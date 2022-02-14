@@ -52,6 +52,7 @@ type Backend interface {
 	RPCGasCap() *big.Int  // global gas cap for klay_call over rpc: DoS protection
 	RPCTxFeeCap() float64 // global tx fee cap for all transaction related APIs
 	Engine() consensus.Engine
+	FeeHistory(ctx context.Context, blockCount int, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*big.Int, [][]*big.Int, []*big.Int, []float64, error)
 
 	// BlockChain API
 	SetHead(number uint64)

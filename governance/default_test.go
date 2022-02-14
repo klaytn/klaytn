@@ -22,6 +22,8 @@ import (
 	"reflect"
 	"testing"
 
+	gotest_assert "gotest.tools/assert"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -132,6 +134,14 @@ var tstData = []voteValue{
 	{k: "istanbul.timeout", v: true, e: false},
 	{k: "istanbul.timeout", v: "10", e: false},
 	{k: "istanbul.timeout", v: 5.3, e: false},
+	{k: "governance.addvalidator", v: "0x639e5ebfc483716fbac9810b230ff6ad487f366c", e: true},
+	{k: "governance.addvalidator", v: " 0x639e5ebfc483716fbac9810b230ff6ad487f366c ", e: true},
+	{k: "governance.addvalidator", v: "0x639e5ebfc483716fbac9810b230ff6ad487f366c,0x828880c5f09cc1cc6a58715e3fe2b4c4cf3c5869", e: true},
+	{k: "governance.addvalidator", v: "0x639e5ebfc483716fbac9810b230ff6ad487f366c,0x828880c5f09cc1cc6a58715e3fe2b4c4cf3c58", e: false},
+	{k: "governance.addvalidator", v: "0x639e5ebfc483716fbac9810b230ff6ad487f366c,0x639e5ebfc483716fbac9810b230ff6ad487f366c", e: false},
+	{k: "governance.addvalidator", v: "0x639e5ebfc483716fbac9810b230ff6ad487f366c, 0x828880c5f09cc1cc6a58715e3fe2b4c4cf3c5869, ", e: false},
+	{k: "governance.addvalidator", v: "0x639e5ebfc483716fbac9810b230ff6ad487f366c,, 0x828880c5f09cc1cc6a58715e3fe2b4c4cf3c5869, ", e: false},
+	{k: "governance.addvalidator", v: "0x639e5ebfc483716fbac9810b230ff6ad487f366c, 0x828880c5f09cc1cc6a58715e3fe2b4c4cf3c5869 ", e: true},
 }
 
 var goodVotes = []voteValue{
@@ -144,6 +154,7 @@ var goodVotes = []voteValue{
 	{k: "reward.mintingamount", v: "9600000000000000000", e: true},
 	{k: "reward.ratio", v: "10/10/80", e: true},
 	{k: "istanbul.timeout", v: uint64(5000), e: true},
+	{k: "governance.addvalidator", v: "0x639e5ebfc483716fbac9810b230ff6ad487f366c,0x828880c5f09cc1cc6a58715e3fe2b4c4cf3c5869", e: true},
 }
 
 func getTestConfig() *params.ChainConfig {
@@ -277,7 +288,6 @@ func TestGovernance_ClearVotes(t *testing.T) {
 }
 
 func TestGovernance_GetEncodedVote(t *testing.T) {
-	var err error
 	gov := getGovernance()
 
 	for _, val := range goodVotes {
@@ -285,31 +295,25 @@ func TestGovernance_GetEncodedVote(t *testing.T) {
 	}
 
 	l := gov.voteMap.Size()
-	for i := 0; i > l; i++ {
+	for i := 0; i < l; i++ {
 		voteData := gov.GetEncodedVote(common.HexToAddress("0x1234567890123456789012345678901234567890"), 1000)
 		v := new(GovernanceVote)
 		rlp.DecodeBytes(voteData, &v)
 
-		if v, err = gov.ParseVoteValue(v); err != nil {
-			assert.Equal(t, nil, err)
-		}
-
-		if v.Value != gov.voteMap.GetValue(v.Key).Value {
-			t.Errorf("Encoded vote and Decoded vote are different! Encoded: %v, Decoded: %v\n", gov.voteMap.GetValue(v.Key).Value, v.Value)
-		}
-		gov.RemoveVote(v.Key, v.Value, 1000)
+		v, err := gov.ParseVoteValue(v)
+		assert.Equal(t, nil, err)
+		gotest_assert.DeepEqual(t, gov.voteMap.GetValue(v.Key).Value, v.Value)
 	}
 }
 
 func TestGovernance_ParseVoteValue(t *testing.T) {
-	var err error
 	gov := getGovernance()
 
 	addr := common.HexToAddress("0x1234567890123456789012345678901234567890")
 	for _, val := range goodVotes {
 		v := &GovernanceVote{
 			Key:       val.k,
-			Value:     val.v,
+			Value:     gov.adjustValueType(val.k, val.v),
 			Validator: addr,
 		}
 
@@ -318,13 +322,9 @@ func TestGovernance_ParseVoteValue(t *testing.T) {
 		d := new(GovernanceVote)
 		rlp.DecodeBytes(b, d)
 
-		if d, err = gov.ParseVoteValue(d); err != nil {
-			assert.Equal(t, nil, err)
-		}
-
-		if !reflect.DeepEqual(v, d) {
-			t.Errorf("Parse was not successful! %v %v \n", v, d)
-		}
+		d, err := gov.ParseVoteValue(d)
+		assert.Equal(t, nil, err)
+		gotest_assert.DeepEqual(t, v, d)
 	}
 }
 
@@ -498,6 +498,7 @@ func TestVoteValueNilInterface(t *testing.T) {
 	gVote := new(GovernanceVote)
 	var test []byte
 
+	gVote.Key = "istanbul.policy"
 	// gVote.Value is an interface list
 	{
 		gVote.Value = []interface{}{[]byte{1, 2}}
@@ -548,6 +549,30 @@ func TestVoteValueNilInterface(t *testing.T) {
 		// Parse vote.Value and make it has appropriate type
 		_, err := gov.ParseVoteValue(gVote)
 		assert.Equal(t, nil, err)
+	}
+
+	gVote.Key = "governance.addvalidator"
+	{
+		gVote.Value = [][]uint8{{0x3, 0x4}, {0x5, 0x6}}
+		test, _ = rlp.EncodeToBytes(gVote)
+		if err := rlp.DecodeBytes(test, gVote); err != nil {
+			t.Fatal("RLP decode error")
+		}
+		// Parse vote.Value and make it has appropriate type
+		_, err := gov.ParseVoteValue(gVote)
+		assert.Equal(t, ErrValueTypeMismatch, err)
+	}
+
+	{
+		gVote.Value = []uint8{0x1, 0x2, 0x3}
+		test, _ = rlp.EncodeToBytes(gVote)
+		if err := rlp.DecodeBytes(test, gVote); err != nil {
+			t.Fatal("RLP decode error")
+		}
+
+		// Parse vote.Value and make it has appropriate type
+		_, err := gov.ParseVoteValue(gVote)
+		assert.Equal(t, ErrValueTypeMismatch, err)
 	}
 }
 

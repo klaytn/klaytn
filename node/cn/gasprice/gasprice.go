@@ -25,7 +25,9 @@ import (
 	"math/big"
 	"sync"
 
-	"github.com/klaytn/klaytn/api"
+	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/networks/rpc"
+
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/params"
 )
@@ -33,26 +35,37 @@ import (
 var maxPrice = big.NewInt(500 * params.Ston)
 
 type Config struct {
-	Blocks     int
-	Percentile int
-	Default    *big.Int `toml:",omitempty"`
+	Blocks           int
+	Percentile       int
+	MaxHeaderHistory int
+	MaxBlockHistory  int
+	Default          *big.Int `toml:",omitempty"`
+}
+
+// OracleBackend includes all necessary background APIs for oracle.
+type OracleBackend interface {
+	HeaderByNumber(ctx context.Context, number rpc.BlockNumber) (*types.Header, error)
+	BlockByNumber(ctx context.Context, number rpc.BlockNumber) (*types.Block, error)
+	GetBlockReceipts(ctx context.Context, hash common.Hash) types.Receipts
+	ChainConfig() *params.ChainConfig
 }
 
 // Oracle recommends gas prices based on the content of recent
 // blocks. Suitable for both light and full clients.
 type Oracle struct {
-	backend   api.Backend
+	backend   OracleBackend
 	lastHead  common.Hash
 	lastPrice *big.Int
 	cacheLock sync.RWMutex
 	fetchLock sync.Mutex
 
-	checkBlocks, maxEmpty, maxBlocks int
-	percentile                       int
+	checkBlocks, maxEmpty, maxBlocks  int
+	percentile                        int
+	maxHeaderHistory, maxBlockHistory int
 }
 
 // NewOracle returns a new oracle.
-func NewOracle(backend api.Backend, params Config) *Oracle {
+func NewOracle(backend OracleBackend, params Config) *Oracle {
 	blocks := params.Blocks
 	if blocks < 1 {
 		blocks = 1
@@ -65,12 +78,14 @@ func NewOracle(backend api.Backend, params Config) *Oracle {
 		percent = 100
 	}
 	return &Oracle{
-		backend:     backend,
-		lastPrice:   params.Default,
-		checkBlocks: blocks,
-		maxEmpty:    blocks / 2,
-		maxBlocks:   blocks * 5,
-		percentile:  percent,
+		backend:          backend,
+		lastPrice:        params.Default,
+		checkBlocks:      blocks,
+		maxEmpty:         blocks / 2,
+		maxBlocks:        blocks * 5,
+		percentile:       percent,
+		maxHeaderHistory: params.MaxHeaderHistory,
+		maxBlockHistory:  params.MaxBlockHistory,
 	}
 }
 

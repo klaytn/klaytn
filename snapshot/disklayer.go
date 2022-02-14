@@ -24,6 +24,8 @@ import (
 	"bytes"
 	"sync"
 
+	"github.com/klaytn/klaytn/blockchain/types/account"
+
 	"github.com/klaytn/klaytn/rlp"
 
 	"github.com/VictoriaMetrics/fastcache"
@@ -69,7 +71,7 @@ func (dl *diskLayer) Stale() bool {
 
 // Account directly retrieves the account associated with a particular hash in
 // the snapshot slim data format.
-func (dl *diskLayer) Account(hash common.Hash) (*Account, error) {
+func (dl *diskLayer) Account(hash common.Hash) (account.Account, error) {
 	data, err := dl.AccountRLP(hash)
 	if err != nil {
 		return nil, err
@@ -77,11 +79,11 @@ func (dl *diskLayer) Account(hash common.Hash) (*Account, error) {
 	if len(data) == 0 { // can be both nil and []byte{}
 		return nil, nil
 	}
-	account := new(Account)
-	if err := rlp.DecodeBytes(data, account); err != nil {
+	serializer := account.NewAccountSerializer()
+	if err := rlp.DecodeBytes(data, serializer); err != nil {
 		panic(err)
 	}
-	return account, nil
+	return serializer.GetAccount(), nil
 }
 
 // AccountRLP directly retrieves the account RLP associated with a particular

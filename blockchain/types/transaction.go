@@ -258,7 +258,7 @@ func (tx *Transaction) Gas() uint64        { return tx.data.GetGasLimit() }
 func (tx *Transaction) GasPrice() *big.Int { return new(big.Int).Set(tx.data.GetPrice()) }
 func (tx *Transaction) GasTipCap() *big.Int {
 	if tx.Type() == TxTypeDynamicFee {
-		te := tx.GetTxInternalData().(TxInternalDataEthTyped)
+		te := tx.GetTxInternalData().(TxInternalDataBaseFee)
 		return te.GetGasTipCap()
 	}
 
@@ -267,7 +267,7 @@ func (tx *Transaction) GasTipCap() *big.Int {
 
 func (tx *Transaction) GasFeeCap() *big.Int {
 	if tx.Type() == TxTypeDynamicFee {
-		te := tx.GetTxInternalData().(TxInternalDataEthTyped)
+		te := tx.GetTxInternalData().(TxInternalDataBaseFee)
 		return te.GetGasFeeCap()
 	}
 
@@ -276,7 +276,7 @@ func (tx *Transaction) GasFeeCap() *big.Int {
 
 func (tx *Transaction) EffectiveGasTip(baseFee *big.Int) *big.Int {
 	if tx.Type() == TxTypeDynamicFee {
-		te := tx.GetTxInternalData().(TxInternalDataEthTyped)
+		te := tx.GetTxInternalData().(TxInternalDataBaseFee)
 		return math.BigMin(te.GetGasTipCap(), new(big.Int).Sub(te.GetGasFeeCap(), baseFee))
 	}
 
@@ -285,7 +285,7 @@ func (tx *Transaction) EffectiveGasTip(baseFee *big.Int) *big.Int {
 
 func (tx *Transaction) EffectiveGasPrice(baseFee *big.Int) *big.Int {
 	if tx.Type() == TxTypeDynamicFee {
-		te := tx.GetTxInternalData().(TxInternalDataEthTyped)
+		te := tx.GetTxInternalData().(TxInternalDataBaseFee)
 		return math.BigMin(new(big.Int).Add(te.GetGasTipCap(), baseFee), te.GetGasFeeCap())
 	}
 

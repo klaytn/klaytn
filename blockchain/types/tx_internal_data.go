@@ -390,6 +390,10 @@ type TxInternalDataPayload interface {
 type TxInternalDataEthTyped interface {
 	setSignatureValues(chainID, v, r, s *big.Int)
 	GetAccessList() AccessList
+}
+
+// TxInternalDataBaseFee has a function related to EIP-1559 Ethereum typed transaction.
+type TxInternalDataBaseFee interface {
 	GetGasTipCap() *big.Int
 	GetGasFeeCap() *big.Int
 	TxHash() common.Hash

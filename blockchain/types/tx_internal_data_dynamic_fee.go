@@ -1,4 +1,4 @@
-// Copyright 2021 The klaytn Authors
+// Copyright 2022 The klaytn Authors
 // This file is part of the klaytn library.
 //
 // The klaytn library is free software: you can redistribute it and/or modify
@@ -257,7 +257,7 @@ func (t *TxInternalDataDynamicFee) SetHash(hash *common.Hash) {
 
 func (t *TxInternalDataDynamicFee) SetSignature(signatures TxSignatures) {
 	if len(signatures) != 1 {
-		logger.Crit("AccessListTransaction can receive only single signature!")
+		logger.Crit("TxTypeDynamicFee can receive only single signature!")
 	}
 
 	t.V = signatures[0].V
@@ -295,10 +295,7 @@ func (t *TxInternalDataDynamicFee) IntrinsicGas(currentBlockNumber uint64) (uint
 }
 
 func (t *TxInternalDataDynamicFee) ChainId() *big.Int {
-	if t.ChainID != nil {
-		return t.ChainID
-	}
-	return deriveChainId(t.V)
+	return t.ChainID
 }
 
 func (t *TxInternalDataDynamicFee) Equal(a TxInternalData) bool {
@@ -352,7 +349,7 @@ func (t *TxInternalDataDynamicFee) String() string {
 		GasLimit  %#x
 		Value:    %#x
 		Data:     0x%x
-	    AccessList: %x
+		AccessList: %x
 		V:        %#x
 		R:        %#x
 		S:        %#x
@@ -378,7 +375,9 @@ func (t *TxInternalDataDynamicFee) String() string {
 }
 
 func (t *TxInternalDataDynamicFee) SerializeForSign() []interface{} {
+	// If the chainId has nil or empty value, It will be set signer's chainId.
 	return []interface{}{
+		t.ChainID,
 		t.AccountNonce,
 		t.GasTipCap,
 		t.GasFeeCap,

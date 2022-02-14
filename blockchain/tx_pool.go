@@ -654,14 +654,19 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 			return ErrFeeCapVeryHigh
 		}
 
+		// Ensure gasFeeCap is greater than or equal to gasTipCap.
+		if tx.GasFeeCap().Cmp(tx.GasTipCap()) < 0 {
+			return ErrTipAboveFeeCap
+		}
+
 		if pool.gasPrice.Cmp(tx.GasTipCap()) != 0 {
-			logger.Trace("fail to validate unitprice", "Klaytn unitprice", pool.gasPrice, "tx max fee per gas", tx.GasFeeCap())
-			return ErrInvalidUnitPrice
+			logger.Trace("fail to validate maxPriorityFeePerGas", "Klaytn unitprice", pool.gasPrice, "tx max priority fee per gas", tx.GasFeeCap())
+			return ErrInvalidGasTipCap
 		}
 
 		if pool.gasPrice.Cmp(tx.GasFeeCap()) != 0 {
-			logger.Trace("fail to validate unitprice", "Klaytn unitprice", pool.gasPrice, "tx max priority fee per gas", tx.GasTipCap())
-			return ErrInvalidUnitPrice
+			logger.Trace("fail to validate maxFeePerGas", "Klaytn unitprice", pool.gasPrice, "tx max fee per gas", tx.GasTipCap())
+			return ErrInvalidGasFeeCap
 		}
 	} else {
 		if pool.gasPrice.Cmp(tx.GasPrice()) != 0 {

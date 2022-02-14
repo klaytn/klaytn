@@ -71,6 +71,7 @@ type DBManager interface {
 	WriteCanonicalHash(hash common.Hash, number uint64)
 	DeleteCanonicalHash(number uint64)
 
+	ReadAllHashes(number uint64) []common.Hash
 	ReadHeadHeaderHash() common.Hash
 	WriteHeadHeaderHash(hash common.Hash)
 
@@ -252,6 +253,7 @@ type DBManager interface {
 	ReadGovernanceAtNumber(num uint64, epoch uint64) (uint64, map[string]interface{}, error)
 	WriteGovernanceState(b []byte) error
 	ReadGovernanceState() ([]byte, error)
+	//TODO-Klaytn implement governance DB deletion methods.
 
 	// StakingInfo related functions
 	ReadStakingInfo(blockNum uint64) ([]byte, error)
@@ -862,6 +864,24 @@ func (dbm *databaseManager) DeleteCanonicalHash(number uint64) {
 		logger.Crit("Failed to delete number to hash mapping", "err", err)
 	}
 	dbm.cm.writeCanonicalHashCache(number, common.Hash{})
+}
+
+// ReadAllHashes retrieves all the hashes assigned to blocks at a certain heights,
+// both canonical and reorged forks included.
+func (dbm *databaseManager) ReadAllHashes(number uint64) []common.Hash {
+	db := dbm.getDatabase(headerDB)
+	prefix := headerKeyPrefix(number)
+
+	hashes := make([]common.Hash, 0, 1)
+	it := db.NewIterator(prefix, nil)
+	defer it.Release()
+
+	for it.Next() {
+		if key := it.Key(); len(key) == len(prefix)+32 {
+			hashes = append(hashes, common.BytesToHash(key[len(key)-32:]))
+		}
+	}
+	return hashes
 }
 
 // Head Header Hash operations.

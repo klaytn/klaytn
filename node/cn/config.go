@@ -57,8 +57,10 @@ func GetDefaultConfig() *Config {
 
 		TxPool: blockchain.DefaultTxPoolConfig,
 		GPO: gasprice.Config{
-			Blocks:     20,
-			Percentile: 60,
+			Blocks:           20,
+			Percentile:       60,
+			MaxHeaderHistory: 1024,
+			MaxBlockHistory:  1024,
 		},
 		WsEndpoint: "localhost:8546",
 

@@ -124,6 +124,7 @@ const (
 	ChainDataFetcher
 	KAS
 	FORK
+	NodeCnGasPrice
 
 	// ModuleNameLen should be placed at the end of the list.
 	ModuleNameLen
@@ -199,4 +200,5 @@ var moduleNames = [ModuleNameLen]string{
 	"datasync/chaindatafetcher",
 	"kas",
 	"fork",
+	"node/cn/gasprice",
 }

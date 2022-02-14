@@ -250,21 +250,13 @@ func (t *TxInternalDataAccessList) GetAccessList() AccessList {
 	return t.AccessList
 }
 
-func (t *TxInternalDataAccessList) GetGasTipCap() *big.Int {
-	return t.Price
-}
-
-func (t *TxInternalDataAccessList) GetGasFeeCap() *big.Int {
-	return t.Price
-}
-
 func (t *TxInternalDataAccessList) SetHash(hash *common.Hash) {
 	t.Hash = hash
 }
 
 func (t *TxInternalDataAccessList) SetSignature(signatures TxSignatures) {
 	if len(signatures) != 1 {
-		logger.Crit("AccessListTransaction can receive only single signature!")
+		logger.Crit("TxTypeAccessList can receive only single signature!")
 	}
 
 	t.V = signatures[0].V
@@ -306,7 +298,9 @@ func (t *TxInternalDataAccessList) setSignatureValues(chainID, v, r, s *big.Int)
 }
 
 func (t *TxInternalDataAccessList) SerializeForSign() []interface{} {
+	// If the chainId has nil or empty value, It will be set signer's chainId.
 	return []interface{}{
+		t.ChainID,
 		t.AccountNonce,
 		t.Price,
 		t.GasLimit,
