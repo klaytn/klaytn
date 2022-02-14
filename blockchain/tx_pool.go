@@ -655,7 +655,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 		}
 
 		if pool.gasPrice.Cmp(tx.GasTipCap()) != 0 {
-			logger.Trace("fail to validate unitprice", "Klaytn unitprice", pool.gasPrice, "tx max fee per gas", tx.GasFeeCap())
+			logger.Trace("fail to validate maxPriorityFeePerGas", "Klaytn unitprice", pool.gasPrice, "tx max priority fee per gas", tx.GasFeeCap())
 			return ErrInvalidUnitPrice
 		}
 
