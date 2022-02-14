@@ -457,8 +457,6 @@ func (bc *BlockChain) SetHead(head uint64) error {
 
 	bc.mu.Lock()
 	defer bc.mu.Unlock()
-	bc.chainmu.Lock()
-	defer bc.chainmu.Unlock()
 
 	updateFn := func(header *types.Header) {
 		// Rewind the block chain, ensuring we don't end up with a stateless head block
