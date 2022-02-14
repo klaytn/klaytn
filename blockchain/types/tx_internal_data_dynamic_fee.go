@@ -257,7 +257,7 @@ func (t *TxInternalDataDynamicFee) SetHash(hash *common.Hash) {
 
 func (t *TxInternalDataDynamicFee) SetSignature(signatures TxSignatures) {
 	if len(signatures) != 1 {
-		logger.Crit("AccessListTransaction can receive only single signature!")
+		logger.Crit("TxTypeDynamicFee can receive only single signature!")
 	}
 
 	t.V = signatures[0].V
