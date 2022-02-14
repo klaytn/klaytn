@@ -292,6 +292,14 @@ func (tx *Transaction) EffectiveGasPrice(baseFee *big.Int) *big.Int {
 	return tx.GasPrice()
 }
 
+func (tx *Transaction) AccessList() AccessList {
+	if tx.Type() == TxTypeAccessList || tx.Type() == TxTypeDynamicFee {
+		te := tx.GetTxInternalData().(TxInternalDataEthTyped)
+		return te.GetAccessList()
+	}
+	return []AccessTuple{}
+}
+
 func (tx *Transaction) Value() *big.Int { return new(big.Int).Set(tx.data.GetAmount()) }
 func (tx *Transaction) Nonce() uint64   { return tx.data.GetAccountNonce() }
 func (tx *Transaction) CheckNonce() bool {
