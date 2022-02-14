@@ -296,7 +296,9 @@ func DoCall(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.Blo
 	defer cancel()
 
 	// Add gas fee to sender for estimating gasLimit/computing cost or calling a function by insufficient balance sender.
-	state.AddBalance(msg.ValidatedSender(), new(big.Int).Mul(new(big.Int).SetUint64(msg.Gas()), msg.GasPrice()))
+	baseFee := new(big.Int).SetUint64(params.BaseFee)
+	effectiveGasPrice := msg.EffectiveGasPrice(baseFee)
+	state.AddBalance(msg.ValidatedSender(), new(big.Int).Mul(new(big.Int).SetUint64(msg.Gas()), effectiveGasPrice))
 	// Get a new instance of the EVM.
 	evm, vmError, err := b.GetEVM(ctx, msg, state, header, vmCfg)
 	if err != nil {
