@@ -420,7 +420,7 @@ func testTransactionSenderTxHash(t *testing.T, tx TxInternalData) {
 		assert.Equal(t, h, senderTxHash)
 	case *TxInternalDataAccessList:
 		hw := sha3.NewKeccak256()
-		rlp.Encode(hw, rawTx.Type())
+		rlp.Encode(hw, byte(rawTx.Type()))
 		rlp.Encode(hw, []interface{}{
 			v.ChainID,
 			v.AccountNonce,
@@ -442,7 +442,7 @@ func testTransactionSenderTxHash(t *testing.T, tx TxInternalData) {
 		assert.Equal(t, h, senderTxHash)
 	case *TxInternalDataDynamicFee:
 		hw := sha3.NewKeccak256()
-		rlp.Encode(hw, rawTx.Type())
+		rlp.Encode(hw, byte(rawTx.Type()))
 		rlp.Encode(hw, []interface{}{
 			v.ChainID,
 			v.AccountNonce,
@@ -457,6 +457,12 @@ func testTransactionSenderTxHash(t *testing.T, tx TxInternalData) {
 			v.R,
 			v.S,
 		})
+
+		h := common.Hash{}
+
+		hw.Sum(h[:0])
+		senderTxHash := rawTx.GetTxInternalData().SenderTxHash()
+		assert.Equal(t, h, senderTxHash)
 
 	default:
 		t.Fatal("Undefined tx type.")
