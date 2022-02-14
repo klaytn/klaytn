@@ -653,7 +653,7 @@ func TestTransactionCoding(t *testing.T) {
 				Payload:      []byte("abcdef"),
 			}
 		case 6:
-			// Tx with empty access list.
+			// Tx with dynamic fee.
 			txData = &TxInternalDataDynamicFee{
 				ChainID:      big.NewInt(1),
 				AccountNonce: i,
