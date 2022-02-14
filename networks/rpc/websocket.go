@@ -123,6 +123,19 @@ func wsHandshakeValidator(allowedOrigins []string) func(*http.Request) bool {
 	return f
 }
 
+type wsHandshakeError struct {
+	err    error
+	status string
+}
+
+func (e wsHandshakeError) Error() string {
+	s := e.err.Error()
+	if e.status != "" {
+		s += " (HTTP status " + e.status + ")"
+	}
+	return s
+}
+
 // DialWebsocket creates a new RPC client that communicates with a JSON-RPC server
 // that is listening on the given endpoint.
 //
@@ -140,9 +153,13 @@ func DialWebsocket(ctx context.Context, endpoint, origin string) (*Client, error
 	}
 	//return newClient(ctx, func(ctx context.Context) (ServerCodec, error) {
 	return NewClient(ctx, func(ctx context.Context) (ServerCodec, error) {
-		conn, _, err := dialer.DialContext(ctx, endpoint, header)
+		conn, resp, err := dialer.DialContext(ctx, endpoint, header)
 		if err != nil {
-			return nil, err
+			hErr := wsHandshakeError{err: err}
+			if resp != nil {
+				hErr.status = resp.Status
+			}
+			return nil, hErr
 		}
 		return newWebsocketCodec(conn), nil
 	})
@@ -153,21 +170,11 @@ func wsClientHeaders(endpoint, origin string) (string, http.Header, error) {
 	if err != nil {
 		return endpoint, nil, err
 	}
-	if origin == "" {
-		var err error
-		if origin, err = os.Hostname(); err != nil {
-			return endpoint, nil, err
-		}
-		if endpointURL.Scheme == "wss" {
-			//origin = "https://" + strings.ToLower(origin)
-			origin = ""
-		} else {
-			origin = "http://" + strings.ToLower(origin)
-		}
-	}
 
 	header := make(http.Header)
-	header.Add("origin", origin)
+	if origin != "" {
+		header.Add("origin", origin)
+	}
 	if endpointURL.User != nil {
 		b64auth := base64.StdEncoding.EncodeToString([]byte(endpointURL.User.String()))
 		header.Add("authorization", "Basic "+b64auth)
@@ -178,7 +185,6 @@ func wsClientHeaders(endpoint, origin string) (string, http.Header, error) {
 
 //func newWebsocketCodec(conn *websocket.Conn) ServerCodec {
 func newWebsocketCodec(conn *websocket.Conn) ServerCodec {
-	//conn.SetReadLimit(maxRequestContentLength)
 	conn.SetReadLimit(maxRequestContentLength)
 	return NewCodec(conn, conn.WriteJSON, conn.ReadJSON)
 }

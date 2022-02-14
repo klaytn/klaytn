@@ -20,10 +20,10 @@ package rpc
 import (
 	"context"
 	"encoding/base64"
-	"fmt"
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -81,13 +81,13 @@ func TestWebsocketAuthCheck(t *testing.T) {
 	defer httpsrv.Close()
 
 	client, err := DialWebsocket(context.Background(), wsURL, "http://example.com")
-	fmt.Println("err: ", err)
 	if err == nil {
 		client.Close()
 		t.Fatal("no error for connect with auth header")
 	}
-	if err != websocket.ErrBadHandshake {
-		t.Fatalf("wrong error for header: %q", err)
+	wantErr := wsHandshakeError{websocket.ErrBadHandshake, "101 Switching Protocols"}
+	if !reflect.DeepEqual(err, wantErr) {
+		t.Fatalf("wrong error for auth header: %q", err)
 	}
 }
 
@@ -109,9 +109,17 @@ func TestWebsocketOriginCheck(t *testing.T) {
 		client.Close()
 		t.Fatal("no error for wrong origin")
 	}
-	if err != websocket.ErrBadHandshake {
+	wantErr := wsHandshakeError{websocket.ErrBadHandshake, "403 Forbidden"}
+	if !reflect.DeepEqual(err, wantErr) {
 		t.Fatalf("wrong error for wrong origin: %q", err)
 	}
+
+	// Connections without origin header should work.
+	client, err = DialWebsocket(context.Background(), wsURL, "")
+	if err != nil {
+		t.Fatal("error for empty origin")
+	}
+	client.Close()
 }
 
 // This test checks whether calls exceeding the request size limit are rejected.
