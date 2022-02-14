@@ -1370,52 +1370,7 @@ func (api *EthereumAPI) PendingTransactions() ([]*EthRPCTransaction, error) {
 // Resend accepts an existing transaction and a new gas price and limit. It will remove
 // the given transaction from the pool and reinsert it with the new gas price and limit.
 func (api *EthereumAPI) Resend(ctx context.Context, sendArgs EthTransactionArgs, gasPrice *hexutil.Big, gasLimit *hexutil.Uint64) (common.Hash, error) {
-	if sendArgs.Nonce == nil {
-		return common.Hash{}, fmt.Errorf("missing transaction nonce in transaction spec")
-	}
-	if err := sendArgs.setDefaults(ctx, api.publicTransactionPoolAPI.b); err != nil {
-		return common.Hash{}, err
-	}
-	matchTx := sendArgs.toTransaction()
-
-	// Before replacing the old transaction, ensure the _new_ transaction fee is reasonable.
-	var price = matchTx.GasPrice()
-	if gasPrice != nil {
-		price = gasPrice.ToInt()
-	}
-	var gas = matchTx.Gas()
-	if gasLimit != nil {
-		gas = uint64(*gasLimit)
-	}
-	if err := checkTxFee(price, gas, api.publicTransactionPoolAPI.b.RPCTxFeeCap()); err != nil {
-		return common.Hash{}, err
-	}
-	pending, err := api.publicTransactionPoolAPI.b.GetPoolTransactions()
-	if err != nil {
-		return common.Hash{}, err
-	}
-	for _, p := range pending {
-		wantSigHash := api.publicTransactionPoolAPI.signer.Hash(matchTx)
-		pFrom, err := types.Sender(api.publicTransactionPoolAPI.signer, p)
-		if err == nil && pFrom == sendArgs.from() && api.publicTransactionPoolAPI.signer.Hash(p) == wantSigHash {
-			// Match. Re-sign and send the transaction.
-			if gasPrice != nil && (*big.Int)(gasPrice).Sign() != 0 {
-				sendArgs.GasPrice = gasPrice
-			}
-			if gasLimit != nil && *gasLimit != 0 {
-				sendArgs.Gas = gasLimit
-			}
-			signedTx, err := api.publicTransactionPoolAPI.sign(sendArgs.from(), sendArgs.toTransaction())
-			if err != nil {
-				return common.Hash{}, err
-			}
-			if err = api.publicTransactionPoolAPI.b.SendTx(ctx, signedTx); err != nil {
-				return common.Hash{}, err
-			}
-			return signedTx.Hash(), nil
-		}
-	}
-	return common.Hash{}, fmt.Errorf("transaction %#x not found", matchTx.Hash())
+	return common.Hash{}, errors.New("this api is not supported by Klaytn because Klaytn use fixed gasPrice policy and there is no gasLimit")
 }
 
 // Accounts returns the collection of accounts this node manages.
