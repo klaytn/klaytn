@@ -655,7 +655,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 		}
 
 		// Ensure gasFeeCap is greater than or equal to gasTipCap.
-		if tx.GasFeeCap().Cmp(tx.GasTipCap()) <0 {
+		if tx.GasFeeCap().Cmp(tx.GasTipCap()) < 0 {
 			return ErrTipAboveFeeCap
 		}
 
