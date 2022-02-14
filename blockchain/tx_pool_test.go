@@ -1899,14 +1899,16 @@ func TestDynamicFeeTransactionHasNotSameGasPrice(t *testing.T) {
 	pool, key := setupTxPoolWithConfig(eip1559Config)
 	defer pool.Stop()
 
-	tx := dynamicFeeTx(0, 100, big.NewInt(1), big.NewInt(2), key)
-	if err := pool.AddRemote(tx); err != ErrInvalidUnitPrice {
-		t.Error("expected", ErrInvalidUnitPrice, "got", err)
+	// Ensure gasFeeCap is greater than or equal to gasTipCap.
+	tx := dynamicFeeTx(0, 100, big.NewInt(2), big.NewInt(1), key)
+	if err := pool.AddRemote(tx); err != ErrInvalidGasFeeCap {
+		t.Error("expected", ErrTipAboveFeeCap, "got", err)
 	}
 
-	tx2 := dynamicFeeTx(0, 100, big.NewInt(2), big.NewInt(1), key)
-	if err := pool.AddRemote(tx2); err != ErrInvalidUnitPrice {
-		t.Error("expected", ErrInvalidUnitPrice, "got", err)
+	// The GasTipCap is equal to gasPrice that config at TxPool.
+	tx2 := dynamicFeeTx(0, 100, big.NewInt(2), big.NewInt(2), key)
+	if err := pool.AddRemote(tx2); err != ErrInvalidGasTipCap {
+		t.Error("expected", ErrInvalidGasTipCap, "got", err)
 	}
 }
 
