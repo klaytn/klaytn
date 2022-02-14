@@ -209,7 +209,7 @@ func TestEIP2930Signer(t *testing.T) {
 	}
 }
 
-// This test checks signature operations on access list transactions.
+// This test checks signature operations on dynamic fee transactions.
 func TestLondonSigner(t *testing.T) {
 	var (
 		key, _  = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
