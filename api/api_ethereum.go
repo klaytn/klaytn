@@ -50,9 +50,6 @@ const (
 	// because there is no uncles in Klaytn.
 	// Just use const value because we don't have to calculate it everytime which always be same result.
 	EmptySha3Uncles = "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347"
-	// DummyGasLimit exists for supporting Ethereum compatible data structure.
-	// There is no gas limit mechanism in Klaytn, check details in https://docs.klaytn.com/klaytn/design/computation/computation-cost.
-	DummyGasLimit uint64 = 999999999
 	// ZeroHashrate exists for supporting Ethereum compatible data structure.
 	// There is no POW mining mechanism in Klaytn.
 	ZeroHashrate uint64 = 0
@@ -312,14 +309,7 @@ func (api *EthereumAPI) GasPrice(ctx context.Context) (*hexutil.Big, error) {
 
 // MaxPriorityFeePerGas returns a suggestion for a gas tip cap for dynamic fee transactions.
 func (api *EthereumAPI) MaxPriorityFeePerGas(ctx context.Context) (*hexutil.Big, error) {
-	return api.publicKlayAPI.GasPrice(ctx)
-}
-
-type FeeHistoryResult struct {
-	OldestBlock  *hexutil.Big     `json:"oldestBlock"`
-	Reward       [][]*hexutil.Big `json:"reward,omitempty"`
-	BaseFee      []*hexutil.Big   `json:"baseFeePerGas,omitempty"`
-	GasUsedRatio []float64        `json:"gasUsedRatio"`
+	return api.publicKlayAPI.MaxPriorityFeePerGas(ctx)
 }
 
 // DecimalOrHex unmarshals a non-negative decimal or hex parameter into a uint64.
@@ -344,30 +334,7 @@ func (dh *DecimalOrHex) UnmarshalJSON(data []byte) error {
 }
 
 func (api *EthereumAPI) FeeHistory(ctx context.Context, blockCount DecimalOrHex, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*FeeHistoryResult, error) {
-	oldest, reward, baseFee, gasUsed, err := api.publicKlayAPI.b.FeeHistory(ctx, int(blockCount), lastBlock, rewardPercentiles)
-	if err != nil {
-		return nil, err
-	}
-	results := &FeeHistoryResult{
-		OldestBlock:  (*hexutil.Big)(oldest),
-		GasUsedRatio: gasUsed,
-	}
-	if reward != nil {
-		results.Reward = make([][]*hexutil.Big, len(reward))
-		for i, w := range reward {
-			results.Reward[i] = make([]*hexutil.Big, len(w))
-			for j, v := range w {
-				results.Reward[i][j] = (*hexutil.Big)(v)
-			}
-		}
-	}
-	if baseFee != nil {
-		results.BaseFee = make([]*hexutil.Big, len(baseFee))
-		for i, v := range baseFee {
-			results.BaseFee[i] = (*hexutil.Big)(v)
-		}
-	}
-	return results, nil
+	return api.publicKlayAPI.FeeHistory(ctx, blockCount, lastBlock, rewardPercentiles)
 }
 
 // Syncing returns false in case the node is currently not syncing with the network. It can be up to date or has not
@@ -649,54 +616,41 @@ func (api *EthereumAPI) GetBlockTransactionCountByHash(ctx context.Context, bloc
 	return transactionCount
 }
 
-// accessListResult returns an optional accesslist
-// Its the result of the `debug_createAccessList` RPC call.
-// It contains an error if the transaction itself failed.
-type accessListResult struct {
-	Accesslist *AccessList    `json:"accessList"`
-	Error      string         `json:"error,omitempty"`
-	GasUsed    hexutil.Uint64 `json:"gasUsed"`
-}
-
-// AccessList is an EIP-2930 access list.
-type AccessList []AccessTuple
-
-// AccessTuple is the element type of an access list.
-type AccessTuple struct {
-	Address     common.Address `json:"address"        gencodec:"required"`
-	StorageKeys []common.Hash  `json:"storageKeys"    gencodec:"required"`
-}
-
 // CreateAccessList creates a EIP-2930 type AccessList for the given transaction.
 // Reexec and BlockNrOrHash can be specified to create the accessList on top of a certain state.
-func (api *EthereumAPI) CreateAccessList(ctx context.Context, args EthTransactionArgs, blockNrOrHash *rpc.BlockNumberOrHash) (*accessListResult, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+func (api *EthereumAPI) CreateAccessList(ctx context.Context, args EthTransactionArgs, blockNrOrHash *rpc.BlockNumberOrHash) (*AccessListResult, error) {
+	// To use CreateAccess of PublicBlockChainAPI, we need to convert the EthTransactionArgs to SendTxArgs.
+	// However, since SendTxArgs does not yet support MaxFeePerGas and MaxPriorityFeePerGas, the conversion logic is bound to be incomplete.
+	// Since this parameter is not actually used and currently only returns an empty result value, implement the logic to return an empty result separately,
+	// and later, when the API is actually implemented, add the relevant fields to SendTxArgs and call the function in PublicBlockChainAPI.
+	// TODO-Klaytn: Modify below logic to use api.publicBlockChainAPI.CreateAccessList
+	result := &AccessListResult{Accesslist: &types.AccessList{}, GasUsed: hexutil.Uint64(0)}
+	return result, nil
 }
 
 // EthRPCTransaction represents a transaction that will serialize to the RPC representation of a transaction
 // RPCTransaction in go-ethereum has been renamed to EthRPCTransaction.
 // RPCTransaction is defined in go-ethereum's internal package, so RPCTransaction is redefined here as EthRPCTransaction.
 type EthRPCTransaction struct {
-	BlockHash        *common.Hash    `json:"blockHash"`
-	BlockNumber      *hexutil.Big    `json:"blockNumber"`
-	From             common.Address  `json:"from"`
-	Gas              hexutil.Uint64  `json:"gas"`
-	GasPrice         *hexutil.Big    `json:"gasPrice"`
-	GasFeeCap        *hexutil.Big    `json:"maxFeePerGas,omitempty"`
-	GasTipCap        *hexutil.Big    `json:"maxPriorityFeePerGas,omitempty"`
-	Hash             common.Hash     `json:"hash"`
-	Input            hexutil.Bytes   `json:"input"`
-	Nonce            hexutil.Uint64  `json:"nonce"`
-	To               *common.Address `json:"to"`
-	TransactionIndex *hexutil.Uint64 `json:"transactionIndex"`
-	Value            *hexutil.Big    `json:"value"`
-	Type             hexutil.Uint64  `json:"type"`
-	Accesses         *AccessList     `json:"accessList,omitempty"`
-	ChainID          *hexutil.Big    `json:"chainId,omitempty"`
-	V                *hexutil.Big    `json:"v"`
-	R                *hexutil.Big    `json:"r"`
-	S                *hexutil.Big    `json:"s"`
+	BlockHash        *common.Hash      `json:"blockHash"`
+	BlockNumber      *hexutil.Big      `json:"blockNumber"`
+	From             common.Address    `json:"from"`
+	Gas              hexutil.Uint64    `json:"gas"`
+	GasPrice         *hexutil.Big      `json:"gasPrice"`
+	GasFeeCap        *hexutil.Big      `json:"maxFeePerGas,omitempty"`
+	GasTipCap        *hexutil.Big      `json:"maxPriorityFeePerGas,omitempty"`
+	Hash             common.Hash       `json:"hash"`
+	Input            hexutil.Bytes     `json:"input"`
+	Nonce            hexutil.Uint64    `json:"nonce"`
+	To               *common.Address   `json:"to"`
+	TransactionIndex *hexutil.Uint64   `json:"transactionIndex"`
+	Value            *hexutil.Big      `json:"value"`
+	Type             hexutil.Uint64    `json:"type"`
+	Accesses         *types.AccessList `json:"accessList,omitempty"`
+	ChainID          *hexutil.Big      `json:"chainId,omitempty"`
+	V                *hexutil.Big      `json:"v"`
+	R                *hexutil.Big      `json:"r"`
+	S                *hexutil.Big      `json:"s"`
 }
 
 // newEthRPCTransactionFromBlockIndex creates an EthRPCTransaction from block and index parameters.
@@ -937,8 +891,8 @@ type EthTransactionArgs struct {
 	Input *hexutil.Bytes `json:"input"`
 
 	// Introduced by AccessListTxType transaction.
-	AccessList *AccessList  `json:"accessList,omitempty"`
-	ChainID    *hexutil.Big `json:"chainId,omitempty"`
+	AccessList *types.AccessList `json:"accessList,omitempty"`
+	ChainID    *hexutil.Big      `json:"chainId,omitempty"`
 }
 
 // from retrieves the transaction sender address.
@@ -1173,7 +1127,7 @@ type TxData interface {
 	copy() TxData // creates a deep copy and initializes all fields
 
 	chainID() *big.Int
-	accessList() AccessList
+	accessList() types.AccessList
 	data() []byte
 	gas() uint64
 	gasPrice() *big.Int
