@@ -44,12 +44,12 @@ func TestLondonSigningWithoutChainID(t *testing.T) {
 	signer := NewLondonSigner(big.NewInt(10))
 	tx, err := SignTx(NewTx(&TxInternalDataEthereumDynamicFee{
 		AccountNonce: 1,
-		Amount: big.NewInt(10),
-		GasFeeCap: big.NewInt(10),
-		GasTipCap: big.NewInt(10),
-		GasLimit: 100,
-		AccessList: accessList,
-		Recipient: &addr,
+		Amount:       big.NewInt(10),
+		GasFeeCap:    big.NewInt(10),
+		GasTipCap:    big.NewInt(10),
+		GasLimit:     100,
+		AccessList:   accessList,
+		Recipient:    &addr,
 	}), signer, key)
 
 	if err != nil {
@@ -70,13 +70,13 @@ func TestLondonSigningWithChainID(t *testing.T) {
 	signer := NewLondonSigner(big.NewInt(10))
 	tx, err := SignTx(NewTx(&TxInternalDataEthereumDynamicFee{
 		AccountNonce: 1,
-		Amount: big.NewInt(10),
-		GasFeeCap: big.NewInt(10),
-		GasTipCap: big.NewInt(10),
-		GasLimit: 100,
-		AccessList: accessList,
-		Recipient: &addr,
-		ChainID: big.NewInt(10),
+		Amount:       big.NewInt(10),
+		GasFeeCap:    big.NewInt(10),
+		GasTipCap:    big.NewInt(10),
+		GasLimit:     100,
+		AccessList:   accessList,
+		Recipient:    &addr,
+		ChainID:      big.NewInt(10),
 	}), signer, key)
 
 	if err != nil {
@@ -97,13 +97,13 @@ func TestLondonSigningWithNoBitChainID(t *testing.T) {
 	signer := NewLondonSigner(big.NewInt(10))
 	tx, err := SignTx(NewTx(&TxInternalDataEthereumDynamicFee{
 		AccountNonce: 1,
-		Amount: big.NewInt(10),
-		GasFeeCap: big.NewInt(10),
-		GasTipCap: big.NewInt(10),
-		GasLimit: 100,
-		AccessList: accessList,
-		Recipient: &addr,
-		ChainID: new(big.Int),
+		Amount:       big.NewInt(10),
+		GasFeeCap:    big.NewInt(10),
+		GasTipCap:    big.NewInt(10),
+		GasLimit:     100,
+		AccessList:   accessList,
+		Recipient:    &addr,
+		ChainID:      new(big.Int),
 	}), signer, key)
 
 	if err != nil {
@@ -124,11 +124,11 @@ func TestEIP2930SigningWithoutChainID(t *testing.T) {
 	signer := NewEIP2930Signer(big.NewInt(10))
 	tx, err := SignTx(NewTx(&TxInternalDataEthereumAccessList{
 		AccountNonce: 1,
-		Amount: big.NewInt(10),
-		Price: big.NewInt(1),
-		GasLimit: 100,
-		AccessList: accessList,
-		Recipient: &addr,
+		Amount:       big.NewInt(10),
+		Price:        big.NewInt(1),
+		GasLimit:     100,
+		AccessList:   accessList,
+		Recipient:    &addr,
 	}), signer, key)
 
 	if err != nil {
@@ -149,12 +149,12 @@ func TestEIP2930SigningWithChainID(t *testing.T) {
 	signer := NewEIP2930Signer(big.NewInt(10))
 	tx, err := SignTx(NewTx(&TxInternalDataEthereumAccessList{
 		AccountNonce: 1,
-		Amount: big.NewInt(10),
-		Price: big.NewInt(1),
-		GasLimit: 100,
-		AccessList: accessList,
-		Recipient: &addr,
-		ChainID: big.NewInt(10),
+		Amount:       big.NewInt(10),
+		Price:        big.NewInt(1),
+		GasLimit:     100,
+		AccessList:   accessList,
+		Recipient:    &addr,
+		ChainID:      big.NewInt(10),
 	}), signer, key)
 
 	if err != nil {
@@ -175,12 +175,12 @@ func TestEIP2930SigningWithNoBitChainID(t *testing.T) {
 	signer := NewEIP2930Signer(big.NewInt(10))
 	tx, err := SignTx(NewTx(&TxInternalDataEthereumAccessList{
 		AccountNonce: 1,
-		Amount: big.NewInt(10),
-		Price: big.NewInt(1),
-		GasLimit: 100,
-		AccessList: accessList,
-		Recipient: &addr,
-		ChainID: new(big.Int),
+		Amount:       big.NewInt(10),
+		Price:        big.NewInt(1),
+		GasLimit:     100,
+		AccessList:   accessList,
+		Recipient:    &addr,
+		ChainID:      new(big.Int),
 	}), signer, key)
 
 	if err != nil {
