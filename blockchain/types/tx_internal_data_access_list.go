@@ -207,7 +207,7 @@ func newTxInternalDataAccessListWithMap(values map[TxValueKeyType]interface{}) (
 }
 
 func (t *TxInternalDataAccessList) Type() TxType {
-	return TxTypeAccessList
+	return TxTypeEthereumAccessList
 }
 
 func (t *TxInternalDataAccessList) GetRoleTypeForValidation() accountkey.RoleType {
@@ -256,7 +256,7 @@ func (t *TxInternalDataAccessList) SetHash(hash *common.Hash) {
 
 func (t *TxInternalDataAccessList) SetSignature(signatures TxSignatures) {
 	if len(signatures) != 1 {
-		logger.Crit("TxTypeAccessList can receive only single signature!")
+		logger.Crit("TxTypeEthereumAccessList can receive only single signature!")
 	}
 
 	t.V = signatures[0].V

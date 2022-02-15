@@ -631,7 +631,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 		return ErrTxTypeNotSupported
 	}
 	// Reject dynamic fee transactions until EIP-1559 activates.
-	if !pool.eip1559 && tx.Type() == types.TxTypeDynamicFee {
+	if !pool.eip1559 && tx.Type() == types.TxTypeEthereumDynamicFee {
 		return ErrTxTypeNotSupported
 	}
 
@@ -644,7 +644,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 
 	// NOTE-Klaytn Drop transactions with unexpected gasPrice
 	// If the transaction type is DynamicFee tx, Compare transaction's GasFeeCap(MaxFeePerGas) and GasTipCap with tx pool's gasPrice to check to have same value.
-	if tx.Type() == types.TxTypeDynamicFee {
+	if tx.Type() == types.TxTypeEthereumDynamicFee {
 		// Sanity check for extremely large numbers
 		if tx.GasTipCap().BitLen() > 256 {
 			return ErrTipVeryHigh

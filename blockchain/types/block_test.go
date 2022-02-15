@@ -249,7 +249,7 @@ func TestEIP2718BlockEncoding(t *testing.T) {
 	check("len(Transactions)", len(block.Transactions()), 2)
 	check("Transactions[0].Hash", block.Transactions()[0].Hash(), tx1.Hash())
 	check("Transactions[1].Hash", block.Transactions()[1].Hash(), tx2.Hash())
-	check("Transactions[1].Type()", block.Transactions()[1].Type(), TxType(TxTypeAccessList))
+	check("Transactions[1].Type()", block.Transactions()[1].Type(), TxType(TxTypeEthereumAccessList))
 
 	ourBlockEnc, err := rlp.EncodeToBytes(&block)
 	if err != nil {
@@ -331,9 +331,9 @@ func TestEIP1559BlockEncoding(t *testing.T) {
 	check("len(Transactions)", len(block.Transactions()), 3)
 	check("Transactions[0].Hash", block.Transactions()[0].Hash(), tx1.Hash())
 	check("Transactions[1].Hash", block.Transactions()[1].Hash(), tx2.Hash())
-	check("Transactions[1].Type()", block.Transactions()[1].Type(), TxType(TxTypeAccessList))
+	check("Transactions[1].Type()", block.Transactions()[1].Type(), TxType(TxTypeEthereumAccessList))
 	check("Transactions[2].Hash", block.Transactions()[2].Hash(), tx3.Hash())
-	check("Transactions[2].Type()", block.Transactions()[2].Type(), TxType(TxTypeDynamicFee))
+	check("Transactions[2].Type()", block.Transactions()[2].Type(), TxType(TxTypeEthereumDynamicFee))
 
 	ourBlockEnc, err := rlp.EncodeToBytes(&block)
 	if err != nil {

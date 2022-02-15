@@ -299,8 +299,8 @@ func genLegacyTransaction(t *testing.T, signer types.Signer, from TestAccount, t
 }
 
 func genAccessListTransaction(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
-	values, intrinsic := genMapForAccessListTransaction(from, to, gasPrice, types.TxTypeAccessList)
-	tx, err := types.NewTransactionWithMap(types.TxTypeAccessList, values)
+	values, intrinsic := genMapForAccessListTransaction(from, to, gasPrice, types.TxTypeEthereumAccessList)
+	tx, err := types.NewTransactionWithMap(types.TxTypeEthereumAccessList, values)
 	assert.Equal(t, nil, err)
 
 	err = tx.SignWithKeys(signer, from.GetTxKeys())
@@ -310,8 +310,8 @@ func genAccessListTransaction(t *testing.T, signer types.Signer, from TestAccoun
 }
 
 func genDynamicFeeTransaction(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
-	values, intrinsic := genMapForDynamicFeeTransaction(from, to, gasPrice, types.TxTypeDynamicFee)
-	tx, err := types.NewTransactionWithMap(types.TxTypeDynamicFee, values)
+	values, intrinsic := genMapForDynamicFeeTransaction(from, to, gasPrice, types.TxTypeEthereumDynamicFee)
+	tx, err := types.NewTransactionWithMap(types.TxTypeEthereumDynamicFee, values)
 	assert.Equal(t, nil, err)
 
 	err = tx.SignWithKeys(signer, from.GetTxKeys())
@@ -1035,9 +1035,9 @@ func getIntrinsicGas(txType types.TxType) uint64 {
 	switch txType {
 	case types.TxTypeLegacyTransaction:
 		intrinsic = params.TxGas
-	case types.TxTypeAccessList:
+	case types.TxTypeEthereumAccessList:
 		intrinsic = params.TxGas
-	case types.TxTypeDynamicFee:
+	case types.TxTypeEthereumDynamicFee:
 		intrinsic = params.TxGas
 	case types.TxTypeValueTransfer:
 		intrinsic = params.TxGasValueTransfer

@@ -204,7 +204,7 @@ func newTxInternalDataDynamicFeeWithMap(values map[TxValueKeyType]interface{}) (
 }
 
 func (t *TxInternalDataDynamicFee) Type() TxType {
-	return TxTypeDynamicFee
+	return TxTypeEthereumDynamicFee
 }
 
 func (t *TxInternalDataDynamicFee) GetRoleTypeForValidation() accountkey.RoleType {
@@ -257,7 +257,7 @@ func (t *TxInternalDataDynamicFee) SetHash(hash *common.Hash) {
 
 func (t *TxInternalDataDynamicFee) SetSignature(signatures TxSignatures) {
 	if len(signatures) != 1 {
-		logger.Crit("TxTypeDynamicFee can receive only single signature!")
+		logger.Crit("TxTypeEthereumDynamicFee can receive only single signature!")
 	}
 
 	t.V = signatures[0].V

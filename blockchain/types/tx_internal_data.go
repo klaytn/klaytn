@@ -43,7 +43,6 @@ const (
 	//   <base type>, <fee-delegated type>, and <fee-delegated type with a fee ratio>
 	// If types other than <base type> are not useful, they are declared with underscore(_).
 	// Each base type is self-descriptive.
-	// TODO-Klaytn-AccessList: Change TxTypeAccessList to another seperated value.
 	TxTypeLegacyTransaction, _, _ TxType = iota << SubTxTypeBits, iota<<SubTxTypeBits + 1, iota<<SubTxTypeBits + 2
 	TxTypeValueTransfer, TxTypeFeeDelegatedValueTransfer, TxTypeFeeDelegatedValueTransferWithRatio
 	TxTypeValueTransferMemo, TxTypeFeeDelegatedValueTransferMemo, TxTypeFeeDelegatedValueTransferMemoWithRatio
@@ -54,13 +53,15 @@ const (
 	TxTypeCancel, TxTypeFeeDelegatedCancel, TxTypeFeeDelegatedCancelWithRatio
 	TxTypeBatch, _, _
 	TxTypeChainDataAnchoring, TxTypeFeeDelegatedChainDataAnchoring, TxTypeFeeDelegatedChainDataAnchoringWithRatio
-	TxTypeLast, _, _
-	TxTypeEthEnvelope = TxType(0x78)
-	TxTypeAccessList  = TxType(0x7801)
-	TxTypeDynamicFee  = TxType(0x7802)
+	TxTypeKlaytnLast, _, _
+	TxTypeEthereumAccessList = TxType(0x7801)
+	TxTypeEthereumDynamicFee = TxType(0x7802)
+	TxTypeEthereumLast       = TxType(0x7803)
 )
 
 type TxValueKeyType uint
+
+const EthereumTxTypeEnvelope = TxType(0x78)
 
 const (
 	TxValueKeyNonce TxValueKeyType = iota
@@ -210,10 +211,10 @@ func (t TxType) String() string {
 		return "TxTypeFeeDelegatedChainDataAnchoring"
 	case TxTypeFeeDelegatedChainDataAnchoringWithRatio:
 		return "TxTypeFeeDelegatedChainDataAnchoringWithRatio"
-	case TxTypeAccessList:
-		return "TxTypeAccessList"
-	case TxTypeDynamicFee:
-		return "TxTypeDynamicFee"
+	case TxTypeEthereumAccessList:
+		return "TxTypeEthereumAccessList"
+	case TxTypeEthereumDynamicFee:
+		return "TxTypeEthereumDynamicFee"
 	}
 
 	return "UndefinedTxType"
@@ -240,17 +241,15 @@ func (t TxType) IsLegacyTransaction() bool {
 }
 
 func (t TxType) IsFeeDelegatedTransaction() bool {
-	// TODO-Klaytn-AccessList: Remove IsEthTypedTransaction related condition after TxTypeAccessList value changed
-	return (TxTypeMask(t)&(TxFeeDelegationBitMask|TxFeeDelegationWithRatioBitMask)) != 0x0 && !t.IsEthTypedTransaction()
+	return (TxTypeMask(t)&(TxFeeDelegationBitMask|TxFeeDelegationWithRatioBitMask)) != 0x0 && !t.IsEthereumTransaction()
 }
 
 func (t TxType) IsFeeDelegatedWithRatioTransaction() bool {
-	// TODO-Klaytn-AccessList: Remove IsEthTypedTransaction related condition after TxTypeAccessList value changed
-	return (TxTypeMask(t)&TxFeeDelegationWithRatioBitMask) != 0x0 && !t.IsEthTypedTransaction()
+	return (TxTypeMask(t)&TxFeeDelegationWithRatioBitMask) != 0x0 && !t.IsEthereumTransaction()
 }
 
 func (t TxType) IsEthTypedTransaction() bool {
-	return t == TxTypeAccessList || t == TxTypeDynamicFee
+	return (t & 0xff00) == (EthereumTxTypeEnvelope << 8)
 }
 
 func (t TxType) IsEthereumTransaction() bool {
@@ -470,9 +469,9 @@ func NewTxInternalData(t TxType) (TxInternalData, error) {
 		return newTxInternalDataFeeDelegatedChainDataAnchoring(), nil
 	case TxTypeFeeDelegatedChainDataAnchoringWithRatio:
 		return newTxInternalDataFeeDelegatedChainDataAnchoringWithRatio(), nil
-	case TxTypeAccessList:
+	case TxTypeEthereumAccessList:
 		return newTxInternalDataAccessList(), nil
-	case TxTypeDynamicFee:
+	case TxTypeEthereumDynamicFee:
 		return newTxInternalDataDynamicFee(), nil
 	}
 
@@ -527,9 +526,9 @@ func NewTxInternalDataWithMap(t TxType, values map[TxValueKeyType]interface{}) (
 		return newTxInternalDataFeeDelegatedChainDataAnchoringWithMap(values)
 	case TxTypeFeeDelegatedChainDataAnchoringWithRatio:
 		return newTxInternalDataFeeDelegatedChainDataAnchoringWithRatioWithMap(values)
-	case TxTypeAccessList:
+	case TxTypeEthereumAccessList:
 		return newTxInternalDataAccessListWithMap(values)
-	case TxTypeDynamicFee:
+	case TxTypeEthereumDynamicFee:
 		return newTxInternalDataDynamicFeeWithMap(values)
 	}
 

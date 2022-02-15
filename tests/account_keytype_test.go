@@ -329,7 +329,7 @@ func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txTy
 		values[types.TxValueKeyAnchoredData] = dataAnchor
 		values[types.TxValueKeyFeePayer] = recipient.Addr
 		values[types.TxValueKeyFeeRatioOfFeePayer] = ratio
-	case types.TxTypeAccessList:
+	case types.TxTypeEthereumAccessList:
 		values[types.TxValueKeyNonce] = sender.Nonce
 		values[types.TxValueKeyTo] = recipient.Addr
 		values[types.TxValueKeyAmount] = amount
@@ -338,7 +338,7 @@ func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txTy
 		values[types.TxValueKeyChainID] = big.NewInt(1)
 		values[types.TxValueKeyData] = dataCode
 		values[types.TxValueKeyAccessList] = types.AccessList{}
-	case types.TxTypeDynamicFee:
+	case types.TxTypeEthereumDynamicFee:
 		values[types.TxValueKeyNonce] = sender.Nonce
 		values[types.TxValueKeyTo] = recipient.Addr
 		values[types.TxValueKeyAmount] = amount
@@ -502,7 +502,11 @@ func TestDefaultTxsWithDefaultAccountKey(t *testing.T) {
 	}
 
 	txTypes := []types.TxType{}
-	for i := types.TxTypeLegacyTransaction; i < types.TxTypeLast; i++ {
+	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
+		if i == types.TxTypeKlaytnLast {
+			i = types.TxTypeEthereumAccessList
+		}
+
 		_, err := types.NewTxInternalData(i)
 		if err == nil {
 			txTypes = append(txTypes, i)
@@ -1877,7 +1881,11 @@ func TestRoleBasedKeySendTx(t *testing.T) {
 	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
 	txTypes := []types.TxType{}
-	for i := types.TxTypeLegacyTransaction; i < types.TxTypeLast; i++ {
+	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
+		if i == types.TxTypeKlaytnLast {
+			i = types.TxTypeEthereumAccessList
+		}
+
 		if i.IsLegacyTransaction() || i.IsEthTypedTransaction() {
 			continue // accounts with role-based key cannot send the legacy tx and ethereum typed tx.
 		}

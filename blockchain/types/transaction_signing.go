@@ -270,7 +270,7 @@ func (s londonSigner) Equal(s2 Signer) bool {
 }
 
 func (s londonSigner) Sender(tx *Transaction) (common.Address, error) {
-	if tx.Type() != TxTypeDynamicFee {
+	if tx.Type() != TxTypeEthereumDynamicFee {
 		return s.eip2930Signer.Sender(tx)
 	}
 
@@ -288,7 +288,7 @@ func (s londonSigner) Sender(tx *Transaction) (common.Address, error) {
 
 // SenderPubkey returns the public key derived from tx signature and txhash.
 func (s londonSigner) SenderPubkey(tx *Transaction) ([]*ecdsa.PublicKey, error) {
-	if tx.Type() != TxTypeDynamicFee {
+	if tx.Type() != TxTypeEthereumDynamicFee {
 		return s.eip2930Signer.SenderPubkey(tx)
 	}
 
@@ -313,7 +313,7 @@ func (s londonSigner) SenderFeePayer(tx *Transaction) ([]*ecdsa.PublicKey, error
 // SignatureValues returns a new transaction with the given signature. This signature
 // needs to be in the [R || S || V] format where V is 0 or 1.
 func (s londonSigner) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big.Int, err error) {
-	if tx.Type() != TxTypeDynamicFee {
+	if tx.Type() != TxTypeEthereumDynamicFee {
 		return s.eip2930Signer.SignatureValues(tx, sig)
 	}
 
@@ -335,7 +335,7 @@ func (s londonSigner) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big
 // Hash returns the hash to be signed by the sender.
 // It does not uniquely identify the transaction.
 func (s londonSigner) Hash(tx *Transaction) common.Hash {
-	if tx.Type() != TxTypeDynamicFee {
+	if tx.Type() != TxTypeEthereumDynamicFee {
 		return s.eip2930Signer.Hash(tx)
 	}
 
@@ -375,7 +375,7 @@ func (s eip2930Signer) Equal(s2 Signer) bool {
 
 // Sender returns the sender address of the transaction.
 func (s eip2930Signer) Sender(tx *Transaction) (common.Address, error) {
-	if tx.Type() != TxTypeAccessList {
+	if tx.Type() != TxTypeEthereumAccessList {
 		return s.EIP155Signer.Sender(tx)
 	}
 
@@ -393,7 +393,7 @@ func (s eip2930Signer) Sender(tx *Transaction) (common.Address, error) {
 
 // SenderPubkey returns the public key derived from tx signature and txhash.
 func (s eip2930Signer) SenderPubkey(tx *Transaction) ([]*ecdsa.PublicKey, error) {
-	if tx.Type() != TxTypeAccessList {
+	if tx.Type() != TxTypeEthereumAccessList {
 		return s.EIP155Signer.SenderPubkey(tx)
 	}
 
@@ -418,7 +418,7 @@ func (s eip2930Signer) SenderFeePayer(tx *Transaction) ([]*ecdsa.PublicKey, erro
 // SignatureValues returns a new transaction with the given signature. This signature
 // needs to be in the [R || S || V] format where V is 0 or 1.
 func (s eip2930Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big.Int, err error) {
-	if tx.Type() != TxTypeAccessList {
+	if tx.Type() != TxTypeEthereumAccessList {
 		return s.EIP155Signer.SignatureValues(tx, sig)
 	}
 
@@ -435,7 +435,7 @@ func (s eip2930Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *bi
 // Hash returns the hash to be signed by the sender.
 // It does not uniquely identify the transaction.
 func (s eip2930Signer) Hash(tx *Transaction) common.Hash {
-	if tx.Type() != TxTypeAccessList {
+	if tx.Type() != TxTypeEthereumAccessList {
 		return s.EIP155Signer.Hash(tx)
 	}
 
