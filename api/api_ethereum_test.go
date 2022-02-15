@@ -33,10 +33,11 @@ import (
 )
 
 var dummyChainConfigForEthereumAPITest = &params.ChainConfig{
-	ChainID:                 new(big.Int).SetUint64(111111),
-	IstanbulCompatibleBlock: new(big.Int).SetUint64(0),
-	LondonCompatibleBlock:   new(big.Int).SetUint64(0),
-	UnitPrice:               25000000000, // 25 ston
+	ChainID:                  new(big.Int).SetUint64(111111),
+	IstanbulCompatibleBlock:  new(big.Int).SetUint64(0),
+	LondonCompatibleBlock:    new(big.Int).SetUint64(0),
+	EthTxTypeCompatibleBlock: new(big.Int).SetUint64(0),
+	UnitPrice:                25000000000, // 25 ston
 }
 
 // TestEthereumAPI_Etherbase tests Etherbase.
