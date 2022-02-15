@@ -21,9 +21,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/klaytn/klaytn/common"
 	"math"
 	"strings"
+
+	"github.com/klaytn/klaytn/common"
 
 	//"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/klaytn/klaytn/common/hexutil"

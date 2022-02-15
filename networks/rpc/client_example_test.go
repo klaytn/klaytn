@@ -20,9 +20,10 @@ package rpc_test
 import (
 	"context"
 	"fmt"
-	"github.com/klaytn/klaytn/networks/rpc"
 	"math/big"
 	"time"
+
+	"github.com/klaytn/klaytn/networks/rpc"
 	//"github.com/ethereum/go-ethereum/rpc"
 )
 

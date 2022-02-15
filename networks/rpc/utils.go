@@ -21,11 +21,12 @@ import (
 	"bufio"
 	crand "crypto/rand"
 	"encoding/binary"
-	"github.com/klaytn/klaytn/log"
 	"math/rand"
 	"reflect"
 	"sync"
 	"time"
+
+	"github.com/klaytn/klaytn/log"
 )
 
 var (

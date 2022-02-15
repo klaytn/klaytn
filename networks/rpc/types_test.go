@@ -19,8 +19,9 @@ package rpc
 
 import (
 	"encoding/json"
-	"github.com/klaytn/klaytn/common/math"
 	"testing"
+
+	"github.com/klaytn/klaytn/common/math"
 	//"github.com/ethereum/go-ethereum/common/math"
 )
 

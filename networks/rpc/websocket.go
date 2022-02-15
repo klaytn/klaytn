@@ -24,11 +24,12 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"sync/atomic"
+	"time"
+
 	"github.com/klaytn/klaytn/common"
 	"github.com/valyala/fasthttp"
 	"gopkg.in/fatih/set.v0"
-	"sync/atomic"
-	"time"
 
 	//"fmt"
 	"net/http"
