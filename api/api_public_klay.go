@@ -24,10 +24,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/klaytn/klaytn/networks/rpc"
 
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common/hexutil"
+	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/rlp"
 )
 

@@ -470,6 +470,10 @@ var (
 		Name:  "rpc.gascap",
 		Usage: "Sets a cap on gas that can be used in klay_call/estimateGas",
 	}
+	RPCGlobalEthTxFeeCapFlag = cli.Float64Flag{
+		Name:  "rpc.ethtxfeecap",
+		Usage: "Sets a cap on transaction fee (in klay) that can be sent via the eth namespace RPC APIs (0 = no cap)",
+	}
 	RPCConcurrencyLimit = cli.IntFlag{
 		Name:  "rpc.concurrencylimit",
 		Usage: "Sets a limit of concurrent connection number of HTTP-RPC server",
@@ -1673,6 +1677,10 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 
 	if ctx.GlobalIsSet(RPCGlobalGasCap.Name) {
 		cfg.RPCGasCap = new(big.Int).SetUint64(ctx.GlobalUint64(RPCGlobalGasCap.Name))
+	}
+
+	if ctx.GlobalIsSet(RPCGlobalEthTxFeeCapFlag.Name) {
+		cfg.RPCTxFeeCap = ctx.GlobalFloat64(RPCGlobalEthTxFeeCapFlag.Name)
 	}
 
 	// Only CNs could set BlockGenerationIntervalFlag and BlockGenerationTimeLimitFlag

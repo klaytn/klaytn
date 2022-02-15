@@ -127,6 +127,7 @@ var CommonRPCFlags = []cli.Flag{
 	utils.RPCPortFlag,
 	utils.RPCApiFlag,
 	utils.RPCGlobalGasCap,
+	utils.RPCGlobalEthTxFeeCapFlag,
 	utils.WSEnabledFlag,
 	utils.WSListenAddrFlag,
 	utils.WSPortFlag,
