@@ -56,8 +56,7 @@ type sigCachePubkey struct {
 func MakeSigner(config *params.ChainConfig, blockNumber *big.Int) Signer {
 	var signer Signer
 
-	// TODO-Klaytn-AccessList: Make another hardfork for EIP2930Signer instead of London
-	if config.IsLondon(blockNumber) {
+	if config.IsEthTxTypeForkEnabled(blockNumber) {
 		signer = NewLondonSigner(config.ChainID)
 	} else {
 		signer = NewEIP155Signer(config.ChainID)
@@ -74,7 +73,9 @@ func MakeSigner(config *params.ChainConfig, blockNumber *big.Int) Signer {
 // Use this in transaction-handling code where the current block number is unknown. If you
 // have the current block number available, use MakeSigner instead.
 func LatestSigner(config *params.ChainConfig) Signer {
-	if config.LondonCompatibleBlock != nil {
+	// Be aware that it checks whether EthTxTypeCompatibleBlock is set,
+	// but doesn't check whether it is enabled on a specific block number.
+	if config.EthTxTypeCompatibleBlock != nil {
 		return NewLondonSigner(config.ChainID)
 	}
 

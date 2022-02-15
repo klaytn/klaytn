@@ -131,6 +131,7 @@ func TestValidationPoolInsert(t *testing.T) {
 	}
 	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
 	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().EthTxTypeCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -256,6 +257,7 @@ func TestValidationBlockTx(t *testing.T) {
 	}
 	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
 	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().EthTxTypeCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -439,6 +441,7 @@ func TestValidationInvalidSig(t *testing.T) {
 	}
 	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
 	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().EthTxTypeCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -651,6 +654,7 @@ func TestInvalidBalance(t *testing.T) {
 	}
 	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
 	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().EthTxTypeCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -1045,6 +1049,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 	}
 	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
 	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().EthTxTypeCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -1453,6 +1458,7 @@ func TestValidationTxSizeAfterRLP(t *testing.T) {
 	}
 	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
 	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().EthTxTypeCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -1611,6 +1617,7 @@ func TestValidationPoolResetAfterSenderKeyChange(t *testing.T) {
 	}
 	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
 	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().EthTxTypeCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification

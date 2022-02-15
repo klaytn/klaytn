@@ -574,7 +574,7 @@ func TestIntrinsicGas(t *testing.T) {
 	for _, tc := range testData {
 		var (
 			data []byte // input data entered through the tx argument
-			gas  uint64 // the gas varies depending on what comes in as a condition(contractCreate & IsIstanbul)
+			gas  uint64 // the gas varies depending on what comes in as a condition(contractCreate & IsIstanbulForkEnabled)
 			err  error  // in this unittest, every testcase returns nil error.
 		)
 
