@@ -1293,7 +1293,11 @@ func (api *EthereumAPI) FillTransaction(ctx context.Context, args EthTransaction
 		return nil, err
 	}
 
-	return &EthSignTransactionResult{Raw: data, Tx: formatTxToEthTxJSON(tx)}, nil
+	if tx.IsEthTypedTransaction() {
+		// Return rawTx except types.TxTypeEthEnvelope: 0x78(= 1 byte)
+		return &EthSignTransactionResult{data[1:], formatTxToEthTxJSON(tx)}, nil
+	}
+	return &EthSignTransactionResult{data, formatTxToEthTxJSON(tx)}, nil
 }
 
 // SendRawTransaction will add the signed transaction to the transaction pool.
