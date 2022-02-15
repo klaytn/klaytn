@@ -1408,7 +1408,7 @@ func (api *EthereumAPI) PendingTransactions() ([]*EthRPCTransaction, error) {
 // Resend accepts an existing transaction and a new gas price and limit. It will remove
 // the given transaction from the pool and reinsert it with the new gas price and limit.
 func (api *EthereumAPI) Resend(ctx context.Context, sendArgs EthTransactionArgs, gasPrice *hexutil.Big, gasLimit *hexutil.Uint64) (common.Hash, error) {
-	return common.Hash{}, errors.New("this api is not supported by Klaytn because Klaytn use fixed gasPrice policy and there is no gasLimit")
+	return common.Hash{}, errors.New("this api is not supported by Klaytn because Klaytn use fixed gasPrice policy")
 }
 
 // Accounts returns the collection of accounts this node manages.
