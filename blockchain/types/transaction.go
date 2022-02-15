@@ -465,7 +465,7 @@ func (tx *Transaction) Hash() common.Hash {
 	var v common.Hash
 	if tx.IsEthTypedTransaction() {
 		te := tx.data.(TxInternalDataEthTyped)
-		v = te.txHash()
+		v = te.TxHash()
 	} else {
 		v = rlpHash(tx)
 	}
