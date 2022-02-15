@@ -47,7 +47,7 @@ type testAccount struct {
 func makeTestState(t *testing.T) (Database, common.Hash, []*testAccount) {
 	// Create an empty state
 	db := NewDatabase(database.NewMemoryDBManager())
-	statedb, err := New(common.Hash{}, db)
+	statedb, err := New(common.Hash{}, db, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,7 +109,7 @@ func makeTestState(t *testing.T) (Database, common.Hash, []*testAccount) {
 // account array.
 func checkStateAccounts(t *testing.T, newDB database.DBManager, root common.Hash, accounts []*testAccount) {
 	// Check root availability and state contents
-	state, err := New(root, NewDatabase(newDB))
+	state, err := New(root, NewDatabase(newDB), nil)
 	if err != nil {
 		t.Fatalf("failed to create state trie at %x: %v", root, err)
 	}
@@ -167,7 +167,7 @@ func checkStateConsistency(db database.DBManager, root common.Hash) error {
 	if _, err := db.ReadStateTrieNode(root.Bytes()); err != nil {
 		return nil // Consider a non existent state consistent.
 	}
-	state, err := New(root, NewDatabase(db))
+	state, err := New(root, NewDatabase(db), nil)
 	if err != nil {
 		return err
 	}
@@ -272,7 +272,7 @@ func TestCheckStateConsistencyMissNode(t *testing.T) {
 	srcState, srcRoot, _ := makeTestState(t)
 	newState, _, _ := makeTestState(t)
 
-	srcStateDB, err := New(srcRoot, srcState)
+	srcStateDB, err := New(srcRoot, srcState, nil)
 	assert.NoError(t, err)
 
 	it := NewNodeIterator(srcStateDB)

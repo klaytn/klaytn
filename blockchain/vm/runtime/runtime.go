@@ -105,7 +105,7 @@ func Execute(code, input []byte, cfg *Config) ([]byte, *state.StateDB, error) {
 
 	if cfg.State == nil {
 		memDBManager := database.NewMemoryDBManager()
-		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(memDBManager))
+		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(memDBManager), nil)
 	}
 	var (
 		address = common.BytesToAddress([]byte("contract"))
@@ -136,7 +136,7 @@ func Create(input []byte, cfg *Config) ([]byte, common.Address, uint64, error) {
 
 	if cfg.State == nil {
 		memDBManager := database.NewMemoryDBManager()
-		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(memDBManager))
+		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(memDBManager), nil)
 	}
 	var (
 		vmenv  = NewEnv(cfg)

@@ -115,7 +115,7 @@ type StateDB struct {
 }
 
 // Create a new state from a given trie.
-func New(root common.Hash, db Database) (*StateDB, error) {
+func New(root common.Hash, db Database, snaps *snapshot.Tree) (*StateDB, error) {
 	tr, err := db.OpenTrie(root)
 	if err != nil {
 		return nil, err
@@ -123,7 +123,7 @@ func New(root common.Hash, db Database) (*StateDB, error) {
 	sdb := &StateDB{
 		db:                       db,
 		trie:                     tr,
-		snaps:                    nil, // TODO-Klaytn-Snapshot the snaps will be inserted with a parameter of New method
+		snaps:                    snaps,
 		stateObjects:             make(map[common.Address]*stateObject),
 		stateObjectsDirtyStorage: make(map[common.Address]struct{}),
 		stateObjectsDirty:        make(map[common.Address]struct{}),
@@ -142,14 +142,15 @@ func New(root common.Hash, db Database) (*StateDB, error) {
 }
 
 // Create a new state from a given trie with prefetching
-func NewForPrefetching(root common.Hash, db Database) (*StateDB, error) {
+func NewForPrefetching(root common.Hash, db Database, snaps *snapshot.Tree) (*StateDB, error) {
 	tr, err := db.OpenTrieForPrefetching(root)
 	if err != nil {
 		return nil, err
 	}
-	return &StateDB{
+	sdb := &StateDB{
 		db:                       db,
 		trie:                     tr,
+		snaps:                    snaps,
 		stateObjects:             make(map[common.Address]*stateObject),
 		stateObjectsDirtyStorage: make(map[common.Address]struct{}),
 		stateObjectsDirty:        make(map[common.Address]struct{}),
@@ -157,7 +158,15 @@ func NewForPrefetching(root common.Hash, db Database) (*StateDB, error) {
 		preimages:                make(map[common.Hash][]byte),
 		journal:                  newJournal(),
 		prefetching:              true,
-	}, nil
+	}
+	if sdb.snaps != nil {
+		if sdb.snap = sdb.snaps.Snapshot(root); sdb.snap != nil {
+			sdb.snapDestructs = make(map[common.Hash]struct{})
+			sdb.snapAccounts = make(map[common.Hash][]byte)
+			sdb.snapStorage = make(map[common.Hash]map[common.Hash][]byte)
+		}
+	}
+	return sdb, nil
 }
 
 // RLockGCCachedNode locks the GC lock of CachedNode.

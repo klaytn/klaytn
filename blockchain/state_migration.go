@@ -400,7 +400,7 @@ func (bc *BlockChain) StateMigrationStatus() (bool, uint64, int, int, int, float
 func (bc *BlockChain) iterateStateTrie(root common.Hash, db state.Database, resultCh chan struct{}, errCh chan error) (resultErr error) {
 	defer func() { errCh <- resultErr }()
 
-	stateDB, err := state.New(root, db)
+	stateDB, err := state.New(root, db, nil)
 	if err != nil {
 		return err
 	}
@@ -635,7 +635,7 @@ func printDepthStats(depthCounter map[int]int) {
 
 // GetContractStorageRoot returns the storage root of a contract based on the given block.
 func (bc *BlockChain) GetContractStorageRoot(block *types.Block, db state.Database, contractAddr common.Address) (common.Hash, error) {
-	stateDB, err := state.New(block.Root(), db)
+	stateDB, err := state.New(block.Root(), db, nil)
 	if err != nil {
 		return common.Hash{}, fmt.Errorf("failed to get StateDB - %w", err)
 	}
@@ -684,7 +684,7 @@ func (bc *BlockChain) iterateStorageTrie(child common.Hash, storageTrie state.Tr
 }
 
 func prepareContractWarmUp(block *types.Block, db state.Database, contractAddr common.Address) (common.Hash, state.Trie, error) {
-	stateDB, err := state.New(block.Root(), db)
+	stateDB, err := state.New(block.Root(), db, nil)
 	if err != nil {
 		return common.Hash{}, nil, fmt.Errorf("failed to get StateDB, err: %w", err)
 	}
