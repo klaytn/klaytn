@@ -174,12 +174,14 @@ func testTxRLPEncodeLegacy(t *testing.T) {
 	})
 	assert.Equal(t, nil, err)
 	assert.Equal(t, hash(txHashRLP.Bytes()), NewTx(tx).Hash())
+	senderTxHash := NewTx(tx).SenderTxHashAll()
+	assert.Equal(t, hash(txHashRLP.Bytes()), senderTxHash)
 	printRLPEncode(chainId, signer, sigRLP, txHashRLP, txHashRLP, rawTx)
 }
 
 func testTxRLPEncodeAccessList(t *testing.T) {
 	//prvKey, _:= crypto.HexToECDSA("0cfd086137699e1371a78e648748be0011de423269805c28d2d7b9973dcdb3ad")
-	tx := genAccessListTransaction().(*TxInternalDataAccessList)
+	tx := genAccessListTransaction().(*TxInternalDataEthereumAccessList)
 
 	signer := LatestSignerForChainID(big.NewInt(2))
 	rawTx := &Transaction{data: tx}
@@ -222,11 +224,13 @@ func testTxRLPEncodeAccessList(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	assert.Equal(t, hash(txHashRLP.Bytes()), NewTx(tx).Hash())
+	senderTxHash := NewTx(tx).SenderTxHashAll()
+	assert.Equal(t, hash(txHashRLP.Bytes()), senderTxHash)
 	printRLPEncode(signer.ChainID(), signer, sigRLP, txHashRLP, txHashRLP, rawTx)
 }
 
 func testTxRLPEncodeDynamicFee(t *testing.T) {
-	tx := genDynamicFeeTransaction().(*TxInternalDataDynamicFee)
+	tx := genDynamicFeeTransaction().(*TxInternalDataEthereumDynamicFee)
 
 	signer := LatestSignerForChainID(big.NewInt(2))
 	rawTx := &Transaction{data: tx}
@@ -270,6 +274,8 @@ func testTxRLPEncodeDynamicFee(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	assert.Equal(t, hash(txHashRLP.Bytes()), NewTx(tx).Hash())
+	senderTxHash := NewTx(tx).SenderTxHashAll()
+	assert.Equal(t, hash(txHashRLP.Bytes()), senderTxHash)
 	printRLPEncode(signer.ChainID(), signer, sigRLP, txHashRLP, txHashRLP, rawTx)
 }
 
@@ -306,6 +312,8 @@ func testTxRLPEncodeValueTransfer(t *testing.T) {
 	})
 	assert.Equal(t, nil, err)
 	assert.Equal(t, hash(txHashRLP.Bytes()), NewTx(tx).Hash())
+	senderTxHash := NewTx(tx).SenderTxHashAll()
+	assert.Equal(t, hash(txHashRLP.Bytes()), senderTxHash)
 	printRLPEncode(chainId, signer, sigRLP, txHashRLP, txHashRLP, rawTx)
 }
 
@@ -343,6 +351,8 @@ func testTxRLPEncodeValueTransferMemo(t *testing.T) {
 	})
 	assert.Equal(t, nil, err)
 	assert.Equal(t, hash(txHashRLP.Bytes()), NewTx(tx).Hash())
+	senderTxHash := NewTx(tx).SenderTxHashAll()
+	assert.Equal(t, hash(txHashRLP.Bytes()), senderTxHash)
 	printRLPEncode(chainId, signer, sigRLP, txHashRLP, txHashRLP, rawTx)
 }
 
@@ -422,6 +432,8 @@ func testTxRLPEncodeAccountUpdate(t *testing.T) {
 	})
 	assert.Equal(t, nil, err)
 	assert.Equal(t, hash(txHashRLP.Bytes()), NewTx(tx).Hash())
+	senderTxHash := NewTx(tx).SenderTxHashAll()
+	assert.Equal(t, hash(txHashRLP.Bytes()), senderTxHash)
 	printRLPEncode(chainId, signer, sigRLP, txHashRLP, txHashRLP, rawTx)
 }
 
@@ -461,6 +473,8 @@ func testTxRLPEncodeSmartContractDeploy(t *testing.T) {
 	})
 	assert.Equal(t, nil, err)
 	assert.Equal(t, hash(txHashRLP.Bytes()), NewTx(tx).Hash())
+	senderTxHash := NewTx(tx).SenderTxHashAll()
+	assert.Equal(t, hash(txHashRLP.Bytes()), senderTxHash)
 	printRLPEncode(chainId, signer, sigRLP, txHashRLP, txHashRLP, rawTx)
 }
 
@@ -498,6 +512,8 @@ func testTxRLPEncodeSmartContractExecution(t *testing.T) {
 	})
 	assert.Equal(t, nil, err)
 	assert.Equal(t, hash(txHashRLP.Bytes()), NewTx(tx).Hash())
+	senderTxHash := NewTx(tx).SenderTxHashAll()
+	assert.Equal(t, hash(txHashRLP.Bytes()), senderTxHash)
 	printRLPEncode(chainId, signer, sigRLP, txHashRLP, txHashRLP, rawTx)
 }
 
@@ -532,6 +548,8 @@ func testTxRLPEncodeCancel(t *testing.T) {
 	})
 	assert.Equal(t, nil, err)
 	assert.Equal(t, hash(txHashRLP.Bytes()), NewTx(tx).Hash())
+	senderTxHash := NewTx(tx).SenderTxHashAll()
+	assert.Equal(t, hash(txHashRLP.Bytes()), senderTxHash)
 	printRLPEncode(chainId, signer, sigRLP, txHashRLP, txHashRLP, rawTx)
 }
 
@@ -567,6 +585,8 @@ func testTxRLPEncodeChainDataAnchoring(t *testing.T) {
 	})
 	assert.Equal(t, nil, err)
 	assert.Equal(t, hash(txHashRLP.Bytes()), NewTx(tx).Hash())
+	senderTxHash := NewTx(tx).SenderTxHashAll()
+	assert.Equal(t, hash(txHashRLP.Bytes()), senderTxHash)
 	printRLPEncode(chainId, signer, sigRLP, txHashRLP, txHashRLP, rawTx)
 }
 
@@ -632,6 +652,8 @@ func testTxRLPEncodeFeeDelegatedValueTransfer(t *testing.T) {
 	})
 	assert.Equal(t, nil, err)
 	assert.Equal(t, hash(txHashRLP.Bytes()), NewTx(tx).Hash())
+	senderTxHash := NewTx(tx).SenderTxHashAll()
+	assert.Equal(t, hash(senderTxHashRLP.Bytes()), senderTxHash)
 	printFeeDelegatedRLPEncode(t, chainId, signer, sigRLP, feePayerSigRLP, txHashRLP, senderTxHashRLP, rawTx)
 }
 
@@ -699,6 +721,8 @@ func testTxRLPEncodeFeeDelegatedValueTransferMemo(t *testing.T) {
 	})
 	assert.Equal(t, nil, err)
 	assert.Equal(t, hash(txHashRLP.Bytes()), NewTx(tx).Hash())
+	senderTxHash := NewTx(tx).SenderTxHashAll()
+	assert.Equal(t, hash(senderTxHashRLP.Bytes()), senderTxHash)
 	printFeeDelegatedRLPEncode(t, chainId, signer, sigRLP, feePayerSigRLP, txHashRLP, senderTxHashRLP, rawTx)
 }
 
@@ -765,6 +789,8 @@ func testTxRLPEncodeFeeDelegatedAccountUpdate(t *testing.T) {
 	})
 	assert.Equal(t, nil, err)
 	assert.Equal(t, hash(txHashRLP.Bytes()), NewTx(tx).Hash())
+	senderTxHash := NewTx(tx).SenderTxHashAll()
+	assert.Equal(t, hash(senderTxHashRLP.Bytes()), senderTxHash)
 	printFeeDelegatedRLPEncode(t, chainId, signer, sigRLP, feePayerSigRLP, txHashRLP, senderTxHashRLP, rawTx)
 }
 
@@ -836,6 +862,8 @@ func testTxRLPEncodeFeeDelegatedSmartContractDeploy(t *testing.T) {
 	})
 	assert.Equal(t, nil, err)
 	assert.Equal(t, hash(txHashRLP.Bytes()), NewTx(tx).Hash())
+	senderTxHash := NewTx(tx).SenderTxHashAll()
+	assert.Equal(t, hash(senderTxHashRLP.Bytes()), senderTxHash)
 	printFeeDelegatedRLPEncode(t, chainId, signer, sigRLP, feePayerSigRLP, txHashRLP, senderTxHashRLP, rawTx)
 }
 
@@ -903,6 +931,8 @@ func testTxRLPEncodeFeeDelegatedSmartContractExecution(t *testing.T) {
 	})
 	assert.Equal(t, nil, err)
 	assert.Equal(t, hash(txHashRLP.Bytes()), NewTx(tx).Hash())
+	senderTxHash := NewTx(tx).SenderTxHashAll()
+	assert.Equal(t, hash(senderTxHashRLP.Bytes()), senderTxHash)
 	printFeeDelegatedRLPEncode(t, chainId, signer, sigRLP, feePayerSigRLP, txHashRLP, senderTxHashRLP, rawTx)
 }
 
@@ -964,6 +994,8 @@ func testTxRLPEncodeFeeDelegatedCancel(t *testing.T) {
 	})
 	assert.Equal(t, nil, err)
 	assert.Equal(t, hash(txHashRLP.Bytes()), NewTx(tx).Hash())
+	senderTxHash := NewTx(tx).SenderTxHashAll()
+	assert.Equal(t, hash(senderTxHashRLP.Bytes()), senderTxHash)
 	printFeeDelegatedRLPEncode(t, chainId, signer, sigRLP, feePayerSigRLP, txHashRLP, senderTxHashRLP, rawTx)
 }
 
@@ -1027,6 +1059,8 @@ func testTxRLPEncodeFeeDelegatedChainDataAnchoring(t *testing.T) {
 	})
 	assert.Equal(t, nil, err)
 	assert.Equal(t, hash(txHashRLP.Bytes()), NewTx(tx).Hash())
+	senderTxHash := NewTx(tx).SenderTxHashAll()
+	assert.Equal(t, hash(senderTxHashRLP.Bytes()), senderTxHash)
 	printFeeDelegatedRLPEncode(t, chainId, signer, sigRLP, feePayerSigRLP, txHashRLP, senderTxHashRLP, rawTx)
 }
 
@@ -1094,6 +1128,8 @@ func testTxRLPEncodeFeeDelegatedValueTransferWithRatio(t *testing.T) {
 	})
 	assert.Equal(t, nil, err)
 	assert.Equal(t, hash(txHashRLP.Bytes()), NewTx(tx).Hash())
+	senderTxHash := NewTx(tx).SenderTxHashAll()
+	assert.Equal(t, hash(senderTxHashRLP.Bytes()), senderTxHash)
 	printFeeDelegatedRLPEncode(t, chainId, signer, sigRLP, feePayerSigRLP, txHashRLP, senderTxHashRLP, rawTx)
 }
 
@@ -1157,11 +1193,14 @@ func testTxRLPEncodeFeeDelegatedValueTransferMemoWithRatio(t *testing.T) {
 		tx.Recipient,
 		tx.Amount,
 		tx.From,
+		tx.Payload,
 		tx.FeeRatio,
 		tx.TxSignatures,
 	})
 	assert.Equal(t, nil, err)
 	assert.Equal(t, hash(txHashRLP.Bytes()), NewTx(tx).Hash())
+	senderTxHash := NewTx(tx).SenderTxHashAll()
+	assert.Equal(t, hash(senderTxHashRLP.Bytes()), senderTxHash)
 	printFeeDelegatedRLPEncode(t, chainId, signer, sigRLP, feePayerSigRLP, txHashRLP, senderTxHashRLP, rawTx)
 }
 
@@ -1230,6 +1269,8 @@ func testTxRLPEncodeFeeDelegatedAccountUpdateWithRatio(t *testing.T) {
 	})
 	assert.Equal(t, nil, err)
 	assert.Equal(t, hash(txHashRLP.Bytes()), NewTx(tx).Hash())
+	senderTxHash := NewTx(tx).SenderTxHashAll()
+	assert.Equal(t, hash(senderTxHashRLP.Bytes()), senderTxHash)
 	printFeeDelegatedRLPEncode(t, chainId, signer, sigRLP, feePayerSigRLP, txHashRLP, senderTxHashRLP, rawTx)
 }
 
@@ -1303,6 +1344,8 @@ func testTxRLPEncodeFeeDelegatedSmartContractDeployWithRatio(t *testing.T) {
 	})
 	assert.Equal(t, nil, err)
 	assert.Equal(t, hash(txHashRLP.Bytes()), NewTx(tx).Hash())
+	senderTxHash := NewTx(tx).SenderTxHashAll()
+	assert.Equal(t, hash(senderTxHashRLP.Bytes()), senderTxHash)
 	printFeeDelegatedRLPEncode(t, chainId, signer, sigRLP, feePayerSigRLP, txHashRLP, senderTxHashRLP, rawTx)
 }
 
@@ -1371,7 +1414,9 @@ func testTxRLPEncodeFeeDelegatedSmartContractExecutionWithRatio(t *testing.T) {
 		tx.TxSignatures,
 	})
 	assert.Equal(t, nil, err)
-
+	assert.Equal(t, hash(txHashRLP.Bytes()), NewTx(tx).Hash())
+	senderTxHash := NewTx(tx).SenderTxHashAll()
+	assert.Equal(t, hash(senderTxHashRLP.Bytes()), senderTxHash)
 	printFeeDelegatedRLPEncode(t, chainId, signer, sigRLP, feePayerSigRLP, txHashRLP, senderTxHashRLP, rawTx)
 }
 
@@ -1435,6 +1480,8 @@ func testTxRLPEncodeFeeDelegatedCancelWithRatio(t *testing.T) {
 	})
 	assert.Equal(t, nil, err)
 	assert.Equal(t, hash(txHashRLP.Bytes()), NewTx(tx).Hash())
+	senderTxHash := NewTx(tx).SenderTxHashAll()
+	assert.Equal(t, hash(senderTxHashRLP.Bytes()), senderTxHash)
 	printFeeDelegatedRLPEncode(t, chainId, signer, sigRLP, feePayerSigRLP, txHashRLP, senderTxHashRLP, rawTx)
 }
 
@@ -1500,6 +1547,8 @@ func testTxRLPEncodeFeeDelegatedChainDataAnchoringWithRatio(t *testing.T) {
 	})
 	assert.Equal(t, nil, err)
 	assert.Equal(t, hash(txHashRLP.Bytes()), NewTx(tx).Hash())
+	senderTxHash := NewTx(tx).SenderTxHashAll()
+	assert.Equal(t, hash(senderTxHashRLP.Bytes()), senderTxHash)
 	printFeeDelegatedRLPEncode(t, chainId, signer, sigRLP, feePayerSigRLP, txHashRLP, senderTxHashRLP, rawTx)
 }
 

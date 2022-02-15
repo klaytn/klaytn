@@ -52,7 +52,7 @@ func (serializer *TxInternalDataSerializer) EncodeRLP(w io.Writer) error {
 
 	if serializer.txType.IsEthTypedTransaction() {
 		ethType := byte(serializer.txType)
-		if _, err := w.Write([]byte{byte(TxTypeEthEnvelope), ethType}); err != nil {
+		if _, err := w.Write([]byte{byte(EthereumTxTypeEnvelope), ethType}); err != nil {
 			return err
 		}
 	} else {
@@ -76,7 +76,7 @@ func (serializer *TxInternalDataSerializer) DecodeRLP(s *rlp.Stream) error {
 		return nil
 	}
 
-	if serializer.txType == TxTypeEthEnvelope {
+	if serializer.txType == EthereumTxTypeEnvelope {
 		var ethType TxType
 		if err := s.Decode(&ethType); err != nil {
 			return err

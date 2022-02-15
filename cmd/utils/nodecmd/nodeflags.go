@@ -116,6 +116,8 @@ var CommonNodeFlags = []cli.Flag{
 	utils.APIFilterGetLogsMaxItemsFlag,
 	utils.APIFilterGetLogsDeadlineFlag,
 	utils.OpcodeComputationCostLimitFlag,
+	utils.SnapshotFlag,
+	utils.SnapshotCacheSizeFlag,
 }
 
 // Common RPC flags

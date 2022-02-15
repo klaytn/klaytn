@@ -123,6 +123,7 @@ type Config struct {
 	SenderTxHashIndexing bool
 	ParallelDBWrite      bool
 	TrieNodeCacheConfig  statedb.TrieNodeCacheConfig
+	SnapshotCacheSize    int
 
 	// Mining-related options
 	ServiceChainSigner common.Address `toml:",omitempty"`

@@ -356,14 +356,14 @@ type (
 	// before head header is updated. The method will return the actual block it
 	// updated the head to (missing state) and a flag if setHead should continue
 	// rewinding till that forcefully (exceeded ancient limits)
-	UpdateHeadBlocksCallback func(*types.Header)
+	UpdateHeadBlocksCallback func(*types.Header) error
 
 	// DeleteBlockContentCallback is a callback function that is called by SetHead
 	// before each header is deleted.
 	DeleteBlockContentCallback func(common.Hash, uint64)
 )
 
-func (hc *HeaderChain) SetHead(head uint64, updateFn UpdateHeadBlocksCallback, delFn DeleteBlockContentCallback) {
+func (hc *HeaderChain) SetHead(head uint64, updateFn UpdateHeadBlocksCallback, delFn DeleteBlockContentCallback) error {
 	var (
 		parentHash common.Hash
 	)
@@ -385,7 +385,9 @@ func (hc *HeaderChain) SetHead(head uint64, updateFn UpdateHeadBlocksCallback, d
 		//
 		// Update head first(head fast block, head full block) before deleting the data.
 		if updateFn != nil {
-			updateFn(parent)
+			if err := updateFn(parent); err != nil {
+				return err
+			}
 		}
 		// Update head header then.
 		hc.chainDB.WriteHeadHeaderHash(parentHash)
@@ -406,6 +408,7 @@ func (hc *HeaderChain) SetHead(head uint64, updateFn UpdateHeadBlocksCallback, d
 
 	// Clear out any stale content from the caches
 	hc.chainDB.ClearHeaderChainCache()
+	return nil
 }
 
 // SetGenesis sets a new genesis block header for the chain

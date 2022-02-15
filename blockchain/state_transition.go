@@ -95,7 +95,7 @@ type Message interface {
 
 	GasPrice() *big.Int
 
-	// For TxTypeDynamicFee
+	// For TxTypeEthereumDynamicFee
 	GasTipCap() *big.Int
 	GasFeeCap() *big.Int
 	EffectiveGasTip(baseFee *big.Int) *big.Int

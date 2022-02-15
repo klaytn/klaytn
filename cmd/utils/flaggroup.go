@@ -305,6 +305,8 @@ var FlagGroups = []FlagGroup{
 			RestartTimeOutFlag,
 			DaemonPathFlag,
 			KESNodeTypeServiceFlag,
+			SnapshotFlag,
+			SnapshotCacheSizeFlag,
 		},
 	},
 }

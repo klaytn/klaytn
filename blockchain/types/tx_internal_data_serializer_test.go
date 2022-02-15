@@ -97,7 +97,11 @@ func TestTransactionSerialization(t *testing.T) {
 
 	// Below code checks whether serialization for all tx implementations is done or not.
 	// If no serialization, make test failed.
-	for i := TxTypeLegacyTransaction; i < TxTypeLast; i++ {
+	for i := TxTypeLegacyTransaction; i < TxTypeEthereumLast; i++ {
+		if i == TxTypeKlaytnLast {
+			i = TxTypeEthereumAccessList
+		}
+
 		tx, err := NewTxInternalData(i)
 		// TxTypeAccountCreation is not supported now
 		if i == TxTypeAccountCreation {
@@ -128,7 +132,7 @@ func testTransactionRLP(t *testing.T, tx TxInternalData) {
 	}
 
 	if tx.Type().IsEthTypedTransaction() {
-		assert.Equal(t, byte(TxTypeEthEnvelope), b[0])
+		assert.Equal(t, byte(EthereumTxTypeEnvelope), b[0])
 	}
 
 	dec := newTxInternalDataSerializer()
@@ -191,7 +195,7 @@ func newRPCTransaction(tx *Transaction, blockHash common.Hash, blockNumber uint6
 }
 
 func testTransactionRPC(t *testing.T, tx TxInternalData) {
-	//TODO - To test AccessList tx, it need to latest signer.
+	// To test AccessList tx, it need to latest signer.
 	//signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
 	signer := LatestSignerForChainID(big.NewInt(2))
 	rawTx := &Transaction{data: tx}
@@ -242,7 +246,7 @@ func genLegacyTransaction() TxInternalData {
 }
 
 func genAccessListTransaction() TxInternalData {
-	tx, err := NewTxInternalDataWithMap(TxTypeAccessList, map[TxValueKeyType]interface{}{
+	tx, err := NewTxInternalDataWithMap(TxTypeEthereumAccessList, map[TxValueKeyType]interface{}{
 		TxValueKeyNonce:      nonce,
 		TxValueKeyTo:         to,
 		TxValueKeyAmount:     amount,
@@ -261,7 +265,7 @@ func genAccessListTransaction() TxInternalData {
 }
 
 func genDynamicFeeTransaction() TxInternalData {
-	tx, err := NewTxInternalDataWithMap(TxTypeDynamicFee, map[TxValueKeyType]interface{}{
+	tx, err := NewTxInternalDataWithMap(TxTypeEthereumDynamicFee, map[TxValueKeyType]interface{}{
 		TxValueKeyNonce:      nonce,
 		TxValueKeyTo:         to,
 		TxValueKeyAmount:     amount,

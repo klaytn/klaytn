@@ -80,7 +80,11 @@ func TestTransactionSenderTxHash(t *testing.T) {
 
 	// Below code checks whether serialization for all tx implementations is done or not.
 	// If no serialization, make test failed.
-	for i := TxTypeLegacyTransaction; i < TxTypeLast; i++ {
+	for i := TxTypeLegacyTransaction; i < TxTypeEthereumLast; i++ {
+		if i == TxTypeKlaytnLast {
+			i = TxTypeEthereumAccessList
+		}
+
 		// TxTypeAccountCreation is not supported now
 		if i == TxTypeAccountCreation {
 			continue
@@ -418,7 +422,7 @@ func testTransactionSenderTxHash(t *testing.T, tx TxInternalData) {
 		hw.Sum(h[:0])
 		senderTxHash := rawTx.GetTxInternalData().SenderTxHash()
 		assert.Equal(t, h, senderTxHash)
-	case *TxInternalDataAccessList:
+	case *TxInternalDataEthereumAccessList:
 		hw := sha3.NewKeccak256()
 		rlp.Encode(hw, byte(rawTx.Type()))
 		rlp.Encode(hw, []interface{}{
@@ -440,7 +444,7 @@ func testTransactionSenderTxHash(t *testing.T, tx TxInternalData) {
 		hw.Sum(h[:0])
 		senderTxHash := rawTx.GetTxInternalData().SenderTxHash()
 		assert.Equal(t, h, senderTxHash)
-	case *TxInternalDataDynamicFee:
+	case *TxInternalDataEthereumDynamicFee:
 		hw := sha3.NewKeccak256()
 		rlp.Encode(hw, byte(rawTx.Type()))
 		rlp.Encode(hw, []interface{}{
@@ -463,7 +467,6 @@ func testTransactionSenderTxHash(t *testing.T, tx TxInternalData) {
 		hw.Sum(h[:0])
 		senderTxHash := rawTx.GetTxInternalData().SenderTxHash()
 		assert.Equal(t, h, senderTxHash)
-
 	default:
 		t.Fatal("Undefined tx type.")
 	}

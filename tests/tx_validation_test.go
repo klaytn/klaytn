@@ -85,11 +85,11 @@ func genMapForTxTypes(from TestAccount, to TestAccount, txType types.TxType) (tx
 		valueMap[types.TxValueKeyFeeRatioOfFeePayer] = types.FeeRatio(30)
 	}
 
-	if txType == types.TxTypeAccessList {
+	if txType == types.TxTypeEthereumAccessList {
 		valueMap, gas = genMapForAccessListTransaction(from, to, gasPrice, txType)
 	}
 
-	if txType == types.TxTypeDynamicFee {
+	if txType == types.TxTypeEthereumDynamicFee {
 		valueMap, gas = genMapForDynamicFeeTransaction(from, to, gasPrice, txType)
 	}
 
@@ -103,7 +103,11 @@ func TestValidationPoolInsert(t *testing.T) {
 	}
 
 	var testTxTypes = []testTxType{}
-	for i := types.TxTypeLegacyTransaction; i < types.TxTypeLast; i++ {
+	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
+		if i == types.TxTypeKlaytnLast {
+			i = types.TxTypeEthereumAccessList
+		}
+
 		_, err := types.NewTxInternalData(i)
 		if err == nil {
 			testTxTypes = append(testTxTypes, testTxType{i.String(), i})
@@ -230,7 +234,11 @@ func TestValidationBlockTx(t *testing.T) {
 	}
 
 	var testTxTypes = []testTxType{}
-	for i := types.TxTypeLegacyTransaction; i < types.TxTypeLast; i++ {
+	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
+		if i == types.TxTypeKlaytnLast {
+			i = types.TxTypeEthereumAccessList
+		}
+
 		_, err := types.NewTxInternalData(i)
 		if err == nil {
 			testTxTypes = append(testTxTypes, testTxType{i.String(), i})
@@ -354,7 +362,7 @@ func decreaseNonce(txType types.TxType, values txValueMap, contract common.Addre
 // decreaseGasLimit changes gasLimit to 12345678
 func decreaseGasLimit(txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
 	var err error
-	if txType == types.TxTypeDynamicFee {
+	if txType == types.TxTypeEthereumDynamicFee {
 		(*big.Int).SetUint64(values[types.TxValueKeyGasFeeCap].(*big.Int), 12345678)
 		(*big.Int).SetUint64(values[types.TxValueKeyGasTipCap].(*big.Int), 12345678)
 		err = blockchain.ErrInvalidGasTipCap
@@ -415,7 +423,11 @@ func invalidCodeFormat(txType types.TxType, values txValueMap, contract common.A
 // TestValidationInvalidSig generates txs signed by an invalid sender or a fee payer.
 func TestValidationInvalidSig(t *testing.T) {
 	var testTxTypes = []testTxType{}
-	for i := types.TxTypeLegacyTransaction; i < types.TxTypeLast; i++ {
+	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
+		if i == types.TxTypeKlaytnLast {
+			i = types.TxTypeEthereumAccessList
+		}
+
 		_, err := types.NewTxInternalData(i)
 		if err == nil {
 			testTxTypes = append(testTxTypes, testTxType{i.String(), i})
@@ -635,7 +647,11 @@ func TestLegacyTxFromNonLegacyAcc(t *testing.T) {
 // TestInvalidBalance generates invalid txs which don't have enough KLAY, and will be invalidated during txPool insert process.
 func TestInvalidBalance(t *testing.T) {
 	var testTxTypes = []testTxType{}
-	for i := types.TxTypeLegacyTransaction; i < types.TxTypeLast; i++ {
+	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
+		if i == types.TxTypeKlaytnLast {
+			i = types.TxTypeEthereumAccessList
+		}
+
 		_, err := types.NewTxInternalData(i)
 		if err == nil {
 			testTxTypes = append(testTxTypes, testTxType{i.String(), i})
@@ -1025,7 +1041,11 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 	}
 
 	var testTxTypes = []testTxType{}
-	for i := types.TxTypeLegacyTransaction; i < types.TxTypeLast; i++ {
+	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
+		if i == types.TxTypeKlaytnLast {
+			i = types.TxTypeEthereumAccessList
+		}
+
 		_, err := types.NewTxInternalData(i)
 		if err == nil {
 			testTxTypes = append(testTxTypes, testTxType{i.String(), i})
@@ -1434,7 +1454,11 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 // Since the size is RLP encoded tx size, the test also includes RLP encoding/decoding process which may raise an issue.
 func TestValidationTxSizeAfterRLP(t *testing.T) {
 	var testTxTypes = []types.TxType{}
-	for i := types.TxTypeLegacyTransaction; i < types.TxTypeLast; i++ {
+	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
+		if i == types.TxTypeKlaytnLast {
+			i = types.TxTypeEthereumAccessList
+		}
+
 		tx, err := types.NewTxInternalData(i)
 		if err == nil {
 			// Since this test is for payload size, tx types without payload field will not be tested.
@@ -1595,7 +1619,11 @@ func TestValidationTxSizeAfterRLP(t *testing.T) {
 // Since the tx changes the sender's account key, all rest txs should drop from the pending pool.
 func TestValidationPoolResetAfterSenderKeyChange(t *testing.T) {
 	txTypes := []types.TxType{}
-	for i := types.TxTypeLegacyTransaction; i < types.TxTypeLast; i++ {
+	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
+		if i == types.TxTypeKlaytnLast {
+			i = types.TxTypeEthereumAccessList
+		}
+
 		_, err := types.NewTxInternalData(i)
 		if err == nil {
 			txTypes = append(txTypes, i)
@@ -1735,7 +1763,11 @@ func TestValidationPoolResetAfterSenderKeyChange(t *testing.T) {
 // Since the tx changes the fee payer's account key, all rest txs should drop from the pending pool.
 func TestValidationPoolResetAfterFeePayerKeyChange(t *testing.T) {
 	txTypes := []types.TxType{}
-	for i := types.TxTypeLegacyTransaction; i < types.TxTypeLast; i++ {
+	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
+		if i == types.TxTypeKlaytnLast {
+			i = types.TxTypeEthereumAccessList
+		}
+
 		_, err := types.NewTxInternalData(i)
 		if err == nil {
 			// This test is only for fee-delegated tx types
