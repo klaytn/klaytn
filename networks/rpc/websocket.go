@@ -176,6 +176,11 @@ func wsClientHeaders(endpoint, origin string) (string, http.Header, error) {
 	if err != nil {
 		return endpoint, nil, err
 	}
+
+	// set origin header with os hostname when no origin is set
+	// because TestStartRPC in node/api_test.go fails when origin is null
+	// fails when websocket related test on runTestWithServerType(t, test, "fasthttp")
+
 	if origin == "" {
 		var err error
 		if origin, err = os.Hostname(); err != nil {
