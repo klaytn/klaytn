@@ -781,7 +781,7 @@ func newEthRPCPendingTransaction(tx *types.Transaction) *EthRPCTransaction {
 	return newEthRPCTransaction(tx, common.Hash{}, 0, 0)
 }
 
-// formatTxToEthTxJSON format Transaction to ethTxJSON.
+// formatTxToEthTxJSON formats types.Transaction to ethTxJSON.
 // Use this function for only Ethereum typed transaction.
 func formatTxToEthTxJSON(tx *types.Transaction) *ethTxJSON {
 	var enc ethTxJSON
