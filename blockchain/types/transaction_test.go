@@ -62,7 +62,7 @@ var (
 		common.Hex2Bytes("98ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4a8887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a301"),
 	)
 
-	accessListTx = TxInternalDataAccessList{
+	accessListTx = TxInternalDataEthereumAccessList{
 		ChainID:      big.NewInt(1),
 		AccountNonce: 3,
 		Recipient:    &testAddr,
@@ -140,9 +140,9 @@ func TestEIP2930Signer(t *testing.T) {
 		keyAddr = crypto.PubkeyToAddress(key.PublicKey)
 		signer1 = NewEIP2930Signer(big.NewInt(1))
 		signer2 = NewEIP2930Signer(big.NewInt(2))
-		tx0     = NewTx(&TxInternalDataAccessList{AccountNonce: 1, ChainID: new(big.Int)})
-		tx1     = NewTx(&TxInternalDataAccessList{ChainID: big.NewInt(1), AccountNonce: 1, V: new(big.Int), R: new(big.Int), S: new(big.Int)})
-		tx2, _  = SignTx(NewTx(&TxInternalDataAccessList{ChainID: big.NewInt(2), AccountNonce: 1}), signer2, key)
+		tx0     = NewTx(&TxInternalDataEthereumAccessList{AccountNonce: 1, ChainID: new(big.Int)})
+		tx1     = NewTx(&TxInternalDataEthereumAccessList{ChainID: big.NewInt(1), AccountNonce: 1, V: new(big.Int), R: new(big.Int), S: new(big.Int)})
+		tx2, _  = SignTx(NewTx(&TxInternalDataEthereumAccessList{ChainID: big.NewInt(2), AccountNonce: 1}), signer2, key)
 	)
 
 	tests := []struct {
@@ -633,7 +633,7 @@ func TestTransactionCoding(t *testing.T) {
 			}
 		case 2:
 			// Tx with non-zero access list.
-			txData = &TxInternalDataAccessList{
+			txData = &TxInternalDataEthereumAccessList{
 				ChainID:      big.NewInt(1),
 				AccountNonce: i,
 				Recipient:    &recipient,
@@ -644,7 +644,7 @@ func TestTransactionCoding(t *testing.T) {
 			}
 		case 3:
 			// Tx with empty access list.
-			txData = &TxInternalDataAccessList{
+			txData = &TxInternalDataEthereumAccessList{
 				ChainID:      big.NewInt(1),
 				AccountNonce: i,
 				Recipient:    &recipient,
@@ -654,7 +654,7 @@ func TestTransactionCoding(t *testing.T) {
 			}
 		case 4:
 			// Contract creation with access list.
-			txData = &TxInternalDataAccessList{
+			txData = &TxInternalDataEthereumAccessList{
 				ChainID:      big.NewInt(1),
 				AccountNonce: i,
 				GasLimit:     123457,

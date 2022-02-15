@@ -470,7 +470,7 @@ func NewTxInternalData(t TxType) (TxInternalData, error) {
 	case TxTypeFeeDelegatedChainDataAnchoringWithRatio:
 		return newTxInternalDataFeeDelegatedChainDataAnchoringWithRatio(), nil
 	case TxTypeEthereumAccessList:
-		return newTxInternalDataAccessList(), nil
+		return newTxInternalDataEthereumAccessList(), nil
 	case TxTypeEthereumDynamicFee:
 		return newTxInternalDataDynamicFee(), nil
 	}
@@ -527,7 +527,7 @@ func NewTxInternalDataWithMap(t TxType, values map[TxValueKeyType]interface{}) (
 	case TxTypeFeeDelegatedChainDataAnchoringWithRatio:
 		return newTxInternalDataFeeDelegatedChainDataAnchoringWithRatioWithMap(values)
 	case TxTypeEthereumAccessList:
-		return newTxInternalDataAccessListWithMap(values)
+		return newTxInternalDataEthereumAccessListWithMap(values)
 	case TxTypeEthereumDynamicFee:
 		return newTxInternalDataDynamicFeeWithMap(values)
 	}

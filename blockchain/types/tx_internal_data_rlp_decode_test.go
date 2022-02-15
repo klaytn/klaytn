@@ -791,7 +791,7 @@ func testTxRLPDecodeFeeDelegatedChainDataAnchoringWithRatio(t *testing.T) {
 }
 
 func testTxRLPDecodeAccessList(t *testing.T) {
-	tx := genAccessListTransaction().(*TxInternalDataAccessList)
+	tx := genAccessListTransaction().(*TxInternalDataEthereumAccessList)
 
 	buffer := new(bytes.Buffer)
 	err := rlp.Encode(buffer, tx.Type())

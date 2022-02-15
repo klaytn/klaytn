@@ -236,7 +236,7 @@ func TestEIP2718BlockEncoding(t *testing.T) {
 
 	// Create ACL tx.
 	addr := common.HexToAddress("0x0000000000000000000000000000000000000001")
-	tx2 := NewTx(&TxInternalDataAccessList{
+	tx2 := NewTx(&TxInternalDataEthereumAccessList{
 		ChainID:      big.NewInt(1),
 		AccountNonce: 0,
 		Recipient:    &to,
@@ -303,7 +303,7 @@ func TestEIP1559BlockEncoding(t *testing.T) {
 
 	// Create ACL tx.
 	addr := common.HexToAddress("0x0000000000000000000000000000000000000001")
-	tx2 := NewTx(&TxInternalDataAccessList{
+	tx2 := NewTx(&TxInternalDataEthereumAccessList{
 		ChainID:      big.NewInt(1),
 		AccountNonce: 0,
 		Recipient:    &to,
