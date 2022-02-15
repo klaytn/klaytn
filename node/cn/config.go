@@ -170,7 +170,8 @@ type Config struct {
 	RPCGasCap *big.Int `toml:",omitempty"`
 
 	// RPCTxFeeCap is the global transaction fee(price * gaslimit) cap for
-	// send-transction variants. The unit is ether.
+	// send-transction variants. The unit is klay.
+	// This is used by eth namespace RPC APIs
 	RPCTxFeeCap float64
 }
 
