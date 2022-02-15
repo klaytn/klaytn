@@ -771,7 +771,7 @@ func newEthRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNum
 		// TODO-Klaytn: If we change the gas price policy from fixed to dynamic,
 		// We should recalculate gasPrice as effectiveGasPrice like below.
 		// price := math.BigMin(new(big.Int).Add(tx.GasTipCap(), baseFee), tx.GasFeeCap())
-		// result.GasPrice = (*hexutil.Big)(price)	}
+		// result.GasPrice = (*hexutil.Big)(price)
 	}
 	return result
 }
@@ -1295,10 +1295,9 @@ func (api *EthereumAPI) SendRawTransaction(ctx context.Context, input hexutil.By
 		inputBytes := []byte{byte(types.TxTypeEthEnvelope)}
 		inputBytes = append(inputBytes, input...)
 		return api.publicTransactionPoolAPI.SendRawTransaction(ctx, inputBytes)
-	} else {
-		// legacy transaction
-		return api.publicTransactionPoolAPI.SendRawTransaction(ctx, input)
-	}
+	}	
+	// legacy transaction
+	return api.publicTransactionPoolAPI.SendRawTransaction(ctx, input)
 }
 
 // Sign calculates an ECDSA signature for:
