@@ -1345,9 +1345,8 @@ func (api *EthereumAPI) SignTransaction(ctx context.Context, args EthTransaction
 	if tx.IsEthTypedTransaction() {
 		// Return rawTx except types.TxTypeEthEnvelope: 0x78(= 1 byte)
 		return &EthSignTransactionResult{data[1:], formatTxToEthTxJSON(tx)}, nil
-	} else {
-		return &EthSignTransactionResult{data, formatTxToEthTxJSON(tx)}, nil
 	}
+	return &EthSignTransactionResult{data, formatTxToEthTxJSON(tx)}, nil
 }
 
 // PendingTransactions returns the transactions that are in the transaction pool
