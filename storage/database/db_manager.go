@@ -785,7 +785,7 @@ func (dbm *databaseManager) GetMiscDB() Database {
 }
 
 func (dbm *databaseManager) GetSnapshotDB() Database {
-	return dbm.dbs[SnapshotDB]
+	return dbm.getDatabase(SnapshotDB)
 }
 
 func (dbm *databaseManager) GetMemDB() *MemDB {

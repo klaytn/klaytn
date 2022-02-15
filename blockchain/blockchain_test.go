@@ -1599,6 +1599,7 @@ func TestBlockChain_SetCanonicalBlock(t *testing.T) {
 		BlockInterval:       DefaultBlockInterval,
 		TriesInMemory:       DefaultTriesInMemory,
 		TrieNodeCacheConfig: statedb.GetEmptyTrieNodeCacheConfig(),
+		SnapshotCacheSize:   512,
 	}
 	// create new blockchain with enabled internal tx tracing option
 	blockchain, _ := NewBlockChain(db, cacheConfig, testGenesis.Config, gxhash.NewFaker(), vm.Config{Debug: true, EnableInternalTxTracing: true})

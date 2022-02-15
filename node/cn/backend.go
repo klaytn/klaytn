@@ -253,7 +253,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		vmConfig    = config.getVMConfig()
 		cacheConfig = &blockchain.CacheConfig{ArchiveMode: config.NoPruning, CacheSize: config.TrieCacheSize,
 			BlockInterval: config.TrieBlockInterval, TriesInMemory: config.TriesInMemory,
-			TrieNodeCacheConfig: &config.TrieNodeCacheConfig, SenderTxHashIndexing: config.SenderTxHashIndexing}
+			TrieNodeCacheConfig: &config.TrieNodeCacheConfig, SenderTxHashIndexing: config.SenderTxHashIndexing, SnapshotCacheSize: config.SnapshotCacheSize}
 	)
 
 	bc, err := blockchain.NewBlockChain(chainDB, cacheConfig, cn.chainConfig, cn.engine, vmConfig)
