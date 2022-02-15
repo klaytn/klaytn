@@ -1693,6 +1693,7 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 		if cfg.StartBlockNumber != 0 {
 			logger.Crit("State snapshot should not be used with --start-block-num", "num", cfg.StartBlockNumber)
 		}
+		logger.Info("State snapshot is enabled", "cache-size (MB)", cfg.SnapshotCacheSize)
 	} else {
 		cfg.SnapshotCacheSize = 0 // snapshot disabled
 	}
