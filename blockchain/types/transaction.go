@@ -297,7 +297,7 @@ func (tx *Transaction) AccessList() AccessList {
 		te := tx.GetTxInternalData().(TxInternalDataEthTyped)
 		return te.GetAccessList()
 	}
-	return []AccessTuple{}
+	return nil
 }
 
 func (tx *Transaction) Value() *big.Int { return new(big.Int).Set(tx.data.GetAmount()) }
