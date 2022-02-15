@@ -76,16 +76,16 @@ type TxInternalDataEthereumAccessList struct {
 type TxInternalDataEthereumAccessListJSON struct {
 	Type         TxType           `json:"typeInt"`
 	TypeStr      string           `json:"type"`
+	ChainID      *hexutil.Big     `json:"chainId"`
 	AccountNonce hexutil.Uint64   `json:"nonce"`
 	Price        *hexutil.Big     `json:"gasPrice"`
 	GasLimit     hexutil.Uint64   `json:"gas"`
 	Recipient    *common.Address  `json:"to"`
 	Amount       *hexutil.Big     `json:"value"`
 	Payload      hexutil.Bytes    `json:"input"`
-	TxSignatures TxSignaturesJSON `json:"signatures"`
 	AccessList   AccessList       `json:"accessList"`
+	TxSignatures TxSignaturesJSON `json:"signatures"`
 	Hash         *common.Hash     `json:"hash"`
-	ChainID      *hexutil.Big     `json:"chainId"`
 }
 
 func newEmptyTxInternalDataEthereumAccessList() *TxInternalDataEthereumAccessList {
@@ -94,17 +94,17 @@ func newEmptyTxInternalDataEthereumAccessList() *TxInternalDataEthereumAccessLis
 
 func newTxInternalDataEthereumAccessList() *TxInternalDataEthereumAccessList {
 	return &TxInternalDataEthereumAccessList{
+		ChainID:      new(big.Int),
 		AccountNonce: 0,
-		Recipient:    nil,
-		Payload:      []byte{},
-		Amount:       new(big.Int),
-		GasLimit:     0,
-		AccessList:   AccessList{},
 		Price:        new(big.Int),
+		GasLimit:     0,
+		Recipient:    nil,
+		Amount:       new(big.Int),
+		Payload:      []byte{},
+		AccessList:   AccessList{},
 		V:            new(big.Int),
 		R:            new(big.Int),
 		S:            new(big.Int),
-		ChainID:      new(big.Int),
 	}
 }
 
@@ -115,22 +115,24 @@ func newTxInternalDataEthereumAccessListWithValues(nonce uint64, to *common.Addr
 	d.Recipient = to
 	d.GasLimit = gasLimit
 
-	if len(data) > 0 {
-		d.Payload = common.CopyBytes(data)
+	if chainID != nil {
+		d.ChainID.Set(chainID)
 	}
-	if amount != nil {
-		d.Amount.Set(amount)
-	}
+
 	if gasPrice != nil {
 		d.Price.Set(gasPrice)
 	}
 
-	if accessList != nil {
-		copy(d.AccessList, accessList)
+	if amount != nil {
+		d.Amount.Set(amount)
 	}
 
-	if chainID != nil {
-		d.ChainID.Set(chainID)
+	if len(data) > 0 {
+		d.Payload = common.CopyBytes(data)
+	}
+
+	if accessList != nil {
+		copy(d.AccessList, accessList)
 	}
 
 	return d
@@ -138,6 +140,13 @@ func newTxInternalDataEthereumAccessListWithValues(nonce uint64, to *common.Addr
 
 func newTxInternalDataEthereumAccessListWithMap(values map[TxValueKeyType]interface{}) (*TxInternalDataEthereumAccessList, error) {
 	d := newTxInternalDataEthereumAccessList()
+
+	if v, ok := values[TxValueKeyChainID].(*big.Int); ok {
+		d.ChainID.Set(v)
+		delete(values, TxValueKeyChainID)
+	} else {
+		return nil, errValueKeyChainIDInvalid
+	}
 
 	if v, ok := values[TxValueKeyNonce].(uint64); ok {
 		d.AccountNonce = v
@@ -187,13 +196,6 @@ func newTxInternalDataEthereumAccessListWithMap(values map[TxValueKeyType]interf
 		delete(values, TxValueKeyAccessList)
 	} else {
 		return nil, errValueKeyAccessListInvalid
-	}
-
-	if v, ok := values[TxValueKeyChainID].(*big.Int); ok {
-		d.ChainID.Set(v)
-		delete(values, TxValueKeyChainID)
-	} else {
-		return nil, errValueKeyChainIDInvalid
 	}
 
 	if len(values) != 0 {
@@ -462,11 +464,11 @@ func (t *TxInternalDataEthereumAccessList) MakeRPCOutput() map[string]interface{
 		"typeInt":    t.Type(),
 		"type":       t.Type().String(),
 		"chainID":    (*hexutil.Big)(t.ChainId()),
-		"gas":        hexutil.Uint64(t.GasLimit),
-		"gasPrice":   (*hexutil.Big)(t.Price),
-		"input":      hexutil.Bytes(t.Payload),
 		"nonce":      hexutil.Uint64(t.AccountNonce),
+		"gasPrice":   (*hexutil.Big)(t.Price),
+		"gas":        hexutil.Uint64(t.GasLimit),
 		"to":         t.Recipient,
+		"input":      hexutil.Bytes(t.Payload),
 		"value":      (*hexutil.Big)(t.Amount),
 		"accessList": t.AccessList,
 		"signatures": TxSignaturesJSON{&TxSignatureJSON{(*hexutil.Big)(t.V), (*hexutil.Big)(t.R), (*hexutil.Big)(t.S)}},
@@ -477,16 +479,16 @@ func (t *TxInternalDataEthereumAccessList) MarshalJSON() ([]byte, error) {
 	return json.Marshal(TxInternalDataEthereumAccessListJSON{
 		t.Type(),
 		t.Type().String(),
+		(*hexutil.Big)(t.ChainID),
 		(hexutil.Uint64)(t.AccountNonce),
 		(*hexutil.Big)(t.Price),
 		(hexutil.Uint64)(t.GasLimit),
 		t.Recipient,
 		(*hexutil.Big)(t.Amount),
 		t.Payload,
-		TxSignaturesJSON{&TxSignatureJSON{(*hexutil.Big)(t.V), (*hexutil.Big)(t.R), (*hexutil.Big)(t.S)}},
 		t.AccessList,
+		TxSignaturesJSON{&TxSignatureJSON{(*hexutil.Big)(t.V), (*hexutil.Big)(t.R), (*hexutil.Big)(t.S)}},
 		t.Hash,
-		(*hexutil.Big)(t.ChainID),
 	})
 }
 
@@ -496,6 +498,7 @@ func (t *TxInternalDataEthereumAccessList) UnmarshalJSON(bytes []byte) error {
 		return err
 	}
 
+	t.ChainID = (*big.Int)(js.ChainID)
 	t.AccountNonce = uint64(js.AccountNonce)
 	t.Price = (*big.Int)(js.Price)
 	t.GasLimit = uint64(js.GasLimit)
@@ -507,7 +510,6 @@ func (t *TxInternalDataEthereumAccessList) UnmarshalJSON(bytes []byte) error {
 	t.R = (*big.Int)(js.TxSignatures[0].R)
 	t.S = (*big.Int)(js.TxSignatures[0].S)
 	t.Hash = js.Hash
-	t.ChainID = (*big.Int)(js.ChainID)
 
 	return nil
 }
