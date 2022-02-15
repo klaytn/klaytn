@@ -677,6 +677,7 @@ func (g *Governance) initializeCache() error {
 	newBlockNumber, newGovernanceSet, _ := g.ReadGovernance(headBlockNumber)
 	g.actualGovernanceBlock.Store(newBlockNumber)
 	g.currentSet.Import(newGovernanceSet)
+	g.updateGovernanceParams()
 
 	governanceBlock, governanceStateBlock := g.actualGovernanceBlock.Load().(uint64), atomic.LoadUint64(&g.lastGovernanceStateBlock)
 	if governanceBlock >= governanceStateBlock {
