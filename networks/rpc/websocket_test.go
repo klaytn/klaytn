@@ -100,7 +100,6 @@ func TestWebsocketOriginCheck(t *testing.T) {
 		httpsrv = httptest.NewServer(srv.WebsocketHandler([]string{"http://example.com"}))
 		wsURL   = "ws:" + strings.TrimPrefix(httpsrv.URL, "http:")
 	)
-
 	defer srv.Stop()
 	defer httpsrv.Close()
 
@@ -113,13 +112,6 @@ func TestWebsocketOriginCheck(t *testing.T) {
 	if !reflect.DeepEqual(err, wantErr) {
 		t.Fatalf("wrong error for wrong origin: %q", err)
 	}
-
-	// Connections without origin header should work.
-	client, err = DialWebsocket(context.Background(), wsURL, "")
-	if err != nil {
-		t.Fatal("error for empty origin")
-	}
-	client.Close()
 }
 
 // This test checks whether calls exceeding the request size limit are rejected.
