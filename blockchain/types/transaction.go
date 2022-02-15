@@ -293,7 +293,7 @@ func (tx *Transaction) EffectiveGasPrice(baseFee *big.Int) *big.Int {
 }
 
 func (tx *Transaction) AccessList() AccessList {
-	if tx.Type() == TxTypeAccessList || tx.Type() == TxTypeDynamicFee {
+	if tx.Type() == TxTypeEthereumAccessList || tx.Type() == TxTypeEthereumDynamicFee {
 		te := tx.GetTxInternalData().(TxInternalDataEthTyped)
 		return te.GetAccessList()
 	}

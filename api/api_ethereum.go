@@ -758,11 +758,11 @@ func newEthRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNum
 	}
 
 	switch typeInt {
-	case types.TxTypeAccessList:
+	case types.TxTypeEthereumAccessList:
 		al := tx.AccessList()
 		result.Accesses = &al
 		result.ChainID = (*hexutil.Big)(tx.ChainId())
-	case types.TxTypeDynamicFee:
+	case types.TxTypeEthereumDynamicFee:
 		al := tx.AccessList()
 		result.Accesses = &al
 		result.ChainID = (*hexutil.Big)(tx.ChainId())
@@ -816,12 +816,12 @@ func formatTxToEthTxJSON(tx *types.Transaction) *ethTxJSON {
 	enc.S = (*hexutil.Big)(signature.S)
 
 	switch tx.Type() {
-	case types.TxTypeAccessList:
+	case types.TxTypeEthereumAccessList:
 		al := tx.AccessList()
 		enc.AccessList = &al
 		enc.ChainID = (*hexutil.Big)(tx.ChainId())
 		enc.GasPrice = (*hexutil.Big)(tx.GasPrice())
-	case types.TxTypeDynamicFee:
+	case types.TxTypeEthereumDynamicFee:
 		al := tx.AccessList()
 		enc.AccessList = &al
 		enc.ChainID = (*hexutil.Big)(tx.ChainId())
@@ -1207,7 +1207,7 @@ func (args *EthTransactionArgs) toTransaction() *types.Transaction {
 		if args.AccessList != nil {
 			al = *args.AccessList
 		}
-		tx = types.NewTx(&types.TxInternalDataDynamicFee{
+		tx = types.NewTx(&types.TxInternalDataEthereumDynamicFee{
 			ChainID:      (*big.Int)(args.ChainID),
 			AccountNonce: uint64(*args.Nonce),
 			GasTipCap:    (*big.Int)(args.MaxPriorityFeePerGas),
@@ -1219,7 +1219,7 @@ func (args *EthTransactionArgs) toTransaction() *types.Transaction {
 			AccessList:   al,
 		})
 	case args.AccessList != nil:
-		tx = types.NewTx(&types.TxInternalDataAccessList{
+		tx = types.NewTx(&types.TxInternalDataEthereumAccessList{
 			ChainID:      (*big.Int)(args.ChainID),
 			AccountNonce: uint64(*args.Nonce),
 			Recipient:    args.To,
@@ -1300,7 +1300,7 @@ func (api *EthereumAPI) FillTransaction(ctx context.Context, args EthTransaction
 // The sender is responsible for signing the transaction and using the correct nonce.
 func (api *EthereumAPI) SendRawTransaction(ctx context.Context, input hexutil.Bytes) (common.Hash, error) {
 	if 0 < input[0] && input[0] < 0x7f {
-		inputBytes := []byte{byte(types.TxTypeEthEnvelope)}
+		inputBytes := []byte{byte(types.EthereumTxTypeEnvelope)}
 		inputBytes = append(inputBytes, input...)
 		return api.publicTransactionPoolAPI.SendRawTransaction(ctx, inputBytes)
 	}
