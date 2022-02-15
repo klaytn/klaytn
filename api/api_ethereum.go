@@ -912,7 +912,7 @@ func (api *EthereumAPI) GetTransactionReceipt(ctx context.Context, hash common.H
 		cumulativeGasUsed += receipts[i].GasUsed
 	}
 
-	ethTx, err := newEthTransactionReceipt(tx, blockHash, blockNumber, index, cumulativeGasUsed, receipt)
+	ethTx, err := newEthTransactionReceipt(tx, api.publicTransactionPoolAPI.b, blockHash, blockNumber, index, cumulativeGasUsed, receipt)
 	if err != nil {
 		return nil, err
 	}
@@ -920,7 +920,7 @@ func (api *EthereumAPI) GetTransactionReceipt(ctx context.Context, hash common.H
 }
 
 // newEthTransactionReceipt creates a transaction receipt in Ethereum format.
-func newEthTransactionReceipt(tx *types.Transaction, blockHash common.Hash, blockNumber, index, cumulativeGasUsed uint64, receipt *types.Receipt) (map[string]interface{}, error) {
+func newEthTransactionReceipt(tx *types.Transaction, b Backend, blockHash common.Hash, blockNumber, index, cumulativeGasUsed uint64, receipt *types.Receipt) (map[string]interface{}, error) {
 	// When an unknown transaction receipt is requested through rpc call,
 	// nil is returned by Klaytn API, and it is handled.
 	if tx == nil || receipt == nil {
@@ -948,15 +948,14 @@ func newEthTransactionReceipt(tx *types.Transaction, blockHash common.Hash, bloc
 		"type":              hexutil.Uint(byte(typeInt)),
 	}
 
-	// TODO-Klaytn: Klaytn is using fixed BaseFee(0) as now but
-	// if we apply dynamic BaseFee, we should add calculated BaseFee instead of using params.BaseFee.
-	baseFee := new(big.Int).SetUint64(params.BaseFee)
-	fields["effectiveGasPrice"] = hexutil.Uint64(
-		new(big.Int).Add(
-			baseFee,
-			tx.EffectiveGasTip(baseFee),
-		).Uint64(),
-	)
+	if b.ChainConfig().IsEthTxTypeForkEnabled(new(big.Int).SetUint64(blockNumber)) {
+		// TODO-Klaytn: Klaytn is using fixed BaseFee(0) as now but
+		// if we apply dynamic BaseFee, we should add calculated BaseFee instead of using params.BaseFee.
+		baseFee := new(big.Int).SetUint64(params.BaseFee)
+		fields["effectiveGasPrice"] = hexutil.Uint64(tx.EffectiveGasPrice(baseFee).Uint64())
+	} else {
+		fields["effectiveGasPrice"] = hexutil.Uint64(tx.GasPrice().Uint64())
+	}
 
 	// Always use the "status" field and Ignore the "root" field.
 	fields["status"] = hexutil.Uint(receipt.Status)
