@@ -157,6 +157,7 @@ func DialWebsocket(ctx context.Context, endpoint, origin string) (*Client, error
 		conn, resp, err := dialer.DialContext(ctx, endpoint, header)
 		if resp != nil && resp.Body != nil {
 			defer resp.Body.Close()
+
 		}
 		if err != nil {
 			hErr := wsHandshakeError{err: err}
@@ -175,11 +176,20 @@ func wsClientHeaders(endpoint, origin string) (string, http.Header, error) {
 	if err != nil {
 		return endpoint, nil, err
 	}
+	if origin == "" {
+		var err error
+		if origin, err = os.Hostname(); err != nil {
+			return endpoint, nil, err
+		}
+		if endpointURL.Scheme == "wss" {
+			origin = "https://" + strings.ToLower(origin)
+		} else {
+			origin = "http://" + strings.ToLower(origin)
+		}
+	}
 
 	header := make(http.Header)
-	if origin != "" {
-		header.Add("origin", origin)
-	}
+	header.Add("origin", origin)
 	if endpointURL.User != nil {
 		b64auth := base64.StdEncoding.EncodeToString([]byte(endpointURL.User.String()))
 		header.Add("authorization", "Basic "+b64auth)
