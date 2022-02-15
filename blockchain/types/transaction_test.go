@@ -62,7 +62,7 @@ var (
 		common.Hex2Bytes("98ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4a8887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a301"),
 	)
 
-	accessListTx = TxInternalDataAccessList{
+	accessListTx = TxInternalDataEthereumAccessList{
 		ChainID:      big.NewInt(1),
 		AccountNonce: 3,
 		Recipient:    &testAddr,
@@ -73,7 +73,7 @@ var (
 	}
 
 	accessAddr   = common.HexToAddress("0x0000000000000000000000000000000000000001")
-	dynamicFeeTx = TxInternalDataDynamicFee{
+	dynamicFeeTx = TxInternalDataEthereumDynamicFee{
 		ChainID:      big.NewInt(1),
 		AccountNonce: 3,
 		Recipient:    &testAddr,
@@ -140,9 +140,9 @@ func TestEIP2930Signer(t *testing.T) {
 		keyAddr = crypto.PubkeyToAddress(key.PublicKey)
 		signer1 = NewEIP2930Signer(big.NewInt(1))
 		signer2 = NewEIP2930Signer(big.NewInt(2))
-		tx0     = NewTx(&TxInternalDataAccessList{AccountNonce: 1, ChainID: new(big.Int)})
-		tx1     = NewTx(&TxInternalDataAccessList{ChainID: big.NewInt(1), AccountNonce: 1, V: new(big.Int), R: new(big.Int), S: new(big.Int)})
-		tx2, _  = SignTx(NewTx(&TxInternalDataAccessList{ChainID: big.NewInt(2), AccountNonce: 1}), signer2, key)
+		tx0     = NewTx(&TxInternalDataEthereumAccessList{AccountNonce: 1, ChainID: new(big.Int)})
+		tx1     = NewTx(&TxInternalDataEthereumAccessList{ChainID: big.NewInt(1), AccountNonce: 1, V: new(big.Int), R: new(big.Int), S: new(big.Int)})
+		tx2, _  = SignTx(NewTx(&TxInternalDataEthereumAccessList{ChainID: big.NewInt(2), AccountNonce: 1}), signer2, key)
 	)
 
 	tests := []struct {
@@ -216,9 +216,9 @@ func TestLondonSigner(t *testing.T) {
 		keyAddr = crypto.PubkeyToAddress(key.PublicKey)
 		signer1 = NewLondonSigner(big.NewInt(1))
 		signer2 = NewLondonSigner(big.NewInt(2))
-		tx0     = NewTx(&TxInternalDataDynamicFee{AccountNonce: 1, ChainID: new(big.Int)})
-		tx1     = NewTx(&TxInternalDataDynamicFee{ChainID: big.NewInt(1), AccountNonce: 1, V: new(big.Int), R: new(big.Int), S: new(big.Int)})
-		tx2, _  = SignTx(NewTx(&TxInternalDataDynamicFee{ChainID: big.NewInt(2), AccountNonce: 1}), signer2, key)
+		tx0     = NewTx(&TxInternalDataEthereumDynamicFee{AccountNonce: 1, ChainID: new(big.Int)})
+		tx1     = NewTx(&TxInternalDataEthereumDynamicFee{ChainID: big.NewInt(1), AccountNonce: 1, V: new(big.Int), R: new(big.Int), S: new(big.Int)})
+		tx2, _  = SignTx(NewTx(&TxInternalDataEthereumDynamicFee{ChainID: big.NewInt(2), AccountNonce: 1}), signer2, key)
 	)
 
 	tests := []struct {
@@ -303,7 +303,7 @@ func TestEIP2718TransactionEncode(t *testing.T) {
 		if err != nil {
 			t.Fatalf("encode error: %v", err)
 		}
-		want := common.FromHex("01f8630103018261a894b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a825544c001a0c9519f4f2b30335884581971573fadf60c6204f59a911df35ee8a540456b2660a032f1e8e2c5dd761f9e4f88f41c8310aeaba26a8bfcdacfedfa12ec3862d37521")
+		want := common.FromHex("7801f8630103018261a894b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a825544c001a0c9519f4f2b30335884581971573fadf60c6204f59a911df35ee8a540456b2660a032f1e8e2c5dd761f9e4f88f41c8310aeaba26a8bfcdacfedfa12ec3862d37521")
 		if !bytes.Equal(have, want) {
 			t.Errorf("encoded RLP mismatch, got %x", have)
 		}
@@ -317,7 +317,7 @@ func TestEIP1559TransactionEncode(t *testing.T) {
 		if err != nil {
 			t.Fatalf("encode error: %v", err)
 		}
-		want := common.FromHex("02f89d010301018261a894b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a825544f838f7940000000000000000000000000000000000000001e1a0000000000000000000000000000000000000000000000000000000000000000001a0c9519f4f2b30335884581971573fadf60c6204f59a911df35ee8a540456b2660a032f1e8e2c5dd761f9e4f88f41c8310aeaba26a8bfcdacfedfa12ec3862d37521")
+		want := common.FromHex("7802f89d010301018261a894b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a825544f838f7940000000000000000000000000000000000000001e1a0000000000000000000000000000000000000000000000000000000000000000001a0c9519f4f2b30335884581971573fadf60c6204f59a911df35ee8a540456b2660a032f1e8e2c5dd761f9e4f88f41c8310aeaba26a8bfcdacfedfa12ec3862d37521")
 		if !bytes.Equal(have, want) {
 			t.Errorf("encoded RLP mismatch, got %x", have)
 		}
@@ -326,7 +326,7 @@ func TestEIP1559TransactionEncode(t *testing.T) {
 
 func TestEffectiveGasPrice(t *testing.T) {
 	legacyTx := NewTx(&TxInternalDataLegacy{Price: big.NewInt(1000)})
-	dynamicTx := NewTx(&TxInternalDataDynamicFee{GasFeeCap: big.NewInt(4000), GasTipCap: big.NewInt(1000)})
+	dynamicTx := NewTx(&TxInternalDataEthereumDynamicFee{GasFeeCap: big.NewInt(4000), GasTipCap: big.NewInt(1000)})
 
 	baseFee := big.NewInt(2000)
 	have := legacyTx.EffectiveGasPrice(baseFee)
@@ -349,7 +349,7 @@ func TestEffectiveGasPrice(t *testing.T) {
 
 func TestEffectiveGasTip(t *testing.T) {
 	legacyTx := NewTx(&TxInternalDataLegacy{Price: big.NewInt(1000)})
-	dynamicTx := NewTx(&TxInternalDataDynamicFee{GasFeeCap: big.NewInt(4000), GasTipCap: big.NewInt(1000)})
+	dynamicTx := NewTx(&TxInternalDataEthereumDynamicFee{GasFeeCap: big.NewInt(4000), GasTipCap: big.NewInt(1000)})
 
 	baseFee := big.NewInt(2000)
 	have := legacyTx.EffectiveGasTip(baseFee)
@@ -633,7 +633,7 @@ func TestTransactionCoding(t *testing.T) {
 			}
 		case 2:
 			// Tx with non-zero access list.
-			txData = &TxInternalDataAccessList{
+			txData = &TxInternalDataEthereumAccessList{
 				ChainID:      big.NewInt(1),
 				AccountNonce: i,
 				Recipient:    &recipient,
@@ -644,7 +644,7 @@ func TestTransactionCoding(t *testing.T) {
 			}
 		case 3:
 			// Tx with empty access list.
-			txData = &TxInternalDataAccessList{
+			txData = &TxInternalDataEthereumAccessList{
 				ChainID:      big.NewInt(1),
 				AccountNonce: i,
 				Recipient:    &recipient,
@@ -654,7 +654,7 @@ func TestTransactionCoding(t *testing.T) {
 			}
 		case 4:
 			// Contract creation with access list.
-			txData = &TxInternalDataAccessList{
+			txData = &TxInternalDataEthereumAccessList{
 				ChainID:      big.NewInt(1),
 				AccountNonce: i,
 				GasLimit:     123457,
@@ -663,7 +663,7 @@ func TestTransactionCoding(t *testing.T) {
 			}
 		case 5:
 			// Tx with non-zero access list.
-			txData = &TxInternalDataDynamicFee{
+			txData = &TxInternalDataEthereumDynamicFee{
 				ChainID:      big.NewInt(1),
 				AccountNonce: i,
 				Recipient:    &recipient,
@@ -675,7 +675,7 @@ func TestTransactionCoding(t *testing.T) {
 			}
 		case 6:
 			// Tx with dynamic fee.
-			txData = &TxInternalDataDynamicFee{
+			txData = &TxInternalDataEthereumDynamicFee{
 				ChainID:      big.NewInt(1),
 				AccountNonce: i,
 				Recipient:    &recipient,
@@ -686,7 +686,7 @@ func TestTransactionCoding(t *testing.T) {
 			}
 		case 7:
 			// Contract creation with dynamic fee tx.
-			txData = &TxInternalDataDynamicFee{
+			txData = &TxInternalDataEthereumDynamicFee{
 				ChainID:      big.NewInt(1),
 				AccountNonce: i,
 				GasLimit:     123457,

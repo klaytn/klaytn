@@ -257,7 +257,7 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 func (tx *Transaction) Gas() uint64        { return tx.data.GetGasLimit() }
 func (tx *Transaction) GasPrice() *big.Int { return new(big.Int).Set(tx.data.GetPrice()) }
 func (tx *Transaction) GasTipCap() *big.Int {
-	if tx.Type() == TxTypeDynamicFee {
+	if tx.Type() == TxTypeEthereumDynamicFee {
 		te := tx.GetTxInternalData().(TxInternalDataBaseFee)
 		return te.GetGasTipCap()
 	}
@@ -266,7 +266,7 @@ func (tx *Transaction) GasTipCap() *big.Int {
 }
 
 func (tx *Transaction) GasFeeCap() *big.Int {
-	if tx.Type() == TxTypeDynamicFee {
+	if tx.Type() == TxTypeEthereumDynamicFee {
 		te := tx.GetTxInternalData().(TxInternalDataBaseFee)
 		return te.GetGasFeeCap()
 	}
@@ -275,7 +275,7 @@ func (tx *Transaction) GasFeeCap() *big.Int {
 }
 
 func (tx *Transaction) EffectiveGasTip(baseFee *big.Int) *big.Int {
-	if tx.Type() == TxTypeDynamicFee {
+	if tx.Type() == TxTypeEthereumDynamicFee {
 		te := tx.GetTxInternalData().(TxInternalDataBaseFee)
 		return math.BigMin(te.GetGasTipCap(), new(big.Int).Sub(te.GetGasFeeCap(), baseFee))
 	}
@@ -284,7 +284,7 @@ func (tx *Transaction) EffectiveGasTip(baseFee *big.Int) *big.Int {
 }
 
 func (tx *Transaction) EffectiveGasPrice(baseFee *big.Int) *big.Int {
-	if tx.Type() == TxTypeDynamicFee {
+	if tx.Type() == TxTypeEthereumDynamicFee {
 		te := tx.GetTxInternalData().(TxInternalDataBaseFee)
 		return math.BigMin(new(big.Int).Add(te.GetGasTipCap(), baseFee), te.GetGasFeeCap())
 	}
@@ -303,7 +303,7 @@ func (tx *Transaction) Type() TxType                { return tx.data.Type() }
 func (tx *Transaction) IsLegacyTransaction() bool   { return tx.Type().IsLegacyTransaction() }
 func (tx *Transaction) IsEthTypedTransaction() bool { return tx.Type().IsEthTypedTransaction() }
 func (tx *Transaction) IsEthereumTransaction() bool {
-	return tx.IsLegacyTransaction() || tx.IsEthTypedTransaction()
+	return tx.Type().IsEthereumTransaction()
 }
 
 func (tx *Transaction) ValidatedSender() common.Address {
@@ -461,7 +461,15 @@ func (tx *Transaction) Hash() common.Hash {
 	if hash := tx.hash.Load(); hash != nil {
 		return hash.(common.Hash)
 	}
-	v := rlpHash(tx)
+
+	var v common.Hash
+	if tx.IsEthTypedTransaction() {
+		te := tx.data.(TxInternalDataEthTyped)
+		v = te.TxHash()
+	} else {
+		v = rlpHash(tx)
+	}
+
 	tx.hash.Store(v)
 	return v
 }

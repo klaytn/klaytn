@@ -35,7 +35,7 @@ const MaxFeeRatio FeeRatio = 100
 
 const SubTxTypeBits uint = 3
 
-type TxType uint8
+type TxType uint16
 
 const (
 	// TxType declarations
@@ -43,8 +43,7 @@ const (
 	//   <base type>, <fee-delegated type>, and <fee-delegated type with a fee ratio>
 	// If types other than <base type> are not useful, they are declared with underscore(_).
 	// Each base type is self-descriptive.
-	// TODO-Klaytn-AccessList: Change TxTypeAccessList to another seperated value.
-	TxTypeLegacyTransaction, TxTypeAccessList, TxTypeDynamicFee TxType = iota << SubTxTypeBits, iota<<SubTxTypeBits + 1, iota<<SubTxTypeBits + 2
+	TxTypeLegacyTransaction, _, _ TxType = iota << SubTxTypeBits, iota<<SubTxTypeBits + 1, iota<<SubTxTypeBits + 2
 	TxTypeValueTransfer, TxTypeFeeDelegatedValueTransfer, TxTypeFeeDelegatedValueTransferWithRatio
 	TxTypeValueTransferMemo, TxTypeFeeDelegatedValueTransferMemo, TxTypeFeeDelegatedValueTransferMemoWithRatio
 	TxTypeAccountCreation, _, _
@@ -54,10 +53,15 @@ const (
 	TxTypeCancel, TxTypeFeeDelegatedCancel, TxTypeFeeDelegatedCancelWithRatio
 	TxTypeBatch, _, _
 	TxTypeChainDataAnchoring, TxTypeFeeDelegatedChainDataAnchoring, TxTypeFeeDelegatedChainDataAnchoringWithRatio
-	TxTypeLast, _, _
+	TxTypeKlaytnLast, _, _
+	TxTypeEthereumAccessList = TxType(0x7801)
+	TxTypeEthereumDynamicFee = TxType(0x7802)
+	TxTypeEthereumLast       = TxType(0x7803)
 )
 
 type TxValueKeyType uint
+
+const EthereumTxTypeEnvelope = TxType(0x78)
 
 const (
 	TxValueKeyNonce TxValueKeyType = iota
@@ -207,10 +211,10 @@ func (t TxType) String() string {
 		return "TxTypeFeeDelegatedChainDataAnchoring"
 	case TxTypeFeeDelegatedChainDataAnchoringWithRatio:
 		return "TxTypeFeeDelegatedChainDataAnchoringWithRatio"
-	case TxTypeAccessList:
-		return "TxTypeAccessList"
-	case TxTypeDynamicFee:
-		return "TxTypeDynamicFee"
+	case TxTypeEthereumAccessList:
+		return "TxTypeEthereumAccessList"
+	case TxTypeEthereumDynamicFee:
+		return "TxTypeEthereumDynamicFee"
 	}
 
 	return "UndefinedTxType"
@@ -237,17 +241,19 @@ func (t TxType) IsLegacyTransaction() bool {
 }
 
 func (t TxType) IsFeeDelegatedTransaction() bool {
-	// TODO-Klaytn-AccessList: Remove IsEthTypedTransaction related condition after TxTypeAccessList value changed
-	return (TxTypeMask(t)&(TxFeeDelegationBitMask|TxFeeDelegationWithRatioBitMask)) != 0x0 && !t.IsEthTypedTransaction()
+	return (TxTypeMask(t)&(TxFeeDelegationBitMask|TxFeeDelegationWithRatioBitMask)) != 0x0 && !t.IsEthereumTransaction()
 }
 
 func (t TxType) IsFeeDelegatedWithRatioTransaction() bool {
-	// TODO-Klaytn-AccessList: Remove IsEthTypedTransaction related condition after TxTypeAccessList value changed
-	return (TxTypeMask(t)&TxFeeDelegationWithRatioBitMask) != 0x0 && !t.IsEthTypedTransaction()
+	return (TxTypeMask(t)&TxFeeDelegationWithRatioBitMask) != 0x0 && !t.IsEthereumTransaction()
 }
 
 func (t TxType) IsEthTypedTransaction() bool {
-	return t == TxTypeAccessList || t == TxTypeDynamicFee
+	return (t & 0xff00) == (EthereumTxTypeEnvelope << 8)
+}
+
+func (t TxType) IsEthereumTransaction() bool {
+	return t.IsLegacyTransaction() || t.IsEthTypedTransaction()
 }
 
 func (t TxType) IsChainDataAnchoring() bool {
@@ -383,6 +389,7 @@ type TxInternalDataPayload interface {
 type TxInternalDataEthTyped interface {
 	setSignatureValues(chainID, v, r, s *big.Int)
 	GetAccessList() AccessList
+	TxHash() common.Hash
 }
 
 // TxInternalDataBaseFee has a function related to EIP-1559 Ethereum typed transaction.
@@ -462,10 +469,10 @@ func NewTxInternalData(t TxType) (TxInternalData, error) {
 		return newTxInternalDataFeeDelegatedChainDataAnchoring(), nil
 	case TxTypeFeeDelegatedChainDataAnchoringWithRatio:
 		return newTxInternalDataFeeDelegatedChainDataAnchoringWithRatio(), nil
-	case TxTypeAccessList:
-		return newTxInternalDataAccessList(), nil
-	case TxTypeDynamicFee:
-		return newTxInternalDataDynamicFee(), nil
+	case TxTypeEthereumAccessList:
+		return newTxInternalDataEthereumAccessList(), nil
+	case TxTypeEthereumDynamicFee:
+		return newTxInternalDataEthereumDynamicFee(), nil
 	}
 
 	return nil, errUndefinedTxType
@@ -519,10 +526,10 @@ func NewTxInternalDataWithMap(t TxType, values map[TxValueKeyType]interface{}) (
 		return newTxInternalDataFeeDelegatedChainDataAnchoringWithMap(values)
 	case TxTypeFeeDelegatedChainDataAnchoringWithRatio:
 		return newTxInternalDataFeeDelegatedChainDataAnchoringWithRatioWithMap(values)
-	case TxTypeAccessList:
-		return newTxInternalDataAccessListWithMap(values)
-	case TxTypeDynamicFee:
-		return newTxInternalDataDynamicFeeWithMap(values)
+	case TxTypeEthereumAccessList:
+		return newTxInternalDataEthereumAccessListWithMap(values)
+	case TxTypeEthereumDynamicFee:
+		return newTxInternalDataEthereumDynamicFeeWithMap(values)
 	}
 
 	return nil, errUndefinedTxType
