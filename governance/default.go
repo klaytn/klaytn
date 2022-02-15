@@ -667,6 +667,12 @@ func (g *Governance) initializeCache() error {
 		}
 	}
 
+	// g.db.ReadGovernance(N) returns the governance data stored in block 'N'. If the data is not exists, it simply returns an error.
+	// On the other hand, g.ReadGovernance(N) returns the governance data viewed by block 'N' and the block number at the time the governance data is stored.
+	// Since g.currentSet means the governance data viewed by the head block number of the node
+	// and g.actualGovernanceBlock means the block number at the time the governance data is stored,
+	// So those two variables are initialized by using the return values of the g.ReadGovernance(headBlockNum).
+
 	// head block number is used to get the appropriate g.currentSet and g.actualGovernanceBlock
 	headBlockNumber := uint64(0)
 	if headBlockHash := g.db.ReadHeadBlockHash(); !common.EmptyHash(headBlockHash) {
@@ -674,11 +680,17 @@ func (g *Governance) initializeCache() error {
 			headBlockNumber = *num
 		}
 	}
-	newBlockNumber, newGovernanceSet, _ := g.ReadGovernance(headBlockNumber)
+	newBlockNumber, newGovernanceSet, err := g.ReadGovernance(headBlockNumber)
+	if err != nil {
+		return err
+	}
+	// g.actualGovernanceBlock and currentSet is set
 	g.actualGovernanceBlock.Store(newBlockNumber)
 	g.currentSet.Import(newGovernanceSet)
 	g.updateGovernanceParams()
 
+	// g.lastGovernanceStateBlock contains the last block number when voting data is included.
+	// we check the order between g.actualGovernanceBlock and g.lastGovernanceStateBlock, so make sure that voting is not missed.
 	governanceBlock, governanceStateBlock := g.actualGovernanceBlock.Load().(uint64), atomic.LoadUint64(&g.lastGovernanceStateBlock)
 	if governanceBlock >= governanceStateBlock {
 		ret, ok := g.itemCache.Get(getGovernanceCacheKey(governanceBlock))
