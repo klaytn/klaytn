@@ -1,4 +1,4 @@
-// Modifications Copyright 2022 The klaytn Authors
+// Modifications Copyright 2018 The klaytn Authors
 // Copyright 2018 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
@@ -14,6 +14,9 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+//
+// This file is derived from rpc/endpoints.go (2018/06/04).
+// Modified and improved for the klaytn development.
 
 package rpc
 

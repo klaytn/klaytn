@@ -1,4 +1,3 @@
-// Modifications Copyright 2022 The klaytn Authors
 package rpc
 
 import (
