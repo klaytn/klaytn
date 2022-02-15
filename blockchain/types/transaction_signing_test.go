@@ -36,6 +36,163 @@ import (
 	"github.com/klaytn/klaytn/rlp"
 )
 
+func TestLondonSigningWithoutChainID(t *testing.T) {
+	key, _ := crypto.GenerateKey()
+	addr := crypto.PubkeyToAddress(key.PublicKey)
+	accessList := AccessList{{Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), StorageKeys: []common.Hash{{0}}}}
+
+	signer := NewLondonSigner(big.NewInt(10))
+	tx, err := SignTx(NewTx(&TxInternalDataEthereumDynamicFee{
+		AccountNonce: 1,
+		Amount: big.NewInt(10),
+		GasFeeCap: big.NewInt(10),
+		GasTipCap: big.NewInt(10),
+		GasLimit: 100,
+		AccessList: accessList,
+		Recipient: &addr,
+	}), signer, key)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	from, err := Sender(signer, tx)
+	if from != addr {
+		t.Errorf("exected from and address to be equal. Got %x want %x", from, addr)
+	}
+}
+
+func TestLondonSigningWithChainID(t *testing.T) {
+	key, _ := crypto.GenerateKey()
+	addr := crypto.PubkeyToAddress(key.PublicKey)
+	accessList := AccessList{{Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), StorageKeys: []common.Hash{{0}}}}
+
+	signer := NewLondonSigner(big.NewInt(10))
+	tx, err := SignTx(NewTx(&TxInternalDataEthereumDynamicFee{
+		AccountNonce: 1,
+		Amount: big.NewInt(10),
+		GasFeeCap: big.NewInt(10),
+		GasTipCap: big.NewInt(10),
+		GasLimit: 100,
+		AccessList: accessList,
+		Recipient: &addr,
+		ChainID: big.NewInt(10),
+	}), signer, key)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	from, err := Sender(signer, tx)
+	if from != addr {
+		t.Errorf("exected from and address to be equal. Got %x want %x", from, addr)
+	}
+}
+
+func TestLondonSigningWithNoBitChainID(t *testing.T) {
+	key, _ := crypto.GenerateKey()
+	addr := crypto.PubkeyToAddress(key.PublicKey)
+	accessList := AccessList{{Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), StorageKeys: []common.Hash{{0}}}}
+
+	signer := NewLondonSigner(big.NewInt(10))
+	tx, err := SignTx(NewTx(&TxInternalDataEthereumDynamicFee{
+		AccountNonce: 1,
+		Amount: big.NewInt(10),
+		GasFeeCap: big.NewInt(10),
+		GasTipCap: big.NewInt(10),
+		GasLimit: 100,
+		AccessList: accessList,
+		Recipient: &addr,
+		ChainID: new(big.Int),
+	}), signer, key)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	from, err := Sender(signer, tx)
+	if from != addr {
+		t.Errorf("exected from and address to be equal. Got %x want %x", from, addr)
+	}
+}
+
+func TestEIP2930SigningWithoutChainID(t *testing.T) {
+	key, _ := crypto.GenerateKey()
+	addr := crypto.PubkeyToAddress(key.PublicKey)
+	accessList := AccessList{{Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), StorageKeys: []common.Hash{{0}}}}
+
+	signer := NewEIP2930Signer(big.NewInt(10))
+	tx, err := SignTx(NewTx(&TxInternalDataEthereumAccessList{
+		AccountNonce: 1,
+		Amount: big.NewInt(10),
+		Price: big.NewInt(1),
+		GasLimit: 100,
+		AccessList: accessList,
+		Recipient: &addr,
+	}), signer, key)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	from, err := Sender(signer, tx)
+	if from != addr {
+		t.Errorf("exected from and address to be equal. Got %x want %x", from, addr)
+	}
+}
+
+func TestEIP2930SigningWithChainID(t *testing.T) {
+	key, _ := crypto.GenerateKey()
+	addr := crypto.PubkeyToAddress(key.PublicKey)
+	accessList := AccessList{{Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), StorageKeys: []common.Hash{{0}}}}
+
+	signer := NewEIP2930Signer(big.NewInt(10))
+	tx, err := SignTx(NewTx(&TxInternalDataEthereumAccessList{
+		AccountNonce: 1,
+		Amount: big.NewInt(10),
+		Price: big.NewInt(1),
+		GasLimit: 100,
+		AccessList: accessList,
+		Recipient: &addr,
+		ChainID: big.NewInt(10),
+	}), signer, key)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	from, err := Sender(signer, tx)
+	if from != addr {
+		t.Errorf("exected from and address to be equal. Got %x want %x", from, addr)
+	}
+}
+
+func TestEIP2930SigningWithNoBitChainID(t *testing.T) {
+	key, _ := crypto.GenerateKey()
+	addr := crypto.PubkeyToAddress(key.PublicKey)
+	accessList := AccessList{{Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), StorageKeys: []common.Hash{{0}}}}
+
+	signer := NewEIP2930Signer(big.NewInt(10))
+	tx, err := SignTx(NewTx(&TxInternalDataEthereumAccessList{
+		AccountNonce: 1,
+		Amount: big.NewInt(10),
+		Price: big.NewInt(1),
+		GasLimit: 100,
+		AccessList: accessList,
+		Recipient: &addr,
+		ChainID: new(big.Int),
+	}), signer, key)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	from, err := Sender(signer, tx)
+	if from != addr {
+		t.Errorf("exected from and address to be equal. Got %x want %x", from, addr)
+	}
+}
+
 func TestEIP155Signing(t *testing.T) {
 	key, _ := crypto.GenerateKey()
 	addr := crypto.PubkeyToAddress(key.PublicKey)

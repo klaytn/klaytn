@@ -321,7 +321,9 @@ func (s londonSigner) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big
 		panic(fmt.Sprintf("wrong size for signature: got %d, want %d", len(sig), crypto.SignatureLength))
 	}
 
-	if tx.data.ChainId().Sign() != 0 && tx.data.ChainId().Cmp(s.ChainID()) != 0 {
+	// Check that chain ID of tx matches the signer. We also accept ID zero or nil here,
+	// because it indicates that the chain ID was not specified in the tx.
+	if tx.data.ChainId() != nil && tx.data.ChainId().Sign() != 0 && tx.data.ChainId().Cmp(s.ChainID()) != 0 {
 		return nil, nil, nil, ErrInvalidChainId
 	}
 
@@ -339,11 +341,11 @@ func (s londonSigner) Hash(tx *Transaction) common.Hash {
 		return s.eip2930Signer.Hash(tx)
 	}
 
+	// infs[0] always has chainID
 	infs := tx.data.SerializeForSign()
-	//infs[0] always has chainID
-	txChainId := infs[0].(*big.Int)
-	if infs[0] == nil || txChainId.BitLen() == 0 {
-		infs[0] = s.chainId
+	chainID := tx.GetTxInternalData().ChainId()
+	if chainID == nil || chainID.BitLen() == 0 {
+		infs[0] = s.ChainID()
 	}
 	return prefixedRlpHash(byte(tx.Type()), infs)
 }
@@ -422,7 +424,9 @@ func (s eip2930Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *bi
 		return s.EIP155Signer.SignatureValues(tx, sig)
 	}
 
-	if tx.data.ChainId().Sign() != 0 && tx.data.ChainId().Cmp(s.ChainID()) != 0 {
+	// Check that chain ID of tx matches the signer. We also accept ID zero or nil here,
+	// because it indicates that the chain ID was not specified in the tx.
+	if tx.data.ChainId() != nil && tx.data.ChainId().Sign() != 0 && tx.data.ChainId().Cmp(s.ChainID()) != 0 {
 		return nil, nil, nil, ErrInvalidChainId
 	}
 
@@ -441,9 +445,9 @@ func (s eip2930Signer) Hash(tx *Transaction) common.Hash {
 
 	// infs[0] always has chainID
 	infs := tx.data.SerializeForSign()
-	txChainId := infs[0].(*big.Int)
-	if infs[0] == nil || txChainId.BitLen() == 0 {
-		infs[0] = s.chainId
+	chainID := tx.GetTxInternalData().ChainId()
+	if chainID == nil || chainID.BitLen() == 0 {
+		infs[0] = s.ChainID()
 	}
 
 	return prefixedRlpHash(byte(tx.Type()), infs)
