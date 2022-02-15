@@ -948,7 +948,15 @@ func newEthTransactionReceipt(tx *types.Transaction, blockHash common.Hash, bloc
 		"type":              hexutil.Uint(byte(typeInt)),
 	}
 
-	fields["effectiveGasPrice"] = hexutil.Uint64(tx.GasPrice().Uint64())
+	// TODO-Klaytn: Klaytn is using fixed BaseFee(0) as now but
+	// if we apply dynamic BaseFee, we should add calculated BaseFee instead of using params.BaseFee.
+	baseFee := new(big.Int).SetUint64(params.BaseFee)
+	fields["effectiveGasPrice"] = hexutil.Uint64(
+		new(big.Int).Add(
+			baseFee,
+			tx.EffectiveGasTip(baseFee),
+		).Uint64(),
+	)
 
 	// Always use the "status" field and Ignore the "root" field.
 	fields["status"] = hexutil.Uint(receipt.Status)
