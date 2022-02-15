@@ -73,7 +73,7 @@ var (
 	}
 
 	accessAddr   = common.HexToAddress("0x0000000000000000000000000000000000000001")
-	dynamicFeeTx = TxInternalDataDynamicFee{
+	dynamicFeeTx = TxInternalDataEthereumDynamicFee{
 		ChainID:      big.NewInt(1),
 		AccountNonce: 3,
 		Recipient:    &testAddr,
@@ -216,9 +216,9 @@ func TestLondonSigner(t *testing.T) {
 		keyAddr = crypto.PubkeyToAddress(key.PublicKey)
 		signer1 = NewLondonSigner(big.NewInt(1))
 		signer2 = NewLondonSigner(big.NewInt(2))
-		tx0     = NewTx(&TxInternalDataDynamicFee{AccountNonce: 1, ChainID: new(big.Int)})
-		tx1     = NewTx(&TxInternalDataDynamicFee{ChainID: big.NewInt(1), AccountNonce: 1, V: new(big.Int), R: new(big.Int), S: new(big.Int)})
-		tx2, _  = SignTx(NewTx(&TxInternalDataDynamicFee{ChainID: big.NewInt(2), AccountNonce: 1}), signer2, key)
+		tx0     = NewTx(&TxInternalDataEthereumDynamicFee{AccountNonce: 1, ChainID: new(big.Int)})
+		tx1     = NewTx(&TxInternalDataEthereumDynamicFee{ChainID: big.NewInt(1), AccountNonce: 1, V: new(big.Int), R: new(big.Int), S: new(big.Int)})
+		tx2, _  = SignTx(NewTx(&TxInternalDataEthereumDynamicFee{ChainID: big.NewInt(2), AccountNonce: 1}), signer2, key)
 	)
 
 	tests := []struct {
@@ -326,7 +326,7 @@ func TestEIP1559TransactionEncode(t *testing.T) {
 
 func TestEffectiveGasPrice(t *testing.T) {
 	legacyTx := NewTx(&TxInternalDataLegacy{Price: big.NewInt(1000)})
-	dynamicTx := NewTx(&TxInternalDataDynamicFee{GasFeeCap: big.NewInt(4000), GasTipCap: big.NewInt(1000)})
+	dynamicTx := NewTx(&TxInternalDataEthereumDynamicFee{GasFeeCap: big.NewInt(4000), GasTipCap: big.NewInt(1000)})
 
 	baseFee := big.NewInt(2000)
 	have := legacyTx.EffectiveGasPrice(baseFee)
@@ -349,7 +349,7 @@ func TestEffectiveGasPrice(t *testing.T) {
 
 func TestEffectiveGasTip(t *testing.T) {
 	legacyTx := NewTx(&TxInternalDataLegacy{Price: big.NewInt(1000)})
-	dynamicTx := NewTx(&TxInternalDataDynamicFee{GasFeeCap: big.NewInt(4000), GasTipCap: big.NewInt(1000)})
+	dynamicTx := NewTx(&TxInternalDataEthereumDynamicFee{GasFeeCap: big.NewInt(4000), GasTipCap: big.NewInt(1000)})
 
 	baseFee := big.NewInt(2000)
 	have := legacyTx.EffectiveGasTip(baseFee)
@@ -663,7 +663,7 @@ func TestTransactionCoding(t *testing.T) {
 			}
 		case 5:
 			// Tx with non-zero access list.
-			txData = &TxInternalDataDynamicFee{
+			txData = &TxInternalDataEthereumDynamicFee{
 				ChainID:      big.NewInt(1),
 				AccountNonce: i,
 				Recipient:    &recipient,
@@ -675,7 +675,7 @@ func TestTransactionCoding(t *testing.T) {
 			}
 		case 6:
 			// Tx with dynamic fee.
-			txData = &TxInternalDataDynamicFee{
+			txData = &TxInternalDataEthereumDynamicFee{
 				ChainID:      big.NewInt(1),
 				AccountNonce: i,
 				Recipient:    &recipient,
@@ -686,7 +686,7 @@ func TestTransactionCoding(t *testing.T) {
 			}
 		case 7:
 			// Contract creation with dynamic fee tx.
-			txData = &TxInternalDataDynamicFee{
+			txData = &TxInternalDataEthereumDynamicFee{
 				ChainID:      big.NewInt(1),
 				AccountNonce: i,
 				GasLimit:     123457,

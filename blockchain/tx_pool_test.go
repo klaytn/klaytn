@@ -95,7 +95,7 @@ func pricedTransaction(nonce uint64, gaslimit uint64, gasprice *big.Int, key *ec
 }
 
 func dynamicFeeTx(nonce uint64, gaslimit uint64, gasFee *big.Int, tip *big.Int, key *ecdsa.PrivateKey) *types.Transaction {
-	dynamicTx := types.NewTx(&types.TxInternalDataDynamicFee{
+	dynamicTx := types.NewTx(&types.TxInternalDataEthereumDynamicFee{
 		ChainID:      params.TestChainConfig.ChainID,
 		AccountNonce: nonce,
 		GasTipCap:    tip,

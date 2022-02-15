@@ -316,7 +316,7 @@ func TestEIP1559BlockEncoding(t *testing.T) {
 
 	// Create DynamicFee tx.
 	addr2 := common.HexToAddress("0x0000000000000000000000000000000000000002")
-	tx3 := NewTx(&TxInternalDataDynamicFee{
+	tx3 := NewTx(&TxInternalDataEthereumDynamicFee{
 		ChainID:      big.NewInt(1),
 		AccountNonce: 0,
 		Recipient:    &to,

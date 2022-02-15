@@ -226,7 +226,7 @@ func testTxRLPEncodeAccessList(t *testing.T) {
 }
 
 func testTxRLPEncodeDynamicFee(t *testing.T) {
-	tx := genDynamicFeeTransaction().(*TxInternalDataDynamicFee)
+	tx := genDynamicFeeTransaction().(*TxInternalDataEthereumDynamicFee)
 
 	signer := LatestSignerForChainID(big.NewInt(2))
 	rawTx := &Transaction{data: tx}

@@ -825,7 +825,7 @@ func testTxRLPDecodeAccessList(t *testing.T) {
 }
 
 func testTxRLPDecodeDynamicFee(t *testing.T) {
-	tx := genDynamicFeeTransaction().(*TxInternalDataDynamicFee)
+	tx := genDynamicFeeTransaction().(*TxInternalDataEthereumDynamicFee)
 
 	buffer := new(bytes.Buffer)
 	err := rlp.Encode(buffer, tx.Type())
