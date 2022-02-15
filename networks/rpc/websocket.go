@@ -154,10 +154,14 @@ func DialWebsocket(ctx context.Context, endpoint, origin string) (*Client, error
 	//return newClient(ctx, func(ctx context.Context) (ServerCodec, error) {
 	return NewClient(ctx, func(ctx context.Context) (ServerCodec, error) {
 		conn, resp, err := dialer.DialContext(ctx, endpoint, header)
+		if resp != nil && resp.Body != nil {
+			defer resp.Body.Close()
+		}
 		if err != nil {
 			hErr := wsHandshakeError{err: err}
 			if resp != nil {
 				hErr.status = resp.Status
+
 			}
 			return nil, hErr
 		}

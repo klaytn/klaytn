@@ -62,6 +62,7 @@ require (
 	golang.org/x/crypto v0.0.0-20220112180741-5e0467b6c7ce
 	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd
 	golang.org/x/sys v0.0.0-20220111092808-5a964db01320
+	golang.org/x/tools v0.1.9 // indirect
 	google.golang.org/grpc v1.27.0
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
 	gopkg.in/fatih/set.v0 v0.1.0
