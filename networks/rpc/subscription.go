@@ -232,12 +232,13 @@ type ClientSubscription struct {
 	channel   reflect.Value
 	namespace string
 	subid     string
-	in        chan json.RawMessage
 
-	quitOnce sync.Once     // ensures quit is closed once
-	quit     chan struct{} // quit is closed when the subscription exits
-	errOnce  sync.Once     // ensures err is closed once
-	err      chan error
+	quitOnce sync.Once // ensures quit is closed once
+	errOnce  sync.Once // ensures err is closed once
+
+	quit chan struct{} // quit is closed when the subscription exits
+	err  chan error
+	in   chan json.RawMessage
 }
 
 func newClientSubscription(c *Client, namespace string, channel reflect.Value) *ClientSubscription {

@@ -74,12 +74,12 @@ var (
 
 // Server is an RPC server.
 type Server struct {
-	services serviceRegistry
-	idgen    func() ID
-	run      int32
-	codecs   mapset.Set
-
+	services    serviceRegistry
+	idgen       func() ID
+	run         int32
 	wsConnCount int32
+
+	codecs mapset.Set
 }
 
 // NewServer creates a new server instance with no registered handlers.

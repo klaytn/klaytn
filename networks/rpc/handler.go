@@ -58,12 +58,14 @@ type handler struct {
 	idgen          func() ID                      // subscription ID generator
 	respWait       map[string]*requestOp          // active client requests
 	clientSubs     map[string]*ClientSubscription // active client subscriptions
-	callWG         sync.WaitGroup                 // pending call goroutines
-	rootCtx        context.Context                // canceled by close()
-	cancelRoot     func()                         // cancel function for rootCtx
-	conn           jsonWriter                     // where responses will be sent
-	log            log.Logger
+	callWG         sync.WaitGroup
 	allowSubscribe bool
+
+	// pending call goroutines
+	rootCtx    context.Context // canceled by close()
+	cancelRoot func()          // cancel function for rootCtx
+	conn       jsonWriter      // where responses will be sent
+	log        log.Logger
 
 	subLock    sync.Mutex
 	serverSubs map[ID]*Subscription
