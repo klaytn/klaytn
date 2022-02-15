@@ -525,7 +525,7 @@ func (bc *BlockChain) setHeadBeyondRoot(head uint64, root common.Hash, repair bo
 	// Track the block number of the requested root hash
 	var rootNumber uint64 // (no root == always 0)
 
-	updateFn := func(header *types.Header) {
+	updateFn := func(header *types.Header) error {
 		// Rewind the block chain, ensuring we don't end up with a stateless head block
 		if currentBlock := bc.CurrentBlock(); currentBlock != nil && header.Number.Uint64() <= currentBlock.NumberU64() {
 			newHeadBlock := bc.GetBlock(header.Hash(), header.Number.Uint64())
@@ -564,6 +564,9 @@ func (bc *BlockChain) setHeadBeyondRoot(head uint64, root common.Hash, repair bo
 				}
 
 			}
+			if newHeadBlock.NumberU64() == 0 {
+				return errors.New("rewound to block number 0, but repair failed")
+			}
 			bc.db.WriteHeadBlockHash(newHeadBlock.Hash())
 
 			// Degrade the chain markers if they are explicitly reverted.
@@ -589,6 +592,7 @@ func (bc *BlockChain) setHeadBeyondRoot(head uint64, root common.Hash, repair bo
 			// to low, so it's safe the update in-memory markers directly.
 			bc.currentFastBlock.Store(newHeadFastBlock)
 		}
+		return nil
 	}
 
 	// Rewind the header chain, deleting all block bodies until then
@@ -604,12 +608,16 @@ func (bc *BlockChain) setHeadBeyondRoot(head uint64, root common.Hash, repair bo
 	// If SetHead was only called as a chain reparation method, try to skip
 	// touching the header chain altogether
 	if repair {
-		updateFn(bc.CurrentBlock().Header())
+		if err := updateFn(bc.CurrentBlock().Header()); err != nil {
+			return 0, err
+		}
 	} else {
 		// Rewind the chain to the requested head and keep going backwards until a
 		// block with a state is found
 		logger.Warn("Rewinding blockchain", "target", head)
-		bc.hc.SetHead(head, updateFn, delFn)
+		if err := bc.hc.SetHead(head, updateFn, delFn); err != nil {
+			return 0, err
+		}
 	}
 
 	// Clear out any stale content from the caches
