@@ -619,16 +619,19 @@ func TestGovernance_initializeCache(t *testing.T) {
 		unitPriceInCurrentSet uint64
 		actualGovernanceBlock uint64
 	}{
-		{3, []uint64{30, 60, 90}, []uint64{2, 3, 4}, 90, 3, 60},
-		{3, []uint64{30, 60, 90}, []uint64{2, 3, 4}, 110, 3, 60},
-		{3, []uint64{30, 60, 90}, []uint64{2, 3, 4}, 130, 4, 90},
+		{0, []uint64{0}, []uint64{1}, 20, 1, 0},
+		{0, []uint64{0}, []uint64{1}, 50, 1, 0},
+		{0, []uint64{0}, []uint64{1}, 80, 1, 0},
+		{3, []uint64{0, 30, 60, 90}, []uint64{1, 2, 3, 4}, 90, 3, 60},
+		{3, []uint64{0, 30, 60, 90}, []uint64{1, 2, 3, 4}, 110, 3, 60},
+		{3, []uint64{0, 30, 60, 90}, []uint64{1, 2, 3, 4}, 130, 4, 90},
 	}
 
 	for _, tc := range testData {
 		// 1. initializing
 
 		// store governance items to the governance db for 'tc.governanceUpdateNum' times
-		for idx := 0; idx < tc.governanceUpdateNum; idx++ {
+		for idx := 1; idx <= tc.governanceUpdateNum; idx++ {
 			config.UnitPrice = tc.unitPrices[idx]
 
 			src := GetGovernanceItemsFromChainConfig(config)
@@ -657,8 +660,8 @@ func TestGovernance_initializeCache(t *testing.T) {
 		assert.True(t, ok)
 		assert.Equal(t, tc.unitPriceInCurrentSet, v)
 
-		assert.Equal(t, tc.blockNums, gov.idxCache[1:]) // the order should be same
-		assert.True(t, gov.itemCache.Contains(getGovernanceCacheKey(tc.blockNums[tc.governanceUpdateNum-1])))
+		assert.Equal(t, tc.blockNums, gov.idxCache) // the order should be same
+		assert.True(t, gov.itemCache.Contains(getGovernanceCacheKey(tc.blockNums[tc.governanceUpdateNum])))
 		assert.Equal(t, tc.actualGovernanceBlock, gov.actualGovernanceBlock.Load().(uint64))
 	}
 }
