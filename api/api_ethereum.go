@@ -1295,7 +1295,7 @@ func (api *EthereumAPI) SendRawTransaction(ctx context.Context, input hexutil.By
 		inputBytes := []byte{byte(types.TxTypeEthEnvelope)}
 		inputBytes = append(inputBytes, input...)
 		return api.publicTransactionPoolAPI.SendRawTransaction(ctx, inputBytes)
-	}	
+	}
 	// legacy transaction
 	return api.publicTransactionPoolAPI.SendRawTransaction(ctx, input)
 }
