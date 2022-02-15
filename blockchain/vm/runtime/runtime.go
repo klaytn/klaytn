@@ -58,9 +58,10 @@ type Config struct {
 func setDefaults(cfg *Config) {
 	if cfg.ChainConfig == nil {
 		cfg.ChainConfig = &params.ChainConfig{
-			ChainID:                 big.NewInt(1),
-			IstanbulCompatibleBlock: new(big.Int),
-			LondonCompatibleBlock:   new(big.Int),
+			ChainID:                  big.NewInt(1),
+			IstanbulCompatibleBlock:  new(big.Int),
+			LondonCompatibleBlock:    new(big.Int),
+			EthTxTypeCompatibleBlock: new(big.Int),
 		}
 	}
 

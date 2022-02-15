@@ -56,6 +56,7 @@ type TxInternalDataEthereumDynamicFee struct {
 type TxInternalDataEthereumDynamicFeeJSON struct {
 	Type                 TxType           `json:"typeInt"`
 	TypeStr              string           `json:"type"`
+	ChainID              *hexutil.Big     `json:"chainId"`
 	AccountNonce         hexutil.Uint64   `json:"nonce"`
 	MaxPriorityFeePerGas *hexutil.Big     `json:"maxPriorityFeePerGas"`
 	MaxFeePerGas         *hexutil.Big     `json:"maxFeePerGas"`
@@ -63,12 +64,9 @@ type TxInternalDataEthereumDynamicFeeJSON struct {
 	Recipient            *common.Address  `json:"to"`
 	Amount               *hexutil.Big     `json:"value"`
 	Payload              hexutil.Bytes    `json:"input"`
+	AccessList           AccessList       `json:"accessList"`
 	TxSignatures         TxSignaturesJSON `json:"signatures"`
-
-	AccessList AccessList   `json:"accessList"`
-	ChainID    *hexutil.Big `json:"chainId"`
-
-	Hash *common.Hash `json:"hash"`
+	Hash                 *common.Hash     `json:"hash"`
 }
 
 func newEmptyTxInternalDataEthereumDynamicFee() *TxInternalDataEthereumDynamicFee {
@@ -86,11 +84,9 @@ func newTxInternalDataEthereumDynamicFee() *TxInternalDataEthereumDynamicFee {
 		Amount:       new(big.Int),
 		Payload:      []byte{},
 		AccessList:   AccessList{},
-
-		// Signature values
-		V: new(big.Int),
-		R: new(big.Int),
-		S: new(big.Int),
+		V:            new(big.Int),
+		R:            new(big.Int),
+		S:            new(big.Int),
 	}
 }
 
@@ -101,12 +97,8 @@ func newTxInternalDataEthereumDynamicFeeWithValues(nonce uint64, to *common.Addr
 	d.Recipient = to
 	d.GasLimit = gasLimit
 
-	if len(data) > 0 {
-		d.Payload = common.CopyBytes(data)
-	}
-
-	if amount != nil {
-		d.Amount.Set(amount)
+	if chainID != nil {
+		d.ChainID.Set(chainID)
 	}
 
 	if gasTipCap != nil {
@@ -117,12 +109,16 @@ func newTxInternalDataEthereumDynamicFeeWithValues(nonce uint64, to *common.Addr
 		d.GasFeeCap.Set(gasFeeCap)
 	}
 
-	if accessList != nil {
-		copy(d.AccessList, accessList)
+	if amount != nil {
+		d.Amount.Set(amount)
 	}
 
-	if chainID != nil {
-		d.ChainID.Set(chainID)
+	if len(data) > 0 {
+		d.Payload = common.CopyBytes(data)
+	}
+
+	if accessList != nil {
+		copy(d.AccessList, accessList)
 	}
 
 	return d
@@ -130,6 +126,13 @@ func newTxInternalDataEthereumDynamicFeeWithValues(nonce uint64, to *common.Addr
 
 func newTxInternalDataEthereumDynamicFeeWithMap(values map[TxValueKeyType]interface{}) (*TxInternalDataEthereumDynamicFee, error) {
 	d := newTxInternalDataEthereumDynamicFee()
+
+	if v, ok := values[TxValueKeyChainID].(*big.Int); ok {
+		d.ChainID.Set(v)
+		delete(values, TxValueKeyChainID)
+	} else {
+		return nil, errValueKeyChainIDInvalid
+	}
 
 	if v, ok := values[TxValueKeyNonce].(uint64); ok {
 		d.AccountNonce = v
@@ -184,13 +187,6 @@ func newTxInternalDataEthereumDynamicFeeWithMap(values map[TxValueKeyType]interf
 		delete(values, TxValueKeyAccessList)
 	} else {
 		return nil, errValueKeyAccessListInvalid
-	}
-
-	if v, ok := values[TxValueKeyChainID].(*big.Int); ok {
-		d.ChainID.Set(v)
-		delete(values, TxValueKeyChainID)
-	} else {
-		return nil, errValueKeyChainIDInvalid
 	}
 
 	if len(values) != 0 {
@@ -468,14 +464,14 @@ func (t *TxInternalDataEthereumDynamicFee) Execute(sender ContractRef, vm VM, st
 func (t *TxInternalDataEthereumDynamicFee) MakeRPCOutput() map[string]interface{} {
 	return map[string]interface{}{
 		"typeInt":              t.Type(),
-		"chainId":              (*hexutil.Big)(t.ChainId()),
 		"type":                 t.Type().String(),
-		"gas":                  hexutil.Uint64(t.GasLimit),
+		"chainId":              (*hexutil.Big)(t.ChainId()),
+		"nonce":                hexutil.Uint64(t.AccountNonce),
 		"maxPriorityFeePerGas": (*hexutil.Big)(t.GasTipCap),
 		"maxFeePerGas":         (*hexutil.Big)(t.GasFeeCap),
-		"input":                hexutil.Bytes(t.Payload),
-		"nonce":                hexutil.Uint64(t.AccountNonce),
+		"gas":                  hexutil.Uint64(t.GasLimit),
 		"to":                   t.Recipient,
+		"input":                hexutil.Bytes(t.Payload),
 		"value":                (*hexutil.Big)(t.Amount),
 		"accessList":           t.AccessList,
 		"signatures":           TxSignaturesJSON{&TxSignatureJSON{(*hexutil.Big)(t.V), (*hexutil.Big)(t.R), (*hexutil.Big)(t.S)}},
@@ -486,6 +482,7 @@ func (t *TxInternalDataEthereumDynamicFee) MarshalJSON() ([]byte, error) {
 	return json.Marshal(TxInternalDataEthereumDynamicFeeJSON{
 		t.Type(),
 		t.Type().String(),
+		(*hexutil.Big)(t.ChainID),
 		(hexutil.Uint64)(t.AccountNonce),
 		(*hexutil.Big)(t.GasTipCap),
 		(*hexutil.Big)(t.GasFeeCap),
@@ -493,9 +490,8 @@ func (t *TxInternalDataEthereumDynamicFee) MarshalJSON() ([]byte, error) {
 		t.Recipient,
 		(*hexutil.Big)(t.Amount),
 		t.Payload,
-		TxSignaturesJSON{&TxSignatureJSON{(*hexutil.Big)(t.V), (*hexutil.Big)(t.R), (*hexutil.Big)(t.S)}},
 		t.AccessList,
-		(*hexutil.Big)(t.ChainID),
+		TxSignaturesJSON{&TxSignatureJSON{(*hexutil.Big)(t.V), (*hexutil.Big)(t.R), (*hexutil.Big)(t.S)}},
 		t.Hash,
 	})
 }
@@ -506,6 +502,7 @@ func (t *TxInternalDataEthereumDynamicFee) UnmarshalJSON(bytes []byte) error {
 		return err
 	}
 
+	t.ChainID = (*big.Int)(js.ChainID)
 	t.AccountNonce = uint64(js.AccountNonce)
 	t.GasTipCap = (*big.Int)(js.MaxPriorityFeePerGas)
 	t.GasFeeCap = (*big.Int)(js.MaxFeePerGas)
@@ -518,7 +515,6 @@ func (t *TxInternalDataEthereumDynamicFee) UnmarshalJSON(bytes []byte) error {
 	t.R = (*big.Int)(js.TxSignatures[0].R)
 	t.S = (*big.Int)(js.TxSignatures[0].S)
 	t.Hash = js.Hash
-	t.ChainID = (*big.Int)(js.ChainID)
 
 	return nil
 }

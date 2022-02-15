@@ -59,6 +59,7 @@ func init() {
 	eip1559Config = &cpy
 	eip1559Config.IstanbulCompatibleBlock = common.Big0
 	eip1559Config.LondonCompatibleBlock = common.Big0
+	eip1559Config.EthTxTypeCompatibleBlock = common.Big0
 	fork.SetHardForkBlockNumberConfig(eip1559Config)
 }
 

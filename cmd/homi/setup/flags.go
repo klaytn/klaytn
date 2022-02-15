@@ -335,4 +335,10 @@ var (
 		Usage: "londonCompatible blockNumber",
 		Value: 0,
 	}
+
+	ethTxTypeCompatibleBlockNumberFlag = cli.Int64Flag{
+		Name:  "eth-tx-type-compatible-blocknumber",
+		Usage: "ethTxTypeCompatible blockNumber",
+		Value: 0,
+	}
 )
