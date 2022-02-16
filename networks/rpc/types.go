@@ -84,6 +84,13 @@ const (
 // - an invalid block number error when the given argument isn't a known strings
 // - an out of range error when the given block number is either too little or too large
 func (bn *BlockNumber) UnmarshalJSON(data []byte) error {
+	var decimalInput uint64
+	err := json.Unmarshal(data, &decimalInput)
+	if err == nil {
+		*bn = BlockNumber(decimalInput)
+		return nil
+	}
+
 	input := strings.TrimSpace(string(data))
 	if len(input) >= 2 && input[0] == '"' && input[len(input)-1] == '"' {
 		input = input[1 : len(input)-1]
