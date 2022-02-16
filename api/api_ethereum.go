@@ -423,7 +423,7 @@ func (api *EthereumAPI) GetProof(ctx context.Context, address common.Address, st
 // * When blockNr is -2 the pending chain head is returned.
 func (api *EthereumAPI) GetHeaderByNumber(ctx context.Context, number rpc.BlockNumber) (map[string]interface{}, error) {
 	// In Ethereum, err is always nil because the backend of Ethereum always return nil.
-	klaytnHeader, _ := api.publicBlockChainAPI.GetHeaderByNumber(ctx, number)
+	klaytnHeader, _ := api.publicBlockChainAPI.b.HeaderByNumber(ctx, number)
 	if klaytnHeader != nil {
 		response, err := api.rpcMarshalHeader(klaytnHeader)
 		if err != nil {
@@ -443,7 +443,7 @@ func (api *EthereumAPI) GetHeaderByNumber(ctx context.Context, number rpc.BlockN
 // GetHeaderByHash returns the requested header by hash.
 func (api *EthereumAPI) GetHeaderByHash(ctx context.Context, hash common.Hash) map[string]interface{} {
 	// In Ethereum, err is always nil because the backend of Ethereum always return nil.
-	klaytnHeader, _ := api.publicBlockChainAPI.GetHeaderByHash(ctx, hash)
+	klaytnHeader, _ := api.publicBlockChainAPI.b.HeaderByHash(ctx, hash)
 	if klaytnHeader != nil {
 		response, err := api.rpcMarshalHeader(klaytnHeader)
 		if err != nil {

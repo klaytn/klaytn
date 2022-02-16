@@ -158,7 +158,7 @@ func (s *PublicBlockChainAPI) rpcMarshalHeader(header *types.Header) map[string]
 }
 
 // RPCMarshalHeader converts the given header to the RPC output .
-func RPCMarshalHeader(head *types.Header, isEnabledEthFork bool) map[string]interface{} {
+func RPCMarshalHeader(head *types.Header, isEnabledEthTxTypeFork bool) map[string]interface{} {
 	result := map[string]interface{}{
 		"parentHash":       head.ParentHash,
 		"reward":           head.Rewardbase,
@@ -180,7 +180,7 @@ func RPCMarshalHeader(head *types.Header, isEnabledEthFork bool) map[string]inte
 		result["voteData"] = hexutil.Bytes(head.Vote)
 	}
 
-	if isEnabledEthFork {
+	if isEnabledEthTxTypeFork {
 		result["baseFeePerGas"] = params.BaseFee
 	}
 
