@@ -90,7 +90,6 @@ func (bn *BlockNumber) UnmarshalJSON(data []byte) error {
 		*bn = BlockNumber(decimalInput)
 		return nil
 	}
-
 	input := strings.TrimSpace(string(data))
 	if len(input) >= 2 && input[0] == '"' && input[len(input)-1] == '"' {
 		input = input[1 : len(input)-1]
