@@ -165,11 +165,11 @@ func RPCMarshalHeader(head *types.Header, isEnabledEthTxTypeFork bool) map[strin
 		"transactionsRoot": head.TxHash,
 		"receiptsRoot":     head.ReceiptHash,
 		"logsBloom":        head.Bloom,
-		"blockScore":       head.BlockScore,
+		"blockScore":       (*hexutil.Big)(head.BlockScore),
 		"number":           (*hexutil.Big)(head.Number),
 		"gasUsed":          hexutil.Uint64(head.GasUsed),
 		"timestamp":        (*hexutil.Big)(head.Time),
-		"timestampFoS":     head.TimeFoS,
+		"timestampFoS":     hexutil.Uint64(head.TimeFoS),
 		"extraData":        hexutil.Bytes(head.Extra),
 		"governanceData":   hexutil.Bytes(head.Governance),
 		"hash":             head.Hash(),
@@ -180,7 +180,7 @@ func RPCMarshalHeader(head *types.Header, isEnabledEthTxTypeFork bool) map[strin
 	}
 
 	if isEnabledEthTxTypeFork {
-		result["baseFeePerGas"] = params.BaseFee
+		result["baseFeePerGas"] = hexutil.Uint64(params.BaseFee)
 	}
 
 	return result
