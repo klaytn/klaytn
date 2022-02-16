@@ -176,7 +176,7 @@ func RPCMarshalHeader(head *types.Header, isEnabledEthTxTypeFork bool) map[strin
 		"hash":             head.Hash(),
 	}
 
-	if head.Vote != nil {
+	if len(head.Vote) != 0 {
 		result["voteData"] = hexutil.Bytes(head.Vote)
 	}
 
