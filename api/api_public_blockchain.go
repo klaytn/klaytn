@@ -158,6 +158,7 @@ func (s *PublicBlockChainAPI) rpcMarshalHeader(header *types.Header) map[string]
 
 // RPCMarshalHeader converts the given header to the RPC output that includes the baseFeePerGas field.
 func RPCMarshalHeader(head *types.Header, isEnabledEthTxTypeFork bool) map[string]interface{} {
+	fmt.Printf("head.TimeFoS: %v / hexutil.Uint(head.TimeFoS): %v / hexutil.Uint64(head.TimeFoS): %v \n", head.TimeFoS, hexutil.Uint(head.TimeFoS), hexutil.Uint64(head.TimeFoS))
 	result := map[string]interface{}{
 		"parentHash":       head.ParentHash,
 		"reward":           head.Rewardbase,
@@ -180,7 +181,7 @@ func RPCMarshalHeader(head *types.Header, isEnabledEthTxTypeFork bool) map[strin
 	}
 
 	if isEnabledEthTxTypeFork {
-		result["baseFeePerGas"] = hexutil.Uint64(params.BaseFee)
+		result["baseFeePerGas"] = (*hexutil.Big)(new(big.Int).SetUint64(params.BaseFee))
 	}
 
 	return result
