@@ -1396,11 +1396,15 @@ func (api *EthereumAPI) Accounts() []common.Address {
 // rpcMarshalHeader marshal block header as Ethereum compatible format.
 // It returns error when fetching Author which is block proposer is failed.
 func (api *EthereumAPI) rpcMarshalHeader(head *types.Header) (map[string]interface{}, error) {
-	proposer, err := api.publicKlayAPI.b.Engine().Author(head)
-	if err != nil {
-		// miner is the field Klaytn should provide the correct value. It's not the field dummy value is allowed.
-		logger.Error("Failed to fetch author during marshaling header", "err", err.Error())
-		return nil, err
+	var proposer common.Address
+	var err error
+	if head.Number.BitLen() != 0 {
+		proposer, err = api.publicKlayAPI.b.Engine().Author(head)
+		if err != nil {
+			// miner is the field Klaytn should provide the correct value. It's not the field dummy value is allowed.
+			logger.Error("Failed to fetch author during marshaling header", "err", err.Error())
+			return nil, err
+		}
 	}
 	result := map[string]interface{}{
 		"number":          (*hexutil.Big)(head.Number),
