@@ -169,7 +169,7 @@ func RPCMarshalHeader(head *types.Header, isEnabledEthTxTypeFork bool) map[strin
 		"number":           (*hexutil.Big)(head.Number),
 		"gasUsed":          hexutil.Uint64(head.GasUsed),
 		"timestamp":        (*hexutil.Big)(head.Time),
-		"timestampFoS":     hexutil.Uint64(head.TimeFoS),
+		"timestampFoS":     hexutil.Uint(head.TimeFoS),
 		"extraData":        hexutil.Bytes(head.Extra),
 		"governanceData":   hexutil.Bytes(head.Governance),
 		"hash":             head.Hash(),
