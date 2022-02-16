@@ -253,7 +253,8 @@ type DBManager interface {
 	ReadGovernanceAtNumber(num uint64, epoch uint64) (uint64, map[string]interface{}, error)
 	WriteGovernanceState(b []byte) error
 	ReadGovernanceState() ([]byte, error)
-	//TODO-Klaytn implement governance DB deletion methods.
+	DeleteGovernance(blockNum uint64) error
+	DeleteGovernanceIdx(blockNum uint64) error
 
 	// StakingInfo related functions
 	ReadStakingInfo(blockNum uint64) ([]byte, error)
@@ -2248,6 +2249,17 @@ func (dbm *databaseManager) WriteGovernance(data map[string]interface{}, num uin
 	return db.Put(makeKey(governancePrefix, num), b)
 }
 
+//DeleteGovernance deletes the governance data of corresponing blockNum index.
+func (dbm *databaseManager) DeleteGovernance(blockNum uint64) error {
+	db := dbm.getDatabase(MiscDB)
+
+	if err := db.Delete(makeKey(governancePrefix, blockNum)); err != nil {
+		logger.Crit("Failed to delete Governance", "err", err)
+		return err
+	}
+	return nil
+}
+
 func (dbm *databaseManager) WriteGovernanceIdx(num uint64) error {
 	db := dbm.getDatabase(MiscDB)
 	newSlice := make([]uint64, 0)
@@ -2265,6 +2277,29 @@ func (dbm *databaseManager) WriteGovernanceIdx(num uint64) error {
 	}
 
 	newSlice = append(newSlice, num)
+
+	data, err := json.Marshal(newSlice)
+	if err != nil {
+		return err
+	}
+	return db.Put(governanceHistoryKey, data)
+}
+
+// DeleteGovernanceIdx leaves governanceHistory from 0 to blockNum.
+func (dbm *databaseManager) DeleteGovernanceIdx(blockNum uint64) error {
+	db := dbm.getDatabase(MiscDB)
+	newSlice := make([]uint64, 0)
+
+	if idxHistory, err := dbm.ReadRecentGovernanceIdx(0); err != nil {
+		return err
+	} else {
+		for i:=0; i<len(idxHistory); i++{
+			if idxHistory[i] > blockNum{
+				break
+			}
+			newSlice = append(newSlice, idxHistory[i])
+		}
+	}
 
 	data, err := json.Marshal(newSlice)
 	if err != nil {
