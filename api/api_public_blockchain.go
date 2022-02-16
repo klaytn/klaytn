@@ -150,14 +150,59 @@ func (s *PublicBlockChainAPI) GetAccount(ctx context.Context, address common.Add
 	return serAcc, state.Error()
 }
 
+// rpcMarshalHeader uses the generalized output filler, then adds the total difficulty field, which requires
+// a `PublicBlockchainAPI`.
+func (s *PublicBlockChainAPI) rpcMarshalHeader(header *types.Header) map[string]interface{} {
+	fields := RPCMarshalHeader(header, s.b.ChainConfig().IsEthTxTypeForkEnabled(header.Number))
+	return fields
+}
+
+// RPCMarshalHeader converts the given header to the RPC output .
+func RPCMarshalHeader(head *types.Header, isEnabledEthFork bool) map[string]interface{} {
+	result := map[string]interface{}{
+		"parentHash":       head.ParentHash,
+		"reward":           head.Rewardbase,
+		"stateRoot":        head.Root,
+		"transactionsRoot": head.TxHash,
+		"receiptsRoot":     head.ReceiptHash,
+		"logsBloom":        head.Bloom,
+		"blockScore":       head.BlockScore,
+		"number":           (*hexutil.Big)(head.Number),
+		"gasUsed":          hexutil.Uint64(head.GasUsed),
+		"timestamp":        (*hexutil.Big)(head.Time),
+		"timestampFoS":     head.TimeFoS,
+		"extraData":        hexutil.Bytes(head.Extra),
+		"governanceData":   hexutil.Bytes(head.Governance),
+		"hash":             head.Hash(),
+	}
+
+	if head.Vote != nil {
+		result["voteData"] = hexutil.Bytes(head.Vote)
+	}
+
+	if isEnabledEthFork {
+		result["baseFeePerGas"] = params.BaseFee
+	}
+
+	return result
+}
+
 // GetHeaderByNumber returns the requested canonical block header.
-func (s *PublicBlockChainAPI) GetHeaderByNumber(ctx context.Context, number rpc.BlockNumber) (*types.Header, error) {
-	return s.b.HeaderByNumber(ctx, number)
+func (s *PublicBlockChainAPI) GetHeaderByNumber(ctx context.Context, number rpc.BlockNumber) (map[string]interface{}, error) {
+	header, err := s.b.HeaderByNumber(ctx, number)
+	if err != nil {
+		return nil, err
+	}
+	return s.rpcMarshalHeader(header), nil
 }
 
 // GetHeaderByHash returns the requested header by hash.
-func (s *PublicBlockChainAPI) GetHeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error) {
-	return s.b.HeaderByHash(ctx, hash)
+func (s *PublicBlockChainAPI) GetHeaderByHash(ctx context.Context, hash common.Hash) (map[string]interface{}, error) {
+	header, err := s.b.HeaderByHash(ctx, hash)
+	if err != nil {
+		return nil, err
+	}
+	return s.rpcMarshalHeader(header), nil
 }
 
 // GetBlockByNumber returns the requested block. When blockNr is -1 the chain head is returned. When fullTx is true all
