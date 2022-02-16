@@ -150,14 +150,13 @@ func (s *PublicBlockChainAPI) GetAccount(ctx context.Context, address common.Add
 	return serAcc, state.Error()
 }
 
-// rpcMarshalHeader uses the generalized output filler, then adds the total difficulty field, which requires
-// a `PublicBlockchainAPI`.
+// rpcMarshalHeader converts the given header to the RPC output.
 func (s *PublicBlockChainAPI) rpcMarshalHeader(header *types.Header) map[string]interface{} {
 	fields := RPCMarshalHeader(header, s.b.ChainConfig().IsEthTxTypeForkEnabled(header.Number))
 	return fields
 }
 
-// RPCMarshalHeader converts the given header to the RPC output .
+// RPCMarshalHeader converts the given header to the RPC output that includes the baseFeePerGas field.
 func RPCMarshalHeader(head *types.Header, isEnabledEthTxTypeFork bool) map[string]interface{} {
 	result := map[string]interface{}{
 		"parentHash":       head.ParentHash,
