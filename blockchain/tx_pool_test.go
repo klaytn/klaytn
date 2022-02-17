@@ -1901,8 +1901,8 @@ func TestDynamicFeeTransactionHasNotSameGasPrice(t *testing.T) {
 	defer pool.Stop()
 
 	// Ensure gasFeeCap is greater than or equal to gasTipCap.
-	tx := dynamicFeeTx(0, 100, big.NewInt(2), big.NewInt(1), key)
-	if err := pool.AddRemote(tx); err != ErrInvalidGasFeeCap {
+	tx := dynamicFeeTx(0, 100, big.NewInt(1), big.NewInt(2), key)
+	if err := pool.AddRemote(tx); err != ErrTipAboveFeeCap {
 		t.Error("expected", ErrTipAboveFeeCap, "got", err)
 	}
 
