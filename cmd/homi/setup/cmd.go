@@ -126,6 +126,7 @@ Args :
 			cliquePeriodFlag,
 			istanbulCompatibleBlockNumberFlag,
 			londonCompatibleBlockNumberFlag,
+			ethTxTypeCompatibleBlockNumberFlag,
 		},
 		ArgsUsage: "type",
 	}
