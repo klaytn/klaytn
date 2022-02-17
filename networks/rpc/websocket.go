@@ -24,13 +24,16 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	gorillaws "github.com/gorilla/websocket"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -44,6 +47,11 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
+const (
+	wsReadBuffer  = 1024
+	wsWriteBuffer = 1024
+)
+
 // websocketJSONCodec is a custom JSON codec with payload size enforcement and
 // special number parsing.
 var websocketJSONCodec = websocket.Codec{
@@ -54,12 +62,16 @@ var websocketJSONCodec = websocket.Codec{
 	},
 	// Unmarshal is a specialized unmarshaller to properly convert numbers.
 	Unmarshal: func(msg []byte, payloadType byte, v interface{}) error {
+		fmt.Println("Unmarshal msg was", string(msg))
 		dec := json.NewDecoder(bytes.NewReader(msg))
 		dec.UseNumber()
-
+		fmt.Println("unmarshal return ---", dec)
+		//unmarshal return --- &{0xc0007080c0 [] {[] 0 0 {<nil> false [] <nil> 0} <nil> <nil> true false} 0 0 {<nil> false [] <nil> 0} <nil> 0 []}
 		return dec.Decode(v)
 	},
 }
+
+var wsBufferPool = new(sync.Pool)
 
 // WebsocketHandler returns a handler that serves JSON-RPC to WebSocket connections.
 //
@@ -91,7 +103,14 @@ func (srv *Server) WebsocketHandler(allowedOrigins []string) http.Handler {
 				return websocketJSONCodec.Send(conn, v)
 			}
 			decoder := func(v interface{}) error {
-				return websocketJSONCodec.Receive(conn, v)
+				fmt.Println("websocket server handler before decoding", conn)
+				//var msg []byte
+				//conn.Read(msg)
+				//fmt.Println("websocket server readed:", len(msg), string(msg))
+				err := websocketJSONCodec.Receive(conn, v)
+				fmt.Println("jsoncodec receive", err, "||||", v)
+				return err
+				//return websocketJSONCodec.Receive(conn, v)
 			}
 			srv.ServeCodec(NewCodec(conn, encoder, decoder), OptionMethodInvocation|OptionSubscriptions)
 		},
@@ -270,14 +289,52 @@ func DialWebsocket(ctx context.Context, endpoint, origin string) (*Client, error
 			origin = "http://" + strings.ToLower(origin)
 		}
 	}
-	config, err := websocket.NewConfig(endpoint, origin)
+	endpoint, header, err := wsClientHeaders(endpoint, origin)
 	if err != nil {
 		return nil, err
 	}
 
-	return NewClient(ctx, func(ctx context.Context) (net.Conn, error) {
-		return wsDialContext(ctx, config)
+	// websocket.NewConfig() is not used on Gorilla Websocket library
+	//config, err := websocket.NewConfig(endpoint, origin)
+	//if err != nil {
+	//	return nil, err
+	//}
+
+	return NewGorillaWSClient(ctx, func(ctx context.Context) (*gorillaws.Conn, error) {
+		dialer := gorillaws.Dialer{
+			ReadBufferSize:  wsReadBuffer,
+			WriteBufferSize: wsWriteBuffer,
+			WriteBufferPool: wsBufferPool,
+		}
+		//fmt.Println("header")
+		//fmt.Println("dialer.dial before")
+
+		conn, resp, err := dialer.Dial(endpoint, header)
+		_ = resp
+		//fmt.Println("dialer.dial after")
+		//fmt.Println("resp", resp)
+		fmt.Println("Dial Done - conn", conn)
+		fmt.Println("Dial Done - resp", resp)
+		fmt.Println("Dial Done - err", err)
+		return conn, err
 	})
+}
+
+func wsClientHeaders(endpoint, origin string) (string, http.Header, error) {
+	endpointURL, err := url.Parse(endpoint)
+	if err != nil {
+		return endpoint, nil, err
+	}
+	header := make(http.Header)
+	if origin != "" {
+		header.Add("origin", origin)
+	}
+	if endpointURL.User != nil {
+		b64auth := base64.StdEncoding.EncodeToString([]byte(endpointURL.User.String()))
+		header.Add("authorization", "Basic "+b64auth)
+		endpointURL.User = nil
+	}
+	return endpointURL.String(), header, nil
 }
 
 func wsDialContext(ctx context.Context, config *websocket.Config) (*websocket.Conn, error) {
