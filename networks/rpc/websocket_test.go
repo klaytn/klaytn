@@ -73,28 +73,26 @@ func TestWebsocketLargeCall(t *testing.T) {
 	method := "service_echo"
 
 	// set message size
-	messageSize := 20000
-	fmt.Println("before get message size")
-
+	messageSize := 200
 	messageSize, err = client.getMessageSize(method)
-	fmt.Println("get message size ", messageSize, err)
+	//fmt.Println("get message size ", messageSize, err)
 	assert.NoError(t, err)
-	requestMaxLen := common.MaxRequestContentLength - messageSize - 50000
+	requestMaxLen := common.MaxRequestContentLength - messageSize
 	//requestMaxLen = 800
 
 	// This call sends slightly less than the limit and should work.
 	arg := strings.Repeat("x", requestMaxLen-1)
-	fmt.Println("before client call ", result)
+	//fmt.Println("before client call ", result)
 
 	assert.NoError(t, client.Call(&result, method, arg, 1), "valid call didn't work")
-	fmt.Println(" client call ", result)
+	//fmt.Println(" client call ", result)
 	assert.Equal(t, arg, result.String, "wrong string echoed")
 
 	// This call sends slightly larger than the allowed size and shouldn't work.
 	arg = strings.Repeat("x", requestMaxLen)
-	fmt.Println("before client call 2 ", result)
+	//fmt.Println("before client call 2 ", result)
 	assert.Error(t, client.Call(&result, method, arg), "no error for too large call")
-	fmt.Println(" client call 2 ", result)
+	//fmt.Println(" client call 2 ", result)
 
 }
 
@@ -198,16 +196,15 @@ func TestWebsocketAuthCheck(t *testing.T) {
 	httpsrv.Config.Handler = http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			auth := r.Header.Get("Authorization")
-			fmt.Println("Received auth header = ", auth)
+			//fmt.Println("Received auth header = ", auth)
 			expectedAuth := "Basic " + base64.StdEncoding.EncodeToString([]byte("testuser:test-PASS_01"))
-			fmt.Println("expected auth  = ", expectedAuth)
+			//fmt.Println("expected auth  = ", expectedAuth)
 			if r.Method == http.MethodGet && auth == expectedAuth {
 				connect = true
 				w.WriteHeader(http.StatusSwitchingProtocols)
 				return
 			}
 			if !connect {
-				//fmt.Println("connect with authorization not received")
 				http.Error(w, "connect with authorization not received", http.StatusMethodNotAllowed)
 				return
 			}
