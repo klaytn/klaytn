@@ -47,9 +47,9 @@ func (dbm *databaseManager) WriteStakingInfo(blockNum uint64, stakingInfo []byte
 	return db.Put(key, stakingInfo)
 }
 
-func (dbm *databaseManager) DeleteStakingInfo(blockNum uint64){
+func (dbm *databaseManager) DeleteStakingInfo(blockNum uint64) {
 	db := dbm.getDatabase(MiscDB)
-	if _,err := dbm.ReadStakingInfo(blockNum); err != nil {
+	if _, err := dbm.ReadStakingInfo(blockNum); err != nil {
 		return
 	}
 

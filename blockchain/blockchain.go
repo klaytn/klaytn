@@ -602,7 +602,8 @@ func (bc *BlockChain) setHeadBeyondRoot(head uint64, root common.Hash, repair bo
 		// removed in the hc.SetHead function.
 		bc.db.DeleteBody(hash, num)
 		bc.db.DeleteReceipts(hash, num)
-
+		bc.db.DeleteGovernance(num)
+		bc.db.DeleteStakingInfo(num)
 	}
 
 	// If SetHead was only called as a chain reparation method, try to skip
@@ -624,6 +625,7 @@ func (bc *BlockChain) setHeadBeyondRoot(head uint64, root common.Hash, repair bo
 	bc.futureBlocks.Purge()
 	bc.db.ClearBlockChainCache()
 	//TODO-Klaytn add governance DB deletion logic.
+	bc.db.DeleteGovernanceIdx(head)
 
 	return rootNumber, bc.loadLastState()
 }

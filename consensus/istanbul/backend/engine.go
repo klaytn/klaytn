@@ -692,8 +692,10 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		}
 		// No snapshot for this header, gather the header and move backward
 		if header := getPrevHeaderAndUpdateParents(chain, number, hash, &parents); header == nil {
+			logger.Info("header null")
 			return nil, consensus.ErrUnknownAncestor
 		} else {
+			logger.Info("header not null", "header", header)
 			headers = append(headers, header)
 			number, hash = number-1, header.ParentHash
 		}
@@ -708,8 +710,11 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 	}
 
 	// If we've generated a new checkpoint snapshot, save to disk
+	logger.Info("snapshot number?", "num", snap.Number, "headers len", len(headers), "headers", headers)
 	if snap.Number%checkpointInterval == 0 && len(headers) > 0 {
+		logger.Info("save snapshot to dist?")
 		if sb.governance.CanWriteGovernanceState(snap.Number) {
+			logger.Info("Can write Governance State", snap.Number)
 			sb.governance.WriteGovernanceState(snap.Number, true)
 		}
 		if err = snap.store(sb.db); err != nil {

@@ -967,6 +967,10 @@ func (gov *Governance) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &j); err != nil {
 		return err
 	}
+	fmt.Println("%%%%% governancejson %%%%%")
+	fmt.Println(j)
+	fmt.Println("%%%%%%%%% %%%%% %%%%% %%%%%  %%%%%")
+
 	gov.ChainConfig = j.ChainConfig
 	gov.voteMap.Import(j.VoteMap)
 	gov.nodeAddress.Store(j.NodeAddress)
@@ -975,7 +979,9 @@ func (gov *Governance) UnmarshalJSON(b []byte) error {
 	gov.currentSet.Import(adjustDecodedSet(j.CurrentSet))
 	gov.changeSet.Import(adjustDecodedSet(j.ChangeSet))
 	atomic.StoreUint64(&gov.lastGovernanceStateBlock, j.BlockNumber)
-
+	fmt.Println("%%%%% lastGovernanceStateBlock %%%%%")
+	fmt.Println(&gov.lastGovernanceStateBlock, j.BlockNumber)
+	fmt.Println("%%%%%%%%% %%%%% %%%%% %%%%%  %%%%%")
 	return nil
 }
 

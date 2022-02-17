@@ -259,7 +259,7 @@ type DBManager interface {
 	// StakingInfo related functions
 	ReadStakingInfo(blockNum uint64) ([]byte, error)
 	WriteStakingInfo(blockNum uint64, stakingInfo []byte) error
-
+	DeleteStakingInfo(blockNum uint64)
 	// DB migration related function
 	StartDBMigration(DBManager) error
 
@@ -2293,8 +2293,8 @@ func (dbm *databaseManager) DeleteGovernanceIdx(blockNum uint64) error {
 	if idxHistory, err := dbm.ReadRecentGovernanceIdx(0); err != nil {
 		return err
 	} else {
-		for i:=0; i<len(idxHistory); i++{
-			if idxHistory[i] > blockNum{
+		for i := 0; i < len(idxHistory); i++ {
+			if idxHistory[i] > blockNum {
 				break
 			}
 			newSlice = append(newSlice, idxHistory[i])

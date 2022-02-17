@@ -79,6 +79,8 @@ func (b *CNAPIBackend) SetHead(number uint64) {
 	b.cn.protocolManager.Downloader().Cancel()
 	b.cn.protocolManager.SetSyncStop(true)
 	b.cn.blockchain.SetHead(number)
+	b.cn.governance.WriteGovernanceState(number, false)
+	b.cn.governance.ReadGovernanceState()
 	b.cn.protocolManager.SetSyncStop(false)
 }
 
