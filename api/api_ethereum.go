@@ -1398,7 +1398,7 @@ func (api *EthereumAPI) Accounts() []common.Address {
 func (api *EthereumAPI) rpcMarshalHeader(head *types.Header) (map[string]interface{}, error) {
 	var proposer common.Address
 	var err error
-	if head.Number.BitLen() != 0 {
+	if head.Number.Sign() != 0 {
 		proposer, err = api.publicKlayAPI.b.Engine().Author(head)
 		if err != nil {
 			// miner is the field Klaytn should provide the correct value. It's not the field dummy value is allowed.
