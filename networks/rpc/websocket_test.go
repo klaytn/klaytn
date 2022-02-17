@@ -24,7 +24,6 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	gorillaws "github.com/gorilla/websocket"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -184,79 +183,6 @@ func TestWebsocketClientHeaders(t *testing.T) {
 	if header.Get("origin") != "https://example.com" {
 		t.Fatal("Origin not set")
 	}
-}
-
-func TestDialWebsocketAuth(t *testing.T) {
-
-	var (
-		srv     = newTestServer("websocket test", new(Service))
-		httpsrv = httptest.NewServer(srv.WebsocketHandler([]string{"http://example.com"}))
-		wsURL   = "ws:" + strings.TrimPrefix(httpsrv.URL, "http:")
-	)
-	defer srv.Stop()
-	defer httpsrv.Close()
-	_ = wsURL
-
-	//client, err := DialWebsocket(context.Background(), wsURL, "http://example.com")
-	//if err == nil {
-	//	fmt.Println("tttttttt")
-	//	client.Close()
-	//	t.Fatal("no error for wrong origin")
-	//}
-
-	url := "wss://node-api.klaytnapi.com/v1/ws/open?chain-id=1001"
-	//url := "wss://KASKZCTSDT07NI1PM54OKL85:nPFDFf1Qh3Zy5VfNmYwl3WV_Vq_R_Dmo3cBtncbP@node-api.klaytnapi.com/v1/ws/open?chain-id=1001"
-	//auth := "wss://KASKZCTSDT07NI1PM54OKL85:nPFDFf1Qh3Zy5VfNmYwl3WV_Vq_R_Dmo3cBtncbP@node-api.klaytnapi.com/v1/ws/open?chain-id=1001"
-	//auth := "Basic S0FTS1pDVFNEVDA3TkkxUE01NE9LTDg1Om5QRkRGZjFRaDNaeTVWZk5tWXdsM1dWX1ZxX1JfRG1vM2NCdG5jYlA="
-	url = "wss://KASKZCTSDT07NI1PM54OKL85:nPFDFf1Qh3Zy5VfNmYwl3WV_Vq_R_Dmo3cBtncbP@node-api.klaytnapi.com/v1/ws/open?chain-id=1001"
-	//username := "foo"
-	//password := "bar"
-	//username = "KASKZCTSDT07NI1PM54OKL85"
-	//password = "nPFDFf1Qh3Zy5VfNmYwl3WV_Vq_R_Dmo3cBtncbP"
-	//authHeader := "Basic " + base64.StdEncoding.EncodeToString([]byte(username+":"+password))
-	////fmt.Println(authHeader)
-
-	ctx := context.Background()
-	_ = ctx
-
-	//client := DialWebsocket(ctx, endpoint, "")
-
-	dialer := gorillaws.Dialer{
-		ReadBufferSize:  1024,
-		WriteBufferSize: 1024,
-	}
-	//endpoint, header, err := wsClientHeaders(endpoint, origin)
-	endpoint, header, err := wsClientHeaders(url, "")
-	fmt.Println("endpoint  ", endpoint)
-	fmt.Println("header  ", header)
-	fmt.Println(err)
-
-	//header := http.Header(make(map[string][]string))
-	//header.Add("Authorization", authHeader)
-
-	//client, err := DialWebsocket(context.Background(), wsURL, "http://example.com")
-	//if err == nil {
-	//	fmt.Println("tttttttt")
-	//	client.Close()
-	//	t.Fatal("no error for wrong origin")
-	//}
-
-	conn, resp, err := dialer.Dial(endpoint, header)
-	//conn, resp, err := dialer.Dial(wsURL, header)
-	fmt.Println(conn)
-	fmt.Println("resp111111", resp)
-	fmt.Println(err)
-	//t.Fatal("no error for wrong origin")
-	err = conn.WriteJSON(map[string]interface{}{
-		"jsonrpc": "2.0",
-		"id":      1,
-		"method":  "klay_subscribe",
-		"params":  []string{"newHeads"},
-	})
-
-	_, msg, _ := conn.ReadMessage()
-	fmt.Println("read bytes", string(msg))
-
 }
 
 func TestWebsocketAuthCheck(t *testing.T) {
