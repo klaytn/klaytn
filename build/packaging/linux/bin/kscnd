@@ -310,6 +310,10 @@ start_node() {
         OPTIONS="$OPTIONS $ADDITIONAL"
     fi
 
+    if [[ ! -z $REWARDBASE ]] && [[ $REWARDBASE != "" ]]; then
+        OPTIONS="$OPTIONS --rewardbase $REWARDBASE"
+    fi
+
     if [[ ! -z $AUTO_RESTART ]] && [[ $AUTO_RESTART -eq 1 ]]; then
         OPTIONS="$OPTIONS --autorestart.enable"
     fi
