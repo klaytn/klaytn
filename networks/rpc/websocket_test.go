@@ -24,6 +24,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	gorillaws "github.com/gorilla/websocket"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -201,6 +202,14 @@ func TestFastWSServer_MaxConnections(t *testing.T) {
 
 func testWebsocketMaxConnections(t *testing.T, addr string, maxConnections int) {
 	var closers []*Client
+	var expectedGSwsError = gorillaws.CloseError{
+		Code: gorillaws.CloseGoingAway,
+		Text: "unexpected EOF",
+	}
+	var expectedFastwsError = gorillaws.CloseError{
+		Code: gorillaws.CloseAbnormalClosure,
+		Text: "unexpected EOF",
+	}
 
 	for i := 0; i <= maxConnections; i++ {
 		client, err := DialWebsocket(context.Background(), addr, "")
@@ -213,13 +222,19 @@ func testWebsocketMaxConnections(t *testing.T, addr string, maxConnections int) 
 		method := "service_echo"
 		arg := strings.Repeat("x", i)
 		err = client.Call(&result, method, arg, 1)
+		fmt.Println("result111", result)
 		if i < int(MaxWebsocketConnections) {
 			assert.NoError(t, err)
 			assert.Equal(t, arg, result.String, "wrong string echoed")
 		} else {
 			assert.Error(t, err)
 			//assert.Equal(t, "EOF", err.Error())
-			assert.Equal(t, "websocket: close 1001 (going away): EOF", err.Error())
+			if t.Name() == "TestWSServer_MaxConnections" {
+				assert.Equal(t, expectedGSwsError.Error(), err.Error())
+			}
+			if t.Name() == "TestFastWSServer_MaxConnections" {
+				assert.Equal(t, expectedFastwsError.Error(), err.Error())
+			}
 		}
 	}
 

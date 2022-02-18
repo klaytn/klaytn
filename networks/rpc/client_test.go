@@ -415,6 +415,7 @@ func TestClientSetHeader(t *testing.T) {
 	}))
 	defer httpsrv.Close()
 	defer srv.Stop()
+	fmt.Println("test client set header...")
 
 	client, err := Dial(httpsrv.URL)
 	if err != nil {
@@ -423,16 +424,21 @@ func TestClientSetHeader(t *testing.T) {
 	defer client.Close()
 
 	client.SetHeader("test", "ok")
+	fmt.Println("test client set header...2")
+
 	if _, err := client.SupportedModules(); err != nil {
 		t.Fatal(err)
 	}
 	if !gotHeader {
 		t.Fatal("client did not set custom header")
 	}
+	fmt.Println("test client set header...3")
 
 	// Check that Content-Type can be replaced.
 	client.SetHeader("content-type", "application/x-garbage")
 	_, err = client.SupportedModules()
+	fmt.Println("test client set header...4")
+
 	if err == nil {
 		t.Fatal("no error for invalid content-type header")
 	} else if !strings.Contains(err.Error(), "Unsupported Media Type") {
@@ -492,11 +498,14 @@ func TestClientReconnect(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		go http.Serve(l, srv.WebsocketHandler([]string{"*"}))
+		//go http.Serve(l, srv.WebsocketHandler([]string{"*"}))
+		go http.Serve(l, srv.GSWebsocketHandler([]string{"*"}))
+		fmt.Println("startServer started...")
+
 		return srv, l
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
 	// Start a server and corresponding client.
@@ -508,26 +517,37 @@ func TestClientReconnect(t *testing.T) {
 
 	// Perform a call. This should work because the server is up.
 	var resp Result
-	if err := client.CallContext(ctx, &resp, "service_echo", "", 1, nil); err != nil {
+	if err := client.CallContext(ctx, &resp, "service_echo", "abcd", 1, nil); err != nil {
 		t.Fatal(err)
 	}
 
 	// Shut down the server and try calling again. It shouldn't work.
 	l1.Close()
 	s1.Stop()
+
+	// Allow for some cool down time so we can listen on the same address again.
+	time.Sleep(2 * time.Second)
+	fmt.Println("call after server down")
+
 	if err := client.CallContext(ctx, &resp, "service_echo", "", 2, nil); err == nil {
 		t.Error("successful call while the server is down")
 		t.Logf("resp: %#v", resp)
 	}
 
-	// Allow for some cool down time so we can listen on the same address again.
-	time.Sleep(2 * time.Second)
-
 	// Start it up again and call again. The connection should be reestablished.
 	// We spawn multiple calls here to check whether this hangs somehow.
 	s2, l2 := startServer(l1.Addr().String())
+	fmt.Println("waited for 5 seconds")
+
 	defer l2.Close()
 	defer s2.Stop()
+
+	fmt.Println("server started")
+
+	//if err := client.CallContext(ctx, &resp, "service_echo", "12345", 2, nil); err == nil {
+	//	t.Fatal(err)
+	//
+	//}
 
 	start := make(chan struct{})
 	errors := make(chan error, 20)
@@ -546,6 +566,8 @@ func TestClientReconnect(t *testing.T) {
 		}
 	}
 	t.Log("err:", err)
+	fmt.Printf("%d errors, last error: %v\n", errcount, err)
+
 	if errcount > 1 {
 		t.Errorf("expected one error after disconnect, got %d", errcount)
 	}

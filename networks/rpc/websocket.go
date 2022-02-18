@@ -145,7 +145,7 @@ func (s *Server) GSWebsocketHandler(allowedOrigins []string) http.Handler {
 			//json.NewEncoder(w).Encode(io.EOF)
 			//conn.WriteMessage(websocket.TextFrame, io.EOF)
 			//conn.Close()
-			conn.WriteControl(gorillaws.CloseMessage, gorillaws.FormatCloseMessage(gorillaws.CloseGoingAway, "EOF"), time.Now().Add(time.Second))
+			conn.WriteControl(gorillaws.CloseMessage, gorillaws.FormatCloseMessage(gorillaws.CloseGoingAway, "unexpected EOF"), time.Now().Add(time.Second))
 			return
 		}
 		atomic.AddInt32(&s.wsConnCount, 1)
@@ -156,9 +156,11 @@ func (s *Server) GSWebsocketHandler(allowedOrigins []string) http.Handler {
 		}()
 
 		if WebsocketReadDeadline != 0 {
+			fmt.Println("set read deadline")
 			conn.SetReadDeadline(time.Now().Add(time.Duration(WebsocketReadDeadline) * time.Second))
 		}
 		if WebsocketWriteDeadline != 0 {
+			fmt.Println("set write deadline")
 			conn.SetWriteDeadline(time.Now().Add(time.Duration(WebsocketWriteDeadline) * time.Second))
 		}
 		//encoder := func(v interface{}) error {

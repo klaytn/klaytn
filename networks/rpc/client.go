@@ -276,6 +276,7 @@ func NewGorillaWSClient(initctx context.Context, connectFunc func(context.Contex
 		close:                make(chan struct{}),
 		didQuit:              make(chan struct{}),
 		reconnected:          make(chan net.Conn),
+		reconnectedGorillaWS: make(chan *gorillaws.Conn),
 		readErr:              make(chan error),
 		readResp:             make(chan []*jsonrpcMessage),
 		requestOp:            make(chan *requestOp),
@@ -353,6 +354,9 @@ func (c *Client) CallContext(ctx context.Context, result interface{}, method str
 		err = c.sendHTTP(ctx, op, msg)
 	} else {
 		err = c.send(ctx, op, msg)
+	}
+	if err != nil {
+		return err
 	}
 
 	// dispatch has accepted the request and will close the channel it when it quits.
@@ -613,9 +617,9 @@ func (c *Client) reconnectGorillaWS(ctx context.Context) error {
 
 		newconn.Close()
 		return ErrClientQuit
-	default:
-		fmt.Println("hang on default on reconnectgorillaws")
-		return nil
+		//default:
+		//	fmt.Println("hang on default on reconnectgorillaws")
+		//	return ErrClientQuit
 
 	}
 }
@@ -766,6 +770,7 @@ func (c *Client) dispatchGorillaWS(conn *gorillaws.Conn) {
 					}})
 					c.handleResponse(msg)
 				default:
+					fmt.Println("client default error")
 					logger.Debug("rpc client default", "msg", log.Lazy{Fn: func() string {
 						return fmt.Sprint("<-readResp: dropping weird message", msg)
 					}})
