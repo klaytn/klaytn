@@ -135,20 +135,19 @@ func (s *Server) GSWebsocketHandler(allowedOrigins []string) http.Handler {
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if atomic.LoadInt32(&s.wsConnCount) > MaxWebsocketConnections {
-			fmt.Println("Max webSocket connections Reached", "err")
-			//json.NewEncoder(w).Encode(io.EOF)
-			//conn.WriteMessage(websocket.TextFrame, io.EOF)
-			//conn.Close()
-			return
-		}
-
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
 			logger.Debug("WebSocket upgrade failed", "err", err)
 			return
 		}
-
+		if atomic.LoadInt32(&s.wsConnCount) >= MaxWebsocketConnections {
+			fmt.Println("Max webSocket connections Reached", "err")
+			//json.NewEncoder(w).Encode(io.EOF)
+			//conn.WriteMessage(websocket.TextFrame, io.EOF)
+			//conn.Close()
+			conn.WriteControl(gorillaws.CloseMessage, gorillaws.FormatCloseMessage(gorillaws.CloseGoingAway, "EOF"), time.Now().Add(time.Second))
+			return
+		}
 		atomic.AddInt32(&s.wsConnCount, 1)
 		wsConnCounter.Inc(1)
 		defer func() {

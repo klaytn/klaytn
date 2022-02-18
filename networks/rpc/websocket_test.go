@@ -218,7 +218,8 @@ func testWebsocketMaxConnections(t *testing.T, addr string, maxConnections int) 
 			assert.Equal(t, arg, result.String, "wrong string echoed")
 		} else {
 			assert.Error(t, err)
-			assert.Equal(t, "EOF", err.Error())
+			//assert.Equal(t, "EOF", err.Error())
+			assert.Equal(t, "websocket: close 1001 (going away): EOF", err.Error())
 		}
 	}
 
