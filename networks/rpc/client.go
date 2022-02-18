@@ -947,7 +947,7 @@ func (c *Client) readGorillaWS(conn *gorillaws.Conn) error {
 	}
 
 	for {
-		fmt.Println("read message")
+		//fmt.Println("read message")
 		//resp, err := readMessage()
 		resp, err := readMessage()
 		if err != nil {

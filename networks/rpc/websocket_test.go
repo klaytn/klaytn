@@ -45,13 +45,74 @@ type echoResult struct {
 	Args   *echoArgs
 }
 
+func TestWebsocketLargeCallFastws(t *testing.T) {
+	t.Parallel()
+
+	// create server
+	var (
+	//srv = newTestServer("service", new(Service))
+	//httpsrv = httptest.NewServer(srv.WebsocketHandler([]string{"*"}))
+	//httpsrv = httptest.NewServer(srv.WebsocketHandler([]string{"*"}))
+	//wsAddr = "ws:" + strings.TrimPrefix(httpsrv.URL, "http:")
+	)
+
+	// create server
+	var (
+		srv    = newTestServer("service", new(Service))
+		ln     = newTestListener()
+		wsAddr = "ws://" + ln.Addr().String()
+	)
+	defer srv.Stop()
+	defer ln.Close()
+
+	go NewFastWSServer([]string{"*"}, srv).Serve(ln)
+	time.Sleep(100 * time.Millisecond)
+
+	//defer srv.Stop()
+	//defer httpsrv.Close()
+	//fmt.Println("server", httpsrv.Listener.Addr())
+	//time.Sleep(100 * time.Millisecond)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	client, err := DialWebsocket(ctx, wsAddr, "")
+	fmt.Println("dial web socket ", client, err)
+	if err != nil {
+		t.Fatalf("can't dial: %v", err)
+	}
+	defer client.Close()
+
+	// set configurations before testing
+	var result echoResult
+	method := "service_echo"
+
+	// set message size
+	messageSize := 200
+	fmt.Println("before get message size")
+
+	messageSize, err = client.getMessageSize(method)
+	fmt.Println("get message size ", messageSize, err)
+	assert.NoError(t, err)
+	requestMaxLen := common.MaxRequestContentLength - messageSize
+	//requestMaxLen = 500
+	// This call sends slightly less than the limit and should work.
+	arg := strings.Repeat("x", requestMaxLen-1)
+
+	assert.NoError(t, client.Call(&result, method, arg, 1), "valid call didn't work")
+	assert.Equal(t, arg, result.String, "wrong string echoed")
+
+	// This call sends slightly larger than the allowed size and shouldn't work.
+	arg = strings.Repeat("x", requestMaxLen)
+	assert.Error(t, client.Call(&result, method, arg), "no error for too large call")
+}
+
 func TestWebsocketLargeCall(t *testing.T) {
 	t.Parallel()
 
 	// create server
 	var (
 		srv     = newTestServer("service", new(Service))
-		httpsrv = httptest.NewServer(srv.WebsocketHandler([]string{"*"}))
+		httpsrv = httptest.NewServer(srv.GSWebsocketHandler([]string{"*"}))
 		wsAddr  = "ws:" + strings.TrimPrefix(httpsrv.URL, "http:")
 	)
 	defer srv.Stop()
@@ -113,7 +174,7 @@ func TestWSServer_MaxConnections(t *testing.T) {
 	defer srv.Stop()
 	defer ln.Close()
 
-	go NewWSServer([]string{"*"}, srv).Serve(ln)
+	go NewGSWSServer([]string{"*"}, srv).Serve(ln)
 	time.Sleep(100 * time.Millisecond)
 
 	// set max websocket connections
@@ -188,7 +249,7 @@ func TestWebsocketAuthCheck(t *testing.T) {
 
 	var (
 		srv     = newTestServer("websocket test", new(Service))
-		httpsrv = httptest.NewServer(srv.WebsocketHandler([]string{"http://example.com"}))
+		httpsrv = httptest.NewServer(srv.GSWebsocketHandler([]string{"http://example.com"}))
 		wsURL   = "ws://testuser:test-PASS_01@" + strings.TrimPrefix(httpsrv.URL, "http://")
 	)
 	connect := false

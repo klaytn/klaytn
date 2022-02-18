@@ -103,7 +103,7 @@ func (srv *Server) WebsocketHandler(allowedOrigins []string) http.Handler {
 				return websocketJSONCodec.Send(conn, v)
 			}
 			decoder := func(v interface{}) error {
-				fmt.Println("websocket server handler before decoding", conn)
+				//fmt.Println("websocket server handler before decoding", conn)
 				//var msg []byte
 				//conn.Read(msg)
 				//fmt.Println("websocket server readed:", len(msg), string(msg))
@@ -120,6 +120,94 @@ func (srv *Server) WebsocketHandler(allowedOrigins []string) http.Handler {
 var upgrader = fastws.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
+}
+
+// GSWebsocketHandler returns a handler that serves JSON-RPC to WebSocket connections.
+//
+// allowedOrigins should be a comma-separated list of allowed origin URLs.
+// To allow connections with any origin, pass "*".
+func (s *Server) GSWebsocketHandler(allowedOrigins []string) http.Handler {
+	var upgrader = gorillaws.Upgrader{
+		ReadBufferSize:  wsReadBuffer,
+		WriteBufferSize: wsWriteBuffer,
+		WriteBufferPool: wsBufferPool,
+		CheckOrigin:     GSwsHandshakeValidator(allowedOrigins),
+	}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if atomic.LoadInt32(&s.wsConnCount) > MaxWebsocketConnections {
+			fmt.Println("Max webSocket connections Reached", "err")
+			//json.NewEncoder(w).Encode(io.EOF)
+			//conn.WriteMessage(websocket.TextFrame, io.EOF)
+			//conn.Close()
+			return
+		}
+
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			logger.Debug("WebSocket upgrade failed", "err", err)
+			return
+		}
+
+		atomic.AddInt32(&s.wsConnCount, 1)
+		wsConnCounter.Inc(1)
+		defer func() {
+			atomic.AddInt32(&s.wsConnCount, -1)
+			wsConnCounter.Dec(1)
+		}()
+
+		if WebsocketReadDeadline != 0 {
+			conn.SetReadDeadline(time.Now().Add(time.Duration(WebsocketReadDeadline) * time.Second))
+		}
+		if WebsocketWriteDeadline != 0 {
+			conn.SetWriteDeadline(time.Now().Add(time.Duration(WebsocketWriteDeadline) * time.Second))
+		}
+		//encoder := func(v interface{}) error {
+		//	return websocketJSONCodec.Send(conn, v)
+		//}
+		//decoder := func(v interface{}) error {
+		//	//fmt.Println("websocket server handler before decoding", conn)
+		//	//var msg []byte
+		//	//conn.Read(msg)
+		//	//fmt.Println("websocket server readed:", len(msg), string(msg))
+		//	err := websocketJSONCodec.Receive(conn, v)
+		//	fmt.Println("jsoncodec receive", err, "||||", v)
+		//	return err
+		//	//return websocketJSONCodec.Receive(conn, v)
+		//}
+		//Create a custom encode/decode pair to enforce payload size and number encoding
+		encoder := func(v interface{}) error {
+			msg, err := json.Marshal(v)
+			if err != nil {
+				return err
+			}
+			err = conn.WriteMessage(websocket.TextFrame, msg)
+			//msg2, err2 := json.Marshal(io.EOF)
+
+			if err != nil {
+				return err
+			}
+			//return fastws.WriteJSON(conn, v)
+			return err
+		}
+		decoder := func(v interface{}) error {
+			_, data, err := conn.ReadMessage()
+			if err != nil {
+				return err
+			}
+			dec := json.NewDecoder(bytes.NewReader(data))
+			dec.UseNumber()
+			return dec.Decode(v)
+			//return fastws.ReadJSON(conn, v)
+		}
+		//codec := newWebsocketCodec(conn, r.Host, r.Header)
+		//codec := NewCodec(conn, encoder, decoder), OptionMethodInvocation|OptionSubscriptions)
+
+		codec := newWebsocketCodec(conn, encoder, decoder)
+		//srv.ServeCodec(NewCodec(conn, encoder, decoder), OptionMethodInvocation|OptionSubscriptions)
+
+		s.ServeCodec(codec, 0)
+	})
 }
 
 func (srv *Server) FastWebsocketHandler(ctx *fasthttp.RequestCtx) {
@@ -185,6 +273,15 @@ func (srv *Server) FastWebsocketHandler(ctx *fasthttp.RequestCtx) {
 func NewWSServer(allowedOrigins []string, srv *Server) *http.Server {
 	return &http.Server{
 		Handler: srv.WebsocketHandler(allowedOrigins),
+	}
+}
+
+// NewWSServer creates a new websocket RPC server around an API provider.
+//
+// Deprecated: use Server.WebsocketHandler
+func NewGSWSServer(allowedOrigins []string, srv *Server) *http.Server {
+	return &http.Server{
+		Handler: srv.GSWebsocketHandler(allowedOrigins),
 	}
 }
 
@@ -272,6 +369,50 @@ func wsHandshakeValidator(allowedOrigins []string) func(*websocket.Config, *http
 	return f
 }
 
+// GSwsHandshakeValidator returns a handler that verifies the origin during the
+// websocket upgrade process. When a '*' is specified as an allowed origins all
+// connections are accepted.
+func GSwsHandshakeValidator(allowedOrigins []string) func(*http.Request) bool {
+	origins := set.New()
+	allowAllOrigins := false
+
+	for _, origin := range allowedOrigins {
+		if origin == "*" {
+			allowAllOrigins = true
+		}
+		if origin != "" {
+			origins.Add(origin)
+		}
+	}
+	// allow localhost if no allowedOrigins are specified.
+	if len(origins.List()) == 0 {
+		origins.Add("http://localhost")
+		if hostname, err := os.Hostname(); err == nil {
+			origins.Add("http://" + hostname)
+		}
+	}
+	logger.Debug(fmt.Sprintf("Allowed origin(s) for WS RPC interface %v", origins.List()))
+
+	f := func(req *http.Request) bool {
+		// Skip origin verification if no Origin header is present. The origin check
+		// is supposed to protect against browser based attacks. Browsers always set
+		// Origin. Non-browser software can put anything in origin and checking it doesn't
+		// provide additional security.
+		if _, ok := req.Header["Origin"]; !ok {
+			return true
+		}
+		// Verify origin against allow list.
+		origin := strings.ToLower(req.Header.Get("Origin"))
+		if allowAllOrigins || origins.Has(origin) {
+			return true
+		}
+		logger.Warn("Rejected WebSocket connection", "origin", origin)
+		return false
+	}
+
+	return f
+}
+
 // DialWebsocket creates a new RPC client that communicates with a JSON-RPC server
 // that is listening on the given endpoint.
 //
@@ -313,9 +454,9 @@ func DialWebsocket(ctx context.Context, endpoint, origin string) (*Client, error
 		_ = resp
 		//fmt.Println("dialer.dial after")
 		//fmt.Println("resp", resp)
-		fmt.Println("Dial Done - conn", conn)
-		fmt.Println("Dial Done - resp", resp)
-		fmt.Println("Dial Done - err", err)
+		//fmt.Println("Dial Done - conn", conn)
+		//fmt.Println("Dial Done - resp", resp)
+		//fmt.Println("Dial Done - err", err)
 		return conn, err
 	})
 }
@@ -384,4 +525,11 @@ func contextDialer(ctx context.Context) *net.Dialer {
 		dialer.Deadline = time.Now().Add(defaultDialTimeout)
 	}
 	return dialer
+}
+
+func newWebsocketCodec(conn *gorillaws.Conn, encode func(v interface{}) error, decode func(v interface{}) error) ServerCodec {
+	conn.SetReadLimit(int64(common.MaxRequestContentLength))
+
+	//return GSNewCodec(conn, conn.WriteJSON, conn.ReadJSON)
+	return GSNewCodec(conn, encode, decode)
 }
