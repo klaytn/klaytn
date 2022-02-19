@@ -23,7 +23,6 @@ package rpc
 import (
 	"context"
 	"encoding/base64"
-	"fmt"
 	gorillaws "github.com/gorilla/websocket"
 	"net"
 	"net/http"
@@ -51,14 +50,6 @@ func TestWebsocketLargeCallFastws(t *testing.T) {
 
 	// create server
 	var (
-	//srv = newTestServer("service", new(Service))
-	//httpsrv = httptest.NewServer(srv.WebsocketHandler([]string{"*"}))
-	//httpsrv = httptest.NewServer(srv.WebsocketHandler([]string{"*"}))
-	//wsAddr = "ws:" + strings.TrimPrefix(httpsrv.URL, "http:")
-	)
-
-	// create server
-	var (
 		srv    = newTestServer("service", new(Service))
 		ln     = newTestListener()
 		wsAddr = "ws://" + ln.Addr().String()
@@ -77,7 +68,7 @@ func TestWebsocketLargeCallFastws(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	client, err := DialWebsocket(ctx, wsAddr, "")
-	fmt.Println("dial web socket ", client, err)
+	//fmt.Println("dial web socket ", client, err)
 	if err != nil {
 		t.Fatalf("can't dial: %v", err)
 	}
@@ -89,13 +80,10 @@ func TestWebsocketLargeCallFastws(t *testing.T) {
 
 	// set message size
 	messageSize := 200
-	fmt.Println("before get message size")
 
 	messageSize, err = client.getMessageSize(method)
-	fmt.Println("get message size ", messageSize, err)
 	assert.NoError(t, err)
 	requestMaxLen := common.MaxRequestContentLength - messageSize
-	//requestMaxLen = 500
 	// This call sends slightly less than the limit and should work.
 	arg := strings.Repeat("x", requestMaxLen-1)
 
@@ -118,13 +106,11 @@ func TestWebsocketLargeCall(t *testing.T) {
 	)
 	defer srv.Stop()
 	defer httpsrv.Close()
-	fmt.Println("server", httpsrv.Listener.Addr())
 	time.Sleep(100 * time.Millisecond)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	client, err := DialWebsocket(ctx, wsAddr, "")
-	fmt.Println("dial web socket ", client, err)
 	if err != nil {
 		t.Fatalf("can't dial: %v", err)
 	}
@@ -137,25 +123,17 @@ func TestWebsocketLargeCall(t *testing.T) {
 	// set message size
 	messageSize := 200
 	messageSize, err = client.getMessageSize(method)
-	//fmt.Println("get message size ", messageSize, err)
 	assert.NoError(t, err)
 	requestMaxLen := common.MaxRequestContentLength - messageSize
-	//requestMaxLen = 800
 
 	// This call sends slightly less than the limit and should work.
 	arg := strings.Repeat("x", requestMaxLen-1)
-	//fmt.Println("before client call ", result)
-
 	assert.NoError(t, client.Call(&result, method, arg, 1), "valid call didn't work")
-	//fmt.Println(" client call ", result)
 	assert.Equal(t, arg, result.String, "wrong string echoed")
 
 	// This call sends slightly larger than the allowed size and shouldn't work.
 	arg = strings.Repeat("x", requestMaxLen)
-	//fmt.Println("before client call 2 ", result)
 	assert.Error(t, client.Call(&result, method, arg), "no error for too large call")
-	//fmt.Println(" client call 2 ", result)
-
 }
 
 func newTestListener() net.Listener {
@@ -222,7 +200,6 @@ func testWebsocketMaxConnections(t *testing.T, addr string, maxConnections int) 
 		method := "service_echo"
 		arg := strings.Repeat("x", i)
 		err = client.Call(&result, method, arg, 1)
-		fmt.Println("result111", result)
 		if i < int(MaxWebsocketConnections) {
 			assert.NoError(t, err)
 			assert.Equal(t, arg, result.String, "wrong string echoed")
@@ -242,6 +219,7 @@ func testWebsocketMaxConnections(t *testing.T, addr string, maxConnections int) 
 		client.Close()
 	}
 }
+
 func TestWebsocketClientHeaders(t *testing.T) {
 	t.Parallel()
 
@@ -291,7 +269,6 @@ func TestWebsocketAuthCheck(t *testing.T) {
 	defer httpsrv.Close()
 
 	client, err := DialWebsocket(context.Background(), wsURL, "")
-	fmt.Println("err: ", err)
 	if err == nil {
 		client.Close()
 		t.Fatal("no error for connect with auth header")

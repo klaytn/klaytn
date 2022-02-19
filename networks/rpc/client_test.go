@@ -415,7 +415,6 @@ func TestClientSetHeader(t *testing.T) {
 	}))
 	defer httpsrv.Close()
 	defer srv.Stop()
-	fmt.Println("test client set header...")
 
 	client, err := Dial(httpsrv.URL)
 	if err != nil {
@@ -424,7 +423,6 @@ func TestClientSetHeader(t *testing.T) {
 	defer client.Close()
 
 	client.SetHeader("test", "ok")
-	fmt.Println("test client set header...2")
 
 	if _, err := client.SupportedModules(); err != nil {
 		t.Fatal(err)
@@ -432,12 +430,10 @@ func TestClientSetHeader(t *testing.T) {
 	if !gotHeader {
 		t.Fatal("client did not set custom header")
 	}
-	fmt.Println("test client set header...3")
 
 	// Check that Content-Type can be replaced.
 	client.SetHeader("content-type", "application/x-garbage")
 	_, err = client.SupportedModules()
-	fmt.Println("test client set header...4")
 
 	if err == nil {
 		t.Fatal("no error for invalid content-type header")
@@ -500,7 +496,6 @@ func TestClientReconnect(t *testing.T) {
 		}
 		//go http.Serve(l, srv.WebsocketHandler([]string{"*"}))
 		go http.Serve(l, srv.GSWebsocketHandler([]string{"*"}))
-		fmt.Println("startServer started...")
 
 		return srv, l
 	}
@@ -527,7 +522,6 @@ func TestClientReconnect(t *testing.T) {
 
 	// Allow for some cool down time so we can listen on the same address again.
 	time.Sleep(2 * time.Second)
-	fmt.Println("call after server down")
 
 	if err := client.CallContext(ctx, &resp, "service_echo", "", 2, nil); err == nil {
 		t.Error("successful call while the server is down")
@@ -537,12 +531,9 @@ func TestClientReconnect(t *testing.T) {
 	// Start it up again and call again. The connection should be reestablished.
 	// We spawn multiple calls here to check whether this hangs somehow.
 	s2, l2 := startServer(l1.Addr().String())
-	fmt.Println("waited for 5 seconds")
 
 	defer l2.Close()
 	defer s2.Stop()
-
-	fmt.Println("server started")
 
 	//if err := client.CallContext(ctx, &resp, "service_echo", "12345", 2, nil); err == nil {
 	//	t.Fatal(err)

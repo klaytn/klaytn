@@ -62,11 +62,9 @@ var websocketJSONCodec = websocket.Codec{
 	},
 	// Unmarshal is a specialized unmarshaller to properly convert numbers.
 	Unmarshal: func(msg []byte, payloadType byte, v interface{}) error {
-		fmt.Println("Unmarshal msg was", string(msg))
 		dec := json.NewDecoder(bytes.NewReader(msg))
 		dec.UseNumber()
-		fmt.Println("unmarshal return ---", dec)
-		//unmarshal return --- &{0xc0007080c0 [] {[] 0 0 {<nil> false [] <nil> 0} <nil> <nil> true false} 0 0 {<nil> false [] <nil> 0} <nil> 0 []}
+
 		return dec.Decode(v)
 	},
 }
@@ -103,14 +101,7 @@ func (srv *Server) WebsocketHandler(allowedOrigins []string) http.Handler {
 				return websocketJSONCodec.Send(conn, v)
 			}
 			decoder := func(v interface{}) error {
-				//fmt.Println("websocket server handler before decoding", conn)
-				//var msg []byte
-				//conn.Read(msg)
-				//fmt.Println("websocket server readed:", len(msg), string(msg))
-				err := websocketJSONCodec.Receive(conn, v)
-				fmt.Println("jsoncodec receive", err, "||||", v)
-				return err
-				//return websocketJSONCodec.Receive(conn, v)
+				return websocketJSONCodec.Receive(conn, v)
 			}
 			srv.ServeCodec(NewCodec(conn, encoder, decoder), OptionMethodInvocation|OptionSubscriptions)
 		},
@@ -141,10 +132,7 @@ func (s *Server) GSWebsocketHandler(allowedOrigins []string) http.Handler {
 			return
 		}
 		if atomic.LoadInt32(&s.wsConnCount) >= MaxWebsocketConnections {
-			fmt.Println("Max webSocket connections Reached", "err")
-			//json.NewEncoder(w).Encode(io.EOF)
-			//conn.WriteMessage(websocket.TextFrame, io.EOF)
-			//conn.Close()
+			// Gorilla websocket uses websocket.WriteControl method to close connection
 			conn.WriteControl(gorillaws.CloseMessage, gorillaws.FormatCloseMessage(gorillaws.CloseGoingAway, "unexpected EOF"), time.Now().Add(time.Second))
 			return
 		}
@@ -156,26 +144,12 @@ func (s *Server) GSWebsocketHandler(allowedOrigins []string) http.Handler {
 		}()
 
 		if WebsocketReadDeadline != 0 {
-			fmt.Println("set read deadline")
 			conn.SetReadDeadline(time.Now().Add(time.Duration(WebsocketReadDeadline) * time.Second))
 		}
 		if WebsocketWriteDeadline != 0 {
-			fmt.Println("set write deadline")
 			conn.SetWriteDeadline(time.Now().Add(time.Duration(WebsocketWriteDeadline) * time.Second))
 		}
-		//encoder := func(v interface{}) error {
-		//	return websocketJSONCodec.Send(conn, v)
-		//}
-		//decoder := func(v interface{}) error {
-		//	//fmt.Println("websocket server handler before decoding", conn)
-		//	//var msg []byte
-		//	//conn.Read(msg)
-		//	//fmt.Println("websocket server readed:", len(msg), string(msg))
-		//	err := websocketJSONCodec.Receive(conn, v)
-		//	fmt.Println("jsoncodec receive", err, "||||", v)
-		//	return err
-		//	//return websocketJSONCodec.Receive(conn, v)
-		//}
+
 		//Create a custom encode/decode pair to enforce payload size and number encoding
 		encoder := func(v interface{}) error {
 			msg, err := json.Marshal(v)
@@ -183,12 +157,10 @@ func (s *Server) GSWebsocketHandler(allowedOrigins []string) http.Handler {
 				return err
 			}
 			err = conn.WriteMessage(websocket.TextFrame, msg)
-			//msg2, err2 := json.Marshal(io.EOF)
 
 			if err != nil {
 				return err
 			}
-			//return fastws.WriteJSON(conn, v)
 			return err
 		}
 		decoder := func(v interface{}) error {
@@ -199,13 +171,9 @@ func (s *Server) GSWebsocketHandler(allowedOrigins []string) http.Handler {
 			dec := json.NewDecoder(bytes.NewReader(data))
 			dec.UseNumber()
 			return dec.Decode(v)
-			//return fastws.ReadJSON(conn, v)
 		}
-		//codec := newWebsocketCodec(conn, r.Host, r.Header)
-		//codec := NewCodec(conn, encoder, decoder), OptionMethodInvocation|OptionSubscriptions)
 
 		codec := newWebsocketCodec(conn, encoder, decoder)
-		//srv.ServeCodec(NewCodec(conn, encoder, decoder), OptionMethodInvocation|OptionSubscriptions)
 
 		s.ServeCodec(codec, 0)
 	})
@@ -277,7 +245,7 @@ func NewWSServer(allowedOrigins []string, srv *Server) *http.Server {
 	}
 }
 
-// NewWSServer creates a new websocket RPC server around an API provider.
+// NewGSWSServer creates a new websocket RPC server around an API provider.
 //
 // Deprecated: use Server.WebsocketHandler
 func NewGSWSServer(allowedOrigins []string, srv *Server) *http.Server {
@@ -435,29 +403,16 @@ func DialWebsocket(ctx context.Context, endpoint, origin string) (*Client, error
 	if err != nil {
 		return nil, err
 	}
-
-	// websocket.NewConfig() is not used on Gorilla Websocket library
-	//config, err := websocket.NewConfig(endpoint, origin)
-	//if err != nil {
-	//	return nil, err
-	//}
-
 	return NewGorillaWSClient(ctx, func(ctx context.Context) (*gorillaws.Conn, error) {
 		dialer := gorillaws.Dialer{
 			ReadBufferSize:  wsReadBuffer,
 			WriteBufferSize: wsWriteBuffer,
 			WriteBufferPool: wsBufferPool,
 		}
-		//fmt.Println("header")
-		//fmt.Println("dialer.dial before")
 
-		conn, resp, err := dialer.Dial(endpoint, header)
-		_ = resp
-		//fmt.Println("dialer.dial after")
-		//fmt.Println("resp", resp)
-		//fmt.Println("Dial Done - conn", conn)
-		//fmt.Println("Dial Done - resp", resp)
-		//fmt.Println("Dial Done - err", err)
+		//conn, resp, err := dialer.Dial(endpoint, header)
+		conn, _, err := dialer.Dial(endpoint, header)
+		//_ = resp
 		return conn, err
 	})
 }

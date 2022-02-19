@@ -565,16 +565,13 @@ func (c *Client) write(ctx context.Context, msg interface{}) error {
 		}
 		return err
 	} else { // The client is using Gorilla websocket
-		fmt.Println("write goriall conn", c.writeGorillaWSConn)
 		if c.writeGorillaWSConn == nil {
-			fmt.Println("reconnect gorilla ws try")
 			if err := c.reconnectGorillaWS(ctx); err != nil {
 				return err
 			}
 		}
 
 		err := c.writeGorillaWSConn.WriteJSON(msg)
-		fmt.Println("error write json", err)
 		if err != nil {
 			c.writeGorillaWSConn = nil
 		}
@@ -599,28 +596,19 @@ func (c *Client) reconnect(ctx context.Context) error {
 }
 
 func (c *Client) reconnectGorillaWS(ctx context.Context) error {
-	fmt.Println("reconnect gws")
 	newconn, err := c.connectGorillaWSFunc(ctx)
 	if err != nil {
 		logger.Trace(fmt.Sprintf("reconnect using Gorilla Websocket failed: %v", err))
 		return err
 	}
-	fmt.Println("reconnect select ")
 	select {
 
 	case c.reconnectedGorillaWS <- newconn:
-		fmt.Println("channel reconnected")
 		c.writeGorillaWSConn = newconn
 		return nil
 	case <-c.didQuit:
-		fmt.Println("channel close")
-
 		newconn.Close()
 		return ErrClientQuit
-		//default:
-		//	fmt.Println("hang on default on reconnectgorillaws")
-		//	return ErrClientQuit
-
 	}
 }
 
@@ -752,7 +740,6 @@ func (c *Client) dispatchGorillaWS(conn *gorillaws.Conn) {
 	for {
 		select {
 		case <-c.close:
-			fmt.Println("close")
 			return
 
 			// Read path.
@@ -770,7 +757,6 @@ func (c *Client) dispatchGorillaWS(conn *gorillaws.Conn) {
 					}})
 					c.handleResponse(msg)
 				default:
-					fmt.Println("client default error")
 					logger.Debug("rpc client default", "msg", log.Lazy{Fn: func() string {
 						return fmt.Sprint("<-readResp: dropping weird message", msg)
 					}})
@@ -779,7 +765,6 @@ func (c *Client) dispatchGorillaWS(conn *gorillaws.Conn) {
 			}
 
 		case err := <-c.readErr:
-			fmt.Println("readerr")
 			logger.Debug("<-readErr", "err", err)
 			c.closeRequestOps(err)
 			conn.Close()
@@ -922,9 +907,7 @@ func (c *Client) read(conn net.Conn) error {
 func (c *Client) readGorillaWS(conn *gorillaws.Conn) error {
 
 	readMessage := func() (rs []*jsonrpcMessage, err error) {
-		fmt.Println("before nextreader")
 		_, reader, err := conn.NextReader()
-		fmt.Println("redaer = ", reader, "err = ", err)
 		if err != nil {
 
 			return nil, err
@@ -937,8 +920,6 @@ func (c *Client) readGorillaWS(conn *gorillaws.Conn) error {
 		}
 		var buf json.RawMessage
 		buf = buf[:0]
-		fmt.Println("dec", dec)
-		fmt.Println("buf", buf)
 		if err = dec.Decode(&buf); err != nil {
 			return nil, err
 		}
@@ -952,12 +933,9 @@ func (c *Client) readGorillaWS(conn *gorillaws.Conn) error {
 	}
 
 	for {
-		//fmt.Println("read message")
-		//resp, err := readMessage()
 		resp, err := readMessage()
 		if err != nil {
 			c.readErr <- err
-			fmt.Println("for   ", err)
 			return err
 		}
 		c.readResp <- resp
