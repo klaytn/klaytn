@@ -23,13 +23,14 @@ package rpc
 import (
 	"context"
 	"encoding/base64"
-	gorillaws "github.com/gorilla/websocket"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
+
+	gorillaws "github.com/gorilla/websocket"
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/stretchr/testify/assert"

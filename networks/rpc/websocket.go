@@ -27,7 +27,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	gorillaws "github.com/gorilla/websocket"
 	"net"
 	"net/http"
 	"net/url"
@@ -36,6 +35,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	gorillaws "github.com/gorilla/websocket"
 
 	"github.com/klaytn/klaytn/common"
 	"golang.org/x/net/websocket"
