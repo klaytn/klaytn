@@ -414,6 +414,7 @@ func DialWebsocket(ctx context.Context, endpoint, origin string) (*Client, error
 		conn, resp, err := dialer.Dial(endpoint, header)
 		//conn, _, err := dialer.Dial(endpoint, header)
 		_ = resp
+		defer resp.Body.Close()
 		return conn, err
 	})
 }
