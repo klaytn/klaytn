@@ -411,9 +411,9 @@ func DialWebsocket(ctx context.Context, endpoint, origin string) (*Client, error
 			WriteBufferPool: wsBufferPool,
 		}
 
-		//conn, resp, err := dialer.Dial(endpoint, header)
-		conn, _, err := dialer.Dial(endpoint, header)
-		//_ = resp
+		conn, resp, err := dialer.Dial(endpoint, header)
+		//conn, _, err := dialer.Dial(endpoint, header)
+		_ = resp
 		return conn, err
 	})
 }
