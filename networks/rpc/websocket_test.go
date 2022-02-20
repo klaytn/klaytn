@@ -26,6 +26,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -239,6 +240,29 @@ func TestWebsocketClientHeaders(t *testing.T) {
 	}
 }
 
+// This test checks that the server rejects connections from disallowed origins.
+func TestWebsocketOriginCheck(t *testing.T) {
+	t.Parallel()
+
+	var (
+		srv     = newTestServer("service", new(Service))
+		httpsrv = httptest.NewServer(srv.GSWebsocketHandler([]string{"http://example.com"}))
+		wsURL   = "ws:" + strings.TrimPrefix(httpsrv.URL, "http:")
+	)
+	defer srv.Stop()
+	defer httpsrv.Close()
+
+	client, err := DialWebsocket(context.Background(), wsURL, "http://ezample.com")
+	if err == nil {
+		client.Close()
+		t.Fatal("no error for wrong origin")
+	}
+	wantErr := gorillaws.ErrBadHandshake
+	if !reflect.DeepEqual(err, wantErr) {
+		t.Fatalf("wrong error for wrong origin: %q", err)
+	}
+}
+
 func TestWebsocketAuthCheck(t *testing.T) {
 	t.Parallel()
 
@@ -274,8 +298,8 @@ func TestWebsocketAuthCheck(t *testing.T) {
 		client.Close()
 		t.Fatal("no error for connect with auth header")
 	}
-	//if err != websocket.ErrBadHandshake {
-	if err.Error() != "websocket: bad handshake" {
+	if err != gorillaws.ErrBadHandshake {
+		//if err.Error() != "websocket: bad handshake" {
 		t.Fatalf("wrong error for header: %q", err)
 	}
 }
