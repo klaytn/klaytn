@@ -26,6 +26,8 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/klaytn/klaytn/node/cn/filters"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/types/account"
@@ -152,38 +154,8 @@ func (s *PublicBlockChainAPI) GetAccount(ctx context.Context, address common.Add
 
 // rpcMarshalHeader converts the given header to the RPC output.
 func (s *PublicBlockChainAPI) rpcMarshalHeader(header *types.Header) map[string]interface{} {
-	fields := RPCMarshalHeader(header, s.b.ChainConfig().IsEthTxTypeForkEnabled(header.Number))
+	fields := filters.RPCMarshalHeader(header, s.b.ChainConfig().IsEthTxTypeForkEnabled(header.Number))
 	return fields
-}
-
-// RPCMarshalHeader converts the given header to the RPC output that includes the baseFeePerGas field.
-func RPCMarshalHeader(head *types.Header, isEnabledEthTxTypeFork bool) map[string]interface{} {
-	result := map[string]interface{}{
-		"parentHash":       head.ParentHash,
-		"reward":           head.Rewardbase,
-		"stateRoot":        head.Root,
-		"transactionsRoot": head.TxHash,
-		"receiptsRoot":     head.ReceiptHash,
-		"logsBloom":        head.Bloom,
-		"blockScore":       (*hexutil.Big)(head.BlockScore),
-		"number":           (*hexutil.Big)(head.Number),
-		"gasUsed":          hexutil.Uint64(head.GasUsed),
-		"timestamp":        (*hexutil.Big)(head.Time),
-		"timestampFoS":     hexutil.Uint(head.TimeFoS),
-		"extraData":        hexutil.Bytes(head.Extra),
-		"governanceData":   hexutil.Bytes(head.Governance),
-		"hash":             head.Hash(),
-	}
-
-	if len(head.Vote) != 0 {
-		result["voteData"] = hexutil.Bytes(head.Vote)
-	}
-
-	if isEnabledEthTxTypeFork {
-		result["baseFeePerGas"] = (*hexutil.Big)(new(big.Int).SetUint64(params.BaseFee))
-	}
-
-	return result
 }
 
 // GetHeaderByNumber returns the requested canonical block header.
