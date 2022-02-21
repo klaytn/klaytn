@@ -1623,7 +1623,7 @@ func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, b
 			// Returns error when it is not VM error (less balance or wrong nonce, etc...).
 			return false, nil, nil, err
 		}
-		return true, ret, nil, nil
+		return true, ret, err, nil
 	}
 	// Execute the binary search and hone in on an executable gas limit
 	for lo+1 < hi {
@@ -1646,8 +1646,9 @@ func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, b
 			return 0, err
 		}
 		if !isExecutable {
-			if ret != nil {
-				if isReverted(vmErr) {
+			if vmErr != nil {
+				// Treat vmErr as RevertError only when there was returned data from call.
+				if isReverted(vmErr) && len(ret) > 0 {
 					return 0, newRevertError(ret)
 				}
 				return 0, vmErr
