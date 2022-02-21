@@ -897,7 +897,9 @@ func (api *EthereumAPI) GetRawTransactionByHash(ctx context.Context, hash common
 	if err != nil {
 		return nil, err
 	}
-
+	if rawTx[0] == byte(types.EthereumTxTypeEnvelope) {
+		return rawTx[1:], nil
+	}
 	return rawTx, nil
 }
 
@@ -906,6 +908,9 @@ func (api *EthereumAPI) GetTransactionReceipt(ctx context.Context, hash common.H
 	// Formats return Klaytn Transaction Receipt to the Ethereum Transaction Receipt.
 	tx, blockHash, blockNumber, index, receipt := api.publicTransactionPoolAPI.b.GetTxLookupInfoAndReceipt(ctx, hash)
 
+	if tx == nil {
+		return nil, nil
+	}
 	receipts := api.publicTransactionPoolAPI.b.GetBlockReceipts(ctx, blockHash)
 	cumulativeGasUsed := uint64(0)
 	for i := uint64(0); i <= index; i++ {
