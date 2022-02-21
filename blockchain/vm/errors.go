@@ -23,8 +23,6 @@ package vm
 import (
 	"errors"
 	"fmt"
-	"strings"
-
 	"github.com/klaytn/klaytn/params"
 )
 
@@ -52,7 +50,7 @@ var VmErrors = []error{ErrCodeStoreOutOfGas, ErrDepth, ErrTraceLimitReached, Err
 // IsVMError returns true if given error is occurred during EVM execution.
 func IsVMError(err error) bool {
 	for _, vmError := range VmErrors {
-		if err == vmError || strings.Contains(err.Error(), vmError.Error()) {
+		if errors.Is(err, vmError) {
 			return true
 		}
 	}
