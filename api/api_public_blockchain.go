@@ -513,7 +513,7 @@ func FormatLogs(logs []vm.StructLog) []StructLogRes {
 	return formatted
 }
 
-func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool) (map[string]interface{}, error) {
+func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool, isEnabledEthTxTypeFork bool) (map[string]interface{}, error) {
 	head := b.Header() // copies the header once
 	fields := map[string]interface{}{
 		"number":           (*hexutil.Big)(head.Number),
@@ -557,6 +557,10 @@ func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool) (map[
 		fields["transactions"] = transactions
 	}
 
+	if isEnabledEthTxTypeFork {
+		fields["baseFeePerGas"] = (*hexutil.Big)(new(big.Int).SetUint64(params.BaseFee))
+	}
+
 	return fields, nil
 }
 
@@ -564,7 +568,7 @@ func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool) (map[
 // returned. When fullTx is true the returned block contains full transaction details, otherwise it will only contain
 // transaction hashes.
 func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx bool) (map[string]interface{}, error) {
-	return RpcOutputBlock(b, s.b.GetTd(b.Hash()), inclTx, fullTx)
+	return RpcOutputBlock(b, s.b.GetTd(b.Hash()), inclTx, fullTx, s.b.ChainConfig().IsEthTxTypeForkEnabled(b.Header().Number))
 }
 
 func getFrom(tx *types.Transaction) common.Address {
