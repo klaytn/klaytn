@@ -1505,8 +1505,12 @@ func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrO
 	if err != nil {
 		return nil, 0, err
 	}
+	// The intrinsicGas is checked again later in the blockchain.ApplyMessage function,
+	// but we check in advance here in order to keep StateTransition.TransactionDb method as unchanged as possible
+	// and to clarify error reason correctly to serve eth namespace APIs.
+	// This case is handled by EthDoEstimateGas function.
 	if msg.Gas() < intrinsicGas {
-		return nil, 0, fmt.Errorf("%w: have %d, want %d", blockchain.ErrIntrinsicGas, msg.Gas(), intrinsicGas)
+		return nil, 0, fmt.Errorf("%w: msg.gas %d, want %d", blockchain.ErrIntrinsicGas, msg.Gas(), intrinsicGas)
 	}
 	evm, vmError, err := b.GetEVM(ctx, msg, st, header, vm.Config{})
 	if err != nil {
