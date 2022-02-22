@@ -22,7 +22,6 @@ package blockchain
 
 import (
 	"errors"
-	"fmt"
 	"math/big"
 
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -255,9 +254,6 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 	// Pay intrinsic gas.
 	if kerr.ErrTxInvalid = st.useGas(msg.ValidatedIntrinsicGas()); kerr.ErrTxInvalid != nil {
 		kerr.Status = getReceiptStatusFromErrTxFailed(nil)
-		// The original error from useGas is out of gas error but, that is not the exact message in this case.
-		// So, overwrite the error with more suitable one.
-		kerr.ErrTxInvalid = fmt.Errorf("%w: have %d, want %d", ErrIntrinsicGas, st.gas, msg.ValidatedIntrinsicGas())
 		return nil, 0, kerr
 	}
 
