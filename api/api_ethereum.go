@@ -585,10 +585,8 @@ func (api *EthereumAPI) Call(ctx context.Context, args EthTransactionArgs, block
 		gasCap = rpcGasCap.Uint64()
 	}
 	result, _, err := EthDoCall(ctx, api.publicBlockChainAPI.b, args, blockNrOrHash, overrides, localTxExecutionTime, gasCap)
-	if len(result) > 0 {
-		if isReverted(err) {
-			return nil, newRevertError(result)
-		}
+	if len(result) > 0 && isReverted(err) {
+		return nil, newRevertError(result)
 	}
 	return (hexutil.Bytes)(result), err
 }
