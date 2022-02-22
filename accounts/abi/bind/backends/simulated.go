@@ -721,6 +721,10 @@ func (fb *filterBackend) ServiceFilter(_ context.Context, _ *bloombits.MatcherSe
 	panic("not supported")
 }
 
+func (fb *filterBackend) ChainConfig() *params.ChainConfig {
+	return fb.bc.Config()
+}
+
 func nullSubscription() event.Subscription {
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		<-quit

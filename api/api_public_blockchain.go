@@ -26,6 +26,8 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/klaytn/klaytn/node/cn/filters"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/types/account"
@@ -150,14 +152,28 @@ func (s *PublicBlockChainAPI) GetAccount(ctx context.Context, address common.Add
 	return serAcc, state.Error()
 }
 
+// rpcMarshalHeader converts the given header to the RPC output.
+func (s *PublicBlockChainAPI) rpcMarshalHeader(header *types.Header) map[string]interface{} {
+	fields := filters.RPCMarshalHeader(header, s.b.ChainConfig().IsEthTxTypeForkEnabled(header.Number))
+	return fields
+}
+
 // GetHeaderByNumber returns the requested canonical block header.
-func (s *PublicBlockChainAPI) GetHeaderByNumber(ctx context.Context, number rpc.BlockNumber) (*types.Header, error) {
-	return s.b.HeaderByNumber(ctx, number)
+func (s *PublicBlockChainAPI) GetHeaderByNumber(ctx context.Context, number rpc.BlockNumber) (map[string]interface{}, error) {
+	header, err := s.b.HeaderByNumber(ctx, number)
+	if err != nil {
+		return nil, err
+	}
+	return s.rpcMarshalHeader(header), nil
 }
 
 // GetHeaderByHash returns the requested header by hash.
-func (s *PublicBlockChainAPI) GetHeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error) {
-	return s.b.HeaderByHash(ctx, hash)
+func (s *PublicBlockChainAPI) GetHeaderByHash(ctx context.Context, hash common.Hash) (map[string]interface{}, error) {
+	header, err := s.b.HeaderByHash(ctx, hash)
+	if err != nil {
+		return nil, err
+	}
+	return s.rpcMarshalHeader(header), nil
 }
 
 // GetBlockByNumber returns the requested block. When blockNr is -1 the chain head is returned. When fullTx is true all
@@ -469,7 +485,7 @@ func FormatLogs(logs []vm.StructLog) []StructLogRes {
 	return formatted
 }
 
-func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool) (map[string]interface{}, error) {
+func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool, isEnabledEthTxTypeFork bool) (map[string]interface{}, error) {
 	head := b.Header() // copies the header once
 	fields := map[string]interface{}{
 		"number":           (*hexutil.Big)(head.Number),
@@ -513,6 +529,10 @@ func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool) (map[
 		fields["transactions"] = transactions
 	}
 
+	if isEnabledEthTxTypeFork {
+		fields["baseFeePerGas"] = (*hexutil.Big)(new(big.Int).SetUint64(params.BaseFee))
+	}
+
 	return fields, nil
 }
 
@@ -520,7 +540,7 @@ func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool) (map[
 // returned. When fullTx is true the returned block contains full transaction details, otherwise it will only contain
 // transaction hashes.
 func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx bool) (map[string]interface{}, error) {
-	return RpcOutputBlock(b, s.b.GetTd(b.Hash()), inclTx, fullTx)
+	return RpcOutputBlock(b, s.b.GetTd(b.Hash()), inclTx, fullTx, s.b.ChainConfig().IsEthTxTypeForkEnabled(b.Header().Number))
 }
 
 func getFrom(tx *types.Transaction) common.Address {
