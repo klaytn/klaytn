@@ -252,17 +252,12 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 
 	msg := st.msg
 
-	// Check before pay intrinsic gas.
-	intrinsicGas := msg.ValidatedIntrinsicGas()
-	if st.gas < intrinsicGas {
-		kerr.Status = getReceiptStatusFromErrTxFailed(nil)
-		kerr.ErrTxInvalid = fmt.Errorf("%w: have %d, want %d", ErrIntrinsicGas, st.gas, intrinsicGas)
-		return nil, 0, kerr
-	}
-
 	// Pay intrinsic gas.
-	if kerr.ErrTxInvalid = st.useGas(intrinsicGas); kerr.ErrTxInvalid != nil {
+	if kerr.ErrTxInvalid = st.useGas(msg.ValidatedIntrinsicGas()); kerr.ErrTxInvalid != nil {
 		kerr.Status = getReceiptStatusFromErrTxFailed(nil)
+		// The original error from useGas is out of gas error but, that is not the exact message in this case.
+		// So, overwrite the error with more suitable one.
+		kerr.ErrTxInvalid = fmt.Errorf("%w: have %d, want %d", ErrIntrinsicGas, st.gas, msg.ValidatedIntrinsicGas())
 		return nil, 0, kerr
 	}
 
