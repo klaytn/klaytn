@@ -62,11 +62,6 @@ func TestWebsocketLargeCallFastws(t *testing.T) {
 	go NewFastWSServer([]string{"*"}, srv).Serve(ln)
 	time.Sleep(100 * time.Millisecond)
 
-	//defer srv.Stop()
-	//defer httpsrv.Close()
-	//fmt.Println("server", httpsrv.Listener.Addr())
-	//time.Sleep(100 * time.Millisecond)
-
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	client, err := DialWebsocket(ctx, wsAddr, "")

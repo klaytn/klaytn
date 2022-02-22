@@ -235,6 +235,7 @@ func DialStdIO(ctx context.Context) (*Client, error) {
 
 func NewClient(initctx context.Context, connectFunc func(context.Context) (net.Conn, error)) (*Client, error) {
 	conn, err := connectFunc(initctx)
+
 	if err != nil {
 		return nil, err
 	}
@@ -909,16 +910,12 @@ func (c *Client) readGorillaWS(conn *gorillaws.Conn) error {
 	readMessage := func() (rs []*jsonrpcMessage, err error) {
 		_, reader, err := conn.NextReader()
 		if err != nil {
-
 			return nil, err
 		}
-
-		dec := json.NewDecoder(reader)
-		if dec == nil {
-			fmt.Println(err)
-			return
-		}
-		var buf json.RawMessage
+		var (
+			buf json.RawMessage
+			dec = json.NewDecoder(reader)
+		)
 		buf = buf[:0]
 		if err = dec.Decode(&buf); err != nil {
 			return nil, err
