@@ -536,16 +536,13 @@ func (g *Governance) ParseVoteValue(gVote *GovernanceVote) (*GovernanceVote, err
 		val = string(v)
 	case params.GoverningNode:
 		v, ok := gVote.Value.([]uint8)
-		if !ok || len(v) != common.AddressLength {
+		if !ok {
 			return nil, ErrValueTypeMismatch
 		}
 		val = common.BytesToAddress(v)
 	case params.AddValidator, params.RemoveValidator:
 		if v, ok := gVote.Value.([]uint8); ok {
 			// if value contains single address, gVote.Value type should be []uint8{}
-			if len(v) != common.AddressLength {
-				return nil, ErrValueTypeMismatch
-			}
 			val = common.BytesToAddress(v)
 		} else if addresses, ok := gVote.Value.([]interface{}); ok {
 			// if value contains multiple addresses, gVote.Value type should be [][]uint8{}
