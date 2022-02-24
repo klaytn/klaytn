@@ -337,11 +337,11 @@ func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, votes 
 		var err error
 
 		if err := rlp.DecodeBytes(header.Vote, gVote); err != nil {
-			logger.Error("Failed to decode a vote. This vote will be ignored", "number", header.Number, "key", gVote.Key, "value", gVote.Value, "validator", gVote.Validator)
+			logger.Error("Failed to decode a vote. This vote will be ignored", "number", header.Number)
 			return valset, votes, tally
 		}
 		if gVote, err = gov.ParseVoteValue(gVote); err != nil {
-			logger.Error("Failed to parse a vote value. This vote will be ignored", "number", header.Number, "key", gVote.Key, "value", gVote.Value, "validator", gVote.Validator)
+			logger.Error("Failed to parse a vote value. This vote will be ignored", "number", header.Number)
 			return valset, votes, tally
 		}
 
