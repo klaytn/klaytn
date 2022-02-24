@@ -548,7 +548,7 @@ func TestVoteValueNilInterface(t *testing.T) {
 
 		// Parse vote.Value and make it has appropriate type
 		_, err := gov.ParseVoteValue(gVote)
-		assert.Equal(t, nil, err)
+		assert.NoError(t, err)
 	}
 
 	gVote.Key = "governance.addvalidator"
@@ -572,7 +572,7 @@ func TestVoteValueNilInterface(t *testing.T) {
 
 		// Parse vote.Value and make it has appropriate type
 		_, err := gov.ParseVoteValue(gVote)
-		assert.Equal(t, ErrValueTypeMismatch, err)
+		assert.NoError(t, err)
 	}
 }
 
