@@ -508,7 +508,7 @@ func (jst *Tracer) Stop(err error) {
 
 // call executes a method on a JS object, catching any errors, formatting and
 // returning them as error objects.
-func (jst *Tracer) call(method string, args ...string) (json.RawMessage, error) {
+func (jst *Tracer) call(noret bool, method string, args ...string) (json.RawMessage, error) {
 	// Execute the JavaScript call and return any error
 	jst.vm.PushString(method)
 	for _, arg := range args {
@@ -521,7 +521,21 @@ func (jst *Tracer) call(method string, args ...string) (json.RawMessage, error) 
 		return nil, errors.New(err)
 	}
 	// No error occurred, extract return value and return
-	return json.RawMessage(jst.vm.JsonEncode(-1)), nil
+	if noret {
+		return nil, nil
+	}
+	// Push a JSON marshaller onto the stack. We can't marshal from the out-
+	// side because duktape can crash on large nestings and we can't catch
+	// C++ exceptions ourselves from Go. TODO(karalabe): Yuck, why wrap?!
+	jst.vm.PushString("(JSON.stringify)")
+	jst.vm.Eval()
+
+	jst.vm.Swap(-1, -2)
+	if code = jst.vm.Pcall(1); code != 0 {
+		err := jst.vm.SafeToString(-1)
+		return nil, errors.New(err)
+	}
+	return json.RawMessage(jst.vm.SafeToString(-1)), nil
 }
 
 func wrapError(context string, err error) error {
@@ -578,7 +592,7 @@ func (jst *Tracer) CaptureState(env *vm.EVM, pc uint64, op vm.OpCode, gas, cost 
 			jst.errorValue = new(string)
 			*jst.errorValue = err.Error()
 		}
-		_, err := jst.call("step", "log", "db")
+		_, err := jst.call(true, "step", "log", "db")
 		if err != nil {
 			jst.err = wrapError("step", err)
 		}
@@ -594,7 +608,7 @@ func (jst *Tracer) CaptureFault(env *vm.EVM, pc uint64, op vm.OpCode, gas, cost 
 		jst.errorValue = new(string)
 		*jst.errorValue = err.Error()
 
-		_, err := jst.call("fault", "log", "db")
+		_, err := jst.call(true, "fault", "log", "db")
 		if err != nil {
 			jst.err = wrapError("fault", err)
 		}
@@ -646,7 +660,7 @@ func (jst *Tracer) GetResult() (json.RawMessage, error) {
 	jst.vm.PutPropString(jst.stateObject, "ctx")
 
 	// Finalize the trace and return the results
-	result, err := jst.call("result", "ctx", "db")
+	result, err := jst.call(false, "result", "ctx", "db")
 	if err != nil {
 		jst.err = wrapError("result", err)
 	}
