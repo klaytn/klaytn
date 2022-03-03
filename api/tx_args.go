@@ -105,15 +105,15 @@ type NewTxArgs interface {
 
 // SendTxArgs represents the arguments to submit a new transaction into the transaction pool.
 type SendTxArgs struct {
-	TypeInt      *types.TxType   `json:"typeInt"`
-	From         common.Address  `json:"from"`
-	Recipient    *common.Address `json:"to"`
-	GasLimit     *hexutil.Uint64 `json:"gas"`
-	Price        *hexutil.Big    `json:"gasPrice"`
-	GasTipCap    *hexutil.Big    `json:"maxPriorityFeePerGas"`
-	GasFeeCap    *hexutil.Big    `json:"maxFeePerGas"`
-	Amount       *hexutil.Big    `json:"value"`
-	AccountNonce *hexutil.Uint64 `json:"nonce"`
+	TypeInt              *types.TxType   `json:"typeInt"`
+	From                 common.Address  `json:"from"`
+	Recipient            *common.Address `json:"to"`
+	GasLimit             *hexutil.Uint64 `json:"gas"`
+	Price                *hexutil.Big    `json:"gasPrice"`
+	MaxPriorityFeePerGas *hexutil.Big    `json:"maxPriorityFeePerGas"`
+	MaxFeePerGas         *hexutil.Big    `json:"maxFeePerGas"`
+	Amount               *hexutil.Big    `json:"value"`
+	AccountNonce         *hexutil.Uint64 `json:"nonce"`
 	// We accept "data" and "input" for backwards-compatibility reasons. "input" is the
 	// newer name and should be preferred by clients.
 	Data    *hexutil.Bytes `json:"data"`
@@ -268,11 +268,11 @@ func (args *SendTxArgs) genTxValuesMap() map[types.TxValueKeyType]interface{} {
 	if args.AccessList != nil {
 		values[types.TxValueKeyAccessList] = *args.AccessList
 	}
-	if args.GasTipCap != nil {
-		values[types.TxValueKeyGasTipCap] = (*big.Int)(args.GasTipCap)
+	if args.MaxPriorityFeePerGas != nil {
+		values[types.TxValueKeyGasTipCap] = (*big.Int)(args.MaxPriorityFeePerGas)
 	}
-	if args.GasFeeCap != nil {
-		values[types.TxValueKeyGasFeeCap] = (*big.Int)(args.GasFeeCap)
+	if args.MaxFeePerGas != nil {
+		values[types.TxValueKeyGasFeeCap] = (*big.Int)(args.MaxFeePerGas)
 	}
 
 	return values
