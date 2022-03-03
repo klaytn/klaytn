@@ -158,16 +158,22 @@ func TestGasPrice_SuggestPrice(t *testing.T) {
 	defer mockCtrl.Finish()
 	mockBackend := mock_api.NewMockBackend(mockCtrl)
 	params := Config{}
-	oracle := NewOracle(mockBackend, params, nil)
+	testBackend := newTestBackend(t)
+	chainConfig := testBackend.ChainConfig()
+	chainConfig.UnitPrice = 0
+	txPoolWith0 := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, chainConfig, testBackend.chain)
+	oracle := NewOracle(mockBackend, params, txPoolWith0)
 
 	price, err := oracle.SuggestPrice(nil)
-	assert.Nil(t, price)
+	assert.Equal(t, price, common.Big0)
 	assert.Nil(t, err)
 
 	params = Config{Default: big.NewInt(123)}
-	oracle = NewOracle(mockBackend, params, nil)
+	chainConfig.UnitPrice = 25
+	txPoolWith25 := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, chainConfig, testBackend.chain)
+	oracle = NewOracle(mockBackend, params, txPoolWith25)
 
 	price, err = oracle.SuggestPrice(nil)
-	assert.Equal(t, big.NewInt(123), price)
+	assert.Equal(t, big.NewInt(25), price)
 	assert.Nil(t, err)
 }
