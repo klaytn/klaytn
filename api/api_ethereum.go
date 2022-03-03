@@ -584,11 +584,16 @@ func (api *EthereumAPI) Call(ctx context.Context, args EthTransactionArgs, block
 	if rpcGasCap := api.publicBlockChainAPI.b.RPCGasCap(); rpcGasCap != nil {
 		gasCap = rpcGasCap.Uint64()
 	}
-	result, _, err := EthDoCall(ctx, api.publicBlockChainAPI.b, args, blockNrOrHash, overrides, localTxExecutionTime, gasCap)
-	if len(result) > 0 && isReverted(err) {
+	result, _, status, err := EthDoCall(ctx, api.publicBlockChainAPI.b, args, blockNrOrHash, overrides, localTxExecutionTime, gasCap)
+	if err != nil {
+		return nil, err
+	}
+
+	err = blockchain.GetVMerrFromReceiptStatus(status)
+	if err != nil && isReverted(err) && len(result) > 0 {
 		return nil, newRevertError(result)
 	}
-	return (hexutil.Bytes)(result), err
+	return common.CopyBytes(result), err
 }
 
 // EstimateGas returns an estimate of the amount of gas needed to execute the
@@ -1472,15 +1477,15 @@ func (api *EthereumAPI) rpcMarshalBlock(block *types.Block, inclTx, fullTx bool)
 	return fields, nil
 }
 
-func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrOrHash rpc.BlockNumberOrHash, overrides *EthStateOverride, timeout time.Duration, globalGasCap uint64) ([]byte, uint64, error) {
+func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrOrHash rpc.BlockNumberOrHash, overrides *EthStateOverride, timeout time.Duration, globalGasCap uint64) ([]byte, uint64, uint, error) {
 	defer func(start time.Time) { logger.Debug("Executing EVM call finished", "runtime", time.Since(start)) }(time.Now())
 
 	st, header, err := b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if st == nil || err != nil {
-		return nil, 0, err
+		return nil, 0, 0, err
 	}
 	if err := overrides.Apply(st); err != nil {
-		return nil, 0, err
+		return nil, 0, 0, err
 	}
 
 	// Setup context so it may be cancelled the call has completed
@@ -1499,22 +1504,22 @@ func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrO
 	fixedBaseFee := new(big.Int).SetUint64(params.BaseFee)
 	intrinsicGas, err := types.IntrinsicGas(args.data(), nil, args.To == nil, b.ChainConfig().Rules(header.Number))
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, 0, err
 	}
 	msg, err := args.ToMessage(globalGasCap, fixedBaseFee, intrinsicGas)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, 0, err
 	}
 	// The intrinsicGas is checked again later in the blockchain.ApplyMessage function,
 	// but we check in advance here in order to keep StateTransition.TransactionDb method as unchanged as possible
 	// and to clarify error reason correctly to serve eth namespace APIs.
 	// This case is handled by EthDoEstimateGas function.
 	if msg.Gas() < intrinsicGas {
-		return nil, 0, fmt.Errorf("%w: msg.gas %d, want %d", blockchain.ErrIntrinsicGas, msg.Gas(), intrinsicGas)
+		return nil, 0, 0, fmt.Errorf("%w: msg.gas %d, want %d", blockchain.ErrIntrinsicGas, msg.Gas(), intrinsicGas)
 	}
 	evm, vmError, err := b.GetEVM(ctx, msg, st, header, vm.Config{})
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, 0, err
 	}
 	// Wait for the context to be done and cancel the evm. Even if the
 	// EVM has finished, cancelling may be done (repeatedly)
@@ -1527,20 +1532,17 @@ func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrO
 	res, gas, kerr := blockchain.ApplyMessage(evm, msg)
 	err = kerr.ErrTxInvalid
 	if err := vmError(); err != nil {
-		return nil, 0, err
+		return nil, 0, 0, err
 	}
 	// If the timer caused an abort, return an appropriate error message
 	if evm.Cancelled() {
-		return nil, 0, fmt.Errorf("execution aborted (timeout = %v)", timeout)
-	}
-
-	if err == nil {
-		err = blockchain.GetVMerrFromReceiptStatus(kerr.Status)
+		return nil, 0, 0, fmt.Errorf("execution aborted (timeout = %v)", timeout)
 	}
 	if err != nil {
-		return res, 0, fmt.Errorf("err: %w (supplied gas %d)", err, msg.Gas())
+		return res, 0, 0, fmt.Errorf("err: %w (supplied gas %d)", err, msg.Gas())
 	}
-	return res, gas, nil
+	// TODO-Klaytn-Interface: Introduce ExecutionResult struct from geth to return more detail information
+	return res, gas, kerr.Status, nil
 }
 
 func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, blockNrOrHash rpc.BlockNumberOrHash, gasCap uint64) (hexutil.Uint64, error) {
@@ -1615,21 +1617,23 @@ func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, b
 	// - error: consensus error which is not EVM related error (less balance of caller, wrong nonce, etc...).
 	executable := func(gas uint64) (bool, []byte, error, error) {
 		args.Gas = (*hexutil.Uint64)(&gas)
-		ret, _, err := EthDoCall(ctx, b, args, rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber), nil, 0, gasCap)
+		ret, _, status, err := EthDoCall(ctx, b, args, rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber), nil, 0, gasCap)
 		if err != nil {
 			if errors.Is(err, blockchain.ErrIntrinsicGas) {
 				// Special case, raise gas limit
 				return false, ret, nil, nil
 			}
-			if vm.IsVMError(err) {
-				// If err is vmError, return vmError with returned data
-				return false, ret, err, nil
-			}
 			// Returns error when it is not VM error (less balance or wrong nonce, etc...).
 			return false, nil, nil, err
 		}
-		return true, ret, err, nil
+		// If err is vmError, return vmError with returned data
+		vmErr := blockchain.GetVMerrFromReceiptStatus(status)
+		if vmErr != nil {
+			return false, ret, vmErr, nil
+		}
+		return true, ret, vmErr, nil
 	}
+
 	// Execute the binary search and hone in on an executable gas limit
 	for lo+1 < hi {
 		mid := (hi + lo) / 2
