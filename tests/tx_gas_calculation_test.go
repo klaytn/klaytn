@@ -690,13 +690,14 @@ func genMapForAccessListTransaction(from TestAccount, to TestAccount, gasPrice *
 	data := []byte{0x11, 0x22}
 	gasPayload := uint64(len(data)) * params.TxDataGas
 	accessList := types.AccessList{{Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), StorageKeys: []common.Hash{{0}}}}
+	toAddress := to.GetAddr()
 
 	gasPayload += uint64(len(accessList)) * params.TxAccessListAddressGas
 	gasPayload += uint64(accessList.StorageKeys()) * params.TxAccessListStorageKeyGas
 
 	values := map[types.TxValueKeyType]interface{}{
 		types.TxValueKeyNonce:      from.GetNonce(),
-		types.TxValueKeyTo:         to.GetAddr(),
+		types.TxValueKeyTo:         &toAddress,
 		types.TxValueKeyAmount:     amount,
 		types.TxValueKeyData:       data,
 		types.TxValueKeyGasLimit:   gasLimit,
@@ -713,13 +714,14 @@ func genMapForDynamicFeeTransaction(from TestAccount, to TestAccount, gasPrice *
 	data := []byte{0x11, 0x22}
 	gasPayload := uint64(len(data)) * params.TxDataGas
 	accessList := types.AccessList{{Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), StorageKeys: []common.Hash{{0}}}}
+	toAddress := to.GetAddr()
 
 	gasPayload += uint64(len(accessList)) * params.TxAccessListAddressGas
 	gasPayload += uint64(accessList.StorageKeys()) * params.TxAccessListStorageKeyGas
 
 	values := map[types.TxValueKeyType]interface{}{
 		types.TxValueKeyNonce:      from.GetNonce(),
-		types.TxValueKeyTo:         to.GetAddr(),
+		types.TxValueKeyTo:         &toAddress,
 		types.TxValueKeyAmount:     amount,
 		types.TxValueKeyData:       data,
 		types.TxValueKeyGasLimit:   gasLimit,
