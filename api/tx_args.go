@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"math/big"
 	"reflect"
 
@@ -150,6 +151,30 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 			return err
 		}
 		args.Price = (*hexutil.Big)(price)
+	}
+	if *args.TypeInt == types.TxTypeEthereumDynamicFee {
+		// TODO-Klaytn: The logic below is valid only when using a fixed gas price.
+		fixedGasPrice, err := b.SuggestPrice(ctx)
+		if err != nil {
+			return err
+		}
+		if args.MaxPriorityFeePerGas == nil {
+			args.MaxPriorityFeePerGas = (*hexutil.Big)(fixedGasPrice)
+		}
+		if args.MaxFeePerGas == nil {
+			fixedBaseFee := new(big.Int).SetUint64(params.BaseFee)
+			gasFeeCap := new(big.Int).Add(
+				(*big.Int)(args.MaxPriorityFeePerGas),
+				new(big.Int).Mul(fixedBaseFee, big.NewInt(2)),
+			)
+			args.MaxFeePerGas = (*hexutil.Big)(gasFeeCap)
+		}
+		if args.MaxPriorityFeePerGas.ToInt().Cmp(fixedGasPrice) != 0 || args.MaxFeePerGas.ToInt().Cmp(fixedGasPrice) != 0 {
+			return fmt.Errorf("only %s is allowed to be used as maxFeePerGas and maxPriorityPerGas", fixedGasPrice.Text(16))
+		}
+		if args.MaxFeePerGas.ToInt().Cmp(args.MaxPriorityFeePerGas.ToInt()) < 0 {
+			return fmt.Errorf("maxFeePerGas (%v) < maxPriorityFeePerGas (%v)", args.MaxFeePerGas, args.MaxPriorityFeePerGas)
+		}
 	}
 	if args.AccountNonce == nil {
 		nonce := b.GetPoolNonce(ctx, args.From)
