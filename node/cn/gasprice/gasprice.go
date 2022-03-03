@@ -98,6 +98,10 @@ func NewOracle(backend OracleBackend, params Config, txPool TxPool) *Oracle {
 // SuggestPrice returns the recommended gas price.
 func (gpo *Oracle) SuggestPrice(ctx context.Context) (*big.Int, error) {
 
+	if gpo.txPool == nil {
+		// If txpool is not set, just return 0. This is used for testing.
+		return common.Big0, nil
+	}
 	// Since we have fixed gas price, we can directly get this value from TxPool.
 	return gpo.txPool.GasPrice(), nil
 	/*
