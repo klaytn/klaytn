@@ -226,6 +226,10 @@ func (args *SendTxArgs) genTxValuesMap() map[types.TxValueKeyType]interface{} {
 	if args.TypeInt.IsContractDeploy() {
 		// contract deploy type allows nil as TxValueKeyTo value
 		values[types.TxValueKeyTo] = (*common.Address)(args.Recipient)
+	} else if args.Recipient == nil && args.TypeInt.IsEthereumTransaction() {
+		// Among the optional fields of an Ethereum transaction,
+		// if `args.Recipient == nil` and `args.Payload != nil`, it is a contract deploy transaction.
+		values[types.TxValueKeyTo] = (*common.Address)(args.Recipient)
 	} else if args.Recipient != nil {
 		values[types.TxValueKeyTo] = *args.Recipient
 	}
