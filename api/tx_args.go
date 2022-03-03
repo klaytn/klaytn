@@ -110,6 +110,8 @@ type SendTxArgs struct {
 	Recipient    *common.Address `json:"to"`
 	GasLimit     *hexutil.Uint64 `json:"gas"`
 	Price        *hexutil.Big    `json:"gasPrice"`
+	GasTipCap    *hexutil.Big    `json:"maxPriorityFeePerGas"`
+	GasFeeCap    *hexutil.Big    `json:"maxFeePerGas"`
 	Amount       *hexutil.Big    `json:"value"`
 	AccountNonce *hexutil.Uint64 `json:"nonce"`
 	// We accept "data" and "input" for backwards-compatibility reasons. "input" is the
@@ -121,6 +123,9 @@ type SendTxArgs struct {
 	HumanReadable *bool              `json:"humanReadable"`
 
 	Key *hexutil.Bytes `json:"key"`
+
+	AccessList *types.AccessList `json:"accessList,omitempty"`
+	ChainID    *hexutil.Big      `json:"chainId,omitempty"`
 
 	FeePayer *common.Address `json:"feePayer"`
 	FeeRatio *types.FeeRatio `json:"feeRatio"`
@@ -138,7 +143,8 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 		args.GasLimit = new(hexutil.Uint64)
 		*args.GasLimit = hexutil.Uint64(90000)
 	}
-	if args.Price == nil {
+	// For the transaction that do not use the gasPrice field, the default value of gasPrice is not set.
+	if args.Price == nil && *args.TypeInt != types.TxTypeEthereumDynamicFee {
 		price, err := b.SuggestPrice(ctx)
 		if err != nil {
 			return err
@@ -159,8 +165,8 @@ func (args *SendTxArgs) checkArgs() error {
 	if args.TypeInt == nil {
 		return errTxArgNilTxType
 	}
-	// Skip legacy transaction type since it has optional fields
-	if *args.TypeInt == types.TxTypeLegacyTransaction {
+	// Skip ethereum transaction type since it has optional fields
+	if args.TypeInt.IsEthereumTransaction() {
 		return nil
 	}
 
@@ -199,15 +205,24 @@ func (args *SendTxArgs) genTxValuesMap() map[types.TxValueKeyType]interface{} {
 	values := make(map[types.TxValueKeyType]interface{})
 
 	// common tx fields. They should have values after executing "setDefaults" function.
-	if args.TypeInt == nil || args.AccountNonce == nil || args.GasLimit == nil || args.Price == nil {
+	if args.TypeInt == nil || args.AccountNonce == nil || args.GasLimit == nil {
 		return values
 	}
-	values[types.TxValueKeyFrom] = args.From
+	// GasPrice can be an optional tx filed for TxTypeEthereumDynamicFee
+	if args.Price == nil && *args.TypeInt != types.TxTypeEthereumDynamicFee {
+		return values
+	}
+
+	if !args.TypeInt.IsEthereumTransaction() {
+		values[types.TxValueKeyFrom] = args.From
+	}
 	values[types.TxValueKeyNonce] = uint64(*args.AccountNonce)
 	values[types.TxValueKeyGasLimit] = uint64(*args.GasLimit)
-	values[types.TxValueKeyGasPrice] = (*big.Int)(args.Price)
 
 	// optional tx fields
+	if args.Price != nil {
+		values[types.TxValueKeyGasPrice] = (*big.Int)(args.Price)
+	}
 	if args.TypeInt.IsContractDeploy() {
 		// contract deploy type allows nil as TxValueKeyTo value
 		values[types.TxValueKeyTo] = (*common.Address)(args.Recipient)
@@ -242,6 +257,18 @@ func (args *SendTxArgs) genTxValuesMap() map[types.TxValueKeyType]interface{} {
 		if err := rlp.DecodeBytes(*args.Key, &serializer); err == nil {
 			values[types.TxValueKeyAccountKey] = serializer.GetKey()
 		}
+	}
+	if args.ChainID != nil {
+		values[types.TxValueKeyChainID] = (*big.Int)(args.ChainID)
+	}
+	if args.AccessList != nil {
+		values[types.TxValueKeyAccessList] = *args.AccessList
+	}
+	if args.GasTipCap != nil {
+		values[types.TxValueKeyGasTipCap] = (*big.Int)(args.GasTipCap)
+	}
+	if args.GasFeeCap != nil {
+		values[types.TxValueKeyGasFeeCap] = (*big.Int)(args.GasFeeCap)
 	}
 
 	return values
