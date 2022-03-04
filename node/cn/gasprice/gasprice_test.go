@@ -108,7 +108,7 @@ func TestGasPrice_NewOracle(t *testing.T) {
 	defer mockCtrl.Finish()
 	mockBackend := mock_api.NewMockBackend(mockCtrl)
 	params := Config{}
-	oracle := NewOracle(mockBackend, params)
+	oracle := NewOracle(mockBackend, params, nil)
 
 	assert.Nil(t, oracle.lastPrice)
 	assert.Equal(t, 1, oracle.checkBlocks)
@@ -117,7 +117,7 @@ func TestGasPrice_NewOracle(t *testing.T) {
 	assert.Equal(t, 0, oracle.percentile)
 
 	params = Config{Blocks: 2}
-	oracle = NewOracle(mockBackend, params)
+	oracle = NewOracle(mockBackend, params, nil)
 
 	assert.Nil(t, oracle.lastPrice)
 	assert.Equal(t, 2, oracle.checkBlocks)
@@ -126,7 +126,7 @@ func TestGasPrice_NewOracle(t *testing.T) {
 	assert.Equal(t, 0, oracle.percentile)
 
 	params = Config{Percentile: -1}
-	oracle = NewOracle(mockBackend, params)
+	oracle = NewOracle(mockBackend, params, nil)
 
 	assert.Nil(t, oracle.lastPrice)
 	assert.Equal(t, 1, oracle.checkBlocks)
@@ -135,7 +135,7 @@ func TestGasPrice_NewOracle(t *testing.T) {
 	assert.Equal(t, 0, oracle.percentile)
 
 	params = Config{Percentile: 101}
-	oracle = NewOracle(mockBackend, params)
+	oracle = NewOracle(mockBackend, params, nil)
 
 	assert.Nil(t, oracle.lastPrice)
 	assert.Equal(t, 1, oracle.checkBlocks)
@@ -144,7 +144,7 @@ func TestGasPrice_NewOracle(t *testing.T) {
 	assert.Equal(t, 100, oracle.percentile)
 
 	params = Config{Percentile: 101, Default: big.NewInt(123)}
-	oracle = NewOracle(mockBackend, params)
+	oracle = NewOracle(mockBackend, params, nil)
 
 	assert.Equal(t, big.NewInt(123), oracle.lastPrice)
 	assert.Equal(t, 1, oracle.checkBlocks)
@@ -158,16 +158,22 @@ func TestGasPrice_SuggestPrice(t *testing.T) {
 	defer mockCtrl.Finish()
 	mockBackend := mock_api.NewMockBackend(mockCtrl)
 	params := Config{}
-	oracle := NewOracle(mockBackend, params)
+	testBackend := newTestBackend(t)
+	chainConfig := testBackend.ChainConfig()
+	chainConfig.UnitPrice = 0
+	txPoolWith0 := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, chainConfig, testBackend.chain)
+	oracle := NewOracle(mockBackend, params, txPoolWith0)
 
 	price, err := oracle.SuggestPrice(nil)
-	assert.Nil(t, price)
+	assert.Equal(t, price, common.Big0)
 	assert.Nil(t, err)
 
 	params = Config{Default: big.NewInt(123)}
-	oracle = NewOracle(mockBackend, params)
+	chainConfig.UnitPrice = 25
+	txPoolWith25 := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, chainConfig, testBackend.chain)
+	oracle = NewOracle(mockBackend, params, txPoolWith25)
 
 	price, err = oracle.SuggestPrice(nil)
-	assert.Equal(t, big.NewInt(123), price)
+	assert.Equal(t, big.NewInt(25), price)
 	assert.Nil(t, err)
 }

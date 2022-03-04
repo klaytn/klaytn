@@ -81,11 +81,6 @@ func (api *GovernanceKlayAPI) GasPriceAt(num *rpc.BlockNumber) (*hexutil.Big, er
 	}
 }
 
-func (api *GovernanceKlayAPI) GasPrice() *hexutil.Big {
-	ret := api.governance.UnitPrice()
-	return (*hexutil.Big)(big.NewInt(0).SetUint64(ret))
-}
-
 // Vote injects a new vote for governance targets such as unitprice and governingnode.
 func (api *PublicGovernanceAPI) Vote(key string, val interface{}) (string, error) {
 	gMode := api.governance.GovernanceMode()
