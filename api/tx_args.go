@@ -248,12 +248,8 @@ func (args *SendTxArgs) genTxValuesMap() map[types.TxValueKeyType]interface{} {
 	if args.Price != nil {
 		values[types.TxValueKeyGasPrice] = (*big.Int)(args.Price)
 	}
-	if args.TypeInt.IsContractDeploy() {
-		// contract deploy type allows nil as TxValueKeyTo value
-		values[types.TxValueKeyTo] = (*common.Address)(args.Recipient)
-	} else if args.Recipient == nil && args.TypeInt.IsEthereumTransaction() {
-		// Among the optional fields of an Ethereum transaction,
-		// if `args.Recipient == nil` and `args.Payload != nil`, it is a contract deploy transaction.
+	if args.TypeInt.IsContractDeploy() || args.TypeInt.IsEthereumTransaction() {
+		// contract deploy type and ethereum tx types allow nil as TxValueKeyTo value
 		values[types.TxValueKeyTo] = (*common.Address)(args.Recipient)
 	} else if args.Recipient != nil {
 		values[types.TxValueKeyTo] = *args.Recipient
@@ -274,6 +270,9 @@ func (args *SendTxArgs) genTxValuesMap() map[types.TxValueKeyType]interface{} {
 		} else {
 			values[types.TxValueKeyData] = ([]byte)(*args.Payload)
 		}
+	} else if args.TypeInt.IsEthereumTransaction() {
+		// For Ethereum transactions, Payload is an optional field.
+		values[types.TxValueKeyData] = []byte{}
 	}
 	if args.CodeFormat != nil {
 		values[types.TxValueKeyCodeFormat] = *args.CodeFormat
