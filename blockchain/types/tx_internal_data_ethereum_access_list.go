@@ -155,11 +155,11 @@ func newTxInternalDataEthereumAccessListWithMap(values map[TxValueKeyType]interf
 		return nil, errValueKeyNonceMustUint64
 	}
 
-	if v, ok := values[TxValueKeyTo].(common.Address); ok {
-		d.Recipient = &v
+	if v, ok := values[TxValueKeyTo].(*common.Address); ok {
+		d.Recipient = v
 		delete(values, TxValueKeyTo)
 	} else {
-		return nil, errValueKeyToMustAddress
+		return nil, errValueKeyToMustAddressPointer
 	}
 
 	if v, ok := values[TxValueKeyAmount].(*big.Int); ok {

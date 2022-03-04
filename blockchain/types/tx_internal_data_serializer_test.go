@@ -248,7 +248,7 @@ func genLegacyTransaction() TxInternalData {
 func genAccessListTransaction() TxInternalData {
 	tx, err := NewTxInternalDataWithMap(TxTypeEthereumAccessList, map[TxValueKeyType]interface{}{
 		TxValueKeyNonce:      nonce,
-		TxValueKeyTo:         to,
+		TxValueKeyTo:         &to,
 		TxValueKeyAmount:     amount,
 		TxValueKeyGasLimit:   gasLimit,
 		TxValueKeyGasPrice:   gasPrice,
@@ -267,7 +267,7 @@ func genAccessListTransaction() TxInternalData {
 func genDynamicFeeTransaction() TxInternalData {
 	tx, err := NewTxInternalDataWithMap(TxTypeEthereumDynamicFee, map[TxValueKeyType]interface{}{
 		TxValueKeyNonce:      nonce,
-		TxValueKeyTo:         to,
+		TxValueKeyTo:         &to,
 		TxValueKeyAmount:     amount,
 		TxValueKeyGasLimit:   gasLimit,
 		TxValueKeyGasFeeCap:  gasFeeCap,
