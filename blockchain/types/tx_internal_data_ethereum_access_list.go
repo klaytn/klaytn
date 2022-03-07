@@ -463,7 +463,7 @@ func (t *TxInternalDataEthereumAccessList) MakeRPCOutput() map[string]interface{
 	return map[string]interface{}{
 		"typeInt":    t.Type(),
 		"type":       t.Type().String(),
-		"chainID":    (*hexutil.Big)(t.ChainId()),
+		"chainId":    (*hexutil.Big)(t.ChainId()),
 		"nonce":      hexutil.Uint64(t.AccountNonce),
 		"gasPrice":   (*hexutil.Big)(t.Price),
 		"gas":        hexutil.Uint64(t.GasLimit),
