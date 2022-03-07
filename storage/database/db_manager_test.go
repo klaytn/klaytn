@@ -64,6 +64,8 @@ var addr common.Address
 var signer types.Signer
 
 func init() {
+	GetOpenFilesLimit()
+
 	key, _ = crypto.GenerateKey()
 	addr = crypto.PubkeyToAddress(key.PublicKey)
 	signer = types.LatestSignerForChainID(big.NewInt(18))
