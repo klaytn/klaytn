@@ -23,6 +23,7 @@ package gxhash
 import (
 	"errors"
 	"fmt"
+	"github.com/klaytn/klaytn/blockchain/types"
 	"math"
 	"math/big"
 	"math/rand"
@@ -588,3 +589,5 @@ func SeedHash(block uint64) []byte {
 func (gxhash *Gxhash) Protocol() consensus.Protocol {
 	return consensus.KlayProtocol
 }
+
+func (gxhash *Gxhash) CreateGovernanceState(num uint64, headers []*types.Header) {}
