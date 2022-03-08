@@ -150,6 +150,7 @@ start_node() {
 
     if [[ ! -z $RPC_ENABLE ]] && [[ $RPC_ENABLE -eq 1 ]]; then
         OPTIONS="$OPTIONS --rpc"
+        RPC_API=`echo $RPC_API | tr -d "[:space:]"`
         if [ ! -z $RPC_API ]; then
             OPTIONS="$OPTIONS --rpcapi $RPC_API"
         fi
@@ -169,6 +170,7 @@ start_node() {
 
     if [[ ! -z $WS_ENABLE ]] && [[ $WS_ENABLE -eq 1 ]]; then
         OPTIONS="$OPTIONS --ws"
+        WS_API=`echo $WS_API | tr -d "[:space:]"`
         if [ ! -z $WS_API ]; then
             OPTIONS="$OPTIONS --wsapi $WS_API"
         fi
