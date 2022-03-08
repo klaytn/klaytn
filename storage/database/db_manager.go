@@ -2292,13 +2292,13 @@ func (dbm *databaseManager) DeleteGovernanceIdx(blockNum uint64) error {
 
 	if idxHistory, err := dbm.ReadRecentGovernanceIdx(0); err != nil {
 		return err
-	}
-
-	for i := 0; i < len(idxHistory); i++ {
-		if idxHistory[i] > blockNum {
-			break
+	} else {
+		for i := 0; i < len(idxHistory); i++ {
+			if idxHistory[i] > blockNum {
+				break
+			}
+			newSlice = append(newSlice, idxHistory[i])
 		}
-		newSlice = append(newSlice, idxHistory[i])
 	}
 
 	data, err := json.Marshal(newSlice)
