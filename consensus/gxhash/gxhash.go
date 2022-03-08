@@ -23,7 +23,6 @@ package gxhash
 import (
 	"errors"
 	"fmt"
-	"github.com/klaytn/klaytn/blockchain/types"
 	"math"
 	"math/big"
 	"math/rand"
@@ -35,6 +34,8 @@ import (
 	"sync"
 	"time"
 	"unsafe"
+
+	"github.com/klaytn/klaytn/blockchain/types"
 
 	"github.com/hashicorp/golang-lru/simplelru"
 	"github.com/klaytn/klaytn/consensus"
