@@ -96,6 +96,18 @@ func (mr *MockEngineMockRecorder) CanVerifyHeadersConcurrently() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CanVerifyHeadersConcurrently", reflect.TypeOf((*MockEngine)(nil).CanVerifyHeadersConcurrently))
 }
 
+// CreateGovernanceState mocks base method.
+func (m *MockEngine) CreateGovernanceState(arg0 uint64, arg1 []*types.Header) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "CreateGovernanceState", arg0, arg1)
+}
+
+// CreateGovernanceState indicates an expected call of CreateGovernanceState.
+func (mr *MockEngineMockRecorder) CreateGovernanceState(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateGovernanceState", reflect.TypeOf((*MockEngine)(nil).CreateGovernanceState), arg0, arg1)
+}
+
 // CreateSnapshot mocks base method.
 func (m *MockEngine) CreateSnapshot(arg0 consensus.ChainReader, arg1 uint64, arg2 common.Hash, arg3 []*types.Header) error {
 	m.ctrl.T.Helper()
