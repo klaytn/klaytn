@@ -213,6 +213,10 @@ type Clique struct {
 	fakeBlockScore bool // Skip blockScore verifications
 }
 
+func (c *Clique) CreateGovernanceState(num uint64, headers []*types.Header) {
+	panic("this method is not used for Clique engine")
+}
+
 // New creates a Clique proof-of-authority consensus engine with the initial
 // signers set to the ones provided by the user.
 func New(config *params.CliqueConfig, db database.DBManager) *Clique {
