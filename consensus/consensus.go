@@ -111,6 +111,9 @@ type Engine interface {
 
 	// CreateSnapshot does not return a snapshot but creates a new snapshot at a given point in time.
 	CreateSnapshot(chain ChainReader, number uint64, hash common.Hash, parents []*types.Header) error
+
+	// CreateGovernanceState is a function that creates governanceState manually with given list of header 'headers'.
+	CreateGovernanceState(num uint64, headers []*types.Header)
 }
 
 // PoW is a consensus engine based on proof-of-work.

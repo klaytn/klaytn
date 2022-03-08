@@ -863,6 +863,16 @@ func (gov *Governance) removeDuplicatedVote(vote *GovernanceVote, number uint64)
 	gov.RemoveVote(vote.Key, vote.Value, number)
 }
 
+// There can be special case when governance changed but blockNumber gets smaller. (ex. block rewinding)
+// Then we cannot use UpdateCurrentSet as usual.
+// Instead, CreateCurrentSet is used in this case.
+func (gov *Governance) CreateCurrentSet(num uint64) {
+	newNumber, newGovernanceSet, _ := gov.ReadGovernance(num)
+	gov.actualGovernanceBlock.Store(newNumber)
+	gov.currentSet.Import(newGovernanceSet)
+	gov.triggerChange(newGovernanceSet)
+}
+
 func (gov *Governance) UpdateCurrentSet(num uint64) {
 	newNumber, newGovernanceSet, _ := gov.ReadGovernance(num)
 	// Do the change only when the governance actually changed
@@ -947,7 +957,7 @@ type governanceJSON struct {
 	ChangeSet       map[string]interface{} `json:"changeSet"`
 }
 
-func (gov *Governance) toJSON(num uint64) ([]byte, error) {
+func (gov *Governance) ToJSON(num uint64) ([]byte, error) {
 	ret := &governanceJSON{
 		BlockNumber:     num,
 		ChainConfig:     gov.ChainConfig,
@@ -967,9 +977,6 @@ func (gov *Governance) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &j); err != nil {
 		return err
 	}
-	fmt.Println("%%%%% governancejson %%%%%")
-	fmt.Println(j)
-	fmt.Println("%%%%%%%%% %%%%% %%%%% %%%%%  %%%%%")
 
 	gov.ChainConfig = j.ChainConfig
 	gov.voteMap.Import(j.VoteMap)
@@ -979,9 +986,7 @@ func (gov *Governance) UnmarshalJSON(b []byte) error {
 	gov.currentSet.Import(adjustDecodedSet(j.CurrentSet))
 	gov.changeSet.Import(adjustDecodedSet(j.ChangeSet))
 	atomic.StoreUint64(&gov.lastGovernanceStateBlock, j.BlockNumber)
-	fmt.Println("%%%%% lastGovernanceStateBlock %%%%%")
-	fmt.Println(&gov.lastGovernanceStateBlock, j.BlockNumber)
-	fmt.Println("%%%%%%%%% %%%%% %%%%% %%%%%  %%%%%")
+
 	return nil
 }
 
@@ -992,8 +997,12 @@ func (gov *Governance) CanWriteGovernanceState(num uint64) bool {
 	return true
 }
 
+func (gov *Governance) LatestEpochNumber(num uint64) uint64 {
+	return num - (num % gov.Epoch())
+}
+
 func (gov *Governance) WriteGovernanceState(num uint64, isCheckpoint bool) error {
-	if b, err := gov.toJSON(num); err != nil {
+	if b, err := gov.ToJSON(num); err != nil {
 		logger.Error("Error in marshaling governance state", "err", err)
 		return err
 	} else {

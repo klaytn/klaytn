@@ -425,3 +425,33 @@ func (sb *backend) HasBadProposal(hash common.Hash) bool {
 	}
 	return sb.hasBadBlock(hash)
 }
+
+// CreateGovernanceState is a function that creates governanceState manually
+// with given list of header 'headers'.
+// The number of last header(headers[len(headers)-1]) should be same with parameter 'num'.
+func (sb *backend) CreateGovernanceState(num uint64, headers []*types.Header) {
+	sb.governance.GovernanceVotes = governance.NewGovernanceVotes()
+	sb.governance.GovernanceTallies = governance.NewGovernanceTallies()
+
+	Votes := make([]governance.GovernanceVote, 0)
+	Tally := make([]governance.GovernanceTallyItem, 0)
+	for _, header := range headers {
+		number := header.Number.Uint64()
+		validator, _ := ecrecover(header)
+		//
+		ValSet := sb.getValidators(number, header.Hash())
+		//// Resolve the authorization key and check against validators
+		ValSet, Votes, Tally = sb.governance.HandleGovernanceVote(ValSet, Votes, Tally, header, validator, sb.address)
+	}
+	sb.governance.GovernanceVotes.Import(Votes)
+	sb.governance.GovernanceTallies.Import(Tally)
+
+	// skip votemap, create currentset
+	sb.governance.CreateCurrentSet(num)
+
+	// update changeset
+	for _, vote := range Votes {
+		sb.governance.ReflectVotes(vote)
+	}
+	sb.governance.WriteGovernanceState(num, true)
+}

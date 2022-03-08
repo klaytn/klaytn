@@ -76,11 +76,29 @@ func (b *CNAPIBackend) CurrentBlock() *types.Block {
 }
 
 func (b *CNAPIBackend) SetHead(number uint64) {
+	var headers []*types.Header
+
 	b.cn.protocolManager.Downloader().Cancel()
 	b.cn.protocolManager.SetSyncStop(true)
-	b.cn.blockchain.SetHead(number)
-	b.cn.governance.WriteGovernanceState(number, false)
+	if err := b.cn.blockchain.SetHead(number); err != nil {
+		logger.Error("SetHead Error", "error", err)
+	}
+	logger.Info("Internal SetHead method done, restoring governance State")
+	//governanceState restoration logic
+	headBlockNumber := b.cn.blockchain.CurrentBlock().NumberU64()
+	b.cn.governance.CreateCurrentSet(headBlockNumber)
+	latestEpochNumber := b.cn.governance.LatestEpochNumber(headBlockNumber)
+	//get headers from latestEpochNumber to headBlockNumber
+	for i := latestEpochNumber; i <= headBlockNumber; i++ {
+		header := b.cn.blockchain.GetHeaderByNumber(i)
+		headers = append(headers, header)
+	}
+	b.cn.engine.CreateGovernanceState(headBlockNumber, headers)
+
+	//load node with newly made governanceState
 	b.cn.governance.ReadGovernanceState()
+
+	logger.Info("Restoring governanceState done, sync again")
 	b.cn.protocolManager.SetSyncStop(false)
 }
 
