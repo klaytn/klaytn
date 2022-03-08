@@ -479,7 +479,7 @@ func (api *EthereumAPI) GetBlockByNumber(ctx context.Context, number rpc.BlockNu
 func (api *EthereumAPI) GetBlockByHash(ctx context.Context, hash common.Hash, fullTx bool) (map[string]interface{}, error) {
 	klaytnBlock, err := api.publicBlockChainAPI.b.BlockByHash(ctx, hash)
 	if err != nil {
-		return nil, err
+		return nil, nil
 	}
 	return api.rpcMarshalBlock(klaytnBlock, true, fullTx)
 }
