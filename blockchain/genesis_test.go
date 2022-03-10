@@ -127,7 +127,7 @@ func TestHardCodedChainConfigUpdate(t *testing.T) {
 			wantStoredConfig: params.CypressChainConfig,
 			wantErr: &params.ConfigCompatError{
 				What:         "Istanbul Block",
-				StoredConfig: nil,
+				StoredConfig: params.CypressChainConfig.IstanbulCompatibleBlock,
 				NewConfig:    big.NewInt(3),
 				RewindTo:     2,
 			},
