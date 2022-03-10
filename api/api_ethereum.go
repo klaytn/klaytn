@@ -477,6 +477,8 @@ func (api *EthereumAPI) GetBlockByNumber(ctx context.Context, number rpc.BlockNu
 // GetBlockByHash returns the requested block. When fullTx is true all transactions in the block are returned in full
 // detail, otherwise only the transaction hash is returned.
 func (api *EthereumAPI) GetBlockByHash(ctx context.Context, hash common.Hash, fullTx bool) (map[string]interface{}, error) {
+	// Klaytn backend returns error when there is no matched block but
+	// Ethereum returns it as nil without error, so we should return is as nil when there is no matched block.
 	klaytnBlock, err := api.publicBlockChainAPI.b.BlockByHash(ctx, hash)
 	if err != nil {
 		return nil, nil
