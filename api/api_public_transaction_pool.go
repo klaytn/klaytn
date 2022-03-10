@@ -400,7 +400,7 @@ type SignTransactionResult struct {
 // The node needs to have the private key of the account corresponding with
 // the given from address and it needs to be unlocked.
 func (s *PublicTransactionPoolAPI) SignTransaction(ctx context.Context, args SendTxArgs) (*SignTransactionResult, error) {
-	if args.TypeInt.IsEthTypedTransaction() {
+	if args.TypeInt != nil && args.TypeInt.IsEthTypedTransaction() {
 		if args.Price == nil && (args.MaxPriorityFeePerGas == nil || args.MaxFeePerGas == nil) {
 			return nil, fmt.Errorf("missing gasPrice or maxFeePerGas/maxPriorityFeePerGas")
 		}
@@ -411,7 +411,7 @@ func (s *PublicTransactionPoolAPI) SignTransaction(ctx context.Context, args Sen
 	if err := args.setDefaults(ctx, s.b); err != nil {
 		return nil, err
 	}
-	tx, err := args.toTransaction(s.b)
+	tx, err := args.toTransaction()
 	if err != nil {
 		return nil, err
 	}
@@ -434,7 +434,7 @@ func (s *PublicTransactionPoolAPI) SignTransactionAsFeePayer(ctx context.Context
 	if err := args.setDefaults(ctx, s.b); err != nil {
 		return nil, err
 	}
-	tx, err := args.toTransaction(s.b)
+	tx, err := args.toTransaction()
 	if err != nil {
 		return nil, err
 	}
@@ -494,7 +494,7 @@ func (s *PublicTransactionPoolAPI) Resend(ctx context.Context, sendArgs SendTxAr
 	if err := sendArgs.setDefaults(ctx, s.b); err != nil {
 		return common.Hash{}, err
 	}
-	matchTx, err := sendArgs.toTransaction(s.b)
+	matchTx, err := sendArgs.toTransaction()
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -515,7 +515,7 @@ func (s *PublicTransactionPoolAPI) Resend(ctx context.Context, sendArgs SendTxAr
 			if gasLimit != nil && *gasLimit != 0 {
 				sendArgs.GasLimit = gasLimit
 			}
-			tx, err := sendArgs.toTransaction(s.b)
+			tx, err := sendArgs.toTransaction()
 			if err != nil {
 				return common.Hash{}, err
 			}

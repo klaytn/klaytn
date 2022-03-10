@@ -222,7 +222,7 @@ func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs
 		return nil, err
 	}
 	// Assemble the transaction and sign with the wallet
-	tx, err := args.toTransaction(s.b)
+	tx, err := args.toTransaction()
 	if err != nil {
 		return nil, err
 	}
@@ -344,12 +344,18 @@ func (s *PrivateAccountAPI) SendValueTransfer(ctx context.Context, args ValueTra
 // try to sign it with the key associated with args.From. If the given password isn't able to
 // decrypt the key, it fails. The transaction is returned in RLP-form, not broadcast to other nodes
 func (s *PrivateAccountAPI) SignTransaction(ctx context.Context, args SendTxArgs, passwd string) (*SignTransactionResult, error) {
+	if args.TypeInt != nil && args.TypeInt.IsEthTypedTransaction() {
+		if args.Price == nil && (args.MaxPriorityFeePerGas == nil || args.MaxFeePerGas == nil) {
+			return nil, fmt.Errorf("missing gasPrice or maxFeePerGas/maxPriorityFeePerGas")
+		}
+	}
+
 	// No need to obtain the noncelock mutex, since we won't be sending this
 	// tx into the transaction pool, but right back to the user
 	if err := args.setDefaults(ctx, s.b); err != nil {
 		return nil, err
 	}
-	tx, err := args.toTransaction(s.b)
+	tx, err := args.toTransaction()
 	if err != nil {
 		return nil, err
 	}
@@ -373,7 +379,7 @@ func (s *PrivateAccountAPI) SignTransactionAsFeePayer(ctx context.Context, args 
 	if err := args.setDefaults(ctx, s.b); err != nil {
 		return nil, err
 	}
-	tx, err := args.toTransaction(s.b)
+	tx, err := args.toTransaction()
 	if err != nil {
 		return nil, err
 	}
