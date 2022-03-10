@@ -222,7 +222,7 @@ func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs
 		return nil, err
 	}
 	// Assemble the transaction and sign with the wallet
-	tx, err := args.toTransaction(s.b)
+	tx, err := args.toTransaction()
 	if err != nil {
 		return nil, err
 	}
@@ -349,7 +349,7 @@ func (s *PrivateAccountAPI) SignTransaction(ctx context.Context, args SendTxArgs
 	if err := args.setDefaults(ctx, s.b); err != nil {
 		return nil, err
 	}
-	tx, err := args.toTransaction(s.b)
+	tx, err := args.toTransaction()
 	if err != nil {
 		return nil, err
 	}
@@ -373,7 +373,7 @@ func (s *PrivateAccountAPI) SignTransactionAsFeePayer(ctx context.Context, args 
 	if err := args.setDefaults(ctx, s.b); err != nil {
 		return nil, err
 	}
-	tx, err := args.toTransaction(s.b)
+	tx, err := args.toTransaction()
 	if err != nil {
 		return nil, err
 	}

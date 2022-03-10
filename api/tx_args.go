@@ -226,7 +226,7 @@ func (args *SendTxArgs) checkArgs() error {
 // genTxValuesMap generates a value map used used in "NewTransactionWithMap" function.
 // This function assigned all non-nil values regardless of the tx type.
 // Invalid values in the map will be validated in "NewTransactionWithMap" function.
-func (args *SendTxArgs) genTxValuesMap(b Backend) map[types.TxValueKeyType]interface{} {
+func (args *SendTxArgs) genTxValuesMap() map[types.TxValueKeyType]interface{} {
 	values := make(map[types.TxValueKeyType]interface{})
 
 	// common tx fields. They should have values after executing "setDefaults" function.
@@ -262,8 +262,6 @@ func (args *SendTxArgs) genTxValuesMap(b Backend) map[types.TxValueKeyType]inter
 	}
 	if args.Amount != nil {
 		values[types.TxValueKeyAmount] = (*big.Int)(args.Amount)
-	} else if args.TypeInt.IsEthereumTransaction() {
-		values[types.TxValueKeyAmount] = common.Big0
 	}
 	if args.Payload != nil {
 		// chain data anchoring type uses the TxValueKeyAnchoredData field
@@ -290,8 +288,6 @@ func (args *SendTxArgs) genTxValuesMap(b Backend) map[types.TxValueKeyType]inter
 	}
 	if args.ChainID != nil {
 		values[types.TxValueKeyChainID] = (*big.Int)(args.ChainID)
-	} else if args.TypeInt.IsEthTypedTransaction() {
-		values[types.TxValueKeyChainID] = b.ChainConfig().ChainID
 	}
 	if args.AccessList != nil {
 		values[types.TxValueKeyAccessList] = *args.AccessList
@@ -307,7 +303,7 @@ func (args *SendTxArgs) genTxValuesMap(b Backend) map[types.TxValueKeyType]inter
 }
 
 // toTransaction returns an unsigned transaction filled with values in SendTxArgs.
-func (args *SendTxArgs) toTransaction(b Backend) (*types.Transaction, error) {
+func (args *SendTxArgs) toTransaction() (*types.Transaction, error) {
 	var input []byte
 
 	// provide detailed error messages to users (optional)
@@ -337,7 +333,7 @@ func (args *SendTxArgs) toTransaction(b Backend) (*types.Transaction, error) {
 	}
 
 	// for other tx types except TxTypeLegacyTransaction
-	values := args.genTxValuesMap(b)
+	values := args.genTxValuesMap()
 	return types.NewTransactionWithMap(*args.TypeInt, values)
 }
 
