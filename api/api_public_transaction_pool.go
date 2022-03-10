@@ -405,7 +405,7 @@ func (s *PublicTransactionPoolAPI) SignTransaction(ctx context.Context, args Sen
 	if err := args.setDefaults(ctx, s.b); err != nil {
 		return nil, err
 	}
-	tx, err := args.toTransaction()
+	tx, err := args.toTransaction(s.b)
 	if err != nil {
 		return nil, err
 	}
@@ -428,7 +428,7 @@ func (s *PublicTransactionPoolAPI) SignTransactionAsFeePayer(ctx context.Context
 	if err := args.setDefaults(ctx, s.b); err != nil {
 		return nil, err
 	}
-	tx, err := args.toTransaction()
+	tx, err := args.toTransaction(s.b)
 	if err != nil {
 		return nil, err
 	}
@@ -488,7 +488,7 @@ func (s *PublicTransactionPoolAPI) Resend(ctx context.Context, sendArgs SendTxAr
 	if err := sendArgs.setDefaults(ctx, s.b); err != nil {
 		return common.Hash{}, err
 	}
-	matchTx, err := sendArgs.toTransaction()
+	matchTx, err := sendArgs.toTransaction(s.b)
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -509,7 +509,7 @@ func (s *PublicTransactionPoolAPI) Resend(ctx context.Context, sendArgs SendTxAr
 			if gasLimit != nil && *gasLimit != 0 {
 				sendArgs.GasLimit = gasLimit
 			}
-			tx, err := sendArgs.toTransaction()
+			tx, err := sendArgs.toTransaction(s.b)
 			if err != nil {
 				return common.Hash{}, err
 			}
