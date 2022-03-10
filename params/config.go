@@ -40,9 +40,9 @@ var (
 	// CypressChainConfig is the chain parameters to run a node on the cypress main network.
 	CypressChainConfig = &ChainConfig{
 		ChainID:                  big.NewInt(int64(CypressNetworkId)),
-		IstanbulCompatibleBlock:  nil,
-		LondonCompatibleBlock:    nil,
-		EthTxTypeCompatibleBlock: nil,
+		IstanbulCompatibleBlock:  big.NewInt(86816005),
+		LondonCompatibleBlock:    big.NewInt(86816005),
+		EthTxTypeCompatibleBlock: big.NewInt(86816005),
 		DeriveShaImpl:            2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x52d41ca72af615a1ac3301b0a93efa222ecc7541"),
@@ -70,7 +70,7 @@ var (
 		ChainID:                  big.NewInt(int64(BaobabNetworkId)),
 		IstanbulCompatibleBlock:  big.NewInt(75373312),
 		LondonCompatibleBlock:    big.NewInt(80295291),
-		EthTxTypeCompatibleBlock: nil,
+		EthTxTypeCompatibleBlock: big.NewInt(86513895),
 		DeriveShaImpl:            2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x99fb17d324fa0e07f23b49d09028ac0919414db6"),
