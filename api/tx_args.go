@@ -144,6 +144,12 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 		args.GasLimit = new(hexutil.Uint64)
 		*args.GasLimit = hexutil.Uint64(90000)
 	}
+	// Eth typed transactions requires chainId.
+	if args.TypeInt.IsEthTypedTransaction() {
+		if args.ChainID == nil {
+			args.ChainID = (*hexutil.Big)(b.ChainConfig().ChainID)
+		}
+	}
 	// For the transaction that do not use the gasPrice field, the default value of gasPrice is not set.
 	if args.Price == nil && *args.TypeInt != types.TxTypeEthereumDynamicFee {
 		price, err := b.SuggestPrice(ctx)
@@ -262,6 +268,8 @@ func (args *SendTxArgs) genTxValuesMap() map[types.TxValueKeyType]interface{} {
 	}
 	if args.Amount != nil {
 		values[types.TxValueKeyAmount] = (*big.Int)(args.Amount)
+	} else if args.TypeInt.IsEthereumTransaction() {
+		values[types.TxValueKeyAmount] = common.Big0
 	}
 	if args.Payload != nil {
 		// chain data anchoring type uses the TxValueKeyAnchoredData field
