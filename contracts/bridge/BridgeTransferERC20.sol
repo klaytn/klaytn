@@ -97,6 +97,7 @@ contract BridgeTransferERC20 is BridgeTokens, IERC20BridgeReceiver, BridgeTransf
             _to,
             _tokenAddress,
             _value,
+            "",
             requestNonce,
             fee,
             _extraData
