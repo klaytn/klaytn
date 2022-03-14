@@ -70,6 +70,7 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
         address indexed to,
         address indexed tokenAddress,
         uint256 valueOrTokenId,
+        string uri,
         uint64 requestNonce,
         uint256 fee,
         bytes extraData
