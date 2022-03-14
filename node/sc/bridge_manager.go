@@ -27,10 +27,8 @@ import (
 
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	bridgecontract "github.com/klaytn/klaytn/contracts/bridge"
-	scnft "github.com/klaytn/klaytn/contracts/sc_erc721"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/node/sc/bridgepool"
 	"github.com/klaytn/klaytn/rlp"
@@ -317,23 +315,7 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev *RequestValueTransferEv
 		}
 		logger.Trace("Bridge succeeded to HandleERC20Transfer", "nonce", ev.RequestNonce, "tx", handleTx.Hash().String())
 	case ERC721:
-		// get URI of the ERC721
-		var uri string
-		erc721, err := scnft.NewERC721Metadata(ev.TokenAddress, bi.counterpartBackend)
-		if err != nil {
-			return err
-		}
-
-		uri, err = erc721.TokenURI(nil, ev.ValueOrTokenId)
-		if err != nil {
-			if err.Error() == vm.ErrExecutionReverted.Error() {
-				logger.Debug("Unable to get an ERC721 URI", "erc721", ev.TokenAddress.String(), "onParent", bi.onChildChain, "tokenId", ev.ValueOrTokenId.String())
-			} else {
-				return err
-			}
-		}
-
-		handleTx, err = bi.bridge.HandleERC721Transfer(auth, ev.Raw.TxHash, ev.From, ev.To, tokenAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, uri, ev.ExtraData)
+		handleTx, err = bi.bridge.HandleERC721Transfer(auth, ev.Raw.TxHash, ev.From, ev.To, tokenAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.Uri, ev.ExtraData)
 		if err != nil {
 			return err
 		}
