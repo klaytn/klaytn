@@ -84,7 +84,10 @@ contract BridgeTransferERC721 is BridgeTokens, IERC721BridgeReceiver, BridgeTran
     {
         require(isRunning, "stopped bridge");
 
-        string memory uri = ERC721Metadata(_tokenAddress).tokenURI(_tokenId);
+        (bool success, bytes memory uri) = _tokenAddress.call(abi.encodePacked(ERC721Metadata(_tokenAddress).tokenURI.selector, abi.encode(_tokenId)));
+        if (success == false) {
+            uri = "";
+        }
 
         if (modeMintBurn) {
             ERC721Burnable(_tokenAddress).burn(_tokenId);
@@ -96,7 +99,7 @@ contract BridgeTransferERC721 is BridgeTokens, IERC721BridgeReceiver, BridgeTran
             _to,
             _tokenAddress,
             _tokenId,
-            uri,
+            string(uri),
             requestNonce,
             0,
             _extraData
