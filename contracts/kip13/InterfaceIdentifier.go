@@ -4,34 +4,37 @@
 package kip13
 
 import (
+	"math/big"
 	"strings"
 
+	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/event"
+)
+
+// Reference imports to suppress errors if they are not otherwise used.
+var (
+	_ = big.NewInt
+	_ = strings.NewReader
+	_ = klaytn.NotFound
+	_ = bind.Bind
+	_ = common.Big1
+	_ = types.BloomLookup
+	_ = event.NewSubscription
 )
 
 // InterfaceIdentifierABI is the input ABI used to generate the binding from.
 const InterfaceIdentifierABI = "[{\"constant\":true,\"inputs\":[{\"name\":\"interfaceID\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
 // InterfaceIdentifierBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
-const InterfaceIdentifierBinRuntime = `0x`
+const InterfaceIdentifierBinRuntime = ``
 
-// InterfaceIdentifierBin is the compiled bytecode used for deploying new contracts.
-const InterfaceIdentifierBin = `0x`
-
-// DeployInterfaceIdentifier deploys a new Klaytn contract, binding an instance of InterfaceIdentifier to it.
-func DeployInterfaceIdentifier(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *InterfaceIdentifier, error) {
-	parsed, err := abi.JSON(strings.NewReader(InterfaceIdentifierABI))
-	if err != nil {
-		return common.Address{}, nil, nil, err
-	}
-	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(InterfaceIdentifierBin), backend)
-	if err != nil {
-		return common.Address{}, nil, nil, err
-	}
-	return address, tx, &InterfaceIdentifier{InterfaceIdentifierCaller: InterfaceIdentifierCaller{contract: contract}, InterfaceIdentifierTransactor: InterfaceIdentifierTransactor{contract: contract}, InterfaceIdentifierFilterer: InterfaceIdentifierFilterer{contract: contract}}, nil
+// InterfaceIdentifierFuncSigs maps the 4-byte function signature to its string representation.
+var InterfaceIdentifierFuncSigs = map[string]string{
+	"01ffc9a7": "supportsInterface(bytes4)",
 }
 
 // InterfaceIdentifier is an auto generated Go binding around a Klaytn contract.
@@ -178,7 +181,7 @@ func (_InterfaceIdentifier *InterfaceIdentifierTransactorRaw) Transact(opts *bin
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
 //
-// Solidity: function supportsInterface(interfaceID bytes4) constant returns(bool)
+// Solidity: function supportsInterface(bytes4 interfaceID) view returns(bool)
 func (_InterfaceIdentifier *InterfaceIdentifierCaller) SupportsInterface(opts *bind.CallOpts, interfaceID [4]byte) (bool, error) {
 	var (
 		ret0 = new(bool)
@@ -190,14 +193,14 @@ func (_InterfaceIdentifier *InterfaceIdentifierCaller) SupportsInterface(opts *b
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
 //
-// Solidity: function supportsInterface(interfaceID bytes4) constant returns(bool)
+// Solidity: function supportsInterface(bytes4 interfaceID) view returns(bool)
 func (_InterfaceIdentifier *InterfaceIdentifierSession) SupportsInterface(interfaceID [4]byte) (bool, error) {
 	return _InterfaceIdentifier.Contract.SupportsInterface(&_InterfaceIdentifier.CallOpts, interfaceID)
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
 //
-// Solidity: function supportsInterface(interfaceID bytes4) constant returns(bool)
+// Solidity: function supportsInterface(bytes4 interfaceID) view returns(bool)
 func (_InterfaceIdentifier *InterfaceIdentifierCallerSession) SupportsInterface(interfaceID [4]byte) (bool, error) {
 	return _InterfaceIdentifier.Contract.SupportsInterface(&_InterfaceIdentifier.CallOpts, interfaceID)
 }
