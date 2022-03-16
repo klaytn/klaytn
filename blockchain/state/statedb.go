@@ -27,6 +27,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/klaytn/klaytn/snapshot"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/types/account"
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
@@ -62,6 +64,12 @@ type StateDB struct {
 	db   Database
 	trie Trie
 
+	snaps         *snapshot.Tree
+	snap          snapshot.Snapshot
+	snapDestructs map[common.Hash]struct{}
+	snapAccounts  map[common.Hash][]byte
+	snapStorage   map[common.Hash]map[common.Hash][]byte
+
 	// This map holds 'live' objects, which will get modified while processing a state transition.
 	stateObjects             map[common.Address]*stateObject
 	stateObjectsDirty        map[common.Address]struct{}
@@ -93,43 +101,56 @@ type StateDB struct {
 	prefetching bool
 
 	// Measurements gathered during execution for debugging purposes
-	AccountReads   time.Duration
-	AccountHashes  time.Duration
-	AccountUpdates time.Duration
-	AccountCommits time.Duration
-	StorageReads   time.Duration
-	StorageHashes  time.Duration
-	StorageUpdates time.Duration
-	StorageCommits time.Duration
+	AccountReads         time.Duration
+	AccountHashes        time.Duration
+	AccountUpdates       time.Duration
+	AccountCommits       time.Duration
+	StorageReads         time.Duration
+	StorageHashes        time.Duration
+	StorageUpdates       time.Duration
+	StorageCommits       time.Duration
+	SnapshotAccountReads time.Duration
+	SnapshotStorageReads time.Duration
+	SnapshotCommits      time.Duration
 }
 
 // Create a new state from a given trie.
-func New(root common.Hash, db Database) (*StateDB, error) {
+func New(root common.Hash, db Database, snaps *snapshot.Tree) (*StateDB, error) {
 	tr, err := db.OpenTrie(root)
 	if err != nil {
 		return nil, err
 	}
-	return &StateDB{
+	sdb := &StateDB{
 		db:                       db,
 		trie:                     tr,
+		snaps:                    snaps,
 		stateObjects:             make(map[common.Address]*stateObject),
 		stateObjectsDirtyStorage: make(map[common.Address]struct{}),
 		stateObjectsDirty:        make(map[common.Address]struct{}),
 		logs:                     make(map[common.Hash][]*types.Log),
 		preimages:                make(map[common.Hash][]byte),
 		journal:                  newJournal(),
-	}, nil
+	}
+	if sdb.snaps != nil {
+		if sdb.snap = sdb.snaps.Snapshot(root); sdb.snap != nil {
+			sdb.snapDestructs = make(map[common.Hash]struct{})
+			sdb.snapAccounts = make(map[common.Hash][]byte)
+			sdb.snapStorage = make(map[common.Hash]map[common.Hash][]byte)
+		}
+	}
+	return sdb, nil
 }
 
 // Create a new state from a given trie with prefetching
-func NewForPrefetching(root common.Hash, db Database) (*StateDB, error) {
+func NewForPrefetching(root common.Hash, db Database, snaps *snapshot.Tree) (*StateDB, error) {
 	tr, err := db.OpenTrieForPrefetching(root)
 	if err != nil {
 		return nil, err
 	}
-	return &StateDB{
+	sdb := &StateDB{
 		db:                       db,
 		trie:                     tr,
+		snaps:                    snaps,
 		stateObjects:             make(map[common.Address]*stateObject),
 		stateObjectsDirtyStorage: make(map[common.Address]struct{}),
 		stateObjectsDirty:        make(map[common.Address]struct{}),
@@ -137,7 +158,15 @@ func NewForPrefetching(root common.Hash, db Database) (*StateDB, error) {
 		preimages:                make(map[common.Hash][]byte),
 		journal:                  newJournal(),
 		prefetching:              true,
-	}, nil
+	}
+	if sdb.snaps != nil {
+		if sdb.snap = sdb.snaps.Snapshot(root); sdb.snap != nil {
+			sdb.snapDestructs = make(map[common.Hash]struct{})
+			sdb.snapAccounts = make(map[common.Hash][]byte)
+			sdb.snapStorage = make(map[common.Hash]map[common.Hash][]byte)
+		}
+	}
+	return sdb, nil
 }
 
 // RLockGCCachedNode locks the GC lock of CachedNode.
@@ -471,6 +500,15 @@ func (self *StateDB) SetState(addr common.Address, key, value common.Hash) {
 	}
 }
 
+// SetStorage replaces the entire storage for the specified account with given
+// storage. This function should only be used for debugging.
+func (self *StateDB) SetStorage(addr common.Address, storage map[common.Hash]common.Hash) {
+	stateObject := self.GetOrNewStateObject(addr)
+	if stateObject != nil {
+		stateObject.SetStorage(storage)
+	}
+}
+
 // UpdateKey updates the account's key with the given key.
 func (self *StateDB) UpdateKey(addr common.Address, newKey accountkey.AccountKey, currentBlockNumber uint64) error {
 	stateObject := self.getStateObject(addr)
@@ -513,6 +551,7 @@ func (self *StateDB) updateStateObject(stateObject *stateObject) {
 		defer func(start time.Time) { self.AccountUpdates += time.Since(start) }(time.Now())
 	}
 	addr := stateObject.Address()
+	var snapshotData []byte
 	if data := stateObject.encoded.Load(); data != nil {
 		encodedData := data.(*encodedData)
 		if encodedData.err != nil {
@@ -521,12 +560,22 @@ func (self *StateDB) updateStateObject(stateObject *stateObject) {
 		self.setError(self.trie.TryUpdateWithKeys(addr[:],
 			encodedData.trieHashKey, encodedData.trieHexKey, encodedData.data))
 		stateObject.encoded = atomic.Value{}
+		snapshotData = encodedData.data
 	} else {
 		data, err := rlp.EncodeToBytes(stateObject)
 		if err != nil {
 			panic(fmt.Errorf("can't encode object at %x: %v", addr[:], err))
 		}
 		self.setError(self.trie.TryUpdate(addr[:], data))
+		snapshotData = data
+	}
+
+	// If state snapshotting is active, cache the data til commit. Note, this
+	// update mechanism is not symmetric to the deletion, because whereas it is
+	// enough to track account updates at commit time, deletions need tracking
+	// at transaction boundary level to ensure we capture state clearing.
+	if self.snap != nil {
+		self.snapAccounts[stateObject.addrHash] = snapshotData
 	}
 }
 
@@ -541,34 +590,62 @@ func (self *StateDB) deleteStateObject(stateObject *stateObject) {
 	self.setError(self.trie.TryDelete(addr[:]))
 }
 
-// Retrieve a state object given by the address. Returns nil if not found.
+// getStateObject retrieves a state object given by the address, returning nil if
+// the object is not found or was deleted in this execution context. If you need
+// to differentiate between non-existent/just-deleted, use getDeletedStateObject.
 func (self *StateDB) getStateObject(addr common.Address) *stateObject {
-	// First, check stateObjects if there is "live" object.
-	if obj := self.stateObjects[addr]; obj != nil {
-		if obj.deleted {
-			return nil
-		}
+	if obj := self.getDeletedStateObject(addr); obj != nil && !obj.deleted {
 		return obj
 	}
-	// Track the amount of time wasted on loading the object from the database
-	if EnabledExpensive {
-		defer func(start time.Time) { self.AccountReads += time.Since(start) }(time.Now())
+	return nil
+}
+
+// getDeletedStateObject is similar to getStateObject, but instead of returning
+// nil for a deleted state object, it returns the actual object with the deleted
+// flag set. This is needed by the state journal to revert to the correct s-
+// destructed object instead of wiping all knowledge about the state object.
+func (self *StateDB) getDeletedStateObject(addr common.Address) *stateObject {
+	// First, check stateObjects if there is "live" object.
+	if obj := self.stateObjects[addr]; obj != nil {
+		return obj
 	}
-	// Second, the object for given address is not cached.
-	// Load the object from the database.
-	enc, err := self.trie.TryGet(addr[:])
-	if len(enc) == 0 {
-		self.setError(err)
-		return nil
+	// If no live objects are available, attempt to use snapshots
+	var (
+		acc account.Account
+		err error
+	)
+	if self.snap != nil {
+		if EnabledExpensive {
+			defer func(start time.Time) { self.SnapshotAccountReads += time.Since(start) }(time.Now())
+		}
+		if acc, err = self.snap.Account(crypto.Keccak256Hash(addr.Bytes())); err == nil {
+			if acc == nil {
+				return nil
+			}
+		}
 	}
-	serializer := account.NewAccountSerializer()
-	if err := rlp.DecodeBytes(enc, serializer); err != nil {
-		logger.Error("Failed to decode state object", "addr", addr, "err", err)
-		return nil
+	// If snapshot unavailable or reading from it failed, load from the database
+	if self.snap == nil || err != nil {
+		// Track the amount of time wasted on loading the object from the database
+		if EnabledExpensive {
+			defer func(start time.Time) { self.AccountReads += time.Since(start) }(time.Now())
+		}
+		// Second, the object for given address is not cached.
+		// Load the object from the database.
+		enc, err := self.trie.TryGet(addr[:])
+		if len(enc) == 0 {
+			self.setError(err)
+			return nil
+		}
+		serializer := account.NewAccountSerializer()
+		if err := rlp.DecodeBytes(enc, serializer); err != nil {
+			logger.Error("Failed to decode state object", "addr", addr, "err", err)
+			return nil
+		}
+		acc = serializer.GetAccount()
 	}
-	data := serializer.GetAccount()
 	// Insert into the live set.
-	obj := newObject(self, addr, data)
+	obj := newObject(self, addr, acc)
 	self.setStateObject(obj)
 
 	return obj
@@ -603,7 +680,15 @@ func (self *StateDB) GetOrNewSmartContract(addr common.Address) *stateObject {
 // createObject creates a new state object. If there is an existing account with
 // the given address, it is overwritten and returned as the second return value.
 func (self *StateDB) createObject(addr common.Address) (newobj, prev *stateObject) {
-	prev = self.getStateObject(addr)
+	prev = self.getDeletedStateObject(addr) // Note, prev might have been deleted, we need that!
+
+	var prevdestruct bool
+	if self.snap != nil && prev != nil {
+		_, prevdestruct = self.snapDestructs[prev.addrHash]
+		if !prevdestruct {
+			self.snapDestructs[prev.addrHash] = struct{}{}
+		}
+	}
 	acc, err := account.NewAccountWithType(account.ExternallyOwnedAccountType)
 	if err != nil {
 		logger.Error("An error occurred on call NewAccountWithType", "err", err)
@@ -613,10 +698,13 @@ func (self *StateDB) createObject(addr common.Address) (newobj, prev *stateObjec
 	if prev == nil {
 		self.journal.append(createObjectChange{account: &addr})
 	} else {
-		self.journal.append(resetObjectChange{prev: prev})
+		self.journal.append(resetObjectChange{prev: prev, prevdestruct: prevdestruct})
 	}
 	self.setStateObject(newobj)
-	return newobj, prev
+	if prev != nil && !prev.deleted {
+		return newobj, prev
+	}
+	return newobj, nil
 }
 
 // createObjectWithMap creates a new state object with the given parameters (accountType and values).
@@ -624,7 +712,15 @@ func (self *StateDB) createObject(addr common.Address) (newobj, prev *stateObjec
 // returned as the second return value.
 func (self *StateDB) createObjectWithMap(addr common.Address, accountType account.AccountType,
 	values map[account.AccountValueKeyType]interface{}) (newobj, prev *stateObject) {
-	prev = self.getStateObject(addr)
+	prev = self.getDeletedStateObject(addr) // Note, prev might have been deleted, we need that!
+
+	var prevdestruct bool
+	if self.snap != nil && prev != nil {
+		_, prevdestruct = self.snapDestructs[prev.addrHash]
+		if !prevdestruct {
+			self.snapDestructs[prev.addrHash] = struct{}{}
+		}
+	}
 	acc, err := account.NewAccountWithMap(accountType, values)
 	if err != nil {
 		logger.Error("An error occurred on call NewAccountWithMap", "err", err)
@@ -634,10 +730,13 @@ func (self *StateDB) createObjectWithMap(addr common.Address, accountType accoun
 	if prev == nil {
 		self.journal.append(createObjectChange{account: &addr})
 	} else {
-		self.journal.append(resetObjectChange{prev: prev})
+		self.journal.append(resetObjectChange{prev: prev, prevdestruct: prevdestruct})
 	}
 	self.setStateObject(newobj)
-	return newobj, prev
+	if prev != nil && !prev.deleted {
+		return newobj, prev
+	}
+	return newobj, nil
 }
 
 // CreateAccount explicitly creates a state object. If a state object with the address
@@ -743,6 +842,31 @@ func (self *StateDB) Copy() *StateDB {
 		state.preimages[hash] = preimage
 	}
 
+	if self.snaps != nil {
+		// In order for the miner to be able to use and make additions
+		// to the snapshot tree, we need to copy that aswell.
+		// Otherwise, any block mined by ourselves will cause gaps in the tree,
+		// and force the miner to operate trie-backed only
+		state.snaps = self.snaps
+		state.snap = self.snap
+		// deep copy needed
+		state.snapDestructs = make(map[common.Hash]struct{})
+		for k, v := range self.snapDestructs {
+			state.snapDestructs[k] = v
+		}
+		state.snapAccounts = make(map[common.Hash][]byte)
+		for k, v := range self.snapAccounts {
+			state.snapAccounts[k] = v
+		}
+		state.snapStorage = make(map[common.Hash]map[common.Hash][]byte)
+		for k, v := range self.snapStorage {
+			temp := make(map[common.Hash][]byte)
+			for kk, vv := range v {
+				temp[kk] = vv
+			}
+			state.snapStorage[k] = temp
+		}
+	}
 	return state
 }
 
@@ -804,6 +928,16 @@ func (stateDB *StateDB) Finalise(deleteEmptyObjects bool, setStorageRoot bool) {
 
 		if so.suicided || (deleteEmptyObjects && so.empty()) {
 			stateDB.deleteStateObject(so)
+
+			// If state snapshotting is active, also mark the destruction there.
+			// Note, we can't do this only at the end of a block because multiple
+			// transactions within the same block might self destruct and then
+			// ressurrect an account; but the snapshotter needs both events.
+			if stateDB.snap != nil {
+				stateDB.snapDestructs[so.addrHash] = struct{}{} // We need to maintain account deletions explicitly (will remain set indefinitely)
+				delete(stateDB.snapAccounts, so.addrHash)       // Clear out any previously updated account data (may be recreated via a ressurrect)
+				delete(stateDB.snapStorage, so.addrHash)        // Clear out any previously updated storage data (may be recreated via a ressurrect)
+			}
 		} else {
 			so.updateStorageTrie(stateDB.db)
 			so.setStorageRoot(setStorageRoot, stateDB.stateObjectsDirtyStorage)
@@ -915,6 +1049,28 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 		}
 		return nil
 	})
+
+	// If snapshotting is enabled, update the snapshot tree with this new version
+	if s.snap != nil {
+		if EnabledExpensive {
+			defer func(start time.Time) { s.SnapshotCommits += time.Since(start) }(time.Now())
+		}
+		// Only update if there's a state transition (skip empty Clique blocks)
+		if parent := s.snap.Root(); parent != root {
+			if err := s.snaps.Update(root, parent, s.snapDestructs, s.snapAccounts, s.snapStorage); err != nil {
+				logger.Warn("Failed to update snapshot tree", "from", parent, "to", root, "err", err)
+			}
+			// Keep 128 diff layers in the memory, persistent layer is 129th.
+			// - head layer is paired with HEAD state
+			// - head-1 layer is paired with HEAD-1 state
+			// - head-127 layer(bottom-most diff layer) is paired with HEAD-127 state
+			if err := s.snaps.Cap(root, 128); err != nil {
+				logger.Warn("Failed to cap snapshot tree", "root", root, "layers", 128, "err", err)
+			}
+		}
+		s.snap, s.snapDestructs, s.snapAccounts, s.snapStorage = nil, nil, nil, nil
+	}
+
 	return root, err
 }
 

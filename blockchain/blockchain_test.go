@@ -46,6 +46,7 @@ import (
 	"github.com/klaytn/klaytn/consensus/gxhash"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/storage"
 	"github.com/klaytn/klaytn/storage/database"
 )
 
@@ -161,7 +162,7 @@ func testBlockChainImport(chain types.Blocks, blockchain *BlockChain) error {
 			}
 			return err
 		}
-		statedb, err := state.New(blockchain.GetBlockByHash(block.ParentHash()).Root(), blockchain.stateCache)
+		statedb, err := state.New(blockchain.GetBlockByHash(block.ParentHash()).Root(), blockchain.stateCache, nil)
 		if err != nil {
 			return err
 		}
@@ -622,7 +623,7 @@ func TestFastVsFullChains(t *testing.T) {
 			Alloc:  GenesisAlloc{address: {Balance: funds}},
 		}
 		genesis = gspec.MustCommit(gendb)
-		signer  = types.NewEIP155Signer(gspec.Config.ChainID)
+		signer  = types.LatestSignerForChainID(gspec.Config.ChainID)
 	)
 	blocks, receipts := GenerateChain(gspec.Config, genesis, gxhash.NewFaker(), gendb, 1024, func(i int, block *BlockGen) {
 		// If the block number is multiple of 3, send a few bonus transactions to the miner
@@ -788,7 +789,7 @@ func TestChainTxReorgs(t *testing.T) {
 			},
 		}
 		genesis = gspec.MustCommit(db)
-		signer  = types.NewEIP155Signer(gspec.Config.ChainID)
+		signer  = types.LatestSignerForChainID(gspec.Config.ChainID)
 	)
 
 	// Create two transactions shared between the chains:
@@ -894,7 +895,7 @@ func TestLogReorgs(t *testing.T) {
 		code    = common.Hex2Bytes("60606040525b7f24ec1d3ff24c2f6ff210738839dbc339cd45a5294d85c79361016243157aae7b60405180905060405180910390a15b600a8060416000396000f360606040526008565b00")
 		gspec   = &Genesis{Config: params.TestChainConfig, Alloc: GenesisAlloc{addr1: {Balance: big.NewInt(10000000000000)}}}
 		genesis = gspec.MustCommit(db)
-		signer  = types.NewEIP155Signer(gspec.Config.ChainID)
+		signer  = types.LatestSignerForChainID(gspec.Config.ChainID)
 	)
 
 	blockchain, _ := NewBlockChain(db, nil, gspec.Config, gxhash.NewFaker(), vm.Config{})
@@ -941,7 +942,7 @@ func TestReorgSideEvent(t *testing.T) {
 			Alloc:  GenesisAlloc{addr1: {Balance: big.NewInt(10000000000000)}},
 		}
 		genesis = gspec.MustCommit(db)
-		signer  = types.NewEIP155Signer(gspec.Config.ChainID)
+		signer  = types.LatestSignerForChainID(gspec.Config.ChainID)
 	)
 
 	blockchain, _ := NewBlockChain(db, nil, gspec.Config, gxhash.NewFaker(), vm.Config{})
@@ -1332,7 +1333,7 @@ func benchmarkLargeNumberOfValueToNonexisting(b *testing.B, numTxs, numBlocks in
 				}, // push 1, pop
 			},
 		}
-		signer = types.NewEIP155Signer(gspec.Config.ChainID)
+		signer = types.LatestSignerForChainID(gspec.Config.ChainID)
 	)
 	// Generate the original common chain segment and the two competing forks
 	engine := gxhash.NewFaker()
@@ -1523,7 +1524,7 @@ func TestCallTraceChainEventSubscription(t *testing.T) {
 			Alloc:  GenesisAlloc{address: {Balance: funds}},
 		}
 		genesis = testGenesis.MustCommit(gendb)
-		signer  = types.NewEIP155Signer(testGenesis.Config.ChainID)
+		signer  = types.LatestSignerForChainID(testGenesis.Config.ChainID)
 	)
 	db := database.NewMemoryDBManager()
 	testGenesis.MustCommit(db)
@@ -1585,7 +1586,7 @@ func TestBlockChain_SetCanonicalBlock(t *testing.T) {
 			Alloc:  GenesisAlloc{address: {Balance: funds}},
 		}
 		genesis = testGenesis.MustCommit(gendb)
-		signer  = types.NewEIP155Signer(testGenesis.Config.ChainID)
+		signer  = types.LatestSignerForChainID(testGenesis.Config.ChainID)
 	)
 	db := database.NewMemoryDBManager()
 	testGenesis.MustCommit(db)
@@ -1598,6 +1599,7 @@ func TestBlockChain_SetCanonicalBlock(t *testing.T) {
 		BlockInterval:       DefaultBlockInterval,
 		TriesInMemory:       DefaultTriesInMemory,
 		TrieNodeCacheConfig: statedb.GetEmptyTrieNodeCacheConfig(),
+		SnapshotCacheSize:   512,
 	}
 	// create new blockchain with enabled internal tx tracing option
 	blockchain, _ := NewBlockChain(db, cacheConfig, testGenesis.Config, gxhash.NewFaker(), vm.Config{Debug: true, EnableInternalTxTracing: true})
@@ -1631,6 +1633,8 @@ func TestBlockChain_SetCanonicalBlock(t *testing.T) {
 }
 
 func TestBlockChain_writeBlockLogsToRemoteCache(t *testing.T) {
+	storage.SkipLocalTest(t)
+
 	// prepare blockchain
 	blockchain := &BlockChain{
 		stateCache: state.NewDatabaseWithNewCache(database.NewMemoryDBManager(), &statedb.TrieNodeCacheConfig{
@@ -1676,4 +1680,76 @@ func TestBlockChain_writeBlockLogsToRemoteCache(t *testing.T) {
 	}
 
 	assert.Equal(t, log, logs[0])
+}
+
+// TestDeleteCreateRevert tests a weird state transition corner case that we hit
+// while changing the internals of statedb. The workflow is that a contract is
+// self destructed, then in a followup transaction (but same block) it's created
+// again and the transaction reverted.
+func TestDeleteCreateRevert(t *testing.T) {
+	var (
+		aa = common.HexToAddress("0x000000000000000000000000000000000000aaaa")
+		bb = common.HexToAddress("0x000000000000000000000000000000000000bbbb")
+		// Generate a canonical chain to act as the main dataset
+		engine = gxhash.NewFaker()
+		db     = database.NewMemoryDBManager()
+
+		// A sender who makes transactions, has some funds
+		key, _  = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+		address = crypto.PubkeyToAddress(key.PublicKey)
+		funds   = big.NewInt(1000000000)
+		gspec   = &Genesis{
+			Config: params.TestChainConfig,
+			Alloc: GenesisAlloc{
+				address: {Balance: funds},
+				// The address 0xAAAAA selfdestructs if called
+				aa: {
+					// Code needs to just selfdestruct
+					Code:    []byte{byte(vm.PC), 0xFF},
+					Nonce:   1,
+					Balance: big.NewInt(0),
+				},
+				// The address 0xBBBB send 1 peb to 0xAAAA, then reverts
+				bb: {
+					Code: []byte{
+						byte(vm.PC),          // [0]
+						byte(vm.DUP1),        // [0,0]
+						byte(vm.DUP1),        // [0,0,0]
+						byte(vm.DUP1),        // [0,0,0,0]
+						byte(vm.PUSH1), 0x01, // [0,0,0,0,1] (value)
+						byte(vm.PUSH2), 0xaa, 0xaa, // [0,0,0,0,1, 0xaaaa]
+						byte(vm.GAS),
+						byte(vm.CALL),
+						byte(vm.REVERT),
+					},
+					Balance: big.NewInt(1),
+				},
+			},
+		}
+		genesis = gspec.MustCommit(db)
+	)
+
+	blocks, _ := GenerateChain(params.TestChainConfig, genesis, engine, db, 1, func(i int, b *BlockGen) {
+		b.SetRewardbase(common.Address{1})
+		signer := types.LatestSignerForChainID(params.TestChainConfig.ChainID)
+		// One transaction to AAAA
+		tx, _ := types.SignTx(types.NewTransaction(0, aa,
+			big.NewInt(0), 50000, big.NewInt(1), nil), signer, key)
+		b.AddTx(tx)
+		// One transaction to BBBB
+		tx, _ = types.SignTx(types.NewTransaction(1, bb,
+			big.NewInt(0), 100000, big.NewInt(1), nil), signer, key)
+		b.AddTx(tx)
+	})
+	// Import the canonical chain
+	diskdb := database.NewMemoryDBManager()
+	gspec.MustCommit(diskdb)
+
+	chain, err := NewBlockChain(diskdb, nil, params.TestChainConfig, engine, vm.Config{})
+	if err != nil {
+		t.Fatalf("failed to create tester chain: %v", err)
+	}
+	if n, err := chain.InsertChain(blocks); err != nil {
+		t.Fatalf("block %d: failed to insert into chain: %v", n, err)
+	}
 }

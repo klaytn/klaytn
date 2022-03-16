@@ -247,7 +247,9 @@ var FlagGroups = []FlagGroup{
 			RPCVirtualHostsFlag,
 			RPCApiFlag,
 			RPCGlobalGasCap,
+			RPCGlobalEthTxFeeCapFlag,
 			RPCConcurrencyLimit,
+			RPCNonEthCompatibleFlag,
 			IPCDisabledFlag,
 			IPCPathFlag,
 			WSEnabledFlag,
@@ -303,6 +305,8 @@ var FlagGroups = []FlagGroup{
 			RestartTimeOutFlag,
 			DaemonPathFlag,
 			KESNodeTypeServiceFlag,
+			SnapshotFlag,
+			SnapshotCacheSizeFlag,
 		},
 	},
 }

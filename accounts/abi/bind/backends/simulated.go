@@ -137,7 +137,7 @@ func (b *SimulatedBackend) rollback() {
 	stateDB, _ := b.blockchain.State()
 
 	b.pendingBlock = blocks[0]
-	b.pendingState, _ = state.New(b.pendingBlock.Root(), stateDB.Database())
+	b.pendingState, _ = state.New(b.pendingBlock.Root(), stateDB.Database(), nil)
 }
 
 // stateByBlockNumber retrieves a state by a given blocknumber.
@@ -488,7 +488,7 @@ func (b *SimulatedBackend) callContract(_ context.Context, call klaytn.CallMsg, 
 	from.SetBalance(math.MaxBig256)
 	// Execute the call.
 	nonce := from.Nonce()
-	intrinsicGas, _ := types.IntrinsicGas(call.Data, call.To == nil, b.config.Rules(block.Number()))
+	intrinsicGas, _ := types.IntrinsicGas(call.Data, nil, call.To == nil, b.config.Rules(block.Number()))
 	msg := types.NewMessage(call.From, call.To, nonce, call.Value, call.Gas, call.GasPrice, call.Data, true, intrinsicGas)
 
 	evmContext := blockchain.NewEVMContext(msg, block.Header(), b.blockchain, nil)
@@ -513,7 +513,11 @@ func (b *SimulatedBackend) SendTransaction(_ context.Context, tx *types.Transact
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	sender, err := types.Sender(types.NewEIP155Signer(b.config.ChainID), tx)
+	// Check transaction validity
+	block := b.blockchain.CurrentBlock()
+	signer := types.MakeSigner(b.blockchain.Config(), block.Number())
+	sender, err := types.Sender(signer, tx)
+
 	if err != nil {
 		panic(fmt.Errorf("invalid transaction: %v", err))
 	}
@@ -522,7 +526,8 @@ func (b *SimulatedBackend) SendTransaction(_ context.Context, tx *types.Transact
 		panic(fmt.Errorf("invalid transaction nonce: got %d, want %d", tx.Nonce(), nonce))
 	}
 
-	blocks, _ := blockchain.GenerateChain(b.config, b.blockchain.CurrentBlock(), gxhash.NewFaker(), b.database, 1, func(number int, block *blockchain.BlockGen) {
+	// Include tx in chain.
+	blocks, _ := blockchain.GenerateChain(b.config, block, gxhash.NewFaker(), b.database, 1, func(number int, block *blockchain.BlockGen) {
 		for _, tx := range b.pendingBlock.Transactions() {
 			block.AddTxWithChain(b.blockchain, tx)
 		}
@@ -531,7 +536,7 @@ func (b *SimulatedBackend) SendTransaction(_ context.Context, tx *types.Transact
 	stateDB, _ := b.blockchain.State()
 
 	b.pendingBlock = blocks[0]
-	b.pendingState, _ = state.New(b.pendingBlock.Root(), stateDB.Database())
+	b.pendingState, _ = state.New(b.pendingBlock.Root(), stateDB.Database(), nil)
 	return nil
 }
 
@@ -651,7 +656,7 @@ func (b *SimulatedBackend) AdjustTime(adjustment time.Duration) error {
 	stateDB, _ := b.blockchain.State()
 
 	b.pendingBlock = blocks[0]
-	b.pendingState, _ = state.New(b.pendingBlock.Root(), stateDB.Database())
+	b.pendingState, _ = state.New(b.pendingBlock.Root(), stateDB.Database(), nil)
 
 	return nil
 }
@@ -714,6 +719,10 @@ func (fb *filterBackend) BloomStatus() (uint64, uint64) { return 4096, 0 }
 
 func (fb *filterBackend) ServiceFilter(_ context.Context, _ *bloombits.MatcherSession) {
 	panic("not supported")
+}
+
+func (fb *filterBackend) ChainConfig() *params.ChainConfig {
+	return fb.bc.Config()
 }
 
 func nullSubscription() event.Subscription {

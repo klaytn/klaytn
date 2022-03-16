@@ -6,7 +6,7 @@
 # @global-owner1 and @global-owner2 will be requested for
 # review when someone opens a pull request.
 #*       @global-owner1 @global-owner2
-*       @KimKyungup @aidan-kwon
+*       @KimKyungup @aidan-kwon @jeongkyun-oh
 
 # Order is important; the last matching pattern takes the most
 # precedence. When someone opens a pull request that only
@@ -36,31 +36,31 @@
 # In this example, @doctocat owns any file in the `/docs`
 # directory in the root of your repository.
 #/docs/ @doctocat
-/accounts/      @KimKyungup @aidan-kwon @yoomee1313 @hqjang-pepper
-/api/           @KimKyungup @aidan-kwon @yoomee1313 @hyochan-brown
-/blockchain/    @KimKyungup @aidan-kwon @ehnuje @winnie-byun
-/build/         @KimKyungup @jeongkyun-oh
-/client/        @hqjang-pepper
-/cmd/           @KimKyungup @jeongkyun-oh @yoomee1313
+/accounts/      @KimKyungup @aidan-kwon @jeongkyun-oh @yoomee1313 @hqjang-pepper
+/api/           @KimKyungup @aidan-kwon @jeongkyun-oh @yoomee1313 @jimni1222 @sirano11 @aeharvlee @mckim19
+/blockchain/    @KimKyungup @aidan-kwon @jeongkyun-oh @ehnuje @winnie-byun @jimni1222 @sirano11 @mckim19
+/build/         @KimKyungup @aidan-kwon @jeongkyun-oh
+/client/        @aidan-kwon @jeongkyun-oh @hqjang-pepper
+/cmd/           @KimKyungup @aidan-kwon @jeongkyun-oh @yoomee1313
 /common/
-/consensus/     @KimKyungup @aidan-kwon @yoomee1313 @hyochan-brown
-/console/
+/consensus/     @KimKyungup @aidan-kwon @jeongkyun-oh @yoomee1313
+/console/       @KimKyungup @aidan-kwon @jimni1222 @sirano11 @aeharvlee
 /contracts/
-/crypto/        @KimKyungup @aidan-kwon
-/datasync/      @KimKyungup @ehnuje @jeongkyun-oh
-/db_migration/  @KimKyungup @winnie-byun
+/crypto/        @KimKyungup @aidan-kwon @jeongkyun-oh
+/datasync/      @KimKyungup @aidan-kwon @ehnuje @jeongkyun-oh
+/db_migration/  @KimKyungup @aidan-kwon @jeongkyun-oh @winnie-byun
 /event/
 /fork/
-/governance/    @KimKyungup @aidan-kwon @yoomee1313 @hqjang-pepper
+/governance/    @KimKyungup @aidan-kwon @jeongkyun-oh @yoomee1313 @hqjang-pepper @mckim19
 /kerrors/
-/log/           @KimKyungup @winnie-byun @hyochan-brown
-/metrics/       @KimKyungup @ehnuje
-/networks/      @KimKyungup @jeongkyun-oh @winnie-byun @hqjang-pepper
-/node/          @KimKyungup @ehnuje @jeongkyun-oh @hyochan-brown
-/params/        @KimKyungup @winnie-byun @yoomee1313
+/log/           @KimKyungup @aidan-kwon @jeongkyun-oh @winnie-byun
+/metrics/       @KimKyungup @aidan-kwon @jeongkyun-oh @ehnuje
+/networks/      @KimKyungup @aidan-kwon @jeongkyun-oh @winnie-byun @hqjang-pepper
+/node/          @KimKyungup @aidan-kwon @ehnuje @jeongkyun-oh
+/params/        @KimKyungup @aidan-kwon @jeongkyun-oh @winnie-byun @yoomee1313
 /reward/
 /ser/
-/storage/       @KimKyungup @ehnuje @winnie-byun
+/storage/       @KimKyungup @aidan-kwon @jeongkyun-oh @ehnuje @winnie-byun
 /tests/
 /utils/
-/work/          @KimKyungup @ehnuje @jeongkyun-oh
+/work/          @KimKyungup @aidan-kwon @ehnuje @jeongkyun-oh

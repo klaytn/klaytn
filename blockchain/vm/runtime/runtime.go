@@ -25,9 +25,8 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/klaytn/klaytn/blockchain/types"
-
 	"github.com/klaytn/klaytn/blockchain/state"
+	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
@@ -59,9 +58,10 @@ type Config struct {
 func setDefaults(cfg *Config) {
 	if cfg.ChainConfig == nil {
 		cfg.ChainConfig = &params.ChainConfig{
-			ChainID:                 big.NewInt(1),
-			IstanbulCompatibleBlock: new(big.Int),
-			LondonCompatibleBlock:   new(big.Int),
+			ChainID:                  big.NewInt(1),
+			IstanbulCompatibleBlock:  new(big.Int),
+			LondonCompatibleBlock:    new(big.Int),
+			EthTxTypeCompatibleBlock: new(big.Int),
 		}
 	}
 
@@ -89,7 +89,7 @@ func setDefaults(cfg *Config) {
 		}
 	}
 	if cfg.BaseFee == nil {
-		cfg.BaseFee = big.NewInt(0)
+		cfg.BaseFee = new(big.Int).SetUint64(params.BaseFee)
 	}
 }
 
@@ -106,7 +106,7 @@ func Execute(code, input []byte, cfg *Config) ([]byte, *state.StateDB, error) {
 
 	if cfg.State == nil {
 		memDBManager := database.NewMemoryDBManager()
-		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(memDBManager))
+		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(memDBManager), nil)
 	}
 	var (
 		address = common.BytesToAddress([]byte("contract"))
@@ -137,7 +137,7 @@ func Create(input []byte, cfg *Config) ([]byte, common.Address, uint64, error) {
 
 	if cfg.State == nil {
 		memDBManager := database.NewMemoryDBManager()
-		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(memDBManager))
+		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(memDBManager), nil)
 	}
 	var (
 		vmenv  = NewEnv(cfg)

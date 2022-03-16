@@ -57,8 +57,10 @@ func GetDefaultConfig() *Config {
 
 		TxPool: blockchain.DefaultTxPoolConfig,
 		GPO: gasprice.Config{
-			Blocks:     20,
-			Percentile: 60,
+			Blocks:           20,
+			Percentile:       60,
+			MaxHeaderHistory: 1024,
+			MaxBlockHistory:  1024,
 		},
 		WsEndpoint: "localhost:8546",
 
@@ -121,6 +123,7 @@ type Config struct {
 	SenderTxHashIndexing bool
 	ParallelDBWrite      bool
 	TrieNodeCacheConfig  statedb.TrieNodeCacheConfig
+	SnapshotCacheSize    int
 
 	// Mining-related options
 	ServiceChainSigner common.Address `toml:",omitempty"`
@@ -166,6 +169,11 @@ type Config struct {
 
 	// RPCGasCap is the global gas cap for eth-call variants.
 	RPCGasCap *big.Int `toml:",omitempty"`
+
+	// RPCTxFeeCap is the global transaction fee(price * gaslimit) cap for
+	// send-transction variants. The unit is klay.
+	// This is used by eth namespace RPC APIs
+	RPCTxFeeCap float64
 }
 
 type configMarshaling struct {

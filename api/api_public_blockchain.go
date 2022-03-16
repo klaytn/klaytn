@@ -26,6 +26,8 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/klaytn/klaytn/node/cn/filters"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/types/account"
@@ -150,14 +152,28 @@ func (s *PublicBlockChainAPI) GetAccount(ctx context.Context, address common.Add
 	return serAcc, state.Error()
 }
 
+// rpcMarshalHeader converts the given header to the RPC output.
+func (s *PublicBlockChainAPI) rpcMarshalHeader(header *types.Header) map[string]interface{} {
+	fields := filters.RPCMarshalHeader(header, s.b.ChainConfig().IsEthTxTypeForkEnabled(header.Number))
+	return fields
+}
+
 // GetHeaderByNumber returns the requested canonical block header.
-func (s *PublicBlockChainAPI) GetHeaderByNumber(ctx context.Context, number rpc.BlockNumber) (*types.Header, error) {
-	return s.b.HeaderByNumber(ctx, number)
+func (s *PublicBlockChainAPI) GetHeaderByNumber(ctx context.Context, number rpc.BlockNumber) (map[string]interface{}, error) {
+	header, err := s.b.HeaderByNumber(ctx, number)
+	if err != nil {
+		return nil, err
+	}
+	return s.rpcMarshalHeader(header), nil
 }
 
 // GetHeaderByHash returns the requested header by hash.
-func (s *PublicBlockChainAPI) GetHeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error) {
-	return s.b.HeaderByHash(ctx, hash)
+func (s *PublicBlockChainAPI) GetHeaderByHash(ctx context.Context, hash common.Hash) (map[string]interface{}, error) {
+	header, err := s.b.HeaderByHash(ctx, hash)
+	if err != nil {
+		return nil, err
+	}
+	return s.rpcMarshalHeader(header), nil
 }
 
 // GetBlockByNumber returns the requested block. When blockNr is -1 the chain head is returned. When fullTx is true all
@@ -275,7 +291,7 @@ func DoCall(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.Blo
 		gasPrice = new(big.Int).SetUint64(defaultGasPrice)
 	}
 
-	intrinsicGas, err := types.IntrinsicGas(args.Data, args.To == nil, b.ChainConfig().Rules(header.Number))
+	intrinsicGas, err := types.IntrinsicGas(args.Data, nil, args.To == nil, b.ChainConfig().Rules(header.Number))
 	if err != nil {
 		return nil, 0, 0, false, err
 	}
@@ -295,6 +311,8 @@ func DoCall(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.Blo
 	// this makes sure resources are cleaned up.
 	defer cancel()
 
+	// Add gas fee to sender for estimating gasLimit/computing cost or calling a function by insufficient balance sender.
+	state.AddBalance(msg.ValidatedSender(), new(big.Int).Mul(new(big.Int).SetUint64(msg.Gas()), msg.GasPrice()))
 	// Get a new instance of the EVM.
 	evm, vmError, err := b.GetEVM(ctx, msg, state, header, vmCfg)
 	if err != nil {
@@ -399,6 +417,23 @@ type ExecutionResult struct {
 	StructLogs  []StructLogRes `json:"structLogs"`
 }
 
+// accessListResult returns an optional accesslist
+// Its the result of the `debug_createAccessList` RPC call.
+// It contains an error if the transaction itself failed.
+type AccessListResult struct {
+	Accesslist *types.AccessList `json:"accessList"`
+	Error      string            `json:"error,omitempty"`
+	GasUsed    hexutil.Uint64    `json:"gasUsed"`
+}
+
+// CreateAccessList creates a EIP-2930 type AccessList for the given transaction.
+// Reexec and BlockNrOrHash can be specified to create the accessList on top of a certain state.
+// TODO-Klaytn: Have to implement logic. For now, Klaytn does not implement actual access list logic, so return empty access list result.
+func (s *PublicBlockChainAPI) CreateAccessList(ctx context.Context, args SendTxArgs, blockNrOrHash *rpc.BlockNumberOrHash) (*AccessListResult, error) {
+	result := &AccessListResult{Accesslist: &types.AccessList{}, GasUsed: hexutil.Uint64(0)}
+	return result, nil
+}
+
 // StructLogRes stores a structured log emitted by the EVM while replaying a
 // transaction in debug mode
 type StructLogRes struct {
@@ -450,7 +485,7 @@ func FormatLogs(logs []vm.StructLog) []StructLogRes {
 	return formatted
 }
 
-func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool) (map[string]interface{}, error) {
+func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool, isEnabledEthTxTypeFork bool) (map[string]interface{}, error) {
 	head := b.Header() // copies the header once
 	fields := map[string]interface{}{
 		"number":           (*hexutil.Big)(head.Number),
@@ -494,6 +529,10 @@ func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool) (map[
 		fields["transactions"] = transactions
 	}
 
+	if isEnabledEthTxTypeFork {
+		fields["baseFeePerGas"] = (*hexutil.Big)(new(big.Int).SetUint64(params.BaseFee))
+	}
+
 	return fields, nil
 }
 
@@ -501,19 +540,24 @@ func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool) (map[
 // returned. When fullTx is true the returned block contains full transaction details, otherwise it will only contain
 // transaction hashes.
 func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx bool) (map[string]interface{}, error) {
-	return RpcOutputBlock(b, s.b.GetTd(b.Hash()), inclTx, fullTx)
+	return RpcOutputBlock(b, s.b.GetTd(b.Hash()), inclTx, fullTx, s.b.ChainConfig().IsEthTxTypeForkEnabled(b.Header().Number))
+}
+
+func getFrom(tx *types.Transaction) common.Address {
+	var from common.Address
+	if tx.IsEthereumTransaction() {
+		signer := types.LatestSignerForChainID(tx.ChainId())
+		from, _ = types.Sender(signer, tx)
+	} else {
+		from, _ = tx.From()
+	}
+	return from
 }
 
 // newRPCTransaction returns a transaction that will serialize to the RPC
 // representation, with the given location metadata set (if available).
 func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64) map[string]interface{} {
-	var from common.Address
-	if tx.IsLegacyTransaction() {
-		signer := types.NewEIP155Signer(tx.ChainId())
-		from, _ = types.Sender(signer, tx)
-	} else {
-		from, _ = tx.From()
-	}
+	from := getFrom(tx)
 
 	output := tx.MakeRPCOutput()
 

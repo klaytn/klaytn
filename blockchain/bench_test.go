@@ -101,8 +101,8 @@ func genValueTx(nbytes int) func(int, *BlockGen) {
 	return func(i int, gen *BlockGen) {
 		toaddr := common.Address{}
 		data := make([]byte, nbytes)
-		gas, _ := types.IntrinsicGas(data, false, params.TestChainConfig.Rules(big.NewInt(0)))
-		signer := types.NewEIP155Signer(params.TestChainConfig.ChainID)
+		gas, _ := types.IntrinsicGas(data, nil, false, params.TestChainConfig.Rules(big.NewInt(0)))
+		signer := types.LatestSignerForChainID(params.TestChainConfig.ChainID)
 		tx, _ := types.SignTx(types.NewTransaction(gen.TxNonce(benchRootAddr), toaddr, big.NewInt(1), gas, nil, data), signer, benchRootKey)
 		gen.AddTx(tx)
 	}
@@ -127,7 +127,7 @@ func init() {
 // and fills the blocks with many small transactions.
 func genTxRing(naccounts int) func(int, *BlockGen) {
 	from := 0
-	signer := types.NewEIP155Signer(params.TestChainConfig.ChainID)
+	signer := types.LatestSignerForChainID(params.TestChainConfig.ChainID)
 	return func(i int, gen *BlockGen) {
 		gas := uint64(1000000)
 		for {
@@ -156,7 +156,7 @@ func benchInsertChain(b *testing.B, dbType database.DBType, gen func(int, *Block
 	dir := genTempDirForDB(b)
 	defer os.RemoveAll(dir)
 
-	db := genDBManagerForTest(b, dir, dbType)
+	db := genDBManagerForTest(dir, dbType)
 	defer db.Close()
 
 	// 2. Generate a chain of b.N blocks using the supplied block generator function.
@@ -298,7 +298,7 @@ func benchWriteChain(b *testing.B, full bool, databaseType database.DBType, coun
 	for i := 0; i < b.N; i++ {
 		dir := genTempDirForDB(b)
 
-		db := genDBManagerForTest(b, dir, databaseType)
+		db := genDBManagerForTest(dir, databaseType)
 		makeChainForBench(db, full, count)
 
 		db.Close()
@@ -311,7 +311,7 @@ func benchReadChain(b *testing.B, full bool, databaseType database.DBType, count
 	dir := genTempDirForDB(b)
 	defer os.RemoveAll(dir)
 
-	db := genDBManagerForTest(b, dir, databaseType)
+	db := genDBManagerForTest(dir, databaseType)
 	makeChainForBench(db, full, count)
 	db.Close()
 
@@ -320,7 +320,7 @@ func benchReadChain(b *testing.B, full bool, databaseType database.DBType, count
 
 	for i := 0; i < b.N; i++ {
 
-		db = genDBManagerForTest(b, dir, databaseType)
+		db = genDBManagerForTest(dir, databaseType)
 
 		chain, err := NewBlockChain(db, nil, params.TestChainConfig, gxhash.NewFaker(), vm.Config{})
 		if err != nil {
@@ -350,7 +350,7 @@ func genTempDirForDB(b *testing.B) string {
 }
 
 // genDBManagerForTest returns database.Database according to entered databaseType
-func genDBManagerForTest(b *testing.B, dir string, dbType database.DBType) database.DBManager {
+func genDBManagerForTest(dir string, dbType database.DBType) database.DBManager {
 	if dbType == database.MemoryDB {
 		db := database.NewMemoryDBManager()
 		return db

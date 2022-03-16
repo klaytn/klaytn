@@ -482,6 +482,7 @@ func defaultCacheConfig() *blockchain.CacheConfig {
 			RedisEndpoints:     nil,
 			RedisClusterEnable: false,
 		},
+		SnapshotCacheSize: 512,
 	}
 }
 

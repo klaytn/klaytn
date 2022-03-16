@@ -275,6 +275,15 @@ var (
 		Name:  "db.no-perf-metrics",
 		Usage: "Disables performance metrics of database's read and write operations",
 	}
+	SnapshotFlag = cli.BoolFlag{
+		Name:  "snapshot",
+		Usage: "Enables snapshot-database mode",
+	}
+	SnapshotCacheSizeFlag = cli.IntFlag{
+		Name:  "snapshot.cache-size",
+		Usage: "Size of in-memory cache of the state snapshot cache (in MiB)",
+		Value: 512,
+	}
 	TrieMemoryCacheSizeFlag = cli.IntFlag{
 		Name:  "state.cache-size",
 		Usage: "Size of in-memory cache of the global state (in MiB) to flush matured singleton trie nodes to disk",
@@ -461,10 +470,18 @@ var (
 		Name:  "rpc.gascap",
 		Usage: "Sets a cap on gas that can be used in klay_call/estimateGas",
 	}
+	RPCGlobalEthTxFeeCapFlag = cli.Float64Flag{
+		Name:  "rpc.ethtxfeecap",
+		Usage: "Sets a cap on transaction fee (in klay) that can be sent via the eth namespace RPC APIs (0 = no cap)",
+	}
 	RPCConcurrencyLimit = cli.IntFlag{
 		Name:  "rpc.concurrencylimit",
 		Usage: "Sets a limit of concurrent connection number of HTTP-RPC server",
 		Value: rpc.ConcurrencyLimit,
+	}
+	RPCNonEthCompatibleFlag = cli.BoolFlag{
+		Name:  "rpc.eth.noncompatible",
+		Usage: "Disables the eth namespace API return formatting for compatibility",
 	}
 	WSEnabledFlag = cli.BoolFlag{
 		Name:  "ws",
@@ -549,6 +566,26 @@ var (
 		Name:  "api.filter.getLogs.maxitems",
 		Usage: "Maximum allowed number of return items for log collecting filter API",
 		Value: filters.GetLogsMaxItems,
+	}
+	RPCReadTimeout = cli.IntFlag{
+		Name:  "rpcreadtimeout",
+		Usage: "HTTP-RPC server read timeout (seconds)",
+		Value: int(rpc.DefaultHTTPTimeouts.ReadTimeout / time.Second),
+	}
+	RPCWriteTimeoutFlag = cli.IntFlag{
+		Name:  "rpcwritetimeout",
+		Usage: "HTTP-RPC server write timeout (seconds)",
+		Value: int(rpc.DefaultHTTPTimeouts.WriteTimeout / time.Second),
+	}
+	RPCIdleTimeoutFlag = cli.IntFlag{
+		Name:  "rpcidletimeout",
+		Usage: "HTTP-RPC server idle timeout (seconds)",
+		Value: int(rpc.DefaultHTTPTimeouts.IdleTimeout / time.Second),
+	}
+	RPCExecutionTimeoutFlag = cli.IntFlag{
+		Name:  "rpcexecutiontimeout",
+		Usage: "HTTP-RPC server execution timeout (seconds)",
+		Value: int(rpc.DefaultHTTPTimeouts.ExecutionTimeout / time.Second),
 	}
 
 	// Network Settings
@@ -1185,6 +1222,18 @@ func setHTTP(ctx *cli.Context, cfg *node.Config) {
 		rpc.ConcurrencyLimit = ctx.GlobalInt(RPCConcurrencyLimit.Name)
 		logger.Info("Set the concurrency limit of RPC-HTTP server", "limit", rpc.ConcurrencyLimit)
 	}
+	if ctx.GlobalIsSet(RPCReadTimeout.Name) {
+		cfg.HTTPTimeouts.ReadTimeout = time.Duration(ctx.GlobalInt(RPCReadTimeout.Name)) * time.Second
+	}
+	if ctx.GlobalIsSet(RPCWriteTimeoutFlag.Name) {
+		cfg.HTTPTimeouts.WriteTimeout = time.Duration(ctx.GlobalInt(RPCWriteTimeoutFlag.Name)) * time.Second
+	}
+	if ctx.GlobalIsSet(RPCIdleTimeoutFlag.Name) {
+		cfg.HTTPTimeouts.IdleTimeout = time.Duration(ctx.GlobalInt(RPCIdleTimeoutFlag.Name)) * time.Second
+	}
+	if ctx.GlobalIsSet(RPCExecutionTimeoutFlag.Name) {
+		cfg.HTTPTimeouts.ExecutionTimeout = time.Duration(ctx.GlobalInt(RPCExecutionTimeoutFlag.Name)) * time.Second
+	}
 }
 
 // setWS creates the WebSocket RPC listener interface string from the set
@@ -1398,6 +1447,9 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 	}
 	if ctx.GlobalIsSet(LightKDFFlag.Name) {
 		cfg.UseLightweightKDF = ctx.GlobalBool(LightKDFFlag.Name)
+	}
+	if ctx.GlobalIsSet(RPCNonEthCompatibleFlag.Name) {
+		rpc.NonEthCompatible = ctx.GlobalBool(RPCNonEthCompatibleFlag.Name)
 	}
 }
 
@@ -1627,6 +1679,10 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 		cfg.RPCGasCap = new(big.Int).SetUint64(ctx.GlobalUint64(RPCGlobalGasCap.Name))
 	}
 
+	if ctx.GlobalIsSet(RPCGlobalEthTxFeeCapFlag.Name) {
+		cfg.RPCTxFeeCap = ctx.GlobalFloat64(RPCGlobalEthTxFeeCapFlag.Name)
+	}
+
 	// Only CNs could set BlockGenerationIntervalFlag and BlockGenerationTimeLimitFlag
 	if ctx.GlobalIsSet(BlockGenerationIntervalFlag.Name) {
 		params.BlockGenerationInterval = ctx.GlobalInt64(BlockGenerationIntervalFlag.Name)
@@ -1639,6 +1695,16 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	}
 
 	params.OpcodeComputationCostLimit = ctx.GlobalUint64(OpcodeComputationCostLimitFlag.Name)
+
+	if ctx.GlobalIsSet(SnapshotFlag.Name) {
+		cfg.SnapshotCacheSize = ctx.GlobalInt(SnapshotCacheSizeFlag.Name)
+		if cfg.StartBlockNumber != 0 {
+			logger.Crit("State snapshot should not be used with --start-block-num", "num", cfg.StartBlockNumber)
+		}
+		logger.Info("State snapshot is enabled", "cache-size (MB)", cfg.SnapshotCacheSize)
+	} else {
+		cfg.SnapshotCacheSize = 0 // snapshot disabled
+	}
 
 	// Override any default configs for hard coded network.
 	// TODO-Klaytn-Bootnode: Discuss and add `baobab` test network's genesis block

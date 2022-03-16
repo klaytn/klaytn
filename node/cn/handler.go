@@ -122,6 +122,9 @@ type ProtocolManager struct {
 
 	nodetype          common.ConnType
 	txResendUseLegacy bool
+
+	//syncStop is a flag to stop peer sync
+	syncStop int32
 }
 
 // NewProtocolManager returns a new Klaytn sub protocol manager. The Klaytn sub protocol manages peers capable
@@ -365,6 +368,22 @@ func (pm *ProtocolManager) Stop() {
 	pm.wg.Wait()
 
 	logger.Info("Klaytn protocol stopped")
+}
+
+// SetSyncStop sets value of syncStop flag. If it's true, peer sync process does not proceed.
+func (pm *ProtocolManager) SetSyncStop(flag bool) {
+	var i int32 = 0
+	if flag {
+		i = 1
+	}
+	atomic.StoreInt32(&(pm.syncStop), int32(i))
+}
+
+func (pm *ProtocolManager) GetSyncStop() bool {
+	if atomic.LoadInt32(&(pm.syncStop)) != 0 {
+		return true
+	}
+	return false
 }
 
 func (pm *ProtocolManager) newPeer(pv int, p *p2p.Peer, rw p2p.MsgReadWriter) Peer {

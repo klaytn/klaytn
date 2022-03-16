@@ -49,18 +49,18 @@ var GovernanceItems = map[int]check{
 	params.GovernanceMode:          {stringT, checkGovernanceMode, nil},
 	params.GoverningNode:           {addressT, checkAddress, nil},
 	params.UnitPrice:               {uint64T, checkUint64andBool, updateUnitPrice},
-	params.AddValidator:            {addressT, checkAddress, nil},
-	params.RemoveValidator:         {addressT, checkAddress, nil},
+	params.AddValidator:            {addressT, checkAddressOrListOfUniqueAddresses, nil},
+	params.RemoveValidator:         {addressT, checkAddressOrListOfUniqueAddresses, nil},
 	params.MintingAmount:           {stringT, checkBigInt, nil},
 	params.Ratio:                   {stringT, checkRatio, nil},
 	params.UseGiniCoeff:            {boolT, checkUint64andBool, updateUseGiniCoeff},
 	params.DeferredTxFee:           {boolT, checkUint64andBool, nil},
-	params.MinimumStake:            {stringT, checkBigInt, nil},
+	params.MinimumStake:            {stringT, checkRewardMinimumStake, nil},
 	params.StakeUpdateInterval:     {uint64T, checkUint64andBool, updateStakingUpdateInterval},
 	params.ProposerRefreshInterval: {uint64T, checkUint64andBool, updateProposerUpdateInterval},
 	params.Epoch:                   {uint64T, checkUint64andBool, nil},
 	params.Policy:                  {uint64T, checkUint64andBool, updateProposerPolicy},
-	params.CommitteeSize:           {uint64T, checkUint64andBool, nil},
+	params.CommitteeSize:           {uint64T, checkCommitteeSize, nil},
 	params.ConstTxGasHumanReadable: {uint64T, checkUint64andBool, updateTxGasHumanReadable},
 	params.Timeout:                 {uint64T, checkUint64andBool, nil},
 }
@@ -127,40 +127,75 @@ func (g *Governance) AddVote(key string, val interface{}) bool {
 
 func (g *Governance) adjustValueType(key string, val interface{}) interface{} {
 	k := GovernanceKeyMap[key]
-	reqType := GovernanceItems[k].t
-	var x interface{}
 
 	// When an int value comes from JS console, it comes as a float64
-	if reqType == uint64T && reflect.TypeOf(val) == float64T {
-		x = uint64(val.(float64))
-		if float64(x.(uint64)) == val.(float64) {
-			return x
+	if GovernanceItems[k].t == uint64T {
+		v, ok := val.(float64)
+		if !ok {
+			return val
+		}
+		if float64(uint64(v)) == v {
+			return uint64(v)
 		}
 		return val
 	}
 
-	// address comes as a form of string from JS console
-	if reqType == addressT && reflect.TypeOf(val) == stringT {
-		if common.IsHexAddress(val.(string)) {
-			x = common.HexToAddress(val.(string))
-			return x
+	// Otherwise, it comes as a string
+	v, ok := val.(string)
+	if !ok {
+		return val
+	}
+	if GovernanceItems[k].t == addressT {
+		addresses := strings.Split(v, ",")
+		switch len(addresses) {
+		case 0:
+			return val
+		case 1:
+			str := strings.Trim(v, " ")
+			if common.IsHexAddress(str) {
+				return common.HexToAddress(str)
+			} else {
+				return val
+			}
+		default:
+			var nodeAddresses []common.Address
+			for _, str := range addresses {
+				str = strings.Trim(str, " ")
+				if common.IsHexAddress(str) {
+					nodeAddresses = append(nodeAddresses, common.HexToAddress(str))
+				} else {
+					return val
+				}
+			}
+			return nodeAddresses
 		}
+	} else {
+		// If a string text come as uppercase, make it into lowercase
+		return strings.ToLower(v)
 	}
-
-	// If a string text come as uppercase, make it into lowercase
-	if reflect.TypeOf(val) == stringT {
-		x = strings.ToLower(val.(string))
-		return x
-	}
-	return val
 }
 
-func (gov *Governance) checkType(vote *GovernanceVote) bool {
-	key := GovernanceKeyMap[vote.Key]
-	return GovernanceItems[key].t == reflect.TypeOf(vote.Value)
+func checkValueType(v interface{}, expectType reflect.Type) bool {
+	var ok bool
+	switch expectType {
+	case uint64T:
+		_, ok = v.(uint64)
+	case stringT:
+		_, ok = v.(string)
+	case addressT:
+		_, ok = v.(common.Address)
+		if !ok {
+			_, ok = v.([]common.Address)
+		}
+	case boolT:
+		_, ok = v.(bool)
+	default:
+		ok = false
+	}
+	return ok
 }
 
-func (gov *Governance) checkKey(k string) bool {
+func checkKey(k string) bool {
 	key := GovernanceKeyMap[k]
 	if _, ok := GovernanceItems[key]; ok {
 		return true
@@ -173,7 +208,7 @@ func (gov *Governance) ValidateVote(vote *GovernanceVote) (*GovernanceVote, bool
 	key := GovernanceKeyMap[vote.Key]
 	vote.Value = gov.adjustValueType(vote.Key, vote.Value)
 
-	if gov.checkKey(vote.Key) && gov.checkType(vote) {
+	if checkKey(vote.Key) && checkValueType(vote.Value, GovernanceItems[key].t) {
 		return vote, GovernanceItems[key].validator(vote.Key, vote.Value)
 	}
 	return vote, false
@@ -206,6 +241,28 @@ func checkGovernanceMode(k string, v interface{}) bool {
 	return false
 }
 
+func checkCommitteeSize(k string, v interface{}) bool {
+	if !checkUint64andBool(k, v) {
+		return false
+	}
+	if v == uint64(0) {
+		return false
+	}
+	return true
+}
+
+func checkRewardMinimumStake(k string, v interface{}) bool {
+	if !checkBigInt(k, v) {
+		return false
+	}
+	if v, ok := new(big.Int).SetString(v.(string), 10); ok {
+		if v.Cmp(common.Big0) < 0 {
+			return false
+		}
+	}
+	return true
+}
+
 func checkUint64andBool(k string, v interface{}) bool {
 	// for Uint64 and Bool, no more check is needed
 	if reflect.TypeOf(v) == uint64T || reflect.TypeOf(v) == boolT {
@@ -230,7 +287,47 @@ func checkBigInt(k string, v interface{}) bool {
 }
 
 func checkAddress(k string, v interface{}) bool {
+	if _, ok := v.(common.Address); ok {
+		return true
+	}
+	return false
+}
+
+func checkAddressOrListOfUniqueAddresses(k string, v interface{}) bool {
+	if checkAddress(k, v) {
+		return true
+	}
+	if _, ok := v.([]common.Address); !ok {
+		return false
+	}
+
+	// there should not be duplicated addresses, if value contains multiple addresses
+	addressExists := make(map[common.Address]bool)
+	for _, address := range v.([]common.Address) {
+		if _, ok := addressExists[address]; ok {
+			return false
+		} else {
+			addressExists[address] = true
+		}
+	}
 	return true
+}
+
+func isEqualValue(k int, v1 interface{}, v2 interface{}) bool {
+	if reflect.TypeOf(v1) != reflect.TypeOf(v2) {
+		return false
+	}
+
+	if GovernanceItems[k].t == addressT && reflect.TypeOf(v1) != addressT {
+		value1, ok1 := v1.([]common.Address)
+		value2, ok2 := v2.([]common.Address)
+		if ok1 == false || ok2 == false {
+			return false
+		}
+		return reflect.DeepEqual(value1, value2)
+	}
+
+	return v1 == v2
 }
 
 func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, votes []GovernanceVote, tally []GovernanceTallyItem, header *types.Header, proposer common.Address, self common.Address) (istanbul.ValidatorSet, []GovernanceVote, []GovernanceTallyItem) {
@@ -240,11 +337,11 @@ func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, votes 
 		var err error
 
 		if err := rlp.DecodeBytes(header.Vote, gVote); err != nil {
-			logger.Error("Failed to decode a vote. This vote will be ignored", "number", header.Number, "key", gVote.Key, "value", gVote.Value, "validator", gVote.Validator)
+			logger.Error("Failed to decode a vote. This vote will be ignored", "number", header.Number)
 			return valset, votes, tally
 		}
 		if gVote, err = gov.ParseVoteValue(gVote); err != nil {
-			logger.Error("Failed to parse a vote value. This vote will be ignored", "number", header.Number, "key", gVote.Key, "value", gVote.Value, "validator", gVote.Validator)
+			logger.Error("Failed to parse a vote value. This vote will be ignored", "number", header.Number)
 			return valset, votes, tally
 		}
 
@@ -257,18 +354,30 @@ func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, votes 
 		key := GovernanceKeyMap[gVote.Key]
 		switch key {
 		case params.GoverningNode:
-			_, addr := valset.GetByAddress(gVote.Value.(common.Address))
+			v, ok := gVote.Value.(common.Address)
+			if !ok {
+				logger.Warn("Invalid value Type", "number", header.Number, "Validator", gVote.Validator, "key", gVote.Key, "value", gVote.Value)
+				return valset, votes, tally
+			}
+			_, addr := valset.GetByAddress(v)
 			if addr == nil {
 				logger.Warn("Invalid governing node address", "number", header.Number, "Validator", gVote.Validator, "key", gVote.Key, "value", gVote.Value)
 				return valset, votes, tally
 			}
-		case params.AddValidator:
-			if !gov.checkVote(gVote.Value.(common.Address), true, valset) {
-				return valset, votes, tally
-			}
-		case params.RemoveValidator:
-			if !gov.checkVote(gVote.Value.(common.Address), false, valset) {
-				return valset, votes, tally
+		case params.AddValidator, params.RemoveValidator:
+			authorize := key == params.AddValidator
+			if addr, ok := gVote.Value.(common.Address); ok {
+				if !gov.checkVote(addr, authorize, valset) {
+					return valset, votes, tally
+				}
+			} else if addresses, ok := gVote.Value.([]common.Address); ok {
+				for _, address := range addresses {
+					if !gov.checkVote(address, authorize, valset) {
+						return valset, votes, tally
+					}
+				}
+			} else {
+				logger.Warn("Invalid value Type", "number", header.Number, "Validator", gVote.Validator, "key", gVote.Key, "value", gVote.Value)
 			}
 		}
 
@@ -351,7 +460,7 @@ func (gov *Governance) changeGovernanceTally(tally []GovernanceTallyItem, key st
 	copy(ret, tally)
 
 	for idx, v := range tally {
-		if v.Key == key && v.Value == value {
+		if v.Key == key && isEqualValue(GovernanceKeyMap[key], v.Value, value) {
 			if isAdd {
 				ret[idx].Votes += vp
 			} else {
@@ -391,11 +500,22 @@ func (gov *Governance) addNewVote(valset istanbul.ValidatorSet, votes []Governan
 			switch GovernanceKeyMap[gVote.Key] {
 			case params.AddValidator:
 				//reward.GetStakingInfo()
-				valset.AddValidator(gVote.Value.(common.Address))
+				if addr, ok := gVote.Value.(common.Address); ok {
+					valset.AddValidator(addr)
+				} else {
+					for _, address := range gVote.Value.([]common.Address) {
+						valset.AddValidator(address)
+					}
+				}
 			case params.RemoveValidator:
-				target := gVote.Value.(common.Address)
-				valset.RemoveValidator(target)
-				votes = gov.removeVotesFromRemovedNode(votes, target)
+				if addr, ok := gVote.Value.(common.Address); ok {
+					valset.RemoveValidator(addr)
+				} else {
+					for _, target := range gVote.Value.([]common.Address) {
+						valset.RemoveValidator(target)
+						votes = gov.removeVotesFromRemovedNode(votes, target)
+					}
+				}
 			case params.Timeout:
 				timeout := gVote.Value.(uint64)
 				atomic.StoreUint64(&istanbul.DefaultConfig.Timeout, timeout)

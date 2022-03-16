@@ -103,6 +103,7 @@ var CommonNodeFlags = []cli.Flag{
 	utils.NetworkIdFlag,
 	utils.RPCCORSDomainFlag,
 	utils.RPCVirtualHostsFlag,
+	utils.RPCNonEthCompatibleFlag,
 	utils.MetricsEnabledFlag,
 	utils.PrometheusExporterFlag,
 	utils.PrometheusExporterPortFlag,
@@ -115,6 +116,8 @@ var CommonNodeFlags = []cli.Flag{
 	utils.APIFilterGetLogsMaxItemsFlag,
 	utils.APIFilterGetLogsDeadlineFlag,
 	utils.OpcodeComputationCostLimitFlag,
+	utils.SnapshotFlag,
+	utils.SnapshotCacheSizeFlag,
 }
 
 // Common RPC flags
@@ -124,6 +127,7 @@ var CommonRPCFlags = []cli.Flag{
 	utils.RPCPortFlag,
 	utils.RPCApiFlag,
 	utils.RPCGlobalGasCap,
+	utils.RPCGlobalEthTxFeeCapFlag,
 	utils.WSEnabledFlag,
 	utils.WSListenAddrFlag,
 	utils.WSPortFlag,
@@ -139,6 +143,10 @@ var CommonRPCFlags = []cli.Flag{
 	utils.WSMaxConnections,
 	utils.IPCDisabledFlag,
 	utils.IPCPathFlag,
+	utils.RPCReadTimeout,
+	utils.RPCWriteTimeoutFlag,
+	utils.RPCIdleTimeoutFlag,
+	utils.RPCExecutionTimeoutFlag,
 }
 
 var KCNFlags = []cli.Flag{

@@ -39,6 +39,8 @@ const (
 	notificationMethodSuffix = "_subscription"
 )
 
+const defaultErrorCode = -32000
+
 type jsonRequest struct {
 	Method  string          `json:"method"`
 	Version string          `json:"jsonrpc"`
@@ -326,8 +328,17 @@ func (c *jsonCodec) CreateResponse(id interface{}, reply interface{}) interface{
 }
 
 // CreateErrorResponse will create a JSON-RPC error response with the given id and error.
-func (c *jsonCodec) CreateErrorResponse(id interface{}, err Error) interface{} {
-	return &jsonErrResponse{Version: jsonrpcVersion, Id: id, Error: jsonError{Code: err.ErrorCode(), Message: err.Error()}}
+func (c *jsonCodec) CreateErrorResponse(id interface{}, err error) interface{} {
+	response := &jsonErrResponse{Version: jsonrpcVersion, Id: id, Error: jsonError{Code: defaultErrorCode, Message: err.Error()}}
+	e, ok := err.(Error)
+	if ok {
+		response.Error.Code = e.ErrorCode()
+	}
+	de, ok := err.(DataError)
+	if ok {
+		response.Error.Data = de.ErrorData()
+	}
+	return response
 }
 
 // CreateErrorResponseWithInfo will create a JSON-RPC error response with the given id and error.

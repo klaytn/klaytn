@@ -64,8 +64,8 @@ func MakeTxDBRow(block *types.Block, txKey uint64, tx *types.Transaction, receip
 	}
 
 	from := ""
-	if tx.IsLegacyTransaction() {
-		signer := types.NewEIP155Signer(tx.ChainId())
+	if tx.IsEthereumTransaction() {
+		signer := types.LatestSignerForChainID(tx.ChainId())
 		addr, err := types.Sender(signer, tx)
 		if err != nil {
 			logger.Error("fail to tx.From", "err", err)
@@ -134,7 +134,7 @@ func MakeTxDBRow(block *types.Block, txKey uint64, tx *types.Transaction, receip
 
 func MakeSummaryDBRow(sa SummaryArguments) (cols string, vals []interface{}, count int, err error) {
 	// insert account summary for creation and deploy
-	if !sa.tx.IsLegacyTransaction() {
+	if !sa.tx.IsEthereumTransaction() {
 		if sa.tx.Type().IsAccountCreation() {
 			accountType := 0
 			creator := sa.from

@@ -56,6 +56,12 @@ func (s *senderFromServer) Sender(tx *types.Transaction) (common.Address, error)
 	return s.addr, nil
 }
 
+func (s *senderFromServer) ChainID() *big.Int {
+	// TODO-Klaytn: need to check this routine is never called or not.
+	// `senderFromServer` is only used in klay_client.go.
+	panic("ChainID should not be called!")
+}
+
 func (s *senderFromServer) SenderPubkey(tx *types.Transaction) ([]*ecdsa.PublicKey, error) {
 	// TODO-Klaytn: need to check this routine is never called or not.
 	// `senderFromServer` is only used in klay_client.go.
@@ -69,13 +75,19 @@ func (s *senderFromServer) SenderFeePayer(tx *types.Transaction) ([]*ecdsa.Publi
 }
 
 func (s *senderFromServer) Hash(tx *types.Transaction) common.Hash {
+	// TODO-Klaytn: need to check this routine is never called or not.
+	// `senderFromServer` is only used in klay_client.go.
 	panic("can't sign with senderFromServer")
 }
 
 func (s *senderFromServer) HashFeePayer(tx *types.Transaction) (common.Hash, error) {
+	// TODO-Klaytn: need to check this routine is never called or not.
+	// `senderFromServer` is only used in klay_client.go.
 	panic("can't sign with senderFromServer")
 }
 
-func (s *senderFromServer) SignatureValues(sig []byte) (R, S, V *big.Int, err error) {
+func (s *senderFromServer) SignatureValues(tx *types.Transaction, sig []byte) (R, S, V *big.Int, err error) {
+	// TODO-Klaytn: need to check this routine is never called or not.
+	// `senderFromServer` is only used in klay_client.go.
 	panic("can't sign with senderFromServer")
 }

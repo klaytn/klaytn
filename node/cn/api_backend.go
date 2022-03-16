@@ -33,6 +33,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node/cn/gasprice"
@@ -75,8 +76,10 @@ func (b *CNAPIBackend) CurrentBlock() *types.Block {
 }
 
 func (b *CNAPIBackend) SetHead(number uint64) {
-	//b.cn.protocolManager.downloader.Cancel()
+	b.cn.protocolManager.Downloader().Cancel()
+	b.cn.protocolManager.SetSyncStop(true)
 	b.cn.blockchain.SetHead(number)
+	b.cn.protocolManager.SetSyncStop(false)
 }
 
 func (b *CNAPIBackend) HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Header, error) {
@@ -205,8 +208,6 @@ func (b *CNAPIBackend) GetTd(blockHash common.Hash) *big.Int {
 }
 
 func (b *CNAPIBackend) GetEVM(ctx context.Context, msg blockchain.Message, state *state.StateDB, header *types.Header, vmCfg vm.Config) (*vm.EVM, func() error, error) {
-	// Add gas fee to sender for estimating gasLimit/computing cost or calling a function by insufficient balance sender.
-	state.AddBalance(msg.ValidatedSender(), new(big.Int).Mul(new(big.Int).SetUint64(msg.Gas()), msg.GasPrice()))
 	vmError := func() error { return nil }
 
 	context := blockchain.NewEVMContext(msg, header, b.cn.BlockChain(), nil)
@@ -314,4 +315,16 @@ func (b *CNAPIBackend) IsSenderTxHashIndexingEnabled() bool {
 
 func (b *CNAPIBackend) RPCGasCap() *big.Int {
 	return b.cn.config.RPCGasCap
+}
+
+func (b *CNAPIBackend) RPCTxFeeCap() float64 {
+	return b.cn.config.RPCTxFeeCap
+}
+
+func (b *CNAPIBackend) Engine() consensus.Engine {
+	return b.cn.engine
+}
+
+func (b *CNAPIBackend) FeeHistory(ctx context.Context, blockCount int, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*big.Int, [][]*big.Int, []*big.Int, []float64, error) {
+	return b.gpo.FeeHistory(ctx, blockCount, lastBlock, rewardPercentiles)
 }

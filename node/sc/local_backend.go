@@ -101,7 +101,7 @@ func (b *LocalBackend) callContract(ctx context.Context, call klaytn.CallMsg, bl
 		gasPrice = new(big.Int).SetUint64(defaultGasPrice)
 	}
 
-	intrinsicGas, err := types.IntrinsicGas(call.Data, call.To == nil, b.config.Rules(block.Number()))
+	intrinsicGas, err := types.IntrinsicGas(call.Data, nil, call.To == nil, b.config.Rules(block.Number()))
 	if err != nil {
 		return nil, 0, false, err
 	}
@@ -337,4 +337,8 @@ func (fb *filterLocalBackend) ServiceFilter(ctx context.Context, session *bloomb
 	//for i := 0; i < bloomFilterThreads; i++ {
 	//	go session.Multiplex(bloomRetrievalBatch, bloomRetrievalWait, backend.bloomRequests)
 	//}
+}
+
+func (fb *filterLocalBackend) ChainConfig() *params.ChainConfig {
+	return fb.subbridge.blockchain.Config()
 }
