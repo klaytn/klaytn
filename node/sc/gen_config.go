@@ -37,7 +37,7 @@ func (s SCConfig) MarshalTOML() (interface{}, error) {
 		KASAnchorOperator     string
 		KASAccessKey          string
 		KASSecretKey          string
-		KASXKRN               string
+		KASXChainId           string
 	}
 	var enc SCConfig
 	enc.Name = s.Name
@@ -68,7 +68,7 @@ func (s SCConfig) MarshalTOML() (interface{}, error) {
 	enc.KASAnchorOperator = s.KASAnchorOperator
 	enc.KASAccessKey = s.KASAccessKey
 	enc.KASSecretKey = s.KASSecretKey
-	enc.KASXKRN = s.KASXChainId
+	enc.KASXChainId = s.KASXChainId
 	return &enc, nil
 }
 
@@ -103,7 +103,7 @@ func (s *SCConfig) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		KASAnchorOperator     *string
 		KASAccessKey          *string
 		KASSecretKey          *string
-		KASXKRN               *string
+		KASXChainId           *string
 	}
 	var dec SCConfig
 	if err := unmarshal(&dec); err != nil {
@@ -193,8 +193,8 @@ func (s *SCConfig) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	if dec.KASSecretKey != nil {
 		s.KASSecretKey = *dec.KASSecretKey
 	}
-	if dec.KASXKRN != nil {
-		s.KASXChainId = *dec.KASXKRN
+	if dec.KASXChainId != nil {
+		s.KASXChainId = *dec.KASXChainId
 	}
 	return nil
 }
