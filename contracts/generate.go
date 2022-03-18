@@ -17,6 +17,7 @@
 package contracts
 
 //go:generate abigen --sol ./bridge/Bridge.sol --pkg bridge --out ./bridge/Bridge.go
+//go:generate abigen --sol ./bridge/BridgeTestAnotherVersion.sol --pkg bridge --out ./bridge/BridgeTestAnotherVersion.go
 //go:generate abigen --sol ./extbridge/ext_bridge.sol --pkg extbridge --out ./extbridge/ext_bridge.go
 
 //go:generate abigen --sol ./sc_erc721/sc_nft.sol --pkg scnft --out ./sc_erc721/sc_nft.go
