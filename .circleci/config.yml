@@ -39,6 +39,7 @@ executors:
           KAFKA_LISTENERS: INSIDE://:9092,OUTSIDE://kafka:9094
           KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
           KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+    resource_class: 2xlarge
   rpm-executor:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
