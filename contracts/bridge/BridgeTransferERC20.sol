@@ -63,9 +63,9 @@ contract BridgeTransferERC20 is BridgeTokens, IERC20BridgeReceiver, BridgeTransf
         );
 
         if (modeMintBurn) {
-            ERC20Mintable(_tokenAddress).mint(_to, _value);
+            require(ERC20Mintable(_tokenAddress).mint(_to, _value), "handleERC20Transfer: mint failed");
         } else {
-            IERC20(_tokenAddress).transfer(_to, _value);
+            require(IERC20(_tokenAddress).transfer(_to, _value), "handleERC20Transfer: transfer failed");
         }
     }
 
@@ -127,7 +127,7 @@ contract BridgeTransferERC20 is BridgeTokens, IERC20BridgeReceiver, BridgeTransf
     )
         public
     {
-        IERC20(_tokenAddress).transferFrom(msg.sender, address(this), _value.add(_feeLimit));
+        require(IERC20(_tokenAddress).transferFrom(msg.sender, address(this), _value.add(_feeLimit)), "requestERC20Transfer: transferFrom failed");
         _requestERC20Transfer(_tokenAddress, msg.sender, _to, _value, _feeLimit, _extraData);
     }
 
