@@ -28,6 +28,7 @@ import (
 	"math/big"
 	"net"
 	"path"
+	"strconv"
 	"sync"
 	"time"
 
@@ -296,13 +297,13 @@ func (sb *SubBridge) APIs() []rpc.API {
 	return []rpc.API{
 		{
 			Namespace: "subbridge",
-			Version:   "1.0",
+			Version:   sb.ProtocolVersion(),
 			Service:   sb.APIBackend,
 			Public:    true,
 		},
 		{
 			Namespace: "subbridge",
-			Version:   "1.0",
+			Version:   sb.ProtocolVersion(),
 			Service:   sb.netRPCService,
 			Public:    true,
 		},
@@ -313,7 +314,8 @@ func (sb *SubBridge) AccountManager() *accounts.Manager { return sb.accountManag
 func (sb *SubBridge) EventMux() *event.TypeMux          { return sb.eventMux }
 func (sb *SubBridge) ChainDB() database.DBManager       { return sb.chainDB }
 func (sb *SubBridge) IsListening() bool                 { return true } // Always listening
-func (sb *SubBridge) ProtocolVersion() int              { return int(sb.SCProtocol().Versions[0]) }
+func (sb *SubBridge) ProtocolVersion() string           { return string(sb.SCProtocol().ProtocolVersions[0]) }
+func (sb *SubBridge) NodeVersion() string               { return sb.SCProtocol().NodeVersion }
 func (sb *SubBridge) NetVersion() uint64                { return sb.networkId }
 
 func (sb *SubBridge) Components() []interface{} {
@@ -395,9 +397,10 @@ func (sb *SubBridge) Protocols() []p2p.Protocol {
 
 func (sb *SubBridge) SCProtocol() SCProtocol {
 	return SCProtocol{
-		Name:     SCProtocolName,
-		Versions: SCProtocolVersion,
-		Lengths:  SCProtocolLength,
+		Name:             SCProtocolName,
+		ProtocolVersions: SCProtocolVersion,
+		NodeVersion:      SCNodeVersion,
+		Lengths:          SCProtocolLength,
 	}
 }
 
@@ -442,16 +445,20 @@ func (sb *SubBridge) Start(srvr p2p.Server) error {
 
 	sb.bridgeServer = p2pServer
 
-	scprotocols := make([]p2p.Protocol, 0, len(sb.SCProtocol().Versions))
-	for i, version := range sb.SCProtocol().Versions {
+	scprotocols := make([]p2p.Protocol, 0, len(sb.SCProtocol().ProtocolVersions))
+	for i, protocolVersion := range sb.SCProtocol().ProtocolVersions {
 		// Compatible; initialise the sub-protocol
-		version := version
+		protocolVersionNum, err := strconv.ParseFloat(protocolVersion, 32)
+		if err != nil {
+			logger.Info("Version parse error:", err)
+			return err
+		}
 		scprotocols = append(scprotocols, p2p.Protocol{
 			Name:    sb.SCProtocol().Name,
-			Version: version,
+			Version: uint(protocolVersionNum),
 			Length:  sb.SCProtocol().Lengths[i],
 			Run: func(p *p2p.Peer, rw p2p.MsgReadWriter) error {
-				peer := sb.newPeer(int(version), p, rw)
+				peer := sb.newPeer(protocolVersion, p, rw)
 				pubKey, _ := p.ID().Pubkey()
 				addr := crypto.PubkeyToAddress(*pubKey)
 				peer.SetAddr(addr)
@@ -500,16 +507,23 @@ func (sb *SubBridge) Start(srvr p2p.Server) error {
 	return nil
 }
 
-func (sb *SubBridge) newPeer(pv int, p *p2p.Peer, rw p2p.MsgReadWriter) BridgePeer {
-	return newBridgePeer(pv, p, newMeteredMsgWriter(rw))
+func (sb *SubBridge) newPeer(pv string, p *p2p.Peer, rw p2p.MsgReadWriter) BridgePeer {
+	return newBridgePeer(pv, params.Version, p, newMeteredMsgWriter(rw))
 }
 
 func (sb *SubBridge) handle(p BridgePeer) error {
+	chainID := sb.getChainID()
+	peer := p.GetP2PPeer()
 	// Ignore maxPeers if this is a trusted peer
-	if sb.peers.Len() >= sb.maxPeers && !p.GetP2PPeer().Info().Networks[p2p.ConnDefault].Trusted {
+	if sb.peers.Len() >= sb.maxPeers && !peer.Info().Networks[p2p.ConnDefault].Trusted {
 		return p2p.DiscTooManyPeers
 	}
-	p.GetP2PPeer().Log().Debug("Klaytn peer connected", "name", p.GetP2PPeer().Name())
+	peer.Log().Info("[Sub Bridge] Peer connected",
+		"SCProtocolVersion", p.GetProtocolVersion(),
+		"nodeVersion", p.GetNodeVersion(),
+		"NodeEnvironment", sb.config.NodeName(),
+		"chainID", chainID,
+		"Address", peer.RemoteAddr().String())
 
 	// Execute the handshake
 	var (
@@ -521,7 +535,7 @@ func (sb *SubBridge) handle(p BridgePeer) error {
 
 	err := p.Handshake(sb.networkId, sb.getChainID(), td, hash)
 	if err != nil {
-		p.GetP2PPeer().Log().Debug("Klaytn peer handshake failed", "err", err)
+		peer.Log().Debug("Peer handshake failed", "err", err)
 		fmt.Println(err)
 		return err
 	}
@@ -529,7 +543,7 @@ func (sb *SubBridge) handle(p BridgePeer) error {
 	// Register the peer locally
 	if err := sb.peers.Register(p); err != nil {
 		// if starting node with unlock account, can't register peer until finish unlock
-		p.GetP2PPeer().Log().Info("Klaytn peer registration failed", "err", err)
+		peer.Log().Info("Peer registration failed", "err", err)
 		fmt.Println(err)
 		return err
 	}
@@ -537,12 +551,12 @@ func (sb *SubBridge) handle(p BridgePeer) error {
 
 	sb.handler.RegisterNewPeer(p)
 
-	p.GetP2PPeer().Log().Info("Added a P2P Peer", "peerID", p.GetP2PPeerID())
+	peer.Log().Info("Added a P2P Peer", "peerID", p.GetP2PPeerID())
 
 	// main loop. handle incoming messages.
 	for {
 		if err := sb.handleMsg(p); err != nil {
-			p.GetP2PPeer().Log().Debug("Klaytn message handling failed", "err", err)
+			peer.Log().Debug("Message handling failed", "err", err)
 			return err
 		}
 	}

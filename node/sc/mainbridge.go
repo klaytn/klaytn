@@ -26,6 +26,7 @@ import (
 	"io"
 	"math/big"
 	"net"
+	"strconv"
 	"sync"
 	"time"
 
@@ -198,13 +199,13 @@ func (mb *MainBridge) APIs() []rpc.API {
 	return []rpc.API{
 		{
 			Namespace: "mainbridge",
-			Version:   "1.0",
+			Version:   mb.ProtocolVersion(),
 			Service:   mb.APIBackend,
 			Public:    true,
 		},
 		{
 			Namespace: "mainbridge",
-			Version:   "1.0",
+			Version:   mb.ProtocolVersion(),
 			Service:   mb.netRPCService,
 			Public:    true,
 		},
@@ -215,7 +216,8 @@ func (mb *MainBridge) AccountManager() *accounts.Manager { return mb.accountMana
 func (mb *MainBridge) EventMux() *event.TypeMux          { return mb.eventMux }
 func (mb *MainBridge) ChainDB() database.DBManager       { return mb.chainDB }
 func (mb *MainBridge) IsListening() bool                 { return true } // Always listening
-func (mb *MainBridge) ProtocolVersion() int              { return int(mb.SCProtocol().Versions[0]) }
+func (mb *MainBridge) ProtocolVersion() string           { return mb.SCProtocol().ProtocolVersions[0] }
+func (mb *MainBridge) NodeVersion() string               { return mb.SCProtocol().NodeVersion }
 func (mb *MainBridge) NetVersion() uint64                { return mb.networkId }
 
 func (mb *MainBridge) Components() []interface{} {
@@ -259,9 +261,10 @@ func (mb *MainBridge) Protocols() []p2p.Protocol {
 
 func (mb *MainBridge) SCProtocol() SCProtocol {
 	return SCProtocol{
-		Name:     SCProtocolName,
-		Versions: SCProtocolVersion,
-		Lengths:  SCProtocolLength,
+		Name:             SCProtocolName,
+		ProtocolVersions: SCProtocolVersion,
+		NodeVersion:      SCNodeVersion,
+		Lengths:          SCProtocolLength,
 	}
 }
 
@@ -296,16 +299,20 @@ func (mb *MainBridge) Start(srvr p2p.Server) error {
 	serverConfig.EnableMultiChannelServer = false
 	serverConfig.NoDial = true
 
-	scprotocols := make([]p2p.Protocol, 0, len(mb.SCProtocol().Versions))
-	for i, version := range mb.SCProtocol().Versions {
+	scprotocols := make([]p2p.Protocol, 0, len(mb.SCProtocol().ProtocolVersions))
+	for i, protocolVersion := range mb.SCProtocol().ProtocolVersions {
 		// Compatible; initialise the sub-protocol
-		version := version
+		protocolVersionNum, err := strconv.ParseFloat(protocolVersion, 32)
+		if err != nil {
+			logger.Info("Version parse error:", err)
+			return err
+		}
 		scprotocols = append(scprotocols, p2p.Protocol{
 			Name:    mb.SCProtocol().Name,
-			Version: version,
+			Version: uint(protocolVersionNum),
 			Length:  mb.SCProtocol().Lengths[i],
 			Run: func(p *p2p.Peer, rw p2p.MsgReadWriter) error {
-				peer := mb.newPeer(int(version), p, rw)
+				peer := mb.newPeer(protocolVersion, p, rw)
 				pubKey, _ := p.ID().Pubkey()
 				addr := crypto.PubkeyToAddress(*pubKey)
 				peer.SetAddr(addr)
@@ -347,17 +354,23 @@ func (mb *MainBridge) Start(srvr p2p.Server) error {
 	return nil
 }
 
-func (mb *MainBridge) newPeer(pv int, p *p2p.Peer, rw p2p.MsgReadWriter) BridgePeer {
-	return newBridgePeer(pv, p, newMeteredMsgWriter(rw))
+func (mb *MainBridge) newPeer(pv string, p *p2p.Peer, rw p2p.MsgReadWriter) BridgePeer {
+	return newBridgePeer(pv, params.Version, p, newMeteredMsgWriter(rw))
 }
 
 func (mb *MainBridge) handle(p BridgePeer) error {
+	chainID := mb.getChainID()
+	peer := p.GetP2PPeer()
 	// Ignore maxPeers if this is a trusted peer
-	if mb.peers.Len() >= mb.maxPeers && !p.GetP2PPeer().Info().Networks[p2p.ConnDefault].Trusted {
+	if mb.peers.Len() >= mb.maxPeers && !peer.Info().Networks[p2p.ConnDefault].Trusted {
 		return p2p.DiscTooManyPeers
 	}
-	p.GetP2PPeer().Log().Debug("Klaytn peer connected", "name", p.GetP2PPeer().Name())
-
+	peer.Log().Info("[Main Bridge] Peer connected",
+		"SCProtocolVersion", p.GetProtocolVersion(),
+		"nodeVersion", p.GetNodeVersion(),
+		"NodeEnvironment", mb.config.NodeName(),
+		"chainID", chainID,
+		"Address", peer.RemoteAddr().String())
 	// Execute the handshake
 	var (
 		head   = mb.blockchain.CurrentHeader()
@@ -366,26 +379,26 @@ func (mb *MainBridge) handle(p BridgePeer) error {
 		td     = mb.blockchain.GetTd(hash, number)
 	)
 
-	err := p.Handshake(mb.networkId, mb.getChainID(), td, hash)
+	err := p.Handshake(mb.networkId, chainID, td, hash)
 	if err != nil {
-		p.GetP2PPeer().Log().Debug("Klaytn peer handshake failed", "err", err)
+		peer.Log().Debug("Peer handshake failed", "err", err)
 		return err
 	}
 
 	// Register the peer locally
 	if err := mb.peers.Register(p); err != nil {
 		// if starting node with unlock account, can't register peer until finish unlock
-		p.GetP2PPeer().Log().Info("Klaytn peer registration failed", "err", err)
+		peer.Log().Info("Peer registration failed", "err", err)
 		return err
 	}
 	defer mb.removePeer(p.GetID())
 
-	p.GetP2PPeer().Log().Info("Added a P2P Peer", "peerID", p.GetP2PPeerID())
+	peer.Log().Info("Added a P2P Peer", "peerID", p.GetP2PPeerID())
 
 	// main loop. handle incoming messages.
 	for {
 		if err := mb.handleMsg(p); err != nil {
-			p.GetP2PPeer().Log().Debug("Klaytn message handling failed", "err", err)
+			peer.Log().Debug("Message handling failed", "err", err)
 			return err
 		}
 	}
@@ -458,7 +471,7 @@ func (mb *MainBridge) removePeer(id string) {
 	if peer == nil {
 		return
 	}
-	logger.Debug("Removing Klaytn peer", "peer", id)
+	logger.Debug("Removing peer", "peer", id)
 
 	if err := mb.peers.Unregister(id); err != nil {
 		logger.Error("Peer removal failed", "peer", id, "err", err)
