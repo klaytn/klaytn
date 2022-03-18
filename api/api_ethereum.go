@@ -1440,7 +1440,10 @@ func (api *EthereumAPI) rpcMarshalHeader(head *types.Header) (map[string]interfa
 		"timestamp":        hexutil.Big(*head.Time),
 		"transactionsRoot": head.TxHash,
 		"receiptsRoot":     head.ReceiptHash,
-		"baseFeePerGas":    (*hexutil.Big)(new(big.Int).SetUint64(params.BaseFee)),
+	}
+
+	if api.publicBlockChainAPI.b.ChainConfig().IsEthTxTypeForkEnabled(head.Number) {
+		result["baseFeePerGas"] = (*hexutil.Big)(new(big.Int).SetUint64(params.BaseFee))
 	}
 
 	return result, nil
