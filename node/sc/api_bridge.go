@@ -31,7 +31,8 @@ import (
 )
 
 var (
-	ErrInvalidBridgePair = errors.New("invalid bridge pair")
+	ErrInvalidBridgePair             = errors.New("Invalid bridge pair")
+	ErrBridgeContractVersionMismatch = errors.New("Bridge contract version mismatch")
 )
 
 // MainBridgeAPI Implementation for main-bridge node
@@ -253,6 +254,21 @@ func (sb *SubBridgeAPI) GetAnchoring() bool {
 	return sb.subBridge.GetAnchoringTx()
 }
 
+func checkBridgeContractVersion(cBridge, pBridge *bridge.Bridge) bool {
+	errStr := "Bridge contract version mistmatched"
+	cv, cvErr := cBridge.VERSION(nil)
+	if cvErr != nil {
+		logger.Info(errStr, "child bridge contract error", cvErr)
+		return false
+	}
+	pv, pvErr := pBridge.VERSION(nil)
+	if pvErr != nil {
+		logger.Info(errStr, "parent bridge contract error", pvErr)
+		return false
+	}
+	return cv == pv
+}
+
 func (sb *SubBridgeAPI) RegisterBridge(cBridgeAddr common.Address, pBridgeAddr common.Address) error {
 	cBridge, err := bridge.NewBridge(cBridgeAddr, sb.subBridge.localBackend)
 	if err != nil {
@@ -261,6 +277,9 @@ func (sb *SubBridgeAPI) RegisterBridge(cBridgeAddr common.Address, pBridgeAddr c
 	pBridge, err := bridge.NewBridge(pBridgeAddr, sb.subBridge.remoteBackend)
 	if err != nil {
 		return err
+	}
+	if !checkBridgeContractVersion(cBridge, pBridge) {
+		return ErrBridgeContractVersionMismatch
 	}
 
 	bm := sb.subBridge.bridgeManager
