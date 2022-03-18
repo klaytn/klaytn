@@ -15,6 +15,7 @@ require (
 	github.com/docker/docker v1.13.1
 	github.com/edsrzf/mmap-go v0.0.0-20170320065105-0bce6a688712
 	github.com/fatih/color v1.7.0
+	github.com/fjl/gencodec v0.0.0-20191126094850-e283372f291f // indirect
 	github.com/fjl/memsize v0.0.0-20180427083637-f6d5545993d6
 	github.com/gin-gonic/gin v1.7.0
 	github.com/go-kit/kit v0.9.0 // indirect
