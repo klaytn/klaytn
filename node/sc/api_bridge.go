@@ -33,6 +33,7 @@ import (
 var (
 	ErrInvalidBridgePair             = errors.New("Invalid bridge pair")
 	ErrBridgeContractVersionMismatch = errors.New("Bridge contract version mismatch")
+	ErrGetBridgeContractVersion      = errors.New("Failed to get bridge contract's version")
 )
 
 // MainBridgeAPI Implementation for main-bridge node
@@ -255,15 +256,14 @@ func (sb *SubBridgeAPI) GetAnchoring() bool {
 }
 
 func checkBridgeContractVersion(cBridge, pBridge *bridge.Bridge) bool {
-	errStr := "Bridge contract version mistmatched"
 	cv, cvErr := cBridge.VERSION(nil)
 	if cvErr != nil {
-		logger.Info(errStr, "child bridge contract error", cvErr)
+		logger.Info(ErrGetBridgeContractVersion.Error(), "child bridge", cvErr)
 		return false
 	}
 	pv, pvErr := pBridge.VERSION(nil)
 	if pvErr != nil {
-		logger.Info(errStr, "parent bridge contract error", pvErr)
+		logger.Info(ErrGetBridgeContractVersion.Error(), "parent bridge", pvErr)
 		return false
 	}
 	return cv == pv
