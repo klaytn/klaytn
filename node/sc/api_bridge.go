@@ -31,7 +31,8 @@ import (
 )
 
 var (
-	ErrInvalidBridgePair = errors.New("invalid bridge pair")
+	ErrInvalidBridgePair             = errors.New("Invalid bridge pair")
+	ErrBridgeContractVersionMismatch = errors.New("Bridge contract version mismatch")
 )
 
 // MainBridgeAPI Implementation for main-bridge node
@@ -242,7 +243,7 @@ func (sb *SubBridgeAPI) KASAnchor(blkNum uint64) error {
 		}
 		return nil
 	}
-	return errInvalidBlock
+	return ErrInvalidBlock
 }
 
 func (sb *SubBridgeAPI) Anchoring(flag bool) bool {
@@ -510,8 +511,17 @@ func (sb *SubBridgeAPI) GetParentOperatorBalance() (*big.Int, error) {
 	return sb.subBridge.handler.getParentOperatorBalance()
 }
 
+// GetParentBridgeContractBalance returns bridge contract's balance from the parent bridge
+func (sb *SubBridgeAPI) GetParentBridgeContractBalance(addr common.Address) (*big.Int, error) {
+	return sb.subBridge.handler.getParentBridgeContractBalance(addr)
+}
+
 func (sb *SubBridgeAPI) GetChildOperatorBalance() (*big.Int, error) {
 	return sb.subBridge.handler.getChildOperatorBalance()
+}
+
+func (sb *SubBridgeAPI) GetChildBridgeContractBalance(addr common.Address) (*big.Int, error) {
+	return sb.subBridge.handler.getChildBridgeContractBalance(addr)
 }
 
 // GetOperators returns the information of bridge operators.
