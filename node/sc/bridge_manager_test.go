@@ -132,17 +132,17 @@ func TestBridgeManager(t *testing.T) {
 		return
 	}
 
-	bridgeManager, err := NewBridgeManager(sc)
+	bm, err := NewBridgeManager(sc)
 
 	testToken := big.NewInt(123)
 	testKLAY := big.NewInt(321)
 
 	// 1. Deploy Bridge Contract
-	addr, err := bridgeManager.DeployBridgeTest(sim, 10000, false)
+	addr, err := bm.DeployBridgeTest(sim, 10000, false)
 	if err != nil {
 		log.Fatalf("Failed to deploy new bridge contract: %v", err)
 	}
-	bridgeInfo, _ := bridgeManager.GetBridgeInfo(addr)
+	bridgeInfo, _ := bm.GetBridgeInfo(addr)
 	bridge := bridgeInfo.bridge
 	fmt.Println("===== BridgeContract Addr ", addr.Hex())
 	sim.Commit() // block
@@ -196,12 +196,12 @@ func TestBridgeManager(t *testing.T) {
 	fmt.Printf("auth4(%v) KLAY balance : %v\n", bob.From.String(), balance)
 
 	// 4. Subscribe Bridge Contract
-	bridgeManager.SubscribeEvent(addr)
+	bm.SubscribeEvent(addr)
 
 	requestValueTransferEventCh := make(chan *RequestValueTransferEvent)
 	handleValueTransferEventCh := make(chan *HandleValueTransferEvent)
-	bridgeManager.SubscribeRequestEvent(requestValueTransferEventCh)
-	bridgeManager.SubscribeHandleEvent(handleValueTransferEventCh)
+	bm.SubscribeRequestEvent(requestValueTransferEventCh)
+	bm.SubscribeHandleEvent(handleValueTransferEventCh)
 
 	go func() {
 		for {
@@ -320,7 +320,7 @@ func TestBridgeManager(t *testing.T) {
 		assert.Equal(t, bob.From, owner)
 	}
 
-	bridgeManager.Stop()
+	bm.Stop()
 }
 
 // TestBridgeManagerERC721_notSupportURI tests if bridge can handle an ERC721 which does not support URI.
@@ -377,14 +377,14 @@ func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
 		return
 	}
 
-	bridgeManager, err := NewBridgeManager(sc)
+	bm, err := NewBridgeManager(sc)
 
 	// Deploy Bridge Contract
-	addr, err := bridgeManager.DeployBridgeTest(sim, 10000, false)
+	addr, err := bm.DeployBridgeTest(sim, 10000, false)
 	if err != nil {
 		log.Fatalf("Failed to deploy new bridge contract: %v", err)
 	}
-	bridgeInfo, _ := bridgeManager.GetBridgeInfo(addr)
+	bridgeInfo, _ := bm.GetBridgeInfo(addr)
 	bridge := bridgeInfo.bridge
 	fmt.Println("===== BridgeContract Addr ", addr.Hex())
 	sim.Commit() // block
@@ -420,12 +420,12 @@ func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
 	assert.Equal(t, cNftAddr, nftAddr)
 
 	// Subscribe Bridge Contract
-	bridgeManager.SubscribeEvent(addr)
+	bm.SubscribeEvent(addr)
 
 	requestValueTransferEventCh := make(chan *RequestValueTransferEvent)
 	handleValueTransferEventCh := make(chan *HandleValueTransferEvent)
-	bridgeManager.SubscribeRequestEvent(requestValueTransferEventCh)
-	bridgeManager.SubscribeHandleEvent(handleValueTransferEventCh)
+	bm.SubscribeRequestEvent(requestValueTransferEventCh)
+	bm.SubscribeHandleEvent(handleValueTransferEventCh)
 
 	go func() {
 		for {
@@ -508,7 +508,7 @@ func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
 		assert.Equal(t, bob.From, owner)
 	}
 
-	bridgeManager.Stop()
+	bm.Stop()
 }
 
 // TestBridgeManagerWithFee tests the KLAY/ERC20 transfer with fee.
@@ -566,7 +566,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		return
 	}
 
-	bridgeManager, err := NewBridgeManager(sc)
+	bm, err := NewBridgeManager(sc)
 
 	testToken := int64(100000)
 	testKLAY := int64(100000)
@@ -574,9 +574,9 @@ func TestBridgeManagerWithFee(t *testing.T) {
 	ERC20Fee := int64(500)
 
 	// 1. Deploy Bridge Contract
-	pBridgeAddr, err := bridgeManager.DeployBridgeTest(sim, 10000, false)
+	pBridgeAddr, err := bm.DeployBridgeTest(sim, 10000, false)
 	assert.NoError(t, err)
-	pBridgeInfo, _ := bridgeManager.GetBridgeInfo(pBridgeAddr)
+	pBridgeInfo, _ := bm.GetBridgeInfo(pBridgeAddr)
 	pBridge := pBridgeInfo.bridge
 	fmt.Println("===== BridgeContract Addr ", pBridgeAddr.Hex())
 	sim.Commit() // block
@@ -652,12 +652,12 @@ func TestBridgeManagerWithFee(t *testing.T) {
 	fmt.Printf("Bob(%v) KLAY balance : %v\n", Bob.From.String(), balance)
 
 	// 4. Subscribe Bridge Contract
-	bridgeManager.SubscribeEvent(pBridgeAddr)
+	bm.SubscribeEvent(pBridgeAddr)
 
 	requestValueTransferEventCh := make(chan *RequestValueTransferEvent)
 	handleValueTransferEventCh := make(chan *HandleValueTransferEvent)
-	bridgeManager.SubscribeRequestEvent(requestValueTransferEventCh)
-	bridgeManager.SubscribeHandleEvent(handleValueTransferEventCh)
+	bm.SubscribeRequestEvent(requestValueTransferEventCh)
+	bm.SubscribeHandleEvent(handleValueTransferEventCh)
 
 	go func() {
 		for {
@@ -911,7 +911,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		assert.Equal(t, KLAYFee*3, balance.Int64())
 	}
 
-	bridgeManager.Stop()
+	bm.Stop()
 }
 
 // TestBasicJournal tests basic journal functionality.
@@ -2027,12 +2027,12 @@ func (bm *BridgeManager) DeployBridgeTest(backend *backends.SimulatedBackend, am
 	return addr, err
 }
 
-func isExpectedBalance(t *testing.T, bridgeManager *BridgeManager,
+func isExpectedBalance(t *testing.T, bm *BridgeManager,
 	pBridgeAddr, cBridgeAddr common.Address,
 	expectedParentBridgeBalance, expectedChildBridgeBalance int64) {
-	pBridgeBalance, err := bridgeManager.subBridge.APIBackend.GetParentBridgeContractBalance(pBridgeAddr)
+	pBridgeBalance, err := bm.subBridge.APIBackend.GetParentBridgeContractBalance(pBridgeAddr)
 	assert.NoError(t, err)
-	cBridgeBalance, err := bridgeManager.subBridge.APIBackend.GetChildBridgeContractBalance(cBridgeAddr)
+	cBridgeBalance, err := bm.subBridge.APIBackend.GetChildBridgeContractBalance(cBridgeAddr)
 	assert.NoError(t, err)
 	assert.Equal(t, pBridgeBalance.Int64(), expectedParentBridgeBalance)
 	assert.Equal(t, cBridgeBalance.Int64(), expectedChildBridgeBalance)
@@ -2080,21 +2080,21 @@ func TestGetParentBridgeContractBalance(t *testing.T) {
 		return
 	}
 
-	bridgeManager, err := NewBridgeManager(sc)
+	bm, err := NewBridgeManager(sc)
 	assert.NoError(t, err)
-	sc.handler.subbridge.bridgeManager = bridgeManager
+	sc.handler.subbridge.bm = bm
 
 	// Case 1 - Success
 	{
 		initialChildbridgeBalance, initialParentbridgeBalance := int64(100), int64(100)
-		cBridgeAddr, err := bridgeManager.DeployBridgeTest(sim, initialChildbridgeBalance, true)
+		cBridgeAddr, err := bm.DeployBridgeTest(sim, initialChildbridgeBalance, true)
 		assert.NoError(t, err)
-		pBridgeAddr, err := bridgeManager.DeployBridgeTest(sim, initialParentbridgeBalance, false)
+		pBridgeAddr, err := bm.DeployBridgeTest(sim, initialParentbridgeBalance, false)
 		assert.NoError(t, err)
-		bridgeManager.SetJournal(cBridgeAddr, pBridgeAddr)
+		bm.SetJournal(cBridgeAddr, pBridgeAddr)
 		assert.NoError(t, err)
 		sim.Commit()
-		isExpectedBalance(t, bridgeManager, pBridgeAddr, cBridgeAddr, initialParentbridgeBalance, initialChildbridgeBalance)
+		isExpectedBalance(t, bm, pBridgeAddr, cBridgeAddr, initialParentbridgeBalance, initialChildbridgeBalance)
 	}
 
 	// Case 2 - ? (Random)
@@ -2102,14 +2102,14 @@ func TestGetParentBridgeContractBalance(t *testing.T) {
 		rand.Seed(time.Now().UnixNano())
 		for i := 0; i < 10; i++ {
 			initialChildbridgeBalance, initialParentbridgeBalance := rand.Int63n(10000), rand.Int63n(10000)
-			cBridgeAddr, err := bridgeManager.DeployBridgeTest(sim, initialChildbridgeBalance, true)
+			cBridgeAddr, err := bm.DeployBridgeTest(sim, initialChildbridgeBalance, true)
 			assert.NoError(t, err)
-			pBridgeAddr, err := bridgeManager.DeployBridgeTest(sim, initialParentbridgeBalance, false)
+			pBridgeAddr, err := bm.DeployBridgeTest(sim, initialParentbridgeBalance, false)
 			assert.NoError(t, err)
-			bridgeManager.SetJournal(cBridgeAddr, pBridgeAddr)
+			bm.SetJournal(cBridgeAddr, pBridgeAddr)
 			assert.NoError(t, err)
 			sim.Commit()
-			isExpectedBalance(t, bridgeManager, pBridgeAddr, cBridgeAddr, initialParentbridgeBalance, initialChildbridgeBalance)
+			isExpectedBalance(t, bm, pBridgeAddr, cBridgeAddr, initialParentbridgeBalance, initialChildbridgeBalance)
 		}
 	}
 
