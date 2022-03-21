@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"log"
 	"math/big"
+	"math/rand"
 	"os"
 	"path"
 	"sync"
@@ -137,7 +138,7 @@ func TestBridgeManager(t *testing.T) {
 	testKLAY := big.NewInt(321)
 
 	// 1. Deploy Bridge Contract
-	addr, err := bridgeManager.DeployBridgeTest(sim, false)
+	addr, err := bridgeManager.DeployBridgeTest(sim, 10000, false)
 	if err != nil {
 		log.Fatalf("Failed to deploy new bridge contract: %v", err)
 	}
@@ -379,7 +380,7 @@ func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
 	bridgeManager, err := NewBridgeManager(sc)
 
 	// Deploy Bridge Contract
-	addr, err := bridgeManager.DeployBridgeTest(sim, false)
+	addr, err := bridgeManager.DeployBridgeTest(sim, 10000, false)
 	if err != nil {
 		log.Fatalf("Failed to deploy new bridge contract: %v", err)
 	}
@@ -573,7 +574,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 	ERC20Fee := int64(500)
 
 	// 1. Deploy Bridge Contract
-	pBridgeAddr, err := bridgeManager.DeployBridgeTest(sim, false)
+	pBridgeAddr, err := bridgeManager.DeployBridgeTest(sim, 10000, false)
 	assert.NoError(t, err)
 	pBridgeInfo, _ := bridgeManager.GetBridgeInfo(pBridgeAddr)
 	pBridge := pBridgeInfo.bridge
@@ -970,9 +971,9 @@ func TestBasicJournal(t *testing.T) {
 	// Prepare manager and deploy bridge contract.
 	bm, err := NewBridgeManager(sc)
 
-	localAddr, err := bm.DeployBridgeTest(sim, true)
+	localAddr, err := bm.DeployBridgeTest(sim, 10000, true)
 	assert.NoError(t, err)
-	remoteAddr, err := bm.DeployBridgeTest(sim, false)
+	remoteAddr, err := bm.DeployBridgeTest(sim, 10000, false)
 	assert.NoError(t, err)
 
 	bm.SetJournal(localAddr, remoteAddr)
@@ -1054,9 +1055,9 @@ func TestMethodRestoreBridges(t *testing.T) {
 	var bridgeAddrs [4]common.Address
 	for i := 0; i < 4; i++ {
 		if i%2 == 0 {
-			bridgeAddrs[i], err = bm.DeployBridgeTest(sim, true)
+			bridgeAddrs[i], err = bm.DeployBridgeTest(sim, 10000, true)
 		} else {
-			bridgeAddrs[i], err = bm.DeployBridgeTest(sim, false)
+			bridgeAddrs[i], err = bm.DeployBridgeTest(sim, 10000, false)
 		}
 		if err != nil {
 			t.Fatal("deploy bridge test failed", bridgeAddrs[i])
@@ -1274,7 +1275,7 @@ func TestErrorDuplicatedSetBridgeInfo(t *testing.T) {
 
 	// Prepare manager
 	bm, err := NewBridgeManager(sc)
-	addr, err := bm.DeployBridgeTest(sim, false)
+	addr, err := bm.DeployBridgeTest(sim, 10000, false)
 	bridgeInfo, _ := bm.GetBridgeInfo(addr)
 
 	// Try to call duplicated SetBridgeInfo
@@ -1340,7 +1341,7 @@ func TestScenarioSubUnsub(t *testing.T) {
 	// Prepare manager and deploy bridge contract.
 	bm, err := NewBridgeManager(sc)
 
-	localAddr, err := bm.DeployBridgeTest(sim, true)
+	localAddr, err := bm.DeployBridgeTest(sim, 10000, true)
 	if err != nil {
 		t.Fatal("deploy bridge test failed", localAddr)
 	}
@@ -1445,7 +1446,7 @@ func TestErrorDupSubscription(t *testing.T) {
 	// 1. Prepare manager and subscribe event
 	bm, err := NewBridgeManager(sc)
 
-	addr, err := bm.DeployBridgeTest(sim, false)
+	addr, err := bm.DeployBridgeTest(sim, 10000, false)
 	bridgeInfo, _ := bm.GetBridgeInfo(addr)
 	bridge := bridgeInfo.bridge
 	fmt.Println("===== BridgeContract Addr ", addr.Hex())
@@ -1491,12 +1492,12 @@ func TestAnchoringBasic(t *testing.T) {
 	// nil block
 	{
 		err := sc.handler.blockAnchoringManager(nil)
-		assert.Error(t, errInvalidBlock, err)
+		assert.Error(t, ErrInvalidBlock, err)
 	}
 
 	{
 		err := sc.handler.generateAndAddAnchoringTxIntoTxPool(nil)
-		assert.Error(t, errInvalidBlock, err)
+		assert.Error(t, ErrInvalidBlock, err)
 	}
 	// Generate anchoring tx again for the curBlk.
 	err = sc.handler.blockAnchoringManager(curBlk)
@@ -1988,7 +1989,7 @@ func TestDecodingLegacyAnchoringTx(t *testing.T) {
 }
 
 // DeployBridgeTest is a test-only function which deploys a bridge contract with some amount of KLAY.
-func (bm *BridgeManager) DeployBridgeTest(backend *backends.SimulatedBackend, local bool) (common.Address, error) {
+func (bm *BridgeManager) DeployBridgeTest(backend *backends.SimulatedBackend, amountOfBridgeContract int64, local bool) (common.Address, error) {
 	var acc *accountInfo
 
 	// When the pending block of backend is updated, commit it
@@ -2010,7 +2011,7 @@ func (bm *BridgeManager) DeployBridgeTest(backend *backends.SimulatedBackend, lo
 	}
 
 	auth := acc.GenerateTransactOpts()
-	auth.Value = big.NewInt(10000)
+	auth.Value = big.NewInt(amountOfBridgeContract)
 
 	// Deploy a bridge contract
 	deployedBridge, addr, err := bm.DeployBridge(auth, backend, local)
@@ -2024,4 +2025,101 @@ func (bm *BridgeManager) DeployBridgeTest(backend *backends.SimulatedBackend, lo
 		return common.Address{}, err
 	}
 	return addr, err
+}
+
+func isExpectedBalance(t *testing.T, bridgeManager *BridgeManager,
+	pBridgeAddr, cBridgeAddr common.Address,
+	expectedParentBridgeBalance, expectedChildBridgeBalance int64) {
+	pBridgeBalance, err := bridgeManager.subBridge.APIBackend.GetParentBridgeContractBalance(pBridgeAddr)
+	assert.NoError(t, err)
+	cBridgeBalance, err := bridgeManager.subBridge.APIBackend.GetChildBridgeContractBalance(cBridgeAddr)
+	assert.NoError(t, err)
+	assert.Equal(t, pBridgeBalance.Int64(), expectedParentBridgeBalance)
+	assert.Equal(t, cBridgeBalance.Int64(), expectedChildBridgeBalance)
+}
+
+func TestGetParentBridgeContractBalance(t *testing.T) {
+	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	assert.NoError(t, err)
+	defer func() {
+		if err := os.RemoveAll(tempDir); err != nil {
+			t.Fatalf("fail to delete file %v", err)
+		}
+	}()
+
+	wg := sync.WaitGroup{}
+	wg.Add(6)
+
+	// Config Bridge Account Manager
+	config := &SCConfig{}
+	config.DataDir = tempDir
+	bacc, _ := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}))
+	bacc.pAccount.chainID = big.NewInt(0)
+	bacc.cAccount.chainID = big.NewInt(0)
+
+	// Create Simulated backend
+	alloc := blockchain.GenesisAlloc{
+		bacc.pAccount.address: {Balance: big.NewInt(params.KLAY)},
+		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
+	}
+	sim := backends.NewSimulatedBackend(alloc)
+	defer sim.Close()
+
+	sc := &SubBridge{
+		chainDB:        database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}),
+		config:         config,
+		peers:          newBridgePeerSet(),
+		bridgeAccounts: bacc,
+		localBackend:   sim,
+		remoteBackend:  sim,
+	}
+	sc.APIBackend = &SubBridgeAPI{sc}
+	sc.handler, err = NewSubBridgeHandler(sc)
+	if err != nil {
+		log.Fatalf("Failed to initialize bridgeHandler : %v", err)
+		return
+	}
+
+	bridgeManager, err := NewBridgeManager(sc)
+	assert.NoError(t, err)
+	sc.handler.subbridge.bridgeManager = bridgeManager
+
+	// Case 1 - Success
+	{
+		initialChildbridgeBalance, initialParentbridgeBalance := int64(100), int64(100)
+		cBridgeAddr, err := bridgeManager.DeployBridgeTest(sim, initialChildbridgeBalance, true)
+		assert.NoError(t, err)
+		pBridgeAddr, err := bridgeManager.DeployBridgeTest(sim, initialParentbridgeBalance, false)
+		assert.NoError(t, err)
+		bridgeManager.SetJournal(cBridgeAddr, pBridgeAddr)
+		assert.NoError(t, err)
+		sim.Commit()
+
+		/*
+			pBridgeBalance, err := bridgeManager.subBridge.APIBackend.GetParentBridgeContractBalance(pBridgeAddr)
+			assert.NoError(t, err)
+			cBridgeBalance, err := bridgeManager.subBridge.APIBackend.GetChildBridgeContractBalance(cBridgeAddr)
+			assert.NoError(t, err)
+			assert.Equal(t, cBridgeBalance.Int64(), initialChildbridgeBalance)
+			assert.Equal(t, pBridgeBalance.Int64(), initialParentbridgeBalance)
+		*/
+		isExpectedBalance(t, bridgeManager, pBridgeAddr, cBridgeAddr, initialParentbridgeBalance, initialChildbridgeBalance)
+	}
+
+	// Case 2 - ? (Random)
+	{
+		rand.Seed(time.Now().UnixNano())
+		for i := 0; i < 1; i++ {
+			initialChildbridgeBalance, initialParentbridgeBalance := rand.Int63n(10000), rand.Int63n(10000)
+			cBridgeAddr, err := bridgeManager.DeployBridgeTest(sim, initialChildbridgeBalance, true)
+			assert.NoError(t, err)
+			pBridgeAddr, err := bridgeManager.DeployBridgeTest(sim, initialParentbridgeBalance, false)
+			assert.NoError(t, err)
+			bridgeManager.SetJournal(cBridgeAddr, pBridgeAddr)
+			assert.NoError(t, err)
+			sim.Commit()
+			isExpectedBalance(t, bridgeManager, pBridgeAddr, cBridgeAddr, initialParentbridgeBalance, initialChildbridgeBalance)
+		}
+	}
+
 }
