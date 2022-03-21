@@ -2082,7 +2082,7 @@ func TestGetParentBridgeContractBalance(t *testing.T) {
 
 	bm, err := NewBridgeManager(sc)
 	assert.NoError(t, err)
-	sc.handler.subbridge.bm = bm
+	sc.handler.subbridge.bridgeManager = bm
 
 	// Case 1 - Success
 	{
