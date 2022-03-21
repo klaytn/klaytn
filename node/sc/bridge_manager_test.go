@@ -2094,22 +2094,13 @@ func TestGetParentBridgeContractBalance(t *testing.T) {
 		bridgeManager.SetJournal(cBridgeAddr, pBridgeAddr)
 		assert.NoError(t, err)
 		sim.Commit()
-
-		/*
-			pBridgeBalance, err := bridgeManager.subBridge.APIBackend.GetParentBridgeContractBalance(pBridgeAddr)
-			assert.NoError(t, err)
-			cBridgeBalance, err := bridgeManager.subBridge.APIBackend.GetChildBridgeContractBalance(cBridgeAddr)
-			assert.NoError(t, err)
-			assert.Equal(t, cBridgeBalance.Int64(), initialChildbridgeBalance)
-			assert.Equal(t, pBridgeBalance.Int64(), initialParentbridgeBalance)
-		*/
 		isExpectedBalance(t, bridgeManager, pBridgeAddr, cBridgeAddr, initialParentbridgeBalance, initialChildbridgeBalance)
 	}
 
 	// Case 2 - ? (Random)
 	{
 		rand.Seed(time.Now().UnixNano())
-		for i := 0; i < 1; i++ {
+		for i := 0; i < 10; i++ {
 			initialChildbridgeBalance, initialParentbridgeBalance := rand.Int63n(10000), rand.Int63n(10000)
 			cBridgeAddr, err := bridgeManager.DeployBridgeTest(sim, initialChildbridgeBalance, true)
 			assert.NoError(t, err)
