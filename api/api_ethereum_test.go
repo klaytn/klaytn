@@ -136,23 +136,46 @@ func TestTestEthereumAPI_GetUncleCountByBlockHash(t *testing.T) {
 
 // TestEthereumAPI_GetHeaderByNumber tests GetHeaderByNumber.
 func TestEthereumAPI_GetHeaderByNumber(t *testing.T) {
-	testGetHeader(t, "GetHeaderByNumber")
+	testGetHeader(t, "GetHeaderByNumber", true)
 }
 
 // TestEthereumAPI_GetHeaderByHash tests GetHeaderByNumber.
 func TestEthereumAPI_GetHeaderByHash(t *testing.T) {
-	testGetHeader(t, "GetHeaderByHash")
+	testGetHeader(t, "GetHeaderByHash", true)
+}
+
+// TestEthereumAPI_GetHeaderByNumber tests GetHeaderByNumber.
+func TestEthereumAPI_GetHeaderByNumber_BeforeEnableFork(t *testing.T) {
+	testGetHeader(t, "GetHeaderByNumber", false)
+}
+
+// TestEthereumAPI_GetHeaderByHash tests GetHeaderByNumber.
+func TestEthereumAPI_GetHeaderByHash_BeforeEnableFork(t *testing.T) {
+	testGetHeader(t, "GetHeaderByHash", false)
 }
 
 // testGetHeader generates data to test GetHeader related functions in EthereumAPI
 // and actually tests the API function passed as a parameter.
-func testGetHeader(t *testing.T, testAPIName string) {
+func testGetHeader(t *testing.T, testAPIName string, forkEnabled bool) {
 	mockCtrl, mockBackend, api := testInitForEthApi(t)
 
 	// Creates a MockEngine.
 	mockEngine := mocks.NewMockEngine(mockCtrl)
 	// GetHeader APIs calls internally below methods.
 	mockBackend.EXPECT().Engine().Return(mockEngine)
+	if forkEnabled {
+		mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthereumAPITest)
+	} else {
+		chainConfigForNotCompatibleEthBlock := &params.ChainConfig{
+			ChainID:                  dummyChainConfigForEthereumAPITest.ChainID,
+			IstanbulCompatibleBlock:  dummyChainConfigForEthereumAPITest.IstanbulCompatibleBlock,
+			LondonCompatibleBlock:    dummyChainConfigForEthereumAPITest.LondonCompatibleBlock,
+			EthTxTypeCompatibleBlock: nil,
+			UnitPrice:                dummyChainConfigForEthereumAPITest.UnitPrice,
+		}
+		mockBackend.EXPECT().ChainConfig().Return(chainConfigForNotCompatibleEthBlock)
+	}
+
 	// Author is called when calculates miner field of Header.
 	dummyMiner := common.HexToAddress("0x9712f943b296758aaae79944ec975884188d3a96")
 	mockEngine.EXPECT().Author(gomock.Any()).Return(dummyMiner, nil)
@@ -203,7 +226,6 @@ func testGetHeader(t *testing.T, testAPIName string) {
 	  "jsonrpc": "2.0",
 	  "id": 1,
 	  "result": {
-		"baseFeePerGas": "0x0",
 		"difficulty": "0x1",
 		"extraData": "0x",
 		"gasLimit": "0xe8d4a50fff",
@@ -225,6 +247,9 @@ func testGetHeader(t *testing.T, testAPIName string) {
 	  }
 	}
     `), &expected))
+	if forkEnabled {
+		expected["baseFeePerGas"] = "0x0"
+	}
 	checkEthereumBlockOrHeaderFormat(t, expected, ethHeader)
 }
 
@@ -249,6 +274,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
 	mockEngine := mocks.NewMockEngine(mockCtrl)
 	// GetHeader APIs calls internally below methods.
 	mockBackend.EXPECT().Engine().Return(mockEngine)
+	mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthereumAPITest)
 	// Author is called when calculates miner field of Header.
 	dummyMiner := common.HexToAddress("0x9712f943b296758aaae79944ec975884188d3a96")
 	mockEngine.EXPECT().Author(gomock.Any()).Return(dummyMiner, nil)
