@@ -377,11 +377,11 @@ func (bc *BlockChain) prefetchTxWorker(index int) {
 	defer bc.wg.Done()
 
 	logger.Debug("prefetchTxWorker is started", "index", index)
+	var snaps *snapshot.Tree
+	if bc.cacheConfig.TrieNodeCacheConfig.UseSnapshotForPrefetch {
+		snaps = bc.snaps
+	}
 	for followup := range bc.prefetchTxCh {
-		var snaps *snapshot.Tree
-		if bc.cacheConfig.TrieNodeCacheConfig.UseSnapshotForPrefetch {
-			snaps = bc.snaps
-		}
 		stateDB, err := state.NewForPrefetching(bc.CurrentBlock().Root(), bc.stateCache, snaps)
 		if err != nil {
 			logger.Debug("failed to retrieve stateDB for prefetchTxWorker", "err", err)
