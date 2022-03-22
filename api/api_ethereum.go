@@ -970,7 +970,12 @@ func newEthTransactionReceipt(tx *types.Transaction, b Backend, blockHash common
 	}
 
 	// Always use the "status" field and Ignore the "root" field.
-	fields["status"] = hexutil.Uint(receipt.Status)
+	if receipt.Status != types.ReceiptStatusSuccessful {
+		// In Ethereum, status field can have 0(=Failure) or 1(=Success) only.
+		fields["status"] = hexutil.Uint(types.ReceiptStatusFailed)
+	} else {
+		fields["status"] = hexutil.Uint(receipt.Status)
+	}
 
 	if receipt.Logs == nil {
 		fields["logs"] = [][]*types.Log{}
