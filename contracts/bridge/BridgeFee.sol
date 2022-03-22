@@ -43,7 +43,9 @@ contract BridgeFee {
             require(_feeLimit >= fee, "insufficient feeLimit");
 
             feeReceiver.transfer(fee);
-            msg.sender.transfer(_feeLimit.sub(fee));
+            if (_feeLimit.sub(fee) > 0) {
+                msg.sender.transfer(_feeLimit.sub(fee));
+            }
 
             return fee;
         }
@@ -58,13 +60,15 @@ contract BridgeFee {
         if (feeReceiver != address(0) && fee > 0) {
             require(_feeLimit >= fee, "insufficient feeLimit");
 
-            IERC20(_token).transfer(feeReceiver, fee);
-            IERC20(_token).transfer(from, _feeLimit.sub(fee));
+            require(IERC20(_token).transfer(feeReceiver, fee), "_payERC20FeeAndRefundChange: transfer failed");
+            if (_feeLimit.sub(fee) > 0) {
+                require(IERC20(_token).transfer(from, _feeLimit.sub(fee)), "_payERC20FeeAndRefundChange: transfer failed");
+            }
 
             return fee;
         }
 
-        IERC20(_token).transfer(from, _feeLimit);
+        require(IERC20(_token).transfer(from, _feeLimit), "_payERC20FeeAndRefundChange: transfer failed");
         return 0;
     }
 
