@@ -57,13 +57,14 @@ const (
 )
 
 var (
-	ErrInvalidTokenPair     = errors.New("invalid token pair")
-	ErrNoBridgeInfo         = errors.New("bridge information does not exist")
-	ErrDuplicatedBridgeInfo = errors.New("bridge information is duplicated")
-	ErrDuplicatedToken      = errors.New("token is duplicated")
-	ErrNoRecovery           = errors.New("recovery does not exist")
-	ErrAlreadySubscribed    = errors.New("already subscribed")
-	ErrBridgeRestore        = errors.New("restoring bridges is failed")
+	ErrInvalidTokenPair                    = errors.New("invalid token pair")
+	ErrNoBridgeInfo                        = errors.New("bridge information does not exist")
+	ErrDuplicatedBridgeInfo                = errors.New("bridge information is duplicated")
+	ErrDuplicatedToken                     = errors.New("token is duplicated")
+	ErrNoRecovery                          = errors.New("recovery does not exist")
+	ErrAlreadySubscribed                   = errors.New("already subscribed")
+	ErrBridgeRestore                       = errors.New("restoring bridges is failed")
+	ErrInsufficientFundsFromBridgeContract = errors.New("insufficient funds of the bridge contract")
 )
 
 // RequestValueTransferEvent from Bridge contract
@@ -304,6 +305,17 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev *RequestValueTransferEv
 
 	switch tokenType {
 	case KLAY:
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+
+		balance, err := bi.subBridge.localBackend.BalanceAt(ctx, bi.address, nil)
+		if err != nil {
+			return err
+		}
+		logger.Info("Bridge contract's balance:", "addr", bi.address, "balance", balance)
+		if balance.Cmp(ev.ValueOrTokenId) == -1 {
+			return ErrInsufficientFundsFromBridgeContract
+		}
 		handleTx, err = bi.bridge.HandleKLAYTransfer(auth, ev.Raw.TxHash, ev.From, ev.To, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.ExtraData)
 		if err != nil {
 			return err
