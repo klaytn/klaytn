@@ -460,18 +460,20 @@ func (api *EthereumAPI) GetHeaderByHash(ctx context.Context, hash common.Hash) m
 // * When fullTx is true all transactions in the block are returned, otherwise
 //   only the transaction hash is returned.
 func (api *EthereumAPI) GetBlockByNumber(ctx context.Context, number rpc.BlockNumber, fullTx bool) (map[string]interface{}, error) {
+	// Klaytn backend returns error when there is no matched block but
+	// Ethereum returns it as nil without error, so we should return is as nil when there is no matched block.
 	klaytnBlock, err := api.publicBlockChainAPI.b.BlockByNumber(ctx, number)
-	if klaytnBlock != nil && err == nil {
-		response, err := api.rpcMarshalBlock(klaytnBlock, true, fullTx)
-		if err == nil && number == rpc.PendingBlockNumber {
-			// Pending blocks need to nil out a few fields
-			for _, field := range []string{"hash", "nonce", "miner"} {
-				response[field] = nil
-			}
-		}
-		return response, err
+	if err != nil {
+		return nil, nil
 	}
-	return nil, err
+	response, err := api.rpcMarshalBlock(klaytnBlock, true, fullTx)
+	if err == nil && number == rpc.PendingBlockNumber {
+		// Pending blocks need to nil out a few fields
+		for _, field := range []string{"hash", "nonce", "miner"} {
+			response[field] = nil
+		}
+	}
+	return response, err
 }
 
 // GetBlockByHash returns the requested block. When fullTx is true all transactions in the block are returned in full
