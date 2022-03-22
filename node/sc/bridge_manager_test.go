@@ -557,6 +557,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		chainDB:        database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}),
 		config:         config,
 		peers:          newBridgePeerSet(),
+		localBackend:   sim,
 		bridgeAccounts: bacc,
 	}
 	sc.handler, err = NewSubBridgeHandler(sc)
