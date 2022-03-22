@@ -466,14 +466,17 @@ func (api *EthereumAPI) GetBlockByNumber(ctx context.Context, number rpc.BlockNu
 	if err != nil {
 		return nil, nil
 	}
-	response, err := api.rpcMarshalBlock(klaytnBlock, true, fullTx)
-	if err == nil && number == rpc.PendingBlockNumber {
-		// Pending blocks need to nil out a few fields
-		for _, field := range []string{"hash", "nonce", "miner"} {
-			response[field] = nil
+	if klaytnBlock != nil {
+		response, err := api.rpcMarshalBlock(klaytnBlock, true, fullTx)
+		if err == nil && number == rpc.PendingBlockNumber {
+			// Pending blocks need to nil out a few fields
+			for _, field := range []string{"hash", "nonce", "miner"} {
+				response[field] = nil
+			}
 		}
+		return response, err
 	}
-	return response, err
+	return nil, nil
 }
 
 // GetBlockByHash returns the requested block. When fullTx is true all transactions in the block are returned in full
