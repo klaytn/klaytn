@@ -67,7 +67,7 @@ func (rb *RemoteBackend) checkParentPeer() bool {
 	return rb.subBridge.peers.Len() > 0
 }
 
-func (rb *RemoteBackend) CodeAt(ctx context.Context, contract common.Address, blockNumber *big.Int) ([]byte, error) {
+func (rb *RemoteBackend) CodeAt(_dummyCtx context.Context, contract common.Address, blockNumber *big.Int) ([]byte, error) {
 	if !rb.checkParentPeer() {
 		return nil, NoParentPeerErr
 	}
@@ -82,8 +82,6 @@ func (rb *RemoteBackend) BalanceAt(ctx context.Context, account common.Address, 
 	if !rb.checkParentPeer() {
 		return nil, NoParentPeerErr
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
 	var hex hexutil.Big
 	err := rb.rpcClient.CallContext(ctx, &hex, "klay_getBalance", account, toBlockNumArg(blockNumber))
 	if err != nil {
@@ -92,7 +90,7 @@ func (rb *RemoteBackend) BalanceAt(ctx context.Context, account common.Address, 
 	return (*big.Int)(&hex), nil
 }
 
-func (rb *RemoteBackend) CallContract(ctx context.Context, call klaytn.CallMsg, blockNumber *big.Int) ([]byte, error) {
+func (rb *RemoteBackend) CallContract(_dummyCtx context.Context, call klaytn.CallMsg, blockNumber *big.Int) ([]byte, error) {
 	if !rb.checkParentPeer() {
 		return nil, NoParentPeerErr
 	}
@@ -103,7 +101,7 @@ func (rb *RemoteBackend) CallContract(ctx context.Context, call klaytn.CallMsg, 
 	return hex, err
 }
 
-func (rb *RemoteBackend) PendingCodeAt(ctx context.Context, contract common.Address) ([]byte, error) {
+func (rb *RemoteBackend) PendingCodeAt(_dummyCtx context.Context, contract common.Address) ([]byte, error) {
 	if !rb.checkParentPeer() {
 		return nil, NoParentPeerErr
 	}
@@ -114,7 +112,7 @@ func (rb *RemoteBackend) PendingCodeAt(ctx context.Context, contract common.Addr
 	return result, err
 }
 
-func (rb *RemoteBackend) PendingNonceAt(ctx context.Context, account common.Address) (uint64, error) {
+func (rb *RemoteBackend) PendingNonceAt(_dummyCtx context.Context, account common.Address) (uint64, error) {
 	if !rb.checkParentPeer() {
 		return 0, NoParentPeerErr
 	}
@@ -125,7 +123,7 @@ func (rb *RemoteBackend) PendingNonceAt(ctx context.Context, account common.Addr
 	return uint64(result), err
 }
 
-func (rb *RemoteBackend) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
+func (rb *RemoteBackend) SuggestGasPrice(_dummyCtx context.Context) (*big.Int, error) {
 	if !rb.checkParentPeer() {
 		return nil, NoParentPeerErr
 	}
@@ -138,7 +136,7 @@ func (rb *RemoteBackend) SuggestGasPrice(ctx context.Context) (*big.Int, error) 
 	return (*big.Int)(&hex), nil
 }
 
-func (rb *RemoteBackend) EstimateGas(ctx context.Context, msg klaytn.CallMsg) (uint64, error) {
+func (rb *RemoteBackend) EstimateGas(_dummyCtx context.Context, msg klaytn.CallMsg) (uint64, error) {
 	if !rb.checkParentPeer() {
 		return 0, NoParentPeerErr
 	}
@@ -153,16 +151,14 @@ func (rb *RemoteBackend) EstimateGas(ctx context.Context, msg klaytn.CallMsg) (u
 	return uint64(hex), nil
 }
 
-func (rb *RemoteBackend) SendTransaction(ctx context.Context, tx *types.Transaction) error {
+func (rb *RemoteBackend) SendTransaction(_dummyCtx context.Context, tx *types.Transaction) error {
 	if !rb.checkParentPeer() {
 		return NoParentPeerErr
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
 	return rb.subBridge.bridgeTxPool.AddLocal(tx)
 }
 
-func (rb *RemoteBackend) TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
+func (rb *RemoteBackend) TransactionReceipt(txHash common.Hash) (*types.Receipt, error) {
 	if !rb.checkParentPeer() {
 		return nil, NoParentPeerErr
 	}
@@ -176,7 +172,7 @@ func (rb *RemoteBackend) TransactionReceipt(ctx context.Context, txHash common.H
 	return r, err
 }
 
-func (rb *RemoteBackend) TransactionReceiptRpcOutput(ctx context.Context, txHash common.Hash) (r map[string]interface{}, err error) {
+func (rb *RemoteBackend) TransactionReceiptRpcOutput(txHash common.Hash) (r map[string]interface{}, err error) {
 	if !rb.checkParentPeer() {
 		return nil, NoParentPeerErr
 	}
@@ -191,11 +187,11 @@ func (rb *RemoteBackend) TransactionReceiptRpcOutput(ctx context.Context, txHash
 }
 
 // ChainID returns the chain ID of the sub-bridge configuration.
-func (rb *RemoteBackend) ChainID(ctx context.Context) (*big.Int, error) {
+func (rb *RemoteBackend) ChainID(_dummyCtx context.Context) (*big.Int, error) {
 	return big.NewInt(int64(rb.subBridge.config.ParentChainID)), nil
 }
 
-func (rb *RemoteBackend) FilterLogs(ctx context.Context, query klaytn.FilterQuery) (result []types.Log, err error) {
+func (rb *RemoteBackend) FilterLogs(_dummyCtx context.Context, query klaytn.FilterQuery) (result []types.Log, err error) {
 	if !rb.checkParentPeer() {
 		return nil, NoParentPeerErr
 	}
@@ -205,7 +201,7 @@ func (rb *RemoteBackend) FilterLogs(ctx context.Context, query klaytn.FilterQuer
 	return
 }
 
-func (rb *RemoteBackend) SubscribeFilterLogs(ctx context.Context, query klaytn.FilterQuery, ch chan<- types.Log) (klaytn.Subscription, error) {
+func (rb *RemoteBackend) SubscribeFilterLogs(_dummyCtx context.Context, query klaytn.FilterQuery, ch chan<- types.Log) (klaytn.Subscription, error) {
 	if !rb.checkParentPeer() {
 		return nil, NoParentPeerErr
 	}
@@ -215,7 +211,7 @@ func (rb *RemoteBackend) SubscribeFilterLogs(ctx context.Context, query klaytn.F
 }
 
 // CurrentBlockNumber returns a current block number.
-func (rb *RemoteBackend) CurrentBlockNumber(ctx context.Context) (uint64, error) {
+func (rb *RemoteBackend) CurrentBlockNumber(_dummyCtx context.Context) (uint64, error) {
 	if !rb.checkParentPeer() {
 		return 0, NoParentPeerErr
 	}
