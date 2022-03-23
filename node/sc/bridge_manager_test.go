@@ -2080,21 +2080,21 @@ func TestGetParentBridgeContractBalance(t *testing.T) {
 		return
 	}
 
-	bridgeManager, err := NewBridgeManager(sc)
+	bm, err := NewBridgeManager(sc)
 	assert.NoError(t, err)
-	sc.handler.subbridge.bridgeManager = bridgeManager
+	sc.handler.subbridge.bm = bm
 
 	// Case 1 - Success
 	{
 		initialChildbridgeBalance, initialParentbridgeBalance := int64(100), int64(100)
-		cBridgeAddr, err := bridgeManager.DeployBridgeTest(sim, initialChildbridgeBalance, true)
+		cBridgeAddr, err := bm.DeployBridgeTest(sim, initialChildbridgeBalance, true)
 		assert.NoError(t, err)
-		pBridgeAddr, err := bridgeManager.DeployBridgeTest(sim, initialParentbridgeBalance, false)
+		pBridgeAddr, err := bm.DeployBridgeTest(sim, initialParentbridgeBalance, false)
 		assert.NoError(t, err)
-		bridgeManager.SetJournal(cBridgeAddr, pBridgeAddr)
+		bm.SetJournal(cBridgeAddr, pBridgeAddr)
 		assert.NoError(t, err)
 		sim.Commit()
-		isExpectedBalance(t, bridgeManager, pBridgeAddr, cBridgeAddr, initialParentbridgeBalance, initialChildbridgeBalance)
+		isExpectedBalance(t, bm, pBridgeAddr, cBridgeAddr, initialParentbridgeBalance, initialChildbridgeBalance)
 	}
 
 	// Case 2 - ? (Random)
@@ -2102,14 +2102,14 @@ func TestGetParentBridgeContractBalance(t *testing.T) {
 		rand.Seed(time.Now().UnixNano())
 		for i := 0; i < 10; i++ {
 			initialChildbridgeBalance, initialParentbridgeBalance := rand.Int63n(10000), rand.Int63n(10000)
-			cBridgeAddr, err := bridgeManager.DeployBridgeTest(sim, initialChildbridgeBalance, true)
+			cBridgeAddr, err := bm.DeployBridgeTest(sim, initialChildbridgeBalance, true)
 			assert.NoError(t, err)
-			pBridgeAddr, err := bridgeManager.DeployBridgeTest(sim, initialParentbridgeBalance, false)
+			pBridgeAddr, err := bm.DeployBridgeTest(sim, initialParentbridgeBalance, false)
 			assert.NoError(t, err)
-			bridgeManager.SetJournal(cBridgeAddr, pBridgeAddr)
+			bm.SetJournal(cBridgeAddr, pBridgeAddr)
 			assert.NoError(t, err)
 			sim.Commit()
-			isExpectedBalance(t, bridgeManager, pBridgeAddr, cBridgeAddr, initialParentbridgeBalance, initialChildbridgeBalance)
+			isExpectedBalance(t, bm, pBridgeAddr, cBridgeAddr, initialParentbridgeBalance, initialChildbridgeBalance)
 		}
 	}
 
