@@ -152,7 +152,7 @@ func TestTestEthereumAPI_GetUncleCountByBlockHash(t *testing.T) {
 	existingHash := block.Hash()
 	assert.Equal(t, hexutil.Uint(ZeroUncleCount), *api.GetUncleCountByBlockHash(context.Background(), existingHash))
 
-	// For existing block hash, it must return 0.
+	// For non-existing block hash, it must return nil.
 	mockBackend.EXPECT().BlockByHash(gomock.Any(), gomock.Any()).Return(nil, nil)
 	nonExistingHash := block.Hash()
 	uncleCount := api.GetUncleCountByBlockHash(context.Background(), nonExistingHash)
