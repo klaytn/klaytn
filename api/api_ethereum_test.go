@@ -122,16 +122,46 @@ func TestEthereumAPI_GetUncleByBlockHashAndIndex(t *testing.T) {
 
 // TestTestEthereumAPI_GetUncleCountByBlockNumber tests GetUncleCountByBlockNumber.
 func TestTestEthereumAPI_GetUncleCountByBlockNumber(t *testing.T) {
-	api := &EthereumAPI{}
-	uncleCount := hexutil.Uint(ZeroUncleCount)
-	assert.Equal(t, uncleCount, *api.GetUncleCountByBlockNumber(context.Background(), rpc.BlockNumber(0)))
+	mockCtrl, mockBackend, api := testInitForEthApi(t)
+	block, _, _, _, _ := createTestData(t, nil)
+
+	// For existing block number, it must return 0.
+	mockBackend.EXPECT().BlockByNumber(gomock.Any(), gomock.Any()).Return(block, nil)
+	existingBlockNumber := rpc.BlockNumber(block.Number().Int64())
+	assert.Equal(t, hexutil.Uint(ZeroUncleCount), *api.GetUncleCountByBlockNumber(context.Background(), existingBlockNumber))
+
+	// For non-existing block number, it must return nil.
+	mockBackend.EXPECT().BlockByNumber(gomock.Any(), gomock.Any()).Return(nil, nil)
+	nonExistingBlockNumber := rpc.BlockNumber(5)
+	uncleCount := api.GetUncleCountByBlockNumber(context.Background(), nonExistingBlockNumber)
+	uintNil := hexutil.Uint(uint(0))
+	expectedResult := &uintNil
+	expectedResult = nil
+	assert.Equal(t, expectedResult, uncleCount)
+
+	mockCtrl.Finish()
 }
 
 // TestTestEthereumAPI_GetUncleCountByBlockHash tests GetUncleCountByBlockHash.
 func TestTestEthereumAPI_GetUncleCountByBlockHash(t *testing.T) {
-	api := &EthereumAPI{}
-	uncleCount := hexutil.Uint(ZeroUncleCount)
-	assert.Equal(t, uncleCount, *api.GetUncleCountByBlockHash(context.Background(), common.Hash{}))
+	mockCtrl, mockBackend, api := testInitForEthApi(t)
+	block, _, _, _, _ := createTestData(t, nil)
+
+	// For existing block hash, it must return 0.
+	mockBackend.EXPECT().BlockByHash(gomock.Any(), gomock.Any()).Return(block, nil)
+	existingHash := block.Hash()
+	assert.Equal(t, hexutil.Uint(ZeroUncleCount), *api.GetUncleCountByBlockHash(context.Background(), existingHash))
+
+	// For existing block hash, it must return 0.
+	mockBackend.EXPECT().BlockByHash(gomock.Any(), gomock.Any()).Return(nil, nil)
+	nonExistingHash := block.Hash()
+	uncleCount := api.GetUncleCountByBlockHash(context.Background(), nonExistingHash)
+	uintNil := hexutil.Uint(uint(0))
+	expectedResult := &uintNil
+	expectedResult = nil
+	assert.Equal(t, expectedResult, uncleCount)
+
+	mockCtrl.Finish()
 }
 
 // TestEthereumAPI_GetHeaderByNumber tests GetHeaderByNumber.
