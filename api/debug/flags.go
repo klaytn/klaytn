@@ -144,8 +144,10 @@ func Setup(ctx *cli.Context) error {
 	if err := glogger.Vmodule(ctx.GlobalString(vmoduleFlag.Name)); err != nil {
 		return err
 	}
-	if err := glogger.BacktraceAt(ctx.GlobalString(backtraceAtFlag.Name)); err != nil {
-		return err
+	if len(ctx.GlobalString(backtraceAtFlag.Name)) != 0 {
+		if err := glogger.BacktraceAt(ctx.GlobalString(backtraceAtFlag.Name)); err != nil {
+			return err
+		}
 	}
 	log.Root().SetHandler(glogger)
 
