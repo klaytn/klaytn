@@ -462,10 +462,7 @@ func (api *EthereumAPI) GetHeaderByHash(ctx context.Context, hash common.Hash) m
 func (api *EthereumAPI) GetBlockByNumber(ctx context.Context, number rpc.BlockNumber, fullTx bool) (map[string]interface{}, error) {
 	// Klaytn backend returns error when there is no matched block but
 	// Ethereum returns it as nil without error, so we should return is as nil when there is no matched block.
-	klaytnBlock, err := api.publicBlockChainAPI.b.BlockByNumber(ctx, number)
-	if err != nil {
-		return nil, nil
-	}
+	klaytnBlock, _ := api.publicBlockChainAPI.b.BlockByNumber(ctx, number)
 	if klaytnBlock != nil {
 		response, err := api.rpcMarshalBlock(klaytnBlock, true, fullTx)
 		if err == nil && number == rpc.PendingBlockNumber {
