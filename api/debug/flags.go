@@ -138,9 +138,15 @@ func CreateLogDir(logDir string) {
 func Setup(ctx *cli.Context) error {
 	// logging
 	log.PrintOrigins(ctx.GlobalBool(debugFlag.Name))
-	log.ChangeGlobalLogLevel(glogger, log.Lvl(ctx.GlobalInt(verbosityFlag.Name)))
-	glogger.Vmodule(ctx.GlobalString(vmoduleFlag.Name))
-	glogger.BacktraceAt(ctx.GlobalString(backtraceAtFlag.Name))
+	if err := log.ChangeGlobalLogLevel(glogger, log.Lvl(ctx.GlobalInt(verbosityFlag.Name))); err != nil {
+		return err
+	}
+	if err := glogger.Vmodule(ctx.GlobalString(vmoduleFlag.Name)); err != nil {
+		return err
+	}
+	if err := glogger.BacktraceAt(ctx.GlobalString(backtraceAtFlag.Name)); err != nil {
+		return err
+	}
 	log.Root().SetHandler(glogger)
 
 	// profiling, tracing

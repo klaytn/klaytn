@@ -175,10 +175,10 @@ func ChangeGlobalLogLevel(glogger *GlogHandler, lvl Lvl) error {
 
 func levelCheck(lvl Lvl) error {
 	if lvl >= LvlEnd {
-		return errors.New(fmt.Sprintf("insert log level less than %d", LvlEnd))
+		return errors.New(fmt.Sprintf("insert log level greater than or equal to %d", LvlEnd))
 	}
 	if lvl < LvlCrit {
-		return errors.New(fmt.Sprintf("insert log level greater than or equal to %d", LvlCrit))
+		return errors.New(fmt.Sprintf("insert log level less than %d", LvlCrit))
 	}
 	return nil
 }
