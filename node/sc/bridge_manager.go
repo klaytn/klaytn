@@ -312,7 +312,7 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev *RequestValueTransferEv
 		if err != nil {
 			return err
 		}
-		logger.Info("Bridge contract's balance:", "addr", bi.address, "balance", balance)
+		logger.Trace("Bridge contract's balance:", "addr", bi.address, "balance", balance)
 		if balance.Cmp(ev.ValueOrTokenId) == -1 {
 			return ErrInsufficientFundsFromBridgeContract
 		}
