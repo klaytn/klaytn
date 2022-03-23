@@ -865,7 +865,9 @@ func (api *EthereumAPI) GetRawTransactionByBlockNumberAndIndex(ctx context.Conte
 	if err != nil {
 		return nil
 	}
-
+	if rawTx[0] == byte(types.EthereumTxTypeEnvelope) {
+		rawTx = rawTx[1:]
+	}
 	return rawTx
 }
 
@@ -875,7 +877,9 @@ func (api *EthereumAPI) GetRawTransactionByBlockHashAndIndex(ctx context.Context
 	if err != nil {
 		return nil
 	}
-
+	if rawTx[0] == byte(types.EthereumTxTypeEnvelope) {
+		rawTx = rawTx[1:]
+	}
 	return rawTx
 }
 
