@@ -740,7 +740,7 @@ var (
 	VTRecoveryIntervalFlag = cli.Uint64Flag{
 		Name:  "vtrecoveryinterval",
 		Usage: "Set the value transfer recovery interval (seconds)",
-		Value: 60,
+		Value: 5,
 	}
 	ServiceChainNewAccountFlag = cli.BoolFlag{
 		Name:  "scnewaccount",
