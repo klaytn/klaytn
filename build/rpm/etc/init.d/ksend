@@ -294,6 +294,9 @@ fi
 if [[ ! -z $VTRECOVERY ]] && [[ $VTRECOVERY -eq 1 ]]; then
     OPTIONS="$OPTIONS --vtrecovery"
 fi
+if [[ ! -z $SC_VTRECOVERY_INTERVAL ]]; then
+    OPTIONS="$OPTIONS --vtrecovery $SC_VTRECOVERY_INTERVAL"
+fi
 
 if [[ ! -z $ADDITIONAL ]] && [[ $ADDITIONAL != "" ]]; then
     OPTIONS="$OPTIONS $ADDITIONAL"

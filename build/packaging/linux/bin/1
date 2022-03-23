@@ -5,22 +5,22 @@ CMD_HOME=$(dirname $BIN)
 CONF=$CMD_HOME/conf
 STOP_TIMEOUT=10 # seconds to wait for a clean exit
 
-source $CONF/ksend.conf
+source $CONF/kscnd.conf
 
 if [ -z $DATA_DIR ]; then
-    echo
-    echo "  [ERROR] : DATA_DIR in conf/ksend.conf is not defined."
-    exit 1
+     echo
+     echo "  [ERROR] : DATA_DIR in conf/kscnd.conf is not defined."
+     exit 1
 fi
 
 if [ ! -d $DATA_DIR ]; then
     echo
-    echo "  [ERROR] : Genesis block is not initiated: [conf/ksend.conf - DATA_DIR=$DATA_DIR]"
+    echo "  [ERROR] : Genesis block is not initiated: [conf/kscnd.conf - DATA_DIR=$DATA_DIR]"
     exit 1
 fi
 
-pidfile=$DATA_DIR/ksend.pid
-auto_restart_daemon_pidfile=$DATA_DIR/restart_daemon_ksend.pid
+pidfile=$DATA_DIR/kscnd.pid
+auto_restart_daemon_pidfile=$DATA_DIR/restart_daemon_kscnd.pid
 
 __pid_run() {
     unset pid
@@ -121,16 +121,16 @@ status_auto_restart_daemon() {
 #------------------------Related to Klaytn node functions-----------------------------
 start_node() {
     __pid_run
-    [ -n "$pid" ] && echo "ksend already running...[$pid]" && return
+    [ -n "$pid" ] && echo "kscnd already running...[$pid]" && return
 
-    echo -n "Starting ksend: "
+    echo -n "Starting kscnd: "
 
     if [ ! -d $LOG_DIR ]; then
         mkdir -p $LOG_DIR
     fi
 
     set -f
-    OPTIONS=""
+    OPTIONS="--nodiscover"
 
     if [[ ! -z $METRICS ]] && [[ $METRICS -eq 1 ]]; then
         OPTIONS="$OPTIONS --metrics"
@@ -185,18 +185,8 @@ start_node() {
         fi
     fi
 
-    # private network only for Service Chain
-    if [[ -z $NETWORK_ID ]]; then
-        echo
-        echo "[ERROR] network id should be specified for Service Chain."
-        exit 1
-    else
+    if [ ! -z $NETWORK_ID ]; then
         OPTIONS="$OPTIONS --networkid $NETWORK_ID"
-        echo "[INFO] creating a private network: $NETWORK_ID"
-        if [[ ! -z $NETWORK ]]; then
-            echo
-            echo "[WARN] ignoring the specified network for Service Chain: $NETWORK"
-        fi
     fi
 
     if [ ! -z $DATA_DIR ]; then
@@ -247,12 +237,12 @@ start_node() {
         OPTIONS="$OPTIONS --db.leveldb.cache-size $LDBCACHESIZE"
     fi
 
-    if [[ ! -z $NO_DISCOVER ]] && [[ $NO_DISCOVER -eq 1 ]]; then
-        OPTIONS="$OPTIONS --nodiscover"
+    if [[ ! -z $SCSIGNER ]] && [[ $SCSIGNER != "" ]]; then
+        OPTIONS="$OPTIONS --scsigner $SCSIGNER --unlock $SCSIGNER"
     fi
 
-    if [[ ! -z $BOOTNODES ]] && [[ $BOOTNODES != "" ]]; then
-        OPTIONS="$OPTIONS --bootnodes $BOOTNODES"
+    if [[ ! -z $SCSIGNER_PASSWD_FILE ]] && [[ $SCSIGNER_PASSWD_FILE != "" ]]; then
+        OPTIONS="$OPTIONS --password $SCSIGNER_PASSWD_FILE"
     fi
 
     if [[ ! -z $SC_MAIN_BRIDGE ]] && [[ $SC_MAIN_BRIDGE -eq 1 ]]; then
@@ -268,6 +258,7 @@ start_node() {
         if [[ ! -z $SC_ANCHORING ]] && [[ $SC_ANCHORING -eq 1 ]]; then
             OPTIONS="$OPTIONS --anchoring"
         fi
+
 
         if [[ ! -z $SC_KAS_ANCHOR ]] && [[ $SC_KAS_ANCHOR -eq 1 ]]; then
             OPTIONS="$OPTIONS --kas.sc.anchor"
@@ -313,15 +304,19 @@ start_node() {
         fi
     fi
 
-    if [[ ! -z $SC_VTRECOVERY ]] && [[ $SC_VTRECOVERY -eq 1 ]]; then
+    if [[ ! -z $VTRECOVERY ]] && [[ $VTRECOVERY -eq 1 ]]; then
         OPTIONS="$OPTIONS --vtrecovery"
     fi
-    if [[ ! -z $SC_VTRECOVERY_INTERVAL ]]; then
-        OPTIONS="$OPTIONS --vtrecoveryinterval $SC_VTRECOVERY_INTERVAL"
+    if [[ ! -z $VTRECOVERY_INTERVAL ]]; then
+        OPTIONS="$OPTIONS --vtrecoveryinterval $VTRECOVERY_INTERVAL"
     fi
 
     if [[ ! -z $ADDITIONAL ]] && [[ $ADDITIONAL != "" ]]; then
         OPTIONS="$OPTIONS $ADDITIONAL"
+    fi
+
+    if [[ ! -z $REWARDBASE ]] && [[ $REWARDBASE != "" ]]; then
+        OPTIONS="$OPTIONS --rewardbase $REWARDBASE"
     fi
 
     if [[ ! -z $AUTO_RESTART ]] && [[ $AUTO_RESTART -eq 1 ]]; then
@@ -332,7 +327,7 @@ start_node() {
     CURRENTFILE=`basename "$0"`
     OPTIONS="$OPTIONS --autorestart.daemon.path $BASEDIR/$CURRENTFILE"
 
-    $BIN/ksen $OPTIONS >> ${LOG_DIR}/ksend.out 2>&1 &
+    $BIN/kscn $OPTIONS >> ${LOG_DIR}/kscnd.out 2>&1 &
     RETVAL=$?
     PIDNUM=$!
     set +f
@@ -347,17 +342,17 @@ start_node() {
 
 stop_node() {
     __pid_run
-    [ -z "$pid" ] && echo "ksend is not running" && return
-    echo -n "Shutting down ksend: "
+    [ -z "$pid" ] && echo "kscnd is not running" && return
+    echo -n "Shutting down kscnd: "
     __kill_timeout $(cat ${pidfile}) && rm -f ${pidfile}
 }
 
 status_node() {
     __pid_run
     if [ -n "$pid" ]; then
-        echo "ksend is running"
+        echo "kscnd is running"
     else
-        echo "ksend is down"
+        echo "kscnd is down"
     fi
 }
 
@@ -380,7 +375,6 @@ stop() {
     fi
     stop_node
 }
-
 
 status() {
     status_node
@@ -409,7 +403,7 @@ case "$1" in
         restart
         ;;
     *)
-        echo "Usages: ksend {start|stop|restart|status}"
+        echo "Usages: kscnd {start|stop|restart|status}"
         exit 1
         ;;
 esac
