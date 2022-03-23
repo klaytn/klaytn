@@ -423,21 +423,24 @@ func (api *EthereumAPI) GetProof(ctx context.Context, address common.Address, st
 // * When blockNr is -2 the pending chain head is returned.
 func (api *EthereumAPI) GetHeaderByNumber(ctx context.Context, number rpc.BlockNumber) (map[string]interface{}, error) {
 	// In Ethereum, err is always nil because the backend of Ethereum always return nil.
-	klaytnHeader, _ := api.publicBlockChainAPI.b.HeaderByNumber(ctx, number)
-	if klaytnHeader != nil {
-		response, err := api.rpcMarshalHeader(klaytnHeader)
-		if err != nil {
-			return nil, err
+	klaytnHeader, err := api.publicBlockChainAPI.b.HeaderByNumber(ctx, number)
+	if err != nil {
+		if strings.Contains(err.Error(), "does not exist") {
+			return nil, nil
 		}
-		if number == rpc.PendingBlockNumber {
-			// Pending header need to nil out a few fields
-			for _, field := range []string{"hash", "nonce", "miner"} {
-				response[field] = nil
-			}
-		}
-		return response, nil
+		return nil, err
 	}
-	return nil, nil
+	response, err := api.rpcMarshalHeader(klaytnHeader)
+	if err != nil {
+		return nil, err
+	}
+	if number == rpc.PendingBlockNumber {
+		// Pending header need to nil out a few fields
+		for _, field := range []string{"hash", "nonce", "miner"} {
+			response[field] = nil
+		}
+	}
+	return response, nil
 }
 
 // GetHeaderByHash returns the requested header by hash.
@@ -462,18 +465,21 @@ func (api *EthereumAPI) GetHeaderByHash(ctx context.Context, hash common.Hash) m
 func (api *EthereumAPI) GetBlockByNumber(ctx context.Context, number rpc.BlockNumber, fullTx bool) (map[string]interface{}, error) {
 	// Klaytn backend returns error when there is no matched block but
 	// Ethereum returns it as nil without error, so we should return is as nil when there is no matched block.
-	klaytnBlock, _ := api.publicBlockChainAPI.b.BlockByNumber(ctx, number)
-	if klaytnBlock != nil {
-		response, err := api.rpcMarshalBlock(klaytnBlock, true, fullTx)
-		if err == nil && number == rpc.PendingBlockNumber {
-			// Pending blocks need to nil out a few fields
-			for _, field := range []string{"hash", "nonce", "miner"} {
-				response[field] = nil
-			}
+	klaytnBlock, err := api.publicBlockChainAPI.b.BlockByNumber(ctx, number)
+	if err != nil {
+		if strings.Contains(err.Error(), "does not exist") {
+			return nil, nil
 		}
-		return response, err
+		return nil, err
 	}
-	return nil, nil
+	response, err := api.rpcMarshalBlock(klaytnBlock, true, fullTx)
+	if err == nil && number == rpc.PendingBlockNumber {
+		// Pending blocks need to nil out a few fields
+		for _, field := range []string{"hash", "nonce", "miner"} {
+			response[field] = nil
+		}
+	}
+	return response, err
 }
 
 // GetBlockByHash returns the requested block. When fullTx is true all transactions in the block are returned in full
@@ -483,7 +489,10 @@ func (api *EthereumAPI) GetBlockByHash(ctx context.Context, hash common.Hash, fu
 	// Ethereum returns it as nil without error, so we should return is as nil when there is no matched block.
 	klaytnBlock, err := api.publicBlockChainAPI.b.BlockByHash(ctx, hash)
 	if err != nil {
-		return nil, nil
+		if strings.Contains(err.Error(), "does not exist") {
+			return nil, nil
+		}
+		return nil, err
 	}
 	return api.rpcMarshalBlock(klaytnBlock, true, fullTx)
 }
