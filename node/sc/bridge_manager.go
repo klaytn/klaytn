@@ -588,7 +588,7 @@ func (bm *BridgeManager) GetAllBridge() []*BridgeJournal {
 	return gwjs
 }
 
-// GetAllChildBridgeAddrs returns a slice of child bridge address list.
+// GetAllChildBridgeAddrs returns a list of child bridge contract addresses.
 func (bm *BridgeManager) GetAllChildBridgeAddrs() []common.Address {
 	var childAddrs []common.Address
 	for _, journal := range bm.journal.cache {
