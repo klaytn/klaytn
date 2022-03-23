@@ -199,7 +199,7 @@ if [ ! -z $TXPOOL_NONEXEC_SLOTS_ACCOUNT ]; then
     OPTIONS="$OPTIONS --txpool.nonexec-slots.account $TXPOOL_NONEXEC_SLOTS_ACCOUNT"
 fi
 
-if [ ! -z TXPOOL_LIFE_TIME ]; then
+if [ ! -z $TXPOOL_LIFE_TIME ]; then
     OPTIONS="$OPTIONS --txpool.lifetime $TXPOOL_LIFE_TIME"
 fi
 
