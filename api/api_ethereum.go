@@ -507,16 +507,22 @@ func (api *EthereumAPI) GetUncleByBlockHashAndIndex(ctx context.Context, blockHa
 	return nil, nil
 }
 
-// GetUncleCountByBlockNumber returns 0 because there is no uncle block in Klaytn.
+// GetUncleCountByBlockNumber returns 0 when given blockNr exists because there is no uncle block in Klaytn.
 func (api *EthereumAPI) GetUncleCountByBlockNumber(ctx context.Context, blockNr rpc.BlockNumber) *hexutil.Uint {
-	uncleCount := hexutil.Uint(ZeroUncleCount)
-	return &uncleCount
+	if block, _ := api.publicBlockChainAPI.b.BlockByNumber(ctx, blockNr); block != nil {
+		n := hexutil.Uint(ZeroUncleCount)
+		return &n
+	}
+	return nil
 }
 
-// GetUncleCountByBlockHash returns 0 because there is no uncle block in Klaytn.
+// GetUncleCountByBlockHash returns 0 when given blockHash exists because there is no uncle block in Klaytn.
 func (api *EthereumAPI) GetUncleCountByBlockHash(ctx context.Context, blockHash common.Hash) *hexutil.Uint {
-	uncleCount := hexutil.Uint(ZeroUncleCount)
-	return &uncleCount
+	if block, _ := api.publicBlockChainAPI.b.BlockByHash(ctx, blockHash); block != nil {
+		n := hexutil.Uint(ZeroUncleCount)
+		return &n
+	}
+	return nil
 }
 
 // GetCode returns the code stored at the given address in the state for the given block number.
