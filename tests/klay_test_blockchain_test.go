@@ -65,7 +65,7 @@ type BCData struct {
 	validatorPrivKeys  []*ecdsa.PrivateKey
 	engine             consensus.Istanbul
 	genesis            *blockchain.Genesis
-	governance         *governance.Governance
+	governance         governance.Engine
 	rewardDistributor  *reward.RewardDistributor
 }
 

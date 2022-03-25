@@ -30,7 +30,7 @@ import (
 )
 
 type PublicGovernanceAPI struct {
-	governance *Governance // Node interfaced by this API
+	governance Engine // Node interfaced by this API
 }
 
 type returnTally struct {
@@ -39,16 +39,16 @@ type returnTally struct {
 	ApprovalPercentage float64
 }
 
-func NewGovernanceAPI(gov *Governance) *PublicGovernanceAPI {
+func NewGovernanceAPI(gov Engine) *PublicGovernanceAPI {
 	return &PublicGovernanceAPI{governance: gov}
 }
 
 type GovernanceKlayAPI struct {
-	governance *Governance
+	governance Engine
 	chain      blockChain
 }
 
-func NewGovernanceKlayAPI(gov *Governance, chain blockChain) *GovernanceKlayAPI {
+func NewGovernanceKlayAPI(gov Engine, chain blockChain) *GovernanceKlayAPI {
 	return &GovernanceKlayAPI{governance: gov, chain: chain}
 }
 
