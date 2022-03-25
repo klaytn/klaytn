@@ -81,6 +81,7 @@ type HandleValueTransferEvent struct {
 }
 
 type BridgeJournal struct {
+	BridgeAlias   string         `json:"bridgeAlias"`
 	ChildAddress  common.Address `json:"childAddress"`
 	ParentAddress common.Address `json:"parentAddress"`
 	Subscribed    bool           `json:"subscribed"`
@@ -432,6 +433,7 @@ func (bi *BridgeInfo) GetCurrentBlockNumber() (uint64, error) {
 // DecodeRLP decodes the Klaytn
 func (b *BridgeJournal) DecodeRLP(s *rlp.Stream) error {
 	var elem struct {
+		Alias         string
 		LocalAddress  common.Address
 		RemoteAddress common.Address
 		Paired        bool
@@ -439,13 +441,14 @@ func (b *BridgeJournal) DecodeRLP(s *rlp.Stream) error {
 	if err := s.Decode(&elem); err != nil {
 		return err
 	}
-	b.ChildAddress, b.ParentAddress, b.Subscribed = elem.LocalAddress, elem.RemoteAddress, elem.Paired
+	b.BridgeAlias, b.ChildAddress, b.ParentAddress, b.Subscribed = elem.Alias, elem.LocalAddress, elem.RemoteAddress, elem.Paired
 	return nil
 }
 
 // EncodeRLP serializes a BridgeJournal into the Klaytn RLP BridgeJournal format.
 func (b *BridgeJournal) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{
+		b.BridgeAlias,
 		b.ChildAddress,
 		b.ParentAddress,
 		b.Subscribed,
@@ -486,11 +489,15 @@ func NewBridgeManager(main *SubBridge) (*BridgeManager, error) {
 
 	logger.Info("Load Bridge Address from JournalFiles ", "path", bridgeManager.journal.path)
 	bridgeManager.journal.cache = make(map[common.Address]*BridgeJournal)
+	bridgeManager.journal.aliasCache = make(map[string]common.Address)
 
 	if err := bridgeManager.journal.load(func(gwjournal BridgeJournal) error {
 		logger.Info("Load Bridge Address from JournalFiles ",
-			"local address", gwjournal.ChildAddress.Hex(), "remote address", gwjournal.ParentAddress.Hex())
+			"alias", gwjournal.BridgeAlias,
+			"local address", gwjournal.ChildAddress.Hex(),
+			"remote address", gwjournal.ParentAddress.Hex())
 		bridgeManager.journal.cache[gwjournal.ChildAddress] = &gwjournal
+		bridgeManager.journal.aliasCache[gwjournal.BridgeAlias] = gwjournal.ChildAddress
 		return nil
 	}); err != nil {
 		logger.Error("fail to load bridge address", "err", err)
@@ -506,14 +513,10 @@ func NewBridgeManager(main *SubBridge) (*BridgeManager, error) {
 func (bm *BridgeManager) IsValidBridgePair(bridge1, bridge2 common.Address) bool {
 	b1, ok1 := bm.GetBridgeInfo(bridge1)
 	b2, ok2 := bm.GetBridgeInfo(bridge2)
-
-	if ok1 && ok2 {
-		if bridge1 == b2.counterpartAddress && bridge2 == b1.counterpartAddress {
-			return true
-		}
+	if !ok1 || !ok2 {
+		return false
 	}
-
-	return false
+	return bridge1 == b2.counterpartAddress && bridge2 == b1.counterpartAddress
 }
 
 func (bm *BridgeManager) GetCounterPartBridgeAddr(bridgeAddr common.Address) common.Address {
@@ -576,6 +579,21 @@ func (bm *BridgeManager) SubscribeRequestEvent(ch chan<- *RequestValueTransferEv
 // SubscribeHandleEvent registers a subscription of RequestValueTransferEvent.
 func (bm *BridgeManager) SubscribeHandleEvent(ch chan<- *HandleValueTransferEvent) event.Subscription {
 	return bm.scope.Track(bm.handleEventFeeder.Subscribe(ch))
+}
+
+// getAddrByAlias returns a pair of child bridge address and parent bridge address
+func (bm *BridgeManager) getAddrByAlias(bridgeAlias string) (common.Address, common.Address, error) {
+	journalAddr, ok := bm.journal.aliasCache[bridgeAlias]
+	if !ok {
+		return common.Address{}, common.Address{}, ErrEmptyBridgeAlias
+	}
+	journal := bm.journal.cache[journalAddr]
+	return journal.ChildAddress, journal.ParentAddress, nil
+}
+
+// GetBridge returns bridge journal structure that contains local(child) and remote(parent) addresses.
+func (bm *BridgeManager) GetBridge(bridgeAlias string) *BridgeJournal {
+	return bm.journal.cache[bm.journal.aliasCache[bridgeAlias]]
 }
 
 // GetAllBridge returns a slice of journal cache.
@@ -722,9 +740,8 @@ func (bm *BridgeManager) RestoreBridges() error {
 }
 
 // SetJournal inserts or updates journal for a given addresses pair.
-func (bm *BridgeManager) SetJournal(localAddress, remoteAddress common.Address) error {
-	err := bm.journal.insert(localAddress, remoteAddress)
-	return err
+func (bm *BridgeManager) SetJournal(bridgeAlias string, localAddress, remoteAddress common.Address) error {
+	return bm.journal.insert(bridgeAlias, localAddress, remoteAddress)
 }
 
 // AddRecovery starts value transfer recovery for a given addresses pair.
