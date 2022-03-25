@@ -1393,6 +1393,47 @@ web3._extend({
 			call: 'subbridge_setChildOperatorFeePayer',
 			params: 1
 		}),
+		// Alias-dedlicated APIs
+		new web3._extend.Method({
+			name: 'subscribeBridgeByAlias',
+			call: 'subbridge_subscribeBridgeByAlias',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'unsubscribeBridgeByAlias',
+			call: 'subbridge_unsubscribeBridgeByAlias',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'registerBridgeByAlias',
+			call: 'subbridge_registerBridgeByAlias',
+			params: 3
+		}),
+		new web3._extend.Method({
+			name: 'deregisterBridgeByAlias',
+			call: 'subbridge_deregisterBridgeByAlias',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'registerTokenByAlias',
+			call: 'subbridge_registerTokenByAlias',
+			params: 3
+		}),
+		new web3._extend.Method({
+			name: 'deregisterTokenByAlias',
+			call: 'subbridge_deregisterTokenByAlias',
+			params: 3
+		}),
+		new web3._extend.Method({
+			name: 'getBridgePairByAlias',
+			call: 'subbridge_getBridgePairByAlias',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'changeBridgeAlias',
+			call: 'subbridge_changeBridgeAlias',
+			params: 2
+		}),
 	],
     properties: [
 		new web3._extend.Property({
