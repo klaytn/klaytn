@@ -975,7 +975,7 @@ func TestBasicJournal(t *testing.T) {
 	remoteAddr, err := bm.DeployBridgeTest(sim, false)
 	assert.NoError(t, err)
 
-	bm.SetJournal(localAddr, remoteAddr)
+	bm.SetJournal("", localAddr, remoteAddr)
 
 	ps := sc.BridgePeerSet()
 	ps.peers["test"] = nil
@@ -1066,9 +1066,9 @@ func TestMethodRestoreBridges(t *testing.T) {
 	sim.Commit()
 
 	// Set journal
-	bm.SetJournal(bridgeAddrs[0], bridgeAddrs[1])
+	bm.SetJournal("", bridgeAddrs[0], bridgeAddrs[1])
 	bm.journal.cache[bridgeAddrs[0]].Subscribed = true
-	bm.SetJournal(bridgeAddrs[2], bridgeAddrs[3])
+	bm.SetJournal("", bridgeAddrs[2], bridgeAddrs[3])
 	bm.journal.cache[bridgeAddrs[2]].Subscribed = true
 
 	ps := sc.BridgePeerSet()
@@ -1132,8 +1132,8 @@ func TestMethodGetAllBridge(t *testing.T) {
 	testBridge1 := common.BytesToAddress([]byte("test1"))
 	testBridge2 := common.BytesToAddress([]byte("test2"))
 
-	bm.journal.insert(testBridge1, testBridge2)
-	bm.journal.insert(testBridge2, testBridge1)
+	bm.journal.insert("", testBridge1, testBridge2)
+	bm.journal.insert("", testBridge2, testBridge1)
 
 	bridges := bm.GetAllBridge()
 	assert.Equal(t, 2, len(bridges))
@@ -1163,15 +1163,15 @@ func TestErrorDuplication(t *testing.T) {
 	localAddr := common.BytesToAddress([]byte("test1"))
 	remoteAddr := common.BytesToAddress([]byte("test2"))
 
-	err = bm.journal.insert(localAddr, remoteAddr)
+	err = bm.journal.insert("", localAddr, remoteAddr)
 	assert.Equal(t, nil, err)
-	err = bm.journal.insert(remoteAddr, localAddr)
+	err = bm.journal.insert("", remoteAddr, localAddr)
 	assert.Equal(t, nil, err)
 
 	// try duplicated insert.
-	err = bm.journal.insert(localAddr, remoteAddr)
+	err = bm.journal.insert("", localAddr, remoteAddr)
 	assert.NotEqual(t, nil, err)
-	err = bm.journal.insert(remoteAddr, localAddr)
+	err = bm.journal.insert("", remoteAddr, localAddr)
 	assert.NotEqual(t, nil, err)
 
 	// check cache size for checking duplication
@@ -1204,11 +1204,11 @@ func TestMethodSetJournal(t *testing.T) {
 	remoteAddr := common.BytesToAddress([]byte("test2"))
 
 	// Simple insert case
-	err = bm.SetJournal(localAddr, remoteAddr)
+	err = bm.SetJournal("", localAddr, remoteAddr)
 	assert.Equal(t, nil, err)
 
 	// Error case
-	err = bm.SetJournal(localAddr, remoteAddr)
+	err = bm.SetJournal("", localAddr, remoteAddr)
 	assert.NotEqual(t, nil, err)
 
 	// Check the number of bridge elements for checking duplication
@@ -1379,10 +1379,10 @@ func TestErrorEmptyAccount(t *testing.T) {
 	localAddr := common.BytesToAddress([]byte("test1"))
 	remoteAddr := common.BytesToAddress([]byte("test2"))
 
-	err = bm.journal.insert(localAddr, common.Address{})
+	err = bm.journal.insert("", localAddr, common.Address{})
 	assert.NotEqual(t, nil, err)
 
-	err = bm.journal.insert(common.Address{}, remoteAddr)
+	err = bm.journal.insert("", common.Address{}, remoteAddr)
 	assert.NotEqual(t, nil, err)
 
 	bm.Stop()
@@ -1453,7 +1453,7 @@ func TestErrorDupSubscription(t *testing.T) {
 
 	bm.bridges[addr], err = NewBridgeInfo(sc, addr, bridge, common.Address{}, nil, bacc.cAccount, true, true, sim)
 
-	bm.journal.cache[addr] = &BridgeJournal{addr, addr, true}
+	bm.journal.cache[addr] = &BridgeJournal{"", addr, addr, true}
 
 	bm.SubscribeEvent(addr)
 	err = bm.SubscribeEvent(addr)
@@ -1987,6 +1987,149 @@ func TestDecodingLegacyAnchoringTx(t *testing.T) {
 	assert.Equal(t, curBlk.Header().Number.String(), decodedData.GetBlockNumber().String())
 }
 
+func TestBridgeAliasAPIs(t *testing.T) {
+	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	assert.NoError(t, err)
+	defer func() {
+		if err := os.RemoveAll(tempDir); err != nil {
+			t.Fatalf("fail to delete file %v", err)
+		}
+	}()
+
+	// Generate a new random account and a funded simulator
+	aliceKey, _ := crypto.GenerateKey()
+	alice := bind.NewKeyedTransactor(aliceKey)
+	bobKey, _ := crypto.GenerateKey()
+	bob := bind.NewKeyedTransactor(bobKey)
+
+	config := &SCConfig{}
+	config.DataDir = tempDir
+
+	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}))
+	bacc.pAccount.chainID = big.NewInt(0)
+	bacc.cAccount.chainID = big.NewInt(0)
+
+	alloc := blockchain.GenesisAlloc{
+		alice.From:            {Balance: big.NewInt(params.KLAY)},
+		bob.From:              {Balance: big.NewInt(params.KLAY)},
+		bacc.pAccount.address: {Balance: big.NewInt(params.KLAY)},
+		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
+	}
+	sim := backends.NewSimulatedBackend(alloc)
+	defer sim.Close()
+
+	sc := &SubBridge{
+		config:         config,
+		peers:          newBridgePeerSet(),
+		localBackend:   sim,
+		remoteBackend:  sim,
+		bridgeAccounts: bacc,
+	}
+
+	sc.APIBackend = &SubBridgeAPI{sc}
+	sc.handler, err = NewSubBridgeHandler(sc)
+	assert.NoError(t, err)
+
+	// Prepare manager and deploy bridge contract.
+	bm, err := NewBridgeManager(sc)
+	assert.NoError(t, err)
+	sc.handler.subbridge.bridgeManager = bm
+
+	// 1. Deploy bridge contracts and register them
+	cBridgeAddr := deployBridge(t, bm, sim, true)
+	pBridgeAddr := deployBridge(t, bm, sim, false)
+
+	// 2. Deploy token Contracts
+	cTokenAddr, _, _, err := sctoken.DeployServiceChainToken(alice, sim, cBridgeAddr)
+	assert.NoError(t, err)
+	pTokenAddr, _, _, err := sctoken.DeployServiceChainToken(alice, sim, pBridgeAddr)
+	assert.NoError(t, err)
+	sim.Commit() // block
+
+	// -------------------------- Done prepration --------------------------
+
+	alias := "MYBRIDGE"
+	changedAlias := "MYBRIDGE_v2"
+	{
+		// TEST 1 - Success (Register bridge, tokens and subscribe registered bridges)
+		bridgePairs := bm.subBridge.APIBackend.ListBridge()
+		assert.Equal(t, len(bridgePairs), 0)
+
+		// Register Bridge
+		err = bm.subBridge.APIBackend.RegisterBridgeByAlias(alias, cBridgeAddr, pBridgeAddr)
+		assert.NoError(t, err)
+
+		// Register tokens
+		err = bm.subBridge.APIBackend.RegisterTokenByAlias(alias, cTokenAddr, pTokenAddr)
+		assert.NoError(t, err)
+
+		// Subscribe bridges
+		err = bm.subBridge.APIBackend.SubscribeBridgeByAlias(alias)
+		assert.NoError(t, err)
+
+		bridgePairs = bm.subBridge.APIBackend.ListBridge()
+		assert.Equal(t, len(bridgePairs), 1)
+		assert.Equal(t, bridgePairs[0].Subscribed, true)
+
+		bridgePair := bm.subBridge.APIBackend.GetBridgePairByAlias(alias)
+		assert.Equal(t, bridgePair.BridgeAlias, alias)
+	}
+
+	{
+		// TEST 2 - Failure
+		// Duplicated bridge journal
+		err = bm.subBridge.APIBackend.RegisterBridgeByAlias(alias, cBridgeAddr, pBridgeAddr)
+		assert.Equal(t, err, ErrDuplicatedBridgeInfo)
+
+		// Duplicated token
+		err = bm.subBridge.APIBackend.RegisterTokenByAlias(alias, cTokenAddr, pTokenAddr)
+		assert.Equal(t, err, ErrDuplicatedToken)
+
+		err = bm.subBridge.APIBackend.SubscribeBridgeByAlias(alias)
+		assert.Equal(t, err, ErrAlreadySubscribed)
+	}
+
+	{
+		// TEST 3 - Success (change bridge alias)
+		err = bm.subBridge.APIBackend.ChangeBridgeAlias(alias, changedAlias)
+		assert.NoError(t, err)
+
+		bridgePair := bm.subBridge.APIBackend.GetBridgePairByAlias(alias)
+		assert.Nil(t, bridgePair)
+
+		bridgePair = bm.subBridge.APIBackend.GetBridgePairByAlias(changedAlias)
+		assert.Equal(t, bridgePair.BridgeAlias, changedAlias)
+	}
+
+	{
+		// TEST 4 - Success (Unsubscribe bridge, deregister bridges and tokens)
+		bridgePairs := bm.subBridge.APIBackend.ListBridge()
+		err = bm.subBridge.APIBackend.UnsubscribeBridgeByAlias(changedAlias)
+		assert.NoError(t, err)
+		assert.Equal(t, bridgePairs[0].Subscribed, false)
+
+		bridgePair := bm.subBridge.APIBackend.GetBridgePairByAlias(changedAlias)
+		assert.Equal(t, bridgePair.BridgeAlias, changedAlias)
+		cBi, ok := bm.GetBridgeInfo(bridgePair.ChildAddress)
+		assert.Equal(t, ok, true)
+		assert.Equal(t, len(cBi.counterpartToken), 1)
+
+		assert.Equal(t, bridgePair.BridgeAlias, changedAlias)
+		pBi, ok := bm.GetBridgeInfo(bridgePair.ParentAddress)
+		assert.Equal(t, ok, true)
+		assert.Equal(t, len(pBi.counterpartToken), 1)
+
+		err = bm.subBridge.APIBackend.DeregisterTokenByAlias(changedAlias, cTokenAddr, pTokenAddr)
+		assert.NoError(t, err)
+		assert.Equal(t, len(cBi.counterpartToken), 0)
+		assert.Equal(t, len(pBi.counterpartToken), 0)
+
+		err = bm.subBridge.APIBackend.DeregisterBridgeByAlias(changedAlias)
+		bridgePairs = bm.subBridge.APIBackend.ListBridge()
+		assert.Equal(t, len(bridgePairs), 0)
+	}
+}
+
 // DeployBridgeTest is a test-only function which deploys a bridge contract with some amount of KLAY.
 func (bm *BridgeManager) DeployBridgeTest(backend *backends.SimulatedBackend, local bool) (common.Address, error) {
 	var acc *accountInfo
@@ -2024,4 +2167,35 @@ func (bm *BridgeManager) DeployBridgeTest(backend *backends.SimulatedBackend, lo
 		return common.Address{}, err
 	}
 	return addr, err
+}
+
+// deployBridge deploys bridge contract and returns its address
+func deployBridge(t *testing.T, bm *BridgeManager, backend *backends.SimulatedBackend, local bool) common.Address {
+	var acc *accountInfo
+
+	// When the pending block of backend is updated, commit it
+	// bm.DeployBridge will be waiting until the block is committed
+	pendingBlock := backend.PendingBlock()
+	go func() {
+		for pendingBlock == backend.PendingBlock() {
+			time.Sleep(100 * time.Millisecond)
+		}
+		backend.Commit()
+		return
+	}()
+
+	// Set transfer value of the bridge account
+	if local {
+		acc = bm.subBridge.bridgeAccounts.cAccount
+	} else {
+		acc = bm.subBridge.bridgeAccounts.pAccount
+	}
+
+	auth := acc.GenerateTransactOpts()
+	auth.Value = big.NewInt(10000)
+
+	// Deploy a bridge contract
+	_, addr, err := bm.DeployBridge(auth, backend, local)
+	assert.NoError(t, err)
+	return addr
 }
