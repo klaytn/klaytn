@@ -511,7 +511,7 @@ func (sb *SubBridgeAPI) GetParentOperatorBalance() (*big.Int, error) {
 	return sb.subBridge.handler.getParentOperatorBalance()
 }
 
-// GetParentBridgeContractBalance returns bridge contract's balance from the parent bridge
+// GetParentBridgeContractBalance returns the balance of the bridge contract in the parent chain.
 func (sb *SubBridgeAPI) GetParentBridgeContractBalance(addr common.Address) (*big.Int, error) {
 	return sb.subBridge.handler.getParentBridgeContractBalance(addr)
 }
@@ -520,6 +520,7 @@ func (sb *SubBridgeAPI) GetChildOperatorBalance() (*big.Int, error) {
 	return sb.subBridge.handler.getChildOperatorBalance()
 }
 
+// GetChildBridgeContractBalance returns the balance of the bridge contract in the child chain.
 func (sb *SubBridgeAPI) GetChildBridgeContractBalance(addr common.Address) (*big.Int, error) {
 	return sb.subBridge.handler.getChildBridgeContractBalance(addr)
 }
