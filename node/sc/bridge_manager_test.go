@@ -1989,7 +1989,7 @@ func TestDecodingLegacyAnchoringTx(t *testing.T) {
 }
 
 // DeployBridgeTest is a test-only function which deploys a bridge contract with some amount of KLAY.
-func (bm *BridgeManager) DeployBridgeTest(backend *backends.SimulatedBackend, amountOfBridgeContract int64, local bool) (common.Address, error) {
+func (bm *BridgeManager) DeployBridgeTest(backend *backends.SimulatedBackend, amountOfDeposit int64, local bool) (common.Address, error) {
 	var acc *accountInfo
 
 	// When the pending block of backend is updated, commit it
@@ -2011,7 +2011,7 @@ func (bm *BridgeManager) DeployBridgeTest(backend *backends.SimulatedBackend, am
 	}
 
 	auth := acc.GenerateTransactOpts()
-	auth.Value = big.NewInt(amountOfBridgeContract)
+	auth.Value = big.NewInt(amountOfDeposit)
 
 	// Deploy a bridge contract
 	deployedBridge, addr, err := bm.DeployBridge(auth, backend, local)
