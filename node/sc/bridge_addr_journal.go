@@ -31,24 +31,27 @@ import (
 )
 
 var (
-	errNoActiveAddressJournal = errors.New("no active address journal")
-	errDuplicatedJournal      = errors.New("duplicated journal is inserted")
-	errEmptyBridgeAddress     = errors.New("empty bridge address is not allowed")
+	ErrNoActiveAddressJournal = errors.New("no active address journal")
+	ErrDuplicatedJournal      = errors.New("duplicated journal is inserted")
+	ErrEmptyBridgeAddress     = errors.New("empty bridge address is not allowed")
+	ErrEmptyBridgeAlias       = errors.New("empty bridge Alias")
 )
 
 // bridgeAddrJournal is a rotating log of addresses with the aim of storing locally
 // created addresses to allow deployed bridge contracts to survive node restarts.
 type bridgeAddrJournal struct {
-	path   string         // Filesystem path to store the addresses at
-	writer io.WriteCloser // Output stream to write new addresses into
-	cache  map[common.Address]*BridgeJournal
+	path       string         // Filesystem path to store the addresses at
+	writer     io.WriteCloser // Output stream to write new addresses into
+	cache      map[common.Address]*BridgeJournal
+	aliasCache map[string]common.Address
 }
 
 // newBridgeAddrJournal creates a new bridge addr journal to
 func newBridgeAddrJournal(path string) *bridgeAddrJournal {
 	return &bridgeAddrJournal{
-		path:  path,
-		cache: make(map[common.Address]*BridgeJournal),
+		path:       path,
+		cache:      make(map[common.Address]*BridgeJournal),
+		aliasCache: make(map[string]common.Address),
 	}
 }
 
@@ -99,20 +102,36 @@ func (journal *bridgeAddrJournal) load(add func(journal BridgeJournal) error) er
 	return failure
 }
 
-// insert adds the specified address to the local disk journal.
-func (journal *bridgeAddrJournal) insert(localAddress common.Address, remoteAddress common.Address) error {
-	if journal.cache[localAddress] != nil {
-		return errDuplicatedJournal
+// ChangeBridgeAlias changes oldBridgeAlias to newBridgeAlias
+func (journal *bridgeAddrJournal) ChangeBridgeAlias(oldBridgeAlias, newBridgeAlias string) error {
+	if addr, ok := journal.aliasCache[oldBridgeAlias]; ok {
+		delete(journal.aliasCache, oldBridgeAlias)
+		journal.aliasCache[newBridgeAlias] = addr
+		journal.cache[addr].BridgeAlias = newBridgeAlias
+		return nil
 	}
+	return ErrEmptyBridgeAlias
+}
+
+// insert adds the specified address to the local disk journal.
+func (journal *bridgeAddrJournal) insert(bridgeAlias string, localAddress common.Address, remoteAddress common.Address) error {
+	if len(bridgeAlias) != 0 && journal.aliasCache[bridgeAlias] != (common.Address{}) {
+		return ErrDuplicatedJournal
+	}
+	if journal.cache[localAddress] != nil {
+		return ErrDuplicatedJournal
+	}
+
 	if journal.writer == nil {
-		return errNoActiveAddressJournal
+		return ErrNoActiveAddressJournal
 	}
 	empty := common.Address{}
 	if localAddress == empty || remoteAddress == empty {
-		return errEmptyBridgeAddress
+		return ErrEmptyBridgeAddress
 	}
 	// TODO-Klaytn-ServiceChain: support false paired
 	item := BridgeJournal{
+		bridgeAlias,
 		localAddress,
 		remoteAddress,
 		false,
@@ -120,7 +139,11 @@ func (journal *bridgeAddrJournal) insert(localAddress common.Address, remoteAddr
 	if err := rlp.Encode(journal.writer, &item); err != nil {
 		return err
 	}
+
 	journal.cache[localAddress] = &item
+	if len(bridgeAlias) != 0 {
+		journal.aliasCache[bridgeAlias] = localAddress
+	}
 	return nil
 }
 
