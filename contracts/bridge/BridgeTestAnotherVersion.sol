@@ -1,4 +1,4 @@
-// Copyright 2019 The klaytn Authors
+// Copyright 2022 The klaytn Authors
 // This file is part of the klaytn library.
 //
 // The klaytn library is free software: you can redistribute it and/or modify
@@ -16,9 +16,9 @@
 
 pragma solidity 0.5.6;
 
-contract BridgeAnotherVersion {
-    uint64 public constant VERSION = 2;
+import "./BridgeVersionController.sol";
 
-    constructor() public {
+contract BridgeAnotherVersion is BridgeVersionController {
+    constructor(uint64 version) BridgeVersionController(version)  public {
     }
 }
