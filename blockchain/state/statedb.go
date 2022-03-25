@@ -328,17 +328,10 @@ func (self *StateDB) IsContractAccount(addr common.Address) bool {
 
 func (self *StateDB) GetCodeSize(addr common.Address) int {
 	stateObject := self.getStateObject(addr)
-	if stateObject == nil {
-		return 0
+	if stateObject != nil {
+		return stateObject.CodeSize(self.db)
 	}
-	if stateObject.code != nil {
-		return len(stateObject.code)
-	}
-	size, err := self.db.ContractCodeSize(common.BytesToHash(stateObject.CodeHash()))
-	if err != nil {
-		self.setError(err)
-	}
-	return size
+	return 0
 }
 
 func (self *StateDB) GetCodeHash(addr common.Address) common.Hash {
