@@ -493,7 +493,7 @@ func TestMissingTrieNodes(t *testing.T) {
 	memDb := database.NewMemoryDBManager()
 	db := NewDatabase(memDb)
 	var root common.Hash
-	state, _ := New(common.Hash{}, db)
+	state, _ := New(common.Hash{}, db, nil)
 	addr := toAddr([]byte("so"))
 	{
 		state.SetBalance(addr, big.NewInt(1))
@@ -507,9 +507,9 @@ func TestMissingTrieNodes(t *testing.T) {
 		state.Database().TrieDB().Cap(0)
 	}
 	// Create a new state on the old root
-	state, _ = New(root, db)
+	state, _ = New(root, db, nil)
 	// Now we clear out the memdb
-	it := memDb.GetMemDB().NewIterator()
+	it := memDb.GetMemDB().NewIterator(nil, nil)
 	for it.Next() {
 		k := it.Key()
 		// Leave the root intact
