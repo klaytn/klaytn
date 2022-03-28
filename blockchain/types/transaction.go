@@ -835,7 +835,7 @@ func (s TxByNonce) Less(i, j int) bool {
 }
 func (s TxByNonce) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 
-// TxByPrice implements both the sort and the heap interface, making it useful
+// TxByPriceAndTime implements both the sort and the heap interface, making it useful
 // for all at once sorting as well as individually adding and removing elements.
 type TxByPriceAndTime Transactions
 
