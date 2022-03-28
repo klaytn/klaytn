@@ -2038,7 +2038,7 @@ func isExpectedBalance(t *testing.T, bridgeManager *BridgeManager,
 	assert.Equal(t, cBridgeBalance.Int64(), expectedChildBridgeBalance)
 }
 
-func TestGetParentBridgeContractBalance(t *testing.T) {
+func TestGetBridgeContractBalance(t *testing.T) {
 	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
 	assert.NoError(t, err)
 	defer func() {
@@ -2046,9 +2046,6 @@ func TestGetParentBridgeContractBalance(t *testing.T) {
 			t.Fatalf("fail to delete file %v", err)
 		}
 	}()
-
-	wg := sync.WaitGroup{}
-	wg.Add(6)
 
 	// Config Bridge Account Manager
 	config := &SCConfig{}
