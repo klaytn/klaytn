@@ -95,8 +95,8 @@ func getHandshakeRet(bridgePeer1, bridgePeer2 BridgePeer) (error, error) {
 }
 
 // compareVersion checks version matching based on property-based testing.
-func compareVersion(t *testing.T, pv1, pv2, nv1, nv2 string, errHandshakePeer1, errHandshakePeer2 error) {
-	if pv1 == pv2 && nv1 == nv2 {
+func compareVersion(t *testing.T, pv1, pv2 string, errHandshakePeer1, errHandshakePeer2 error) {
+	if pv1 == pv2 {
 		assert.Nil(t, errHandshakePeer1)
 		assert.Nil(t, errHandshakePeer2)
 	} else {
@@ -112,74 +112,40 @@ func TestVersionCompare(t *testing.T) {
 	pipe1, pipe2 := p2p.MsgPipe()
 
 	{
-		// Case 1 - Success (Exactly matched)
+		// Case 1 - Success (ProtocolVersion matched)
 		testProtocolVersion1, testProtocolVersion2 := "1.0", "1.0"
-		testNodeVersion1, testNodeVersion2 := "v1.8.0", "v1.8.0"
-		bridgePeer1 := newBridgePeer(testProtocolVersion1, testNodeVersion1, peer1, pipe1)
-		bridgePeer2 := newBridgePeer(testProtocolVersion2, testNodeVersion2, peer2, pipe2)
+		bridgePeer1 := newBridgePeer(testProtocolVersion1, peer1, pipe1)
+		bridgePeer2 := newBridgePeer(testProtocolVersion2, peer2, pipe2)
 
 		errHandshakePeer1, errHandshakePeer2 := getHandshakeRet(bridgePeer1, bridgePeer2)
 		compareVersion(t,
 			testProtocolVersion1, testProtocolVersion2,
-			testNodeVersion1, testNodeVersion2,
 			errHandshakePeer1, errHandshakePeer2)
 	}
 
 	{
 		// Case 2 - Failure (ProtocolVersion diff)
 		testProtocolVersion1, testProtocolVersion2 := "1.0", "1.1"
-		testNodeVersion1, testNodeVersion2 := "v1.8.0", "v1.8.0"
-		bridgePeer1 := newBridgePeer(testProtocolVersion1, testNodeVersion1, peer1, pipe1)
-		bridgePeer2 := newBridgePeer(testProtocolVersion2, testNodeVersion2, peer2, pipe2)
+		bridgePeer1 := newBridgePeer(testProtocolVersion1, peer1, pipe1)
+		bridgePeer2 := newBridgePeer(testProtocolVersion2, peer2, pipe2)
 
 		errHandshakePeer1, errHandshakePeer2 := getHandshakeRet(bridgePeer1, bridgePeer2)
 		compareVersion(t,
 			testProtocolVersion1, testProtocolVersion2,
-			testNodeVersion1, testNodeVersion2,
 			errHandshakePeer1, errHandshakePeer2)
 	}
 
 	{
-		// Case 3 - Failure (NodeVersion diff)
-		testProtocolVersion1, testProtocolVersion2 := "1.0", "1.0"
-		testNodeVersion1, testNodeVersion2 := "v1.8.0", "v1.8.1"
-		bridgePeer1 := newBridgePeer(testProtocolVersion1, testNodeVersion1, peer1, pipe1)
-		bridgePeer2 := newBridgePeer(testProtocolVersion2, testNodeVersion2, peer2, pipe2)
-
-		errHandshakePeer1, errHandshakePeer2 := getHandshakeRet(bridgePeer1, bridgePeer2)
-		compareVersion(t,
-			testProtocolVersion1, testProtocolVersion2,
-			testNodeVersion1, testNodeVersion2,
-			errHandshakePeer1, errHandshakePeer2)
-	}
-
-	{
-		// Case 4 - Failure (All diff)
-		testProtocolVersion1, testProtocolVersion2 := "1.0", "1.1"
-		testNodeVersion1, testNodeVersion2 := "v1.8.0", "v1.8.1"
-		bridgePeer1 := newBridgePeer(testProtocolVersion1, testNodeVersion1, peer1, pipe1)
-		bridgePeer2 := newBridgePeer(testProtocolVersion2, testNodeVersion2, peer2, pipe2)
-
-		errHandshakePeer1, errHandshakePeer2 := getHandshakeRet(bridgePeer1, bridgePeer2)
-		compareVersion(t,
-			testProtocolVersion1, testProtocolVersion2,
-			testNodeVersion1, testNodeVersion2,
-			errHandshakePeer1, errHandshakePeer2)
-	}
-
-	{
-		// Case 5 - ? (Random)
+		// Case 3 - ? (Random)
 		rand.Seed(time.Now().UnixNano())
 		for i := 0; i < 100; i++ {
 			testProtocolVersion1, testProtocolVersion2 := genRandomNum(), genRandomNum()
-			testNodeVersion1, testNodeVersion2 := genRandomString(t), genRandomString(t)
-			bridgePeer1 := newBridgePeer(testProtocolVersion1, testNodeVersion1, peer1, pipe1)
-			bridgePeer2 := newBridgePeer(testProtocolVersion2, testNodeVersion2, peer2, pipe2)
+			bridgePeer1 := newBridgePeer(testProtocolVersion1, peer1, pipe1)
+			bridgePeer2 := newBridgePeer(testProtocolVersion2, peer2, pipe2)
 
 			errHandshakePeer1, errHandshakePeer2 := getHandshakeRet(bridgePeer1, bridgePeer2)
 			compareVersion(t,
 				testProtocolVersion1, testProtocolVersion2,
-				testNodeVersion1, testNodeVersion2,
 				errHandshakePeer1, errHandshakePeer2)
 		}
 	}

@@ -48,7 +48,6 @@ import (
 const testNetVersion = uint64(8888)
 
 var testProtocolVersion = SCProtocolVersion[0]
-var testNodeVersion = params.Version
 
 // testNewMainBridge returns a test MainBridge.
 func testNewMainBridge(t *testing.T) *MainBridge {
@@ -136,7 +135,6 @@ func TestMainBridge_basic(t *testing.T) {
 	// Test getters for elements of MainBridge
 	assert.Equal(t, true, mBridge.IsListening()) // Always returns `true`
 	assert.Equal(t, testProtocolVersion, mBridge.ProtocolVersion())
-	assert.Equal(t, testNodeVersion, mBridge.NodeVersion())
 	assert.Equal(t, testNetVersion, mBridge.NetVersion())
 
 	// New components of MainBridge which will update old components
@@ -214,7 +212,7 @@ func TestMainBridge_handleMsg(t *testing.T) {
 	pipe1, pipe2 := p2p.MsgPipe()
 
 	// bridgePeer will receive a message through rw1
-	bridgePeer := newBridgePeer(testProtocolVersion, testNodeVersion, peer, pipe1)
+	bridgePeer := newBridgePeer(testProtocolVersion, peer, pipe1)
 
 	// Case1. Send a valid message and handle it successfully
 	{
@@ -283,7 +281,6 @@ func TestMainBridge_handle(t *testing.T) {
 	mockBridgePeer.EXPECT().GetRW().Return(pipe).AnyTimes()
 	mockBridgePeer.EXPECT().Close().Return().AnyTimes()
 	mockBridgePeer.EXPECT().GetProtocolVersion().Return(testProtocolVersion).AnyTimes()
-	mockBridgePeer.EXPECT().GetNodeVersion().Return(testNodeVersion).AnyTimes()
 
 	// Case 1 - Error if `mBridge.peers.Len()` was equal or bigger than `mBridge.maxPeers`
 	{

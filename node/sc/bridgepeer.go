@@ -49,7 +49,6 @@ const (
 // about a connected peer.
 type BridgePeerInfo struct {
 	ProtocolVersion string `json:"protocolversion"` // Klaytn Bridge protocol version negotiated
-	NodeVersion     string `json:"nodeversion"`     // Klaytn Bridge node version negotiated
 	Head            string `json:"head"`            // SHA3 hash of the peer's best owned block
 }
 
@@ -101,9 +100,6 @@ type BridgePeer interface {
 	// GetProtocolVersion returns the peer's protocol version.
 	GetProtocolVersion() string
 
-	// GetNodeVersion returns the peer's node version.
-	GetNodeVersion() string
-
 	// KnowsTx returns if the peer is known to have the transaction, based on knownTxsCache.
 	KnowsTx(hash common.Hash) bool
 
@@ -147,7 +143,6 @@ type baseBridgePeer struct {
 	rw p2p.MsgReadWriter
 
 	pv string // Protocol version negotiated
-	nv string // Node version
 
 	head common.Hash
 	td   *big.Int
@@ -167,7 +162,7 @@ func newKnownTxCache() common.Cache {
 }
 
 // newPeer returns new Peer interface.
-func newBridgePeer(pv string, nv string, p *p2p.Peer, rw p2p.MsgReadWriter) BridgePeer {
+func newBridgePeer(pv string, p *p2p.Peer, rw p2p.MsgReadWriter) BridgePeer {
 	id := p.ID()
 
 	return &singleChannelPeer{
@@ -175,7 +170,6 @@ func newBridgePeer(pv string, nv string, p *p2p.Peer, rw p2p.MsgReadWriter) Brid
 			Peer:          p,
 			rw:            rw,
 			pv:            pv,
-			nv:            nv,
 			id:            fmt.Sprintf("%x", id[:8]),
 			knownTxsCache: newKnownTxCache(),
 			term:          make(chan struct{}),
@@ -195,7 +189,6 @@ func (p *baseBridgePeer) Info() *BridgePeerInfo {
 
 	return &BridgePeerInfo{
 		ProtocolVersion: p.pv,
-		NodeVersion:     p.nv,
 		Head:            hash.Hex(),
 	}
 }
@@ -269,7 +262,6 @@ func (p *baseBridgePeer) Handshake(network uint64, chainID, td *big.Int, head co
 	go func() {
 		errc <- p2p.Send(p.rw, StatusMsg, &statusData{
 			ProtocolVersion: p.pv,
-			NodeVersion:     p.nv,
 			NetworkId:       network,
 			TD:              td,
 			CurrentBlock:    head,
@@ -321,9 +313,6 @@ func (p *baseBridgePeer) readStatus(network uint64, status *statusData) error {
 	if status.ProtocolVersion != p.pv {
 		return errResp(ErrProtocolVersionMismatch, "%s (!= %s)", status.ProtocolVersion, p.pv)
 	}
-	if status.NodeVersion != p.nv {
-		return errResp(ErrNodeVersionMisMatch, "%s (!= %s)", status.NodeVersion, p.nv)
-	}
 	return nil
 }
 
@@ -367,11 +356,6 @@ func (p *baseBridgePeer) SetAddr(addr common.Address) {
 // GetProtocolVersion returns the peer's protocol version.
 func (p *baseBridgePeer) GetProtocolVersion() string {
 	return p.pv
-}
-
-// GetNodeVersion returns the peer's node version.
-func (p *baseBridgePeer) GetNodeVersion() string {
-	return p.nv
 }
 
 // KnowsTx returns if the peer is known to have the transaction, based on knownTxsCache.

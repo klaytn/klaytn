@@ -24,7 +24,6 @@ import (
 	"math/big"
 
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/params"
 )
 
 const ProtocolMaxMsgSize = 10 * 1024 * 1024 // Maximum cap on the size of a protocol message
@@ -49,7 +48,6 @@ var (
 	SCProtocolName    = "servicechain"
 	SCProtocolVersion = []string{"1.0"}
 	SCProtocolLength  = []uint64{9}
-	SCNodeVersion     = params.Version
 )
 
 // Protocol defines the protocol of the consensus
@@ -58,8 +56,6 @@ type SCProtocol struct {
 	Name string
 	// Supported versions of the Klaytn SC protocol (first is primary).
 	ProtocolVersions []string
-	// Supported versions of the Klaytn Node version
-	NodeVersion string
 	// Number of implemented message corresponding to different protocol versions.
 	Lengths []uint64
 }
@@ -71,7 +67,6 @@ const (
 	ErrDecode
 	ErrInvalidMsgCode
 	ErrProtocolVersionMismatch
-	ErrNodeVersionMisMatch
 	ErrNetworkIdMismatch
 	ErrNoStatusMsg
 	ErrUnexpectedTxType
@@ -87,7 +82,6 @@ var errorToString = map[int]string{
 	ErrDecode:                  "Invalid message",
 	ErrInvalidMsgCode:          "Invalid message code",
 	ErrProtocolVersionMismatch: "Protocol version mismatch",
-	ErrNodeVersionMisMatch:     "Node version mismatch",
 	ErrNetworkIdMismatch:       "NetworkId mismatch",
 	ErrNoStatusMsg:             "No status message",
 	ErrUnexpectedTxType:        "Unexpected tx type",
@@ -96,7 +90,6 @@ var errorToString = map[int]string{
 // statusData is the network packet for the status message.
 type statusData struct {
 	ProtocolVersion string
-	NodeVersion     string
 	NetworkId       uint64
 	TD              *big.Int
 	CurrentBlock    common.Hash

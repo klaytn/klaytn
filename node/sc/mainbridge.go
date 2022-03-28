@@ -217,7 +217,6 @@ func (mb *MainBridge) EventMux() *event.TypeMux          { return mb.eventMux }
 func (mb *MainBridge) ChainDB() database.DBManager       { return mb.chainDB }
 func (mb *MainBridge) IsListening() bool                 { return true } // Always listening
 func (mb *MainBridge) ProtocolVersion() string           { return mb.SCProtocol().ProtocolVersions[0] }
-func (mb *MainBridge) NodeVersion() string               { return mb.SCProtocol().NodeVersion }
 func (mb *MainBridge) NetVersion() uint64                { return mb.networkId }
 
 func (mb *MainBridge) Components() []interface{} {
@@ -263,7 +262,6 @@ func (mb *MainBridge) SCProtocol() SCProtocol {
 	return SCProtocol{
 		Name:             SCProtocolName,
 		ProtocolVersions: SCProtocolVersion,
-		NodeVersion:      SCNodeVersion,
 		Lengths:          SCProtocolLength,
 	}
 }
@@ -355,7 +353,7 @@ func (mb *MainBridge) Start(srvr p2p.Server) error {
 }
 
 func (mb *MainBridge) newPeer(pv string, p *p2p.Peer, rw p2p.MsgReadWriter) BridgePeer {
-	return newBridgePeer(pv, params.Version, p, newMeteredMsgWriter(rw))
+	return newBridgePeer(pv, p, newMeteredMsgWriter(rw))
 }
 
 func (mb *MainBridge) handle(p BridgePeer) error {
@@ -367,7 +365,6 @@ func (mb *MainBridge) handle(p BridgePeer) error {
 	}
 	peer.Log().Info("[Main Bridge] Peer connected",
 		"SCProtocolVersion", p.GetProtocolVersion(),
-		"nodeVersion", p.GetNodeVersion(),
 		"NodeEnvironment", mb.config.NodeName(),
 		"chainID", chainID,
 		"Address", peer.RemoteAddr().String())
