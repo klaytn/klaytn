@@ -123,8 +123,12 @@ func TestBasePeer_ReSendTransactions(t *testing.T) {
 
 	assert.False(t, basePeer.KnowsTx(tx1.Hash()))
 	assert.Equal(t, len(sentTxs), len(receivedTxs))
-	receivedTxs[0].Hash()
-	assert.Equal(t, sentTxs[0], receivedTxs[0])
+	assert.Equal(t, sentTxs[0].Hash(), receivedTxs[0].Hash())
+
+	sendTxBinary, _ := sentTxs[0].MarshalBinary()
+	receivedTxBinary, _ := receivedTxs[0].MarshalBinary()
+	assert.Equal(t, sendTxBinary, receivedTxBinary)
+
 }
 
 func TestBasePeer_AsyncSendTransactions(t *testing.T) {
