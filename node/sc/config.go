@@ -104,6 +104,7 @@ type SCConfig struct {
 	KASAccessKey      string
 	KASSecretKey      string
 	KASXChainId       string
+	KASRequestTimeout time.Duration
 }
 
 // NodeName returns the devp2p node identifier.

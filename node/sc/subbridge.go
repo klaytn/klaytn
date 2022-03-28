@@ -327,13 +327,14 @@ func (sb *SubBridge) SetComponents(components []interface{}) {
 			sb.blockchain = v
 
 			kasConfig := &kas.KASConfig{
-				Url:          sb.config.KASAnchorUrl,
-				XChainId:     sb.config.KASXChainId,
-				User:         sb.config.KASAccessKey,
-				Pwd:          sb.config.KASSecretKey,
-				Operator:     common.HexToAddress(sb.config.KASAnchorOperator),
-				Anchor:       sb.config.KASAnchor,
-				AnchorPeriod: sb.config.KASAnchorPeriod,
+				Url:            sb.config.KASAnchorUrl,
+				XChainId:       sb.config.KASXChainId,
+				User:           sb.config.KASAccessKey,
+				Pwd:            sb.config.KASSecretKey,
+				Operator:       common.HexToAddress(sb.config.KASAnchorOperator),
+				Anchor:         sb.config.KASAnchor,
+				AnchorPeriod:   sb.config.KASAnchorPeriod,
+				RequestTimeout: sb.config.KASRequestTimeout,
 			}
 			sb.kasAnchor = kas.NewKASAnchor(kasConfig, sb.chainDB, v)
 
