@@ -20,9 +20,10 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"errors"
-	"github.com/klaytn/klaytn/rlp"
 	"math"
 	"math/big"
+
+	"github.com/klaytn/klaytn/rlp"
 
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
