@@ -260,9 +260,13 @@ func TestHandleTxMsg(t *testing.T) {
 	}
 	// If pm.acceptTxs == 1, TxPool.HandleTxMsg is called.
 	{
+
 		atomic.StoreUint32(&pm.acceptTxs, 1)
 		mockTxPool := mocks.NewMockTxPool(mockCtrl)
-		mockTxPool.EXPECT().HandleTxMsg(gomock.Eq(txs)).AnyTimes()
+
+		//The time field in received transaction through pm.handleMsg() has different value from generated transaction(`tx1`).
+		//It can check whether the transaction created `HandleTxMsg()` is the same as `tx1` through `AddToKnownTxs(txs[0].Hash())`.
+		mockTxPool.EXPECT().HandleTxMsg(gomock.Any()).AnyTimes()
 		pm.txpool = mockTxPool
 
 		mockPeer.EXPECT().AddToKnownTxs(txs[0].Hash()).Times(1)
