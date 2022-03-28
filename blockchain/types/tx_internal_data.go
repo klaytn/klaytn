@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"errors"
+	"github.com/klaytn/klaytn/rlp"
 	"math"
 	"math/big"
 
@@ -631,9 +632,16 @@ func equalRecipient(a, b *common.Address) bool {
 // NewAccountCreationTransactionWithMap is a test only function since the accountCreation tx is disabled.
 // The function generates an accountCreation function like 'NewTxInternalDataWithMap()'.
 func NewAccountCreationTransactionWithMap(values map[TxValueKeyType]interface{}) (*Transaction, error) {
-	txdata, err := newTxInternalDataAccountCreationWithMap(values)
+	txData, err := newTxInternalDataAccountCreationWithMap(values)
 	if err != nil {
 		return nil, err
 	}
-	return &Transaction{data: txdata}, nil
+
+	return NewTx(txData), nil
+}
+
+func calculateTxSize(data TxInternalData) common.StorageSize {
+	c := writeCounter(0)
+	rlp.Encode(&c, data)
+	return common.StorageSize(c)
 }

@@ -30,6 +30,7 @@ import (
 	"math/big"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/klaytn/klaytn/common/math"
 
@@ -60,6 +61,7 @@ func deriveSigner(V *big.Int) Signer {
 
 type Transaction struct {
 	data TxInternalData
+	time time.Time
 	// caches
 	hash         atomic.Value
 	size         atomic.Value
@@ -94,18 +96,18 @@ func NewTransactionWithMap(t TxType, values map[TxValueKeyType]interface{}) (tx 
 			retErr = errInvalidValueMap
 		}
 	}()
-	txdata, err := NewTxInternalDataWithMap(t, values)
+	txData, err := NewTxInternalDataWithMap(t, values)
 	if err != nil {
 		return nil, err
 	}
-	tx = &Transaction{data: txdata}
+	tx = NewTx(txData)
 	return tx, retErr
 }
 
 // NewTx creates a new transaction.
 func NewTx(data TxInternalData) *Transaction {
 	tx := new(Transaction)
-	tx.data = data
+	tx.setDecoded(data, 0)
 
 	return tx
 }
@@ -140,7 +142,7 @@ func newTransaction(nonce uint64, to *common.Address, amount *big.Int, gasLimit 
 		d.Price.Set(gasPrice)
 	}
 
-	return &Transaction{data: &d}
+	return NewTx(&d)
 }
 
 // ChainId returns which chain id this transaction was signed for (if at all)
@@ -213,8 +215,8 @@ func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
 		return ErrInvalidSig
 	}
 
-	tx.data = serializer.tx
-	tx.Size()
+	size := calculateTxSize(serializer.tx)
+	tx.setDecoded(serializer.tx, int(size))
 
 	return nil
 }
@@ -227,8 +229,7 @@ func (tx *Transaction) UnmarshalBinary(b []byte) error {
 		return err
 	}
 
-	tx.data = newTx.data
-	tx.Size()
+	tx.setDecoded(newTx.data, len(b))
 	return nil
 }
 
@@ -250,8 +251,18 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 	if !serializer.tx.ValidateSignature() {
 		return ErrInvalidSig
 	}
-	*tx = Transaction{data: serializer.tx}
+
+	tx.setDecoded(serializer.tx, 0)
 	return nil
+}
+
+func (tx *Transaction) setDecoded(inner TxInternalData, size int) {
+	tx.data = inner
+	tx.time = time.Now()
+
+	if size > 0 {
+		tx.size.Store(common.StorageSize(size))
+	}
 }
 
 func (tx *Transaction) Gas() uint64        { return tx.data.GetGasLimit() }
@@ -488,10 +499,11 @@ func (tx *Transaction) Size() common.StorageSize {
 	if size := tx.size.Load(); size != nil {
 		return size.(common.StorageSize)
 	}
-	c := writeCounter(0)
-	rlp.Encode(&c, &tx.data)
-	tx.size.Store(common.StorageSize(c))
-	return common.StorageSize(c)
+
+	size := calculateTxSize(tx.data)
+	tx.size.Store(size)
+
+	return size
 }
 
 // FillContractAddress fills contract address to receipt. This only works for types deploying a smart contract.
@@ -551,7 +563,7 @@ func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, e
 	if err != nil {
 		return nil, err
 	}
-	cpy := &Transaction{data: tx.data}
+	cpy := NewTx(tx.data)
 
 	if tx.Type().IsEthTypedTransaction() {
 		te, ok := cpy.data.(TxInternalDataEthTyped)
@@ -572,11 +584,14 @@ func (tx *Transaction) WithFeePayerSignature(signer Signer, sig []byte) (*Transa
 	if err != nil {
 		return nil, err
 	}
+
+	cpy := NewTx(tx.data)
+
 	feePayerSig := TxSignatures{&TxSignature{v, r, s}}
-	if err := tx.SetFeePayerSignatures(feePayerSig); err != nil {
+	if err := cpy.SetFeePayerSignatures(feePayerSig); err != nil {
 		return nil, err
 	}
-	return tx, nil
+	return cpy, nil
 }
 
 // Cost returns amount + gasprice * gaslimit.
