@@ -128,15 +128,8 @@ func (sbh *SubBridgeHandler) getParentBridgeContractBalance(addr common.Address)
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	found := false
-	for _, bridgeContractAddr := range sbh.subbridge.bridgeManager.GetAllParentBridgeAddrs() {
-		if bridgeContractAddr == addr {
-			found = true
-			break
-		}
-	}
-	if !found {
-		logger.Info(ErrUnknownBridgeContractAddr.Error(), "addr", addr)
+	if !sbh.subbridge.bridgeManager.IsInParentAddrs(addr) {
+		logger.Error(ErrUnknownBridgeContractAddr.Error(), "addr", addr)
 		return common.Big0, ErrUnknownBridgeContractAddr
 	}
 	return sbh.subbridge.remoteBackend.BalanceAt(ctx, addr, nil)
@@ -163,15 +156,8 @@ func (sbh *SubBridgeHandler) getChildBridgeContractBalance(addr common.Address) 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	found := false
-	for _, bridgeContractAddr := range sbh.subbridge.bridgeManager.GetAllChildBridgeAddrs() {
-		if bridgeContractAddr == addr {
-			found = true
-			break
-		}
-	}
-	if !found {
-		logger.Info(ErrUnknownBridgeContractAddr.Error(), "addr", addr)
+	if !sbh.subbridge.bridgeManager.IsInChildAddrs(addr) {
+		logger.Error(ErrUnknownBridgeContractAddr.Error(), "addr", addr)
 		return common.Big0, ErrUnknownBridgeContractAddr
 	}
 	return sbh.subbridge.localBackend.BalanceAt(ctx, addr, nil)

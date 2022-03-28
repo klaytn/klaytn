@@ -1161,3 +1161,23 @@ func (bm *BridgeManager) GetFeeReceiver(bridgeAddr common.Address) (common.Addre
 
 	return bi.bridge.FeeReceiver(nil)
 }
+
+// IsInParentAddrs returns true if the bridgeAddr is in the list of parent bridge addresses and returns false if not.
+func (bm *BridgeManager) IsInParentAddrs(bridgeAddr common.Address) bool {
+	return bm.IsValidBridgeAddr(bridgeAddr, bm.GetAllParentBridgeAddrs())
+}
+
+// IsInChildAddrs returns true if the bridgeAddr is in the list of child bridge addresses and returns false if not.
+func (bm *BridgeManager) IsInChildAddrs(bridgeAddr common.Address) bool {
+	return bm.IsValidBridgeAddr(bridgeAddr, bm.GetAllChildBridgeAddrs())
+}
+
+// GetFeeReceiver returns true if the brigeAddr is in the bridgeContractAddrList and returns false if not.
+func (bm *BridgeManager) IsValidBridgeAddr(bridgeAddr common.Address, bridgeContractAddrList []common.Address) bool {
+	for _, bridgeContractAddr := range bridgeContractAddrList {
+		if bridgeContractAddr == bridgeAddr {
+			return true
+		}
+	}
+	return false
+}
