@@ -27,10 +27,10 @@ var (
 )
 
 // BridgeAnotherVersionABI is the input ABI used to generate the binding from.
-const BridgeAnotherVersionABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"VERSION\",\"outputs\":[{\"name\":\"\",\"type\":\"uint64\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"name\":\"version\",\"type\":\"uint64\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"}]"
+const BridgeAnotherVersionABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"VERSION\",\"outputs\":[{\"name\":\"\",\"type\":\"uint64\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"}]"
 
 // BridgeAnotherVersionBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
-const BridgeAnotherVersionBinRuntime = `6080604052348015600f57600080fd5b506004361060285760003560e01c8063ffa1ad7414602d575b600080fd5b60336050565b6040805167ffffffffffffffff9092168252519081900360200190f35b60005467ffffffffffffffff168156fea165627a7a72305820deda475869c31c7eea972dca13cb66d75fc5c8d12d64d0798ee640146c7288030029`
+const BridgeAnotherVersionBinRuntime = `6080604052348015600f57600080fd5b506004361060285760003560e01c8063ffa1ad7414602d575b600080fd5b60336050565b6040805167ffffffffffffffff9092168252519081900360200190f35b60005467ffffffffffffffff168156fea165627a7a7230582099a145ac9e3ad170fdf9981044fb44cb7d32b26a2640300476ccfba6ed2f93db0029`
 
 // BridgeAnotherVersionFuncSigs maps the 4-byte function signature to its string representation.
 var BridgeAnotherVersionFuncSigs = map[string]string{
@@ -38,16 +38,16 @@ var BridgeAnotherVersionFuncSigs = map[string]string{
 }
 
 // BridgeAnotherVersionBin is the compiled bytecode used for deploying new contracts.
-var BridgeAnotherVersionBin = "0x6080604052600080546001600160401b031916905534801561002057600080fd5b506040516020806100fd8339810180604052602081101561004057600080fd5b5051600080546001600160401b039092166001600160401b0319909216919091179055608c806100716000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063ffa1ad7414602d575b600080fd5b60336050565b6040805167ffffffffffffffff9092168252519081900360200190f35b60005467ffffffffffffffff168156fea165627a7a72305820deda475869c31c7eea972dca13cb66d75fc5c8d12d64d0798ee640146c7288030029"
+var BridgeAnotherVersionBin = "0x6080604052600080546001600160401b0319169055348015601f57600080fd5b50600080546001600160401b0319166002179055608c806100416000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063ffa1ad7414602d575b600080fd5b60336050565b6040805167ffffffffffffffff9092168252519081900360200190f35b60005467ffffffffffffffff168156fea165627a7a7230582099a145ac9e3ad170fdf9981044fb44cb7d32b26a2640300476ccfba6ed2f93db0029"
 
 // DeployBridgeAnotherVersion deploys a new Klaytn contract, binding an instance of BridgeAnotherVersion to it.
-func DeployBridgeAnotherVersion(auth *bind.TransactOpts, backend bind.ContractBackend, version uint64) (common.Address, *types.Transaction, *BridgeAnotherVersion, error) {
+func DeployBridgeAnotherVersion(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *BridgeAnotherVersion, error) {
 	parsed, err := abi.JSON(strings.NewReader(BridgeAnotherVersionABI))
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
 
-	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(BridgeAnotherVersionBin), backend, version)
+	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(BridgeAnotherVersionBin), backend)
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
@@ -226,7 +226,7 @@ func (_BridgeAnotherVersion *BridgeAnotherVersionCallerSession) VERSION() (uint6
 const BridgeVersionControllerABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"VERSION\",\"outputs\":[{\"name\":\"\",\"type\":\"uint64\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"name\":\"version\",\"type\":\"uint64\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"}]"
 
 // BridgeVersionControllerBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
-const BridgeVersionControllerBinRuntime = `6080604052348015600f57600080fd5b506004361060285760003560e01c8063ffa1ad7414602d575b600080fd5b60336050565b6040805167ffffffffffffffff9092168252519081900360200190f35b60005467ffffffffffffffff168156fea165627a7a72305820103675040118bf16fec749270367b54bdfcfc8e40fb9174d60a7b20584aaa0240029`
+const BridgeVersionControllerBinRuntime = `6080604052348015600f57600080fd5b506004361060285760003560e01c8063ffa1ad7414602d575b600080fd5b60336050565b6040805167ffffffffffffffff9092168252519081900360200190f35b60005467ffffffffffffffff168156fea165627a7a72305820559d7a3f2321c4e7cab7e81c60b0a4ec5d23f6ca1bee7b2ddca538a8b70c30630029`
 
 // BridgeVersionControllerFuncSigs maps the 4-byte function signature to its string representation.
 var BridgeVersionControllerFuncSigs = map[string]string{
@@ -234,7 +234,7 @@ var BridgeVersionControllerFuncSigs = map[string]string{
 }
 
 // BridgeVersionControllerBin is the compiled bytecode used for deploying new contracts.
-var BridgeVersionControllerBin = "0x6080604052600080546001600160401b031916905534801561002057600080fd5b506040516020806100fd8339810180604052602081101561004057600080fd5b5051600080546001600160401b039092166001600160401b0319909216919091179055608c806100716000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063ffa1ad7414602d575b600080fd5b60336050565b6040805167ffffffffffffffff9092168252519081900360200190f35b60005467ffffffffffffffff168156fea165627a7a72305820103675040118bf16fec749270367b54bdfcfc8e40fb9174d60a7b20584aaa0240029"
+var BridgeVersionControllerBin = "0x6080604052600080546001600160401b031916905534801561002057600080fd5b506040516020806100fd8339810180604052602081101561004057600080fd5b5051600080546001600160401b039092166001600160401b0319909216919091179055608c806100716000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063ffa1ad7414602d575b600080fd5b60336050565b6040805167ffffffffffffffff9092168252519081900360200190f35b60005467ffffffffffffffff168156fea165627a7a72305820559d7a3f2321c4e7cab7e81c60b0a4ec5d23f6ca1bee7b2ddca538a8b70c30630029"
 
 // DeployBridgeVersionController deploys a new Klaytn contract, binding an instance of BridgeVersionController to it.
 func DeployBridgeVersionController(auth *bind.TransactOpts, backend bind.ContractBackend, version uint64) (common.Address, *types.Transaction, *BridgeVersionController, error) {
