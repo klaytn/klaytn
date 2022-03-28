@@ -118,20 +118,6 @@ func (mr *MockBridgePeerMockRecorder) GetID() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetID", reflect.TypeOf((*MockBridgePeer)(nil).GetID))
 }
 
-// GetNodeVersion mocks base method.
-func (m *MockBridgePeer) GetNodeVersion() string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetNodeVersion")
-	ret0, _ := ret[0].(string)
-	return ret0
-}
-
-// GetNodeVersion indicates an expected call of GetNodeVersion.
-func (mr *MockBridgePeerMockRecorder) GetNodeVersion() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNodeVersion", reflect.TypeOf((*MockBridgePeer)(nil).GetNodeVersion))
-}
-
 // GetP2PPeer mocks base method.
 func (m *MockBridgePeer) GetP2PPeer() *p2p.Peer {
 	m.ctrl.T.Helper()

@@ -12,30 +12,30 @@ import (
 	common "github.com/klaytn/klaytn/common"
 )
 
-// MockBridgeTxPool is a mock of BridgeTxPool interface
+// MockBridgeTxPool is a mock of BridgeTxPool interface.
 type MockBridgeTxPool struct {
 	ctrl     *gomock.Controller
 	recorder *MockBridgeTxPoolMockRecorder
 }
 
-// MockBridgeTxPoolMockRecorder is the mock recorder for MockBridgeTxPool
+// MockBridgeTxPoolMockRecorder is the mock recorder for MockBridgeTxPool.
 type MockBridgeTxPoolMockRecorder struct {
 	mock *MockBridgeTxPool
 }
 
-// NewMockBridgeTxPool creates a new mock instance
+// NewMockBridgeTxPool creates a new mock instance.
 func NewMockBridgeTxPool(ctrl *gomock.Controller) *MockBridgeTxPool {
 	mock := &MockBridgeTxPool{ctrl: ctrl}
 	mock.recorder = &MockBridgeTxPoolMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockBridgeTxPool) EXPECT() *MockBridgeTxPoolMockRecorder {
 	return m.recorder
 }
 
-// AddLocal mocks base method
+// AddLocal mocks base method.
 func (m *MockBridgeTxPool) AddLocal(arg0 *types.Transaction) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddLocal", arg0)
@@ -43,13 +43,13 @@ func (m *MockBridgeTxPool) AddLocal(arg0 *types.Transaction) error {
 	return ret0
 }
 
-// AddLocal indicates an expected call of AddLocal
+// AddLocal indicates an expected call of AddLocal.
 func (mr *MockBridgeTxPoolMockRecorder) AddLocal(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddLocal", reflect.TypeOf((*MockBridgeTxPool)(nil).AddLocal), arg0)
 }
 
-// Get mocks base method
+// Get mocks base method.
 func (m *MockBridgeTxPool) Get(arg0 common.Hash) *types.Transaction {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get", arg0)
@@ -57,13 +57,13 @@ func (m *MockBridgeTxPool) Get(arg0 common.Hash) *types.Transaction {
 	return ret0
 }
 
-// Get indicates an expected call of Get
+// Get indicates an expected call of Get.
 func (mr *MockBridgeTxPoolMockRecorder) Get(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockBridgeTxPool)(nil).Get), arg0)
 }
 
-// GetMaxTxNonce mocks base method
+// GetMaxTxNonce mocks base method.
 func (m *MockBridgeTxPool) GetMaxTxNonce(arg0 *common.Address) uint64 {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetMaxTxNonce", arg0)
@@ -71,13 +71,13 @@ func (m *MockBridgeTxPool) GetMaxTxNonce(arg0 *common.Address) uint64 {
 	return ret0
 }
 
-// GetMaxTxNonce indicates an expected call of GetMaxTxNonce
+// GetMaxTxNonce indicates an expected call of GetMaxTxNonce.
 func (mr *MockBridgeTxPoolMockRecorder) GetMaxTxNonce(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMaxTxNonce", reflect.TypeOf((*MockBridgeTxPool)(nil).GetMaxTxNonce), arg0)
 }
 
-// Pending mocks base method
+// Pending mocks base method.
 func (m *MockBridgeTxPool) Pending() map[common.Address]types.Transactions {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Pending")
@@ -85,13 +85,13 @@ func (m *MockBridgeTxPool) Pending() map[common.Address]types.Transactions {
 	return ret0
 }
 
-// Pending indicates an expected call of Pending
+// Pending indicates an expected call of Pending.
 func (mr *MockBridgeTxPoolMockRecorder) Pending() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Pending", reflect.TypeOf((*MockBridgeTxPool)(nil).Pending))
 }
 
-// PendingTxHashesByAddress mocks base method
+// PendingTxHashesByAddress mocks base method.
 func (m *MockBridgeTxPool) PendingTxHashesByAddress(arg0 *common.Address, arg1 int) []common.Hash {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "PendingTxHashesByAddress", arg0, arg1)
@@ -99,13 +99,13 @@ func (m *MockBridgeTxPool) PendingTxHashesByAddress(arg0 *common.Address, arg1 i
 	return ret0
 }
 
-// PendingTxHashesByAddress indicates an expected call of PendingTxHashesByAddress
+// PendingTxHashesByAddress indicates an expected call of PendingTxHashesByAddress.
 func (mr *MockBridgeTxPoolMockRecorder) PendingTxHashesByAddress(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PendingTxHashesByAddress", reflect.TypeOf((*MockBridgeTxPool)(nil).PendingTxHashesByAddress), arg0, arg1)
 }
 
-// PendingTxsByAddress mocks base method
+// PendingTxsByAddress mocks base method.
 func (m *MockBridgeTxPool) PendingTxsByAddress(arg0 *common.Address, arg1 int) types.Transactions {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "PendingTxsByAddress", arg0, arg1)
@@ -113,13 +113,13 @@ func (m *MockBridgeTxPool) PendingTxsByAddress(arg0 *common.Address, arg1 int) t
 	return ret0
 }
 
-// PendingTxsByAddress indicates an expected call of PendingTxsByAddress
+// PendingTxsByAddress indicates an expected call of PendingTxsByAddress.
 func (mr *MockBridgeTxPoolMockRecorder) PendingTxsByAddress(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PendingTxsByAddress", reflect.TypeOf((*MockBridgeTxPool)(nil).PendingTxsByAddress), arg0, arg1)
 }
 
-// RemoveTx mocks base method
+// RemoveTx mocks base method.
 func (m *MockBridgeTxPool) RemoveTx(arg0 *types.Transaction) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RemoveTx", arg0)
@@ -127,13 +127,13 @@ func (m *MockBridgeTxPool) RemoveTx(arg0 *types.Transaction) error {
 	return ret0
 }
 
-// RemoveTx indicates an expected call of RemoveTx
+// RemoveTx indicates an expected call of RemoveTx.
 func (mr *MockBridgeTxPoolMockRecorder) RemoveTx(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveTx", reflect.TypeOf((*MockBridgeTxPool)(nil).RemoveTx), arg0)
 }
 
-// Stats mocks base method
+// Stats mocks base method.
 func (m *MockBridgeTxPool) Stats() int {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Stats")
@@ -141,19 +141,19 @@ func (m *MockBridgeTxPool) Stats() int {
 	return ret0
 }
 
-// Stats indicates an expected call of Stats
+// Stats indicates an expected call of Stats.
 func (mr *MockBridgeTxPoolMockRecorder) Stats() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stats", reflect.TypeOf((*MockBridgeTxPool)(nil).Stats))
 }
 
-// Stop mocks base method
+// Stop mocks base method.
 func (m *MockBridgeTxPool) Stop() {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Stop")
 }
 
-// Stop indicates an expected call of Stop
+// Stop indicates an expected call of Stop.
 func (mr *MockBridgeTxPoolMockRecorder) Stop() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockBridgeTxPool)(nil).Stop))
