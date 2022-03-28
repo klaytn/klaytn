@@ -22,4 +22,19 @@ contract BridgeVersionController {
     constructor(uint64 version) public {
         VERSION = version;
     }
+
+
+    // TODO: The currently above tentative implementation should be changed like below. 
+    /*
+    mapping(address => uint64) internal vMap;
+
+    consturctor(addr address, utin64 version) public {
+        require(addr.isContract(), "The given address is not a contract address");
+        vMap[addr] = version;
+    }
+    // Version Getter
+    function getVersion(addr address) public view returns(uint64) {
+        return vMap[addr];
+    }
+    */
 }

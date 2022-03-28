@@ -202,8 +202,8 @@ func deployBridgeContract(t *testing.T, bridgeAccount *bind.TransactOpts, backen
 }
 
 // deployAnotherBridgeContract deploys another bridge contract
-func deployAnotherBridgeContract(t *testing.T, bridgeAccount *bind.TransactOpts, backend *backends.SimulatedBackend, version uint64) *bridge.BridgeAnotherVersion {
-	_, tx, b, err := bridge.DeployBridgeAnotherVersion(bridgeAccount, backend, version)
+func deployAnotherBridgeContract(t *testing.T, bridgeAccount *bind.TransactOpts, backend *backends.SimulatedBackend) *bridge.BridgeAnotherVersion {
+	_, tx, b, err := bridge.DeployBridgeAnotherVersion(bridgeAccount, backend)
 	assert.Nil(t, err)
 	backend.Commit()
 	assert.Nil(t, WaitMined(tx, backend, t))
@@ -232,8 +232,7 @@ func TestCompareBridgeContractVersion(t *testing.T) {
 	defer backend.Close()
 
 	{
-		version := uint64(2)
-		anotherBridgeContract := deployAnotherBridgeContract(t, bridgeAccount, backend, version)
+		anotherBridgeContract := deployAnotherBridgeContract(t, bridgeAccount, backend)
 		bridgeContract := deployBridgeContract(t, bridgeAccount, backend)
 
 		// Case 1 - Success (matched with same contracts)
@@ -242,14 +241,5 @@ func TestCompareBridgeContractVersion(t *testing.T) {
 
 		// Case 2 - Failure (not matched)
 		assert.NotEqual(t, getBridgeContractVersion(t, bridgeContract), getAnotherBridgeContractVersion(t, anotherBridgeContract))
-	}
-
-	{
-		// Case 1 - Success (matched with different contracts)
-		version := uint64(1)
-		anotherBridgeContract := deployAnotherBridgeContract(t, bridgeAccount, backend, version)
-		bridgeContract := deployBridgeContract(t, bridgeAccount, backend)
-
-		assert.Equal(t, getBridgeContractVersion(t, bridgeContract), getAnotherBridgeContractVersion(t, anotherBridgeContract))
 	}
 }

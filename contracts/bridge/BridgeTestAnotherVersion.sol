@@ -19,6 +19,8 @@ pragma solidity 0.5.6;
 import "./BridgeVersionController.sol";
 
 contract BridgeAnotherVersion is BridgeVersionController {
-    constructor(uint64 version) BridgeVersionController(version)  public {
+    // Do not declare the variable name with `VERSION` like below.
+    //uint64 public VERSION = 1;
+    constructor() BridgeVersionController(2)  public {
     }
 }
