@@ -562,7 +562,6 @@ func (sb *SubBridgeAPI) SetBridgeGasLimit(fee uint64) {
 	sb.subBridge.bridgeAccounts.SetBridgeGasLimit(fee)
 }
 
-
 // GetParentOperatorFeePayer can return the parent bridge operator's fee payer.
 func (sb *SubBridgeAPI) GetParentOperatorFeePayer() common.Address {
 	return sb.subBridge.bridgeAccounts.GetParentOperatorFeePayer()

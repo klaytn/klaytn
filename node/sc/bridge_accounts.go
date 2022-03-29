@@ -35,9 +35,8 @@ import (
 	"github.com/klaytn/klaytn/params"
 )
 
-
 var (
-	DefaultBridgeTxGasLimit = uint64(5000000)
+	DefaultBridgeTxGasLimit   = uint64(5000000)
 	errUnlockDurationTooLarge = errors.New("unlock duration too large")
 )
 
