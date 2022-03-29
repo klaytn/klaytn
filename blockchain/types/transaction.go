@@ -895,7 +895,7 @@ func (t *TransactionsByPriceAndNonce) Txs() map[common.Address]Transactions {
 // Note, the input map is reowned so the caller should not interact any more with
 // if after providing it to the constructor.
 func NewTransactionsByPriceAndNonce(signer Signer, txs map[common.Address]Transactions) *TransactionsByPriceAndNonce {
-	// Initialize a price based heap with the head transactions
+	// Initialize a price and received time based heap with the head transactions
 	heads := make(TxByPriceAndTime, 0, len(txs))
 	for _, accTxs := range txs {
 		heads = append(heads, accTxs[0])
