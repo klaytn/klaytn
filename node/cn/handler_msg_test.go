@@ -260,7 +260,6 @@ func TestHandleTxMsg(t *testing.T) {
 	}
 	// If pm.acceptTxs == 1, TxPool.HandleTxMsg is called.
 	{
-
 		atomic.StoreUint32(&pm.acceptTxs, 1)
 		mockTxPool := mocks.NewMockTxPool(mockCtrl)
 
