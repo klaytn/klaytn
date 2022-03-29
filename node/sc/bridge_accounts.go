@@ -35,11 +35,9 @@ import (
 	"github.com/klaytn/klaytn/params"
 )
 
-const (
-	DefaultBridgeTxGasLimit = 5000000
-)
 
 var (
+	DefaultBridgeTxGasLimit = uint64(5000000)
 	errUnlockDurationTooLarge = errors.New("unlock duration too large")
 )
 
@@ -104,6 +102,16 @@ func (ba *BridgeAccounts) SetChildOperatorFeePayer(feePayer common.Address) erro
 	ba.cAccount.feePayer = feePayer
 	ba.db.WriteChildOperatorFeePayer(feePayer)
 	return nil
+}
+
+//SetBridgeGasLimit changes value of DefaultBridgeTxGasLimit.
+func (ba *BridgeAccounts) SetBridgeGasLimit(fee uint64) {
+	DefaultBridgeTxGasLimit = fee
+}
+
+//GetBridgeGasLimit gets value of DefaultBridgeTxGasLimit.
+func (ba *BridgeAccounts) GetBridgeGasLimit() uint64 {
+	return DefaultBridgeTxGasLimit
 }
 
 // NewBridgeAccounts returns bridgeAccounts created by main/service bridge account keys.
