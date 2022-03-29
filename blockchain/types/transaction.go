@@ -849,7 +849,6 @@ func (s TxByPriceAndTime) Less(i, j int) bool {
 	}
 	return cmp > 0
 
-	//return s[i].data.GetPrice().Cmp(s[j].data.GetPrice()) > 0
 }
 func (s TxByPriceAndTime) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 
