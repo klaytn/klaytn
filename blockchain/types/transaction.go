@@ -563,8 +563,8 @@ func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, e
 	if err != nil {
 		return nil, err
 	}
-	cpy := NewTx(tx.data)
 
+	cpy := &Transaction{data: tx.data, time: tx.time}
 	if tx.Type().IsEthTypedTransaction() {
 		te, ok := cpy.data.(TxInternalDataEthTyped)
 		if ok {
@@ -585,7 +585,7 @@ func (tx *Transaction) WithFeePayerSignature(signer Signer, sig []byte) (*Transa
 		return nil, err
 	}
 
-	cpy := NewTx(tx.data)
+	cpy := &Transaction{data: tx.data, time: tx.time}
 
 	feePayerSig := TxSignatures{&TxSignature{v, r, s}}
 	if err := cpy.SetFeePayerSignatures(feePayerSig); err != nil {
