@@ -29,13 +29,13 @@ const (
 	// TODO-Klaytn-Issue1587 Decide whether to remove below three variables after discussing token economy policy for service chain and private network
 	rewardContractIncentiveInSton int64 = 3200000000 // 3.2 KLAY for Reward contract (Unit: ston)
 	kirContractIncentiveInSton    int64 = 3200000000 // 3.2 KLAY for KIR contract (Unit: ston)
-	pocContractIncentiveInSton    int64 = 3200000000 // 3.2 KLAY for PoC contract (Unit: ston)
+	kgfContractIncentiveInSton    int64 = 3200000000 // 3.2 KLAY for KGF contract (Unit: ston)
 
 	defaultMintedKLAYInSton           int64 = 9600000000 // Default amount of minted KLAY. 9.6 KLAY for block reward (Unit: ston)
 	defaultMinimumStakingAmountInKlay int64 = 5000000    // Default amount of minimum staking (Unit: KLAY)
 
 	DefaultCNRewardRatio  = 34 // Default CN reward ratio 34%
-	DefaultPoCRewardRatio = 54 // Default PoC ratio 54%
+	DefaultKGFRewardRatio = 54 // Default KGF ratio 54%
 	DefaultKIRRewardRatio = 12 // Default KIR ratio 12%
 )
 
@@ -43,7 +43,7 @@ var (
 	// TODO-Klaytn-Issue1587 Decide whether to remove below three variables after discussing token economy policy for service chain and private network
 	RewardContractIncentive = big.NewInt(0).Mul(big.NewInt(rewardContractIncentiveInSton), big.NewInt(Ston))
 	KIRContractIncentive    = big.NewInt(0).Mul(big.NewInt(kirContractIncentiveInSton), big.NewInt(Ston))
-	PoCContractIncentive    = big.NewInt(0).Mul(big.NewInt(pocContractIncentiveInSton), big.NewInt(Ston))
+	KGFContractIncentive    = big.NewInt(0).Mul(big.NewInt(kgfContractIncentiveInSton), big.NewInt(Ston))
 
 	DefaultMintedKLAY = big.NewInt(0).Mul(big.NewInt(defaultMintedKLAYInSton), big.NewInt(Ston))
 

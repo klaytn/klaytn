@@ -105,7 +105,7 @@ func TestRewardConfigCache_parseRewardRatio(t *testing.T) {
 	testCases := []struct {
 		s   string
 		cn  int
-		poc int
+		kgf int
 		kir int
 		err error
 	}{
@@ -125,10 +125,10 @@ func TestRewardConfigCache_parseRewardRatio(t *testing.T) {
 	rewardConfigCache := newRewardConfigCache(newDefaultTestGovernance())
 
 	for i := 0; i < len(testCases); i++ {
-		cn, poc, kir, err := rewardConfigCache.parseRewardRatio(testCases[i].s)
+		cn, kgf, kir, err := rewardConfigCache.parseRewardRatio(testCases[i].s)
 
 		assert.Equal(t, testCases[i].cn, cn)
-		assert.Equal(t, testCases[i].poc, poc)
+		assert.Equal(t, testCases[i].kgf, kgf)
 		assert.Equal(t, testCases[i].kir, kir)
 		assert.Equal(t, testCases[i].err, err)
 	}
@@ -152,7 +152,7 @@ func TestRewardConfigCache_newRewardConfig(t *testing.T) {
 				blockNum:      0,
 				mintingAmount: big.NewInt(0).SetUint64(9600000000000000000),
 				cnRatio:       big.NewInt(0).SetInt64(34),
-				pocRatio:      big.NewInt(0).SetInt64(54),
+				kgfRatio:      big.NewInt(0).SetInt64(54),
 				kirRatio:      big.NewInt(0).SetInt64(12),
 				totalRatio:    big.NewInt(0).SetInt64(100),
 				unitPrice:     big.NewInt(0).SetInt64(25000000000),
@@ -171,7 +171,7 @@ func TestRewardConfigCache_newRewardConfig(t *testing.T) {
 				blockNum:      1,
 				mintingAmount: big.NewInt(0).SetInt64(10000),
 				cnRatio:       big.NewInt(0).SetInt64(50),
-				pocRatio:      big.NewInt(0).SetInt64(30),
+				kgfRatio:      big.NewInt(0).SetInt64(30),
 				kirRatio:      big.NewInt(0).SetInt64(20),
 				totalRatio:    big.NewInt(0).SetInt64(100),
 				unitPrice:     big.NewInt(0).SetInt64(50000000000),
@@ -190,7 +190,7 @@ func TestRewardConfigCache_newRewardConfig(t *testing.T) {
 				blockNum:      2,
 				mintingAmount: big.NewInt(0).SetInt64(100000000),
 				cnRatio:       big.NewInt(0).SetInt64(10),
-				pocRatio:      big.NewInt(0).SetInt64(35),
+				kgfRatio:      big.NewInt(0).SetInt64(35),
 				kirRatio:      big.NewInt(0).SetInt64(55),
 				totalRatio:    big.NewInt(0).SetInt64(100),
 				unitPrice:     big.NewInt(0).SetInt64(1500000000),
@@ -212,7 +212,7 @@ func TestRewardConfigCache_newRewardConfig(t *testing.T) {
 		assert.Equal(t, expectedResult.blockNum, rewardConfig.blockNum)
 		assert.Equal(t, expectedResult.mintingAmount, rewardConfig.mintingAmount)
 		assert.Equal(t, expectedResult.cnRatio, rewardConfig.cnRatio)
-		assert.Equal(t, expectedResult.pocRatio, rewardConfig.pocRatio)
+		assert.Equal(t, expectedResult.kgfRatio, rewardConfig.kgfRatio)
 		assert.Equal(t, expectedResult.kirRatio, rewardConfig.kirRatio)
 		assert.Equal(t, expectedResult.totalRatio, rewardConfig.totalRatio)
 		assert.Equal(t, expectedResult.unitPrice, rewardConfig.unitPrice)
@@ -225,7 +225,7 @@ func TestRewardConfigCache_add(t *testing.T) {
 			blockNum:      1,
 			mintingAmount: big.NewInt(0).SetUint64(9600000000000000000),
 			cnRatio:       big.NewInt(0).SetInt64(34),
-			pocRatio:      big.NewInt(0).SetInt64(54),
+			kgfRatio:      big.NewInt(0).SetInt64(54),
 			kirRatio:      big.NewInt(0).SetInt64(12),
 			totalRatio:    big.NewInt(0).SetInt64(100),
 			unitPrice:     big.NewInt(0).SetInt64(25000000000),
@@ -234,7 +234,7 @@ func TestRewardConfigCache_add(t *testing.T) {
 			blockNum:      2,
 			mintingAmount: big.NewInt(0).SetInt64(10000),
 			cnRatio:       big.NewInt(0).SetInt64(50),
-			pocRatio:      big.NewInt(0).SetInt64(30),
+			kgfRatio:      big.NewInt(0).SetInt64(30),
 			kirRatio:      big.NewInt(0).SetInt64(20),
 			totalRatio:    big.NewInt(0).SetInt64(100),
 			unitPrice:     big.NewInt(0).SetInt64(50000000000),
@@ -243,7 +243,7 @@ func TestRewardConfigCache_add(t *testing.T) {
 			blockNum:      3,
 			mintingAmount: big.NewInt(0).SetInt64(100000000),
 			cnRatio:       big.NewInt(0).SetInt64(10),
-			pocRatio:      big.NewInt(0).SetInt64(35),
+			kgfRatio:      big.NewInt(0).SetInt64(35),
 			kirRatio:      big.NewInt(0).SetInt64(55),
 			totalRatio:    big.NewInt(0).SetInt64(100),
 			unitPrice:     big.NewInt(0).SetInt64(1500000000),
@@ -264,7 +264,7 @@ func TestRewardConfigCache_add_sameNumber(t *testing.T) {
 		blockNum:      1,
 		mintingAmount: big.NewInt(0).SetUint64(9600000000000000000),
 		cnRatio:       big.NewInt(0).SetInt64(34),
-		pocRatio:      big.NewInt(0).SetInt64(54),
+		kgfRatio:      big.NewInt(0).SetInt64(54),
 		kirRatio:      big.NewInt(0).SetInt64(12),
 		totalRatio:    big.NewInt(0).SetInt64(100),
 		unitPrice:     big.NewInt(0).SetInt64(25000000000),
@@ -301,7 +301,7 @@ func TestRewardConfigCache_get_exist(t *testing.T) {
 				blockNum:      0,
 				mintingAmount: big.NewInt(0).SetUint64(9600000000000000000),
 				cnRatio:       big.NewInt(0).SetInt64(34),
-				pocRatio:      big.NewInt(0).SetInt64(54),
+				kgfRatio:      big.NewInt(0).SetInt64(54),
 				kirRatio:      big.NewInt(0).SetInt64(12),
 				totalRatio:    big.NewInt(0).SetInt64(100),
 				unitPrice:     big.NewInt(0).SetInt64(25000000000),
@@ -319,7 +319,7 @@ func TestRewardConfigCache_get_exist(t *testing.T) {
 				blockNum:      604800,
 				mintingAmount: big.NewInt(0).SetUint64(9600000000000000),
 				cnRatio:       big.NewInt(0).SetInt64(40),
-				pocRatio:      big.NewInt(0).SetInt64(25),
+				kgfRatio:      big.NewInt(0).SetInt64(25),
 				kirRatio:      big.NewInt(0).SetInt64(35),
 				totalRatio:    big.NewInt(0).SetInt64(100),
 				unitPrice:     big.NewInt(0).SetInt64(250000000),
@@ -337,7 +337,7 @@ func TestRewardConfigCache_get_exist(t *testing.T) {
 				blockNum:      1209600,
 				mintingAmount: big.NewInt(0).SetUint64(100000000000000000),
 				cnRatio:       big.NewInt(0).SetInt64(34),
-				pocRatio:      big.NewInt(0).SetInt64(33),
+				kgfRatio:      big.NewInt(0).SetInt64(33),
 				kirRatio:      big.NewInt(0).SetInt64(33),
 				totalRatio:    big.NewInt(0).SetInt64(100),
 				unitPrice:     big.NewInt(0).SetInt64(100000000000),
@@ -367,7 +367,7 @@ func TestRewardConfigCache_get_exist(t *testing.T) {
 		assert.Equal(t, testCases[i].result.blockNum, rewardConfig.blockNum)
 		assert.Equal(t, testCases[i].result.mintingAmount, rewardConfig.mintingAmount)
 		assert.Equal(t, testCases[i].result.cnRatio, rewardConfig.cnRatio)
-		assert.Equal(t, testCases[i].result.pocRatio, rewardConfig.pocRatio)
+		assert.Equal(t, testCases[i].result.kgfRatio, rewardConfig.kgfRatio)
 		assert.Equal(t, testCases[i].result.kirRatio, rewardConfig.kirRatio)
 		assert.Equal(t, testCases[i].result.totalRatio, rewardConfig.totalRatio)
 		assert.Equal(t, testCases[i].result.unitPrice, rewardConfig.unitPrice)

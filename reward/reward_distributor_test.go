@@ -130,7 +130,7 @@ func TestRewardDistributor_distributeBlockReward(t *testing.T) {
 		totalTxFee         *big.Int
 		rewardConfig       *rewardConfig
 		expectedCnBalance  *big.Int
-		expectedPocBalance *big.Int
+		expectedKgfBalance *big.Int
 		expectedKirBalance *big.Int
 	}{
 		{
@@ -139,13 +139,13 @@ func TestRewardDistributor_distributeBlockReward(t *testing.T) {
 				blockNum:      1,
 				mintingAmount: big.NewInt(0).SetUint64(9600000000000000000),
 				cnRatio:       big.NewInt(0).SetInt64(34),
-				pocRatio:      big.NewInt(0).SetInt64(54),
+				kgfRatio:      big.NewInt(0).SetInt64(54),
 				kirRatio:      big.NewInt(0).SetInt64(12),
 				totalRatio:    big.NewInt(0).SetInt64(100),
 				unitPrice:     big.NewInt(0).SetInt64(25000000000),
 			},
 			expectedCnBalance:  big.NewInt(0).SetUint64(3264000000000000000),
-			expectedPocBalance: big.NewInt(0).SetUint64(5184000000000000000),
+			expectedKgfBalance: big.NewInt(0).SetUint64(5184000000000000000),
 			expectedKirBalance: big.NewInt(0).SetUint64(1152000000000000000),
 		},
 		{
@@ -154,13 +154,13 @@ func TestRewardDistributor_distributeBlockReward(t *testing.T) {
 				blockNum:      1,
 				mintingAmount: big.NewInt(0).SetUint64(10000000000),
 				cnRatio:       big.NewInt(0).SetInt64(60),
-				pocRatio:      big.NewInt(0).SetInt64(30),
+				kgfRatio:      big.NewInt(0).SetInt64(30),
 				kirRatio:      big.NewInt(0).SetInt64(10),
 				totalRatio:    big.NewInt(0).SetInt64(100),
 				unitPrice:     big.NewInt(0).SetInt64(25000000000),
 			},
 			expectedCnBalance:  big.NewInt(0).SetUint64(6000600000),
-			expectedPocBalance: big.NewInt(0).SetUint64(3000300000),
+			expectedKgfBalance: big.NewInt(0).SetUint64(3000300000),
 			expectedKirBalance: big.NewInt(0).SetUint64(1000100000),
 		},
 	}
@@ -168,17 +168,17 @@ func TestRewardDistributor_distributeBlockReward(t *testing.T) {
 	header := &types.Header{}
 	header.Number = big.NewInt(0)
 	header.Rewardbase = common.StringToAddress("0x1552F52D459B713E0C4558e66C8c773a75615FA8")
-	pocAddress := common.StringToAddress("0x4bCDd8E3F9776d16056815E189EcB5A8bF8E4CBb")
+	kgfAddress := common.StringToAddress("0x4bCDd8E3F9776d16056815E189EcB5A8bF8E4CBb")
 	kirAddress := common.StringToAddress("0xd38A08AD21B44681f5e75D0a3CA4793f3E6c03e7")
 	governance := newDefaultTestGovernance()
 
 	for _, testCase := range testCases {
 		BalanceAdder := newTestBalanceAdder()
 		rewardDistributor := NewRewardDistributor(governance)
-		rewardDistributor.distributeBlockReward(BalanceAdder, header, testCase.totalTxFee, testCase.rewardConfig, pocAddress, kirAddress)
+		rewardDistributor.distributeBlockReward(BalanceAdder, header, testCase.totalTxFee, testCase.rewardConfig, kgfAddress, kirAddress)
 
 		assert.Equal(t, testCase.expectedCnBalance.Uint64(), BalanceAdder.GetBalance(header.Rewardbase).Uint64())
-		assert.Equal(t, testCase.expectedPocBalance.Uint64(), BalanceAdder.GetBalance(pocAddress).Uint64())
+		assert.Equal(t, testCase.expectedKgfBalance.Uint64(), BalanceAdder.GetBalance(kgfAddress).Uint64())
 		assert.Equal(t, testCase.expectedKirBalance.Uint64(), BalanceAdder.GetBalance(kirAddress).Uint64())
 	}
 }
@@ -193,7 +193,7 @@ func TestRewardDistributor_DistributeBlockReward(t *testing.T) {
 		useGiniCoeff       bool
 		deferredTxFee      bool
 		expectedCnBalance  *big.Int
-		expectedPocBalance *big.Int
+		expectedKgfBalance *big.Int
 		expectedKirBalance *big.Int
 	}{
 		{
@@ -205,7 +205,7 @@ func TestRewardDistributor_DistributeBlockReward(t *testing.T) {
 			useGiniCoeff:       true,
 			deferredTxFee:      true,
 			expectedCnBalance:  big.NewInt(0).SetUint64(40000),
-			expectedPocBalance: big.NewInt(0).SetUint64(50000),
+			expectedKgfBalance: big.NewInt(0).SetUint64(50000),
 			expectedKirBalance: big.NewInt(0).SetUint64(10000),
 		},
 		{
@@ -217,7 +217,7 @@ func TestRewardDistributor_DistributeBlockReward(t *testing.T) {
 			useGiniCoeff:       true,
 			deferredTxFee:      true,
 			expectedCnBalance:  big.NewInt(0).SetUint64(3264000000000000000),
-			expectedPocBalance: big.NewInt(0).SetUint64(5184000000000000000),
+			expectedKgfBalance: big.NewInt(0).SetUint64(5184000000000000000),
 			expectedKirBalance: big.NewInt(0).SetUint64(1152000000000000000),
 		},
 		{
@@ -229,7 +229,7 @@ func TestRewardDistributor_DistributeBlockReward(t *testing.T) {
 			useGiniCoeff:       true,
 			deferredTxFee:      true,
 			expectedCnBalance:  big.NewInt(0).SetUint64(0),
-			expectedPocBalance: big.NewInt(0).SetUint64(0),
+			expectedKgfBalance: big.NewInt(0).SetUint64(0),
 			expectedKirBalance: big.NewInt(0).SetUint64(0),
 		},
 	}
@@ -237,7 +237,7 @@ func TestRewardDistributor_DistributeBlockReward(t *testing.T) {
 	header := &types.Header{}
 	header.Number = big.NewInt(0)
 	header.Rewardbase = common.StringToAddress("0x1552F52D459B713E0C4558e66C8c773a75615FA8")
-	pocAddress := common.StringToAddress("0x4bCDd8E3F9776d16056815E189EcB5A8bF8E4CBb")
+	kgfAddress := common.StringToAddress("0x4bCDd8E3F9776d16056815E189EcB5A8bF8E4CBb")
 	kirAddress := common.StringToAddress("0xd38A08AD21B44681f5e75D0a3CA4793f3E6c03e7")
 	governance := newDefaultTestGovernance()
 
@@ -247,14 +247,14 @@ func TestRewardDistributor_DistributeBlockReward(t *testing.T) {
 		header.GasUsed = testCase.gasUsed
 		rewardDistributor := NewRewardDistributor(governance)
 
-		err := rewardDistributor.DistributeBlockReward(BalanceAdder, header, pocAddress, kirAddress)
+		err := rewardDistributor.DistributeBlockReward(BalanceAdder, header, kgfAddress, kirAddress)
 		if !assert.NoError(t, err) {
 			t.FailNow()
 		}
 
 		assert.NotNil(t, BalanceAdder.GetBalance(header.Rewardbase).Int64())
 		assert.Equal(t, testCase.expectedCnBalance.Uint64(), BalanceAdder.GetBalance(header.Rewardbase).Uint64())
-		assert.Equal(t, testCase.expectedPocBalance.Uint64(), BalanceAdder.GetBalance(pocAddress).Uint64())
+		assert.Equal(t, testCase.expectedKgfBalance.Uint64(), BalanceAdder.GetBalance(kgfAddress).Uint64())
 		assert.Equal(t, testCase.expectedKirBalance.Uint64(), BalanceAdder.GetBalance(kirAddress).Uint64())
 	}
 }

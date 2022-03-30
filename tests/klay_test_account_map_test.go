@@ -93,8 +93,8 @@ func (a *AccountMap) Initialize(bcdata *BCData) error {
 	// Add predefined accounts related to reward mechanism
 	rewardContractAddr := common.HexToAddress(contract.RewardContractAddress)
 	kirContractAddr := common.HexToAddress(contract.KIRContractAddress)
-	pocContractAddr := common.HexToAddress(contract.PoCContractAddress)
-	addrs := append(bcdata.addrs, &rewardContractAddr, &kirContractAddr, &pocContractAddr)
+	kgfContractAddr := common.HexToAddress(contract.KGFContractAddress)
+	addrs := append(bcdata.addrs, &rewardContractAddr, &kirContractAddr, &kgfContractAddr)
 
 	for _, addr := range addrs {
 		a.Set(*addr, statedb.GetBalance(*addr), statedb.GetNonce(*addr))

@@ -118,7 +118,7 @@ func TestStakingInfo_String(t *testing.T) {
 				common.StringToAddress("reward address 4"),
 			},
 			common.StringToAddress("kir address"),
-			common.StringToAddress("poc address"),
+			common.StringToAddress("kgf address"),
 			false,
 			0.0,
 			[]uint64{5000000, 5000000, 5000000, 5000000},

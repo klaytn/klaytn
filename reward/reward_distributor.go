@@ -71,8 +71,8 @@ func (rd *RewardDistributor) MintKLAY(b BalanceAdder, header *types.Header) erro
 	return nil
 }
 
-// DistributeBlockReward distributes block reward to proposer, kirAddr and pocAddr.
-func (rd *RewardDistributor) DistributeBlockReward(b BalanceAdder, header *types.Header, pocAddr common.Address, kirAddr common.Address) error {
+// DistributeBlockReward distributes block reward to proposer, kirAddr and kgfAddr.
+func (rd *RewardDistributor) DistributeBlockReward(b BalanceAdder, header *types.Header, kgfAddr common.Address, kirAddr common.Address) error {
 	rewardConfig, err := rd.rcc.get(header.Number.Uint64())
 	if err != nil {
 		return err
@@ -84,12 +84,12 @@ func (rd *RewardDistributor) DistributeBlockReward(b BalanceAdder, header *types
 		totalTxFee = rd.getTotalTxFee(header, rewardConfig)
 	}
 
-	rd.distributeBlockReward(b, header, totalTxFee, rewardConfig, pocAddr, kirAddr)
+	rd.distributeBlockReward(b, header, totalTxFee, rewardConfig, kgfAddr, kirAddr)
 	return nil
 }
 
-// distributeBlockReward mints KLAY and distributes newly minted KLAY and transaction fee to proposer, kirAddr and pocAddr.
-func (rd *RewardDistributor) distributeBlockReward(b BalanceAdder, header *types.Header, totalTxFee *big.Int, rewardConfig *rewardConfig, pocAddr common.Address, kirAddr common.Address) {
+// distributeBlockReward mints KLAY and distributes newly minted KLAY and transaction fee to proposer, kirAddr and kgfAddr.
+func (rd *RewardDistributor) distributeBlockReward(b BalanceAdder, header *types.Header, totalTxFee *big.Int, rewardConfig *rewardConfig, kgfAddr common.Address, kirAddr common.Address) {
 	proposer := header.Rewardbase
 	// Block reward
 	blockReward := big.NewInt(0).Add(rewardConfig.mintingAmount, totalTxFee)
@@ -99,26 +99,26 @@ func (rd *RewardDistributor) distributeBlockReward(b BalanceAdder, header *types
 	tmpInt = tmpInt.Mul(blockReward, rewardConfig.cnRatio)
 	cnReward := big.NewInt(0).Div(tmpInt, rewardConfig.totalRatio)
 
-	tmpInt = tmpInt.Mul(blockReward, rewardConfig.pocRatio)
-	pocIncentive := big.NewInt(0).Div(tmpInt, rewardConfig.totalRatio)
+	tmpInt = tmpInt.Mul(blockReward, rewardConfig.kgfRatio)
+	kgfIncentive := big.NewInt(0).Div(tmpInt, rewardConfig.totalRatio)
 
 	tmpInt = tmpInt.Mul(blockReward, rewardConfig.kirRatio)
 	kirIncentive := big.NewInt(0).Div(tmpInt, rewardConfig.totalRatio)
 
 	remaining := tmpInt.Sub(blockReward, cnReward)
-	remaining = tmpInt.Sub(remaining, pocIncentive)
+	remaining = tmpInt.Sub(remaining, kgfIncentive)
 	remaining = tmpInt.Sub(remaining, kirIncentive)
-	pocIncentive = pocIncentive.Add(pocIncentive, remaining)
+	kgfIncentive = kgfIncentive.Add(kgfIncentive, remaining)
 
 	// CN reward
 	b.AddBalance(proposer, cnReward)
 
-	// Proposer gets PoC incentive and KIR incentive, if there is no PoC/KIR address.
-	// PoC
-	if common.EmptyAddress(pocAddr) {
-		pocAddr = proposer
+	// Proposer gets KGF incentive and KIR incentive, if there is no KGF/KIR address.
+	// KGF
+	if common.EmptyAddress(kgfAddr) {
+		kgfAddr = proposer
 	}
-	b.AddBalance(pocAddr, pocIncentive)
+	b.AddBalance(kgfAddr, kgfIncentive)
 
 	// KIR
 	if common.EmptyAddress(kirAddr) {
@@ -128,6 +128,6 @@ func (rd *RewardDistributor) distributeBlockReward(b BalanceAdder, header *types
 
 	logger.Debug("Block reward", "blockNumber", header.Number.Uint64(),
 		"Reward address of a proposer", proposer, "CN reward amount", cnReward,
-		"PoC address", pocAddr, "Poc incentive", pocIncentive,
+		"KGF address", kgfAddr, "KGF incentive", kgfIncentive,
 		"KIR address", kirAddr, "KIR incentive", kirIncentive)
 }

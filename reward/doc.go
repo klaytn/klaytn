@@ -24,12 +24,12 @@ Klaytn uses WeightedRandom policy to choose a block proposer.
 It means, the percentage of becoming a block proposer depends on how much KLAY a node has staked.
 Therefore, a node with stakes more than others will have more opportunities than other nodes.
 
-StakingInfo is a data including stakingAmount and addresses (node, staking, reward, PoC and KIR).
+StakingInfo is a data including stakingAmount and addresses (node, staking, reward, KGF and KIR).
 StakingAmount is a balance how much KLAY each node has staked. Only CCO can stake KLAY.
 Each CCO stakes KLAY by a smart contract called staking contract.
 StakingAmount is derived by checking balance of staking contract.
 StakingInfo has 5 types of addresses. All addresses are obtained by the addressBookContract which is pre-deployed in the genesis block.
-stakingAddress are addresses of staking contracts of CCO. reward, PoC and KIR addresses are the addresses which get a block reward when a block has been created.
+stakingAddress are addresses of staking contracts of CCO. reward, KGF and KIR addresses are the addresses which get a block reward when a block has been created.
 StakingInfo is made every 86400 blocks (stakingInterval) and used in a next interval.
 
 	type StakingInfo struct {
@@ -38,7 +38,7 @@ StakingInfo is made every 86400 blocks (stakingInterval) and used in a next inte
 		CouncilStakingAddrs   []common.Address // Address of Staking contract which holds staking balance
 		CouncilRewardAddrs    []common.Address // Address of Council account which will get a block reward
 		KIRAddr               common.Address   // Address of KIR contract
-		PoCAddr               common.Address   // Address of PoC contract
+		KGFAddr               common.Address   // Address of KGF contract
 		UseGini               bool             // configure whether Gini is used or not
 		Gini                  float64          // Gini coefficient
 		CouncilStakingAmounts []uint64         // StakingAmounts of Council. They are derived from Staking addresses of council
@@ -59,10 +59,10 @@ and returns correct stakingInfo to use.
 
 Distributing Reward
 
-Klaytn distributes the reward of a block to proposer, PoC and KIR.
-The detail information of PoC and KIR is available on Klaytn docs.
+Klaytn distributes the reward of a block to proposer, KGF and KIR.
+The detail information of KGF and KIR is available on Klaytn docs.
 
-PoC - https://docs.klaytn.com/klaytn/token_economy#proof-of-contribution
+KGF - https://docs.klaytn.com/klaytn/design/token-economy#klaytn-growth-fund
 
 KIR - https://docs.klaytn.com/klaytn/token_economy#klaytn-improvement-reserve
 
@@ -72,8 +72,8 @@ All configurations are saved as rewardConfig on every epoch block (default 604,8
 A proposer which has made a current block will get the reward of the block.
 A block reward is calculated by following steps.
 First, calculate totalReward by adding mintingAmount and totalTxFee (unitPrice * gasUsed).
-Second, divide totalReward by ratio (default 34/54/12 - proposer/PoC/KIR).
-Last, distribute reward to each address (proposer, PoC, KIR).
+Second, divide totalReward by ratio (default 34/54/12 - proposer/KGF/KIR).
+Last, distribute reward to each address (proposer, KGF, KIR).
 
  related struct
  - RewardDistributor

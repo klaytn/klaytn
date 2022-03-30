@@ -40,7 +40,7 @@ type rewardConfig struct {
 	blockNum      uint64
 	mintingAmount *big.Int
 	cnRatio       *big.Int
-	pocRatio      *big.Int
+	kgfRatio      *big.Int
 	kirRatio      *big.Int
 	totalRatio    *big.Int
 	unitPrice     *big.Int
@@ -101,7 +101,7 @@ func (rewardConfigCache *rewardConfigCache) newRewardConfig(blockNumber uint64) 
 	mintingAmount.SetString(result.(string), 10)
 
 	cnRatio := big.NewInt(0)
-	pocRatio := big.NewInt(0)
+	kgfRatio := big.NewInt(0)
 	kirRatio := big.NewInt(0)
 	totalRatio := big.NewInt(0)
 
@@ -110,14 +110,14 @@ func (rewardConfigCache *rewardConfigCache) newRewardConfig(blockNumber uint64) 
 		logger.Error("Couldn't get Ratio from governance", "blockNumber", blockNumber, "err", err)
 		return nil, errFailGettingConfigure
 	}
-	cn, poc, kir, parsingError := rewardConfigCache.parseRewardRatio(result.(string))
+	cn, kgf, kir, parsingError := rewardConfigCache.parseRewardRatio(result.(string))
 	if parsingError != nil {
 		return nil, parsingError
 	}
 	cnRatio.SetInt64(int64(cn))
-	pocRatio.SetInt64(int64(poc))
+	kgfRatio.SetInt64(int64(kgf))
 	kirRatio.SetInt64(int64(kir))
-	totalRatio.SetInt64(int64(cn + poc + kir))
+	totalRatio.SetInt64(int64(cn + kgf + kir))
 
 	unitPrice := big.NewInt(0)
 	result, err = rewardConfigCache.governanceHelper.GetItemAtNumberByIntKey(blockNumber, params.UnitPrice)
@@ -131,7 +131,7 @@ func (rewardConfigCache *rewardConfigCache) newRewardConfig(blockNumber uint64) 
 		blockNum:      blockNumber,
 		mintingAmount: mintingAmount,
 		cnRatio:       cnRatio,
-		pocRatio:      pocRatio,
+		kgfRatio:      kgfRatio,
 		kirRatio:      kirRatio,
 		totalRatio:    totalRatio,
 		unitPrice:     unitPrice,
@@ -149,11 +149,11 @@ func (rewardConfigCache *rewardConfigCache) parseRewardRatio(ratio string) (int,
 		return 0, 0, 0, errInvalidFormat
 	}
 	cn, err1 := strconv.Atoi(s[0])
-	poc, err2 := strconv.Atoi(s[1])
+	kgf, err2 := strconv.Atoi(s[1])
 	kir, err3 := strconv.Atoi(s[2])
 
 	if err1 != nil || err2 != nil || err3 != nil {
 		return 0, 0, 0, errParsingRatio
 	}
-	return cn, poc, kir, nil
+	return cn, kgf, kir, nil
 }

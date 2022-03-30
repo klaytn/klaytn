@@ -36,7 +36,7 @@ const (
 	addressTypeNodeID = iota
 	addressTypeStakingAddr
 	addressTypeRewardAddr
-	addressTypePoCAddr
+	addressTypeKGFAddr
 	addressTypeKIRAddr
 )
 
@@ -86,11 +86,11 @@ func (ac *addressBookConnector) makeMsgToAddressBook(r params.Rules) (*types.Tra
 }
 
 // It parses the result bytes of calling addressBook to addresses.
-func (ac *addressBookConnector) parseAllAddresses(result []byte) (nodeIds []common.Address, stakingAddrs []common.Address, rewardAddrs []common.Address, pocAddr common.Address, kirAddr common.Address, err error) {
+func (ac *addressBookConnector) parseAllAddresses(result []byte) (nodeIds []common.Address, stakingAddrs []common.Address, rewardAddrs []common.Address, kgfAddr common.Address, kirAddr common.Address, err error) {
 	nodeIds = []common.Address{}
 	stakingAddrs = []common.Address{}
 	rewardAddrs = []common.Address{}
-	pocAddr = common.Address{}
+	kgfAddr = common.Address{}
 	kirAddr = common.Address{}
 
 	if result == nil {
@@ -132,8 +132,8 @@ func (ac *addressBookConnector) parseAllAddresses(result []byte) (nodeIds []comm
 			stakingAddrs = append(stakingAddrs, (*allAddressList)[i])
 		case addressTypeRewardAddr:
 			rewardAddrs = append(rewardAddrs, (*allAddressList)[i])
-		case addressTypePoCAddr:
-			pocAddr = (*allAddressList)[i]
+		case addressTypeKGFAddr:
+			kgfAddr = (*allAddressList)[i]
 		case addressTypeKIRAddr:
 			kirAddr = (*allAddressList)[i]
 		default:
@@ -145,7 +145,7 @@ func (ac *addressBookConnector) parseAllAddresses(result []byte) (nodeIds []comm
 	// validate parsed node information
 	if len(nodeIds) != len(stakingAddrs) ||
 		len(nodeIds) != len(rewardAddrs) ||
-		common.EmptyAddress(pocAddr) ||
+		common.EmptyAddress(kgfAddr) ||
 		common.EmptyAddress(kirAddr) {
 		err = errAddressBookIncomplete
 		return
@@ -189,7 +189,7 @@ func (ac *addressBookConnector) getStakingInfoFromAddressBook(blockNum uint64) (
 		return nil, errors.New(fmt.Sprintf("failed to call AddressBook contract. root err: %s", err))
 	}
 
-	nodeAddrs, stakingAddrs, rewardAddrs, PoCAddr, KIRAddr, err := ac.parseAllAddresses(res)
+	nodeAddrs, stakingAddrs, rewardAddrs, KGFAddr, KIRAddr, err := ac.parseAllAddresses(res)
 	if err != nil {
 		if err == errAddressBookIncomplete {
 			// This is an expected behavior when the addressBook contract is not activated yet.
@@ -200,5 +200,5 @@ func (ac *addressBookConnector) getStakingInfoFromAddressBook(blockNum uint64) (
 		return newEmptyStakingInfo(blockNum), nil
 	}
 
-	return newStakingInfo(ac.bc, ac.gh, blockNum, nodeAddrs, stakingAddrs, rewardAddrs, KIRAddr, PoCAddr)
+	return newStakingInfo(ac.bc, ac.gh, blockNum, nodeAddrs, stakingAddrs, rewardAddrs, KIRAddr, KGFAddr)
 }

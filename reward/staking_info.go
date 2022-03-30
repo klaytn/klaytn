@@ -49,7 +49,7 @@ type StakingInfo struct {
 	CouncilStakingAddrs []common.Address // Address of Staking account which holds staking balance
 	CouncilRewardAddrs  []common.Address // Address of Council account which will get block reward
 	KIRAddr             common.Address   // Address of KIR contract
-	PoCAddr             common.Address   // Address of PoC contract
+	KGFAddr             common.Address   // Address of KGF contract
 
 	UseGini bool
 	Gini    float64 // gini coefficient
@@ -65,7 +65,7 @@ func newEmptyStakingInfo(blockNum uint64) *StakingInfo {
 		CouncilStakingAddrs:   make([]common.Address, 0, 0),
 		CouncilRewardAddrs:    make([]common.Address, 0, 0),
 		KIRAddr:               common.Address{},
-		PoCAddr:               common.Address{},
+		KGFAddr:               common.Address{},
 		CouncilStakingAmounts: make([]uint64, 0, 0),
 		Gini:                  DefaultGiniCoefficient,
 		UseGini:               false,
@@ -73,7 +73,7 @@ func newEmptyStakingInfo(blockNum uint64) *StakingInfo {
 	return stakingInfo
 }
 
-func newStakingInfo(bc blockChain, helper governanceHelper, blockNum uint64, nodeAddrs []common.Address, stakingAddrs []common.Address, rewardAddrs []common.Address, KIRAddr common.Address, PoCAddr common.Address) (*StakingInfo, error) {
+func newStakingInfo(bc blockChain, helper governanceHelper, blockNum uint64, nodeAddrs []common.Address, stakingAddrs []common.Address, rewardAddrs []common.Address, KIRAddr common.Address, KGFAddr common.Address) (*StakingInfo, error) {
 	intervalBlock := bc.GetBlockByNumber(blockNum)
 	if intervalBlock == nil {
 		logger.Trace("Failed to get the block by the given number", "blockNum", blockNum)
@@ -110,7 +110,7 @@ func newStakingInfo(bc blockChain, helper governanceHelper, blockNum uint64, nod
 		CouncilStakingAddrs:   stakingAddrs,
 		CouncilRewardAddrs:    rewardAddrs,
 		KIRAddr:               KIRAddr,
-		PoCAddr:               PoCAddr,
+		KGFAddr:               KGFAddr,
 		CouncilStakingAmounts: stakingAmounts,
 		Gini:                  gini,
 		UseGini:               useGini,

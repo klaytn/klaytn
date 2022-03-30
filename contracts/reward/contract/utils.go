@@ -23,5 +23,5 @@ const (
 	// TODO-Klaytn-Issue1587 Decide whether to cleanup below three addresses after discussing issue1587
 	RewardContractAddress = "0x0000000000000000000000000000000000000441"
 	KIRContractAddress    = "0x0000000000000000000000000000000000000442"
-	PoCContractAddress    = "0x0000000000000000000000000000000000000443"
+	KGFContractAddress    = "0x0000000000000000000000000000000000000443"
 )
