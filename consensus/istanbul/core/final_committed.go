@@ -21,12 +21,23 @@
 package core
 
 import (
+	"time"
+
 	"github.com/klaytn/klaytn/common"
 )
 
 func (c *core) handleFinalCommitted() error {
 	logger := c.logger.NewWith("state", c.state)
 	logger.Trace("Received a final committed proposal")
+
+	if !c.committedTime.IsZero() {
+		c.blockCommitTimeGauge.Update(int64(time.Since(c.committedTime)))
+	}
+	c.preprepareStartTime = time.Time{}
+	c.prepreparedTime = time.Time{}
+	c.preparedTime = time.Time{}
+	c.committedTime = time.Time{}
+
 	c.startNewRound(common.Big0)
 	return nil
 }

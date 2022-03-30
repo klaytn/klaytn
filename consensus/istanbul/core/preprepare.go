@@ -34,6 +34,8 @@ func (c *core) sendPreprepare(request *istanbul.Request) {
 	header := types.SetRoundToHeader(request.Proposal.Header(), c.currentView().Round.Int64())
 	request.Proposal = request.Proposal.WithSeal(header)
 
+	c.preprepareStartTime = time.Now()
+
 	// If I'm the proposer and I have the same sequence with the proposal
 	if c.current.Sequence().Cmp(request.Proposal.Number()) == 0 && c.isProposer() {
 		curView := c.currentView()

@@ -42,22 +42,32 @@ var logger = log.NewModuleLogger(log.ConsensusIstanbulCore)
 // New creates an Istanbul consensus core
 func New(backend istanbul.Backend, config *istanbul.Config) Engine {
 	c := &core{
-		config:             config,
-		address:            backend.Address(),
-		state:              StateAcceptRequest,
-		handlerWg:          new(sync.WaitGroup),
-		logger:             logger.NewWith("address", backend.Address()),
-		backend:            backend,
-		backlogs:           make(map[common.Address]*prque.Prque),
-		backlogsMu:         new(sync.Mutex),
-		pendingRequests:    prque.New(),
-		pendingRequestsMu:  new(sync.Mutex),
-		consensusTimestamp: time.Time{},
+		config:            config,
+		address:           backend.Address(),
+		state:             StateAcceptRequest,
+		handlerWg:         new(sync.WaitGroup),
+		logger:            logger.NewWith("address", backend.Address()),
+		backend:           backend,
+		backlogs:          make(map[common.Address]*prque.Prque),
+		backlogsMu:        new(sync.Mutex),
+		pendingRequests:   prque.New(),
+		pendingRequestsMu: new(sync.Mutex),
+
+		preprepareStartTime: time.Time{},
+		consensusTimestamp:  time.Time{},
+		prepreparedTime:     time.Time{},
+		preparedTime:        time.Time{},
+		committedTime:       time.Time{},
+
+		prepreparePhaseTimeGauge: metrics.NewRegisteredGauge("consensus/istanbul/core/prepreparePhase", nil),
+		consensusTimeGauge:       metrics.NewRegisteredGauge("consensus/istanbul/core/timer", nil),
+		preparePhaseTimeGauge:    metrics.NewRegisteredGauge("consensus/istanbul/core/preparePhase", nil),
+		commitPhaseTimeGauge:     metrics.NewRegisteredGauge("consensus/istanbul/core/commitPhase", nil),
+		blockCommitTimeGauge:     metrics.NewRegisteredGauge("consensus/istanbul/core/blockCommit", nil),
 
 		roundMeter:         metrics.NewRegisteredMeter("consensus/istanbul/core/round", nil),
 		currentRoundGauge:  metrics.NewRegisteredGauge("consensus/istanbul/core/currentRound", nil),
 		sequenceMeter:      metrics.NewRegisteredMeter("consensus/istanbul/core/sequence", nil),
-		consensusTimeGauge: metrics.NewRegisteredGauge("consensus/istanbul/core/timer", nil),
 		councilSizeGauge:   metrics.NewRegisteredGauge("consensus/istanbul/core/councilSize", nil),
 		committeeSizeGauge: metrics.NewRegisteredGauge("consensus/istanbul/core/committeeSize", nil),
 		hashLockGauge:      metrics.NewRegisteredGauge("consensus/istanbul/core/hashLock", nil),
@@ -95,18 +105,22 @@ type core struct {
 	pendingRequests   *prque.Prque
 	pendingRequestsMu *sync.Mutex
 
-	consensusTimestamp time.Time
-	// the meter to record the round change rate
-	roundMeter metrics.Meter
-	// the gauge to record the current round
-	currentRoundGauge metrics.Gauge
-	// the meter to record the sequence update rate
-	sequenceMeter metrics.Meter
-	// the gauge to record consensus duration (from accepting a preprepare to final committed stage)
-	consensusTimeGauge metrics.Gauge
-	// the gauge to record hashLock status (1 if hash-locked. 0 otherwise)
-	hashLockGauge metrics.Gauge
+	consensusTimestamp  time.Time
+	preprepareStartTime time.Time
+	prepreparedTime     time.Time
+	preparedTime        time.Time
+	committedTime       time.Time
 
+	consensusTimeGauge       metrics.Gauge // the gauge to record consensus duration (from accepting a preprepare to final committed stage)
+	prepreparePhaseTimeGauge metrics.Gauge // start time to wait for a preprepare msg ~ receive preprepare msg time
+	preparePhaseTimeGauge    metrics.Gauge // receive preprepare msg time(==preprepared state) ~ prepared state
+	commitPhaseTimeGauge     metrics.Gauge // prepared state ~ committed state
+	blockCommitTimeGauge     metrics.Gauge // block commit(if proposer) or insert&commit(if non-proposer) time
+
+	roundMeter         metrics.Meter // the meter to record the round change rate
+	currentRoundGauge  metrics.Gauge // the gauge to record the current round
+	sequenceMeter      metrics.Meter // the meter to record the sequence update rate
+	hashLockGauge      metrics.Gauge // the gauge to record hashLock status (1 if hash-locked. 0 otherwise)
 	councilSizeGauge   metrics.Gauge
 	committeeSizeGauge metrics.Gauge
 }
@@ -334,6 +348,25 @@ func (c *core) setState(state State) {
 	if c.state != state {
 		c.state = state
 	}
+
+	switch state {
+	case StatePreprepared:
+		c.prepreparedTime = time.Now()
+		if !c.preprepareStartTime.IsZero() {
+			c.prepreparePhaseTimeGauge.Update(int64(c.preparedTime.Sub(c.prepreparedTime)))
+		}
+	case StatePrepared:
+		c.preparedTime = time.Now()
+		if !c.prepreparedTime.IsZero() {
+			c.preparePhaseTimeGauge.Update(int64(c.preparedTime.Sub(c.prepreparedTime)))
+		}
+	case StateCommitted:
+		c.committedTime = time.Now()
+		if !c.committedTime.IsZero() {
+			c.commitPhaseTimeGauge.Update(int64(c.committedTime.Sub(c.preparedTime)))
+		}
+	}
+
 	if state == StateAcceptRequest {
 		c.processPendingRequests()
 	}

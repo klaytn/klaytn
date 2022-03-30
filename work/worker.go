@@ -68,6 +68,7 @@ var (
 	nonceTooHighTxsGauge    = metrics.NewRegisteredGauge("miner/nonce/high/txs", nil)
 	gasLimitReachedTxsGauge = metrics.NewRegisteredGauge("miner/limitreached/gas/txs", nil)
 	strangeErrorTxsCounter  = metrics.NewRegisteredCounter("miner/strangeerror/txs", nil)
+	waitBlockminingTimer    = klaytnmetrics.NewRegisteredHybridTimer("miner/waitblockmining/time", nil)
 
 	blockMiningTimer          = klaytnmetrics.NewRegisteredHybridTimer("miner/block/mining/time", nil)
 	blockMiningExecuteTxTimer = klaytnmetrics.NewRegisteredHybridTimer("miner/block/execute/time", nil)
@@ -504,6 +505,7 @@ func (self *worker) commitNewWork() {
 			logger.Info("Mining too far in the future", "wait", common.PrettyDuration(wait))
 			time.Sleep(wait)
 
+			waitBlockminingTimer.Update(time.Since(tstart))
 			tstart = time.Now()    // refresh for metrics
 			tstamp = tstart.Unix() // refresh for block timestamp
 		}
