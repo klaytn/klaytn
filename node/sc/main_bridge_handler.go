@@ -111,18 +111,24 @@ func (mbh *MainBridgeHandler) handleServiceChainTxDataMsg(p BridgePeer, msg p2p.
 	}
 
 	// Only valid txs should be pushed into the pool.
-	validTxs := make([]*types.Transaction, 0, len(txs))
-	//validTxs := []*types.Transaction{}
-	var err error
+	var invalidTxHashes []common.Hash
 	for i, tx := range txs {
 		if tx == nil {
-			err = errResp(ErrDecode, "tx %d is nil", i)
+			logger.Trace("Invalid Tx (Nil)", "idx", i)
 			continue
 		}
-		validTxs = append(validTxs, tx)
+		if err := mbh.mainbridge.txPool.AddRemote(tx); err != nil {
+			txHash := tx.Hash()
+			logger.Trace("Invalid tx found",
+				"txType", tx.Type(), "txNonce", tx.Nonce(), "txHash", txHash, "err", err)
+			invalidTxHashes = append(invalidTxHashes, txHash)
+		}
 	}
-	mbh.mainbridge.txPool.AddRemotes(validTxs)
-	return err
+
+	if len(invalidTxHashes) > 0 {
+		return p.SendServiceChainInvalidTxResponse(invalidTxHashes)
+	}
+	return nil
 }
 
 // handleServiceChainParentChainInfoRequestMsg handles parent chain info request message from child chain.
@@ -141,11 +147,13 @@ func (mbh *MainBridgeHandler) handleServiceChainParentChainInfoRequestMsg(p Brid
 
 // handleServiceChainReceiptRequestMsg handles receipt request message from child chain.
 // It will find and send corresponding receipts with given transaction hashes.
+
 func (mbh *MainBridgeHandler) handleServiceChainReceiptRequestMsg(p BridgePeer, msg p2p.Msg) error {
 	// Decode the retrieval message
 	msgStream := rlp.NewStream(msg.Payload, uint64(msg.Size))
 	if _, err := msgStream.List(); err != nil {
 		return err
+
 	}
 	// Gather state data until the fetch or network limits is reached
 	var (
@@ -156,6 +164,7 @@ func (mbh *MainBridgeHandler) handleServiceChainReceiptRequestMsg(p BridgePeer, 
 		// Retrieve the hash of the next block
 		if err := msgStream.Decode(&hash); err == rlp.EOL {
 			break
+
 		} else if err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
@@ -164,7 +173,6 @@ func (mbh *MainBridgeHandler) handleServiceChainReceiptRequestMsg(p BridgePeer, 
 		if receipt == nil {
 			continue
 		}
-
 		receiptsForStorage = append(receiptsForStorage, (*types.ReceiptForStorage)(receipt))
 	}
 	if len(receiptsForStorage) == 0 {
