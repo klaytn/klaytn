@@ -195,10 +195,14 @@ func (sbh *SubBridgeHandler) HandleMainMsg(p BridgePeer, msg p2p.Msg) error {
 		if err := sbh.handleParentChainInfoResponseMsg(p, msg); err != nil {
 			return err
 		}
-
 	case ServiceChainReceiptResponseMsg:
 		logger.Debug("received ServiceChainReceiptResponseMsg")
 		if err := sbh.handleParentChainReceiptResponseMsg(p, msg); err != nil {
+			return err
+		}
+	case ServiceChainInvalidTxResponseMsg:
+		logger.Debug("received ServiceChainInvalidTxResponse")
+		if err := sbh.handleParentChainInvalidTxResponseMsg(msg); err != nil {
 			return err
 		}
 	default:
@@ -301,7 +305,8 @@ func (sbh *SubBridgeHandler) LocalChainHeadEvent(block *types.Block) {
 		if sbh.subbridge.GetAnchoringTx() {
 			sbh.blockAnchoringManager(block)
 		}
-		sbh.broadcastServiceChainTx()
+
+		sbh.broadcastServiceChainTx(block)
 		sbh.broadcastServiceChainReceiptRequest()
 
 		sbh.skipSyncBlockCount = 0
@@ -317,17 +322,47 @@ func (sbh *SubBridgeHandler) LocalChainHeadEvent(block *types.Block) {
 	}
 }
 
+func (sbh *SubBridgeHandler) handleParentChainInvalidTxResponseMsg(msg p2p.Msg) error {
+	var txHashes []common.Hash
+	if err := msg.Decode(&txHashes); err != nil && err != rlp.EOL {
+		return errResp(ErrDecode, "msg %v: %v", msg, err)
+	}
+	txPool := sbh.subbridge.GetBridgeTxPool()
+	for _, txHash := range txHashes {
+		if tx := txPool.Get(txHash); tx != nil {
+			if err := txPool.RemoveTx(tx); err != nil {
+				logger.Trace("Failed to remove bridge tx",
+					"txType", tx.Type(), "txNonce", tx.Nonce(), "txHash", tx.Hash())
+			}
+			logger.Trace("Removed invalid bridge tx",
+				"txType", tx.Type(), "txNonce", tx.Nonce(), "txHash", tx.Hash())
+		}
+	}
+	return nil
+}
+
 // broadcastServiceChainTx broadcasts service chain transactions to parent chain peers.
 // It signs the given unsigned transaction with parent chain ID and then send it to its
 // parent chain peers.
-func (sbh *SubBridgeHandler) broadcastServiceChainTx() {
+func (sbh *SubBridgeHandler) broadcastServiceChainTx(block *types.Block) {
 	parentChainID := sbh.parentChainID
 	if parentChainID == nil {
 		logger.Error("unexpected nil parentChainID while broadcastServiceChainTx")
 	}
-	txs := sbh.subbridge.GetBridgeTxPool().PendingTxsByAddress(&sbh.subbridge.bridgeAccounts.pAccount.address, int(sbh.GetSentChainTxsLimit())) // TODO-Klaytn-Servicechain change GetSentChainTxsLimit type to int from uint64
-	peers := sbh.subbridge.BridgePeerSet().peers
+	var txs types.Transactions
+	allPendingTxs := sbh.subbridge.GetBridgeTxPool().PendingTxsByAddress(&sbh.subbridge.bridgeAccounts.pAccount.address, int(sbh.GetSentChainTxsLimit())) // TODO-Klaytn-Servicechain change GetSentChainTxsLimit type to int from uint64
+	// Remove anchoring tx if the period is not currently arrived to avoid sending duplicated txs which are not currrently mined from counterpart chain.
+	if block.NumberU64()%sbh.chainTxPeriod != 0 {
+		for _, tx := range allPendingTxs {
+			if !tx.Type().IsChainDataAnchoring() {
+				txs = append(txs, tx)
+			}
+		}
+	} else {
+		txs = allPendingTxs
+	}
 
+	peers := sbh.subbridge.BridgePeerSet().peers
 	for _, peer := range peers {
 		if peer.GetChainID().Cmp(parentChainID) != 0 {
 			logger.Error("parent peer with different parent chainID", "peerID", peer.GetID(), "peer chainID", peer.GetChainID(), "parent chainID", parentChainID)
@@ -359,7 +394,13 @@ func (sbh *SubBridgeHandler) writeServiceChainTxReceipts(bc *blockchain.BlockCha
 				sbh.WriteAnchoredBlockNumber(decodedData.GetBlockNumber().Uint64())
 			}
 			// TODO-Klaytn-ServiceChain: support other tx types if needed.
-			sbh.subbridge.GetBridgeTxPool().RemoveTx(tx)
+			if err := sbh.subbridge.GetBridgeTxPool().RemoveTx(tx); err != nil {
+				logger.Error("Tx removal error",
+					"txType", tx.Type(), "txNonce", tx.Nonce(), "txHash", tx.Hash(), "err", err)
+			} else {
+				logger.Trace("Removed invalid bridge tx",
+					"txType", tx.Type(), "txNonce", tx.Nonce(), "txHash", tx.Hash())
+			}
 		} else {
 			logger.Trace("received service chain transaction receipt does not exist in sentServiceChainTxs", "txHash", txHash.String())
 		}
