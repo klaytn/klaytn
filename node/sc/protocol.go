@@ -38,10 +38,11 @@ const (
 	ServiceChainReceiptRequestMsg          = 0x03
 	ServiceChainParentChainInfoResponseMsg = 0x04
 	ServiceChainParentChainInfoRequestMsg  = 0x05
+	ServiceChainInvalidTxResponseMsg       = 0x06
 
-	ServiceChainCall     = 0x06
-	ServiceChainResponse = 0x07
-	ServiceChainNotify   = 0x08
+	ServiceChainCall     = 0x07
+	ServiceChainResponse = 0x08
+	ServiceChainNotify   = 0x09
 )
 
 var (
