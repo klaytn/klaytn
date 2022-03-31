@@ -20,6 +20,8 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
+	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/storage/database"
 )
 
 type Engine interface {
@@ -55,10 +57,19 @@ type HeaderEngine interface {
 
 	// Get internal fields
 	ChainId() uint64
+	InitialChainConfig() *params.ChainConfig
+	GetVoteMapCopy() map[string]VoteStatus
+	GetGovernanceTalliesCopy() []GovernanceTallyItem
 	PendingChanges() map[string]interface{}
 	Votes() []GovernanceVote
 	IdxCache() []uint64
 	IdxCacheFromDb() []uint64
+
+	NodeAddress() common.Address
+	TotalVotingPower() uint64
+	MyVotingPower() uint64
+	BlockChain() blockChain
+	DB() database.DBManager
 
 	// Set internal fields
 	SetNodeAddress(addr common.Address)

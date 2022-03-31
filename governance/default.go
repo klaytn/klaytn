@@ -467,6 +467,26 @@ func (g *Governance) SetMyVotingPower(t uint64) {
 	atomic.StoreUint64(&g.votingPower, t)
 }
 
+func (g *Governance) NodeAddress() common.Address {
+	return g.nodeAddress.Load().(common.Address)
+}
+
+func (g *Governance) TotalVotingPower() uint64 {
+	return atomic.LoadUint64(&g.totalVotingPower)
+}
+
+func (g *Governance) MyVotingPower() uint64 {
+	return atomic.LoadUint64(&g.votingPower)
+}
+
+func (gov *Governance) BlockChain() blockChain {
+	return gov.blockChain
+}
+
+func (gov *Governance) DB() database.DBManager {
+	return gov.db
+}
+
 func (g *Governance) GetEncodedVote(addr common.Address, number uint64) []byte {
 	// TODO-Klaytn-Governance Change this part to add all votes to the header at once
 	for key, val := range g.voteMap.Copy() {
@@ -1134,6 +1154,18 @@ func (gov *Governance) UseGiniCoeff() bool {
 
 func (gov *Governance) ChainId() uint64 {
 	return gov.ChainConfig.ChainID.Uint64()
+}
+
+func (gov *Governance) InitialChainConfig() *params.ChainConfig {
+	return gov.ChainConfig
+}
+
+func (g *Governance) GetVoteMapCopy() map[string]VoteStatus {
+	return g.voteMap.Copy()
+}
+
+func (g *Governance) GetGovernanceTalliesCopy() []GovernanceTallyItem {
+	return g.GovernanceTallies.Copy()
 }
 
 func (gov *Governance) PendingChanges() map[string]interface{} {
