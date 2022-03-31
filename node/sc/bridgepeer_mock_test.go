@@ -15,54 +15,54 @@ import (
 	discover "github.com/klaytn/klaytn/networks/p2p/discover"
 )
 
-// MockBridgePeer is a mock of BridgePeer interface
+// MockBridgePeer is a mock of BridgePeer interface.
 type MockBridgePeer struct {
 	ctrl     *gomock.Controller
 	recorder *MockBridgePeerMockRecorder
 }
 
-// MockBridgePeerMockRecorder is the mock recorder for MockBridgePeer
+// MockBridgePeerMockRecorder is the mock recorder for MockBridgePeer.
 type MockBridgePeerMockRecorder struct {
 	mock *MockBridgePeer
 }
 
-// NewMockBridgePeer creates a new mock instance
+// NewMockBridgePeer creates a new mock instance.
 func NewMockBridgePeer(ctrl *gomock.Controller) *MockBridgePeer {
 	mock := &MockBridgePeer{ctrl: ctrl}
 	mock.recorder = &MockBridgePeerMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockBridgePeer) EXPECT() *MockBridgePeerMockRecorder {
 	return m.recorder
 }
 
-// AddToKnownTxs mocks base method
+// AddToKnownTxs mocks base method.
 func (m *MockBridgePeer) AddToKnownTxs(arg0 common.Hash) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "AddToKnownTxs", arg0)
 }
 
-// AddToKnownTxs indicates an expected call of AddToKnownTxs
+// AddToKnownTxs indicates an expected call of AddToKnownTxs.
 func (mr *MockBridgePeerMockRecorder) AddToKnownTxs(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddToKnownTxs", reflect.TypeOf((*MockBridgePeer)(nil).AddToKnownTxs), arg0)
 }
 
-// Close mocks base method
+// Close mocks base method.
 func (m *MockBridgePeer) Close() {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Close")
 }
 
-// Close indicates an expected call of Close
+// Close indicates an expected call of Close.
 func (mr *MockBridgePeerMockRecorder) Close() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockBridgePeer)(nil).Close))
 }
 
-// ConnType mocks base method
+// ConnType mocks base method.
 func (m *MockBridgePeer) ConnType() common.ConnType {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ConnType")
@@ -70,13 +70,13 @@ func (m *MockBridgePeer) ConnType() common.ConnType {
 	return ret0
 }
 
-// ConnType indicates an expected call of ConnType
+// ConnType indicates an expected call of ConnType.
 func (mr *MockBridgePeerMockRecorder) ConnType() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ConnType", reflect.TypeOf((*MockBridgePeer)(nil).ConnType))
 }
 
-// GetAddr mocks base method
+// GetAddr mocks base method.
 func (m *MockBridgePeer) GetAddr() common.Address {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetAddr")
@@ -84,13 +84,13 @@ func (m *MockBridgePeer) GetAddr() common.Address {
 	return ret0
 }
 
-// GetAddr indicates an expected call of GetAddr
+// GetAddr indicates an expected call of GetAddr.
 func (mr *MockBridgePeerMockRecorder) GetAddr() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAddr", reflect.TypeOf((*MockBridgePeer)(nil).GetAddr))
 }
 
-// GetChainID mocks base method
+// GetChainID mocks base method.
 func (m *MockBridgePeer) GetChainID() *big.Int {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetChainID")
@@ -98,13 +98,13 @@ func (m *MockBridgePeer) GetChainID() *big.Int {
 	return ret0
 }
 
-// GetChainID indicates an expected call of GetChainID
+// GetChainID indicates an expected call of GetChainID.
 func (mr *MockBridgePeerMockRecorder) GetChainID() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetChainID", reflect.TypeOf((*MockBridgePeer)(nil).GetChainID))
 }
 
-// GetID mocks base method
+// GetID mocks base method.
 func (m *MockBridgePeer) GetID() string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetID")
@@ -112,13 +112,13 @@ func (m *MockBridgePeer) GetID() string {
 	return ret0
 }
 
-// GetID indicates an expected call of GetID
+// GetID indicates an expected call of GetID.
 func (mr *MockBridgePeerMockRecorder) GetID() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetID", reflect.TypeOf((*MockBridgePeer)(nil).GetID))
 }
 
-// GetP2PPeer mocks base method
+// GetP2PPeer mocks base method.
 func (m *MockBridgePeer) GetP2PPeer() *p2p.Peer {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetP2PPeer")
@@ -126,13 +126,13 @@ func (m *MockBridgePeer) GetP2PPeer() *p2p.Peer {
 	return ret0
 }
 
-// GetP2PPeer indicates an expected call of GetP2PPeer
+// GetP2PPeer indicates an expected call of GetP2PPeer.
 func (mr *MockBridgePeerMockRecorder) GetP2PPeer() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetP2PPeer", reflect.TypeOf((*MockBridgePeer)(nil).GetP2PPeer))
 }
 
-// GetP2PPeerID mocks base method
+// GetP2PPeerID mocks base method.
 func (m *MockBridgePeer) GetP2PPeerID() discover.NodeID {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetP2PPeerID")
@@ -140,13 +140,13 @@ func (m *MockBridgePeer) GetP2PPeerID() discover.NodeID {
 	return ret0
 }
 
-// GetP2PPeerID indicates an expected call of GetP2PPeerID
+// GetP2PPeerID indicates an expected call of GetP2PPeerID.
 func (mr *MockBridgePeerMockRecorder) GetP2PPeerID() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetP2PPeerID", reflect.TypeOf((*MockBridgePeer)(nil).GetP2PPeerID))
 }
 
-// GetRW mocks base method
+// GetRW mocks base method.
 func (m *MockBridgePeer) GetRW() p2p.MsgReadWriter {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetRW")
@@ -154,13 +154,13 @@ func (m *MockBridgePeer) GetRW() p2p.MsgReadWriter {
 	return ret0
 }
 
-// GetRW indicates an expected call of GetRW
+// GetRW indicates an expected call of GetRW.
 func (mr *MockBridgePeerMockRecorder) GetRW() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRW", reflect.TypeOf((*MockBridgePeer)(nil).GetRW))
 }
 
-// GetVersion mocks base method
+// GetVersion mocks base method.
 func (m *MockBridgePeer) GetVersion() int {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetVersion")
@@ -168,13 +168,13 @@ func (m *MockBridgePeer) GetVersion() int {
 	return ret0
 }
 
-// GetVersion indicates an expected call of GetVersion
+// GetVersion indicates an expected call of GetVersion.
 func (mr *MockBridgePeerMockRecorder) GetVersion() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVersion", reflect.TypeOf((*MockBridgePeer)(nil).GetVersion))
 }
 
-// Handle mocks base method
+// Handle mocks base method.
 func (m *MockBridgePeer) Handle(arg0 *MainBridge) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Handle", arg0)
@@ -182,13 +182,13 @@ func (m *MockBridgePeer) Handle(arg0 *MainBridge) error {
 	return ret0
 }
 
-// Handle indicates an expected call of Handle
+// Handle indicates an expected call of Handle.
 func (mr *MockBridgePeerMockRecorder) Handle(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Handle", reflect.TypeOf((*MockBridgePeer)(nil).Handle), arg0)
 }
 
-// Handshake mocks base method
+// Handshake mocks base method.
 func (m *MockBridgePeer) Handshake(arg0 uint64, arg1, arg2 *big.Int, arg3 common.Hash) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Handshake", arg0, arg1, arg2, arg3)
@@ -196,13 +196,13 @@ func (m *MockBridgePeer) Handshake(arg0 uint64, arg1, arg2 *big.Int, arg3 common
 	return ret0
 }
 
-// Handshake indicates an expected call of Handshake
+// Handshake indicates an expected call of Handshake.
 func (mr *MockBridgePeerMockRecorder) Handshake(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Handshake", reflect.TypeOf((*MockBridgePeer)(nil).Handshake), arg0, arg1, arg2, arg3)
 }
 
-// Head mocks base method
+// Head mocks base method.
 func (m *MockBridgePeer) Head() (common.Hash, *big.Int) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Head")
@@ -211,13 +211,13 @@ func (m *MockBridgePeer) Head() (common.Hash, *big.Int) {
 	return ret0, ret1
 }
 
-// Head indicates an expected call of Head
+// Head indicates an expected call of Head.
 func (mr *MockBridgePeerMockRecorder) Head() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Head", reflect.TypeOf((*MockBridgePeer)(nil).Head))
 }
 
-// Info mocks base method
+// Info mocks base method.
 func (m *MockBridgePeer) Info() *BridgePeerInfo {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Info")
@@ -225,13 +225,13 @@ func (m *MockBridgePeer) Info() *BridgePeerInfo {
 	return ret0
 }
 
-// Info indicates an expected call of Info
+// Info indicates an expected call of Info.
 func (mr *MockBridgePeerMockRecorder) Info() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Info", reflect.TypeOf((*MockBridgePeer)(nil).Info))
 }
 
-// KnowsTx mocks base method
+// KnowsTx mocks base method.
 func (m *MockBridgePeer) KnowsTx(arg0 common.Hash) bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "KnowsTx", arg0)
@@ -239,13 +239,13 @@ func (m *MockBridgePeer) KnowsTx(arg0 common.Hash) bool {
 	return ret0
 }
 
-// KnowsTx indicates an expected call of KnowsTx
+// KnowsTx indicates an expected call of KnowsTx.
 func (mr *MockBridgePeerMockRecorder) KnowsTx(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KnowsTx", reflect.TypeOf((*MockBridgePeer)(nil).KnowsTx), arg0)
 }
 
-// Send mocks base method
+// Send mocks base method.
 func (m *MockBridgePeer) Send(arg0 uint64, arg1 interface{}) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Send", arg0, arg1)
@@ -253,13 +253,13 @@ func (m *MockBridgePeer) Send(arg0 uint64, arg1 interface{}) error {
 	return ret0
 }
 
-// Send indicates an expected call of Send
+// Send indicates an expected call of Send.
 func (mr *MockBridgePeerMockRecorder) Send(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Send", reflect.TypeOf((*MockBridgePeer)(nil).Send), arg0, arg1)
 }
 
-// SendRequestRPC mocks base method
+// SendRequestRPC mocks base method.
 func (m *MockBridgePeer) SendRequestRPC(arg0 []byte) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SendRequestRPC", arg0)
@@ -267,13 +267,13 @@ func (m *MockBridgePeer) SendRequestRPC(arg0 []byte) error {
 	return ret0
 }
 
-// SendRequestRPC indicates an expected call of SendRequestRPC
+// SendRequestRPC indicates an expected call of SendRequestRPC.
 func (mr *MockBridgePeerMockRecorder) SendRequestRPC(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendRequestRPC", reflect.TypeOf((*MockBridgePeer)(nil).SendRequestRPC), arg0)
 }
 
-// SendResponseRPC mocks base method
+// SendResponseRPC mocks base method.
 func (m *MockBridgePeer) SendResponseRPC(arg0 []byte) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SendResponseRPC", arg0)
@@ -281,13 +281,13 @@ func (m *MockBridgePeer) SendResponseRPC(arg0 []byte) error {
 	return ret0
 }
 
-// SendResponseRPC indicates an expected call of SendResponseRPC
+// SendResponseRPC indicates an expected call of SendResponseRPC.
 func (mr *MockBridgePeerMockRecorder) SendResponseRPC(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendResponseRPC", reflect.TypeOf((*MockBridgePeer)(nil).SendResponseRPC), arg0)
 }
 
-// SendServiceChainInfoRequest mocks base method
+// SendServiceChainInfoRequest mocks base method.
 func (m *MockBridgePeer) SendServiceChainInfoRequest(arg0 *common.Address) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SendServiceChainInfoRequest", arg0)
@@ -295,13 +295,13 @@ func (m *MockBridgePeer) SendServiceChainInfoRequest(arg0 *common.Address) error
 	return ret0
 }
 
-// SendServiceChainInfoRequest indicates an expected call of SendServiceChainInfoRequest
+// SendServiceChainInfoRequest indicates an expected call of SendServiceChainInfoRequest.
 func (mr *MockBridgePeerMockRecorder) SendServiceChainInfoRequest(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendServiceChainInfoRequest", reflect.TypeOf((*MockBridgePeer)(nil).SendServiceChainInfoRequest), arg0)
 }
 
-// SendServiceChainInfoResponse mocks base method
+// SendServiceChainInfoResponse mocks base method.
 func (m *MockBridgePeer) SendServiceChainInfoResponse(arg0 *parentChainInfo) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SendServiceChainInfoResponse", arg0)
@@ -309,13 +309,27 @@ func (m *MockBridgePeer) SendServiceChainInfoResponse(arg0 *parentChainInfo) err
 	return ret0
 }
 
-// SendServiceChainInfoResponse indicates an expected call of SendServiceChainInfoResponse
+// SendServiceChainInfoResponse indicates an expected call of SendServiceChainInfoResponse.
 func (mr *MockBridgePeerMockRecorder) SendServiceChainInfoResponse(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendServiceChainInfoResponse", reflect.TypeOf((*MockBridgePeer)(nil).SendServiceChainInfoResponse), arg0)
 }
 
-// SendServiceChainReceiptRequest mocks base method
+// SendServiceChainInvalidTxResponse mocks base method.
+func (m *MockBridgePeer) SendServiceChainInvalidTxResponse(arg0 []common.Hash) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SendServiceChainInvalidTxResponse", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SendServiceChainInvalidTxResponse indicates an expected call of SendServiceChainInvalidTxResponse.
+func (mr *MockBridgePeerMockRecorder) SendServiceChainInvalidTxResponse(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendServiceChainInvalidTxResponse", reflect.TypeOf((*MockBridgePeer)(nil).SendServiceChainInvalidTxResponse), arg0)
+}
+
+// SendServiceChainReceiptRequest mocks base method.
 func (m *MockBridgePeer) SendServiceChainReceiptRequest(arg0 []common.Hash) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SendServiceChainReceiptRequest", arg0)
@@ -323,13 +337,13 @@ func (m *MockBridgePeer) SendServiceChainReceiptRequest(arg0 []common.Hash) erro
 	return ret0
 }
 
-// SendServiceChainReceiptRequest indicates an expected call of SendServiceChainReceiptRequest
+// SendServiceChainReceiptRequest indicates an expected call of SendServiceChainReceiptRequest.
 func (mr *MockBridgePeerMockRecorder) SendServiceChainReceiptRequest(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendServiceChainReceiptRequest", reflect.TypeOf((*MockBridgePeer)(nil).SendServiceChainReceiptRequest), arg0)
 }
 
-// SendServiceChainReceiptResponse mocks base method
+// SendServiceChainReceiptResponse mocks base method.
 func (m *MockBridgePeer) SendServiceChainReceiptResponse(arg0 []*types.ReceiptForStorage) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SendServiceChainReceiptResponse", arg0)
@@ -337,13 +351,13 @@ func (m *MockBridgePeer) SendServiceChainReceiptResponse(arg0 []*types.ReceiptFo
 	return ret0
 }
 
-// SendServiceChainReceiptResponse indicates an expected call of SendServiceChainReceiptResponse
+// SendServiceChainReceiptResponse indicates an expected call of SendServiceChainReceiptResponse.
 func (mr *MockBridgePeerMockRecorder) SendServiceChainReceiptResponse(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendServiceChainReceiptResponse", reflect.TypeOf((*MockBridgePeer)(nil).SendServiceChainReceiptResponse), arg0)
 }
 
-// SendServiceChainTxs mocks base method
+// SendServiceChainTxs mocks base method.
 func (m *MockBridgePeer) SendServiceChainTxs(arg0 types.Transactions) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SendServiceChainTxs", arg0)
@@ -351,19 +365,19 @@ func (m *MockBridgePeer) SendServiceChainTxs(arg0 types.Transactions) error {
 	return ret0
 }
 
-// SendServiceChainTxs indicates an expected call of SendServiceChainTxs
+// SendServiceChainTxs indicates an expected call of SendServiceChainTxs.
 func (mr *MockBridgePeerMockRecorder) SendServiceChainTxs(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendServiceChainTxs", reflect.TypeOf((*MockBridgePeer)(nil).SendServiceChainTxs), arg0)
 }
 
-// SetAddr mocks base method
+// SetAddr mocks base method.
 func (m *MockBridgePeer) SetAddr(arg0 common.Address) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "SetAddr", arg0)
 }
 
-// SetAddr indicates an expected call of SetAddr
+// SetAddr indicates an expected call of SetAddr.
 func (mr *MockBridgePeerMockRecorder) SetAddr(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetAddr", reflect.TypeOf((*MockBridgePeer)(nil).SetAddr), arg0)
