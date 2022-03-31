@@ -61,6 +61,7 @@ Governance related functions and variables are defined in the files listed below
   - default.go    : the governance struct, cache and persistence
   - handler.go    : functions to handle votes and its application
   - api.go        : console APIs to get governance information and to cast a vote
+  - interface.go  : Abstract interfaces to various underlying implementations
 
 */
 package governance
