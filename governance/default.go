@@ -1089,11 +1089,12 @@ func writeFailLog(key int, err error) {
 	logger.Crit(msg, "err", err)
 }
 
-func AddGovernanceCacheForTest(g *Governance, num uint64, config *params.ChainConfig) {
-	// Don't update cache if num (block number) is smaller than the biggest number of cached block number
-
-	data := GetGovernanceItemsFromChainConfig(config)
-	g.addGovernanceCache(num, data)
+func AddGovernanceCacheForTest(e Engine, num uint64, config *params.ChainConfig) {
+	// addGovernanceCache only exists and relevant in *Governance.
+	if g, ok := e.(*Governance); ok {
+		data := GetGovernanceItemsFromChainConfig(config)
+		g.addGovernanceCache(num, data)
+	}
 }
 
 func (gov *Governance) GovernanceMode() string {
