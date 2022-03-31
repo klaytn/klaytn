@@ -199,13 +199,13 @@ func (mb *MainBridge) APIs() []rpc.API {
 	return []rpc.API{
 		{
 			Namespace: "mainbridge",
-			Version:   mb.ProtocolVersion(),
+			Version:   mb.Version(),
 			Service:   mb.APIBackend,
 			Public:    true,
 		},
 		{
 			Namespace: "mainbridge",
-			Version:   mb.ProtocolVersion(),
+			Version:   mb.Version(),
 			Service:   mb.netRPCService,
 			Public:    true,
 		},
@@ -216,7 +216,7 @@ func (mb *MainBridge) AccountManager() *accounts.Manager { return mb.accountMana
 func (mb *MainBridge) EventMux() *event.TypeMux          { return mb.eventMux }
 func (mb *MainBridge) ChainDB() database.DBManager       { return mb.chainDB }
 func (mb *MainBridge) IsListening() bool                 { return true } // Always listening
-func (mb *MainBridge) ProtocolVersion() string           { return mb.SCProtocol().ProtocolVersions[0] }
+func (mb *MainBridge) Version() string                   { return mb.SCProtocol().Versions[0] }
 func (mb *MainBridge) NetVersion() uint64                { return mb.networkId }
 
 func (mb *MainBridge) Components() []interface{} {
@@ -260,9 +260,9 @@ func (mb *MainBridge) Protocols() []p2p.Protocol {
 
 func (mb *MainBridge) SCProtocol() SCProtocol {
 	return SCProtocol{
-		Name:             SCProtocolName,
-		ProtocolVersions: SCProtocolVersion,
-		Lengths:          SCProtocolLength,
+		Name:     SCProtocolName,
+		Versions: SCProtocolVersion,
+		Lengths:  SCProtocolLength,
 	}
 }
 
@@ -297,8 +297,8 @@ func (mb *MainBridge) Start(srvr p2p.Server) error {
 	serverConfig.EnableMultiChannelServer = false
 	serverConfig.NoDial = true
 
-	scprotocols := make([]p2p.Protocol, 0, len(mb.SCProtocol().ProtocolVersions))
-	for i, protocolVersion := range mb.SCProtocol().ProtocolVersions {
+	scprotocols := make([]p2p.Protocol, 0, len(mb.SCProtocol().Versions))
+	for i, protocolVersion := range mb.SCProtocol().Versions {
 		// Compatible; initialise the sub-protocol
 		protocolVersionNum, err := strconv.ParseFloat(protocolVersion, 32)
 		if err != nil {
@@ -364,7 +364,7 @@ func (mb *MainBridge) handle(p BridgePeer) error {
 		return p2p.DiscTooManyPeers
 	}
 	peer.Log().Info("[Main Bridge] Peer connected",
-		"SCProtocolVersion", p.GetProtocolVersion(),
+		"SCVersion", p.GetVersion(),
 		"NodeEnvironment", mb.config.NodeName(),
 		"chainID", chainID,
 		"Address", peer.RemoteAddr().String())

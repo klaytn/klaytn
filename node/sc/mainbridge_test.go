@@ -47,7 +47,7 @@ import (
 
 const testNetVersion = uint64(8888)
 
-var testProtocolVersion = SCProtocolVersion[0]
+var testSCVersion = SCProtocolVersion[0]
 
 // testNewMainBridge returns a test MainBridge.
 func testNewMainBridge(t *testing.T) *MainBridge {
@@ -134,7 +134,7 @@ func TestMainBridge_basic(t *testing.T) {
 
 	// Test getters for elements of MainBridge
 	assert.Equal(t, true, mBridge.IsListening()) // Always returns `true`
-	assert.Equal(t, testProtocolVersion, mBridge.ProtocolVersion())
+	assert.Equal(t, testSCVersion, mBridge.Version())
 	assert.Equal(t, testNetVersion, mBridge.NetVersion())
 
 	// New components of MainBridge which will update old components
@@ -182,7 +182,7 @@ func TestMainBridge_removePeer(t *testing.T) {
 	// Prepare a bridgePeer to be added and removed
 	nodeID := "0x1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d"
 	peer := p2p.NewPeer(discover.MustHexID(nodeID), "name", []p2p.Cap{})
-	bridgePeer := mBridge.newPeer(testProtocolVersion, peer, &p2p.MsgPipeRW{})
+	bridgePeer := mBridge.newPeer(testSCVersion, peer, &p2p.MsgPipeRW{})
 
 	// Add the bridgePeer
 	if err := mBridge.peers.Register(bridgePeer); err != nil {
@@ -212,7 +212,7 @@ func TestMainBridge_handleMsg(t *testing.T) {
 	pipe1, pipe2 := p2p.MsgPipe()
 
 	// bridgePeer will receive a message through rw1
-	bridgePeer := newBridgePeer(testProtocolVersion, peer, pipe1)
+	bridgePeer := newBridgePeer(testSCVersion, peer, pipe1)
 
 	// Case1. Send a valid message and handle it successfully
 	{
@@ -280,7 +280,7 @@ func TestMainBridge_handle(t *testing.T) {
 	mockBridgePeer.EXPECT().GetP2PPeerID().Return(peerID).AnyTimes()
 	mockBridgePeer.EXPECT().GetRW().Return(pipe).AnyTimes()
 	mockBridgePeer.EXPECT().Close().Return().AnyTimes()
-	mockBridgePeer.EXPECT().GetProtocolVersion().Return(testProtocolVersion).AnyTimes()
+	mockBridgePeer.EXPECT().GetVersion().Return(testSCVersion).AnyTimes()
 
 	// Case 1 - Error if `mBridge.peers.Len()` was equal or bigger than `mBridge.maxPeers`
 	{

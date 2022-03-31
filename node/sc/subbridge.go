@@ -297,13 +297,13 @@ func (sb *SubBridge) APIs() []rpc.API {
 	return []rpc.API{
 		{
 			Namespace: "subbridge",
-			Version:   sb.ProtocolVersion(),
+			Version:   sb.Version(),
 			Service:   sb.APIBackend,
 			Public:    true,
 		},
 		{
 			Namespace: "subbridge",
-			Version:   sb.ProtocolVersion(),
+			Version:   sb.Version(),
 			Service:   sb.netRPCService,
 			Public:    true,
 		},
@@ -314,7 +314,7 @@ func (sb *SubBridge) AccountManager() *accounts.Manager { return sb.accountManag
 func (sb *SubBridge) EventMux() *event.TypeMux          { return sb.eventMux }
 func (sb *SubBridge) ChainDB() database.DBManager       { return sb.chainDB }
 func (sb *SubBridge) IsListening() bool                 { return true } // Always listening
-func (sb *SubBridge) ProtocolVersion() string           { return string(sb.SCProtocol().ProtocolVersions[0]) }
+func (sb *SubBridge) Version() string                   { return string(sb.SCProtocol().Versions[0]) }
 func (sb *SubBridge) NetVersion() uint64                { return sb.networkId }
 
 func (sb *SubBridge) Components() []interface{} {
@@ -396,9 +396,9 @@ func (sb *SubBridge) Protocols() []p2p.Protocol {
 
 func (sb *SubBridge) SCProtocol() SCProtocol {
 	return SCProtocol{
-		Name:             SCProtocolName,
-		ProtocolVersions: SCProtocolVersion,
-		Lengths:          SCProtocolLength,
+		Name:     SCProtocolName,
+		Versions: SCProtocolVersion,
+		Lengths:  SCProtocolLength,
 	}
 }
 
@@ -443,8 +443,8 @@ func (sb *SubBridge) Start(srvr p2p.Server) error {
 
 	sb.bridgeServer = p2pServer
 
-	scprotocols := make([]p2p.Protocol, 0, len(sb.SCProtocol().ProtocolVersions))
-	for i, protocolVersion := range sb.SCProtocol().ProtocolVersions {
+	scprotocols := make([]p2p.Protocol, 0, len(sb.SCProtocol().Versions))
+	for i, protocolVersion := range sb.SCProtocol().Versions {
 		// Compatible; initialise the sub-protocol
 		protocolVersionNum, err := strconv.ParseFloat(protocolVersion, 32)
 		if err != nil {
@@ -517,7 +517,7 @@ func (sb *SubBridge) handle(p BridgePeer) error {
 		return p2p.DiscTooManyPeers
 	}
 	peer.Log().Info("[Sub Bridge] Peer connected",
-		"SCProtocolVersion", p.GetProtocolVersion(),
+		"SCVersion", p.GetVersion(),
 		"NodeEnvironment", sb.config.NodeName(),
 		"chainID", chainID,
 		"Address", peer.RemoteAddr().String())

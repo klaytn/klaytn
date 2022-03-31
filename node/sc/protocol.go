@@ -55,7 +55,7 @@ type SCProtocol struct {
 	// Official short name of the protocol used during capability negotiation.
 	Name string
 	// Supported versions of the Klaytn SC protocol (first is primary).
-	ProtocolVersions []string
+	Versions []string
 	// Number of implemented message corresponding to different protocol versions.
 	Lengths []uint64
 }
@@ -66,7 +66,7 @@ const (
 	ErrMsgTooLarge = iota
 	ErrDecode
 	ErrInvalidMsgCode
-	ErrProtocolVersionMismatch
+	ErrVersionMismatch
 	ErrNetworkIdMismatch
 	ErrNoStatusMsg
 	ErrUnexpectedTxType
@@ -78,20 +78,20 @@ func (e errCode) String() string {
 
 // XXX change once legacy code is out
 var errorToString = map[int]string{
-	ErrMsgTooLarge:             "Message too long",
-	ErrDecode:                  "Invalid message",
-	ErrInvalidMsgCode:          "Invalid message code",
-	ErrProtocolVersionMismatch: "Protocol version mismatch",
-	ErrNetworkIdMismatch:       "NetworkId mismatch",
-	ErrNoStatusMsg:             "No status message",
-	ErrUnexpectedTxType:        "Unexpected tx type",
+	ErrMsgTooLarge:       "Message too long",
+	ErrDecode:            "Invalid message",
+	ErrInvalidMsgCode:    "Invalid message code",
+	ErrVersionMismatch:   "ServiceChain version mismatch",
+	ErrNetworkIdMismatch: "NetworkId mismatch",
+	ErrNoStatusMsg:       "No status message",
+	ErrUnexpectedTxType:  "Unexpected tx type",
 }
 
 // statusData is the network packet for the status message.
 type statusData struct {
-	ProtocolVersion string
-	NetworkId       uint64
-	TD              *big.Int
-	CurrentBlock    common.Hash
-	ChainID         *big.Int // A child chain must know parent chain's ChainID to sign a transaction.
+	Version      string
+	NetworkId    uint64
+	TD           *big.Int
+	CurrentBlock common.Hash
+	ChainID      *big.Int // A child chain must know parent chain's ChainID to sign a transaction.
 }

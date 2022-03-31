@@ -73,7 +73,7 @@ func TestSubBridge_basic(t *testing.T) {
 
 	// Test getters for elements of SubBridge
 	assert.Equal(t, true, sBridge.IsListening()) // Always returns `true`
-	assert.Equal(t, testProtocolVersion, sBridge.ProtocolVersion())
+	assert.Equal(t, testSCVersion, sBridge.Version())
 	assert.Equal(t, testNetVersion, sBridge.NetVersion())
 
 	// New components of MainBridge which will update old components
@@ -169,7 +169,7 @@ func TestSubBridge_handleMsg(t *testing.T) {
 	pipe1, pipe2 := p2p.MsgPipe()
 
 	// bridgePeer will receive a message through rw1
-	bridgePeer := newBridgePeer(testProtocolVersion, peer, pipe1)
+	bridgePeer := newBridgePeer(testSCVersion, peer, pipe1)
 
 	// Case1. Send a valid message and handle it successfully
 	{
@@ -240,7 +240,7 @@ func TestSubBridge_handle(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	mockBridgePeer := NewMockBridgePeer(mockCtrl)
-	mockBridgePeer.EXPECT().GetProtocolVersion().Return(testProtocolVersion).AnyTimes()
+	mockBridgePeer.EXPECT().GetVersion().Return(testSCVersion).AnyTimes()
 	mockBridgePeer.EXPECT().GetID().Return(bridgePeerID).AnyTimes()
 	mockBridgePeer.EXPECT().GetChainID().Return(big.NewInt(0)).AnyTimes()
 	mockBridgePeer.EXPECT().GetP2PPeer().Return(peer).AnyTimes()

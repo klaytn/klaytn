@@ -146,20 +146,6 @@ func (mr *MockBridgePeerMockRecorder) GetP2PPeerID() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetP2PPeerID", reflect.TypeOf((*MockBridgePeer)(nil).GetP2PPeerID))
 }
 
-// GetProtocolVersion mocks base method.
-func (m *MockBridgePeer) GetProtocolVersion() string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetProtocolVersion")
-	ret0, _ := ret[0].(string)
-	return ret0
-}
-
-// GetProtocolVersion indicates an expected call of GetProtocolVersion.
-func (mr *MockBridgePeerMockRecorder) GetProtocolVersion() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProtocolVersion", reflect.TypeOf((*MockBridgePeer)(nil).GetProtocolVersion))
-}
-
 // GetRW mocks base method.
 func (m *MockBridgePeer) GetRW() p2p.MsgReadWriter {
 	m.ctrl.T.Helper()
@@ -172,6 +158,20 @@ func (m *MockBridgePeer) GetRW() p2p.MsgReadWriter {
 func (mr *MockBridgePeerMockRecorder) GetRW() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRW", reflect.TypeOf((*MockBridgePeer)(nil).GetRW))
+}
+
+// GetVersion mocks base method.
+func (m *MockBridgePeer) GetVersion() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetVersion")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GetVersion indicates an expected call of GetVersion.
+func (mr *MockBridgePeerMockRecorder) GetVersion() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVersion", reflect.TypeOf((*MockBridgePeer)(nil).GetVersion))
 }
 
 // Handle mocks base method.
