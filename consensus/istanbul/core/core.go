@@ -353,7 +353,7 @@ func (c *core) setState(state State) {
 	case StatePreprepared:
 		c.prepreparedTime = time.Now()
 		if !c.preprepareStartTime.IsZero() {
-			c.prepreparePhaseTimeGauge.Update(int64(c.preparedTime.Sub(c.prepreparedTime)))
+			c.prepreparePhaseTimeGauge.Update(int64(c.prepreparedTime.Sub(c.preprepareStartTime)))
 		}
 	case StatePrepared:
 		c.preparedTime = time.Now()
@@ -362,7 +362,7 @@ func (c *core) setState(state State) {
 		}
 	case StateCommitted:
 		c.committedTime = time.Now()
-		if !c.committedTime.IsZero() {
+		if !c.preparedTime.IsZero() {
 			c.commitPhaseTimeGauge.Update(int64(c.committedTime.Sub(c.preparedTime)))
 		}
 	}
