@@ -674,11 +674,6 @@ func getTestConfig() *params.ChainConfig {
 	return config
 }
 
-func getGovernance(dbm database.DBManager) *governance.Governance {
-	config := getTestConfig()
-	return governance.NewGovernanceInitialize(config, dbm)
-}
-
 func Benchmark_getTargetReceivers(b *testing.B) {
 	_, backend := newBlockChain(1)
 	defer backend.Stop()
