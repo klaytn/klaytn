@@ -41,6 +41,7 @@ import (
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/storage/database"
+	"github.com/rcrowley/go-metrics"
 )
 
 const (
@@ -49,6 +50,11 @@ const (
 )
 
 var logger = log.NewModuleLogger(log.ConsensusIstanbulBackend)
+
+var (
+	istanbulOutPacketsMeter = metrics.NewRegisteredMeter("consensus/istanbul/out/packets", nil)
+	istanbulOutTrafficMeter = metrics.NewRegisteredMeter("consensus/istanbul/out/traffic", nil)
+)
 
 func New(rewardbase common.Address, config *istanbul.Config, privateKey *ecdsa.PrivateKey, db database.DBManager, governance *governance.Governance, nodetype common.ConnType) consensus.Istanbul {
 
@@ -247,6 +253,8 @@ func (sb *backend) GossipSubPeer(prevHash common.Hash, valSet istanbul.Validator
 
 	if sb.broadcaster != nil && len(targets) > 0 {
 		ps := sb.broadcaster.FindCNPeers(targets)
+		istanbulOutPacketsMeter.Mark(int64(len(ps)))
+		istanbulOutTrafficMeter.Mark(int64(len(ps) * len(payload)))
 		for addr, p := range ps {
 			ms, ok := sb.recentMessages.Get(addr)
 			var m *lru.ARCCache
