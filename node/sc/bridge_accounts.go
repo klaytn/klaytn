@@ -38,10 +38,10 @@ import (
 const (
 	DefaultBridgeTxGasLimit = 5000000
 
-	PARENT_OPERATOR_STR                = "parentOperator"
-	CHILD_OPERATOR_STR                 = "childOperator"
+	ParentOperatorStr                  = "parentOperator"
+	ChildOperatorStr                   = "childOperator"
 	DEFAULT_PARENT_BRIDGE_ACCOUNT_NAME = "parent_bridge_account"
-	DEFAULT_CHILD_BRIDGE_ACCOUNT_NAME  = "child_bridge_account"
+	DefaultChildBridgeAccountName      = "child_bridge_account"
 )
 
 var (
@@ -81,8 +81,8 @@ type BridgeAccounts struct {
 func (ba *BridgeAccounts) GetBridgeOperators() map[string]interface{} {
 	res := make(map[string]interface{})
 
-	res[PARENT_OPERATOR_STR] = ba.pAccount.GetAccountInfo()
-	res[CHILD_OPERATOR_STR] = ba.cAccount.GetAccountInfo()
+	res[ParentOperatorStr] = ba.pAccount.GetAccountInfo()
+	res[ChildOperatorStr] = ba.cAccount.GetAccountInfo()
 
 	return res
 }
@@ -122,13 +122,13 @@ func NewBridgeAccounts(am *accounts.Manager, dataDir string, db feePayerDB) (*Br
 		logger.Warn("parent bridge account is locked. Please unlock the account manually for Service Chain", "name", DEFAULT_PARENT_BRIDGE_ACCOUNT_NAME)
 	}
 
-	cKS, cAccAddr, isLock, err := InitializeBridgeAccountKeystore(path.Join(dataDir, DEFAULT_CHILD_BRIDGE_ACCOUNT_NAME))
+	cKS, cAccAddr, isLock, err := InitializeBridgeAccountKeystore(path.Join(dataDir, DefaultChildBridgeAccountName))
 	if err != nil {
 		return nil, err
 	}
 
 	if isLock {
-		logger.Warn("child bridge account is locked. Please unlock the account manually for Service Chain", "name", DEFAULT_CHILD_BRIDGE_ACCOUNT_NAME)
+		logger.Warn("child bridge account is locked. Please unlock the account manually for Service Chain", "name", DefaultChildBridgeAccountName)
 	}
 
 	logger.Info("bridge account is loaded", "parent", pAccAddr.String(), "child", cAccAddr.String())
