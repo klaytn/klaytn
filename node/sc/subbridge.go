@@ -334,7 +334,7 @@ func (sb *SubBridge) SetComponents(components []interface{}) {
 				Operator:       common.HexToAddress(sb.config.KASAnchorOperator),
 				Anchor:         sb.config.KASAnchor,
 				AnchorPeriod:   sb.config.KASAnchorPeriod,
-				RequestTimeout: sb.config.KASRequestTimeout,
+				RequestTimeout: sb.config.KASAnchorRequestTimeout,
 			}
 			sb.kasAnchor = kas.NewKASAnchor(kasConfig, sb.chainDB, v)
 

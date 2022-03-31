@@ -367,7 +367,7 @@ func makeServiceChainConfig(ctx *cli.Context) (config sc.SCConfig) {
 			logger.Crit("KAS x-chain-id should be set", "key", utils.KASServiceChainXChainIdFlag.Name)
 		}
 
-		cfg.KASRequestTimeout = ctx.GlobalDuration(utils.KASServiceChainRequestTimeoutFlag.Name)
+		cfg.KASAnchorRequestTimeout = ctx.GlobalDuration(utils.KASServiceChainAnchorRequestTimeoutFlag.Name)
 	}
 	return cfg
 }

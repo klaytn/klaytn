@@ -303,7 +303,7 @@ start_node() {
             OPTIONS="$OPTIONS --kas.x-chain-id $SC_KAS_ANCHOR_X_CHAIN_ID"
             
             if [ ! -z $SC_KAS_ANCHOR_REQUEST_TIMEOUT ]; then
-                OPTIONS="$OPTIONS --kas.sc.anchor.timeout $SC_KAS_ANCHOR_REQUEST_TIMEOUT"
+                OPTIONS="$OPTIONS --kas.sc.anchor.request.timeout $SC_KAS_ANCHOR_REQUEST_TIMEOUT"
             fi
         fi
     fi
