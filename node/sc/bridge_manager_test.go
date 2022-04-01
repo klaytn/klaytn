@@ -1453,7 +1453,7 @@ func TestErrorDupSubscription(t *testing.T) {
 
 	bm.bridges[addr], err = NewBridgeInfo(sc, addr, bridge, common.Address{}, nil, bacc.cAccount, true, true, sim)
 
-	bm.journal.cache[addr] = &BridgeJournal{"", addr, addr, true}
+	bm.journal.cache[addr] = &BridgeJournal{"", addr, addr, true, false}
 
 	bm.SubscribeEvent(addr)
 	err = bm.SubscribeEvent(addr)

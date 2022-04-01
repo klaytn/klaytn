@@ -57,13 +57,16 @@ const (
 )
 
 var (
-	ErrInvalidTokenPair     = errors.New("invalid token pair")
-	ErrNoBridgeInfo         = errors.New("bridge information does not exist")
-	ErrDuplicatedBridgeInfo = errors.New("bridge information is duplicated")
-	ErrDuplicatedToken      = errors.New("token is duplicated")
-	ErrNoRecovery           = errors.New("recovery does not exist")
-	ErrAlreadySubscribed    = errors.New("already subscribed")
-	ErrBridgeRestore        = errors.New("restoring bridges is failed")
+	ErrInvalidTokenPair        = errors.New("invalid token pair")
+	ErrNoBridgeInfo            = errors.New("bridge information does not exist")
+	ErrDuplicatedBridgeInfo    = errors.New("bridge information is duplicated")
+	ErrDuplicatedToken         = errors.New("token is duplicated")
+	ErrNoRecovery              = errors.New("recovery does not exist")
+	ErrAlreadySubscribed       = errors.New("already subscribed")
+	ErrBridgeRestore           = errors.New("restoring bridges is failed")
+	ErrBridgeAliasFormatDecode = errors.New("restoring bridges is failed")
+
+	//IsLegacyBridgeJournal = false
 )
 
 // RequestValueTransferEvent from Bridge contract
@@ -81,10 +84,11 @@ type HandleValueTransferEvent struct {
 }
 
 type BridgeJournal struct {
-	BridgeAlias   string         `json:"bridgeAlias"`
-	ChildAddress  common.Address `json:"childAddress"`
-	ParentAddress common.Address `json:"parentAddress"`
-	Subscribed    bool           `json:"subscribed"`
+	BridgeAlias           string         `json:"bridgeAlias"`
+	ChildAddress          common.Address `json:"childAddress"`
+	ParentAddress         common.Address `json:"parentAddress"`
+	Subscribed            bool           `json:"subscribed"`
+	isLegacyBridgeJournal bool
 }
 
 type BridgeInfo struct {
@@ -432,16 +436,33 @@ func (bi *BridgeInfo) GetCurrentBlockNumber() (uint64, error) {
 
 // DecodeRLP decodes the Klaytn
 func (b *BridgeJournal) DecodeRLP(s *rlp.Stream) error {
-	var elem struct {
-		Alias         string
+	var LegacyBridgeAddrInfo struct {
 		LocalAddress  common.Address
 		RemoteAddress common.Address
 		Paired        bool
 	}
-	if err := s.Decode(&elem); err != nil {
-		return err
+	var BridgeAddrInfo struct {
+		BridgeAlias   string
+		LocalAddress  common.Address
+		RemoteAddress common.Address
+		Paired        bool
 	}
-	b.BridgeAlias, b.ChildAddress, b.ParentAddress, b.Subscribed = elem.Alias, elem.LocalAddress, elem.RemoteAddress, elem.Paired
+	if !b.isLegacyBridgeJournal {
+		if err := s.Decode(&BridgeAddrInfo); err != nil {
+			logger.Trace("Failed to decode. Try decode again with legacy structure")
+			b.isLegacyBridgeJournal = true
+			if err == io.EOF {
+				return err
+			}
+			return ErrBridgeAliasFormatDecode
+		}
+		b.BridgeAlias, b.ChildAddress, b.ParentAddress, b.Subscribed = BridgeAddrInfo.BridgeAlias, BridgeAddrInfo.LocalAddress, BridgeAddrInfo.RemoteAddress, BridgeAddrInfo.Paired
+	} else {
+		if err := s.Decode(&LegacyBridgeAddrInfo); err != nil {
+			return err
+		}
+		b.BridgeAlias, b.ChildAddress, b.ParentAddress, b.Subscribed = "", LegacyBridgeAddrInfo.LocalAddress, LegacyBridgeAddrInfo.RemoteAddress, LegacyBridgeAddrInfo.Paired
+	}
 	return nil
 }
 

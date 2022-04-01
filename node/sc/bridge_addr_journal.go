@@ -78,14 +78,29 @@ func (journal *bridgeAddrJournal) load(add func(journal BridgeJournal) error) er
 	total, dropped := 0, 0
 
 	var (
-		failure error
+		failure        error
+		firstDecodeErr = true
 	)
 	for {
 		// Parse the next address and terminate on error
 		addr := new(BridgeJournal)
+		if !firstDecodeErr {
+			addr.isLegacyBridgeJournal = true
+		}
+	DecodeAgainWithLegacyStruct:
 		if err = stream.Decode(addr); err != nil {
 			if err != io.EOF {
 				failure = err
+			}
+			if err == ErrBridgeAliasFormatDecode && firstDecodeErr {
+				input.Close()
+				input, err = os.Open(journal.path)
+				if err != nil {
+					return err
+				}
+				firstDecodeErr = false
+				stream.Reset(input, 0)
+				goto DecodeAgainWithLegacyStruct
 			}
 			break
 		}
@@ -134,6 +149,7 @@ func (journal *bridgeAddrJournal) insert(bridgeAlias string, localAddress common
 		bridgeAlias,
 		localAddress,
 		remoteAddress,
+		false,
 		false,
 	}
 	if err := rlp.Encode(journal.writer, &item); err != nil {
