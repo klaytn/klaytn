@@ -36,6 +36,8 @@ import (
 )
 
 var (
+	// only for test puropse. We don't use this variable s gasLimit.
+	// Maybe refactoring of test codes is needed.
 	DefaultBridgeTxGasLimit   = uint64(5000000)
 	errUnlockDurationTooLarge = errors.New("unlock duration too large")
 )
