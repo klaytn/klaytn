@@ -291,6 +291,10 @@ if [[ ! -z $SC_SUB_BRIDGE ]] && [[ $SC_SUB_BRIDGE -eq 1 ]]; then
     fi
 fi
 
+if [[ ! -z $SC_DEFAULTGASLIMIT ]]; then
+    OPTIONS="$OPTIONS --defaultgaslimit $SC_DEFAULTGASLIMIT"
+fi
+
 if [[ ! -z $VTRECOVERY ]] && [[ $VTRECOVERY -eq 1 ]]; then
     OPTIONS="$OPTIONS --vtrecovery"
 fi

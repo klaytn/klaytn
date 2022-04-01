@@ -95,6 +95,7 @@ type SCConfig struct {
 	VTRecovery         bool
 	VTRecoveryInterval uint64
 	Anchoring          bool
+	DefaultGasLimit    uint64
 
 	// KAS
 	KASAnchor         bool

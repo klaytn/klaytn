@@ -55,6 +55,7 @@ type accountInfo struct {
 	nonce    uint64
 	chainID  *big.Int
 	gasPrice *big.Int
+	gasLimit uint64
 
 	isNonceSynced bool
 	mu            sync.RWMutex
@@ -105,16 +106,17 @@ func (ba *BridgeAccounts) SetChildOperatorFeePayer(feePayer common.Address) erro
 
 //SetBridgeGasLimit changes value of DefaultBridgeTxGasLimit.
 func (ba *BridgeAccounts) SetBridgeGasLimit(fee uint64) {
-	DefaultBridgeTxGasLimit = fee
+	ba.pAccount.gasLimit = fee
+	ba.cAccount.gasLimit = fee
 }
 
 //GetBridgeGasLimit gets value of DefaultBridgeTxGasLimit.
 func (ba *BridgeAccounts) GetBridgeGasLimit() uint64 {
-	return DefaultBridgeTxGasLimit
+	return ba.pAccount.gasLimit
 }
 
 // NewBridgeAccounts returns bridgeAccounts created by main/service bridge account keys.
-func NewBridgeAccounts(am *accounts.Manager, dataDir string, db feePayerDB) (*BridgeAccounts, error) {
+func NewBridgeAccounts(am *accounts.Manager, dataDir string, db feePayerDB, gaslimit uint64) (*BridgeAccounts, error) {
 	pKS, pAccAddr, isLock, err := InitializeBridgeAccountKeystore(path.Join(dataDir, "parent_bridge_account"))
 	if err != nil {
 		return nil, err
@@ -142,6 +144,7 @@ func NewBridgeAccounts(am *accounts.Manager, dataDir string, db feePayerDB) (*Br
 		nonce:    0,
 		chainID:  nil,
 		gasPrice: nil,
+		gasLimit: gaslimit,
 		feePayer: db.ReadParentOperatorFeePayer(),
 	}
 
@@ -152,6 +155,7 @@ func NewBridgeAccounts(am *accounts.Manager, dataDir string, db feePayerDB) (*Br
 		nonce:    0,
 		chainID:  nil,
 		gasPrice: nil,
+		gasLimit: gaslimit,
 		feePayer: db.ReadChildOperatorFeePayer(),
 	}
 
@@ -226,7 +230,7 @@ func (acc *accountInfo) GenerateTransactOpts() *bind.TransactOpts {
 		nonce = new(big.Int).SetUint64(acc.nonce)
 	}
 
-	return bind.MakeTransactOptsWithKeystore(acc.keystore, acc.address, nonce, acc.chainID, DefaultBridgeTxGasLimit, acc.gasPrice)
+	return bind.MakeTransactOptsWithKeystore(acc.keystore, acc.address, nonce, acc.chainID, acc.gasLimit, acc.gasPrice)
 }
 
 // SignTx signs a transaction with the accountInfo.

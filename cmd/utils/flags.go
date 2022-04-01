@@ -742,6 +742,11 @@ var (
 		Usage: "Set the value transfer recovery interval (seconds)",
 		Value: 60,
 	}
+	DefaultTxGasLimitFlag = cli.Uint64Flag{
+		Name: "defaultgaslimit",
+		Usage : "Set the default value of gas limit when make tx in bridge",
+		Value : 5000000,
+	}
 	ServiceChainNewAccountFlag = cli.BoolFlag{
 		Name:  "scnewaccount",
 		Usage: "Enable account creation for the service chain (default: false). If set true, generated account can't be synced with the parent chain.",
@@ -755,6 +760,7 @@ var (
 		Name:  "anchoring",
 		Usage: "Enable anchoring for service chain",
 	}
+
 	// KAS
 	KASServiceChainAnchorFlag = cli.BoolFlag{
 		Name:  "kas.sc.anchor",
