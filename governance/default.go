@@ -536,16 +536,13 @@ func (g *Governance) ParseVoteValue(gVote *GovernanceVote) (*GovernanceVote, err
 		val = string(v)
 	case params.GoverningNode:
 		v, ok := gVote.Value.([]uint8)
-		if !ok || len(v) != common.AddressLength {
+		if !ok {
 			return nil, ErrValueTypeMismatch
 		}
 		val = common.BytesToAddress(v)
 	case params.AddValidator, params.RemoveValidator:
 		if v, ok := gVote.Value.([]uint8); ok {
 			// if value contains single address, gVote.Value type should be []uint8{}
-			if len(v) != common.AddressLength {
-				return nil, ErrValueTypeMismatch
-			}
 			val = common.BytesToAddress(v)
 		} else if addresses, ok := gVote.Value.([]interface{}); ok {
 			// if value contains multiple addresses, gVote.Value type should be [][]uint8{}
@@ -918,19 +915,22 @@ func (gov *Governance) VerifyGovernance(received []byte) error {
 	}
 	rChangeSet = adjustDecodedSet(rChangeSet)
 
-	if len(rChangeSet) == gov.changeSet.Size() {
-		for k, v := range rChangeSet {
-			if GovernanceKeyMap[k] == params.GoverningNode {
-				if reflect.TypeOf(v) == stringT {
-					v = common.HexToAddress(v.(string))
-				}
-			}
+	if len(rChangeSet) != gov.changeSet.Size() {
+		logger.Error("Verification Error", "len(receivedChangeSet)", len(rChangeSet), "len(changeSet)", gov.changeSet.Size())
+		return ErrVoteValueMismatch
+	}
 
-			have, _ := gov.changeSet.GetValue(GovernanceKeyMap[k])
-			if have != v {
-				logger.Error("Verification Error", "key", k, "received", rChangeSet[k], "have", have, "receivedType", reflect.TypeOf(rChangeSet[k]), "haveType", reflect.TypeOf(have))
-				return ErrVoteValueMismatch
+	for k, v := range rChangeSet {
+		if GovernanceKeyMap[k] == params.GoverningNode {
+			if reflect.TypeOf(v) == stringT {
+				v = common.HexToAddress(v.(string))
 			}
+		}
+
+		have, _ := gov.changeSet.GetValue(GovernanceKeyMap[k])
+		if have != v {
+			logger.Error("Verification Error", "key", k, "received", rChangeSet[k], "have", have, "receivedType", reflect.TypeOf(rChangeSet[k]), "haveType", reflect.TypeOf(have))
+			return ErrVoteValueMismatch
 		}
 	}
 	return nil

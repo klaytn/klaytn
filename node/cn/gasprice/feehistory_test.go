@@ -57,7 +57,7 @@ func TestFeeHistory(t *testing.T) {
 			MaxBlockHistory:  c.maxBlock,
 		}
 		backend := newTestBackend(t)
-		oracle := NewOracle(backend, config)
+		oracle := NewOracle(backend, config, nil)
 
 		first, reward, baseFee, ratio, err := oracle.FeeHistory(context.Background(), c.count, c.last, c.percent)
 

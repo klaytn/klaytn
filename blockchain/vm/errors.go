@@ -23,7 +23,6 @@ package vm
 import (
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/klaytn/klaytn/params"
 )
@@ -46,15 +45,3 @@ var (
 	ErrMaxCodeSizeExceeded   = errors.New("evm: max code size exceeded")
 	ErrInvalidJump           = errors.New("evm: invalid jump destination")
 )
-
-var VmErrors = []error{ErrCodeStoreOutOfGas, ErrDepth, ErrTraceLimitReached, ErrInsufficientBalance, ErrContractAddressCollision, ErrTotalTimeLimitReached, ErrOpcodeComputationCostLimitReached, ErrFailedOnSetCode, ErrWriteProtection, ErrReturnDataOutOfBounds, ErrExecutionReverted, ErrMaxCodeSizeExceeded, ErrInvalidJump}
-
-// IsVMError returns true if given error is occurred during EVM execution.
-func IsVMError(err error) bool {
-	for _, vmError := range VmErrors {
-		if err == vmError || strings.Contains(err.Error(), vmError.Error()) {
-			return true
-		}
-	}
-	return false
-}

@@ -210,6 +210,11 @@ func testTransactionRPC(t *testing.T, tx TxInternalData) {
 
 	// Copied from newRPCTransaction
 	rpcout := newRPCTransaction(rawTx, common.Hash{}, 0, 0)
+	if tx.Type().IsEthTypedTransaction() {
+		if _, ok := rpcout["chainId"]; !ok {
+			t.Fatalf("The chainId field must be presented.")
+		}
+	}
 
 	b, err := json.Marshal(rpcout)
 	if err != nil {
@@ -248,7 +253,7 @@ func genLegacyTransaction() TxInternalData {
 func genAccessListTransaction() TxInternalData {
 	tx, err := NewTxInternalDataWithMap(TxTypeEthereumAccessList, map[TxValueKeyType]interface{}{
 		TxValueKeyNonce:      nonce,
-		TxValueKeyTo:         to,
+		TxValueKeyTo:         &to,
 		TxValueKeyAmount:     amount,
 		TxValueKeyGasLimit:   gasLimit,
 		TxValueKeyGasPrice:   gasPrice,
@@ -267,7 +272,7 @@ func genAccessListTransaction() TxInternalData {
 func genDynamicFeeTransaction() TxInternalData {
 	tx, err := NewTxInternalDataWithMap(TxTypeEthereumDynamicFee, map[TxValueKeyType]interface{}{
 		TxValueKeyNonce:      nonce,
-		TxValueKeyTo:         to,
+		TxValueKeyTo:         &to,
 		TxValueKeyAmount:     amount,
 		TxValueKeyGasLimit:   gasLimit,
 		TxValueKeyGasFeeCap:  gasFeeCap,

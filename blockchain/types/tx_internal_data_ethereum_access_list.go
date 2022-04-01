@@ -155,11 +155,11 @@ func newTxInternalDataEthereumAccessListWithMap(values map[TxValueKeyType]interf
 		return nil, errValueKeyNonceMustUint64
 	}
 
-	if v, ok := values[TxValueKeyTo].(common.Address); ok {
-		d.Recipient = &v
+	if v, ok := values[TxValueKeyTo].(*common.Address); ok {
+		d.Recipient = v
 		delete(values, TxValueKeyTo)
 	} else {
-		return nil, errValueKeyToMustAddress
+		return nil, errValueKeyToMustAddressPointer
 	}
 
 	if v, ok := values[TxValueKeyAmount].(*big.Int); ok {
@@ -463,7 +463,7 @@ func (t *TxInternalDataEthereumAccessList) MakeRPCOutput() map[string]interface{
 	return map[string]interface{}{
 		"typeInt":    t.Type(),
 		"type":       t.Type().String(),
-		"chainID":    (*hexutil.Big)(t.ChainId()),
+		"chainId":    (*hexutil.Big)(t.ChainId()),
 		"nonce":      hexutil.Uint64(t.AccountNonce),
 		"gasPrice":   (*hexutil.Big)(t.Price),
 		"gas":        hexutil.Uint64(t.GasLimit),

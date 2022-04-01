@@ -27,6 +27,8 @@ import (
 	"math/big"
 	"strconv"
 
+	"github.com/klaytn/klaytn/params"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/bloombits"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -51,6 +53,8 @@ type Backend interface {
 
 	BloomStatus() (uint64, uint64)
 	ServiceFilter(ctx context.Context, session *bloombits.MatcherSession)
+
+	ChainConfig() *params.ChainConfig
 }
 
 // Filter can be used to retrieve and filter logs.

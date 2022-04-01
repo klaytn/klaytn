@@ -50,6 +50,10 @@ type OracleBackend interface {
 	ChainConfig() *params.ChainConfig
 }
 
+type TxPool interface {
+	GasPrice() *big.Int
+}
+
 // Oracle recommends gas prices based on the content of recent
 // blocks. Suitable for both light and full clients.
 type Oracle struct {
@@ -58,6 +62,7 @@ type Oracle struct {
 	lastPrice *big.Int
 	cacheLock sync.RWMutex
 	fetchLock sync.Mutex
+	txPool    TxPool
 
 	checkBlocks, maxEmpty, maxBlocks  int
 	percentile                        int
@@ -65,7 +70,7 @@ type Oracle struct {
 }
 
 // NewOracle returns a new oracle.
-func NewOracle(backend OracleBackend, params Config) *Oracle {
+func NewOracle(backend OracleBackend, params Config, txPool TxPool) *Oracle {
 	blocks := params.Blocks
 	if blocks < 1 {
 		blocks = 1
@@ -86,16 +91,19 @@ func NewOracle(backend OracleBackend, params Config) *Oracle {
 		percentile:       percent,
 		maxHeaderHistory: params.MaxHeaderHistory,
 		maxBlockHistory:  params.MaxBlockHistory,
+		txPool:           txPool,
 	}
 }
 
 // SuggestPrice returns the recommended gas price.
 func (gpo *Oracle) SuggestPrice(ctx context.Context) (*big.Int, error) {
 
-	// NOTE-Klaytn We use invariant ChainConfig.UnitPrice and this value
-	//         will not be changed until ChainConfig.UnitPrice is updated with governance.
-	// TODO-Klaytn We have to update Oracle.lastPrice when UnitPrice is changed.
-	return gpo.lastPrice, nil
+	if gpo.txPool == nil {
+		// If txpool is not set, just return 0. This is used for testing.
+		return common.Big0, nil
+	}
+	// Since we have fixed gas price, we can directly get this value from TxPool.
+	return gpo.txPool.GasPrice(), nil
 	/*
 		// TODO-Klaytn-RemoveLater Later remove below obsolete code if we don't need them anymore.
 		gpo.cacheLock.RLock()

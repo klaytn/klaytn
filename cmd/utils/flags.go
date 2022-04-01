@@ -327,6 +327,10 @@ var (
 		Usage: "Number of workers used to prefetch block when fetcher fetches block",
 		Value: 32,
 	}
+	UseSnapshotForPrefetchFlag = cli.BoolFlag{
+		Name:  "statedb.cache.use-snapshot-for-prefetch",
+		Usage: "Use state snapshot functionality while prefetching",
+	}
 	TrieNodeCacheRedisEndpointsFlag = cli.StringSliceFlag{
 		Name:  "statedb.cache.redis.endpoints",
 		Usage: "Set endpoints of redis trie node cache. More than one endpoints can be set",
@@ -1651,6 +1655,7 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 		CacheType: statedb.TrieNodeCacheType(ctx.GlobalString(TrieNodeCacheTypeFlag.
 			Name)).ToValid(),
 		NumFetcherPrefetchWorker:  ctx.GlobalInt(NumFetcherPrefetchWorkerFlag.Name),
+		UseSnapshotForPrefetch:    ctx.GlobalBool(UseSnapshotForPrefetchFlag.Name),
 		LocalCacheSizeMiB:         ctx.GlobalInt(TrieNodeCacheLimitFlag.Name),
 		FastCacheFileDir:          ctx.GlobalString(DataDirFlag.Name) + "/fastcache",
 		FastCacheSavePeriod:       ctx.GlobalDuration(TrieNodeCacheSavePeriodFlag.Name),

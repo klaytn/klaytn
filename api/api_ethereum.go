@@ -423,27 +423,30 @@ func (api *EthereumAPI) GetProof(ctx context.Context, address common.Address, st
 // * When blockNr is -2 the pending chain head is returned.
 func (api *EthereumAPI) GetHeaderByNumber(ctx context.Context, number rpc.BlockNumber) (map[string]interface{}, error) {
 	// In Ethereum, err is always nil because the backend of Ethereum always return nil.
-	klaytnHeader, _ := api.publicBlockChainAPI.GetHeaderByNumber(ctx, number)
-	if klaytnHeader != nil {
-		response, err := api.rpcMarshalHeader(klaytnHeader)
-		if err != nil {
-			return nil, err
+	klaytnHeader, err := api.publicBlockChainAPI.b.HeaderByNumber(ctx, number)
+	if err != nil {
+		if strings.Contains(err.Error(), "does not exist") {
+			return nil, nil
 		}
-		if number == rpc.PendingBlockNumber {
-			// Pending header need to nil out a few fields
-			for _, field := range []string{"hash", "nonce", "miner"} {
-				response[field] = nil
-			}
-		}
-		return response, nil
+		return nil, err
 	}
-	return nil, nil
+	response, err := api.rpcMarshalHeader(klaytnHeader)
+	if err != nil {
+		return nil, err
+	}
+	if number == rpc.PendingBlockNumber {
+		// Pending header need to nil out a few fields
+		for _, field := range []string{"hash", "nonce", "miner"} {
+			response[field] = nil
+		}
+	}
+	return response, nil
 }
 
 // GetHeaderByHash returns the requested header by hash.
 func (api *EthereumAPI) GetHeaderByHash(ctx context.Context, hash common.Hash) map[string]interface{} {
 	// In Ethereum, err is always nil because the backend of Ethereum always return nil.
-	klaytnHeader, _ := api.publicBlockChainAPI.GetHeaderByHash(ctx, hash)
+	klaytnHeader, _ := api.publicBlockChainAPI.b.HeaderByHash(ctx, hash)
 	if klaytnHeader != nil {
 		response, err := api.rpcMarshalHeader(klaytnHeader)
 		if err != nil {
@@ -460,25 +463,35 @@ func (api *EthereumAPI) GetHeaderByHash(ctx context.Context, hash common.Hash) m
 // * When fullTx is true all transactions in the block are returned, otherwise
 //   only the transaction hash is returned.
 func (api *EthereumAPI) GetBlockByNumber(ctx context.Context, number rpc.BlockNumber, fullTx bool) (map[string]interface{}, error) {
+	// Klaytn backend returns error when there is no matched block but
+	// Ethereum returns it as nil without error, so we should return is as nil when there is no matched block.
 	klaytnBlock, err := api.publicBlockChainAPI.b.BlockByNumber(ctx, number)
-	if klaytnBlock != nil && err == nil {
-		response, err := api.rpcMarshalBlock(klaytnBlock, true, fullTx)
-		if err == nil && number == rpc.PendingBlockNumber {
-			// Pending blocks need to nil out a few fields
-			for _, field := range []string{"hash", "nonce", "miner"} {
-				response[field] = nil
-			}
+	if err != nil {
+		if strings.Contains(err.Error(), "does not exist") {
+			return nil, nil
 		}
-		return response, err
+		return nil, err
 	}
-	return nil, err
+	response, err := api.rpcMarshalBlock(klaytnBlock, true, fullTx)
+	if err == nil && number == rpc.PendingBlockNumber {
+		// Pending blocks need to nil out a few fields
+		for _, field := range []string{"hash", "nonce", "miner"} {
+			response[field] = nil
+		}
+	}
+	return response, err
 }
 
 // GetBlockByHash returns the requested block. When fullTx is true all transactions in the block are returned in full
 // detail, otherwise only the transaction hash is returned.
 func (api *EthereumAPI) GetBlockByHash(ctx context.Context, hash common.Hash, fullTx bool) (map[string]interface{}, error) {
+	// Klaytn backend returns error when there is no matched block but
+	// Ethereum returns it as nil without error, so we should return is as nil when there is no matched block.
 	klaytnBlock, err := api.publicBlockChainAPI.b.BlockByHash(ctx, hash)
 	if err != nil {
+		if strings.Contains(err.Error(), "does not exist") {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return api.rpcMarshalBlock(klaytnBlock, true, fullTx)
@@ -494,16 +507,22 @@ func (api *EthereumAPI) GetUncleByBlockHashAndIndex(ctx context.Context, blockHa
 	return nil, nil
 }
 
-// GetUncleCountByBlockNumber returns 0 because there is no uncle block in Klaytn.
+// GetUncleCountByBlockNumber returns 0 when given blockNr exists because there is no uncle block in Klaytn.
 func (api *EthereumAPI) GetUncleCountByBlockNumber(ctx context.Context, blockNr rpc.BlockNumber) *hexutil.Uint {
-	uncleCount := hexutil.Uint(ZeroUncleCount)
-	return &uncleCount
+	if block, _ := api.publicBlockChainAPI.b.BlockByNumber(ctx, blockNr); block != nil {
+		n := hexutil.Uint(ZeroUncleCount)
+		return &n
+	}
+	return nil
 }
 
-// GetUncleCountByBlockHash returns 0 because there is no uncle block in Klaytn.
+// GetUncleCountByBlockHash returns 0 when given blockHash exists because there is no uncle block in Klaytn.
 func (api *EthereumAPI) GetUncleCountByBlockHash(ctx context.Context, blockHash common.Hash) *hexutil.Uint {
-	uncleCount := hexutil.Uint(ZeroUncleCount)
-	return &uncleCount
+	if block, _ := api.publicBlockChainAPI.b.BlockByHash(ctx, blockHash); block != nil {
+		n := hexutil.Uint(ZeroUncleCount)
+		return &n
+	}
+	return nil
 }
 
 // GetCode returns the code stored at the given address in the state for the given block number.
@@ -584,11 +603,16 @@ func (api *EthereumAPI) Call(ctx context.Context, args EthTransactionArgs, block
 	if rpcGasCap := api.publicBlockChainAPI.b.RPCGasCap(); rpcGasCap != nil {
 		gasCap = rpcGasCap.Uint64()
 	}
-	result, _, err := EthDoCall(ctx, api.publicBlockChainAPI.b, args, blockNrOrHash, overrides, localTxExecutionTime, gasCap)
-	if isReverted(err) {
+	result, _, status, err := EthDoCall(ctx, api.publicBlockChainAPI.b, args, blockNrOrHash, overrides, localTxExecutionTime, gasCap)
+	if err != nil {
+		return nil, err
+	}
+
+	err = blockchain.GetVMerrFromReceiptStatus(status)
+	if err != nil && isReverted(err) && len(result) > 0 {
 		return nil, newRevertError(result)
 	}
-	return (hexutil.Bytes)(result), err
+	return common.CopyBytes(result), err
 }
 
 // EstimateGas returns an estimate of the amount of gas needed to execute the
@@ -858,7 +882,9 @@ func (api *EthereumAPI) GetRawTransactionByBlockNumberAndIndex(ctx context.Conte
 	if err != nil {
 		return nil
 	}
-
+	if rawTx[0] == byte(types.EthereumTxTypeEnvelope) {
+		rawTx = rawTx[1:]
+	}
 	return rawTx
 }
 
@@ -868,7 +894,9 @@ func (api *EthereumAPI) GetRawTransactionByBlockHashAndIndex(ctx context.Context
 	if err != nil {
 		return nil
 	}
-
+	if rawTx[0] == byte(types.EthereumTxTypeEnvelope) {
+		rawTx = rawTx[1:]
+	}
 	return rawTx
 }
 
@@ -897,7 +925,9 @@ func (api *EthereumAPI) GetRawTransactionByHash(ctx context.Context, hash common
 	if err != nil {
 		return nil, err
 	}
-
+	if rawTx[0] == byte(types.EthereumTxTypeEnvelope) {
+		return rawTx[1:], nil
+	}
 	return rawTx, nil
 }
 
@@ -906,6 +936,9 @@ func (api *EthereumAPI) GetTransactionReceipt(ctx context.Context, hash common.H
 	// Formats return Klaytn Transaction Receipt to the Ethereum Transaction Receipt.
 	tx, blockHash, blockNumber, index, receipt := api.publicTransactionPoolAPI.b.GetTxLookupInfoAndReceipt(ctx, hash)
 
+	if tx == nil {
+		return nil, nil
+	}
 	receipts := api.publicTransactionPoolAPI.b.GetBlockReceipts(ctx, blockHash)
 	cumulativeGasUsed := uint64(0)
 	for i := uint64(0); i <= index; i++ {
@@ -958,7 +991,12 @@ func newEthTransactionReceipt(tx *types.Transaction, b Backend, blockHash common
 	}
 
 	// Always use the "status" field and Ignore the "root" field.
-	fields["status"] = hexutil.Uint(receipt.Status)
+	if receipt.Status != types.ReceiptStatusSuccessful {
+		// In Ethereum, status field can have 0(=Failure) or 1(=Success) only.
+		fields["status"] = hexutil.Uint(types.ReceiptStatusFailed)
+	} else {
+		fields["status"] = hexutil.Uint(receipt.Status)
+	}
 
 	if receipt.Logs == nil {
 		fields["logs"] = [][]*types.Log{}
@@ -1396,11 +1434,15 @@ func (api *EthereumAPI) Accounts() []common.Address {
 // rpcMarshalHeader marshal block header as Ethereum compatible format.
 // It returns error when fetching Author which is block proposer is failed.
 func (api *EthereumAPI) rpcMarshalHeader(head *types.Header) (map[string]interface{}, error) {
-	proposer, err := api.publicKlayAPI.b.Engine().Author(head)
-	if err != nil {
-		// miner is the field Klaytn should provide the correct value. It's not the field dummy value is allowed.
-		logger.Error("Failed to fetch author during marshaling header", "err", err.Error())
-		return nil, err
+	var proposer common.Address
+	var err error
+	if head.Number.Sign() != 0 {
+		proposer, err = api.publicKlayAPI.b.Engine().Author(head)
+		if err != nil {
+			// miner is the field Klaytn should provide the correct value. It's not the field dummy value is allowed.
+			logger.Error("Failed to fetch author during marshaling header", "err", err.Error())
+			return nil, err
+		}
 	}
 	result := map[string]interface{}{
 		"number":          (*hexutil.Big)(head.Number),
@@ -1424,7 +1466,10 @@ func (api *EthereumAPI) rpcMarshalHeader(head *types.Header) (map[string]interfa
 		"timestamp":        hexutil.Big(*head.Time),
 		"transactionsRoot": head.TxHash,
 		"receiptsRoot":     head.ReceiptHash,
-		"baseFeePerGas":    (*hexutil.Big)(new(big.Int).SetUint64(params.BaseFee)),
+	}
+
+	if api.publicBlockChainAPI.b.ChainConfig().IsEthTxTypeForkEnabled(head.Number) {
+		result["baseFeePerGas"] = (*hexutil.Big)(new(big.Int).SetUint64(params.BaseFee))
 	}
 
 	return result, nil
@@ -1463,15 +1508,15 @@ func (api *EthereumAPI) rpcMarshalBlock(block *types.Block, inclTx, fullTx bool)
 	return fields, nil
 }
 
-func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrOrHash rpc.BlockNumberOrHash, overrides *EthStateOverride, timeout time.Duration, globalGasCap uint64) ([]byte, uint64, error) {
+func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrOrHash rpc.BlockNumberOrHash, overrides *EthStateOverride, timeout time.Duration, globalGasCap uint64) ([]byte, uint64, uint, error) {
 	defer func(start time.Time) { logger.Debug("Executing EVM call finished", "runtime", time.Since(start)) }(time.Now())
 
 	st, header, err := b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if st == nil || err != nil {
-		return nil, 0, err
+		return nil, 0, 0, err
 	}
 	if err := overrides.Apply(st); err != nil {
-		return nil, 0, err
+		return nil, 0, 0, err
 	}
 
 	// Setup context so it may be cancelled the call has completed
@@ -1490,15 +1535,22 @@ func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrO
 	fixedBaseFee := new(big.Int).SetUint64(params.BaseFee)
 	intrinsicGas, err := types.IntrinsicGas(args.data(), nil, args.To == nil, b.ChainConfig().Rules(header.Number))
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, 0, err
 	}
 	msg, err := args.ToMessage(globalGasCap, fixedBaseFee, intrinsicGas)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, 0, err
+	}
+	// The intrinsicGas is checked again later in the blockchain.ApplyMessage function,
+	// but we check in advance here in order to keep StateTransition.TransactionDb method as unchanged as possible
+	// and to clarify error reason correctly to serve eth namespace APIs.
+	// This case is handled by EthDoEstimateGas function.
+	if msg.Gas() < intrinsicGas {
+		return nil, 0, 0, fmt.Errorf("%w: msg.gas %d, want %d", blockchain.ErrIntrinsicGas, msg.Gas(), intrinsicGas)
 	}
 	evm, vmError, err := b.GetEVM(ctx, msg, st, header, vm.Config{})
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, 0, err
 	}
 	// Wait for the context to be done and cancel the evm. Even if the
 	// EVM has finished, cancelling may be done (repeatedly)
@@ -1511,20 +1563,17 @@ func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrO
 	res, gas, kerr := blockchain.ApplyMessage(evm, msg)
 	err = kerr.ErrTxInvalid
 	if err := vmError(); err != nil {
-		return nil, 0, err
+		return nil, 0, 0, err
 	}
 	// If the timer caused an abort, return an appropriate error message
 	if evm.Cancelled() {
-		return nil, 0, fmt.Errorf("execution aborted (timeout = %v)", timeout)
-	}
-
-	if err == nil {
-		err = blockchain.GetVMerrFromReceiptStatus(kerr.Status)
+		return nil, 0, 0, fmt.Errorf("execution aborted (timeout = %v)", timeout)
 	}
 	if err != nil {
-		return res, 0, fmt.Errorf("err: %w (supplied gas %d)", err, msg.Gas())
+		return res, 0, 0, fmt.Errorf("err: %w (supplied gas %d)", err, msg.Gas())
 	}
-	return res, gas, nil
+	// TODO-Klaytn-Interface: Introduce ExecutionResult struct from geth to return more detail information
+	return res, gas, kerr.Status, nil
 }
 
 func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, blockNrOrHash rpc.BlockNumberOrHash, gasCap uint64) (hexutil.Uint64, error) {
@@ -1599,17 +1648,23 @@ func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, b
 	// - error: consensus error which is not EVM related error (less balance of caller, wrong nonce, etc...).
 	executable := func(gas uint64) (bool, []byte, error, error) {
 		args.Gas = (*hexutil.Uint64)(&gas)
-		ret, _, err := EthDoCall(ctx, b, args, rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber), nil, 0, gasCap)
+		ret, _, status, err := EthDoCall(ctx, b, args, rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber), nil, 0, gasCap)
 		if err != nil {
-			if vm.IsVMError(err) {
-				// If err is vmError, return vmError with returned data
-				return false, ret, err, nil
+			if errors.Is(err, blockchain.ErrIntrinsicGas) {
+				// Special case, raise gas limit
+				return false, ret, nil, nil
 			}
 			// Returns error when it is not VM error (less balance or wrong nonce, etc...).
 			return false, nil, nil, err
 		}
-		return true, ret, nil, nil
+		// If err is vmError, return vmError with returned data
+		vmErr := blockchain.GetVMerrFromReceiptStatus(status)
+		if vmErr != nil {
+			return false, ret, vmErr, nil
+		}
+		return true, ret, vmErr, nil
 	}
+
 	// Execute the binary search and hone in on an executable gas limit
 	for lo+1 < hi {
 		mid := (hi + lo) / 2
@@ -1631,8 +1686,9 @@ func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, b
 			return 0, err
 		}
 		if !isExecutable {
-			if ret != nil {
-				if isReverted(vmErr) {
+			if vmErr != nil {
+				// Treat vmErr as RevertError only when there was returned data from call.
+				if isReverted(vmErr) && len(ret) > 0 {
 					return 0, newRevertError(ret)
 				}
 				return 0, vmErr
@@ -1646,7 +1702,7 @@ func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, b
 
 // isReverted checks given error is vm.ErrExecutionReverted
 func isReverted(err error) bool {
-	if err == vm.ErrExecutionReverted || strings.Contains(err.Error(), vm.ErrExecutionReverted.Error()) {
+	if errors.Is(err, vm.ErrExecutionReverted) {
 		return true
 	}
 	return false

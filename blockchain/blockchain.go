@@ -72,6 +72,10 @@ var (
 	storageUpdateTimer = klaytnmetrics.NewRegisteredHybridTimer("state/storage/updates", nil)
 	storageCommitTimer = klaytnmetrics.NewRegisteredHybridTimer("state/storage/commits", nil)
 
+	snapshotAccountReadTimer = metrics.NewRegisteredTimer("state/snapshot/account/reads", nil)
+	snapshotStorageReadTimer = metrics.NewRegisteredTimer("state/snapshot/storage/reads", nil)
+	snapshotCommitTimer      = metrics.NewRegisteredTimer("state/snapshot/commits", nil)
+
 	blockInsertTimer    = klaytnmetrics.NewRegisteredHybridTimer("chain/inserts", nil)
 	blockProcessTimer   = klaytnmetrics.NewRegisteredHybridTimer("chain/process", nil)
 	blockExecutionTimer = klaytnmetrics.NewRegisteredHybridTimer("chain/execution", nil)
@@ -373,8 +377,12 @@ func (bc *BlockChain) prefetchTxWorker(index int) {
 	defer bc.wg.Done()
 
 	logger.Debug("prefetchTxWorker is started", "index", index)
+	var snaps *snapshot.Tree
+	if bc.cacheConfig.TrieNodeCacheConfig.UseSnapshotForPrefetch {
+		snaps = bc.snaps
+	}
 	for followup := range bc.prefetchTxCh {
-		stateDB, err := state.NewForPrefetching(bc.CurrentBlock().Root(), bc.stateCache, bc.snaps)
+		stateDB, err := state.NewForPrefetching(bc.CurrentBlock().Root(), bc.stateCache, snaps)
 		if err != nil {
 			logger.Debug("failed to retrieve stateDB for prefetchTxWorker", "err", err)
 			continue
@@ -1773,6 +1781,10 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		var followupInterrupt uint32
 
 		if bc.cacheConfig.TrieNodeCacheConfig.NumFetcherPrefetchWorker > 0 {
+			var snaps *snapshot.Tree
+			if bc.cacheConfig.TrieNodeCacheConfig.UseSnapshotForPrefetch {
+				snaps = bc.snaps
+			}
 			// Tx prefetcher is enabled for all cases (both single and multiple block insertion).
 			for ti := range block.Transactions() {
 				select {
@@ -1784,7 +1796,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 				// current block is not the last one, so prefetch the right next block
 				followup := chain[i+1]
 				go func(start time.Time) {
-					throwaway, err := state.NewForPrefetching(parent.Root(), bc.stateCache, bc.snaps)
+					throwaway, err := state.NewForPrefetching(parent.Root(), bc.stateCache, snaps)
 					if throwaway == nil || err != nil {
 						logger.Warn("failed to get StateDB for prefetcher", "err", err,
 							"parentBlockNum", parent.NumberU64(), "currBlockNum", bc.CurrentBlock().NumberU64())
@@ -1931,6 +1943,10 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		storageHashTimer.Update(stateDB.StorageHashes)
 		storageUpdateTimer.Update(stateDB.StorageUpdates)
 		storageCommitTimer.Update(stateDB.StorageCommits)
+
+		snapshotAccountReadTimer.Update(stateDB.SnapshotAccountReads)
+		snapshotStorageReadTimer.Update(stateDB.SnapshotStorageReads)
+		snapshotCommitTimer.Update(stateDB.SnapshotCommits)
 
 		trieAccess := stateDB.AccountReads + stateDB.AccountHashes + stateDB.AccountUpdates + stateDB.AccountCommits
 		trieAccess += stateDB.StorageReads + stateDB.StorageHashes + stateDB.StorageUpdates + stateDB.StorageCommits

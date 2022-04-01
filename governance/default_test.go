@@ -17,6 +17,7 @@
 package governance
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"reflect"
@@ -548,7 +549,7 @@ func TestVoteValueNilInterface(t *testing.T) {
 
 		// Parse vote.Value and make it has appropriate type
 		_, err := gov.ParseVoteValue(gVote)
-		assert.Equal(t, nil, err)
+		assert.NoError(t, err)
 	}
 
 	gVote.Key = "governance.addvalidator"
@@ -572,7 +573,7 @@ func TestVoteValueNilInterface(t *testing.T) {
 
 		// Parse vote.Value and make it has appropriate type
 		_, err := gov.ParseVoteValue(gVote)
-		assert.Equal(t, ErrValueTypeMismatch, err)
+		assert.NoError(t, err)
 	}
 }
 
@@ -1020,4 +1021,54 @@ func TestGovernance_checkVote(t *testing.T) {
 	assert.False(t, gov.checkVote(unknown, false, valSet))
 	assert.False(t, gov.checkVote(validators[1], true, valSet))
 	assert.False(t, gov.checkVote(demotedValidators[1], true, valSet))
+}
+
+func TestGovernance_VerifyGovernance(t *testing.T) {
+	gov := getGovernance()
+	vote := GovernanceVote{
+		Key:   "governance.governingnode",
+		Value: common.HexToAddress("000000000000000000000000000abcd000000000"),
+	}
+	gov.updateChangeSet(vote)
+
+	// consensus/istanbul/backend/engine.go:Prepare()
+	// Correct case
+	g := gov.GetGovernanceChange()
+	j, err := json.Marshal(g)
+	assert.Nil(t, err)
+	r, err := rlp.EncodeToBytes(j)
+	assert.Nil(t, err)
+	err = gov.VerifyGovernance(r)
+	assert.Nil(t, err)
+
+	// Value mismatch
+	g = gov.GetGovernanceChange()
+	g["governance.governingnode"] = "000000000000000000000000000abcd000001111"
+	j, err = json.Marshal(g)
+	assert.Nil(t, err)
+	r, err = rlp.EncodeToBytes(j)
+	assert.Nil(t, err)
+	err = gov.VerifyGovernance(r)
+	assert.Equal(t, ErrVoteValueMismatch, err)
+
+	// Type mismatch
+	g = gov.GetGovernanceChange()
+	g["governance.governingnode"] = 123
+	j, err = json.Marshal(g)
+	assert.Nil(t, err)
+	r, err = rlp.EncodeToBytes(j)
+	assert.Nil(t, err)
+	err = gov.VerifyGovernance(r)
+	assert.Equal(t, ErrVoteValueMismatch, err)
+
+	// Length mismatch
+	g = gov.GetGovernanceChange()
+	g["governance.governingnode"] = 123
+	g["istanbul.epoch"] = uint64(10000)
+	j, err = json.Marshal(g)
+	assert.Nil(t, err)
+	r, err = rlp.EncodeToBytes(j)
+	assert.Nil(t, err)
+	err = gov.VerifyGovernance(r)
+	assert.Equal(t, ErrVoteValueMismatch, err)
 }

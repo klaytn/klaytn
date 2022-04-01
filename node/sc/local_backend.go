@@ -338,3 +338,7 @@ func (fb *filterLocalBackend) ServiceFilter(ctx context.Context, session *bloomb
 	//	go session.Multiplex(bloomRetrievalBatch, bloomRetrievalWait, backend.bloomRequests)
 	//}
 }
+
+func (fb *filterLocalBackend) ChainConfig() *params.ChainConfig {
+	return fb.subbridge.blockchain.Config()
+}

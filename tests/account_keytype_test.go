@@ -331,7 +331,7 @@ func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txTy
 		values[types.TxValueKeyFeeRatioOfFeePayer] = ratio
 	case types.TxTypeEthereumAccessList:
 		values[types.TxValueKeyNonce] = sender.Nonce
-		values[types.TxValueKeyTo] = recipient.Addr
+		values[types.TxValueKeyTo] = &recipient.Addr
 		values[types.TxValueKeyAmount] = amount
 		values[types.TxValueKeyGasLimit] = gasLimit
 		values[types.TxValueKeyGasPrice] = gasPrice
@@ -340,7 +340,7 @@ func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txTy
 		values[types.TxValueKeyAccessList] = types.AccessList{}
 	case types.TxTypeEthereumDynamicFee:
 		values[types.TxValueKeyNonce] = sender.Nonce
-		values[types.TxValueKeyTo] = recipient.Addr
+		values[types.TxValueKeyTo] = &recipient.Addr
 		values[types.TxValueKeyAmount] = amount
 		values[types.TxValueKeyGasLimit] = gasLimit
 		values[types.TxValueKeyGasFeeCap] = gasFeeCap
