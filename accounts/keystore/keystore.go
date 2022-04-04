@@ -539,10 +539,12 @@ func (ks *KeyStore) ImportECDSA(priv *ecdsa.PrivateKey, passphrase string) (acco
 }
 
 func (ks *KeyStore) importKey(key Key, passphrase string) (accounts.Account, error) {
-	a := accounts.Account{Address: key.GetAddress(), URL: accounts.URL{Scheme: KeyStoreScheme, Path: ks.storage.JoinPath(keyFileName(key.GetAddress()))}}
+	accDir := ks.storage.JoinPath(keyFileName(key.GetAddress()))
+	a := accounts.Account{Address: key.GetAddress(), URL: accounts.URL{Scheme: KeyStoreScheme, Path: accDir}}
 	if err := ks.storage.StoreKey(a.URL.Path, key, passphrase); err != nil {
 		return accounts.Account{}, err
 	}
+	fmt.Println("Your account is imported at", accDir)
 	ks.cache.add(a)
 	ks.refreshWallets()
 	return a, nil
