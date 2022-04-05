@@ -334,5 +334,8 @@ func accountImport(ctx *cli.Context) error {
 		log.Fatalf("Could not create the account: %v", err)
 	}
 	fmt.Printf("Address: {%x}\n", acct.Address)
+	if _acct, err := ks.Find(acct); err == nil {
+		fmt.Println("Your account is imported at", _acct.URL.Path)
+	}
 	return nil
 }
