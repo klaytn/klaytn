@@ -66,7 +66,6 @@ var (
 	ErrBridgeRestore           = errors.New("restoring bridges is failed")
 	ErrBridgeAliasFormatDecode = errors.New("restoring bridges is failed")
 
-	//IsLegacyBridgeJournal = false
 )
 
 // RequestValueTransferEvent from Bridge contract
