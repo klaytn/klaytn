@@ -92,7 +92,7 @@ func TestBridgeManager(t *testing.T) {
 	wg.Add(6)
 
 	// Config Bridge Account Manager
-	config := &SCConfig{DefaultGasLimit: 5000000}
+	config := &SCConfig{}
 	config.DataDir = tempDir
 	bacc, _ := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), config.DefaultGasLimit)
 	bacc.pAccount.chainID = big.NewInt(0)
@@ -336,7 +336,7 @@ func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
 	wg.Add(2)
 
 	// Config Bridge Account Manager
-	config := &SCConfig{DefaultGasLimit: 5000000}
+	config := &SCConfig{}
 	config.DataDir = tempDir
 	bacc, _ := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), config.DefaultGasLimit)
 	bacc.pAccount.chainID = big.NewInt(0)
@@ -534,7 +534,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 	receiver := bind.NewKeyedTransactor(receiverKey)
 
 	// Config Bridge Account Manager
-	config := &SCConfig{DefaultGasLimit: 5000000}
+	config := &SCConfig{}
 	config.DataDir = tempDir
 	bacc, _ := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), config.DefaultGasLimit)
 	bacc.pAccount.chainID = big.NewInt(0)
@@ -936,7 +936,7 @@ func TestBasicJournal(t *testing.T) {
 	key4, _ := crypto.GenerateKey()
 	auth4 := bind.NewKeyedTransactor(key4)
 
-	config := &SCConfig{DefaultGasLimit: 5000000}
+	config := &SCConfig{}
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
@@ -1015,7 +1015,7 @@ func TestMethodRestoreBridges(t *testing.T) {
 
 	key4, _ := crypto.GenerateKey()
 	auth4 := bind.NewKeyedTransactor(key4)
-	config := &SCConfig{DefaultGasLimit: 5000000}
+	config := &SCConfig{}
 	config.DataDir = tempDir
 	config.VTRecovery = true
 	config.VTRecoveryInterval = 60
@@ -1240,7 +1240,7 @@ func TestErrorDuplicatedSetBridgeInfo(t *testing.T) {
 
 	key4, _ := crypto.GenerateKey()
 	auth4 := bind.NewKeyedTransactor(key4)
-	config := &SCConfig{DefaultGasLimit: 5000000}
+	config := &SCConfig{}
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
@@ -1305,7 +1305,7 @@ func TestScenarioSubUnsub(t *testing.T) {
 
 	key4, _ := crypto.GenerateKey()
 	auth4 := bind.NewKeyedTransactor(key4)
-	config := &SCConfig{DefaultGasLimit: 5000000}
+	config := &SCConfig{}
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
@@ -1410,7 +1410,7 @@ func TestErrorDupSubscription(t *testing.T) {
 
 	key4, _ := crypto.GenerateKey()
 	auth4 := bind.NewKeyedTransactor(key4)
-	config := &SCConfig{DefaultGasLimit: 5000000}
+	config := &SCConfig{}
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
@@ -1642,7 +1642,7 @@ func TestAnchoringBasicWithBridgeTxPoolMock(t *testing.T) {
 }
 
 func generateAnchoringEnv(t *testing.T, tempDir string) (*backends.SimulatedBackend, *SubBridge, *BridgeAccounts, *accountInfo, accounts.Account, *bind.TransactOpts) {
-	config := &SCConfig{AnchoringPeriod: 1, DefaultGasLimit: 5000000}
+	config := &SCConfig{AnchoringPeriod: 1}
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
@@ -1730,7 +1730,7 @@ func TestAnchoringStart(t *testing.T) {
 		}
 	}()
 
-	config := &SCConfig{AnchoringPeriod: 4, DefaultGasLimit: 5000000}
+	config := &SCConfig{AnchoringPeriod: 4}
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
@@ -1813,7 +1813,7 @@ func TestAnchoringPeriod(t *testing.T) {
 		}
 	}()
 
-	config := &SCConfig{AnchoringPeriod: 4, DefaultGasLimit: 5000000}
+	config := &SCConfig{AnchoringPeriod: 4}
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
@@ -1937,7 +1937,7 @@ func TestDecodingLegacyAnchoringTx(t *testing.T) {
 		}
 	}()
 
-	config := &SCConfig{AnchoringPeriod: 1, DefaultGasLimit: 5000000}
+	config := &SCConfig{AnchoringPeriod: 1}
 	config.DataDir = tempDir
 	config.VTRecovery = true
 

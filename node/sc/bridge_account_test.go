@@ -41,7 +41,7 @@ func TestBridgeAccountLockUnlock(t *testing.T) {
 	}()
 
 	// Config Bridge Account Manager
-	config := &SCConfig{DefaultGasLimit: 5000000}
+	config := &SCConfig{}
 	config.DataDir = tempDir
 	bAcc, err := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), config.DefaultGasLimit)
 	assert.NoError(t, err)
@@ -162,7 +162,7 @@ func TestBridgeAccountInformation(t *testing.T) {
 	}()
 
 	// Config Bridge Account Manager
-	config := &SCConfig{DefaultGasLimit: 5000000}
+	config := &SCConfig{}
 	config.DataDir = tempDir
 	bAcc, err := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), config.DefaultGasLimit)
 	assert.NoError(t, err)
