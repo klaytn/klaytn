@@ -38,10 +38,10 @@ import (
 const (
 	DefaultBridgeTxGasLimit = 5000000
 
-	ParentOperatorStr              = "parentOperator"
-	ChildOperatorStr               = "childOperator"
-	DefaultParentBridgeAccountName = "parent_bridge_account"
-	DefaultChildBridgeAccountName  = "child_bridge_account"
+	ParentOperatorStr       = "parentOperator"
+	ChildOperatorStr        = "childOperator"
+	ParentBridgeAccountName = "parent_bridge_account"
+	ChildBridgeAccountName  = "child_bridge_account"
 )
 
 var (
@@ -113,22 +113,22 @@ func (ba *BridgeAccounts) SetChildOperatorFeePayer(feePayer common.Address) erro
 
 // NewBridgeAccounts returns bridgeAccounts created by main/service bridge account keys.
 func NewBridgeAccounts(am *accounts.Manager, dataDir string, db feePayerDB) (*BridgeAccounts, error) {
-	pKS, pAccAddr, isLock, err := InitializeBridgeAccountKeystore(path.Join(dataDir, DefaultParentBridgeAccountName))
+	pKS, pAccAddr, isLock, err := InitializeBridgeAccountKeystore(path.Join(dataDir, ParentBridgeAccountName))
 	if err != nil {
 		return nil, err
 	}
 
 	if isLock {
-		logger.Warn("parent bridge account is locked. Please unlock the account manually for Service Chain", "name", DefaultParentBridgeAccountName)
+		logger.Warn("parent bridge account is locked. Please unlock the account manually for Service Chain", "name", ParentBridgeAccountName)
 	}
 
-	cKS, cAccAddr, isLock, err := InitializeBridgeAccountKeystore(path.Join(dataDir, DefaultChildBridgeAccountName))
+	cKS, cAccAddr, isLock, err := InitializeBridgeAccountKeystore(path.Join(dataDir, ChildBridgeAccountName))
 	if err != nil {
 		return nil, err
 	}
 
 	if isLock {
-		logger.Warn("child bridge account is locked. Please unlock the account manually for Service Chain", "name", DefaultChildBridgeAccountName)
+		logger.Warn("child bridge account is locked. Please unlock the account manually for Service Chain", "name", ChildBridgeAccountName)
 	}
 
 	logger.Info("bridge account is loaded", "parent", pAccAddr.String(), "child", cAccAddr.String())
