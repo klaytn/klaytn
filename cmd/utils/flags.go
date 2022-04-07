@@ -773,6 +773,11 @@ var (
 		Name:  "kas.sc.anchor.operator",
 		Usage: "The operator address for KAS anchor",
 	}
+	KASServiceChainAnchorRequestTimeoutFlag = cli.DurationFlag{
+		Name:  "kas.sc.anchor.request.timeout",
+		Usage: "The reuqest timeout for KAS Anchoring API call",
+		Value: 500 * time.Millisecond,
+	}
 	KASServiceChainXChainIdFlag = cli.StringFlag{
 		Name:  "kas.x-chain-id",
 		Usage: "The x-chain-id for KAS",
