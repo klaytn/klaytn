@@ -24,6 +24,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"sort"
 	"sync"
 	"time"
 
@@ -431,6 +432,9 @@ func (p *basePeer) Send(msgcode uint64, data interface{}) error {
 // SendTransactions sends transactions to the peer and includes the hashes
 // in its transaction hash set for future reference.
 func (p *basePeer) SendTransactions(txs types.Transactions) error {
+	//Before sending transactions, sort transactions in ascending order by time.
+	sort.Sort(types.TxByPriceAndTime(txs))
+
 	for _, tx := range txs {
 		p.AddToKnownTxs(tx.Hash())
 	}
@@ -439,6 +443,9 @@ func (p *basePeer) SendTransactions(txs types.Transactions) error {
 
 // ReSendTransactions sends txs to a peer in order to prevent the txs from missing.
 func (p *basePeer) ReSendTransactions(txs types.Transactions) error {
+	//Before sending transactions, sort transactions in ascending order by time.
+	sort.Sort(types.TxByPriceAndTime(txs))
+
 	return p2p.Send(p.rw, TxMsg, txs)
 }
 
@@ -800,6 +807,9 @@ func (p *multiChannelPeer) Broadcast() {
 // SendTransactions sends transactions to the peer and includes the hashes
 // in its transaction hash set for future reference.
 func (p *multiChannelPeer) SendTransactions(txs types.Transactions) error {
+	//Before sending transactions, sort transactions in ascending order by time.
+	sort.Sort(types.TxByPriceAndTime(txs))
+
 	for _, tx := range txs {
 		p.AddToKnownTxs(tx.Hash())
 	}
@@ -808,6 +818,9 @@ func (p *multiChannelPeer) SendTransactions(txs types.Transactions) error {
 
 // ReSendTransactions sends txs to a peer in order to prevent the txs from missing.
 func (p *multiChannelPeer) ReSendTransactions(txs types.Transactions) error {
+	//Before sending transactions, sort transactions in ascending order by time.
+	sort.Sort(types.TxByPriceAndTime(txs))
+
 	return p.msgSender(TxMsg, txs)
 }
 

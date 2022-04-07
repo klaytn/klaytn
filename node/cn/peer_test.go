@@ -17,9 +17,14 @@
 package cn
 
 import (
+	"crypto/ecdsa"
+	"github.com/klaytn/klaytn/crypto"
 	"math/big"
+	"math/rand"
+	"sort"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -350,4 +355,115 @@ func TestBasePeer_RequestReceipts(t *testing.T) {
 	}
 
 	assert.Equal(t, sentHashes, receivedHashes)
+}
+
+func TestBasePeer_SendTransactionWithSortedByTime(t *testing.T) {
+	// Generate a batch of accounts to start with
+	keys := make([]*ecdsa.PrivateKey, 5)
+	for i := 0; i < len(keys); i++ {
+		keys[i], _ = crypto.GenerateKey()
+	}
+	signer := types.LatestSignerForChainID(big.NewInt(1))
+
+	// Generate a batch of transactions.
+	txs := types.Transactions{}
+	for _, key := range keys {
+		tx, _ := types.SignTx(types.NewTransaction(0, common.Address{}, big.NewInt(100), 100, big.NewInt(1), nil), signer, key)
+
+		txs = append(txs, tx)
+	}
+
+	// Shuffle transactions.
+	rand.Seed(time.Now().Unix())
+	rand.Shuffle(len(txs), func(i, j int) {
+		txs[i], txs[j] = txs[j], txs[i]
+	})
+
+	sortedTxs := make(types.Transactions, len(txs))
+	copy(sortedTxs, txs)
+
+	// Sort transaction by time.
+	sort.Sort(types.TxByPriceAndTime(sortedTxs))
+
+	basePeer, _, oppositePipe := newBasePeer()
+	for _, tx := range txs {
+		assert.False(t, basePeer.KnowsTx(tx.Hash()))
+	}
+
+	go func(t *testing.T) {
+		if err := basePeer.SendTransactions(txs); err != nil {
+			t.Fatal(t)
+		}
+	}(t)
+
+	receivedMsg, err := oppositePipe.ReadMsg()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var receivedTxs types.Transactions
+	if err := receivedMsg.Decode(&receivedTxs); err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, len(txs), len(receivedTxs))
+
+	// It should be received transaction with sorted by times.
+	for i, tx := range receivedTxs {
+		assert.True(t, basePeer.KnowsTx(tx.Hash()))
+		assert.Equal(t, sortedTxs[i].Hash(), tx.Hash())
+	}
+}
+
+func TestBasePeer_ReSendTransactionWithSortedByTime(t *testing.T) {
+	// Generate a batch of accounts to start with
+	keys := make([]*ecdsa.PrivateKey, 5)
+	for i := 0; i < len(keys); i++ {
+		keys[i], _ = crypto.GenerateKey()
+	}
+	signer := types.LatestSignerForChainID(big.NewInt(1))
+
+	// Generate a batch of transactions.
+	txs := types.Transactions{}
+	for _, key := range keys {
+		tx, _ := types.SignTx(types.NewTransaction(0, common.Address{}, big.NewInt(100), 100, big.NewInt(1), nil), signer, key)
+
+		txs = append(txs, tx)
+	}
+
+	// Shuffle transactions.
+	rand.Seed(time.Now().Unix())
+	rand.Shuffle(len(txs), func(i, j int) {
+		txs[i], txs[j] = txs[j], txs[i]
+	})
+	
+	sortedTxs := make(types.Transactions, len(txs))
+	copy(sortedTxs, txs)
+
+	// Sort transaction by time.
+	sort.Sort(types.TxByPriceAndTime(sortedTxs))
+
+	basePeer, _, oppositePipe := newBasePeer()
+	go func(t *testing.T) {
+		if err := basePeer.ReSendTransactions(txs); err != nil {
+			t.Fatal(t)
+		}
+	}(t)
+
+	receivedMsg, err := oppositePipe.ReadMsg()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var receivedTxs types.Transactions
+	if err := receivedMsg.Decode(&receivedTxs); err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, len(txs), len(receivedTxs))
+
+	// It should be received transaction with sorted by times.
+	for i, tx := range receivedTxs {
+		assert.Equal(t, sortedTxs[i].Hash(), tx.Hash())
+	}
 }
