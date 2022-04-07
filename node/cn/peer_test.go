@@ -18,13 +18,14 @@ package cn
 
 import (
 	"crypto/ecdsa"
-	"github.com/klaytn/klaytn/crypto"
 	"math/big"
 	"math/rand"
 	"sort"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/klaytn/klaytn/crypto"
 
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -436,7 +437,7 @@ func TestBasePeer_ReSendTransactionWithSortedByTime(t *testing.T) {
 	rand.Shuffle(len(txs), func(i, j int) {
 		txs[i], txs[j] = txs[j], txs[i]
 	})
-	
+
 	sortedTxs := make(types.Transactions, len(txs))
 	copy(sortedTxs, txs)
 
