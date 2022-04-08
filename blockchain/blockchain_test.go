@@ -1754,7 +1754,7 @@ func TestDeleteCreateRevert(t *testing.T) {
 	}
 }
 
-// TestBlockChain_InsertChain_InsertFuntureBlocks inserts future blocks that have missing ancestor.
+// TestBlockChain_InsertChain_InsertFutureBlocks inserts future blocks that have a missing ancestor.
 // It should return an expected error, but not panic.
 func TestBlockChain_InsertChain_InsertFutureBlocks(t *testing.T) {
 	// configure and generate a sample blockchain
