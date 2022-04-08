@@ -97,13 +97,14 @@ type SCConfig struct {
 	Anchoring          bool
 
 	// KAS
-	KASAnchor         bool
-	KASAnchorUrl      string
-	KASAnchorPeriod   uint64
-	KASAnchorOperator string
-	KASAccessKey      string
-	KASSecretKey      string
-	KASXChainId       string
+	KASAnchor               bool
+	KASAnchorUrl            string
+	KASAnchorPeriod         uint64
+	KASAnchorOperator       string
+	KASAccessKey            string
+	KASSecretKey            string
+	KASXChainId             string
+	KASAnchorRequestTimeout time.Duration
 }
 
 // NodeName returns the devp2p node identifier.

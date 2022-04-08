@@ -122,16 +122,46 @@ func TestEthereumAPI_GetUncleByBlockHashAndIndex(t *testing.T) {
 
 // TestTestEthereumAPI_GetUncleCountByBlockNumber tests GetUncleCountByBlockNumber.
 func TestTestEthereumAPI_GetUncleCountByBlockNumber(t *testing.T) {
-	api := &EthereumAPI{}
-	uncleCount := hexutil.Uint(ZeroUncleCount)
-	assert.Equal(t, uncleCount, *api.GetUncleCountByBlockNumber(context.Background(), rpc.BlockNumber(0)))
+	mockCtrl, mockBackend, api := testInitForEthApi(t)
+	block, _, _, _, _ := createTestData(t, nil)
+
+	// For existing block number, it must return 0.
+	mockBackend.EXPECT().BlockByNumber(gomock.Any(), gomock.Any()).Return(block, nil)
+	existingBlockNumber := rpc.BlockNumber(block.Number().Int64())
+	assert.Equal(t, hexutil.Uint(ZeroUncleCount), *api.GetUncleCountByBlockNumber(context.Background(), existingBlockNumber))
+
+	// For non-existing block number, it must return nil.
+	mockBackend.EXPECT().BlockByNumber(gomock.Any(), gomock.Any()).Return(nil, nil)
+	nonExistingBlockNumber := rpc.BlockNumber(5)
+	uncleCount := api.GetUncleCountByBlockNumber(context.Background(), nonExistingBlockNumber)
+	uintNil := hexutil.Uint(uint(0))
+	expectedResult := &uintNil
+	expectedResult = nil
+	assert.Equal(t, expectedResult, uncleCount)
+
+	mockCtrl.Finish()
 }
 
 // TestTestEthereumAPI_GetUncleCountByBlockHash tests GetUncleCountByBlockHash.
 func TestTestEthereumAPI_GetUncleCountByBlockHash(t *testing.T) {
-	api := &EthereumAPI{}
-	uncleCount := hexutil.Uint(ZeroUncleCount)
-	assert.Equal(t, uncleCount, *api.GetUncleCountByBlockHash(context.Background(), common.Hash{}))
+	mockCtrl, mockBackend, api := testInitForEthApi(t)
+	block, _, _, _, _ := createTestData(t, nil)
+
+	// For existing block hash, it must return 0.
+	mockBackend.EXPECT().BlockByHash(gomock.Any(), gomock.Any()).Return(block, nil)
+	existingHash := block.Hash()
+	assert.Equal(t, hexutil.Uint(ZeroUncleCount), *api.GetUncleCountByBlockHash(context.Background(), existingHash))
+
+	// For non-existing block hash, it must return nil.
+	mockBackend.EXPECT().BlockByHash(gomock.Any(), gomock.Any()).Return(nil, nil)
+	nonExistingHash := block.Hash()
+	uncleCount := api.GetUncleCountByBlockHash(context.Background(), nonExistingHash)
+	uintNil := hexutil.Uint(uint(0))
+	expectedResult := &uintNil
+	expectedResult = nil
+	assert.Equal(t, expectedResult, uncleCount)
+
+	mockCtrl.Finish()
 }
 
 // TestEthereumAPI_GetHeaderByNumber tests GetHeaderByNumber.
@@ -1845,6 +1875,94 @@ func createTestData(t *testing.T, header *types.Header) (*types.Block, types.Tra
 	return block, txs, txHashMap, receiptMap, receipts
 }
 
+func createEthereumTypedTestData(t *testing.T, header *types.Header) (*types.Block, types.Transactions, map[common.Hash]*types.Transaction, map[common.Hash]*types.Receipt, []*types.Receipt) {
+	var txs types.Transactions
+
+	var gasPrice = big.NewInt(25 * params.Ston)
+	var deployData = "0x60806040526000805534801561001457600080fd5b506101ea806100246000396000f30060806040526004361061006d576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff16806306661abd1461007257806342cbb15c1461009d578063767800de146100c8578063b22636271461011f578063d14e62b814610150575b600080fd5b34801561007e57600080fd5b5061008761017d565b6040518082815260200191505060405180910390f35b3480156100a957600080fd5b506100b2610183565b6040518082815260200191505060405180910390f35b3480156100d457600080fd5b506100dd61018b565b604051808273ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200191505060405180910390f35b34801561012b57600080fd5b5061014e60048036038101908080356000191690602001909291905050506101b1565b005b34801561015c57600080fd5b5061017b600480360381019080803590602001909291905050506101b4565b005b60005481565b600043905090565b600160009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1681565b50565b80600081905550505600a165627a7a7230582053c65686a3571c517e2cf4f741d842e5ee6aa665c96ce70f46f9a594794f11eb0029"
+	var accessList = types.AccessList{
+		types.AccessTuple{
+			Address: common.StringToAddress("0x23a519a88e79fbc0bab796f3dce3ff79a2373e30"),
+			StorageKeys: []common.Hash{
+				common.HexToHash("0xa145cd642157a5df01f5bc3837a1bb59b3dcefbbfad5ec435919780aebeaba2b"),
+				common.HexToHash("0x12e2c26dca2fb2b8879f54a5ea1604924edf0e37965c2be8aa6133b75818da40"),
+			},
+		},
+	}
+	var chainId = new(big.Int).SetUint64(2019)
+
+	var txHashMap = make(map[common.Hash]*types.Transaction)
+	var receiptMap = make(map[common.Hash]*types.Receipt)
+	var receipts []*types.Receipt
+
+	// Make test transactions data
+	{
+		// TxTypeEthereumAccessList
+		to := common.StringToAddress("0xb5a2d79e9228f3d278cb36b5b15930f24fe8bae8")
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:      uint64(txs.Len()),
+			types.TxValueKeyTo:         &to,
+			types.TxValueKeyAmount:     big.NewInt(10),
+			types.TxValueKeyGasLimit:   uint64(50000000),
+			types.TxValueKeyData:       common.Hex2Bytes(deployData),
+			types.TxValueKeyGasPrice:   gasPrice,
+			types.TxValueKeyAccessList: accessList,
+			types.TxValueKeyChainID:    chainId,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeEthereumAccessList, values)
+		assert.Equal(t, nil, err)
+
+		signatures := types.TxSignatures{
+			&types.TxSignature{V: big.NewInt(1), R: big.NewInt(2), S: big.NewInt(3)},
+		}
+		tx.SetSignature(signatures)
+
+		txs = append(txs, tx)
+		txHashMap[tx.Hash()] = tx
+		// For testing, set GasUsed with tx.Gas()
+		receiptMap[tx.Hash()] = createReceipt(t, tx, tx.Gas())
+		receipts = append(receipts, receiptMap[tx.Hash()])
+	}
+	{
+		// TxTypeEthereumDynamicFee
+		to := common.StringToAddress("0xb5a2d79e9228f3d278cb36b5b15930f24fe8bae8")
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:      uint64(txs.Len()),
+			types.TxValueKeyTo:         &to,
+			types.TxValueKeyAmount:     big.NewInt(3),
+			types.TxValueKeyGasLimit:   uint64(50000000),
+			types.TxValueKeyData:       common.Hex2Bytes(deployData),
+			types.TxValueKeyGasTipCap:  gasPrice,
+			types.TxValueKeyGasFeeCap:  gasPrice,
+			types.TxValueKeyAccessList: accessList,
+			types.TxValueKeyChainID:    chainId,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeEthereumDynamicFee, values)
+		assert.Equal(t, nil, err)
+
+		signatures := types.TxSignatures{
+			&types.TxSignature{V: big.NewInt(2), R: big.NewInt(3), S: big.NewInt(4)},
+		}
+		tx.SetSignature(signatures)
+
+		txs = append(txs, tx)
+		txHashMap[tx.Hash()] = tx
+		// For testing, set GasUsed with tx.Gas()
+		receiptMap[tx.Hash()] = createReceipt(t, tx, tx.Gas())
+		receipts = append(receipts, receiptMap[tx.Hash()])
+	}
+
+	// Create a block which includes all transaction data.
+	var block *types.Block
+	if header != nil {
+		block = types.NewBlock(header, txs, receipts)
+	} else {
+		block = types.NewBlock(&types.Header{Number: big.NewInt(1)}, txs, nil)
+	}
+
+	return block, txs, txHashMap, receiptMap, receipts
+}
+
 func createReceipt(t *testing.T, tx *types.Transaction, gasUsed uint64) *types.Receipt {
 	rct := types.NewReceipt(uint(0), tx.Hash(), gasUsed)
 	rct.Logs = []*types.Log{}
@@ -2264,4 +2382,47 @@ func TestEthTransactionArgs_setDefaults(t *testing.T) {
 			require.Equal(t, test.expectedResult, txArgs)
 		}
 	}
+}
+
+func TestEthereumAPI_GetRawTransactionByHash(t *testing.T) {
+	mockCtrl, mockBackend, api := testInitForEthApi(t)
+	block, txs, txHashMap, _, _ := createEthereumTypedTestData(t, nil)
+
+	// Define queryFromPool for ReadTxAndLookupInfo function return tx from hash map.
+	// MockDatabaseManager will initiate data with txHashMap, block and queryFromPool.
+	// If queryFromPool is true, MockDatabaseManager will return nil to query transactions from transaction pool,
+	// otherwise return a transaction from txHashMap.
+	mockDBManager := &MockDatabaseManager{txHashMap: txHashMap, blockData: block, queryFromPool: false}
+
+	// Mock Backend functions.
+	mockBackend.EXPECT().ChainDB().Return(mockDBManager).Times(txs.Len())
+
+	for i := 0; i < txs.Len(); i++ {
+		rawTx, err := api.GetRawTransactionByHash(context.Background(), txs[i].Hash())
+		if err != nil {
+			t.Fatal(err)
+		}
+		prefix := types.TxType(rawTx[0])
+		// When get raw transaction by eth namespace API, EthereumTxTypeEnvelope must not be included.
+		require.NotEqual(t, types.EthereumTxTypeEnvelope, prefix)
+	}
+
+	mockCtrl.Finish()
+}
+
+func TestEthereumAPI_GetRawTransactionByBlockNumberAndIndex(t *testing.T) {
+	mockCtrl, mockBackend, api := testInitForEthApi(t)
+	block, txs, _, _, _ := createEthereumTypedTestData(t, nil)
+
+	// Mock Backend functions.
+	mockBackend.EXPECT().BlockByNumber(gomock.Any(), gomock.Any()).Return(block, nil).Times(txs.Len())
+
+	for i := 0; i < txs.Len(); i++ {
+		rawTx := api.GetRawTransactionByBlockNumberAndIndex(context.Background(), rpc.BlockNumber(block.NumberU64()), hexutil.Uint(i))
+		prefix := types.TxType(rawTx[0])
+		// When get raw transaction by eth namespace API, EthereumTxTypeEnvelope must not be included.
+		require.NotEqual(t, types.EthereumTxTypeEnvelope, prefix)
+	}
+
+	mockCtrl.Finish()
 }

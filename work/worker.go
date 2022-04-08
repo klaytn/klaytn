@@ -83,6 +83,10 @@ var (
 	storageHashTimer   = klaytnmetrics.NewRegisteredHybridTimer("miner/block/storage/hashes", nil)
 	storageUpdateTimer = klaytnmetrics.NewRegisteredHybridTimer("miner/block/storage/updates", nil)
 	storageCommitTimer = klaytnmetrics.NewRegisteredHybridTimer("miner/block/storage/commits", nil)
+
+	snapshotAccountReadTimer = metrics.NewRegisteredTimer("miner/snapshot/account/reads", nil)
+	snapshotStorageReadTimer = metrics.NewRegisteredTimer("miner/snapshot/storage/reads", nil)
+	snapshotCommitTimer      = metrics.NewRegisteredTimer("miner/snapshot/commits", nil)
 )
 
 // Agent can register themself with the worker
@@ -462,7 +466,7 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 	if err != nil {
 		return err
 	}
-	work := NewTask(self.config, types.LatestSignerForChainID(self.config.ChainID), stateDB, header)
+	work := NewTask(self.config, types.MakeSigner(self.config, header.Number), stateDB, header)
 	if self.nodetype != common.CONSENSUSNODE {
 		work.Block = parent
 	}
@@ -557,6 +561,10 @@ func (self *worker) commitNewWork() {
 			storageHashTimer.Update(work.state.StorageHashes)
 			storageUpdateTimer.Update(work.state.StorageUpdates)
 			storageCommitTimer.Update(work.state.StorageCommits)
+
+			snapshotAccountReadTimer.Update(work.state.SnapshotAccountReads)
+			snapshotStorageReadTimer.Update(work.state.SnapshotStorageReads)
+			snapshotCommitTimer.Update(work.state.SnapshotCommits)
 
 			trieAccess := work.state.AccountReads + work.state.AccountHashes + work.state.AccountUpdates + work.state.AccountCommits
 			trieAccess += work.state.StorageReads + work.state.StorageHashes + work.state.StorageUpdates + work.state.StorageCommits

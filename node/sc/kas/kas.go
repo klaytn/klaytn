@@ -17,6 +17,8 @@
 package kas
 
 import (
+	"time"
+
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/log"
 )
@@ -26,7 +28,8 @@ var logger = log.NewModuleLogger(log.KAS)
 type KASConfig struct {
 	Url, XChainId, User, Pwd string
 
-	Operator     common.Address
-	Anchor       bool
-	AnchorPeriod uint64
+	Operator       common.Address
+	Anchor         bool
+	AnchorPeriod   uint64
+	RequestTimeout time.Duration
 }

@@ -124,6 +124,7 @@ fi
 
 if [[ ! -z $RPC_ENABLE ]] && [[ $RPC_ENABLE -eq 1 ]]; then
     OPTIONS="$OPTIONS --rpc"
+    RPC_API=`echo $RPC_API | tr -d "[:space:]"`
     if [ ! -z $RPC_API ]; then
         OPTIONS="$OPTIONS --rpcapi $RPC_API"
     fi
@@ -143,6 +144,7 @@ fi
 
 if [[ ! -z $WS_ENABLE ]] && [[ $WS_ENABLE -eq 1 ]]; then
     OPTIONS="$OPTIONS --ws"
+    WS_API=`echo $WS_API | tr -d "[:space:]"`
     if [ ! -z $WS_API ]; then
         OPTIONS="$OPTIONS --wsapi $WS_API"
     fi
@@ -207,7 +209,7 @@ if [ ! -z $TXPOOL_NONEXEC_SLOTS_ACCOUNT ]; then
     OPTIONS="$OPTIONS --txpool.nonexec-slots.account $TXPOOL_NONEXEC_SLOTS_ACCOUNT"
 fi
 
-if [ ! -z TXPOOL_LIFE_TIME ]; then
+if [ ! -z $TXPOOL_LIFE_TIME ]; then
     OPTIONS="$OPTIONS --txpool.lifetime $TXPOOL_LIFE_TIME"
 fi
 
@@ -286,6 +288,10 @@ if [[ ! -z $SC_SUB_BRIDGE ]] && [[ $SC_SUB_BRIDGE -eq 1 ]]; then
             exit 1
         fi
         OPTIONS="$OPTIONS --kas.x-chain-id $SC_KAS_ANCHOR_X_CHAIN_ID"
+        
+        if [ ! -z $SC_KAS_ANCHOR_REQUEST_TIMEOUT ]; then
+            OPTIONS="$OPTIONS --kas.sc.anchor.request.timeout $SC_KAS_ANCHOR_REQUEST_TIMEOUT"
+        fi
     fi
 fi
 

@@ -423,21 +423,24 @@ func (api *EthereumAPI) GetProof(ctx context.Context, address common.Address, st
 // * When blockNr is -2 the pending chain head is returned.
 func (api *EthereumAPI) GetHeaderByNumber(ctx context.Context, number rpc.BlockNumber) (map[string]interface{}, error) {
 	// In Ethereum, err is always nil because the backend of Ethereum always return nil.
-	klaytnHeader, _ := api.publicBlockChainAPI.b.HeaderByNumber(ctx, number)
-	if klaytnHeader != nil {
-		response, err := api.rpcMarshalHeader(klaytnHeader)
-		if err != nil {
-			return nil, err
+	klaytnHeader, err := api.publicBlockChainAPI.b.HeaderByNumber(ctx, number)
+	if err != nil {
+		if strings.Contains(err.Error(), "does not exist") {
+			return nil, nil
 		}
-		if number == rpc.PendingBlockNumber {
-			// Pending header need to nil out a few fields
-			for _, field := range []string{"hash", "nonce", "miner"} {
-				response[field] = nil
-			}
-		}
-		return response, nil
+		return nil, err
 	}
-	return nil, nil
+	response, err := api.rpcMarshalHeader(klaytnHeader)
+	if err != nil {
+		return nil, err
+	}
+	if number == rpc.PendingBlockNumber {
+		// Pending header need to nil out a few fields
+		for _, field := range []string{"hash", "nonce", "miner"} {
+			response[field] = nil
+		}
+	}
+	return response, nil
 }
 
 // GetHeaderByHash returns the requested header by hash.
@@ -460,18 +463,23 @@ func (api *EthereumAPI) GetHeaderByHash(ctx context.Context, hash common.Hash) m
 // * When fullTx is true all transactions in the block are returned, otherwise
 //   only the transaction hash is returned.
 func (api *EthereumAPI) GetBlockByNumber(ctx context.Context, number rpc.BlockNumber, fullTx bool) (map[string]interface{}, error) {
+	// Klaytn backend returns error when there is no matched block but
+	// Ethereum returns it as nil without error, so we should return is as nil when there is no matched block.
 	klaytnBlock, err := api.publicBlockChainAPI.b.BlockByNumber(ctx, number)
-	if klaytnBlock != nil && err == nil {
-		response, err := api.rpcMarshalBlock(klaytnBlock, true, fullTx)
-		if err == nil && number == rpc.PendingBlockNumber {
-			// Pending blocks need to nil out a few fields
-			for _, field := range []string{"hash", "nonce", "miner"} {
-				response[field] = nil
-			}
+	if err != nil {
+		if strings.Contains(err.Error(), "does not exist") {
+			return nil, nil
 		}
-		return response, err
+		return nil, err
 	}
-	return nil, err
+	response, err := api.rpcMarshalBlock(klaytnBlock, true, fullTx)
+	if err == nil && number == rpc.PendingBlockNumber {
+		// Pending blocks need to nil out a few fields
+		for _, field := range []string{"hash", "nonce", "miner"} {
+			response[field] = nil
+		}
+	}
+	return response, err
 }
 
 // GetBlockByHash returns the requested block. When fullTx is true all transactions in the block are returned in full
@@ -481,7 +489,10 @@ func (api *EthereumAPI) GetBlockByHash(ctx context.Context, hash common.Hash, fu
 	// Ethereum returns it as nil without error, so we should return is as nil when there is no matched block.
 	klaytnBlock, err := api.publicBlockChainAPI.b.BlockByHash(ctx, hash)
 	if err != nil {
-		return nil, nil
+		if strings.Contains(err.Error(), "does not exist") {
+			return nil, nil
+		}
+		return nil, err
 	}
 	return api.rpcMarshalBlock(klaytnBlock, true, fullTx)
 }
@@ -496,16 +507,22 @@ func (api *EthereumAPI) GetUncleByBlockHashAndIndex(ctx context.Context, blockHa
 	return nil, nil
 }
 
-// GetUncleCountByBlockNumber returns 0 because there is no uncle block in Klaytn.
+// GetUncleCountByBlockNumber returns 0 when given blockNr exists because there is no uncle block in Klaytn.
 func (api *EthereumAPI) GetUncleCountByBlockNumber(ctx context.Context, blockNr rpc.BlockNumber) *hexutil.Uint {
-	uncleCount := hexutil.Uint(ZeroUncleCount)
-	return &uncleCount
+	if block, _ := api.publicBlockChainAPI.b.BlockByNumber(ctx, blockNr); block != nil {
+		n := hexutil.Uint(ZeroUncleCount)
+		return &n
+	}
+	return nil
 }
 
-// GetUncleCountByBlockHash returns 0 because there is no uncle block in Klaytn.
+// GetUncleCountByBlockHash returns 0 when given blockHash exists because there is no uncle block in Klaytn.
 func (api *EthereumAPI) GetUncleCountByBlockHash(ctx context.Context, blockHash common.Hash) *hexutil.Uint {
-	uncleCount := hexutil.Uint(ZeroUncleCount)
-	return &uncleCount
+	if block, _ := api.publicBlockChainAPI.b.BlockByHash(ctx, blockHash); block != nil {
+		n := hexutil.Uint(ZeroUncleCount)
+		return &n
+	}
+	return nil
 }
 
 // GetCode returns the code stored at the given address in the state for the given block number.
@@ -865,7 +882,9 @@ func (api *EthereumAPI) GetRawTransactionByBlockNumberAndIndex(ctx context.Conte
 	if err != nil {
 		return nil
 	}
-
+	if rawTx[0] == byte(types.EthereumTxTypeEnvelope) {
+		rawTx = rawTx[1:]
+	}
 	return rawTx
 }
 
@@ -875,7 +894,9 @@ func (api *EthereumAPI) GetRawTransactionByBlockHashAndIndex(ctx context.Context
 	if err != nil {
 		return nil
 	}
-
+	if rawTx[0] == byte(types.EthereumTxTypeEnvelope) {
+		rawTx = rawTx[1:]
+	}
 	return rawTx
 }
 
@@ -970,7 +991,12 @@ func newEthTransactionReceipt(tx *types.Transaction, b Backend, blockHash common
 	}
 
 	// Always use the "status" field and Ignore the "root" field.
-	fields["status"] = hexutil.Uint(receipt.Status)
+	if receipt.Status != types.ReceiptStatusSuccessful {
+		// In Ethereum, status field can have 0(=Failure) or 1(=Success) only.
+		fields["status"] = hexutil.Uint(types.ReceiptStatusFailed)
+	} else {
+		fields["status"] = hexutil.Uint(receipt.Status)
+	}
 
 	if receipt.Logs == nil {
 		fields["logs"] = [][]*types.Log{}

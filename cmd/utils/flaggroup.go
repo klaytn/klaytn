@@ -184,6 +184,7 @@ var FlagGroups = []FlagGroup{
 			MemorySizeFlag,
 			TrieNodeCacheTypeFlag,
 			NumFetcherPrefetchWorkerFlag,
+			UseSnapshotForPrefetchFlag,
 			TrieNodeCacheLimitFlag,
 			TrieNodeCacheSavePeriodFlag,
 			TrieNodeCacheRedisEndpointsFlag,
@@ -294,6 +295,7 @@ var FlagGroups = []FlagGroup{
 			KASServiceChainAccessKeyFlag,
 			KASServiceChainSecretKeyFlag,
 			KASServiceChainXChainIdFlag,
+			KASServiceChainAnchorRequestTimeoutFlag,
 		},
 	},
 	{
