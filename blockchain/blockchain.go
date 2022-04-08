@@ -1780,11 +1780,12 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		// transactions and probabilistically some of the account/storage trie nodes.
 		var followupInterrupt uint32
 
-		if bc.cacheConfig.TrieNodeCacheConfig.NumFetcherPrefetchWorker > 0 {
+		if bc.cacheConfig.TrieNodeCacheConfig.NumFetcherPrefetchWorker > 0 && parent != nil {
 			var snaps *snapshot.Tree
 			if bc.cacheConfig.TrieNodeCacheConfig.UseSnapshotForPrefetch {
 				snaps = bc.snaps
 			}
+
 			// Tx prefetcher is enabled for all cases (both single and multiple block insertion).
 			for ti := range block.Transactions() {
 				select {
@@ -1796,6 +1797,12 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 				// current block is not the last one, so prefetch the right next block
 				followup := chain[i+1]
 				go func(start time.Time) {
+					defer func() {
+						if err := recover(); err != nil {
+							logger.Error("Got panic and recovered from prefetcher", "err", err)
+						}
+					}()
+
 					throwaway, err := state.NewForPrefetching(parent.Root(), bc.stateCache, snaps)
 					if throwaway == nil || err != nil {
 						logger.Warn("failed to get StateDB for prefetcher", "err", err,
