@@ -255,20 +255,6 @@ func (sb *SubBridgeAPI) GetAnchoring() bool {
 	return sb.subBridge.GetAnchoringTx()
 }
 
-func compareBridgeContractVersion(cBridge, pBridge *bridge.Bridge) bool {
-	cv, cvErr := cBridge.VERSION(nil)
-	if cvErr != nil {
-		logger.Info(ErrGetBridgeContractVersion.Error(), "child bridge", cvErr)
-		return false
-	}
-	pv, pvErr := pBridge.VERSION(nil)
-	if pvErr != nil {
-		logger.Info(ErrGetBridgeContractVersion.Error(), "parent bridge", pvErr)
-		return false
-	}
-	return cv == pv
-}
-
 func (sb *SubBridgeAPI) RegisterBridge(cBridgeAddr common.Address, pBridgeAddr common.Address) error {
 	cBridge, err := bridge.NewBridge(cBridgeAddr, sb.subBridge.localBackend)
 	if err != nil {
@@ -278,7 +264,7 @@ func (sb *SubBridgeAPI) RegisterBridge(cBridgeAddr common.Address, pBridgeAddr c
 	if err != nil {
 		return err
 	}
-	if !compareBridgeContractVersion(cBridge, pBridge) {
+	if !CompareBridgeContractVersion(cBridge, pBridge) {
 		return ErrBridgeContractVersionMismatch
 	}
 

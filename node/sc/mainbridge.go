@@ -26,7 +26,6 @@ import (
 	"io"
 	"math/big"
 	"net"
-	"strconv"
 	"sync"
 	"time"
 
@@ -199,13 +198,13 @@ func (mb *MainBridge) APIs() []rpc.API {
 	return []rpc.API{
 		{
 			Namespace: "mainbridge",
-			Version:   mb.Version(),
+			Version:   fmt.Sprintf("%d", mb.Version()),
 			Service:   mb.APIBackend,
 			Public:    true,
 		},
 		{
 			Namespace: "mainbridge",
-			Version:   mb.Version(),
+			Version:   fmt.Sprintf("%d", mb.Version()),
 			Service:   mb.netRPCService,
 			Public:    true,
 		},
@@ -216,7 +215,7 @@ func (mb *MainBridge) AccountManager() *accounts.Manager { return mb.accountMana
 func (mb *MainBridge) EventMux() *event.TypeMux          { return mb.eventMux }
 func (mb *MainBridge) ChainDB() database.DBManager       { return mb.chainDB }
 func (mb *MainBridge) IsListening() bool                 { return true } // Always listening
-func (mb *MainBridge) Version() string                   { return mb.SCProtocol().Versions[0] }
+func (mb *MainBridge) Version() int                      { return int(mb.SCProtocol().Versions[0]) }
 func (mb *MainBridge) NetVersion() uint64                { return mb.networkId }
 
 func (mb *MainBridge) Components() []interface{} {
@@ -298,19 +297,14 @@ func (mb *MainBridge) Start(srvr p2p.Server) error {
 	serverConfig.NoDial = true
 
 	scprotocols := make([]p2p.Protocol, 0, len(mb.SCProtocol().Versions))
-	for i, protocolVersion := range mb.SCProtocol().Versions {
+	for i, version := range mb.SCProtocol().Versions {
 		// Compatible; initialise the sub-protocol
-		protocolVersionNum, err := strconv.ParseFloat(protocolVersion, 32)
-		if err != nil {
-			logger.Info("Version parse error:", err)
-			return err
-		}
 		scprotocols = append(scprotocols, p2p.Protocol{
 			Name:    mb.SCProtocol().Name,
-			Version: uint(protocolVersionNum),
+			Version: version,
 			Length:  mb.SCProtocol().Lengths[i],
 			Run: func(p *p2p.Peer, rw p2p.MsgReadWriter) error {
-				peer := mb.newPeer(protocolVersion, p, rw)
+				peer := mb.newPeer(int(version), p, rw)
 				pubKey, _ := p.ID().Pubkey()
 				addr := crypto.PubkeyToAddress(*pubKey)
 				peer.SetAddr(addr)
@@ -352,7 +346,7 @@ func (mb *MainBridge) Start(srvr p2p.Server) error {
 	return nil
 }
 
-func (mb *MainBridge) newPeer(pv string, p *p2p.Peer, rw p2p.MsgReadWriter) BridgePeer {
+func (mb *MainBridge) newPeer(pv int, p *p2p.Peer, rw p2p.MsgReadWriter) BridgePeer {
 	return newBridgePeer(pv, p, newMeteredMsgWriter(rw))
 }
 

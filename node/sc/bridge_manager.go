@@ -29,6 +29,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/contracts/bridge"
 	bridgecontract "github.com/klaytn/klaytn/contracts/bridge"
 	scnft "github.com/klaytn/klaytn/contracts/sc_erc721"
 	"github.com/klaytn/klaytn/event"
@@ -1142,4 +1143,18 @@ func (bm *BridgeManager) GetFeeReceiver(bridgeAddr common.Address) (common.Addre
 	}
 
 	return bi.bridge.FeeReceiver(nil)
+}
+
+func CompareBridgeContractVersion(cBridge, pBridge *bridge.Bridge) bool {
+	cv, cvErr := cBridge.VERSION(nil)
+	if cvErr != nil {
+		logger.Info(ErrGetBridgeContractVersion.Error(), "child bridge", cvErr)
+		return false
+	}
+	pv, pvErr := pBridge.VERSION(nil)
+	if pvErr != nil {
+		logger.Info(ErrGetBridgeContractVersion.Error(), "parent bridge", pvErr)
+		return false
+	}
+	return cv == pv
 }

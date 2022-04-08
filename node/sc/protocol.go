@@ -46,7 +46,7 @@ const (
 
 var (
 	SCProtocolName    = "servicechain"
-	SCProtocolVersion = []string{"1.0"}
+	SCProtocolVersion = []uint{1}
 	SCProtocolLength  = []uint64{9}
 )
 
@@ -55,7 +55,7 @@ type SCProtocol struct {
 	// Official short name of the protocol used during capability negotiation.
 	Name string
 	// Supported versions of the Klaytn SC protocol (first is primary).
-	Versions []string
+	Versions []uint
 	// Number of implemented message corresponding to different protocol versions.
 	Lengths []uint64
 }
@@ -89,7 +89,7 @@ var errorToString = map[int]string{
 
 // statusData is the network packet for the status message.
 type statusData struct {
-	Version      string
+	Version      uint32
 	NetworkId    uint64
 	TD           *big.Int
 	CurrentBlock common.Hash

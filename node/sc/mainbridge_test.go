@@ -47,7 +47,7 @@ import (
 
 const testNetVersion = uint64(8888)
 
-var testSCVersion = SCProtocolVersion[0]
+var testSCVersion = int(SCProtocolVersion[0])
 
 // testNewMainBridge returns a test MainBridge.
 func testNewMainBridge(t *testing.T) *MainBridge {

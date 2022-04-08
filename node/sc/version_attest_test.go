@@ -17,11 +17,8 @@
 package sc
 
 import (
-	cryptorand "crypto/rand"
-	"fmt"
 	"math/big"
 	"math/rand"
-	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -38,28 +35,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// genRandomString returns ASCII string
-func genRandomString(t *testing.T) string {
-	const length = 10
-	result := "v"
-	for {
-		if len(result) >= length {
-			return result
-
-		}
-		num, err := cryptorand.Int(cryptorand.Reader, big.NewInt(int64(127)))
-		assert.Nil(t, err)
-
-		n := num.Int64()
-		if n > 32 && n < 127 {
-			result += strconv.FormatInt(n, 16)
-		}
-	}
-}
-
 // genRandomNum returns random string of float number
-func genRandomNum() string {
-	return fmt.Sprintf("%f", rand.Float64()*10000)
+func genRandomNum() int {
+	return rand.Intn(10000)
 }
 
 // makePeer creates a new peer.
@@ -95,7 +73,7 @@ func getHandshakeRet(bridgePeer1, bridgePeer2 BridgePeer) (error, error) {
 }
 
 // compareVersion checks version matching based on property-based testing.
-func compareVersion(t *testing.T, pv1, pv2 string, errHandshakePeer1, errHandshakePeer2 error) {
+func compareVersion(t *testing.T, pv1, pv2 int, errHandshakePeer1, errHandshakePeer2 error) {
 	if pv1 == pv2 {
 		assert.Nil(t, errHandshakePeer1)
 		assert.Nil(t, errHandshakePeer2)
@@ -113,7 +91,7 @@ func TestVersionCompare(t *testing.T) {
 
 	{
 		// Case 1 - Success (ProtocolVersion matched)
-		testProtocolVersion1, testProtocolVersion2 := "1.0", "1.0"
+		testProtocolVersion1, testProtocolVersion2 := 1, 1
 		bridgePeer1 := newBridgePeer(testProtocolVersion1, peer1, pipe1)
 		bridgePeer2 := newBridgePeer(testProtocolVersion2, peer2, pipe2)
 
@@ -125,7 +103,7 @@ func TestVersionCompare(t *testing.T) {
 
 	{
 		// Case 2 - Failure (ProtocolVersion diff)
-		testProtocolVersion1, testProtocolVersion2 := "1.0", "1.1"
+		testProtocolVersion1, testProtocolVersion2 := 1, 2
 		bridgePeer1 := newBridgePeer(testProtocolVersion1, peer1, pipe1)
 		bridgePeer2 := newBridgePeer(testProtocolVersion2, peer2, pipe2)
 

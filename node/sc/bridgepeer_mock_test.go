@@ -161,10 +161,10 @@ func (mr *MockBridgePeerMockRecorder) GetRW() *gomock.Call {
 }
 
 // GetVersion mocks base method.
-func (m *MockBridgePeer) GetVersion() string {
+func (m *MockBridgePeer) GetVersion() int {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetVersion")
-	ret0, _ := ret[0].(string)
+	ret0, _ := ret[0].(int)
 	return ret0
 }
 
