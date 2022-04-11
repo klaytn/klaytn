@@ -1770,3 +1770,52 @@ func TestDeleteCreateRevert(t *testing.T) {
 		t.Fatalf("block %d: failed to insert into chain: %v", n, err)
 	}
 }
+
+// TestBlockChain_InsertChain_InsertFutureBlocks inserts future blocks that have a missing ancestor.
+// It should return an expected error, but not panic.
+func TestBlockChain_InsertChain_InsertFutureBlocks(t *testing.T) {
+	// configure and generate a sample blockchain
+	var (
+		db          = database.NewMemoryDBManager()
+		key, _      = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+		address     = crypto.PubkeyToAddress(key.PublicKey)
+		funds       = big.NewInt(100000000000000000)
+		testGenesis = &Genesis{
+			Config: params.TestChainConfig,
+			Alloc:  GenesisAlloc{address: {Balance: funds}},
+		}
+		genesis = testGenesis.MustCommit(db)
+	)
+
+	// Archive mode is given to avoid mismatching between the given starting block number and
+	// the actual block number where the blockchain has been rolled back to due to 128 blocks interval commit.
+	cacheConfig := &CacheConfig{
+		ArchiveMode:         true,
+		CacheSize:           512,
+		BlockInterval:       DefaultBlockInterval,
+		TriesInMemory:       DefaultTriesInMemory,
+		TrieNodeCacheConfig: statedb.GetEmptyTrieNodeCacheConfig(),
+		SnapshotCacheSize:   512,
+	}
+	cacheConfig.TrieNodeCacheConfig.NumFetcherPrefetchWorker = 3
+
+	// create new blockchain with enabled internal tx tracing option
+	blockchain, _ := NewBlockChain(db, cacheConfig, testGenesis.Config, gxhash.NewFaker(), vm.Config{})
+	defer blockchain.Stop()
+
+	// generate blocks
+	blocks, _ := GenerateChain(testGenesis.Config, genesis, gxhash.NewFaker(), db, 10, func(i int, block *BlockGen) {})
+
+	// insert the generated blocks into the test chain
+	if n, err := blockchain.InsertChain(blocks[:2]); err != nil {
+		t.Fatalf("failed to process block %d: %v", n, err)
+	}
+
+	// insert future blocks
+	_, err := blockchain.InsertChain(blocks[4:])
+	if err == nil {
+		t.Fatal("should be failed")
+	}
+
+	assert.Equal(t, consensus.ErrUnknownAncestor, err)
+}
