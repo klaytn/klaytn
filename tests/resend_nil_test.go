@@ -101,7 +101,8 @@ func BenchmarkResendNilDereference(t *testing.B) {
 			})
 			if err != nil {
 				fmt.Println("tx gen err", err)
-				t.Fatal(err)
+				t.Error(err)
+				return
 			}
 
 			signedTx, err := types.SignTx(tx, signer, bcdata.privKeys[0])
