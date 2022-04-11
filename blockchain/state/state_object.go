@@ -500,6 +500,23 @@ func (self *stateObject) Code(db Database) []byte {
 	return code
 }
 
+// CodeSize returns the size of the contract code associated with this object,
+// or zero if none. This method is an almost mirror of Code, but uses a cache
+// inside the database to avoid loading codes seen recently.
+func (self *stateObject) CodeSize(db Database) int {
+	if self.code != nil {
+		return len(self.code)
+	}
+	if bytes.Equal(self.CodeHash(), emptyCodeHash) {
+		return 0
+	}
+	size, err := db.ContractCodeSize(common.BytesToHash(self.CodeHash()))
+	if err != nil {
+		self.setError(fmt.Errorf("can't load code size %x: %v", self.CodeHash(), err))
+	}
+	return size
+}
+
 func (self *stateObject) SetCode(codeHash common.Hash, code []byte) error {
 	prevcode := self.Code(self.db.db)
 	self.db.journal.append(codeChange{

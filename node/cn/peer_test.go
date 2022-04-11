@@ -55,7 +55,8 @@ func TestBasePeer_Send(t *testing.T) {
 	expectedMsg := generateMsg(t, NewBlockHashesMsg, data)
 	go func(t *testing.T) {
 		if err := basePeer.Send(NewBlockHashesMsg, data); err != nil {
-			t.Fatal(err)
+			t.Error(err)
+			return
 		}
 	}(t)
 	receivedMsg, err := oppositePipe.ReadMsg()
@@ -79,7 +80,8 @@ func TestBasePeer_SendTransactions(t *testing.T) {
 	assert.False(t, basePeer.KnowsTx(sentTxs[0].Hash()))
 	go func(t *testing.T) {
 		if err := basePeer.SendTransactions(sentTxs); err != nil {
-			t.Fatal(t)
+			t.Error(t)
+			return
 		}
 	}(t)
 	receivedMsg, err := oppositePipe.ReadMsg()
@@ -94,8 +96,11 @@ func TestBasePeer_SendTransactions(t *testing.T) {
 
 	assert.True(t, basePeer.KnowsTx(tx1.Hash()))
 	assert.Equal(t, len(sentTxs), len(receivedTxs))
-	receivedTxs[0].Hash()
-	assert.Equal(t, sentTxs[0], receivedTxs[0])
+	assert.Equal(t, sentTxs[0].Hash(), receivedTxs[0].Hash())
+
+	sendTxBinary, _ := sentTxs[0].MarshalBinary()
+	receivedTxBinary, _ := receivedTxs[0].MarshalBinary()
+	assert.Equal(t, sendTxBinary, receivedTxBinary)
 }
 
 func TestBasePeer_ReSendTransactions(t *testing.T) {
@@ -105,7 +110,8 @@ func TestBasePeer_ReSendTransactions(t *testing.T) {
 	assert.False(t, basePeer.KnowsTx(sentTxs[0].Hash()))
 	go func(t *testing.T) {
 		if err := basePeer.ReSendTransactions(sentTxs); err != nil {
-			t.Fatal(t)
+			t.Error(t)
+			return
 		}
 	}(t)
 	receivedMsg, err := oppositePipe.ReadMsg()
@@ -120,8 +126,12 @@ func TestBasePeer_ReSendTransactions(t *testing.T) {
 
 	assert.False(t, basePeer.KnowsTx(tx1.Hash()))
 	assert.Equal(t, len(sentTxs), len(receivedTxs))
-	receivedTxs[0].Hash()
-	assert.Equal(t, sentTxs[0], receivedTxs[0])
+	assert.Equal(t, sentTxs[0].Hash(), receivedTxs[0].Hash())
+
+	sendTxBinary, _ := sentTxs[0].MarshalBinary()
+	receivedTxBinary, _ := receivedTxs[0].MarshalBinary()
+	assert.Equal(t, sendTxBinary, receivedTxBinary)
+
 }
 
 func TestBasePeer_AsyncSendTransactions(t *testing.T) {
@@ -179,7 +189,8 @@ func TestBasePeer_SendBlockHeaders(t *testing.T) {
 	basePeer, _, oppositePipe := newBasePeer()
 	go func(t *testing.T) {
 		if err := basePeer.SendBlockHeaders(sentHeaders); err != nil {
-			t.Fatal(err)
+			t.Error(err)
+			return
 		}
 	}(t)
 	receivedMsg, err := oppositePipe.ReadMsg()
@@ -201,7 +212,8 @@ func TestBasePeer_SendFetchedBlockHeader(t *testing.T) {
 	basePeer, _, oppositePipe := newBasePeer()
 	go func(t *testing.T) {
 		if err := basePeer.SendFetchedBlockHeader(sentHeader); err != nil {
-			t.Fatal(err)
+			t.Error(err)
+			return
 		}
 	}(t)
 	receivedMsg, err := oppositePipe.ReadMsg()
@@ -223,7 +235,8 @@ func TestBasePeer_SendNodeData(t *testing.T) {
 	basePeer, _, oppositePipe := newBasePeer()
 	go func(t *testing.T) {
 		if err := basePeer.SendNodeData(sentData); err != nil {
-			t.Fatal(err)
+			t.Error(err)
+			return
 		}
 	}(t)
 	receivedMsg, err := oppositePipe.ReadMsg()
@@ -245,7 +258,8 @@ func TestBasePeer_FetchBlockHeader(t *testing.T) {
 	basePeer, _, oppositePipe := newBasePeer()
 	go func(t *testing.T) {
 		if err := basePeer.FetchBlockHeader(sentHash); err != nil {
-			t.Fatal(err)
+			t.Error(err)
+			return
 		}
 	}(t)
 	receivedMsg, err := oppositePipe.ReadMsg()
@@ -266,7 +280,8 @@ func TestBasePeer_RequestBodies(t *testing.T) {
 	basePeer, _, oppositePipe := newBasePeer()
 	go func(t *testing.T) {
 		if err := basePeer.RequestBodies(sentHashes); err != nil {
-			t.Fatal(err)
+			t.Error(err)
+			return
 		}
 	}(t)
 	receivedMsg, err := oppositePipe.ReadMsg()
@@ -287,7 +302,8 @@ func TestBasePeer_FetchBlockBodies(t *testing.T) {
 	basePeer, _, oppositePipe := newBasePeer()
 	go func(t *testing.T) {
 		if err := basePeer.FetchBlockBodies(sentHashes); err != nil {
-			t.Fatal(err)
+			t.Error(err)
+			return
 		}
 	}(t)
 	receivedMsg, err := oppositePipe.ReadMsg()
@@ -308,7 +324,8 @@ func TestBasePeer_RequestNodeData(t *testing.T) {
 	basePeer, _, oppositePipe := newBasePeer()
 	go func(t *testing.T) {
 		if err := basePeer.RequestNodeData(sentHashes); err != nil {
-			t.Fatal(err)
+			t.Error(err)
+			return
 		}
 	}(t)
 	receivedMsg, err := oppositePipe.ReadMsg()
@@ -329,7 +346,8 @@ func TestBasePeer_RequestReceipts(t *testing.T) {
 	basePeer, _, oppositePipe := newBasePeer()
 	go func(t *testing.T) {
 		if err := basePeer.RequestReceipts(sentHashes); err != nil {
-			t.Fatal(err)
+			t.Error(err)
+			return
 		}
 	}(t)
 	receivedMsg, err := oppositePipe.ReadMsg()

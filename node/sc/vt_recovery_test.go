@@ -812,7 +812,8 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 					case KLAY, ERC20, ERC721:
 						break
 					default:
-						t.Fatalf("received ev.TokenType is unknown: %v", ev.TokenType)
+						t.Errorf("received ev.TokenType is unknown: %v", ev.TokenType)
+						return
 					}
 
 					if ev.Raw.Address == info.localInfo.address {
