@@ -212,25 +212,29 @@ func TestRedisCache_Timeout(t *testing.T) {
 	go func() {
 		tcpAddr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:11234")
 		if err != nil {
-			t.Fatal(err)
+			t.Error(err)
+			return
 		}
 
 		listen, err := net.ListenTCP("tcp", tcpAddr)
 		if err != nil {
-			t.Fatal(err)
+			t.Error(err)
+			return
 		}
 		defer listen.Close()
 
 		for {
 			if err := listen.SetDeadline(time.Now().Add(10 * time.Second)); err != nil {
-				t.Fatal(err)
+				t.Error(err)
+				return
 			}
 			_, err := listen.AcceptTCP()
 			if err != nil {
 				if strings.Contains(err.Error(), "timeout") {
 					return
 				}
-				t.Fatal(err)
+				t.Error(err)
+				return
 			}
 		}
 	}()
