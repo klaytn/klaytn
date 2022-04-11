@@ -3,7 +3,6 @@ module github.com/klaytn/klaytn
 go 1.13
 
 require (
-	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/Shopify/sarama v1.26.4
 	github.com/VictoriaMetrics/fastcache v1.5.7
 	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf
@@ -69,5 +68,5 @@ require (
 	gopkg.in/olebedev/go-duktape.v3 v3.0.0-20181125150206-ccb656ba24c2
 	gopkg.in/sourcemap.v1 v1.0.5 // indirect
 	gopkg.in/urfave/cli.v1 v1.20.0
-	gotest.tools v2.2.0+incompatible // indirect
+	gotest.tools v2.2.0+incompatible
 )

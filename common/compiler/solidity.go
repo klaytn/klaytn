@@ -156,29 +156,22 @@ func CompileSolidityOrLoad(solc string, sourcefiles ...string) (map[string]*Cont
 	if err != nil {
 		return nil, err
 	}
-	sourceVersions := extractSourceVersion(source)
 
 	// Find available compiler, if any
 	s, err := SolidityVersion(solc)
 	if err != nil {
-		logger.Warn("Solidity compiler not found. Loading from file.")
-		contracts, err := loadCombinedJSON(source, sourcefiles...)
-		return contracts, err
-	}
-
-	// Check that compiler meets the version requirements
-	if canCompile, err := solcCanCompile(s.Version, sourceVersions); err != nil {
-		return nil, err
-	} else if !canCompile {
-		logger.Warn("Solidity compiler", s.Version, "cannot compile source versions",
-			sourceVersions, ". Loading from file.")
-		contracts, err := loadCombinedJSON(source, sourcefiles...)
-		return contracts, err
+		logger.Warn("Solidity compiler not found. Loading from file.", "err", err)
+		return loadCombinedJSON(source, sourcefiles...)
 	}
 
 	args := append(s.makeArgs(), "--")
 	cmd := exec.Command(s.Path, append(args, sourcefiles...)...)
-	return s.run(cmd, source)
+	contracts, err := s.run(cmd, source)
+	if err != nil {
+		logger.Warn("Solidity compiler cannot compile source versions. Loading from file.", "err", err)
+		return loadCombinedJSON(source, sourcefiles...)
+	}
+	return contracts, nil
 }
 
 // Search for CombinedJSON at <solidity_file_name>.json

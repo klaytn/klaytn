@@ -21,12 +21,9 @@ import (
 	"bytes"
 	"io/ioutil"
 	"regexp"
-
-	semver "github.com/Masterminds/semver/v3"
 )
 
 var versionRegexp = regexp.MustCompile(`([0-9]+)\.([0-9]+)\.([0-9]+)`)
-var pragmaVersionRegexp = regexp.MustCompile(`(?m)^pragma solidity (.+)\;$`)
 
 // Contract contains information about a compiled contract, alongside its code and runtime code.
 type Contract struct {
@@ -65,31 +62,4 @@ func slurpFiles(files []string) (string, error) {
 		concat.Write(content)
 	}
 	return concat.String(), nil
-}
-
-func extractSourceVersion(source string) []string {
-	matches := pragmaVersionRegexp.FindAllSubmatch([]byte(source), -1)
-	versions := make([]string, 0)
-	for _, match := range matches {
-		versions = append(versions, string(match[1]))
-	}
-	return versions
-}
-
-func solcCanCompile(solcVersion string, sourceVersions []string) (bool, error) {
-	v, err := semver.NewVersion(solcVersion)
-	if err != nil {
-		return false, err
-	}
-
-	for _, sourceVersion := range sourceVersions {
-		c, err := semver.NewConstraint(sourceVersion)
-		if err != nil {
-			return false, err
-		}
-		if !c.Check(v) {
-			return false, nil
-		}
-	}
-	return true, nil
 }

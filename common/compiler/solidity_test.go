@@ -41,24 +41,6 @@ func skipWithoutSolc(t *testing.T) {
 	}
 }
 
-func TestExtractSourceVersion(t *testing.T) {
-	tests := []struct {
-		source   string
-		expected []string
-	}{
-		{"pragma solidity ^0.4.24;\n", []string{"^0.4.24"}},
-		{"pragma solidity 0.4.24;\n", []string{"0.4.24"}},
-		{"pragma solidity ^0.4.24;\n", []string{"^0.4.24"}},
-		{"pragma solidity 0.4.24;\npragma solidity 0.4.25;\n", []string{"0.4.24", "0.4.25"}},
-		{"pragma solidity 0.4.24;\n//pragma solidity 0.4.25;\n", []string{"0.4.24"}},
-		{"//pragma solidity 0.4.24;\npragma solidity 0.4.25;\n", []string{"0.4.25"}},
-	}
-	for _, test := range tests {
-		v := extractSourceVersion(test.source)
-		assert.Equal(t, test.expected, v)
-	}
-}
-
 func TestSolidityCompiler(t *testing.T) {
 	skipWithoutSolc(t)
 
@@ -98,34 +80,15 @@ func TestSolidityCompileError(t *testing.T) {
 	t.Logf("error: %v", err)
 }
 
-func TestSolcCanCompile(t *testing.T) {
-	solcVersion := "0.8.11"
-	tests := []struct {
-		version  string
-		expected bool
-	}{
-		{"^0.8.11", true},
-		{"^0.4.24", false},
-		{"^0.5.6", false},
-		{"0.5.6", false},
-	}
-
-	for _, test := range tests {
-		r, err := solcCanCompile(solcVersion, []string{test.version})
-		assert.Equal(t, test.expected, r)
-		assert.Nil(t, err)
-	}
-}
-
-func TestSolidityCompileVersions(t *testing.T) {
+func TestCompileSolidityOrLoad(t *testing.T) {
 	// Usually only one version of solc is installed, if any.
 	// But CompileSolidityOrLoad will work in all cases.
 
-	versions := []string{"0.4.24", "0.8.11"}
+	versions := []string{"0.4.24", "0.8.13"}
 	for _, version := range versions {
 		t.Logf("testing version %s", version)
 
-		path := "../../contracts/compiler/version_" + version + ".sol"
+		path := "../../contracts/test/UnsafeMultiply_" + version + ".sol"
 
 		contracts, err := CompileSolidityOrLoad("", path)
 		assert.Nil(t, err)
