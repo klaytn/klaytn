@@ -413,6 +413,7 @@ func TestBasePeer_SendTransactionWithSortedByTime(t *testing.T) {
 	for i, tx := range receivedTxs {
 		assert.True(t, basePeer.KnowsTx(tx.Hash()))
 		assert.Equal(t, sortedTxs[i].Hash(), tx.Hash())
+		assert.False(t, sortedTxs[i].Time().Equal(tx.Time()))
 	}
 }
 
