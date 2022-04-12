@@ -27,7 +27,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"math/rand"
 	"reflect"
+	"sort"
 	"testing"
 	"time"
 
@@ -809,4 +811,50 @@ func assertEqual(orig *Transaction, cpy *Transaction) error {
 	}
 
 	return nil
+}
+
+func TestIsSorted(t *testing.T) {
+	signer := LatestSignerForChainID(big.NewInt(1))
+
+	key, _ := crypto.GenerateKey()
+	batches := make(Transactions, 10)
+
+	for i := 0; i < 10; i++ {
+		batches[i], _ = SignTx(NewTransaction(uint64(i), common.Address{}, big.NewInt(100), 100, big.NewInt(int64(i)), nil), signer, key)
+	}
+
+	// Shuffle transactions.
+	rand.Seed(time.Now().Unix())
+	rand.Shuffle(len(batches), func(i, j int) {
+		batches[i], batches[j] = batches[j], batches[i]
+	})
+
+	sort.Sort(TxByPriceAndTime(batches))
+	assert.True(t, sort.IsSorted(TxByPriceAndTime(batches)))
+}
+
+func BenchmarkTxSortByTime30000(b *testing.B) { benchmarkTxSortByTime(b, 30000) }
+func BenchmarkTxSortByTime20000(b *testing.B) { benchmarkTxSortByTime(b, 20000) }
+func benchmarkTxSortByTime(b *testing.B, size int) {
+	signer := LatestSignerForChainID(big.NewInt(1))
+
+	key, _ := crypto.GenerateKey()
+	batches := make(Transactions, size)
+
+	for i := 0; i < size; i++ {
+		batches[i], _ = SignTx(NewTransaction(uint64(i), common.Address{}, big.NewInt(100), 100, big.NewInt(int64(i)), nil), signer, key)
+	}
+
+	// Shuffle transactions.
+	rand.Seed(time.Now().Unix())
+	rand.Shuffle(len(batches), func(i, j int) {
+		batches[i], batches[j] = batches[j], batches[i]
+	})
+
+	// Benchmark importing the transactions into the queue
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		sort.Sort(TxByPriceAndTime(batches))
+	}
 }
