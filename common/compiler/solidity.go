@@ -26,10 +26,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os/exec"
 	"strconv"
 	"strings"
+
+	"github.com/klaytn/klaytn/log"
 )
+
+var logger = log.NewModuleLogger(log.Common)
 
 // Solidity contains information about the solidity compiler.
 type Solidity struct {
@@ -45,7 +50,7 @@ type solcOutput struct {
 		Bin, SrcMap, Abi, Devdoc, Userdoc, Metadata string
 		Hashes                                      map[string]string
 	}
-	Version string
+	Version string `json:"version"`
 }
 
 // solidity v.0.8 changes the way ABI, Devdoc and Userdoc are serialized
@@ -59,7 +64,7 @@ type solcOutputV8 struct {
 		Userdoc               interface{}
 		Hashes                map[string]string
 	}
-	Version string
+	Version string `json:"version"`
 }
 
 func (s *Solidity) makeArgs() []string {
@@ -134,6 +139,63 @@ func CompileSolidity(solc string, sourcefiles ...string) (map[string]*Contract, 
 	args := append(s.makeArgs(), "--")
 	cmd := exec.Command(s.Path, append(args, sourcefiles...)...)
 	return s.run(cmd, source)
+}
+
+// CompileSolidityOrLoad compiles all given Solidity source files.
+// If suitable compiler is not available, try to load combinedJSON stored as file.
+// The combinedJSON file should be named as *.sol.json.
+// Create combinedJSON with following command:
+//   solc --combined-json bin,bin-runtime,srcmap,srcmap-runtime,abi,userdoc,devdoc \
+//       --optimize --allow-paths '., ./, ../' test.sol > test.sol.json
+func CompileSolidityOrLoad(solc string, sourcefiles ...string) (map[string]*Contract, error) {
+	// Extract solidity version requirements from source codes
+	if len(sourcefiles) == 0 {
+		return nil, errors.New("solc: no source files")
+	}
+	source, err := slurpFiles(sourcefiles)
+	if err != nil {
+		return nil, err
+	}
+
+	// Find available compiler, if any
+	s, err := SolidityVersion(solc)
+	if err != nil {
+		logger.Warn("Solidity compiler not found. Loading from file.", "err", err)
+		return loadCombinedJSON(source, sourcefiles...)
+	}
+
+	args := append(s.makeArgs(), "--")
+	cmd := exec.Command(s.Path, append(args, sourcefiles...)...)
+	contracts, err := s.run(cmd, source)
+	if err != nil {
+		logger.Warn("Solidity compiler cannot compile source versions. Loading from file.", "err", err)
+		return loadCombinedJSON(source, sourcefiles...)
+	}
+	return contracts, nil
+}
+
+// Search for CombinedJSON at <solidity_file_name>.json
+func loadCombinedJSON(source string, sourcefiles ...string) (map[string]*Contract, error) {
+	path := sourcefiles[0] + ".json"
+	combinedJSON, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("Cannot open combined json at %s", path)
+	}
+
+	// Find compiler version from the loaded json
+	v := struct {
+		Version string `json:"version"`
+	}{}
+	if err := json.Unmarshal(combinedJSON, &v); err != nil {
+		return nil, fmt.Errorf("can't parse combined json version %s", err)
+	}
+	matches := versionRegexp.FindStringSubmatch(v.Version)
+	if len(matches) != 4 {
+		return nil, fmt.Errorf("can't parse combined json version %q", v.Version)
+	}
+	version := matches[0]
+
+	return ParseCombinedJSON(combinedJSON, source, version, version, "")
 }
 
 func (s *Solidity) run(cmd *exec.Cmd, source string) (map[string]*Contract, error) {
