@@ -20,6 +20,8 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"math/big"
+	"math/rand"
+	"sort"
 	"testing"
 	"time"
 
@@ -1006,6 +1008,129 @@ func TestProtocolManager_SetWsEndPoint(t *testing.T) {
 	wsep := "wsep"
 	pm.SetWsEndPoint(wsep)
 	assert.Equal(t, wsep, pm.wsendpoint)
+}
+
+func TestBroadcastTxsSortedByTime(t *testing.T) {
+	// Generate a batch of accounts to start with
+	keys := make([]*ecdsa.PrivateKey, 5)
+	for i := 0; i < len(keys); i++ {
+		keys[i], _ = crypto.GenerateKey()
+	}
+	signer := types.LatestSignerForChainID(big.NewInt(1))
+
+	// Generate a batch of transactions.
+	txs := types.Transactions{}
+	for _, key := range keys {
+		tx, _ := types.SignTx(types.NewTransaction(0, common.Address{}, big.NewInt(100), 100, big.NewInt(1), nil), signer, key)
+
+		txs = append(txs, tx)
+	}
+
+	// Shuffle transactions.
+	rand.Seed(time.Now().Unix())
+	rand.Shuffle(len(txs), func(i, j int) {
+		txs[i], txs[j] = txs[j], txs[i]
+	})
+
+	sortedTxs := make(types.Transactions, len(txs))
+	copy(sortedTxs, txs)
+
+	// Sort transaction by time.
+	sort.Sort(types.TxByPriceAndTime(sortedTxs))
+
+	pm := &ProtocolManager{}
+	pm.nodetype = common.ENDPOINTNODE
+
+	peers := newPeerSet()
+	basePeer, _, oppositePipe := newBasePeer()
+
+	pm.peers = peers
+	pm.peers.Register(basePeer)
+
+	go func(t *testing.T) {
+		pm.BroadcastTxs(txs)
+	}(t)
+
+	receivedMsg, err := oppositePipe.ReadMsg()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var receivedTxs types.Transactions
+	if err := receivedMsg.Decode(&receivedTxs); err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, len(txs), len(receivedTxs))
+
+	// It should be received transaction with sorted by times.
+	for i, tx := range receivedTxs {
+		assert.True(t, basePeer.KnowsTx(tx.Hash()))
+		assert.Equal(t, sortedTxs[i].Hash(), tx.Hash())
+		assert.False(t, sortedTxs[i].Time().Equal(tx.Time()))
+	}
+
+}
+
+func TestReBroadcastTxsSortedByTime(t *testing.T) {
+	// Generate a batch of accounts to start with
+	keys := make([]*ecdsa.PrivateKey, 5)
+	for i := 0; i < len(keys); i++ {
+		keys[i], _ = crypto.GenerateKey()
+	}
+	signer := types.LatestSignerForChainID(big.NewInt(1))
+
+	// Generate a batch of transactions.
+	txs := types.Transactions{}
+	for _, key := range keys {
+		tx, _ := types.SignTx(types.NewTransaction(0, common.Address{}, big.NewInt(100), 100, big.NewInt(1), nil), signer, key)
+
+		txs = append(txs, tx)
+	}
+
+	// Shuffle transactions.
+	rand.Seed(time.Now().Unix())
+	rand.Shuffle(len(txs), func(i, j int) {
+		txs[i], txs[j] = txs[j], txs[i]
+	})
+
+	sortedTxs := make(types.Transactions, len(txs))
+	copy(sortedTxs, txs)
+
+	// Sort transaction by time.
+	sort.Sort(types.TxByPriceAndTime(sortedTxs))
+
+	pm := &ProtocolManager{}
+	pm.nodetype = common.ENDPOINTNODE
+
+	peers := newPeerSet()
+	basePeer, _, oppositePipe := newBasePeer()
+
+	pm.peers = peers
+	pm.peers.Register(basePeer)
+
+	go func(t *testing.T) {
+		pm.ReBroadcastTxs(txs)
+	}(t)
+
+	receivedMsg, err := oppositePipe.ReadMsg()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var receivedTxs types.Transactions
+	if err := receivedMsg.Decode(&receivedTxs); err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, len(txs), len(receivedTxs))
+
+	// It should be received transaction with sorted by times.
+	for i, tx := range receivedTxs {
+		assert.Equal(t, sortedTxs[i].Hash(), tx.Hash())
+		assert.False(t, sortedTxs[i].Time().Equal(tx.Time()))
+	}
+
 }
 
 func contains(addrs []common.Address, item common.Address) bool {
