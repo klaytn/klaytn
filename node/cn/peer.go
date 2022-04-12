@@ -807,8 +807,10 @@ func (p *multiChannelPeer) Broadcast() {
 // SendTransactions sends transactions to the peer and includes the hashes
 // in its transaction hash set for future reference.
 func (p *multiChannelPeer) SendTransactions(txs types.Transactions) error {
-	//Before sending transactions, sort transactions in ascending order by time.
-	sort.Sort(types.TxByPriceAndTime(txs))
+	// Before sending transactions, sort transactions in ascending order by time.
+	if !sort.IsSorted(types.TxByPriceAndTime(txs)) {
+		sort.Sort(types.TxByPriceAndTime(txs))
+	}
 
 	for _, tx := range txs {
 		p.AddToKnownTxs(tx.Hash())
@@ -818,8 +820,10 @@ func (p *multiChannelPeer) SendTransactions(txs types.Transactions) error {
 
 // ReSendTransactions sends txs to a peer in order to prevent the txs from missing.
 func (p *multiChannelPeer) ReSendTransactions(txs types.Transactions) error {
-	//Before sending transactions, sort transactions in ascending order by time.
-	sort.Sort(types.TxByPriceAndTime(txs))
+	// Before sending transactions, sort transactions in ascending order by time.
+	if !sort.IsSorted(types.TxByPriceAndTime(txs)) {
+		sort.Sort(types.TxByPriceAndTime(txs))
+	}
 
 	return p.msgSender(TxMsg, txs)
 }
