@@ -445,7 +445,7 @@ func (p *basePeer) SendTransactions(txs types.Transactions) error {
 
 // ReSendTransactions sends txs to a peer in order to prevent the txs from missing.
 func (p *basePeer) ReSendTransactions(txs types.Transactions) error {
-	//Before sending transactions, sort transactions in ascending order by time.
+	// Before sending transactions, sort transactions in ascending order by time.
 	if !sort.IsSorted(types.TxByPriceAndTime(txs)) {
 		sort.Sort(types.TxByPriceAndTime(txs))
 	}
