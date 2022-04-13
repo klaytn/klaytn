@@ -1203,7 +1203,7 @@ func (pm *ProtocolManager) ReBroadcastTxs(txs types.Transactions) {
 		return
 	}
 
-	// This function sendTransaction() is called for each peer internally.
+	// This function calls sendTransaction() to broadcast the transactions for each peer.
 	// In that case, transactions are sorted for each peer in sendTransaction().
 	// Therefore, it prevents sorting transactions by each peer.
 	if !sort.IsSorted(types.TxByPriceAndTime(txs)) {
