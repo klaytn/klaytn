@@ -1114,7 +1114,7 @@ func (pm *ProtocolManager) BroadcastBlockHash(block *types.Block) {
 // BroadcastTxs propagates a batch of transactions to its peers which are not known to
 // already have the given transaction.
 func (pm *ProtocolManager) BroadcastTxs(txs types.Transactions) {
-	// This function sendTransaction() is called for each peer internally.
+	// This function calls sendTransaction() to broadcast the transactions for each peer.
 	// In that case, transactions are sorted for each peer in sendTransaction().
 	// Therefore, it prevents sorting transactions by each peer.
 	if !sort.IsSorted(types.TxByPriceAndTime(txs)) {
