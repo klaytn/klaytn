@@ -639,7 +639,7 @@ func TestExtendedBridgeAndCallbackERC721(t *testing.T) {
 		assert.Equal(t, ERC721, ev.TokenType)
 		assert.Equal(t, bobAcc.From, ev.To)
 
-		// HandleERC20Transfer
+		// HandleERC721Transfer
 		tx, err = b.HandleERC721Transfer(bridgeAccount, ev.Raw.TxHash, ev.From, ev.To, ev.TokenAddress, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, "", ev.ExtraData)
 		assert.NoError(t, err)
 		backend.Commit()
