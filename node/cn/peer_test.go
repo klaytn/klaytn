@@ -404,7 +404,8 @@ func TestBasePeer_SendTransactionWithSortedByTime(t *testing.T) {
 
 	go func(t *testing.T) {
 		if err := basePeer.SendTransactions(txs); err != nil {
-			t.Fatal(t)
+			t.Error(t)
+			return
 		}
 	}(t)
 
@@ -459,7 +460,8 @@ func TestBasePeer_ReSendTransactionWithSortedByTime(t *testing.T) {
 	basePeer, _, oppositePipe := newBasePeer()
 	go func(t *testing.T) {
 		if err := basePeer.ReSendTransactions(txs); err != nil {
-			t.Fatal(t)
+			t.Error(t)
+			return
 		}
 	}(t)
 
@@ -519,7 +521,8 @@ func TestMultiChannelPeer_SendTransactionWithSortedByTime(t *testing.T) {
 
 	go func(t *testing.T) {
 		if err := multiPeer.SendTransactions(txs); err != nil {
-			t.Fatal(t)
+			t.Error(t)
+			return
 		}
 	}(t)
 
@@ -580,7 +583,8 @@ func TestMultiChannelPeer_ReSendTransactionWithSortedByTime(t *testing.T) {
 
 	go func(t *testing.T) {
 		if err := multiPeer.ReSendTransactions(txs); err != nil {
-			t.Fatal(t)
+			t.Error(t)
+			return
 		}
 	}(t)
 
