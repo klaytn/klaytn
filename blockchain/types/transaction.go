@@ -506,6 +506,11 @@ func (tx *Transaction) Size() common.StorageSize {
 	return size
 }
 
+// Time returns the time that transaction was created.
+func (tx *Transaction) Time() time.Time {
+	return tx.time
+}
+
 // FillContractAddress fills contract address to receipt. This only works for types deploying a smart contract.
 func (tx *Transaction) FillContractAddress(from common.Address, r *Receipt) {
 	if filler, ok := tx.data.(TxInternalDataContractAddressFiller); ok {
