@@ -4,7 +4,7 @@ ARG PKG_DIR=/klaytn-docker-pkg
 ARG SRC_DIR=/go/src/github.com/klaytn/klaytn
 
 FROM ${DOCKER_BASE_IMAGE} AS builder
-LABEL maintainer="Austin Brown <austin.brown@groundx.xyz>"
+LABEL maintainer="Tony Lee <tony.jm@krustuniverse.com>"
 ARG SRC_DIR
 ARG PKG_DIR
 
@@ -20,7 +20,7 @@ ENV KLAYTN_DISABLE_SYMBOL=$KLAYTN_DISABLE_SYMBOL
 ADD . $SRC_DIR
 RUN cd $SRC_DIR && make all
 
-FROM alpine:3
+FROM ubuntu:20.04
 ARG SRC_DIR
 ARG PKG_DIR
 
