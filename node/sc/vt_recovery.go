@@ -359,14 +359,22 @@ func (vtr *valueTransferRecovery) recoverPendingEvents() error {
 	vtRequestEventMeter.Mark(int64(len(vtr.childEvents)))
 	vtRecoveredRequestEventMeter.Mark(int64(len(vtr.childEvents)))
 
-	vtr.pBridgeInfo.AddRequestValueTransferEvents(vtr.childEvents)
+	var events []interface{}
+	for _, event := range vtr.childEvents {
+		events = append(events, event)
+	}
+	vtr.pBridgeInfo.AddRequestValueTransferEvents(events)
 
 	if len(vtr.parentEvents) > 0 {
 		logger.Warn("VT Recovery : Parent -> Child Chain", "pBridge", vtr.pBridgeInfo.address.String(), "events", len(vtr.parentEvents))
 	}
 
 	vtHandleEventMeter.Mark(int64(len(vtr.parentEvents)))
-	vtr.cBridgeInfo.AddRequestValueTransferEvents(vtr.parentEvents)
+	events = []interface{}{}
+	for _, event := range vtr.parentEvents {
+		events = append(events, event)
+	}
+	vtr.cBridgeInfo.AddRequestValueTransferEvents(events)
 
 	return nil
 }
