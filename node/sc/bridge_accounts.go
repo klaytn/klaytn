@@ -36,7 +36,7 @@ import (
 )
 
 const (
-	DefaultBridgeTxGasLimit = 5000000
+	DefaultBridgeTxGasLimit = 10000000
 )
 
 var (
