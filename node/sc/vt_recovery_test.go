@@ -784,8 +784,8 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 	requestVTCh := make(chan *RequestValueTransferEvent)
 	handleVTCh := make(chan *HandleValueTransferEvent)
 	recoveryCh := make(chan bool)
-	bm.SubscribeRequestEvent(requestVTCh)
-	bm.SubscribeHandleEvent(handleVTCh)
+	bm.SubscribeReqVTev(requestVTCh)
+	bm.SubscribeHandleVTev(handleVTCh)
 
 	info := testInfo{
 		t, sim, sc, bm, localInfo, remoteInfo,
@@ -872,7 +872,7 @@ func handleKLAYTransfer(info *testInfo, bi *BridgeInfo, ev *RequestValueTransfer
 // TODO-Klaytn-ServiceChain: use ChildChainEventHandler
 func dummyHandleRequestKLAYTransfer(info *testInfo, bi *BridgeInfo) {
 	for _, ev := range bi.GetPendingRequestEvents() {
-		handleKLAYTransfer(info, bi, ev)
+		handleKLAYTransfer(info, bi, ev.(*RequestValueTransferEvent))
 	}
 	info.sim.Commit()
 }
@@ -917,7 +917,7 @@ func handleTokenTransfer(info *testInfo, bi *BridgeInfo, ev *RequestValueTransfe
 // TODO-Klaytn-ServiceChain: use ChildChainEventHandler
 func dummyHandleRequestTokenTransfer(info *testInfo, bi *BridgeInfo) {
 	for _, ev := range bi.GetPendingRequestEvents() {
-		handleTokenTransfer(info, bi, ev)
+		handleTokenTransfer(info, bi, ev.(*RequestValueTransferEvent))
 	}
 	info.sim.Commit()
 }
@@ -972,7 +972,7 @@ func handleNFTTransfer(info *testInfo, bi *BridgeInfo, ev *RequestValueTransferE
 // TODO-Klaytn-ServiceChain: use ChildChainEventHandler
 func dummyHandleRequestNFTTransfer(info *testInfo, bi *BridgeInfo) {
 	for _, ev := range bi.GetPendingRequestEvents() {
-		handleNFTTransfer(info, bi, ev)
+		handleNFTTransfer(info, bi, ev.(*RequestValueTransferEvent))
 	}
 	info.sim.Commit()
 }
