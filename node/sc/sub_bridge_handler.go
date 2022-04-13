@@ -331,7 +331,7 @@ func (sbh *SubBridgeHandler) handleParentChainInvalidTxResponseMsg(msg p2p.Msg) 
 	for _, txHash := range txHashes {
 		if tx := txPool.Get(txHash); tx != nil {
 			if err := txPool.RemoveTx(tx); err != nil {
-				logger.Trace("Failed to remove bridge tx",
+				logger.Error("Failed to remove bridge tx",
 					"txType", tx.Type(), "txNonce", tx.Nonce(), "txHash", tx.Hash())
 			}
 			logger.Trace("Removed invalid bridge tx",
