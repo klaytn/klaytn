@@ -76,28 +76,49 @@ contract BridgeTransferERC721 is BridgeTokens, IERC721BridgeReceiver, BridgeTran
         address _from,
         address _to,
         uint256 _tokenId,
-        bytes memory _extraData
+        bytes memory _extraData,
+        uint ver
     )
         internal
         onlyRegisteredToken(_tokenAddress)
         onlyUnlockedToken(_tokenAddress)
     {
         require(isRunning, "stopped bridge");
+        require(ver == 1 || ver == 2, "Unknown version");
 
+        if (ver == 1) {
+            emit RequestValueTransfer(
+                TokenType.ERC721,
+                _from,
+                _to,
+                _tokenAddress,
+                _tokenId,
+                requestNonce,
+                0,
+                _extraData
+            );
+        } else {
+            (bool success, bytes memory uri) = _tokenAddress.call(abi.encodePacked(ERC721Metadata(_tokenAddress).tokenURI.selector, abi.encode(_tokenId)));
+            if (success == false) {
+                uri = "";
+            }
+
+            emit RequestValueTransferEncoded(
+                ver,
+                TokenType.ERC721,
+                _from,
+                _to,
+                _tokenAddress,
+                _tokenId,
+                requestNonce,
+                0,
+                abi.encode(string(uri)),
+                _extraData
+            );
+        }
         if (modeMintBurn) {
             ERC721Burnable(_tokenAddress).burn(_tokenId);
         }
-
-        emit RequestValueTransfer(
-            TokenType.ERC721,
-            _from,
-            _to,
-            _tokenAddress,
-            _tokenId,
-            requestNonce,
-            0,
-            _extraData
-        );
         requestNonce++;
     }
 
@@ -110,7 +131,21 @@ contract BridgeTransferERC721 is BridgeTokens, IERC721BridgeReceiver, BridgeTran
     )
         public
     {
-        _requestERC721Transfer(msg.sender, _from, _to, _tokenId, _extraData);
+        uint V1 = 1;
+        _requestERC721Transfer(msg.sender, _from, _to, _tokenId, _extraData, V1);
+    }
+
+    // onERC721ReceivedV2 function is the smae function with onERC721Received, but emits different event that takes uri value.
+    function onERC721ReceivedV2(
+        address _from,
+        uint256 _tokenId,
+        address _to,
+        bytes memory _extraData
+    )
+        public
+    {
+        uint V2 = 2;
+        _requestERC721Transfer(msg.sender, _from, _to, _tokenId, _extraData, V2);
     }
 
     // requestERC721Transfer requests transfer ERC721 to _to on relative chain.
@@ -122,7 +157,22 @@ contract BridgeTransferERC721 is BridgeTokens, IERC721BridgeReceiver, BridgeTran
     )
         public
     {
+        uint V1 = 1;
         IERC721(_tokenAddress).transferFrom(msg.sender, address(this), _tokenId);
-        _requestERC721Transfer(_tokenAddress, msg.sender, _to, _tokenId, _extraData);
+        _requestERC721Transfer(_tokenAddress, msg.sender, _to, _tokenId, _extraData, V1);
+    }
+
+    // requestERC721TransferV2 is the smae function with requestERC721Transfer, but emits different event that takes uri value.
+    function requestERC721TransferV2(
+        address _tokenAddress,
+        address _to,
+        uint256 _tokenId,
+        bytes memory _extraData
+    )
+        public
+    {
+        uint V2 = 2;
+        IERC721(_tokenAddress).transferFrom(msg.sender, address(this), _tokenId);
+        _requestERC721Transfer(_tokenAddress, msg.sender, _to, _tokenId, _extraData, V2);
     }
 }
