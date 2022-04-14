@@ -31,7 +31,7 @@ func (s SCConfig) MarshalTOML() (interface{}, error) {
 		VTRecovery              bool
 		VTRecoveryInterval      uint64
 		Anchoring               bool
-    DefaultGasLimit         uint64
+		DefaultGasLimit         uint64
 		KASAnchor               bool
 		KASAnchorUrl            string
 		KASAnchorPeriod         uint64
@@ -101,7 +101,7 @@ func (s *SCConfig) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		VTRecovery              *bool
 		VTRecoveryInterval      *uint64
 		Anchoring               *bool
-    DefaultGasLimit         *uint64
+		DefaultGasLimit         *uint64
 		KASAnchor               *bool
 		KASAnchorUrl            *string
 		KASAnchorPeriod         *uint64
