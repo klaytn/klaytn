@@ -27,8 +27,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"math/rand"
 	"reflect"
+	"sort"
 	"testing"
+	"time"
 
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
@@ -599,6 +602,54 @@ func TestIntrinsicGas(t *testing.T) {
 	}
 }
 
+// Tests that if multiple transactions have the same price, the ones seen earlier
+// are prioritized to avoid network spam attacks aiming for a specific ordering.
+func TestTransactionTimeSort(t *testing.T) {
+	// Generate a batch of accounts to start with
+	keys := make([]*ecdsa.PrivateKey, 5)
+	for i := 0; i < len(keys); i++ {
+		keys[i], _ = crypto.GenerateKey()
+	}
+	signer := LatestSignerForChainID(big.NewInt(1))
+
+	// Generate a batch of transactions with overlapping prices, but different creation times
+	groups := map[common.Address]Transactions{}
+	for start, key := range keys {
+		addr := crypto.PubkeyToAddress(key.PublicKey)
+
+		tx, _ := SignTx(NewTransaction(0, common.Address{}, big.NewInt(100), 100, big.NewInt(1), nil), signer, key)
+		tx.time = time.Unix(0, int64(len(keys)-start))
+
+		groups[addr] = append(groups[addr], tx)
+	}
+	// Sort the transactions and cross check the nonce ordering
+	txset := NewTransactionsByPriceAndNonce(signer, groups)
+
+	txs := Transactions{}
+	for tx := txset.Peek(); tx != nil; tx = txset.Peek() {
+		txs = append(txs, tx)
+		txset.Shift()
+	}
+	if len(txs) != len(keys) {
+		t.Errorf("expected %d transactions, found %d", len(keys), len(txs))
+	}
+	for i, txi := range txs {
+		fromi, _ := Sender(signer, txi)
+		if i+1 < len(txs) {
+			next := txs[i+1]
+			fromNext, _ := Sender(signer, next)
+
+			if txi.GasPrice().Cmp(next.GasPrice()) < 0 {
+				t.Errorf("invalid gasprice ordering: tx #%d (A=%x P=%v) < tx #%d (A=%x P=%v)", i, fromi[:4], txi.GasPrice(), i+1, fromNext[:4], next.GasPrice())
+			}
+			// Make sure time order is ascending if the txs have the same gas price
+			if txi.GasPrice().Cmp(next.GasPrice()) == 0 && txi.time.After(next.time) {
+				t.Errorf("invalid received time ordering: tx #%d (A=%x T=%v) > tx #%d (A=%x T=%v)", i, fromi[:4], txi.time, i+1, fromNext[:4], next.time)
+			}
+		}
+	}
+}
+
 // TestTransactionCoding tests serializing/de-serializing to/from rlp and JSON.
 func TestTransactionCoding(t *testing.T) {
 	key, err := crypto.GenerateKey()
@@ -760,4 +811,50 @@ func assertEqual(orig *Transaction, cpy *Transaction) error {
 	}
 
 	return nil
+}
+
+func TestIsSorted(t *testing.T) {
+	signer := LatestSignerForChainID(big.NewInt(1))
+
+	key, _ := crypto.GenerateKey()
+	batches := make(Transactions, 10)
+
+	for i := 0; i < 10; i++ {
+		batches[i], _ = SignTx(NewTransaction(uint64(i), common.Address{}, big.NewInt(100), 100, big.NewInt(int64(i)), nil), signer, key)
+	}
+
+	// Shuffle transactions.
+	rand.Seed(time.Now().Unix())
+	rand.Shuffle(len(batches), func(i, j int) {
+		batches[i], batches[j] = batches[j], batches[i]
+	})
+
+	sort.Sort(TxByPriceAndTime(batches))
+	assert.True(t, sort.IsSorted(TxByPriceAndTime(batches)))
+}
+
+func BenchmarkTxSortByTime30000(b *testing.B) { benchmarkTxSortByTime(b, 30000) }
+func BenchmarkTxSortByTime20000(b *testing.B) { benchmarkTxSortByTime(b, 20000) }
+func benchmarkTxSortByTime(b *testing.B, size int) {
+	signer := LatestSignerForChainID(big.NewInt(1))
+
+	key, _ := crypto.GenerateKey()
+	batches := make(Transactions, size)
+
+	for i := 0; i < size; i++ {
+		batches[i], _ = SignTx(NewTransaction(uint64(i), common.Address{}, big.NewInt(100), 100, big.NewInt(int64(i)), nil), signer, key)
+	}
+
+	// Shuffle transactions.
+	rand.Seed(time.Now().Unix())
+	rand.Shuffle(len(batches), func(i, j int) {
+		batches[i], batches[j] = batches[j], batches[i]
+	})
+
+	// Benchmark importing the transactions into the queue
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		sort.Sort(TxByPriceAndTime(batches))
+	}
 }

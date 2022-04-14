@@ -14,12 +14,12 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity ^0.4.24;
+pragma solidity >0.8.0;
 
 contract FeePayer {
     function GetFeePayerDirect() public returns (address) {
         assembly {
-            if iszero(call(gas, 0x0a, 0, 0, 0, 12, 20)) {
+            if iszero(call(gas(), 0x0a, 0, 0, 0, 12, 20)) {
               invalid()
             }
             return(0, 32)
@@ -30,7 +30,7 @@ contract FeePayer {
         assembly {
             let freemem := mload(0x40)
             let start_addr := add(freemem, 12)
-            if iszero(call(gas, 0x0a, 0, 0, 0, start_addr, 20)) {
+            if iszero(call(gas(), 0x0a, 0, 0, 0, start_addr, 20)) {
               invalid()
             }
             addr := mload(freemem)

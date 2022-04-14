@@ -43,7 +43,8 @@ func TestTCPPipe(t *testing.T) {
 
 			_, err := c1.Write(msg)
 			if err != nil {
-				t.Fatal(err)
+				t.Error(err)
+				return
 			}
 		}
 
@@ -54,11 +55,13 @@ func TestTCPPipe(t *testing.T) {
 			out := make([]byte, size)
 			_, err := c2.Read(out)
 			if err != nil {
-				t.Fatal(err)
+				t.Error(err)
+				return
 			}
 
 			if !bytes.Equal(msg, out) {
-				t.Fatalf("expected %#v, got %#v", msg, out)
+				t.Errorf("expected %#v, got %#v", msg, out)
+				return
 			}
 		}
 		done <- struct{}{}
@@ -87,7 +90,8 @@ func TestTCPPipeBidirections(t *testing.T) {
 
 			_, err := c1.Write(msg)
 			if err != nil {
-				t.Fatal(err)
+				t.Error(err)
+				return
 			}
 		}
 
@@ -97,16 +101,19 @@ func TestTCPPipeBidirections(t *testing.T) {
 			out := make([]byte, size)
 			_, err := c2.Read(out)
 			if err != nil {
-				t.Fatal(err)
+				t.Error(err)
+				return
 			}
 
 			if !bytes.Equal(expected, out) {
-				t.Fatalf("expected %#v, got %#v", out, expected)
+				t.Errorf("expected %#v, got %#v", out, expected)
+				return
 			} else {
 				msg := []byte(fmt.Sprintf("pong %02d", i))
 				_, err := c2.Write(msg)
 				if err != nil {
-					t.Fatal(err)
+					t.Error(err)
+					return
 				}
 			}
 		}
@@ -117,11 +124,13 @@ func TestTCPPipeBidirections(t *testing.T) {
 			out := make([]byte, size)
 			_, err := c1.Read(out)
 			if err != nil {
-				t.Fatal(err)
+				t.Error(err)
+				return
 			}
 
 			if !bytes.Equal(expected, out) {
-				t.Fatalf("expected %#v, got %#v", out, expected)
+				t.Errorf("expected %#v, got %#v", out, expected)
+				return
 			}
 		}
 		done <- struct{}{}
@@ -153,7 +162,8 @@ func TestNetPipe(t *testing.T) {
 
 				_, err := c1.Write(msg)
 				if err != nil {
-					t.Fatal(err)
+					t.Error(err)
+					return
 				}
 			}
 		}()
@@ -165,11 +175,13 @@ func TestNetPipe(t *testing.T) {
 			out := make([]byte, size)
 			_, err := c2.Read(out)
 			if err != nil {
-				t.Fatal(err)
+				t.Error(err)
+				return
 			}
 
 			if !bytes.Equal(msg, out) {
-				t.Fatalf("expected %#v, got %#v", msg, out)
+				t.Errorf("expected %#v, got %#v", msg, out)
+				return
 			}
 		}
 
@@ -204,7 +216,8 @@ func TestNetPipeBidirections(t *testing.T) {
 
 				_, err := c1.Write(msg)
 				if err != nil {
-					t.Fatal(err)
+					t.Error(err)
+					return
 				}
 			}
 		}()
@@ -217,11 +230,13 @@ func TestNetPipeBidirections(t *testing.T) {
 				out := make([]byte, size)
 				_, err := c1.Read(out)
 				if err != nil {
-					t.Fatal(err)
+					t.Error(err)
+					return
 				}
 
 				if !bytes.Equal(expected, out) {
-					t.Fatalf("expected %#v, got %#v", expected, out)
+					t.Errorf("expected %#v, got %#v", expected, out)
+					return
 				}
 			}
 
@@ -235,17 +250,20 @@ func TestNetPipeBidirections(t *testing.T) {
 			out := make([]byte, size)
 			_, err := c2.Read(out)
 			if err != nil {
-				t.Fatal(err)
+				t.Error(err)
+				return
 			}
 
 			if !bytes.Equal(expected, out) {
-				t.Fatalf("expected %#v, got %#v", expected, out)
+				t.Errorf("expected %#v, got %#v", expected, out)
+				return
 			} else {
 				msg := []byte(fmt.Sprintf(pongTemplate, i))
 
 				_, err := c2.Write(msg)
 				if err != nil {
-					t.Fatal(err)
+					t.Error(err)
+					return
 				}
 			}
 		}

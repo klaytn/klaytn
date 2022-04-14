@@ -295,6 +295,7 @@ var FlagGroups = []FlagGroup{
 			KASServiceChainAccessKeyFlag,
 			KASServiceChainSecretKeyFlag,
 			KASServiceChainXChainIdFlag,
+			KASServiceChainAnchorRequestTimeoutFlag,
 		},
 	},
 	{
