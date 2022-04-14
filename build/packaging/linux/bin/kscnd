@@ -304,7 +304,7 @@ start_node() {
         fi
     fi
 
-    if [[ ! -z $SC_VTRECOVERY ]] && [[ $SC_VTRECOVERY -eq 1 ]]; then
+    if [[ (! -z $VTRECOVERY && $VTRECOVERY -eq 1 ) || (! -z $SC_VTRECOVERY && $SC_VTRECOVERY -eq 1) ]]; then
         OPTIONS="$OPTIONS --vtrecovery"
         if [[ ! -z $SC_VTRECOVERY_INTERVAL ]]; then
             OPTIONS="$OPTIONS --vtrecoveryinterval $SC_VTRECOVERY_INTERVAL"
