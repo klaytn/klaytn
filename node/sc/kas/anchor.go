@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
-	"time"
 
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -33,8 +32,6 @@ import (
 const (
 	codeOK              = 0
 	codeAlreadyAnchored = 1072100
-
-	apiCtxTimeout = 500 * time.Millisecond
 )
 
 var (
@@ -196,7 +193,7 @@ func (anchor *Anchor) sendRequest(payload interface{}) (*respBody, error) {
 	body := bytes.NewReader(bodyDataBytes)
 
 	// set up timeout for API call
-	ctx, cancel := context.WithTimeout(context.Background(), apiCtxTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), anchor.kasConfig.RequestTimeout)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, "POST", anchor.kasConfig.Url, body)

@@ -77,6 +77,7 @@ var CommonNodeFlags = []cli.Flag{
 	utils.MemorySizeFlag,
 	utils.TrieNodeCacheTypeFlag,
 	utils.NumFetcherPrefetchWorkerFlag,
+	utils.UseSnapshotForPrefetchFlag,
 	utils.TrieNodeCacheLimitFlag,
 	utils.TrieNodeCacheSavePeriodFlag,
 	utils.TrieNodeCacheRedisEndpointsFlag,
@@ -248,6 +249,7 @@ var KSCNFlags = []cli.Flag{
 	utils.KASServiceChainSecretKeyFlag,
 	utils.KASServiceChainAccessKeyFlag,
 	utils.KASServiceChainXChainIdFlag,
+	utils.KASServiceChainAnchorRequestTimeoutFlag,
 }
 
 var KSPNFlags = []cli.Flag{
@@ -276,6 +278,7 @@ var KSPNFlags = []cli.Flag{
 	utils.KASServiceChainSecretKeyFlag,
 	utils.KASServiceChainAccessKeyFlag,
 	utils.KASServiceChainXChainIdFlag,
+	utils.KASServiceChainAnchorRequestTimeoutFlag,
 }
 
 var KSENFlags = []cli.Flag{
@@ -300,6 +303,7 @@ var KSENFlags = []cli.Flag{
 	utils.KASServiceChainSecretKeyFlag,
 	utils.KASServiceChainAccessKeyFlag,
 	utils.KASServiceChainXChainIdFlag,
+	utils.KASServiceChainAnchorRequestTimeoutFlag,
 	// DBSyncer
 	utils.EnableDBSyncerFlag,
 	utils.DBHostFlag,

@@ -17,7 +17,6 @@
 package tests
 
 import (
-	"fmt"
 	"math/big"
 	"strings"
 	"testing"
@@ -36,13 +35,6 @@ import (
 func TestFeePayerContract(t *testing.T) {
 	contractFunctions := []string{"GetFeePayerDirect", "GetFeePayer"}
 
-	if isCompilerAvailable() == false {
-		if testing.Verbose() {
-			fmt.Printf("TestFeePayerContract is skipped due to the lack of solc.")
-		}
-		return
-	}
-
 	for _, c := range contractFunctions {
 		t.Run(c, func(t *testing.T) {
 			testFeePayerContract(t, c)
@@ -56,13 +48,6 @@ func TestFeePayerContract(t *testing.T) {
 // TODO-Klaytn-FeePayer: need more test cases for other calls such as delegatecall, etc.
 func TestFeePayerContractIndirect(t *testing.T) {
 	contractFunctions := []string{"TestCall"}
-
-	if isCompilerAvailable() == false {
-		if testing.Verbose() {
-			fmt.Printf("TestFeePayerContractIndirect is skipped due to the lack of solc.")
-		}
-		return
-	}
 
 	for _, c := range contractFunctions {
 		t.Run(c, func(t *testing.T) {
@@ -180,7 +165,11 @@ func testFeePayerContractIndirect(t *testing.T, fn string) {
 	// 1. Deploy the FeePayer contract.
 	callee_contracts, err := deployContract(callee_path, bcdata, accountMap, prof)
 	assert.Equal(t, nil, err)
-	callee := callee_contracts[callee_path+":FeePayer"]
+	var callee deployedContract
+	for _, v := range callee_contracts {
+		callee = *v
+		break
+	}
 
 	// 2. Deploy the FeePayerIndirect contract.
 	start = time.Now()
@@ -191,7 +180,13 @@ func testFeePayerContractIndirect(t *testing.T, fn string) {
 
 	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
 	{
-		c := caller_contracts[caller_path+":FeePayerIndirect"]
+		var c deployedContract
+		for k, v := range caller_contracts {
+			if strings.Contains(k, "FeePayerIndirect") {
+				c = *v
+				break
+			}
+		}
 		abii, err := abi.JSON(strings.NewReader(c.abi))
 
 		// 3. Make an input data for the contract call. The function name is given as a parameter.

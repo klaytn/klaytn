@@ -30,6 +30,7 @@ type TrieNodeCacheType string
 type TrieNodeCacheConfig struct {
 	CacheType                 TrieNodeCacheType
 	NumFetcherPrefetchWorker  int           // Number of workers used to prefetch a block when fetcher works
+	UseSnapshotForPrefetch    bool          // Enable snapshot functionality while prefetching
 	LocalCacheSizeMiB         int           // Memory allowance (MiB) to use for caching trie nodes in fast cache
 	FastCacheFileDir          string        // Directory where the persistent fastcache data is stored
 	FastCacheSavePeriod       time.Duration // Period of saving in memory trie cache to file if fastcache is used

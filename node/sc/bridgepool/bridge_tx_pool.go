@@ -390,27 +390,17 @@ func (pool *BridgeTxPool) AddLocals(txs []*types.Transaction) []error {
 func (pool *BridgeTxPool) addTx(tx *types.Transaction) error {
 	//senderCacher.recover(pool.signer, []*types.Transaction{tx})
 	// Try to inject the transaction and update any state
-	err := pool.add(tx)
-	return err
+	return pool.add(tx)
 }
 
 // addTxs attempts to queue a batch of transactions if they are valid.
 func (pool *BridgeTxPool) addTxs(txs []*types.Transaction) []error {
 	//senderCacher.recover(pool.signer, txs)
 	// Add the batch of transaction, tracking the accepted ones
-	dirty := make(map[common.Address]struct{})
 	errs := make([]error, len(txs))
 
 	for i, tx := range txs {
-		var replace bool
-		if errs[i] = pool.add(tx); errs[i] == nil {
-			if !replace {
-				from, err := types.Sender(pool.signer, tx)
-				errs[i] = err
-
-				dirty[from] = struct{}{}
-			}
-		}
+		errs[i] = pool.add(tx)
 	}
 
 	return errs
