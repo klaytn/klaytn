@@ -156,6 +156,18 @@ func NewBridgeInfo(sb *SubBridge, addr common.Address, bridge *bridgecontract.Br
 	return bi, nil
 }
 
+// handleValueTrnsferLog pushes value transfer transaction's log
+func handleValueTrnsferLog(isChild bool, funcName, txHash string, reqNonce uint64) {
+	// Note the `isChild` should be interpreted as reverse. Refer `ProcessRequestEvent()` in sub_event_handler.go
+	if isChild {
+		logger.Trace("Bridge contract transaction is created", "VTDirection", "parent--->child",
+			"contractCall", funcName, "nonce", reqNonce, "tx", txHash)
+	} else {
+		logger.Trace("Bridge contract transaction is created", "VTDirection", "child--->parent",
+			"contractCall", funcName, "nonce", reqNonce, "tx", txHash)
+	}
+}
+
 func (bi *BridgeInfo) loop() {
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
@@ -308,14 +320,13 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev *RequestValueTransferEv
 		if err != nil {
 			return err
 		}
-		logger.Trace("Bridge succeeded to HandleKLAYTransfer", "nonce", ev.RequestNonce, "tx", handleTx.Hash().String())
-
+		handleValueTrnsferLog(bi.onChildChain, "handleKLAYTransfer", handleTx.Hash().String(), ev.RequestNonce)
 	case ERC20:
 		handleTx, err = bi.bridge.HandleERC20Transfer(auth, ev.Raw.TxHash, ev.From, ev.To, tokenAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.ExtraData)
 		if err != nil {
 			return err
 		}
-		logger.Trace("Bridge succeeded to HandleERC20Transfer", "nonce", ev.RequestNonce, "tx", handleTx.Hash().String())
+		handleValueTrnsferLog(bi.onChildChain, "handleERC20Transfer", handleTx.Hash().String(), ev.RequestNonce)
 	case ERC721:
 		// get URI of the ERC721
 		var uri string
@@ -337,7 +348,7 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev *RequestValueTransferEv
 		if err != nil {
 			return err
 		}
-		logger.Trace("Bridge succeeded to HandleERC721Transfer", "nonce", ev.RequestNonce, "tx", handleTx.Hash().String())
+		handleValueTrnsferLog(bi.onChildChain, "handleERC721Transfer", handleTx.Hash().String(), ev.RequestNonce)
 	default:
 		logger.Error("Got Unknown Token Type ReceivedEvent", "bridge", ev.Raw.Address, "nonce", ev.RequestNonce, "from", ev.From)
 		return nil
