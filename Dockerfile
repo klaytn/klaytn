@@ -26,9 +26,6 @@ ARG PKG_DIR
 
 RUN mkdir -p $PKG_DIR/conf $PKG_DIR/bin
 
-# Add bash as required by the Klaytn startup scripts
-RUN apk add --no-cache bash
-
 # Startup scripts and binaries must be in the same location
 COPY --from=builder $SRC_DIR/build/bin/* $PKG_DIR/bin/
 COPY --from=builder $SRC_DIR/build/packaging/linux/bin/* $PKG_DIR/bin/
