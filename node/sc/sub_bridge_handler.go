@@ -344,6 +344,10 @@ func (sbh *SubBridgeHandler) writeServiceChainTxReceipts(bc *blockchain.BlockCha
 	for _, receipt := range receipts {
 		txHash := receipt.TxHash
 		if tx := sbh.subbridge.GetBridgeTxPool().Get(txHash); tx != nil {
+			if receipt.Status != types.ReceiptStatusSuccessful {
+				logger.Error("Transaction's receipt sent from child chain is invalid",
+					"status", receipt.Status, "txHash", txHash.String())
+			}
 			if tx.Type().IsChainDataAnchoring() {
 				data, err := tx.AnchoredData()
 				if err != nil {
