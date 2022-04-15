@@ -35,6 +35,14 @@ import (
 	"github.com/klaytn/klaytn/params"
 )
 
+
+const (
+	ParentOperatorStr       = "parentOperator"
+	ChildOperatorStr        = "childOperator"
+	ParentBridgeAccountName = "parent_bridge_account"
+	ChildBridgeAccountName  = "child_bridge_account"
+)
+
 var (
 	errUnlockDurationTooLarge = errors.New("unlock duration too large")
 )
@@ -73,8 +81,8 @@ type BridgeAccounts struct {
 func (ba *BridgeAccounts) GetBridgeOperators() map[string]interface{} {
 	res := make(map[string]interface{})
 
-	res["parentOperator"] = ba.pAccount.GetAccountInfo()
-	res["childOperator"] = ba.cAccount.GetAccountInfo()
+	res[ParentOperatorStr] = ba.pAccount.GetAccountInfo()
+	res[ChildOperatorStr] = ba.cAccount.GetAccountInfo()
 
 	return res
 }
@@ -115,23 +123,23 @@ func (ba *BridgeAccounts) GetBridgeGasLimit() uint64 {
 }
 
 // NewBridgeAccounts returns bridgeAccounts created by main/service bridge account keys.
-func NewBridgeAccounts(am *accounts.Manager, dataDir string, db feePayerDB, gaslimit uint64) (*BridgeAccounts, error) {
-	pKS, pAccAddr, isLock, err := InitializeBridgeAccountKeystore(path.Join(dataDir, "parent_bridge_account"))
+func NewBridgeAccounts(am *accounts.Manager, dataDir string, db feePayerDB) (*BridgeAccounts, error) {
+	pKS, pAccAddr, isLock, err := InitializeBridgeAccountKeystore(path.Join(dataDir, ParentBridgeAccountName))
 	if err != nil {
 		return nil, err
 	}
 
 	if isLock {
-		logger.Warn("parent_bridge_account is locked. Please unlock the account manually for Service Chain")
+		logger.Warn("parent bridge account is locked. Please unlock the account manually for Service Chain", "name", ParentBridgeAccountName)
 	}
 
-	cKS, cAccAddr, isLock, err := InitializeBridgeAccountKeystore(path.Join(dataDir, "child_bridge_account"))
+	cKS, cAccAddr, isLock, err := InitializeBridgeAccountKeystore(path.Join(dataDir, ChildBridgeAccountName))
 	if err != nil {
 		return nil, err
 	}
 
 	if isLock {
-		logger.Warn("child_bridge_account is locked. Please unlock the account manually for Service Chain")
+		logger.Warn("child bridge account is locked. Please unlock the account manually for Service Chain", "name", ChildBridgeAccountName)
 	}
 
 	logger.Info("bridge account is loaded", "parent", pAccAddr.String(), "child", cAccAddr.String())
