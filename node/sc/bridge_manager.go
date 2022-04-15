@@ -159,13 +159,14 @@ func NewBridgeInfo(sb *SubBridge, addr common.Address, bridge *bridgecontract.Br
 // handleValueTrnsferLog pushes value transfer transaction's log
 func handleValueTrnsferLog(isChild bool, funcName, txHash string, reqNonce uint64) {
 	// Note the `isChild` should be interpreted as reverse. Refer `ProcessRequestEvent()` in sub_event_handler.go
+	var vtDir string
 	if isChild {
-		logger.Trace("Bridge contract transaction is created", "VTDirection", "parent--->child",
-			"contractCall", funcName, "nonce", reqNonce, "tx", txHash)
+		vtDir = "parent--->child"
 	} else {
-		logger.Trace("Bridge contract transaction is created", "VTDirection", "child--->parent",
-			"contractCall", funcName, "nonce", reqNonce, "tx", txHash)
+		vtDir = "child--->parent"
 	}
+	logger.Trace("Bridge contract transaction is created", "VTDirection", vtDir,
+		"contractCall", funcName, "nonce", reqNonce, "tx", txHash)
 }
 
 func (bi *BridgeInfo) loop() {
