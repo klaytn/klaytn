@@ -427,6 +427,12 @@ func genBaobabTestGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Gen
 	testGenesis.Config.Governance.Reward.StakingUpdateInterval = 60
 	testGenesis.Config.Governance.Reward.ProposerUpdateInterval = 30
 	testGenesis.Config.Governance.Reward.MinimumStake = new(big.Int).SetUint64(5000000)
+
+	// To enable all the features in the test, set hardfork block number to 0
+	testGenesis.Config.IstanbulCompatibleBlock = big.NewInt(0)
+	testGenesis.Config.LondonCompatibleBlock = big.NewInt(0)
+	testGenesis.Config.EthTxTypeCompatibleBlock = big.NewInt(0)
+
 	allocationFunction := genesis.AllocWithPrebaobabContract(append(nodeAddrs, testAddrs...), new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil))
 	allocationFunction(testGenesis)
 	WriteFile([]byte(baobabOperatorAddress), "baobab_operator", "address")
