@@ -102,7 +102,6 @@ contract BridgeTransferERC721 is BridgeTokens, IERC721BridgeReceiver, BridgeTran
             if (success == false) {
                 uri = "";
             }
-
             emit RequestValueTransferEncoded(
                 ver,
                 TokenType.ERC721,
