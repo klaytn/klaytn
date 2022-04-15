@@ -745,7 +745,7 @@ var (
 	DefaultTxGasLimitFlag = cli.Uint64Flag{
 		Name:  "defaultgaslimit",
 		Usage: "Set the default value of gas limit for transactions made by bridges",
-		Value: 5000000,
+		Value: 10000000,
 	}
 	ServiceChainNewAccountFlag = cli.BoolFlag{
 		Name:  "scnewaccount",

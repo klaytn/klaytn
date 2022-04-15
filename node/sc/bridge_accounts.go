@@ -35,7 +35,6 @@ import (
 	"github.com/klaytn/klaytn/params"
 )
 
-
 const (
 	ParentOperatorStr       = "parentOperator"
 	ChildOperatorStr        = "childOperator"
