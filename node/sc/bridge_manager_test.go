@@ -177,6 +177,7 @@ func TestBridgeManager(t *testing.T) {
 	}
 
 	bridgeManager, err := NewBridgeManager(sc)
+	assert.NoError(t, err)
 
 	testToken := big.NewInt(123)
 	testKLAY := big.NewInt(321)
@@ -433,6 +434,7 @@ func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
 	}
 
 	bridgeManager, err := NewBridgeManager(sc)
+	assert.NoError(t, err)
 
 	// Deploy Bridge Contract
 	addr, err := bridgeManager.DeployBridgeTest(sim, false)
@@ -1027,6 +1029,7 @@ func TestBasicJournal(t *testing.T) {
 
 	// Prepare manager and deploy bridge contract.
 	bm, err := NewBridgeManager(sc)
+	assert.NoError(t, err)
 
 	localAddr, err := bm.DeployBridgeTest(sim, true)
 	assert.NoError(t, err)
@@ -1107,7 +1110,8 @@ func TestMethodRestoreBridges(t *testing.T) {
 	}
 
 	// Prepare manager and deploy bridge contract.
-	bm, _ := NewBridgeManager(sc)
+	bm, err := NewBridgeManager(sc)
+	assert.NoError(t, err)
 
 	var bridgeAddrs [4]common.Address
 	for i := 0; i < 4; i++ {
@@ -1332,7 +1336,9 @@ func TestErrorDuplicatedSetBridgeInfo(t *testing.T) {
 
 	// Prepare manager
 	bm, err := NewBridgeManager(sc)
+	assert.NoError(t, err)
 	addr, err := bm.DeployBridgeTest(sim, false)
+	assert.NoError(t, err)
 	bridgeInfo, _ := bm.GetBridgeInfo(addr)
 
 	// Try to call duplicated SetBridgeInfo
@@ -1397,6 +1403,7 @@ func TestScenarioSubUnsub(t *testing.T) {
 
 	// Prepare manager and deploy bridge contract.
 	bm, err := NewBridgeManager(sc)
+	assert.NoError(t, err)
 
 	localAddr, err := bm.DeployBridgeTest(sim, true)
 	if err != nil {
@@ -1502,6 +1509,7 @@ func TestErrorDupSubscription(t *testing.T) {
 
 	// 1. Prepare manager and subscribe event
 	bm, err := NewBridgeManager(sc)
+	assert.NoError(t, err)
 
 	addr, err := bm.DeployBridgeTest(sim, false)
 	bridgeInfo, _ := bm.GetBridgeInfo(addr)

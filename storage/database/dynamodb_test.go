@@ -294,12 +294,14 @@ func TestDynamoDB_Retry(t *testing.T) {
 	go func() {
 		tcpAddr, err := net.ResolveTCPAddr("tcp", fakeEndpoint)
 		if err != nil {
-			t.Fatal(err)
+			t.Error(err)
+			return
 		}
 
 		listen, err := net.ListenTCP("tcp", tcpAddr)
 		if err != nil {
-			t.Fatal(err)
+			t.Error(err)
+			return
 		}
 		defer listen.Close()
 
@@ -310,7 +312,8 @@ func TestDynamoDB_Retry(t *testing.T) {
 			// Deadline prevents infinite waiting of the fake server
 			// Wait longer than (maxRetries+1) * timeout
 			if err := listen.SetDeadline(time.Now().Add(10 * time.Second)); err != nil {
-				t.Fatal(err)
+				t.Error(err)
+				return
 			}
 			conn, err := listen.AcceptTCP()
 			if err != nil {

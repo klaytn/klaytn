@@ -19,6 +19,8 @@ package compiler
 import (
 	"os/exec"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -70,9 +72,32 @@ func TestSolidityCompiler(t *testing.T) {
 func TestSolidityCompileError(t *testing.T) {
 	skipWithoutSolc(t)
 
+	// Force syntax error by removing some characters.
 	contracts, err := CompileSolidityString("", testSource[4:])
 	if err == nil {
 		t.Errorf("error expected compiling source. got none. result %v", contracts)
 	}
 	t.Logf("error: %v", err)
+}
+
+func TestCompileSolidityOrLoad(t *testing.T) {
+	// Usually only one version of solc is installed, if any.
+	// But CompileSolidityOrLoad will work in all cases.
+
+	versions := []string{"0.4.24", "0.8.13"}
+	for _, version := range versions {
+		t.Logf("testing version %s", version)
+
+		path := "../../contracts/test/UnsafeMultiply_" + version + ".sol"
+
+		contracts, err := CompileSolidityOrLoad("", path)
+		assert.Nil(t, err)
+		assert.Equal(t, 1, len(contracts))
+
+		for _, contract := range contracts {
+			assert.NotNil(t, contract.Code)
+			assert.NotNil(t, contract.Info.AbiDefinition)
+			assert.Equal(t, version, contract.Info.CompilerVersion)
+		}
+	}
 }
