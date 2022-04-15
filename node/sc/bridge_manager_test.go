@@ -94,7 +94,7 @@ func TestBridgeManager(t *testing.T) {
 	// Config Bridge Account Manager
 	config := &SCConfig{}
 	config.DataDir = tempDir
-	bacc, _ := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), config.DefaultGasLimit)
+	bacc, _ := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), config.ServiceChainDefaultGasLimit)
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
@@ -339,7 +339,7 @@ func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
 	// Config Bridge Account Manager
 	config := &SCConfig{}
 	config.DataDir = tempDir
-	bacc, _ := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), config.DefaultGasLimit)
+	bacc, _ := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), config.ServiceChainDefaultGasLimit)
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
@@ -538,7 +538,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 	// Config Bridge Account Manager
 	config := &SCConfig{}
 	config.DataDir = tempDir
-	bacc, _ := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), config.DefaultGasLimit)
+	bacc, _ := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), config.ServiceChainDefaultGasLimit)
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
@@ -942,7 +942,7 @@ func TestBasicJournal(t *testing.T) {
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), config.DefaultGasLimit)
+	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), config.ServiceChainDefaultGasLimit)
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
@@ -1023,7 +1023,7 @@ func TestMethodRestoreBridges(t *testing.T) {
 	config.VTRecovery = true
 	config.VTRecoveryInterval = 60
 
-	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), config.DefaultGasLimit)
+	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), config.ServiceChainDefaultGasLimit)
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
@@ -1248,7 +1248,7 @@ func TestErrorDuplicatedSetBridgeInfo(t *testing.T) {
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), config.DefaultGasLimit)
+	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), config.ServiceChainDefaultGasLimit)
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
@@ -1315,7 +1315,7 @@ func TestScenarioSubUnsub(t *testing.T) {
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), config.DefaultGasLimit)
+	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), config.ServiceChainDefaultGasLimit)
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
@@ -1421,7 +1421,7 @@ func TestErrorDupSubscription(t *testing.T) {
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), config.DefaultGasLimit)
+	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), config.ServiceChainDefaultGasLimit)
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
@@ -1659,7 +1659,7 @@ func generateAnchoringEnv(t *testing.T, tempDir string) (*backends.SimulatedBack
 		ks,
 	}
 	am := accounts.NewManager(back...)
-	bAcc, _ := NewBridgeAccounts(am, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), config.DefaultGasLimit)
+	bAcc, _ := NewBridgeAccounts(am, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), config.ServiceChainDefaultGasLimit)
 	bAcc.pAccount.chainID = big.NewInt(0)
 	bAcc.cAccount.chainID = big.NewInt(0)
 	parentOperator := bAcc.pAccount
@@ -1742,7 +1742,7 @@ func TestAnchoringStart(t *testing.T) {
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bAcc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), config.DefaultGasLimit)
+	bAcc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), config.ServiceChainDefaultGasLimit)
 	bAcc.pAccount.chainID = big.NewInt(0)
 	bAcc.cAccount.chainID = big.NewInt(0)
 
@@ -1825,7 +1825,7 @@ func TestAnchoringPeriod(t *testing.T) {
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bAcc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), config.DefaultGasLimit)
+	bAcc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), config.ServiceChainDefaultGasLimit)
 	bAcc.pAccount.chainID = big.NewInt(0)
 	bAcc.cAccount.chainID = big.NewInt(0)
 
@@ -1949,7 +1949,7 @@ func TestDecodingLegacyAnchoringTx(t *testing.T) {
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bAcc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), config.DefaultGasLimit)
+	bAcc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), config.ServiceChainDefaultGasLimit)
 	bAcc.pAccount.chainID = big.NewInt(0)
 	bAcc.cAccount.chainID = big.NewInt(0)
 

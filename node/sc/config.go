@@ -91,11 +91,11 @@ type SCConfig struct {
 	AnchoringPeriod       uint64
 	SentChainTxsLimit     uint64
 
-	ParentChainID      uint64
-	VTRecovery         bool
-	VTRecoveryInterval uint64
-	Anchoring          bool
-	DefaultGasLimit    uint64
+	ParentChainID               uint64
+	VTRecovery                  bool
+	VTRecoveryInterval          uint64
+	Anchoring                   bool
+	ServiceChainDefaultGasLimit uint64
 
 	// KAS
 	KASAnchor               bool

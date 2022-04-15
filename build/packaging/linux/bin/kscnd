@@ -309,7 +309,7 @@ start_node() {
     fi
 
     if [ ! -z $SC_DEFAULTGASLIMIT ]; then
-        OPTIONS="$OPTIONS --defaultgaslimit $SC_DEFAULTGASLIMIT"
+        OPTIONS="$OPTIONS --scdefaultgaslimit $SC_DEFAULTGASLIMIT"
     fi
 
     if [[ ! -z $VTRECOVERY ]] && [[ $VTRECOVERY -eq 1 ]]; then

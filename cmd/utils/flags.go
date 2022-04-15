@@ -742,8 +742,8 @@ var (
 		Usage: "Set the value transfer recovery interval (seconds)",
 		Value: 60,
 	}
-	DefaultTxGasLimitFlag = cli.Uint64Flag{
-		Name:  "defaultgaslimit",
+	ServiceChainDefaultTxGasLimitFlag = cli.Uint64Flag{
+		Name:  "scdefaultgaslimit",
 		Usage: "Set the default value of gas limit for transactions made by bridges",
 		Value: 10000000,
 	}
