@@ -288,7 +288,7 @@ var FlagGroups = []FlagGroup{
 			VTRecoveryIntervalFlag,
 			ServiceChainAnchoringFlag,
 			ServiceChainNewAccountFlag,
-			DefaultTxGasLimitFlag,
+			ServiceChainDefaultTxGasLimitFlag,
 			KASServiceChainAnchorFlag,
 			KASServiceChainAnchorPeriodFlag,
 			KASServiceChainAnchorUrlFlag,
