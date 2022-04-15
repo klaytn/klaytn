@@ -30,14 +30,13 @@ contract ERC721ServiceChain is ERC721, Ownable {
     address public bridge;
 
     constructor(address _bridge) internal {
-        if (!_bridge.isContract()) {
-            revert("bridge is not a contract");
-        }
-
-        bridge = _bridge;
+        setBridge(_bridge);
     }
 
     function setBridge(address _bridge) public onlyOwner {
+        if (!_bridge.isContract()) {
+            revert("bridge is not a contract");
+        }
         bridge = _bridge;
     }
 
