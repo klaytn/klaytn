@@ -359,9 +359,9 @@ func (vtr *valueTransferRecovery) recoverPendingEvents() error {
 	vtRequestEventMeter.Mark(int64(len(vtr.childEvents)))
 	vtRecoveredRequestEventMeter.Mark(int64(len(vtr.childEvents)))
 
-	var events []interface{}
-	for _, event := range vtr.childEvents {
-		events = append(events, event)
+	events := make([]interface{}, len(vtr.childEvents))
+	for i, event := range vtr.childEvents {
+		events[i] = event
 	}
 	vtr.pBridgeInfo.AddRequestValueTransferEvents(events)
 
@@ -370,9 +370,9 @@ func (vtr *valueTransferRecovery) recoverPendingEvents() error {
 	}
 
 	vtHandleEventMeter.Mark(int64(len(vtr.parentEvents)))
-	events = []interface{}{}
-	for _, event := range vtr.parentEvents {
-		events = append(events, event)
+	events = make([]interface{}, len(vtr.parentEvents))
+	for i, event := range vtr.parentEvents {
+		events[i] = event
 	}
 	vtr.cBridgeInfo.AddRequestValueTransferEvents(events)
 
