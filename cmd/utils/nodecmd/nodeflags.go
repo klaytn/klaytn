@@ -271,6 +271,7 @@ var KSPNFlags = []cli.Flag{
 	utils.VTRecoveryIntervalFlag,
 	utils.ServiceChainNewAccountFlag,
 	utils.ServiceChainAnchoringFlag,
+	utils.DefaultTxGasLimitFlag,
 	// KAS
 	utils.KASServiceChainAnchorFlag,
 	utils.KASServiceChainAnchorPeriodFlag,
@@ -296,6 +297,7 @@ var KSENFlags = []cli.Flag{
 	utils.VTRecoveryIntervalFlag,
 	utils.ServiceChainAnchoringFlag,
 	utils.KESNodeTypeServiceFlag,
+	utils.DefaultTxGasLimitFlag,
 	// KAS
 	utils.KASServiceChainAnchorFlag,
 	utils.KASServiceChainAnchorPeriodFlag,
