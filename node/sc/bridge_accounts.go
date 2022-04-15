@@ -111,19 +111,19 @@ func (ba *BridgeAccounts) SetChildOperatorFeePayer(feePayer common.Address) erro
 	return nil
 }
 
-//SetBridgeGasLimit changes value of DefaultBridgeTxGasLimit.
+//SetBridgeGasLimit changes GasLimit of parent and child operator.
 func (ba *BridgeAccounts) SetBridgeGasLimit(fee uint64) {
 	ba.pAccount.gasLimit = fee
 	ba.cAccount.gasLimit = fee
 }
 
-//GetBridgeGasLimit gets value of DefaultBridgeTxGasLimit.
+//GetBridgeGasLimit gets value of GasLimit of operator.
 func (ba *BridgeAccounts) GetBridgeGasLimit() uint64 {
 	return ba.pAccount.gasLimit
 }
 
 // NewBridgeAccounts returns bridgeAccounts created by main/service bridge account keys.
-func NewBridgeAccounts(am *accounts.Manager, dataDir string, db feePayerDB) (*BridgeAccounts, error) {
+func NewBridgeAccounts(am *accounts.Manager, dataDir string, db feePayerDB, gaslimit uint64) (*BridgeAccounts, error) {
 	pKS, pAccAddr, isLock, err := InitializeBridgeAccountKeystore(path.Join(dataDir, ParentBridgeAccountName))
 	if err != nil {
 		return nil, err
