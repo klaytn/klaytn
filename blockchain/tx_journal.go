@@ -22,11 +22,12 @@ package blockchain
 
 import (
 	"errors"
+	"io"
+	"os"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/rlp"
-	"io"
-	"os"
 )
 
 // errNoActiveJournal is returned if a transaction is attempted to be inserted

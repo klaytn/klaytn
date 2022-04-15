@@ -23,7 +23,6 @@ package blockchain
 import (
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/klaytn/klaytn/rlp"
 	"io"
 	"io/ioutil"
 	"math/big"
@@ -31,6 +30,8 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"github.com/klaytn/klaytn/rlp"
 
 	"github.com/klaytn/klaytn/fork"
 
