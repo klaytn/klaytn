@@ -1394,13 +1394,13 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
-			name: 'getBridgeGasLimit',
-			call: 'subbridge_getBridgeGasLimit',
+			name: 'getBridgeOperatorGasLimit',
+			call: 'subbridge_getBridgeOperatorGasLimit',
 			params: 0
 		}),
 		new web3._extend.Method({
-			name: 'setBridgeGasLimit',
-			call: 'subbridge_setBridgeGasLimit',
+			name: 'setBridgeOperatorGasLimit',
+			call: 'subbridge_setBridgeOperatorGasLimit',
 			params: 1
 		}),
 	],

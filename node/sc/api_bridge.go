@@ -557,8 +557,8 @@ func (sb *SubBridgeAPI) SetChildOperatorFeePayer(feePayer common.Address) error 
 	return sb.subBridge.bridgeAccounts.SetChildOperatorFeePayer(feePayer)
 }
 
-// SetBridgeGasLimit changes value of DefaultBridgeTxGasLimit.
-func (sb *SubBridgeAPI) SetBridgeGasLimit(fee uint64) {
+// SetBridgeOperatorGasLimit changes value of DefaultBridgeTxGasLimit.
+func (sb *SubBridgeAPI) SetBridgeOperatorGasLimit(fee uint64) {
 	sb.subBridge.bridgeAccounts.SetBridgeOperatorGasLimit(fee)
 }
 
@@ -572,7 +572,7 @@ func (sb *SubBridgeAPI) GetChildOperatorFeePayer() common.Address {
 	return sb.subBridge.bridgeAccounts.GetChildOperatorFeePayer()
 }
 
-// GetBridgeGasLimit gets value of DefaultBridgeTxGasLimit.
-func (sb *SubBridgeAPI) GetBridgeGasLimit() uint64 {
+// GetBridgeOperatorGasLimit gets value of DefaultBridgeTxGasLimit.
+func (sb *SubBridgeAPI) GetBridgeOperatorGasLimit() uint64 {
 	return sb.subBridge.bridgeAccounts.GetBridgeOperatorGasLimit()
 }
