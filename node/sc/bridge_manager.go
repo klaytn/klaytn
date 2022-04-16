@@ -1143,3 +1143,23 @@ func (bm *BridgeManager) GetFeeReceiver(bridgeAddr common.Address) (common.Addre
 
 	return bi.bridge.FeeReceiver(nil)
 }
+
+// IsInParentAddrs returns true if the bridgeAddr is in the list of parent bridge addresses and returns false if not.
+func (bm *BridgeManager) IsInParentAddrs(bridgeAddr common.Address) bool {
+	for _, journal := range bm.journal.cache {
+		if journal.ParentAddress == bridgeAddr {
+			return true
+		}
+	}
+	return false
+}
+
+// IsInChildAddrs returns true if the bridgeAddr is in the list of child bridge addresses and returns false if not.
+func (bm *BridgeManager) IsInChildAddrs(bridgeAddr common.Address) bool {
+	for _, journal := range bm.journal.cache {
+		if journal.ChildAddress == bridgeAddr {
+			return true
+		}
+	}
+	return false
+}
