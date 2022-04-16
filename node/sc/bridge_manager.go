@@ -289,28 +289,24 @@ func (bi *BridgeInfo) UpdateInfo() error {
 // handleRequestValueTransferEvent handles the given request value transfer event.
 func (bi *BridgeInfo) handleRequestValueTransferEvent(_ev interface{}) error {
 	var (
-		tokenType      uint8
-		tokenAddr      common.Address
-		txHash         common.Hash
-		from           common.Address
-		to             common.Address
-		valueOrTokenId *big.Int
-		requestNonce   uint64
-		blockNumber    uint64
-		extraData      []byte
-		addr           common.Address
-		verEv          uint
+		tokenType                         uint8
+		tokenAddr, from, to, contractAddr common.Address
+		txHash                            common.Hash
+		valueOrTokenId                    *big.Int
+		requestNonce, blkNumber           uint64
+		extraData                         []byte
+		verEv                             uint
 	)
 
 	switch ev := _ev.(type) {
 	case *RequestValueTransferEvent:
 		tokenType, tokenAddr, txHash, from, to = ev.TokenType, ev.TokenAddress, ev.Raw.TxHash, ev.From, ev.To
-		valueOrTokenId, requestNonce, blockNumber, extraData, addr = ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.ExtraData, ev.Raw.Address
+		valueOrTokenId, requestNonce, blkNumber, extraData, contractAddr = ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.ExtraData, ev.Raw.Address
 		verEv = 1
 	case *RequestValueTransferEncodedEvent:
 		tokenType, tokenAddr, txHash, from, to = ev.TokenType, ev.TokenAddress, ev.Raw.TxHash, ev.From, ev.To
-		valueOrTokenId, requestNonce, blockNumber, extraData, addr = ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.ExtraData, ev.Raw.Address
-		verEv = uint(ev.Ver.Uint64())
+		valueOrTokenId, requestNonce, blkNumber, extraData, contractAddr = ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.ExtraData, ev.Raw.Address
+		verEv = uint(ev.EncodingVer.Uint64())
 	default:
 		return ErrUnknownEvent
 	}
@@ -345,13 +341,13 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(_ev interface{}) error {
 
 	switch tokenType {
 	case KLAY:
-		handleTx, err = bi.bridge.HandleKLAYTransfer(auth, txHash, from, to, valueOrTokenId, requestNonce, blockNumber, extraData)
+		handleTx, err = bi.bridge.HandleKLAYTransfer(auth, txHash, from, to, valueOrTokenId, requestNonce, blkNumber, extraData)
 		if err != nil {
 			return err
 		}
 		logger.Trace("Bridge succeeded to HandleKLAYTransfer", "nonce", requestNonce, "tx", handleTx.Hash().String())
 	case ERC20:
-		handleTx, err = bi.bridge.HandleERC20Transfer(auth, txHash, from, to, ctpartTokenAddr, valueOrTokenId, requestNonce, blockNumber, extraData)
+		handleTx, err = bi.bridge.HandleERC20Transfer(auth, txHash, from, to, ctpartTokenAddr, valueOrTokenId, requestNonce, blkNumber, extraData)
 		if err != nil {
 			return err
 		}
@@ -359,10 +355,10 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(_ev interface{}) error {
 	case ERC721:
 		switch verEv {
 		case 1:
-			handleTx, err = bi.bridge.HandleERC721Transfer(auth, txHash, from, to, ctpartTokenAddr, valueOrTokenId, requestNonce, blockNumber, "", extraData)
+			handleTx, err = bi.bridge.HandleERC721Transfer(auth, txHash, from, to, ctpartTokenAddr, valueOrTokenId, requestNonce, blkNumber, "", extraData)
 		case 2:
 			uri := _ev.(*RequestValueTransferEncodedEvent).Uri
-			handleTx, err = bi.bridge.HandleERC721Transfer(auth, txHash, from, to, ctpartTokenAddr, valueOrTokenId, requestNonce, blockNumber, uri, extraData)
+			handleTx, err = bi.bridge.HandleERC721Transfer(auth, txHash, from, to, ctpartTokenAddr, valueOrTokenId, requestNonce, blkNumber, uri, extraData)
 		default:
 			return ErrUnknownEvent
 		}
@@ -371,7 +367,7 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(_ev interface{}) error {
 		}
 		logger.Trace("Bridge succeeded to HandleERC721Transfer", "nonce", requestNonce, "tx", handleTx.Hash().String())
 	default:
-		logger.Error("Got Unknown Token Type ReceivedEvent", "bridge", addr, "nonce", requestNonce, "from", from)
+		logger.Error("Got Unknown Token Type ReceivedEvent", "bridge", contractAddr, "nonce", requestNonce, "from", from)
 		return nil
 	}
 
@@ -1088,8 +1084,8 @@ func (bm *BridgeManager) loop(
 		case ev := <-chanReqVT:
 			bm.reqVTevFeeder.Send(&RequestValueTransferEvent{ev})
 		case ev := <-chanReqVTencoded:
-			encodeVer := ev.Ver.Uint64()
-			decoded := UnpackEncodedEvent(encodeVer, ev.EncodedEvent)
+			encodeVer := ev.EncodingVer.Uint64()
+			decoded := UnpackEncodedData(encodeVer, ev.EncodedData)
 			switch encodeVer {
 			case 2:
 				if uri, ok := decoded.(string); ok {
