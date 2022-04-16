@@ -44,9 +44,4 @@ contract ERC721ServiceChain is ERC721, Ownable {
         transferFrom(msg.sender, bridge, _uid);
         IERC721BridgeReceiver(bridge).onERC721Received(msg.sender, _uid, _to, _extraData);
     }
-
-    function requestValueTransferV2(uint256 _uid, address _to, bytes calldata _extraData) external {
-        transferFrom(msg.sender, bridge, _uid);
-        IERC721BridgeReceiver(bridge).onERC721ReceivedV2(msg.sender, _uid, _to, _extraData);
-    }
 }
