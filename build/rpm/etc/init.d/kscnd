@@ -283,8 +283,11 @@ if [[ ! -z $SC_SUB_BRIDGE ]] && [[ $SC_SUB_BRIDGE -eq 1 ]]; then
     fi
 fi
 
-if [[ ! -z $VTRECOVERY ]] && [[ $VTRECOVERY -eq 1 ]]; then
+if [[ (! -z $VTRECOVERY && $VTRECOVERY -eq 1 ) || (! -z $SC_VTRECOVERY && $SC_VTRECOVERY -eq 1) ]]; then
     OPTIONS="$OPTIONS --vtrecovery"
+    if [[ ! -z $SC_VTRECOVERY_INTERVAL ]]; then
+        OPTIONS="$OPTIONS --vtrecoveryinterval $SC_VTRECOVERY_INTERVAL"
+    fi
 fi
 
 if [[ ! -z $ADDITIONAL ]] && [[ $ADDITIONAL != "" ]]; then
