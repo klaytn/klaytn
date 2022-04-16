@@ -603,6 +603,10 @@ func TestExtendedBridgeAndCallbackERC721(t *testing.T) {
 	requestSub, err := b.WatchRequestValueTransfer(nil, requestValueTransferEventCh, nil, nil, nil)
 	assert.NoError(t, err)
 	defer requestSub.Unsubscribe()
+	requestValueTransferEncodedEventCh := make(chan *bridge.BridgeRequestValueTransferEncoded, 10)
+	requestEncodedEvSub, err := b.WatchRequestValueTransferEncoded(nil, requestValueTransferEncodedEventCh, nil, nil, nil)
+	assert.NoError(t, err)
+	defer requestEncodedEvSub.Unsubscribe()
 
 	handleValueTransferEventCh := make(chan *bridge.BridgeHandleValueTransfer, 10)
 	handleSub, err := b.WatchHandleValueTransfer(nil, handleValueTransferEventCh, nil, nil, nil)
@@ -644,6 +648,26 @@ func TestExtendedBridgeAndCallbackERC721(t *testing.T) {
 		assert.NoError(t, err)
 		backend.Commit()
 		assert.Nil(t, bind.CheckWaitMined(backend, tx))
+
+	case ev := <-requestValueTransferEncodedEventCh:
+		assert.Equal(t, testToken.String(), ev.ValueOrTokenId.String())
+		assert.Equal(t, rNonce, ev.RequestNonce)
+		assert.Equal(t, erc721Addr, ev.TokenAddress)
+		assert.Equal(t, ERC721, ev.TokenType)
+		assert.Equal(t, bobAcc.From, ev.To)
+
+		encodeVer := ev.EncodingVer.Uint64()
+		decoded := UnpackEncodedData(encodeVer, ev.EncodedData)
+		switch encodeVer {
+		case 2:
+			if uri, ok := decoded.(string); ok {
+				// HandleERC721Transfer
+				tx, err = b.HandleERC721Transfer(bridgeAccount, ev.Raw.TxHash, ev.From, ev.To, ev.TokenAddress, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, uri, ev.ExtraData)
+				assert.NoError(t, err)
+				backend.Commit()
+				assert.Nil(t, bind.CheckWaitMined(backend, tx))
+			}
+		}
 
 	case <-time.After(time.Second):
 		t.Fatalf("requestValueTransferEvent was not found.")
