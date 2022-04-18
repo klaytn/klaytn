@@ -44,7 +44,7 @@ executors:
     docker:
       - image: klaytn/circleci-rpmbuild:1.18
   default:
-    working_directory: /go/src/github.com/klaytn/klaytn
+    working_directory: ~/go/src/github.com/klaytn/klaytn
     docker:
       - image: cimg/go:1.18
 
