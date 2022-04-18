@@ -63,6 +63,12 @@ commands:
             curl -O https://dl.google.com/go/go1.18.linux-amd64.tar.gz
             mkdir $HOME/go1.18
             tar -C $HOME/go1.18 -xzf go1.18.linux-amd64.tar.gz
+  install-golangci-lint:
+    steps:
+      - run:
+          name: "Install golangci-lint"
+          command: |
+            curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.45.2
   pre-build:
     description: "before build, set version"
     steps:
@@ -304,6 +310,7 @@ jobs:
   test-linter:
     executor: test-executor
     steps:
+      - install-golangci-lint
       - checkout
       - run:
           name: "Run golangci-lint"
