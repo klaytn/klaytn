@@ -42,7 +42,7 @@ executors:
   rpm-executor:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
-      - image: klaytn/circleci-rpmbuild:1.15.7
+      - image: klaytn/circleci-rpmbuild:1.18
   default:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
