@@ -156,8 +156,8 @@ func NewBridgeInfo(sb *SubBridge, addr common.Address, bridge *bridgecontract.Br
 	return bi, nil
 }
 
-// handleValueTrnsferLog pushes value transfer transaction's log
-func handleValueTrnsferLog(isChild bool, funcName, txHash string, reqNonce uint64) {
+// handleValueTransferLog pushes value transfer transaction's log
+func handleValueTransferLog(isChild bool, funcName, txHash string, reqNonce uint64) {
 	// Note the `isChild` should be interpreted as reverse. Refer `ProcessRequestEvent()` in sub_event_handler.go
 	var vtDir string
 	if isChild {
@@ -321,13 +321,13 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev *RequestValueTransferEv
 		if err != nil {
 			return err
 		}
-		handleValueTrnsferLog(bi.onChildChain, "handleKLAYTransfer", handleTx.Hash().String(), ev.RequestNonce)
+		handleValueTransferLog(bi.onChildChain, "handleKLAYTransfer", handleTx.Hash().String(), ev.RequestNonce)
 	case ERC20:
 		handleTx, err = bi.bridge.HandleERC20Transfer(auth, ev.Raw.TxHash, ev.From, ev.To, tokenAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.ExtraData)
 		if err != nil {
 			return err
 		}
-		handleValueTrnsferLog(bi.onChildChain, "handleERC20Transfer", handleTx.Hash().String(), ev.RequestNonce)
+		handleValueTransferLog(bi.onChildChain, "handleERC20Transfer", handleTx.Hash().String(), ev.RequestNonce)
 	case ERC721:
 		// get URI of the ERC721
 		var uri string
@@ -349,7 +349,7 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev *RequestValueTransferEv
 		if err != nil {
 			return err
 		}
-		handleValueTrnsferLog(bi.onChildChain, "handleERC721Transfer", handleTx.Hash().String(), ev.RequestNonce)
+		handleValueTransferLog(bi.onChildChain, "handleERC721Transfer", handleTx.Hash().String(), ev.RequestNonce)
 	default:
 		logger.Error("Got Unknown Token Type ReceivedEvent", "bridge", ev.Raw.Address, "nonce", ev.RequestNonce, "from", ev.From)
 		return nil
