@@ -49,6 +49,12 @@ executors:
       - image: circleci/golang:latest
 
 commands:
+  install-netcat:
+    steps:
+      - run:
+          name: "Install netcat"
+          command: |
+            apt install -y netcat
   install-golang:
     steps:
       - run:
@@ -307,6 +313,7 @@ jobs:
   test-datasync:
     executor: test-others-executor
     steps:
+      - install-netcat
       - checkout
       - wait-other-containers-ready
       - run:
@@ -337,6 +344,7 @@ jobs:
   test-others:
     executor: test-others-executor
     steps:
+      - install-netcat
       - checkout
       - wait-other-containers-ready
       - run:
@@ -362,6 +370,7 @@ jobs:
     executor: test-others-executor
     resource_class: xlarge
     steps:
+      - install-netcat
       - checkout
       - wait-other-containers-ready
       - run:
