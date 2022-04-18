@@ -665,7 +665,7 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bacc, err := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}))
+	bacc, err := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit)
 	assert.NoError(t, err)
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
@@ -703,9 +703,9 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 
 	// Prepare manager and deploy bridge contract.
 	bm, err := NewBridgeManager(sc)
-	localAddr, err := bm.DeployBridgeTest(sim, true)
+	localAddr, err := bm.DeployBridgeTest(sim, 10000, true)
 	assert.NoError(t, err)
-	remoteAddr, err := bm.DeployBridgeTest(sim, false)
+	remoteAddr, err := bm.DeployBridgeTest(sim, 10000, false)
 	assert.NoError(t, err)
 
 	localInfo, _ := bm.GetBridgeInfo(localAddr)

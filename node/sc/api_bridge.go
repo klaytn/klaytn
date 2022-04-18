@@ -31,7 +31,8 @@ import (
 )
 
 var (
-	ErrInvalidBridgePair = errors.New("invalid bridge pair")
+	ErrInvalidBridgePair             = errors.New("Invalid bridge pair")
+	ErrBridgeContractVersionMismatch = errors.New("Bridge contract version mismatch")
 )
 
 // MainBridgeAPI Implementation for main-bridge node
@@ -242,7 +243,7 @@ func (sb *SubBridgeAPI) KASAnchor(blkNum uint64) error {
 		}
 		return nil
 	}
-	return errInvalidBlock
+	return ErrInvalidBlock
 }
 
 func (sb *SubBridgeAPI) Anchoring(flag bool) bool {
@@ -510,8 +511,18 @@ func (sb *SubBridgeAPI) GetParentOperatorBalance() (*big.Int, error) {
 	return sb.subBridge.handler.getParentOperatorBalance()
 }
 
+// GetParentBridgeContractBalance returns the balance of the bridge contract in the parent chain.
+func (sb *SubBridgeAPI) GetParentBridgeContractBalance(addr common.Address) (*big.Int, error) {
+	return sb.subBridge.handler.getParentBridgeContractBalance(addr)
+}
+
 func (sb *SubBridgeAPI) GetChildOperatorBalance() (*big.Int, error) {
 	return sb.subBridge.handler.getChildOperatorBalance()
+}
+
+// GetChildBridgeContractBalance returns the balance of the bridge contract in the child chain.
+func (sb *SubBridgeAPI) GetChildBridgeContractBalance(addr common.Address) (*big.Int, error) {
+	return sb.subBridge.handler.getChildBridgeContractBalance(addr)
 }
 
 // GetOperators returns the information of bridge operators.
@@ -557,6 +568,11 @@ func (sb *SubBridgeAPI) SetChildOperatorFeePayer(feePayer common.Address) error 
 	return sb.subBridge.bridgeAccounts.SetChildOperatorFeePayer(feePayer)
 }
 
+// SetBridgeOperatorGasLimit changes value of DefaultBridgeTxGasLimit.
+func (sb *SubBridgeAPI) SetBridgeOperatorGasLimit(fee uint64) {
+	sb.subBridge.bridgeAccounts.SetBridgeOperatorGasLimit(fee)
+}
+
 // GetParentOperatorFeePayer can return the parent bridge operator's fee payer.
 func (sb *SubBridgeAPI) GetParentOperatorFeePayer() common.Address {
 	return sb.subBridge.bridgeAccounts.GetParentOperatorFeePayer()
@@ -565,4 +581,9 @@ func (sb *SubBridgeAPI) GetParentOperatorFeePayer() common.Address {
 // GetChildOperatorFeePayer can return the child bridge operator's fee payer.
 func (sb *SubBridgeAPI) GetChildOperatorFeePayer() common.Address {
 	return sb.subBridge.bridgeAccounts.GetChildOperatorFeePayer()
+}
+
+// GetBridgeOperatorGasLimit gets value of DefaultBridgeTxGasLimit.
+func (sb *SubBridgeAPI) GetBridgeOperatorGasLimit() uint64 {
+	return sb.subBridge.bridgeAccounts.GetBridgeOperatorGasLimit()
 }
