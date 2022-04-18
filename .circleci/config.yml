@@ -294,7 +294,8 @@ commands:
 
 jobs:
   build:
-    machine: true
+    machine:
+      image: ubuntu-2004:202201-02
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
