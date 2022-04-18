@@ -21,6 +21,7 @@
 package types
 
 import (
+	"bytes"
 	"container/heap"
 	"crypto/ecdsa"
 	"encoding/json"
@@ -29,6 +30,9 @@ import (
 	"math/big"
 	"sync"
 	"sync/atomic"
+	"time"
+
+	"github.com/klaytn/klaytn/common/math"
 
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
@@ -47,15 +51,17 @@ var (
 	errNotImplementTxInternalDataFrom = errors.New("not implement TxInternalDataFrom")
 	errNotFeeDelegationTransaction    = errors.New("not a fee delegation type transaction")
 	errInvalidValueMap                = errors.New("tx fields should be filled with valid values")
+	errNotImplementTxInternalEthTyped = errors.New("not implement TxInternalDataEthTyped")
 )
 
 // deriveSigner makes a *best* guess about which signer to use.
 func deriveSigner(V *big.Int) Signer {
-	return NewEIP155Signer(deriveChainId(V))
+	return LatestSignerForChainID(deriveChainId(V))
 }
 
 type Transaction struct {
 	data TxInternalData
+	time time.Time
 	// caches
 	hash         atomic.Value
 	size         atomic.Value
@@ -90,12 +96,20 @@ func NewTransactionWithMap(t TxType, values map[TxValueKeyType]interface{}) (tx 
 			retErr = errInvalidValueMap
 		}
 	}()
-	txdata, err := NewTxInternalDataWithMap(t, values)
+	txData, err := NewTxInternalDataWithMap(t, values)
 	if err != nil {
 		return nil, err
 	}
-	tx = &Transaction{data: txdata}
+	tx = NewTx(txData)
 	return tx, retErr
+}
+
+// NewTx creates a new transaction.
+func NewTx(data TxInternalData) *Transaction {
+	tx := new(Transaction)
+	tx.setDecoded(data, 0)
+
+	return tx
 }
 
 func NewTransaction(nonce uint64, to common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *Transaction {
@@ -128,7 +142,7 @@ func newTransaction(nonce uint64, to *common.Address, amount *big.Int, gasLimit 
 		d.Price.Set(gasPrice)
 	}
 
-	return &Transaction{data: &d}
+	return NewTx(&d)
 }
 
 // ChainId returns which chain id this transaction was signed for (if at all)
@@ -181,6 +195,15 @@ func (tx *Transaction) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, serializer)
 }
 
+// MarshalBinary returns the canonical encoding of the transaction.
+// For legacy transactions, it returns the RLP encoding. For typed
+// transactions, it returns the type and payload.
+func (tx *Transaction) MarshalBinary() ([]byte, error) {
+	var buf bytes.Buffer
+	err := tx.EncodeRLP(&buf)
+	return buf.Bytes(), err
+}
+
 // DecodeRLP implements rlp.Decoder
 func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
 	serializer := newTxInternalDataSerializer()
@@ -192,9 +215,21 @@ func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
 		return ErrInvalidSig
 	}
 
-	tx.data = serializer.tx
-	tx.Size()
+	size := calculateTxSize(serializer.tx)
+	tx.setDecoded(serializer.tx, int(size))
 
+	return nil
+}
+
+// UnmarshalBinary decodes the canonical encoding of transactions.
+// It supports legacy RLP transactions and EIP2718 typed transactions.
+func (tx *Transaction) UnmarshalBinary(b []byte) error {
+	newTx := &Transaction{}
+	if err := rlp.DecodeBytes(b, newTx); err != nil {
+		return err
+	}
+
+	tx.setDecoded(newTx.data, len(b))
 	return nil
 }
 
@@ -216,21 +251,80 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 	if !serializer.tx.ValidateSignature() {
 		return ErrInvalidSig
 	}
-	*tx = Transaction{data: serializer.tx}
+
+	tx.setDecoded(serializer.tx, 0)
 	return nil
+}
+
+func (tx *Transaction) setDecoded(inner TxInternalData, size int) {
+	tx.data = inner
+	tx.time = time.Now()
+
+	if size > 0 {
+		tx.size.Store(common.StorageSize(size))
+	}
 }
 
 func (tx *Transaction) Gas() uint64        { return tx.data.GetGasLimit() }
 func (tx *Transaction) GasPrice() *big.Int { return new(big.Int).Set(tx.data.GetPrice()) }
-func (tx *Transaction) Value() *big.Int    { return new(big.Int).Set(tx.data.GetAmount()) }
-func (tx *Transaction) Nonce() uint64      { return tx.data.GetAccountNonce() }
+func (tx *Transaction) GasTipCap() *big.Int {
+	if tx.Type() == TxTypeEthereumDynamicFee {
+		te := tx.GetTxInternalData().(TxInternalDataBaseFee)
+		return te.GetGasTipCap()
+	}
+
+	return tx.data.GetPrice()
+}
+
+func (tx *Transaction) GasFeeCap() *big.Int {
+	if tx.Type() == TxTypeEthereumDynamicFee {
+		te := tx.GetTxInternalData().(TxInternalDataBaseFee)
+		return te.GetGasFeeCap()
+	}
+
+	return tx.data.GetPrice()
+}
+
+func (tx *Transaction) EffectiveGasTip(baseFee *big.Int) *big.Int {
+	if tx.Type() == TxTypeEthereumDynamicFee {
+		te := tx.GetTxInternalData().(TxInternalDataBaseFee)
+		return math.BigMin(te.GetGasTipCap(), new(big.Int).Sub(te.GetGasFeeCap(), baseFee))
+	}
+
+	return tx.GasPrice()
+}
+
+func (tx *Transaction) EffectiveGasPrice(baseFee *big.Int) *big.Int {
+	if tx.Type() == TxTypeEthereumDynamicFee {
+		te := tx.GetTxInternalData().(TxInternalDataBaseFee)
+		return math.BigMin(new(big.Int).Add(te.GetGasTipCap(), baseFee), te.GetGasFeeCap())
+	}
+
+	return tx.GasPrice()
+}
+
+func (tx *Transaction) AccessList() AccessList {
+	if tx.IsEthTypedTransaction() {
+		te := tx.GetTxInternalData().(TxInternalDataEthTyped)
+		return te.GetAccessList()
+	}
+	return nil
+}
+
+func (tx *Transaction) Value() *big.Int { return new(big.Int).Set(tx.data.GetAmount()) }
+func (tx *Transaction) Nonce() uint64   { return tx.data.GetAccountNonce() }
 func (tx *Transaction) CheckNonce() bool {
 	tx.mu.RLock()
 	defer tx.mu.RUnlock()
 	return tx.checkNonce
 }
-func (tx *Transaction) Type() TxType              { return tx.data.Type() }
-func (tx *Transaction) IsLegacyTransaction() bool { return tx.data.IsLegacyTransaction() }
+func (tx *Transaction) Type() TxType                { return tx.data.Type() }
+func (tx *Transaction) IsLegacyTransaction() bool   { return tx.Type().IsLegacyTransaction() }
+func (tx *Transaction) IsEthTypedTransaction() bool { return tx.Type().IsEthTypedTransaction() }
+func (tx *Transaction) IsEthereumTransaction() bool {
+	return tx.Type().IsEthereumTransaction()
+}
+
 func (tx *Transaction) ValidatedSender() common.Address {
 	tx.mu.RLock()
 	defer tx.mu.RUnlock()
@@ -261,7 +355,7 @@ func (tx *Transaction) Validate(db StateDB, blockNumber uint64) error {
 func (tx *Transaction) ValidateMutableValue(db StateDB, signer Signer, currentBlockNumber uint64) error {
 	// validate the sender's account key
 	accKey := db.GetKey(tx.ValidatedSender())
-	if tx.IsLegacyTransaction() {
+	if tx.IsEthereumTransaction() {
 		if !accKey.Type().IsLegacyAccountKey() {
 			return ErrInvalidSigSender
 		}
@@ -342,7 +436,7 @@ func (tx *Transaction) To() *common.Address {
 // Since a legacy transaction (TxInternalDataLegacy) does not have the field `from`,
 // calling From() is failed for `TxInternalDataLegacy`.
 func (tx *Transaction) From() (common.Address, error) {
-	if tx.IsLegacyTransaction() {
+	if tx.IsEthereumTransaction() {
 		return common.Address{}, errLegacyTransaction
 	}
 
@@ -386,7 +480,15 @@ func (tx *Transaction) Hash() common.Hash {
 	if hash := tx.hash.Load(); hash != nil {
 		return hash.(common.Hash)
 	}
-	v := rlpHash(tx)
+
+	var v common.Hash
+	if tx.IsEthTypedTransaction() {
+		te := tx.data.(TxInternalDataEthTyped)
+		v = te.TxHash()
+	} else {
+		v = rlpHash(tx)
+	}
+
 	tx.hash.Store(v)
 	return v
 }
@@ -397,10 +499,16 @@ func (tx *Transaction) Size() common.StorageSize {
 	if size := tx.size.Load(); size != nil {
 		return size.(common.StorageSize)
 	}
-	c := writeCounter(0)
-	rlp.Encode(&c, &tx.data)
-	tx.size.Store(common.StorageSize(c))
-	return common.StorageSize(c)
+
+	size := calculateTxSize(tx.data)
+	tx.size.Store(size)
+
+	return size
+}
+
+// Time returns the time that transaction was created.
+func (tx *Transaction) Time() time.Time {
+	return tx.time
 }
 
 // FillContractAddress fills contract address to receipt. This only works for types deploying a smart contract.
@@ -456,26 +564,39 @@ func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKey
 // WithSignature returns a new transaction with the given signature.
 // This signature needs to be formatted as described in the yellow paper (v+27).
 func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, error) {
-	r, s, v, err := signer.SignatureValues(sig)
+	r, s, v, err := signer.SignatureValues(tx, sig)
 	if err != nil {
 		return nil, err
 	}
-	cpy := &Transaction{data: tx.data}
+
+	cpy := &Transaction{data: tx.data, time: tx.time}
+	if tx.Type().IsEthTypedTransaction() {
+		te, ok := cpy.data.(TxInternalDataEthTyped)
+		if ok {
+			te.setSignatureValues(signer.ChainID(), v, r, s)
+		} else {
+			return nil, errNotImplementTxInternalEthTyped
+		}
+	}
+
 	cpy.data.SetSignature(TxSignatures{&TxSignature{v, r, s}})
 	return cpy, nil
 }
 
 // WithFeePayerSignature returns a new transaction with the given fee payer signature.
 func (tx *Transaction) WithFeePayerSignature(signer Signer, sig []byte) (*Transaction, error) {
-	r, s, v, err := signer.SignatureValues(sig)
+	r, s, v, err := signer.SignatureValues(tx, sig)
 	if err != nil {
 		return nil, err
 	}
+
+	cpy := &Transaction{data: tx.data, time: tx.time}
+
 	feePayerSig := TxSignatures{&TxSignature{v, r, s}}
-	if err := tx.SetFeePayerSignatures(feePayerSig); err != nil {
+	if err := cpy.SetFeePayerSignatures(feePayerSig); err != nil {
 		return nil, err
 	}
-	return tx, nil
+	return cpy, nil
 }
 
 // Cost returns amount + gasprice * gaslimit.
@@ -492,7 +613,7 @@ func (tx *Transaction) Fee() *big.Int {
 // Sign signs the tx with the given signer and private key.
 func (tx *Transaction) Sign(s Signer, prv *ecdsa.PrivateKey) error {
 	h := s.Hash(tx)
-	sig, err := NewTxSignatureWithValues(s, h, prv)
+	sig, err := NewTxSignatureWithValues(s, tx, h, prv)
 	if err != nil {
 		return err
 	}
@@ -504,7 +625,7 @@ func (tx *Transaction) Sign(s Signer, prv *ecdsa.PrivateKey) error {
 // SignWithKeys signs the tx with the given signer and a slice of private keys.
 func (tx *Transaction) SignWithKeys(s Signer, prv []*ecdsa.PrivateKey) error {
 	h := s.Hash(tx)
-	sig, err := NewTxSignaturesWithValues(s, h, prv)
+	sig, err := NewTxSignaturesWithValues(s, tx, h, prv)
 	if err != nil {
 		return err
 	}
@@ -519,7 +640,7 @@ func (tx *Transaction) SignFeePayer(s Signer, prv *ecdsa.PrivateKey) error {
 	if err != nil {
 		return err
 	}
-	sig, err := NewTxSignatureWithValues(s, h, prv)
+	sig, err := NewTxSignatureWithValues(s, tx, h, prv)
 	if err != nil {
 		return err
 	}
@@ -537,7 +658,7 @@ func (tx *Transaction) SignFeePayerWithKeys(s Signer, prv []*ecdsa.PrivateKey) e
 	if err != nil {
 		return err
 	}
-	sig, err := NewTxSignaturesWithValues(s, h, prv)
+	sig, err := NewTxSignaturesWithValues(s, tx, h, prv)
 	if err != nil {
 		return err
 	}
@@ -596,7 +717,7 @@ func (tx *Transaction) String() string {
 // ValidateSender finds a sender from both legacy and new types of transactions.
 // It returns the senders address and gas used for the tx validation.
 func (tx *Transaction) ValidateSender(signer Signer, p AccountKeyPicker, currentBlockNumber uint64) (uint64, error) {
-	if tx.IsLegacyTransaction() {
+	if tx.IsEthereumTransaction() {
 		addr, err := Sender(signer, tx)
 		// Legacy transaction cannot be executed unless the account has a legacy key.
 		if p.GetKey(addr).Type().IsLegacyAccountKey() == false {
@@ -719,19 +840,28 @@ func (s TxByNonce) Less(i, j int) bool {
 }
 func (s TxByNonce) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 
-// TxByPrice implements both the sort and the heap interface, making it useful
+// TxByPriceAndTime implements both the sort and the heap interface, making it useful
 // for all at once sorting as well as individually adding and removing elements.
-type TxByPrice Transactions
+type TxByPriceAndTime Transactions
 
-func (s TxByPrice) Len() int           { return len(s) }
-func (s TxByPrice) Less(i, j int) bool { return s[i].data.GetPrice().Cmp(s[j].data.GetPrice()) > 0 }
-func (s TxByPrice) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+func (s TxByPriceAndTime) Len() int { return len(s) }
+func (s TxByPriceAndTime) Less(i, j int) bool {
+	// If the prices are equal, use the time the transaction was first seen for
+	// deterministic sorting
+	cmp := s[i].GasPrice().Cmp(s[j].GasPrice())
+	if cmp == 0 {
+		return s[i].time.Before(s[j].time)
+	}
+	return cmp > 0
 
-func (s *TxByPrice) Push(x interface{}) {
+}
+func (s TxByPriceAndTime) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+
+func (s *TxByPriceAndTime) Push(x interface{}) {
 	*s = append(*s, x.(*Transaction))
 }
 
-func (s *TxByPrice) Pop() interface{} {
+func (s *TxByPriceAndTime) Pop() interface{} {
 	old := *s
 	n := len(old)
 	x := old[n-1]
@@ -744,7 +874,7 @@ func (s *TxByPrice) Pop() interface{} {
 // entire batches of transactions for non-executable accounts.
 type TransactionsByPriceAndNonce struct {
 	txs    map[common.Address]Transactions // Per account nonce-sorted list of transactions
-	heads  TxByPrice                       // Next transaction for each unique account (price heap)
+	heads  TxByPriceAndTime                // Next transaction for each unique account (price heap)
 	signer Signer                          // Signer for the set of transactions
 }
 
@@ -769,8 +899,8 @@ func (t *TransactionsByPriceAndNonce) Txs() map[common.Address]Transactions {
 // Note, the input map is reowned so the caller should not interact any more with
 // if after providing it to the constructor.
 func NewTransactionsByPriceAndNonce(signer Signer, txs map[common.Address]Transactions) *TransactionsByPriceAndNonce {
-	// Initialize a price based heap with the head transactions
-	heads := make(TxByPrice, 0, len(txs))
+	// Initialize a price and received time based heap with the head transactions
+	heads := make(TxByPriceAndTime, 0, len(txs))
 	for _, accTxs := range txs {
 		heads = append(heads, accTxs[0])
 		// Ensure the sender address is from the signer
@@ -815,11 +945,15 @@ func (t *TransactionsByPriceAndNonce) Pop() {
 
 // NewMessage returns a `*Transaction` object with the given arguments.
 func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, checkNonce bool, intrinsicGas uint64) *Transaction {
-	return &Transaction{
-		data:                  newTxInternalDataLegacyWithValues(nonce, to, amount, gasLimit, gasPrice, data),
+	transaction := &Transaction{
 		validatedIntrinsicGas: intrinsicGas,
 		validatedFeePayer:     from,
 		validatedSender:       from,
 		checkNonce:            checkNonce,
 	}
+
+	internalData := newTxInternalDataLegacyWithValues(nonce, to, amount, gasLimit, gasPrice, data)
+	transaction.setDecoded(internalData, 0)
+
+	return transaction
 }

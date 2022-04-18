@@ -238,7 +238,7 @@ func TestFeeDelegatedWithSmallBalance(t *testing.T) {
 		fmt.Println("anonAddr = ", anon.Addr.String())
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := big.NewInt(25 * params.Ston)
 
 	// 1. Transfer (reservoir -> anon) using a legacy transaction.
@@ -336,7 +336,7 @@ func TestSmartContractDeployAddress(t *testing.T) {
 	gasPrice := new(big.Int).SetUint64(0)
 	gasLimit := uint64(100000000000)
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
 	var code string
 
@@ -421,7 +421,7 @@ func TestSmartContractScenario(t *testing.T) {
 	contractAddr := common.Address{}
 
 	gasPrice := new(big.Int).SetUint64(0)
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
 	var abiStr string
 	var code string
@@ -607,7 +607,7 @@ func TestSmartContractSign(t *testing.T) {
 	gasPrice := new(big.Int).SetUint64(0)
 	gasLimit := uint64(100000000000)
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
 	var code string
 
@@ -762,7 +762,7 @@ func TestFeeDelegatedSmartContractScenario(t *testing.T) {
 	gasPrice := new(big.Int).SetUint64(0)
 	gasLimit := uint64(100000000000)
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
 	var abiStr string
 	var code string
@@ -954,7 +954,7 @@ func TestFeeDelegatedSmartContractScenarioWithRatio(t *testing.T) {
 	gasPrice := new(big.Int).SetUint64(0)
 	gasLimit := uint64(100000000000)
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
 	var abiStr string
 	var code string
@@ -1143,7 +1143,7 @@ func TestAccountUpdate(t *testing.T) {
 		fmt.Println("anonAddr = ", anon.Addr.String())
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 	gasLimit := uint64(100000)
 
@@ -1342,7 +1342,7 @@ func TestFeeDelegatedAccountUpdate(t *testing.T) {
 		fmt.Println("anonAddr = ", anon.Addr.String())
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// 1. Transfer (reservoir -> anon) using a legacy transaction.
@@ -1474,7 +1474,7 @@ func TestFeeDelegatedAccountUpdateWithRatio(t *testing.T) {
 		fmt.Println("anonAddr = ", anon.Addr.String())
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// 1. Transfer (reservoir -> anon) using a legacy transaction.
@@ -1617,7 +1617,7 @@ func TestMultisigScenario(t *testing.T) {
 		fmt.Println("multisigAddr = ", multisig.Addr.String())
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// 1. Create an account anon using LegacyTransaction.
@@ -1760,7 +1760,7 @@ func TestValidateSender(t *testing.T) {
 
 	initialBalance := big.NewInt(1000000)
 
-	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
+	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil)
 	statedb.CreateEOA(anon.Addr, false, anon.AccKey)
 	statedb.SetNonce(anon.Addr, nonce)
 	statedb.SetBalance(anon.Addr, initialBalance)

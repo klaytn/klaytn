@@ -25,7 +25,9 @@ import (
 	"math/big"
 	"sync"
 
-	"github.com/klaytn/klaytn/api"
+	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/networks/rpc"
+
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/params"
 )
@@ -33,26 +35,42 @@ import (
 var maxPrice = big.NewInt(500 * params.Ston)
 
 type Config struct {
-	Blocks     int
-	Percentile int
-	Default    *big.Int `toml:",omitempty"`
+	Blocks           int
+	Percentile       int
+	MaxHeaderHistory int
+	MaxBlockHistory  int
+	Default          *big.Int `toml:",omitempty"`
+}
+
+// OracleBackend includes all necessary background APIs for oracle.
+type OracleBackend interface {
+	HeaderByNumber(ctx context.Context, number rpc.BlockNumber) (*types.Header, error)
+	BlockByNumber(ctx context.Context, number rpc.BlockNumber) (*types.Block, error)
+	GetBlockReceipts(ctx context.Context, hash common.Hash) types.Receipts
+	ChainConfig() *params.ChainConfig
+}
+
+type TxPool interface {
+	GasPrice() *big.Int
 }
 
 // Oracle recommends gas prices based on the content of recent
 // blocks. Suitable for both light and full clients.
 type Oracle struct {
-	backend   api.Backend
+	backend   OracleBackend
 	lastHead  common.Hash
 	lastPrice *big.Int
 	cacheLock sync.RWMutex
 	fetchLock sync.Mutex
+	txPool    TxPool
 
-	checkBlocks, maxEmpty, maxBlocks int
-	percentile                       int
+	checkBlocks, maxEmpty, maxBlocks  int
+	percentile                        int
+	maxHeaderHistory, maxBlockHistory int
 }
 
 // NewOracle returns a new oracle.
-func NewOracle(backend api.Backend, params Config) *Oracle {
+func NewOracle(backend OracleBackend, params Config, txPool TxPool) *Oracle {
 	blocks := params.Blocks
 	if blocks < 1 {
 		blocks = 1
@@ -65,22 +83,27 @@ func NewOracle(backend api.Backend, params Config) *Oracle {
 		percent = 100
 	}
 	return &Oracle{
-		backend:     backend,
-		lastPrice:   params.Default,
-		checkBlocks: blocks,
-		maxEmpty:    blocks / 2,
-		maxBlocks:   blocks * 5,
-		percentile:  percent,
+		backend:          backend,
+		lastPrice:        params.Default,
+		checkBlocks:      blocks,
+		maxEmpty:         blocks / 2,
+		maxBlocks:        blocks * 5,
+		percentile:       percent,
+		maxHeaderHistory: params.MaxHeaderHistory,
+		maxBlockHistory:  params.MaxBlockHistory,
+		txPool:           txPool,
 	}
 }
 
 // SuggestPrice returns the recommended gas price.
 func (gpo *Oracle) SuggestPrice(ctx context.Context) (*big.Int, error) {
 
-	// NOTE-Klaytn We use invariant ChainConfig.UnitPrice and this value
-	//         will not be changed until ChainConfig.UnitPrice is updated with governance.
-	// TODO-Klaytn We have to update Oracle.lastPrice when UnitPrice is changed.
-	return gpo.lastPrice, nil
+	if gpo.txPool == nil {
+		// If txpool is not set, just return 0. This is used for testing.
+		return common.Big0, nil
+	}
+	// Since we have fixed gas price, we can directly get this value from TxPool.
+	return gpo.txPool.GasPrice(), nil
 	/*
 		// TODO-Klaytn-RemoveLater Later remove below obsolete code if we don't need them anymore.
 		gpo.cacheLock.RLock()

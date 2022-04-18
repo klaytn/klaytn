@@ -19,7 +19,6 @@ package governance
 import (
 	"errors"
 	"math/big"
-	"reflect"
 	"strings"
 	"sync/atomic"
 
@@ -82,11 +81,6 @@ func (api *GovernanceKlayAPI) GasPriceAt(num *rpc.BlockNumber) (*hexutil.Big, er
 	}
 }
 
-func (api *GovernanceKlayAPI) GasPrice() *hexutil.Big {
-	ret := api.governance.UnitPrice()
-	return (*hexutil.Big)(big.NewInt(0).SetUint64(ret))
-}
-
 // Vote injects a new vote for governance targets such as unitprice and governingnode.
 func (api *PublicGovernanceAPI) Vote(key string, val interface{}) (string, error) {
 	gMode := api.governance.GovernanceMode()
@@ -96,14 +90,10 @@ func (api *PublicGovernanceAPI) Vote(key string, val interface{}) (string, error
 		return "", errPermissionDenied
 	}
 	if strings.ToLower(key) == "governance.removevalidator" {
-		if reflect.TypeOf(val).String() != "string" {
+		if _, ok := api.governance.ValidateVote(&GovernanceVote{Key: key, Value: val}); !ok {
 			return "", errInvalidKeyValue
 		}
-		target := val.(string)
-		if !common.IsHexAddress(target) {
-			return "", errInvalidKeyValue
-		}
-		if api.isRemovingSelf(val) {
+		if api.isRemovingSelf(val.(string)) {
 			return "", errRemoveSelf
 		}
 	}
@@ -113,14 +103,14 @@ func (api *PublicGovernanceAPI) Vote(key string, val interface{}) (string, error
 	return "", errInvalidKeyValue
 }
 
-func (api *PublicGovernanceAPI) isRemovingSelf(val interface{}) bool {
-	target := val.(string)
-
-	if common.HexToAddress(target) == api.governance.nodeAddress.Load().(common.Address) {
-		return true
-	} else {
-		return false
+func (api *PublicGovernanceAPI) isRemovingSelf(val string) bool {
+	for _, str := range strings.Split(val, ",") {
+		str = strings.Trim(str, " ")
+		if common.HexToAddress(str) == api.governance.nodeAddress.Load().(common.Address) {
+			return true
+		}
 	}
+	return false
 }
 
 func (api *PublicGovernanceAPI) ShowTally() []*returnTally {

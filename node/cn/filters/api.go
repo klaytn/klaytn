@@ -29,6 +29,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/klaytn/klaytn/params"
+
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -207,6 +209,36 @@ func (api *PublicFilterAPI) NewBlockFilter() rpc.ID {
 	return headerSub.ID
 }
 
+// RPCMarshalHeader converts the given header to the RPC output that includes the baseFeePerGas field.
+func RPCMarshalHeader(head *types.Header, isEnabledEthTxTypeFork bool) map[string]interface{} {
+	result := map[string]interface{}{
+		"parentHash":       head.ParentHash,
+		"reward":           head.Rewardbase,
+		"stateRoot":        head.Root,
+		"transactionsRoot": head.TxHash,
+		"receiptsRoot":     head.ReceiptHash,
+		"logsBloom":        head.Bloom,
+		"blockScore":       (*hexutil.Big)(head.BlockScore),
+		"number":           (*hexutil.Big)(head.Number),
+		"gasUsed":          hexutil.Uint64(head.GasUsed),
+		"timestamp":        (*hexutil.Big)(head.Time),
+		"timestampFoS":     hexutil.Uint(head.TimeFoS),
+		"extraData":        hexutil.Bytes(head.Extra),
+		"governanceData":   hexutil.Bytes(head.Governance),
+		"hash":             head.Hash(),
+	}
+
+	if len(head.Vote) != 0 {
+		result["voteData"] = hexutil.Bytes(head.Vote)
+	}
+
+	if isEnabledEthTxTypeFork {
+		result["baseFeePerGas"] = (*hexutil.Big)(new(big.Int).SetUint64(params.BaseFee))
+	}
+
+	return result
+}
+
 // NewHeads send a notification each time a new (header) block is appended to the chain.
 func (api *PublicFilterAPI) NewHeads(ctx context.Context) (*rpc.Subscription, error) {
 	notifier, supported := rpc.NotifierFromContext(ctx)
@@ -223,7 +255,8 @@ func (api *PublicFilterAPI) NewHeads(ctx context.Context) (*rpc.Subscription, er
 		for {
 			select {
 			case h := <-headers:
-				notifier.Notify(rpcSub.ID, h)
+				header := RPCMarshalHeader(h, api.backend.ChainConfig().IsEthTxTypeForkEnabled(h.Number))
+				notifier.Notify(rpcSub.ID, header)
 			case <-rpcSub.Err():
 				headersSub.Unsubscribe()
 				return
@@ -424,6 +457,11 @@ func (api *PublicFilterAPI) GetFilterChanges(id rpc.ID) (interface{}, error) {
 	}
 
 	return []interface{}{}, fmt.Errorf("filter not found")
+}
+
+// Events return private field events of PublicFilterAPI.
+func (api *PublicFilterAPI) Events() *EventSystem {
+	return api.events
 }
 
 // returnHashes is a helper that will return an empty hash array case the given hash array is nil,

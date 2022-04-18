@@ -94,6 +94,7 @@ type BackendProtocolManager interface {
 	NodeType() common.ConnType
 	Start(maxPeers int)
 	Stop()
+	SetSyncStop(flag bool)
 }
 
 // CN implements the Klaytn consensus node service.
@@ -252,7 +253,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		vmConfig    = config.getVMConfig()
 		cacheConfig = &blockchain.CacheConfig{ArchiveMode: config.NoPruning, CacheSize: config.TrieCacheSize,
 			BlockInterval: config.TrieBlockInterval, TriesInMemory: config.TriesInMemory,
-			TrieNodeCacheConfig: &config.TrieNodeCacheConfig, SenderTxHashIndexing: config.SenderTxHashIndexing}
+			TrieNodeCacheConfig: &config.TrieNodeCacheConfig, SenderTxHashIndexing: config.SenderTxHashIndexing, SnapshotCacheSize: config.SnapshotCacheSize}
 	)
 
 	bc, err := blockchain.NewBlockChain(chainDB, cacheConfig, cn.chainConfig, cn.engine, vmConfig)
@@ -339,7 +340,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	//         So let's override gpoParams.Default with config.GasPrice
 	gpoParams.Default = config.GasPrice
 
-	cn.APIBackend.gpo = gasprice.NewOracle(cn.APIBackend, gpoParams)
+	cn.APIBackend.gpo = gasprice.NewOracle(cn.APIBackend, gpoParams, cn.txPool)
 	//@TODO Klaytn add core component
 	cn.addComponent(cn.blockchain)
 	cn.addComponent(cn.txPool)
@@ -471,10 +472,12 @@ func (s *CN) APIs() []rpc.API {
 
 	publicFilterAPI := filters.NewPublicFilterAPI(s.APIBackend, false)
 	governanceKlayAPI := governance.NewGovernanceKlayAPI(s.governance, s.blockchain)
+	publicGovernanceAPI := governance.NewGovernanceAPI(s.governance)
 	publicDownloaderAPI := downloader.NewPublicDownloaderAPI(s.protocolManager.Downloader(), s.eventMux)
 
 	ethAPI.SetPublicFilterAPI(publicFilterAPI)
 	ethAPI.SetGovernanceKlayAPI(governanceKlayAPI)
+	ethAPI.SetPublicGovernanceAPI(publicGovernanceAPI)
 
 	// Append all the local APIs and return
 	return append(apis, []rpc.API{

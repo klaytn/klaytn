@@ -39,10 +39,11 @@ var (
 var (
 	// CypressChainConfig is the chain parameters to run a node on the cypress main network.
 	CypressChainConfig = &ChainConfig{
-		ChainID:                 big.NewInt(int64(CypressNetworkId)),
-		IstanbulCompatibleBlock: nil,
-		LondonCompatibleBlock:   nil,
-		DeriveShaImpl:           2,
+		ChainID:                  big.NewInt(int64(CypressNetworkId)),
+		IstanbulCompatibleBlock:  big.NewInt(86816005),
+		LondonCompatibleBlock:    big.NewInt(86816005),
+		EthTxTypeCompatibleBlock: big.NewInt(86816005),
+		DeriveShaImpl:            2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x52d41ca72af615a1ac3301b0a93efa222ecc7541"),
 			GovernanceMode: "single",
@@ -66,10 +67,11 @@ var (
 
 	// BaobabChainConfig contains the chain parameters to run a node on the Baobab test network.
 	BaobabChainConfig = &ChainConfig{
-		ChainID:                 big.NewInt(int64(BaobabNetworkId)),
-		IstanbulCompatibleBlock: big.NewInt(75373312),
-		LondonCompatibleBlock:   big.NewInt(80295291),
-		DeriveShaImpl:           2,
+		ChainID:                  big.NewInt(int64(BaobabNetworkId)),
+		IstanbulCompatibleBlock:  big.NewInt(75373312),
+		LondonCompatibleBlock:    big.NewInt(80295291),
+		EthTxTypeCompatibleBlock: big.NewInt(86513895),
+		DeriveShaImpl:            2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x99fb17d324fa0e07f23b49d09028ac0919414db6"),
 			GovernanceMode: "single",
@@ -165,8 +167,9 @@ type ChainConfig struct {
 
 	// "Compatible" means that it is EVM compatible(the opcode and precompiled contracts are the same as Ethereum EVM).
 	// In other words, not all the hard fork items are included.
-	IstanbulCompatibleBlock *big.Int `json:"istanbulCompatibleBlock,omitempty"` // IstanbulCompatibleBlock switch block (nil = no fork, 0 = already on istanbul)
-	LondonCompatibleBlock   *big.Int `json:"londonCompatibleBlock,omitempty"`   // LondonCompatibleBlock switch block (nil = no fork, 0 = already on london)
+	IstanbulCompatibleBlock  *big.Int `json:"istanbulCompatibleBlock,omitempty"`  // IstanbulCompatibleBlock switch block (nil = no fork, 0 = already on istanbul)
+	LondonCompatibleBlock    *big.Int `json:"londonCompatibleBlock,omitempty"`    // LondonCompatibleBlock switch block (nil = no fork, 0 = already on london)
+	EthTxTypeCompatibleBlock *big.Int `json:"ethTxTypeCompatibleBlock,omitempty"` // EthTxTypeCompatibleBlock switch block (nil = no fork, 0 = already on ethTxType)
 
 	// Various consensus engines
 	Gxhash   *GxhashConfig   `json:"gxhash,omitempty"` // (deprecated) not supported engine
@@ -246,20 +249,22 @@ func (c *ChainConfig) String() string {
 		engine = "unknown"
 	}
 	if c.Istanbul != nil {
-		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d Engine: %v}",
+		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d Engine: %v}",
 			c.ChainID,
 			c.IstanbulCompatibleBlock,
 			c.LondonCompatibleBlock,
+			c.EthTxTypeCompatibleBlock,
 			c.Istanbul.SubGroupSize,
 			c.UnitPrice,
 			c.DeriveShaImpl,
 			engine,
 		)
 	} else {
-		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v UnitPrice: %d DeriveShaImpl: %d Engine: %v }",
+		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v UnitPrice: %d DeriveShaImpl: %d Engine: %v }",
 			c.ChainID,
 			c.IstanbulCompatibleBlock,
 			c.LondonCompatibleBlock,
+			c.EthTxTypeCompatibleBlock,
 			c.UnitPrice,
 			c.DeriveShaImpl,
 			engine,
@@ -267,14 +272,19 @@ func (c *ChainConfig) String() string {
 	}
 }
 
-// IsIstanbul returns whether num is either equal to the istanbul block or greater.
-func (c *ChainConfig) IsIstanbul(num *big.Int) bool {
+// IsIstanbulForkEnabled returns whether num is either equal to the istanbul block or greater.
+func (c *ChainConfig) IsIstanbulForkEnabled(num *big.Int) bool {
 	return isForked(c.IstanbulCompatibleBlock, num)
 }
 
-// IsLondon returns whether num is either equal to the london block or greater.
-func (c *ChainConfig) IsLondon(num *big.Int) bool {
+// IsLondonForkEnabled returns whether num is either equal to the london block or greater.
+func (c *ChainConfig) IsLondonForkEnabled(num *big.Int) bool {
 	return isForked(c.LondonCompatibleBlock, num)
+}
+
+// IsEthTxTypeForkEnabled returns whether num is either equal to the ethTxType block or greater.
+func (c *ChainConfig) IsEthTxTypeForkEnabled(num *big.Int) bool {
+	return isForked(c.EthTxTypeCompatibleBlock, num)
 }
 
 // CheckCompatible checks whether scheduled fork transitions have been imported
@@ -307,6 +317,7 @@ func (c *ChainConfig) CheckConfigForkOrder() error {
 	for _, cur := range []fork{
 		{name: "istanbulBlock", block: c.IstanbulCompatibleBlock},
 		{name: "londonBlock", block: c.LondonCompatibleBlock},
+		{name: "ethTxTypeBlock", block: c.EthTxTypeCompatibleBlock},
 	} {
 		if lastFork.name != "" {
 			// Next one must be higher number
@@ -335,6 +346,9 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *Confi
 	}
 	if isForkIncompatible(c.LondonCompatibleBlock, newcfg.LondonCompatibleBlock, head) {
 		return newCompatError("London Block", c.LondonCompatibleBlock, newcfg.LondonCompatibleBlock)
+	}
+	if isForkIncompatible(c.EthTxTypeCompatibleBlock, newcfg.EthTxTypeCompatibleBlock, head) {
+		return newCompatError("EthTxType Block", c.EthTxTypeCompatibleBlock, newcfg.EthTxTypeCompatibleBlock)
 	}
 	return nil
 }
@@ -460,8 +474,8 @@ func (c *ChainConfig) Rules(num *big.Int) Rules {
 	}
 	return Rules{
 		ChainID:    new(big.Int).Set(chainID),
-		IsIstanbul: c.IsIstanbul(num),
-		IsLondon:   c.IsLondon(num),
+		IsIstanbul: c.IsIstanbulForkEnabled(num),
+		IsLondon:   c.IsLondonForkEnabled(num),
 	}
 }
 

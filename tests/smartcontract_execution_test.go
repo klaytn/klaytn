@@ -45,7 +45,7 @@ type deployedContract struct {
 
 func deployContract(filename string, bcdata *BCData, accountMap *AccountMap,
 	prof *profile.Profiler) (map[string]*deployedContract, error) {
-	contracts, err := compiler.CompileSolidity("", filename)
+	contracts, err := compiler.CompileSolidityOrLoad("", filename)
 	if err != nil {
 		return nil, err
 	}

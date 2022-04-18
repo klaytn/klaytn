@@ -61,12 +61,14 @@ var hash4 = common.HexToHash("5397FB1") // 87654321 in hexadecimal
 
 var key *ecdsa.PrivateKey
 var addr common.Address
-var signer types.EIP155Signer
+var signer types.Signer
 
 func init() {
+	GetOpenFilesLimit()
+
 	key, _ = crypto.GenerateKey()
 	addr = crypto.PubkeyToAddress(key.PublicKey)
-	signer = types.NewEIP155Signer(big.NewInt(18))
+	signer = types.LatestSignerForChainID(big.NewInt(18))
 
 	for _, bc := range baseConfigs {
 		badgerConfig := *bc

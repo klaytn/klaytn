@@ -27,10 +27,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
+	"github.com/klaytn/klaytn/storage"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -64,10 +64,13 @@ func (s *SuiteDynamoDB) TearDownSuite() {
 }
 
 func TestDynamoDB(t *testing.T) {
+	storage.SkipLocalTest(t)
 	suite.Run(t, new(SuiteDynamoDB))
 }
 
 func (s *SuiteDynamoDB) TestDynamoDB_Put() {
+	storage.SkipLocalTest(s.T())
+
 	dynamo, err := newDynamoDB(GetTestDynamoConfig())
 	if err != nil {
 		s.FailNow("failed to create dynamoDB", err)
@@ -90,6 +93,8 @@ func (s *SuiteDynamoDB) TestDynamoDB_Put() {
 }
 
 func (s *SuiteDynamoDB) TestDynamoBatch_Write() {
+	storage.SkipLocalTest(s.T())
+
 	dynamo, err := newDynamoDB(GetTestDynamoConfig())
 	if err != nil {
 		s.FailNow("failed to create dynamoDB", err)
@@ -121,6 +126,8 @@ func (s *SuiteDynamoDB) TestDynamoBatch_Write() {
 }
 
 func (s *SuiteDynamoDB) TestDynamoBatch_Write_LargeData() {
+	storage.SkipLocalTest(s.T())
+
 	dynamo, err := newDynamoDB(GetTestDynamoConfig())
 	if err != nil {
 		s.FailNow("failed to create dynamoDB", err)
@@ -152,6 +159,8 @@ func (s *SuiteDynamoDB) TestDynamoBatch_Write_LargeData() {
 }
 
 func (s *SuiteDynamoDB) TestDynamoBatch_Write_DuplicatedKey() {
+	storage.SkipLocalTest(s.T())
+
 	dynamo, err := newDynamoDB(GetTestDynamoConfig())
 	if err != nil {
 		s.FailNow("failed to create dynamoDB", err)
@@ -187,6 +196,7 @@ func (s *SuiteDynamoDB) TestDynamoBatch_Write_DuplicatedKey() {
 // TestDynamoBatch_Write_MultiTables checks if there is no error when working with more than one tables.
 // This also checks if shared workers works as expected.
 func (s *SuiteDynamoDB) TestDynamoBatch_Write_MultiTables() {
+	storage.SkipLocalTest(s.T())
 	// this test might end with Crit, enableLog to find out the log
 	//enableLog()
 
@@ -265,6 +275,7 @@ func (dynamo *dynamoDB) deleteDB() {
 // TestDynamoDB_Retry tests whether dynamoDB client retries successfully.
 // A fake server is setup to simulate a server with a request count.
 func TestDynamoDB_Retry(t *testing.T) {
+	storage.SkipLocalTest(t)
 	// This test needs a new dynamoDBClient having a fake endpoint.
 	oldClient := dynamoDBClient
 	dynamoDBClient = nil
@@ -283,12 +294,14 @@ func TestDynamoDB_Retry(t *testing.T) {
 	go func() {
 		tcpAddr, err := net.ResolveTCPAddr("tcp", fakeEndpoint)
 		if err != nil {
-			t.Fatal(err)
+			t.Error(err)
+			return
 		}
 
 		listen, err := net.ListenTCP("tcp", tcpAddr)
 		if err != nil {
-			t.Fatal(err)
+			t.Error(err)
+			return
 		}
 		defer listen.Close()
 
@@ -299,7 +312,8 @@ func TestDynamoDB_Retry(t *testing.T) {
 			// Deadline prevents infinite waiting of the fake server
 			// Wait longer than (maxRetries+1) * timeout
 			if err := listen.SetDeadline(time.Now().Add(10 * time.Second)); err != nil {
-				t.Fatal(err)
+				t.Error(err)
+				return
 			}
 			conn, err := listen.AcceptTCP()
 			if err != nil {

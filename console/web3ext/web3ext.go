@@ -976,6 +976,18 @@ web3._extend({
 			call: 'klay_decodeAccountKey',
 			params: 1,
 		}),
+		new web3._extend.Method({
+			name: 'createAccessList',
+			call: 'klay_createAccessList',
+			params: 2,
+			inputFormatter: [null, web3._extend.formatters.inputBlockNumberFormatter],
+		}),
+		new web3._extend.Method({
+			name: 'feeHistory',
+			call: 'klay_feeHistory',
+			params: 3,
+			inputFormatter: [null, web3._extend.formatters.inputBlockNumberFormatter, null]
+		}),
 	],
 	properties: [
 		new web3._extend.Property({
@@ -999,6 +1011,11 @@ web3._extend({
             getter: 'klay_gasPrice',
             outputFormatter: web3._extend.formatters.outputBigNumberFormatter
         }),
+		new web3._extend.Property({
+			name: 'maxPriorityFeePerGas',
+			getter: 'klay_maxPriorityFeePerGas',
+			outputFormatter: web3._extend.utils.toBigNumber
+		}),
 	]
 });
 `
@@ -1376,6 +1393,18 @@ web3._extend({
 			call: 'subbridge_setChildOperatorFeePayer',
 			params: 1
 		}),
+		new web3._extend.Method({
+			name: 'getParentBridgeContractBalance',
+			call: 'subbridge_getParentBridgeContractBalance',
+			params: 1,
+			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
+		}),
+		new web3._extend.Method({
+			name: 'getChildBridgeContractBalance',
+			call: 'subbridge_getChildBridgeContractBalance',
+			params: 1,
+			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
+		}),
 	],
     properties: [
 		new web3._extend.Property({
@@ -1419,7 +1448,7 @@ web3._extend({
 			getter: 'subbridge_getParentOperatorBalance',
 			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
 		}),
-			new web3._extend.Property({
+		new web3._extend.Property({
 			name: 'childOperatorBalance',
 			getter: 'subbridge_getChildOperatorBalance',
 			outputFormatter: web3._extend.formatters.outputBigNumberFormatter

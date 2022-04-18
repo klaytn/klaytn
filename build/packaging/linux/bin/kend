@@ -20,15 +20,27 @@ if [ ! -d $DATA_DIR ]; then
 fi
 
 pidfile=$DATA_DIR/kend.pid
+auto_restart_daemon_pidfile=$DATA_DIR/restart_daemon_kend.pid
 
 __pid_run() {
     unset pid
     if [ ! -f $pidfile ]; then
         return
     fi
-    PID_NUM=$(eval "cat $pidfile")
+    PID_NUM=$(cat $pidfile)
     if [[ ! -z "$PID_NUM" ]]; then
-        export pid=$(eval "ps -p $PID_NUM -o pid=")
+        export pid=$(ps -p $PID_NUM -o pid=)
+    fi
+}
+
+__auto_restart_daemon_pid_run() {
+    unset auto_restart_daemon_pid
+    if [ ! -f $auto_restart_daemon_pidfile ]; then
+        return
+    fi
+    AUTO_RESTART_DAEMON_PID_NUM=$(cat $auto_restart_daemon_pidfile)
+    if [[ ! -z "$AUTO_RESTART_DAEMON_PID_NUM" ]]; then
+        export auto_restart_daemon_pid=$(ps -p $AUTO_RESTART_DAEMON_PID_NUM -o pid=)
     fi
 }
 
@@ -44,6 +56,69 @@ __kill_timeout() {
     done
     kill -9 $PIDNUM && echo "Killed"
 }
+
+#------------------------Related Auto restart daemon functions-----------------------------
+__auto_restart_daemon() {
+    local backOffTime=$AUTO_RESTART_INTERVAL
+    local coeff=2
+    while :
+    do
+        sleep 1
+        __pid_run
+        if [ -z "$pid" ]; then
+            echo "INFO[`date`] node[${PID_NUM}] is down"
+            if [ -f $pidfile ]; then
+                echo "INFO[`date`] remove redundant pid file"
+                rm -f ${pidfile}
+            fi
+            echo "INFO[`date`] Sleep for backOffTime.... ${backOffTime} seconds."
+            sleep $backOffTime
+            echo -n "INFO[`date`] "
+            start_node
+            backOffTime=$(echo $backOffTime $coeff | awk '{printf "%.1f\n",$1*$2}')
+
+            echo "INFO[`date`] backOffTime = ${backOffTime}, Restarted node pid = ${PID_NUM}"
+            PID_NUM=$(cat $pidfile)
+            echo ""
+        fi
+    done
+}
+
+start_auto_restart_daemon() {
+    __auto_restart_daemon_pid_run
+    if [ -z $auto_restart_daemon_pid ]; then
+        __auto_restart_daemon >> ${LOG_DIR}/restart_daemon.out 2>&1 &
+        disown
+        AUTO_RESTART_DAEMON_PID_NUM=$!
+        AUTO_RESTART_DAEMON_RETVAL=$?
+
+        set +f
+        if [ $AUTO_RESTART_DAEMON_RETVAL = 0 ]; then
+            echo $AUTO_RESTART_DAEMON_PID_NUM > ${auto_restart_daemon_pidfile}
+            echo "Success to start auto restart daemon."
+        else
+            echo "Fail to start auto restart daemon."
+        fi
+    fi
+}
+
+stop_auto_restart_daemon() {
+    __auto_restart_daemon_pid_run
+    [ -z "$auto_restart_daemon_pid" ] && echo "auto restart daemon is not running" && return
+    echo -n "Shutting down auto restart daemon:  "
+    __kill_timeout $(cat ${auto_restart_daemon_pidfile}) && rm -f ${auto_restart_daemon_pidfile}
+}
+
+status_auto_restart_daemon() {
+    __auto_restart_daemon_pid_run
+    if [ -n "$auto_restart_daemon_pid" ]; then
+        echo "auto restart daemon is running."
+    else
+        echo "auto restart daemon is down."
+    fi
+}
+
+#------------------------Related to Klaytn node functions-----------------------------
 
 __check_option() {
     if [ ! -d $LOG_DIR ]; then
@@ -71,6 +146,7 @@ __check_option() {
 
     if [[ ! -z $RPC_ENABLE ]] && [[ $RPC_ENABLE -eq 1 ]]; then
         OPTIONS="$OPTIONS --rpc"
+        RPC_API=`echo $RPC_API | tr -d "[:space:]"`
         if [ ! -z $RPC_API ]; then
             OPTIONS="$OPTIONS --rpcapi $RPC_API"
         fi
@@ -90,6 +166,7 @@ __check_option() {
 
     if [[ ! -z $WS_ENABLE ]] && [[ $WS_ENABLE -eq 1 ]]; then
         OPTIONS="$OPTIONS --ws"
+        WS_API=`echo $WS_API | tr -d "[:space:]"`
         if [ ! -z $WS_API ]; then
             OPTIONS="$OPTIONS --wsapi $WS_API"
         fi
@@ -246,7 +323,7 @@ __check_option() {
     fi
 }
 
-start() {
+start_node() {
     __pid_run
     [ -n "$pid" ] && echo "kend already running...[$pid]" && return
 
@@ -264,11 +341,40 @@ start() {
     set +f
     if [ $RETVAL = 0 ]; then
         echo $PIDNUM > ${pidfile}
-        echo "OK"
+        echo "Success to start node."
     else
-        echo "Fail"
+        echo "Fail to start node."
     fi
     return $RETVAL
+}
+
+stop_node() {
+    __pid_run
+    [ -z "$pid" ] && echo "kend is not running" && return
+    echo -n "Shutting down kend: "
+    __kill_timeout $(cat ${pidfile}) && rm -f ${pidfile}
+}
+
+status_node() {
+    __pid_run
+    if [ -n "$pid" ]; then
+        echo "kend is running"
+    else
+        echo "kend is down"
+    fi
+}
+
+#--------------------- Public functions --------------------------
+start() {
+    if [ ! -d $LOG_DIR ]; then
+        mkdir -p $LOG_DIR
+    fi
+
+    if [ ! -z $AUTO_RESTART_NODE ] && [[ $AUTO_RESTART_NODE -eq 1 ]]; then
+        start_auto_restart_daemon
+    else
+        start_node
+    fi
 }
 
 start_docker() {
@@ -280,20 +386,20 @@ start_docker() {
 }
 
 stop() {
-    __pid_run
-    [ -z "$pid" ] && echo "kend is not running" && return
-    echo -n "Shutting down kend: "
-    __kill_timeout $(eval "cat ${pidfile}") && rm -f ${pidfile}
+    if [ ! -z $AUTO_RESTART_NODE ] && [[ $AUTO_RESTART_NODE -eq 1 ]]; then
+        stop_auto_restart_daemon
+    fi
+    stop_node
 }
 
+
 status() {
-    __pid_run
-    if [ -n "$pid" ]; then
-        echo "kend is running"
-    else
-        echo "kend is down"
+    status_node
+    if [ ! -z $AUTO_RESTART_NODE ] && [[ $AUTO_RESTART_NODE -eq 1 ]]; then
+        status_auto_restart_daemon
     fi
 }
+
 
 restart() {
     stop
