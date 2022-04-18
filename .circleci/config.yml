@@ -266,7 +266,7 @@ commands:
       - run:
           name: "Wait until localstack container running"
           command: |
-            timeout -t 60 sh -c \
+            timeout 60 sh -c \
             'until nc -z localhost 4566; do
               echo "Waiting for Localstack ..."
               sleep 1
