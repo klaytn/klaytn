@@ -49,10 +49,6 @@ executors:
       - image: circleci/golang:latest
 
 commands:
-  install-ssh-alpine:
-    description: "Install openssh before image update"
-    steps:
-      - run: apk add --no-cache openssh
   install-golang:
     steps:
       - run:
@@ -302,7 +298,6 @@ jobs:
   test-linter:
     executor: test-executor
     steps:
-      - install-ssh-alpine
       - checkout
       - run:
           name: "Run golangci-lint"
@@ -312,7 +307,6 @@ jobs:
   test-datasync:
     executor: test-others-executor
     steps:
-      - install-ssh-alpine
       - checkout
       - wait-other-containers-ready
       - run:
@@ -323,7 +317,6 @@ jobs:
   test-networks:
     executor: test-executor
     steps:
-      - install-ssh-alpine
       - checkout
       - run:
           name: "Run test networks"
@@ -333,7 +326,6 @@ jobs:
   test-tests:
     executor: test-executor
     steps:
-      - install-ssh-alpine
       - checkout
       - run:
           name: "Run test tests"
@@ -345,7 +337,6 @@ jobs:
   test-others:
     executor: test-others-executor
     steps:
-      - install-ssh-alpine
       - checkout
       - wait-other-containers-ready
       - run:
@@ -371,7 +362,6 @@ jobs:
     executor: test-others-executor
     resource_class: xlarge
     steps:
-      - install-ssh-alpine
       - checkout
       - wait-other-containers-ready
       - run:
@@ -395,7 +385,6 @@ jobs:
   linters:
     executor: test-executor
     steps:
-      - install-ssh-alpine
       - checkout
       - run:
           name: "Run linters"
@@ -482,7 +471,6 @@ jobs:
   tag-verify:
     executor: test-executor
     steps:
-      - install-ssh-alpine
       - checkout
       - tag-verify
 
