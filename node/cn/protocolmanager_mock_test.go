@@ -14,30 +14,30 @@ import (
 	p2p "github.com/klaytn/klaytn/networks/p2p"
 )
 
-// MockBackendProtocolManager is a mock of BackendProtocolManager interface
+// MockBackendProtocolManager is a mock of BackendProtocolManager interface.
 type MockBackendProtocolManager struct {
 	ctrl     *gomock.Controller
 	recorder *MockBackendProtocolManagerMockRecorder
 }
 
-// MockBackendProtocolManagerMockRecorder is the mock recorder for MockBackendProtocolManager
+// MockBackendProtocolManagerMockRecorder is the mock recorder for MockBackendProtocolManager.
 type MockBackendProtocolManagerMockRecorder struct {
 	mock *MockBackendProtocolManager
 }
 
-// NewMockBackendProtocolManager creates a new mock instance
+// NewMockBackendProtocolManager creates a new mock instance.
 func NewMockBackendProtocolManager(ctrl *gomock.Controller) *MockBackendProtocolManager {
 	mock := &MockBackendProtocolManager{ctrl: ctrl}
 	mock.recorder = &MockBackendProtocolManagerMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockBackendProtocolManager) EXPECT() *MockBackendProtocolManagerMockRecorder {
 	return m.recorder
 }
 
-// Downloader mocks base method
+// Downloader mocks base method.
 func (m *MockBackendProtocolManager) Downloader() ProtocolManagerDownloader {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Downloader")
@@ -45,13 +45,13 @@ func (m *MockBackendProtocolManager) Downloader() ProtocolManagerDownloader {
 	return ret0
 }
 
-// Downloader indicates an expected call of Downloader
+// Downloader indicates an expected call of Downloader.
 func (mr *MockBackendProtocolManagerMockRecorder) Downloader() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Downloader", reflect.TypeOf((*MockBackendProtocolManager)(nil).Downloader))
 }
 
-// GetSubProtocols mocks base method
+// GetSubProtocols mocks base method.
 func (m *MockBackendProtocolManager) GetSubProtocols() []p2p.Protocol {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetSubProtocols")
@@ -59,13 +59,13 @@ func (m *MockBackendProtocolManager) GetSubProtocols() []p2p.Protocol {
 	return ret0
 }
 
-// GetSubProtocols indicates an expected call of GetSubProtocols
+// GetSubProtocols indicates an expected call of GetSubProtocols.
 func (mr *MockBackendProtocolManagerMockRecorder) GetSubProtocols() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSubProtocols", reflect.TypeOf((*MockBackendProtocolManager)(nil).GetSubProtocols))
 }
 
-// NodeType mocks base method
+// NodeType mocks base method.
 func (m *MockBackendProtocolManager) NodeType() common.ConnType {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "NodeType")
@@ -73,13 +73,13 @@ func (m *MockBackendProtocolManager) NodeType() common.ConnType {
 	return ret0
 }
 
-// NodeType indicates an expected call of NodeType
+// NodeType indicates an expected call of NodeType.
 func (mr *MockBackendProtocolManagerMockRecorder) NodeType() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NodeType", reflect.TypeOf((*MockBackendProtocolManager)(nil).NodeType))
 }
 
-// ProtocolVersion mocks base method
+// ProtocolVersion mocks base method.
 func (m *MockBackendProtocolManager) ProtocolVersion() int {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ProtocolVersion")
@@ -87,91 +87,103 @@ func (m *MockBackendProtocolManager) ProtocolVersion() int {
 	return ret0
 }
 
-// ProtocolVersion indicates an expected call of ProtocolVersion
+// ProtocolVersion indicates an expected call of ProtocolVersion.
 func (mr *MockBackendProtocolManagerMockRecorder) ProtocolVersion() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProtocolVersion", reflect.TypeOf((*MockBackendProtocolManager)(nil).ProtocolVersion))
 }
 
-// ReBroadcastTxs mocks base method
+// ReBroadcastTxs mocks base method.
 func (m *MockBackendProtocolManager) ReBroadcastTxs(arg0 types.Transactions) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "ReBroadcastTxs", arg0)
 }
 
-// ReBroadcastTxs indicates an expected call of ReBroadcastTxs
+// ReBroadcastTxs indicates an expected call of ReBroadcastTxs.
 func (mr *MockBackendProtocolManagerMockRecorder) ReBroadcastTxs(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReBroadcastTxs", reflect.TypeOf((*MockBackendProtocolManager)(nil).ReBroadcastTxs), arg0)
 }
 
-// SetAcceptTxs mocks base method
+// SetAcceptTxs mocks base method.
 func (m *MockBackendProtocolManager) SetAcceptTxs() {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "SetAcceptTxs")
 }
 
-// SetAcceptTxs indicates an expected call of SetAcceptTxs
+// SetAcceptTxs indicates an expected call of SetAcceptTxs.
 func (mr *MockBackendProtocolManagerMockRecorder) SetAcceptTxs() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetAcceptTxs", reflect.TypeOf((*MockBackendProtocolManager)(nil).SetAcceptTxs))
 }
 
-// SetRewardbase mocks base method
+// SetRewardbase mocks base method.
 func (m *MockBackendProtocolManager) SetRewardbase(arg0 common.Address) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "SetRewardbase", arg0)
 }
 
-// SetRewardbase indicates an expected call of SetRewardbase
+// SetRewardbase indicates an expected call of SetRewardbase.
 func (mr *MockBackendProtocolManagerMockRecorder) SetRewardbase(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetRewardbase", reflect.TypeOf((*MockBackendProtocolManager)(nil).SetRewardbase), arg0)
 }
 
-// SetRewardbaseWallet mocks base method
+// SetRewardbaseWallet mocks base method.
 func (m *MockBackendProtocolManager) SetRewardbaseWallet(arg0 accounts.Wallet) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "SetRewardbaseWallet", arg0)
 }
 
-// SetRewardbaseWallet indicates an expected call of SetRewardbaseWallet
+// SetRewardbaseWallet indicates an expected call of SetRewardbaseWallet.
 func (mr *MockBackendProtocolManagerMockRecorder) SetRewardbaseWallet(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetRewardbaseWallet", reflect.TypeOf((*MockBackendProtocolManager)(nil).SetRewardbaseWallet), arg0)
 }
 
-// SetWsEndPoint mocks base method
+// SetTmpStop mocks base method.
+func (m *MockBackendProtocolManager) SetSyncStop(arg0 bool) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetSyncStop", arg0)
+}
+
+// SetTmpStop indicates an expected call of SetTmpStop.
+func (mr *MockBackendProtocolManagerMockRecorder) SetTmpStop(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSyncStop", reflect.TypeOf((*MockBackendProtocolManager)(nil).SetSyncStop), arg0)
+}
+
+// SetWsEndPoint mocks base method.
 func (m *MockBackendProtocolManager) SetWsEndPoint(arg0 string) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "SetWsEndPoint", arg0)
 }
 
-// SetWsEndPoint indicates an expected call of SetWsEndPoint
+// SetWsEndPoint indicates an expected call of SetWsEndPoint.
 func (mr *MockBackendProtocolManagerMockRecorder) SetWsEndPoint(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetWsEndPoint", reflect.TypeOf((*MockBackendProtocolManager)(nil).SetWsEndPoint), arg0)
 }
 
-// Start mocks base method
+// Start mocks base method.
 func (m *MockBackendProtocolManager) Start(arg0 int) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Start", arg0)
 }
 
-// Start indicates an expected call of Start
+// Start indicates an expected call of Start.
 func (mr *MockBackendProtocolManagerMockRecorder) Start(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockBackendProtocolManager)(nil).Start), arg0)
 }
 
-// Stop mocks base method
+// Stop mocks base method.
 func (m *MockBackendProtocolManager) Stop() {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Stop")
 }
 
-// Stop indicates an expected call of Stop
+// Stop indicates an expected call of Stop.
 func (mr *MockBackendProtocolManagerMockRecorder) Stop() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockBackendProtocolManager)(nil).Stop))

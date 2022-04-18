@@ -9,35 +9,36 @@ import (
 // MarshalTOML marshals as TOML.
 func (s SCConfig) MarshalTOML() (interface{}, error) {
 	type SCConfig struct {
-		Name                  string `toml:"-"`
-		EnabledMainBridge     bool
-		EnabledSubBridge      bool
-		DataDir               string
-		NetworkId             uint64
-		SkipBcVersionCheck    bool `toml:"-"`
-		DatabaseHandles       int  `toml:"-"`
-		LevelDBCacheSize      int
-		TrieCacheSize         int
-		TrieTimeout           time.Duration
-		TrieBlockInterval     uint
-		ChildChainIndexing    bool
-		MainBridgePort        string
-		SubBridgePort         string
-		MaxPeer               int
-		ServiceChainConsensus string
-		AnchoringPeriod       uint64
-		SentChainTxsLimit     uint64
-		ParentChainID         uint64
-		VTRecovery            bool
-		VTRecoveryInterval    uint64
-		Anchoring             bool
-		KASAnchor             bool
-		KASAnchorUrl          string
-		KASAnchorPeriod       uint64
-		KASAnchorOperator     string
-		KASAccessKey          string
-		KASSecretKey          string
-		KASXKRN               string
+		Name                    string `toml:"-"`
+		EnabledMainBridge       bool
+		EnabledSubBridge        bool
+		DataDir                 string
+		NetworkId               uint64
+		SkipBcVersionCheck      bool `toml:"-"`
+		DatabaseHandles         int  `toml:"-"`
+		LevelDBCacheSize        int
+		TrieCacheSize           int
+		TrieTimeout             time.Duration
+		TrieBlockInterval       uint
+		ChildChainIndexing      bool
+		MainBridgePort          string
+		SubBridgePort           string
+		MaxPeer                 int
+		ServiceChainConsensus   string
+		AnchoringPeriod         uint64
+		SentChainTxsLimit       uint64
+		ParentChainID           uint64
+		VTRecovery              bool
+		VTRecoveryInterval      uint64
+		Anchoring               bool
+		KASAnchor               bool
+		KASAnchorUrl            string
+		KASAnchorPeriod         uint64
+		KASAnchorOperator       string
+		KASAccessKey            string
+		KASSecretKey            string
+		KASXChainId             string
+		KASAnchorRequestTimeout time.Duration
 	}
 	var enc SCConfig
 	enc.Name = s.Name
@@ -68,42 +69,44 @@ func (s SCConfig) MarshalTOML() (interface{}, error) {
 	enc.KASAnchorOperator = s.KASAnchorOperator
 	enc.KASAccessKey = s.KASAccessKey
 	enc.KASSecretKey = s.KASSecretKey
-	enc.KASXKRN = s.KASXChainId
+	enc.KASXChainId = s.KASXChainId
+	enc.KASAnchorRequestTimeout = s.KASAnchorRequestTimeout
 	return &enc, nil
 }
 
 // UnmarshalTOML unmarshals from TOML.
 func (s *SCConfig) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	type SCConfig struct {
-		Name                  *string `toml:"-"`
-		EnabledMainBridge     *bool
-		EnabledSubBridge      *bool
-		DataDir               *string
-		NetworkId             *uint64
-		SkipBcVersionCheck    *bool `toml:"-"`
-		DatabaseHandles       *int  `toml:"-"`
-		LevelDBCacheSize      *int
-		TrieCacheSize         *int
-		TrieTimeout           *time.Duration
-		TrieBlockInterval     *uint
-		ChildChainIndexing    *bool
-		MainBridgePort        *string
-		SubBridgePort         *string
-		MaxPeer               *int
-		ServiceChainConsensus *string
-		AnchoringPeriod       *uint64
-		SentChainTxsLimit     *uint64
-		ParentChainID         *uint64
-		VTRecovery            *bool
-		VTRecoveryInterval    *uint64
-		Anchoring             *bool
-		KASAnchor             *bool
-		KASAnchorUrl          *string
-		KASAnchorPeriod       *uint64
-		KASAnchorOperator     *string
-		KASAccessKey          *string
-		KASSecretKey          *string
-		KASXKRN               *string
+		Name                    *string `toml:"-"`
+		EnabledMainBridge       *bool
+		EnabledSubBridge        *bool
+		DataDir                 *string
+		NetworkId               *uint64
+		SkipBcVersionCheck      *bool `toml:"-"`
+		DatabaseHandles         *int  `toml:"-"`
+		LevelDBCacheSize        *int
+		TrieCacheSize           *int
+		TrieTimeout             *time.Duration
+		TrieBlockInterval       *uint
+		ChildChainIndexing      *bool
+		MainBridgePort          *string
+		SubBridgePort           *string
+		MaxPeer                 *int
+		ServiceChainConsensus   *string
+		AnchoringPeriod         *uint64
+		SentChainTxsLimit       *uint64
+		ParentChainID           *uint64
+		VTRecovery              *bool
+		VTRecoveryInterval      *uint64
+		Anchoring               *bool
+		KASAnchor               *bool
+		KASAnchorUrl            *string
+		KASAnchorPeriod         *uint64
+		KASAnchorOperator       *string
+		KASAccessKey            *string
+		KASSecretKey            *string
+		KASXChainId             *string
+		KASAnchorRequestTimeout *time.Duration
 	}
 	var dec SCConfig
 	if err := unmarshal(&dec); err != nil {
@@ -193,8 +196,11 @@ func (s *SCConfig) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	if dec.KASSecretKey != nil {
 		s.KASSecretKey = *dec.KASSecretKey
 	}
-	if dec.KASXKRN != nil {
-		s.KASXChainId = *dec.KASXKRN
+	if dec.KASXChainId != nil {
+		s.KASXChainId = *dec.KASXChainId
+	}
+	if dec.KASAnchorRequestTimeout != nil {
+		s.KASAnchorRequestTimeout = *dec.KASAnchorRequestTimeout
 	}
 	return nil
 }

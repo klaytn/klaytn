@@ -17,10 +17,13 @@
 package governance
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"reflect"
 	"testing"
+
+	gotest_assert "gotest.tools/assert"
 
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -132,6 +135,14 @@ var tstData = []voteValue{
 	{k: "istanbul.timeout", v: true, e: false},
 	{k: "istanbul.timeout", v: "10", e: false},
 	{k: "istanbul.timeout", v: 5.3, e: false},
+	{k: "governance.addvalidator", v: "0x639e5ebfc483716fbac9810b230ff6ad487f366c", e: true},
+	{k: "governance.addvalidator", v: " 0x639e5ebfc483716fbac9810b230ff6ad487f366c ", e: true},
+	{k: "governance.addvalidator", v: "0x639e5ebfc483716fbac9810b230ff6ad487f366c,0x828880c5f09cc1cc6a58715e3fe2b4c4cf3c5869", e: true},
+	{k: "governance.addvalidator", v: "0x639e5ebfc483716fbac9810b230ff6ad487f366c,0x828880c5f09cc1cc6a58715e3fe2b4c4cf3c58", e: false},
+	{k: "governance.addvalidator", v: "0x639e5ebfc483716fbac9810b230ff6ad487f366c,0x639e5ebfc483716fbac9810b230ff6ad487f366c", e: false},
+	{k: "governance.addvalidator", v: "0x639e5ebfc483716fbac9810b230ff6ad487f366c, 0x828880c5f09cc1cc6a58715e3fe2b4c4cf3c5869, ", e: false},
+	{k: "governance.addvalidator", v: "0x639e5ebfc483716fbac9810b230ff6ad487f366c,, 0x828880c5f09cc1cc6a58715e3fe2b4c4cf3c5869, ", e: false},
+	{k: "governance.addvalidator", v: "0x639e5ebfc483716fbac9810b230ff6ad487f366c, 0x828880c5f09cc1cc6a58715e3fe2b4c4cf3c5869 ", e: true},
 }
 
 var goodVotes = []voteValue{
@@ -144,6 +155,7 @@ var goodVotes = []voteValue{
 	{k: "reward.mintingamount", v: "9600000000000000000", e: true},
 	{k: "reward.ratio", v: "10/10/80", e: true},
 	{k: "istanbul.timeout", v: uint64(5000), e: true},
+	{k: "governance.addvalidator", v: "0x639e5ebfc483716fbac9810b230ff6ad487f366c,0x828880c5f09cc1cc6a58715e3fe2b4c4cf3c5869", e: true},
 }
 
 func getTestConfig() *params.ChainConfig {
@@ -277,7 +289,6 @@ func TestGovernance_ClearVotes(t *testing.T) {
 }
 
 func TestGovernance_GetEncodedVote(t *testing.T) {
-	var err error
 	gov := getGovernance()
 
 	for _, val := range goodVotes {
@@ -285,31 +296,25 @@ func TestGovernance_GetEncodedVote(t *testing.T) {
 	}
 
 	l := gov.voteMap.Size()
-	for i := 0; i > l; i++ {
+	for i := 0; i < l; i++ {
 		voteData := gov.GetEncodedVote(common.HexToAddress("0x1234567890123456789012345678901234567890"), 1000)
 		v := new(GovernanceVote)
 		rlp.DecodeBytes(voteData, &v)
 
-		if v, err = gov.ParseVoteValue(v); err != nil {
-			assert.Equal(t, nil, err)
-		}
-
-		if v.Value != gov.voteMap.GetValue(v.Key).Value {
-			t.Errorf("Encoded vote and Decoded vote are different! Encoded: %v, Decoded: %v\n", gov.voteMap.GetValue(v.Key).Value, v.Value)
-		}
-		gov.RemoveVote(v.Key, v.Value, 1000)
+		v, err := gov.ParseVoteValue(v)
+		assert.Equal(t, nil, err)
+		gotest_assert.DeepEqual(t, gov.voteMap.GetValue(v.Key).Value, v.Value)
 	}
 }
 
 func TestGovernance_ParseVoteValue(t *testing.T) {
-	var err error
 	gov := getGovernance()
 
 	addr := common.HexToAddress("0x1234567890123456789012345678901234567890")
 	for _, val := range goodVotes {
 		v := &GovernanceVote{
 			Key:       val.k,
-			Value:     val.v,
+			Value:     gov.adjustValueType(val.k, val.v),
 			Validator: addr,
 		}
 
@@ -318,13 +323,9 @@ func TestGovernance_ParseVoteValue(t *testing.T) {
 		d := new(GovernanceVote)
 		rlp.DecodeBytes(b, d)
 
-		if d, err = gov.ParseVoteValue(d); err != nil {
-			assert.Equal(t, nil, err)
-		}
-
-		if !reflect.DeepEqual(v, d) {
-			t.Errorf("Parse was not successful! %v %v \n", v, d)
-		}
+		d, err := gov.ParseVoteValue(d)
+		assert.Equal(t, nil, err)
+		gotest_assert.DeepEqual(t, v, d)
 	}
 }
 
@@ -498,6 +499,7 @@ func TestVoteValueNilInterface(t *testing.T) {
 	gVote := new(GovernanceVote)
 	var test []byte
 
+	gVote.Key = "istanbul.policy"
 	// gVote.Value is an interface list
 	{
 		gVote.Value = []interface{}{[]byte{1, 2}}
@@ -547,7 +549,31 @@ func TestVoteValueNilInterface(t *testing.T) {
 
 		// Parse vote.Value and make it has appropriate type
 		_, err := gov.ParseVoteValue(gVote)
-		assert.Equal(t, nil, err)
+		assert.NoError(t, err)
+	}
+
+	gVote.Key = "governance.addvalidator"
+	{
+		gVote.Value = [][]uint8{{0x3, 0x4}, {0x5, 0x6}}
+		test, _ = rlp.EncodeToBytes(gVote)
+		if err := rlp.DecodeBytes(test, gVote); err != nil {
+			t.Fatal("RLP decode error")
+		}
+		// Parse vote.Value and make it has appropriate type
+		_, err := gov.ParseVoteValue(gVote)
+		assert.Equal(t, ErrValueTypeMismatch, err)
+	}
+
+	{
+		gVote.Value = []uint8{0x1, 0x2, 0x3}
+		test, _ = rlp.EncodeToBytes(gVote)
+		if err := rlp.DecodeBytes(test, gVote); err != nil {
+			t.Fatal("RLP decode error")
+		}
+
+		// Parse vote.Value and make it has appropriate type
+		_, err := gov.ParseVoteValue(gVote)
+		assert.NoError(t, err)
 	}
 }
 
@@ -574,6 +600,70 @@ func TestCypressGenesisHash(t *testing.T) {
 	block, _ := genesis.Commit(common.Hash{}, db)
 	if block.Hash() != cypressHash {
 		t.Errorf("Generated hash is not equal to Cypress's hash. Want %v, Have %v", cypressHash.String(), block.Hash().String())
+	}
+}
+
+func TestGovernance_initializeCache(t *testing.T) {
+	dbm := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
+	config := getTestConfig()
+	config.Istanbul.Epoch = 30
+
+	gov := NewGovernanceInitialize(config, dbm)
+
+	testData := []struct {
+		// test input
+		governanceUpdateNum int
+		blockNums           []uint64
+		unitPrices          []uint64
+		currentBlockNum     int64
+		// expected result
+		unitPriceInCurrentSet uint64
+		actualGovernanceBlock uint64
+	}{
+		{0, []uint64{0}, []uint64{1}, 20, 1, 0},
+		{0, []uint64{0}, []uint64{1}, 50, 1, 0},
+		{0, []uint64{0}, []uint64{1}, 80, 1, 0},
+		{3, []uint64{0, 30, 60, 90}, []uint64{1, 2, 3, 4}, 90, 3, 60},
+		{3, []uint64{0, 30, 60, 90}, []uint64{1, 2, 3, 4}, 110, 3, 60},
+		{3, []uint64{0, 30, 60, 90}, []uint64{1, 2, 3, 4}, 130, 4, 90},
+	}
+
+	for _, tc := range testData {
+		// 1. initializing
+
+		// store governance items to the governance db for 'tc.governanceUpdateNum' times
+		for idx := 1; idx <= tc.governanceUpdateNum; idx++ {
+			config.UnitPrice = tc.unitPrices[idx]
+
+			src := GetGovernanceItemsFromChainConfig(config)
+			delta := NewGovernanceSet()
+
+			if ret := gov.WriteGovernance(tc.blockNums[idx], src, delta); ret != nil {
+				t.Errorf("Error in testing WriteGovernance, %v", ret)
+			}
+		}
+		// store head block (fake block, it only contains block number) to the headerDB
+		header := &types.Header{Number: big.NewInt(tc.currentBlockNum)}
+		gov.db.WriteHeadBlockHash(header.Hash())
+		gov.db.WriteHeader(header)
+
+		// reset idxCache and itemCache. purpose - reproduce the environment of the restarted node
+		gov.idxCache = nil
+		gov.itemCache.Purge()
+
+		// 2. call initializeCache
+		err := gov.initializeCache()
+
+		// 3. check the affected values with expected results
+		assert.NoError(t, err)
+
+		v, ok := gov.currentSet.GetValue(GovernanceKeyMap["governance.unitprice"])
+		assert.True(t, ok)
+		assert.Equal(t, tc.unitPriceInCurrentSet, v)
+
+		assert.Equal(t, tc.blockNums, gov.idxCache) // the order should be same
+		assert.True(t, gov.itemCache.Contains(getGovernanceCacheKey(tc.blockNums[tc.governanceUpdateNum])))
+		assert.Equal(t, tc.actualGovernanceBlock, gov.actualGovernanceBlock.Load().(uint64))
 	}
 }
 
@@ -931,4 +1021,54 @@ func TestGovernance_checkVote(t *testing.T) {
 	assert.False(t, gov.checkVote(unknown, false, valSet))
 	assert.False(t, gov.checkVote(validators[1], true, valSet))
 	assert.False(t, gov.checkVote(demotedValidators[1], true, valSet))
+}
+
+func TestGovernance_VerifyGovernance(t *testing.T) {
+	gov := getGovernance()
+	vote := GovernanceVote{
+		Key:   "governance.governingnode",
+		Value: common.HexToAddress("000000000000000000000000000abcd000000000"),
+	}
+	gov.updateChangeSet(vote)
+
+	// consensus/istanbul/backend/engine.go:Prepare()
+	// Correct case
+	g := gov.GetGovernanceChange()
+	j, err := json.Marshal(g)
+	assert.Nil(t, err)
+	r, err := rlp.EncodeToBytes(j)
+	assert.Nil(t, err)
+	err = gov.VerifyGovernance(r)
+	assert.Nil(t, err)
+
+	// Value mismatch
+	g = gov.GetGovernanceChange()
+	g["governance.governingnode"] = "000000000000000000000000000abcd000001111"
+	j, err = json.Marshal(g)
+	assert.Nil(t, err)
+	r, err = rlp.EncodeToBytes(j)
+	assert.Nil(t, err)
+	err = gov.VerifyGovernance(r)
+	assert.Equal(t, ErrVoteValueMismatch, err)
+
+	// Type mismatch
+	g = gov.GetGovernanceChange()
+	g["governance.governingnode"] = 123
+	j, err = json.Marshal(g)
+	assert.Nil(t, err)
+	r, err = rlp.EncodeToBytes(j)
+	assert.Nil(t, err)
+	err = gov.VerifyGovernance(r)
+	assert.Equal(t, ErrVoteValueMismatch, err)
+
+	// Length mismatch
+	g = gov.GetGovernanceChange()
+	g["governance.governingnode"] = 123
+	g["istanbul.epoch"] = uint64(10000)
+	j, err = json.Marshal(g)
+	assert.Nil(t, err)
+	r, err = rlp.EncodeToBytes(j)
+	assert.Nil(t, err)
+	err = gov.VerifyGovernance(r)
+	assert.Equal(t, ErrVoteValueMismatch, err)
 }

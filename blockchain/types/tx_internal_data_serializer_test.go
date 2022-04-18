@@ -21,6 +21,8 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
@@ -36,6 +38,9 @@ var (
 	amount    = big.NewInt(10)
 	gasLimit  = uint64(1000000)
 	gasPrice  = big.NewInt(25)
+	gasTipCap = big.NewInt(25)
+	gasFeeCap = big.NewInt(25)
+	accesses  = AccessList{{Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), StorageKeys: []common.Hash{{0}}}}
 )
 
 // TestTransactionSerialization tests RLP/JSON serialization for TxInternalData
@@ -66,6 +71,8 @@ func TestTransactionSerialization(t *testing.T) {
 		{"Cancel", genCancelTransaction()},
 		{"FeeDelegatedCancel", genFeeDelegatedCancelTransaction()},
 		{"FeeDelegatedCancelWithRatio", genFeeDelegatedCancelWithRatioTransaction()},
+		{"AccessList", genAccessListTransaction()},
+		{"DynamicFee", genDynamicFeeTransaction()},
 	}
 
 	var testcases = []struct {
@@ -90,7 +97,11 @@ func TestTransactionSerialization(t *testing.T) {
 
 	// Below code checks whether serialization for all tx implementations is done or not.
 	// If no serialization, make test failed.
-	for i := TxTypeLegacyTransaction; i < TxTypeLast; i++ {
+	for i := TxTypeLegacyTransaction; i < TxTypeEthereumLast; i++ {
+		if i == TxTypeKlaytnLast {
+			i = TxTypeEthereumAccessList
+		}
+
 		tx, err := NewTxInternalData(i)
 		// TxTypeAccountCreation is not supported now
 		if i == TxTypeAccountCreation {
@@ -118,6 +129,10 @@ func testTransactionRLP(t *testing.T, tx TxInternalData) {
 	b, err := rlp.EncodeToBytes(enc)
 	if err != nil {
 		panic(err)
+	}
+
+	if tx.Type().IsEthTypedTransaction() {
+		assert.Equal(t, byte(EthereumTxTypeEnvelope), b[0])
 	}
 
 	dec := newTxInternalDataSerializer()
@@ -161,8 +176,8 @@ func testTransactionJSON(t *testing.T, tx TxInternalData) {
 // Copied from api/api_public_blockchain.go
 func newRPCTransaction(tx *Transaction, blockHash common.Hash, blockNumber uint64, index uint64) map[string]interface{} {
 	var from common.Address
-	if tx.IsLegacyTransaction() {
-		signer := NewEIP155Signer(tx.ChainId())
+	if tx.IsEthereumTransaction() {
+		signer := LatestSignerForChainID(tx.ChainId())
 		from, _ = Sender(signer, tx)
 	} else {
 		from, _ = tx.From()
@@ -180,7 +195,9 @@ func newRPCTransaction(tx *Transaction, blockHash common.Hash, blockNumber uint6
 }
 
 func testTransactionRPC(t *testing.T, tx TxInternalData) {
-	signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
+	// To test AccessList tx, it need to latest signer.
+	//signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
+	signer := LatestSignerForChainID(big.NewInt(2))
 	rawTx := &Transaction{data: tx}
 	rawTx.Sign(signer, key)
 
@@ -193,6 +210,11 @@ func testTransactionRPC(t *testing.T, tx TxInternalData) {
 
 	// Copied from newRPCTransaction
 	rpcout := newRPCTransaction(rawTx, common.Hash{}, 0, 0)
+	if tx.Type().IsEthTypedTransaction() {
+		if _, ok := rpcout["chainId"]; !ok {
+			t.Fatalf("The chainId field must be presented.")
+		}
+	}
 
 	b, err := json.Marshal(rpcout)
 	if err != nil {
@@ -226,6 +248,45 @@ func genLegacyTransaction() TxInternalData {
 	}
 
 	return txdata
+}
+
+func genAccessListTransaction() TxInternalData {
+	tx, err := NewTxInternalDataWithMap(TxTypeEthereumAccessList, map[TxValueKeyType]interface{}{
+		TxValueKeyNonce:      nonce,
+		TxValueKeyTo:         &to,
+		TxValueKeyAmount:     amount,
+		TxValueKeyGasLimit:   gasLimit,
+		TxValueKeyGasPrice:   gasPrice,
+		TxValueKeyData:       []byte("1234"),
+		TxValueKeyAccessList: accesses,
+		TxValueKeyChainID:    big.NewInt(2),
+	})
+
+	if err != nil {
+		panic(err)
+	}
+
+	return tx
+}
+
+func genDynamicFeeTransaction() TxInternalData {
+	tx, err := NewTxInternalDataWithMap(TxTypeEthereumDynamicFee, map[TxValueKeyType]interface{}{
+		TxValueKeyNonce:      nonce,
+		TxValueKeyTo:         &to,
+		TxValueKeyAmount:     amount,
+		TxValueKeyGasLimit:   gasLimit,
+		TxValueKeyGasFeeCap:  gasFeeCap,
+		TxValueKeyGasTipCap:  gasTipCap,
+		TxValueKeyData:       []byte("1234"),
+		TxValueKeyAccessList: accesses,
+		TxValueKeyChainID:    big.NewInt(2),
+	})
+
+	if err != nil {
+		panic(err)
+	}
+
+	return tx
 }
 
 func genValueTransferTransaction() TxInternalData {

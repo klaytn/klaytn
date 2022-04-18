@@ -128,6 +128,7 @@ type ProtocolManagerDownloader interface {
 	Terminate()
 	Synchronise(id string, head common.Hash, td *big.Int, mode downloader.SyncMode) error
 	Progress() klaytn.SyncProgress
+	Cancel()
 }
 
 //go:generate mockgen -destination=node/cn/mocks/fetcher_mock.go -package=mocks github.com/klaytn/klaytn/node/cn ProtocolManagerFetcher

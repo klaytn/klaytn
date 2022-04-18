@@ -34,7 +34,8 @@ const (
 )
 
 var (
-	errInvalidBlock = errors.New("block is invalid")
+	ErrInvalidBlock              = errors.New("block is invalid")
+	ErrUnknownBridgeContractAddr = errors.New("The given address was not found in the bridge contract list")
 )
 
 // parentChainInfo handles the information of parent chain, which is needed from child chain.
@@ -122,6 +123,18 @@ func (sbh *SubBridgeHandler) getParentOperatorBalance() (*big.Int, error) {
 	return sbh.subbridge.remoteBackend.BalanceAt(ctx, sbh.subbridge.bridgeAccounts.pAccount.address, nil)
 }
 
+// getParentBridgeContractBalance returns the parent bridge contract's balance.
+func (sbh *SubBridgeHandler) getParentBridgeContractBalance(addr common.Address) (*big.Int, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	if !sbh.subbridge.bridgeManager.IsInParentAddrs(addr) {
+		logger.Error(ErrUnknownBridgeContractAddr.Error(), "addr", addr)
+		return common.Big0, ErrUnknownBridgeContractAddr
+	}
+	return sbh.subbridge.remoteBackend.BalanceAt(ctx, addr, nil)
+}
+
 // setParentOperatorNonceSynced sets whether the parent chain operator account nonce is synced or not.
 func (sbh *SubBridgeHandler) setParentOperatorNonceSynced(synced bool) {
 	sbh.nonceSynced = synced
@@ -136,6 +149,18 @@ func (sbh *SubBridgeHandler) getChildOperatorBalance() (*big.Int, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	return sbh.subbridge.localBackend.BalanceAt(ctx, sbh.subbridge.bridgeAccounts.cAccount.address, nil)
+}
+
+// getChildBridgeContractBalance returns the child bridge contract's balance.
+func (sbh *SubBridgeHandler) getChildBridgeContractBalance(addr common.Address) (*big.Int, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	if !sbh.subbridge.bridgeManager.IsInChildAddrs(addr) {
+		logger.Error(ErrUnknownBridgeContractAddr.Error(), "addr", addr)
+		return common.Big0, ErrUnknownBridgeContractAddr
+	}
+	return sbh.subbridge.localBackend.BalanceAt(ctx, addr, nil)
 }
 
 func (sbh *SubBridgeHandler) getRemoteGasPrice() uint64 {
@@ -391,7 +416,7 @@ func (sbh *SubBridgeHandler) broadcastServiceChainReceiptRequest() {
 // updateTxCount update txCount to insert into anchoring tx.
 func (sbh *SubBridgeHandler) updateTxCount(block *types.Block) error {
 	if block == nil {
-		return errInvalidBlock
+		return ErrInvalidBlock
 	}
 
 	if sbh.txCountStartingBlockNumber == 0 {
@@ -433,7 +458,7 @@ func (sbh *SubBridgeHandler) blockAnchoringManager(block *types.Block) error {
 
 func (sbh *SubBridgeHandler) generateAndAddAnchoringTxIntoTxPool(block *types.Block) error {
 	if block == nil {
-		return errInvalidBlock
+		return ErrInvalidBlock
 	}
 
 	// Generating Anchoring Tx

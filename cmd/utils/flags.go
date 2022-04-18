@@ -275,6 +275,15 @@ var (
 		Name:  "db.no-perf-metrics",
 		Usage: "Disables performance metrics of database's read and write operations",
 	}
+	SnapshotFlag = cli.BoolFlag{
+		Name:  "snapshot",
+		Usage: "Enables snapshot-database mode",
+	}
+	SnapshotCacheSizeFlag = cli.IntFlag{
+		Name:  "snapshot.cache-size",
+		Usage: "Size of in-memory cache of the state snapshot cache (in MiB)",
+		Value: 512,
+	}
 	TrieMemoryCacheSizeFlag = cli.IntFlag{
 		Name:  "state.cache-size",
 		Usage: "Size of in-memory cache of the global state (in MiB) to flush matured singleton trie nodes to disk",
@@ -317,6 +326,10 @@ var (
 		Name:  "statedb.cache.num-fetcher-prefetch-worker",
 		Usage: "Number of workers used to prefetch block when fetcher fetches block",
 		Value: 32,
+	}
+	UseSnapshotForPrefetchFlag = cli.BoolFlag{
+		Name:  "statedb.cache.use-snapshot-for-prefetch",
+		Usage: "Use state snapshot functionality while prefetching",
 	}
 	TrieNodeCacheRedisEndpointsFlag = cli.StringSliceFlag{
 		Name:  "statedb.cache.redis.endpoints",
@@ -460,6 +473,10 @@ var (
 	RPCGlobalGasCap = cli.Uint64Flag{
 		Name:  "rpc.gascap",
 		Usage: "Sets a cap on gas that can be used in klay_call/estimateGas",
+	}
+	RPCGlobalEthTxFeeCapFlag = cli.Float64Flag{
+		Name:  "rpc.ethtxfeecap",
+		Usage: "Sets a cap on transaction fee (in klay) that can be sent via the eth namespace RPC APIs (0 = no cap)",
 	}
 	RPCConcurrencyLimit = cli.IntFlag{
 		Name:  "rpc.concurrencylimit",
@@ -723,7 +740,7 @@ var (
 	VTRecoveryIntervalFlag = cli.Uint64Flag{
 		Name:  "vtrecoveryinterval",
 		Usage: "Set the value transfer recovery interval (seconds)",
-		Value: 60,
+		Value: 5,
 	}
 	ServiceChainNewAccountFlag = cli.BoolFlag{
 		Name:  "scnewaccount",
@@ -755,6 +772,11 @@ var (
 	KASServiceChainAnchorOperatorFlag = cli.StringFlag{
 		Name:  "kas.sc.anchor.operator",
 		Usage: "The operator address for KAS anchor",
+	}
+	KASServiceChainAnchorRequestTimeoutFlag = cli.DurationFlag{
+		Name:  "kas.sc.anchor.request.timeout",
+		Usage: "The reuqest timeout for KAS Anchoring API call",
+		Value: 500 * time.Millisecond,
 	}
 	KASServiceChainXChainIdFlag = cli.StringFlag{
 		Name:  "kas.x-chain-id",
@@ -1638,6 +1660,7 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 		CacheType: statedb.TrieNodeCacheType(ctx.GlobalString(TrieNodeCacheTypeFlag.
 			Name)).ToValid(),
 		NumFetcherPrefetchWorker:  ctx.GlobalInt(NumFetcherPrefetchWorkerFlag.Name),
+		UseSnapshotForPrefetch:    ctx.GlobalBool(UseSnapshotForPrefetchFlag.Name),
 		LocalCacheSizeMiB:         ctx.GlobalInt(TrieNodeCacheLimitFlag.Name),
 		FastCacheFileDir:          ctx.GlobalString(DataDirFlag.Name) + "/fastcache",
 		FastCacheSavePeriod:       ctx.GlobalDuration(TrieNodeCacheSavePeriodFlag.Name),
@@ -1666,6 +1689,10 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 		cfg.RPCGasCap = new(big.Int).SetUint64(ctx.GlobalUint64(RPCGlobalGasCap.Name))
 	}
 
+	if ctx.GlobalIsSet(RPCGlobalEthTxFeeCapFlag.Name) {
+		cfg.RPCTxFeeCap = ctx.GlobalFloat64(RPCGlobalEthTxFeeCapFlag.Name)
+	}
+
 	// Only CNs could set BlockGenerationIntervalFlag and BlockGenerationTimeLimitFlag
 	if ctx.GlobalIsSet(BlockGenerationIntervalFlag.Name) {
 		params.BlockGenerationInterval = ctx.GlobalInt64(BlockGenerationIntervalFlag.Name)
@@ -1678,6 +1705,16 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	}
 
 	params.OpcodeComputationCostLimit = ctx.GlobalUint64(OpcodeComputationCostLimitFlag.Name)
+
+	if ctx.GlobalIsSet(SnapshotFlag.Name) {
+		cfg.SnapshotCacheSize = ctx.GlobalInt(SnapshotCacheSizeFlag.Name)
+		if cfg.StartBlockNumber != 0 {
+			logger.Crit("State snapshot should not be used with --start-block-num", "num", cfg.StartBlockNumber)
+		}
+		logger.Info("State snapshot is enabled", "cache-size (MB)", cfg.SnapshotCacheSize)
+	} else {
+		cfg.SnapshotCacheSize = 0 // snapshot disabled
+	}
 
 	// Override any default configs for hard coded network.
 	// TODO-Klaytn-Bootnode: Discuss and add `baobab` test network's genesis block

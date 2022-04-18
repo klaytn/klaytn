@@ -71,7 +71,7 @@ func makeBlockGroupOutput(blockchain *blockchain.BlockChain, block *types.Block,
 		logger.Error("Getting the proposer and validators failed.", "blockHash", hash, "err", err)
 	}
 	td := blockchain.GetTd(hash, block.NumberU64())
-	r, _ := klaytnApi.RpcOutputBlock(block, td, false, false)
+	r, _ := klaytnApi.RpcOutputBlock(block, td, false, false, blockchain.Config().IsEthTxTypeForkEnabled(block.Header().Number))
 
 	// make transactions
 	transactions := block.Transactions()

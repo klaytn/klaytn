@@ -28,6 +28,7 @@ import (
 	"math/big"
 	"math/rand"
 	"runtime/debug"
+	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -122,6 +123,9 @@ type ProtocolManager struct {
 
 	nodetype          common.ConnType
 	txResendUseLegacy bool
+
+	//syncStop is a flag to stop peer sync
+	syncStop int32
 }
 
 // NewProtocolManager returns a new Klaytn sub protocol manager. The Klaytn sub protocol manages peers capable
@@ -365,6 +369,22 @@ func (pm *ProtocolManager) Stop() {
 	pm.wg.Wait()
 
 	logger.Info("Klaytn protocol stopped")
+}
+
+// SetSyncStop sets value of syncStop flag. If it's true, peer sync process does not proceed.
+func (pm *ProtocolManager) SetSyncStop(flag bool) {
+	var i int32 = 0
+	if flag {
+		i = 1
+	}
+	atomic.StoreInt32(&(pm.syncStop), int32(i))
+}
+
+func (pm *ProtocolManager) GetSyncStop() bool {
+	if atomic.LoadInt32(&(pm.syncStop)) != 0 {
+		return true
+	}
+	return false
 }
 
 func (pm *ProtocolManager) newPeer(pv int, p *p2p.Peer, rw p2p.MsgReadWriter) Peer {
@@ -1094,6 +1114,13 @@ func (pm *ProtocolManager) BroadcastBlockHash(block *types.Block) {
 // BroadcastTxs propagates a batch of transactions to its peers which are not known to
 // already have the given transaction.
 func (pm *ProtocolManager) BroadcastTxs(txs types.Transactions) {
+	// This function calls sendTransaction() to broadcast the transactions for each peer.
+	// In that case, transactions are sorted for each peer in sendTransaction().
+	// Therefore, it prevents sorting transactions by each peer.
+	if !sort.IsSorted(types.TxByPriceAndTime(txs)) {
+		sort.Sort(types.TxByPriceAndTime(txs))
+	}
+
 	switch pm.nodetype {
 	case common.CONSENSUSNODE:
 		pm.broadcastTxsFromCN(txs)
@@ -1174,6 +1201,13 @@ func (pm *ProtocolManager) ReBroadcastTxs(txs types.Transactions) {
 	// A consensus node does not rebroadcast transactions, hence return here.
 	if pm.nodetype == common.CONSENSUSNODE {
 		return
+	}
+
+	// This function calls sendTransaction() to broadcast the transactions for each peer.
+	// In that case, transactions are sorted for each peer in sendTransaction().
+	// Therefore, it prevents sorting transactions by each peer.
+	if !sort.IsSorted(types.TxByPriceAndTime(txs)) {
+		sort.Sort(types.TxByPriceAndTime(txs))
 	}
 
 	peersWithoutTxs := make(map[Peer]types.Transactions)

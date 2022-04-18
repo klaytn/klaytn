@@ -25,6 +25,8 @@ import (
 	"container/heap"
 	"errors"
 
+	"github.com/klaytn/klaytn/storage/database"
+
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/rlp"
 )
@@ -98,6 +100,19 @@ type NodeIterator interface {
 	// iterator is not positioned at a leaf. Callers must not retain references
 	// to the value after calling Next.
 	LeafProof() [][]byte
+
+	// AddResolver sets an intermediate database to use for looking up trie nodes
+	// before reaching into the real persistent layer.
+	//
+	// This is not required for normal operation, rather is an optimization for
+	// cases where trie nodes can be recovered from some external mechanism without
+	// reading from disk. In those cases, this resolver allows short circuiting
+	// accesses and returning them from memory.
+	//
+	// Before adding a similar mechanism to any other place in Geth, consider
+	// making trie.Database an interface and wrapping at that level. It's a huge
+	// refactor, but it could be worth it if another occurrence arises.
+	AddResolver(database.DBManager)
 }
 
 // nodeIteratorState represents the iteration state at one particular node of the
@@ -115,6 +130,8 @@ type nodeIterator struct {
 	stack []*nodeIteratorState // Hierarchy of trie nodes persisting the iteration state
 	path  []byte               // Path to the current node
 	err   error                // Failure set in case of an internal error in the iterator
+
+	resolver database.DBManager // Optional intermediate resolver above the disk layer
 }
 
 // iteratorEnd is stored in nodeIterator.err when iteration is done.
@@ -198,6 +215,10 @@ func (it *nodeIterator) LeafProof() [][]byte {
 	panic("not at leaf")
 }
 
+func (it *nodeIterator) AddResolver(resolver database.DBManager) {
+	it.resolver = resolver
+}
+
 func (it *nodeIterator) Path() []byte {
 	return it.path
 }
@@ -262,7 +283,7 @@ func (it *nodeIterator) peek(descend bool) (*nodeIteratorState, *int, []byte, er
 		if root != emptyRoot {
 			state.hash = root
 		}
-		err := state.resolve(it.trie, nil)
+		err := state.resolve(it, nil)
 		return state, nil, nil, err
 	}
 	if !descend {
@@ -279,7 +300,7 @@ func (it *nodeIterator) peek(descend bool) (*nodeIteratorState, *int, []byte, er
 		}
 		state, path, ok := it.nextChild(parent, ancestor)
 		if ok {
-			if err := state.resolve(it.trie, path); err != nil {
+			if err := state.resolve(it, path); err != nil {
 				return parent, &parent.index, path, err
 			}
 			return state, &parent.index, path, nil
@@ -290,9 +311,22 @@ func (it *nodeIterator) peek(descend bool) (*nodeIteratorState, *int, []byte, er
 	return nil, nil, nil, iteratorEnd
 }
 
-func (st *nodeIteratorState) resolve(tr *Trie, path []byte) error {
+func (it *nodeIterator) resolveHash(hash hashNode, path []byte) (node, error) {
+	if it.resolver != nil {
+		hash := common.BytesToHash(hash)
+		enc, _ := it.resolver.ReadCachedTrieNode(hash)
+		if enc != nil {
+			if resolved, err := decodeNode(hash[:], enc); err == nil {
+				return resolved, nil
+			}
+		}
+	}
+	return it.trie.resolveHash(hash, path)
+}
+
+func (st *nodeIteratorState) resolve(it *nodeIterator, path []byte) error {
 	if hash, ok := st.node.(hashNode); ok {
-		resolved, err := tr.resolveHash(hash, path)
+		resolved, err := it.resolveHash(hash, path)
 		if err != nil {
 			return err
 		}
@@ -414,6 +448,10 @@ func (it *differenceIterator) LeafProof() [][]byte {
 	return it.b.LeafProof()
 }
 
+func (it *differenceIterator) AddResolver(database.DBManager) {
+	panic("implement me")
+}
+
 func (it *differenceIterator) Path() []byte {
 	return it.b.Path()
 }
@@ -515,6 +553,10 @@ func (it *unionIterator) LeafBlob() []byte {
 
 func (it *unionIterator) LeafProof() [][]byte {
 	return (*it.items)[0].LeafProof()
+}
+
+func (it *unionIterator) AddResolver(database.DBManager) {
+	panic("implement me")
 }
 
 func (it *unionIterator) LeafKey() []byte {

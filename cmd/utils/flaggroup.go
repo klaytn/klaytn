@@ -184,6 +184,7 @@ var FlagGroups = []FlagGroup{
 			MemorySizeFlag,
 			TrieNodeCacheTypeFlag,
 			NumFetcherPrefetchWorkerFlag,
+			UseSnapshotForPrefetchFlag,
 			TrieNodeCacheLimitFlag,
 			TrieNodeCacheSavePeriodFlag,
 			TrieNodeCacheRedisEndpointsFlag,
@@ -247,6 +248,7 @@ var FlagGroups = []FlagGroup{
 			RPCVirtualHostsFlag,
 			RPCApiFlag,
 			RPCGlobalGasCap,
+			RPCGlobalEthTxFeeCapFlag,
 			RPCConcurrencyLimit,
 			RPCNonEthCompatibleFlag,
 			IPCDisabledFlag,
@@ -293,6 +295,7 @@ var FlagGroups = []FlagGroup{
 			KASServiceChainAccessKeyFlag,
 			KASServiceChainSecretKeyFlag,
 			KASServiceChainXChainIdFlag,
+			KASServiceChainAnchorRequestTimeoutFlag,
 		},
 	},
 	{
@@ -304,6 +307,8 @@ var FlagGroups = []FlagGroup{
 			RestartTimeOutFlag,
 			DaemonPathFlag,
 			KESNodeTypeServiceFlag,
+			SnapshotFlag,
+			SnapshotCacheSizeFlag,
 		},
 	},
 }

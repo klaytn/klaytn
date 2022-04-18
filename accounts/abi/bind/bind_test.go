@@ -1701,7 +1701,7 @@ func TestGolangBindings(t *testing.T) {
 		t.Skip("go sdk not found for testing")
 	}
 	// Create a temporary workspace for the test suite
-	ws, err := ioutil.TempDir("", "")
+	ws, err := ioutil.TempDir("", "binding-test")
 	if err != nil {
 		t.Fatalf("failed to create temporary workspace: %v", err)
 	}
@@ -1713,36 +1713,38 @@ func TestGolangBindings(t *testing.T) {
 	}
 	// Generate the test suite for all the contracts
 	for i, tt := range bindTests {
-		var types []string
-		if tt.types != nil {
-			types = tt.types
-		} else {
-			types = []string{tt.name}
-		}
-		// Generate the binding and create a Go source file in the workspace
-		bind, err := Bind(types, tt.abi, tt.bytecode, tt.bytecode, tt.fsigs, "bindtest", LangGo, tt.libs, tt.aliases)
-		if err != nil {
-			t.Fatalf("test %d: failed to generate binding: %v", i, err)
-		}
-		if err = ioutil.WriteFile(filepath.Join(pkg, strings.ToLower(tt.name)+".go"), []byte(bind), 0600); err != nil {
-			t.Fatalf("test %d: failed to write binding: %v", i, err)
-		}
-		// Generate the test file with the injected test code
-		code := fmt.Sprintf(`
-			package bindtest
-
-			import (
-				"testing"
-				%s
-			)
-
-			func Test%s(t *testing.T) {
-				%s
+		t.Run(tt.name, func(t *testing.T) {
+			var types []string
+			if tt.types != nil {
+				types = tt.types
+			} else {
+				types = []string{tt.name}
 			}
-		`, tt.imports, tt.name, tt.tester)
-		if err := ioutil.WriteFile(filepath.Join(pkg, strings.ToLower(tt.name)+"_test.go"), []byte(code), 0600); err != nil {
-			t.Fatalf("test %d: failed to write tests: %v", i, err)
-		}
+			// Generate the binding and create a Go source file in the workspace
+			bind, err := Bind(types, tt.abi, tt.bytecode, tt.bytecode, tt.fsigs, "bindtest", LangGo, tt.libs, tt.aliases)
+			if err != nil {
+				t.Fatalf("test %d: failed to generate binding: %v", i, err)
+			}
+			if err = ioutil.WriteFile(filepath.Join(pkg, strings.ToLower(tt.name)+".go"), []byte(bind), 0600); err != nil {
+				t.Fatalf("test %d: failed to write binding: %v", i, err)
+			}
+			// Generate the test file with the injected test code
+			code := fmt.Sprintf(`
+				package bindtest
+	
+				import (
+					"testing"
+					%s
+				)
+	
+				func Test%s(t *testing.T) {
+					%s
+				}
+			`, tt.imports, tt.name, tt.tester)
+			if err := ioutil.WriteFile(filepath.Join(pkg, strings.ToLower(tt.name)+"_test.go"), []byte(code), 0600); err != nil {
+				t.Fatalf("test %d: failed to write tests: %v", i, err)
+			}
+		})
 	}
 	// Convert the package to go modules and use the current source for klaytn
 	moder := exec.Command(gocmd, "mod", "init", "bindtest")
@@ -1751,10 +1753,15 @@ func TestGolangBindings(t *testing.T) {
 		t.Fatalf("failed to convert binding test to modules: %v\n%s", err, out)
 	}
 	pwd, _ := os.Getwd()
-	replacer := exec.Command(gocmd, "mod", "edit", "-replace", "github.com/klaytn/klaytn="+filepath.Join(pwd, "..", "..", "..")) // Repo root
+	replacer := exec.Command(gocmd, "mod", "edit", "-x", "-require", "github.com/klaytn/klaytn@v0.0.0-local", "-replace", "github.com/klaytn/klaytn="+filepath.Join(pwd, "..", "..", "..")) // Repo root
 	replacer.Dir = pkg
 	if out, err := replacer.CombinedOutput(); err != nil {
 		t.Fatalf("failed to replace binding test dependency to current source tree: %v\n%s", err, out)
+	}
+	tidier := exec.Command(gocmd, "mod", "tidy")
+	tidier.Dir = pkg
+	if out, err := tidier.CombinedOutput(); err != nil {
+		t.Fatalf("failed to tidy Go module file: %v\n%s", err, out)
 	}
 	// Test the entire package and report any failures
 	cmd := exec.Command(gocmd, "test", "-v", "-count", "1", "-timeout", "1m")
