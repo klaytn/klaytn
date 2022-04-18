@@ -337,7 +337,7 @@ func TestBridgeManager(t *testing.T) {
 		assert.Equal(t, testKLAY.String(), balance.String())
 	}
 
-	// 12. Check NFT owner
+	// 12. Check NFT owner sent by RequestValueTransfer()
 	{
 		owner, err := nft.OwnerOf(nil, big.NewInt(int64(nftTokenID)))
 		assert.Equal(t, nil, err)
