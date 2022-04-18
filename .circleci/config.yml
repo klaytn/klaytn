@@ -46,7 +46,7 @@ executors:
   default:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
-      - image: circleci/golang:latest
+      - image: cimg/go:latest
 
 commands:
   install-netcat:
