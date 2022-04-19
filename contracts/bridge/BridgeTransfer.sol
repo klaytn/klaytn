@@ -97,7 +97,7 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
         uint64 requestNonce,
         uint256 fee,
         bytes extraData,
-        uint encodingVer,
+        uint8 encodingVer,
         bytes encodedData
     );
 
