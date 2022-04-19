@@ -114,7 +114,7 @@ commands:
             export GOPATH=~/go
             export PATH=$HOME/go1.18/go/bin:$PATH
             KLAYTN_VERSION=$(go run build/rpm/main.go version)
-            for item in << parameters.item >>; do aws s3 cp packages/${item}-*.tar.gz s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/; done
+#            for item in << parameters.item >>; do aws s3 cp packages/${item}-*.tar.gz s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/; done
   rpm-tagging:
     description: "rpm tagging for cypress"
     steps:
@@ -504,6 +504,12 @@ jobs:
       - notify-failure
       - notify-success
 
+  release-tmp-test:
+    executor: default
+    steps:
+      - add_ssh_keys
+      - checkout
+
   major-tagging:
     executor: default
     steps:
@@ -582,6 +588,14 @@ workflows:
               only: /^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+.*/
             branches:
               ignore: /.*/
+      - release-tmp-test:
+          requires:
+            - rpm-tagged
+            - rpm-tagged-baobab
+            - packaging-linux
+            - packaging-linux-baobab
+            - packaging-darwin
+            - packaging-darwin-baobab
 
       - rpm-tagged:
           filters: *filter-only-version-tag
