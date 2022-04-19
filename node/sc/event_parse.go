@@ -4,6 +4,11 @@ import (
 	"strings"
 
 	"github.com/klaytn/klaytn/accounts/abi"
+	"github.com/pkg/errors"
+)
+
+var (
+	ErrUnknownEvent = errors.New("Unknown event type")
 )
 
 var RequestValueTransferEncodeABIs = map[uint]string{
@@ -18,7 +23,7 @@ var RequestValueTransferEncodeABIs = map[uint]string{
 		}]`,
 }
 
-func UnpackEncodedData(ver uint64, packed []byte) interface{} {
+func UnpackEncodedData(ver uint8, packed []byte) interface{} {
 	switch ver {
 	case 2:
 		encodedEvent := map[string]interface{}{}
