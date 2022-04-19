@@ -46,8 +46,8 @@ type valueTransferRecovery struct {
 
 	child2parentHint *valueTransferHint
 	parent2childHint *valueTransferHint
-	childEvents      []interface{}
-	parentEvents     []interface{}
+	childEvents      []RequestValueTransferEventInterface
+	parentEvents     []RequestValueTransferEventInterface
 
 	config      *SCConfig
 	cBridgeInfo *BridgeInfo
@@ -59,6 +59,15 @@ var (
 	ErrVtrAlreadyStarted = errors.New("VTR is already started")
 )
 
+func isHandledEvent(to *BridgeInfo, ev RequestValueTransferEventInterface) bool {
+	blk, err := to.bridge.HandleNoncesToBlockNums(nil, ev.GetRequestNonce())
+	if err == nil && blk > 0 {
+		logger.Trace("skip handled event", "nonce", ev.GetRequestNonce())
+		return true
+	}
+	return false
+}
+
 // NewValueTransferRecovery creates a new value transfer recovery structure.
 func NewValueTransferRecovery(config *SCConfig, cBridgeInfo, pBridgeInfo *BridgeInfo) *valueTransferRecovery {
 	return &valueTransferRecovery{
@@ -67,8 +76,8 @@ func NewValueTransferRecovery(config *SCConfig, cBridgeInfo, pBridgeInfo *Bridge
 		wg:               sync.WaitGroup{},
 		child2parentHint: &valueTransferHint{},
 		parent2childHint: &valueTransferHint{},
-		childEvents:      []interface{}{},
-		parentEvents:     []interface{}{},
+		childEvents:      []RequestValueTransferEventInterface{},
+		parentEvents:     []RequestValueTransferEventInterface{},
 		config:           config,
 		cBridgeInfo:      cBridgeInfo,
 		pBridgeInfo:      pBridgeInfo,
@@ -252,7 +261,7 @@ func (vtr *valueTransferRecovery) retrievePendingEvents() error {
 
 // retrievePendingEventsFrom retrieves pending events from the specified bridge by using the hint provided.
 // The filter uses a hint as a search range. It returns a slice of events that has log details.
-func retrievePendingEventsFrom(hint *valueTransferHint, from, to *BridgeInfo) ([]interface{}, error) {
+func retrievePendingEventsFrom(hint *valueTransferHint, from, to *BridgeInfo) ([]RequestValueTransferEventInterface, error) {
 	if from.bridge == nil {
 		return nil, errors.New("from bridge is nil")
 	}
@@ -266,7 +275,7 @@ func retrievePendingEventsFrom(hint *valueTransferHint, from, to *BridgeInfo) ([
 		return nil, nil
 	}
 
-	var pendingEvents []interface{}
+	var pendingEvents []RequestValueTransferEventInterface
 
 	curBlkNum, err := from.GetCurrentBlockNumber()
 	if err != nil {
@@ -297,14 +306,11 @@ pendingTxLoop:
 			logger.Trace("pending nonce in the RequestValueTransfer event", "requestNonce", reqVTevIt.Event.RequestNonce)
 			if reqVTevIt.Event.RequestNonce >= hint.handleNonce {
 				// Check if the event is already handled in target bridge contract
-				blk, err := to.bridge.HandleNoncesToBlockNums(nil, reqVTevIt.Event.RequestNonce)
-				if err == nil && blk > 0 {
-					logger.Trace("skip handled event", "nonce", reqVTevIt.Event.RequestNonce)
+				if isHandledEvent(to, RequestValueTransferEvent{reqVTevIt.Event}) {
 					continue
 				}
-
 				logger.Trace("filtered pending nonce", "requestNonce", reqVTevIt.Event.RequestNonce, "handledNonce", hint.handleNonce)
-				pendingEvents = append(pendingEvents, &RequestValueTransferEvent{reqVTevIt.Event})
+				pendingEvents = append(pendingEvents, RequestValueTransferEvent{reqVTevIt.Event})
 				if len(pendingEvents) >= maxPendingTxs {
 					reqVTevIt.Close()
 					break pendingTxLoop
@@ -316,23 +322,11 @@ pendingTxLoop:
 			logger.Trace("pending nonce in the RequestValueTransferEncoded event", "requestNonce", reqVTencodedDataIt.Event.RequestNonce)
 			if reqVTencodedDataIt.Event.RequestNonce >= hint.handleNonce {
 				// Check if the event is already handled in target bridge contract
-				blk, err := to.bridge.HandleNoncesToBlockNums(nil, reqVTencodedDataIt.Event.RequestNonce)
-				if err == nil && blk > 0 {
-					logger.Trace("skip handled event", "nonce", reqVTencodedDataIt.Event.RequestNonce)
+				if isHandledEvent(to, RequestValueTransferEncodedEvent{reqVTencodedDataIt.Event}) {
 					continue
 				}
-
 				logger.Trace("filtered pending nonce", "requestNonce", reqVTencodedDataIt.Event.RequestNonce, "handledNonce", hint.handleNonce)
-
-				encodeVer := reqVTencodedDataIt.Event.EncodingVer.Uint64()
-				decoded := UnpackEncodedData(encodeVer, reqVTencodedDataIt.Event.EncodedData)
-				switch encodeVer {
-				case 2:
-					if uri, ok := decoded.(string); ok {
-						pendingEvents = append(pendingEvents, &RequestValueTransferEncodedEvent{reqVTencodedDataIt.Event, uri})
-					}
-				}
-
+				pendingEvents = append(pendingEvents, RequestValueTransferEncodedEvent{reqVTencodedDataIt.Event})
 				if len(pendingEvents) >= maxPendingTxs {
 					reqVTencodedDataIt.Close()
 					break pendingTxLoop
@@ -346,15 +340,9 @@ pendingTxLoop:
 	}
 
 	if len(pendingEvents) > 0 {
-		var nonce uint64
-		switch ev := pendingEvents[0].(type) {
-		case *RequestValueTransferEvent:
-			nonce = ev.Nonce()
-		case *RequestValueTransferEncodedEvent:
-			nonce = ev.Nonce()
-		}
 		logger.Info("retrieved pending events", "bridge", from.address.String(),
-			"len(pendingEvents)", len(pendingEvents), "1st nonce", nonce)
+			"len(pendingEvents)", len(pendingEvents), "1st nonce", pendingEvents[0].Nonce())
+
 	}
 	return pendingEvents, nil
 }
@@ -392,8 +380,8 @@ func checkRecoveryCondition(hint *valueTransferHint) bool {
 // recoverPendingEvents recovers all pending events by resending them.
 func (vtr *valueTransferRecovery) recoverPendingEvents() error {
 	defer func() {
-		vtr.childEvents = []interface{}{}
-		vtr.parentEvents = []interface{}{}
+		vtr.childEvents = []RequestValueTransferEventInterface{}
+		vtr.parentEvents = []RequestValueTransferEventInterface{}
 	}()
 
 	if len(vtr.childEvents) > 0 {
@@ -403,7 +391,7 @@ func (vtr *valueTransferRecovery) recoverPendingEvents() error {
 	vtRequestEventMeter.Mark(int64(len(vtr.childEvents)))
 	vtRecoveredRequestEventMeter.Mark(int64(len(vtr.childEvents)))
 
-	events := make([]interface{}, len(vtr.childEvents))
+	events := make([]RequestValueTransferEventInterface, len(vtr.childEvents))
 	for i, event := range vtr.childEvents {
 		events[i] = event
 	}
@@ -414,7 +402,7 @@ func (vtr *valueTransferRecovery) recoverPendingEvents() error {
 	}
 
 	vtHandleEventMeter.Mark(int64(len(vtr.parentEvents)))
-	events = make([]interface{}, len(vtr.parentEvents))
+	events = make([]RequestValueTransferEventInterface, len(vtr.parentEvents))
 	for i, event := range vtr.parentEvents {
 		events[i] = event
 	}
