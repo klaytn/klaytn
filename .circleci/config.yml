@@ -121,18 +121,7 @@ commands:
       - run:
           name: "rpm tagging"
           command: make rpm-all
-      - run:
-          name: "upload S3 repo"
-          command: |
-            PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
-            KLAYTN_VERSION=$(go run build/rpm/main.go version)
 
-            for item in kcn kpn ken kscn kspn ksen kbn kgen homi;
-            do
-              TARGET_RPM=$(find $item-linux-x86_64/rpmbuild/RPMS/x86_64/ | awk -v pat="$item(d)?-v" '$0~pat')
-              aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
-              aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
-            done
   rpm-tagging-baobab:
     description: "rpm tagging for baobab"
     steps:
@@ -142,16 +131,7 @@ commands:
               make rpm-baobab-kcn
               make rpm-baobab-kpn
               make rpm-baobab-ken
-      - run:
-          name: "upload S3 repo"
-          command: |
-            for item in kcn kpn ken;
-            do
-              PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
-              TARGET_RPM=$(find $item-linux-x86_64/rpmbuild/RPMS/x86_64/ | awk -v pat="$item(d)?-baobab-v" '$0~pat')
-              aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
-              aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
-            done
+
   createrepo-update:
     steps:
       - run:
