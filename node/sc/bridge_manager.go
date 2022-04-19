@@ -62,27 +62,7 @@ var (
 	ErrNoRecovery           = errors.New("recovery does not exist")
 	ErrAlreadySubscribed    = errors.New("already subscribed")
 	ErrBridgeRestore        = errors.New("restoring bridges is failed")
-	ErrUnknownEvent         = errors.New("Unknown event type")
 )
-
-// RequestValueTransferEvent from Bridge contract
-type RequestValueTransferEvent struct {
-	*bridgecontract.BridgeRequestValueTransfer
-}
-
-func (rEv RequestValueTransferEvent) Nonce() uint64 {
-	return rEv.RequestNonce
-}
-
-// RequestValueTransferEncodedEvent from Bridge contract
-type RequestValueTransferEncodedEvent struct {
-	*bridgecontract.BridgeRequestValueTransferEncoded
-	Uri string
-}
-
-func (rEv RequestValueTransferEncodedEvent) Nonce() uint64 {
-	return rEv.RequestNonce
-}
 
 // HandleValueTransferEvent from Bridge contract
 type HandleValueTransferEvent struct {
@@ -212,12 +192,11 @@ func (bi *BridgeInfo) GetCounterPartToken(token common.Address) common.Address {
 	return cpToken
 }
 
-//func (bi *BridgeInfo) GetPendingRequestEvents() []*RequestValueTransferEvent {
-func (bi *BridgeInfo) GetPendingRequestEvents() []interface{} {
+func (bi *BridgeInfo) GetPendingRequestEvents() []RequestValueTransferEventInterface {
 	ready := bi.pendingRequestEvent.Pop(maxPendingNonceDiff / 2)
-	readyEvent := make([]interface{}, len(ready))
+	readyEvent := make([]RequestValueTransferEventInterface, len(ready))
 	for i, item := range ready {
-		readyEvent[i] = item
+		readyEvent[i] = item.(RequestValueTransferEventInterface)
 	}
 	vtPendingRequestEventCounter.Dec((int64)(len(ready)))
 	return readyEvent
@@ -232,24 +211,13 @@ func (bi *BridgeInfo) processingPendingRequestEvents() {
 
 	logger.Trace("Get ready request value transfer event", "len(readyEvent)", len(ReadyEvent), "len(pendingEvent)", bi.pendingRequestEvent.Len())
 
-	for idx, _ev := range ReadyEvent {
-		switch ev := _ev.(type) {
-		case *RequestValueTransferEvent:
-			if ev.RequestNonce < bi.lowerHandleNonce || bi.handledEvent.Exist(ev.RequestNonce) {
-				logger.Trace("handled requests can be ignored", "RequestNonce", ev.RequestNonce, "lowerHandleNonce", bi.lowerHandleNonce)
-				continue
-			}
-		case *RequestValueTransferEncodedEvent:
-			if ev.RequestNonce < bi.lowerHandleNonce || bi.handledEvent.Exist(ev.RequestNonce) {
-				logger.Trace("handled requests can be ignored", "RequestNonce", ev.RequestNonce, "lowerHandleNonce", bi.lowerHandleNonce)
-				continue
-			}
-		default:
-			logger.Error(ErrUnknownEvent.Error())
-			return
+	for idx, ev := range ReadyEvent {
+		if ev.GetRequestNonce() < bi.lowerHandleNonce || bi.handledEvent.Exist(ev.GetRequestNonce()) {
+			logger.Trace("handled requests can be ignored", "RequestNonce", ev.GetRequestNonce(), "lowerHandleNonce", bi.lowerHandleNonce)
+			continue
 		}
 
-		if err := bi.handleRequestValueTransferEvent(_ev); err != nil {
+		if err := bi.handleRequestValueTransferEvent(ev); err != nil {
 			bi.AddRequestValueTransferEvents(ReadyEvent[idx:])
 			logger.Debug("Failed handle request value transfer event", "err", err, "len(RePutEvent)", len(ReadyEvent[idx:]))
 			return
@@ -288,29 +256,15 @@ func (bi *BridgeInfo) UpdateInfo() error {
 }
 
 // handleRequestValueTransferEvent handles the given request value transfer event.
-func (bi *BridgeInfo) handleRequestValueTransferEvent(_ev interface{}) error {
+func (bi *BridgeInfo) handleRequestValueTransferEvent(ev RequestValueTransferEventInterface) error {
 	var (
-		tokenType                         uint8
-		tokenAddr, from, to, contractAddr common.Address
-		txHash                            common.Hash
-		valueOrTokenId                    *big.Int
-		requestNonce, blkNumber           uint64
-		extraData                         []byte
-		verEv                             uint
+		tokenType                         = ev.GetTokenType()
+		tokenAddr, from, to, contractAddr = ev.GetTokenAddress(), ev.GetFrom(), ev.GetTo(), ev.GetRaw().Address
+		txHash                            = ev.GetRaw().TxHash
+		valueOrTokenId                    = ev.GetValueOrTokenId()
+		requestNonce, blkNumber           = ev.GetRequestNonce(), ev.GetRaw().BlockNumber
+		extraData                         = ev.GetExtraData()
 	)
-
-	switch ev := _ev.(type) {
-	case *RequestValueTransferEvent:
-		tokenType, tokenAddr, txHash, from, to = ev.TokenType, ev.TokenAddress, ev.Raw.TxHash, ev.From, ev.To
-		valueOrTokenId, requestNonce, blkNumber, extraData, contractAddr = ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.ExtraData, ev.Raw.Address
-		verEv = 1
-	case *RequestValueTransferEncodedEvent:
-		tokenType, tokenAddr, txHash, from, to = ev.TokenType, ev.TokenAddress, ev.Raw.TxHash, ev.From, ev.To
-		valueOrTokenId, requestNonce, blkNumber, extraData, contractAddr = ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.ExtraData, ev.Raw.Address
-		verEv = uint(ev.EncodingVer.Uint64())
-	default:
-		return ErrUnknownEvent
-	}
 
 	ctpartTokenAddr := bi.GetCounterPartToken(tokenAddr)
 	// TODO-Klaytn-Servicechain Add counterpart token address in requestValueTransferEvent
@@ -354,14 +308,17 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(_ev interface{}) error {
 		}
 		logger.Trace("Bridge succeeded to HandleERC20Transfer", "nonce", requestNonce, "tx", handleTx.Hash().String())
 	case ERC721:
-		switch verEv {
-		case 1:
+		switch evType := ev.(type) {
+		case RequestValueTransferEvent:
 			handleTx, err = bi.bridge.HandleERC721Transfer(auth, txHash, from, to, ctpartTokenAddr, valueOrTokenId, requestNonce, blkNumber, "", extraData)
-		case 2:
-			uri := _ev.(*RequestValueTransferEncodedEvent).Uri
+		case RequestValueTransferEncodedEvent:
+			uri := ""
+			decoded := UnpackEncodedData(evType.EncodingVer, evType.EncodedData)
+			switch evType.EncodingVer {
+			case 2:
+				uri = decoded.(string)
+			}
 			handleTx, err = bi.bridge.HandleERC721Transfer(auth, txHash, from, to, ctpartTokenAddr, valueOrTokenId, requestNonce, blkNumber, uri, extraData)
-		default:
-			return ErrUnknownEvent
 		}
 		if err != nil {
 			return err
@@ -418,39 +375,21 @@ func (bi *BridgeInfo) UpdateLowerHandleNonce(nonce uint64) {
 }
 
 // AddRequestValueTransferEvents adds events into the pendingRequestEvent.
-//func (bi *BridgeInfo) AddRequestValueTransferEvents(evs []*RequestValueTransferEvent) {
-func (bi *BridgeInfo) AddRequestValueTransferEvents(evs []interface{}) {
-	for _, _ev := range evs {
-		var (
-			nonce        uint64
-			requestNonce uint64
-		)
-		switch ev := _ev.(type) {
-		case *RequestValueTransferEvent:
-			nonce, requestNonce = ev.Nonce(), ev.RequestNonce
-		case *RequestValueTransferEncodedEvent:
-			nonce, requestNonce = ev.Nonce(), ev.RequestNonce
-		default:
-			continue
-		}
+func (bi *BridgeInfo) AddRequestValueTransferEvents(evs []RequestValueTransferEventInterface) {
+	for _, ev := range evs {
 		if bi.pendingRequestEvent.Len() > maxPendingNonceDiff {
 			flatten := bi.pendingRequestEvent.Flatten()
 			maxNonce := flatten[len(flatten)-1].Nonce()
-			if nonce >= maxNonce || bi.pendingRequestEvent.Exist(nonce) {
+			if ev.Nonce() >= maxNonce || bi.pendingRequestEvent.Exist(ev.Nonce()) {
 				continue
 			}
 			bi.pendingRequestEvent.Remove(maxNonce)
 			vtPendingRequestEventCounter.Dec(1)
-			logger.Trace("List is full but add requestValueTransfer ", "newNonce", nonce, "removedNonce", maxNonce)
+			logger.Trace("List is full but add requestValueTransfer ", "newNonce", ev.Nonce(), "removedNonce", maxNonce)
 		}
 
-		bi.SetRequestNonceFromCounterpart(requestNonce + 1)
-		switch ev := _ev.(type) {
-		case *RequestValueTransferEvent:
-			bi.pendingRequestEvent.Put(ev)
-		case *RequestValueTransferEncodedEvent:
-			bi.pendingRequestEvent.Put(ev)
-		}
+		bi.SetRequestNonceFromCounterpart(ev.GetRequestNonce() + 1)
+		bi.pendingRequestEvent.Put(ev)
 		vtPendingRequestEventCounter.Inc(1)
 	}
 	logger.Trace("added pending request events to the bridge info:", "bi.pendingRequestEvent", bi.pendingRequestEvent.Len())
@@ -462,8 +401,7 @@ func (bi *BridgeInfo) AddRequestValueTransferEvents(evs []interface{}) {
 }
 
 // GetReadyRequestValueTransferEvents returns the processable events with the increasing nonce.
-//func (bi *BridgeInfo) GetReadyRequestValueTransferEvents() []*RequestValueTransferEvent {
-func (bi *BridgeInfo) GetReadyRequestValueTransferEvents() []interface{} {
+func (bi *BridgeInfo) GetReadyRequestValueTransferEvents() []RequestValueTransferEventInterface {
 	return bi.GetPendingRequestEvents()
 }
 
@@ -618,16 +556,16 @@ func (bm *BridgeManager) LogBridgeStatus() {
 }
 
 // SubscribeReqVTev registers a subscription of RequestValueTransferEvent.
-func (bm *BridgeManager) SubscribeReqVTev(ch chan<- *RequestValueTransferEvent) event.Subscription {
+func (bm *BridgeManager) SubscribeReqVTev(ch chan<- RequestValueTransferEvent) event.Subscription {
 	return bm.scope.Track(bm.reqVTevFeeder.Subscribe(ch))
 }
 
 // SubscribeReqVTencodedEv registers a subscription of RequestValueTransferEncoded.
-func (bm *BridgeManager) SubscribeReqVTencodedEv(ch chan<- *RequestValueTransferEncodedEvent) event.Subscription {
+func (bm *BridgeManager) SubscribeReqVTencodedEv(ch chan<- RequestValueTransferEncodedEvent) event.Subscription {
 	return bm.scope.Track(bm.reqVTevEncodedFeeder.Subscribe(ch))
 }
 
-// SubscribeHandleVTev registers a subscription of RequestValueTransferEvent.
+// SubscribeHandleVTev registers a subscription of HandleValueTransferEvent.
 func (bm *BridgeManager) SubscribeHandleVTev(ch chan<- *HandleValueTransferEvent) event.Subscription {
 	return bm.scope.Track(bm.handleEventFeeder.Subscribe(ch))
 }
@@ -1083,16 +1021,9 @@ func (bm *BridgeManager) loop(
 		case <-bi.closed:
 			return
 		case ev := <-chanReqVT:
-			bm.reqVTevFeeder.Send(&RequestValueTransferEvent{ev})
+			bm.reqVTevFeeder.Send(RequestValueTransferEvent{ev})
 		case ev := <-chanReqVTencoded:
-			encodeVer := ev.EncodingVer.Uint64()
-			decoded := UnpackEncodedData(encodeVer, ev.EncodedData)
-			switch encodeVer {
-			case 2:
-				if uri, ok := decoded.(string); ok {
-					bm.reqVTevEncodedFeeder.Send(&RequestValueTransferEncodedEvent{ev, uri})
-				}
-			}
+			bm.reqVTevEncodedFeeder.Send(RequestValueTransferEncodedEvent{ev})
 		case ev := <-chanHandleVT:
 			bm.handleEventFeeder.Send(&HandleValueTransferEvent{ev})
 		case err := <-reqVTevSub.Err():
