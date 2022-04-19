@@ -75,7 +75,7 @@ const (
 
 type operations struct {
 	request     func(*testInfo, *BridgeInfo)
-	handle      func(*testInfo, *BridgeInfo, interface{})
+	handle      func(*testInfo, *BridgeInfo, RequestValueTransferEventInterface)
 	dummyHandle func(*testInfo, *BridgeInfo)
 }
 
@@ -136,23 +136,12 @@ func TestBasicKLAYTransferRecovery(t *testing.T) {
 	// 4. Check pending events.
 	t.Log("check pending tx", "len", len(vtr.childEvents))
 	var count = 0
-	for _, _ev := range vtr.childEvents {
-		var (
-			from, to       common.Address
-			valueOrTokenId *big.Int
-			blkNumber      uint64
-		)
-		switch ev := _ev.(type) {
-		case *RequestValueTransferEvent:
-			from, to, valueOrTokenId, blkNumber = ev.From, ev.To, ev.ValueOrTokenId, ev.Raw.BlockNumber
-		case *RequestValueTransferEncodedEvent:
-			from, to, valueOrTokenId, blkNumber = ev.From, ev.To, ev.ValueOrTokenId, ev.Raw.BlockNumber
-		}
-		assert.Equal(t, info.nodeAuth.From, from)
-		assert.Equal(t, info.aliceAuth.From, to)
-		assert.Equal(t, big.NewInt(testAmount), valueOrTokenId)
+	for _, ev := range vtr.childEvents {
+		assert.Equal(t, info.nodeAuth.From, ev.GetFrom())
+		assert.Equal(t, info.aliceAuth.From, ev.GetTo())
+		assert.Equal(t, big.NewInt(testAmount), ev.GetValueOrTokenId())
 		assert.Condition(t, func() bool {
-			return uint64(testBlockOffset) <= blkNumber
+			return uint64(testBlockOffset) <= ev.GetRaw().BlockNumber
 		})
 		count++
 	}
@@ -593,23 +582,12 @@ func TestMultiOperatorRequestRecovery(t *testing.T) {
 	// 6. Check pending events.
 	t.Log("check pending tx", "len", len(vtr.childEvents))
 	var count = 0
-	for _, _ev := range vtr.childEvents {
-		var (
-			from, to       common.Address
-			valueOrTokenId *big.Int
-			blkNumber      uint64
-		)
-		switch ev := _ev.(type) {
-		case *RequestValueTransferEvent:
-			from, to, valueOrTokenId, blkNumber = ev.From, ev.To, ev.ValueOrTokenId, ev.Raw.BlockNumber
-		case *RequestValueTransferEncodedEvent:
-			from, to, valueOrTokenId, blkNumber = ev.From, ev.To, ev.ValueOrTokenId, ev.Raw.BlockNumber
-		}
-		assert.Equal(t, info.nodeAuth.From, from)
-		assert.Equal(t, info.aliceAuth.From, to)
-		assert.Equal(t, big.NewInt(testAmount), valueOrTokenId)
+	for _, ev := range vtr.childEvents {
+		assert.Equal(t, info.nodeAuth.From, ev.GetFrom())
+		assert.Equal(t, info.aliceAuth.From, ev.GetTo())
+		assert.Equal(t, big.NewInt(testAmount), ev.GetValueOrTokenId())
 		assert.Condition(t, func() bool {
-			return uint64(testBlockOffset) <= blkNumber
+			return uint64(testBlockOffset) <= ev.GetRaw().BlockNumber
 		})
 		count++
 	}
@@ -803,8 +781,8 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 	}
 
 	// Prepare channel for event handling.
-	requestVTCh := make(chan *RequestValueTransferEvent)
-	requestVTencodedCh := make(chan *RequestValueTransferEncodedEvent)
+	requestVTCh := make(chan RequestValueTransferEvent)
+	requestVTencodedCh := make(chan RequestValueTransferEncodedEvent)
 	handleVTCh := make(chan *HandleValueTransferEvent)
 	recoveryCh := make(chan bool)
 	bm.SubscribeReqVTev(requestVTCh)
@@ -822,54 +800,38 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 	wg := sync.WaitGroup{}
 	wg.Add((2 * testTxCount) - testPendingCount)
 	var isRecovery = false
+	reqHandler := func(ev RequestValueTransferEventInterface) {
+		t.Log("request value transfer", "nonce", ev.GetRequestNonce())
+		if ev.GetRequestNonce() >= (testTxCount - testPendingCount) {
+			t.Log("missing handle value transfer", "nonce", ev.GetRequestNonce())
+		} else {
+			switch ev.GetTokenType() {
+			case KLAY, ERC20, ERC721:
+				break
+			default:
+				t.Errorf("received ev.TokenType is unknown: %v", ev.GetTokenType())
+				return
+			}
+
+			if ev.GetRaw().Address == info.localInfo.address {
+				ops[ev.GetTokenType()].handle(&info, info.remoteInfo, ev)
+			} else {
+				ops[ev.GetTokenType()].handle(&info, info.localInfo, ev)
+			}
+		}
+	}
 	go func() {
 		for {
 			select {
 			case ev := <-recoveryCh:
 				isRecovery = ev
 			case ev := <-requestVTCh:
-				t.Log("request value transfer", "nonce", ev.RequestNonce)
-				if ev.RequestNonce >= (testTxCount - testPendingCount) {
-					t.Log("missing handle value transfer", "nonce", ev.RequestNonce)
-				} else {
-					switch ev.TokenType {
-					case KLAY, ERC20, ERC721:
-						break
-					default:
-						t.Errorf("received ev.TokenType is unknown: %v", ev.TokenType)
-						return
-					}
-
-					if ev.Raw.Address == info.localInfo.address {
-						ops[ev.TokenType].handle(&info, info.remoteInfo, ev)
-					} else {
-						ops[ev.TokenType].handle(&info, info.localInfo, ev)
-					}
-				}
-
+				reqHandler(ev)
 				if !isRecovery {
 					wg.Done()
 				}
 			case ev := <-requestVTencodedCh:
-				t.Log("request value transfer", "nonce", ev.RequestNonce)
-				if ev.RequestNonce >= (testTxCount - testPendingCount) {
-					t.Log("missing handle value transfer", "nonce", ev.RequestNonce)
-				} else {
-					switch ev.TokenType {
-					case KLAY, ERC20, ERC721:
-						break
-					default:
-						t.Errorf("received ev.TokenType is unknown: %v", ev.TokenType)
-						return
-					}
-
-					if ev.Raw.Address == info.localInfo.address {
-						ops[ev.TokenType].handle(&info, info.remoteInfo, ev)
-					} else {
-						ops[ev.TokenType].handle(&info, info.localInfo, ev)
-					}
-				}
-
+				reqHandler(ev)
 				if !isRecovery {
 					wg.Done()
 				}
@@ -903,16 +865,13 @@ func requestKLAYTransfer(info *testInfo, bi *BridgeInfo) {
 	assert.Nil(info.t, bind.CheckWaitMined(info.sim, tx))
 }
 
-func handleKLAYTransfer(info *testInfo, bi *BridgeInfo, _ev interface{}) {
+func handleKLAYTransfer(info *testInfo, bi *BridgeInfo, ev RequestValueTransferEventInterface) {
 	bi.account.Lock()
 	defer bi.account.UnLock()
 
-	ev, ok := _ev.(*RequestValueTransferEvent)
-	assert.Equal(info.t, ok, true)
-
-	assert.Equal(info.t, new(big.Int).SetUint64(testAmount), ev.ValueOrTokenId)
+	assert.Equal(info.t, new(big.Int).SetUint64(testAmount), ev.GetValueOrTokenId())
 	opts := bi.account.GenerateTransactOpts()
-	tx, err := bi.bridge.HandleKLAYTransfer(opts, ev.Raw.TxHash, ev.From, ev.To, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.ExtraData)
+	tx, err := bi.bridge.HandleKLAYTransfer(opts, ev.GetRaw().TxHash, ev.GetFrom(), ev.GetTo(), ev.GetValueOrTokenId(), ev.GetRequestNonce(), ev.GetRaw().BlockNumber, ev.GetExtraData())
 	if err != nil {
 		log.Fatalf("\tFailed to HandleKLAYTransfer: %v", err)
 	}
@@ -923,7 +882,7 @@ func handleKLAYTransfer(info *testInfo, bi *BridgeInfo, _ev interface{}) {
 // TODO-Klaytn-ServiceChain: use ChildChainEventHandler
 func dummyHandleRequestKLAYTransfer(info *testInfo, bi *BridgeInfo) {
 	for _, ev := range bi.GetPendingRequestEvents() {
-		handleKLAYTransfer(info, bi, ev.(*RequestValueTransferEvent))
+		handleKLAYTransfer(info, bi, ev.(RequestValueTransferEvent))
 	}
 	info.sim.Commit()
 }
@@ -951,16 +910,13 @@ func requestTokenTransfer(info *testInfo, bi *BridgeInfo) {
 	assert.Nil(info.t, bind.CheckWaitMined(info.sim, tx))
 }
 
-func handleTokenTransfer(info *testInfo, bi *BridgeInfo, _ev interface{}) {
+func handleTokenTransfer(info *testInfo, bi *BridgeInfo, ev RequestValueTransferEventInterface) {
 	bi.account.Lock()
 	defer bi.account.UnLock()
 
-	ev, ok := _ev.(*RequestValueTransferEvent)
-	assert.Equal(info.t, ok, true)
-
-	assert.Equal(info.t, new(big.Int).SetUint64(testToken), ev.ValueOrTokenId)
+	assert.Equal(info.t, new(big.Int).SetUint64(testToken), ev.GetValueOrTokenId())
 	tx, err := bi.bridge.HandleERC20Transfer(
-		bi.account.GenerateTransactOpts(), ev.Raw.TxHash, ev.From, ev.To, info.tokenRemoteAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.ExtraData)
+		bi.account.GenerateTransactOpts(), ev.GetRaw().TxHash, ev.GetFrom(), ev.GetTo(), info.tokenRemoteAddr, ev.GetValueOrTokenId(), ev.GetRequestNonce(), ev.GetRaw().BlockNumber, ev.GetExtraData())
 	if err != nil {
 		log.Fatalf("Failed to HandleERC20Transfer: %v", err)
 	}
@@ -971,7 +927,7 @@ func handleTokenTransfer(info *testInfo, bi *BridgeInfo, _ev interface{}) {
 // TODO-Klaytn-ServiceChain: use ChildChainEventHandler
 func dummyHandleRequestTokenTransfer(info *testInfo, bi *BridgeInfo) {
 	for _, ev := range bi.GetPendingRequestEvents() {
-		handleTokenTransfer(info, bi, ev.(*RequestValueTransferEvent))
+		handleTokenTransfer(info, bi, ev.(RequestValueTransferEvent))
 	}
 	info.sim.Commit()
 }
@@ -1001,7 +957,7 @@ func requestNFTTransfer(info *testInfo, bi *BridgeInfo) {
 	assert.Nil(info.t, bind.CheckWaitMined(info.sim, tx))
 }
 
-func handleNFTTransfer(info *testInfo, bi *BridgeInfo, _ev interface{}) {
+func handleNFTTransfer(info *testInfo, bi *BridgeInfo, ev RequestValueTransferEventInterface) {
 	bi.account.Lock()
 	defer bi.account.UnLock()
 
@@ -1012,36 +968,20 @@ func handleNFTTransfer(info *testInfo, bi *BridgeInfo, _ev interface{}) {
 	} else {
 		nftAddr = info.nftRemoteAddr
 	}
-
-	var (
-		txHash              common.Hash
-		from, to, addr      common.Address
-		valueOrTokenId      *big.Int
-		reqNonce, blkNumber uint64
-		uri                 string
-		extraData           []byte
-	)
-
-	switch ev := _ev.(type) {
-	case *RequestValueTransferEvent:
-		txHash, from, to, addr, valueOrTokenId, reqNonce, blkNumber, extraData = ev.Raw.TxHash, ev.From, ev.To, nftAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.ExtraData
-	case *RequestValueTransferEncodedEvent:
-		txHash, from, to, addr, valueOrTokenId, reqNonce, blkNumber, extraData = ev.Raw.TxHash, ev.From, ev.To, nftAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.ExtraData
-		encodeVer := ev.EncodingVer.Uint64()
-		decoded := UnpackEncodedData(encodeVer, ev.EncodedData)
-		switch encodeVer {
+	uri := ""
+	if encodedEvent, ok := ev.(RequestValueTransferEncodedEvent); ok {
+		decoded := UnpackEncodedData(encodedEvent.EncodingVer, encodedEvent.EncodedData)
+		switch encodedEvent.EncodingVer {
 		case 2:
 			if _uri, ok := decoded.(string); ok {
 				uri = _uri
 			}
 		}
-	default:
-		log.Fatalf("Unknown event")
 	}
-
 	tx, err := bi.bridge.HandleERC721Transfer(
 		bi.account.GenerateTransactOpts(),
-		txHash, from, to, addr, valueOrTokenId, reqNonce, blkNumber, uri, extraData)
+		ev.GetRaw().TxHash, ev.GetFrom(), ev.GetTo(), nftAddr, ev.GetValueOrTokenId(),
+		ev.GetRequestNonce(), ev.GetRaw().BlockNumber, uri, ev.GetExtraData())
 	if err != nil {
 		log.Fatalf("Failed to handleERC721Transfer: %v", err)
 	}

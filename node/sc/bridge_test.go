@@ -657,7 +657,7 @@ func TestExtendedBridgeAndCallbackERC721(t *testing.T) {
 		assert.Equal(t, ERC721, ev.TokenType)
 		assert.Equal(t, bobAcc.From, ev.To)
 
-		encodeVer := ev.EncodingVer.Uint64()
+		encodeVer := ev.EncodingVer
 		decoded := UnpackEncodedData(encodeVer, ev.EncodedData)
 		switch encodeVer {
 		case 2:

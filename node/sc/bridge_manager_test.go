@@ -76,24 +76,17 @@ func CheckReceipt(b bind.DeployBackend, tx *types.Transaction, duration time.Dur
 	assert.Equal(t, expectedStatus, receipt.Status)
 }
 
-func handleValueTransfer(t *testing.T, _ev interface{}, bridgeInfo *BridgeInfo, wg *sync.WaitGroup, backend *backends.SimulatedBackend) {
+func handleValueTransfer(t *testing.T, ev RequestValueTransferEventInterface, bridgeInfo *BridgeInfo, wg *sync.WaitGroup, backend *backends.SimulatedBackend) {
 	var (
-		tokenType      uint8
-		valueOrTokenId *big.Int
-		from           string
-		to             string
-		contractAddr   string
-		tokenAddr      string
-		requestNonce   uint64
-		txHash         common.Hash
+		tokenType      = ev.GetTokenType()
+		valueOrTokenId = ev.GetValueOrTokenId()
+		from           = ev.GetFrom()
+		to             = ev.GetTo()
+		contractAddr   = ev.GetRaw().Address
+		tokenAddr      = ev.GetTokenAddress()
+		requestNonce   = ev.GetRequestNonce()
+		txHash         = ev.GetRaw().TxHash
 	)
-	switch ev := _ev.(type) {
-	case *RequestValueTransferEvent:
-		tokenType, valueOrTokenId, from, to, contractAddr, tokenAddr, requestNonce, txHash = ev.TokenType, ev.ValueOrTokenId, ev.From.String(), ev.To.String(), ev.Raw.Address.String(), ev.TokenAddress.String(), ev.RequestNonce, ev.Raw.TxHash
-	case *RequestValueTransferEncodedEvent:
-		tokenType, valueOrTokenId, from, to, contractAddr, tokenAddr, requestNonce, txHash = ev.TokenType, ev.ValueOrTokenId, ev.From.String(), ev.To.String(), ev.Raw.Address.String(), ev.TokenAddress.String(), ev.RequestNonce, ev.Raw.TxHash
-	}
-
 	fmt.Println("Request Event",
 		"type", tokenType,
 		"amount", valueOrTokenId,
@@ -109,7 +102,7 @@ func handleValueTransfer(t *testing.T, _ev interface{}, bridgeInfo *BridgeInfo, 
 	assert.Equal(t, false, done)
 
 	// insert the value transfer request event to the bridge info's event list.
-	bridgeInfo.AddRequestValueTransferEvents([]interface{}{_ev})
+	bridgeInfo.AddRequestValueTransferEvents([]RequestValueTransferEventInterface{ev})
 
 	// handle the value transfer request event in the event list.
 	bridgeInfo.processingPendingRequestEvents()
@@ -244,19 +237,19 @@ func TestBridgeManager(t *testing.T) {
 	// 4. Subscribe Bridge Contract
 	bridgeManager.SubscribeEvent(addr)
 
-	requestValueTransferEventCh := make(chan *RequestValueTransferEvent)
-	requestValueTransferEncodedEventCh := make(chan *RequestValueTransferEncodedEvent)
+	reqVTevCh := make(chan RequestValueTransferEvent)
+	reqVTencodedEvCh := make(chan RequestValueTransferEncodedEvent)
 	handleValueTransferEventCh := make(chan *HandleValueTransferEvent)
-	bridgeManager.SubscribeReqVTev(requestValueTransferEventCh)
-	bridgeManager.SubscribeReqVTencodedEv(requestValueTransferEncodedEventCh)
+	bridgeManager.SubscribeReqVTev(reqVTevCh)
+	bridgeManager.SubscribeReqVTencodedEv(reqVTencodedEvCh)
 	bridgeManager.SubscribeHandleVTev(handleValueTransferEventCh)
 
 	go func() {
 		for {
 			select {
-			case ev := <-requestValueTransferEventCh:
+			case ev := <-reqVTevCh:
 				handleValueTransfer(t, ev, bridgeInfo, &wg, sim)
-			case ev := <-requestValueTransferEncodedEventCh:
+			case ev := <-reqVTencodedEvCh:
 				handleValueTransfer(t, ev, bridgeInfo, &wg, sim)
 			case ev := <-handleValueTransferEventCh:
 				fmt.Println("Handle value transfer event",
@@ -447,19 +440,19 @@ func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
 	// Subscribe Bridge Contract
 	bridgeManager.SubscribeEvent(addr)
 
-	requestValueTransferEventCh := make(chan *RequestValueTransferEvent)
-	requestValueTransferEncodedEventCh := make(chan *RequestValueTransferEncodedEvent)
+	reqVTevCh := make(chan RequestValueTransferEvent)
+	reqVTencodedEvCh := make(chan RequestValueTransferEncodedEvent)
 	handleValueTransferEventCh := make(chan *HandleValueTransferEvent)
-	bridgeManager.SubscribeReqVTev(requestValueTransferEventCh)
-	bridgeManager.SubscribeReqVTencodedEv(requestValueTransferEncodedEventCh)
+	bridgeManager.SubscribeReqVTev(reqVTevCh)
+	bridgeManager.SubscribeReqVTencodedEv(reqVTencodedEvCh)
 	bridgeManager.SubscribeHandleVTev(handleValueTransferEventCh)
 
 	go func() {
 		for {
 			select {
-			case ev := <-requestValueTransferEventCh:
+			case ev := <-reqVTevCh:
 				handleValueTransfer(t, ev, bridgeInfo, &wg, sim)
-			case ev := <-requestValueTransferEncodedEventCh:
+			case ev := <-reqVTencodedEvCh:
 				handleValueTransfer(t, ev, bridgeInfo, &wg, sim)
 			case ev := <-handleValueTransferEventCh:
 				fmt.Println("Handle value transfer event",
@@ -659,28 +652,27 @@ func TestBridgeManagerWithFee(t *testing.T) {
 	// 4. Subscribe Bridge Contract
 	bridgeManager.SubscribeEvent(pBridgeAddr)
 
-	requestValueTransferEventCh := make(chan *RequestValueTransferEvent)
+	reqVTevCh := make(chan RequestValueTransferEvent)
 	handleValueTransferEventCh := make(chan *HandleValueTransferEvent)
-	bridgeManager.SubscribeReqVTev(requestValueTransferEventCh)
+	bridgeManager.SubscribeReqVTev(reqVTevCh)
 	bridgeManager.SubscribeHandleVTev(handleValueTransferEventCh)
 
 	go func() {
 		for {
 			select {
-			case ev := <-requestValueTransferEventCh:
+			case ev := <-reqVTevCh:
 				fmt.Println("Request value transfer event",
-					"type", ev.TokenType,
-					"amount", ev.ValueOrTokenId,
-					"from", ev.From.String(),
-					"to", ev.To.String(),
-					"contract", ev.Raw.Address.String(),
-					"token", ev.TokenAddress.String(),
-					"requestNonce", ev.RequestNonce,
-					"fee", ev.Fee.String())
+					"type", ev.GetTokenType(),
+					"amount", ev.GetValueOrTokenId(),
+					"from", ev.GetFrom().String(),
+					"to", ev.GetTo().String(),
+					"contract", ev.GetRaw().Address.String(),
+					"token", ev.GetTokenAddress().String(),
+					"requestNonce", ev.GetRequestNonce(),
+					"fee", ev.GetFee().String())
 
 				// insert the value transfer request event to the bridge info's event list.
-				//pBridgeInfo.AddRequestValueTransferEvents([]*RequestValueTransferEvent{ev})
-				pBridgeInfo.AddRequestValueTransferEvents([]interface{}{ev})
+				pBridgeInfo.AddRequestValueTransferEvents([]RequestValueTransferEventInterface{ev})
 
 				// handle the value transfer request event in the event list.
 				pBridgeInfo.processingPendingRequestEvents()
