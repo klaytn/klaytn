@@ -524,15 +524,15 @@ workflows:
       - build:
           filters: *filter-version-not-release
       - test-datasync:
-          filters: *filter-version-not-release
+          filters: *filter-only-version-tag
       - test-networks:
-          filters: *filter-version-not-release
+          filters: *filter-only-version-tag
       - test-tests:
-          filters: *filter-version-not-release
+          filters: *filter-only-version-tag
       - test-others:
-         filters: *filter-version-not-release
+          filters: *filter-only-version-tag
       - test-linter:
-          filters: *filter-version-not-release
+          filters: *filter-only-version-tag
       - tagger-verify:
          filters:
             tags:
@@ -543,12 +543,12 @@ workflows:
       - pass-tests:
           requires:
             - build
-            - test-datasync
-            - test-networks
-            - test-tests
-            - test-others
-            - tag-verify
-            - tagger-verify
+#            - test-datasync
+#            - test-networks
+#            - test-tests
+#            - test-others
+#            - tag-verify
+#            - tagger-verify
           filters: *filter-version-not-release
 
       - docker/publish:
@@ -596,29 +596,30 @@ workflows:
             - packaging-linux-baobab
             - packaging-darwin
             - packaging-darwin-baobab
+          filters: *filter-version-not-release
 
       - rpm-tagged:
-          filters: *filter-only-version-tag
+          filters: *filter-version-not-release
           requires:
             - pass-tests
       - rpm-tagged-baobab:
-          filters: *filter-only-version-tag
+          filters: *filter-version-not-release
           requires:
             - pass-tests
       - packaging-linux:
-          filters: *filter-only-version-tag
+          filters: *filter-version-not-release
           requires:
             - pass-tests
       - packaging-linux-baobab:
-          filters: *filter-only-version-tag
+          filters: *filter-version-not-release
           requires:
             - pass-tests
       - packaging-darwin:
-          filters: *filter-only-version-tag
+          filters: *filter-version-not-release
           requires:
             - pass-tests
       - packaging-darwin-baobab:
-          filters: *filter-only-version-tag
+          filters: *filter-version-not-release
           requires:
             - pass-tests
 
