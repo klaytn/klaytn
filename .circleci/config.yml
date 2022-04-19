@@ -395,8 +395,7 @@ jobs:
           path: /tmp/linter_reports
 
   packaging-linux:
-    machine: 
-      image: ubuntu-2004:202201-02
+    machine: true
     resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
@@ -407,8 +406,7 @@ jobs:
       - upload-repo
 
   packaging-linux-baobab:
-    machine: 
-      image: ubuntu-2004:202201-02
+    machine: true
     resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
@@ -421,8 +419,7 @@ jobs:
           item: "kcn kpn ken"
 
   packaging-darwin:
-    machine: 
-      image: ubuntu-2004:202201-02
+    machine: true
     resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
@@ -434,8 +431,7 @@ jobs:
       - upload-repo
 
   packaging-darwin-baobab:
-    machine: 
-      image: ubuntu-2004:202201-02
+    machine: true
     resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
