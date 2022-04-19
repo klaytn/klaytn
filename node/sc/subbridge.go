@@ -152,8 +152,8 @@ type SubBridge struct {
 	remoteBackend Backend
 	bridgeManager *BridgeManager
 
-	chanReqVTev        chan *RequestValueTransferEvent
-	chanReqVTencodedEv chan *RequestValueTransferEncodedEvent
+	chanReqVTev        chan RequestValueTransferEvent
+	chanReqVTencodedEv chan RequestValueTransferEncodedEvent
 	reqVTevSub         event.Subscription
 	reqVTencodedEvSub  event.Subscription
 	chanHandleVTev     chan *HandleValueTransferEvent
@@ -193,8 +193,8 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 		chainCh:        make(chan blockchain.ChainEvent, chainEventChanSize),
 		logsCh:         make(chan []*types.Log, chainLogChanSize),
 		// txCh:            make(chan blockchain.NewTxsEvent, transactionChanSize),
-		chanReqVTev:        make(chan *RequestValueTransferEvent, chanReqVTevanSize),
-		chanReqVTencodedEv: make(chan *RequestValueTransferEncodedEvent, chanReqVTevanSize),
+		chanReqVTev:        make(chan RequestValueTransferEvent, chanReqVTevanSize),
+		chanReqVTencodedEv: make(chan RequestValueTransferEncodedEvent, chanReqVTevanSize),
 		chanHandleVTev:     make(chan *HandleValueTransferEvent, chanHandleVTevanSize),
 		quitSync:           make(chan struct{}),
 		maxPeers:           config.MaxPeer,
