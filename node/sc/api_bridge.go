@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"strings"
 
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -33,6 +34,28 @@ import (
 var (
 	ErrInvalidBridgePair = errors.New("invalid bridge pair")
 )
+
+func parseBridgeAddrWithAlias(cBridgeAddr, pBridgeAddr string, args ...interface{}) (string, common.Address, common.Address, []interface{}) {
+	if !strings.HasPrefix(cBridgeAddr, "0x") {
+		// Takes pBirdgeAddr as the first API argument and append residual arguments.
+		var newArgs []interface{}
+		if len(args) > 0 {
+			newArgs = append([]interface{}{pBridgeAddr}, args[:len(args)-1]...)
+		}
+		// return bridge alias
+		return cBridgeAddr, common.Address{}, common.Address{}, newArgs
+	} else {
+		// return two raw bridge addresses
+		return "", common.HexToAddress(cBridgeAddr), common.HexToAddress(pBridgeAddr), args
+	}
+}
+
+func stringDeref(str *string) string {
+	if str == nil {
+		return ""
+	}
+	return *str
+}
 
 // MainBridgeAPI Implementation for main-bridge node
 type MainBridgeAPI struct {
@@ -145,8 +168,8 @@ func (sb *SubBridgeAPI) DeployBridge() ([]common.Address, error) {
 	return []common.Address{cBridgeAddr, pBridgeAddr}, nil
 }
 
-// SubscribeBridge enables the given child/parent chain bridges to subscribe the events.
-func (sb *SubBridgeAPI) SubscribeBridge(cBridgeAddr, pBridgeAddr common.Address) error {
+// doSubscribeBridge enables the given child/parent chain bridges to subscribe the events.
+func (sb *SubBridgeAPI) doSubscribeBridge(cBridgeAddr, pBridgeAddr common.Address) error {
 	if !sb.subBridge.bridgeManager.IsValidBridgePair(cBridgeAddr, pBridgeAddr) {
 		return ErrInvalidBridgePair
 	}
@@ -178,18 +201,22 @@ func (sb *SubBridgeAPI) SubscribeBridge(cBridgeAddr, pBridgeAddr common.Address)
 	return nil
 }
 
-// SubscribeBridgeByAlias is the same implementation with SubscribeBridge.
-// It takes bridgeAlias instaed of raw addresses
-func (sb *SubBridgeAPI) SubscribeBridgeByAlias(bridgeAlias string) error {
-	cBridgeAddr, pBridgeAddr, err := sb.subBridge.bridgeManager.getAddrByAlias(bridgeAlias)
-	if err != nil {
-		return err
+func (sb *SubBridgeAPI) SubscribeBridge(cBridgeAddrStrP, pBridgeAddrStrP *string) error {
+	cBridgeAddrStr, pBridgeAddrStr := stringDeref(cBridgeAddrStrP), stringDeref(pBridgeAddrStrP)
+
+	var err error
+	bridgeAlias, cBridgeAddr, pBridgeAddr, _ := parseBridgeAddrWithAlias(cBridgeAddrStr, pBridgeAddrStr)
+	if bridgeAlias != "" {
+		cBridgeAddr, pBridgeAddr, err = sb.subBridge.bridgeManager.getAddrByAlias(bridgeAlias)
+		if err != nil {
+			return err
+		}
 	}
-	return sb.SubscribeBridge(cBridgeAddr, pBridgeAddr)
+	return sb.doSubscribeBridge(cBridgeAddr, pBridgeAddr)
 }
 
-// UnsubscribeBridge disables the event subscription of the given child/parent chain bridges.
-func (sb *SubBridgeAPI) UnsubscribeBridge(cBridgeAddr, pBridgeAddr common.Address) error {
+// doUnsubscribeBridge disables the event subscription of the given child/parent chain bridges.
+func (sb *SubBridgeAPI) doUnsubscribeBridge(cBridgeAddr, pBridgeAddr common.Address) error {
 	if !sb.subBridge.bridgeManager.IsValidBridgePair(cBridgeAddr, pBridgeAddr) {
 		return ErrInvalidBridgePair
 	}
@@ -203,14 +230,18 @@ func (sb *SubBridgeAPI) UnsubscribeBridge(cBridgeAddr, pBridgeAddr common.Addres
 	return nil
 }
 
-// UnsubscribeBridgeByAlias is the same implementation with SubscribeBridge.
-// It takes bridgeAlias instaed of raw addresses
-func (sb *SubBridgeAPI) UnsubscribeBridgeByAlias(bridgeAlias string) error {
-	cBridgeAddr, pBridgeAddr, err := sb.subBridge.bridgeManager.getAddrByAlias(bridgeAlias)
-	if err != nil {
-		return err
+func (sb *SubBridgeAPI) UnsubscribeBridge(cBridgeAddrStrP, pBridgeAddrStrP *string) error {
+	cBridgeAddrStr, pBridgeAddrStr := stringDeref(cBridgeAddrStrP), stringDeref(pBridgeAddrStrP)
+
+	var err error
+	bridgeAlias, cBridgeAddr, pBridgeAddr, _ := parseBridgeAddrWithAlias(cBridgeAddrStr, pBridgeAddrStr)
+	if bridgeAlias != "" {
+		cBridgeAddr, pBridgeAddr, err = sb.subBridge.bridgeManager.getAddrByAlias(bridgeAlias)
+		if err != nil {
+			return err
+		}
 	}
-	return sb.UnsubscribeBridge(cBridgeAddr, pBridgeAddr)
+	return sb.doUnsubscribeBridge(cBridgeAddr, pBridgeAddr)
 }
 
 func (sb *SubBridgeAPI) ConvertRequestTxHashToHandleTxHash(hash common.Hash) common.Hash {
@@ -308,23 +339,15 @@ func (sb *SubBridgeAPI) registerBridgePair(cBridgeAddr common.Address, pBridgeAd
 	return nil
 }
 
-func (sb *SubBridgeAPI) RegisterBridge(cBridgeAddr common.Address, pBridgeAddr common.Address) error {
-	if err := sb.registerBridgePair(cBridgeAddr, pBridgeAddr); err != nil {
+func (sb *SubBridgeAPI) RegisterBridge(cBridgeAddr, pBridgeAddr common.Address, bridgeAliasP *string) error {
+	bridgeAlias := stringDeref(bridgeAliasP)
+	if err := sb.subBridge.bridgeManager.SetJournal(bridgeAlias, cBridgeAddr, pBridgeAddr); err != nil {
 		return err
 	}
-	bm := sb.subBridge.bridgeManager
-	return bm.SetJournal("", cBridgeAddr, pBridgeAddr)
+	return sb.registerBridgePair(cBridgeAddr, pBridgeAddr)
 }
 
-func (sb *SubBridgeAPI) RegisterBridgeByAlias(bridgeAlias string, cBridgeAddr common.Address, pBridgeAddr common.Address) error {
-	if err := sb.registerBridgePair(cBridgeAddr, pBridgeAddr); err != nil {
-		return err
-	}
-	bm := sb.subBridge.bridgeManager
-	return bm.SetJournal(bridgeAlias, cBridgeAddr, pBridgeAddr)
-}
-
-func (sb *SubBridgeAPI) DeregisterBridge(cBridgeAddr common.Address, pBridgeAddr common.Address) error {
+func (sb *SubBridgeAPI) doDeregisterBridge(cBridgeAddr common.Address, pBridgeAddr common.Address) error {
 	if !sb.subBridge.bridgeManager.IsValidBridgePair(cBridgeAddr, pBridgeAddr) {
 		return ErrInvalidBridgePair
 	}
@@ -355,15 +378,22 @@ func (sb *SubBridgeAPI) DeregisterBridge(cBridgeAddr common.Address, pBridgeAddr
 	return nil
 }
 
-func (sb *SubBridgeAPI) DeregisterBridgeByAlias(bridgeAlias string) error {
-	cBridgeAddr, pBridgeAddr, err := sb.subBridge.bridgeManager.getAddrByAlias(bridgeAlias)
-	if err != nil {
-		return err
+func (sb *SubBridgeAPI) DeregisterBridge(cBridgeAddrStrP, pBridgeAddrStrP *string) error {
+	cBridgeAddrStr, pBridgeAddrStr := stringDeref(cBridgeAddrStrP), stringDeref(pBridgeAddrStrP)
+
+	var err error
+	bridgeAlias, cBridgeAddr, pBridgeAddr, _ := parseBridgeAddrWithAlias(cBridgeAddrStr, pBridgeAddrStr)
+	if bridgeAlias != "" {
+		cBridgeAddr, pBridgeAddr, err = sb.subBridge.bridgeManager.getAddrByAlias(bridgeAlias)
+		if err != nil {
+			return err
+		}
+		delete(sb.subBridge.bridgeManager.journal.aliasCache, bridgeAlias)
 	}
-	return sb.DeregisterBridge(cBridgeAddr, pBridgeAddr)
+	return sb.doDeregisterBridge(cBridgeAddr, pBridgeAddr)
 }
 
-func (sb *SubBridgeAPI) RegisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr, pTokenAddr common.Address) error {
+func (sb *SubBridgeAPI) doRegisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr, pTokenAddr common.Address) error {
 	if !sb.subBridge.bridgeManager.IsValidBridgePair(cBridgeAddr, pBridgeAddr) {
 		return ErrInvalidBridgePair
 	}
@@ -411,12 +441,19 @@ func (sb *SubBridgeAPI) RegisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr, pTok
 	return nil
 }
 
-func (sb *SubBridgeAPI) RegisterTokenByAlias(bridgeAlias string, cTokenAddr, pTokenAddr common.Address) error {
-	cBridgeAddr, pBridgeAddr, err := sb.subBridge.bridgeManager.getAddrByAlias(bridgeAlias)
-	if err != nil {
-		return err
+func (sb *SubBridgeAPI) RegisterToken(cBridgeAddrStrP, pBridgeAddrStrP, cTokenAddrStrP, pTokenAddrStrP *string) error {
+	cBridgeAddrStr, pBridgeAddrStr, cTokenAddrStr, pTokenAddrStr := stringDeref(cBridgeAddrStrP), stringDeref(pBridgeAddrStrP), stringDeref(cTokenAddrStrP), stringDeref(pTokenAddrStrP)
+
+	var err error
+	bridgeAlias, cBridgeAddr, pBridgeAddr, args := parseBridgeAddrWithAlias(cBridgeAddrStr, pBridgeAddrStr, cTokenAddrStr, pTokenAddrStr)
+	if bridgeAlias != "" {
+		cBridgeAddr, pBridgeAddr, err = sb.subBridge.bridgeManager.getAddrByAlias(bridgeAlias)
+		if err != nil {
+			return err
+		}
 	}
-	return sb.RegisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr, pTokenAddr)
+	cTokenAddr, pTokenAddr := common.HexToAddress(args[0].(string)), common.HexToAddress(args[1].(string))
+	return sb.doRegisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr, pTokenAddr)
 }
 
 func (sb *SubBridgeAPI) GetParentTransactionReceipt(txHash common.Hash) (map[string]interface{}, error) {
@@ -448,7 +485,7 @@ func (sb *SubBridgeAPI) GetFeeReceiver(bridgeAddr common.Address) (common.Addres
 	return sb.subBridge.bridgeManager.GetFeeReceiver(bridgeAddr)
 }
 
-func (sb *SubBridgeAPI) DeregisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr, pTokenAddr common.Address) error {
+func (sb *SubBridgeAPI) doDeregisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr, pTokenAddr common.Address) error {
 	if !sb.subBridge.bridgeManager.IsValidBridgePair(cBridgeAddr, pBridgeAddr) {
 		return ErrInvalidBridgePair
 	}
@@ -490,12 +527,19 @@ func (sb *SubBridgeAPI) DeregisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr, pT
 	return err
 }
 
-func (sb *SubBridgeAPI) DeregisterTokenByAlias(bridgeAlias string, cTokenAddr, pTokenAddr common.Address) error {
-	cBridgeAddr, pBridgeAddr, err := sb.subBridge.bridgeManager.getAddrByAlias(bridgeAlias)
-	if err != nil {
-		return err
+func (sb *SubBridgeAPI) DeregisterToken(cBridgeAddrStrP, pBridgeAddrStrP, cTokenAddrStrP, pTokenAddrStrP *string) error {
+	cBridgeAddrStr, pBridgeAddrStr, cTokenAddrStr, pTokenAddrStr := stringDeref(cBridgeAddrStrP), stringDeref(pBridgeAddrStrP), stringDeref(cTokenAddrStrP), stringDeref(pTokenAddrStrP)
+
+	var err error
+	bridgeAlias, cBridgeAddr, pBridgeAddr, args := parseBridgeAddrWithAlias(cBridgeAddrStr, pBridgeAddrStr, cTokenAddrStr, pTokenAddrStr)
+	if bridgeAlias != "" {
+		cBridgeAddr, pBridgeAddr, err = sb.subBridge.bridgeManager.getAddrByAlias(bridgeAlias)
+		if err != nil {
+			return err
+		}
 	}
-	return sb.DeregisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr, pTokenAddr)
+	cTokenAddr, pTokenAddr := common.HexToAddress(args[0].(string)), common.HexToAddress(args[1].(string))
+	return sb.doDeregisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr, pTokenAddr)
 }
 
 // AddPeer requests connecting to a remote node, and also maintaining the new
