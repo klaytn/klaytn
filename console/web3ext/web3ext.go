@@ -1408,6 +1408,8 @@ web3._extend({
 			name: 'changeBridgeAlias',
 			call: 'subbridge_changeBridgeAlias',
 			params: 2
+		}),
+		new web3._extend.Method({
 			name: 'getBridgeOperatorGasLimit',
 			call: 'subbridge_getBridgeOperatorGasLimit',
 			params: 0
@@ -1416,6 +1418,8 @@ web3._extend({
 			name: 'setBridgeOperatorGasLimit',
 			call: 'subbridge_setBridgeOperatorGasLimit',
 			params: 1
+		}),
+		new web3._extend.Method({
 			name: 'getParentBridgeContractBalance',
 			call: 'subbridge_getParentBridgeContractBalance',
 			params: 1,
