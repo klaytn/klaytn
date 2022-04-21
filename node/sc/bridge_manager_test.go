@@ -2014,7 +2014,7 @@ func TestBridgeAliasAPIs(t *testing.T) {
 	config := &SCConfig{}
 	config.DataDir = tempDir
 
-	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}))
+	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit)
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
@@ -2253,7 +2253,6 @@ func (bm *BridgeManager) DeployBridgeTest(backend *backends.SimulatedBackend, am
 	return addr, err
 }
 
-<<<<<<< HEAD
 // deployBridge deploys bridge contract and returns its address
 func deployBridge(t *testing.T, bm *BridgeManager, backend *backends.SimulatedBackend, local bool) common.Address {
 	var acc *accountInfo
@@ -2346,7 +2345,7 @@ func TestGetBridgeContractBalance(t *testing.T) {
 		assert.NoError(t, err)
 		pBridgeAddr, err := bm.DeployBridgeTest(sim, initialParentbridgeBalance, false)
 		assert.NoError(t, err)
-		bm.SetJournal(cBridgeAddr, pBridgeAddr)
+		bm.SetJournal("", cBridgeAddr, pBridgeAddr)
 		assert.NoError(t, err)
 		sim.Commit()
 		isExpectedBalance(t, bm, pBridgeAddr, cBridgeAddr, initialParentbridgeBalance, initialChildbridgeBalance)
@@ -2361,7 +2360,7 @@ func TestGetBridgeContractBalance(t *testing.T) {
 			assert.NoError(t, err)
 			pBridgeAddr, err := bm.DeployBridgeTest(sim, initialParentbridgeBalance, false)
 			assert.NoError(t, err)
-			bm.SetJournal(cBridgeAddr, pBridgeAddr)
+			bm.SetJournal("", cBridgeAddr, pBridgeAddr)
 			assert.NoError(t, err)
 			sim.Commit()
 			isExpectedBalance(t, bm, pBridgeAddr, cBridgeAddr, initialParentbridgeBalance, initialChildbridgeBalance)
