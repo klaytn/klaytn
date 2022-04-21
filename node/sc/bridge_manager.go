@@ -65,7 +65,6 @@ var (
 	ErrAlreadySubscribed       = errors.New("already subscribed")
 	ErrBridgeRestore           = errors.New("restoring bridges is failed")
 	ErrBridgeAliasFormatDecode = errors.New("restoring bridges is failed")
-
 )
 
 // RequestValueTransferEvent from Bridge contract
@@ -607,7 +606,10 @@ func (bm *BridgeManager) getAddrByAlias(bridgeAlias string) (common.Address, com
 	if !ok {
 		return common.Address{}, common.Address{}, ErrEmptyBridgeAlias
 	}
-	journal := bm.journal.cache[journalAddr]
+	journal, ok := bm.journal.cache[journalAddr]
+	if !ok {
+		return common.Address{}, common.Address{}, ErrEmptyBridgeAlias
+	}
 	return journal.ChildAddress, journal.ParentAddress, nil
 }
 
