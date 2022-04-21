@@ -260,7 +260,20 @@ func (this *InternalTxTracer) step(log *tracerLog) error {
 		if this.callStack[left-1].Calls == nil {
 			this.callStack[left-1].Calls = []*InternalCall{}
 		}
-		this.callStack[left-1].Calls = append(this.callStack[left-1].Calls, &InternalCall{Type: op.String()})
+		contractAddr := log.contract.Address()
+		ret := log.stack.Peek()
+		toAddr := common.HexToAddress(ret.Text(16))
+		this.callStack[left-1].Calls = append(
+			this.callStack[left-1].Calls,
+			&InternalCall{
+				Type:    op.String(),
+				From:    &contractAddr,
+				To:      &toAddr,
+				Value:   "0x" + log.env.StateDB.GetBalance(contractAddr).Text(16),
+				GasIn:   log.gas,
+				GasCost: log.cost,
+			},
+		)
 		return nil
 	}
 	// If a new method invocation is being done, add to the call stack

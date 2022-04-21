@@ -57,7 +57,10 @@
   "result": {
     "calls": [
       {
-        "type": "SELFDESTRUCT"
+        "type": "SELFDESTRUCT",
+        "from": "0xf0b1b2a91af3b0a0a5389ea80bffdc42cf86b7e3",
+        "to": "0xf0b1b2a91af3b0a0a5389ea80bffdc42cf86b7e3",
+        "value": "0x0"
       }
     ],
     "from": "0x71562b71999873db5b286df957af199ec94617f7",
