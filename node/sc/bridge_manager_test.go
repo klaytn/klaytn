@@ -2046,25 +2046,90 @@ func TestBridgeAliasAPIs(t *testing.T) {
 	assert.NoError(t, err)
 	sim.Commit() // block
 
+	cBridgeAddrStr := cBridgeAddr.String()
+	pBridgeAddrStr := pBridgeAddr.String()
+	cTokenAddrStr := cTokenAddr.String()
+	pTokenAddrStr := pTokenAddr.String()
+
 	// -------------------------- Done prepration --------------------------
 
-	alias := "MYBRIDGE"
-	changedAlias := "MYBRIDGE_v2"
+	// -------------------------- API test with the raw addresss format --------------------------
 	{
 		// TEST 1 - Success (Register bridge, tokens and subscribe registered bridges)
 		bridgePairs := bm.subBridge.APIBackend.ListBridge()
 		assert.Equal(t, len(bridgePairs), 0)
 
 		// Register Bridge
-		err = bm.subBridge.APIBackend.RegisterBridgeByAlias(alias, cBridgeAddr, pBridgeAddr)
+		err = bm.subBridge.APIBackend.RegisterBridge(cBridgeAddr, pBridgeAddr, nil)
 		assert.NoError(t, err)
 
 		// Register tokens
-		err = bm.subBridge.APIBackend.RegisterTokenByAlias(alias, cTokenAddr, pTokenAddr)
+		err = bm.subBridge.APIBackend.RegisterToken(&cBridgeAddrStr, &pBridgeAddrStr, &cTokenAddrStr, &pTokenAddrStr)
 		assert.NoError(t, err)
 
 		// Subscribe bridges
-		err = bm.subBridge.APIBackend.SubscribeBridgeByAlias(alias)
+		err = bm.subBridge.APIBackend.SubscribeBridge(&cBridgeAddrStr, &pBridgeAddrStr)
+		assert.NoError(t, err)
+
+		bridgePairs = bm.subBridge.APIBackend.ListBridge()
+		assert.Equal(t, len(bridgePairs), 1)
+		assert.Equal(t, bridgePairs[0].Subscribed, true)
+	}
+
+	{
+		// TEST 2 - Failure
+		// Duplicated journal
+		err = bm.subBridge.APIBackend.RegisterBridge(cBridgeAddr, pBridgeAddr, nil)
+		assert.Equal(t, err, ErrDuplicatedJournal)
+
+		// Already subscribed
+		err = bm.subBridge.APIBackend.SubscribeBridge(&cBridgeAddrStr, &pBridgeAddrStr)
+		assert.Equal(t, err, ErrAlreadySubscribed)
+	}
+
+	{
+		// TEST 3 - Success (Unsubscribe bridge, deregister bridges and tokens)
+		bridgePairs := bm.subBridge.APIBackend.ListBridge()
+		err = bm.subBridge.APIBackend.UnsubscribeBridge(&cBridgeAddrStr, &pBridgeAddrStr)
+		assert.NoError(t, err)
+		assert.Equal(t, bridgePairs[0].Subscribed, false)
+
+		cBi, ok := bm.GetBridgeInfo(bridgePairs[0].ChildAddress)
+		assert.Equal(t, ok, true)
+		assert.Equal(t, len(cBi.counterpartToken), 1)
+		pBi, ok := bm.GetBridgeInfo(bridgePairs[0].ParentAddress)
+		assert.Equal(t, ok, true)
+		assert.Equal(t, len(pBi.counterpartToken), 1)
+
+		err = bm.subBridge.APIBackend.DeregisterToken(&cBridgeAddrStr, &pBridgeAddrStr, &cTokenAddrStr, &pTokenAddrStr)
+		assert.NoError(t, err)
+		assert.Equal(t, len(cBi.counterpartToken), 0)
+		assert.Equal(t, len(pBi.counterpartToken), 0)
+
+		err = bm.subBridge.APIBackend.DeregisterBridge(&cBridgeAddrStr, &pBridgeAddrStr)
+		bridgePairs = bm.subBridge.APIBackend.ListBridge()
+		assert.Equal(t, len(bridgePairs), 0)
+	}
+
+	// -------------------------- API test with the bridge format --------------------------
+	alias := "MYBRIDGE"
+	changedAlias := "MYBRIDGE_v2"
+	invalidBridgeAlias := "0xMYBRIDGE"
+	{
+		// TEST 1 - Success (Register bridge, tokens and subscribe registered bridges)
+		bridgePairs := bm.subBridge.APIBackend.ListBridge()
+		assert.Equal(t, len(bridgePairs), 0)
+
+		// Register Bridge
+		err = bm.subBridge.APIBackend.RegisterBridge(cBridgeAddr, pBridgeAddr, &alias)
+		assert.NoError(t, err)
+
+		// Register tokens
+		err = bm.subBridge.APIBackend.RegisterToken(&alias, nil, &cTokenAddrStr, &pTokenAddrStr)
+		assert.NoError(t, err)
+
+		// Subscribe bridges
+		err = bm.subBridge.APIBackend.SubscribeBridge(&alias, nil)
 		assert.NoError(t, err)
 
 		bridgePairs = bm.subBridge.APIBackend.ListBridge()
@@ -2077,15 +2142,15 @@ func TestBridgeAliasAPIs(t *testing.T) {
 
 	{
 		// TEST 2 - Failure
-		// Duplicated bridge journal
-		err = bm.subBridge.APIBackend.RegisterBridgeByAlias(alias, cBridgeAddr, pBridgeAddr)
-		assert.Equal(t, err, ErrDuplicatedBridgeInfo)
+		// Duplicated alias
+		err = bm.subBridge.APIBackend.RegisterBridge(cBridgeAddr, pBridgeAddr, &alias)
+		assert.Equal(t, err, ErrDuplicatedAlias)
 
 		// Duplicated token
-		err = bm.subBridge.APIBackend.RegisterTokenByAlias(alias, cTokenAddr, pTokenAddr)
+		err = bm.subBridge.APIBackend.RegisterToken(&alias, nil, &cTokenAddrStr, &pTokenAddrStr)
 		assert.Equal(t, err, ErrDuplicatedToken)
 
-		err = bm.subBridge.APIBackend.SubscribeBridgeByAlias(alias)
+		err = bm.subBridge.APIBackend.SubscribeBridge(&alias, nil)
 		assert.Equal(t, err, ErrAlreadySubscribed)
 	}
 
@@ -2093,6 +2158,10 @@ func TestBridgeAliasAPIs(t *testing.T) {
 		// TEST 3 - Success (change bridge alias)
 		err = bm.subBridge.APIBackend.ChangeBridgeAlias(alias, changedAlias)
 		assert.NoError(t, err)
+
+		// Try to deregister with empty bridge alias
+		err = bm.subBridge.APIBackend.DeregisterBridge(&alias, nil)
+		assert.Equal(t, err, ErrEmptyBridgeAlias)
 
 		bridgePair := bm.subBridge.APIBackend.GetBridgePairByAlias(alias)
 		assert.Nil(t, bridgePair)
@@ -2104,7 +2173,7 @@ func TestBridgeAliasAPIs(t *testing.T) {
 	{
 		// TEST 4 - Success (Unsubscribe bridge, deregister bridges and tokens)
 		bridgePairs := bm.subBridge.APIBackend.ListBridge()
-		err = bm.subBridge.APIBackend.UnsubscribeBridgeByAlias(changedAlias)
+		err = bm.subBridge.APIBackend.UnsubscribeBridge(&changedAlias, nil)
 		assert.NoError(t, err)
 		assert.Equal(t, bridgePairs[0].Subscribed, false)
 
@@ -2119,14 +2188,20 @@ func TestBridgeAliasAPIs(t *testing.T) {
 		assert.Equal(t, ok, true)
 		assert.Equal(t, len(pBi.counterpartToken), 1)
 
-		err = bm.subBridge.APIBackend.DeregisterTokenByAlias(changedAlias, cTokenAddr, pTokenAddr)
+		err = bm.subBridge.APIBackend.DeregisterToken(&changedAlias, nil, &cTokenAddrStr, &pTokenAddrStr)
 		assert.NoError(t, err)
 		assert.Equal(t, len(cBi.counterpartToken), 0)
 		assert.Equal(t, len(pBi.counterpartToken), 0)
 
-		err = bm.subBridge.APIBackend.DeregisterBridgeByAlias(changedAlias)
+		err = bm.subBridge.APIBackend.DeregisterBridge(&changedAlias, nil)
 		bridgePairs = bm.subBridge.APIBackend.ListBridge()
 		assert.Equal(t, len(bridgePairs), 0)
+	}
+
+	{
+		// TEST 5 - Failure (Try to create a bridge alias with invalid bridge alias name)
+		err = bm.subBridge.APIBackend.RegisterBridge(cBridgeAddr, pBridgeAddr, &invalidBridgeAlias)
+		assert.Equal(t, err, ErrNotAllowedAliasFormat)
 	}
 }
 
