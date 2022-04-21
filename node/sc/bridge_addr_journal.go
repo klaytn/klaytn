@@ -24,6 +24,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/node/sc/bridgepool"
@@ -33,8 +34,11 @@ import (
 var (
 	ErrNoActiveAddressJournal = errors.New("no active address journal")
 	ErrDuplicatedJournal      = errors.New("duplicated journal is inserted")
+	ErrDuplicatedAlias        = errors.New("duplicated alias")
 	ErrEmptyBridgeAddress     = errors.New("empty bridge address is not allowed")
+	ErrEmptyJournalCache      = errors.New("empty bridge journal")
 	ErrEmptyBridgeAlias       = errors.New("empty bridge Alias")
+	ErrNotAllowedAliasFormat  = errors.New("Not allowed bridge alias format")
 )
 
 // bridgeAddrJournal is a rotating log of addresses with the aim of storing locally
@@ -130,8 +134,11 @@ func (journal *bridgeAddrJournal) ChangeBridgeAlias(oldBridgeAlias, newBridgeAli
 
 // insert adds the specified address to the local disk journal.
 func (journal *bridgeAddrJournal) insert(bridgeAlias string, localAddress common.Address, remoteAddress common.Address) error {
+	if strings.HasPrefix(bridgeAlias, "0x") {
+		return ErrNotAllowedAliasFormat
+	}
 	if len(bridgeAlias) != 0 && journal.aliasCache[bridgeAlias] != (common.Address{}) {
-		return ErrDuplicatedJournal
+		return ErrDuplicatedAlias
 	}
 	if journal.cache[localAddress] != nil {
 		return ErrDuplicatedJournal
