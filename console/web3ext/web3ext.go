@@ -1408,6 +1408,24 @@ web3._extend({
 			name: 'changeBridgeAlias',
 			call: 'subbridge_changeBridgeAlias',
 			params: 2
+			name: 'getBridgeOperatorGasLimit',
+			call: 'subbridge_getBridgeOperatorGasLimit',
+			params: 0
+		}),
+		new web3._extend.Method({
+			name: 'setBridgeOperatorGasLimit',
+			call: 'subbridge_setBridgeOperatorGasLimit',
+			params: 1
+			name: 'getParentBridgeContractBalance',
+			call: 'subbridge_getParentBridgeContractBalance',
+			params: 1,
+			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
+		}),
+		new web3._extend.Method({
+			name: 'getChildBridgeContractBalance',
+			call: 'subbridge_getChildBridgeContractBalance',
+			params: 1,
+			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
 		}),
 	],
     properties: [
@@ -1452,7 +1470,7 @@ web3._extend({
 			getter: 'subbridge_getParentOperatorBalance',
 			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
 		}),
-			new web3._extend.Property({
+		new web3._extend.Property({
 			name: 'childOperatorBalance',
 			getter: 'subbridge_getChildOperatorBalance',
 			outputFormatter: web3._extend.formatters.outputBigNumberFormatter

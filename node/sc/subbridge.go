@@ -213,7 +213,7 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 	sb.bridgeTxPool = bridgepool.NewBridgeTxPool(bridgetxConfig)
 
 	var err error
-	sb.bridgeAccounts, err = NewBridgeAccounts(sb.accountManager, config.DataDir, chainDB)
+	sb.bridgeAccounts, err = NewBridgeAccounts(sb.accountManager, config.DataDir, chainDB, sb.config.ServiceChainOperatorGasLimit)
 	if err != nil {
 		return nil, err
 	}
@@ -327,13 +327,14 @@ func (sb *SubBridge) SetComponents(components []interface{}) {
 			sb.blockchain = v
 
 			kasConfig := &kas.KASConfig{
-				Url:          sb.config.KASAnchorUrl,
-				XChainId:     sb.config.KASXChainId,
-				User:         sb.config.KASAccessKey,
-				Pwd:          sb.config.KASSecretKey,
-				Operator:     common.HexToAddress(sb.config.KASAnchorOperator),
-				Anchor:       sb.config.KASAnchor,
-				AnchorPeriod: sb.config.KASAnchorPeriod,
+				Url:            sb.config.KASAnchorUrl,
+				XChainId:       sb.config.KASXChainId,
+				User:           sb.config.KASAccessKey,
+				Pwd:            sb.config.KASSecretKey,
+				Operator:       common.HexToAddress(sb.config.KASAnchorOperator),
+				Anchor:         sb.config.KASAnchor,
+				AnchorPeriod:   sb.config.KASAnchorPeriod,
+				RequestTimeout: sb.config.KASAnchorRequestTimeout,
 			}
 			sb.kasAnchor = kas.NewKASAnchor(kasConfig, sb.chainDB, v)
 

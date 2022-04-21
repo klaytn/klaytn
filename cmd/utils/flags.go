@@ -740,7 +740,12 @@ var (
 	VTRecoveryIntervalFlag = cli.Uint64Flag{
 		Name:  "vtrecoveryinterval",
 		Usage: "Set the value transfer recovery interval (seconds)",
-		Value: 60,
+		Value: 5,
+	}
+	ServiceChainDefaultTxGasLimitFlag = cli.Uint64Flag{
+		Name:  "scdefaultgaslimit",
+		Usage: "Set the default value of gas limit for transactions made by bridges",
+		Value: 10000000,
 	}
 	ServiceChainNewAccountFlag = cli.BoolFlag{
 		Name:  "scnewaccount",
@@ -755,6 +760,7 @@ var (
 		Name:  "anchoring",
 		Usage: "Enable anchoring for service chain",
 	}
+
 	// KAS
 	KASServiceChainAnchorFlag = cli.BoolFlag{
 		Name:  "kas.sc.anchor",
@@ -772,6 +778,11 @@ var (
 	KASServiceChainAnchorOperatorFlag = cli.StringFlag{
 		Name:  "kas.sc.anchor.operator",
 		Usage: "The operator address for KAS anchor",
+	}
+	KASServiceChainAnchorRequestTimeoutFlag = cli.DurationFlag{
+		Name:  "kas.sc.anchor.request.timeout",
+		Usage: "The reuqest timeout for KAS Anchoring API call",
+		Value: 500 * time.Millisecond,
 	}
 	KASServiceChainXChainIdFlag = cli.StringFlag{
 		Name:  "kas.x-chain-id",

@@ -199,7 +199,7 @@ if [ ! -z $TXPOOL_NONEXEC_SLOTS_ACCOUNT ]; then
     OPTIONS="$OPTIONS --txpool.nonexec-slots.account $TXPOOL_NONEXEC_SLOTS_ACCOUNT"
 fi
 
-if [ ! -z TXPOOL_LIFE_TIME ]; then
+if [ ! -z $TXPOOL_LIFE_TIME ]; then
     OPTIONS="$OPTIONS --txpool.lifetime $TXPOOL_LIFE_TIME"
 fi
 
@@ -278,11 +278,22 @@ if [[ ! -z $SC_SUB_BRIDGE ]] && [[ $SC_SUB_BRIDGE -eq 1 ]]; then
             exit 1
         fi
         OPTIONS="$OPTIONS --kas.x-chain-id $SC_KAS_ANCHOR_X_CHAIN_ID"
+         
+        if [ ! -z $SC_KAS_ANCHOR_REQUEST_TIMEOUT ]; then
+            OPTIONS="$OPTIONS --kas.sc.anchor.request.timeout $SC_KAS_ANCHOR_REQUEST_TIMEOUT"
+        fi
     fi
 fi
 
-if [[ ! -z $VTRECOVERY ]] && [[ $VTRECOVERY -eq 1 ]]; then
+if [ ! -z $SC_DEFAULTGASLIMIT ]; then
+    OPTIONS="$OPTIONS --scdefaultgaslimit $SC_DEFAULTGASLIMIT"
+fi
+
+if [[ (! -z $VTRECOVERY && $VTRECOVERY -eq 1 ) || (! -z $SC_VTRECOVERY && $SC_VTRECOVERY -eq 1) ]]; then
     OPTIONS="$OPTIONS --vtrecovery"
+    if [[ ! -z $SC_VTRECOVERY_INTERVAL ]]; then
+        OPTIONS="$OPTIONS --vtrecoveryinterval $SC_VTRECOVERY_INTERVAL"
+    fi
 fi
 
 if [[ ! -z $ADDITIONAL ]] && [[ $ADDITIONAL != "" ]]; then

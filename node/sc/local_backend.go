@@ -49,45 +49,69 @@ var errGasEstimationFailed = errors.New("gas required exceeds allowance or alway
 
 // TODO-Klaytn currently LocalBackend is only for ServiceChain, especially Bridge SmartContract
 type LocalBackend struct {
-	subbrige *SubBridge
+	subbridge *SubBridge
 
 	events *filters.EventSystem // Event system for filtering log events live
 	config *params.ChainConfig
 }
 
+func checkCtx(ctx context.Context) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+		return nil
+	}
+}
+
 func NewLocalBackend(main *SubBridge) (*LocalBackend, error) {
 	return &LocalBackend{
-		subbrige: main,
-		config:   main.blockchain.Config(),
-		events:   filters.NewEventSystem(main.EventMux(), &filterLocalBackend{main}, false),
+		subbridge: main,
+		config:    main.blockchain.Config(),
+		events:    filters.NewEventSystem(main.EventMux(), &filterLocalBackend{main}, false),
 	}, nil
 }
 
 func (lb *LocalBackend) CodeAt(ctx context.Context, contract common.Address, blockNumber *big.Int) ([]byte, error) {
-	if blockNumber != nil && blockNumber.Cmp(lb.subbrige.blockchain.CurrentBlock().Number()) != 0 {
+	if err := checkCtx(ctx); err != nil {
+		return nil, err
+	}
+	if blockNumber != nil && blockNumber.Cmp(lb.subbridge.blockchain.CurrentBlock().Number()) != 0 {
 		return nil, errBlockNumberUnsupported
 	}
-	statedb, _ := lb.subbrige.blockchain.State()
+	statedb, err := lb.subbridge.blockchain.State()
+	if err != nil {
+		return nil, err
+	}
 	return statedb.GetCode(contract), nil
 }
 
 func (lb *LocalBackend) BalanceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (*big.Int, error) {
-	if blockNumber != nil && blockNumber.Cmp(lb.subbrige.blockchain.CurrentBlock().Number()) != 0 {
+	if err := checkCtx(ctx); err != nil {
+		return nil, err
+	}
+	if blockNumber != nil && blockNumber.Cmp(lb.subbridge.blockchain.CurrentBlock().Number()) != 0 {
 		return nil, errBlockNumberUnsupported
 	}
-	statedb, _ := lb.subbrige.blockchain.State()
+	statedb, err := lb.subbridge.blockchain.State()
+	if err != nil {
+		return nil, err
+	}
 	return statedb.GetBalance(account), nil
 }
 
 func (lb *LocalBackend) CallContract(ctx context.Context, call klaytn.CallMsg, blockNumber *big.Int) ([]byte, error) {
-	if blockNumber != nil && blockNumber.Cmp(lb.subbrige.blockchain.CurrentBlock().Number()) != 0 {
+	if err := checkCtx(ctx); err != nil {
+		return nil, err
+	}
+	if blockNumber != nil && blockNumber.Cmp(lb.subbridge.blockchain.CurrentBlock().Number()) != 0 {
 		return nil, errBlockNumberUnsupported
 	}
-	currentState, err := lb.subbrige.blockchain.State()
+	currentState, err := lb.subbridge.blockchain.State()
 	if err != nil {
 		return nil, err
 	}
-	rval, _, _, err := lb.callContract(ctx, call, lb.subbrige.blockchain.CurrentBlock(), currentState)
+	rval, _, _, err := lb.callContract(ctx, call, lb.subbridge.blockchain.CurrentBlock(), currentState)
 	return rval, err
 }
 
@@ -120,7 +144,7 @@ func (b *LocalBackend) callContract(ctx context.Context, call klaytn.CallMsg, bl
 	statedb.SetBalance(msg.ValidatedSender(), math.MaxBig256)
 	vmError := func() error { return nil }
 
-	context := blockchain.NewEVMContext(msg, block.Header(), b.subbrige.blockchain, nil)
+	context := blockchain.NewEVMContext(msg, block.Header(), b.subbridge.blockchain, nil)
 	evm := vm.NewEVM(context, statedb, b.config, &vm.Config{})
 	// Wait for the context to be done and cancel the evm. Even if the
 	// EVM has finished, cancelling may be done (repeatedly)
@@ -144,19 +168,31 @@ func (b *LocalBackend) callContract(ctx context.Context, call klaytn.CallMsg, bl
 }
 
 func (lb *LocalBackend) PendingCodeAt(ctx context.Context, contract common.Address) ([]byte, error) {
+	if err := checkCtx(ctx); err != nil {
+		return nil, err
+	}
 	// TODO-Klaytn this is not pending code but latest code
-	return lb.CodeAt(ctx, contract, lb.subbrige.blockchain.CurrentBlock().Number())
+	return lb.CodeAt(ctx, contract, lb.subbridge.blockchain.CurrentBlock().Number())
 }
 
 func (lb *LocalBackend) PendingNonceAt(ctx context.Context, account common.Address) (uint64, error) {
-	return lb.subbrige.txPool.GetPendingNonce(account), nil
+	if err := checkCtx(ctx); err != nil {
+		return 0, err
+	}
+	return lb.subbridge.txPool.GetPendingNonce(account), nil
 }
 
 func (lb *LocalBackend) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
+	if err := checkCtx(ctx); err != nil {
+		return nil, err
+	}
 	return new(big.Int).SetUint64(lb.config.UnitPrice), nil
 }
 
 func (lb *LocalBackend) EstimateGas(ctx context.Context, call klaytn.CallMsg) (gas uint64, err error) {
+	if err := checkCtx(ctx); err != nil {
+		return 0, err
+	}
 	// Binary search the gas requirement, as it may be higher than the amount used
 	var (
 		lo  uint64 = params.TxGas - 1
@@ -174,11 +210,11 @@ func (lb *LocalBackend) EstimateGas(ctx context.Context, call klaytn.CallMsg) (g
 	executable := func(gas uint64) bool {
 		call.Gas = gas
 
-		currentState, err := lb.subbrige.blockchain.State()
+		currentState, err := lb.subbridge.blockchain.State()
 		if err != nil {
 			return false
 		}
-		_, _, failed, err := lb.callContract(ctx, call, lb.subbrige.blockchain.CurrentBlock(), currentState)
+		_, _, failed, err := lb.callContract(ctx, call, lb.subbridge.blockchain.CurrentBlock(), currentState)
 		if err != nil || failed {
 			return false
 		}
@@ -203,16 +239,25 @@ func (lb *LocalBackend) EstimateGas(ctx context.Context, call klaytn.CallMsg) (g
 }
 
 func (lb *LocalBackend) SendTransaction(ctx context.Context, tx *types.Transaction) error {
-	return lb.subbrige.txPool.AddLocal(tx)
+	if err := checkCtx(ctx); err != nil {
+		return err
+	}
+	return lb.subbridge.txPool.AddLocal(tx)
 }
 
 // ChainID can return the chain ID of the chain.
 func (lb *LocalBackend) ChainID(ctx context.Context) (*big.Int, error) {
+	if err := checkCtx(ctx); err != nil {
+		return nil, err
+	}
 	return lb.config.ChainID, nil
 }
 
 func (lb *LocalBackend) TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
-	receipt := lb.subbrige.blockchain.GetReceiptByTxHash(txHash)
+	if err := checkCtx(ctx); err != nil {
+		return nil, err
+	}
+	receipt := lb.subbridge.blockchain.GetReceiptByTxHash(txHash)
 	if receipt != nil {
 		return receipt, nil
 	}
@@ -220,6 +265,9 @@ func (lb *LocalBackend) TransactionReceipt(ctx context.Context, txHash common.Ha
 }
 
 func (lb *LocalBackend) FilterLogs(ctx context.Context, query klaytn.FilterQuery) ([]types.Log, error) {
+	if err := checkCtx(ctx); err != nil {
+		return nil, err
+	}
 	// Convert the RPC block numbers into internal representations
 	if query.FromBlock == nil {
 		query.FromBlock = big.NewInt(rpc.LatestBlockNumber.Int64())
@@ -231,7 +279,7 @@ func (lb *LocalBackend) FilterLogs(ctx context.Context, query klaytn.FilterQuery
 	to := query.ToBlock.Int64()
 
 	// Construct and execute the filter
-	filter := filters.NewRangeFilter(&filterLocalBackend{lb.subbrige}, from, to, query.Addresses, query.Topics)
+	filter := filters.NewRangeFilter(&filterLocalBackend{lb.subbridge}, from, to, query.Addresses, query.Topics)
 
 	logs, err := filter.Logs(ctx)
 	if err != nil {
@@ -245,6 +293,9 @@ func (lb *LocalBackend) FilterLogs(ctx context.Context, query klaytn.FilterQuery
 }
 
 func (lb *LocalBackend) SubscribeFilterLogs(ctx context.Context, query klaytn.FilterQuery, ch chan<- types.Log) (klaytn.Subscription, error) {
+	if err := checkCtx(ctx); err != nil {
+		return nil, err
+	}
 	// Subscribe to contract events
 	sink := make(chan []*types.Log)
 
@@ -278,7 +329,10 @@ func (lb *LocalBackend) SubscribeFilterLogs(ctx context.Context, query klaytn.Fi
 
 // CurrentBlockNumber returns a current block number.
 func (lb *LocalBackend) CurrentBlockNumber(ctx context.Context) (uint64, error) {
-	return lb.subbrige.blockchain.CurrentBlock().NumberU64(), nil
+	if err := checkCtx(ctx); err != nil {
+		return 0, err
+	}
+	return lb.subbridge.blockchain.CurrentBlock().NumberU64(), nil
 }
 
 type filterLocalBackend struct {
@@ -295,6 +349,9 @@ func (fb *filterLocalBackend) EventMux() *event.TypeMux {
 }
 
 func (fb *filterLocalBackend) HeaderByNumber(ctx context.Context, block rpc.BlockNumber) (*types.Header, error) {
+	if err := checkCtx(ctx); err != nil {
+		return nil, err
+	}
 	// TODO-Klaytn consider pendingblock instead of latest block
 	if block == rpc.LatestBlockNumber {
 		return fb.subbridge.blockchain.CurrentHeader(), nil
@@ -303,10 +360,16 @@ func (fb *filterLocalBackend) HeaderByNumber(ctx context.Context, block rpc.Bloc
 }
 
 func (fb *filterLocalBackend) GetBlockReceipts(ctx context.Context, hash common.Hash) types.Receipts {
+	if err := checkCtx(ctx); err != nil {
+		return nil
+	}
 	return fb.subbridge.blockchain.GetReceiptsByBlockHash(hash)
 }
 
 func (fb *filterLocalBackend) GetLogs(ctx context.Context, hash common.Hash) ([][]*types.Log, error) {
+	if err := checkCtx(ctx); err != nil {
+		return nil, err
+	}
 	return fb.subbridge.blockchain.GetLogsByHash(hash), nil
 }
 
@@ -332,7 +395,7 @@ func (fb *filterLocalBackend) BloomStatus() (uint64, uint64) {
 	return 4096, 0
 }
 
-func (fb *filterLocalBackend) ServiceFilter(ctx context.Context, session *bloombits.MatcherSession) {
+func (fb *filterLocalBackend) ServiceFilter(_dummyCtx context.Context, session *bloombits.MatcherSession) {
 	// TODO-Klaytn this method should implmentation to support indexed tag in solidity
 	//for i := 0; i < bloomFilterThreads; i++ {
 	//	go session.Multiplex(bloomRetrievalBatch, bloomRetrievalWait, backend.bloomRequests)

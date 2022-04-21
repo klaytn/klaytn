@@ -23,12 +23,15 @@ package blockchain
 import (
 	"crypto/ecdsa"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"math/big"
 	"math/rand"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/klaytn/klaytn/rlp"
 
 	"github.com/klaytn/klaytn/fork"
 
@@ -1944,6 +1947,83 @@ func TestDynamicFeeTransactionNotAccepted(t *testing.T) {
 
 	if err := pool.AddLocal(tx); err != ErrTxTypeNotSupported {
 		t.Error("expected", ErrTxTypeNotSupported, "got", err)
+	}
+}
+
+func TestTransactionJournalingSortedByTime(t *testing.T) {
+	t.Parallel()
+
+	// Create a temporary file for the journal
+	file, err := ioutil.TempFile("", "")
+	if err != nil {
+		t.Fatalf("failed to create temporary journal: %v", err)
+	}
+	journal := file.Name()
+	defer os.Remove(journal)
+
+	// Clean up the temporary file, we only need the path for now
+	file.Close()
+	os.Remove(journal)
+
+	// Create the pool to test the status retrievals with
+	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil)
+	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
+
+	config := testTxPoolConfig
+	config.Journal = journal
+
+	pool := NewTxPool(config, params.TestChainConfig, blockchain)
+	defer pool.Stop()
+
+	// Create the test accounts to check various transaction statuses with
+	keys := make([]*ecdsa.PrivateKey, 3)
+	for i := 0; i < len(keys); i++ {
+		keys[i], _ = crypto.GenerateKey()
+		testAddBalance(pool, crypto.PubkeyToAddress(keys[i].PublicKey), big.NewInt(1000000))
+	}
+	// Generate and queue a batch of transactions, both pending and queued
+	txs := types.Transactions{}
+
+	txs = append(txs, pricedTransaction(0, 100000, big.NewInt(1), keys[0])) // Pending only
+	txs = append(txs, pricedTransaction(0, 100000, big.NewInt(1), keys[1])) // Pending and queued
+	txs = append(txs, pricedTransaction(2, 100000, big.NewInt(1), keys[1]))
+	txs = append(txs, pricedTransaction(2, 100000, big.NewInt(1), keys[2])) // Queued only
+
+	// Import the transaction locally and ensure they are correctly added
+	pool.AddLocals(txs)
+
+	// Execute rotate() to write transactions to file.
+	pool.mu.Lock()
+	if err := pool.journal.rotate(pool.local(), pool.signer); err != nil {
+		t.Error("Failed to rotate local tx journal", "err", err)
+	}
+	pool.mu.Unlock()
+
+	// Read a journal and load it.
+	input, err := os.Open(pool.journal.path)
+	if err != nil {
+		t.Error(err)
+	}
+	defer input.Close()
+
+	txsFromFile := make(types.Transactions, 4)
+	stream := rlp.NewStream(input, 0)
+	for i := 0; i < 4; i++ {
+		tx := new(types.Transaction)
+		if err = stream.Decode(tx); err != nil {
+			if err != io.EOF {
+				t.Error(err)
+			}
+
+			break
+		}
+		txsFromFile[i] = tx
+	}
+
+	// Check whether transactions loaded from journal file is sorted by time
+	for i, tx := range txsFromFile {
+		assert.Equal(t, txs[i].Hash(), tx.Hash())
+		assert.False(t, txs[i].Time().Equal(tx.Time()))
 	}
 }
 
