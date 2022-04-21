@@ -608,7 +608,7 @@ func (bm *BridgeManager) getAddrByAlias(bridgeAlias string) (common.Address, com
 	}
 	journal, ok := bm.journal.cache[journalAddr]
 	if !ok {
-		return common.Address{}, common.Address{}, ErrEmptyBridgeAlias
+		return common.Address{}, common.Address{}, ErrEmptyJournalCache
 	}
 	return journal.ChildAddress, journal.ParentAddress, nil
 }
