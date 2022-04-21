@@ -1283,12 +1283,14 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'subscribeBridge',
 			call: 'subbridge_subscribeBridge',
-			params: 2
+			params: 2,
+			inputFormatter: [null, web3._extend.formatters.inputEmptyFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'unsubscribeBridge',
 			call: 'subbridge_unsubscribeBridge',
-			params: 2
+			params: 2,
+			inputFormatter: [null, web3._extend.formatters.inputEmptyFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'KASAnchor',
@@ -1303,22 +1305,26 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'registerBridge',
 			call: 'subbridge_registerBridge',
-			params: 2
+			params: 3,
+			inputFormatter: [null, null, web3._extend.formatters.inputEmptyFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'deregisterBridge',
 			call: 'subbridge_deregisterBridge',
-			params: 2
+			params: 2,
+			inputFormatter: [null, web3._extend.formatters.inputEmptyFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'registerToken',
 			call: 'subbridge_registerToken',
-			params: 4
+			params: 4,
+			inputFormatter: [null, null, null, web3._extend.formatters.inputEmptyFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'deregisterToken',
 			call: 'subbridge_deregisterToken',
-			params: 4
+			params: 4,
+			inputFormatter: [null, null, null, web3._extend.formatters.inputEmptyFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'convertRequestTxHashToHandleTxHash',
@@ -1392,37 +1398,6 @@ web3._extend({
 			name: 'setChildOperatorFeePayer',
 			call: 'subbridge_setChildOperatorFeePayer',
 			params: 1
-		}),
-		// Alias-dedlicated APIs
-		new web3._extend.Method({
-			name: 'subscribeBridgeByAlias',
-			call: 'subbridge_subscribeBridgeByAlias',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'unsubscribeBridgeByAlias',
-			call: 'subbridge_unsubscribeBridgeByAlias',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'registerBridgeByAlias',
-			call: 'subbridge_registerBridgeByAlias',
-			params: 3
-		}),
-		new web3._extend.Method({
-			name: 'deregisterBridgeByAlias',
-			call: 'subbridge_deregisterBridgeByAlias',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'registerTokenByAlias',
-			call: 'subbridge_registerTokenByAlias',
-			params: 3
-		}),
-		new web3._extend.Method({
-			name: 'deregisterTokenByAlias',
-			call: 'subbridge_deregisterTokenByAlias',
-			params: 3
 		}),
 		new web3._extend.Method({
 			name: 'getBridgePairByAlias',
