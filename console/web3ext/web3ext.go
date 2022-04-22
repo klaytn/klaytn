@@ -1402,6 +1402,8 @@ web3._extend({
 			name: 'setChildBridgeOperatorGasLimit',
 			call: 'subbridge_setChildBridgeOperatorGasLimit',
 			params: 1
+		}),
+		new web3._extend.Method({
 			name: 'getParentBridgeContractBalance',
 			call: 'subbridge_getParentBridgeContractBalance',
 			params: 1,
