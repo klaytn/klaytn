@@ -371,10 +371,6 @@ func TestCallTracer(t *testing.T) {
 				t.Fatalf("failed to unmarshal trace result: %v", err)
 			}
 			if !jsonEqual(ret, test.Result) {
-				// uncomment this for easier debugging
-				//have, _ := json.MarshalIndent(ret, "", " ")
-				//want, _ := json.MarshalIndent(test.Result, "", " ")
-				//t.Fatalf("trace mismatch: \nhave %+v\nwant %+v", string(have), string(want))
 				t.Fatalf("trace mismatch: \nhave %+v, \nwant %+v", ret, test.Result)
 			}
 		})
@@ -490,10 +486,6 @@ func TestInternalCallTracer(t *testing.T) {
 
 			resultFromInternalCallTracer := covertToCallTrace(t, res)
 			if !jsonEqual(test.Result, resultFromInternalCallTracer) {
-				// uncomment this for easier debugging
-				//have, _ := json.MarshalIndent(ret, "", " ")
-				//want, _ := json.MarshalIndent(test.Result, "", " ")
-				//t.Fatalf("trace mismatch: \nhave %+v\nwant %+v", string(have), string(want))
 				t.Fatalf("trace mismatch: \nhave %+v, \nwant %+v", resultFromInternalCallTracer, test.Result)
 			}
 		})
