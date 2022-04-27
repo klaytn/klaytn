@@ -28,6 +28,7 @@ import (
 	"math/big"
 	"math/rand"
 	"runtime/debug"
+	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -1113,6 +1114,13 @@ func (pm *ProtocolManager) BroadcastBlockHash(block *types.Block) {
 // BroadcastTxs propagates a batch of transactions to its peers which are not known to
 // already have the given transaction.
 func (pm *ProtocolManager) BroadcastTxs(txs types.Transactions) {
+	// This function calls sendTransaction() to broadcast the transactions for each peer.
+	// In that case, transactions are sorted for each peer in sendTransaction().
+	// Therefore, it prevents sorting transactions by each peer.
+	if !sort.IsSorted(types.TxByPriceAndTime(txs)) {
+		sort.Sort(types.TxByPriceAndTime(txs))
+	}
+
 	switch pm.nodetype {
 	case common.CONSENSUSNODE:
 		pm.broadcastTxsFromCN(txs)
@@ -1193,6 +1201,13 @@ func (pm *ProtocolManager) ReBroadcastTxs(txs types.Transactions) {
 	// A consensus node does not rebroadcast transactions, hence return here.
 	if pm.nodetype == common.CONSENSUSNODE {
 		return
+	}
+
+	// This function calls sendTransaction() to broadcast the transactions for each peer.
+	// In that case, transactions are sorted for each peer in sendTransaction().
+	// Therefore, it prevents sorting transactions by each peer.
+	if !sort.IsSorted(types.TxByPriceAndTime(txs)) {
+		sort.Sort(types.TxByPriceAndTime(txs))
 	}
 
 	peersWithoutTxs := make(map[Peer]types.Transactions)

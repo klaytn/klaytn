@@ -184,6 +184,7 @@ var FlagGroups = []FlagGroup{
 			MemorySizeFlag,
 			TrieNodeCacheTypeFlag,
 			NumFetcherPrefetchWorkerFlag,
+			UseSnapshotForPrefetchFlag,
 			TrieNodeCacheLimitFlag,
 			TrieNodeCacheSavePeriodFlag,
 			TrieNodeCacheRedisEndpointsFlag,

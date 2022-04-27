@@ -17,9 +17,15 @@
 package cn
 
 import (
+	"crypto/ecdsa"
 	"math/big"
+	"math/rand"
+	"sort"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/klaytn/klaytn/crypto"
 
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -55,7 +61,8 @@ func TestBasePeer_Send(t *testing.T) {
 	expectedMsg := generateMsg(t, NewBlockHashesMsg, data)
 	go func(t *testing.T) {
 		if err := basePeer.Send(NewBlockHashesMsg, data); err != nil {
-			t.Fatal(err)
+			t.Error(err)
+			return
 		}
 	}(t)
 	receivedMsg, err := oppositePipe.ReadMsg()
@@ -79,7 +86,8 @@ func TestBasePeer_SendTransactions(t *testing.T) {
 	assert.False(t, basePeer.KnowsTx(sentTxs[0].Hash()))
 	go func(t *testing.T) {
 		if err := basePeer.SendTransactions(sentTxs); err != nil {
-			t.Fatal(t)
+			t.Error(t)
+			return
 		}
 	}(t)
 	receivedMsg, err := oppositePipe.ReadMsg()
@@ -94,8 +102,11 @@ func TestBasePeer_SendTransactions(t *testing.T) {
 
 	assert.True(t, basePeer.KnowsTx(tx1.Hash()))
 	assert.Equal(t, len(sentTxs), len(receivedTxs))
-	receivedTxs[0].Hash()
-	assert.Equal(t, sentTxs[0], receivedTxs[0])
+	assert.Equal(t, sentTxs[0].Hash(), receivedTxs[0].Hash())
+
+	sendTxBinary, _ := sentTxs[0].MarshalBinary()
+	receivedTxBinary, _ := receivedTxs[0].MarshalBinary()
+	assert.Equal(t, sendTxBinary, receivedTxBinary)
 }
 
 func TestBasePeer_ReSendTransactions(t *testing.T) {
@@ -105,7 +116,8 @@ func TestBasePeer_ReSendTransactions(t *testing.T) {
 	assert.False(t, basePeer.KnowsTx(sentTxs[0].Hash()))
 	go func(t *testing.T) {
 		if err := basePeer.ReSendTransactions(sentTxs); err != nil {
-			t.Fatal(t)
+			t.Error(t)
+			return
 		}
 	}(t)
 	receivedMsg, err := oppositePipe.ReadMsg()
@@ -120,8 +132,12 @@ func TestBasePeer_ReSendTransactions(t *testing.T) {
 
 	assert.False(t, basePeer.KnowsTx(tx1.Hash()))
 	assert.Equal(t, len(sentTxs), len(receivedTxs))
-	receivedTxs[0].Hash()
-	assert.Equal(t, sentTxs[0], receivedTxs[0])
+	assert.Equal(t, sentTxs[0].Hash(), receivedTxs[0].Hash())
+
+	sendTxBinary, _ := sentTxs[0].MarshalBinary()
+	receivedTxBinary, _ := receivedTxs[0].MarshalBinary()
+	assert.Equal(t, sendTxBinary, receivedTxBinary)
+
 }
 
 func TestBasePeer_AsyncSendTransactions(t *testing.T) {
@@ -179,7 +195,8 @@ func TestBasePeer_SendBlockHeaders(t *testing.T) {
 	basePeer, _, oppositePipe := newBasePeer()
 	go func(t *testing.T) {
 		if err := basePeer.SendBlockHeaders(sentHeaders); err != nil {
-			t.Fatal(err)
+			t.Error(err)
+			return
 		}
 	}(t)
 	receivedMsg, err := oppositePipe.ReadMsg()
@@ -201,7 +218,8 @@ func TestBasePeer_SendFetchedBlockHeader(t *testing.T) {
 	basePeer, _, oppositePipe := newBasePeer()
 	go func(t *testing.T) {
 		if err := basePeer.SendFetchedBlockHeader(sentHeader); err != nil {
-			t.Fatal(err)
+			t.Error(err)
+			return
 		}
 	}(t)
 	receivedMsg, err := oppositePipe.ReadMsg()
@@ -223,7 +241,8 @@ func TestBasePeer_SendNodeData(t *testing.T) {
 	basePeer, _, oppositePipe := newBasePeer()
 	go func(t *testing.T) {
 		if err := basePeer.SendNodeData(sentData); err != nil {
-			t.Fatal(err)
+			t.Error(err)
+			return
 		}
 	}(t)
 	receivedMsg, err := oppositePipe.ReadMsg()
@@ -245,7 +264,8 @@ func TestBasePeer_FetchBlockHeader(t *testing.T) {
 	basePeer, _, oppositePipe := newBasePeer()
 	go func(t *testing.T) {
 		if err := basePeer.FetchBlockHeader(sentHash); err != nil {
-			t.Fatal(err)
+			t.Error(err)
+			return
 		}
 	}(t)
 	receivedMsg, err := oppositePipe.ReadMsg()
@@ -266,7 +286,8 @@ func TestBasePeer_RequestBodies(t *testing.T) {
 	basePeer, _, oppositePipe := newBasePeer()
 	go func(t *testing.T) {
 		if err := basePeer.RequestBodies(sentHashes); err != nil {
-			t.Fatal(err)
+			t.Error(err)
+			return
 		}
 	}(t)
 	receivedMsg, err := oppositePipe.ReadMsg()
@@ -287,7 +308,8 @@ func TestBasePeer_FetchBlockBodies(t *testing.T) {
 	basePeer, _, oppositePipe := newBasePeer()
 	go func(t *testing.T) {
 		if err := basePeer.FetchBlockBodies(sentHashes); err != nil {
-			t.Fatal(err)
+			t.Error(err)
+			return
 		}
 	}(t)
 	receivedMsg, err := oppositePipe.ReadMsg()
@@ -308,7 +330,8 @@ func TestBasePeer_RequestNodeData(t *testing.T) {
 	basePeer, _, oppositePipe := newBasePeer()
 	go func(t *testing.T) {
 		if err := basePeer.RequestNodeData(sentHashes); err != nil {
-			t.Fatal(err)
+			t.Error(err)
+			return
 		}
 	}(t)
 	receivedMsg, err := oppositePipe.ReadMsg()
@@ -329,7 +352,8 @@ func TestBasePeer_RequestReceipts(t *testing.T) {
 	basePeer, _, oppositePipe := newBasePeer()
 	go func(t *testing.T) {
 		if err := basePeer.RequestReceipts(sentHashes); err != nil {
-			t.Fatal(err)
+			t.Error(err)
+			return
 		}
 	}(t)
 	receivedMsg, err := oppositePipe.ReadMsg()
@@ -343,4 +367,242 @@ func TestBasePeer_RequestReceipts(t *testing.T) {
 	}
 
 	assert.Equal(t, sentHashes, receivedHashes)
+}
+
+func TestBasePeer_SendTransactionWithSortedByTime(t *testing.T) {
+	// Generate a batch of accounts to start with
+	keys := make([]*ecdsa.PrivateKey, 5)
+	for i := 0; i < len(keys); i++ {
+		keys[i], _ = crypto.GenerateKey()
+	}
+	signer := types.LatestSignerForChainID(big.NewInt(1))
+
+	// Generate a batch of transactions.
+	txs := types.Transactions{}
+	for _, key := range keys {
+		tx, _ := types.SignTx(types.NewTransaction(0, common.Address{}, big.NewInt(100), 100, big.NewInt(1), nil), signer, key)
+
+		txs = append(txs, tx)
+	}
+
+	// Shuffle transactions.
+	rand.Seed(time.Now().Unix())
+	rand.Shuffle(len(txs), func(i, j int) {
+		txs[i], txs[j] = txs[j], txs[i]
+	})
+
+	sortedTxs := make(types.Transactions, len(txs))
+	copy(sortedTxs, txs)
+
+	// Sort transaction by time.
+	sort.Sort(types.TxByPriceAndTime(sortedTxs))
+
+	basePeer, _, oppositePipe := newBasePeer()
+	for _, tx := range txs {
+		assert.False(t, basePeer.KnowsTx(tx.Hash()))
+	}
+
+	go func(t *testing.T) {
+		if err := basePeer.SendTransactions(txs); err != nil {
+			t.Error(t)
+			return
+		}
+	}(t)
+
+	receivedMsg, err := oppositePipe.ReadMsg()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var receivedTxs types.Transactions
+	if err := receivedMsg.Decode(&receivedTxs); err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, len(txs), len(receivedTxs))
+
+	// It should be received transaction with sorted by times.
+	for i, tx := range receivedTxs {
+		assert.True(t, basePeer.KnowsTx(tx.Hash()))
+		assert.Equal(t, sortedTxs[i].Hash(), tx.Hash())
+		assert.False(t, sortedTxs[i].Time().Equal(tx.Time()))
+	}
+}
+
+func TestBasePeer_ReSendTransactionWithSortedByTime(t *testing.T) {
+	// Generate a batch of accounts to start with
+	keys := make([]*ecdsa.PrivateKey, 5)
+	for i := 0; i < len(keys); i++ {
+		keys[i], _ = crypto.GenerateKey()
+	}
+	signer := types.LatestSignerForChainID(big.NewInt(1))
+
+	// Generate a batch of transactions.
+	txs := types.Transactions{}
+	for _, key := range keys {
+		tx, _ := types.SignTx(types.NewTransaction(0, common.Address{}, big.NewInt(100), 100, big.NewInt(1), nil), signer, key)
+
+		txs = append(txs, tx)
+	}
+
+	// Shuffle transactions.
+	rand.Seed(time.Now().Unix())
+	rand.Shuffle(len(txs), func(i, j int) {
+		txs[i], txs[j] = txs[j], txs[i]
+	})
+
+	sortedTxs := make(types.Transactions, len(txs))
+	copy(sortedTxs, txs)
+
+	// Sort transaction by time.
+	sort.Sort(types.TxByPriceAndTime(sortedTxs))
+
+	basePeer, _, oppositePipe := newBasePeer()
+	go func(t *testing.T) {
+		if err := basePeer.ReSendTransactions(txs); err != nil {
+			t.Error(t)
+			return
+		}
+	}(t)
+
+	receivedMsg, err := oppositePipe.ReadMsg()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var receivedTxs types.Transactions
+	if err := receivedMsg.Decode(&receivedTxs); err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, len(txs), len(receivedTxs))
+
+	// It should be received transaction with sorted by times.
+	for i, tx := range receivedTxs {
+		assert.Equal(t, sortedTxs[i].Hash(), tx.Hash())
+		assert.False(t, sortedTxs[i].Time().Equal(tx.Time()))
+	}
+}
+
+func TestMultiChannelPeer_SendTransactionWithSortedByTime(t *testing.T) {
+	// Generate a batch of accounts to start with
+	keys := make([]*ecdsa.PrivateKey, 5)
+	for i := 0; i < len(keys); i++ {
+		keys[i], _ = crypto.GenerateKey()
+	}
+	signer := types.LatestSignerForChainID(big.NewInt(1))
+
+	// Generate a batch of transactions.
+	txs := types.Transactions{}
+	for _, key := range keys {
+		tx, _ := types.SignTx(types.NewTransaction(0, common.Address{}, big.NewInt(100), 100, big.NewInt(1), nil), signer, key)
+
+		txs = append(txs, tx)
+	}
+
+	// Shuffle transactions.
+	rand.Seed(time.Now().Unix())
+	rand.Shuffle(len(txs), func(i, j int) {
+		txs[i], txs[j] = txs[j], txs[i]
+	})
+
+	sortedTxs := make(types.Transactions, len(txs))
+	copy(sortedTxs, txs)
+
+	// Sort transaction by time.
+	sort.Sort(types.TxByPriceAndTime(sortedTxs))
+
+	_, oppositePipe1, oppositePipe2 := newBasePeer()
+	multiPeer, _ := newPeerWithRWs(version, p2pPeers[0], []p2p.MsgReadWriter{oppositePipe1, oppositePipe2})
+
+	for _, tx := range txs {
+		assert.False(t, multiPeer.KnowsTx(tx.Hash()))
+	}
+
+	go func(t *testing.T) {
+		if err := multiPeer.SendTransactions(txs); err != nil {
+			t.Error(t)
+			return
+		}
+	}(t)
+
+	receivedMsg, err := oppositePipe1.ReadMsg()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var receivedTxs types.Transactions
+	if err := receivedMsg.Decode(&receivedTxs); err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, len(txs), len(receivedTxs))
+
+	// It should be received transaction with sorted by times.
+	for i, tx := range receivedTxs {
+		assert.True(t, multiPeer.KnowsTx(tx.Hash()))
+		assert.Equal(t, sortedTxs[i].Hash(), tx.Hash())
+		assert.False(t, sortedTxs[i].Time().Equal(tx.Time()))
+	}
+}
+
+func TestMultiChannelPeer_ReSendTransactionWithSortedByTime(t *testing.T) {
+	// Generate a batch of accounts to start with
+	keys := make([]*ecdsa.PrivateKey, 5)
+	for i := 0; i < len(keys); i++ {
+		keys[i], _ = crypto.GenerateKey()
+	}
+	signer := types.LatestSignerForChainID(big.NewInt(1))
+
+	// Generate a batch of transactions.
+	txs := types.Transactions{}
+	for _, key := range keys {
+		tx, _ := types.SignTx(types.NewTransaction(0, common.Address{}, big.NewInt(100), 100, big.NewInt(1), nil), signer, key)
+
+		txs = append(txs, tx)
+	}
+
+	// Shuffle transactions.
+	rand.Seed(time.Now().Unix())
+	rand.Shuffle(len(txs), func(i, j int) {
+		txs[i], txs[j] = txs[j], txs[i]
+	})
+
+	sortedTxs := make(types.Transactions, len(txs))
+	copy(sortedTxs, txs)
+
+	// Sort transaction by time.
+	sort.Sort(types.TxByPriceAndTime(sortedTxs))
+
+	_, oppositePipe1, oppositePipe2 := newBasePeer()
+	multiPeer, _ := newPeerWithRWs(version, p2pPeers[0], []p2p.MsgReadWriter{oppositePipe1, oppositePipe2})
+
+	for _, tx := range txs {
+		assert.False(t, multiPeer.KnowsTx(tx.Hash()))
+	}
+
+	go func(t *testing.T) {
+		if err := multiPeer.ReSendTransactions(txs); err != nil {
+			t.Error(t)
+			return
+		}
+	}(t)
+
+	receivedMsg, err := oppositePipe1.ReadMsg()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var receivedTxs types.Transactions
+	if err := receivedMsg.Decode(&receivedTxs); err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, len(txs), len(receivedTxs))
+
+	// It should be received transaction with sorted by times.
+	for i, tx := range receivedTxs {
+		assert.Equal(t, sortedTxs[i].Hash(), tx.Hash())
+		assert.False(t, sortedTxs[i].Time().Equal(tx.Time()))
+	}
 }
