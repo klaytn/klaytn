@@ -110,22 +110,22 @@ func (ba *BridgeAccounts) SetChildOperatorFeePayer(feePayer common.Address) erro
 	return nil
 }
 
-//GetParentBridgeOperatorGasLimit gets value of GasLimit of parent operator.
+// GetParentBridgeOperatorGasLimit gets value of GasLimit of parent operator.
 func (ba *BridgeAccounts) GetParentBridgeOperatorGasLimit() uint64 {
 	return ba.pAccount.gasLimit
 }
 
-//GetChildBridgeOperatorGasLimit gets value of GasLimit of child operator.
+// GetChildBridgeOperatorGasLimit gets value of GasLimit of child operator.
 func (ba *BridgeAccounts) GetChildBridgeOperatorGasLimit() uint64 {
 	return ba.cAccount.gasLimit
 }
 
-//SetParentBridgeOperatorGasLimit changes GasLimit of parent operator.
+// SetParentBridgeOperatorGasLimit changes GasLimit of parent operator.
 func (ba *BridgeAccounts) SetParentBridgeOperatorGasLimit(fee uint64) {
 	ba.pAccount.gasLimit = fee
 }
 
-//SetChildBridgeOperatorGasLimit changes GasLimit of child operator.
+// SetChildBridgeOperatorGasLimit changes GasLimit of child operator.
 func (ba *BridgeAccounts) SetChildBridgeOperatorGasLimit(fee uint64) {
 	ba.cAccount.gasLimit = fee
 }
