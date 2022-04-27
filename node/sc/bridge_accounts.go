@@ -121,6 +121,22 @@ func (ba *BridgeAccounts) GetBridgeOperatorGasLimit() uint64 {
 	return ba.pAccount.gasLimit
 }
 
+func (ba *BridgeAccounts) GetParentBridgeOperatorGasLimit() uint64 {
+	return ba.pAccount.gasLimit
+}
+
+func (ba *BridgeAccounts) GetChildBridgeOperatorGasLimit() uint64 {
+	return ba.cAccount.gasLimit
+}
+
+func (ba *BridgeAccounts) SetParentBridgeOperatorGasLimit(fee uint64) {
+	ba.pAccount.gasLimit = fee
+}
+
+func (ba *BridgeAccounts) SetChildBridgeOperatorGasLimit(fee uint64) {
+	ba.cAccount.gasLimit = fee
+}
+
 // NewBridgeAccounts returns bridgeAccounts created by main/service bridge account keys.
 func NewBridgeAccounts(am *accounts.Manager, dataDir string, db feePayerDB, gaslimit uint64) (*BridgeAccounts, error) {
 	pKS, pAccAddr, isLock, err := InitializeBridgeAccountKeystore(path.Join(dataDir, ParentBridgeAccountName))
