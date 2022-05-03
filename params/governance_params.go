@@ -31,8 +31,7 @@ const (
 	kirContractIncentiveInSton    int64 = 3200000000 // 3.2 KLAY for KIR contract (Unit: ston)
 	pocContractIncentiveInSton    int64 = 3200000000 // 3.2 KLAY for PoC contract (Unit: ston)
 
-	defaultMintedKLAYInSton           int64 = 9600000000 // Default amount of minted KLAY. 9.6 KLAY for block reward (Unit: ston)
-	defaultMinimumStakingAmountInKlay int64 = 5000000    // Default amount of minimum staking (Unit: KLAY)
+	defaultMintedKLAYInSton int64 = 9600000000 // Default amount of minted KLAY. 9.6 KLAY for block reward (Unit: ston)
 
 	DefaultCNRewardRatio  = 34 // Default CN reward ratio 34%
 	DefaultPoCRewardRatio = 54 // Default PoC ratio 54%
@@ -46,10 +45,6 @@ var (
 	PoCContractIncentive    = big.NewInt(0).Mul(big.NewInt(pocContractIncentiveInSton), big.NewInt(Ston))
 
 	DefaultMintedKLAY = big.NewInt(0).Mul(big.NewInt(defaultMintedKLAYInSton), big.NewInt(Ston))
-
-	// TODO-Governance remove below minimum staking amount parameter
-	defaultMinimumStakingAmount = big.NewInt(0).Mul(big.NewInt(defaultMinimumStakingAmountInKlay), big.NewInt(KLAY))
-	minimumStakingAmount        atomic.Value
 
 	stakingUpdateInterval  uint64 = 86400 // About 1 day. 86400 blocks = (24 hrs) * (3600 secs/hr) * (1 block/sec)
 	proposerUpdateInterval uint64 = 3600  // About 1 hour. 3600 blocks = (1 hr) * (3600 secs/hr) * (1 block/sec)
@@ -180,15 +175,4 @@ func SetProposerUpdateInterval(num uint64) {
 func ProposerUpdateInterval() uint64 {
 	ret := atomic.LoadUint64(&proposerUpdateInterval)
 	return ret
-}
-
-func SetMinimumStakingAmount(val *big.Int) {
-	minimumStakingAmount.Store(val)
-}
-
-func MinimumStakingAmount() *big.Int {
-	if m, ok := minimumStakingAmount.Load().(*big.Int); ok {
-		return m
-	}
-	return defaultMinimumStakingAmount
 }
