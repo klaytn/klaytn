@@ -331,8 +331,16 @@ func (sb *SubBridgeAPI) RegisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr, pTok
 	if err != nil {
 		return err
 	}
+	err = cBi.RegisterToken(pTokenAddr, cTokenAddr)
+	if err != nil {
+		return err
+	}
 
 	err = pBi.RegisterToken(pTokenAddr, cTokenAddr)
+	if err != nil {
+		return err
+	}
+	err = pBi.RegisterToken(cTokenAddr, pTokenAddr)
 	if err != nil {
 		return err
 	}
@@ -396,13 +404,6 @@ func (sb *SubBridgeAPI) DeregisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr, pT
 
 	if !cExist || !pExist {
 		return ErrNoBridgeInfo
-	}
-
-	pTokenAddrCheck := cBi.GetCounterPartToken(cTokenAddr)
-	cTokenAddrCheck := pBi.GetCounterPartToken(pTokenAddr)
-
-	if pTokenAddr != pTokenAddrCheck || cTokenAddr != cTokenAddrCheck {
-		return errors.New("invalid toke pair")
 	}
 
 	cBi.DeregisterToken(cTokenAddr, pTokenAddr)
