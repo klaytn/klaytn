@@ -125,7 +125,6 @@ func initGenesis(ctx *cli.Context) error {
 	}
 	params.SetStakingUpdateInterval(genesis.Config.Governance.Reward.StakingUpdateInterval)
 	params.SetProposerUpdateInterval(genesis.Config.Governance.Reward.ProposerUpdateInterval)
-	params.SetMinimumStakingAmount(genesis.Config.Governance.Reward.MinimumStake)
 
 	// Open an initialise both full and light databases
 	stack := MakeFullNode(ctx)
