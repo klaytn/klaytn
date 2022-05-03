@@ -64,6 +64,7 @@ var (
 	ErrNoRecovery           = errors.New("recovery does not exist")
 	ErrAlreadySubscribed    = errors.New("already subscribed")
 	ErrBridgeRestore        = errors.New("restoring bridges is failed")
+	ErrNotFoundHandleToken  = errors.New("failed to find handle token address")
 )
 
 // RequestValueTransferEvent from Bridge contract
@@ -270,26 +271,41 @@ func (bi *BridgeInfo) UpdateInfo() error {
 	return nil
 }
 
+// getHandleTokenAddr tries to get handle token address through contract call
+func (bi *BridgeInfo) getHandleTokenAddr(tokenType uint8, tokenAddrInEvent common.Address) (common.Address, error) {
+	myToken := bi.GetCounterPartToken(tokenAddrInEvent)
+	if tokenType != KLAY && myToken == (common.Address{}) {
+		myTokens, err := bi.bridge.GetRegisteredTokenList(nil)
+		if err != nil {
+			return common.Address{}, err
+		}
+		for _, myToken := range myTokens {
+			ctTokenAddr, err := bi.bridge.RegisteredTokens(nil, myToken)
+			if err != nil {
+				return common.Address{}, err
+			}
+			if ctTokenAddr == tokenAddrInEvent {
+				if err := bi.RegisterToken(tokenAddrInEvent, myToken); err != nil {
+					return common.Address{}, err
+				}
+				logger.Info("Registered counter part token address.", "counterpartTokenAddr", tokenAddrInEvent.Hex(),
+					"myTokenAddr", myToken.Hex())
+				return myToken, nil
+			}
+		}
+		logger.Error("Failed to find registered token address from received token address",
+			"tokenAddrInEvent", tokenAddrInEvent)
+		return common.Address{}, ErrNotFoundHandleToken
+	}
+	return myToken, nil
+}
+
 // handleRequestValueTransferEvent handles the given request value transfer event.
 func (bi *BridgeInfo) handleRequestValueTransferEvent(ev *RequestValueTransferEvent) error {
 	tokenType := ev.TokenType
-	tokenAddr := bi.GetCounterPartToken(ev.TokenAddress)
-	// TODO-Klaytn-Servicechain Add counterpart token address in requestValueTransferEvent
-	if tokenType != KLAY && tokenAddr == (common.Address{}) {
-		logger.Warn("Unregistered counter part token address.", "addr", tokenAddr.Hex())
-		ctTokenAddr, err := bi.counterpartBridge.RegisteredTokens(nil, ev.TokenAddress)
-		if err != nil {
-			return err
-		}
-		if ctTokenAddr == (common.Address{}) {
-			return errors.New("can't get counterpart token from bridge")
-		}
-
-		if err := bi.RegisterToken(ev.TokenAddress, ctTokenAddr); err != nil {
-			return err
-		}
-		tokenAddr = ctTokenAddr
-		logger.Info("Register counter part token address.", "addr", tokenAddr.Hex(), "cpAddr", ctTokenAddr.Hex())
+	tokenAddr, err := bi.getHandleTokenAddr(tokenType, ev.TokenAddress)
+	if err != nil {
+		return err
 	}
 
 	bridgeAcc := bi.account
@@ -300,8 +316,6 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev *RequestValueTransferEv
 	auth := bridgeAcc.GenerateTransactOpts()
 
 	var handleTx *types.Transaction
-	var err error
-
 	switch tokenType {
 	case KLAY:
 		handleTx, err = bi.bridge.HandleKLAYTransfer(auth, ev.Raw.TxHash, ev.From, ev.To, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.ExtraData)
