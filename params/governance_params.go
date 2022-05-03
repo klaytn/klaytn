@@ -17,12 +17,13 @@
 package params
 
 import (
+	"math/big"
 	"sync/atomic"
 )
 
 var (
-	stakingUpdateInterval  uint64 = 86400 // About 1 day. 86400 blocks = (24 hrs) * (3600 secs/hr) * (1 block/sec)
-	proposerUpdateInterval uint64 = 3600  // About 1 hour. 3600 blocks = (1 hr) * (3600 secs/hr) * (1 block/sec)
+	stakingUpdateInterval  uint64 = DefaultStakeUpdateInterval
+	proposerUpdateInterval uint64 = DefaultProposerRefreshInterval
 )
 
 const (
@@ -81,19 +82,22 @@ const (
 	WeightedRandom
 )
 
-const (
+var (
 	// Default Values: Constants used for getting default values for configuration
-	DefaultGovernanceMode = "none"
-	DefaultGoverningNode  = "0x0000000000000000000000000000000000000000"
-	DefaultEpoch          = uint64(604800)
-	DefaultProposerPolicy = uint64(0)
-	DefaultSubGroupSize   = uint64(21)
-	DefaultMintingAmount  = 0
-	DefaultRatio          = "100/0/0"
-	DefaultUseGiniCoeff   = false
-	DefaultDefferedTxFee  = false
-	DefaultUnitPrice      = uint64(250000000000)
-	DefaultPeriod         = 1
+	DefaultGovernanceMode          = "none"
+	DefaultGoverningNode           = "0x0000000000000000000000000000000000000000"
+	DefaultEpoch                   = uint64(604800)
+	DefaultProposerPolicy          = uint64(RoundRobin)
+	DefaultSubGroupSize            = uint64(21)
+	DefaultUnitPrice               = uint64(250000000000)
+	DefaultMintingAmount           = big.NewInt(0)
+	DefaultRatio                   = "100/0/0"
+	DefaultUseGiniCoeff            = false
+	DefaultDefferedTxFee           = false
+	DefaultMinimumStake            = big.NewInt(2000000)
+	DefaultStakeUpdateInterval     = uint64(86400) // 1 day
+	DefaultProposerRefreshInterval = uint64(3600)  // 1 hour
+	DefaultPeriod                  = uint64(1)
 )
 
 func IsStakingUpdateInterval(blockNum uint64) bool {
