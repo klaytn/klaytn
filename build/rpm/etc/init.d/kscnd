@@ -285,8 +285,12 @@ if [[ ! -z $SC_SUB_BRIDGE ]] && [[ $SC_SUB_BRIDGE -eq 1 ]]; then
     fi
 fi
 
-if [ ! -z $SC_DEFAULTGASLIMIT ]; then
-    OPTIONS="$OPTIONS --scdefaultgaslimit $SC_DEFAULTGASLIMIT"
+if [ ! -z $SC_PARENT_OPERATOR_DEFAULTGASLIMIT ]; then
+    OPTIONS="$OPTIONS --sc.parentop.defaultgaslimit $SC_PARENT_OPERATOR_DEFAULTGASLIMIT"
+fi
+
+if [ ! -z $SC_CHILD_OPERATOR_DEFAULTGASLIMIT ]; then
+    OPTIONS="$OPTIONS --sc.childop.defaultgaslimit $SC_CHILD_OPERATOR_DEFAULTGASLIMIT"
 fi
 
 if [[ (! -z $VTRECOVERY && $VTRECOVERY -eq 1 ) || (! -z $SC_VTRECOVERY && $SC_VTRECOVERY -eq 1) ]]; then
