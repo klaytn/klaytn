@@ -132,7 +132,7 @@ contract AddressBook {
      */
     function constructContract(address[] _adminList, uint256 _requirement) external 
     validRequirement(_adminList.length, _requirement) {
-        require(msg.sender == 0x88bb3838aa0a140aCb73EEb3d4B25a8D3aFD58D4, "Invalid sender.");
+        require(msg.sender == 0x854CA8508C8BE2bb1f3C244045786410Cb7D5D0a, "Invalid sender.");
         require(isConstructed == false, "Already constructed.");
         uint256 adminListCnt = _adminList.length;
 
