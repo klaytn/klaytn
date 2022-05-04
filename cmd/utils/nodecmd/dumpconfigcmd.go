@@ -334,7 +334,7 @@ func makeServiceChainConfig(ctx *cli.Context) (config sc.SCConfig) {
 	cfg.VTRecoveryInterval = ctx.GlobalUint64(utils.VTRecoveryIntervalFlag.Name)
 	cfg.ServiceChainConsensus = utils.ServiceChainConsensusFlag.Value
 	cfg.ServiceChainParentOperatorGasLimit = ctx.GlobalUint64(utils.ServiceChainParentOperatorDefaultTxGasLimitFlag.Name)
-	cfg.ServiceChainChildOperatorGasLimit = ctx.GlobalUint64(utils.ServiceChainParentOperatorDefaultTxGasLimitFlag.Name)
+	cfg.ServiceChainChildOperatorGasLimit = ctx.GlobalUint64(utils.ServiceChainChildOperatorDefaultTxGasLimitFlag.Name)
 
 	cfg.KASAnchor = ctx.GlobalBool(utils.KASServiceChainAnchorFlag.Name)
 	if cfg.KASAnchor {
