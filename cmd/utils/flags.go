@@ -748,7 +748,7 @@ var (
 		Value: 10000000,
 	}
 	ServiceChainChildOperatorDefaultTxGasLimitFlag = cli.Uint64Flag{
-		Name:  "sc.parentop.defaultgaslimit",
+		Name:  "sc.childop.defaultgaslimit",
 		Usage: "Set the default value of gas limit for transactions made by bridge parent operator",
 		Value: 10000000,
 	}
