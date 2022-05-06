@@ -47,7 +47,10 @@ func TestGovParamSet_ParseValue(t *testing.T) {
 		{govParamTypeBigInt, "", nil, false},
 
 		{govParamTypeRatio, "100/0/0", "100/0/0", true},
+		{govParamTypeRatio, "30/30/40", "30/30/40", true},
 		{govParamTypeRatio, "10/20/30/40", nil, false},
+		{govParamTypeRatio, "0/0/0", nil, false},
+		{govParamTypeRatio, "1/2/3", nil, false},
 		{govParamTypeRatio, "", nil, false},
 
 		{govParamTypeBool, true, true, true},

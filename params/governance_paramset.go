@@ -18,10 +18,12 @@ type govParamType struct {
 
 	// Parse arbitrary typed value into canonical type
 	// Return false if not possible
+	// Used to parse or normalize database content.
 	parseValue func(v interface{}) (interface{}, bool)
 
 	// Parse byte array into canonical type
 	// Return false if not possible
+	// Used to parse solidity contract content.
 	parseBytes func(b []byte) (interface{}, bool)
 
 	// Application-specific checks.
@@ -74,6 +76,8 @@ var (
 		return true
 	}
 
+	uint64ByteLen = int(reflect.TypeOf(uint64(0)).Size())
+
 	govParamTypeGovMode = &govParamType{
 		canonicalType: reflect.TypeOf("single"),
 		parseValue:    parseValueString,
@@ -121,7 +125,7 @@ var (
 		},
 		parseBytes: func(b []byte) (interface{}, bool) {
 			// Must not exceed uint64 range
-			return new(big.Int).SetBytes(b).Uint64(), len(b) <= 8
+			return new(big.Int).SetBytes(b).Uint64(), len(b) <= uint64ByteLen
 		},
 		validate: validatePass,
 	}
@@ -159,13 +163,15 @@ var (
 			if len(strs) != 3 {
 				return false
 			}
+			sum := 0
 			for _, s := range strs {
 				n, err := strconv.Atoi(s)
 				if err != nil || n < 0 {
 					return false
 				}
+				sum += n
 			}
-			return true
+			return sum == 100
 		},
 	}
 
