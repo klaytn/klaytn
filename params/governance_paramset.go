@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/log"
 )
 
 type govParamType struct {
@@ -221,22 +220,6 @@ var govParamNames = map[string]int{
 	"reward.proposerupdateinterval": ProposerRefreshInterval,
 }
 
-var govParamDefaults = map[int]interface{}{
-	GovernanceMode:          DefaultGovernanceMode,
-	GoverningNode:           DefaultGoverningNode,
-	Epoch:                   DefaultEpoch,
-	Policy:                  DefaultProposerPolicy,
-	CommitteeSize:           DefaultSubGroupSize,
-	UnitPrice:               DefaultUnitPrice,
-	MintingAmount:           DefaultMintingAmount,
-	Ratio:                   DefaultRatio,
-	UseGiniCoeff:            DefaultUseGiniCoeff,
-	DeferredTxFee:           DefaultDefferedTxFee,
-	MinimumStake:            DefaultMinimumStake,
-	StakeUpdateInterval:     DefaultStakeUpdateInterval,
-	ProposerRefreshInterval: DefaultProposerRefreshInterval,
-}
-
 var govParamNamesReverse = map[int]string{}
 
 func init() {
@@ -348,91 +331,7 @@ func (p *GovParamSet) IntMap() map[int]interface{} {
 }
 
 // Returns a parameter value and a boolean indicating success.
-// Use Get() to be careful about existence of a parameter.
 func (p *GovParamSet) Get(key int) (interface{}, bool) {
 	v, ok := p.items[key]
 	return v, ok
-}
-
-// Returns a parameter value or default value for the key if the value is not set.
-// Use MustGet() if you are confident that the value is set.
-// To simply quote a parameter in an expression, MustGet() can come in handy.
-func (p *GovParamSet) MustGet(key int) interface{} {
-	if v, ok := p.items[key]; ok {
-		return v
-	}
-	if d, ok := govParamDefaults[key]; ok {
-		// If key is a known parameter, fallback to default
-		return d
-	}
-	// This path is very unlikely.
-	logger := log.NewModuleLogger(log.Governance)
-	logger.Crit("Unknown governance param key")
-	return nil
-}
-
-func (p *GovParamSet) GovernanceMode() string {
-	return p.MustGet(GovernanceMode).(string)
-}
-
-func (p *GovParamSet) GoverningNode() common.Address {
-	return p.MustGet(GoverningNode).(common.Address)
-}
-
-func (p *GovParamSet) Epoch() uint64 {
-	return p.MustGet(Epoch).(uint64)
-}
-
-func (p *GovParamSet) Policy() uint64 {
-	return p.MustGet(Policy).(uint64)
-}
-
-func (p *GovParamSet) CommitteeSize() uint64 {
-	return p.MustGet(CommitteeSize).(uint64)
-}
-
-func (p *GovParamSet) UnitPrice() uint64 {
-	return p.MustGet(UnitPrice).(uint64)
-}
-
-func (p *GovParamSet) MintingAmountStr() string {
-	return p.MustGet(MintingAmount).(string)
-}
-
-func (p *GovParamSet) MintingAmountBig() *big.Int {
-	n, _ := new(big.Int).SetString(p.MintingAmountStr(), 10)
-	return n
-}
-
-func (p *GovParamSet) Ratio() string {
-	return p.MustGet(Ratio).(string)
-}
-
-func (p *GovParamSet) UseGiniCoeff() bool {
-	return p.MustGet(UseGiniCoeff).(bool)
-}
-
-func (p *GovParamSet) DeferredTxFee() bool {
-	return p.MustGet(DeferredTxFee).(bool)
-}
-
-func (p *GovParamSet) MinimumStakeStr() string {
-	return p.MustGet(MinimumStake).(string)
-}
-
-func (p *GovParamSet) MinimumStakeBig() *big.Int {
-	n, _ := new(big.Int).SetString(p.MinimumStakeStr(), 10)
-	return n
-}
-
-func (p *GovParamSet) StakeUpdateInterval() uint64 {
-	return p.MustGet(StakeUpdateInterval).(uint64)
-}
-
-func (p *GovParamSet) ProposerRefreshInterval() uint64 {
-	return p.MustGet(ProposerRefreshInterval).(uint64)
-}
-
-func (p *GovParamSet) Timeout() uint64 {
-	return p.MustGet(Timeout).(uint64)
 }

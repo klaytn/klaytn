@@ -117,11 +117,6 @@ func TestGovParamSet_GlobalMaps(t *testing.T) {
 	for _, key := range govParamNames {
 		assert.NotNil(t, govParamTypes[key])
 	}
-
-	assert.Equal(t, len(govParamTypes), len(govParamDefaults))
-	for key := range govParamTypes {
-		assert.NotNil(t, govParamDefaults[key])
-	}
 }
 
 func TestGovParamSet_Get(t *testing.T) {
@@ -134,15 +129,11 @@ func TestGovParamSet_Get(t *testing.T) {
 	v, ok := p.Get(Epoch)
 	assert.True(t, ok)
 	assert.Equal(t, num, v)
-	assert.Equal(t, num, p.MustGet(Epoch))
-	assert.Equal(t, num, p.Epoch())
 
-	// Even when param does not exist, MustGet() must return something.
+	// Not exists
 	v, ok = p.Get(CommitteeSize)
 	assert.False(t, ok)
 	assert.Nil(t, v)
-	assert.Equal(t, DefaultSubGroupSize, p.MustGet(CommitteeSize))
-	assert.Equal(t, DefaultSubGroupSize, p.CommitteeSize())
 }
 
 func TestGovParamSet_New(t *testing.T) {
@@ -150,32 +141,24 @@ func TestGovParamSet_New(t *testing.T) {
 		"istanbul.epoch": 604800,
 	})
 	assert.Nil(t, err)
-	assert.Equal(t, uint64(604800), p.Epoch())
+	v, ok := p.Get(Epoch)
+	assert.Equal(t, uint64(604800), v)
+	assert.True(t, ok)
 
 	p, err = NewGovParamSetIntMap(map[int]interface{}{
 		Epoch: 604800,
 	})
 	assert.Nil(t, err)
-	assert.Equal(t, uint64(604800), p.Epoch())
+	v, ok = p.Get(Epoch)
+	assert.Equal(t, uint64(604800), v)
+	assert.True(t, ok)
 
 	c := CypressChainConfig
 	p, err = NewGovParamSetChainConfig(c)
 	assert.Nil(t, err)
-	assert.Equal(t, c.Istanbul.Epoch, p.Epoch())
-	assert.Equal(t, c.Istanbul.ProposerPolicy, p.Policy())
-	assert.Equal(t, c.Istanbul.SubGroupSize, p.CommitteeSize())
-	assert.Equal(t, c.UnitPrice, p.UnitPrice())
-	assert.Equal(t, c.Governance.GovernanceMode, p.GovernanceMode())
-	assert.Equal(t, c.Governance.GoverningNode, p.GoverningNode())
-	assert.Equal(t, c.Governance.Reward.MintingAmount.String(), p.MintingAmountStr())
-	assert.Equal(t, c.Governance.Reward.MintingAmount, p.MintingAmountBig())
-	assert.Equal(t, c.Governance.Reward.Ratio, p.Ratio())
-	assert.Equal(t, c.Governance.Reward.UseGiniCoeff, p.UseGiniCoeff())
-	assert.Equal(t, c.Governance.Reward.DeferredTxFee, p.DeferredTxFee())
-	assert.Equal(t, c.Governance.Reward.MinimumStake.String(), p.MinimumStakeStr())
-	assert.Equal(t, c.Governance.Reward.MinimumStake, p.MinimumStakeBig())
-	assert.Equal(t, c.Governance.Reward.StakingUpdateInterval, p.StakeUpdateInterval())
-	assert.Equal(t, c.Governance.Reward.ProposerUpdateInterval, p.ProposerRefreshInterval())
+	v, ok = p.Get(Epoch)
+	assert.Equal(t, c.Istanbul.Epoch, v)
+	assert.True(t, ok)
 }
 
 func TestGovParamSet_RegressDb(t *testing.T) {
