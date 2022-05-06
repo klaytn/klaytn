@@ -98,7 +98,7 @@ func (api *PublicGovernanceAPI) Vote(key string, val interface{}) (string, error
 		}
 	}
 	if api.governance.AddVote(key, val) {
-		return "Your vote was successfully placed.", nil
+		return "Your vote is prepared. It will be put into the block header or applied when your node generates a block as a proposer.", nil
 	}
 	return "", errInvalidKeyValue
 }
