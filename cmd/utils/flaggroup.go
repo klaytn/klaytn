@@ -289,6 +289,7 @@ var FlagGroups = []FlagGroup{
 			ServiceChainAnchoringFlag,
 			ServiceChainNewAccountFlag,
 			ServiceChainParentOperatorDefaultTxGasLimitFlag,
+			ServiceChainChildOperatorDefaultTxGasLimitFlag,
 			KASServiceChainAnchorFlag,
 			KASServiceChainAnchorPeriodFlag,
 			KASServiceChainAnchorUrlFlag,
