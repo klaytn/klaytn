@@ -36,18 +36,17 @@ var (
 	ErrBridgeContractVersionMismatch = errors.New("Bridge contract version mismatch")
 )
 
-func parseBridgeAddrWithAlias(cBridgeAddrOrAlias, pBridgeAddrOrFirstParam string, args ...interface{}) (string, common.Address, common.Address, []interface{}) {
+func parseBridgeAddrWithAlias(sb *SubBridge, cBridgeAddrOrAlias, pBridgeAddrOrFirstParam string, args ...interface{}) (common.Address, common.Address, []interface{}, error) {
 	if !strings.HasPrefix(cBridgeAddrOrAlias, "0x") {
 		// Takes pBirdgeAddr as the first API argument and append residual arguments.
 		var newArgs []interface{}
 		if len(args) > 0 {
 			newArgs = append([]interface{}{pBridgeAddrOrFirstParam}, args[:len(args)-1]...)
 		}
-		// return bridge alias
-		return cBridgeAddrOrAlias, common.Address{}, common.Address{}, newArgs
+		cBridgeAddr, pBridgeAddr, err := sb.bridgeManager.getAddrByAlias(cBridgeAddrOrAlias)
+		return cBridgeAddr, pBridgeAddr, newArgs, err
 	} else {
-		// return two raw bridge addresses
-		return "", common.HexToAddress(cBridgeAddrOrAlias), common.HexToAddress(pBridgeAddrOrFirstParam), args
+		return common.HexToAddress(cBridgeAddrOrAlias), common.HexToAddress(pBridgeAddrOrFirstParam), args, nil
 	}
 }
 
@@ -204,14 +203,9 @@ func (sb *SubBridgeAPI) doSubscribeBridge(cBridgeAddr, pBridgeAddr common.Addres
 
 func (sb *SubBridgeAPI) SubscribeBridge(cBridgeAddrOrAlias, pBridgeAddrOrEmpty *string) error {
 	cBridgeAddrOrAliasStr, pBridgeAddrOrEmptyStr := stringDeref(cBridgeAddrOrAlias), stringDeref(pBridgeAddrOrEmpty)
-
-	var err error
-	bridgeAlias, cBridgeAddr, pBridgeAddr, _ := parseBridgeAddrWithAlias(cBridgeAddrOrAliasStr, pBridgeAddrOrEmptyStr)
-	if bridgeAlias != "" {
-		cBridgeAddr, pBridgeAddr, err = sb.subBridge.bridgeManager.getAddrByAlias(bridgeAlias)
-		if err != nil {
-			return err
-		}
+	cBridgeAddr, pBridgeAddr, _, err := parseBridgeAddrWithAlias(sb.subBridge, cBridgeAddrOrAliasStr, pBridgeAddrOrEmptyStr)
+	if err != nil {
+		return err
 	}
 	return sb.doSubscribeBridge(cBridgeAddr, pBridgeAddr)
 }
@@ -232,15 +226,10 @@ func (sb *SubBridgeAPI) doUnsubscribeBridge(cBridgeAddr, pBridgeAddr common.Addr
 }
 
 func (sb *SubBridgeAPI) UnsubscribeBridge(cBridgeAddrOrAlias, pBridgeAddrOrEmpty *string) error {
-	cBridgeAddrStr, pBridgeAddrOrEmptyStr := stringDeref(cBridgeAddrOrAlias), stringDeref(pBridgeAddrOrEmpty)
-
-	var err error
-	bridgeAlias, cBridgeAddr, pBridgeAddr, _ := parseBridgeAddrWithAlias(cBridgeAddrStr, pBridgeAddrOrEmptyStr)
-	if bridgeAlias != "" {
-		cBridgeAddr, pBridgeAddr, err = sb.subBridge.bridgeManager.getAddrByAlias(bridgeAlias)
-		if err != nil {
-			return err
-		}
+	cBridgeAddrOrAliasStr, pBridgeAddrOrEmptyStr := stringDeref(cBridgeAddrOrAlias), stringDeref(pBridgeAddrOrEmpty)
+	cBridgeAddr, pBridgeAddr, _, err := parseBridgeAddrWithAlias(sb.subBridge, cBridgeAddrOrAliasStr, pBridgeAddrOrEmptyStr)
+	if err != nil {
+		return err
 	}
 	return sb.doUnsubscribeBridge(cBridgeAddr, pBridgeAddr)
 }
@@ -380,17 +369,12 @@ func (sb *SubBridgeAPI) doDeregisterBridge(cBridgeAddr common.Address, pBridgeAd
 }
 
 func (sb *SubBridgeAPI) DeregisterBridge(cBridgeAddrOrAlias, pBridgeAddrOrEmpty *string) error {
-	cBridgeAddrStr, pBridgeAddrOrEmptyStr := stringDeref(cBridgeAddrOrAlias), stringDeref(pBridgeAddrOrEmpty)
-
-	var err error
-	bridgeAlias, cBridgeAddr, pBridgeAddr, _ := parseBridgeAddrWithAlias(cBridgeAddrStr, pBridgeAddrOrEmptyStr)
-	if bridgeAlias != "" {
-		cBridgeAddr, pBridgeAddr, err = sb.subBridge.bridgeManager.getAddrByAlias(bridgeAlias)
-		if err != nil {
-			return err
-		}
-		delete(sb.subBridge.bridgeManager.journal.aliasCache, bridgeAlias)
+	cBridgeAddrOrAliasStr, pBridgeAddrOrEmptyStr := stringDeref(cBridgeAddrOrAlias), stringDeref(pBridgeAddrOrEmpty)
+	cBridgeAddr, pBridgeAddr, _, err := parseBridgeAddrWithAlias(sb.subBridge, cBridgeAddrOrAliasStr, pBridgeAddrOrEmptyStr)
+	if err != nil {
+		return err
 	}
+	delete(sb.subBridge.bridgeManager.journal.aliasCache, cBridgeAddrOrAliasStr)
 	return sb.doDeregisterBridge(cBridgeAddr, pBridgeAddr)
 }
 
@@ -444,14 +428,9 @@ func (sb *SubBridgeAPI) doRegisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr, pT
 
 func (sb *SubBridgeAPI) RegisterToken(cBridgeAddrOrAlias, pBridgeOrChildToken, cTokenAddrOrPtokenAddr, pTokenAddrOrEmpty *string) error {
 	cBridgeAddrOrAliasStr, pBridgeAddrOrChildTokenStr, cTokenAddrOrPtokenAddrStr, pTokenAddrOrEmptyStr := stringDeref(cBridgeAddrOrAlias), stringDeref(pBridgeOrChildToken), stringDeref(cTokenAddrOrPtokenAddr), stringDeref(pTokenAddrOrEmpty)
-
-	var err error
-	bridgeAlias, cBridgeAddr, pBridgeAddr, args := parseBridgeAddrWithAlias(cBridgeAddrOrAliasStr, pBridgeAddrOrChildTokenStr, cTokenAddrOrPtokenAddrStr, pTokenAddrOrEmptyStr)
-	if bridgeAlias != "" {
-		cBridgeAddr, pBridgeAddr, err = sb.subBridge.bridgeManager.getAddrByAlias(bridgeAlias)
-		if err != nil {
-			return err
-		}
+	cBridgeAddr, pBridgeAddr, args, err := parseBridgeAddrWithAlias(sb.subBridge, cBridgeAddrOrAliasStr, pBridgeAddrOrChildTokenStr, cTokenAddrOrPtokenAddrStr, pTokenAddrOrEmptyStr)
+	if err != nil {
+		return err
 	}
 	cTokenAddr, pTokenAddr := common.HexToAddress(args[0].(string)), common.HexToAddress(args[1].(string))
 	return sb.doRegisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr, pTokenAddr)
@@ -530,14 +509,9 @@ func (sb *SubBridgeAPI) doDeregisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr, 
 
 func (sb *SubBridgeAPI) DeregisterToken(cBridgeAddrOrAlias, pBridgeOrChildToken, cTokenAddrOrPtokenAddr, pTokenAddrOrEmpty *string) error {
 	cBridgeAddrOrAliasStr, pBridgeAddrOrChildTokenStr, cTokenAddrOrPtokenAddrStr, pTokenAddrOrEmptyStr := stringDeref(cBridgeAddrOrAlias), stringDeref(pBridgeOrChildToken), stringDeref(cTokenAddrOrPtokenAddr), stringDeref(pTokenAddrOrEmpty)
-
-	var err error
-	bridgeAlias, cBridgeAddr, pBridgeAddr, args := parseBridgeAddrWithAlias(cBridgeAddrOrAliasStr, pBridgeAddrOrChildTokenStr, cTokenAddrOrPtokenAddrStr, pTokenAddrOrEmptyStr)
-	if bridgeAlias != "" {
-		cBridgeAddr, pBridgeAddr, err = sb.subBridge.bridgeManager.getAddrByAlias(bridgeAlias)
-		if err != nil {
-			return err
-		}
+	cBridgeAddr, pBridgeAddr, args, err := parseBridgeAddrWithAlias(sb.subBridge, cBridgeAddrOrAliasStr, pBridgeAddrOrChildTokenStr, cTokenAddrOrPtokenAddrStr, pTokenAddrOrEmptyStr)
+	if err != nil {
+		return err
 	}
 	cTokenAddr, pTokenAddr := common.HexToAddress(args[0].(string)), common.HexToAddress(args[1].(string))
 	return sb.doDeregisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr, pTokenAddr)
