@@ -486,8 +486,8 @@ func defaultCacheConfig() *blockchain.CacheConfig {
 	}
 }
 
-// generateGovernaceDataForTest returns *governance.Governance for test.
-func generateGovernaceDataForTest() *governance.Governance {
+// generateGovernaceDataForTest returns governance.Engine for test.
+func generateGovernaceDataForTest() governance.Engine {
 	dbm := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
 
 	return governance.NewGovernanceInitialize(&params.ChainConfig{
