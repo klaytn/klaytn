@@ -103,8 +103,10 @@ func (e *MixedEngine) UpdateCurrentSet(num uint64) {
 
 func (e *MixedEngine) HandleGovernanceVote(
 	valset istanbul.ValidatorSet, votes []GovernanceVote, tally []GovernanceTallyItem,
-	header *types.Header, proposer common.Address, self common.Address) (
-	istanbul.ValidatorSet, []GovernanceVote, []GovernanceTallyItem) {
+	header *types.Header, proposer common.Address, self common.Address,
+) (
+	istanbul.ValidatorSet, []GovernanceVote, []GovernanceTallyItem,
+) {
 	return e.defaultGov.HandleGovernanceVote(valset, votes, tally, header, proposer, self)
 }
 
