@@ -54,6 +54,11 @@ var (
 		"istanbul.policy":               params.Policy,
 		"istanbul.committeesize":        params.CommitteeSize,
 		"governance.unitprice":          params.UnitPrice,
+		"reward.lowerboundbasefee":      params.LowerBoundBaseFee,  //dynamic gas fee
+		"reward.gastarget":              params.GasTarget,          //dynamic gas fee
+		"reward.blockgaslimit":          params.BlockGasLimit,      //dynamic gas fee
+		"reward.basefeedenominator":     params.BaseFeeDenominator, //dynamic gas fee
+		"reward.upperboundbasefee":      params.UpperBoundBaseFee,  //dynamic gas fee
 		"reward.mintingamount":          params.MintingAmount,
 		"reward.ratio":                  params.Ratio,
 		"reward.useginicoeff":           params.UseGiniCoeff,
@@ -576,7 +581,9 @@ func (g *Governance) ParseVoteValue(gVote *GovernanceVote) (*GovernanceVote, err
 		} else {
 			return nil, ErrValueTypeMismatch
 		}
-	case params.Epoch, params.CommitteeSize, params.UnitPrice, params.StakeUpdateInterval, params.ProposerRefreshInterval, params.ConstTxGasHumanReadable, params.Policy, params.Timeout:
+	case params.Epoch, params.CommitteeSize, params.UnitPrice, params.StakeUpdateInterval,
+		params.ProposerRefreshInterval, params.ConstTxGasHumanReadable, params.Policy, params.Timeout,
+		params.LowerBoundBaseFee, params.UpperBoundBaseFee, params.GasTarget, params.BlockGasLimit, params.BaseFeeDenominator:
 		v, ok := gVote.Value.([]uint8)
 		if !ok {
 			return nil, ErrValueTypeMismatch
@@ -613,7 +620,9 @@ func (gov *Governance) updateChangeSet(vote GovernanceVote) bool {
 	case params.GovernanceMode, params.Ratio:
 		gov.changeSet.SetValue(GovernanceKeyMap[vote.Key], vote.Value.(string))
 		return true
-	case params.Epoch, params.StakeUpdateInterval, params.ProposerRefreshInterval, params.CommitteeSize, params.UnitPrice, params.ConstTxGasHumanReadable, params.Policy, params.Timeout:
+	case params.Epoch, params.StakeUpdateInterval, params.ProposerRefreshInterval, params.CommitteeSize,
+		params.UnitPrice, params.ConstTxGasHumanReadable, params.Policy, params.Timeout,
+		params.LowerBoundBaseFee, params.UpperBoundBaseFee, params.GasTarget, params.BlockGasLimit, params.BaseFeeDenominator:
 		gov.changeSet.SetValue(GovernanceKeyMap[vote.Key], vote.Value.(uint64))
 		return true
 	case params.MintingAmount, params.MinimumStake:

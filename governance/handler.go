@@ -49,6 +49,11 @@ var GovernanceItems = map[int]check{
 	params.GovernanceMode:          {stringT, checkGovernanceMode, nil},
 	params.GoverningNode:           {addressT, checkAddress, nil},
 	params.UnitPrice:               {uint64T, checkUint64andBool, updateUnitPrice},
+	params.LowerBoundBaseFee:       {uint64T, checkUint64andBool, updateLowerBoundBaseFee},
+	params.UpperBoundBaseFee:       {uint64T, checkUint64andBool, updateUpperBoundBaseFee},
+	params.GasTarget:               {uint64T, checkUint64andBool, updateGasTarget},
+	params.BlockGasLimit:           {uint64T, checkUint64andBool, updateBlockGasLimit},
+	params.BaseFeeDenominator:      {uint64T, checkUint64andBool, updateBaseFeeDenominator},
 	params.AddValidator:            {addressT, checkAddressOrListOfUniqueAddresses, nil},
 	params.RemoveValidator:         {addressT, checkAddressOrListOfUniqueAddresses, nil},
 	params.MintingAmount:           {stringT, checkBigInt, nil},
@@ -63,6 +68,22 @@ var GovernanceItems = map[int]check{
 	params.CommitteeSize:           {uint64T, checkCommitteeSize, nil},
 	params.ConstTxGasHumanReadable: {uint64T, checkUint64andBool, updateTxGasHumanReadable},
 	params.Timeout:                 {uint64T, checkUint64andBool, nil},
+}
+
+func updateLowerBoundBaseFee(g *Governance, k string, v interface{}) {
+	params.SetLowerBoundBaseFee(v.(uint64))
+}
+func updateUpperBoundBaseFee(g *Governance, k string, v interface{}) {
+	params.SetUpperBoundBaseFee(v.(uint64))
+}
+func updateGasTarget(g *Governance, k string, v interface{}) {
+	params.SetGasTarget(v.(uint64))
+}
+func updateBlockGasLimit(g *Governance, k string, v interface{}) {
+	params.SetBlockGasLimit(v.(uint64))
+}
+func updateBaseFeeDenominator(g *Governance, k string, v interface{}) {
+	params.SetBaseFeeDenominator(v.(uint64))
 }
 
 func updateTxGasHumanReadable(g *Governance, k string, v interface{}) {

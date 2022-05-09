@@ -24,6 +24,11 @@ import (
 var (
 	stakingUpdateInterval  uint64 = DefaultStakeUpdateInterval
 	proposerUpdateInterval uint64 = DefaultProposerRefreshInterval
+	lowerBoundBaseFee      uint64 = DefaultLowerBoundBaseFee
+	upperBoundBaseFee      uint64 = DefaultUpperBoundBaseFee
+	gasTarget              uint64 = DefaultGasTarget
+	blockGasLimit          uint64 = DefaultBlockGasLimit
+	baseFeeDenominator     uint64 = DefaultBaseFeeDenominator
 )
 
 const (
@@ -53,6 +58,11 @@ const (
 	Policy
 	CommitteeSize
 	UnitPrice
+	LowerBoundBaseFee
+	UpperBoundBaseFee
+	GasTarget
+	BlockGasLimit
+	BaseFeeDenominator
 	MintingAmount
 	Ratio
 	UseGiniCoeff
@@ -90,6 +100,11 @@ var (
 	DefaultProposerPolicy          = uint64(RoundRobin)
 	DefaultSubGroupSize            = uint64(21)
 	DefaultUnitPrice               = uint64(250000000000)
+	DefaultLowerBoundBaseFee       = uint64(25000000000)
+	DefaultUpperBoundBaseFee       = uint64(750000000000)
+	DefaultGasTarget               = uint64(30000000)
+	DefaultBlockGasLimit           = uint64(84000000)
+	DefaultBaseFeeDenominator      = uint64(64)
 	DefaultMintingAmount           = big.NewInt(0)
 	DefaultRatio                   = "100/0/0"
 	DefaultUseGiniCoeff            = false
@@ -153,5 +168,50 @@ func SetProposerUpdateInterval(num uint64) {
 
 func ProposerUpdateInterval() uint64 {
 	ret := atomic.LoadUint64(&proposerUpdateInterval)
+	return ret
+}
+
+func SetLowerBoundBaseFee(num uint64) {
+	atomic.StoreUint64(&lowerBoundBaseFee, num)
+
+}
+func GetLowerBoundBaseFee() uint64 {
+	ret := atomic.LoadUint64(&lowerBoundBaseFee)
+	return ret
+}
+
+func SetUpperBoundBaseFee(num uint64) {
+	atomic.StoreUint64(&upperBoundBaseFee, num)
+}
+
+func GetUpperBoundBaseFee() uint64 {
+	ret := atomic.LoadUint64(&upperBoundBaseFee)
+	return ret
+}
+
+func SetGasTarget(num uint64) {
+	atomic.StoreUint64(&gasTarget, num)
+}
+
+func GetGasTarget() uint64 {
+	ret := atomic.LoadUint64(&gasTarget)
+	return ret
+}
+
+func SetBlockGasLimit(num uint64) {
+	atomic.StoreUint64(&blockGasLimit, num)
+}
+
+func GetBlockGasLimit() uint64 {
+	ret := atomic.LoadUint64(&blockGasLimit)
+	return ret
+}
+
+func SetBaseFeeDenominator(num uint64) {
+	atomic.StoreUint64(&baseFeeDenominator, num)
+}
+
+func GetBaseFeeDenominator() uint64 {
+	ret := atomic.LoadUint64(&baseFeeDenominator)
 	return ret
 }
