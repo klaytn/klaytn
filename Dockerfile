@@ -22,7 +22,7 @@ ADD . $SRC_DIR
 RUN git init
 RUN cd $SRC_DIR && make all
 
-FROM ubuntu:20.04
+FROM --platform=linux/amd64 ubuntu:20.04
 ARG SRC_DIR
 ARG PKG_DIR
 
