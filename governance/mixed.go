@@ -11,7 +11,7 @@ import (
 type MixedEngine struct {
 	// Subordinate engines
 	// TODO: Add ContractEngine
-	defaultGov *Governance
+	defaultGov HeaderEngine
 }
 
 // newMixedEngine instantiate a new MixedEngine struct.
