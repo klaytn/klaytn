@@ -10,9 +10,12 @@ import (
 
 type MixedEngine struct {
 	// Subordinate engines
+	// TODO: Add ContractEngine
 	defaultGov *Governance
 }
 
+// newMixedEngine instantiate a new MixedEngine struct.
+// Only if doInit is true, subordinate engines will be initialized.
 func newMixedEngine(config *params.ChainConfig, db database.DBManager, doInit bool) *MixedEngine {
 	e := &MixedEngine{}
 
@@ -25,15 +28,29 @@ func newMixedEngine(config *params.ChainConfig, db database.DBManager, doInit bo
 	return e
 }
 
-// Most users are encouraged to call this constructor
+// Developers are encouraged to call this constructor in most cases.
 func NewMixedEngine(config *params.ChainConfig, db database.DBManager) *MixedEngine {
 	return newMixedEngine(config, db, true)
 }
 
-// For test purposes
+// Does not load initial data for test purposes
 func NewMixedEngineNoInit(config *params.ChainConfig, db database.DBManager) *MixedEngine {
 	return newMixedEngine(config, db, false)
 }
+
+// TODO: Once ContractEngine is developed, add wrapper methods as follows:
+//
+// MixedEngine will determine which subordinate engine to be used,
+// depending on block number or other governance configs.
+//
+// func (e *MixedEngine) ParamsAt(num uint64) *params.GovParamSet {
+//     if num >= config.Governance.ContractGovernanceBlock {
+//         return e.contractGov.ParamsAt(num)
+//     } else {
+//         _, strMap, _ := e.defaultGov.ReadGovernance(num)
+//         return params.NewGovParamSetStrMap(sm)
+//     }
+// }
 
 // Pass-through to HeaderEngine
 func (e *MixedEngine) AddVote(key string, val interface{}) bool {
