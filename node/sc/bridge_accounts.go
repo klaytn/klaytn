@@ -131,7 +131,7 @@ func (ba *BridgeAccounts) SetChildBridgeOperatorGasLimit(fee uint64) {
 }
 
 // NewBridgeAccounts returns bridgeAccounts created by main/service bridge account keys.
-func NewBridgeAccounts(am *accounts.Manager, dataDir string, db feePayerDB, parentgaslimit, childgaslimit uint64) (*BridgeAccounts, error) {
+func NewBridgeAccounts(am *accounts.Manager, dataDir string, db feePayerDB, parentGaslimit, childGaslimit uint64) (*BridgeAccounts, error) {
 	pKS, pAccAddr, isLock, err := InitializeBridgeAccountKeystore(path.Join(dataDir, ParentBridgeAccountName))
 	if err != nil {
 		return nil, err
@@ -159,7 +159,7 @@ func NewBridgeAccounts(am *accounts.Manager, dataDir string, db feePayerDB, pare
 		nonce:    0,
 		chainID:  nil,
 		gasPrice: nil,
-		gasLimit: parentgaslimit,
+		gasLimit: parentGaslimit,
 		feePayer: db.ReadParentOperatorFeePayer(),
 	}
 
@@ -170,7 +170,7 @@ func NewBridgeAccounts(am *accounts.Manager, dataDir string, db feePayerDB, pare
 		nonce:    0,
 		chainID:  nil,
 		gasPrice: nil,
-		gasLimit: childgaslimit,
+		gasLimit: childGaslimit,
 		feePayer: db.ReadChildOperatorFeePayer(),
 	}
 
