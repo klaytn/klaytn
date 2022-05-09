@@ -194,7 +194,7 @@ func TestGetDefaultGovernanceConfig(t *testing.T) {
 		t.Fatalf("Want %v, got %v", want, got)
 	}
 
-	if tstGovernance.Reward.MintingAmount.Cmp(big.NewInt(params.DefaultMintingAmount)) != 0 {
+	if tstGovernance.Reward.MintingAmount.Cmp(params.DefaultMintingAmount) != 0 {
 		t.Errorf("Default minting amount is not equal")
 	}
 }

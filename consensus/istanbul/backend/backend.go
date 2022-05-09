@@ -50,7 +50,7 @@ const (
 
 var logger = log.NewModuleLogger(log.ConsensusIstanbulBackend)
 
-func New(rewardbase common.Address, config *istanbul.Config, privateKey *ecdsa.PrivateKey, db database.DBManager, governance *governance.Governance, nodetype common.ConnType) consensus.Istanbul {
+func New(rewardbase common.Address, config *istanbul.Config, privateKey *ecdsa.PrivateKey, db database.DBManager, governance governance.Engine, nodetype common.ConnType) consensus.Istanbul {
 
 	recents, _ := lru.NewARC(inmemorySnapshots)
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
@@ -115,8 +115,8 @@ type backend struct {
 	rewardbase  common.Address
 	currentView atomic.Value //*istanbul.View
 
-	// Reference to the governance.Governance
-	governance *governance.Governance
+	// Reference to the governance.Engine
+	governance governance.Engine
 	// Last Block Number which has current Governance Config
 	lastGovernanceBlock uint64
 
