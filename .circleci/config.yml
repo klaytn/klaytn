@@ -17,6 +17,7 @@ aliases:
 orbs:
   codecov: codecov/codecov@1.0.5
   docker: circleci/docker@1.0.1
+  python: circleci/python@2.0.3
 
 executors:
   test-executor:
@@ -342,12 +343,28 @@ jobs:
     executor: test-executor
     steps:
       - checkout
+      - python/install-packages:
+          pkg-manager: pip
       - run:
           name: "Run test tests"
           no_output_timeout: 30m
           command: |
-            git clone --depth 1 https://$TEST_TOKEN@github.com/klaytn/klaytn-tests.git tests/testdata
-            make test-tests
+            git clone --depth 1 https://$TEST_TOKEN@github.com/klaytn/klaytn-tests.git
+            
+
+  test-rpc:
+    executor: test-executor
+    steps:
+      - checkout
+      - run:
+          name: "Run test rpcs"
+          no_output_timeout: 30m
+          command: |
+            git clone --depth 1 https://$TEST_TOKEN@github.com/klaytn/klaytn-rpc-tests.git
+            cd klaytn-rpc-test
+            pip install requirements.txt
+            cp config_template.json config.json
+            protocol main.py --protocol rpc
 
   test-others:
     executor: test-others-executor
@@ -526,6 +543,8 @@ workflows:
       - test-others:
          filters: *filter-version-not-release
       - test-linter:
+          filters: *filter-version-not-release
+      - test-rpc:
           filters: *filter-version-not-release
       - tagger-verify:
          filters:
