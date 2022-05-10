@@ -381,6 +381,8 @@ func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, votes 
 			}
 
 			if checkVotePass, typeAssertPass := checkValidator(); !checkVotePass {
+				// this vote is adding existing validator or removing nonexistent validator
+				gov.removeDuplicatedVote(gVote, header.Number.Uint64())
 				return valset, votes, tally
 			} else if !typeAssertPass {
 				logger.Warn("Invalid value Type", "number", header.Number, "Validator", gVote.Validator, "key", gVote.Key, "value", gVote.Value)
