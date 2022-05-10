@@ -804,6 +804,23 @@ func TestGovernance_HandleGovernanceVote_None_mode(t *testing.T) {
 	gov.voteMap.Clear()
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Test adding an existing validator
+	header.Number = blockCounter.Add(blockCounter, common.Big1)
+	gov.AddVote("governance.addvalidator", validators[1].String())
+	header.Vote = gov.GetEncodedVote(proposer, blockCounter.Uint64())
+
+	gov.HandleGovernanceVote(valSet, votes, tally, header, proposer, self)
+	// check if casted
+	if !gov.voteMap.items["governance.addvalidator"].Casted {
+		t.Errorf("Adding an existing validator failed")
+	}
+	gov.RemoveVote("governance.addvalidator", validators[1], 0)
+	if i, _ := valSet.GetByAddress(validators[1]); i == -1 {
+		t.Errorf("Validator addition failed, %d validators remains", valSet.Size())
+	}
+	gov.voteMap.Clear()
+
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Test removing a demoted validator
 	header.Number = blockCounter.Add(blockCounter, common.Big1)
 	gov.AddVote("governance.removevalidator", demotedValidators[1].String())
