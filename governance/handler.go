@@ -360,17 +360,29 @@ func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, votes 
 			}
 		case params.AddValidator, params.RemoveValidator:
 			authorize := key == params.AddValidator
-			if addr, ok := gVote.Value.(common.Address); ok {
-				if !gov.checkVote(addr, authorize, valset) {
-					return valset, votes, tally
-				}
-			} else if addresses, ok := gVote.Value.([]common.Address); ok {
-				for _, address := range addresses {
-					if !gov.checkVote(address, authorize, valset) {
-						return valset, votes, tally
+
+			// returns (checkVotePass, typeAssertPass)
+			checkValidator := func() (bool, bool) {
+				if addr, ok := gVote.Value.(common.Address); ok {
+					if !gov.checkVote(addr, authorize, valset) {
+						return false, true
 					}
+				} else if addresses, ok := gVote.Value.([]common.Address); ok {
+					for _, address := range addresses {
+						if !gov.checkVote(address, authorize, valset) {
+							return false, true
+						}
+					}
+				} else {
+					// invalid value type
+					return true, false
 				}
-			} else {
+				return true, true
+			}
+
+			if checkVotePass, typeAssertPass := checkValidator(); !checkVotePass {
+				return valset, votes, tally
+			} else if !typeAssertPass {
 				logger.Warn("Invalid value Type", "number", header.Number, "Validator", gVote.Validator, "key", gVote.Key, "value", gVote.Value)
 			}
 		}
