@@ -308,6 +308,7 @@ jobs:
             export PATH=$HOME/go1.18/go/bin:$PATH
             make fmt
             make all
+            python3 --version
 
   test-linter:
     executor: test-executor
