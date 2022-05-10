@@ -75,7 +75,7 @@ const (
 
 type operations struct {
 	request     func(*testInfo, *BridgeInfo)
-	handle      func(*testInfo, *BridgeInfo, RequestValueTransferEventInterface)
+	handle      func(*testInfo, *BridgeInfo, IRequestValueTransferEvent)
 	dummyHandle func(*testInfo, *BridgeInfo)
 }
 
@@ -800,7 +800,7 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 	wg := sync.WaitGroup{}
 	wg.Add((2 * testTxCount) - testPendingCount)
 	var isRecovery = false
-	reqHandler := func(ev RequestValueTransferEventInterface) {
+	reqHandler := func(ev IRequestValueTransferEvent) {
 		t.Log("request value transfer", "nonce", ev.GetRequestNonce())
 		if ev.GetRequestNonce() >= (testTxCount - testPendingCount) {
 			t.Log("missing handle value transfer", "nonce", ev.GetRequestNonce())
@@ -865,7 +865,7 @@ func requestKLAYTransfer(info *testInfo, bi *BridgeInfo) {
 	assert.Nil(info.t, bind.CheckWaitMined(info.sim, tx))
 }
 
-func handleKLAYTransfer(info *testInfo, bi *BridgeInfo, ev RequestValueTransferEventInterface) {
+func handleKLAYTransfer(info *testInfo, bi *BridgeInfo, ev IRequestValueTransferEvent) {
 	bi.account.Lock()
 	defer bi.account.UnLock()
 
@@ -910,7 +910,7 @@ func requestTokenTransfer(info *testInfo, bi *BridgeInfo) {
 	assert.Nil(info.t, bind.CheckWaitMined(info.sim, tx))
 }
 
-func handleTokenTransfer(info *testInfo, bi *BridgeInfo, ev RequestValueTransferEventInterface) {
+func handleTokenTransfer(info *testInfo, bi *BridgeInfo, ev IRequestValueTransferEvent) {
 	bi.account.Lock()
 	defer bi.account.UnLock()
 
@@ -957,7 +957,7 @@ func requestNFTTransfer(info *testInfo, bi *BridgeInfo) {
 	assert.Nil(info.t, bind.CheckWaitMined(info.sim, tx))
 }
 
-func handleNFTTransfer(info *testInfo, bi *BridgeInfo, ev RequestValueTransferEventInterface) {
+func handleNFTTransfer(info *testInfo, bi *BridgeInfo, ev IRequestValueTransferEvent) {
 	bi.account.Lock()
 	defer bi.account.UnLock()
 
@@ -968,16 +968,7 @@ func handleNFTTransfer(info *testInfo, bi *BridgeInfo, ev RequestValueTransferEv
 	} else {
 		nftAddr = info.nftRemoteAddr
 	}
-	uri := ""
-	if encodedEvent, ok := ev.(RequestValueTransferEncodedEvent); ok {
-		decoded := UnpackEncodedData(encodedEvent.EncodingVer, encodedEvent.EncodedData)
-		switch encodedEvent.EncodingVer {
-		case 2:
-			if _uri, ok := decoded.(string); ok {
-				uri = _uri
-			}
-		}
-	}
+	uri := GetURI(ev)
 	tx, err := bi.bridge.HandleERC721Transfer(
 		bi.account.GenerateTransactOpts(),
 		ev.GetRaw().TxHash, ev.GetFrom(), ev.GetTo(), nftAddr, ev.GetValueOrTokenId(),

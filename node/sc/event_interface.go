@@ -8,7 +8,7 @@ import (
 	bridgecontract "github.com/klaytn/klaytn/contracts/bridge"
 )
 
-type RequestValueTransferEventInterface interface {
+type IRequestValueTransferEvent interface {
 	Nonce() uint64
 	GetTokenType() uint8
 	GetFrom() common.Address

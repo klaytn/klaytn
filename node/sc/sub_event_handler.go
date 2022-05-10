@@ -68,7 +68,7 @@ func (cce *ChildChainEventHandler) HandleLogsEvent(logs []*types.Log) error {
 	return nil
 }
 
-func (cce *ChildChainEventHandler) ProcessRequestEvent(ev RequestValueTransferEventInterface) error {
+func (cce *ChildChainEventHandler) ProcessRequestEvent(ev IRequestValueTransferEvent) error {
 	addr := ev.GetRaw().Address
 
 	handleBridgeAddr := cce.subbridge.bridgeManager.GetCounterPartBridgeAddr(addr)
@@ -82,7 +82,7 @@ func (cce *ChildChainEventHandler) ProcessRequestEvent(ev RequestValueTransferEv
 	}
 
 	// TODO-Klaytn need to manage the size limitation of pending event list.
-	handleBridgeInfo.AddRequestValueTransferEvents([]RequestValueTransferEventInterface{ev})
+	handleBridgeInfo.AddRequestValueTransferEvents([]IRequestValueTransferEvent{ev})
 	return nil
 }
 
