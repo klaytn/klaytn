@@ -349,7 +349,7 @@ jobs:
           name: "Run test tests"
           no_output_timeout: 30m
           command: |
-            git clone --depth 1 https://$TEST_TOKEN@github.com/klaytn/klaytn-tests.git
+            git clone --depth 1 https://$TEST_TOKEN@github.com/klaytn/klaytn-tests.git tests/testdata
             make test-tests
             
 
