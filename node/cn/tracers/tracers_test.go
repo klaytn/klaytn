@@ -43,7 +43,6 @@ import (
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/tests"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -371,11 +370,29 @@ func TestCallTracer(t *testing.T) {
 			if err := json.Unmarshal(res, ret); err != nil {
 				t.Fatalf("failed to unmarshal trace result: %v", err)
 			}
-			if !reflect.DeepEqual(ret, test.Result) {
+			if !jsonEqual(ret, test.Result) {
 				t.Fatalf("trace mismatch: \nhave %+v, \nwant %+v", ret, test.Result)
 			}
 		})
 	}
+}
+
+// jsonEqual is similar to reflect.DeepEqual, but does a 'bounce' via json prior to
+// comparison
+func jsonEqual(x, y interface{}) bool {
+	xTrace := new(callTrace)
+	yTrace := new(callTrace)
+	if xj, err := json.Marshal(x); err == nil {
+		json.Unmarshal(xj, xTrace)
+	} else {
+		return false
+	}
+	if yj, err := json.Marshal(y); err == nil {
+		json.Unmarshal(yj, yTrace)
+	} else {
+		return false
+	}
+	return reflect.DeepEqual(xTrace, yTrace)
 }
 
 // Iterates over all the input-output datasets in the tracer test harness and
@@ -468,7 +485,9 @@ func TestInternalCallTracer(t *testing.T) {
 			}
 
 			resultFromInternalCallTracer := covertToCallTrace(t, res)
-			assert.EqualValues(t, test.Result, resultFromInternalCallTracer)
+			if !jsonEqual(test.Result, resultFromInternalCallTracer) {
+				t.Fatalf("trace mismatch: \nhave %+v, \nwant %+v", resultFromInternalCallTracer, test.Result)
+			}
 		})
 	}
 }

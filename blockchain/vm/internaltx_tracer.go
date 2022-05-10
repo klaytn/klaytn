@@ -359,14 +359,13 @@ func (this *InternalTxTracer) step(log *tracerLog) error {
 			// If the call was a contract call, retrieve the gas usage and output
 			if call.Gas != uint64(0) {
 				call.GasUsed = call.GasIn - call.GasCost + call.Gas - log.gas
-
-				ret := log.stack.Peek()
-				if ret == nil || ret.Cmp(big.NewInt(0)) != 0 {
-					callOutOff, callOutLen := call.OutOff.Int64(), call.OutLen.Int64()
-					call.Output = hexutil.Encode(log.memory.Slice(callOutOff, callOutOff+callOutLen))
-				} else if call.Error == nil {
-					call.Error = errInternalFailure // TODO(karalabe): surface these faults somehow
-				}
+			}
+			ret := log.stack.Peek()
+			if ret == nil || ret.Cmp(big.NewInt(0)) != 0 {
+				callOutOff, callOutLen := call.OutOff.Int64(), call.OutLen.Int64()
+				call.Output = hexutil.Encode(log.memory.Slice(callOutOff, callOutOff+callOutLen))
+			} else if call.Error == nil {
+				call.Error = errInternalFailure // TODO(karalabe): surface these faults somehow
 			}
 			call.GasIn, call.GasCost = uint64(0), uint64(0)
 			call.OutOff, call.OutLen = nil, nil
@@ -509,7 +508,7 @@ func (this *InternalTxTracer) result() (*InternalTxTrace, error) {
 	} else if ctxErr, _ := this.ctx["error"]; ctxErr != nil {
 		result.Error = ctxErr.(error)
 	}
-	if result.Error != nil {
+	if result.Error != nil && (result.Error.Error() != errExecutionReverted.Error() || result.Output == "0x") {
 		result.Output = "" // delete result.output;
 	}
 	if err := this.ctx["error"]; err != nil && err.(error).Error() == errEvmExecutionReverted.Error() {

@@ -500,11 +500,11 @@ func (self *worker) commitNewWork() {
 	tstart := time.Now()
 	tstamp := tstart.Unix()
 	if self.nodetype == common.CONSENSUSNODE {
-		ideal := parent.Time().Int64() + params.BlockGenerationInterval
+		ideal := time.Unix(parent.Time().Int64()+params.BlockGenerationInterval, 0)
 		// If a timestamp of this block is faster than the ideal timestamp,
 		// wait for a while and get a new timestamp
-		if tstamp < ideal {
-			wait := time.Duration(ideal-tstamp) * time.Second
+		if tstart.Before(ideal) {
+			wait := ideal.Sub(tstart)
 			logger.Info("Mining too far in the future", "wait", common.PrettyDuration(wait))
 			time.Sleep(wait)
 
