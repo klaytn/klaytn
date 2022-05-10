@@ -343,8 +343,6 @@ jobs:
     executor: test-executor
     steps:
       - checkout
-      - python/install-packages:
-          pkg-manager: pip
       - run:
           name: "Run test tests"
           no_output_timeout: 30m
