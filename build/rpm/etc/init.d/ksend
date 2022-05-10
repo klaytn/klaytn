@@ -296,11 +296,11 @@ if [[ ! -z $SC_SUB_BRIDGE ]] && [[ $SC_SUB_BRIDGE -eq 1 ]]; then
 fi
 
 if [ ! -z $SC_PARENT_OPERATOR_GASLIMIT ]; then
-    OPTIONS="$OPTIONS --sc.parentop.gaslimit $SC_PARENT_OPERATOR_GASLIMIT"
+    OPTIONS="$OPTIONS --sc.parentoperator.gaslimit $SC_PARENT_OPERATOR_GASLIMIT"
 fi
 
 if [ ! -z $SC_CHILD_OPERATOR_GASLIMIT ]; then
-    OPTIONS="$OPTIONS --sc.childop.gaslimit $SC_CHILD_OPERATOR_GASLIMIT"
+    OPTIONS="$OPTIONS --sc.childoperator.gaslimit $SC_CHILD_OPERATOR_GASLIMIT"
 fi
 
 if [[ (! -z $VTRECOVERY && $VTRECOVERY -eq 1 ) || (! -z $SC_VTRECOVERY && $SC_VTRECOVERY -eq 1) ]]; then
