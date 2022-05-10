@@ -363,7 +363,7 @@ jobs:
             cd klaytn-rpc-tester
             pip install -r requirements.txt
             cp config_template.json config.json
-            protocol main.py --protocol rpc
+            python main.py --protocol rpc
 
   test-others:
     executor: test-others-executor
