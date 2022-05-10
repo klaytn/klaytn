@@ -657,19 +657,12 @@ func TestExtendedBridgeAndCallbackERC721(t *testing.T) {
 		assert.Equal(t, ERC721, ev.TokenType)
 		assert.Equal(t, bobAcc.From, ev.To)
 
-		encodeVer := ev.EncodingVer
-		decoded := UnpackEncodedData(encodeVer, ev.EncodedData)
-		switch encodeVer {
-		case 2:
-			if uri, ok := decoded.(string); ok {
-				// HandleERC721Transfer
-				tx, err = b.HandleERC721Transfer(bridgeAccount, ev.Raw.TxHash, ev.From, ev.To, ev.TokenAddress, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, uri, ev.ExtraData)
-				assert.NoError(t, err)
-				backend.Commit()
-				assert.Nil(t, bind.CheckWaitMined(backend, tx))
-			}
-		}
-
+		// HandleERC721Transfer
+		uri := GetURI(RequestValueTransferEncodedEvent{ev})
+		tx, err = b.HandleERC721Transfer(bridgeAccount, ev.Raw.TxHash, ev.From, ev.To, ev.TokenAddress, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, uri, ev.ExtraData)
+		assert.NoError(t, err)
+		backend.Commit()
+		assert.Nil(t, bind.CheckWaitMined(backend, tx))
 	case <-time.After(time.Second):
 		t.Fatalf("requestValueTransferEvent was not found.")
 	}

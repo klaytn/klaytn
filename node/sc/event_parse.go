@@ -1,6 +1,7 @@
 package sc
 
 import (
+	"bytes"
 	"strings"
 
 	"github.com/klaytn/klaytn/accounts/abi"
@@ -23,7 +24,7 @@ var RequestValueTransferEncodeABIs = map[uint]string{
 		}]`,
 }
 
-func UnpackEncodedData(ver uint8, packed []byte) interface{} {
+func UnpackEncodedData(ver uint8, packed []byte) map[string]interface{} {
 	switch ver {
 	case 2:
 		encodedEvent := map[string]interface{}{}
@@ -36,9 +37,23 @@ func UnpackEncodedData(ver uint8, packed []byte) interface{} {
 			logger.Error("Failed to unpack the values", "err", err)
 			return nil
 		}
-		return encodedEvent["uri"]
+		return encodedEvent
 	default:
 		logger.Error(ErrUnknownEvent.Error(), "encodingVer", ver)
 		return nil
 	}
+}
+
+func GetURI(ev IRequestValueTransferEvent) string {
+	uri := ""
+	switch evType := ev.(type) {
+	case RequestValueTransferEncodedEvent:
+		decoded := UnpackEncodedData(evType.EncodingVer, evType.EncodedData)
+		uri = decoded["uri"].(string)
+		if len(uri) <= 64 {
+			return uri
+		}
+		uri = string(bytes.Trim([]byte(uri[64:]), "\x00"))
+	}
+	return uri
 }

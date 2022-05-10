@@ -76,7 +76,7 @@ func CheckReceipt(b bind.DeployBackend, tx *types.Transaction, duration time.Dur
 	assert.Equal(t, expectedStatus, receipt.Status)
 }
 
-func handleValueTransfer(t *testing.T, ev RequestValueTransferEventInterface, bridgeInfo *BridgeInfo, wg *sync.WaitGroup, backend *backends.SimulatedBackend) {
+func handleValueTransfer(t *testing.T, ev IRequestValueTransferEvent, bridgeInfo *BridgeInfo, wg *sync.WaitGroup, backend *backends.SimulatedBackend) {
 	var (
 		tokenType      = ev.GetTokenType()
 		valueOrTokenId = ev.GetValueOrTokenId()
@@ -102,7 +102,7 @@ func handleValueTransfer(t *testing.T, ev RequestValueTransferEventInterface, br
 	assert.Equal(t, false, done)
 
 	// insert the value transfer request event to the bridge info's event list.
-	bridgeInfo.AddRequestValueTransferEvents([]RequestValueTransferEventInterface{ev})
+	bridgeInfo.AddRequestValueTransferEvents([]IRequestValueTransferEvent{ev})
 
 	// handle the value transfer request event in the event list.
 	bridgeInfo.processingPendingRequestEvents()
@@ -672,7 +672,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 					"fee", ev.GetFee().String())
 
 				// insert the value transfer request event to the bridge info's event list.
-				pBridgeInfo.AddRequestValueTransferEvents([]RequestValueTransferEventInterface{ev})
+				pBridgeInfo.AddRequestValueTransferEvents([]IRequestValueTransferEvent{ev})
 
 				// handle the value transfer request event in the event list.
 				pBridgeInfo.processingPendingRequestEvents()

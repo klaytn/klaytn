@@ -192,11 +192,11 @@ func (bi *BridgeInfo) GetCounterPartToken(token common.Address) common.Address {
 	return cpToken
 }
 
-func (bi *BridgeInfo) GetPendingRequestEvents() []RequestValueTransferEventInterface {
+func (bi *BridgeInfo) GetPendingRequestEvents() []IRequestValueTransferEvent {
 	ready := bi.pendingRequestEvent.Pop(maxPendingNonceDiff / 2)
-	readyEvent := make([]RequestValueTransferEventInterface, len(ready))
+	readyEvent := make([]IRequestValueTransferEvent, len(ready))
 	for i, item := range ready {
-		readyEvent[i] = item.(RequestValueTransferEventInterface)
+		readyEvent[i] = item.(IRequestValueTransferEvent)
 	}
 	vtPendingRequestEventCounter.Dec((int64)(len(ready)))
 	return readyEvent
@@ -256,7 +256,7 @@ func (bi *BridgeInfo) UpdateInfo() error {
 }
 
 // handleRequestValueTransferEvent handles the given request value transfer event.
-func (bi *BridgeInfo) handleRequestValueTransferEvent(ev RequestValueTransferEventInterface) error {
+func (bi *BridgeInfo) handleRequestValueTransferEvent(ev IRequestValueTransferEvent) error {
 	var (
 		tokenType                         = ev.GetTokenType()
 		tokenAddr, from, to, contractAddr = ev.GetTokenAddress(), ev.GetFrom(), ev.GetTo(), ev.GetRaw().Address
@@ -308,21 +308,7 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev RequestValueTransferEve
 		}
 		logger.Trace("Bridge succeeded to HandleERC20Transfer", "nonce", requestNonce, "tx", handleTx.Hash().String())
 	case ERC721:
-		switch evType := ev.(type) {
-		case RequestValueTransferEvent:
-			handleTx, err = bi.bridge.HandleERC721Transfer(auth, txHash, from, to, ctpartTokenAddr, valueOrTokenId, requestNonce, blkNumber, "", extraData)
-		case RequestValueTransferEncodedEvent:
-			uri := ""
-			decoded := UnpackEncodedData(evType.EncodingVer, evType.EncodedData)
-			switch evType.EncodingVer {
-			case 2:
-				uri = decoded.(string)
-			}
-			handleTx, err = bi.bridge.HandleERC721Transfer(auth, txHash, from, to, ctpartTokenAddr, valueOrTokenId, requestNonce, blkNumber, uri, extraData)
-		}
-		if err != nil {
-			return err
-		}
+		handleTx, err = bi.bridge.HandleERC721Transfer(auth, txHash, from, to, ctpartTokenAddr, valueOrTokenId, requestNonce, blkNumber, GetURI(ev), extraData)
 		logger.Trace("Bridge succeeded to HandleERC721Transfer", "nonce", requestNonce, "tx", handleTx.Hash().String())
 	default:
 		logger.Error("Got Unknown Token Type ReceivedEvent", "bridge", contractAddr, "nonce", requestNonce, "from", from)
@@ -375,7 +361,7 @@ func (bi *BridgeInfo) UpdateLowerHandleNonce(nonce uint64) {
 }
 
 // AddRequestValueTransferEvents adds events into the pendingRequestEvent.
-func (bi *BridgeInfo) AddRequestValueTransferEvents(evs []RequestValueTransferEventInterface) {
+func (bi *BridgeInfo) AddRequestValueTransferEvents(evs []IRequestValueTransferEvent) {
 	for _, ev := range evs {
 		if bi.pendingRequestEvent.Len() > maxPendingNonceDiff {
 			flatten := bi.pendingRequestEvent.Flatten()
@@ -401,7 +387,7 @@ func (bi *BridgeInfo) AddRequestValueTransferEvents(evs []RequestValueTransferEv
 }
 
 // GetReadyRequestValueTransferEvents returns the processable events with the increasing nonce.
-func (bi *BridgeInfo) GetReadyRequestValueTransferEvents() []RequestValueTransferEventInterface {
+func (bi *BridgeInfo) GetReadyRequestValueTransferEvents() []IRequestValueTransferEvent {
 	return bi.GetPendingRequestEvents()
 }
 
