@@ -809,7 +809,7 @@ func TestGovernance_HandleGovernanceVote_None_mode(t *testing.T) {
 	gov.AddVote("governance.addvalidator", validators[1].String())
 	header.Vote = gov.GetEncodedVote(proposer, blockCounter.Uint64())
 
-	gov.HandleGovernanceVote(valSet, votes, tally, header, proposer, self)
+	gov.HandleGovernanceVote(valSet, votes, tally, header, proposer, proposer) // self = proposer
 	// check if casted
 	if !gov.voteMap.items["governance.addvalidator"].Casted {
 		t.Errorf("Adding an existing validator failed")
@@ -970,7 +970,7 @@ func TestGovernance_HandleGovernanceVote_Ballot_mode(t *testing.T) {
 
 	header.Number = blockCounter.Add(blockCounter, common.Big1)
 	header.Vote = gov.GetEncodedVote(validators[0], blockCounter.Uint64())
-	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[0], self)
+	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[0], validators[0])
 	// check if casted
 	if !gov.voteMap.items["governance.addvalidator"].Casted {
 		t.Errorf("Adding an existing validator failed")
@@ -978,7 +978,7 @@ func TestGovernance_HandleGovernanceVote_Ballot_mode(t *testing.T) {
 
 	header.Number = blockCounter.Add(blockCounter, common.Big1)
 	header.Vote = gov.GetEncodedVote(validators[2], blockCounter.Uint64())
-	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[2], self)
+	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[2], validators[2])
 	// check if casted
 	if !gov.voteMap.items["governance.addvalidator"].Casted {
 		t.Errorf("Adding an existing validator failed")
