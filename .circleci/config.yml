@@ -360,10 +360,11 @@ jobs:
           no_output_timeout: 30m
           command: |
             git clone --depth 1 https://$TEST_TOKEN@github.com/klaytn/klaytn-rpc-tester.git
+            python3 --version
             cd klaytn-rpc-tester
-            pip install -r requirements.txt
+            pip3 install -r requirements.txt
             cp config_template.json config.json
-            python main.py --protocol rpc
+            python3 main.py --protocol rpc
 
   test-others:
     executor: test-others-executor
