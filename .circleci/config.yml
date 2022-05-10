@@ -359,8 +359,8 @@ jobs:
           name: "Run test rpcs"
           no_output_timeout: 30m
           command: |
-            git clone --depth 1 https://$TEST_TOKEN@github.com/klaytn/klaytn-rpc-tests.git
-            cd klaytn-rpc-test
+            git clone --depth 1 https://$TEST_TOKEN@github.com/klaytn/klaytn-rpc-tester.git
+            cd klaytn-rpc-tester
             pip install requirements.txt
             cp config_template.json config.json
             protocol main.py --protocol rpc
