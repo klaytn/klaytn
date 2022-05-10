@@ -345,7 +345,7 @@ func (sbh *SubBridgeHandler) writeServiceChainTxReceipts(bc *blockchain.BlockCha
 		txHash := receipt.TxHash
 		if tx := sbh.subbridge.GetBridgeTxPool().Get(txHash); tx != nil {
 			if receipt.Status != types.ReceiptStatusSuccessful {
-				logger.Error("A transaction sent from the child chain is failed",
+				logger.Error("A transaction sent from the child chain failed",
 					"status", receipt.Status, "txHash", txHash.String())
 			}
 			if tx.Type().IsChainDataAnchoring() {
