@@ -545,7 +545,7 @@ workflows:
       - test-tests:
           filters: *filter-version-not-release
       - test-others:
-         filters: *filter-version-not-release    
+         filters: *filter-version-not-release
       - test-linter:
           filters: *filter-version-not-release
       - tagger-verify:
@@ -555,7 +555,7 @@ workflows:
             branches:
               ignore: /.*/
       - test-rpc:
-         filters: *filter-version-not-release     
+         filters: *filter-only-version-tag
 
       - pass-tests:
           requires:
