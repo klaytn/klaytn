@@ -1272,6 +1272,91 @@ func TestGovernance_Votes(t *testing.T) {
 				{vote{"governance.unitprice", uint64(2)}, 0}, // check on current
 			},
 		},
+		{
+			votes: []vote{
+				{"reward.lowerboundbasefee", uint64(25000000000)},  // voted on block 1
+				{"reward.lowerboundbasefee", uint64(750000000000)}, // voted on block 2
+				{"reward.lowerboundbasefee", uint64(25000000000)},  // voted on block 3
+				{"reward.lowerboundbasefee", uint64(25000000000)},  // voted on block 4
+				{"reward.lowerboundbasefee", uint64(25000000000)},  // voted on block 5
+				{"reward.lowerboundbasefee", uint64(25000000000)},  // voted on block 6
+				{"reward.lowerboundbasefee", uint64(25000000000)},  // voted on block 7
+				{"reward.lowerboundbasefee", uint64(25000000000)},  // voted on block 8
+				{"reward.lowerboundbasefee", uint64(25000000000)},  // voted on block 9
+			},
+			expected: []governanceItem{
+				{vote{"reward.lowerboundbasefee", uint64(750000000000)}, 6},
+				{vote{"reward.lowerboundbasefee", uint64(25000000000)}, 9},
+			},
+		},
+		{
+			votes: []vote{
+				{"reward.upperboundbasefee", uint64(25000000000)},  // voted on block 1
+				{"reward.upperboundbasefee", uint64(750000000000)}, // voted on block 2
+				{"reward.upperboundbasefee", uint64(25000000000)},  // voted on block 3
+				{"reward.upperboundbasefee", uint64(25000000000)},  // voted on block 4
+				{"reward.upperboundbasefee", uint64(25000000000)},  // voted on block 5
+				{"reward.upperboundbasefee", uint64(25000000000)},  // voted on block 6
+				{"reward.upperboundbasefee", uint64(25000000000)},  // voted on block 7
+				{"reward.upperboundbasefee", uint64(25000000000)},  // voted on block 8
+				{"reward.upperboundbasefee", uint64(25000000000)},  // voted on block 9
+			},
+			expected: []governanceItem{
+				{vote{"reward.upperboundbasefee", uint64(750000000000)}, 6},
+				{vote{"reward.upperboundbasefee", uint64(25000000000)}, 9},
+			},
+		},
+		{
+			votes: []vote{
+				{"reward.blockgaslimit", uint64(84000000)},  // voted on block 1
+				{"reward.blockgaslimit", uint64(840000000)}, // voted on block 2
+				{"reward.blockgaslimit", uint64(84000000)},  // voted on block 3
+				{"reward.blockgaslimit", uint64(84000000)},  // voted on block 4
+				{"reward.blockgaslimit", uint64(84000000)},  // voted on block 5
+				{"reward.blockgaslimit", uint64(84000000)},  // voted on block 6
+				{"reward.blockgaslimit", uint64(84000000)},  // voted on block 7
+				{"reward.blockgaslimit", uint64(84000000)},  // voted on block 8
+				{"reward.blockgaslimit", uint64(84000000)},  // voted on block 9
+			},
+			expected: []governanceItem{
+				{vote{"reward.blockgaslimit", uint64(840000000)}, 6},
+				{vote{"reward.blockgaslimit", uint64(84000000)}, 9},
+			},
+		},
+		{
+			votes: []vote{
+				{"reward.gastarget", uint64(30000000)}, // voted on block 1
+				{"reward.gastarget", uint64(50000000)}, // voted on block 2
+				{"reward.gastarget", uint64(30000000)}, // voted on block 3
+				{"reward.gastarget", uint64(30000000)}, // voted on block 4
+				{"reward.gastarget", uint64(30000000)}, // voted on block 5
+				{"reward.gastarget", uint64(30000000)}, // voted on block 6
+				{"reward.gastarget", uint64(30000000)}, // voted on block 7
+				{"reward.gastarget", uint64(30000000)}, // voted on block 8
+				{"reward.gastarget", uint64(30000000)}, // voted on block 9
+			},
+			expected: []governanceItem{
+				{vote{"reward.gastarget", uint64(50000000)}, 6},
+				{vote{"reward.gastarget", uint64(30000000)}, 9},
+			},
+		},
+		{
+			votes: []vote{
+				{"reward.basefeedenominator", uint64(64)}, // voted on block 1
+				{"reward.basefeedenominator", uint64(32)}, // voted on block 2
+				{"reward.basefeedenominator", uint64(64)}, // voted on block 3
+				{"reward.basefeedenominator", uint64(64)}, // voted on block 4
+				{"reward.basefeedenominator", uint64(64)}, // voted on block 5
+				{"reward.basefeedenominator", uint64(64)}, // voted on block 6
+				{"reward.basefeedenominator", uint64(64)}, // voted on block 7
+				{"reward.basefeedenominator", uint64(64)}, // voted on block 8
+				{"reward.basefeedenominator", uint64(64)}, // voted on block 9
+			},
+			expected: []governanceItem{
+				{vote{"reward.basefeedenominator", uint64(32)}, 6},
+				{vote{"reward.basefeedenominator", uint64(64)}, 9},
+			},
+		},
 	}
 
 	var configItems []interface{}
@@ -1320,6 +1405,7 @@ func TestGovernance_Votes(t *testing.T) {
 				blockNumber = chain.CurrentBlock().NumberU64()
 			}
 			_, items, err := engine.governance.ReadGovernance(blockNumber)
+			t.Log(items)
 			assert.NoError(t, err)
 			assert.Equal(t, item.value, items[item.key])
 		}
