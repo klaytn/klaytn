@@ -365,11 +365,13 @@ jobs:
             make kcn
             build/bin/kcn init --datadir cn/data genesis.json
             ./conf/kcnd start
+            sleep 10
             git clone --depth 1 https://$TEST_TOKEN@github.com/klaytn/klaytn-rpc-tester.git
             python3 --version
             cd klaytn-rpc-tester
             pip3 install -r requirements.txt
             cp config_template.json config.json
+            echo "test"
             python3 main.py --protocol rpc
 
   test-others:
