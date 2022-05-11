@@ -43,7 +43,7 @@ func TestBridgeAccountLockUnlock(t *testing.T) {
 	// Config Bridge Account Manager
 	config := &SCConfig{}
 	config.DataDir = tempDir
-	bAcc, err := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), config.ServiceChainParentOperatorGasLimit, config.ServiceChainChildOperatorGasLimit)
+	bAcc, err := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
 	assert.NoError(t, err)
 	assert.Equal(t, true, bAcc.cAccount.IsUnlockedAccount())
 	assert.Equal(t, true, bAcc.pAccount.IsUnlockedAccount())
@@ -164,7 +164,7 @@ func TestBridgeAccountInformation(t *testing.T) {
 	// Config Bridge Account Manager
 	config := &SCConfig{}
 	config.DataDir = tempDir
-	bAcc, err := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), config.ServiceChainParentOperatorGasLimit, config.ServiceChainChildOperatorGasLimit)
+	bAcc, err := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
 	assert.NoError(t, err)
 	assert.Equal(t, true, bAcc.cAccount.IsUnlockedAccount())
 	assert.Equal(t, true, bAcc.pAccount.IsUnlockedAccount())
