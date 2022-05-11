@@ -361,6 +361,27 @@ jobs:
           command: |
             make test-others
 
+  test-rpc:
+    executor: test-executor
+    steps:
+      - checkout
+      - install-golang
+      - pre-build
+      - run:
+          name: "Run test rpcs"
+          no_output_timeout: 30m
+          command: |
+            export PATH=$HOME/go1.18/go/bin:$PATH
+            make kcn
+            git clone https://$TEST_TOKEN@github.com/klaytn/klaytn-rpc-tester.git
+            cp build/bin/kcn script/cn/bin/
+            cd klaytn-rpc-tester/script
+            ./set_CNonly.sh
+            cd ..
+            pip3 install -r requirements.txt
+            cp config_template.json config.json
+            python3 main.py --protocol rpc
+
   pass-tests:
     executor: default
     steps:
@@ -525,6 +546,8 @@ workflows:
           filters: *filter-version-not-release
       - test-others:
          filters: *filter-version-not-release
+      - test-rpc:
+         filters: *filter-version-not-release         
       - test-linter:
           filters: *filter-version-not-release
       - tagger-verify:
