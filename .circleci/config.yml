@@ -551,6 +551,7 @@ workflows:
               only: dev
           requires:
             - pass-tests
+          extra_build_args: '--platform=linux/amd64'
           image: klaytn/klaytn
           tag: dev
           executor: docker/docker
@@ -616,6 +617,7 @@ workflows:
               ignore: /.*/
           requires:
             - pass-tests
+          extra_build_args: '--platform=linux/amd64'
           image: klaytn/klaytn
           tag: latest,$CIRCLE_TAG
           executor: docker/docker
