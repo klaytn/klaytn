@@ -362,10 +362,9 @@ jobs:
           no_output_timeout: 30m
           command: |
             export PATH=$HOME/go1.18/go/bin:$PATH
-            make fmt
-            make all
+            make kcn
             build/bin/kcn init genesis.json
-            kcnd start
+            ./kcnd start
             git clone --depth 1 https://$TEST_TOKEN@github.com/klaytn/klaytn-rpc-tester.git
             python3 --version
             cd klaytn-rpc-tester
