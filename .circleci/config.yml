@@ -357,7 +357,6 @@ jobs:
       - checkout
       - install-golang
       - pre-build
-            python3 --version
       - run:
           name: "Run test rpcs"
           no_output_timeout: 30m
