@@ -363,7 +363,7 @@ jobs:
           command: |
             export PATH=$HOME/go1.18/go/bin:$PATH
             make kcn
-            build/bin/kcn init genesis.json
+            build/bin/kcn init --datadir cn/data genesis.json
             ./conf/kcnd start
             git clone --depth 1 https://$TEST_TOKEN@github.com/klaytn/klaytn-rpc-tester.git
             python3 --version
