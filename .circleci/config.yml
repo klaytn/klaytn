@@ -374,7 +374,7 @@ jobs:
             export PATH=$HOME/go1.18/go/bin:$PATH
             make kcn
             git clone https://$TEST_TOKEN@github.com/klaytn/klaytn-rpc-tester.git
-            cp build/bin/kcn script/cn/bin/
+            cp build/bin/kcn klaytn-rpc-tester/script/cn/bin/
             cd klaytn-rpc-tester/script
             ./set_CNonly.sh
             cd ..
