@@ -545,9 +545,7 @@ workflows:
       - test-tests:
           filters: *filter-version-not-release
       - test-others:
-         filters: *filter-version-not-release
-      - test-rpc:
-         filters: *filter-version-not-release         
+         filters: *filter-version-not-release    
       - test-linter:
           filters: *filter-version-not-release
       - tagger-verify:
@@ -556,6 +554,8 @@ workflows:
               only: /^v[0-9]+\.[0-9]+\.[0-9]+/
             branches:
               ignore: /.*/
+      - test-rpc:
+         filters: *filter-version-not-release     
 
       - pass-tests:
           requires:
