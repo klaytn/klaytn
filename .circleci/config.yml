@@ -308,7 +308,6 @@ jobs:
             export PATH=$HOME/go1.18/go/bin:$PATH
             make fmt
             make all
-            python3 --version
 
   test-linter:
     executor: test-executor
@@ -356,10 +355,18 @@ jobs:
     executor: test-executor
     steps:
       - checkout
+      - install-golang
+      - pre-build
+            python3 --version
       - run:
           name: "Run test rpcs"
           no_output_timeout: 30m
           command: |
+            export PATH=$HOME/go1.18/go/bin:$PATH
+            make fmt
+            make all
+            build/bin/kcn init genesis.json
+            kcnd start
             git clone --depth 1 https://$TEST_TOKEN@github.com/klaytn/klaytn-rpc-tester.git
             python3 --version
             cd klaytn-rpc-tester
@@ -533,18 +540,7 @@ workflows:
   version: 2
   build_n_packaging:
     jobs:
-      - build:
-          filters: *filter-version-not-release
-      - test-datasync:
-          filters: *filter-version-not-release
-      - test-networks:
-          filters: *filter-version-not-release
-      - test-tests:
-          filters: *filter-version-not-release
-      - test-others:
-         filters: *filter-version-not-release
-      - test-linter:
-          filters: *filter-version-not-release
+
       - test-rpc:
           filters: *filter-version-not-release
       - tagger-verify:
