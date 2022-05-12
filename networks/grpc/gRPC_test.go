@@ -41,9 +41,9 @@ func TestGRPC(t *testing.T) {
 	wg.Add(2)
 
 	addr := "127.0.0.1:4000"
-	handler := rpc.NewServer()
+	handler := rpc.NewServer(rpc.TestServer)
 
-	handler.RegisterName("klay", &APIgRPC{})
+	handler.RegisterName("klay", &APIgRPC{}, []uintptr{})
 
 	listener := &Listener{Addr: addr}
 	listener.SetRPCServer(handler)
