@@ -148,7 +148,7 @@ func NewMainBridge(ctx *node.ServiceContext, config *SCConfig) (*MainBridge, err
 		return nil, err
 	}
 
-	mb.rpcServer = rpc.NewServer()
+	mb.rpcServer = rpc.NewServer(rpc.InProcServer)
 	p1, p2 := net.Pipe()
 	mb.rpcConn = p1
 	go mb.rpcServer.ServeCodec(rpc.NewJSONCodec(p2), rpc.OptionMethodInvocation|rpc.OptionSubscriptions)
@@ -239,7 +239,7 @@ func (mb *MainBridge) SetComponents(components []interface{}) {
 			for _, api := range v {
 				if api.Public && api.Namespace == "klay" {
 					logger.Error("p2p rpc registered", "namespace", api.Namespace)
-					if err := mb.rpcServer.RegisterName(api.Namespace, api.Service); err != nil {
+					if err := mb.rpcServer.RegisterName(api.Namespace, api.Service, api.Ban); err != nil {
 						logger.Error("pRPC failed to register", "namespace", api.Namespace)
 					}
 				}
