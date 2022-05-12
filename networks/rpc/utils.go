@@ -22,10 +22,8 @@ import (
 	crand "crypto/rand"
 	"encoding/binary"
 	"encoding/hex"
-	"fmt"
 	"math/rand"
 	"reflect"
-	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -250,6 +248,7 @@ func sanitizeTimeouts(timeouts HTTPTimeouts) HTTPTimeouts {
 	return timeouts
 }
 
+/*
 func GenerateBanList(apiService interface{}, apis []interface{}) []uintptr {
 	serviceTyp := reflect.TypeOf(apiService)
 	apiBans := make([]uintptr, len(apis))
@@ -291,3 +290,4 @@ func SchemeToString(scheme ServerScheme) string {
 	}
 	return ""
 }
+*/

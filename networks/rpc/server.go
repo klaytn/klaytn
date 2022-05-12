@@ -87,7 +87,7 @@ func NewServer(scheme ServerScheme) *Server {
 	// register a default service which will provide meta information about the RPC service such as the services and
 	// methods it offers.
 	rpcService := &RPCService{server}
-	server.RegisterName(MetadataApi, rpcService, []uintptr{})
+	server.RegisterName(MetadataApi, rpcService, false)
 
 	return server
 }
@@ -114,7 +114,7 @@ func (s *Server) GetServices() serviceRegistry {
 // RegisterName will create a service for the given rcvr type under the given name. When no methods on the given rcvr
 // match the criteria to be either a RPC method or a subscription an error is returned. Otherwise a new service is
 // created and added to the service collection this server instance serves.
-func (s *Server) RegisterName(name string, rcvr interface{}, apiBans []uintptr) error {
+func (s *Server) RegisterName(name string, rcvr interface{}, isPriviliged bool) error {
 	if s.services == nil {
 		s.services = make(serviceRegistry)
 	}
@@ -131,10 +131,20 @@ func (s *Server) RegisterName(name string, rcvr interface{}, apiBans []uintptr) 
 	}
 
 	methods, subscriptions := suitableCallbacks(rcvrVal, svc.typ)
+	if isPriviliged && s.scheme != IPCServer {
+		for name, _ := range methods {
+			logger.Trace("The priviliged API(method) is not registered", "API", name, "scheme", s.scheme)
+			delete(methods, name)
+		}
+		for name, _ := range subscriptions {
+			logger.Trace("The priviliged API(subscription) is not registered", "API", name, "scheme", s.scheme)
+			delete(subscriptions, name)
+		}
+	}
 
 	// already a previous service register under given sname, merge methods/subscriptions
 	if regsvc, present := s.services[name]; present {
-		if len(methods) == 0 && len(subscriptions) == 0 {
+		if len(methods) == 0 && len(subscriptions) == 0 && !isPriviliged {
 			return fmt.Errorf("Service %T doesn't have any suitable methods/subscriptions to expose", rcvr)
 		}
 		for _, m := range methods {
@@ -146,22 +156,15 @@ func (s *Server) RegisterName(name string, rcvr interface{}, apiBans []uintptr) 
 		return nil
 	}
 
-	if s.scheme != IPCServer {
-		for _, api := range apiBans {
-			for name, m := range methods {
-				if api == m.method.Func.Pointer() {
-					logger.Trace("The banned API is not registered", "API", name, "scheme", SchemeToString(s.scheme))
-					delete(methods, name)
-				}
-			}
-		}
-	}
-
 	svc.name = name
 	svc.callbacks, svc.subscriptions = methods, subscriptions
 
 	if len(svc.callbacks) == 0 && len(svc.subscriptions) == 0 {
-		return fmt.Errorf("Service %T doesn't have any suitable methods/subscriptions to expose", rcvr)
+		if isPriviliged {
+			return nil
+		} else {
+			return fmt.Errorf("Service %T doesn't have any suitable methods/subscriptions to expose", rcvr)
+		}
 	}
 
 	s.services[svc.name] = svc
