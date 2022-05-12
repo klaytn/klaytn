@@ -73,15 +73,19 @@ var GovernanceItems = map[int]check{
 func updateLowerBoundBaseFee(g *Governance, k string, v interface{}) {
 	g.ChainConfig.Governance.Reward.LowerBoundBaseFee = v.(uint64)
 }
+
 func updateUpperBoundBaseFee(g *Governance, k string, v interface{}) {
 	g.ChainConfig.Governance.Reward.UpperBoundBaseFee = v.(uint64)
 }
+
 func updateGasTarget(g *Governance, k string, v interface{}) {
 	g.ChainConfig.Governance.Reward.GasTarget = v.(uint64)
 }
+
 func updateBlockGasLimit(g *Governance, k string, v interface{}) {
 	g.ChainConfig.Governance.Reward.BlockGasLimit = v.(uint64)
 }
+
 func updateBaseFeeDenominator(g *Governance, k string, v interface{}) {
 	g.ChainConfig.Governance.Reward.BaseFeeDenominator = v.(uint64)
 }
