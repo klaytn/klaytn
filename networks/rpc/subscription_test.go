@@ -99,10 +99,10 @@ func (s *NotificationTestService) HangSubscription(ctx context.Context, val int)
 }
 
 func TestNotifications(t *testing.T) {
-	server := NewServer()
+	server := NewServer(TestServer)
 	service := &NotificationTestService{unsubscribed: make(chan string)}
 
-	if err := server.RegisterName("klay", service); err != nil {
+	if err := server.RegisterName("klay", service, []uintptr{}); err != nil {
 		t.Fatalf("unable to register test service %v", err)
 	}
 
@@ -231,7 +231,7 @@ func TestSubscriptionMultipleNamespaces(t *testing.T) {
 		subCount          = len(namespaces) * 2
 		notificationCount = 3
 
-		server                 = NewServer()
+		server                 = NewServer(TestServer)
 		clientConn, serverConn = net.Pipe()
 		out                    = json.NewEncoder(clientConn)
 		in                     = json.NewDecoder(clientConn)
@@ -243,7 +243,7 @@ func TestSubscriptionMultipleNamespaces(t *testing.T) {
 
 	// setup and start server
 	for _, namespace := range namespaces {
-		if err := server.RegisterName(namespace, &service); err != nil {
+		if err := server.RegisterName(namespace, &service, []uintptr{}); err != nil {
 			t.Fatalf("unable to register test service %v", err)
 		}
 	}

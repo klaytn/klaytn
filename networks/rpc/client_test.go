@@ -36,6 +36,7 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestClientRequest(t *testing.T) {
@@ -49,6 +50,23 @@ func TestClientRequest(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(resp, Result{"hello", 10, &Args{"world"}}) {
+		t.Errorf("incorrect result %#v", resp)
+	}
+}
+
+func TestClientBannedRequest(t *testing.T) {
+	svc := new(Service)
+	banned := GenerateBanList(svc, []interface{}{svc.Echo})
+	server := newTestServerWithBannedAPIs("service", svc, banned)
+	defer server.Stop()
+	client := DialInProc(server)
+	defer client.Close()
+
+	var resp Result
+	err := client.Call(&resp, "service_echo", "hello", 10, &Args{"world"})
+	assert.Equal(t, err.Error(), "The method service_echo does not exist/is not available")
+
+	if !reflect.DeepEqual(resp, Result{"", 0, nil}) {
 		t.Errorf("incorrect result %#v", resp)
 	}
 }
@@ -552,8 +570,16 @@ func TestClientReconnect(t *testing.T) {
 }
 
 func newTestServer(serviceName string, service interface{}) *Server {
-	server := NewServer()
-	if err := server.RegisterName(serviceName, service); err != nil {
+	server := NewServer(TestServer)
+	if err := server.RegisterName(serviceName, service, []uintptr{}); err != nil {
+		panic(err)
+	}
+	return server
+}
+
+func newTestServerWithBannedAPIs(serviceName string, service interface{}, ban []uintptr) *Server {
+	server := NewServer(TestServer)
+	if err := server.RegisterName(serviceName, service, ban); err != nil {
 		panic(err)
 	}
 	return server

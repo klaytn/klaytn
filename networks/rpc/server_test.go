@@ -76,10 +76,10 @@ func (s *Service) Subscription(ctx context.Context) (*Subscription, error) {
 }
 
 func TestServerRegisterName(t *testing.T) {
-	server := NewServer()
+	server := NewServer(TestServer)
 	service := new(Service)
 
-	if err := server.RegisterName("calc", service); err != nil {
+	if err := server.RegisterName("calc", service, []uintptr{}); err != nil {
 		t.Fatalf("%v", err)
 	}
 
@@ -102,10 +102,10 @@ func TestServerRegisterName(t *testing.T) {
 }
 
 func testServerMethodExecution(t *testing.T, method string) {
-	server := NewServer()
+	server := NewServer(TestServer)
 	service := new(Service)
 
-	if err := server.RegisterName("test", service); err != nil {
+	if err := server.RegisterName("test", service, []uintptr{}); err != nil {
 		t.Fatalf("%v", err)
 	}
 

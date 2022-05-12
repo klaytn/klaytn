@@ -34,10 +34,10 @@ func (rwc *RWC) Close() error {
 }
 
 func TestJSONRequestParsing(t *testing.T) {
-	server := NewServer()
+	server := NewServer(TestServer)
 	service := new(Service)
 
-	if err := server.RegisterName("calc", service); err != nil {
+	if err := server.RegisterName("calc", service, []uintptr{}); err != nil {
 		t.Fatalf("%v", err)
 	}
 
