@@ -34,12 +34,26 @@ import (
 	"gopkg.in/fatih/set.v0"
 )
 
+type ServerScheme uint8
+
+const (
+	HTTPServer ServerScheme = iota
+	FastHTTPServer
+	WSServer
+	FastWSServer
+	GRPCServer
+	InProcServer
+	IPCServer
+	TestServer
+)
+
 // API describes the set of methods offered over the RPC interface
 type API struct {
 	Namespace string      // namespace under which the rpc methods of Service are exposed
 	Version   string      // api version for DApp's
 	Service   interface{} // receiver instance which holds the methods
 	Public    bool        // indication if the methods must be considered safe for public use
+	Ban       []uintptr
 }
 
 // callback is a method callback which was registered in the server
@@ -76,6 +90,7 @@ type subscriptions map[string]*callback  // collection of subscription callbacks
 
 // Server represents a RPC server
 type Server struct {
+	scheme   ServerScheme
 	services serviceRegistry
 
 	run      int32
