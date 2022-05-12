@@ -54,11 +54,11 @@ var (
 		"istanbul.policy":               params.Policy,
 		"istanbul.committeesize":        params.CommitteeSize,
 		"governance.unitprice":          params.UnitPrice,
-		"reward.lowerboundbasefee":      params.LowerBoundBaseFee,  //dynamic gas fee
-		"reward.gastarget":              params.GasTarget,          //dynamic gas fee
-		"reward.blockgaslimit":          params.BlockGasLimit,      //dynamic gas fee
-		"reward.basefeedenominator":     params.BaseFeeDenominator, //dynamic gas fee
-		"reward.upperboundbasefee":      params.UpperBoundBaseFee,  //dynamic gas fee
+		"reward.lowerboundbasefee":      params.LowerBoundBaseFee,
+		"reward.gastarget":              params.GasTarget,
+		"reward.blockgaslimit":          params.BlockGasLimit,
+		"reward.basefeedenominator":     params.BaseFeeDenominator,
+		"reward.upperboundbasefee":      params.UpperBoundBaseFee,
 		"reward.mintingamount":          params.MintingAmount,
 		"reward.ratio":                  params.Ratio,
 		"reward.useginicoeff":           params.UseGiniCoeff,
