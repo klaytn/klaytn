@@ -239,7 +239,7 @@ func (mb *MainBridge) SetComponents(components []interface{}) {
 			for _, api := range v {
 				if api.Public && api.Namespace == "klay" {
 					logger.Error("p2p rpc registered", "namespace", api.Namespace)
-					if err := mb.rpcServer.RegisterName(api.Namespace, api.Service, api.Ban); err != nil {
+					if err := mb.rpcServer.RegisterName(api.Namespace, api.Service, api.Privileged); err != nil {
 						logger.Error("pRPC failed to register", "namespace", api.Namespace)
 					}
 				}
