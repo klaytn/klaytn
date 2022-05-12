@@ -2402,17 +2402,7 @@ func (bc *BlockChain) reportBlock(block *types.Block, receipts types.Receipts, e
 			i, receipt.TxHash.Hex(), receipt.Status, receipt.GasUsed, receipt.ContractAddress.Hex(),
 			receipt.Bloom, receipt.Logs)
 	}
-	logger.Error(fmt.Sprintf(`
-########## BAD BLOCK #########
-Chain config: %v
-
-Number: %v
-Hash: 0x%x
-%v
-
-Error: %v
-##############################
-`, bc.chainConfig, block.Number(), block.Hash(), receiptString, err))
+	logger.Error(fmt.Sprintf(`########## BAD BLOCK ######### Chain config: %v Number: %v Hash: 0x%x %v Error: %v`, bc.chainConfig, block.Number(), block.Hash(), receiptString, err))
 }
 
 // InsertHeaderChain attempts to insert the given header chain in to the local
