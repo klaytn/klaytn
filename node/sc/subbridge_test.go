@@ -67,9 +67,10 @@ func TestSubBridge_basic(t *testing.T) {
 
 	// APIs returns default rpc APIs of MainBridge
 	apis := sBridge.APIs()
-	assert.Equal(t, 2, len(apis))
+	assert.Equal(t, 3, len(apis))
 	assert.Equal(t, "subbridge", apis[0].Namespace)
 	assert.Equal(t, "subbridge", apis[1].Namespace)
+	assert.Equal(t, "subbridge", apis[2].Namespace)
 
 	// Test getters for elements of SubBridge
 	assert.Equal(t, true, sBridge.IsListening()) // Always returns `true`
