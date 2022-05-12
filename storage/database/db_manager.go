@@ -119,6 +119,9 @@ type DBManager interface {
 	WriteBlock(block *types.Block)
 	DeleteBlock(hash common.Hash, number uint64)
 
+	ReadBadBlock(hash common.Hash) *types.Block
+	WriteBadBlock(block *types.Block)
+
 	FindCommonAncestor(a, b *types.Header) *types.Header
 
 	ReadIstanbulSnapshot(hash common.Hash) ([]byte, error)
@@ -1434,6 +1437,97 @@ func (dbm *databaseManager) DeleteBlock(hash common.Hash, number uint64) {
 	dbm.DeleteBody(hash, number)
 	dbm.DeleteTd(hash, number)
 	dbm.cm.deleteBlockCache(hash)
+}
+
+const badBlockToKeep = 1000
+
+type badBlock struct {
+	Header *types.Header
+	Body   *types.Body
+}
+
+// badBlockList implements the sort interface to allow sorting a list of
+// bad blocks by their number in the reverse order.
+type badBlockList []*badBlock
+
+func (s badBlockList) Len() int { return len(s) }
+func (s badBlockList) Less(i, j int) bool {
+	return s[i].Header.Number.Uint64() < s[j].Header.Number.Uint64()
+}
+func (s badBlockList) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+
+func (dbm *databaseManager) ReadBadBlock(hash common.Hash) *types.Block {
+	db := dbm.getDatabase(MiscDB)
+	blob,err := db.Get(badBlockKey)
+	if err != nil {
+		return nil
+	}
+	var badBlocks badBlockList
+	if err := rlp.DecodeBytes(blob, &badBlocks); err != nil {
+		return nil
+	}
+	for _, bad := range badBlocks {
+		if bad.Header.Hash() == hash {
+			return types.NewBlockWithHeader(bad.Header).WithBody(bad.Body.Transactions)
+		}
+	}
+	return nil
+}
+
+func (dbm *databaseManager) ReadAllBadBlocks() []*types.Block {
+	db := dbm.getDatabase(MiscDB)
+	blob, err := db.Get(badBlockKey)
+	if err != nil {
+		return nil
+	}
+	var badBlocks badBlockList
+	if err := rlp.DecodeBytes(blob, &badBlocks); err != nil {
+		return nil
+	}
+	var blocks []*types.Block
+	for _, bad := range badBlocks {
+		blocks = append(blocks, types.NewBlockWithHeader(bad.Header).WithBody(bad.Body.Transactions))
+	}
+	return blocks
+}
+
+func (dbm *databaseManager) WriteBadBlock(block *types.Block) {
+	db := dbm.getDatabase(MiscDB)
+	blob, err := db.Get(badBlockKey)
+	if err != nil {
+		logger.Warn("Failed to load old bad blocks", "error", err)
+	}
+	var badBlocks badBlockList
+	if len(blob) > 0 {
+		if err := rlp.DecodeBytes(blob,&badBlocks); err!=nil {
+			logger.Error("failed to decode old bad blocks")
+		}
+	}
+
+	for _, badblock := range badBlocks{
+		if badblock.Header.Hash() == block.Hash() && badblock.Header.Number.Uint64() == block.NumberU64() {
+			logger.Info("There is already corresponding badblock in db.","badblock number",block.NumberU64())
+			return
+		}
+	}
+
+	badBlocks = append(badBlocks,&badBlock{
+		Header: block.Header(),
+		Body: block.Body(),
+	})
+	sort.Sort(sort.Reverse(badBlocks))
+	if len(badBlocks) > badBlockToKeep {
+		badBlocks = badBlocks[:badBlockToKeep]
+	}
+	data, err := rlp.EncodeToBytes(badBlocks)
+	if err != nil {
+		logger.Crit("Failed to encode bad blocks", "err", err)
+		return
+	}
+	if err := db.Put(badBlockKey, data); err != nil {
+		logger.Crit("Failed to write bad blocks", "err", err)
+		return
+	}
 }
 
 // Find Common Ancestor operation

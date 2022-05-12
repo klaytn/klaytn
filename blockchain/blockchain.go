@@ -2386,15 +2386,11 @@ func (bc *BlockChain) HasBadBlock(hash common.Hash) bool {
 	return bc.badBlocks.Contains(hash)
 }
 
-// addBadBlock adds a bad block to the bad-block LRU cache
-func (bc *BlockChain) addBadBlock(block *types.Block) {
-	bc.badBlocks.Add(block.Header().Hash(), block)
-}
 
 // reportBlock logs a bad block error.
 func (bc *BlockChain) reportBlock(block *types.Block, receipts types.Receipts, err error) {
 	badBlockCounter.Inc(1)
-	bc.addBadBlock(block)
+	bc.db.WriteBadBlock(block)
 
 	var receiptString string
 	for i, receipt := range receipts {

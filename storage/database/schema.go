@@ -66,6 +66,9 @@ var (
 	// snapshotRootKey tracks the hash of the last snapshot.
 	snapshotRootKey = []byte("SnapshotRoot")
 
+	// badBlockKey tracks the list of bad blocks seen by local
+	badBlockKey = []byte("InvalidBlock")
+
 	// Data item prefixes (use single byte to avoid mixing data types, avoid `i`, used for indexes).
 	headerPrefix       = []byte("h") // headerPrefix + num (uint64 big endian) + hash -> header
 	headerTDSuffix     = []byte("t") // headerPrefix + num (uint64 big endian) + hash + headerTDSuffix -> td
