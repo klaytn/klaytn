@@ -32,10 +32,10 @@ func StartHTTPEndpoint(endpoint string, apis []API, modules []string, cors []str
 		whitelist[module] = true
 	}
 	// Register all the APIs exposed by the services
-	handler := NewServer()
+	handler := NewServer(HTTPServer)
 	for _, api := range apis {
 		if whitelist[api.Namespace] || (len(whitelist) == 0 && api.Public) {
-			if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
+			if err := handler.RegisterName(api.Namespace, api.Service, api.Ban); err != nil {
 				return nil, nil, err
 			}
 			logger.Debug("HTTP registered", "namespace", api.Namespace)
@@ -61,10 +61,10 @@ func StartFastHTTPEndpoint(endpoint string, apis []API, modules []string, cors [
 		whitelist[module] = true
 	}
 	// Register all the APIs exposed by the services
-	handler := NewServer()
+	handler := NewServer(FastHTTPServer)
 	for _, api := range apis {
 		if whitelist[api.Namespace] || (len(whitelist) == 0 && api.Public) {
-			if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
+			if err := handler.RegisterName(api.Namespace, api.Service, api.Ban); err != nil {
 				return nil, nil, err
 			}
 			logger.Debug("FastHTTP registered", "namespace", api.Namespace)
@@ -91,10 +91,10 @@ func StartWSEndpoint(endpoint string, apis []API, modules []string, wsOrigins []
 		whitelist[module] = true
 	}
 	// Register all the APIs exposed by the services
-	handler := NewServer()
+	handler := NewServer(WSServer)
 	for _, api := range apis {
 		if exposeAll || whitelist[api.Namespace] || (len(whitelist) == 0 && api.Public) {
-			if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
+			if err := handler.RegisterName(api.Namespace, api.Service, api.Ban); err != nil {
 				return nil, nil, err
 			}
 			logger.Debug("WebSocket registered", "service", api.Service, "namespace", api.Namespace)
@@ -121,10 +121,10 @@ func StartFastWSEndpoint(endpoint string, apis []API, modules []string, wsOrigin
 		whitelist[module] = true
 	}
 	// Register all the APIs exposed by the services
-	handler := NewServer()
+	handler := NewServer(FastWSServer)
 	for _, api := range apis {
 		if exposeAll || whitelist[api.Namespace] || (len(whitelist) == 0 && api.Public) {
-			if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
+			if err := handler.RegisterName(api.Namespace, api.Service, api.Ban); err != nil {
 				return nil, nil, err
 			}
 			logger.Debug("FastWebSocket registered", "service", api.Service, "namespace", api.Namespace)
@@ -146,9 +146,9 @@ func StartFastWSEndpoint(endpoint string, apis []API, modules []string, wsOrigin
 // StartIPCEndpoint starts an IPC endpoint.
 func StartIPCEndpoint(ipcEndpoint string, apis []API) (net.Listener, *Server, error) {
 	// Register all the APIs exposed by the services.
-	handler := NewServer()
+	handler := NewServer(IPCServer)
 	for _, api := range apis {
-		if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
+		if err := handler.RegisterName(api.Namespace, api.Service, api.Ban); err != nil {
 			return nil, nil, err
 		}
 		logger.Debug("IPC registered", "namespace", api.Namespace)

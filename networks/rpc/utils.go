@@ -22,8 +22,10 @@ import (
 	crand "crypto/rand"
 	"encoding/binary"
 	"encoding/hex"
+	"fmt"
 	"math/rand"
 	"reflect"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -246,4 +248,46 @@ func sanitizeTimeouts(timeouts HTTPTimeouts) HTTPTimeouts {
 	}
 
 	return timeouts
+}
+
+func GenerateBanList(apiService interface{}, apis []interface{}) []uintptr {
+	serviceTyp := reflect.TypeOf(apiService)
+	apiBans := make([]uintptr, len(apis))
+	for idx, api := range apis {
+		funcFullName := strings.Split((runtime.FuncForPC(reflect.ValueOf(api).Pointer()).Name()), ".")
+		funcName := strings.TrimSuffix(funcFullName[len(funcFullName)-1], "-fm")
+		var funcPtr uintptr
+		for i := 0; i < serviceTyp.NumMethod(); i++ {
+			method := serviceTyp.Method(i)
+			if method.Name == funcName {
+				funcPtr = method.Func.Pointer()
+				break
+			}
+		}
+		if funcPtr == 0 {
+			panic(fmt.Sprintf("The function name %s is not found", funcName))
+		}
+		apiBans[idx] = funcPtr
+	}
+	return apiBans
+}
+
+func SchemeToString(scheme ServerScheme) string {
+	switch scheme {
+	case HTTPServer:
+		return "HTTP"
+	case FastHTTPServer:
+		return "FastHTTP"
+	case WSServer:
+		return "WS"
+	case FastWSServer:
+		return "FastWS"
+	case GRPCServer:
+		return "GRPC"
+	case InProcServer:
+		return "InProc"
+	case IPCServer:
+		return "IPC"
+	}
+	return ""
 }

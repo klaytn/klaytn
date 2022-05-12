@@ -366,9 +366,9 @@ func (n *Node) startRPC(services map[reflect.Type]Service) error {
 // startInProc initializes an in-process RPC endpoint.
 func (n *Node) startInProc(apis []rpc.API) error {
 	// Register all the APIs exposed by the services
-	handler := rpc.NewServer()
+	handler := rpc.NewServer(rpc.InProcServer)
 	for _, api := range apis {
-		if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
+		if err := handler.RegisterName(api.Namespace, api.Service, api.Ban); err != nil {
 			return err
 		}
 		n.logger.Debug("InProc registered", "service", api.Service, "namespace", api.Namespace)
@@ -420,10 +420,10 @@ func (n *Node) startgRPC(apis []rpc.API) error {
 		return nil
 	}
 
-	handler := rpc.NewServer()
+	handler := rpc.NewServer(rpc.GRPCServer)
 	for _, api := range apis {
 		if api.Public {
-			if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
+			if err := handler.RegisterName(api.Namespace, api.Service, api.Ban); err != nil {
 				return err
 			}
 			n.logger.Debug("gRPC registered", "namespace", api.Namespace)
