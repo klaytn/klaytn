@@ -1412,3 +1412,91 @@ func TestGovernance_Votes(t *testing.T) {
 		engine.Stop()
 	}
 }
+
+func TestChainConfig_UpdateAfterVotes(t *testing.T) {
+	type vote struct {
+		key   string
+		value interface{}
+	}
+	type testcase struct {
+		voting   vote
+		expected vote
+	}
+
+	testcases := []testcase{
+		{
+			voting:   vote{"reward.lowerboundbasefee", uint64(20000000000)}, // voted on block 1
+			expected: vote{"reward.lowerboundbasefee", uint64(20000000000)},
+		},
+		{
+			voting:   vote{"reward.upperboundbasefee", uint64(500000000000)}, // voted on block 1
+			expected: vote{"reward.upperboundbasefee", uint64(500000000000)},
+		},
+		{
+			voting:   vote{"reward.blockgaslimit", uint64(100000000)}, // voted on block 1
+			expected: vote{"reward.blockgaslimit", uint64(100000000)},
+		},
+		{
+			voting:   vote{"reward.gastarget", uint64(50000000)}, // voted on block 1
+			expected: vote{"reward.gastarget", uint64(50000000)},
+		},
+		{
+			voting:   vote{"reward.basefeedenominator", uint64(32)}, // voted on block 1
+			expected: vote{"reward.basefeedenominator", uint64(32)},
+		},
+	}
+
+	var configItems []interface{}
+	configItems = append(configItems, proposerPolicy(params.WeightedRandom))
+	configItems = append(configItems, epoch(3))
+	configItems = append(configItems, governanceMode("single"))
+	configItems = append(configItems, blockPeriod(0)) // set block period to 0 to prevent creating future block
+	for _, tc := range testcases {
+		chain, engine := newBlockChain(1, configItems...)
+
+		// test initial governance items
+		assert.Equal(t, uint64(25000000000), chain.Config().Governance.Reward.LowerBoundBaseFee)
+		assert.Equal(t, uint64(750000000000), chain.Config().Governance.Reward.UpperBoundBaseFee)
+		assert.Equal(t, uint64(64), chain.Config().Governance.Reward.BaseFeeDenominator)
+		assert.Equal(t, uint64(84000000), chain.Config().Governance.Reward.BlockGasLimit)
+		assert.Equal(t, uint64(30000000), chain.Config().Governance.Reward.GasTarget)
+
+		// add votes and insert voted blocks
+		var (
+			previousBlock, currentBlock *types.Block = nil, chain.Genesis()
+			err                         error
+		)
+
+		engine.governance.AddVote(tc.voting.key, tc.voting.value)
+		previousBlock = currentBlock
+		currentBlock = makeBlockWithSeal(chain, engine, previousBlock)
+		_, err = chain.InsertChain(types.Blocks{currentBlock})
+		assert.NoError(t, err)
+
+		// insert blocks until the vote is applied
+		for i := 0; i < 6; i++ {
+			previousBlock = currentBlock
+			currentBlock = makeBlockWithSeal(chain, engine, previousBlock)
+			_, err = chain.InsertChain(types.Blocks{currentBlock})
+			assert.NoError(t, err)
+		}
+
+		govConfig := chain.Config().Governance
+		switch tc.expected.key {
+		case "reward.lowerboundbasefee":
+			assert.Equal(t, tc.expected.value, govConfig.Reward.LowerBoundBaseFee)
+		case "reward.upperboundbasefee":
+			assert.Equal(t, tc.expected.value, govConfig.Reward.UpperBoundBaseFee)
+		case "reward.gastarget":
+			assert.Equal(t, tc.expected.value, govConfig.Reward.GasTarget)
+		case "reward.blockgaslimit":
+			assert.Equal(t, tc.expected.value, govConfig.Reward.BlockGasLimit)
+		case "reward.basefeedenominator":
+			assert.Equal(t, tc.expected.value, govConfig.Reward.BaseFeeDenominator)
+		default:
+			assert.Error(t, nil)
+		}
+
+		engine.Stop()
+	}
+}
