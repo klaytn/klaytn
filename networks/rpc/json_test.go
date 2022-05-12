@@ -37,7 +37,7 @@ func TestJSONRequestParsing(t *testing.T) {
 	server := NewServer(TestServer)
 	service := new(Service)
 
-	if err := server.RegisterName("calc", service, []uintptr{}); err != nil {
+	if err := server.RegisterName("calc", service, false); err != nil {
 		t.Fatalf("%v", err)
 	}
 

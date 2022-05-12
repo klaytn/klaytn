@@ -54,17 +54,15 @@ func TestClientRequest(t *testing.T) {
 	}
 }
 
-func TestClientBannedRequest(t *testing.T) {
-	svc := new(Service)
-	banned := GenerateBanList(svc, []interface{}{svc.Echo})
-	server := newTestServerWithBannedAPIs("service", svc, banned)
+func TestClientPrivilegedRequest(t *testing.T) {
+	server := newTestServerWithPriviligedAPIs("privilegedservice", new(PrivilegedService))
 	defer server.Stop()
 	client := DialInProc(server)
 	defer client.Close()
 
 	var resp Result
-	err := client.Call(&resp, "service_echo", "hello", 10, &Args{"world"})
-	assert.Equal(t, err.Error(), "The method service_echo does not exist/is not available")
+	err := client.Call(&resp, "privilegedservice_echo", "hello", 10, &Args{"world"})
+	assert.Equal(t, err.Error(), "The method privilegedservice_echo does not exist/is not available")
 
 	if !reflect.DeepEqual(resp, Result{"", 0, nil}) {
 		t.Errorf("incorrect result %#v", resp)
@@ -571,15 +569,15 @@ func TestClientReconnect(t *testing.T) {
 
 func newTestServer(serviceName string, service interface{}) *Server {
 	server := NewServer(TestServer)
-	if err := server.RegisterName(serviceName, service, []uintptr{}); err != nil {
+	if err := server.RegisterName(serviceName, service, false); err != nil {
 		panic(err)
 	}
 	return server
 }
 
-func newTestServerWithBannedAPIs(serviceName string, service interface{}, ban []uintptr) *Server {
+func newTestServerWithPriviligedAPIs(serviceName string, service interface{}) *Server {
 	server := NewServer(TestServer)
-	if err := server.RegisterName(serviceName, service, ban); err != nil {
+	if err := server.RegisterName(serviceName, service, true); err != nil {
 		panic(err)
 	}
 	return server

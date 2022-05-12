@@ -75,11 +75,17 @@ func (s *Service) Subscription(ctx context.Context) (*Subscription, error) {
 	return nil, nil
 }
 
+type PrivilegedService struct{}
+
+func (s *PrivilegedService) Echo(str string, i int, args *Args) Result {
+	return Result{str, i, args}
+}
+
 func TestServerRegisterName(t *testing.T) {
 	server := NewServer(TestServer)
 	service := new(Service)
 
-	if err := server.RegisterName("calc", service, []uintptr{}); err != nil {
+	if err := server.RegisterName("calc", service, false); err != nil {
 		t.Fatalf("%v", err)
 	}
 
@@ -105,7 +111,7 @@ func testServerMethodExecution(t *testing.T, method string) {
 	server := NewServer(TestServer)
 	service := new(Service)
 
-	if err := server.RegisterName("test", service, []uintptr{}); err != nil {
+	if err := server.RegisterName("test", service, false); err != nil {
 		t.Fatalf("%v", err)
 	}
 
