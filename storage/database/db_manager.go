@@ -121,6 +121,8 @@ type DBManager interface {
 
 	ReadBadBlock(hash common.Hash) *types.Block
 	WriteBadBlock(block *types.Block)
+	ReadAllBadBlocks() ([]*types.Block, error)
+	DeleteBadBlocks()
 
 	FindCommonAncestor(a, b *types.Header) *types.Header
 
@@ -1456,9 +1458,10 @@ func (s badBlockList) Less(i, j int) bool {
 }
 func (s badBlockList) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 
+// ReadBadBlock retrieves the bad block with the corresponding block hash.
 func (dbm *databaseManager) ReadBadBlock(hash common.Hash) *types.Block {
 	db := dbm.getDatabase(MiscDB)
-	blob,err := db.Get(badBlockKey)
+	blob, err := db.Get(badBlockKey)
 	if err != nil {
 		return nil
 	}
@@ -1474,23 +1477,27 @@ func (dbm *databaseManager) ReadBadBlock(hash common.Hash) *types.Block {
 	return nil
 }
 
-func (dbm *databaseManager) ReadAllBadBlocks() []*types.Block {
+// ReadAllBadBlocks retrieves all the bad blocks in the database.
+// All returned blocks are sorted in reverse order by number.
+func (dbm *databaseManager) ReadAllBadBlocks() ([]*types.Block, error) {
 	db := dbm.getDatabase(MiscDB)
 	blob, err := db.Get(badBlockKey)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	var badBlocks badBlockList
 	if err := rlp.DecodeBytes(blob, &badBlocks); err != nil {
-		return nil
+		return nil, err
 	}
 	var blocks []*types.Block
 	for _, bad := range badBlocks {
 		blocks = append(blocks, types.NewBlockWithHeader(bad.Header).WithBody(bad.Body.Transactions))
 	}
-	return blocks
+	return blocks, nil
 }
 
+// WriteBadBlock serializes the bad block into the database. If the cumulated
+// bad blocks exceeds the limitation, the oldest will be dropped.
 func (dbm *databaseManager) WriteBadBlock(block *types.Block) {
 	db := dbm.getDatabase(MiscDB)
 	blob, err := db.Get(badBlockKey)
@@ -1499,21 +1506,21 @@ func (dbm *databaseManager) WriteBadBlock(block *types.Block) {
 	}
 	var badBlocks badBlockList
 	if len(blob) > 0 {
-		if err := rlp.DecodeBytes(blob,&badBlocks); err!=nil {
+		if err := rlp.DecodeBytes(blob, &badBlocks); err != nil {
 			logger.Error("failed to decode old bad blocks")
 		}
 	}
 
-	for _, badblock := range badBlocks{
+	for _, badblock := range badBlocks {
 		if badblock.Header.Hash() == block.Hash() && badblock.Header.Number.Uint64() == block.NumberU64() {
-			logger.Info("There is already corresponding badblock in db.","badblock number",block.NumberU64())
+			logger.Info("There is already corresponding badblock in db.", "badblock number", block.NumberU64())
 			return
 		}
 	}
 
-	badBlocks = append(badBlocks,&badBlock{
+	badBlocks = append(badBlocks, &badBlock{
 		Header: block.Header(),
-		Body: block.Body(),
+		Body:   block.Body(),
 	})
 	sort.Sort(sort.Reverse(badBlocks))
 	if len(badBlocks) > badBlockToKeep {
@@ -1527,6 +1534,14 @@ func (dbm *databaseManager) WriteBadBlock(block *types.Block) {
 	if err := db.Put(badBlockKey, data); err != nil {
 		logger.Crit("Failed to write bad blocks", "err", err)
 		return
+	}
+}
+
+// DeleteBadBlocks deletes all the bad blocks from the database. Not used anywhere
+func(dbm *databaseManager) DeleteBadBlocks() {
+	db := dbm.getDatabase(MiscDB)
+	if err := db.Delete(badBlockKey); err != nil {
+		logger.Error("Failed to delete bad blocks", "err", err)
 	}
 }
 

@@ -99,7 +99,6 @@ var (
 const (
 	maxFutureBlocks     = 256
 	maxTimeFutureBlocks = 30
-	maxBadBlocks        = 10
 	// TODO-Klaytn-Issue1911  This flag needs to be adjusted to the appropriate value.
 	//  Currently, this value is taken to cache all 10 million accounts
 	//  and should be optimized considering memory size and performance.
@@ -187,8 +186,6 @@ type BlockChain struct {
 	validator  Validator  // block and state validator interface
 	vmConfig   vm.Config
 
-	badBlocks *lru.Cache // Bad block cache
-
 	parallelDBWrite bool // TODO-Klaytn-Storage parallelDBWrite will be replaced by number of goroutines when worker pool pattern is introduced.
 
 	// State migration
@@ -239,7 +236,6 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 	InitDeriveSha(chainConfig.DeriveShaImpl)
 
 	futureBlocks, _ := lru.New(maxFutureBlocks)
-	badBlocks, _ := lru.New(maxBadBlocks)
 
 	bc := &BlockChain{
 		chainConfig:        chainConfig,
@@ -253,7 +249,6 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		futureBlocks:       futureBlocks,
 		engine:             engine,
 		vmConfig:           vmConfig,
-		badBlocks:          badBlocks,
 		parallelDBWrite:    db.IsParallelDBWrite(),
 		stopStateMigration: make(chan struct{}),
 		prefetchTxCh:       make(chan prefetchTx, MaxPrefetchTxs),
@@ -2362,30 +2357,29 @@ type BadBlockArgs struct {
 
 // BadBlocks returns a list of the last 'bad blocks' that the client has seen on the network
 func (bc *BlockChain) BadBlocks() ([]BadBlockArgs, error) {
-	blocks := make([]BadBlockArgs, 0, bc.badBlocks.Len())
-	for _, hash := range bc.badBlocks.Keys() {
-		hashKey, ok := hash.(common.CacheKey)
-		if !ok {
-			logger.Error("invalid key type", "expect", "common.CacheKey", "actual", reflect.TypeOf(hash))
-			continue
-		}
-
-		if blk, exist := bc.badBlocks.Peek(hashKey); exist {
-			cacheGetBadBlockHitMeter.Mark(1)
-			block := blk.(*types.Block)
-			blocks = append(blocks, BadBlockArgs{block.Hash(), block})
-		} else {
-			cacheGetBadBlockMissMeter.Mark(1)
-		}
+	blocks, err := bc.db.ReadAllBadBlocks()
+	if err != nil {
+		return nil, err
 	}
-	return blocks, nil
+	badblockargs := make([]BadBlockArgs, len(blocks))
+	for _, block := range blocks {
+		hash := block.Hash()
+		badblockargs = append(badblockargs, BadBlockArgs{
+			Hash:  hash,
+			Block: block,
+		})
+	}
+	return badblockargs, err
 }
 
 // istanbul BFT
 func (bc *BlockChain) HasBadBlock(hash common.Hash) bool {
-	return bc.badBlocks.Contains(hash)
+	badBlock := bc.db.ReadBadBlock(hash)
+	if badBlock != nil {
+		return true
+	}
+	return false
 }
-
 
 // reportBlock logs a bad block error.
 func (bc *BlockChain) reportBlock(block *types.Block, receipts types.Receipts, err error) {
