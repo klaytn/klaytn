@@ -132,11 +132,11 @@ func (s *Server) RegisterName(name string, rcvr interface{}, isPriviliged bool) 
 
 	methods, subscriptions := suitableCallbacks(rcvrVal, svc.typ)
 	if isPriviliged && s.scheme != IPCServer {
-		for name, _ := range methods {
+		for name := range methods {
 			logger.Trace("The priviliged API(method) is not registered", "API", name, "scheme", s.scheme)
 			delete(methods, name)
 		}
-		for name, _ := range subscriptions {
+		for name := range subscriptions {
 			logger.Trace("The priviliged API(subscription) is not registered", "API", name, "scheme", s.scheme)
 			delete(subscriptions, name)
 		}
