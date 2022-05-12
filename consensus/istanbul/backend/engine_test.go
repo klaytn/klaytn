@@ -1405,7 +1405,6 @@ func TestGovernance_Votes(t *testing.T) {
 				blockNumber = chain.CurrentBlock().NumberU64()
 			}
 			_, items, err := engine.governance.ReadGovernance(blockNumber)
-			t.Log(items)
 			assert.NoError(t, err)
 			assert.Equal(t, item.value, items[item.key])
 		}
