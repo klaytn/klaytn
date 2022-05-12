@@ -201,11 +201,11 @@ type RewardConfig struct {
 	StakingUpdateInterval  uint64   `json:"stakingUpdateInterval"`  // Interval when staking information is updated
 	ProposerUpdateInterval uint64   `json:"proposerUpdateInterval"` // Interval when proposer information is updated
 	MinimumStake           *big.Int `json:"minimumStake"`           // Minimum amount of peb to join CCO
-	LowerBoundBaseFee      uint64   `json:"lowerboundbasefee"`      // minimum base fee for dynamic gas price
-	UpperBoundBaseFee      uint64   `json:"upperboundbasefee"`      // maximum base fee for dynamic gas price
-	GasTarget              uint64   `json:"gastarget"`              // guage parameter increasing or decreasing gas price
-	BlockGasLimit          uint64   `json:"blockgaslimit"`          // maximum network and process capacity to allow in a block
-	BaseFeeDenominator     uint64   `json:"basefeedenominator"`     // for nomalizing effect of the rapid change like impulse gas used
+	LowerBoundBaseFee      uint64   `json:"lowerboundbasefee"`      // Minimum base fee for dynamic gas price
+	UpperBoundBaseFee      uint64   `json:"upperboundbasefee"`      // Maximum base fee for dynamic gas price
+	GasTarget              uint64   `json:"gastarget"`              // Gauge parameter increasing or decreasing gas price
+	BlockGasLimit          uint64   `json:"blockgaslimit"`          // Maximum network and process capacity to allow in a block
+	BaseFeeDenominator     uint64   `json:"basefeedenominator"`     // For normalizing effect of the rapid change like impulse gas used
 }
 
 // IstanbulConfig is the consensus engine configs for Istanbul based sealing.
