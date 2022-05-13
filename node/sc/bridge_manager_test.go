@@ -18,7 +18,6 @@ package sc
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -87,7 +86,7 @@ func handleValueTransfer(t *testing.T, ev IRequestValueTransferEvent, bridgeInfo
 		requestNonce   = ev.GetRequestNonce()
 		txHash         = ev.GetRaw().TxHash
 	)
-	fmt.Println("Request Event",
+	t.Log("Request Event",
 		"type", tokenType,
 		"amount", valueOrTokenId,
 		"from", from,
@@ -183,7 +182,7 @@ func TestBridgeManager(t *testing.T) {
 	}
 	bridgeInfo, _ := bridgeManager.GetBridgeInfo(addr)
 	bridge := bridgeInfo.bridge
-	fmt.Println("===== BridgeContract Addr ", addr.Hex())
+	t.Log("===== BridgeContract Addr ", addr.Hex())
 	sim.Commit() // block
 
 	// 2. Deploy Token Contract
@@ -223,16 +222,16 @@ func TestBridgeManager(t *testing.T) {
 	assert.Equal(t, cNftAddr, nftAddr)
 
 	balance, _ := sim.BalanceAt(context.Background(), pAuth.From, nil)
-	fmt.Printf("auth(%v) KLAY balance : %v\n", pAuth.From.String(), balance)
+	t.Logf("auth(%v) KLAY balance : %v\n", pAuth.From.String(), balance)
 
 	balance, _ = sim.BalanceAt(context.Background(), cAuth.From, nil)
-	fmt.Printf("auth2(%v) KLAY balance : %v\n", cAuth.From.String(), balance)
+	t.Logf("auth2(%v) KLAY balance : %v\n", cAuth.From.String(), balance)
 
 	balance, _ = sim.BalanceAt(context.Background(), alice.From, nil)
-	fmt.Printf("auth3(%v) KLAY balance : %v\n", alice.From.String(), balance)
+	t.Logf("auth3(%v) KLAY balance : %v\n", alice.From.String(), balance)
 
 	balance, _ = sim.BalanceAt(context.Background(), bob.From, nil)
-	fmt.Printf("auth4(%v) KLAY balance : %v\n", bob.From.String(), balance)
+	t.Logf("auth4(%v) KLAY balance : %v\n", bob.From.String(), balance)
 
 	// 4. Subscribe Bridge Contract
 	bridgeManager.SubscribeEvent(addr)
@@ -252,7 +251,7 @@ func TestBridgeManager(t *testing.T) {
 			case ev := <-reqVTencodedEvCh:
 				handleValueTransfer(t, ev, bridgeInfo, &wg, sim)
 			case ev := <-handleValueTransferEventCh:
-				fmt.Println("Handle value transfer event",
+				t.Log("Handle value transfer event",
 					"bridgeAddr", ev.Raw.Address.Hex(),
 					"type", ev.TokenType,
 					"amount", ev.ValueOrTokenId,
@@ -269,7 +268,7 @@ func TestBridgeManager(t *testing.T) {
 	{
 		tx, err = nft.MintWithTokenURI(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, GasLimit: testGasLimit}, alice.From, big.NewInt(int64(nftTokenID)), "testURI")
 		assert.NoError(t, err)
-		fmt.Println("Register NFT Transaction", tx.Hash().Hex())
+		t.Log("Register NFT Transaction", tx.Hash().Hex())
 		sim.Commit() // block
 		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
 
@@ -282,7 +281,7 @@ func TestBridgeManager(t *testing.T) {
 	{
 		tx, err = token.RequestValueTransfer(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, GasLimit: testGasLimit}, testToken, bob.From, big.NewInt(0), nil)
 		assert.NoError(t, err)
-		fmt.Println("RequestValueTransfer Transaction", tx.Hash().Hex())
+		t.Log("RequestValueTransfer Transaction", tx.Hash().Hex())
 		sim.Commit() // block
 
 		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
@@ -293,7 +292,7 @@ func TestBridgeManager(t *testing.T) {
 	{
 		tx, err = bridge.RequestKLAYTransfer(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, Value: testKLAY, GasLimit: testGasLimit}, bob.From, testKLAY, nil)
 		assert.NoError(t, err)
-		fmt.Println("DepositKLAY Transaction", tx.Hash().Hex())
+		t.Log("DepositKLAY Transaction", tx.Hash().Hex())
 
 		sim.Commit() // block
 
@@ -304,7 +303,7 @@ func TestBridgeManager(t *testing.T) {
 	{
 		tx, err = nft.RequestValueTransfer(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, GasLimit: testGasLimit}, big.NewInt(int64(nftTokenID)), bob.From, nil)
 		assert.NoError(t, err)
-		fmt.Println("nft.RequestValueTransfer Transaction", tx.Hash().Hex())
+		t.Log("nft.RequestValueTransfer Transaction", tx.Hash().Hex())
 
 		sim.Commit() // block
 
@@ -404,7 +403,7 @@ func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
 	}
 	bridgeInfo, _ := bridgeManager.GetBridgeInfo(addr)
 	bridge := bridgeInfo.bridge
-	fmt.Println("===== BridgeContract Addr ", addr.Hex())
+	t.Log("===== BridgeContract Addr ", addr.Hex())
 	sim.Commit() // block
 
 	// Deploy NFT Contract
@@ -455,7 +454,7 @@ func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
 			case ev := <-reqVTencodedEvCh:
 				handleValueTransfer(t, ev, bridgeInfo, &wg, sim)
 			case ev := <-handleValueTransferEventCh:
-				fmt.Println("Handle value transfer event",
+				t.Log("Handle value transfer event",
 					"bridgeAddr", ev.Raw.Address.Hex(),
 					"type", ev.TokenType,
 					"amount", ev.ValueOrTokenId,
@@ -472,7 +471,7 @@ func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
 	{
 		tx, err = nft.Mint(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, GasLimit: testGasLimit}, alice.From, big.NewInt(int64(nftTokenID)))
 		assert.NoError(t, err)
-		fmt.Println("Register NFT Transaction", tx.Hash().Hex())
+		t.Log("Register NFT Transaction", tx.Hash().Hex())
 		sim.Commit() // block
 
 		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
@@ -486,7 +485,7 @@ func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
 	{
 		tx, err = nft.RequestValueTransfer(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, GasLimit: testGasLimit}, big.NewInt(int64(nftTokenID)), bob.From, nil)
 		assert.NoError(t, err)
-		fmt.Println("nft.RequestValueTransfer Transaction", tx.Hash().Hex())
+		t.Log("nft.RequestValueTransfer Transaction", tx.Hash().Hex())
 
 		sim.Commit() // block
 
@@ -576,7 +575,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 	assert.NoError(t, err)
 	pBridgeInfo, _ := bridgeManager.GetBridgeInfo(pBridgeAddr)
 	pBridge := pBridgeInfo.bridge
-	fmt.Println("===== BridgeContract Addr ", pBridgeAddr.Hex())
+	t.Log("===== BridgeContract Addr ", pBridgeAddr.Hex())
 	sim.Commit() // block
 
 	// 2. Deploy Token Contract
@@ -644,10 +643,10 @@ func TestBridgeManagerWithFee(t *testing.T) {
 	assert.Equal(t, cTokenAddr, tokenAddr)
 
 	balance, _ := sim.BalanceAt(context.Background(), Alice.From, nil)
-	fmt.Printf("Alice(%v) KLAY balance : %v\n", Alice.From.String(), balance)
+	t.Logf("Alice(%v) KLAY balance : %v\n", Alice.From.String(), balance)
 
 	balance, _ = sim.BalanceAt(context.Background(), Bob.From, nil)
-	fmt.Printf("Bob(%v) KLAY balance : %v\n", Bob.From.String(), balance)
+	t.Logf("Bob(%v) KLAY balance : %v\n", Bob.From.String(), balance)
 
 	// 4. Subscribe Bridge Contract
 	bridgeManager.SubscribeEvent(pBridgeAddr)
@@ -661,7 +660,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		for {
 			select {
 			case ev := <-reqVTevCh:
-				fmt.Println("Request value transfer event",
+				t.Log("Request value transfer event",
 					"type", ev.GetTokenType(),
 					"amount", ev.GetValueOrTokenId(),
 					"from", ev.GetFrom().String(),
@@ -681,7 +680,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 				wg.Done()
 
 			case ev := <-handleValueTransferEventCh:
-				fmt.Println("Handle value transfer event",
+				t.Log("Handle value transfer event",
 					"bridgeAddr", ev.Raw.Address.Hex(),
 					"type", ev.TokenType,
 					"amount", ev.ValueOrTokenId,
@@ -700,29 +699,29 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		if err != nil {
 			log.Fatalf("Failed to Transfer for charging: %v", err)
 		}
-		fmt.Println("Transfer Transaction", tx.Hash().Hex())
+		t.Log("Transfer Transaction", tx.Hash().Hex())
 		sim.Commit() // block
 
 		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
 
 		balance, err = token.BalanceOf(nil, pAuth.From)
 		assert.Equal(t, nil, err)
-		fmt.Println("parentAcc token balance", balance.String())
+		t.Log("parentAcc token balance", balance.String())
 
 		balance, err = token.BalanceOf(nil, Alice.From)
 		assert.Equal(t, nil, err)
-		fmt.Println("Alice token balance", balance.String())
+		t.Log("Alice token balance", balance.String())
 
 		balance, err = token.BalanceOf(nil, Bob.From)
 		assert.Equal(t, nil, err)
-		fmt.Println("Bob token balance", balance.String())
+		t.Log("Bob token balance", balance.String())
 	}
 
 	// 7-1. Request ERC20 Transfer from Alice to Bob with same feeLimit with fee
 	{
 		tx, err = token.RequestValueTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, GasLimit: testGasLimit}, big.NewInt(testToken), Bob.From, big.NewInt(ERC20Fee), nil)
 		assert.NoError(t, err)
-		fmt.Println("RequestValueTransfer Transaction", tx.Hash().Hex())
+		t.Log("RequestValueTransfer Transaction", tx.Hash().Hex())
 		sim.Commit() // block
 
 		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
@@ -766,7 +765,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		tx, err = pBridge.RequestERC20Transfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, GasLimit: testGasLimit}, tokenAddr, Bob.From, big.NewInt(testToken), big.NewInt(ERC20Fee), nil)
 		assert.Equal(t, nil, err)
 
-		fmt.Println("RequestValueTransfer Transaction", tx.Hash().Hex())
+		t.Log("RequestValueTransfer Transaction", tx.Hash().Hex())
 		sim.Commit() // block
 
 		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
@@ -780,7 +779,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		tx, err = pBridge.RequestERC20Transfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, GasLimit: testGasLimit}, tokenAddr, Bob.From, big.NewInt(testToken), big.NewInt(0), nil)
 		assert.Equal(t, nil, err)
 
-		fmt.Println("RequestValueTransfer Transaction", tx.Hash().Hex())
+		t.Log("RequestValueTransfer Transaction", tx.Hash().Hex())
 		sim.Commit() // block
 
 		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusErrExecutionReverted, t)
@@ -794,7 +793,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		tx, err = pBridge.RequestERC20Transfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, GasLimit: testGasLimit}, tokenAddr, Bob.From, big.NewInt(testToken), big.NewInt(ERC20Fee-1), nil)
 		assert.Equal(t, nil, err)
 
-		fmt.Println("RequestValueTransfer Transaction", tx.Hash().Hex())
+		t.Log("RequestValueTransfer Transaction", tx.Hash().Hex())
 		sim.Commit() // block
 
 		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusErrExecutionReverted, t)
@@ -808,7 +807,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		tx, err = pBridge.RequestERC20Transfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, GasLimit: testGasLimit}, tokenAddr, Bob.From, big.NewInt(testToken), big.NewInt(ERC20Fee+1), nil)
 		assert.Equal(t, nil, err)
 
-		fmt.Println("RequestValueTransfer Transaction", tx.Hash().Hex())
+		t.Log("RequestValueTransfer Transaction", tx.Hash().Hex())
 		sim.Commit() // block
 
 		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
@@ -820,7 +819,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		if err != nil {
 			log.Fatalf("Failed to RequestKLAYTransfer: %v", err)
 		}
-		fmt.Println("RequestKLAYTransfer Transaction", tx.Hash().Hex())
+		t.Log("RequestKLAYTransfer Transaction", tx.Hash().Hex())
 
 		sim.Commit() // block
 
@@ -880,32 +879,32 @@ func TestBridgeManagerWithFee(t *testing.T) {
 	{
 		balance, err = token.BalanceOf(nil, Alice.From)
 		assert.Equal(t, nil, err)
-		fmt.Println("Alice token balance", balance.String())
+		t.Log("Alice token balance", balance.String())
 		assert.Equal(t, initialValue-(testToken+ERC20Fee)*4, balance.Int64())
 
 		balance, err = token.BalanceOf(nil, Bob.From)
 		assert.Equal(t, nil, err)
-		fmt.Println("Bob token balance", balance.String())
+		t.Log("Bob token balance", balance.String())
 		assert.Equal(t, testToken*4, balance.Int64())
 
 		balance, err = token.BalanceOf(nil, receiver.From)
 		assert.Equal(t, nil, err)
-		fmt.Println("Fee receiver token balance", balance.String())
+		t.Log("Fee receiver token balance", balance.String())
 		assert.Equal(t, ERC20Fee*4, balance.Int64())
 	}
 
 	// 11. Check KLAY balance
 	{
 		balance, _ = sim.BalanceAt(context.Background(), Alice.From, nil)
-		fmt.Println("Alice KLAY balance :", balance)
+		t.Log("Alice KLAY balance :", balance)
 		assert.Equal(t, initialValue-(testKLAY+KLAYFee)*2-KLAYFee, balance.Int64())
 
 		balance, _ = sim.BalanceAt(context.Background(), Bob.From, nil)
-		fmt.Println("Bob KLAY balance :", balance)
+		t.Log("Bob KLAY balance :", balance)
 		assert.Equal(t, big.NewInt(testKLAY*2).String(), balance.String())
 
 		balance, _ = sim.BalanceAt(context.Background(), receiver.From, nil)
-		fmt.Println("receiver KLAY balance :", balance)
+		t.Log("receiver KLAY balance :", balance)
 		assert.Equal(t, KLAYFee*3, balance.Int64())
 	}
 
@@ -1453,7 +1452,7 @@ func TestErrorDupSubscription(t *testing.T) {
 	addr, err := bm.DeployBridgeTest(sim, 10000, false)
 	bridgeInfo, _ := bm.GetBridgeInfo(addr)
 	bridge := bridgeInfo.bridge
-	fmt.Println("===== BridgeContract Addr ", addr.Hex())
+	t.Log("===== BridgeContract Addr ", addr.Hex())
 	sim.Commit() // block
 
 	bm.bridges[addr], err = NewBridgeInfo(sc, addr, bridge, common.Address{}, nil, bacc.cAccount, true, true, sim)

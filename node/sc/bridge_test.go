@@ -19,7 +19,6 @@ package sc
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"math/big"
 	"strconv"
@@ -1204,7 +1203,7 @@ func TestBridgeRequestHandleGasUsed(t *testing.T) {
 
 		select {
 		case ev := <-handleValueTransferEventCh:
-			fmt.Println("Handle value transfer event",
+			t.Log("Handle value transfer event",
 				"handleNonce", ev.HandleNonce,
 				"lowerHandleNonce", ev.LowerHandleNonce,
 				"gasUsed", receipt.GasUsed,
@@ -1320,7 +1319,7 @@ func TestBridgeMaxOperatorHandleTxGasUsed(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, uint(0x1), receipt.Status)
 
-		fmt.Println("Handle value transfer tx receipt", "gasUsed", receipt.GasUsed, "status", receipt.Status)
+		t.Log("Handle value transfer tx receipt", "gasUsed", receipt.GasUsed, "status", receipt.Status)
 	}
 
 	for i := 0; i < maxOperator; i++ {
@@ -1329,7 +1328,7 @@ func TestBridgeMaxOperatorHandleTxGasUsed(t *testing.T) {
 
 	select {
 	case ev := <-handleValueTransferEventCh:
-		fmt.Println("Handle value transfer event",
+		t.Log("Handle value transfer event",
 			"handleNonce", ev.HandleNonce,
 			"lowerHandleNonce", ev.LowerHandleNonce)
 	case <-time.After(1 * time.Second):
