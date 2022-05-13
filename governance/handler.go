@@ -360,33 +360,23 @@ func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, votes 
 			}
 		case params.AddValidator, params.RemoveValidator:
 			authorize := key == params.AddValidator
-
-			// returns (checkVotePass, typeAssertPass)
-			checkValidator := func() (bool, bool) {
-				if addr, ok := gVote.Value.(common.Address); ok {
-					if !gov.checkVote(addr, authorize, valset) {
-						return false, true
+			if addr, ok := gVote.Value.(common.Address); ok {
+				if !gov.checkVote(addr, authorize, valset) {
+					if proposer == self {
+						gov.removeDuplicatedVote(gVote, header.Number.Uint64())
 					}
-				} else if addresses, ok := gVote.Value.([]common.Address); ok {
-					for _, address := range addresses {
-						if !gov.checkVote(address, authorize, valset) {
-							return false, true
+					return valset, votes, tally
+				}
+			} else if addresses, ok := gVote.Value.([]common.Address); ok {
+				for _, address := range addresses {
+					if !gov.checkVote(address, authorize, valset) {
+						if proposer == self {
+							gov.removeDuplicatedVote(gVote, header.Number.Uint64())
 						}
+						return valset, votes, tally
 					}
-				} else {
-					// invalid value type
-					return true, false
 				}
-				return true, true
-			}
-
-			if checkVotePass, typeAssertPass := checkValidator(); !checkVotePass {
-				// this vote is adding existing validator or removing nonexistent validator
-				if self == proposer {
-					gov.removeDuplicatedVote(gVote, header.Number.Uint64())
-				}
-				return valset, votes, tally
-			} else if !typeAssertPass {
+			} else {
 				logger.Warn("Invalid value Type", "number", header.Number, "Validator", gVote.Validator, "key", gVote.Key, "value", gVote.Value)
 			}
 		}
