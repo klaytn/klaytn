@@ -45,15 +45,17 @@ func UnpackEncodedData(ver uint8, packed []byte) map[string]interface{} {
 }
 
 func GetURI(ev IRequestValueTransferEvent) string {
-	uri := ""
 	switch evType := ev.(type) {
 	case RequestValueTransferEncodedEvent:
 		decoded := UnpackEncodedData(evType.EncodingVer, evType.EncodedData)
-		uri = decoded["uri"].(string)
+		uri, ok := decoded["uri"].(string)
+		if !ok {
+			return ""
+		}
 		if len(uri) <= 64 {
 			return uri
 		}
-		uri = string(bytes.Trim([]byte(uri[64:]), "\x00"))
+		return string(bytes.Trim([]byte(uri[64:]), "\x00"))
 	}
-	return uri
+	return ""
 }
