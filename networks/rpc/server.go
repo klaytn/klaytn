@@ -114,7 +114,12 @@ func (s *Server) GetServices() serviceRegistry {
 // RegisterName will create a service for the given rcvr type under the given name. When no methods on the given rcvr
 // match the criteria to be either a RPC method or a subscription an error is returned. Otherwise a new service is
 // created and added to the service collection this server instance serves.
-func (s *Server) RegisterName(name string, rcvr interface{}, isPriviliged bool) error {
+func (s *Server) RegisterName(name string, rcvr interface{}, isPrivileged bool) error {
+	if s.scheme != IPCServer && isPrivileged {
+		log_unregistered_apis(name, rcvr, s.scheme)
+		return nil
+	}
+
 	if s.services == nil {
 		s.services = make(serviceRegistry)
 	}
@@ -131,20 +136,10 @@ func (s *Server) RegisterName(name string, rcvr interface{}, isPriviliged bool) 
 	}
 
 	methods, subscriptions := suitableCallbacks(rcvrVal, svc.typ)
-	if isPriviliged && s.scheme != IPCServer {
-		for name := range methods {
-			logger.Trace("The priviliged API(method) is not registered", "API", name, "scheme", s.scheme)
-			delete(methods, name)
-		}
-		for name := range subscriptions {
-			logger.Trace("The priviliged API(subscription) is not registered", "API", name, "scheme", s.scheme)
-			delete(subscriptions, name)
-		}
-	}
 
 	// already a previous service register under given sname, merge methods/subscriptions
 	if regsvc, present := s.services[name]; present {
-		if len(methods) == 0 && len(subscriptions) == 0 && !isPriviliged {
+		if len(methods) == 0 && len(subscriptions) == 0 {
 			return fmt.Errorf("Service %T doesn't have any suitable methods/subscriptions to expose", rcvr)
 		}
 		for _, m := range methods {
@@ -153,6 +148,7 @@ func (s *Server) RegisterName(name string, rcvr interface{}, isPriviliged bool) 
 		for _, s := range subscriptions {
 			regsvc.subscriptions[formatName(s.method.Name)] = s
 		}
+		logger.Debug("service registered", "namespace", name, "scheme", SchemeToString(s.scheme))
 		return nil
 	}
 
@@ -160,14 +156,11 @@ func (s *Server) RegisterName(name string, rcvr interface{}, isPriviliged bool) 
 	svc.callbacks, svc.subscriptions = methods, subscriptions
 
 	if len(svc.callbacks) == 0 && len(svc.subscriptions) == 0 {
-		if isPriviliged {
-			return nil
-		} else {
-			return fmt.Errorf("Service %T doesn't have any suitable methods/subscriptions to expose", rcvr)
-		}
+		return fmt.Errorf("Service %T doesn't have any suitable methods/subscriptions to expose", rcvr)
 	}
 
 	s.services[svc.name] = svc
+	logger.Debug("service registered", "namespace", name, "scheme", SchemeToString(s.scheme))
 	return nil
 }
 

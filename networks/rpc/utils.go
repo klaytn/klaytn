@@ -248,29 +248,6 @@ func sanitizeTimeouts(timeouts HTTPTimeouts) HTTPTimeouts {
 	return timeouts
 }
 
-/*
-func GenerateBanList(apiService interface{}, apis []interface{}) []uintptr {
-	serviceTyp := reflect.TypeOf(apiService)
-	apiBans := make([]uintptr, len(apis))
-	for idx, api := range apis {
-		funcFullName := strings.Split((runtime.FuncForPC(reflect.ValueOf(api).Pointer()).Name()), ".")
-		funcName := strings.TrimSuffix(funcFullName[len(funcFullName)-1], "-fm")
-		var funcPtr uintptr
-		for i := 0; i < serviceTyp.NumMethod(); i++ {
-			method := serviceTyp.Method(i)
-			if method.Name == funcName {
-				funcPtr = method.Func.Pointer()
-				break
-			}
-		}
-		if funcPtr == 0 {
-			panic(fmt.Sprintf("The function name %s is not found", funcName))
-		}
-		apiBans[idx] = funcPtr
-	}
-	return apiBans
-}
-
 func SchemeToString(scheme ServerScheme) string {
 	switch scheme {
 	case HTTPServer:
@@ -287,7 +264,21 @@ func SchemeToString(scheme ServerScheme) string {
 		return "InProc"
 	case IPCServer:
 		return "IPC"
+
 	}
 	return ""
 }
-*/
+
+func log_unregistered_apis(namespace string, svc interface{}, scheme ServerScheme) {
+	svcTyp := reflect.TypeOf(svc)
+	svcVal := reflect.ValueOf(svc)
+	methods, subscriptions := suitableCallbacks(svcVal, svcTyp)
+	for name := range methods {
+		logger.Trace("The priviliged API(method) is not registered",
+			"namespace", namespace, "API", name, "scheme", SchemeToString(scheme))
+	}
+	for name := range subscriptions {
+		logger.Trace("The priviliged API(subscription) is not registered",
+			"namespace", namespace, "API", name, "scheme", SchemeToString(scheme))
+	}
+}

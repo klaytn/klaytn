@@ -38,7 +38,6 @@ func StartHTTPEndpoint(endpoint string, apis []API, modules []string, cors []str
 			if err := handler.RegisterName(api.Namespace, api.Service, api.Privileged); err != nil {
 				return nil, nil, err
 			}
-			logger.Debug("HTTP registered", "namespace", api.Namespace)
 		}
 	}
 	// All APIs registered, start the HTTP listener
@@ -67,7 +66,6 @@ func StartFastHTTPEndpoint(endpoint string, apis []API, modules []string, cors [
 			if err := handler.RegisterName(api.Namespace, api.Service, api.Privileged); err != nil {
 				return nil, nil, err
 			}
-			logger.Debug("FastHTTP registered", "namespace", api.Namespace)
 		}
 	}
 	// All APIs registered, start the HTTP listener
@@ -97,7 +95,6 @@ func StartWSEndpoint(endpoint string, apis []API, modules []string, wsOrigins []
 			if err := handler.RegisterName(api.Namespace, api.Service, api.Privileged); err != nil {
 				return nil, nil, err
 			}
-			logger.Debug("WebSocket registered", "service", api.Service, "namespace", api.Namespace)
 		}
 	}
 	// All APIs registered, start the HTTP listener
@@ -127,7 +124,6 @@ func StartFastWSEndpoint(endpoint string, apis []API, modules []string, wsOrigin
 			if err := handler.RegisterName(api.Namespace, api.Service, api.Privileged); err != nil {
 				return nil, nil, err
 			}
-			logger.Debug("FastWebSocket registered", "service", api.Service, "namespace", api.Namespace)
 		}
 	}
 	// All APIs registered, start the HTTP listener
@@ -148,10 +144,10 @@ func StartIPCEndpoint(ipcEndpoint string, apis []API) (net.Listener, *Server, er
 	// Register all the APIs exposed by the services.
 	handler := NewServer(IPCServer)
 	for _, api := range apis {
+		// The priviliged option is not considered in IPC scheme
 		if err := handler.RegisterName(api.Namespace, api.Service, api.Privileged); err != nil {
 			return nil, nil, err
 		}
-		logger.Debug("IPC registered", "namespace", api.Namespace)
 	}
 	// All APIs registered, start the IPC listener.
 	listener, err := ipcListen(ipcEndpoint)

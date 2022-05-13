@@ -371,7 +371,6 @@ func (n *Node) startInProc(apis []rpc.API) error {
 		if err := handler.RegisterName(api.Namespace, api.Service, api.Privileged); err != nil {
 			return err
 		}
-		n.logger.Debug("InProc registered", "service", api.Service, "namespace", api.Namespace)
 	}
 	n.inprocHandler = handler
 	return nil
@@ -426,7 +425,6 @@ func (n *Node) startgRPC(apis []rpc.API) error {
 			if err := handler.RegisterName(api.Namespace, api.Service, api.Privileged); err != nil {
 				return err
 			}
-			n.logger.Debug("gRPC registered", "namespace", api.Namespace)
 		}
 	}
 
