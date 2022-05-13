@@ -742,9 +742,14 @@ var (
 		Usage: "Set the value transfer recovery interval (seconds)",
 		Value: 5,
 	}
-	ServiceChainDefaultTxGasLimitFlag = cli.Uint64Flag{
-		Name:  "scdefaultgaslimit",
-		Usage: "Set the default value of gas limit for transactions made by bridges",
+	ServiceChainParentOperatorTxGasLimitFlag = cli.Uint64Flag{
+		Name:  "sc.parentoperator.gaslimit",
+		Usage: "Set the default value of gas limit for transactions made by bridge parent operator",
+		Value: 10000000,
+	}
+	ServiceChainChildOperatorTxGasLimitFlag = cli.Uint64Flag{
+		Name:  "sc.childoperator.gaslimit",
+		Usage: "Set the default value of gas limit for transactions made by bridge child operator",
 		Value: 10000000,
 	}
 	ServiceChainNewAccountFlag = cli.BoolFlag{
