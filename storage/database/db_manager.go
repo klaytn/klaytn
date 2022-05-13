@@ -1538,7 +1538,7 @@ func (dbm *databaseManager) WriteBadBlock(block *types.Block) {
 }
 
 // DeleteBadBlocks deletes all the bad blocks from the database. Not used anywhere
-func(dbm *databaseManager) DeleteBadBlocks() {
+func (dbm *databaseManager) DeleteBadBlocks() {
 	db := dbm.getDatabase(MiscDB)
 	if err := db.Delete(badBlockKey); err != nil {
 		logger.Error("Failed to delete bad blocks", "err", err)
