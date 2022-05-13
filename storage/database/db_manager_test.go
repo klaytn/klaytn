@@ -352,19 +352,19 @@ func TestDBManager_BadBlock(t *testing.T) {
 		block := types.NewBlockWithHeader(header)
 
 		if entry := dbm.ReadBadBlock(block.Hash()); entry != nil {
-			t.Fatalf("Non existance block returned, %v",entry)
+			t.Fatalf("Non existance block returned, %v", entry)
 		}
 		dbm.WriteBadBlock(block)
 		if entry := dbm.ReadBadBlock(block.Hash()); entry == nil {
-			t.Fatalf("Existing bad block didn't returned, %v",entry)
+			t.Fatalf("Existing bad block didn't returned, %v", entry)
 		} else if entry.Hash() != block.Hash() {
-			t.Fatalf("retrived block mismatching, have %v, want %v",entry,block)
+			t.Fatalf("retrived block mismatching, have %v, want %v", entry, block)
 		}
-		if badblocks,_ := dbm.ReadAllBadBlocks(); len(badblocks) != 1 {
-			for _,b := range badblocks{
+		if badblocks, _ := dbm.ReadAllBadBlocks(); len(badblocks) != 1 {
+			for _, b := range badblocks {
 				t.Log(b)
 			}
-			t.Fatalf("bad blocks length mismatching, have %d, want %d",len(badblocks),1)
+			t.Fatalf("bad blocks length mismatching, have %d, want %d", len(badblocks), 1)
 
 		}
 
@@ -372,27 +372,27 @@ func TestDBManager_BadBlock(t *testing.T) {
 		blocktwo := types.NewBlockWithHeader(headertwo)
 		dbm.WriteBadBlock(blocktwo)
 		if entry := dbm.ReadBadBlock(blocktwo.Hash()); entry == nil {
-			t.Fatalf("Existing bad block didn't returned, %v",entry)
+			t.Fatalf("Existing bad block didn't returned, %v", entry)
 		} else if entry.Hash() != blocktwo.Hash() {
-			t.Fatalf("retrived block mismatching, have %v, want %v",entry,block)
+			t.Fatalf("retrived block mismatching, have %v, want %v", entry, block)
 		}
 
 		//block #1 insert again
 		dbm.WriteBadBlock(block)
-		badBlocks,_ := dbm.ReadAllBadBlocks()
+		badBlocks, _ := dbm.ReadAllBadBlocks()
 		if len(badBlocks) != 2 {
-			t.Fatalf("bad block db len mismatching, have %d, want %d",len(badBlocks),2)
+			t.Fatalf("bad block db len mismatching, have %d, want %d", len(badBlocks), 2)
 		}
 
 		// Write a bunch of bad blocks, all the blocks are should sorted
 		// in reverse order. The extra blocks should be truncated.
 		for _, n := range rand.Perm(150) {
 			block := types.NewBlockWithHeader(&types.Header{
-				Number:      big.NewInt(int64(n)),
+				Number: big.NewInt(int64(n)),
 			})
 			dbm.WriteBadBlock(block)
 		}
-		badBlocks,_ = dbm.ReadAllBadBlocks()
+		badBlocks, _ = dbm.ReadAllBadBlocks()
 		if len(badBlocks) != badBlockToKeep {
 			t.Fatalf("The number of persised bad blocks in incorrect %d", len(badBlocks))
 		}
@@ -404,7 +404,7 @@ func TestDBManager_BadBlock(t *testing.T) {
 
 		//delete DB
 		dbm.DeleteBadBlocks()
-		if badblocks,_ := dbm.ReadAllBadBlocks(); len(badblocks) != 0 {
+		if badblocks, _ := dbm.ReadAllBadBlocks(); len(badblocks) != 0 {
 			t.Fatalf("Failed to delete bad blocks")
 		}
 
