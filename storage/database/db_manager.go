@@ -1480,12 +1480,12 @@ func (dbm *databaseManager) ReadBadBlock(hash common.Hash) *types.Block {
 // ReadAllBadBlocks retrieves all the bad blocks in the database.
 // All returned blocks are sorted in reverse order by number.
 func (dbm *databaseManager) ReadAllBadBlocks() ([]*types.Block, error) {
-	db := dbm.getDatabase(MiscDB)
-	blob, err := db.Get(badBlockKey)
 	var (
 		badBlocks badBlockList
 		blocks    []*types.Block
 	)
+	db := dbm.getDatabase(MiscDB)
+	blob, err := db.Get(badBlockKey)
 	if err != nil {
 		return nil, err
 	}
