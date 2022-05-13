@@ -164,6 +164,37 @@ func TestGovParamSet_New(t *testing.T) {
 	assert.True(t, ok)
 }
 
+func TestGovParamSet_Merged(t *testing.T) {
+	base, err := NewGovParamSetStrMap(map[string]interface{}{
+		"istanbul.epoch":         123456,
+		"istanbul.committeesize": 77,
+	})
+	assert.Nil(t, err)
+
+	update, err := NewGovParamSetStrMap(map[string]interface{}{
+		"istanbul.committeesize": 99,
+		"istanbul.policy":        2,
+	})
+	assert.Nil(t, err)
+
+	p := NewGovParamSetMerged(base, update)
+
+	// Was only in base
+	v, ok := p.Get(Epoch)
+	assert.Equal(t, uint64(123456), v)
+	assert.True(t, ok)
+
+	// Was only in update
+	v, ok = p.Get(Policy)
+	assert.Equal(t, uint64(2), v)
+	assert.True(t, ok)
+
+	// Was in both - prefers the value in update
+	v, ok = p.Get(CommitteeSize)
+	assert.Equal(t, uint64(99), v)
+	assert.True(t, ok)
+}
+
 func TestGovParamSet_RegressDb(t *testing.T) {
 	// MiscDB stores governance data as JSON strings. The value types can be
 	// slightly wrong during unmarshal because we unmarshal into interface{}.

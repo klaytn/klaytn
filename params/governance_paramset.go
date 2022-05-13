@@ -248,6 +248,19 @@ func NewGovParamSet() *GovParamSet {
 	}
 }
 
+// Return a new GovParamSet that contains keys from both input sets.
+// If a key belongs to both sets, the value from `update` is used.
+func NewGovParamSetMerged(base *GovParamSet, update *GovParamSet) *GovParamSet {
+	p := NewGovParamSet()
+	for key, value := range base.items {
+		p.items[key] = value
+	}
+	for key, value := range update.items {
+		p.items[key] = value
+	}
+	return p
+}
+
 func NewGovParamSetStrMap(items map[string]interface{}) (*GovParamSet, error) {
 	p := NewGovParamSet()
 
