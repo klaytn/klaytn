@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/log"
 )
 
 var (
@@ -387,4 +388,87 @@ func (p *GovParamSet) IntMap() map[int]interface{} {
 func (p *GovParamSet) Get(key int) (interface{}, bool) {
 	v, ok := p.items[key]
 	return v, ok
+}
+
+// Return a parameter value or return a nil if the key does not exist.
+func (p *GovParamSet) MustGet(key int) interface{} {
+	if v, ok := p.Get(key); ok {
+		return v
+	} else {
+		logger := log.NewModuleLogger(log.Governance)
+		logger.Crit("Attempted to get missing GovParam item", "key", key, "name", govParamNamesReverse[key])
+		return nil
+	}
+}
+
+// Nominal getters. Shortcut for MustGet() + type assertion.
+
+func (p *GovParamSet) GovernanceModeStr() string {
+	return p.MustGet(GovernanceMode).(string)
+}
+
+func (p *GovParamSet) GovernanceModeInt() int {
+	return govModeNames[p.GovernanceModeStr()]
+}
+
+func (p *GovParamSet) GoverningNode() common.Address {
+	return p.MustGet(GoverningNode).(common.Address)
+}
+
+func (p *GovParamSet) Epoch() uint64 {
+	return p.MustGet(Epoch).(uint64)
+}
+
+func (p *GovParamSet) Policy() uint64 {
+	return p.MustGet(Policy).(uint64)
+}
+
+func (p *GovParamSet) CommitteeSize() uint64 {
+	return p.MustGet(CommitteeSize).(uint64)
+}
+
+func (p *GovParamSet) UnitPrice() uint64 {
+	return p.MustGet(UnitPrice).(uint64)
+}
+
+func (p *GovParamSet) MintingAmountStr() string {
+	return p.MustGet(MintingAmount).(string)
+}
+
+func (p *GovParamSet) MintingAmountBig() *big.Int {
+	n, _ := new(big.Int).SetString(p.MintingAmountStr(), 10)
+	return n
+}
+
+func (p *GovParamSet) Ratio() string {
+	return p.MustGet(Ratio).(string)
+}
+
+func (p *GovParamSet) UseGiniCoeff() bool {
+	return p.MustGet(UseGiniCoeff).(bool)
+}
+
+func (p *GovParamSet) DeferredTxFee() bool {
+	return p.MustGet(DeferredTxFee).(bool)
+}
+
+func (p *GovParamSet) MinimumStakeStr() string {
+	return p.MustGet(MinimumStake).(string)
+}
+
+func (p *GovParamSet) MinimumStakeBig() *big.Int {
+	n, _ := new(big.Int).SetString(p.MinimumStakeStr(), 10)
+	return n
+}
+
+func (p *GovParamSet) StakeUpdateInterval() uint64 {
+	return p.MustGet(StakeUpdateInterval).(uint64)
+}
+
+func (p *GovParamSet) ProposerRefreshInterval() uint64 {
+	return p.MustGet(ProposerRefreshInterval).(uint64)
+}
+
+func (p *GovParamSet) Timeout() uint64 {
+	return p.MustGet(Timeout).(uint64)
 }
