@@ -3,13 +3,18 @@ package params
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"math/big"
 	"reflect"
 	"strconv"
 	"strings"
 
 	"github.com/klaytn/klaytn/common"
+)
+
+var (
+	errUnknownGovParamKey  = errors.New("Unknown governance param key")
+	errUnknownGovParamName = errors.New("Unknown governance param name")
+	errBadGovParamValue    = errors.New("Malformed governance param value")
 )
 
 type govParamType struct {
@@ -267,7 +272,7 @@ func NewGovParamSetStrMap(items map[string]interface{}) (*GovParamSet, error) {
 	for name, value := range items {
 		key, ok := govParamNames[name]
 		if !ok {
-			return nil, fmt.Errorf("Unknown governance param '%s'", name)
+			return nil, errUnknownGovParamName
 		}
 		err := p.set(key, value)
 		if err != nil {
@@ -297,7 +302,7 @@ func NewGovParamSetBytesMap(items map[string][]byte) (*GovParamSet, error) {
 	for name, value := range items {
 		key, ok := govParamNames[name]
 		if !ok {
-			return nil, fmt.Errorf("Unknown governance param '%s'", name)
+			return nil, errUnknownGovParamName
 		}
 		err := p.setBytes(key, value)
 		if err != nil {
@@ -339,11 +344,11 @@ func NewGovParamSetChainConfig(config *ChainConfig) (*GovParamSet, error) {
 func (p *GovParamSet) set(key int, value interface{}) error {
 	ty, ok := govParamTypes[key]
 	if !ok {
-		return errors.New("Unknown governance param key")
+		return errUnknownGovParamKey
 	}
 	parsed, ok := ty.ParseValue(value)
 	if !ok {
-		return errors.New("Malformed governance param value")
+		return errBadGovParamValue
 	}
 	p.items[key] = parsed
 	return nil
@@ -352,11 +357,11 @@ func (p *GovParamSet) set(key int, value interface{}) error {
 func (p *GovParamSet) setBytes(key int, bytes []byte) error {
 	ty, ok := govParamTypes[key]
 	if !ok {
-		return errors.New("Unknown governance param key")
+		return errUnknownGovParamKey
 	}
 	parsed, ok := ty.ParseBytes(bytes)
 	if !ok {
-		return errors.New("Malformed governance param value")
+		return errBadGovParamValue
 	}
 	p.items[key] = parsed
 	return nil
