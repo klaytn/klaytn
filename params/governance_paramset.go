@@ -291,6 +291,22 @@ func NewGovParamSetIntMap(items map[int]interface{}) (*GovParamSet, error) {
 	return p, nil
 }
 
+func NewGovParamSetBytesMap(items map[string][]byte) (*GovParamSet, error) {
+	p := NewGovParamSet()
+
+	for name, value := range items {
+		key, ok := govParamNames[name]
+		if !ok {
+			return nil, fmt.Errorf("Unknown governance param '%s'", name)
+		}
+		err := p.setBytes(key, value)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return p, nil
+}
+
 func NewGovParamSetChainConfig(config *ChainConfig) (*GovParamSet, error) {
 	items := make(map[int]interface{})
 	if config.Istanbul != nil {
@@ -326,6 +342,19 @@ func (p *GovParamSet) set(key int, value interface{}) error {
 		return errors.New("Unknown governance param key")
 	}
 	parsed, ok := ty.ParseValue(value)
+	if !ok {
+		return errors.New("Malformed governance param value")
+	}
+	p.items[key] = parsed
+	return nil
+}
+
+func (p *GovParamSet) setBytes(key int, bytes []byte) error {
+	ty, ok := govParamTypes[key]
+	if !ok {
+		return errors.New("Unknown governance param key")
+	}
+	parsed, ok := ty.ParseBytes(bytes)
 	if !ok {
 		return errors.New("Malformed governance param value")
 	}

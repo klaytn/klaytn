@@ -156,6 +156,14 @@ func TestGovParamSet_New(t *testing.T) {
 	assert.Equal(t, uint64(604800), v)
 	assert.True(t, ok)
 
+	p, err = NewGovParamSetBytesMap(map[string][]byte{
+		"istanbul.epoch": {0x12, 0x34},
+	})
+	assert.Nil(t, err)
+	v, ok = p.Get(Epoch)
+	assert.Equal(t, uint64(0x1234), v)
+	assert.True(t, ok)
+
 	c := CypressChainConfig
 	p, err = NewGovParamSetChainConfig(c)
 	assert.Nil(t, err)
