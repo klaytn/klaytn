@@ -264,7 +264,6 @@ func SchemeToString(scheme ServerScheme) string {
 		return "InProc"
 	case IPCServer:
 		return "IPC"
-
 	}
 	return ""
 }
