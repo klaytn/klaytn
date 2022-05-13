@@ -219,7 +219,7 @@ func (bi *BridgeInfo) processingPendingRequestEvents() {
 
 		if err := bi.handleRequestValueTransferEvent(ev); err != nil {
 			bi.AddRequestValueTransferEvents(ReadyEvent[idx:])
-			logger.Debug("Failed handle request value transfer event", "err", err, "len(RePutEvent)", len(ReadyEvent[idx:]))
+			logger.Error("Failed handle request value transfer event", "err", err, "len(RePutEvent)", len(ReadyEvent[idx:]))
 			return
 		}
 	}
