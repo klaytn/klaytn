@@ -1482,14 +1482,16 @@ func (dbm *databaseManager) ReadBadBlock(hash common.Hash) *types.Block {
 func (dbm *databaseManager) ReadAllBadBlocks() ([]*types.Block, error) {
 	db := dbm.getDatabase(MiscDB)
 	blob, err := db.Get(badBlockKey)
+	var (
+		badBlocks badBlockList
+		blocks    []*types.Block
+	)
 	if err != nil {
 		return nil, err
 	}
-	var badBlocks badBlockList
 	if err := rlp.DecodeBytes(blob, &badBlocks); err != nil {
 		return nil, err
 	}
-	var blocks []*types.Block
 	for _, bad := range badBlocks {
 		blocks = append(blocks, types.NewBlockWithHeader(bad.Header).WithBody(bad.Body.Transactions))
 	}
