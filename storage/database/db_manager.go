@@ -1441,7 +1441,7 @@ func (dbm *databaseManager) DeleteBlock(hash common.Hash, number uint64) {
 	dbm.cm.deleteBlockCache(hash)
 }
 
-const badBlockToKeep = 1000
+const badBlockToKeep = 100
 
 type badBlock struct {
 	Header *types.Header
@@ -1489,7 +1489,7 @@ func (dbm *databaseManager) ReadAllBadBlocks() ([]*types.Block, error) {
 	if err := rlp.DecodeBytes(blob, &badBlocks); err != nil {
 		return nil, err
 	}
-	blocks := make([]*types.Block, len(badBlocks))
+	var blocks []*types.Block
 	for _, bad := range badBlocks {
 		blocks = append(blocks, types.NewBlockWithHeader(bad.Header).WithBody(bad.Body.Transactions))
 	}

@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"math/big"
+	"math/rand"
 	"os"
 	"strconv"
 	"strings"
@@ -340,6 +341,73 @@ func TestDBManager_Block(t *testing.T) {
 		assert.Nil(t, dbm.ReadBlock(headerHash, num1))
 		assert.Nil(t, dbm.ReadBlockByHash(headerHash))
 		assert.Nil(t, dbm.ReadBlockByNumber(num1))
+	}
+}
+
+func TestDBManager_BadBlock(t *testing.T) {
+	header := &types.Header{Number: big.NewInt(int64(num1))}
+	headertwo := &types.Header{Number: big.NewInt(int64(num2))}
+	for _, dbm := range dbManagers {
+		//block #1 test
+		block := types.NewBlockWithHeader(header)
+
+		if entry := dbm.ReadBadBlock(block.Hash()); entry != nil {
+			t.Fatalf("Non existance block returned, %v",entry)
+		}
+		dbm.WriteBadBlock(block)
+		if entry := dbm.ReadBadBlock(block.Hash()); entry == nil {
+			t.Fatalf("Existing bad block didn't returned, %v",entry)
+		} else if entry.Hash() != block.Hash() {
+			t.Fatalf("retrived block mismatching, have %v, want %v",entry,block)
+		}
+		if badblocks,_ := dbm.ReadAllBadBlocks(); len(badblocks) != 1 {
+			for _,b := range badblocks{
+				t.Log(b)
+			}
+			t.Fatalf("bad blocks length mismatching, have %d, want %d",len(badblocks),1)
+
+		}
+
+		//block #2 test
+		blocktwo := types.NewBlockWithHeader(headertwo)
+		dbm.WriteBadBlock(blocktwo)
+		if entry := dbm.ReadBadBlock(blocktwo.Hash()); entry == nil {
+			t.Fatalf("Existing bad block didn't returned, %v",entry)
+		} else if entry.Hash() != blocktwo.Hash() {
+			t.Fatalf("retrived block mismatching, have %v, want %v",entry,block)
+		}
+
+		//block #1 insert again
+		dbm.WriteBadBlock(block)
+		badBlocks,_ := dbm.ReadAllBadBlocks()
+		if len(badBlocks) != 2 {
+			t.Fatalf("bad block db len mismatching, have %d, want %d",len(badBlocks),2)
+		}
+
+		// Write a bunch of bad blocks, all the blocks are should sorted
+		// in reverse order. The extra blocks should be truncated.
+		for _, n := range rand.Perm(150) {
+			block := types.NewBlockWithHeader(&types.Header{
+				Number:      big.NewInt(int64(n)),
+			})
+			dbm.WriteBadBlock(block)
+		}
+		badBlocks,_ = dbm.ReadAllBadBlocks()
+		if len(badBlocks) != badBlockToKeep {
+			t.Fatalf("The number of persised bad blocks in incorrect %d", len(badBlocks))
+		}
+		for i := 0; i < len(badBlocks)-1; i++ {
+			if badBlocks[i].NumberU64() < badBlocks[i+1].NumberU64() {
+				t.Fatalf("The bad blocks are not sorted #[%d](%d) < #[%d](%d)", i, i+1, badBlocks[i].NumberU64(), badBlocks[i+1].NumberU64())
+			}
+		}
+
+		//delete DB
+		dbm.DeleteBadBlocks()
+		if badblocks,_ := dbm.ReadAllBadBlocks(); len(badblocks) != 0 {
+			t.Fatalf("Failed to delete bad blocks")
+		}
+
 	}
 }
 
