@@ -75,6 +75,18 @@ func makeCommittedSeals(hash common.Hash) [][]byte {
 	return committedSeals
 }
 
+// Include a node from the global nodeKeys and addrs
+func includeNode(addr common.Address, key *ecdsa.PrivateKey) {
+	for _, a := range addrs {
+		if a.String() == addr.String() {
+			// already exists
+			return
+		}
+	}
+	nodeKeys = append(nodeKeys, key)
+	addrs = append(addrs, addr)
+}
+
 // Exclude a node from the global nodeKeys and addrs
 func excludeNodeByAddr(target common.Address) {
 	for i, a := range addrs {
@@ -1057,6 +1069,40 @@ func TestSnapshot_Validators_AddRemove(t *testing.T) {
 				checkpointInterval + 9: {[]int{0, 1, 2, 3}},
 			},
 		},
+		{ // multiple addvalidator & removevalidator
+			10,
+			map[int]vote{
+				0: {"governance.removevalidator", 3},
+				2: {"governance.addvalidator", 3},
+				4: {"governance.addvalidator", 3},
+				6: {"governance.removevalidator", 3},
+				8: {"governance.removevalidator", 3},
+			},
+			map[int]expected{
+				1: {[]int{0, 1, 2}},
+				3: {[]int{0, 1, 2, 3}},
+				5: {[]int{0, 1, 2, 3}},
+				7: {[]int{0, 1, 2}},
+				9: {[]int{0, 1, 2}},
+			},
+		},
+		{ // multiple addvalidators & removevalidators
+			10,
+			map[int]vote{
+				0: {"governance.removevalidator", []int{2, 3}},
+				2: {"governance.addvalidator", []int{2, 3}},
+				4: {"governance.addvalidator", []int{2, 3}},
+				6: {"governance.removevalidator", []int{2, 3}},
+				8: {"governance.removevalidator", []int{2, 3}},
+			},
+			map[int]expected{
+				1: {[]int{0, 1}},
+				3: {[]int{0, 1, 2, 3}},
+				5: {[]int{0, 1, 2, 3}},
+				7: {[]int{0, 1}},
+				9: {[]int{0, 1}},
+			},
+		},
 	}
 
 	var configItems []interface{}
@@ -1115,8 +1161,7 @@ func TestSnapshot_Validators_AddRemove(t *testing.T) {
 				}
 				if v.key == "governance.addvalidator" {
 					for _, i := range indices {
-						nodeKeys = append(nodeKeys, allNodeKeys[i])
-						addrs = append(addrs, allAddrs[i])
+						includeNode(allAddrs[i], allNodeKeys[i])
 					}
 				}
 				if v.key == "governance.removevalidator" {
