@@ -622,7 +622,8 @@ workflows:
           image: klaytn/klaytn
           tag: latest,$CIRCLE_TAG
           executor: docker/docker
-          use-remote-docker: 20.10.14
+          use-remote-docker: true
+          remote-docker-version: 20.10.14
 
       - major-tagging:
           filters:
