@@ -454,6 +454,36 @@ func (bc *BlockChain) SetProposerPolicy(val uint64) {
 	bc.chainConfig.Istanbul.ProposerPolicy = val
 }
 
+func (bc *BlockChain) SetLowerBoundBaseFee(val uint64) {
+	bc.chainConfigMu.RLock()
+	defer bc.chainConfigMu.RUnlock()
+	bc.chainConfig.Governance.KIP71.LowerBoundBaseFee = val
+}
+
+func (bc *BlockChain) SetUpperBoundBaseFee(val uint64) {
+	bc.chainConfigMu.RLock()
+	defer bc.chainConfigMu.RUnlock()
+	bc.chainConfig.Governance.KIP71.UpperBoundBaseFee = val
+}
+
+func (bc *BlockChain) SetGasTarget(val uint64) {
+	bc.chainConfigMu.RLock()
+	defer bc.chainConfigMu.RUnlock()
+	bc.chainConfig.Governance.KIP71.GasTarget = val
+}
+
+func (bc *BlockChain) SetBlockGasLimit(val uint64) {
+	bc.chainConfigMu.RLock()
+	defer bc.chainConfigMu.RUnlock()
+	bc.chainConfig.Governance.KIP71.BlockGasLimit = val
+}
+
+func (bc *BlockChain) SetBaseFeeDenominator(val uint64) {
+	bc.chainConfigMu.RLock()
+	defer bc.chainConfigMu.RUnlock()
+	bc.chainConfig.Governance.KIP71.BaseFeeDenominator = val
+}
+
 func (bc *BlockChain) getProcInterrupt() bool {
 	return atomic.LoadInt32(&bc.procInterrupt) == 1
 }

@@ -54,11 +54,11 @@ var (
 		"istanbul.policy":               params.Policy,
 		"istanbul.committeesize":        params.CommitteeSize,
 		"governance.unitprice":          params.UnitPrice,
-		"reward.lowerboundbasefee":      params.LowerBoundBaseFee,
-		"reward.gastarget":              params.GasTarget,
-		"reward.blockgaslimit":          params.BlockGasLimit,
-		"reward.basefeedenominator":     params.BaseFeeDenominator,
-		"reward.upperboundbasefee":      params.UpperBoundBaseFee,
+		"kip71.lowerboundbasefee":       params.LowerBoundBaseFee,
+		"kip71.gastarget":               params.GasTarget,
+		"kip71.blockgaslimit":           params.BlockGasLimit,
+		"kip71.basefeedenominator":      params.BaseFeeDenominator,
+		"kip71.upperboundbasefee":       params.UpperBoundBaseFee,
 		"reward.mintingamount":          params.MintingAmount,
 		"reward.ratio":                  params.Ratio,
 		"reward.useginicoeff":           params.UseGiniCoeff,
@@ -86,11 +86,11 @@ var (
 		params.Policy:                  "istanbul.policy",
 		params.CommitteeSize:           "istanbul.committeesize",
 		params.UnitPrice:               "governance.unitprice",
-		params.LowerBoundBaseFee:       "reward.lowerboundbasefee",
-		params.UpperBoundBaseFee:       "reward.upperboundbasefee",
-		params.GasTarget:               "reward.gastarget",
-		params.BlockGasLimit:           "reward.blockgaslimit",
-		params.BaseFeeDenominator:      "reward.basefeedenominator",
+		params.LowerBoundBaseFee:       "kip71.lowerboundbasefee",
+		params.UpperBoundBaseFee:       "kip71.upperboundbasefee",
+		params.GasTarget:               "kip71.gastarget",
+		params.BlockGasLimit:           "kip71.blockgaslimit",
+		params.BaseFeeDenominator:      "kip71.basefeedenominator",
 		params.MintingAmount:           "reward.mintingamount",
 		params.Ratio:                   "reward.ratio",
 		params.UseGiniCoeff:            "reward.useginicoeff",
@@ -175,6 +175,11 @@ type blockChain interface {
 	CurrentHeader() *types.Header
 	SetProposerPolicy(val uint64)
 	SetUseGiniCoeff(val bool)
+	SetLowerBoundBaseFee(val uint64)
+	SetUpperBoundBaseFee(val uint64)
+	SetGasTarget(val uint64)
+	SetBlockGasLimit(val uint64)
+	SetBaseFeeDenominator(val uint64)
 }
 
 type Governance struct {

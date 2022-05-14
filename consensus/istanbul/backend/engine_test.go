@@ -1167,27 +1167,27 @@ func TestGovernance_Votes(t *testing.T) {
 				{"governance.governancemode", "none"},     // voted on block 1
 				{"istanbul.committeesize", uint64(4)},     // voted on block 2
 				{"governance.unitprice", uint64(2000000)}, // voted on block 3
-				{"reward.mintingamount", "96000000000"},   // voted on block 4
-				{"reward.ratio", "34/33/33"},              // voted on block 5
-				{"reward.useginicoeff", true},             // voted on block 6
-				{"reward.minimumstake", "5000000"},        // voted on block 7
+				{"kip71.mintingamount", "96000000000"},    // voted on block 4
+				{"kip71.ratio", "34/33/33"},               // voted on block 5
+				{"kip71.useginicoeff", true},              // voted on block 6
+				{"kip71.minimumstake", "5000000"},         // voted on block 7
 			},
 			expected: []governanceItem{
 				{vote{"governance.governancemode", "none"}, 6},
 				{vote{"istanbul.committeesize", uint64(4)}, 6},
 				{vote{"governance.unitprice", uint64(2000000)}, 9},
-				{vote{"reward.mintingamount", "96000000000"}, 9},
-				{vote{"reward.ratio", "34/33/33"}, 9},
-				{vote{"reward.useginicoeff", true}, 12},
-				{vote{"reward.minimumstake", "5000000"}, 12},
+				{vote{"kip71.mintingamount", "96000000000"}, 9},
+				{vote{"kip71.ratio", "34/33/33"}, 9},
+				{vote{"kip71.useginicoeff", true}, 12},
+				{vote{"kip71.minimumstake", "5000000"}, 12},
 				// check governance items on current block
 				{vote{"governance.governancemode", "none"}, 0},
 				{vote{"istanbul.committeesize", uint64(4)}, 0},
 				{vote{"governance.unitprice", uint64(2000000)}, 0},
-				{vote{"reward.mintingamount", "96000000000"}, 0},
-				{vote{"reward.ratio", "34/33/33"}, 0},
-				{vote{"reward.useginicoeff", true}, 0},
-				{vote{"reward.minimumstake", "5000000"}, 0},
+				{vote{"kip71.mintingamount", "96000000000"}, 0},
+				{vote{"kip71.ratio", "34/33/33"}, 0},
+				{vote{"kip71.useginicoeff", true}, 0},
+				{vote{"kip71.minimumstake", "5000000"}, 0},
 			},
 		},
 		{
@@ -1274,87 +1274,87 @@ func TestGovernance_Votes(t *testing.T) {
 		},
 		{
 			votes: []vote{
-				{"reward.lowerboundbasefee", uint64(25000000000)},  // voted on block 1
-				{"reward.lowerboundbasefee", uint64(750000000000)}, // voted on block 2
-				{"reward.lowerboundbasefee", uint64(25000000000)},  // voted on block 3
-				{"reward.lowerboundbasefee", uint64(25000000000)},  // voted on block 4
-				{"reward.lowerboundbasefee", uint64(25000000000)},  // voted on block 5
-				{"reward.lowerboundbasefee", uint64(25000000000)},  // voted on block 6
-				{"reward.lowerboundbasefee", uint64(25000000000)},  // voted on block 7
-				{"reward.lowerboundbasefee", uint64(25000000000)},  // voted on block 8
-				{"reward.lowerboundbasefee", uint64(25000000000)},  // voted on block 9
+				{"kip71.lowerboundbasefee", uint64(25000000000)},  // voted on block 1
+				{"kip71.lowerboundbasefee", uint64(750000000000)}, // voted on block 2
+				{"kip71.lowerboundbasefee", uint64(25000000000)},  // voted on block 3
+				{"kip71.lowerboundbasefee", uint64(25000000000)},  // voted on block 4
+				{"kip71.lowerboundbasefee", uint64(25000000000)},  // voted on block 5
+				{"kip71.lowerboundbasefee", uint64(25000000000)},  // voted on block 6
+				{"kip71.lowerboundbasefee", uint64(25000000000)},  // voted on block 7
+				{"kip71.lowerboundbasefee", uint64(25000000000)},  // voted on block 8
+				{"kip71.lowerboundbasefee", uint64(25000000000)},  // voted on block 9
 			},
 			expected: []governanceItem{
-				{vote{"reward.lowerboundbasefee", uint64(750000000000)}, 6},
-				{vote{"reward.lowerboundbasefee", uint64(25000000000)}, 9},
+				{vote{"kip71.lowerboundbasefee", uint64(750000000000)}, 6},
+				{vote{"kip71.lowerboundbasefee", uint64(25000000000)}, 9},
 			},
 		},
 		{
 			votes: []vote{
-				{"reward.upperboundbasefee", uint64(25000000000)},  // voted on block 1
-				{"reward.upperboundbasefee", uint64(750000000000)}, // voted on block 2
-				{"reward.upperboundbasefee", uint64(25000000000)},  // voted on block 3
-				{"reward.upperboundbasefee", uint64(25000000000)},  // voted on block 4
-				{"reward.upperboundbasefee", uint64(25000000000)},  // voted on block 5
-				{"reward.upperboundbasefee", uint64(25000000000)},  // voted on block 6
-				{"reward.upperboundbasefee", uint64(25000000000)},  // voted on block 7
-				{"reward.upperboundbasefee", uint64(25000000000)},  // voted on block 8
-				{"reward.upperboundbasefee", uint64(25000000000)},  // voted on block 9
+				{"kip71.upperboundbasefee", uint64(25000000000)},  // voted on block 1
+				{"kip71.upperboundbasefee", uint64(750000000000)}, // voted on block 2
+				{"kip71.upperboundbasefee", uint64(25000000000)},  // voted on block 3
+				{"kip71.upperboundbasefee", uint64(25000000000)},  // voted on block 4
+				{"kip71.upperboundbasefee", uint64(25000000000)},  // voted on block 5
+				{"kip71.upperboundbasefee", uint64(25000000000)},  // voted on block 6
+				{"kip71.upperboundbasefee", uint64(25000000000)},  // voted on block 7
+				{"kip71.upperboundbasefee", uint64(25000000000)},  // voted on block 8
+				{"kip71.upperboundbasefee", uint64(25000000000)},  // voted on block 9
 			},
 			expected: []governanceItem{
-				{vote{"reward.upperboundbasefee", uint64(750000000000)}, 6},
-				{vote{"reward.upperboundbasefee", uint64(25000000000)}, 9},
+				{vote{"kip71.upperboundbasefee", uint64(750000000000)}, 6},
+				{vote{"kip71.upperboundbasefee", uint64(25000000000)}, 9},
 			},
 		},
 		{
 			votes: []vote{
-				{"reward.blockgaslimit", uint64(84000000)},  // voted on block 1
-				{"reward.blockgaslimit", uint64(840000000)}, // voted on block 2
-				{"reward.blockgaslimit", uint64(84000000)},  // voted on block 3
-				{"reward.blockgaslimit", uint64(84000000)},  // voted on block 4
-				{"reward.blockgaslimit", uint64(84000000)},  // voted on block 5
-				{"reward.blockgaslimit", uint64(84000000)},  // voted on block 6
-				{"reward.blockgaslimit", uint64(84000000)},  // voted on block 7
-				{"reward.blockgaslimit", uint64(84000000)},  // voted on block 8
-				{"reward.blockgaslimit", uint64(84000000)},  // voted on block 9
+				{"kip71.blockgaslimit", uint64(84000000)},  // voted on block 1
+				{"kip71.blockgaslimit", uint64(840000000)}, // voted on block 2
+				{"kip71.blockgaslimit", uint64(84000000)},  // voted on block 3
+				{"kip71.blockgaslimit", uint64(84000000)},  // voted on block 4
+				{"kip71.blockgaslimit", uint64(84000000)},  // voted on block 5
+				{"kip71.blockgaslimit", uint64(84000000)},  // voted on block 6
+				{"kip71.blockgaslimit", uint64(84000000)},  // voted on block 7
+				{"kip71.blockgaslimit", uint64(84000000)},  // voted on block 8
+				{"kip71.blockgaslimit", uint64(84000000)},  // voted on block 9
 			},
 			expected: []governanceItem{
-				{vote{"reward.blockgaslimit", uint64(840000000)}, 6},
-				{vote{"reward.blockgaslimit", uint64(84000000)}, 9},
+				{vote{"kip71.blockgaslimit", uint64(840000000)}, 6},
+				{vote{"kip71.blockgaslimit", uint64(84000000)}, 9},
 			},
 		},
 		{
 			votes: []vote{
-				{"reward.gastarget", uint64(30000000)}, // voted on block 1
-				{"reward.gastarget", uint64(50000000)}, // voted on block 2
-				{"reward.gastarget", uint64(30000000)}, // voted on block 3
-				{"reward.gastarget", uint64(30000000)}, // voted on block 4
-				{"reward.gastarget", uint64(30000000)}, // voted on block 5
-				{"reward.gastarget", uint64(30000000)}, // voted on block 6
-				{"reward.gastarget", uint64(30000000)}, // voted on block 7
-				{"reward.gastarget", uint64(30000000)}, // voted on block 8
-				{"reward.gastarget", uint64(30000000)}, // voted on block 9
+				{"kip71.gastarget", uint64(30000000)}, // voted on block 1
+				{"kip71.gastarget", uint64(50000000)}, // voted on block 2
+				{"kip71.gastarget", uint64(30000000)}, // voted on block 3
+				{"kip71.gastarget", uint64(30000000)}, // voted on block 4
+				{"kip71.gastarget", uint64(30000000)}, // voted on block 5
+				{"kip71.gastarget", uint64(30000000)}, // voted on block 6
+				{"kip71.gastarget", uint64(30000000)}, // voted on block 7
+				{"kip71.gastarget", uint64(30000000)}, // voted on block 8
+				{"kip71.gastarget", uint64(30000000)}, // voted on block 9
 			},
 			expected: []governanceItem{
-				{vote{"reward.gastarget", uint64(50000000)}, 6},
-				{vote{"reward.gastarget", uint64(30000000)}, 9},
+				{vote{"kip71.gastarget", uint64(50000000)}, 6},
+				{vote{"kip71.gastarget", uint64(30000000)}, 9},
 			},
 		},
 		{
 			votes: []vote{
-				{"reward.basefeedenominator", uint64(64)}, // voted on block 1
-				{"reward.basefeedenominator", uint64(32)}, // voted on block 2
-				{"reward.basefeedenominator", uint64(64)}, // voted on block 3
-				{"reward.basefeedenominator", uint64(64)}, // voted on block 4
-				{"reward.basefeedenominator", uint64(64)}, // voted on block 5
-				{"reward.basefeedenominator", uint64(64)}, // voted on block 6
-				{"reward.basefeedenominator", uint64(64)}, // voted on block 7
-				{"reward.basefeedenominator", uint64(64)}, // voted on block 8
-				{"reward.basefeedenominator", uint64(64)}, // voted on block 9
+				{"kip71.basefeedenominator", uint64(64)}, // voted on block 1
+				{"kip71.basefeedenominator", uint64(32)}, // voted on block 2
+				{"kip71.basefeedenominator", uint64(64)}, // voted on block 3
+				{"kip71.basefeedenominator", uint64(64)}, // voted on block 4
+				{"kip71.basefeedenominator", uint64(64)}, // voted on block 5
+				{"kip71.basefeedenominator", uint64(64)}, // voted on block 6
+				{"kip71.basefeedenominator", uint64(64)}, // voted on block 7
+				{"kip71.basefeedenominator", uint64(64)}, // voted on block 8
+				{"kip71.basefeedenominator", uint64(64)}, // voted on block 9
 			},
 			expected: []governanceItem{
-				{vote{"reward.basefeedenominator", uint64(32)}, 6},
-				{vote{"reward.basefeedenominator", uint64(64)}, 9},
+				{vote{"kip71.basefeedenominator", uint64(32)}, 6},
+				{vote{"kip71.basefeedenominator", uint64(64)}, 9},
 			},
 		},
 	}
@@ -1425,24 +1425,24 @@ func TestChainConfig_UpdateAfterVotes(t *testing.T) {
 
 	testcases := []testcase{
 		{
-			voting:   vote{"reward.lowerboundbasefee", uint64(20000000000)}, // voted on block 1
-			expected: vote{"reward.lowerboundbasefee", uint64(20000000000)},
+			voting:   vote{"kip71.lowerboundbasefee", uint64(20000000000)}, // voted on block 1
+			expected: vote{"kip71.lowerboundbasefee", uint64(20000000000)},
 		},
 		{
-			voting:   vote{"reward.upperboundbasefee", uint64(500000000000)}, // voted on block 1
-			expected: vote{"reward.upperboundbasefee", uint64(500000000000)},
+			voting:   vote{"kip71.upperboundbasefee", uint64(500000000000)}, // voted on block 1
+			expected: vote{"kip71.upperboundbasefee", uint64(500000000000)},
 		},
 		{
-			voting:   vote{"reward.blockgaslimit", uint64(100000000)}, // voted on block 1
-			expected: vote{"reward.blockgaslimit", uint64(100000000)},
+			voting:   vote{"kip71.blockgaslimit", uint64(100000000)}, // voted on block 1
+			expected: vote{"kip71.blockgaslimit", uint64(100000000)},
 		},
 		{
-			voting:   vote{"reward.gastarget", uint64(50000000)}, // voted on block 1
-			expected: vote{"reward.gastarget", uint64(50000000)},
+			voting:   vote{"kip71.gastarget", uint64(50000000)}, // voted on block 1
+			expected: vote{"kip71.gastarget", uint64(50000000)},
 		},
 		{
-			voting:   vote{"reward.basefeedenominator", uint64(32)}, // voted on block 1
-			expected: vote{"reward.basefeedenominator", uint64(32)},
+			voting:   vote{"kip71.basefeedenominator", uint64(32)}, // voted on block 1
+			expected: vote{"kip71.basefeedenominator", uint64(32)},
 		},
 	}
 
@@ -1455,11 +1455,11 @@ func TestChainConfig_UpdateAfterVotes(t *testing.T) {
 		chain, engine := newBlockChain(1, configItems...)
 
 		// test initial governance items
-		assert.Equal(t, uint64(25000000000), chain.Config().Governance.Reward.LowerBoundBaseFee)
-		assert.Equal(t, uint64(750000000000), chain.Config().Governance.Reward.UpperBoundBaseFee)
-		assert.Equal(t, uint64(64), chain.Config().Governance.Reward.BaseFeeDenominator)
-		assert.Equal(t, uint64(84000000), chain.Config().Governance.Reward.BlockGasLimit)
-		assert.Equal(t, uint64(30000000), chain.Config().Governance.Reward.GasTarget)
+		assert.Equal(t, uint64(25000000000), chain.Config().Governance.KIP71.LowerBoundBaseFee)
+		assert.Equal(t, uint64(750000000000), chain.Config().Governance.KIP71.UpperBoundBaseFee)
+		assert.Equal(t, uint64(64), chain.Config().Governance.KIP71.BaseFeeDenominator)
+		assert.Equal(t, uint64(84000000), chain.Config().Governance.KIP71.BlockGasLimit)
+		assert.Equal(t, uint64(30000000), chain.Config().Governance.KIP71.GasTarget)
 
 		// add votes and insert voted blocks
 		var (
@@ -1467,6 +1467,7 @@ func TestChainConfig_UpdateAfterVotes(t *testing.T) {
 			err                         error
 		)
 
+		engine.governance.SetBlockchain(chain)
 		engine.governance.AddVote(tc.voting.key, tc.voting.value)
 		previousBlock = currentBlock
 		currentBlock = makeBlockWithSeal(chain, engine, previousBlock)
@@ -1483,16 +1484,16 @@ func TestChainConfig_UpdateAfterVotes(t *testing.T) {
 
 		govConfig := chain.Config().Governance
 		switch tc.expected.key {
-		case "reward.lowerboundbasefee":
-			assert.Equal(t, tc.expected.value, govConfig.Reward.LowerBoundBaseFee)
-		case "reward.upperboundbasefee":
-			assert.Equal(t, tc.expected.value, govConfig.Reward.UpperBoundBaseFee)
-		case "reward.gastarget":
-			assert.Equal(t, tc.expected.value, govConfig.Reward.GasTarget)
-		case "reward.blockgaslimit":
-			assert.Equal(t, tc.expected.value, govConfig.Reward.BlockGasLimit)
-		case "reward.basefeedenominator":
-			assert.Equal(t, tc.expected.value, govConfig.Reward.BaseFeeDenominator)
+		case "kip71.lowerboundbasefee":
+			assert.Equal(t, tc.expected.value, govConfig.KIP71.LowerBoundBaseFee)
+		case "kip71.upperboundbasefee":
+			assert.Equal(t, tc.expected.value, govConfig.KIP71.UpperBoundBaseFee)
+		case "kip71.gastarget":
+			assert.Equal(t, tc.expected.value, govConfig.KIP71.GasTarget)
+		case "kip71.blockgaslimit":
+			assert.Equal(t, tc.expected.value, govConfig.KIP71.BlockGasLimit)
+		case "kip71.basefeedenominator":
+			assert.Equal(t, tc.expected.value, govConfig.KIP71.BaseFeeDenominator)
 		default:
 			assert.Error(t, nil)
 		}
