@@ -1167,27 +1167,27 @@ func TestGovernance_Votes(t *testing.T) {
 				{"governance.governancemode", "none"},     // voted on block 1
 				{"istanbul.committeesize", uint64(4)},     // voted on block 2
 				{"governance.unitprice", uint64(2000000)}, // voted on block 3
-				{"kip71.mintingamount", "96000000000"},    // voted on block 4
-				{"kip71.ratio", "34/33/33"},               // voted on block 5
-				{"kip71.useginicoeff", true},              // voted on block 6
-				{"kip71.minimumstake", "5000000"},         // voted on block 7
+				{"reward.mintingamount", "96000000000"},   // voted on block 4
+				{"reward.ratio", "34/33/33"},              // voted on block 5
+				{"reward.useginicoeff", true},             // voted on block 6
+				{"reward.minimumstake", "5000000"},        // voted on block 7
 			},
 			expected: []governanceItem{
 				{vote{"governance.governancemode", "none"}, 6},
 				{vote{"istanbul.committeesize", uint64(4)}, 6},
 				{vote{"governance.unitprice", uint64(2000000)}, 9},
-				{vote{"kip71.mintingamount", "96000000000"}, 9},
-				{vote{"kip71.ratio", "34/33/33"}, 9},
-				{vote{"kip71.useginicoeff", true}, 12},
-				{vote{"kip71.minimumstake", "5000000"}, 12},
+				{vote{"reward.mintingamount", "96000000000"}, 9},
+				{vote{"reward.ratio", "34/33/33"}, 9},
+				{vote{"reward.useginicoeff", true}, 12},
+				{vote{"reward.minimumstake", "5000000"}, 12},
 				// check governance items on current block
 				{vote{"governance.governancemode", "none"}, 0},
 				{vote{"istanbul.committeesize", uint64(4)}, 0},
 				{vote{"governance.unitprice", uint64(2000000)}, 0},
-				{vote{"kip71.mintingamount", "96000000000"}, 0},
-				{vote{"kip71.ratio", "34/33/33"}, 0},
-				{vote{"kip71.useginicoeff", true}, 0},
-				{vote{"kip71.minimumstake", "5000000"}, 0},
+				{vote{"reward.mintingamount", "96000000000"}, 0},
+				{vote{"reward.ratio", "34/33/33"}, 0},
+				{vote{"reward.useginicoeff", true}, 0},
+				{vote{"reward.minimumstake", "5000000"}, 0},
 			},
 		},
 		{

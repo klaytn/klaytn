@@ -186,7 +186,7 @@ type GovernanceConfig struct {
 	GoverningNode  common.Address `json:"governingNode"`
 	GovernanceMode string         `json:"governanceMode"`
 	Reward         *RewardConfig  `json:"reward,omitempty"`
-	KIP71          *KIP71Config   `json:kip71,omitempty`
+	KIP71          *KIP71Config   `json:"kip71,omitempty"`
 }
 
 func (g *GovernanceConfig) DeferredTxFee() bool {
