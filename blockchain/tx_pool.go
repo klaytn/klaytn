@@ -655,24 +655,38 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 			return ErrFeeCapVeryHigh
 		}
 
+		// TODO : Need to KIP-71 hardfork.
 		// Ensure gasFeeCap is greater than or equal to gasTipCap.
-		if tx.GasFeeCap().Cmp(tx.GasTipCap()) < 0 {
-			return ErrTipAboveFeeCap
-		}
+		//if tx.GasFeeCap().Cmp(tx.GasTipCap()) < 0 {
+		//	return ErrTipAboveFeeCap
+		//}
+		//
+		//if pool.gasPrice.Cmp(tx.GasTipCap()) != 0 {
+		//	logger.Trace("fail to validate maxPriorityFeePerGas", "unitprice", pool.gasPrice, "maxPriorityFeePerGas", tx.GasFeeCap())
+		//	return ErrInvalidGasTipCap
+		//}
+		//
+		//if pool.gasPrice.Cmp(tx.GasFeeCap()) != 0 {
+		//	logger.Trace("fail to validate maxFeePerGas", "unitprice", pool.gasPrice, "maxFeePerGas", tx.GasTipCap())
+		//	return ErrInvalidGasFeeCap
+		//}
 
-		if pool.gasPrice.Cmp(tx.GasTipCap()) != 0 {
-			logger.Trace("fail to validate maxPriorityFeePerGas", "unitprice", pool.gasPrice, "maxPriorityFeePerGas", tx.GasFeeCap())
-			return ErrInvalidGasTipCap
-		}
-
-		if pool.gasPrice.Cmp(tx.GasFeeCap()) != 0 {
-			logger.Trace("fail to validate maxFeePerGas", "unitprice", pool.gasPrice, "maxFeePerGas", tx.GasTipCap())
-			return ErrInvalidGasFeeCap
+		// Ensure transaction's gasFeeCap is greater than or equal to transaction pool's gasPrice(baseFee).
+		if pool.gasPrice.Cmp(tx.GasFeeCap()) > 0 {
+			logger.Trace("fail to validate maxFeePerGas", "unitPrice", pool.gasPrice, "maxFeePerGas", tx.GasFeeCap())
+			return ErrFeeCapBelowBaseFee
 		}
 	} else {
-		if pool.gasPrice.Cmp(tx.GasPrice()) != 0 {
-			logger.Trace("fail to validate unitprice", "unitprice", pool.gasPrice, "txUnitPrice", tx.GasPrice())
-			return ErrInvalidUnitPrice
+		// TODO : Need to KIP-71 hardfork.
+		//if pool.gasPrice.Cmp(tx.GasPrice()) != 0 {
+		//	logger.Trace("fail to validate unitprice", "unitPrice", pool.gasPrice, "txUnitPrice", tx.GasPrice())
+		//	return ErrInvalidUnitPrice
+		//}
+
+		// Ensure transaction's gasPrice is greater than or equal to transaction pool's gasPrice(baseFee).
+		if pool.gasPrice.Cmp(tx.GasPrice()) > 0 {
+			logger.Trace("fail to validate unitprice", "unitPrice", pool.gasPrice, "txUnitPrice", tx.GasPrice())
+			return ErrGasPriceBelowBaseFee
 		}
 	}
 

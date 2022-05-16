@@ -1897,45 +1897,48 @@ func TestDynamicFeeTransactionVeryHighValues(t *testing.T) {
 	}
 }
 
-func TestDynamicFeeTransactionHasNotSameGasPrice(t *testing.T) {
-	t.Parallel()
+// TODO : Need to KIP-71 hardfork
+//func TestDynamicFeeTransactionHasNotSameGasPrice(t *testing.T) {
+//	t.Parallel()
+//
+//	pool, key := setupTxPoolWithConfig(eip1559Config)
+//	defer pool.Stop()
+//
+//	// Ensure gasFeeCap is greater than or equal to gasTipCap.
+//	tx := dynamicFeeTx(0, 100, big.NewInt(1), big.NewInt(2), key)
+//	if err := pool.AddRemote(tx); err != ErrTipAboveFeeCap {
+//		t.Error("expected", ErrTipAboveFeeCap, "got", err)
+//	}
+//
+//	// The GasTipCap is equal to gasPrice that config at TxPool.
+//	tx2 := dynamicFeeTx(0, 100, big.NewInt(2), big.NewInt(2), key)
+//	if err := pool.AddRemote(tx2); err != ErrInvalidGasTipCap {
+//		t.Error("expected", ErrInvalidGasTipCap, "got", err)
+//	}
+//}
 
-	pool, key := setupTxPoolWithConfig(eip1559Config)
-	defer pool.Stop()
+// TODO : Need to KIP-71 hardfork
+//func TestDynamicFeeTransactionAccepted(t *testing.T) {
+//	t.Parallel()
+//
+//	pool, key := setupTxPoolWithConfig(eip1559Config)
+//	defer pool.Stop()
+//
+//	testAddBalance(pool, crypto.PubkeyToAddress(key.PublicKey), big.NewInt(1000000))
+//
+//	tx := dynamicFeeTx(0, 21000, big.NewInt(1), big.NewInt(1), key)
+//	if err := pool.AddRemote(tx); err != nil {
+//		t.Error("error", "got", err)
+//	}
+//
+//	tx2 := dynamicFeeTx(1, 21000, big.NewInt(1), big.NewInt(1), key)
+//	if err := pool.AddRemote(tx2); err != nil {
+//		t.Error("error", "got", err)
+//	}
+//}
 
-	// Ensure gasFeeCap is greater than or equal to gasTipCap.
-	tx := dynamicFeeTx(0, 100, big.NewInt(1), big.NewInt(2), key)
-	if err := pool.AddRemote(tx); err != ErrTipAboveFeeCap {
-		t.Error("expected", ErrTipAboveFeeCap, "got", err)
-	}
-
-	// The GasTipCap is equal to gasPrice that config at TxPool.
-	tx2 := dynamicFeeTx(0, 100, big.NewInt(2), big.NewInt(2), key)
-	if err := pool.AddRemote(tx2); err != ErrInvalidGasTipCap {
-		t.Error("expected", ErrInvalidGasTipCap, "got", err)
-	}
-}
-
-func TestDynamicFeeTransactionAccepted(t *testing.T) {
-	t.Parallel()
-
-	pool, key := setupTxPoolWithConfig(eip1559Config)
-	defer pool.Stop()
-
-	testAddBalance(pool, crypto.PubkeyToAddress(key.PublicKey), big.NewInt(1000000))
-
-	tx := dynamicFeeTx(0, 21000, big.NewInt(1), big.NewInt(1), key)
-	if err := pool.AddRemote(tx); err != nil {
-		t.Error("error", "got", err)
-	}
-
-	tx2 := dynamicFeeTx(1, 21000, big.NewInt(1), big.NewInt(1), key)
-	if err := pool.AddRemote(tx2); err != nil {
-		t.Error("error", "got", err)
-	}
-}
-
-func TestDynamicFeeTransactionNotAccepted(t *testing.T) {
+// TestDynamicFeeTransactionNotAcceptedNotEnableHardfork tests that the pool didn't accept dynamic tx if the pool didn't enable eip1559 hardfork.
+func TestDynamicFeeTransactionNotAcceptedNotEnableHardfork(t *testing.T) {
 	t.Parallel()
 
 	pool, key := setupTxPool()
@@ -1947,6 +1950,95 @@ func TestDynamicFeeTransactionNotAccepted(t *testing.T) {
 
 	if err := pool.AddLocal(tx); err != ErrTxTypeNotSupported {
 		t.Error("expected", ErrTxTypeNotSupported, "got", err)
+	}
+}
+
+// TestDynamicFeeTransactionAccepted tests that pool accept the transaction which has gasFeeCap bigger than or equal to baseFee.
+func TestDynamicFeeTransactionAccepted(t *testing.T) {
+	t.Parallel()
+	baseFee := big.NewInt(30)
+
+	pool, key := setupTxPoolWithConfig(eip1559Config)
+	defer pool.Stop()
+	pool.SetGasPrice(baseFee)
+
+	testAddBalance(pool, crypto.PubkeyToAddress(key.PublicKey), big.NewInt(10000000000))
+
+	// The GasFeeCap equal to baseFee and gasTipCap is lower than baseFee(ignored).
+	tx := dynamicFeeTx(0, 21000, big.NewInt(30), big.NewInt(1), key)
+	if err := pool.AddRemote(tx); err != nil {
+		t.Error("error", "got", err)
+	}
+
+	// The GasFeeCap bigger than baseFee and gasTipCap is equal to baseFee(ignored).
+	tx2 := dynamicFeeTx(1, 21000, big.NewInt(40), big.NewInt(30), key)
+	if err := pool.AddRemote(tx2); err != nil {
+		t.Error("error", "got", err)
+	}
+
+	// The GasFeeCap greater than baseFee and gasTipCap is bigger than baseFee(ignored).
+	tx3 := dynamicFeeTx(2, 21000, big.NewInt(50), big.NewInt(50), key)
+	if err := pool.AddRemote(tx3); err != nil {
+		t.Error("error", "got", err)
+	}
+}
+
+// TestTransactionAccepted tests that pool accepted transaction which has gasPrice bigger than or equal to baseFee.
+func TestTransactionAccepted(t *testing.T) {
+	t.Parallel()
+	baseFee := big.NewInt(30)
+
+	pool, key := setupTxPoolWithConfig(eip1559Config)
+	defer pool.Stop()
+	pool.SetGasPrice(baseFee)
+
+	testAddBalance(pool, crypto.PubkeyToAddress(key.PublicKey), big.NewInt(10000000000))
+
+	// The transaction's gasPrice equal to baseFee.
+	tx1 := pricedTransaction(0, 21000, big.NewInt(30), key)
+	if err := pool.AddRemote(tx1); err != nil {
+		t.Error("error", "got", err)
+	}
+
+	// The transaction's gasPrice bigger than baseFee.
+	tx2 := pricedTransaction(1, 21000, big.NewInt(40), key)
+	if err := pool.AddRemote(tx2); err != nil {
+		t.Error("error", "got", err)
+	}
+}
+
+// TestDynamicFeeTransactionNotAcceptedWithLowerGasPrice tests that pool didn't accept the transaction which has gasFeeCap lower than baseFee.
+func TestDynamicFeeTransactionNotAcceptedWithLowerGasPrice(t *testing.T) {
+	t.Parallel()
+	baseFee := big.NewInt(30)
+
+	pool, key := setupTxPoolWithConfig(eip1559Config)
+	defer pool.Stop()
+	pool.SetGasPrice(baseFee)
+
+	testAddBalance(pool, crypto.PubkeyToAddress(key.PublicKey), big.NewInt(10000000000))
+
+	// The gasFeeCap equal to baseFee and gasTipCap is lower than baseFee(ignored).
+	tx := dynamicFeeTx(0, 21000, big.NewInt(20), big.NewInt(1), key)
+	if err := pool.AddRemote(tx); err != ErrFeeCapBelowBaseFee {
+		t.Error("error", "got", err)
+	}
+}
+
+// TestTransactionNotAcceptedWithLowerGasPrice tests that pool didn't accept the transaction which has gasPrice lower than baseFee.
+func TestTransactionNotAcceptedWithLowerGasPrice(t *testing.T) {
+	t.Parallel()
+	baseFee := big.NewInt(30)
+
+	pool, key := setupTxPoolWithConfig(eip1559Config)
+	defer pool.Stop()
+	pool.SetGasPrice(baseFee)
+
+	testAddBalance(pool, crypto.PubkeyToAddress(key.PublicKey), big.NewInt(10000000000))
+
+	tx1 := pricedTransaction(0, 21000, big.NewInt(20), key)
+	if err := pool.AddRemote(tx1); err != ErrGasPriceBelowBaseFee {
+		t.Error("error", "got", err)
 	}
 }
 
