@@ -195,6 +195,37 @@ func (m *txSortedMap) Ready(start uint64) types.Transactions {
 	return ready
 }
 
+// ReadyWithGasPrice retrieves a sequentially increasing list of transactions that greater than or
+// equal to the given baseFee starting at the provided nonce that is ready for processing.
+// If there is a transaction lower than the baseFee during the search, only previously collected transactions
+// are returned. The returned transactions will be removed from the list.
+//
+// Note, all transactions with nonces lower than start will also be returned to
+// prevent getting into and invalid state. This is not something that should ever
+// happen but better to be self correcting than failing!
+func (m *txSortedMap) ReadyWithGasPrice(start uint64, baseFee *big.Int) types.Transactions {
+	// Short circuit if no transactions are available
+	if m.index.Len() == 0 || (*m.index)[0] > start {
+		return nil
+	}
+	// Otherwise start accumulating incremental transactions
+	var ready types.Transactions
+	for next := (*m.index)[0]; m.index.Len() > 0 && (*m.index)[0] == next; next++ {
+		if m.items[next].GasPrice().Cmp(baseFee) < 0 {
+			break
+		}
+		ready = append(ready, m.items[next])
+		delete(m.items, next)
+		heap.Pop(m.index)
+	}
+	// If we had a cached order, shift the front
+	if m.cache != nil {
+		m.cache = m.cache[len(ready):]
+	}
+
+	return ready
+}
+
 // Len returns the length of the transaction map.
 func (m *txSortedMap) Len() int {
 	return len(m.items)
@@ -408,6 +439,18 @@ func (l *txList) Remove(tx *types.Transaction) (bool, types.Transactions) {
 // happen but better to be self correcting than failing!
 func (l *txList) Ready(start uint64) types.Transactions {
 	return l.txs.Ready(start)
+}
+
+// ReadyWithGasPrice retrieves a sequentially increasing list of transactions that greater than or
+// equal to the given baseFee starting at the provided nonce that is ready for processing.
+// If there is a transaction lower than the baseFee during the search, only previously collected transactions
+// are returned. The returned transactions will be removed from the list.
+//
+// Note, all transactions with nonces lower than start will also be returned to
+// prevent getting into and invalid state. This is not something that should ever
+// happen but better to be self correcting than failing!
+func (l *txList) ReadyWithGasPrice(start uint64, baseFee *big.Int) types.Transactions {
+	return l.txs.ReadyWithGasPrice(start, baseFee)
 }
 
 // Len returns the length of the transaction list.

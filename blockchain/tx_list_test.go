@@ -21,7 +21,9 @@
 package blockchain
 
 import (
+	"math/big"
 	"math/rand"
+	"reflect"
 	"testing"
 
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -50,6 +52,104 @@ func TestStrictTxListAdd(t *testing.T) {
 	for i, tx := range txs {
 		if list.txs.items[tx.Nonce()] != tx {
 			t.Errorf("item %d: transaction mismatch: have %v, want %v", i, list.txs.items[tx.Nonce()], tx)
+		}
+	}
+}
+
+// TestTxListReadyWithGasPriceALL check whether ReadyWithGasPrice() works well.
+// It makes a slice has 10 transactions and executes ReadyWithGasPrice() with baseFee 30.
+func TestTxListReadyWithGasPrice(t *testing.T) {
+	// Start nonce : 3
+	// baseFee : 30
+	// Transaction[0:9] has gasPrice 50
+	// The result of executing ReadyWithGasPrice will be Transaction[0:9].
+	startNonce := 3
+	expectedBaseFee := big.NewInt(30)
+
+	// Generate a list of transactions to insert
+	key, _ := crypto.GenerateKey()
+
+	txs := make(types.Transactions, 10)
+	nonce := startNonce
+	for i := 0; i < len(txs); i++ {
+		txs[i] = pricedTransaction(uint64(nonce), 0, big.NewInt(50), key)
+		nonce++
+	}
+
+	// Insert the transactions in a random order
+	list := newTxList(true)
+	for _, v := range rand.Perm(len(txs)) {
+		list.Add(txs[v], DefaultTxPoolConfig.PriceBump)
+	}
+
+	ready := list.ReadyWithGasPrice(uint64(startNonce), expectedBaseFee)
+
+	if ready.Len() != 10 {
+		t.Error("expected filtered txs length", 7, "got", ready.Len())
+	}
+
+	nonce = startNonce
+	for i := 0; i < len(ready); i++ {
+		if result := reflect.DeepEqual(ready[i], txs[i]); result == false {
+			t.Error("ready hash : ", ready[i].Hash(), "tx[i] hash : ", txs[i].Hash())
+		}
+
+		if list.txs.items[uint64(nonce)] != nil {
+			t.Error("Not deleted in txList. nonce : ", nonce, "tx hash : ", list.txs.items[uint64(nonce)].Hash())
+		}
+		nonce++
+	}
+}
+
+// TestTxListReadyWithGasPriceALL check whether ReadyWithGasPrice() works well.
+// It makes a slice has 10 transactions and executes ReadyWithGasPrice() with baseFee 20.
+//
+// It checks whether filtering works well if there is a transaction
+// with a gasPrice lower than the baseFee among Tx.
+func TestTxListReadyWithGasPricePartialFilter(t *testing.T) {
+	// Start nonce : 3
+	// baseFee : 20
+	// Transaction[0:6] has gasPrice 30
+	// Transaction[7] has gasPrice 10
+	// Transaction[8:9] has gasPrice 50
+	// The result of executing ReadyWithGasPrice will be Transaction[0:6].
+	startNonce := 3
+	expectedBaseFee := big.NewInt(20)
+
+	// Generate a list of transactions to insert
+	key, _ := crypto.GenerateKey()
+
+	txs := make(types.Transactions, 10)
+	nonce := startNonce
+	for i := 0; i < len(txs); i++ {
+		txs[i] = pricedTransaction(uint64(nonce), 0, big.NewInt(30), key)
+
+		// Set the gasPrice of transaction lower than expectedBaseFee.
+		if i == 7 {
+			txs[i] = pricedTransaction(uint64(nonce), 0, big.NewInt(10), key)
+		}
+
+		if i > 7 {
+			txs[i] = pricedTransaction(uint64(nonce), 0, big.NewInt(50), key)
+		}
+		nonce++
+	}
+
+	// Insert the transactions in a random order
+	list := newTxList(true)
+	for _, v := range rand.Perm(len(txs)) {
+		list.Add(txs[v], DefaultTxPoolConfig.PriceBump)
+	}
+
+	ready := list.ReadyWithGasPrice(uint64(startNonce), expectedBaseFee)
+
+	if ready.Len() != 7 {
+		t.Error("expected filtered txs length", 7, "got", ready.Len())
+	}
+
+	for i := 0; i < len(ready); i++ {
+		if result := reflect.DeepEqual(ready[i], txs[i]); result == false {
+			t.Error("ready hash : ", ready[i].Hash(), "tx[i] hash : ", txs[i].Hash())
 		}
 	}
 }
