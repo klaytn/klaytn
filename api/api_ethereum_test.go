@@ -52,7 +52,7 @@ func TestEthereumAPI_Coinbase(t *testing.T) {
 
 // testNodeAddress generates nodeAddress and tests Etherbase and Coinbase.
 func testNodeAddress(t *testing.T, testAPIName string) {
-	gov := governance.NewGovernance(
+	gov := governance.NewMixedEngineNoInit(
 		dummyChainConfigForEthereumAPITest,
 		database.NewMemoryDBManager(),
 	)

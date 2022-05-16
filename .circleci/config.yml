@@ -22,11 +22,11 @@ executors:
   test-executor:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
-      - image: klaytn/build_base:1.1-go1.15.7-solc0.4.24
+      - image: klaytn/build_base:1.2-go.1.18-solc0.8.13
   test-others-executor:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
-      - image: klaytn/build_base:1.1-go1.15.7-solc0.4.24
+      - image: klaytn/build_base:1.2-go.1.18-solc0.8.13
       - image: localstack/localstack:0.11.5
       - image: circleci/redis:6.0.8-alpine
       - name: zookeeper
@@ -42,25 +42,33 @@ executors:
   rpm-executor:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
-      - image: klaytn/circleci-rpmbuild:1.15.7
+      - image: klaytn/circleci-rpmbuild:1.18
   default:
-    working_directory: /go/src/github.com/klaytn/klaytn
+    working_directory: ~/go/src/github.com/klaytn/klaytn
     docker:
-      - image: circleci/golang:latest
+      - image: cimg/go:1.18
 
 commands:
-  install-ssh-alpine:
-    description: "Install openssh before image update"
+  install-netcat:
     steps:
-      - run: apk add --no-cache openssh
+      - run:
+          name: "Install netcat"
+          command: |
+            apt install -y netcat
   install-golang:
     steps:
       - run:
           name: "Install golang on machine"
           command: |
-            curl -O https://dl.google.com/go/go1.15.7.linux-amd64.tar.gz
-            mkdir $HOME/go1.15.7
-            tar -C $HOME/go1.15.7 -xzf go1.15.7.linux-amd64.tar.gz
+            curl -O https://dl.google.com/go/go1.18.linux-amd64.tar.gz
+            mkdir $HOME/go1.18
+            tar -C $HOME/go1.18 -xzf go1.18.linux-amd64.tar.gz
+  install-golangci-lint:
+    steps:
+      - run:
+          name: "Install golangci-lint"
+          command: |
+            curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.45.2
   pre-build:
     description: "before build, set version"
     steps:
@@ -68,7 +76,7 @@ commands:
           name: "set variables"
           command: |
             export GOPATH=~/go
-            export PATH=$HOME/go1.15.7/go/bin:$PATH
+            export PATH=$HOME/go1.18/go/bin:$PATH
             pat="^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+.*"
 
             if [[ $CIRCLE_TAG =~ $pat ]]; then
@@ -91,7 +99,7 @@ commands:
           name: "build new(Cross compile)"
           command: |
             export GOPATH=~/go
-            export PATH=$HOME/go1.15.7/go/bin:$PATH
+            export PATH=$HOME/go1.18/go/bin:$PATH
             make << parameters.os-network >>
   upload-repo:
     description: "upload packaging tar.gz"
@@ -104,7 +112,7 @@ commands:
           name: "upload S3 repo"
           command: |
             export GOPATH=~/go
-            export PATH=$HOME/go1.15.7/go/bin:$PATH
+            export PATH=$HOME/go1.18/go/bin:$PATH
             KLAYTN_VERSION=$(go run build/rpm/main.go version)
             for item in << parameters.item >>; do aws s3 cp packages/${item}-*.tar.gz s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/; done
   rpm-tagging:
@@ -264,7 +272,7 @@ commands:
       - run:
           name: "Wait until localstack container running"
           command: |
-            timeout -t 60 sh -c \
+            timeout 60 sh -c \
             'until nc -z localhost 4566; do
               echo "Waiting for Localstack ..."
               sleep 1
@@ -286,7 +294,8 @@ commands:
 
 jobs:
   build:
-    machine: true
+    machine:
+      image: ubuntu-2004:202201-02
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
@@ -295,14 +304,14 @@ jobs:
       - run:
           name: "Build"
           command: |
-            export PATH=$HOME/go1.15.7/go/bin:$PATH
+            export PATH=$HOME/go1.18/go/bin:$PATH
             make fmt
             make all
 
   test-linter:
     executor: test-executor
     steps:
-      - install-ssh-alpine
+      - install-golangci-lint
       - checkout
       - run:
           name: "Run golangci-lint"
@@ -312,7 +321,7 @@ jobs:
   test-datasync:
     executor: test-others-executor
     steps:
-      - install-ssh-alpine
+      - install-netcat
       - checkout
       - wait-other-containers-ready
       - run:
@@ -323,7 +332,6 @@ jobs:
   test-networks:
     executor: test-executor
     steps:
-      - install-ssh-alpine
       - checkout
       - run:
           name: "Run test networks"
@@ -333,7 +341,6 @@ jobs:
   test-tests:
     executor: test-executor
     steps:
-      - install-ssh-alpine
       - checkout
       - run:
           name: "Run test tests"
@@ -345,7 +352,7 @@ jobs:
   test-others:
     executor: test-others-executor
     steps:
-      - install-ssh-alpine
+      - install-netcat
       - checkout
       - wait-other-containers-ready
       - run:
@@ -371,7 +378,7 @@ jobs:
     executor: test-others-executor
     resource_class: xlarge
     steps:
-      - install-ssh-alpine
+      - install-netcat
       - checkout
       - wait-other-containers-ready
       - run:
@@ -395,7 +402,6 @@ jobs:
   linters:
     executor: test-executor
     steps:
-      - install-ssh-alpine
       - checkout
       - run:
           name: "Run linters"
@@ -409,7 +415,8 @@ jobs:
           path: /tmp/linter_reports
 
   packaging-linux:
-    machine: true
+    machine: 
+      image: ubuntu-2004:202201-02
     resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
@@ -420,7 +427,8 @@ jobs:
       - upload-repo
 
   packaging-linux-baobab:
-    machine: true
+    machine: 
+      image: ubuntu-2004:202201-02
     resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
@@ -433,7 +441,8 @@ jobs:
           item: "kcn kpn ken"
 
   packaging-darwin:
-    machine: true
+    machine: 
+      image: ubuntu-2004:202201-02
     resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
@@ -445,7 +454,8 @@ jobs:
       - upload-repo
 
   packaging-darwin-baobab:
-    machine: true
+    machine: 
+      image: ubuntu-2004:202201-02
     resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
@@ -482,7 +492,6 @@ jobs:
   tag-verify:
     executor: test-executor
     steps:
-      - install-ssh-alpine
       - checkout
       - tag-verify
 
@@ -542,6 +551,7 @@ workflows:
               only: dev
           requires:
             - pass-tests
+          extra_build_args: '--platform=linux/amd64'
           image: klaytn/klaytn
           tag: dev
           executor: docker/docker
@@ -607,6 +617,7 @@ workflows:
               ignore: /.*/
           requires:
             - pass-tests
+          extra_build_args: '--platform=linux/amd64'
           image: klaytn/klaytn
           tag: latest,$CIRCLE_TAG
           executor: docker/docker

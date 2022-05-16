@@ -216,7 +216,7 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 	sb.bridgeTxPool = bridgepool.NewBridgeTxPool(bridgetxConfig)
 
 	var err error
-	sb.bridgeAccounts, err = NewBridgeAccounts(sb.accountManager, config.DataDir, chainDB, sb.config.ServiceChainOperatorGasLimit)
+	sb.bridgeAccounts, err = NewBridgeAccounts(sb.accountManager, config.DataDir, chainDB, sb.config.ServiceChainParentOperatorGasLimit, sb.config.ServiceChainChildOperatorGasLimit)
 	if err != nil {
 		return nil, err
 	}

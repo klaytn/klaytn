@@ -91,12 +91,6 @@ func updateProposerUpdateInterval(g *Governance, k string, v interface{}) {
 	params.SetProposerUpdateInterval(g.ProposerUpdateInterval())
 }
 
-func updateMinimumStakingAmount(g *Governance, k string, v interface{}) {
-	if val, ok := new(big.Int).SetString(g.MinimumStake(), 10); ok {
-		params.SetMinimumStakingAmount(val)
-	}
-}
-
 func updateProposerPolicy(g *Governance, k string, v interface{}) {
 	if g.blockChain != nil {
 		g.blockChain.SetProposerPolicy(g.ProposerPolicy())

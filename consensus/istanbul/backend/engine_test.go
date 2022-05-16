@@ -60,6 +60,7 @@ type proposerUpdateInterval uint64
 type proposerPolicy uint64
 type governanceMode string
 type epoch uint64
+type subGroupSize uint64
 type blockPeriod uint64
 
 // makeCommittedSeals returns a list of committed seals for the global variable nodeKeys.
@@ -72,6 +73,17 @@ func makeCommittedSeals(hash common.Hash) [][]byte {
 		copy(committedSeals[i][:], sig)
 	}
 	return committedSeals
+}
+
+// Exclude a node from the global nodeKeys and addrs
+func excludeNodeByAddr(target common.Address) {
+	for i, a := range addrs {
+		if a.String() == target.String() {
+			nodeKeys = append(nodeKeys[:i], nodeKeys[i+1:]...)
+			addrs = append(addrs[:i], addrs[i+1:]...)
+			break
+		}
+	}
 }
 
 // in this test, we can set n to 1, and it means we can process Istanbul and commit a
@@ -99,6 +111,8 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 			genesis.Config.Istanbul.ProposerPolicy = uint64(v)
 		case epoch:
 			genesis.Config.Istanbul.Epoch = uint64(v)
+		case subGroupSize:
+			genesis.Config.Istanbul.SubGroupSize = uint64(v)
 		case minimumStake:
 			genesis.Config.Governance.Reward.MinimumStake = v
 		case stakingUpdateInterval:
@@ -972,6 +986,161 @@ func TestSnapshot_Validators_BasedOnStaking(t *testing.T) {
 
 		assert.Equal(t, expectedValidators, validators)
 		assert.Equal(t, expectedDemoted, demoted)
+
+		reward.SetTestStakingManager(oldStakingManager)
+		engine.Stop()
+	}
+}
+
+func TestSnapshot_Validators_AddRemove(t *testing.T) {
+	type vote struct {
+		key   string
+		value interface{}
+	}
+	type expected struct {
+		validators []int // expected validator indexes at given block
+	}
+	type testcase struct {
+		length   int // total number of blocks to simulate
+		votes    map[int]vote
+		expected map[int]expected
+	}
+
+	testcases := []testcase{
+		{ // Singular change
+			5,
+			map[int]vote{
+				1: {"governance.removevalidator", 3},
+				3: {"governance.addvalidator", 3},
+			},
+			map[int]expected{
+				0: {[]int{0, 1, 2, 3}},
+				1: {[]int{0, 1, 2, 3}},
+				2: {[]int{0, 1, 2}},
+				3: {[]int{0, 1, 2}},
+				4: {[]int{0, 1, 2, 3}},
+			},
+		},
+		{ // Plural change
+			5,
+			map[int]vote{
+				1: {"governance.removevalidator", []int{1, 2, 3}},
+				3: {"governance.addvalidator", []int{1, 2}},
+			},
+			map[int]expected{
+				0: {[]int{0, 1, 2, 3}},
+				1: {[]int{0, 1, 2, 3}},
+				2: {[]int{0}},
+				3: {[]int{0}},
+				4: {[]int{0, 1, 2}},
+			},
+		},
+		{ // Around checkpoint interval (i.e. every 1024 block)
+			checkpointInterval + 10,
+			map[int]vote{
+				checkpointInterval - 5: {"governance.removevalidator", 3},
+				checkpointInterval - 1: {"governance.removevalidator", 2},
+				checkpointInterval + 0: {"governance.removevalidator", 1},
+				checkpointInterval + 1: {"governance.addvalidator", 1},
+				checkpointInterval + 2: {"governance.addvalidator", 2},
+				checkpointInterval + 3: {"governance.addvalidator", 3},
+			},
+			map[int]expected{
+				0:                      {[]int{0, 1, 2, 3}},
+				1:                      {[]int{0, 1, 2, 3}},
+				checkpointInterval - 4: {[]int{0, 1, 2}},
+				checkpointInterval + 0: {[]int{0, 1}},
+				checkpointInterval + 1: {[]int{0}},
+				checkpointInterval + 2: {[]int{0, 1}},
+				checkpointInterval + 3: {[]int{0, 1, 2}},
+				checkpointInterval + 4: {[]int{0, 1, 2, 3}},
+				checkpointInterval + 9: {[]int{0, 1, 2, 3}},
+			},
+		},
+	}
+
+	var configItems []interface{}
+	configItems = append(configItems, proposerPolicy(params.WeightedRandom))
+	configItems = append(configItems, proposerUpdateInterval(1))
+	configItems = append(configItems, epoch(3))
+	configItems = append(configItems, subGroupSize(4))
+	configItems = append(configItems, governanceMode("single"))
+	configItems = append(configItems, minimumStake(new(big.Int).SetUint64(4000000)))
+	configItems = append(configItems, istanbulCompatibleBlock(new(big.Int).SetUint64(0)))
+	configItems = append(configItems, blockPeriod(0)) // set block period to 0 to prevent creating future block
+	stakes := []uint64{4000000, 4000000, 4000000, 4000000}
+
+	for _, tc := range testcases {
+		// Create test blockchain
+		chain, engine := newBlockChain(4, configItems...)
+
+		oldStakingManager := reward.GetStakingManager()
+		stakingInfo := makeFakeStakingInfo(0, nodeKeys, stakes)
+		reward.SetTestStakingManagerWithStakingInfoCache(stakingInfo)
+
+		// Backup the globals. The globals `nodeKeys` and `addrs` will be
+		// modified according to validator change votes.
+		allNodeKeys := make([]*ecdsa.PrivateKey, len(nodeKeys))
+		allAddrs := make([]common.Address, len(addrs))
+		copy(allNodeKeys, nodeKeys)
+		copy(allAddrs, addrs)
+
+		var previousBlock, currentBlock *types.Block = nil, chain.Genesis()
+
+		// Create blocks with votes
+		for i := 0; i < tc.length; i++ {
+			if v, ok := tc.votes[i]; ok { // If a vote is scheduled in this block,
+				if idx, ok := v.value.(int); ok {
+					addr := allAddrs[idx]
+					engine.governance.AddVote(v.key, addr)
+				} else {
+					addrList := makeExpectedResult(v.value.([]int), allAddrs)
+					engine.governance.AddVote(v.key, addrList)
+				}
+				// t.Logf("Voting at block #%d for %s, %v", i, v.key, v.value)
+			}
+
+			previousBlock = currentBlock
+			currentBlock = makeBlockWithSeal(chain, engine, previousBlock)
+			_, err := chain.InsertChain(types.Blocks{currentBlock})
+			assert.NoError(t, err)
+
+			// After a voting, reflect the validator change to the globals
+			if v, ok := tc.votes[i]; ok {
+				var indices []int
+				if idx, ok := v.value.(int); ok {
+					indices = []int{idx}
+				} else {
+					indices = v.value.([]int)
+				}
+				if v.key == "governance.addvalidator" {
+					for _, i := range indices {
+						nodeKeys = append(nodeKeys, allNodeKeys[i])
+						addrs = append(addrs, allAddrs[i])
+					}
+				}
+				if v.key == "governance.removevalidator" {
+					for _, i := range indices {
+						excludeNodeByAddr(allAddrs[i])
+					}
+				}
+			}
+		}
+
+		// Calculate historical validators using the snapshot.
+		for i := 0; i < tc.length; i++ {
+			if _, ok := tc.expected[i]; !ok {
+				continue
+			}
+			block := chain.GetBlockByNumber(uint64(i))
+			snap, err := engine.snapshot(chain, block.NumberU64(), block.Hash(), nil)
+			assert.NoError(t, err)
+			validators := copyAndSortAddrs(toAddressList(snap.ValSet.List()))
+
+			expectedValidators := makeExpectedResult(tc.expected[i].validators, allAddrs)
+			assert.Equal(t, expectedValidators, validators)
+			// t.Logf("snap at block #%d: size %d", i, snap.ValSet.Size())
+		}
 
 		reward.SetTestStakingManager(oldStakingManager)
 		engine.Stop()

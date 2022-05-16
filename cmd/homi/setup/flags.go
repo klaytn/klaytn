@@ -318,7 +318,7 @@ var (
 		Value: params.DefaultEpoch,
 	}
 
-	cliquePeriodFlag = cli.IntFlag{
+	cliquePeriodFlag = cli.Uint64Flag{
 		Name:  "clique-period",
 		Usage: "clique period",
 		Value: params.DefaultPeriod,
