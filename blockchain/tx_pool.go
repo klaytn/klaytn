@@ -1354,7 +1354,9 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 		}
 
 		// Gather all executable transactions and promote them
-		for _, tx := range list.Ready(pool.getPendingNonce(addr)) {
+		// TODO : Need to KIP-71 hardfork
+		//for _, tx := range list.Ready(pool.getPendingNonce(addr)) {
+		for _, tx := range list.ReadyWithGasPrice(pool.getPendingNonce(addr), pool.gasPrice) {
 			hash := tx.Hash()
 			if pool.promoteTx(addr, hash, tx) {
 				logger.Trace("Promoting queued transaction", "hash", hash)

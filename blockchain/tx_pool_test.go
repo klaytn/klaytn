@@ -28,6 +28,7 @@ import (
 	"math/big"
 	"math/rand"
 	"os"
+	"reflect"
 	"testing"
 	"time"
 
@@ -2040,6 +2041,151 @@ func TestTransactionNotAcceptedWithLowerGasPrice(t *testing.T) {
 	if err := pool.AddRemote(tx1); err != ErrGasPriceBelowBaseFee {
 		t.Error("error", "got", err)
 	}
+}
+
+// TestTransactionsPromoteFull is a test to check whether transactions in the queue are promoted to Pending
+// by filtering them with gasPrice greater than or equal to baseFee and sorting them in nonce sequentially order.
+// This test expected that all transactions in queue promoted pending.
+func TestTransactionsPromoteFull(t *testing.T) {
+	t.Parallel()
+
+	pool, key := setupTxPoolWithConfig(eip1559Config)
+	defer pool.Stop()
+
+	from := crypto.PubkeyToAddress(key.PublicKey)
+
+	baseFee := big.NewInt(10)
+	pool.SetGasPrice(baseFee)
+
+	testAddBalance(pool, from, big.NewInt(1000000000))
+
+	// Generate and queue a batch of transactions, both pending and queued
+	txs := types.Transactions{}
+	txs = append(txs, pricedTransaction(0, 100000, big.NewInt(50), key))
+	txs = append(txs, pricedTransaction(1, 100000, big.NewInt(30), key))
+	txs = append(txs, pricedTransaction(2, 100000, big.NewInt(30), key))
+	txs = append(txs, pricedTransaction(3, 100000, big.NewInt(30), key))
+
+	pool.enqueueTx(txs[0].Hash(), txs[0])
+	pool.enqueueTx(txs[1].Hash(), txs[1])
+	pool.enqueueTx(txs[2].Hash(), txs[2])
+	pool.enqueueTx(txs[3].Hash(), txs[3])
+
+	//set baseFee to 20.
+	baseFee = big.NewInt(30)
+	pool.gasPrice = baseFee
+
+	pool.promoteExecutables(nil)
+
+	assert.Equal(t, pool.pending[from].Len(), 4)
+
+	assert.True(t, reflect.DeepEqual(txs[0], pool.pending[from].txs.items[0]))
+	assert.True(t, reflect.DeepEqual(txs[1], pool.pending[from].txs.items[1]))
+	assert.True(t, reflect.DeepEqual(txs[2], pool.pending[from].txs.items[2]))
+	assert.True(t, reflect.DeepEqual(txs[3], pool.pending[from].txs.items[3]))
+}
+
+// TestTransactionsPromotePartial is a test to check whether transactions in the queue are promoted to Pending
+// by filtering them with gasPrice greater than or equal to baseFee and sorting them in nonce sequentially order.
+// // This test expected that partially transaction in queue promoted pending.
+func TestTransactionsPromotePartial(t *testing.T) {
+	t.Parallel()
+
+	pool, key := setupTxPoolWithConfig(eip1559Config)
+	defer pool.Stop()
+
+	from := crypto.PubkeyToAddress(key.PublicKey)
+
+	baseFee := big.NewInt(10)
+	pool.SetGasPrice(baseFee)
+
+	testAddBalance(pool, from, big.NewInt(1000000000))
+
+	// Generate and queue a batch of transactions, both pending and queued
+	txs := types.Transactions{}
+	txs = append(txs, pricedTransaction(0, 100000, big.NewInt(50), key))
+	txs = append(txs, pricedTransaction(1, 100000, big.NewInt(20), key))
+	txs = append(txs, pricedTransaction(2, 100000, big.NewInt(20), key))
+	txs = append(txs, pricedTransaction(3, 100000, big.NewInt(10), key))
+
+	pool.enqueueTx(txs[0].Hash(), txs[0])
+	pool.enqueueTx(txs[1].Hash(), txs[1])
+	pool.enqueueTx(txs[2].Hash(), txs[2])
+	pool.enqueueTx(txs[3].Hash(), txs[3])
+
+	//set baseFee to 20.
+	baseFee = big.NewInt(20)
+	pool.gasPrice = baseFee
+
+	pool.promoteExecutables(nil)
+
+	assert.Equal(t, pool.pending[from].Len(), 3)
+	assert.Equal(t, pool.queue[from].Len(), 1)
+
+	assert.True(t, reflect.DeepEqual(txs[0], pool.pending[from].txs.items[0]))
+	assert.True(t, reflect.DeepEqual(txs[1], pool.pending[from].txs.items[1]))
+	assert.True(t, reflect.DeepEqual(txs[2], pool.pending[from].txs.items[2]))
+
+	assert.True(t, reflect.DeepEqual(txs[3], pool.queue[from].txs.items[3]))
+}
+
+// TestTransactionsPromoteFull is a test to check whether transactions in the queue are promoted to Pending
+// by filtering them with gasPrice greater than or equal to baseFee and sorting them in nonce sequentially order.
+// This test expected that all transactions in queue promoted pending.
+func TestTransactionsPromoteMultipleAccount(t *testing.T) {
+	t.Parallel()
+
+	pool, _ := setupTxPoolWithConfig(eip1559Config)
+	defer pool.Stop()
+	pool.SetGasPrice(big.NewInt(10))
+
+	keys := make([]*ecdsa.PrivateKey, 3)
+	froms := make([]common.Address, 3)
+	for i := 0; i < 3; i++ {
+		keys[i], _ = crypto.GenerateKey()
+		froms[i] = crypto.PubkeyToAddress(keys[i].PublicKey)
+		testAddBalance(pool, froms[i], big.NewInt(1000000000))
+	}
+
+	txs := types.Transactions{}
+
+	txs = append(txs, pricedTransaction(0, 100000, big.NewInt(50), keys[0])) // Pending
+	txs = append(txs, pricedTransaction(1, 100000, big.NewInt(40), keys[0])) // Pending
+	txs = append(txs, pricedTransaction(2, 100000, big.NewInt(30), keys[0])) // Pending
+	txs = append(txs, pricedTransaction(3, 100000, big.NewInt(20), keys[0])) // Pending
+
+	txs = append(txs, pricedTransaction(1, 100000, big.NewInt(10), keys[1])) // Only Queue
+
+	txs = append(txs, pricedTransaction(0, 100000, big.NewInt(50), keys[2])) // Pending
+	txs = append(txs, pricedTransaction(1, 100000, big.NewInt(30), keys[2])) // Pending
+	txs = append(txs, pricedTransaction(2, 100000, big.NewInt(30), keys[2])) // Pending
+	txs = append(txs, pricedTransaction(4, 100000, big.NewInt(10), keys[2])) // Queue
+
+	for i := 0; i < 9; i++ {
+		pool.enqueueTx(txs[i].Hash(), txs[i])
+	}
+
+	pool.gasPrice = big.NewInt(20)
+
+	pool.promoteExecutables(nil)
+
+	assert.Equal(t, pool.pending[froms[0]].Len(), 4)
+	assert.True(t, reflect.DeepEqual(txs[0], pool.pending[froms[0]].txs.items[uint64(0)]))
+	assert.True(t, reflect.DeepEqual(txs[1], pool.pending[froms[0]].txs.items[uint64(1)]))
+	assert.True(t, reflect.DeepEqual(txs[2], pool.pending[froms[0]].txs.items[uint64(2)]))
+	assert.True(t, reflect.DeepEqual(txs[3], pool.pending[froms[0]].txs.items[uint64(3)]))
+
+	assert.Equal(t, pool.queue[froms[1]].Len(), 1)
+	assert.True(t, reflect.DeepEqual(txs[4], pool.queue[froms[1]].txs.items[1]))
+
+	assert.Equal(t, pool.queue[froms[2]].Len(), 1)
+	assert.Equal(t, pool.pending[froms[2]].Len(), 3)
+
+	assert.True(t, reflect.DeepEqual(txs[5], pool.pending[froms[2]].txs.items[0]))
+	assert.True(t, reflect.DeepEqual(txs[6], pool.pending[froms[2]].txs.items[1]))
+	assert.True(t, reflect.DeepEqual(txs[7], pool.pending[froms[2]].txs.items[2]))
+	assert.True(t, reflect.DeepEqual(txs[8], pool.queue[froms[2]].txs.items[4]))
+
 }
 
 func TestTransactionJournalingSortedByTime(t *testing.T) {
