@@ -419,6 +419,9 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	pool.currentState = stateDB
 	pool.pendingNonce = make(map[common.Address]uint64)
 	pool.currentBlockNumber = newHead.Number.Uint64()
+	// TODO :  Need to KIP-71 hardfork
+	// TODO : It need to update gas price of tx pool after implemnted baseFee calculation logic.
+	// pool.gasPrice = misc.calculateBaseFee()
 
 	// Inject any transactions discarded due to reorgs
 	logger.Debug("Reinjecting stale transactions", "count", len(reinject))
