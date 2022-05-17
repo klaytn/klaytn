@@ -650,6 +650,54 @@ func TestTransactionTimeSort(t *testing.T) {
 	}
 }
 
+// TestTransactionTimeSortDifferentGasPrice tests that although multiple transactions have the different price, the ones seen earlier
+// are prioritized to avoid network spam attacks aiming for a specific ordering.
+func TestTransactionTimeSortDifferentGasPrice(t *testing.T) {
+	// Generate a batch of accounts to start with
+	keys := make([]*ecdsa.PrivateKey, 5)
+	for i := 0; i < len(keys); i++ {
+		keys[i], _ = crypto.GenerateKey()
+	}
+	signer := LatestSignerForChainID(big.NewInt(1))
+
+	// Generate a batch of transactions with overlapping prices, but different creation times
+	groups := map[common.Address]Transactions{}
+	gasPrice := big.NewInt(1)
+	for start, key := range keys {
+		addr := crypto.PubkeyToAddress(key.PublicKey)
+
+		tx, _ := SignTx(NewTransaction(0, common.Address{}, big.NewInt(100), 100, gasPrice, nil), signer, key)
+		tx.time = time.Unix(0, int64(len(keys)-start))
+
+		groups[addr] = append(groups[addr], tx)
+
+		gasPrice = gasPrice.Add(gasPrice, big.NewInt(1))
+	}
+	// Sort the transactions and cross check the nonce ordering
+	txset := NewTransactionsByPriceAndNonce(signer, groups)
+
+	txs := Transactions{}
+	for tx := txset.Peek(); tx != nil; tx = txset.Peek() {
+		txs = append(txs, tx)
+		txset.Shift()
+	}
+	if len(txs) != len(keys) {
+		t.Errorf("expected %d transactions, found %d", len(keys), len(txs))
+	}
+	for i, txi := range txs {
+		fromi, _ := Sender(signer, txi)
+		if i+1 < len(txs) {
+			next := txs[i+1]
+			fromNext, _ := Sender(signer, next)
+
+			// Make sure time order is ascending.
+			if txi.time.After(next.time) {
+				t.Errorf("invalid received time ordering: tx #%d (A=%x T=%v) > tx #%d (A=%x T=%v)", i, fromi[:4], txi.time, i+1, fromNext[:4], next.time)
+			}
+		}
+	}
+}
+
 // TestTransactionCoding tests serializing/de-serializing to/from rlp and JSON.
 func TestTransactionCoding(t *testing.T) {
 	key, err := crypto.GenerateKey()

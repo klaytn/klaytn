@@ -840,6 +840,27 @@ func (s TxByNonce) Less(i, j int) bool {
 }
 func (s TxByNonce) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 
+type TxByTime Transactions
+
+func (s TxByTime) Len() int { return len(s) }
+func (s TxByTime) Less(i, j int) bool {
+	// Use the time the transaction was first seen for deterministic sorting
+	return s[i].time.Before(s[j].time)
+}
+func (s TxByTime) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+
+func (s *TxByTime) Push(x interface{}) {
+	*s = append(*s, x.(*Transaction))
+}
+
+func (s *TxByTime) Pop() interface{} {
+	old := *s
+	n := len(old)
+	x := old[n-1]
+	*s = old[0 : n-1]
+	return x
+}
+
 // TxByPriceAndTime implements both the sort and the heap interface, making it useful
 // for all at once sorting as well as individually adding and removing elements.
 type TxByPriceAndTime Transactions
@@ -874,7 +895,7 @@ func (s *TxByPriceAndTime) Pop() interface{} {
 // entire batches of transactions for non-executable accounts.
 type TransactionsByPriceAndNonce struct {
 	txs    map[common.Address]Transactions // Per account nonce-sorted list of transactions
-	heads  TxByPriceAndTime                // Next transaction for each unique account (price heap)
+	heads  TxByTime                        // Next transaction for each unique account (transaction's time heap)
 	signer Signer                          // Signer for the set of transactions
 }
 
@@ -900,7 +921,7 @@ func (t *TransactionsByPriceAndNonce) Txs() map[common.Address]Transactions {
 // if after providing it to the constructor.
 func NewTransactionsByPriceAndNonce(signer Signer, txs map[common.Address]Transactions) *TransactionsByPriceAndNonce {
 	// Initialize a price and received time based heap with the head transactions
-	heads := make(TxByPriceAndTime, 0, len(txs))
+	heads := make(TxByTime, 0, len(txs))
 	for _, accTxs := range txs {
 		heads = append(heads, accTxs[0])
 		// Ensure the sender address is from the signer
