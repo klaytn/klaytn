@@ -110,19 +110,28 @@ func (ba *BridgeAccounts) SetChildOperatorFeePayer(feePayer common.Address) erro
 	return nil
 }
 
-//SetBridgeOperatorGasLimit changes GasLimit of parent and child operator.
-func (ba *BridgeAccounts) SetBridgeOperatorGasLimit(fee uint64) {
-	ba.pAccount.gasLimit = fee
-	ba.cAccount.gasLimit = fee
-}
-
-//GetBridgeOperatorGasLimit gets value of GasLimit of operator.
-func (ba *BridgeAccounts) GetBridgeOperatorGasLimit() uint64 {
+// GetParentBridgeOperatorGasLimit gets value of GasLimit of parent operator.
+func (ba *BridgeAccounts) GetParentBridgeOperatorGasLimit() uint64 {
 	return ba.pAccount.gasLimit
 }
 
+// GetChildBridgeOperatorGasLimit gets value of GasLimit of child operator.
+func (ba *BridgeAccounts) GetChildBridgeOperatorGasLimit() uint64 {
+	return ba.cAccount.gasLimit
+}
+
+// SetParentBridgeOperatorGasLimit changes GasLimit of parent operator.
+func (ba *BridgeAccounts) SetParentBridgeOperatorGasLimit(fee uint64) {
+	ba.pAccount.gasLimit = fee
+}
+
+// SetChildBridgeOperatorGasLimit changes GasLimit of child operator.
+func (ba *BridgeAccounts) SetChildBridgeOperatorGasLimit(fee uint64) {
+	ba.cAccount.gasLimit = fee
+}
+
 // NewBridgeAccounts returns bridgeAccounts created by main/service bridge account keys.
-func NewBridgeAccounts(am *accounts.Manager, dataDir string, db feePayerDB, gaslimit uint64) (*BridgeAccounts, error) {
+func NewBridgeAccounts(am *accounts.Manager, dataDir string, db feePayerDB, parentOperatorGaslimit, childOperatorGaslimit uint64) (*BridgeAccounts, error) {
 	pKS, pAccAddr, isLock, err := InitializeBridgeAccountKeystore(path.Join(dataDir, ParentBridgeAccountName))
 	if err != nil {
 		return nil, err
@@ -150,7 +159,7 @@ func NewBridgeAccounts(am *accounts.Manager, dataDir string, db feePayerDB, gasl
 		nonce:    0,
 		chainID:  nil,
 		gasPrice: nil,
-		gasLimit: gaslimit,
+		gasLimit: parentOperatorGaslimit,
 		feePayer: db.ReadParentOperatorFeePayer(),
 	}
 
@@ -161,7 +170,7 @@ func NewBridgeAccounts(am *accounts.Manager, dataDir string, db feePayerDB, gasl
 		nonce:    0,
 		chainID:  nil,
 		gasPrice: nil,
-		gasLimit: gaslimit,
+		gasLimit: childOperatorGaslimit,
 		feePayer: db.ReadChildOperatorFeePayer(),
 	}
 

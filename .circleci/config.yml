@@ -415,7 +415,8 @@ jobs:
           path: /tmp/linter_reports
 
   packaging-linux:
-    machine: true
+    machine: 
+      image: ubuntu-2004:202201-02
     resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
@@ -426,7 +427,8 @@ jobs:
       - upload-repo
 
   packaging-linux-baobab:
-    machine: true
+    machine: 
+      image: ubuntu-2004:202201-02
     resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
@@ -439,7 +441,8 @@ jobs:
           item: "kcn kpn ken"
 
   packaging-darwin:
-    machine: true
+    machine: 
+      image: ubuntu-2004:202201-02
     resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
@@ -451,7 +454,8 @@ jobs:
       - upload-repo
 
   packaging-darwin-baobab:
-    machine: true
+    machine: 
+      image: ubuntu-2004:202201-02
     resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
@@ -547,6 +551,7 @@ workflows:
               only: dev
           requires:
             - pass-tests
+          extra_build_args: '--platform=linux/amd64'
           image: klaytn/klaytn
           tag: dev
           executor: docker/docker
@@ -612,6 +617,7 @@ workflows:
               ignore: /.*/
           requires:
             - pass-tests
+          extra_build_args: '--platform=linux/amd64'
           image: klaytn/klaytn
           tag: latest,$CIRCLE_TAG
           executor: docker/docker
