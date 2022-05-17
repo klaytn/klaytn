@@ -348,7 +348,7 @@ func TestDBManager_BadBlock(t *testing.T) {
 	header := &types.Header{Number: big.NewInt(int64(num1))}
 	headertwo := &types.Header{Number: big.NewInt(int64(num2))}
 	for _, dbm := range dbManagers {
-		//block #1 test
+		// block #1 test
 		block := types.NewBlockWithHeader(header)
 
 		if entry := dbm.ReadBadBlock(block.Hash()); entry != nil {
@@ -368,7 +368,7 @@ func TestDBManager_BadBlock(t *testing.T) {
 
 		}
 
-		//block #2 test
+		// block #2 test
 		blocktwo := types.NewBlockWithHeader(headertwo)
 		dbm.WriteBadBlock(blocktwo)
 		if entry := dbm.ReadBadBlock(blocktwo.Hash()); entry == nil {
@@ -377,7 +377,7 @@ func TestDBManager_BadBlock(t *testing.T) {
 			t.Fatalf("retrived block mismatching, have %v, want %v", entry, block)
 		}
 
-		//block #1 insert again
+		// block #1 insert again
 		dbm.WriteBadBlock(block)
 		badBlocks, _ := dbm.ReadAllBadBlocks()
 		if len(badBlocks) != 2 {

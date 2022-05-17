@@ -1489,7 +1489,7 @@ func (dbm *databaseManager) ReadAllBadBlocks() ([]*types.Block, error) {
 	if err := rlp.DecodeBytes(blob, &badBlocks); err != nil {
 		return nil, err
 	}
-	var blocks []*types.Block
+	var blocks = make([]*types.Block, 0)
 	for _, bad := range badBlocks {
 		blocks = append(blocks, types.NewBlockWithHeader(bad.Header).WithBody(bad.Body.Transactions))
 	}
