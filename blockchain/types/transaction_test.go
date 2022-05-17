@@ -881,6 +881,56 @@ func TestIsSorted(t *testing.T) {
 	assert.True(t, sort.IsSorted(TxByPriceAndTime(batches)))
 }
 
+func TestFilterTransactionWithBaseFee(t *testing.T) {
+	signer := LatestSignerForChainID(big.NewInt(1))
+
+	pending := make(map[common.Address]Transactions)
+	keys := make([]*ecdsa.PrivateKey, 3)
+
+	for i := 0; i < len(keys); i++ {
+		keys[i], _ = crypto.GenerateKey()
+	}
+
+	from1 := crypto.PubkeyToAddress(keys[0].PublicKey)
+	txs1 := make(Transactions, 3)
+	txs1[0], _ = SignTx(NewTransaction(uint64(0), common.Address{}, big.NewInt(100), 100, big.NewInt(30), nil), signer, keys[0])
+	txs1[1], _ = SignTx(NewTransaction(uint64(1), common.Address{}, big.NewInt(100), 100, big.NewInt(40), nil), signer, keys[0])
+	txs1[2], _ = SignTx(NewTransaction(uint64(2), common.Address{}, big.NewInt(100), 100, big.NewInt(50), nil), signer, keys[0])
+	pending[from1] = txs1
+
+	from2 := crypto.PubkeyToAddress(keys[1].PublicKey)
+	txs2 := make(Transactions, 4)
+	txs2[0], _ = SignTx(NewTransaction(uint64(0), common.Address{}, big.NewInt(100), 100, big.NewInt(30), nil), signer, keys[1])
+	txs2[1], _ = SignTx(NewTransaction(uint64(1), common.Address{}, big.NewInt(100), 100, big.NewInt(20), nil), signer, keys[1])
+	txs2[2], _ = SignTx(NewTransaction(uint64(2), common.Address{}, big.NewInt(100), 100, big.NewInt(40), nil), signer, keys[1])
+	txs2[3], _ = SignTx(NewTransaction(uint64(3), common.Address{}, big.NewInt(100), 100, big.NewInt(40), nil), signer, keys[1])
+	pending[from2] = txs2
+
+	from3 := crypto.PubkeyToAddress(keys[2].PublicKey)
+	txs3 := make(Transactions, 5)
+	txs3[0], _ = SignTx(NewTransaction(uint64(0), common.Address{}, big.NewInt(100), 100, big.NewInt(10), nil), signer, keys[2])
+	txs3[1], _ = SignTx(NewTransaction(uint64(1), common.Address{}, big.NewInt(100), 100, big.NewInt(30), nil), signer, keys[2])
+	txs3[2], _ = SignTx(NewTransaction(uint64(2), common.Address{}, big.NewInt(100), 100, big.NewInt(30), nil), signer, keys[2])
+	txs3[3], _ = SignTx(NewTransaction(uint64(3), common.Address{}, big.NewInt(100), 100, big.NewInt(30), nil), signer, keys[2])
+	txs3[4], _ = SignTx(NewTransaction(uint64(4), common.Address{}, big.NewInt(100), 100, big.NewInt(30), nil), signer, keys[2])
+	pending[from3] = txs3
+
+	baseFee := big.NewInt(30)
+	pending, _ = FilterTransactionWithBaseFee(pending, baseFee)
+
+	assert.Equal(t, len(pending[from1]), 3)
+	for i := 0; i < len(pending[from1]); i++ {
+		assert.Equal(t, txs1[i], pending[from1][i])
+	}
+
+	assert.Equal(t, len(pending[from2]), 1)
+	for i := 0; i < len(pending[from2]); i++ {
+		assert.Equal(t, txs2[i], pending[from2][i])
+	}
+
+	assert.Equal(t, len(pending[from3]), 0)
+}
+
 func BenchmarkTxSortByTime30000(b *testing.B) { benchmarkTxSortByTime(b, 30000) }
 func BenchmarkTxSortByTime20000(b *testing.B) { benchmarkTxSortByTime(b, 20000) }
 func benchmarkTxSortByTime(b *testing.B, size int) {

@@ -829,6 +829,26 @@ func TxDifference(a, b Transactions) (keep Transactions) {
 	return keep
 }
 
+// FilterTransactionWithBaseFee returns a list of transactions for each account that filters transactions
+// that are greater than or equal to baseFee.
+func FilterTransactionWithBaseFee(pending map[common.Address]Transactions, baseFee *big.Int) (map[common.Address]Transactions, error) {
+	txMap := make(map[common.Address]Transactions)
+	for addr, list := range pending {
+		txs := list
+		for i, tx := range list {
+			if tx.GasPrice().Cmp(baseFee) < 0 {
+				txs = list[:i]
+				break
+			}
+		}
+
+		if len(txs) > 0 {
+			txMap[addr] = txs
+		}
+	}
+	return txMap, nil
+}
+
 // TxByNonce implements the sort interface to allow sorting a list of transactions
 // by their nonces. This is usually only useful for sorting transactions from a
 // single account, otherwise a nonce comparison doesn't make much sense.
