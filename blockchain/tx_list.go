@@ -312,14 +312,24 @@ func (l *txList) Add(tx *types.Transaction, priceBump uint64) (bool, *types.Tran
 	// If there's an older better transaction, abort
 	old := l.txs.Get(tx.Nonce())
 	if old != nil {
-		if tx.Type().IsCancelTransaction() {
-			logger.Trace("New tx is a cancel transaction. replace it!", "old", old.String(), "new", tx.String())
-		} else {
+		// TODO : Need to KIP-71 hardfork.
+		//if tx.Type().IsCancelTransaction() {
+		//	logger.Trace("New tx is a cancel transaction. replace it!", "old", old.String(), "new", tx.String())
+		//} else {
+		//	logger.Trace("already nonce exist", "nonce", tx.Nonce(), "with gasprice", old.GasPrice(), "priceBump", priceBump, "new tx.gasprice", tx.GasPrice())
+		//	return false, nil
+		//}
+
+		// If gas price of older is bigger than newer, abort.
+		if old.GasPrice().Cmp(tx.GasPrice()) > 0 {
 			logger.Trace("already nonce exist", "nonce", tx.Nonce(), "with gasprice", old.GasPrice(), "priceBump", priceBump, "new tx.gasprice", tx.GasPrice())
 			return false, nil
+		} else {
+			// Otherwise overwrite the old transaction with the current one
+			logger.Trace("Gas price of new tx is bigger than older tx!", "old", old.String(), "new", tx.String())
 		}
 	}
-	// Otherwise overwrite the old transaction with the current one
+
 	l.txs.Put(tx)
 
 	return true, old

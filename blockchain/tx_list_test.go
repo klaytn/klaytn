@@ -21,6 +21,7 @@
 package blockchain
 
 import (
+	"gotest.tools/assert"
 	"math/big"
 	"math/rand"
 	"reflect"
@@ -151,5 +152,51 @@ func TestTxListReadyWithGasPricePartialFilter(t *testing.T) {
 		if result := reflect.DeepEqual(ready[i], txs[i]); result == false {
 			t.Error("ready hash : ", ready[i].Hash(), "tx[i] hash : ", txs[i].Hash())
 		}
+	}
+}
+
+// TestReplaceTransaction tests if the new tx has been successfully replaced
+// if it has the same nonce and greater gas price as the old tx.
+func TestReplaceTransaction(t *testing.T) {
+	// Generate a list of transactions to insert
+	key, _ := crypto.GenerateKey()
+	txList := newTxList(false)
+
+	oldTx := pricedTransaction(0, 21000, big.NewInt(50), key)
+	newTx := pricedTransaction(0, 21000, big.NewInt(60), key)
+
+	if result, _ := txList.Add(oldTx, DefaultTxPoolConfig.PriceBump); !result {
+		t.Error("it cannot add tx in tx list.")
+	}
+
+	result, replaced := txList.Add(newTx, DefaultTxPoolConfig.PriceBump)
+	if !result {
+		t.Error("it cannot replace tx in tx list.")
+	}
+
+	assert.Equal(t, replaced, oldTx)
+}
+
+// TestReplaceTransactionAbort checks if a new tx aborts a new transaction
+// if it has the same nonce and lower gas price as the old tx.
+func TestReplaceTransactionAbort(t *testing.T) {
+	// Generate a list of transactions to insert
+	key, _ := crypto.GenerateKey()
+	txList := newTxList(false)
+
+	oldTx := pricedTransaction(0, 21000, big.NewInt(50), key)
+	newTx := pricedTransaction(0, 21000, big.NewInt(40), key)
+
+	if result, _ := txList.Add(oldTx, DefaultTxPoolConfig.PriceBump); !result {
+		t.Error("it cannot add tx in tx list.")
+	}
+
+	result, replaced := txList.Add(newTx, DefaultTxPoolConfig.PriceBump)
+	if result {
+		t.Error("it replaced to newly tx in tx list.")
+	}
+
+	if replaced != nil {
+		t.Error("it replaced to newly tx in tx list.")
 	}
 }
