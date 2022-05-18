@@ -791,6 +791,23 @@ func TestGovernance_HandleGovernanceVote_None_mode(t *testing.T) {
 	gov.voteMap.Clear()
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Test removing a non-existing validator
+	header.Number = blockCounter.Add(blockCounter, common.Big1)
+	gov.AddVote("governance.removevalidator", validators[1].String())
+	header.Vote = gov.GetEncodedVote(proposer, blockCounter.Uint64())
+
+	gov.HandleGovernanceVote(valSet, votes, tally, header, proposer, proposer) // self = proposer
+	// check if casted
+	if !gov.voteMap.items["governance.removevalidator"].Casted {
+		t.Errorf("Removing a non-existing validator failed")
+	}
+	gov.RemoveVote("governance.removevalidator", validators[1], 0)
+	if i, _ := valSet.GetByAddress(validators[1]); i != -1 {
+		t.Errorf("Removing a non-existing validator failed, %d validators remains", valSet.Size())
+	}
+	gov.voteMap.Clear()
+
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Test adding a validator
 	header.Number = blockCounter.Add(blockCounter, common.Big1)
 	gov.AddVote("governance.addvalidator", validators[1].String())
@@ -940,6 +957,29 @@ func TestGovernance_HandleGovernanceVote_Ballot_mode(t *testing.T) {
 	if i, _ := valSet.GetByAddress(validators[1]); i != -1 {
 		t.Errorf("Validator removal failed, %d validators remains", valSet.Size())
 	}
+	gov.RemoveVote("governance.removevalidator", validators[1], blockCounter.Uint64())
+	gov.voteMap.Clear()
+
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Test removing a non-existing validator. Because there are 3 nodes, 2 votes are required to remove a validator
+	gov.AddVote("governance.removevalidator", validators[1].String())
+
+	header.Number = blockCounter.Add(blockCounter, common.Big1)
+	header.Vote = gov.GetEncodedVote(validators[0], blockCounter.Uint64())
+	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[0], validators[0])
+	// check if casted
+	if !gov.voteMap.items["governance.removevalidator"].Casted {
+		t.Errorf("Removing a non-existing validator failed")
+	}
+
+	header.Number = blockCounter.Add(blockCounter, common.Big1)
+	header.Vote = gov.GetEncodedVote(validators[2], blockCounter.Uint64())
+	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[2], validators[2])
+	// check if casted
+	if !gov.voteMap.items["governance.removevalidator"].Casted {
+		t.Errorf("Removing a non-existing validator failed")
+	}
+
 	gov.RemoveVote("governance.removevalidator", validators[1], blockCounter.Uint64())
 	gov.voteMap.Clear()
 
