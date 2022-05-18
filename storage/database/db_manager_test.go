@@ -402,7 +402,7 @@ func TestDBManager_BadBlock(t *testing.T) {
 			}
 		}
 
-		//delete DB
+		// delete DB
 		dbm.DeleteBadBlocks()
 		if badblocks, _ := dbm.ReadAllBadBlocks(); len(badblocks) != 0 {
 			t.Fatalf("Failed to delete bad blocks")
