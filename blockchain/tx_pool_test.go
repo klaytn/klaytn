@@ -310,11 +310,18 @@ func TestInvalidTransactions(t *testing.T) {
 
 	// NOTE-Klaytn We only accept txs with an expected gas price only
 	//         regardless of local or remote.
-	if err := pool.AddRemote(tx); err != ErrInvalidUnitPrice {
-		t.Error("expected", ErrInvalidUnitPrice, "got", err)
+	// TODO : Need to KIP-71 hardfork.
+	//if err := pool.AddRemote(tx); err != ErrInvalidUnitPrice {
+	//	t.Error("expected", ErrInvalidUnitPrice, "got", err)
+	//}
+	//if err := pool.AddLocal(tx); err != ErrInvalidUnitPrice {
+	//	t.Error("expected", ErrInvalidUnitPrice, "got", err)
+	//}
+	if err := pool.AddRemote(tx); err != ErrGasPriceBelowBaseFee {
+		t.Error("expected", ErrGasPriceBelowBaseFee, "got", err)
 	}
-	if err := pool.AddLocal(tx); err != ErrInvalidUnitPrice {
-		t.Error("expected", ErrInvalidUnitPrice, "got", err)
+	if err := pool.AddLocal(tx); err != ErrGasPriceBelowBaseFee {
+		t.Error("expected", ErrGasPriceBelowBaseFee, "got", err)
 	}
 }
 
@@ -494,7 +501,7 @@ func TestTransactionDoubleNonce(t *testing.T) {
 
 	signer := types.LatestSignerForChainID(params.TestChainConfig.ChainID)
 	tx1, _ := types.SignTx(types.NewTransaction(0, common.HexToAddress("0xAAAA"), big.NewInt(100), 100000, big.NewInt(1), nil), signer, key)
-	tx2, _ := types.SignTx(types.NewTransaction(0, common.HexToAddress("0xAAAA"), big.NewInt(100), 1000000, big.NewInt(2), nil), signer, key)
+	tx2, _ := types.SignTx(types.NewTransaction(0, common.HexToAddress("0xAAAA"), big.NewInt(100), 1000000, big.NewInt(1), nil), signer, key)
 	tx3, _ := types.SignTx(types.NewTransaction(0, common.HexToAddress("0xAAAA"), big.NewInt(100), 1000000, big.NewInt(1), nil), signer, key)
 
 	// NOTE-Klaytn Add the first two transaction, ensure the first one stays only
