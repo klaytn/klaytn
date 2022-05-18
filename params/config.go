@@ -43,6 +43,7 @@ var (
 		IstanbulCompatibleBlock:  big.NewInt(86816005),
 		LondonCompatibleBlock:    big.NewInt(86816005),
 		EthTxTypeCompatibleBlock: big.NewInt(86816005),
+		KIP71CompatibleBlock:     big.NewInt(90000000), // temporal number
 		DeriveShaImpl:            2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x52d41ca72af615a1ac3301b0a93efa222ecc7541"),
@@ -55,6 +56,13 @@ var (
 				StakingUpdateInterval:  86400,
 				ProposerUpdateInterval: 3600,
 				MinimumStake:           big.NewInt(5000000),
+			},
+			KIP71: &KIP71Config{
+				LowerBoundBaseFee:  25000000000,
+				UpperBoundBaseFee:  750000000000,
+				GasTarget:          30000000,
+				BlockGasLimit:      84000000,
+				BaseFeeDenominator: 36,
 			},
 		},
 		Istanbul: &IstanbulConfig{
@@ -71,6 +79,7 @@ var (
 		IstanbulCompatibleBlock:  big.NewInt(75373312),
 		LondonCompatibleBlock:    big.NewInt(80295291),
 		EthTxTypeCompatibleBlock: big.NewInt(86513895),
+		KIP71CompatibleBlock:     big.NewInt(90000000), // temporal number
 		DeriveShaImpl:            2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x99fb17d324fa0e07f23b49d09028ac0919414db6"),
@@ -83,6 +92,13 @@ var (
 				StakingUpdateInterval:  86400,
 				ProposerUpdateInterval: 3600,
 				MinimumStake:           big.NewInt(5000000),
+			},
+			KIP71: &KIP71Config{
+				LowerBoundBaseFee:  25000000000,
+				UpperBoundBaseFee:  750000000000,
+				GasTarget:          30000000,
+				BlockGasLimit:      84000000,
+				BaseFeeDenominator: 36,
 			},
 		},
 		Istanbul: &IstanbulConfig{
@@ -170,6 +186,7 @@ type ChainConfig struct {
 	IstanbulCompatibleBlock  *big.Int `json:"istanbulCompatibleBlock,omitempty"`  // IstanbulCompatibleBlock switch block (nil = no fork, 0 = already on istanbul)
 	LondonCompatibleBlock    *big.Int `json:"londonCompatibleBlock,omitempty"`    // LondonCompatibleBlock switch block (nil = no fork, 0 = already on london)
 	EthTxTypeCompatibleBlock *big.Int `json:"ethTxTypeCompatibleBlock,omitempty"` // EthTxTypeCompatibleBlock switch block (nil = no fork, 0 = already on ethTxType)
+	KIP71CompatibleBlock     *big.Int `json:"kip71CompatibleBlock,omitempty"`     // KIP71Compatible switch block (nil = no fork, 0 already on ethTxType)
 
 	// Various consensus engines
 	Gxhash   *GxhashConfig   `json:"gxhash,omitempty"` // (deprecated) not supported engine
@@ -204,6 +221,7 @@ type RewardConfig struct {
 	MinimumStake           *big.Int `json:"minimumStake"`           // Minimum amount of peb to join CCO
 }
 
+// TODO-klaytn kip71 governance parameters
 type KIP71Config struct {
 	LowerBoundBaseFee  uint64 `json:"lowerboundbasefee"`  // Minimum base fee for dynamic gas price
 	UpperBoundBaseFee  uint64 `json:"upperboundbasefee"`  // Maximum base fee for dynamic gas price
@@ -296,6 +314,11 @@ func (c *ChainConfig) IsEthTxTypeForkEnabled(num *big.Int) bool {
 	return isForked(c.EthTxTypeCompatibleBlock, num)
 }
 
+// IsKIP71ForkedEnabled returns whether num is either equal to the kip71 block or greater.
+func (c *ChainConfig) IsKIP71ForkEnabled(num *big.Int) bool {
+	return isForked(c.KIP71CompatibleBlock, num)
+}
+
 // CheckCompatible checks whether scheduled fork transitions have been imported
 // with a mismatching chain configuration.
 func (c *ChainConfig) CheckCompatible(newcfg *ChainConfig, height uint64) *ConfigCompatError {
@@ -327,6 +350,7 @@ func (c *ChainConfig) CheckConfigForkOrder() error {
 		{name: "istanbulBlock", block: c.IstanbulCompatibleBlock},
 		{name: "londonBlock", block: c.LondonCompatibleBlock},
 		{name: "ethTxTypeBlock", block: c.EthTxTypeCompatibleBlock},
+		{name: "kip71Block", block: c.KIP71CompatibleBlock},
 	} {
 		if lastFork.name != "" {
 			// Next one must be higher number
@@ -358,6 +382,9 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *Confi
 	}
 	if isForkIncompatible(c.EthTxTypeCompatibleBlock, newcfg.EthTxTypeCompatibleBlock, head) {
 		return newCompatError("EthTxType Block", c.EthTxTypeCompatibleBlock, newcfg.EthTxTypeCompatibleBlock)
+	}
+	if isForkIncompatible(c.KIP71CompatibleBlock, newcfg.KIP71CompatibleBlock, head) {
+		return newCompatError("KIP71 Block", c.KIP71CompatibleBlock, newcfg.KIP71CompatibleBlock)
 	}
 	return nil
 }
@@ -473,6 +500,7 @@ type Rules struct {
 	ChainID    *big.Int
 	IsIstanbul bool
 	IsLondon   bool
+	IsKIP71    bool
 }
 
 // Rules ensures c's ChainID is not nil.
@@ -485,6 +513,7 @@ func (c *ChainConfig) Rules(num *big.Int) Rules {
 		ChainID:    new(big.Int).Set(chainID),
 		IsIstanbul: c.IsIstanbulForkEnabled(num),
 		IsLondon:   c.IsLondonForkEnabled(num),
+		IsKIP71:    c.IsKIP71ForkEnabled(num),
 	}
 }
 

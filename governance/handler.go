@@ -70,6 +70,8 @@ var GovernanceItems = map[int]check{
 	params.Timeout:                 {uint64T, checkUint64andBool, nil},
 }
 
+// TODO-klaytn chainConfig in blockchain, cn, worker, and governance after governance vote
+// Every instances share the chainConfig
 func updateLowerBoundBaseFee(g *Governance, k string, v interface{}) {
 	if g.blockChain != nil {
 		g.blockChain.SetLowerBoundBaseFee(v.(uint64))
@@ -99,6 +101,8 @@ func updateBaseFeeDenominator(g *Governance, k string, v interface{}) {
 		g.blockChain.SetBaseFeeDenominator(v.(uint64))
 	}
 }
+
+// end TODO-klaytn
 
 func updateTxGasHumanReadable(g *Governance, k string, v interface{}) {
 	params.TxGasHumanReadable = v.(uint64)
