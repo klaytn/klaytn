@@ -1550,6 +1550,22 @@ func (pool *TxPool) demoteUnexecutables() {
 			}
 		}
 
+		// TODO : Need to KIP-71 hardfork.
+		// Enqueue transaction if gasPrice of transaction is lower than gasPrice of txPool.
+		// All transactions with a nonce greater than enqueued transaction also stored queue.
+		if list.Len() > 0 {
+			needRemoved := false
+			for _, tx := range list.Flatten() {
+				hash := tx.Hash()
+				if needRemoved || tx.GasPrice().Cmp(pool.gasPrice) < 0 {
+					needRemoved = true
+					logger.Trace("Demoting transaction that has lower gas price than baseFee", "hash", hash)
+					list.Remove(tx)
+					pool.enqueueTx(hash, tx)
+				}
+			}
+		}
+
 		// Delete the entire queue entry if it became empty.
 		if list.Empty() {
 			delete(pool.pending, addr)
