@@ -21,11 +21,12 @@
 package blockchain
 
 import (
-	"gotest.tools/assert"
 	"math/big"
 	"math/rand"
 	"reflect"
 	"testing"
+
+	"gotest.tools/assert"
 
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/crypto"
