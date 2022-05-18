@@ -19,6 +19,7 @@ import (
 	event "github.com/klaytn/klaytn/event"
 	params "github.com/klaytn/klaytn/params"
 	rlp "github.com/klaytn/klaytn/rlp"
+	snapshot "github.com/klaytn/klaytn/snapshot"
 )
 
 // MockBlockChain is a mock of BlockChain interface.
@@ -112,6 +113,21 @@ func (m *MockBlockChain) Config() *params.ChainConfig {
 func (mr *MockBlockChainMockRecorder) Config() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Config", reflect.TypeOf((*MockBlockChain)(nil).Config))
+}
+
+// ContractCode mocks base method
+func (m *MockBlockChain) ContractCode(arg0 common.Hash) ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ContractCode", arg0)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ContractCode indicates an expected call of ContractCode
+func (mr *MockBlockChainMockRecorder) ContractCode(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ContractCode", reflect.TypeOf((*MockBlockChain)(nil).ContractCode), arg0)
 }
 
 // ContractCodeWithPrefix mocks base method
@@ -725,6 +741,20 @@ func (m *MockBlockChain) SetUseGiniCoeff(arg0 bool) {
 func (mr *MockBlockChainMockRecorder) SetUseGiniCoeff(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetUseGiniCoeff", reflect.TypeOf((*MockBlockChain)(nil).SetUseGiniCoeff), arg0)
+}
+
+// Snapshots mocks base method.
+func (m *MockBlockChain) Snapshots() *snapshot.Tree {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Snapshots")
+	ret0, _ := ret[0].(*snapshot.Tree)
+	return ret0
+}
+
+// Snapshots indicates an expected call of Snapshots.
+func (mr *MockBlockChainMockRecorder) Snapshots() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Snapshots", reflect.TypeOf((*MockBlockChain)(nil).Snapshots))
 }
 
 // StartCollectingTrieStats mocks base method.

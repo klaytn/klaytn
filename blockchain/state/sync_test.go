@@ -183,7 +183,7 @@ func TestEmptyStateSync(t *testing.T) {
 	// only bloom
 	{
 		db := database.NewMemoryDBManager()
-		sync := NewStateSync(empty, db, statedb.NewSyncBloom(1, db.GetMemDB()), nil)
+		sync := NewStateSync(empty, db, statedb.NewSyncBloom(1, db.GetMemDB()), nil, nil)
 		if nodes, paths, codes := sync.Missing(1); len(nodes) != 0 || len(paths) != 0 || len(codes) != 0 {
 			t.Errorf("content requested for empty state: %v", sync)
 		}
@@ -193,7 +193,7 @@ func TestEmptyStateSync(t *testing.T) {
 	{
 		lruCache, _ := lru.New(int(1 * units.MB / common.HashLength))
 		db := database.NewMemoryDBManager()
-		sync := NewStateSync(empty, db, statedb.NewSyncBloom(1, db.GetMemDB()), lruCache)
+		sync := NewStateSync(empty, db, statedb.NewSyncBloom(1, db.GetMemDB()), lruCache, nil)
 		if nodes, paths, codes := sync.Missing(1); len(nodes) != 0 || len(paths) != 0 || len(codes) != 0 {
 			t.Errorf("content requested for empty state: %v", sync)
 		}
@@ -202,7 +202,7 @@ func TestEmptyStateSync(t *testing.T) {
 	// no bloom lru
 	{
 		db := database.NewMemoryDBManager()
-		sync := NewStateSync(empty, db, nil, nil)
+		sync := NewStateSync(empty, db, nil, nil, nil)
 		if nodes, paths, codes := sync.Missing(1); len(nodes) != 0 || len(paths) != 0 || len(codes) != 0 {
 			t.Errorf("content requested for empty state: %v", sync)
 		}
@@ -213,7 +213,7 @@ func TestEmptyStateSync(t *testing.T) {
 		bloom := statedb.NewSyncBloom(1, database.NewMemDB())
 		lruCache, _ := lru.New(int(1 * units.MB / common.HashLength))
 		db := database.NewMemoryDBManager()
-		sync := NewStateSync(empty, db, bloom, lruCache)
+		sync := NewStateSync(empty, db, bloom, lruCache, nil)
 		if nodes, paths, codes := sync.Missing(1); len(nodes) != 0 || len(paths) != 0 || len(codes) != 0 {
 			t.Errorf("content requested for empty state: %v", sync)
 		}
@@ -257,7 +257,7 @@ func testIterativeStateSync(t *testing.T, count int, commit bool, bypath bool) {
 	// Create a destination state and sync with the scheduler
 	dstDiskDb := database.NewMemoryDBManager()
 	dstState := NewDatabase(dstDiskDb)
-	sched := NewStateSync(srcRoot, dstDiskDb, statedb.NewSyncBloom(1, dstDiskDb.GetMemDB()), nil)
+	sched := NewStateSync(srcRoot, dstDiskDb, statedb.NewSyncBloom(1, dstDiskDb.GetMemDB()), nil, nil)
 
 	nodes, paths, codes := sched.Missing(count)
 	var (
@@ -422,7 +422,7 @@ func TestIterativeDelayedStateSync(t *testing.T) {
 	// Create a destination state and sync with the scheduler
 	dstDiskDB := database.NewMemoryDBManager()
 	dstState := NewDatabase(dstDiskDB)
-	sched := NewStateSync(srcRoot, dstDiskDB, statedb.NewSyncBloom(1, dstDiskDB.GetMemDB()), nil)
+	sched := NewStateSync(srcRoot, dstDiskDB, statedb.NewSyncBloom(1, dstDiskDB.GetMemDB()), nil, nil)
 
 	nodes, _, codes := sched.Missing(0)
 	queue := append(append([]common.Hash{}, nodes...), codes...)
@@ -477,7 +477,7 @@ func testIterativeRandomStateSync(t *testing.T, count int) {
 	// Create a destination state and sync with the scheduler
 	dstDb := database.NewMemoryDBManager()
 	dstState := NewDatabase(dstDb)
-	sched := NewStateSync(srcRoot, dstDb, statedb.NewSyncBloom(1, dstDb.GetMemDB()), nil)
+	sched := NewStateSync(srcRoot, dstDb, statedb.NewSyncBloom(1, dstDb.GetMemDB()), nil, nil)
 
 	queue := make(map[common.Hash]struct{})
 	nodes, _, codes := sched.Missing(count)
@@ -534,7 +534,7 @@ func TestIterativeRandomDelayedStateSync(t *testing.T) {
 	// Create a destination state and sync with the scheduler
 	dstDb := database.NewMemoryDBManager()
 	dstState := NewDatabase(dstDb)
-	sched := NewStateSync(srcRoot, dstDb, statedb.NewSyncBloom(1, dstDb.GetMemDB()), nil)
+	sched := NewStateSync(srcRoot, dstDb, statedb.NewSyncBloom(1, dstDb.GetMemDB()), nil, nil)
 
 	queue := make(map[common.Hash]struct{})
 	nodes, _, codes := sched.Missing(0)
@@ -610,7 +610,7 @@ func TestIncompleteStateSync(t *testing.T) {
 	// Create a destination state and sync with the scheduler
 	dstDb := database.NewMemoryDBManager()
 	dstState := NewDatabase(dstDb)
-	sched := NewStateSync(srcRoot, dstDb, statedb.NewSyncBloom(1, dstDb.GetMemDB()), nil)
+	sched := NewStateSync(srcRoot, dstDb, statedb.NewSyncBloom(1, dstDb.GetMemDB()), nil, nil)
 
 	var added []common.Hash
 

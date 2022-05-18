@@ -105,6 +105,15 @@ func (d *Downloader) runStateSync(s *stateSync) *stateSync {
 
 	// Run the state sync.
 	logger.Trace("State sync starting", "root", s.root)
+
+	defer func() {
+		// Cancel active request timers on exit. Also set peers to idle so they're
+		// available for the next sync.
+		for _, req := range active {
+			req.timer.Stop()
+			req.peer.SetNodeDataIdle(int(req.nItems), time.Now())
+		}
+	}()
 	go s.run()
 	defer s.Cancel()
 
@@ -256,6 +265,7 @@ func (d *Downloader) spindownStateSync(active map[string]*stateReq, finished []*
 type stateSync struct {
 	d *Downloader // Downloader instance to access and manage current peerset
 
+	root   common.Hash       // State root currently being synced
 	sched  *statedb.TrieSync // State trie sync scheduler defining the tasks
 	keccak hash.Hash         // Keccak256 hasher to verify deliveries with
 
@@ -271,8 +281,6 @@ type stateSync struct {
 	cancelOnce sync.Once      // Ensures cancel only ever gets called once
 	done       chan struct{}  // Channel to signal termination completion
 	err        error          // Any error hit during sync (set before completion)
-
-	root common.Hash
 }
 
 // trieTask represents a single trie node download task, containing a set of
@@ -293,7 +301,8 @@ type codeTask struct {
 func newStateSync(d *Downloader, root common.Hash) *stateSync {
 	return &stateSync{
 		d:         d,
-		sched:     state.NewStateSync(root, d.stateDB, d.stateBloom, nil),
+		root:      root,
+		sched:     state.NewStateSync(root, d.stateDB, d.stateBloom, nil, nil),
 		keccak:    sha3.NewKeccak256(),
 		trieTasks: make(map[common.Hash]*trieTask),
 		codeTasks: make(map[common.Hash]*codeTask),
@@ -301,7 +310,6 @@ func newStateSync(d *Downloader, root common.Hash) *stateSync {
 		cancel:    make(chan struct{}),
 		done:      make(chan struct{}),
 		started:   make(chan struct{}),
-		root:      root,
 	}
 }
 
@@ -309,7 +317,12 @@ func newStateSync(d *Downloader, root common.Hash) *stateSync {
 // it finishes, and finally notifying any goroutines waiting for the loop to
 // finish.
 func (s *stateSync) run() {
-	s.err = s.loop()
+	close(s.started)
+	if s.d.snapSync {
+		s.err = s.d.SnapSyncer.Sync(s.root, s.cancel)
+	} else {
+		s.err = s.loop()
+	}
 	close(s.done)
 }
 
@@ -332,7 +345,6 @@ func (s *stateSync) Cancel() error {
 // pushed here async. The reason is to decouple processing from data receipt
 // and timeouts.
 func (s *stateSync) loop() (err error) {
-	close(s.started)
 	// Listen for new peer events to assign tasks to them
 	newPeer := make(chan *peerConnection, 1024)
 	peerSub := s.d.peers.SubscribeNewPeers(newPeer)

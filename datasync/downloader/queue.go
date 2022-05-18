@@ -74,17 +74,21 @@ type fetchResult struct {
 	StakingInfo  *reward.StakingInfo
 }
 
-func newFetchResult(header *types.Header, fastSync bool, proposerPolicy uint64) *fetchResult {
+func newFetchResult(header *types.Header, mode SyncMode, proposerPolicy uint64) *fetchResult {
+	var (
+		fastSync = mode == FastSync
+		snapSync = mode == SnapSync
+	)
 	item := &fetchResult{
 		Header: header,
 	}
 	if !header.EmptyBody() {
 		item.pending |= (1 << bodyType)
 	}
-	if fastSync && !header.EmptyReceipts() {
+	if (fastSync || snapSync) && !header.EmptyReceipts() {
 		item.pending |= (1 << receiptType)
 	}
-	if fastSync && proposerPolicy == uint64(istanbul.WeightedRandom) && params.IsStakingUpdateInterval(header.Number.Uint64()) {
+	if (fastSync || snapSync) && proposerPolicy == uint64(istanbul.WeightedRandom) && params.IsStakingUpdateInterval(header.Number.Uint64()) {
 		item.pending |= (1 << stakingInfoType)
 	}
 	return item
@@ -361,7 +365,7 @@ func (q *queue) Schedule(headers []*types.Header, from uint64) []*types.Header {
 			q.blockTaskQueue.Push(header, -int64(header.Number.Uint64()))
 		}
 		// Queue for receipt retrieval
-		if q.mode == FastSync && !header.EmptyReceipts() {
+		if (q.mode == FastSync || q.mode == SnapSync) && !header.EmptyReceipts() {
 			if _, ok := q.receiptTaskPool[hash]; ok {
 				logger.Trace("Header already scheduled for receipt fetch", "number", header.Number, "hash", hash)
 			} else {
@@ -370,7 +374,7 @@ func (q *queue) Schedule(headers []*types.Header, from uint64) []*types.Header {
 			}
 		}
 
-		if q.mode == FastSync && q.proposerPolicy == uint64(istanbul.WeightedRandom) && params.IsStakingUpdateInterval(header.Number.Uint64()) {
+		if (q.mode == FastSync || q.mode == SnapSync) && q.proposerPolicy == uint64(istanbul.WeightedRandom) && params.IsStakingUpdateInterval(header.Number.Uint64()) {
 			if _, ok := q.stakingInfoTaskPool[hash]; ok {
 				logger.Trace("Header already scheduled for staking info fetch", "number", header.Number, "hash", hash)
 			} else {
@@ -565,7 +569,7 @@ func (q *queue) reserveHeaders(p *peerConnection, count int, taskPool map[common
 		header := h.(*types.Header)
 		// we can ask the resultCache if this header is within the
 		// "prioritized" segment of blocks. If it is not, we need to throttle
-		stale, throttle, item, err := q.resultCache.AddFetch(header, q.mode == FastSync, q.proposerPolicy)
+		stale, throttle, item, err := q.resultCache.AddFetch(header, q.mode, q.proposerPolicy)
 		if stale {
 			// Don't put back in the task queue, this item has already been
 			// delivered upstream

@@ -123,7 +123,7 @@ var (
 	defaultSyncMode = cn.GetDefaultConfig().SyncMode
 	SyncModeFlag    = TextMarshalerFlag{
 		Name:  "syncmode",
-		Usage: `Blockchain sync mode (only "full" is supported)`,
+		Usage: `Blockchain sync mode ("full" or "snap")`,
 		Value: &defaultSyncMode,
 	}
 	GCModeFlag = cli.StringFlag{
@@ -1586,8 +1586,11 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 
 	if ctx.GlobalIsSet(SyncModeFlag.Name) {
 		cfg.SyncMode = *GlobalTextMarshaler(ctx, SyncModeFlag.Name).(*downloader.SyncMode)
-		if cfg.SyncMode != downloader.FullSync {
-			log.Fatalf("only syncmode=full can be used for syncmode!")
+		if cfg.SyncMode == downloader.SnapSync {
+			logger.Info("Snap sync requested, enabling --snapshot")
+			ctx.Set(SnapshotFlag.Name, "true")
+		} else {
+			cfg.SnapshotCacheSize = 0 // Disabled
 		}
 	}
 

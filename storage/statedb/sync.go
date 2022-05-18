@@ -185,7 +185,7 @@ func (s *TrieSync) AddSubTrie(root common.Hash, path []byte, depth int, parent c
 		// If database says yes, then at least the trie node is present
 		// and we hold the assumption that it's NOT legacy contract code.
 		if ok, _ := s.database.HasStateTrieNode(root[:]); ok {
-			logger.Info("skip write node in migration by ReadStateTrieNode", "AddSubTrie", root.String())
+			logger.Debug("skip write sub-trie", "root", root.String())
 			return
 		}
 		// False positive, bump fault meter
@@ -234,6 +234,7 @@ func (s *TrieSync) AddCodeEntry(hash common.Hash, path []byte, depth int, parent
 		// exists the code with legacy format, fetch and store with
 		// new scheme anyway.
 		if ok := s.database.HasCodeWithPrefix(hash); ok {
+			logger.Debug("skip write code entry", "root", hash.String())
 			return
 		}
 		// False positive, bump fault meter
@@ -451,7 +452,14 @@ func (s *TrieSync) children(req *request, object node) ([]*request, error) {
 		// Notify any external watcher of a new key/value node
 		if req.callback != nil {
 			if node, ok := (child.node).(valueNode); ok {
-				if err := req.callback(child.path, node, req.hash, child.depth); err != nil {
+				var paths [][]byte
+				if len(child.path) == 2*common.HashLength {
+					paths = append(paths, hexToKeybytes(child.path))
+				} else if len(child.path) == 4*common.HashLength {
+					paths = append(paths, hexToKeybytes(child.path[:2*common.HashLength]))
+					paths = append(paths, hexToKeybytes(child.path[2*common.HashLength:]))
+				}
+				if err := req.callback(paths, child.path, node, req.hash, child.depth); err != nil {
 					return nil, err
 				}
 			}

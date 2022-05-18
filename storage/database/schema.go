@@ -64,6 +64,9 @@ var (
 	// snapshotRecoveryKey tracks the snapshot recovery marker across restarts.
 	snapshotRecoveryKey = []byte("SnapshotRecovery")
 
+	// snapshotSyncStatusKey tracks the snapshot sync status across restarts.
+	snapshotSyncStatusKey = []byte("SnapshotSyncStatus")
+
 	// snapshotRootKey tracks the hash of the last snapshot.
 	snapshotRootKey = []byte("SnapshotRoot")
 

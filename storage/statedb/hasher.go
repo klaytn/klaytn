@@ -31,14 +31,14 @@ import (
 
 type hasher struct {
 	tmp    sliceBuffer
-	sha    keccakState
+	sha    KeccakState
 	onleaf LeafCallback
 }
 
-// keccakState wraps sha3.state. In addition to the usual hash methods, it also supports
+// KeccakState wraps sha3.state. In addition to the usual hash methods, it also supports
 // Read to get a variable amount of data from the hash state. Read is faster than Sum
 // because it doesn't copy the internal state, but also modifies the internal state.
-type keccakState interface {
+type KeccakState interface {
 	hash.Hash
 	Read([]byte) (int, error)
 }
@@ -59,7 +59,7 @@ var hasherPool = sync.Pool{
 	New: func() interface{} {
 		return &hasher{
 			tmp: make(sliceBuffer, 0, 550), // cap is as large as a full fullNode.
-			sha: sha3.NewKeccak256().(keccakState),
+			sha: sha3.NewKeccak256().(KeccakState),
 		}
 	},
 }
@@ -278,12 +278,12 @@ func (h *hasher) store(n node, db *Database, force bool) (node, uint16) {
 			switch n := n.(type) {
 			case *shortNode:
 				if child, ok := n.Val.(valueNode); ok {
-					h.onleaf(nil, child, hash, 0)
+					h.onleaf(nil, nil, child, hash, 0)
 				}
 			case *fullNode:
 				for i := 0; i < 16; i++ {
 					if child, ok := n.Children[i].(valueNode); ok {
-						h.onleaf(nil, child, hash, 0)
+						h.onleaf(nil, nil, child, hash, 0)
 					}
 				}
 			}
