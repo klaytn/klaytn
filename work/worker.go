@@ -538,9 +538,9 @@ func (self *worker) commitNewWork() {
 	// Create the current work task
 	work := self.current
 	if self.nodetype == common.CONSENSUSNODE {
-		//TODO : Need to KIP-71 hardfork.
-		//TODO : It need to uncomment after implemented baseFee logic.
-		//pending = types.FilterTransactionWithBaseFee(pending, baseFee)
+		// TODO : Need to KIP-71 hardfork.
+		// TODO : It need to uncomment after implemented baseFee logic.
+		// pending = types.FilterTransactionWithBaseFee(pending, baseFee)
 		txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending)
 		work.commitTransactions(self.mux, txs, self.chain, self.rewardbase)
 		finishedCommitTx := time.Now()
