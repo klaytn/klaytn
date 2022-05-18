@@ -22,6 +22,7 @@ import (
 
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -122,7 +123,7 @@ func TestRewardDistributor_MintKLAY(t *testing.T) {
 	}
 
 	assert.NotNil(t, BalanceAdder.GetBalance(header.Rewardbase).Int64())
-	assert.Equal(t, governance.mintingAmount, BalanceAdder.GetBalance(header.Rewardbase).String())
+	assert.Equal(t, governance.Params().MintingAmountStr(), BalanceAdder.GetBalance(header.Rewardbase).String())
 }
 
 func TestRewardDistributor_distributeBlockReward(t *testing.T) {
@@ -185,49 +186,50 @@ func TestRewardDistributor_distributeBlockReward(t *testing.T) {
 
 func TestRewardDistributor_DistributeBlockReward(t *testing.T) {
 	testCases := []struct {
+		config             map[int]interface{}
 		gasUsed            uint64
-		epoch              uint64
-		mintingAmount      string
-		ratio              string
-		unitprice          uint64
-		useGiniCoeff       bool
-		deferredTxFee      bool
 		expectedCnBalance  *big.Int
 		expectedPocBalance *big.Int
 		expectedKirBalance *big.Int
 	}{
 		{
+			config: map[int]interface{}{
+				params.Epoch:         30,
+				params.MintingAmount: "50000",
+				params.Ratio:         "40/50/10",
+				params.UnitPrice:     500,
+				params.UseGiniCoeff:  true,
+				params.DeferredTxFee: true,
+			},
 			gasUsed:            100,
-			epoch:              30,
-			mintingAmount:      "50000",
-			ratio:              "40/50/10",
-			unitprice:          500,
-			useGiniCoeff:       true,
-			deferredTxFee:      true,
 			expectedCnBalance:  big.NewInt(0).SetUint64(40000),
 			expectedPocBalance: big.NewInt(0).SetUint64(50000),
 			expectedKirBalance: big.NewInt(0).SetUint64(10000),
 		},
 		{
+			config: map[int]interface{}{
+				params.Epoch:         604800,
+				params.MintingAmount: "9600000000000000000",
+				params.Ratio:         "34/54/12",
+				params.UnitPrice:     25000000000,
+				params.UseGiniCoeff:  true,
+				params.DeferredTxFee: true,
+			},
 			gasUsed:            0,
-			epoch:              604800,
-			mintingAmount:      "9600000000000000000",
-			ratio:              "34/54/12",
-			unitprice:          25000000000,
-			useGiniCoeff:       true,
-			deferredTxFee:      true,
 			expectedCnBalance:  big.NewInt(0).SetUint64(3264000000000000000),
 			expectedPocBalance: big.NewInt(0).SetUint64(5184000000000000000),
 			expectedKirBalance: big.NewInt(0).SetUint64(1152000000000000000),
 		},
 		{
+			config: map[int]interface{}{
+				params.Epoch:         3600,
+				params.MintingAmount: "0",
+				params.Ratio:         "100/0/0",
+				params.UnitPrice:     0,
+				params.UseGiniCoeff:  true,
+				params.DeferredTxFee: true,
+			},
 			gasUsed:            0,
-			epoch:              3600,
-			mintingAmount:      "0",
-			ratio:              "100/0/0",
-			unitprice:          0,
-			useGiniCoeff:       true,
-			deferredTxFee:      true,
 			expectedCnBalance:  big.NewInt(0).SetUint64(0),
 			expectedPocBalance: big.NewInt(0).SetUint64(0),
 			expectedKirBalance: big.NewInt(0).SetUint64(0),
@@ -239,11 +241,10 @@ func TestRewardDistributor_DistributeBlockReward(t *testing.T) {
 	header.Rewardbase = common.StringToAddress("0x1552F52D459B713E0C4558e66C8c773a75615FA8")
 	pocAddress := common.StringToAddress("0x4bCDd8E3F9776d16056815E189EcB5A8bF8E4CBb")
 	kirAddress := common.StringToAddress("0xd38A08AD21B44681f5e75D0a3CA4793f3E6c03e7")
-	governance := newDefaultTestGovernance()
 
 	for _, testCase := range testCases {
 		BalanceAdder := newTestBalanceAdder()
-		governance.setTestGovernance(testCase.epoch, testCase.mintingAmount, testCase.ratio, testCase.unitprice, testCase.useGiniCoeff, testCase.deferredTxFee)
+		governance := newTestGovernance(testCase.config)
 		header.GasUsed = testCase.gasUsed
 		rewardDistributor := NewRewardDistributor(governance)
 

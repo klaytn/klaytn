@@ -23,7 +23,6 @@ import (
 	"strings"
 
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/klaytn/klaytn/params"
 )
 
 var (
@@ -61,14 +60,12 @@ func newRewardConfigCache(governanceHelper governanceHelper) *rewardConfigCache 
 }
 
 func (rewardConfigCache *rewardConfigCache) get(blockNumber uint64) (*rewardConfig, error) {
-	var epoch uint64
-	result, err := rewardConfigCache.governanceHelper.GetItemAtNumberByIntKey(blockNumber, params.Epoch)
+	pset, err := rewardConfigCache.governanceHelper.ParamsAt(blockNumber)
 	if err != nil {
-		logger.Error("Couldn't get epoch from governance", "blockNumber", blockNumber, "err", err)
-		return nil, errFailGettingConfigure
+		return nil, err
 	}
-	epoch = result.(uint64)
 
+	epoch := pset.Epoch()
 	remainder := blockNumber % epoch
 	if remainder == 0 {
 		blockNumber -= epoch
@@ -91,50 +88,25 @@ func (rewardConfigCache *rewardConfigCache) get(blockNumber uint64) (*rewardConf
 }
 
 func (rewardConfigCache *rewardConfigCache) newRewardConfig(blockNumber uint64) (*rewardConfig, error) {
-	mintingAmount := big.NewInt(0)
-
-	result, err := rewardConfigCache.governanceHelper.GetItemAtNumberByIntKey(blockNumber, params.MintingAmount)
+	pset, err := rewardConfigCache.governanceHelper.ParamsAt(blockNumber)
 	if err != nil {
-		logger.Error("Couldn't get MintingAmount from governance", "blockNumber", blockNumber, "err", err)
-		return nil, errFailGettingConfigure
+		return nil, err
 	}
-	mintingAmount.SetString(result.(string), 10)
 
-	cnRatio := big.NewInt(0)
-	pocRatio := big.NewInt(0)
-	kirRatio := big.NewInt(0)
-	totalRatio := big.NewInt(0)
-
-	result, err = rewardConfigCache.governanceHelper.GetItemAtNumberByIntKey(blockNumber, params.Ratio)
+	ratio := pset.Ratio()
+	cn, poc, kir, err := rewardConfigCache.parseRewardRatio(ratio)
 	if err != nil {
-		logger.Error("Couldn't get Ratio from governance", "blockNumber", blockNumber, "err", err)
-		return nil, errFailGettingConfigure
+		return nil, err
 	}
-	cn, poc, kir, parsingError := rewardConfigCache.parseRewardRatio(result.(string))
-	if parsingError != nil {
-		return nil, parsingError
-	}
-	cnRatio.SetInt64(int64(cn))
-	pocRatio.SetInt64(int64(poc))
-	kirRatio.SetInt64(int64(kir))
-	totalRatio.SetInt64(int64(cn + poc + kir))
-
-	unitPrice := big.NewInt(0)
-	result, err = rewardConfigCache.governanceHelper.GetItemAtNumberByIntKey(blockNumber, params.UnitPrice)
-	if err != nil {
-		logger.Error("Couldn't get MintingAmount from governance", "blockNumber", blockNumber, "err", err)
-		return nil, errFailGettingConfigure
-	}
-	unitPrice.SetUint64(result.(uint64))
 
 	rewardConfig := &rewardConfig{
 		blockNum:      blockNumber,
-		mintingAmount: mintingAmount,
-		cnRatio:       cnRatio,
-		pocRatio:      pocRatio,
-		kirRatio:      kirRatio,
-		totalRatio:    totalRatio,
-		unitPrice:     unitPrice,
+		mintingAmount: pset.MintingAmountBig(),
+		cnRatio:       big.NewInt(int64(cn)),
+		pocRatio:      big.NewInt(int64(poc)),
+		kirRatio:      big.NewInt(int64(kir)),
+		totalRatio:    big.NewInt(int64(cn + poc + kir)),
+		unitPrice:     new(big.Int).SetUint64(pset.UnitPrice()),
 	}
 	return rewardConfig, nil
 }
