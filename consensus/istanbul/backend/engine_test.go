@@ -1086,6 +1086,21 @@ func TestSnapshot_Validators_AddRemove(t *testing.T) {
 				9: {[]int{0, 1, 2}},
 			},
 		},
+		{ // multiple removevalidator & addvalidator
+			10,
+			map[int]vote{
+				0: {"governance.removevalidator", 3},
+				2: {"governance.removevalidator", 3},
+				4: {"governance.addvalidator", 3},
+				6: {"governance.addvalidator", 3},
+			},
+			map[int]expected{
+				1: {[]int{0, 1, 2}},
+				3: {[]int{0, 1, 2}},
+				5: {[]int{0, 1, 2, 3}},
+				7: {[]int{0, 1, 2, 3}},
+			},
+		},
 		{ // multiple addvalidators & removevalidators
 			10,
 			map[int]vote{
@@ -1101,6 +1116,21 @@ func TestSnapshot_Validators_AddRemove(t *testing.T) {
 				5: {[]int{0, 1, 2, 3}},
 				7: {[]int{0, 1}},
 				9: {[]int{0, 1}},
+			},
+		},
+		{ // multiple removevalidators & addvalidators
+			10,
+			map[int]vote{
+				0: {"governance.removevalidator", []int{2, 3}},
+				2: {"governance.removevalidator", []int{2, 3}},
+				4: {"governance.addvalidator", []int{2, 3}},
+				6: {"governance.addvalidator", []int{2, 3}},
+			},
+			map[int]expected{
+				1: {[]int{0, 1}},
+				3: {[]int{0, 1}},
+				5: {[]int{0, 1, 2, 3}},
+				7: {[]int{0, 1, 2, 3}},
 			},
 		},
 	}
