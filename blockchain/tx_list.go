@@ -321,7 +321,7 @@ func (l *txList) Add(tx *types.Transaction, priceBump uint64) (bool, *types.Tran
 		//}
 
 		// If gas price of older is bigger than newer, abort.
-		if old.GasPrice().Cmp(tx.GasPrice()) > 0 {
+		if old.GasPrice().Cmp(tx.GasPrice()) >= 0 {
 			logger.Trace("already nonce exist", "nonce", tx.Nonce(), "with gasprice", old.GasPrice(), "priceBump", priceBump, "new tx.gasprice", tx.GasPrice())
 			return false, nil
 		} else {
