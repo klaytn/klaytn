@@ -63,7 +63,7 @@ var (
 // TODO-Klaytn-Governance: Refine this API and consider the gas price of txpool
 func (api *GovernanceKlayAPI) GasPriceAt(num *rpc.BlockNumber) (*hexutil.Big, error) {
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
-		ret := api.governance.UnitPrice()
+		ret := api.governance.Params().UnitPrice()
 		return (*hexutil.Big)(big.NewInt(0).SetUint64(ret)), nil
 	} else {
 		blockNum := num.Int64()
@@ -82,10 +82,10 @@ func (api *GovernanceKlayAPI) GasPriceAt(num *rpc.BlockNumber) (*hexutil.Big, er
 
 // Vote injects a new vote for governance targets such as unitprice and governingnode.
 func (api *PublicGovernanceAPI) Vote(key string, val interface{}) (string, error) {
-	gMode := api.governance.GovernanceMode()
-	gNode := api.governance.GoverningNode()
+	gMode := api.governance.Params().GovernanceModeInt()
+	gNode := api.governance.Params().GoverningNode()
 
-	if GovernanceModeMap[gMode] == params.GovernanceMode_Single && gNode != api.governance.NodeAddress() {
+	if gMode == params.GovernanceMode_Single && gNode != api.governance.NodeAddress() {
 		return "", errPermissionDenied
 	}
 	if strings.ToLower(key) == "governance.removevalidator" {
@@ -226,19 +226,15 @@ func (api *PublicGovernanceAPI) NodeAddress() common.Address {
 }
 
 func (api *PublicGovernanceAPI) isGovernanceModeBallot() bool {
-	if GovernanceModeMap[api.governance.GovernanceMode()] == params.GovernanceMode_Ballot {
-		return true
-	}
-	return false
+	return api.governance.Params().GovernanceModeInt() == params.GovernanceMode_Ballot
 }
 
 func (api *GovernanceKlayAPI) GasPriceAtNumber(num int64) (uint64, error) {
-	val, err := api.governance.GetGovernanceItemAtNumber(uint64(num), GovernanceKeyMapReverse[params.UnitPrice])
+	pset, err := api.governance.ParamsAt(uint64(num))
 	if err != nil {
-		logger.Error("Failed to retrieve unit price", "err", err)
 		return 0, err
 	}
-	return val.(uint64), nil
+	return pset.UnitPrice(), nil
 }
 
 // Disabled APIs

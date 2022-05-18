@@ -1097,6 +1097,8 @@ func AddGovernanceCacheForTest(e HeaderEngine, num uint64, config *params.ChainC
 	}
 }
 
+// TODO-Klaytn: Remove nominal getters once we add Governnace.Params() and UpdateParams()
+
 func (gov *Governance) GovernanceMode() string {
 	return gov.GetGovernanceValue(params.GovernanceMode).(string)
 }
