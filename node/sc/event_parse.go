@@ -53,7 +53,7 @@ func GetURI(ev IRequestValueTransferEvent) string {
 			return ""
 		}
 		if len(uri) <= 64 {
-			return uri
+			return ""
 		}
 		return string(bytes.Trim([]byte(uri[64:]), "\x00"))
 	}
