@@ -51,7 +51,7 @@ func TestOutput(t *testing.T) {
 
 			// Set this environment variable to regenerate the test outputs.
 			if os.Getenv("WRITE_TEST_FILES") != "" {
-				ioutil.WriteFile(outputFile, output, 0644)
+				ioutil.WriteFile(outputFile, output, 0o644)
 			}
 
 			// Check if output matches.
