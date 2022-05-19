@@ -68,19 +68,21 @@ func (cce *ChildChainEventHandler) HandleLogsEvent(logs []*types.Log) error {
 	return nil
 }
 
-func (cce *ChildChainEventHandler) ProcessRequestEvent(ev *RequestValueTransferEvent) error {
-	handleBridgeAddr := cce.subbridge.bridgeManager.GetCounterPartBridgeAddr(ev.Raw.Address)
+func (cce *ChildChainEventHandler) ProcessRequestEvent(ev IRequestValueTransferEvent) error {
+	addr := ev.GetRaw().Address
+
+	handleBridgeAddr := cce.subbridge.bridgeManager.GetCounterPartBridgeAddr(addr)
 	if handleBridgeAddr == (common.Address{}) {
-		return fmt.Errorf("there is no counter part bridge of the bridge(%v)", ev.Raw.Address.String())
+		return fmt.Errorf("there is no counter part bridge of the bridge(%v)", addr.String())
 	}
 
 	handleBridgeInfo, ok := cce.subbridge.bridgeManager.GetBridgeInfo(handleBridgeAddr)
 	if !ok {
-		return fmt.Errorf("there is no counter part bridge info(%v) of the bridge(%v)", handleBridgeAddr.String(), ev.Raw.Address.String())
+		return fmt.Errorf("there is no counter part bridge info(%v) of the bridge(%v)", handleBridgeAddr.String(), addr.String())
 	}
 
 	// TODO-Klaytn need to manage the size limitation of pending event list.
-	handleBridgeInfo.AddRequestValueTransferEvents([]*RequestValueTransferEvent{ev})
+	handleBridgeInfo.AddRequestValueTransferEvents([]IRequestValueTransferEvent{ev})
 	return nil
 }
 
