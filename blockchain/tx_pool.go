@@ -688,7 +688,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 
 		// Ensure transaction's gasPrice is greater than or equal to transaction pool's gasPrice(baseFee).
 		if pool.gasPrice.Cmp(tx.GasPrice()) > 0 {
-			logger.Trace("fail to validate unitprice", "unitPrice", pool.gasPrice, "txUnitPrice", tx.GasPrice())
+			logger.Trace("fail to validate gasprice", "pool.gasPrice", pool.gasPrice, "tx.gasPrice", tx.GasPrice())
 			return ErrGasPriceBelowBaseFee
 		}
 	}
@@ -1558,8 +1558,12 @@ func (pool *TxPool) demoteUnexecutables() {
 			for _, tx := range list.Flatten() {
 				hash := tx.Hash()
 				if needRemoved || tx.GasPrice().Cmp(pool.gasPrice) < 0 {
-					needRemoved = true
-					logger.Trace("Demoting transaction that has lower gas price than baseFee", "hash", hash)
+					if needRemoved {
+						logger.Trace("Demoting the transaction due to the previous transaction that has lower gas price than baseFee", "txhash", hash)
+					} else {
+						needRemoved = true
+						logger.Trace("Demoting the transaction that has lower gas price than baseFee", "txhash", hash)
+					}
 					list.Remove(tx)
 					pool.enqueueTx(hash, tx)
 				}
