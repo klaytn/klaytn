@@ -26,10 +26,10 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/crypto"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // Tests that transactions can be added to strict lists and list contents and
