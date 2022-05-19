@@ -57,13 +57,6 @@ var (
 				ProposerUpdateInterval: 3600,
 				MinimumStake:           big.NewInt(5000000),
 			},
-			KIP71: &KIP71Config{
-				LowerBoundBaseFee:  25000000000,
-				UpperBoundBaseFee:  750000000000,
-				GasTarget:          30000000,
-				BlockGasLimit:      84000000,
-				BaseFeeDenominator: 36,
-			},
 		},
 		Istanbul: &IstanbulConfig{
 			Epoch:          604800,
@@ -92,13 +85,6 @@ var (
 				StakingUpdateInterval:  86400,
 				ProposerUpdateInterval: 3600,
 				MinimumStake:           big.NewInt(5000000),
-			},
-			KIP71: &KIP71Config{
-				LowerBoundBaseFee:  25000000000,
-				UpperBoundBaseFee:  750000000000,
-				GasTarget:          30000000,
-				BlockGasLimit:      84000000,
-				BaseFeeDenominator: 36,
 			},
 		},
 		Istanbul: &IstanbulConfig{

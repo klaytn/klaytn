@@ -46,13 +46,6 @@ var (
                 "proposerUpdateInterval": 3600,
                 "minimumStake":5000000
             },
-            "kip71": {
-                "lowerboundbasefee": 25000000000,
-                "upperboundbasefee": 750000000000,
-                "gastarget": 30000000,
-                "blockgaslimit": 84000000,
-                "basefeedenominator": 36
-            }
         },
         "istanbul": {
             "epoch": 604800,
@@ -95,13 +88,6 @@ var (
                 "proposerUpdateInterval": 3600,
                 "minimumStake":5000000
             },
-            "kip71": {
-                "lowerboundbasefee": 25000000000,
-                "upperboundbasefee": 750000000000,
-                "gastarget": 30000000,
-                "blockgaslimit": 84000000,
-                "basefeedenominator": 36
-            }
         },
         "istanbul": {
             "epoch": 604800,

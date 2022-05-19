@@ -424,7 +424,7 @@ func (gs *GovernanceSet) Merge(change map[string]interface{}) {
 
 // NewGovernance creates Governance with the given configuration.
 func NewGovernance(chainConfig *params.ChainConfig, dbm database.DBManager) *Governance {
-	return &Governance{
+	g := &Governance{
 		ChainConfig:              chainConfig,
 		voteMap:                  NewVoteMap(),
 		db:                       dbm,
@@ -436,6 +436,12 @@ func NewGovernance(chainConfig *params.ChainConfig, dbm database.DBManager) *Gov
 		GovernanceVotes:          NewGovernanceVotes(),
 		idxCacheLock:             new(sync.RWMutex),
 	}
+	// TODO-klaytn KIP71 default setting
+	// If DB doesn't have the KIP71 state, default values will be used
+	if g.ChainConfig.Governance.KIP71 == nil {
+		g.ChainConfig.Governance.KIP71 = params.GetDefaultKip71Config()
+	}
+	return g
 }
 
 // NewGovernanceInitialize creates Governance with the given configuration and read governance state from DB.
