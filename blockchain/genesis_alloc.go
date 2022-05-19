@@ -45,7 +45,7 @@ var (
                 "stakingUpdateInterval": 86400,
                 "proposerUpdateInterval": 3600,
                 "minimumStake":5000000
-            },
+            }
         },
         "istanbul": {
             "epoch": 604800,
@@ -87,7 +87,7 @@ var (
                 "stakingUpdateInterval": 86400,
                 "proposerUpdateInterval": 3600,
                 "minimumStake":5000000
-            },
+            }
         },
         "istanbul": {
             "epoch": 604800,
