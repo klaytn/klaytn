@@ -173,7 +173,7 @@ type ChainConfig struct {
 	IstanbulCompatibleBlock  *big.Int `json:"istanbulCompatibleBlock,omitempty"`  // IstanbulCompatibleBlock switch block (nil = no fork, 0 = already on istanbul)
 	LondonCompatibleBlock    *big.Int `json:"londonCompatibleBlock,omitempty"`    // LondonCompatibleBlock switch block (nil = no fork, 0 = already on london)
 	EthTxTypeCompatibleBlock *big.Int `json:"ethTxTypeCompatibleBlock,omitempty"` // EthTxTypeCompatibleBlock switch block (nil = no fork, 0 = already on ethTxType)
-	KIP71CompatibleBlock     *big.Int `json:"kip71CompatibleBlock,omitempty"`     // KIP71Compatible switch block (nil = no fork, 0 already on ethTxType)
+	KIP71CompatibleBlock     *big.Int `json:"kip71CompatibleBlock,omitempty"`     // KIP71Compatible switch block (nil = no fork, 0 already on KIP71)
 
 	// Various consensus engines
 	Gxhash   *GxhashConfig   `json:"gxhash,omitempty"` // (deprecated) not supported engine
