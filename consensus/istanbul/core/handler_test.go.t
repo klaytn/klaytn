@@ -2,8 +2,14 @@ package core
 
 import (
 	"crypto/ecdsa"
+	"fmt"
+	"github.com/klaytn/klaytn/log"
+	"github.com/klaytn/klaytn/log/term"
+	"github.com/mattn/go-colorable"
+	"io"
 	"math/big"
 	"math/rand"
+	"os"
 	"testing"
 	"time"
 
@@ -72,6 +78,9 @@ func newMockBackend(t *testing.T, validatorAddrs []common.Address) (*mock_istanb
 
 	// Verify checks whether the proposal of the preprepare message is a valid block. Consider it valid.
 	mockBackend.EXPECT().Verify(gomock.Any()).Return(time.Duration(0), nil).AnyTimes()
+
+	// Commit is added to remove unexpected call error
+	mockBackend.EXPECT().Commit(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
 	return mockBackend, mockCtrl
 }
@@ -153,6 +162,19 @@ func genBlock(prevBlock *types.Block, signerKey *ecdsa.PrivateKey) (*types.Block
 		Extra:      prevBlock.Extra(),
 		Time:       new(big.Int).Add(prevBlock.Time(), common.Big1),
 		BlockScore: new(big.Int).Add(prevBlock.BlockScore(), common.Big1),
+	})
+	return signBlock(block, signerKey)
+}
+
+// genMaliciousBlock generates a modified block indicating prevBlock with ParentHash
+func genMaliciousBlock(prevBlock *types.Block, signerKey *ecdsa.PrivateKey) (*types.Block, error) {
+	block := types.NewBlockWithHeader(&types.Header{
+		ParentHash: prevBlock.Hash(),
+		Number:     new(big.Int).Add(prevBlock.Number(), common.Big0),
+		GasUsed:    0,
+		Extra:      prevBlock.Extra(),
+		Time:       new(big.Int).Add(prevBlock.Time(), common.Big0),
+		BlockScore: new(big.Int).Add(prevBlock.BlockScore(), common.Big0),
 	})
 	return signBlock(block, signerKey)
 }
@@ -461,6 +483,108 @@ func TestCore_handlerMsg(t *testing.T) {
 
 		err = istCore.handleMsg(istanbulMsg.Payload)
 		assert.Nil(t, err)
+	}
+}
+
+// TODO-Klaytn: To enable logging in the test code, we can use the following function.
+// This function will be moved to somewhere utility functions are located.
+func enableLog() {
+	usecolor := term.IsTty(os.Stderr.Fd()) && os.Getenv("TERM") != "dumb"
+	output := io.Writer(os.Stderr)
+	if usecolor {
+		output = colorable.NewColorableStderr()
+	}
+	glogger := log.NewGlogHandler(log.StreamHandler(output, log.TerminalFormat(usecolor)))
+	log.PrintOrigins(true)
+	log.ChangeGlobalLogLevel(glogger, log.Lvl(5))
+	glogger.Vmodule("")
+	glogger.BacktraceAt("")
+	log.Root().SetHandler(glogger)
+}
+
+func TestCore_handlerMsg2(t *testing.T) {
+
+	/// test only
+	enableLog()
+	/// delete this after finishing test
+
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
+
+	validatorAddrs, validatorKeyMap := genValidators(4)
+	mockBackend, mockCtrl := newMockBackend(t, validatorAddrs)
+	defer mockCtrl.Finish()
+
+	istConfig := istanbul.DefaultConfig
+	istConfig.ProposerPolicy = istanbul.WeightedRandom
+
+	istCore := New(mockBackend, istConfig).(*core)
+	if err := istCore.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer istCore.Stop()
+
+	lastProposal, _ := mockBackend.LastProposal()
+	lastBlock := lastProposal.(*types.Block)
+	validators := mockBackend.Validators(lastBlock)
+
+	// valid message
+	{
+		msgSender := validators.GetProposer()
+		msgSenderKey := validatorKeyMap[msgSender.Address()]
+
+		newProposal, err := genBlock(lastBlock, msgSenderKey)
+		if err != nil {
+			t.Fatal(err)
+		}
+		malProposal, err := genMaliciousBlock(lastBlock, msgSenderKey)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		istanbulMsg, _ := genIstanbulMsg(msgPreprepare, lastBlock.Hash(), newProposal, msgSender.Address(), msgSenderKey)
+		if err != nil {
+			t.Fatal(err)
+		}
+		istCore.handleMsg(istanbulMsg.Payload)
+		fmt.Println("current state = ", istCore.state)
+
+		sendMessages := func(state uint64, malicious int) {
+			cnt := 0
+			for k, v := range validatorKeyMap {
+				var msg *types.Block
+				if k.Hex() == msgSender.Address().Hex() {
+					msg = newProposal
+
+				} else if cnt <= malicious {
+
+					msg = malProposal
+					cnt++
+				} else {
+					msg = newProposal
+
+				}
+				istanbulMsg, _ := genIstanbulMsg(state, lastBlock.Hash(), msg, k, v)
+				err = istCore.handleMsg(istanbulMsg.Payload)
+
+				if err != nil {
+					fmt.Println(err)
+				}
+			}
+		}
+
+		sendMessages(msgPrepare, 1)
+		if istCore.state.Cmp(StatePrepared) < 0 {
+			t.Fatal("not prepared due to malicious cns")
+		}
+
+		sendMessages(msgCommit, 2)
+		if istCore.state.Cmp(StateCommitted) < 0 {
+			t.Fatal("not committed due to malicious cns")
+		}
+
+		assert.Nil(t, err)
+
 	}
 }
 
