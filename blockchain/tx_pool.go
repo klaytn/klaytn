@@ -1335,7 +1335,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 			pool.priced.Removed()
 		}
 		// Drop all transactions that are too costly (low balance)
-		drops, _ := list.Filter(pool.getBalance(addr), pool)
+		drops, _ := list.Filter(addr, pool)
 		for _, tx := range drops {
 			hash := tx.Hash()
 			logger.Trace("Removed unpayable queued transaction", "hash", hash)
@@ -1508,7 +1508,7 @@ func (pool *TxPool) demoteUnexecutables() {
 		// The logic below loosely checks the tx count for the efficiency and the simplicity.
 		if cnt < demoteUnexecutablesFullValidationTxLimit {
 			cnt += list.Len()
-			drops, invalids = list.Filter(pool.getBalance(addr), pool)
+			drops, invalids = list.Filter(addr, pool)
 		} else {
 			drops, invalids = list.FilterUnexecutable()
 		}
