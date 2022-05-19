@@ -43,7 +43,6 @@ var (
 		IstanbulCompatibleBlock:  big.NewInt(86816005),
 		LondonCompatibleBlock:    big.NewInt(86816005),
 		EthTxTypeCompatibleBlock: big.NewInt(86816005),
-		KIP71CompatibleBlock:     big.NewInt(90000000), // temporal number
 		DeriveShaImpl:            2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x52d41ca72af615a1ac3301b0a93efa222ecc7541"),
@@ -72,7 +71,6 @@ var (
 		IstanbulCompatibleBlock:  big.NewInt(75373312),
 		LondonCompatibleBlock:    big.NewInt(80295291),
 		EthTxTypeCompatibleBlock: big.NewInt(86513895),
-		KIP71CompatibleBlock:     big.NewInt(90000000), // temporal number
 		DeriveShaImpl:            2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x99fb17d324fa0e07f23b49d09028ac0919414db6"),
@@ -145,6 +143,9 @@ var (
 	//  - 0x1: file (DATADIR/logs/vm.log)
 	//  - 0x2: stdout (like logger.DEBUG)
 	VMLogTarget = 0x0
+
+	// TODO-klaytn temporal number for test
+	DefaultKIP71CompatibleBlockNum = big.NewInt(300)
 )
 
 const (
