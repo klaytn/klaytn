@@ -816,7 +816,7 @@ func newTestBackendWithConfig(chainConfig *params.ChainConfig, blockPeriod uint6
 		// if governance mode is single, set the node key to the governing node.
 		chainConfig.Governance.GoverningNode = crypto.PubkeyToAddress(key.PublicKey)
 	}
-	gov := governance.NewGovernanceInitialize(chainConfig, dbm)
+	gov := governance.NewMixedEngine(chainConfig, dbm)
 	istanbulConfig := istanbul.DefaultConfig
 	istanbulConfig.BlockPeriod = blockPeriod
 	istanbulConfig.ProposerPolicy = istanbul.ProposerPolicy(chainConfig.Istanbul.ProposerPolicy)

@@ -65,7 +65,7 @@ func testNewMainBridge(t *testing.T) *MainBridge {
 func testBlockChain(t *testing.T) *blockchain.BlockChain {
 	db := database.NewMemoryDBManager()
 
-	gov := governance.NewGovernanceInitialize(&params.ChainConfig{
+	gov := governance.NewMixedEngine(&params.ChainConfig{
 		ChainID:       big.NewInt(2018),
 		UnitPrice:     25000000000,
 		DeriveShaImpl: 0,
