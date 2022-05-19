@@ -194,7 +194,6 @@ func (bi *BridgeInfo) GetCounterPartToken(token common.Address) common.Address {
 
 func (bi *BridgeInfo) GetPendingRequestEvents() []IRequestValueTransferEvent {
 	ready := bi.pendingRequestEvent.Pop(maxPendingNonceDiff / 2)
-
 	readyEvent := make([]IRequestValueTransferEvent, len(ready))
 	for i, item := range ready {
 		readyEvent[i] = item.(IRequestValueTransferEvent)

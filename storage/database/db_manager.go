@@ -1497,7 +1497,7 @@ func (dbm *databaseManager) ReadAllBadBlocks() ([]*types.Block, error) {
 }
 
 // WriteBadBlock serializes the bad block into the database. If the cumulated
-// bad blocks exceeds the limitation, the oldest will be dropped.
+// bad blocks exceed the limitation, the oldest will be dropped.
 func (dbm *databaseManager) WriteBadBlock(block *types.Block) {
 	db := dbm.getDatabase(MiscDB)
 	blob, err := db.Get(badBlockKey)
