@@ -438,6 +438,9 @@ func NewGovernance(chainConfig *params.ChainConfig, dbm database.DBManager) *Gov
 	}
 	// TODO-klaytn KIP71 default setting
 	// If DB doesn't have the KIP71 state, default values will be used
+	if g.ChainConfig.Governance == nil {
+		g.ChainConfig.Governance = &params.GovernanceConfig{}
+	}
 	if g.ChainConfig.Governance.KIP71 == nil {
 		g.ChainConfig.Governance.KIP71 = params.GetDefaultKip71Config()
 	}
