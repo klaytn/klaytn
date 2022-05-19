@@ -209,7 +209,7 @@ func (m *txSortedMap) ReadyWithGasPrice(start uint64, baseFee *big.Int) types.Tr
 		return nil
 	}
 	// Otherwise start accumulating incremental transactions
-	var ready types.Transactions
+	ready := make(types.Transactions, 0, m.index.Len())
 	for next := (*m.index)[0]; m.index.Len() > 0 && (*m.index)[0] == next; next++ {
 		if m.items[next].GasPrice().Cmp(baseFee) < 0 {
 			break
