@@ -178,7 +178,7 @@ func (st *StateTransition) useGas(amount uint64) error {
 }
 
 func (st *StateTransition) buyGas() error {
-	mgval := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()), st.gasPrice)
+	mgval := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()), st.evm.BaseFee)
 
 	validatedFeePayer := st.msg.ValidatedFeePayer()
 	validatedSender := st.msg.ValidatedSender()
@@ -390,7 +390,7 @@ func (st *StateTransition) refundGas() {
 	st.gas += refund
 
 	// Return KLAY for remaining gas, exchanged at the original rate.
-	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.gas), st.gasPrice)
+	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.gas), st.evm.BaseFee)
 
 	validatedFeePayer := st.msg.ValidatedFeePayer()
 	validatedSender := st.msg.ValidatedSender()
