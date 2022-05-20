@@ -234,6 +234,26 @@ func (e *MixedEngine) UseGiniCoeff() bool {
 	return e.defaultGov.UseGiniCoeff()
 }
 
+func (e *MixedEngine) LowerBoundBaseFee() uint64 {
+	return e.defaultGov.LowerBoundBaseFee()
+}
+
+func (e *MixedEngine) UpperBoundBaseFee() uint64 {
+	return e.defaultGov.UpperBoundBaseFee()
+}
+
+func (e *MixedEngine) GasTarget() uint64 {
+	return e.defaultGov.GasTarget()
+}
+
+func (e *MixedEngine) BlockGasLimit() uint64 {
+	return e.defaultGov.BlockGasLimit()
+}
+
+func (e *MixedEngine) BaseFeeDenominator() uint64 {
+	return e.defaultGov.BaseFeeDenominator()
+}
+
 func (e *MixedEngine) GetGovernanceValue(key int) interface{} {
 	return e.defaultGov.GetGovernanceValue(key)
 }

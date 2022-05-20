@@ -424,7 +424,7 @@ func (gs *GovernanceSet) Merge(change map[string]interface{}) {
 
 // NewGovernance creates Governance with the given configuration.
 func NewGovernance(chainConfig *params.ChainConfig, dbm database.DBManager) *Governance {
-	g := &Governance{
+	return &Governance{
 		ChainConfig:              chainConfig,
 		voteMap:                  NewVoteMap(),
 		db:                       dbm,
@@ -436,15 +436,6 @@ func NewGovernance(chainConfig *params.ChainConfig, dbm database.DBManager) *Gov
 		GovernanceVotes:          NewGovernanceVotes(),
 		idxCacheLock:             new(sync.RWMutex),
 	}
-	// TODO-klaytn KIP71 default setting
-	// If DB doesn't have the KIP71 state, default values will be used
-	if g.ChainConfig.Governance == nil {
-		g.ChainConfig.Governance = &params.GovernanceConfig{}
-	}
-	if g.ChainConfig.Governance.KIP71 == nil {
-		g.ChainConfig.Governance.KIP71 = params.GetDefaultKip71Config()
-	}
-	return g
 }
 
 // NewGovernanceInitialize creates Governance with the given configuration and read governance state from DB.
@@ -1179,6 +1170,46 @@ func (gov *Governance) StakingUpdateInterval() uint64 {
 
 func (gov *Governance) UseGiniCoeff() bool {
 	return gov.GetGovernanceValue(params.UseGiniCoeff).(bool)
+}
+
+func (gov *Governance) LowerBoundBaseFee() uint64 {
+	ret := gov.GetGovernanceValue(params.LowerBoundBaseFee)
+	if ret != nil {
+		return ret.(uint64)
+	}
+	return params.DefaultLowerBoundBaseFee
+}
+
+func (gov *Governance) UpperBoundBaseFee() uint64 {
+	ret := gov.GetGovernanceValue(params.UpperBoundBaseFee)
+	if ret != nil {
+		return ret.(uint64)
+	}
+	return params.DefaultUpperBoundBaseFee
+}
+
+func (gov *Governance) GasTarget() uint64 {
+	ret := gov.GetGovernanceValue(params.GasTarget)
+	if ret != nil {
+		return ret.(uint64)
+	}
+	return params.DefaultGasTarget
+}
+
+func (gov *Governance) BlockGasLimit() uint64 {
+	ret := gov.GetGovernanceValue(params.BlockGasLimit)
+	if ret != nil {
+		return ret.(uint64)
+	}
+	return params.DefaultBlockGasLimit
+}
+
+func (gov *Governance) BaseFeeDenominator() uint64 {
+	ret := gov.GetGovernanceValue(params.BaseFeeDenominator)
+	if ret != nil {
+		return ret.(uint64)
+	}
+	return params.DefaultBaseFeeDenominator
 }
 
 func (gov *Governance) ChainId() uint64 {
