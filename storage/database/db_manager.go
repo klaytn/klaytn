@@ -1489,15 +1489,15 @@ func (dbm *databaseManager) ReadAllBadBlocks() ([]*types.Block, error) {
 	if err := rlp.DecodeBytes(blob, &badBlocks); err != nil {
 		return nil, err
 	}
-	blocks := make([]*types.Block, 0)
-	for _, bad := range badBlocks {
-		blocks = append(blocks, types.NewBlockWithHeader(bad.Header).WithBody(bad.Body.Transactions))
+	blocks := make([]*types.Block, len(badBlocks))
+	for i, bad := range badBlocks {
+		blocks[i] = types.NewBlockWithHeader(bad.Header).WithBody(bad.Body.Transactions)
 	}
 	return blocks, nil
 }
 
 // WriteBadBlock serializes the bad block into the database. If the cumulated
-// bad blocks exceed the limitation, the oldest will be dropped.
+// bad blocks exceed the capacity, the oldest will be dropped.
 func (dbm *databaseManager) WriteBadBlock(block *types.Block) {
 	db := dbm.getDatabase(MiscDB)
 	blob, err := db.Get(badBlockKey)
@@ -1537,7 +1537,6 @@ func (dbm *databaseManager) WriteBadBlock(block *types.Block) {
 	}
 }
 
-// DeleteBadBlocks deletes all the bad blocks from the database. Not used anywhere
 func (dbm *databaseManager) DeleteBadBlocks() {
 	db := dbm.getDatabase(MiscDB)
 	if err := db.Delete(badBlockKey); err != nil {

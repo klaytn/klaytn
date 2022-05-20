@@ -2362,12 +2362,9 @@ func (bc *BlockChain) BadBlocks() ([]BadBlockArgs, error) {
 		return nil, err
 	}
 	badBlockArgs := make([]BadBlockArgs, len(blocks))
-	for _, block := range blocks {
+	for i, block := range blocks {
 		hash := block.Hash()
-		badBlockArgs = append(badBlockArgs, BadBlockArgs{
-			Hash:  hash,
-			Block: block,
-		})
+		badBlockArgs[i] = BadBlockArgs{Hash: hash, Block: block}
 	}
 	return badBlockArgs, err
 }
