@@ -1393,6 +1393,26 @@ web3._extend({
 			call: 'subbridge_setChildOperatorFeePayer',
 			params: 1
 		}),
+		new web3._extend.Method({
+			name: 'setParentBridgeOperatorGasLimit',
+			call: 'subbridge_setParentBridgeOperatorGasLimit',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'setChildBridgeOperatorGasLimit',
+			call: 'subbridge_setChildBridgeOperatorGasLimit',
+			params: 1
+			name: 'getParentBridgeContractBalance',
+			call: 'subbridge_getParentBridgeContractBalance',
+			params: 1,
+			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
+		}),
+		new web3._extend.Method({
+			name: 'getChildBridgeContractBalance',
+			call: 'subbridge_getChildBridgeContractBalance',
+			params: 1,
+			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
+		}),
 	],
     properties: [
 		new web3._extend.Property({
@@ -1436,7 +1456,7 @@ web3._extend({
 			getter: 'subbridge_getParentOperatorBalance',
 			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
 		}),
-			new web3._extend.Property({
+		new web3._extend.Property({
 			name: 'childOperatorBalance',
 			getter: 'subbridge_getChildOperatorBalance',
 			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
@@ -1464,6 +1484,14 @@ web3._extend({
 		new web3._extend.Property({
 			name: 'childOperatorFeePayer',
 			getter: 'subbridge_getChildOperatorFeePayer',
+		}),
+		new web3._extend.Property({
+			name: 'parentBridgeOperatorGasLimit',
+			getter: 'subbridge_getParentBridgeOperatorGasLimit',
+		}),
+		new web3._extend.Property({
+			name: 'childBridgeOperatorGasLimit',
+			getter: 'subbridge_getChildBridgeOperatorGasLimit',
 		}),
 	]
 });

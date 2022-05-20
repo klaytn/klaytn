@@ -91,19 +91,22 @@ type SCConfig struct {
 	AnchoringPeriod       uint64
 	SentChainTxsLimit     uint64
 
-	ParentChainID      uint64
-	VTRecovery         bool
-	VTRecoveryInterval uint64
-	Anchoring          bool
+	ParentChainID                      uint64
+	VTRecovery                         bool
+	VTRecoveryInterval                 uint64
+	Anchoring                          bool
+	ServiceChainParentOperatorGasLimit uint64
+	ServiceChainChildOperatorGasLimit  uint64
 
 	// KAS
-	KASAnchor         bool
-	KASAnchorUrl      string
-	KASAnchorPeriod   uint64
-	KASAnchorOperator string
-	KASAccessKey      string
-	KASSecretKey      string
-	KASXChainId       string
+	KASAnchor               bool
+	KASAnchorUrl            string
+	KASAnchorPeriod         uint64
+	KASAnchorOperator       string
+	KASAccessKey            string
+	KASSecretKey            string
+	KASXChainId             string
+	KASAnchorRequestTimeout time.Duration
 }
 
 // NodeName returns the devp2p node identifier.

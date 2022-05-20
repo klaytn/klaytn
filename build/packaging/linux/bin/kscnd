@@ -299,11 +299,26 @@ start_node() {
                 exit 1
             fi
             OPTIONS="$OPTIONS --kas.x-chain-id $SC_KAS_ANCHOR_X_CHAIN_ID"
+            
+            if [ ! -z $SC_KAS_ANCHOR_REQUEST_TIMEOUT ]; then
+                OPTIONS="$OPTIONS --kas.sc.anchor.request.timeout $SC_KAS_ANCHOR_REQUEST_TIMEOUT"
+            fi
         fi
     fi
 
-    if [[ ! -z $VTRECOVERY ]] && [[ $VTRECOVERY -eq 1 ]]; then
+    if [ ! -z $SC_PARENT_OPERATOR_GASLIMIT ]; then
+        OPTIONS="$OPTIONS --sc.parentoperator.gaslimit $SC_PARENT_OPERATOR_GASLIMIT"
+    fi
+
+    if [ ! -z $SC_CHILD_OPERATOR_GASLIMIT ]; then
+        OPTIONS="$OPTIONS --sc.childoperator.gaslimit $SC_CHILD_OPERATOR_GASLIMIT"
+    fi
+
+    if [[ (! -z $VTRECOVERY && $VTRECOVERY -eq 1 ) || (! -z $SC_VTRECOVERY && $SC_VTRECOVERY -eq 1) ]]; then
         OPTIONS="$OPTIONS --vtrecovery"
+        if [[ ! -z $SC_VTRECOVERY_INTERVAL ]]; then
+            OPTIONS="$OPTIONS --vtrecoveryinterval $SC_VTRECOVERY_INTERVAL"
+        fi
     fi
 
     if [[ ! -z $ADDITIONAL ]] && [[ $ADDITIONAL != "" ]]; then
