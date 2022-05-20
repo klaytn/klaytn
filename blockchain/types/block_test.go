@@ -138,20 +138,20 @@ func TestBlockEncoding(t *testing.T) {
 
 	// Comparing the hash from  Header and ToHeader()
 	fHeader := Header{
-		header.ParentHash,
-		header.Rewardbase,
-		header.Root,
-		header.TxHash,
-		header.ReceiptHash,
-		header.Bloom,
-		header.BlockScore,
-		header.Number,
-		header.GasUsed,
-		header.Time,
-		header.TimeFoS,
-		header.Extra,
-		header.Governance,
-		header.Vote,
+		ParentHash:  header.ParentHash,
+		Rewardbase:  header.Rewardbase,
+		Root:        header.Root,
+		TxHash:      header.TxHash,
+		ReceiptHash: header.ReceiptHash,
+		Bloom:       header.Bloom,
+		BlockScore:  header.BlockScore,
+		Number:      header.Number,
+		GasUsed:     header.GasUsed,
+		Time:        header.Time,
+		TimeFoS:     header.TimeFoS,
+		Extra:       header.Extra,
+		Governance:  header.Governance,
+		Vote:        header.Vote,
 	}
 
 	resHash := rlpHash(fHeader)

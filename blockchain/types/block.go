@@ -62,11 +62,12 @@ type Header struct {
 	BlockScore  *big.Int       `json:"blockScore"       gencodec:"required"`
 	Number      *big.Int       `json:"number"           gencodec:"required"`
 	GasUsed     uint64         `json:"gasUsed"          gencodec:"required"`
+	BaseFee     *big.Int       `json:"baseFeePerGas"    rlp:"-"`
 	Time        *big.Int       `json:"timestamp"        gencodec:"required"`
 	// TimeFoS represents a fraction of a second since `Time`.
-	TimeFoS    uint8  `json:"timestampFoS"     gencodec:"required"`
-	Extra      []byte `json:"extraData"        gencodec:"required"`
-	Governance []byte `json:"governanceData"        gencodec:"required"`
+	TimeFoS    uint8  `json:"timestampFoS"              gencodec:"required"`
+	Extra      []byte `json:"extraData"                 gencodec:"required"`
+	Governance []byte `json:"governanceData"            gencodec:"required"`
 	Vote       []byte `json:"voteData,omitempty"`
 }
 
