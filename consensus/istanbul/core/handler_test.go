@@ -31,9 +31,7 @@ import (
 
 // newMockBackend create a mock-backend initialized with default values
 func newMockBackend(t *testing.T, validatorAddrs []common.Address) (*mock_istanbul.MockBackend, *gomock.Controller) {
-	//committeeSize := uint64(len(validatorAddrs) / 3)
-	committeeSize := uint64(4)
-	fmt.Println("new mock backend: committeeSize: ", committeeSize)
+	committeeSize := uint64(len(validatorAddrs) / 3)
 
 	istExtra := &types.IstanbulExtra{
 		Validators:    validatorAddrs,
@@ -82,63 +80,7 @@ func newMockBackend(t *testing.T, validatorAddrs []common.Address) (*mock_istanb
 	// Verify checks whether the proposal of the preprepare message is a valid block. Consider it valid.
 	mockBackend.EXPECT().Verify(gomock.Any()).Return(time.Duration(0), nil).AnyTimes()
 
-	return mockBackend, mockCtrl
-}
-
-// newMockBackend create a mock-backend initialized with default values
-func newMockBackend2(t *testing.T, validatorAddrs []common.Address) (*mock_istanbul.MockBackend, *gomock.Controller) {
-	//committeeSize := uint64(len(validatorAddrs) / 3)
-	committeeSize := uint64(4)
-	fmt.Println("new mock backend: committeeSize: ", committeeSize)
-
-	istExtra := &types.IstanbulExtra{
-		Validators:    validatorAddrs,
-		Seal:          []byte{},
-		CommittedSeal: [][]byte{{0x01, 0x23}, {0x45, 0x12}, {0x34, 0x56}},
-	}
-	extra, err := rlp.EncodeToBytes(istExtra)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	initBlock := types.NewBlockWithHeader(&types.Header{
-		ParentHash: common.Hash{},
-		Number:     common.Big0,
-		GasUsed:    0,
-		Extra:      append(make([]byte, types.IstanbulExtraVanity), extra...),
-		Time:       new(big.Int).SetUint64(1234),
-		BlockScore: common.Big0,
-	})
-
-	eventMux := new(event.TypeMux)
-	validatorSet := validator.NewWeightedCouncil(validatorAddrs, nil, validatorAddrs, nil, nil,
-		istanbul.WeightedRandom, committeeSize, 0, 0, &blockchain.BlockChain{})
-
-	mockCtrl := gomock.NewController(t)
-	mockBackend := mock_istanbul.NewMockBackend(mockCtrl)
-
-	// Consider the last proposal is "initBlock" and the owner of mockBackend is validatorAddrs[0]
-	mockBackend.EXPECT().Address().Return(validatorAddrs[0]).AnyTimes()
-	mockBackend.EXPECT().LastProposal().Return(initBlock, validatorAddrs[0]).AnyTimes()
-	mockBackend.EXPECT().Validators(initBlock).Return(validatorSet).AnyTimes()
-	mockBackend.EXPECT().NodeType().Return(common.CONSENSUSNODE).AnyTimes()
-
-	// Set an eventMux in which istanbul core will subscribe istanbul events
-	mockBackend.EXPECT().EventMux().Return(eventMux).AnyTimes()
-
-	// Just for bypassing an unused function
-	mockBackend.EXPECT().SetCurrentView(gomock.Any()).Return().AnyTimes()
-
-	// Always return nil for broadcasting related functions
-	//mockBackend.EXPECT().Sign(gomock.Any()).Return(nil, nil).AnyTimes()
-	//mockBackend.EXPECT().Broadcast(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-	mockBackend.EXPECT().Sign(gomock.Any()).Return(nil, nil).Times(3)
-	mockBackend.EXPECT().Broadcast(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
-
-	mockBackend.EXPECT().GossipSubPeer(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-
-	// Verify checks whether the proposal of the preprepare message is a valid block. Consider it valid.
-	mockBackend.EXPECT().Verify(gomock.Any()).Return(time.Duration(0), nil).AnyTimes()
+	// Commit is added to remove unexpected call error
 
 	return mockBackend, mockCtrl
 }
@@ -224,15 +166,16 @@ func genBlock(prevBlock *types.Block, signerKey *ecdsa.PrivateKey) (*types.Block
 	return signBlock(block, signerKey)
 }
 
-// genBlock generates a signed block indicating prevBlock with ParentHash
+// genMaliciousBlock generates a modified block indicating prevBlock with ParentHash
 func genMaliciousBlock(prevBlock *types.Block, signerKey *ecdsa.PrivateKey) (*types.Block, error) {
 	block := types.NewBlockWithHeader(&types.Header{
 		ParentHash: prevBlock.Hash(),
-		Number:     new(big.Int).Add(prevBlock.Number(), common.Big0),
+		//ParentHash: common.HexToHash("2"),
+		Number:     common.Big0,
 		GasUsed:    0,
 		Extra:      prevBlock.Extra(),
-		Time:       new(big.Int).Add(prevBlock.Time(), common.Big0),
-		BlockScore: new(big.Int).Add(prevBlock.BlockScore(), common.Big0),
+		Time:       common.Big0,
+		BlockScore: common.Big0,
 	})
 	return signBlock(block, signerKey)
 }
@@ -259,7 +202,6 @@ func genIstanbulMsg(msgType uint64, prevHash common.Hash, proposal *types.Block,
 			PrevHash: prevHash,
 		}
 	}
-	fmt.Println("istanbul proposal : ", proposal)
 
 	encodedSubject, err := Encode(subject)
 	if err != nil {
@@ -299,8 +241,6 @@ func genIstanbulMsg(msgType uint64, prevHash common.Hash, proposal *types.Block,
 // TestCore_handleEvents_scenario_invalidSender tests `handleEvents` function of `istanbul.core` with a scenario.
 // It posts an invalid message and a valid message of each istanbul message type.
 func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
-	enableLog()
-
 	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
 	defer fork.ClearHardForkBlockNumberConfig()
 
@@ -325,27 +265,27 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 	validators := mockBackend.Validators(lastBlock)
 
 	// Preprepare message originated from invalid sender
-	//{
-	//	msgSender := getRandomValidator(false, validators, lastBlock.Hash(), istCore.currentView())
-	//	msgSenderKey := validatorKeyMap[msgSender.Address()]
-	//
-	//	newProposal, err := genBlock(lastBlock, msgSenderKey)
-	//	if err != nil {
-	//		t.Fatal(err)
-	//	}
-	//
-	//	istanbulMsg, err := genIstanbulMsg(msgPreprepare, lastProposal.Hash(), newProposal, msgSender.Address(), msgSenderKey)
-	//	if err != nil {
-	//		t.Fatal(err)
-	//	}
-	//
-	//	if err := eventMux.Post(istanbulMsg); err != nil {
-	//		t.Fatal(err)
-	//	}
-	//
-	//	time.Sleep(time.Second)
-	//	assert.Nil(t, istCore.current.Preprepare)
-	//}
+	{
+		msgSender := getRandomValidator(false, validators, lastBlock.Hash(), istCore.currentView())
+		msgSenderKey := validatorKeyMap[msgSender.Address()]
+
+		newProposal, err := genBlock(lastBlock, msgSenderKey)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		istanbulMsg, err := genIstanbulMsg(msgPreprepare, lastProposal.Hash(), newProposal, msgSender.Address(), msgSenderKey)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if err := eventMux.Post(istanbulMsg); err != nil {
+			t.Fatal(err)
+		}
+
+		time.Sleep(time.Second)
+		assert.Nil(t, istCore.current.Preprepare)
+	}
 
 	// Preprepare message originated from valid sender and set a new proposal in the istanbul core
 	{
@@ -371,22 +311,22 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 	}
 
 	// Prepare message originated from invalid sender
-	//{
-	//	msgSender := getRandomValidator(false, validators, lastBlock.Hash(), istCore.currentView())
-	//	msgSenderKey := validatorKeyMap[msgSender.Address()]
-	//
-	//	istanbulMsg, err := genIstanbulMsg(msgPrepare, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), msgSender.Address(), msgSenderKey)
-	//	if err != nil {
-	//		t.Fatal(err)
-	//	}
-	//
-	//	if err := eventMux.Post(istanbulMsg); err != nil {
-	//		t.Fatal(err)
-	//	}
-	//
-	//	time.Sleep(time.Second)
-	//	assert.Equal(t, 0, len(istCore.current.Prepares.messages))
-	//}
+	{
+		msgSender := getRandomValidator(false, validators, lastBlock.Hash(), istCore.currentView())
+		msgSenderKey := validatorKeyMap[msgSender.Address()]
+
+		istanbulMsg, err := genIstanbulMsg(msgPrepare, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), msgSender.Address(), msgSenderKey)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if err := eventMux.Post(istanbulMsg); err != nil {
+			t.Fatal(err)
+		}
+
+		time.Sleep(time.Second)
+		assert.Equal(t, 0, len(istCore.current.Prepares.messages))
+	}
 
 	// Prepare message originated from valid sender
 	{
@@ -407,22 +347,22 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 	}
 
 	// Commit message originated from invalid sender
-	//{
-	//	msgSender := getRandomValidator(false, validators, lastBlock.Hash(), istCore.currentView())
-	//	msgSenderKey := validatorKeyMap[msgSender.Address()]
-	//
-	//	istanbulMsg, err := genIstanbulMsg(msgCommit, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), msgSender.Address(), msgSenderKey)
-	//	if err != nil {
-	//		t.Fatal(err)
-	//	}
-	//
-	//	if err := eventMux.Post(istanbulMsg); err != nil {
-	//		t.Fatal(err)
-	//	}
-	//
-	//	time.Sleep(time.Second)
-	//	assert.Equal(t, 0, len(istCore.current.Commits.messages))
-	//}
+	{
+		msgSender := getRandomValidator(false, validators, lastBlock.Hash(), istCore.currentView())
+		msgSenderKey := validatorKeyMap[msgSender.Address()]
+
+		istanbulMsg, err := genIstanbulMsg(msgCommit, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), msgSender.Address(), msgSenderKey)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if err := eventMux.Post(istanbulMsg); err != nil {
+			t.Fatal(err)
+		}
+
+		time.Sleep(time.Second)
+		assert.Equal(t, 0, len(istCore.current.Commits.messages))
+	}
 
 	// Commit message originated from valid sender
 	{
@@ -479,28 +419,7 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 	}
 }
 
-// TODO-Klaytn: To enable logging in the test code, we can use the following function.
-// This function will be moved to somewhere utility functions are located.
-func enableLog() {
-	usecolor := term.IsTty(os.Stderr.Fd()) && os.Getenv("TERM") != "dumb"
-	output := io.Writer(os.Stderr)
-	if usecolor {
-		output = colorable.NewColorableStderr()
-	}
-	glogger := log.NewGlogHandler(log.StreamHandler(output, log.TerminalFormat(usecolor)))
-	log.PrintOrigins(true)
-	log.ChangeGlobalLogLevel(glogger, log.Lvl(5))
-	glogger.Vmodule("")
-	glogger.BacktraceAt("")
-	log.Root().SetHandler(glogger)
-}
-
 func TestCore_handlerMsg(t *testing.T) {
-
-	/// test only
-	enableLog()
-	/// delete this after finishing test
-
 	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
 	defer fork.ClearHardForkBlockNumberConfig()
 
@@ -520,6 +439,33 @@ func TestCore_handlerMsg(t *testing.T) {
 	lastProposal, _ := mockBackend.LastProposal()
 	lastBlock := lastProposal.(*types.Block)
 	validators := mockBackend.Validators(lastBlock)
+
+	// invalid format
+	{
+		invalidMsg := []byte{0x1, 0x2, 0x3, 0x4}
+		err := istCore.handleMsg(invalidMsg)
+		assert.NotNil(t, err)
+	}
+
+	// invali sender (non-validator)
+	{
+		newAddr, keyMap := genValidators(1)
+		nonValidatorAddr := newAddr[0]
+		nonValidatorKey := keyMap[nonValidatorAddr]
+
+		newProposal, err := genBlock(lastBlock, nonValidatorKey)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		istanbulMsg, err := genIstanbulMsg(msgPreprepare, lastBlock.Hash(), newProposal, nonValidatorAddr, nonValidatorKey)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		err = istCore.handleMsg(istanbulMsg.Payload)
+		assert.NotNil(t, err)
+	}
 
 	// valid message
 	{
@@ -541,16 +487,30 @@ func TestCore_handlerMsg(t *testing.T) {
 	}
 }
 
-func TestCore_handlerMsg2(t *testing.T) {
+// TODO-Klaytn: To enable logging in the test code, we can use the following function.
+// This function will be moved to somewhere utility functions are located.
+func enableLog() {
+	usecolor := term.IsTty(os.Stderr.Fd()) && os.Getenv("TERM") != "dumb"
+	output := io.Writer(os.Stderr)
+	if usecolor {
+		output = colorable.NewColorableStderr()
+	}
+	glogger := log.NewGlogHandler(log.StreamHandler(output, log.TerminalFormat(usecolor)))
+	log.PrintOrigins(true)
+	log.ChangeGlobalLogLevel(glogger, log.Lvl(5))
+	glogger.Vmodule("")
+	glogger.BacktraceAt("")
+	log.Root().SetHandler(glogger)
+}
 
-	/// test only
+func TestCore_MaliciousCN(t *testing.T) {
+
 	enableLog()
-	/// delete this after finishing test
 
 	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
 	defer fork.ClearHardForkBlockNumberConfig()
 
-	validatorAddrs, validatorKeyMap := genValidators(4)
+	validatorAddrs, validatorKeyMap := genValidators(12)
 	mockBackend, mockCtrl := newMockBackend(t, validatorAddrs)
 	defer mockCtrl.Finish()
 
@@ -566,6 +526,7 @@ func TestCore_handlerMsg2(t *testing.T) {
 	lastProposal, _ := mockBackend.LastProposal()
 	lastBlock := lastProposal.(*types.Block)
 	validators := mockBackend.Validators(lastBlock)
+	fmt.Println(validators.SubList(lastBlock.Hash(), istCore.currentView()))
 
 	// valid message
 	{
@@ -585,31 +546,48 @@ func TestCore_handlerMsg2(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		//fmt.Println("msgsender = ", msgSender.Address().Hex())
+		//fmt.Println("validators = ", validators.SubList(lastBlock.Hash(), istCore.currentView()))
 		istCore.handleMsg(istanbulMsg.Payload)
-
+		//fmt.Println("current state = ", istCore.state)
+		//validators := sb.getValidators(sb.chain.CurrentHeader().Number.Uint64(), sb.chain.CurrentHeader().Hash())
+		//for _, val := range validators.List() {
+		//	if addr == val.Address() {
+		//		return nil
+		//	}
 		sendMessages := func(state uint64, malicious int) {
 			cnt := 0
-			for k, v := range validatorKeyMap {
+			//for k, v := range validatorKeyMap {
+			for _, k := range validators.SubList(lastBlock.Hash(), istCore.currentView()) {
+				v := validatorKeyMap[k.Address()]
+
 				var msg *types.Block
+				// the proposer does not send prepare message
+				//if msgSender.Address().Hex() == k.Address().Hex() && state == msgPrepare {
+				//	continue
+				//}
 				if cnt < malicious {
 					msg = malProposal
+					cnt++
 				} else {
 					msg = newProposal
-				}
-				istanbulMsg, _ := genIstanbulMsg(state, lastBlock.Hash(), msg, k, v)
-				err = istCore.handleMsg(istanbulMsg.Payload)
-				cnt++
 
+				}
+				istanbulMsg, _ := genIstanbulMsg(state, lastBlock.Hash(), msg, k.Address(), v)
+				err = istCore.handleMsg(istanbulMsg.Payload)
 				if err != nil {
 					fmt.Println(err)
 				}
+
 			}
 		}
 
-		sendMessages(msgPrepare, 2)
+		sendMessages(msgPrepare, 1)
 		if istCore.state.Cmp(StatePrepared) < 0 {
 			t.Fatal("not prepared due to malicious cns")
 		}
+
+		//fmt.Println("prepared. state = ", istCore.state)
 
 		sendMessages(msgCommit, 2)
 		if istCore.state.Cmp(StateCommitted) < 0 {
@@ -652,10 +630,6 @@ func TestCore_handleTimeoutMsg_race(t *testing.T) {
 			expectedRound: 20,
 		},
 	}
-
-	/// test only
-	enableLog()
-	/// delete this after finishing test
 
 	validatorAddrs, _ := genValidators(10)
 	mockBackend, mockCtrl := newMockBackend(t, validatorAddrs)
