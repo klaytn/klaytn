@@ -26,6 +26,8 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/log"
@@ -162,7 +164,13 @@ type txPool interface {
 
 // blockChain is an interface for blockchain.Blockchain used in governance package.
 type blockChain interface {
+	blockchain.ChainContext
+
 	CurrentHeader() *types.Header
+	GetBlockByNumber(num uint64) *types.Block
+	StateAt(root common.Hash) (*state.StateDB, error)
+	Config() *params.ChainConfig
+
 	SetProposerPolicy(val uint64)
 	SetUseGiniCoeff(val bool)
 }
