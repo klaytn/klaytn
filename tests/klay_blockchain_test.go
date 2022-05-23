@@ -293,3 +293,21 @@ func deployContractExecutionTx(t *testing.T, txpool work.TxPool, chainId *big.In
 	sender.AddNonce()
 	return tx
 }
+
+func waitReceipt(chain *blockchain.BlockChain, txhash common.Hash) *types.Receipt {
+	chainEventCh := make(chan blockchain.ChainEvent)
+	subscription := chain.SubscribeChainEvent(chainEventCh)
+	defer subscription.Unsubscribe()
+	timeout := time.NewTimer(15 * time.Second)
+	for {
+		select {
+		case <-timeout.C:
+			return nil
+		case <-chainEventCh:
+			receipt := chain.GetReceiptByTxHash(txhash)
+			if receipt != nil {
+				return receipt
+			}
+		}
+	}
+}
