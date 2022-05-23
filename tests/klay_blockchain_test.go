@@ -55,15 +55,16 @@ func TestSimpleBlockchain(t *testing.T) {
 
 	contractDeployCode := "0x608060405234801561001057600080fd5b506000808190555060646001819055506101848061002f6000396000f300608060405260043610610062576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff16806302e5329e14610067578063197e70e41461009457806349b667d2146100c157806367e0badb146100ec575b600080fd5b34801561007357600080fd5b5061009260048036038101908080359060200190929190505050610117565b005b3480156100a057600080fd5b506100bf60048036038101908080359060200190929190505050610121565b005b3480156100cd57600080fd5b506100d6610145565b6040518082815260200191505060405180910390f35b3480156100f857600080fd5b5061010161014f565b6040518082815260200191505060405180910390f35b8060018190555050565b806000540160008190555060015460005481151561013b57fe5b0660008190555050565b6000600154905090565b600080549050905600a165627a7a72305820ef4e7e564c744de3a36cb74000c35687f7de9ecf1d29abdd3c4bcc66db981c160029"
 	for i := 0; i < numAccounts; i++ {
-		contractAccounts[i].Addr = deployContractDeployTx(t, node.TxPool(), chainId, richAccount, contractDeployCode)
+		contractAccounts[i].Addr, _ = deployContractDeployTx(t, node.TxPool(), chainId, richAccount, contractDeployCode)
 	}
 	time.Sleep(time.Second) // need to make a block before contract execution
 
 	// deploy
+	calldata := "0x197e70e40000000000000000000000000000000000000000000000000000000000000001"
 	for i := 0; i < numAccounts; i++ {
 		deployRandomTxs(t, node.TxPool(), chainId, richAccount, 10)
 		deployValueTransferTx(t, node.TxPool(), chainId, richAccount, accounts[i%numAccounts])
-		deployContractExecutionTx(t, node.TxPool(), chainId, richAccount, contractAccounts[i%numAccounts].Addr)
+		deployContractExecutionTx(t, node.TxPool(), chainId, richAccount, contractAccounts[i%numAccounts].Addr, calldata)
 
 		// time.Sleep(time.Second) // wait until txpool is flushed if needed
 	}
@@ -195,8 +196,9 @@ func newKlaytnNode(t *testing.T, dir string, validator *TestAccountType) (*node.
 }
 
 // deployRandomTxs creates a random transaction
-func deployRandomTxs(t *testing.T, txpool work.TxPool, chainId *big.Int, sender *TestAccountType, txNum int) {
+func deployRandomTxs(t *testing.T, txpool work.TxPool, chainId *big.Int, sender *TestAccountType, txNum int) []*types.Transaction {
 	var tx *types.Transaction
+	var txs []*types.Transaction
 	signer := types.LatestSignerForChainID(chainId)
 	gasPrice := big.NewInt(25 * params.Ston)
 
@@ -215,12 +217,14 @@ func deployRandomTxs(t *testing.T, txpool work.TxPool, chainId *big.Int, sender 
 		if err := txpool.AddLocal(tx); err != nil && err != blockchain.ErrAlreadyNonceExistInPool {
 			t.Fatal(err)
 		}
+		txs = append(txs, tx)
 		sender.AddNonce()
 	}
+	return txs
 }
 
 // deployValueTransferTx deploy value transfer transactions
-func deployValueTransferTx(t *testing.T, txpool work.TxPool, chainId *big.Int, sender *TestAccountType, toAcc *TestAccountType) {
+func deployValueTransferTx(t *testing.T, txpool work.TxPool, chainId *big.Int, sender *TestAccountType, toAcc *TestAccountType) *types.Transaction {
 	signer := types.LatestSignerForChainID(chainId)
 	gasPrice := big.NewInt(25 * params.Ston)
 
@@ -229,23 +233,24 @@ func deployValueTransferTx(t *testing.T, txpool work.TxPool, chainId *big.Int, s
 		t.Fatal(err)
 	}
 	sender.AddNonce()
+	return tx
 }
 
-// deployContractDeployTx deploy contrac
-func deployContractDeployTx(t *testing.T, txpool work.TxPool, chainId *big.Int, sender *TestAccountType, contractDeployCode string) common.Address {
+// deployContractDeployTx deploys a contract
+func deployContractDeployTx(t *testing.T, txpool work.TxPool, chainId *big.Int, sender *TestAccountType, code string) (common.Address, *types.Transaction) {
 	signer := types.LatestSignerForChainID(chainId)
 	gasPrice := big.NewInt(25 * params.Ston)
 
 	values := map[types.TxValueKeyType]interface{}{
 		types.TxValueKeyNonce:         sender.GetNonce(),
-		types.TxValueKeyAmount:        new(big.Int).SetUint64(0),
-		types.TxValueKeyGasLimit:      uint64(1000000),
-		types.TxValueKeyGasPrice:      gasPrice,
-		types.TxValueKeyHumanReadable: false,
 		types.TxValueKeyFrom:          sender.GetAddr(),
-		types.TxValueKeyData:          common.FromHex(contractDeployCode),
-		types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
 		types.TxValueKeyTo:            (*common.Address)(nil),
+		types.TxValueKeyAmount:        new(big.Int).SetUint64(0),
+		types.TxValueKeyGasLimit:      uint64(1e9),
+		types.TxValueKeyGasPrice:      gasPrice,
+		types.TxValueKeyData:          common.FromHex(code),
+		types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
+		types.TxValueKeyHumanReadable: false,
 	}
 	tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, values)
 	if err != nil {
@@ -259,23 +264,21 @@ func deployContractDeployTx(t *testing.T, txpool work.TxPool, chainId *big.Int, 
 	}
 	contractAddr := crypto.CreateAddress(sender.Addr, sender.Nonce)
 	sender.AddNonce()
-
-	return contractAddr
+	return contractAddr, tx
 }
 
-func deployContractExecutionTx(t *testing.T, txpool work.TxPool, chainId *big.Int, sender *TestAccountType, contractAddr common.Address) {
+func deployContractExecutionTx(t *testing.T, txpool work.TxPool, chainId *big.Int, sender *TestAccountType, contractAddr common.Address, calldata string) *types.Transaction {
 	signer := types.LatestSignerForChainID(chainId)
 	gasPrice := big.NewInt(25 * params.Ston)
-	contractExecutionPayload := "0x197e70e40000000000000000000000000000000000000000000000000000000000000001"
 
 	values := map[types.TxValueKeyType]interface{}{
 		types.TxValueKeyNonce:    sender.GetNonce(),
 		types.TxValueKeyFrom:     sender.GetAddr(),
 		types.TxValueKeyTo:       contractAddr,
 		types.TxValueKeyAmount:   new(big.Int).SetUint64(0),
-		types.TxValueKeyGasLimit: uint64(100000),
+		types.TxValueKeyGasLimit: uint64(1e9),
 		types.TxValueKeyGasPrice: gasPrice,
-		types.TxValueKeyData:     common.FromHex(contractExecutionPayload),
+		types.TxValueKeyData:     common.FromHex(calldata),
 	}
 	tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractExecution, values)
 	if err != nil {
@@ -284,9 +287,9 @@ func deployContractExecutionTx(t *testing.T, txpool work.TxPool, chainId *big.In
 	if err := tx.SignWithKeys(signer, sender.GetTxKeys()); err != nil {
 		t.Fatal(err)
 	}
-
 	if err := txpool.AddLocal(tx); err != nil && err != blockchain.ErrAlreadyNonceExistInPool {
 		t.Fatal(err)
 	}
 	sender.AddNonce()
+	return tx
 }
