@@ -177,7 +177,6 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 	if len(contract.Code) == 0 {
 		return nil, nil
 	}
-
 	var (
 		op    OpCode        // current opcode
 		mem   = NewMemory() // bound memory
@@ -193,6 +192,7 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 		logged              bool                // deferred Tracer should ignore already logged steps
 		res                 []byte              // result of the opcode execution function
 		allocatedMemorySize = uint64(mem.Len()) // Currently allocated memory size
+		errStack            = newErrStack()
 	)
 	contract.Input = input
 
@@ -317,7 +317,7 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 		}
 
 		// execute the operation
-		res, err = operation.execute(&pc, in.evm, contract, mem, stack)
+		res, err = operation.execute(&pc, in.evm, contract, mem, stack, errStack)
 		// verifyPool is a build flag. Pool verification makes sure the integrity
 		// of the integer pool by comparing values to a default value.
 		if verifyPool {
@@ -333,7 +333,12 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 		case err != nil:
 			return nil, err // TODO-Klaytn-Issue615
 		case operation.reverts:
-			return res, ErrExecutionReverted // TODO-Klaytn-Issue615
+			if firstErr := errStack.getFirstErr(); firstErr != nil {
+				errStack.pushToLog(in.evm.StateDB.GetTxHash().String())
+				return res, firstErr
+			} else {
+				return res, ErrExecutionReverted
+			}
 		case operation.halts:
 			return res, nil
 		case !operation.jumps:
