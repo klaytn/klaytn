@@ -60,7 +60,7 @@ func enable1884(jt *JumpTable) {
 	}
 }
 
-func opSelfBalance(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
+func opSelfBalance(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack, errStack *ErrStack) ([]byte, error) {
 	balance := evm.interpreter.intPool.get().Set(evm.StateDB.GetBalance(contract.Address()))
 	stack.push(balance)
 	return nil, nil
@@ -80,7 +80,7 @@ func enable1344(jt *JumpTable) {
 }
 
 // opChainID implements CHAINID opcode
-func opChainID(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
+func opChainID(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack, errStack *ErrStack) ([]byte, error) {
 	chainId := evm.interpreter.intPool.get().Set(evm.chainConfig.ChainID)
 	stack.push(chainId)
 	return nil, nil
@@ -118,7 +118,7 @@ func enable3198(jt *JumpTable) {
 }
 
 // opBaseFee implements BASEFEE opcode
-func opBaseFee(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
+func opBaseFee(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack, errStack *ErrStack) ([]byte, error) {
 	baseFee := evm.interpreter.intPool.get().Set(evm.Context.BaseFee)
 	stack.push(baseFee)
 	return nil, nil
