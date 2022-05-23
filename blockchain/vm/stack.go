@@ -97,3 +97,32 @@ func (st *Stack) Print() {
 	}
 	fmt.Println("#############")
 }
+
+type ErrStack struct {
+	errs []error
+}
+
+func newErrStack() *ErrStack {
+	return &ErrStack{}
+}
+
+func (st *ErrStack) push(e error) {
+	st.errs = append(st.errs, e)
+}
+
+func (st *ErrStack) pushToLog(txHash string) {
+	for i := 0; i < st.len(); i++ {
+		logger.Debug("EVM errors:", "idx", i+1, "txHash", txHash, "err", st.errs[i].Error())
+	}
+}
+
+func (st *ErrStack) len() int {
+	return len(st.errs)
+}
+
+func (st *ErrStack) getFirstErr() error {
+	if st.len() != 0 {
+		return st.errs[0]
+	}
+	return nil
+}
