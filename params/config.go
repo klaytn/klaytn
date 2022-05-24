@@ -169,9 +169,10 @@ type ChainConfig struct {
 
 	// "Compatible" means that it is EVM compatible(the opcode and precompiled contracts are the same as Ethereum EVM).
 	// In other words, not all the hard fork items are included.
-	IstanbulCompatibleBlock  *big.Int `json:"istanbulCompatibleBlock,omitempty"`  // IstanbulCompatibleBlock switch block (nil = no fork, 0 = already on istanbul)
-	LondonCompatibleBlock    *big.Int `json:"londonCompatibleBlock,omitempty"`    // LondonCompatibleBlock switch block (nil = no fork, 0 = already on london)
-	EthTxTypeCompatibleBlock *big.Int `json:"ethTxTypeCompatibleBlock,omitempty"` // EthTxTypeCompatibleBlock switch block (nil = no fork, 0 = already on ethTxType)
+	IstanbulCompatibleBlock    *big.Int `json:"istanbulCompatibleBlock,omitempty"`    // IstanbulCompatibleBlock switch block (nil = no fork, 0 = already on istanbul)
+	LondonCompatibleBlock      *big.Int `json:"londonCompatibleBlock,omitempty"`      // LondonCompatibleBlock switch block (nil = no fork, 0 = already on london)
+	EthTxTypeCompatibleBlock   *big.Int `json:"ethTxTypeCompatibleBlock,omitempty"`   // EthTxTypeCompatibleBlock switch block (nil = no fork, 0 = already on ethTxType)
+	ContractGovCompatibleBlock *big.Int `json:"contractGovCompatibleBlock,omitempty"` // ContractGovCompatibleBlock switch block (nil = no fork, 0 = already on contractGov)
 
 	// Various consensus engines
 	Gxhash   *GxhashConfig   `json:"gxhash,omitempty"` // (deprecated) not supported engine
@@ -252,22 +253,24 @@ func (c *ChainConfig) String() string {
 		engine = "unknown"
 	}
 	if c.Istanbul != nil {
-		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d Engine: %v}",
+		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v ContractGovCompatibleBlock: %v SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d Engine: %v}",
 			c.ChainID,
 			c.IstanbulCompatibleBlock,
 			c.LondonCompatibleBlock,
 			c.EthTxTypeCompatibleBlock,
+			c.ContractGovCompatibleBlock,
 			c.Istanbul.SubGroupSize,
 			c.UnitPrice,
 			c.DeriveShaImpl,
 			engine,
 		)
 	} else {
-		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v UnitPrice: %d DeriveShaImpl: %d Engine: %v }",
+		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v ContractGovCompatibleBlock: %v UnitPrice: %d DeriveShaImpl: %d Engine: %v }",
 			c.ChainID,
 			c.IstanbulCompatibleBlock,
 			c.LondonCompatibleBlock,
 			c.EthTxTypeCompatibleBlock,
+			c.ContractGovCompatibleBlock,
 			c.UnitPrice,
 			c.DeriveShaImpl,
 			engine,
@@ -295,6 +298,11 @@ func (c *ChainConfig) IsLondonForkEnabled(num *big.Int) bool {
 // IsEthTxTypeForkEnabled returns whether num is either equal to the ethTxType block or greater.
 func (c *ChainConfig) IsEthTxTypeForkEnabled(num *big.Int) bool {
 	return isForked(c.EthTxTypeCompatibleBlock, num)
+}
+
+// IsContractGovForkEnabled returns whether num is either equal to the contractGov block or greater.
+func (c *ChainConfig) IsContractGovForkEnabled(num *big.Int) bool {
+	return isForked(c.ContractGovCompatibleBlock, num)
 }
 
 // CheckCompatible checks whether scheduled fork transitions have been imported
@@ -328,6 +336,7 @@ func (c *ChainConfig) CheckConfigForkOrder() error {
 		{name: "istanbulBlock", block: c.IstanbulCompatibleBlock},
 		{name: "londonBlock", block: c.LondonCompatibleBlock},
 		{name: "ethTxTypeBlock", block: c.EthTxTypeCompatibleBlock},
+		{name: "contractGovBlock", block: c.ContractGovCompatibleBlock},
 	} {
 		if lastFork.name != "" {
 			// Next one must be higher number
@@ -359,6 +368,9 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *Confi
 	}
 	if isForkIncompatible(c.EthTxTypeCompatibleBlock, newcfg.EthTxTypeCompatibleBlock, head) {
 		return newCompatError("EthTxType Block", c.EthTxTypeCompatibleBlock, newcfg.EthTxTypeCompatibleBlock)
+	}
+	if isForkIncompatible(c.ContractGovCompatibleBlock, newcfg.ContractGovCompatibleBlock, head) {
+		return newCompatError("ContractGov Block", c.ContractGovCompatibleBlock, newcfg.ContractGovCompatibleBlock)
 	}
 	return nil
 }
