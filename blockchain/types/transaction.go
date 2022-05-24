@@ -910,17 +910,17 @@ func (s *TxByPriceAndTime) Pop() interface{} {
 	return x
 }
 
-// TransactionsByPriceAndNonce represents a set of transactions that can return
+// TransactionsByTimeAndNonce represents a set of transactions that can return
 // transactions in a profit-maximizing sorted order, while supporting removing
 // entire batches of transactions for non-executable accounts.
-type TransactionsByPriceAndNonce struct {
+type TransactionsByTimeAndNonce struct {
 	txs    map[common.Address]Transactions // Per account nonce-sorted list of transactions
 	heads  TxByTime                        // Next transaction for each unique account (transaction's time heap)
 	signer Signer                          // Signer for the set of transactions
 }
 
 // ############ method for debug
-func (t *TransactionsByPriceAndNonce) Count() (int, int) {
+func (t *TransactionsByTimeAndNonce) Count() (int, int) {
 	var count int
 
 	for _, tx := range t.txs {
@@ -930,16 +930,16 @@ func (t *TransactionsByPriceAndNonce) Count() (int, int) {
 	return len(t.txs), count
 }
 
-func (t *TransactionsByPriceAndNonce) Txs() map[common.Address]Transactions {
+func (t *TransactionsByTimeAndNonce) Txs() map[common.Address]Transactions {
 	return t.txs
 }
 
-// NewTransactionsByPriceAndNonce creates a transaction set that can retrieve
+// NewTransactionsByTimeAndNonce creates a transaction set that can retrieve
 // price sorted transactions in a nonce-honouring way.
 //
 // Note, the input map is reowned so the caller should not interact any more with
 // if after providing it to the constructor.
-func NewTransactionsByPriceAndNonce(signer Signer, txs map[common.Address]Transactions) *TransactionsByPriceAndNonce {
+func NewTransactionsByTimeAndNonce(signer Signer, txs map[common.Address]Transactions) *TransactionsByTimeAndNonce {
 	// Initialize a price and received time based heap with the head transactions
 	heads := make(TxByTime, 0, len(txs))
 	for _, accTxs := range txs {
@@ -951,7 +951,7 @@ func NewTransactionsByPriceAndNonce(signer Signer, txs map[common.Address]Transa
 	heap.Init(&heads)
 
 	// Assemble and return the transaction set
-	return &TransactionsByPriceAndNonce{
+	return &TransactionsByTimeAndNonce{
 		txs:    txs,
 		heads:  heads,
 		signer: signer,
@@ -959,7 +959,7 @@ func NewTransactionsByPriceAndNonce(signer Signer, txs map[common.Address]Transa
 }
 
 // Peek returns the next transaction by price.
-func (t *TransactionsByPriceAndNonce) Peek() *Transaction {
+func (t *TransactionsByTimeAndNonce) Peek() *Transaction {
 	if len(t.heads) == 0 {
 		return nil
 	}
@@ -967,7 +967,7 @@ func (t *TransactionsByPriceAndNonce) Peek() *Transaction {
 }
 
 // Shift replaces the current best head with the next one from the same account.
-func (t *TransactionsByPriceAndNonce) Shift() {
+func (t *TransactionsByTimeAndNonce) Shift() {
 	acc, _ := Sender(t.signer, t.heads[0])
 	if txs, ok := t.txs[acc]; ok && len(txs) > 0 {
 		t.heads[0], t.txs[acc] = txs[0], txs[1:]
@@ -980,7 +980,7 @@ func (t *TransactionsByPriceAndNonce) Shift() {
 // Pop removes the best transaction, *not* replacing it with the next one from
 // the same account. This should be used when a transaction cannot be executed
 // and hence all subsequent ones should be discarded from the same account.
-func (t *TransactionsByPriceAndNonce) Pop() {
+func (t *TransactionsByTimeAndNonce) Pop() {
 	heap.Pop(&t.heads)
 }
 
