@@ -42,6 +42,7 @@ func TestCalcBaseFee(t *testing.T) {
 }
 
 func TestBlockNumReacheDoubleBaseFee(t *testing.T) {
+	blockNum := 0
 	parentBaseFee := big.NewInt(25000000000)
 	for i := 0; i < 15; i++ {
 		parent := &types.Header{
@@ -50,14 +51,16 @@ func TestBlockNumReacheDoubleBaseFee(t *testing.T) {
 			BaseFee: parentBaseFee,
 		}
 		parentBaseFee = CalcBaseFee(parent, getTestConfig(big.NewInt(3)))
-		t.Logf("test %d: have %d, ", i, parentBaseFee)
+		blockNum = i
+		// t.Logf("test %d: have %d, ", i, parentBaseFee)
 	}
 	if parentBaseFee.Cmp(big.NewInt(25000000000*2)) < 0 {
-		t.Errorf("base fee have more then double in 20 blocks")
+		t.Errorf("block number %d: have %d want < %d", blockNum, parentBaseFee, 25000000000*2)
 	}
 }
 
 func TestBlockNumReacheHalfBaseFee(t *testing.T) {
+	blockNum := 0
 	parentBaseFee := big.NewInt(60000000000)
 	for i := 0; i < 749; i++ {
 		parent := &types.Header{
@@ -66,14 +69,16 @@ func TestBlockNumReacheHalfBaseFee(t *testing.T) {
 			BaseFee: parentBaseFee,
 		}
 		parentBaseFee = CalcBaseFee(parent, getTestConfig(big.NewInt(3)))
-		t.Logf("test %d: have %d, ", i, parentBaseFee)
+		blockNum = i
+		// t.Logf("test %d: have %d, ", i, parentBaseFee)
 	}
 	if parentBaseFee.Cmp(big.NewInt(60000000000/2)) > 0 {
-		t.Errorf("base fee have more then double in 20 blocks")
+		t.Errorf("block number %d: have %d want > %d", blockNum, parentBaseFee, 60000000000/2)
 	}
 }
 
 func TestBlockNumReacheLowerToMaxBaseFee(t *testing.T) {
+	blockNum := 0
 	parentBaseFee := big.NewInt(25000000000)
 	for i := 0; i < 69; i++ {
 		parent := &types.Header{
@@ -82,14 +87,16 @@ func TestBlockNumReacheLowerToMaxBaseFee(t *testing.T) {
 			BaseFee: parentBaseFee,
 		}
 		parentBaseFee = CalcBaseFee(parent, getTestConfig(big.NewInt(3)))
-		t.Logf("test %d: have %d, ", i, parentBaseFee)
+		blockNum = i
+		// t.Logf("test %d: have %d, ", i, parentBaseFee)
 	}
 	if parentBaseFee.Cmp(big.NewInt(750000000000)) == 0 {
-		t.Errorf("base fee have more then double in 20 blocks")
+		t.Errorf("block number %d: have %d want %d", blockNum, parentBaseFee, 750000000000)
 	}
 }
 
 func TestBlockNumReacheMaxToLowerBaseFee(t *testing.T) {
+	blockNum := 0
 	parentBaseFee := big.NewInt(750000000000)
 	for i := 0; i < 3671; i++ {
 		parent := &types.Header{
@@ -98,10 +105,11 @@ func TestBlockNumReacheMaxToLowerBaseFee(t *testing.T) {
 			BaseFee: parentBaseFee,
 		}
 		parentBaseFee = CalcBaseFee(parent, getTestConfig(big.NewInt(3)))
-		t.Logf("test %d: have %d, ", i, parentBaseFee)
+		blockNum = i
+		// t.Logf("test %d: have %d, ", i, parentBaseFee)
 	}
 	if parentBaseFee.Cmp(big.NewInt(25000000000)) == 0 {
-		t.Errorf("base fee have more then double in 20 blocks")
+		t.Errorf("block number %d: have %d want %d", blockNum, parentBaseFee, 25000000000)
 	}
 }
 
