@@ -739,7 +739,9 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 				return ErrInsufficientFundsFeePayer
 			}
 		}
-		// balance check in case of sender = feepayer
+		// additional balance check in case of sender = feepayer
+		// since a single account has to bear the both cost(feepayer_cost + sender_cost),
+		// it is necessary to check whether the balance is equal to the sum of the cost.
 		if from == feePayer && senderBalance.Cmp(tx.Cost()) < 0 {
 			logger.Trace("[tx_pool] insufficient funds for cost(gas * price + value)", "from", from, "balance", senderBalance, "cost", tx.Cost())
 			return ErrInsufficientFundsFrom
