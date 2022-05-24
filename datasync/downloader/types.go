@@ -23,9 +23,8 @@ package downloader
 import (
 	"fmt"
 
-	"github.com/klaytn/klaytn/reward"
-
 	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/reward"
 )
 
 // peerDropFn is a callback type for dropping a peer detected as malicious.

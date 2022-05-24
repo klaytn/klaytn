@@ -27,15 +27,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/klaytn/klaytn/params"
-
-	"github.com/klaytn/klaytn/reward"
-
-	klaytnmetrics "github.com/klaytn/klaytn/metrics"
-
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/prque"
+	klaytnmetrics "github.com/klaytn/klaytn/metrics"
+	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/reward"
 	"github.com/rcrowley/go-metrics"
 )
 
