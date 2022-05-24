@@ -19,6 +19,8 @@ package downloader
 import (
 	"math/big"
 
+	"github.com/klaytn/klaytn/reward"
+
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -41,6 +43,9 @@ func (*FakeDownloader) DeliverBodies(id string, transactions [][]*types.Transact
 func (*FakeDownloader) DeliverHeaders(id string, headers []*types.Header) error      { return nil }
 func (*FakeDownloader) DeliverNodeData(id string, data [][]byte) error               { return nil }
 func (*FakeDownloader) DeliverReceipts(id string, receipts [][]*types.Receipt) error { return nil }
+func (*FakeDownloader) DeliverStakingInfos(id string, stakingInfos []*reward.StakingInfo) error {
+	return nil
+}
 
 func (*FakeDownloader) Terminate() {}
 func (*FakeDownloader) Synchronise(id string, head common.Hash, td *big.Int, mode SyncMode) error {

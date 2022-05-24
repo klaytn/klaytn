@@ -30,12 +30,13 @@ import (
 const (
 	Klay62 = 62
 	Klay63 = 63
+	Klay64 = 64
 )
 
 var KlayProtocol = Protocol{
 	Name:     "klay",
-	Versions: []uint{Klay63, Klay62},
-	Lengths:  []uint64{17, 8},
+	Versions: []uint{Klay64, Klay63, Klay62},
+	Lengths:  []uint64{19, 17, 8},
 }
 
 // Protocol defines the protocol of the consensus

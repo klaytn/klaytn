@@ -29,6 +29,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/klaytn/klaytn/reward"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -60,11 +62,12 @@ type downloadTester struct {
 	ownReceipts map[common.Hash]types.Receipts // Receipts belonging to the tester
 	ownChainTd  map[common.Hash]*big.Int       // Total difficulties of the blocks in the local chain
 
-	peerHashes   map[string][]common.Hash                  // Hash chain belonging to different test peers
-	peerHeaders  map[string]map[common.Hash]*types.Header  // Headers belonging to different test peers
-	peerBlocks   map[string]map[common.Hash]*types.Block   // Blocks belonging to different test peers
-	peerReceipts map[string]map[common.Hash]types.Receipts // Receipts belonging to different test peers
-	peerChainTds map[string]map[common.Hash]*big.Int       // Total difficulties of the blocks in the peer chains
+	peerHashes       map[string][]common.Hash                      // Hash chain belonging to different test peers
+	peerHeaders      map[string]map[common.Hash]*types.Header      // Headers belonging to different test peers
+	peerBlocks       map[string]map[common.Hash]*types.Block       // Blocks belonging to different test peers
+	peerReceipts     map[string]map[common.Hash]types.Receipts     // Receipts belonging to different test peers
+	peerStakingInfos map[string]map[common.Hash]reward.StakingInfo // StakingInfo belonging to different test peers
+	peerChainTds     map[string]map[common.Hash]*big.Int           // Total difficulties of the blocks in the peer chains
 
 	peerMissingStates map[string]map[common.Hash]bool // State entries that fast sync should not return
 
@@ -573,6 +576,10 @@ func (dlp *downloadTesterPeer) RequestReceipts(hashes []common.Hash) error {
 	go dlp.dl.downloader.DeliverReceipts(dlp.id, results)
 
 	return nil
+}
+
+func (dlp *downloadTesterPeer) RequestStakingInfo(hashes []common.Hash) error {
+	panic("implement me")
 }
 
 // RequestNodeData constructs a getNodeData method associated with a particular
@@ -1685,6 +1692,10 @@ func (ftp *floodingTestPeer) RequestBodies(hashes []common.Hash) error {
 
 func (ftp *floodingTestPeer) RequestReceipts(hashes []common.Hash) error {
 	return ftp.peer.RequestReceipts(hashes)
+}
+
+func (ftp *floodingTestPeer) RequestStakingInfo(hashes []common.Hash) error {
+	return ftp.peer.RequestStakingInfo(hashes)
 }
 
 func (ftp *floodingTestPeer) RequestNodeData(hashes []common.Hash) error {

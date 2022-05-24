@@ -26,6 +26,8 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/klaytn/klaytn/reward"
+
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -74,7 +76,11 @@ const (
 	ReceiptsRequestMsg = 0x0e
 	ReceiptsMsg        = 0x0f
 
-	MsgCodeEnd = 0x10
+	// Protocol messages belonging to klay/64
+	StakingInfoRequestMsg = 0x10
+	StakingInfoMsg        = 0x12
+
+	MsgCodeEnd = 0x12
 )
 
 type errCode int
@@ -124,6 +130,7 @@ type ProtocolManagerDownloader interface {
 	DeliverHeaders(id string, headers []*types.Header) error
 	DeliverNodeData(id string, data [][]byte) error
 	DeliverReceipts(id string, receipts [][]*types.Receipt) error
+	DeliverStakingInfos(id string, stakingInfos []*reward.StakingInfo) error
 
 	Terminate()
 	Synchronise(id string, head common.Hash, td *big.Int, mode downloader.SyncMode) error

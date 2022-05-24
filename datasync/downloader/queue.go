@@ -27,6 +27,10 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/klaytn/klaytn/params"
+
+	"github.com/klaytn/klaytn/reward"
+
 	klaytnmetrics "github.com/klaytn/klaytn/metrics"
 
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -36,8 +40,9 @@ import (
 )
 
 const (
-	bodyType    = uint(0)
-	receiptType = uint(1)
+	bodyType        = uint(0)
+	receiptType     = uint(1)
+	stakingInfoType = uint(2)
 )
 
 var (
@@ -68,6 +73,7 @@ type fetchResult struct {
 	Header       *types.Header
 	Transactions types.Transactions
 	Receipts     types.Receipts
+	StakingInfo  *reward.StakingInfo
 }
 
 func newFetchResult(header *types.Header, fastSync bool) *fetchResult {
@@ -79,6 +85,9 @@ func newFetchResult(header *types.Header, fastSync bool) *fetchResult {
 	}
 	if fastSync && !header.EmptyReceipts() {
 		item.pending |= (1 << receiptType)
+	}
+	if fastSync && params.IsStakingUpdateInterval(header.Number.Uint64()) {
+		item.pending |= (1 << stakingInfoType)
 	}
 	return item
 }
@@ -99,6 +108,13 @@ func (f *fetchResult) AllDone() bool {
 func (f *fetchResult) SetReceiptsDone() {
 	if v := atomic.LoadInt32(&f.pending); (v & (1 << receiptType)) != 0 {
 		atomic.AddInt32(&f.pending, -2)
+	}
+}
+
+// SetStakingInfoDone flags the receipts as finished.
+func (f *fetchResult) SetStakingInfoDone() {
+	if v := atomic.LoadInt32(&f.pending); (v & (1 << stakingInfoType)) != 0 {
+		atomic.AddInt32(&f.pending, -4)
 	}
 }
 
@@ -132,6 +148,10 @@ type queue struct {
 	receiptTaskQueue *prque.Prque                  // [klay/63] Priority queue of the headers to fetch the receipts for
 	receiptPendPool  map[string]*fetchRequest      // [klay/63] Currently pending receipt retrieval operations
 
+	stakingInfoTaskPool  map[common.Hash]*types.Header // [klay/65] Pending staking info retrieval tasks, mapping hashes to headers
+	stakingInfoTaskQueue *prque.Prque                  // [klay/65] Priority queue of the headers to fetch the staking infos for
+	stakingInfoPendPool  map[string]*fetchRequest      // [klay/65] Currently pending staking info retrieval operations
+
 	resultCache *resultStore       // Downloaded but not yet delivered fetch results
 	resultSize  common.StorageSize // Approximate size of a block (exponential moving average)
 
@@ -146,11 +166,12 @@ type queue struct {
 func newQueue(blockCacheLimit int, thresholdInitialSize int) *queue {
 	lock := new(sync.RWMutex)
 	q := &queue{
-		headerContCh:     make(chan bool),
-		blockTaskQueue:   prque.New(),
-		receiptTaskQueue: prque.New(),
-		active:           sync.NewCond(lock),
-		lock:             lock,
+		headerContCh:         make(chan bool),
+		blockTaskQueue:       prque.New(),
+		receiptTaskQueue:     prque.New(),
+		stakingInfoTaskQueue: prque.New(),
+		active:               sync.NewCond(lock),
+		lock:                 lock,
 	}
 	q.Reset(blockCacheLimit, thresholdInitialSize)
 	return q
@@ -174,6 +195,10 @@ func (q *queue) Reset(blockCacheLimit int, thresholdInitialSize int) {
 	q.receiptTaskPool = make(map[common.Hash]*types.Header)
 	q.receiptTaskQueue.Reset()
 	q.receiptPendPool = make(map[string]*fetchRequest)
+
+	q.stakingInfoTaskPool = make(map[common.Hash]*types.Header)
+	q.stakingInfoTaskQueue.Reset()
+	q.stakingInfoPendPool = make(map[string]*fetchRequest)
 
 	q.resultCache = newResultStore(blockCacheLimit)
 	q.resultCache.SetThrottleThreshold(uint64(thresholdInitialSize))
@@ -212,6 +237,14 @@ func (q *queue) PendingReceipts() int {
 	return q.receiptTaskQueue.Size()
 }
 
+// PendingStakingInfos retrieves the number of staking information pending for retrieval.
+func (q *queue) PendingStakingInfos() int {
+	q.lock.Lock()
+	defer q.lock.Unlock()
+
+	return q.stakingInfoTaskQueue.Size()
+}
+
 // InFlightHeaders retrieves whether there are header fetch requests currently
 // in flight.
 func (q *queue) InFlightHeaders() bool {
@@ -239,13 +272,22 @@ func (q *queue) InFlightReceipts() bool {
 	return len(q.receiptPendPool) > 0
 }
 
+// InFlightStakingInfos retrieves whether there are staking info fetch requests currently
+// in flight.
+func (q *queue) InFlightStakingInfos() bool {
+	q.lock.Lock()
+	defer q.lock.Unlock()
+
+	return len(q.stakingInfoPendPool) > 0
+}
+
 // Idle returns if the queue is fully idle or has some data still inside.
 func (q *queue) Idle() bool {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
-	queued := q.blockTaskQueue.Size() + q.receiptTaskQueue.Size()
-	pending := len(q.blockPendPool) + len(q.receiptPendPool)
+	queued := q.blockTaskQueue.Size() + q.receiptTaskQueue.Size() + q.stakingInfoTaskQueue.Size()
+	pending := len(q.blockPendPool) + len(q.receiptPendPool) + len(q.stakingInfoPendPool)
 
 	return (queued + pending) == 0
 }
@@ -326,6 +368,16 @@ func (q *queue) Schedule(headers []*types.Header, from uint64) []*types.Header {
 				q.receiptTaskQueue.Push(header, -int64(header.Number.Uint64()))
 			}
 		}
+
+		if q.mode == FastSync && params.IsStakingUpdateInterval(header.Number.Uint64()) {
+			logger.Info("is staking update interval", "blockNum", header.Number.Uint64())
+			if _, ok := q.stakingInfoTaskPool[hash]; ok {
+				logger.Trace("Header already scheduled for staking info fetch", "number", header.Number, "hash", hash)
+			} else {
+				q.stakingInfoTaskPool[hash] = header
+				q.stakingInfoTaskQueue.Push(header, -int64(header.Number.Uint64()))
+			}
+		}
 		inserts = append(inserts, header)
 		q.headerHead = hash
 		from++
@@ -401,6 +453,7 @@ func (q *queue) stats() []interface{} {
 	return []interface{}{
 		"receiptTasks", q.receiptTaskQueue.Size(),
 		"blockTasks", q.blockTaskQueue.Size(),
+		"stakingInfoTasks", q.stakingInfoTaskQueue.Size(),
 		"itemSize", q.resultSize,
 	}
 }
@@ -463,6 +516,16 @@ func (q *queue) ReserveReceipts(p *peerConnection, count int) (*fetchRequest, bo
 	defer q.lock.Unlock()
 
 	return q.reserveHeaders(p, count, q.receiptTaskPool, q.receiptTaskQueue, q.receiptPendPool, receiptType)
+}
+
+// ReserveStakingInfos reserves a set of staking info fetches for the given peer, skipping
+// any previously failed downloads. Beside the next batch of needed fetches, it
+// also returns a flag whether empty receipts were queued requiring importing.
+func (q *queue) ReserveStakingInfos(p *peerConnection, count int) (*fetchRequest, bool, bool) {
+	q.lock.Lock()
+	defer q.lock.Unlock()
+
+	return q.reserveHeaders(p, count, q.stakingInfoTaskPool, q.stakingInfoTaskQueue, q.stakingInfoPendPool, stakingInfoType)
 }
 
 // reserveHeaders reserves a set of data download operations for a given peer,
@@ -587,6 +650,14 @@ func (q *queue) CancelReceipts(request *fetchRequest) {
 	q.cancel(request, q.receiptTaskQueue, q.receiptPendPool)
 }
 
+// CancelStakingInfo aborts a body fetch request, returning all pending headers to
+// the task queue.
+func (q *queue) CancelStakingInfo(request *fetchRequest) {
+	q.lock.Lock()
+	defer q.lock.Unlock()
+	q.cancel(request, q.stakingInfoTaskQueue, q.stakingInfoPendPool)
+}
+
 // Cancel aborts a fetch request, returning all pending hashes to the task queue.
 func (q *queue) cancel(request *fetchRequest, taskQueue *prque.Prque, pendPool map[string]*fetchRequest) {
 	if request.From > 0 {
@@ -617,6 +688,12 @@ func (q *queue) Revoke(peerId string) {
 		}
 		delete(q.receiptPendPool, peerId)
 	}
+	if request, ok := q.stakingInfoPendPool[peerId]; ok {
+		for _, header := range request.Headers {
+			q.stakingInfoTaskQueue.Push(header, -int64(header.Number.Uint64()))
+		}
+		delete(q.stakingInfoPendPool, peerId)
+	}
 }
 
 // ExpireHeaders checks for in flight requests that exceeded a timeout allowance,
@@ -644,6 +721,15 @@ func (q *queue) ExpireReceipts(timeout time.Duration) map[string]int {
 	defer q.lock.Unlock()
 
 	return q.expire(timeout, q.receiptPendPool, q.receiptTaskQueue, receiptTimeoutMeter)
+}
+
+// ExpireStakingInfos checks for in flight staking info requests that exceeded a timeout
+// allowance, canceling them and returning the responsible peers for penalisation.
+func (q *queue) ExpireStakingInfos(timeout time.Duration) map[string]int {
+	q.lock.Lock()
+	defer q.lock.Unlock()
+
+	return q.expire(timeout, q.stakingInfoPendPool, q.stakingInfoTaskQueue, stakingInfoTimeoutMeter)
 }
 
 // expire is the generic check that move expired tasks from a pending pool back
@@ -804,6 +890,24 @@ func (q *queue) DeliverReceipts(id string, receiptList [][]*types.Receipt) (int,
 		result.SetReceiptsDone()
 	}
 	return q.deliver(id, q.receiptTaskPool, q.receiptTaskQueue, q.receiptPendPool, receiptReqTimer, len(receiptList), validate, reconstruct)
+}
+
+// DeliverStakingInfos injects a receipt retrieval response into the results queue.
+// The method returns the number of staking information accepted from the delivery
+// and also wakes any threads waiting for data delivery.
+func (q *queue) DeliverStakingInfos(id string, stakingInfoList []*reward.StakingInfo) (int, error) {
+	q.lock.Lock()
+	defer q.lock.Unlock()
+	validate := func(index int, header *types.Header) error {
+		// TODO-Klaytn-Snapsync update validation logic
+		return nil
+	}
+
+	reconstruct := func(index int, result *fetchResult) {
+		result.StakingInfo = stakingInfoList[index]
+		result.SetStakingInfoDone()
+	}
+	return q.deliver(id, q.stakingInfoTaskPool, q.stakingInfoTaskQueue, q.stakingInfoPendPool, stakingInfoReqTimer, len(stakingInfoList), validate, reconstruct)
 }
 
 // deliver injects a data retrieval response into the results queue.

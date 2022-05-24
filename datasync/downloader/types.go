@@ -23,6 +23,8 @@ package downloader
 import (
 	"fmt"
 
+	"github.com/klaytn/klaytn/reward"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 )
 
@@ -77,3 +79,12 @@ type statePack struct {
 func (p *statePack) PeerId() string { return p.peerId }
 func (p *statePack) Items() int     { return len(p.states) }
 func (p *statePack) Stats() string  { return fmt.Sprintf("%d", len(p.states)) }
+
+type stakingInfoPack struct {
+	peerId       string
+	stakingInfos []*reward.StakingInfo
+}
+
+func (p *stakingInfoPack) PeerId() string { return p.peerId }
+func (p *stakingInfoPack) Items() int     { return len(p.stakingInfos) }
+func (p *stakingInfoPack) Stats() string  { return fmt.Sprintf("%d", len(p.stakingInfos)) }

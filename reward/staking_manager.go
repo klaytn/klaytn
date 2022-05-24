@@ -103,14 +103,29 @@ func GetStakingManager() *StakingManager {
 	return stakingManager
 }
 
-// GetStakingInfo returns a corresponding stakingInfo for a blockNum.
+// GetStakingInfo returns a stakingInfo on the staking block of the given block number.
+// Note that staking block is the block on which the associated staking information is stored and used during an interval.
 func GetStakingInfo(blockNum uint64) *StakingInfo {
+	stakingBlockNumber := params.CalcStakingBlockNumber(blockNum)
+	return GetStakingInfoOnStakingBlock(stakingBlockNumber)
+}
+
+// GetStakingInfoOnStakingBlock returns a corresponding StakingInfo for a staking block number.
+// If the given number is not on the staking block, it returns nil.
+func GetStakingInfoOnStakingBlock(stakingBlockNumber uint64) *StakingInfo {
 	if stakingManager == nil {
 		logger.Error("unable to GetStakingInfo", "err", ErrStakingManagerNotSet)
 		return nil
 	}
 
-	stakingBlockNumber := params.CalcStakingBlockNumber(blockNum)
+	return getStakingInfo(0, stakingBlockNumber)
+}
+
+func getStakingInfo(blockNum, stakingBlockNumber uint64) *StakingInfo {
+	if stakingManager == nil {
+		logger.Error("unable to GetStakingInfo", "err", ErrStakingManagerNotSet)
+		return nil
+	}
 
 	// Get staking info from cache
 	if cachedStakingInfo := stakingManager.stakingInfoCache.get(stakingBlockNumber); cachedStakingInfo != nil {
@@ -124,7 +139,7 @@ func GetStakingInfo(blockNum uint64) *StakingInfo {
 		stakingManager.stakingInfoCache.add(storedStakingInfo)
 		return storedStakingInfo
 	} else {
-		logger.Debug("failed to get stakingInfo from DB", "err", err, "blockNum", blockNum)
+		logger.Debug("failed to get stakingInfo from DB", "err", err, "blockNum", blockNum, "staking block number", stakingBlockNumber)
 	}
 
 	// Calculate staking info from block header and updates it to cache and db
@@ -151,7 +166,7 @@ func updateStakingInfo(blockNum uint64) (*StakingInfo, error) {
 
 	stakingManager.stakingInfoCache.add(stakingInfo)
 
-	if err := addStakingInfoToDB(stakingInfo); err != nil {
+	if err := AddStakingInfoToDB(stakingInfo); err != nil {
 		logger.Debug("failed to write staking info to db", "err", err, "stakingInfo", stakingInfo)
 		return stakingInfo, err
 	}
