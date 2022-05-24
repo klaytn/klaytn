@@ -40,16 +40,18 @@ import (
 const (
 	klay62 = 62
 	klay63 = 63
+	klay64 = 64
+	klay65 = 65
 )
 
 // ProtocolName is the official short name of the protocol used during capability negotiation.
 var ProtocolName = "klay"
 
 // ProtocolVersions are the upported versions of the klay protocol (first is primary).
-var ProtocolVersions = []uint{klay63, klay62}
+var ProtocolVersions = []uint{klay65, klay64, klay63, klay62}
 
 // ProtocolLengths are the number of implemented message corresponding to different protocol versions.
-var ProtocolLengths = []uint64{17, 8}
+var ProtocolLengths = []uint64{21, 19, 17, 8}
 
 const ProtocolMaxMsgSize = 10 * 1024 * 1024 // Maximum cap on the size of a protocol message
 
@@ -77,10 +79,14 @@ const (
 	ReceiptsMsg        = 0x0f
 
 	// Protocol messages belonging to klay/64
-	StakingInfoRequestMsg = 0x10
-	StakingInfoMsg        = 0x12
+	DummyMsg1 = 0x10
+	DummyMsg2 = 0x11 // it is used for consensus message for istanbul engine
 
-	MsgCodeEnd = 0x12
+	// Protocol messages belonging to klay/65
+	StakingInfoRequestMsg = 0x12
+	StakingInfoMsg        = 0x13
+
+	MsgCodeEnd = 0x14
 )
 
 type errCode int

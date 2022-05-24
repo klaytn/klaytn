@@ -611,12 +611,12 @@ func (pm *ProtocolManager) handleMsg(p Peer, addr common.Address, msg p2p.Msg) e
 			return err
 		}
 
-	case msg.Code == StakingInfoRequestMsg:
+	case p.GetVersion() >= klay65 && msg.Code == StakingInfoRequestMsg:
 		if err := handleStakingInfoRequestMsg(pm, p, msg); err != nil {
 			return err
 		}
 
-	case msg.Code == StakingInfoMsg:
+	case p.GetVersion() >= klay65 && msg.Code == StakingInfoMsg:
 		if err := handleStakingInfoMsg(pm, p, msg); err != nil {
 			return err
 		}

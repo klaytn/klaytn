@@ -130,10 +130,10 @@ type Downloader struct {
 	headerCh          chan dataPack        // [klay/62] Channel receiving inbound block headers
 	bodyCh            chan dataPack        // [klay/62] Channel receiving inbound block bodies
 	receiptCh         chan dataPack        // [klay/63] Channel receiving inbound receipts
-	stakingInfoCh     chan dataPack        // [klay/64] Channel receiving inbound staking infos
+	stakingInfoCh     chan dataPack        // [klay/65] Channel receiving inbound staking infos
 	bodyWakeCh        chan bool            // [klay/62] Channel to signal the block body fetcher of new tasks
 	receiptWakeCh     chan bool            // [klay/63] Channel to signal the receipt fetcher of new tasks
-	stakingInfoWakeCh chan bool            // [klay/64] Channel to signal the staking info fetcher of new tasks
+	stakingInfoWakeCh chan bool            // [klay/65] Channel to signal the staking info fetcher of new tasks
 	headerProcCh      chan []*types.Header // [klay/62] Channel to feed the header processor new tasks
 
 	// for stateFetcher

@@ -55,6 +55,10 @@ func testChannelManager(t *testing.T, chSize int) {
 		// Before calling RegisterChannelWithIndex,
 		// calling GetChannelWithMsgCode with registered MsgCode should return no channel and no error.
 		for i := StatusMsg; i < MsgCodeEnd; i++ {
+			if i == DummyMsg1 || i == DummyMsg2 {
+				// skip for dummy messages
+				continue
+			}
 			ch, err := cm.GetChannelWithMsgCode(chIdx, uint64(i))
 			assert.Nil(t, ch)
 			assert.NoError(t, err)
@@ -82,6 +86,10 @@ func testChannelManager(t *testing.T, chSize int) {
 		// After calling RegisterChannelWithIndex,
 		// calling GetChannelWithMsgCode with registered MsgCode should return a channel but no error.
 		for i := StatusMsg; i < MsgCodeEnd; i++ {
+			if i == DummyMsg1 || i == DummyMsg2 {
+				// skip for dummy messages
+				continue
+			}
 			ch, err := cm.GetChannelWithMsgCode(chIdx, uint64(i))
 			assert.Equal(t, channel, ch)
 			assert.NoError(t, err)
