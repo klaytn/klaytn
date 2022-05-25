@@ -88,7 +88,7 @@ func (c *core) handleRoundChange(msg *message, src istanbul.Validator) error {
 	// Decode ROUND CHANGE message
 	var rc *istanbul.Subject
 	if err := msg.Decode(&rc); err != nil {
-		logger.Error("Failed to decode ROUND CHANGE", "err", err)
+		logger.Error("Failed to decode message", "code", msg.Code, "err", err)
 		return errInvalidMessage
 	}
 
