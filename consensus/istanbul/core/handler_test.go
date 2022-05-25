@@ -80,6 +80,8 @@ func newMockBackend(t *testing.T, validatorAddrs []common.Address) (*mock_istanb
 	// Verify checks whether the proposal of the preprepare message is a valid block. Consider it valid.
 	mockBackend.EXPECT().Verify(gomock.Any()).Return(time.Duration(0), nil).AnyTimes()
 
+	mockBackend.EXPECT().HasBadProposal(gomock.Any()).Return(true).AnyTimes()
+
 	// Commit is added to remove unexpected call error
 
 	return mockBackend, mockCtrl
@@ -176,6 +178,35 @@ func genMaliciousBlock(prevBlock *types.Block, signerKey *ecdsa.PrivateKey) (*ty
 		Extra:      prevBlock.Extra(),
 		Time:       common.Big0,
 		BlockScore: common.Big0,
+	})
+	return signBlock(block, signerKey)
+}
+
+// genBlock generates a signed block indicating prevBlock with ParentHash
+func genBlockA(prevBlock *types.Block, signerKey *ecdsa.PrivateKey) (*types.Block, error) {
+	block := types.NewBlockWithHeader(&types.Header{
+		ParentHash: prevBlock.Hash(),
+		Number:     new(big.Int).Add(prevBlock.Number(), common.Big1),
+		GasUsed:    0,
+		Extra:      prevBlock.Extra(),
+		//Extra:      []byte{'a', 'b', 'c'},
+		Time:       new(big.Int).Add(prevBlock.Time(), common.Big1),
+		BlockScore: new(big.Int).Add(prevBlock.BlockScore(), common.Big1),
+	})
+	return signBlock(block, signerKey)
+}
+
+// genBlock generates a signed block indicating prevBlock with ParentHash
+func genBlockB(prevBlock *types.Block, signerKey *ecdsa.PrivateKey) (*types.Block, error) {
+	block := types.NewBlockWithHeader(&types.Header{
+		ParentHash: prevBlock.Hash(),
+		Number:     new(big.Int).Add(prevBlock.Number(), common.Big1),
+		GasUsed:    1000,
+		Extra:      prevBlock.Extra(),
+		//Extra: []byte{'x', 'y', 'z'},
+
+		Time:       new(big.Int).Add(prevBlock.Time(), big.NewInt(10)),
+		BlockScore: new(big.Int).Add(prevBlock.BlockScore(), common.Big1),
 	})
 	return signBlock(block, signerKey)
 }
@@ -497,7 +528,7 @@ func enableLog() {
 	}
 	glogger := log.NewGlogHandler(log.StreamHandler(output, log.TerminalFormat(usecolor)))
 	log.PrintOrigins(true)
-	log.ChangeGlobalLogLevel(glogger, log.Lvl(5))
+	log.ChangeGlobalLogLevel(glogger, log.Lvl(3))
 	glogger.Vmodule("")
 	glogger.BacktraceAt("")
 	log.Root().SetHandler(glogger)
@@ -506,6 +537,7 @@ func enableLog() {
 func TestCore_MaliciousCN(t *testing.T) {
 
 	enableLog()
+	var maxAllowedRound = uint64(5)
 
 	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
 	defer fork.ClearHardForkBlockNumberConfig()
@@ -526,7 +558,7 @@ func TestCore_MaliciousCN(t *testing.T) {
 	lastProposal, _ := mockBackend.LastProposal()
 	lastBlock := lastProposal.(*types.Block)
 	validators := mockBackend.Validators(lastBlock)
-	fmt.Println(validators.SubList(lastBlock.Hash(), istCore.currentView()))
+	//fmt.Println(validators.SubList(lastBlock.Hash(), istCore.currentView()))
 
 	// valid message
 	{
@@ -583,16 +615,225 @@ func TestCore_MaliciousCN(t *testing.T) {
 		}
 
 		sendMessages(msgPrepare, 1)
+		preparesSize := istCore.current.Prepares.Size()
+		commitsSize := istCore.current.Commits.Size()
+
+		fmt.Println("prepare size = ", preparesSize, " commit size: ", commitsSize)
+
 		if istCore.state.Cmp(StatePrepared) < 0 {
-			t.Fatal("not prepared due to malicious cns")
+			for {
+				if istCore.currentView().Round.Uint64() > maxAllowedRound {
+					t.Fatal("not prepared due to malicious cns")
+
+				}
+				//istCore.sendRoundChange(istCore.currentView().Round)
+				istCore.sendEvent(timeoutEvent{&istanbul.View{
+					Sequence: istCore.current.sequence,
+					Round:    new(big.Int).Add(istCore.current.round, common.Big1),
+				}})
+				//istCore.sendRoundChange(new(big.Int).Add(istCore.currentView().Round, common.Big1))
+				//fmt.Println("current round: ", istCore.currentView().Round)
+
+				time.Sleep(1000 * time.Millisecond)
+			}
+
 		}
 
 		//fmt.Println("prepared. state = ", istCore.state)
 
 		sendMessages(msgCommit, 2)
+		commitsSize = istCore.current.Commits.Size()
+
+		fmt.Println("prepare size = ", preparesSize, " commit size: ", commitsSize)
+
 		if istCore.state.Cmp(StateCommitted) < 0 {
-			t.Fatal("not committed due to malicious cns")
+			for {
+				if istCore.currentView().Round.Uint64() > maxAllowedRound {
+					t.Fatal("not committed due to malicious cns")
+
+				}
+				//istCore.sendRoundChange(istCore.currentView().Round)
+				istCore.sendEvent(timeoutEvent{&istanbul.View{
+					Sequence: istCore.current.sequence,
+					Round:    new(big.Int).Add(istCore.current.round, common.Big1),
+				}})
+				//istCore.sendRoundChange(new(big.Int).Add(istCore.currentView().Round, common.Big1))
+				//fmt.Println("current round: ", istCore.currentView().Round)
+
+				time.Sleep(1000 * time.Millisecond)
+			}
+
 		}
+
+		assert.Nil(t, err)
+
+	}
+}
+
+func TestCore_MaliciousCN_5nodes(t *testing.T) {
+
+	enableLog()
+
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
+
+	validatorAddrs, validatorKeyMap := genValidators(15)
+	mockBackend, mockCtrl := newMockBackend(t, validatorAddrs)
+	defer mockCtrl.Finish()
+
+	istConfig := istanbul.DefaultConfig
+	istConfig.ProposerPolicy = istanbul.WeightedRandom
+
+	istCore := New(mockBackend, istConfig).(*core)
+	istCoreA := New(mockBackend, istConfig).(*core)
+	istCoreB := New(mockBackend, istConfig).(*core)
+
+	if err := istCore.Start(); err != nil {
+		t.Fatal(err)
+	}
+	if err := istCoreA.Start(); err != nil {
+		t.Fatal(err)
+	}
+	if err := istCoreB.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer istCore.Stop()
+	defer istCoreA.Stop()
+	defer istCoreB.Stop()
+
+	lastProposal, _ := mockBackend.LastProposal()
+	lastBlock := lastProposal.(*types.Block)
+	validators := mockBackend.Validators(lastBlock)
+	//fmt.Println("validator addrs = ", validators.SubList(lastBlock.Hash(), istCore.currentView()))
+
+	// validatorA, validatorB
+	// msgSender sends a block of sequence #0 to validatorA
+	// msgSender sends a block of sequence #1 to validatorB
+	// node 5 f = 1 2f+1 = 3
+
+	// valid message
+	{
+		msgSender := validators.GetProposer()
+		msgSenderKey := validatorKeyMap[msgSender.Address()]
+
+		newProposalA, err := genBlockA(lastBlock, msgSenderKey)
+		if err != nil {
+			t.Fatal(err)
+		}
+		newProposalB, err := genBlockB(lastBlock, msgSenderKey)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		istanbulMsgA, _ := genIstanbulMsg(msgPreprepare, lastBlock.Hash(), newProposalA, msgSender.Address(), msgSenderKey)
+		if err != nil {
+			t.Fatal(err)
+		}
+		istanbulMsgB, _ := genIstanbulMsg(msgPreprepare, lastBlock.Hash(), newProposalB, msgSender.Address(), msgSenderKey)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		istCore.handleMsg(istanbulMsgA.Payload)
+		istCoreA.handleMsg(istanbulMsgA.Payload)
+		istCoreA.handleMsg(istanbulMsgA.Payload)
+		istCore.handleMsg(istanbulMsgB.Payload)
+		istCoreB.handleMsg(istanbulMsgB.Payload)
+		istCoreB.handleMsg(istanbulMsgB.Payload)
+
+		//{0,1,2,3,4} <- proposer이 항상 0 이라는 보장이 없어서 프로포저가 0이면 {0,1,2}{0,3,4} 프로포저가 1이면 {0,1,2}{1,3,4}
+
+		committeeSize := len(validators.SubList(lastBlock.Hash(), istCore.currentView()))
+		tmpList := validators.SubList(lastBlock.Hash(), istCore.currentView())
+		//fmt.Println(tmpList)
+
+		for i := range validators.SubList(lastBlock.Hash(), istCore.currentView()) {
+			// both groupA and groupB includes proposer as validator
+			if tmpList[i].Address() == msgSender.Address() {
+				tmpList = append(tmpList[i+1:], tmpList[:i]...)
+				break
+			}
+		}
+
+		listA := make([]istanbul.Validator, (committeeSize-1)/2)
+		listB := make([]istanbul.Validator, (committeeSize-1)/2)
+		copy(listA, tmpList[:(committeeSize-1)/2])
+		listA = append(listA, msgSender)
+
+		copy(listB, tmpList[(committeeSize-1)/2:])
+		listB = append(listB, msgSender)
+
+		//fmt.Println(listA)
+		//fmt.Println(listB)
+
+		for _, k := range listA {
+			v := validatorKeyMap[k.Address()]
+
+			istanbulMsg, _ := genIstanbulMsg(msgPrepare, lastBlock.Hash(), newProposalA, k.Address(), v)
+			err = istCoreA.handleMsg(istanbulMsg.Payload)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
+
+		//sendMessages := func(state uint64, malicious int) {
+		//	//for k, v := range validatorKeyMap {
+		//	for _, k := range listB {
+		//		v := validatorKeyMap[k.Address()]
+		//
+		//		var msg *types.Block
+		//		// the proposer does not send prepare message
+		//		//if msgSender.Address().Hex() == k.Address().Hex() && state == msgPrepare {
+		//		//	continue
+		//		//}
+		//
+		//		istanbulMsg, _ := genIstanbulMsg(state, lastBlock.Hash(), msg, k.Address(), v)
+		//		err = istCoreA.handleMsg(istanbulMsg.Payload)
+		//		if err != nil {
+		//			fmt.Println(err)
+		//		}
+		//
+		//	}
+		//}
+
+		//sendMessages(msgPrepare, 1)
+		preparesSizeA := istCoreA.current.Prepares.Size()
+
+		for _, k := range listA {
+			v := validatorKeyMap[k.Address()]
+
+			istanbulMsg, _ := genIstanbulMsg(msgCommit, lastBlock.Hash(), newProposalA, k.Address(), v)
+			err = istCoreA.handleMsg(istanbulMsg.Payload)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
+		commitsSizeA := istCoreA.current.Commits.Size()
+
+		fmt.Println("group 1 prepare size = ", preparesSizeA, "group 1 commit size = ", commitsSizeA)
+
+		for _, k := range listB {
+			v := validatorKeyMap[k.Address()]
+
+			istanbulMsg, _ := genIstanbulMsg(msgPrepare, lastBlock.Hash(), newProposalB, k.Address(), v)
+			err = istCoreB.handleMsg(istanbulMsg.Payload)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
+
+		for _, k := range listB {
+			v := validatorKeyMap[k.Address()]
+
+			istanbulMsg, _ := genIstanbulMsg(msgCommit, lastBlock.Hash(), newProposalB, k.Address(), v)
+			err = istCoreB.handleMsg(istanbulMsg.Payload)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
+		preparesSizeB := istCoreB.current.Prepares.Size()
+		commitsSizeB := istCoreB.current.Commits.Size()
+		fmt.Println("group 2 prepare size = ", preparesSizeB, "group 2 commit size = ", commitsSizeB)
 
 		assert.Nil(t, err)
 
@@ -601,6 +842,7 @@ func TestCore_MaliciousCN(t *testing.T) {
 
 // TestCore_handleTimeoutMsg_race tests a race condition between round change triggers.
 // There should be no race condition when round change message and timeout event are handled simultaneously.
+
 func TestCore_handleTimeoutMsg_race(t *testing.T) {
 	// important variables to construct test cases
 	const sleepTime = 200 * time.Millisecond
