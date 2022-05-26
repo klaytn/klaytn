@@ -17,7 +17,7 @@ func newTestGovernanceApi() *PublicGovernanceAPI {
 	return govApi
 }
 
-func TestUpperBoundUnderLowerBound(t *testing.T) {
+func TestUpperBoundBaseFeeSet_LowerThan_LowerBoundBaseFee(t *testing.T) {
 	govApi := newTestGovernanceApi()
 
 	curLowerBoundBaseFee := govApi.governance.LowerBoundBaseFee()
@@ -26,7 +26,7 @@ func TestUpperBoundUnderLowerBound(t *testing.T) {
 	assert.Equal(t, err, errInvalidUpperBound)
 }
 
-func TestLowerBoundOverUpperBound(t *testing.T) {
+func TestLowerBoundFeeSet_Exceeding_UpperBoundBaseFee(t *testing.T) {
 	govApi := newTestGovernanceApi()
 
 	curUpperBoundBaseFee := govApi.governance.UpperBoundBaseFee()

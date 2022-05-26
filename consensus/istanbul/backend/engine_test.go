@@ -1277,8 +1277,8 @@ func TestGovernance_Votes(t *testing.T) {
 			votes: []vote{
 				{}, // voted on block 1
 				{"kip71.lowerboundbasefee", uint64(750000000000)}, // voted on block 2
-				{}, // voted on block 4
 				{}, // voted on block 3
+				{}, // voted on block 4
 				{"kip71.lowerboundbasefee", uint64(25000000000)}, // voted on block 5
 			},
 			expected: []governanceItem{
@@ -1545,7 +1545,7 @@ func TestChainConfig_ReadFromDBAfterVotes(t *testing.T) {
 		assert.NoError(t, err)
 
 		// insert blocks until the vote is applied
-		for i := 0; i < 1023; i++ {
+		for i := 0; i < checkpointInterval; i++ {
 			previousBlock = currentBlock
 			currentBlock = makeBlockWithSeal(chain, engine, previousBlock)
 			_, err = chain.InsertChain(types.Blocks{currentBlock})

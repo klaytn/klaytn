@@ -311,16 +311,19 @@ var (
 		Usage: "gas target flag",
 		Value: params.DefaultGasTarget,
 	}
+
 	kip71BlockGasLimit = cli.Uint64Flag{
 		Name:  "block-gas-limit",
 		Usage: "block gas limit flag",
 		Value: params.DefaultBlockGasLimit,
 	}
+
 	kip71BaseFeeDenominator = cli.Uint64Flag{
 		Name:  "base-fee-denominator",
 		Usage: "base fee denominator flag",
 		Value: params.DefaultLowerBoundBaseFee,
 	}
+
 	istEpochFlag = cli.Uint64Flag{
 		Name:  "ist-epoch",
 		Usage: "governance epoch [default: 604800]",
