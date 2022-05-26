@@ -145,7 +145,7 @@ var (
 	VMLogTarget = 0x0
 
 	// TODO-klaytn temporal number for test
-	DefaultKIP71CompatibleBlockNum = big.NewInt(95000000)
+	KIP71CompatibleBlockNum = big.NewInt(95000000)
 )
 
 const (
