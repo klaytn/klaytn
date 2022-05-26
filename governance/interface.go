@@ -95,7 +95,7 @@ type HeaderEngine interface {
 	LowerBoundBaseFee() uint64
 	UpperBoundBaseFee() uint64
 	GasTarget() uint64
-	BlockGasLimit() uint64
+	MaxBlockGasUsedForBaseFee() uint64
 	BaseFeeDenominator() uint64
 	GetGovernanceValue(key int) interface{}
 	GetGovernanceItemAtNumber(num uint64, key string) (interface{}, error)

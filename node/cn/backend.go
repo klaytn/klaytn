@@ -227,11 +227,11 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		chainConfig.KIP71CompatibleBlock = params.KIP71CompatibleBlockNum
 	}
 	chainConfig.Governance.KIP71 = &params.KIP71Config{
-		LowerBoundBaseFee:  governance.LowerBoundBaseFee(),
-		UpperBoundBaseFee:  governance.UpperBoundBaseFee(),
-		GasTarget:          governance.GasTarget(),
-		BlockGasLimit:      governance.BlockGasLimit(),
-		BaseFeeDenominator: governance.BaseFeeDenominator(),
+		LowerBoundBaseFee:         governance.LowerBoundBaseFee(),
+		UpperBoundBaseFee:         governance.UpperBoundBaseFee(),
+		GasTarget:                 governance.GasTarget(),
+		MaxBlockGasUsedForBaseFee: governance.MaxBlockGasUsedForBaseFee(),
+		BaseFeeDenominator:        governance.BaseFeeDenominator(),
 	}
 
 	cn := &CN{

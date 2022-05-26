@@ -200,7 +200,7 @@ func genKIP71Config(ctx *cli.Context) *params.KIP71Config {
 	lowerBoundBaseFee := ctx.Uint64(kip71LowerBoundBaseFeeFlag.Name)
 	upperBoundBaseFee := ctx.Uint64(kip71UpperBoundBaseFeeFlag.Name)
 	gasTarget := ctx.Uint64(kip71GasTarget.Name)
-	blockGasLimit := ctx.Uint64(kip71BlockGasLimit.Name)
+	maxBlockGasUsedForBaseFee := ctx.Uint64(kip71MaxBlockGasUsedForBaseFee.Name)
 	baseFeeDenominator := ctx.Uint64(kip71BaseFeeDenominator.Name)
 
 	// TODO-klaytn These parameters are for dynamic gas price policy
@@ -208,17 +208,19 @@ func genKIP71Config(ctx *cli.Context) *params.KIP71Config {
 	//
 	// Dynamic variation of the BaseFee is determined by following constrains
 	//  1. ParentGasUsed : GasUsed of the parent block
-	//  2. LowerBoundBaseFee <= BaseFee <= UpperBoundBaseFee
-	//  3. NextBaseFee = (ParentBaseFee * (ParentGasUsed - GasTarget) / BaseFeeDenominator) + ParentBaseFee
+	//  2. If MaxBlockGasUsedForBaseFee < ParentGasUsed, ParentGasUsed := MaxBlockGasUsedForBaseFee
+	//  3. LowerBoundBaseFee <= BaseFee <= UpperBoundBaseFee
+	//  4. NextBaseFee = (ParentBaseFee * (ParentGasUsed - GasTarget) / BaseFeeDenominator) + ParentBaseFee
 	//
+	// MaxBlockGasUsedForBaseFee: factor to limit the impulsed delta (ParentGasUsed-GasTarget)
 	// GasTarget: If ParentGasUsed < GasTarget, BaseFee will be decreased. Conversely it increase
 	// BaseFeeDenominator: BaseFeeDenominator cause the scaling effect for the delta (ParentGasUsed-GasTarget)
 	return &params.KIP71Config{
-		LowerBoundBaseFee:  lowerBoundBaseFee,
-		UpperBoundBaseFee:  upperBoundBaseFee,
-		GasTarget:          gasTarget,
-		BlockGasLimit:      blockGasLimit,
-		BaseFeeDenominator: baseFeeDenominator,
+		LowerBoundBaseFee:         lowerBoundBaseFee,
+		UpperBoundBaseFee:         upperBoundBaseFee,
+		GasTarget:                 gasTarget,
+		MaxBlockGasUsedForBaseFee: maxBlockGasUsedForBaseFee,
+		BaseFeeDenominator:        baseFeeDenominator,
 	}
 }
 

@@ -472,10 +472,10 @@ func (bc *BlockChain) SetGasTarget(val uint64) {
 	bc.chainConfig.Governance.KIP71.GasTarget = val
 }
 
-func (bc *BlockChain) SetBlockGasLimit(val uint64) {
+func (bc *BlockChain) SetMaxBlockGasUsedForBaseFee(val uint64) {
 	bc.chainConfigMu.Lock()
 	defer bc.chainConfigMu.Unlock()
-	bc.chainConfig.Governance.KIP71.BlockGasLimit = val
+	bc.chainConfig.Governance.KIP71.MaxBlockGasUsedForBaseFee = val
 }
 
 func (bc *BlockChain) SetBaseFeeDenominator(val uint64) {

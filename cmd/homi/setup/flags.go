@@ -312,10 +312,10 @@ var (
 		Value: params.DefaultGasTarget,
 	}
 
-	kip71BlockGasLimit = cli.Uint64Flag{
+	kip71MaxBlockGasUsedForBaseFee = cli.Uint64Flag{
 		Name:  "block-gas-limit",
 		Usage: "block gas limit flag",
-		Value: params.DefaultBlockGasLimit,
+		Value: params.DefaultMaxBlockGasUsedForBaseFee,
 	}
 
 	kip71BaseFeeDenominator = cli.Uint64Flag{

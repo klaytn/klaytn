@@ -210,11 +210,11 @@ type RewardConfig struct {
 
 // TODO-klaytn kip71 governance parameters
 type KIP71Config struct {
-	LowerBoundBaseFee  uint64 `json:"lowerboundbasefee"`  // Minimum base fee for dynamic gas price
-	UpperBoundBaseFee  uint64 `json:"upperboundbasefee"`  // Maximum base fee for dynamic gas price
-	GasTarget          uint64 `json:"gastarget"`          // Gauge parameter increasing or decreasing gas price
-	BlockGasLimit      uint64 `json:"blockgaslimit"`      // Maximum network and process capacity to allow in a block
-	BaseFeeDenominator uint64 `json:"basefeedenominator"` // For normalizing effect of the rapid change like impulse gas used
+	LowerBoundBaseFee         uint64 `json:"lowerboundbasefee"`         // Minimum base fee for dynamic gas price
+	UpperBoundBaseFee         uint64 `json:"upperboundbasefee"`         // Maximum base fee for dynamic gas price
+	GasTarget                 uint64 `json:"gastarget"`                 // Gauge parameter increasing or decreasing gas price
+	MaxBlockGasUsedForBaseFee uint64 `json:"maxblockgasusedforbasefee"` // Maximum network and process capacity to allow in a block
+	BaseFeeDenominator        uint64 `json:"basefeedenominator"`        // For normalizing effect of the rapid change like impulse gas used
 }
 
 // IstanbulConfig is the consensus engine configs for Istanbul based sealing.
@@ -562,11 +562,11 @@ func GetDefaultRewardConfig() *RewardConfig {
 
 func GetDefaultKip71Config() *KIP71Config {
 	return &KIP71Config{
-		LowerBoundBaseFee:  DefaultLowerBoundBaseFee,
-		UpperBoundBaseFee:  DefaultUpperBoundBaseFee,
-		GasTarget:          DefaultGasTarget,
-		BlockGasLimit:      DefaultBlockGasLimit,
-		BaseFeeDenominator: DefaultBaseFeeDenominator,
+		LowerBoundBaseFee:         DefaultLowerBoundBaseFee,
+		UpperBoundBaseFee:         DefaultUpperBoundBaseFee,
+		GasTarget:                 DefaultGasTarget,
+		MaxBlockGasUsedForBaseFee: DefaultMaxBlockGasUsedForBaseFee,
+		BaseFeeDenominator:        DefaultBaseFeeDenominator,
 	}
 }
 

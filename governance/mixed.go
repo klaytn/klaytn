@@ -246,8 +246,8 @@ func (e *MixedEngine) GasTarget() uint64 {
 	return e.defaultGov.GasTarget()
 }
 
-func (e *MixedEngine) BlockGasLimit() uint64 {
-	return e.defaultGov.BlockGasLimit()
+func (e *MixedEngine) MaxBlockGasUsedForBaseFee() uint64 {
+	return e.defaultGov.MaxBlockGasUsedForBaseFee()
 }
 
 func (e *MixedEngine) BaseFeeDenominator() uint64 {

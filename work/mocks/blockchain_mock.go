@@ -780,16 +780,16 @@ func (mr *MockBlockChainMockRecorder) SetBaseFeeDenominator(val interface{}) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetBaseFeeDenominator", reflect.TypeOf((*MockBlockChain)(nil).SetBaseFeeDenominator), val)
 }
 
-// SetBlockGasLimit mocks base method.
-func (m *MockBlockChain) SetBlockGasLimit(val uint64) {
+// SetMaxBlockGasUsedForBaseFee mocks base method.
+func (m *MockBlockChain) SetMaxBlockGasUsedForBaseFee(val uint64) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetBlockGasLimit", val)
+	m.ctrl.Call(m, "SetMaxBlockGasUsedForBaseFee", val)
 }
 
-// SetBlockGasLimit indicates an expected call of SetBlockGasLimit.
-func (mr *MockBlockChainMockRecorder) SetBlockGasLimit(val interface{}) *gomock.Call {
+// SetMaxBlockGasUsedForBaseFee indicates an expected call of SetMaxBlockGasUsedForBaseFee.
+func (mr *MockBlockChainMockRecorder) SetMaxBlockGasUsedForBaseFee(val interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetBlockGasLimit", reflect.TypeOf((*MockBlockChain)(nil).SetBlockGasLimit), val)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetMaxBlockGasUsedForBaseFee", reflect.TypeOf((*MockBlockChain)(nil).SetMaxBlockGasUsedForBaseFee), val)
 }
 
 // SetGasTarget mocks base method.

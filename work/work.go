@@ -271,7 +271,7 @@ type BlockChain interface {
 	SetLowerBoundBaseFee(val uint64)
 	SetUpperBoundBaseFee(val uint64)
 	SetGasTarget(val uint64)
-	SetBlockGasLimit(val uint64)
+	SetMaxBlockGasUsedForBaseFee(val uint64)
 	SetBaseFeeDenominator(val uint64)
 
 	Processor() blockchain.Processor

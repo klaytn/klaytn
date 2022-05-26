@@ -48,28 +48,28 @@ var (
 
 var (
 	GovernanceKeyMap = map[string]int{
-		"governance.governancemode":     params.GovernanceMode,
-		"governance.governingnode":      params.GoverningNode,
-		"istanbul.epoch":                params.Epoch,
-		"istanbul.policy":               params.Policy,
-		"istanbul.committeesize":        params.CommitteeSize,
-		"governance.unitprice":          params.UnitPrice,
-		"kip71.lowerboundbasefee":       params.LowerBoundBaseFee,
-		"kip71.gastarget":               params.GasTarget,
-		"kip71.blockgaslimit":           params.BlockGasLimit,
-		"kip71.basefeedenominator":      params.BaseFeeDenominator,
-		"kip71.upperboundbasefee":       params.UpperBoundBaseFee,
-		"reward.mintingamount":          params.MintingAmount,
-		"reward.ratio":                  params.Ratio,
-		"reward.useginicoeff":           params.UseGiniCoeff,
-		"reward.deferredtxfee":          params.DeferredTxFee,
-		"reward.minimumstake":           params.MinimumStake,
-		"reward.stakingupdateinterval":  params.StakeUpdateInterval,
-		"reward.proposerupdateinterval": params.ProposerRefreshInterval,
-		"governance.addvalidator":       params.AddValidator,
-		"governance.removevalidator":    params.RemoveValidator,
-		"param.txgashumanreadable":      params.ConstTxGasHumanReadable,
-		"istanbul.timeout":              params.Timeout,
+		"governance.governancemode":       params.GovernanceMode,
+		"governance.governingnode":        params.GoverningNode,
+		"istanbul.epoch":                  params.Epoch,
+		"istanbul.policy":                 params.Policy,
+		"istanbul.committeesize":          params.CommitteeSize,
+		"governance.unitprice":            params.UnitPrice,
+		"kip71.lowerboundbasefee":         params.LowerBoundBaseFee,
+		"kip71.gastarget":                 params.GasTarget,
+		"kip71.maxblockgasusedforbasefee": params.MaxBlockGasUsedForBaseFee,
+		"kip71.basefeedenominator":        params.BaseFeeDenominator,
+		"kip71.upperboundbasefee":         params.UpperBoundBaseFee,
+		"reward.mintingamount":            params.MintingAmount,
+		"reward.ratio":                    params.Ratio,
+		"reward.useginicoeff":             params.UseGiniCoeff,
+		"reward.deferredtxfee":            params.DeferredTxFee,
+		"reward.minimumstake":             params.MinimumStake,
+		"reward.stakingupdateinterval":    params.StakeUpdateInterval,
+		"reward.proposerupdateinterval":   params.ProposerRefreshInterval,
+		"governance.addvalidator":         params.AddValidator,
+		"governance.removevalidator":      params.RemoveValidator,
+		"param.txgashumanreadable":        params.ConstTxGasHumanReadable,
+		"istanbul.timeout":                params.Timeout,
 	}
 
 	GovernanceForbiddenKeyMap = map[string]int{
@@ -79,29 +79,29 @@ var (
 	}
 
 	GovernanceKeyMapReverse = map[int]string{
-		params.GovernanceMode:          "governance.governancemode",
-		params.GoverningNode:           "governance.governingnode",
-		params.Epoch:                   "istanbul.epoch",
-		params.CliqueEpoch:             "clique.epoch",
-		params.Policy:                  "istanbul.policy",
-		params.CommitteeSize:           "istanbul.committeesize",
-		params.UnitPrice:               "governance.unitprice",
-		params.LowerBoundBaseFee:       "kip71.lowerboundbasefee",
-		params.UpperBoundBaseFee:       "kip71.upperboundbasefee",
-		params.GasTarget:               "kip71.gastarget",
-		params.BlockGasLimit:           "kip71.blockgaslimit",
-		params.BaseFeeDenominator:      "kip71.basefeedenominator",
-		params.MintingAmount:           "reward.mintingamount",
-		params.Ratio:                   "reward.ratio",
-		params.UseGiniCoeff:            "reward.useginicoeff",
-		params.DeferredTxFee:           "reward.deferredtxfee",
-		params.MinimumStake:            "reward.minimumstake",
-		params.StakeUpdateInterval:     "reward.stakingupdateinterval",
-		params.ProposerRefreshInterval: "reward.proposerupdateinterval",
-		params.AddValidator:            "governance.addvalidator",
-		params.RemoveValidator:         "governance.removevalidator",
-		params.ConstTxGasHumanReadable: "param.txgashumanreadable",
-		params.Timeout:                 "istanbul.timeout",
+		params.GovernanceMode:            "governance.governancemode",
+		params.GoverningNode:             "governance.governingnode",
+		params.Epoch:                     "istanbul.epoch",
+		params.CliqueEpoch:               "clique.epoch",
+		params.Policy:                    "istanbul.policy",
+		params.CommitteeSize:             "istanbul.committeesize",
+		params.UnitPrice:                 "governance.unitprice",
+		params.LowerBoundBaseFee:         "kip71.lowerboundbasefee",
+		params.UpperBoundBaseFee:         "kip71.upperboundbasefee",
+		params.GasTarget:                 "kip71.gastarget",
+		params.MaxBlockGasUsedForBaseFee: "kip71.maxblockgasusedforbasefee",
+		params.BaseFeeDenominator:        "kip71.basefeedenominator",
+		params.MintingAmount:             "reward.mintingamount",
+		params.Ratio:                     "reward.ratio",
+		params.UseGiniCoeff:              "reward.useginicoeff",
+		params.DeferredTxFee:             "reward.deferredtxfee",
+		params.MinimumStake:              "reward.minimumstake",
+		params.StakeUpdateInterval:       "reward.stakingupdateinterval",
+		params.ProposerRefreshInterval:   "reward.proposerupdateinterval",
+		params.AddValidator:              "governance.addvalidator",
+		params.RemoveValidator:           "governance.removevalidator",
+		params.ConstTxGasHumanReadable:   "param.txgashumanreadable",
+		params.Timeout:                   "istanbul.timeout",
 	}
 
 	ProposerPolicyMap = map[string]int{
@@ -178,7 +178,7 @@ type blockChain interface {
 	SetLowerBoundBaseFee(val uint64)
 	SetUpperBoundBaseFee(val uint64)
 	SetGasTarget(val uint64)
-	SetBlockGasLimit(val uint64)
+	SetMaxBlockGasUsedForBaseFee(val uint64)
 	SetBaseFeeDenominator(val uint64)
 }
 
@@ -593,7 +593,7 @@ func (g *Governance) ParseVoteValue(gVote *GovernanceVote) (*GovernanceVote, err
 		}
 	case params.Epoch, params.CommitteeSize, params.UnitPrice, params.StakeUpdateInterval,
 		params.ProposerRefreshInterval, params.ConstTxGasHumanReadable, params.Policy, params.Timeout,
-		params.LowerBoundBaseFee, params.UpperBoundBaseFee, params.GasTarget, params.BlockGasLimit, params.BaseFeeDenominator:
+		params.LowerBoundBaseFee, params.UpperBoundBaseFee, params.GasTarget, params.MaxBlockGasUsedForBaseFee, params.BaseFeeDenominator:
 		v, ok := gVote.Value.([]uint8)
 		if !ok {
 			return nil, ErrValueTypeMismatch
@@ -632,7 +632,7 @@ func (gov *Governance) updateChangeSet(vote GovernanceVote) bool {
 		return true
 	case params.Epoch, params.StakeUpdateInterval, params.ProposerRefreshInterval, params.CommitteeSize,
 		params.UnitPrice, params.ConstTxGasHumanReadable, params.Policy, params.Timeout,
-		params.LowerBoundBaseFee, params.UpperBoundBaseFee, params.GasTarget, params.BlockGasLimit, params.BaseFeeDenominator:
+		params.LowerBoundBaseFee, params.UpperBoundBaseFee, params.GasTarget, params.MaxBlockGasUsedForBaseFee, params.BaseFeeDenominator:
 		gov.changeSet.SetValue(GovernanceKeyMap[vote.Key], vote.Value.(uint64))
 		return true
 	case params.MintingAmount, params.MinimumStake:
@@ -1196,12 +1196,12 @@ func (gov *Governance) GasTarget() uint64 {
 	return params.DefaultGasTarget
 }
 
-func (gov *Governance) BlockGasLimit() uint64 {
-	ret := gov.GetGovernanceValue(params.BlockGasLimit)
+func (gov *Governance) MaxBlockGasUsedForBaseFee() uint64 {
+	ret := gov.GetGovernanceValue(params.MaxBlockGasUsedForBaseFee)
 	if ret != nil {
 		return ret.(uint64)
 	}
-	return params.DefaultBlockGasLimit
+	return params.DefaultMaxBlockGasUsedForBaseFee
 }
 
 func (gov *Governance) BaseFeeDenominator() uint64 {
