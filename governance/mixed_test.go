@@ -24,8 +24,7 @@ func newTestMixedEngine(t *testing.T, config *params.ChainConfig) (*MixedEngine,
 	return e, db, defaultGov
 }
 
-// Under Header era,
-// Check that
+// Without ContractGov, Check that
 // - From a fresh MixedEngine instance, Params() and ParamsAt(0) returns the
 //   initial config value.
 func TestMixedEngine_Header_New(t *testing.T) {
@@ -45,8 +44,7 @@ func TestMixedEngine_Header_New(t *testing.T) {
 	assert.Equal(t, valueA, pset.CommitteeSize())
 }
 
-// Under Header era,
-// Check that
+// Without ContractGov, Check that
 // - after UpdateParams(), Params() returns the new value
 func TestMixedEngine_Header_Params(t *testing.T) {
 	valueA := uint64(0x11)
@@ -64,8 +62,7 @@ func TestMixedEngine_Header_Params(t *testing.T) {
 	assert.Equal(t, valueB, pset.CommitteeSize())
 }
 
-// Under Header era,
-// Check that
+// Without ContractGov, Check that
 // - after DB is written at [n - epoch], ParamsAt(n) returns the new value
 // - ParamsAt(n) == ReadGovernance(n)
 func TestMixedEngine_Header_ParamsAt(t *testing.T) {
@@ -76,9 +73,9 @@ func TestMixedEngine_Header_ParamsAt(t *testing.T) {
 	config.Istanbul.SubGroupSize = valueA
 	e, _, defaultGov := newTestMixedEngine(t, config)
 
-	// Write to database. Note that we must use gov.WriteGovernance(), not db.WriteGovernance().
+	// Write to database. Note that we must use gov.WriteGovernance(), not db.WriteGovernance()
 	// The reason is that gov.ReadGovernance() depends on the caches, and that
-	// gov.WriteGovernance() sets idxCache accordingly, whereas db.WriteGovernance don't,
+	// gov.WriteGovernance() sets idxCache accordingly, whereas db.WriteGovernance don't
 	items := e.Params().StrMap()
 	items["istanbul.committeesize"] = valueB
 	gset := NewGovernanceSet()
