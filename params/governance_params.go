@@ -36,15 +36,6 @@ const (
 	GovernanceCachePrefix = "governance"
 )
 
-type EngineType int
-
-const (
-	// Engine type
-	UseIstanbul EngineType = iota
-	UseClique
-	Unknown
-)
-
 const (
 	// Governance Key
 	GovernanceMode int = iota

@@ -210,7 +210,7 @@ func ValidateGenesisConfig(g *blockchain.Genesis) error {
 		return errors.New("proposerUpdateInterval and stakingUpdateInterval cannot be zero")
 	}
 
-	if g.Config.GetConsensusEngine() == params.UseIstanbul {
+	if g.Config.Istanbul != nil {
 		if err := governance.CheckGenesisValues(g.Config); err != nil {
 			return err
 		}

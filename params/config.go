@@ -353,24 +353,11 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *Confi
 	return nil
 }
 
-// GetConsensusEngine returns the consensus engine type specified in ChainConfig.
-// It returns Unknown type if none of engine type is configured or more than one type is configured.
-func (c *ChainConfig) GetConsensusEngine() EngineType {
-	switch {
-	case c.Clique != nil && c.Istanbul == nil:
-		return UseClique
-	case c.Clique == nil && c.Istanbul != nil:
-		return UseIstanbul
-	default:
-		return Unknown
-	}
-}
-
 // SetDefaults fills undefined chain config with default values.
 func (c *ChainConfig) SetDefaults() {
 	logger := log.NewModuleLogger(log.Governance)
 
-	if c.GetConsensusEngine() == Unknown && c.Istanbul == nil {
+	if c.Clique == nil && c.Istanbul == nil {
 		c.Istanbul = GetDefaultIstanbulConfig()
 		logger.Warn("Override the default Istanbul config to the chain config")
 	}
@@ -386,12 +373,14 @@ func (c *ChainConfig) SetDefaults() {
 			c.Governance.Reward)
 	}
 
+	// StakingUpdateInterval must be nonzero because it is used as denominator
 	if c.Governance.Reward.StakingUpdateInterval == 0 {
 		c.Governance.Reward.StakingUpdateInterval = StakingUpdateInterval()
 		logger.Warn("Override the default staking update interval to the chain config", "interval",
 			c.Governance.Reward.StakingUpdateInterval)
 	}
 
+	// StakingUpdateInterval must be nonzero because it is used as denominator
 	if c.Governance.Reward.ProposerUpdateInterval == 0 {
 		c.Governance.Reward.ProposerUpdateInterval = ProposerUpdateInterval()
 		logger.Warn("Override the default proposer update interval to the chain config", "interval",
