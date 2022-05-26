@@ -376,9 +376,8 @@ func (c *ChainConfig) SetDefaults() {
 	}
 
 	if c.Governance == nil {
-		engineType := c.GetConsensusEngine()
-		c.Governance = GetDefaultGovernanceConfig(engineType)
-		logger.Warn("Override the default governance config to the chain config", "engineType", engineType)
+		c.Governance = GetDefaultGovernanceConfig()
+		logger.Warn("Override the default governance config to the chain config")
 	}
 
 	if c.Governance.Reward == nil {
@@ -479,8 +478,7 @@ func (c *ChainConfig) Rules(num *big.Int) Rules {
 	}
 }
 
-// TODO-Klaytn-Governance: Remove input parameter if not needed anymore
-func GetDefaultGovernanceConfig(engine EngineType) *GovernanceConfig {
+func GetDefaultGovernanceConfig() *GovernanceConfig {
 	gov := &GovernanceConfig{
 		GovernanceMode: DefaultGovernanceMode,
 		GoverningNode:  common.HexToAddress(DefaultGoverningNode),
