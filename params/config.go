@@ -479,31 +479,6 @@ func (c *ChainConfig) Rules(num *big.Int) Rules {
 	}
 }
 
-// Copy copies self to a new governance config and return it
-func (g *GovernanceConfig) Copy() *GovernanceConfig {
-	newConfig := &GovernanceConfig{
-		Reward: &RewardConfig{},
-	}
-	newConfig.GovernanceMode = g.GovernanceMode
-	newConfig.Reward.MintingAmount = big.NewInt(0).Set(g.Reward.MintingAmount)
-	newConfig.Reward.Ratio = g.Reward.Ratio
-	newConfig.Reward.UseGiniCoeff = g.Reward.UseGiniCoeff
-	newConfig.Reward.DeferredTxFee = g.Reward.DeferredTxFee
-	newConfig.GoverningNode = g.GoverningNode
-
-	return newConfig
-}
-
-func (c *IstanbulConfig) Copy() *IstanbulConfig {
-	newIC := &IstanbulConfig{}
-
-	newIC.Epoch = c.Epoch
-	newIC.SubGroupSize = c.SubGroupSize
-	newIC.ProposerPolicy = c.ProposerPolicy
-
-	return newIC
-}
-
 // TODO-Klaytn-Governance: Remove input parameter if not needed anymore
 func GetDefaultGovernanceConfig(engine EngineType) *GovernanceConfig {
 	gov := &GovernanceConfig{
