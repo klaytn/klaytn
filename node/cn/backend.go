@@ -223,7 +223,9 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	// TODO-klaytn set KIP71 forked block number
 	// It's intended not to modify something like genesis in SetupGenesisBlock()
-	chainConfig.KIP71CompatibleBlock = params.DefaultKIP71CompatibleBlockNum
+	if chainConfig.KIP71CompatibleBlock != nil {
+		chainConfig.KIP71CompatibleBlock = params.KIP71CompatibleBlockNum
+	}
 	chainConfig.Governance.KIP71 = &params.KIP71Config{
 		LowerBoundBaseFee:  governance.LowerBoundBaseFee(),
 		UpperBoundBaseFee:  governance.UpperBoundBaseFee(),
