@@ -411,6 +411,13 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	receipts []*types.Receipt) (*types.Block, error) {
 
+	var isKIP71Forked bool
+	if chain.Config().IsKIP71ForkEnabled(header.Number) {
+		isKIP71Forked = true
+	} else {
+		isKIP71Forked = false
+	}
+
 	// If sb.chain is nil, it means backend is not initialized yet.
 	if sb.chain != nil && sb.governance.ProposerPolicy() == uint64(istanbul.WeightedRandom) {
 		// TODO-Klaytn Let's redesign below logic and remove dependency between block reward and istanbul consensus.
@@ -442,11 +449,11 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 			pocAddr = stakingInfo.PoCAddr
 		}
 
-		if err := sb.rewardDistributor.DistributeBlockReward(state, header, pocAddr, kirAddr); err != nil {
+		if err := sb.rewardDistributor.DistributeBlockReward(state, header, pocAddr, kirAddr, isKIP71Forked); err != nil {
 			return nil, err
 		}
 	} else {
-		if err := sb.rewardDistributor.MintKLAY(state, header); err != nil {
+		if err := sb.rewardDistributor.MintKLAY(state, header, isKIP71Forked); err != nil {
 			return nil, err
 		}
 	}

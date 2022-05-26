@@ -178,7 +178,12 @@ func (st *StateTransition) useGas(amount uint64) error {
 }
 
 func (st *StateTransition) buyGas() error {
-	mgval := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()), st.evm.BaseFee)
+	mgval := new(big.Int)
+	if st.evm.ChainConfig().IsKIP71ForkEnabled(st.evm.BlockNumber) {
+		mgval = mgval.Mul(new(big.Int).SetUint64(st.msg.Gas()), st.evm.BaseFee)
+	} else {
+		mgval = mgval.Mul(new(big.Int).SetUint64(st.msg.Gas()), st.gasPrice)
+	}
 
 	validatedFeePayer := st.msg.ValidatedFeePayer()
 	validatedSender := st.msg.ValidatedSender()
@@ -390,7 +395,12 @@ func (st *StateTransition) refundGas() {
 	st.gas += refund
 
 	// Return KLAY for remaining gas, exchanged at the original rate.
-	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.gas), st.evm.BaseFee)
+	remaining := new(big.Int)
+	if st.evm.ChainConfig().IsKIP71ForkEnabled(st.evm.BlockNumber) {
+		remaining = remaining.Mul(new(big.Int).SetUint64(st.gas), st.evm.BaseFee)
+	} else {
+		remaining = remaining.Mul(new(big.Int).SetUint64(st.gas), st.gasPrice)
+	}
 
 	validatedFeePayer := st.msg.ValidatedFeePayer()
 	validatedSender := st.msg.ValidatedSender()
