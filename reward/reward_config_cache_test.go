@@ -92,11 +92,10 @@ func (governance *testGovernance) StakingUpdateInterval() uint64 {
 	return governance.stakingInterval
 }
 
-func (governance *testGovernance) setTestGovernance(epoch uint64, mintingAmount string, ratio string, unitprice uint64, useGiniCoeff bool, deferredTxFee bool) {
+func (governance *testGovernance) setTestGovernance(epoch uint64, mintingAmount string, ratio string, useGiniCoeff bool, deferredTxFee bool) {
 	governance.epoch = epoch
 	governance.mintingAmount = mintingAmount
 	governance.ratio = ratio
-	governance.unitPrice = unitprice
 	governance.useGiniCoeff = useGiniCoeff
 	governance.deferredTxFee = deferredTxFee
 }
@@ -349,7 +348,7 @@ func TestRewardConfigCache_get_exist(t *testing.T) {
 	rewardConfigCache := newRewardConfigCache(testGovernance)
 
 	for i := 0; i < len(testCases); i++ {
-		testGovernance.setTestGovernance(testCases[i].epoch, testCases[i].mintingAmount, testCases[i].ratio, testCases[i].unitprice, testCases[i].useGiniCoeff, testCases[i].deferredTxFee)
+		testGovernance.setTestGovernance(testCases[i].epoch, testCases[i].mintingAmount, testCases[i].ratio, testCases[i].useGiniCoeff, testCases[i].deferredTxFee)
 		blockNumber := testCases[i].blockNumber
 		if blockNumber%testCases[i].epoch == 0 {
 			blockNumber -= testCases[i].epoch
@@ -370,6 +369,6 @@ func TestRewardConfigCache_get_exist(t *testing.T) {
 		assert.Equal(t, testCases[i].result.pocRatio, rewardConfig.pocRatio)
 		assert.Equal(t, testCases[i].result.kirRatio, rewardConfig.kirRatio)
 		assert.Equal(t, testCases[i].result.totalRatio, rewardConfig.totalRatio)
-		assert.Equal(t, testCases[i].result.unitPrice, rewardConfig.unitPrice)
+		// assert.Equal(t, testCases[i].result.unitPrice, rewardConfig.unitPrice)
 	}
 }
