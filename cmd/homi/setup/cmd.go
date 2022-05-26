@@ -203,6 +203,16 @@ func genKIP71Config(ctx *cli.Context) *params.KIP71Config {
 	blockGasLimit := ctx.Uint64(kip71BlockGasLimit.Name)
 	baseFeeDenominator := ctx.Uint64(kip71BaseFeeDenominator.Name)
 
+	// TODO-klaytn These parameters are for dynamic gas price policy
+	// The parameters are connected each other for the algorithm. It's not intuitive respectively
+	//
+	// Dynamic variation of the BaseFee is determined by following constrains
+	//  1. ParentGasUsed : GasUsed of the parent block
+	//  2. LowerBoundBaseFee <= BaseFee <= UpperBoundBaseFee
+	//  3. NextBaseFee = (ParentBaseFee * (ParentGasUsed - GasTarget) / BaseFeeDenominator) + ParentBaseFee
+	//
+	// GasTarget: If ParentGasUsed < GasTarget, BaseFee will be decreased. Conversely it increase
+	// BaseFeeDenominator: BaseFeeDenominator cause the scaling effect for the delta (ParentGasUsed-GasTarget)
 	return &params.KIP71Config{
 		LowerBoundBaseFee:  lowerBoundBaseFee,
 		UpperBoundBaseFee:  upperBoundBaseFee,
