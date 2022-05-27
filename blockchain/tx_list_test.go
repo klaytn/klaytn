@@ -25,6 +25,7 @@ import (
 	"math/rand"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/crypto"
@@ -66,7 +67,7 @@ func TestTxListReadyWithGasPrice(t *testing.T) {
 	// The result of executing ReadyWithGasPrice will be Transaction[0:9].
 	startNonce := 3
 	expectedBaseFee := big.NewInt(30)
-nTxs := 10
+	nTxs := 10
 	// Generate a list of transactions to insert
 	key, _ := crypto.GenerateKey()
 
@@ -128,9 +129,9 @@ func TestTxListReadyWithGasPricePartialFilter(t *testing.T) {
 		if i == 7 {
 			txs[i] = pricedTransaction(uint64(nonce), 0, big.NewInt(10), key)
 		} else if i > 7 {
-		    txs[i] = pricedTransaction(uint64(nonce), 0, big.NewInt(50), key)
+			txs[i] = pricedTransaction(uint64(nonce), 0, big.NewInt(50), key)
 		} else {
-		    txs[i] = pricedTransaction(uint64(nonce), 0, big.NewInt(30), key)
+			txs[i] = pricedTransaction(uint64(nonce), 0, big.NewInt(30), key)
 		}
 
 		nonce++
@@ -192,7 +193,7 @@ func TestReplaceTransactionAbort(t *testing.T) {
 	}
 
 	if result, replaced := txList.Add(newTx, DefaultTxPoolConfig.PriceBump); result || replaced != nil {
-	    t.Error("Expected to not substitute by a tx with lower gas price")
+		t.Error("Expected to not substitute by a tx with lower gas price")
 	}
-	
+
 }
