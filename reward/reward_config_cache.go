@@ -26,9 +26,8 @@ import (
 )
 
 var (
-	errFailGettingConfigure = errors.New("fail to get configure from governance")
-	errInvalidFormat        = errors.New("invalid format")
-	errParsingRatio         = errors.New("parsing ratio fail")
+	errInvalidFormat = errors.New("invalid format")
+	errParsingRatio  = errors.New("parsing ratio fail")
 )
 
 const (
