@@ -66,11 +66,11 @@ func TestTxListReadyWithGasPrice(t *testing.T) {
 	// The result of executing ReadyWithGasPrice will be Transaction[0:9].
 	startNonce := 3
 	expectedBaseFee := big.NewInt(30)
-
+nTxs := 10
 	// Generate a list of transactions to insert
 	key, _ := crypto.GenerateKey()
 
-	txs := make(types.Transactions, 10)
+	txs := make(types.Transactions, nTxs)
 	nonce := startNonce
 	for i := 0; i < len(txs); i++ {
 		txs[i] = pricedTransaction(uint64(nonce), 0, big.NewInt(50), key)
@@ -79,19 +79,20 @@ func TestTxListReadyWithGasPrice(t *testing.T) {
 
 	// Insert the transactions in a random order
 	list := newTxList(true)
+	rand.Seed(time.Now().UnixNano())
 	for _, v := range rand.Perm(len(txs)) {
 		list.Add(txs[v], DefaultTxPoolConfig.PriceBump)
 	}
 
 	ready := list.ReadyWithGasPrice(uint64(startNonce), expectedBaseFee)
 
-	if ready.Len() != 10 {
-		t.Error("expected filtered txs length", 7, "got", ready.Len())
+	if ready.Len() != nTxs {
+		t.Error("expected number of filtered txs", nTxs, "got", ready.Len())
 	}
 
 	nonce = startNonce
 	for i := 0; i < len(ready); i++ {
-		if result := reflect.DeepEqual(ready[i], txs[i]); result == false {
+		if result := reflect.DeepEqual(ready[i], txs[i]); !result {
 			t.Error("ready hash : ", ready[i].Hash(), "tx[i] hash : ", txs[i].Hash())
 		}
 
@@ -102,7 +103,7 @@ func TestTxListReadyWithGasPrice(t *testing.T) {
 	}
 }
 
-// TestTxListReadyWithGasPriceALL check whether ReadyWithGasPrice() works well.
+// TestTxListReadyWithGasPricePartialFilter check whether ReadyWithGasPrice() works well.
 // It makes a slice has 10 transactions and executes ReadyWithGasPrice() with baseFee 20.
 //
 // It checks whether filtering works well if there is a transaction
@@ -123,16 +124,15 @@ func TestTxListReadyWithGasPricePartialFilter(t *testing.T) {
 	txs := make(types.Transactions, 10)
 	nonce := startNonce
 	for i := 0; i < len(txs); i++ {
-		txs[i] = pricedTransaction(uint64(nonce), 0, big.NewInt(30), key)
-
 		// Set the gasPrice of transaction lower than expectedBaseFee.
 		if i == 7 {
 			txs[i] = pricedTransaction(uint64(nonce), 0, big.NewInt(10), key)
+		} else if i > 7 {
+		    txs[i] = pricedTransaction(uint64(nonce), 0, big.NewInt(50), key)
+		} else {
+		    txs[i] = pricedTransaction(uint64(nonce), 0, big.NewInt(30), key)
 		}
 
-		if i > 7 {
-			txs[i] = pricedTransaction(uint64(nonce), 0, big.NewInt(50), key)
-		}
 		nonce++
 	}
 
