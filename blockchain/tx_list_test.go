@@ -191,12 +191,8 @@ func TestReplaceTransactionAbort(t *testing.T) {
 		t.Error("it cannot add tx in tx list.")
 	}
 
-	result, replaced := txList.Add(newTx, DefaultTxPoolConfig.PriceBump)
-	if result {
-		t.Error("it replaced to newly tx in tx list.")
+	if result, replaced := txList.Add(newTx, DefaultTxPoolConfig.PriceBump); result || replaced != nil {
+	    t.Error("Expected to not substitute by a tx with lower gas price")
 	}
-
-	if replaced != nil {
-		t.Error("it replaced to newly tx in tx list.")
-	}
+	
 }
