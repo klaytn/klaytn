@@ -935,7 +935,7 @@ func (t *TransactionsByTimeAndNonce) Txs() map[common.Address]Transactions {
 }
 
 // NewTransactionsByTimeAndNonce creates a transaction set that can retrieve
-// price sorted transactions in a nonce-honouring way.
+// time sorted transactions in a nonce-honouring way.
 //
 // Note, the input map is reowned so the caller should not interact any more with
 // if after providing it to the constructor.
