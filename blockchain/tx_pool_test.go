@@ -2048,8 +2048,8 @@ func TestTransactionNotAcceptedWithLowerGasPrice(t *testing.T) {
 
 	testAddBalance(pool, crypto.PubkeyToAddress(key.PublicKey), big.NewInt(10000000000))
 
-	tx1 := pricedTransaction(0, 21000, big.NewInt(20), key)
-	if err := pool.AddRemote(tx1); err != ErrGasPriceBelowBaseFee {
+	tx := pricedTransaction(0, 21000, big.NewInt(20), key)
+	if err := pool.AddRemote(tx); err != ErrGasPriceBelowBaseFee {
 		t.Error("error", "got", err)
 	}
 }
