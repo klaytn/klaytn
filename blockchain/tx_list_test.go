@@ -118,11 +118,12 @@ func TestTxListReadyWithGasPricePartialFilter(t *testing.T) {
 	// The result of executing ReadyWithGasPrice will be Transaction[0:6].
 	startNonce := 3
 	expectedBaseFee := big.NewInt(20)
+	nTxs := 10
 
 	// Generate a list of transactions to insert
 	key, _ := crypto.GenerateKey()
 
-	txs := make(types.Transactions, 10)
+	txs := make(types.Transactions, nTxs)
 	nonce := startNonce
 	for i := 0; i < len(txs); i++ {
 		// Set the gasPrice of transaction lower than expectedBaseFee.
@@ -149,10 +150,16 @@ func TestTxListReadyWithGasPricePartialFilter(t *testing.T) {
 		t.Error("expected filtered txs length", 7, "got", ready.Len())
 	}
 
+	nonce = startNonce
 	for i := 0; i < len(ready); i++ {
 		if result := reflect.DeepEqual(ready[i], txs[i]); result == false {
 			t.Error("ready hash : ", ready[i].Hash(), "tx[i] hash : ", txs[i].Hash())
 		}
+
+		if list.txs.items[uint64(nonce)] != nil {
+			t.Error("Not deleted in txList. nonce : ", nonce, "tx hash : ", list.txs.items[uint64(nonce)].Hash())
+		}
+		nonce++
 	}
 }
 
