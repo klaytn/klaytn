@@ -80,10 +80,6 @@ func newMockBackend(t *testing.T, validatorAddrs []common.Address) (*mock_istanb
 	// Verify checks whether the proposal of the preprepare message is a valid block. Consider it valid.
 	mockBackend.EXPECT().Verify(gomock.Any()).Return(time.Duration(0), nil).AnyTimes()
 
-	mockBackend.EXPECT().HasBadProposal(gomock.Any()).Return(true).AnyTimes()
-
-	// Commit is added to remove unexpected call error
-
 	return mockBackend, mockCtrl
 }
 
@@ -578,6 +574,9 @@ func TestCore_MaliciousCN(t *testing.T) {
 	validatorAddrs, validatorKeyMap := genValidators(12)
 	mockBackend, mockCtrl := newMockBackend(t, validatorAddrs)
 	defer mockCtrl.Finish()
+	// Commit is added to remove unexpected call error
+	mockBackend.EXPECT().Commit(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+	mockBackend.EXPECT().HasBadProposal(gomock.Any()).Return(true).AnyTimes()
 
 	istConfig := istanbul.DefaultConfig
 	istConfig.ProposerPolicy = istanbul.WeightedRandom
@@ -700,6 +699,10 @@ func TestCore_MaliciousCN_5nodes(t *testing.T) {
 	validatorAddrs, validatorKeyMap := genValidators(15)
 	mockBackend, mockCtrl := newMockBackend(t, validatorAddrs)
 	defer mockCtrl.Finish()
+
+	// Commit is added to remove unexpected call error
+	mockBackend.EXPECT().Commit(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+	mockBackend.EXPECT().HasBadProposal(gomock.Any()).Return(true).AnyTimes()
 
 	istConfig := istanbul.DefaultConfig
 	istConfig.ProposerPolicy = istanbul.WeightedRandom
