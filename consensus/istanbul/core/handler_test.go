@@ -178,30 +178,14 @@ func genMaliciousBlock(prevBlock *types.Block, signerKey *ecdsa.PrivateKey) (*ty
 	return signBlock(block, signerKey)
 }
 
-// genBlock generates a signed block indicating prevBlock with ParentHash
-func genBlockA(prevBlock *types.Block, signerKey *ecdsa.PrivateKey) (*types.Block, error) {
+// genBlockParams generates a signed block indicating prevBlock with ParentHash. parameters gasUsed and time are used
+func genBlockParams(prevBlock *types.Block, signerKey *ecdsa.PrivateKey, gasUsed uint64, time int64) (*types.Block, error) {
 	block := types.NewBlockWithHeader(&types.Header{
 		ParentHash: prevBlock.Hash(),
 		Number:     new(big.Int).Add(prevBlock.Number(), common.Big1),
-		GasUsed:    0,
+		GasUsed:    gasUsed,
 		Extra:      prevBlock.Extra(),
-		//Extra:      []byte{'a', 'b', 'c'},
-		Time:       new(big.Int).Add(prevBlock.Time(), common.Big1),
-		BlockScore: new(big.Int).Add(prevBlock.BlockScore(), common.Big1),
-	})
-	return signBlock(block, signerKey)
-}
-
-// genBlock generates a signed block indicating prevBlock with ParentHash
-func genBlockB(prevBlock *types.Block, signerKey *ecdsa.PrivateKey) (*types.Block, error) {
-	block := types.NewBlockWithHeader(&types.Header{
-		ParentHash: prevBlock.Hash(),
-		Number:     new(big.Int).Add(prevBlock.Number(), common.Big1),
-		GasUsed:    1000,
-		Extra:      prevBlock.Extra(),
-		//Extra: []byte{'x', 'y', 'z'},
-
-		Time:       new(big.Int).Add(prevBlock.Time(), big.NewInt(10)),
+		Time:       new(big.Int).Add(prevBlock.Time(), big.NewInt(time)),
 		BlockScore: new(big.Int).Add(prevBlock.BlockScore(), common.Big1),
 	})
 	return signBlock(block, signerKey)
@@ -734,11 +718,11 @@ func TestCore_MaliciousCN_5nodes(t *testing.T) {
 		msgSender := validators.GetProposer()
 		msgSenderKey := validatorKeyMap[msgSender.Address()]
 
-		newProposalA, err := genBlockA(lastBlock, msgSenderKey)
+		newProposalA, err := genBlockParams(lastBlock, msgSenderKey, 0, 0)
 		if err != nil {
 			t.Fatal(err)
 		}
-		newProposalB, err := genBlockB(lastBlock, msgSenderKey)
+		newProposalB, err := genBlockParams(lastBlock, msgSenderKey, 1000, 10)
 		if err != nil {
 			t.Fatal(err)
 		}
