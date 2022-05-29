@@ -675,8 +675,7 @@ func TestCore_MaliciousCN(t *testing.T) {
 				time.Sleep(1000 * time.Millisecond)
 			}
 		}
-		assert.Nil(t, err)
-
+		fmt.Println("The block is committed")
 	}
 }
 
@@ -832,6 +831,7 @@ func TestCore_MaliciousCN_5nodes(t *testing.T) {
 		preparesSizeB := groupB.current.Prepares.Size()
 		commitsSizeB := groupB.current.Commits.Size()
 		fmt.Println("group 2 prepare size = ", preparesSizeB, "group 2 commit size = ", commitsSizeB)
+		fmt.Println("Chain split occurred")
 
 		assert.Nil(t, err)
 	}
