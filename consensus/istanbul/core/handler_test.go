@@ -536,12 +536,12 @@ func splitSubList(committee []istanbul.Validator, numMalicious int, proposerAddr
 
 // TestCore_MaliciousCN tests whether a proposed block can be committed when malicious CNs exist.
 // 1) it starts with generating a validator list
-// 2) creates two pre-defined blocks: one for benign CNs, the other for the malicious
-// 3) proposer sends the benign block
-// 4) splits the validator list into two groups; one for the benign, the other for the malicious
-// 4) benign group try to commit the benign block by sending prepare/commit messages of benign block
-// 5) malicious group try to stop the consensus by sending the messages of malicious block
-// 6) if the number of malicious CNs is less than f, the block will be committed
+// 2) it creates two pre-defined blocks: one for benign CNs, the other for the malicious
+// 3) a proposer sends the benign block
+// 4) it splits the validator list into two groups; one for the benign, the other for the malicious
+// 5) benign group try to commit the benign block by sending prepare/commit messages of benign block
+// 6) malicious group try to stop the consensus by sending the messages of malicious block
+// 7) if the number of malicious CNs is less than f, the block will be committed
 //    otherwise, round change occurs and the test will be fail
 
 func TestCore_MaliciousCN(t *testing.T) {
