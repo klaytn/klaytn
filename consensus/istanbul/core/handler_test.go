@@ -596,7 +596,7 @@ func simulateMaliciousCN(t *testing.T, numValidators int, numMalicious int) Stat
 			istanbulMsg, err := genIstanbulMsg(state, lastBlock.Hash(), proposal, val.Address(), valKey)
 			assert.Nil(t, err)
 			err = istCore.handleMsg(istanbulMsg.Payload)
-			//assert.Nil(t, err)
+			// assert.Nil(t, err)
 		}
 	}
 
@@ -616,10 +616,10 @@ func simulateMaliciousCN(t *testing.T, numValidators int, numMalicious int) Stat
 	sendMessages(msgCommit, malProposal, maliciousCNs)
 
 	if istCore.state.Cmp(StateCommitted) != 0 {
-		//t.Logf("State stuck at prepared")
+		// t.Logf("State stuck at prepared")
 		return istCore.state
 	} else {
-		//t.Logf("State is at committed")
+		// t.Logf("State is at committed")
 		return istCore.state
 	}
 }
