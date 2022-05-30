@@ -514,23 +514,24 @@ func enableLog() {
 	log.Root().SetHandler(glogger)
 }
 
-func splitSubList(committee []istanbul.Validator, numMalicious int, proposerAddr common.Address) ([]istanbul.Validator, []istanbul.Validator) {
-	var benignCN []istanbul.Validator
-	var maliciousCN []istanbul.Validator
+// splitSubList splits a committee into two groups w/o proposer
+// one for n nodes, the other for len(committee) - n - 1 nodes
+func splitSubList(committee []istanbul.Validator, n int, proposerAddr common.Address) ([]istanbul.Validator, []istanbul.Validator) {
+	var subCN []istanbul.Validator
+	var remainingCN []istanbul.Validator
 
 	for _, val := range committee {
 		if val.Address() == proposerAddr {
-			// proposer is always considered benign, so benignCN includes the proposer
-			benignCN = append(benignCN, val)
+			// proposer is not included in any group
 			continue
 		}
-		if len(maliciousCN) < numMalicious {
-			maliciousCN = append(maliciousCN, val)
+		if len(subCN) < n {
+			subCN = append(subCN, val)
 		} else {
-			benignCN = append(benignCN, val)
+			remainingCN = append(remainingCN, val)
 		}
 	}
-	return benignCN, maliciousCN
+	return subCN, remainingCN
 }
 
 // Simulate a proposer that receives messages from disagreeing groups of CNs.
@@ -570,7 +571,7 @@ func simulateMaliciousCN(t *testing.T, numValidators int, numMalicious int) Stat
 	istConfig.ProposerPolicy = istanbul.WeightedRandom
 	istCore := New(mockBackend, istConfig).(*core)
 	err := istCore.Start()
-	require.NotNil(t, err)
+	require.Nil(t, err)
 	defer istCore.Stop()
 
 	// Step 1 - Pre-prepare with correct message
@@ -581,11 +582,12 @@ func simulateMaliciousCN(t *testing.T, numValidators int, numMalicious int) Stat
 
 	// Handle pre-prepare message
 	err = istCore.handleMsg(istanbulMsg.Payload)
-	require.NotNil(t, err)
+	require.Nil(t, err)
 
 	// splitSubList split current committee into benign CNs and malicious CNs
 	subList := validators.SubList(lastBlock.Hash(), istCore.currentView())
-	benignCNs, maliciousCNs := splitSubList(subList, numMalicious, proposer.Address())
+	maliciousCNs, benignCNs := splitSubList(subList, numMalicious, proposer.Address())
+	benignCNs = append(benignCNs, proposer)
 
 	// Shortcut for sending consensus message to everyone in `CNList`
 	sendMessages := func(state uint64, proposal *types.Block, CNList []istanbul.Validator) {
@@ -594,7 +596,7 @@ func simulateMaliciousCN(t *testing.T, numValidators int, numMalicious int) Stat
 			istanbulMsg, err := genIstanbulMsg(state, lastBlock.Hash(), proposal, val.Address(), valKey)
 			assert.Nil(t, err)
 			err = istCore.handleMsg(istanbulMsg.Payload)
-			assert.Nil(t, err)
+			//assert.Nil(t, err)
 		}
 	}
 
@@ -614,10 +616,10 @@ func simulateMaliciousCN(t *testing.T, numValidators int, numMalicious int) Stat
 	sendMessages(msgCommit, malProposal, maliciousCNs)
 
 	if istCore.state.Cmp(StateCommitted) != 0 {
-		t.Logf("State stuck at prepared")
+		//t.Logf("State stuck at prepared")
 		return istCore.state
 	} else {
-		t.Logf("State is at committed")
+		//t.Logf("State is at committed")
 		return istCore.state
 	}
 }
@@ -668,39 +670,24 @@ func TestCore_chainSplit(t *testing.T) {
 	istConfig := istanbul.DefaultConfig
 	istConfig.ProposerPolicy = istanbul.WeightedRandom
 	coreProposer := New(mockBackend, istConfig).(*core)
-	groupA := New(mockBackend, istConfig).(*core)
-	groupB := New(mockBackend, istConfig).(*core)
+	coreGroupA := New(mockBackend, istConfig).(*core)
+	coreGroupB := New(mockBackend, istConfig).(*core)
 	err := coreProposer.Start()
-	require.NotNil(t, err)
-	err = groupA.Start()
-	require.NotNil(t, err)
-	err = groupB.Start()
-	require.NotNil(t, err)
+	fmt.Println(err)
+	require.Nil(t, err)
+	err = coreGroupA.Start()
+	require.Nil(t, err)
+	err = coreGroupB.Start()
+	require.Nil(t, err)
 	defer coreProposer.Stop()
-	defer groupA.Stop()
-	defer groupB.Stop()
+	defer coreGroupA.Stop()
+	defer coreGroupB.Stop()
 
 	// make two groups
-	committeeSize := len(validators.SubList(lastBlock.Hash(), coreProposer.currentView()))
-	tmpList := validators.SubList(lastBlock.Hash(), coreProposer.currentView())
-
-	for i := range validators.SubList(lastBlock.Hash(), coreProposer.currentView()) {
-		// both groupA and groupB includes proposer as validator
-		if tmpList[i].Address() == proposer.Address() {
-			tmpList = append(tmpList[i+1:], tmpList[:i]...)
-			break
-		}
-	}
-	// listA and ListB have the validator addresses of group A and group B
-	// the proposer address is included to each group
-	// each group makes consensus messages inside the group
-	listA := make([]istanbul.Validator, (committeeSize-1)/2)
-	listB := make([]istanbul.Validator, (committeeSize-1)/2)
-	copy(listA, tmpList[:(committeeSize-1)/2])
-	listA = append(listA, proposer)
-
-	copy(listB, tmpList[(committeeSize-1)/2:])
-	listB = append(listB, proposer)
+	subList := validators.SubList(lastBlock.Hash(), coreProposer.currentView())
+	groupA, groupB := splitSubList(subList, 2, proposer.Address())
+	groupA = append(groupA, proposer)
+	groupB = append(groupB, proposer)
 
 	// Step 1 - the malicious proposer generates two blocks
 	proposalA, err := genBlockParams(lastBlock, proposerKey, 0, 0)
@@ -731,15 +718,15 @@ func TestCore_chainSplit(t *testing.T) {
 	// the proposer sends two different blocks to each group
 	// each group receives a block and handles it
 	// in this scenario, each group makes consensus of each block
-	sendMessages(msgPreprepare, proposalA, listA, groupA)
-	sendMessages(msgPrepare, proposalA, listA, groupA)
-	sendMessages(msgCommit, proposalA, listA, groupA)
-	assert.True(t, groupA.state.Cmp(StateCommitted) == 0)
+	sendMessages(msgPreprepare, proposalA, groupA, coreGroupA)
+	sendMessages(msgPrepare, proposalA, groupA, coreGroupA)
+	sendMessages(msgCommit, proposalA, groupA, coreGroupA)
+	assert.True(t, coreGroupA.state.Cmp(StateCommitted) == 0)
 
-	sendMessages(msgPreprepare, proposalB, listB, groupB)
-	sendMessages(msgPrepare, proposalB, listB, groupB)
-	sendMessages(msgCommit, proposalB, listB, groupB)
-	assert.True(t, groupB.state.Cmp(StateCommitted) == 0)
+	sendMessages(msgPreprepare, proposalB, groupB, coreGroupB)
+	sendMessages(msgPrepare, proposalB, groupB, coreGroupB)
+	sendMessages(msgCommit, proposalB, groupB, coreGroupB)
+	assert.True(t, coreGroupB.state.Cmp(StateCommitted) == 0)
 	t.Logf("Chain split occurred")
 }
 
