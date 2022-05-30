@@ -2140,7 +2140,7 @@ func TestTransactionsPromotePartial(t *testing.T) {
 	assert.True(t, reflect.DeepEqual(txs[3], pool.queue[from].txs.items[3]))
 }
 
-// TestTransactionsPromoteFull is a test to check whether transactions in the queue are promoted to Pending
+// TestTransactionsPromoteMultipleAccount is a test to check whether transactions in the queue are promoted to Pending
 // by filtering them with gasPrice greater than or equal to baseFee and sorting them in nonce sequentially order.
 // This test expected that all transactions in queue promoted pending.
 func TestTransactionsPromoteMultipleAccount(t *testing.T) {
