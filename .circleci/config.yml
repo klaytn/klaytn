@@ -371,7 +371,6 @@ jobs:
           name: "Run test rpcs"
           no_output_timeout: 30m
           command: |
-            export PATH=$HOME/go1.18/go/bin:$PATH
             make kcn
             git clone https://$TEST_TOKEN@github.com/klaytn/klaytn-rpc-tester.git
             cp build/bin/kcn klaytn-rpc-tester/script/cn/bin/
@@ -667,5 +666,14 @@ workflows:
             branches:
               only: dev
     jobs:
-      - linters
-
+      - linter
+  
+  nightly-rpc:
+    triggers:
+      - schedule:
+          cron: "0 20 * * *"
+          filters:
+            branches:
+              only: dev
+    jobs:
+      - test-rpc
