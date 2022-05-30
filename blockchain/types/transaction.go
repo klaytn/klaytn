@@ -887,8 +887,7 @@ type TxByPriceAndTime Transactions
 
 func (s TxByPriceAndTime) Len() int { return len(s) }
 func (s TxByPriceAndTime) Less(i, j int) bool {
-	// If the prices are equal, use the time the transaction was first seen for
-	// deterministic sorting
+	// Use the time the transaction was first seen for deterministic sorting
 	cmp := s[i].GasPrice().Cmp(s[j].GasPrice())
 	if cmp == 0 {
 		return s[i].time.Before(s[j].time)
@@ -940,7 +939,7 @@ func (t *TransactionsByTimeAndNonce) Txs() map[common.Address]Transactions {
 // Note, the input map is reowned so the caller should not interact any more with
 // if after providing it to the constructor.
 func NewTransactionsByTimeAndNonce(signer Signer, txs map[common.Address]Transactions) *TransactionsByTimeAndNonce {
-	// Initialize a price and received time based heap with the head transactions
+	// Initialize received time based heap with the head transactions
 	heads := make(TxByTime, 0, len(txs))
 	for _, accTxs := range txs {
 		heads = append(heads, accTxs[0])
@@ -958,7 +957,7 @@ func NewTransactionsByTimeAndNonce(signer Signer, txs map[common.Address]Transac
 	}
 }
 
-// Peek returns the next transaction by price.
+// Peek returns the next transaction by time.
 func (t *TransactionsByTimeAndNonce) Peek() *Transaction {
 	if len(t.heads) == 0 {
 		return nil
