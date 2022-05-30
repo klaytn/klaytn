@@ -609,7 +609,7 @@ func simulateMaliciousCN(t *testing.T, numValidators int, numMalicious int) Stat
 }
 
 // TestCore_MalCN tests whether the proposer can commit when malicious CNs exist.
-func TestCore_MalCN(t *testing.T) {
+func TestCore_malCN(t *testing.T) {
 	// If there are little malicious CNs, proposer can commit.
 	state := simulateMaliciousCN(t, 4, 1)
 	assert.Equal(t, StateCommitted, state)
