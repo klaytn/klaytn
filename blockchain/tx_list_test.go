@@ -165,7 +165,7 @@ func TestTxListReadyWithGasPricePartialFilter(t *testing.T) {
 
 // TestReplaceTransaction tests if the new tx has been successfully replaced
 // if it has the same nonce and greater gas price as the old tx.
-func TestReplaceTransaction(t *testing.T) {
+func TestSubtituteTxByGasPrice(t *testing.T) {
 	// Generate a list of transactions to insert
 	key, _ := crypto.GenerateKey()
 	txList := newTxList(false)
