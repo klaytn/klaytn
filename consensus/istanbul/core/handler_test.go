@@ -502,8 +502,7 @@ func enableLog() {
 // splitSubList splits a committee into two groups w/o proposer
 // one for n nodes, the other for len(committee) - n - 1 nodes
 func splitSubList(committee []istanbul.Validator, n int, proposerAddr common.Address) ([]istanbul.Validator, []istanbul.Validator) {
-	var subCN []istanbul.Validator
-	var remainingCN []istanbul.Validator
+	var subCN, remainingCN []istanbul.Validator
 
 	for _, val := range committee {
 		if val.Address() == proposerAddr {
@@ -680,8 +679,7 @@ func TestCore_chainSplit(t *testing.T) {
 	proposalB, err := genBlockParams(lastBlock, proposerKey, 1000, 10, 1)
 	assert.Nil(t, err)
 
-	// Shortcut for sending message `proposal` to everyone in `CNList`
-	// each group handles the consensus messages
+	// Shortcut for sending message `proposal` to core `c`
 	sendMessages := func(state uint64, proposal *types.Block, CNList []istanbul.Validator, c *core) {
 		for _, val := range CNList {
 			valKey := validatorKeyMap[val.Address()]
