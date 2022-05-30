@@ -2,7 +2,6 @@ package core
 
 import (
 	"crypto/ecdsa"
-	"fmt"
 	"io"
 	"math/big"
 	"math/rand"
@@ -670,20 +669,19 @@ func TestCore_chainSplit(t *testing.T) {
 	istConfig := istanbul.DefaultConfig
 	istConfig.ProposerPolicy = istanbul.WeightedRandom
 	coreProposer := New(mockBackend, istConfig).(*core)
-	coreGroupA := New(mockBackend, istConfig).(*core)
-	coreGroupB := New(mockBackend, istConfig).(*core)
-	err := coreProposer.Start()
-	fmt.Println(err)
-	require.Nil(t, err)
-	err = coreGroupA.Start()
-	require.Nil(t, err)
-	err = coreGroupB.Start()
-	require.Nil(t, err)
+	coreA := New(mockBackend, istConfig).(*core)
+	coreB := New(mockBackend, istConfig).(*core)
+	require.Nil(t,
+		coreProposer.Start(),
+		coreA.Start(),
+		coreB.Start())
 	defer coreProposer.Stop()
-	defer coreGroupA.Stop()
-	defer coreGroupB.Stop()
+	defer coreA.Stop()
+	defer coreB.Stop()
 
 	// make two groups
+	// groupA consists of proposer, coreA, unnamed node
+	// groupB consists of proposer, coreB, unnamed node
 	subList := validators.SubList(lastBlock.Hash(), coreProposer.currentView())
 	groupA, groupB := splitSubList(subList, 2, proposer.Address())
 	groupA = append(groupA, proposer)
@@ -698,18 +696,18 @@ func TestCore_chainSplit(t *testing.T) {
 
 	// Shortcut for sending message `proposal` to everyone in `CNList`
 	// each group handles the consensus messages
-	sendMessages := func(state uint64, proposal *types.Block, CNList []istanbul.Validator, group *core) {
+	sendMessages := func(state uint64, proposal *types.Block, CNList []istanbul.Validator, c *core) {
 		for _, val := range CNList {
-			v := validatorKeyMap[val.Address()]
+			valKey := validatorKeyMap[val.Address()]
 			if state == msgPreprepare {
-				istanbulMsg, _ := genIstanbulMsg(state, lastBlock.Hash(), proposal, proposer.Address(), v)
-				err = group.handleMsg(istanbulMsg.Payload)
+				istanbulMsg, _ := genIstanbulMsg(state, lastBlock.Hash(), proposal, proposer.Address(), valKey)
+				err = c.handleMsg(istanbulMsg.Payload)
 			} else {
-				istanbulMsg, _ := genIstanbulMsg(state, lastBlock.Hash(), proposal, val.Address(), v)
-				err = group.handleMsg(istanbulMsg.Payload)
+				istanbulMsg, _ := genIstanbulMsg(state, lastBlock.Hash(), proposal, val.Address(), valKey)
+				err = c.handleMsg(istanbulMsg.Payload)
 			}
 			if err != nil {
-				fmt.Println(err)
+				t.Logf("handleMsg error: %s", err)
 			}
 		}
 	}
@@ -718,15 +716,16 @@ func TestCore_chainSplit(t *testing.T) {
 	// the proposer sends two different blocks to each group
 	// each group receives a block and handles it
 	// in this scenario, each group makes consensus of each block
-	sendMessages(msgPreprepare, proposalA, groupA, coreGroupA)
-	sendMessages(msgPrepare, proposalA, groupA, coreGroupA)
-	sendMessages(msgCommit, proposalA, groupA, coreGroupA)
-	assert.True(t, coreGroupA.state.Cmp(StateCommitted) == 0)
+	sendMessages(msgPreprepare, proposalA, groupA, coreA)
+	sendMessages(msgPrepare, proposalA, groupA, coreA)
+	sendMessages(msgCommit, proposalA, groupA, coreA)
+	assert.Equal(t, StateCommitted, coreA.state)
 
-	sendMessages(msgPreprepare, proposalB, groupB, coreGroupB)
-	sendMessages(msgPrepare, proposalB, groupB, coreGroupB)
-	sendMessages(msgCommit, proposalB, groupB, coreGroupB)
-	assert.True(t, coreGroupB.state.Cmp(StateCommitted) == 0)
+	sendMessages(msgPreprepare, proposalB, groupB, coreB)
+	sendMessages(msgPrepare, proposalB, groupB, coreB)
+	sendMessages(msgCommit, proposalB, groupB, coreB)
+	assert.Equal(t, StateCommitted, coreB.state)
+
 	t.Logf("Chain split occurred")
 }
 
