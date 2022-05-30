@@ -2077,23 +2077,17 @@ func TestTransactionsPromoteFull(t *testing.T) {
 	txs = append(txs, pricedTransaction(2, 100000, big.NewInt(30), key))
 	txs = append(txs, pricedTransaction(3, 100000, big.NewInt(30), key))
 
-	pool.enqueueTx(txs[0].Hash(), txs[0])
-	pool.enqueueTx(txs[1].Hash(), txs[1])
-	pool.enqueueTx(txs[2].Hash(), txs[2])
-	pool.enqueueTx(txs[3].Hash(), txs[3])
-
-	// set baseFee to 30.
-	baseFee = big.NewInt(30)
-	pool.gasPrice = baseFee
+	for _, tx := range txs {
+		pool.enqueueTx(tx.Hash(), tx)
+	}
 
 	pool.promoteExecutables(nil)
 
 	assert.Equal(t, pool.pending[from].Len(), 4)
 
-	assert.True(t, reflect.DeepEqual(txs[0], pool.pending[from].txs.items[0]))
-	assert.True(t, reflect.DeepEqual(txs[1], pool.pending[from].txs.items[1]))
-	assert.True(t, reflect.DeepEqual(txs[2], pool.pending[from].txs.items[2]))
-	assert.True(t, reflect.DeepEqual(txs[3], pool.pending[from].txs.items[3]))
+	for i, tx := range txs {
+		assert.True(t, reflect.DeepEqual(tx, pool.pending[from].txs.items[uint64(i)]))
+	}
 }
 
 // TestTransactionsPromotePartial is a test to check whether transactions in the queue are promoted to Pending
@@ -2119,10 +2113,9 @@ func TestTransactionsPromotePartial(t *testing.T) {
 	txs = append(txs, pricedTransaction(2, 100000, big.NewInt(20), key))
 	txs = append(txs, pricedTransaction(3, 100000, big.NewInt(10), key))
 
-	pool.enqueueTx(txs[0].Hash(), txs[0])
-	pool.enqueueTx(txs[1].Hash(), txs[1])
-	pool.enqueueTx(txs[2].Hash(), txs[2])
-	pool.enqueueTx(txs[3].Hash(), txs[3])
+	for _, tx := range txs {
+		pool.enqueueTx(tx.Hash(), tx)
+	}
 
 	// set baseFee to 20.
 	baseFee = big.NewInt(20)
@@ -2133,10 +2126,12 @@ func TestTransactionsPromotePartial(t *testing.T) {
 	assert.Equal(t, pool.pending[from].Len(), 3)
 	assert.Equal(t, pool.queue[from].Len(), 1)
 
-	assert.True(t, reflect.DeepEqual(txs[0], pool.pending[from].txs.items[0]))
-	assert.True(t, reflect.DeepEqual(txs[1], pool.pending[from].txs.items[1]))
-	assert.True(t, reflect.DeepEqual(txs[2], pool.pending[from].txs.items[2]))
+	// txs[0:2] should be promoted.
+	for i := 0; i < 3; i++ {
+		assert.True(t, reflect.DeepEqual(txs[i], pool.pending[from].txs.items[uint64(i)]))
+	}
 
+	// txs[3] shouldn't be promoted.
 	assert.True(t, reflect.DeepEqual(txs[3], pool.queue[from].txs.items[3]))
 }
 
@@ -2181,6 +2176,7 @@ func TestTransactionsPromoteMultipleAccount(t *testing.T) {
 	pool.promoteExecutables(nil)
 
 	assert.Equal(t, pool.pending[froms[0]].Len(), 4)
+
 	assert.True(t, reflect.DeepEqual(txs[0], pool.pending[froms[0]].txs.items[uint64(0)]))
 	assert.True(t, reflect.DeepEqual(txs[1], pool.pending[froms[0]].txs.items[uint64(1)]))
 	assert.True(t, reflect.DeepEqual(txs[2], pool.pending[froms[0]].txs.items[uint64(2)]))
@@ -2234,9 +2230,9 @@ func TestTransactionsDemotionMultipleAccount(t *testing.T) {
 	}
 
 	pool.promoteExecutables(nil)
-    assert.Equal(t, pool.pending[froms[0]].Len(), 4) 
-    assert.Equal(t, pool.pending[froms[1]].Len(), 1)
-    assert.Equal(t, pool.pending[froms[2]].Len(), 4)
+	assert.Equal(t, pool.pending[froms[0]].Len(), 4)
+	assert.Equal(t, pool.pending[froms[1]].Len(), 1)
+	assert.Equal(t, pool.pending[froms[2]].Len(), 4)
 	// If gasPrice of txPool is set to 35, when demoteUnexecutables() is executed, it is saved for each transaction as shown below.
 	// tx[0] : pending[from[0]]
 	// tx[1] : pending[from[0]]

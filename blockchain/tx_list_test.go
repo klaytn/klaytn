@@ -58,7 +58,7 @@ func TestStrictTxListAdd(t *testing.T) {
 	}
 }
 
-// TestTxListReadyWithGasPrice check whether ReadyWithGasPrice() works well.
+// TestTxListReadyWithGasPriceBasic check whether ReadyWithGasPrice() works well.
 // It makes a slice of 10 transactions and executes ReadyWithGasPrice() with baseFee 30.
 func TestTxListReadyWithGasPriceBasic(t *testing.T) {
 	// Start nonce : 3
