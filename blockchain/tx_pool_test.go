@@ -2082,7 +2082,7 @@ func TestTransactionsPromoteFull(t *testing.T) {
 	pool.enqueueTx(txs[2].Hash(), txs[2])
 	pool.enqueueTx(txs[3].Hash(), txs[3])
 
-	// set baseFee to 20.
+	// set baseFee to 30.
 	baseFee = big.NewInt(30)
 	pool.gasPrice = baseFee
 
