@@ -3,15 +3,16 @@ package core
 import (
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/log/term"
-	"github.com/mattn/go-colorable"
 	"io"
 	"math/big"
 	"math/rand"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/klaytn/klaytn/log"
+	"github.com/klaytn/klaytn/log/term"
+	"github.com/mattn/go-colorable"
 
 	"github.com/golang/mock/gomock"
 	"github.com/klaytn/klaytn/blockchain"
@@ -167,7 +168,7 @@ func genBlock(prevBlock *types.Block, signerKey *ecdsa.PrivateKey) (*types.Block
 func genMaliciousBlock(prevBlock *types.Block, signerKey *ecdsa.PrivateKey) (*types.Block, error) {
 	block := types.NewBlockWithHeader(&types.Header{
 		ParentHash: prevBlock.Hash(),
-		//ParentHash: common.HexToHash("2"),
+		// ParentHash: common.HexToHash("2"),
 		Number:     common.Big0,
 		GasUsed:    0,
 		Extra:      prevBlock.Extra(),
@@ -514,7 +515,6 @@ func enableLog() {
 }
 
 func splitSubList(committee []istanbul.Validator, numMalicious int, proposerAddr common.Address) ([]istanbul.Validator, []istanbul.Validator) {
-
 	var benignCN []istanbul.Validator
 	var maliciousCN []istanbul.Validator
 
@@ -603,28 +603,28 @@ func testMaliciousCN(t *testing.T, numValidators int, numMalicious int) (prepare
 			istanbulMsg, _ := genIstanbulMsg(state, lastBlock.Hash(), proposal, val.Address(), v)
 			err = istCore.handleMsg(istanbulMsg.Payload)
 			if err != nil {
-				//fmt.Println(err)
+				// fmt.Println(err)
 			}
 		}
 	}
 	sendMessages(msgPrepare, newProposal, benignCNs)
 	sendMessages(msgPrepare, malProposal, maliciousCNs)
 
-	//preparesSize := istCore.current.Prepares.Size()
-	//commitsSize := istCore.current.Commits.Size()
+	// preparesSize := istCore.current.Prepares.Size()
+	// commitsSize := istCore.current.Commits.Size()
 
 	if istCore.state.Cmp(StatePrepared) < 0 {
-		//t.Fatal("not prepared due to malicious cns")
+		// t.Fatal("not prepared due to malicious cns")
 		return false, false
 	} else {
 		sendMessages(msgCommit, newProposal, benignCNs)
 		sendMessages(msgCommit, malProposal, maliciousCNs)
-		//commitsSize = istCore.current.Commits.Size()
+		// commitsSize = istCore.current.Commits.Size()
 
-		//fmt.Println("prepare size = ", preparesSize, " commit size: ", commitsSize)
+		// fmt.Println("prepare size = ", preparesSize, " commit size: ", commitsSize)
 
 		if istCore.state.Cmp(StateCommitted) < 0 {
-			//t.Fatal("not committed due to malicious cns")
+			// t.Fatal("not committed due to malicious cns")
 			return true, false
 		}
 		fmt.Println("The block is committed")
@@ -698,7 +698,7 @@ func TestCore_chainSplit(t *testing.T) {
 	lastProposal, _ := mockBackend.LastProposal()
 	lastBlock := lastProposal.(*types.Block)
 	validators := mockBackend.Validators(lastBlock)
-	//fmt.Println("validator addrs = ", validators.SubList(lastBlock.Hash(), istCore.currentView()))
+	// fmt.Println("validator addrs = ", validators.SubList(lastBlock.Hash(), istCore.currentView()))
 
 	// proposer creates a block for group A
 	// proposer creates the other block for group B
