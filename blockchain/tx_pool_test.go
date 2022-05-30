@@ -2234,7 +2234,9 @@ func TestTransactionsDemotionMultipleAccount(t *testing.T) {
 	}
 
 	pool.promoteExecutables(nil)
-
+    assert.Equal(t, pool.pending[froms[0]].Len(), 4) 
+    assert.Equal(t, pool.pending[froms[1]].Len(), 1)
+    assert.Equal(t, pool.pending[froms[2]].Len(), 4)
 	// If gasPrice of txPool is set to 35, when demoteUnexecutables() is executed, it is saved for each transaction as shown below.
 	// tx[0] : pending[from[0]]
 	// tx[1] : pending[from[0]]
