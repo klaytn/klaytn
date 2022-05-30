@@ -202,5 +202,4 @@ func TestSubstituteTransactionAbort(t *testing.T) {
 	if result, replaced := txList.Add(newTx, DefaultTxPoolConfig.PriceBump); result || replaced != nil {
 		t.Error("Expected to not substitute by a tx with lower gas price")
 	}
-
 }
