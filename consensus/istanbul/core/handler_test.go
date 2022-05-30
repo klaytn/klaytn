@@ -10,10 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/log/term"
-	"github.com/mattn/go-colorable"
-
 	"github.com/golang/mock/gomock"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -25,8 +21,11 @@ import (
 	"github.com/klaytn/klaytn/crypto/sha3"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/fork"
+	"github.com/klaytn/klaytn/log"
+	"github.com/klaytn/klaytn/log/term"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
+	"github.com/mattn/go-colorable"
 	"github.com/stretchr/testify/assert"
 )
 
