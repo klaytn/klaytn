@@ -729,7 +729,6 @@ func TestCore_chainSplit(t *testing.T) {
 		// listA and ListB have the validator addresses of group A and group B
 		// the proposer address is included to each group
 		// each group makes consensus messages inside the group
-
 		listA := make([]istanbul.Validator, (committeeSize-1)/2)
 		listB := make([]istanbul.Validator, (committeeSize-1)/2)
 		copy(listA, tmpList[:(committeeSize-1)/2])
@@ -752,31 +751,21 @@ func TestCore_chainSplit(t *testing.T) {
 					fmt.Println(err)
 				}
 			}
-
 		}
-
 		// the proposer sends two different blocks to each group
-		sendMessages(msgPreprepare, proposalA, listA, groupA)
-		sendMessages(msgPreprepare, proposalB, listB, groupB)
-
 		// each group receives a block and process it by using handleMsg
 		// the proposer handles both messages to send consensus messages to both groups
+		sendMessages(msgPreprepare, proposalA, listA, groupA)
 		sendMessages(msgPrepare, proposalA, listA, groupA)
 		sendMessages(msgCommit, proposalA, listA, groupA)
+		assert.True(t, groupA.state.Cmp(StateCommitted) == 0)
 
-		preparesSizeA := groupA.current.Prepares.Size()
-		commitsSizeA := groupA.current.Commits.Size()
-		fmt.Println("Group A: prepare size = ", preparesSizeA, " commit size = ", commitsSizeA)
-
+		sendMessages(msgPreprepare, proposalB, listB, groupB)
 		sendMessages(msgPrepare, proposalB, listB, groupB)
 		sendMessages(msgCommit, proposalB, listB, groupB)
+		assert.True(t, groupB.state.Cmp(StateCommitted) == 0)
 
-		preparesSizeB := groupB.current.Prepares.Size()
-		commitsSizeB := groupB.current.Commits.Size()
-		fmt.Println("Group B: prepare size = ", preparesSizeB, " commit size = ", commitsSizeB)
 		fmt.Println("Chain split occurred")
-
-		assert.Nil(t, err)
 	}
 }
 
