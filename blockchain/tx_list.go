@@ -326,7 +326,7 @@ func (l *txList) Add(tx *types.Transaction, priceBump uint64) (bool, *types.Tran
 			return false, nil
 		} else {
 			// Otherwise overwrite the old transaction with the current one
-			logger.Trace("Gas price of new tx is bigger than older tx!", "old", old.String(), "new", tx.String())
+			logger.Trace("The transaction was substituted by competitive gas price", "old", old.String(), "new", tx.String())
 		}
 	}
 
