@@ -53,11 +53,6 @@ const (
 	Policy
 	CommitteeSize
 	UnitPrice
-	LowerBoundBaseFee
-	UpperBoundBaseFee
-	GasTarget
-	MaxBlockGasUsedForBaseFee
-	BaseFeeDenominator
 	MintingAmount
 	Ratio
 	UseGiniCoeff
@@ -70,6 +65,11 @@ const (
 	ConstTxGasHumanReadable
 	CliqueEpoch
 	Timeout
+	LowerBoundBaseFee
+	UpperBoundBaseFee
+	GasTarget
+	MaxBlockGasUsedForBaseFee
+	BaseFeeDenominator
 )
 
 const (
