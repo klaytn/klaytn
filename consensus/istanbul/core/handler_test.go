@@ -163,29 +163,15 @@ func genBlock(prevBlock *types.Block, signerKey *ecdsa.PrivateKey) (*types.Block
 	return signBlock(block, signerKey)
 }
 
-// genMaliciousBlock generates a modified block indicating prevBlock with ParentHash
-func genMaliciousBlock(prevBlock *types.Block, signerKey *ecdsa.PrivateKey) (*types.Block, error) {
-	block := types.NewBlockWithHeader(&types.Header{
-		ParentHash: prevBlock.Hash(),
-		// ParentHash: common.HexToHash("2"),
-		Number:     common.Big0,
-		GasUsed:    0,
-		Extra:      prevBlock.Extra(),
-		Time:       common.Big0,
-		BlockScore: common.Big0,
-	})
-	return signBlock(block, signerKey)
-}
-
-// genBlockParams generates a signed block indicating prevBlock with ParentHash. parameters gasUsed and time are used
-func genBlockParams(prevBlock *types.Block, signerKey *ecdsa.PrivateKey, gasUsed uint64, time int64) (*types.Block, error) {
+// genBlockParams generates a signed block indicating prevBlock with ParentHash with additional parameters.
+func genBlockParams(prevBlock *types.Block, signerKey *ecdsa.PrivateKey, gasUsed uint64, time int64, blockScore int64) (*types.Block, error) {
 	block := types.NewBlockWithHeader(&types.Header{
 		ParentHash: prevBlock.Hash(),
 		Number:     new(big.Int).Add(prevBlock.Number(), common.Big1),
 		GasUsed:    gasUsed,
 		Extra:      prevBlock.Extra(),
 		Time:       new(big.Int).Add(prevBlock.Time(), big.NewInt(time)),
-		BlockScore: new(big.Int).Add(prevBlock.BlockScore(), common.Big1),
+		BlockScore: new(big.Int).Add(prevBlock.BlockScore(), big.NewInt(blockScore)),
 	})
 	return signBlock(block, signerKey)
 }
@@ -561,8 +547,8 @@ func simulateMaliciousCN(t *testing.T, numValidators int, numMalicious int) Stat
 		validators      = mockBackend.Validators(lastBlock)
 		proposer        = validators.GetProposer()
 		proposerKey     = validatorKeyMap[proposer.Address()]
-		newProposal, _  = genBlock(lastBlock, proposerKey)
-		malProposal, _  = genMaliciousBlock(lastBlock, proposerKey)
+		newProposal, _  = genBlockParams(lastBlock, proposerKey, 0, 1, 1)
+		malProposal, _  = genBlockParams(lastBlock, proposerKey, 0, 0, 0)
 	)
 
 	// Start istanbul core
@@ -688,10 +674,10 @@ func TestCore_chainSplit(t *testing.T) {
 	groupB = append(groupB, proposer)
 
 	// Step 1 - the malicious proposer generates two blocks
-	proposalA, err := genBlockParams(lastBlock, proposerKey, 0, 0)
+	proposalA, err := genBlockParams(lastBlock, proposerKey, 0, 0, 1)
 	assert.Nil(t, err)
 
-	proposalB, err := genBlockParams(lastBlock, proposerKey, 1000, 10)
+	proposalB, err := genBlockParams(lastBlock, proposerKey, 1000, 10, 1)
 	assert.Nil(t, err)
 
 	// Shortcut for sending message `proposal` to everyone in `CNList`
