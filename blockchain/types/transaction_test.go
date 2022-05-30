@@ -684,15 +684,15 @@ func TestTransactionTimeSortDifferentGasPrice(t *testing.T) {
 	if len(txs) != len(keys) {
 		t.Errorf("expected %d transactions, found %d", len(keys), len(txs))
 	}
-	for i, txi := range txs {
-		fromi, _ := Sender(signer, txi)
+	for i, tx := range txs {
+		from, _ := Sender(signer, tx)
 		if i+1 < len(txs) {
 			next := txs[i+1]
 			fromNext, _ := Sender(signer, next)
 
 			// Make sure time order is ascending.
-			if txi.time.After(next.time) {
-				t.Errorf("invalid received time ordering: tx #%d (A=%x T=%v) > tx #%d (A=%x T=%v)", i, fromi[:4], txi.time, i+1, fromNext[:4], next.time)
+			if tx.time.After(next.time) {
+				t.Errorf("invalid received time ordering: tx #%d (A=%x T=%v) > tx #%d (A=%x T=%v)", i, from[:4], tx.time, i+1, fromNext[:4], next.time)
 			}
 		}
 	}
