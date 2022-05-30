@@ -3,7 +3,6 @@ package core
 import (
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/stretchr/testify/require"
 	"io"
 	"math/big"
 	"math/rand"
@@ -28,6 +27,7 @@ import (
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/mattn/go-colorable"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // newMockBackend create a mock-backend initialized with default values
@@ -587,7 +587,7 @@ func simulateMaliciousCN(t *testing.T, numValidators int, numMalicious int) Stat
 	subList := validators.SubList(lastBlock.Hash(), istCore.currentView())
 	benignCNs, maliciousCNs := splitSubList(subList, numMalicious, proposer.Address())
 
-	// Shortcut for sending message `proposal` to everyone in `CNList`
+	// Shortcut for sending consensus message to everyone in `CNList`
 	sendMessages := func(state uint64, proposal *types.Block, CNList []istanbul.Validator) {
 		for _, val := range CNList {
 			valKey := validatorKeyMap[val.Address()]
@@ -622,8 +622,7 @@ func simulateMaliciousCN(t *testing.T, numValidators int, numMalicious int) Stat
 	}
 }
 
-// TestCore_MalCN1 will test consensus where the number of validators is 4
-// and number of malicious CN is 1
+// TestCore_MalCN tests whether the proposer can commit when malicious CNs exist.
 func TestCore_MalCN(t *testing.T) {
 	// If there are little malicious CNs, proposer can commit.
 	state := simulateMaliciousCN(t, 4, 1)
@@ -635,120 +634,113 @@ func TestCore_MalCN(t *testing.T) {
 }
 
 // TestCore_chainSplit tests whether a chain split occurs in a certain conditions:
-// 1) the number of validators does not consist of 3f+1; e.g. if 5 nodes, it consists of 3f+2 (f=1)
+// 1) the number of validators does not consist of 3f+1;
+//     e.g.) if 5 nodes, it consists of 3f+2 (f=1)
 //    This test assumes the number of validators is 5.
 // 2) the proposer is malicious; it sends two different blocks to each group
-// 3) the malicious proposer receives consensus messages from each group,
-//    and returns valid consensus messages to them
-// 4) both group make consensus, but the committed block is different each other
-// 5) chain split occurred
 func TestCore_chainSplit(t *testing.T) {
-	enableLog()
+	if testing.Verbose() {
+		enableLog()
+	}
+
 	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
 	defer fork.ClearHardForkBlockNumberConfig()
 
-	// genValidators(15) returns five validator addresses
-	// for the chain split scenario, the validator nodes are fixed at five
+	// Note that genValidators(n) will generate n/3 validators.
+	// We want 5 validators, thus calling genValidators(15).
 	validatorAddrs, validatorKeyMap := genValidators(15)
-	mockBackend, mockCtrl := newMockBackend(t, validatorAddrs)
-	defer mockCtrl.Finish()
 
-	// Commit is added to remove unexpected call error
+	// Add more EXPECT()s to remove unexpected call error
+	mockBackend, mockCtrl := newMockBackend(t, validatorAddrs)
 	mockBackend.EXPECT().Commit(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 	mockBackend.EXPECT().HasBadProposal(gomock.Any()).Return(true).AnyTimes()
+	defer mockCtrl.Finish()
 
+	var (
+		lastProposal, _ = mockBackend.LastProposal()
+		lastBlock       = lastProposal.(*types.Block)
+		validators      = mockBackend.Validators(lastBlock)
+		proposer        = validators.GetProposer()
+		proposerKey     = validatorKeyMap[proposer.Address()]
+	)
+
+	// Start istanbul core
 	istConfig := istanbul.DefaultConfig
 	istConfig.ProposerPolicy = istanbul.WeightedRandom
-
-	proposer := New(mockBackend, istConfig).(*core)
+	coreProposer := New(mockBackend, istConfig).(*core)
 	groupA := New(mockBackend, istConfig).(*core)
 	groupB := New(mockBackend, istConfig).(*core)
-
-	if err := proposer.Start(); err != nil {
-		t.Fatal(err)
-	}
-	if err := groupA.Start(); err != nil {
-		t.Fatal(err)
-	}
-	if err := groupB.Start(); err != nil {
-		t.Fatal(err)
-	}
-	defer proposer.Stop()
+	err := coreProposer.Start()
+	require.NotNil(t, err)
+	err = groupA.Start()
+	require.NotNil(t, err)
+	err = groupB.Start()
+	require.NotNil(t, err)
+	defer coreProposer.Stop()
 	defer groupA.Stop()
 	defer groupB.Stop()
 
-	lastProposal, _ := mockBackend.LastProposal()
-	lastBlock := lastProposal.(*types.Block)
-	validators := mockBackend.Validators(lastBlock)
-	// fmt.Println("validator addrs = ", validators.SubList(lastBlock.Hash(), istCore.currentView()))
+	// make two groups
+	committeeSize := len(validators.SubList(lastBlock.Hash(), coreProposer.currentView()))
+	tmpList := validators.SubList(lastBlock.Hash(), coreProposer.currentView())
 
-	// proposer creates a block for group A
-	// proposer creates the other block for group B
-	{
-		msgSender := validators.GetProposer()
-		msgSenderKey := validatorKeyMap[msgSender.Address()]
-
-		proposalA, err := genBlockParams(lastBlock, msgSenderKey, 0, 0)
-		if err != nil {
-			t.Fatal(err)
+	for i := range validators.SubList(lastBlock.Hash(), coreProposer.currentView()) {
+		// both groupA and groupB includes proposer as validator
+		if tmpList[i].Address() == proposer.Address() {
+			tmpList = append(tmpList[i+1:], tmpList[:i]...)
+			break
 		}
-		proposalB, err := genBlockParams(lastBlock, msgSenderKey, 1000, 10)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		committeeSize := len(validators.SubList(lastBlock.Hash(), proposer.currentView()))
-		tmpList := validators.SubList(lastBlock.Hash(), proposer.currentView())
-
-		for i := range validators.SubList(lastBlock.Hash(), proposer.currentView()) {
-			// both groupA and groupB includes proposer as validator
-			if tmpList[i].Address() == msgSender.Address() {
-				tmpList = append(tmpList[i+1:], tmpList[:i]...)
-				break
-			}
-		}
-
-		// listA and ListB have the validator addresses of group A and group B
-		// the proposer address is included to each group
-		// each group makes consensus messages inside the group
-		listA := make([]istanbul.Validator, (committeeSize-1)/2)
-		listB := make([]istanbul.Validator, (committeeSize-1)/2)
-		copy(listA, tmpList[:(committeeSize-1)/2])
-		listA = append(listA, msgSender)
-
-		copy(listB, tmpList[(committeeSize-1)/2:])
-		listB = append(listB, msgSender)
-
-		sendMessages := func(state uint64, proposal *types.Block, CNList []istanbul.Validator, group *core) {
-			for _, val := range CNList {
-				v := validatorKeyMap[val.Address()]
-				if state == msgPreprepare {
-					istanbulMsg, _ := genIstanbulMsg(state, lastBlock.Hash(), proposal, msgSender.Address(), v)
-					err = group.handleMsg(istanbulMsg.Payload)
-				} else {
-					istanbulMsg, _ := genIstanbulMsg(state, lastBlock.Hash(), proposal, val.Address(), v)
-					err = group.handleMsg(istanbulMsg.Payload)
-				}
-				if err != nil {
-					fmt.Println(err)
-				}
-			}
-		}
-		// the proposer sends two different blocks to each group
-		// each group receives a block and process it by using handleMsg
-		// the proposer handles both messages to send consensus messages to both groups
-		sendMessages(msgPreprepare, proposalA, listA, groupA)
-		sendMessages(msgPrepare, proposalA, listA, groupA)
-		sendMessages(msgCommit, proposalA, listA, groupA)
-		assert.True(t, groupA.state.Cmp(StateCommitted) == 0)
-
-		sendMessages(msgPreprepare, proposalB, listB, groupB)
-		sendMessages(msgPrepare, proposalB, listB, groupB)
-		sendMessages(msgCommit, proposalB, listB, groupB)
-		assert.True(t, groupB.state.Cmp(StateCommitted) == 0)
-
-		fmt.Println("Chain split occurred")
 	}
+	// listA and ListB have the validator addresses of group A and group B
+	// the proposer address is included to each group
+	// each group makes consensus messages inside the group
+	listA := make([]istanbul.Validator, (committeeSize-1)/2)
+	listB := make([]istanbul.Validator, (committeeSize-1)/2)
+	copy(listA, tmpList[:(committeeSize-1)/2])
+	listA = append(listA, proposer)
+
+	copy(listB, tmpList[(committeeSize-1)/2:])
+	listB = append(listB, proposer)
+
+	// Step 1 - the malicious proposer generates two blocks
+	proposalA, err := genBlockParams(lastBlock, proposerKey, 0, 0)
+	assert.Nil(t, err)
+
+	proposalB, err := genBlockParams(lastBlock, proposerKey, 1000, 10)
+	assert.Nil(t, err)
+
+	// Shortcut for sending message `proposal` to everyone in `CNList`
+	// each group handles the consensus messages
+	sendMessages := func(state uint64, proposal *types.Block, CNList []istanbul.Validator, group *core) {
+		for _, val := range CNList {
+			v := validatorKeyMap[val.Address()]
+			if state == msgPreprepare {
+				istanbulMsg, _ := genIstanbulMsg(state, lastBlock.Hash(), proposal, proposer.Address(), v)
+				err = group.handleMsg(istanbulMsg.Payload)
+			} else {
+				istanbulMsg, _ := genIstanbulMsg(state, lastBlock.Hash(), proposal, val.Address(), v)
+				err = group.handleMsg(istanbulMsg.Payload)
+			}
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
+	}
+	// Step 2 - exchange consensus messages inside each group
+
+	// the proposer sends two different blocks to each group
+	// each group receives a block and handles it
+	// in this scenario, each group makes consensus of each block
+	sendMessages(msgPreprepare, proposalA, listA, groupA)
+	sendMessages(msgPrepare, proposalA, listA, groupA)
+	sendMessages(msgCommit, proposalA, listA, groupA)
+	assert.True(t, groupA.state.Cmp(StateCommitted) == 0)
+
+	sendMessages(msgPreprepare, proposalB, listB, groupB)
+	sendMessages(msgPrepare, proposalB, listB, groupB)
+	sendMessages(msgCommit, proposalB, listB, groupB)
+	assert.True(t, groupB.state.Cmp(StateCommitted) == 0)
+	t.Logf("Chain split occurred")
 }
 
 // TestCore_handleTimeoutMsg_race tests a race condition between round change triggers.
