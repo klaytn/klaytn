@@ -34,6 +34,7 @@ import (
 	"github.com/klaytn/klaytn/common/profile"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/kerrors"
+	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
 )
@@ -412,9 +413,7 @@ func TestDefaultTxsWithDefaultAccountKey(t *testing.T) {
 	gasPrice := new(big.Int).SetUint64(25 * params.Ston)
 	gasLimit := uint64(100000000)
 
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
@@ -623,9 +622,7 @@ func TestDefaultTxsWithDefaultAccountKey(t *testing.T) {
 // A multiSig account supports maximum 10 different private keys.
 // Update an account key to a multiSig key with 11 different private keys (more than 10 -> failed)
 func TestAccountUpdateMultiSigKeyMaxKey(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
@@ -748,9 +745,7 @@ func TestAccountUpdateMultiSigKeyMaxKey(t *testing.T) {
 // If not, the account cannot creates any valid signatures.
 // The test update an account key to a multisig key with a threshold (10) and the total weight (6). (failed case)
 func TestAccountUpdateMultiSigKeyBigThreshold(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
@@ -861,9 +856,7 @@ func TestAccountUpdateMultiSigKeyBigThreshold(t *testing.T) {
 // A multisig key consists of  all different private keys, therefore account update with duplicated private keys should be failed.
 // The test supposed the case when two same private keys are used in creation processes.
 func TestAccountUpdateMultiSigKeyDupPrvKeys(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
@@ -973,9 +966,7 @@ func TestAccountUpdateMultiSigKeyDupPrvKeys(t *testing.T) {
 // TestAccountUpdateMultiSigKeyWeightOverflow tests multiSig key update with weight overflow.
 // If the sum of weights is overflowed, the test should fail.
 func TestAccountUpdateMultiSigKeyWeightOverflow(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
@@ -1093,9 +1084,7 @@ func TestAccountUpdateMultiSigKeyWeightOverflow(t *testing.T) {
 // 1. try to create an account with a RoleBased key which contains 4 sub-keys.
 // 2. try to create an account with a RoleBased key which contains 0 sub-key.
 func TestAccountUpdateRoleBasedKeyInvalidNumKey(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
@@ -1239,9 +1228,7 @@ func TestAccountUpdateRoleBasedKeyInvalidNumKey(t *testing.T) {
 // 5. a RoleBased key contains an AccountKeyFail type sub-key as a second sub-key. (success)
 // 6. a RoleBased key contains an AccountKeyFail type sub-key as a third sub-key. (success)
 func TestAccountUpdateRoleBasedKeyInvalidTypeKey(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
@@ -1504,9 +1491,7 @@ func TestAccountUpdateRoleBasedKeyInvalidTypeKey(t *testing.T) {
 // 2. try to update the account with a RoleFeePayer key. (fail)
 // 3. try to update the account with a RoleAccountUpdate key. (success)
 func TestAccountUpdateRoleBasedKey(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
@@ -1693,9 +1678,7 @@ func TestAccountUpdateRoleBasedKey(t *testing.T) {
 // 1. Create an account with a RoleBasedKey.
 // 2. Update an accountKey with a nested RoleBasedKey
 func TestAccountUpdateRoleBasedKeyNested(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
@@ -1828,9 +1811,7 @@ func TestAccountUpdateRoleBasedKeyNested(t *testing.T) {
 // Only RoleTransaction can generate valid signature as a sender except account update txs.
 // RoleAccountUpdate can generate valid signature for account update txs.
 func TestRoleBasedKeySendTx(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
@@ -2033,9 +2014,7 @@ func TestRoleBasedKeySendTx(t *testing.T) {
 // A role-based key contains three types of sub-keys: RoleTransaction, RoleAccountUpdate, RoleFeePayer.
 // Only RoleFeePayer can sign txs as a fee payer.
 func TestRoleBasedKeyFeeDelegation(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
@@ -2232,9 +2211,7 @@ func TestAccountKeyUpdateLegacyToPublic(t *testing.T) {
 	gasPrice := new(big.Int).SetUint64(25 * params.Ston)
 	gasLimit := uint64(1000000)
 
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain

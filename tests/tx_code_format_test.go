@@ -27,6 +27,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/profile"
 	"github.com/klaytn/klaytn/kerrors"
+	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
 )
@@ -46,9 +47,7 @@ func TestCodeFormat(t *testing.T) {
 		{"FeeDelegatedWithRatioSmartContractDeployWithInvalidCodeFormat", genFeeDelegatedWithRatioSmartContractDeployWithCodeFormat},
 	}
 
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain

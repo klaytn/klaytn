@@ -17,9 +17,7 @@
 package tests
 
 import (
-	"io"
 	"math/big"
-	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -28,30 +26,11 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/compiler"
 	"github.com/klaytn/klaytn/common/profile"
-	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/log/term"
-	"github.com/mattn/go-colorable"
 )
 
 type testData struct {
 	name string
 	opt  testOption
-}
-
-// TODO-Klaytn: To enable logging in the test code, we can use the following function.
-// This function will be moved to somewhere utility functions are located.
-func enableLog() {
-	usecolor := term.IsTty(os.Stderr.Fd()) && os.Getenv("TERM") != "dumb"
-	output := io.Writer(os.Stderr)
-	if usecolor {
-		output = colorable.NewColorableStderr()
-	}
-	glogger := log.NewGlogHandler(log.StreamHandler(output, log.TerminalFormat(usecolor)))
-	log.PrintOrigins(true)
-	log.ChangeGlobalLogLevel(glogger, log.Lvl(5))
-	glogger.Vmodule("")
-	glogger.BacktraceAt("")
-	log.Root().SetHandler(glogger)
 }
 
 func makeContractCreationTransactions(bcdata *BCData, accountMap *AccountMap, signer types.Signer,

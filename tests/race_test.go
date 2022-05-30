@@ -29,6 +29,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
 )
@@ -38,9 +39,7 @@ import (
 // This race test may need multiple trials and additional flags to avoid false alarms from sha3 package.
 // For example, `go test -gcflags=all=-d=checkptr=0 -race -run TestRaceBetweenTxpoolAddAndCommitNewWork`.
 func TestRaceBetweenTxpoolAddAndCommitNewWork(t *testing.T) {
-	if testing.Verbose() {
-		enableLog() // Change verbosity level in the function if needed
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 
 	numAccounts := 2
 	fullNode, node, validator, chainId, workspace := newBlockchain(t)
@@ -100,9 +99,7 @@ func TestRaceBetweenTxpoolAddAndCommitNewWork(t *testing.T) {
 // TestRaceAsMessageWithAccountPickerForFeePayer tests calling AsMessageWithAccountPicker of a fee delegated transaction
 // where a fee payer may be inserted wrongly due to concurrent issue.
 func TestRaceAsMessageWithAccountPickerForFeePayer(t *testing.T) {
-	if testing.Verbose() {
-		enableLog() // Change verbosity level in the function if needed
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 
 	// Configure and generate a sample block chain
 	var (

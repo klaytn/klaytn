@@ -34,6 +34,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/profile"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
 )
@@ -254,9 +255,7 @@ func BenchmarkTxPerformanceNewRoleBasedMultisig3(b *testing.B) {
 }
 
 func benchmarkTxPerformanceCompatible(b *testing.B, genTx genTx) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 
 	// Initialize blockchain
 	bcdata, err := NewBCData(6, 4)
@@ -343,9 +342,7 @@ func benchmarkTxPerformanceCompatible(b *testing.B, genTx genTx) {
 }
 
 func benchmarkTxPerformanceSmartContractExecution(b *testing.B, genTx genTx) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
@@ -475,9 +472,7 @@ func benchmarkTxPerformanceSmartContractExecution(b *testing.B, genTx genTx) {
 }
 
 func benchmarkTxPerformanceNew(b *testing.B, genTx genTx, sender *TestAccountType) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
