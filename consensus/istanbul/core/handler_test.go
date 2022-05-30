@@ -513,15 +513,14 @@ func enableLog() {
 	log.Root().SetHandler(glogger)
 }
 
-func splitSubList(committee []istanbul.Validator, numMalicious int, proposerAddr common.Address) (istanbul.Validator, []istanbul.Validator, []istanbul.Validator) {
+func splitSubList(committee []istanbul.Validator, numMalicious int, proposerAddr common.Address) ([]istanbul.Validator, []istanbul.Validator) {
 
-	var proposer istanbul.Validator
 	var benignCN []istanbul.Validator
 	var maliciousCN []istanbul.Validator
 
 	for _, val := range committee {
 		if val.Address() == proposerAddr {
-			proposer = val
+			// proposer is always considered benign, so benignCN includes the proposer
 			benignCN = append(benignCN, val)
 			continue
 		}
@@ -531,10 +530,10 @@ func splitSubList(committee []istanbul.Validator, numMalicious int, proposerAddr
 			benignCN = append(benignCN, val)
 		}
 	}
-	return proposer, benignCN, maliciousCN
+	return benignCN, maliciousCN
 }
 
-// TestCore_MaliciousCN tests whether a proposed block can be committed when malicious CNs exist.
+// testMaliciousCN tests whether a proposed block can be committed when malicious CNs exist.
 // 1) it starts with generating a validator list
 // 2) it creates two pre-defined blocks: one for benign CNs, the other for the malicious
 // 3) a proposer sends the benign block
@@ -542,12 +541,9 @@ func splitSubList(committee []istanbul.Validator, numMalicious int, proposerAddr
 // 5) benign group try to commit the benign block by sending prepare/commit messages of benign block
 // 6) malicious group try to stop the consensus by sending the messages of malicious block
 // 7) if the number of malicious CNs is less than f, the block will be committed
-//    otherwise, round change occurs and the test will fail
-
-func TestCore_MaliciousCN(t *testing.T) {
-
+//    otherwise, the round will fail
+func testMaliciousCN(t *testing.T, numValidators int, numMalicious int) (prepared bool, committed bool) {
 	enableLog()
-	var maxAllowedRound = uint64(5)
 
 	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
 	defer fork.ClearHardForkBlockNumberConfig()
@@ -555,8 +551,7 @@ func TestCore_MaliciousCN(t *testing.T) {
 	// 1) validator list is generated
 	// genValidators returns 1/3 validator addresses of input parameter
 	// for example, if the parameter is 12, it will return four validator addresses
-
-	validatorAddrs, validatorKeyMap := genValidators(12)
+	validatorAddrs, validatorKeyMap := genValidators(numValidators * 3)
 	mockBackend, mockCtrl := newMockBackend(t, validatorAddrs)
 	defer mockCtrl.Finish()
 	// Commit is added to remove unexpected call error
@@ -579,93 +574,85 @@ func TestCore_MaliciousCN(t *testing.T) {
 	// make two blocks
 	// newProposal is a block which the proposer has created
 	// malProposal is an incorrect block that malicious CNs use to try stop consensus
+	msgSender := validators.GetProposer()
+	msgSenderKey := validatorKeyMap[msgSender.Address()]
 
-	{
-		msgSender := validators.GetProposer()
-		msgSenderKey := validatorKeyMap[msgSender.Address()]
+	newProposal, err := genBlock(lastBlock, msgSenderKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	malProposal, err := genMaliciousBlock(lastBlock, msgSenderKey)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-		newProposal, err := genBlock(lastBlock, msgSenderKey)
-		if err != nil {
-			t.Fatal(err)
-		}
-		malProposal, err := genMaliciousBlock(lastBlock, msgSenderKey)
-		if err != nil {
-			t.Fatal(err)
-		}
+	istanbulMsg, _ := genIstanbulMsg(msgPreprepare, lastBlock.Hash(), newProposal, msgSender.Address(), msgSenderKey)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-		istanbulMsg, _ := genIstanbulMsg(msgPreprepare, lastBlock.Hash(), newProposal, msgSender.Address(), msgSenderKey)
-		if err != nil {
-			t.Fatal(err)
-		}
+	istCore.handleMsg(istanbulMsg.Payload)
 
-		istCore.handleMsg(istanbulMsg.Payload)
+	// splitSubList split current committee into benign CNs and malicious CNs
+	// parameter numMalicious: the number of malicious CNs
+	benignCNs, maliciousCNs := splitSubList(validators.SubList(lastBlock.Hash(), istCore.currentView()), numMalicious, msgSender.Address())
 
-		// splitSubList split current committee into benign CNs and malicious CNs
-		// parameter numMalicious: the number of malicious CNs
-
-		_, benignCNs, maliciousCNs := splitSubList(validators.SubList(lastBlock.Hash(), istCore.currentView()), 2, msgSender.Address())
-		fmt.Println("benign cns =", benignCNs)
-		fmt.Println("malicious cns =", maliciousCNs)
-
-		sendMessages := func(state uint64, proposal *types.Block, CNList []istanbul.Validator) {
-			for _, val := range CNList {
-				v := validatorKeyMap[val.Address()]
-				istanbulMsg, _ := genIstanbulMsg(state, lastBlock.Hash(), proposal, val.Address(), v)
-				err = istCore.handleMsg(istanbulMsg.Payload)
-				if err != nil {
-					fmt.Println(err)
-				}
+	sendMessages := func(state uint64, proposal *types.Block, CNList []istanbul.Validator) {
+		for _, val := range CNList {
+			v := validatorKeyMap[val.Address()]
+			istanbulMsg, _ := genIstanbulMsg(state, lastBlock.Hash(), proposal, val.Address(), v)
+			err = istCore.handleMsg(istanbulMsg.Payload)
+			if err != nil {
+				//fmt.Println(err)
 			}
 		}
-		sendMessages(msgPrepare, newProposal, benignCNs)
-		sendMessages(msgPrepare, malProposal, maliciousCNs)
+	}
+	sendMessages(msgPrepare, newProposal, benignCNs)
+	sendMessages(msgPrepare, malProposal, maliciousCNs)
 
-		preparesSize := istCore.current.Prepares.Size()
-		commitsSize := istCore.current.Commits.Size()
-		fmt.Println("sent prepare message")
+	//preparesSize := istCore.current.Prepares.Size()
+	//commitsSize := istCore.current.Commits.Size()
 
-		fmt.Println("prepare size = ", preparesSize, " commit size: ", commitsSize)
+	if istCore.state.Cmp(StatePrepared) < 0 {
+		//t.Fatal("not prepared due to malicious cns")
+		return false, false
+	} else {
+		sendMessages(msgCommit, newProposal, benignCNs)
+		sendMessages(msgCommit, malProposal, maliciousCNs)
+		//commitsSize = istCore.current.Commits.Size()
 
-		if istCore.state.Cmp(StatePrepared) < 0 {
-			for {
-				if istCore.currentView().Round.Uint64() > maxAllowedRound {
-					t.Fatal("not prepared due to malicious cns")
-				}
-				// make round change event
-				istCore.sendEvent(timeoutEvent{&istanbul.View{
-					Sequence: istCore.current.sequence,
-					Round:    new(big.Int).Add(istCore.current.round, common.Big1),
-				}})
-				time.Sleep(1000 * time.Millisecond)
-			}
-		} else {
-			fmt.Println(" prepared! ")
-			sendMessages(msgCommit, newProposal, benignCNs)
-			sendMessages(msgCommit, malProposal, maliciousCNs)
-			//commitsSize = istCore.current.Commits.Size()
+		//fmt.Println("prepare size = ", preparesSize, " commit size: ", commitsSize)
 
-			//fmt.Println("prepare size = ", preparesSize, " commit size: ", commitsSize)
-
-			if istCore.state.Cmp(StateCommitted) < 0 {
-				for {
-					if istCore.currentView().Round.Uint64() > maxAllowedRound {
-						t.Fatal("not committed due to malicious cns")
-
-					}
-					// make round change event
-					istCore.sendEvent(timeoutEvent{&istanbul.View{
-						Sequence: istCore.current.sequence,
-						Round:    new(big.Int).Add(istCore.current.round, common.Big1),
-					}})
-					time.Sleep(1000 * time.Millisecond)
-				}
-			}
-			fmt.Println("The block is committed")
+		if istCore.state.Cmp(StateCommitted) < 0 {
+			//t.Fatal("not committed due to malicious cns")
+			return true, false
 		}
+		fmt.Println("The block is committed")
+		return true, true
 	}
 }
 
-// TestCore_MaliciousCN_5nodes tests whether a chain split occurs in a certain conditions:
+// TestCore_MalCN1 will test consensus where the number of validators is 4
+// and number of malicious CN is 1
+func TestCore_MalCN1(t *testing.T) {
+	numValidators := 4
+	numMalicious := 1
+	prepared, committed := testMaliciousCN(t, numValidators, numMalicious)
+	assert.True(t, prepared)
+	assert.True(t, committed)
+}
+
+// TestCore_MalCN1 will test consensus where the number of validators is 4
+// and number of malicious CN is 2
+func TestCore_MalCN2(t *testing.T) {
+	numValidators := 4
+	numMalicious := 2
+	prepared, committed := testMaliciousCN(t, numValidators, numMalicious)
+	assert.False(t, prepared)
+	assert.False(t, committed)
+}
+
+// TestCore_chainSplit tests whether a chain split occurs in a certain conditions:
 // 1) the number of validators does not consist of 3f+1; e.g. if 5 nodes, it consists of 3f+2 (f=1)
 //    This test assumes the number of validators is 5.
 // 2) the proposer is malicious; it sends two different blocks to each group
@@ -673,11 +660,8 @@ func TestCore_MaliciousCN(t *testing.T) {
 //    and returns valid consensus messages to them
 // 4) both group make consensus, but the committed block is different each other
 // 5) chain split occurred
-
 func TestCore_chainSplit(t *testing.T) {
-
 	enableLog()
-
 	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
 	defer fork.ClearHardForkBlockNumberConfig()
 
