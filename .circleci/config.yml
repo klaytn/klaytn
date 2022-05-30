@@ -381,6 +381,28 @@ jobs:
             cp config_template.json config.json
             python3 main.py --protocol rpc
 
+  rpc:
+    executor: test-executor
+    steps:
+      - checkout
+      - install-golang
+      - pre-build
+      - run:
+          name: "Run test rpcs"
+          no_output_timeout: 30m
+          command: |
+            make kcn
+            git clone https://$TEST_TOKEN@github.com/klaytn/klaytn-rpc-tester.git
+            cp build/bin/kcn klaytn-rpc-tester/script/cn/bin/
+            cd klaytn-rpc-tester/script
+            ./set_CNonly.sh
+            cd ..
+            pip3 install -r requirements.txt
+            cp config_template.json config.json
+            python3 main.py --protocol rpc
+      - notify-failure
+      - notify-success
+
   pass-tests:
     executor: default
     steps:
@@ -676,4 +698,4 @@ workflows:
             branches:
               only: dev
     jobs:
-      - test-rpc
+      - rpc
