@@ -90,21 +90,22 @@ func (api *PublicGovernanceAPI) Vote(key string, val interface{}) (string, error
 	if GovernanceModeMap[gMode] == params.GovernanceMode_Single && gNode != api.governance.NodeAddress() {
 		return "", errPermissionDenied
 	}
-	if _, ok := api.governance.ValidateVote(&GovernanceVote{Key: key, Value: val}); !ok {
+	vote, ok := api.governance.ValidateVote(&GovernanceVote{Key: strings.ToLower(key), Value: val})
+	if !ok {
 		return "", errInvalidKeyValue
 	}
-	if strings.ToLower(key) == "governance.removevalidator" {
+	if vote.Key == "governance.removevalidator" {
 		if api.isRemovingSelf(val.(string)) {
 			return "", errRemoveSelf
 		}
 	}
-	if strings.ToLower(key) == "kip71.lowerboundbasefee" {
-		if val.(uint64) > api.governance.UpperBoundBaseFee() {
+	if vote.Key == "kip71.lowerboundbasefee" {
+		if vote.Value.(uint64) > api.governance.UpperBoundBaseFee() {
 			return "", errInvalidLowerBound
 		}
 	}
-	if strings.ToLower(key) == "kip71.upperboundbasefee" {
-		if val.(uint64) < api.governance.LowerBoundBaseFee() {
+	if vote.Key == "kip71.upperboundbasefee" {
+		if vote.Value.(uint64) < api.governance.LowerBoundBaseFee() {
 			return "", errInvalidUpperBound
 		}
 	}

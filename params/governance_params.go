@@ -98,8 +98,8 @@ var (
 	DefaultLowerBoundBaseFee         = uint64(25000000000)
 	DefaultUpperBoundBaseFee         = uint64(750000000000)
 	DefaultGasTarget                 = uint64(30000000)
-	DefaultMaxBlockGasUsedForBaseFee = uint64(84000000)
-	DefaultBaseFeeDenominator        = uint64(36)
+	DefaultMaxBlockGasUsedForBaseFee = uint64(60000000)
+	DefaultBaseFeeDenominator        = uint64(20)
 	DefaultMintingAmount             = big.NewInt(0)
 	DefaultRatio                     = "100/0/0"
 	DefaultUseGiniCoeff              = false

@@ -1438,8 +1438,8 @@ func TestChainConfig_UpdateAfterVotes(t *testing.T) {
 		// test initial governance items
 		assert.Equal(t, uint64(25000000000), chain.Config().Governance.KIP71.LowerBoundBaseFee)
 		assert.Equal(t, uint64(750000000000), chain.Config().Governance.KIP71.UpperBoundBaseFee)
-		assert.Equal(t, uint64(36), chain.Config().Governance.KIP71.BaseFeeDenominator)
-		assert.Equal(t, uint64(84000000), chain.Config().Governance.KIP71.MaxBlockGasUsedForBaseFee)
+		assert.Equal(t, uint64(20), chain.Config().Governance.KIP71.BaseFeeDenominator)
+		assert.Equal(t, uint64(60000000), chain.Config().Governance.KIP71.MaxBlockGasUsedForBaseFee)
 		assert.Equal(t, uint64(30000000), chain.Config().Governance.KIP71.GasTarget)
 
 		// add votes and insert voted blocks
@@ -1527,8 +1527,8 @@ func TestChainConfig_ReadFromDBAfterVotes(t *testing.T) {
 		// test initial governance items
 		assert.Equal(t, uint64(25000000000), chain.Config().Governance.KIP71.LowerBoundBaseFee)
 		assert.Equal(t, uint64(750000000000), chain.Config().Governance.KIP71.UpperBoundBaseFee)
-		assert.Equal(t, uint64(36), chain.Config().Governance.KIP71.BaseFeeDenominator)
-		assert.Equal(t, uint64(84000000), chain.Config().Governance.KIP71.MaxBlockGasUsedForBaseFee)
+		assert.Equal(t, uint64(20), chain.Config().Governance.KIP71.BaseFeeDenominator)
+		assert.Equal(t, uint64(60000000), chain.Config().Governance.KIP71.MaxBlockGasUsedForBaseFee)
 		assert.Equal(t, uint64(30000000), chain.Config().Governance.KIP71.GasTarget)
 
 		// add votes and insert voted blocks
