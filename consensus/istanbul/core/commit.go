@@ -79,9 +79,9 @@ func (c *core) handleCommit(msg *message, src istanbul.Validator) error {
 		return errFailedDecodeCommit
 	}
 
-	//logger.Error("receive handle commit","num", commit.View.Sequence)
+	// logger.Error("receive handle commit","num", commit.View.Sequence)
 	if err := c.checkMessage(msgCommit, commit.View); err != nil {
-		//logger.Error("### istanbul/commit.go checkMessage","num",commit.View.Sequence,"err",err)
+		// logger.Error("### istanbul/commit.go checkMessage","num",commit.View.Sequence,"err",err)
 		return err
 	}
 
@@ -106,7 +106,7 @@ func (c *core) handleCommit(msg *message, src istanbul.Validator) error {
 			logger.Warn("received commit of the hash locked proposal and change state to prepared", "msgType", msgCommit)
 			c.setState(StatePrepared)
 			c.sendCommit()
-		} else if c.current.GetPrepareOrCommitSize() > 2*c.valSet.F() {
+		} else if c.current.GetPrepareOrCommitSize() >= c.QuorumSize() {
 			logger.Info("received more than 2f agreements and change state to prepared", "msgType", msgCommit)
 			c.current.LockHash()
 			c.setState(StatePrepared)
@@ -119,7 +119,7 @@ func (c *core) handleCommit(msg *message, src istanbul.Validator) error {
 	// If we already have a proposal, we may have chance to speed up the consensus process
 	// by committing the proposal without PREPARE messages.
 	//logger.Error("### consensus check","len(commits)",c.current.Commits.Size(),"f(2/3)",2*c.valSet.F(),"state",c.state.Cmp(StateCommitted))
-	if c.state.Cmp(StateCommitted) < 0 && c.current.Commits.Size() > 2*c.valSet.F() {
+	if c.state.Cmp(StateCommitted) < 0 && c.current.Commits.Size() >= c.QuorumSize() {
 		// Still need to call LockHash here since state can skip Prepared state and jump directly to the Committed state.
 		c.current.LockHash()
 		c.commit()
