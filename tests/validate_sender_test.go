@@ -29,6 +29,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/profile"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
 )
@@ -36,6 +37,7 @@ import (
 // TestValidateSenderContract tests a precompiled contract "ValidateSender" whose address is 0xb.
 // This contract validates the signature that is signed by the sender with the msgHash.
 func TestValidateSenderContract(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	if isCompilerAvailable() == false {
@@ -43,10 +45,6 @@ func TestValidateSenderContract(t *testing.T) {
 			fmt.Printf("TestFeePayerContract is skipped due to the lack of solc.")
 		}
 		return
-	}
-
-	if testing.Verbose() {
-		enableLog()
 	}
 
 	// Initialize blockchain
