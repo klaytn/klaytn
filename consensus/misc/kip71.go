@@ -34,7 +34,7 @@ func CalcBaseFee(parentHeader *types.Header, config *params.ChainConfig) *big.In
 	upperBoundBaseFee := new(big.Int).SetUint64(config.Governance.KIP71.UpperBoundBaseFee)
 	baseFeeDenominator := new(big.Int).SetUint64(config.Governance.KIP71.BaseFeeDenominator)
 	gasTarget := config.Governance.KIP71.GasTarget
-	upperGasLimit := config.Governance.KIP71.BlockGasLimit
+	upperGasLimit := config.Governance.KIP71.MaxBlockGasUsedForBaseFee
 
 	parentBaseFee := parentHeader.BaseFee
 	parentGasUsed := parentHeader.GasUsed
