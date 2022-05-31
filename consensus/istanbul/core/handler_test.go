@@ -546,8 +546,10 @@ func simulateMaliciousCN(t *testing.T, numValidators int, numMalicious int) Stat
 		validators      = mockBackend.Validators(lastBlock)
 		proposer        = validators.GetProposer()
 		proposerKey     = validatorKeyMap[proposer.Address()]
-		newProposal, _  = genBlockParams(lastBlock, proposerKey, 0, 1, 1)
-		malProposal, _  = genBlockParams(lastBlock, proposerKey, 0, 0, 0)
+		// the proposer generates a block as newProposal
+		// malicious CNs does not accept the proposer's block and use malProposal's hash value for consensus
+		newProposal, _ = genBlockParams(lastBlock, proposerKey, 0, 1, 1)
+		malProposal, _ = genBlockParams(lastBlock, proposerKey, 0, 0, 0)
 	)
 
 	// Start istanbul core
@@ -589,7 +591,7 @@ func simulateMaliciousCN(t *testing.T, numValidators int, numMalicious int) Stat
 	sendMessages(msgPrepare, newProposal, benignCNs)
 	sendMessages(msgPrepare, malProposal, maliciousCNs)
 
-	if istCore.state.Cmp(StatePrepared) != 0 {
+	if istCore.state.Cmp(StatePreprepared) == 0 {
 		t.Logf("State stuck at preprepared")
 		return istCore.state
 	}
@@ -598,24 +600,17 @@ func simulateMaliciousCN(t *testing.T, numValidators int, numMalicious int) Stat
 
 	sendMessages(msgCommit, newProposal, benignCNs)
 	sendMessages(msgCommit, malProposal, maliciousCNs)
-
-	if istCore.state.Cmp(StateCommitted) != 0 {
-		// t.Logf("State stuck at prepared")
-		return istCore.state
-	} else {
-		// t.Logf("State is at committed")
-		return istCore.state
-	}
+	return istCore.state
 }
 
 // TestCore_MalCN tests whether the proposer can commit when malicious CNs exist.
 func TestCore_malCN(t *testing.T) {
-	// If there are little malicious CNs, proposer can commit.
+	// If there are less than 'f' malicious CNs, proposer can commit.
 	state := simulateMaliciousCN(t, 4, 1)
 	assert.Equal(t, StateCommitted, state)
 
 	// If there are more than 'f' malicious CNs, the proposer cannot commit, stuck at preprepared state.
-	state = simulateMaliciousCN(t, 4, 2)
+	state = simulateMaliciousCN(t, 4, 3)
 	assert.Equal(t, StatePreprepared, state)
 }
 
