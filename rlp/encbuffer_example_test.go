@@ -1,5 +1,5 @@
 // Modifications Copyright 2022 The klaytn Authors
-// Copyright 2014 The go-ethereum Authors
+// Copyright 2022 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
 // The go-ethereum library is free software: you can redistribute it and/or modify
@@ -15,38 +15,35 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 //
-// This file is derived from rlp/encoder_example_test.go(2022/05/19)
+// This file is derived from rlp/encbuffer_example_test.go(2022/05/19)
 // Modified and improved for the klaytn development.
 
 package rlp_test
 
 import (
+	"bytes"
 	"fmt"
-	"io"
 
 	"github.com/klaytn/klaytn/rlp"
 )
 
-type MyCoolType struct {
-	Name string
-	a, b uint
-}
+func ExampleEncoderBuffer() {
+	var w bytes.Buffer
 
-// EncodeRLP writes x as RLP list [a, b] that omits the Name field.
-func (x *MyCoolType) EncodeRLP(w io.Writer) (err error) {
-	return rlp.Encode(w, []uint{x.a, x.b})
-}
+	// Encode [4, [5, 6]] to w.
+	buf := rlp.NewEncoderBuffer(&w)
+	l1 := buf.List()
+	buf.WriteUint64(4)
+	l2 := buf.List()
+	buf.WriteUint64(5)
+	buf.WriteUint64(6)
+	buf.ListEnd(l2)
+	buf.ListEnd(l1)
 
-func ExampleEncoder() {
-	var t *MyCoolType // t is nil pointer to MyCoolType
-	bytes, _ := rlp.EncodeToBytes(t)
-	fmt.Printf("%v → %X\n", t, bytes)
-
-	t = &MyCoolType{Name: "foobar", a: 5, b: 6}
-	bytes, _ = rlp.EncodeToBytes(t)
-	fmt.Printf("%v → %X\n", t, bytes)
-
+	if err := buf.Flush(); err != nil {
+		panic(err)
+	}
+	fmt.Printf("%X\n", w.Bytes())
 	// Output:
-	// <nil> → C0
-	// &{foobar 5 6} → C20506
+	// C404C20506
 }

@@ -401,11 +401,19 @@ func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, votes 
 			authorize := key == params.AddValidator
 			if addr, ok := gVote.Value.(common.Address); ok {
 				if !gov.checkVote(addr, authorize, valset) {
+					if proposer == self {
+						logger.Warn("A meaningless vote has been proposed. It is being removed without further handling", "key", gVote.Key, "value", gVote.Value)
+						gov.removeDuplicatedVote(gVote, header.Number.Uint64())
+					}
 					return valset, votes, tally
 				}
 			} else if addresses, ok := gVote.Value.([]common.Address); ok {
 				for _, address := range addresses {
 					if !gov.checkVote(address, authorize, valset) {
+						if proposer == self {
+							logger.Warn("A meaningless vote has been proposed. It is being removed without further handling", "key", gVote.Key, "value", gVote.Value)
+							gov.removeDuplicatedVote(gVote, header.Number.Uint64())
+						}
 						return valset, votes, tally
 					}
 				}
