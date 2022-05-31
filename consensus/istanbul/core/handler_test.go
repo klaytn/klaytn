@@ -2,6 +2,7 @@ package core
 
 import (
 	"crypto/ecdsa"
+	"fmt"
 	"io"
 	"math/big"
 	"math/rand"
@@ -614,12 +615,8 @@ func TestCore_malCN(t *testing.T) {
 	assert.Equal(t, StatePreprepared, state)
 }
 
-// TestCore_chainSplit tests whether a chain split occurs in a certain conditions:
-// 1) the number of validators does not consist of 3f+1;
-//     e.g.) if 5 nodes, it consists of 3f+2 (f=1)
-//    This test assumes the number of validators is 5.
-// 2) the proposer is malicious; it sends two different blocks to each group
-func TestCore_chainSplit(t *testing.T) {
+// Simulate chain split depending on the number of numValidators
+func simulateChainSplit(t *testing.T, numValidators int) (State, State) {
 	if testing.Verbose() {
 		enableLog()
 	}
@@ -628,8 +625,8 @@ func TestCore_chainSplit(t *testing.T) {
 	defer fork.ClearHardForkBlockNumberConfig()
 
 	// Note that genValidators(n) will generate n/3 validators.
-	// We want 5 validators, thus calling genValidators(15).
-	validatorAddrs, validatorKeyMap := genValidators(15)
+	// We want 5 validators, thus calling genValidators(3n).
+	validatorAddrs, validatorKeyMap := genValidators(numValidators * 3)
 
 	// Add more EXPECT()s to remove unexpected call error
 	mockBackend, mockCtrl := newMockBackend(t, validatorAddrs)
@@ -660,10 +657,11 @@ func TestCore_chainSplit(t *testing.T) {
 	defer coreB.Stop()
 
 	// make two groups
-	// groupA consists of proposer, coreA, unnamed node
-	// groupB consists of proposer, coreB, unnamed node
+	// the number of group size is (numValidators-1/2) + 1
+	// groupA consists of proposer, coreA, unnamed node(s)
+	// groupB consists of proposer, coreB, unnamed node(s)
 	subList := validators.SubList(lastBlock.Hash(), coreProposer.currentView())
-	groupA, groupB := splitSubList(subList, 2, proposer.Address())
+	groupA, groupB := splitSubList(subList, (numValidators-1)/2, proposer.Address())
 	groupA = append(groupA, proposer)
 	groupB = append(groupB, proposer)
 
@@ -693,19 +691,39 @@ func TestCore_chainSplit(t *testing.T) {
 	// Step 2 - exchange consensus messages inside each group
 
 	// the proposer sends two different blocks to each group
-	// each group receives a block and handles it
-	// in this scenario, each group makes consensus of each block
+	// each group receives a block and handles the message
+	// when chain split occurs, their states become StateCommitted
+	// otherwise, their states stay StatePreprepared
 	sendMessages(msgPreprepare, proposalA, groupA, coreA)
 	sendMessages(msgPrepare, proposalA, groupA, coreA)
-	sendMessages(msgCommit, proposalA, groupA, coreA)
-	assert.Equal(t, StateCommitted, coreA.state)
+	if coreA.state.Cmp(StatePrepared) == 0 {
+		sendMessages(msgCommit, proposalA, groupA, coreA)
+	}
 
 	sendMessages(msgPreprepare, proposalB, groupB, coreB)
 	sendMessages(msgPrepare, proposalB, groupB, coreB)
-	sendMessages(msgCommit, proposalB, groupB, coreB)
-	assert.Equal(t, StateCommitted, coreB.state)
+	if coreB.state.Cmp(StatePrepared) == 0 {
+		sendMessages(msgCommit, proposalB, groupB, coreB)
+	}
 
-	t.Logf("Chain split occurred")
+	return coreA.state, coreB.state
+}
+
+// TestCore_chainSplit tests whether a chain split occurs in a certain conditions:
+// 1) the number of validators does not consist of 3f+1;
+//     e.g. if the number of validator is 5, it consists of 3f+2 (f=1)
+// 2) the proposer is malicious; it sends two different blocks to each group
+func TestCore_chainSplit(t *testing.T) {
+	// If the number of validators is not 3f+1, the chain can be split.
+	stateA, stateB := simulateChainSplit(t, 5)
+	assert.Equal(t, StateCommitted, stateA)
+	assert.Equal(t, StateCommitted, stateB)
+
+	// If the number of validators is 3f+1, the chain cannot be split.
+	stateA, stateB = simulateChainSplit(t, 7)
+	fmt.Println(stateA, stateB)
+	assert.Equal(t, StatePreprepared, stateA)
+	assert.Equal(t, StatePreprepared, stateB)
 }
 
 // TestCore_handleTimeoutMsg_race tests a race condition between round change triggers.
