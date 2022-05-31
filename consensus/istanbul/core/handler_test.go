@@ -625,7 +625,7 @@ func simulateChainSplit(t *testing.T, numValidators int) (State, State) {
 	defer fork.ClearHardForkBlockNumberConfig()
 
 	// Note that genValidators(n) will generate n/3 validators.
-	// We want 5 validators, thus calling genValidators(3n).
+	// We want n validators, thus calling genValidators(3n).
 	validatorAddrs, validatorKeyMap := genValidators(numValidators * 3)
 
 	// Add more EXPECT()s to remove unexpected call error
