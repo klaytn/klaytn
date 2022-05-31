@@ -29,8 +29,6 @@ import (
 
 	"github.com/klaytn/klaytn/rlp"
 
-	"github.com/klaytn/klaytn/accounts/abi"
-
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -58,9 +56,7 @@ const (
 	ZeroUncleCount uint = 0
 )
 
-var (
-	errNoMiningWork = errors.New("no mining work available yet")
-)
+var errNoMiningWork = errors.New("no mining work available yet")
 
 // EthereumAPI provides an API to access the Klaytn through the `eth` namespace.
 // TODO-Klaytn: Removed unused variable
@@ -610,6 +606,7 @@ func (api *EthereumAPI) Call(ctx context.Context, args EthTransactionArgs, block
 
 	err = blockchain.GetVMerrFromReceiptStatus(status)
 	if err != nil && isReverted(err) && len(result) > 0 {
+		logger.Info("revert error occured", "error", err)
 		return nil, newRevertError(result)
 	}
 	return common.CopyBytes(result), err
@@ -1178,6 +1175,7 @@ func (args *EthTransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int,
 	if gas == 0 {
 		gas = uint64(math.MaxUint64 / 2)
 	}
+	logger.Info("gas","gas",gas)
 	if args.Gas != nil {
 		gas = uint64(*args.Gas)
 	}
@@ -1190,6 +1188,7 @@ func (args *EthTransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int,
 		gasFeeCap *big.Int
 		gasTipCap *big.Int
 	)
+	logger.Info("base?","basefee",baseFee)
 	if baseFee == nil {
 		// If there's no basefee, then it must be a non-1559 execution
 		gasPrice = new(big.Int)
@@ -1537,6 +1536,8 @@ func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrO
 	if err != nil {
 		return nil, 0, 0, err
 	}
+	logger.Info("sdf","globalgascap",globalGasCap,"fixedBAsefee",fixedBaseFee,"intrinsicGas",intrinsicGas)
+	logger.Info("args","args",args)
 	msg, err := args.ToMessage(globalGasCap, fixedBaseFee, intrinsicGas)
 	if err != nil {
 		return nil, 0, 0, err
@@ -1545,6 +1546,9 @@ func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrO
 	// but we check in advance here in order to keep StateTransition.TransactionDb method as unchanged as possible
 	// and to clarify error reason correctly to serve eth namespace APIs.
 	// This case is handled by EthDoEstimateGas function.
+	logger.Info("mgs","msg",msg)
+
+	logger.Info("logic","msggas", msg.Gas(), "intrinsicGas",intrinsicGas)
 	if msg.Gas() < intrinsicGas {
 		return nil, 0, 0, fmt.Errorf("%w: msg.gas %d, want %d", blockchain.ErrIntrinsicGas, msg.Gas(), intrinsicGas)
 	}
@@ -1698,46 +1702,6 @@ func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, b
 		}
 	}
 	return hexutil.Uint64(hi), nil
-}
-
-// isReverted checks given error is vm.ErrExecutionReverted
-func isReverted(err error) bool {
-	if errors.Is(err, vm.ErrExecutionReverted) {
-		return true
-	}
-	return false
-}
-
-// newRevertError wraps data returned when EVM execution was reverted.
-// Make sure that data is returned when execution reverted situation.
-func newRevertError(data []byte) *revertError {
-	reason, errUnpack := abi.UnpackRevert(data)
-	err := errors.New("execution reverted")
-	if errUnpack == nil {
-		err = fmt.Errorf("execution reverted: %v", reason)
-	}
-	return &revertError{
-		error:  err,
-		reason: hexutil.Encode(data),
-	}
-}
-
-// revertError is an API error that encompassas an EVM revertal with JSON error
-// code and a binary data blob.
-type revertError struct {
-	error
-	reason string // revert reason hex encoded
-}
-
-// ErrorCode returns the JSON error code for a revertal.
-// See: https://github.com/ethereum/wiki/wiki/JSON-RPC-Error-Codes-Improvement-Proposal
-func (e *revertError) ErrorCode() int {
-	return 3
-}
-
-// ErrorData returns the hex encoded revert reason.
-func (e *revertError) ErrorData() interface{} {
-	return e.reason
 }
 
 // checkTxFee is an internal function used to check whether the fee of

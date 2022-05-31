@@ -28,6 +28,9 @@ import (
 	"math/big"
 	"reflect"
 
+	"github.com/klaytn/klaytn/accounts/abi"
+	"github.com/klaytn/klaytn/blockchain/vm"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
@@ -51,10 +54,10 @@ var (
 // isTxField checks whether the string is a field name of the specific txType.
 // isTxField[txType][txFieldName] has true/false.
 var isTxField = func() map[types.TxType]map[string]bool {
-	var mapOfFieldMap = map[types.TxType]map[string]bool{}
-	var internalDataTypes = map[types.TxType]interface{}{
+	mapOfFieldMap := map[types.TxType]map[string]bool{}
+	internalDataTypes := map[types.TxType]interface{}{
 		// since legacy tx has optional fields, some fields can be omitted
-		//types.TxTypeLegacyTransaction:                           types.TxInternalDataLegacy{},
+		// types.TxTypeLegacyTransaction:                           types.TxInternalDataLegacy{},
 		types.TxTypeValueTransfer:                               types.TxInternalDataValueTransfer{},
 		types.TxTypeFeeDelegatedValueTransfer:                   types.TxInternalDataFeeDelegatedValueTransfer{},
 		types.TxTypeFeeDelegatedValueTransferWithRatio:          types.TxInternalDataFeeDelegatedValueTransferWithRatio{},
@@ -387,7 +390,6 @@ func (args *ValueTransferTxArgs) toTransaction() (*types.Transaction, error) {
 		types.TxValueKeyTo:       args.To,
 		types.TxValueKeyAmount:   (*big.Int)(args.Value),
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -440,10 +442,49 @@ func (args *AccountUpdateTxArgs) toTransaction() (*types.Transaction, error) {
 		types.TxValueKeyFrom:       args.From,
 		types.TxValueKeyAccountKey: serializer.GetKey(),
 	})
-
 	if err != nil {
 		return nil, err
 	}
 
 	return tx, nil
+}
+
+// isReverted checks given error is vm.ErrExecutionReverted
+func isReverted(err error) bool {
+	if errors.Is(err, vm.ErrExecutionReverted) {
+		return true
+	}
+	return false
+}
+
+// newRevertError wraps data returned when EVM execution was reverted.
+// Make sure that data is returned when execution reverted situation.
+func newRevertError(data []byte) *revertError {
+	reason, errUnpack := abi.UnpackRevert(data)
+	err := errors.New("execution reverted")
+	if errUnpack == nil {
+		err = fmt.Errorf("execution reverted: %v", reason)
+	}
+	return &revertError{
+		error:  err,
+		reason: hexutil.Encode(data),
+	}
+}
+
+// revertError is an API error that encompassas an EVM revertal with JSON error
+// code and a binary data blob.
+type revertError struct {
+	error
+	reason string // revert reason hex encoded
+}
+
+// ErrorCode returns the JSON error code for a revertal.
+// See: https://github.com/ethereum/wiki/wiki/JSON-RPC-Error-Codes-Improvement-Proposal
+func (e *revertError) ErrorCode() int {
+	return 3
+}
+
+// ErrorData returns the hex encoded revert reason.
+func (e *revertError) ErrorData() interface{} {
+	return e.reason
 }

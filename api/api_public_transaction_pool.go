@@ -228,7 +228,6 @@ func RpcOutputReceipt(tx *types.Transaction, blockHash common.Hash, blockNumber 
 		fields["contractAddress"] = receipt.ContractAddress
 	} else {
 		fields["contractAddress"] = nil
-
 	}
 
 	// Rename field name `hash` to `transactionHash` since this function returns a JSON object of a receipt.
@@ -286,8 +285,8 @@ var submitTxCount = 0
 
 // submitTransaction is a helper function that submits tx to txPool and logs a message.
 func submitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (common.Hash, error) {
-	//submitTxCount++
-	//log.Error("### submitTransaction","tx",submitTxCount)
+	// submitTxCount++
+	// log.Error("### submitTransaction","tx",submitTxCount)
 
 	if err := b.SendTx(ctx, tx); err != nil {
 		return common.Hash{}, err
