@@ -1986,7 +1986,12 @@ func TestFeeDelegatedTransaction(t *testing.T) {
 	}
 
 	testAddBalance(pool, crypto.PubkeyToAddress(key.PublicKey), big.NewInt(60000))
-	tx1 := feeDelegatedTx(1, 40000, big.NewInt(1), big.NewInt(40000), key, key)
+
+	// test on case when sender = feePayer
+	// balance : 60k, tx.value : 40k, tx.fee : 40k
+	tx1 := feeDelegatedTx(0, 40000, big.NewInt(1), big.NewInt(40000), key, key)
+
+	// balance : 60k, tx.value : 10k, tx.fee : 40k
 	tx2 := feeDelegatedTx(1, 40000, big.NewInt(1), big.NewInt(10000), key, key)
 
 	if err := pool.AddRemote(tx1); err != ErrInsufficientFundsFrom {
