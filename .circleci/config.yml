@@ -679,7 +679,7 @@ workflows:
             branches:
               only: dev
     jobs:
-      - linter
+      - linters
   
   nightly-rpc:
     triggers:
@@ -690,4 +690,3 @@ workflows:
               only: dev
     jobs:
       - rpc
-      
