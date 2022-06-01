@@ -367,7 +367,6 @@ func (q *queue) Schedule(headers []*types.Header, from uint64) []*types.Header {
 		}
 
 		if q.mode == FastSync && params.IsStakingUpdateInterval(header.Number.Uint64()) {
-			logger.Info("is staking update interval", "blockNum", header.Number.Uint64())
 			if _, ok := q.stakingInfoTaskPool[hash]; ok {
 				logger.Trace("Header already scheduled for staking info fetch", "number", header.Number, "hash", hash)
 			} else {
