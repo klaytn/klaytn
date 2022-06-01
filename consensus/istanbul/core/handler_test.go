@@ -32,7 +32,7 @@ import (
 
 // newMockBackend create a mock-backend initialized with default values
 func newMockBackend(t *testing.T, validatorAddrs []common.Address) (*mock_istanbul.MockBackend, *gomock.Controller) {
-	committeeSize := uint64(len(validatorAddrs) / 3)
+	committeeSize := uint64(len(validatorAddrs))
 
 	istExtra := &types.IstanbulExtra{
 		Validators:    validatorAddrs,
@@ -790,19 +790,26 @@ func TestCore_handleTimeoutMsg_race(t *testing.T) {
 				return common.Address{}, nil
 			}
 
-			// prepare a round change message payload
-			payload := makeRCMsgPayload(tc.messageRound, sequence, lastProposal.Hash(), validatorAddrs[0])
-			if payload == nil {
-				t.Fatal("failed to make a round change message payload")
-			}
+			for idx, valAdd := range validatorAddrs {
+				// the number of round change messages greater than the quorum have to be collected
+				if idx == istCore.QuorumSize() {
+					break
+				}
 
-			// one round change message changes the round because the committee size of mockBackend is 3
-			err := eventMux.Post(istanbul.MessageEvent{
-				Hash:    lastProposal.Hash(),
-				Payload: payload,
-			})
-			if err != nil {
-				t.Fatal(err)
+				// prepare a round change message payload
+				payload := makeRCMsgPayload(tc.messageRound, sequence, lastProposal.Hash(), valAdd)
+				if payload == nil {
+					t.Fatal("failed to make a round change message payload")
+				}
+
+				err := eventMux.Post(istanbul.MessageEvent{
+					Hash:    lastProposal.Hash(),
+					Payload: payload,
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+
 			}
 
 			// wait until the istanbul message have processed
