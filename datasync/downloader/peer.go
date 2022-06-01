@@ -223,8 +223,8 @@ func (p *peerConnection) FetchReceipts(request *fetchRequest) error {
 // FetchStakingInfo sends a staking information retrieval request to the remote peer.
 func (p *peerConnection) FetchStakingInfo(request *fetchRequest) error {
 	// Sanity check the protocol version
-	if p.version < 64 {
-		panic(fmt.Sprintf("staking info fetch [klay/64+] requested on klay/%d", p.version))
+	if p.version < 65 {
+		panic(fmt.Sprintf("staking info fetch [klay/65+] requested on klay/%d", p.version))
 	}
 	// Short circuit if the peer is already fetching
 	if !atomic.CompareAndSwapInt32(&p.stakingInfoIdle, 0, 1) {
@@ -574,7 +574,7 @@ func (ps *peerSet) StakingInfoIdlePeers() ([]*peerConnection, int) {
 		defer p.lock.RUnlock()
 		return p.stakingInfoThroughput
 	}
-	return ps.idlePeers(64, 65, idleCheck, throughput)
+	return ps.idlePeers(65, 65, idleCheck, throughput)
 }
 
 // NodeDataIdlePeers retrieves a flat list of all the currently node-data-idle

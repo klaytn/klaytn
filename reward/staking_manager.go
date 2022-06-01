@@ -242,6 +242,14 @@ func StakingManagerUnsubscribe() {
 	stakingManager.chainHeadSub.Unsubscribe()
 }
 
+// SetTestStakingManagerWithDB sets the staking manager with the given database.
+// Note that this method is used only for testing purpose.
+func SetTestStakingManagerWithDB(testDB stakingInfoDB) {
+	SetTestStakingManager(&StakingManager{
+		stakingInfoDB: testDB,
+	})
+}
+
 // SetTestStakingManagerWithStakingInfoCache sets the staking manager with the given test staking information.
 // Note that this method is used only for testing purpose.
 func SetTestStakingManagerWithStakingInfoCache(testInfo *StakingInfo) {
