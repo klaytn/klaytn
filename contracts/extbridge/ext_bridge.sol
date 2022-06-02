@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -14,7 +16,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity 0.5.6;
+pragma solidity ^0.8.0;
 
 import "../bridge/BridgeTransferERC20.sol";
 import "../bridge/BridgeTransferERC721.sol";
@@ -61,6 +63,7 @@ contract ExtBridge is BridgeTransferERC20, BridgeTransferERC721 {
         bytes memory _extraData
     )
     public
+    override
     {
         revert("not support");
     }
@@ -90,6 +93,7 @@ contract ExtBridge is BridgeTransferERC20, BridgeTransferERC721 {
         bytes memory _extraData
     )
     public
+    override
     {
         revert("not support");
     }
@@ -106,6 +110,7 @@ contract ExtBridge is BridgeTransferERC20, BridgeTransferERC721 {
         bytes memory _extraData
     )
         public
+        override
     {
         require(_extraData.length == 32, "extraData size error");
 
@@ -131,6 +136,7 @@ contract ExtBridge is BridgeTransferERC20, BridgeTransferERC721 {
         bytes memory _extraData
     )
         public
+        override
     {
         require(_extraData.length == 32, "extraData size error");
 
