@@ -1,16 +1,13 @@
 package sc
 
 import (
-	"bytes"
 	"strings"
 
 	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/pkg/errors"
 )
 
-var (
-	ErrUnknownEvent = errors.New("Unknown event type")
-)
+var ErrUnknownEvent = errors.New("Unknown event type")
 
 var RequestValueTransferEncodeABIs = map[uint]string{
 	2: `[{
@@ -52,10 +49,7 @@ func GetURI(ev IRequestValueTransferEvent) string {
 		if !ok {
 			return ""
 		}
-		if len(uri) <= 64 {
-			return ""
-		}
-		return string(bytes.Trim([]byte(uri[64:]), "\x00"))
+		return uri
 	}
 	return ""
 }
