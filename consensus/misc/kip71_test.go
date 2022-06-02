@@ -26,8 +26,8 @@ func TestCalcBaseFee(t *testing.T) {
 		nextBaseFee   int64
 	}{
 		{750000000000, 30000000, 750000000000}, // usage == target
-		{30000000000, 20000000, 29722222223},   // usage below target
-		{300000000000, 40000000, 302777777777}, // usage above target
+		{30000000000, 20000000, 29500000000},   // usage below target
+		{300000000000, 40000000, 305000000000}, // usage above target
 	}
 	for i, test := range tests {
 		parent := &types.Header{
