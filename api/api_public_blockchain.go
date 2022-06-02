@@ -632,7 +632,6 @@ func newRPCTransactionFromBlockHash(b *types.Block, hash common.Hash) map[string
 }
 
 func (args *CallArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsicGas uint64) (*types.Transaction, error) {
-
 	// Set sender address or use zero address if none specified.
 	addr := args.From
 
