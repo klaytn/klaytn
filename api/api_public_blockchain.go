@@ -324,7 +324,7 @@ func DoCall(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.Blo
 		return res, 0, 0, 0, fmt.Errorf("err: %w (supplied gas %d)", err, msg.Gas())
 	}
 	// TODO-Klaytn-Interface: Introduce ExecutionResult struct from geth to return more detail information
-	return res, gas ,evm.GetOpCodeComputationCost(), kerr.Status, nil
+	return res, gas, evm.GetOpCodeComputationCost(), kerr.Status, nil
 }
 
 // Call executes the given transaction on the state for the given block number or hash.
