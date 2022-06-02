@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -14,12 +16,11 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity 0.5.6;
+pragma solidity ^0.8.0;
 
 import "./BridgeTransfer.sol";
 
-
-contract BridgeTransferKLAY is BridgeTransfer {
+abstract contract BridgeTransferKLAY is BridgeTransfer {
     bool public isLockedKLAY;
 
     event KLAYLocked();
@@ -111,7 +112,7 @@ contract BridgeTransferKLAY is BridgeTransfer {
             msg.sender,
             _to,
             address(0),
-            msg.value.sub(_feeLimit),
+            msg.value - _feeLimit,
             requestNonce,
             fee,
             _extraData
@@ -119,14 +120,14 @@ contract BridgeTransferKLAY is BridgeTransfer {
         requestNonce++;
     }
 
-    // () requests transfer KLAY to msg.sender address on relative chain.
-    function () external payable {
+    // receive() requests transfer KLAY to msg.sender address on relative chain.
+    receive() external payable {
         _requestKLAYTransfer(msg.sender, feeOfKLAY, new bytes(0));
     }
 
     // requestKLAYTransfer requests transfer KLAY to _to on relative chain.
     function requestKLAYTransfer(address _to, uint256 _value, bytes calldata _extraData) external payable {
-        uint256 feeLimit = msg.value.sub(_value);
+        uint256 feeLimit = msg.value - _value;
         _requestKLAYTransfer(_to, feeLimit, _extraData);
     }
 

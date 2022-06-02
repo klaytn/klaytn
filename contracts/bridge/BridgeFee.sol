@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -14,17 +16,12 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity 0.5.6;
+pragma solidity ^0.8.0;
 
-import "../externals/openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
-import "../externals/openzeppelin-solidity/contracts/token/ERC20/ERC20Mintable.sol";
-import "../externals/openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "../klaytn-contracts/contracts/token/ERC20/IERC20.sol";
 
-
-contract BridgeFee {
-    using SafeMath for uint256;
-
-    address payable public feeReceiver = address(0);
+abstract contract BridgeFee {
+    address payable public feeReceiver = payable(address(0));
     uint256 public feeOfKLAY = 0;
     mapping (address => uint256) public feeOfERC20;
 
@@ -32,7 +29,7 @@ contract BridgeFee {
     event ERC20FeeChanged(address indexed token, uint256 indexed fee);
     event FeeReceiverChanged(address indexed feeReceiver);
 
-    constructor(address payable _feeReceiver) internal {
+    constructor(address payable _feeReceiver) {
         feeReceiver = _feeReceiver;
     }
 
@@ -43,14 +40,14 @@ contract BridgeFee {
             require(_feeLimit >= fee, "insufficient feeLimit");
 
             feeReceiver.transfer(fee);
-            if (_feeLimit.sub(fee) > 0) {
-                msg.sender.transfer(_feeLimit.sub(fee));
+            if (_feeLimit - fee > 0) {
+               payable(msg.sender).transfer(_feeLimit - fee);
             }
 
             return fee;
         }
 
-        msg.sender.transfer(_feeLimit);
+        payable(msg.sender).transfer(_feeLimit);
         return 0;
     }
 
@@ -61,8 +58,8 @@ contract BridgeFee {
             require(_feeLimit >= fee, "insufficient feeLimit");
 
             require(IERC20(_token).transfer(feeReceiver, fee), "_payERC20FeeAndRefundChange: transfer failed");
-            if (_feeLimit.sub(fee) > 0) {
-                require(IERC20(_token).transfer(from, _feeLimit.sub(fee)), "_payERC20FeeAndRefundChange: transfer failed");
+            if (_feeLimit - fee > 0) {
+                require(IERC20(_token).transfer(from, _feeLimit - fee), "_payERC20FeeAndRefundChange: transfer failed");
             }
 
             return fee;

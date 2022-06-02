@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -14,7 +16,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity 0.5.6;
+pragma solidity ^0.8.0;
 
 import "./BridgeTransferKLAY.sol";
 import "./BridgeTransferERC20.sol";
@@ -23,8 +25,8 @@ import "./BridgeCounterPart.sol";
 
 
 contract Bridge is BridgeCounterPart, BridgeTransferKLAY, BridgeTransferERC20, BridgeTransferERC721 {
-    uint64 public constant VERSION = 1;
+    uint64 public constant VERSION = 2;
 
-    constructor(bool _modeMintBurn) BridgeTransfer(_modeMintBurn) public payable {
+    constructor(bool _modeMintBurn) BridgeTransfer(_modeMintBurn) payable {
     }
 }

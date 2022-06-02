@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -14,17 +16,15 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity 0.5.6;
+pragma solidity ^0.8.0;
 
-import "../externals/openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
-import "../externals/openzeppelin-solidity/contracts/token/ERC20/ERC20Mintable.sol";
-import "../externals/openzeppelin-solidity/contracts/token/ERC20/ERC20Burnable.sol";
+import "../klaytn-contracts/contracts/token/ERC20/IERC20.sol";
+import "../klaytn-contracts/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 
-import "../sc_erc20/IERC20BridgeReceiver.sol";
+import "../bridge_interface/IERC20BridgeReceiver.sol";
 import "./BridgeTransfer.sol";
 
-
-contract BridgeTransferERC20 is BridgeTokens, IERC20BridgeReceiver, BridgeTransfer {
+abstract contract BridgeTransferERC20 is BridgeTokens, IERC20BridgeReceiver, BridgeTransfer {
     // handleERC20Transfer sends the token by the request.
     function handleERC20Transfer(
         bytes32 _requestTxHash,
@@ -37,6 +37,7 @@ contract BridgeTransferERC20 is BridgeTokens, IERC20BridgeReceiver, BridgeTransf
         bytes memory _extraData
     )
         public
+        virtual
         onlyOperators
     {
         _lowerHandleNonceCheck(_requestedNonce);
@@ -63,7 +64,7 @@ contract BridgeTransferERC20 is BridgeTokens, IERC20BridgeReceiver, BridgeTransf
         );
 
         if (modeMintBurn) {
-            require(ERC20Mintable(_tokenAddress).mint(_to, _value), "handleERC20Transfer: mint failed");
+            IERC20Mint(_tokenAddress).mint(_to, _value);
         } else {
             require(IERC20(_tokenAddress).transfer(_to, _value), "handleERC20Transfer: transfer failed");
         }
@@ -126,8 +127,9 @@ contract BridgeTransferERC20 is BridgeTokens, IERC20BridgeReceiver, BridgeTransf
         bytes memory _extraData
     )
         public
+        virtual
     {
-        require(IERC20(_tokenAddress).transferFrom(msg.sender, address(this), _value.add(_feeLimit)), "requestERC20Transfer: transferFrom failed");
+        require(IERC20(_tokenAddress).transferFrom(msg.sender, address(this), _value + _feeLimit), "requestERC20Transfer: transferFrom failed");
         _requestERC20Transfer(_tokenAddress, msg.sender, _to, _value, _feeLimit, _extraData);
     }
 

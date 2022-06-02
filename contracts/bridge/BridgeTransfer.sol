@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -14,16 +16,14 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity 0.5.6;
-
-import "../externals/openzeppelin-solidity/contracts/math/SafeMath.sol";
+pragma solidity ^0.8.0;
 
 import "./BridgeHandledRequests.sol";
 import "./BridgeFee.sol";
 import "./BridgeOperator.sol";
 import "./BridgeTokens.sol";
 
-contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
+abstract contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
     bool public modeMintBurn = false;
     bool public isRunning = true;
 
@@ -33,15 +33,13 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
     uint64 public recoveryBlockNumber = 1; // the block number that recovery start to filter log from.
     mapping(uint64 => uint64) public handleNoncesToBlockNums;  // <request nonce> => <request blockNum>
 
-    using SafeMath for uint256;
-
     enum TokenType {
         KLAY,
         ERC20,
         ERC721
     }
 
-    constructor(bool _modeMintBurn) BridgeFee(address(0)) internal {
+    constructor(bool _modeMintBurn) BridgeFee(payable(address(0))) {
         modeMintBurn = _modeMintBurn;
     }
 
@@ -144,7 +142,7 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
         lowerHandleNonce = i;
     }
 
-    function _lowerHandleNonceCheck(uint64 _requestedNonce) internal {
+    function _lowerHandleNonceCheck(uint64 _requestedNonce) internal view {
         require(lowerHandleNonce <= _requestedNonce, "removed vote");
     }
 

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -14,15 +16,12 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity 0.5.6;
+pragma solidity ^0.8.0;
 
-import "../externals/openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
-import "../externals/openzeppelin-solidity/contracts/token/ERC20/ERC20Mintable.sol";
-import "../externals/openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "../externals/openzeppelin-solidity/contracts/ownership/Ownable.sol";
+import "../klaytn-contracts/contracts/token/ERC20/IERC20.sol";
+import "../klaytn-contracts/contracts/access/Ownable.sol";
 
-
-contract BridgeOperator is Ownable {
+abstract contract BridgeOperator is Ownable {
     struct VotesData {
         address[] voters;   // voter list for deleting voted map
         mapping(address => bytes32) voted; // <operator, sha3(type, args, nonce)>
@@ -47,7 +46,7 @@ contract BridgeOperator is Ownable {
         Max
     }
 
-    constructor() internal {
+    constructor() {
         for (uint8 i = 0; i < uint8(VoteType.Max); i++) {
             operatorThresholds[uint8(i)] = 1;
         }
@@ -165,7 +164,7 @@ contract BridgeOperator is Ownable {
         for (uint i = 0; i < operatorList.length; i++) {
            if (operatorList[i] == _operator) {
                operatorList[i] = operatorList[operatorList.length-1];
-               operatorList.length--;
+               operatorList.pop();
                break;
            }
         }

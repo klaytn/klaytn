@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -14,9 +16,9 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity 0.5.6;
+pragma solidity ^0.8.0;
 
-import "../externals/openzeppelin-solidity/contracts/ownership/Ownable.sol";
+import "../klaytn-contracts/contracts/access/Ownable.sol";
 
 contract BridgeTokens is Ownable {
     mapping(address => address) public registeredTokens; // <token, counterpart token>
@@ -82,7 +84,8 @@ contract BridgeTokens is Ownable {
             registeredTokenList[idx] = registeredTokenList[registeredTokenList.length-1];
             indexOfTokens[registeredTokenList[idx]] = idx;
         }
-        registeredTokenList.length--;
+        //registeredTokenList.length--;
+        registeredTokenList.pop();
 
         emit TokenDeregistered(_token);
     }
