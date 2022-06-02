@@ -44,21 +44,23 @@ func TestCore_sendPrepare(t *testing.T) {
 	// invalid case - not committee
 	{
 		// Increase round number until the owner of istanbul.core is not a member of the committee
-		for istCore.valSet.CheckInSubList(lastProposal.Hash(), istCore.currentView(), istCore.Address()) {
-			istCore.current.round.Add(istCore.current.round, common.Big1)
-			istCore.valSet.CalcProposer(lastProposer, istCore.current.round.Uint64())
+		if istCore.valSet.Size() > istCore.valSet.SubGroupSize() {
+			for istCore.valSet.CheckInSubList(lastProposal.Hash(), istCore.currentView(), istCore.Address()) {
+				istCore.current.round.Add(istCore.current.round, common.Big1)
+				istCore.valSet.CalcProposer(lastProposer, istCore.current.round.Uint64())
+			}
+
+			mockCtrl := gomock.NewController(t)
+			mockBackend := mock_istanbul.NewMockBackend(mockCtrl)
+			mockBackend.EXPECT().Sign(gomock.Any()).Return(nil, nil).Times(0)
+			mockBackend.EXPECT().Broadcast(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(0)
+
+			istCore.backend = mockBackend
+			istCore.sendPrepare()
+
+			// methods of mockBackend should be executed given times
+			mockCtrl.Finish()
 		}
-
-		mockCtrl := gomock.NewController(t)
-		mockBackend := mock_istanbul.NewMockBackend(mockCtrl)
-		mockBackend.EXPECT().Sign(gomock.Any()).Return(nil, nil).Times(0)
-		mockBackend.EXPECT().Broadcast(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(0)
-
-		istCore.backend = mockBackend
-		istCore.sendPrepare()
-
-		// methods of mockBackend should be executed given times
-		mockCtrl.Finish()
 	}
 
 	// valid case

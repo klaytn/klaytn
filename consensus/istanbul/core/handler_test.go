@@ -98,27 +98,10 @@ func genValidators(n int) ([]common.Address, map[common.Address]*ecdsa.PrivateKe
 
 // getRandomValidator selects a validator in the given validator set.
 // `isCommittee` determines whether it returns a committee or a non-committee.
-func getRandomValidator(isCommittee bool, valSet istanbul.ValidatorSet, prevHash common.Hash, view *istanbul.View) istanbul.Validator {
+func getRandomValidator(valSet istanbul.ValidatorSet, prevHash common.Hash, view *istanbul.View) istanbul.Validator {
 	committee := valSet.SubList(prevHash, view)
 
-	if isCommittee {
-		return committee[rand.Int()%(len(committee)-1)]
-	}
-
-	for _, val := range valSet.List() {
-		for _, com := range committee {
-			if val.Address() == com.Address() {
-				isCommittee = true
-			}
-		}
-		if !isCommittee {
-			return val
-		}
-		isCommittee = false
-	}
-
-	// it should not be happened
-	return nil
+	return committee[rand.Int()%(len(committee)-1)]
 }
 
 // signBlock signs the given block with the given private key
@@ -263,7 +246,7 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 
 	// Preprepare message originated from invalid sender
 	{
-		msgSender := getRandomValidator(false, validators, lastBlock.Hash(), istCore.currentView())
+		msgSender := getRandomValidator(validators, lastBlock.Hash(), istCore.currentView())
 		msgSenderKey := validatorKeyMap[msgSender.Address()]
 
 		newProposal, err := genBlock(lastBlock, msgSenderKey)
@@ -271,7 +254,11 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		istanbulMsg, err := genIstanbulMsg(msgPreprepare, lastProposal.Hash(), newProposal, msgSender.Address(), msgSenderKey)
+		// generate invalidAddress
+		var invalidAddress common.Address
+		invalidAddress = common.Address{}
+
+		istanbulMsg, err := genIstanbulMsg(msgPreprepare, lastProposal.Hash(), newProposal, invalidAddress, msgSenderKey)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -309,10 +296,14 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 
 	// Prepare message originated from invalid sender
 	{
-		msgSender := getRandomValidator(false, validators, lastBlock.Hash(), istCore.currentView())
+		msgSender := getRandomValidator(validators, lastBlock.Hash(), istCore.currentView())
 		msgSenderKey := validatorKeyMap[msgSender.Address()]
 
-		istanbulMsg, err := genIstanbulMsg(msgPrepare, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), msgSender.Address(), msgSenderKey)
+		// generate invalidAddress
+		var invalidAddress common.Address
+		invalidAddress = common.Address{}
+
+		istanbulMsg, err := genIstanbulMsg(msgPrepare, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), invalidAddress, msgSenderKey)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -327,7 +318,7 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 
 	// Prepare message originated from valid sender
 	{
-		msgSender := getRandomValidator(true, validators, lastBlock.Hash(), istCore.currentView())
+		msgSender := getRandomValidator(validators, lastBlock.Hash(), istCore.currentView())
 		msgSenderKey := validatorKeyMap[msgSender.Address()]
 
 		istanbulMsg, err := genIstanbulMsg(msgPrepare, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), msgSender.Address(), msgSenderKey)
@@ -345,10 +336,14 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 
 	// Commit message originated from invalid sender
 	{
-		msgSender := getRandomValidator(false, validators, lastBlock.Hash(), istCore.currentView())
+		msgSender := getRandomValidator(validators, lastBlock.Hash(), istCore.currentView())
 		msgSenderKey := validatorKeyMap[msgSender.Address()]
 
-		istanbulMsg, err := genIstanbulMsg(msgCommit, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), msgSender.Address(), msgSenderKey)
+		// generate invalidAddress
+		var invalidAddress common.Address
+		invalidAddress = common.Address{}
+
+		istanbulMsg, err := genIstanbulMsg(msgCommit, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), invalidAddress, msgSenderKey)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -363,7 +358,7 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 
 	// Commit message originated from valid sender
 	{
-		msgSender := getRandomValidator(true, validators, lastBlock.Hash(), istCore.currentView())
+		msgSender := getRandomValidator(validators, lastBlock.Hash(), istCore.currentView())
 		msgSenderKey := validatorKeyMap[msgSender.Address()]
 
 		istanbulMsg, err := genIstanbulMsg(msgCommit, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), msgSender.Address(), msgSenderKey)
@@ -399,7 +394,7 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 
 	// RoundChange message originated from valid sender
 	{
-		msgSender := getRandomValidator(true, validators, lastBlock.Hash(), istCore.currentView())
+		msgSender := getRandomValidator(validators, lastBlock.Hash(), istCore.currentView())
 		msgSenderKey := validatorKeyMap[msgSender.Address()]
 
 		istanbulMsg, err := genIstanbulMsg(msgRoundChange, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), msgSender.Address(), msgSenderKey)
