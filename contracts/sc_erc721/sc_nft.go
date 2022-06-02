@@ -26,14 +26,823 @@ var (
 	_ = event.NewSubscription
 )
 
+// AccessControlABI is the input ABI used to generate the binding from.
+const AccessControlABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"previousAdminRole\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"newAdminRole\",\"type\":\"bytes32\"}],\"name\":\"RoleAdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleGranted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleRevoked\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"DEFAULT_ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"}],\"name\":\"getRoleAdmin\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"grantRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"hasRole\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"renounceRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"revokeRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
+
+// AccessControlBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
+const AccessControlBinRuntime = ``
+
+// AccessControlFuncSigs maps the 4-byte function signature to its string representation.
+var AccessControlFuncSigs = map[string]string{
+	"a217fddf": "DEFAULT_ADMIN_ROLE()",
+	"248a9ca3": "getRoleAdmin(bytes32)",
+	"2f2ff15d": "grantRole(bytes32,address)",
+	"91d14854": "hasRole(bytes32,address)",
+	"36568abe": "renounceRole(bytes32,address)",
+	"d547741f": "revokeRole(bytes32,address)",
+	"01ffc9a7": "supportsInterface(bytes4)",
+}
+
+// AccessControl is an auto generated Go binding around a Klaytn contract.
+type AccessControl struct {
+	AccessControlCaller     // Read-only binding to the contract
+	AccessControlTransactor // Write-only binding to the contract
+	AccessControlFilterer   // Log filterer for contract events
+}
+
+// AccessControlCaller is an auto generated read-only Go binding around a Klaytn contract.
+type AccessControlCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// AccessControlTransactor is an auto generated write-only Go binding around a Klaytn contract.
+type AccessControlTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// AccessControlFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+type AccessControlFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// AccessControlSession is an auto generated Go binding around a Klaytn contract,
+// with pre-set call and transact options.
+type AccessControlSession struct {
+	Contract     *AccessControl    // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts     // Call options to use throughout this session
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+}
+
+// AccessControlCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// with pre-set call options.
+type AccessControlCallerSession struct {
+	Contract *AccessControlCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts        // Call options to use throughout this session
+}
+
+// AccessControlTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// with pre-set transact options.
+type AccessControlTransactorSession struct {
+	Contract     *AccessControlTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts        // Transaction auth options to use throughout this session
+}
+
+// AccessControlRaw is an auto generated low-level Go binding around a Klaytn contract.
+type AccessControlRaw struct {
+	Contract *AccessControl // Generic contract binding to access the raw methods on
+}
+
+// AccessControlCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+type AccessControlCallerRaw struct {
+	Contract *AccessControlCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// AccessControlTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+type AccessControlTransactorRaw struct {
+	Contract *AccessControlTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewAccessControl creates a new instance of AccessControl, bound to a specific deployed contract.
+func NewAccessControl(address common.Address, backend bind.ContractBackend) (*AccessControl, error) {
+	contract, err := bindAccessControl(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &AccessControl{AccessControlCaller: AccessControlCaller{contract: contract}, AccessControlTransactor: AccessControlTransactor{contract: contract}, AccessControlFilterer: AccessControlFilterer{contract: contract}}, nil
+}
+
+// NewAccessControlCaller creates a new read-only instance of AccessControl, bound to a specific deployed contract.
+func NewAccessControlCaller(address common.Address, caller bind.ContractCaller) (*AccessControlCaller, error) {
+	contract, err := bindAccessControl(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &AccessControlCaller{contract: contract}, nil
+}
+
+// NewAccessControlTransactor creates a new write-only instance of AccessControl, bound to a specific deployed contract.
+func NewAccessControlTransactor(address common.Address, transactor bind.ContractTransactor) (*AccessControlTransactor, error) {
+	contract, err := bindAccessControl(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &AccessControlTransactor{contract: contract}, nil
+}
+
+// NewAccessControlFilterer creates a new log filterer instance of AccessControl, bound to a specific deployed contract.
+func NewAccessControlFilterer(address common.Address, filterer bind.ContractFilterer) (*AccessControlFilterer, error) {
+	contract, err := bindAccessControl(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &AccessControlFilterer{contract: contract}, nil
+}
+
+// bindAccessControl binds a generic wrapper to an already deployed contract.
+func bindAccessControl(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(AccessControlABI))
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_AccessControl *AccessControlRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _AccessControl.Contract.AccessControlCaller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_AccessControl *AccessControlRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _AccessControl.Contract.AccessControlTransactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_AccessControl *AccessControlRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _AccessControl.Contract.AccessControlTransactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_AccessControl *AccessControlCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _AccessControl.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_AccessControl *AccessControlTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _AccessControl.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_AccessControl *AccessControlTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _AccessControl.Contract.contract.Transact(opts, method, params...)
+}
+
+// DEFAULTADMINROLE is a free data retrieval call binding the contract method 0xa217fddf.
+//
+// Solidity: function DEFAULT_ADMIN_ROLE() view returns(bytes32)
+func (_AccessControl *AccessControlCaller) DEFAULTADMINROLE(opts *bind.CallOpts) ([32]byte, error) {
+	var (
+		ret0 = new([32]byte)
+	)
+	out := ret0
+	err := _AccessControl.contract.Call(opts, out, "DEFAULT_ADMIN_ROLE")
+	return *ret0, err
+}
+
+// DEFAULTADMINROLE is a free data retrieval call binding the contract method 0xa217fddf.
+//
+// Solidity: function DEFAULT_ADMIN_ROLE() view returns(bytes32)
+func (_AccessControl *AccessControlSession) DEFAULTADMINROLE() ([32]byte, error) {
+	return _AccessControl.Contract.DEFAULTADMINROLE(&_AccessControl.CallOpts)
+}
+
+// DEFAULTADMINROLE is a free data retrieval call binding the contract method 0xa217fddf.
+//
+// Solidity: function DEFAULT_ADMIN_ROLE() view returns(bytes32)
+func (_AccessControl *AccessControlCallerSession) DEFAULTADMINROLE() ([32]byte, error) {
+	return _AccessControl.Contract.DEFAULTADMINROLE(&_AccessControl.CallOpts)
+}
+
+// GetRoleAdmin is a free data retrieval call binding the contract method 0x248a9ca3.
+//
+// Solidity: function getRoleAdmin(bytes32 role) view returns(bytes32)
+func (_AccessControl *AccessControlCaller) GetRoleAdmin(opts *bind.CallOpts, role [32]byte) ([32]byte, error) {
+	var (
+		ret0 = new([32]byte)
+	)
+	out := ret0
+	err := _AccessControl.contract.Call(opts, out, "getRoleAdmin", role)
+	return *ret0, err
+}
+
+// GetRoleAdmin is a free data retrieval call binding the contract method 0x248a9ca3.
+//
+// Solidity: function getRoleAdmin(bytes32 role) view returns(bytes32)
+func (_AccessControl *AccessControlSession) GetRoleAdmin(role [32]byte) ([32]byte, error) {
+	return _AccessControl.Contract.GetRoleAdmin(&_AccessControl.CallOpts, role)
+}
+
+// GetRoleAdmin is a free data retrieval call binding the contract method 0x248a9ca3.
+//
+// Solidity: function getRoleAdmin(bytes32 role) view returns(bytes32)
+func (_AccessControl *AccessControlCallerSession) GetRoleAdmin(role [32]byte) ([32]byte, error) {
+	return _AccessControl.Contract.GetRoleAdmin(&_AccessControl.CallOpts, role)
+}
+
+// HasRole is a free data retrieval call binding the contract method 0x91d14854.
+//
+// Solidity: function hasRole(bytes32 role, address account) view returns(bool)
+func (_AccessControl *AccessControlCaller) HasRole(opts *bind.CallOpts, role [32]byte, account common.Address) (bool, error) {
+	var (
+		ret0 = new(bool)
+	)
+	out := ret0
+	err := _AccessControl.contract.Call(opts, out, "hasRole", role, account)
+	return *ret0, err
+}
+
+// HasRole is a free data retrieval call binding the contract method 0x91d14854.
+//
+// Solidity: function hasRole(bytes32 role, address account) view returns(bool)
+func (_AccessControl *AccessControlSession) HasRole(role [32]byte, account common.Address) (bool, error) {
+	return _AccessControl.Contract.HasRole(&_AccessControl.CallOpts, role, account)
+}
+
+// HasRole is a free data retrieval call binding the contract method 0x91d14854.
+//
+// Solidity: function hasRole(bytes32 role, address account) view returns(bool)
+func (_AccessControl *AccessControlCallerSession) HasRole(role [32]byte, account common.Address) (bool, error) {
+	return _AccessControl.Contract.HasRole(&_AccessControl.CallOpts, role, account)
+}
+
+// SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
+//
+// Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
+func (_AccessControl *AccessControlCaller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
+	var (
+		ret0 = new(bool)
+	)
+	out := ret0
+	err := _AccessControl.contract.Call(opts, out, "supportsInterface", interfaceId)
+	return *ret0, err
+}
+
+// SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
+//
+// Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
+func (_AccessControl *AccessControlSession) SupportsInterface(interfaceId [4]byte) (bool, error) {
+	return _AccessControl.Contract.SupportsInterface(&_AccessControl.CallOpts, interfaceId)
+}
+
+// SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
+//
+// Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
+func (_AccessControl *AccessControlCallerSession) SupportsInterface(interfaceId [4]byte) (bool, error) {
+	return _AccessControl.Contract.SupportsInterface(&_AccessControl.CallOpts, interfaceId)
+}
+
+// GrantRole is a paid mutator transaction binding the contract method 0x2f2ff15d.
+//
+// Solidity: function grantRole(bytes32 role, address account) returns()
+func (_AccessControl *AccessControlTransactor) GrantRole(opts *bind.TransactOpts, role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _AccessControl.contract.Transact(opts, "grantRole", role, account)
+}
+
+// GrantRole is a paid mutator transaction binding the contract method 0x2f2ff15d.
+//
+// Solidity: function grantRole(bytes32 role, address account) returns()
+func (_AccessControl *AccessControlSession) GrantRole(role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _AccessControl.Contract.GrantRole(&_AccessControl.TransactOpts, role, account)
+}
+
+// GrantRole is a paid mutator transaction binding the contract method 0x2f2ff15d.
+//
+// Solidity: function grantRole(bytes32 role, address account) returns()
+func (_AccessControl *AccessControlTransactorSession) GrantRole(role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _AccessControl.Contract.GrantRole(&_AccessControl.TransactOpts, role, account)
+}
+
+// RenounceRole is a paid mutator transaction binding the contract method 0x36568abe.
+//
+// Solidity: function renounceRole(bytes32 role, address account) returns()
+func (_AccessControl *AccessControlTransactor) RenounceRole(opts *bind.TransactOpts, role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _AccessControl.contract.Transact(opts, "renounceRole", role, account)
+}
+
+// RenounceRole is a paid mutator transaction binding the contract method 0x36568abe.
+//
+// Solidity: function renounceRole(bytes32 role, address account) returns()
+func (_AccessControl *AccessControlSession) RenounceRole(role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _AccessControl.Contract.RenounceRole(&_AccessControl.TransactOpts, role, account)
+}
+
+// RenounceRole is a paid mutator transaction binding the contract method 0x36568abe.
+//
+// Solidity: function renounceRole(bytes32 role, address account) returns()
+func (_AccessControl *AccessControlTransactorSession) RenounceRole(role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _AccessControl.Contract.RenounceRole(&_AccessControl.TransactOpts, role, account)
+}
+
+// RevokeRole is a paid mutator transaction binding the contract method 0xd547741f.
+//
+// Solidity: function revokeRole(bytes32 role, address account) returns()
+func (_AccessControl *AccessControlTransactor) RevokeRole(opts *bind.TransactOpts, role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _AccessControl.contract.Transact(opts, "revokeRole", role, account)
+}
+
+// RevokeRole is a paid mutator transaction binding the contract method 0xd547741f.
+//
+// Solidity: function revokeRole(bytes32 role, address account) returns()
+func (_AccessControl *AccessControlSession) RevokeRole(role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _AccessControl.Contract.RevokeRole(&_AccessControl.TransactOpts, role, account)
+}
+
+// RevokeRole is a paid mutator transaction binding the contract method 0xd547741f.
+//
+// Solidity: function revokeRole(bytes32 role, address account) returns()
+func (_AccessControl *AccessControlTransactorSession) RevokeRole(role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _AccessControl.Contract.RevokeRole(&_AccessControl.TransactOpts, role, account)
+}
+
+// AccessControlRoleAdminChangedIterator is returned from FilterRoleAdminChanged and is used to iterate over the raw logs and unpacked data for RoleAdminChanged events raised by the AccessControl contract.
+type AccessControlRoleAdminChangedIterator struct {
+	Event *AccessControlRoleAdminChanged // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AccessControlRoleAdminChangedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AccessControlRoleAdminChanged)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AccessControlRoleAdminChanged)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AccessControlRoleAdminChangedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AccessControlRoleAdminChangedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AccessControlRoleAdminChanged represents a RoleAdminChanged event raised by the AccessControl contract.
+type AccessControlRoleAdminChanged struct {
+	Role              [32]byte
+	PreviousAdminRole [32]byte
+	NewAdminRole      [32]byte
+	Raw               types.Log // Blockchain specific contextual infos
+}
+
+// FilterRoleAdminChanged is a free log retrieval operation binding the contract event 0xbd79b86ffe0ab8e8776151514217cd7cacd52c909f66475c3af44e129f0b00ff.
+//
+// Solidity: event RoleAdminChanged(bytes32 indexed role, bytes32 indexed previousAdminRole, bytes32 indexed newAdminRole)
+func (_AccessControl *AccessControlFilterer) FilterRoleAdminChanged(opts *bind.FilterOpts, role [][32]byte, previousAdminRole [][32]byte, newAdminRole [][32]byte) (*AccessControlRoleAdminChangedIterator, error) {
+
+	var roleRule []interface{}
+	for _, roleItem := range role {
+		roleRule = append(roleRule, roleItem)
+	}
+	var previousAdminRoleRule []interface{}
+	for _, previousAdminRoleItem := range previousAdminRole {
+		previousAdminRoleRule = append(previousAdminRoleRule, previousAdminRoleItem)
+	}
+	var newAdminRoleRule []interface{}
+	for _, newAdminRoleItem := range newAdminRole {
+		newAdminRoleRule = append(newAdminRoleRule, newAdminRoleItem)
+	}
+
+	logs, sub, err := _AccessControl.contract.FilterLogs(opts, "RoleAdminChanged", roleRule, previousAdminRoleRule, newAdminRoleRule)
+	if err != nil {
+		return nil, err
+	}
+	return &AccessControlRoleAdminChangedIterator{contract: _AccessControl.contract, event: "RoleAdminChanged", logs: logs, sub: sub}, nil
+}
+
+// WatchRoleAdminChanged is a free log subscription operation binding the contract event 0xbd79b86ffe0ab8e8776151514217cd7cacd52c909f66475c3af44e129f0b00ff.
+//
+// Solidity: event RoleAdminChanged(bytes32 indexed role, bytes32 indexed previousAdminRole, bytes32 indexed newAdminRole)
+func (_AccessControl *AccessControlFilterer) WatchRoleAdminChanged(opts *bind.WatchOpts, sink chan<- *AccessControlRoleAdminChanged, role [][32]byte, previousAdminRole [][32]byte, newAdminRole [][32]byte) (event.Subscription, error) {
+
+	var roleRule []interface{}
+	for _, roleItem := range role {
+		roleRule = append(roleRule, roleItem)
+	}
+	var previousAdminRoleRule []interface{}
+	for _, previousAdminRoleItem := range previousAdminRole {
+		previousAdminRoleRule = append(previousAdminRoleRule, previousAdminRoleItem)
+	}
+	var newAdminRoleRule []interface{}
+	for _, newAdminRoleItem := range newAdminRole {
+		newAdminRoleRule = append(newAdminRoleRule, newAdminRoleItem)
+	}
+
+	logs, sub, err := _AccessControl.contract.WatchLogs(opts, "RoleAdminChanged", roleRule, previousAdminRoleRule, newAdminRoleRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AccessControlRoleAdminChanged)
+				if err := _AccessControl.contract.UnpackLog(event, "RoleAdminChanged", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseRoleAdminChanged is a log parse operation binding the contract event 0xbd79b86ffe0ab8e8776151514217cd7cacd52c909f66475c3af44e129f0b00ff.
+//
+// Solidity: event RoleAdminChanged(bytes32 indexed role, bytes32 indexed previousAdminRole, bytes32 indexed newAdminRole)
+func (_AccessControl *AccessControlFilterer) ParseRoleAdminChanged(log types.Log) (*AccessControlRoleAdminChanged, error) {
+	event := new(AccessControlRoleAdminChanged)
+	if err := _AccessControl.contract.UnpackLog(event, "RoleAdminChanged", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// AccessControlRoleGrantedIterator is returned from FilterRoleGranted and is used to iterate over the raw logs and unpacked data for RoleGranted events raised by the AccessControl contract.
+type AccessControlRoleGrantedIterator struct {
+	Event *AccessControlRoleGranted // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AccessControlRoleGrantedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AccessControlRoleGranted)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AccessControlRoleGranted)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AccessControlRoleGrantedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AccessControlRoleGrantedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AccessControlRoleGranted represents a RoleGranted event raised by the AccessControl contract.
+type AccessControlRoleGranted struct {
+	Role    [32]byte
+	Account common.Address
+	Sender  common.Address
+	Raw     types.Log // Blockchain specific contextual infos
+}
+
+// FilterRoleGranted is a free log retrieval operation binding the contract event 0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d.
+//
+// Solidity: event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)
+func (_AccessControl *AccessControlFilterer) FilterRoleGranted(opts *bind.FilterOpts, role [][32]byte, account []common.Address, sender []common.Address) (*AccessControlRoleGrantedIterator, error) {
+
+	var roleRule []interface{}
+	for _, roleItem := range role {
+		roleRule = append(roleRule, roleItem)
+	}
+	var accountRule []interface{}
+	for _, accountItem := range account {
+		accountRule = append(accountRule, accountItem)
+	}
+	var senderRule []interface{}
+	for _, senderItem := range sender {
+		senderRule = append(senderRule, senderItem)
+	}
+
+	logs, sub, err := _AccessControl.contract.FilterLogs(opts, "RoleGranted", roleRule, accountRule, senderRule)
+	if err != nil {
+		return nil, err
+	}
+	return &AccessControlRoleGrantedIterator{contract: _AccessControl.contract, event: "RoleGranted", logs: logs, sub: sub}, nil
+}
+
+// WatchRoleGranted is a free log subscription operation binding the contract event 0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d.
+//
+// Solidity: event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)
+func (_AccessControl *AccessControlFilterer) WatchRoleGranted(opts *bind.WatchOpts, sink chan<- *AccessControlRoleGranted, role [][32]byte, account []common.Address, sender []common.Address) (event.Subscription, error) {
+
+	var roleRule []interface{}
+	for _, roleItem := range role {
+		roleRule = append(roleRule, roleItem)
+	}
+	var accountRule []interface{}
+	for _, accountItem := range account {
+		accountRule = append(accountRule, accountItem)
+	}
+	var senderRule []interface{}
+	for _, senderItem := range sender {
+		senderRule = append(senderRule, senderItem)
+	}
+
+	logs, sub, err := _AccessControl.contract.WatchLogs(opts, "RoleGranted", roleRule, accountRule, senderRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AccessControlRoleGranted)
+				if err := _AccessControl.contract.UnpackLog(event, "RoleGranted", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseRoleGranted is a log parse operation binding the contract event 0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d.
+//
+// Solidity: event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)
+func (_AccessControl *AccessControlFilterer) ParseRoleGranted(log types.Log) (*AccessControlRoleGranted, error) {
+	event := new(AccessControlRoleGranted)
+	if err := _AccessControl.contract.UnpackLog(event, "RoleGranted", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// AccessControlRoleRevokedIterator is returned from FilterRoleRevoked and is used to iterate over the raw logs and unpacked data for RoleRevoked events raised by the AccessControl contract.
+type AccessControlRoleRevokedIterator struct {
+	Event *AccessControlRoleRevoked // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AccessControlRoleRevokedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AccessControlRoleRevoked)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AccessControlRoleRevoked)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AccessControlRoleRevokedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AccessControlRoleRevokedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AccessControlRoleRevoked represents a RoleRevoked event raised by the AccessControl contract.
+type AccessControlRoleRevoked struct {
+	Role    [32]byte
+	Account common.Address
+	Sender  common.Address
+	Raw     types.Log // Blockchain specific contextual infos
+}
+
+// FilterRoleRevoked is a free log retrieval operation binding the contract event 0xf6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b.
+//
+// Solidity: event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender)
+func (_AccessControl *AccessControlFilterer) FilterRoleRevoked(opts *bind.FilterOpts, role [][32]byte, account []common.Address, sender []common.Address) (*AccessControlRoleRevokedIterator, error) {
+
+	var roleRule []interface{}
+	for _, roleItem := range role {
+		roleRule = append(roleRule, roleItem)
+	}
+	var accountRule []interface{}
+	for _, accountItem := range account {
+		accountRule = append(accountRule, accountItem)
+	}
+	var senderRule []interface{}
+	for _, senderItem := range sender {
+		senderRule = append(senderRule, senderItem)
+	}
+
+	logs, sub, err := _AccessControl.contract.FilterLogs(opts, "RoleRevoked", roleRule, accountRule, senderRule)
+	if err != nil {
+		return nil, err
+	}
+	return &AccessControlRoleRevokedIterator{contract: _AccessControl.contract, event: "RoleRevoked", logs: logs, sub: sub}, nil
+}
+
+// WatchRoleRevoked is a free log subscription operation binding the contract event 0xf6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b.
+//
+// Solidity: event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender)
+func (_AccessControl *AccessControlFilterer) WatchRoleRevoked(opts *bind.WatchOpts, sink chan<- *AccessControlRoleRevoked, role [][32]byte, account []common.Address, sender []common.Address) (event.Subscription, error) {
+
+	var roleRule []interface{}
+	for _, roleItem := range role {
+		roleRule = append(roleRule, roleItem)
+	}
+	var accountRule []interface{}
+	for _, accountItem := range account {
+		accountRule = append(accountRule, accountItem)
+	}
+	var senderRule []interface{}
+	for _, senderItem := range sender {
+		senderRule = append(senderRule, senderItem)
+	}
+
+	logs, sub, err := _AccessControl.contract.WatchLogs(opts, "RoleRevoked", roleRule, accountRule, senderRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AccessControlRoleRevoked)
+				if err := _AccessControl.contract.UnpackLog(event, "RoleRevoked", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseRoleRevoked is a log parse operation binding the contract event 0xf6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b.
+//
+// Solidity: event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender)
+func (_AccessControl *AccessControlFilterer) ParseRoleRevoked(log types.Log) (*AccessControlRoleRevoked, error) {
+	event := new(AccessControlRoleRevoked)
+	if err := _AccessControl.contract.UnpackLog(event, "RoleRevoked", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
 // AddressABI is the input ABI used to generate the binding from.
 const AddressABI = "[]"
 
 // AddressBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
-const AddressBinRuntime = `73000000000000000000000000000000000000000030146080604052600080fdfea165627a7a72305820b7534b8b203852d9ead56352219b5abb5424533d9bb1b9cf84c0b1d15d11fee50029`
+const AddressBinRuntime = `73000000000000000000000000000000000000000030146080604052600080fdfea2646970667358221220c4289861551a3b181d2909947054297a7b2550725cafc9ab6e921d0ed3bd6d9d64736f6c634300080d0033`
 
 // AddressBin is the compiled bytecode used for deploying new contracts.
-var AddressBin = "0x604c6023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea165627a7a72305820b7534b8b203852d9ead56352219b5abb5424533d9bb1b9cf84c0b1d15d11fee50029"
+var AddressBin = "0x60566037600b82828239805160001a607314602a57634e487b7160e01b600052600060045260246000fd5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea2646970667358221220c4289861551a3b181d2909947054297a7b2550725cafc9ab6e921d0ed3bd6d9d64736f6c634300080d0033"
 
 // DeployAddress deploys a new Klaytn contract, binding an instance of Address to it.
 func DeployAddress(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Address, error) {
@@ -191,127 +1000,110 @@ func (_Address *AddressTransactorRaw) Transact(opts *bind.TransactOpts, method s
 	return _Address.Contract.contract.Transact(opts, method, params...)
 }
 
-// CountersABI is the input ABI used to generate the binding from.
-const CountersABI = "[]"
+// ContextABI is the input ABI used to generate the binding from.
+const ContextABI = "[]"
 
-// CountersBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
-const CountersBinRuntime = `73000000000000000000000000000000000000000030146080604052600080fdfea165627a7a723058207329cab25de591c35947480820e66bd7e2d232979872616f21ac6e5783a017700029`
+// ContextBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
+const ContextBinRuntime = ``
 
-// CountersBin is the compiled bytecode used for deploying new contracts.
-var CountersBin = "0x604c6023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea165627a7a723058207329cab25de591c35947480820e66bd7e2d232979872616f21ac6e5783a017700029"
-
-// DeployCounters deploys a new Klaytn contract, binding an instance of Counters to it.
-func DeployCounters(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Counters, error) {
-	parsed, err := abi.JSON(strings.NewReader(CountersABI))
-	if err != nil {
-		return common.Address{}, nil, nil, err
-	}
-
-	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(CountersBin), backend)
-	if err != nil {
-		return common.Address{}, nil, nil, err
-	}
-	return address, tx, &Counters{CountersCaller: CountersCaller{contract: contract}, CountersTransactor: CountersTransactor{contract: contract}, CountersFilterer: CountersFilterer{contract: contract}}, nil
+// Context is an auto generated Go binding around a Klaytn contract.
+type Context struct {
+	ContextCaller     // Read-only binding to the contract
+	ContextTransactor // Write-only binding to the contract
+	ContextFilterer   // Log filterer for contract events
 }
 
-// Counters is an auto generated Go binding around a Klaytn contract.
-type Counters struct {
-	CountersCaller     // Read-only binding to the contract
-	CountersTransactor // Write-only binding to the contract
-	CountersFilterer   // Log filterer for contract events
-}
-
-// CountersCaller is an auto generated read-only Go binding around a Klaytn contract.
-type CountersCaller struct {
+// ContextCaller is an auto generated read-only Go binding around a Klaytn contract.
+type ContextCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// CountersTransactor is an auto generated write-only Go binding around a Klaytn contract.
-type CountersTransactor struct {
+// ContextTransactor is an auto generated write-only Go binding around a Klaytn contract.
+type ContextTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// CountersFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
-type CountersFilterer struct {
+// ContextFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+type ContextFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// CountersSession is an auto generated Go binding around a Klaytn contract,
+// ContextSession is an auto generated Go binding around a Klaytn contract,
 // with pre-set call and transact options.
-type CountersSession struct {
-	Contract     *Counters         // Generic contract binding to set the session for
+type ContextSession struct {
+	Contract     *Context          // Generic contract binding to set the session for
 	CallOpts     bind.CallOpts     // Call options to use throughout this session
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// CountersCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// ContextCallerSession is an auto generated read-only Go binding around a Klaytn contract,
 // with pre-set call options.
-type CountersCallerSession struct {
-	Contract *CountersCaller // Generic contract caller binding to set the session for
-	CallOpts bind.CallOpts   // Call options to use throughout this session
+type ContextCallerSession struct {
+	Contract *ContextCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts  // Call options to use throughout this session
 }
 
-// CountersTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// ContextTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
 // with pre-set transact options.
-type CountersTransactorSession struct {
-	Contract     *CountersTransactor // Generic contract transactor binding to set the session for
-	TransactOpts bind.TransactOpts   // Transaction auth options to use throughout this session
+type ContextTransactorSession struct {
+	Contract     *ContextTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts  // Transaction auth options to use throughout this session
 }
 
-// CountersRaw is an auto generated low-level Go binding around a Klaytn contract.
-type CountersRaw struct {
-	Contract *Counters // Generic contract binding to access the raw methods on
+// ContextRaw is an auto generated low-level Go binding around a Klaytn contract.
+type ContextRaw struct {
+	Contract *Context // Generic contract binding to access the raw methods on
 }
 
-// CountersCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
-type CountersCallerRaw struct {
-	Contract *CountersCaller // Generic read-only contract binding to access the raw methods on
+// ContextCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+type ContextCallerRaw struct {
+	Contract *ContextCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// CountersTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
-type CountersTransactorRaw struct {
-	Contract *CountersTransactor // Generic write-only contract binding to access the raw methods on
+// ContextTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+type ContextTransactorRaw struct {
+	Contract *ContextTransactor // Generic write-only contract binding to access the raw methods on
 }
 
-// NewCounters creates a new instance of Counters, bound to a specific deployed contract.
-func NewCounters(address common.Address, backend bind.ContractBackend) (*Counters, error) {
-	contract, err := bindCounters(address, backend, backend, backend)
+// NewContext creates a new instance of Context, bound to a specific deployed contract.
+func NewContext(address common.Address, backend bind.ContractBackend) (*Context, error) {
+	contract, err := bindContext(address, backend, backend, backend)
 	if err != nil {
 		return nil, err
 	}
-	return &Counters{CountersCaller: CountersCaller{contract: contract}, CountersTransactor: CountersTransactor{contract: contract}, CountersFilterer: CountersFilterer{contract: contract}}, nil
+	return &Context{ContextCaller: ContextCaller{contract: contract}, ContextTransactor: ContextTransactor{contract: contract}, ContextFilterer: ContextFilterer{contract: contract}}, nil
 }
 
-// NewCountersCaller creates a new read-only instance of Counters, bound to a specific deployed contract.
-func NewCountersCaller(address common.Address, caller bind.ContractCaller) (*CountersCaller, error) {
-	contract, err := bindCounters(address, caller, nil, nil)
+// NewContextCaller creates a new read-only instance of Context, bound to a specific deployed contract.
+func NewContextCaller(address common.Address, caller bind.ContractCaller) (*ContextCaller, error) {
+	contract, err := bindContext(address, caller, nil, nil)
 	if err != nil {
 		return nil, err
 	}
-	return &CountersCaller{contract: contract}, nil
+	return &ContextCaller{contract: contract}, nil
 }
 
-// NewCountersTransactor creates a new write-only instance of Counters, bound to a specific deployed contract.
-func NewCountersTransactor(address common.Address, transactor bind.ContractTransactor) (*CountersTransactor, error) {
-	contract, err := bindCounters(address, nil, transactor, nil)
+// NewContextTransactor creates a new write-only instance of Context, bound to a specific deployed contract.
+func NewContextTransactor(address common.Address, transactor bind.ContractTransactor) (*ContextTransactor, error) {
+	contract, err := bindContext(address, nil, transactor, nil)
 	if err != nil {
 		return nil, err
 	}
-	return &CountersTransactor{contract: contract}, nil
+	return &ContextTransactor{contract: contract}, nil
 }
 
-// NewCountersFilterer creates a new log filterer instance of Counters, bound to a specific deployed contract.
-func NewCountersFilterer(address common.Address, filterer bind.ContractFilterer) (*CountersFilterer, error) {
-	contract, err := bindCounters(address, nil, nil, filterer)
+// NewContextFilterer creates a new log filterer instance of Context, bound to a specific deployed contract.
+func NewContextFilterer(address common.Address, filterer bind.ContractFilterer) (*ContextFilterer, error) {
+	contract, err := bindContext(address, nil, nil, filterer)
 	if err != nil {
 		return nil, err
 	}
-	return &CountersFilterer{contract: contract}, nil
+	return &ContextFilterer{contract: contract}, nil
 }
 
-// bindCounters binds a generic wrapper to an already deployed contract.
-func bindCounters(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
-	parsed, err := abi.JSON(strings.NewReader(CountersABI))
+// bindContext binds a generic wrapper to an already deployed contract.
+func bindContext(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(ContextABI))
 	if err != nil {
 		return nil, err
 	}
@@ -322,42 +1114,42 @@ func bindCounters(address common.Address, caller bind.ContractCaller, transactor
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_Counters *CountersRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
-	return _Counters.Contract.CountersCaller.contract.Call(opts, result, method, params...)
+func (_Context *ContextRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _Context.Contract.ContextCaller.contract.Call(opts, result, method, params...)
 }
 
 // Transfer initiates a plain transaction to move funds to the contract, calling
 // its default method if one is available.
-func (_Counters *CountersRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _Counters.Contract.CountersTransactor.contract.Transfer(opts)
+func (_Context *ContextRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Context.Contract.ContextTransactor.contract.Transfer(opts)
 }
 
 // Transact invokes the (paid) contract method with params as input values.
-func (_Counters *CountersRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _Counters.Contract.CountersTransactor.contract.Transact(opts, method, params...)
+func (_Context *ContextRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _Context.Contract.ContextTransactor.contract.Transact(opts, method, params...)
 }
 
 // Call invokes the (constant) contract method with params as input values and
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_Counters *CountersCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
-	return _Counters.Contract.contract.Call(opts, result, method, params...)
+func (_Context *ContextCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _Context.Contract.contract.Call(opts, result, method, params...)
 }
 
 // Transfer initiates a plain transaction to move funds to the contract, calling
 // its default method if one is available.
-func (_Counters *CountersTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _Counters.Contract.contract.Transfer(opts)
+func (_Context *ContextTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Context.Contract.contract.Transfer(opts)
 }
 
 // Transact invokes the (paid) contract method with params as input values.
-func (_Counters *CountersTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _Counters.Contract.contract.Transact(opts, method, params...)
+func (_Context *ContextTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _Context.Contract.contract.Transact(opts, method, params...)
 }
 
 // ERC165ABI is the input ABI used to generate the binding from.
-const ERC165ABI = "[{\"constant\":true,\"inputs\":[{\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"}]"
+const ERC165ABI = "[{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
 // ERC165BinRuntime is the compiled bytecode used for adding genesis block without deploying code.
 const ERC165BinRuntime = ``
@@ -536,10 +1328,10 @@ func (_ERC165 *ERC165CallerSession) SupportsInterface(interfaceId [4]byte) (bool
 }
 
 // ERC721ABI is the input ABI used to generate the binding from.
-const ERC721ABI = "[{\"constant\":true,\"inputs\":[{\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"getApproved\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"approve\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"transferFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"ownerOf\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"setApprovalForAll\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"},{\"name\":\"_data\",\"type\":\"bytes\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"},{\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"isApprovedForAll\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"approved\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Approval\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"operator\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"ApprovalForAll\",\"type\":\"event\"}]"
+const ERC721ABI = "[{\"inputs\":[{\"internalType\":\"string\",\"name\":\"name_\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"symbol_\",\"type\":\"string\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"approved\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Approval\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"ApprovalForAll\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"approve\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"getApproved\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"isApprovedForAll\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"ownerOf\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"setApprovalForAll\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"symbol\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"tokenURI\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"transferFrom\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // ERC721BinRuntime is the compiled bytecode used for adding genesis block without deploying code.
-const ERC721BinRuntime = `608060405234801561001057600080fd5b506004361061009e5760003560e01c80636352211e116100665780636352211e146101b157806370a08231146101ce578063a22cb46514610206578063b88d4fde14610234578063e985e9c5146102fa5761009e565b806301ffc9a7146100a3578063081812fc146100de578063095ea7b31461011757806323b872dd1461014557806342842e0e1461017b575b600080fd5b6100ca600480360360208110156100b957600080fd5b50356001600160e01b031916610328565b604080519115158252519081900360200190f35b6100fb600480360360208110156100f457600080fd5b5035610347565b604080516001600160a01b039092168252519081900360200190f35b6101436004803603604081101561012d57600080fd5b506001600160a01b0381351690602001356103ac565b005b6101436004803603606081101561015b57600080fd5b506001600160a01b038135811691602081013590911690604001356104c3565b6101436004803603606081101561019157600080fd5b506001600160a01b0381358116916020810135909116906040013561051b565b6100fb600480360360208110156101c757600080fd5b5035610536565b6101f4600480360360208110156101e457600080fd5b50356001600160a01b0316610593565b60408051918252519081900360200190f35b6101436004803603604081101561021c57600080fd5b506001600160a01b03813516906020013515156105fe565b6101436004803603608081101561024a57600080fd5b6001600160a01b0382358116926020810135909116916040820135919081019060808101606082013564010000000081111561028557600080fd5b82018360208201111561029757600080fd5b803590602001918460018302840111640100000000831117156102b957600080fd5b91908080601f0160208091040260200160405190810160405280939291908181526020018383808284376000920191909152509295506106cd945050505050565b6100ca6004803603604081101561031057600080fd5b506001600160a01b0381358116916020013516610728565b6001600160e01b03191660009081526020819052604090205460ff1690565b600061035282610756565b61039057604051600160e51b62461bcd02815260040180806020018281038252602c815260200180610c72602c913960400191505060405180910390fd5b506000908152600260205260409020546001600160a01b031690565b60006103b782610536565b9050806001600160a01b0316836001600160a01b0316141561040d57604051600160e51b62461bcd028152600401808060200182810382526021815260200180610cc76021913960400191505060405180910390fd5b336001600160a01b038216148061042957506104298133610728565b61046757604051600160e51b62461bcd028152600401808060200182810382526038815260200180610be76038913960400191505060405180910390fd5b60008281526002602052604080822080546001600160a01b0319166001600160a01b0387811691821790925591518593918516917f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b92591a4505050565b6104cd3382610773565b61050b57604051600160e51b62461bcd028152600401808060200182810382526031815260200180610ce86031913960400191505060405180910390fd5b61051683838361081a565b505050565b610516838383604051806020016040528060008152506106cd565b6000818152600160205260408120546001600160a01b03168061058d57604051600160e51b62461bcd028152600401808060200182810382526029815260200180610c496029913960400191505060405180910390fd5b92915050565b60006001600160a01b0382166105dd57604051600160e51b62461bcd02815260040180806020018281038252602a815260200180610c1f602a913960400191505060405180910390fd5b6001600160a01b038216600090815260036020526040902061058d90610964565b6001600160a01b03821633141561065f5760408051600160e51b62461bcd02815260206004820152601960248201527f4552433732313a20617070726f766520746f2063616c6c657200000000000000604482015290519081900360640190fd5b3360008181526004602090815260408083206001600160a01b03871680855290835292819020805460ff1916861515908117909155815190815290519293927f17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31929181900390910190a35050565b6106d88484846104c3565b6106e484848484610968565b61072257604051600160e51b62461bcd028152600401808060200182810382526032815260200180610b656032913960400191505060405180910390fd5b50505050565b6001600160a01b03918216600090815260046020908152604080832093909416825291909152205460ff1690565b6000908152600160205260409020546001600160a01b0316151590565b600061077e82610756565b6107bc57604051600160e51b62461bcd02815260040180806020018281038252602c815260200180610bbb602c913960400191505060405180910390fd5b60006107c783610536565b9050806001600160a01b0316846001600160a01b031614806108025750836001600160a01b03166107f784610347565b6001600160a01b0316145b8061081257506108128185610728565b949350505050565b826001600160a01b031661082d82610536565b6001600160a01b03161461087557604051600160e51b62461bcd028152600401808060200182810382526029815260200180610c9e6029913960400191505060405180910390fd5b6001600160a01b0382166108bd57604051600160e51b62461bcd028152600401808060200182810382526024815260200180610b976024913960400191505060405180910390fd5b6108c681610aa1565b6001600160a01b03831660009081526003602052604090206108e790610ade565b6001600160a01b038216600090815260036020526040902061090890610af5565b60008181526001602052604080822080546001600160a01b0319166001600160a01b0386811691821790925591518493918716917fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef91a4505050565b5490565b600061097c846001600160a01b0316610afe565b61098857506001610812565b604051600160e11b630a85bd0102815233600482018181526001600160a01b03888116602485015260448401879052608060648501908152865160848601528651600095928a169463150b7a029490938c938b938b939260a4019060208501908083838e5b83811015610a055781810151838201526020016109ed565b50505050905090810190601f168015610a325780820380516001836020036101000a031916815260200191505b5095505050505050602060405180830381600087803b158015610a5457600080fd5b505af1158015610a68573d6000803e3d6000fd5b505050506040513d6020811015610a7e57600080fd5b50516001600160e01b031916600160e11b630a85bd010214915050949350505050565b6000818152600260205260409020546001600160a01b031615610adb57600081815260026020526040902080546001600160a01b03191690555b50565b8054610af190600163ffffffff610b0416565b9055565b80546001019055565b3b151590565b600082821115610b5e5760408051600160e51b62461bcd02815260206004820152601e60248201527f536166654d6174683a207375627472616374696f6e206f766572666c6f770000604482015290519081900360640190fd5b5090039056fe4552433732313a207472616e7366657220746f206e6f6e20455243373231526563656976657220696d706c656d656e7465724552433732313a207472616e7366657220746f20746865207a65726f20616464726573734552433732313a206f70657261746f7220717565727920666f72206e6f6e6578697374656e7420746f6b656e4552433732313a20617070726f76652063616c6c6572206973206e6f74206f776e6572206e6f7220617070726f76656420666f7220616c6c4552433732313a2062616c616e636520717565727920666f7220746865207a65726f20616464726573734552433732313a206f776e657220717565727920666f72206e6f6e6578697374656e7420746f6b656e4552433732313a20617070726f76656420717565727920666f72206e6f6e6578697374656e7420746f6b656e4552433732313a207472616e73666572206f6620746f6b656e2074686174206973206e6f74206f776e4552433732313a20617070726f76616c20746f2063757272656e74206f776e65724552433732313a207472616e736665722063616c6c6572206973206e6f74206f776e6572206e6f7220617070726f766564a165627a7a72305820729ef652fa5b3de930aa2053816415426d90b8ede7f21175faa42825db4887780029`
+const ERC721BinRuntime = `608060405234801561001057600080fd5b50600436106100cf5760003560e01c80636352211e1161008c578063a22cb46511610066578063a22cb465146101b3578063b88d4fde146101c6578063c87b56dd146101d9578063e985e9c5146101ec57600080fd5b80636352211e1461017757806370a082311461018a57806395d89b41146101ab57600080fd5b806301ffc9a7146100d457806306fdde03146100fc578063081812fc14610111578063095ea7b31461013c57806323b872dd1461015157806342842e0e14610164575b600080fd5b6100e76100e2366004610d5f565b610228565b60405190151581526020015b60405180910390f35b61010461027a565b6040516100f39190610dd4565b61012461011f366004610de7565b61030c565b6040516001600160a01b0390911681526020016100f3565b61014f61014a366004610e1c565b6103a6565b005b61014f61015f366004610e46565b6104bb565b61014f610172366004610e46565b6104ec565b610124610185366004610de7565b610507565b61019d610198366004610e82565b61057e565b6040519081526020016100f3565b610104610604565b61014f6101c1366004610e9d565b610613565b61014f6101d4366004610eef565b610622565b6101046101e7366004610de7565b61065a565b6100e76101fa366004610fcb565b6001600160a01b03918216600090815260056020908152604080832093909416825291909152205460ff1690565b60006001600160e01b031982166380ac58cd60e01b148061025957506001600160e01b03198216635b5e139f60e01b145b8061027457506301ffc9a760e01b6001600160e01b03198316145b92915050565b60606000805461028990610ffe565b80601f01602080910402602001604051908101604052809291908181526020018280546102b590610ffe565b80156103025780601f106102d757610100808354040283529160200191610302565b820191906000526020600020905b8154815290600101906020018083116102e557829003601f168201915b5050505050905090565b6000818152600260205260408120546001600160a01b031661038a5760405162461bcd60e51b815260206004820152602c60248201527f4552433732313a20617070726f76656420717565727920666f72206e6f6e657860448201526b34b9ba32b73a103a37b5b2b760a11b60648201526084015b60405180910390fd5b506000908152600460205260409020546001600160a01b031690565b60006103b182610507565b9050806001600160a01b0316836001600160a01b03160361041e5760405162461bcd60e51b815260206004820152602160248201527f4552433732313a20617070726f76616c20746f2063757272656e74206f776e656044820152603960f91b6064820152608401610381565b336001600160a01b038216148061043a575061043a81336101fa565b6104ac5760405162461bcd60e51b815260206004820152603860248201527f4552433732313a20617070726f76652063616c6c6572206973206e6f74206f7760448201527f6e6572206e6f7220617070726f76656420666f7220616c6c00000000000000006064820152608401610381565b6104b68383610742565b505050565b6104c533826107b0565b6104e15760405162461bcd60e51b815260040161038190611038565b6104b68383836108a7565b6104b683838360405180602001604052806000815250610622565b6000818152600260205260408120546001600160a01b0316806102745760405162461bcd60e51b815260206004820152602960248201527f4552433732313a206f776e657220717565727920666f72206e6f6e657869737460448201526832b73a103a37b5b2b760b91b6064820152608401610381565b60006001600160a01b0382166105e85760405162461bcd60e51b815260206004820152602960248201527f4552433732313a2061646472657373207a65726f206973206e6f7420612076616044820152683634b21037bbb732b960b91b6064820152608401610381565b506001600160a01b031660009081526003602052604090205490565b60606001805461028990610ffe565b61061e338383610a43565b5050565b61062c33836107b0565b6106485760405162461bcd60e51b815260040161038190611038565b61065484848484610b11565b50505050565b6000818152600260205260409020546060906001600160a01b03166106d95760405162461bcd60e51b815260206004820152602f60248201527f4552433732314d657461646174613a2055524920717565727920666f72206e6f60448201526e3732bc34b9ba32b73a103a37b5b2b760891b6064820152608401610381565b60006106f060408051602081019091526000815290565b90506000815111610710576040518060200160405280600081525061073b565b8061071a84610b44565b60405160200161072b929190611089565b6040516020818303038152906040525b9392505050565b600081815260046020526040902080546001600160a01b0319166001600160a01b038416908117909155819061077782610507565b6001600160a01b03167f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b92560405160405180910390a45050565b6000818152600260205260408120546001600160a01b03166108295760405162461bcd60e51b815260206004820152602c60248201527f4552433732313a206f70657261746f7220717565727920666f72206e6f6e657860448201526b34b9ba32b73a103a37b5b2b760a11b6064820152608401610381565b600061083483610507565b9050806001600160a01b0316846001600160a01b0316148061087b57506001600160a01b0380821660009081526005602090815260408083209388168352929052205460ff165b8061089f5750836001600160a01b03166108948461030c565b6001600160a01b0316145b949350505050565b826001600160a01b03166108ba82610507565b6001600160a01b03161461091e5760405162461bcd60e51b815260206004820152602560248201527f4552433732313a207472616e736665722066726f6d20696e636f72726563742060448201526437bbb732b960d91b6064820152608401610381565b6001600160a01b0382166109805760405162461bcd60e51b8152602060048201526024808201527f4552433732313a207472616e7366657220746f20746865207a65726f206164646044820152637265737360e01b6064820152608401610381565b61098b600082610742565b6001600160a01b03831660009081526003602052604081208054600192906109b49084906110ce565b90915550506001600160a01b03821660009081526003602052604081208054600192906109e29084906110e5565b909155505060008181526002602052604080822080546001600160a01b0319166001600160a01b0386811691821790925591518493918716917fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef91a4505050565b816001600160a01b0316836001600160a01b031603610aa45760405162461bcd60e51b815260206004820152601960248201527f4552433732313a20617070726f766520746f2063616c6c6572000000000000006044820152606401610381565b6001600160a01b03838116600081815260056020908152604080832094871680845294825291829020805460ff191686151590811790915591519182527f17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31910160405180910390a3505050565b610b1c8484846108a7565b610b2884848484610c45565b6106545760405162461bcd60e51b8152600401610381906110fd565b606081600003610b6b5750506040805180820190915260018152600360fc1b602082015290565b8160005b8115610b955780610b7f8161114f565b9150610b8e9050600a8361117e565b9150610b6f565b60008167ffffffffffffffff811115610bb057610bb0610ed9565b6040519080825280601f01601f191660200182016040528015610bda576020820181803683370190505b5090505b841561089f57610bef6001836110ce565b9150610bfc600a86611192565b610c079060306110e5565b60f81b818381518110610c1c57610c1c6111a6565b60200101906001600160f81b031916908160001a905350610c3e600a8661117e565b9450610bde565b60006001600160a01b0384163b15610d3b57604051630a85bd0160e11b81526001600160a01b0385169063150b7a0290610c899033908990889088906004016111bc565b6020604051808303816000875af1925050508015610cc4575060408051601f3d908101601f19168201909252610cc1918101906111f9565b60015b610d21573d808015610cf2576040519150601f19603f3d011682016040523d82523d6000602084013e610cf7565b606091505b508051600003610d195760405162461bcd60e51b8152600401610381906110fd565b805181602001fd5b6001600160e01b031916630a85bd0160e11b14905061089f565b506001949350505050565b6001600160e01b031981168114610d5c57600080fd5b50565b600060208284031215610d7157600080fd5b813561073b81610d46565b60005b83811015610d97578181015183820152602001610d7f565b838111156106545750506000910152565b60008151808452610dc0816020860160208601610d7c565b601f01601f19169290920160200192915050565b60208152600061073b6020830184610da8565b600060208284031215610df957600080fd5b5035919050565b80356001600160a01b0381168114610e1757600080fd5b919050565b60008060408385031215610e2f57600080fd5b610e3883610e00565b946020939093013593505050565b600080600060608486031215610e5b57600080fd5b610e6484610e00565b9250610e7260208501610e00565b9150604084013590509250925092565b600060208284031215610e9457600080fd5b61073b82610e00565b60008060408385031215610eb057600080fd5b610eb983610e00565b915060208301358015158114610ece57600080fd5b809150509250929050565b634e487b7160e01b600052604160045260246000fd5b60008060008060808587031215610f0557600080fd5b610f0e85610e00565b9350610f1c60208601610e00565b925060408501359150606085013567ffffffffffffffff80821115610f4057600080fd5b818701915087601f830112610f5457600080fd5b813581811115610f6657610f66610ed9565b604051601f8201601f19908116603f01168101908382118183101715610f8e57610f8e610ed9565b816040528281528a6020848701011115610fa757600080fd5b82602086016020830137600060208483010152809550505050505092959194509250565b60008060408385031215610fde57600080fd5b610fe783610e00565b9150610ff560208401610e00565b90509250929050565b600181811c9082168061101257607f821691505b60208210810361103257634e487b7160e01b600052602260045260246000fd5b50919050565b60208082526031908201527f4552433732313a207472616e736665722063616c6c6572206973206e6f74206f6040820152701ddb995c881b9bdc88185c1c1c9bdd9959607a1b606082015260800190565b6000835161109b818460208801610d7c565b8351908301906110af818360208801610d7c565b01949350505050565b634e487b7160e01b600052601160045260246000fd5b6000828210156110e0576110e06110b8565b500390565b600082198211156110f8576110f86110b8565b500190565b60208082526032908201527f4552433732313a207472616e7366657220746f206e6f6e20455243373231526560408201527131b2b4bb32b91034b6b83632b6b2b73a32b960711b606082015260800190565b600060018201611161576111616110b8565b5060010190565b634e487b7160e01b600052601260045260246000fd5b60008261118d5761118d611168565b500490565b6000826111a1576111a1611168565b500690565b634e487b7160e01b600052603260045260246000fd5b6001600160a01b03858116825284166020820152604081018390526080606082018190526000906111ef90830184610da8565b9695505050505050565b60006020828403121561120b57600080fd5b815161073b81610d4656fea264697066735822122027a7b56ae50caf19da6468b86362b2fa45867945b5d8d10d6390e267956bc0ad64736f6c634300080d0033`
 
 // ERC721FuncSigs maps the 4-byte function signature to its string representation.
 var ERC721FuncSigs = map[string]string{
@@ -547,25 +1339,28 @@ var ERC721FuncSigs = map[string]string{
 	"70a08231": "balanceOf(address)",
 	"081812fc": "getApproved(uint256)",
 	"e985e9c5": "isApprovedForAll(address,address)",
+	"06fdde03": "name()",
 	"6352211e": "ownerOf(uint256)",
 	"42842e0e": "safeTransferFrom(address,address,uint256)",
 	"b88d4fde": "safeTransferFrom(address,address,uint256,bytes)",
 	"a22cb465": "setApprovalForAll(address,bool)",
 	"01ffc9a7": "supportsInterface(bytes4)",
+	"95d89b41": "symbol()",
+	"c87b56dd": "tokenURI(uint256)",
 	"23b872dd": "transferFrom(address,address,uint256)",
 }
 
 // ERC721Bin is the compiled bytecode used for deploying new contracts.
-var ERC721Bin = "0x608060405234801561001057600080fd5b506100276301ffc9a760e01b61004260201b60201c565b61003d6380ac58cd60e01b61004260201b60201c565b610110565b7fffffffff0000000000000000000000000000000000000000000000000000000080821614156100d357604080517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601c60248201527f4552433136353a20696e76616c696420696e7465726661636520696400000000604482015290519081900360640190fd5b7fffffffff00000000000000000000000000000000000000000000000000000000166000908152602081905260409020805460ff19166001179055565b610d448061011f6000396000f3fe608060405234801561001057600080fd5b506004361061009e5760003560e01c80636352211e116100665780636352211e146101b157806370a08231146101ce578063a22cb46514610206578063b88d4fde14610234578063e985e9c5146102fa5761009e565b806301ffc9a7146100a3578063081812fc146100de578063095ea7b31461011757806323b872dd1461014557806342842e0e1461017b575b600080fd5b6100ca600480360360208110156100b957600080fd5b50356001600160e01b031916610328565b604080519115158252519081900360200190f35b6100fb600480360360208110156100f457600080fd5b5035610347565b604080516001600160a01b039092168252519081900360200190f35b6101436004803603604081101561012d57600080fd5b506001600160a01b0381351690602001356103ac565b005b6101436004803603606081101561015b57600080fd5b506001600160a01b038135811691602081013590911690604001356104c3565b6101436004803603606081101561019157600080fd5b506001600160a01b0381358116916020810135909116906040013561051b565b6100fb600480360360208110156101c757600080fd5b5035610536565b6101f4600480360360208110156101e457600080fd5b50356001600160a01b0316610593565b60408051918252519081900360200190f35b6101436004803603604081101561021c57600080fd5b506001600160a01b03813516906020013515156105fe565b6101436004803603608081101561024a57600080fd5b6001600160a01b0382358116926020810135909116916040820135919081019060808101606082013564010000000081111561028557600080fd5b82018360208201111561029757600080fd5b803590602001918460018302840111640100000000831117156102b957600080fd5b91908080601f0160208091040260200160405190810160405280939291908181526020018383808284376000920191909152509295506106cd945050505050565b6100ca6004803603604081101561031057600080fd5b506001600160a01b0381358116916020013516610728565b6001600160e01b03191660009081526020819052604090205460ff1690565b600061035282610756565b61039057604051600160e51b62461bcd02815260040180806020018281038252602c815260200180610c72602c913960400191505060405180910390fd5b506000908152600260205260409020546001600160a01b031690565b60006103b782610536565b9050806001600160a01b0316836001600160a01b0316141561040d57604051600160e51b62461bcd028152600401808060200182810382526021815260200180610cc76021913960400191505060405180910390fd5b336001600160a01b038216148061042957506104298133610728565b61046757604051600160e51b62461bcd028152600401808060200182810382526038815260200180610be76038913960400191505060405180910390fd5b60008281526002602052604080822080546001600160a01b0319166001600160a01b0387811691821790925591518593918516917f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b92591a4505050565b6104cd3382610773565b61050b57604051600160e51b62461bcd028152600401808060200182810382526031815260200180610ce86031913960400191505060405180910390fd5b61051683838361081a565b505050565b610516838383604051806020016040528060008152506106cd565b6000818152600160205260408120546001600160a01b03168061058d57604051600160e51b62461bcd028152600401808060200182810382526029815260200180610c496029913960400191505060405180910390fd5b92915050565b60006001600160a01b0382166105dd57604051600160e51b62461bcd02815260040180806020018281038252602a815260200180610c1f602a913960400191505060405180910390fd5b6001600160a01b038216600090815260036020526040902061058d90610964565b6001600160a01b03821633141561065f5760408051600160e51b62461bcd02815260206004820152601960248201527f4552433732313a20617070726f766520746f2063616c6c657200000000000000604482015290519081900360640190fd5b3360008181526004602090815260408083206001600160a01b03871680855290835292819020805460ff1916861515908117909155815190815290519293927f17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31929181900390910190a35050565b6106d88484846104c3565b6106e484848484610968565b61072257604051600160e51b62461bcd028152600401808060200182810382526032815260200180610b656032913960400191505060405180910390fd5b50505050565b6001600160a01b03918216600090815260046020908152604080832093909416825291909152205460ff1690565b6000908152600160205260409020546001600160a01b0316151590565b600061077e82610756565b6107bc57604051600160e51b62461bcd02815260040180806020018281038252602c815260200180610bbb602c913960400191505060405180910390fd5b60006107c783610536565b9050806001600160a01b0316846001600160a01b031614806108025750836001600160a01b03166107f784610347565b6001600160a01b0316145b8061081257506108128185610728565b949350505050565b826001600160a01b031661082d82610536565b6001600160a01b03161461087557604051600160e51b62461bcd028152600401808060200182810382526029815260200180610c9e6029913960400191505060405180910390fd5b6001600160a01b0382166108bd57604051600160e51b62461bcd028152600401808060200182810382526024815260200180610b976024913960400191505060405180910390fd5b6108c681610aa1565b6001600160a01b03831660009081526003602052604090206108e790610ade565b6001600160a01b038216600090815260036020526040902061090890610af5565b60008181526001602052604080822080546001600160a01b0319166001600160a01b0386811691821790925591518493918716917fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef91a4505050565b5490565b600061097c846001600160a01b0316610afe565b61098857506001610812565b604051600160e11b630a85bd0102815233600482018181526001600160a01b03888116602485015260448401879052608060648501908152865160848601528651600095928a169463150b7a029490938c938b938b939260a4019060208501908083838e5b83811015610a055781810151838201526020016109ed565b50505050905090810190601f168015610a325780820380516001836020036101000a031916815260200191505b5095505050505050602060405180830381600087803b158015610a5457600080fd5b505af1158015610a68573d6000803e3d6000fd5b505050506040513d6020811015610a7e57600080fd5b50516001600160e01b031916600160e11b630a85bd010214915050949350505050565b6000818152600260205260409020546001600160a01b031615610adb57600081815260026020526040902080546001600160a01b03191690555b50565b8054610af190600163ffffffff610b0416565b9055565b80546001019055565b3b151590565b600082821115610b5e5760408051600160e51b62461bcd02815260206004820152601e60248201527f536166654d6174683a207375627472616374696f6e206f766572666c6f770000604482015290519081900360640190fd5b5090039056fe4552433732313a207472616e7366657220746f206e6f6e20455243373231526563656976657220696d706c656d656e7465724552433732313a207472616e7366657220746f20746865207a65726f20616464726573734552433732313a206f70657261746f7220717565727920666f72206e6f6e6578697374656e7420746f6b656e4552433732313a20617070726f76652063616c6c6572206973206e6f74206f776e6572206e6f7220617070726f76656420666f7220616c6c4552433732313a2062616c616e636520717565727920666f7220746865207a65726f20616464726573734552433732313a206f776e657220717565727920666f72206e6f6e6578697374656e7420746f6b656e4552433732313a20617070726f76656420717565727920666f72206e6f6e6578697374656e7420746f6b656e4552433732313a207472616e73666572206f6620746f6b656e2074686174206973206e6f74206f776e4552433732313a20617070726f76616c20746f2063757272656e74206f776e65724552433732313a207472616e736665722063616c6c6572206973206e6f74206f776e6572206e6f7220617070726f766564a165627a7a72305820729ef652fa5b3de930aa2053816415426d90b8ede7f21175faa42825db4887780029"
+var ERC721Bin = "0x60806040523480156200001157600080fd5b50604051620014dd380380620014dd8339810160408190526200003491620001db565b81516200004990600090602085019062000068565b5080516200005f90600190602084019062000068565b50505062000281565b828054620000769062000245565b90600052602060002090601f0160209004810192826200009a5760008555620000e5565b82601f10620000b557805160ff1916838001178555620000e5565b82800160010185558215620000e5579182015b82811115620000e5578251825591602001919060010190620000c8565b50620000f3929150620000f7565b5090565b5b80821115620000f35760008155600101620000f8565b634e487b7160e01b600052604160045260246000fd5b600082601f8301126200013657600080fd5b81516001600160401b03808211156200015357620001536200010e565b604051601f8301601f19908116603f011681019082821181831017156200017e576200017e6200010e565b816040528381526020925086838588010111156200019b57600080fd5b600091505b83821015620001bf5785820183015181830184015290820190620001a0565b83821115620001d15760008385830101525b9695505050505050565b60008060408385031215620001ef57600080fd5b82516001600160401b03808211156200020757600080fd5b620002158683870162000124565b935060208501519150808211156200022c57600080fd5b506200023b8582860162000124565b9150509250929050565b600181811c908216806200025a57607f821691505b6020821081036200027b57634e487b7160e01b600052602260045260246000fd5b50919050565b61124c80620002916000396000f3fe608060405234801561001057600080fd5b50600436106100cf5760003560e01c80636352211e1161008c578063a22cb46511610066578063a22cb465146101b3578063b88d4fde146101c6578063c87b56dd146101d9578063e985e9c5146101ec57600080fd5b80636352211e1461017757806370a082311461018a57806395d89b41146101ab57600080fd5b806301ffc9a7146100d457806306fdde03146100fc578063081812fc14610111578063095ea7b31461013c57806323b872dd1461015157806342842e0e14610164575b600080fd5b6100e76100e2366004610d5f565b610228565b60405190151581526020015b60405180910390f35b61010461027a565b6040516100f39190610dd4565b61012461011f366004610de7565b61030c565b6040516001600160a01b0390911681526020016100f3565b61014f61014a366004610e1c565b6103a6565b005b61014f61015f366004610e46565b6104bb565b61014f610172366004610e46565b6104ec565b610124610185366004610de7565b610507565b61019d610198366004610e82565b61057e565b6040519081526020016100f3565b610104610604565b61014f6101c1366004610e9d565b610613565b61014f6101d4366004610eef565b610622565b6101046101e7366004610de7565b61065a565b6100e76101fa366004610fcb565b6001600160a01b03918216600090815260056020908152604080832093909416825291909152205460ff1690565b60006001600160e01b031982166380ac58cd60e01b148061025957506001600160e01b03198216635b5e139f60e01b145b8061027457506301ffc9a760e01b6001600160e01b03198316145b92915050565b60606000805461028990610ffe565b80601f01602080910402602001604051908101604052809291908181526020018280546102b590610ffe565b80156103025780601f106102d757610100808354040283529160200191610302565b820191906000526020600020905b8154815290600101906020018083116102e557829003601f168201915b5050505050905090565b6000818152600260205260408120546001600160a01b031661038a5760405162461bcd60e51b815260206004820152602c60248201527f4552433732313a20617070726f76656420717565727920666f72206e6f6e657860448201526b34b9ba32b73a103a37b5b2b760a11b60648201526084015b60405180910390fd5b506000908152600460205260409020546001600160a01b031690565b60006103b182610507565b9050806001600160a01b0316836001600160a01b03160361041e5760405162461bcd60e51b815260206004820152602160248201527f4552433732313a20617070726f76616c20746f2063757272656e74206f776e656044820152603960f91b6064820152608401610381565b336001600160a01b038216148061043a575061043a81336101fa565b6104ac5760405162461bcd60e51b815260206004820152603860248201527f4552433732313a20617070726f76652063616c6c6572206973206e6f74206f7760448201527f6e6572206e6f7220617070726f76656420666f7220616c6c00000000000000006064820152608401610381565b6104b68383610742565b505050565b6104c533826107b0565b6104e15760405162461bcd60e51b815260040161038190611038565b6104b68383836108a7565b6104b683838360405180602001604052806000815250610622565b6000818152600260205260408120546001600160a01b0316806102745760405162461bcd60e51b815260206004820152602960248201527f4552433732313a206f776e657220717565727920666f72206e6f6e657869737460448201526832b73a103a37b5b2b760b91b6064820152608401610381565b60006001600160a01b0382166105e85760405162461bcd60e51b815260206004820152602960248201527f4552433732313a2061646472657373207a65726f206973206e6f7420612076616044820152683634b21037bbb732b960b91b6064820152608401610381565b506001600160a01b031660009081526003602052604090205490565b60606001805461028990610ffe565b61061e338383610a43565b5050565b61062c33836107b0565b6106485760405162461bcd60e51b815260040161038190611038565b61065484848484610b11565b50505050565b6000818152600260205260409020546060906001600160a01b03166106d95760405162461bcd60e51b815260206004820152602f60248201527f4552433732314d657461646174613a2055524920717565727920666f72206e6f60448201526e3732bc34b9ba32b73a103a37b5b2b760891b6064820152608401610381565b60006106f060408051602081019091526000815290565b90506000815111610710576040518060200160405280600081525061073b565b8061071a84610b44565b60405160200161072b929190611089565b6040516020818303038152906040525b9392505050565b600081815260046020526040902080546001600160a01b0319166001600160a01b038416908117909155819061077782610507565b6001600160a01b03167f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b92560405160405180910390a45050565b6000818152600260205260408120546001600160a01b03166108295760405162461bcd60e51b815260206004820152602c60248201527f4552433732313a206f70657261746f7220717565727920666f72206e6f6e657860448201526b34b9ba32b73a103a37b5b2b760a11b6064820152608401610381565b600061083483610507565b9050806001600160a01b0316846001600160a01b0316148061087b57506001600160a01b0380821660009081526005602090815260408083209388168352929052205460ff165b8061089f5750836001600160a01b03166108948461030c565b6001600160a01b0316145b949350505050565b826001600160a01b03166108ba82610507565b6001600160a01b03161461091e5760405162461bcd60e51b815260206004820152602560248201527f4552433732313a207472616e736665722066726f6d20696e636f72726563742060448201526437bbb732b960d91b6064820152608401610381565b6001600160a01b0382166109805760405162461bcd60e51b8152602060048201526024808201527f4552433732313a207472616e7366657220746f20746865207a65726f206164646044820152637265737360e01b6064820152608401610381565b61098b600082610742565b6001600160a01b03831660009081526003602052604081208054600192906109b49084906110ce565b90915550506001600160a01b03821660009081526003602052604081208054600192906109e29084906110e5565b909155505060008181526002602052604080822080546001600160a01b0319166001600160a01b0386811691821790925591518493918716917fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef91a4505050565b816001600160a01b0316836001600160a01b031603610aa45760405162461bcd60e51b815260206004820152601960248201527f4552433732313a20617070726f766520746f2063616c6c6572000000000000006044820152606401610381565b6001600160a01b03838116600081815260056020908152604080832094871680845294825291829020805460ff191686151590811790915591519182527f17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31910160405180910390a3505050565b610b1c8484846108a7565b610b2884848484610c45565b6106545760405162461bcd60e51b8152600401610381906110fd565b606081600003610b6b5750506040805180820190915260018152600360fc1b602082015290565b8160005b8115610b955780610b7f8161114f565b9150610b8e9050600a8361117e565b9150610b6f565b60008167ffffffffffffffff811115610bb057610bb0610ed9565b6040519080825280601f01601f191660200182016040528015610bda576020820181803683370190505b5090505b841561089f57610bef6001836110ce565b9150610bfc600a86611192565b610c079060306110e5565b60f81b818381518110610c1c57610c1c6111a6565b60200101906001600160f81b031916908160001a905350610c3e600a8661117e565b9450610bde565b60006001600160a01b0384163b15610d3b57604051630a85bd0160e11b81526001600160a01b0385169063150b7a0290610c899033908990889088906004016111bc565b6020604051808303816000875af1925050508015610cc4575060408051601f3d908101601f19168201909252610cc1918101906111f9565b60015b610d21573d808015610cf2576040519150601f19603f3d011682016040523d82523d6000602084013e610cf7565b606091505b508051600003610d195760405162461bcd60e51b8152600401610381906110fd565b805181602001fd5b6001600160e01b031916630a85bd0160e11b14905061089f565b506001949350505050565b6001600160e01b031981168114610d5c57600080fd5b50565b600060208284031215610d7157600080fd5b813561073b81610d46565b60005b83811015610d97578181015183820152602001610d7f565b838111156106545750506000910152565b60008151808452610dc0816020860160208601610d7c565b601f01601f19169290920160200192915050565b60208152600061073b6020830184610da8565b600060208284031215610df957600080fd5b5035919050565b80356001600160a01b0381168114610e1757600080fd5b919050565b60008060408385031215610e2f57600080fd5b610e3883610e00565b946020939093013593505050565b600080600060608486031215610e5b57600080fd5b610e6484610e00565b9250610e7260208501610e00565b9150604084013590509250925092565b600060208284031215610e9457600080fd5b61073b82610e00565b60008060408385031215610eb057600080fd5b610eb983610e00565b915060208301358015158114610ece57600080fd5b809150509250929050565b634e487b7160e01b600052604160045260246000fd5b60008060008060808587031215610f0557600080fd5b610f0e85610e00565b9350610f1c60208601610e00565b925060408501359150606085013567ffffffffffffffff80821115610f4057600080fd5b818701915087601f830112610f5457600080fd5b813581811115610f6657610f66610ed9565b604051601f8201601f19908116603f01168101908382118183101715610f8e57610f8e610ed9565b816040528281528a6020848701011115610fa757600080fd5b82602086016020830137600060208483010152809550505050505092959194509250565b60008060408385031215610fde57600080fd5b610fe783610e00565b9150610ff560208401610e00565b90509250929050565b600181811c9082168061101257607f821691505b60208210810361103257634e487b7160e01b600052602260045260246000fd5b50919050565b60208082526031908201527f4552433732313a207472616e736665722063616c6c6572206973206e6f74206f6040820152701ddb995c881b9bdc88185c1c1c9bdd9959607a1b606082015260800190565b6000835161109b818460208801610d7c565b8351908301906110af818360208801610d7c565b01949350505050565b634e487b7160e01b600052601160045260246000fd5b6000828210156110e0576110e06110b8565b500390565b600082198211156110f8576110f86110b8565b500190565b60208082526032908201527f4552433732313a207472616e7366657220746f206e6f6e20455243373231526560408201527131b2b4bb32b91034b6b83632b6b2b73a32b960711b606082015260800190565b600060018201611161576111616110b8565b5060010190565b634e487b7160e01b600052601260045260246000fd5b60008261118d5761118d611168565b500490565b6000826111a1576111a1611168565b500690565b634e487b7160e01b600052603260045260246000fd5b6001600160a01b03858116825284166020820152604081018390526080606082018190526000906111ef90830184610da8565b9695505050505050565b60006020828403121561120b57600080fd5b815161073b81610d4656fea264697066735822122027a7b56ae50caf19da6468b86362b2fa45867945b5d8d10d6390e267956bc0ad64736f6c634300080d0033"
 
 // DeployERC721 deploys a new Klaytn contract, binding an instance of ERC721 to it.
-func DeployERC721(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ERC721, error) {
+func DeployERC721(auth *bind.TransactOpts, backend bind.ContractBackend, name_ string, symbol_ string) (common.Address, *types.Transaction, *ERC721, error) {
 	parsed, err := abi.JSON(strings.NewReader(ERC721ABI))
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
 
-	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(ERC721Bin), backend)
+	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(ERC721Bin), backend, name_, symbol_)
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
@@ -792,6 +1587,32 @@ func (_ERC721 *ERC721CallerSession) IsApprovedForAll(owner common.Address, opera
 	return _ERC721.Contract.IsApprovedForAll(&_ERC721.CallOpts, owner, operator)
 }
 
+// Name is a free data retrieval call binding the contract method 0x06fdde03.
+//
+// Solidity: function name() view returns(string)
+func (_ERC721 *ERC721Caller) Name(opts *bind.CallOpts) (string, error) {
+	var (
+		ret0 = new(string)
+	)
+	out := ret0
+	err := _ERC721.contract.Call(opts, out, "name")
+	return *ret0, err
+}
+
+// Name is a free data retrieval call binding the contract method 0x06fdde03.
+//
+// Solidity: function name() view returns(string)
+func (_ERC721 *ERC721Session) Name() (string, error) {
+	return _ERC721.Contract.Name(&_ERC721.CallOpts)
+}
+
+// Name is a free data retrieval call binding the contract method 0x06fdde03.
+//
+// Solidity: function name() view returns(string)
+func (_ERC721 *ERC721CallerSession) Name() (string, error) {
+	return _ERC721.Contract.Name(&_ERC721.CallOpts)
+}
+
 // OwnerOf is a free data retrieval call binding the contract method 0x6352211e.
 //
 // Solidity: function ownerOf(uint256 tokenId) view returns(address)
@@ -844,6 +1665,58 @@ func (_ERC721 *ERC721CallerSession) SupportsInterface(interfaceId [4]byte) (bool
 	return _ERC721.Contract.SupportsInterface(&_ERC721.CallOpts, interfaceId)
 }
 
+// Symbol is a free data retrieval call binding the contract method 0x95d89b41.
+//
+// Solidity: function symbol() view returns(string)
+func (_ERC721 *ERC721Caller) Symbol(opts *bind.CallOpts) (string, error) {
+	var (
+		ret0 = new(string)
+	)
+	out := ret0
+	err := _ERC721.contract.Call(opts, out, "symbol")
+	return *ret0, err
+}
+
+// Symbol is a free data retrieval call binding the contract method 0x95d89b41.
+//
+// Solidity: function symbol() view returns(string)
+func (_ERC721 *ERC721Session) Symbol() (string, error) {
+	return _ERC721.Contract.Symbol(&_ERC721.CallOpts)
+}
+
+// Symbol is a free data retrieval call binding the contract method 0x95d89b41.
+//
+// Solidity: function symbol() view returns(string)
+func (_ERC721 *ERC721CallerSession) Symbol() (string, error) {
+	return _ERC721.Contract.Symbol(&_ERC721.CallOpts)
+}
+
+// TokenURI is a free data retrieval call binding the contract method 0xc87b56dd.
+//
+// Solidity: function tokenURI(uint256 tokenId) view returns(string)
+func (_ERC721 *ERC721Caller) TokenURI(opts *bind.CallOpts, tokenId *big.Int) (string, error) {
+	var (
+		ret0 = new(string)
+	)
+	out := ret0
+	err := _ERC721.contract.Call(opts, out, "tokenURI", tokenId)
+	return *ret0, err
+}
+
+// TokenURI is a free data retrieval call binding the contract method 0xc87b56dd.
+//
+// Solidity: function tokenURI(uint256 tokenId) view returns(string)
+func (_ERC721 *ERC721Session) TokenURI(tokenId *big.Int) (string, error) {
+	return _ERC721.Contract.TokenURI(&_ERC721.CallOpts, tokenId)
+}
+
+// TokenURI is a free data retrieval call binding the contract method 0xc87b56dd.
+//
+// Solidity: function tokenURI(uint256 tokenId) view returns(string)
+func (_ERC721 *ERC721CallerSession) TokenURI(tokenId *big.Int) (string, error) {
+	return _ERC721.Contract.TokenURI(&_ERC721.CallOpts, tokenId)
+}
+
 // Approve is a paid mutator transaction binding the contract method 0x095ea7b3.
 //
 // Solidity: function approve(address to, uint256 tokenId) returns()
@@ -888,44 +1761,44 @@ func (_ERC721 *ERC721TransactorSession) SafeTransferFrom(from common.Address, to
 
 // SafeTransferFrom0 is a paid mutator transaction binding the contract method 0xb88d4fde.
 //
-// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId, bytes _data) returns()
-func (_ERC721 *ERC721Transactor) SafeTransferFrom0(opts *bind.TransactOpts, from common.Address, to common.Address, tokenId *big.Int, _data []byte) (*types.Transaction, error) {
-	return _ERC721.contract.Transact(opts, "safeTransferFrom0", from, to, tokenId, _data)
+// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId, bytes data) returns()
+func (_ERC721 *ERC721Transactor) SafeTransferFrom0(opts *bind.TransactOpts, from common.Address, to common.Address, tokenId *big.Int, data []byte) (*types.Transaction, error) {
+	return _ERC721.contract.Transact(opts, "safeTransferFrom0", from, to, tokenId, data)
 }
 
 // SafeTransferFrom0 is a paid mutator transaction binding the contract method 0xb88d4fde.
 //
-// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId, bytes _data) returns()
-func (_ERC721 *ERC721Session) SafeTransferFrom0(from common.Address, to common.Address, tokenId *big.Int, _data []byte) (*types.Transaction, error) {
-	return _ERC721.Contract.SafeTransferFrom0(&_ERC721.TransactOpts, from, to, tokenId, _data)
+// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId, bytes data) returns()
+func (_ERC721 *ERC721Session) SafeTransferFrom0(from common.Address, to common.Address, tokenId *big.Int, data []byte) (*types.Transaction, error) {
+	return _ERC721.Contract.SafeTransferFrom0(&_ERC721.TransactOpts, from, to, tokenId, data)
 }
 
 // SafeTransferFrom0 is a paid mutator transaction binding the contract method 0xb88d4fde.
 //
-// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId, bytes _data) returns()
-func (_ERC721 *ERC721TransactorSession) SafeTransferFrom0(from common.Address, to common.Address, tokenId *big.Int, _data []byte) (*types.Transaction, error) {
-	return _ERC721.Contract.SafeTransferFrom0(&_ERC721.TransactOpts, from, to, tokenId, _data)
+// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId, bytes data) returns()
+func (_ERC721 *ERC721TransactorSession) SafeTransferFrom0(from common.Address, to common.Address, tokenId *big.Int, data []byte) (*types.Transaction, error) {
+	return _ERC721.Contract.SafeTransferFrom0(&_ERC721.TransactOpts, from, to, tokenId, data)
 }
 
 // SetApprovalForAll is a paid mutator transaction binding the contract method 0xa22cb465.
 //
-// Solidity: function setApprovalForAll(address to, bool approved) returns()
-func (_ERC721 *ERC721Transactor) SetApprovalForAll(opts *bind.TransactOpts, to common.Address, approved bool) (*types.Transaction, error) {
-	return _ERC721.contract.Transact(opts, "setApprovalForAll", to, approved)
+// Solidity: function setApprovalForAll(address operator, bool approved) returns()
+func (_ERC721 *ERC721Transactor) SetApprovalForAll(opts *bind.TransactOpts, operator common.Address, approved bool) (*types.Transaction, error) {
+	return _ERC721.contract.Transact(opts, "setApprovalForAll", operator, approved)
 }
 
 // SetApprovalForAll is a paid mutator transaction binding the contract method 0xa22cb465.
 //
-// Solidity: function setApprovalForAll(address to, bool approved) returns()
-func (_ERC721 *ERC721Session) SetApprovalForAll(to common.Address, approved bool) (*types.Transaction, error) {
-	return _ERC721.Contract.SetApprovalForAll(&_ERC721.TransactOpts, to, approved)
+// Solidity: function setApprovalForAll(address operator, bool approved) returns()
+func (_ERC721 *ERC721Session) SetApprovalForAll(operator common.Address, approved bool) (*types.Transaction, error) {
+	return _ERC721.Contract.SetApprovalForAll(&_ERC721.TransactOpts, operator, approved)
 }
 
 // SetApprovalForAll is a paid mutator transaction binding the contract method 0xa22cb465.
 //
-// Solidity: function setApprovalForAll(address to, bool approved) returns()
-func (_ERC721 *ERC721TransactorSession) SetApprovalForAll(to common.Address, approved bool) (*types.Transaction, error) {
-	return _ERC721.Contract.SetApprovalForAll(&_ERC721.TransactOpts, to, approved)
+// Solidity: function setApprovalForAll(address operator, bool approved) returns()
+func (_ERC721 *ERC721TransactorSession) SetApprovalForAll(operator common.Address, approved bool) (*types.Transaction, error) {
+	return _ERC721.Contract.SetApprovalForAll(&_ERC721.TransactOpts, operator, approved)
 }
 
 // TransferFrom is a paid mutator transaction binding the contract method 0x23b872dd.
@@ -1425,10 +2298,10 @@ func (_ERC721 *ERC721Filterer) ParseTransfer(log types.Log) (*ERC721Transfer, er
 }
 
 // ERC721BurnableABI is the input ABI used to generate the binding from.
-const ERC721BurnableABI = "[{\"constant\":true,\"inputs\":[{\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"getApproved\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"approve\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"transferFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"burn\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"ownerOf\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"setApprovalForAll\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"},{\"name\":\"_data\",\"type\":\"bytes\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"},{\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"isApprovedForAll\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"approved\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Approval\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"operator\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"ApprovalForAll\",\"type\":\"event\"}]"
+const ERC721BurnableABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"approved\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Approval\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"ApprovalForAll\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"approve\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"burn\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"getApproved\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"isApprovedForAll\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"ownerOf\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"setApprovalForAll\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"symbol\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"tokenURI\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"transferFrom\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // ERC721BurnableBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
-const ERC721BurnableBinRuntime = `608060405234801561001057600080fd5b50600436106100a95760003560e01c806342966c681161007157806342966c68146101bc5780636352211e146101d957806370a08231146101f6578063a22cb4651461022e578063b88d4fde1461025c578063e985e9c514610322576100a9565b806301ffc9a7146100ae578063081812fc146100e9578063095ea7b31461012257806323b872dd1461015057806342842e0e14610186575b600080fd5b6100d5600480360360208110156100c457600080fd5b50356001600160e01b031916610350565b604080519115158252519081900360200190f35b610106600480360360208110156100ff57600080fd5b503561036f565b604080516001600160a01b039092168252519081900360200190f35b61014e6004803603604081101561013857600080fd5b506001600160a01b0381351690602001356103d4565b005b61014e6004803603606081101561016657600080fd5b506001600160a01b038135811691602081013590911690604001356104eb565b61014e6004803603606081101561019c57600080fd5b506001600160a01b03813581169160208101359091169060400135610543565b61014e600480360360208110156101d257600080fd5b503561055e565b610106600480360360208110156101ef57600080fd5b50356105b2565b61021c6004803603602081101561020c57600080fd5b50356001600160a01b031661060f565b60408051918252519081900360200190f35b61014e6004803603604081101561024457600080fd5b506001600160a01b038135169060200135151561067a565b61014e6004803603608081101561027257600080fd5b6001600160a01b038235811692602081013590911691604082013591908101906080810160608201356401000000008111156102ad57600080fd5b8201836020820111156102bf57600080fd5b803590602001918460018302840111640100000000831117156102e157600080fd5b91908080601f016020809104026020016040519081016040528093929190818152602001838380828437600092019190915250929550610749945050505050565b6100d56004803603604081101561033857600080fd5b506001600160a01b03813581169160200135166107a4565b6001600160e01b03191660009081526020819052604090205460ff1690565b600061037a826107d2565b6103b857604051600160e51b62461bcd02815260040180806020018281038252602c815260200180610dd8602c913960400191505060405180910390fd5b506000908152600260205260409020546001600160a01b031690565b60006103df826105b2565b9050806001600160a01b0316836001600160a01b0316141561043557604051600160e51b62461bcd028152600401808060200182810382526021815260200180610e2d6021913960400191505060405180910390fd5b336001600160a01b0382161480610451575061045181336107a4565b61048f57604051600160e51b62461bcd028152600401808060200182810382526038815260200180610d4d6038913960400191505060405180910390fd5b60008281526002602052604080822080546001600160a01b0319166001600160a01b0387811691821790925591518593918516917f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b92591a4505050565b6104f533826107ef565b61053357604051600160e51b62461bcd028152600401808060200182810382526031815260200180610e4e6031913960400191505060405180910390fd5b61053e838383610896565b505050565b61053e83838360405180602001604052806000815250610749565b61056833826107ef565b6105a657604051600160e51b62461bcd028152600401808060200182810382526030815260200180610ea46030913960400191505060405180910390fd5b6105af816109e0565b50565b6000818152600160205260408120546001600160a01b03168061060957604051600160e51b62461bcd028152600401808060200182810382526029815260200180610daf6029913960400191505060405180910390fd5b92915050565b60006001600160a01b03821661065957604051600160e51b62461bcd02815260040180806020018281038252602a815260200180610d85602a913960400191505060405180910390fd5b6001600160a01b0382166000908152600360205260409020610609906109f2565b6001600160a01b0382163314156106db5760408051600160e51b62461bcd02815260206004820152601960248201527f4552433732313a20617070726f766520746f2063616c6c657200000000000000604482015290519081900360640190fd5b3360008181526004602090815260408083206001600160a01b03871680855290835292819020805460ff1916861515908117909155815190815290519293927f17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31929181900390910190a35050565b6107548484846104eb565b610760848484846109f6565b61079e57604051600160e51b62461bcd028152600401808060200182810382526032815260200180610ccb6032913960400191505060405180910390fd5b50505050565b6001600160a01b03918216600090815260046020908152604080832093909416825291909152205460ff1690565b6000908152600160205260409020546001600160a01b0316151590565b60006107fa826107d2565b61083857604051600160e51b62461bcd02815260040180806020018281038252602c815260200180610d21602c913960400191505060405180910390fd5b6000610843836105b2565b9050806001600160a01b0316846001600160a01b0316148061087e5750836001600160a01b03166108738461036f565b6001600160a01b0316145b8061088e575061088e81856107a4565b949350505050565b826001600160a01b03166108a9826105b2565b6001600160a01b0316146108f157604051600160e51b62461bcd028152600401808060200182810382526029815260200180610e046029913960400191505060405180910390fd5b6001600160a01b03821661093957604051600160e51b62461bcd028152600401808060200182810382526024815260200180610cfd6024913960400191505060405180910390fd5b61094281610b2f565b6001600160a01b038316600090815260036020526040902061096390610b6a565b6001600160a01b038216600090815260036020526040902061098490610b81565b60008181526001602052604080822080546001600160a01b0319166001600160a01b0386811691821790925591518493918716917fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef91a4505050565b6105af6109ec826105b2565b82610b8a565b5490565b6000610a0a846001600160a01b0316610c64565b610a165750600161088e565b604051600160e11b630a85bd0102815233600482018181526001600160a01b03888116602485015260448401879052608060648501908152865160848601528651600095928a169463150b7a029490938c938b938b939260a4019060208501908083838e5b83811015610a93578181015183820152602001610a7b565b50505050905090810190601f168015610ac05780820380516001836020036101000a031916815260200191505b5095505050505050602060405180830381600087803b158015610ae257600080fd5b505af1158015610af6573d6000803e3d6000fd5b505050506040513d6020811015610b0c57600080fd5b50516001600160e01b031916600160e11b630a85bd010214915050949350505050565b6000818152600260205260409020546001600160a01b0316156105af57600090815260026020526040902080546001600160a01b0319169055565b8054610b7d90600163ffffffff610c6a16565b9055565b80546001019055565b816001600160a01b0316610b9d826105b2565b6001600160a01b031614610be557604051600160e51b62461bcd028152600401808060200182810382526025815260200180610e7f6025913960400191505060405180910390fd5b610bee81610b2f565b6001600160a01b0382166000908152600360205260409020610c0f90610b6a565b60008181526001602052604080822080546001600160a01b0319169055518291906001600160a01b038516907fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef908390a45050565b3b151590565b600082821115610cc45760408051600160e51b62461bcd02815260206004820152601e60248201527f536166654d6174683a207375627472616374696f6e206f766572666c6f770000604482015290519081900360640190fd5b5090039056fe4552433732313a207472616e7366657220746f206e6f6e20455243373231526563656976657220696d706c656d656e7465724552433732313a207472616e7366657220746f20746865207a65726f20616464726573734552433732313a206f70657261746f7220717565727920666f72206e6f6e6578697374656e7420746f6b656e4552433732313a20617070726f76652063616c6c6572206973206e6f74206f776e6572206e6f7220617070726f76656420666f7220616c6c4552433732313a2062616c616e636520717565727920666f7220746865207a65726f20616464726573734552433732313a206f776e657220717565727920666f72206e6f6e6578697374656e7420746f6b656e4552433732313a20617070726f76656420717565727920666f72206e6f6e6578697374656e7420746f6b656e4552433732313a207472616e73666572206f6620746f6b656e2074686174206973206e6f74206f776e4552433732313a20617070726f76616c20746f2063757272656e74206f776e65724552433732313a207472616e736665722063616c6c6572206973206e6f74206f776e6572206e6f7220617070726f7665644552433732313a206275726e206f6620746f6b656e2074686174206973206e6f74206f776e4552433732314275726e61626c653a2063616c6c6572206973206e6f74206f776e6572206e6f7220617070726f766564a165627a7a7230582035986e074f001b98f3d4f8e669063ef8d5efcf5cb63f5103e5e5296048223c1d0029`
+const ERC721BurnableBinRuntime = ``
 
 // ERC721BurnableFuncSigs maps the 4-byte function signature to its string representation.
 var ERC721BurnableFuncSigs = map[string]string{
@@ -1437,29 +2310,15 @@ var ERC721BurnableFuncSigs = map[string]string{
 	"42966c68": "burn(uint256)",
 	"081812fc": "getApproved(uint256)",
 	"e985e9c5": "isApprovedForAll(address,address)",
+	"06fdde03": "name()",
 	"6352211e": "ownerOf(uint256)",
 	"42842e0e": "safeTransferFrom(address,address,uint256)",
 	"b88d4fde": "safeTransferFrom(address,address,uint256,bytes)",
 	"a22cb465": "setApprovalForAll(address,bool)",
 	"01ffc9a7": "supportsInterface(bytes4)",
+	"95d89b41": "symbol()",
+	"c87b56dd": "tokenURI(uint256)",
 	"23b872dd": "transferFrom(address,address,uint256)",
-}
-
-// ERC721BurnableBin is the compiled bytecode used for deploying new contracts.
-var ERC721BurnableBin = "0x608060405261001a6301ffc9a760e01b61003560201b60201c565b6100306380ac58cd60e01b61003560201b60201c565b610103565b7fffffffff0000000000000000000000000000000000000000000000000000000080821614156100c657604080517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601c60248201527f4552433136353a20696e76616c696420696e7465726661636520696400000000604482015290519081900360640190fd5b7fffffffff00000000000000000000000000000000000000000000000000000000166000908152602081905260409020805460ff19166001179055565b610eff806101126000396000f3fe608060405234801561001057600080fd5b50600436106100a95760003560e01c806342966c681161007157806342966c68146101bc5780636352211e146101d957806370a08231146101f6578063a22cb4651461022e578063b88d4fde1461025c578063e985e9c514610322576100a9565b806301ffc9a7146100ae578063081812fc146100e9578063095ea7b31461012257806323b872dd1461015057806342842e0e14610186575b600080fd5b6100d5600480360360208110156100c457600080fd5b50356001600160e01b031916610350565b604080519115158252519081900360200190f35b610106600480360360208110156100ff57600080fd5b503561036f565b604080516001600160a01b039092168252519081900360200190f35b61014e6004803603604081101561013857600080fd5b506001600160a01b0381351690602001356103d4565b005b61014e6004803603606081101561016657600080fd5b506001600160a01b038135811691602081013590911690604001356104eb565b61014e6004803603606081101561019c57600080fd5b506001600160a01b03813581169160208101359091169060400135610543565b61014e600480360360208110156101d257600080fd5b503561055e565b610106600480360360208110156101ef57600080fd5b50356105b2565b61021c6004803603602081101561020c57600080fd5b50356001600160a01b031661060f565b60408051918252519081900360200190f35b61014e6004803603604081101561024457600080fd5b506001600160a01b038135169060200135151561067a565b61014e6004803603608081101561027257600080fd5b6001600160a01b038235811692602081013590911691604082013591908101906080810160608201356401000000008111156102ad57600080fd5b8201836020820111156102bf57600080fd5b803590602001918460018302840111640100000000831117156102e157600080fd5b91908080601f016020809104026020016040519081016040528093929190818152602001838380828437600092019190915250929550610749945050505050565b6100d56004803603604081101561033857600080fd5b506001600160a01b03813581169160200135166107a4565b6001600160e01b03191660009081526020819052604090205460ff1690565b600061037a826107d2565b6103b857604051600160e51b62461bcd02815260040180806020018281038252602c815260200180610dd8602c913960400191505060405180910390fd5b506000908152600260205260409020546001600160a01b031690565b60006103df826105b2565b9050806001600160a01b0316836001600160a01b0316141561043557604051600160e51b62461bcd028152600401808060200182810382526021815260200180610e2d6021913960400191505060405180910390fd5b336001600160a01b0382161480610451575061045181336107a4565b61048f57604051600160e51b62461bcd028152600401808060200182810382526038815260200180610d4d6038913960400191505060405180910390fd5b60008281526002602052604080822080546001600160a01b0319166001600160a01b0387811691821790925591518593918516917f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b92591a4505050565b6104f533826107ef565b61053357604051600160e51b62461bcd028152600401808060200182810382526031815260200180610e4e6031913960400191505060405180910390fd5b61053e838383610896565b505050565b61053e83838360405180602001604052806000815250610749565b61056833826107ef565b6105a657604051600160e51b62461bcd028152600401808060200182810382526030815260200180610ea46030913960400191505060405180910390fd5b6105af816109e0565b50565b6000818152600160205260408120546001600160a01b03168061060957604051600160e51b62461bcd028152600401808060200182810382526029815260200180610daf6029913960400191505060405180910390fd5b92915050565b60006001600160a01b03821661065957604051600160e51b62461bcd02815260040180806020018281038252602a815260200180610d85602a913960400191505060405180910390fd5b6001600160a01b0382166000908152600360205260409020610609906109f2565b6001600160a01b0382163314156106db5760408051600160e51b62461bcd02815260206004820152601960248201527f4552433732313a20617070726f766520746f2063616c6c657200000000000000604482015290519081900360640190fd5b3360008181526004602090815260408083206001600160a01b03871680855290835292819020805460ff1916861515908117909155815190815290519293927f17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31929181900390910190a35050565b6107548484846104eb565b610760848484846109f6565b61079e57604051600160e51b62461bcd028152600401808060200182810382526032815260200180610ccb6032913960400191505060405180910390fd5b50505050565b6001600160a01b03918216600090815260046020908152604080832093909416825291909152205460ff1690565b6000908152600160205260409020546001600160a01b0316151590565b60006107fa826107d2565b61083857604051600160e51b62461bcd02815260040180806020018281038252602c815260200180610d21602c913960400191505060405180910390fd5b6000610843836105b2565b9050806001600160a01b0316846001600160a01b0316148061087e5750836001600160a01b03166108738461036f565b6001600160a01b0316145b8061088e575061088e81856107a4565b949350505050565b826001600160a01b03166108a9826105b2565b6001600160a01b0316146108f157604051600160e51b62461bcd028152600401808060200182810382526029815260200180610e046029913960400191505060405180910390fd5b6001600160a01b03821661093957604051600160e51b62461bcd028152600401808060200182810382526024815260200180610cfd6024913960400191505060405180910390fd5b61094281610b2f565b6001600160a01b038316600090815260036020526040902061096390610b6a565b6001600160a01b038216600090815260036020526040902061098490610b81565b60008181526001602052604080822080546001600160a01b0319166001600160a01b0386811691821790925591518493918716917fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef91a4505050565b6105af6109ec826105b2565b82610b8a565b5490565b6000610a0a846001600160a01b0316610c64565b610a165750600161088e565b604051600160e11b630a85bd0102815233600482018181526001600160a01b03888116602485015260448401879052608060648501908152865160848601528651600095928a169463150b7a029490938c938b938b939260a4019060208501908083838e5b83811015610a93578181015183820152602001610a7b565b50505050905090810190601f168015610ac05780820380516001836020036101000a031916815260200191505b5095505050505050602060405180830381600087803b158015610ae257600080fd5b505af1158015610af6573d6000803e3d6000fd5b505050506040513d6020811015610b0c57600080fd5b50516001600160e01b031916600160e11b630a85bd010214915050949350505050565b6000818152600260205260409020546001600160a01b0316156105af57600090815260026020526040902080546001600160a01b0319169055565b8054610b7d90600163ffffffff610c6a16565b9055565b80546001019055565b816001600160a01b0316610b9d826105b2565b6001600160a01b031614610be557604051600160e51b62461bcd028152600401808060200182810382526025815260200180610e7f6025913960400191505060405180910390fd5b610bee81610b2f565b6001600160a01b0382166000908152600360205260409020610c0f90610b6a565b60008181526001602052604080822080546001600160a01b0319169055518291906001600160a01b038516907fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef908390a45050565b3b151590565b600082821115610cc45760408051600160e51b62461bcd02815260206004820152601e60248201527f536166654d6174683a207375627472616374696f6e206f766572666c6f770000604482015290519081900360640190fd5b5090039056fe4552433732313a207472616e7366657220746f206e6f6e20455243373231526563656976657220696d706c656d656e7465724552433732313a207472616e7366657220746f20746865207a65726f20616464726573734552433732313a206f70657261746f7220717565727920666f72206e6f6e6578697374656e7420746f6b656e4552433732313a20617070726f76652063616c6c6572206973206e6f74206f776e6572206e6f7220617070726f76656420666f7220616c6c4552433732313a2062616c616e636520717565727920666f7220746865207a65726f20616464726573734552433732313a206f776e657220717565727920666f72206e6f6e6578697374656e7420746f6b656e4552433732313a20617070726f76656420717565727920666f72206e6f6e6578697374656e7420746f6b656e4552433732313a207472616e73666572206f6620746f6b656e2074686174206973206e6f74206f776e4552433732313a20617070726f76616c20746f2063757272656e74206f776e65724552433732313a207472616e736665722063616c6c6572206973206e6f74206f776e6572206e6f7220617070726f7665644552433732313a206275726e206f6620746f6b656e2074686174206973206e6f74206f776e4552433732314275726e61626c653a2063616c6c6572206973206e6f74206f776e6572206e6f7220617070726f766564a165627a7a7230582035986e074f001b98f3d4f8e669063ef8d5efcf5cb63f5103e5e5296048223c1d0029"
-
-// DeployERC721Burnable deploys a new Klaytn contract, binding an instance of ERC721Burnable to it.
-func DeployERC721Burnable(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ERC721Burnable, error) {
-	parsed, err := abi.JSON(strings.NewReader(ERC721BurnableABI))
-	if err != nil {
-		return common.Address{}, nil, nil, err
-	}
-
-	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(ERC721BurnableBin), backend)
-	if err != nil {
-		return common.Address{}, nil, nil, err
-	}
-	return address, tx, &ERC721Burnable{ERC721BurnableCaller: ERC721BurnableCaller{contract: contract}, ERC721BurnableTransactor: ERC721BurnableTransactor{contract: contract}, ERC721BurnableFilterer: ERC721BurnableFilterer{contract: contract}}, nil
 }
 
 // ERC721Burnable is an auto generated Go binding around a Klaytn contract.
@@ -1682,6 +2541,32 @@ func (_ERC721Burnable *ERC721BurnableCallerSession) IsApprovedForAll(owner commo
 	return _ERC721Burnable.Contract.IsApprovedForAll(&_ERC721Burnable.CallOpts, owner, operator)
 }
 
+// Name is a free data retrieval call binding the contract method 0x06fdde03.
+//
+// Solidity: function name() view returns(string)
+func (_ERC721Burnable *ERC721BurnableCaller) Name(opts *bind.CallOpts) (string, error) {
+	var (
+		ret0 = new(string)
+	)
+	out := ret0
+	err := _ERC721Burnable.contract.Call(opts, out, "name")
+	return *ret0, err
+}
+
+// Name is a free data retrieval call binding the contract method 0x06fdde03.
+//
+// Solidity: function name() view returns(string)
+func (_ERC721Burnable *ERC721BurnableSession) Name() (string, error) {
+	return _ERC721Burnable.Contract.Name(&_ERC721Burnable.CallOpts)
+}
+
+// Name is a free data retrieval call binding the contract method 0x06fdde03.
+//
+// Solidity: function name() view returns(string)
+func (_ERC721Burnable *ERC721BurnableCallerSession) Name() (string, error) {
+	return _ERC721Burnable.Contract.Name(&_ERC721Burnable.CallOpts)
+}
+
 // OwnerOf is a free data retrieval call binding the contract method 0x6352211e.
 //
 // Solidity: function ownerOf(uint256 tokenId) view returns(address)
@@ -1732,6 +2617,58 @@ func (_ERC721Burnable *ERC721BurnableSession) SupportsInterface(interfaceId [4]b
 // Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
 func (_ERC721Burnable *ERC721BurnableCallerSession) SupportsInterface(interfaceId [4]byte) (bool, error) {
 	return _ERC721Burnable.Contract.SupportsInterface(&_ERC721Burnable.CallOpts, interfaceId)
+}
+
+// Symbol is a free data retrieval call binding the contract method 0x95d89b41.
+//
+// Solidity: function symbol() view returns(string)
+func (_ERC721Burnable *ERC721BurnableCaller) Symbol(opts *bind.CallOpts) (string, error) {
+	var (
+		ret0 = new(string)
+	)
+	out := ret0
+	err := _ERC721Burnable.contract.Call(opts, out, "symbol")
+	return *ret0, err
+}
+
+// Symbol is a free data retrieval call binding the contract method 0x95d89b41.
+//
+// Solidity: function symbol() view returns(string)
+func (_ERC721Burnable *ERC721BurnableSession) Symbol() (string, error) {
+	return _ERC721Burnable.Contract.Symbol(&_ERC721Burnable.CallOpts)
+}
+
+// Symbol is a free data retrieval call binding the contract method 0x95d89b41.
+//
+// Solidity: function symbol() view returns(string)
+func (_ERC721Burnable *ERC721BurnableCallerSession) Symbol() (string, error) {
+	return _ERC721Burnable.Contract.Symbol(&_ERC721Burnable.CallOpts)
+}
+
+// TokenURI is a free data retrieval call binding the contract method 0xc87b56dd.
+//
+// Solidity: function tokenURI(uint256 tokenId) view returns(string)
+func (_ERC721Burnable *ERC721BurnableCaller) TokenURI(opts *bind.CallOpts, tokenId *big.Int) (string, error) {
+	var (
+		ret0 = new(string)
+	)
+	out := ret0
+	err := _ERC721Burnable.contract.Call(opts, out, "tokenURI", tokenId)
+	return *ret0, err
+}
+
+// TokenURI is a free data retrieval call binding the contract method 0xc87b56dd.
+//
+// Solidity: function tokenURI(uint256 tokenId) view returns(string)
+func (_ERC721Burnable *ERC721BurnableSession) TokenURI(tokenId *big.Int) (string, error) {
+	return _ERC721Burnable.Contract.TokenURI(&_ERC721Burnable.CallOpts, tokenId)
+}
+
+// TokenURI is a free data retrieval call binding the contract method 0xc87b56dd.
+//
+// Solidity: function tokenURI(uint256 tokenId) view returns(string)
+func (_ERC721Burnable *ERC721BurnableCallerSession) TokenURI(tokenId *big.Int) (string, error) {
+	return _ERC721Burnable.Contract.TokenURI(&_ERC721Burnable.CallOpts, tokenId)
 }
 
 // Approve is a paid mutator transaction binding the contract method 0x095ea7b3.
@@ -1799,44 +2736,44 @@ func (_ERC721Burnable *ERC721BurnableTransactorSession) SafeTransferFrom(from co
 
 // SafeTransferFrom0 is a paid mutator transaction binding the contract method 0xb88d4fde.
 //
-// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId, bytes _data) returns()
-func (_ERC721Burnable *ERC721BurnableTransactor) SafeTransferFrom0(opts *bind.TransactOpts, from common.Address, to common.Address, tokenId *big.Int, _data []byte) (*types.Transaction, error) {
-	return _ERC721Burnable.contract.Transact(opts, "safeTransferFrom0", from, to, tokenId, _data)
+// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId, bytes data) returns()
+func (_ERC721Burnable *ERC721BurnableTransactor) SafeTransferFrom0(opts *bind.TransactOpts, from common.Address, to common.Address, tokenId *big.Int, data []byte) (*types.Transaction, error) {
+	return _ERC721Burnable.contract.Transact(opts, "safeTransferFrom0", from, to, tokenId, data)
 }
 
 // SafeTransferFrom0 is a paid mutator transaction binding the contract method 0xb88d4fde.
 //
-// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId, bytes _data) returns()
-func (_ERC721Burnable *ERC721BurnableSession) SafeTransferFrom0(from common.Address, to common.Address, tokenId *big.Int, _data []byte) (*types.Transaction, error) {
-	return _ERC721Burnable.Contract.SafeTransferFrom0(&_ERC721Burnable.TransactOpts, from, to, tokenId, _data)
+// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId, bytes data) returns()
+func (_ERC721Burnable *ERC721BurnableSession) SafeTransferFrom0(from common.Address, to common.Address, tokenId *big.Int, data []byte) (*types.Transaction, error) {
+	return _ERC721Burnable.Contract.SafeTransferFrom0(&_ERC721Burnable.TransactOpts, from, to, tokenId, data)
 }
 
 // SafeTransferFrom0 is a paid mutator transaction binding the contract method 0xb88d4fde.
 //
-// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId, bytes _data) returns()
-func (_ERC721Burnable *ERC721BurnableTransactorSession) SafeTransferFrom0(from common.Address, to common.Address, tokenId *big.Int, _data []byte) (*types.Transaction, error) {
-	return _ERC721Burnable.Contract.SafeTransferFrom0(&_ERC721Burnable.TransactOpts, from, to, tokenId, _data)
+// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId, bytes data) returns()
+func (_ERC721Burnable *ERC721BurnableTransactorSession) SafeTransferFrom0(from common.Address, to common.Address, tokenId *big.Int, data []byte) (*types.Transaction, error) {
+	return _ERC721Burnable.Contract.SafeTransferFrom0(&_ERC721Burnable.TransactOpts, from, to, tokenId, data)
 }
 
 // SetApprovalForAll is a paid mutator transaction binding the contract method 0xa22cb465.
 //
-// Solidity: function setApprovalForAll(address to, bool approved) returns()
-func (_ERC721Burnable *ERC721BurnableTransactor) SetApprovalForAll(opts *bind.TransactOpts, to common.Address, approved bool) (*types.Transaction, error) {
-	return _ERC721Burnable.contract.Transact(opts, "setApprovalForAll", to, approved)
+// Solidity: function setApprovalForAll(address operator, bool approved) returns()
+func (_ERC721Burnable *ERC721BurnableTransactor) SetApprovalForAll(opts *bind.TransactOpts, operator common.Address, approved bool) (*types.Transaction, error) {
+	return _ERC721Burnable.contract.Transact(opts, "setApprovalForAll", operator, approved)
 }
 
 // SetApprovalForAll is a paid mutator transaction binding the contract method 0xa22cb465.
 //
-// Solidity: function setApprovalForAll(address to, bool approved) returns()
-func (_ERC721Burnable *ERC721BurnableSession) SetApprovalForAll(to common.Address, approved bool) (*types.Transaction, error) {
-	return _ERC721Burnable.Contract.SetApprovalForAll(&_ERC721Burnable.TransactOpts, to, approved)
+// Solidity: function setApprovalForAll(address operator, bool approved) returns()
+func (_ERC721Burnable *ERC721BurnableSession) SetApprovalForAll(operator common.Address, approved bool) (*types.Transaction, error) {
+	return _ERC721Burnable.Contract.SetApprovalForAll(&_ERC721Burnable.TransactOpts, operator, approved)
 }
 
 // SetApprovalForAll is a paid mutator transaction binding the contract method 0xa22cb465.
 //
-// Solidity: function setApprovalForAll(address to, bool approved) returns()
-func (_ERC721Burnable *ERC721BurnableTransactorSession) SetApprovalForAll(to common.Address, approved bool) (*types.Transaction, error) {
-	return _ERC721Burnable.Contract.SetApprovalForAll(&_ERC721Burnable.TransactOpts, to, approved)
+// Solidity: function setApprovalForAll(address operator, bool approved) returns()
+func (_ERC721Burnable *ERC721BurnableTransactorSession) SetApprovalForAll(operator common.Address, approved bool) (*types.Transaction, error) {
+	return _ERC721Burnable.Contract.SetApprovalForAll(&_ERC721Burnable.TransactOpts, operator, approved)
 }
 
 // TransferFrom is a paid mutator transaction binding the contract method 0x23b872dd.
@@ -2336,10 +3273,10 @@ func (_ERC721Burnable *ERC721BurnableFilterer) ParseTransfer(log types.Log) (*ER
 }
 
 // ERC721EnumerableABI is the input ABI used to generate the binding from.
-const ERC721EnumerableABI = "[{\"constant\":true,\"inputs\":[{\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"getApproved\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"approve\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"totalSupply\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"transferFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"},{\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"tokenOfOwnerByIndex\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"tokenByIndex\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"ownerOf\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"setApprovalForAll\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"},{\"name\":\"_data\",\"type\":\"bytes\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"},{\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"isApprovedForAll\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"approved\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Approval\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"operator\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"ApprovalForAll\",\"type\":\"event\"}]"
+const ERC721EnumerableABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"approved\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Approval\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"ApprovalForAll\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"approve\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"getApproved\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"isApprovedForAll\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"ownerOf\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"setApprovalForAll\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"symbol\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"tokenByIndex\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"tokenOfOwnerByIndex\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"tokenURI\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"totalSupply\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"transferFrom\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // ERC721EnumerableBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
-const ERC721EnumerableBinRuntime = `608060405234801561001057600080fd5b50600436106100cf5760003560e01c806342842e0e1161008c57806370a082311161006657806370a0823114610262578063a22cb46514610288578063b88d4fde146102b6578063e985e9c51461037c576100cf565b806342842e0e146101f25780634f6ccce7146102285780636352211e14610245576100cf565b806301ffc9a7146100d4578063081812fc1461010f578063095ea7b31461014857806318160ddd1461017657806323b872dd146101905780632f745c59146101c6575b600080fd5b6100fb600480360360208110156100ea57600080fd5b50356001600160e01b0319166103aa565b604080519115158252519081900360200190f35b61012c6004803603602081101561012557600080fd5b50356103c9565b604080516001600160a01b039092168252519081900360200190f35b6101746004803603604081101561015e57600080fd5b506001600160a01b03813516906020013561042e565b005b61017e610545565b60408051918252519081900360200190f35b610174600480360360608110156101a657600080fd5b506001600160a01b0381358116916020810135909116906040013561054c565b61017e600480360360408110156101dc57600080fd5b506001600160a01b0381351690602001356105a4565b6101746004803603606081101561020857600080fd5b506001600160a01b03813581169160208101359091169060400135610626565b61017e6004803603602081101561023e57600080fd5b5035610641565b61012c6004803603602081101561025b57600080fd5b50356106aa565b61017e6004803603602081101561027857600080fd5b50356001600160a01b0316610707565b6101746004803603604081101561029e57600080fd5b506001600160a01b0381351690602001351515610772565b610174600480360360808110156102cc57600080fd5b6001600160a01b0382358116926020810135909116916040820135919081019060808101606082013564010000000081111561030757600080fd5b82018360208201111561031957600080fd5b8035906020019184600183028401116401000000008311171561033b57600080fd5b91908080601f016020809104026020016040519081016040528093929190818152602001838380828437600092019190915250929550610841945050505050565b6100fb6004803603604081101561039257600080fd5b506001600160a01b038135811691602001351661089c565b6001600160e01b03191660009081526020819052604090205460ff1690565b60006103d4826108ca565b61041257604051600160e51b62461bcd02815260040180806020018281038252602c815260200180610fa0602c913960400191505060405180910390fd5b506000908152600260205260409020546001600160a01b031690565b6000610439826106aa565b9050806001600160a01b0316836001600160a01b0316141561048f57604051600160e51b62461bcd028152600401808060200182810382526021815260200180610ff56021913960400191505060405180910390fd5b336001600160a01b03821614806104ab57506104ab813361089c565b6104e957604051600160e51b62461bcd028152600401808060200182810382526038815260200180610f156038913960400191505060405180910390fd5b60008281526002602052604080822080546001600160a01b0319166001600160a01b0387811691821790925591518593918516917f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b92591a4505050565b6007545b90565b61055633826108e7565b61059457604051600160e51b62461bcd0281526004018080602001828103825260318152602001806110166031913960400191505060405180910390fd5b61059f83838361098e565b505050565b60006105af83610707565b82106105ef57604051600160e51b62461bcd02815260040180806020018281038252602b815260200180610e68602b913960400191505060405180910390fd5b6001600160a01b038316600090815260056020526040902080548390811061061357fe5b9060005260206000200154905092915050565b61059f83838360405180602001604052806000815250610841565b600061064b610545565b821061068b57604051600160e51b62461bcd02815260040180806020018281038252602c815260200180611047602c913960400191505060405180910390fd5b6007828154811061069857fe5b90600052602060002001549050919050565b6000818152600160205260408120546001600160a01b03168061070157604051600160e51b62461bcd028152600401808060200182810382526029815260200180610f776029913960400191505060405180910390fd5b92915050565b60006001600160a01b03821661075157604051600160e51b62461bcd02815260040180806020018281038252602a815260200180610f4d602a913960400191505060405180910390fd5b6001600160a01b0382166000908152600360205260409020610701906109ad565b6001600160a01b0382163314156107d35760408051600160e51b62461bcd02815260206004820152601960248201527f4552433732313a20617070726f766520746f2063616c6c657200000000000000604482015290519081900360640190fd5b3360008181526004602090815260408083206001600160a01b03871680855290835292819020805460ff1916861515908117909155815190815290519293927f17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31929181900390910190a35050565b61084c84848461054c565b610858848484846109b1565b61089657604051600160e51b62461bcd028152600401808060200182810382526032815260200180610e936032913960400191505060405180910390fd5b50505050565b6001600160a01b03918216600090815260046020908152604080832093909416825291909152205460ff1690565b6000908152600160205260409020546001600160a01b0316151590565b60006108f2826108ca565b61093057604051600160e51b62461bcd02815260040180806020018281038252602c815260200180610ee9602c913960400191505060405180910390fd5b600061093b836106aa565b9050806001600160a01b0316846001600160a01b031614806109765750836001600160a01b031661096b846103c9565b6001600160a01b0316145b806109865750610986818561089c565b949350505050565b610999838383610aea565b6109a38382610c34565b61059f8282610d29565b5490565b60006109c5846001600160a01b0316610d67565b6109d157506001610986565b604051600160e11b630a85bd0102815233600482018181526001600160a01b03888116602485015260448401879052608060648501908152865160848601528651600095928a169463150b7a029490938c938b938b939260a4019060208501908083838e5b83811015610a4e578181015183820152602001610a36565b50505050905090810190601f168015610a7b5780820380516001836020036101000a031916815260200191505b5095505050505050602060405180830381600087803b158015610a9d57600080fd5b505af1158015610ab1573d6000803e3d6000fd5b505050506040513d6020811015610ac757600080fd5b50516001600160e01b031916600160e11b630a85bd010214915050949350505050565b826001600160a01b0316610afd826106aa565b6001600160a01b031614610b4557604051600160e51b62461bcd028152600401808060200182810382526029815260200180610fcc6029913960400191505060405180910390fd5b6001600160a01b038216610b8d57604051600160e51b62461bcd028152600401808060200182810382526024815260200180610ec56024913960400191505060405180910390fd5b610b9681610d6d565b6001600160a01b0383166000908152600360205260409020610bb790610daa565b6001600160a01b0382166000908152600360205260409020610bd890610dc1565b60008181526001602052604080822080546001600160a01b0319166001600160a01b0386811691821790925591518493918716917fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef91a4505050565b6001600160a01b038216600090815260056020526040812054610c5e90600163ffffffff610dca16565b600083815260066020526040902054909150808214610cf9576001600160a01b0384166000908152600560205260408120805484908110610c9b57fe5b906000526020600020015490508060056000876001600160a01b03166001600160a01b031681526020019081526020016000208381548110610cd957fe5b600091825260208083209091019290925591825260069052604090208190555b6001600160a01b0384166000908152600560205260409020805490610d22906000198301610e2a565b5050505050565b6001600160a01b0390911660009081526005602081815260408084208054868652600684529185208290559282526001810183559183529091200155565b3b151590565b6000818152600260205260409020546001600160a01b031615610da757600081815260026020526040902080546001600160a01b03191690555b50565b8054610dbd90600163ffffffff610dca16565b9055565b80546001019055565b600082821115610e245760408051600160e51b62461bcd02815260206004820152601e60248201527f536166654d6174683a207375627472616374696f6e206f766572666c6f770000604482015290519081900360640190fd5b50900390565b81548183558181111561059f5760008381526020902061059f91810190830161054991905b80821115610e635760008155600101610e4f565b509056fe455243373231456e756d657261626c653a206f776e657220696e646578206f7574206f6620626f756e64734552433732313a207472616e7366657220746f206e6f6e20455243373231526563656976657220696d706c656d656e7465724552433732313a207472616e7366657220746f20746865207a65726f20616464726573734552433732313a206f70657261746f7220717565727920666f72206e6f6e6578697374656e7420746f6b656e4552433732313a20617070726f76652063616c6c6572206973206e6f74206f776e6572206e6f7220617070726f76656420666f7220616c6c4552433732313a2062616c616e636520717565727920666f7220746865207a65726f20616464726573734552433732313a206f776e657220717565727920666f72206e6f6e6578697374656e7420746f6b656e4552433732313a20617070726f76656420717565727920666f72206e6f6e6578697374656e7420746f6b656e4552433732313a207472616e73666572206f6620746f6b656e2074686174206973206e6f74206f776e4552433732313a20617070726f76616c20746f2063757272656e74206f776e65724552433732313a207472616e736665722063616c6c6572206973206e6f74206f776e6572206e6f7220617070726f766564455243373231456e756d657261626c653a20676c6f62616c20696e646578206f7574206f6620626f756e6473a165627a7a7230582032758eb600139b67a210fd9276c84319949b41630d8e516f489ff299a27364150029`
+const ERC721EnumerableBinRuntime = ``
 
 // ERC721EnumerableFuncSigs maps the 4-byte function signature to its string representation.
 var ERC721EnumerableFuncSigs = map[string]string{
@@ -2347,32 +3284,18 @@ var ERC721EnumerableFuncSigs = map[string]string{
 	"70a08231": "balanceOf(address)",
 	"081812fc": "getApproved(uint256)",
 	"e985e9c5": "isApprovedForAll(address,address)",
+	"06fdde03": "name()",
 	"6352211e": "ownerOf(uint256)",
 	"42842e0e": "safeTransferFrom(address,address,uint256)",
 	"b88d4fde": "safeTransferFrom(address,address,uint256,bytes)",
 	"a22cb465": "setApprovalForAll(address,bool)",
 	"01ffc9a7": "supportsInterface(bytes4)",
+	"95d89b41": "symbol()",
 	"4f6ccce7": "tokenByIndex(uint256)",
 	"2f745c59": "tokenOfOwnerByIndex(address,uint256)",
+	"c87b56dd": "tokenURI(uint256)",
 	"18160ddd": "totalSupply()",
 	"23b872dd": "transferFrom(address,address,uint256)",
-}
-
-// ERC721EnumerableBin is the compiled bytecode used for deploying new contracts.
-var ERC721EnumerableBin = "0x608060405234801561001057600080fd5b506100276301ffc9a760e01b61005860201b60201c565b61003d6380ac58cd60e01b61005860201b60201c565b61005363780e9d6360e01b61005860201b60201c565b610126565b7fffffffff0000000000000000000000000000000000000000000000000000000080821614156100e957604080517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601c60248201527f4552433136353a20696e76616c696420696e7465726661636520696400000000604482015290519081900360640190fd5b7fffffffff00000000000000000000000000000000000000000000000000000000166000908152602081905260409020805460ff19166001179055565b61109e806101356000396000f3fe608060405234801561001057600080fd5b50600436106100cf5760003560e01c806342842e0e1161008c57806370a082311161006657806370a0823114610262578063a22cb46514610288578063b88d4fde146102b6578063e985e9c51461037c576100cf565b806342842e0e146101f25780634f6ccce7146102285780636352211e14610245576100cf565b806301ffc9a7146100d4578063081812fc1461010f578063095ea7b31461014857806318160ddd1461017657806323b872dd146101905780632f745c59146101c6575b600080fd5b6100fb600480360360208110156100ea57600080fd5b50356001600160e01b0319166103aa565b604080519115158252519081900360200190f35b61012c6004803603602081101561012557600080fd5b50356103c9565b604080516001600160a01b039092168252519081900360200190f35b6101746004803603604081101561015e57600080fd5b506001600160a01b03813516906020013561042e565b005b61017e610545565b60408051918252519081900360200190f35b610174600480360360608110156101a657600080fd5b506001600160a01b0381358116916020810135909116906040013561054c565b61017e600480360360408110156101dc57600080fd5b506001600160a01b0381351690602001356105a4565b6101746004803603606081101561020857600080fd5b506001600160a01b03813581169160208101359091169060400135610626565b61017e6004803603602081101561023e57600080fd5b5035610641565b61012c6004803603602081101561025b57600080fd5b50356106aa565b61017e6004803603602081101561027857600080fd5b50356001600160a01b0316610707565b6101746004803603604081101561029e57600080fd5b506001600160a01b0381351690602001351515610772565b610174600480360360808110156102cc57600080fd5b6001600160a01b0382358116926020810135909116916040820135919081019060808101606082013564010000000081111561030757600080fd5b82018360208201111561031957600080fd5b8035906020019184600183028401116401000000008311171561033b57600080fd5b91908080601f016020809104026020016040519081016040528093929190818152602001838380828437600092019190915250929550610841945050505050565b6100fb6004803603604081101561039257600080fd5b506001600160a01b038135811691602001351661089c565b6001600160e01b03191660009081526020819052604090205460ff1690565b60006103d4826108ca565b61041257604051600160e51b62461bcd02815260040180806020018281038252602c815260200180610fa0602c913960400191505060405180910390fd5b506000908152600260205260409020546001600160a01b031690565b6000610439826106aa565b9050806001600160a01b0316836001600160a01b0316141561048f57604051600160e51b62461bcd028152600401808060200182810382526021815260200180610ff56021913960400191505060405180910390fd5b336001600160a01b03821614806104ab57506104ab813361089c565b6104e957604051600160e51b62461bcd028152600401808060200182810382526038815260200180610f156038913960400191505060405180910390fd5b60008281526002602052604080822080546001600160a01b0319166001600160a01b0387811691821790925591518593918516917f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b92591a4505050565b6007545b90565b61055633826108e7565b61059457604051600160e51b62461bcd0281526004018080602001828103825260318152602001806110166031913960400191505060405180910390fd5b61059f83838361098e565b505050565b60006105af83610707565b82106105ef57604051600160e51b62461bcd02815260040180806020018281038252602b815260200180610e68602b913960400191505060405180910390fd5b6001600160a01b038316600090815260056020526040902080548390811061061357fe5b9060005260206000200154905092915050565b61059f83838360405180602001604052806000815250610841565b600061064b610545565b821061068b57604051600160e51b62461bcd02815260040180806020018281038252602c815260200180611047602c913960400191505060405180910390fd5b6007828154811061069857fe5b90600052602060002001549050919050565b6000818152600160205260408120546001600160a01b03168061070157604051600160e51b62461bcd028152600401808060200182810382526029815260200180610f776029913960400191505060405180910390fd5b92915050565b60006001600160a01b03821661075157604051600160e51b62461bcd02815260040180806020018281038252602a815260200180610f4d602a913960400191505060405180910390fd5b6001600160a01b0382166000908152600360205260409020610701906109ad565b6001600160a01b0382163314156107d35760408051600160e51b62461bcd02815260206004820152601960248201527f4552433732313a20617070726f766520746f2063616c6c657200000000000000604482015290519081900360640190fd5b3360008181526004602090815260408083206001600160a01b03871680855290835292819020805460ff1916861515908117909155815190815290519293927f17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31929181900390910190a35050565b61084c84848461054c565b610858848484846109b1565b61089657604051600160e51b62461bcd028152600401808060200182810382526032815260200180610e936032913960400191505060405180910390fd5b50505050565b6001600160a01b03918216600090815260046020908152604080832093909416825291909152205460ff1690565b6000908152600160205260409020546001600160a01b0316151590565b60006108f2826108ca565b61093057604051600160e51b62461bcd02815260040180806020018281038252602c815260200180610ee9602c913960400191505060405180910390fd5b600061093b836106aa565b9050806001600160a01b0316846001600160a01b031614806109765750836001600160a01b031661096b846103c9565b6001600160a01b0316145b806109865750610986818561089c565b949350505050565b610999838383610aea565b6109a38382610c34565b61059f8282610d29565b5490565b60006109c5846001600160a01b0316610d67565b6109d157506001610986565b604051600160e11b630a85bd0102815233600482018181526001600160a01b03888116602485015260448401879052608060648501908152865160848601528651600095928a169463150b7a029490938c938b938b939260a4019060208501908083838e5b83811015610a4e578181015183820152602001610a36565b50505050905090810190601f168015610a7b5780820380516001836020036101000a031916815260200191505b5095505050505050602060405180830381600087803b158015610a9d57600080fd5b505af1158015610ab1573d6000803e3d6000fd5b505050506040513d6020811015610ac757600080fd5b50516001600160e01b031916600160e11b630a85bd010214915050949350505050565b826001600160a01b0316610afd826106aa565b6001600160a01b031614610b4557604051600160e51b62461bcd028152600401808060200182810382526029815260200180610fcc6029913960400191505060405180910390fd5b6001600160a01b038216610b8d57604051600160e51b62461bcd028152600401808060200182810382526024815260200180610ec56024913960400191505060405180910390fd5b610b9681610d6d565b6001600160a01b0383166000908152600360205260409020610bb790610daa565b6001600160a01b0382166000908152600360205260409020610bd890610dc1565b60008181526001602052604080822080546001600160a01b0319166001600160a01b0386811691821790925591518493918716917fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef91a4505050565b6001600160a01b038216600090815260056020526040812054610c5e90600163ffffffff610dca16565b600083815260066020526040902054909150808214610cf9576001600160a01b0384166000908152600560205260408120805484908110610c9b57fe5b906000526020600020015490508060056000876001600160a01b03166001600160a01b031681526020019081526020016000208381548110610cd957fe5b600091825260208083209091019290925591825260069052604090208190555b6001600160a01b0384166000908152600560205260409020805490610d22906000198301610e2a565b5050505050565b6001600160a01b0390911660009081526005602081815260408084208054868652600684529185208290559282526001810183559183529091200155565b3b151590565b6000818152600260205260409020546001600160a01b031615610da757600081815260026020526040902080546001600160a01b03191690555b50565b8054610dbd90600163ffffffff610dca16565b9055565b80546001019055565b600082821115610e245760408051600160e51b62461bcd02815260206004820152601e60248201527f536166654d6174683a207375627472616374696f6e206f766572666c6f770000604482015290519081900360640190fd5b50900390565b81548183558181111561059f5760008381526020902061059f91810190830161054991905b80821115610e635760008155600101610e4f565b509056fe455243373231456e756d657261626c653a206f776e657220696e646578206f7574206f6620626f756e64734552433732313a207472616e7366657220746f206e6f6e20455243373231526563656976657220696d706c656d656e7465724552433732313a207472616e7366657220746f20746865207a65726f20616464726573734552433732313a206f70657261746f7220717565727920666f72206e6f6e6578697374656e7420746f6b656e4552433732313a20617070726f76652063616c6c6572206973206e6f74206f776e6572206e6f7220617070726f76656420666f7220616c6c4552433732313a2062616c616e636520717565727920666f7220746865207a65726f20616464726573734552433732313a206f776e657220717565727920666f72206e6f6e6578697374656e7420746f6b656e4552433732313a20617070726f76656420717565727920666f72206e6f6e6578697374656e7420746f6b656e4552433732313a207472616e73666572206f6620746f6b656e2074686174206973206e6f74206f776e4552433732313a20617070726f76616c20746f2063757272656e74206f776e65724552433732313a207472616e736665722063616c6c6572206973206e6f74206f776e6572206e6f7220617070726f766564455243373231456e756d657261626c653a20676c6f62616c20696e646578206f7574206f6620626f756e6473a165627a7a7230582032758eb600139b67a210fd9276c84319949b41630d8e516f489ff299a27364150029"
-
-// DeployERC721Enumerable deploys a new Klaytn contract, binding an instance of ERC721Enumerable to it.
-func DeployERC721Enumerable(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ERC721Enumerable, error) {
-	parsed, err := abi.JSON(strings.NewReader(ERC721EnumerableABI))
-	if err != nil {
-		return common.Address{}, nil, nil, err
-	}
-
-	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(ERC721EnumerableBin), backend)
-	if err != nil {
-		return common.Address{}, nil, nil, err
-	}
-	return address, tx, &ERC721Enumerable{ERC721EnumerableCaller: ERC721EnumerableCaller{contract: contract}, ERC721EnumerableTransactor: ERC721EnumerableTransactor{contract: contract}, ERC721EnumerableFilterer: ERC721EnumerableFilterer{contract: contract}}, nil
 }
 
 // ERC721Enumerable is an auto generated Go binding around a Klaytn contract.
@@ -2595,6 +3518,32 @@ func (_ERC721Enumerable *ERC721EnumerableCallerSession) IsApprovedForAll(owner c
 	return _ERC721Enumerable.Contract.IsApprovedForAll(&_ERC721Enumerable.CallOpts, owner, operator)
 }
 
+// Name is a free data retrieval call binding the contract method 0x06fdde03.
+//
+// Solidity: function name() view returns(string)
+func (_ERC721Enumerable *ERC721EnumerableCaller) Name(opts *bind.CallOpts) (string, error) {
+	var (
+		ret0 = new(string)
+	)
+	out := ret0
+	err := _ERC721Enumerable.contract.Call(opts, out, "name")
+	return *ret0, err
+}
+
+// Name is a free data retrieval call binding the contract method 0x06fdde03.
+//
+// Solidity: function name() view returns(string)
+func (_ERC721Enumerable *ERC721EnumerableSession) Name() (string, error) {
+	return _ERC721Enumerable.Contract.Name(&_ERC721Enumerable.CallOpts)
+}
+
+// Name is a free data retrieval call binding the contract method 0x06fdde03.
+//
+// Solidity: function name() view returns(string)
+func (_ERC721Enumerable *ERC721EnumerableCallerSession) Name() (string, error) {
+	return _ERC721Enumerable.Contract.Name(&_ERC721Enumerable.CallOpts)
+}
+
 // OwnerOf is a free data retrieval call binding the contract method 0x6352211e.
 //
 // Solidity: function ownerOf(uint256 tokenId) view returns(address)
@@ -2647,6 +3596,32 @@ func (_ERC721Enumerable *ERC721EnumerableCallerSession) SupportsInterface(interf
 	return _ERC721Enumerable.Contract.SupportsInterface(&_ERC721Enumerable.CallOpts, interfaceId)
 }
 
+// Symbol is a free data retrieval call binding the contract method 0x95d89b41.
+//
+// Solidity: function symbol() view returns(string)
+func (_ERC721Enumerable *ERC721EnumerableCaller) Symbol(opts *bind.CallOpts) (string, error) {
+	var (
+		ret0 = new(string)
+	)
+	out := ret0
+	err := _ERC721Enumerable.contract.Call(opts, out, "symbol")
+	return *ret0, err
+}
+
+// Symbol is a free data retrieval call binding the contract method 0x95d89b41.
+//
+// Solidity: function symbol() view returns(string)
+func (_ERC721Enumerable *ERC721EnumerableSession) Symbol() (string, error) {
+	return _ERC721Enumerable.Contract.Symbol(&_ERC721Enumerable.CallOpts)
+}
+
+// Symbol is a free data retrieval call binding the contract method 0x95d89b41.
+//
+// Solidity: function symbol() view returns(string)
+func (_ERC721Enumerable *ERC721EnumerableCallerSession) Symbol() (string, error) {
+	return _ERC721Enumerable.Contract.Symbol(&_ERC721Enumerable.CallOpts)
+}
+
 // TokenByIndex is a free data retrieval call binding the contract method 0x4f6ccce7.
 //
 // Solidity: function tokenByIndex(uint256 index) view returns(uint256)
@@ -2697,6 +3672,32 @@ func (_ERC721Enumerable *ERC721EnumerableSession) TokenOfOwnerByIndex(owner comm
 // Solidity: function tokenOfOwnerByIndex(address owner, uint256 index) view returns(uint256)
 func (_ERC721Enumerable *ERC721EnumerableCallerSession) TokenOfOwnerByIndex(owner common.Address, index *big.Int) (*big.Int, error) {
 	return _ERC721Enumerable.Contract.TokenOfOwnerByIndex(&_ERC721Enumerable.CallOpts, owner, index)
+}
+
+// TokenURI is a free data retrieval call binding the contract method 0xc87b56dd.
+//
+// Solidity: function tokenURI(uint256 tokenId) view returns(string)
+func (_ERC721Enumerable *ERC721EnumerableCaller) TokenURI(opts *bind.CallOpts, tokenId *big.Int) (string, error) {
+	var (
+		ret0 = new(string)
+	)
+	out := ret0
+	err := _ERC721Enumerable.contract.Call(opts, out, "tokenURI", tokenId)
+	return *ret0, err
+}
+
+// TokenURI is a free data retrieval call binding the contract method 0xc87b56dd.
+//
+// Solidity: function tokenURI(uint256 tokenId) view returns(string)
+func (_ERC721Enumerable *ERC721EnumerableSession) TokenURI(tokenId *big.Int) (string, error) {
+	return _ERC721Enumerable.Contract.TokenURI(&_ERC721Enumerable.CallOpts, tokenId)
+}
+
+// TokenURI is a free data retrieval call binding the contract method 0xc87b56dd.
+//
+// Solidity: function tokenURI(uint256 tokenId) view returns(string)
+func (_ERC721Enumerable *ERC721EnumerableCallerSession) TokenURI(tokenId *big.Int) (string, error) {
+	return _ERC721Enumerable.Contract.TokenURI(&_ERC721Enumerable.CallOpts, tokenId)
 }
 
 // TotalSupply is a free data retrieval call binding the contract method 0x18160ddd.
@@ -2769,44 +3770,44 @@ func (_ERC721Enumerable *ERC721EnumerableTransactorSession) SafeTransferFrom(fro
 
 // SafeTransferFrom0 is a paid mutator transaction binding the contract method 0xb88d4fde.
 //
-// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId, bytes _data) returns()
-func (_ERC721Enumerable *ERC721EnumerableTransactor) SafeTransferFrom0(opts *bind.TransactOpts, from common.Address, to common.Address, tokenId *big.Int, _data []byte) (*types.Transaction, error) {
-	return _ERC721Enumerable.contract.Transact(opts, "safeTransferFrom0", from, to, tokenId, _data)
+// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId, bytes data) returns()
+func (_ERC721Enumerable *ERC721EnumerableTransactor) SafeTransferFrom0(opts *bind.TransactOpts, from common.Address, to common.Address, tokenId *big.Int, data []byte) (*types.Transaction, error) {
+	return _ERC721Enumerable.contract.Transact(opts, "safeTransferFrom0", from, to, tokenId, data)
 }
 
 // SafeTransferFrom0 is a paid mutator transaction binding the contract method 0xb88d4fde.
 //
-// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId, bytes _data) returns()
-func (_ERC721Enumerable *ERC721EnumerableSession) SafeTransferFrom0(from common.Address, to common.Address, tokenId *big.Int, _data []byte) (*types.Transaction, error) {
-	return _ERC721Enumerable.Contract.SafeTransferFrom0(&_ERC721Enumerable.TransactOpts, from, to, tokenId, _data)
+// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId, bytes data) returns()
+func (_ERC721Enumerable *ERC721EnumerableSession) SafeTransferFrom0(from common.Address, to common.Address, tokenId *big.Int, data []byte) (*types.Transaction, error) {
+	return _ERC721Enumerable.Contract.SafeTransferFrom0(&_ERC721Enumerable.TransactOpts, from, to, tokenId, data)
 }
 
 // SafeTransferFrom0 is a paid mutator transaction binding the contract method 0xb88d4fde.
 //
-// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId, bytes _data) returns()
-func (_ERC721Enumerable *ERC721EnumerableTransactorSession) SafeTransferFrom0(from common.Address, to common.Address, tokenId *big.Int, _data []byte) (*types.Transaction, error) {
-	return _ERC721Enumerable.Contract.SafeTransferFrom0(&_ERC721Enumerable.TransactOpts, from, to, tokenId, _data)
+// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId, bytes data) returns()
+func (_ERC721Enumerable *ERC721EnumerableTransactorSession) SafeTransferFrom0(from common.Address, to common.Address, tokenId *big.Int, data []byte) (*types.Transaction, error) {
+	return _ERC721Enumerable.Contract.SafeTransferFrom0(&_ERC721Enumerable.TransactOpts, from, to, tokenId, data)
 }
 
 // SetApprovalForAll is a paid mutator transaction binding the contract method 0xa22cb465.
 //
-// Solidity: function setApprovalForAll(address to, bool approved) returns()
-func (_ERC721Enumerable *ERC721EnumerableTransactor) SetApprovalForAll(opts *bind.TransactOpts, to common.Address, approved bool) (*types.Transaction, error) {
-	return _ERC721Enumerable.contract.Transact(opts, "setApprovalForAll", to, approved)
+// Solidity: function setApprovalForAll(address operator, bool approved) returns()
+func (_ERC721Enumerable *ERC721EnumerableTransactor) SetApprovalForAll(opts *bind.TransactOpts, operator common.Address, approved bool) (*types.Transaction, error) {
+	return _ERC721Enumerable.contract.Transact(opts, "setApprovalForAll", operator, approved)
 }
 
 // SetApprovalForAll is a paid mutator transaction binding the contract method 0xa22cb465.
 //
-// Solidity: function setApprovalForAll(address to, bool approved) returns()
-func (_ERC721Enumerable *ERC721EnumerableSession) SetApprovalForAll(to common.Address, approved bool) (*types.Transaction, error) {
-	return _ERC721Enumerable.Contract.SetApprovalForAll(&_ERC721Enumerable.TransactOpts, to, approved)
+// Solidity: function setApprovalForAll(address operator, bool approved) returns()
+func (_ERC721Enumerable *ERC721EnumerableSession) SetApprovalForAll(operator common.Address, approved bool) (*types.Transaction, error) {
+	return _ERC721Enumerable.Contract.SetApprovalForAll(&_ERC721Enumerable.TransactOpts, operator, approved)
 }
 
 // SetApprovalForAll is a paid mutator transaction binding the contract method 0xa22cb465.
 //
-// Solidity: function setApprovalForAll(address to, bool approved) returns()
-func (_ERC721Enumerable *ERC721EnumerableTransactorSession) SetApprovalForAll(to common.Address, approved bool) (*types.Transaction, error) {
-	return _ERC721Enumerable.Contract.SetApprovalForAll(&_ERC721Enumerable.TransactOpts, to, approved)
+// Solidity: function setApprovalForAll(address operator, bool approved) returns()
+func (_ERC721Enumerable *ERC721EnumerableTransactorSession) SetApprovalForAll(operator common.Address, approved bool) (*types.Transaction, error) {
+	return _ERC721Enumerable.Contract.SetApprovalForAll(&_ERC721Enumerable.TransactOpts, operator, approved)
 }
 
 // TransferFrom is a paid mutator transaction binding the contract method 0x23b872dd.
@@ -3305,3361 +4306,8 @@ func (_ERC721Enumerable *ERC721EnumerableFilterer) ParseTransfer(log types.Log) 
 	return event, nil
 }
 
-// ERC721FullABI is the input ABI used to generate the binding from.
-const ERC721FullABI = "[{\"constant\":true,\"inputs\":[{\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"getApproved\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"approve\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"totalSupply\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"transferFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"},{\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"tokenOfOwnerByIndex\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"tokenByIndex\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"ownerOf\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"symbol\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"setApprovalForAll\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"},{\"name\":\"_data\",\"type\":\"bytes\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"tokenURI\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"},{\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"isApprovedForAll\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"name\":\"name\",\"type\":\"string\"},{\"name\":\"symbol\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"approved\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Approval\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"operator\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"ApprovalForAll\",\"type\":\"event\"}]"
-
-// ERC721FullBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
-const ERC721FullBinRuntime = `608060405234801561001057600080fd5b50600436106101005760003560e01c80634f6ccce711610097578063a22cb46511610066578063a22cb4651461033e578063b88d4fde1461036c578063c87b56dd14610432578063e985e9c51461044f57610100565b80634f6ccce7146102d65780636352211e146102f357806370a082311461031057806395d89b411461033657610100565b806318160ddd116100d357806318160ddd1461022457806323b872dd1461023e5780632f745c591461027457806342842e0e146102a057610100565b806301ffc9a71461010557806306fdde0314610140578063081812fc146101bd578063095ea7b3146101f6575b600080fd5b61012c6004803603602081101561011b57600080fd5b50356001600160e01b03191661047d565b604080519115158252519081900360200190f35b61014861049c565b6040805160208082528351818301528351919283929083019185019080838360005b8381101561018257818101518382015260200161016a565b50505050905090810190601f1680156101af5780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b6101da600480360360208110156101d357600080fd5b5035610533565b604080516001600160a01b039092168252519081900360200190f35b6102226004803603604081101561020c57600080fd5b506001600160a01b038135169060200135610598565b005b61022c6106af565b60408051918252519081900360200190f35b6102226004803603606081101561025457600080fd5b506001600160a01b038135811691602081013590911690604001356106b5565b61022c6004803603604081101561028a57600080fd5b506001600160a01b03813516906020013561070d565b610222600480360360608110156102b657600080fd5b506001600160a01b0381358116916020810135909116906040013561078f565b61022c600480360360208110156102ec57600080fd5b50356107aa565b6101da6004803603602081101561030957600080fd5b5035610813565b61022c6004803603602081101561032657600080fd5b50356001600160a01b0316610870565b6101486108db565b6102226004803603604081101561035457600080fd5b506001600160a01b038135169060200135151561093c565b6102226004803603608081101561038257600080fd5b6001600160a01b038235811692602081013590911691604082013591908101906080810160608201356401000000008111156103bd57600080fd5b8201836020820111156103cf57600080fd5b803590602001918460018302840111640100000000831117156103f157600080fd5b91908080601f016020809104026020016040519081016040528093929190818152602001838380828437600092019190915250929550610a0b945050505050565b6101486004803603602081101561044857600080fd5b5035610a66565b61012c6004803603604081101561046557600080fd5b506001600160a01b0381358116916020013516610b4e565b6001600160e01b03191660009081526020819052604090205460ff1690565b60098054604080516020601f60026000196101006001881615020190951694909404938401819004810282018101909252828152606093909290918301828280156105285780601f106104fd57610100808354040283529160200191610528565b820191906000526020600020905b81548152906001019060200180831161050b57829003601f168201915b505050505090505b90565b600061053e82610b7c565b61057c57604051600160e51b62461bcd02815260040180806020018281038252602c815260200180611252602c913960400191505060405180910390fd5b506000908152600260205260409020546001600160a01b031690565b60006105a382610813565b9050806001600160a01b0316836001600160a01b031614156105f957604051600160e51b62461bcd0281526004018080602001828103825260218152602001806112d66021913960400191505060405180910390fd5b336001600160a01b038216148061061557506106158133610b4e565b61065357604051600160e51b62461bcd0281526004018080602001828103825260388152602001806111c76038913960400191505060405180910390fd5b60008281526002602052604080822080546001600160a01b0319166001600160a01b0387811691821790925591518593918516917f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b92591a4505050565b60075490565b6106bf3382610b99565b6106fd57604051600160e51b62461bcd0281526004018080602001828103825260318152602001806112f76031913960400191505060405180910390fd5b610708838383610c40565b505050565b600061071883610870565b821061075857604051600160e51b62461bcd02815260040180806020018281038252602b81526020018061111a602b913960400191505060405180910390fd5b6001600160a01b038316600090815260056020526040902080548390811061077c57fe5b9060005260206000200154905092915050565b61070883838360405180602001604052806000815250610a0b565b60006107b46106af565b82106107f457604051600160e51b62461bcd02815260040180806020018281038252602c815260200180611328602c913960400191505060405180910390fd5b6007828154811061080157fe5b90600052602060002001549050919050565b6000818152600160205260408120546001600160a01b03168061086a57604051600160e51b62461bcd0281526004018080602001828103825260298152602001806112296029913960400191505060405180910390fd5b92915050565b60006001600160a01b0382166108ba57604051600160e51b62461bcd02815260040180806020018281038252602a8152602001806111ff602a913960400191505060405180910390fd5b6001600160a01b038216600090815260036020526040902061086a90610c5f565b600a8054604080516020601f60026000196101006001881615020190951694909404938401819004810282018101909252828152606093909290918301828280156105285780601f106104fd57610100808354040283529160200191610528565b6001600160a01b03821633141561099d5760408051600160e51b62461bcd02815260206004820152601960248201527f4552433732313a20617070726f766520746f2063616c6c657200000000000000604482015290519081900360640190fd5b3360008181526004602090815260408083206001600160a01b03871680855290835292819020805460ff1916861515908117909155815190815290519293927f17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31929181900390910190a35050565b610a168484846106b5565b610a2284848484610c63565b610a6057604051600160e51b62461bcd0281526004018080602001828103825260328152602001806111456032913960400191505060405180910390fd5b50505050565b6060610a7182610b7c565b610aaf57604051600160e51b62461bcd02815260040180806020018281038252602f8152602001806112a7602f913960400191505060405180910390fd5b6000828152600b602090815260409182902080548351601f600260001961010060018616150201909316929092049182018490048402810184019094528084529091830182828015610b425780601f10610b1757610100808354040283529160200191610b42565b820191906000526020600020905b815481529060010190602001808311610b2557829003601f168201915b50505050509050919050565b6001600160a01b03918216600090815260046020908152604080832093909416825291909152205460ff1690565b6000908152600160205260409020546001600160a01b0316151590565b6000610ba482610b7c565b610be257604051600160e51b62461bcd02815260040180806020018281038252602c81526020018061119b602c913960400191505060405180910390fd5b6000610bed83610813565b9050806001600160a01b0316846001600160a01b03161480610c285750836001600160a01b0316610c1d84610533565b6001600160a01b0316145b80610c385750610c388185610b4e565b949350505050565b610c4b838383610d9c565b610c558382610ee6565b6107088282610fdb565b5490565b6000610c77846001600160a01b0316611019565b610c8357506001610c38565b604051600160e11b630a85bd0102815233600482018181526001600160a01b03888116602485015260448401879052608060648501908152865160848601528651600095928a169463150b7a029490938c938b938b939260a4019060208501908083838e5b83811015610d00578181015183820152602001610ce8565b50505050905090810190601f168015610d2d5780820380516001836020036101000a031916815260200191505b5095505050505050602060405180830381600087803b158015610d4f57600080fd5b505af1158015610d63573d6000803e3d6000fd5b505050506040513d6020811015610d7957600080fd5b50516001600160e01b031916600160e11b630a85bd010214915050949350505050565b826001600160a01b0316610daf82610813565b6001600160a01b031614610df757604051600160e51b62461bcd02815260040180806020018281038252602981526020018061127e6029913960400191505060405180910390fd5b6001600160a01b038216610e3f57604051600160e51b62461bcd0281526004018080602001828103825260248152602001806111776024913960400191505060405180910390fd5b610e488161101f565b6001600160a01b0383166000908152600360205260409020610e699061105c565b6001600160a01b0382166000908152600360205260409020610e8a90611073565b60008181526001602052604080822080546001600160a01b0319166001600160a01b0386811691821790925591518493918716917fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef91a4505050565b6001600160a01b038216600090815260056020526040812054610f1090600163ffffffff61107c16565b600083815260066020526040902054909150808214610fab576001600160a01b0384166000908152600560205260408120805484908110610f4d57fe5b906000526020600020015490508060056000876001600160a01b03166001600160a01b031681526020019081526020016000208381548110610f8b57fe5b600091825260208083209091019290925591825260069052604090208190555b6001600160a01b0384166000908152600560205260409020805490610fd49060001983016110dc565b5050505050565b6001600160a01b0390911660009081526005602081815260408084208054868652600684529185208290559282526001810183559183529091200155565b3b151590565b6000818152600260205260409020546001600160a01b03161561105957600081815260026020526040902080546001600160a01b03191690555b50565b805461106f90600163ffffffff61107c16565b9055565b80546001019055565b6000828211156110d65760408051600160e51b62461bcd02815260206004820152601e60248201527f536166654d6174683a207375627472616374696f6e206f766572666c6f770000604482015290519081900360640190fd5b50900390565b8154818355818111156107085760008381526020902061070891810190830161053091905b808211156111155760008155600101611101565b509056fe455243373231456e756d657261626c653a206f776e657220696e646578206f7574206f6620626f756e64734552433732313a207472616e7366657220746f206e6f6e20455243373231526563656976657220696d706c656d656e7465724552433732313a207472616e7366657220746f20746865207a65726f20616464726573734552433732313a206f70657261746f7220717565727920666f72206e6f6e6578697374656e7420746f6b656e4552433732313a20617070726f76652063616c6c6572206973206e6f74206f776e6572206e6f7220617070726f76656420666f7220616c6c4552433732313a2062616c616e636520717565727920666f7220746865207a65726f20616464726573734552433732313a206f776e657220717565727920666f72206e6f6e6578697374656e7420746f6b656e4552433732313a20617070726f76656420717565727920666f72206e6f6e6578697374656e7420746f6b656e4552433732313a207472616e73666572206f6620746f6b656e2074686174206973206e6f74206f776e4552433732314d657461646174613a2055524920717565727920666f72206e6f6e6578697374656e7420746f6b656e4552433732313a20617070726f76616c20746f2063757272656e74206f776e65724552433732313a207472616e736665722063616c6c6572206973206e6f74206f776e6572206e6f7220617070726f766564455243373231456e756d657261626c653a20676c6f62616c20696e646578206f7574206f6620626f756e6473a165627a7a72305820d942a10ddcb4d5148ecf424c7de1114da916205255e5106d65dd4d339bde3e5b0029`
-
-// ERC721FullFuncSigs maps the 4-byte function signature to its string representation.
-var ERC721FullFuncSigs = map[string]string{
-	"095ea7b3": "approve(address,uint256)",
-	"70a08231": "balanceOf(address)",
-	"081812fc": "getApproved(uint256)",
-	"e985e9c5": "isApprovedForAll(address,address)",
-	"06fdde03": "name()",
-	"6352211e": "ownerOf(uint256)",
-	"42842e0e": "safeTransferFrom(address,address,uint256)",
-	"b88d4fde": "safeTransferFrom(address,address,uint256,bytes)",
-	"a22cb465": "setApprovalForAll(address,bool)",
-	"01ffc9a7": "supportsInterface(bytes4)",
-	"95d89b41": "symbol()",
-	"4f6ccce7": "tokenByIndex(uint256)",
-	"2f745c59": "tokenOfOwnerByIndex(address,uint256)",
-	"c87b56dd": "tokenURI(uint256)",
-	"18160ddd": "totalSupply()",
-	"23b872dd": "transferFrom(address,address,uint256)",
-}
-
-// ERC721FullBin is the compiled bytecode used for deploying new contracts.
-var ERC721FullBin = "0x60806040523480156200001157600080fd5b506040516200166e3803806200166e833981018060405260408110156200003757600080fd5b8101908080516401000000008111156200005057600080fd5b820160208101848111156200006457600080fd5b81516401000000008111828201871017156200007f57600080fd5b505092919060200180516401000000008111156200009c57600080fd5b82016020810184811115620000b057600080fd5b8151640100000000811182820187101715620000cb57600080fd5b50509291905050508181620000ed6301ffc9a760e01b6200016b60201b60201c565b620001056380ac58cd60e01b6200016b60201b60201c565b6200011d63780e9d6360e01b6200016b60201b60201c565b8151620001329060099060208501906200023a565b5080516200014890600a9060208401906200023a565b5062000161635b5e139f60e01b6200016b60201b60201c565b50505050620002df565b7fffffffff000000000000000000000000000000000000000000000000000000008082161415620001fd57604080517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601c60248201527f4552433136353a20696e76616c696420696e7465726661636520696400000000604482015290519081900360640190fd5b7fffffffff00000000000000000000000000000000000000000000000000000000166000908152602081905260409020805460ff19166001179055565b828054600181600116156101000203166002900490600052602060002090601f016020900481019282601f106200027d57805160ff1916838001178555620002ad565b82800160010185558215620002ad579182015b82811115620002ad57825182559160200191906001019062000290565b50620002bb929150620002bf565b5090565b620002dc91905b80821115620002bb5760008155600101620002c6565b90565b61137f80620002ef6000396000f3fe608060405234801561001057600080fd5b50600436106101005760003560e01c80634f6ccce711610097578063a22cb46511610066578063a22cb4651461033e578063b88d4fde1461036c578063c87b56dd14610432578063e985e9c51461044f57610100565b80634f6ccce7146102d65780636352211e146102f357806370a082311461031057806395d89b411461033657610100565b806318160ddd116100d357806318160ddd1461022457806323b872dd1461023e5780632f745c591461027457806342842e0e146102a057610100565b806301ffc9a71461010557806306fdde0314610140578063081812fc146101bd578063095ea7b3146101f6575b600080fd5b61012c6004803603602081101561011b57600080fd5b50356001600160e01b03191661047d565b604080519115158252519081900360200190f35b61014861049c565b6040805160208082528351818301528351919283929083019185019080838360005b8381101561018257818101518382015260200161016a565b50505050905090810190601f1680156101af5780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b6101da600480360360208110156101d357600080fd5b5035610533565b604080516001600160a01b039092168252519081900360200190f35b6102226004803603604081101561020c57600080fd5b506001600160a01b038135169060200135610598565b005b61022c6106af565b60408051918252519081900360200190f35b6102226004803603606081101561025457600080fd5b506001600160a01b038135811691602081013590911690604001356106b5565b61022c6004803603604081101561028a57600080fd5b506001600160a01b03813516906020013561070d565b610222600480360360608110156102b657600080fd5b506001600160a01b0381358116916020810135909116906040013561078f565b61022c600480360360208110156102ec57600080fd5b50356107aa565b6101da6004803603602081101561030957600080fd5b5035610813565b61022c6004803603602081101561032657600080fd5b50356001600160a01b0316610870565b6101486108db565b6102226004803603604081101561035457600080fd5b506001600160a01b038135169060200135151561093c565b6102226004803603608081101561038257600080fd5b6001600160a01b038235811692602081013590911691604082013591908101906080810160608201356401000000008111156103bd57600080fd5b8201836020820111156103cf57600080fd5b803590602001918460018302840111640100000000831117156103f157600080fd5b91908080601f016020809104026020016040519081016040528093929190818152602001838380828437600092019190915250929550610a0b945050505050565b6101486004803603602081101561044857600080fd5b5035610a66565b61012c6004803603604081101561046557600080fd5b506001600160a01b0381358116916020013516610b4e565b6001600160e01b03191660009081526020819052604090205460ff1690565b60098054604080516020601f60026000196101006001881615020190951694909404938401819004810282018101909252828152606093909290918301828280156105285780601f106104fd57610100808354040283529160200191610528565b820191906000526020600020905b81548152906001019060200180831161050b57829003601f168201915b505050505090505b90565b600061053e82610b7c565b61057c57604051600160e51b62461bcd02815260040180806020018281038252602c815260200180611252602c913960400191505060405180910390fd5b506000908152600260205260409020546001600160a01b031690565b60006105a382610813565b9050806001600160a01b0316836001600160a01b031614156105f957604051600160e51b62461bcd0281526004018080602001828103825260218152602001806112d66021913960400191505060405180910390fd5b336001600160a01b038216148061061557506106158133610b4e565b61065357604051600160e51b62461bcd0281526004018080602001828103825260388152602001806111c76038913960400191505060405180910390fd5b60008281526002602052604080822080546001600160a01b0319166001600160a01b0387811691821790925591518593918516917f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b92591a4505050565b60075490565b6106bf3382610b99565b6106fd57604051600160e51b62461bcd0281526004018080602001828103825260318152602001806112f76031913960400191505060405180910390fd5b610708838383610c40565b505050565b600061071883610870565b821061075857604051600160e51b62461bcd02815260040180806020018281038252602b81526020018061111a602b913960400191505060405180910390fd5b6001600160a01b038316600090815260056020526040902080548390811061077c57fe5b9060005260206000200154905092915050565b61070883838360405180602001604052806000815250610a0b565b60006107b46106af565b82106107f457604051600160e51b62461bcd02815260040180806020018281038252602c815260200180611328602c913960400191505060405180910390fd5b6007828154811061080157fe5b90600052602060002001549050919050565b6000818152600160205260408120546001600160a01b03168061086a57604051600160e51b62461bcd0281526004018080602001828103825260298152602001806112296029913960400191505060405180910390fd5b92915050565b60006001600160a01b0382166108ba57604051600160e51b62461bcd02815260040180806020018281038252602a8152602001806111ff602a913960400191505060405180910390fd5b6001600160a01b038216600090815260036020526040902061086a90610c5f565b600a8054604080516020601f60026000196101006001881615020190951694909404938401819004810282018101909252828152606093909290918301828280156105285780601f106104fd57610100808354040283529160200191610528565b6001600160a01b03821633141561099d5760408051600160e51b62461bcd02815260206004820152601960248201527f4552433732313a20617070726f766520746f2063616c6c657200000000000000604482015290519081900360640190fd5b3360008181526004602090815260408083206001600160a01b03871680855290835292819020805460ff1916861515908117909155815190815290519293927f17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31929181900390910190a35050565b610a168484846106b5565b610a2284848484610c63565b610a6057604051600160e51b62461bcd0281526004018080602001828103825260328152602001806111456032913960400191505060405180910390fd5b50505050565b6060610a7182610b7c565b610aaf57604051600160e51b62461bcd02815260040180806020018281038252602f8152602001806112a7602f913960400191505060405180910390fd5b6000828152600b602090815260409182902080548351601f600260001961010060018616150201909316929092049182018490048402810184019094528084529091830182828015610b425780601f10610b1757610100808354040283529160200191610b42565b820191906000526020600020905b815481529060010190602001808311610b2557829003601f168201915b50505050509050919050565b6001600160a01b03918216600090815260046020908152604080832093909416825291909152205460ff1690565b6000908152600160205260409020546001600160a01b0316151590565b6000610ba482610b7c565b610be257604051600160e51b62461bcd02815260040180806020018281038252602c81526020018061119b602c913960400191505060405180910390fd5b6000610bed83610813565b9050806001600160a01b0316846001600160a01b03161480610c285750836001600160a01b0316610c1d84610533565b6001600160a01b0316145b80610c385750610c388185610b4e565b949350505050565b610c4b838383610d9c565b610c558382610ee6565b6107088282610fdb565b5490565b6000610c77846001600160a01b0316611019565b610c8357506001610c38565b604051600160e11b630a85bd0102815233600482018181526001600160a01b03888116602485015260448401879052608060648501908152865160848601528651600095928a169463150b7a029490938c938b938b939260a4019060208501908083838e5b83811015610d00578181015183820152602001610ce8565b50505050905090810190601f168015610d2d5780820380516001836020036101000a031916815260200191505b5095505050505050602060405180830381600087803b158015610d4f57600080fd5b505af1158015610d63573d6000803e3d6000fd5b505050506040513d6020811015610d7957600080fd5b50516001600160e01b031916600160e11b630a85bd010214915050949350505050565b826001600160a01b0316610daf82610813565b6001600160a01b031614610df757604051600160e51b62461bcd02815260040180806020018281038252602981526020018061127e6029913960400191505060405180910390fd5b6001600160a01b038216610e3f57604051600160e51b62461bcd0281526004018080602001828103825260248152602001806111776024913960400191505060405180910390fd5b610e488161101f565b6001600160a01b0383166000908152600360205260409020610e699061105c565b6001600160a01b0382166000908152600360205260409020610e8a90611073565b60008181526001602052604080822080546001600160a01b0319166001600160a01b0386811691821790925591518493918716917fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef91a4505050565b6001600160a01b038216600090815260056020526040812054610f1090600163ffffffff61107c16565b600083815260066020526040902054909150808214610fab576001600160a01b0384166000908152600560205260408120805484908110610f4d57fe5b906000526020600020015490508060056000876001600160a01b03166001600160a01b031681526020019081526020016000208381548110610f8b57fe5b600091825260208083209091019290925591825260069052604090208190555b6001600160a01b0384166000908152600560205260409020805490610fd49060001983016110dc565b5050505050565b6001600160a01b0390911660009081526005602081815260408084208054868652600684529185208290559282526001810183559183529091200155565b3b151590565b6000818152600260205260409020546001600160a01b03161561105957600081815260026020526040902080546001600160a01b03191690555b50565b805461106f90600163ffffffff61107c16565b9055565b80546001019055565b6000828211156110d65760408051600160e51b62461bcd02815260206004820152601e60248201527f536166654d6174683a207375627472616374696f6e206f766572666c6f770000604482015290519081900360640190fd5b50900390565b8154818355818111156107085760008381526020902061070891810190830161053091905b808211156111155760008155600101611101565b509056fe455243373231456e756d657261626c653a206f776e657220696e646578206f7574206f6620626f756e64734552433732313a207472616e7366657220746f206e6f6e20455243373231526563656976657220696d706c656d656e7465724552433732313a207472616e7366657220746f20746865207a65726f20616464726573734552433732313a206f70657261746f7220717565727920666f72206e6f6e6578697374656e7420746f6b656e4552433732313a20617070726f76652063616c6c6572206973206e6f74206f776e6572206e6f7220617070726f76656420666f7220616c6c4552433732313a2062616c616e636520717565727920666f7220746865207a65726f20616464726573734552433732313a206f776e657220717565727920666f72206e6f6e6578697374656e7420746f6b656e4552433732313a20617070726f76656420717565727920666f72206e6f6e6578697374656e7420746f6b656e4552433732313a207472616e73666572206f6620746f6b656e2074686174206973206e6f74206f776e4552433732314d657461646174613a2055524920717565727920666f72206e6f6e6578697374656e7420746f6b656e4552433732313a20617070726f76616c20746f2063757272656e74206f776e65724552433732313a207472616e736665722063616c6c6572206973206e6f74206f776e6572206e6f7220617070726f766564455243373231456e756d657261626c653a20676c6f62616c20696e646578206f7574206f6620626f756e6473a165627a7a72305820d942a10ddcb4d5148ecf424c7de1114da916205255e5106d65dd4d339bde3e5b0029"
-
-// DeployERC721Full deploys a new Klaytn contract, binding an instance of ERC721Full to it.
-func DeployERC721Full(auth *bind.TransactOpts, backend bind.ContractBackend, name string, symbol string) (common.Address, *types.Transaction, *ERC721Full, error) {
-	parsed, err := abi.JSON(strings.NewReader(ERC721FullABI))
-	if err != nil {
-		return common.Address{}, nil, nil, err
-	}
-
-	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(ERC721FullBin), backend, name, symbol)
-	if err != nil {
-		return common.Address{}, nil, nil, err
-	}
-	return address, tx, &ERC721Full{ERC721FullCaller: ERC721FullCaller{contract: contract}, ERC721FullTransactor: ERC721FullTransactor{contract: contract}, ERC721FullFilterer: ERC721FullFilterer{contract: contract}}, nil
-}
-
-// ERC721Full is an auto generated Go binding around a Klaytn contract.
-type ERC721Full struct {
-	ERC721FullCaller     // Read-only binding to the contract
-	ERC721FullTransactor // Write-only binding to the contract
-	ERC721FullFilterer   // Log filterer for contract events
-}
-
-// ERC721FullCaller is an auto generated read-only Go binding around a Klaytn contract.
-type ERC721FullCaller struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// ERC721FullTransactor is an auto generated write-only Go binding around a Klaytn contract.
-type ERC721FullTransactor struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// ERC721FullFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
-type ERC721FullFilterer struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// ERC721FullSession is an auto generated Go binding around a Klaytn contract,
-// with pre-set call and transact options.
-type ERC721FullSession struct {
-	Contract     *ERC721Full       // Generic contract binding to set the session for
-	CallOpts     bind.CallOpts     // Call options to use throughout this session
-	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
-}
-
-// ERC721FullCallerSession is an auto generated read-only Go binding around a Klaytn contract,
-// with pre-set call options.
-type ERC721FullCallerSession struct {
-	Contract *ERC721FullCaller // Generic contract caller binding to set the session for
-	CallOpts bind.CallOpts     // Call options to use throughout this session
-}
-
-// ERC721FullTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
-// with pre-set transact options.
-type ERC721FullTransactorSession struct {
-	Contract     *ERC721FullTransactor // Generic contract transactor binding to set the session for
-	TransactOpts bind.TransactOpts     // Transaction auth options to use throughout this session
-}
-
-// ERC721FullRaw is an auto generated low-level Go binding around a Klaytn contract.
-type ERC721FullRaw struct {
-	Contract *ERC721Full // Generic contract binding to access the raw methods on
-}
-
-// ERC721FullCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
-type ERC721FullCallerRaw struct {
-	Contract *ERC721FullCaller // Generic read-only contract binding to access the raw methods on
-}
-
-// ERC721FullTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
-type ERC721FullTransactorRaw struct {
-	Contract *ERC721FullTransactor // Generic write-only contract binding to access the raw methods on
-}
-
-// NewERC721Full creates a new instance of ERC721Full, bound to a specific deployed contract.
-func NewERC721Full(address common.Address, backend bind.ContractBackend) (*ERC721Full, error) {
-	contract, err := bindERC721Full(address, backend, backend, backend)
-	if err != nil {
-		return nil, err
-	}
-	return &ERC721Full{ERC721FullCaller: ERC721FullCaller{contract: contract}, ERC721FullTransactor: ERC721FullTransactor{contract: contract}, ERC721FullFilterer: ERC721FullFilterer{contract: contract}}, nil
-}
-
-// NewERC721FullCaller creates a new read-only instance of ERC721Full, bound to a specific deployed contract.
-func NewERC721FullCaller(address common.Address, caller bind.ContractCaller) (*ERC721FullCaller, error) {
-	contract, err := bindERC721Full(address, caller, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-	return &ERC721FullCaller{contract: contract}, nil
-}
-
-// NewERC721FullTransactor creates a new write-only instance of ERC721Full, bound to a specific deployed contract.
-func NewERC721FullTransactor(address common.Address, transactor bind.ContractTransactor) (*ERC721FullTransactor, error) {
-	contract, err := bindERC721Full(address, nil, transactor, nil)
-	if err != nil {
-		return nil, err
-	}
-	return &ERC721FullTransactor{contract: contract}, nil
-}
-
-// NewERC721FullFilterer creates a new log filterer instance of ERC721Full, bound to a specific deployed contract.
-func NewERC721FullFilterer(address common.Address, filterer bind.ContractFilterer) (*ERC721FullFilterer, error) {
-	contract, err := bindERC721Full(address, nil, nil, filterer)
-	if err != nil {
-		return nil, err
-	}
-	return &ERC721FullFilterer{contract: contract}, nil
-}
-
-// bindERC721Full binds a generic wrapper to an already deployed contract.
-func bindERC721Full(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
-	parsed, err := abi.JSON(strings.NewReader(ERC721FullABI))
-	if err != nil {
-		return nil, err
-	}
-	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
-}
-
-// Call invokes the (constant) contract method with params as input values and
-// sets the output to result. The result type might be a single field for simple
-// returns, a slice of interfaces for anonymous returns and a struct for named
-// returns.
-func (_ERC721Full *ERC721FullRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
-	return _ERC721Full.Contract.ERC721FullCaller.contract.Call(opts, result, method, params...)
-}
-
-// Transfer initiates a plain transaction to move funds to the contract, calling
-// its default method if one is available.
-func (_ERC721Full *ERC721FullRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _ERC721Full.Contract.ERC721FullTransactor.contract.Transfer(opts)
-}
-
-// Transact invokes the (paid) contract method with params as input values.
-func (_ERC721Full *ERC721FullRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _ERC721Full.Contract.ERC721FullTransactor.contract.Transact(opts, method, params...)
-}
-
-// Call invokes the (constant) contract method with params as input values and
-// sets the output to result. The result type might be a single field for simple
-// returns, a slice of interfaces for anonymous returns and a struct for named
-// returns.
-func (_ERC721Full *ERC721FullCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
-	return _ERC721Full.Contract.contract.Call(opts, result, method, params...)
-}
-
-// Transfer initiates a plain transaction to move funds to the contract, calling
-// its default method if one is available.
-func (_ERC721Full *ERC721FullTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _ERC721Full.Contract.contract.Transfer(opts)
-}
-
-// Transact invokes the (paid) contract method with params as input values.
-func (_ERC721Full *ERC721FullTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _ERC721Full.Contract.contract.Transact(opts, method, params...)
-}
-
-// BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
-//
-// Solidity: function balanceOf(address owner) view returns(uint256)
-func (_ERC721Full *ERC721FullCaller) BalanceOf(opts *bind.CallOpts, owner common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _ERC721Full.contract.Call(opts, out, "balanceOf", owner)
-	return *ret0, err
-}
-
-// BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
-//
-// Solidity: function balanceOf(address owner) view returns(uint256)
-func (_ERC721Full *ERC721FullSession) BalanceOf(owner common.Address) (*big.Int, error) {
-	return _ERC721Full.Contract.BalanceOf(&_ERC721Full.CallOpts, owner)
-}
-
-// BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
-//
-// Solidity: function balanceOf(address owner) view returns(uint256)
-func (_ERC721Full *ERC721FullCallerSession) BalanceOf(owner common.Address) (*big.Int, error) {
-	return _ERC721Full.Contract.BalanceOf(&_ERC721Full.CallOpts, owner)
-}
-
-// GetApproved is a free data retrieval call binding the contract method 0x081812fc.
-//
-// Solidity: function getApproved(uint256 tokenId) view returns(address)
-func (_ERC721Full *ERC721FullCaller) GetApproved(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
-	out := ret0
-	err := _ERC721Full.contract.Call(opts, out, "getApproved", tokenId)
-	return *ret0, err
-}
-
-// GetApproved is a free data retrieval call binding the contract method 0x081812fc.
-//
-// Solidity: function getApproved(uint256 tokenId) view returns(address)
-func (_ERC721Full *ERC721FullSession) GetApproved(tokenId *big.Int) (common.Address, error) {
-	return _ERC721Full.Contract.GetApproved(&_ERC721Full.CallOpts, tokenId)
-}
-
-// GetApproved is a free data retrieval call binding the contract method 0x081812fc.
-//
-// Solidity: function getApproved(uint256 tokenId) view returns(address)
-func (_ERC721Full *ERC721FullCallerSession) GetApproved(tokenId *big.Int) (common.Address, error) {
-	return _ERC721Full.Contract.GetApproved(&_ERC721Full.CallOpts, tokenId)
-}
-
-// IsApprovedForAll is a free data retrieval call binding the contract method 0xe985e9c5.
-//
-// Solidity: function isApprovedForAll(address owner, address operator) view returns(bool)
-func (_ERC721Full *ERC721FullCaller) IsApprovedForAll(opts *bind.CallOpts, owner common.Address, operator common.Address) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
-	out := ret0
-	err := _ERC721Full.contract.Call(opts, out, "isApprovedForAll", owner, operator)
-	return *ret0, err
-}
-
-// IsApprovedForAll is a free data retrieval call binding the contract method 0xe985e9c5.
-//
-// Solidity: function isApprovedForAll(address owner, address operator) view returns(bool)
-func (_ERC721Full *ERC721FullSession) IsApprovedForAll(owner common.Address, operator common.Address) (bool, error) {
-	return _ERC721Full.Contract.IsApprovedForAll(&_ERC721Full.CallOpts, owner, operator)
-}
-
-// IsApprovedForAll is a free data retrieval call binding the contract method 0xe985e9c5.
-//
-// Solidity: function isApprovedForAll(address owner, address operator) view returns(bool)
-func (_ERC721Full *ERC721FullCallerSession) IsApprovedForAll(owner common.Address, operator common.Address) (bool, error) {
-	return _ERC721Full.Contract.IsApprovedForAll(&_ERC721Full.CallOpts, owner, operator)
-}
-
-// Name is a free data retrieval call binding the contract method 0x06fdde03.
-//
-// Solidity: function name() view returns(string)
-func (_ERC721Full *ERC721FullCaller) Name(opts *bind.CallOpts) (string, error) {
-	var (
-		ret0 = new(string)
-	)
-	out := ret0
-	err := _ERC721Full.contract.Call(opts, out, "name")
-	return *ret0, err
-}
-
-// Name is a free data retrieval call binding the contract method 0x06fdde03.
-//
-// Solidity: function name() view returns(string)
-func (_ERC721Full *ERC721FullSession) Name() (string, error) {
-	return _ERC721Full.Contract.Name(&_ERC721Full.CallOpts)
-}
-
-// Name is a free data retrieval call binding the contract method 0x06fdde03.
-//
-// Solidity: function name() view returns(string)
-func (_ERC721Full *ERC721FullCallerSession) Name() (string, error) {
-	return _ERC721Full.Contract.Name(&_ERC721Full.CallOpts)
-}
-
-// OwnerOf is a free data retrieval call binding the contract method 0x6352211e.
-//
-// Solidity: function ownerOf(uint256 tokenId) view returns(address)
-func (_ERC721Full *ERC721FullCaller) OwnerOf(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
-	out := ret0
-	err := _ERC721Full.contract.Call(opts, out, "ownerOf", tokenId)
-	return *ret0, err
-}
-
-// OwnerOf is a free data retrieval call binding the contract method 0x6352211e.
-//
-// Solidity: function ownerOf(uint256 tokenId) view returns(address)
-func (_ERC721Full *ERC721FullSession) OwnerOf(tokenId *big.Int) (common.Address, error) {
-	return _ERC721Full.Contract.OwnerOf(&_ERC721Full.CallOpts, tokenId)
-}
-
-// OwnerOf is a free data retrieval call binding the contract method 0x6352211e.
-//
-// Solidity: function ownerOf(uint256 tokenId) view returns(address)
-func (_ERC721Full *ERC721FullCallerSession) OwnerOf(tokenId *big.Int) (common.Address, error) {
-	return _ERC721Full.Contract.OwnerOf(&_ERC721Full.CallOpts, tokenId)
-}
-
-// SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
-//
-// Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
-func (_ERC721Full *ERC721FullCaller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
-	out := ret0
-	err := _ERC721Full.contract.Call(opts, out, "supportsInterface", interfaceId)
-	return *ret0, err
-}
-
-// SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
-//
-// Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
-func (_ERC721Full *ERC721FullSession) SupportsInterface(interfaceId [4]byte) (bool, error) {
-	return _ERC721Full.Contract.SupportsInterface(&_ERC721Full.CallOpts, interfaceId)
-}
-
-// SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
-//
-// Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
-func (_ERC721Full *ERC721FullCallerSession) SupportsInterface(interfaceId [4]byte) (bool, error) {
-	return _ERC721Full.Contract.SupportsInterface(&_ERC721Full.CallOpts, interfaceId)
-}
-
-// Symbol is a free data retrieval call binding the contract method 0x95d89b41.
-//
-// Solidity: function symbol() view returns(string)
-func (_ERC721Full *ERC721FullCaller) Symbol(opts *bind.CallOpts) (string, error) {
-	var (
-		ret0 = new(string)
-	)
-	out := ret0
-	err := _ERC721Full.contract.Call(opts, out, "symbol")
-	return *ret0, err
-}
-
-// Symbol is a free data retrieval call binding the contract method 0x95d89b41.
-//
-// Solidity: function symbol() view returns(string)
-func (_ERC721Full *ERC721FullSession) Symbol() (string, error) {
-	return _ERC721Full.Contract.Symbol(&_ERC721Full.CallOpts)
-}
-
-// Symbol is a free data retrieval call binding the contract method 0x95d89b41.
-//
-// Solidity: function symbol() view returns(string)
-func (_ERC721Full *ERC721FullCallerSession) Symbol() (string, error) {
-	return _ERC721Full.Contract.Symbol(&_ERC721Full.CallOpts)
-}
-
-// TokenByIndex is a free data retrieval call binding the contract method 0x4f6ccce7.
-//
-// Solidity: function tokenByIndex(uint256 index) view returns(uint256)
-func (_ERC721Full *ERC721FullCaller) TokenByIndex(opts *bind.CallOpts, index *big.Int) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _ERC721Full.contract.Call(opts, out, "tokenByIndex", index)
-	return *ret0, err
-}
-
-// TokenByIndex is a free data retrieval call binding the contract method 0x4f6ccce7.
-//
-// Solidity: function tokenByIndex(uint256 index) view returns(uint256)
-func (_ERC721Full *ERC721FullSession) TokenByIndex(index *big.Int) (*big.Int, error) {
-	return _ERC721Full.Contract.TokenByIndex(&_ERC721Full.CallOpts, index)
-}
-
-// TokenByIndex is a free data retrieval call binding the contract method 0x4f6ccce7.
-//
-// Solidity: function tokenByIndex(uint256 index) view returns(uint256)
-func (_ERC721Full *ERC721FullCallerSession) TokenByIndex(index *big.Int) (*big.Int, error) {
-	return _ERC721Full.Contract.TokenByIndex(&_ERC721Full.CallOpts, index)
-}
-
-// TokenOfOwnerByIndex is a free data retrieval call binding the contract method 0x2f745c59.
-//
-// Solidity: function tokenOfOwnerByIndex(address owner, uint256 index) view returns(uint256)
-func (_ERC721Full *ERC721FullCaller) TokenOfOwnerByIndex(opts *bind.CallOpts, owner common.Address, index *big.Int) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _ERC721Full.contract.Call(opts, out, "tokenOfOwnerByIndex", owner, index)
-	return *ret0, err
-}
-
-// TokenOfOwnerByIndex is a free data retrieval call binding the contract method 0x2f745c59.
-//
-// Solidity: function tokenOfOwnerByIndex(address owner, uint256 index) view returns(uint256)
-func (_ERC721Full *ERC721FullSession) TokenOfOwnerByIndex(owner common.Address, index *big.Int) (*big.Int, error) {
-	return _ERC721Full.Contract.TokenOfOwnerByIndex(&_ERC721Full.CallOpts, owner, index)
-}
-
-// TokenOfOwnerByIndex is a free data retrieval call binding the contract method 0x2f745c59.
-//
-// Solidity: function tokenOfOwnerByIndex(address owner, uint256 index) view returns(uint256)
-func (_ERC721Full *ERC721FullCallerSession) TokenOfOwnerByIndex(owner common.Address, index *big.Int) (*big.Int, error) {
-	return _ERC721Full.Contract.TokenOfOwnerByIndex(&_ERC721Full.CallOpts, owner, index)
-}
-
-// TokenURI is a free data retrieval call binding the contract method 0xc87b56dd.
-//
-// Solidity: function tokenURI(uint256 tokenId) view returns(string)
-func (_ERC721Full *ERC721FullCaller) TokenURI(opts *bind.CallOpts, tokenId *big.Int) (string, error) {
-	var (
-		ret0 = new(string)
-	)
-	out := ret0
-	err := _ERC721Full.contract.Call(opts, out, "tokenURI", tokenId)
-	return *ret0, err
-}
-
-// TokenURI is a free data retrieval call binding the contract method 0xc87b56dd.
-//
-// Solidity: function tokenURI(uint256 tokenId) view returns(string)
-func (_ERC721Full *ERC721FullSession) TokenURI(tokenId *big.Int) (string, error) {
-	return _ERC721Full.Contract.TokenURI(&_ERC721Full.CallOpts, tokenId)
-}
-
-// TokenURI is a free data retrieval call binding the contract method 0xc87b56dd.
-//
-// Solidity: function tokenURI(uint256 tokenId) view returns(string)
-func (_ERC721Full *ERC721FullCallerSession) TokenURI(tokenId *big.Int) (string, error) {
-	return _ERC721Full.Contract.TokenURI(&_ERC721Full.CallOpts, tokenId)
-}
-
-// TotalSupply is a free data retrieval call binding the contract method 0x18160ddd.
-//
-// Solidity: function totalSupply() view returns(uint256)
-func (_ERC721Full *ERC721FullCaller) TotalSupply(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _ERC721Full.contract.Call(opts, out, "totalSupply")
-	return *ret0, err
-}
-
-// TotalSupply is a free data retrieval call binding the contract method 0x18160ddd.
-//
-// Solidity: function totalSupply() view returns(uint256)
-func (_ERC721Full *ERC721FullSession) TotalSupply() (*big.Int, error) {
-	return _ERC721Full.Contract.TotalSupply(&_ERC721Full.CallOpts)
-}
-
-// TotalSupply is a free data retrieval call binding the contract method 0x18160ddd.
-//
-// Solidity: function totalSupply() view returns(uint256)
-func (_ERC721Full *ERC721FullCallerSession) TotalSupply() (*big.Int, error) {
-	return _ERC721Full.Contract.TotalSupply(&_ERC721Full.CallOpts)
-}
-
-// Approve is a paid mutator transaction binding the contract method 0x095ea7b3.
-//
-// Solidity: function approve(address to, uint256 tokenId) returns()
-func (_ERC721Full *ERC721FullTransactor) Approve(opts *bind.TransactOpts, to common.Address, tokenId *big.Int) (*types.Transaction, error) {
-	return _ERC721Full.contract.Transact(opts, "approve", to, tokenId)
-}
-
-// Approve is a paid mutator transaction binding the contract method 0x095ea7b3.
-//
-// Solidity: function approve(address to, uint256 tokenId) returns()
-func (_ERC721Full *ERC721FullSession) Approve(to common.Address, tokenId *big.Int) (*types.Transaction, error) {
-	return _ERC721Full.Contract.Approve(&_ERC721Full.TransactOpts, to, tokenId)
-}
-
-// Approve is a paid mutator transaction binding the contract method 0x095ea7b3.
-//
-// Solidity: function approve(address to, uint256 tokenId) returns()
-func (_ERC721Full *ERC721FullTransactorSession) Approve(to common.Address, tokenId *big.Int) (*types.Transaction, error) {
-	return _ERC721Full.Contract.Approve(&_ERC721Full.TransactOpts, to, tokenId)
-}
-
-// SafeTransferFrom is a paid mutator transaction binding the contract method 0x42842e0e.
-//
-// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId) returns()
-func (_ERC721Full *ERC721FullTransactor) SafeTransferFrom(opts *bind.TransactOpts, from common.Address, to common.Address, tokenId *big.Int) (*types.Transaction, error) {
-	return _ERC721Full.contract.Transact(opts, "safeTransferFrom", from, to, tokenId)
-}
-
-// SafeTransferFrom is a paid mutator transaction binding the contract method 0x42842e0e.
-//
-// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId) returns()
-func (_ERC721Full *ERC721FullSession) SafeTransferFrom(from common.Address, to common.Address, tokenId *big.Int) (*types.Transaction, error) {
-	return _ERC721Full.Contract.SafeTransferFrom(&_ERC721Full.TransactOpts, from, to, tokenId)
-}
-
-// SafeTransferFrom is a paid mutator transaction binding the contract method 0x42842e0e.
-//
-// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId) returns()
-func (_ERC721Full *ERC721FullTransactorSession) SafeTransferFrom(from common.Address, to common.Address, tokenId *big.Int) (*types.Transaction, error) {
-	return _ERC721Full.Contract.SafeTransferFrom(&_ERC721Full.TransactOpts, from, to, tokenId)
-}
-
-// SafeTransferFrom0 is a paid mutator transaction binding the contract method 0xb88d4fde.
-//
-// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId, bytes _data) returns()
-func (_ERC721Full *ERC721FullTransactor) SafeTransferFrom0(opts *bind.TransactOpts, from common.Address, to common.Address, tokenId *big.Int, _data []byte) (*types.Transaction, error) {
-	return _ERC721Full.contract.Transact(opts, "safeTransferFrom0", from, to, tokenId, _data)
-}
-
-// SafeTransferFrom0 is a paid mutator transaction binding the contract method 0xb88d4fde.
-//
-// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId, bytes _data) returns()
-func (_ERC721Full *ERC721FullSession) SafeTransferFrom0(from common.Address, to common.Address, tokenId *big.Int, _data []byte) (*types.Transaction, error) {
-	return _ERC721Full.Contract.SafeTransferFrom0(&_ERC721Full.TransactOpts, from, to, tokenId, _data)
-}
-
-// SafeTransferFrom0 is a paid mutator transaction binding the contract method 0xb88d4fde.
-//
-// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId, bytes _data) returns()
-func (_ERC721Full *ERC721FullTransactorSession) SafeTransferFrom0(from common.Address, to common.Address, tokenId *big.Int, _data []byte) (*types.Transaction, error) {
-	return _ERC721Full.Contract.SafeTransferFrom0(&_ERC721Full.TransactOpts, from, to, tokenId, _data)
-}
-
-// SetApprovalForAll is a paid mutator transaction binding the contract method 0xa22cb465.
-//
-// Solidity: function setApprovalForAll(address to, bool approved) returns()
-func (_ERC721Full *ERC721FullTransactor) SetApprovalForAll(opts *bind.TransactOpts, to common.Address, approved bool) (*types.Transaction, error) {
-	return _ERC721Full.contract.Transact(opts, "setApprovalForAll", to, approved)
-}
-
-// SetApprovalForAll is a paid mutator transaction binding the contract method 0xa22cb465.
-//
-// Solidity: function setApprovalForAll(address to, bool approved) returns()
-func (_ERC721Full *ERC721FullSession) SetApprovalForAll(to common.Address, approved bool) (*types.Transaction, error) {
-	return _ERC721Full.Contract.SetApprovalForAll(&_ERC721Full.TransactOpts, to, approved)
-}
-
-// SetApprovalForAll is a paid mutator transaction binding the contract method 0xa22cb465.
-//
-// Solidity: function setApprovalForAll(address to, bool approved) returns()
-func (_ERC721Full *ERC721FullTransactorSession) SetApprovalForAll(to common.Address, approved bool) (*types.Transaction, error) {
-	return _ERC721Full.Contract.SetApprovalForAll(&_ERC721Full.TransactOpts, to, approved)
-}
-
-// TransferFrom is a paid mutator transaction binding the contract method 0x23b872dd.
-//
-// Solidity: function transferFrom(address from, address to, uint256 tokenId) returns()
-func (_ERC721Full *ERC721FullTransactor) TransferFrom(opts *bind.TransactOpts, from common.Address, to common.Address, tokenId *big.Int) (*types.Transaction, error) {
-	return _ERC721Full.contract.Transact(opts, "transferFrom", from, to, tokenId)
-}
-
-// TransferFrom is a paid mutator transaction binding the contract method 0x23b872dd.
-//
-// Solidity: function transferFrom(address from, address to, uint256 tokenId) returns()
-func (_ERC721Full *ERC721FullSession) TransferFrom(from common.Address, to common.Address, tokenId *big.Int) (*types.Transaction, error) {
-	return _ERC721Full.Contract.TransferFrom(&_ERC721Full.TransactOpts, from, to, tokenId)
-}
-
-// TransferFrom is a paid mutator transaction binding the contract method 0x23b872dd.
-//
-// Solidity: function transferFrom(address from, address to, uint256 tokenId) returns()
-func (_ERC721Full *ERC721FullTransactorSession) TransferFrom(from common.Address, to common.Address, tokenId *big.Int) (*types.Transaction, error) {
-	return _ERC721Full.Contract.TransferFrom(&_ERC721Full.TransactOpts, from, to, tokenId)
-}
-
-// ERC721FullApprovalIterator is returned from FilterApproval and is used to iterate over the raw logs and unpacked data for Approval events raised by the ERC721Full contract.
-type ERC721FullApprovalIterator struct {
-	Event *ERC721FullApproval // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *ERC721FullApprovalIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(ERC721FullApproval)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(ERC721FullApproval)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *ERC721FullApprovalIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *ERC721FullApprovalIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// ERC721FullApproval represents a Approval event raised by the ERC721Full contract.
-type ERC721FullApproval struct {
-	Owner    common.Address
-	Approved common.Address
-	TokenId  *big.Int
-	Raw      types.Log // Blockchain specific contextual infos
-}
-
-// FilterApproval is a free log retrieval operation binding the contract event 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925.
-//
-// Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
-func (_ERC721Full *ERC721FullFilterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, approved []common.Address, tokenId []*big.Int) (*ERC721FullApprovalIterator, error) {
-
-	var ownerRule []interface{}
-	for _, ownerItem := range owner {
-		ownerRule = append(ownerRule, ownerItem)
-	}
-	var approvedRule []interface{}
-	for _, approvedItem := range approved {
-		approvedRule = append(approvedRule, approvedItem)
-	}
-	var tokenIdRule []interface{}
-	for _, tokenIdItem := range tokenId {
-		tokenIdRule = append(tokenIdRule, tokenIdItem)
-	}
-
-	logs, sub, err := _ERC721Full.contract.FilterLogs(opts, "Approval", ownerRule, approvedRule, tokenIdRule)
-	if err != nil {
-		return nil, err
-	}
-	return &ERC721FullApprovalIterator{contract: _ERC721Full.contract, event: "Approval", logs: logs, sub: sub}, nil
-}
-
-// WatchApproval is a free log subscription operation binding the contract event 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925.
-//
-// Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
-func (_ERC721Full *ERC721FullFilterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *ERC721FullApproval, owner []common.Address, approved []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
-	var ownerRule []interface{}
-	for _, ownerItem := range owner {
-		ownerRule = append(ownerRule, ownerItem)
-	}
-	var approvedRule []interface{}
-	for _, approvedItem := range approved {
-		approvedRule = append(approvedRule, approvedItem)
-	}
-	var tokenIdRule []interface{}
-	for _, tokenIdItem := range tokenId {
-		tokenIdRule = append(tokenIdRule, tokenIdItem)
-	}
-
-	logs, sub, err := _ERC721Full.contract.WatchLogs(opts, "Approval", ownerRule, approvedRule, tokenIdRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(ERC721FullApproval)
-				if err := _ERC721Full.contract.UnpackLog(event, "Approval", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseApproval is a log parse operation binding the contract event 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925.
-//
-// Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
-func (_ERC721Full *ERC721FullFilterer) ParseApproval(log types.Log) (*ERC721FullApproval, error) {
-	event := new(ERC721FullApproval)
-	if err := _ERC721Full.contract.UnpackLog(event, "Approval", log); err != nil {
-		return nil, err
-	}
-	return event, nil
-}
-
-// ERC721FullApprovalForAllIterator is returned from FilterApprovalForAll and is used to iterate over the raw logs and unpacked data for ApprovalForAll events raised by the ERC721Full contract.
-type ERC721FullApprovalForAllIterator struct {
-	Event *ERC721FullApprovalForAll // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *ERC721FullApprovalForAllIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(ERC721FullApprovalForAll)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(ERC721FullApprovalForAll)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *ERC721FullApprovalForAllIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *ERC721FullApprovalForAllIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// ERC721FullApprovalForAll represents a ApprovalForAll event raised by the ERC721Full contract.
-type ERC721FullApprovalForAll struct {
-	Owner    common.Address
-	Operator common.Address
-	Approved bool
-	Raw      types.Log // Blockchain specific contextual infos
-}
-
-// FilterApprovalForAll is a free log retrieval operation binding the contract event 0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31.
-//
-// Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
-func (_ERC721Full *ERC721FullFilterer) FilterApprovalForAll(opts *bind.FilterOpts, owner []common.Address, operator []common.Address) (*ERC721FullApprovalForAllIterator, error) {
-
-	var ownerRule []interface{}
-	for _, ownerItem := range owner {
-		ownerRule = append(ownerRule, ownerItem)
-	}
-	var operatorRule []interface{}
-	for _, operatorItem := range operator {
-		operatorRule = append(operatorRule, operatorItem)
-	}
-
-	logs, sub, err := _ERC721Full.contract.FilterLogs(opts, "ApprovalForAll", ownerRule, operatorRule)
-	if err != nil {
-		return nil, err
-	}
-	return &ERC721FullApprovalForAllIterator{contract: _ERC721Full.contract, event: "ApprovalForAll", logs: logs, sub: sub}, nil
-}
-
-// WatchApprovalForAll is a free log subscription operation binding the contract event 0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31.
-//
-// Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
-func (_ERC721Full *ERC721FullFilterer) WatchApprovalForAll(opts *bind.WatchOpts, sink chan<- *ERC721FullApprovalForAll, owner []common.Address, operator []common.Address) (event.Subscription, error) {
-
-	var ownerRule []interface{}
-	for _, ownerItem := range owner {
-		ownerRule = append(ownerRule, ownerItem)
-	}
-	var operatorRule []interface{}
-	for _, operatorItem := range operator {
-		operatorRule = append(operatorRule, operatorItem)
-	}
-
-	logs, sub, err := _ERC721Full.contract.WatchLogs(opts, "ApprovalForAll", ownerRule, operatorRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(ERC721FullApprovalForAll)
-				if err := _ERC721Full.contract.UnpackLog(event, "ApprovalForAll", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseApprovalForAll is a log parse operation binding the contract event 0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31.
-//
-// Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
-func (_ERC721Full *ERC721FullFilterer) ParseApprovalForAll(log types.Log) (*ERC721FullApprovalForAll, error) {
-	event := new(ERC721FullApprovalForAll)
-	if err := _ERC721Full.contract.UnpackLog(event, "ApprovalForAll", log); err != nil {
-		return nil, err
-	}
-	return event, nil
-}
-
-// ERC721FullTransferIterator is returned from FilterTransfer and is used to iterate over the raw logs and unpacked data for Transfer events raised by the ERC721Full contract.
-type ERC721FullTransferIterator struct {
-	Event *ERC721FullTransfer // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *ERC721FullTransferIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(ERC721FullTransfer)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(ERC721FullTransfer)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *ERC721FullTransferIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *ERC721FullTransferIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// ERC721FullTransfer represents a Transfer event raised by the ERC721Full contract.
-type ERC721FullTransfer struct {
-	From    common.Address
-	To      common.Address
-	TokenId *big.Int
-	Raw     types.Log // Blockchain specific contextual infos
-}
-
-// FilterTransfer is a free log retrieval operation binding the contract event 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef.
-//
-// Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
-func (_ERC721Full *ERC721FullFilterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenId []*big.Int) (*ERC721FullTransferIterator, error) {
-
-	var fromRule []interface{}
-	for _, fromItem := range from {
-		fromRule = append(fromRule, fromItem)
-	}
-	var toRule []interface{}
-	for _, toItem := range to {
-		toRule = append(toRule, toItem)
-	}
-	var tokenIdRule []interface{}
-	for _, tokenIdItem := range tokenId {
-		tokenIdRule = append(tokenIdRule, tokenIdItem)
-	}
-
-	logs, sub, err := _ERC721Full.contract.FilterLogs(opts, "Transfer", fromRule, toRule, tokenIdRule)
-	if err != nil {
-		return nil, err
-	}
-	return &ERC721FullTransferIterator{contract: _ERC721Full.contract, event: "Transfer", logs: logs, sub: sub}, nil
-}
-
-// WatchTransfer is a free log subscription operation binding the contract event 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef.
-//
-// Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
-func (_ERC721Full *ERC721FullFilterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *ERC721FullTransfer, from []common.Address, to []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
-	var fromRule []interface{}
-	for _, fromItem := range from {
-		fromRule = append(fromRule, fromItem)
-	}
-	var toRule []interface{}
-	for _, toItem := range to {
-		toRule = append(toRule, toItem)
-	}
-	var tokenIdRule []interface{}
-	for _, tokenIdItem := range tokenId {
-		tokenIdRule = append(tokenIdRule, tokenIdItem)
-	}
-
-	logs, sub, err := _ERC721Full.contract.WatchLogs(opts, "Transfer", fromRule, toRule, tokenIdRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(ERC721FullTransfer)
-				if err := _ERC721Full.contract.UnpackLog(event, "Transfer", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseTransfer is a log parse operation binding the contract event 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef.
-//
-// Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
-func (_ERC721Full *ERC721FullFilterer) ParseTransfer(log types.Log) (*ERC721FullTransfer, error) {
-	event := new(ERC721FullTransfer)
-	if err := _ERC721Full.contract.UnpackLog(event, "Transfer", log); err != nil {
-		return nil, err
-	}
-	return event, nil
-}
-
-// ERC721MetadataABI is the input ABI used to generate the binding from.
-const ERC721MetadataABI = "[{\"constant\":true,\"inputs\":[{\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"getApproved\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"approve\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"transferFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"ownerOf\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"symbol\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"setApprovalForAll\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"},{\"name\":\"_data\",\"type\":\"bytes\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"tokenURI\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"},{\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"isApprovedForAll\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"name\":\"name\",\"type\":\"string\"},{\"name\":\"symbol\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"approved\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Approval\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"operator\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"ApprovalForAll\",\"type\":\"event\"}]"
-
-// ERC721MetadataBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
-const ERC721MetadataBinRuntime = `608060405234801561001057600080fd5b50600436106100cf5760003560e01c80636352211e1161008c578063a22cb46511610066578063a22cb465146102bc578063b88d4fde146102ea578063c87b56dd146103b0578063e985e9c5146103cd576100cf565b80636352211e1461025f57806370a082311461027c57806395d89b41146102b4576100cf565b806301ffc9a7146100d457806306fdde031461010f578063081812fc1461018c578063095ea7b3146101c557806323b872dd146101f357806342842e0e14610229575b600080fd5b6100fb600480360360208110156100ea57600080fd5b50356001600160e01b0319166103fb565b604080519115158252519081900360200190f35b61011761041a565b6040805160208082528351818301528351919283929083019185019080838360005b83811015610151578181015183820152602001610139565b50505050905090810190601f16801561017e5780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b6101a9600480360360208110156101a257600080fd5b50356104b0565b604080516001600160a01b039092168252519081900360200190f35b6101f1600480360360408110156101db57600080fd5b506001600160a01b038135169060200135610515565b005b6101f16004803603606081101561020957600080fd5b506001600160a01b0381358116916020810135909116906040013561062c565b6101f16004803603606081101561023f57600080fd5b506001600160a01b03813581169160208101359091169060400135610684565b6101a96004803603602081101561027557600080fd5b503561069f565b6102a26004803603602081101561029257600080fd5b50356001600160a01b03166106fc565b60408051918252519081900360200190f35b610117610767565b6101f1600480360360408110156102d257600080fd5b506001600160a01b03813516906020013515156107c8565b6101f16004803603608081101561030057600080fd5b6001600160a01b0382358116926020810135909116916040820135919081019060808101606082013564010000000081111561033b57600080fd5b82018360208201111561034d57600080fd5b8035906020019184600183028401116401000000008311171561036f57600080fd5b91908080601f016020809104026020016040519081016040528093929190818152602001838380828437600092019190915250929550610897945050505050565b610117600480360360208110156103c657600080fd5b50356108f2565b6100fb600480360360408110156103e357600080fd5b506001600160a01b03813581169160200135166109da565b6001600160e01b03191660009081526020819052604090205460ff1690565b60058054604080516020601f60026000196101006001881615020190951694909404938401819004810282018101909252828152606093909290918301828280156104a65780601f1061047b576101008083540402835291602001916104a6565b820191906000526020600020905b81548152906001019060200180831161048957829003601f168201915b5050505050905090565b60006104bb82610a08565b6104f957604051600160e51b62461bcd02815260040180806020018281038252602c815260200180610f24602c913960400191505060405180910390fd5b506000908152600260205260409020546001600160a01b031690565b60006105208261069f565b9050806001600160a01b0316836001600160a01b0316141561057657604051600160e51b62461bcd028152600401808060200182810382526021815260200180610fa86021913960400191505060405180910390fd5b336001600160a01b0382161480610592575061059281336109da565b6105d057604051600160e51b62461bcd028152600401808060200182810382526038815260200180610e996038913960400191505060405180910390fd5b60008281526002602052604080822080546001600160a01b0319166001600160a01b0387811691821790925591518593918516917f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b92591a4505050565b6106363382610a25565b61067457604051600160e51b62461bcd028152600401808060200182810382526031815260200180610fc96031913960400191505060405180910390fd5b61067f838383610acc565b505050565b61067f83838360405180602001604052806000815250610897565b6000818152600160205260408120546001600160a01b0316806106f657604051600160e51b62461bcd028152600401808060200182810382526029815260200180610efb6029913960400191505060405180910390fd5b92915050565b60006001600160a01b03821661074657604051600160e51b62461bcd02815260040180806020018281038252602a815260200180610ed1602a913960400191505060405180910390fd5b6001600160a01b03821660009081526003602052604090206106f690610c16565b60068054604080516020601f60026000196101006001881615020190951694909404938401819004810282018101909252828152606093909290918301828280156104a65780601f1061047b576101008083540402835291602001916104a6565b6001600160a01b0382163314156108295760408051600160e51b62461bcd02815260206004820152601960248201527f4552433732313a20617070726f766520746f2063616c6c657200000000000000604482015290519081900360640190fd5b3360008181526004602090815260408083206001600160a01b03871680855290835292819020805460ff1916861515908117909155815190815290519293927f17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31929181900390910190a35050565b6108a284848461062c565b6108ae84848484610c1a565b6108ec57604051600160e51b62461bcd028152600401808060200182810382526032815260200180610e176032913960400191505060405180910390fd5b50505050565b60606108fd82610a08565b61093b57604051600160e51b62461bcd02815260040180806020018281038252602f815260200180610f79602f913960400191505060405180910390fd5b60008281526007602090815260409182902080548351601f6002600019610100600186161502019093169290920491820184900484028101840190945280845290918301828280156109ce5780601f106109a3576101008083540402835291602001916109ce565b820191906000526020600020905b8154815290600101906020018083116109b157829003601f168201915b50505050509050919050565b6001600160a01b03918216600090815260046020908152604080832093909416825291909152205460ff1690565b6000908152600160205260409020546001600160a01b0316151590565b6000610a3082610a08565b610a6e57604051600160e51b62461bcd02815260040180806020018281038252602c815260200180610e6d602c913960400191505060405180910390fd5b6000610a798361069f565b9050806001600160a01b0316846001600160a01b03161480610ab45750836001600160a01b0316610aa9846104b0565b6001600160a01b0316145b80610ac45750610ac481856109da565b949350505050565b826001600160a01b0316610adf8261069f565b6001600160a01b031614610b2757604051600160e51b62461bcd028152600401808060200182810382526029815260200180610f506029913960400191505060405180910390fd5b6001600160a01b038216610b6f57604051600160e51b62461bcd028152600401808060200182810382526024815260200180610e496024913960400191505060405180910390fd5b610b7881610d53565b6001600160a01b0383166000908152600360205260409020610b9990610d90565b6001600160a01b0382166000908152600360205260409020610bba90610da7565b60008181526001602052604080822080546001600160a01b0319166001600160a01b0386811691821790925591518493918716917fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef91a4505050565b5490565b6000610c2e846001600160a01b0316610db0565b610c3a57506001610ac4565b604051600160e11b630a85bd0102815233600482018181526001600160a01b03888116602485015260448401879052608060648501908152865160848601528651600095928a169463150b7a029490938c938b938b939260a4019060208501908083838e5b83811015610cb7578181015183820152602001610c9f565b50505050905090810190601f168015610ce45780820380516001836020036101000a031916815260200191505b5095505050505050602060405180830381600087803b158015610d0657600080fd5b505af1158015610d1a573d6000803e3d6000fd5b505050506040513d6020811015610d3057600080fd5b50516001600160e01b031916600160e11b630a85bd010214915050949350505050565b6000818152600260205260409020546001600160a01b031615610d8d57600081815260026020526040902080546001600160a01b03191690555b50565b8054610da390600163ffffffff610db616565b9055565b80546001019055565b3b151590565b600082821115610e105760408051600160e51b62461bcd02815260206004820152601e60248201527f536166654d6174683a207375627472616374696f6e206f766572666c6f770000604482015290519081900360640190fd5b5090039056fe4552433732313a207472616e7366657220746f206e6f6e20455243373231526563656976657220696d706c656d656e7465724552433732313a207472616e7366657220746f20746865207a65726f20616464726573734552433732313a206f70657261746f7220717565727920666f72206e6f6e6578697374656e7420746f6b656e4552433732313a20617070726f76652063616c6c6572206973206e6f74206f776e6572206e6f7220617070726f76656420666f7220616c6c4552433732313a2062616c616e636520717565727920666f7220746865207a65726f20616464726573734552433732313a206f776e657220717565727920666f72206e6f6e6578697374656e7420746f6b656e4552433732313a20617070726f76656420717565727920666f72206e6f6e6578697374656e7420746f6b656e4552433732313a207472616e73666572206f6620746f6b656e2074686174206973206e6f74206f776e4552433732314d657461646174613a2055524920717565727920666f72206e6f6e6578697374656e7420746f6b656e4552433732313a20617070726f76616c20746f2063757272656e74206f776e65724552433732313a207472616e736665722063616c6c6572206973206e6f74206f776e6572206e6f7220617070726f766564a165627a7a7230582037ba54c848524be0056a573891a8b0f5c56b08f8613060e9876ee13fe582c6480029`
-
-// ERC721MetadataFuncSigs maps the 4-byte function signature to its string representation.
-var ERC721MetadataFuncSigs = map[string]string{
-	"095ea7b3": "approve(address,uint256)",
-	"70a08231": "balanceOf(address)",
-	"081812fc": "getApproved(uint256)",
-	"e985e9c5": "isApprovedForAll(address,address)",
-	"06fdde03": "name()",
-	"6352211e": "ownerOf(uint256)",
-	"42842e0e": "safeTransferFrom(address,address,uint256)",
-	"b88d4fde": "safeTransferFrom(address,address,uint256,bytes)",
-	"a22cb465": "setApprovalForAll(address,bool)",
-	"01ffc9a7": "supportsInterface(bytes4)",
-	"95d89b41": "symbol()",
-	"c87b56dd": "tokenURI(uint256)",
-	"23b872dd": "transferFrom(address,address,uint256)",
-}
-
-// ERC721MetadataBin is the compiled bytecode used for deploying new contracts.
-var ERC721MetadataBin = "0x60806040523480156200001157600080fd5b50604051620012f8380380620012f8833981018060405260408110156200003757600080fd5b8101908080516401000000008111156200005057600080fd5b820160208101848111156200006457600080fd5b81516401000000008111828201871017156200007f57600080fd5b505092919060200180516401000000008111156200009c57600080fd5b82016020810184811115620000b057600080fd5b8151640100000000811182820187101715620000cb57600080fd5b5050929190505050620000eb6301ffc9a760e01b6200014f60201b60201c565b620001036380ac58cd60e01b6200014f60201b60201c565b8151620001189060059060208501906200021e565b5080516200012e9060069060208401906200021e565b5062000147635b5e139f60e01b6200014f60201b60201c565b5050620002c3565b7fffffffff000000000000000000000000000000000000000000000000000000008082161415620001e157604080517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601c60248201527f4552433136353a20696e76616c696420696e7465726661636520696400000000604482015290519081900360640190fd5b7fffffffff00000000000000000000000000000000000000000000000000000000166000908152602081905260409020805460ff19166001179055565b828054600181600116156101000203166002900490600052602060002090601f016020900481019282601f106200026157805160ff191683800117855562000291565b8280016001018555821562000291579182015b828111156200029157825182559160200191906001019062000274565b506200029f929150620002a3565b5090565b620002c091905b808211156200029f5760008155600101620002aa565b90565b61102580620002d36000396000f3fe608060405234801561001057600080fd5b50600436106100cf5760003560e01c80636352211e1161008c578063a22cb46511610066578063a22cb465146102bc578063b88d4fde146102ea578063c87b56dd146103b0578063e985e9c5146103cd576100cf565b80636352211e1461025f57806370a082311461027c57806395d89b41146102b4576100cf565b806301ffc9a7146100d457806306fdde031461010f578063081812fc1461018c578063095ea7b3146101c557806323b872dd146101f357806342842e0e14610229575b600080fd5b6100fb600480360360208110156100ea57600080fd5b50356001600160e01b0319166103fb565b604080519115158252519081900360200190f35b61011761041a565b6040805160208082528351818301528351919283929083019185019080838360005b83811015610151578181015183820152602001610139565b50505050905090810190601f16801561017e5780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b6101a9600480360360208110156101a257600080fd5b50356104b0565b604080516001600160a01b039092168252519081900360200190f35b6101f1600480360360408110156101db57600080fd5b506001600160a01b038135169060200135610515565b005b6101f16004803603606081101561020957600080fd5b506001600160a01b0381358116916020810135909116906040013561062c565b6101f16004803603606081101561023f57600080fd5b506001600160a01b03813581169160208101359091169060400135610684565b6101a96004803603602081101561027557600080fd5b503561069f565b6102a26004803603602081101561029257600080fd5b50356001600160a01b03166106fc565b60408051918252519081900360200190f35b610117610767565b6101f1600480360360408110156102d257600080fd5b506001600160a01b03813516906020013515156107c8565b6101f16004803603608081101561030057600080fd5b6001600160a01b0382358116926020810135909116916040820135919081019060808101606082013564010000000081111561033b57600080fd5b82018360208201111561034d57600080fd5b8035906020019184600183028401116401000000008311171561036f57600080fd5b91908080601f016020809104026020016040519081016040528093929190818152602001838380828437600092019190915250929550610897945050505050565b610117600480360360208110156103c657600080fd5b50356108f2565b6100fb600480360360408110156103e357600080fd5b506001600160a01b03813581169160200135166109da565b6001600160e01b03191660009081526020819052604090205460ff1690565b60058054604080516020601f60026000196101006001881615020190951694909404938401819004810282018101909252828152606093909290918301828280156104a65780601f1061047b576101008083540402835291602001916104a6565b820191906000526020600020905b81548152906001019060200180831161048957829003601f168201915b5050505050905090565b60006104bb82610a08565b6104f957604051600160e51b62461bcd02815260040180806020018281038252602c815260200180610f24602c913960400191505060405180910390fd5b506000908152600260205260409020546001600160a01b031690565b60006105208261069f565b9050806001600160a01b0316836001600160a01b0316141561057657604051600160e51b62461bcd028152600401808060200182810382526021815260200180610fa86021913960400191505060405180910390fd5b336001600160a01b0382161480610592575061059281336109da565b6105d057604051600160e51b62461bcd028152600401808060200182810382526038815260200180610e996038913960400191505060405180910390fd5b60008281526002602052604080822080546001600160a01b0319166001600160a01b0387811691821790925591518593918516917f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b92591a4505050565b6106363382610a25565b61067457604051600160e51b62461bcd028152600401808060200182810382526031815260200180610fc96031913960400191505060405180910390fd5b61067f838383610acc565b505050565b61067f83838360405180602001604052806000815250610897565b6000818152600160205260408120546001600160a01b0316806106f657604051600160e51b62461bcd028152600401808060200182810382526029815260200180610efb6029913960400191505060405180910390fd5b92915050565b60006001600160a01b03821661074657604051600160e51b62461bcd02815260040180806020018281038252602a815260200180610ed1602a913960400191505060405180910390fd5b6001600160a01b03821660009081526003602052604090206106f690610c16565b60068054604080516020601f60026000196101006001881615020190951694909404938401819004810282018101909252828152606093909290918301828280156104a65780601f1061047b576101008083540402835291602001916104a6565b6001600160a01b0382163314156108295760408051600160e51b62461bcd02815260206004820152601960248201527f4552433732313a20617070726f766520746f2063616c6c657200000000000000604482015290519081900360640190fd5b3360008181526004602090815260408083206001600160a01b03871680855290835292819020805460ff1916861515908117909155815190815290519293927f17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31929181900390910190a35050565b6108a284848461062c565b6108ae84848484610c1a565b6108ec57604051600160e51b62461bcd028152600401808060200182810382526032815260200180610e176032913960400191505060405180910390fd5b50505050565b60606108fd82610a08565b61093b57604051600160e51b62461bcd02815260040180806020018281038252602f815260200180610f79602f913960400191505060405180910390fd5b60008281526007602090815260409182902080548351601f6002600019610100600186161502019093169290920491820184900484028101840190945280845290918301828280156109ce5780601f106109a3576101008083540402835291602001916109ce565b820191906000526020600020905b8154815290600101906020018083116109b157829003601f168201915b50505050509050919050565b6001600160a01b03918216600090815260046020908152604080832093909416825291909152205460ff1690565b6000908152600160205260409020546001600160a01b0316151590565b6000610a3082610a08565b610a6e57604051600160e51b62461bcd02815260040180806020018281038252602c815260200180610e6d602c913960400191505060405180910390fd5b6000610a798361069f565b9050806001600160a01b0316846001600160a01b03161480610ab45750836001600160a01b0316610aa9846104b0565b6001600160a01b0316145b80610ac45750610ac481856109da565b949350505050565b826001600160a01b0316610adf8261069f565b6001600160a01b031614610b2757604051600160e51b62461bcd028152600401808060200182810382526029815260200180610f506029913960400191505060405180910390fd5b6001600160a01b038216610b6f57604051600160e51b62461bcd028152600401808060200182810382526024815260200180610e496024913960400191505060405180910390fd5b610b7881610d53565b6001600160a01b0383166000908152600360205260409020610b9990610d90565b6001600160a01b0382166000908152600360205260409020610bba90610da7565b60008181526001602052604080822080546001600160a01b0319166001600160a01b0386811691821790925591518493918716917fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef91a4505050565b5490565b6000610c2e846001600160a01b0316610db0565b610c3a57506001610ac4565b604051600160e11b630a85bd0102815233600482018181526001600160a01b03888116602485015260448401879052608060648501908152865160848601528651600095928a169463150b7a029490938c938b938b939260a4019060208501908083838e5b83811015610cb7578181015183820152602001610c9f565b50505050905090810190601f168015610ce45780820380516001836020036101000a031916815260200191505b5095505050505050602060405180830381600087803b158015610d0657600080fd5b505af1158015610d1a573d6000803e3d6000fd5b505050506040513d6020811015610d3057600080fd5b50516001600160e01b031916600160e11b630a85bd010214915050949350505050565b6000818152600260205260409020546001600160a01b031615610d8d57600081815260026020526040902080546001600160a01b03191690555b50565b8054610da390600163ffffffff610db616565b9055565b80546001019055565b3b151590565b600082821115610e105760408051600160e51b62461bcd02815260206004820152601e60248201527f536166654d6174683a207375627472616374696f6e206f766572666c6f770000604482015290519081900360640190fd5b5090039056fe4552433732313a207472616e7366657220746f206e6f6e20455243373231526563656976657220696d706c656d656e7465724552433732313a207472616e7366657220746f20746865207a65726f20616464726573734552433732313a206f70657261746f7220717565727920666f72206e6f6e6578697374656e7420746f6b656e4552433732313a20617070726f76652063616c6c6572206973206e6f74206f776e6572206e6f7220617070726f76656420666f7220616c6c4552433732313a2062616c616e636520717565727920666f7220746865207a65726f20616464726573734552433732313a206f776e657220717565727920666f72206e6f6e6578697374656e7420746f6b656e4552433732313a20617070726f76656420717565727920666f72206e6f6e6578697374656e7420746f6b656e4552433732313a207472616e73666572206f6620746f6b656e2074686174206973206e6f74206f776e4552433732314d657461646174613a2055524920717565727920666f72206e6f6e6578697374656e7420746f6b656e4552433732313a20617070726f76616c20746f2063757272656e74206f776e65724552433732313a207472616e736665722063616c6c6572206973206e6f74206f776e6572206e6f7220617070726f766564a165627a7a7230582037ba54c848524be0056a573891a8b0f5c56b08f8613060e9876ee13fe582c6480029"
-
-// DeployERC721Metadata deploys a new Klaytn contract, binding an instance of ERC721Metadata to it.
-func DeployERC721Metadata(auth *bind.TransactOpts, backend bind.ContractBackend, name string, symbol string) (common.Address, *types.Transaction, *ERC721Metadata, error) {
-	parsed, err := abi.JSON(strings.NewReader(ERC721MetadataABI))
-	if err != nil {
-		return common.Address{}, nil, nil, err
-	}
-
-	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(ERC721MetadataBin), backend, name, symbol)
-	if err != nil {
-		return common.Address{}, nil, nil, err
-	}
-	return address, tx, &ERC721Metadata{ERC721MetadataCaller: ERC721MetadataCaller{contract: contract}, ERC721MetadataTransactor: ERC721MetadataTransactor{contract: contract}, ERC721MetadataFilterer: ERC721MetadataFilterer{contract: contract}}, nil
-}
-
-// ERC721Metadata is an auto generated Go binding around a Klaytn contract.
-type ERC721Metadata struct {
-	ERC721MetadataCaller     // Read-only binding to the contract
-	ERC721MetadataTransactor // Write-only binding to the contract
-	ERC721MetadataFilterer   // Log filterer for contract events
-}
-
-// ERC721MetadataCaller is an auto generated read-only Go binding around a Klaytn contract.
-type ERC721MetadataCaller struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// ERC721MetadataTransactor is an auto generated write-only Go binding around a Klaytn contract.
-type ERC721MetadataTransactor struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// ERC721MetadataFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
-type ERC721MetadataFilterer struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// ERC721MetadataSession is an auto generated Go binding around a Klaytn contract,
-// with pre-set call and transact options.
-type ERC721MetadataSession struct {
-	Contract     *ERC721Metadata   // Generic contract binding to set the session for
-	CallOpts     bind.CallOpts     // Call options to use throughout this session
-	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
-}
-
-// ERC721MetadataCallerSession is an auto generated read-only Go binding around a Klaytn contract,
-// with pre-set call options.
-type ERC721MetadataCallerSession struct {
-	Contract *ERC721MetadataCaller // Generic contract caller binding to set the session for
-	CallOpts bind.CallOpts         // Call options to use throughout this session
-}
-
-// ERC721MetadataTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
-// with pre-set transact options.
-type ERC721MetadataTransactorSession struct {
-	Contract     *ERC721MetadataTransactor // Generic contract transactor binding to set the session for
-	TransactOpts bind.TransactOpts         // Transaction auth options to use throughout this session
-}
-
-// ERC721MetadataRaw is an auto generated low-level Go binding around a Klaytn contract.
-type ERC721MetadataRaw struct {
-	Contract *ERC721Metadata // Generic contract binding to access the raw methods on
-}
-
-// ERC721MetadataCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
-type ERC721MetadataCallerRaw struct {
-	Contract *ERC721MetadataCaller // Generic read-only contract binding to access the raw methods on
-}
-
-// ERC721MetadataTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
-type ERC721MetadataTransactorRaw struct {
-	Contract *ERC721MetadataTransactor // Generic write-only contract binding to access the raw methods on
-}
-
-// NewERC721Metadata creates a new instance of ERC721Metadata, bound to a specific deployed contract.
-func NewERC721Metadata(address common.Address, backend bind.ContractBackend) (*ERC721Metadata, error) {
-	contract, err := bindERC721Metadata(address, backend, backend, backend)
-	if err != nil {
-		return nil, err
-	}
-	return &ERC721Metadata{ERC721MetadataCaller: ERC721MetadataCaller{contract: contract}, ERC721MetadataTransactor: ERC721MetadataTransactor{contract: contract}, ERC721MetadataFilterer: ERC721MetadataFilterer{contract: contract}}, nil
-}
-
-// NewERC721MetadataCaller creates a new read-only instance of ERC721Metadata, bound to a specific deployed contract.
-func NewERC721MetadataCaller(address common.Address, caller bind.ContractCaller) (*ERC721MetadataCaller, error) {
-	contract, err := bindERC721Metadata(address, caller, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-	return &ERC721MetadataCaller{contract: contract}, nil
-}
-
-// NewERC721MetadataTransactor creates a new write-only instance of ERC721Metadata, bound to a specific deployed contract.
-func NewERC721MetadataTransactor(address common.Address, transactor bind.ContractTransactor) (*ERC721MetadataTransactor, error) {
-	contract, err := bindERC721Metadata(address, nil, transactor, nil)
-	if err != nil {
-		return nil, err
-	}
-	return &ERC721MetadataTransactor{contract: contract}, nil
-}
-
-// NewERC721MetadataFilterer creates a new log filterer instance of ERC721Metadata, bound to a specific deployed contract.
-func NewERC721MetadataFilterer(address common.Address, filterer bind.ContractFilterer) (*ERC721MetadataFilterer, error) {
-	contract, err := bindERC721Metadata(address, nil, nil, filterer)
-	if err != nil {
-		return nil, err
-	}
-	return &ERC721MetadataFilterer{contract: contract}, nil
-}
-
-// bindERC721Metadata binds a generic wrapper to an already deployed contract.
-func bindERC721Metadata(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
-	parsed, err := abi.JSON(strings.NewReader(ERC721MetadataABI))
-	if err != nil {
-		return nil, err
-	}
-	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
-}
-
-// Call invokes the (constant) contract method with params as input values and
-// sets the output to result. The result type might be a single field for simple
-// returns, a slice of interfaces for anonymous returns and a struct for named
-// returns.
-func (_ERC721Metadata *ERC721MetadataRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
-	return _ERC721Metadata.Contract.ERC721MetadataCaller.contract.Call(opts, result, method, params...)
-}
-
-// Transfer initiates a plain transaction to move funds to the contract, calling
-// its default method if one is available.
-func (_ERC721Metadata *ERC721MetadataRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _ERC721Metadata.Contract.ERC721MetadataTransactor.contract.Transfer(opts)
-}
-
-// Transact invokes the (paid) contract method with params as input values.
-func (_ERC721Metadata *ERC721MetadataRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _ERC721Metadata.Contract.ERC721MetadataTransactor.contract.Transact(opts, method, params...)
-}
-
-// Call invokes the (constant) contract method with params as input values and
-// sets the output to result. The result type might be a single field for simple
-// returns, a slice of interfaces for anonymous returns and a struct for named
-// returns.
-func (_ERC721Metadata *ERC721MetadataCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
-	return _ERC721Metadata.Contract.contract.Call(opts, result, method, params...)
-}
-
-// Transfer initiates a plain transaction to move funds to the contract, calling
-// its default method if one is available.
-func (_ERC721Metadata *ERC721MetadataTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _ERC721Metadata.Contract.contract.Transfer(opts)
-}
-
-// Transact invokes the (paid) contract method with params as input values.
-func (_ERC721Metadata *ERC721MetadataTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _ERC721Metadata.Contract.contract.Transact(opts, method, params...)
-}
-
-// BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
-//
-// Solidity: function balanceOf(address owner) view returns(uint256)
-func (_ERC721Metadata *ERC721MetadataCaller) BalanceOf(opts *bind.CallOpts, owner common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _ERC721Metadata.contract.Call(opts, out, "balanceOf", owner)
-	return *ret0, err
-}
-
-// BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
-//
-// Solidity: function balanceOf(address owner) view returns(uint256)
-func (_ERC721Metadata *ERC721MetadataSession) BalanceOf(owner common.Address) (*big.Int, error) {
-	return _ERC721Metadata.Contract.BalanceOf(&_ERC721Metadata.CallOpts, owner)
-}
-
-// BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
-//
-// Solidity: function balanceOf(address owner) view returns(uint256)
-func (_ERC721Metadata *ERC721MetadataCallerSession) BalanceOf(owner common.Address) (*big.Int, error) {
-	return _ERC721Metadata.Contract.BalanceOf(&_ERC721Metadata.CallOpts, owner)
-}
-
-// GetApproved is a free data retrieval call binding the contract method 0x081812fc.
-//
-// Solidity: function getApproved(uint256 tokenId) view returns(address)
-func (_ERC721Metadata *ERC721MetadataCaller) GetApproved(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
-	out := ret0
-	err := _ERC721Metadata.contract.Call(opts, out, "getApproved", tokenId)
-	return *ret0, err
-}
-
-// GetApproved is a free data retrieval call binding the contract method 0x081812fc.
-//
-// Solidity: function getApproved(uint256 tokenId) view returns(address)
-func (_ERC721Metadata *ERC721MetadataSession) GetApproved(tokenId *big.Int) (common.Address, error) {
-	return _ERC721Metadata.Contract.GetApproved(&_ERC721Metadata.CallOpts, tokenId)
-}
-
-// GetApproved is a free data retrieval call binding the contract method 0x081812fc.
-//
-// Solidity: function getApproved(uint256 tokenId) view returns(address)
-func (_ERC721Metadata *ERC721MetadataCallerSession) GetApproved(tokenId *big.Int) (common.Address, error) {
-	return _ERC721Metadata.Contract.GetApproved(&_ERC721Metadata.CallOpts, tokenId)
-}
-
-// IsApprovedForAll is a free data retrieval call binding the contract method 0xe985e9c5.
-//
-// Solidity: function isApprovedForAll(address owner, address operator) view returns(bool)
-func (_ERC721Metadata *ERC721MetadataCaller) IsApprovedForAll(opts *bind.CallOpts, owner common.Address, operator common.Address) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
-	out := ret0
-	err := _ERC721Metadata.contract.Call(opts, out, "isApprovedForAll", owner, operator)
-	return *ret0, err
-}
-
-// IsApprovedForAll is a free data retrieval call binding the contract method 0xe985e9c5.
-//
-// Solidity: function isApprovedForAll(address owner, address operator) view returns(bool)
-func (_ERC721Metadata *ERC721MetadataSession) IsApprovedForAll(owner common.Address, operator common.Address) (bool, error) {
-	return _ERC721Metadata.Contract.IsApprovedForAll(&_ERC721Metadata.CallOpts, owner, operator)
-}
-
-// IsApprovedForAll is a free data retrieval call binding the contract method 0xe985e9c5.
-//
-// Solidity: function isApprovedForAll(address owner, address operator) view returns(bool)
-func (_ERC721Metadata *ERC721MetadataCallerSession) IsApprovedForAll(owner common.Address, operator common.Address) (bool, error) {
-	return _ERC721Metadata.Contract.IsApprovedForAll(&_ERC721Metadata.CallOpts, owner, operator)
-}
-
-// Name is a free data retrieval call binding the contract method 0x06fdde03.
-//
-// Solidity: function name() view returns(string)
-func (_ERC721Metadata *ERC721MetadataCaller) Name(opts *bind.CallOpts) (string, error) {
-	var (
-		ret0 = new(string)
-	)
-	out := ret0
-	err := _ERC721Metadata.contract.Call(opts, out, "name")
-	return *ret0, err
-}
-
-// Name is a free data retrieval call binding the contract method 0x06fdde03.
-//
-// Solidity: function name() view returns(string)
-func (_ERC721Metadata *ERC721MetadataSession) Name() (string, error) {
-	return _ERC721Metadata.Contract.Name(&_ERC721Metadata.CallOpts)
-}
-
-// Name is a free data retrieval call binding the contract method 0x06fdde03.
-//
-// Solidity: function name() view returns(string)
-func (_ERC721Metadata *ERC721MetadataCallerSession) Name() (string, error) {
-	return _ERC721Metadata.Contract.Name(&_ERC721Metadata.CallOpts)
-}
-
-// OwnerOf is a free data retrieval call binding the contract method 0x6352211e.
-//
-// Solidity: function ownerOf(uint256 tokenId) view returns(address)
-func (_ERC721Metadata *ERC721MetadataCaller) OwnerOf(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
-	out := ret0
-	err := _ERC721Metadata.contract.Call(opts, out, "ownerOf", tokenId)
-	return *ret0, err
-}
-
-// OwnerOf is a free data retrieval call binding the contract method 0x6352211e.
-//
-// Solidity: function ownerOf(uint256 tokenId) view returns(address)
-func (_ERC721Metadata *ERC721MetadataSession) OwnerOf(tokenId *big.Int) (common.Address, error) {
-	return _ERC721Metadata.Contract.OwnerOf(&_ERC721Metadata.CallOpts, tokenId)
-}
-
-// OwnerOf is a free data retrieval call binding the contract method 0x6352211e.
-//
-// Solidity: function ownerOf(uint256 tokenId) view returns(address)
-func (_ERC721Metadata *ERC721MetadataCallerSession) OwnerOf(tokenId *big.Int) (common.Address, error) {
-	return _ERC721Metadata.Contract.OwnerOf(&_ERC721Metadata.CallOpts, tokenId)
-}
-
-// SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
-//
-// Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
-func (_ERC721Metadata *ERC721MetadataCaller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
-	out := ret0
-	err := _ERC721Metadata.contract.Call(opts, out, "supportsInterface", interfaceId)
-	return *ret0, err
-}
-
-// SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
-//
-// Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
-func (_ERC721Metadata *ERC721MetadataSession) SupportsInterface(interfaceId [4]byte) (bool, error) {
-	return _ERC721Metadata.Contract.SupportsInterface(&_ERC721Metadata.CallOpts, interfaceId)
-}
-
-// SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
-//
-// Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
-func (_ERC721Metadata *ERC721MetadataCallerSession) SupportsInterface(interfaceId [4]byte) (bool, error) {
-	return _ERC721Metadata.Contract.SupportsInterface(&_ERC721Metadata.CallOpts, interfaceId)
-}
-
-// Symbol is a free data retrieval call binding the contract method 0x95d89b41.
-//
-// Solidity: function symbol() view returns(string)
-func (_ERC721Metadata *ERC721MetadataCaller) Symbol(opts *bind.CallOpts) (string, error) {
-	var (
-		ret0 = new(string)
-	)
-	out := ret0
-	err := _ERC721Metadata.contract.Call(opts, out, "symbol")
-	return *ret0, err
-}
-
-// Symbol is a free data retrieval call binding the contract method 0x95d89b41.
-//
-// Solidity: function symbol() view returns(string)
-func (_ERC721Metadata *ERC721MetadataSession) Symbol() (string, error) {
-	return _ERC721Metadata.Contract.Symbol(&_ERC721Metadata.CallOpts)
-}
-
-// Symbol is a free data retrieval call binding the contract method 0x95d89b41.
-//
-// Solidity: function symbol() view returns(string)
-func (_ERC721Metadata *ERC721MetadataCallerSession) Symbol() (string, error) {
-	return _ERC721Metadata.Contract.Symbol(&_ERC721Metadata.CallOpts)
-}
-
-// TokenURI is a free data retrieval call binding the contract method 0xc87b56dd.
-//
-// Solidity: function tokenURI(uint256 tokenId) view returns(string)
-func (_ERC721Metadata *ERC721MetadataCaller) TokenURI(opts *bind.CallOpts, tokenId *big.Int) (string, error) {
-	var (
-		ret0 = new(string)
-	)
-	out := ret0
-	err := _ERC721Metadata.contract.Call(opts, out, "tokenURI", tokenId)
-	return *ret0, err
-}
-
-// TokenURI is a free data retrieval call binding the contract method 0xc87b56dd.
-//
-// Solidity: function tokenURI(uint256 tokenId) view returns(string)
-func (_ERC721Metadata *ERC721MetadataSession) TokenURI(tokenId *big.Int) (string, error) {
-	return _ERC721Metadata.Contract.TokenURI(&_ERC721Metadata.CallOpts, tokenId)
-}
-
-// TokenURI is a free data retrieval call binding the contract method 0xc87b56dd.
-//
-// Solidity: function tokenURI(uint256 tokenId) view returns(string)
-func (_ERC721Metadata *ERC721MetadataCallerSession) TokenURI(tokenId *big.Int) (string, error) {
-	return _ERC721Metadata.Contract.TokenURI(&_ERC721Metadata.CallOpts, tokenId)
-}
-
-// Approve is a paid mutator transaction binding the contract method 0x095ea7b3.
-//
-// Solidity: function approve(address to, uint256 tokenId) returns()
-func (_ERC721Metadata *ERC721MetadataTransactor) Approve(opts *bind.TransactOpts, to common.Address, tokenId *big.Int) (*types.Transaction, error) {
-	return _ERC721Metadata.contract.Transact(opts, "approve", to, tokenId)
-}
-
-// Approve is a paid mutator transaction binding the contract method 0x095ea7b3.
-//
-// Solidity: function approve(address to, uint256 tokenId) returns()
-func (_ERC721Metadata *ERC721MetadataSession) Approve(to common.Address, tokenId *big.Int) (*types.Transaction, error) {
-	return _ERC721Metadata.Contract.Approve(&_ERC721Metadata.TransactOpts, to, tokenId)
-}
-
-// Approve is a paid mutator transaction binding the contract method 0x095ea7b3.
-//
-// Solidity: function approve(address to, uint256 tokenId) returns()
-func (_ERC721Metadata *ERC721MetadataTransactorSession) Approve(to common.Address, tokenId *big.Int) (*types.Transaction, error) {
-	return _ERC721Metadata.Contract.Approve(&_ERC721Metadata.TransactOpts, to, tokenId)
-}
-
-// SafeTransferFrom is a paid mutator transaction binding the contract method 0x42842e0e.
-//
-// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId) returns()
-func (_ERC721Metadata *ERC721MetadataTransactor) SafeTransferFrom(opts *bind.TransactOpts, from common.Address, to common.Address, tokenId *big.Int) (*types.Transaction, error) {
-	return _ERC721Metadata.contract.Transact(opts, "safeTransferFrom", from, to, tokenId)
-}
-
-// SafeTransferFrom is a paid mutator transaction binding the contract method 0x42842e0e.
-//
-// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId) returns()
-func (_ERC721Metadata *ERC721MetadataSession) SafeTransferFrom(from common.Address, to common.Address, tokenId *big.Int) (*types.Transaction, error) {
-	return _ERC721Metadata.Contract.SafeTransferFrom(&_ERC721Metadata.TransactOpts, from, to, tokenId)
-}
-
-// SafeTransferFrom is a paid mutator transaction binding the contract method 0x42842e0e.
-//
-// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId) returns()
-func (_ERC721Metadata *ERC721MetadataTransactorSession) SafeTransferFrom(from common.Address, to common.Address, tokenId *big.Int) (*types.Transaction, error) {
-	return _ERC721Metadata.Contract.SafeTransferFrom(&_ERC721Metadata.TransactOpts, from, to, tokenId)
-}
-
-// SafeTransferFrom0 is a paid mutator transaction binding the contract method 0xb88d4fde.
-//
-// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId, bytes _data) returns()
-func (_ERC721Metadata *ERC721MetadataTransactor) SafeTransferFrom0(opts *bind.TransactOpts, from common.Address, to common.Address, tokenId *big.Int, _data []byte) (*types.Transaction, error) {
-	return _ERC721Metadata.contract.Transact(opts, "safeTransferFrom0", from, to, tokenId, _data)
-}
-
-// SafeTransferFrom0 is a paid mutator transaction binding the contract method 0xb88d4fde.
-//
-// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId, bytes _data) returns()
-func (_ERC721Metadata *ERC721MetadataSession) SafeTransferFrom0(from common.Address, to common.Address, tokenId *big.Int, _data []byte) (*types.Transaction, error) {
-	return _ERC721Metadata.Contract.SafeTransferFrom0(&_ERC721Metadata.TransactOpts, from, to, tokenId, _data)
-}
-
-// SafeTransferFrom0 is a paid mutator transaction binding the contract method 0xb88d4fde.
-//
-// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId, bytes _data) returns()
-func (_ERC721Metadata *ERC721MetadataTransactorSession) SafeTransferFrom0(from common.Address, to common.Address, tokenId *big.Int, _data []byte) (*types.Transaction, error) {
-	return _ERC721Metadata.Contract.SafeTransferFrom0(&_ERC721Metadata.TransactOpts, from, to, tokenId, _data)
-}
-
-// SetApprovalForAll is a paid mutator transaction binding the contract method 0xa22cb465.
-//
-// Solidity: function setApprovalForAll(address to, bool approved) returns()
-func (_ERC721Metadata *ERC721MetadataTransactor) SetApprovalForAll(opts *bind.TransactOpts, to common.Address, approved bool) (*types.Transaction, error) {
-	return _ERC721Metadata.contract.Transact(opts, "setApprovalForAll", to, approved)
-}
-
-// SetApprovalForAll is a paid mutator transaction binding the contract method 0xa22cb465.
-//
-// Solidity: function setApprovalForAll(address to, bool approved) returns()
-func (_ERC721Metadata *ERC721MetadataSession) SetApprovalForAll(to common.Address, approved bool) (*types.Transaction, error) {
-	return _ERC721Metadata.Contract.SetApprovalForAll(&_ERC721Metadata.TransactOpts, to, approved)
-}
-
-// SetApprovalForAll is a paid mutator transaction binding the contract method 0xa22cb465.
-//
-// Solidity: function setApprovalForAll(address to, bool approved) returns()
-func (_ERC721Metadata *ERC721MetadataTransactorSession) SetApprovalForAll(to common.Address, approved bool) (*types.Transaction, error) {
-	return _ERC721Metadata.Contract.SetApprovalForAll(&_ERC721Metadata.TransactOpts, to, approved)
-}
-
-// TransferFrom is a paid mutator transaction binding the contract method 0x23b872dd.
-//
-// Solidity: function transferFrom(address from, address to, uint256 tokenId) returns()
-func (_ERC721Metadata *ERC721MetadataTransactor) TransferFrom(opts *bind.TransactOpts, from common.Address, to common.Address, tokenId *big.Int) (*types.Transaction, error) {
-	return _ERC721Metadata.contract.Transact(opts, "transferFrom", from, to, tokenId)
-}
-
-// TransferFrom is a paid mutator transaction binding the contract method 0x23b872dd.
-//
-// Solidity: function transferFrom(address from, address to, uint256 tokenId) returns()
-func (_ERC721Metadata *ERC721MetadataSession) TransferFrom(from common.Address, to common.Address, tokenId *big.Int) (*types.Transaction, error) {
-	return _ERC721Metadata.Contract.TransferFrom(&_ERC721Metadata.TransactOpts, from, to, tokenId)
-}
-
-// TransferFrom is a paid mutator transaction binding the contract method 0x23b872dd.
-//
-// Solidity: function transferFrom(address from, address to, uint256 tokenId) returns()
-func (_ERC721Metadata *ERC721MetadataTransactorSession) TransferFrom(from common.Address, to common.Address, tokenId *big.Int) (*types.Transaction, error) {
-	return _ERC721Metadata.Contract.TransferFrom(&_ERC721Metadata.TransactOpts, from, to, tokenId)
-}
-
-// ERC721MetadataApprovalIterator is returned from FilterApproval and is used to iterate over the raw logs and unpacked data for Approval events raised by the ERC721Metadata contract.
-type ERC721MetadataApprovalIterator struct {
-	Event *ERC721MetadataApproval // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *ERC721MetadataApprovalIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(ERC721MetadataApproval)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(ERC721MetadataApproval)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *ERC721MetadataApprovalIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *ERC721MetadataApprovalIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// ERC721MetadataApproval represents a Approval event raised by the ERC721Metadata contract.
-type ERC721MetadataApproval struct {
-	Owner    common.Address
-	Approved common.Address
-	TokenId  *big.Int
-	Raw      types.Log // Blockchain specific contextual infos
-}
-
-// FilterApproval is a free log retrieval operation binding the contract event 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925.
-//
-// Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
-func (_ERC721Metadata *ERC721MetadataFilterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, approved []common.Address, tokenId []*big.Int) (*ERC721MetadataApprovalIterator, error) {
-
-	var ownerRule []interface{}
-	for _, ownerItem := range owner {
-		ownerRule = append(ownerRule, ownerItem)
-	}
-	var approvedRule []interface{}
-	for _, approvedItem := range approved {
-		approvedRule = append(approvedRule, approvedItem)
-	}
-	var tokenIdRule []interface{}
-	for _, tokenIdItem := range tokenId {
-		tokenIdRule = append(tokenIdRule, tokenIdItem)
-	}
-
-	logs, sub, err := _ERC721Metadata.contract.FilterLogs(opts, "Approval", ownerRule, approvedRule, tokenIdRule)
-	if err != nil {
-		return nil, err
-	}
-	return &ERC721MetadataApprovalIterator{contract: _ERC721Metadata.contract, event: "Approval", logs: logs, sub: sub}, nil
-}
-
-// WatchApproval is a free log subscription operation binding the contract event 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925.
-//
-// Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
-func (_ERC721Metadata *ERC721MetadataFilterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *ERC721MetadataApproval, owner []common.Address, approved []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
-	var ownerRule []interface{}
-	for _, ownerItem := range owner {
-		ownerRule = append(ownerRule, ownerItem)
-	}
-	var approvedRule []interface{}
-	for _, approvedItem := range approved {
-		approvedRule = append(approvedRule, approvedItem)
-	}
-	var tokenIdRule []interface{}
-	for _, tokenIdItem := range tokenId {
-		tokenIdRule = append(tokenIdRule, tokenIdItem)
-	}
-
-	logs, sub, err := _ERC721Metadata.contract.WatchLogs(opts, "Approval", ownerRule, approvedRule, tokenIdRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(ERC721MetadataApproval)
-				if err := _ERC721Metadata.contract.UnpackLog(event, "Approval", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseApproval is a log parse operation binding the contract event 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925.
-//
-// Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
-func (_ERC721Metadata *ERC721MetadataFilterer) ParseApproval(log types.Log) (*ERC721MetadataApproval, error) {
-	event := new(ERC721MetadataApproval)
-	if err := _ERC721Metadata.contract.UnpackLog(event, "Approval", log); err != nil {
-		return nil, err
-	}
-	return event, nil
-}
-
-// ERC721MetadataApprovalForAllIterator is returned from FilterApprovalForAll and is used to iterate over the raw logs and unpacked data for ApprovalForAll events raised by the ERC721Metadata contract.
-type ERC721MetadataApprovalForAllIterator struct {
-	Event *ERC721MetadataApprovalForAll // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *ERC721MetadataApprovalForAllIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(ERC721MetadataApprovalForAll)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(ERC721MetadataApprovalForAll)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *ERC721MetadataApprovalForAllIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *ERC721MetadataApprovalForAllIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// ERC721MetadataApprovalForAll represents a ApprovalForAll event raised by the ERC721Metadata contract.
-type ERC721MetadataApprovalForAll struct {
-	Owner    common.Address
-	Operator common.Address
-	Approved bool
-	Raw      types.Log // Blockchain specific contextual infos
-}
-
-// FilterApprovalForAll is a free log retrieval operation binding the contract event 0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31.
-//
-// Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
-func (_ERC721Metadata *ERC721MetadataFilterer) FilterApprovalForAll(opts *bind.FilterOpts, owner []common.Address, operator []common.Address) (*ERC721MetadataApprovalForAllIterator, error) {
-
-	var ownerRule []interface{}
-	for _, ownerItem := range owner {
-		ownerRule = append(ownerRule, ownerItem)
-	}
-	var operatorRule []interface{}
-	for _, operatorItem := range operator {
-		operatorRule = append(operatorRule, operatorItem)
-	}
-
-	logs, sub, err := _ERC721Metadata.contract.FilterLogs(opts, "ApprovalForAll", ownerRule, operatorRule)
-	if err != nil {
-		return nil, err
-	}
-	return &ERC721MetadataApprovalForAllIterator{contract: _ERC721Metadata.contract, event: "ApprovalForAll", logs: logs, sub: sub}, nil
-}
-
-// WatchApprovalForAll is a free log subscription operation binding the contract event 0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31.
-//
-// Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
-func (_ERC721Metadata *ERC721MetadataFilterer) WatchApprovalForAll(opts *bind.WatchOpts, sink chan<- *ERC721MetadataApprovalForAll, owner []common.Address, operator []common.Address) (event.Subscription, error) {
-
-	var ownerRule []interface{}
-	for _, ownerItem := range owner {
-		ownerRule = append(ownerRule, ownerItem)
-	}
-	var operatorRule []interface{}
-	for _, operatorItem := range operator {
-		operatorRule = append(operatorRule, operatorItem)
-	}
-
-	logs, sub, err := _ERC721Metadata.contract.WatchLogs(opts, "ApprovalForAll", ownerRule, operatorRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(ERC721MetadataApprovalForAll)
-				if err := _ERC721Metadata.contract.UnpackLog(event, "ApprovalForAll", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseApprovalForAll is a log parse operation binding the contract event 0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31.
-//
-// Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
-func (_ERC721Metadata *ERC721MetadataFilterer) ParseApprovalForAll(log types.Log) (*ERC721MetadataApprovalForAll, error) {
-	event := new(ERC721MetadataApprovalForAll)
-	if err := _ERC721Metadata.contract.UnpackLog(event, "ApprovalForAll", log); err != nil {
-		return nil, err
-	}
-	return event, nil
-}
-
-// ERC721MetadataTransferIterator is returned from FilterTransfer and is used to iterate over the raw logs and unpacked data for Transfer events raised by the ERC721Metadata contract.
-type ERC721MetadataTransferIterator struct {
-	Event *ERC721MetadataTransfer // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *ERC721MetadataTransferIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(ERC721MetadataTransfer)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(ERC721MetadataTransfer)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *ERC721MetadataTransferIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *ERC721MetadataTransferIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// ERC721MetadataTransfer represents a Transfer event raised by the ERC721Metadata contract.
-type ERC721MetadataTransfer struct {
-	From    common.Address
-	To      common.Address
-	TokenId *big.Int
-	Raw     types.Log // Blockchain specific contextual infos
-}
-
-// FilterTransfer is a free log retrieval operation binding the contract event 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef.
-//
-// Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
-func (_ERC721Metadata *ERC721MetadataFilterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenId []*big.Int) (*ERC721MetadataTransferIterator, error) {
-
-	var fromRule []interface{}
-	for _, fromItem := range from {
-		fromRule = append(fromRule, fromItem)
-	}
-	var toRule []interface{}
-	for _, toItem := range to {
-		toRule = append(toRule, toItem)
-	}
-	var tokenIdRule []interface{}
-	for _, tokenIdItem := range tokenId {
-		tokenIdRule = append(tokenIdRule, tokenIdItem)
-	}
-
-	logs, sub, err := _ERC721Metadata.contract.FilterLogs(opts, "Transfer", fromRule, toRule, tokenIdRule)
-	if err != nil {
-		return nil, err
-	}
-	return &ERC721MetadataTransferIterator{contract: _ERC721Metadata.contract, event: "Transfer", logs: logs, sub: sub}, nil
-}
-
-// WatchTransfer is a free log subscription operation binding the contract event 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef.
-//
-// Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
-func (_ERC721Metadata *ERC721MetadataFilterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *ERC721MetadataTransfer, from []common.Address, to []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
-	var fromRule []interface{}
-	for _, fromItem := range from {
-		fromRule = append(fromRule, fromItem)
-	}
-	var toRule []interface{}
-	for _, toItem := range to {
-		toRule = append(toRule, toItem)
-	}
-	var tokenIdRule []interface{}
-	for _, tokenIdItem := range tokenId {
-		tokenIdRule = append(tokenIdRule, tokenIdItem)
-	}
-
-	logs, sub, err := _ERC721Metadata.contract.WatchLogs(opts, "Transfer", fromRule, toRule, tokenIdRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(ERC721MetadataTransfer)
-				if err := _ERC721Metadata.contract.UnpackLog(event, "Transfer", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseTransfer is a log parse operation binding the contract event 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef.
-//
-// Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
-func (_ERC721Metadata *ERC721MetadataFilterer) ParseTransfer(log types.Log) (*ERC721MetadataTransfer, error) {
-	event := new(ERC721MetadataTransfer)
-	if err := _ERC721Metadata.contract.UnpackLog(event, "Transfer", log); err != nil {
-		return nil, err
-	}
-	return event, nil
-}
-
-// ERC721MetadataMintableABI is the input ABI used to generate the binding from.
-const ERC721MetadataMintableABI = "[{\"constant\":true,\"inputs\":[{\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"getApproved\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"approve\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"transferFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"},{\"name\":\"tokenURI\",\"type\":\"string\"}],\"name\":\"mintWithTokenURI\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"ownerOf\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"symbol\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"account\",\"type\":\"address\"}],\"name\":\"addMinter\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"renounceMinter\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"setApprovalForAll\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"account\",\"type\":\"address\"}],\"name\":\"isMinter\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"},{\"name\":\"_data\",\"type\":\"bytes\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"tokenURI\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"},{\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"isApprovedForAll\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"account\",\"type\":\"address\"}],\"name\":\"MinterAdded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"account\",\"type\":\"address\"}],\"name\":\"MinterRemoved\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"approved\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Approval\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"operator\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"ApprovalForAll\",\"type\":\"event\"}]"
-
-// ERC721MetadataMintableBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
-const ERC721MetadataMintableBinRuntime = ``
-
-// ERC721MetadataMintableFuncSigs maps the 4-byte function signature to its string representation.
-var ERC721MetadataMintableFuncSigs = map[string]string{
-	"983b2d56": "addMinter(address)",
-	"095ea7b3": "approve(address,uint256)",
-	"70a08231": "balanceOf(address)",
-	"081812fc": "getApproved(uint256)",
-	"e985e9c5": "isApprovedForAll(address,address)",
-	"aa271e1a": "isMinter(address)",
-	"50bb4e7f": "mintWithTokenURI(address,uint256,string)",
-	"06fdde03": "name()",
-	"6352211e": "ownerOf(uint256)",
-	"98650275": "renounceMinter()",
-	"42842e0e": "safeTransferFrom(address,address,uint256)",
-	"b88d4fde": "safeTransferFrom(address,address,uint256,bytes)",
-	"a22cb465": "setApprovalForAll(address,bool)",
-	"01ffc9a7": "supportsInterface(bytes4)",
-	"95d89b41": "symbol()",
-	"c87b56dd": "tokenURI(uint256)",
-	"23b872dd": "transferFrom(address,address,uint256)",
-}
-
-// ERC721MetadataMintable is an auto generated Go binding around a Klaytn contract.
-type ERC721MetadataMintable struct {
-	ERC721MetadataMintableCaller     // Read-only binding to the contract
-	ERC721MetadataMintableTransactor // Write-only binding to the contract
-	ERC721MetadataMintableFilterer   // Log filterer for contract events
-}
-
-// ERC721MetadataMintableCaller is an auto generated read-only Go binding around a Klaytn contract.
-type ERC721MetadataMintableCaller struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// ERC721MetadataMintableTransactor is an auto generated write-only Go binding around a Klaytn contract.
-type ERC721MetadataMintableTransactor struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// ERC721MetadataMintableFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
-type ERC721MetadataMintableFilterer struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// ERC721MetadataMintableSession is an auto generated Go binding around a Klaytn contract,
-// with pre-set call and transact options.
-type ERC721MetadataMintableSession struct {
-	Contract     *ERC721MetadataMintable // Generic contract binding to set the session for
-	CallOpts     bind.CallOpts           // Call options to use throughout this session
-	TransactOpts bind.TransactOpts       // Transaction auth options to use throughout this session
-}
-
-// ERC721MetadataMintableCallerSession is an auto generated read-only Go binding around a Klaytn contract,
-// with pre-set call options.
-type ERC721MetadataMintableCallerSession struct {
-	Contract *ERC721MetadataMintableCaller // Generic contract caller binding to set the session for
-	CallOpts bind.CallOpts                 // Call options to use throughout this session
-}
-
-// ERC721MetadataMintableTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
-// with pre-set transact options.
-type ERC721MetadataMintableTransactorSession struct {
-	Contract     *ERC721MetadataMintableTransactor // Generic contract transactor binding to set the session for
-	TransactOpts bind.TransactOpts                 // Transaction auth options to use throughout this session
-}
-
-// ERC721MetadataMintableRaw is an auto generated low-level Go binding around a Klaytn contract.
-type ERC721MetadataMintableRaw struct {
-	Contract *ERC721MetadataMintable // Generic contract binding to access the raw methods on
-}
-
-// ERC721MetadataMintableCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
-type ERC721MetadataMintableCallerRaw struct {
-	Contract *ERC721MetadataMintableCaller // Generic read-only contract binding to access the raw methods on
-}
-
-// ERC721MetadataMintableTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
-type ERC721MetadataMintableTransactorRaw struct {
-	Contract *ERC721MetadataMintableTransactor // Generic write-only contract binding to access the raw methods on
-}
-
-// NewERC721MetadataMintable creates a new instance of ERC721MetadataMintable, bound to a specific deployed contract.
-func NewERC721MetadataMintable(address common.Address, backend bind.ContractBackend) (*ERC721MetadataMintable, error) {
-	contract, err := bindERC721MetadataMintable(address, backend, backend, backend)
-	if err != nil {
-		return nil, err
-	}
-	return &ERC721MetadataMintable{ERC721MetadataMintableCaller: ERC721MetadataMintableCaller{contract: contract}, ERC721MetadataMintableTransactor: ERC721MetadataMintableTransactor{contract: contract}, ERC721MetadataMintableFilterer: ERC721MetadataMintableFilterer{contract: contract}}, nil
-}
-
-// NewERC721MetadataMintableCaller creates a new read-only instance of ERC721MetadataMintable, bound to a specific deployed contract.
-func NewERC721MetadataMintableCaller(address common.Address, caller bind.ContractCaller) (*ERC721MetadataMintableCaller, error) {
-	contract, err := bindERC721MetadataMintable(address, caller, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-	return &ERC721MetadataMintableCaller{contract: contract}, nil
-}
-
-// NewERC721MetadataMintableTransactor creates a new write-only instance of ERC721MetadataMintable, bound to a specific deployed contract.
-func NewERC721MetadataMintableTransactor(address common.Address, transactor bind.ContractTransactor) (*ERC721MetadataMintableTransactor, error) {
-	contract, err := bindERC721MetadataMintable(address, nil, transactor, nil)
-	if err != nil {
-		return nil, err
-	}
-	return &ERC721MetadataMintableTransactor{contract: contract}, nil
-}
-
-// NewERC721MetadataMintableFilterer creates a new log filterer instance of ERC721MetadataMintable, bound to a specific deployed contract.
-func NewERC721MetadataMintableFilterer(address common.Address, filterer bind.ContractFilterer) (*ERC721MetadataMintableFilterer, error) {
-	contract, err := bindERC721MetadataMintable(address, nil, nil, filterer)
-	if err != nil {
-		return nil, err
-	}
-	return &ERC721MetadataMintableFilterer{contract: contract}, nil
-}
-
-// bindERC721MetadataMintable binds a generic wrapper to an already deployed contract.
-func bindERC721MetadataMintable(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
-	parsed, err := abi.JSON(strings.NewReader(ERC721MetadataMintableABI))
-	if err != nil {
-		return nil, err
-	}
-	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
-}
-
-// Call invokes the (constant) contract method with params as input values and
-// sets the output to result. The result type might be a single field for simple
-// returns, a slice of interfaces for anonymous returns and a struct for named
-// returns.
-func (_ERC721MetadataMintable *ERC721MetadataMintableRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
-	return _ERC721MetadataMintable.Contract.ERC721MetadataMintableCaller.contract.Call(opts, result, method, params...)
-}
-
-// Transfer initiates a plain transaction to move funds to the contract, calling
-// its default method if one is available.
-func (_ERC721MetadataMintable *ERC721MetadataMintableRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _ERC721MetadataMintable.Contract.ERC721MetadataMintableTransactor.contract.Transfer(opts)
-}
-
-// Transact invokes the (paid) contract method with params as input values.
-func (_ERC721MetadataMintable *ERC721MetadataMintableRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _ERC721MetadataMintable.Contract.ERC721MetadataMintableTransactor.contract.Transact(opts, method, params...)
-}
-
-// Call invokes the (constant) contract method with params as input values and
-// sets the output to result. The result type might be a single field for simple
-// returns, a slice of interfaces for anonymous returns and a struct for named
-// returns.
-func (_ERC721MetadataMintable *ERC721MetadataMintableCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
-	return _ERC721MetadataMintable.Contract.contract.Call(opts, result, method, params...)
-}
-
-// Transfer initiates a plain transaction to move funds to the contract, calling
-// its default method if one is available.
-func (_ERC721MetadataMintable *ERC721MetadataMintableTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _ERC721MetadataMintable.Contract.contract.Transfer(opts)
-}
-
-// Transact invokes the (paid) contract method with params as input values.
-func (_ERC721MetadataMintable *ERC721MetadataMintableTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _ERC721MetadataMintable.Contract.contract.Transact(opts, method, params...)
-}
-
-// BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
-//
-// Solidity: function balanceOf(address owner) view returns(uint256)
-func (_ERC721MetadataMintable *ERC721MetadataMintableCaller) BalanceOf(opts *bind.CallOpts, owner common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _ERC721MetadataMintable.contract.Call(opts, out, "balanceOf", owner)
-	return *ret0, err
-}
-
-// BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
-//
-// Solidity: function balanceOf(address owner) view returns(uint256)
-func (_ERC721MetadataMintable *ERC721MetadataMintableSession) BalanceOf(owner common.Address) (*big.Int, error) {
-	return _ERC721MetadataMintable.Contract.BalanceOf(&_ERC721MetadataMintable.CallOpts, owner)
-}
-
-// BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
-//
-// Solidity: function balanceOf(address owner) view returns(uint256)
-func (_ERC721MetadataMintable *ERC721MetadataMintableCallerSession) BalanceOf(owner common.Address) (*big.Int, error) {
-	return _ERC721MetadataMintable.Contract.BalanceOf(&_ERC721MetadataMintable.CallOpts, owner)
-}
-
-// GetApproved is a free data retrieval call binding the contract method 0x081812fc.
-//
-// Solidity: function getApproved(uint256 tokenId) view returns(address)
-func (_ERC721MetadataMintable *ERC721MetadataMintableCaller) GetApproved(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
-	out := ret0
-	err := _ERC721MetadataMintable.contract.Call(opts, out, "getApproved", tokenId)
-	return *ret0, err
-}
-
-// GetApproved is a free data retrieval call binding the contract method 0x081812fc.
-//
-// Solidity: function getApproved(uint256 tokenId) view returns(address)
-func (_ERC721MetadataMintable *ERC721MetadataMintableSession) GetApproved(tokenId *big.Int) (common.Address, error) {
-	return _ERC721MetadataMintable.Contract.GetApproved(&_ERC721MetadataMintable.CallOpts, tokenId)
-}
-
-// GetApproved is a free data retrieval call binding the contract method 0x081812fc.
-//
-// Solidity: function getApproved(uint256 tokenId) view returns(address)
-func (_ERC721MetadataMintable *ERC721MetadataMintableCallerSession) GetApproved(tokenId *big.Int) (common.Address, error) {
-	return _ERC721MetadataMintable.Contract.GetApproved(&_ERC721MetadataMintable.CallOpts, tokenId)
-}
-
-// IsApprovedForAll is a free data retrieval call binding the contract method 0xe985e9c5.
-//
-// Solidity: function isApprovedForAll(address owner, address operator) view returns(bool)
-func (_ERC721MetadataMintable *ERC721MetadataMintableCaller) IsApprovedForAll(opts *bind.CallOpts, owner common.Address, operator common.Address) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
-	out := ret0
-	err := _ERC721MetadataMintable.contract.Call(opts, out, "isApprovedForAll", owner, operator)
-	return *ret0, err
-}
-
-// IsApprovedForAll is a free data retrieval call binding the contract method 0xe985e9c5.
-//
-// Solidity: function isApprovedForAll(address owner, address operator) view returns(bool)
-func (_ERC721MetadataMintable *ERC721MetadataMintableSession) IsApprovedForAll(owner common.Address, operator common.Address) (bool, error) {
-	return _ERC721MetadataMintable.Contract.IsApprovedForAll(&_ERC721MetadataMintable.CallOpts, owner, operator)
-}
-
-// IsApprovedForAll is a free data retrieval call binding the contract method 0xe985e9c5.
-//
-// Solidity: function isApprovedForAll(address owner, address operator) view returns(bool)
-func (_ERC721MetadataMintable *ERC721MetadataMintableCallerSession) IsApprovedForAll(owner common.Address, operator common.Address) (bool, error) {
-	return _ERC721MetadataMintable.Contract.IsApprovedForAll(&_ERC721MetadataMintable.CallOpts, owner, operator)
-}
-
-// IsMinter is a free data retrieval call binding the contract method 0xaa271e1a.
-//
-// Solidity: function isMinter(address account) view returns(bool)
-func (_ERC721MetadataMintable *ERC721MetadataMintableCaller) IsMinter(opts *bind.CallOpts, account common.Address) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
-	out := ret0
-	err := _ERC721MetadataMintable.contract.Call(opts, out, "isMinter", account)
-	return *ret0, err
-}
-
-// IsMinter is a free data retrieval call binding the contract method 0xaa271e1a.
-//
-// Solidity: function isMinter(address account) view returns(bool)
-func (_ERC721MetadataMintable *ERC721MetadataMintableSession) IsMinter(account common.Address) (bool, error) {
-	return _ERC721MetadataMintable.Contract.IsMinter(&_ERC721MetadataMintable.CallOpts, account)
-}
-
-// IsMinter is a free data retrieval call binding the contract method 0xaa271e1a.
-//
-// Solidity: function isMinter(address account) view returns(bool)
-func (_ERC721MetadataMintable *ERC721MetadataMintableCallerSession) IsMinter(account common.Address) (bool, error) {
-	return _ERC721MetadataMintable.Contract.IsMinter(&_ERC721MetadataMintable.CallOpts, account)
-}
-
-// Name is a free data retrieval call binding the contract method 0x06fdde03.
-//
-// Solidity: function name() view returns(string)
-func (_ERC721MetadataMintable *ERC721MetadataMintableCaller) Name(opts *bind.CallOpts) (string, error) {
-	var (
-		ret0 = new(string)
-	)
-	out := ret0
-	err := _ERC721MetadataMintable.contract.Call(opts, out, "name")
-	return *ret0, err
-}
-
-// Name is a free data retrieval call binding the contract method 0x06fdde03.
-//
-// Solidity: function name() view returns(string)
-func (_ERC721MetadataMintable *ERC721MetadataMintableSession) Name() (string, error) {
-	return _ERC721MetadataMintable.Contract.Name(&_ERC721MetadataMintable.CallOpts)
-}
-
-// Name is a free data retrieval call binding the contract method 0x06fdde03.
-//
-// Solidity: function name() view returns(string)
-func (_ERC721MetadataMintable *ERC721MetadataMintableCallerSession) Name() (string, error) {
-	return _ERC721MetadataMintable.Contract.Name(&_ERC721MetadataMintable.CallOpts)
-}
-
-// OwnerOf is a free data retrieval call binding the contract method 0x6352211e.
-//
-// Solidity: function ownerOf(uint256 tokenId) view returns(address)
-func (_ERC721MetadataMintable *ERC721MetadataMintableCaller) OwnerOf(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
-	out := ret0
-	err := _ERC721MetadataMintable.contract.Call(opts, out, "ownerOf", tokenId)
-	return *ret0, err
-}
-
-// OwnerOf is a free data retrieval call binding the contract method 0x6352211e.
-//
-// Solidity: function ownerOf(uint256 tokenId) view returns(address)
-func (_ERC721MetadataMintable *ERC721MetadataMintableSession) OwnerOf(tokenId *big.Int) (common.Address, error) {
-	return _ERC721MetadataMintable.Contract.OwnerOf(&_ERC721MetadataMintable.CallOpts, tokenId)
-}
-
-// OwnerOf is a free data retrieval call binding the contract method 0x6352211e.
-//
-// Solidity: function ownerOf(uint256 tokenId) view returns(address)
-func (_ERC721MetadataMintable *ERC721MetadataMintableCallerSession) OwnerOf(tokenId *big.Int) (common.Address, error) {
-	return _ERC721MetadataMintable.Contract.OwnerOf(&_ERC721MetadataMintable.CallOpts, tokenId)
-}
-
-// SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
-//
-// Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
-func (_ERC721MetadataMintable *ERC721MetadataMintableCaller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
-	out := ret0
-	err := _ERC721MetadataMintable.contract.Call(opts, out, "supportsInterface", interfaceId)
-	return *ret0, err
-}
-
-// SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
-//
-// Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
-func (_ERC721MetadataMintable *ERC721MetadataMintableSession) SupportsInterface(interfaceId [4]byte) (bool, error) {
-	return _ERC721MetadataMintable.Contract.SupportsInterface(&_ERC721MetadataMintable.CallOpts, interfaceId)
-}
-
-// SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
-//
-// Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
-func (_ERC721MetadataMintable *ERC721MetadataMintableCallerSession) SupportsInterface(interfaceId [4]byte) (bool, error) {
-	return _ERC721MetadataMintable.Contract.SupportsInterface(&_ERC721MetadataMintable.CallOpts, interfaceId)
-}
-
-// Symbol is a free data retrieval call binding the contract method 0x95d89b41.
-//
-// Solidity: function symbol() view returns(string)
-func (_ERC721MetadataMintable *ERC721MetadataMintableCaller) Symbol(opts *bind.CallOpts) (string, error) {
-	var (
-		ret0 = new(string)
-	)
-	out := ret0
-	err := _ERC721MetadataMintable.contract.Call(opts, out, "symbol")
-	return *ret0, err
-}
-
-// Symbol is a free data retrieval call binding the contract method 0x95d89b41.
-//
-// Solidity: function symbol() view returns(string)
-func (_ERC721MetadataMintable *ERC721MetadataMintableSession) Symbol() (string, error) {
-	return _ERC721MetadataMintable.Contract.Symbol(&_ERC721MetadataMintable.CallOpts)
-}
-
-// Symbol is a free data retrieval call binding the contract method 0x95d89b41.
-//
-// Solidity: function symbol() view returns(string)
-func (_ERC721MetadataMintable *ERC721MetadataMintableCallerSession) Symbol() (string, error) {
-	return _ERC721MetadataMintable.Contract.Symbol(&_ERC721MetadataMintable.CallOpts)
-}
-
-// TokenURI is a free data retrieval call binding the contract method 0xc87b56dd.
-//
-// Solidity: function tokenURI(uint256 tokenId) view returns(string)
-func (_ERC721MetadataMintable *ERC721MetadataMintableCaller) TokenURI(opts *bind.CallOpts, tokenId *big.Int) (string, error) {
-	var (
-		ret0 = new(string)
-	)
-	out := ret0
-	err := _ERC721MetadataMintable.contract.Call(opts, out, "tokenURI", tokenId)
-	return *ret0, err
-}
-
-// TokenURI is a free data retrieval call binding the contract method 0xc87b56dd.
-//
-// Solidity: function tokenURI(uint256 tokenId) view returns(string)
-func (_ERC721MetadataMintable *ERC721MetadataMintableSession) TokenURI(tokenId *big.Int) (string, error) {
-	return _ERC721MetadataMintable.Contract.TokenURI(&_ERC721MetadataMintable.CallOpts, tokenId)
-}
-
-// TokenURI is a free data retrieval call binding the contract method 0xc87b56dd.
-//
-// Solidity: function tokenURI(uint256 tokenId) view returns(string)
-func (_ERC721MetadataMintable *ERC721MetadataMintableCallerSession) TokenURI(tokenId *big.Int) (string, error) {
-	return _ERC721MetadataMintable.Contract.TokenURI(&_ERC721MetadataMintable.CallOpts, tokenId)
-}
-
-// AddMinter is a paid mutator transaction binding the contract method 0x983b2d56.
-//
-// Solidity: function addMinter(address account) returns()
-func (_ERC721MetadataMintable *ERC721MetadataMintableTransactor) AddMinter(opts *bind.TransactOpts, account common.Address) (*types.Transaction, error) {
-	return _ERC721MetadataMintable.contract.Transact(opts, "addMinter", account)
-}
-
-// AddMinter is a paid mutator transaction binding the contract method 0x983b2d56.
-//
-// Solidity: function addMinter(address account) returns()
-func (_ERC721MetadataMintable *ERC721MetadataMintableSession) AddMinter(account common.Address) (*types.Transaction, error) {
-	return _ERC721MetadataMintable.Contract.AddMinter(&_ERC721MetadataMintable.TransactOpts, account)
-}
-
-// AddMinter is a paid mutator transaction binding the contract method 0x983b2d56.
-//
-// Solidity: function addMinter(address account) returns()
-func (_ERC721MetadataMintable *ERC721MetadataMintableTransactorSession) AddMinter(account common.Address) (*types.Transaction, error) {
-	return _ERC721MetadataMintable.Contract.AddMinter(&_ERC721MetadataMintable.TransactOpts, account)
-}
-
-// Approve is a paid mutator transaction binding the contract method 0x095ea7b3.
-//
-// Solidity: function approve(address to, uint256 tokenId) returns()
-func (_ERC721MetadataMintable *ERC721MetadataMintableTransactor) Approve(opts *bind.TransactOpts, to common.Address, tokenId *big.Int) (*types.Transaction, error) {
-	return _ERC721MetadataMintable.contract.Transact(opts, "approve", to, tokenId)
-}
-
-// Approve is a paid mutator transaction binding the contract method 0x095ea7b3.
-//
-// Solidity: function approve(address to, uint256 tokenId) returns()
-func (_ERC721MetadataMintable *ERC721MetadataMintableSession) Approve(to common.Address, tokenId *big.Int) (*types.Transaction, error) {
-	return _ERC721MetadataMintable.Contract.Approve(&_ERC721MetadataMintable.TransactOpts, to, tokenId)
-}
-
-// Approve is a paid mutator transaction binding the contract method 0x095ea7b3.
-//
-// Solidity: function approve(address to, uint256 tokenId) returns()
-func (_ERC721MetadataMintable *ERC721MetadataMintableTransactorSession) Approve(to common.Address, tokenId *big.Int) (*types.Transaction, error) {
-	return _ERC721MetadataMintable.Contract.Approve(&_ERC721MetadataMintable.TransactOpts, to, tokenId)
-}
-
-// MintWithTokenURI is a paid mutator transaction binding the contract method 0x50bb4e7f.
-//
-// Solidity: function mintWithTokenURI(address to, uint256 tokenId, string tokenURI) returns(bool)
-func (_ERC721MetadataMintable *ERC721MetadataMintableTransactor) MintWithTokenURI(opts *bind.TransactOpts, to common.Address, tokenId *big.Int, tokenURI string) (*types.Transaction, error) {
-	return _ERC721MetadataMintable.contract.Transact(opts, "mintWithTokenURI", to, tokenId, tokenURI)
-}
-
-// MintWithTokenURI is a paid mutator transaction binding the contract method 0x50bb4e7f.
-//
-// Solidity: function mintWithTokenURI(address to, uint256 tokenId, string tokenURI) returns(bool)
-func (_ERC721MetadataMintable *ERC721MetadataMintableSession) MintWithTokenURI(to common.Address, tokenId *big.Int, tokenURI string) (*types.Transaction, error) {
-	return _ERC721MetadataMintable.Contract.MintWithTokenURI(&_ERC721MetadataMintable.TransactOpts, to, tokenId, tokenURI)
-}
-
-// MintWithTokenURI is a paid mutator transaction binding the contract method 0x50bb4e7f.
-//
-// Solidity: function mintWithTokenURI(address to, uint256 tokenId, string tokenURI) returns(bool)
-func (_ERC721MetadataMintable *ERC721MetadataMintableTransactorSession) MintWithTokenURI(to common.Address, tokenId *big.Int, tokenURI string) (*types.Transaction, error) {
-	return _ERC721MetadataMintable.Contract.MintWithTokenURI(&_ERC721MetadataMintable.TransactOpts, to, tokenId, tokenURI)
-}
-
-// RenounceMinter is a paid mutator transaction binding the contract method 0x98650275.
-//
-// Solidity: function renounceMinter() returns()
-func (_ERC721MetadataMintable *ERC721MetadataMintableTransactor) RenounceMinter(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _ERC721MetadataMintable.contract.Transact(opts, "renounceMinter")
-}
-
-// RenounceMinter is a paid mutator transaction binding the contract method 0x98650275.
-//
-// Solidity: function renounceMinter() returns()
-func (_ERC721MetadataMintable *ERC721MetadataMintableSession) RenounceMinter() (*types.Transaction, error) {
-	return _ERC721MetadataMintable.Contract.RenounceMinter(&_ERC721MetadataMintable.TransactOpts)
-}
-
-// RenounceMinter is a paid mutator transaction binding the contract method 0x98650275.
-//
-// Solidity: function renounceMinter() returns()
-func (_ERC721MetadataMintable *ERC721MetadataMintableTransactorSession) RenounceMinter() (*types.Transaction, error) {
-	return _ERC721MetadataMintable.Contract.RenounceMinter(&_ERC721MetadataMintable.TransactOpts)
-}
-
-// SafeTransferFrom is a paid mutator transaction binding the contract method 0x42842e0e.
-//
-// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId) returns()
-func (_ERC721MetadataMintable *ERC721MetadataMintableTransactor) SafeTransferFrom(opts *bind.TransactOpts, from common.Address, to common.Address, tokenId *big.Int) (*types.Transaction, error) {
-	return _ERC721MetadataMintable.contract.Transact(opts, "safeTransferFrom", from, to, tokenId)
-}
-
-// SafeTransferFrom is a paid mutator transaction binding the contract method 0x42842e0e.
-//
-// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId) returns()
-func (_ERC721MetadataMintable *ERC721MetadataMintableSession) SafeTransferFrom(from common.Address, to common.Address, tokenId *big.Int) (*types.Transaction, error) {
-	return _ERC721MetadataMintable.Contract.SafeTransferFrom(&_ERC721MetadataMintable.TransactOpts, from, to, tokenId)
-}
-
-// SafeTransferFrom is a paid mutator transaction binding the contract method 0x42842e0e.
-//
-// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId) returns()
-func (_ERC721MetadataMintable *ERC721MetadataMintableTransactorSession) SafeTransferFrom(from common.Address, to common.Address, tokenId *big.Int) (*types.Transaction, error) {
-	return _ERC721MetadataMintable.Contract.SafeTransferFrom(&_ERC721MetadataMintable.TransactOpts, from, to, tokenId)
-}
-
-// SafeTransferFrom0 is a paid mutator transaction binding the contract method 0xb88d4fde.
-//
-// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId, bytes _data) returns()
-func (_ERC721MetadataMintable *ERC721MetadataMintableTransactor) SafeTransferFrom0(opts *bind.TransactOpts, from common.Address, to common.Address, tokenId *big.Int, _data []byte) (*types.Transaction, error) {
-	return _ERC721MetadataMintable.contract.Transact(opts, "safeTransferFrom0", from, to, tokenId, _data)
-}
-
-// SafeTransferFrom0 is a paid mutator transaction binding the contract method 0xb88d4fde.
-//
-// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId, bytes _data) returns()
-func (_ERC721MetadataMintable *ERC721MetadataMintableSession) SafeTransferFrom0(from common.Address, to common.Address, tokenId *big.Int, _data []byte) (*types.Transaction, error) {
-	return _ERC721MetadataMintable.Contract.SafeTransferFrom0(&_ERC721MetadataMintable.TransactOpts, from, to, tokenId, _data)
-}
-
-// SafeTransferFrom0 is a paid mutator transaction binding the contract method 0xb88d4fde.
-//
-// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId, bytes _data) returns()
-func (_ERC721MetadataMintable *ERC721MetadataMintableTransactorSession) SafeTransferFrom0(from common.Address, to common.Address, tokenId *big.Int, _data []byte) (*types.Transaction, error) {
-	return _ERC721MetadataMintable.Contract.SafeTransferFrom0(&_ERC721MetadataMintable.TransactOpts, from, to, tokenId, _data)
-}
-
-// SetApprovalForAll is a paid mutator transaction binding the contract method 0xa22cb465.
-//
-// Solidity: function setApprovalForAll(address to, bool approved) returns()
-func (_ERC721MetadataMintable *ERC721MetadataMintableTransactor) SetApprovalForAll(opts *bind.TransactOpts, to common.Address, approved bool) (*types.Transaction, error) {
-	return _ERC721MetadataMintable.contract.Transact(opts, "setApprovalForAll", to, approved)
-}
-
-// SetApprovalForAll is a paid mutator transaction binding the contract method 0xa22cb465.
-//
-// Solidity: function setApprovalForAll(address to, bool approved) returns()
-func (_ERC721MetadataMintable *ERC721MetadataMintableSession) SetApprovalForAll(to common.Address, approved bool) (*types.Transaction, error) {
-	return _ERC721MetadataMintable.Contract.SetApprovalForAll(&_ERC721MetadataMintable.TransactOpts, to, approved)
-}
-
-// SetApprovalForAll is a paid mutator transaction binding the contract method 0xa22cb465.
-//
-// Solidity: function setApprovalForAll(address to, bool approved) returns()
-func (_ERC721MetadataMintable *ERC721MetadataMintableTransactorSession) SetApprovalForAll(to common.Address, approved bool) (*types.Transaction, error) {
-	return _ERC721MetadataMintable.Contract.SetApprovalForAll(&_ERC721MetadataMintable.TransactOpts, to, approved)
-}
-
-// TransferFrom is a paid mutator transaction binding the contract method 0x23b872dd.
-//
-// Solidity: function transferFrom(address from, address to, uint256 tokenId) returns()
-func (_ERC721MetadataMintable *ERC721MetadataMintableTransactor) TransferFrom(opts *bind.TransactOpts, from common.Address, to common.Address, tokenId *big.Int) (*types.Transaction, error) {
-	return _ERC721MetadataMintable.contract.Transact(opts, "transferFrom", from, to, tokenId)
-}
-
-// TransferFrom is a paid mutator transaction binding the contract method 0x23b872dd.
-//
-// Solidity: function transferFrom(address from, address to, uint256 tokenId) returns()
-func (_ERC721MetadataMintable *ERC721MetadataMintableSession) TransferFrom(from common.Address, to common.Address, tokenId *big.Int) (*types.Transaction, error) {
-	return _ERC721MetadataMintable.Contract.TransferFrom(&_ERC721MetadataMintable.TransactOpts, from, to, tokenId)
-}
-
-// TransferFrom is a paid mutator transaction binding the contract method 0x23b872dd.
-//
-// Solidity: function transferFrom(address from, address to, uint256 tokenId) returns()
-func (_ERC721MetadataMintable *ERC721MetadataMintableTransactorSession) TransferFrom(from common.Address, to common.Address, tokenId *big.Int) (*types.Transaction, error) {
-	return _ERC721MetadataMintable.Contract.TransferFrom(&_ERC721MetadataMintable.TransactOpts, from, to, tokenId)
-}
-
-// ERC721MetadataMintableApprovalIterator is returned from FilterApproval and is used to iterate over the raw logs and unpacked data for Approval events raised by the ERC721MetadataMintable contract.
-type ERC721MetadataMintableApprovalIterator struct {
-	Event *ERC721MetadataMintableApproval // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *ERC721MetadataMintableApprovalIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(ERC721MetadataMintableApproval)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(ERC721MetadataMintableApproval)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *ERC721MetadataMintableApprovalIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *ERC721MetadataMintableApprovalIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// ERC721MetadataMintableApproval represents a Approval event raised by the ERC721MetadataMintable contract.
-type ERC721MetadataMintableApproval struct {
-	Owner    common.Address
-	Approved common.Address
-	TokenId  *big.Int
-	Raw      types.Log // Blockchain specific contextual infos
-}
-
-// FilterApproval is a free log retrieval operation binding the contract event 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925.
-//
-// Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
-func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, approved []common.Address, tokenId []*big.Int) (*ERC721MetadataMintableApprovalIterator, error) {
-
-	var ownerRule []interface{}
-	for _, ownerItem := range owner {
-		ownerRule = append(ownerRule, ownerItem)
-	}
-	var approvedRule []interface{}
-	for _, approvedItem := range approved {
-		approvedRule = append(approvedRule, approvedItem)
-	}
-	var tokenIdRule []interface{}
-	for _, tokenIdItem := range tokenId {
-		tokenIdRule = append(tokenIdRule, tokenIdItem)
-	}
-
-	logs, sub, err := _ERC721MetadataMintable.contract.FilterLogs(opts, "Approval", ownerRule, approvedRule, tokenIdRule)
-	if err != nil {
-		return nil, err
-	}
-	return &ERC721MetadataMintableApprovalIterator{contract: _ERC721MetadataMintable.contract, event: "Approval", logs: logs, sub: sub}, nil
-}
-
-// WatchApproval is a free log subscription operation binding the contract event 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925.
-//
-// Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
-func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *ERC721MetadataMintableApproval, owner []common.Address, approved []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
-	var ownerRule []interface{}
-	for _, ownerItem := range owner {
-		ownerRule = append(ownerRule, ownerItem)
-	}
-	var approvedRule []interface{}
-	for _, approvedItem := range approved {
-		approvedRule = append(approvedRule, approvedItem)
-	}
-	var tokenIdRule []interface{}
-	for _, tokenIdItem := range tokenId {
-		tokenIdRule = append(tokenIdRule, tokenIdItem)
-	}
-
-	logs, sub, err := _ERC721MetadataMintable.contract.WatchLogs(opts, "Approval", ownerRule, approvedRule, tokenIdRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(ERC721MetadataMintableApproval)
-				if err := _ERC721MetadataMintable.contract.UnpackLog(event, "Approval", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseApproval is a log parse operation binding the contract event 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925.
-//
-// Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
-func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) ParseApproval(log types.Log) (*ERC721MetadataMintableApproval, error) {
-	event := new(ERC721MetadataMintableApproval)
-	if err := _ERC721MetadataMintable.contract.UnpackLog(event, "Approval", log); err != nil {
-		return nil, err
-	}
-	return event, nil
-}
-
-// ERC721MetadataMintableApprovalForAllIterator is returned from FilterApprovalForAll and is used to iterate over the raw logs and unpacked data for ApprovalForAll events raised by the ERC721MetadataMintable contract.
-type ERC721MetadataMintableApprovalForAllIterator struct {
-	Event *ERC721MetadataMintableApprovalForAll // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *ERC721MetadataMintableApprovalForAllIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(ERC721MetadataMintableApprovalForAll)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(ERC721MetadataMintableApprovalForAll)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *ERC721MetadataMintableApprovalForAllIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *ERC721MetadataMintableApprovalForAllIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// ERC721MetadataMintableApprovalForAll represents a ApprovalForAll event raised by the ERC721MetadataMintable contract.
-type ERC721MetadataMintableApprovalForAll struct {
-	Owner    common.Address
-	Operator common.Address
-	Approved bool
-	Raw      types.Log // Blockchain specific contextual infos
-}
-
-// FilterApprovalForAll is a free log retrieval operation binding the contract event 0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31.
-//
-// Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
-func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) FilterApprovalForAll(opts *bind.FilterOpts, owner []common.Address, operator []common.Address) (*ERC721MetadataMintableApprovalForAllIterator, error) {
-
-	var ownerRule []interface{}
-	for _, ownerItem := range owner {
-		ownerRule = append(ownerRule, ownerItem)
-	}
-	var operatorRule []interface{}
-	for _, operatorItem := range operator {
-		operatorRule = append(operatorRule, operatorItem)
-	}
-
-	logs, sub, err := _ERC721MetadataMintable.contract.FilterLogs(opts, "ApprovalForAll", ownerRule, operatorRule)
-	if err != nil {
-		return nil, err
-	}
-	return &ERC721MetadataMintableApprovalForAllIterator{contract: _ERC721MetadataMintable.contract, event: "ApprovalForAll", logs: logs, sub: sub}, nil
-}
-
-// WatchApprovalForAll is a free log subscription operation binding the contract event 0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31.
-//
-// Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
-func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) WatchApprovalForAll(opts *bind.WatchOpts, sink chan<- *ERC721MetadataMintableApprovalForAll, owner []common.Address, operator []common.Address) (event.Subscription, error) {
-
-	var ownerRule []interface{}
-	for _, ownerItem := range owner {
-		ownerRule = append(ownerRule, ownerItem)
-	}
-	var operatorRule []interface{}
-	for _, operatorItem := range operator {
-		operatorRule = append(operatorRule, operatorItem)
-	}
-
-	logs, sub, err := _ERC721MetadataMintable.contract.WatchLogs(opts, "ApprovalForAll", ownerRule, operatorRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(ERC721MetadataMintableApprovalForAll)
-				if err := _ERC721MetadataMintable.contract.UnpackLog(event, "ApprovalForAll", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseApprovalForAll is a log parse operation binding the contract event 0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31.
-//
-// Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
-func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) ParseApprovalForAll(log types.Log) (*ERC721MetadataMintableApprovalForAll, error) {
-	event := new(ERC721MetadataMintableApprovalForAll)
-	if err := _ERC721MetadataMintable.contract.UnpackLog(event, "ApprovalForAll", log); err != nil {
-		return nil, err
-	}
-	return event, nil
-}
-
-// ERC721MetadataMintableMinterAddedIterator is returned from FilterMinterAdded and is used to iterate over the raw logs and unpacked data for MinterAdded events raised by the ERC721MetadataMintable contract.
-type ERC721MetadataMintableMinterAddedIterator struct {
-	Event *ERC721MetadataMintableMinterAdded // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *ERC721MetadataMintableMinterAddedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(ERC721MetadataMintableMinterAdded)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(ERC721MetadataMintableMinterAdded)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *ERC721MetadataMintableMinterAddedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *ERC721MetadataMintableMinterAddedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// ERC721MetadataMintableMinterAdded represents a MinterAdded event raised by the ERC721MetadataMintable contract.
-type ERC721MetadataMintableMinterAdded struct {
-	Account common.Address
-	Raw     types.Log // Blockchain specific contextual infos
-}
-
-// FilterMinterAdded is a free log retrieval operation binding the contract event 0x6ae172837ea30b801fbfcdd4108aa1d5bf8ff775444fd70256b44e6bf3dfc3f6.
-//
-// Solidity: event MinterAdded(address indexed account)
-func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) FilterMinterAdded(opts *bind.FilterOpts, account []common.Address) (*ERC721MetadataMintableMinterAddedIterator, error) {
-
-	var accountRule []interface{}
-	for _, accountItem := range account {
-		accountRule = append(accountRule, accountItem)
-	}
-
-	logs, sub, err := _ERC721MetadataMintable.contract.FilterLogs(opts, "MinterAdded", accountRule)
-	if err != nil {
-		return nil, err
-	}
-	return &ERC721MetadataMintableMinterAddedIterator{contract: _ERC721MetadataMintable.contract, event: "MinterAdded", logs: logs, sub: sub}, nil
-}
-
-// WatchMinterAdded is a free log subscription operation binding the contract event 0x6ae172837ea30b801fbfcdd4108aa1d5bf8ff775444fd70256b44e6bf3dfc3f6.
-//
-// Solidity: event MinterAdded(address indexed account)
-func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) WatchMinterAdded(opts *bind.WatchOpts, sink chan<- *ERC721MetadataMintableMinterAdded, account []common.Address) (event.Subscription, error) {
-
-	var accountRule []interface{}
-	for _, accountItem := range account {
-		accountRule = append(accountRule, accountItem)
-	}
-
-	logs, sub, err := _ERC721MetadataMintable.contract.WatchLogs(opts, "MinterAdded", accountRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(ERC721MetadataMintableMinterAdded)
-				if err := _ERC721MetadataMintable.contract.UnpackLog(event, "MinterAdded", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseMinterAdded is a log parse operation binding the contract event 0x6ae172837ea30b801fbfcdd4108aa1d5bf8ff775444fd70256b44e6bf3dfc3f6.
-//
-// Solidity: event MinterAdded(address indexed account)
-func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) ParseMinterAdded(log types.Log) (*ERC721MetadataMintableMinterAdded, error) {
-	event := new(ERC721MetadataMintableMinterAdded)
-	if err := _ERC721MetadataMintable.contract.UnpackLog(event, "MinterAdded", log); err != nil {
-		return nil, err
-	}
-	return event, nil
-}
-
-// ERC721MetadataMintableMinterRemovedIterator is returned from FilterMinterRemoved and is used to iterate over the raw logs and unpacked data for MinterRemoved events raised by the ERC721MetadataMintable contract.
-type ERC721MetadataMintableMinterRemovedIterator struct {
-	Event *ERC721MetadataMintableMinterRemoved // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *ERC721MetadataMintableMinterRemovedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(ERC721MetadataMintableMinterRemoved)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(ERC721MetadataMintableMinterRemoved)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *ERC721MetadataMintableMinterRemovedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *ERC721MetadataMintableMinterRemovedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// ERC721MetadataMintableMinterRemoved represents a MinterRemoved event raised by the ERC721MetadataMintable contract.
-type ERC721MetadataMintableMinterRemoved struct {
-	Account common.Address
-	Raw     types.Log // Blockchain specific contextual infos
-}
-
-// FilterMinterRemoved is a free log retrieval operation binding the contract event 0xe94479a9f7e1952cc78f2d6baab678adc1b772d936c6583def489e524cb66692.
-//
-// Solidity: event MinterRemoved(address indexed account)
-func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) FilterMinterRemoved(opts *bind.FilterOpts, account []common.Address) (*ERC721MetadataMintableMinterRemovedIterator, error) {
-
-	var accountRule []interface{}
-	for _, accountItem := range account {
-		accountRule = append(accountRule, accountItem)
-	}
-
-	logs, sub, err := _ERC721MetadataMintable.contract.FilterLogs(opts, "MinterRemoved", accountRule)
-	if err != nil {
-		return nil, err
-	}
-	return &ERC721MetadataMintableMinterRemovedIterator{contract: _ERC721MetadataMintable.contract, event: "MinterRemoved", logs: logs, sub: sub}, nil
-}
-
-// WatchMinterRemoved is a free log subscription operation binding the contract event 0xe94479a9f7e1952cc78f2d6baab678adc1b772d936c6583def489e524cb66692.
-//
-// Solidity: event MinterRemoved(address indexed account)
-func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) WatchMinterRemoved(opts *bind.WatchOpts, sink chan<- *ERC721MetadataMintableMinterRemoved, account []common.Address) (event.Subscription, error) {
-
-	var accountRule []interface{}
-	for _, accountItem := range account {
-		accountRule = append(accountRule, accountItem)
-	}
-
-	logs, sub, err := _ERC721MetadataMintable.contract.WatchLogs(opts, "MinterRemoved", accountRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(ERC721MetadataMintableMinterRemoved)
-				if err := _ERC721MetadataMintable.contract.UnpackLog(event, "MinterRemoved", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseMinterRemoved is a log parse operation binding the contract event 0xe94479a9f7e1952cc78f2d6baab678adc1b772d936c6583def489e524cb66692.
-//
-// Solidity: event MinterRemoved(address indexed account)
-func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) ParseMinterRemoved(log types.Log) (*ERC721MetadataMintableMinterRemoved, error) {
-	event := new(ERC721MetadataMintableMinterRemoved)
-	if err := _ERC721MetadataMintable.contract.UnpackLog(event, "MinterRemoved", log); err != nil {
-		return nil, err
-	}
-	return event, nil
-}
-
-// ERC721MetadataMintableTransferIterator is returned from FilterTransfer and is used to iterate over the raw logs and unpacked data for Transfer events raised by the ERC721MetadataMintable contract.
-type ERC721MetadataMintableTransferIterator struct {
-	Event *ERC721MetadataMintableTransfer // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *ERC721MetadataMintableTransferIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(ERC721MetadataMintableTransfer)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(ERC721MetadataMintableTransfer)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *ERC721MetadataMintableTransferIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *ERC721MetadataMintableTransferIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// ERC721MetadataMintableTransfer represents a Transfer event raised by the ERC721MetadataMintable contract.
-type ERC721MetadataMintableTransfer struct {
-	From    common.Address
-	To      common.Address
-	TokenId *big.Int
-	Raw     types.Log // Blockchain specific contextual infos
-}
-
-// FilterTransfer is a free log retrieval operation binding the contract event 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef.
-//
-// Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
-func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenId []*big.Int) (*ERC721MetadataMintableTransferIterator, error) {
-
-	var fromRule []interface{}
-	for _, fromItem := range from {
-		fromRule = append(fromRule, fromItem)
-	}
-	var toRule []interface{}
-	for _, toItem := range to {
-		toRule = append(toRule, toItem)
-	}
-	var tokenIdRule []interface{}
-	for _, tokenIdItem := range tokenId {
-		tokenIdRule = append(tokenIdRule, tokenIdItem)
-	}
-
-	logs, sub, err := _ERC721MetadataMintable.contract.FilterLogs(opts, "Transfer", fromRule, toRule, tokenIdRule)
-	if err != nil {
-		return nil, err
-	}
-	return &ERC721MetadataMintableTransferIterator{contract: _ERC721MetadataMintable.contract, event: "Transfer", logs: logs, sub: sub}, nil
-}
-
-// WatchTransfer is a free log subscription operation binding the contract event 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef.
-//
-// Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
-func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *ERC721MetadataMintableTransfer, from []common.Address, to []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
-	var fromRule []interface{}
-	for _, fromItem := range from {
-		fromRule = append(fromRule, fromItem)
-	}
-	var toRule []interface{}
-	for _, toItem := range to {
-		toRule = append(toRule, toItem)
-	}
-	var tokenIdRule []interface{}
-	for _, tokenIdItem := range tokenId {
-		tokenIdRule = append(tokenIdRule, tokenIdItem)
-	}
-
-	logs, sub, err := _ERC721MetadataMintable.contract.WatchLogs(opts, "Transfer", fromRule, toRule, tokenIdRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(ERC721MetadataMintableTransfer)
-				if err := _ERC721MetadataMintable.contract.UnpackLog(event, "Transfer", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseTransfer is a log parse operation binding the contract event 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef.
-//
-// Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
-func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) ParseTransfer(log types.Log) (*ERC721MetadataMintableTransfer, error) {
-	event := new(ERC721MetadataMintableTransfer)
-	if err := _ERC721MetadataMintable.contract.UnpackLog(event, "Transfer", log); err != nil {
-		return nil, err
-	}
-	return event, nil
-}
-
 // ERC721ServiceChainABI is the input ABI used to generate the binding from.
-const ERC721ServiceChainABI = "[{\"constant\":true,\"inputs\":[{\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"getApproved\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"approve\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"transferFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_uid\",\"type\":\"uint256\"},{\"name\":\"_to\",\"type\":\"address\"},{\"name\":\"_extraData\",\"type\":\"bytes\"}],\"name\":\"requestValueTransfer\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"ownerOf\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_bridge\",\"type\":\"address\"}],\"name\":\"setBridge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"isOwner\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"setApprovalForAll\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"},{\"name\":\"_data\",\"type\":\"bytes\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"bridge\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"},{\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"isApprovedForAll\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"name\":\"_bridge\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"approved\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Approval\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"operator\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"ApprovalForAll\",\"type\":\"event\"}]"
+const ERC721ServiceChainABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"approved\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Approval\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"ApprovalForAll\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"approve\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"bridge\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"getApproved\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"isApprovedForAll\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"ownerOf\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_uid\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"_to\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"_extraData\",\"type\":\"bytes\"}],\"name\":\"requestValueTransfer\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"setApprovalForAll\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_bridge\",\"type\":\"address\"}],\"name\":\"setBridge\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"symbol\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"tokenURI\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"transferFrom\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // ERC721ServiceChainBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
 const ERC721ServiceChainBinRuntime = ``
@@ -6671,7 +4319,7 @@ var ERC721ServiceChainFuncSigs = map[string]string{
 	"e78cea92": "bridge()",
 	"081812fc": "getApproved(uint256)",
 	"e985e9c5": "isApprovedForAll(address,address)",
-	"8f32d59b": "isOwner()",
+	"06fdde03": "name()",
 	"8da5cb5b": "owner()",
 	"6352211e": "ownerOf(uint256)",
 	"715018a6": "renounceOwnership()",
@@ -6681,6 +4329,8 @@ var ERC721ServiceChainFuncSigs = map[string]string{
 	"a22cb465": "setApprovalForAll(address,bool)",
 	"8dd14802": "setBridge(address)",
 	"01ffc9a7": "supportsInterface(bytes4)",
+	"95d89b41": "symbol()",
+	"c87b56dd": "tokenURI(uint256)",
 	"23b872dd": "transferFrom(address,address,uint256)",
 	"f2fde38b": "transferOwnership(address)",
 }
@@ -6931,30 +4581,30 @@ func (_ERC721ServiceChain *ERC721ServiceChainCallerSession) IsApprovedForAll(own
 	return _ERC721ServiceChain.Contract.IsApprovedForAll(&_ERC721ServiceChain.CallOpts, owner, operator)
 }
 
-// IsOwner is a free data retrieval call binding the contract method 0x8f32d59b.
+// Name is a free data retrieval call binding the contract method 0x06fdde03.
 //
-// Solidity: function isOwner() view returns(bool)
-func (_ERC721ServiceChain *ERC721ServiceChainCaller) IsOwner(opts *bind.CallOpts) (bool, error) {
+// Solidity: function name() view returns(string)
+func (_ERC721ServiceChain *ERC721ServiceChainCaller) Name(opts *bind.CallOpts) (string, error) {
 	var (
-		ret0 = new(bool)
+		ret0 = new(string)
 	)
 	out := ret0
-	err := _ERC721ServiceChain.contract.Call(opts, out, "isOwner")
+	err := _ERC721ServiceChain.contract.Call(opts, out, "name")
 	return *ret0, err
 }
 
-// IsOwner is a free data retrieval call binding the contract method 0x8f32d59b.
+// Name is a free data retrieval call binding the contract method 0x06fdde03.
 //
-// Solidity: function isOwner() view returns(bool)
-func (_ERC721ServiceChain *ERC721ServiceChainSession) IsOwner() (bool, error) {
-	return _ERC721ServiceChain.Contract.IsOwner(&_ERC721ServiceChain.CallOpts)
+// Solidity: function name() view returns(string)
+func (_ERC721ServiceChain *ERC721ServiceChainSession) Name() (string, error) {
+	return _ERC721ServiceChain.Contract.Name(&_ERC721ServiceChain.CallOpts)
 }
 
-// IsOwner is a free data retrieval call binding the contract method 0x8f32d59b.
+// Name is a free data retrieval call binding the contract method 0x06fdde03.
 //
-// Solidity: function isOwner() view returns(bool)
-func (_ERC721ServiceChain *ERC721ServiceChainCallerSession) IsOwner() (bool, error) {
-	return _ERC721ServiceChain.Contract.IsOwner(&_ERC721ServiceChain.CallOpts)
+// Solidity: function name() view returns(string)
+func (_ERC721ServiceChain *ERC721ServiceChainCallerSession) Name() (string, error) {
+	return _ERC721ServiceChain.Contract.Name(&_ERC721ServiceChain.CallOpts)
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -7033,6 +4683,58 @@ func (_ERC721ServiceChain *ERC721ServiceChainSession) SupportsInterface(interfac
 // Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
 func (_ERC721ServiceChain *ERC721ServiceChainCallerSession) SupportsInterface(interfaceId [4]byte) (bool, error) {
 	return _ERC721ServiceChain.Contract.SupportsInterface(&_ERC721ServiceChain.CallOpts, interfaceId)
+}
+
+// Symbol is a free data retrieval call binding the contract method 0x95d89b41.
+//
+// Solidity: function symbol() view returns(string)
+func (_ERC721ServiceChain *ERC721ServiceChainCaller) Symbol(opts *bind.CallOpts) (string, error) {
+	var (
+		ret0 = new(string)
+	)
+	out := ret0
+	err := _ERC721ServiceChain.contract.Call(opts, out, "symbol")
+	return *ret0, err
+}
+
+// Symbol is a free data retrieval call binding the contract method 0x95d89b41.
+//
+// Solidity: function symbol() view returns(string)
+func (_ERC721ServiceChain *ERC721ServiceChainSession) Symbol() (string, error) {
+	return _ERC721ServiceChain.Contract.Symbol(&_ERC721ServiceChain.CallOpts)
+}
+
+// Symbol is a free data retrieval call binding the contract method 0x95d89b41.
+//
+// Solidity: function symbol() view returns(string)
+func (_ERC721ServiceChain *ERC721ServiceChainCallerSession) Symbol() (string, error) {
+	return _ERC721ServiceChain.Contract.Symbol(&_ERC721ServiceChain.CallOpts)
+}
+
+// TokenURI is a free data retrieval call binding the contract method 0xc87b56dd.
+//
+// Solidity: function tokenURI(uint256 tokenId) view returns(string)
+func (_ERC721ServiceChain *ERC721ServiceChainCaller) TokenURI(opts *bind.CallOpts, tokenId *big.Int) (string, error) {
+	var (
+		ret0 = new(string)
+	)
+	out := ret0
+	err := _ERC721ServiceChain.contract.Call(opts, out, "tokenURI", tokenId)
+	return *ret0, err
+}
+
+// TokenURI is a free data retrieval call binding the contract method 0xc87b56dd.
+//
+// Solidity: function tokenURI(uint256 tokenId) view returns(string)
+func (_ERC721ServiceChain *ERC721ServiceChainSession) TokenURI(tokenId *big.Int) (string, error) {
+	return _ERC721ServiceChain.Contract.TokenURI(&_ERC721ServiceChain.CallOpts, tokenId)
+}
+
+// TokenURI is a free data retrieval call binding the contract method 0xc87b56dd.
+//
+// Solidity: function tokenURI(uint256 tokenId) view returns(string)
+func (_ERC721ServiceChain *ERC721ServiceChainCallerSession) TokenURI(tokenId *big.Int) (string, error) {
+	return _ERC721ServiceChain.Contract.TokenURI(&_ERC721ServiceChain.CallOpts, tokenId)
 }
 
 // Approve is a paid mutator transaction binding the contract method 0x095ea7b3.
@@ -7121,44 +4823,44 @@ func (_ERC721ServiceChain *ERC721ServiceChainTransactorSession) SafeTransferFrom
 
 // SafeTransferFrom0 is a paid mutator transaction binding the contract method 0xb88d4fde.
 //
-// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId, bytes _data) returns()
-func (_ERC721ServiceChain *ERC721ServiceChainTransactor) SafeTransferFrom0(opts *bind.TransactOpts, from common.Address, to common.Address, tokenId *big.Int, _data []byte) (*types.Transaction, error) {
-	return _ERC721ServiceChain.contract.Transact(opts, "safeTransferFrom0", from, to, tokenId, _data)
+// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId, bytes data) returns()
+func (_ERC721ServiceChain *ERC721ServiceChainTransactor) SafeTransferFrom0(opts *bind.TransactOpts, from common.Address, to common.Address, tokenId *big.Int, data []byte) (*types.Transaction, error) {
+	return _ERC721ServiceChain.contract.Transact(opts, "safeTransferFrom0", from, to, tokenId, data)
 }
 
 // SafeTransferFrom0 is a paid mutator transaction binding the contract method 0xb88d4fde.
 //
-// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId, bytes _data) returns()
-func (_ERC721ServiceChain *ERC721ServiceChainSession) SafeTransferFrom0(from common.Address, to common.Address, tokenId *big.Int, _data []byte) (*types.Transaction, error) {
-	return _ERC721ServiceChain.Contract.SafeTransferFrom0(&_ERC721ServiceChain.TransactOpts, from, to, tokenId, _data)
+// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId, bytes data) returns()
+func (_ERC721ServiceChain *ERC721ServiceChainSession) SafeTransferFrom0(from common.Address, to common.Address, tokenId *big.Int, data []byte) (*types.Transaction, error) {
+	return _ERC721ServiceChain.Contract.SafeTransferFrom0(&_ERC721ServiceChain.TransactOpts, from, to, tokenId, data)
 }
 
 // SafeTransferFrom0 is a paid mutator transaction binding the contract method 0xb88d4fde.
 //
-// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId, bytes _data) returns()
-func (_ERC721ServiceChain *ERC721ServiceChainTransactorSession) SafeTransferFrom0(from common.Address, to common.Address, tokenId *big.Int, _data []byte) (*types.Transaction, error) {
-	return _ERC721ServiceChain.Contract.SafeTransferFrom0(&_ERC721ServiceChain.TransactOpts, from, to, tokenId, _data)
+// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId, bytes data) returns()
+func (_ERC721ServiceChain *ERC721ServiceChainTransactorSession) SafeTransferFrom0(from common.Address, to common.Address, tokenId *big.Int, data []byte) (*types.Transaction, error) {
+	return _ERC721ServiceChain.Contract.SafeTransferFrom0(&_ERC721ServiceChain.TransactOpts, from, to, tokenId, data)
 }
 
 // SetApprovalForAll is a paid mutator transaction binding the contract method 0xa22cb465.
 //
-// Solidity: function setApprovalForAll(address to, bool approved) returns()
-func (_ERC721ServiceChain *ERC721ServiceChainTransactor) SetApprovalForAll(opts *bind.TransactOpts, to common.Address, approved bool) (*types.Transaction, error) {
-	return _ERC721ServiceChain.contract.Transact(opts, "setApprovalForAll", to, approved)
+// Solidity: function setApprovalForAll(address operator, bool approved) returns()
+func (_ERC721ServiceChain *ERC721ServiceChainTransactor) SetApprovalForAll(opts *bind.TransactOpts, operator common.Address, approved bool) (*types.Transaction, error) {
+	return _ERC721ServiceChain.contract.Transact(opts, "setApprovalForAll", operator, approved)
 }
 
 // SetApprovalForAll is a paid mutator transaction binding the contract method 0xa22cb465.
 //
-// Solidity: function setApprovalForAll(address to, bool approved) returns()
-func (_ERC721ServiceChain *ERC721ServiceChainSession) SetApprovalForAll(to common.Address, approved bool) (*types.Transaction, error) {
-	return _ERC721ServiceChain.Contract.SetApprovalForAll(&_ERC721ServiceChain.TransactOpts, to, approved)
+// Solidity: function setApprovalForAll(address operator, bool approved) returns()
+func (_ERC721ServiceChain *ERC721ServiceChainSession) SetApprovalForAll(operator common.Address, approved bool) (*types.Transaction, error) {
+	return _ERC721ServiceChain.Contract.SetApprovalForAll(&_ERC721ServiceChain.TransactOpts, operator, approved)
 }
 
 // SetApprovalForAll is a paid mutator transaction binding the contract method 0xa22cb465.
 //
-// Solidity: function setApprovalForAll(address to, bool approved) returns()
-func (_ERC721ServiceChain *ERC721ServiceChainTransactorSession) SetApprovalForAll(to common.Address, approved bool) (*types.Transaction, error) {
-	return _ERC721ServiceChain.Contract.SetApprovalForAll(&_ERC721ServiceChain.TransactOpts, to, approved)
+// Solidity: function setApprovalForAll(address operator, bool approved) returns()
+func (_ERC721ServiceChain *ERC721ServiceChainTransactorSession) SetApprovalForAll(operator common.Address, approved bool) (*types.Transaction, error) {
+	return _ERC721ServiceChain.Contract.SetApprovalForAll(&_ERC721ServiceChain.TransactOpts, operator, approved)
 }
 
 // SetBridge is a paid mutator transaction binding the contract method 0x8dd14802.
@@ -7851,8 +5553,1716 @@ func (_ERC721ServiceChain *ERC721ServiceChainFilterer) ParseTransfer(log types.L
 	return event, nil
 }
 
+// ERC721URIStorageABI is the input ABI used to generate the binding from.
+const ERC721URIStorageABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"approved\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Approval\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"ApprovalForAll\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"approve\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"getApproved\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"isApprovedForAll\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"ownerOf\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"setApprovalForAll\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"symbol\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"tokenURI\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"transferFrom\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+
+// ERC721URIStorageBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
+const ERC721URIStorageBinRuntime = ``
+
+// ERC721URIStorageFuncSigs maps the 4-byte function signature to its string representation.
+var ERC721URIStorageFuncSigs = map[string]string{
+	"095ea7b3": "approve(address,uint256)",
+	"70a08231": "balanceOf(address)",
+	"081812fc": "getApproved(uint256)",
+	"e985e9c5": "isApprovedForAll(address,address)",
+	"06fdde03": "name()",
+	"6352211e": "ownerOf(uint256)",
+	"42842e0e": "safeTransferFrom(address,address,uint256)",
+	"b88d4fde": "safeTransferFrom(address,address,uint256,bytes)",
+	"a22cb465": "setApprovalForAll(address,bool)",
+	"01ffc9a7": "supportsInterface(bytes4)",
+	"95d89b41": "symbol()",
+	"c87b56dd": "tokenURI(uint256)",
+	"23b872dd": "transferFrom(address,address,uint256)",
+}
+
+// ERC721URIStorage is an auto generated Go binding around a Klaytn contract.
+type ERC721URIStorage struct {
+	ERC721URIStorageCaller     // Read-only binding to the contract
+	ERC721URIStorageTransactor // Write-only binding to the contract
+	ERC721URIStorageFilterer   // Log filterer for contract events
+}
+
+// ERC721URIStorageCaller is an auto generated read-only Go binding around a Klaytn contract.
+type ERC721URIStorageCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// ERC721URIStorageTransactor is an auto generated write-only Go binding around a Klaytn contract.
+type ERC721URIStorageTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// ERC721URIStorageFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+type ERC721URIStorageFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// ERC721URIStorageSession is an auto generated Go binding around a Klaytn contract,
+// with pre-set call and transact options.
+type ERC721URIStorageSession struct {
+	Contract     *ERC721URIStorage // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts     // Call options to use throughout this session
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+}
+
+// ERC721URIStorageCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// with pre-set call options.
+type ERC721URIStorageCallerSession struct {
+	Contract *ERC721URIStorageCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts           // Call options to use throughout this session
+}
+
+// ERC721URIStorageTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// with pre-set transact options.
+type ERC721URIStorageTransactorSession struct {
+	Contract     *ERC721URIStorageTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts           // Transaction auth options to use throughout this session
+}
+
+// ERC721URIStorageRaw is an auto generated low-level Go binding around a Klaytn contract.
+type ERC721URIStorageRaw struct {
+	Contract *ERC721URIStorage // Generic contract binding to access the raw methods on
+}
+
+// ERC721URIStorageCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+type ERC721URIStorageCallerRaw struct {
+	Contract *ERC721URIStorageCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// ERC721URIStorageTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+type ERC721URIStorageTransactorRaw struct {
+	Contract *ERC721URIStorageTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewERC721URIStorage creates a new instance of ERC721URIStorage, bound to a specific deployed contract.
+func NewERC721URIStorage(address common.Address, backend bind.ContractBackend) (*ERC721URIStorage, error) {
+	contract, err := bindERC721URIStorage(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &ERC721URIStorage{ERC721URIStorageCaller: ERC721URIStorageCaller{contract: contract}, ERC721URIStorageTransactor: ERC721URIStorageTransactor{contract: contract}, ERC721URIStorageFilterer: ERC721URIStorageFilterer{contract: contract}}, nil
+}
+
+// NewERC721URIStorageCaller creates a new read-only instance of ERC721URIStorage, bound to a specific deployed contract.
+func NewERC721URIStorageCaller(address common.Address, caller bind.ContractCaller) (*ERC721URIStorageCaller, error) {
+	contract, err := bindERC721URIStorage(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &ERC721URIStorageCaller{contract: contract}, nil
+}
+
+// NewERC721URIStorageTransactor creates a new write-only instance of ERC721URIStorage, bound to a specific deployed contract.
+func NewERC721URIStorageTransactor(address common.Address, transactor bind.ContractTransactor) (*ERC721URIStorageTransactor, error) {
+	contract, err := bindERC721URIStorage(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &ERC721URIStorageTransactor{contract: contract}, nil
+}
+
+// NewERC721URIStorageFilterer creates a new log filterer instance of ERC721URIStorage, bound to a specific deployed contract.
+func NewERC721URIStorageFilterer(address common.Address, filterer bind.ContractFilterer) (*ERC721URIStorageFilterer, error) {
+	contract, err := bindERC721URIStorage(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &ERC721URIStorageFilterer{contract: contract}, nil
+}
+
+// bindERC721URIStorage binds a generic wrapper to an already deployed contract.
+func bindERC721URIStorage(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(ERC721URIStorageABI))
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_ERC721URIStorage *ERC721URIStorageRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _ERC721URIStorage.Contract.ERC721URIStorageCaller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_ERC721URIStorage *ERC721URIStorageRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _ERC721URIStorage.Contract.ERC721URIStorageTransactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_ERC721URIStorage *ERC721URIStorageRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _ERC721URIStorage.Contract.ERC721URIStorageTransactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_ERC721URIStorage *ERC721URIStorageCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _ERC721URIStorage.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_ERC721URIStorage *ERC721URIStorageTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _ERC721URIStorage.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_ERC721URIStorage *ERC721URIStorageTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _ERC721URIStorage.Contract.contract.Transact(opts, method, params...)
+}
+
+// BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
+//
+// Solidity: function balanceOf(address owner) view returns(uint256)
+func (_ERC721URIStorage *ERC721URIStorageCaller) BalanceOf(opts *bind.CallOpts, owner common.Address) (*big.Int, error) {
+	var (
+		ret0 = new(*big.Int)
+	)
+	out := ret0
+	err := _ERC721URIStorage.contract.Call(opts, out, "balanceOf", owner)
+	return *ret0, err
+}
+
+// BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
+//
+// Solidity: function balanceOf(address owner) view returns(uint256)
+func (_ERC721URIStorage *ERC721URIStorageSession) BalanceOf(owner common.Address) (*big.Int, error) {
+	return _ERC721URIStorage.Contract.BalanceOf(&_ERC721URIStorage.CallOpts, owner)
+}
+
+// BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
+//
+// Solidity: function balanceOf(address owner) view returns(uint256)
+func (_ERC721URIStorage *ERC721URIStorageCallerSession) BalanceOf(owner common.Address) (*big.Int, error) {
+	return _ERC721URIStorage.Contract.BalanceOf(&_ERC721URIStorage.CallOpts, owner)
+}
+
+// GetApproved is a free data retrieval call binding the contract method 0x081812fc.
+//
+// Solidity: function getApproved(uint256 tokenId) view returns(address)
+func (_ERC721URIStorage *ERC721URIStorageCaller) GetApproved(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
+	var (
+		ret0 = new(common.Address)
+	)
+	out := ret0
+	err := _ERC721URIStorage.contract.Call(opts, out, "getApproved", tokenId)
+	return *ret0, err
+}
+
+// GetApproved is a free data retrieval call binding the contract method 0x081812fc.
+//
+// Solidity: function getApproved(uint256 tokenId) view returns(address)
+func (_ERC721URIStorage *ERC721URIStorageSession) GetApproved(tokenId *big.Int) (common.Address, error) {
+	return _ERC721URIStorage.Contract.GetApproved(&_ERC721URIStorage.CallOpts, tokenId)
+}
+
+// GetApproved is a free data retrieval call binding the contract method 0x081812fc.
+//
+// Solidity: function getApproved(uint256 tokenId) view returns(address)
+func (_ERC721URIStorage *ERC721URIStorageCallerSession) GetApproved(tokenId *big.Int) (common.Address, error) {
+	return _ERC721URIStorage.Contract.GetApproved(&_ERC721URIStorage.CallOpts, tokenId)
+}
+
+// IsApprovedForAll is a free data retrieval call binding the contract method 0xe985e9c5.
+//
+// Solidity: function isApprovedForAll(address owner, address operator) view returns(bool)
+func (_ERC721URIStorage *ERC721URIStorageCaller) IsApprovedForAll(opts *bind.CallOpts, owner common.Address, operator common.Address) (bool, error) {
+	var (
+		ret0 = new(bool)
+	)
+	out := ret0
+	err := _ERC721URIStorage.contract.Call(opts, out, "isApprovedForAll", owner, operator)
+	return *ret0, err
+}
+
+// IsApprovedForAll is a free data retrieval call binding the contract method 0xe985e9c5.
+//
+// Solidity: function isApprovedForAll(address owner, address operator) view returns(bool)
+func (_ERC721URIStorage *ERC721URIStorageSession) IsApprovedForAll(owner common.Address, operator common.Address) (bool, error) {
+	return _ERC721URIStorage.Contract.IsApprovedForAll(&_ERC721URIStorage.CallOpts, owner, operator)
+}
+
+// IsApprovedForAll is a free data retrieval call binding the contract method 0xe985e9c5.
+//
+// Solidity: function isApprovedForAll(address owner, address operator) view returns(bool)
+func (_ERC721URIStorage *ERC721URIStorageCallerSession) IsApprovedForAll(owner common.Address, operator common.Address) (bool, error) {
+	return _ERC721URIStorage.Contract.IsApprovedForAll(&_ERC721URIStorage.CallOpts, owner, operator)
+}
+
+// Name is a free data retrieval call binding the contract method 0x06fdde03.
+//
+// Solidity: function name() view returns(string)
+func (_ERC721URIStorage *ERC721URIStorageCaller) Name(opts *bind.CallOpts) (string, error) {
+	var (
+		ret0 = new(string)
+	)
+	out := ret0
+	err := _ERC721URIStorage.contract.Call(opts, out, "name")
+	return *ret0, err
+}
+
+// Name is a free data retrieval call binding the contract method 0x06fdde03.
+//
+// Solidity: function name() view returns(string)
+func (_ERC721URIStorage *ERC721URIStorageSession) Name() (string, error) {
+	return _ERC721URIStorage.Contract.Name(&_ERC721URIStorage.CallOpts)
+}
+
+// Name is a free data retrieval call binding the contract method 0x06fdde03.
+//
+// Solidity: function name() view returns(string)
+func (_ERC721URIStorage *ERC721URIStorageCallerSession) Name() (string, error) {
+	return _ERC721URIStorage.Contract.Name(&_ERC721URIStorage.CallOpts)
+}
+
+// OwnerOf is a free data retrieval call binding the contract method 0x6352211e.
+//
+// Solidity: function ownerOf(uint256 tokenId) view returns(address)
+func (_ERC721URIStorage *ERC721URIStorageCaller) OwnerOf(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
+	var (
+		ret0 = new(common.Address)
+	)
+	out := ret0
+	err := _ERC721URIStorage.contract.Call(opts, out, "ownerOf", tokenId)
+	return *ret0, err
+}
+
+// OwnerOf is a free data retrieval call binding the contract method 0x6352211e.
+//
+// Solidity: function ownerOf(uint256 tokenId) view returns(address)
+func (_ERC721URIStorage *ERC721URIStorageSession) OwnerOf(tokenId *big.Int) (common.Address, error) {
+	return _ERC721URIStorage.Contract.OwnerOf(&_ERC721URIStorage.CallOpts, tokenId)
+}
+
+// OwnerOf is a free data retrieval call binding the contract method 0x6352211e.
+//
+// Solidity: function ownerOf(uint256 tokenId) view returns(address)
+func (_ERC721URIStorage *ERC721URIStorageCallerSession) OwnerOf(tokenId *big.Int) (common.Address, error) {
+	return _ERC721URIStorage.Contract.OwnerOf(&_ERC721URIStorage.CallOpts, tokenId)
+}
+
+// SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
+//
+// Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
+func (_ERC721URIStorage *ERC721URIStorageCaller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
+	var (
+		ret0 = new(bool)
+	)
+	out := ret0
+	err := _ERC721URIStorage.contract.Call(opts, out, "supportsInterface", interfaceId)
+	return *ret0, err
+}
+
+// SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
+//
+// Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
+func (_ERC721URIStorage *ERC721URIStorageSession) SupportsInterface(interfaceId [4]byte) (bool, error) {
+	return _ERC721URIStorage.Contract.SupportsInterface(&_ERC721URIStorage.CallOpts, interfaceId)
+}
+
+// SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
+//
+// Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
+func (_ERC721URIStorage *ERC721URIStorageCallerSession) SupportsInterface(interfaceId [4]byte) (bool, error) {
+	return _ERC721URIStorage.Contract.SupportsInterface(&_ERC721URIStorage.CallOpts, interfaceId)
+}
+
+// Symbol is a free data retrieval call binding the contract method 0x95d89b41.
+//
+// Solidity: function symbol() view returns(string)
+func (_ERC721URIStorage *ERC721URIStorageCaller) Symbol(opts *bind.CallOpts) (string, error) {
+	var (
+		ret0 = new(string)
+	)
+	out := ret0
+	err := _ERC721URIStorage.contract.Call(opts, out, "symbol")
+	return *ret0, err
+}
+
+// Symbol is a free data retrieval call binding the contract method 0x95d89b41.
+//
+// Solidity: function symbol() view returns(string)
+func (_ERC721URIStorage *ERC721URIStorageSession) Symbol() (string, error) {
+	return _ERC721URIStorage.Contract.Symbol(&_ERC721URIStorage.CallOpts)
+}
+
+// Symbol is a free data retrieval call binding the contract method 0x95d89b41.
+//
+// Solidity: function symbol() view returns(string)
+func (_ERC721URIStorage *ERC721URIStorageCallerSession) Symbol() (string, error) {
+	return _ERC721URIStorage.Contract.Symbol(&_ERC721URIStorage.CallOpts)
+}
+
+// TokenURI is a free data retrieval call binding the contract method 0xc87b56dd.
+//
+// Solidity: function tokenURI(uint256 tokenId) view returns(string)
+func (_ERC721URIStorage *ERC721URIStorageCaller) TokenURI(opts *bind.CallOpts, tokenId *big.Int) (string, error) {
+	var (
+		ret0 = new(string)
+	)
+	out := ret0
+	err := _ERC721URIStorage.contract.Call(opts, out, "tokenURI", tokenId)
+	return *ret0, err
+}
+
+// TokenURI is a free data retrieval call binding the contract method 0xc87b56dd.
+//
+// Solidity: function tokenURI(uint256 tokenId) view returns(string)
+func (_ERC721URIStorage *ERC721URIStorageSession) TokenURI(tokenId *big.Int) (string, error) {
+	return _ERC721URIStorage.Contract.TokenURI(&_ERC721URIStorage.CallOpts, tokenId)
+}
+
+// TokenURI is a free data retrieval call binding the contract method 0xc87b56dd.
+//
+// Solidity: function tokenURI(uint256 tokenId) view returns(string)
+func (_ERC721URIStorage *ERC721URIStorageCallerSession) TokenURI(tokenId *big.Int) (string, error) {
+	return _ERC721URIStorage.Contract.TokenURI(&_ERC721URIStorage.CallOpts, tokenId)
+}
+
+// Approve is a paid mutator transaction binding the contract method 0x095ea7b3.
+//
+// Solidity: function approve(address to, uint256 tokenId) returns()
+func (_ERC721URIStorage *ERC721URIStorageTransactor) Approve(opts *bind.TransactOpts, to common.Address, tokenId *big.Int) (*types.Transaction, error) {
+	return _ERC721URIStorage.contract.Transact(opts, "approve", to, tokenId)
+}
+
+// Approve is a paid mutator transaction binding the contract method 0x095ea7b3.
+//
+// Solidity: function approve(address to, uint256 tokenId) returns()
+func (_ERC721URIStorage *ERC721URIStorageSession) Approve(to common.Address, tokenId *big.Int) (*types.Transaction, error) {
+	return _ERC721URIStorage.Contract.Approve(&_ERC721URIStorage.TransactOpts, to, tokenId)
+}
+
+// Approve is a paid mutator transaction binding the contract method 0x095ea7b3.
+//
+// Solidity: function approve(address to, uint256 tokenId) returns()
+func (_ERC721URIStorage *ERC721URIStorageTransactorSession) Approve(to common.Address, tokenId *big.Int) (*types.Transaction, error) {
+	return _ERC721URIStorage.Contract.Approve(&_ERC721URIStorage.TransactOpts, to, tokenId)
+}
+
+// SafeTransferFrom is a paid mutator transaction binding the contract method 0x42842e0e.
+//
+// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId) returns()
+func (_ERC721URIStorage *ERC721URIStorageTransactor) SafeTransferFrom(opts *bind.TransactOpts, from common.Address, to common.Address, tokenId *big.Int) (*types.Transaction, error) {
+	return _ERC721URIStorage.contract.Transact(opts, "safeTransferFrom", from, to, tokenId)
+}
+
+// SafeTransferFrom is a paid mutator transaction binding the contract method 0x42842e0e.
+//
+// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId) returns()
+func (_ERC721URIStorage *ERC721URIStorageSession) SafeTransferFrom(from common.Address, to common.Address, tokenId *big.Int) (*types.Transaction, error) {
+	return _ERC721URIStorage.Contract.SafeTransferFrom(&_ERC721URIStorage.TransactOpts, from, to, tokenId)
+}
+
+// SafeTransferFrom is a paid mutator transaction binding the contract method 0x42842e0e.
+//
+// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId) returns()
+func (_ERC721URIStorage *ERC721URIStorageTransactorSession) SafeTransferFrom(from common.Address, to common.Address, tokenId *big.Int) (*types.Transaction, error) {
+	return _ERC721URIStorage.Contract.SafeTransferFrom(&_ERC721URIStorage.TransactOpts, from, to, tokenId)
+}
+
+// SafeTransferFrom0 is a paid mutator transaction binding the contract method 0xb88d4fde.
+//
+// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId, bytes data) returns()
+func (_ERC721URIStorage *ERC721URIStorageTransactor) SafeTransferFrom0(opts *bind.TransactOpts, from common.Address, to common.Address, tokenId *big.Int, data []byte) (*types.Transaction, error) {
+	return _ERC721URIStorage.contract.Transact(opts, "safeTransferFrom0", from, to, tokenId, data)
+}
+
+// SafeTransferFrom0 is a paid mutator transaction binding the contract method 0xb88d4fde.
+//
+// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId, bytes data) returns()
+func (_ERC721URIStorage *ERC721URIStorageSession) SafeTransferFrom0(from common.Address, to common.Address, tokenId *big.Int, data []byte) (*types.Transaction, error) {
+	return _ERC721URIStorage.Contract.SafeTransferFrom0(&_ERC721URIStorage.TransactOpts, from, to, tokenId, data)
+}
+
+// SafeTransferFrom0 is a paid mutator transaction binding the contract method 0xb88d4fde.
+//
+// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId, bytes data) returns()
+func (_ERC721URIStorage *ERC721URIStorageTransactorSession) SafeTransferFrom0(from common.Address, to common.Address, tokenId *big.Int, data []byte) (*types.Transaction, error) {
+	return _ERC721URIStorage.Contract.SafeTransferFrom0(&_ERC721URIStorage.TransactOpts, from, to, tokenId, data)
+}
+
+// SetApprovalForAll is a paid mutator transaction binding the contract method 0xa22cb465.
+//
+// Solidity: function setApprovalForAll(address operator, bool approved) returns()
+func (_ERC721URIStorage *ERC721URIStorageTransactor) SetApprovalForAll(opts *bind.TransactOpts, operator common.Address, approved bool) (*types.Transaction, error) {
+	return _ERC721URIStorage.contract.Transact(opts, "setApprovalForAll", operator, approved)
+}
+
+// SetApprovalForAll is a paid mutator transaction binding the contract method 0xa22cb465.
+//
+// Solidity: function setApprovalForAll(address operator, bool approved) returns()
+func (_ERC721URIStorage *ERC721URIStorageSession) SetApprovalForAll(operator common.Address, approved bool) (*types.Transaction, error) {
+	return _ERC721URIStorage.Contract.SetApprovalForAll(&_ERC721URIStorage.TransactOpts, operator, approved)
+}
+
+// SetApprovalForAll is a paid mutator transaction binding the contract method 0xa22cb465.
+//
+// Solidity: function setApprovalForAll(address operator, bool approved) returns()
+func (_ERC721URIStorage *ERC721URIStorageTransactorSession) SetApprovalForAll(operator common.Address, approved bool) (*types.Transaction, error) {
+	return _ERC721URIStorage.Contract.SetApprovalForAll(&_ERC721URIStorage.TransactOpts, operator, approved)
+}
+
+// TransferFrom is a paid mutator transaction binding the contract method 0x23b872dd.
+//
+// Solidity: function transferFrom(address from, address to, uint256 tokenId) returns()
+func (_ERC721URIStorage *ERC721URIStorageTransactor) TransferFrom(opts *bind.TransactOpts, from common.Address, to common.Address, tokenId *big.Int) (*types.Transaction, error) {
+	return _ERC721URIStorage.contract.Transact(opts, "transferFrom", from, to, tokenId)
+}
+
+// TransferFrom is a paid mutator transaction binding the contract method 0x23b872dd.
+//
+// Solidity: function transferFrom(address from, address to, uint256 tokenId) returns()
+func (_ERC721URIStorage *ERC721URIStorageSession) TransferFrom(from common.Address, to common.Address, tokenId *big.Int) (*types.Transaction, error) {
+	return _ERC721URIStorage.Contract.TransferFrom(&_ERC721URIStorage.TransactOpts, from, to, tokenId)
+}
+
+// TransferFrom is a paid mutator transaction binding the contract method 0x23b872dd.
+//
+// Solidity: function transferFrom(address from, address to, uint256 tokenId) returns()
+func (_ERC721URIStorage *ERC721URIStorageTransactorSession) TransferFrom(from common.Address, to common.Address, tokenId *big.Int) (*types.Transaction, error) {
+	return _ERC721URIStorage.Contract.TransferFrom(&_ERC721URIStorage.TransactOpts, from, to, tokenId)
+}
+
+// ERC721URIStorageApprovalIterator is returned from FilterApproval and is used to iterate over the raw logs and unpacked data for Approval events raised by the ERC721URIStorage contract.
+type ERC721URIStorageApprovalIterator struct {
+	Event *ERC721URIStorageApproval // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ERC721URIStorageApprovalIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ERC721URIStorageApproval)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ERC721URIStorageApproval)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ERC721URIStorageApprovalIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ERC721URIStorageApprovalIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ERC721URIStorageApproval represents a Approval event raised by the ERC721URIStorage contract.
+type ERC721URIStorageApproval struct {
+	Owner    common.Address
+	Approved common.Address
+	TokenId  *big.Int
+	Raw      types.Log // Blockchain specific contextual infos
+}
+
+// FilterApproval is a free log retrieval operation binding the contract event 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925.
+//
+// Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
+func (_ERC721URIStorage *ERC721URIStorageFilterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, approved []common.Address, tokenId []*big.Int) (*ERC721URIStorageApprovalIterator, error) {
+
+	var ownerRule []interface{}
+	for _, ownerItem := range owner {
+		ownerRule = append(ownerRule, ownerItem)
+	}
+	var approvedRule []interface{}
+	for _, approvedItem := range approved {
+		approvedRule = append(approvedRule, approvedItem)
+	}
+	var tokenIdRule []interface{}
+	for _, tokenIdItem := range tokenId {
+		tokenIdRule = append(tokenIdRule, tokenIdItem)
+	}
+
+	logs, sub, err := _ERC721URIStorage.contract.FilterLogs(opts, "Approval", ownerRule, approvedRule, tokenIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return &ERC721URIStorageApprovalIterator{contract: _ERC721URIStorage.contract, event: "Approval", logs: logs, sub: sub}, nil
+}
+
+// WatchApproval is a free log subscription operation binding the contract event 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925.
+//
+// Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
+func (_ERC721URIStorage *ERC721URIStorageFilterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *ERC721URIStorageApproval, owner []common.Address, approved []common.Address, tokenId []*big.Int) (event.Subscription, error) {
+
+	var ownerRule []interface{}
+	for _, ownerItem := range owner {
+		ownerRule = append(ownerRule, ownerItem)
+	}
+	var approvedRule []interface{}
+	for _, approvedItem := range approved {
+		approvedRule = append(approvedRule, approvedItem)
+	}
+	var tokenIdRule []interface{}
+	for _, tokenIdItem := range tokenId {
+		tokenIdRule = append(tokenIdRule, tokenIdItem)
+	}
+
+	logs, sub, err := _ERC721URIStorage.contract.WatchLogs(opts, "Approval", ownerRule, approvedRule, tokenIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ERC721URIStorageApproval)
+				if err := _ERC721URIStorage.contract.UnpackLog(event, "Approval", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseApproval is a log parse operation binding the contract event 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925.
+//
+// Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
+func (_ERC721URIStorage *ERC721URIStorageFilterer) ParseApproval(log types.Log) (*ERC721URIStorageApproval, error) {
+	event := new(ERC721URIStorageApproval)
+	if err := _ERC721URIStorage.contract.UnpackLog(event, "Approval", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// ERC721URIStorageApprovalForAllIterator is returned from FilterApprovalForAll and is used to iterate over the raw logs and unpacked data for ApprovalForAll events raised by the ERC721URIStorage contract.
+type ERC721URIStorageApprovalForAllIterator struct {
+	Event *ERC721URIStorageApprovalForAll // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ERC721URIStorageApprovalForAllIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ERC721URIStorageApprovalForAll)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ERC721URIStorageApprovalForAll)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ERC721URIStorageApprovalForAllIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ERC721URIStorageApprovalForAllIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ERC721URIStorageApprovalForAll represents a ApprovalForAll event raised by the ERC721URIStorage contract.
+type ERC721URIStorageApprovalForAll struct {
+	Owner    common.Address
+	Operator common.Address
+	Approved bool
+	Raw      types.Log // Blockchain specific contextual infos
+}
+
+// FilterApprovalForAll is a free log retrieval operation binding the contract event 0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31.
+//
+// Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
+func (_ERC721URIStorage *ERC721URIStorageFilterer) FilterApprovalForAll(opts *bind.FilterOpts, owner []common.Address, operator []common.Address) (*ERC721URIStorageApprovalForAllIterator, error) {
+
+	var ownerRule []interface{}
+	for _, ownerItem := range owner {
+		ownerRule = append(ownerRule, ownerItem)
+	}
+	var operatorRule []interface{}
+	for _, operatorItem := range operator {
+		operatorRule = append(operatorRule, operatorItem)
+	}
+
+	logs, sub, err := _ERC721URIStorage.contract.FilterLogs(opts, "ApprovalForAll", ownerRule, operatorRule)
+	if err != nil {
+		return nil, err
+	}
+	return &ERC721URIStorageApprovalForAllIterator{contract: _ERC721URIStorage.contract, event: "ApprovalForAll", logs: logs, sub: sub}, nil
+}
+
+// WatchApprovalForAll is a free log subscription operation binding the contract event 0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31.
+//
+// Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
+func (_ERC721URIStorage *ERC721URIStorageFilterer) WatchApprovalForAll(opts *bind.WatchOpts, sink chan<- *ERC721URIStorageApprovalForAll, owner []common.Address, operator []common.Address) (event.Subscription, error) {
+
+	var ownerRule []interface{}
+	for _, ownerItem := range owner {
+		ownerRule = append(ownerRule, ownerItem)
+	}
+	var operatorRule []interface{}
+	for _, operatorItem := range operator {
+		operatorRule = append(operatorRule, operatorItem)
+	}
+
+	logs, sub, err := _ERC721URIStorage.contract.WatchLogs(opts, "ApprovalForAll", ownerRule, operatorRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ERC721URIStorageApprovalForAll)
+				if err := _ERC721URIStorage.contract.UnpackLog(event, "ApprovalForAll", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseApprovalForAll is a log parse operation binding the contract event 0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31.
+//
+// Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
+func (_ERC721URIStorage *ERC721URIStorageFilterer) ParseApprovalForAll(log types.Log) (*ERC721URIStorageApprovalForAll, error) {
+	event := new(ERC721URIStorageApprovalForAll)
+	if err := _ERC721URIStorage.contract.UnpackLog(event, "ApprovalForAll", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// ERC721URIStorageTransferIterator is returned from FilterTransfer and is used to iterate over the raw logs and unpacked data for Transfer events raised by the ERC721URIStorage contract.
+type ERC721URIStorageTransferIterator struct {
+	Event *ERC721URIStorageTransfer // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ERC721URIStorageTransferIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ERC721URIStorageTransfer)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ERC721URIStorageTransfer)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ERC721URIStorageTransferIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ERC721URIStorageTransferIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ERC721URIStorageTransfer represents a Transfer event raised by the ERC721URIStorage contract.
+type ERC721URIStorageTransfer struct {
+	From    common.Address
+	To      common.Address
+	TokenId *big.Int
+	Raw     types.Log // Blockchain specific contextual infos
+}
+
+// FilterTransfer is a free log retrieval operation binding the contract event 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef.
+//
+// Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
+func (_ERC721URIStorage *ERC721URIStorageFilterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenId []*big.Int) (*ERC721URIStorageTransferIterator, error) {
+
+	var fromRule []interface{}
+	for _, fromItem := range from {
+		fromRule = append(fromRule, fromItem)
+	}
+	var toRule []interface{}
+	for _, toItem := range to {
+		toRule = append(toRule, toItem)
+	}
+	var tokenIdRule []interface{}
+	for _, tokenIdItem := range tokenId {
+		tokenIdRule = append(tokenIdRule, tokenIdItem)
+	}
+
+	logs, sub, err := _ERC721URIStorage.contract.FilterLogs(opts, "Transfer", fromRule, toRule, tokenIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return &ERC721URIStorageTransferIterator{contract: _ERC721URIStorage.contract, event: "Transfer", logs: logs, sub: sub}, nil
+}
+
+// WatchTransfer is a free log subscription operation binding the contract event 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef.
+//
+// Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
+func (_ERC721URIStorage *ERC721URIStorageFilterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *ERC721URIStorageTransfer, from []common.Address, to []common.Address, tokenId []*big.Int) (event.Subscription, error) {
+
+	var fromRule []interface{}
+	for _, fromItem := range from {
+		fromRule = append(fromRule, fromItem)
+	}
+	var toRule []interface{}
+	for _, toItem := range to {
+		toRule = append(toRule, toItem)
+	}
+	var tokenIdRule []interface{}
+	for _, tokenIdItem := range tokenId {
+		tokenIdRule = append(tokenIdRule, tokenIdItem)
+	}
+
+	logs, sub, err := _ERC721URIStorage.contract.WatchLogs(opts, "Transfer", fromRule, toRule, tokenIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ERC721URIStorageTransfer)
+				if err := _ERC721URIStorage.contract.UnpackLog(event, "Transfer", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseTransfer is a log parse operation binding the contract event 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef.
+//
+// Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
+func (_ERC721URIStorage *ERC721URIStorageFilterer) ParseTransfer(log types.Log) (*ERC721URIStorageTransfer, error) {
+	event := new(ERC721URIStorageTransfer)
+	if err := _ERC721URIStorage.contract.UnpackLog(event, "Transfer", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// IAccessControlABI is the input ABI used to generate the binding from.
+const IAccessControlABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"previousAdminRole\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"newAdminRole\",\"type\":\"bytes32\"}],\"name\":\"RoleAdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleGranted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleRevoked\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"}],\"name\":\"getRoleAdmin\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"grantRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"hasRole\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"renounceRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"revokeRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+
+// IAccessControlBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
+const IAccessControlBinRuntime = ``
+
+// IAccessControlFuncSigs maps the 4-byte function signature to its string representation.
+var IAccessControlFuncSigs = map[string]string{
+	"248a9ca3": "getRoleAdmin(bytes32)",
+	"2f2ff15d": "grantRole(bytes32,address)",
+	"91d14854": "hasRole(bytes32,address)",
+	"36568abe": "renounceRole(bytes32,address)",
+	"d547741f": "revokeRole(bytes32,address)",
+}
+
+// IAccessControl is an auto generated Go binding around a Klaytn contract.
+type IAccessControl struct {
+	IAccessControlCaller     // Read-only binding to the contract
+	IAccessControlTransactor // Write-only binding to the contract
+	IAccessControlFilterer   // Log filterer for contract events
+}
+
+// IAccessControlCaller is an auto generated read-only Go binding around a Klaytn contract.
+type IAccessControlCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// IAccessControlTransactor is an auto generated write-only Go binding around a Klaytn contract.
+type IAccessControlTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// IAccessControlFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+type IAccessControlFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// IAccessControlSession is an auto generated Go binding around a Klaytn contract,
+// with pre-set call and transact options.
+type IAccessControlSession struct {
+	Contract     *IAccessControl   // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts     // Call options to use throughout this session
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+}
+
+// IAccessControlCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// with pre-set call options.
+type IAccessControlCallerSession struct {
+	Contract *IAccessControlCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts         // Call options to use throughout this session
+}
+
+// IAccessControlTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// with pre-set transact options.
+type IAccessControlTransactorSession struct {
+	Contract     *IAccessControlTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts         // Transaction auth options to use throughout this session
+}
+
+// IAccessControlRaw is an auto generated low-level Go binding around a Klaytn contract.
+type IAccessControlRaw struct {
+	Contract *IAccessControl // Generic contract binding to access the raw methods on
+}
+
+// IAccessControlCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+type IAccessControlCallerRaw struct {
+	Contract *IAccessControlCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// IAccessControlTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+type IAccessControlTransactorRaw struct {
+	Contract *IAccessControlTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewIAccessControl creates a new instance of IAccessControl, bound to a specific deployed contract.
+func NewIAccessControl(address common.Address, backend bind.ContractBackend) (*IAccessControl, error) {
+	contract, err := bindIAccessControl(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &IAccessControl{IAccessControlCaller: IAccessControlCaller{contract: contract}, IAccessControlTransactor: IAccessControlTransactor{contract: contract}, IAccessControlFilterer: IAccessControlFilterer{contract: contract}}, nil
+}
+
+// NewIAccessControlCaller creates a new read-only instance of IAccessControl, bound to a specific deployed contract.
+func NewIAccessControlCaller(address common.Address, caller bind.ContractCaller) (*IAccessControlCaller, error) {
+	contract, err := bindIAccessControl(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &IAccessControlCaller{contract: contract}, nil
+}
+
+// NewIAccessControlTransactor creates a new write-only instance of IAccessControl, bound to a specific deployed contract.
+func NewIAccessControlTransactor(address common.Address, transactor bind.ContractTransactor) (*IAccessControlTransactor, error) {
+	contract, err := bindIAccessControl(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &IAccessControlTransactor{contract: contract}, nil
+}
+
+// NewIAccessControlFilterer creates a new log filterer instance of IAccessControl, bound to a specific deployed contract.
+func NewIAccessControlFilterer(address common.Address, filterer bind.ContractFilterer) (*IAccessControlFilterer, error) {
+	contract, err := bindIAccessControl(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &IAccessControlFilterer{contract: contract}, nil
+}
+
+// bindIAccessControl binds a generic wrapper to an already deployed contract.
+func bindIAccessControl(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(IAccessControlABI))
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_IAccessControl *IAccessControlRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _IAccessControl.Contract.IAccessControlCaller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_IAccessControl *IAccessControlRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _IAccessControl.Contract.IAccessControlTransactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_IAccessControl *IAccessControlRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _IAccessControl.Contract.IAccessControlTransactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_IAccessControl *IAccessControlCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _IAccessControl.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_IAccessControl *IAccessControlTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _IAccessControl.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_IAccessControl *IAccessControlTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _IAccessControl.Contract.contract.Transact(opts, method, params...)
+}
+
+// GetRoleAdmin is a free data retrieval call binding the contract method 0x248a9ca3.
+//
+// Solidity: function getRoleAdmin(bytes32 role) view returns(bytes32)
+func (_IAccessControl *IAccessControlCaller) GetRoleAdmin(opts *bind.CallOpts, role [32]byte) ([32]byte, error) {
+	var (
+		ret0 = new([32]byte)
+	)
+	out := ret0
+	err := _IAccessControl.contract.Call(opts, out, "getRoleAdmin", role)
+	return *ret0, err
+}
+
+// GetRoleAdmin is a free data retrieval call binding the contract method 0x248a9ca3.
+//
+// Solidity: function getRoleAdmin(bytes32 role) view returns(bytes32)
+func (_IAccessControl *IAccessControlSession) GetRoleAdmin(role [32]byte) ([32]byte, error) {
+	return _IAccessControl.Contract.GetRoleAdmin(&_IAccessControl.CallOpts, role)
+}
+
+// GetRoleAdmin is a free data retrieval call binding the contract method 0x248a9ca3.
+//
+// Solidity: function getRoleAdmin(bytes32 role) view returns(bytes32)
+func (_IAccessControl *IAccessControlCallerSession) GetRoleAdmin(role [32]byte) ([32]byte, error) {
+	return _IAccessControl.Contract.GetRoleAdmin(&_IAccessControl.CallOpts, role)
+}
+
+// HasRole is a free data retrieval call binding the contract method 0x91d14854.
+//
+// Solidity: function hasRole(bytes32 role, address account) view returns(bool)
+func (_IAccessControl *IAccessControlCaller) HasRole(opts *bind.CallOpts, role [32]byte, account common.Address) (bool, error) {
+	var (
+		ret0 = new(bool)
+	)
+	out := ret0
+	err := _IAccessControl.contract.Call(opts, out, "hasRole", role, account)
+	return *ret0, err
+}
+
+// HasRole is a free data retrieval call binding the contract method 0x91d14854.
+//
+// Solidity: function hasRole(bytes32 role, address account) view returns(bool)
+func (_IAccessControl *IAccessControlSession) HasRole(role [32]byte, account common.Address) (bool, error) {
+	return _IAccessControl.Contract.HasRole(&_IAccessControl.CallOpts, role, account)
+}
+
+// HasRole is a free data retrieval call binding the contract method 0x91d14854.
+//
+// Solidity: function hasRole(bytes32 role, address account) view returns(bool)
+func (_IAccessControl *IAccessControlCallerSession) HasRole(role [32]byte, account common.Address) (bool, error) {
+	return _IAccessControl.Contract.HasRole(&_IAccessControl.CallOpts, role, account)
+}
+
+// GrantRole is a paid mutator transaction binding the contract method 0x2f2ff15d.
+//
+// Solidity: function grantRole(bytes32 role, address account) returns()
+func (_IAccessControl *IAccessControlTransactor) GrantRole(opts *bind.TransactOpts, role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _IAccessControl.contract.Transact(opts, "grantRole", role, account)
+}
+
+// GrantRole is a paid mutator transaction binding the contract method 0x2f2ff15d.
+//
+// Solidity: function grantRole(bytes32 role, address account) returns()
+func (_IAccessControl *IAccessControlSession) GrantRole(role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _IAccessControl.Contract.GrantRole(&_IAccessControl.TransactOpts, role, account)
+}
+
+// GrantRole is a paid mutator transaction binding the contract method 0x2f2ff15d.
+//
+// Solidity: function grantRole(bytes32 role, address account) returns()
+func (_IAccessControl *IAccessControlTransactorSession) GrantRole(role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _IAccessControl.Contract.GrantRole(&_IAccessControl.TransactOpts, role, account)
+}
+
+// RenounceRole is a paid mutator transaction binding the contract method 0x36568abe.
+//
+// Solidity: function renounceRole(bytes32 role, address account) returns()
+func (_IAccessControl *IAccessControlTransactor) RenounceRole(opts *bind.TransactOpts, role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _IAccessControl.contract.Transact(opts, "renounceRole", role, account)
+}
+
+// RenounceRole is a paid mutator transaction binding the contract method 0x36568abe.
+//
+// Solidity: function renounceRole(bytes32 role, address account) returns()
+func (_IAccessControl *IAccessControlSession) RenounceRole(role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _IAccessControl.Contract.RenounceRole(&_IAccessControl.TransactOpts, role, account)
+}
+
+// RenounceRole is a paid mutator transaction binding the contract method 0x36568abe.
+//
+// Solidity: function renounceRole(bytes32 role, address account) returns()
+func (_IAccessControl *IAccessControlTransactorSession) RenounceRole(role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _IAccessControl.Contract.RenounceRole(&_IAccessControl.TransactOpts, role, account)
+}
+
+// RevokeRole is a paid mutator transaction binding the contract method 0xd547741f.
+//
+// Solidity: function revokeRole(bytes32 role, address account) returns()
+func (_IAccessControl *IAccessControlTransactor) RevokeRole(opts *bind.TransactOpts, role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _IAccessControl.contract.Transact(opts, "revokeRole", role, account)
+}
+
+// RevokeRole is a paid mutator transaction binding the contract method 0xd547741f.
+//
+// Solidity: function revokeRole(bytes32 role, address account) returns()
+func (_IAccessControl *IAccessControlSession) RevokeRole(role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _IAccessControl.Contract.RevokeRole(&_IAccessControl.TransactOpts, role, account)
+}
+
+// RevokeRole is a paid mutator transaction binding the contract method 0xd547741f.
+//
+// Solidity: function revokeRole(bytes32 role, address account) returns()
+func (_IAccessControl *IAccessControlTransactorSession) RevokeRole(role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _IAccessControl.Contract.RevokeRole(&_IAccessControl.TransactOpts, role, account)
+}
+
+// IAccessControlRoleAdminChangedIterator is returned from FilterRoleAdminChanged and is used to iterate over the raw logs and unpacked data for RoleAdminChanged events raised by the IAccessControl contract.
+type IAccessControlRoleAdminChangedIterator struct {
+	Event *IAccessControlRoleAdminChanged // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *IAccessControlRoleAdminChangedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(IAccessControlRoleAdminChanged)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(IAccessControlRoleAdminChanged)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *IAccessControlRoleAdminChangedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *IAccessControlRoleAdminChangedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// IAccessControlRoleAdminChanged represents a RoleAdminChanged event raised by the IAccessControl contract.
+type IAccessControlRoleAdminChanged struct {
+	Role              [32]byte
+	PreviousAdminRole [32]byte
+	NewAdminRole      [32]byte
+	Raw               types.Log // Blockchain specific contextual infos
+}
+
+// FilterRoleAdminChanged is a free log retrieval operation binding the contract event 0xbd79b86ffe0ab8e8776151514217cd7cacd52c909f66475c3af44e129f0b00ff.
+//
+// Solidity: event RoleAdminChanged(bytes32 indexed role, bytes32 indexed previousAdminRole, bytes32 indexed newAdminRole)
+func (_IAccessControl *IAccessControlFilterer) FilterRoleAdminChanged(opts *bind.FilterOpts, role [][32]byte, previousAdminRole [][32]byte, newAdminRole [][32]byte) (*IAccessControlRoleAdminChangedIterator, error) {
+
+	var roleRule []interface{}
+	for _, roleItem := range role {
+		roleRule = append(roleRule, roleItem)
+	}
+	var previousAdminRoleRule []interface{}
+	for _, previousAdminRoleItem := range previousAdminRole {
+		previousAdminRoleRule = append(previousAdminRoleRule, previousAdminRoleItem)
+	}
+	var newAdminRoleRule []interface{}
+	for _, newAdminRoleItem := range newAdminRole {
+		newAdminRoleRule = append(newAdminRoleRule, newAdminRoleItem)
+	}
+
+	logs, sub, err := _IAccessControl.contract.FilterLogs(opts, "RoleAdminChanged", roleRule, previousAdminRoleRule, newAdminRoleRule)
+	if err != nil {
+		return nil, err
+	}
+	return &IAccessControlRoleAdminChangedIterator{contract: _IAccessControl.contract, event: "RoleAdminChanged", logs: logs, sub: sub}, nil
+}
+
+// WatchRoleAdminChanged is a free log subscription operation binding the contract event 0xbd79b86ffe0ab8e8776151514217cd7cacd52c909f66475c3af44e129f0b00ff.
+//
+// Solidity: event RoleAdminChanged(bytes32 indexed role, bytes32 indexed previousAdminRole, bytes32 indexed newAdminRole)
+func (_IAccessControl *IAccessControlFilterer) WatchRoleAdminChanged(opts *bind.WatchOpts, sink chan<- *IAccessControlRoleAdminChanged, role [][32]byte, previousAdminRole [][32]byte, newAdminRole [][32]byte) (event.Subscription, error) {
+
+	var roleRule []interface{}
+	for _, roleItem := range role {
+		roleRule = append(roleRule, roleItem)
+	}
+	var previousAdminRoleRule []interface{}
+	for _, previousAdminRoleItem := range previousAdminRole {
+		previousAdminRoleRule = append(previousAdminRoleRule, previousAdminRoleItem)
+	}
+	var newAdminRoleRule []interface{}
+	for _, newAdminRoleItem := range newAdminRole {
+		newAdminRoleRule = append(newAdminRoleRule, newAdminRoleItem)
+	}
+
+	logs, sub, err := _IAccessControl.contract.WatchLogs(opts, "RoleAdminChanged", roleRule, previousAdminRoleRule, newAdminRoleRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(IAccessControlRoleAdminChanged)
+				if err := _IAccessControl.contract.UnpackLog(event, "RoleAdminChanged", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseRoleAdminChanged is a log parse operation binding the contract event 0xbd79b86ffe0ab8e8776151514217cd7cacd52c909f66475c3af44e129f0b00ff.
+//
+// Solidity: event RoleAdminChanged(bytes32 indexed role, bytes32 indexed previousAdminRole, bytes32 indexed newAdminRole)
+func (_IAccessControl *IAccessControlFilterer) ParseRoleAdminChanged(log types.Log) (*IAccessControlRoleAdminChanged, error) {
+	event := new(IAccessControlRoleAdminChanged)
+	if err := _IAccessControl.contract.UnpackLog(event, "RoleAdminChanged", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// IAccessControlRoleGrantedIterator is returned from FilterRoleGranted and is used to iterate over the raw logs and unpacked data for RoleGranted events raised by the IAccessControl contract.
+type IAccessControlRoleGrantedIterator struct {
+	Event *IAccessControlRoleGranted // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *IAccessControlRoleGrantedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(IAccessControlRoleGranted)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(IAccessControlRoleGranted)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *IAccessControlRoleGrantedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *IAccessControlRoleGrantedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// IAccessControlRoleGranted represents a RoleGranted event raised by the IAccessControl contract.
+type IAccessControlRoleGranted struct {
+	Role    [32]byte
+	Account common.Address
+	Sender  common.Address
+	Raw     types.Log // Blockchain specific contextual infos
+}
+
+// FilterRoleGranted is a free log retrieval operation binding the contract event 0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d.
+//
+// Solidity: event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)
+func (_IAccessControl *IAccessControlFilterer) FilterRoleGranted(opts *bind.FilterOpts, role [][32]byte, account []common.Address, sender []common.Address) (*IAccessControlRoleGrantedIterator, error) {
+
+	var roleRule []interface{}
+	for _, roleItem := range role {
+		roleRule = append(roleRule, roleItem)
+	}
+	var accountRule []interface{}
+	for _, accountItem := range account {
+		accountRule = append(accountRule, accountItem)
+	}
+	var senderRule []interface{}
+	for _, senderItem := range sender {
+		senderRule = append(senderRule, senderItem)
+	}
+
+	logs, sub, err := _IAccessControl.contract.FilterLogs(opts, "RoleGranted", roleRule, accountRule, senderRule)
+	if err != nil {
+		return nil, err
+	}
+	return &IAccessControlRoleGrantedIterator{contract: _IAccessControl.contract, event: "RoleGranted", logs: logs, sub: sub}, nil
+}
+
+// WatchRoleGranted is a free log subscription operation binding the contract event 0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d.
+//
+// Solidity: event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)
+func (_IAccessControl *IAccessControlFilterer) WatchRoleGranted(opts *bind.WatchOpts, sink chan<- *IAccessControlRoleGranted, role [][32]byte, account []common.Address, sender []common.Address) (event.Subscription, error) {
+
+	var roleRule []interface{}
+	for _, roleItem := range role {
+		roleRule = append(roleRule, roleItem)
+	}
+	var accountRule []interface{}
+	for _, accountItem := range account {
+		accountRule = append(accountRule, accountItem)
+	}
+	var senderRule []interface{}
+	for _, senderItem := range sender {
+		senderRule = append(senderRule, senderItem)
+	}
+
+	logs, sub, err := _IAccessControl.contract.WatchLogs(opts, "RoleGranted", roleRule, accountRule, senderRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(IAccessControlRoleGranted)
+				if err := _IAccessControl.contract.UnpackLog(event, "RoleGranted", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseRoleGranted is a log parse operation binding the contract event 0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d.
+//
+// Solidity: event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)
+func (_IAccessControl *IAccessControlFilterer) ParseRoleGranted(log types.Log) (*IAccessControlRoleGranted, error) {
+	event := new(IAccessControlRoleGranted)
+	if err := _IAccessControl.contract.UnpackLog(event, "RoleGranted", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// IAccessControlRoleRevokedIterator is returned from FilterRoleRevoked and is used to iterate over the raw logs and unpacked data for RoleRevoked events raised by the IAccessControl contract.
+type IAccessControlRoleRevokedIterator struct {
+	Event *IAccessControlRoleRevoked // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *IAccessControlRoleRevokedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(IAccessControlRoleRevoked)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(IAccessControlRoleRevoked)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *IAccessControlRoleRevokedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *IAccessControlRoleRevokedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// IAccessControlRoleRevoked represents a RoleRevoked event raised by the IAccessControl contract.
+type IAccessControlRoleRevoked struct {
+	Role    [32]byte
+	Account common.Address
+	Sender  common.Address
+	Raw     types.Log // Blockchain specific contextual infos
+}
+
+// FilterRoleRevoked is a free log retrieval operation binding the contract event 0xf6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b.
+//
+// Solidity: event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender)
+func (_IAccessControl *IAccessControlFilterer) FilterRoleRevoked(opts *bind.FilterOpts, role [][32]byte, account []common.Address, sender []common.Address) (*IAccessControlRoleRevokedIterator, error) {
+
+	var roleRule []interface{}
+	for _, roleItem := range role {
+		roleRule = append(roleRule, roleItem)
+	}
+	var accountRule []interface{}
+	for _, accountItem := range account {
+		accountRule = append(accountRule, accountItem)
+	}
+	var senderRule []interface{}
+	for _, senderItem := range sender {
+		senderRule = append(senderRule, senderItem)
+	}
+
+	logs, sub, err := _IAccessControl.contract.FilterLogs(opts, "RoleRevoked", roleRule, accountRule, senderRule)
+	if err != nil {
+		return nil, err
+	}
+	return &IAccessControlRoleRevokedIterator{contract: _IAccessControl.contract, event: "RoleRevoked", logs: logs, sub: sub}, nil
+}
+
+// WatchRoleRevoked is a free log subscription operation binding the contract event 0xf6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b.
+//
+// Solidity: event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender)
+func (_IAccessControl *IAccessControlFilterer) WatchRoleRevoked(opts *bind.WatchOpts, sink chan<- *IAccessControlRoleRevoked, role [][32]byte, account []common.Address, sender []common.Address) (event.Subscription, error) {
+
+	var roleRule []interface{}
+	for _, roleItem := range role {
+		roleRule = append(roleRule, roleItem)
+	}
+	var accountRule []interface{}
+	for _, accountItem := range account {
+		accountRule = append(accountRule, accountItem)
+	}
+	var senderRule []interface{}
+	for _, senderItem := range sender {
+		senderRule = append(senderRule, senderItem)
+	}
+
+	logs, sub, err := _IAccessControl.contract.WatchLogs(opts, "RoleRevoked", roleRule, accountRule, senderRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(IAccessControlRoleRevoked)
+				if err := _IAccessControl.contract.UnpackLog(event, "RoleRevoked", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseRoleRevoked is a log parse operation binding the contract event 0xf6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b.
+//
+// Solidity: event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender)
+func (_IAccessControl *IAccessControlFilterer) ParseRoleRevoked(log types.Log) (*IAccessControlRoleRevoked, error) {
+	event := new(IAccessControlRoleRevoked)
+	if err := _IAccessControl.contract.UnpackLog(event, "RoleRevoked", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
 // IERC165ABI is the input ABI used to generate the binding from.
-const IERC165ABI = "[{\"constant\":true,\"inputs\":[{\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
+const IERC165ABI = "[{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
 // IERC165BinRuntime is the compiled bytecode used for adding genesis block without deploying code.
 const IERC165BinRuntime = ``
@@ -8031,7 +7441,7 @@ func (_IERC165 *IERC165CallerSession) SupportsInterface(interfaceId [4]byte) (bo
 }
 
 // IERC721ABI is the input ABI used to generate the binding from.
-const IERC721ABI = "[{\"constant\":true,\"inputs\":[{\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"getApproved\",\"outputs\":[{\"name\":\"operator\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"approve\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"transferFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"ownerOf\",\"outputs\":[{\"name\":\"owner\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"name\":\"balance\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"operator\",\"type\":\"address\"},{\"name\":\"_approved\",\"type\":\"bool\"}],\"name\":\"setApprovalForAll\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"},{\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"},{\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"isApprovedForAll\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"approved\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Approval\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"operator\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"ApprovalForAll\",\"type\":\"event\"}]"
+const IERC721ABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"approved\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Approval\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"ApprovalForAll\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"approve\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"balance\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"getApproved\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"isApprovedForAll\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"ownerOf\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"_approved\",\"type\":\"bool\"}],\"name\":\"setApprovalForAll\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"transferFrom\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // IERC721BinRuntime is the compiled bytecode used for adding genesis block without deploying code.
 const IERC721BinRuntime = ``
@@ -8903,7 +8313,7 @@ func (_IERC721 *IERC721Filterer) ParseTransfer(log types.Log) (*IERC721Transfer,
 }
 
 // IERC721BridgeReceiverABI is the input ABI used to generate the binding from.
-const IERC721BridgeReceiverABI = "[{\"constant\":false,\"inputs\":[{\"name\":\"_from\",\"type\":\"address\"},{\"name\":\"_tokenId\",\"type\":\"uint256\"},{\"name\":\"_to\",\"type\":\"address\"},{\"name\":\"_extraData\",\"type\":\"bytes\"}],\"name\":\"onERC721Received\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const IERC721BridgeReceiverABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_from\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_tokenId\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"_to\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"_extraData\",\"type\":\"bytes\"}],\"name\":\"onERC721Received\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // IERC721BridgeReceiverBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
 const IERC721BridgeReceiverBinRuntime = ``
@@ -9077,7 +8487,7 @@ func (_IERC721BridgeReceiver *IERC721BridgeReceiverTransactorSession) OnERC721Re
 }
 
 // IERC721EnumerableABI is the input ABI used to generate the binding from.
-const IERC721EnumerableABI = "[{\"constant\":true,\"inputs\":[{\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"getApproved\",\"outputs\":[{\"name\":\"operator\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"approve\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"totalSupply\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"transferFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"},{\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"tokenOfOwnerByIndex\",\"outputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"tokenByIndex\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"ownerOf\",\"outputs\":[{\"name\":\"owner\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"name\":\"balance\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"operator\",\"type\":\"address\"},{\"name\":\"_approved\",\"type\":\"bool\"}],\"name\":\"setApprovalForAll\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"},{\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"},{\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"isApprovedForAll\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"approved\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Approval\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"operator\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"ApprovalForAll\",\"type\":\"event\"}]"
+const IERC721EnumerableABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"approved\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Approval\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"ApprovalForAll\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"approve\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"balance\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"getApproved\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"isApprovedForAll\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"ownerOf\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"_approved\",\"type\":\"bool\"}],\"name\":\"setApprovalForAll\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"tokenByIndex\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"tokenOfOwnerByIndex\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"totalSupply\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"transferFrom\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // IERC721EnumerableBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
 const IERC721EnumerableBinRuntime = ``
@@ -9399,7 +8809,7 @@ func (_IERC721Enumerable *IERC721EnumerableCallerSession) TokenByIndex(index *bi
 
 // TokenOfOwnerByIndex is a free data retrieval call binding the contract method 0x2f745c59.
 //
-// Solidity: function tokenOfOwnerByIndex(address owner, uint256 index) view returns(uint256 tokenId)
+// Solidity: function tokenOfOwnerByIndex(address owner, uint256 index) view returns(uint256)
 func (_IERC721Enumerable *IERC721EnumerableCaller) TokenOfOwnerByIndex(opts *bind.CallOpts, owner common.Address, index *big.Int) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
@@ -9411,14 +8821,14 @@ func (_IERC721Enumerable *IERC721EnumerableCaller) TokenOfOwnerByIndex(opts *bin
 
 // TokenOfOwnerByIndex is a free data retrieval call binding the contract method 0x2f745c59.
 //
-// Solidity: function tokenOfOwnerByIndex(address owner, uint256 index) view returns(uint256 tokenId)
+// Solidity: function tokenOfOwnerByIndex(address owner, uint256 index) view returns(uint256)
 func (_IERC721Enumerable *IERC721EnumerableSession) TokenOfOwnerByIndex(owner common.Address, index *big.Int) (*big.Int, error) {
 	return _IERC721Enumerable.Contract.TokenOfOwnerByIndex(&_IERC721Enumerable.CallOpts, owner, index)
 }
 
 // TokenOfOwnerByIndex is a free data retrieval call binding the contract method 0x2f745c59.
 //
-// Solidity: function tokenOfOwnerByIndex(address owner, uint256 index) view returns(uint256 tokenId)
+// Solidity: function tokenOfOwnerByIndex(address owner, uint256 index) view returns(uint256)
 func (_IERC721Enumerable *IERC721EnumerableCallerSession) TokenOfOwnerByIndex(owner common.Address, index *big.Int) (*big.Int, error) {
 	return _IERC721Enumerable.Contract.TokenOfOwnerByIndex(&_IERC721Enumerable.CallOpts, owner, index)
 }
@@ -10030,7 +9440,7 @@ func (_IERC721Enumerable *IERC721EnumerableFilterer) ParseTransfer(log types.Log
 }
 
 // IERC721MetadataABI is the input ABI used to generate the binding from.
-const IERC721MetadataABI = "[{\"constant\":true,\"inputs\":[{\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"getApproved\",\"outputs\":[{\"name\":\"operator\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"approve\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"transferFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"ownerOf\",\"outputs\":[{\"name\":\"owner\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"name\":\"balance\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"symbol\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"operator\",\"type\":\"address\"},{\"name\":\"_approved\",\"type\":\"bool\"}],\"name\":\"setApprovalForAll\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"},{\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"tokenURI\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"},{\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"isApprovedForAll\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"approved\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Approval\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"operator\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"ApprovalForAll\",\"type\":\"event\"}]"
+const IERC721MetadataABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"approved\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Approval\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"ApprovalForAll\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"approve\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"balance\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"getApproved\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"isApprovedForAll\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"ownerOf\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"_approved\",\"type\":\"bool\"}],\"name\":\"setApprovalForAll\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"symbol\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"tokenURI\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"transferFrom\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // IERC721MetadataBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
 const IERC721MetadataBinRuntime = ``
@@ -10982,8 +10392,182 @@ func (_IERC721Metadata *IERC721MetadataFilterer) ParseTransfer(log types.Log) (*
 	return event, nil
 }
 
+// IERC721MintABI is the input ABI used to generate the binding from.
+const IERC721MintABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"tokenURI\",\"type\":\"string\"}],\"name\":\"mintWithTokenURI\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+
+// IERC721MintBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
+const IERC721MintBinRuntime = ``
+
+// IERC721MintFuncSigs maps the 4-byte function signature to its string representation.
+var IERC721MintFuncSigs = map[string]string{
+	"50bb4e7f": "mintWithTokenURI(address,uint256,string)",
+}
+
+// IERC721Mint is an auto generated Go binding around a Klaytn contract.
+type IERC721Mint struct {
+	IERC721MintCaller     // Read-only binding to the contract
+	IERC721MintTransactor // Write-only binding to the contract
+	IERC721MintFilterer   // Log filterer for contract events
+}
+
+// IERC721MintCaller is an auto generated read-only Go binding around a Klaytn contract.
+type IERC721MintCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// IERC721MintTransactor is an auto generated write-only Go binding around a Klaytn contract.
+type IERC721MintTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// IERC721MintFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+type IERC721MintFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// IERC721MintSession is an auto generated Go binding around a Klaytn contract,
+// with pre-set call and transact options.
+type IERC721MintSession struct {
+	Contract     *IERC721Mint      // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts     // Call options to use throughout this session
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+}
+
+// IERC721MintCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// with pre-set call options.
+type IERC721MintCallerSession struct {
+	Contract *IERC721MintCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts      // Call options to use throughout this session
+}
+
+// IERC721MintTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// with pre-set transact options.
+type IERC721MintTransactorSession struct {
+	Contract     *IERC721MintTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts      // Transaction auth options to use throughout this session
+}
+
+// IERC721MintRaw is an auto generated low-level Go binding around a Klaytn contract.
+type IERC721MintRaw struct {
+	Contract *IERC721Mint // Generic contract binding to access the raw methods on
+}
+
+// IERC721MintCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+type IERC721MintCallerRaw struct {
+	Contract *IERC721MintCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// IERC721MintTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+type IERC721MintTransactorRaw struct {
+	Contract *IERC721MintTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewIERC721Mint creates a new instance of IERC721Mint, bound to a specific deployed contract.
+func NewIERC721Mint(address common.Address, backend bind.ContractBackend) (*IERC721Mint, error) {
+	contract, err := bindIERC721Mint(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &IERC721Mint{IERC721MintCaller: IERC721MintCaller{contract: contract}, IERC721MintTransactor: IERC721MintTransactor{contract: contract}, IERC721MintFilterer: IERC721MintFilterer{contract: contract}}, nil
+}
+
+// NewIERC721MintCaller creates a new read-only instance of IERC721Mint, bound to a specific deployed contract.
+func NewIERC721MintCaller(address common.Address, caller bind.ContractCaller) (*IERC721MintCaller, error) {
+	contract, err := bindIERC721Mint(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &IERC721MintCaller{contract: contract}, nil
+}
+
+// NewIERC721MintTransactor creates a new write-only instance of IERC721Mint, bound to a specific deployed contract.
+func NewIERC721MintTransactor(address common.Address, transactor bind.ContractTransactor) (*IERC721MintTransactor, error) {
+	contract, err := bindIERC721Mint(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &IERC721MintTransactor{contract: contract}, nil
+}
+
+// NewIERC721MintFilterer creates a new log filterer instance of IERC721Mint, bound to a specific deployed contract.
+func NewIERC721MintFilterer(address common.Address, filterer bind.ContractFilterer) (*IERC721MintFilterer, error) {
+	contract, err := bindIERC721Mint(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &IERC721MintFilterer{contract: contract}, nil
+}
+
+// bindIERC721Mint binds a generic wrapper to an already deployed contract.
+func bindIERC721Mint(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(IERC721MintABI))
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_IERC721Mint *IERC721MintRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _IERC721Mint.Contract.IERC721MintCaller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_IERC721Mint *IERC721MintRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _IERC721Mint.Contract.IERC721MintTransactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_IERC721Mint *IERC721MintRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _IERC721Mint.Contract.IERC721MintTransactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_IERC721Mint *IERC721MintCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _IERC721Mint.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_IERC721Mint *IERC721MintTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _IERC721Mint.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_IERC721Mint *IERC721MintTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _IERC721Mint.Contract.contract.Transact(opts, method, params...)
+}
+
+// MintWithTokenURI is a paid mutator transaction binding the contract method 0x50bb4e7f.
+//
+// Solidity: function mintWithTokenURI(address to, uint256 tokenId, string tokenURI) returns()
+func (_IERC721Mint *IERC721MintTransactor) MintWithTokenURI(opts *bind.TransactOpts, to common.Address, tokenId *big.Int, tokenURI string) (*types.Transaction, error) {
+	return _IERC721Mint.contract.Transact(opts, "mintWithTokenURI", to, tokenId, tokenURI)
+}
+
+// MintWithTokenURI is a paid mutator transaction binding the contract method 0x50bb4e7f.
+//
+// Solidity: function mintWithTokenURI(address to, uint256 tokenId, string tokenURI) returns()
+func (_IERC721Mint *IERC721MintSession) MintWithTokenURI(to common.Address, tokenId *big.Int, tokenURI string) (*types.Transaction, error) {
+	return _IERC721Mint.Contract.MintWithTokenURI(&_IERC721Mint.TransactOpts, to, tokenId, tokenURI)
+}
+
+// MintWithTokenURI is a paid mutator transaction binding the contract method 0x50bb4e7f.
+//
+// Solidity: function mintWithTokenURI(address to, uint256 tokenId, string tokenURI) returns()
+func (_IERC721Mint *IERC721MintTransactorSession) MintWithTokenURI(to common.Address, tokenId *big.Int, tokenURI string) (*types.Transaction, error) {
+	return _IERC721Mint.Contract.MintWithTokenURI(&_IERC721Mint.TransactOpts, to, tokenId, tokenURI)
+}
+
 // IERC721ReceiverABI is the input ABI used to generate the binding from.
-const IERC721ReceiverABI = "[{\"constant\":false,\"inputs\":[{\"name\":\"operator\",\"type\":\"address\"},{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"},{\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"onERC721Received\",\"outputs\":[{\"name\":\"\",\"type\":\"bytes4\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const IERC721ReceiverABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"onERC721Received\",\"outputs\":[{\"internalType\":\"bytes4\",\"name\":\"\",\"type\":\"bytes4\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // IERC721ReceiverBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
 const IERC721ReceiverBinRuntime = ``
@@ -11156,524 +10740,14 @@ func (_IERC721Receiver *IERC721ReceiverTransactorSession) OnERC721Received(opera
 	return _IERC721Receiver.Contract.OnERC721Received(&_IERC721Receiver.TransactOpts, operator, from, tokenId, data)
 }
 
-// MinterRoleABI is the input ABI used to generate the binding from.
-const MinterRoleABI = "[{\"constant\":false,\"inputs\":[{\"name\":\"account\",\"type\":\"address\"}],\"name\":\"addMinter\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"renounceMinter\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"account\",\"type\":\"address\"}],\"name\":\"isMinter\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"account\",\"type\":\"address\"}],\"name\":\"MinterAdded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"account\",\"type\":\"address\"}],\"name\":\"MinterRemoved\",\"type\":\"event\"}]"
-
-// MinterRoleBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
-const MinterRoleBinRuntime = ``
-
-// MinterRoleFuncSigs maps the 4-byte function signature to its string representation.
-var MinterRoleFuncSigs = map[string]string{
-	"983b2d56": "addMinter(address)",
-	"aa271e1a": "isMinter(address)",
-	"98650275": "renounceMinter()",
-}
-
-// MinterRole is an auto generated Go binding around a Klaytn contract.
-type MinterRole struct {
-	MinterRoleCaller     // Read-only binding to the contract
-	MinterRoleTransactor // Write-only binding to the contract
-	MinterRoleFilterer   // Log filterer for contract events
-}
-
-// MinterRoleCaller is an auto generated read-only Go binding around a Klaytn contract.
-type MinterRoleCaller struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// MinterRoleTransactor is an auto generated write-only Go binding around a Klaytn contract.
-type MinterRoleTransactor struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// MinterRoleFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
-type MinterRoleFilterer struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// MinterRoleSession is an auto generated Go binding around a Klaytn contract,
-// with pre-set call and transact options.
-type MinterRoleSession struct {
-	Contract     *MinterRole       // Generic contract binding to set the session for
-	CallOpts     bind.CallOpts     // Call options to use throughout this session
-	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
-}
-
-// MinterRoleCallerSession is an auto generated read-only Go binding around a Klaytn contract,
-// with pre-set call options.
-type MinterRoleCallerSession struct {
-	Contract *MinterRoleCaller // Generic contract caller binding to set the session for
-	CallOpts bind.CallOpts     // Call options to use throughout this session
-}
-
-// MinterRoleTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
-// with pre-set transact options.
-type MinterRoleTransactorSession struct {
-	Contract     *MinterRoleTransactor // Generic contract transactor binding to set the session for
-	TransactOpts bind.TransactOpts     // Transaction auth options to use throughout this session
-}
-
-// MinterRoleRaw is an auto generated low-level Go binding around a Klaytn contract.
-type MinterRoleRaw struct {
-	Contract *MinterRole // Generic contract binding to access the raw methods on
-}
-
-// MinterRoleCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
-type MinterRoleCallerRaw struct {
-	Contract *MinterRoleCaller // Generic read-only contract binding to access the raw methods on
-}
-
-// MinterRoleTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
-type MinterRoleTransactorRaw struct {
-	Contract *MinterRoleTransactor // Generic write-only contract binding to access the raw methods on
-}
-
-// NewMinterRole creates a new instance of MinterRole, bound to a specific deployed contract.
-func NewMinterRole(address common.Address, backend bind.ContractBackend) (*MinterRole, error) {
-	contract, err := bindMinterRole(address, backend, backend, backend)
-	if err != nil {
-		return nil, err
-	}
-	return &MinterRole{MinterRoleCaller: MinterRoleCaller{contract: contract}, MinterRoleTransactor: MinterRoleTransactor{contract: contract}, MinterRoleFilterer: MinterRoleFilterer{contract: contract}}, nil
-}
-
-// NewMinterRoleCaller creates a new read-only instance of MinterRole, bound to a specific deployed contract.
-func NewMinterRoleCaller(address common.Address, caller bind.ContractCaller) (*MinterRoleCaller, error) {
-	contract, err := bindMinterRole(address, caller, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-	return &MinterRoleCaller{contract: contract}, nil
-}
-
-// NewMinterRoleTransactor creates a new write-only instance of MinterRole, bound to a specific deployed contract.
-func NewMinterRoleTransactor(address common.Address, transactor bind.ContractTransactor) (*MinterRoleTransactor, error) {
-	contract, err := bindMinterRole(address, nil, transactor, nil)
-	if err != nil {
-		return nil, err
-	}
-	return &MinterRoleTransactor{contract: contract}, nil
-}
-
-// NewMinterRoleFilterer creates a new log filterer instance of MinterRole, bound to a specific deployed contract.
-func NewMinterRoleFilterer(address common.Address, filterer bind.ContractFilterer) (*MinterRoleFilterer, error) {
-	contract, err := bindMinterRole(address, nil, nil, filterer)
-	if err != nil {
-		return nil, err
-	}
-	return &MinterRoleFilterer{contract: contract}, nil
-}
-
-// bindMinterRole binds a generic wrapper to an already deployed contract.
-func bindMinterRole(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
-	parsed, err := abi.JSON(strings.NewReader(MinterRoleABI))
-	if err != nil {
-		return nil, err
-	}
-	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
-}
-
-// Call invokes the (constant) contract method with params as input values and
-// sets the output to result. The result type might be a single field for simple
-// returns, a slice of interfaces for anonymous returns and a struct for named
-// returns.
-func (_MinterRole *MinterRoleRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
-	return _MinterRole.Contract.MinterRoleCaller.contract.Call(opts, result, method, params...)
-}
-
-// Transfer initiates a plain transaction to move funds to the contract, calling
-// its default method if one is available.
-func (_MinterRole *MinterRoleRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _MinterRole.Contract.MinterRoleTransactor.contract.Transfer(opts)
-}
-
-// Transact invokes the (paid) contract method with params as input values.
-func (_MinterRole *MinterRoleRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _MinterRole.Contract.MinterRoleTransactor.contract.Transact(opts, method, params...)
-}
-
-// Call invokes the (constant) contract method with params as input values and
-// sets the output to result. The result type might be a single field for simple
-// returns, a slice of interfaces for anonymous returns and a struct for named
-// returns.
-func (_MinterRole *MinterRoleCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
-	return _MinterRole.Contract.contract.Call(opts, result, method, params...)
-}
-
-// Transfer initiates a plain transaction to move funds to the contract, calling
-// its default method if one is available.
-func (_MinterRole *MinterRoleTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _MinterRole.Contract.contract.Transfer(opts)
-}
-
-// Transact invokes the (paid) contract method with params as input values.
-func (_MinterRole *MinterRoleTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _MinterRole.Contract.contract.Transact(opts, method, params...)
-}
-
-// IsMinter is a free data retrieval call binding the contract method 0xaa271e1a.
-//
-// Solidity: function isMinter(address account) view returns(bool)
-func (_MinterRole *MinterRoleCaller) IsMinter(opts *bind.CallOpts, account common.Address) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
-	out := ret0
-	err := _MinterRole.contract.Call(opts, out, "isMinter", account)
-	return *ret0, err
-}
-
-// IsMinter is a free data retrieval call binding the contract method 0xaa271e1a.
-//
-// Solidity: function isMinter(address account) view returns(bool)
-func (_MinterRole *MinterRoleSession) IsMinter(account common.Address) (bool, error) {
-	return _MinterRole.Contract.IsMinter(&_MinterRole.CallOpts, account)
-}
-
-// IsMinter is a free data retrieval call binding the contract method 0xaa271e1a.
-//
-// Solidity: function isMinter(address account) view returns(bool)
-func (_MinterRole *MinterRoleCallerSession) IsMinter(account common.Address) (bool, error) {
-	return _MinterRole.Contract.IsMinter(&_MinterRole.CallOpts, account)
-}
-
-// AddMinter is a paid mutator transaction binding the contract method 0x983b2d56.
-//
-// Solidity: function addMinter(address account) returns()
-func (_MinterRole *MinterRoleTransactor) AddMinter(opts *bind.TransactOpts, account common.Address) (*types.Transaction, error) {
-	return _MinterRole.contract.Transact(opts, "addMinter", account)
-}
-
-// AddMinter is a paid mutator transaction binding the contract method 0x983b2d56.
-//
-// Solidity: function addMinter(address account) returns()
-func (_MinterRole *MinterRoleSession) AddMinter(account common.Address) (*types.Transaction, error) {
-	return _MinterRole.Contract.AddMinter(&_MinterRole.TransactOpts, account)
-}
-
-// AddMinter is a paid mutator transaction binding the contract method 0x983b2d56.
-//
-// Solidity: function addMinter(address account) returns()
-func (_MinterRole *MinterRoleTransactorSession) AddMinter(account common.Address) (*types.Transaction, error) {
-	return _MinterRole.Contract.AddMinter(&_MinterRole.TransactOpts, account)
-}
-
-// RenounceMinter is a paid mutator transaction binding the contract method 0x98650275.
-//
-// Solidity: function renounceMinter() returns()
-func (_MinterRole *MinterRoleTransactor) RenounceMinter(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _MinterRole.contract.Transact(opts, "renounceMinter")
-}
-
-// RenounceMinter is a paid mutator transaction binding the contract method 0x98650275.
-//
-// Solidity: function renounceMinter() returns()
-func (_MinterRole *MinterRoleSession) RenounceMinter() (*types.Transaction, error) {
-	return _MinterRole.Contract.RenounceMinter(&_MinterRole.TransactOpts)
-}
-
-// RenounceMinter is a paid mutator transaction binding the contract method 0x98650275.
-//
-// Solidity: function renounceMinter() returns()
-func (_MinterRole *MinterRoleTransactorSession) RenounceMinter() (*types.Transaction, error) {
-	return _MinterRole.Contract.RenounceMinter(&_MinterRole.TransactOpts)
-}
-
-// MinterRoleMinterAddedIterator is returned from FilterMinterAdded and is used to iterate over the raw logs and unpacked data for MinterAdded events raised by the MinterRole contract.
-type MinterRoleMinterAddedIterator struct {
-	Event *MinterRoleMinterAdded // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *MinterRoleMinterAddedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(MinterRoleMinterAdded)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(MinterRoleMinterAdded)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *MinterRoleMinterAddedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *MinterRoleMinterAddedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// MinterRoleMinterAdded represents a MinterAdded event raised by the MinterRole contract.
-type MinterRoleMinterAdded struct {
-	Account common.Address
-	Raw     types.Log // Blockchain specific contextual infos
-}
-
-// FilterMinterAdded is a free log retrieval operation binding the contract event 0x6ae172837ea30b801fbfcdd4108aa1d5bf8ff775444fd70256b44e6bf3dfc3f6.
-//
-// Solidity: event MinterAdded(address indexed account)
-func (_MinterRole *MinterRoleFilterer) FilterMinterAdded(opts *bind.FilterOpts, account []common.Address) (*MinterRoleMinterAddedIterator, error) {
-
-	var accountRule []interface{}
-	for _, accountItem := range account {
-		accountRule = append(accountRule, accountItem)
-	}
-
-	logs, sub, err := _MinterRole.contract.FilterLogs(opts, "MinterAdded", accountRule)
-	if err != nil {
-		return nil, err
-	}
-	return &MinterRoleMinterAddedIterator{contract: _MinterRole.contract, event: "MinterAdded", logs: logs, sub: sub}, nil
-}
-
-// WatchMinterAdded is a free log subscription operation binding the contract event 0x6ae172837ea30b801fbfcdd4108aa1d5bf8ff775444fd70256b44e6bf3dfc3f6.
-//
-// Solidity: event MinterAdded(address indexed account)
-func (_MinterRole *MinterRoleFilterer) WatchMinterAdded(opts *bind.WatchOpts, sink chan<- *MinterRoleMinterAdded, account []common.Address) (event.Subscription, error) {
-
-	var accountRule []interface{}
-	for _, accountItem := range account {
-		accountRule = append(accountRule, accountItem)
-	}
-
-	logs, sub, err := _MinterRole.contract.WatchLogs(opts, "MinterAdded", accountRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(MinterRoleMinterAdded)
-				if err := _MinterRole.contract.UnpackLog(event, "MinterAdded", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseMinterAdded is a log parse operation binding the contract event 0x6ae172837ea30b801fbfcdd4108aa1d5bf8ff775444fd70256b44e6bf3dfc3f6.
-//
-// Solidity: event MinterAdded(address indexed account)
-func (_MinterRole *MinterRoleFilterer) ParseMinterAdded(log types.Log) (*MinterRoleMinterAdded, error) {
-	event := new(MinterRoleMinterAdded)
-	if err := _MinterRole.contract.UnpackLog(event, "MinterAdded", log); err != nil {
-		return nil, err
-	}
-	return event, nil
-}
-
-// MinterRoleMinterRemovedIterator is returned from FilterMinterRemoved and is used to iterate over the raw logs and unpacked data for MinterRemoved events raised by the MinterRole contract.
-type MinterRoleMinterRemovedIterator struct {
-	Event *MinterRoleMinterRemoved // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *MinterRoleMinterRemovedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(MinterRoleMinterRemoved)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(MinterRoleMinterRemoved)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *MinterRoleMinterRemovedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *MinterRoleMinterRemovedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// MinterRoleMinterRemoved represents a MinterRemoved event raised by the MinterRole contract.
-type MinterRoleMinterRemoved struct {
-	Account common.Address
-	Raw     types.Log // Blockchain specific contextual infos
-}
-
-// FilterMinterRemoved is a free log retrieval operation binding the contract event 0xe94479a9f7e1952cc78f2d6baab678adc1b772d936c6583def489e524cb66692.
-//
-// Solidity: event MinterRemoved(address indexed account)
-func (_MinterRole *MinterRoleFilterer) FilterMinterRemoved(opts *bind.FilterOpts, account []common.Address) (*MinterRoleMinterRemovedIterator, error) {
-
-	var accountRule []interface{}
-	for _, accountItem := range account {
-		accountRule = append(accountRule, accountItem)
-	}
-
-	logs, sub, err := _MinterRole.contract.FilterLogs(opts, "MinterRemoved", accountRule)
-	if err != nil {
-		return nil, err
-	}
-	return &MinterRoleMinterRemovedIterator{contract: _MinterRole.contract, event: "MinterRemoved", logs: logs, sub: sub}, nil
-}
-
-// WatchMinterRemoved is a free log subscription operation binding the contract event 0xe94479a9f7e1952cc78f2d6baab678adc1b772d936c6583def489e524cb66692.
-//
-// Solidity: event MinterRemoved(address indexed account)
-func (_MinterRole *MinterRoleFilterer) WatchMinterRemoved(opts *bind.WatchOpts, sink chan<- *MinterRoleMinterRemoved, account []common.Address) (event.Subscription, error) {
-
-	var accountRule []interface{}
-	for _, accountItem := range account {
-		accountRule = append(accountRule, accountItem)
-	}
-
-	logs, sub, err := _MinterRole.contract.WatchLogs(opts, "MinterRemoved", accountRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(MinterRoleMinterRemoved)
-				if err := _MinterRole.contract.UnpackLog(event, "MinterRemoved", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseMinterRemoved is a log parse operation binding the contract event 0xe94479a9f7e1952cc78f2d6baab678adc1b772d936c6583def489e524cb66692.
-//
-// Solidity: event MinterRemoved(address indexed account)
-func (_MinterRole *MinterRoleFilterer) ParseMinterRemoved(log types.Log) (*MinterRoleMinterRemoved, error) {
-	event := new(MinterRoleMinterRemoved)
-	if err := _MinterRole.contract.UnpackLog(event, "MinterRemoved", log); err != nil {
-		return nil, err
-	}
-	return event, nil
-}
-
 // OwnableABI is the input ABI used to generate the binding from.
-const OwnableABI = "[{\"constant\":false,\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"isOwner\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"}]"
+const OwnableABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // OwnableBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
 const OwnableBinRuntime = ``
 
 // OwnableFuncSigs maps the 4-byte function signature to its string representation.
 var OwnableFuncSigs = map[string]string{
-	"8f32d59b": "isOwner()",
 	"8da5cb5b": "owner()",
 	"715018a6": "renounceOwnership()",
 	"f2fde38b": "transferOwnership(address)",
@@ -11819,32 +10893,6 @@ func (_Ownable *OwnableTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.
 // Transact invokes the (paid) contract method with params as input values.
 func (_Ownable *OwnableTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
 	return _Ownable.Contract.contract.Transact(opts, method, params...)
-}
-
-// IsOwner is a free data retrieval call binding the contract method 0x8f32d59b.
-//
-// Solidity: function isOwner() view returns(bool)
-func (_Ownable *OwnableCaller) IsOwner(opts *bind.CallOpts) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
-	out := ret0
-	err := _Ownable.contract.Call(opts, out, "isOwner")
-	return *ret0, err
-}
-
-// IsOwner is a free data retrieval call binding the contract method 0x8f32d59b.
-//
-// Solidity: function isOwner() view returns(bool)
-func (_Ownable *OwnableSession) IsOwner() (bool, error) {
-	return _Ownable.Contract.IsOwner(&_Ownable.CallOpts)
-}
-
-// IsOwner is a free data retrieval call binding the contract method 0x8f32d59b.
-//
-// Solidity: function isOwner() view returns(bool)
-func (_Ownable *OwnableCallerSession) IsOwner() (bool, error) {
-	return _Ownable.Contract.IsOwner(&_Ownable.CallOpts)
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -12067,361 +11115,36 @@ func (_Ownable *OwnableFilterer) ParseOwnershipTransferred(log types.Log) (*Owna
 	return event, nil
 }
 
-// RolesABI is the input ABI used to generate the binding from.
-const RolesABI = "[]"
-
-// RolesBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
-const RolesBinRuntime = `73000000000000000000000000000000000000000030146080604052600080fdfea165627a7a7230582026429ed555f83236ac076363d644804ff5b0baa4e098f1d4ef783a49049f7df70029`
-
-// RolesBin is the compiled bytecode used for deploying new contracts.
-var RolesBin = "0x604c6023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea165627a7a7230582026429ed555f83236ac076363d644804ff5b0baa4e098f1d4ef783a49049f7df70029"
-
-// DeployRoles deploys a new Klaytn contract, binding an instance of Roles to it.
-func DeployRoles(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Roles, error) {
-	parsed, err := abi.JSON(strings.NewReader(RolesABI))
-	if err != nil {
-		return common.Address{}, nil, nil, err
-	}
-
-	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(RolesBin), backend)
-	if err != nil {
-		return common.Address{}, nil, nil, err
-	}
-	return address, tx, &Roles{RolesCaller: RolesCaller{contract: contract}, RolesTransactor: RolesTransactor{contract: contract}, RolesFilterer: RolesFilterer{contract: contract}}, nil
-}
-
-// Roles is an auto generated Go binding around a Klaytn contract.
-type Roles struct {
-	RolesCaller     // Read-only binding to the contract
-	RolesTransactor // Write-only binding to the contract
-	RolesFilterer   // Log filterer for contract events
-}
-
-// RolesCaller is an auto generated read-only Go binding around a Klaytn contract.
-type RolesCaller struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// RolesTransactor is an auto generated write-only Go binding around a Klaytn contract.
-type RolesTransactor struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// RolesFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
-type RolesFilterer struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// RolesSession is an auto generated Go binding around a Klaytn contract,
-// with pre-set call and transact options.
-type RolesSession struct {
-	Contract     *Roles            // Generic contract binding to set the session for
-	CallOpts     bind.CallOpts     // Call options to use throughout this session
-	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
-}
-
-// RolesCallerSession is an auto generated read-only Go binding around a Klaytn contract,
-// with pre-set call options.
-type RolesCallerSession struct {
-	Contract *RolesCaller  // Generic contract caller binding to set the session for
-	CallOpts bind.CallOpts // Call options to use throughout this session
-}
-
-// RolesTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
-// with pre-set transact options.
-type RolesTransactorSession struct {
-	Contract     *RolesTransactor  // Generic contract transactor binding to set the session for
-	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
-}
-
-// RolesRaw is an auto generated low-level Go binding around a Klaytn contract.
-type RolesRaw struct {
-	Contract *Roles // Generic contract binding to access the raw methods on
-}
-
-// RolesCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
-type RolesCallerRaw struct {
-	Contract *RolesCaller // Generic read-only contract binding to access the raw methods on
-}
-
-// RolesTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
-type RolesTransactorRaw struct {
-	Contract *RolesTransactor // Generic write-only contract binding to access the raw methods on
-}
-
-// NewRoles creates a new instance of Roles, bound to a specific deployed contract.
-func NewRoles(address common.Address, backend bind.ContractBackend) (*Roles, error) {
-	contract, err := bindRoles(address, backend, backend, backend)
-	if err != nil {
-		return nil, err
-	}
-	return &Roles{RolesCaller: RolesCaller{contract: contract}, RolesTransactor: RolesTransactor{contract: contract}, RolesFilterer: RolesFilterer{contract: contract}}, nil
-}
-
-// NewRolesCaller creates a new read-only instance of Roles, bound to a specific deployed contract.
-func NewRolesCaller(address common.Address, caller bind.ContractCaller) (*RolesCaller, error) {
-	contract, err := bindRoles(address, caller, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-	return &RolesCaller{contract: contract}, nil
-}
-
-// NewRolesTransactor creates a new write-only instance of Roles, bound to a specific deployed contract.
-func NewRolesTransactor(address common.Address, transactor bind.ContractTransactor) (*RolesTransactor, error) {
-	contract, err := bindRoles(address, nil, transactor, nil)
-	if err != nil {
-		return nil, err
-	}
-	return &RolesTransactor{contract: contract}, nil
-}
-
-// NewRolesFilterer creates a new log filterer instance of Roles, bound to a specific deployed contract.
-func NewRolesFilterer(address common.Address, filterer bind.ContractFilterer) (*RolesFilterer, error) {
-	contract, err := bindRoles(address, nil, nil, filterer)
-	if err != nil {
-		return nil, err
-	}
-	return &RolesFilterer{contract: contract}, nil
-}
-
-// bindRoles binds a generic wrapper to an already deployed contract.
-func bindRoles(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
-	parsed, err := abi.JSON(strings.NewReader(RolesABI))
-	if err != nil {
-		return nil, err
-	}
-	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
-}
-
-// Call invokes the (constant) contract method with params as input values and
-// sets the output to result. The result type might be a single field for simple
-// returns, a slice of interfaces for anonymous returns and a struct for named
-// returns.
-func (_Roles *RolesRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
-	return _Roles.Contract.RolesCaller.contract.Call(opts, result, method, params...)
-}
-
-// Transfer initiates a plain transaction to move funds to the contract, calling
-// its default method if one is available.
-func (_Roles *RolesRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _Roles.Contract.RolesTransactor.contract.Transfer(opts)
-}
-
-// Transact invokes the (paid) contract method with params as input values.
-func (_Roles *RolesRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _Roles.Contract.RolesTransactor.contract.Transact(opts, method, params...)
-}
-
-// Call invokes the (constant) contract method with params as input values and
-// sets the output to result. The result type might be a single field for simple
-// returns, a slice of interfaces for anonymous returns and a struct for named
-// returns.
-func (_Roles *RolesCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
-	return _Roles.Contract.contract.Call(opts, result, method, params...)
-}
-
-// Transfer initiates a plain transaction to move funds to the contract, calling
-// its default method if one is available.
-func (_Roles *RolesTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _Roles.Contract.contract.Transfer(opts)
-}
-
-// Transact invokes the (paid) contract method with params as input values.
-func (_Roles *RolesTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _Roles.Contract.contract.Transact(opts, method, params...)
-}
-
-// SafeMathABI is the input ABI used to generate the binding from.
-const SafeMathABI = "[]"
-
-// SafeMathBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
-const SafeMathBinRuntime = `73000000000000000000000000000000000000000030146080604052600080fdfea165627a7a723058201aa360e6241ae1bc829140fb38ae5ca1672181b2a5c529c4ca3a045ed2896feb0029`
-
-// SafeMathBin is the compiled bytecode used for deploying new contracts.
-var SafeMathBin = "0x604c6023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea165627a7a723058201aa360e6241ae1bc829140fb38ae5ca1672181b2a5c529c4ca3a045ed2896feb0029"
-
-// DeploySafeMath deploys a new Klaytn contract, binding an instance of SafeMath to it.
-func DeploySafeMath(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *SafeMath, error) {
-	parsed, err := abi.JSON(strings.NewReader(SafeMathABI))
-	if err != nil {
-		return common.Address{}, nil, nil, err
-	}
-
-	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(SafeMathBin), backend)
-	if err != nil {
-		return common.Address{}, nil, nil, err
-	}
-	return address, tx, &SafeMath{SafeMathCaller: SafeMathCaller{contract: contract}, SafeMathTransactor: SafeMathTransactor{contract: contract}, SafeMathFilterer: SafeMathFilterer{contract: contract}}, nil
-}
-
-// SafeMath is an auto generated Go binding around a Klaytn contract.
-type SafeMath struct {
-	SafeMathCaller     // Read-only binding to the contract
-	SafeMathTransactor // Write-only binding to the contract
-	SafeMathFilterer   // Log filterer for contract events
-}
-
-// SafeMathCaller is an auto generated read-only Go binding around a Klaytn contract.
-type SafeMathCaller struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// SafeMathTransactor is an auto generated write-only Go binding around a Klaytn contract.
-type SafeMathTransactor struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// SafeMathFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
-type SafeMathFilterer struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// SafeMathSession is an auto generated Go binding around a Klaytn contract,
-// with pre-set call and transact options.
-type SafeMathSession struct {
-	Contract     *SafeMath         // Generic contract binding to set the session for
-	CallOpts     bind.CallOpts     // Call options to use throughout this session
-	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
-}
-
-// SafeMathCallerSession is an auto generated read-only Go binding around a Klaytn contract,
-// with pre-set call options.
-type SafeMathCallerSession struct {
-	Contract *SafeMathCaller // Generic contract caller binding to set the session for
-	CallOpts bind.CallOpts   // Call options to use throughout this session
-}
-
-// SafeMathTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
-// with pre-set transact options.
-type SafeMathTransactorSession struct {
-	Contract     *SafeMathTransactor // Generic contract transactor binding to set the session for
-	TransactOpts bind.TransactOpts   // Transaction auth options to use throughout this session
-}
-
-// SafeMathRaw is an auto generated low-level Go binding around a Klaytn contract.
-type SafeMathRaw struct {
-	Contract *SafeMath // Generic contract binding to access the raw methods on
-}
-
-// SafeMathCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
-type SafeMathCallerRaw struct {
-	Contract *SafeMathCaller // Generic read-only contract binding to access the raw methods on
-}
-
-// SafeMathTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
-type SafeMathTransactorRaw struct {
-	Contract *SafeMathTransactor // Generic write-only contract binding to access the raw methods on
-}
-
-// NewSafeMath creates a new instance of SafeMath, bound to a specific deployed contract.
-func NewSafeMath(address common.Address, backend bind.ContractBackend) (*SafeMath, error) {
-	contract, err := bindSafeMath(address, backend, backend, backend)
-	if err != nil {
-		return nil, err
-	}
-	return &SafeMath{SafeMathCaller: SafeMathCaller{contract: contract}, SafeMathTransactor: SafeMathTransactor{contract: contract}, SafeMathFilterer: SafeMathFilterer{contract: contract}}, nil
-}
-
-// NewSafeMathCaller creates a new read-only instance of SafeMath, bound to a specific deployed contract.
-func NewSafeMathCaller(address common.Address, caller bind.ContractCaller) (*SafeMathCaller, error) {
-	contract, err := bindSafeMath(address, caller, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-	return &SafeMathCaller{contract: contract}, nil
-}
-
-// NewSafeMathTransactor creates a new write-only instance of SafeMath, bound to a specific deployed contract.
-func NewSafeMathTransactor(address common.Address, transactor bind.ContractTransactor) (*SafeMathTransactor, error) {
-	contract, err := bindSafeMath(address, nil, transactor, nil)
-	if err != nil {
-		return nil, err
-	}
-	return &SafeMathTransactor{contract: contract}, nil
-}
-
-// NewSafeMathFilterer creates a new log filterer instance of SafeMath, bound to a specific deployed contract.
-func NewSafeMathFilterer(address common.Address, filterer bind.ContractFilterer) (*SafeMathFilterer, error) {
-	contract, err := bindSafeMath(address, nil, nil, filterer)
-	if err != nil {
-		return nil, err
-	}
-	return &SafeMathFilterer{contract: contract}, nil
-}
-
-// bindSafeMath binds a generic wrapper to an already deployed contract.
-func bindSafeMath(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
-	parsed, err := abi.JSON(strings.NewReader(SafeMathABI))
-	if err != nil {
-		return nil, err
-	}
-	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
-}
-
-// Call invokes the (constant) contract method with params as input values and
-// sets the output to result. The result type might be a single field for simple
-// returns, a slice of interfaces for anonymous returns and a struct for named
-// returns.
-func (_SafeMath *SafeMathRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
-	return _SafeMath.Contract.SafeMathCaller.contract.Call(opts, result, method, params...)
-}
-
-// Transfer initiates a plain transaction to move funds to the contract, calling
-// its default method if one is available.
-func (_SafeMath *SafeMathRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _SafeMath.Contract.SafeMathTransactor.contract.Transfer(opts)
-}
-
-// Transact invokes the (paid) contract method with params as input values.
-func (_SafeMath *SafeMathRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _SafeMath.Contract.SafeMathTransactor.contract.Transact(opts, method, params...)
-}
-
-// Call invokes the (constant) contract method with params as input values and
-// sets the output to result. The result type might be a single field for simple
-// returns, a slice of interfaces for anonymous returns and a struct for named
-// returns.
-func (_SafeMath *SafeMathCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
-	return _SafeMath.Contract.contract.Call(opts, result, method, params...)
-}
-
-// Transfer initiates a plain transaction to move funds to the contract, calling
-// its default method if one is available.
-func (_SafeMath *SafeMathTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _SafeMath.Contract.contract.Transfer(opts)
-}
-
-// Transact invokes the (paid) contract method with params as input values.
-func (_SafeMath *SafeMathTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _SafeMath.Contract.contract.Transact(opts, method, params...)
-}
-
 // ServiceChainNFTABI is the input ABI used to generate the binding from.
-const ServiceChainNFTABI = "[{\"constant\":true,\"inputs\":[{\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"getApproved\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"approve\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"totalSupply\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"transferFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"},{\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"tokenOfOwnerByIndex\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_uid\",\"type\":\"uint256\"},{\"name\":\"_to\",\"type\":\"address\"},{\"name\":\"_extraData\",\"type\":\"bytes\"}],\"name\":\"requestValueTransfer\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"burn\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"tokenByIndex\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"},{\"name\":\"tokenURI\",\"type\":\"string\"}],\"name\":\"mintWithTokenURI\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"ownerOf\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_user\",\"type\":\"address\"},{\"name\":\"_startID\",\"type\":\"uint256\"},{\"name\":\"_endID\",\"type\":\"uint256\"}],\"name\":\"registerBulk\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_bridge\",\"type\":\"address\"}],\"name\":\"setBridge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"isOwner\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"symbol\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"account\",\"type\":\"address\"}],\"name\":\"addMinter\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"renounceMinter\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"setApprovalForAll\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"account\",\"type\":\"address\"}],\"name\":\"isMinter\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"},{\"name\":\"_data\",\"type\":\"bytes\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"tokenURI\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"bridge\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"},{\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"isApprovedForAll\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"name\":\"_bridge\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"account\",\"type\":\"address\"}],\"name\":\"MinterAdded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"account\",\"type\":\"address\"}],\"name\":\"MinterRemoved\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"approved\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Approval\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"operator\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"ApprovalForAll\",\"type\":\"event\"}]"
+const ServiceChainNFTABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_bridge\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"approved\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Approval\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"ApprovalForAll\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"previousAdminRole\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"newAdminRole\",\"type\":\"bytes32\"}],\"name\":\"RoleAdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleGranted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleRevoked\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"DEFAULT_ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MINTER_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"NAME\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"SYMBOL\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"approve\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"bridge\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"burn\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"getApproved\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"}],\"name\":\"getRoleAdmin\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"grantRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"hasRole\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"isApprovedForAll\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"_tokenURI\",\"type\":\"string\"}],\"name\":\"mintWithTokenURI\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"ownerOf\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_user\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_startID\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_endID\",\"type\":\"uint256\"}],\"name\":\"registerBulk\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"renounceRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_uid\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"_to\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"_extraData\",\"type\":\"bytes\"}],\"name\":\"requestValueTransfer\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"revokeRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"setApprovalForAll\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_bridge\",\"type\":\"address\"}],\"name\":\"setBridge\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"symbol\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"tokenByIndex\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"tokenOfOwnerByIndex\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"tokenURI\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"totalSupply\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"transferFrom\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // ServiceChainNFTBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
-const ServiceChainNFTBinRuntime = `608060405234801561001057600080fd5b50600436106101cf5760003560e01c8063715018a61161010457806398650275116100a2578063c87b56dd11610071578063c87b56dd14610722578063e78cea921461073f578063e985e9c514610747578063f2fde38b14610775576101cf565b80639865027514610600578063a22cb46514610608578063aa271e1a14610636578063b88d4fde1461065c576101cf565b80638dd14802116100de5780638dd14802146105a45780638f32d59b146105ca57806395d89b41146105d2578063983b2d56146105da576101cf565b8063715018a6146105625780637a9adac61461056a5780638da5cb5b1461059c576101cf565b80633f4c4e3d116101715780634f6ccce71161014b5780634f6ccce71461044757806350bb4e7f146104645780636352211e1461051f57806370a082311461053c576101cf565b80633f4c4e3d1461036f57806342842e0e146103f457806342966c681461042a576101cf565b8063095ea7b3116101ad578063095ea7b3146102c557806318160ddd146102f357806323b872dd1461030d5780632f745c5914610343576101cf565b806301ffc9a7146101d457806306fdde031461020f578063081812fc1461028c575b600080fd5b6101fb600480360360208110156101ea57600080fd5b50356001600160e01b03191661079b565b604080519115158252519081900360200190f35b6102176107ba565b6040805160208082528351818301528351919283929083019185019080838360005b83811015610251578181015183820152602001610239565b50505050905090810190601f16801561027e5780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b6102a9600480360360208110156102a257600080fd5b5035610851565b604080516001600160a01b039092168252519081900360200190f35b6102f1600480360360408110156102db57600080fd5b506001600160a01b0381351690602001356108b6565b005b6102fb6109cd565b60408051918252519081900360200190f35b6102f16004803603606081101561032357600080fd5b506001600160a01b038135811691602081013590911690604001356109d3565b6102fb6004803603604081101561035957600080fd5b506001600160a01b038135169060200135610a2b565b6102f16004803603606081101561038557600080fd5b8135916001600160a01b03602082013516918101906060810160408201356401000000008111156103b557600080fd5b8201836020820111156103c757600080fd5b803590602001918460018302840111640100000000831117156103e957600080fd5b509092509050610aad565b6102f16004803603606081101561040a57600080fd5b506001600160a01b03813581169160208101359091169060400135610b7a565b6102f16004803603602081101561044057600080fd5b5035610b95565b6102fb6004803603602081101561045d57600080fd5b5035610be9565b6101fb6004803603606081101561047a57600080fd5b6001600160a01b03823516916020810135918101906060810160408201356401000000008111156104aa57600080fd5b8201836020820111156104bc57600080fd5b803590602001918460018302840111640100000000831117156104de57600080fd5b91908080601f016020809104026020016040519081016040528093929190818152602001838380828437600092019190915250929550610c52945050505050565b6102a96004803603602081101561053557600080fd5b5035610cb9565b6102fb6004803603602081101561055257600080fd5b50356001600160a01b0316610d16565b6102f1610d81565b6102f16004803603606081101561058057600080fd5b506001600160a01b038135169060208101359060400135610e15565b6102a9610ea5565b6102f1600480360360208110156105ba57600080fd5b50356001600160a01b0316610eb4565b6101fb610f86565b610217610f97565b6102f1600480360360208110156105f057600080fd5b50356001600160a01b0316610ff8565b6102f1611048565b6102f16004803603604081101561061e57600080fd5b506001600160a01b0381351690602001351515611053565b6101fb6004803603602081101561064c57600080fd5b50356001600160a01b0316611122565b6102f16004803603608081101561067257600080fd5b6001600160a01b038235811692602081013590911691604082013591908101906080810160608201356401000000008111156106ad57600080fd5b8201836020820111156106bf57600080fd5b803590602001918460018302840111640100000000831117156106e157600080fd5b91908080601f016020809104026020016040519081016040528093929190818152602001838380828437600092019190915250929550611135945050505050565b6102176004803603602081101561073857600080fd5b503561118a565b6102a9611272565b6101fb6004803603604081101561075d57600080fd5b506001600160a01b0381358116916020013516611281565b6102f16004803603602081101561078b57600080fd5b50356001600160a01b03166112af565b6001600160e01b03191660009081526020819052604090205460ff1690565b60098054604080516020601f60026000196101006001881615020190951694909404938401819004810282018101909252828152606093909290918301828280156108465780601f1061081b57610100808354040283529160200191610846565b820191906000526020600020905b81548152906001019060200180831161082957829003601f168201915b505050505090505b90565b600061085c82611302565b61089a57604051600160e51b62461bcd02815260040180806020018281038252602c815260200180612196602c913960400191505060405180910390fd5b506000908152600260205260409020546001600160a01b031690565b60006108c182610cb9565b9050806001600160a01b0316836001600160a01b0316141561091757604051600160e51b62461bcd0281526004018080602001828103825260218152602001806122886021913960400191505060405180910390fd5b336001600160a01b038216148061093357506109338133611281565b61097157604051600160e51b62461bcd0281526004018080602001828103825260388152602001806120ba6038913960400191505060405180910390fd5b60008281526002602052604080822080546001600160a01b0319166001600160a01b0387811691821790925591518593918516917f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b92591a4505050565b60075490565b6109dd338261131f565b610a1b57604051600160e51b62461bcd0281526004018080602001828103825260318152602001806122a96031913960400191505060405180910390fd5b610a268383836113c6565b505050565b6000610a3683610d16565b8210610a7657604051600160e51b62461bcd02815260040180806020018281038252602b815260200180611fe7602b913960400191505060405180910390fd5b6001600160a01b0383166000908152600560205260409020805483908110610a9a57fe5b9060005260206000200154905092915050565b600e54610ac59033906001600160a01b0316866109d3565b600e54604051600160e41b630cf0da290281523360048201818152602483018890526001600160a01b0387811660448501526080606485019081526084850187905294169363cf0da290938992899289928992919060a401848480828437600081840152601f19601f8201169050808301925050509650505050505050600060405180830381600087803b158015610b5c57600080fd5b505af1158015610b70573d6000803e3d6000fd5b5050505050505050565b610a2683838360405180602001604052806000815250611135565b610b9f338261131f565b610bdd57604051600160e51b62461bcd02815260040180806020018281038252603081526020018061232b6030913960400191505060405180910390fd5b610be6816113e5565b50565b6000610bf36109cd565b8210610c3357604051600160e51b62461bcd02815260040180806020018281038252602c8152602001806122da602c913960400191505060405180910390fd5b60078281548110610c4057fe5b90600052602060002001549050919050565b6000610c5d33611122565b610c9b57604051600160e51b62461bcd0281526004018080602001828103825260308152602001806121456030913960400191505060405180910390fd5b610ca584846113f7565b610caf8383611418565b5060019392505050565b6000818152600160205260408120546001600160a01b031680610d1057604051600160e51b62461bcd02815260040180806020018281038252602981526020018061211c6029913960400191505060405180910390fd5b92915050565b60006001600160a01b038216610d6057604051600160e51b62461bcd02815260040180806020018281038252602a8152602001806120f2602a913960400191505060405180910390fd5b6001600160a01b0382166000908152600360205260409020610d109061147e565b610d89610f86565b610dcb5760408051600160e51b62461bcd02815260206004820181905260248201526000805160206121ee833981519152604482015290519081900360640190fd5b600d546040516000916001600160a01b0316907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0908390a3600d80546001600160a01b0319169055565b610e1d610f86565b610e5f5760408051600160e51b62461bcd02815260206004820181905260248201526000805160206121ee833981519152604482015290519081900360640190fd5b815b81811015610e9f57610e968482604051806040016040528060078152602001600160c81b667465737455524902815250610c52565b50600101610e61565b50505050565b600d546001600160a01b031690565b610ebc610f86565b610efe5760408051600160e51b62461bcd02815260206004820181905260248201526000805160206121ee833981519152604482015290519081900360640190fd5b610f10816001600160a01b0316611482565b610f645760408051600160e51b62461bcd02815260206004820152601860248201527f627269646765206973206e6f74206120636f6e74726163740000000000000000604482015290519081900360640190fd5b600e80546001600160a01b0319166001600160a01b0392909216919091179055565b600d546001600160a01b0316331490565b600a8054604080516020601f60026000196101006001881615020190951694909404938401819004810282018101909252828152606093909290918301828280156108465780601f1061081b57610100808354040283529160200191610846565b61100133611122565b61103f57604051600160e51b62461bcd0281526004018080602001828103825260308152602001806121456030913960400191505060405180910390fd5b610be681611488565b611051336114d0565b565b6001600160a01b0382163314156110b45760408051600160e51b62461bcd02815260206004820152601960248201527f4552433732313a20617070726f766520746f2063616c6c657200000000000000604482015290519081900360640190fd5b3360008181526004602090815260408083206001600160a01b03871680855290835292819020805460ff1916861515908117909155815190815290519293927f17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31929181900390910190a35050565b6000610d10600c8363ffffffff61151816565b6111408484846109d3565b61114c84848484611582565b610e9f57604051600160e51b62461bcd0281526004018080602001828103825260328152602001806120126032913960400191505060405180910390fd5b606061119582611302565b6111d357604051600160e51b62461bcd02815260040180806020018281038252602f815260200180612259602f913960400191505060405180910390fd5b6000828152600b602090815260409182902080548351601f6002600019610100600186161502019093169290920491820184900484028101840190945280845290918301828280156112665780601f1061123b57610100808354040283529160200191611266565b820191906000526020600020905b81548152906001019060200180831161124957829003601f168201915b50505050509050919050565b600e546001600160a01b031681565b6001600160a01b03918216600090815260046020908152604080832093909416825291909152205460ff1690565b6112b7610f86565b6112f95760408051600160e51b62461bcd02815260206004820181905260248201526000805160206121ee833981519152604482015290519081900360640190fd5b610be6816116bb565b6000908152600160205260409020546001600160a01b0316151590565b600061132a82611302565b61136857604051600160e51b62461bcd02815260040180806020018281038252602c81526020018061208e602c913960400191505060405180910390fd5b600061137383610cb9565b9050806001600160a01b0316846001600160a01b031614806113ae5750836001600160a01b03166113a384610851565b6001600160a01b0316145b806113be57506113be8185611281565b949350505050565b6113d183838361175f565b6113db83826118a9565b610a26828261199e565b610be66113f182610cb9565b826119dc565b6114018282611a24565b61140b828261199e565b61141481611b5b565b5050565b61142182611302565b61145f57604051600160e51b62461bcd02815260040180806020018281038252602c8152602001806121c2602c913960400191505060405180910390fd5b6000828152600b602090815260409091208251610a2692840190611eea565b5490565b3b151590565b611499600c8263ffffffff611b9f16565b6040516001600160a01b038216907f6ae172837ea30b801fbfcdd4108aa1d5bf8ff775444fd70256b44e6bf3dfc3f690600090a250565b6114e1600c8263ffffffff611c2316565b6040516001600160a01b038216907fe94479a9f7e1952cc78f2d6baab678adc1b772d936c6583def489e524cb6669290600090a250565b60006001600160a01b03821661156257604051600160e51b62461bcd02815260040180806020018281038252602281526020018061220e6022913960400191505060405180910390fd5b506001600160a01b03166000908152602091909152604090205460ff1690565b6000611596846001600160a01b0316611482565b6115a2575060016113be565b604051600160e11b630a85bd0102815233600482018181526001600160a01b03888116602485015260448401879052608060648501908152865160848601528651600095928a169463150b7a029490938c938b938b939260a4019060208501908083838e5b8381101561161f578181015183820152602001611607565b50505050905090810190601f16801561164c5780820380516001836020036101000a031916815260200191505b5095505050505050602060405180830381600087803b15801561166e57600080fd5b505af1158015611682573d6000803e3d6000fd5b505050506040513d602081101561169857600080fd5b50516001600160e01b031916600160e11b630a85bd010214915050949350505050565b6001600160a01b03811661170357604051600160e51b62461bcd0281526004018080602001828103825260268152602001806120446026913960400191505060405180910390fd5b600d546040516001600160a01b038084169216907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e090600090a3600d80546001600160a01b0319166001600160a01b0392909216919091179055565b826001600160a01b031661177282610cb9565b6001600160a01b0316146117ba57604051600160e51b62461bcd0281526004018080602001828103825260298152602001806122306029913960400191505060405180910390fd5b6001600160a01b03821661180257604051600160e51b62461bcd02815260040180806020018281038252602481526020018061206a6024913960400191505060405180910390fd5b61180b81611c8d565b6001600160a01b038316600090815260036020526040902061182c90611cc8565b6001600160a01b038216600090815260036020526040902061184d90611cdf565b60008181526001602052604080822080546001600160a01b0319166001600160a01b0386811691821790925591518493918716917fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef91a4505050565b6001600160a01b0382166000908152600560205260408120546118d390600163ffffffff611ce816565b60008381526006602052604090205490915080821461196e576001600160a01b038416600090815260056020526040812080548490811061191057fe5b906000526020600020015490508060056000876001600160a01b03166001600160a01b03168152602001908152602001600020838154811061194e57fe5b600091825260208083209091019290925591825260069052604090208190555b6001600160a01b0384166000908152600560205260409020805490611997906000198301611f68565b5050505050565b6001600160a01b0390911660009081526005602081815260408084208054868652600684529185208290559282526001810183559183529091200155565b6119e68282611d48565b6000818152600b60205260409020546002600019610100600184161502019091160415611414576000818152600b6020526040812061141491611f8c565b6001600160a01b038216611a825760408051600160e51b62461bcd02815260206004820181905260248201527f4552433732313a206d696e7420746f20746865207a65726f2061646472657373604482015290519081900360640190fd5b611a8b81611302565b15611ae05760408051600160e51b62461bcd02815260206004820152601c60248201527f4552433732313a20746f6b656e20616c7265616479206d696e74656400000000604482015290519081900360640190fd5b600081815260016020908152604080832080546001600160a01b0319166001600160a01b038716908117909155835260039091529020611b1f90611cdf565b60405181906001600160a01b038416906000907fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef908290a45050565b600780546000838152600860205260408120829055600182018355919091527fa66cc928b5edb82af9bd49922954155ab7b0942694bea4ce44661d9a8736c6880155565b611ba98282611518565b15611bfe5760408051600160e51b62461bcd02815260206004820152601f60248201527f526f6c65733a206163636f756e7420616c72656164792068617320726f6c6500604482015290519081900360640190fd5b6001600160a01b0316600090815260209190915260409020805460ff19166001179055565b611c2d8282611518565b611c6b57604051600160e51b62461bcd0281526004018080602001828103825260218152602001806121756021913960400191505060405180910390fd5b6001600160a01b0316600090815260209190915260409020805460ff19169055565b6000818152600260205260409020546001600160a01b031615610be657600090815260026020526040902080546001600160a01b0319169055565b8054611cdb90600163ffffffff611ce816565b9055565b80546001019055565b600082821115611d425760408051600160e51b62461bcd02815260206004820152601e60248201527f536166654d6174683a207375627472616374696f6e206f766572666c6f770000604482015290519081900360640190fd5b50900390565b611d528282611d74565b611d5c82826118a9565b60008181526006602052604081205561141481611e4e565b816001600160a01b0316611d8782610cb9565b6001600160a01b031614611dcf57604051600160e51b62461bcd0281526004018080602001828103825260258152602001806123066025913960400191505060405180910390fd5b611dd881611c8d565b6001600160a01b0382166000908152600360205260409020611df990611cc8565b60008181526001602052604080822080546001600160a01b0319169055518291906001600160a01b038516907fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef908390a45050565b600754600090611e6590600163ffffffff611ce816565b60008381526008602052604081205460078054939450909284908110611e8757fe5b906000526020600020015490508060078381548110611ea257fe5b60009182526020808320909101929092558281526008909152604090208290556007805490611ed5906000198301611f68565b50505060009182525060086020526040812055565b828054600181600116156101000203166002900490600052602060002090601f016020900481019282601f10611f2b57805160ff1916838001178555611f58565b82800160010185558215611f58579182015b82811115611f58578251825591602001919060010190611f3d565b50611f64929150611fcc565b5090565b815481835581811115610a2657600083815260209020610a26918101908301611fcc565b50805460018160011615610100020316600290046000825580601f10611fb25750610be6565b601f016020900490600052602060002090810190610be691905b61084e91905b80821115611f645760008155600101611fd256fe455243373231456e756d657261626c653a206f776e657220696e646578206f7574206f6620626f756e64734552433732313a207472616e7366657220746f206e6f6e20455243373231526563656976657220696d706c656d656e7465724f776e61626c653a206e6577206f776e657220697320746865207a65726f20616464726573734552433732313a207472616e7366657220746f20746865207a65726f20616464726573734552433732313a206f70657261746f7220717565727920666f72206e6f6e6578697374656e7420746f6b656e4552433732313a20617070726f76652063616c6c6572206973206e6f74206f776e6572206e6f7220617070726f76656420666f7220616c6c4552433732313a2062616c616e636520717565727920666f7220746865207a65726f20616464726573734552433732313a206f776e657220717565727920666f72206e6f6e6578697374656e7420746f6b656e4d696e746572526f6c653a2063616c6c657220646f6573206e6f74206861766520746865204d696e74657220726f6c65526f6c65733a206163636f756e7420646f6573206e6f74206861766520726f6c654552433732313a20617070726f76656420717565727920666f72206e6f6e6578697374656e7420746f6b656e4552433732314d657461646174613a2055524920736574206f66206e6f6e6578697374656e7420746f6b656e4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e6572526f6c65733a206163636f756e7420697320746865207a65726f20616464726573734552433732313a207472616e73666572206f6620746f6b656e2074686174206973206e6f74206f776e4552433732314d657461646174613a2055524920717565727920666f72206e6f6e6578697374656e7420746f6b656e4552433732313a20617070726f76616c20746f2063757272656e74206f776e65724552433732313a207472616e736665722063616c6c6572206973206e6f74206f776e6572206e6f7220617070726f766564455243373231456e756d657261626c653a20676c6f62616c20696e646578206f7574206f6620626f756e64734552433732313a206275726e206f6620746f6b656e2074686174206973206e6f74206f776e4552433732314275726e61626c653a2063616c6c6572206973206e6f74206f776e6572206e6f7220617070726f766564a165627a7a72305820c0a409364e62b03c239b1fb84bf994c3cdf1c1af2191cf79ebf33c05434d7f710029`
+const ServiceChainNFTBinRuntime = `608060405234801561001057600080fd5b50600436106102065760003560e01c8063715018a61161011a578063a3f4df7e116100ad578063d547741f1161007c578063d547741f1461047e578063e78cea9214610491578063e985e9c5146104a4578063f2fde38b146104e0578063f76f8d78146104f357600080fd5b8063a3f4df7e14610403578063b88d4fde14610431578063c87b56dd14610444578063d53913931461045757600080fd5b806391d14854116100e957806391d14854146103cd57806395d89b41146103e0578063a217fddf146103e8578063a22cb465146103f057600080fd5b8063715018a61461038e5780637a9adac6146103965780638da5cb5b146103a95780638dd14802146103ba57600080fd5b80632f745c591161019d57806342966c681161016c57806342966c681461032f5780634f6ccce71461034257806350bb4e7f146103555780636352211e1461036857806370a082311461037b57600080fd5b80632f745c59146102e357806336568abe146102f65780633f4c4e3d1461030957806342842e0e1461031c57600080fd5b806318160ddd116101d957806318160ddd1461028857806323b872dd1461029a578063248a9ca3146102ad5780632f2ff15d146102d057600080fd5b806301ffc9a71461020b57806306fdde0314610233578063081812fc14610248578063095ea7b314610273575b600080fd5b61021e610219366004612087565b610515565b60405190151581526020015b60405180910390f35b61023b610526565b60405161022a91906120fc565b61025b61025636600461210f565b6105b8565b6040516001600160a01b03909116815260200161022a565b610286610281366004612144565b610645565b005b6008545b60405190815260200161022a565b6102866102a836600461216e565b61075a565b61028c6102bb36600461210f565b6000908152600b602052604090206001015490565b6102866102de3660046121aa565b61078c565b61028c6102f1366004612144565b6107b1565b6102866103043660046121aa565b610847565b6102866103173660046121d6565b6108c5565b61028661032a36600461216e565b61094d565b61028661033d36600461210f565b610968565b61028c61035036600461210f565b6109e2565b6102866103633660046122e9565b610a75565b61025b61037636600461210f565b610ab9565b61028c610389366004612354565b610b30565b610286610bb6565b6102866103a436600461236f565b610bec565b600c546001600160a01b031661025b565b6102866103c8366004612354565b610c5c565b61021e6103db3660046121aa565b610cff565b61023b610d2a565b61028c600081565b6102866103fe3660046123a2565b610d39565b61023b6040518060400160405280600f81526020016e14d95c9d9a58d950da185a5b939195608a1b81525081565b61028661043f3660046123de565b610d44565b61023b61045236600461210f565b610d76565b61028c7f9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a681565b61028661048c3660046121aa565b610d81565b600d5461025b906001600160a01b031681565b61021e6104b236600461245a565b6001600160a01b03918216600090815260056020908152604080832093909416825291909152205460ff1690565b6102866104ee366004612354565b610da6565b61023b6040518060400160405280600381526020016229a1a760e91b81525081565b600061052082610e4d565b92915050565b60606000805461053590612484565b80601f016020809104026020016040519081016040528092919081815260200182805461056190612484565b80156105ae5780601f10610583576101008083540402835291602001916105ae565b820191906000526020600020905b81548152906001019060200180831161059157829003601f168201915b5050505050905090565b60006105c382610e72565b6106295760405162461bcd60e51b815260206004820152602c60248201527f4552433732313a20617070726f76656420717565727920666f72206e6f6e657860448201526b34b9ba32b73a103a37b5b2b760a11b60648201526084015b60405180910390fd5b506000908152600460205260409020546001600160a01b031690565b600061065082610ab9565b9050806001600160a01b0316836001600160a01b0316036106bd5760405162461bcd60e51b815260206004820152602160248201527f4552433732313a20617070726f76616c20746f2063757272656e74206f776e656044820152603960f91b6064820152608401610620565b336001600160a01b03821614806106d957506106d981336104b2565b61074b5760405162461bcd60e51b815260206004820152603860248201527f4552433732313a20617070726f76652063616c6c6572206973206e6f74206f7760448201527f6e6572206e6f7220617070726f76656420666f7220616c6c00000000000000006064820152608401610620565b6107558383610e8f565b505050565b610765335b82610efd565b6107815760405162461bcd60e51b8152600401610620906124be565b610755838383610fe7565b6000828152600b60205260409020600101546107a78161118e565b6107558383611198565b60006107bc83610b30565b821061081e5760405162461bcd60e51b815260206004820152602b60248201527f455243373231456e756d657261626c653a206f776e657220696e646578206f7560448201526a74206f6620626f756e647360a81b6064820152608401610620565b506001600160a01b03919091166000908152600660209081526040808320938352929052205490565b6001600160a01b03811633146108b75760405162461bcd60e51b815260206004820152602f60248201527f416363657373436f6e74726f6c3a2063616e206f6e6c792072656e6f756e636560448201526e103937b632b9903337b91039b2b63360891b6064820152608401610620565b6108c1828261121e565b5050565b600d546108dd9033906001600160a01b03168661075a565b600d54604051630cf0da2960e41b81526001600160a01b039091169063cf0da29090610915903390889088908890889060040161250f565b600060405180830381600087803b15801561092f57600080fd5b505af1158015610943573d6000803e3d6000fd5b5050505050505050565b61075583838360405180602001604052806000815250610d44565b6109713361075f565b6109d65760405162461bcd60e51b815260206004820152603060248201527f4552433732314275726e61626c653a2063616c6c6572206973206e6f74206f7760448201526f1b995c881b9bdc88185c1c1c9bdd995960821b6064820152608401610620565b6109df81611285565b50565b60006109ed60085490565b8210610a505760405162461bcd60e51b815260206004820152602c60248201527f455243373231456e756d657261626c653a20676c6f62616c20696e646578206f60448201526b7574206f6620626f756e647360a01b6064820152608401610620565b60088281548110610a6357610a63612563565b90600052602060002001549050919050565b7f9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6610a9f8161118e565b610aa9848461128e565b610ab383836113cd565b50505050565b6000818152600260205260408120546001600160a01b0316806105205760405162461bcd60e51b815260206004820152602960248201527f4552433732313a206f776e657220717565727920666f72206e6f6e657869737460448201526832b73a103a37b5b2b760b91b6064820152608401610620565b60006001600160a01b038216610b9a5760405162461bcd60e51b815260206004820152602960248201527f4552433732313a2061646472657373207a65726f206973206e6f7420612076616044820152683634b21037bbb732b960b91b6064820152608401610620565b506001600160a01b031660009081526003602052604090205490565b600c546001600160a01b03163314610be05760405162461bcd60e51b815260040161062090612579565b610bea6000611458565b565b600c546001600160a01b03163314610c165760405162461bcd60e51b815260040161062090612579565b815b81811015610ab357610c4a8482604051806040016040528060078152602001667465737455524960c81b815250610a75565b80610c54816125c4565b915050610c18565b600c546001600160a01b03163314610c865760405162461bcd60e51b815260040161062090612579565b6001600160a01b0381163b610cdd5760405162461bcd60e51b815260206004820152601860248201527f627269646765206973206e6f74206120636f6e747261637400000000000000006044820152606401610620565b600d80546001600160a01b0319166001600160a01b0392909216919091179055565b6000918252600b602090815260408084206001600160a01b0393909316845291905290205460ff1690565b60606001805461053590612484565b6108c13383836114aa565b610d4e3383610efd565b610d6a5760405162461bcd60e51b8152600401610620906124be565b610ab384848484611578565b6060610520826115ab565b6000828152600b6020526040902060010154610d9c8161118e565b610755838361121e565b600c546001600160a01b03163314610dd05760405162461bcd60e51b815260040161062090612579565b6001600160a01b038116610e355760405162461bcd60e51b815260206004820152602660248201527f4f776e61626c653a206e6577206f776e657220697320746865207a65726f206160448201526564647265737360d01b6064820152608401610620565b6109df81611458565b6001600160a01b03163b151590565b60006001600160e01b03198216637965db0b60e01b1480610520575061052082611719565b6000908152600260205260409020546001600160a01b0316151590565b600081815260046020526040902080546001600160a01b0319166001600160a01b0384169081179091558190610ec482610ab9565b6001600160a01b03167f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b92560405160405180910390a45050565b6000610f0882610e72565b610f695760405162461bcd60e51b815260206004820152602c60248201527f4552433732313a206f70657261746f7220717565727920666f72206e6f6e657860448201526b34b9ba32b73a103a37b5b2b760a11b6064820152608401610620565b6000610f7483610ab9565b9050806001600160a01b0316846001600160a01b03161480610fbb57506001600160a01b0380821660009081526005602090815260408083209388168352929052205460ff165b80610fdf5750836001600160a01b0316610fd4846105b8565b6001600160a01b0316145b949350505050565b826001600160a01b0316610ffa82610ab9565b6001600160a01b03161461105e5760405162461bcd60e51b815260206004820152602560248201527f4552433732313a207472616e736665722066726f6d20696e636f72726563742060448201526437bbb732b960d91b6064820152608401610620565b6001600160a01b0382166110c05760405162461bcd60e51b8152602060048201526024808201527f4552433732313a207472616e7366657220746f20746865207a65726f206164646044820152637265737360e01b6064820152608401610620565b6110cb83838361173e565b6110d6600082610e8f565b6001600160a01b03831660009081526003602052604081208054600192906110ff9084906125dd565b90915550506001600160a01b038216600090815260036020526040812080546001929061112d9084906125f4565b909155505060008181526002602052604080822080546001600160a01b0319166001600160a01b0386811691821790925591518493918716917fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef91a4505050565b6109df8133611749565b6111a28282610cff565b6108c1576000828152600b602090815260408083206001600160a01b03851684529091529020805460ff191660011790556111da3390565b6001600160a01b0316816001600160a01b0316837f2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d60405160405180910390a45050565b6112288282610cff565b156108c1576000828152600b602090815260408083206001600160a01b0385168085529252808320805460ff1916905551339285917ff6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b9190a45050565b6109df816117ad565b6001600160a01b0382166112e45760405162461bcd60e51b815260206004820181905260248201527f4552433732313a206d696e7420746f20746865207a65726f20616464726573736044820152606401610620565b6112ed81610e72565b1561133a5760405162461bcd60e51b815260206004820152601c60248201527f4552433732313a20746f6b656e20616c7265616479206d696e746564000000006044820152606401610620565b6113466000838361173e565b6001600160a01b038216600090815260036020526040812080546001929061136f9084906125f4565b909155505060008181526002602052604080822080546001600160a01b0319166001600160a01b03861690811790915590518392907fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef908290a45050565b6113d682610e72565b6114395760405162461bcd60e51b815260206004820152602e60248201527f45524337323155524953746f726167653a2055524920736574206f66206e6f6e60448201526d32bc34b9ba32b73a103a37b5b2b760911b6064820152608401610620565b6000828152600a60209081526040909120825161075592840190611fa2565b600c80546001600160a01b038381166001600160a01b0319831681179093556040519116919082907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e090600090a35050565b816001600160a01b0316836001600160a01b03160361150b5760405162461bcd60e51b815260206004820152601960248201527f4552433732313a20617070726f766520746f2063616c6c6572000000000000006044820152606401610620565b6001600160a01b03838116600081815260056020908152604080832094871680845294825291829020805460ff191686151590811790915591519182527f17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31910160405180910390a3505050565b611583848484610fe7565b61158f848484846117ed565b610ab35760405162461bcd60e51b81526004016106209061260c565b60606115b682610e72565b61161c5760405162461bcd60e51b815260206004820152603160248201527f45524337323155524953746f726167653a2055524920717565727920666f72206044820152703737b732bc34b9ba32b73a103a37b5b2b760791b6064820152608401610620565b6000828152600a60205260408120805461163590612484565b80601f016020809104026020016040519081016040528092919081815260200182805461166190612484565b80156116ae5780601f10611683576101008083540402835291602001916116ae565b820191906000526020600020905b81548152906001019060200180831161169157829003601f168201915b5050505050905060006116cc60408051602081019091526000815290565b905080516000036116de575092915050565b8151156117105780826040516020016116f892919061265e565b60405160208183030381529060405292505050919050565b610fdf846118ee565b60006001600160e01b0319821663780e9d6360e01b14806105205750610520826119c6565b610755838383611a16565b6117538282610cff565b6108c15761176b816001600160a01b03166014611ace565b611776836020611ace565b60405160200161178792919061268d565b60408051601f198184030181529082905262461bcd60e51b8252610620916004016120fc565b6117b681611c6a565b6000818152600a6020526040902080546117cf90612484565b1590506109df576000818152600a602052604081206109df91612026565b60006001600160a01b0384163b156118e357604051630a85bd0160e11b81526001600160a01b0385169063150b7a0290611831903390899088908890600401612702565b6020604051808303816000875af192505050801561186c575060408051601f3d908101601f191682019092526118699181019061273f565b60015b6118c9573d80801561189a576040519150601f19603f3d011682016040523d82523d6000602084013e61189f565b606091505b5080516000036118c15760405162461bcd60e51b81526004016106209061260c565b805181602001fd5b6001600160e01b031916630a85bd0160e11b149050610fdf565b506001949350505050565b60606118f982610e72565b61195d5760405162461bcd60e51b815260206004820152602f60248201527f4552433732314d657461646174613a2055524920717565727920666f72206e6f60448201526e3732bc34b9ba32b73a103a37b5b2b760891b6064820152608401610620565b600061197460408051602081019091526000815290565b9050600081511161199457604051806020016040528060008152506119bf565b8061199e84611d11565b6040516020016119af92919061265e565b6040516020818303038152906040525b9392505050565b60006001600160e01b031982166380ac58cd60e01b14806119f757506001600160e01b03198216635b5e139f60e01b145b8061052057506301ffc9a760e01b6001600160e01b0319831614610520565b6001600160a01b038316611a7157611a6c81600880546000838152600960205260408120829055600182018355919091527ff3f7a9fe364faab93b216da50a3214154f22a0a2b415b23a84c8169e8b636ee30155565b611a94565b816001600160a01b0316836001600160a01b031614611a9457611a948382611e12565b6001600160a01b038216611aab5761075581611eaf565b826001600160a01b0316826001600160a01b031614610755576107558282611f5e565b60606000611add83600261275c565b611ae89060026125f4565b67ffffffffffffffff811115611b0057611b0061225d565b6040519080825280601f01601f191660200182016040528015611b2a576020820181803683370190505b509050600360fc1b81600081518110611b4557611b45612563565b60200101906001600160f81b031916908160001a905350600f60fb1b81600181518110611b7457611b74612563565b60200101906001600160f81b031916908160001a9053506000611b9884600261275c565b611ba39060016125f4565b90505b6001811115611c1b576f181899199a1a9b1b9c1cb0b131b232b360811b85600f1660108110611bd757611bd7612563565b1a60f81b828281518110611bed57611bed612563565b60200101906001600160f81b031916908160001a90535060049490941c93611c148161277b565b9050611ba6565b5083156119bf5760405162461bcd60e51b815260206004820181905260248201527f537472696e67733a20686578206c656e67746820696e73756666696369656e746044820152606401610620565b6000611c7582610ab9565b9050611c838160008461173e565b611c8e600083610e8f565b6001600160a01b0381166000908152600360205260408120805460019290611cb79084906125dd565b909155505060008281526002602052604080822080546001600160a01b0319169055518391906001600160a01b038416907fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef908390a45050565b606081600003611d385750506040805180820190915260018152600360fc1b602082015290565b8160005b8115611d625780611d4c816125c4565b9150611d5b9050600a836127a8565b9150611d3c565b60008167ffffffffffffffff811115611d7d57611d7d61225d565b6040519080825280601f01601f191660200182016040528015611da7576020820181803683370190505b5090505b8415610fdf57611dbc6001836125dd565b9150611dc9600a866127bc565b611dd49060306125f4565b60f81b818381518110611de957611de9612563565b60200101906001600160f81b031916908160001a905350611e0b600a866127a8565b9450611dab565b60006001611e1f84610b30565b611e2991906125dd565b600083815260076020526040902054909150808214611e7c576001600160a01b03841660009081526006602090815260408083208584528252808320548484528184208190558352600790915290208190555b5060009182526007602090815260408084208490556001600160a01b039094168352600681528383209183525290812055565b600854600090611ec1906001906125dd565b60008381526009602052604081205460088054939450909284908110611ee957611ee9612563565b906000526020600020015490508060088381548110611f0a57611f0a612563565b6000918252602080832090910192909255828152600990915260408082208490558582528120556008805480611f4257611f426127d0565b6001900381819060005260206000200160009055905550505050565b6000611f6983610b30565b6001600160a01b039093166000908152600660209081526040808320868452825280832085905593825260079052919091209190915550565b828054611fae90612484565b90600052602060002090601f016020900481019282611fd05760008555612016565b82601f10611fe957805160ff1916838001178555612016565b82800160010185558215612016579182015b82811115612016578251825591602001919060010190611ffb565b5061202292915061205c565b5090565b50805461203290612484565b6000825580601f10612042575050565b601f0160209004906000526020600020908101906109df91905b5b80821115612022576000815560010161205d565b6001600160e01b0319811681146109df57600080fd5b60006020828403121561209957600080fd5b81356119bf81612071565b60005b838110156120bf5781810151838201526020016120a7565b83811115610ab35750506000910152565b600081518084526120e88160208601602086016120a4565b601f01601f19169290920160200192915050565b6020815260006119bf60208301846120d0565b60006020828403121561212157600080fd5b5035919050565b80356001600160a01b038116811461213f57600080fd5b919050565b6000806040838503121561215757600080fd5b61216083612128565b946020939093013593505050565b60008060006060848603121561218357600080fd5b61218c84612128565b925061219a60208501612128565b9150604084013590509250925092565b600080604083850312156121bd57600080fd5b823591506121cd60208401612128565b90509250929050565b600080600080606085870312156121ec57600080fd5b843593506121fc60208601612128565b9250604085013567ffffffffffffffff8082111561221957600080fd5b818701915087601f83011261222d57600080fd5b81358181111561223c57600080fd5b88602082850101111561224e57600080fd5b95989497505060200194505050565b634e487b7160e01b600052604160045260246000fd5b600067ffffffffffffffff8084111561228e5761228e61225d565b604051601f8501601f19908116603f011681019082821181831017156122b6576122b661225d565b816040528093508581528686860111156122cf57600080fd5b858560208301376000602087830101525050509392505050565b6000806000606084860312156122fe57600080fd5b61230784612128565b925060208401359150604084013567ffffffffffffffff81111561232a57600080fd5b8401601f8101861361233b57600080fd5b61234a86823560208401612273565b9150509250925092565b60006020828403121561236657600080fd5b6119bf82612128565b60008060006060848603121561238457600080fd5b61238d84612128565b95602085013595506040909401359392505050565b600080604083850312156123b557600080fd5b6123be83612128565b9150602083013580151581146123d357600080fd5b809150509250929050565b600080600080608085870312156123f457600080fd5b6123fd85612128565b935061240b60208601612128565b925060408501359150606085013567ffffffffffffffff81111561242e57600080fd5b8501601f8101871361243f57600080fd5b61244e87823560208401612273565b91505092959194509250565b6000806040838503121561246d57600080fd5b61247683612128565b91506121cd60208401612128565b600181811c9082168061249857607f821691505b6020821081036124b857634e487b7160e01b600052602260045260246000fd5b50919050565b60208082526031908201527f4552433732313a207472616e736665722063616c6c6572206973206e6f74206f6040820152701ddb995c881b9bdc88185c1c1c9bdd9959607a1b606082015260800190565b6001600160a01b038681168252602082018690528416604082015260806060820181905281018290526000828460a0840137600060a0848401015260a0601f19601f85011683010190509695505050505050565b634e487b7160e01b600052603260045260246000fd5b6020808252818101527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e6572604082015260600190565b634e487b7160e01b600052601160045260246000fd5b6000600182016125d6576125d66125ae565b5060010190565b6000828210156125ef576125ef6125ae565b500390565b60008219821115612607576126076125ae565b500190565b60208082526032908201527f4552433732313a207472616e7366657220746f206e6f6e20455243373231526560408201527131b2b4bb32b91034b6b83632b6b2b73a32b960711b606082015260800190565b600083516126708184602088016120a4565b8351908301906126848183602088016120a4565b01949350505050565b7f416363657373436f6e74726f6c3a206163636f756e74200000000000000000008152600083516126c58160178501602088016120a4565b7001034b99036b4b9b9b4b733903937b6329607d1b60179184019182015283516126f68160288401602088016120a4565b01602801949350505050565b6001600160a01b0385811682528416602082015260408101839052608060608201819052600090612735908301846120d0565b9695505050505050565b60006020828403121561275157600080fd5b81516119bf81612071565b6000816000190483118215151615612776576127766125ae565b500290565b60008161278a5761278a6125ae565b506000190190565b634e487b7160e01b600052601260045260246000fd5b6000826127b7576127b7612792565b500490565b6000826127cb576127cb612792565b500690565b634e487b7160e01b600052603160045260246000fdfea26469706673582212205cc81a03638a56f3c1a58191f786ca51c811fc21cab02e4f45d5c4cf06c9c01464736f6c634300080d0033`
 
 // ServiceChainNFTFuncSigs maps the 4-byte function signature to its string representation.
 var ServiceChainNFTFuncSigs = map[string]string{
-	"983b2d56": "addMinter(address)",
+	"a217fddf": "DEFAULT_ADMIN_ROLE()",
+	"d5391393": "MINTER_ROLE()",
+	"a3f4df7e": "NAME()",
+	"f76f8d78": "SYMBOL()",
 	"095ea7b3": "approve(address,uint256)",
 	"70a08231": "balanceOf(address)",
 	"e78cea92": "bridge()",
 	"42966c68": "burn(uint256)",
 	"081812fc": "getApproved(uint256)",
+	"248a9ca3": "getRoleAdmin(bytes32)",
+	"2f2ff15d": "grantRole(bytes32,address)",
+	"91d14854": "hasRole(bytes32,address)",
 	"e985e9c5": "isApprovedForAll(address,address)",
-	"aa271e1a": "isMinter(address)",
-	"8f32d59b": "isOwner()",
 	"50bb4e7f": "mintWithTokenURI(address,uint256,string)",
 	"06fdde03": "name()",
 	"8da5cb5b": "owner()",
 	"6352211e": "ownerOf(uint256)",
 	"7a9adac6": "registerBulk(address,uint256,uint256)",
-	"98650275": "renounceMinter()",
 	"715018a6": "renounceOwnership()",
+	"36568abe": "renounceRole(bytes32,address)",
 	"3f4c4e3d": "requestValueTransfer(uint256,address,bytes)",
+	"d547741f": "revokeRole(bytes32,address)",
 	"42842e0e": "safeTransferFrom(address,address,uint256)",
 	"b88d4fde": "safeTransferFrom(address,address,uint256,bytes)",
 	"a22cb465": "setApprovalForAll(address,bool)",
@@ -12437,7 +11160,7 @@ var ServiceChainNFTFuncSigs = map[string]string{
 }
 
 // ServiceChainNFTBin is the compiled bytecode used for deploying new contracts.
-var ServiceChainNFTBin = "0x60806040523480156200001157600080fd5b50604051602080620029a6833981018060405260208110156200003357600080fd5b5051604080518082018252600f81527f53657276696365436861696e4e465400000000000000000000000000000000006020828101919091528251808401909352600383527f53434e00000000000000000000000000000000000000000000000000000000008382015283929082908290620000d5907f01ffc9a70000000000000000000000000000000000000000000000000000000090620001c3811b901c565b620000ed6380ac58cd60e01b620001c360201b60201c565b6200010563780e9d6360e01b620001c360201b60201c565b81516200011a9060099060208501906200054c565b5080516200013090600a9060208401906200054c565b5062000149635b5e139f60e01b620001c360201b60201c565b505050506200015e336200029260201b60201c565b600d80546001600160a01b0319163317908190556040516001600160a01b0391909116906000907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0908290a3620001bb81620002e460201b60201c565b5050620005ee565b7fffffffff0000000000000000000000000000000000000000000000000000000080821614156200025557604080517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601c60248201527f4552433136353a20696e76616c696420696e7465726661636520696400000000604482015290519081900360640190fd5b7fffffffff00000000000000000000000000000000000000000000000000000000166000908152602081905260409020805460ff19166001179055565b620002ad81600c6200040d60201b62001b9f1790919060201c565b6040516001600160a01b038216907f6ae172837ea30b801fbfcdd4108aa1d5bf8ff775444fd70256b44e6bf3dfc3f690600090a250565b620002f4620004b160201b60201c565b6200036057604080517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e6572604482015290519081900360640190fd5b6200037f816001600160a01b0316620004c360201b620014821760201c565b620003eb57604080517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601860248201527f627269646765206973206e6f74206120636f6e74726163740000000000000000604482015290519081900360640190fd5b600e80546001600160a01b0319166001600160a01b0392909216919091179055565b6200041f8282620004c960201b60201c565b156200048c57604080517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601f60248201527f526f6c65733a206163636f756e7420616c72656164792068617320726f6c6500604482015290519081900360640190fd5b6001600160a01b0316600090815260209190915260409020805460ff19166001179055565b600d546001600160a01b031633145b90565b3b151590565b60006001600160a01b0382166200052c576040517f08c379a0000000000000000000000000000000000000000000000000000000008152600401808060200182810382526022815260200180620029846022913960400191505060405180910390fd5b506001600160a01b03166000908152602091909152604090205460ff1690565b828054600181600116156101000203166002900490600052602060002090601f016020900481019282601f106200058f57805160ff1916838001178555620005bf565b82800160010185558215620005bf579182015b82811115620005bf578251825591602001919060010190620005a2565b50620005cd929150620005d1565b5090565b620004c091905b80821115620005cd5760008155600101620005d8565b61238680620005fe6000396000f3fe608060405234801561001057600080fd5b50600436106101cf5760003560e01c8063715018a61161010457806398650275116100a2578063c87b56dd11610071578063c87b56dd14610722578063e78cea921461073f578063e985e9c514610747578063f2fde38b14610775576101cf565b80639865027514610600578063a22cb46514610608578063aa271e1a14610636578063b88d4fde1461065c576101cf565b80638dd14802116100de5780638dd14802146105a45780638f32d59b146105ca57806395d89b41146105d2578063983b2d56146105da576101cf565b8063715018a6146105625780637a9adac61461056a5780638da5cb5b1461059c576101cf565b80633f4c4e3d116101715780634f6ccce71161014b5780634f6ccce71461044757806350bb4e7f146104645780636352211e1461051f57806370a082311461053c576101cf565b80633f4c4e3d1461036f57806342842e0e146103f457806342966c681461042a576101cf565b8063095ea7b3116101ad578063095ea7b3146102c557806318160ddd146102f357806323b872dd1461030d5780632f745c5914610343576101cf565b806301ffc9a7146101d457806306fdde031461020f578063081812fc1461028c575b600080fd5b6101fb600480360360208110156101ea57600080fd5b50356001600160e01b03191661079b565b604080519115158252519081900360200190f35b6102176107ba565b6040805160208082528351818301528351919283929083019185019080838360005b83811015610251578181015183820152602001610239565b50505050905090810190601f16801561027e5780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b6102a9600480360360208110156102a257600080fd5b5035610851565b604080516001600160a01b039092168252519081900360200190f35b6102f1600480360360408110156102db57600080fd5b506001600160a01b0381351690602001356108b6565b005b6102fb6109cd565b60408051918252519081900360200190f35b6102f16004803603606081101561032357600080fd5b506001600160a01b038135811691602081013590911690604001356109d3565b6102fb6004803603604081101561035957600080fd5b506001600160a01b038135169060200135610a2b565b6102f16004803603606081101561038557600080fd5b8135916001600160a01b03602082013516918101906060810160408201356401000000008111156103b557600080fd5b8201836020820111156103c757600080fd5b803590602001918460018302840111640100000000831117156103e957600080fd5b509092509050610aad565b6102f16004803603606081101561040a57600080fd5b506001600160a01b03813581169160208101359091169060400135610b7a565b6102f16004803603602081101561044057600080fd5b5035610b95565b6102fb6004803603602081101561045d57600080fd5b5035610be9565b6101fb6004803603606081101561047a57600080fd5b6001600160a01b03823516916020810135918101906060810160408201356401000000008111156104aa57600080fd5b8201836020820111156104bc57600080fd5b803590602001918460018302840111640100000000831117156104de57600080fd5b91908080601f016020809104026020016040519081016040528093929190818152602001838380828437600092019190915250929550610c52945050505050565b6102a96004803603602081101561053557600080fd5b5035610cb9565b6102fb6004803603602081101561055257600080fd5b50356001600160a01b0316610d16565b6102f1610d81565b6102f16004803603606081101561058057600080fd5b506001600160a01b038135169060208101359060400135610e15565b6102a9610ea5565b6102f1600480360360208110156105ba57600080fd5b50356001600160a01b0316610eb4565b6101fb610f86565b610217610f97565b6102f1600480360360208110156105f057600080fd5b50356001600160a01b0316610ff8565b6102f1611048565b6102f16004803603604081101561061e57600080fd5b506001600160a01b0381351690602001351515611053565b6101fb6004803603602081101561064c57600080fd5b50356001600160a01b0316611122565b6102f16004803603608081101561067257600080fd5b6001600160a01b038235811692602081013590911691604082013591908101906080810160608201356401000000008111156106ad57600080fd5b8201836020820111156106bf57600080fd5b803590602001918460018302840111640100000000831117156106e157600080fd5b91908080601f016020809104026020016040519081016040528093929190818152602001838380828437600092019190915250929550611135945050505050565b6102176004803603602081101561073857600080fd5b503561118a565b6102a9611272565b6101fb6004803603604081101561075d57600080fd5b506001600160a01b0381358116916020013516611281565b6102f16004803603602081101561078b57600080fd5b50356001600160a01b03166112af565b6001600160e01b03191660009081526020819052604090205460ff1690565b60098054604080516020601f60026000196101006001881615020190951694909404938401819004810282018101909252828152606093909290918301828280156108465780601f1061081b57610100808354040283529160200191610846565b820191906000526020600020905b81548152906001019060200180831161082957829003601f168201915b505050505090505b90565b600061085c82611302565b61089a57604051600160e51b62461bcd02815260040180806020018281038252602c815260200180612196602c913960400191505060405180910390fd5b506000908152600260205260409020546001600160a01b031690565b60006108c182610cb9565b9050806001600160a01b0316836001600160a01b0316141561091757604051600160e51b62461bcd0281526004018080602001828103825260218152602001806122886021913960400191505060405180910390fd5b336001600160a01b038216148061093357506109338133611281565b61097157604051600160e51b62461bcd0281526004018080602001828103825260388152602001806120ba6038913960400191505060405180910390fd5b60008281526002602052604080822080546001600160a01b0319166001600160a01b0387811691821790925591518593918516917f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b92591a4505050565b60075490565b6109dd338261131f565b610a1b57604051600160e51b62461bcd0281526004018080602001828103825260318152602001806122a96031913960400191505060405180910390fd5b610a268383836113c6565b505050565b6000610a3683610d16565b8210610a7657604051600160e51b62461bcd02815260040180806020018281038252602b815260200180611fe7602b913960400191505060405180910390fd5b6001600160a01b0383166000908152600560205260409020805483908110610a9a57fe5b9060005260206000200154905092915050565b600e54610ac59033906001600160a01b0316866109d3565b600e54604051600160e41b630cf0da290281523360048201818152602483018890526001600160a01b0387811660448501526080606485019081526084850187905294169363cf0da290938992899289928992919060a401848480828437600081840152601f19601f8201169050808301925050509650505050505050600060405180830381600087803b158015610b5c57600080fd5b505af1158015610b70573d6000803e3d6000fd5b5050505050505050565b610a2683838360405180602001604052806000815250611135565b610b9f338261131f565b610bdd57604051600160e51b62461bcd02815260040180806020018281038252603081526020018061232b6030913960400191505060405180910390fd5b610be6816113e5565b50565b6000610bf36109cd565b8210610c3357604051600160e51b62461bcd02815260040180806020018281038252602c8152602001806122da602c913960400191505060405180910390fd5b60078281548110610c4057fe5b90600052602060002001549050919050565b6000610c5d33611122565b610c9b57604051600160e51b62461bcd0281526004018080602001828103825260308152602001806121456030913960400191505060405180910390fd5b610ca584846113f7565b610caf8383611418565b5060019392505050565b6000818152600160205260408120546001600160a01b031680610d1057604051600160e51b62461bcd02815260040180806020018281038252602981526020018061211c6029913960400191505060405180910390fd5b92915050565b60006001600160a01b038216610d6057604051600160e51b62461bcd02815260040180806020018281038252602a8152602001806120f2602a913960400191505060405180910390fd5b6001600160a01b0382166000908152600360205260409020610d109061147e565b610d89610f86565b610dcb5760408051600160e51b62461bcd02815260206004820181905260248201526000805160206121ee833981519152604482015290519081900360640190fd5b600d546040516000916001600160a01b0316907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0908390a3600d80546001600160a01b0319169055565b610e1d610f86565b610e5f5760408051600160e51b62461bcd02815260206004820181905260248201526000805160206121ee833981519152604482015290519081900360640190fd5b815b81811015610e9f57610e968482604051806040016040528060078152602001600160c81b667465737455524902815250610c52565b50600101610e61565b50505050565b600d546001600160a01b031690565b610ebc610f86565b610efe5760408051600160e51b62461bcd02815260206004820181905260248201526000805160206121ee833981519152604482015290519081900360640190fd5b610f10816001600160a01b0316611482565b610f645760408051600160e51b62461bcd02815260206004820152601860248201527f627269646765206973206e6f74206120636f6e74726163740000000000000000604482015290519081900360640190fd5b600e80546001600160a01b0319166001600160a01b0392909216919091179055565b600d546001600160a01b0316331490565b600a8054604080516020601f60026000196101006001881615020190951694909404938401819004810282018101909252828152606093909290918301828280156108465780601f1061081b57610100808354040283529160200191610846565b61100133611122565b61103f57604051600160e51b62461bcd0281526004018080602001828103825260308152602001806121456030913960400191505060405180910390fd5b610be681611488565b611051336114d0565b565b6001600160a01b0382163314156110b45760408051600160e51b62461bcd02815260206004820152601960248201527f4552433732313a20617070726f766520746f2063616c6c657200000000000000604482015290519081900360640190fd5b3360008181526004602090815260408083206001600160a01b03871680855290835292819020805460ff1916861515908117909155815190815290519293927f17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31929181900390910190a35050565b6000610d10600c8363ffffffff61151816565b6111408484846109d3565b61114c84848484611582565b610e9f57604051600160e51b62461bcd0281526004018080602001828103825260328152602001806120126032913960400191505060405180910390fd5b606061119582611302565b6111d357604051600160e51b62461bcd02815260040180806020018281038252602f815260200180612259602f913960400191505060405180910390fd5b6000828152600b602090815260409182902080548351601f6002600019610100600186161502019093169290920491820184900484028101840190945280845290918301828280156112665780601f1061123b57610100808354040283529160200191611266565b820191906000526020600020905b81548152906001019060200180831161124957829003601f168201915b50505050509050919050565b600e546001600160a01b031681565b6001600160a01b03918216600090815260046020908152604080832093909416825291909152205460ff1690565b6112b7610f86565b6112f95760408051600160e51b62461bcd02815260206004820181905260248201526000805160206121ee833981519152604482015290519081900360640190fd5b610be6816116bb565b6000908152600160205260409020546001600160a01b0316151590565b600061132a82611302565b61136857604051600160e51b62461bcd02815260040180806020018281038252602c81526020018061208e602c913960400191505060405180910390fd5b600061137383610cb9565b9050806001600160a01b0316846001600160a01b031614806113ae5750836001600160a01b03166113a384610851565b6001600160a01b0316145b806113be57506113be8185611281565b949350505050565b6113d183838361175f565b6113db83826118a9565b610a26828261199e565b610be66113f182610cb9565b826119dc565b6114018282611a24565b61140b828261199e565b61141481611b5b565b5050565b61142182611302565b61145f57604051600160e51b62461bcd02815260040180806020018281038252602c8152602001806121c2602c913960400191505060405180910390fd5b6000828152600b602090815260409091208251610a2692840190611eea565b5490565b3b151590565b611499600c8263ffffffff611b9f16565b6040516001600160a01b038216907f6ae172837ea30b801fbfcdd4108aa1d5bf8ff775444fd70256b44e6bf3dfc3f690600090a250565b6114e1600c8263ffffffff611c2316565b6040516001600160a01b038216907fe94479a9f7e1952cc78f2d6baab678adc1b772d936c6583def489e524cb6669290600090a250565b60006001600160a01b03821661156257604051600160e51b62461bcd02815260040180806020018281038252602281526020018061220e6022913960400191505060405180910390fd5b506001600160a01b03166000908152602091909152604090205460ff1690565b6000611596846001600160a01b0316611482565b6115a2575060016113be565b604051600160e11b630a85bd0102815233600482018181526001600160a01b03888116602485015260448401879052608060648501908152865160848601528651600095928a169463150b7a029490938c938b938b939260a4019060208501908083838e5b8381101561161f578181015183820152602001611607565b50505050905090810190601f16801561164c5780820380516001836020036101000a031916815260200191505b5095505050505050602060405180830381600087803b15801561166e57600080fd5b505af1158015611682573d6000803e3d6000fd5b505050506040513d602081101561169857600080fd5b50516001600160e01b031916600160e11b630a85bd010214915050949350505050565b6001600160a01b03811661170357604051600160e51b62461bcd0281526004018080602001828103825260268152602001806120446026913960400191505060405180910390fd5b600d546040516001600160a01b038084169216907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e090600090a3600d80546001600160a01b0319166001600160a01b0392909216919091179055565b826001600160a01b031661177282610cb9565b6001600160a01b0316146117ba57604051600160e51b62461bcd0281526004018080602001828103825260298152602001806122306029913960400191505060405180910390fd5b6001600160a01b03821661180257604051600160e51b62461bcd02815260040180806020018281038252602481526020018061206a6024913960400191505060405180910390fd5b61180b81611c8d565b6001600160a01b038316600090815260036020526040902061182c90611cc8565b6001600160a01b038216600090815260036020526040902061184d90611cdf565b60008181526001602052604080822080546001600160a01b0319166001600160a01b0386811691821790925591518493918716917fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef91a4505050565b6001600160a01b0382166000908152600560205260408120546118d390600163ffffffff611ce816565b60008381526006602052604090205490915080821461196e576001600160a01b038416600090815260056020526040812080548490811061191057fe5b906000526020600020015490508060056000876001600160a01b03166001600160a01b03168152602001908152602001600020838154811061194e57fe5b600091825260208083209091019290925591825260069052604090208190555b6001600160a01b0384166000908152600560205260409020805490611997906000198301611f68565b5050505050565b6001600160a01b0390911660009081526005602081815260408084208054868652600684529185208290559282526001810183559183529091200155565b6119e68282611d48565b6000818152600b60205260409020546002600019610100600184161502019091160415611414576000818152600b6020526040812061141491611f8c565b6001600160a01b038216611a825760408051600160e51b62461bcd02815260206004820181905260248201527f4552433732313a206d696e7420746f20746865207a65726f2061646472657373604482015290519081900360640190fd5b611a8b81611302565b15611ae05760408051600160e51b62461bcd02815260206004820152601c60248201527f4552433732313a20746f6b656e20616c7265616479206d696e74656400000000604482015290519081900360640190fd5b600081815260016020908152604080832080546001600160a01b0319166001600160a01b038716908117909155835260039091529020611b1f90611cdf565b60405181906001600160a01b038416906000907fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef908290a45050565b600780546000838152600860205260408120829055600182018355919091527fa66cc928b5edb82af9bd49922954155ab7b0942694bea4ce44661d9a8736c6880155565b611ba98282611518565b15611bfe5760408051600160e51b62461bcd02815260206004820152601f60248201527f526f6c65733a206163636f756e7420616c72656164792068617320726f6c6500604482015290519081900360640190fd5b6001600160a01b0316600090815260209190915260409020805460ff19166001179055565b611c2d8282611518565b611c6b57604051600160e51b62461bcd0281526004018080602001828103825260218152602001806121756021913960400191505060405180910390fd5b6001600160a01b0316600090815260209190915260409020805460ff19169055565b6000818152600260205260409020546001600160a01b031615610be657600090815260026020526040902080546001600160a01b0319169055565b8054611cdb90600163ffffffff611ce816565b9055565b80546001019055565b600082821115611d425760408051600160e51b62461bcd02815260206004820152601e60248201527f536166654d6174683a207375627472616374696f6e206f766572666c6f770000604482015290519081900360640190fd5b50900390565b611d528282611d74565b611d5c82826118a9565b60008181526006602052604081205561141481611e4e565b816001600160a01b0316611d8782610cb9565b6001600160a01b031614611dcf57604051600160e51b62461bcd0281526004018080602001828103825260258152602001806123066025913960400191505060405180910390fd5b611dd881611c8d565b6001600160a01b0382166000908152600360205260409020611df990611cc8565b60008181526001602052604080822080546001600160a01b0319169055518291906001600160a01b038516907fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef908390a45050565b600754600090611e6590600163ffffffff611ce816565b60008381526008602052604081205460078054939450909284908110611e8757fe5b906000526020600020015490508060078381548110611ea257fe5b60009182526020808320909101929092558281526008909152604090208290556007805490611ed5906000198301611f68565b50505060009182525060086020526040812055565b828054600181600116156101000203166002900490600052602060002090601f016020900481019282601f10611f2b57805160ff1916838001178555611f58565b82800160010185558215611f58579182015b82811115611f58578251825591602001919060010190611f3d565b50611f64929150611fcc565b5090565b815481835581811115610a2657600083815260209020610a26918101908301611fcc565b50805460018160011615610100020316600290046000825580601f10611fb25750610be6565b601f016020900490600052602060002090810190610be691905b61084e91905b80821115611f645760008155600101611fd256fe455243373231456e756d657261626c653a206f776e657220696e646578206f7574206f6620626f756e64734552433732313a207472616e7366657220746f206e6f6e20455243373231526563656976657220696d706c656d656e7465724f776e61626c653a206e6577206f776e657220697320746865207a65726f20616464726573734552433732313a207472616e7366657220746f20746865207a65726f20616464726573734552433732313a206f70657261746f7220717565727920666f72206e6f6e6578697374656e7420746f6b656e4552433732313a20617070726f76652063616c6c6572206973206e6f74206f776e6572206e6f7220617070726f76656420666f7220616c6c4552433732313a2062616c616e636520717565727920666f7220746865207a65726f20616464726573734552433732313a206f776e657220717565727920666f72206e6f6e6578697374656e7420746f6b656e4d696e746572526f6c653a2063616c6c657220646f6573206e6f74206861766520746865204d696e74657220726f6c65526f6c65733a206163636f756e7420646f6573206e6f74206861766520726f6c654552433732313a20617070726f76656420717565727920666f72206e6f6e6578697374656e7420746f6b656e4552433732314d657461646174613a2055524920736574206f66206e6f6e6578697374656e7420746f6b656e4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e6572526f6c65733a206163636f756e7420697320746865207a65726f20616464726573734552433732313a207472616e73666572206f6620746f6b656e2074686174206973206e6f74206f776e4552433732314d657461646174613a2055524920717565727920666f72206e6f6e6578697374656e7420746f6b656e4552433732313a20617070726f76616c20746f2063757272656e74206f776e65724552433732313a207472616e736665722063616c6c6572206973206e6f74206f776e6572206e6f7220617070726f766564455243373231456e756d657261626c653a20676c6f62616c20696e646578206f7574206f6620626f756e64734552433732313a206275726e206f6620746f6b656e2074686174206973206e6f74206f776e4552433732314275726e61626c653a2063616c6c6572206973206e6f74206f776e6572206e6f7220617070726f766564a165627a7a72305820c0a409364e62b03c239b1fb84bf994c3cdf1c1af2191cf79ebf33c05434d7f710029526f6c65733a206163636f756e7420697320746865207a65726f2061646472657373"
+var ServiceChainNFTBin = "0x60806040523480156200001157600080fd5b5060405162002c3f38038062002c3f8339810160408190526200003491620003a5565b604080518082018252600f81526e14d95c9d9a58d950da185a5b939195608a1b60208083019182528351808501909452600384526229a1a760e91b908401528151849391620000879160009190620002ff565b5080516200009d906001906020840190620002ff565b505050620000ba620000b46200010660201b60201c565b6200010a565b620000c5816200015c565b50620000d36000336200024b565b620000ff7f9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6336200024b565b5062000413565b3390565b600c80546001600160a01b038381166001600160a01b0319831681179093556040519116919082907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e090600090a35050565b600c546001600160a01b03163314620001bc5760405162461bcd60e51b815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e657260448201526064015b60405180910390fd5b620001db816001600160a01b0316620002f060201b62000e3e1760201c565b620002295760405162461bcd60e51b815260206004820152601860248201527f627269646765206973206e6f74206120636f6e747261637400000000000000006044820152606401620001b3565b600d80546001600160a01b0319166001600160a01b0392909216919091179055565b6000828152600b602090815260408083206001600160a01b038516845290915290205460ff16620002ec576000828152600b602090815260408083206001600160a01b03851684529091529020805460ff19166001179055620002ab3390565b6001600160a01b0316816001600160a01b0316837f2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d60405160405180910390a45b5050565b6001600160a01b03163b151590565b8280546200030d90620003d7565b90600052602060002090601f0160209004810192826200033157600085556200037c565b82601f106200034c57805160ff19168380011785556200037c565b828001600101855582156200037c579182015b828111156200037c5782518255916020019190600101906200035f565b506200038a9291506200038e565b5090565b5b808211156200038a57600081556001016200038f565b600060208284031215620003b857600080fd5b81516001600160a01b0381168114620003d057600080fd5b9392505050565b600181811c90821680620003ec57607f821691505b6020821081036200040d57634e487b7160e01b600052602260045260246000fd5b50919050565b61281c80620004236000396000f3fe608060405234801561001057600080fd5b50600436106102065760003560e01c8063715018a61161011a578063a3f4df7e116100ad578063d547741f1161007c578063d547741f1461047e578063e78cea9214610491578063e985e9c5146104a4578063f2fde38b146104e0578063f76f8d78146104f357600080fd5b8063a3f4df7e14610403578063b88d4fde14610431578063c87b56dd14610444578063d53913931461045757600080fd5b806391d14854116100e957806391d14854146103cd57806395d89b41146103e0578063a217fddf146103e8578063a22cb465146103f057600080fd5b8063715018a61461038e5780637a9adac6146103965780638da5cb5b146103a95780638dd14802146103ba57600080fd5b80632f745c591161019d57806342966c681161016c57806342966c681461032f5780634f6ccce71461034257806350bb4e7f146103555780636352211e1461036857806370a082311461037b57600080fd5b80632f745c59146102e357806336568abe146102f65780633f4c4e3d1461030957806342842e0e1461031c57600080fd5b806318160ddd116101d957806318160ddd1461028857806323b872dd1461029a578063248a9ca3146102ad5780632f2ff15d146102d057600080fd5b806301ffc9a71461020b57806306fdde0314610233578063081812fc14610248578063095ea7b314610273575b600080fd5b61021e610219366004612087565b610515565b60405190151581526020015b60405180910390f35b61023b610526565b60405161022a91906120fc565b61025b61025636600461210f565b6105b8565b6040516001600160a01b03909116815260200161022a565b610286610281366004612144565b610645565b005b6008545b60405190815260200161022a565b6102866102a836600461216e565b61075a565b61028c6102bb36600461210f565b6000908152600b602052604090206001015490565b6102866102de3660046121aa565b61078c565b61028c6102f1366004612144565b6107b1565b6102866103043660046121aa565b610847565b6102866103173660046121d6565b6108c5565b61028661032a36600461216e565b61094d565b61028661033d36600461210f565b610968565b61028c61035036600461210f565b6109e2565b6102866103633660046122e9565b610a75565b61025b61037636600461210f565b610ab9565b61028c610389366004612354565b610b30565b610286610bb6565b6102866103a436600461236f565b610bec565b600c546001600160a01b031661025b565b6102866103c8366004612354565b610c5c565b61021e6103db3660046121aa565b610cff565b61023b610d2a565b61028c600081565b6102866103fe3660046123a2565b610d39565b61023b6040518060400160405280600f81526020016e14d95c9d9a58d950da185a5b939195608a1b81525081565b61028661043f3660046123de565b610d44565b61023b61045236600461210f565b610d76565b61028c7f9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a681565b61028661048c3660046121aa565b610d81565b600d5461025b906001600160a01b031681565b61021e6104b236600461245a565b6001600160a01b03918216600090815260056020908152604080832093909416825291909152205460ff1690565b6102866104ee366004612354565b610da6565b61023b6040518060400160405280600381526020016229a1a760e91b81525081565b600061052082610e4d565b92915050565b60606000805461053590612484565b80601f016020809104026020016040519081016040528092919081815260200182805461056190612484565b80156105ae5780601f10610583576101008083540402835291602001916105ae565b820191906000526020600020905b81548152906001019060200180831161059157829003601f168201915b5050505050905090565b60006105c382610e72565b6106295760405162461bcd60e51b815260206004820152602c60248201527f4552433732313a20617070726f76656420717565727920666f72206e6f6e657860448201526b34b9ba32b73a103a37b5b2b760a11b60648201526084015b60405180910390fd5b506000908152600460205260409020546001600160a01b031690565b600061065082610ab9565b9050806001600160a01b0316836001600160a01b0316036106bd5760405162461bcd60e51b815260206004820152602160248201527f4552433732313a20617070726f76616c20746f2063757272656e74206f776e656044820152603960f91b6064820152608401610620565b336001600160a01b03821614806106d957506106d981336104b2565b61074b5760405162461bcd60e51b815260206004820152603860248201527f4552433732313a20617070726f76652063616c6c6572206973206e6f74206f7760448201527f6e6572206e6f7220617070726f76656420666f7220616c6c00000000000000006064820152608401610620565b6107558383610e8f565b505050565b610765335b82610efd565b6107815760405162461bcd60e51b8152600401610620906124be565b610755838383610fe7565b6000828152600b60205260409020600101546107a78161118e565b6107558383611198565b60006107bc83610b30565b821061081e5760405162461bcd60e51b815260206004820152602b60248201527f455243373231456e756d657261626c653a206f776e657220696e646578206f7560448201526a74206f6620626f756e647360a81b6064820152608401610620565b506001600160a01b03919091166000908152600660209081526040808320938352929052205490565b6001600160a01b03811633146108b75760405162461bcd60e51b815260206004820152602f60248201527f416363657373436f6e74726f6c3a2063616e206f6e6c792072656e6f756e636560448201526e103937b632b9903337b91039b2b63360891b6064820152608401610620565b6108c1828261121e565b5050565b600d546108dd9033906001600160a01b03168661075a565b600d54604051630cf0da2960e41b81526001600160a01b039091169063cf0da29090610915903390889088908890889060040161250f565b600060405180830381600087803b15801561092f57600080fd5b505af1158015610943573d6000803e3d6000fd5b5050505050505050565b61075583838360405180602001604052806000815250610d44565b6109713361075f565b6109d65760405162461bcd60e51b815260206004820152603060248201527f4552433732314275726e61626c653a2063616c6c6572206973206e6f74206f7760448201526f1b995c881b9bdc88185c1c1c9bdd995960821b6064820152608401610620565b6109df81611285565b50565b60006109ed60085490565b8210610a505760405162461bcd60e51b815260206004820152602c60248201527f455243373231456e756d657261626c653a20676c6f62616c20696e646578206f60448201526b7574206f6620626f756e647360a01b6064820152608401610620565b60088281548110610a6357610a63612563565b90600052602060002001549050919050565b7f9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6610a9f8161118e565b610aa9848461128e565b610ab383836113cd565b50505050565b6000818152600260205260408120546001600160a01b0316806105205760405162461bcd60e51b815260206004820152602960248201527f4552433732313a206f776e657220717565727920666f72206e6f6e657869737460448201526832b73a103a37b5b2b760b91b6064820152608401610620565b60006001600160a01b038216610b9a5760405162461bcd60e51b815260206004820152602960248201527f4552433732313a2061646472657373207a65726f206973206e6f7420612076616044820152683634b21037bbb732b960b91b6064820152608401610620565b506001600160a01b031660009081526003602052604090205490565b600c546001600160a01b03163314610be05760405162461bcd60e51b815260040161062090612579565b610bea6000611458565b565b600c546001600160a01b03163314610c165760405162461bcd60e51b815260040161062090612579565b815b81811015610ab357610c4a8482604051806040016040528060078152602001667465737455524960c81b815250610a75565b80610c54816125c4565b915050610c18565b600c546001600160a01b03163314610c865760405162461bcd60e51b815260040161062090612579565b6001600160a01b0381163b610cdd5760405162461bcd60e51b815260206004820152601860248201527f627269646765206973206e6f74206120636f6e747261637400000000000000006044820152606401610620565b600d80546001600160a01b0319166001600160a01b0392909216919091179055565b6000918252600b602090815260408084206001600160a01b0393909316845291905290205460ff1690565b60606001805461053590612484565b6108c13383836114aa565b610d4e3383610efd565b610d6a5760405162461bcd60e51b8152600401610620906124be565b610ab384848484611578565b6060610520826115ab565b6000828152600b6020526040902060010154610d9c8161118e565b610755838361121e565b600c546001600160a01b03163314610dd05760405162461bcd60e51b815260040161062090612579565b6001600160a01b038116610e355760405162461bcd60e51b815260206004820152602660248201527f4f776e61626c653a206e6577206f776e657220697320746865207a65726f206160448201526564647265737360d01b6064820152608401610620565b6109df81611458565b6001600160a01b03163b151590565b60006001600160e01b03198216637965db0b60e01b1480610520575061052082611719565b6000908152600260205260409020546001600160a01b0316151590565b600081815260046020526040902080546001600160a01b0319166001600160a01b0384169081179091558190610ec482610ab9565b6001600160a01b03167f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b92560405160405180910390a45050565b6000610f0882610e72565b610f695760405162461bcd60e51b815260206004820152602c60248201527f4552433732313a206f70657261746f7220717565727920666f72206e6f6e657860448201526b34b9ba32b73a103a37b5b2b760a11b6064820152608401610620565b6000610f7483610ab9565b9050806001600160a01b0316846001600160a01b03161480610fbb57506001600160a01b0380821660009081526005602090815260408083209388168352929052205460ff165b80610fdf5750836001600160a01b0316610fd4846105b8565b6001600160a01b0316145b949350505050565b826001600160a01b0316610ffa82610ab9565b6001600160a01b03161461105e5760405162461bcd60e51b815260206004820152602560248201527f4552433732313a207472616e736665722066726f6d20696e636f72726563742060448201526437bbb732b960d91b6064820152608401610620565b6001600160a01b0382166110c05760405162461bcd60e51b8152602060048201526024808201527f4552433732313a207472616e7366657220746f20746865207a65726f206164646044820152637265737360e01b6064820152608401610620565b6110cb83838361173e565b6110d6600082610e8f565b6001600160a01b03831660009081526003602052604081208054600192906110ff9084906125dd565b90915550506001600160a01b038216600090815260036020526040812080546001929061112d9084906125f4565b909155505060008181526002602052604080822080546001600160a01b0319166001600160a01b0386811691821790925591518493918716917fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef91a4505050565b6109df8133611749565b6111a28282610cff565b6108c1576000828152600b602090815260408083206001600160a01b03851684529091529020805460ff191660011790556111da3390565b6001600160a01b0316816001600160a01b0316837f2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d60405160405180910390a45050565b6112288282610cff565b156108c1576000828152600b602090815260408083206001600160a01b0385168085529252808320805460ff1916905551339285917ff6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b9190a45050565b6109df816117ad565b6001600160a01b0382166112e45760405162461bcd60e51b815260206004820181905260248201527f4552433732313a206d696e7420746f20746865207a65726f20616464726573736044820152606401610620565b6112ed81610e72565b1561133a5760405162461bcd60e51b815260206004820152601c60248201527f4552433732313a20746f6b656e20616c7265616479206d696e746564000000006044820152606401610620565b6113466000838361173e565b6001600160a01b038216600090815260036020526040812080546001929061136f9084906125f4565b909155505060008181526002602052604080822080546001600160a01b0319166001600160a01b03861690811790915590518392907fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef908290a45050565b6113d682610e72565b6114395760405162461bcd60e51b815260206004820152602e60248201527f45524337323155524953746f726167653a2055524920736574206f66206e6f6e60448201526d32bc34b9ba32b73a103a37b5b2b760911b6064820152608401610620565b6000828152600a60209081526040909120825161075592840190611fa2565b600c80546001600160a01b038381166001600160a01b0319831681179093556040519116919082907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e090600090a35050565b816001600160a01b0316836001600160a01b03160361150b5760405162461bcd60e51b815260206004820152601960248201527f4552433732313a20617070726f766520746f2063616c6c6572000000000000006044820152606401610620565b6001600160a01b03838116600081815260056020908152604080832094871680845294825291829020805460ff191686151590811790915591519182527f17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31910160405180910390a3505050565b611583848484610fe7565b61158f848484846117ed565b610ab35760405162461bcd60e51b81526004016106209061260c565b60606115b682610e72565b61161c5760405162461bcd60e51b815260206004820152603160248201527f45524337323155524953746f726167653a2055524920717565727920666f72206044820152703737b732bc34b9ba32b73a103a37b5b2b760791b6064820152608401610620565b6000828152600a60205260408120805461163590612484565b80601f016020809104026020016040519081016040528092919081815260200182805461166190612484565b80156116ae5780601f10611683576101008083540402835291602001916116ae565b820191906000526020600020905b81548152906001019060200180831161169157829003601f168201915b5050505050905060006116cc60408051602081019091526000815290565b905080516000036116de575092915050565b8151156117105780826040516020016116f892919061265e565b60405160208183030381529060405292505050919050565b610fdf846118ee565b60006001600160e01b0319821663780e9d6360e01b14806105205750610520826119c6565b610755838383611a16565b6117538282610cff565b6108c15761176b816001600160a01b03166014611ace565b611776836020611ace565b60405160200161178792919061268d565b60408051601f198184030181529082905262461bcd60e51b8252610620916004016120fc565b6117b681611c6a565b6000818152600a6020526040902080546117cf90612484565b1590506109df576000818152600a602052604081206109df91612026565b60006001600160a01b0384163b156118e357604051630a85bd0160e11b81526001600160a01b0385169063150b7a0290611831903390899088908890600401612702565b6020604051808303816000875af192505050801561186c575060408051601f3d908101601f191682019092526118699181019061273f565b60015b6118c9573d80801561189a576040519150601f19603f3d011682016040523d82523d6000602084013e61189f565b606091505b5080516000036118c15760405162461bcd60e51b81526004016106209061260c565b805181602001fd5b6001600160e01b031916630a85bd0160e11b149050610fdf565b506001949350505050565b60606118f982610e72565b61195d5760405162461bcd60e51b815260206004820152602f60248201527f4552433732314d657461646174613a2055524920717565727920666f72206e6f60448201526e3732bc34b9ba32b73a103a37b5b2b760891b6064820152608401610620565b600061197460408051602081019091526000815290565b9050600081511161199457604051806020016040528060008152506119bf565b8061199e84611d11565b6040516020016119af92919061265e565b6040516020818303038152906040525b9392505050565b60006001600160e01b031982166380ac58cd60e01b14806119f757506001600160e01b03198216635b5e139f60e01b145b8061052057506301ffc9a760e01b6001600160e01b0319831614610520565b6001600160a01b038316611a7157611a6c81600880546000838152600960205260408120829055600182018355919091527ff3f7a9fe364faab93b216da50a3214154f22a0a2b415b23a84c8169e8b636ee30155565b611a94565b816001600160a01b0316836001600160a01b031614611a9457611a948382611e12565b6001600160a01b038216611aab5761075581611eaf565b826001600160a01b0316826001600160a01b031614610755576107558282611f5e565b60606000611add83600261275c565b611ae89060026125f4565b67ffffffffffffffff811115611b0057611b0061225d565b6040519080825280601f01601f191660200182016040528015611b2a576020820181803683370190505b509050600360fc1b81600081518110611b4557611b45612563565b60200101906001600160f81b031916908160001a905350600f60fb1b81600181518110611b7457611b74612563565b60200101906001600160f81b031916908160001a9053506000611b9884600261275c565b611ba39060016125f4565b90505b6001811115611c1b576f181899199a1a9b1b9c1cb0b131b232b360811b85600f1660108110611bd757611bd7612563565b1a60f81b828281518110611bed57611bed612563565b60200101906001600160f81b031916908160001a90535060049490941c93611c148161277b565b9050611ba6565b5083156119bf5760405162461bcd60e51b815260206004820181905260248201527f537472696e67733a20686578206c656e67746820696e73756666696369656e746044820152606401610620565b6000611c7582610ab9565b9050611c838160008461173e565b611c8e600083610e8f565b6001600160a01b0381166000908152600360205260408120805460019290611cb79084906125dd565b909155505060008281526002602052604080822080546001600160a01b0319169055518391906001600160a01b038416907fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef908390a45050565b606081600003611d385750506040805180820190915260018152600360fc1b602082015290565b8160005b8115611d625780611d4c816125c4565b9150611d5b9050600a836127a8565b9150611d3c565b60008167ffffffffffffffff811115611d7d57611d7d61225d565b6040519080825280601f01601f191660200182016040528015611da7576020820181803683370190505b5090505b8415610fdf57611dbc6001836125dd565b9150611dc9600a866127bc565b611dd49060306125f4565b60f81b818381518110611de957611de9612563565b60200101906001600160f81b031916908160001a905350611e0b600a866127a8565b9450611dab565b60006001611e1f84610b30565b611e2991906125dd565b600083815260076020526040902054909150808214611e7c576001600160a01b03841660009081526006602090815260408083208584528252808320548484528184208190558352600790915290208190555b5060009182526007602090815260408084208490556001600160a01b039094168352600681528383209183525290812055565b600854600090611ec1906001906125dd565b60008381526009602052604081205460088054939450909284908110611ee957611ee9612563565b906000526020600020015490508060088381548110611f0a57611f0a612563565b6000918252602080832090910192909255828152600990915260408082208490558582528120556008805480611f4257611f426127d0565b6001900381819060005260206000200160009055905550505050565b6000611f6983610b30565b6001600160a01b039093166000908152600660209081526040808320868452825280832085905593825260079052919091209190915550565b828054611fae90612484565b90600052602060002090601f016020900481019282611fd05760008555612016565b82601f10611fe957805160ff1916838001178555612016565b82800160010185558215612016579182015b82811115612016578251825591602001919060010190611ffb565b5061202292915061205c565b5090565b50805461203290612484565b6000825580601f10612042575050565b601f0160209004906000526020600020908101906109df91905b5b80821115612022576000815560010161205d565b6001600160e01b0319811681146109df57600080fd5b60006020828403121561209957600080fd5b81356119bf81612071565b60005b838110156120bf5781810151838201526020016120a7565b83811115610ab35750506000910152565b600081518084526120e88160208601602086016120a4565b601f01601f19169290920160200192915050565b6020815260006119bf60208301846120d0565b60006020828403121561212157600080fd5b5035919050565b80356001600160a01b038116811461213f57600080fd5b919050565b6000806040838503121561215757600080fd5b61216083612128565b946020939093013593505050565b60008060006060848603121561218357600080fd5b61218c84612128565b925061219a60208501612128565b9150604084013590509250925092565b600080604083850312156121bd57600080fd5b823591506121cd60208401612128565b90509250929050565b600080600080606085870312156121ec57600080fd5b843593506121fc60208601612128565b9250604085013567ffffffffffffffff8082111561221957600080fd5b818701915087601f83011261222d57600080fd5b81358181111561223c57600080fd5b88602082850101111561224e57600080fd5b95989497505060200194505050565b634e487b7160e01b600052604160045260246000fd5b600067ffffffffffffffff8084111561228e5761228e61225d565b604051601f8501601f19908116603f011681019082821181831017156122b6576122b661225d565b816040528093508581528686860111156122cf57600080fd5b858560208301376000602087830101525050509392505050565b6000806000606084860312156122fe57600080fd5b61230784612128565b925060208401359150604084013567ffffffffffffffff81111561232a57600080fd5b8401601f8101861361233b57600080fd5b61234a86823560208401612273565b9150509250925092565b60006020828403121561236657600080fd5b6119bf82612128565b60008060006060848603121561238457600080fd5b61238d84612128565b95602085013595506040909401359392505050565b600080604083850312156123b557600080fd5b6123be83612128565b9150602083013580151581146123d357600080fd5b809150509250929050565b600080600080608085870312156123f457600080fd5b6123fd85612128565b935061240b60208601612128565b925060408501359150606085013567ffffffffffffffff81111561242e57600080fd5b8501601f8101871361243f57600080fd5b61244e87823560208401612273565b91505092959194509250565b6000806040838503121561246d57600080fd5b61247683612128565b91506121cd60208401612128565b600181811c9082168061249857607f821691505b6020821081036124b857634e487b7160e01b600052602260045260246000fd5b50919050565b60208082526031908201527f4552433732313a207472616e736665722063616c6c6572206973206e6f74206f6040820152701ddb995c881b9bdc88185c1c1c9bdd9959607a1b606082015260800190565b6001600160a01b038681168252602082018690528416604082015260806060820181905281018290526000828460a0840137600060a0848401015260a0601f19601f85011683010190509695505050505050565b634e487b7160e01b600052603260045260246000fd5b6020808252818101527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e6572604082015260600190565b634e487b7160e01b600052601160045260246000fd5b6000600182016125d6576125d66125ae565b5060010190565b6000828210156125ef576125ef6125ae565b500390565b60008219821115612607576126076125ae565b500190565b60208082526032908201527f4552433732313a207472616e7366657220746f206e6f6e20455243373231526560408201527131b2b4bb32b91034b6b83632b6b2b73a32b960711b606082015260800190565b600083516126708184602088016120a4565b8351908301906126848183602088016120a4565b01949350505050565b7f416363657373436f6e74726f6c3a206163636f756e74200000000000000000008152600083516126c58160178501602088016120a4565b7001034b99036b4b9b9b4b733903937b6329607d1b60179184019182015283516126f68160288401602088016120a4565b01602801949350505050565b6001600160a01b0385811682528416602082015260408101839052608060608201819052600090612735908301846120d0565b9695505050505050565b60006020828403121561275157600080fd5b81516119bf81612071565b6000816000190483118215151615612776576127766125ae565b500290565b60008161278a5761278a6125ae565b506000190190565b634e487b7160e01b600052601260045260246000fd5b6000826127b7576127b7612792565b500490565b6000826127cb576127cb612792565b500690565b634e487b7160e01b600052603160045260246000fdfea26469706673582212205cc81a03638a56f3c1a58191f786ca51c811fc21cab02e4f45d5c4cf06c9c01464736f6c634300080d0033"
 
 // DeployServiceChainNFT deploys a new Klaytn contract, binding an instance of ServiceChainNFT to it.
 func DeployServiceChainNFT(auth *bind.TransactOpts, backend bind.ContractBackend, _bridge common.Address) (common.Address, *types.Transaction, *ServiceChainNFT, error) {
@@ -12595,6 +11318,110 @@ func (_ServiceChainNFT *ServiceChainNFTTransactorRaw) Transact(opts *bind.Transa
 	return _ServiceChainNFT.Contract.contract.Transact(opts, method, params...)
 }
 
+// DEFAULTADMINROLE is a free data retrieval call binding the contract method 0xa217fddf.
+//
+// Solidity: function DEFAULT_ADMIN_ROLE() view returns(bytes32)
+func (_ServiceChainNFT *ServiceChainNFTCaller) DEFAULTADMINROLE(opts *bind.CallOpts) ([32]byte, error) {
+	var (
+		ret0 = new([32]byte)
+	)
+	out := ret0
+	err := _ServiceChainNFT.contract.Call(opts, out, "DEFAULT_ADMIN_ROLE")
+	return *ret0, err
+}
+
+// DEFAULTADMINROLE is a free data retrieval call binding the contract method 0xa217fddf.
+//
+// Solidity: function DEFAULT_ADMIN_ROLE() view returns(bytes32)
+func (_ServiceChainNFT *ServiceChainNFTSession) DEFAULTADMINROLE() ([32]byte, error) {
+	return _ServiceChainNFT.Contract.DEFAULTADMINROLE(&_ServiceChainNFT.CallOpts)
+}
+
+// DEFAULTADMINROLE is a free data retrieval call binding the contract method 0xa217fddf.
+//
+// Solidity: function DEFAULT_ADMIN_ROLE() view returns(bytes32)
+func (_ServiceChainNFT *ServiceChainNFTCallerSession) DEFAULTADMINROLE() ([32]byte, error) {
+	return _ServiceChainNFT.Contract.DEFAULTADMINROLE(&_ServiceChainNFT.CallOpts)
+}
+
+// MINTERROLE is a free data retrieval call binding the contract method 0xd5391393.
+//
+// Solidity: function MINTER_ROLE() view returns(bytes32)
+func (_ServiceChainNFT *ServiceChainNFTCaller) MINTERROLE(opts *bind.CallOpts) ([32]byte, error) {
+	var (
+		ret0 = new([32]byte)
+	)
+	out := ret0
+	err := _ServiceChainNFT.contract.Call(opts, out, "MINTER_ROLE")
+	return *ret0, err
+}
+
+// MINTERROLE is a free data retrieval call binding the contract method 0xd5391393.
+//
+// Solidity: function MINTER_ROLE() view returns(bytes32)
+func (_ServiceChainNFT *ServiceChainNFTSession) MINTERROLE() ([32]byte, error) {
+	return _ServiceChainNFT.Contract.MINTERROLE(&_ServiceChainNFT.CallOpts)
+}
+
+// MINTERROLE is a free data retrieval call binding the contract method 0xd5391393.
+//
+// Solidity: function MINTER_ROLE() view returns(bytes32)
+func (_ServiceChainNFT *ServiceChainNFTCallerSession) MINTERROLE() ([32]byte, error) {
+	return _ServiceChainNFT.Contract.MINTERROLE(&_ServiceChainNFT.CallOpts)
+}
+
+// NAME is a free data retrieval call binding the contract method 0xa3f4df7e.
+//
+// Solidity: function NAME() view returns(string)
+func (_ServiceChainNFT *ServiceChainNFTCaller) NAME(opts *bind.CallOpts) (string, error) {
+	var (
+		ret0 = new(string)
+	)
+	out := ret0
+	err := _ServiceChainNFT.contract.Call(opts, out, "NAME")
+	return *ret0, err
+}
+
+// NAME is a free data retrieval call binding the contract method 0xa3f4df7e.
+//
+// Solidity: function NAME() view returns(string)
+func (_ServiceChainNFT *ServiceChainNFTSession) NAME() (string, error) {
+	return _ServiceChainNFT.Contract.NAME(&_ServiceChainNFT.CallOpts)
+}
+
+// NAME is a free data retrieval call binding the contract method 0xa3f4df7e.
+//
+// Solidity: function NAME() view returns(string)
+func (_ServiceChainNFT *ServiceChainNFTCallerSession) NAME() (string, error) {
+	return _ServiceChainNFT.Contract.NAME(&_ServiceChainNFT.CallOpts)
+}
+
+// SYMBOL is a free data retrieval call binding the contract method 0xf76f8d78.
+//
+// Solidity: function SYMBOL() view returns(string)
+func (_ServiceChainNFT *ServiceChainNFTCaller) SYMBOL(opts *bind.CallOpts) (string, error) {
+	var (
+		ret0 = new(string)
+	)
+	out := ret0
+	err := _ServiceChainNFT.contract.Call(opts, out, "SYMBOL")
+	return *ret0, err
+}
+
+// SYMBOL is a free data retrieval call binding the contract method 0xf76f8d78.
+//
+// Solidity: function SYMBOL() view returns(string)
+func (_ServiceChainNFT *ServiceChainNFTSession) SYMBOL() (string, error) {
+	return _ServiceChainNFT.Contract.SYMBOL(&_ServiceChainNFT.CallOpts)
+}
+
+// SYMBOL is a free data retrieval call binding the contract method 0xf76f8d78.
+//
+// Solidity: function SYMBOL() view returns(string)
+func (_ServiceChainNFT *ServiceChainNFTCallerSession) SYMBOL() (string, error) {
+	return _ServiceChainNFT.Contract.SYMBOL(&_ServiceChainNFT.CallOpts)
+}
+
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
 //
 // Solidity: function balanceOf(address owner) view returns(uint256)
@@ -12673,6 +11500,58 @@ func (_ServiceChainNFT *ServiceChainNFTCallerSession) GetApproved(tokenId *big.I
 	return _ServiceChainNFT.Contract.GetApproved(&_ServiceChainNFT.CallOpts, tokenId)
 }
 
+// GetRoleAdmin is a free data retrieval call binding the contract method 0x248a9ca3.
+//
+// Solidity: function getRoleAdmin(bytes32 role) view returns(bytes32)
+func (_ServiceChainNFT *ServiceChainNFTCaller) GetRoleAdmin(opts *bind.CallOpts, role [32]byte) ([32]byte, error) {
+	var (
+		ret0 = new([32]byte)
+	)
+	out := ret0
+	err := _ServiceChainNFT.contract.Call(opts, out, "getRoleAdmin", role)
+	return *ret0, err
+}
+
+// GetRoleAdmin is a free data retrieval call binding the contract method 0x248a9ca3.
+//
+// Solidity: function getRoleAdmin(bytes32 role) view returns(bytes32)
+func (_ServiceChainNFT *ServiceChainNFTSession) GetRoleAdmin(role [32]byte) ([32]byte, error) {
+	return _ServiceChainNFT.Contract.GetRoleAdmin(&_ServiceChainNFT.CallOpts, role)
+}
+
+// GetRoleAdmin is a free data retrieval call binding the contract method 0x248a9ca3.
+//
+// Solidity: function getRoleAdmin(bytes32 role) view returns(bytes32)
+func (_ServiceChainNFT *ServiceChainNFTCallerSession) GetRoleAdmin(role [32]byte) ([32]byte, error) {
+	return _ServiceChainNFT.Contract.GetRoleAdmin(&_ServiceChainNFT.CallOpts, role)
+}
+
+// HasRole is a free data retrieval call binding the contract method 0x91d14854.
+//
+// Solidity: function hasRole(bytes32 role, address account) view returns(bool)
+func (_ServiceChainNFT *ServiceChainNFTCaller) HasRole(opts *bind.CallOpts, role [32]byte, account common.Address) (bool, error) {
+	var (
+		ret0 = new(bool)
+	)
+	out := ret0
+	err := _ServiceChainNFT.contract.Call(opts, out, "hasRole", role, account)
+	return *ret0, err
+}
+
+// HasRole is a free data retrieval call binding the contract method 0x91d14854.
+//
+// Solidity: function hasRole(bytes32 role, address account) view returns(bool)
+func (_ServiceChainNFT *ServiceChainNFTSession) HasRole(role [32]byte, account common.Address) (bool, error) {
+	return _ServiceChainNFT.Contract.HasRole(&_ServiceChainNFT.CallOpts, role, account)
+}
+
+// HasRole is a free data retrieval call binding the contract method 0x91d14854.
+//
+// Solidity: function hasRole(bytes32 role, address account) view returns(bool)
+func (_ServiceChainNFT *ServiceChainNFTCallerSession) HasRole(role [32]byte, account common.Address) (bool, error) {
+	return _ServiceChainNFT.Contract.HasRole(&_ServiceChainNFT.CallOpts, role, account)
+}
+
 // IsApprovedForAll is a free data retrieval call binding the contract method 0xe985e9c5.
 //
 // Solidity: function isApprovedForAll(address owner, address operator) view returns(bool)
@@ -12697,58 +11576,6 @@ func (_ServiceChainNFT *ServiceChainNFTSession) IsApprovedForAll(owner common.Ad
 // Solidity: function isApprovedForAll(address owner, address operator) view returns(bool)
 func (_ServiceChainNFT *ServiceChainNFTCallerSession) IsApprovedForAll(owner common.Address, operator common.Address) (bool, error) {
 	return _ServiceChainNFT.Contract.IsApprovedForAll(&_ServiceChainNFT.CallOpts, owner, operator)
-}
-
-// IsMinter is a free data retrieval call binding the contract method 0xaa271e1a.
-//
-// Solidity: function isMinter(address account) view returns(bool)
-func (_ServiceChainNFT *ServiceChainNFTCaller) IsMinter(opts *bind.CallOpts, account common.Address) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
-	out := ret0
-	err := _ServiceChainNFT.contract.Call(opts, out, "isMinter", account)
-	return *ret0, err
-}
-
-// IsMinter is a free data retrieval call binding the contract method 0xaa271e1a.
-//
-// Solidity: function isMinter(address account) view returns(bool)
-func (_ServiceChainNFT *ServiceChainNFTSession) IsMinter(account common.Address) (bool, error) {
-	return _ServiceChainNFT.Contract.IsMinter(&_ServiceChainNFT.CallOpts, account)
-}
-
-// IsMinter is a free data retrieval call binding the contract method 0xaa271e1a.
-//
-// Solidity: function isMinter(address account) view returns(bool)
-func (_ServiceChainNFT *ServiceChainNFTCallerSession) IsMinter(account common.Address) (bool, error) {
-	return _ServiceChainNFT.Contract.IsMinter(&_ServiceChainNFT.CallOpts, account)
-}
-
-// IsOwner is a free data retrieval call binding the contract method 0x8f32d59b.
-//
-// Solidity: function isOwner() view returns(bool)
-func (_ServiceChainNFT *ServiceChainNFTCaller) IsOwner(opts *bind.CallOpts) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
-	out := ret0
-	err := _ServiceChainNFT.contract.Call(opts, out, "isOwner")
-	return *ret0, err
-}
-
-// IsOwner is a free data retrieval call binding the contract method 0x8f32d59b.
-//
-// Solidity: function isOwner() view returns(bool)
-func (_ServiceChainNFT *ServiceChainNFTSession) IsOwner() (bool, error) {
-	return _ServiceChainNFT.Contract.IsOwner(&_ServiceChainNFT.CallOpts)
-}
-
-// IsOwner is a free data retrieval call binding the contract method 0x8f32d59b.
-//
-// Solidity: function isOwner() view returns(bool)
-func (_ServiceChainNFT *ServiceChainNFTCallerSession) IsOwner() (bool, error) {
-	return _ServiceChainNFT.Contract.IsOwner(&_ServiceChainNFT.CallOpts)
 }
 
 // Name is a free data retrieval call binding the contract method 0x06fdde03.
@@ -12985,27 +11812,6 @@ func (_ServiceChainNFT *ServiceChainNFTCallerSession) TotalSupply() (*big.Int, e
 	return _ServiceChainNFT.Contract.TotalSupply(&_ServiceChainNFT.CallOpts)
 }
 
-// AddMinter is a paid mutator transaction binding the contract method 0x983b2d56.
-//
-// Solidity: function addMinter(address account) returns()
-func (_ServiceChainNFT *ServiceChainNFTTransactor) AddMinter(opts *bind.TransactOpts, account common.Address) (*types.Transaction, error) {
-	return _ServiceChainNFT.contract.Transact(opts, "addMinter", account)
-}
-
-// AddMinter is a paid mutator transaction binding the contract method 0x983b2d56.
-//
-// Solidity: function addMinter(address account) returns()
-func (_ServiceChainNFT *ServiceChainNFTSession) AddMinter(account common.Address) (*types.Transaction, error) {
-	return _ServiceChainNFT.Contract.AddMinter(&_ServiceChainNFT.TransactOpts, account)
-}
-
-// AddMinter is a paid mutator transaction binding the contract method 0x983b2d56.
-//
-// Solidity: function addMinter(address account) returns()
-func (_ServiceChainNFT *ServiceChainNFTTransactorSession) AddMinter(account common.Address) (*types.Transaction, error) {
-	return _ServiceChainNFT.Contract.AddMinter(&_ServiceChainNFT.TransactOpts, account)
-}
-
 // Approve is a paid mutator transaction binding the contract method 0x095ea7b3.
 //
 // Solidity: function approve(address to, uint256 tokenId) returns()
@@ -13048,25 +11854,46 @@ func (_ServiceChainNFT *ServiceChainNFTTransactorSession) Burn(tokenId *big.Int)
 	return _ServiceChainNFT.Contract.Burn(&_ServiceChainNFT.TransactOpts, tokenId)
 }
 
-// MintWithTokenURI is a paid mutator transaction binding the contract method 0x50bb4e7f.
+// GrantRole is a paid mutator transaction binding the contract method 0x2f2ff15d.
 //
-// Solidity: function mintWithTokenURI(address to, uint256 tokenId, string tokenURI) returns(bool)
-func (_ServiceChainNFT *ServiceChainNFTTransactor) MintWithTokenURI(opts *bind.TransactOpts, to common.Address, tokenId *big.Int, tokenURI string) (*types.Transaction, error) {
-	return _ServiceChainNFT.contract.Transact(opts, "mintWithTokenURI", to, tokenId, tokenURI)
+// Solidity: function grantRole(bytes32 role, address account) returns()
+func (_ServiceChainNFT *ServiceChainNFTTransactor) GrantRole(opts *bind.TransactOpts, role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _ServiceChainNFT.contract.Transact(opts, "grantRole", role, account)
+}
+
+// GrantRole is a paid mutator transaction binding the contract method 0x2f2ff15d.
+//
+// Solidity: function grantRole(bytes32 role, address account) returns()
+func (_ServiceChainNFT *ServiceChainNFTSession) GrantRole(role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _ServiceChainNFT.Contract.GrantRole(&_ServiceChainNFT.TransactOpts, role, account)
+}
+
+// GrantRole is a paid mutator transaction binding the contract method 0x2f2ff15d.
+//
+// Solidity: function grantRole(bytes32 role, address account) returns()
+func (_ServiceChainNFT *ServiceChainNFTTransactorSession) GrantRole(role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _ServiceChainNFT.Contract.GrantRole(&_ServiceChainNFT.TransactOpts, role, account)
 }
 
 // MintWithTokenURI is a paid mutator transaction binding the contract method 0x50bb4e7f.
 //
-// Solidity: function mintWithTokenURI(address to, uint256 tokenId, string tokenURI) returns(bool)
-func (_ServiceChainNFT *ServiceChainNFTSession) MintWithTokenURI(to common.Address, tokenId *big.Int, tokenURI string) (*types.Transaction, error) {
-	return _ServiceChainNFT.Contract.MintWithTokenURI(&_ServiceChainNFT.TransactOpts, to, tokenId, tokenURI)
+// Solidity: function mintWithTokenURI(address to, uint256 tokenId, string _tokenURI) returns()
+func (_ServiceChainNFT *ServiceChainNFTTransactor) MintWithTokenURI(opts *bind.TransactOpts, to common.Address, tokenId *big.Int, _tokenURI string) (*types.Transaction, error) {
+	return _ServiceChainNFT.contract.Transact(opts, "mintWithTokenURI", to, tokenId, _tokenURI)
 }
 
 // MintWithTokenURI is a paid mutator transaction binding the contract method 0x50bb4e7f.
 //
-// Solidity: function mintWithTokenURI(address to, uint256 tokenId, string tokenURI) returns(bool)
-func (_ServiceChainNFT *ServiceChainNFTTransactorSession) MintWithTokenURI(to common.Address, tokenId *big.Int, tokenURI string) (*types.Transaction, error) {
-	return _ServiceChainNFT.Contract.MintWithTokenURI(&_ServiceChainNFT.TransactOpts, to, tokenId, tokenURI)
+// Solidity: function mintWithTokenURI(address to, uint256 tokenId, string _tokenURI) returns()
+func (_ServiceChainNFT *ServiceChainNFTSession) MintWithTokenURI(to common.Address, tokenId *big.Int, _tokenURI string) (*types.Transaction, error) {
+	return _ServiceChainNFT.Contract.MintWithTokenURI(&_ServiceChainNFT.TransactOpts, to, tokenId, _tokenURI)
+}
+
+// MintWithTokenURI is a paid mutator transaction binding the contract method 0x50bb4e7f.
+//
+// Solidity: function mintWithTokenURI(address to, uint256 tokenId, string _tokenURI) returns()
+func (_ServiceChainNFT *ServiceChainNFTTransactorSession) MintWithTokenURI(to common.Address, tokenId *big.Int, _tokenURI string) (*types.Transaction, error) {
+	return _ServiceChainNFT.Contract.MintWithTokenURI(&_ServiceChainNFT.TransactOpts, to, tokenId, _tokenURI)
 }
 
 // RegisterBulk is a paid mutator transaction binding the contract method 0x7a9adac6.
@@ -13090,27 +11917,6 @@ func (_ServiceChainNFT *ServiceChainNFTTransactorSession) RegisterBulk(_user com
 	return _ServiceChainNFT.Contract.RegisterBulk(&_ServiceChainNFT.TransactOpts, _user, _startID, _endID)
 }
 
-// RenounceMinter is a paid mutator transaction binding the contract method 0x98650275.
-//
-// Solidity: function renounceMinter() returns()
-func (_ServiceChainNFT *ServiceChainNFTTransactor) RenounceMinter(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _ServiceChainNFT.contract.Transact(opts, "renounceMinter")
-}
-
-// RenounceMinter is a paid mutator transaction binding the contract method 0x98650275.
-//
-// Solidity: function renounceMinter() returns()
-func (_ServiceChainNFT *ServiceChainNFTSession) RenounceMinter() (*types.Transaction, error) {
-	return _ServiceChainNFT.Contract.RenounceMinter(&_ServiceChainNFT.TransactOpts)
-}
-
-// RenounceMinter is a paid mutator transaction binding the contract method 0x98650275.
-//
-// Solidity: function renounceMinter() returns()
-func (_ServiceChainNFT *ServiceChainNFTTransactorSession) RenounceMinter() (*types.Transaction, error) {
-	return _ServiceChainNFT.Contract.RenounceMinter(&_ServiceChainNFT.TransactOpts)
-}
-
 // RenounceOwnership is a paid mutator transaction binding the contract method 0x715018a6.
 //
 // Solidity: function renounceOwnership() returns()
@@ -13132,6 +11938,27 @@ func (_ServiceChainNFT *ServiceChainNFTTransactorSession) RenounceOwnership() (*
 	return _ServiceChainNFT.Contract.RenounceOwnership(&_ServiceChainNFT.TransactOpts)
 }
 
+// RenounceRole is a paid mutator transaction binding the contract method 0x36568abe.
+//
+// Solidity: function renounceRole(bytes32 role, address account) returns()
+func (_ServiceChainNFT *ServiceChainNFTTransactor) RenounceRole(opts *bind.TransactOpts, role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _ServiceChainNFT.contract.Transact(opts, "renounceRole", role, account)
+}
+
+// RenounceRole is a paid mutator transaction binding the contract method 0x36568abe.
+//
+// Solidity: function renounceRole(bytes32 role, address account) returns()
+func (_ServiceChainNFT *ServiceChainNFTSession) RenounceRole(role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _ServiceChainNFT.Contract.RenounceRole(&_ServiceChainNFT.TransactOpts, role, account)
+}
+
+// RenounceRole is a paid mutator transaction binding the contract method 0x36568abe.
+//
+// Solidity: function renounceRole(bytes32 role, address account) returns()
+func (_ServiceChainNFT *ServiceChainNFTTransactorSession) RenounceRole(role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _ServiceChainNFT.Contract.RenounceRole(&_ServiceChainNFT.TransactOpts, role, account)
+}
+
 // RequestValueTransfer is a paid mutator transaction binding the contract method 0x3f4c4e3d.
 //
 // Solidity: function requestValueTransfer(uint256 _uid, address _to, bytes _extraData) returns()
@@ -13151,6 +11978,27 @@ func (_ServiceChainNFT *ServiceChainNFTSession) RequestValueTransfer(_uid *big.I
 // Solidity: function requestValueTransfer(uint256 _uid, address _to, bytes _extraData) returns()
 func (_ServiceChainNFT *ServiceChainNFTTransactorSession) RequestValueTransfer(_uid *big.Int, _to common.Address, _extraData []byte) (*types.Transaction, error) {
 	return _ServiceChainNFT.Contract.RequestValueTransfer(&_ServiceChainNFT.TransactOpts, _uid, _to, _extraData)
+}
+
+// RevokeRole is a paid mutator transaction binding the contract method 0xd547741f.
+//
+// Solidity: function revokeRole(bytes32 role, address account) returns()
+func (_ServiceChainNFT *ServiceChainNFTTransactor) RevokeRole(opts *bind.TransactOpts, role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _ServiceChainNFT.contract.Transact(opts, "revokeRole", role, account)
+}
+
+// RevokeRole is a paid mutator transaction binding the contract method 0xd547741f.
+//
+// Solidity: function revokeRole(bytes32 role, address account) returns()
+func (_ServiceChainNFT *ServiceChainNFTSession) RevokeRole(role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _ServiceChainNFT.Contract.RevokeRole(&_ServiceChainNFT.TransactOpts, role, account)
+}
+
+// RevokeRole is a paid mutator transaction binding the contract method 0xd547741f.
+//
+// Solidity: function revokeRole(bytes32 role, address account) returns()
+func (_ServiceChainNFT *ServiceChainNFTTransactorSession) RevokeRole(role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _ServiceChainNFT.Contract.RevokeRole(&_ServiceChainNFT.TransactOpts, role, account)
 }
 
 // SafeTransferFrom is a paid mutator transaction binding the contract method 0x42842e0e.
@@ -13176,44 +12024,44 @@ func (_ServiceChainNFT *ServiceChainNFTTransactorSession) SafeTransferFrom(from 
 
 // SafeTransferFrom0 is a paid mutator transaction binding the contract method 0xb88d4fde.
 //
-// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId, bytes _data) returns()
-func (_ServiceChainNFT *ServiceChainNFTTransactor) SafeTransferFrom0(opts *bind.TransactOpts, from common.Address, to common.Address, tokenId *big.Int, _data []byte) (*types.Transaction, error) {
-	return _ServiceChainNFT.contract.Transact(opts, "safeTransferFrom0", from, to, tokenId, _data)
+// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId, bytes data) returns()
+func (_ServiceChainNFT *ServiceChainNFTTransactor) SafeTransferFrom0(opts *bind.TransactOpts, from common.Address, to common.Address, tokenId *big.Int, data []byte) (*types.Transaction, error) {
+	return _ServiceChainNFT.contract.Transact(opts, "safeTransferFrom0", from, to, tokenId, data)
 }
 
 // SafeTransferFrom0 is a paid mutator transaction binding the contract method 0xb88d4fde.
 //
-// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId, bytes _data) returns()
-func (_ServiceChainNFT *ServiceChainNFTSession) SafeTransferFrom0(from common.Address, to common.Address, tokenId *big.Int, _data []byte) (*types.Transaction, error) {
-	return _ServiceChainNFT.Contract.SafeTransferFrom0(&_ServiceChainNFT.TransactOpts, from, to, tokenId, _data)
+// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId, bytes data) returns()
+func (_ServiceChainNFT *ServiceChainNFTSession) SafeTransferFrom0(from common.Address, to common.Address, tokenId *big.Int, data []byte) (*types.Transaction, error) {
+	return _ServiceChainNFT.Contract.SafeTransferFrom0(&_ServiceChainNFT.TransactOpts, from, to, tokenId, data)
 }
 
 // SafeTransferFrom0 is a paid mutator transaction binding the contract method 0xb88d4fde.
 //
-// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId, bytes _data) returns()
-func (_ServiceChainNFT *ServiceChainNFTTransactorSession) SafeTransferFrom0(from common.Address, to common.Address, tokenId *big.Int, _data []byte) (*types.Transaction, error) {
-	return _ServiceChainNFT.Contract.SafeTransferFrom0(&_ServiceChainNFT.TransactOpts, from, to, tokenId, _data)
+// Solidity: function safeTransferFrom(address from, address to, uint256 tokenId, bytes data) returns()
+func (_ServiceChainNFT *ServiceChainNFTTransactorSession) SafeTransferFrom0(from common.Address, to common.Address, tokenId *big.Int, data []byte) (*types.Transaction, error) {
+	return _ServiceChainNFT.Contract.SafeTransferFrom0(&_ServiceChainNFT.TransactOpts, from, to, tokenId, data)
 }
 
 // SetApprovalForAll is a paid mutator transaction binding the contract method 0xa22cb465.
 //
-// Solidity: function setApprovalForAll(address to, bool approved) returns()
-func (_ServiceChainNFT *ServiceChainNFTTransactor) SetApprovalForAll(opts *bind.TransactOpts, to common.Address, approved bool) (*types.Transaction, error) {
-	return _ServiceChainNFT.contract.Transact(opts, "setApprovalForAll", to, approved)
+// Solidity: function setApprovalForAll(address operator, bool approved) returns()
+func (_ServiceChainNFT *ServiceChainNFTTransactor) SetApprovalForAll(opts *bind.TransactOpts, operator common.Address, approved bool) (*types.Transaction, error) {
+	return _ServiceChainNFT.contract.Transact(opts, "setApprovalForAll", operator, approved)
 }
 
 // SetApprovalForAll is a paid mutator transaction binding the contract method 0xa22cb465.
 //
-// Solidity: function setApprovalForAll(address to, bool approved) returns()
-func (_ServiceChainNFT *ServiceChainNFTSession) SetApprovalForAll(to common.Address, approved bool) (*types.Transaction, error) {
-	return _ServiceChainNFT.Contract.SetApprovalForAll(&_ServiceChainNFT.TransactOpts, to, approved)
+// Solidity: function setApprovalForAll(address operator, bool approved) returns()
+func (_ServiceChainNFT *ServiceChainNFTSession) SetApprovalForAll(operator common.Address, approved bool) (*types.Transaction, error) {
+	return _ServiceChainNFT.Contract.SetApprovalForAll(&_ServiceChainNFT.TransactOpts, operator, approved)
 }
 
 // SetApprovalForAll is a paid mutator transaction binding the contract method 0xa22cb465.
 //
-// Solidity: function setApprovalForAll(address to, bool approved) returns()
-func (_ServiceChainNFT *ServiceChainNFTTransactorSession) SetApprovalForAll(to common.Address, approved bool) (*types.Transaction, error) {
-	return _ServiceChainNFT.Contract.SetApprovalForAll(&_ServiceChainNFT.TransactOpts, to, approved)
+// Solidity: function setApprovalForAll(address operator, bool approved) returns()
+func (_ServiceChainNFT *ServiceChainNFTTransactorSession) SetApprovalForAll(operator common.Address, approved bool) (*types.Transaction, error) {
+	return _ServiceChainNFT.Contract.SetApprovalForAll(&_ServiceChainNFT.TransactOpts, operator, approved)
 }
 
 // SetBridge is a paid mutator transaction binding the contract method 0x8dd14802.
@@ -13593,292 +12441,6 @@ func (_ServiceChainNFT *ServiceChainNFTFilterer) ParseApprovalForAll(log types.L
 	return event, nil
 }
 
-// ServiceChainNFTMinterAddedIterator is returned from FilterMinterAdded and is used to iterate over the raw logs and unpacked data for MinterAdded events raised by the ServiceChainNFT contract.
-type ServiceChainNFTMinterAddedIterator struct {
-	Event *ServiceChainNFTMinterAdded // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *ServiceChainNFTMinterAddedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(ServiceChainNFTMinterAdded)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(ServiceChainNFTMinterAdded)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *ServiceChainNFTMinterAddedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *ServiceChainNFTMinterAddedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// ServiceChainNFTMinterAdded represents a MinterAdded event raised by the ServiceChainNFT contract.
-type ServiceChainNFTMinterAdded struct {
-	Account common.Address
-	Raw     types.Log // Blockchain specific contextual infos
-}
-
-// FilterMinterAdded is a free log retrieval operation binding the contract event 0x6ae172837ea30b801fbfcdd4108aa1d5bf8ff775444fd70256b44e6bf3dfc3f6.
-//
-// Solidity: event MinterAdded(address indexed account)
-func (_ServiceChainNFT *ServiceChainNFTFilterer) FilterMinterAdded(opts *bind.FilterOpts, account []common.Address) (*ServiceChainNFTMinterAddedIterator, error) {
-
-	var accountRule []interface{}
-	for _, accountItem := range account {
-		accountRule = append(accountRule, accountItem)
-	}
-
-	logs, sub, err := _ServiceChainNFT.contract.FilterLogs(opts, "MinterAdded", accountRule)
-	if err != nil {
-		return nil, err
-	}
-	return &ServiceChainNFTMinterAddedIterator{contract: _ServiceChainNFT.contract, event: "MinterAdded", logs: logs, sub: sub}, nil
-}
-
-// WatchMinterAdded is a free log subscription operation binding the contract event 0x6ae172837ea30b801fbfcdd4108aa1d5bf8ff775444fd70256b44e6bf3dfc3f6.
-//
-// Solidity: event MinterAdded(address indexed account)
-func (_ServiceChainNFT *ServiceChainNFTFilterer) WatchMinterAdded(opts *bind.WatchOpts, sink chan<- *ServiceChainNFTMinterAdded, account []common.Address) (event.Subscription, error) {
-
-	var accountRule []interface{}
-	for _, accountItem := range account {
-		accountRule = append(accountRule, accountItem)
-	}
-
-	logs, sub, err := _ServiceChainNFT.contract.WatchLogs(opts, "MinterAdded", accountRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(ServiceChainNFTMinterAdded)
-				if err := _ServiceChainNFT.contract.UnpackLog(event, "MinterAdded", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseMinterAdded is a log parse operation binding the contract event 0x6ae172837ea30b801fbfcdd4108aa1d5bf8ff775444fd70256b44e6bf3dfc3f6.
-//
-// Solidity: event MinterAdded(address indexed account)
-func (_ServiceChainNFT *ServiceChainNFTFilterer) ParseMinterAdded(log types.Log) (*ServiceChainNFTMinterAdded, error) {
-	event := new(ServiceChainNFTMinterAdded)
-	if err := _ServiceChainNFT.contract.UnpackLog(event, "MinterAdded", log); err != nil {
-		return nil, err
-	}
-	return event, nil
-}
-
-// ServiceChainNFTMinterRemovedIterator is returned from FilterMinterRemoved and is used to iterate over the raw logs and unpacked data for MinterRemoved events raised by the ServiceChainNFT contract.
-type ServiceChainNFTMinterRemovedIterator struct {
-	Event *ServiceChainNFTMinterRemoved // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *ServiceChainNFTMinterRemovedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(ServiceChainNFTMinterRemoved)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(ServiceChainNFTMinterRemoved)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *ServiceChainNFTMinterRemovedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *ServiceChainNFTMinterRemovedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// ServiceChainNFTMinterRemoved represents a MinterRemoved event raised by the ServiceChainNFT contract.
-type ServiceChainNFTMinterRemoved struct {
-	Account common.Address
-	Raw     types.Log // Blockchain specific contextual infos
-}
-
-// FilterMinterRemoved is a free log retrieval operation binding the contract event 0xe94479a9f7e1952cc78f2d6baab678adc1b772d936c6583def489e524cb66692.
-//
-// Solidity: event MinterRemoved(address indexed account)
-func (_ServiceChainNFT *ServiceChainNFTFilterer) FilterMinterRemoved(opts *bind.FilterOpts, account []common.Address) (*ServiceChainNFTMinterRemovedIterator, error) {
-
-	var accountRule []interface{}
-	for _, accountItem := range account {
-		accountRule = append(accountRule, accountItem)
-	}
-
-	logs, sub, err := _ServiceChainNFT.contract.FilterLogs(opts, "MinterRemoved", accountRule)
-	if err != nil {
-		return nil, err
-	}
-	return &ServiceChainNFTMinterRemovedIterator{contract: _ServiceChainNFT.contract, event: "MinterRemoved", logs: logs, sub: sub}, nil
-}
-
-// WatchMinterRemoved is a free log subscription operation binding the contract event 0xe94479a9f7e1952cc78f2d6baab678adc1b772d936c6583def489e524cb66692.
-//
-// Solidity: event MinterRemoved(address indexed account)
-func (_ServiceChainNFT *ServiceChainNFTFilterer) WatchMinterRemoved(opts *bind.WatchOpts, sink chan<- *ServiceChainNFTMinterRemoved, account []common.Address) (event.Subscription, error) {
-
-	var accountRule []interface{}
-	for _, accountItem := range account {
-		accountRule = append(accountRule, accountItem)
-	}
-
-	logs, sub, err := _ServiceChainNFT.contract.WatchLogs(opts, "MinterRemoved", accountRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(ServiceChainNFTMinterRemoved)
-				if err := _ServiceChainNFT.contract.UnpackLog(event, "MinterRemoved", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseMinterRemoved is a log parse operation binding the contract event 0xe94479a9f7e1952cc78f2d6baab678adc1b772d936c6583def489e524cb66692.
-//
-// Solidity: event MinterRemoved(address indexed account)
-func (_ServiceChainNFT *ServiceChainNFTFilterer) ParseMinterRemoved(log types.Log) (*ServiceChainNFTMinterRemoved, error) {
-	event := new(ServiceChainNFTMinterRemoved)
-	if err := _ServiceChainNFT.contract.UnpackLog(event, "MinterRemoved", log); err != nil {
-		return nil, err
-	}
-	return event, nil
-}
-
 // ServiceChainNFTOwnershipTransferredIterator is returned from FilterOwnershipTransferred and is used to iterate over the raw logs and unpacked data for OwnershipTransferred events raised by the ServiceChainNFT contract.
 type ServiceChainNFTOwnershipTransferredIterator struct {
 	Event *ServiceChainNFTOwnershipTransferred // Event containing the contract specifics and raw log
@@ -14026,6 +12588,489 @@ func (_ServiceChainNFT *ServiceChainNFTFilterer) WatchOwnershipTransferred(opts 
 func (_ServiceChainNFT *ServiceChainNFTFilterer) ParseOwnershipTransferred(log types.Log) (*ServiceChainNFTOwnershipTransferred, error) {
 	event := new(ServiceChainNFTOwnershipTransferred)
 	if err := _ServiceChainNFT.contract.UnpackLog(event, "OwnershipTransferred", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// ServiceChainNFTRoleAdminChangedIterator is returned from FilterRoleAdminChanged and is used to iterate over the raw logs and unpacked data for RoleAdminChanged events raised by the ServiceChainNFT contract.
+type ServiceChainNFTRoleAdminChangedIterator struct {
+	Event *ServiceChainNFTRoleAdminChanged // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ServiceChainNFTRoleAdminChangedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ServiceChainNFTRoleAdminChanged)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ServiceChainNFTRoleAdminChanged)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ServiceChainNFTRoleAdminChangedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ServiceChainNFTRoleAdminChangedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ServiceChainNFTRoleAdminChanged represents a RoleAdminChanged event raised by the ServiceChainNFT contract.
+type ServiceChainNFTRoleAdminChanged struct {
+	Role              [32]byte
+	PreviousAdminRole [32]byte
+	NewAdminRole      [32]byte
+	Raw               types.Log // Blockchain specific contextual infos
+}
+
+// FilterRoleAdminChanged is a free log retrieval operation binding the contract event 0xbd79b86ffe0ab8e8776151514217cd7cacd52c909f66475c3af44e129f0b00ff.
+//
+// Solidity: event RoleAdminChanged(bytes32 indexed role, bytes32 indexed previousAdminRole, bytes32 indexed newAdminRole)
+func (_ServiceChainNFT *ServiceChainNFTFilterer) FilterRoleAdminChanged(opts *bind.FilterOpts, role [][32]byte, previousAdminRole [][32]byte, newAdminRole [][32]byte) (*ServiceChainNFTRoleAdminChangedIterator, error) {
+
+	var roleRule []interface{}
+	for _, roleItem := range role {
+		roleRule = append(roleRule, roleItem)
+	}
+	var previousAdminRoleRule []interface{}
+	for _, previousAdminRoleItem := range previousAdminRole {
+		previousAdminRoleRule = append(previousAdminRoleRule, previousAdminRoleItem)
+	}
+	var newAdminRoleRule []interface{}
+	for _, newAdminRoleItem := range newAdminRole {
+		newAdminRoleRule = append(newAdminRoleRule, newAdminRoleItem)
+	}
+
+	logs, sub, err := _ServiceChainNFT.contract.FilterLogs(opts, "RoleAdminChanged", roleRule, previousAdminRoleRule, newAdminRoleRule)
+	if err != nil {
+		return nil, err
+	}
+	return &ServiceChainNFTRoleAdminChangedIterator{contract: _ServiceChainNFT.contract, event: "RoleAdminChanged", logs: logs, sub: sub}, nil
+}
+
+// WatchRoleAdminChanged is a free log subscription operation binding the contract event 0xbd79b86ffe0ab8e8776151514217cd7cacd52c909f66475c3af44e129f0b00ff.
+//
+// Solidity: event RoleAdminChanged(bytes32 indexed role, bytes32 indexed previousAdminRole, bytes32 indexed newAdminRole)
+func (_ServiceChainNFT *ServiceChainNFTFilterer) WatchRoleAdminChanged(opts *bind.WatchOpts, sink chan<- *ServiceChainNFTRoleAdminChanged, role [][32]byte, previousAdminRole [][32]byte, newAdminRole [][32]byte) (event.Subscription, error) {
+
+	var roleRule []interface{}
+	for _, roleItem := range role {
+		roleRule = append(roleRule, roleItem)
+	}
+	var previousAdminRoleRule []interface{}
+	for _, previousAdminRoleItem := range previousAdminRole {
+		previousAdminRoleRule = append(previousAdminRoleRule, previousAdminRoleItem)
+	}
+	var newAdminRoleRule []interface{}
+	for _, newAdminRoleItem := range newAdminRole {
+		newAdminRoleRule = append(newAdminRoleRule, newAdminRoleItem)
+	}
+
+	logs, sub, err := _ServiceChainNFT.contract.WatchLogs(opts, "RoleAdminChanged", roleRule, previousAdminRoleRule, newAdminRoleRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ServiceChainNFTRoleAdminChanged)
+				if err := _ServiceChainNFT.contract.UnpackLog(event, "RoleAdminChanged", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseRoleAdminChanged is a log parse operation binding the contract event 0xbd79b86ffe0ab8e8776151514217cd7cacd52c909f66475c3af44e129f0b00ff.
+//
+// Solidity: event RoleAdminChanged(bytes32 indexed role, bytes32 indexed previousAdminRole, bytes32 indexed newAdminRole)
+func (_ServiceChainNFT *ServiceChainNFTFilterer) ParseRoleAdminChanged(log types.Log) (*ServiceChainNFTRoleAdminChanged, error) {
+	event := new(ServiceChainNFTRoleAdminChanged)
+	if err := _ServiceChainNFT.contract.UnpackLog(event, "RoleAdminChanged", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// ServiceChainNFTRoleGrantedIterator is returned from FilterRoleGranted and is used to iterate over the raw logs and unpacked data for RoleGranted events raised by the ServiceChainNFT contract.
+type ServiceChainNFTRoleGrantedIterator struct {
+	Event *ServiceChainNFTRoleGranted // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ServiceChainNFTRoleGrantedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ServiceChainNFTRoleGranted)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ServiceChainNFTRoleGranted)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ServiceChainNFTRoleGrantedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ServiceChainNFTRoleGrantedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ServiceChainNFTRoleGranted represents a RoleGranted event raised by the ServiceChainNFT contract.
+type ServiceChainNFTRoleGranted struct {
+	Role    [32]byte
+	Account common.Address
+	Sender  common.Address
+	Raw     types.Log // Blockchain specific contextual infos
+}
+
+// FilterRoleGranted is a free log retrieval operation binding the contract event 0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d.
+//
+// Solidity: event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)
+func (_ServiceChainNFT *ServiceChainNFTFilterer) FilterRoleGranted(opts *bind.FilterOpts, role [][32]byte, account []common.Address, sender []common.Address) (*ServiceChainNFTRoleGrantedIterator, error) {
+
+	var roleRule []interface{}
+	for _, roleItem := range role {
+		roleRule = append(roleRule, roleItem)
+	}
+	var accountRule []interface{}
+	for _, accountItem := range account {
+		accountRule = append(accountRule, accountItem)
+	}
+	var senderRule []interface{}
+	for _, senderItem := range sender {
+		senderRule = append(senderRule, senderItem)
+	}
+
+	logs, sub, err := _ServiceChainNFT.contract.FilterLogs(opts, "RoleGranted", roleRule, accountRule, senderRule)
+	if err != nil {
+		return nil, err
+	}
+	return &ServiceChainNFTRoleGrantedIterator{contract: _ServiceChainNFT.contract, event: "RoleGranted", logs: logs, sub: sub}, nil
+}
+
+// WatchRoleGranted is a free log subscription operation binding the contract event 0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d.
+//
+// Solidity: event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)
+func (_ServiceChainNFT *ServiceChainNFTFilterer) WatchRoleGranted(opts *bind.WatchOpts, sink chan<- *ServiceChainNFTRoleGranted, role [][32]byte, account []common.Address, sender []common.Address) (event.Subscription, error) {
+
+	var roleRule []interface{}
+	for _, roleItem := range role {
+		roleRule = append(roleRule, roleItem)
+	}
+	var accountRule []interface{}
+	for _, accountItem := range account {
+		accountRule = append(accountRule, accountItem)
+	}
+	var senderRule []interface{}
+	for _, senderItem := range sender {
+		senderRule = append(senderRule, senderItem)
+	}
+
+	logs, sub, err := _ServiceChainNFT.contract.WatchLogs(opts, "RoleGranted", roleRule, accountRule, senderRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ServiceChainNFTRoleGranted)
+				if err := _ServiceChainNFT.contract.UnpackLog(event, "RoleGranted", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseRoleGranted is a log parse operation binding the contract event 0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d.
+//
+// Solidity: event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)
+func (_ServiceChainNFT *ServiceChainNFTFilterer) ParseRoleGranted(log types.Log) (*ServiceChainNFTRoleGranted, error) {
+	event := new(ServiceChainNFTRoleGranted)
+	if err := _ServiceChainNFT.contract.UnpackLog(event, "RoleGranted", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// ServiceChainNFTRoleRevokedIterator is returned from FilterRoleRevoked and is used to iterate over the raw logs and unpacked data for RoleRevoked events raised by the ServiceChainNFT contract.
+type ServiceChainNFTRoleRevokedIterator struct {
+	Event *ServiceChainNFTRoleRevoked // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ServiceChainNFTRoleRevokedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ServiceChainNFTRoleRevoked)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ServiceChainNFTRoleRevoked)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ServiceChainNFTRoleRevokedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ServiceChainNFTRoleRevokedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ServiceChainNFTRoleRevoked represents a RoleRevoked event raised by the ServiceChainNFT contract.
+type ServiceChainNFTRoleRevoked struct {
+	Role    [32]byte
+	Account common.Address
+	Sender  common.Address
+	Raw     types.Log // Blockchain specific contextual infos
+}
+
+// FilterRoleRevoked is a free log retrieval operation binding the contract event 0xf6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b.
+//
+// Solidity: event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender)
+func (_ServiceChainNFT *ServiceChainNFTFilterer) FilterRoleRevoked(opts *bind.FilterOpts, role [][32]byte, account []common.Address, sender []common.Address) (*ServiceChainNFTRoleRevokedIterator, error) {
+
+	var roleRule []interface{}
+	for _, roleItem := range role {
+		roleRule = append(roleRule, roleItem)
+	}
+	var accountRule []interface{}
+	for _, accountItem := range account {
+		accountRule = append(accountRule, accountItem)
+	}
+	var senderRule []interface{}
+	for _, senderItem := range sender {
+		senderRule = append(senderRule, senderItem)
+	}
+
+	logs, sub, err := _ServiceChainNFT.contract.FilterLogs(opts, "RoleRevoked", roleRule, accountRule, senderRule)
+	if err != nil {
+		return nil, err
+	}
+	return &ServiceChainNFTRoleRevokedIterator{contract: _ServiceChainNFT.contract, event: "RoleRevoked", logs: logs, sub: sub}, nil
+}
+
+// WatchRoleRevoked is a free log subscription operation binding the contract event 0xf6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b.
+//
+// Solidity: event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender)
+func (_ServiceChainNFT *ServiceChainNFTFilterer) WatchRoleRevoked(opts *bind.WatchOpts, sink chan<- *ServiceChainNFTRoleRevoked, role [][32]byte, account []common.Address, sender []common.Address) (event.Subscription, error) {
+
+	var roleRule []interface{}
+	for _, roleItem := range role {
+		roleRule = append(roleRule, roleItem)
+	}
+	var accountRule []interface{}
+	for _, accountItem := range account {
+		accountRule = append(accountRule, accountItem)
+	}
+	var senderRule []interface{}
+	for _, senderItem := range sender {
+		senderRule = append(senderRule, senderItem)
+	}
+
+	logs, sub, err := _ServiceChainNFT.contract.WatchLogs(opts, "RoleRevoked", roleRule, accountRule, senderRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ServiceChainNFTRoleRevoked)
+				if err := _ServiceChainNFT.contract.UnpackLog(event, "RoleRevoked", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseRoleRevoked is a log parse operation binding the contract event 0xf6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b.
+//
+// Solidity: event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender)
+func (_ServiceChainNFT *ServiceChainNFTFilterer) ParseRoleRevoked(log types.Log) (*ServiceChainNFTRoleRevoked, error) {
+	event := new(ServiceChainNFTRoleRevoked)
+	if err := _ServiceChainNFT.contract.UnpackLog(event, "RoleRevoked", log); err != nil {
 		return nil, err
 	}
 	return event, nil
@@ -14190,4 +13235,169 @@ func (_ServiceChainNFT *ServiceChainNFTFilterer) ParseTransfer(log types.Log) (*
 		return nil, err
 	}
 	return event, nil
+}
+
+// StringsABI is the input ABI used to generate the binding from.
+const StringsABI = "[]"
+
+// StringsBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
+const StringsBinRuntime = `73000000000000000000000000000000000000000030146080604052600080fdfea2646970667358221220dfa49bc152ab2a1f7bc0d8b1b553b8aa2265a04b8f667ccecdb0b981127e2e1164736f6c634300080d0033`
+
+// StringsBin is the compiled bytecode used for deploying new contracts.
+var StringsBin = "0x60566037600b82828239805160001a607314602a57634e487b7160e01b600052600060045260246000fd5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea2646970667358221220dfa49bc152ab2a1f7bc0d8b1b553b8aa2265a04b8f667ccecdb0b981127e2e1164736f6c634300080d0033"
+
+// DeployStrings deploys a new Klaytn contract, binding an instance of Strings to it.
+func DeployStrings(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Strings, error) {
+	parsed, err := abi.JSON(strings.NewReader(StringsABI))
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+
+	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(StringsBin), backend)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	return address, tx, &Strings{StringsCaller: StringsCaller{contract: contract}, StringsTransactor: StringsTransactor{contract: contract}, StringsFilterer: StringsFilterer{contract: contract}}, nil
+}
+
+// Strings is an auto generated Go binding around a Klaytn contract.
+type Strings struct {
+	StringsCaller     // Read-only binding to the contract
+	StringsTransactor // Write-only binding to the contract
+	StringsFilterer   // Log filterer for contract events
+}
+
+// StringsCaller is an auto generated read-only Go binding around a Klaytn contract.
+type StringsCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// StringsTransactor is an auto generated write-only Go binding around a Klaytn contract.
+type StringsTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// StringsFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+type StringsFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// StringsSession is an auto generated Go binding around a Klaytn contract,
+// with pre-set call and transact options.
+type StringsSession struct {
+	Contract     *Strings          // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts     // Call options to use throughout this session
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+}
+
+// StringsCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// with pre-set call options.
+type StringsCallerSession struct {
+	Contract *StringsCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts  // Call options to use throughout this session
+}
+
+// StringsTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// with pre-set transact options.
+type StringsTransactorSession struct {
+	Contract     *StringsTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts  // Transaction auth options to use throughout this session
+}
+
+// StringsRaw is an auto generated low-level Go binding around a Klaytn contract.
+type StringsRaw struct {
+	Contract *Strings // Generic contract binding to access the raw methods on
+}
+
+// StringsCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+type StringsCallerRaw struct {
+	Contract *StringsCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// StringsTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+type StringsTransactorRaw struct {
+	Contract *StringsTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewStrings creates a new instance of Strings, bound to a specific deployed contract.
+func NewStrings(address common.Address, backend bind.ContractBackend) (*Strings, error) {
+	contract, err := bindStrings(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &Strings{StringsCaller: StringsCaller{contract: contract}, StringsTransactor: StringsTransactor{contract: contract}, StringsFilterer: StringsFilterer{contract: contract}}, nil
+}
+
+// NewStringsCaller creates a new read-only instance of Strings, bound to a specific deployed contract.
+func NewStringsCaller(address common.Address, caller bind.ContractCaller) (*StringsCaller, error) {
+	contract, err := bindStrings(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &StringsCaller{contract: contract}, nil
+}
+
+// NewStringsTransactor creates a new write-only instance of Strings, bound to a specific deployed contract.
+func NewStringsTransactor(address common.Address, transactor bind.ContractTransactor) (*StringsTransactor, error) {
+	contract, err := bindStrings(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &StringsTransactor{contract: contract}, nil
+}
+
+// NewStringsFilterer creates a new log filterer instance of Strings, bound to a specific deployed contract.
+func NewStringsFilterer(address common.Address, filterer bind.ContractFilterer) (*StringsFilterer, error) {
+	contract, err := bindStrings(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &StringsFilterer{contract: contract}, nil
+}
+
+// bindStrings binds a generic wrapper to an already deployed contract.
+func bindStrings(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(StringsABI))
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_Strings *StringsRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _Strings.Contract.StringsCaller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_Strings *StringsRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Strings.Contract.StringsTransactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_Strings *StringsRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _Strings.Contract.StringsTransactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_Strings *StringsCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _Strings.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_Strings *StringsTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Strings.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_Strings *StringsTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _Strings.Contract.contract.Transact(opts, method, params...)
 }
