@@ -1,0 +1,46 @@
+// SPDX-License-Identifier: MIT
+// Klaytn Contract Library v1.0.0 (KIP/token/KIP7/extensions/KIP7VotesComp.sol)
+// Based on OpenZeppelin Contracts v4.5.0 (token/ERC20/extensions/ERC20VotesComp.sol)
+// https://github.com/OpenZeppelin/openzeppelin-contracts/releases/tag/v4.5.0
+
+pragma solidity ^0.8.0;
+
+import "./KIP7Votes.sol";
+
+/**
+ * @dev Extension of KIP7 to support Compound's voting and delegation. This version exactly matches Compound's
+ * interface, with the drawback of only supporting supply up to (2^96^ - 1).
+ *
+ * NOTE: You should use this contract if you need exact compatibility with COMP (for example in order to use your token
+ * with Governor Alpha or Bravo) and if you are sure the supply cap of 2^96^ is enough for you. Otherwise, use the
+ * {KIP7Votes} variant of this module.
+ *
+ * This extension keeps a history (checkpoints) of each account's vote power. Vote power can be delegated either
+ * by calling the {delegate} function directly, or by providing a signature to be used with {delegateBySig}. Voting
+ * power can be queried through the public accessors {getCurrentVotes} and {getPriorVotes}.
+ *
+ * By default, token balance does not account for voting power. This makes transfers cheaper. The downside is that it
+ * requires users to delegate to themselves in order to activate checkpoints and have their voting power tracked.
+ */
+abstract contract KIP7VotesComp is KIP7Votes {
+    /**
+     * @dev Comp version of the {getVotes} accessor, with `uint96` return type.
+     */
+    function getCurrentVotes(address account) external view virtual returns (uint96) {
+        return SafeCast.toUint96(getVotes(account));
+    }
+
+    /**
+     * @dev Comp version of the {getPastVotes} accessor, with `uint96` return type.
+     */
+    function getPriorVotes(address account, uint256 blockNumber) external view virtual returns (uint96) {
+        return SafeCast.toUint96(getPastVotes(account, blockNumber));
+    }
+
+    /**
+     * @dev Maximum token supply. Reduced to `type(uint96).max` (2^96^ - 1) to fit COMP interface.
+     */
+    function _maxSupply() internal view virtual override returns (uint224) {
+        return type(uint96).max;
+    }
+}

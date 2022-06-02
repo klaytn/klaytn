@@ -1,0 +1,23 @@
+# @global-owner1 and @global-owner2 will be requested for
+# review when someone opens a pull request.
+#*       @global-owner1 @global-owner2
+*       @kjhman21 @terry-klaytn @neoofklaytn @toniya-klaytn @chloe-klatyn
+
+# Order is important; the last matching pattern takes the most
+# precedence. When someone opens a pull request that only
+# directory at the root of the repository and any of its
+# subdirectories.
+#/build/logs/      @doctocat
+
+# The `docs/*` pattern will match files like
+# `docs/getting-started.md` but not further nested files like
+# `docs/build-app/troubleshooting.md`.
+#docs/*  docs@example.com
+
+# In this example, @octocat owns any file in an apps directory
+# anywhere in your repository.
+#apps/ @octocat
+
+# In this example, @doctocat owns any file in the `/docs`
+# directory in the root of your repository.
+#/docs/ @doctocat

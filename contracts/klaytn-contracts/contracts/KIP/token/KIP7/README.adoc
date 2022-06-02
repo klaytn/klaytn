@@ -1,0 +1,100 @@
+= KIP 7
+
+[.readme-notice]
+NOTE: More documentation at https://kips.klaytn.com/KIPs/kip-7
+
+This set of interfaces, contracts, and utilities are all related to the https://kips.klaytn.com/KIPs/kip-7[KIP7 Token Standard].
+
+The KIP specifies six interfaces:
+
+* {IKIP7}: the interface all KIP7 implementations should conform to.
+* {IKIP7Receiver}: An interfaces that must be implemented by contracts if they want to accept tokens through `safeTransfer` or `safeTransferFrom`. Renamed from IKIP7TokenReceiver
+* {IKIP7Metadata}: Extended KIP7 interface including the <<KIP7-name,`name`>>, <<KIP7-symbol,`symbol`>> and <<KIP7-decimals,`decimals`>> functions.
+* {IKIP7Mintable}: Extended KIP7 interface for permissioned token minting
+* {IKIP7Burnable}: Extended KIP7 interface for token owners (or approved accounts) to destroy tokens
+* {IKIP7Pausable}: Extended KIP7 interface for permissioned transfer, minting, and burning function pause/unpause. Note: removed Paused and UnPaused events. This is consistent with the IKIP37Pausable implementation, and also with the Pausable.sol OpenZeppelin implementation. 
+
+Klaytn Contract Library provides implementations of all six interfaces:
+
+* {KIP7}: The core token and metadata extension.
+* {KIP7Holder}: A bare bones implementation of the receiver interface (only KIP17 tokens).
+* {KIP7Mintable}: The mintable extension.
+* {KIP7Burnable}: A way for token holders to burn their own tokens.
+* {KIP7Pausable}: A primitive to pause contract transfer operation.
+
+Additionally there are a few of other extensions:
+
+* {IKIP7}: the interface all KIP7 implementations should conform to.
+* {IKIP7Metadata}: Extended KIP7 interface including the <<KIP7-name,`name`>>, <<KIP7-symbol,`symbol`>> and <<KIP7-decimals,`decimals`>> functions.
+* {KIP7}: the implementation of the KIP7 interface, including the metadata optional standard extension to the base interface.
+
+Additionally there are multiple custom extensions, including:
+
+* {KIP7Capped}: enforcement of a cap to the total supply when minting tokens.
+* {KIP7Snapshot}: efficient storage of past token balances to be later queried at any point in time.
+* {KIP7Permit}: gasless approval of tokens (standardized as ERC2612).
+* {KIP7FlashMint}: token level support for flash loans through the minting and burning of ephemeral tokens (standardized as ERC3156).
+* {KIP7Votes}: support for voting and vote delegation.
+* {KIP7VotesComp}: support for voting and vote delegation (compatible with Compound's token, with uint96 restrictions).
+* {KIP7Wrapper}: wrapper to create an KIP7 backed by another KIP7, with deposit and withdraw methods. Useful in conjunction with {KIP7Votes}.
+
+Finally, there are some utilities to interact with KIP7 contracts in various ways.
+
+* {SafeKIP7}: a wrapper around the interface that eliminates the need to handle boolean return values.
+* {TokenTimelock}: hold tokens for a beneficiary until a specified time.
+
+The following are in draft status (following the OpenZeppelin EIP status)
+
+- {KIP7Permit}
+
+NOTE: This core set of contracts is designed to be unopinionated, allowing developers to access the internal functions in KIP7 (such as <<KIP7-_mint-address-uint256-,`_mint`>>) and expose them as external functions in the way they prefer. On the other hand, xref:ROOT:kip7.adoc#Presets[KIP7 Presets] (such as {KIP7PresetMinterPauser}) are designed using opinionated patterns to provide developers with ready to use, deployable contracts.
+
+== Core
+
+{{IKIP7}}
+
+{{IKIP7Metadata}}
+
+{{KIP7}}
+
+== Extensions
+
+{{KIP7Burnable}}
+
+{{KIP7Capped}}
+
+{{KIP7Mintable}}
+
+{{KIP7Pausable}}
+
+{{KIP7Snapshot}}
+
+{{KIP7Votes}}
+
+{{KIP7VotesComp}}
+
+{{KIP7Wrapper}}
+
+{{KIP7FlashMint}}
+
+== Drafts
+
+The following are still in Draft status. Due to their nature as drafts, the details of these contracts may change and we cannot guarantee their xref:ROOT:releases-stability.adoc[stability]. Minor releases of Klaytn Contract Library may contain breaking changes for the contracts in this directory, which will be duly announced in the RELEASE note at https://github.com/klaytn/klaytn-contracts/releases and the originally tracked changes in https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/CHANGELOG.md[changelog]. The contracts included here are used by projects in production and this may make them less likely to change significantly.
+
+{{KIP7Permit}}
+
+== Presets
+
+These contracts are preconfigured combinations of the above features. They can be used through inheritance or as models to copy and paste their source code.
+
+{{KIP7PresetMinterPauser}}
+
+{{KIP7PresetFixedSupply}}
+
+== Utilities
+
+{{KIP7Holder}}
+
+{{KIP7TokenTimelock}}
+
+{{SafeKIP7}}
