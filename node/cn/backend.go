@@ -214,7 +214,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	setEngineType(chainConfig)
 
 	// load governance state
-	governance := governance.NewGovernanceInitialize(chainConfig, chainDB)
+	governance := governance.NewMixedEngine(chainConfig, chainDB)
 
 	// Set latest unitPrice/gasPrice
 	chainConfig.UnitPrice = governance.UnitPrice()

@@ -30,6 +30,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/node/cn"
@@ -42,9 +43,7 @@ import (
 
 // TestSimpleBlockchain
 func TestSimpleBlockchain(t *testing.T) {
-	//if testing.Verbose() {
-	//	enableLog() // Change verbosity level in the function if needed
-	//}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 
 	numAccounts := 12
 	fullNode, node, validator, chainId, workspace := newBlockchain(t)

@@ -35,6 +35,7 @@ import (
 	"github.com/klaytn/klaytn/common/profile"
 	"github.com/klaytn/klaytn/consensus/istanbul/backend"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
@@ -67,9 +68,7 @@ import (
 // - TxTypeFeeDelegatedCancelWithRatio
 // - TxTypeChainDataAnchoring
 func BenchmarkRPCOutput(t *testing.B) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain

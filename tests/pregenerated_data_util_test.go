@@ -29,7 +29,6 @@ import (
 	"path"
 	"strconv"
 	"sync"
-	"testing"
 	"time"
 
 	"github.com/klaytn/klaytn/blockchain"
@@ -40,6 +39,7 @@ import (
 	istanbulBackend "github.com/klaytn/klaytn/consensus/istanbul/backend"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/governance"
+	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/storage/database"
@@ -490,7 +490,7 @@ func defaultCacheConfig() *blockchain.CacheConfig {
 func generateGovernaceDataForTest() governance.Engine {
 	dbm := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
 
-	return governance.NewGovernanceInitialize(&params.ChainConfig{
+	return governance.NewMixedEngine(&params.ChainConfig{
 		ChainID:       big.NewInt(2018),
 		UnitPrice:     25000000000,
 		DeriveShaImpl: 0,
@@ -505,13 +505,11 @@ func generateGovernaceDataForTest() governance.Engine {
 
 // setUpTest sets up test data directory, verbosity and profile file.
 func setUpTest(tc *preGeneratedTC) (string, *os.File, error) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
+
 	testDataDir, err := setupTestDir(tc.originalDataDir, tc.isGenerateTest)
 	if err != nil {
 		return "", nil, fmt.Errorf("err: %v, dir: %v", err, testDataDir)
-	}
-
-	if testing.Verbose() {
-		enableLog()
 	}
 
 	timeNow := time.Now()

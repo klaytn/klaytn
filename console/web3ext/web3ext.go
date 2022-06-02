@@ -1488,11 +1488,11 @@ web3._extend({
 			getter: 'subbridge_getChildOperatorFeePayer',
 		}),
 		new web3._extend.Property({
-			name: 'ParentBridgeOperatorGasLimit',
+			name: 'parentBridgeOperatorGasLimit',
 			getter: 'subbridge_getParentBridgeOperatorGasLimit',
 		}),
 		new web3._extend.Property({
-			name: 'ChildBridgeOperatorGasLimit',
+			name: 'childBridgeOperatorGasLimit',
 			getter: 'subbridge_getChildBridgeOperatorGasLimit',
 		}),
 	]
