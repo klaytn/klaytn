@@ -29,10 +29,9 @@ import (
 	"reflect"
 
 	"github.com/klaytn/klaytn/accounts/abi"
-	"github.com/klaytn/klaytn/blockchain/vm"
-
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
+	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/params"
