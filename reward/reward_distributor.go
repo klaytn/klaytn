@@ -67,7 +67,6 @@ func (rd *RewardDistributor) getTotalTxFee(header *types.Header, rewardConfig *r
 	} else {
 		return totalGasUsed.Mul(totalGasUsed, rewardConfig.unitPrice), nil
 	}
-
 }
 
 // MintKLAY mints KLAY and gives the KLAY and the total transaction gas fee to the block proposer.
