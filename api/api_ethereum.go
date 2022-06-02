@@ -1175,7 +1175,6 @@ func (args *EthTransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int,
 	if gas == 0 {
 		gas = uint64(math.MaxUint64 / 2)
 	}
-	logger.Info("gas","gas",gas)
 	if args.Gas != nil {
 		gas = uint64(*args.Gas)
 	}
@@ -1188,7 +1187,6 @@ func (args *EthTransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int,
 		gasFeeCap *big.Int
 		gasTipCap *big.Int
 	)
-	logger.Info("base?","basefee",baseFee)
 	if baseFee == nil {
 		// If there's no basefee, then it must be a non-1559 execution
 		gasPrice = new(big.Int)
@@ -1536,8 +1534,6 @@ func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrO
 	if err != nil {
 		return nil, 0, 0, err
 	}
-	logger.Info("sdf","globalgascap",globalGasCap,"fixedBAsefee",fixedBaseFee,"intrinsicGas",intrinsicGas)
-	logger.Info("args","args",args)
 	msg, err := args.ToMessage(globalGasCap, fixedBaseFee, intrinsicGas)
 	if err != nil {
 		return nil, 0, 0, err
@@ -1546,9 +1542,7 @@ func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrO
 	// but we check in advance here in order to keep StateTransition.TransactionDb method as unchanged as possible
 	// and to clarify error reason correctly to serve eth namespace APIs.
 	// This case is handled by EthDoEstimateGas function.
-	logger.Info("mgs","msg",msg)
 
-	logger.Info("logic","msggas", msg.Gas(), "intrinsicGas",intrinsicGas)
 	if msg.Gas() < intrinsicGas {
 		return nil, 0, 0, fmt.Errorf("%w: msg.gas %d, want %d", blockchain.ErrIntrinsicGas, msg.Gas(), intrinsicGas)
 	}

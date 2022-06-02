@@ -288,8 +288,6 @@ func DoCall(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.Blo
 	if err != nil {
 		return nil, 0, 0, 0, err
 	}
-	logger.Info("sdf","globalgascap",globalGasCap,"fixedBAsefee",fixedBaseFee,"intrinsicGas",intrinsicGas)
-	logger.Info("args","args",args)
 	msg, err := args.ToMessage(globalGasCap.Uint64(), fixedBaseFee, intrinsicGas)
 	if err != nil {
 		return nil, 0, 0, 0, err
@@ -298,8 +296,6 @@ func DoCall(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.Blo
 	// but we check in advance here in order to keep StateTransition.TransactionDb method as unchanged as possible
 	// and to clarify error reason correctly to serve eth namespace APIs.
 	// This case is handled by EthDoEstimateGas function.
-	logger.Info("mgs","msg",msg)
-	logger.Info("logic","msggas", msg.Gas(), "intrinsicGas",intrinsicGas)
 	if msg.Gas() < intrinsicGas {
 		return nil, 0, 0, 0, fmt.Errorf("%w: msg.gas %d, want %d", blockchain.ErrIntrinsicGas, msg.Gas(), intrinsicGas)
 	}
@@ -645,17 +641,13 @@ func (args *CallArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsic
 	if gas == 0 {
 		gas = uint64(math.MaxUint64 / 2)
 	}
-	logger.Info("gas","gas",gas)
 	if args.Gas != 0 {
 		gas = uint64(args.Gas)
 	}
-	logger.Info("gas","gas",gas)
-
 	if globalGasCap != 0 && globalGasCap < gas {
 		logger.Warn("Caller gas above allowance, capping", "requested", gas, "cap", globalGasCap)
 		gas = globalGasCap
 	}
-	logger.Info("gas","gas",gas)
 
 	var (
 		gasPrice  *big.Int
