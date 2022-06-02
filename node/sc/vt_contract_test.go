@@ -114,9 +114,6 @@ func TestNFTPublicVariables(t *testing.T) {
 	isApproved, err := info.nftLocalBridge.IsApprovedForAll(nil, info.nodeAuth.From, info.nodeAuth.From)
 	assert.Equal(t, false, isApproved)
 
-	isOwner, err := info.nftLocalBridge.IsOwner(&bind.CallOpts{From: info.nodeAuth.From})
-	assert.Equal(t, true, isOwner)
-
 	name, err := info.nftLocalBridge.Name(nil)
 	assert.Equal(t, "ServiceChainNFT", name)
 

@@ -69,7 +69,7 @@ func prepareMultiBridgeTest(t *testing.T) *bridgeTestInfo {
 
 func prepareMultiBridgeEventTest(t *testing.T) *multiBridgeTestInfo {
 	const maxAccounts = 4
-	var res = multiBridgeTestInfo{}
+	res := multiBridgeTestInfo{}
 
 	accountMap := make(map[common.Address]blockchain.GenesisAccount)
 	res.accounts = make([]*bind.TransactOpts, maxAccounts)
@@ -422,8 +422,9 @@ func TestMultiBridgeERC20Transfer(t *testing.T) {
 	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
 
 	// Give minter role to bridge contract
-	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
-	tx, err = erc20.AddMinter(opts, info.bAddr)
+	role, err := erc20.MINTERROLE(nil)
+	assert.NoError(t, err)
+	tx, err = erc20.GrantRole(opts, role, info.bAddr)
 	assert.NoError(t, err)
 	info.sim.Commit()
 	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
@@ -493,7 +494,9 @@ func TestMultiBridgeERC721Transfer(t *testing.T) {
 
 	// Give minter role to bridge contract
 	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
-	tx, err = erc721.AddMinter(opts, info.bAddr)
+	role, err := erc721.MINTERROLE(nil)
+	assert.NoError(t, err)
+	tx, err = erc721.GrantRole(opts, role, info.bAddr)
 	assert.NoError(t, err)
 	info.sim.Commit()
 	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))

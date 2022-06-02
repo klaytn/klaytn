@@ -273,7 +273,6 @@ func TestBridgeHandleValueTransferNonceAndBlockNumber(t *testing.T) {
 	defer cancelTimeout()
 
 	receipt, err := bind.WaitMined(timeoutContext, backend, tx)
-
 	if err != nil {
 		t.Fatal("Failed to WaitMined.", "err", err, "txHash", tx.Hash().String(), "status", receipt.Status)
 	}
@@ -353,7 +352,7 @@ func TestBridgePublicVariables(t *testing.T) {
 	assert.Nil(t, WaitMined(tx, backend, t))
 
 	version, err := b.VERSION(nil)
-	assert.Equal(t, uint64(0x1), version)
+	assert.Equal(t, uint64(0x2), version)
 
 	allowedTokens, err := b.RegisteredTokens(nil, common.Address{1})
 	assert.Equal(t, common.Address{0}, allowedTokens)
@@ -364,11 +363,10 @@ func TestBridgePublicVariables(t *testing.T) {
 	hnonce, err := b.LowerHandleNonce(nil)
 	assert.Equal(t, uint64(0), hnonce)
 
-	owner, err := b.IsOwner(&bind.CallOpts{From: bridgeAccount.From})
-	assert.Equal(t, true, owner)
-
-	notOwner, err := b.IsOwner(&bind.CallOpts{From: common.Address{1}})
-	assert.Equal(t, false, notOwner)
+	owner, err := b.Owner(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, owner, bridgeAccount.From)
+	assert.NotEqual(t, owner, common.Address{1})
 
 	isRunning, err := b.IsRunning(nil)
 	assert.Equal(t, true, isRunning)
@@ -426,7 +424,9 @@ func TestExtendedBridgeAndCallbackERC20(t *testing.T) {
 	assert.Nil(t, bind.CheckWaitMined(backend, tx))
 
 	// Give minter role to bridge contract
-	tx, err = erc20.AddMinter(bridgeAccount, bridgeAddr)
+	role, err := erc20.MINTERROLE(nil)
+	assert.NoError(t, err)
+	tx, err = erc20.GrantRole(bridgeAccount, role, bridgeAddr)
 	assert.NoError(t, err)
 	backend.Commit()
 	assert.Nil(t, bind.CheckWaitMined(backend, tx))
@@ -572,7 +572,9 @@ func TestExtendedBridgeAndCallbackERC721(t *testing.T) {
 	assert.Nil(t, bind.CheckWaitMined(backend, tx))
 
 	// Give minter role to bridge contract
-	tx, err = erc721.AddMinter(bridgeAccount, bridgeAddr)
+	role, err := erc721.MINTERROLE(nil)
+	assert.NoError(t, err)
+	tx, err = erc721.GrantRole(bridgeAccount, role, bridgeAddr)
 	assert.NoError(t, err)
 	backend.Commit()
 	assert.Nil(t, bind.CheckWaitMined(backend, tx))
@@ -1236,7 +1238,7 @@ func TestBridgeRequestHandleGasUsed(t *testing.T) {
 	upperHandleNonce, _ = b.UpperHandleNonce(nil)
 	assert.Equal(t, uint64(999), upperHandleNonce)
 
-	//This 500 nonce handle checks whether the handle transaction which has a loop failed.
+	// This 500 nonce handle checks whether the handle transaction which has a loop failed.
 	handleFunc(500)
 
 	lowerHandleNonce, _ = b.LowerHandleNonce(nil)

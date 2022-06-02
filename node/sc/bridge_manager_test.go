@@ -35,7 +35,6 @@ import (
 	"github.com/klaytn/klaytn/accounts/keystore"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/contracts/bridge"
 	sctoken "github.com/klaytn/klaytn/contracts/sc_erc20"
@@ -365,7 +364,7 @@ func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
-	//pAuth := bacc.cAccount.GenerateTransactOpts()
+	// pAuth := bacc.cAccount.GenerateTransactOpts()
 	cAuth := bacc.pAccount.GenerateTransactOpts()
 
 	// Generate a new random account and a funded simulator
@@ -419,7 +418,7 @@ func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
 		log.Fatalf("Failed to DeployServiceChainNFT: %v", err)
 	}
 
-	nft_uri, err := scnft.NewServiceChainNFT(nftAddr, sim)
+	nft_uri, err := scnft_no_uri.NewServiceChainNFTNoURI(nftAddr, sim)
 	if err != nil {
 		log.Fatalf("Failed to get NFT object: %v", err)
 	}
@@ -496,8 +495,8 @@ func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
 		sim.Commit() // block
 
 		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
-		uri, err := nft_uri.TokenURI(nil, big.NewInt(int64(nftTokenID)))
-		assert.Equal(t, vm.ErrExecutionReverted, err)
+		uri, err := nft_uri.TokenURI(nil, big.NewInt(int64(nftTokenID))) // Semi-standard (Openzeppelin) includes `tokenURI` function in `ERC721.sol`
+		assert.NoError(t, err)
 		assert.Equal(t, "", uri)
 	}
 
@@ -2118,5 +2117,4 @@ func TestGetBridgeContractBalance(t *testing.T) {
 			isExpectedBalance(t, bm, pBridgeAddr, cBridgeAddr, initialParentbridgeBalance, initialChildbridgeBalance)
 		}
 	}
-
 }
