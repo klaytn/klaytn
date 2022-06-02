@@ -619,7 +619,7 @@ func (bm *BridgeManager) RestoreBridges() error {
 		return ErrBridgeRestore
 	}
 
-	var counter = 0
+	counter := 0
 	bm.stopAllRecoveries()
 
 	for _, journal := range bm.journal.cache {
@@ -990,7 +990,6 @@ func (bm *BridgeManager) loop(
 	chanHandleVT <-chan *bridgecontract.BridgeHandleValueTransfer,
 	reqVTevSub, reqVTencodedEvSub event.Subscription,
 	handleEventSub event.Subscription) {
-
 	defer reqVTevSub.Unsubscribe()
 	defer reqVTencodedEvSub.Unsubscribe()
 	defer handleEventSub.Unsubscribe()
