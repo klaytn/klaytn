@@ -1,4 +1,4 @@
-pragma solidity ^0.5.6;
+pragma solidity ^0.8.0;
 
 interface InterfaceIdentifier {
     /// @notice Query if a contract implements an interface

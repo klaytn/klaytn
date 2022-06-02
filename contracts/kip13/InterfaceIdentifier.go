@@ -27,7 +27,7 @@ var (
 )
 
 // InterfaceIdentifierABI is the input ABI used to generate the binding from.
-const InterfaceIdentifierABI = "[{\"constant\":true,\"inputs\":[{\"name\":\"interfaceID\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
+const InterfaceIdentifierABI = "[{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceID\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
 // InterfaceIdentifierBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
 const InterfaceIdentifierBinRuntime = ``
