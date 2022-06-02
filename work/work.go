@@ -268,6 +268,11 @@ type BlockChain interface {
 	// Used in governance pkg
 	SetProposerPolicy(val uint64)
 	SetUseGiniCoeff(val bool)
+	SetLowerBoundBaseFee(val uint64)
+	SetUpperBoundBaseFee(val uint64)
+	SetGasTarget(val uint64)
+	SetMaxBlockGasUsedForBaseFee(val uint64)
+	SetBaseFeeDenominator(val uint64)
 
 	Processor() blockchain.Processor
 	BadBlocks() ([]blockchain.BadBlockArgs, error)

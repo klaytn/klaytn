@@ -221,6 +221,19 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	config.GasPrice = new(big.Int).SetUint64(chainConfig.UnitPrice)
 	logger.Info("Initialised chain configuration", "config", chainConfig)
 
+	// TODO-klaytn set KIP71 forked block number
+	// It's intended not to modify something like genesis in SetupGenesisBlock()
+	if chainConfig.KIP71CompatibleBlock != nil {
+		chainConfig.KIP71CompatibleBlock = params.KIP71CompatibleBlockNum
+	}
+	chainConfig.Governance.KIP71 = &params.KIP71Config{
+		LowerBoundBaseFee:         governance.LowerBoundBaseFee(),
+		UpperBoundBaseFee:         governance.UpperBoundBaseFee(),
+		GasTarget:                 governance.GasTarget(),
+		MaxBlockGasUsedForBaseFee: governance.MaxBlockGasUsedForBaseFee(),
+		BaseFeeDenominator:        governance.BaseFeeDenominator(),
+	}
+
 	cn := &CN{
 		config:            config,
 		chainDB:           chainDB,

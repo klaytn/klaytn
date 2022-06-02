@@ -58,6 +58,8 @@ var (
 	errPermissionDenied       = errors.New("You don't have the right to vote")
 	errRemoveSelf             = errors.New("You can't vote on removing yourself")
 	errInvalidKeyValue        = errors.New("Your vote couldn't be placed. Please check your vote's key and value")
+	errInvalidLowerBound      = errors.New("lowerboundbasefee cannot be set exceeding upperboundbasefee")
+	errInvalidUpperBound      = errors.New("upperboundbasefee cannot be set lower than lowerboundbasefee")
 )
 
 // TODO-Klaytn-Governance: Refine this API and consider the gas price of txpool
@@ -88,12 +90,23 @@ func (api *PublicGovernanceAPI) Vote(key string, val interface{}) (string, error
 	if GovernanceModeMap[gMode] == params.GovernanceMode_Single && gNode != api.governance.NodeAddress() {
 		return "", errPermissionDenied
 	}
-	if strings.ToLower(key) == "governance.removevalidator" {
-		if _, ok := api.governance.ValidateVote(&GovernanceVote{Key: key, Value: val}); !ok {
-			return "", errInvalidKeyValue
-		}
+	vote, ok := api.governance.ValidateVote(&GovernanceVote{Key: strings.ToLower(key), Value: val})
+	if !ok {
+		return "", errInvalidKeyValue
+	}
+	if vote.Key == "governance.removevalidator" {
 		if api.isRemovingSelf(val.(string)) {
 			return "", errRemoveSelf
+		}
+	}
+	if vote.Key == "kip71.lowerboundbasefee" {
+		if vote.Value.(uint64) > api.governance.UpperBoundBaseFee() {
+			return "", errInvalidLowerBound
+		}
+	}
+	if vote.Key == "kip71.upperboundbasefee" {
+		if vote.Value.(uint64) < api.governance.LowerBoundBaseFee() {
+			return "", errInvalidUpperBound
 		}
 	}
 	if api.governance.AddVote(key, val) {

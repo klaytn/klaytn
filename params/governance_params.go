@@ -65,6 +65,11 @@ const (
 	ConstTxGasHumanReadable
 	CliqueEpoch
 	Timeout
+	LowerBoundBaseFee
+	UpperBoundBaseFee
+	GasTarget
+	MaxBlockGasUsedForBaseFee
+	BaseFeeDenominator
 )
 
 const (
@@ -84,20 +89,25 @@ const (
 
 var (
 	// Default Values: Constants used for getting default values for configuration
-	DefaultGovernanceMode          = "none"
-	DefaultGoverningNode           = "0x0000000000000000000000000000000000000000"
-	DefaultEpoch                   = uint64(604800)
-	DefaultProposerPolicy          = uint64(RoundRobin)
-	DefaultSubGroupSize            = uint64(21)
-	DefaultUnitPrice               = uint64(250000000000)
-	DefaultMintingAmount           = big.NewInt(0)
-	DefaultRatio                   = "100/0/0"
-	DefaultUseGiniCoeff            = false
-	DefaultDefferedTxFee           = false
-	DefaultMinimumStake            = big.NewInt(2000000)
-	DefaultStakeUpdateInterval     = uint64(86400) // 1 day
-	DefaultProposerRefreshInterval = uint64(3600)  // 1 hour
-	DefaultPeriod                  = uint64(1)
+	DefaultGovernanceMode            = "none"
+	DefaultGoverningNode             = "0x0000000000000000000000000000000000000000"
+	DefaultEpoch                     = uint64(604800)
+	DefaultProposerPolicy            = uint64(RoundRobin)
+	DefaultSubGroupSize              = uint64(21)
+	DefaultUnitPrice                 = uint64(250000000000)
+	DefaultLowerBoundBaseFee         = uint64(25000000000)
+	DefaultUpperBoundBaseFee         = uint64(750000000000)
+	DefaultGasTarget                 = uint64(30000000)
+	DefaultMaxBlockGasUsedForBaseFee = uint64(60000000)
+	DefaultBaseFeeDenominator        = uint64(20)
+	DefaultMintingAmount             = big.NewInt(0)
+	DefaultRatio                     = "100/0/0"
+	DefaultUseGiniCoeff              = false
+	DefaultDefferedTxFee             = false
+	DefaultMinimumStake              = big.NewInt(2000000)
+	DefaultStakeUpdateInterval       = uint64(86400) // 1 day
+	DefaultProposerRefreshInterval   = uint64(3600)  // 1 hour
+	DefaultPeriod                    = uint64(1)
 )
 
 func IsStakingUpdateInterval(blockNum uint64) bool {

@@ -196,6 +196,22 @@ func genRewardConfig(ctx *cli.Context) *params.RewardConfig {
 	}
 }
 
+func genKIP71Config(ctx *cli.Context) *params.KIP71Config {
+	lowerBoundBaseFee := ctx.Uint64(kip71LowerBoundBaseFeeFlag.Name)
+	upperBoundBaseFee := ctx.Uint64(kip71UpperBoundBaseFeeFlag.Name)
+	gasTarget := ctx.Uint64(kip71GasTarget.Name)
+	maxBlockGasUsedForBaseFee := ctx.Uint64(kip71MaxBlockGasUsedForBaseFee.Name)
+	baseFeeDenominator := ctx.Uint64(kip71BaseFeeDenominator.Name)
+
+	return &params.KIP71Config{
+		LowerBoundBaseFee:         lowerBoundBaseFee,         // lower bound of the base fee
+		UpperBoundBaseFee:         upperBoundBaseFee,         // upper bound of the base fee
+		GasTarget:                 gasTarget,                 // standard gas usage for whether to raise or lower the base fee
+		MaxBlockGasUsedForBaseFee: maxBlockGasUsedForBaseFee, // maximum gas that can be used to calculate the base fee
+		BaseFeeDenominator:        baseFeeDenominator,        // scaling factor to adjust the gap between used and target gas
+	}
+}
+
 func genIstanbulConfig(ctx *cli.Context) *params.IstanbulConfig {
 	epoch := ctx.Uint64(istEpochFlag.Name)
 	policy := ctx.Uint64(istProposerPolicyFlag.Name)
@@ -218,6 +234,7 @@ func genGovernanceConfig(ctx *cli.Context) *params.GovernanceConfig {
 		GoverningNode:  common.HexToAddress(governingNode),
 		GovernanceMode: govMode,
 		Reward:         genRewardConfig(ctx),
+		KIP71:          genKIP71Config(ctx),
 	}
 }
 
