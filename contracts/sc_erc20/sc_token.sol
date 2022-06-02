@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -14,17 +16,18 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity 0.5.6;
+pragma solidity ^0.8.0;
 
-import "../externals/openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
-import "../externals/openzeppelin-solidity/contracts/token/ERC20/ERC20Mintable.sol";
-import "../externals/openzeppelin-solidity/contracts/token/ERC20/ERC20Burnable.sol";
+import "../klaytn-contracts/contracts/token/ERC20/ERC20.sol";
+import "../klaytn-contracts/contracts/token/ERC20/extensions/ERC20Burnable.sol";
+import "../klaytn-contracts/contracts/access/AccessControl.sol";
+import "../klaytn-contracts/contracts/utils/Address.sol";
 
-import "../externals/openzeppelin-solidity/contracts/utils/Address.sol";
 import "./ERC20ServiceChain.sol";
 
+contract ServiceChainToken is ERC20, ERC20Burnable, AccessControl, IERC20Mint, ERC20ServiceChain {
+    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
-contract ServiceChainToken is ERC20, ERC20Mintable, ERC20Burnable, ERC20ServiceChain {
     string public constant NAME = "ServiceChainToken";
     string public constant SYMBOL = "SCT";
     uint8 public constant DECIMALS = 18;
@@ -32,7 +35,13 @@ contract ServiceChainToken is ERC20, ERC20Mintable, ERC20Burnable, ERC20ServiceC
     // one billion in initial supply
     uint256 public constant INITIAL_SUPPLY = 1000000000 * (10 ** uint256(DECIMALS));
 
-    constructor(address _bridge) ERC20ServiceChain(_bridge) public {
+    constructor(address _bridge) ERC20(NAME, SYMBOL) ERC20ServiceChain(_bridge) {
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(MINTER_ROLE, msg.sender);
         _mint(msg.sender, INITIAL_SUPPLY);
+    }
+
+    function mint(address to, uint256 amount) public onlyRole(MINTER_ROLE) {
+        _mint(to, amount);
     }
 }

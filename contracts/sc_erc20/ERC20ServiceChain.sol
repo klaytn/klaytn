@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -14,23 +16,22 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity 0.5.6;
+pragma solidity ^0.8.0;
 
-import "../externals/openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
-import "../externals/openzeppelin-solidity/contracts/utils/Address.sol";
-import "../externals/openzeppelin-solidity/contracts/ownership/Ownable.sol";
-import "./IERC20BridgeReceiver.sol";
-
+import "../klaytn-contracts/contracts/token/ERC20/ERC20.sol";
+import "../klaytn-contracts/contracts/utils/Address.sol";
+import "../klaytn-contracts/contracts/access/Ownable.sol";
+import "../bridge_interface/IERC20BridgeReceiver.sol";
 
 /**
  * @title ERC20ServiceChain
  * @dev ERC20 service chain value transfer logic for 1-step transfer.
  */
-contract ERC20ServiceChain is ERC20, Ownable {
+abstract contract ERC20ServiceChain is ERC20, Ownable {
     using Address for address;
     address public bridge;
 
-    constructor(address _bridge) internal {
+    constructor(address _bridge) {
         setBridge(_bridge);
     }
 
@@ -42,7 +43,7 @@ contract ERC20ServiceChain is ERC20, Ownable {
     }
 
     function requestValueTransfer(uint256 _amount, address _to, uint256 _feeLimit, bytes calldata _extraData) external {
-        require(transfer(bridge, _amount.add(_feeLimit)), "requestValueTransfer: transfer failed");
+        require(transfer(bridge, _amount + _feeLimit), "requestValueTransfer: transfer failed");
         IERC20BridgeReceiver(bridge).onERC20Received(msg.sender, _to, _amount, _feeLimit, _extraData);
     }
 }
