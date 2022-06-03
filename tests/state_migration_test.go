@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/node/cn"
 	"github.com/klaytn/klaytn/storage/database"
@@ -34,6 +35,8 @@ import (
 
 // continuous occurrence of state trie migration and node restart must success
 func TestMigration_ContinuousRestartAndMigration(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
+
 	fullNode, node, validator, chainID, workspace, richAccount, _, _ := newSimpleBlockchain(t, 10)
 	defer os.RemoveAll(workspace)
 
@@ -67,6 +70,8 @@ func TestMigration_ContinuousRestartAndMigration(t *testing.T) {
 
 // state trie DB should be determined by the values of miscDB
 func TestMigration_StartMigrationByMiscDB(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
+
 	fullNode, cn, validator, _, workspace, _, _, _ := newSimpleBlockchain(t, 10)
 	defer os.RemoveAll(workspace)
 
@@ -133,6 +138,8 @@ func checkIfStoredInDB(t *testing.T, numShard uint, dir string, entries map[stri
 
 // if migration status is set on miscDB and a node is restarted, migration should start
 func TestMigration_StartMigrationByMiscDBOnRestart(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
+
 	fullNode, node, validator, chainID, workspace, richAccount, _, _ := newSimpleBlockchain(t, 10)
 	defer os.RemoveAll(workspace)
 	miscDB := node.ChainDB().GetMiscDB()
@@ -177,10 +184,6 @@ func TestMigration_StartMigrationByMiscDBOnRestart(t *testing.T) {
 }
 
 func newSimpleBlockchain(t *testing.T, numAccounts int) (*node.Node, *cn.CN, *TestAccountType, *big.Int, string, *TestAccountType, []*TestAccountType, []*TestAccountType) {
-	//if testing.Verbose() {
-	//	enableLog() // Change verbosity level in the function if needed
-	//}
-
 	t.Log("=========== create blockchain ==============")
 	fullNode, node, validator, chainID, workspace := newBlockchain(t)
 	richAccount, accounts, contractAccounts := createAccount(t, numAccounts, validator)

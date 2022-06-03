@@ -29,6 +29,7 @@ import (
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
+	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -197,8 +198,7 @@ func (s *SuiteDynamoDB) TestDynamoBatch_Write_DuplicatedKey() {
 // This also checks if shared workers works as expected.
 func (s *SuiteDynamoDB) TestDynamoBatch_Write_MultiTables() {
 	storage.SkipLocalTest(s.T())
-	// this test might end with Crit, enableLog to find out the log
-	//enableLog()
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace) // this test might end with Crit, enable Log to find out the log
 
 	// create DynamoDB1
 	dynamo, err := newDynamoDB(GetTestDynamoConfig())

@@ -35,6 +35,7 @@ import (
 	"github.com/klaytn/klaytn/common/compiler"
 	"github.com/klaytn/klaytn/common/profile"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/log"
 )
 
 type deployedContract struct {
@@ -333,7 +334,7 @@ func BenchmarkSmartContractExecute(b *testing.B) {
 }
 
 func BenchmarkStorageTrieStore(b *testing.B) {
-	//enableLog()
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	benchOption := ContractExecutionOption{

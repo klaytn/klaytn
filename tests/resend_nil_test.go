@@ -26,6 +26,7 @@ import (
 
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common/profile"
+	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
 )
 
@@ -41,9 +42,7 @@ import (
 // To execute this,
 // $ go test -run XXX -bench BenchmarkResendNilDereference
 func BenchmarkResendNilDereference(t *testing.B) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	numTransactions := 20000
