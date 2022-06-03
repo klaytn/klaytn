@@ -299,7 +299,7 @@ func DoCall(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.Blo
 	if msg.Gas() < intrinsicGas {
 		return nil, 0, 0, 0, fmt.Errorf("%w: msg.gas %d, want %d", blockchain.ErrIntrinsicGas, msg.Gas(), intrinsicGas)
 	}
-	evm, vmError, err := b.GetEVM(ctx, msg, st, header, vm.Config{})
+	evm, vmError, err := b.GetEVM(ctx, msg, st, header, vmCfg)
 	if err != nil {
 		return nil, 0, 0, 0, err
 	}
