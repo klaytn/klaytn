@@ -333,7 +333,7 @@ func BenchmarkSmartContractExecute(b *testing.B) {
 }
 
 func BenchmarkStorageTrieStore(b *testing.B) {
-	//enableLog()
+	// enableLog()
 	prof := profile.NewProfiler()
 
 	benchOption := ContractExecutionOption{

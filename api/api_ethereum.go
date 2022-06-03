@@ -793,8 +793,8 @@ func newEthRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNum
 		result.GasFeeCap = (*hexutil.Big)(tx.GasFeeCap())
 		result.GasTipCap = (*hexutil.Big)(tx.GasTipCap())
 		// TODO-Klaytn: If we change the gas price policy from fixed to dynamic,
-		// we should change the params.BaseFee(fixed value) to dynamic value.
-		price := math.BigMin(new(big.Int).Add(tx.GasTipCap(), new(big.Int).SetUint64(params.BaseFee)), tx.GasFeeCap())
+		// we should change the params.ZeroBaseFee(fixed value) to dynamic value.
+		price := math.BigMin(new(big.Int).Add(tx.GasTipCap(), new(big.Int).SetUint64(params.ZeroBaseFee)), tx.GasFeeCap())
 		result.GasPrice = (*hexutil.Big)(price)
 	}
 	return result
@@ -983,8 +983,8 @@ func newEthTransactionReceipt(tx *types.Transaction, b Backend, blockHash common
 
 	if b.ChainConfig().IsEthTxTypeForkEnabled(new(big.Int).SetUint64(blockNumber)) {
 		// TODO-Klaytn: Klaytn is using fixed BaseFee(0) as now but
-		// if we apply dynamic BaseFee, we should add calculated BaseFee instead of using params.BaseFee.
-		baseFee := new(big.Int).SetUint64(params.BaseFee)
+		// if we apply dynamic BaseFee, we should add calculated BaseFee instead of using params.ZeroBaseFee.
+		baseFee := new(big.Int).SetUint64(params.ZeroBaseFee)
 		fields["effectiveGasPrice"] = hexutil.Uint64(tx.EffectiveGasPrice(baseFee).Uint64())
 	} else {
 		fields["effectiveGasPrice"] = hexutil.Uint64(tx.GasPrice().Uint64())
@@ -1061,8 +1061,8 @@ func (args *EthTransactionArgs) setDefaults(ctx context.Context, b Backend) erro
 	// After london, default to 1559 uncles gasPrice is set
 	head := b.CurrentBlock().Header()
 	// TODO-Klaytn: Klaytn is using fixed BaseFee(0) as now but
-	// if we apply dynamic BaseFee, we should add calculated BaseFee instead of using params.BaseFee.
-	fixedBaseFee := new(big.Int).SetUint64(params.BaseFee)
+	// if we apply dynamic BaseFee, we should add calculated BaseFee instead of using params.ZeroBaseFee.
+	fixedBaseFee := new(big.Int).SetUint64(params.ZeroBaseFee)
 	// Klaytn uses fixed gasPrice policy determined by Governance, so
 	// only fixedGasPrice value is allowed to be used as args.MaxFeePerGas and args.MaxPriorityFeePerGas.
 	fixedGasPrice, err := b.SuggestPrice(ctx)
@@ -1105,8 +1105,8 @@ func (args *EthTransactionArgs) setDefaults(ctx context.Context, b Backend) erro
 				// is fine as now.
 				if b.ChainConfig().IsEthTxTypeForkEnabled(head.Number) {
 					// TODO-Klaytn: Klaytn is using fixed BaseFee(0) as now but
-					// if we apply dynamic BaseFee, we should add calculated BaseFee instead of params.BaseFee.
-					fixedGasPrice.Add(fixedGasPrice, new(big.Int).SetUint64(params.BaseFee))
+					// if we apply dynamic BaseFee, we should add calculated BaseFee instead of params.ZeroBaseFee.
+					fixedGasPrice.Add(fixedGasPrice, new(big.Int).SetUint64(params.ZeroBaseFee))
 				}
 				args.GasPrice = (*hexutil.Big)(fixedGasPrice)
 			}
@@ -1469,7 +1469,7 @@ func (api *EthereumAPI) rpcMarshalHeader(head *types.Header) (map[string]interfa
 	}
 
 	if api.publicBlockChainAPI.b.ChainConfig().IsEthTxTypeForkEnabled(head.Number) {
-		result["baseFeePerGas"] = (*hexutil.Big)(new(big.Int).SetUint64(params.BaseFee))
+		result["baseFeePerGas"] = (*hexutil.Big)(new(big.Int).SetUint64(params.ZeroBaseFee))
 	}
 
 	return result, nil
@@ -1532,7 +1532,7 @@ func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrO
 	defer cancel()
 
 	// TODO-Klaytn: Klaytn is using fixed baseFee as now but, if we change this fixed baseFee as dynamic baseFee, we should update this logic too.
-	fixedBaseFee := new(big.Int).SetUint64(params.BaseFee)
+	fixedBaseFee := new(big.Int).SetUint64(params.ZeroBaseFee)
 	intrinsicGas, err := types.IntrinsicGas(args.data(), nil, args.To == nil, b.ChainConfig().Rules(header.Number))
 	if err != nil {
 		return nil, 0, 0, err

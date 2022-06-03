@@ -198,7 +198,7 @@ func (s *SuiteDynamoDB) TestDynamoBatch_Write_DuplicatedKey() {
 func (s *SuiteDynamoDB) TestDynamoBatch_Write_MultiTables() {
 	storage.SkipLocalTest(s.T())
 	// this test might end with Crit, enableLog to find out the log
-	//enableLog()
+	// enableLog()
 
 	// create DynamoDB1
 	dynamo, err := newDynamoDB(GetTestDynamoConfig())

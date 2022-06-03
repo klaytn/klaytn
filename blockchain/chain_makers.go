@@ -29,6 +29,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus"
+	"github.com/klaytn/klaytn/consensus/misc"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/storage/statedb"
@@ -227,7 +228,7 @@ func makeHeader(chain consensus.ChainReader, parent *types.Block, state *state.S
 		time = new(big.Int).Add(parent.Time(), big.NewInt(10)) // block time is fixed at 10 seconds
 	}
 
-	return &types.Header{
+	header := &types.Header{
 		Root:       state.IntermediateRoot(true),
 		ParentHash: parent.Hash(),
 		BlockScore: engine.CalcBlockScore(chain, time.Uint64(), &types.Header{
@@ -238,6 +239,10 @@ func makeHeader(chain consensus.ChainReader, parent *types.Block, state *state.S
 		Number: new(big.Int).Add(parent.Number(), common.Big1),
 		Time:   time,
 	}
+	if chain.Config().IsKIP71ForkEnabled(header.Number) {
+		header.BaseFee = misc.CalcBaseFee(parent.Header(), chain.Config())
+	}
+	return header
 }
 
 // makeHeaderChain creates a deterministic chain of headers rooted at parent.

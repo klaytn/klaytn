@@ -168,7 +168,7 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 			args.MaxPriorityFeePerGas = (*hexutil.Big)(fixedGasPrice)
 		}
 		if args.MaxFeePerGas == nil {
-			fixedBaseFee := new(big.Int).SetUint64(params.BaseFee)
+			fixedBaseFee := new(big.Int).SetUint64(params.ZeroBaseFee)
 			gasFeeCap := new(big.Int).Add(
 				(*big.Int)(args.MaxPriorityFeePerGas),
 				new(big.Int).Mul(fixedBaseFee, big.NewInt(2)),

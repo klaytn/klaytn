@@ -17,6 +17,7 @@
 package reward
 
 import (
+	"errors"
 	"math/big"
 
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -25,6 +26,7 @@ import (
 )
 
 var logger = log.NewModuleLogger(log.Reward)
+var errInvalidKIP71Block = errors.New("Invalide KIP-71 block with no baseFee")
 
 type BalanceAdder interface {
 	AddBalance(addr common.Address, v *big.Int)
@@ -51,20 +53,33 @@ func NewRewardDistributor(gh governanceHelper) *RewardDistributor {
 }
 
 // getTotalTxFee returns the total transaction gas fee of the block.
-func (rd *RewardDistributor) getTotalTxFee(header *types.Header, rewardConfig *rewardConfig) *big.Int {
+func (rd *RewardDistributor) getTotalTxFee(header *types.Header, rewardConfig *rewardConfig, isKIP71Forked bool) (*big.Int, error) {
 	totalGasUsed := big.NewInt(0).SetUint64(header.GasUsed)
-	totalTxFee := totalGasUsed.Mul(totalGasUsed, rewardConfig.unitPrice)
-	return totalTxFee
+	var totalTxFee *big.Int
+	if isKIP71Forked {
+		if header.BaseFee == nil {
+			logger.Error("KIP-71 hard forked block should have baseFee", "blockNum", header.Number.Uint64())
+			return nil, errInvalidKIP71Block
+		}
+		totalTxFee = totalGasUsed.Mul(totalGasUsed, header.BaseFee)
+		// burned 50% TxFee
+		return totalTxFee.Div(totalTxFee, big.NewInt(2)), nil
+	} else {
+		return totalGasUsed.Mul(totalGasUsed, rewardConfig.unitPrice), nil
+	}
 }
 
 // MintKLAY mints KLAY and gives the KLAY and the total transaction gas fee to the block proposer.
-func (rd *RewardDistributor) MintKLAY(b BalanceAdder, header *types.Header) error {
+func (rd *RewardDistributor) MintKLAY(b BalanceAdder, header *types.Header, isKIP71Forked bool) error {
 	rewardConfig, err := rd.rcc.get(header.Number.Uint64())
 	if err != nil {
 		return err
 	}
 
-	totalTxFee := rd.getTotalTxFee(header, rewardConfig)
+	totalTxFee, err := rd.getTotalTxFee(header, rewardConfig, isKIP71Forked)
+	if err != nil {
+		return err
+	}
 	blockReward := totalTxFee.Add(rewardConfig.mintingAmount, totalTxFee)
 
 	b.AddBalance(header.Rewardbase, blockReward)
@@ -72,7 +87,7 @@ func (rd *RewardDistributor) MintKLAY(b BalanceAdder, header *types.Header) erro
 }
 
 // DistributeBlockReward distributes block reward to proposer, kirAddr and pocAddr.
-func (rd *RewardDistributor) DistributeBlockReward(b BalanceAdder, header *types.Header, pocAddr common.Address, kirAddr common.Address) error {
+func (rd *RewardDistributor) DistributeBlockReward(b BalanceAdder, header *types.Header, pocAddr common.Address, kirAddr common.Address, isKIP71Forked bool) error {
 	rewardConfig, err := rd.rcc.get(header.Number.Uint64())
 	if err != nil {
 		return err
@@ -81,7 +96,10 @@ func (rd *RewardDistributor) DistributeBlockReward(b BalanceAdder, header *types
 	// Calculate total tx fee
 	totalTxFee := common.Big0
 	if rd.gh.DeferredTxFee() {
-		totalTxFee = rd.getTotalTxFee(header, rewardConfig)
+		totalTxFee, err = rd.getTotalTxFee(header, rewardConfig, isKIP71Forked)
+		if err != nil {
+			return err
+		}
 	}
 
 	rd.distributeBlockReward(b, header, totalTxFee, rewardConfig, pocAddr, kirAddr)

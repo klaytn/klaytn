@@ -168,7 +168,7 @@ const (
 	TxAccessListStorageKeyGas uint64 = 1900 // Per storage key specified in EIP 2930 access list
 
 	// BaseFee exists for supporting Ethereum compatible data structure.
-	BaseFee uint64 = 0
+	ZeroBaseFee uint64 = 0
 )
 
 const (

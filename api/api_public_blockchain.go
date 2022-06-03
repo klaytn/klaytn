@@ -530,7 +530,7 @@ func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool, isEna
 	}
 
 	if isEnabledEthTxTypeFork {
-		fields["baseFeePerGas"] = (*hexutil.Big)(new(big.Int).SetUint64(params.BaseFee))
+		fields["baseFeePerGas"] = (*hexutil.Big)(new(big.Int).SetUint64(params.ZeroBaseFee))
 	}
 
 	return fields, nil
