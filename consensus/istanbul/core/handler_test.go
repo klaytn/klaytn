@@ -525,7 +525,7 @@ func simulateMaliciousCN(t *testing.T, numValidators int, numMalicious int) Stat
 
 	// Note that genValidators(n) will generate n/3 validators.
 	// We want n validators, thus calling genValidators(3n).
-	validatorAddrs, validatorKeyMap := genValidators(numValidators * 3)
+	validatorAddrs, validatorKeyMap := genValidators(numValidators)
 
 	// Add more EXPECT()s to remove unexpected call error
 	mockBackend, mockCtrl := newMockBackend(t, validatorAddrs)
@@ -621,7 +621,7 @@ func simulateChainSplit(t *testing.T, numValidators int) (State, State) {
 
 	// Note that genValidators(n) will generate n/3 validators.
 	// We want n validators, thus calling genValidators(3n).
-	validatorAddrs, validatorKeyMap := genValidators(numValidators * 3)
+	validatorAddrs, validatorKeyMap := genValidators(numValidators)
 
 	// Add more EXPECT()s to remove unexpected call error
 	mockBackend, mockCtrl := newMockBackend(t, validatorAddrs)
@@ -643,6 +643,7 @@ func simulateChainSplit(t *testing.T, numValidators int) (State, State) {
 	coreProposer := New(mockBackend, istConfig).(*core)
 	coreA := New(mockBackend, istConfig).(*core)
 	coreB := New(mockBackend, istConfig).(*core)
+
 	require.Nil(t,
 		coreProposer.Start(),
 		coreA.Start(),
@@ -650,7 +651,6 @@ func simulateChainSplit(t *testing.T, numValidators int) (State, State) {
 	defer coreProposer.Stop()
 	defer coreA.Stop()
 	defer coreB.Stop()
-
 	// make two groups
 	// the number of group size is (numValidators-1/2) + 1
 	// groupA consists of proposer, coreA, unnamed node(s)
@@ -704,21 +704,26 @@ func simulateChainSplit(t *testing.T, numValidators int) (State, State) {
 	return coreA.state, coreB.state
 }
 
-// TestCore_chainSplit tests whether a chain split occurs in a certain conditions:
-// 1) the number of validators does not consist of 3f+1;
-//     e.g. if the number of validator is 5, it consists of 3f+2 (f=1)
-// 2) the proposer is malicious; it sends two different blocks to each group
+// TestCore_chainSplit tests won't be split
+// the proposer is malicious; it sends two different blocks to each group
 func TestCore_chainSplit(t *testing.T) {
-	// If the number of validators is not 3f+1, the chain can be split.
-	stateA, stateB := simulateChainSplit(t, 5)
-	assert.Equal(t, StateCommitted, stateA)
+	// If the number of validators is 3f+1, the chain cannot be split.
+	stateA, stateB := simulateChainSplit(t, 4)
+	fmt.Println(stateA, stateB)
+	assert.Equal(t, StatePreprepared, stateA)
 	assert.Equal(t, StateCommitted, stateB)
 
-	// If the number of validators is 3f+1, the chain cannot be split.
-	stateA, stateB = simulateChainSplit(t, 7)
+	// If the number of validators is 3f+2, the chain cannot be split.
+	stateA, stateB = simulateChainSplit(t, 5)
 	fmt.Println(stateA, stateB)
 	assert.Equal(t, StatePreprepared, stateA)
 	assert.Equal(t, StatePreprepared, stateB)
+
+	// If the number of validators is 3f+3, the chain cannot be split.
+	stateA, stateB = simulateChainSplit(t, 6)
+	fmt.Println(stateA, stateB)
+	assert.Equal(t, StatePreprepared, stateA)
+	assert.Equal(t, StateCommitted, stateB)
 }
 
 // TestCore_handleTimeoutMsg_race tests a race condition between round change triggers.
