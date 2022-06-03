@@ -1117,8 +1117,8 @@ func (pm *ProtocolManager) BroadcastTxs(txs types.Transactions) {
 	// This function calls sendTransaction() to broadcast the transactions for each peer.
 	// In that case, transactions are sorted for each peer in sendTransaction().
 	// Therefore, it prevents sorting transactions by each peer.
-	if !sort.IsSorted(types.TxByPriceAndTime(txs)) {
-		sort.Sort(types.TxByPriceAndTime(txs))
+	if !sort.IsSorted(types.TxByTime(txs)) {
+		sort.Sort(types.TxByTime(txs))
 	}
 
 	switch pm.nodetype {
@@ -1206,8 +1206,8 @@ func (pm *ProtocolManager) ReBroadcastTxs(txs types.Transactions) {
 	// This function calls sendTransaction() to broadcast the transactions for each peer.
 	// In that case, transactions are sorted for each peer in sendTransaction().
 	// Therefore, it prevents sorting transactions by each peer.
-	if !sort.IsSorted(types.TxByPriceAndTime(txs)) {
-		sort.Sort(types.TxByPriceAndTime(txs))
+	if !sort.IsSorted(types.TxByTime(txs)) {
+		sort.Sort(types.TxByTime(txs))
 	}
 
 	peersWithoutTxs := make(map[Peer]types.Transactions)

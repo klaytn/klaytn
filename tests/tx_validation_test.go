@@ -96,6 +96,7 @@ func genMapForTxTypes(from TestAccount, to TestAccount, txType types.TxType) (tx
 	return valueMap, gas
 }
 
+// TODO : Need to KIP-71 hardfork
 // TestValidationPoolInsert generates invalid txs which will be invalidated during txPool insert process.
 func TestValidationPoolInsert(t *testing.T) {
 	if testing.Verbose() {
@@ -367,10 +368,12 @@ func decreaseGasLimit(txType types.TxType, values txValueMap, contract common.Ad
 	if txType == types.TxTypeEthereumDynamicFee {
 		(*big.Int).SetUint64(values[types.TxValueKeyGasFeeCap].(*big.Int), 12345678)
 		(*big.Int).SetUint64(values[types.TxValueKeyGasTipCap].(*big.Int), 12345678)
-		err = blockchain.ErrInvalidGasTipCap
+		// TODO : Need to KIP-71 hardfork
+		err = blockchain.ErrFeeCapBelowBaseFee
 	} else {
 		(*big.Int).SetUint64(values[types.TxValueKeyGasPrice].(*big.Int), 12345678)
-		err = blockchain.ErrInvalidUnitPrice
+		// TODO : Need to KIP-71 hardfork
+		err = blockchain.ErrGasPriceBelowBaseFee
 	}
 
 	return values, err

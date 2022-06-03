@@ -28,6 +28,7 @@ import (
 	"math/big"
 	"math/rand"
 	"os"
+	"reflect"
 	"testing"
 	"time"
 
@@ -309,11 +310,18 @@ func TestInvalidTransactions(t *testing.T) {
 
 	// NOTE-Klaytn We only accept txs with an expected gas price only
 	//         regardless of local or remote.
-	if err := pool.AddRemote(tx); err != ErrInvalidUnitPrice {
-		t.Error("expected", ErrInvalidUnitPrice, "got", err)
+	// TODO : Need to KIP-71 hardfork.
+	//if err := pool.AddRemote(tx); err != ErrInvalidUnitPrice {
+	//	t.Error("expected", ErrInvalidUnitPrice, "got", err)
+	//}
+	//if err := pool.AddLocal(tx); err != ErrInvalidUnitPrice {
+	//	t.Error("expected", ErrInvalidUnitPrice, "got", err)
+	//}
+	if err := pool.AddRemote(tx); err != ErrGasPriceBelowBaseFee {
+		t.Error("expected", ErrGasPriceBelowBaseFee, "got", err)
 	}
-	if err := pool.AddLocal(tx); err != ErrInvalidUnitPrice {
-		t.Error("expected", ErrInvalidUnitPrice, "got", err)
+	if err := pool.AddLocal(tx); err != ErrGasPriceBelowBaseFee {
+		t.Error("expected", ErrGasPriceBelowBaseFee, "got", err)
 	}
 }
 
@@ -493,7 +501,7 @@ func TestTransactionDoubleNonce(t *testing.T) {
 
 	signer := types.LatestSignerForChainID(params.TestChainConfig.ChainID)
 	tx1, _ := types.SignTx(types.NewTransaction(0, common.HexToAddress("0xAAAA"), big.NewInt(100), 100000, big.NewInt(1), nil), signer, key)
-	tx2, _ := types.SignTx(types.NewTransaction(0, common.HexToAddress("0xAAAA"), big.NewInt(100), 1000000, big.NewInt(2), nil), signer, key)
+	tx2, _ := types.SignTx(types.NewTransaction(0, common.HexToAddress("0xAAAA"), big.NewInt(100), 1000000, big.NewInt(1), nil), signer, key)
 	tx3, _ := types.SignTx(types.NewTransaction(0, common.HexToAddress("0xAAAA"), big.NewInt(100), 1000000, big.NewInt(1), nil), signer, key)
 
 	// NOTE-Klaytn Add the first two transaction, ensure the first one stays only
@@ -673,7 +681,6 @@ func TestTransactionPostponing(t *testing.T) {
 	// Add a batch consecutive pending transactions for validation
 	txs := []*types.Transaction{}
 	for i, key := range keys {
-
 		for j := 0; j < 100; j++ {
 			var tx *types.Transaction
 			if (i+j)%2 == 0 {
@@ -861,6 +868,7 @@ func TestTransactionQueueAccountLimiting(t *testing.T) {
 func TestTransactionQueueGlobalLimiting(t *testing.T) {
 	testTransactionQueueGlobalLimiting(t, false)
 }
+
 func TestTransactionQueueGlobalLimitingNoLocals(t *testing.T) {
 	testTransactionQueueGlobalLimiting(t, true)
 }
@@ -951,12 +959,15 @@ func testTransactionQueueGlobalLimiting(t *testing.T, nolocals bool) {
 func TestTransactionQueueTimeLimitingKeepLocals(t *testing.T) {
 	testTransactionQueueTimeLimiting(t, false, true)
 }
+
 func TestTransactionQueueTimeLimitingNotKeepLocals(t *testing.T) {
 	testTransactionQueueTimeLimiting(t, false, false)
 }
+
 func TestTransactionQueueTimeLimitingNoLocalsKeepLocals(t *testing.T) {
 	testTransactionQueueTimeLimiting(t, true, true)
 }
+
 func TestTransactionQueueTimeLimitingNoLocalsNoKeepLocals(t *testing.T) {
 	testTransactionQueueTimeLimiting(t, true, false)
 }
@@ -1074,6 +1085,7 @@ func TestTransactionPendingLimiting(t *testing.T) {
 // Tests that the transaction limits are enforced the same way irrelevant whether
 // the transactions are added one by one or in batches.
 func TestTransactionQueueLimitingEquivalency(t *testing.T) { testTransactionLimitingEquivalency(t, 1) }
+
 func TestTransactionPendingLimitingEquivalency(t *testing.T) {
 	testTransactionLimitingEquivalency(t, 0)
 }
@@ -1897,45 +1909,48 @@ func TestDynamicFeeTransactionVeryHighValues(t *testing.T) {
 	}
 }
 
-func TestDynamicFeeTransactionHasNotSameGasPrice(t *testing.T) {
-	t.Parallel()
+// TODO : Need to KIP-71 hardfork
+//func TestDynamicFeeTransactionHasNotSameGasPrice(t *testing.T) {
+//	t.Parallel()
+//
+//	pool, key := setupTxPoolWithConfig(eip1559Config)
+//	defer pool.Stop()
+//
+//	// Ensure gasFeeCap is greater than or equal to gasTipCap.
+//	tx := dynamicFeeTx(0, 100, big.NewInt(1), big.NewInt(2), key)
+//	if err := pool.AddRemote(tx); err != ErrTipAboveFeeCap {
+//		t.Error("expected", ErrTipAboveFeeCap, "got", err)
+//	}
+//
+//	// The GasTipCap is equal to gasPrice that config at TxPool.
+//	tx2 := dynamicFeeTx(0, 100, big.NewInt(2), big.NewInt(2), key)
+//	if err := pool.AddRemote(tx2); err != ErrInvalidGasTipCap {
+//		t.Error("expected", ErrInvalidGasTipCap, "got", err)
+//	}
+//}
 
-	pool, key := setupTxPoolWithConfig(eip1559Config)
-	defer pool.Stop()
+// TODO : Need to KIP-71 hardfork
+//func TestDynamicFeeTransactionAccepted(t *testing.T) {
+//	t.Parallel()
+//
+//	pool, key := setupTxPoolWithConfig(eip1559Config)
+//	defer pool.Stop()
+//
+//	testAddBalance(pool, crypto.PubkeyToAddress(key.PublicKey), big.NewInt(1000000))
+//
+//	tx := dynamicFeeTx(0, 21000, big.NewInt(1), big.NewInt(1), key)
+//	if err := pool.AddRemote(tx); err != nil {
+//		t.Error("error", "got", err)
+//	}
+//
+//	tx2 := dynamicFeeTx(1, 21000, big.NewInt(1), big.NewInt(1), key)
+//	if err := pool.AddRemote(tx2); err != nil {
+//		t.Error("error", "got", err)
+//	}
+//}
 
-	// Ensure gasFeeCap is greater than or equal to gasTipCap.
-	tx := dynamicFeeTx(0, 100, big.NewInt(1), big.NewInt(2), key)
-	if err := pool.AddRemote(tx); err != ErrTipAboveFeeCap {
-		t.Error("expected", ErrTipAboveFeeCap, "got", err)
-	}
-
-	// The GasTipCap is equal to gasPrice that config at TxPool.
-	tx2 := dynamicFeeTx(0, 100, big.NewInt(2), big.NewInt(2), key)
-	if err := pool.AddRemote(tx2); err != ErrInvalidGasTipCap {
-		t.Error("expected", ErrInvalidGasTipCap, "got", err)
-	}
-}
-
-func TestDynamicFeeTransactionAccepted(t *testing.T) {
-	t.Parallel()
-
-	pool, key := setupTxPoolWithConfig(eip1559Config)
-	defer pool.Stop()
-
-	testAddBalance(pool, crypto.PubkeyToAddress(key.PublicKey), big.NewInt(1000000))
-
-	tx := dynamicFeeTx(0, 21000, big.NewInt(1), big.NewInt(1), key)
-	if err := pool.AddRemote(tx); err != nil {
-		t.Error("error", "got", err)
-	}
-
-	tx2 := dynamicFeeTx(1, 21000, big.NewInt(1), big.NewInt(1), key)
-	if err := pool.AddRemote(tx2); err != nil {
-		t.Error("error", "got", err)
-	}
-}
-
-func TestDynamicFeeTransactionNotAccepted(t *testing.T) {
+// TestDynamicFeeTransactionNotAcceptedNotEnableHardfork tests that the pool didn't accept dynamic tx if the pool didn't enable eip1559 hardfork.
+func TestDynamicFeeTransactionNotAcceptedNotEnableHardfork(t *testing.T) {
 	t.Parallel()
 
 	pool, key := setupTxPool()
@@ -1948,6 +1963,309 @@ func TestDynamicFeeTransactionNotAccepted(t *testing.T) {
 	if err := pool.AddLocal(tx); err != ErrTxTypeNotSupported {
 		t.Error("expected", ErrTxTypeNotSupported, "got", err)
 	}
+}
+
+// TestDynamicFeeTransactionAccepted tests that pool accept the transaction which has gasFeeCap bigger than or equal to baseFee.
+func TestDynamicFeeTransactionAccepted(t *testing.T) {
+	t.Parallel()
+	baseFee := big.NewInt(30)
+
+	pool, key := setupTxPoolWithConfig(eip1559Config)
+	defer pool.Stop()
+	pool.SetGasPrice(baseFee)
+
+	testAddBalance(pool, crypto.PubkeyToAddress(key.PublicKey), big.NewInt(10000000000))
+
+	// The GasFeeCap equal to baseFee and gasTipCap is lower than baseFee(ignored).
+	tx := dynamicFeeTx(0, 21000, big.NewInt(30), big.NewInt(1), key)
+	if err := pool.AddRemote(tx); err != nil {
+		t.Error("error", "got", err)
+	}
+
+	// The GasFeeCap bigger than baseFee and gasTipCap is equal to baseFee(ignored).
+	tx2 := dynamicFeeTx(1, 21000, big.NewInt(40), big.NewInt(30), key)
+	if err := pool.AddRemote(tx2); err != nil {
+		t.Error("error", "got", err)
+	}
+
+	// The GasFeeCap greater than baseFee and gasTipCap is bigger than baseFee(ignored).
+	tx3 := dynamicFeeTx(2, 21000, big.NewInt(50), big.NewInt(50), key)
+	if err := pool.AddRemote(tx3); err != nil {
+		t.Error("error", "got", err)
+	}
+}
+
+// TestTransactionAccepted tests that pool accepted transaction which has gasPrice bigger than or equal to baseFee.
+func TestTransactionAccepted(t *testing.T) {
+	t.Parallel()
+	baseFee := big.NewInt(30)
+
+	pool, key := setupTxPoolWithConfig(eip1559Config)
+	defer pool.Stop()
+	pool.SetGasPrice(baseFee)
+
+	testAddBalance(pool, crypto.PubkeyToAddress(key.PublicKey), big.NewInt(10000000000))
+
+	// The transaction's gasPrice equal to baseFee.
+	tx1 := pricedTransaction(0, 21000, big.NewInt(30), key)
+	if err := pool.AddRemote(tx1); err != nil {
+		t.Error("error", "got", err)
+	}
+
+	// The transaction's gasPrice bigger than baseFee.
+	tx2 := pricedTransaction(1, 21000, big.NewInt(40), key)
+	if err := pool.AddRemote(tx2); err != nil {
+		t.Error("error", "got", err)
+	}
+}
+
+// TestDynamicFeeTransactionNotAcceptedWithLowerGasPrice tests that pool didn't accept the transaction which has gasFeeCap lower than baseFee.
+func TestDynamicFeeTransactionNotAcceptedWithLowerGasPrice(t *testing.T) {
+	t.Parallel()
+	baseFee := big.NewInt(30)
+
+	pool, key := setupTxPoolWithConfig(eip1559Config)
+	defer pool.Stop()
+	pool.SetGasPrice(baseFee)
+
+	testAddBalance(pool, crypto.PubkeyToAddress(key.PublicKey), big.NewInt(10000000000))
+
+	// The gasFeeCap equal to baseFee and gasTipCap is lower than baseFee(ignored).
+	tx := dynamicFeeTx(0, 21000, big.NewInt(20), big.NewInt(1), key)
+	if err := pool.AddRemote(tx); err != ErrFeeCapBelowBaseFee {
+		t.Error("error", "got", err)
+	}
+}
+
+// TestTransactionNotAcceptedWithLowerGasPrice tests that pool didn't accept the transaction which has gasPrice lower than baseFee.
+func TestTransactionNotAcceptedWithLowerGasPrice(t *testing.T) {
+	t.Parallel()
+	baseFee := big.NewInt(30)
+
+	pool, key := setupTxPoolWithConfig(eip1559Config)
+	defer pool.Stop()
+	pool.SetGasPrice(baseFee)
+
+	testAddBalance(pool, crypto.PubkeyToAddress(key.PublicKey), big.NewInt(10000000000))
+
+	tx := pricedTransaction(0, 21000, big.NewInt(20), key)
+	if err := pool.AddRemote(tx); err != ErrGasPriceBelowBaseFee {
+		t.Error("error", "got", err)
+	}
+}
+
+// TestTransactionsPromoteFull is a test to check whether transactions in the queue are promoted to Pending
+// by filtering them with gasPrice greater than or equal to baseFee and sorting them in nonce sequentially order.
+// This test expected that all transactions in queue promoted pending.
+func TestTransactionsPromoteFull(t *testing.T) {
+	t.Parallel()
+
+	pool, key := setupTxPoolWithConfig(eip1559Config)
+	defer pool.Stop()
+
+	from := crypto.PubkeyToAddress(key.PublicKey)
+
+	baseFee := big.NewInt(10)
+	pool.SetGasPrice(baseFee)
+
+	testAddBalance(pool, from, big.NewInt(1000000000))
+
+	// Generate and queue a batch of transactions, both pending and queued
+	txs := types.Transactions{}
+	txs = append(txs, pricedTransaction(0, 100000, big.NewInt(50), key))
+	txs = append(txs, pricedTransaction(1, 100000, big.NewInt(30), key))
+	txs = append(txs, pricedTransaction(2, 100000, big.NewInt(30), key))
+	txs = append(txs, pricedTransaction(3, 100000, big.NewInt(30), key))
+
+	for _, tx := range txs {
+		pool.enqueueTx(tx.Hash(), tx)
+	}
+
+	pool.promoteExecutables(nil)
+
+	assert.Equal(t, pool.pending[from].Len(), 4)
+
+	for i, tx := range txs {
+		assert.True(t, reflect.DeepEqual(tx, pool.pending[from].txs.items[uint64(i)]))
+	}
+}
+
+// TestTransactionsPromotePartial is a test to check whether transactions in the queue are promoted to Pending
+// by filtering them with gasPrice greater than or equal to baseFee and sorting them in nonce sequentially order.
+// This test expected that partially transaction in queue promoted pending.
+func TestTransactionsPromotePartial(t *testing.T) {
+	t.Parallel()
+
+	pool, key := setupTxPoolWithConfig(eip1559Config)
+	defer pool.Stop()
+
+	from := crypto.PubkeyToAddress(key.PublicKey)
+
+	baseFee := big.NewInt(10)
+	pool.SetGasPrice(baseFee)
+
+	testAddBalance(pool, from, big.NewInt(1000000000))
+
+	// Generate and queue a batch of transactions, both pending and queued
+	txs := types.Transactions{}
+	txs = append(txs, pricedTransaction(0, 100000, big.NewInt(50), key))
+	txs = append(txs, pricedTransaction(1, 100000, big.NewInt(20), key))
+	txs = append(txs, pricedTransaction(2, 100000, big.NewInt(20), key))
+	txs = append(txs, pricedTransaction(3, 100000, big.NewInt(10), key))
+
+	for _, tx := range txs {
+		pool.enqueueTx(tx.Hash(), tx)
+	}
+
+	// set baseFee to 20.
+	baseFee = big.NewInt(20)
+	pool.gasPrice = baseFee
+
+	pool.promoteExecutables(nil)
+
+	assert.Equal(t, pool.pending[from].Len(), 3)
+	assert.Equal(t, pool.queue[from].Len(), 1)
+
+	// txs[0:2] should be promoted.
+	for i := 0; i < 3; i++ {
+		assert.True(t, reflect.DeepEqual(txs[i], pool.pending[from].txs.items[uint64(i)]))
+	}
+
+	// txs[3] shouldn't be promoted.
+	assert.True(t, reflect.DeepEqual(txs[3], pool.queue[from].txs.items[3]))
+}
+
+// TestTransactionsPromoteMultipleAccount is a test to check whether transactions in the queue are promoted to Pending
+// by filtering them with gasPrice greater than or equal to baseFee and sorting them in nonce sequentially order.
+// This test expected that all transactions in queue promoted pending.
+func TestTransactionsPromoteMultipleAccount(t *testing.T) {
+	t.Parallel()
+
+	pool, _ := setupTxPoolWithConfig(eip1559Config)
+	defer pool.Stop()
+	pool.SetGasPrice(big.NewInt(10))
+
+	keys := make([]*ecdsa.PrivateKey, 3)
+	froms := make([]common.Address, 3)
+	for i := 0; i < 3; i++ {
+		keys[i], _ = crypto.GenerateKey()
+		froms[i] = crypto.PubkeyToAddress(keys[i].PublicKey)
+		testAddBalance(pool, froms[i], big.NewInt(1000000000))
+	}
+
+	txs := types.Transactions{}
+
+	txs = append(txs, pricedTransaction(0, 100000, big.NewInt(50), keys[0])) // Pending
+	txs = append(txs, pricedTransaction(1, 100000, big.NewInt(40), keys[0])) // Pending
+	txs = append(txs, pricedTransaction(2, 100000, big.NewInt(30), keys[0])) // Pending
+	txs = append(txs, pricedTransaction(3, 100000, big.NewInt(20), keys[0])) // Pending
+
+	txs = append(txs, pricedTransaction(1, 100000, big.NewInt(10), keys[1])) // Only Queue
+
+	txs = append(txs, pricedTransaction(0, 100000, big.NewInt(50), keys[2])) // Pending
+	txs = append(txs, pricedTransaction(1, 100000, big.NewInt(30), keys[2])) // Pending
+	txs = append(txs, pricedTransaction(2, 100000, big.NewInt(30), keys[2])) // Pending
+	txs = append(txs, pricedTransaction(4, 100000, big.NewInt(10), keys[2])) // Queue
+
+	for i := 0; i < 9; i++ {
+		pool.enqueueTx(txs[i].Hash(), txs[i])
+	}
+
+	pool.gasPrice = big.NewInt(20)
+
+	pool.promoteExecutables(nil)
+
+	assert.Equal(t, pool.pending[froms[0]].Len(), 4)
+
+	assert.True(t, reflect.DeepEqual(txs[0], pool.pending[froms[0]].txs.items[uint64(0)]))
+	assert.True(t, reflect.DeepEqual(txs[1], pool.pending[froms[0]].txs.items[uint64(1)]))
+	assert.True(t, reflect.DeepEqual(txs[2], pool.pending[froms[0]].txs.items[uint64(2)]))
+	assert.True(t, reflect.DeepEqual(txs[3], pool.pending[froms[0]].txs.items[uint64(3)]))
+
+	assert.Equal(t, pool.queue[froms[1]].Len(), 1)
+	assert.True(t, reflect.DeepEqual(txs[4], pool.queue[froms[1]].txs.items[1]))
+
+	assert.Equal(t, pool.queue[froms[2]].Len(), 1)
+	assert.Equal(t, pool.pending[froms[2]].Len(), 3)
+
+	assert.True(t, reflect.DeepEqual(txs[5], pool.pending[froms[2]].txs.items[0]))
+	assert.True(t, reflect.DeepEqual(txs[6], pool.pending[froms[2]].txs.items[1]))
+	assert.True(t, reflect.DeepEqual(txs[7], pool.pending[froms[2]].txs.items[2]))
+	assert.True(t, reflect.DeepEqual(txs[8], pool.queue[froms[2]].txs.items[4]))
+}
+
+// TestTransactionsDemotionMultipleAccount is a test if the transactions in pending are
+// less than the gasPrice of the configured tx pool, check if they are demoted to the queue.
+func TestTransactionsDemotionMultipleAccount(t *testing.T) {
+	t.Parallel()
+
+	pool, _ := setupTxPoolWithConfig(eip1559Config)
+	defer pool.Stop()
+	pool.SetGasPrice(big.NewInt(10))
+
+	keys := make([]*ecdsa.PrivateKey, 3)
+	froms := make([]common.Address, 3)
+	for i := 0; i < 3; i++ {
+		keys[i], _ = crypto.GenerateKey()
+		froms[i] = crypto.PubkeyToAddress(keys[i].PublicKey)
+		testAddBalance(pool, froms[i], big.NewInt(1000000000))
+	}
+
+	txs := types.Transactions{}
+
+	txs = append(txs, pricedTransaction(0, 100000, big.NewInt(50), keys[0]))
+	txs = append(txs, pricedTransaction(1, 100000, big.NewInt(40), keys[0]))
+	txs = append(txs, pricedTransaction(2, 100000, big.NewInt(30), keys[0]))
+	txs = append(txs, pricedTransaction(3, 100000, big.NewInt(20), keys[0]))
+
+	txs = append(txs, pricedTransaction(0, 100000, big.NewInt(10), keys[1]))
+
+	txs = append(txs, pricedTransaction(0, 100000, big.NewInt(50), keys[2]))
+	txs = append(txs, pricedTransaction(1, 100000, big.NewInt(30), keys[2]))
+	txs = append(txs, pricedTransaction(2, 100000, big.NewInt(30), keys[2]))
+	txs = append(txs, pricedTransaction(3, 100000, big.NewInt(10), keys[2]))
+
+	for i := 0; i < 9; i++ {
+		pool.enqueueTx(txs[i].Hash(), txs[i])
+	}
+
+	pool.promoteExecutables(nil)
+	assert.Equal(t, pool.pending[froms[0]].Len(), 4)
+	assert.Equal(t, pool.pending[froms[1]].Len(), 1)
+	assert.Equal(t, pool.pending[froms[2]].Len(), 4)
+	// If gasPrice of txPool is set to 35, when demoteUnexecutables() is executed, it is saved for each transaction as shown below.
+	// tx[0] : pending[from[0]]
+	// tx[1] : pending[from[0]]
+	// tx[2] : queue[from[0]]
+	// tx[3] : queue[from[0]]
+
+	// tx[4] : queue[from[1]]
+
+	// tx[5] : pending[from[2]]
+	// tx[6] : queue[from[2]]
+	// tx[7] : queue[from[2]]
+	// tx[7] : queue[from[2]]
+	pool.gasPrice = big.NewInt(35)
+	pool.demoteUnexecutables()
+
+	assert.Equal(t, pool.queue[froms[0]].Len(), 2)
+	assert.Equal(t, pool.pending[froms[0]].Len(), 2)
+
+	assert.True(t, reflect.DeepEqual(txs[0], pool.pending[froms[0]].txs.items[uint64(0)]))
+	assert.True(t, reflect.DeepEqual(txs[1], pool.pending[froms[0]].txs.items[uint64(1)]))
+	assert.True(t, reflect.DeepEqual(txs[2], pool.queue[froms[0]].txs.items[uint64(2)]))
+	assert.True(t, reflect.DeepEqual(txs[3], pool.queue[froms[0]].txs.items[uint64(3)]))
+
+	assert.Equal(t, pool.queue[froms[1]].Len(), 1)
+	assert.True(t, reflect.DeepEqual(txs[4], pool.queue[froms[1]].txs.items[0]))
+
+	assert.Equal(t, pool.queue[froms[2]].Len(), 3)
+	assert.Equal(t, pool.pending[froms[2]].Len(), 1)
+
+	assert.True(t, reflect.DeepEqual(txs[5], pool.pending[froms[2]].txs.items[0]))
+	assert.True(t, reflect.DeepEqual(txs[6], pool.queue[froms[2]].txs.items[1]))
+	assert.True(t, reflect.DeepEqual(txs[7], pool.queue[froms[2]].txs.items[2]))
+	assert.True(t, reflect.DeepEqual(txs[8], pool.queue[froms[2]].txs.items[3]))
 }
 
 func TestTransactionJournalingSortedByTime(t *testing.T) {
