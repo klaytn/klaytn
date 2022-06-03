@@ -59,7 +59,7 @@ func NewEVMContext(msg Message, header *types.Header, chain ChainContext, author
 	if header.BaseFee != nil {
 		baseFee = header.BaseFee
 	} else {
-		baseFee = new(big.Int).SetUint64(params.BaseFee)
+		baseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
 	}
 	effectiveGasPrice = msg.EffectiveGasPrice(baseFee)
 

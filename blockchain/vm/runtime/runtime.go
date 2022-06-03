@@ -89,7 +89,7 @@ func setDefaults(cfg *Config) {
 		}
 	}
 	if cfg.BaseFee == nil {
-		cfg.BaseFee = new(big.Int).SetUint64(params.BaseFee)
+		cfg.BaseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
 	}
 }
 

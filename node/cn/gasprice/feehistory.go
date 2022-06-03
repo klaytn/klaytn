@@ -89,9 +89,9 @@ func (s sortGasAndReward) Less(i, j int) bool {
 func (oracle *Oracle) processBlock(bf *blockFees, percentiles []float64) {
 	chainconfig := oracle.backend.ChainConfig()
 	// TODO-Klaytn: If we implement baseFee feature like Ethereum does, we should set it from header, not constant.
-	bf.results.baseFee = new(big.Int).SetUint64(params.BaseFee)
+	bf.results.baseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
 	// TODO-Klaytn: If we implement baseFee feature like Ethereum does, we should calculate nextBaseFee from parent block header.
-	bf.results.nextBaseFee = new(big.Int).SetUint64(params.BaseFee)
+	bf.results.nextBaseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
 	// There is no GasLimit in Klaytn, so it is enough to use pre-defined constant in api package as now.
 	bf.results.gasUsedRatio = float64(bf.header.GasUsed) / float64(params.UpperGasLimit)
 	if len(percentiles) == 0 {
