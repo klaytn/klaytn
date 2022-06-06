@@ -40,16 +40,22 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var addr1 = common.HexToAddress("111")
-var addr2 = common.HexToAddress("222")
-var addrs []common.Address
+var (
+	addr1 = common.HexToAddress("111")
+	addr2 = common.HexToAddress("222")
+	addrs []common.Address
+)
 
-var topic1 common.Hash
-var topic2 common.Hash
-var topics [][]common.Hash
+var (
+	topic1 common.Hash
+	topic2 common.Hash
+	topics [][]common.Hash
+)
 
-var begin = int64(12345)
-var end = int64(12345)
+var (
+	begin = int64(12345)
+	end   = int64(12345)
+)
 
 var header *types.Header
 

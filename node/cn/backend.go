@@ -251,9 +251,11 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	}
 	var (
 		vmConfig    = config.getVMConfig()
-		cacheConfig = &blockchain.CacheConfig{ArchiveMode: config.NoPruning, CacheSize: config.TrieCacheSize,
+		cacheConfig = &blockchain.CacheConfig{
+			ArchiveMode: config.NoPruning, CacheSize: config.TrieCacheSize,
 			BlockInterval: config.TrieBlockInterval, TriesInMemory: config.TriesInMemory,
-			TrieNodeCacheConfig: &config.TrieNodeCacheConfig, SenderTxHashIndexing: config.SenderTxHashIndexing, SnapshotCacheSize: config.SnapshotCacheSize}
+			TrieNodeCacheConfig: &config.TrieNodeCacheConfig, SenderTxHashIndexing: config.SenderTxHashIndexing, SnapshotCacheSize: config.SnapshotCacheSize,
+		}
 	)
 
 	bc, err := blockchain.NewBlockChain(chainDB, cacheConfig, cn.chainConfig, cn.engine, vmConfig)
@@ -447,9 +449,11 @@ func makeExtraData(extra []byte) []byte {
 
 // CreateDB creates the chain database.
 func CreateDB(ctx *node.ServiceContext, config *Config, name string) database.DBManager {
-	dbc := &database.DBConfig{Dir: name, DBType: config.DBType, ParallelDBWrite: config.ParallelDBWrite, SingleDB: config.SingleDB, NumStateTrieShards: config.NumStateTrieShards,
+	dbc := &database.DBConfig{
+		Dir: name, DBType: config.DBType, ParallelDBWrite: config.ParallelDBWrite, SingleDB: config.SingleDB, NumStateTrieShards: config.NumStateTrieShards,
 		LevelDBCacheSize: config.LevelDBCacheSize, OpenFilesLimit: database.GetOpenFilesLimit(), LevelDBCompression: config.LevelDBCompression,
-		LevelDBBufferPool: config.LevelDBBufferPool, EnableDBPerfMetrics: config.EnableDBPerfMetrics, DynamoDBConfig: &config.DynamoDBConfig}
+		LevelDBBufferPool: config.LevelDBBufferPool, EnableDBPerfMetrics: config.EnableDBPerfMetrics, DynamoDBConfig: &config.DynamoDBConfig,
+	}
 	return ctx.OpenDatabase(dbc)
 }
 

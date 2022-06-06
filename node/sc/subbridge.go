@@ -140,8 +140,8 @@ type SubBridge struct {
 
 	// If this channel can't be read immediately, it can lock service chain tx pool.
 	// Commented out because for now, it doesn't need.
-	//txCh         chan blockchain.NewTxsEvent
-	//txSub        event.Subscription
+	// txCh         chan blockchain.NewTxsEvent
+	// txSub        event.Subscription
 
 	peers        *bridgePeerSet
 	handler      *SubBridgeHandler
@@ -169,7 +169,7 @@ type SubBridge struct {
 	rpcConn   net.Conn
 	rpcSendCh chan []byte
 
-	//KAS Anchor
+	// KAS Anchor
 	kasAnchor *kas.Anchor
 }
 
@@ -426,7 +426,6 @@ func (sb *SubBridge) getChainID() *big.Int {
 // Start implements node.Service, starting all internal goroutines needed by the
 // Klaytn protocol implementation.
 func (sb *SubBridge) Start(srvr p2p.Server) error {
-
 	if sb.bootFail {
 		return errors.New("subBridge node fail to start")
 	}
@@ -625,7 +624,7 @@ func (sb *SubBridge) loop() {
 				logger.Error("subbridge block event is nil")
 			}
 		// Handle NewTexsEvent
-		//case ev := <-sb.txCh:
+		// case ev := <-sb.txCh:
 		//	if ev.Txs != nil {
 		//		if err := sb.eventhandler.HandleTxsEvent(ev.Txs); err != nil {
 		//			logger.Error("subbridge tx event", "err", err)
@@ -659,7 +658,7 @@ func (sb *SubBridge) loop() {
 				logger.Error("subbridge block subscription ", "err", err)
 			}
 			return
-		//case err := <-sb.txSub.Err():
+		// case err := <-sb.txSub.Err():
 		//	if err != nil {
 		//		logger.Error("subbridge tx subscription ", "err", err)
 		//	}
@@ -710,8 +709,8 @@ func (sb *SubBridge) removePeer(id string) {
 // handleMsg is invoked whenever an inbound message is received from a remote
 // peer. The remote connection is torn down upon returning any error.
 func (sb *SubBridge) handleMsg(p BridgePeer) error {
-	//Below message size checking is done by handle().
-	//Read the next message from the remote peer, and ensure it's fully consumed
+	// Below message size checking is done by handle().
+	// Read the next message from the remote peer, and ensure it's fully consumed
 	msg, err := p.GetRW().ReadMsg()
 	if err != nil {
 		p.GetP2PPeer().Log().Warn("ProtocolManager failed to read msg", "err", err)
@@ -729,9 +728,9 @@ func (sb *SubBridge) handleMsg(p BridgePeer) error {
 
 func (sb *SubBridge) syncer() {
 	// Start and ensure cleanup of sync mechanisms
-	//pm.fetcher.Start()
-	//defer pm.fetcher.Stop()
-	//defer pm.downloader.Terminate()
+	// pm.fetcher.Start()
+	// defer pm.fetcher.Stop()
+	// defer pm.downloader.Terminate()
 
 	// Wait for different events to fire synchronisation operations
 	forceSync := time.NewTicker(forceSyncCycle)
@@ -759,12 +758,11 @@ func (sb *SubBridge) synchronise(peer BridgePeer) {
 // Stop implements node.Service, terminating all internal goroutines used by the
 // Klaytn protocol.
 func (sb *SubBridge) Stop() error {
-
 	close(sb.quitSync)
 	sb.bridgeManager.stopAllRecoveries()
 
 	sb.chainSub.Unsubscribe()
-	//sb.txSub.Unsubscribe()
+	// sb.txSub.Unsubscribe()
 	sb.logsSub.Unsubscribe()
 	sb.reqVTevSub.Unsubscribe()
 	sb.reqVTencodedEvSub.Unsubscribe()

@@ -8,8 +8,10 @@ import (
 	"net/http"
 )
 
-const Operations = "operations"
-const OperationsShort = "ops"
+const (
+	Operations      = "operations"
+	OperationsShort = "ops"
+)
 
 type LibratoClient struct {
 	Email, Token string
@@ -55,8 +57,10 @@ const (
 	MetricsPostUrl = "https://metrics-api.librato.com/v1/metrics"
 )
 
-type Measurement map[string]interface{}
-type Metric map[string]interface{}
+type (
+	Measurement map[string]interface{}
+	Metric      map[string]interface{}
+)
 
 type Batch struct {
 	Gauges      []Measurement `json:"gauges,omitempty"`
