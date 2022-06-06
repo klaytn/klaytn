@@ -109,6 +109,7 @@ func BenchmarkG2(b *testing.B) {
 		new(G2).ScalarBaseMult(x)
 	}
 }
+
 func BenchmarkPairing(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		Pair(&G1{curveGen}, &G2{twistGen})
