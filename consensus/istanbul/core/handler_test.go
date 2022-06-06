@@ -643,7 +643,6 @@ func simulateChainSplit(t *testing.T, numValidators int) (State, State) {
 	coreProposer := New(mockBackend, istConfig).(*core)
 	coreA := New(mockBackend, istConfig).(*core)
 	coreB := New(mockBackend, istConfig).(*core)
-
 	require.Nil(t,
 		coreProposer.Start(),
 		coreA.Start(),
