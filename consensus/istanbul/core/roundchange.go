@@ -113,7 +113,7 @@ func (c *core) handleRoundChange(msg *message, src istanbul.Validator) error {
 	}
 
 	var numCatchUp, numStartNewRound int
-	if c.valSet.Size() < consensusMinValSet {
+	if c.valSet.Size() < 4 {
 		n := int(c.valSet.Size())
 		// N ROUND CHANGE messages can start new round.
 		numStartNewRound = n
@@ -122,7 +122,7 @@ func (c *core) handleRoundChange(msg *message, src istanbul.Validator) error {
 	} else {
 		f := int(c.valSet.F())
 		// QuorumSize ROUND CHANGE messages can start new round.
-		numStartNewRound = c.QuorumSize()
+		numStartNewRound = c.valSet.QuorumSize()
 		// F + 1 ROUND CHANGE messages can start catch up the round.
 		numCatchUp = f + 1
 	}

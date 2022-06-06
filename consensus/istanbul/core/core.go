@@ -37,10 +37,6 @@ import (
 	"github.com/rcrowley/go-metrics"
 )
 
-const (
-	consensusMinValSet = 4
-)
-
 var logger = log.NewModuleLogger(log.ConsensusIstanbulCore)
 
 // New creates an Istanbul consensus core
@@ -417,14 +413,6 @@ func (c *core) newRoundChangeTimer() {
 
 func (c *core) checkValidatorSignature(data []byte, sig []byte) (common.Address, error) {
 	return istanbul.CheckValidatorSignature(c.valSet, data, sig)
-}
-
-func (c *core) QuorumSize() int {
-	if c.valSet.Size() < consensusMinValSet {
-		return int(c.valSet.Size())
-	}
-
-	return int(math.Ceil(float64(2*c.valSet.Size()) / 3))
 }
 
 // PrepareCommittedSeal returns a committed seal for the given hash

@@ -367,6 +367,24 @@ func (valSet *defaultSet) F() int {
 	return int(math.Ceil(float64(valSet.Size())/3)) - 1 // It's the same as int(math.Floor(float64((valSet.Size()-1)/3)))
 }
 
+func (valSet *defaultSet) QuorumSize() int {
+	valSet.validatorMu.RLock()
+	defer valSet.validatorMu.RUnlock()
+
+	n := valSet.Size()
+	// the minimum number of byzantine fault tolerance is 4, if n < 4, every node has to participate in the consensus for safety
+	if n < 4 {
+		return int(n)
+	}
+
+	// It's going to be removed. Because klaytn should set the valSet.subSize equal to valSet.Size() for safety
+	if n > valSet.subSize {
+		n = valSet.subSize
+	}
+
+	return int(math.Ceil(float64(2*n) / 3))
+}
+
 func (valSet *defaultSet) Policy() istanbul.ProposerPolicy { return valSet.policy }
 
 func (valSet *defaultSet) Refresh(hash common.Hash, blockNum uint64, config *params.ChainConfig, isSingle bool, governingNode common.Address, minStaking uint64) error {
