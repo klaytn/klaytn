@@ -60,7 +60,8 @@ type testOption struct {
 }
 
 func makeTransactionsFrom(bcdata *BCData, accountMap *AccountMap, signer types.Signer, numTransactions int,
-	amount *big.Int, data []byte) (types.Transactions, error) {
+	amount *big.Int, data []byte,
+) (types.Transactions, error) {
 	from := *bcdata.addrs[0]
 	privKey := bcdata.privKeys[0]
 	toAddrs := bcdata.addrs
@@ -94,7 +95,8 @@ func makeTransactionsFrom(bcdata *BCData, accountMap *AccountMap, signer types.S
 }
 
 func makeIndependentTransactions(bcdata *BCData, accountMap *AccountMap, signer types.Signer, numTransactions int,
-	amount *big.Int, data []byte) (types.Transactions, error) {
+	amount *big.Int, data []byte,
+) (types.Transactions, error) {
 	numAddrs := len(bcdata.addrs) / 2
 	fromAddrs := bcdata.addrs[:numAddrs]
 	toAddrs := bcdata.addrs[numAddrs:]
@@ -135,7 +137,8 @@ func makeIndependentTransactions(bcdata *BCData, accountMap *AccountMap, signer 
 // from accounts in `AccountMap` to a randomly generated account.
 // It returns the generated transactions if successful, or it returns an error if failed.
 func makeTransactionsToRandom(bcdata *BCData, accountMap *AccountMap, signer types.Signer, numTransactions int,
-	amount *big.Int, data []byte) (types.Transactions, error) {
+	amount *big.Int, data []byte,
+) (types.Transactions, error) {
 	numAddrs := len(bcdata.addrs)
 	fromAddrs := bcdata.addrs
 
@@ -182,7 +185,8 @@ func makeTransactionsToRandom(bcdata *BCData, accountMap *AccountMap, signer typ
 // from accounts in `AccountMap` to a randomly generated account.
 // It returns the generated transactions if successful, or it returns an error if failed.
 func makeNewTransactionsToRandom(bcdata *BCData, accountMap *AccountMap, signer types.Signer, numTransactions int,
-	amount *big.Int, data []byte) (types.Transactions, error) {
+	amount *big.Int, data []byte,
+) (types.Transactions, error) {
 	numAddrs := len(bcdata.addrs)
 	fromAddrs := bcdata.addrs
 	fromNonces := make([]uint64, numAddrs)
@@ -237,7 +241,8 @@ func makeNewTransactionsToRandom(bcdata *BCData, accountMap *AccountMap, signer 
 // total number of transactions should be the multiple of number of addresses.
 // It returns the generated transactions if successful, or it returns an error if failed.
 func makeNewTransactionsToRing(bcdata *BCData, accountMap *AccountMap, signer types.Signer, numTransactions int,
-	amount *big.Int, data []byte) (types.Transactions, error) {
+	amount *big.Int, data []byte,
+) (types.Transactions, error) {
 	numAddrs := len(bcdata.addrs)
 	fromAddrs := bcdata.addrs
 
@@ -297,24 +302,36 @@ func TestValueTransfer(t *testing.T) {
 		txPerBlock = int(i)
 	}
 
-	var valueTransferTests = [...]struct {
+	valueTransferTests := [...]struct {
 		name string
 		opt  testOption
 	}{
-		{"SingleSenderMultipleRecipient",
-			testOption{txPerBlock, 1000, 4, nBlocks, []byte{}, makeTransactionsFrom}},
-		{"MultipleSenderMultipleRecipient",
-			testOption{txPerBlock, 2000, 4, nBlocks, []byte{}, makeIndependentTransactions}},
-		{"MultipleSenderRandomRecipient",
-			testOption{txPerBlock, 2000, 4, nBlocks, []byte{}, makeTransactionsToRandom}},
+		{
+			"SingleSenderMultipleRecipient",
+			testOption{txPerBlock, 1000, 4, nBlocks, []byte{}, makeTransactionsFrom},
+		},
+		{
+			"MultipleSenderMultipleRecipient",
+			testOption{txPerBlock, 2000, 4, nBlocks, []byte{}, makeIndependentTransactions},
+		},
+		{
+			"MultipleSenderRandomRecipient",
+			testOption{txPerBlock, 2000, 4, nBlocks, []byte{}, makeTransactionsToRandom},
+		},
 
 		// Below test cases execute one transaction per a block.
-		{"SingleSenderMultipleRecipientSingleTxPerBlock",
-			testOption{1, 1000, 4, 10, []byte{}, makeTransactionsFrom}},
-		{"MultipleSenderMultipleRecipientSingleTxPerBlock",
-			testOption{1, 2000, 4, 10, []byte{}, makeIndependentTransactions}},
-		{"MultipleSenderRandomRecipientSingleTxPerBlock",
-			testOption{1, 2000, 4, 10, []byte{}, makeTransactionsToRandom}},
+		{
+			"SingleSenderMultipleRecipientSingleTxPerBlock",
+			testOption{1, 1000, 4, 10, []byte{}, makeTransactionsFrom},
+		},
+		{
+			"MultipleSenderMultipleRecipientSingleTxPerBlock",
+			testOption{1, 2000, 4, 10, []byte{}, makeIndependentTransactions},
+		},
+		{
+			"MultipleSenderRandomRecipientSingleTxPerBlock",
+			testOption{1, 2000, 4, 10, []byte{}, makeTransactionsToRandom},
+		},
 	}
 
 	for _, test := range valueTransferTests {
@@ -345,7 +362,7 @@ func testValueTransfer(t *testing.T, opt *testOption) {
 	prof.Profile("main_init_accountMap", time.Now().Sub(start))
 
 	for i := 0; i < opt.numGeneratedBlocks; i++ {
-		//fmt.Printf("iteration %d\n", i)
+		// fmt.Printf("iteration %d\n", i)
 		err := bcdata.GenABlock(accountMap, opt, opt.numTransactions, prof)
 		if err != nil {
 			t.Fatal(err)
@@ -448,7 +465,7 @@ func TestWronglyEncodedAccountKey(t *testing.T) {
 	prof.Profile("main_init_accountMap", time.Now().Sub(start))
 
 	// make txpool
-	//var txs types.Transactions
+	// var txs types.Transactions
 	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
 
 	// case 1. AccountUpdate

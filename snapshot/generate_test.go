@@ -117,7 +117,7 @@ func TestGeneration(t *testing.T) {
 }
 
 func hashData(input []byte) common.Hash {
-	var hasher = sha3.NewLegacyKeccak256()
+	hasher := sha3.NewLegacyKeccak256()
 	var hash common.Hash
 	hasher.Reset()
 	hasher.Write(input)
@@ -156,7 +156,7 @@ func TestGenerateExistentState(t *testing.T) {
 	serializer = account.NewAccountSerializerWithAccount(acc)
 	val, _ = rlp.EncodeToBytes(serializer)
 	accTrie.Update([]byte("acc-2"), val) // 0x65145f923027566669a1ae5ccac66f945b55ff6eaeb17d2ea8e048b7d381f2d7
-	//diskdb.Put(hashData([]byte("acc-2")).Bytes(), val)
+	// diskdb.Put(hashData([]byte("acc-2")).Bytes(), val)
 	diskdb.WriteAccountSnapshot(hashData([]byte("acc-2")), val)
 
 	acc, _ = genSmartContractAccount(uint64(0), big.NewInt(3), stTrie.Hash(), emptyCode.Bytes())
@@ -202,7 +202,6 @@ func checkSnapRoot(t *testing.T, snap *diskLayer, trieRoot common.Hash) {
 			}
 			return hash, nil
 		}, newGenerateStats(), true)
-
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -143,7 +143,6 @@ func SerializeEdges(edges []VisEdge) (ret string) {
 func TestPrintTrie(t *testing.T) {
 	trie := newEmptyTrie()
 	vals := []struct{ k, v string }{
-
 		//{"klaytn", "wookiedoo"},
 		//{"horse", "stallion"},
 		//{"shaman", "horse"},

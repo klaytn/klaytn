@@ -273,7 +273,6 @@ func TestShardedDBParallelIterator_Release(t *testing.T) {
 				defer it.Release()
 
 				for _, ch := range it.Channels() {
-
 					// check if channel is not closed
 					for i := 0; i < shardedDBSubChannelSize+1; i++ {
 						e, ok := <-ch

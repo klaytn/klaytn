@@ -59,8 +59,8 @@ func TestHardForkBlock(t *testing.T) {
 
 	// If you print out b1.rlp and b2.rlp, uncomment below.
 	// `genBlocks` could be failed sometimes depends on the order of transaction in a block. Just try again.
-	//genBlocks(t)
-	//return
+	// genBlocks(t)
+	// return
 
 	// load raw data from files.
 	genesisJson, err := ioutil.ReadFile("genesis.json")
@@ -119,7 +119,7 @@ func TestHardForkBlock(t *testing.T) {
 
 // genBlock generates two blocks including transactions utilizing all transaction types and account types.
 func genBlocks(t *testing.T) {
-	var testFunctions = []struct {
+	testFunctions := []struct {
 		Name  string
 		genTx genTransaction
 	}{
@@ -142,7 +142,7 @@ func genBlocks(t *testing.T) {
 		{"FeeDelegatedWithRatioCancel", genFeeDelegatedWithRatioCancel},
 	}
 
-	var accountTypes = []struct {
+	accountTypes := []struct {
 		Type    string
 		account TestAccount
 	}{
@@ -163,7 +163,7 @@ func genBlocks(t *testing.T) {
 	prof.Profile("main_init_blockchain", time.Now().Sub(start))
 
 	b, err := json.Marshal(bcdata.genesis)
-	ioutil.WriteFile("genesis.json", b, 0755)
+	ioutil.WriteFile("genesis.json", b, 0o755)
 
 	defer bcdata.Shutdown()
 
@@ -469,9 +469,9 @@ func genBlocks(t *testing.T) {
 		b, err := rlp.EncodeToBytes(blk)
 		require.Equal(t, nil, err)
 
-		//fmt.Println(blk.String())
-		//fmt.Println("encoded===")
-		//fmt.Println((hexutil.Bytes)(b))
+		// fmt.Println(blk.String())
+		// fmt.Println("encoded===")
+		// fmt.Println((hexutil.Bytes)(b))
 
 		filename := fmt.Sprintf("b%d.rlp", i)
 		f, err := os.Create(filename)

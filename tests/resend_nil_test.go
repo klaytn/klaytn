@@ -84,11 +84,11 @@ func BenchmarkResendNilDereference(t *testing.B) {
 	}
 
 	go func(num int) {
-		//fmt.Println("creating transaction start!")
+		// fmt.Println("creating transaction start!")
 		time.Sleep(1 * time.Nanosecond)
 		// make ring transactions
 		for i := 0; i < num; i++ {
-			//fmt.Println("tx gen num", i)
+			// fmt.Println("tx gen num", i)
 
 			tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, map[types.TxValueKeyType]interface{}{
 				types.TxValueKeyNonce:    reservoir.Nonce,
@@ -113,30 +113,30 @@ func BenchmarkResendNilDereference(t *testing.B) {
 
 			reservoir.Nonce++
 		}
-		//fmt.Println("creating transaction done!")
+		// fmt.Println("creating transaction done!")
 		wg.Done()
 	}(100000)
 
 	go func(iter int) {
-		//fmt.Println("Thread1 start!")
+		// fmt.Println("Thread1 start!")
 		for i := 0; i < iter; i++ {
-			//fmt.Println("CachedPendingTxsByCount num", i)
+			// fmt.Println("CachedPendingTxsByCount num", i)
 			time.Sleep(1 * time.Nanosecond)
 			txpool.CachedPendingTxsByCount(20000)
 		}
 		wg.Done()
-		//fmt.Println("Thread1 done!")
+		// fmt.Println("Thread1 done!")
 	}(100000)
 
 	go func(iter int) {
-		//fmt.Println("Thread2 start!")
+		// fmt.Println("Thread2 start!")
 		for i := 0; i < iter; i++ {
-			//fmt.Println("Content num", i)
+			// fmt.Println("Content num", i)
 			time.Sleep(1 * time.Nanosecond)
 			txpool.Content()
 		}
 		wg.Done()
-		//fmt.Println("Thread2 done!")
+		// fmt.Println("Thread2 done!")
 	}(100000)
 
 	wg.Wait()
