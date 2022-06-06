@@ -792,7 +792,7 @@ func TestCore_handleTimeoutMsg_race(t *testing.T) {
 
 			for idx, valAdd := range validatorAddrs {
 				// the number of round change messages greater than the quorum have to be collected
-				if idx == istCore.QuorumSize() {
+				if idx == istCore.valSet.QuorumSize() {
 					break
 				}
 
