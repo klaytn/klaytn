@@ -523,8 +523,6 @@ func simulateMaliciousCN(t *testing.T, numValidators int, numMalicious int) Stat
 	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
 	defer fork.ClearHardForkBlockNumberConfig()
 
-	// Note that genValidators(n) will generate n/3 validators.
-	// We want n validators, thus calling genValidators(3n).
 	validatorAddrs, validatorKeyMap := genValidators(numValidators)
 
 	// Add more EXPECT()s to remove unexpected call error
@@ -619,8 +617,6 @@ func simulateChainSplit(t *testing.T, numValidators int) (State, State) {
 	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
 	defer fork.ClearHardForkBlockNumberConfig()
 
-	// Note that genValidators(n) will generate n/3 validators.
-	// We want n validators, thus calling genValidators(3n).
 	validatorAddrs, validatorKeyMap := genValidators(numValidators)
 
 	// Add more EXPECT()s to remove unexpected call error
