@@ -330,11 +330,13 @@ func (tx *Transaction) ValidatedSender() common.Address {
 	defer tx.mu.RUnlock()
 	return tx.validatedSender
 }
+
 func (tx *Transaction) ValidatedFeePayer() common.Address {
 	tx.mu.RLock()
 	defer tx.mu.RUnlock()
 	return tx.validatedFeePayer
 }
+
 func (tx *Transaction) ValidatedIntrinsicGas() uint64 {
 	tx.mu.RLock()
 	defer tx.mu.RUnlock()
@@ -853,7 +855,6 @@ func (s TxByPriceAndTime) Less(i, j int) bool {
 		return s[i].time.Before(s[j].time)
 	}
 	return cmp > 0
-
 }
 func (s TxByPriceAndTime) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 

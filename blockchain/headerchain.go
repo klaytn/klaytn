@@ -63,7 +63,6 @@ type HeaderChain struct {
 //  procInterrupt points to the parent's interrupt semaphore
 //  wg points to the parent's shutdown wait group
 func NewHeaderChain(chainDB database.DBManager, config *params.ChainConfig, engine consensus.Engine, procInterrupt func() bool) (*HeaderChain, error) {
-
 	// Seed a fast but crypto originating random generator
 	seed, err := crand.Int(crand.Reader, big.NewInt(math.MaxInt64))
 	if err != nil {
@@ -364,9 +363,7 @@ type (
 )
 
 func (hc *HeaderChain) SetHead(head uint64, updateFn UpdateHeadBlocksCallback, delFn DeleteBlockContentCallback) error {
-	var (
-		parentHash common.Hash
-	)
+	var parentHash common.Hash
 	for hdr := hc.CurrentHeader(); hdr != nil && hdr.Number.Uint64() > head; hdr = hc.CurrentHeader() {
 		hash, num := hdr.Hash(), hdr.Number.Uint64()
 
@@ -397,7 +394,7 @@ func (hc *HeaderChain) SetHead(head uint64, updateFn UpdateHeadBlocksCallback, d
 			delFn(hash, num)
 		}
 
-		//Rewind header chain to new head.
+		// Rewind header chain to new head.
 		hc.chainDB.DeleteHeader(hash, num)
 		hc.chainDB.DeleteTd(hash, num)
 		hc.chainDB.DeleteCanonicalHash(num)

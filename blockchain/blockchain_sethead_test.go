@@ -86,6 +86,7 @@ func testShortSetHead(t *testing.T) {
 // it. The side chain should be left alone as it was shorter.
 
 func TestLongDeepSetHead(t *testing.T) { testLongDeepSetHead(t, false) }
+
 func testLongDeepSetHead(t *testing.T, snapshots bool) {
 	// Chain:
 	//   G->C1->C2->C3->C4->C5->C6->C7->C8->C9->C10->C11->C12->C13->C14->C15->C16->C17->C18->C19->C20->C21->C22->C23->C24 (HEAD)
@@ -116,6 +117,7 @@ func testLongDeepSetHead(t *testing.T, snapshots bool) {
 		expHeadBlock:       6,
 	})
 }
+
 func testSetHead(t *testing.T, tt *rewindTest) {
 	db, chain, err := newCanonical(gxhash.NewFullFaker(), 0, true)
 	if err != nil {
@@ -167,7 +169,6 @@ func testSetHead(t *testing.T, tt *rewindTest) {
 	}
 	if head := chain.CurrentBlock(); head.NumberU64() != tt.expHeadBlock {
 		t.Errorf("Head block mismatch!!: have %d, want %d", head.NumberU64(), tt.expHeadBlock)
-
 	}
 }
 
