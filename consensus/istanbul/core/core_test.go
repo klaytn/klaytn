@@ -37,7 +37,7 @@ import (
 //  So: N + f < 2Q <= 2(N - f)
 
 func TestCore_QuorumSize(t *testing.T) {
-	validatorAddrs, _ := genValidators(4)
+	validatorAddrs, _ := genValidators(1)
 	mockBackend, mockCtrl := newMockBackend(t, validatorAddrs)
 	defer mockCtrl.Finish()
 
@@ -51,7 +51,7 @@ func TestCore_QuorumSize(t *testing.T) {
 	defer istCore.Stop()
 
 	valSet := istCore.valSet
-	for i := 1; i <= 100; i++ {
+	for i := 0; i <= 100; i++ {
 		valSet.AddValidator(common.StringToAddress(fmt.Sprint(i)))
 		valSet.SetSubGroupSize(valSet.Size())
 		if 2*valSet.QuorumSize() <= int(valSet.Size())+valSet.F() || 2*valSet.QuorumSize() > 2*(int(valSet.Size())-valSet.F()) {
