@@ -16,7 +16,7 @@ aliases:
 
 orbs:
   codecov: codecov/codecov@1.0.5
-  docker: circleci/docker@1.0.1
+  docker: circleci/docker@2.1.1
 
 executors:
   test-executor:
@@ -586,10 +586,12 @@ workflows:
               only: dev
           requires:
             - pass-tests
+          extra_build_args: '--platform=linux/amd64'
           image: klaytn/klaytn
           tag: dev
           executor: docker/docker
           use-remote-docker: true
+          remote-docker-version: 20.10.14
 
       - tag-verify:
           filters: *filter-only-version-tag
@@ -651,10 +653,12 @@ workflows:
               ignore: /.*/
           requires:
             - pass-tests
+          extra_build_args: '--platform=linux/amd64'
           image: klaytn/klaytn
           tag: latest,$CIRCLE_TAG
           executor: docker/docker
           use-remote-docker: true
+          remote-docker-version: 20.10.14
 
       - major-tagging:
           filters:
