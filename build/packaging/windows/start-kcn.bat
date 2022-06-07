@@ -80,7 +80,8 @@ IF DEFINED REWARDBASE (
 IF DEFINED RPC_ENABLE (
     IF %RPC_ENABLE%==1 (
         set OPTIONS=%OPTIONS% --rpc --rpcapi %RPC_API% --rpcport %RPC_PORT% --rpcaddr %RPC_ADDR% --rpccorsdomain ^
-%RPC_CORSDOMAIN% --rpcvhosts %RPC_VHOSTS%
+%RPC_CORSDOMAIN% --rpcvhosts %RPC_VHOSTS% --rpc.concurrencylimit %RPC_CONCURRENCYLIMIT% --rpcreadtimeout %RPC_READ_TIMEOUT% ^
+--rpcwritetimeout %RPC_WRITE_TIMEOUT% --rpcidletimeout %RPC_IDLE_TIMEOUT% --rpcexecutiontimeout %RPC_EXECUTION_TIMEOUT%
     )
 )
 
