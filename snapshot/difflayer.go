@@ -203,7 +203,7 @@ func (dl *diffLayer) rebloom(origin *diskLayer) {
 
 	defer func(start time.Time) {
 		// TODO-Klaytn-Snapshot update snapshotBloomIndexTimer
-		//snapshotBloomIndexTimer.Update(time.Since(start))
+		// snapshotBloomIndexTimer.Update(time.Since(start))
 	}(time.Now())
 
 	// Inject the new origin that triggered the rebloom

@@ -16,7 +16,7 @@ aliases:
 
 orbs:
   codecov: codecov/codecov@1.0.5
-  docker: circleci/docker@1.0.1
+  docker: circleci/docker@2.1.1
 
 executors:
   test-executor:
@@ -353,6 +353,15 @@ jobs:
           no_output_timeout: 30m
           command: make test-networks
 
+  test-node:
+    executor: test-executor
+    steps:
+      - checkout
+      - run:
+          name: "Run test node"
+          no_output_timeout: 30m
+          command: make test-node
+
   test-tests:
     executor: test-executor
     steps:
@@ -554,6 +563,8 @@ workflows:
           filters: *filter-version-not-release
       - test-networks:
           filters: *filter-version-not-release
+      - test-node:
+          filters: *filter-version-not-release
       - test-tests:
           filters: *filter-version-not-release
       - test-others:
@@ -574,6 +585,7 @@ workflows:
             - build
             - test-datasync
             - test-networks
+            - test-node
             - test-tests
             - test-others
             - tag-verify
@@ -586,10 +598,12 @@ workflows:
               only: dev
           requires:
             - pass-tests
+          extra_build_args: '--platform=linux/amd64'
           image: klaytn/klaytn
           tag: dev
           executor: docker/docker
           use-remote-docker: true
+          remote-docker-version: 20.10.14
 
       - tag-verify:
           filters: *filter-only-version-tag
@@ -651,10 +665,12 @@ workflows:
               ignore: /.*/
           requires:
             - pass-tests
+          extra_build_args: '--platform=linux/amd64'
           image: klaytn/klaytn
           tag: latest,$CIRCLE_TAG
           executor: docker/docker
           use-remote-docker: true
+          remote-docker-version: 20.10.14
 
       - major-tagging:
           filters:
