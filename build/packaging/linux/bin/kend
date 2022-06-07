@@ -162,8 +162,8 @@ __check_option() {
         if [ ! -z $RPC_VHOSTS ]; then
             OPTIONS="$OPTIONS --rpcvhosts $RPC_VHOSTS"
         fi
-        if [ ! -z $RPC_CONCURRENCYLIMIT ]; then
-            OPTIONS="$OPTIONS --rpc.concurrencylimit $RPC_CONCURRENCYLIMIT"
+        if [ ! -z $RPC_CONCURRENCY_LIMIT ]; then
+            OPTIONS="$OPTIONS --rpc.concurrencylimit $RPC_CONCURRENCY_LIMIT"
         fi
         if [ ! -z $RPC_READ_TIMEOUT ]; then
             OPTIONS="$OPTIONS --rpcreadtimeout $RPC_READ_TIMEOUT"
