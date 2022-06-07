@@ -680,12 +680,11 @@ func (args *CallArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsic
 	if &args.Value != nil {
 		value = args.Value.ToInt()
 	}
-	data := args.Data
 
 	// TODO-Klaytn: Klaytn does not support accessList yet.
 	// var accessList types.AccessList
 	// if args.AccessList != nil {
 	//	 accessList = *args.AccessList
 	// }
-	return types.NewMessage(addr, args.To, 0, value, gas, gasPrice, data, false, intrinsicGas), nil
+	return types.NewMessage(addr, args.To, 0, value, gas, gasPrice, args.Data, false, intrinsicGas), nil
 }
