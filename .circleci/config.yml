@@ -338,6 +338,15 @@ jobs:
           no_output_timeout: 30m
           command: make test-networks
 
+  test-node:
+    executor: test-executor
+    steps:
+      - checkout
+      - run:
+          name: "Run test node"
+          no_output_timeout: 30m
+          command: make test-node
+
   test-tests:
     executor: test-executor
     steps:
@@ -521,6 +530,8 @@ workflows:
           filters: *filter-version-not-release
       - test-networks:
           filters: *filter-version-not-release
+      - test-node:
+          filters: *filter-version-not-release
       - test-tests:
           filters: *filter-version-not-release
       - test-others:
@@ -539,6 +550,7 @@ workflows:
             - build
             - test-datasync
             - test-networks
+            - test-node
             - test-tests
             - test-others
             - tag-verify
