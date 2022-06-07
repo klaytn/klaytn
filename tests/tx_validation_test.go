@@ -137,6 +137,7 @@ func TestValidationPoolInsert(t *testing.T) {
 	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
 	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
 	bcdata.bc.Config().EthTxTypeCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().KIP71CompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
