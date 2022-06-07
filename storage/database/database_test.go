@@ -99,21 +99,17 @@ func newTestDynamoS3DB() (Database, func()) {
 	}
 }
 
-var testValues = []string{"a", "1251", "\x00123\x00"}
-
-// var testValues = []string{"", "a", "1251", "\x00123\x00"} original test_values; modified since badgerDB can't store empty key
-
-// TODO-Klaytn-Database Need to add DynamoDB to the below list.
-var testDatabases = []func() (Database, func()){newTestLDB, newTestBadgerDB, newTestMemDB}
-
-// var testDatabases = []func() (Database, func()){newTestLDB, newTestBadgerDB, newTestMemDB, newTestDynamoS3DB} if want to include the dynamo test, use this line
-
 type commonDatabaseTestSuite struct {
 	suite.Suite
 	database Database
 }
 
 func TestDatabaseTestSuite(t *testing.T) {
+	// If you want to include dynamo test, use below line
+	// var testDatabases = []func() (Database, func()){newTestLDB, newTestBadgerDB, newTestMemDB, newTestDynamoS3DB}
+
+	// TODO-Klaytn-Database Need to add DynamoDB to the below list.
+	testDatabases := []func() (Database, func()){newTestLDB, newTestBadgerDB, newTestMemDB}
 	for _, newFn := range testDatabases {
 		db, remove := newFn()
 		suite.Run(t, &commonDatabaseTestSuite{database: db})
@@ -186,6 +182,10 @@ func (ts *commonDatabaseTestSuite) TestNotFoundErr() {
 // TestPutGet tests the basic put and get operations.
 func (ts *commonDatabaseTestSuite) TestPutGet() {
 	db, t := ts.database, ts.T()
+
+	// Since badgerDB can't store empty key, testValues is modified. Below line is the original testValues.
+	// var testValues = []string{"", "a", "1251", "\x00123\x00"}
+	testValues := []string{"a", "1251", "\x00123\x00"}
 
 	// put
 	for _, v := range testValues {
