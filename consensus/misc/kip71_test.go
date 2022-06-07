@@ -79,7 +79,7 @@ func TestBlockNumReachHalfBaseFee(t *testing.T) {
 
 func TestBlockNumReacheLowerToMaxBaseFee(t *testing.T) {
 	blockNum := 0
-	parentBaseFee := big.NewInt(25000000000)
+	cfg := getTestConfig(big.NewInt(3))
 	for i := 0; i < 70; i++ {
 		parent := &types.Header{
 			Number:  common.Big3,
