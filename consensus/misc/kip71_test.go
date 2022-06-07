@@ -86,11 +86,11 @@ func TestBlockNumReacheLowerToMaxBaseFee(t *testing.T) {
 			GasUsed: 84000000,
 			BaseFee: parentBaseFee,
 		}
-		parentBaseFee = CalcBaseFee(parent, getTestConfig(big.NewInt(3)))
+		parentBaseFee = CalcBaseFee(parent, cfg)
 		blockNum = i
 		// t.Logf("test %d: have %d, ", i, parentBaseFee)
 	}
-	if parentBaseFee.Cmp(big.NewInt(750000000000)) != 0 {
+	if parentBaseFee.Cmp(new(big.Int).SetUint64(cfg.Governance.KIP71.UpperBoundBaseFee)) != 0 {
 		t.Errorf("block number %d: have %d want %d", blockNum, parentBaseFee, 750000000000)
 	}
 }
@@ -108,7 +108,7 @@ func TestBlockNumReachMaxToLowerBaseFee(t *testing.T) {
 		blockNum = i
 		// t.Logf("test %d: have %d, ", i, parentBaseFee)
 	}
-	if parentBaseFee.Cmp(big.NewInt(25000000000)) != 0 {
+	if parentBaseFee.Cmp(new(big.Int).SetUint64(cfg.Governance.KIP71.UpperBoundBaseFee)) != 0 {
 		t.Errorf("block number %d: have %d want %d", blockNum, parentBaseFee, 25000000000)
 	}
 }
