@@ -437,7 +437,7 @@ jobs:
       - store_artifacts:
           path: /tmp/linter_reports
   
-  rpc:
+  rpc-tester-report:
     executor: test-executor
     steps:
       - checkout
@@ -689,4 +689,4 @@ workflows:
             branches:
               only: dev
     jobs:
-      - rpc
+      - rpc-tester-report
