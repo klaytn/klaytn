@@ -77,7 +77,8 @@ func BenchmarkEvmOp(t *testing.B) {
 
 	multisig10, err := createMultisigAccount(uint(1),
 		[]uint{1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-		[]string{"bb113e82881499a7a361e8354a5b68f6c6885c7bcba09ea2b0891480396c322e",
+		[]string{
+			"bb113e82881499a7a361e8354a5b68f6c6885c7bcba09ea2b0891480396c322e",
 			"a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae59438e989",
 			"a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae59438e98A",
 			"a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae59438e98B",
@@ -86,7 +87,8 @@ func BenchmarkEvmOp(t *testing.B) {
 			"a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae59438e98E",
 			"a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae59438e98F",
 			"a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae59438e999",
-			"c32c471b732e2f56103e2f8e8cfd52792ef548f05f326e546a7d1fbf9d0419ec"},
+			"c32c471b732e2f56103e2f8e8cfd52792ef548f05f326e546a7d1fbf9d0419ec",
+		},
 		multisig10Initial.Addr)
 
 	if testing.Verbose() {
@@ -263,8 +265,8 @@ func BenchmarkEvmOp(t *testing.B) {
 	}
 
 	loopCnt := big.NewInt(1000000)
-	//loopCnt := big.NewInt(10000)
-	//loopCnt := big.NewInt(1)
+	// loopCnt := big.NewInt(10000)
+	// loopCnt := big.NewInt(1)
 
 	testcases := []struct {
 		testName string
@@ -2177,7 +2179,6 @@ func BenchmarkEvmOp(t *testing.B) {
 
 	for _, tc := range testcases {
 		t.Run(tc.testName, func(t *testing.B) {
-
 			if testing.Verbose() {
 				fmt.Printf("----------------------testing %s...\n", tc.testName)
 			}
@@ -2186,10 +2187,10 @@ func BenchmarkEvmOp(t *testing.B) {
 				input = append(input, new(big.Int).SetUint64(bcdata.bc.CurrentBlock().NumberU64()-2))
 			}
 
-			//for i := 0; i < 1000; i++ {
+			// for i := 0; i < 1000; i++ {
 			var txs types.Transactions
 
-			//tc.input[1] = big.NewInt(int64(i) * 10000)
+			// tc.input[1] = big.NewInt(int64(i) * 10000)
 
 			data, err := abii.Pack(tc.funcName, input...)
 			assert.Equal(t, nil, err)
