@@ -25,6 +25,12 @@ set RPC_PORT=8551
 set RPC_ADDR="0.0.0.0"
 set RPC_CORSDOMAIN="*"
 set RPC_VHOSTS="*"
+REM below options are related with http server
+set RPC_CONCURRENCYLIMIT=3000
+set RPC_READ_TIMEOUT=30
+set RPC_WRITE_TIMEOUT=30
+set RPC_IDLE_TIMEOUT=120
+set RPC_EXECUTION_TIMEOUT=30
 
 REM ws options setting
 set WS_ENABLE=0 &:: if this is set, the following options will be used
