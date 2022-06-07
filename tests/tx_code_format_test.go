@@ -35,7 +35,7 @@ import (
 type genTxWithCodeFormat func(t *testing.T, signer types.Signer, from TestAccount, payer TestAccount, gasPrice *big.Int, codeFormat params.CodeFormat) *types.Transaction
 
 func TestCodeFormat(t *testing.T) {
-	var testFunctions = []struct {
+	testFunctions := []struct {
 		Name  string
 		genTx genTxWithCodeFormat
 	}{

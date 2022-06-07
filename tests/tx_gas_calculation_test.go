@@ -52,7 +52,7 @@ type TestAccount interface {
 type genTransaction func(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64)
 
 func TestGasCalculation(t *testing.T) {
-	var testFunctions = []struct {
+	testFunctions := []struct {
 		Name  string
 		genTx genTransaction
 	}{
@@ -85,7 +85,7 @@ func TestGasCalculation(t *testing.T) {
 		{"FeeDelegatedWithRatioChainDataAnchoring", genFeeDelegatedWithRatioChainDataAnchoring},
 	}
 
-	var accountTypes = []struct {
+	accountTypes := []struct {
 		Type    string
 		account TestAccount
 	}{

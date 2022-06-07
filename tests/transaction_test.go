@@ -120,7 +120,7 @@ func TestAccountCreationDisable(t *testing.T) {
 func TestContractDeployWithDisabledAddress(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 
-	var testTxTypes = []types.TxType{
+	testTxTypes := []types.TxType{
 		types.TxTypeSmartContractDeploy,
 		types.TxTypeFeeDelegatedSmartContractDeploy,
 		types.TxTypeFeeDelegatedSmartContractDeployWithRatio,

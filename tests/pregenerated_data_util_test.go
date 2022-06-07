@@ -402,9 +402,11 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 
 	rewardDistributor := reward.NewRewardDistributor(gov)
 
-	return &BCData{bc, addrs, privKeys, chainDB,
+	return &BCData{
+		bc, addrs, privKeys, chainDB,
 		&genesisAddr, validatorAddresses,
-		validatorPrivKeys, engine, genesis, gov, rewardDistributor}, nil
+		validatorPrivKeys, engine, genesis, gov, rewardDistributor,
+	}, nil
 }
 
 // genAspenOptions returns database configurations of Aspen network.

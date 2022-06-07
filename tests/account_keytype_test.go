@@ -102,7 +102,7 @@ func createDefaultAccount(accountKeyType accountkey.AccountKeyType) (*TestAccoun
 func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txType types.TxType, contractAddr common.Address) (*types.Transaction, *TestAccountType, error) {
 	gasPrice := new(big.Int).SetUint64(25 * params.Ston)
 
-	//For Dynamic fee tx.
+	// For Dynamic fee tx.
 	gasTipCap := new(big.Int).SetUint64(25 * params.Ston)
 	gasFeeCap := new(big.Int).SetUint64(25 * params.Ston)
 
@@ -373,7 +373,7 @@ func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txTy
 // expectedTestResultForDefaultTx returns expected validity of tx which generated from (accountKeyType, txType) pair.
 func expectedTestResultForDefaultTx(accountKeyType accountkey.AccountKeyType, txType types.TxType) error {
 	switch accountKeyType {
-	//case accountkey.AccountKeyTypeNil:                     // not supported type
+	// case accountkey.AccountKeyTypeNil:                     // not supported type
 	case accountkey.AccountKeyTypeFail:
 		if txType.IsAccountUpdate() {
 			return kerrors.ErrAccountKeyFailNotUpdatable
@@ -493,7 +493,7 @@ func TestDefaultTxsWithDefaultAccountKey(t *testing.T) {
 	}
 	// select account key types to be tested
 	accountKeyTypes := []accountkey.AccountKeyType{
-		//accountkey.AccountKeyTypeNil, // not supported type
+		// accountkey.AccountKeyTypeNil, // not supported type
 		accountkey.AccountKeyTypeLegacy,
 		accountkey.AccountKeyTypePublic,
 		accountkey.AccountKeyTypeFail,
