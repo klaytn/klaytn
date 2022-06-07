@@ -26,6 +26,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/klaytn/klaytn/consensus/misc"
 	klaytnmetrics "github.com/klaytn/klaytn/metrics"
 
 	"github.com/klaytn/klaytn/blockchain"
@@ -538,9 +539,10 @@ func (self *worker) commitNewWork() {
 	// Create the current work task
 	work := self.current
 	if self.nodetype == common.CONSENSUSNODE {
-		// TODO : Need to KIP-71 hardfork.
-		// TODO : It need to uncomment after implemented baseFee logic.
-		// pending = types.FilterTransactionWithBaseFee(pending, baseFee)
+		if self.config.IsKIP71ForkEnabled(header.Number) {
+			header.BaseFee = misc.CalcBaseFee(header, self.config)
+			pending = types.FilterTransactionWithBaseFee(pending, header.BaseFee)
+		}
 		txs := types.NewTransactionsByTimeAndNonce(self.current.signer, pending)
 		work.commitTransactions(self.mux, txs, self.chain, self.rewardbase)
 		finishedCommitTx := time.Now()

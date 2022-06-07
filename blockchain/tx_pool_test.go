@@ -309,19 +309,21 @@ func TestInvalidTransactions(t *testing.T) {
 	pool.gasPrice = big.NewInt(1000)
 
 	// NOTE-Klaytn We only accept txs with an expected gas price only
-	//         regardless of local or remote.
-	// TODO : Need to KIP-71 hardfork.
-	//if err := pool.AddRemote(tx); err != ErrInvalidUnitPrice {
-	//	t.Error("expected", ErrInvalidUnitPrice, "got", err)
-	//}
-	//if err := pool.AddLocal(tx); err != ErrInvalidUnitPrice {
-	//	t.Error("expected", ErrInvalidUnitPrice, "got", err)
-	//}
-	if err := pool.AddRemote(tx); err != ErrGasPriceBelowBaseFee {
-		t.Error("expected", ErrGasPriceBelowBaseFee, "got", err)
-	}
-	if err := pool.AddLocal(tx); err != ErrGasPriceBelowBaseFee {
-		t.Error("expected", ErrGasPriceBelowBaseFee, "got", err)
+	// regardless of local or remote.
+	if pool.chainconfig.IsKIP71ForkEnabled(pool.chain.CurrentBlock().Number()) {
+		if err := pool.AddRemote(tx); err != ErrGasPriceBelowBaseFee {
+			t.Error("expected", ErrGasPriceBelowBaseFee, "got", err)
+		}
+		if err := pool.AddLocal(tx); err != ErrGasPriceBelowBaseFee {
+			t.Error("expected", ErrGasPriceBelowBaseFee, "got", err)
+		}
+	} else {
+		if err := pool.AddRemote(tx); err != ErrInvalidUnitPrice {
+			t.Error("expected", ErrInvalidUnitPrice, "got", err)
+		}
+		if err := pool.AddLocal(tx); err != ErrInvalidUnitPrice {
+			t.Error("expected", ErrInvalidUnitPrice, "got", err)
+		}
 	}
 }
 
@@ -1909,45 +1911,43 @@ func TestDynamicFeeTransactionVeryHighValues(t *testing.T) {
 	}
 }
 
-// TODO : Need to KIP-71 hardfork
-//func TestDynamicFeeTransactionHasNotSameGasPrice(t *testing.T) {
-//	t.Parallel()
-//
-//	pool, key := setupTxPoolWithConfig(eip1559Config)
-//	defer pool.Stop()
-//
-//	// Ensure gasFeeCap is greater than or equal to gasTipCap.
-//	tx := dynamicFeeTx(0, 100, big.NewInt(1), big.NewInt(2), key)
-//	if err := pool.AddRemote(tx); err != ErrTipAboveFeeCap {
-//		t.Error("expected", ErrTipAboveFeeCap, "got", err)
-//	}
-//
-//	// The GasTipCap is equal to gasPrice that config at TxPool.
-//	tx2 := dynamicFeeTx(0, 100, big.NewInt(2), big.NewInt(2), key)
-//	if err := pool.AddRemote(tx2); err != ErrInvalidGasTipCap {
-//		t.Error("expected", ErrInvalidGasTipCap, "got", err)
-//	}
-//}
+func TestDynamicFeeTransactionHasNotSameGasPrice(t *testing.T) {
+	t.Parallel()
 
-// TODO : Need to KIP-71 hardfork
-//func TestDynamicFeeTransactionAccepted(t *testing.T) {
-//	t.Parallel()
-//
-//	pool, key := setupTxPoolWithConfig(eip1559Config)
-//	defer pool.Stop()
-//
-//	testAddBalance(pool, crypto.PubkeyToAddress(key.PublicKey), big.NewInt(1000000))
-//
-//	tx := dynamicFeeTx(0, 21000, big.NewInt(1), big.NewInt(1), key)
-//	if err := pool.AddRemote(tx); err != nil {
-//		t.Error("error", "got", err)
-//	}
-//
-//	tx2 := dynamicFeeTx(1, 21000, big.NewInt(1), big.NewInt(1), key)
-//	if err := pool.AddRemote(tx2); err != nil {
-//		t.Error("error", "got", err)
-//	}
-//}
+	pool, key := setupTxPoolWithConfig(eip1559Config)
+	defer pool.Stop()
+
+	// Ensure gasFeeCap is greater than or equal to gasTipCap.
+	tx := dynamicFeeTx(0, 100, big.NewInt(1), big.NewInt(2), key)
+	if err := pool.AddRemote(tx); err != ErrTipAboveFeeCap {
+		t.Error("expected", ErrTipAboveFeeCap, "got", err)
+	}
+
+	// The GasTipCap is equal to gasPrice that config at TxPool.
+	tx2 := dynamicFeeTx(0, 100, big.NewInt(2), big.NewInt(2), key)
+	if err := pool.AddRemote(tx2); err != ErrInvalidGasTipCap {
+		t.Error("expected", ErrInvalidGasTipCap, "got", err)
+	}
+}
+
+// func TestDynamicFeeTransactionAccepted(t *testing.T) {
+// 	t.Parallel()
+
+// 	pool, key := setupTxPoolWithConfig(eip1559Config)
+// 	defer pool.Stop()
+
+// 	testAddBalance(pool, crypto.PubkeyToAddress(key.PublicKey), big.NewInt(1000000))
+
+// 	tx := dynamicFeeTx(0, 21000, big.NewInt(1), big.NewInt(1), key)
+// 	if err := pool.AddRemote(tx); err != nil {
+// 		t.Error("error", "got", err)
+// 	}
+
+// 	tx2 := dynamicFeeTx(1, 21000, big.NewInt(1), big.NewInt(1), key)
+// 	if err := pool.AddRemote(tx2); err != nil {
+// 		t.Error("error", "got", err)
+// 	}
+// }
 
 // TestDynamicFeeTransactionNotAcceptedNotEnableHardfork tests that the pool didn't accept dynamic tx if the pool didn't enable eip1559 hardfork.
 func TestDynamicFeeTransactionNotAcceptedNotEnableHardfork(t *testing.T) {
