@@ -40,9 +40,7 @@ const (
 	addressTypeKIRAddr
 )
 
-var (
-	errAddressBookIncomplete = errors.New("incomplete node information from AddressBook")
-)
+var errAddressBookIncomplete = errors.New("incomplete node information from AddressBook")
 
 type addressBookConnector struct {
 	bc              blockChain

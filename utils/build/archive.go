@@ -157,7 +157,7 @@ func (a *TarballArchive) Directory(name string) error {
 	a.dir = name + "/"
 	return a.tarw.WriteHeader(&tar.Header{
 		Name:     a.dir,
-		Mode:     0755,
+		Mode:     0o755,
 		Typeflag: tar.TypeDir,
 	})
 }

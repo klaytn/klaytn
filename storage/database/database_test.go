@@ -98,12 +98,12 @@ func newTestDynamoS3DB() (Database, func()) {
 
 var test_values = []string{"a", "1251", "\x00123\x00"}
 
-//var test_values = []string{"", "a", "1251", "\x00123\x00"} original test_values; modified since badgerDB can't store empty key
+// var test_values = []string{"", "a", "1251", "\x00123\x00"} original test_values; modified since badgerDB can't store empty key
 
 // TODO-Klaytn-Database Need to add DynamoDB to the below list.
 var testDatabases = []func() (Database, func()){newTestLDB, newTestBadgerDB, newTestMemDB}
 
-//var testDatabases = []func() (Database, func()){newTestLDB, newTestBadgerDB, newTestMemDB, newTestDynamoS3DB} if want to include the dynamo test, use this line
+// var testDatabases = []func() (Database, func()){newTestLDB, newTestBadgerDB, newTestMemDB, newTestDynamoS3DB} if want to include the dynamo test, use this line
 
 // TestDatabase_PutGet tests the basic put and get operations.
 func TestDatabase_PutGet(t *testing.T) {
@@ -263,7 +263,6 @@ func testPutGet(db Database, t *testing.T) {
 }
 
 func TestShardDB(t *testing.T) {
-
 	key := common.Hex2Bytes("0x91d6f7d2537d8a0bd7d487dcc59151ebc00da306")
 
 	hashstring := strings.TrimPrefix("0x93d6f3d2537d8a0bd7d485dcc59151ebc00da306", "0x")
@@ -277,7 +276,6 @@ func TestShardDB(t *testing.T) {
 	idx := common.BytesToHash(key).Big().Mod(common.BytesToHash(key).Big(), big.NewInt(4))
 
 	fmt.Printf("idx %d   %d   %d\n", idx, shard, seed)
-
 }
 
 func testParallelPutGet(db Database, t *testing.T) {

@@ -234,7 +234,7 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 		if err := pool.journal.load(pool.AddLocals); err != nil {
 			logger.Error("Failed to load transaction journal", "err", err)
 		}
-		if err := pool.journal.rotate(pool.local()); err != nil {
+		if err := pool.journal.rotate(pool.local(), pool.signer); err != nil {
 			logger.Error("Failed to rotate transaction journal", "err", err)
 		}
 	}
@@ -339,7 +339,7 @@ func (pool *TxPool) loop() {
 		case <-journal.C:
 			if pool.journal != nil {
 				pool.mu.Lock()
-				if err := pool.journal.rotate(pool.local()); err != nil {
+				if err := pool.journal.rotate(pool.local(), pool.signer); err != nil {
 					logger.Error("Failed to rotate local tx journal", "err", err)
 				}
 				pool.mu.Unlock()

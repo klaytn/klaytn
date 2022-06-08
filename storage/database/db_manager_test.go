@@ -35,35 +35,45 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var dbManagers []DBManager
-var dbConfigs = make([]*DBConfig, 0, len(baseConfigs)*3)
-var baseConfigs = []*DBConfig{
-	{DBType: LevelDB, SingleDB: false, NumStateTrieShards: 1, ParallelDBWrite: false},
-	{DBType: LevelDB, SingleDB: false, NumStateTrieShards: 1, ParallelDBWrite: true},
-	{DBType: LevelDB, SingleDB: false, NumStateTrieShards: 4, ParallelDBWrite: false},
-	{DBType: LevelDB, SingleDB: false, NumStateTrieShards: 4, ParallelDBWrite: true},
+var (
+	dbManagers  []DBManager
+	dbConfigs   = make([]*DBConfig, 0, len(baseConfigs)*3)
+	baseConfigs = []*DBConfig{
+		{DBType: LevelDB, SingleDB: false, NumStateTrieShards: 1, ParallelDBWrite: false},
+		{DBType: LevelDB, SingleDB: false, NumStateTrieShards: 1, ParallelDBWrite: true},
+		{DBType: LevelDB, SingleDB: false, NumStateTrieShards: 4, ParallelDBWrite: false},
+		{DBType: LevelDB, SingleDB: false, NumStateTrieShards: 4, ParallelDBWrite: true},
 
-	{DBType: LevelDB, SingleDB: true, NumStateTrieShards: 1, ParallelDBWrite: false},
-	{DBType: LevelDB, SingleDB: true, NumStateTrieShards: 1, ParallelDBWrite: true},
-	{DBType: LevelDB, SingleDB: true, NumStateTrieShards: 4, ParallelDBWrite: false},
-	{DBType: LevelDB, SingleDB: true, NumStateTrieShards: 4, ParallelDBWrite: true},
-}
+		{DBType: LevelDB, SingleDB: true, NumStateTrieShards: 1, ParallelDBWrite: false},
+		{DBType: LevelDB, SingleDB: true, NumStateTrieShards: 1, ParallelDBWrite: true},
+		{DBType: LevelDB, SingleDB: true, NumStateTrieShards: 4, ParallelDBWrite: false},
+		{DBType: LevelDB, SingleDB: true, NumStateTrieShards: 4, ParallelDBWrite: true},
+	}
+)
 
-var num1 = uint64(20190815)
-var num2 = uint64(20199999)
-var num3 = uint64(12345678)
-var num4 = uint64(87654321)
+var (
+	num1 = uint64(20190815)
+	num2 = uint64(20199999)
+	num3 = uint64(12345678)
+	num4 = uint64(87654321)
+)
 
-var hash1 = common.HexToHash("1341655") // 20190805 in hexadecimal
-var hash2 = common.HexToHash("1343A3F") // 20199999 in hexadecimal
-var hash3 = common.HexToHash("BC614E")  // 12345678 in hexadecimal
-var hash4 = common.HexToHash("5397FB1") // 87654321 in hexadecimal
+var (
+	hash1 = common.HexToHash("1341655") // 20190805 in hexadecimal
+	hash2 = common.HexToHash("1343A3F") // 20199999 in hexadecimal
+	hash3 = common.HexToHash("BC614E")  // 12345678 in hexadecimal
+	hash4 = common.HexToHash("5397FB1") // 87654321 in hexadecimal
+)
 
-var key *ecdsa.PrivateKey
-var addr common.Address
-var signer types.Signer
+var (
+	key    *ecdsa.PrivateKey
+	addr   common.Address
+	signer types.Signer
+)
 
 func init() {
+	GetOpenFilesLimit()
+
 	key, _ = crypto.GenerateKey()
 	addr = crypto.PubkeyToAddress(key.PublicKey)
 	signer = types.LatestSignerForChainID(big.NewInt(18))

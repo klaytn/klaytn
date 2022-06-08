@@ -36,7 +36,10 @@ import (
 )
 
 const (
-	DefaultBridgeTxGasLimit = 5000000
+	ParentOperatorStr       = "parentOperator"
+	ChildOperatorStr        = "childOperator"
+	ParentBridgeAccountName = "parent_bridge_account"
+	ChildBridgeAccountName  = "child_bridge_account"
 )
 
 var (
@@ -58,6 +61,7 @@ type accountInfo struct {
 	nonce    uint64
 	chainID  *big.Int
 	gasPrice *big.Int
+	gasLimit uint64
 
 	isNonceSynced bool
 	mu            sync.RWMutex
@@ -76,8 +80,8 @@ type BridgeAccounts struct {
 func (ba *BridgeAccounts) GetBridgeOperators() map[string]interface{} {
 	res := make(map[string]interface{})
 
-	res["parentOperator"] = ba.pAccount.GetAccountInfo()
-	res["childOperator"] = ba.cAccount.GetAccountInfo()
+	res[ParentOperatorStr] = ba.pAccount.GetAccountInfo()
+	res[ChildOperatorStr] = ba.cAccount.GetAccountInfo()
 
 	return res
 }
@@ -106,24 +110,44 @@ func (ba *BridgeAccounts) SetChildOperatorFeePayer(feePayer common.Address) erro
 	return nil
 }
 
+// GetParentBridgeOperatorGasLimit gets value of GasLimit of parent operator.
+func (ba *BridgeAccounts) GetParentBridgeOperatorGasLimit() uint64 {
+	return ba.pAccount.gasLimit
+}
+
+// GetChildBridgeOperatorGasLimit gets value of GasLimit of child operator.
+func (ba *BridgeAccounts) GetChildBridgeOperatorGasLimit() uint64 {
+	return ba.cAccount.gasLimit
+}
+
+// SetParentBridgeOperatorGasLimit changes GasLimit of parent operator.
+func (ba *BridgeAccounts) SetParentBridgeOperatorGasLimit(fee uint64) {
+	ba.pAccount.gasLimit = fee
+}
+
+// SetChildBridgeOperatorGasLimit changes GasLimit of child operator.
+func (ba *BridgeAccounts) SetChildBridgeOperatorGasLimit(fee uint64) {
+	ba.cAccount.gasLimit = fee
+}
+
 // NewBridgeAccounts returns bridgeAccounts created by main/service bridge account keys.
-func NewBridgeAccounts(am *accounts.Manager, dataDir string, db feePayerDB) (*BridgeAccounts, error) {
-	pKS, pAccAddr, isLock, err := InitializeBridgeAccountKeystore(path.Join(dataDir, "parent_bridge_account"))
+func NewBridgeAccounts(am *accounts.Manager, dataDir string, db feePayerDB, parentOperatorGaslimit, childOperatorGaslimit uint64) (*BridgeAccounts, error) {
+	pKS, pAccAddr, isLock, err := InitializeBridgeAccountKeystore(path.Join(dataDir, ParentBridgeAccountName))
 	if err != nil {
 		return nil, err
 	}
 
 	if isLock {
-		logger.Warn("parent_bridge_account is locked. Please unlock the account manually for Service Chain")
+		logger.Warn("parent bridge account is locked. Please unlock the account manually for Service Chain", "name", ParentBridgeAccountName)
 	}
 
-	cKS, cAccAddr, isLock, err := InitializeBridgeAccountKeystore(path.Join(dataDir, "child_bridge_account"))
+	cKS, cAccAddr, isLock, err := InitializeBridgeAccountKeystore(path.Join(dataDir, ChildBridgeAccountName))
 	if err != nil {
 		return nil, err
 	}
 
 	if isLock {
-		logger.Warn("child_bridge_account is locked. Please unlock the account manually for Service Chain")
+		logger.Warn("child bridge account is locked. Please unlock the account manually for Service Chain", "name", ChildBridgeAccountName)
 	}
 
 	logger.Info("bridge account is loaded", "parent", pAccAddr.String(), "child", cAccAddr.String())
@@ -135,6 +159,7 @@ func NewBridgeAccounts(am *accounts.Manager, dataDir string, db feePayerDB) (*Br
 		nonce:    0,
 		chainID:  nil,
 		gasPrice: nil,
+		gasLimit: parentOperatorGaslimit,
 		feePayer: db.ReadParentOperatorFeePayer(),
 	}
 
@@ -145,6 +170,7 @@ func NewBridgeAccounts(am *accounts.Manager, dataDir string, db feePayerDB) (*Br
 		nonce:    0,
 		chainID:  nil,
 		gasPrice: nil,
+		gasLimit: childOperatorGaslimit,
 		feePayer: db.ReadChildOperatorFeePayer(),
 	}
 
@@ -219,7 +245,7 @@ func (acc *accountInfo) GenerateTransactOpts() *bind.TransactOpts {
 		nonce = new(big.Int).SetUint64(acc.nonce)
 	}
 
-	return bind.MakeTransactOptsWithKeystore(acc.keystore, acc.address, nonce, acc.chainID, DefaultBridgeTxGasLimit, acc.gasPrice)
+	return bind.MakeTransactOptsWithKeystore(acc.keystore, acc.address, nonce, acc.chainID, acc.gasLimit, acc.gasPrice)
 }
 
 // SignTx signs a transaction with the accountInfo.
