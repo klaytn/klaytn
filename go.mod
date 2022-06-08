@@ -16,7 +16,6 @@ require (
 	github.com/edsrzf/mmap-go v1.0.0
 	github.com/fatih/color v1.7.0
 	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5
-	github.com/gin-gonic/gin v1.7.0
 	github.com/go-kit/kit v0.9.0 // indirect
 	github.com/go-redis/redis/v7 v7.4.0
 	github.com/go-sql-driver/mysql v1.5.0
