@@ -81,7 +81,7 @@ var (
 	snapshotFlushStorageSizeMeter = metrics.NewRegisteredMeter("state/snapshot/flush/storage/size", nil)
 
 	// TODO-Klaytn-Snapshot update snapshotBloomIndexTimer
-	//snapshotBloomIndexTimer = metrics.NewRegisteredResettingTimer("state/snapshot/bloom/index", nil)
+	// snapshotBloomIndexTimer = metrics.NewRegisteredResettingTimer("state/snapshot/bloom/index", nil)
 	snapshotBloomErrorGauge = metrics.NewRegisteredGaugeFloat64("state/snapshot/bloom/error", nil)
 
 	snapshotBloomAccountTrueHitMeter  = metrics.NewRegisteredMeter("state/snapshot/bloom/account/truehit", nil)
@@ -795,7 +795,6 @@ func (t *Tree) Verify(root common.Hash) error {
 		}
 		return hash, nil
 	}, newGenerateStats(), true)
-
 	if err != nil {
 		return err
 	}

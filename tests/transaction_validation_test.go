@@ -29,6 +29,7 @@ import (
 	"github.com/klaytn/klaytn/common/profile"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/kerrors"
+	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
 )
@@ -36,9 +37,7 @@ import (
 // TestValidatingUnavailableContractExecution tests validation logic of invalid contract execution transaction.
 // TxPool will invalidate contract execution transactions sending to un-executable account even though the recipient is a contract account.
 func TestValidatingUnavailableContractExecution(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain

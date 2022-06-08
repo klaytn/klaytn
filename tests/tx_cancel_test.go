@@ -25,6 +25,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common/profile"
+	"github.com/klaytn/klaytn/log"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -34,9 +35,7 @@ import (
 // 3. Insert a TxCancel transaction with nonce 0. This should replace the tx with the same nonce.
 // 4. Insert a TxCancel transaction with nonce 0 and different gas limit. This should replace the tx with the same nonce.
 func TestTxCancel(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 	opt := testOption{1000, 2000, 4, 1, []byte{}, makeNewTransactionsToRandom}
 
@@ -187,9 +186,7 @@ func TestTxCancel(t *testing.T) {
 // 3. Insert a TxCancel transaction with nonce 0. This should replace the tx with the same nonce.
 // 4. Insert a TxCancel transaction with nonce 0 and different gas limit. This should replace the tx with the same nonce.
 func TestTxFeeDelegatedCancel(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 	opt := testOption{1000, 2000, 4, 1, []byte{}, makeNewTransactionsToRandom}
 
@@ -348,9 +345,7 @@ func TestTxFeeDelegatedCancel(t *testing.T) {
 // 3. Insert a TxCancel transaction with nonce 0. This should replace the tx with the same nonce.
 // 4. Insert a TxCancel transaction with nonce 0 and different gas limit. This should replace the tx with the same nonce.
 func TestTxFeeDelegatedCancelWithRatio(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 	opt := testOption{1000, 2000, 4, 1, []byte{}, makeNewTransactionsToRandom}
 

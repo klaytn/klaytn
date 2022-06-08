@@ -127,7 +127,7 @@ func TestBridgeManager(t *testing.T) {
 	}()
 
 	wg := sync.WaitGroup{}
-	wg.Add(6)
+	wg.Add(10)
 
 	// Config Bridge Account Manager
 	config := &SCConfig{}
@@ -193,7 +193,6 @@ func TestBridgeManager(t *testing.T) {
 	sim.Commit() // block
 
 	// 3. Deploy NFT Contract
-	nftTokenID := uint64(4438)
 	nftAddr, tx, nft, err := scnft.DeployServiceChainNFT(alice, sim, addr)
 	if err != nil {
 		log.Fatalf("Failed to DeployServiceChainNFT: %v", err)
@@ -264,17 +263,21 @@ func TestBridgeManager(t *testing.T) {
 		}
 	}()
 
+	nftTokenIDs := []uint64{4437, 4438, 4439}
+	testURIs := []string{"", "testURI", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
 	// 6. Register (Mint) an NFT to Alice
 	{
-		tx, err = nft.MintWithTokenURI(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, GasLimit: testGasLimit}, alice.From, big.NewInt(int64(nftTokenID)), "testURI")
-		assert.NoError(t, err)
-		t.Log("Register NFT Transaction", tx.Hash().Hex())
-		sim.Commit() // block
-		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+		for i := 0; i < len(nftTokenIDs); i++ {
+			tx, err = nft.MintWithTokenURI(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, GasLimit: testGasLimit}, alice.From, big.NewInt(int64(nftTokenIDs[i])), testURIs[i])
+			assert.NoError(t, err)
+			t.Log("Register NFT Transaction", tx.Hash().Hex())
+			sim.Commit() // block
+			CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
 
-		owner, err := nft.OwnerOf(nil, big.NewInt(int64(nftTokenID)))
-		assert.Equal(t, nil, err)
-		assert.Equal(t, alice.From, owner)
+			owner, err := nft.OwnerOf(nil, big.NewInt(int64(nftTokenIDs[i])))
+			assert.Equal(t, nil, err)
+			assert.Equal(t, alice.From, owner)
+		}
 	}
 
 	// 7. Request ERC20 Transfer from Alice to Bob
@@ -285,7 +288,6 @@ func TestBridgeManager(t *testing.T) {
 		sim.Commit() // block
 
 		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
-
 	}
 
 	// 8. RequestKLAYTransfer from Alice to Bob
@@ -301,16 +303,18 @@ func TestBridgeManager(t *testing.T) {
 
 	// 9. Request NFT transfer from Alice to Bob
 	{
-		tx, err = nft.RequestValueTransfer(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, GasLimit: testGasLimit}, big.NewInt(int64(nftTokenID)), bob.From, nil)
-		assert.NoError(t, err)
-		t.Log("nft.RequestValueTransfer Transaction", tx.Hash().Hex())
+		for i := 0; i < len(nftTokenIDs); i++ {
+			tx, err = nft.RequestValueTransfer(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, GasLimit: testGasLimit}, big.NewInt(int64(nftTokenIDs[i])), bob.From, nil)
+			assert.NoError(t, err)
+			t.Log("nft.RequestValueTransfer Transaction", tx.Hash().Hex())
+			sim.Commit() // block
+			CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
 
-		sim.Commit() // block
-
-		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
-		uri, err := nft.TokenURI(nil, big.NewInt(int64(nftTokenID)))
-		assert.NoError(t, err)
-		assert.Equal(t, "testURI", uri)
+			uri, err := nft.TokenURI(nil, big.NewInt(int64(nftTokenIDs[i])))
+			assert.NoError(t, err)
+			assert.Equal(t, testURIs[i], uri)
+			t.Log("URI length: ", len(testURIs[i]), len(uri))
+		}
 	}
 
 	// Wait a few second for wait group
@@ -332,9 +336,11 @@ func TestBridgeManager(t *testing.T) {
 
 	// 12. Check NFT owner sent by RequestValueTransfer()
 	{
-		owner, err := nft.OwnerOf(nil, big.NewInt(int64(nftTokenID)))
-		assert.Equal(t, nil, err)
-		assert.Equal(t, bob.From, owner)
+		for i := 0; i < len(nftTokenIDs); i++ {
+			owner, err := nft.OwnerOf(nil, big.NewInt(int64(nftTokenIDs[i])))
+			assert.Equal(t, nil, err)
+			assert.Equal(t, bob.From, owner)
+		}
 	}
 	bridgeManager.Stop()
 }

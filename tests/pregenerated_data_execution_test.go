@@ -93,9 +93,12 @@ func BenchmarkDataExecution_Baobab_ControlGroup(b *testing.B) {
 // If there are saved addresses and keys and the given numReceiversPerRun and testDataDir
 // match with saved ones, it will reuse saved addresses and keys.
 var savedAddresses []*common.Address = nil
-var savedKeys []*ecdsa.PrivateKey = nil
-var savedNumReceiversPerRun int
-var savedTestDataDir string
+
+var (
+	savedKeys               []*ecdsa.PrivateKey = nil
+	savedNumReceiversPerRun int
+	savedTestDataDir        string
+)
 
 // dataExecutionTest is to check the performance of Klaytn with pre-generated data.
 // It generates warmUpTxs and executionTxs first, and then initialize blockchain and database to
