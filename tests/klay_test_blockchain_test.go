@@ -440,7 +440,7 @@ func initBlockChain(db database.DBManager, cacheConfig *blockchain.CacheConfig, 
 		genesis.Config = Forks["Byzantium"]
 		genesis.ExtraData = extraData
 		genesis.BlockScore = big.NewInt(1)
-		genesis.Config.Governance = params.GetDefaultGovernanceConfig(params.UseIstanbul)
+		genesis.Config.Governance = params.GetDefaultGovernanceConfig()
 		genesis.Config.Istanbul = params.GetDefaultIstanbulConfig()
 		genesis.Config.UnitPrice = 25 * params.Ston
 	}

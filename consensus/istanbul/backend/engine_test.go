@@ -114,7 +114,7 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 	)
 	// force enable Istanbul engine and governance
 	genesis.Config.Istanbul = params.GetDefaultIstanbulConfig()
-	genesis.Config.Governance = params.GetDefaultGovernanceConfig(params.UseIstanbul)
+	genesis.Config.Governance = params.GetDefaultGovernanceConfig()
 	for _, item := range items {
 		switch v := item.(type) {
 		case istanbulCompatibleBlock:
