@@ -43,8 +43,10 @@ import (
 	"github.com/klaytn/klaytn/rlp"
 )
 
-const defaultGasPrice = 25 * params.Ston
-const localTxExecutionTime = 5 * time.Second
+const (
+	defaultGasPrice      = 25 * params.Ston
+	localTxExecutionTime = 5 * time.Second
+)
 
 var logger = log.NewModuleLogger(log.API)
 

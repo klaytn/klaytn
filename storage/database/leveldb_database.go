@@ -251,7 +251,6 @@ func NewLevelDBWithOption(dbPath string, ldbOption *opt.Options) (*levelDB, erro
 		db:     db,
 		logger: localLogger,
 	}, nil
-
 }
 
 func (db *levelDB) Type() DBType {
@@ -266,7 +265,7 @@ func (db *levelDB) Path() string {
 // Put puts the given key / value to the queue
 func (db *levelDB) Put(key []byte, value []byte) error {
 	// Generate the data to write to disk, update the meter and write
-	//value = rle.Compress(value)
+	// value = rle.Compress(value)
 	if db.perfCheck {
 		start := time.Now()
 		err := db.put(key, value)
@@ -293,7 +292,7 @@ func (db *levelDB) Get(key []byte) ([]byte, error) {
 		return val, err
 	}
 	return db.get(key)
-	//return rle.Decompress(dat)
+	// return rle.Decompress(dat)
 }
 
 func (db *levelDB) get(key []byte) ([]byte, error) {

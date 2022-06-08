@@ -29,11 +29,9 @@ import (
 	"github.com/klaytn/klaytn/common"
 )
 
-var (
-	// errMemorydbClosed is returned if a memory database was already closed at the
-	// invocation of a data access operation.
-	errMemorydbClosed = errors.New("database closed")
-)
+// errMemorydbClosed is returned if a memory database was already closed at the
+// invocation of a data access operation.
+var errMemorydbClosed = errors.New("database closed")
 
 /*
  * This is a test memory database. Do not use for any production it does not get persisted

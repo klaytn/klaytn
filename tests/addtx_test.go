@@ -89,7 +89,8 @@ func txDispatcher(ch <-chan *types.Transaction, txpool *blockchain.TxPool, wait 
 }
 
 func benchAddTx(b *testing.B, maxAccounts, numValidators int, parallel string, numQueue int,
-	cacheSender bool) {
+	cacheSender bool,
+) {
 	// Initialize blockchain
 	start := time.Now()
 	bcdata, err := NewBCData(maxAccounts, numValidators)
@@ -199,8 +200,8 @@ func benchAddTx(b *testing.B, maxAccounts, numValidators int, parallel string, n
 
 func makeTransactions(accountMap *AccountMap, fromAddrs []*common.Address, privKeys []*ecdsa.PrivateKey,
 	signer types.Signer, toAddrs []*common.Address, amount *big.Int, additionalNonce int,
-	cacheSender bool) (types.Transactions, error) {
-
+	cacheSender bool,
+) (types.Transactions, error) {
 	txs := make(types.Transactions, 0, len(toAddrs))
 	for i, from := range fromAddrs {
 		nonce := accountMap.GetNonce(*from)
@@ -266,7 +267,8 @@ func txSequential(txs types.Transactions, txpool *blockchain.TxPool) {
 }
 
 func txQueue(txs types.Transactions, txpool *blockchain.TxPool,
-	txChs []chan *types.Transaction, numQueue int, wait *sync.WaitGroup) {
+	txChs []chan *types.Transaction, numQueue int, wait *sync.WaitGroup,
+) {
 	wait.Add(len(txs))
 
 	for i, tx := range txs {

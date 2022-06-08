@@ -149,12 +149,28 @@ func TestFastIteratorBasics(t *testing.T) {
 		expKeys []byte
 	}
 	for i, tc := range []testCase{
-		{lists: [][]byte{{0, 1, 8}, {1, 2, 8}, {2, 9}, {4},
-			{7, 14, 15}, {9, 13, 15, 16}},
-			expKeys: []byte{0, 1, 2, 4, 7, 8, 9, 13, 14, 15, 16}},
-		{lists: [][]byte{{0, 8}, {1, 2, 8}, {7, 14, 15}, {8, 9},
-			{9, 10}, {10, 13, 15, 16}},
-			expKeys: []byte{0, 1, 2, 7, 8, 9, 10, 13, 14, 15, 16}},
+		{
+			lists: [][]byte{
+				{0, 1, 8},
+				{1, 2, 8},
+				{2, 9},
+				{4},
+				{7, 14, 15},
+				{9, 13, 15, 16},
+			},
+			expKeys: []byte{0, 1, 2, 4, 7, 8, 9, 13, 14, 15, 16},
+		},
+		{
+			lists: [][]byte{
+				{0, 8},
+				{1, 2, 8},
+				{7, 14, 15},
+				{8, 9},
+				{9, 10},
+				{10, 13, 15, 16},
+			},
+			expKeys: []byte{0, 1, 2, 7, 8, 9, 10, 13, 14, 15, 16},
+		},
 	} {
 		var iterators []*weightedIterator
 		for i, data := range tc.lists {
@@ -586,7 +602,7 @@ func TestAccountIteratorFlattening(t *testing.T) {
 	if err := snaps.Cap(common.HexToHash("0x04"), 1); err != nil {
 		t.Fatalf("failed to flatten snapshot stack: %v", err)
 	}
-	//verifyIterator(t, 7, it)
+	// verifyIterator(t, 7, it)
 }
 
 func TestAccountIteratorSeek(t *testing.T) {

@@ -65,7 +65,9 @@ func (s *KafkaSuite) SetupTest() {
 }
 
 func (s *KafkaSuite) TearDownTest() {
-	s.kfk.Close()
+	if s.kfk != nil {
+		s.kfk.Close()
+	}
 }
 
 func (s *KafkaSuite) TestKafka_split() {

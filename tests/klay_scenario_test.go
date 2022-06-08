@@ -1588,9 +1588,11 @@ func TestMultisigScenario(t *testing.T) {
 	// multi-sig account
 	multisig, err := createMultisigAccount(uint(2),
 		[]uint{1, 1, 1},
-		[]string{"bb113e82881499a7a361e8354a5b68f6c6885c7bcba09ea2b0891480396c322e",
+		[]string{
+			"bb113e82881499a7a361e8354a5b68f6c6885c7bcba09ea2b0891480396c322e",
 			"a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae59438e989",
-			"c32c471b732e2f56103e2f8e8cfd52792ef548f05f326e546a7d1fbf9d0419ec"},
+			"c32c471b732e2f56103e2f8e8cfd52792ef548f05f326e546a7d1fbf9d0419ec",
+		},
 		common.HexToAddress("0xbbfa38050bf3167c887c086758f448ce067ea8ea"))
 
 	if testing.Verbose() {

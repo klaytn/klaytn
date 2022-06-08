@@ -34,8 +34,8 @@ type testData struct {
 }
 
 func makeContractCreationTransactions(bcdata *BCData, accountMap *AccountMap, signer types.Signer,
-	numTransactions int, amount *big.Int, data []byte) (types.Transactions, error) {
-
+	numTransactions int, amount *big.Int, data []byte,
+) (types.Transactions, error) {
 	numAddrs := len(bcdata.addrs)
 	fromAddrs := bcdata.addrs
 	fromNonces := make([]uint64, numAddrs)
@@ -81,7 +81,8 @@ func genOptions(b *testing.B) ([]testData, error) {
 		for name, contract := range contracts {
 			testName := filepath.Base(name)
 			opts[i] = testData{testName, testOption{
-				b.N, 2000, 4, 1, common.FromHex(contract.Code), makeContractCreationTransactions}}
+				b.N, 2000, 4, 1, common.FromHex(contract.Code), makeContractCreationTransactions,
+			}}
 		}
 	}
 
@@ -108,7 +109,7 @@ func deploySmartContract(b *testing.B, opt *testOption, prof *profile.Profiler) 
 
 	b.ResetTimer()
 	for i := 0; i < b.N/txPerBlock; i++ {
-		//fmt.Printf("iteration %d tx %d\n", i, opt.numTransactions)
+		// fmt.Printf("iteration %d tx %d\n", i, opt.numTransactions)
 		err := bcdata.GenABlock(accountMap, opt, txPerBlock, prof)
 		if err != nil {
 			b.Fatal(err)

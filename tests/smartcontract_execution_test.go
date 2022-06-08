@@ -45,7 +45,8 @@ type deployedContract struct {
 }
 
 func deployContract(filename string, bcdata *BCData, accountMap *AccountMap,
-	prof *profile.Profiler) (map[string]*deployedContract, error) {
+	prof *profile.Profiler,
+) (map[string]*deployedContract, error) {
 	contracts, err := compiler.CompileSolidityOrLoad("", filename)
 	if err != nil {
 		return nil, err
@@ -119,7 +120,8 @@ func callContract(bcdata *BCData, tx *types.Transaction) ([]byte, error) {
 }
 
 func makeRewardTransactions(c *deployedContract, accountMap *AccountMap, bcdata *BCData,
-	numTransactions int) (types.Transactions, error) {
+	numTransactions int,
+) (types.Transactions, error) {
 	abii, err := abi.JSON(strings.NewReader(c.abi))
 	if err != nil {
 		return nil, err
@@ -157,12 +159,14 @@ func makeRewardTransactions(c *deployedContract, accountMap *AccountMap, bcdata 
 }
 
 func executeRewardTransactions(c *deployedContract, transactions types.Transactions, prof *profile.Profiler, bcdata *BCData,
-	accountMap *AccountMap) error {
+	accountMap *AccountMap,
+) error {
 	return bcdata.GenABlockWithTransactions(accountMap, transactions, prof)
 }
 
 func makeBalanceOf(c *deployedContract, accountMap *AccountMap, bcdata *BCData,
-	numTransactions int) (types.Transactions, error) {
+	numTransactions int,
+) (types.Transactions, error) {
 	abii, err := abi.JSON(strings.NewReader(c.abi))
 	if err != nil {
 		return nil, err
@@ -195,14 +199,15 @@ func makeBalanceOf(c *deployedContract, accountMap *AccountMap, bcdata *BCData,
 		transactions[i] = signedTx
 
 		// This is not required because the transactions will not be inserted into the blockchain.
-		//fromNonces[idx]++
+		// fromNonces[idx]++
 	}
 
 	return transactions, nil
 }
 
 func executeBalanceOf(c *deployedContract, transactions types.Transactions, prof *profile.Profiler, bcdata *BCData,
-	accountMap *AccountMap) error {
+	accountMap *AccountMap,
+) error {
 	abii, err := abi.JSON(strings.NewReader(c.abi))
 	if err != nil {
 		return err
@@ -222,7 +227,8 @@ func executeBalanceOf(c *deployedContract, transactions types.Transactions, prof
 }
 
 func makeQuickSortTransactions(c *deployedContract, accountMap *AccountMap, bcdata *BCData,
-	numTransactions int) (types.Transactions, error) {
+	numTransactions int,
+) (types.Transactions, error) {
 	abii, err := abi.JSON(strings.NewReader(c.abi))
 	if err != nil {
 		return nil, err
@@ -259,7 +265,8 @@ func makeQuickSortTransactions(c *deployedContract, accountMap *AccountMap, bcda
 }
 
 func executeQuickSortTransactions(c *deployedContract, transactions types.Transactions, prof *profile.Profiler, bcdata *BCData,
-	accountMap *AccountMap) error {
+	accountMap *AccountMap,
+) error {
 	return bcdata.GenABlockWithTransactions(accountMap, transactions, prof)
 }
 
@@ -434,7 +441,8 @@ func executeSmartContractForStorageTrie(b *testing.B, opt *ContractExecutionOpti
 }
 
 func makeStorageTrieTransactions(c *deployedContract, accountMap *AccountMap, bcdata *BCData,
-	numTransactions int) (types.Transactions, error) {
+	numTransactions int,
+) (types.Transactions, error) {
 	abii, err := abi.JSON(strings.NewReader(c.abi))
 	if err != nil {
 		return nil, err
