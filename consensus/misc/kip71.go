@@ -25,7 +25,7 @@ func VerifyKIP71Header(config *params.ChainConfig, parentHeader, header *types.H
 
 func CalcBaseFee(parentHeader *types.Header, config *params.ChainConfig) *big.Int {
 	// If the current is the kip71 disabled block, then return default base fee (250ston)
-	if !config.IsKIP71ForkEnabled(parentHeader.Number) {
+	if !config.IsKIP71ForkEnabled(parentHeader.Number) || parentHeader.Number.Cmp(new(big.Int).SetUint64(0)) == 0 {
 		return new(big.Int).SetUint64(config.UnitPrice)
 	}
 

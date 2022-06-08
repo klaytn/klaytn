@@ -1577,8 +1577,9 @@ func (pool *TxPool) demoteUnexecutables() {
 						removed, invalids := list.Remove(tx) // delete all transactions satisfying the nonce value > tx.Nonce()
 						if removed {
 							for _, invalidTx := range invalids {
-								pool.enqueueTx(hash, invalidTx)
+								pool.enqueueTx(invalidTx.Hash(), invalidTx)
 							}
+							pool.enqueueTx(hash, tx)
 						}
 						break
 					}
