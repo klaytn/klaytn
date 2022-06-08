@@ -421,7 +421,7 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	pool.pendingNonce = make(map[common.Address]uint64)
 	pool.currentBlockNumber = newHead.Number.Uint64()
 	// It need to update gas price of tx pool after kip71 hardfork
-	if pool.chainconfig.IsKIP71ForkEnabled(newHead.Number) {
+	if pool.chainconfig.IsKIP71ForkEnabled(new(big.Int).Add(newHead.Number, big.NewInt(1))) {
 		pool.gasPrice = misc.CalcBaseFee(newHead, pool.chainconfig)
 	}
 
