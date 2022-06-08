@@ -380,7 +380,7 @@ func (c *ChainConfig) SetDefaults() {
 			c.Governance.Reward.StakingUpdateInterval)
 	}
 
-	// StakingUpdateInterval must be nonzero because it is used as denominator
+	// ProposerUpdateInterval must be nonzero because it is used as denominator
 	if c.Governance.Reward.ProposerUpdateInterval == 0 {
 		c.Governance.Reward.ProposerUpdateInterval = ProposerUpdateInterval()
 		logger.Warn("Override the default proposer update interval to the chain config", "interval",
