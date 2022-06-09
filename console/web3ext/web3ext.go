@@ -286,6 +286,7 @@ web3._extend({
 	properties: []
 });
 `
+
 const Governance_JS = `
 web3._extend({
 	property: 'governance',
@@ -358,6 +359,7 @@ web3._extend({
 	]
 });
 `
+
 const Admin_JS = `
 web3._extend({
 	property: 'admin',
@@ -1203,6 +1205,7 @@ web3._extend({
 	]
 });
 `
+
 const MainBridge_JS = `
 web3._extend({
 	property: 'mainbridge',
@@ -1230,6 +1233,7 @@ web3._extend({
 	]
 });
 `
+
 const SubBridge_JS = `
 web3._extend({
 	property: 'subbridge',
@@ -1415,6 +1419,11 @@ web3._extend({
 			params: 1,
 			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
 		}),
+		new web3._extend.Method({
+			name: 'requestParentSync',
+			call: 'subbridge_requestParentSync',
+			params: 0,
+		})
 	],
     properties: [
 		new web3._extend.Property({
@@ -1495,9 +1504,19 @@ web3._extend({
 			name: 'childBridgeOperatorGasLimit',
 			getter: 'subbridge_getChildBridgeOperatorGasLimit',
 		}),
+
+		new web3._extend.Property({
+			name: 'parentGasPrice',
+			getter: 'subbridge_getParentGasPrice',
+		}),
+		new web3._extend.Property({
+			name: 'parentKIP71Config',
+			getter: 'subbridge_getParentKIP71Config',
+		}),
 	]
 });
 `
+
 const CliqueJs = `
 web3._extend({
 	property: 'clique',
