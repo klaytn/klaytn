@@ -26,7 +26,6 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
@@ -158,13 +157,6 @@ type VoteMap struct {
 // txPool is an interface for blockchain.TxPool used in governance package.
 type txPool interface {
 	SetGasPrice(price *big.Int)
-}
-
-// blockChain is an interface for blockchain.Blockchain used in governance package.
-type blockChain interface {
-	CurrentHeader() *types.Header
-	SetProposerPolicy(val uint64)
-	SetUseGiniCoeff(val bool)
 }
 
 type Governance struct {
