@@ -77,6 +77,7 @@ var (
 	// Default Values: Constants used for getting default values for configuration
 	DefaultGovernanceMode          = "none"
 	DefaultGoverningNode           = "0x0000000000000000000000000000000000000000"
+	DefaultGovernanceContract      = "0x0000000000000000000000000000000000000000"
 	DefaultEpoch                   = uint64(604800)
 	DefaultProposerPolicy          = uint64(RoundRobin)
 	DefaultSubGroupSize            = uint64(21)
