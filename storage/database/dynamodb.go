@@ -54,14 +54,19 @@ var dynamoBatchWriteTimeMeter metrics.Meter = &metrics.NilMeter{}
 
 // errors
 var dataNotFoundErr = errors.New("data is not found with the given key")
-var nilDynamoConfigErr = errors.New("attempt to create DynamoDB with nil configuration")
-var noTableNameErr = errors.New("dynamoDB table name not provided")
+
+var (
+	nilDynamoConfigErr = errors.New("attempt to create DynamoDB with nil configuration")
+	noTableNameErr     = errors.New("dynamoDB table name not provided")
+)
 
 // batch write size
 const dynamoWriteSizeLimit = 399 * 1024 // The maximum write size is 400KB including attribute names and values
-const dynamoBatchSize = 25
-const dynamoMaxRetry = 20
-const dynamoTimeout = 10 * time.Second
+const (
+	dynamoBatchSize = 25
+	dynamoMaxRetry  = 20
+	dynamoTimeout   = 10 * time.Second
+)
 
 // batch write
 const WorkerNum = 10

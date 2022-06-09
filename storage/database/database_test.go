@@ -33,6 +33,7 @@ import (
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
 func newTestLDB() (Database, func()) {
@@ -87,7 +88,9 @@ func newTestDynamoS3DB() (Database, func()) {
 		panic("failed to create test DynamoS3 database: " + err.Error())
 	}
 	return db, func() {
-		db.deleteDB()
+		db.Close()
+		db.deleteTable()
+		db.fdb.deleteBucket()
 
 		// to finish test with DynamoDB singletons
 		dynamoDBClient = oldDynamoDBClient
@@ -96,39 +99,69 @@ func newTestDynamoS3DB() (Database, func()) {
 	}
 }
 
-var test_values = []string{"a", "1251", "\x00123\x00"}
+type commonDatabaseTestSuite struct {
+	suite.Suite
+	database Database
+}
 
-//var test_values = []string{"", "a", "1251", "\x00123\x00"} original test_values; modified since badgerDB can't store empty key
+func TestDatabaseTestSuite(t *testing.T) {
+	// If you want to include dynamo test, use below line
+	// var testDatabases = []func() (Database, func()){newTestLDB, newTestBadgerDB, newTestMemDB, newTestDynamoS3DB}
 
-// TODO-Klaytn-Database Need to add DynamoDB to the below list.
-var testDatabases = []func() (Database, func()){newTestLDB, newTestBadgerDB, newTestMemDB}
-
-//var testDatabases = []func() (Database, func()){newTestLDB, newTestBadgerDB, newTestMemDB, newTestDynamoS3DB} if want to include the dynamo test, use this line
-
-// TestDatabase_PutGet tests the basic put and get operations.
-func TestDatabase_PutGet(t *testing.T) {
-	for _, dbCreateFn := range testDatabases {
-		db, remove := dbCreateFn()
-		defer remove()
-		testPutGet(db, t)
+	// TODO-Klaytn-Database Need to add DynamoDB to the below list.
+	testDatabases := []func() (Database, func()){newTestLDB, newTestBadgerDB, newTestMemDB}
+	for _, newFn := range testDatabases {
+		db, remove := newFn()
+		suite.Run(t, &commonDatabaseTestSuite{database: db})
+		remove()
 	}
 }
 
-// TestDatabase_ParallelPutGet tests the parallel put and get operations.
-func TestDatabase_ParallelPutGet(t *testing.T) {
-	for _, dbCreateFn := range testDatabases {
-		db, remove := dbCreateFn()
-		defer remove()
-		testParallelPutGet(db, t)
-	}
-}
+// TestNilValue checks if all database write/read nil value in the same way.
+func (ts *commonDatabaseTestSuite) TestNilValue() {
+	db, t := ts.database, ts.T()
 
-// TestDatabase_NotFoundErr checks if an empty database returns
-// dataNotFoundErr for the given  random key.
-func TestDatabase_NotFoundErr(t *testing.T) {
-	for _, dbCreateFn := range testDatabases {
-		db, remove := dbCreateFn()
-		defer remove()
+	// non-batch
+	{
+		// write nil value
+		key := common.MakeRandomBytes(32)
+		assert.Nil(t, db.Put(key, nil))
+
+		// get nil value
+		ret, err := db.Get(key)
+		assert.Equal(t, []byte{}, ret)
+		assert.Nil(t, err)
+
+		// check existence
+		exist, err := db.Has(key)
+		assert.Equal(t, true, exist)
+		assert.Nil(t, err)
+
+		val, err := db.Get(randStrBytes(100))
+		assert.Nil(t, val)
+		assert.Error(t, err)
+		assert.Equal(t, dataNotFoundErr, err)
+	}
+
+	// batch
+	{
+		batch := db.NewBatch()
+
+		// write nil value
+		key := common.MakeRandomBytes(32)
+		assert.Nil(t, batch.Put(key, nil))
+		assert.NoError(t, batch.Write())
+
+		// get nil value
+		ret, err := db.Get(key)
+		assert.Equal(t, []byte{}, ret)
+		assert.Nil(t, err)
+
+		// check existence
+		exist, err := db.Has(key)
+		assert.Equal(t, true, exist)
+		assert.Nil(t, err)
+
 		val, err := db.Get(randStrBytes(100))
 		assert.Nil(t, val)
 		assert.Error(t, err)
@@ -136,63 +169,26 @@ func TestDatabase_NotFoundErr(t *testing.T) {
 	}
 }
 
-// TestDatabase_NilValue checks if all database write/read nil value in the same way.
-func TestDatabase_NilValue(t *testing.T) {
-	for _, dbCreateFn := range testDatabases {
-		db, remove := dbCreateFn()
-		defer remove()
+// TestNotFoundErr checks if an empty database returns DataNotFoundErr for the given random key.
+func (ts *commonDatabaseTestSuite) TestNotFoundErr() {
+	db, t := ts.database, ts.T()
 
-		{
-			// write nil value
-			key := common.MakeRandomBytes(32)
-			assert.Nil(t, db.Put(key, nil))
-
-			// get nil value
-			ret, err := db.Get(key)
-			assert.Equal(t, []byte{}, ret)
-			assert.Nil(t, err)
-
-			// check existence
-			exist, err := db.Has(key)
-			assert.Equal(t, true, exist)
-			assert.Nil(t, err)
-
-			val, err := db.Get(randStrBytes(100))
-			assert.Nil(t, val)
-			assert.Error(t, err)
-			assert.Equal(t, dataNotFoundErr, err)
-		}
-
-		// batch
-		{
-			batch := db.NewBatch()
-
-			// write nil value
-			key := common.MakeRandomBytes(32)
-			assert.Nil(t, batch.Put(key, nil))
-			assert.NoError(t, batch.Write())
-
-			// get nil value
-			ret, err := db.Get(key)
-			assert.Equal(t, []byte{}, ret)
-			assert.Nil(t, err)
-
-			// check existence
-			exist, err := db.Has(key)
-			assert.Equal(t, true, exist)
-			assert.Nil(t, err)
-
-			val, err := db.Get(randStrBytes(100))
-			assert.Nil(t, val)
-			assert.Error(t, err)
-			assert.Equal(t, dataNotFoundErr, err)
-		}
-	}
+	val, err := db.Get(randStrBytes(100))
+	assert.Nil(t, val)
+	assert.Error(t, err)
+	assert.Equal(t, dataNotFoundErr, err)
 }
 
-func testPutGet(db Database, t *testing.T) {
+// TestPutGet tests the basic put and get operations.
+func (ts *commonDatabaseTestSuite) TestPutGet() {
+	db, t := ts.database, ts.T()
+
+	// Since badgerDB can't store empty key, testValues is modified. Below line is the original testValues.
+	// var testValues = []string{"", "a", "1251", "\x00123\x00"}
+	testValues := []string{"a", "1251", "\x00123\x00"}
+
 	// put
-	for _, v := range test_values {
+	for _, v := range testValues {
 		err := db.Put([]byte(v), []byte(v))
 		if err != nil {
 			t.Fatalf("put failed: %v", err)
@@ -200,7 +196,7 @@ func testPutGet(db Database, t *testing.T) {
 	}
 
 	// get
-	for _, v := range test_values {
+	for _, v := range testValues {
 		data, err := db.Get([]byte(v))
 		if err != nil {
 			t.Fatalf("get failed: %v", err)
@@ -211,7 +207,7 @@ func testPutGet(db Database, t *testing.T) {
 	}
 
 	// override with "?"
-	for _, v := range test_values {
+	for _, v := range testValues {
 		err := db.Put([]byte(v), []byte("?"))
 		if err != nil {
 			t.Fatalf("put override failed: %v", err)
@@ -219,7 +215,7 @@ func testPutGet(db Database, t *testing.T) {
 	}
 
 	// get "?" by key
-	for _, v := range test_values {
+	for _, v := range testValues {
 		data, err := db.Get([]byte(v))
 		if err != nil {
 			t.Fatalf("get failed: %v", err)
@@ -230,7 +226,7 @@ func testPutGet(db Database, t *testing.T) {
 	}
 
 	// override returned value
-	for _, v := range test_values {
+	for _, v := range testValues {
 		orig, err := db.Get([]byte(v))
 		if err != nil {
 			t.Fatalf("get failed: %v", err)
@@ -246,7 +242,7 @@ func testPutGet(db Database, t *testing.T) {
 	}
 
 	// delete
-	for _, v := range test_values {
+	for _, v := range testValues {
 		err := db.Delete([]byte(v))
 		if err != nil {
 			t.Fatalf("delete %q failed: %v", v, err)
@@ -254,7 +250,7 @@ func testPutGet(db Database, t *testing.T) {
 	}
 
 	// try to get deleted values
-	for _, v := range test_values {
+	for _, v := range testValues {
 		_, err := db.Get([]byte(v))
 		if err == nil {
 			t.Fatalf("got deleted value %q", v)
@@ -263,7 +259,6 @@ func testPutGet(db Database, t *testing.T) {
 }
 
 func TestShardDB(t *testing.T) {
-
 	key := common.Hex2Bytes("0x91d6f7d2537d8a0bd7d487dcc59151ebc00da306")
 
 	hashstring := strings.TrimPrefix("0x93d6f3d2537d8a0bd7d485dcc59151ebc00da306", "0x")
@@ -277,10 +272,11 @@ func TestShardDB(t *testing.T) {
 	idx := common.BytesToHash(key).Big().Mod(common.BytesToHash(key).Big(), big.NewInt(4))
 
 	fmt.Printf("idx %d   %d   %d\n", idx, shard, seed)
-
 }
 
-func testParallelPutGet(db Database, t *testing.T) {
+// TestParallelPutGet tests the parallel put and get operations.
+func (ts *commonDatabaseTestSuite) TestParallelPutGet() {
+	db := ts.database
 	const n = 8
 	var pending sync.WaitGroup
 

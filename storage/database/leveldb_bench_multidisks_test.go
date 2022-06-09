@@ -13,6 +13,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+//go:build multidisktest
 // +build multidisktest
 
 package database
@@ -77,7 +78,6 @@ func benchmark_MDP_Put_GoRoutine(b *testing.B, mdo *multiDiskOption) {
 			go func(currDB Database, idx int) {
 				defer wait.Done()
 				currDB.Put(keys[idx], values[idx])
-
 			}(db, k)
 		}
 		wait.Wait()
@@ -396,8 +396,11 @@ func benchmark_MDP_Get_GoRoutine(b *testing.B, mdo *multiDiskOption, numReads in
 
 // please change below rowSize to change the size of an input row for MDP_Get tests (GoRoutine & NoGoRoutine)
 const rowSizeGetMDP = 250
-const insertedRowsBeforeGetMDP = 1000 * 100 // pre-insertion size before read
-const numReadsMDP = 1000
+
+const (
+	insertedRowsBeforeGetMDP = 1000 * 100 // pre-insertion size before read
+	numReadsMDP              = 1000
+)
 
 var getMDPBenchmarks = [...]struct {
 	name     string
@@ -440,7 +443,6 @@ func Benchmark_MDP_Get_Random_1kRows_NoGoRoutine(b *testing.B) {
 }
 
 func Benchmark_MDP_Parallel_Get(b *testing.B) {
-
 	for _, bm := range getMDPBenchmarks {
 		b.Run(bm.name, func(b *testing.B) {
 			b.StopTimer()
@@ -482,7 +484,6 @@ func Benchmark_MDP_Parallel_Get(b *testing.B) {
 }
 
 func Benchmark_MDP_Parallel_Put(b *testing.B) {
-
 	for _, bm := range putMDPBenchmarks {
 		b.Run(bm.name, func(b *testing.B) {
 			b.StopTimer()
@@ -518,7 +519,6 @@ func Benchmark_MDP_Parallel_Put(b *testing.B) {
 const parallelBatchSizeMDP = 100
 
 func Benchmark_MDP_Parallel_Batch(b *testing.B) {
-
 	for _, bm := range batchMDPBenchmarks {
 		b.Run(bm.name, func(b *testing.B) {
 			b.StopTimer()

@@ -75,6 +75,18 @@ func makeCommittedSeals(hash common.Hash) [][]byte {
 	return committedSeals
 }
 
+// Include a node from the global nodeKeys and addrs
+func includeNode(addr common.Address, key *ecdsa.PrivateKey) {
+	for _, a := range addrs {
+		if a.String() == addr.String() {
+			// already exists
+			return
+		}
+	}
+	nodeKeys = append(nodeKeys, key)
+	addrs = append(addrs, addr)
+}
+
 // Exclude a node from the global nodeKeys and addrs
 func excludeNodeByAddr(target common.Address) {
 	for i, a := range addrs {
@@ -102,7 +114,7 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 	)
 	// force enable Istanbul engine and governance
 	genesis.Config.Istanbul = params.GetDefaultIstanbulConfig()
-	genesis.Config.Governance = params.GetDefaultGovernanceConfig(params.UseIstanbul)
+	genesis.Config.Governance = params.GetDefaultGovernanceConfig()
 	for _, item := range items {
 		switch v := item.(type) {
 		case istanbulCompatibleBlock:
@@ -668,6 +680,13 @@ func makeExpectedResult(indices []int, candidate []common.Address) []common.Addr
 	return copyAndSortAddrs(expected)
 }
 
+// Asserts taht if all (key,value) pairs of `subset` exists in `set`
+func assertMapSubset(t *testing.T, subset, set map[string]interface{}) {
+	for k, v := range subset {
+		assert.Equal(t, set[k], v)
+	}
+}
+
 func TestSnapshot_Validators_AfterMinimumStakingVotes(t *testing.T) {
 	type vote struct {
 		key   string
@@ -1057,6 +1076,70 @@ func TestSnapshot_Validators_AddRemove(t *testing.T) {
 				checkpointInterval + 9: {[]int{0, 1, 2, 3}},
 			},
 		},
+		{ // multiple addvalidator & removevalidator
+			10,
+			map[int]vote{
+				0: {"governance.removevalidator", 3},
+				2: {"governance.addvalidator", 3},
+				4: {"governance.addvalidator", 3},
+				6: {"governance.removevalidator", 3},
+				8: {"governance.removevalidator", 3},
+			},
+			map[int]expected{
+				1: {[]int{0, 1, 2}},
+				3: {[]int{0, 1, 2, 3}},
+				5: {[]int{0, 1, 2, 3}},
+				7: {[]int{0, 1, 2}},
+				9: {[]int{0, 1, 2}},
+			},
+		},
+		{ // multiple removevalidator & addvalidator
+			10,
+			map[int]vote{
+				0: {"governance.removevalidator", 3},
+				2: {"governance.removevalidator", 3},
+				4: {"governance.addvalidator", 3},
+				6: {"governance.addvalidator", 3},
+			},
+			map[int]expected{
+				1: {[]int{0, 1, 2}},
+				3: {[]int{0, 1, 2}},
+				5: {[]int{0, 1, 2, 3}},
+				7: {[]int{0, 1, 2, 3}},
+			},
+		},
+		{ // multiple addvalidators & removevalidators
+			10,
+			map[int]vote{
+				0: {"governance.removevalidator", []int{2, 3}},
+				2: {"governance.addvalidator", []int{2, 3}},
+				4: {"governance.addvalidator", []int{2, 3}},
+				6: {"governance.removevalidator", []int{2, 3}},
+				8: {"governance.removevalidator", []int{2, 3}},
+			},
+			map[int]expected{
+				1: {[]int{0, 1}},
+				3: {[]int{0, 1, 2, 3}},
+				5: {[]int{0, 1, 2, 3}},
+				7: {[]int{0, 1}},
+				9: {[]int{0, 1}},
+			},
+		},
+		{ // multiple removevalidators & addvalidators
+			10,
+			map[int]vote{
+				0: {"governance.removevalidator", []int{2, 3}},
+				2: {"governance.removevalidator", []int{2, 3}},
+				4: {"governance.addvalidator", []int{2, 3}},
+				6: {"governance.addvalidator", []int{2, 3}},
+			},
+			map[int]expected{
+				1: {[]int{0, 1}},
+				3: {[]int{0, 1}},
+				5: {[]int{0, 1, 2, 3}},
+				7: {[]int{0, 1, 2, 3}},
+			},
+		},
 	}
 
 	var configItems []interface{}
@@ -1115,8 +1198,7 @@ func TestSnapshot_Validators_AddRemove(t *testing.T) {
 				}
 				if v.key == "governance.addvalidator" {
 					for _, i := range indices {
-						nodeKeys = append(nodeKeys, allNodeKeys[i])
-						addrs = append(addrs, allAddrs[i])
+						includeNode(allAddrs[i], allNodeKeys[i])
 					}
 				}
 				if v.key == "governance.removevalidator" {
@@ -1324,6 +1406,98 @@ func TestGovernance_Votes(t *testing.T) {
 			assert.Equal(t, item.value, items[item.key])
 		}
 
+		engine.Stop()
+	}
+}
+
+func TestGovernance_ReaderEngine(t *testing.T) {
+	// Test that ReaderEngine (Params(), ParamsAt(), UpdateParams()) works.
+	type vote = map[string]interface{}
+	type expected = map[string]interface{} // expected (subset of) governance items
+	type testcase struct {
+		length   int // total number of blocks to simulate
+		votes    map[int]vote
+		expected map[int]expected
+	}
+
+	testcases := []testcase{
+		{
+			8,
+			map[int]vote{
+				1: {"governance.unitprice": uint64(17)},
+			},
+			map[int]expected{
+				0: {"governance.unitprice": uint64(1)},
+				1: {"governance.unitprice": uint64(1)},
+				2: {"governance.unitprice": uint64(1)},
+				3: {"governance.unitprice": uint64(1)},
+				4: {"governance.unitprice": uint64(1)},
+				5: {"governance.unitprice": uint64(1)},
+				6: {"governance.unitprice": uint64(17)},
+				7: {"governance.unitprice": uint64(17)},
+				8: {"governance.unitprice": uint64(17)},
+			},
+		},
+	}
+
+	var configItems []interface{}
+	configItems = append(configItems, proposerPolicy(params.WeightedRandom))
+	configItems = append(configItems, proposerUpdateInterval(1))
+	configItems = append(configItems, epoch(3))
+	configItems = append(configItems, governanceMode("single"))
+	configItems = append(configItems, minimumStake(new(big.Int).SetUint64(4000000)))
+	configItems = append(configItems, istanbulCompatibleBlock(new(big.Int).SetUint64(0)))
+	configItems = append(configItems, blockPeriod(0)) // set block period to 0 to prevent creating future block
+	stakes := []uint64{4000000, 4000000, 4000000, 4000000}
+
+	for _, tc := range testcases {
+		// Create test blockchain
+		chain, engine := newBlockChain(4, configItems...)
+
+		oldStakingManager := reward.GetStakingManager()
+		stakingInfo := makeFakeStakingInfo(0, nodeKeys, stakes)
+		reward.SetTestStakingManagerWithStakingInfoCache(stakingInfo)
+
+		var previousBlock, currentBlock *types.Block = nil, chain.Genesis()
+
+		// Create blocks with votes
+		for num := 0; num <= tc.length; num++ {
+			// Validate current params with Params() and CurrentSetCopy().
+			// Check that both returns the expected result.
+			assertMapSubset(t, tc.expected[num], engine.governance.Params().StrMap())
+			assertMapSubset(t, tc.expected[num], engine.governance.CurrentSetCopy())
+
+			// Place a vote if a vote is scheduled in upcoming block
+			// Note that we're building (head+1)'th block here.
+			for k, v := range tc.votes[num+1] {
+				ok := engine.governance.AddVote(k, v)
+				assert.True(t, ok)
+			}
+
+			// Create a block
+			previousBlock = currentBlock
+			currentBlock = makeBlockWithSeal(chain, engine, previousBlock)
+			_, err := chain.InsertChain(types.Blocks{currentBlock})
+			assert.NoError(t, err)
+
+			// Load parameters for the next block
+			err = engine.governance.UpdateParams()
+			assert.NoError(t, err)
+		}
+
+		// Validate historic parameters with ParamsAt() and ReadGovernance().
+		// Check that both returns the expected result.
+		for num := 0; num <= tc.length; num++ {
+			pset, err := engine.governance.ParamsAt(uint64(num))
+			assert.NoError(t, err)
+			assertMapSubset(t, tc.expected[num], pset.StrMap())
+
+			_, items, err := engine.governance.ReadGovernance(uint64(num))
+			assert.NoError(t, err)
+			assertMapSubset(t, tc.expected[num], items)
+		}
+
+		reward.SetTestStakingManager(oldStakingManager)
 		engine.Stop()
 	}
 }

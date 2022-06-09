@@ -29,7 +29,7 @@ import (
 type overflowCheckFunc func(t *testing.T)
 
 func TestGasOverflow(t *testing.T) {
-	var testFunctions = []struct {
+	testFunctions := []struct {
 		Name                 string
 		gasOverflowCheckFunc overflowCheckFunc
 	}{

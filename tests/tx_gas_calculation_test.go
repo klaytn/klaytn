@@ -29,6 +29,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/profile"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
 )
@@ -51,7 +52,7 @@ type TestAccount interface {
 type genTransaction func(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64)
 
 func TestGasCalculation(t *testing.T) {
-	var testFunctions = []struct {
+	testFunctions := []struct {
 		Name  string
 		genTx genTransaction
 	}{
@@ -84,7 +85,7 @@ func TestGasCalculation(t *testing.T) {
 		{"FeeDelegatedWithRatioChainDataAnchoring", genFeeDelegatedWithRatioChainDataAnchoring},
 	}
 
-	var accountTypes = []struct {
+	accountTypes := []struct {
 		Type    string
 		account TestAccount
 	}{
@@ -95,9 +96,7 @@ func TestGasCalculation(t *testing.T) {
 		{"RoleBasedWithMultiSig", genRoleBasedWithMultiSigAccount(t)},
 	}
 
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain

@@ -60,8 +60,7 @@ func (dynamo *dynamoDBReadOnly) NewBatch() Batch {
 	return &emptyBatch{}
 }
 
-type emptyBatch struct {
-}
+type emptyBatch struct{}
 
 func (batch *emptyBatch) Put(key, val []byte) error {
 	return nil
