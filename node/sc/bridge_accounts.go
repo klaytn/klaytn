@@ -42,9 +42,7 @@ const (
 	ChildBridgeAccountName  = "child_bridge_account"
 )
 
-var (
-	errUnlockDurationTooLarge = errors.New("unlock duration too large")
-)
+var errUnlockDurationTooLarge = errors.New("unlock duration too large")
 
 type feePayerDB interface {
 	WriteParentOperatorFeePayer(feePayer common.Address)
@@ -55,13 +53,14 @@ type feePayerDB interface {
 
 // accountInfo has bridge account's information to make and sign a transaction.
 type accountInfo struct {
-	am       *accounts.Manager  // the account manager of the node for the fee payer.
-	keystore *keystore.KeyStore // the keystore of the operator.
-	address  common.Address
-	nonce    uint64
-	chainID  *big.Int
-	gasPrice *big.Int
-	gasLimit uint64
+	am          *accounts.Manager  // the account manager of the node for the fee payer.
+	keystore    *keystore.KeyStore // the keystore of the operator.
+	address     common.Address
+	nonce       uint64
+	chainID     *big.Int
+	gasPrice    *big.Int
+	gasLimit    uint64
+	kip71Config params.KIP71Config
 
 	isNonceSynced bool
 	mu            sync.RWMutex
@@ -128,6 +127,22 @@ func (ba *BridgeAccounts) SetParentBridgeOperatorGasLimit(fee uint64) {
 // SetChildBridgeOperatorGasLimit changes GasLimit of child operator.
 func (ba *BridgeAccounts) SetChildBridgeOperatorGasLimit(fee uint64) {
 	ba.cAccount.gasLimit = fee
+}
+
+// GetParentGasPrice returns the parent chain's gas price.
+func (ba *BridgeAccounts) GetParentGasPrice() uint64 {
+	if ba.pAccount.gasPrice == nil {
+		return 0
+	}
+	return ba.pAccount.gasPrice.Uint64()
+}
+
+func (ba *BridgeAccounts) SetParentKIP71Config(kip71Config params.KIP71Config) {
+	ba.pAccount.kip71Config = kip71Config
+}
+
+func (ba *BridgeAccounts) GetParentKIP71Config() params.KIP71Config {
+	return ba.pAccount.kip71Config
 }
 
 // NewBridgeAccounts returns bridgeAccounts created by main/service bridge account keys.
