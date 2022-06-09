@@ -17,7 +17,6 @@
 package reward
 
 import (
-	"errors"
 	"math/big"
 
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -26,7 +25,6 @@ import (
 )
 
 var logger = log.NewModuleLogger(log.Reward)
-var errInvalidKIP71Block = errors.New("Invalide KIP-71 block with no baseFee")
 
 type BalanceAdder interface {
 	AddBalance(addr common.Address, v *big.Int)
@@ -53,41 +51,41 @@ func NewRewardDistributor(gh governanceHelper) *RewardDistributor {
 }
 
 // getTotalTxFee returns the total transaction gas fee of the block.
-func (rd *RewardDistributor) getTotalTxFee(header *types.Header, rewardConfig *rewardConfig, isKIP71Forked bool) (*big.Int, error) {
+func (rd *RewardDistributor) getTotalTxFee(header *types.Header, rewardConfig *rewardConfig) *big.Int {
 	totalGasUsed := big.NewInt(0).SetUint64(header.GasUsed)
-	var totalTxFee *big.Int
-	if isKIP71Forked {
-		if header.BaseFee == nil {
-			logger.Error("KIP-71 hard forked block should have baseFee", "blockNum", header.Number.Uint64())
-			return nil, errInvalidKIP71Block
-		}
-		totalTxFee = totalGasUsed.Mul(totalGasUsed, header.BaseFee)
-		// burned 50% TxFee
-		return totalTxFee.Div(totalTxFee, big.NewInt(2)), nil
+	if header.BaseFee != nil {
+		// kip71 hardfork
+		return totalGasUsed.Mul(totalGasUsed, header.BaseFee)
 	} else {
-		return totalGasUsed.Mul(totalGasUsed, rewardConfig.unitPrice), nil
+		return totalGasUsed.Mul(totalGasUsed, rewardConfig.unitPrice)
 	}
 }
 
+func (rd *RewardDistributor) txFeeBurning(txFee *big.Int) *big.Int {
+	return txFee.Div(txFee, big.NewInt(2))
+}
+
 // MintKLAY mints KLAY and gives the KLAY and the total transaction gas fee to the block proposer.
-func (rd *RewardDistributor) MintKLAY(b BalanceAdder, header *types.Header, isKIP71Forked bool) error {
+func (rd *RewardDistributor) MintKLAY(b BalanceAdder, header *types.Header) error {
 	rewardConfig, err := rd.rcc.get(header.Number.Uint64())
 	if err != nil {
 		return err
 	}
 
-	totalTxFee, err := rd.getTotalTxFee(header, rewardConfig, isKIP71Forked)
-	if err != nil {
-		return err
+	totalTxFee := rd.getTotalTxFee(header, rewardConfig)
+	if header.BaseFee != nil {
+		// kip71 hardfork
+		totalTxFee = totalTxFee.Add(rewardConfig.mintingAmount, rd.txFeeBurning(totalTxFee))
+	} else {
+		totalTxFee = totalTxFee.Add(rewardConfig.mintingAmount, totalTxFee)
 	}
-	blockReward := totalTxFee.Add(rewardConfig.mintingAmount, totalTxFee)
 
-	b.AddBalance(header.Rewardbase, blockReward)
+	b.AddBalance(header.Rewardbase, totalTxFee)
 	return nil
 }
 
 // DistributeBlockReward distributes block reward to proposer, kirAddr and pocAddr.
-func (rd *RewardDistributor) DistributeBlockReward(b BalanceAdder, header *types.Header, pocAddr common.Address, kirAddr common.Address, isKIP71Forked bool) error {
+func (rd *RewardDistributor) DistributeBlockReward(b BalanceAdder, header *types.Header, pocAddr common.Address, kirAddr common.Address) error {
 	rewardConfig, err := rd.rcc.get(header.Number.Uint64())
 	if err != nil {
 		return err
@@ -96,9 +94,10 @@ func (rd *RewardDistributor) DistributeBlockReward(b BalanceAdder, header *types
 	// Calculate total tx fee
 	totalTxFee := common.Big0
 	if rd.gh.DeferredTxFee() {
-		totalTxFee, err = rd.getTotalTxFee(header, rewardConfig, isKIP71Forked)
-		if err != nil {
-			return err
+		totalTxFee = rd.getTotalTxFee(header, rewardConfig)
+		// kip71 hardfork
+		if header.BaseFee != nil {
+			totalTxFee = rd.txFeeBurning(totalTxFee)
 		}
 	}
 
