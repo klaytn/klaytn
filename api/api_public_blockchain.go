@@ -341,7 +341,6 @@ func (s *PublicBlockChainAPI) Call(ctx context.Context, args CallArgs, blockNrOr
 
 	err = blockchain.GetVMerrFromReceiptStatus(status)
 	if err != nil && isReverted(err) && len(result) > 0 {
-		logger.Info("revert error occured", "error", err)
 		return nil, newRevertError(result)
 	}
 	return common.CopyBytes(result), err
@@ -669,6 +668,7 @@ func (args *CallArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsic
 		} else {
 			// User specified 1559 gas fields (or none), use those
 			gasFeeCap = new(big.Int)
+			gasTipCap = new(big.Int)
 			// Backfill the legacy gasPrice for EVM execution, unless we're all zeros
 			gasPrice = new(big.Int)
 			if gasFeeCap.BitLen() > 0 || gasTipCap.BitLen() > 0 {

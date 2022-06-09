@@ -606,7 +606,6 @@ func (api *EthereumAPI) Call(ctx context.Context, args EthTransactionArgs, block
 
 	err = blockchain.GetVMerrFromReceiptStatus(status)
 	if err != nil && isReverted(err) && len(result) > 0 {
-		logger.Info("revert error occured", "error", err)
 		return nil, newRevertError(result)
 	}
 	return common.CopyBytes(result), err
