@@ -291,7 +291,22 @@ commands:
           command : |
             curl --data '{"text": "❌ Job *'$CIRCLE_JOB'* failed on *'$CIRCLE_BRANCH'*. Please see '$CIRCLE_BUILD_URL' for details."}' "$SLACK_WEBHOOK_URL"
           when: on_fail
-
+  run-rpc:
+    steps:
+      - run:
+          name: "Run rpc-tester on 1CN private network"
+          no_output_timeout: 30m
+          command: |
+            make kcn 
+            git clone https://$TEST_TOKEN@github.com/klaytn/klaytn-rpc-tester.git
+            cd klaytn-rpc-tester
+            cp ../build/bin/kcn script/cn/bin/
+            cd script
+            ./set_CNonly.sh
+            cd ..
+            pip3 install -r requirements.txt
+            cp config_template.json config.json
+            python3 main.py --protocol rpc
 jobs:
   build:
     machine:
@@ -370,6 +385,14 @@ jobs:
           command: |
             make test-others
 
+  test-rpc:
+    executor: test-executor
+    steps:
+      - checkout
+      - install-golang
+      - pre-build
+      - run-rpc
+
   pass-tests:
     executor: default
     steps:
@@ -422,6 +445,16 @@ jobs:
       - notify-success
       - store_artifacts:
           path: /tmp/linter_reports
+  
+  rpc-tester-report:
+    executor: test-executor
+    steps:
+      - checkout
+      - install-golang
+      - pre-build
+      - run-rpc
+      - notify-failure
+      - notify-success
 
   packaging-linux:
     machine: 
@@ -544,6 +577,8 @@ workflows:
               only: /^v[0-9]+\.[0-9]+\.[0-9]+/
             branches:
               ignore: /.*/
+      - test-rpc:
+         filters: *filter-only-version-tag
 
       - pass-tests:
           requires:
@@ -661,4 +696,13 @@ workflows:
               only: dev
     jobs:
       - linters
-
+  
+  nightly-rpc:
+    triggers:
+      - schedule:
+          cron: "0 20 * * *"
+          filters:
+            branches:
+              only: dev
+    jobs:
+      - rpc-tester-report
