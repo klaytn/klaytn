@@ -18,7 +18,7 @@
 // This file is derived from internal/debug/trace.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
-//+build go1.5
+// +build go1.5
 
 package debug
 
