@@ -137,9 +137,10 @@ type kerror struct {
 func NewStateTransition(evm *vm.EVM, msg Message) *StateTransition {
 	var effectiveGasPrice *big.Int
 	if !evm.ChainConfig().IsKIP71ForkEnabled(evm.BlockNumber) {
-		// TODO-klaytn it use calculation algorithm of ethereum
+		// TODO-klaytn it use calculation algorithm of ethereum.
 		// We have used it just like mock function. It returns governance unitprice
-		// after hard fork, we need to consider new getEffectiveGasPrice API that operates differently
+		// because GetGasTipCap() is same with GetGasFeeCap()
+		// After hard fork, we need to consider new getEffectiveGasPrice API that operates differently
 		effectiveGasPrice = msg.EffectiveGasPrice(evm.BaseFee)
 	} else {
 		// apply dynamically changed base fee to burning and rewards

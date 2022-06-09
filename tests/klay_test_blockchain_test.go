@@ -309,7 +309,7 @@ func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockc
 
 	// Apply reward
 	start = time.Now()
-	if err := bcdata.rewardDistributor.MintKLAY(accountMap, header, false); err != nil {
+	if err := bcdata.rewardDistributor.MintKLAY(accountMap, header); err != nil {
 		return err
 	}
 	prof.Profile("main_apply_reward", time.Now().Sub(start))
@@ -374,7 +374,7 @@ func (bcdata *BCData) GenABlockWithTransactions(accountMap *AccountMap, transact
 
 	// Apply reward
 	start = time.Now()
-	if err := bcdata.rewardDistributor.MintKLAY(accountMap, b.Header(), false); err != nil {
+	if err := bcdata.rewardDistributor.MintKLAY(accountMap, b.Header()); err != nil {
 		return err
 	}
 	prof.Profile("main_apply_reward", time.Now().Sub(start))
