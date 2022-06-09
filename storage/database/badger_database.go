@@ -25,8 +25,10 @@ import (
 	"github.com/klaytn/klaytn/log"
 )
 
-const gcThreshold = int64(1 << 30) // GB
-const sizeGCTickerTime = 1 * time.Minute
+const (
+	gcThreshold      = int64(1 << 30) // GB
+	sizeGCTickerTime = 1 * time.Minute
+)
 
 type badgerDB struct {
 	fn string // filename for reporting
@@ -51,7 +53,7 @@ func NewBadgerDB(dbDir string) (*badgerDB, error) {
 			return nil, fmt.Errorf("failed to make badgerDB while checking dbDir. Given dbDir is not a directory. dbDir: %v", dbDir)
 		}
 	} else if os.IsNotExist(err) {
-		if err := os.MkdirAll(dbDir, 0755); err != nil {
+		if err := os.MkdirAll(dbDir, 0o755); err != nil {
 			return nil, fmt.Errorf("failed to make badgerDB while making dbDir. dbDir: %v, err: %v", dbDir, err)
 		}
 	} else {
@@ -168,8 +170,8 @@ func (bg *badgerDB) Delete(key []byte) error {
 }
 
 func (bg *badgerDB) NewIterator(prefix []byte, start []byte) Iterator {
-	//txn := bg.db.NewTransaction(false)
-	//return txn.NewIterator(badger.DefaultIteratorOptions)
+	// txn := bg.db.NewTransaction(false)
+	// return txn.NewIterator(badger.DefaultIteratorOptions)
 	logger.CritWithStack("badgerDB doesn't support NewIterator")
 	return nil
 }

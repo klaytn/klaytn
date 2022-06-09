@@ -37,14 +37,14 @@
 # directory in the root of your repository.
 #/docs/ @doctocat
 /accounts/
-/api/           @jimni1222 @sirano11 @aeharvlee
+/api/           @aidan-kwon @jimni1222 @sirano11 @aeharvlee @JayChoi1736
 /blockchain/    @KimKyungup @aidan-kwon @jeongkyun-oh @ehnuje
 /build/         @aidan-kwon @henry-will @nohkwak @2dvorak
 /client/        @aidan-kwon @aeharvlee @henry-will @nohkwak @hyunsooda
 /cmd/           @aidan-kwon @henry-will @nohkwak @2dvorak
 /common/
 /consensus/     @aidan-kwon @jiseongnoh @yoomee1313 @mckim19
-/console/       @jimni1222 @sirano11 @aeharvlee
+/console/       @aidan-kwon @jimni1222 @sirano11 @aeharvlee @JayChoi1736
 /contracts/     @kjhman21 @KimKyungup @aidan-kwon @blukat29 @ian0371 @henry-will @hyunsooda @hqjang-pepper
 /crypto/
 /datasync/      @KimKyungup @ethan-kr @jeongkyun-oh @ehnuje

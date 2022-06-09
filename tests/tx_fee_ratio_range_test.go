@@ -37,7 +37,7 @@ import (
 
 // TestTxFeeRatioRange checks the range of the fee ratio.
 func TestTxFeeRatioRange(t *testing.T) {
-	var testCases = []struct {
+	testCases := []struct {
 		feeRatio types.FeeRatio
 		expected error
 	}{
@@ -308,5 +308,4 @@ func testTxFeeRatioRange(t *testing.T, feeRatio types.FeeRatio, expected error) 
 
 		reservoir.Nonce += 1
 	}
-
 }
