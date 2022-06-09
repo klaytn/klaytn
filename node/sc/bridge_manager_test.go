@@ -89,10 +89,10 @@ func handleValueTransfer(t *testing.T, ev IRequestValueTransferEvent, bridgeInfo
 	t.Log("Request Event",
 		"type", tokenType,
 		"amount", valueOrTokenId,
-		"from", from,
-		"to", to,
-		"contract", contractAddr,
-		"token", tokenAddr,
+		"from", from.String(),
+		"to", to.String(),
+		"contract", contractAddr.String(),
+		"token", tokenAddr.String(),
 		"requestNonce", requestNonce)
 
 	bridge := bridgeInfo.bridge
@@ -365,7 +365,7 @@ func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
-	//pAuth := bacc.cAccount.GenerateTransactOpts()
+	// pAuth := bacc.cAccount.GenerateTransactOpts()
 	cAuth := bacc.pAccount.GenerateTransactOpts()
 
 	// Generate a new random account and a funded simulator
@@ -2118,5 +2118,4 @@ func TestGetBridgeContractBalance(t *testing.T) {
 			isExpectedBalance(t, bm, pBridgeAddr, cBridgeAddr, initialParentbridgeBalance, initialChildbridgeBalance)
 		}
 	}
-
 }
