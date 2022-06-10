@@ -254,6 +254,16 @@ func (sb *SubBridgeAPI) GetChildOperatorFeePayer() common.Address {
 	return sb.subBridge.bridgeAccounts.GetChildOperatorFeePayer()
 }
 
+// GetParentBridgeOperatorGasLimit gets value of bridge parent operator's gaslimit.
+func (sb *SubBridgeAPI) GetParentBridgeOperatorGasLimit() uint64 {
+	return sb.subBridge.bridgeAccounts.GetParentBridgeOperatorGasLimit()
+}
+
+// GetChildBridgeOperatorGasLimit gets value of bridge child operator's gaslimit.
+func (sb *SubBridgeAPI) GetChildBridgeOperatorGasLimit() uint64 {
+	return sb.subBridge.bridgeAccounts.GetChildBridgeOperatorGasLimit()
+}
+
 // SubBridgeAPI Implementation for sub-bridge node
 type SubBridgePrivilegedAPI struct {
 	subBridge *SubBridge
@@ -591,24 +601,4 @@ func (sb *SubBridgePrivilegedAPI) SetParentBridgeOperatorGasLimit(fee uint64) {
 // SetChildBridgeOperatorGasLimit changes value of bridge child operator's gaslimit.
 func (sb *SubBridgePrivilegedAPI) SetChildBridgeOperatorGasLimit(fee uint64) {
 	sb.subBridge.bridgeAccounts.SetChildBridgeOperatorGasLimit(fee)
-}
-
-// GetParentOperatorFeePayer can return the parent bridge operator's fee payer.
-func (sb *SubBridgeAPI) GetParentOperatorFeePayer() common.Address {
-	return sb.subBridge.bridgeAccounts.GetParentOperatorFeePayer()
-}
-
-// GetChildOperatorFeePayer can return the child bridge operator's fee payer.
-func (sb *SubBridgeAPI) GetChildOperatorFeePayer() common.Address {
-	return sb.subBridge.bridgeAccounts.GetChildOperatorFeePayer()
-}
-
-// GetParentBridgeOperatorGasLimit gets value of bridge parent operator's gaslimit.
-func (sb *SubBridgeAPI) GetParentBridgeOperatorGasLimit() uint64 {
-	return sb.subBridge.bridgeAccounts.GetParentBridgeOperatorGasLimit()
-}
-
-// GetChildBridgeOperatorGasLimit gets value of bridge child operator's gaslimit.
-func (sb *SubBridgeAPI) GetChildBridgeOperatorGasLimit() uint64 {
-	return sb.subBridge.bridgeAccounts.GetChildBridgeOperatorGasLimit()
 }
