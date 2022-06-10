@@ -22,11 +22,10 @@ package debug
 
 import (
 	"fmt"
+	"io"
 	_ "net/http/pprof"
 	"os"
 	"runtime"
-
-	"io"
 
 	"github.com/fjl/memsize/memsizeui"
 	"github.com/klaytn/klaytn/log"
