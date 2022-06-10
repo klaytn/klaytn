@@ -34,7 +34,7 @@ func TestPrivateAccountAPI_ImportRawKey(t *testing.T) {
 	scryptP := keystore.StandardScryptP
 
 	// To get JSON files use below.
-	//keydir := filepath.Join(".", "keystore")
+	// keydir := filepath.Join(".", "keystore")
 	keydir, err := ioutil.TempDir("", "klay-test")
 	require.NoError(t, err)
 	defer os.RemoveAll(keydir)

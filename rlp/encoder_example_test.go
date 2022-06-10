@@ -1,3 +1,4 @@
+// Modifications Copyright 2022 The klaytn Authors
 // Copyright 2014 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
@@ -13,12 +14,17 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+//
+// This file is derived from rlp/encoder_example_test.go(2022/05/19)
+// Modified and improved for the klaytn development.
 
-package rlp
+package rlp_test
 
 import (
 	"fmt"
 	"io"
+
+	"github.com/klaytn/klaytn/rlp"
 )
 
 type MyCoolType struct {
@@ -28,27 +34,19 @@ type MyCoolType struct {
 
 // EncodeRLP writes x as RLP list [a, b] that omits the Name field.
 func (x *MyCoolType) EncodeRLP(w io.Writer) (err error) {
-	// Note: the receiver can be a nil pointer. This allows you to
-	// control the encoding of nil, but it also means that you have to
-	// check for a nil receiver.
-	if x == nil {
-		err = Encode(w, []uint{0, 0})
-	} else {
-		err = Encode(w, []uint{x.a, x.b})
-	}
-	return err
+	return rlp.Encode(w, []uint{x.a, x.b})
 }
 
 func ExampleEncoder() {
 	var t *MyCoolType // t is nil pointer to MyCoolType
-	bytes, _ := EncodeToBytes(t)
+	bytes, _ := rlp.EncodeToBytes(t)
 	fmt.Printf("%v → %X\n", t, bytes)
 
 	t = &MyCoolType{Name: "foobar", a: 5, b: 6}
-	bytes, _ = EncodeToBytes(t)
+	bytes, _ = rlp.EncodeToBytes(t)
 	fmt.Printf("%v → %X\n", t, bytes)
 
 	// Output:
-	// <nil> → C28080
+	// <nil> → C0
 	// &{foobar 5 6} → C20506
 }

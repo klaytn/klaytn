@@ -30,7 +30,8 @@ func BenchmarkDeriveSha(b *testing.B) {
 	funcs := map[string]types.IDeriveSha{
 		"Orig":   statedb.DeriveShaOrig{},
 		"Simple": types.DeriveShaSimple{},
-		"Concat": types.DeriveShaConcat{}}
+		"Concat": types.DeriveShaConcat{},
+	}
 
 	NTS := []int{1000}
 

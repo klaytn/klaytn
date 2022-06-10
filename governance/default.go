@@ -1089,7 +1089,7 @@ func writeFailLog(key int, err error) {
 	logger.Crit(msg, "err", err)
 }
 
-func AddGovernanceCacheForTest(e Engine, num uint64, config *params.ChainConfig) {
+func AddGovernanceCacheForTest(e HeaderEngine, num uint64, config *params.ChainConfig) {
 	// addGovernanceCache only exists and relevant in *Governance.
 	if g, ok := e.(*Governance); ok {
 		data := GetGovernanceItemsFromChainConfig(config)
@@ -1167,6 +1167,10 @@ func (g *Governance) GetVoteMapCopy() map[string]VoteStatus {
 
 func (g *Governance) GetGovernanceTalliesCopy() []GovernanceTallyItem {
 	return g.GovernanceTallies.Copy()
+}
+
+func (gov *Governance) CurrentSetCopy() map[string]interface{} {
+	return gov.currentSet.Items()
 }
 
 func (gov *Governance) PendingChanges() map[string]interface{} {
