@@ -49,6 +49,7 @@ var (
 	GovernanceKeyMap = map[string]int{
 		"governance.governancemode":     params.GovernanceMode,
 		"governance.governingnode":      params.GoverningNode,
+		"governance.governancecontract": params.GovernanceContract,
 		"istanbul.epoch":                params.Epoch,
 		"istanbul.policy":               params.Policy,
 		"istanbul.committeesize":        params.CommitteeSize,
@@ -75,6 +76,7 @@ var (
 	GovernanceKeyMapReverse = map[int]string{
 		params.GovernanceMode:          "governance.governancemode",
 		params.GoverningNode:           "governance.governingnode",
+		params.GovernanceContract:      "governance.governancecontract",
 		params.Epoch:                   "istanbul.epoch",
 		params.CliqueEpoch:             "clique.epoch",
 		params.Policy:                  "istanbul.policy",
@@ -546,7 +548,7 @@ func (g *Governance) ParseVoteValue(gVote *GovernanceVote) (*GovernanceVote, err
 			return nil, ErrValueTypeMismatch
 		}
 		val = string(v)
-	case params.GoverningNode:
+	case params.GoverningNode, params.GovernanceContract:
 		v, ok := gVote.Value.([]uint8)
 		if !ok {
 			return nil, ErrValueTypeMismatch
@@ -603,7 +605,7 @@ func (gov *Governance) ReflectVotes(vote GovernanceVote) {
 
 func (gov *Governance) updateChangeSet(vote GovernanceVote) bool {
 	switch GovernanceKeyMap[vote.Key] {
-	case params.GoverningNode:
+	case params.GoverningNode, params.GovernanceContract:
 		gov.changeSet.SetValue(GovernanceKeyMap[vote.Key], vote.Value.(common.Address))
 		return true
 	case params.GovernanceMode, params.Ratio:
@@ -633,6 +635,7 @@ func CheckGenesisValues(c *params.ChainConfig) error {
 		"istanbul.policy":               uint64(c.Istanbul.ProposerPolicy),
 		"governance.governancemode":     c.Governance.GovernanceMode,
 		"governance.governingnode":      c.Governance.GoverningNode,
+		"governance.governancecontract": c.Governance.GovernanceContract,
 		"governance.unitprice":          c.UnitPrice,
 		"reward.ratio":                  c.Governance.Reward.Ratio,
 		"reward.useginicoeff":           c.Governance.Reward.UseGiniCoeff,
@@ -904,11 +907,10 @@ func adjustDecodedSet(src map[string]interface{}) map[string]interface{} {
 		if x.Kind() == reflect.Float64 {
 			src[k] = uint64(v.(float64))
 		}
-		if GovernanceKeyMap[k] == params.GoverningNode {
+		if GovernanceKeyMap[k] == params.GoverningNode ||
+			GovernanceKeyMap[k] == params.GovernanceContract {
 			if reflect.TypeOf(v) == stringT {
 				src[k] = common.HexToAddress(v.(string))
-			} else {
-				src[k] = v
 			}
 		}
 	}
@@ -941,7 +943,8 @@ func (gov *Governance) VerifyGovernance(received []byte) error {
 	}
 
 	for k, v := range rChangeSet {
-		if GovernanceKeyMap[k] == params.GoverningNode {
+		if GovernanceKeyMap[k] == params.GoverningNode ||
+			GovernanceKeyMap[k] == params.GovernanceContract {
 			if reflect.TypeOf(v) == stringT {
 				v = common.HexToAddress(v.(string))
 			}
@@ -1054,6 +1057,7 @@ func GetGovernanceItemsFromChainConfig(config *params.ChainConfig) GovernanceSet
 		governanceMap := map[int]interface{}{
 			params.GovernanceMode:          governance.GovernanceMode,
 			params.GoverningNode:           governance.GoverningNode,
+			params.GovernanceContract:      governance.GovernanceContract,
 			params.UnitPrice:               config.UnitPrice,
 			params.MintingAmount:           governance.Reward.MintingAmount.String(),
 			params.Ratio:                   governance.Reward.Ratio,

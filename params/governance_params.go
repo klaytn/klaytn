@@ -56,6 +56,7 @@ const (
 	ConstTxGasHumanReadable
 	CliqueEpoch
 	Timeout
+	GovernanceContract
 )
 
 const (

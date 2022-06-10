@@ -47,6 +47,7 @@ var (
 var GovernanceItems = map[int]check{
 	params.GovernanceMode:          {stringT, checkGovernanceMode, nil},
 	params.GoverningNode:           {addressT, checkAddress, nil},
+	params.GovernanceContract:      {addressT, checkAddress, nil},
 	params.UnitPrice:               {uint64T, checkUint64andBool, updateUnitPrice},
 	params.AddValidator:            {addressT, checkAddressOrListOfUniqueAddresses, nil},
 	params.RemoveValidator:         {addressT, checkAddressOrListOfUniqueAddresses, nil},
@@ -380,6 +381,7 @@ func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, votes 
 			} else {
 				logger.Warn("Invalid value Type", "number", header.Number, "Validator", gVote.Validator, "key", gVote.Key, "value", gVote.Value)
 			}
+			// TODO-Klaytn: Verify params.GovernanceContract points to a valid Governance contract
 		}
 
 		number := header.Number.Uint64()
