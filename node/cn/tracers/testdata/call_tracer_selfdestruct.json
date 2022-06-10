@@ -13,7 +13,7 @@
         "storage": {}
       },
       "0xf0b1b2a91af3b0a0a5389ea80bffdc42cf86b7e3": {
-        "balance": "0x0",
+        "balance": "0x12345",
         "code": "0x6080604052348015600f57600080fd5b506004361060285760003560e01c80633f5a0bdd14602d575b600080fd5b606c60048036036020811015604157600080fd5b81019080803573ffffffffffffffffffffffffffffffffffffffff169060200190929190505050606e565b005b8073ffffffffffffffffffffffffffffffffffffffff16fffea165627a7a723058205a07115694cf6d085e273dfb445dc694641455dff6394df72bc6963b78c5319f0029",
         "nonce": "1",
         "storage": {}
@@ -57,7 +57,10 @@
   "result": {
     "calls": [
       {
-        "type": "SELFDESTRUCT"
+        "type": "SELFDESTRUCT",
+        "from": "0xf0b1b2a91af3b0a0a5389ea80bffdc42cf86b7e3",
+        "to": "0xf0b1b2a91af3b0a0a5389ea80bffdc42cf86b7e3",
+        "value": "0x12345"
       }
     ],
     "from": "0x71562b71999873db5b286df957af199ec94617f7",

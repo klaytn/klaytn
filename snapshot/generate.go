@@ -258,7 +258,7 @@ func (dl *diskLayer) proveRange(stats *generatorStats, root common.Hash, prefix 
 	iter := dl.diskdb.NewSnapshotDBIterator(prefix, origin)
 	defer iter.Release()
 
-	var start = time.Now()
+	start := time.Now()
 	for iter.Next() {
 		key := iter.Key()
 		if len(key) != len(prefix)+common.HashLength {
@@ -369,7 +369,8 @@ func (dl *diskLayer) proveRange(stats *generatorStats, root common.Hash, prefix 
 			diskMore: diskMore,
 			trieMore: cont,
 			proofErr: err,
-			tr:       tr},
+			tr:       tr,
+		},
 		nil
 }
 
@@ -703,7 +704,7 @@ func (dl *diskLayer) generate(stats *generatorStats) {
 				}
 				return nil
 			}
-			var storeOrigin = common.CopyBytes(storeMarker)
+			storeOrigin := common.CopyBytes(storeMarker)
 			for {
 				exhausted, last, err := dl.generateRange(rootHash, append(database.SnapshotStoragePrefix, accountHash.Bytes()...), "storage", storeOrigin, storageCheckRange, stats, onStorage, nil)
 				if err != nil {

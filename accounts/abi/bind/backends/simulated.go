@@ -517,7 +517,6 @@ func (b *SimulatedBackend) SendTransaction(_ context.Context, tx *types.Transact
 	block := b.blockchain.CurrentBlock()
 	signer := types.MakeSigner(b.blockchain.Config(), block.Number())
 	sender, err := types.Sender(signer, tx)
-
 	if err != nil {
 		panic(fmt.Errorf("invalid transaction: %v", err))
 	}

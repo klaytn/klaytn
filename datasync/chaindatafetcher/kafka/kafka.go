@@ -103,8 +103,11 @@ func (k *Kafka) setupTopic(topicName string) error {
 	}
 
 	if err := k.CreateTopic(topicName); err != nil {
-		logger.Error("creating a topic is failed", "topicName", topicName, "err", err)
-		return err
+		if kerr, ok := err.(*sarama.TopicError); !ok || kerr.Err != sarama.ErrTopicAlreadyExists {
+			logger.Error("creating a topic is failed", "topicName", topicName, "err", err)
+			return err
+		}
+		logger.Warn("creating a topic is failed. topic already exists", "topicName", topicName)
 	}
 
 	return nil

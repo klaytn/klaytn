@@ -409,13 +409,13 @@ func (s *TrieSync) CommittedByDepth(depth int) int {
 // CalcProgressPercentage returns the progress percentage.
 func (s *TrieSync) CalcProgressPercentage() float64 {
 	var progress float64
-	//depth	max trie	resolution (%)
-	//0	 	1 	 		100.00000
-	//1	 	16 	 		6.25000
-	//2	 	256 	 	0.39063
-	//3	 	4,096 	 	0.02441
-	//4	 	65,536 	 	0.00153
-	//5	 	1,048,576 	0.00010
+	// depth	max trie	resolution (%)
+	// 0	 	1 	 		100.00000
+	// 1	 	16 	 		6.25000
+	// 2	 	256 	 	0.39063
+	// 3	 	4,096 	 	0.02441
+	// 4	 	65,536 	 	0.00153
+	// 5	 	1,048,576 	0.00010
 
 	for i := 0; i < 20; i++ {
 		c, r := s.CommittedByDepth(i), s.RetrievedByDepth(i)
