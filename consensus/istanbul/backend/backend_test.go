@@ -669,7 +669,7 @@ func getTestVotingPowers(num int) []uint64 {
 
 func getTestConfig() *params.ChainConfig {
 	config := params.TestChainConfig
-	config.Governance = params.GetDefaultGovernanceConfig(params.UseIstanbul)
+	config.Governance = params.GetDefaultGovernanceConfig()
 	config.Istanbul = params.GetDefaultIstanbulConfig()
 	return config
 }

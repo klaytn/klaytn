@@ -313,7 +313,6 @@ func (c *BoundContract) FilterLogs(opts *FilterOpts, name string, query ...[]int
 		}
 		return nil
 	}), nil
-
 	if err != nil {
 		return nil, nil, err
 	}

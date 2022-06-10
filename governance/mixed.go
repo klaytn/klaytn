@@ -9,6 +9,12 @@ import (
 )
 
 type MixedEngine struct {
+	initialConfig *params.ChainConfig
+	initialParams *params.GovParamSet
+	currentParams *params.GovParamSet
+
+	db database.DBManager
+
 	// Subordinate engines
 	// TODO: Add ContractEngine
 	defaultGov HeaderEngine
@@ -17,7 +23,22 @@ type MixedEngine struct {
 // newMixedEngine instantiate a new MixedEngine struct.
 // Only if doInit is true, subordinate engines will be initialized.
 func newMixedEngine(config *params.ChainConfig, db database.DBManager, doInit bool) *MixedEngine {
-	e := &MixedEngine{}
+	e := &MixedEngine{
+		initialConfig: config,
+		initialParams: nil,
+		currentParams: nil,
+
+		db: db,
+
+		defaultGov: nil,
+	}
+
+	if p, err := params.NewGovParamSetChainConfig(config); err == nil {
+		e.initialParams = p
+		e.currentParams = p
+	} else {
+		logger.Crit("Error parsing initial ChainConfig", "err", err)
+	}
 
 	// Setup subordinate engines
 	if doInit {
@@ -25,6 +46,10 @@ func newMixedEngine(config *params.ChainConfig, db database.DBManager, doInit bo
 	} else {
 		e.defaultGov = NewGovernance(config, db)
 	}
+
+	// Load last state
+	e.UpdateParams()
+
 	return e
 }
 
@@ -38,19 +63,44 @@ func NewMixedEngineNoInit(config *params.ChainConfig, db database.DBManager) *Mi
 	return newMixedEngine(config, db, false)
 }
 
-// TODO: Once ContractEngine is developed, add wrapper methods as follows:
-//
-// MixedEngine will determine which subordinate engine to be used,
-// depending on block number or other governance configs.
-//
-// func (e *MixedEngine) ParamsAt(num uint64) *params.GovParamSet {
-//     if num >= config.Governance.ContractGovernanceBlock {
-//         return e.contractGov.ParamsAt(num)
-//     } else {
-//         _, strMap, _ := e.defaultGov.ReadGovernance(num)
-//         return params.NewGovParamSetStrMap(sm)
-//     }
-// }
+func (e *MixedEngine) Params() *params.GovParamSet {
+	return e.currentParams
+}
+
+func (e *MixedEngine) ParamsAt(num uint64) (*params.GovParamSet, error) {
+	headerParams, err := e.dbParamsAt(num)
+	if err != nil {
+		return nil, err
+	}
+
+	p := params.NewGovParamSetMerged(e.initialParams, headerParams)
+	return p, nil
+}
+
+func (e *MixedEngine) UpdateParams() error {
+	strMap := e.defaultGov.CurrentSetCopy()
+	headerParams, err := params.NewGovParamSetStrMap(strMap)
+	if err != nil {
+		return err
+	}
+
+	e.currentParams = params.NewGovParamSetMerged(e.initialParams, headerParams)
+	return nil
+}
+
+// Retrospect data from HeaderEngine.
+// Should be equivalent to Governance.ReadGovernance(), but without in-memory caches.
+// Not using in-memory caches to make it stateless, hence less error-prone.
+func (e *MixedEngine) dbParamsAt(num uint64) (*params.GovParamSet, error) {
+	// TODO-Klaytn: Either handle epoch change, or permanently forbid epoch change.
+	epoch := e.initialParams.Epoch()
+	_, strMap, err := e.db.ReadGovernanceAtNumber(num, epoch)
+	if err != nil {
+		return nil, err
+	}
+
+	return params.NewGovParamSetStrMap(strMap)
+}
 
 // Pass-through to HeaderEngine
 func (e *MixedEngine) AddVote(key string, val interface{}) bool {
@@ -124,6 +174,10 @@ func (e *MixedEngine) GetVoteMapCopy() map[string]VoteStatus {
 
 func (e *MixedEngine) GetGovernanceTalliesCopy() []GovernanceTallyItem {
 	return e.defaultGov.GetGovernanceTalliesCopy()
+}
+
+func (e *MixedEngine) CurrentSetCopy() map[string]interface{} {
+	return e.defaultGov.CurrentSetCopy()
 }
 
 func (e *MixedEngine) PendingChanges() map[string]interface{} {
