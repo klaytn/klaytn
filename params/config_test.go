@@ -26,3 +26,24 @@ func TestChainConfig_CheckConfigForkOrder(t *testing.T) {
 	assert.Nil(t, BaobabChainConfig.CheckConfigForkOrder())
 	assert.Nil(t, CypressChainConfig.CheckConfigForkOrder())
 }
+
+func TestChainConfig_Copy(t *testing.T) {
+	a := CypressChainConfig
+	b := a.Copy()
+
+	b.UnitPrice = 0x1111
+	assert.NotEqual(t, a.UnitPrice, b.UnitPrice)
+
+	b.Istanbul.Epoch = 0x2222
+	assert.NotEqual(t, a.Istanbul.Epoch, b.Istanbul.Epoch)
+
+	b.Governance.Reward = &RewardConfig{Ratio: "11/22/33"}
+	assert.NotEqual(t, a.Governance.Reward.Ratio, b.Governance.Reward.Ratio)
+}
+
+func BenchmarkChainConfig_Copy(b *testing.B) {
+	a := CypressChainConfig
+	for i := 0; i < b.N; i++ {
+		a.Copy()
+	}
+}
