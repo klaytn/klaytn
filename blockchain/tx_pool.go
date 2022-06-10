@@ -391,9 +391,7 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 					// When setHead is performed, then oldHead becomes bigger than newHead, since newHead becomes rewinded blockNumber.
 					logger.Debug("Skipping transaction reset caused by setHead",
 						"old", oldHead.Hash(), "oldnum", oldNum, "new", newHead.Hash(), "newnum", newNum)
-
 				}
-
 			} else {
 				for rem.NumberU64() > add.NumberU64() {
 					discarded = append(discarded, rem.Transactions()...)
