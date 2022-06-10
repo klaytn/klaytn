@@ -260,7 +260,12 @@ func (acc *accountInfo) GenerateTransactOpts() *bind.TransactOpts {
 		nonce = new(big.Int).SetUint64(acc.nonce)
 	}
 
-	return bind.MakeTransactOptsWithKeystore(acc.keystore, acc.address, nonce, acc.chainID, acc.gasLimit, acc.gasPrice)
+	gasPrice := acc.gasPrice
+	if acc.kip71Config.UpperBoundBaseFee != 0 {
+		gasPrice = new(big.Int).SetUint64(acc.kip71Config.UpperBoundBaseFee)
+	}
+
+	return bind.MakeTransactOptsWithKeystore(acc.keystore, acc.address, nonce, acc.chainID, acc.gasLimit, gasPrice)
 }
 
 // SignTx signs a transaction with the accountInfo.
