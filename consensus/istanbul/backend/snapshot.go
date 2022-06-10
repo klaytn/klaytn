@@ -51,7 +51,7 @@ type Snapshot struct {
 	Tally         []governance.GovernanceTallyItem // Current vote tally to avoid recalculating
 }
 
-func getGovernanceValue(gov *governance.Governance, number uint64) (epoch uint64, policy uint64, committeeSize uint64) {
+func getGovernanceValue(gov governance.Engine, number uint64) (epoch uint64, policy uint64, committeeSize uint64) {
 	if r, err := gov.GetGovernanceItemAtNumber(number, governance.GovernanceKeyMapReverse[params.Epoch]); err == nil && r != nil {
 		epoch = r.(uint64)
 	} else {
@@ -78,7 +78,7 @@ func getGovernanceValue(gov *governance.Governance, number uint64) (epoch uint64
 // newSnapshot create a new snapshot with the specified startup parameters. This
 // method does not initialize the set of recent validators, so only ever use if for
 // the genesis block.
-func newSnapshot(gov *governance.Governance, number uint64, hash common.Hash, valSet istanbul.ValidatorSet, chainConfig *params.ChainConfig) *Snapshot {
+func newSnapshot(gov governance.Engine, number uint64, hash common.Hash, valSet istanbul.ValidatorSet, chainConfig *params.ChainConfig) *Snapshot {
 	epoch, policy, committeeSize := getGovernanceValue(gov, number)
 
 	snap := &Snapshot{
@@ -144,7 +144,7 @@ func (s *Snapshot) checkVote(address common.Address, authorize bool) bool {
 
 // apply creates a new authorization snapshot by applying the given headers to
 // the original one.
-func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, addr common.Address, policy uint64, chain consensus.ChainReader) (*Snapshot, error) {
+func (s *Snapshot) apply(headers []*types.Header, gov governance.Engine, addr common.Address, policy uint64, chain consensus.ChainReader) (*Snapshot, error) {
 	// Allow passing in no headers for cleaner code
 	if len(headers) == 0 {
 		return s, nil

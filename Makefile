@@ -87,11 +87,14 @@ test-datasync:
 test-networks:
 	$(GORUN) build/ci.go test -p 1 ./networks/...
 
+test-node:
+	$(GORUN) build/ci.go test -p 1 ./node/...
+
 test-tests:
 	$(GORUN) build/ci.go test -p 1 ./tests/...
 
 test-others:
-	$(GORUN) build/ci.go test -p 1 -exclude datasync,networks,tests
+	$(GORUN) build/ci.go test -p 1 -exclude datasync,networks,node,tests
 
 cover:
 	$(GORUN) build/ci.go cover -coverprofile=coverage.out

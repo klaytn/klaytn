@@ -18,6 +18,7 @@
 // This file is derived from accounts/keystore/watch.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
+//go:build (darwin && !ios) || freebsd || (linux && !arm64) || netbsd || solaris
 // +build darwin,!ios freebsd linux,!arm64 netbsd solaris
 
 package keystore
