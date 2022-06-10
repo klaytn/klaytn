@@ -18,10 +18,10 @@ package sc
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"math/big"
+	"math/rand"
 	"os"
 	"path"
 	"sync"
@@ -75,6 +75,44 @@ func CheckReceipt(b bind.DeployBackend, tx *types.Transaction, duration time.Dur
 	assert.Equal(t, expectedStatus, receipt.Status)
 }
 
+func handleValueTransfer(t *testing.T, ev IRequestValueTransferEvent, bridgeInfo *BridgeInfo, wg *sync.WaitGroup, backend *backends.SimulatedBackend) {
+	var (
+		tokenType      = ev.GetTokenType()
+		valueOrTokenId = ev.GetValueOrTokenId()
+		from           = ev.GetFrom()
+		to             = ev.GetTo()
+		contractAddr   = ev.GetRaw().Address
+		tokenAddr      = ev.GetTokenAddress()
+		requestNonce   = ev.GetRequestNonce()
+		txHash         = ev.GetRaw().TxHash
+	)
+	t.Log("Request Event",
+		"type", tokenType,
+		"amount", valueOrTokenId,
+		"from", from,
+		"to", to,
+		"contract", contractAddr,
+		"token", tokenAddr,
+		"requestNonce", requestNonce)
+
+	bridge := bridgeInfo.bridge
+	done, err := bridge.HandledRequestTx(nil, txHash)
+	assert.NoError(t, err)
+	assert.Equal(t, false, done)
+
+	// insert the value transfer request event to the bridge info's event list.
+	bridgeInfo.AddRequestValueTransferEvents([]IRequestValueTransferEvent{ev})
+
+	// handle the value transfer request event in the event list.
+	bridgeInfo.processingPendingRequestEvents()
+
+	backend.Commit() // block
+	wg.Done()
+	done, err = bridge.HandledRequestTx(nil, txHash)
+	assert.NoError(t, err)
+	assert.Equal(t, true, done)
+}
+
 // TestBridgeManager tests the event/method of Token/NFT/Bridge contracts.
 // TODO-Klaytn-Servicechain needs to refine this test.
 // - consider parent/child chain simulated backend.
@@ -89,12 +127,12 @@ func TestBridgeManager(t *testing.T) {
 	}()
 
 	wg := sync.WaitGroup{}
-	wg.Add(6)
+	wg.Add(10)
 
 	// Config Bridge Account Manager
 	config := &SCConfig{}
 	config.DataDir = tempDir
-	bacc, _ := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}))
+	bacc, _ := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
@@ -132,18 +170,19 @@ func TestBridgeManager(t *testing.T) {
 	}
 
 	bridgeManager, err := NewBridgeManager(sc)
+	assert.NoError(t, err)
 
 	testToken := big.NewInt(123)
 	testKLAY := big.NewInt(321)
 
 	// 1. Deploy Bridge Contract
-	addr, err := bridgeManager.DeployBridgeTest(sim, false)
+	addr, err := bridgeManager.DeployBridgeTest(sim, 10000, false)
 	if err != nil {
 		log.Fatalf("Failed to deploy new bridge contract: %v", err)
 	}
 	bridgeInfo, _ := bridgeManager.GetBridgeInfo(addr)
 	bridge := bridgeInfo.bridge
-	fmt.Println("===== BridgeContract Addr ", addr.Hex())
+	t.Log("===== BridgeContract Addr ", addr.Hex())
 	sim.Commit() // block
 
 	// 2. Deploy Token Contract
@@ -154,7 +193,6 @@ func TestBridgeManager(t *testing.T) {
 	sim.Commit() // block
 
 	// 3. Deploy NFT Contract
-	nftTokenID := uint64(4438)
 	nftAddr, tx, nft, err := scnft.DeployServiceChainNFT(alice, sim, addr)
 	if err != nil {
 		log.Fatalf("Failed to DeployServiceChainNFT: %v", err)
@@ -183,56 +221,36 @@ func TestBridgeManager(t *testing.T) {
 	assert.Equal(t, cNftAddr, nftAddr)
 
 	balance, _ := sim.BalanceAt(context.Background(), pAuth.From, nil)
-	fmt.Printf("auth(%v) KLAY balance : %v\n", pAuth.From.String(), balance)
+	t.Logf("auth(%v) KLAY balance : %v\n", pAuth.From.String(), balance)
 
 	balance, _ = sim.BalanceAt(context.Background(), cAuth.From, nil)
-	fmt.Printf("auth2(%v) KLAY balance : %v\n", cAuth.From.String(), balance)
+	t.Logf("auth2(%v) KLAY balance : %v\n", cAuth.From.String(), balance)
 
 	balance, _ = sim.BalanceAt(context.Background(), alice.From, nil)
-	fmt.Printf("auth3(%v) KLAY balance : %v\n", alice.From.String(), balance)
+	t.Logf("auth3(%v) KLAY balance : %v\n", alice.From.String(), balance)
 
 	balance, _ = sim.BalanceAt(context.Background(), bob.From, nil)
-	fmt.Printf("auth4(%v) KLAY balance : %v\n", bob.From.String(), balance)
+	t.Logf("auth4(%v) KLAY balance : %v\n", bob.From.String(), balance)
 
 	// 4. Subscribe Bridge Contract
 	bridgeManager.SubscribeEvent(addr)
 
-	requestValueTransferEventCh := make(chan *RequestValueTransferEvent)
+	reqVTevCh := make(chan RequestValueTransferEvent)
+	reqVTencodedEvCh := make(chan RequestValueTransferEncodedEvent)
 	handleValueTransferEventCh := make(chan *HandleValueTransferEvent)
-	bridgeManager.SubscribeRequestEvent(requestValueTransferEventCh)
-	bridgeManager.SubscribeHandleEvent(handleValueTransferEventCh)
+	bridgeManager.SubscribeReqVTev(reqVTevCh)
+	bridgeManager.SubscribeReqVTencodedEv(reqVTencodedEvCh)
+	bridgeManager.SubscribeHandleVTev(handleValueTransferEventCh)
 
 	go func() {
 		for {
 			select {
-			case ev := <-requestValueTransferEventCh:
-				fmt.Println("Request Event",
-					"type", ev.TokenType,
-					"amount", ev.ValueOrTokenId,
-					"from", ev.From.String(),
-					"to", ev.To.String(),
-					"contract", ev.Raw.Address.String(),
-					"token", ev.TokenAddress.String(),
-					"requestNonce", ev.RequestNonce)
-
-				done, err := bridge.HandledRequestTx(nil, ev.Raw.TxHash)
-				assert.NoError(t, err)
-				assert.Equal(t, false, done)
-
-				// insert the value transfer request event to the bridge info's event list.
-				bridgeInfo.AddRequestValueTransferEvents([]*RequestValueTransferEvent{ev})
-
-				// handle the value transfer request event in the event list.
-				bridgeInfo.processingPendingRequestEvents()
-
-				sim.Commit() // block
-				wg.Done()
-				done, err = bridge.HandledRequestTx(nil, ev.Raw.TxHash)
-				assert.NoError(t, err)
-				assert.Equal(t, true, done)
-
+			case ev := <-reqVTevCh:
+				handleValueTransfer(t, ev, bridgeInfo, &wg, sim)
+			case ev := <-reqVTencodedEvCh:
+				handleValueTransfer(t, ev, bridgeInfo, &wg, sim)
 			case ev := <-handleValueTransferEventCh:
-				fmt.Println("Handle value transfer event",
+				t.Log("Handle value transfer event",
 					"bridgeAddr", ev.Raw.Address.Hex(),
 					"type", ev.TokenType,
 					"amount", ev.ValueOrTokenId,
@@ -245,36 +263,38 @@ func TestBridgeManager(t *testing.T) {
 		}
 	}()
 
+	nftTokenIDs := []uint64{4437, 4438, 4439}
+	testURIs := []string{"", "testURI", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
 	// 6. Register (Mint) an NFT to Alice
 	{
-		tx, err = nft.MintWithTokenURI(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, GasLimit: testGasLimit}, alice.From, big.NewInt(int64(nftTokenID)), "testURI")
-		assert.NoError(t, err)
-		fmt.Println("Register NFT Transaction", tx.Hash().Hex())
-		sim.Commit() // block
+		for i := 0; i < len(nftTokenIDs); i++ {
+			tx, err = nft.MintWithTokenURI(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, GasLimit: testGasLimit}, alice.From, big.NewInt(int64(nftTokenIDs[i])), testURIs[i])
+			assert.NoError(t, err)
+			t.Log("Register NFT Transaction", tx.Hash().Hex())
+			sim.Commit() // block
+			CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
 
-		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
-
-		owner, err := nft.OwnerOf(nil, big.NewInt(int64(nftTokenID)))
-		assert.Equal(t, nil, err)
-		assert.Equal(t, alice.From, owner)
+			owner, err := nft.OwnerOf(nil, big.NewInt(int64(nftTokenIDs[i])))
+			assert.Equal(t, nil, err)
+			assert.Equal(t, alice.From, owner)
+		}
 	}
 
 	// 7. Request ERC20 Transfer from Alice to Bob
 	{
 		tx, err = token.RequestValueTransfer(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, GasLimit: testGasLimit}, testToken, bob.From, big.NewInt(0), nil)
 		assert.NoError(t, err)
-		fmt.Println("RequestValueTransfer Transaction", tx.Hash().Hex())
+		t.Log("RequestValueTransfer Transaction", tx.Hash().Hex())
 		sim.Commit() // block
 
 		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
-
 	}
 
 	// 8. RequestKLAYTransfer from Alice to Bob
 	{
 		tx, err = bridge.RequestKLAYTransfer(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, Value: testKLAY, GasLimit: testGasLimit}, bob.From, testKLAY, nil)
 		assert.NoError(t, err)
-		fmt.Println("DepositKLAY Transaction", tx.Hash().Hex())
+		t.Log("DepositKLAY Transaction", tx.Hash().Hex())
 
 		sim.Commit() // block
 
@@ -283,16 +303,18 @@ func TestBridgeManager(t *testing.T) {
 
 	// 9. Request NFT transfer from Alice to Bob
 	{
-		tx, err = nft.RequestValueTransfer(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, GasLimit: testGasLimit}, big.NewInt(int64(nftTokenID)), bob.From, nil)
-		assert.NoError(t, err)
-		fmt.Println("nft.RequestValueTransfer Transaction", tx.Hash().Hex())
+		for i := 0; i < len(nftTokenIDs); i++ {
+			tx, err = nft.RequestValueTransfer(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, GasLimit: testGasLimit}, big.NewInt(int64(nftTokenIDs[i])), bob.From, nil)
+			assert.NoError(t, err)
+			t.Log("nft.RequestValueTransfer Transaction", tx.Hash().Hex())
+			sim.Commit() // block
+			CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
 
-		sim.Commit() // block
-
-		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
-		uri, err := nft.TokenURI(nil, big.NewInt(int64(nftTokenID)))
-		assert.NoError(t, err)
-		assert.Equal(t, "testURI", uri)
+			uri, err := nft.TokenURI(nil, big.NewInt(int64(nftTokenIDs[i])))
+			assert.NoError(t, err)
+			assert.Equal(t, testURIs[i], uri)
+			t.Log("URI length: ", len(testURIs[i]), len(uri))
+		}
 	}
 
 	// Wait a few second for wait group
@@ -312,13 +334,14 @@ func TestBridgeManager(t *testing.T) {
 		assert.Equal(t, testKLAY.String(), balance.String())
 	}
 
-	// 12. Check NFT owner
+	// 12. Check NFT owner sent by RequestValueTransfer()
 	{
-		owner, err := nft.OwnerOf(nil, big.NewInt(int64(nftTokenID)))
-		assert.Equal(t, nil, err)
-		assert.Equal(t, bob.From, owner)
+		for i := 0; i < len(nftTokenIDs); i++ {
+			owner, err := nft.OwnerOf(nil, big.NewInt(int64(nftTokenIDs[i])))
+			assert.Equal(t, nil, err)
+			assert.Equal(t, bob.From, owner)
+		}
 	}
-
 	bridgeManager.Stop()
 }
 
@@ -338,7 +361,7 @@ func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
 	// Config Bridge Account Manager
 	config := &SCConfig{}
 	config.DataDir = tempDir
-	bacc, _ := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}))
+	bacc, _ := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
@@ -377,15 +400,16 @@ func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
 	}
 
 	bridgeManager, err := NewBridgeManager(sc)
+	assert.NoError(t, err)
 
 	// Deploy Bridge Contract
-	addr, err := bridgeManager.DeployBridgeTest(sim, false)
+	addr, err := bridgeManager.DeployBridgeTest(sim, 10000, false)
 	if err != nil {
 		log.Fatalf("Failed to deploy new bridge contract: %v", err)
 	}
 	bridgeInfo, _ := bridgeManager.GetBridgeInfo(addr)
 	bridge := bridgeInfo.bridge
-	fmt.Println("===== BridgeContract Addr ", addr.Hex())
+	t.Log("===== BridgeContract Addr ", addr.Hex())
 	sim.Commit() // block
 
 	// Deploy NFT Contract
@@ -421,42 +445,22 @@ func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
 	// Subscribe Bridge Contract
 	bridgeManager.SubscribeEvent(addr)
 
-	requestValueTransferEventCh := make(chan *RequestValueTransferEvent)
+	reqVTevCh := make(chan RequestValueTransferEvent)
+	reqVTencodedEvCh := make(chan RequestValueTransferEncodedEvent)
 	handleValueTransferEventCh := make(chan *HandleValueTransferEvent)
-	bridgeManager.SubscribeRequestEvent(requestValueTransferEventCh)
-	bridgeManager.SubscribeHandleEvent(handleValueTransferEventCh)
+	bridgeManager.SubscribeReqVTev(reqVTevCh)
+	bridgeManager.SubscribeReqVTencodedEv(reqVTencodedEvCh)
+	bridgeManager.SubscribeHandleVTev(handleValueTransferEventCh)
 
 	go func() {
 		for {
 			select {
-			case ev := <-requestValueTransferEventCh:
-				fmt.Println("Request Event",
-					"type", ev.TokenType,
-					"amount", ev.ValueOrTokenId,
-					"from", ev.From.String(),
-					"to", ev.To.String(),
-					"contract", ev.Raw.Address.String(),
-					"token", ev.TokenAddress.String(),
-					"requestNonce", ev.RequestNonce)
-
-				done, err := bridge.HandledRequestTx(nil, ev.Raw.TxHash)
-				assert.NoError(t, err)
-				assert.Equal(t, false, done)
-
-				// insert the value transfer request event to the bridge info's event list.
-				bridgeInfo.AddRequestValueTransferEvents([]*RequestValueTransferEvent{ev})
-
-				// handle the value transfer request event in the event list.
-				bridgeInfo.processingPendingRequestEvents()
-
-				sim.Commit() // block
-				wg.Done()
-				done, err = bridge.HandledRequestTx(nil, ev.Raw.TxHash)
-				assert.NoError(t, err)
-				assert.Equal(t, true, done)
-
+			case ev := <-reqVTevCh:
+				handleValueTransfer(t, ev, bridgeInfo, &wg, sim)
+			case ev := <-reqVTencodedEvCh:
+				handleValueTransfer(t, ev, bridgeInfo, &wg, sim)
 			case ev := <-handleValueTransferEventCh:
-				fmt.Println("Handle value transfer event",
+				t.Log("Handle value transfer event",
 					"bridgeAddr", ev.Raw.Address.Hex(),
 					"type", ev.TokenType,
 					"amount", ev.ValueOrTokenId,
@@ -473,7 +477,7 @@ func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
 	{
 		tx, err = nft.Mint(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, GasLimit: testGasLimit}, alice.From, big.NewInt(int64(nftTokenID)))
 		assert.NoError(t, err)
-		fmt.Println("Register NFT Transaction", tx.Hash().Hex())
+		t.Log("Register NFT Transaction", tx.Hash().Hex())
 		sim.Commit() // block
 
 		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
@@ -487,7 +491,7 @@ func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
 	{
 		tx, err = nft.RequestValueTransfer(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, GasLimit: testGasLimit}, big.NewInt(int64(nftTokenID)), bob.From, nil)
 		assert.NoError(t, err)
-		fmt.Println("nft.RequestValueTransfer Transaction", tx.Hash().Hex())
+		t.Log("nft.RequestValueTransfer Transaction", tx.Hash().Hex())
 
 		sim.Commit() // block
 
@@ -536,7 +540,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 	// Config Bridge Account Manager
 	config := &SCConfig{}
 	config.DataDir = tempDir
-	bacc, _ := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}))
+	bacc, _ := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
@@ -573,11 +577,11 @@ func TestBridgeManagerWithFee(t *testing.T) {
 	ERC20Fee := int64(500)
 
 	// 1. Deploy Bridge Contract
-	pBridgeAddr, err := bridgeManager.DeployBridgeTest(sim, false)
+	pBridgeAddr, err := bridgeManager.DeployBridgeTest(sim, 10000, false)
 	assert.NoError(t, err)
 	pBridgeInfo, _ := bridgeManager.GetBridgeInfo(pBridgeAddr)
 	pBridge := pBridgeInfo.bridge
-	fmt.Println("===== BridgeContract Addr ", pBridgeAddr.Hex())
+	t.Log("===== BridgeContract Addr ", pBridgeAddr.Hex())
 	sim.Commit() // block
 
 	// 2. Deploy Token Contract
@@ -645,35 +649,35 @@ func TestBridgeManagerWithFee(t *testing.T) {
 	assert.Equal(t, cTokenAddr, tokenAddr)
 
 	balance, _ := sim.BalanceAt(context.Background(), Alice.From, nil)
-	fmt.Printf("Alice(%v) KLAY balance : %v\n", Alice.From.String(), balance)
+	t.Logf("Alice(%v) KLAY balance : %v\n", Alice.From.String(), balance)
 
 	balance, _ = sim.BalanceAt(context.Background(), Bob.From, nil)
-	fmt.Printf("Bob(%v) KLAY balance : %v\n", Bob.From.String(), balance)
+	t.Logf("Bob(%v) KLAY balance : %v\n", Bob.From.String(), balance)
 
 	// 4. Subscribe Bridge Contract
 	bridgeManager.SubscribeEvent(pBridgeAddr)
 
-	requestValueTransferEventCh := make(chan *RequestValueTransferEvent)
+	reqVTevCh := make(chan RequestValueTransferEvent)
 	handleValueTransferEventCh := make(chan *HandleValueTransferEvent)
-	bridgeManager.SubscribeRequestEvent(requestValueTransferEventCh)
-	bridgeManager.SubscribeHandleEvent(handleValueTransferEventCh)
+	bridgeManager.SubscribeReqVTev(reqVTevCh)
+	bridgeManager.SubscribeHandleVTev(handleValueTransferEventCh)
 
 	go func() {
 		for {
 			select {
-			case ev := <-requestValueTransferEventCh:
-				fmt.Println("Request value transfer event",
-					"type", ev.TokenType,
-					"amount", ev.ValueOrTokenId,
-					"from", ev.From.String(),
-					"to", ev.To.String(),
-					"contract", ev.Raw.Address.String(),
-					"token", ev.TokenAddress.String(),
-					"requestNonce", ev.RequestNonce,
-					"fee", ev.Fee.String())
+			case ev := <-reqVTevCh:
+				t.Log("Request value transfer event",
+					"type", ev.GetTokenType(),
+					"amount", ev.GetValueOrTokenId(),
+					"from", ev.GetFrom().String(),
+					"to", ev.GetTo().String(),
+					"contract", ev.GetRaw().Address.String(),
+					"token", ev.GetTokenAddress().String(),
+					"requestNonce", ev.GetRequestNonce(),
+					"fee", ev.GetFee().String())
 
 				// insert the value transfer request event to the bridge info's event list.
-				pBridgeInfo.AddRequestValueTransferEvents([]*RequestValueTransferEvent{ev})
+				pBridgeInfo.AddRequestValueTransferEvents([]IRequestValueTransferEvent{ev})
 
 				// handle the value transfer request event in the event list.
 				pBridgeInfo.processingPendingRequestEvents()
@@ -682,7 +686,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 				wg.Done()
 
 			case ev := <-handleValueTransferEventCh:
-				fmt.Println("Handle value transfer event",
+				t.Log("Handle value transfer event",
 					"bridgeAddr", ev.Raw.Address.Hex(),
 					"type", ev.TokenType,
 					"amount", ev.ValueOrTokenId,
@@ -701,29 +705,29 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		if err != nil {
 			log.Fatalf("Failed to Transfer for charging: %v", err)
 		}
-		fmt.Println("Transfer Transaction", tx.Hash().Hex())
+		t.Log("Transfer Transaction", tx.Hash().Hex())
 		sim.Commit() // block
 
 		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
 
 		balance, err = token.BalanceOf(nil, pAuth.From)
 		assert.Equal(t, nil, err)
-		fmt.Println("parentAcc token balance", balance.String())
+		t.Log("parentAcc token balance", balance.String())
 
 		balance, err = token.BalanceOf(nil, Alice.From)
 		assert.Equal(t, nil, err)
-		fmt.Println("Alice token balance", balance.String())
+		t.Log("Alice token balance", balance.String())
 
 		balance, err = token.BalanceOf(nil, Bob.From)
 		assert.Equal(t, nil, err)
-		fmt.Println("Bob token balance", balance.String())
+		t.Log("Bob token balance", balance.String())
 	}
 
 	// 7-1. Request ERC20 Transfer from Alice to Bob with same feeLimit with fee
 	{
 		tx, err = token.RequestValueTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, GasLimit: testGasLimit}, big.NewInt(testToken), Bob.From, big.NewInt(ERC20Fee), nil)
 		assert.NoError(t, err)
-		fmt.Println("RequestValueTransfer Transaction", tx.Hash().Hex())
+		t.Log("RequestValueTransfer Transaction", tx.Hash().Hex())
 		sim.Commit() // block
 
 		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
@@ -767,7 +771,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		tx, err = pBridge.RequestERC20Transfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, GasLimit: testGasLimit}, tokenAddr, Bob.From, big.NewInt(testToken), big.NewInt(ERC20Fee), nil)
 		assert.Equal(t, nil, err)
 
-		fmt.Println("RequestValueTransfer Transaction", tx.Hash().Hex())
+		t.Log("RequestValueTransfer Transaction", tx.Hash().Hex())
 		sim.Commit() // block
 
 		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
@@ -781,7 +785,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		tx, err = pBridge.RequestERC20Transfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, GasLimit: testGasLimit}, tokenAddr, Bob.From, big.NewInt(testToken), big.NewInt(0), nil)
 		assert.Equal(t, nil, err)
 
-		fmt.Println("RequestValueTransfer Transaction", tx.Hash().Hex())
+		t.Log("RequestValueTransfer Transaction", tx.Hash().Hex())
 		sim.Commit() // block
 
 		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusErrExecutionReverted, t)
@@ -795,7 +799,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		tx, err = pBridge.RequestERC20Transfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, GasLimit: testGasLimit}, tokenAddr, Bob.From, big.NewInt(testToken), big.NewInt(ERC20Fee-1), nil)
 		assert.Equal(t, nil, err)
 
-		fmt.Println("RequestValueTransfer Transaction", tx.Hash().Hex())
+		t.Log("RequestValueTransfer Transaction", tx.Hash().Hex())
 		sim.Commit() // block
 
 		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusErrExecutionReverted, t)
@@ -809,7 +813,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		tx, err = pBridge.RequestERC20Transfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, GasLimit: testGasLimit}, tokenAddr, Bob.From, big.NewInt(testToken), big.NewInt(ERC20Fee+1), nil)
 		assert.Equal(t, nil, err)
 
-		fmt.Println("RequestValueTransfer Transaction", tx.Hash().Hex())
+		t.Log("RequestValueTransfer Transaction", tx.Hash().Hex())
 		sim.Commit() // block
 
 		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
@@ -821,7 +825,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		if err != nil {
 			log.Fatalf("Failed to RequestKLAYTransfer: %v", err)
 		}
-		fmt.Println("RequestKLAYTransfer Transaction", tx.Hash().Hex())
+		t.Log("RequestKLAYTransfer Transaction", tx.Hash().Hex())
 
 		sim.Commit() // block
 
@@ -881,32 +885,32 @@ func TestBridgeManagerWithFee(t *testing.T) {
 	{
 		balance, err = token.BalanceOf(nil, Alice.From)
 		assert.Equal(t, nil, err)
-		fmt.Println("Alice token balance", balance.String())
+		t.Log("Alice token balance", balance.String())
 		assert.Equal(t, initialValue-(testToken+ERC20Fee)*4, balance.Int64())
 
 		balance, err = token.BalanceOf(nil, Bob.From)
 		assert.Equal(t, nil, err)
-		fmt.Println("Bob token balance", balance.String())
+		t.Log("Bob token balance", balance.String())
 		assert.Equal(t, testToken*4, balance.Int64())
 
 		balance, err = token.BalanceOf(nil, receiver.From)
 		assert.Equal(t, nil, err)
-		fmt.Println("Fee receiver token balance", balance.String())
+		t.Log("Fee receiver token balance", balance.String())
 		assert.Equal(t, ERC20Fee*4, balance.Int64())
 	}
 
 	// 11. Check KLAY balance
 	{
 		balance, _ = sim.BalanceAt(context.Background(), Alice.From, nil)
-		fmt.Println("Alice KLAY balance :", balance)
+		t.Log("Alice KLAY balance :", balance)
 		assert.Equal(t, initialValue-(testKLAY+KLAYFee)*2-KLAYFee, balance.Int64())
 
 		balance, _ = sim.BalanceAt(context.Background(), Bob.From, nil)
-		fmt.Println("Bob KLAY balance :", balance)
+		t.Log("Bob KLAY balance :", balance)
 		assert.Equal(t, big.NewInt(testKLAY*2).String(), balance.String())
 
 		balance, _ = sim.BalanceAt(context.Background(), receiver.From, nil)
-		fmt.Println("receiver KLAY balance :", balance)
+		t.Log("receiver KLAY balance :", balance)
 		assert.Equal(t, KLAYFee*3, balance.Int64())
 	}
 
@@ -940,7 +944,7 @@ func TestBasicJournal(t *testing.T) {
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}))
+	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
@@ -969,10 +973,11 @@ func TestBasicJournal(t *testing.T) {
 
 	// Prepare manager and deploy bridge contract.
 	bm, err := NewBridgeManager(sc)
-
-	localAddr, err := bm.DeployBridgeTest(sim, true)
 	assert.NoError(t, err)
-	remoteAddr, err := bm.DeployBridgeTest(sim, false)
+
+	localAddr, err := bm.DeployBridgeTest(sim, 10000, true)
+	assert.NoError(t, err)
+	remoteAddr, err := bm.DeployBridgeTest(sim, 10000, false)
 	assert.NoError(t, err)
 
 	bm.SetJournal(localAddr, remoteAddr)
@@ -1020,7 +1025,7 @@ func TestMethodRestoreBridges(t *testing.T) {
 	config.VTRecovery = true
 	config.VTRecoveryInterval = 60
 
-	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}))
+	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
@@ -1049,14 +1054,15 @@ func TestMethodRestoreBridges(t *testing.T) {
 	}
 
 	// Prepare manager and deploy bridge contract.
-	bm, _ := NewBridgeManager(sc)
+	bm, err := NewBridgeManager(sc)
+	assert.NoError(t, err)
 
 	var bridgeAddrs [4]common.Address
 	for i := 0; i < 4; i++ {
 		if i%2 == 0 {
-			bridgeAddrs[i], err = bm.DeployBridgeTest(sim, true)
+			bridgeAddrs[i], err = bm.DeployBridgeTest(sim, 10000, true)
 		} else {
-			bridgeAddrs[i], err = bm.DeployBridgeTest(sim, false)
+			bridgeAddrs[i], err = bm.DeployBridgeTest(sim, 10000, false)
 		}
 		if err != nil {
 			t.Fatal("deploy bridge test failed", bridgeAddrs[i])
@@ -1244,7 +1250,7 @@ func TestErrorDuplicatedSetBridgeInfo(t *testing.T) {
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}))
+	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
@@ -1274,7 +1280,9 @@ func TestErrorDuplicatedSetBridgeInfo(t *testing.T) {
 
 	// Prepare manager
 	bm, err := NewBridgeManager(sc)
-	addr, err := bm.DeployBridgeTest(sim, false)
+	assert.NoError(t, err)
+	addr, err := bm.DeployBridgeTest(sim, 10000, false)
+	assert.NoError(t, err)
 	bridgeInfo, _ := bm.GetBridgeInfo(addr)
 
 	// Try to call duplicated SetBridgeInfo
@@ -1309,7 +1317,7 @@ func TestScenarioSubUnsub(t *testing.T) {
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}))
+	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
@@ -1339,8 +1347,9 @@ func TestScenarioSubUnsub(t *testing.T) {
 
 	// Prepare manager and deploy bridge contract.
 	bm, err := NewBridgeManager(sc)
+	assert.NoError(t, err)
 
-	localAddr, err := bm.DeployBridgeTest(sim, true)
+	localAddr, err := bm.DeployBridgeTest(sim, 10000, true)
 	if err != nil {
 		t.Fatal("deploy bridge test failed", localAddr)
 	}
@@ -1414,7 +1423,7 @@ func TestErrorDupSubscription(t *testing.T) {
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}))
+	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
@@ -1444,11 +1453,12 @@ func TestErrorDupSubscription(t *testing.T) {
 
 	// 1. Prepare manager and subscribe event
 	bm, err := NewBridgeManager(sc)
+	assert.NoError(t, err)
 
-	addr, err := bm.DeployBridgeTest(sim, false)
+	addr, err := bm.DeployBridgeTest(sim, 10000, false)
 	bridgeInfo, _ := bm.GetBridgeInfo(addr)
 	bridge := bridgeInfo.bridge
-	fmt.Println("===== BridgeContract Addr ", addr.Hex())
+	t.Log("===== BridgeContract Addr ", addr.Hex())
 	sim.Commit() // block
 
 	bm.bridges[addr], err = NewBridgeInfo(sc, addr, bridge, common.Address{}, nil, bacc.cAccount, true, true, sim)
@@ -1491,12 +1501,12 @@ func TestAnchoringBasic(t *testing.T) {
 	// nil block
 	{
 		err := sc.handler.blockAnchoringManager(nil)
-		assert.Error(t, errInvalidBlock, err)
+		assert.Error(t, ErrInvalidBlock, err)
 	}
 
 	{
 		err := sc.handler.generateAndAddAnchoringTxIntoTxPool(nil)
-		assert.Error(t, errInvalidBlock, err)
+		assert.Error(t, ErrInvalidBlock, err)
 	}
 	// Generate anchoring tx again for the curBlk.
 	err = sc.handler.blockAnchoringManager(curBlk)
@@ -1651,7 +1661,7 @@ func generateAnchoringEnv(t *testing.T, tempDir string) (*backends.SimulatedBack
 		ks,
 	}
 	am := accounts.NewManager(back...)
-	bAcc, _ := NewBridgeAccounts(am, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}))
+	bAcc, _ := NewBridgeAccounts(am, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
 	bAcc.pAccount.chainID = big.NewInt(0)
 	bAcc.cAccount.chainID = big.NewInt(0)
 	parentOperator := bAcc.pAccount
@@ -1734,7 +1744,7 @@ func TestAnchoringStart(t *testing.T) {
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bAcc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}))
+	bAcc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
 	bAcc.pAccount.chainID = big.NewInt(0)
 	bAcc.cAccount.chainID = big.NewInt(0)
 
@@ -1817,7 +1827,7 @@ func TestAnchoringPeriod(t *testing.T) {
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bAcc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}))
+	bAcc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
 	bAcc.pAccount.chainID = big.NewInt(0)
 	bAcc.cAccount.chainID = big.NewInt(0)
 
@@ -1941,7 +1951,7 @@ func TestDecodingLegacyAnchoringTx(t *testing.T) {
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bAcc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}))
+	bAcc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
 	bAcc.pAccount.chainID = big.NewInt(0)
 	bAcc.cAccount.chainID = big.NewInt(0)
 
@@ -1988,7 +1998,7 @@ func TestDecodingLegacyAnchoringTx(t *testing.T) {
 }
 
 // DeployBridgeTest is a test-only function which deploys a bridge contract with some amount of KLAY.
-func (bm *BridgeManager) DeployBridgeTest(backend *backends.SimulatedBackend, local bool) (common.Address, error) {
+func (bm *BridgeManager) DeployBridgeTest(backend *backends.SimulatedBackend, amountOfDeposit int64, local bool) (common.Address, error) {
 	var acc *accountInfo
 
 	// When the pending block of backend is updated, commit it
@@ -2010,7 +2020,7 @@ func (bm *BridgeManager) DeployBridgeTest(backend *backends.SimulatedBackend, lo
 	}
 
 	auth := acc.GenerateTransactOpts()
-	auth.Value = big.NewInt(10000)
+	auth.Value = big.NewInt(amountOfDeposit)
 
 	// Deploy a bridge contract
 	deployedBridge, addr, err := bm.DeployBridge(auth, backend, local)
@@ -2024,4 +2034,89 @@ func (bm *BridgeManager) DeployBridgeTest(backend *backends.SimulatedBackend, lo
 		return common.Address{}, err
 	}
 	return addr, err
+}
+
+func isExpectedBalance(t *testing.T, bridgeManager *BridgeManager,
+	pBridgeAddr, cBridgeAddr common.Address,
+	expectedParentBridgeBalance, expectedChildBridgeBalance int64) {
+	pBridgeBalance, err := bridgeManager.subBridge.APIBackend.GetParentBridgeContractBalance(pBridgeAddr)
+	assert.NoError(t, err)
+	cBridgeBalance, err := bridgeManager.subBridge.APIBackend.GetChildBridgeContractBalance(cBridgeAddr)
+	assert.NoError(t, err)
+	assert.Equal(t, pBridgeBalance.Int64(), expectedParentBridgeBalance)
+	assert.Equal(t, cBridgeBalance.Int64(), expectedChildBridgeBalance)
+}
+
+func TestGetBridgeContractBalance(t *testing.T) {
+	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	assert.NoError(t, err)
+	defer func() {
+		if err := os.RemoveAll(tempDir); err != nil {
+			t.Fatalf("fail to delete file %v", err)
+		}
+	}()
+
+	// Config Bridge Account Manager
+	config := &SCConfig{}
+	config.DataDir = tempDir
+	bacc, _ := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
+	bacc.pAccount.chainID = big.NewInt(0)
+	bacc.cAccount.chainID = big.NewInt(0)
+
+	// Create Simulated backend
+	alloc := blockchain.GenesisAlloc{
+		bacc.pAccount.address: {Balance: big.NewInt(params.KLAY)},
+		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
+	}
+	sim := backends.NewSimulatedBackend(alloc)
+	defer sim.Close()
+
+	sc := &SubBridge{
+		chainDB:        database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}),
+		config:         config,
+		peers:          newBridgePeerSet(),
+		bridgeAccounts: bacc,
+		localBackend:   sim,
+		remoteBackend:  sim,
+	}
+	sc.APIBackend = &SubBridgeAPI{sc}
+	sc.handler, err = NewSubBridgeHandler(sc)
+	if err != nil {
+		log.Fatalf("Failed to initialize bridgeHandler : %v", err)
+		return
+	}
+
+	bm, err := NewBridgeManager(sc)
+	assert.NoError(t, err)
+	sc.handler.subbridge.bridgeManager = bm
+
+	// Case 1 - Success
+	{
+		initialChildbridgeBalance, initialParentbridgeBalance := int64(100), int64(100)
+		cBridgeAddr, err := bm.DeployBridgeTest(sim, initialChildbridgeBalance, true)
+		assert.NoError(t, err)
+		pBridgeAddr, err := bm.DeployBridgeTest(sim, initialParentbridgeBalance, false)
+		assert.NoError(t, err)
+		bm.SetJournal(cBridgeAddr, pBridgeAddr)
+		assert.NoError(t, err)
+		sim.Commit()
+		isExpectedBalance(t, bm, pBridgeAddr, cBridgeAddr, initialParentbridgeBalance, initialChildbridgeBalance)
+	}
+
+	// Case 2 - ? (Random)
+	{
+		rand.Seed(time.Now().UnixNano())
+		for i := 0; i < 10; i++ {
+			initialChildbridgeBalance, initialParentbridgeBalance := rand.Int63n(10000), rand.Int63n(10000)
+			cBridgeAddr, err := bm.DeployBridgeTest(sim, initialChildbridgeBalance, true)
+			assert.NoError(t, err)
+			pBridgeAddr, err := bm.DeployBridgeTest(sim, initialParentbridgeBalance, false)
+			assert.NoError(t, err)
+			bm.SetJournal(cBridgeAddr, pBridgeAddr)
+			assert.NoError(t, err)
+			sim.Commit()
+			isExpectedBalance(t, bm, pBridgeAddr, cBridgeAddr, initialParentbridgeBalance, initialChildbridgeBalance)
+		}
+	}
+
 }

@@ -449,10 +449,6 @@ func (g *Governance) updateGovernanceParams() {
 	params.SetStakingUpdateInterval(g.StakingUpdateInterval())
 	params.SetProposerUpdateInterval(g.ProposerUpdateInterval())
 
-	if minimumStakingAmount, ok := new(big.Int).SetString(g.MinimumStake(), 10); ok {
-		params.SetMinimumStakingAmount(minimumStakingAmount)
-	}
-
 	// NOTE: HumanReadable related functions are inactivated now
 	if txGasHumanReadable, ok := g.currentSet.GetValue(params.ConstTxGasHumanReadable); ok {
 		params.TxGasHumanReadable = txGasHumanReadable.(uint64)
@@ -469,6 +465,26 @@ func (g *Governance) SetTotalVotingPower(t uint64) {
 
 func (g *Governance) SetMyVotingPower(t uint64) {
 	atomic.StoreUint64(&g.votingPower, t)
+}
+
+func (g *Governance) NodeAddress() common.Address {
+	return g.nodeAddress.Load().(common.Address)
+}
+
+func (g *Governance) TotalVotingPower() uint64 {
+	return atomic.LoadUint64(&g.totalVotingPower)
+}
+
+func (g *Governance) MyVotingPower() uint64 {
+	return atomic.LoadUint64(&g.votingPower)
+}
+
+func (gov *Governance) BlockChain() blockChain {
+	return gov.blockChain
+}
+
+func (gov *Governance) DB() database.DBManager {
+	return gov.db
 }
 
 func (g *Governance) GetEncodedVote(addr common.Address, number uint64) []byte {
@@ -1073,11 +1089,12 @@ func writeFailLog(key int, err error) {
 	logger.Crit(msg, "err", err)
 }
 
-func AddGovernanceCacheForTest(g *Governance, num uint64, config *params.ChainConfig) {
-	// Don't update cache if num (block number) is smaller than the biggest number of cached block number
-
-	data := GetGovernanceItemsFromChainConfig(config)
-	g.addGovernanceCache(num, data)
+func AddGovernanceCacheForTest(e HeaderEngine, num uint64, config *params.ChainConfig) {
+	// addGovernanceCache only exists and relevant in *Governance.
+	if g, ok := e.(*Governance); ok {
+		data := GetGovernanceItemsFromChainConfig(config)
+		g.addGovernanceCache(num, data)
+	}
 }
 
 func (gov *Governance) GovernanceMode() string {
@@ -1138,6 +1155,22 @@ func (gov *Governance) UseGiniCoeff() bool {
 
 func (gov *Governance) ChainId() uint64 {
 	return gov.ChainConfig.ChainID.Uint64()
+}
+
+func (gov *Governance) InitialChainConfig() *params.ChainConfig {
+	return gov.ChainConfig
+}
+
+func (g *Governance) GetVoteMapCopy() map[string]VoteStatus {
+	return g.voteMap.Copy()
+}
+
+func (g *Governance) GetGovernanceTalliesCopy() []GovernanceTallyItem {
+	return g.GovernanceTallies.Copy()
+}
+
+func (gov *Governance) CurrentSetCopy() map[string]interface{} {
+	return gov.currentSet.Items()
 }
 
 func (gov *Governance) PendingChanges() map[string]interface{} {

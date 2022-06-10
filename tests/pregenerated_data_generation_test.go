@@ -329,5 +329,6 @@ func getGenerationTestDefaultTC() *preGeneratedTC {
 		numTotalAccountsToGenerate: 500 * 10000, numTxsPerGen: 10000,
 		numTotalSenders: 10000, numReceiversPerRun: 10000,
 		filePicker: sequentialIndex, addrPicker: sequentialIndex,
-		cacheConfig: defaultCacheConfig()}
+		cacheConfig: defaultCacheConfig(),
+	}
 }

@@ -674,11 +674,6 @@ func getTestConfig() *params.ChainConfig {
 	return config
 }
 
-func getGovernance(dbm database.DBManager) *governance.Governance {
-	config := getTestConfig()
-	return governance.NewGovernanceInitialize(config, dbm)
-}
-
 func Benchmark_getTargetReceivers(b *testing.B) {
 	_, backend := newBlockChain(1)
 	defer backend.Stop()
@@ -821,7 +816,7 @@ func newTestBackendWithConfig(chainConfig *params.ChainConfig, blockPeriod uint6
 		// if governance mode is single, set the node key to the governing node.
 		chainConfig.Governance.GoverningNode = crypto.PubkeyToAddress(key.PublicKey)
 	}
-	gov := governance.NewGovernanceInitialize(chainConfig, dbm)
+	gov := governance.NewMixedEngine(chainConfig, dbm)
 	istanbulConfig := istanbul.DefaultConfig
 	istanbulConfig.BlockPeriod = blockPeriod
 	istanbulConfig.ProposerPolicy = istanbul.ProposerPolicy(chainConfig.Istanbul.ProposerPolicy)

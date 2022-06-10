@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
+//go:build none
 // +build none
 
 package main
@@ -1008,8 +1009,13 @@ func doXgo(cmdline []string) {
 	flag.CommandLine.Parse(cmdline)
 	env := build.Env()
 
+	subCmd := "get"
+	if strings.HasPrefix(runtime.Version(), "go1.18") {
+		subCmd = "install"
+	}
+
 	// Make sure xgo is available for cross compilation
-	gogetxgo := goTool("get", "github.com/klaytn/xgo")
+	gogetxgo := goTool(subCmd, "github.com/klaytn/xgo")
 	build.MustRun(gogetxgo)
 
 	// If all tools building is requested, build everything the builder wants

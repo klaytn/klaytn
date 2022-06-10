@@ -132,7 +132,7 @@ func (journal *txJournal) insert(tx *types.Transaction) error {
 
 // rotate regenerates the transaction journal based on the current contents of
 // the transaction pool.
-func (journal *txJournal) rotate(all map[common.Address]types.Transactions) error {
+func (journal *txJournal) rotate(all map[common.Address]types.Transactions, signer types.Signer) error {
 	// Close the current journal (if any is open)
 	if journal.writer != nil {
 		if err := journal.writer.Close(); err != nil {
@@ -146,15 +146,17 @@ func (journal *txJournal) rotate(all map[common.Address]types.Transactions) erro
 		return err
 	}
 	journaled := 0
-	for _, txs := range all {
-		for _, tx := range txs {
-			if err = rlp.Encode(replacement, tx); err != nil {
-				replacement.Close()
-				return err
-			}
+
+	txSetByTime := types.NewTransactionsByPriceAndNonce(signer, all)
+	for tx := txSetByTime.Peek(); tx != nil; tx = txSetByTime.Peek() {
+		if err = rlp.Encode(replacement, tx); err != nil {
+			replacement.Close()
+			return err
 		}
-		journaled += len(txs)
+		journaled++
+		txSetByTime.Shift()
 	}
+
 	replacement.Close()
 
 	// Replace the live journal with the newly generated one

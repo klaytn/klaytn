@@ -65,7 +65,7 @@ func testNewMainBridge(t *testing.T) *MainBridge {
 func testBlockChain(t *testing.T) *blockchain.BlockChain {
 	db := database.NewMemoryDBManager()
 
-	gov := governance.NewGovernanceInitialize(&params.ChainConfig{
+	gov := governance.NewMixedEngine(&params.ChainConfig{
 		ChainID:       big.NewInt(2018),
 		UnitPrice:     25000000000,
 		DeriveShaImpl: 0,
@@ -219,7 +219,8 @@ func TestMainBridge_handleMsg(t *testing.T) {
 		data := "valid message"
 		go func() {
 			if err := p2p.Send(pipe2, StatusMsg, data); err != nil {
-				t.Fatal(err)
+				t.Error(err)
+				return
 			}
 		}()
 
@@ -233,7 +234,8 @@ func TestMainBridge_handleMsg(t *testing.T) {
 		data := strings.Repeat("a", ProtocolMaxMsgSize+1)
 		go func() {
 			if err := p2p.Send(pipe2, StatusMsg, data); err != nil {
-				t.Fatal(err)
+				t.Error(err)
+				return
 			}
 		}()
 

@@ -87,7 +87,8 @@ func newShardedDB(dbc *DBConfig, et DBEntryType, numShards uint) (*shardedDB, er
 	logger.Info("Created a sharded database", "dbType", et, "numShards", numShards)
 	return &shardedDB{
 		fn: dbc.Dir, shards: shards,
-		numShards: numShards, sdbBatchTaskCh: sdbBatchTaskCh}, nil
+		numShards: numShards, sdbBatchTaskCh: sdbBatchTaskCh,
+	}, nil
 }
 
 // batchWriteWorker executes passed batch tasks.
@@ -207,7 +208,6 @@ func (db *shardedDB) NewIteratorUnsorted(prefix []byte, start []byte) Iterator {
 // runCombineWorker fetches any key/value from resultChs and put the data in resultCh
 // in binary-alphabetical order.
 func (it *shardedDBIterator) runCombineWorker() {
-
 	// creates min-priority queue smallest values from each iterators
 	entries := &entryHeap{}
 	heap.Init(entries)
@@ -291,9 +291,11 @@ func (e entryHeap) Len() int {
 func (e entryHeap) Less(i, j int) bool {
 	return bytes.Compare(e[i].Key, e[j].Key) < 0
 }
+
 func (e entryHeap) Swap(i, j int) {
 	e[i], e[j] = e[j], e[i]
 }
+
 func (e *entryHeap) Push(x interface{}) {
 	*e = append(*e, x.(entryWithShardNum))
 }
@@ -410,8 +412,10 @@ func (db *shardedDB) NewBatch() Batch {
 		batches = append(batches, db.shards[i].NewBatch())
 	}
 
-	return &shardedDBBatch{batches: batches, numBatches: db.numShards,
-		taskCh: db.sdbBatchTaskCh, resultCh: make(chan sdbBatchResult, db.numShards)}
+	return &shardedDBBatch{
+		batches: batches, numBatches: db.numShards,
+		taskCh: db.sdbBatchTaskCh, resultCh: make(chan sdbBatchResult, db.numShards),
+	}
 }
 
 func (db *shardedDB) Type() DBType {

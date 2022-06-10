@@ -22,11 +22,10 @@ package debug
 
 import (
 	"fmt"
+	"io"
 	_ "net/http/pprof"
 	"os"
 	"runtime"
-
-	"io"
 
 	"github.com/fjl/memsize/memsizeui"
 	"github.com/klaytn/klaytn/log"
@@ -128,7 +127,7 @@ func CreateLogDir(logDir string) {
 	Handler.logDir = logDir
 
 	// Currently failures on directory or file creation is treated as a warning.
-	if err := os.MkdirAll(logDir, 0700); err != nil {
+	if err := os.MkdirAll(logDir, 0o700); err != nil {
 		logger.Warn("Failed to create a directory", "logDir", logDir, "err", err)
 	}
 }
@@ -138,9 +137,17 @@ func CreateLogDir(logDir string) {
 func Setup(ctx *cli.Context) error {
 	// logging
 	log.PrintOrigins(ctx.GlobalBool(debugFlag.Name))
-	log.ChangeGlobalLogLevel(glogger, log.Lvl(ctx.GlobalInt(verbosityFlag.Name)))
-	glogger.Vmodule(ctx.GlobalString(vmoduleFlag.Name))
-	glogger.BacktraceAt(ctx.GlobalString(backtraceAtFlag.Name))
+	if err := log.ChangeGlobalLogLevel(glogger, log.Lvl(ctx.GlobalInt(verbosityFlag.Name))); err != nil {
+		return err
+	}
+	if err := glogger.Vmodule(ctx.GlobalString(vmoduleFlag.Name)); err != nil {
+		return err
+	}
+	if len(ctx.GlobalString(backtraceAtFlag.Name)) != 0 {
+		if err := glogger.BacktraceAt(ctx.GlobalString(backtraceAtFlag.Name)); err != nil {
+			return err
+		}
+	}
 	log.Root().SetHandler(glogger)
 
 	// profiling, tracing

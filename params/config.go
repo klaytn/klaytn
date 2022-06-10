@@ -524,13 +524,13 @@ func GetDefaultIstanbulConfig() *IstanbulConfig {
 
 func GetDefaultRewardConfig() *RewardConfig {
 	return &RewardConfig{
-		MintingAmount:          big.NewInt(DefaultMintingAmount),
+		MintingAmount:          DefaultMintingAmount,
 		Ratio:                  DefaultRatio,
 		UseGiniCoeff:           DefaultUseGiniCoeff,
 		DeferredTxFee:          DefaultDefferedTxFee,
-		StakingUpdateInterval:  uint64(86400),
-		ProposerUpdateInterval: uint64(3600),
-		MinimumStake:           big.NewInt(2000000),
+		StakingUpdateInterval:  DefaultStakeUpdateInterval,
+		ProposerUpdateInterval: DefaultProposerRefreshInterval,
+		MinimumStake:           DefaultMinimumStake,
 	}
 }
 

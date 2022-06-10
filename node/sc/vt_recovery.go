@@ -46,8 +46,8 @@ type valueTransferRecovery struct {
 
 	child2parentHint *valueTransferHint
 	parent2childHint *valueTransferHint
-	childEvents      []*RequestValueTransferEvent
-	parentEvents     []*RequestValueTransferEvent
+	childEvents      []IRequestValueTransferEvent
+	parentEvents     []IRequestValueTransferEvent
 
 	config      *SCConfig
 	cBridgeInfo *BridgeInfo
@@ -59,6 +59,15 @@ var (
 	ErrVtrAlreadyStarted = errors.New("VTR is already started")
 )
 
+func isHandledEvent(to *BridgeInfo, ev IRequestValueTransferEvent) bool {
+	blk, err := to.bridge.HandleNoncesToBlockNums(nil, ev.GetRequestNonce())
+	if err == nil && blk > 0 {
+		logger.Trace("skip handled event", "nonce", ev.GetRequestNonce())
+		return true
+	}
+	return false
+}
+
 // NewValueTransferRecovery creates a new value transfer recovery structure.
 func NewValueTransferRecovery(config *SCConfig, cBridgeInfo, pBridgeInfo *BridgeInfo) *valueTransferRecovery {
 	return &valueTransferRecovery{
@@ -67,8 +76,8 @@ func NewValueTransferRecovery(config *SCConfig, cBridgeInfo, pBridgeInfo *Bridge
 		wg:               sync.WaitGroup{},
 		child2parentHint: &valueTransferHint{},
 		parent2childHint: &valueTransferHint{},
-		childEvents:      []*RequestValueTransferEvent{},
-		parentEvents:     []*RequestValueTransferEvent{},
+		childEvents:      []IRequestValueTransferEvent{},
+		parentEvents:     []IRequestValueTransferEvent{},
 		config:           config,
 		cBridgeInfo:      cBridgeInfo,
 		pBridgeInfo:      pBridgeInfo,
@@ -252,7 +261,7 @@ func (vtr *valueTransferRecovery) retrievePendingEvents() error {
 
 // retrievePendingEventsFrom retrieves pending events from the specified bridge by using the hint provided.
 // The filter uses a hint as a search range. It returns a slice of events that has log details.
-func retrievePendingEventsFrom(hint *valueTransferHint, from, to *BridgeInfo) ([]*RequestValueTransferEvent, error) {
+func retrievePendingEventsFrom(hint *valueTransferHint, from, to *BridgeInfo) ([]IRequestValueTransferEvent, error) {
 	if from.bridge == nil {
 		return nil, errors.New("from bridge is nil")
 	}
@@ -266,7 +275,7 @@ func retrievePendingEventsFrom(hint *valueTransferHint, from, to *BridgeInfo) ([
 		return nil, nil
 	}
 
-	var pendingEvents []*RequestValueTransferEvent
+	var pendingEvents []IRequestValueTransferEvent
 
 	curBlkNum, err := from.GetCurrentBlockNumber()
 	if err != nil {
@@ -282,35 +291,58 @@ pendingTxLoop:
 			endBlkNum = curBlkNum
 		}
 		opts := &bind.FilterOpts{Start: startBlkNum, End: &endBlkNum}
-		it, err := from.bridge.FilterRequestValueTransfer(opts, nil, nil, nil)
+		reqVTevIt, err := from.bridge.FilterRequestValueTransfer(opts, nil, nil, nil)
 		if err != nil {
 			return nil, err
 		}
-		for it.Next() {
-			logger.Trace("pending nonce in the event", "requestNonce", it.Event.RequestNonce)
-			if it.Event.RequestNonce >= hint.handleNonce {
+		reqVTencodedDataIt, err := from.bridge.FilterRequestValueTransferEncoded(opts, nil, nil, nil)
+		if err != nil {
+			return nil, err
+		}
+
+		// TODO: The same logic with two types are verbose and can be neat with Go1.18 which supports generic.
+		// For the FilterRequestValueTransfer type
+		for reqVTevIt.Next() {
+			logger.Trace("pending nonce in the RequestValueTransfer event", "requestNonce", reqVTevIt.Event.RequestNonce)
+			if reqVTevIt.Event.RequestNonce >= hint.handleNonce {
 				// Check if the event is already handled in target bridge contract
-				blk, err := to.bridge.HandleNoncesToBlockNums(nil, it.Event.RequestNonce)
-				if err == nil && blk > 0 {
-					logger.Trace("skip handled event", "nonce", it.Event.RequestNonce)
+				if isHandledEvent(to, RequestValueTransferEvent{reqVTevIt.Event}) {
 					continue
 				}
-
-				logger.Trace("filtered pending nonce", "requestNonce", it.Event.RequestNonce, "handledNonce", hint.handleNonce)
-				pendingEvents = append(pendingEvents, &RequestValueTransferEvent{it.Event})
+				logger.Trace("filtered pending nonce", "requestNonce", reqVTevIt.Event.RequestNonce, "handledNonce", hint.handleNonce)
+				pendingEvents = append(pendingEvents, RequestValueTransferEvent{reqVTevIt.Event})
 				if len(pendingEvents) >= maxPendingTxs {
-					it.Close()
+					reqVTevIt.Close()
+					break pendingTxLoop
+				}
+			}
+		}
+		// For the FilterRequestValueTransferEncoded type
+		for reqVTencodedDataIt.Next() {
+			logger.Trace("pending nonce in the RequestValueTransferEncoded event", "requestNonce", reqVTencodedDataIt.Event.RequestNonce)
+			if reqVTencodedDataIt.Event.RequestNonce >= hint.handleNonce {
+				// Check if the event is already handled in target bridge contract
+				if isHandledEvent(to, RequestValueTransferEncodedEvent{reqVTencodedDataIt.Event}) {
+					continue
+				}
+				logger.Trace("filtered pending nonce", "requestNonce", reqVTencodedDataIt.Event.RequestNonce, "handledNonce", hint.handleNonce)
+				pendingEvents = append(pendingEvents, RequestValueTransferEncodedEvent{reqVTencodedDataIt.Event})
+				if len(pendingEvents) >= maxPendingTxs {
+					reqVTencodedDataIt.Close()
 					break pendingTxLoop
 				}
 			}
 		}
 		startBlkNum = endBlkNum + 1
 		endBlkNum = startBlkNum + filterLogsStride
-		it.Close()
+		reqVTevIt.Close()
+		reqVTencodedDataIt.Close()
 	}
 
 	if len(pendingEvents) > 0 {
-		logger.Info("retrieved pending events", "bridge", from.address.String(), "len(pendingEvents)", len(pendingEvents), "1st nonce", pendingEvents[0].Nonce())
+		logger.Info("retrieved pending events", "bridge", from.address.String(),
+			"len(pendingEvents)", len(pendingEvents), "1st nonce", pendingEvents[0].Nonce())
+
 	}
 	return pendingEvents, nil
 }
@@ -348,8 +380,8 @@ func checkRecoveryCondition(hint *valueTransferHint) bool {
 // recoverPendingEvents recovers all pending events by resending them.
 func (vtr *valueTransferRecovery) recoverPendingEvents() error {
 	defer func() {
-		vtr.childEvents = []*RequestValueTransferEvent{}
-		vtr.parentEvents = []*RequestValueTransferEvent{}
+		vtr.childEvents = []IRequestValueTransferEvent{}
+		vtr.parentEvents = []IRequestValueTransferEvent{}
 	}()
 
 	if len(vtr.childEvents) > 0 {
@@ -359,14 +391,22 @@ func (vtr *valueTransferRecovery) recoverPendingEvents() error {
 	vtRequestEventMeter.Mark(int64(len(vtr.childEvents)))
 	vtRecoveredRequestEventMeter.Mark(int64(len(vtr.childEvents)))
 
-	vtr.pBridgeInfo.AddRequestValueTransferEvents(vtr.childEvents)
+	events := make([]IRequestValueTransferEvent, len(vtr.childEvents))
+	for i, event := range vtr.childEvents {
+		events[i] = event
+	}
+	vtr.pBridgeInfo.AddRequestValueTransferEvents(events)
 
 	if len(vtr.parentEvents) > 0 {
 		logger.Warn("VT Recovery : Parent -> Child Chain", "pBridge", vtr.pBridgeInfo.address.String(), "events", len(vtr.parentEvents))
 	}
 
 	vtHandleEventMeter.Mark(int64(len(vtr.parentEvents)))
-	vtr.cBridgeInfo.AddRequestValueTransferEvents(vtr.parentEvents)
+	events = make([]IRequestValueTransferEvent, len(vtr.parentEvents))
+	for i, event := range vtr.parentEvents {
+		events[i] = event
+	}
+	vtr.cBridgeInfo.AddRequestValueTransferEvents(events)
 
 	return nil
 }

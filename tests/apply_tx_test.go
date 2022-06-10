@@ -34,6 +34,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/profile"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
 )
@@ -139,9 +140,11 @@ func BenchmarkTxPerformanceNewMultisig(b *testing.B) {
 	// sender account
 	sender, err := createMultisigAccount(uint(2),
 		[]uint{1, 1, 1},
-		[]string{"bb113e82881499a7a361e8354a5b68f6c6885c7bcba09ea2b0891480396c322e",
+		[]string{
+			"bb113e82881499a7a361e8354a5b68f6c6885c7bcba09ea2b0891480396c322e",
 			"a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae59438e989",
-			"c32c471b732e2f56103e2f8e8cfd52792ef548f05f326e546a7d1fbf9d0419ec"},
+			"c32c471b732e2f56103e2f8e8cfd52792ef548f05f326e546a7d1fbf9d0419ec",
+		},
 		common.HexToAddress("0xbbfa38050bf3167c887c086758f448ce067ea8ea"))
 	assert.Equal(b, nil, err)
 
@@ -254,9 +257,7 @@ func BenchmarkTxPerformanceNewRoleBasedMultisig3(b *testing.B) {
 }
 
 func benchmarkTxPerformanceCompatible(b *testing.B, genTx genTx) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 
 	// Initialize blockchain
 	bcdata, err := NewBCData(6, 4)
@@ -343,9 +344,7 @@ func benchmarkTxPerformanceCompatible(b *testing.B, genTx genTx) {
 }
 
 func benchmarkTxPerformanceSmartContractExecution(b *testing.B, genTx genTx) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
@@ -475,9 +474,7 @@ func benchmarkTxPerformanceSmartContractExecution(b *testing.B, genTx genTx) {
 }
 
 func benchmarkTxPerformanceNew(b *testing.B, genTx genTx, sender *TestAccountType) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
@@ -657,7 +654,6 @@ func genNewSmartContractDeploy(signer types.Signer, from *TestAccountType, to *T
 		// The binary below is a compiled binary of contracts/reward/contract/KlaytnReward.sol.
 		types.TxValueKeyData: common.Hex2Bytes("608060405234801561001057600080fd5b506101de806100206000396000f3006080604052600436106100615763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631a39d8ef81146100805780636353586b146100a757806370a08231146100ca578063fd6b7ef8146100f8575b3360009081526001602052604081208054349081019091558154019055005b34801561008c57600080fd5b5061009561010d565b60408051918252519081900360200190f35b6100c873ffffffffffffffffffffffffffffffffffffffff60043516610113565b005b3480156100d657600080fd5b5061009573ffffffffffffffffffffffffffffffffffffffff60043516610147565b34801561010457600080fd5b506100c8610159565b60005481565b73ffffffffffffffffffffffffffffffffffffffff1660009081526001602052604081208054349081019091558154019055565b60016020526000908152604090205481565b336000908152600160205260408120805490829055908111156101af57604051339082156108fc029083906000818181858888f193505050501561019c576101af565b3360009081526001602052604090208190555b505600a165627a7a72305820627ca46bb09478a015762806cc00c431230501118c7c26c30ac58c4e09e51c4f0029"),
 	})
-
 	if err != nil {
 		panic(err)
 	}
@@ -695,7 +691,6 @@ func genNewAccountUpdateMultisig3(signer types.Signer, from *TestAccountType, to
 		types.TxValueKeyHumanReadable: false,
 		types.TxValueKeyAccountKey:    keys,
 	})
-
 	if err != nil {
 		panic(err)
 	}
@@ -731,7 +726,6 @@ func genNewAccountUpdateRoleBasedSingle(signer types.Signer, from *TestAccountTy
 		types.TxValueKeyHumanReadable: false,
 		types.TxValueKeyAccountKey:    keys,
 	})
-
 	if err != nil {
 		panic(err)
 	}
@@ -783,7 +777,6 @@ func genNewAccountUpdateRoleBasedMultisig3(signer types.Signer, from *TestAccoun
 		types.TxValueKeyHumanReadable: false,
 		types.TxValueKeyAccountKey:    keys,
 	})
-
 	if err != nil {
 		panic(err)
 	}
@@ -810,7 +803,6 @@ func genNewFeeDelegatedValueTransfer(signer types.Signer, from *TestAccountType,
 		types.TxValueKeyFrom:     from.Addr,
 		types.TxValueKeyFeePayer: from.Addr,
 	})
-
 	if err != nil {
 		panic(err)
 	}
@@ -841,7 +833,6 @@ func genNewFeeDelegatedValueTransferWithRatio(signer types.Signer, from *TestAcc
 		types.TxValueKeyFeePayer:           from.Addr,
 		types.TxValueKeyFeeRatioOfFeePayer: types.FeeRatio(30),
 	})
-
 	if err != nil {
 		panic(err)
 	}
@@ -885,7 +876,6 @@ func genNewSmartContractExecution(signer types.Signer, from *TestAccountType, to
 		// An abi-packed bytes calling "reward" of contracts/reward/contract/KlaytnReward.sol with an address "bc5951f055a85f41a3b62fd6f68ab7de76d299b2".
 		types.TxValueKeyData: common.Hex2Bytes("6353586b000000000000000000000000bc5951f055a85f41a3b62fd6f68ab7de76d299b2"),
 	})
-
 	if err != nil {
 		panic(err)
 	}
@@ -908,7 +898,6 @@ func genNewAccountUpdateAccountKeyPublic(signer types.Signer, from *TestAccountT
 		types.TxValueKeyFrom:       from.Addr,
 		types.TxValueKeyAccountKey: accountkey.NewAccountKeyPublicWithValue(&k.PublicKey),
 	})
-
 	if err != nil {
 		panic(err)
 	}
@@ -932,7 +921,6 @@ func genNewCancel(signer types.Signer, from *TestAccountType, to *TestAccountTyp
 		types.TxValueKeyGasPrice: gasPrice,
 		types.TxValueKeyFrom:     from.Addr,
 	})
-
 	if err != nil {
 		panic(err)
 	}
