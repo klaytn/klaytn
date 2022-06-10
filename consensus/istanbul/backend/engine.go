@@ -426,7 +426,7 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 	if chain.Config().IsKIP71ForkEnabled(header.Number) {
 		if header.BaseFee == nil {
 			logger.Error("KIP-71 hard forked block should have baseFee", "blockNum", header.Number.Uint64())
-			return nil, errors.New("Invalide KIP-71 block with no baseFee")
+			return nil, errors.New("Invalid KIP-71 block without baseFee")
 		}
 	} else {
 		if header.BaseFee != nil {
