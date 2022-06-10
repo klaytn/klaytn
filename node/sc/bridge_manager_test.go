@@ -365,7 +365,7 @@ func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
-	//pAuth := bacc.cAccount.GenerateTransactOpts()
+	// pAuth := bacc.cAccount.GenerateTransactOpts()
 	cAuth := bacc.pAccount.GenerateTransactOpts()
 
 	// Generate a new random account and a funded simulator
@@ -2015,7 +2015,7 @@ func TestBridgeAliasAPIs(t *testing.T) {
 	config := &SCConfig{}
 	config.DataDir = tempDir
 
-	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit)
+	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
