@@ -53,8 +53,8 @@ import (
 const (
 	forceSyncCycle = 10 * time.Second // Time interval to force syncs, even if few peers are available
 
-	requestEventChanSize = 10000
-	handleEventChanSize  = 10000
+	chanReqVTevanSize    = 10000
+	chanHandleVTevanSize = 10000
 
 	resetBridgeCycle   = 3 * time.Second
 	restoreBridgeCycle = 3 * time.Second
@@ -153,10 +153,12 @@ type SubBridge struct {
 	remoteBackend Backend
 	bridgeManager *BridgeManager
 
-	requestEventCh  chan *RequestValueTransferEvent
-	requestEventSub event.Subscription
-	handleEventCh   chan *HandleValueTransferEvent
-	handleEventSub  event.Subscription
+	chanReqVTev        chan RequestValueTransferEvent
+	chanReqVTencodedEv chan RequestValueTransferEncodedEvent
+	reqVTevSub         event.Subscription
+	reqVTencodedEvSub  event.Subscription
+	chanHandleVTev     chan *HandleValueTransferEvent
+	handleVTevSub      event.Subscription
 
 	bridgeAccounts *BridgeAccounts
 
@@ -192,13 +194,14 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 		chainCh:        make(chan blockchain.ChainEvent, chainEventChanSize),
 		logsCh:         make(chan []*types.Log, chainLogChanSize),
 		// txCh:            make(chan blockchain.NewTxsEvent, transactionChanSize),
-		requestEventCh: make(chan *RequestValueTransferEvent, requestEventChanSize),
-		handleEventCh:  make(chan *HandleValueTransferEvent, handleEventChanSize),
-		quitSync:       make(chan struct{}),
-		maxPeers:       config.MaxPeer,
-		onAnchoringTx:  config.Anchoring,
-		bootFail:       false,
-		rpcSendCh:      make(chan []byte),
+		chanReqVTev:        make(chan RequestValueTransferEvent, chanReqVTevanSize),
+		chanReqVTencodedEv: make(chan RequestValueTransferEncodedEvent, chanReqVTevanSize),
+		chanHandleVTev:     make(chan *HandleValueTransferEvent, chanHandleVTevanSize),
+		quitSync:           make(chan struct{}),
+		maxPeers:           config.MaxPeer,
+		onAnchoringTx:      config.Anchoring,
+		bootFail:           false,
+		rpcSendCh:          make(chan []byte),
 	}
 	// TODO-Klaytn change static config to user define config
 	bridgetxConfig := bridgepool.BridgeTxPoolConfig{
@@ -215,7 +218,7 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 	sb.bridgeTxPool = bridgepool.NewBridgeTxPool(bridgetxConfig)
 
 	var err error
-	sb.bridgeAccounts, err = NewBridgeAccounts(sb.accountManager, config.DataDir, chainDB, sb.config.ServiceChainOperatorGasLimit)
+	sb.bridgeAccounts, err = NewBridgeAccounts(sb.accountManager, config.DataDir, chainDB, sb.config.ServiceChainParentOperatorGasLimit, sb.config.ServiceChainChildOperatorGasLimit)
 	if err != nil {
 		return nil, err
 	}
@@ -382,8 +385,9 @@ func (sb *SubBridge) SetComponents(components []interface{}) {
 		sb.bootFail = true
 		return
 	}
-	sb.requestEventSub = sb.bridgeManager.SubscribeRequestEvent(sb.requestEventCh)
-	sb.handleEventSub = sb.bridgeManager.SubscribeHandleEvent(sb.handleEventCh)
+	sb.reqVTevSub = sb.bridgeManager.SubscribeReqVTev(sb.chanReqVTev)
+	sb.reqVTencodedEvSub = sb.bridgeManager.SubscribeReqVTencodedEv(sb.chanReqVTencodedEv)
+	sb.handleVTevSub = sb.bridgeManager.SubscribeHandleVTev(sb.chanHandleVTev)
 
 	sb.pmwg.Add(1)
 	go sb.restoreBridgeLoop()
@@ -644,12 +648,17 @@ func (sb *SubBridge) loop() {
 				logger.Error("subbridge log event", "err", err)
 			}
 		// Handle Bridge Event
-		case ev := <-sb.requestEventCh:
+		case ev := <-sb.chanReqVTev:
 			vtRequestEventMeter.Mark(1)
 			if err := sb.eventhandler.ProcessRequestEvent(ev); err != nil {
 				logger.Error("fail to process request value transfer event ", "err", err)
 			}
-		case ev := <-sb.handleEventCh:
+		case ev := <-sb.chanReqVTencodedEv:
+			vtRequestEventMeter.Mark(1)
+			if err := sb.eventhandler.ProcessRequestEvent(ev); err != nil {
+				logger.Error("fail to process request value transfer event ", "err", err)
+			}
+		case ev := <-sb.chanHandleVTev:
 			vtHandleEventMeter.Mark(1)
 			if err := sb.eventhandler.ProcessHandleEvent(ev); err != nil {
 				logger.Error("fail to process handle value transfer event ", "err", err)
@@ -669,12 +678,17 @@ func (sb *SubBridge) loop() {
 				logger.Error("subbridge log subscription ", "err", err)
 			}
 			return
-		case err := <-sb.requestEventSub.Err():
+		case err := <-sb.reqVTevSub.Err():
 			if err != nil {
 				logger.Error("subbridge token-received subscription ", "err", err)
 			}
 			return
-		case err := <-sb.handleEventSub.Err():
+		case err := <-sb.reqVTencodedEvSub.Err():
+			if err != nil {
+				logger.Error("subbridge token-received subscription ", "err", err)
+			}
+			return
+		case err := <-sb.handleVTevSub.Err():
 			if err != nil {
 				logger.Error("subbridge token-transfer subscription ", "err", err)
 			}
@@ -761,8 +775,9 @@ func (sb *SubBridge) Stop() error {
 	sb.chainSub.Unsubscribe()
 	//sb.txSub.Unsubscribe()
 	sb.logsSub.Unsubscribe()
-	sb.requestEventSub.Unsubscribe()
-	sb.handleEventSub.Unsubscribe()
+	sb.reqVTevSub.Unsubscribe()
+	sb.reqVTencodedEvSub.Unsubscribe()
+	sb.handleVTevSub.Unsubscribe()
 	sb.eventMux.Stop()
 	sb.chainDB.Close()
 

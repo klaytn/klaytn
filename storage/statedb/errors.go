@@ -39,6 +39,4 @@ func (err *MissingNodeError) Error() string {
 	return fmt.Sprintf("missing trie node %x (path %x)", err.NodeHash, err.Path)
 }
 
-var (
-	ErrZeroHashNode = errors.New("cannot retrieve a node which has 0x00 hash value")
-)
+var ErrZeroHashNode = errors.New("cannot retrieve a node which has 0x00 hash value")

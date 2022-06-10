@@ -171,7 +171,7 @@ func benchmarkEVM_Create(bench *testing.B, code string) {
 		Time:        new(big.Int).SetUint64(0),
 		Coinbase:    common.Address{},
 		BlockNumber: new(big.Int).SetUint64(1),
-		ChainConfig: &params.ChainConfig{Istanbul: params.GetDefaultIstanbulConfig(), Governance: params.GetDefaultGovernanceConfig(params.UseIstanbul)},
+		ChainConfig: &params.ChainConfig{Istanbul: params.GetDefaultIstanbulConfig(), Governance: params.GetDefaultGovernanceConfig()},
 		EVMConfig:   vm.Config{},
 	}
 	// Warm up the intpools and stuff

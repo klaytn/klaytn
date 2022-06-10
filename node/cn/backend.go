@@ -214,7 +214,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	setEngineType(chainConfig)
 
 	// load governance state
-	governance := governance.NewGovernanceInitialize(chainConfig, chainDB)
+	governance := governance.NewMixedEngine(chainConfig, chainDB)
 
 	// Set latest unitPrice/gasPrice
 	chainConfig.UnitPrice = governance.UnitPrice()
@@ -457,7 +457,7 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) database.DB
 func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db database.DBManager, gov governance.Engine, nodetype common.ConnType) consensus.Engine {
 	// Only istanbul  BFT is allowed in the main net. PoA is supported by service chain
 	if chainConfig.Governance == nil {
-		chainConfig.Governance = params.GetDefaultGovernanceConfig(params.UseIstanbul)
+		chainConfig.Governance = params.GetDefaultGovernanceConfig()
 	}
 	return istanbulBackend.New(config.Rewardbase, &config.Istanbul, ctx.NodeKey(), db, gov, nodetype)
 }

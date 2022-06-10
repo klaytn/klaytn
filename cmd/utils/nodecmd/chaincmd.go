@@ -166,8 +166,8 @@ func initGenesis(ctx *cli.Context) error {
 
 		// Write governance items to database
 		// If governance data already exist, it'll be skipped with an error log and will not return an error
-		if err := governance.NewGovernance(genesis.Config, chainDB).WriteGovernance(0, govSet,
-			governance.NewGovernanceSet()); err != nil {
+		gov := governance.NewMixedEngineNoInit(genesis.Config, chainDB)
+		if err := gov.WriteGovernance(0, govSet, governance.NewGovernanceSet()); err != nil {
 			logger.Crit("Failed to write governance items", "err", err)
 		}
 
@@ -210,7 +210,7 @@ func ValidateGenesisConfig(g *blockchain.Genesis) error {
 		return errors.New("proposerUpdateInterval and stakingUpdateInterval cannot be zero")
 	}
 
-	if g.Config.GetConsensusEngine() == params.UseIstanbul {
+	if g.Config.Istanbul != nil {
 		if err := governance.CheckGenesisValues(g.Config); err != nil {
 			return err
 		}

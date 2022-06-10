@@ -641,7 +641,7 @@ func (db *Database) Nodes() []common.Hash {
 	db.lock.RLock()
 	defer db.lock.RUnlock()
 
-	var hashes = make([]common.Hash, 0, len(db.nodes))
+	hashes := make([]common.Hash, 0, len(db.nodes))
 	for hash := range db.nodes {
 		if hash != (common.Hash{}) { // Special case for "root" references/nodes
 			hashes = append(hashes, hash)
@@ -1033,7 +1033,7 @@ func (db *Database) Size() (common.StorageSize, common.StorageSize) {
 	// db.nodesSize only contains the useful data in the cache, but when reporting
 	// the total memory consumption, the maintenance metadata is also needed to be
 	// counted. For every useful node, we track 2 extra hashes as the flushlist.
-	var flushlistSize = common.StorageSize((len(db.nodes) - 1) * 2 * common.HashLength)
+	flushlistSize := common.StorageSize((len(db.nodes) - 1) * 2 * common.HashLength)
 	return db.nodesSize + flushlistSize, db.preimagesSize
 }
 
@@ -1129,8 +1129,10 @@ func (db *Database) UpdateMetricNodes() {
 	}
 }
 
-var errDisabledTrieNodeCache = errors.New("trie node cache is disabled, nothing to save to file")
-var errSavingTrieNodeCacheInProgress = errors.New("saving trie node cache has been triggered already")
+var (
+	errDisabledTrieNodeCache         = errors.New("trie node cache is disabled, nothing to save to file")
+	errSavingTrieNodeCacheInProgress = errors.New("saving trie node cache has been triggered already")
+)
 
 func (db *Database) CanSaveTrieNodeCacheToFile() error {
 	if db.trieNodeCache == nil {
