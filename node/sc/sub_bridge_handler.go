@@ -175,16 +175,25 @@ func (sbh *SubBridgeHandler) getRemoteGasPrice() uint64 {
 }
 
 // setRemoteGasPrice sets parent chain's gasprice with upperboundbasefee
-func (sbh *SubBridgeHandler) setRemoteGasPrice(upperBoundBaseFee uint64) {
-	sbh.subbridge.bridgeAccounts.pAccount.SetGasPrice(big.NewInt(int64(upperBoundBaseFee)))
-	sbh.remoteGasPrice = upperBoundBaseFee
+func (sbh *SubBridgeHandler) setRemoteGasPrice(gasPrice uint64) {
+	sbh.subbridge.bridgeAccounts.pAccount.SetGasPrice(big.NewInt(int64(gasPrice)))
+	sbh.remoteGasPrice = gasPrice
 }
 
 // setRemoteChainValues sets parent chain's configuration values
 func (sbh *SubBridgeHandler) setRemoteChainValues(pcInfo parentChainInfo) {
-	if sbh.subbridge.blockchain.Config().IsKIP71ForkEnabled(sbh.subbridge.blockchain.CurrentHeader().Number) {
+	/*
+		///////////////////// KIP71 Test ///////////////////////////
+		sbh.subbridge.blockchain.Config().KIP71CompatibleBlock = big.NewInt(100)
+		headerNum := big.NewInt(101)
+		////////////////////////////////////////////////////////////
+	*/
+
+	headerNum := sbh.subbridge.blockchain.CurrentHeader().Number
+	sbh.setRemoteGasPrice(pcInfo.GasPrice)
+	if sbh.subbridge.blockchain.Config().IsKIP71ForkEnabled(headerNum) {
 		// Set parent chain's gasprice with upperboundbasefee
-		sbh.setRemoteGasPrice(pcInfo.KIP71Config.UpperBoundBaseFee)
+		sbh.remoteGasPrice = pcInfo.KIP71Config.UpperBoundBaseFee
 		sbh.subbridge.bridgeAccounts.SetParentKIP71Config(pcInfo.KIP71Config)
 		kip71Config := sbh.subbridge.bridgeAccounts.GetParentKIP71Config()
 
@@ -195,7 +204,6 @@ func (sbh *SubBridgeHandler) setRemoteChainValues(pcInfo parentChainInfo) {
 			"MaxBlockGasUsedForBaseFee", kip71Config.MaxBlockGasUsedForBaseFee,
 			"BaseFeeDenominator", kip71Config.BaseFeeDenominator)
 	} else {
-		sbh.setRemoteGasPrice(pcInfo.GasPrice)
 		logger.Info("Updated parent chain's gas price", "gasPrice", sbh.subbridge.bridgeAccounts.GetParentGasPrice())
 	}
 }
@@ -376,10 +384,14 @@ func (sbh *SubBridgeHandler) LocalChainHeadEvent(block *types.Block) {
 }
 
 func (sbh *SubBridgeHandler) handleParentChainInvalidTxResponseMsg(msg p2p.Msg) error {
-	if !sbh.subbridge.blockchain.Config().IsKIP71ForkEnabled(sbh.subbridge.blockchain.CurrentHeader().Number) {
-		return nil
-	}
+	/*
+		///////////////////// KIP71 Test ///////////////////////////
+		sbh.subbridge.blockchain.Config().KIP71CompatibleBlock = big.NewInt(100)
+		headerNum := big.NewInt(101)
+		////////////////////////////////////////////////////////////
+	*/
 
+	headerNum := sbh.subbridge.blockchain.CurrentHeader().Number
 	var invalidTxs []InvalidParentChainTx
 	if err := msg.Decode(&invalidTxs); err != nil && err != rlp.EOL {
 		return errResp(ErrDecode, "msg %v: %v", msg, err)
@@ -391,7 +403,8 @@ func (sbh *SubBridgeHandler) handleParentChainInvalidTxResponseMsg(msg p2p.Msg) 
 				"prevGasPrice", sbh.subbridge.bridgeAccounts.GetParentGasPrice(), "txHash", invalidTx.TxHash.String(),
 				"txGasPrice", tx.GasPrice().Uint64(),
 				"txHash", tx.Hash().String())
-			if invalidTx.ErrStr == blockchain.ErrGasPriceBelowBaseFee.Error() {
+			if sbh.subbridge.blockchain.Config().IsKIP71ForkEnabled(headerNum) &&
+				invalidTx.ErrStr == blockchain.ErrGasPriceBelowBaseFee.Error() {
 				logger.Info("Request gasPrice and KIP71 values to parent chain")
 				sbh.SyncNonceAndGasPrice()
 
