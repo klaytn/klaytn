@@ -356,7 +356,7 @@ func (h *HandlerT) WriteVMLog(msg string) {
 func (h *HandlerT) openVMLogFile() {
 	var err error
 	filename := filepath.Join(h.logDir, "vm.log")
-	Handler.vmLogFile, err = os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
+	Handler.vmLogFile, err = os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
 	if err != nil {
 		logger.Warn("Failed to open a file", "filename", filename, "err", err)
 	}
