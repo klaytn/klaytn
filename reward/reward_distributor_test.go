@@ -83,27 +83,37 @@ func Test_isEmptyAddress(t *testing.T) {
 func TestRewardDistributor_getTotalTxFee(t *testing.T) {
 	testCases := []struct {
 		gasUsed            uint64
+		unitPrice          *big.Int
 		baseFee            *big.Int
 		expectedTotalTxFee *big.Int
 	}{
-		{0, big.NewInt(25000000000), big.NewInt(0)},
-		{200000, big.NewInt(25000000000), big.NewInt(5000000000000000)},
-		{200000, big.NewInt(25000000000), big.NewInt(5000000000000000)},
-		{129346, big.NewInt(10000000000), big.NewInt(1293460000000000)},
-		{129346, big.NewInt(10000000000), big.NewInt(1293460000000000)},
-		{9236192, big.NewInt(50000), big.NewInt(461809600000)},
-		{9236192, big.NewInt(50000), big.NewInt(461809600000)},
-		{12936418927364923, big.NewInt(0), big.NewInt(0)},
+		// before kip71 hardfork
+		{0, big.NewInt(25000000000), nil, big.NewInt(0)},
+		{200000, big.NewInt(25000000000), nil, big.NewInt(5000000000000000)},
+		{200000, big.NewInt(25000000000), nil, big.NewInt(5000000000000000)},
+		{129346, big.NewInt(10000000000), nil, big.NewInt(1293460000000000)},
+		{129346, big.NewInt(10000000000), nil, big.NewInt(1293460000000000)},
+		{9236192, big.NewInt(50000), nil, big.NewInt(461809600000)},
+		{9236192, big.NewInt(50000), nil, big.NewInt(461809600000)},
+		{12936418927364923, big.NewInt(0), nil, big.NewInt(0)},
+		// after kip71 hardfork, unitprice ignored
+		{0, big.NewInt(25000000000), big.NewInt(25000000000), big.NewInt(0)},
+		{200000, big.NewInt(25000000000), big.NewInt(25000000000), big.NewInt(5000000000000000)},
+		{200000, big.NewInt(25000000000), big.NewInt(25000000000), big.NewInt(5000000000000000)},
+		{129346, big.NewInt(25000000000), big.NewInt(10000000000), big.NewInt(1293460000000000)},
+		{129346, big.NewInt(250), big.NewInt(10000000000), big.NewInt(1293460000000000)},
+		{9236192, big.NewInt(9876), big.NewInt(50000), big.NewInt(461809600000)},
+		{9236192, big.NewInt(25000000000), big.NewInt(50000), big.NewInt(461809600000)},
+		{12936418927364923, big.NewInt(25000000000), big.NewInt(0), big.NewInt(0)},
 	}
 	rewardDistributor := NewRewardDistributor(newDefaultTestGovernance())
 	rewardConfig := &rewardConfig{}
 
 	header := &types.Header{}
-
 	for _, testCase := range testCases {
 		header.GasUsed = testCase.gasUsed
 		header.BaseFee = testCase.baseFee
-		rewardConfig.unitPrice = testCase.baseFee
+		rewardConfig.unitPrice = testCase.unitPrice
 
 		result := rewardDistributor.getTotalTxFee(header, rewardConfig)
 		assert.Equal(t, testCase.expectedTotalTxFee.Uint64(), result.Uint64())
@@ -113,17 +123,18 @@ func TestRewardDistributor_getTotalTxFee(t *testing.T) {
 func TestRewardDistributor_TxFeeBurning(t *testing.T) {
 	testCases := []struct {
 		gasUsed            uint64
+		unitPrice          *big.Int
 		baseFee            *big.Int
 		expectedTotalTxFee *big.Int
 	}{
-		{0, big.NewInt(25000000000), big.NewInt(0)},
-		{200000, big.NewInt(25000000000), big.NewInt(5000000000000000 / 2)},
-		{200000, big.NewInt(25000000000), big.NewInt(5000000000000000 / 2)},
-		{129346, big.NewInt(10000000000), big.NewInt(1293460000000000 / 2)},
-		{129346, big.NewInt(10000000000), big.NewInt(1293460000000000 / 2)},
-		{9236192, big.NewInt(50000), big.NewInt(461809600000 / 2)},
-		{9236192, big.NewInt(50000), big.NewInt(461809600000 / 2)},
-		{12936418927364923, big.NewInt(0), big.NewInt(0)},
+		{0, nil, big.NewInt(25000000000), big.NewInt(0)},
+		{200000, nil, big.NewInt(25000000000), big.NewInt(5000000000000000 / 2)},
+		{200000, nil, big.NewInt(25000000000), big.NewInt(5000000000000000 / 2)},
+		{129346, nil, big.NewInt(10000000000), big.NewInt(1293460000000000 / 2)},
+		{129346, nil, big.NewInt(10000000000), big.NewInt(1293460000000000 / 2)},
+		{9236192, nil, big.NewInt(50000), big.NewInt(461809600000 / 2)},
+		{9236192, nil, big.NewInt(50000), big.NewInt(461809600000 / 2)},
+		{12936418927364923, nil, big.NewInt(0), big.NewInt(0)},
 	}
 	rewardDistributor := NewRewardDistributor(newDefaultTestGovernance())
 	rewardConfig := &rewardConfig{}
