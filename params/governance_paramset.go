@@ -210,6 +210,7 @@ var govParamTypes = map[int]*govParamType{
 	MinimumStake:            govParamTypeBigInt,
 	StakeUpdateInterval:     govParamTypeUint64,
 	ProposerRefreshInterval: govParamTypeUint64,
+	GovernanceContract:      govParamTypeAddress,
 }
 
 var govParamNames = map[string]int{
@@ -226,6 +227,7 @@ var govParamNames = map[string]int{
 	"reward.minimumstake":           MinimumStake,
 	"reward.stakingupdateinterval":  StakeUpdateInterval,
 	"reward.proposerupdateinterval": ProposerRefreshInterval,
+	"governance.governancecontract": GovernanceContract,
 }
 
 var govParamNamesReverse = map[int]string{}
@@ -320,6 +322,7 @@ func NewGovParamSetChainConfig(config *ChainConfig) (*GovParamSet, error) {
 	if config.Governance != nil {
 		items[GoverningNode] = config.Governance.GoverningNode
 		items[GovernanceMode] = config.Governance.GovernanceMode
+		items[GovernanceContract] = config.Governance.GovernanceContract
 		if config.Governance.Reward != nil {
 			if config.Governance.Reward.MintingAmount != nil {
 				items[MintingAmount] = config.Governance.Reward.MintingAmount.String()
@@ -470,4 +473,8 @@ func (p *GovParamSet) ProposerRefreshInterval() uint64 {
 
 func (p *GovParamSet) Timeout() uint64 {
 	return p.MustGet(Timeout).(uint64)
+}
+
+func (p *GovParamSet) GovernanceContract() common.Address {
+	return p.MustGet(GovernanceContract).(common.Address)
 }
