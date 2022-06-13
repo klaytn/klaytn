@@ -428,11 +428,9 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 			logger.Error("KIP-71 hard forked block should have baseFee", "blockNum", header.Number.Uint64())
 			return nil, errors.New("Invalide KIP-71 block with no baseFee")
 		}
-	} else {
-		if header.BaseFee != nil {
-			logger.Error("A block before KIP-71 hardfork shouldn't have baseFee", "blockNum", header.Number.Uint64())
-			return nil, errors.New("Invalide block with baseFee")
-		}
+	} else if header.BaseFee != nil {
+		logger.Error("A block before KIP-71 hardfork shouldn't have baseFee", "blockNum", header.Number.Uint64())
+		return nil, consensus.ErrInvalidBaseFee
 	}
 
 	// If sb.chain is nil, it means backend is not initialized yet.
