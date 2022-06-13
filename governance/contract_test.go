@@ -12,6 +12,7 @@ import (
 	govcontract "github.com/klaytn/klaytn/contracts/gov"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -94,4 +95,39 @@ func TestContractEngine_Simulated(t *testing.T) {
 	assert.Equal(t, 1, len(values))
 	assert.Equal(t, name, names[0])
 	assert.Equal(t, valueB, values[0].Value)
+}
+
+func TestContractEngine_AddrAt(t *testing.T) {
+	// Setup:
+	// in ChainConfig: addrA
+	// in Database at blocks 0-59: addrA
+	// in Database at blocks 60-: addrB
+	var (
+		addrA  = common.HexToAddress("0xaaaa")
+		addrB  = common.HexToAddress("0xbbbb")
+		config = getTestConfig()
+		db     = database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
+	)
+
+	config.Istanbul.Epoch = 30
+	config.Governance.GovernanceContract = addrA
+	defaultGov := NewGovernanceInitialize(config, db)
+
+	// Write to database
+	items := defaultGov.currentSet.Items()
+	items["governance.governancecontract"] = addrB
+	gset := NewGovernanceSet()
+	gset.Import(items)
+	err := defaultGov.WriteGovernance(30, NewGovernanceSet(), gset)
+	assert.Nil(t, err)
+
+	// Falls back to ChainConfig if defaultGov is not set
+	e := NewContractEngine(config, nil)
+	assert.Equal(t, addrA, e.contractAddrAt(0))
+	assert.Equal(t, addrA, e.contractAddrAt(60))
+
+	// Read from database if defaultGov is given
+	e = NewContractEngine(config, defaultGov)
+	assert.Equal(t, addrA, e.contractAddrAt(0))
+	assert.Equal(t, addrB, e.contractAddrAt(60))
 }

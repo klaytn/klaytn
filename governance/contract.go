@@ -118,7 +118,14 @@ func (e *ContractEngine) contractGetAllParams(num uint64) (*params.GovParamSet, 
 
 // Return the GovernanceContract address effective at given block number
 func (e *ContractEngine) contractAddrAt(num uint64) common.Address {
-	// TODO: Load from HeaderEngine
+	// Load from HeaderEngine
+	if e.defaultGov != nil {
+		if pset, err := e.defaultGov.ParamsAt(num); err == nil {
+			if _, ok := pset.Get(params.GovernanceContract); ok {
+				return pset.GovernanceContract()
+			}
+		}
+	}
 
 	// If database don't have the item, fallback to ChainConfig
 	if e.chainConfig.Governance != nil {
