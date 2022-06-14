@@ -392,7 +392,7 @@ func (s *PublicBlockChainAPI) DoEstimateGas(ctx context.Context, b Backend, args
 		logger.Warn("Caller gas above allowance, capping", "requested", hi, "cap", gasCap)
 		hi = gasCap.Uint64()
 	}
-	//TODO-Klaytn set hi value with account balance
+	// TODO-Klaytn set hi value with account balance
 	cap = hi
 
 	// Create a helper to check if a gas allowance results in an executable transaction
