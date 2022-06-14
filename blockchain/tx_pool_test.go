@@ -2018,7 +2018,6 @@ func TestFeeDelegatedTransaction(t *testing.T) {
 	if err := pool.AddRemote(tx2); err != nil {
 		t.Error("expected", "got", err)
 	}
-
 }
 
 func TestFeeDelegatedWithRatioTransaction(t *testing.T) {
@@ -2069,7 +2068,6 @@ func TestFeeDelegatedWithRatioTransaction(t *testing.T) {
 	if err := pool.AddRemote(tx5); err != nil {
 		t.Error("expected", "got", err)
 	}
-
 }
 
 func TestTransactionJournalingSortedByTime(t *testing.T) {
