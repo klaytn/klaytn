@@ -1468,6 +1468,7 @@ func (api *EthereumAPI) rpcMarshalHeader(head *types.Header) (map[string]interfa
 		"receiptsRoot":     head.ReceiptHash,
 	}
 
+	// TODO-Klaytn needs to add kip71 hardfork condition
 	if api.publicBlockChainAPI.b.ChainConfig().IsEthTxTypeForkEnabled(head.Number) {
 		result["baseFeePerGas"] = (*hexutil.Big)(new(big.Int).SetUint64(params.ZeroBaseFee))
 	}
