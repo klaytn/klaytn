@@ -64,6 +64,12 @@ var (
 	ErrBridgeRestore        = errors.New("restoring bridges is failed")
 )
 
+var handleVTmethods = map[uint8]string{
+	KLAY:   "handleKLAYTransfer",
+	ERC20:  "handleERC20Transfer",
+	ERC721: "handleERC721Transfer",
+}
+
 // HandleValueTransferEvent from Bridge contract
 type HandleValueTransferEvent struct {
 	*bridgecontract.BridgeHandleValueTransfer
@@ -143,6 +149,19 @@ func NewBridgeInfo(sb *SubBridge, addr common.Address, bridge *bridgecontract.Br
 	go bi.loop()
 
 	return bi, nil
+}
+
+// handleValueTransferLog records value transfer transaction's log
+func handleValueTransferLog(onChild bool, funcName, txHash string, reqNonce uint64, from, to common.Address, valueOrTokenId *big.Int) {
+	// Note the `onChild` should be interpreted as reverse. Refer `ProcessRequestEvent()` in sub_event_handler.go
+	var vtDir string
+	if onChild {
+		vtDir = "(parent--->child)"
+	} else {
+		vtDir = "(child--->parent)"
+	}
+	logger.Trace("Bridge contract transaction is created", "VTDirection", vtDir,
+		"contractCall", funcName, "nonce", reqNonce, "txHash", txHash, "from", from, "to", to, "valueOrTokenID", valueOrTokenId)
 }
 
 func (bi *BridgeInfo) loop() {
@@ -300,16 +319,20 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev IRequestValueTransferEv
 		if err != nil {
 			return err
 		}
-		logger.Trace("Bridge succeeded to HandleKLAYTransfer", "nonce", requestNonce, "tx", handleTx.Hash().String())
+		handleValueTransferLog(bi.onChildChain, handleVTmethods[KLAY], handleTx.Hash().String(), requestNonce, from, to, valueOrTokenId)
 	case ERC20:
 		handleTx, err = bi.bridge.HandleERC20Transfer(auth, txHash, from, to, ctpartTokenAddr, valueOrTokenId, requestNonce, blkNumber, extraData)
 		if err != nil {
 			return err
 		}
-		logger.Trace("Bridge succeeded to HandleERC20Transfer", "nonce", requestNonce, "tx", handleTx.Hash().String())
+		handleValueTransferLog(bi.onChildChain, handleVTmethods[ERC20], handleTx.Hash().String(), requestNonce, from, to, valueOrTokenId)
 	case ERC721:
-		handleTx, err = bi.bridge.HandleERC721Transfer(auth, txHash, from, to, ctpartTokenAddr, valueOrTokenId, requestNonce, blkNumber, GetURI(ev), extraData)
-		logger.Trace("Bridge succeeded to HandleERC721Transfer", "nonce", requestNonce, "tx", handleTx.Hash().String())
+		uri := GetURI(ev)
+		handleTx, err = bi.bridge.HandleERC721Transfer(auth, txHash, from, to, ctpartTokenAddr, valueOrTokenId, requestNonce, blkNumber, uri, extraData)
+		if err != nil {
+			return err
+		}
+		handleValueTransferLog(bi.onChildChain, handleVTmethods[ERC721], handleTx.Hash().String(), requestNonce, from, to, valueOrTokenId)
 	default:
 		logger.Error("Got Unknown Token Type ReceivedEvent", "bridge", contractAddr, "nonce", requestNonce, "from", from)
 		return nil

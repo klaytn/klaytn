@@ -29,7 +29,6 @@ import (
 	"path"
 	"strconv"
 	"sync"
-	"testing"
 	"time"
 
 	"github.com/klaytn/klaytn/blockchain"
@@ -40,6 +39,7 @@ import (
 	istanbulBackend "github.com/klaytn/klaytn/consensus/istanbul/backend"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/governance"
+	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/storage/database"
@@ -402,9 +402,11 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 
 	rewardDistributor := reward.NewRewardDistributor(gov)
 
-	return &BCData{bc, addrs, privKeys, chainDB,
+	return &BCData{
+		bc, addrs, privKeys, chainDB,
 		&genesisAddr, validatorAddresses,
-		validatorPrivKeys, engine, genesis, gov, rewardDistributor}, nil
+		validatorPrivKeys, engine, genesis, gov, rewardDistributor,
+	}, nil
 }
 
 // genAspenOptions returns database configurations of Aspen network.
@@ -499,19 +501,17 @@ func generateGovernaceDataForTest() governance.Engine {
 			ProposerPolicy: uint64(istanbul.DefaultConfig.ProposerPolicy),
 			SubGroupSize:   istanbul.DefaultConfig.SubGroupSize,
 		},
-		Governance: params.GetDefaultGovernanceConfig(params.UseIstanbul),
+		Governance: params.GetDefaultGovernanceConfig(),
 	}, dbm)
 }
 
 // setUpTest sets up test data directory, verbosity and profile file.
 func setUpTest(tc *preGeneratedTC) (string, *os.File, error) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
+
 	testDataDir, err := setupTestDir(tc.originalDataDir, tc.isGenerateTest)
 	if err != nil {
 		return "", nil, fmt.Errorf("err: %v, dir: %v", err, testDataDir)
-	}
-
-	if testing.Verbose() {
-		enableLog()
 	}
 
 	timeNow := time.Now()
