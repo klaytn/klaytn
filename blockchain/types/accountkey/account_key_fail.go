@@ -27,8 +27,7 @@ import (
 // from themselves with a public key recovery mechanism.
 // Klaytn assumes that the only way to take tokens from smart contract account is using
 // `transfer()` in the smart contract code.
-type AccountKeyFail struct {
-}
+type AccountKeyFail struct{}
 
 var globalFailKey = &AccountKeyFail{}
 
