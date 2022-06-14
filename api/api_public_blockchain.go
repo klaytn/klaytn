@@ -256,6 +256,7 @@ func (s *PublicBlockChainAPI) IsSenderTxHashIndexingEnabled() bool {
 }
 
 // CallArgs represents the arguments for a call.
+// TODO-Klaytn add KIP-71 related parameter
 type CallArgs struct {
 	From     common.Address  `json:"from"`
 	To       *common.Address `json:"to"`
@@ -263,6 +264,17 @@ type CallArgs struct {
 	GasPrice hexutil.Big     `json:"gasPrice"`
 	Value    hexutil.Big     `json:"value"`
 	Data     hexutil.Bytes   `json:"data"`
+	Input    hexutil.Bytes   `json:"input"`
+}
+
+func (args *CallArgs) data() []byte {
+	if args.Input != nil {
+		return args.Input
+	}
+	if args.Data != nil {
+		return args.Data
+	}
+	return nil
 }
 
 func DoCall(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.BlockNumberOrHash, vmCfg vm.Config, timeout time.Duration, globalGasCap *big.Int) ([]byte, uint64, uint64, uint, error) {
@@ -286,7 +298,7 @@ func DoCall(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.Blo
 
 	// TODO-Klaytn: Klaytn is using fixed baseFee as now but, if we change this fixed baseFee as dynamic baseFee, we should update this logic too.
 	fixedBaseFee := new(big.Int).SetUint64(params.BaseFee)
-	intrinsicGas, err := types.IntrinsicGas(args.Data, nil, args.To == nil, b.ChainConfig().Rules(header.Number))
+	intrinsicGas, err := types.IntrinsicGas(args.data(), nil, args.To == nil, b.ChainConfig().Rules(header.Number))
 	if err != nil {
 		return nil, 0, 0, 0, err
 	}
@@ -375,10 +387,12 @@ func (s *PublicBlockChainAPI) DoEstimateGas(ctx context.Context, b Backend, args
 		// Retrieve the current pending block to act as the gas ceiling
 		hi = params.UpperGasLimit
 	}
+
 	if gasCap != nil && hi > gasCap.Uint64() {
 		logger.Warn("Caller gas above allowance, capping", "requested", hi, "cap", gasCap)
 		hi = gasCap.Uint64()
 	}
+	//TODO-Klaytn set hi value with account balance
 	cap = hi
 
 	// Create a helper to check if a gas allowance results in an executable transaction
@@ -688,5 +702,5 @@ func (args *CallArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsic
 	// if args.AccessList != nil {
 	//	 accessList = *args.AccessList
 	// }
-	return types.NewMessage(addr, args.To, 0, value, gas, gasPrice, args.Data, false, intrinsicGas), nil
+	return types.NewMessage(addr, args.To, 0, value, gas, gasPrice, args.data(), false, intrinsicGas), nil
 }
