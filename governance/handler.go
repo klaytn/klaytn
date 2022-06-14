@@ -381,6 +381,10 @@ func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, votes 
 			} else {
 				logger.Warn("Invalid value Type", "number", header.Number, "Validator", gVote.Validator, "key", gVote.Key, "value", gVote.Value)
 			}
+		case params.GovernanceContract:
+			if addr, ok := gVote.Value.(common.Address); ok {
+				logger.Warn("Vote GovernanceContract", "number", header.Number, "addr", addr.Hex())
+			}
 			// TODO-Klaytn: Verify params.GovernanceContract points to a valid Governance contract
 		}
 

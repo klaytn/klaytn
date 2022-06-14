@@ -168,8 +168,10 @@ func newKlaytnNode(t *testing.T, dir string, validator *TestAccountType) (*node.
 	genesis.ExtraData = genesis.ExtraData[:types.IstanbulExtraVanity]
 	genesis.ExtraData = append(genesis.ExtraData, istanbulConfData...)
 	genesis.Config = params.CypressChainConfig.Copy()
+	genesis.Config.Istanbul.Epoch = 3 // make it small for quicker tests
 	genesis.Config.Istanbul.SubGroupSize = 1
 	genesis.Config.Istanbul.ProposerPolicy = uint64(istanbul.RoundRobin)
+	genesis.Config.Governance.GoverningNode = validator.Addr
 	genesis.Config.Governance.Reward.MintingAmount = new(big.Int).Mul(big.NewInt(9000000000000000000), big.NewInt(params.KLAY))
 
 	cnConf := cn.GetDefaultConfig()

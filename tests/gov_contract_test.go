@@ -16,12 +16,15 @@ import (
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/log"
+	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node/cn"
 	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
+// Test that ContractEngine can read appropriate parameter values before and after
+// the contract is deployed.
 func TestGovernance_ContractEngine(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
 
@@ -107,6 +110,60 @@ func TestGovernance_ContractEngine(t *testing.T) {
 			assert.Equal(t, paramValue, value)
 		}
 	}
+}
+
+// Test that vote for "governance.governancecontract" works.
+func TestGovernance_MixedEngine(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
+
+	fullNode, node, validator, chainId, workspace := newBlockchain(t)
+	defer os.RemoveAll(workspace)
+	defer fullNode.Stop()
+
+	var (
+		chain        = node.BlockChain().(*blockchain.BlockChain)
+		db           = node.ChainDB()
+		config       = chain.Config()
+		owner        = validator
+		contractAddr = crypto.CreateAddress(owner.Addr, owner.Nonce)
+		rpcServer, _ = fullNode.RPCHandler()
+		rpcClient    = rpc.DialInProc(rpcServer)
+	)
+
+	engine := governance.NewMixedEngine(config, db)
+	engine.SetBlockchain(chain)
+
+	// Check assumptions in ChainConfig. Should have been configured in newBlockchain().
+	require.Equal(t, uint64(3), config.Istanbul.Epoch)                         // for quicker test
+	require.Equal(t, owner.Addr, config.Governance.GoverningNode)              // allow governance_vote
+	require.True(t, common.EmptyAddress(config.Governance.GovernanceContract)) // no contract at genesis
+
+	// Prepare the contract before vote the contract address
+	deployGovParamTx_constructor(t, node, owner, chainId)      // deploy
+	configToWrite := config.Copy()                             // upload copy of ChainConfig
+	configToWrite.Governance.GovernanceContract = contractAddr // ..except GovernanceContract
+	bytesMap := chainConfigToBytesMap(t, configToWrite)
+	deployGovParamTx_batchSetParam(t, node, owner, chainId, contractAddr, bytesMap)
+
+	// Vote for the contract address
+	var res interface{}
+	require.Nil(t, rpcClient.Call(&res, "governance_vote", "governance.governancecontract", contractAddr))
+	t.Logf("Voted at block=%2d returned='%s'", chain.CurrentHeader().Number.Uint64(), res)
+
+	// Check that GovernanceContract param changes correctly
+	num := chain.CurrentHeader().Number.Uint64()
+	pset, err := engine.ParamsAt(num)
+	require.Nil(t, err)
+	assert.Equal(t, common.Address{}, pset.GovernanceContract()) // zero address before vote is applied.
+
+	// Wait until the vote takes effect.
+	// It takes at most 3*Epoch blocks for the vote to take effect.
+	applyBlock := num + 9
+	waitBlock(chain, applyBlock)
+
+	pset, err = engine.ParamsAt(num)
+	require.Nil(t, err)
+	assert.NotEqual(t, contractAddr, pset.GovernanceContract()) // set to contractAddr after vote is applied
 }
 
 func deployGovParamTx_constructor(t *testing.T, node *cn.CN, owner *TestAccountType, chainId *big.Int,
