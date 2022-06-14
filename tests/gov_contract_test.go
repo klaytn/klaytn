@@ -158,12 +158,82 @@ func TestGovernance_MixedEngine(t *testing.T) {
 
 	// Wait until the vote takes effect.
 	// It takes at most 3*Epoch blocks for the vote to take effect.
-	applyBlock := num + 9
-	waitBlock(chain, applyBlock)
+	waitBlock(chain, num+9)
 
 	pset, err = engine.ParamsAt(num)
 	require.Nil(t, err)
 	assert.NotEqual(t, contractAddr, pset.GovernanceContract()) // set to contractAddr after vote is applied
+}
+
+// Test the validation lobic of voting for "governance.governancecontract" item
+func TestGovernance_VoteContractAddr(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
+
+	fullNode, node, validator, chainId, workspace := newBlockchain(t)
+	defer os.RemoveAll(workspace)
+	defer fullNode.Stop()
+
+	var (
+		chain        = node.BlockChain().(*blockchain.BlockChain)
+		db           = node.ChainDB()
+		config       = chain.Config()
+		owner        = validator
+		contractAddr = crypto.CreateAddress(owner.Addr, owner.Nonce)
+		rpcServer, _ = fullNode.RPCHandler()
+		rpcClient    = rpc.DialInProc(rpcServer)
+	)
+
+	engine := governance.NewMixedEngine(config, db)
+	engine.SetBlockchain(chain)
+
+	// Check assumptions in ChainConfig. Should have been configured in newBlockchain().
+	require.Equal(t, uint64(3), config.Istanbul.Epoch)                         // for quicker test
+	require.Equal(t, owner.Addr, config.Governance.GoverningNode)              // allow governance_vote
+	require.True(t, common.EmptyAddress(config.Governance.GovernanceContract)) // no contract at genesis
+
+	// 1-1. Deploy the contract but wrong values
+	deployGovParamTx_constructor(t, node, owner, chainId) // deploy
+	configToWrite := config.Copy()                        // upload copy of ChainConfig
+	configToWrite.Istanbul.SubGroupSize = 777             // ..with intentionally wrong value
+	bytesMap := chainConfigToBytesMap(t, configToWrite)
+	deployGovParamTx_batchSetParam(t, node, owner, chainId, contractAddr, bytesMap)
+
+	// 1-2. Vote fails because of parameter mismatch
+	num := chain.CurrentHeader().Number.Uint64()
+	require.Nil(t, rpcClient.Call(nil, "governance_vote", "governance.governancecontract", contractAddr))
+	t.Logf("Voted at block=%2d", num)
+	waitBlock(chain, num+9) // wait for 3*Epochs for vote to apply
+	pset, err := engine.ParamsAt(num + 9)
+	assert.Nil(t, err)
+	assert.Equal(t, common.Address{}, pset.GovernanceContract()) // still zero
+
+	// 2-1. Overwrite the wrong param by correct value
+	name := "istanbul.committeesize"
+	value := []byte{byte(config.Istanbul.SubGroupSize)}
+	deployGovParamTx_setParam(t, node, owner, chainId, contractAddr, name, value)
+
+	// 2-2. Vote fails because governancecontract == 0 in contract
+	num = chain.CurrentHeader().Number.Uint64()
+	require.Nil(t, rpcClient.Call(nil, "governance_vote", "governance.governancecontract", contractAddr))
+	t.Logf("Voted at block=%2d", num)
+	waitBlock(chain, num+9) // wait for 3*Epochs for vote to apply
+	pset, err = engine.ParamsAt(num + 9)
+	assert.Nil(t, err)
+	assert.Equal(t, common.Address{}, pset.GovernanceContract()) // still zero
+
+	// 3-1. Correct the contract by setting the GovernanceContract param
+	name = "governance.governancecontract"
+	value = contractAddr.Bytes()
+	deployGovParamTx_setParam(t, node, owner, chainId, contractAddr, name, value)
+
+	// 3-2. Vote succeeds
+	num = chain.CurrentHeader().Number.Uint64()
+	require.Nil(t, rpcClient.Call(nil, "governance_vote", "governance.governancecontract", contractAddr))
+	t.Logf("Voted at block=%2d", num)
+	waitBlock(chain, num+9) // wait for 3*Epochs for vote to apply
+	pset, err = engine.ParamsAt(num + 9)
+	assert.Nil(t, err)
+	assert.Equal(t, contractAddr, pset.GovernanceContract()) // now changed
 }
 
 func deployGovParamTx_constructor(t *testing.T, node *cn.CN, owner *TestAccountType, chainId *big.Int,

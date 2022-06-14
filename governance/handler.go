@@ -17,6 +17,7 @@
 package governance
 
 import (
+	"errors"
 	"math/big"
 	"reflect"
 	"strconv"
@@ -382,10 +383,21 @@ func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, votes 
 				logger.Warn("Invalid value Type", "number", header.Number, "Validator", gVote.Validator, "key", gVote.Key, "value", gVote.Value)
 			}
 		case params.GovernanceContract:
-			if addr, ok := gVote.Value.(common.Address); ok {
-				logger.Warn("Vote GovernanceContract", "number", header.Number, "addr", addr.Hex())
+			if addr, ok := gVote.Value.(common.Address); !ok {
+				logger.Warn("Invalid value Type", "number", header.Number, "Validator", gVote.Validator, "key", gVote.Key, "value", gVote.Value)
+				if proposer == self {
+					gov.removeDuplicatedVote(gVote, header.Number.Uint64())
+				}
+				return valset, votes, tally
+			} else if err := gov.validateGovernanceContractVote(addr, header.Number); err != nil {
+				logger.Warn("Invalid GovernanceContract vote", "number", header.Number, "addr", addr.Hex(), "err", err)
+				if proposer == self {
+					gov.removeDuplicatedVote(gVote, header.Number.Uint64())
+				}
+				return valset, votes, tally
+			} else {
+				logger.Info("Valid GovernanceContract vote", "number", header.Number, "addr", addr.Hex())
 			}
-			// TODO-Klaytn: Verify params.GovernanceContract points to a valid Governance contract
 		}
 
 		number := header.Number.Uint64()
@@ -417,6 +429,44 @@ func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, votes 
 		}
 	}
 	return valset, votes, tally
+}
+
+func (gov *Governance) validateGovernanceContractVote(votedAddr common.Address, number *big.Int) error {
+	// 1. The address must be a contract that implements getAllParamsAt(num).
+	caller := &contractCaller{
+		chainConfig:  gov.ChainConfig,
+		chain:        gov.blockChain,
+		contractAddr: votedAddr,
+	}
+	contractSet, err := caller.getAllParams(number)
+	if err != nil {
+		return err
+	}
+
+	// 2. The contract's paramset must be equal to current set
+	//    except the GovernanceContract item because it is now changing.
+	contractMap := contractSet.StrMap()
+	existingMap := gov.Params().StrMap()
+	for key, existingVal := range existingMap {
+		contractVal := contractMap[key]
+		if key == "governance.governancecontract" {
+			continue
+		}
+		if contractVal != existingVal {
+			logger.Warn("Params mismatch", "key", key, "existing", existingVal, "contract", contractVal)
+			return errors.New("Params mismatch")
+		}
+	}
+
+	// 3. The contract's GovernanceContract value must be the contract address
+	key := "governance.governancecontract"
+	contractVal := contractMap[key]
+	if contractVal != votedAddr {
+		logger.Warn("Params mismatch", "key", key, "value", contractVal)
+		return errors.New("Params mismatch")
+	}
+
+	return nil
 }
 
 func (gov *Governance) checkVote(address common.Address, authorize bool, valset istanbul.ValidatorSet) bool {
