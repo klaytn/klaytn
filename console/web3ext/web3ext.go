@@ -286,6 +286,7 @@ web3._extend({
 	properties: []
 });
 `
+
 const Governance_JS = `
 web3._extend({
 	property: 'governance',
@@ -358,6 +359,7 @@ web3._extend({
 	]
 });
 `
+
 const Admin_JS = `
 web3._extend({
 	property: 'admin',
@@ -1203,6 +1205,7 @@ web3._extend({
 	]
 });
 `
+
 const MainBridge_JS = `
 web3._extend({
 	property: 'mainbridge',
@@ -1230,6 +1233,7 @@ web3._extend({
 	]
 });
 `
+
 const SubBridge_JS = `
 web3._extend({
 	property: 'subbridge',
@@ -1410,13 +1414,13 @@ web3._extend({
 			params: 2
 		}),
 		new web3._extend.Method({
-			name: 'getBridgeOperatorGasLimit',
-			call: 'subbridge_getBridgeOperatorGasLimit',
-			params: 0
+			name: 'setParentBridgeOperatorGasLimit',
+			call: 'subbridge_setParentBridgeOperatorGasLimit',
+			params: 1
 		}),
 		new web3._extend.Method({
-			name: 'setBridgeOperatorGasLimit',
-			call: 'subbridge_setBridgeOperatorGasLimit',
+			name: 'setChildBridgeOperatorGasLimit',
+			call: 'subbridge_setChildBridgeOperatorGasLimit',
 			params: 1
 		}),
 		new web3._extend.Method({
@@ -1503,9 +1507,18 @@ web3._extend({
 			name: 'childOperatorFeePayer',
 			getter: 'subbridge_getChildOperatorFeePayer',
 		}),
+		new web3._extend.Property({
+			name: 'parentBridgeOperatorGasLimit',
+			getter: 'subbridge_getParentBridgeOperatorGasLimit',
+		}),
+		new web3._extend.Property({
+			name: 'childBridgeOperatorGasLimit',
+			getter: 'subbridge_getChildBridgeOperatorGasLimit',
+		}),
 	]
 });
 `
+
 const CliqueJs = `
 web3._extend({
 	property: 'clique',
