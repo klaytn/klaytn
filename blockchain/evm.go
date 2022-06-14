@@ -54,14 +54,14 @@ func NewEVMContext(msg Message, header *types.Header, chain ChainContext, author
 	} else {
 		beneficiary = *author
 	}
-	// TODO-klaytn kip71 fork
-	// bafore fork, base fee is 0
+	// bafore kip71 hardfork, base fee is 0, effectiveGasPrice is unitPrice
 	if header.BaseFee != nil {
 		baseFee = header.BaseFee
+		effectiveGasPrice = header.BaseFee
 	} else {
 		baseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
+		effectiveGasPrice = msg.GasPrice()
 	}
-	effectiveGasPrice = msg.EffectiveGasPrice(baseFee)
 
 	return vm.Context{
 		CanTransfer: CanTransfer,

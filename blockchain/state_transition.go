@@ -135,17 +135,9 @@ type kerror struct {
 
 // NewStateTransition initialises and returns a new state transition object.
 func NewStateTransition(evm *vm.EVM, msg Message) *StateTransition {
-	var effectiveGasPrice *big.Int
-	if !evm.ChainConfig().IsKIP71ForkEnabled(evm.BlockNumber) {
-		// TODO-klaytn it use calculation algorithm of ethereum.
-		// We have used it just like mock function. It returns governance unitprice
-		// because GetGasTipCap() is same with GetGasFeeCap()
-		// After hard fork, we need to consider new getEffectiveGasPrice API that operates differently
-		effectiveGasPrice = msg.EffectiveGasPrice(evm.BaseFee)
-	} else {
-		// apply dynamically changed base fee to burning and rewards
-		effectiveGasPrice = evm.BaseFee
-	}
+	// before kip71 hardfork, effectiveGasPrice is unitPrice
+	// after kip71 hardfork, effectiveGasPrice is BaseFee
+	effectiveGasPrice := evm.Context.GasPrice
 
 	return &StateTransition{
 		evm:       evm,
@@ -188,12 +180,16 @@ func (st *StateTransition) useGas(amount uint64) error {
 }
 
 func (st *StateTransition) buyGas() error {
-	mgval := new(big.Int)
-	if st.evm.ChainConfig().IsKIP71ForkEnabled(st.evm.BlockNumber) {
-		mgval = mgval.Mul(new(big.Int).SetUint64(st.msg.Gas()), st.evm.BaseFee)
-	} else {
-		mgval = mgval.Mul(new(big.Int).SetUint64(st.msg.Gas()), st.gasPrice)
-	}
+	// mgval := new(big.Int)
+	// if st.evm.ChainConfig().IsKIP71ForkEnabled(st.evm.BlockNumber) {
+	// 	mgval = mgval.Mul(new(big.Int).SetUint64(st.msg.Gas()), st.evm.BaseFee)
+	// } else {
+	// 	mgval = mgval.Mul(new(big.Int).SetUint64(st.msg.Gas()), st.gasPrice)
+	// }
+
+	// st.gasPrice : gasPrice user set before kip71 hardfork
+	// st.gasPrice : BaseFee after kip71 hardfork
+	mgval := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()), st.gasPrice)
 
 	validatedFeePayer := st.msg.ValidatedFeePayer()
 	validatedSender := st.msg.ValidatedSender()
@@ -298,6 +294,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 	}
 	st.refundGas()
 
+	// TODO-klaytn need hardfork condition
 	// Defer transferring Tx fee when DeferredTxFee is true
 	if st.evm.ChainConfig().Governance == nil || !st.evm.ChainConfig().Governance.DeferredTxFee() {
 		effectiveTip := msg.EffectiveGasTip(st.evm.BaseFee)
@@ -405,12 +402,14 @@ func (st *StateTransition) refundGas() {
 	st.gas += refund
 
 	// Return KLAY for remaining gas, exchanged at the original rate.
-	remaining := new(big.Int)
-	if st.evm.ChainConfig().IsKIP71ForkEnabled(st.evm.BlockNumber) {
-		remaining = remaining.Mul(new(big.Int).SetUint64(st.gas), st.evm.BaseFee)
-	} else {
-		remaining = remaining.Mul(new(big.Int).SetUint64(st.gas), st.gasPrice)
-	}
+	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.gas), st.gasPrice)
+
+	// remaining := new(big.Int)
+	// if st.evm.ChainConfig().IsKIP71ForkEnabled(st.evm.BlockNumber) {
+	// 	remaining = remaining.Mul(new(big.Int).SetUint64(st.gas), st.evm.BaseFee)
+	// } else {
+	// 	remaining = remaining.Mul(new(big.Int).SetUint64(st.gas), st.gasPrice)
+	// }
 
 	validatedFeePayer := st.msg.ValidatedFeePayer()
 	validatedSender := st.msg.ValidatedSender()
