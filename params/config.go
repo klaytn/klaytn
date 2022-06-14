@@ -35,6 +35,7 @@ var (
 	BaobabGenesisHash       = common.HexToHash("0xe33ff05ceec2581ca9496f38a2bf9baad5d4eed629e896ccb33d1dc991bc4b4a") // baobab genesis hash to enforce below configs on
 	AuthorAddressForTesting = common.HexToAddress("0xc0ea08a2d404d3172d2add29a45be56da40e2949")
 	mintingAmount, _        = new(big.Int).SetString("9600000000000000000", 10)
+	logger                  = log.NewModuleLogger(log.Governance)
 )
 
 var (
@@ -364,7 +365,6 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *Confi
 
 // SetDefaults fills undefined chain config with default values.
 func (c *ChainConfig) SetDefaults() {
-	logger := log.NewModuleLogger(log.Governance)
 
 	if c.Clique == nil && c.Istanbul == nil {
 		c.Istanbul = GetDefaultIstanbulConfig()

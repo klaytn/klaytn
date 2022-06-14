@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/log"
 )
 
 var (
@@ -349,6 +348,8 @@ func (p *GovParamSet) set(key int, value interface{}) error {
 	}
 	parsed, ok := ty.ParseValue(value)
 	if !ok {
+		logger.Warn("Bad GovParam value",
+			"key", govParamNamesReverse[key], "value", value)
 		return errBadGovParamValue
 	}
 	p.items[key] = parsed
@@ -362,6 +363,8 @@ func (p *GovParamSet) setBytes(key int, bytes []byte) error {
 	}
 	parsed, ok := ty.ParseBytes(bytes)
 	if !ok {
+		logger.Warn("Bad GovParam value",
+			"key", govParamNamesReverse[key], "hex(value)", common.ToHex(bytes))
 		return errBadGovParamValue
 	}
 	p.items[key] = parsed
@@ -395,7 +398,6 @@ func (p *GovParamSet) MustGet(key int) interface{} {
 	if v, ok := p.Get(key); ok {
 		return v
 	} else {
-		logger := log.NewModuleLogger(log.Governance)
 		logger.Crit("Attempted to get missing GovParam item", "key", key, "name", govParamNamesReverse[key])
 		return nil
 	}
