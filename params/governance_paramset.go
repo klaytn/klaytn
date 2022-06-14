@@ -140,17 +140,14 @@ var (
 		parseValue: func(v interface{}) (interface{}, bool) {
 			switch v.(type) {
 			case string:
-				_, ok := new(big.Int).SetString(v.(string), 10)
-				return v.(string), ok
+				return v.(string), true
 			case *big.Int:
 				return v.(*big.Int).String(), true
 			default:
 				return nil, false
 			}
 		},
-		parseBytes: func(b []byte) (interface{}, bool) {
-			return new(big.Int).SetBytes(b).String(), true
-		},
+		parseBytes: parseBytesString,
 		validate: func(v interface{}) bool {
 			if n, ok := new(big.Int).SetString(v.(string), 10); ok {
 				return n.Sign() >= 0 // must be non-negative.
