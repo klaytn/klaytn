@@ -170,7 +170,7 @@ func (c *core) handleMsg(payload []byte) error {
 			// Print view and address to help you analyze the node is valid or not.
 			// This information will help you to analyze whether the msg sender is valid or not.
 			// Furthermore, if the node is still syncing, there is a high probability that msg sender is a valid validator.
-			logger.Warn("Received Consensus msg is signed by an unauthorized address. It could happen when there is an unsynced valid validator in the network", "senderAddress", msg.Address, "nodeView", c.currentView().String(), "msgView", msgView.String())
+			logger.Warn("Received Consensus msg is signed by an unauthorized address. It could happen when the node is unsynced temporarily.", "senderAddress", msg.Address, "nodeView", c.currentView().String(), "msgView", msgView.String())
 		}
 		return err
 	}
