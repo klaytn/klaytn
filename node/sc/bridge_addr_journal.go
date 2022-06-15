@@ -25,6 +25,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/node/sc/bridgepool"
@@ -48,6 +49,8 @@ type bridgeAddrJournal struct {
 	writer     io.WriteCloser // Output stream to write new addresses into
 	cache      map[common.Address]*BridgeJournal
 	aliasCache map[string]common.Address
+	writerMu   *sync.Mutex
+	cacheMu    *sync.RWMutex
 }
 
 // newBridgeAddrJournal creates a new bridge addr journal to
@@ -56,12 +59,16 @@ func newBridgeAddrJournal(path string) *bridgeAddrJournal {
 		path:       path,
 		cache:      make(map[common.Address]*BridgeJournal),
 		aliasCache: make(map[string]common.Address),
+		writerMu:   &sync.Mutex{},
+		cacheMu:    &sync.RWMutex{},
 	}
 }
 
 // load parses a address journal dump from disk, loading its contents into
 // the specified pool.
 func (journal *bridgeAddrJournal) load(add func(journal BridgeJournal) error) error {
+	journal.writerMu.Lock()
+	defer journal.writerMu.Unlock()
 	// Skip the parsing if the journal file doens't exist at all
 	if _, err := os.Stat(journal.path); os.IsNotExist(err) {
 		return nil
@@ -82,27 +89,27 @@ func (journal *bridgeAddrJournal) load(add func(journal BridgeJournal) error) er
 	total, dropped := 0, 0
 
 	var (
-		failure        error
-		firstDecodeErr = true
+		failure              error
+		aliasBridgeDecodeErr = true
 	)
 	for {
 		// Parse the next address and terminate on error
 		addr := new(BridgeJournal)
-		if !firstDecodeErr {
+		if !aliasBridgeDecodeErr {
 			addr.isLegacyBridgeJournal = true
 		}
 	DecodeAgainWithLegacyStruct:
 		if err = stream.Decode(addr); err != nil {
-			if err != io.EOF {
+			if err != io.EOF && err != ErrBridgeAliasFormatDecode {
 				failure = err
 			}
-			if err == ErrBridgeAliasFormatDecode && firstDecodeErr {
+			if err == ErrBridgeAliasFormatDecode && aliasBridgeDecodeErr {
 				input.Close()
 				input, err = os.Open(journal.path)
 				if err != nil {
 					return err
 				}
-				firstDecodeErr = false
+				aliasBridgeDecodeErr = false
 				stream.Reset(input, 0)
 				goto DecodeAgainWithLegacyStruct
 			}
@@ -123,6 +130,8 @@ func (journal *bridgeAddrJournal) load(add func(journal BridgeJournal) error) er
 
 // ChangeBridgeAlias changes oldBridgeAlias to newBridgeAlias
 func (journal *bridgeAddrJournal) ChangeBridgeAlias(oldBridgeAlias, newBridgeAlias string) error {
+	journal.cacheMu.Lock()
+	defer journal.cacheMu.Unlock()
 	if addr, ok := journal.aliasCache[oldBridgeAlias]; ok {
 		delete(journal.aliasCache, oldBridgeAlias)
 		journal.aliasCache[newBridgeAlias] = addr
@@ -134,16 +143,25 @@ func (journal *bridgeAddrJournal) ChangeBridgeAlias(oldBridgeAlias, newBridgeAli
 
 // insert adds the specified address to the local disk journal.
 func (journal *bridgeAddrJournal) insert(bridgeAlias string, localAddress common.Address, remoteAddress common.Address) error {
+	// lock order is important
+	journal.cacheMu.Lock()
+	journal.writerMu.Lock()
+
+	defer func() {
+		journal.cacheMu.Unlock()
+		journal.writerMu.Unlock()
+	}()
+
 	if strings.HasPrefix(bridgeAlias, "0x") {
 		return ErrNotAllowedAliasFormat
 	}
 	if len(bridgeAlias) != 0 && journal.aliasCache[bridgeAlias] != (common.Address{}) {
 		return ErrDuplicatedAlias
 	}
+
 	if journal.cache[localAddress] != nil {
 		return ErrDuplicatedJournal
 	}
-
 	if journal.writer == nil {
 		return ErrNoActiveAddressJournal
 	}
@@ -173,6 +191,8 @@ func (journal *bridgeAddrJournal) insert(bridgeAlias string, localAddress common
 // rotate regenerates the addresses journal based on the current contents of
 // the address pool.
 func (journal *bridgeAddrJournal) rotate(all []*BridgeJournal) error {
+	journal.writerMu.Lock()
+	defer journal.writerMu.Unlock()
 	// Close the current journal (if any is open)
 	if journal.writer != nil {
 		if err := journal.writer.Close(); err != nil {
@@ -211,8 +231,10 @@ func (journal *bridgeAddrJournal) rotate(all []*BridgeJournal) error {
 
 // close flushes the addresses journal contents to disk and closes the file.
 func (journal *bridgeAddrJournal) close() error {
-	var err error
+	journal.writerMu.Lock()
+	defer journal.writerMu.Unlock()
 
+	var err error
 	if journal.writer != nil {
 		err = journal.writer.Close()
 		journal.writer = nil
