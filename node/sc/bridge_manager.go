@@ -64,7 +64,7 @@ var (
 	ErrNoRecovery              = errors.New("recovery does not exist")
 	ErrAlreadySubscribed       = errors.New("already subscribed")
 	ErrBridgeRestore           = errors.New("restoring bridges is failed")
-	ErrBridgeAliasFormatDecode = errors.New("restoring bridges is failed")
+	ErrBridgeAliasFormatDecode = errors.New("failed to decode alias-format bridge")
 )
 
 // RequestValueTransferEvent from Bridge contract
@@ -103,6 +103,7 @@ type BridgeInfo struct {
 	subscribed         bool
 
 	counterpartToken map[common.Address]common.Address
+	ctTokenMu        sync.RWMutex
 
 	pendingRequestEvent *bridgepool.ItemSortedMap
 
@@ -128,26 +129,26 @@ func (ev requestEvent) Nonce() uint64 {
 
 func NewBridgeInfo(sb *SubBridge, addr common.Address, bridge *bridgecontract.Bridge, cpAddr common.Address, cpBridge *bridgecontract.Bridge, account *accountInfo, local, subscribed bool, cpBackend Backend) (*BridgeInfo, error) {
 	bi := &BridgeInfo{
-		sb,
-		sb.chainDB,
-		cpBackend,
-		addr,
-		cpAddr,
-		account,
-		bridge,
-		cpBridge,
-		local,
-		subscribed,
-		make(map[common.Address]common.Address),
-		bridgepool.NewItemSortedMap(bridgepool.UnlimitedItemSortedMap),
-		true,
-		0,
-		0,
-		0,
-		0,
-		make(chan struct{}),
-		make(chan struct{}),
-		bridgepool.NewItemSortedMap(maxHandledEventSize),
+		subBridge:                   sb,
+		bridgeDB:                    sb.chainDB,
+		counterpartBackend:          cpBackend,
+		address:                     addr,
+		counterpartAddress:          cpAddr,
+		account:                     account,
+		bridge:                      bridge,
+		counterpartBridge:           cpBridge,
+		onChildChain:                local,
+		subscribed:                  subscribed,
+		counterpartToken:            make(map[common.Address]common.Address),
+		pendingRequestEvent:         bridgepool.NewItemSortedMap(bridgepool.UnlimitedItemSortedMap),
+		isRunning:                   true,
+		handleNonce:                 0,
+		lowerHandleNonce:            0,
+		requestNonceFromCounterPart: 0,
+		requestNonce:                0,
+		newEvent:                    make(chan struct{}),
+		closed:                      make(chan struct{}),
+		handledEvent:                bridgepool.NewItemSortedMap(maxHandledEventSize),
 	}
 
 	if err := bi.UpdateInfo(); err != nil {
@@ -181,6 +182,9 @@ func (bi *BridgeInfo) loop() {
 }
 
 func (bi *BridgeInfo) RegisterToken(token, counterpartToken common.Address) error {
+	bi.ctTokenMu.Lock()
+	defer bi.ctTokenMu.Unlock()
+
 	_, exist := bi.counterpartToken[token]
 	if exist {
 		return ErrDuplicatedToken
@@ -190,6 +194,9 @@ func (bi *BridgeInfo) RegisterToken(token, counterpartToken common.Address) erro
 }
 
 func (bi *BridgeInfo) DeregisterToken(token, counterpartToken common.Address) error {
+	bi.ctTokenMu.Lock()
+	defer bi.ctTokenMu.Unlock()
+
 	_, exist := bi.counterpartToken[token]
 	if !exist {
 		return ErrInvalidTokenPair
@@ -199,6 +206,9 @@ func (bi *BridgeInfo) DeregisterToken(token, counterpartToken common.Address) er
 }
 
 func (bi *BridgeInfo) GetCounterPartToken(token common.Address) common.Address {
+	bi.ctTokenMu.RLock()
+	defer bi.ctTokenMu.RUnlock()
+
 	cpToken, exist := bi.counterpartToken[token]
 	if !exist {
 		return common.Address{}
@@ -482,7 +492,8 @@ type BridgeManager struct {
 	receivedEvents map[common.Address]event.Subscription
 	withdrawEvents map[common.Address]event.Subscription
 	bridges        map[common.Address]*BridgeInfo
-	mu             sync.RWMutex
+	bridgeInfoMu   sync.RWMutex
+	tokenEventMu   sync.RWMutex
 
 	requestEventFeeder event.Feed
 	handleEventFeeder  event.Feed
@@ -507,6 +518,8 @@ func NewBridgeManager(main *SubBridge) (*BridgeManager, error) {
 	}
 
 	logger.Info("Load Bridge Address from JournalFiles ", "path", bridgeManager.journal.path)
+	bridgeManager.journal.cacheMu.Lock()
+
 	bridgeManager.journal.cache = make(map[common.Address]*BridgeJournal)
 	bridgeManager.journal.aliasCache = make(map[string]common.Address)
 
@@ -521,6 +534,8 @@ func NewBridgeManager(main *SubBridge) (*BridgeManager, error) {
 	}); err != nil {
 		logger.Error("fail to load bridge address", "err", err)
 	}
+
+	bridgeManager.journal.cacheMu.Unlock()
 
 	if err := bridgeManager.journal.rotate(bridgeManager.GetAllBridge()); err != nil {
 		logger.Error("fail to rotate bridge journal", "err", err)
@@ -556,8 +571,8 @@ func (bm *BridgeManager) GetCounterPartBridge(bridgeAddr common.Address) *bridge
 
 // LogBridgeStatus logs the bridge contract requested/handled nonce status as an information.
 func (bm *BridgeManager) LogBridgeStatus() {
-	bm.mu.RLock()
-	defer bm.mu.RUnlock()
+	bm.bridgeInfoMu.RLock()
+	defer bm.bridgeInfoMu.RUnlock()
 
 	if len(bm.bridges) == 0 {
 		return
@@ -602,6 +617,9 @@ func (bm *BridgeManager) SubscribeHandleEvent(ch chan<- *HandleValueTransferEven
 
 // getAddrByAlias returns a pair of child bridge address and parent bridge address
 func (bm *BridgeManager) getAddrByAlias(bridgeAlias string) (common.Address, common.Address, error) {
+	bm.journal.cacheMu.RLock()
+	defer bm.journal.cacheMu.RUnlock()
+
 	journalAddr, ok := bm.journal.aliasCache[bridgeAlias]
 	if !ok {
 		return common.Address{}, common.Address{}, ErrEmptyBridgeAlias
@@ -615,23 +633,28 @@ func (bm *BridgeManager) getAddrByAlias(bridgeAlias string) (common.Address, com
 
 // GetBridge returns bridge journal structure that contains local(child) and remote(parent) addresses.
 func (bm *BridgeManager) GetBridge(bridgeAlias string) *BridgeJournal {
+	bm.journal.cacheMu.RLock()
+	defer bm.journal.cacheMu.RUnlock()
+
 	return bm.journal.cache[bm.journal.aliasCache[bridgeAlias]]
 }
 
 // GetAllBridge returns a slice of journal cache.
 func (bm *BridgeManager) GetAllBridge() []*BridgeJournal {
-	var gwjs []*BridgeJournal
+	bm.journal.cacheMu.RLock()
+	defer bm.journal.cacheMu.RUnlock()
 
+	var gwjs []*BridgeJournal
 	for _, journal := range bm.journal.cache {
 		gwjs = append(gwjs, journal)
 	}
 	return gwjs
 }
 
-// GetBridge returns bridge contract of the specified address.
+// GetBridgeInfo returns bridge contract of the specified address.
 func (bm *BridgeManager) GetBridgeInfo(addr common.Address) (*BridgeInfo, bool) {
-	bm.mu.RLock()
-	defer bm.mu.RUnlock()
+	bm.bridgeInfoMu.RLock()
+	defer bm.bridgeInfoMu.RUnlock()
 
 	bridge, ok := bm.bridges[addr]
 	return bridge, ok
@@ -639,8 +662,8 @@ func (bm *BridgeManager) GetBridgeInfo(addr common.Address) (*BridgeInfo, bool) 
 
 // DeleteBridgeInfo deletes the bridge info of the specified address.
 func (bm *BridgeManager) DeleteBridgeInfo(addr common.Address) error {
-	bm.mu.Lock()
-	defer bm.mu.Unlock()
+	bm.bridgeInfoMu.Lock()
+	defer bm.bridgeInfoMu.Unlock()
 
 	bi := bm.bridges[addr]
 	if bi == nil {
@@ -655,8 +678,8 @@ func (bm *BridgeManager) DeleteBridgeInfo(addr common.Address) error {
 
 // SetBridgeInfo stores the address and bridge pair with local/remote and subscription status.
 func (bm *BridgeManager) SetBridgeInfo(addr common.Address, bridge *bridgecontract.Bridge, cpAddr common.Address, cpBridge *bridgecontract.Bridge, account *accountInfo, local bool, subscribed bool) error {
-	bm.mu.Lock()
-	defer bm.mu.Unlock()
+	bm.bridgeInfoMu.Lock()
+	defer bm.bridgeInfoMu.Unlock()
 
 	if bm.bridges[addr] != nil {
 		return ErrDuplicatedBridgeInfo
@@ -683,6 +706,9 @@ func (bm *BridgeManager) RestoreBridges() error {
 
 	var counter = 0
 	bm.stopAllRecoveries()
+
+	bm.journal.cacheMu.RLock()
+	defer bm.journal.cacheMu.RUnlock()
 
 	for _, journal := range bm.journal.cache {
 		cBridgeAddr := journal.ChildAddress
@@ -948,6 +974,10 @@ func (bm *BridgeManager) SubscribeEvent(addr common.Address) error {
 func (bm *BridgeManager) ResetAllSubscribedEvents() error {
 	logger.Info("ResetAllSubscribedEvents is called.")
 
+	bm.journal.cacheMu.RLock()
+	defer func() {
+		bm.journal.cacheMu.RUnlock()
+	}()
 	for _, journal := range bm.journal.cache {
 		if journal.Subscribed {
 			bm.UnsubscribeEvent(journal.ChildAddress)
@@ -980,6 +1010,9 @@ func (bm *BridgeManager) ResetAllSubscribedEvents() error {
 
 // SubscribeEvent sets watch logs and creates a goroutine loop to handle event messages.
 func (bm *BridgeManager) subscribeEvent(addr common.Address, bridge *bridgecontract.Bridge) error {
+	bm.tokenEventMu.Lock()
+	defer bm.tokenEventMu.Unlock()
+
 	tokenReceivedCh := make(chan *bridgecontract.BridgeRequestValueTransfer, TokenEventChanSize)
 	tokenWithdrawCh := make(chan *bridgecontract.BridgeHandleValueTransfer, TokenEventChanSize)
 
@@ -997,6 +1030,7 @@ func (bm *BridgeManager) subscribeEvent(addr common.Address, bridge *bridgecontr
 		return err
 	}
 	bm.withdrawEvents[addr] = withdrawnSub
+
 	bridgeInfo, ok := bm.GetBridgeInfo(addr)
 	if !ok {
 		receivedSub.Unsubscribe()
@@ -1014,6 +1048,9 @@ func (bm *BridgeManager) subscribeEvent(addr common.Address, bridge *bridgecontr
 
 // UnsubscribeEvent cancels the contract's watch logs and initializes the status.
 func (bm *BridgeManager) UnsubscribeEvent(addr common.Address) {
+	bm.tokenEventMu.Lock()
+	defer bm.tokenEventMu.Unlock()
+
 	receivedSub := bm.receivedEvents[addr]
 	if receivedSub != nil {
 		receivedSub.Unsubscribe()
@@ -1070,8 +1107,8 @@ func (bm *BridgeManager) loop(
 
 // Stop closes a subscribed event scope of the bridge manager.
 func (bm *BridgeManager) Stop() {
-	bm.mu.RLock()
-	defer bm.mu.RUnlock()
+	bm.bridgeInfoMu.RLock()
+	defer bm.bridgeInfoMu.RUnlock()
 
 	for _, bi := range bm.bridges {
 		close(bi.closed)
@@ -1185,6 +1222,9 @@ func (bm *BridgeManager) GetFeeReceiver(bridgeAddr common.Address) (common.Addre
 
 // IsInParentAddrs returns true if the bridgeAddr is in the list of parent bridge addresses and returns false if not.
 func (bm *BridgeManager) IsInParentAddrs(bridgeAddr common.Address) bool {
+	bm.journal.cacheMu.RLock()
+	defer bm.journal.cacheMu.RUnlock()
+
 	for _, journal := range bm.journal.cache {
 		if journal.ParentAddress == bridgeAddr {
 			return true
@@ -1195,6 +1235,9 @@ func (bm *BridgeManager) IsInParentAddrs(bridgeAddr common.Address) bool {
 
 // IsInChildAddrs returns true if the bridgeAddr is in the list of child bridge addresses and returns false if not.
 func (bm *BridgeManager) IsInChildAddrs(bridgeAddr common.Address) bool {
+	bm.journal.cacheMu.RLock()
+	defer bm.journal.cacheMu.RUnlock()
+
 	for _, journal := range bm.journal.cache {
 		if journal.ChildAddress == bridgeAddr {
 			return true
