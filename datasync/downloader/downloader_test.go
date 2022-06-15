@@ -49,6 +49,48 @@ func init() {
 	fsHeaderContCheck = 500 * time.Millisecond
 }
 
+var (
+	lock   sync.Mutex
+	setter *govSetter
+)
+
+// govSetter sets governance items for testing purpose
+type govSetter struct {
+	numTesting          uint32
+	origStakingInterval uint64
+	origStakingManager  *reward.StakingManager
+}
+
+// setTestGovernance sets staking manager with memory db and staking update interval to 4.
+func setTestGovernance() {
+	lock.Lock()
+	defer lock.Unlock()
+	if setter == nil {
+		setter = &govSetter{
+			numTesting:          0,
+			origStakingInterval: params.StakingUpdateInterval(),
+			origStakingManager:  reward.GetStakingManager(),
+		}
+
+		reward.SetTestStakingManagerWithDB(database.NewMemoryDBManager())
+		params.SetStakingUpdateInterval(4)
+	}
+	setter.numTesting += 1
+}
+
+// rollbackOrigGovernance rollbacks the original staking manager as well as staking update interval.
+func rollbackOrigGovernance() {
+	lock.Lock()
+	defer lock.Unlock()
+	setter.numTesting -= 1
+	if setter.numTesting == 0 {
+		reward.SetTestStakingManager(setter.origStakingManager)
+		params.SetStakingUpdateInterval(setter.origStakingInterval)
+
+		setter = nil
+	}
+}
+
 // downloadTester is a test simulator for mocking out local block chain.
 type downloadTester struct {
 	downloader *Downloader
@@ -80,8 +122,7 @@ type downloadTester struct {
 func newTester() *downloadTester {
 	testdb := database.NewMemoryDBManager()
 	genesis := blockchain.GenesisBlockForTesting(testdb, testAddress, big.NewInt(1000000000))
-	params.SetStakingUpdateInterval(4)
-	reward.SetTestStakingManagerWithDB(testDB)
+	setTestGovernance()
 
 	tester := &downloadTester{
 		genesis:           genesis,
@@ -223,6 +264,7 @@ func (dl *downloadTester) makeChainFork(n, f int, parent *types.Block, parentRec
 // held resources.
 func (dl *downloadTester) terminate() {
 	dl.downloader.Terminate()
+	rollbackOrigGovernance()
 }
 
 // sync starts synchronizing with a remote peer, blocking until it completes.
