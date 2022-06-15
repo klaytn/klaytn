@@ -16,7 +16,7 @@ func newTestMixedEngine(t *testing.T, config *params.ChainConfig) (*MixedEngine,
 	db := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
 
 	e := NewMixedEngine(config, db)
-	defaultGov := e.defaultGov.(*Governance) // to manipulate internal fields
+	defaultGov := e.defaultGov // to manipulate internal fields
 
 	require.NotNil(t, e)
 	require.NotNil(t, defaultGov)

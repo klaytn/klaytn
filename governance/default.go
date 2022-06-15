@@ -191,8 +191,10 @@ type Governance struct {
 	// The last block number at governance state was stored (used not to replay old votes)
 	lastGovernanceStateBlock uint64
 
-	currentSet GovernanceSet
-	changeSet  GovernanceSet
+	currentSet    GovernanceSet
+	changeSet     GovernanceSet
+	currentParams *params.GovParamSet // equals to currentSet
+	initialParams *params.GovParamSet // equals to initial ChainConfig
 
 	TxPool txPool
 
@@ -416,6 +418,8 @@ func NewGovernance(chainConfig *params.ChainConfig, dbm database.DBManager) *Gov
 		itemCache:                newGovernanceCache(),
 		currentSet:               NewGovernanceSet(),
 		changeSet:                NewGovernanceSet(),
+		currentParams:            params.NewGovParamSet(),
+		initialParams:            params.NewGovParamSet(),
 		lastGovernanceStateBlock: 0,
 		GovernanceTallies:        NewGovernanceTallies(),
 		GovernanceVotes:          NewGovernanceVotes(),
@@ -700,7 +704,6 @@ func (g *Governance) initializeCache() error {
 	// g.actualGovernanceBlock and currentSet is set
 	g.actualGovernanceBlock.Store(newBlockNumber)
 	g.currentSet.Import(newGovernanceSet)
-	g.updateGovernanceParams()
 
 	// g.lastGovernanceStateBlock contains the last block number when voting data is included.
 	// we check the order between g.actualGovernanceBlock and g.lastGovernanceStateBlock, so make sure that voting is not missed.
@@ -712,8 +715,20 @@ func (g *Governance) initializeCache() error {
 			return errors.New("Currentset initialization failed")
 		}
 		g.currentSet.Import(ret.(map[string]interface{}))
-		g.updateGovernanceParams()
 	}
+
+	// Populate g.initialParams from ChainConfig
+	if pset, err := params.NewGovParamSetChainConfig(g.ChainConfig); err == nil {
+		g.initialParams = pset
+	} else {
+		logger.Crit("Error parsing initial ChainConfig", "err", err)
+	}
+	// Reflect g.currentSet -> g.currentParams (for g.Params())
+	// Outside initializeCache, istanbul.CreateSnapshot() will trigger UpdateParams().
+	g.UpdateParams()
+	// Reflect g.currentSet -> global params in params/governance_params.go
+	// Outside initializeCache, GovernanceItems[].trigger will reflect changes to globals.
+	g.updateGovernanceParams()
 
 	return nil
 }
@@ -1195,4 +1210,36 @@ func (gov *Governance) IdxCache() []uint64 {
 func (gov *Governance) IdxCacheFromDb() []uint64 {
 	res, _ := gov.db.ReadRecentGovernanceIdx(0)
 	return res
+}
+
+func (gov *Governance) Params() *params.GovParamSet {
+	return gov.currentParams
+}
+
+func (gov *Governance) ParamsAt(num uint64) (*params.GovParamSet, error) {
+	// TODO-Klaytn: Either handle epoch change, or permanently forbid epoch change.
+	epoch := gov.Params().Epoch()
+
+	// Should be equivalent to Governance.ReadGovernance(), but without in-memory caches.
+	// Not using in-memory caches to make it stateless, hence less error-prone.
+	_, strMap, err := gov.db.ReadGovernanceAtNumber(num, epoch)
+	if err != nil {
+		return nil, err
+	}
+	pset, err := params.NewGovParamSetStrMap(strMap)
+	if err != nil {
+		return nil, err
+	}
+	return params.NewGovParamSetMerged(gov.initialParams, pset), nil
+}
+
+func (gov *Governance) UpdateParams() error {
+	strMap := gov.currentSet.Items()
+	pset, err := params.NewGovParamSetStrMap(strMap)
+	if err != nil {
+		return err
+	}
+
+	gov.currentParams = params.NewGovParamSetMerged(gov.initialParams, pset)
+	return nil
 }

@@ -17,7 +17,7 @@ type MixedEngine struct {
 
 	// Subordinate engines
 	// TODO: Add ContractEngine
-	defaultGov HeaderEngine
+	defaultGov *Governance
 }
 
 // newMixedEngine instantiate a new MixedEngine struct.
@@ -64,42 +64,15 @@ func NewMixedEngineNoInit(config *params.ChainConfig, db database.DBManager) *Mi
 }
 
 func (e *MixedEngine) Params() *params.GovParamSet {
-	return e.currentParams
+	return e.defaultGov.Params()
 }
 
 func (e *MixedEngine) ParamsAt(num uint64) (*params.GovParamSet, error) {
-	headerParams, err := e.dbParamsAt(num)
-	if err != nil {
-		return nil, err
-	}
-
-	p := params.NewGovParamSetMerged(e.initialParams, headerParams)
-	return p, nil
+	return e.defaultGov.ParamsAt(num)
 }
 
 func (e *MixedEngine) UpdateParams() error {
-	strMap := e.defaultGov.CurrentSetCopy()
-	headerParams, err := params.NewGovParamSetStrMap(strMap)
-	if err != nil {
-		return err
-	}
-
-	e.currentParams = params.NewGovParamSetMerged(e.initialParams, headerParams)
-	return nil
-}
-
-// Retrospect data from HeaderEngine.
-// Should be equivalent to Governance.ReadGovernance(), but without in-memory caches.
-// Not using in-memory caches to make it stateless, hence less error-prone.
-func (e *MixedEngine) dbParamsAt(num uint64) (*params.GovParamSet, error) {
-	// TODO-Klaytn: Either handle epoch change, or permanently forbid epoch change.
-	epoch := e.initialParams.Epoch()
-	_, strMap, err := e.db.ReadGovernanceAtNumber(num, epoch)
-	if err != nil {
-		return nil, err
-	}
-
-	return params.NewGovParamSetStrMap(strMap)
+	return e.defaultGov.UpdateParams()
 }
 
 // Pass-through to HeaderEngine
