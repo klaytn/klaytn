@@ -27,9 +27,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var (
-	ErrRPCDecode = errors.New("failed to decode mainbridge rpc call message")
-)
+var ErrRPCDecode = errors.New("failed to decode mainbridge rpc call message")
 
 type MainBridgeHandler struct {
 	mainbridge *MainBridge
@@ -103,7 +101,7 @@ func (mbh *MainBridgeHandler) handleCallMsg(p BridgePeer, msg p2p.Msg) error {
 // handleServiceChainTxDataMsg handles service chain transactions from child chain.
 // It will return an error if given tx is not TxTypeChainDataAnchoring type.
 func (mbh *MainBridgeHandler) handleServiceChainTxDataMsg(p BridgePeer, msg p2p.Msg) error {
-	//pm.txMsgLock.Lock()
+	// pm.txMsgLock.Lock()
 	// Transactions can be processed, parse all of them and deliver to the pool
 	var txs []*types.Transaction
 	if err := msg.Decode(&txs); err != nil {
@@ -112,7 +110,7 @@ func (mbh *MainBridgeHandler) handleServiceChainTxDataMsg(p BridgePeer, msg p2p.
 
 	// Only valid txs should be pushed into the pool.
 	validTxs := make([]*types.Transaction, 0, len(txs))
-	//validTxs := []*types.Transaction{}
+	// validTxs := []*types.Transaction{}
 	var err error
 	for i, tx := range txs {
 		if tx == nil {

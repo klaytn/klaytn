@@ -273,7 +273,6 @@ func TestBridgeHandleValueTransferNonceAndBlockNumber(t *testing.T) {
 	defer cancelTimeout()
 
 	receipt, err := bind.WaitMined(timeoutContext, backend, tx)
-
 	if err != nil {
 		t.Fatal("Failed to WaitMined.", "err", err, "txHash", tx.Hash().String(), "status", receipt.Status)
 	}
@@ -1236,7 +1235,7 @@ func TestBridgeRequestHandleGasUsed(t *testing.T) {
 	upperHandleNonce, _ = b.UpperHandleNonce(nil)
 	assert.Equal(t, uint64(999), upperHandleNonce)
 
-	//This 500 nonce handle checks whether the handle transaction which has a loop failed.
+	// This 500 nonce handle checks whether the handle transaction which has a loop failed.
 	handleFunc(500)
 
 	lowerHandleNonce, _ = b.LowerHandleNonce(nil)

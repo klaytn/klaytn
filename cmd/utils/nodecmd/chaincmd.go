@@ -151,9 +151,11 @@ func initGenesis(ctx *cli.Context) error {
 	}
 
 	for _, name := range []string{"chaindata"} { // Removed "lightchaindata" since Klaytn doesn't use it
-		dbc := &database.DBConfig{Dir: name, DBType: dbtype, ParallelDBWrite: parallelDBWrite,
+		dbc := &database.DBConfig{
+			Dir: name, DBType: dbtype, ParallelDBWrite: parallelDBWrite,
 			SingleDB: singleDB, NumStateTrieShards: numStateTrieShards,
-			LevelDBCacheSize: 0, OpenFilesLimit: 0, DynamoDBConfig: dynamoDBConfig}
+			LevelDBCacheSize: 0, OpenFilesLimit: 0, DynamoDBConfig: dynamoDBConfig,
+		}
 		chainDB := stack.OpenDatabase(dbc)
 
 		// Initialize DeriveSha implementation

@@ -394,7 +394,7 @@ func (dl *downloadTester) newSlowPeer(id string, version int, hashes []common.Ha
 	dl.lock.Lock()
 	defer dl.lock.Unlock()
 
-	var err = dl.downloader.RegisterPeer(id, version, &downloadTesterPeer{dl: dl, id: id, delay: delay})
+	err := dl.downloader.RegisterPeer(id, version, &downloadTesterPeer{dl: dl, id: id, delay: delay})
 	if err == nil {
 		// Assign the owned hashes, headers and blocks to the peer (deep copy)
 		dl.peerHashes[id] = make([]common.Hash, len(hashes))
@@ -1678,12 +1678,15 @@ func (ftp *floodingTestPeer) Head() (common.Hash, *big.Int) { return ftp.peer.He
 func (ftp *floodingTestPeer) RequestHeadersByHash(hash common.Hash, count int, skip int, reverse bool) error {
 	return ftp.peer.RequestHeadersByHash(hash, count, skip, reverse)
 }
+
 func (ftp *floodingTestPeer) RequestBodies(hashes []common.Hash) error {
 	return ftp.peer.RequestBodies(hashes)
 }
+
 func (ftp *floodingTestPeer) RequestReceipts(hashes []common.Hash) error {
 	return ftp.peer.RequestReceipts(hashes)
 }
+
 func (ftp *floodingTestPeer) RequestNodeData(hashes []common.Hash) error {
 	return ftp.peer.RequestNodeData(hashes)
 }

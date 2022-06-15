@@ -18,6 +18,7 @@
 // This file is derived from build/ci.go (2018/06/04).
 // Modified and improved for the klaytn development.
 //
+//go:build none
 // +build none
 
 /*

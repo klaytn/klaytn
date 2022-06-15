@@ -75,5 +75,4 @@ func TestFilterKIPContracts_Success(t *testing.T) {
 	assert.Equal(t, 1, len(nfts))
 	assert.Equal(t, 2, len(others))
 	assert.NoError(t, err)
-
 }

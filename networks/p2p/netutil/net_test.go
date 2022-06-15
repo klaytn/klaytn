@@ -27,7 +27,7 @@ import (
 )
 
 func TestParseNetlist(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		input    string
 		wantErr  error
 		wantList *Netlist

@@ -21,12 +21,11 @@
 package nat
 
 import (
-	"time"
-
 	"errors"
 	"fmt"
 	"net"
 	"strings"
+	"time"
 
 	"github.com/huin/goupnp"
 	"github.com/huin/goupnp/dcps/internetgateway1"
