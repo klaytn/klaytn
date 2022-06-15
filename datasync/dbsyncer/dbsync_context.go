@@ -52,7 +52,6 @@ func (ds *DBSyncer) HandleChainEventContext(block *types.Block) error {
 	starttx := time.Now()
 
 	if block.Transactions().Len() > 0 {
-
 		if err := ds.syncTransactionsContext(ctx, tx, block); err != nil {
 			logger.Error("fail to sync transaction", "block", block.Number(), "err", err)
 			if rerr := tx.Rollback(); rerr != nil {
@@ -93,7 +92,6 @@ func (ds *DBSyncer) syncBlockHeaderContext(ctx context.Context, tx *sql.Tx, bloc
 	timestampFos := block.Header().TimeFoS
 
 	stmtIns, err := ds.db.Prepare(ds.blockInsertQuery)
-
 	if err != nil {
 		logger.Error("fail to prepare (block)", "query", ds.blockInsertQuery)
 		return err

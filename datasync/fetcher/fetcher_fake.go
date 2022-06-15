@@ -34,9 +34,11 @@ func (*FakeFetcher) Enqueue(peer string, block *types.Block) error { return nil 
 func (*FakeFetcher) FilterBodies(peer string, transactions [][]*types.Transaction, time time.Time) [][]*types.Transaction {
 	return nil
 }
+
 func (*FakeFetcher) FilterHeaders(peer string, headers []*types.Header, time time.Time) []*types.Header {
 	return nil
 }
+
 func (*FakeFetcher) Notify(peer string, hash common.Hash, number uint64, time time.Time, headerFetcher HeaderRequesterFn, bodyFetcher BodyRequesterFn) error {
 	return nil
 }

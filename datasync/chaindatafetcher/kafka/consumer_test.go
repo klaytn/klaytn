@@ -288,7 +288,6 @@ func Test_insertSegment_Success_MultipleMessages(t *testing.T) {
 		{m3s0, m3s1},
 	}
 	assert.Equal(t, expected, buffer)
-
 }
 
 func Test_insertSegment_Success_DuplicatedMessages(t *testing.T) {
