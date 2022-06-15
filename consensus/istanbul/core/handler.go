@@ -158,15 +158,19 @@ func (c *core) handleMsg(payload []byte) error {
 		if c.backend.NodeType() == common.CONSENSUSNODE {
 			if err != istanbul.ErrUnauthorizedAddress {
 				logger.Error("Failed to decode message from payload", "err", err)
-			} else {
-				// Decode msg to derive view, so node's view and msg's view can be compared
-				msgView, msgDecodeErr := msg.GetView()
-				if msgDecodeErr != nil {
-					logger.Error("Failed to decode message", "code", msg.Code, "err", msgDecodeErr)
-					return errInvalidMessage
-				}
-				logger.Warn("Signed by an unauthorized address. If syncing, it may or may not be an unauthorized address.", "node view", c.currentView().String(), "msg view", msgView.String())
+				return err
 			}
+
+			msgView, msgDecodeErr := msg.GetView()
+			if msgDecodeErr != nil {
+				logger.Error("Failed to decode message while getting view information", "code", msg.Code, "err", msgDecodeErr)
+				return err
+			}
+
+			// Print view and address to help you analyze the node is valid or not.
+			// This information will help you to analyze whether the msg sender is valid or not.
+			// Furthermore, if the node is still syncing, there is a high probability that msg sender is a valid validator.
+			logger.Warn("Received Consensus msg is signed by an unauthorized address. It could happen when there is an unsynced valid validator in the network", "senderAddress", msg.Address, "nodeView", c.currentView().String(), "msgView", msgView.String())
 		}
 		return err
 	}
