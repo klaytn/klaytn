@@ -92,7 +92,7 @@ func newFetchResult(header *types.Header, fastSync bool) *fetchResult {
 // SetBodyDone flags the body as finished.
 func (f *fetchResult) SetBodyDone() {
 	if v := atomic.LoadInt32(&f.pending); (v & (1 << bodyType)) != 0 {
-		atomic.AddInt32(&f.pending, -1)
+		atomic.AddInt32(&f.pending, -(1 << bodyType))
 	}
 }
 
@@ -104,14 +104,14 @@ func (f *fetchResult) AllDone() bool {
 // SetReceiptsDone flags the receipts as finished.
 func (f *fetchResult) SetReceiptsDone() {
 	if v := atomic.LoadInt32(&f.pending); (v & (1 << receiptType)) != 0 {
-		atomic.AddInt32(&f.pending, -2)
+		atomic.AddInt32(&f.pending, -(1 << receiptType))
 	}
 }
 
 // SetStakingInfoDone flags the receipts as finished.
 func (f *fetchResult) SetStakingInfoDone() {
 	if v := atomic.LoadInt32(&f.pending); (v & (1 << stakingInfoType)) != 0 {
-		atomic.AddInt32(&f.pending, -4)
+		atomic.AddInt32(&f.pending, -(1 << stakingInfoType))
 	}
 }
 
