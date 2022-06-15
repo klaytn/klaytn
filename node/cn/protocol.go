@@ -78,8 +78,8 @@ const (
 	ReceiptsMsg        = 0x0f
 
 	// Protocol messages belonging to klay/64
-	DummyMsg1 = 0x10
-	DummyMsg2 = 0x11 // it is used for consensus message for istanbul engine
+	Unused10 = 0x10 // Skipped a number because 0x11 is already taken
+	Unused11 = 0x11 // Already used by consensus (IstanbulMsg)
 
 	// Protocol messages belonging to klay/65
 	StakingInfoRequestMsg = 0x12

@@ -55,7 +55,7 @@ func testChannelManager(t *testing.T, chSize int) {
 		// Before calling RegisterChannelWithIndex,
 		// calling GetChannelWithMsgCode with registered MsgCode should return no channel and no error.
 		for i := StatusMsg; i < MsgCodeEnd; i++ {
-			if i == DummyMsg1 || i == DummyMsg2 {
+			if i == Unused10 || i == Unused11 {
 				// skip for dummy messages
 				continue
 			}
@@ -86,7 +86,7 @@ func testChannelManager(t *testing.T, chSize int) {
 		// After calling RegisterChannelWithIndex,
 		// calling GetChannelWithMsgCode with registered MsgCode should return a channel but no error.
 		for i := StatusMsg; i < MsgCodeEnd; i++ {
-			if i == DummyMsg1 || i == DummyMsg2 {
+			if i == Unused10 || i == Unused11 {
 				// skip for dummy messages
 				continue
 			}
