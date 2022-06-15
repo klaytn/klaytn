@@ -888,7 +888,7 @@ func (q *queue) DeliverReceipts(id string, receiptList [][]*types.Receipt) (int,
 	return q.deliver(id, q.receiptTaskPool, q.receiptTaskQueue, q.receiptPendPool, receiptReqTimer, len(receiptList), validate, reconstruct)
 }
 
-// DeliverStakingInfos injects a receipt retrieval response into the results queue.
+// DeliverStakingInfos injects a stakinginfo retrieval response into the results queue.
 // The method returns the number of staking information accepted from the delivery
 // and also wakes any threads waiting for data delivery.
 func (q *queue) DeliverStakingInfos(id string, stakingInfoList []*reward.StakingInfo) (int, error) {
