@@ -18,13 +18,14 @@ package sc
 
 import (
 	"context"
-	"fmt"
+	"encoding/hex"
 	"io/ioutil"
 	"log"
 	"math/big"
 	"math/rand"
 	"os"
 	"path"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -145,7 +146,7 @@ func TestBridgeManager(t *testing.T) {
 	}
 	bridgeInfo, _ := bridgeManager.GetBridgeInfo(addr)
 	bridge := bridgeInfo.bridge
-	fmt.Println("===== BridgeContract Addr ", addr.Hex())
+	t.Log("===== BridgeContract Addr ", addr.Hex())
 	sim.Commit() // block
 
 	// 2. Deploy Token Contract
@@ -185,16 +186,16 @@ func TestBridgeManager(t *testing.T) {
 	assert.Equal(t, cNftAddr, nftAddr)
 
 	balance, _ := sim.BalanceAt(context.Background(), pAuth.From, nil)
-	fmt.Printf("auth(%v) KLAY balance : %v\n", pAuth.From.String(), balance)
+	t.Logf("auth(%v) KLAY balance : %v\n", pAuth.From.String(), balance)
 
 	balance, _ = sim.BalanceAt(context.Background(), cAuth.From, nil)
-	fmt.Printf("auth2(%v) KLAY balance : %v\n", cAuth.From.String(), balance)
+	t.Logf("auth2(%v) KLAY balance : %v\n", cAuth.From.String(), balance)
 
 	balance, _ = sim.BalanceAt(context.Background(), alice.From, nil)
-	fmt.Printf("auth3(%v) KLAY balance : %v\n", alice.From.String(), balance)
+	t.Logf("auth3(%v) KLAY balance : %v\n", alice.From.String(), balance)
 
 	balance, _ = sim.BalanceAt(context.Background(), bob.From, nil)
-	fmt.Printf("auth4(%v) KLAY balance : %v\n", bob.From.String(), balance)
+	t.Logf("auth4(%v) KLAY balance : %v\n", bob.From.String(), balance)
 
 	// 4. Subscribe Bridge Contract
 	bridgeManager.SubscribeEvent(addr)
@@ -208,7 +209,7 @@ func TestBridgeManager(t *testing.T) {
 		for {
 			select {
 			case ev := <-requestValueTransferEventCh:
-				fmt.Println("Request Event",
+				t.Log("Request Event",
 					"type", ev.TokenType,
 					"amount", ev.ValueOrTokenId,
 					"from", ev.From.String(),
@@ -234,7 +235,7 @@ func TestBridgeManager(t *testing.T) {
 				assert.Equal(t, true, done)
 
 			case ev := <-handleValueTransferEventCh:
-				fmt.Println("Handle value transfer event",
+				t.Log("Handle value transfer event",
 					"bridgeAddr", ev.Raw.Address.Hex(),
 					"type", ev.TokenType,
 					"amount", ev.ValueOrTokenId,
@@ -251,7 +252,7 @@ func TestBridgeManager(t *testing.T) {
 	{
 		tx, err = nft.MintWithTokenURI(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, GasLimit: testGasLimit}, alice.From, big.NewInt(int64(nftTokenID)), "testURI")
 		assert.NoError(t, err)
-		fmt.Println("Register NFT Transaction", tx.Hash().Hex())
+		t.Log("Register NFT Transaction", tx.Hash().Hex())
 		sim.Commit() // block
 
 		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
@@ -265,7 +266,7 @@ func TestBridgeManager(t *testing.T) {
 	{
 		tx, err = token.RequestValueTransfer(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, GasLimit: testGasLimit}, testToken, bob.From, big.NewInt(0), nil)
 		assert.NoError(t, err)
-		fmt.Println("RequestValueTransfer Transaction", tx.Hash().Hex())
+		t.Log("RequestValueTransfer Transaction", tx.Hash().Hex())
 		sim.Commit() // block
 
 		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
@@ -276,7 +277,7 @@ func TestBridgeManager(t *testing.T) {
 	{
 		tx, err = bridge.RequestKLAYTransfer(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, Value: testKLAY, GasLimit: testGasLimit}, bob.From, testKLAY, nil)
 		assert.NoError(t, err)
-		fmt.Println("DepositKLAY Transaction", tx.Hash().Hex())
+		t.Log("DepositKLAY Transaction", tx.Hash().Hex())
 
 		sim.Commit() // block
 
@@ -287,7 +288,7 @@ func TestBridgeManager(t *testing.T) {
 	{
 		tx, err = nft.RequestValueTransfer(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, GasLimit: testGasLimit}, big.NewInt(int64(nftTokenID)), bob.From, nil)
 		assert.NoError(t, err)
-		fmt.Println("nft.RequestValueTransfer Transaction", tx.Hash().Hex())
+		t.Log("nft.RequestValueTransfer Transaction", tx.Hash().Hex())
 
 		sim.Commit() // block
 
@@ -388,7 +389,7 @@ func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
 	}
 	bridgeInfo, _ := bridgeManager.GetBridgeInfo(addr)
 	bridge := bridgeInfo.bridge
-	fmt.Println("===== BridgeContract Addr ", addr.Hex())
+	t.Log("===== BridgeContract Addr ", addr.Hex())
 	sim.Commit() // block
 
 	// Deploy NFT Contract
@@ -433,7 +434,7 @@ func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
 		for {
 			select {
 			case ev := <-requestValueTransferEventCh:
-				fmt.Println("Request Event",
+				t.Log("Request Event",
 					"type", ev.TokenType,
 					"amount", ev.ValueOrTokenId,
 					"from", ev.From.String(),
@@ -459,7 +460,7 @@ func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
 				assert.Equal(t, true, done)
 
 			case ev := <-handleValueTransferEventCh:
-				fmt.Println("Handle value transfer event",
+				t.Log("Handle value transfer event",
 					"bridgeAddr", ev.Raw.Address.Hex(),
 					"type", ev.TokenType,
 					"amount", ev.ValueOrTokenId,
@@ -476,7 +477,7 @@ func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
 	{
 		tx, err = nft.Mint(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, GasLimit: testGasLimit}, alice.From, big.NewInt(int64(nftTokenID)))
 		assert.NoError(t, err)
-		fmt.Println("Register NFT Transaction", tx.Hash().Hex())
+		t.Log("Register NFT Transaction", tx.Hash().Hex())
 		sim.Commit() // block
 
 		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
@@ -490,7 +491,7 @@ func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
 	{
 		tx, err = nft.RequestValueTransfer(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, GasLimit: testGasLimit}, big.NewInt(int64(nftTokenID)), bob.From, nil)
 		assert.NoError(t, err)
-		fmt.Println("nft.RequestValueTransfer Transaction", tx.Hash().Hex())
+		t.Log("nft.RequestValueTransfer Transaction", tx.Hash().Hex())
 
 		sim.Commit() // block
 
@@ -580,7 +581,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 	assert.NoError(t, err)
 	pBridgeInfo, _ := bridgeManager.GetBridgeInfo(pBridgeAddr)
 	pBridge := pBridgeInfo.bridge
-	fmt.Println("===== BridgeContract Addr ", pBridgeAddr.Hex())
+	t.Log("===== BridgeContract Addr ", pBridgeAddr.Hex())
 	sim.Commit() // block
 
 	// 2. Deploy Token Contract
@@ -648,10 +649,10 @@ func TestBridgeManagerWithFee(t *testing.T) {
 	assert.Equal(t, cTokenAddr, tokenAddr)
 
 	balance, _ := sim.BalanceAt(context.Background(), Alice.From, nil)
-	fmt.Printf("Alice(%v) KLAY balance : %v\n", Alice.From.String(), balance)
+	t.Logf("Alice(%v) KLAY balance : %v\n", Alice.From.String(), balance)
 
 	balance, _ = sim.BalanceAt(context.Background(), Bob.From, nil)
-	fmt.Printf("Bob(%v) KLAY balance : %v\n", Bob.From.String(), balance)
+	t.Logf("Bob(%v) KLAY balance : %v\n", Bob.From.String(), balance)
 
 	// 4. Subscribe Bridge Contract
 	bridgeManager.SubscribeEvent(pBridgeAddr)
@@ -665,7 +666,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		for {
 			select {
 			case ev := <-requestValueTransferEventCh:
-				fmt.Println("Request value transfer event",
+				t.Log("Request value transfer event",
 					"type", ev.TokenType,
 					"amount", ev.ValueOrTokenId,
 					"from", ev.From.String(),
@@ -685,7 +686,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 				wg.Done()
 
 			case ev := <-handleValueTransferEventCh:
-				fmt.Println("Handle value transfer event",
+				t.Log("Handle value transfer event",
 					"bridgeAddr", ev.Raw.Address.Hex(),
 					"type", ev.TokenType,
 					"amount", ev.ValueOrTokenId,
@@ -704,29 +705,29 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		if err != nil {
 			log.Fatalf("Failed to Transfer for charging: %v", err)
 		}
-		fmt.Println("Transfer Transaction", tx.Hash().Hex())
+		t.Log("Transfer Transaction", tx.Hash().Hex())
 		sim.Commit() // block
 
 		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
 
 		balance, err = token.BalanceOf(nil, pAuth.From)
 		assert.Equal(t, nil, err)
-		fmt.Println("parentAcc token balance", balance.String())
+		t.Log("parentAcc token balance", balance.String())
 
 		balance, err = token.BalanceOf(nil, Alice.From)
 		assert.Equal(t, nil, err)
-		fmt.Println("Alice token balance", balance.String())
+		t.Log("Alice token balance", balance.String())
 
 		balance, err = token.BalanceOf(nil, Bob.From)
 		assert.Equal(t, nil, err)
-		fmt.Println("Bob token balance", balance.String())
+		t.Log("Bob token balance", balance.String())
 	}
 
 	// 7-1. Request ERC20 Transfer from Alice to Bob with same feeLimit with fee
 	{
 		tx, err = token.RequestValueTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, GasLimit: testGasLimit}, big.NewInt(testToken), Bob.From, big.NewInt(ERC20Fee), nil)
 		assert.NoError(t, err)
-		fmt.Println("RequestValueTransfer Transaction", tx.Hash().Hex())
+		t.Log("RequestValueTransfer Transaction", tx.Hash().Hex())
 		sim.Commit() // block
 
 		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
@@ -770,7 +771,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		tx, err = pBridge.RequestERC20Transfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, GasLimit: testGasLimit}, tokenAddr, Bob.From, big.NewInt(testToken), big.NewInt(ERC20Fee), nil)
 		assert.Equal(t, nil, err)
 
-		fmt.Println("RequestValueTransfer Transaction", tx.Hash().Hex())
+		t.Log("RequestValueTransfer Transaction", tx.Hash().Hex())
 		sim.Commit() // block
 
 		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
@@ -784,7 +785,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		tx, err = pBridge.RequestERC20Transfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, GasLimit: testGasLimit}, tokenAddr, Bob.From, big.NewInt(testToken), big.NewInt(0), nil)
 		assert.Equal(t, nil, err)
 
-		fmt.Println("RequestValueTransfer Transaction", tx.Hash().Hex())
+		t.Log("RequestValueTransfer Transaction", tx.Hash().Hex())
 		sim.Commit() // block
 
 		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusErrExecutionReverted, t)
@@ -798,7 +799,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		tx, err = pBridge.RequestERC20Transfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, GasLimit: testGasLimit}, tokenAddr, Bob.From, big.NewInt(testToken), big.NewInt(ERC20Fee-1), nil)
 		assert.Equal(t, nil, err)
 
-		fmt.Println("RequestValueTransfer Transaction", tx.Hash().Hex())
+		t.Log("RequestValueTransfer Transaction", tx.Hash().Hex())
 		sim.Commit() // block
 
 		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusErrExecutionReverted, t)
@@ -812,7 +813,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		tx, err = pBridge.RequestERC20Transfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, GasLimit: testGasLimit}, tokenAddr, Bob.From, big.NewInt(testToken), big.NewInt(ERC20Fee+1), nil)
 		assert.Equal(t, nil, err)
 
-		fmt.Println("RequestValueTransfer Transaction", tx.Hash().Hex())
+		t.Log("RequestValueTransfer Transaction", tx.Hash().Hex())
 		sim.Commit() // block
 
 		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
@@ -824,7 +825,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		if err != nil {
 			log.Fatalf("Failed to RequestKLAYTransfer: %v", err)
 		}
-		fmt.Println("RequestKLAYTransfer Transaction", tx.Hash().Hex())
+		t.Log("RequestKLAYTransfer Transaction", tx.Hash().Hex())
 
 		sim.Commit() // block
 
@@ -884,32 +885,32 @@ func TestBridgeManagerWithFee(t *testing.T) {
 	{
 		balance, err = token.BalanceOf(nil, Alice.From)
 		assert.Equal(t, nil, err)
-		fmt.Println("Alice token balance", balance.String())
+		t.Log("Alice token balance", balance.String())
 		assert.Equal(t, initialValue-(testToken+ERC20Fee)*4, balance.Int64())
 
 		balance, err = token.BalanceOf(nil, Bob.From)
 		assert.Equal(t, nil, err)
-		fmt.Println("Bob token balance", balance.String())
+		t.Log("Bob token balance", balance.String())
 		assert.Equal(t, testToken*4, balance.Int64())
 
 		balance, err = token.BalanceOf(nil, receiver.From)
 		assert.Equal(t, nil, err)
-		fmt.Println("Fee receiver token balance", balance.String())
+		t.Log("Fee receiver token balance", balance.String())
 		assert.Equal(t, ERC20Fee*4, balance.Int64())
 	}
 
 	// 11. Check KLAY balance
 	{
 		balance, _ = sim.BalanceAt(context.Background(), Alice.From, nil)
-		fmt.Println("Alice KLAY balance :", balance)
+		t.Log("Alice KLAY balance :", balance)
 		assert.Equal(t, initialValue-(testKLAY+KLAYFee)*2-KLAYFee, balance.Int64())
 
 		balance, _ = sim.BalanceAt(context.Background(), Bob.From, nil)
-		fmt.Println("Bob KLAY balance :", balance)
+		t.Log("Bob KLAY balance :", balance)
 		assert.Equal(t, big.NewInt(testKLAY*2).String(), balance.String())
 
 		balance, _ = sim.BalanceAt(context.Background(), receiver.From, nil)
-		fmt.Println("receiver KLAY balance :", balance)
+		t.Log("receiver KLAY balance :", balance)
 		assert.Equal(t, KLAYFee*3, balance.Int64())
 	}
 
@@ -1457,7 +1458,7 @@ func TestErrorDupSubscription(t *testing.T) {
 	addr, err := bm.DeployBridgeTest(sim, 10000, false)
 	bridgeInfo, _ := bm.GetBridgeInfo(addr)
 	bridge := bridgeInfo.bridge
-	fmt.Println("===== BridgeContract Addr ", addr.Hex())
+	t.Log("===== BridgeContract Addr ", addr.Hex())
 	sim.Commit() // block
 
 	bm.bridges[addr], err = NewBridgeInfo(sc, addr, bridge, common.Address{}, nil, bacc.cAccount, true, true, sim)
@@ -2059,26 +2060,15 @@ func TestBridgeAliasAPIs(t *testing.T) {
 	pBridgeAddrStr := pBridgeAddr.String()
 	cTokenAddrStr := cTokenAddr.String()
 	pTokenAddrStr := pTokenAddr.String()
-
 	// -------------------------- Done prepration --------------------------
 
 	// -------------------------- API test with the raw addresss format --------------------------
 	{
-		// TEST 1 - Success (Register bridge, tokens and subscribe registered bridges)
+		// TEST 1-1 - Success (Register bridge, tokens and subscribe registered bridges)
 		bridgePairs := bm.subBridge.APIBackend.ListBridge()
 		assert.Equal(t, len(bridgePairs), 0)
 
-		// Register Bridge
-		err = bm.subBridge.APIBackend.RegisterBridge(cBridgeAddr, pBridgeAddr, nil)
-		assert.NoError(t, err)
-
-		// Register tokens
-		err = bm.subBridge.APIBackend.RegisterToken(&cBridgeAddrStr, &pBridgeAddrStr, &cTokenAddrStr, &pTokenAddrStr)
-		assert.NoError(t, err)
-
-		// Subscribe bridges
-		err = bm.subBridge.APIBackend.SubscribeBridge(&cBridgeAddrStr, &pBridgeAddrStr)
-		assert.NoError(t, err)
+		testBridgeAPIBasic(t, bm, cBridgeAddr, pBridgeAddr, nil, cTokenAddr, pTokenAddr)
 
 		bridgePairs = bm.subBridge.APIBackend.ListBridge()
 		assert.Equal(t, len(bridgePairs), 1)
@@ -2086,38 +2076,20 @@ func TestBridgeAliasAPIs(t *testing.T) {
 	}
 
 	{
-		// TEST 2 - Failure
+		// TEST 1-2 - Failure
 		// Duplicated journal
-		err = bm.subBridge.APIBackend.RegisterBridge(cBridgeAddr, pBridgeAddr, nil)
-		assert.Equal(t, err, ErrDuplicatedJournal)
+		testDuplicatedJournal(t, bm, cBridgeAddr, pBridgeAddr, nil)
+
+		// Duplicated token
+		testDuplicatedToken(t, bm, &cBridgeAddrStr, &pBridgeAddrStr, &cTokenAddrStr, &pTokenAddrStr)
 
 		// Already subscribed
-		err = bm.subBridge.APIBackend.SubscribeBridge(&cBridgeAddrStr, &pBridgeAddrStr)
-		assert.Equal(t, err, ErrAlreadySubscribed)
+		testAlreadySubscribed(t, bm, &cBridgeAddrStr, &pBridgeAddrStr)
 	}
 
 	{
-		// TEST 3 - Success (Unsubscribe bridge, deregister bridges and tokens)
-		bridgePairs := bm.subBridge.APIBackend.ListBridge()
-		err = bm.subBridge.APIBackend.UnsubscribeBridge(&cBridgeAddrStr, &pBridgeAddrStr)
-		assert.NoError(t, err)
-		assert.Equal(t, bridgePairs[0].Subscribed, false)
-
-		cBi, ok := bm.GetBridgeInfo(bridgePairs[0].ChildAddress)
-		assert.Equal(t, ok, true)
-		assert.Equal(t, len(cBi.counterpartToken), 1)
-		pBi, ok := bm.GetBridgeInfo(bridgePairs[0].ParentAddress)
-		assert.Equal(t, ok, true)
-		assert.Equal(t, len(pBi.counterpartToken), 1)
-
-		err = bm.subBridge.APIBackend.DeregisterToken(&cBridgeAddrStr, &pBridgeAddrStr, &cTokenAddrStr, &pTokenAddrStr)
-		assert.NoError(t, err)
-		assert.Equal(t, len(cBi.counterpartToken), 0)
-		assert.Equal(t, len(pBi.counterpartToken), 0)
-
-		err = bm.subBridge.APIBackend.DeregisterBridge(&cBridgeAddrStr, &pBridgeAddrStr)
-		bridgePairs = bm.subBridge.APIBackend.ListBridge()
-		assert.Equal(t, len(bridgePairs), 0)
+		// TEST 1-3 - Success (Unsubscribe bridge, deregister bridges and tokens)
+		testUnsubscribeAndDeRegister(t, bm, &cBridgeAddrStr, &pBridgeAddrStr, &cTokenAddrStr, &pTokenAddrStr)
 	}
 
 	// -------------------------- API test with the bridge format --------------------------
@@ -2125,46 +2097,33 @@ func TestBridgeAliasAPIs(t *testing.T) {
 	changedAlias := "MYBRIDGE_v2"
 	invalidBridgeAlias := "0xMYBRIDGE"
 	{
-		// TEST 1 - Success (Register bridge, tokens and subscribe registered bridges)
+		// TEST 2-1 - Success (Register bridge, tokens and subscribe registered bridges)
 		bridgePairs := bm.subBridge.APIBackend.ListBridge()
 		assert.Equal(t, len(bridgePairs), 0)
 
-		// Register Bridge
-		err = bm.subBridge.APIBackend.RegisterBridge(cBridgeAddr, pBridgeAddr, &alias)
-		assert.NoError(t, err)
-
-		// Register tokens
-		err = bm.subBridge.APIBackend.RegisterToken(&alias, nil, &cTokenAddrStr, &pTokenAddrStr)
-		assert.NoError(t, err)
-
-		// Subscribe bridges
-		err = bm.subBridge.APIBackend.SubscribeBridge(&alias, nil)
-		assert.NoError(t, err)
+		testBridgeAPIBasic(t, bm, cBridgeAddr, pBridgeAddr, &alias, cTokenAddr, pTokenAddr)
 
 		bridgePairs = bm.subBridge.APIBackend.ListBridge()
 		assert.Equal(t, len(bridgePairs), 1)
 		assert.Equal(t, bridgePairs[0].Subscribed, true)
-
 		bridgePair := bm.subBridge.APIBackend.GetBridgePairByAlias(alias)
 		assert.Equal(t, bridgePair.BridgeAlias, alias)
 	}
 
 	{
-		// TEST 2 - Failure
-		// Duplicated alias
-		err = bm.subBridge.APIBackend.RegisterBridge(cBridgeAddr, pBridgeAddr, &alias)
-		assert.Equal(t, err, ErrDuplicatedAlias)
+		// TEST 2-2 - Failure
+		// Duplicated bridge alias
+		testDuplicatedJournal(t, bm, cBridgeAddr, pBridgeAddr, &alias)
 
 		// Duplicated token
-		err = bm.subBridge.APIBackend.RegisterToken(&alias, nil, &cTokenAddrStr, &pTokenAddrStr)
-		assert.Equal(t, err, ErrDuplicatedToken)
+		testDuplicatedToken(t, bm, &alias, &cTokenAddrStr, &pTokenAddrStr, nil)
 
-		err = bm.subBridge.APIBackend.SubscribeBridge(&alias, nil)
-		assert.Equal(t, err, ErrAlreadySubscribed)
+		// Already subscribed
+		testAlreadySubscribed(t, bm, &alias, nil)
 	}
 
 	{
-		// TEST 3 - Success (change bridge alias)
+		// TEST 2-3 - Success (change bridge alias)
 		err = bm.subBridge.APIBackend.ChangeBridgeAlias(alias, changedAlias)
 		assert.NoError(t, err)
 
@@ -2180,38 +2139,328 @@ func TestBridgeAliasAPIs(t *testing.T) {
 	}
 
 	{
-		// TEST 4 - Success (Unsubscribe bridge, deregister bridges and tokens)
-		bridgePairs := bm.subBridge.APIBackend.ListBridge()
-		err = bm.subBridge.APIBackend.UnsubscribeBridge(&changedAlias, nil)
-		assert.NoError(t, err)
-		assert.Equal(t, bridgePairs[0].Subscribed, false)
-
-		bridgePair := bm.subBridge.APIBackend.GetBridgePairByAlias(changedAlias)
-		assert.Equal(t, bridgePair.BridgeAlias, changedAlias)
-		cBi, ok := bm.GetBridgeInfo(bridgePair.ChildAddress)
-		assert.Equal(t, ok, true)
-		assert.Equal(t, len(cBi.counterpartToken), 1)
-
-		assert.Equal(t, bridgePair.BridgeAlias, changedAlias)
-		pBi, ok := bm.GetBridgeInfo(bridgePair.ParentAddress)
-		assert.Equal(t, ok, true)
-		assert.Equal(t, len(pBi.counterpartToken), 1)
-
-		err = bm.subBridge.APIBackend.DeregisterToken(&changedAlias, nil, &cTokenAddrStr, &pTokenAddrStr)
-		assert.NoError(t, err)
-		assert.Equal(t, len(cBi.counterpartToken), 0)
-		assert.Equal(t, len(pBi.counterpartToken), 0)
-
-		err = bm.subBridge.APIBackend.DeregisterBridge(&changedAlias, nil)
-		bridgePairs = bm.subBridge.APIBackend.ListBridge()
-		assert.Equal(t, len(bridgePairs), 0)
+		// TEST 2-4 - Success (Unsubscribe bridge, deregister bridges and tokens)
+		testUnsubscribeAndDeRegister(t, bm, &changedAlias, &cTokenAddrStr, &pTokenAddrStr, nil)
 	}
 
 	{
-		// TEST 5 - Failure (Try to create a bridge alias with invalid bridge alias name)
+		// TEST 2-5 - Failure (Try to create a bridge alias with invalid bridge alias name)
 		err = bm.subBridge.APIBackend.RegisterBridge(cBridgeAddr, pBridgeAddr, &invalidBridgeAlias)
 		assert.Equal(t, err, ErrNotAllowedAliasFormat)
 	}
+
+	{
+		// TEST 4 - Concurrent API Call
+		contractPairLen := 10
+		bridgeAddrs := make([]common.Address, contractPairLen)
+		tokenAddrs := make([]common.Address, contractPairLen)
+		t.Logf("Prepare %d contracts\n", contractPairLen)
+		// Preparation: Deploy bridge and token contracts
+		for i := 0; i < contractPairLen/2; i++ {
+			cBridgeAddr, pBridgeAddr = deployBridge(t, bm, sim, true), deployBridge(t, bm, sim, false)
+			cIdx, pIdx := i*2, i*2+1
+			bridgeAddrs[cIdx], bridgeAddrs[pIdx] = cBridgeAddr, pBridgeAddr
+
+			cTokenAddr, _, _, err := sctoken.DeployServiceChainToken(alice, sim, cBridgeAddr)
+			assert.NoError(t, err)
+			pTokenAddr, _, _, err := sctoken.DeployServiceChainToken(alice, sim, pBridgeAddr)
+			assert.NoError(t, err)
+			tokenAddrs[cIdx], tokenAddrs[pIdx] = cTokenAddr, pTokenAddr
+
+			t.Logf("Deployed bridge contracts %d, %d\n", cIdx, pIdx)
+		}
+
+		// Declare another bridge and token contracts that did not initialize
+		fixedChildBridgeAddr, fixedParentBridgeAddr := deployBridge(t, bm, sim, true), deployBridge(t, bm, sim, false)
+
+		const (
+			BRIDGE_SETUP = iota
+			FAILURE
+			CLEANUP_BRIDGE
+			ALIAS_BRIDGE_SETUP
+			ALIAS_FAILURE
+			ALIAS_CLEANUP_BRIDGE
+			REGISTER_MULTIPLE_TOKEN_WITH_SINGLE_BRIDGE
+		)
+		// DO NOT CHANGE THE TEST ORDER
+		testCases := map[uint8]string{
+			BRIDGE_SETUP:         "BRIDGE_SETUP",
+			FAILURE:              "FAILURE",
+			CLEANUP_BRIDGE:       "CLEANUP_BRIDGE",
+			ALIAS_BRIDGE_SETUP:   "ALIAS_BRIDGE_SETUP",
+			ALIAS_FAILURE:        "ALIAS_FAILURE",
+			ALIAS_CLEANUP_BRIDGE: "ALIAS_CLEANUP_BRIDGE",
+			REGISTER_MULTIPLE_TOKEN_WITH_SINGLE_BRIDGE: "REGISTER_MULTIPLE_TOKEN_WITH_SINGLE_BRIDGE",
+		}
+
+		for testNum := 0; testNum < len(testCases); testNum++ {
+			wg := sync.WaitGroup{}
+			wg.Add(contractPairLen / 2)
+			for i := 0; i < len(bridgeAddrs); i += 2 {
+				//alias := "MYBRIDGE_v3" + strconv.Itoa(i)
+				cIdx, pIdx := i, i+1
+				go func(cIdx, pIdx int) {
+					cBridgeAddr, pBridgeAddr := bridgeAddrs[cIdx], bridgeAddrs[pIdx]
+					cBridgeAddrStr, pBridgeAddrStr := cBridgeAddr.String(), pBridgeAddr.String()
+					cTokenAddr, pTokenAddr := tokenAddrs[cIdx], tokenAddrs[pIdx]
+					cTokenAddrStr, pTokenAddrStr := cTokenAddr.String(), pTokenAddr.String()
+					alias := "MYBRIDGE_v3" + strconv.Itoa(cIdx)
+
+					switch testNum {
+					case BRIDGE_SETUP:
+						// TEST 3-1. `testBridgeAPIBasic` again with concurrent calls using raw-address-format APIS
+						testBridgeAPIBasic(t, bm, cBridgeAddr, pBridgeAddr, nil, cTokenAddr, pTokenAddr)
+						t.Log("passed:", testCases[uint8(testNum)], cIdx, pIdx)
+					case FAILURE:
+						// TEST 3-2 - Failure
+						testDuplicatedJournal(t, bm, cBridgeAddr, pBridgeAddr, nil)
+						testDuplicatedToken(t, bm, &cBridgeAddrStr, &pBridgeAddrStr, &cTokenAddrStr, &pTokenAddrStr)
+						testAlreadySubscribed(t, bm, &cBridgeAddrStr, &pBridgeAddrStr)
+						t.Log("passed:", testCases[uint8(testNum)], cIdx, pIdx)
+					case ALIAS_BRIDGE_SETUP:
+						// TEST 3-3. `testBridgeAPIBasic` again with concurrent calls using alias APIS
+						testBridgeAPIBasic(t, bm, cBridgeAddr, pBridgeAddr, &alias, cTokenAddr, pTokenAddr)
+						t.Log("passed:", testCases[uint8(testNum)], cIdx, pIdx)
+					case ALIAS_FAILURE:
+						// TEST 3-4 - Failure
+						testDuplicatedJournal(t, bm, cBridgeAddr, pBridgeAddr, &alias)
+						testDuplicatedToken(t, bm, &alias, &cTokenAddrStr, &pTokenAddrStr, nil)
+						testAlreadySubscribed(t, bm, &alias, nil)
+						t.Log("passed:", testCases[uint8(testNum)], cIdx, pIdx)
+					case CLEANUP_BRIDGE:
+						// TEST 3-5 - Success (Unsubscribe bridge, deregister bridges and tokens)
+						testUnsubscribeAndDeRegister(t, bm, &cBridgeAddrStr, &pBridgeAddrStr, &cTokenAddrStr, &pTokenAddrStr)
+						t.Log("passed:", testCases[uint8(testNum)], cIdx, pIdx)
+					case ALIAS_CLEANUP_BRIDGE:
+						// TEST 3-6 - Success (Unsubscribe bridge, deregister bridges and tokens)
+						testUnsubscribeAndDeRegister(t, bm, &alias, &cTokenAddrStr, &pTokenAddrStr, nil)
+						t.Log("passed:", testCases[uint8(testNum)], cIdx, pIdx)
+					case REGISTER_MULTIPLE_TOKEN_WITH_SINGLE_BRIDGE:
+						// TEST 3-7 - Use the fresh bridge that did not register any token contracts
+						cbAddr, pbAddr := fixedChildBridgeAddr.String(), fixedParentBridgeAddr.String()
+						testRegisterToken(t, bm, &cbAddr, &pbAddr, &cTokenAddrStr, &pTokenAddrStr)
+						t.Log("passed:", testCases[uint8(testNum)], cIdx, pIdx)
+					}
+					wg.Done()
+				}(cIdx, pIdx)
+			}
+			wg.Wait()
+			t.Log("Test Done: ", testCases[uint8(testNum)])
+			switch testNum {
+			case BRIDGE_SETUP:
+				checkBridgeSetup(t, bm, true, 1, contractPairLen/2)
+			case CLEANUP_BRIDGE:
+				checkBridgeSetup(t, bm, false, 0, 0)
+			case ALIAS_BRIDGE_SETUP:
+				checkBridgeSetup(t, bm, true, 1, contractPairLen/2)
+			case ALIAS_CLEANUP_BRIDGE:
+				checkBridgeSetup(t, bm, false, 0, 0)
+				// Initiailize another two bridge contracts for the test `REGISTER_MULTIPLE_TOKEN_WITH_SINGLE_BRIDGE`
+				err = bm.subBridge.APIBackend.RegisterBridge(fixedChildBridgeAddr, fixedParentBridgeAddr, nil)
+				assert.NoError(t, err)
+			case REGISTER_MULTIPLE_TOKEN_WITH_SINGLE_BRIDGE:
+				checkRegisterMultipleToken(t, bm, fixedChildBridgeAddr, fixedParentBridgeAddr, contractPairLen/2)
+			}
+		}
+		t.Log("All Done")
+	}
+}
+
+func testBridgeAPIBasic(t *testing.T, bm *BridgeManager,
+	cBridgeAddr, pBridgeAddr common.Address,
+	alias *string,
+	cTokenAddr, pTokenAddr common.Address) {
+	// TEST 1 - Success (Register bridge, tokens and subscribe registered bridges)
+	cBridgeAddrStr := cBridgeAddr.String()
+	pBridgeAddrStr := pBridgeAddr.String()
+	cTokenAddrStr := cTokenAddr.String()
+	pTokenAddrStr := pTokenAddr.String()
+
+	// Register Bridge
+	err := bm.subBridge.APIBackend.RegisterBridge(cBridgeAddr, pBridgeAddr, alias)
+	assert.NoError(t, err)
+
+	// Register tokens
+	if alias != nil {
+		err = bm.subBridge.APIBackend.RegisterToken(alias, &cTokenAddrStr, &pTokenAddrStr, nil)
+	} else {
+		err = bm.subBridge.APIBackend.RegisterToken(&cBridgeAddrStr, &pBridgeAddrStr, &cTokenAddrStr, &pTokenAddrStr)
+	}
+	assert.NoError(t, err)
+
+	// Subscribe bridges
+	if alias != nil {
+		err = bm.subBridge.APIBackend.SubscribeBridge(alias, nil)
+	} else {
+		err = bm.subBridge.APIBackend.SubscribeBridge(&cBridgeAddrStr, &pBridgeAddrStr)
+	}
+	assert.NoError(t, err)
+}
+
+func testDuplicatedJournal(t *testing.T, bm *BridgeManager, cBridgeAddr, pBridgeAddr common.Address, alias *string) {
+	err := bm.subBridge.APIBackend.RegisterBridge(cBridgeAddr, pBridgeAddr, alias)
+	if err != ErrDuplicatedJournal && err != ErrDuplicatedAlias {
+		t.Fatal("Unexpected error", err)
+	}
+}
+
+func testDuplicatedToken(t *testing.T, bm *BridgeManager, cBridgeAddrStr, pBridgeAddrStr, cTokenAddrStr, pTokenAddrStr *string) {
+	err := bm.subBridge.APIBackend.RegisterToken(cBridgeAddrStr, pBridgeAddrStr, cTokenAddrStr, pTokenAddrStr)
+	assert.Equal(t, err, ErrDuplicatedToken)
+}
+
+func testAlreadySubscribed(t *testing.T, bm *BridgeManager, cBridgeAddrStr, pBridgeAddrStr *string) {
+	err := bm.subBridge.APIBackend.SubscribeBridge(cBridgeAddrStr, pBridgeAddrStr)
+	assert.Equal(t, err, ErrAlreadySubscribed)
+}
+
+func testRegisterToken(t *testing.T, bm *BridgeManager, cBridgeAddrStr, pBridgeAddrStr, cTokenAddrStr, pTokenAddrStr *string) {
+	err := bm.subBridge.APIBackend.RegisterToken(cBridgeAddrStr, pBridgeAddrStr, cTokenAddrStr, pTokenAddrStr)
+	assert.NoError(t, err)
+}
+
+func testUnsubscribeAndDeRegister(t *testing.T, bm *BridgeManager,
+	cBridgeAddrStr, pBridgeAddrStr, cTokenAddrStr, pTokenAddrStr *string) {
+	findBridgePair := func(addrStr string) *BridgeJournal {
+		bridgePairs := bm.subBridge.APIBackend.ListBridge()
+		for _, bridgePair := range bridgePairs {
+			if bridgePair.ChildAddress.String() == addrStr || bridgePair.BridgeAlias == addrStr {
+				return bridgePair
+			}
+		}
+		return nil
+	}
+	bridgePairLen := len(bm.subBridge.APIBackend.ListBridge())
+	defer func() {
+		err := bm.subBridge.APIBackend.DeregisterBridge(cBridgeAddrStr, pBridgeAddrStr)
+		assert.NoError(t, err)
+		assert.Equal(t, len(bm.subBridge.APIBackend.ListBridge()) < bridgePairLen, true)
+	}()
+
+	bridgePair := findBridgePair(*cBridgeAddrStr)
+	assert.NotNil(t, bridgePair)
+	assert.Equal(t, bridgePair.Subscribed, true)
+	err := bm.subBridge.APIBackend.UnsubscribeBridge(cBridgeAddrStr, pBridgeAddrStr)
+	assert.NoError(t, err)
+	assert.Equal(t, bridgePair.Subscribed, false)
+
+	cBi, ok := bm.GetBridgeInfo(bridgePair.ChildAddress)
+	assert.Equal(t, ok, true)
+	assert.Equal(t, len(cBi.counterpartToken), 1)
+	pBi, ok := bm.GetBridgeInfo(bridgePair.ParentAddress)
+	assert.Equal(t, ok, true)
+	assert.Equal(t, len(pBi.counterpartToken), 1)
+
+	err = bm.subBridge.APIBackend.DeregisterToken(cBridgeAddrStr, pBridgeAddrStr, cTokenAddrStr, pTokenAddrStr)
+	assert.NoError(t, err)
+	assert.Equal(t, len(cBi.counterpartToken), 0)
+	assert.Equal(t, len(pBi.counterpartToken), 0)
+}
+
+func TestLegacyBridgeJournalDecode(t *testing.T) {
+	// `encodedJournalHexStr` is an encoded legacy bridge journals. The code below generate the following hex.
+	encodedJournalHexStr := "eb9485564429cce278d4399436f1af2f91e1be6f0bd494c12701e0cb09d6600f774be1dbb585ddc749f9da80eb9485564429cce278d4399436f1af2f91e1be6f0bd594c12701e0cb09d6600f774be1dbb585ddc749f9db01eb9485564429cce278d4399436f1af2f91e1be6f0bd694c12701e0cb09d6600f774be1dbb585ddc749f9dc01"
+	/*
+		legacyJournals := []BridgeJournal{
+			{
+				ChildAddress:  common.HexToAddress("0x85564429cce278d4399436f1af2f91e1be6f0bd4"),
+				ParentAddress: common.HexToAddress("0xc12701e0cb09d6600f774be1dbb585ddc749f9da"),
+				Subscribed:    false,
+			},
+			{
+				ChildAddress:  common.HexToAddress("0x85564429cce278d4399436f1af2f91e1be6f0bd5"),
+				ParentAddress: common.HexToAddress("0xc12701e0cb09d6600f774be1dbb585ddc749f9db"),
+				Subscribed:    true,
+			},
+			{
+				ChildAddress:  common.HexToAddress("0x85564429cce278d4399436f1af2f91e1be6f0bd6"),
+				ParentAddress: common.HexToAddress("0xc12701e0cb09d6600f774be1dbb585ddc749f9dc"),
+				Subscribed:    true,
+			},
+		}
+			encodedBuf := new(bytes.Buffer)
+			for i := 0; i < len(journals); i++ {
+				err := rlp.Encode(encodedBuf, &journals[i])
+				assert.NoError(t, err)
+			}
+			encodedString := hex.EncodeToString(encodedBuf.Bytes())
+			fmt.Println(encodedString)
+	*/
+
+	legacyJournals := []BridgeJournal{
+		{
+			ChildAddress:  common.HexToAddress("0x85564429cce278d4399436f1af2f91e1be6f0bd4"),
+			ParentAddress: common.HexToAddress("0xc12701e0cb09d6600f774be1dbb585ddc749f9da"),
+			Subscribed:    false,
+		},
+		{
+			ChildAddress:  common.HexToAddress("0x85564429cce278d4399436f1af2f91e1be6f0bd5"),
+			ParentAddress: common.HexToAddress("0xc12701e0cb09d6600f774be1dbb585ddc749f9db"),
+			Subscribed:    true,
+		},
+		{
+			ChildAddress:  common.HexToAddress("0x85564429cce278d4399436f1af2f91e1be6f0bd6"),
+			ParentAddress: common.HexToAddress("0xc12701e0cb09d6600f774be1dbb585ddc749f9dc"),
+			Subscribed:    true,
+		},
+	}
+
+	tempJournalPath := "legacy-journal-decoding-test"
+	tempFile, err := ioutil.TempFile(".", tempJournalPath)
+	assert.NoError(t, err)
+
+	encodedHex, err := hex.DecodeString(encodedJournalHexStr)
+	assert.NoError(t, err)
+
+	_, err = tempFile.Write(encodedHex)
+	assert.NoError(t, err)
+	defer os.Remove(tempFile.Name())
+
+	readJournalIdx := 0
+	load := func(gwjournal BridgeJournal) error {
+		assert.Equal(t, len(gwjournal.BridgeAlias), 0)
+		assert.Equal(t, gwjournal.ChildAddress.String(), legacyJournals[readJournalIdx].ChildAddress.String())
+		assert.Equal(t, gwjournal.ParentAddress.String(), legacyJournals[readJournalIdx].ParentAddress.String())
+		assert.Equal(t, gwjournal.Subscribed, legacyJournals[readJournalIdx].Subscribed)
+		readJournalIdx++
+		return nil
+	}
+	journalAddr := newBridgeAddrJournal(tempFile.Name())
+	err = journalAddr.load(load)
+	assert.NoError(t, err)
+}
+
+func checkBridgeSetup(t *testing.T, bm *BridgeManager, expectedSubscribed bool, expectedNumberOfToken, expectedBridgeLen int) {
+	bridgePairs := bm.subBridge.APIBackend.ListBridge()
+	assert.Equal(t, len(bridgePairs), expectedBridgeLen)
+	for _, bridgePair := range bridgePairs {
+		assert.Equal(t, bridgePair.Subscribed, expectedSubscribed)
+		cbi, ok := bm.GetBridgeInfo(bridgePair.ChildAddress)
+		assert.Equal(t, ok, true)
+		pbi, ok := bm.GetBridgeInfo(bridgePair.ChildAddress)
+		assert.Equal(t, ok, true)
+		assert.Equal(t, len(cbi.counterpartToken), expectedNumberOfToken)
+		assert.Equal(t, len(pbi.counterpartToken), expectedNumberOfToken)
+	}
+}
+
+func checkRegisterMultipleToken(t *testing.T, bm *BridgeManager, cBridgeAddr, pBridgeAddr common.Address, expectedLen int) {
+	cbi, ok := bm.GetBridgeInfo(cBridgeAddr)
+	assert.Equal(t, ok, true)
+	pbi, ok := bm.GetBridgeInfo(pBridgeAddr)
+	assert.Equal(t, ok, true)
+	cbi.ctTokenMu.RLock()
+	defer cbi.ctTokenMu.RUnlock()
+	assert.Equal(t, len(cbi.counterpartToken), expectedLen)
+	assert.Equal(t, len(pbi.counterpartToken), expectedLen)
+}
+func randomHex(n int) (string, error) {
+	bytes := make([]byte, n)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+
+	}
+	return hex.EncodeToString(bytes), nil
 }
 
 // DeployBridgeTest is a test-only function which deploys a bridge contract with some amount of KLAY.
