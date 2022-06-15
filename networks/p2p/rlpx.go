@@ -712,7 +712,7 @@ func (rw *rlpxFrameRW) ReadMsg() (msg Msg, err error) {
 	// ignore protocol type for now
 
 	// read the frame content
-	var rsize = fsize // frame size rounded up to 16 byte boundary
+	rsize := fsize // frame size rounded up to 16 byte boundary
 	if padding := fsize % 16; padding > 0 {
 		rsize += 16 - padding
 	}

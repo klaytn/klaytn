@@ -26,9 +26,7 @@ import (
 	"time"
 )
 
-var (
-	TargetGasLimit = GenesisGasLimit // The artificial target
-)
+var TargetGasLimit = GenesisGasLimit // The artificial target
 
 const (
 	// Fee schedule parameters

@@ -916,7 +916,7 @@ type BaseServer struct {
 	ourHandshake *protoHandshake
 	lastLookup   time.Time
 	lastLookupMu sync.Mutex
-	//DiscV5       *discv5.Network
+	// DiscV5       *discv5.Network
 
 	// These are for Peers, PeerCount (and nothing else).
 	peerOp     chan peerOpFunc
