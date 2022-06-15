@@ -53,7 +53,7 @@ type API struct {
 	Version    string      // api version for DApp's
 	Service    interface{} // receiver instance which holds the methods
 	Public     bool        // indication if the methods must be considered safe for public use
-	Privileged bool
+	Privileged bool        // if true, the `Service` methods are only serviced through the IPC channel
 }
 
 // callback is a method callback which was registered in the server
