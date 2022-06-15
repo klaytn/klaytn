@@ -2,8 +2,11 @@ package core
 
 import (
 	"crypto/ecdsa"
+	"fmt"
+	"io"
 	"math/big"
 	"math/rand"
+	"os"
 	"testing"
 	"time"
 
@@ -18,9 +21,13 @@ import (
 	"github.com/klaytn/klaytn/crypto/sha3"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/fork"
+	"github.com/klaytn/klaytn/log"
+	"github.com/klaytn/klaytn/log/term"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
+	"github.com/mattn/go-colorable"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // newMockBackend create a mock-backend initialized with default values
@@ -153,6 +160,19 @@ func genBlock(prevBlock *types.Block, signerKey *ecdsa.PrivateKey) (*types.Block
 		Extra:      prevBlock.Extra(),
 		Time:       new(big.Int).Add(prevBlock.Time(), common.Big1),
 		BlockScore: new(big.Int).Add(prevBlock.BlockScore(), common.Big1),
+	})
+	return signBlock(block, signerKey)
+}
+
+// genBlockParams generates a signed block indicating prevBlock with ParentHash with additional parameters.
+func genBlockParams(prevBlock *types.Block, signerKey *ecdsa.PrivateKey, gasUsed uint64, time int64, blockScore int64) (*types.Block, error) {
+	block := types.NewBlockWithHeader(&types.Header{
+		ParentHash: prevBlock.Hash(),
+		Number:     new(big.Int).Add(prevBlock.Number(), common.Big1),
+		GasUsed:    gasUsed,
+		Extra:      prevBlock.Extra(),
+		Time:       new(big.Int).Add(prevBlock.Time(), big.NewInt(time)),
+		BlockScore: new(big.Int).Add(prevBlock.BlockScore(), big.NewInt(blockScore)),
 	})
 	return signBlock(block, signerKey)
 }
@@ -462,6 +482,248 @@ func TestCore_handlerMsg(t *testing.T) {
 		err = istCore.handleMsg(istanbulMsg.Payload)
 		assert.Nil(t, err)
 	}
+}
+
+// TODO-Klaytn: To enable logging in the test code, we can use the following function.
+// This function will be moved to somewhere utility functions are located.
+func enableLog() {
+	usecolor := term.IsTty(os.Stderr.Fd()) && os.Getenv("TERM") != "dumb"
+	output := io.Writer(os.Stderr)
+	if usecolor {
+		output = colorable.NewColorableStderr()
+	}
+	glogger := log.NewGlogHandler(log.StreamHandler(output, log.TerminalFormat(usecolor)))
+	log.PrintOrigins(true)
+	log.ChangeGlobalLogLevel(glogger, log.Lvl(3))
+	glogger.Vmodule("")
+	glogger.BacktraceAt("")
+	log.Root().SetHandler(glogger)
+}
+
+// splitSubList splits a committee into two groups w/o proposer
+// one for n nodes, the other for len(committee) - n - 1 nodes
+func splitSubList(committee []istanbul.Validator, n int, proposerAddr common.Address) ([]istanbul.Validator, []istanbul.Validator) {
+	var subCN, remainingCN []istanbul.Validator
+
+	for _, val := range committee {
+		if val.Address() == proposerAddr {
+			// proposer is not included in any group
+			continue
+		}
+		if len(subCN) < n {
+			subCN = append(subCN, val)
+		} else {
+			remainingCN = append(remainingCN, val)
+		}
+	}
+	return subCN, remainingCN
+}
+
+// Simulate a proposer that receives messages from disagreeing groups of CNs.
+func simulateMaliciousCN(t *testing.T, numValidators int, numMalicious int) State {
+	if testing.Verbose() {
+		enableLog()
+	}
+
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
+
+	// Note that genValidators(n) will generate n/3 validators.
+	// We want n validators, thus calling genValidators(3n).
+	validatorAddrs, validatorKeyMap := genValidators(numValidators * 3)
+
+	// Add more EXPECT()s to remove unexpected call error
+	mockBackend, mockCtrl := newMockBackend(t, validatorAddrs)
+	mockBackend.EXPECT().Commit(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+	mockBackend.EXPECT().HasBadProposal(gomock.Any()).Return(true).AnyTimes()
+	defer mockCtrl.Finish()
+
+	var (
+		// it creates two pre-defined blocks: one for benign CNs, the other for the malicious
+		// newProposal is a block which the proposer has created
+		// malProposal is an incorrect block that malicious CNs use to try stop consensus
+		lastProposal, _ = mockBackend.LastProposal()
+		lastBlock       = lastProposal.(*types.Block)
+		validators      = mockBackend.Validators(lastBlock)
+		proposer        = validators.GetProposer()
+		proposerKey     = validatorKeyMap[proposer.Address()]
+		// the proposer generates a block as newProposal
+		// malicious CNs does not accept the proposer's block and use malProposal's hash value for consensus
+		newProposal, _ = genBlockParams(lastBlock, proposerKey, 0, 1, 1)
+		malProposal, _ = genBlockParams(lastBlock, proposerKey, 0, 0, 0)
+	)
+
+	// Start istanbul core
+	istConfig := istanbul.DefaultConfig
+	istConfig.ProposerPolicy = istanbul.WeightedRandom
+	istCore := New(mockBackend, istConfig).(*core)
+	err := istCore.Start()
+	require.Nil(t, err)
+	defer istCore.Stop()
+
+	// Step 1 - Pre-prepare with correct message
+
+	// Create pre-prepare message
+	istanbulMsg, err := genIstanbulMsg(msgPreprepare, lastBlock.Hash(), newProposal, proposer.Address(), proposerKey)
+	require.Nil(t, err)
+
+	// Handle pre-prepare message
+	err = istCore.handleMsg(istanbulMsg.Payload)
+	require.Nil(t, err)
+
+	// splitSubList split current committee into benign CNs and malicious CNs
+	subList := validators.SubList(lastBlock.Hash(), istCore.currentView())
+	maliciousCNs, benignCNs := splitSubList(subList, numMalicious, proposer.Address())
+	benignCNs = append(benignCNs, proposer)
+
+	// Shortcut for sending consensus message to everyone in `CNList`
+	sendMessages := func(state uint64, proposal *types.Block, CNList []istanbul.Validator) {
+		for _, val := range CNList {
+			valKey := validatorKeyMap[val.Address()]
+			istanbulMsg, err := genIstanbulMsg(state, lastBlock.Hash(), proposal, val.Address(), valKey)
+			assert.Nil(t, err)
+			err = istCore.handleMsg(istanbulMsg.Payload)
+			// assert.Nil(t, err)
+		}
+	}
+
+	// Step 2 - Receive disagreeing prepare messages
+
+	sendMessages(msgPrepare, newProposal, benignCNs)
+	sendMessages(msgPrepare, malProposal, maliciousCNs)
+
+	if istCore.state.Cmp(StatePreprepared) == 0 {
+		t.Logf("State stuck at preprepared")
+		return istCore.state
+	}
+
+	// Step 3 - Receive disagreeing commit messages
+
+	sendMessages(msgCommit, newProposal, benignCNs)
+	sendMessages(msgCommit, malProposal, maliciousCNs)
+	return istCore.state
+}
+
+// TestCore_MalCN tests whether the proposer can commit when malicious CNs exist.
+func TestCore_malCN(t *testing.T) {
+	// If there are less than 'f' malicious CNs, proposer can commit.
+	state := simulateMaliciousCN(t, 4, 1)
+	assert.Equal(t, StateCommitted, state)
+
+	// If there are more than 'f' malicious CNs, the proposer cannot commit, stuck at preprepared state.
+	state = simulateMaliciousCN(t, 4, 3)
+	assert.Equal(t, StatePreprepared, state)
+}
+
+// Simulate chain split depending on the number of numValidators
+func simulateChainSplit(t *testing.T, numValidators int) (State, State) {
+	if testing.Verbose() {
+		enableLog()
+	}
+
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
+
+	// Note that genValidators(n) will generate n/3 validators.
+	// We want n validators, thus calling genValidators(3n).
+	validatorAddrs, validatorKeyMap := genValidators(numValidators * 3)
+
+	// Add more EXPECT()s to remove unexpected call error
+	mockBackend, mockCtrl := newMockBackend(t, validatorAddrs)
+	mockBackend.EXPECT().Commit(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+	mockBackend.EXPECT().HasBadProposal(gomock.Any()).Return(true).AnyTimes()
+	defer mockCtrl.Finish()
+
+	var (
+		lastProposal, _ = mockBackend.LastProposal()
+		lastBlock       = lastProposal.(*types.Block)
+		validators      = mockBackend.Validators(lastBlock)
+		proposer        = validators.GetProposer()
+		proposerKey     = validatorKeyMap[proposer.Address()]
+	)
+
+	// Start istanbul core
+	istConfig := istanbul.DefaultConfig
+	istConfig.ProposerPolicy = istanbul.WeightedRandom
+	coreProposer := New(mockBackend, istConfig).(*core)
+	coreA := New(mockBackend, istConfig).(*core)
+	coreB := New(mockBackend, istConfig).(*core)
+	require.Nil(t,
+		coreProposer.Start(),
+		coreA.Start(),
+		coreB.Start())
+	defer coreProposer.Stop()
+	defer coreA.Stop()
+	defer coreB.Stop()
+
+	// make two groups
+	// the number of group size is (numValidators-1/2) + 1
+	// groupA consists of proposer, coreA, unnamed node(s)
+	// groupB consists of proposer, coreB, unnamed node(s)
+	subList := validators.SubList(lastBlock.Hash(), coreProposer.currentView())
+	groupA, groupB := splitSubList(subList, (numValidators-1)/2, proposer.Address())
+	groupA = append(groupA, proposer)
+	groupB = append(groupB, proposer)
+
+	// Step 1 - the malicious proposer generates two blocks
+	proposalA, err := genBlockParams(lastBlock, proposerKey, 0, 0, 1)
+	assert.Nil(t, err)
+
+	proposalB, err := genBlockParams(lastBlock, proposerKey, 1000, 10, 1)
+	assert.Nil(t, err)
+
+	// Shortcut for sending message `proposal` to core `c`
+	sendMessages := func(state uint64, proposal *types.Block, CNList []istanbul.Validator, c *core) {
+		for _, val := range CNList {
+			valKey := validatorKeyMap[val.Address()]
+			if state == msgPreprepare {
+				istanbulMsg, _ := genIstanbulMsg(state, lastBlock.Hash(), proposal, proposer.Address(), valKey)
+				err = c.handleMsg(istanbulMsg.Payload)
+			} else {
+				istanbulMsg, _ := genIstanbulMsg(state, lastBlock.Hash(), proposal, val.Address(), valKey)
+				err = c.handleMsg(istanbulMsg.Payload)
+			}
+			if err != nil {
+				t.Logf("handleMsg error: %s", err)
+			}
+		}
+	}
+	// Step 2 - exchange consensus messages inside each group
+
+	// the proposer sends two different blocks to each group
+	// each group receives a block and handles the message
+	// when chain split occurs, their states become StateCommitted
+	// otherwise, their states stay StatePreprepared
+	sendMessages(msgPreprepare, proposalA, groupA, coreA)
+	sendMessages(msgPrepare, proposalA, groupA, coreA)
+	if coreA.state.Cmp(StatePrepared) == 0 {
+		sendMessages(msgCommit, proposalA, groupA, coreA)
+	}
+
+	sendMessages(msgPreprepare, proposalB, groupB, coreB)
+	sendMessages(msgPrepare, proposalB, groupB, coreB)
+	if coreB.state.Cmp(StatePrepared) == 0 {
+		sendMessages(msgCommit, proposalB, groupB, coreB)
+	}
+
+	return coreA.state, coreB.state
+}
+
+// TestCore_chainSplit tests whether a chain split occurs in a certain conditions:
+// 1) the number of validators does not consist of 3f+1;
+//     e.g. if the number of validator is 5, it consists of 3f+2 (f=1)
+// 2) the proposer is malicious; it sends two different blocks to each group
+func TestCore_chainSplit(t *testing.T) {
+	// If the number of validators is not 3f+1, the chain can be split.
+	stateA, stateB := simulateChainSplit(t, 5)
+	assert.Equal(t, StateCommitted, stateA)
+	assert.Equal(t, StateCommitted, stateB)
+
+	// If the number of validators is 3f+1, the chain cannot be split.
+	stateA, stateB = simulateChainSplit(t, 7)
+	fmt.Println(stateA, stateB)
+	assert.Equal(t, StatePreprepared, stateA)
+	assert.Equal(t, StatePreprepared, stateB)
 }
 
 // TestCore_handleTimeoutMsg_race tests a race condition between round change triggers.

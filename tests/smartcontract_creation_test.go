@@ -17,9 +17,7 @@
 package tests
 
 import (
-	"io"
 	"math/big"
-	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -28,9 +26,6 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/compiler"
 	"github.com/klaytn/klaytn/common/profile"
-	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/log/term"
-	"github.com/mattn/go-colorable"
 )
 
 type testData struct {
@@ -38,25 +33,9 @@ type testData struct {
 	opt  testOption
 }
 
-// TODO-Klaytn: To enable logging in the test code, we can use the following function.
-// This function will be moved to somewhere utility functions are located.
-func enableLog() {
-	usecolor := term.IsTty(os.Stderr.Fd()) && os.Getenv("TERM") != "dumb"
-	output := io.Writer(os.Stderr)
-	if usecolor {
-		output = colorable.NewColorableStderr()
-	}
-	glogger := log.NewGlogHandler(log.StreamHandler(output, log.TerminalFormat(usecolor)))
-	log.PrintOrigins(true)
-	log.ChangeGlobalLogLevel(glogger, log.Lvl(5))
-	glogger.Vmodule("")
-	glogger.BacktraceAt("")
-	log.Root().SetHandler(glogger)
-}
-
 func makeContractCreationTransactions(bcdata *BCData, accountMap *AccountMap, signer types.Signer,
-	numTransactions int, amount *big.Int, data []byte) (types.Transactions, error) {
-
+	numTransactions int, amount *big.Int, data []byte,
+) (types.Transactions, error) {
 	numAddrs := len(bcdata.addrs)
 	fromAddrs := bcdata.addrs
 	fromNonces := make([]uint64, numAddrs)
@@ -102,7 +81,8 @@ func genOptions(b *testing.B) ([]testData, error) {
 		for name, contract := range contracts {
 			testName := filepath.Base(name)
 			opts[i] = testData{testName, testOption{
-				b.N, 2000, 4, 1, common.FromHex(contract.Code), makeContractCreationTransactions}}
+				b.N, 2000, 4, 1, common.FromHex(contract.Code), makeContractCreationTransactions,
+			}}
 		}
 	}
 
@@ -129,7 +109,7 @@ func deploySmartContract(b *testing.B, opt *testOption, prof *profile.Profiler) 
 
 	b.ResetTimer()
 	for i := 0; i < b.N/txPerBlock; i++ {
-		//fmt.Printf("iteration %d tx %d\n", i, opt.numTransactions)
+		// fmt.Printf("iteration %d tx %d\n", i, opt.numTransactions)
 		err := bcdata.GenABlock(accountMap, opt, txPerBlock, prof)
 		if err != nil {
 			b.Fatal(err)

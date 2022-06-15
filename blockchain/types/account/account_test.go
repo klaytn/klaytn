@@ -33,7 +33,7 @@ import (
 
 // TestAccountSerialization tests serialization of various account types.
 func TestAccountSerialization(t *testing.T) {
-	var accs = []struct {
+	accs := []struct {
 		Name string
 		acc  Account
 	}{
@@ -42,7 +42,7 @@ func TestAccountSerialization(t *testing.T) {
 		{"SCA", genSCA()},
 		{"SCAWithPublic", genSCAWithPublicKey()},
 	}
-	var testcases = []struct {
+	testcases := []struct {
 		Name string
 		fn   func(t *testing.T, acc Account)
 	}{

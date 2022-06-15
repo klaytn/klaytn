@@ -65,7 +65,7 @@ func testNewMainBridge(t *testing.T) *MainBridge {
 func testBlockChain(t *testing.T) *blockchain.BlockChain {
 	db := database.NewMemoryDBManager()
 
-	gov := governance.NewGovernanceInitialize(&params.ChainConfig{
+	gov := governance.NewMixedEngine(&params.ChainConfig{
 		ChainID:       big.NewInt(2018),
 		UnitPrice:     25000000000,
 		DeriveShaImpl: 0,
@@ -74,7 +74,7 @@ func testBlockChain(t *testing.T) *blockchain.BlockChain {
 			ProposerPolicy: uint64(istanbul.DefaultConfig.ProposerPolicy),
 			SubGroupSize:   istanbul.DefaultConfig.SubGroupSize,
 		},
-		Governance: params.GetDefaultGovernanceConfig(params.UseIstanbul),
+		Governance: params.GetDefaultGovernanceConfig(),
 	}, db)
 
 	prvKey, _ := crypto.GenerateKey()
@@ -83,7 +83,7 @@ func testBlockChain(t *testing.T) *blockchain.BlockChain {
 	var genesis *blockchain.Genesis
 	genesis = blockchain.DefaultGenesisBlock()
 	genesis.BlockScore = big.NewInt(1)
-	genesis.Config.Governance = params.GetDefaultGovernanceConfig(params.UseIstanbul)
+	genesis.Config.Governance = params.GetDefaultGovernanceConfig()
 	genesis.Config.Istanbul = params.GetDefaultIstanbulConfig()
 	genesis.Config.UnitPrice = 25 * params.Ston
 

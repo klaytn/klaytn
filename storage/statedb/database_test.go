@@ -24,8 +24,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var childHash = common.HexToHash("1341655")  // 20190805 in hexadecimal
-var parentHash = common.HexToHash("1343A3F") // 20199999 in hexadecimal
+var (
+	childHash  = common.HexToHash("1341655") // 20190805 in hexadecimal
+	parentHash = common.HexToHash("1343A3F") // 20199999 in hexadecimal
+)
 
 func TestDatabase_Reference(t *testing.T) {
 	memDB := database.NewMemoryDBManager()

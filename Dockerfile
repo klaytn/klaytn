@@ -22,10 +22,12 @@ ADD . $SRC_DIR
 RUN git init
 RUN cd $SRC_DIR && make all
 
-FROM ubuntu:20.04
+FROM --platform=linux/amd64 ubuntu:20.04
 ARG SRC_DIR
 ARG PKG_DIR
 
+RUN apt update
+RUN apt install -yq musl-dev
 RUN mkdir -p $PKG_DIR/conf $PKG_DIR/bin
 
 # Startup scripts and binaries must be in the same location

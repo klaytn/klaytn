@@ -81,5 +81,4 @@ func packNum(value reflect.Value) []byte {
 	default:
 		panic("abi: fatal error")
 	}
-
 }

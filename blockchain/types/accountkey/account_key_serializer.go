@@ -24,9 +24,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var (
-	errNoKeyType = errors.New("key type is not specified on the input")
-)
+var errNoKeyType = errors.New("key type is not specified on the input")
 
 type AccountKeySerializer struct {
 	keyType AccountKeyType

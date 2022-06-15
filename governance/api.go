@@ -20,7 +20,6 @@ import (
 	"errors"
 	"math/big"
 	"strings"
-	"sync/atomic"
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
@@ -30,7 +29,7 @@ import (
 )
 
 type PublicGovernanceAPI struct {
-	governance *Governance // Node interfaced by this API
+	governance Engine // Node interfaced by this API
 }
 
 type returnTally struct {
@@ -39,16 +38,16 @@ type returnTally struct {
 	ApprovalPercentage float64
 }
 
-func NewGovernanceAPI(gov *Governance) *PublicGovernanceAPI {
+func NewGovernanceAPI(gov Engine) *PublicGovernanceAPI {
 	return &PublicGovernanceAPI{governance: gov}
 }
 
 type GovernanceKlayAPI struct {
-	governance *Governance
+	governance Engine
 	chain      blockChain
 }
 
-func NewGovernanceKlayAPI(gov *Governance, chain blockChain) *GovernanceKlayAPI {
+func NewGovernanceKlayAPI(gov Engine, chain blockChain) *GovernanceKlayAPI {
 	return &GovernanceKlayAPI{governance: gov, chain: chain}
 }
 
@@ -86,7 +85,7 @@ func (api *PublicGovernanceAPI) Vote(key string, val interface{}) (string, error
 	gMode := api.governance.GovernanceMode()
 	gNode := api.governance.GoverningNode()
 
-	if GovernanceModeMap[gMode] == params.GovernanceMode_Single && gNode != api.governance.nodeAddress.Load().(common.Address) {
+	if GovernanceModeMap[gMode] == params.GovernanceMode_Single && gNode != api.governance.NodeAddress() {
 		return "", errPermissionDenied
 	}
 	if strings.ToLower(key) == "governance.removevalidator" {
@@ -98,7 +97,7 @@ func (api *PublicGovernanceAPI) Vote(key string, val interface{}) (string, error
 		}
 	}
 	if api.governance.AddVote(key, val) {
-		return "Your vote was successfully placed.", nil
+		return "Your vote is prepared. It will be put into the block header or applied when your node generates a block as a proposer. Note that your vote may be duplicate.", nil
 	}
 	return "", errInvalidKeyValue
 }
@@ -106,7 +105,7 @@ func (api *PublicGovernanceAPI) Vote(key string, val interface{}) (string, error
 func (api *PublicGovernanceAPI) isRemovingSelf(val string) bool {
 	for _, str := range strings.Split(val, ",") {
 		str = strings.Trim(str, " ")
-		if common.HexToAddress(str) == api.governance.nodeAddress.Load().(common.Address) {
+		if common.HexToAddress(str) == api.governance.NodeAddress() {
 			return true
 		}
 	}
@@ -116,11 +115,11 @@ func (api *PublicGovernanceAPI) isRemovingSelf(val string) bool {
 func (api *PublicGovernanceAPI) ShowTally() []*returnTally {
 	ret := []*returnTally{}
 
-	for _, val := range api.governance.GovernanceTallies.Copy() {
+	for _, val := range api.governance.GetGovernanceTalliesCopy() {
 		item := &returnTally{
 			Key:                val.Key,
 			Value:              val.Value,
-			ApprovalPercentage: float64(val.Votes) / float64(atomic.LoadUint64(&api.governance.totalVotingPower)) * 100,
+			ApprovalPercentage: float64(val.Votes) / float64(api.governance.TotalVotingPower()) * 100,
 		}
 		ret = append(ret, item)
 	}
@@ -132,13 +131,13 @@ func (api *PublicGovernanceAPI) TotalVotingPower() (float64, error) {
 	if !api.isGovernanceModeBallot() {
 		return 0, errNotAvailableInThisMode
 	}
-	return float64(atomic.LoadUint64(&api.governance.totalVotingPower)) / 1000.0, nil
+	return float64(api.governance.TotalVotingPower()) / 1000.0, nil
 }
 
 func (api *PublicGovernanceAPI) ItemsAt(num *rpc.BlockNumber) (map[string]interface{}, error) {
 	blockNumber := uint64(0)
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
-		blockNumber = api.governance.blockChain.CurrentHeader().Number.Uint64()
+		blockNumber = api.governance.BlockChain().CurrentHeader().Number.Uint64()
 	} else {
 		blockNumber = uint64(num.Int64())
 	}
@@ -153,7 +152,7 @@ func (api *PublicGovernanceAPI) ItemsAt(num *rpc.BlockNumber) (map[string]interf
 func (api *PublicGovernanceAPI) GetStakingInfo(num *rpc.BlockNumber) (*reward.StakingInfo, error) {
 	blockNumber := uint64(0)
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
-		blockNumber = api.governance.blockChain.CurrentHeader().Number.Uint64()
+		blockNumber = api.governance.BlockChain().CurrentHeader().Number.Uint64()
 	} else {
 		blockNumber = uint64(num.Int64())
 	}
@@ -180,11 +179,11 @@ func (api *PublicGovernanceAPI) IdxCacheFromDb() []uint64 {
 func (api *PublicGovernanceAPI) ItemCacheFromDb(num *rpc.BlockNumber) map[string]interface{} {
 	blockNumber := uint64(0)
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
-		blockNumber = api.governance.blockChain.CurrentHeader().Number.Uint64()
+		blockNumber = api.governance.BlockChain().CurrentHeader().Number.Uint64()
 	} else {
 		blockNumber = uint64(num.Int64())
 	}
-	ret, _ := api.governance.db.ReadGovernance(blockNumber)
+	ret, _ := api.governance.DB().ReadGovernance(blockNumber)
 	return ret
 }
 
@@ -196,11 +195,9 @@ type VoteList struct {
 }
 
 func (api *PublicGovernanceAPI) MyVotes() []*VoteList {
+	ret := []*VoteList{}
 
-	ret := make([]*VoteList, 0, api.governance.voteMap.Size())
-	//ret := []*VoteList{}
-
-	for k, v := range api.governance.voteMap.Copy() {
+	for k, v := range api.governance.GetVoteMapCopy() {
 		item := &VoteList{
 			Key:      k,
 			Value:    v.Value,
@@ -217,15 +214,15 @@ func (api *PublicGovernanceAPI) MyVotingPower() (float64, error) {
 	if !api.isGovernanceModeBallot() {
 		return 0, errNotAvailableInThisMode
 	}
-	return float64(atomic.LoadUint64(&api.governance.votingPower)) / 1000.0, nil
+	return float64(api.governance.MyVotingPower()) / 1000.0, nil
 }
 
 func (api *PublicGovernanceAPI) ChainConfig() *params.ChainConfig {
-	return api.governance.ChainConfig
+	return api.governance.InitialChainConfig()
 }
 
 func (api *PublicGovernanceAPI) NodeAddress() common.Address {
-	return api.governance.nodeAddress.Load().(common.Address)
+	return api.governance.NodeAddress()
 }
 
 func (api *PublicGovernanceAPI) isGovernanceModeBallot() bool {
