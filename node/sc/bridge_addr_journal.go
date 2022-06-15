@@ -90,30 +90,31 @@ func (journal *bridgeAddrJournal) load(add func(journal BridgeJournal) error) er
 
 	var (
 		failure              error
-		aliasBridgeDecodeErr = true
+		aliasBridgeDecodeErr = false
 	)
 	for {
 		// Parse the next address and terminate on error
 		addr := new(BridgeJournal)
-		if !aliasBridgeDecodeErr {
+		if aliasBridgeDecodeErr {
 			addr.isLegacyBridgeJournal = true
 		}
-	DecodeAgainWithLegacyStruct:
 		if err = stream.Decode(addr); err != nil {
-			if err != io.EOF && err != ErrBridgeAliasFormatDecode {
-				failure = err
-			}
-			if err == ErrBridgeAliasFormatDecode && aliasBridgeDecodeErr {
+			if err == io.EOF {
+				break
+			} else if err == ErrBridgeAliasFormatDecode {
 				input.Close()
 				input, err = os.Open(journal.path)
 				if err != nil {
-					return err
+					failure = err
+					break
 				}
-				aliasBridgeDecodeErr = false
+				aliasBridgeDecodeErr = true
 				stream.Reset(input, 0)
-				goto DecodeAgainWithLegacyStruct
+				continue
+			} else {
+				failure = err
+				break
 			}
-			break
 		}
 
 		total++
