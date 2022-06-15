@@ -46,10 +46,10 @@ import (
 )
 
 const (
-	//checkpointInterval = 1024 // Number of blocks after which to save the vote snapshot to the database
-	//inmemorySnapshots  = 128  // Number of recent vote snapshots to keep in memory
-	//inmemoryPeers      = 40
-	//inmemoryMessages   = 1024
+	// checkpointInterval = 1024 // Number of blocks after which to save the vote snapshot to the database
+	// inmemorySnapshots  = 128  // Number of recent vote snapshots to keep in memory
+	// inmemoryPeers      = 40
+	// inmemoryMessages   = 1024
 
 	checkpointInterval = 1024 // Number of blocks after which to save the vote snapshot to the database
 	inmemorySnapshots  = 496  // Number of recent vote snapshots to keep in memory
@@ -89,6 +89,7 @@ var (
 	// errMismatchTxhashes is returned if the TxHash in header is mismatch.
 	errMismatchTxhashes = errors.New("mismatch transactions hashes")
 )
+
 var (
 	defaultBlockScore = big.NewInt(1)
 	now               = time.Now
@@ -409,8 +410,8 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 // Note, the block header and state database might be updated to reflect any
 // consensus rules that happen at finalization (e.g. block rewards).
 func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
-	receipts []*types.Receipt) (*types.Block, error) {
-
+	receipts []*types.Receipt,
+) (*types.Block, error) {
 	// If sb.chain is nil, it means backend is not initialized yet.
 	if sb.chain != nil && sb.governance.ProposerPolicy() == uint64(istanbul.WeightedRandom) {
 		// TODO-Klaytn Let's redesign below logic and remove dependency between block reward and istanbul consensus.

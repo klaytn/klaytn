@@ -26,15 +26,13 @@ import (
 	"github.com/klaytn/klaytn/consensus/istanbul"
 )
 
-var (
-	// msgPriority is defined for calculating processing priority to speedup consensus
-	// msgPreprepare > msgCommit > msgPrepare
-	msgPriority = map[uint64]int{
-		msgPreprepare: 1,
-		msgCommit:     2,
-		msgPrepare:    3,
-	}
-)
+// msgPriority is defined for calculating processing priority to speedup consensus
+// msgPreprepare > msgCommit > msgPrepare
+var msgPriority = map[uint64]int{
+	msgPreprepare: 1,
+	msgCommit:     2,
+	msgPrepare:    3,
+}
 
 // checkMessage checks the message state
 // return errInvalidMessage if the message is invalid

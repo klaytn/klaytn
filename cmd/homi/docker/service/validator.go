@@ -47,7 +47,8 @@ type Validator struct {
 
 func NewValidator(identity int, genesis, scGenesis string, nodeAddress string, nodeKey string, staticNodes, bridgeNodes string, port int, rpcPort int,
 	prometheusPort int, ethStats string, ip string, dockerImageId string, useFastHttp bool, networkId, parentChainId int,
-	namePrefix string, nodeType string, addPrivKey bool) *Validator {
+	namePrefix string, nodeType string, addPrivKey bool,
+) *Validator {
 	return &Validator{
 		Identity:       identity,
 		Genesis:        genesis,
