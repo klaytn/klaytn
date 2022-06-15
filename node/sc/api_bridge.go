@@ -187,7 +187,9 @@ func (sb *SubBridgeAPI) doSubscribeBridge(cBridgeAddr, pBridgeAddr common.Addres
 		return err
 	}
 
+	sb.subBridge.bridgeManager.journal.cacheMu.Lock()
 	sb.subBridge.bridgeManager.journal.cache[cBridgeAddr].Subscribed = true
+	sb.subBridge.bridgeManager.journal.cacheMu.Unlock()
 
 	// Update the journal's subscribed flag.
 	sb.subBridge.bridgeManager.journal.rotate(sb.subBridge.bridgeManager.GetAllBridge())
@@ -219,7 +221,9 @@ func (sb *SubBridgeAPI) doUnsubscribeBridge(cBridgeAddr, pBridgeAddr common.Addr
 	sb.subBridge.bridgeManager.UnsubscribeEvent(cBridgeAddr)
 	sb.subBridge.bridgeManager.UnsubscribeEvent(pBridgeAddr)
 
+	sb.subBridge.bridgeManager.journal.cacheMu.Lock()
 	sb.subBridge.bridgeManager.journal.cache[cBridgeAddr].Subscribed = false
+	sb.subBridge.bridgeManager.journal.cacheMu.Unlock()
 
 	sb.subBridge.bridgeManager.journal.rotate(sb.subBridge.bridgeManager.GetAllBridge())
 	return nil
@@ -343,6 +347,7 @@ func (sb *SubBridgeAPI) doDeregisterBridge(cBridgeAddr common.Address, pBridgeAd
 	}
 
 	bm := sb.subBridge.bridgeManager
+	bm.journal.cacheMu.Lock()
 	journal := bm.journal.cache[cBridgeAddr]
 
 	if journal.Subscribed {
@@ -353,6 +358,7 @@ func (sb *SubBridgeAPI) doDeregisterBridge(cBridgeAddr common.Address, pBridgeAd
 	}
 
 	delete(bm.journal.cache, cBridgeAddr)
+	bm.journal.cacheMu.Unlock()
 
 	if err := bm.journal.rotate(bm.GetAllBridge()); err != nil {
 		logger.Warn("failed to rotate bridge journal", "err", err, "cBridge", cBridgeAddr.String(), "pBridge", pBridgeAddr.String())
