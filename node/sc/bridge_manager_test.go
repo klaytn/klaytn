@@ -2271,7 +2271,8 @@ func TestBridgeAliasAPIs(t *testing.T) {
 func testBridgeAPIBasic(t *testing.T, bm *BridgeManager,
 	cBridgeAddr, pBridgeAddr common.Address,
 	alias *string,
-	cTokenAddr, pTokenAddr common.Address) {
+	cTokenAddr, pTokenAddr common.Address,
+) {
 	// TEST 1 - Success (Register bridge, tokens and subscribe registered bridges)
 	cBridgeAddrStr := cBridgeAddr.String()
 	pBridgeAddrStr := pBridgeAddr.String()
@@ -2322,7 +2323,8 @@ func testRegisterToken(t *testing.T, bm *BridgeManager, cBridgeAddrStr, pBridgeA
 }
 
 func testUnsubscribeAndDeRegister(t *testing.T, bm *BridgeManager,
-	cBridgeAddrStr, pBridgeAddrStr, cTokenAddrStr, pTokenAddrStr *string) {
+	cBridgeAddrStr, pBridgeAddrStr, cTokenAddrStr, pTokenAddrStr *string,
+) {
 	findBridgePair := func(addrStr string) *BridgeJournal {
 		bridgePairs := bm.subBridge.APIBackend.ListBridge()
 		for _, bridgePair := range bridgePairs {
