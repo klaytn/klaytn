@@ -78,21 +78,21 @@ func updateUnitPrice(g *Governance, k string, v interface{}) {
 
 func updateUseGiniCoeff(g *Governance, k string, v interface{}) {
 	if g.blockChain != nil {
-		g.blockChain.SetUseGiniCoeff(g.UseGiniCoeff())
+		g.blockChain.SetUseGiniCoeff(g.Params().UseGiniCoeff())
 	}
 }
 
 func updateStakingUpdateInterval(g *Governance, k string, v interface{}) {
-	params.SetStakingUpdateInterval(g.StakingUpdateInterval())
+	params.SetStakingUpdateInterval(g.Params().StakeUpdateInterval())
 }
 
 func updateProposerUpdateInterval(g *Governance, k string, v interface{}) {
-	params.SetProposerUpdateInterval(g.ProposerUpdateInterval())
+	params.SetProposerUpdateInterval(g.Params().ProposerRefreshInterval())
 }
 
 func updateProposerPolicy(g *Governance, k string, v interface{}) {
 	if g.blockChain != nil {
-		g.blockChain.SetProposerPolicy(g.ProposerPolicy())
+		g.blockChain.SetProposerPolicy(g.Params().Policy())
 	}
 }
 
@@ -385,8 +385,8 @@ func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, votes 
 		number := header.Number.Uint64()
 		// Check vote's validity
 		if gVote, ok := gov.ValidateVote(gVote); ok {
-			governanceMode := GovernanceModeMap[gov.GovernanceMode()]
-			governingNode := gov.GoverningNode()
+			governanceMode := gov.Params().GovernanceModeInt()
+			governingNode := gov.Params().GoverningNode()
 
 			// Remove old vote with same validator and key
 			votes, tally = gov.removePreviousVote(valset, votes, tally, proposer, gVote, governanceMode, governingNode)
