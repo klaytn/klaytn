@@ -19,7 +19,7 @@ func getTestConfig(forkedBlockNum *big.Int) *params.ChainConfig {
 	return testConfig
 }
 
-func TestCalcBaseFee(t *testing.T) {
+func TestNextBlockBaseFee(t *testing.T) {
 	tests := []struct {
 		parentBaseFee int64
 		parentGasUsed uint64
@@ -35,7 +35,7 @@ func TestCalcBaseFee(t *testing.T) {
 			GasUsed: test.parentGasUsed,
 			BaseFee: big.NewInt(test.parentBaseFee),
 		}
-		if have, want := CalcBaseFee(parent, getTestConfig(big.NewInt(3))), big.NewInt(test.nextBaseFee); have.Cmp(want) != 0 {
+		if have, want := NextBlockBaseFee(parent, getTestConfig(big.NewInt(3))), big.NewInt(test.nextBaseFee); have.Cmp(want) != 0 {
 			t.Errorf("test %d: have %d  want %d, ", i, have, want)
 		}
 	}
@@ -102,7 +102,7 @@ func blocksToReachExpectedBaseFee(t *testing.T, testCase BaseFeeTestCase) {
 			GasUsed: testCase.GasUsed,
 			BaseFee: parentBaseFee,
 		}
-		parentBaseFee = CalcBaseFee(parent, testConfig)
+		parentBaseFee = NextBlockBaseFee(parent, testConfig)
 
 		if testCase.compMethod(parentBaseFee, testCase.expectedBaseFee) {
 			break
@@ -120,7 +120,7 @@ func TestInactieDynamicPolicyBeforeForkedBlock(t *testing.T) {
 		GasUsed: 84000000,
 		BaseFee: parentBaseFee,
 	}
-	nextBaseFee := CalcBaseFee(parent, getTestConfig(big.NewInt(5)))
+	nextBaseFee := NextBlockBaseFee(parent, getTestConfig(big.NewInt(5)))
 	if parentBaseFee.Cmp(nextBaseFee) < 0 {
 		t.Errorf("before fork, dynamic base fee policy should be inactive, current base fee: %d  next base fee: %d", parentBaseFee, nextBaseFee)
 	}
@@ -133,7 +133,7 @@ func TestActieDynamicPolicyAfterForkedBlock(t *testing.T) {
 		GasUsed: 84000000,
 		BaseFee: parentBaseFee,
 	}
-	nextBaseFee := CalcBaseFee(parent, getTestConfig(big.NewInt(2)))
+	nextBaseFee := NextBlockBaseFee(parent, getTestConfig(big.NewInt(2)))
 	if parentBaseFee.Cmp(nextBaseFee) > 0 {
 		t.Errorf("after fork, dynamic base fee policy should be active, current base fee: %d  next base fee: %d", parentBaseFee, nextBaseFee)
 	}

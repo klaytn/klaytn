@@ -15,7 +15,7 @@ func VerifyKIP71Header(config *params.ChainConfig, parentHeader, header *types.H
 		return fmt.Errorf("header is missing baseFee")
 	}
 	// Verify the baseFee is correct based on the parent header.
-	expectedBaseFee := CalcBaseFee(parentHeader, config)
+	expectedBaseFee := NextBlockBaseFee(parentHeader, config)
 	if header.BaseFee.Cmp(expectedBaseFee) != 0 {
 		return fmt.Errorf("invalid baseFee: have %s, want %s, parentBaseFee %s, parentGasUsed %d",
 			header.BaseFee, expectedBaseFee, parentHeader.BaseFee, parentHeader.GasUsed)
@@ -23,7 +23,7 @@ func VerifyKIP71Header(config *params.ChainConfig, parentHeader, header *types.H
 	return nil
 }
 
-func CalcBaseFee(parentHeader *types.Header, config *params.ChainConfig) *big.Int {
+func NextBlockBaseFee(parentHeader *types.Header, config *params.ChainConfig) *big.Int {
 	// If the parent is the kip71 disabled block or genesis, then return default base fee (250ston)
 	if !config.IsKIP71ForkEnabled(parentHeader.Number) || parentHeader.Number.Cmp(new(big.Int).SetUint64(0)) == 0 {
 		return new(big.Int).SetUint64(config.UnitPrice)
