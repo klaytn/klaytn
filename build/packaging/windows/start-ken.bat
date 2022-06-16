@@ -72,8 +72,22 @@ IF DEFINED LDBCACHESIZE (
 IF DEFINED RPC_ENABLE (
     IF %RPC_ENABLE%==1 (
         set OPTIONS=%OPTIONS% --rpc --rpcapi %RPC_API% --rpcport %RPC_PORT% --rpcaddr %RPC_ADDR% --rpccorsdomain ^
-%RPC_CORSDOMAIN% --rpcvhosts %RPC_VHOSTS% --rpc.concurrencylimit %RPC_CONCURRENCY_LIMIT% --rpcreadtimeout %RPC_READ_TIMEOUT% ^
---rpcwritetimeout %RPC_WRITE_TIMEOUT% --rpcidletimeout %RPC_IDLE_TIMEOUT% --rpcexecutiontimeout %RPC_EXECUTION_TIMEOUT%
+%RPC_CORSDOMAIN% --rpcvhosts %RPC_VHOSTS%
+    )
+    IF DEFINED RPC_CONCURRENCY_LIMIT (
+        set OPTIONS=%OPTIONS% --rpc.concurrencylimit %RPC_CONCURRENCY_LIMIT%
+    )
+    IF DEFINED RPC_READ_TIMEOUT (
+        set OPTIONS=%OPTIONS% --rpcreadtimeout %RPC_READ_TIMEOUT%
+    )
+    IF DEFINED RPC_WRITE_TIMEOUT (
+        set OPTIONS=%OPTIONS% --rpcwritetimeout %RPC_WRITE_TIMEOUT%
+    )
+    IF DEFINED RPC_IDLE_TIMEOUT(
+        set OPTIONS=%OPTIONS% --rpcidletimeout %RPC_IDLE_TIMEOUT%
+    )
+    IF DEFINED RPC_EXECUTION_TIMEOUT (
+        set OPTIONS=%OPTIONS% --rpcexecutiontimeout %RPC_EXECUTION_TIMEOUT%
     )
 )
 
