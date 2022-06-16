@@ -28,9 +28,7 @@ import (
 	"github.com/klaytn/klaytn/kerrors"
 )
 
-var (
-	ErrShouldBeSingleSignature = errors.New("the number of signatures should be one")
-)
+var ErrShouldBeSingleSignature = errors.New("the number of signatures should be one")
 
 // TxSignatures is a slice of TxSignature. It is created to support multi-sig accounts.
 // Note that this structure also processes txs having a single signature.

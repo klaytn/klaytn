@@ -65,7 +65,7 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 
 		var cmsg istanbul.ConsensusMsg
 
-		//var data []byte
+		// var data []byte
 		if err := msg.Decode(&cmsg); err != nil {
 			return true, errDecodeFailed
 		}

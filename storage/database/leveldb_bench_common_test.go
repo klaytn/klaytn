@@ -244,7 +244,7 @@ func TestLRUShardCacheAddressKeyFromFront(t *testing.T) {
 	}
 }
 
-//TestLRUShardCacheHashKey is a test to see if add and get commands work when using Hash as key.
+// TestLRUShardCacheHashKey is a test to see if add and get commands work when using Hash as key.
 // Cache hit for all data.
 func TestLRUShardCacheHashKey(t *testing.T) {
 	cache := common.NewCache(common.LRUShardConfig{CacheSize: 40960, NumShards: 4096})

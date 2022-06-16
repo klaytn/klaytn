@@ -29,8 +29,7 @@ import (
 // 1. The address comes from the public key which is derived from txhash and the tx's signature.
 // 2. Check that the address is the same as the address in the tx.
 // It is implemented to support LegacyAccounts.
-type AccountKeyLegacy struct {
-}
+type AccountKeyLegacy struct{}
 
 var globalLegacyKey = &AccountKeyLegacy{}
 

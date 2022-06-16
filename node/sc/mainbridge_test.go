@@ -74,7 +74,7 @@ func testBlockChain(t *testing.T) *blockchain.BlockChain {
 			ProposerPolicy: uint64(istanbul.DefaultConfig.ProposerPolicy),
 			SubGroupSize:   istanbul.DefaultConfig.SubGroupSize,
 		},
-		Governance: params.GetDefaultGovernanceConfig(params.UseIstanbul),
+		Governance: params.GetDefaultGovernanceConfig(),
 	}, db)
 
 	prvKey, _ := crypto.GenerateKey()
@@ -83,7 +83,7 @@ func testBlockChain(t *testing.T) *blockchain.BlockChain {
 	var genesis *blockchain.Genesis
 	genesis = blockchain.DefaultGenesisBlock()
 	genesis.BlockScore = big.NewInt(1)
-	genesis.Config.Governance = params.GetDefaultGovernanceConfig(params.UseIstanbul)
+	genesis.Config.Governance = params.GetDefaultGovernanceConfig()
 	genesis.Config.Istanbul = params.GetDefaultIstanbulConfig()
 	genesis.Config.UnitPrice = 25 * params.Ston
 
@@ -170,7 +170,7 @@ func TestMainBridge_basic(t *testing.T) {
 	}
 	defer mBridge.Stop()
 
-	//TODO more test
+	// TODO more test
 }
 
 // TestMainBridge_removePeer tests correct removal of a peer from `MainBridge.peers`.

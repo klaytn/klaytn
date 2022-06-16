@@ -16,6 +16,8 @@
 
 package downloader
 
-type DoneEvent struct{}
-type StartEvent struct{}
-type FailedEvent struct{ Err error }
+type (
+	DoneEvent   struct{}
+	StartEvent  struct{}
+	FailedEvent struct{ Err error }
+)

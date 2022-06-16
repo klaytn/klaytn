@@ -331,8 +331,10 @@ func (s *Server) createSubscription(ctx context.Context, c ServerCodec, req *ser
 	return reply[0].Interface().(*Subscription).ID, nil
 }
 
-var callCount = 0
-var callSendTx = 0
+var (
+	callCount  = 0
+	callSendTx = 0
+)
 
 // handle executes a request and returns the response from the callback.
 func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverRequest, subCnt *int32) (interface{}, func()) {

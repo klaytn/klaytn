@@ -25,8 +25,10 @@ import (
 
 const gaugeSuffix = "/maxgauge"
 
-var mu sync.Mutex
-var gauges = make(map[string]metrics.Gauge)
+var (
+	mu     sync.Mutex
+	gauges = make(map[string]metrics.Gauge)
+)
 
 // ResetMaxGauges sets the value of registered gauges to 0.
 func ResetMaxGauges() {

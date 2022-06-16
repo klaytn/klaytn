@@ -39,6 +39,7 @@ const (
 	cacheLevelNormal  = "normal"
 	cacheLevelExtreme = "extreme"
 )
+
 const (
 	minimumMemorySize      = 16
 	defaultCacheUsageLevel = cacheLevelSaving
@@ -46,10 +47,13 @@ const (
 
 // it's set by flag.
 var DefaultCacheType CacheType = FIFOCacheType
-var logger = log.NewModuleLogger(log.Common)
-var CacheScale int = 100                             // Cache size = preset size * CacheScale / 100. Only used when IsScaled == true
-var ScaleByCacheUsageLevel int = 100                 // Scale according to cache usage level (%). Only used when IsScaled == true
-var TotalPhysicalMemGB int = getPhysicalMemorySize() // Convert Byte to GByte
+
+var (
+	logger                     = log.NewModuleLogger(log.Common)
+	CacheScale             int = 100                     // Cache size = preset size * CacheScale / 100. Only used when IsScaled == true
+	ScaleByCacheUsageLevel int = 100                     // Scale according to cache usage level (%). Only used when IsScaled == true
+	TotalPhysicalMemGB     int = getPhysicalMemorySize() // Convert Byte to GByte
+)
 
 // getPhysicalMemorySize returns the system's physical memory value.
 // It internally returns a minimumMemorySize if it is an os that does not support using the system call to obtain it,
@@ -128,7 +132,7 @@ type arcCache struct {
 
 func (cache *arcCache) Add(key CacheKey, value interface{}) (evicted bool) {
 	cache.arc.Add(key, value)
-	//TODO-Klaytn-RemoveLater need to be removed or should be added according to usage of evicted flag
+	// TODO-Klaytn-RemoveLater need to be removed or should be added according to usage of evicted flag
 	return true
 }
 
@@ -230,8 +234,8 @@ const (
 	minNumShards = 2
 )
 
-//If key is not common.Hash nor common.Address then you should set numShard 1 or use LRU Cache
-//The number of shards is readjusted to meet the minimum shard size.
+// If key is not common.Hash nor common.Address then you should set numShard 1 or use LRU Cache
+// The number of shards is readjusted to meet the minimum shard size.
 func (c LRUShardConfig) newCache() (Cache, error) {
 	cacheSize := c.CacheSize
 	if c.IsScaled {

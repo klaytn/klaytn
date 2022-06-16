@@ -243,7 +243,6 @@ func TestDefaultSet_IsProposer(t *testing.T) {
 }
 
 func TestWeightedCouncil_RefreshWithZeroWeight(t *testing.T) {
-
 	validators := makeTestValidators(testZeroWeights)
 
 	valSet := makeTestWeightedCouncil(testZeroWeights)
@@ -315,7 +314,6 @@ func checkCalcProposerWithBlockNumberAndRound(t *testing.T, valSet *weightedCoun
 }
 
 func TestWeightedCouncil_RefreshWithNonZeroWeight(t *testing.T) {
-
 	validators := makeTestValidators(testNonZeroWeights)
 
 	valSet := makeTestWeightedCouncil(testNonZeroWeights)

@@ -18,6 +18,7 @@
 // This file is derived from crypto/signature_cgo.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
+//go:build !nacl && !js && !nocgo
 // +build !nacl,!js,!nocgo
 
 package crypto
