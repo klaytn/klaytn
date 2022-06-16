@@ -937,7 +937,7 @@ func handleStakingInfoRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error
 		header := pm.blockchain.GetHeaderByHash(hash)
 		result := reward.GetStakingInfoOnStakingBlock(header.Number.Uint64())
 		if result == nil {
-			logger.Error("Failed to get staking information on a specific block", "number", header.Number.Uint64())
+			logger.Error("Failed to get staking information on a specific block", "number", header.Number.Uint64(), "hash", hash)
 			continue
 		}
 		// If known, encode and queue for response packet

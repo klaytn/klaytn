@@ -1626,10 +1626,10 @@ func (d *Downloader) commitPivotBlock(result *fetchResult) error {
 	logger.Debug("Committing fast sync pivot as new head", "number", block.Number(), "hash", block.Hash())
 	if result.StakingInfo != nil {
 		if err := reward.AddStakingInfoToDB(result.StakingInfo); err != nil {
-			logger.Error("Inserting downloaded staking info is failed", "err", err)
-			return fmt.Errorf("failed to insert the downloaded staking information: %v", err)
+			logger.Error("Inserting downloaded staking info is failed on pivot block", "err", err, "pivot", block.Number())
+			return fmt.Errorf("failed to insert the downloaded staking information on pivot block (%v) : %v", block.Number(), err)
 		} else {
-			logger.Info("Imported new staking information", "number", result.StakingInfo.BlockNum)
+			logger.Info("Imported new staking information on pivot block", "number", result.StakingInfo.BlockNum, "pivot", block.Number())
 		}
 	}
 	if _, err := d.blockchain.InsertReceiptChain([]*types.Block{block}, []types.Receipts{result.Receipts}); err != nil {
