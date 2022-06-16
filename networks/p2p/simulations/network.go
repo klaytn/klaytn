@@ -25,10 +25,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
-
-	"strings"
 
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/networks/p2p"
@@ -669,13 +668,13 @@ func (net *Network) Shutdown() {
 	close(net.quitc)
 }
 
-//Reset resets all network properties:
-//emtpies the nodes and the connection list
+// Reset resets all network properties:
+// emtpies the nodes and the connection list
 func (net *Network) Reset() {
 	net.lock.Lock()
 	defer net.lock.Unlock()
 
-	//re-initialize the maps
+	// re-initialize the maps
 	net.connMap = make(map[string]int)
 	net.nodeMap = make(map[discover.NodeID]int)
 
@@ -848,8 +847,8 @@ func (net *Network) Load(snap *Snapshot) error {
 	for _, conn := range snap.Conns {
 
 		if !net.GetNode(conn.One).Up || !net.GetNode(conn.Other).Up {
-			//in this case, at least one of the nodes of a connection is not up,
-			//so it would result in the snapshot `Load` to fail
+			// in this case, at least one of the nodes of a connection is not up,
+			// so it would result in the snapshot `Load` to fail
 			continue
 		}
 		if err := net.Connect(conn.One, conn.Other); err != nil {

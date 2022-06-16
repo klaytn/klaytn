@@ -706,7 +706,6 @@ func TestTransactionPostponing(t *testing.T) {
 	// Add a batch consecutive pending transactions for validation
 	txs := []*types.Transaction{}
 	for i, key := range keys {
-
 		for j := 0; j < 100; j++ {
 			var tx *types.Transaction
 			if (i+j)%2 == 0 {
@@ -894,6 +893,7 @@ func TestTransactionQueueAccountLimiting(t *testing.T) {
 func TestTransactionQueueGlobalLimiting(t *testing.T) {
 	testTransactionQueueGlobalLimiting(t, false)
 }
+
 func TestTransactionQueueGlobalLimitingNoLocals(t *testing.T) {
 	testTransactionQueueGlobalLimiting(t, true)
 }
@@ -984,12 +984,15 @@ func testTransactionQueueGlobalLimiting(t *testing.T, nolocals bool) {
 func TestTransactionQueueTimeLimitingKeepLocals(t *testing.T) {
 	testTransactionQueueTimeLimiting(t, false, true)
 }
+
 func TestTransactionQueueTimeLimitingNotKeepLocals(t *testing.T) {
 	testTransactionQueueTimeLimiting(t, false, false)
 }
+
 func TestTransactionQueueTimeLimitingNoLocalsKeepLocals(t *testing.T) {
 	testTransactionQueueTimeLimiting(t, true, true)
 }
+
 func TestTransactionQueueTimeLimitingNoLocalsNoKeepLocals(t *testing.T) {
 	testTransactionQueueTimeLimiting(t, true, false)
 }
@@ -1107,6 +1110,7 @@ func TestTransactionPendingLimiting(t *testing.T) {
 // Tests that the transaction limits are enforced the same way irrelevant whether
 // the transactions are added one by one or in batches.
 func TestTransactionQueueLimitingEquivalency(t *testing.T) { testTransactionLimitingEquivalency(t, 1) }
+
 func TestTransactionPendingLimitingEquivalency(t *testing.T) {
 	testTransactionLimitingEquivalency(t, 0)
 }

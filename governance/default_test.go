@@ -223,7 +223,6 @@ func TestGovernance_AddVote(t *testing.T) {
 		ret := gov.AddVote(val.k, val.v)
 		assert.Equal(t, val.e, ret, fmt.Sprintf("key %v, value %v", val.k, val.v))
 	}
-
 }
 
 func TestGovernance_RemoveVote(t *testing.T) {
@@ -350,7 +349,7 @@ func copyMap(src map[string]interface{}) map[string]interface{} {
 func TestGovernancePersistence(t *testing.T) {
 	gov := getGovernance()
 
-	var MAXITEMS = int(10)
+	MAXITEMS := int(10)
 
 	// Write Test
 	// WriteGovernance() and WriteGovernanceIdx()
@@ -434,7 +433,7 @@ var tstGovernanceData = []governanceData{
 func TestSaveGovernance(t *testing.T) {
 	gov := getGovernance()
 
-	var MAXITEMS = int(10)
+	MAXITEMS := int(10)
 
 	// Set Data
 	for i := 0; i < len(tstGovernanceInfo); i++ {
