@@ -213,8 +213,8 @@ func (sb *SubBridgeAPI) ListBridge() []*BridgeJournal {
 
 func (sb *SubBridgeAPI) ListBridgeWithToken() ([]map[string]interface{}, error) {
 	// TODO: Add mutex guard for `counterpartToken`
-	var bridgeWithTokens []map[string]interface{}
 	bridgeJournals := sb.subBridge.bridgeManager.GetAllBridge()
+	bridgeWithTokens := make([]map[string]interface{}, 0, len(bridgeJournals))
 	for _, bridgeJournal := range bridgeJournals {
 		cbi, ok := sb.subBridge.bridgeManager.GetBridgeInfo(bridgeJournal.ChildAddress)
 		if !ok {
