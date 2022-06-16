@@ -1472,6 +1472,10 @@ web3._extend({
 			getter: 'subbridge_listBridge'
 		}),
 		new web3._extend.Property({
+			name: 'listBridgeWithToken',
+			getter: 'subbridge_listBridgeWithToken'
+		}),
+		new web3._extend.Property({
 			name: 'txPendingCount',
 			getter: 'subbridge_txPendingCount'
 		}),

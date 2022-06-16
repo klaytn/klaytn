@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"reflect"
 
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -208,6 +209,35 @@ func (sb *SubBridgeAPI) TxPending() map[common.Address]types.Transactions {
 
 func (sb *SubBridgeAPI) ListBridge() []*BridgeJournal {
 	return sb.subBridge.bridgeManager.GetAllBridge()
+}
+
+func (sb *SubBridgeAPI) ListBridgeWithToken() ([]map[string]interface{}, error) {
+	// TODO: Add mutex guard for `counterpartToken`
+	var bridgeWithTokens []map[string]interface{}
+	bridgeJournals := sb.subBridge.bridgeManager.GetAllBridge()
+	for _, bridgeJournal := range bridgeJournals {
+		cbi, ok := sb.subBridge.bridgeManager.GetBridgeInfo(bridgeJournal.ChildAddress)
+		if !ok {
+			return nil, errors.New("Failed to retrieve child bridge address")
+		}
+		pbi, ok := sb.subBridge.bridgeManager.GetBridgeInfo(bridgeJournal.ParentAddress)
+		if !ok {
+			return nil, errors.New("Failed to retrieve parent bridge address")
+		}
+		bridgeWithToken := map[string]interface{}{
+			"childToParentTokenMap": cbi.counterpartToken,
+			"parentToChildTokenMap": pbi.counterpartToken,
+		}
+		journalVal := reflect.ValueOf(*bridgeJournal)
+		for i := 0; i < journalVal.NumField(); i++ {
+			fieldName := journalVal.Type().Field(i).Name
+			fieldTag := journalVal.Type().Field(i).Tag.Get("json")
+			fieldValue := reflect.Indirect(journalVal).FieldByName(fieldName)
+			bridgeWithToken[fieldTag] = fieldValue.Interface()
+		}
+		bridgeWithTokens = append(bridgeWithTokens, bridgeWithToken)
+	}
+	return bridgeWithTokens, nil
 }
 
 func (sb *SubBridgeAPI) GetBridgeInformation(bridgeAddr common.Address) (map[string]interface{}, error) {
