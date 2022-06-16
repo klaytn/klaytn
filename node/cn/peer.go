@@ -994,18 +994,13 @@ func (p *multiChannelPeer) UpdateRWImplementationVersion() {
 func (p *multiChannelPeer) ReadMsg(rw p2p.MsgReadWriter, connectionOrder int, errCh chan<- error, wg *sync.WaitGroup, closed <-chan struct{}) {
 	defer wg.Done()
 
-	var (
-		readMsgCh     = make(chan p2p.Msg, channelSizePerPeer)
-		readLoopEndCh = make(chan struct{})
-	)
-
+	readMsgCh := make(chan p2p.Msg, channelSizePerPeer)
 	go func() {
 		for {
 			msg, err := rw.ReadMsg()
 			if err != nil {
 				p.GetP2PPeer().Log().Warn("ProtocolManager failed to read msg", "err", err)
 				errCh <- err
-				close(readLoopEndCh)
 				return
 			}
 			readMsgCh <- msg
@@ -1019,16 +1014,12 @@ func (p *multiChannelPeer) ReadMsg(rw p2p.MsgReadWriter, connectionOrder int, er
 			if err != nil {
 				p.GetP2PPeer().Log().Warn("ProtocolManager failed to get msg channel", "err", err)
 				errCh <- err
-				close(readLoopEndCh)
 			} else if msg.Size > ProtocolMaxMsgSize {
 				err := errResp(ErrMsgTooLarge, "%v > %v", msg.Size, ProtocolMaxMsgSize)
 				p.GetP2PPeer().Log().Warn("ProtocolManager over max msg size", "err", err)
 				errCh <- err
-				close(readLoopEndCh)
 			}
 			msgCh <- msg
-		case <-readLoopEndCh:
-			return
 		case <-closed:
 			return
 		}
