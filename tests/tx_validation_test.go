@@ -32,6 +32,7 @@ import (
 	"github.com/klaytn/klaytn/common/profile"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/kerrors"
+	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/stretchr/testify/assert"
@@ -96,13 +97,12 @@ func genMapForTxTypes(from TestAccount, to TestAccount, txType types.TxType) (tx
 	return valueMap, gas
 }
 
+// TODO : Need to KIP-71 hardfork
 // TestValidationPoolInsert generates invalid txs which will be invalidated during txPool insert process.
 func TestValidationPoolInsert(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 
-	var testTxTypes = []testTxType{}
+	testTxTypes := []testTxType{}
 	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
 		if i == types.TxTypeKlaytnLast {
 			i = types.TxTypeEthereumAccessList
@@ -114,7 +114,7 @@ func TestValidationPoolInsert(t *testing.T) {
 		}
 	}
 
-	var invalidCases = []struct {
+	invalidCases := []struct {
 		Name string
 		fn   func(types.TxType, txValueMap, common.Address) (txValueMap, error)
 	}{
@@ -230,11 +230,9 @@ func TestValidationPoolInsert(t *testing.T) {
 
 // TestValidationBlockTx generates invalid txs which will be invalidated during block insert process.
 func TestValidationBlockTx(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 
-	var testTxTypes = []testTxType{}
+	testTxTypes := []testTxType{}
 	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
 		if i == types.TxTypeKlaytnLast {
 			i = types.TxTypeEthereumAccessList
@@ -246,7 +244,7 @@ func TestValidationBlockTx(t *testing.T) {
 		}
 	}
 
-	var invalidCases = []struct {
+	invalidCases := []struct {
 		Name string
 		fn   func(types.TxType, txValueMap, common.Address) (txValueMap, error)
 	}{
@@ -367,10 +365,12 @@ func decreaseGasLimit(txType types.TxType, values txValueMap, contract common.Ad
 	if txType == types.TxTypeEthereumDynamicFee {
 		(*big.Int).SetUint64(values[types.TxValueKeyGasFeeCap].(*big.Int), 12345678)
 		(*big.Int).SetUint64(values[types.TxValueKeyGasTipCap].(*big.Int), 12345678)
-		err = blockchain.ErrInvalidGasTipCap
+		// TODO : Need to KIP-71 hardfork
+		err = blockchain.ErrFeeCapBelowBaseFee
 	} else {
 		(*big.Int).SetUint64(values[types.TxValueKeyGasPrice].(*big.Int), 12345678)
-		err = blockchain.ErrInvalidUnitPrice
+		// TODO : Need to KIP-71 hardfork
+		err = blockchain.ErrGasPriceBelowBaseFee
 	}
 
 	return values, err
@@ -424,7 +424,7 @@ func invalidCodeFormat(txType types.TxType, values txValueMap, contract common.A
 
 // TestValidationInvalidSig generates txs signed by an invalid sender or a fee payer.
 func TestValidationInvalidSig(t *testing.T) {
-	var testTxTypes = []testTxType{}
+	testTxTypes := []testTxType{}
 	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
 		if i == types.TxTypeKlaytnLast {
 			i = types.TxTypeEthereumAccessList
@@ -436,7 +436,7 @@ func TestValidationInvalidSig(t *testing.T) {
 		}
 	}
 
-	var invalidCases = []struct {
+	invalidCases := []struct {
 		Name string
 		fn   func(*testing.T, types.TxType, *TestAccountType, *TestAccountType, types.Signer) (*types.Transaction, error)
 	}{
@@ -649,7 +649,7 @@ func TestLegacyTxFromNonLegacyAcc(t *testing.T) {
 
 // TestInvalidBalance generates invalid txs which don't have enough KLAY, and will be invalidated during txPool insert process.
 func TestInvalidBalance(t *testing.T) {
-	var testTxTypes = []testTxType{}
+	testTxTypes := []testTxType{}
 	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
 		if i == types.TxTypeKlaytnLast {
 			i = types.TxTypeEthereumAccessList
@@ -1040,11 +1040,9 @@ func TestInvalidBalance(t *testing.T) {
 
 // TestInvalidBalanceBlockTx generates invalid txs which don't have enough KLAY, and will be invalidated during block insert process.
 func TestInvalidBalanceBlockTx(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 
-	var testTxTypes = []testTxType{}
+	testTxTypes := []testTxType{}
 	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
 		if i == types.TxTypeKlaytnLast {
 			i = types.TxTypeEthereumAccessList
@@ -1458,7 +1456,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 // TestValidationTxSizeAfterRLP tests tx size validation during txPool insert process.
 // Since the size is RLP encoded tx size, the test also includes RLP encoding/decoding process which may raise an issue.
 func TestValidationTxSizeAfterRLP(t *testing.T) {
-	var testTxTypes = []types.TxType{}
+	testTxTypes := []types.TxType{}
 	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
 		if i == types.TxTypeKlaytnLast {
 			i = types.TxTypeEthereumAccessList

@@ -195,6 +195,37 @@ func (m *txSortedMap) Ready(start uint64) types.Transactions {
 	return ready
 }
 
+// ReadyWithGasPrice retrieves a sequentially increasing list of transactions that greater than or
+// equal to the given baseFee starting at the provided nonce that is ready for processing.
+// If there is a transaction lower than the baseFee during the search, only previously collected transactions
+// are returned. The returned transactions will be removed from the list.
+//
+// Note, all transactions with nonces lower than start will also be returned to
+// prevent getting into and invalid state. This is not something that should ever
+// happen but better to be self correcting than failing!
+func (m *txSortedMap) ReadyWithGasPrice(start uint64, baseFee *big.Int) types.Transactions {
+	// Short circuit if no transactions are available
+	if m.index.Len() == 0 || (*m.index)[0] > start {
+		return nil
+	}
+	// Otherwise start accumulating incremental transactions
+	ready := make(types.Transactions, 0, m.index.Len())
+	for next := (*m.index)[0]; m.index.Len() > 0 && (*m.index)[0] == next; next++ {
+		if m.items[next].GasPrice().Cmp(baseFee) < 0 {
+			break
+		}
+		ready = append(ready, m.items[next])
+		delete(m.items, next)
+		heap.Pop(m.index)
+	}
+	// If we had a cached order, shift the front
+	if m.cache != nil {
+		m.cache = m.cache[len(ready):]
+	}
+
+	return ready
+}
+
 // Len returns the length of the transaction map.
 func (m *txSortedMap) Len() int {
 	return len(m.items)
@@ -281,14 +312,24 @@ func (l *txList) Add(tx *types.Transaction, priceBump uint64) (bool, *types.Tran
 	// If there's an older better transaction, abort
 	old := l.txs.Get(tx.Nonce())
 	if old != nil {
-		if tx.Type().IsCancelTransaction() {
-			logger.Trace("New tx is a cancel transaction. replace it!", "old", old.String(), "new", tx.String())
-		} else {
+		// TODO : Need to KIP-71 hardfork.
+		//if tx.Type().IsCancelTransaction() {
+		//	logger.Trace("New tx is a cancel transaction. replace it!", "old", old.String(), "new", tx.String())
+		//} else {
+		//	logger.Trace("already nonce exist", "nonce", tx.Nonce(), "with gasprice", old.GasPrice(), "priceBump", priceBump, "new tx.gasprice", tx.GasPrice())
+		//	return false, nil
+		//}
+
+		// If gas price of older is bigger than newer, abort.
+		if old.GasPrice().Cmp(tx.GasPrice()) >= 0 {
 			logger.Trace("already nonce exist", "nonce", tx.Nonce(), "with gasprice", old.GasPrice(), "priceBump", priceBump, "new tx.gasprice", tx.GasPrice())
 			return false, nil
+		} else {
+			// Otherwise overwrite the old transaction with the current one
+			logger.Trace("The transaction was substituted by competitive gas price", "old", old.String(), "new", tx.String())
 		}
 	}
-	// Otherwise overwrite the old transaction with the current one
+
 	l.txs.Put(tx)
 
 	return true, old
@@ -408,6 +449,18 @@ func (l *txList) Remove(tx *types.Transaction) (bool, types.Transactions) {
 // happen but better to be self correcting than failing!
 func (l *txList) Ready(start uint64) types.Transactions {
 	return l.txs.Ready(start)
+}
+
+// ReadyWithGasPrice retrieves a sequentially increasing list of transactions that greater than or
+// equal to the given baseFee starting at the provided nonce that is ready for processing.
+// If there is a transaction lower than the baseFee during the search, only previously collected transactions
+// are returned. The returned transactions will be removed from the list.
+//
+// Note, all transactions with nonces lower than start will also be returned to
+// prevent getting into and invalid state. This is not something that should ever
+// happen but better to be self correcting than failing!
+func (l *txList) ReadyWithGasPrice(start uint64, baseFee *big.Int) types.Transactions {
+	return l.txs.ReadyWithGasPrice(start, baseFee)
 }
 
 // Len returns the length of the transaction list.

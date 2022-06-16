@@ -69,7 +69,7 @@ func NewApp(gitCommit, usage string) *cli.App {
 	app := cli.NewApp()
 	app.Name = filepath.Base(os.Args[0])
 	app.Author = ""
-	//app.Authors = nil
+	// app.Authors = nil
 	app.Email = ""
 	app.Version = params.Version
 	if len(gitCommit) >= 8 {
@@ -395,7 +395,7 @@ var (
 		Usage: "Set the max count of resending transactions",
 		Value: cn.DefaultMaxResendTxCount,
 	}
-	//TODO-Klaytn-RemoveLater Remove this flag when we are confident with the new transaction resend logic
+	// TODO-Klaytn-RemoveLater Remove this flag when we are confident with the new transaction resend logic
 	TxResendUseLegacyFlag = cli.BoolFlag{
 		Name:  "txresend.use-legacy",
 		Usage: "Enable the legacy transaction resend logic (For testing only)",
@@ -695,7 +695,7 @@ var (
 		Usage: "Comma separated kni URLs for authorized nodes list",
 		Value: "",
 	}
-	//TODO-Klaytn-Bootnode the boodnode flags should be updated when it is implemented
+	// TODO-Klaytn-Bootnode the boodnode flags should be updated when it is implemented
 	BNAddrFlag = cli.StringFlag{
 		Name:  "bnaddr",
 		Usage: `udp address to use node discovery`,

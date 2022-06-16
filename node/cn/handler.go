@@ -124,7 +124,7 @@ type ProtocolManager struct {
 	nodetype          common.ConnType
 	txResendUseLegacy bool
 
-	//syncStop is a flag to stop peer sync
+	// syncStop is a flag to stop peer sync
 	syncStop int32
 }
 
@@ -132,7 +132,8 @@ type ProtocolManager struct {
 // with the Klaytn network.
 func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux,
 	txpool work.TxPool, engine consensus.Engine, blockchain work.BlockChain, chainDB database.DBManager, cacheLimit int,
-	nodetype common.ConnType, cnconfig *Config) (*ProtocolManager, error) {
+	nodetype common.ConnType, cnconfig *Config,
+) (*ProtocolManager, error) {
 	// Create the protocol maanger with the base fields
 	manager := &ProtocolManager{
 		networkId:         networkId,
@@ -477,7 +478,7 @@ func (pm *ProtocolManager) handle(p Peer) error {
 			return err
 		case messageChannel <- msg:
 		}
-		//go pm.handleMsg(p, addr, msg)
+		// go pm.handleMsg(p, addr, msg)
 
 		//if err := pm.handleMsg(p); err != nil {
 		//	p.Log().Debug("Klaytn message handling failed", "err", err)
@@ -1085,7 +1086,7 @@ func (pm *ProtocolManager) BroadcastBlock(block *types.Block) {
 		return
 	}
 	// TODO-Klaytn only send all validators + sub(peer) except subset for this block
-	//transfer := peers[:int(math.Sqrt(float64(len(peers))))]
+	// transfer := peers[:int(math.Sqrt(float64(len(peers))))]
 
 	// Calculate the TD of the block (it's not imported yet, so block.Td is not valid)
 	td := new(big.Int).Add(block.BlockScore(), pm.blockchain.GetTd(block.ParentHash(), block.NumberU64()-1))
@@ -1104,7 +1105,7 @@ func (pm *ProtocolManager) BroadcastBlockHash(block *types.Block) {
 	// Otherwise if the block is indeed in out own chain, announce it
 	peersWithoutBlock := pm.peers.PeersWithoutBlock(block.Hash())
 	for _, peer := range peersWithoutBlock {
-		//peer.SendNewBlockHashes([]common.Hash{hash}, []uint64{block.NumberU64()})
+		// peer.SendNewBlockHashes([]common.Hash{hash}, []uint64{block.NumberU64()})
 		peer.AsyncSendNewBlockHash(block)
 	}
 	logger.Trace("Announced block", "hash", block.Hash(),
@@ -1117,8 +1118,8 @@ func (pm *ProtocolManager) BroadcastTxs(txs types.Transactions) {
 	// This function calls sendTransaction() to broadcast the transactions for each peer.
 	// In that case, transactions are sorted for each peer in sendTransaction().
 	// Therefore, it prevents sorting transactions by each peer.
-	if !sort.IsSorted(types.TxByPriceAndTime(txs)) {
-		sort.Sort(types.TxByPriceAndTime(txs))
+	if !sort.IsSorted(types.TxByTime(txs)) {
+		sort.Sort(types.TxByTime(txs))
 	}
 
 	switch pm.nodetype {
@@ -1143,7 +1144,7 @@ func (pm *ProtocolManager) broadcastTxsFromCN(txs types.Transactions) {
 		}
 
 		// TODO-Klaytn Code Check
-		//peers = peers[:int(math.Sqrt(float64(len(peers))))]
+		// peers = peers[:int(math.Sqrt(float64(len(peers))))]
 		half := (len(peers) / 2) + 2
 		peers = samplingPeers(peers, half)
 		for _, peer := range peers {
@@ -1155,7 +1156,7 @@ func (pm *ProtocolManager) broadcastTxsFromCN(txs types.Transactions) {
 	propTxPeersGauge.Update(int64(len(cnPeersWithoutTxs)))
 	// FIXME include this again: peers = peers[:int(math.Sqrt(float64(len(peers))))]
 	for peer, txs2 := range cnPeersWithoutTxs {
-		//peer.SendTransactions(txs)
+		// peer.SendTransactions(txs)
 		peer.AsyncSendTransactions(txs2)
 	}
 }
@@ -1206,8 +1207,8 @@ func (pm *ProtocolManager) ReBroadcastTxs(txs types.Transactions) {
 	// This function calls sendTransaction() to broadcast the transactions for each peer.
 	// In that case, transactions are sorted for each peer in sendTransaction().
 	// Therefore, it prevents sorting transactions by each peer.
-	if !sort.IsSorted(types.TxByPriceAndTime(txs)) {
-		sort.Sort(types.TxByPriceAndTime(txs))
+	if !sort.IsSorted(types.TxByTime(txs)) {
+		sort.Sort(types.TxByTime(txs))
 	}
 
 	peersWithoutTxs := make(map[Peer]types.Transactions)

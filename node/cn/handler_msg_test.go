@@ -263,8 +263,8 @@ func TestHandleTxMsg(t *testing.T) {
 		atomic.StoreUint32(&pm.acceptTxs, 1)
 		mockTxPool := mocks.NewMockTxPool(mockCtrl)
 
-		//The time field in received transaction through pm.handleMsg() has different value from generated transaction(`tx1`).
-		//It can check whether the transaction created `HandleTxMsg()` is the same as `tx1` through `AddToKnownTxs(txs[0].Hash())`.
+		// The time field in received transaction through pm.handleMsg() has different value from generated transaction(`tx1`).
+		// It can check whether the transaction created `HandleTxMsg()` is the same as `tx1` through `AddToKnownTxs(txs[0].Hash())`.
 		mockTxPool.EXPECT().HandleTxMsg(gomock.Any()).AnyTimes()
 		pm.txpool = mockTxPool
 

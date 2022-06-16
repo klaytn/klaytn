@@ -30,8 +30,7 @@ import (
 // If an item is an AccountKeyNil object, the corresponding key will not be updated.
 // For example, if TxTypeAccountUpdate tries to update the account's key to
 // [AccountKeyPublic, AccountKeyNil, AccountKeyPublic], the second item will not be updated in the account.
-type AccountKeyNil struct {
-}
+type AccountKeyNil struct{}
 
 var globalNilKey = &AccountKeyNil{}
 

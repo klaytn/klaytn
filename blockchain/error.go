@@ -131,8 +131,14 @@ var (
 	ErrTipAboveFeeCap = errors.New("max fee per gas higher than max priority fee per gas")
 
 	// ErrInvalidGasFeeCap is returned if gas fee cap of transaction is not equal to UnitPrice
-	ErrInvalidGasFeeCap = errors.New("Invalid gas fee cap. It must be set to the same value as gas unit price.")
+	ErrInvalidGasFeeCap = errors.New("invalid gas fee cap. It must be set to the same value as gas unit price")
 
 	// ErrInvalidGasTipCap is returned if gas tip cap of transaction is not equal to UnitPrice
-	ErrInvalidGasTipCap = errors.New("Invalid gas tip cap. It must be set to the same value as gas unit price.")
+	ErrInvalidGasTipCap = errors.New("invalid gas tip cap. It must be set to the same value as gas unit price")
+
+	// ErrFeeCapBelowBaseFee is returned if gas fee cap of transaction is lower than gas unit price.
+	ErrFeeCapBelowBaseFee = errors.New("invalid gas fee cap. It must be set to value greater than or equal to baseFee")
+
+	// ErrGasPriceBelowBaseFee is returned if gas price of transaction is lower than gas unit price.
+	ErrGasPriceBelowBaseFee = errors.New("invalid gas price. It must be set to value greater than or equal to baseFee")
 )

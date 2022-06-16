@@ -886,7 +886,6 @@ func TestChainTxReorgs(t *testing.T) {
 }
 
 func TestLogReorgs(t *testing.T) {
-
 	var (
 		key1, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 		addr1   = crypto.PubkeyToAddress(key1.PublicKey)
@@ -1012,7 +1011,6 @@ done:
 		t.Errorf("unexpected event fired: %v", e)
 	case <-time.After(250 * time.Millisecond):
 	}
-
 }
 
 // Tests if the canonical block can be fetched from the database during chain insertion.
@@ -1347,7 +1345,7 @@ func benchmarkLargeNumberOfValueToNonexisting(b *testing.B, numTxs, numBlocks in
 		for txi := 0; txi < numTxs; txi++ {
 			uniq := uint64(i*numTxs + txi)
 			recipient := recipientFn(uniq)
-			//recipient := common.BigToAddress(big.NewInt(0).SetUint64(1337 + uniq))
+			// recipient := common.BigToAddress(big.NewInt(0).SetUint64(1337 + uniq))
 			tx, err := types.SignTx(types.NewTransaction(uniq, recipient, big.NewInt(1), params.TxGas, big.NewInt(1), nil), signer, testBankKey)
 			if err != nil {
 				b.Error(err)
@@ -1375,10 +1373,10 @@ func benchmarkLargeNumberOfValueToNonexisting(b *testing.B, numTxs, numBlocks in
 		b.StopTimer()
 		if got := chain.CurrentBlock().Transactions().Len(); got != numTxs*numBlocks {
 			b.Fatalf("Transactions were not included, expected %d, got %d", (numTxs * numBlocks), got)
-
 		}
 	}
 }
+
 func BenchmarkBlockChain_1x1000ValueTransferToNonexisting(b *testing.B) {
 	var (
 		numTxs    = 1000
@@ -1394,6 +1392,7 @@ func BenchmarkBlockChain_1x1000ValueTransferToNonexisting(b *testing.B) {
 
 	benchmarkLargeNumberOfValueToNonexisting(b, numTxs, numBlocks, recipientFn, dataFn)
 }
+
 func BenchmarkBlockChain_1x1000ValueTransferToExisting(b *testing.B) {
 	var (
 		numTxs    = 1000
@@ -1411,6 +1410,7 @@ func BenchmarkBlockChain_1x1000ValueTransferToExisting(b *testing.B) {
 
 	benchmarkLargeNumberOfValueToNonexisting(b, numTxs, numBlocks, recipientFn, dataFn)
 }
+
 func BenchmarkBlockChain_1x1000Executions(b *testing.B) {
 	var (
 		numTxs    = 1000
@@ -1452,8 +1452,10 @@ func TestCheckBlockChainVersion(t *testing.T) {
 	assert.Equal(t, uint64(BlockChainVersion+1), *memDB.ReadDatabaseVersion())
 }
 
-var internalTxContractCode string
-var internalTxContractAbi string
+var (
+	internalTxContractCode string
+	internalTxContractAbi  string
+)
 
 func genInternalTxTransaction(t *testing.T, block *BlockGen, address common.Address, signer types.Signer, key *ecdsa.PrivateKey) {
 	// 1. Deploy internal transaction sample contract

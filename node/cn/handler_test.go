@@ -48,15 +48,19 @@ var td1 = big.NewInt(123)
 
 const numVals = 6
 
-var addrs []common.Address
-var keys []*ecdsa.PrivateKey
-var nodeids []discover.NodeID
-var p2pPeers []*p2p.Peer
-var blocks []*types.Block
-var hashes []common.Hash
+var (
+	addrs    []common.Address
+	keys     []*ecdsa.PrivateKey
+	nodeids  []discover.NodeID
+	p2pPeers []*p2p.Peer
+	blocks   []*types.Block
+	hashes   []common.Hash
+)
 
-var tx1 *types.Transaction
-var txs types.Transactions
+var (
+	tx1 *types.Transaction
+	txs types.Transactions
+)
 
 var hash1 common.Hash
 
@@ -141,7 +145,7 @@ func newReceipt(gasUsed int) *types.Receipt {
 }
 
 func TestNewProtocolManager(t *testing.T) {
-	//1. If consensus.Engine returns an empty Protocol, NewProtocolManager throws an error.
+	// 1. If consensus.Engine returns an empty Protocol, NewProtocolManager throws an error.
 	{
 		mockCtrl, mockEngine, mockBlockChain, mockTxPool := newMocks(t)
 		defer mockCtrl.Finish()
@@ -265,7 +269,6 @@ func TestProtocolManager_removePeer(t *testing.T) {
 
 		mockCtrl.Finish()
 	}
-
 }
 
 func TestProtocolManager_getChainID(t *testing.T) {
@@ -1036,7 +1039,7 @@ func TestBroadcastTxsSortedByTime(t *testing.T) {
 	copy(sortedTxs, txs)
 
 	// Sort transaction by time.
-	sort.Sort(types.TxByPriceAndTime(sortedTxs))
+	sort.Sort(types.TxByTime(sortedTxs))
 
 	pm := &ProtocolManager{}
 	pm.nodetype = common.ENDPOINTNODE
@@ -1069,7 +1072,6 @@ func TestBroadcastTxsSortedByTime(t *testing.T) {
 		assert.Equal(t, sortedTxs[i].Hash(), tx.Hash())
 		assert.False(t, sortedTxs[i].Time().Equal(tx.Time()))
 	}
-
 }
 
 func TestReBroadcastTxsSortedByTime(t *testing.T) {
@@ -1098,7 +1100,7 @@ func TestReBroadcastTxsSortedByTime(t *testing.T) {
 	copy(sortedTxs, txs)
 
 	// Sort transaction by time.
-	sort.Sort(types.TxByPriceAndTime(sortedTxs))
+	sort.Sort(types.TxByTime(sortedTxs))
 
 	pm := &ProtocolManager{}
 	pm.nodetype = common.ENDPOINTNODE
@@ -1130,7 +1132,6 @@ func TestReBroadcastTxsSortedByTime(t *testing.T) {
 		assert.Equal(t, sortedTxs[i].Hash(), tx.Hash())
 		assert.False(t, sortedTxs[i].Time().Equal(tx.Time()))
 	}
-
 }
 
 func contains(addrs []common.Address, item common.Address) bool {

@@ -640,7 +640,6 @@ func (bc *BlockChain) setHeadBeyondRoot(head uint64, root common.Hash, repair bo
 		// removed in the hc.SetHead function.
 		bc.db.DeleteBody(hash, num)
 		bc.db.DeleteReceipts(hash, num)
-
 	}
 
 	// If SetHead was only called as a chain reparation method, try to skip
@@ -661,7 +660,7 @@ func (bc *BlockChain) setHeadBeyondRoot(head uint64, root common.Hash, repair bo
 	// Clear out any stale content from the caches
 	bc.futureBlocks.Purge()
 	bc.db.ClearBlockChainCache()
-	//TODO-Klaytn add governance DB deletion logic.
+	// TODO-Klaytn add governance DB deletion logic.
 
 	return rootNumber, bc.loadLastState()
 }
@@ -850,7 +849,6 @@ func (bc *BlockChain) ExportN(w io.Writer, first uint64, last uint64) error {
 //
 // Note, this function assumes that the `mu` mutex is held!
 func (bc *BlockChain) insert(block *types.Block) {
-
 	// If the block is on a side chain or an unknown one, force other heads onto it too
 	updateHeads := bc.db.ReadCanonicalHash(block.NumberU64()) != block.Hash()
 
@@ -2467,7 +2465,6 @@ func (bc *BlockChain) InsertHeaderChain(chain []*types.Header, checkFreq int) (i
 	defer bc.wg.Done()
 
 	whFunc := func(header *types.Header) error {
-
 		_, err := bc.hc.WriteHeader(header)
 		return err
 	}
@@ -2585,7 +2582,6 @@ func (bc *BlockChain) SaveTrieNodeCacheToDisk() error {
 // for the transaction, gas used and an error if the transaction failed,
 // indicating the block was invalid.
 func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *common.Address, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *uint64, vmConfig *vm.Config) (*types.Receipt, uint64, *vm.InternalTxTrace, error) {
-
 	// TODO-Klaytn We reject transactions with unexpected gasPrice and do not put the transaction into TxPool.
 	//         And we run transactions regardless of gasPrice if we push transactions in the TxPool.
 	/*

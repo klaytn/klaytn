@@ -58,9 +58,7 @@ const (
 	ZeroUncleCount uint = 0
 )
 
-var (
-	errNoMiningWork = errors.New("no mining work available yet")
-)
+var errNoMiningWork = errors.New("no mining work available yet")
 
 // EthereumAPI provides an API to access the Klaytn through the `eth` namespace.
 // TODO-Klaytn: Removed unused variable

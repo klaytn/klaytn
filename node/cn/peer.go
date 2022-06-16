@@ -284,7 +284,7 @@ func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) Peer {
 
 // ChannelOfMessage is a map with the index of the channel per message
 var ChannelOfMessage = map[uint64]int{
-	StatusMsg:                   p2p.ConnDefault, //StatusMsg's Channel should to be set ConnDefault
+	StatusMsg:                   p2p.ConnDefault, // StatusMsg's Channel should to be set ConnDefault
 	NewBlockHashesMsg:           p2p.ConnDefault,
 	BlockHeaderFetchRequestMsg:  p2p.ConnDefault,
 	BlockHeaderFetchResponseMsg: p2p.ConnDefault,
@@ -349,7 +349,7 @@ func (p *basePeer) Broadcast() {
 			if err := p.SendTransactions(txs); err != nil {
 				logger.Error("fail to SendTransactions", "peer", p.id, "err", err)
 				continue
-				//return
+				// return
 			}
 			p.Log().Trace("Broadcast transactions", "peer", p.id, "count", len(txs))
 
@@ -357,7 +357,7 @@ func (p *basePeer) Broadcast() {
 			if err := p.SendNewBlock(prop.block, prop.td); err != nil {
 				logger.Error("fail to SendNewBlock", "peer", p.id, "err", err)
 				continue
-				//return
+				// return
 			}
 			p.Log().Trace("Propagated block", "peer", p.id, "number", prop.block.Number(), "hash", prop.block.Hash(), "td", prop.td)
 
@@ -365,7 +365,7 @@ func (p *basePeer) Broadcast() {
 			if err := p.SendNewBlockHashes([]common.Hash{block.Hash()}, []uint64{block.NumberU64()}); err != nil {
 				logger.Error("fail to SendNewBlockHashes", "peer", p.id, "err", err)
 				continue
-				//return
+				// return
 			}
 			p.Log().Trace("Announced block", "peer", p.id, "number", block.Number(), "hash", block.Hash())
 
@@ -433,8 +433,8 @@ func (p *basePeer) Send(msgcode uint64, data interface{}) error {
 // in its transaction hash set for future reference.
 func (p *basePeer) SendTransactions(txs types.Transactions) error {
 	// Before sending transactions, sort transactions in ascending order by time.
-	if !sort.IsSorted(types.TxByPriceAndTime(txs)) {
-		sort.Sort(types.TxByPriceAndTime(txs))
+	if !sort.IsSorted(types.TxByTime(txs)) {
+		sort.Sort(types.TxByTime(txs))
 	}
 
 	for _, tx := range txs {
@@ -446,8 +446,8 @@ func (p *basePeer) SendTransactions(txs types.Transactions) error {
 // ReSendTransactions sends txs to a peer in order to prevent the txs from missing.
 func (p *basePeer) ReSendTransactions(txs types.Transactions) error {
 	// Before sending transactions, sort transactions in ascending order by time.
-	if !sort.IsSorted(types.TxByPriceAndTime(txs)) {
-		sort.Sort(types.TxByPriceAndTime(txs))
+	if !sort.IsSorted(types.TxByTime(txs)) {
+		sort.Sort(types.TxByTime(txs))
 	}
 
 	return p2p.Send(p.rw, TxMsg, txs)
@@ -781,7 +781,7 @@ func (p *multiChannelPeer) Broadcast() {
 			if err := p.SendTransactions(txs); err != nil {
 				logger.Error("fail to SendTransactions", "peer", p.id, "err", err)
 				continue
-				//return
+				// return
 			}
 			p.Log().Trace("Broadcast transactions", "peer", p.id, "count", len(txs))
 
@@ -789,7 +789,7 @@ func (p *multiChannelPeer) Broadcast() {
 			if err := p.SendNewBlock(prop.block, prop.td); err != nil {
 				logger.Error("fail to SendNewBlock", "peer", p.id, "err", err)
 				continue
-				//return
+				// return
 			}
 			p.Log().Trace("Propagated block", "peer", p.id, "number", prop.block.Number(), "hash", prop.block.Hash(), "td", prop.td)
 
@@ -797,7 +797,7 @@ func (p *multiChannelPeer) Broadcast() {
 			if err := p.SendNewBlockHashes([]common.Hash{block.Hash()}, []uint64{block.NumberU64()}); err != nil {
 				logger.Error("fail to SendNewBlockHashes", "peer", p.id, "err", err)
 				continue
-				//return
+				// return
 			}
 			p.Log().Trace("Announced block", "peer", p.id, "number", block.Number(), "hash", block.Hash())
 
@@ -812,8 +812,8 @@ func (p *multiChannelPeer) Broadcast() {
 // in its transaction hash set for future reference.
 func (p *multiChannelPeer) SendTransactions(txs types.Transactions) error {
 	// Before sending transactions, sort transactions in ascending order by time.
-	if !sort.IsSorted(types.TxByPriceAndTime(txs)) {
-		sort.Sort(types.TxByPriceAndTime(txs))
+	if !sort.IsSorted(types.TxByTime(txs)) {
+		sort.Sort(types.TxByTime(txs))
 	}
 
 	for _, tx := range txs {
@@ -825,8 +825,8 @@ func (p *multiChannelPeer) SendTransactions(txs types.Transactions) error {
 // ReSendTransactions sends txs to a peer in order to prevent the txs from missing.
 func (p *multiChannelPeer) ReSendTransactions(txs types.Transactions) error {
 	// Before sending transactions, sort transactions in ascending order by time.
-	if !sort.IsSorted(types.TxByPriceAndTime(txs)) {
-		sort.Sort(types.TxByPriceAndTime(txs))
+	if !sort.IsSorted(types.TxByTime(txs)) {
+		sort.Sort(types.TxByTime(txs))
 	}
 
 	return p.msgSender(TxMsg, txs)
@@ -950,7 +950,7 @@ func (p *multiChannelPeer) msgSender(msgcode uint64, data interface{}) error {
 
 // GetRW returns the MsgReadWriter of the peer.
 func (p *multiChannelPeer) GetRW() p2p.MsgReadWriter {
-	return p.rw //TODO-Klaytn check this function usage
+	return p.rw // TODO-Klaytn check this function usage
 }
 
 // UpdateRWImplementationVersion updates the version of the implementation of RW.

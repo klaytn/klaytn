@@ -185,7 +185,7 @@ type TxPool struct {
 	locals  *accountSet // Set of local transaction to exempt from eviction rules
 	journal *txJournal  // Journal of local transaction to back up to disk
 
-	//TODO-Klaytn
+	// TODO-Klaytn
 	txMu sync.RWMutex
 
 	pending map[common.Address]*txList         // All currently processable transactions
@@ -419,13 +419,16 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	pool.currentState = stateDB
 	pool.pendingNonce = make(map[common.Address]uint64)
 	pool.currentBlockNumber = newHead.Number.Uint64()
+	// TODO :  Need to KIP-71 hardfork
+	// TODO : It need to update gas price of tx pool after implemnted baseFee calculation logic.
+	// pool.gasPrice = misc.calculateBaseFee()
 
 	// Inject any transactions discarded due to reorgs
 	logger.Debug("Reinjecting stale transactions", "count", len(reinject))
 	senderCacher.recover(pool.signer, reinject)
 
-	//pool.mu.Lock()
-	//defer pool.mu.Unlock()
+	// pool.mu.Lock()
+	// defer pool.mu.Unlock()
 
 	pool.addTxsLocked(reinject, false)
 
@@ -655,24 +658,38 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 			return ErrFeeCapVeryHigh
 		}
 
+		// TODO : Need to KIP-71 hardfork.
 		// Ensure gasFeeCap is greater than or equal to gasTipCap.
-		if tx.GasFeeCap().Cmp(tx.GasTipCap()) < 0 {
-			return ErrTipAboveFeeCap
-		}
+		//if tx.GasFeeCap().Cmp(tx.GasTipCap()) < 0 {
+		//	return ErrTipAboveFeeCap
+		//}
+		//
+		//if pool.gasPrice.Cmp(tx.GasTipCap()) != 0 {
+		//	logger.Trace("fail to validate maxPriorityFeePerGas", "unitprice", pool.gasPrice, "maxPriorityFeePerGas", tx.GasFeeCap())
+		//	return ErrInvalidGasTipCap
+		//}
+		//
+		//if pool.gasPrice.Cmp(tx.GasFeeCap()) != 0 {
+		//	logger.Trace("fail to validate maxFeePerGas", "unitprice", pool.gasPrice, "maxFeePerGas", tx.GasTipCap())
+		//	return ErrInvalidGasFeeCap
+		//}
 
-		if pool.gasPrice.Cmp(tx.GasTipCap()) != 0 {
-			logger.Trace("fail to validate maxPriorityFeePerGas", "unitprice", pool.gasPrice, "maxPriorityFeePerGas", tx.GasFeeCap())
-			return ErrInvalidGasTipCap
-		}
-
-		if pool.gasPrice.Cmp(tx.GasFeeCap()) != 0 {
-			logger.Trace("fail to validate maxFeePerGas", "unitprice", pool.gasPrice, "maxFeePerGas", tx.GasTipCap())
-			return ErrInvalidGasFeeCap
+		// Ensure transaction's gasFeeCap is greater than or equal to transaction pool's gasPrice(baseFee).
+		if pool.gasPrice.Cmp(tx.GasFeeCap()) > 0 {
+			logger.Trace("fail to validate maxFeePerGas", "unitPrice", pool.gasPrice, "maxFeePerGas", tx.GasFeeCap())
+			return ErrFeeCapBelowBaseFee
 		}
 	} else {
-		if pool.gasPrice.Cmp(tx.GasPrice()) != 0 {
-			logger.Trace("fail to validate unitprice", "unitprice", pool.gasPrice, "txUnitPrice", tx.GasPrice())
-			return ErrInvalidUnitPrice
+		// TODO : Need to KIP-71 hardfork.
+		//if pool.gasPrice.Cmp(tx.GasPrice()) != 0 {
+		//	logger.Trace("fail to validate unitprice", "unitPrice", pool.gasPrice, "txUnitPrice", tx.GasPrice())
+		//	return ErrInvalidUnitPrice
+		//}
+
+		// Ensure transaction's gasPrice is greater than or equal to transaction pool's gasPrice(baseFee).
+		if pool.gasPrice.Cmp(tx.GasPrice()) > 0 {
+			logger.Trace("fail to validate gasprice", "pool.gasPrice", pool.gasPrice, "tx.gasPrice", tx.GasPrice())
+			return ErrGasPriceBelowBaseFee
 		}
 	}
 
@@ -1340,7 +1357,9 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 		}
 
 		// Gather all executable transactions and promote them
-		for _, tx := range list.Ready(pool.getPendingNonce(addr)) {
+		// TODO : Need to KIP-71 hardfork
+		// for _, tx := range list.Ready(pool.getPendingNonce(addr)) {
+		for _, tx := range list.ReadyWithGasPrice(pool.getPendingNonce(addr), pool.gasPrice) {
 			hash := tx.Hash()
 			if pool.promoteTx(addr, hash, tx) {
 				logger.Trace("Promoting queued transaction", "hash", hash)
@@ -1528,6 +1547,26 @@ func (pool *TxPool) demoteUnexecutables() {
 				hash := tx.Hash()
 				logger.Error("Demoting invalidated transaction", "hash", hash)
 				pool.enqueueTx(hash, tx)
+			}
+		}
+
+		// TODO : Need to KIP-71 hardfork.
+		// Enqueue transaction if gasPrice of transaction is lower than gasPrice of txPool.
+		// All transactions with a nonce greater than enqueued transaction also stored queue.
+		if list.Len() > 0 {
+			needRemoved := false
+			for _, tx := range list.Flatten() {
+				hash := tx.Hash()
+				if needRemoved || tx.GasPrice().Cmp(pool.gasPrice) < 0 {
+					if needRemoved {
+						logger.Trace("Demoting the transaction due to the previous transaction that has lower gas price than baseFee", "txhash", hash)
+					} else {
+						needRemoved = true
+						logger.Trace("Demoting the transaction that has lower gas price than baseFee", "txhash", hash)
+					}
+					list.Remove(tx)
+					pool.enqueueTx(hash, tx)
+				}
 			}
 		}
 

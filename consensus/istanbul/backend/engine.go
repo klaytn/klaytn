@@ -47,10 +47,10 @@ import (
 )
 
 const (
-	//checkpointInterval = 1024 // Number of blocks after which to save the vote snapshot to the database
-	//inmemorySnapshots  = 128  // Number of recent vote snapshots to keep in memory
-	//inmemoryPeers      = 40
-	//inmemoryMessages   = 1024
+	// checkpointInterval = 1024 // Number of blocks after which to save the vote snapshot to the database
+	// inmemorySnapshots  = 128  // Number of recent vote snapshots to keep in memory
+	// inmemoryPeers      = 40
+	// inmemoryMessages   = 1024
 
 	checkpointInterval = 1024 // Number of blocks after which to save the vote snapshot to the database
 	inmemorySnapshots  = 496  // Number of recent vote snapshots to keep in memory
@@ -90,6 +90,7 @@ var (
 	// errMismatchTxhashes is returned if the TxHash in header is mismatch.
 	errMismatchTxhashes = errors.New("mismatch transactions hashes")
 )
+
 var (
 	defaultBlockScore = big.NewInt(1)
 	now               = time.Now
