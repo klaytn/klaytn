@@ -645,7 +645,7 @@ func (bm *BridgeManager) GetAllBridge() []*BridgeJournal {
 	bm.journal.cacheMu.RLock()
 	defer bm.journal.cacheMu.RUnlock()
 
-	var gwjs []*BridgeJournal
+	gwjs := make([]*BridgeJournal, len(bm.journal.cache))
 	for _, journal := range bm.journal.cache {
 		gwjs = append(gwjs, journal)
 	}
