@@ -331,7 +331,8 @@ func (l *txList) Filter(sender common.Address, pool *TxPool) (types.Transactions
 			// Handling the special case when the sender and fee payer are the same.
 			if sender == feePayer {
 				return senderBalance.Cmp(tx.Cost()) < 0
-			} else if isRatioTx {
+			}
+			if isRatioTx {
 				feeByFeePayer, feeBySender := types.CalcFeeWithRatio(feeRatio, tx.Fee())
 				return senderBalance.Cmp(new(big.Int).Add(tx.Value(), feeBySender)) < 0 || feePayerBalance.Cmp(feeByFeePayer) < 0
 			} else {
