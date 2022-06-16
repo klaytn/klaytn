@@ -50,8 +50,9 @@ func init() {
 }
 
 var (
-	lock   sync.Mutex
-	setter *govSetter
+	lock                      sync.Mutex
+	setter                    *govSetter
+	testStakingUpdateInterval = uint64(4)
 )
 
 // govSetter sets governance items for testing purpose
@@ -73,7 +74,7 @@ func setTestGovernance() {
 		}
 
 		reward.SetTestStakingManagerWithDB(database.NewMemoryDBManager())
-		params.SetStakingUpdateInterval(4)
+		params.SetStakingUpdateInterval(testStakingUpdateInterval)
 	}
 	setter.numTesting += 1
 }
@@ -166,7 +167,6 @@ func (dl *downloadTester) makeStakingInfoData(blockNumber uint64) (*reward.Staki
 // On every 4th block, staking information is updated to allow testing staking info
 // downloading as well.
 func (dl *downloadTester) makeChain(n int, seed byte, parent *types.Block, parentReceipts types.Receipts, heavy bool) ([]common.Hash, map[common.Hash]*types.Header, map[common.Hash]*types.Block, map[common.Hash]types.Receipts, map[common.Hash]*reward.StakingInfo) {
-	stakingInterval := uint64(4)
 	stakingUpdatedBlocks := make(map[uint64]*reward.StakingInfo)
 	// Generate the block chain
 	blocks, receipts := blockchain.GenerateChain(params.TestChainConfig, parent, gxhash.NewFaker(), dl.peerDb, n, func(i int, block *blockchain.BlockGen) {
@@ -186,7 +186,7 @@ func (dl *downloadTester) makeChain(n int, seed byte, parent *types.Block, paren
 		}
 
 		blockNum := block.Number().Uint64()
-		if blockNum%stakingInterval == 0 {
+		if blockNum%testStakingUpdateInterval == 0 {
 			si, siBytes := dl.makeStakingInfoData(blockNum)
 			stakingUpdatedBlocks[blockNum] = si
 			dl.peerDb.WriteStakingInfo(blockNum, siBytes)
@@ -206,7 +206,7 @@ func (dl *downloadTester) makeChain(n int, seed byte, parent *types.Block, paren
 	receiptm[parent.Hash()] = parentReceipts
 
 	stakingInfom := make(map[common.Hash]*reward.StakingInfo)
-	if parent.NumberU64()%stakingInterval == 0 {
+	if parent.NumberU64()%testStakingUpdateInterval == 0 {
 		si, siBytes := dl.makeStakingInfoData(parent.NumberU64())
 		stakingInfom[parent.Hash()] = si
 		dl.peerDb.WriteStakingInfo(parent.NumberU64(), siBytes)
@@ -217,7 +217,7 @@ func (dl *downloadTester) makeChain(n int, seed byte, parent *types.Block, paren
 		headerm[b.Hash()] = b.Header()
 		blockm[b.Hash()] = b
 		receiptm[b.Hash()] = receipts[i]
-		if b.NumberU64()%uint64(stakingInterval) == 0 {
+		if b.NumberU64()%testStakingUpdateInterval == 0 {
 			stakingInfom[b.Hash()] = stakingUpdatedBlocks[b.NumberU64()]
 		}
 	}
@@ -744,7 +744,7 @@ func assertOwnForkedChain(t *testing.T, tester *downloadTester, common int, leng
 		receipts += length - common - fsMinFullBlocks
 		stakingInfos += length - common - fsMinFullBlocks
 	}
-	stakingInfos = stakingInfos / 4 // assuming that staking information update interval is 4
+	stakingInfos = stakingInfos / int(testStakingUpdateInterval) // assuming that staking information update interval is 4
 	switch tester.downloader.getMode() {
 	case FullSync:
 		receipts, stakingInfos = 1, 0
