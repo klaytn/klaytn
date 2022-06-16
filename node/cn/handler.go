@@ -33,12 +33,13 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/klaytn/klaytn/consensus/istanbul"
+
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus"
-	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/datasync/downloader"
 	"github.com/klaytn/klaytn/datasync/fetcher"
@@ -531,13 +532,13 @@ func (pm *ProtocolManager) processMsg(msgCh <-chan p2p.Msg, p Peer, addr common.
 func (pm *ProtocolManager) processConsensusMsg(msgCh <-chan p2p.Msg, p Peer, addr common.Address, errCh chan<- error) {
 	for msg := range msgCh {
 		if handler, ok := pm.engine.(consensus.Handler); ok {
-			_, err := handler.HandleMsg(addr, msg)
 			// if msg is istanbul msg, handled is true and err is nil if handle msg is successful.
-			if err == istanbul.ErrStoppedEngine {
+			if _, err := handler.HandleMsg(addr, msg); err != nil {
 				p.GetP2PPeer().Log().Warn("ProtocolManager failed to handle consensus message. This can happen during block synchronization.", "msg", msg, "err", err)
-			} else if err != nil {
-				errCh <- err
-				return
+				if err != istanbul.ErrStoppedEngine {
+					errCh <- err
+					return
+				}
 			}
 		}
 		msg.Discard()
