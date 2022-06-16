@@ -151,6 +151,7 @@ func TestRewardDistributor_TxFeeBurning(t *testing.T) {
 		assert.Equal(t, testCase.expectedTotalTxFee.Uint64(), burnedTxFee.Uint64())
 	}
 }
+
 func TestRewardDistributor_MintKLAY(t *testing.T) {
 	BalanceAdder := newTestBalanceAdder()
 	header := &types.Header{}

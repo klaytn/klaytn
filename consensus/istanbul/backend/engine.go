@@ -421,8 +421,8 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 // Note, the block header and state database might be updated to reflect any
 // consensus rules that happen at finalization (e.g. block rewards).
 func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
-	receipts []*types.Receipt) (*types.Block, error) {
-
+	receipts []*types.Receipt,
+) (*types.Block, error) {
 	// We can assure that if the kip71 hard forked block should have the field of base fee
 	if chain.Config().IsKIP71ForkEnabled(header.Number) {
 		if header.BaseFee == nil {
