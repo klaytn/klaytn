@@ -172,11 +172,11 @@ func (sb *backend) computeSignatureAddrs(header *types.Header) error {
 // given engine. Verifying the seal may be done optionally here, or explicitly
 // via the VerifySeal method.
 func (sb *backend) VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool) error {
-        parents := []*types.Header{}
-        number := header.Number.Uint64()
-        if number > 0 {
-                parents = append(parents, chain.GetHeader(header.ParentHash, number-1))
-        }
+	parents := []*types.Header{}
+	number := header.Number.Uint64()
+	if number > 0 {
+		parents = append(parents, chain.GetHeader(header.ParentHash, number-1))
+	}
 	return sb.verifyHeader(chain, header, parents)
 }
 
