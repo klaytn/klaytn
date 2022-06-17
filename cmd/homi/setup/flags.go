@@ -22,9 +22,11 @@ import (
 	"gopkg.in/urfave/cli.v1"
 )
 
-var fundingAddr string
-var dockerImageId string
-var outputPath string
+var (
+	fundingAddr   string
+	dockerImageId string
+	outputPath    string
+)
 
 var (
 	cypressTestFlag = cli.BoolFlag{

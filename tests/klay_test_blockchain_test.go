@@ -51,9 +51,7 @@ const transactionsJournalFilename = "transactions.rlp"
 // If you don't want to remove 'chaindata', set removeChaindataOnExit = false
 const removeChaindataOnExit = true
 
-var (
-	errEmptyPending = errors.New("pending is empty")
-)
+var errEmptyPending = errors.New("pending is empty")
 
 type BCData struct {
 	bc                 *blockchain.BlockChain
@@ -69,8 +67,10 @@ type BCData struct {
 	rewardDistributor  *reward.RewardDistributor
 }
 
-var dir = "chaindata"
-var nodeAddr = common.StringToAddress("nodeAddr")
+var (
+	dir      = "chaindata"
+	nodeAddr = common.StringToAddress("nodeAddr")
+)
 
 func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 	if numValidators > maxAccounts {
@@ -126,9 +126,11 @@ func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 	governance.AddGovernanceCacheForTest(gov, 0, genesis.Config)
 	rewardDistributor := reward.NewRewardDistributor(gov)
 
-	return &BCData{bc, addrs, privKeys, chainDb,
+	return &BCData{
+		bc, addrs, privKeys, chainDb,
 		&genesisAddr, validatorAddresses,
-		validatorPrivKeys, engine, genesis, gov, rewardDistributor}, nil
+		validatorPrivKeys, engine, genesis, gov, rewardDistributor,
+	}, nil
 }
 
 func (bcdata *BCData) Shutdown() {
@@ -235,7 +237,8 @@ func (bcdata *BCData) MineABlock(transactions types.Transactions, signer types.S
 }
 
 func (bcdata *BCData) GenABlock(accountMap *AccountMap, opt *testOption,
-	numTransactions int, prof *profile.Profiler) error {
+	numTransactions int, prof *profile.Profiler,
+) error {
 	// Make a set of transactions
 	start := time.Now()
 	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
@@ -249,7 +252,8 @@ func (bcdata *BCData) GenABlock(accountMap *AccountMap, opt *testOption,
 }
 
 func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockchain.TxPool,
-	prof *profile.Profiler) error {
+	prof *profile.Profiler,
+) error {
 	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
 
 	pending, err := txpool.Pending()
@@ -312,7 +316,7 @@ func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockc
 
 	// Apply reward
 	start = time.Now()
-	if err := bcdata.rewardDistributor.MintKLAY(accountMap, header, false); err != nil {
+	if err := bcdata.rewardDistributor.MintKLAY(accountMap, header); err != nil {
 		return err
 	}
 	prof.Profile("main_apply_reward", time.Now().Sub(start))
@@ -332,8 +336,8 @@ func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockc
 }
 
 func (bcdata *BCData) GenABlockWithTransactions(accountMap *AccountMap, transactions types.Transactions,
-	prof *profile.Profiler) error {
-
+	prof *profile.Profiler,
+) error {
 	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
 
 	statedb, err := bcdata.bc.State()
@@ -377,7 +381,7 @@ func (bcdata *BCData) GenABlockWithTransactions(accountMap *AccountMap, transact
 
 	// Apply reward
 	start = time.Now()
-	if err := bcdata.rewardDistributor.MintKLAY(accountMap, b.Header(), false); err != nil {
+	if err := bcdata.rewardDistributor.MintKLAY(accountMap, b.Header()); err != nil {
 		return err
 	}
 	prof.Profile("main_apply_reward", time.Now().Sub(start))
@@ -401,9 +405,11 @@ func NewDatabase(dir string, dbType database.DBType) database.DBManager {
 	if dir == "" {
 		return database.NewMemoryDBManager()
 	} else {
-		dbc := &database.DBConfig{Dir: dir, DBType: dbType, LevelDBCacheSize: 768,
+		dbc := &database.DBConfig{
+			Dir: dir, DBType: dbType, LevelDBCacheSize: 768,
 			OpenFilesLimit: 1024, SingleDB: false, NumStateTrieShards: 4, ParallelDBWrite: true,
-			LevelDBCompression: database.AllNoCompression, LevelDBBufferPool: true}
+			LevelDBCompression: database.AllNoCompression, LevelDBBufferPool: true,
+		}
 		return database.NewDBManager(dbc)
 	}
 }
@@ -428,8 +434,8 @@ func prepareIstanbulExtra(validators []common.Address) ([]byte, error) {
 }
 
 func initBlockChain(db database.DBManager, cacheConfig *blockchain.CacheConfig, coinbaseAddrs []*common.Address, validators []common.Address,
-	genesis *blockchain.Genesis, engine consensus.Engine) (*blockchain.BlockChain, *blockchain.Genesis, error) {
-
+	genesis *blockchain.Genesis, engine consensus.Engine,
+) (*blockchain.BlockChain, *blockchain.Genesis, error) {
 	extraData, err := prepareIstanbulExtra(validators)
 
 	if genesis == nil {
@@ -437,7 +443,7 @@ func initBlockChain(db database.DBManager, cacheConfig *blockchain.CacheConfig, 
 		genesis.Config = Forks["Byzantium"]
 		genesis.ExtraData = extraData
 		genesis.BlockScore = big.NewInt(1)
-		genesis.Config.Governance = params.GetDefaultGovernanceConfig(params.UseIstanbul)
+		genesis.Config.Governance = params.GetDefaultGovernanceConfig()
 		genesis.Config.Istanbul = params.GetDefaultIstanbulConfig()
 		genesis.Config.UnitPrice = 25 * params.Ston
 	}

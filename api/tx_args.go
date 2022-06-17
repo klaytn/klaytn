@@ -51,10 +51,10 @@ var (
 // isTxField checks whether the string is a field name of the specific txType.
 // isTxField[txType][txFieldName] has true/false.
 var isTxField = func() map[types.TxType]map[string]bool {
-	var mapOfFieldMap = map[types.TxType]map[string]bool{}
-	var internalDataTypes = map[types.TxType]interface{}{
+	mapOfFieldMap := map[types.TxType]map[string]bool{}
+	internalDataTypes := map[types.TxType]interface{}{
 		// since legacy tx has optional fields, some fields can be omitted
-		//types.TxTypeLegacyTransaction:                           types.TxInternalDataLegacy{},
+		// types.TxTypeLegacyTransaction:                           types.TxInternalDataLegacy{},
 		types.TxTypeValueTransfer:                               types.TxInternalDataValueTransfer{},
 		types.TxTypeFeeDelegatedValueTransfer:                   types.TxInternalDataFeeDelegatedValueTransfer{},
 		types.TxTypeFeeDelegatedValueTransferWithRatio:          types.TxInternalDataFeeDelegatedValueTransferWithRatio{},
@@ -152,6 +152,7 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 	}
 	// For the transaction that do not use the gasPrice field, the default value of gasPrice is not set.
 	if args.Price == nil && *args.TypeInt != types.TxTypeEthereumDynamicFee {
+		// TODO-Klaytn: needs to be fixed to double the BaseFee
 		price, err := b.SuggestPrice(ctx)
 		if err != nil {
 			return err
@@ -387,7 +388,6 @@ func (args *ValueTransferTxArgs) toTransaction() (*types.Transaction, error) {
 		types.TxValueKeyTo:       args.To,
 		types.TxValueKeyAmount:   (*big.Int)(args.Value),
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -440,7 +440,6 @@ func (args *AccountUpdateTxArgs) toTransaction() (*types.Transaction, error) {
 		types.TxValueKeyFrom:       args.From,
 		types.TxValueKeyAccountKey: serializer.GetKey(),
 	})
-
 	if err != nil {
 		return nil, err
 	}

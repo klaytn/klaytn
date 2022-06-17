@@ -99,7 +99,7 @@ func TestSubBridge_basic(t *testing.T) {
 	}
 	defer sBridge.Stop()
 
-	//TODO more test
+	// TODO more test
 }
 
 // TestSubBridge_removePeer tests correct removal of a peer from `SubBridge.peers`.

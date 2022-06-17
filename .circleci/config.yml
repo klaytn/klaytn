@@ -27,7 +27,7 @@ executors:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
       - image: klaytn/build_base:1.2-go.1.18-solc0.8.13
-      - image: localstack/localstack:0.11.5
+      - image: localstack/localstack:0.13.0
       - image: circleci/redis:6.0.8-alpine
       - name: zookeeper
         image: wurstmeister/zookeeper
@@ -291,7 +291,22 @@ commands:
           command : |
             curl --data '{"text": "❌ Job *'$CIRCLE_JOB'* failed on *'$CIRCLE_BRANCH'*. Please see '$CIRCLE_BUILD_URL' for details."}' "$SLACK_WEBHOOK_URL"
           when: on_fail
-
+  run-rpc:
+    steps:
+      - run:
+          name: "Run rpc-tester on 1CN private network"
+          no_output_timeout: 30m
+          command: |
+            make kcn 
+            git clone https://$TEST_TOKEN@github.com/klaytn/klaytn-rpc-tester.git
+            cd klaytn-rpc-tester
+            cp ../build/bin/kcn script/cn/bin/
+            cd script
+            ./set_CNonly.sh
+            cd ..
+            pip3 install -r requirements.txt
+            cp config_template.json config.json
+            python3 main.py --protocol rpc
 jobs:
   build:
     machine:
@@ -338,6 +353,15 @@ jobs:
           no_output_timeout: 30m
           command: make test-networks
 
+  test-node:
+    executor: test-executor
+    steps:
+      - checkout
+      - run:
+          name: "Run test node"
+          no_output_timeout: 30m
+          command: make test-node
+
   test-tests:
     executor: test-executor
     steps:
@@ -360,6 +384,14 @@ jobs:
           no_output_timeout: 30m
           command: |
             make test-others
+
+  test-rpc:
+    executor: test-executor
+    steps:
+      - checkout
+      - install-golang
+      - pre-build
+      - run-rpc
 
   pass-tests:
     executor: default
@@ -413,6 +445,16 @@ jobs:
       - notify-success
       - store_artifacts:
           path: /tmp/linter_reports
+  
+  rpc-tester-report:
+    executor: test-executor
+    steps:
+      - checkout
+      - install-golang
+      - pre-build
+      - run-rpc
+      - notify-failure
+      - notify-success
 
   packaging-linux:
     machine: 
@@ -521,6 +563,8 @@ workflows:
           filters: *filter-version-not-release
       - test-networks:
           filters: *filter-version-not-release
+      - test-node:
+          filters: *filter-version-not-release
       - test-tests:
           filters: *filter-version-not-release
       - test-others:
@@ -533,12 +577,15 @@ workflows:
               only: /^v[0-9]+\.[0-9]+\.[0-9]+/
             branches:
               ignore: /.*/
+      - test-rpc:
+         filters: *filter-only-version-tag
 
       - pass-tests:
           requires:
             - build
             - test-datasync
             - test-networks
+            - test-node
             - test-tests
             - test-others
             - tag-verify
@@ -649,4 +696,13 @@ workflows:
               only: dev
     jobs:
       - linters
-
+  
+  nightly-rpc:
+    triggers:
+      - schedule:
+          cron: "0 20 * * *"
+          filters:
+            branches:
+              only: dev
+    jobs:
+      - rpc-tester-report

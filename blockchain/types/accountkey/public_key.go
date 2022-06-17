@@ -94,7 +94,8 @@ func (p *PublicKeySerializable) MarshalJSON() ([]byte, error) {
 		return nil, errNotS256Curve
 	}
 	return json.Marshal(&publicKeySerializableInternalJSON{
-		(*hexutil.Big)(p.X), (*hexutil.Big)(p.Y)})
+		(*hexutil.Big)(p.X), (*hexutil.Big)(p.Y),
+	})
 }
 
 // UnmarshalJSON decodes PublicKeySerializable using JSON.

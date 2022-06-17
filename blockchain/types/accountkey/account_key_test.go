@@ -31,7 +31,7 @@ import (
 )
 
 func TestAccountKeySerialization(t *testing.T) {
-	var keys = []struct {
+	keys := []struct {
 		Name string
 		k    AccountKey
 	}{
@@ -43,7 +43,7 @@ func TestAccountKeySerialization(t *testing.T) {
 		{"RoleBased", genAccountKeyRoleBased()},
 	}
 
-	var testcases = []struct {
+	testcases := []struct {
 		Name string
 		fn   func(t *testing.T, k AccountKey)
 	}{
@@ -241,8 +241,16 @@ func TestAccountKeyWeightedMultiSig_SigValidationGas(t *testing.T) {
 		expectChargedKeyNumBeforeHF uint64
 		expectChargedKeyNumAfterHf  uint64
 	}{
-		{1, 5, 1}, {2, 5, 2}, {3, 5, 3}, {4, 5, 4}, {5, 5, 5},
-		{6, 5, 6}, {7, 5, 7}, {8, 5, 8}, {9, 5, 9}, {10, 5, 10},
+		{1, 5, 1},
+		{2, 5, 2},
+		{3, 5, 3},
+		{4, 5, 4},
+		{5, 5, 5},
+		{6, 5, 6},
+		{7, 5, 7},
+		{8, 5, 8},
+		{9, 5, 9},
+		{10, 5, 10},
 	}
 
 	// do test

@@ -19,7 +19,7 @@ func getTestConfig(forkedBlockNum *big.Int) *params.ChainConfig {
 	return testConfig
 }
 
-func TestCalcBaseFee(t *testing.T) {
+func TestNextBlockBaseFee(t *testing.T) {
 	tests := []struct {
 		parentBaseFee int64
 		parentGasUsed uint64
@@ -35,81 +35,81 @@ func TestCalcBaseFee(t *testing.T) {
 			GasUsed: test.parentGasUsed,
 			BaseFee: big.NewInt(test.parentBaseFee),
 		}
-		if have, want := CalcBaseFee(parent, getTestConfig(big.NewInt(3))), big.NewInt(test.nextBaseFee); have.Cmp(want) != 0 {
+		if have, want := NextBlockBaseFee(parent, getTestConfig(big.NewInt(3))), big.NewInt(test.nextBaseFee); have.Cmp(want) != 0 {
 			t.Errorf("test %d: have %d  want %d, ", i, have, want)
 		}
 	}
 }
 
-func TestBlockNumReachDoubleBaseFee(t *testing.T) {
-	blockNum := 0
-	parentBaseFee := big.NewInt(25000000000)
-	for i := 0; i < 15; i++ {
-		parent := &types.Header{
-			Number:  common.Big3,
-			GasUsed: 84000000,
-			BaseFee: parentBaseFee,
-		}
-		parentBaseFee = CalcBaseFee(parent, getTestConfig(big.NewInt(3)))
-		blockNum = i
-		// t.Logf("test %d: have %d, ", i, parentBaseFee)
+type BaseFeeTestCase struct {
+	genesisParentBaseFee *big.Int
+	hardforkedNum        *big.Int
+	GasUsed              uint64
+	compMethod           func(*big.Int, *big.Int) bool
+	expectedBaseFee      *big.Int
+	expectedNum          int
+}
+
+func TestBlocksToReachExpectedBaseFee(t *testing.T) {
+	testCases := []BaseFeeTestCase{
+		{
+			big.NewInt(25000000000),
+			common.Big3,
+			84000000,
+			func(a *big.Int, b *big.Int) bool { return a.Cmp(b) > 0 },
+			big.NewInt(25000000000 * 2),
+			15,
+		},
+		{
+			big.NewInt(60000000000),
+			common.Big3,
+			29000000,
+			func(a *big.Int, b *big.Int) bool { return a.Cmp(b) < 0 },
+			big.NewInt(60000000000 / 2),
+			416,
+		},
+		{
+			big.NewInt(25000000000),
+			common.Big3,
+			84000000,
+			func(a *big.Int, b *big.Int) bool { return a.Cmp(b) == 0 },
+			big.NewInt(750000000000),
+			70,
+		},
+		{
+			big.NewInt(750000000000),
+			common.Big3,
+			29000000,
+			func(a *big.Int, b *big.Int) bool { return a.Cmp(b) == 0 },
+			big.NewInt(25000000000),
+			2040,
+		},
 	}
-	if parentBaseFee.Cmp(big.NewInt(25000000000*2)) < 0 {
-		t.Errorf("block number %d: have %d want < %d", blockNum, parentBaseFee, 25000000000*2)
+
+	for _, testCase := range testCases {
+		blocksToReachExpectedBaseFee(t, testCase)
 	}
 }
 
-func TestBlockNumReachHalfBaseFee(t *testing.T) {
+func blocksToReachExpectedBaseFee(t *testing.T, testCase BaseFeeTestCase) {
+	testConfig := getTestConfig(big.NewInt(3))
 	blockNum := 0
-	parentBaseFee := big.NewInt(60000000000)
-	for i := 0; i < 749; i++ {
+	parentBaseFee := testCase.genesisParentBaseFee
+	for {
+		blockNum++
 		parent := &types.Header{
-			Number:  common.Big3,
-			GasUsed: 29000000,
+			Number:  testCase.hardforkedNum,
+			GasUsed: testCase.GasUsed,
 			BaseFee: parentBaseFee,
 		}
-		parentBaseFee = CalcBaseFee(parent, getTestConfig(big.NewInt(3)))
-		blockNum = i
-		// t.Logf("test %d: have %d, ", i, parentBaseFee)
-	}
-	if parentBaseFee.Cmp(big.NewInt(60000000000/2)) > 0 {
-		t.Errorf("block number %d: have %d want > %d", blockNum, parentBaseFee, 60000000000/2)
-	}
-}
+		parentBaseFee = NextBlockBaseFee(parent, testConfig)
 
-func TestBlockNumReacheLowerToMaxBaseFee(t *testing.T) {
-	blockNum := 0
-	parentBaseFee := big.NewInt(25000000000)
-	for i := 0; i < 70; i++ {
-		parent := &types.Header{
-			Number:  common.Big3,
-			GasUsed: 84000000,
-			BaseFee: parentBaseFee,
+		if testCase.compMethod(parentBaseFee, testCase.expectedBaseFee) {
+			break
 		}
-		parentBaseFee = CalcBaseFee(parent, getTestConfig(big.NewInt(3)))
-		blockNum = i
-		// t.Logf("test %d: have %d, ", i, parentBaseFee)
 	}
-	if parentBaseFee.Cmp(big.NewInt(750000000000)) != 0 {
-		t.Errorf("block number %d: have %d want %d", blockNum, parentBaseFee, 750000000000)
-	}
-}
-
-func TestBlockNumReachMaxToLowerBaseFee(t *testing.T) {
-	blockNum := 0
-	parentBaseFee := big.NewInt(750000000000)
-	for i := 0; i < 2040; i++ {
-		parent := &types.Header{
-			Number:  common.Big3,
-			GasUsed: 29000000,
-			BaseFee: parentBaseFee,
-		}
-		parentBaseFee = CalcBaseFee(parent, getTestConfig(big.NewInt(3)))
-		blockNum = i
-		// t.Logf("test %d: have %d, ", i, parentBaseFee)
-	}
-	if parentBaseFee.Cmp(big.NewInt(25000000000)) != 0 {
-		t.Errorf("block number %d: have %d want %d", blockNum, parentBaseFee, 25000000000)
+	if blockNum != int(testCase.expectedNum) {
+		t.Errorf("block number %d expected block number %d, have %d didn't reach to %d", blockNum, testCase.expectedNum, parentBaseFee, testCase.expectedBaseFee)
 	}
 }
 
@@ -120,7 +120,7 @@ func TestInactieDynamicPolicyBeforeForkedBlock(t *testing.T) {
 		GasUsed: 84000000,
 		BaseFee: parentBaseFee,
 	}
-	nextBaseFee := CalcBaseFee(parent, getTestConfig(big.NewInt(5)))
+	nextBaseFee := NextBlockBaseFee(parent, getTestConfig(big.NewInt(5)))
 	if parentBaseFee.Cmp(nextBaseFee) < 0 {
 		t.Errorf("before fork, dynamic base fee policy should be inactive, current base fee: %d  next base fee: %d", parentBaseFee, nextBaseFee)
 	}
@@ -133,7 +133,7 @@ func TestActieDynamicPolicyAfterForkedBlock(t *testing.T) {
 		GasUsed: 84000000,
 		BaseFee: parentBaseFee,
 	}
-	nextBaseFee := CalcBaseFee(parent, getTestConfig(big.NewInt(2)))
+	nextBaseFee := NextBlockBaseFee(parent, getTestConfig(big.NewInt(2)))
 	if parentBaseFee.Cmp(nextBaseFee) > 0 {
 		t.Errorf("after fork, dynamic base fee policy should be active, current base fee: %d  next base fee: %d", parentBaseFee, nextBaseFee)
 	}

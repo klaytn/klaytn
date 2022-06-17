@@ -96,6 +96,7 @@ func (governance *testGovernance) setTestGovernance(epoch uint64, mintingAmount 
 	governance.epoch = epoch
 	governance.mintingAmount = mintingAmount
 	governance.ratio = ratio
+	governance.unitPrice = unitprice
 	governance.useGiniCoeff = useGiniCoeff
 	governance.deferredTxFee = deferredTxFee
 	governance.unitPrice = unitprice

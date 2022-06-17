@@ -29,7 +29,7 @@ import (
 )
 
 func TestFeeHistory(t *testing.T) {
-	var cases = []struct {
+	cases := []struct {
 		maxHeader, maxBlock int
 		count               int
 		last                rpc.BlockNumber

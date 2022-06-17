@@ -240,7 +240,7 @@ func makeHeader(chain consensus.ChainReader, parent *types.Block, state *state.S
 		Time:   time,
 	}
 	if chain.Config().IsKIP71ForkEnabled(header.Number) {
-		header.BaseFee = misc.CalcBaseFee(parent.Header(), chain.Config())
+		header.BaseFee = misc.NextBlockBaseFee(parent.Header(), chain.Config())
 	}
 	return header
 }

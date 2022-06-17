@@ -669,7 +669,7 @@ func getTestVotingPowers(num int) []uint64 {
 
 func getTestConfig() *params.ChainConfig {
 	config := params.TestChainConfig
-	config.Governance = params.GetDefaultGovernanceConfig(params.UseIstanbul)
+	config.Governance = params.GetDefaultGovernanceConfig()
 	config.Istanbul = params.GetDefaultIstanbulConfig()
 	return config
 }
@@ -838,7 +838,7 @@ func newTestValidatorSet(n int, policy istanbul.ProposerPolicy) (istanbul.Valida
 		addrs[i] = crypto.PubkeyToAddress(privateKey.PublicKey)
 	}
 	vset := validator.NewSet(addrs, policy)
-	sort.Sort(keys) //Keys need to be sorted by its public key address
+	sort.Sort(keys) // Keys need to be sorted by its public key address
 	return vset, keys
 }
 
@@ -850,7 +850,7 @@ func TestSign(t *testing.T) {
 		t.Errorf("error mismatch: have %v, want nil", err)
 	}
 
-	//Check signature recover
+	// Check signature recover
 	hashData := crypto.Keccak256([]byte(testSigningData))
 	pubkey, _ := crypto.Ecrecover(hashData, sig)
 	actualSigner := common.BytesToAddress(crypto.Keccak256(pubkey[1:])[12:])

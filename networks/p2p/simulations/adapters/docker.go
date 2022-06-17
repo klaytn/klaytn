@@ -36,9 +36,7 @@ import (
 	"github.com/klaytn/klaytn/node"
 )
 
-var (
-	ErrLinuxOnly = errors.New("DockerAdapter can only be used on Linux as it uses the current binary (which must be a Linux binary)")
-)
+var ErrLinuxOnly = errors.New("DockerAdapter can only be used on Linux as it uses the current binary (which must be a Linux binary)")
 
 // DockerAdapter is a NodeAdapter which runs simulation nodes inside Docker
 // containers.
@@ -162,7 +160,7 @@ func buildDockerImage() error {
 		return err
 	}
 	defer bin.Close()
-	dst, err := os.OpenFile(filepath.Join(dir, "self.bin"), os.O_WRONLY|os.O_CREATE, 0755)
+	dst, err := os.OpenFile(filepath.Join(dir, "self.bin"), os.O_WRONLY|os.O_CREATE, 0o755)
 	if err != nil {
 		return err
 	}
@@ -177,7 +175,7 @@ FROM ubuntu:16.04
 RUN mkdir /data
 ADD self.bin /bin/p2p-node
 	`)
-	if err := ioutil.WriteFile(filepath.Join(dir, "Dockerfile"), dockerfile, 0644); err != nil {
+	if err := ioutil.WriteFile(filepath.Join(dir, "Dockerfile"), dockerfile, 0o644); err != nil {
 		return err
 	}
 

@@ -15,7 +15,7 @@ func VerifyKIP71Header(config *params.ChainConfig, parentHeader, header *types.H
 		return fmt.Errorf("header is missing baseFee")
 	}
 	// Verify the baseFee is correct based on the parent header.
-	expectedBaseFee := CalcBaseFee(parentHeader, config)
+	expectedBaseFee := NextBlockBaseFee(parentHeader, config)
 	if header.BaseFee.Cmp(expectedBaseFee) != 0 {
 		return fmt.Errorf("invalid baseFee: have %s, want %s, parentBaseFee %s, parentGasUsed %d",
 			header.BaseFee, expectedBaseFee, parentHeader.BaseFee, parentHeader.GasUsed)
@@ -23,8 +23,8 @@ func VerifyKIP71Header(config *params.ChainConfig, parentHeader, header *types.H
 	return nil
 }
 
-func CalcBaseFee(parentHeader *types.Header, config *params.ChainConfig) *big.Int {
-	// If the current is the kip71 disabled block, then return default base fee (250ston)
+func NextBlockBaseFee(parentHeader *types.Header, config *params.ChainConfig) *big.Int {
+	// If the parent is the kip71 disabled block or genesis, then return default base fee (250ston)
 	if !config.IsKIP71ForkEnabled(parentHeader.Number) || parentHeader.Number.Cmp(new(big.Int).SetUint64(0)) == 0 {
 		return new(big.Int).SetUint64(config.UnitPrice)
 	}
@@ -32,7 +32,13 @@ func CalcBaseFee(parentHeader *types.Header, config *params.ChainConfig) *big.In
 	// governance parameters
 	lowerBoundBaseFee := new(big.Int).SetUint64(config.Governance.KIP71.LowerBoundBaseFee)
 	upperBoundBaseFee := new(big.Int).SetUint64(config.Governance.KIP71.UpperBoundBaseFee)
-	baseFeeDenominator := new(big.Int).SetUint64(config.Governance.KIP71.BaseFeeDenominator)
+	var baseFeeDenominator *big.Int
+	if config.Governance.KIP71.BaseFeeDenominator == 0 {
+		// To avoid panic, set the fluctuation range small
+		baseFeeDenominator = new(big.Int).SetUint64(64)
+	} else {
+		baseFeeDenominator = new(big.Int).SetUint64(config.Governance.KIP71.BaseFeeDenominator)
+	}
 	gasTarget := config.Governance.KIP71.GasTarget
 	upperGasLimit := config.Governance.KIP71.MaxBlockGasUsedForBaseFee
 

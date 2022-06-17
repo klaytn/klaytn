@@ -83,18 +83,58 @@ func Test_isEmptyAddress(t *testing.T) {
 func TestRewardDistributor_getTotalTxFee(t *testing.T) {
 	testCases := []struct {
 		gasUsed            uint64
+		unitPrice          *big.Int
 		baseFee            *big.Int
 		expectedTotalTxFee *big.Int
-		isKIP71Forked      bool
 	}{
-		{0, big.NewInt(25000000000), big.NewInt(0), false},
-		{200000, big.NewInt(25000000000), big.NewInt(5000000000000000), false},
-		{200000, big.NewInt(25000000000), big.NewInt(5000000000000000 / 2), true},
-		{129346, big.NewInt(10000000000), big.NewInt(1293460000000000), false},
-		{129346, big.NewInt(10000000000), big.NewInt(1293460000000000 / 2), true},
-		{9236192, big.NewInt(50000), big.NewInt(461809600000), false},
-		{9236192, big.NewInt(50000), big.NewInt(461809600000 / 2), true},
-		{12936418927364923, big.NewInt(0), big.NewInt(0), false},
+		// before kip71 hardfork
+		{0, big.NewInt(25000000000), nil, big.NewInt(0)},
+		{200000, big.NewInt(25000000000), nil, big.NewInt(5000000000000000)},
+		{200000, big.NewInt(25000000000), nil, big.NewInt(5000000000000000)},
+		{129346, big.NewInt(10000000000), nil, big.NewInt(1293460000000000)},
+		{129346, big.NewInt(10000000000), nil, big.NewInt(1293460000000000)},
+		{9236192, big.NewInt(50000), nil, big.NewInt(461809600000)},
+		{9236192, big.NewInt(50000), nil, big.NewInt(461809600000)},
+		{12936418927364923, big.NewInt(0), nil, big.NewInt(0)},
+		// after kip71 hardfork, unitprice ignored
+		{0, big.NewInt(25000000000), big.NewInt(25000000000), big.NewInt(0)},
+		{200000, big.NewInt(25000000000), big.NewInt(25000000000), big.NewInt(5000000000000000)},
+		{200000, big.NewInt(25000000000), big.NewInt(25000000000), big.NewInt(5000000000000000)},
+		{129346, big.NewInt(25000000000), big.NewInt(10000000000), big.NewInt(1293460000000000)},
+		{129346, big.NewInt(250), big.NewInt(10000000000), big.NewInt(1293460000000000)},
+		{9236192, big.NewInt(9876), big.NewInt(50000), big.NewInt(461809600000)},
+		{9236192, big.NewInt(25000000000), big.NewInt(50000), big.NewInt(461809600000)},
+		{12936418927364923, big.NewInt(25000000000), big.NewInt(0), big.NewInt(0)},
+	}
+	rewardDistributor := NewRewardDistributor(newDefaultTestGovernance())
+	rewardConfig := &rewardConfig{}
+
+	header := &types.Header{}
+	for _, testCase := range testCases {
+		header.GasUsed = testCase.gasUsed
+		header.BaseFee = testCase.baseFee
+		rewardConfig.unitPrice = testCase.unitPrice
+
+		result := rewardDistributor.getTotalTxFee(header, rewardConfig)
+		assert.Equal(t, testCase.expectedTotalTxFee.Uint64(), result.Uint64())
+	}
+}
+
+func TestRewardDistributor_TxFeeBurning(t *testing.T) {
+	testCases := []struct {
+		gasUsed            uint64
+		unitPrice          *big.Int
+		baseFee            *big.Int
+		expectedTotalTxFee *big.Int
+	}{
+		{0, nil, big.NewInt(25000000000), big.NewInt(0)},
+		{200000, nil, big.NewInt(25000000000), big.NewInt(5000000000000000 / 2)},
+		{200000, nil, big.NewInt(25000000000), big.NewInt(5000000000000000 / 2)},
+		{129346, nil, big.NewInt(10000000000), big.NewInt(1293460000000000 / 2)},
+		{129346, nil, big.NewInt(10000000000), big.NewInt(1293460000000000 / 2)},
+		{9236192, nil, big.NewInt(50000), big.NewInt(461809600000 / 2)},
+		{9236192, nil, big.NewInt(50000), big.NewInt(461809600000 / 2)},
+		{12936418927364923, nil, big.NewInt(0), big.NewInt(0)},
 	}
 	rewardDistributor := NewRewardDistributor(newDefaultTestGovernance())
 	rewardConfig := &rewardConfig{}
@@ -106,8 +146,9 @@ func TestRewardDistributor_getTotalTxFee(t *testing.T) {
 		header.BaseFee = testCase.baseFee
 		rewardConfig.unitPrice = testCase.baseFee
 
-		result, _ := rewardDistributor.getTotalTxFee(header, rewardConfig, testCase.isKIP71Forked)
-		assert.Equal(t, testCase.expectedTotalTxFee.Uint64(), result.Uint64())
+		txFee := rewardDistributor.getTotalTxFee(header, rewardConfig)
+		burnedTxFee := rewardDistributor.txFeeBurning(txFee)
+		assert.Equal(t, testCase.expectedTotalTxFee.Uint64(), burnedTxFee.Uint64())
 	}
 }
 
@@ -120,7 +161,7 @@ func TestRewardDistributor_MintKLAY(t *testing.T) {
 	governance := newDefaultTestGovernance()
 	rewardDistributor := NewRewardDistributor(governance)
 
-	err := rewardDistributor.MintKLAY(BalanceAdder, header, false)
+	err := rewardDistributor.MintKLAY(BalanceAdder, header)
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
@@ -194,6 +235,7 @@ func TestRewardDistributor_DistributeBlockReward(t *testing.T) {
 		epoch              uint64
 		mintingAmount      string
 		ratio              string
+		unitprice          uint64
 		baseFee            *big.Int
 		unitPrice          uint64
 		useGiniCoeff       bool
@@ -201,13 +243,13 @@ func TestRewardDistributor_DistributeBlockReward(t *testing.T) {
 		expectedCnBalance  *big.Int
 		expectedPocBalance *big.Int
 		expectedKirBalance *big.Int
-		isKIP71Forked      bool
 	}{
 		{
 			gasUsed:            100,
 			epoch:              30,
 			mintingAmount:      "50000",
 			ratio:              "40/50/10",
+			unitprice:          500,
 			baseFee:            big.NewInt(500),
 			unitPrice:          25000000000,
 			useGiniCoeff:       true,
@@ -215,7 +257,6 @@ func TestRewardDistributor_DistributeBlockReward(t *testing.T) {
 			expectedCnBalance:  big.NewInt(0).SetUint64(30000),
 			expectedPocBalance: big.NewInt(0).SetUint64(37500),
 			expectedKirBalance: big.NewInt(0).SetUint64(7500),
-			isKIP71Forked:      true,
 		},
 		{
 			gasUsed:            100,
@@ -228,13 +269,13 @@ func TestRewardDistributor_DistributeBlockReward(t *testing.T) {
 			expectedCnBalance:  big.NewInt(0).SetUint64(250000005000 * 4),
 			expectedPocBalance: big.NewInt(0).SetUint64(250000005000 * 5),
 			expectedKirBalance: big.NewInt(0).SetUint64(250000005000),
-			isKIP71Forked:      false,
 		},
 		{
 			gasUsed:            0,
 			epoch:              604800,
 			mintingAmount:      "9600000000000000000",
 			ratio:              "34/54/12",
+			unitprice:          25000000000,
 			baseFee:            big.NewInt(25000000000),
 			unitPrice:          25000000000,
 			useGiniCoeff:       true,
@@ -242,7 +283,6 @@ func TestRewardDistributor_DistributeBlockReward(t *testing.T) {
 			expectedCnBalance:  big.NewInt(0).SetUint64(3264000000000000000),
 			expectedPocBalance: big.NewInt(0).SetUint64(5184000000000000000),
 			expectedKirBalance: big.NewInt(0).SetUint64(1152000000000000000),
-			isKIP71Forked:      true,
 		},
 		{
 			gasUsed:            0,
@@ -255,7 +295,6 @@ func TestRewardDistributor_DistributeBlockReward(t *testing.T) {
 			expectedCnBalance:  big.NewInt(0).SetUint64(0),
 			expectedPocBalance: big.NewInt(0).SetUint64(0),
 			expectedKirBalance: big.NewInt(0).SetUint64(0),
-			isKIP71Forked:      false,
 		},
 	}
 
@@ -273,7 +312,7 @@ func TestRewardDistributor_DistributeBlockReward(t *testing.T) {
 		header.BaseFee = testCase.baseFee
 		rewardDistributor := NewRewardDistributor(governance)
 
-		err := rewardDistributor.DistributeBlockReward(BalanceAdder, header, pocAddress, kirAddress, testCase.isKIP71Forked)
+		err := rewardDistributor.DistributeBlockReward(BalanceAdder, header, pocAddress, kirAddress)
 		if !assert.NoError(t, err) {
 			t.FailNow()
 		}

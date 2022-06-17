@@ -376,7 +376,7 @@ func TestSnaphots(t *testing.T) {
 		last = head
 		snaps.Cap(head, 128) // 130 layers (128 diffs + 1 accumulator + 1 disk)
 	}
-	var cases = []struct {
+	cases := []struct {
 		headRoot     common.Hash
 		limit        int
 		nodisk       bool
@@ -473,7 +473,7 @@ func TestReadStateDuringFlattening(t *testing.T) {
 	snap := snaps.Snapshot(common.HexToHash("0xa3"))
 
 	// Register the testing hook to access the state after flattening
-	var result = make(chan account.Account)
+	result := make(chan account.Account)
 	snaps.onFlatten = func() {
 		// Spin up a thread to read the account from the pre-created
 		// snapshot handler. It's expected to be blocked.

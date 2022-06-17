@@ -51,7 +51,6 @@ func TestLondonSigningWithoutChainID(t *testing.T) {
 		AccessList:   accessList,
 		Recipient:    &addr,
 	}), signer, key)
-
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +77,6 @@ func TestLondonSigningWithChainID(t *testing.T) {
 		Recipient:    &addr,
 		ChainID:      big.NewInt(10),
 	}), signer, key)
-
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,7 +103,6 @@ func TestLondonSigningWithNoBitChainID(t *testing.T) {
 		Recipient:    &addr,
 		ChainID:      new(big.Int),
 	}), signer, key)
-
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -130,7 +127,6 @@ func TestEIP2930SigningWithoutChainID(t *testing.T) {
 		AccessList:   accessList,
 		Recipient:    &addr,
 	}), signer, key)
-
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -156,7 +152,6 @@ func TestEIP2930SigningWithChainID(t *testing.T) {
 		Recipient:    &addr,
 		ChainID:      big.NewInt(10),
 	}), signer, key)
-
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -182,7 +177,6 @@ func TestEIP2930SigningWithNoBitChainID(t *testing.T) {
 		Recipient:    &addr,
 		ChainID:      new(big.Int),
 	}), signer, key)
-
 	if err != nil {
 		t.Fatal(err)
 	}

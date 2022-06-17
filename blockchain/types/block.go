@@ -69,7 +69,7 @@ type Header struct {
 	Governance []byte `json:"governanceData"            gencodec:"required"`
 	Vote       []byte `json:"voteData,omitempty"`
 
-	BaseFee *big.Int `json:"baseFeePerGas"    rlp:"optional"`
+	BaseFee *big.Int `json:"baseFeePerGas,omitempty"    rlp:"optional"`
 }
 
 // field type overrides for gencodec

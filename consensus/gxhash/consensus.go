@@ -31,7 +31,6 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus"
-	"github.com/klaytn/klaytn/consensus/misc"
 	"github.com/klaytn/klaytn/params"
 )
 
@@ -181,15 +180,6 @@ func (gxhash *Gxhash) verifyHeader(chain consensus.ChainReader, header, parent *
 	// Ensure that the header's extra-data section is of a reasonable size
 	if uint64(len(header.Extra)) > params.MaximumExtraDataSize {
 		return fmt.Errorf("extra-data too long: %d > %d", len(header.Extra), params.MaximumExtraDataSize)
-	}
-	// TODO-klaytn header verify before/after kip71 fork
-	if !chain.Config().IsKIP71ForkEnabled(header.Number) {
-		// Verify BaseFee not present before EIP-1559 fork.
-		if header.BaseFee != nil {
-			return fmt.Errorf("invalid baseFee before fork: have %d, expected 'nil'", header.BaseFee)
-		}
-	} else if err := misc.VerifyKIP71Header(chain.Config(), parent, header); err != nil {
-		return err
 	}
 
 	// Verify the header's timestamp
