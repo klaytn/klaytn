@@ -717,7 +717,7 @@ func (g *Governance) initializeCache() error {
 		g.currentSet.Import(ret.(map[string]interface{}))
 	}
 
-	// Populate g.initialParams from ChainConfig
+	// Reflect CurrentSet -> g.initialParams
 	if pset, err := params.NewGovParamSetChainConfig(g.ChainConfig); err == nil {
 		g.initialParams = pset
 	} else {
@@ -1154,18 +1154,19 @@ func (gov *Governance) IdxCacheFromDb() []uint64 {
 // Returns the istanbul epoch. This function works even before loading any params
 // from database. We need epoch to load any param from database.
 func (gov *Governance) epochWithFallback() uint64 {
-	// Comes here in most cases
+	// After UpdateParams() is called at least once, Params() should contain the Epoch.
 	if v, ok := gov.Params().Get(params.Epoch); ok {
 		return v.(uint64)
 	}
-	// Useful before first UpdateParam()
+	// Otherwise after initializeCache() is called, initialParams should contain the Epoch.
 	if v, ok := gov.initialParams.Get(params.Epoch); ok {
 		return v.(uint64)
 	}
-	// Useful before initializeCache()
+	// Otherwise fallback to ChainConfig that is supplied to NewGovernance().
 	if gov.ChainConfig.Istanbul != nil {
 		return gov.ChainConfig.Istanbul.Epoch
 	}
+	// We shouldn't reach here because Governance is only relevant with Istanbul engine.
 	logger.Crit("Failed to read governance. ChainConfig.Istanbul == nil")
 	return params.DefaultEpoch // unreachable. just satisfying compiler.
 }
