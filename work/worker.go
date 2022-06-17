@@ -540,7 +540,7 @@ func (self *worker) commitNewWork() {
 	work := self.current
 	if self.nodetype == common.CONSENSUSNODE {
 		if self.config.IsKIP71ForkEnabled(header.Number) {
-			header.BaseFee = misc.CalcBaseFee(parent.Header(), self.config)
+			header.BaseFee = misc.NextBlockBaseFee(parent.Header(), self.config)
 			pending = types.FilterTransactionWithBaseFee(pending, header.BaseFee)
 		}
 		txs := types.NewTransactionsByTimeAndNonce(self.current.signer, pending)
