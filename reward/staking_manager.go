@@ -242,6 +242,7 @@ func StakingManagerUnsubscribe() {
 	stakingManager.chainHeadSub.Unsubscribe()
 }
 
+// TODO-Klaytn-Reward the following methods are used for testing purpose, it needs to be moved into test files.
 // SetTestStakingManagerWithDB sets the staking manager with the given database.
 // Note that this method is used only for testing purpose.
 func SetTestStakingManagerWithDB(testDB stakingInfoDB) {
