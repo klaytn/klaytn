@@ -54,7 +54,7 @@ func NewEVMContext(msg Message, header *types.Header, chain ChainContext, author
 	} else {
 		beneficiary = *author
 	}
-	// bafore kip71 hardfork, base fee is 0, effectiveGasPrice is unitPrice
+	// before kip71 hardfork, base fee is 0, effectiveGasPrice is unitPrice
 	if header.BaseFee != nil {
 		baseFee = header.BaseFee
 		effectiveGasPrice = header.BaseFee
