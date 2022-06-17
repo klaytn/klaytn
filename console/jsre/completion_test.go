@@ -39,7 +39,7 @@ func TestCompleteKeywords(t *testing.T) {
 		y.someMethod = function override() {};
 	`)
 
-	var tests = []struct {
+	tests := []struct {
 		input string
 		want  []string
 	}{

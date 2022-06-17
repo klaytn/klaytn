@@ -49,6 +49,7 @@ type stateTrieMigrationDB struct {
 func (td *stateTrieMigrationDB) ReadCachedTrieNode(hash common.Hash) ([]byte, error) {
 	return td.ReadCachedTrieNodeFromNew(hash)
 }
+
 func (td *stateTrieMigrationDB) ReadCachedTrieNodePreimage(secureKey []byte) ([]byte, error) {
 	return td.ReadCachedTrieNodePreimageFromNew(secureKey)
 }
@@ -266,6 +267,7 @@ func (st *migrationStats) stateMigrationReport(force bool, pending int, progress
 		st.startTime = now
 	}
 }
+
 func (bc *BlockChain) checkTrieContents(oldDB, newDB *statedb.Database, root common.Hash) ([]common.Address, error) {
 	oldTrie, err := statedb.NewSecureTrie(root, oldDB)
 	if err != nil {
@@ -423,7 +425,8 @@ func (bc *BlockChain) iterateStateTrie(root common.Hash, db state.Database, resu
 // If it receives a nil error, it means a child goroutine is successfully terminated.
 // It also periodically checks and logs warm-up progress.
 func (bc *BlockChain) warmUpChecker(mainTrieDB *statedb.Database, numChildren int,
-	resultCh chan struct{}, errCh chan error) {
+	resultCh chan struct{}, errCh chan error,
+) {
 	defer func() { bc.quitWarmUp = nil }()
 
 	cache := mainTrieDB.TrieNodeCache()
@@ -464,7 +467,7 @@ func (bc *BlockChain) warmUpChecker(mainTrieDB *statedb.Database, numChildren in
 			logged = time.Now()
 
 			updateContext()
-			if percent > 90 { //more than 90%
+			if percent > 90 { // more than 90%
 				close(bc.quitWarmUp)
 				logger.Info("Warm up is completed", context...)
 				return

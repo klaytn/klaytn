@@ -22,12 +22,11 @@ package rpc
 
 import (
 	"encoding/json"
-	"reflect"
-	"sync"
-
 	"fmt"
 	"math"
+	"reflect"
 	"strings"
+	"sync"
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
@@ -70,9 +69,11 @@ type serverRequest struct {
 	err           Error
 }
 
-type serviceRegistry map[string]*service // collection of services
-type callbacks map[string]*callback      // collection of RPC callbacks
-type subscriptions map[string]*callback  // collection of subscription callbacks
+type (
+	serviceRegistry map[string]*service  // collection of services
+	callbacks       map[string]*callback // collection of RPC callbacks
+	subscriptions   map[string]*callback // collection of subscription callbacks
+)
 
 // Server represents a RPC server
 type Server struct {

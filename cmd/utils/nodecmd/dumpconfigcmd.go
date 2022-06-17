@@ -127,8 +127,8 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, klayConfig) {
 	}
 	utils.SetKlayConfig(ctx, stack, &cfg.CN)
 
-	//utils.SetShhConfig(ctx, stack, &cfg.Shh)
-	//utils.SetDashboardConfig(ctx, &cfg.Dashboard)
+	// utils.SetShhConfig(ctx, stack, &cfg.Shh)
+	// utils.SetDashboardConfig(ctx, &cfg.Dashboard)
 
 	return stack, cfg
 }

@@ -35,9 +35,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var (
-	errTest = errors.New("test error")
-)
+var errTest = errors.New("test error")
 
 func testAnchorData() *types.AnchoringDataInternalType0 {
 	return &types.AnchoringDataInternalType0{

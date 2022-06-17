@@ -102,7 +102,7 @@ func (c *core) handleEvents() {
 			case istanbul.MessageEvent:
 				if err := c.handleMsg(ev.Payload); err == nil {
 					c.backend.GossipSubPeer(ev.Hash, c.valSet, ev.Payload)
-					//c.backend.Gossip(c.valSet, ev.Payload)
+					// c.backend.Gossip(c.valSet, ev.Payload)
 				}
 			case backlogEvent:
 				_, src := c.valSet.GetByAddress(ev.src)
@@ -118,7 +118,7 @@ func (c *core) handleEvents() {
 						continue
 					}
 					c.backend.GossipSubPeer(ev.Hash, c.valSet, p)
-					//c.backend.Gossip(c.valSet, p)
+					// c.backend.Gossip(c.valSet, p)
 				}
 			}
 		case ev, ok := <-c.timeoutSub.Chan():

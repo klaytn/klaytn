@@ -30,38 +30,48 @@ type NodeInfo struct {
 }
 
 var BINARY_TYPE = map[string]NodeInfo{
-	CN: {"kcnd",
+	CN: {
+		"kcnd",
 		"Klaytn consensus node daemon",
 		"kcnd is a daemon for Klaytn consensus node (kcn). For more information, please refer to https://docs.klaytn.com.",
 	},
-	PN: {"kpnd",
+	PN: {
+		"kpnd",
 		"Klaytn proxy node daemon",
 		"kpnd is a daemon for Klaytn proxy node (kpn). For more information, please refer to https://docs.klaytn.com.",
 	},
-	EN: {"kend",
+	EN: {
+		"kend",
 		"Klaytn endpoint node daemon",
 		"kend is a daemon for Klaytn endpoint node (ken). For more information, please refer to https://docs.klaytn.com.",
 	},
-	SCN: {"kscnd",
+	SCN: {
+		"kscnd",
 		"Klaytn servicechain consensus node daemon",
 		"kscnd is a daemon for Klaytn servicechain consensus node (kscn). For more information, please refer to https://docs.klaytn.com.",
 	},
-	SPN: {"kspnd",
+	SPN: {
+		"kspnd",
 		"Klaytn servicechain proxy node daemon",
 		"kspnd is a daemon for Klaytn servicechain proxy node (kspn). For more information, please refer to https://docs.klaytn.com.",
 	},
-	SEN: {"ksend",
+	SEN: {
+		"ksend",
 		"Klaytn servicechain endpoint node daemon",
 		"ksend is a daemon for Klaytn servicechain endpoint node (ksen). For more information, please refer to https://docs.klaytn.com.",
 	},
-	BN: {"kbnd",
+	BN: {
+		"kbnd",
 		"Klaytn boot node daemon",
 		"kbnd is a daemon for Klaytn boot node (kbn). For more information, please refer to https://docs.klaytn.com.",
 	},
-	HOMI: {"homi",
+	HOMI: {
+		"homi",
 		"genesis.json generator",
-		"homi is a generator of genesis.json."},
-	GEN: {"kgen",
+		"homi is a generator of genesis.json.",
+	},
+	GEN: {
+		"kgen",
 		"private key generator",
 		"kgen is a generator of private keys.",
 	},

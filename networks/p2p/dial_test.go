@@ -105,6 +105,7 @@ func (t fakeTable) GetNodes(targetType discover.NodeType, max int) []*discover.N
 func (t fakeTable) ReadRandomNodes(buf []*discover.Node, nType discover.NodeType) int {
 	return copy(buf, t)
 }
+
 func (t fakeTable) RetrieveNodes(target common.Hash, nType discover.NodeType, nresults int) []*discover.Node {
 	return nil
 }
@@ -119,6 +120,7 @@ func (t fakeTable) HasBond(id discover.NodeID) bool                          { r
 func (t fakeTable) Bond(pinged bool, id discover.NodeID, addr *net.UDPAddr, tcpPort uint16, nType discover.NodeType) (*discover.Node, error) {
 	return nil, nil
 }
+
 func (t fakeTable) IsAuthorized(id discover.NodeID, ntype discover.NodeType) bool {
 	return true
 }
