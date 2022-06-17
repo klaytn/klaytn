@@ -17,7 +17,6 @@
 package reward
 
 import (
-	"errors"
 	"math/big"
 	"testing"
 
@@ -26,79 +25,38 @@ import (
 )
 
 type testGovernance struct {
-	epoch           uint64
-	mintingAmount   string
-	ratio           string
-	unitPrice       uint64
-	useGiniCoeff    bool
-	policy          uint64
-	stakingInterval uint64
-	deferredTxFee   bool
+	p *params.GovParamSet
+}
+
+func newTestGovernance(intMap map[int]interface{}) *testGovernance {
+	p, _ := params.NewGovParamSetIntMap(intMap)
+	return &testGovernance{p}
 }
 
 func newDefaultTestGovernance() *testGovernance {
-	return &testGovernance{
-		epoch:           604800,
-		mintingAmount:   "9600000000000000000",
-		ratio:           "34/54/12",
-		unitPrice:       25000000000,
-		useGiniCoeff:    true,
-		policy:          params.WeightedRandom,
-		stakingInterval: 86400,
-		deferredTxFee:   true,
-	}
+	return newTestGovernance(map[int]interface{}{
+		params.Epoch:               604800,
+		params.Policy:              params.WeightedRandom,
+		params.UnitPrice:           25000000000,
+		params.MintingAmount:       "9600000000000000000",
+		params.Ratio:               "34/54/12",
+		params.UseGiniCoeff:        true,
+		params.DeferredTxFee:       true,
+		params.StakeUpdateInterval: 86400,
+	})
 }
 
-func newTestGovernance(epoch uint64, mintingAmount string, ratio string, unitPrice uint64, useGiniCoeff bool, stakingInterval uint64, deferredTxFee bool) *testGovernance {
-	return &testGovernance{
-		epoch:           epoch,
-		mintingAmount:   mintingAmount,
-		ratio:           ratio,
-		unitPrice:       unitPrice,
-		useGiniCoeff:    useGiniCoeff,
-		stakingInterval: stakingInterval,
-		deferredTxFee:   deferredTxFee,
-	}
+func (governance *testGovernance) Params() *params.GovParamSet {
+	return governance.p
 }
 
-func (governance *testGovernance) Epoch() uint64 {
-	return governance.epoch
+func (governance *testGovernance) ParamsAt(num uint64) (*params.GovParamSet, error) {
+	return governance.p, nil
 }
 
-func (governance *testGovernance) GetItemAtNumberByIntKey(num uint64, key int) (interface{}, error) {
-	switch key {
-	case params.MintingAmount:
-		return governance.mintingAmount, nil
-	case params.Ratio:
-		return governance.ratio, nil
-	case params.UnitPrice:
-		return governance.unitPrice, nil
-	case params.Epoch:
-		return governance.epoch, nil
-	default:
-		return nil, errors.New("Unhandled key on testGovernance")
-	}
-}
-
-func (governance *testGovernance) ProposerPolicy() uint64 {
-	return governance.policy
-}
-
-func (governance *testGovernance) DeferredTxFee() bool {
-	return governance.deferredTxFee
-}
-
-func (governance *testGovernance) StakingUpdateInterval() uint64 {
-	return governance.stakingInterval
-}
-
-func (governance *testGovernance) setTestGovernance(epoch uint64, mintingAmount string, ratio string, unitprice uint64, useGiniCoeff bool, deferredTxFee bool) {
-	governance.epoch = epoch
-	governance.mintingAmount = mintingAmount
-	governance.ratio = ratio
-	governance.unitPrice = unitprice
-	governance.useGiniCoeff = useGiniCoeff
-	governance.deferredTxFee = deferredTxFee
+func (governance *testGovernance) setTestGovernance(intMap map[int]interface{}) {
+	p, _ := params.NewGovParamSetIntMap(intMap)
+	governance.p = p
 }
 
 func TestRewardConfigCache_parseRewardRatio(t *testing.T) {
@@ -136,17 +94,17 @@ func TestRewardConfigCache_parseRewardRatio(t *testing.T) {
 
 func TestRewardConfigCache_newRewardConfig(t *testing.T) {
 	testCases := []struct {
-		testGovernance testGovernance
-		result         rewardConfig
+		config map[int]interface{}
+		result rewardConfig
 	}{
 		{
-			testGovernance{
-				epoch:         604800,
-				mintingAmount: "9600000000000000000",
-				ratio:         "34/54/12",
-				unitPrice:     25000000000,
-				useGiniCoeff:  true,
-				deferredTxFee: true,
+			map[int]interface{}{
+				params.Epoch:         604800,
+				params.MintingAmount: "9600000000000000000",
+				params.Ratio:         "34/54/12",
+				params.UnitPrice:     25000000000,
+				params.UseGiniCoeff:  true,
+				params.DeferredTxFee: true,
 			},
 			rewardConfig{
 				blockNum:      0,
@@ -159,13 +117,13 @@ func TestRewardConfigCache_newRewardConfig(t *testing.T) {
 			},
 		},
 		{
-			testGovernance{
-				epoch:         30,
-				mintingAmount: "10000",
-				ratio:         "50/30/20",
-				unitPrice:     50000000000,
-				useGiniCoeff:  true,
-				deferredTxFee: false,
+			map[int]interface{}{
+				params.Epoch:         30,
+				params.MintingAmount: "10000",
+				params.Ratio:         "50/30/20",
+				params.UnitPrice:     50000000000,
+				params.UseGiniCoeff:  true,
+				params.DeferredTxFee: false,
 			},
 			rewardConfig{
 				blockNum:      1,
@@ -178,13 +136,13 @@ func TestRewardConfigCache_newRewardConfig(t *testing.T) {
 			},
 		},
 		{
-			testGovernance{
-				epoch:         3000,
-				mintingAmount: "100000000",
-				ratio:         "10/35/55",
-				unitPrice:     1500000000,
-				useGiniCoeff:  false,
-				deferredTxFee: true,
+			map[int]interface{}{
+				params.Epoch:         3000,
+				params.MintingAmount: "100000000",
+				params.Ratio:         "10/35/55",
+				params.UnitPrice:     1500000000,
+				params.UseGiniCoeff:  false,
+				params.DeferredTxFee: true,
 			},
 			rewardConfig{
 				blockNum:      2,
@@ -199,7 +157,7 @@ func TestRewardConfigCache_newRewardConfig(t *testing.T) {
 	}
 
 	for i := 0; i < len(testCases); i++ {
-		testGovernance := &testCases[i].testGovernance
+		testGovernance := newTestGovernance(testCases[i].config)
 		rewardConfigCache := newRewardConfigCache(testGovernance)
 
 		rewardConfig, error := rewardConfigCache.newRewardConfig(uint64(i))
@@ -280,24 +238,21 @@ func TestRewardConfigCache_add_sameNumber(t *testing.T) {
 
 func TestRewardConfigCache_get_exist(t *testing.T) {
 	testCases := []struct {
-		blockNumber   uint64
-		epoch         uint64
-		mintingAmount string
-		ratio         string
-		unitprice     uint64
-		useGiniCoeff  bool
-		deferredTxFee bool
-		result        rewardConfig
+		blockNumber uint64
+		config      map[int]interface{}
+		result      rewardConfig
 	}{
 		{
-			blockNumber:   1,
-			epoch:         604800,
-			mintingAmount: "9600000000000000000",
-			ratio:         "34/54/12",
-			unitprice:     25000000000,
-			useGiniCoeff:  true,
-			deferredTxFee: true,
-			result: rewardConfig{
+			1,
+			map[int]interface{}{
+				params.Epoch:         604800,
+				params.MintingAmount: "9600000000000000000",
+				params.Ratio:         "34/54/12",
+				params.UnitPrice:     25000000000,
+				params.UseGiniCoeff:  true,
+				params.DeferredTxFee: true,
+			},
+			rewardConfig{
 				blockNum:      0,
 				mintingAmount: big.NewInt(0).SetUint64(9600000000000000000),
 				cnRatio:       big.NewInt(0).SetInt64(34),
@@ -308,14 +263,16 @@ func TestRewardConfigCache_get_exist(t *testing.T) {
 			},
 		},
 		{
-			blockNumber:   604805,
-			epoch:         604800,
-			mintingAmount: "9600000000000000",
-			ratio:         "40/25/35",
-			unitprice:     250000000,
-			useGiniCoeff:  true,
-			deferredTxFee: false,
-			result: rewardConfig{
+			604805,
+			map[int]interface{}{
+				params.Epoch:         604800,
+				params.MintingAmount: "9600000000000000",
+				params.Ratio:         "40/25/35",
+				params.UnitPrice:     250000000,
+				params.UseGiniCoeff:  true,
+				params.DeferredTxFee: false,
+			},
+			rewardConfig{
 				blockNum:      604800,
 				mintingAmount: big.NewInt(0).SetUint64(9600000000000000),
 				cnRatio:       big.NewInt(0).SetInt64(40),
@@ -326,14 +283,16 @@ func TestRewardConfigCache_get_exist(t *testing.T) {
 			},
 		},
 		{
-			blockNumber:   1210000,
-			epoch:         604800,
-			mintingAmount: "100000000000000000",
-			ratio:         "34/33/33",
-			unitprice:     100000000000,
-			useGiniCoeff:  false,
-			deferredTxFee: true,
-			result: rewardConfig{
+			1210000,
+			map[int]interface{}{
+				params.Epoch:         604800,
+				params.MintingAmount: "100000000000000000",
+				params.Ratio:         "34/33/33",
+				params.UnitPrice:     100000000000,
+				params.UseGiniCoeff:  false,
+				params.DeferredTxFee: true,
+			},
+			rewardConfig{
 				blockNum:      1209600,
 				mintingAmount: big.NewInt(0).SetUint64(100000000000000000),
 				cnRatio:       big.NewInt(0).SetInt64(34),
@@ -349,12 +308,14 @@ func TestRewardConfigCache_get_exist(t *testing.T) {
 	rewardConfigCache := newRewardConfigCache(testGovernance)
 
 	for i := 0; i < len(testCases); i++ {
-		testGovernance.setTestGovernance(testCases[i].epoch, testCases[i].mintingAmount, testCases[i].ratio, testCases[i].unitprice, testCases[i].useGiniCoeff, testCases[i].deferredTxFee)
 		blockNumber := testCases[i].blockNumber
-		if blockNumber%testCases[i].epoch == 0 {
-			blockNumber -= testCases[i].epoch
+		testGovernance.setTestGovernance(testCases[i].config)
+		epoch := testGovernance.Params().Epoch()
+
+		if blockNumber%epoch == 0 {
+			blockNumber -= epoch
 		} else {
-			blockNumber -= (blockNumber % testCases[i].epoch)
+			blockNumber -= (blockNumber % epoch)
 		}
 		rewardConfig, _ := rewardConfigCache.newRewardConfig(blockNumber)
 		rewardConfigCache.add(blockNumber, rewardConfig)

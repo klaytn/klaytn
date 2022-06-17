@@ -17,7 +17,7 @@ type MixedEngine struct {
 
 	// Subordinate engines
 	// TODO: Add ContractEngine
-	defaultGov HeaderEngine
+	defaultGov *Governance
 }
 
 // newMixedEngine instantiate a new MixedEngine struct.
@@ -64,42 +64,15 @@ func NewMixedEngineNoInit(config *params.ChainConfig, db database.DBManager) *Mi
 }
 
 func (e *MixedEngine) Params() *params.GovParamSet {
-	return e.currentParams
+	return e.defaultGov.Params()
 }
 
 func (e *MixedEngine) ParamsAt(num uint64) (*params.GovParamSet, error) {
-	headerParams, err := e.dbParamsAt(num)
-	if err != nil {
-		return nil, err
-	}
-
-	p := params.NewGovParamSetMerged(e.initialParams, headerParams)
-	return p, nil
+	return e.defaultGov.ParamsAt(num)
 }
 
 func (e *MixedEngine) UpdateParams() error {
-	strMap := e.defaultGov.CurrentSetCopy()
-	headerParams, err := params.NewGovParamSetStrMap(strMap)
-	if err != nil {
-		return err
-	}
-
-	e.currentParams = params.NewGovParamSetMerged(e.initialParams, headerParams)
-	return nil
-}
-
-// Retrospect data from HeaderEngine.
-// Should be equivalent to Governance.ReadGovernance(), but without in-memory caches.
-// Not using in-memory caches to make it stateless, hence less error-prone.
-func (e *MixedEngine) dbParamsAt(num uint64) (*params.GovParamSet, error) {
-	// TODO-Klaytn: Either handle epoch change, or permanently forbid epoch change.
-	epoch := e.initialParams.Epoch()
-	_, strMap, err := e.db.ReadGovernanceAtNumber(num, epoch)
-	if err != nil {
-		return nil, err
-	}
-
-	return params.NewGovParamSetStrMap(strMap)
+	return e.defaultGov.UpdateParams()
 }
 
 // Pass-through to HeaderEngine
@@ -234,76 +207,4 @@ func (e *MixedEngine) SetBlockchain(chain blockChain) {
 
 func (e *MixedEngine) SetTxPool(txpool txPool) {
 	e.defaultGov.SetTxPool(txpool)
-}
-
-func (e *MixedEngine) GovernanceMode() string {
-	return e.defaultGov.GovernanceMode()
-}
-
-func (e *MixedEngine) GoverningNode() common.Address {
-	return e.defaultGov.GoverningNode()
-}
-
-func (e *MixedEngine) UnitPrice() uint64 {
-	return e.defaultGov.UnitPrice()
-}
-
-func (e *MixedEngine) CommitteeSize() uint64 {
-	return e.defaultGov.CommitteeSize()
-}
-
-func (e *MixedEngine) Epoch() uint64 {
-	return e.defaultGov.Epoch()
-}
-
-func (e *MixedEngine) ProposerPolicy() uint64 {
-	return e.defaultGov.ProposerPolicy()
-}
-
-func (e *MixedEngine) DeferredTxFee() bool {
-	return e.defaultGov.DeferredTxFee()
-}
-
-func (e *MixedEngine) MinimumStake() string {
-	return e.defaultGov.MinimumStake()
-}
-
-func (e *MixedEngine) MintingAmount() string {
-	return e.defaultGov.MintingAmount()
-}
-
-func (e *MixedEngine) ProposerUpdateInterval() uint64 {
-	return e.defaultGov.ProposerUpdateInterval()
-}
-
-func (e *MixedEngine) Ratio() string {
-	return e.defaultGov.Ratio()
-}
-
-func (e *MixedEngine) StakingUpdateInterval() uint64 {
-	return e.defaultGov.StakingUpdateInterval()
-}
-
-func (e *MixedEngine) UseGiniCoeff() bool {
-	return e.defaultGov.UseGiniCoeff()
-}
-
-func (e *MixedEngine) GetGovernanceValue(key int) interface{} {
-	return e.defaultGov.GetGovernanceValue(key)
-}
-
-func (e *MixedEngine) GetGovernanceItemAtNumber(num uint64, key string) (interface{}, error) {
-	return e.defaultGov.GetGovernanceItemAtNumber(num, key)
-}
-
-func (e *MixedEngine) GetItemAtNumberByIntKey(num uint64, key int) (interface{}, error) {
-	return e.defaultGov.GetItemAtNumberByIntKey(num, key)
-}
-
-func (e *MixedEngine) GetGoverningInfoAtNumber(num uint64) (bool, common.Address, error) {
-	return e.defaultGov.GetGoverningInfoAtNumber(num)
-}
-
-func (e *MixedEngine) GetMinimumStakingAtNumber(num uint64) (uint64, error) {
-	return e.defaultGov.GetMinimumStakingAtNumber(num)
 }

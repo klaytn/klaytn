@@ -97,24 +97,4 @@ type HeaderEngine interface {
 	SetMyVotingPower(t uint64)
 	SetBlockchain(chain blockChain)
 	SetTxPool(txpool txPool)
-
-	// Get network params
-	GovernanceMode() string
-	GoverningNode() common.Address
-	UnitPrice() uint64
-	CommitteeSize() uint64
-	Epoch() uint64
-	ProposerPolicy() uint64
-	DeferredTxFee() bool
-	MinimumStake() string
-	MintingAmount() string
-	ProposerUpdateInterval() uint64
-	Ratio() string
-	StakingUpdateInterval() uint64
-	UseGiniCoeff() bool
-	GetGovernanceValue(key int) interface{}
-	GetGovernanceItemAtNumber(num uint64, key string) (interface{}, error)
-	GetItemAtNumberByIntKey(num uint64, key int) (interface{}, error)
-	GetGoverningInfoAtNumber(num uint64) (bool, common.Address, error)
-	GetMinimumStakingAtNumber(num uint64) (uint64, error)
 }

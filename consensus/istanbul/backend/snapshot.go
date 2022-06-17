@@ -52,25 +52,16 @@ type Snapshot struct {
 }
 
 func getGovernanceValue(gov governance.Engine, number uint64) (epoch uint64, policy uint64, committeeSize uint64) {
-	if r, err := gov.GetGovernanceItemAtNumber(number, governance.GovernanceKeyMapReverse[params.Epoch]); err == nil && r != nil {
-		epoch = r.(uint64)
-	} else {
-		logger.Error("Couldn't get governance value istanbul.epoch", "err", err, "received", r)
+	pset, err := gov.ParamsAt(number)
+	if err != nil {
+		logger.Error("Couldn't get governance value. Resorting to defaults", "err", err)
 		epoch = params.DefaultEpoch
-	}
-
-	if r, err := gov.GetGovernanceItemAtNumber(number, governance.GovernanceKeyMapReverse[params.Policy]); err == nil && r != nil {
-		policy = r.(uint64)
-	} else {
-		logger.Error("Couldn't get governance value istanbul.policy", "err", err, "received", r)
 		policy = params.DefaultProposerPolicy
-	}
-
-	if r, err := gov.GetGovernanceItemAtNumber(number, governance.GovernanceKeyMapReverse[params.CommitteeSize]); err == nil && r != nil {
-		committeeSize = r.(uint64)
-	} else {
-		logger.Error("Couldn't get governance value istanbul.committeesize", "err", err, "received", r)
 		committeeSize = params.DefaultSubGroupSize
+	} else {
+		epoch = pset.Epoch()
+		policy = pset.Policy()
+		committeeSize = pset.CommitteeSize()
 	}
 	return
 }
@@ -199,15 +190,14 @@ func (s *Snapshot) apply(headers []*types.Header, gov governance.Engine, addr co
 			//
 			// Proposers for Block N+1 can be calculated from the nearest previous proposersUpdateInterval block.
 			// Refresh proposers in Snapshot_N using previous proposersUpdateInterval block for N+1, if not updated yet.
-			isSingle, govNode, err := gov.GetGoverningInfoAtNumber(number)
+			pset, err := gov.ParamsAt(number)
 			if err != nil {
 				return nil, err
 			}
 
-			minStaking, err := gov.GetMinimumStakingAtNumber(number)
-			if err != nil {
-				return nil, err
-			}
+			isSingle := (pset.GovernanceModeInt() == params.GovernanceMode_Single)
+			govNode := pset.GoverningNode()
+			minStaking := pset.MinimumStakeBig().Uint64()
 
 			pHeader := chain.GetHeaderByNumber(params.CalcProposerBlockNumber(number + 1))
 			if pHeader != nil {

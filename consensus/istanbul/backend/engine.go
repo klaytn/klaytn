@@ -41,7 +41,6 @@ import (
 	"github.com/klaytn/klaytn/consensus/istanbul/validator"
 	"github.com/klaytn/klaytn/crypto/sha3"
 	"github.com/klaytn/klaytn/networks/rpc"
-	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 )
 
@@ -228,7 +227,7 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 	}
 
 	// At every epoch governance data will come in block header. Verify it.
-	if number%sb.governance.Epoch() == 0 && len(header.Governance) > 0 {
+	if number%sb.governance.Params().Epoch() == 0 && len(header.Governance) > 0 {
 		return sb.governance.VerifyGovernance(header.Governance)
 	}
 	return sb.verifyCommittedSeals(chain, header, parents)
@@ -371,7 +370,7 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	}
 
 	// If it reaches the Epoch, governance config will be added to block header
-	if number%sb.governance.Epoch() == 0 {
+	if number%sb.governance.Params().Epoch() == 0 {
 		if g := sb.governance.GetGovernanceChange(); g != nil {
 			if data, err := json.Marshal(g); err != nil {
 				logger.Error("Failed to encode governance changes!! Possible configuration mismatch!! ")
@@ -413,7 +412,7 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 	receipts []*types.Receipt,
 ) (*types.Block, error) {
 	// If sb.chain is nil, it means backend is not initialized yet.
-	if sb.chain != nil && sb.governance.ProposerPolicy() == uint64(istanbul.WeightedRandom) {
+	if sb.chain != nil && sb.governance.Params().Policy() == uint64(istanbul.WeightedRandom) {
 		// TODO-Klaytn Let's redesign below logic and remove dependency between block reward and istanbul consensus.
 
 		pocAddr := common.Address{}
@@ -618,15 +617,11 @@ func (sb *backend) initSnapshot(chain consensus.ChainReader) (*Snapshot, error) 
 		return nil, err
 	}
 
-	proposerPolicy, ok := sb.governance.GetGovernanceValue(params.Policy).(uint64)
-	if !ok {
-		proposerPolicy = params.DefaultProposerPolicy
-	}
-	committeeSize, ok := sb.governance.GetGovernanceValue(params.CommitteeSize).(uint64)
-	if !ok {
-		committeeSize = params.DefaultSubGroupSize
-	}
-	snap := newSnapshot(sb.governance, 0, genesis.Hash(), validator.NewValidatorSet(istanbulExtra.Validators, nil, istanbul.ProposerPolicy(proposerPolicy), committeeSize, chain), chain.Config())
+	valSet := validator.NewValidatorSet(istanbulExtra.Validators, nil,
+		istanbul.ProposerPolicy(sb.governance.Params().Policy()),
+		sb.governance.Params().CommitteeSize(),
+		chain)
+	snap := newSnapshot(sb.governance, 0, genesis.Hash(), valSet, chain.Config())
 
 	if err := snap.store(sb.db); err != nil {
 		return nil, err
@@ -657,8 +652,13 @@ func getPrevHeaderAndUpdateParents(chain consensus.ChainReader, number uint64, h
 
 // CreateSnapshot does not return a snapshot but creates a new snapshot at a given point in time.
 func (sb *backend) CreateSnapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) error {
-	_, err := sb.snapshot(chain, number, hash, parents)
-	return err
+	if _, err := sb.snapshot(chain, number, hash, parents); err != nil {
+		return err
+	}
+	if err := sb.governance.UpdateParams(); err != nil {
+		return err
+	}
+	return nil
 }
 
 // snapshot retrieves the authorization snapshot at a given point in time.
@@ -703,7 +703,7 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 	for i := 0; i < len(headers)/2; i++ {
 		headers[i], headers[len(headers)-1-i] = headers[len(headers)-1-i], headers[i]
 	}
-	snap, err := snap.apply(headers, sb.governance, sb.address, sb.governance.ProposerPolicy(), chain)
+	snap, err := snap.apply(headers, sb.governance, sb.address, sb.governance.Params().Policy(), chain)
 	if err != nil {
 		return nil, err
 	}

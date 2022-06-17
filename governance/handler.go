@@ -17,7 +17,6 @@
 package governance
 
 import (
-	"fmt"
 	"math/big"
 	"reflect"
 	"strconv"
@@ -79,21 +78,21 @@ func updateUnitPrice(g *Governance, k string, v interface{}) {
 
 func updateUseGiniCoeff(g *Governance, k string, v interface{}) {
 	if g.blockChain != nil {
-		g.blockChain.SetUseGiniCoeff(g.UseGiniCoeff())
+		g.blockChain.SetUseGiniCoeff(g.Params().UseGiniCoeff())
 	}
 }
 
 func updateStakingUpdateInterval(g *Governance, k string, v interface{}) {
-	params.SetStakingUpdateInterval(g.StakingUpdateInterval())
+	params.SetStakingUpdateInterval(g.Params().StakeUpdateInterval())
 }
 
 func updateProposerUpdateInterval(g *Governance, k string, v interface{}) {
-	params.SetProposerUpdateInterval(g.ProposerUpdateInterval())
+	params.SetProposerUpdateInterval(g.Params().ProposerRefreshInterval())
 }
 
 func updateProposerPolicy(g *Governance, k string, v interface{}) {
 	if g.blockChain != nil {
-		g.blockChain.SetProposerPolicy(g.ProposerPolicy())
+		g.blockChain.SetProposerPolicy(g.Params().Policy())
 	}
 }
 
@@ -386,8 +385,8 @@ func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, votes 
 		number := header.Number.Uint64()
 		// Check vote's validity
 		if gVote, ok := gov.ValidateVote(gVote); ok {
-			governanceMode := GovernanceModeMap[gov.GovernanceMode()]
-			governingNode := gov.GoverningNode()
+			governanceMode := gov.Params().GovernanceModeInt()
+			governingNode := gov.Params().GoverningNode()
 
 			// Remove old vote with same validator and key
 			votes, tally = gov.removePreviousVote(valset, votes, tally, proposer, gVote, governanceMode, governingNode)
@@ -546,55 +545,4 @@ func (gov *Governance) removeVotesFromRemovedNode(votes []GovernanceVote, addr c
 		}
 	}
 	return ret
-}
-
-func (gov *Governance) GetGovernanceItemAtNumber(num uint64, key string) (interface{}, error) {
-	_, data, err := gov.ReadGovernance(num)
-	if err != nil {
-		return nil, err
-	}
-
-	if item, ok := data[key]; ok {
-		if item == nil {
-			return nil, ErrItemNil
-		}
-		return item, nil
-	} else {
-		return nil, ErrItemNotFound
-	}
-}
-
-func (gov *Governance) GetItemAtNumberByIntKey(num uint64, key int) (interface{}, error) {
-	return gov.GetGovernanceItemAtNumber(num, GovernanceKeyMapReverse[key])
-}
-
-// GetGoverningInfoAtNumber returns whether the governing mode is single or not and the governing node.
-func (gov *Governance) GetGoverningInfoAtNumber(num uint64) (bool, common.Address, error) {
-	govMode, err := gov.GetItemAtNumberByIntKey(num, params.GovernanceMode)
-	if err != nil {
-		return false, common.Address{}, err
-	}
-
-	if GovernanceModeMap[govMode.(string)] != params.GovernanceMode_Single {
-		return false, common.Address{}, nil
-	}
-
-	govNode, err := gov.GetItemAtNumberByIntKey(num, params.GoverningNode)
-	if err != nil {
-		return true, common.Address{}, err
-	}
-
-	return true, govNode.(common.Address), nil
-}
-
-func (gov *Governance) GetMinimumStakingAtNumber(num uint64) (uint64, error) {
-	minStaking, err := gov.GetItemAtNumberByIntKey(num, params.MinimumStake)
-	if err != nil {
-		return 0, err
-	}
-	bigMinStaking, ok := new(big.Int).SetString(minStaking.(string), 10)
-	if !ok {
-		return 0, fmt.Errorf("invalid number string: %v", minStaking)
-	}
-	return bigMinStaking.Uint64(), nil
 }
