@@ -156,7 +156,21 @@ func (c *core) handleMsg(payload []byte) error {
 	msg := new(message)
 	if err := msg.FromPayload(payload, c.validateFn); err != nil {
 		if c.backend.NodeType() == common.CONSENSUSNODE {
-			logger.Error("Failed to decode message from payload", "err", err)
+			if err != istanbul.ErrUnauthorizedAddress {
+				logger.Error("Failed to decode message from payload", "err", err)
+				return err
+			}
+
+			msgView, msgDecodeErr := msg.GetView()
+			if msgDecodeErr != nil {
+				logger.Error("Failed to decode message while getting view information", "code", msg.Code, "err", msgDecodeErr)
+				return err
+			}
+
+			// Print view and address to help you analyze the node is valid or not.
+			// This information will help you to analyze whether the msg sender is valid or not.
+			// Furthermore, if the node is still syncing, there is a high probability that msg sender is a valid validator.
+			logger.Warn("Received Consensus msg is signed by an unauthorized address. It could happen when the node is unsynced temporarily.", "senderAddress", msg.Address, "nodeView", c.currentView().String(), "msgView", msgView.String())
 		}
 		return err
 	}
@@ -193,7 +207,7 @@ func (c *core) handleCheckedMsg(msg *message, src istanbul.Validator) error {
 	case msgRoundChange:
 		return testBacklog(c.handleRoundChange(msg, src))
 	default:
-		logger.Error("Invalid message", "msg", msg)
+		logger.Error("Invalid message type", "msg", msg)
 	}
 
 	return errInvalidMessage
