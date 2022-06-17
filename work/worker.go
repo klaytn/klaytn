@@ -26,16 +26,15 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/klaytn/klaytn/consensus/misc"
-	klaytnmetrics "github.com/klaytn/klaytn/metrics"
-
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus"
+	"github.com/klaytn/klaytn/consensus/misc"
 	"github.com/klaytn/klaytn/event"
+	klaytnmetrics "github.com/klaytn/klaytn/metrics"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/rcrowley/go-metrics"

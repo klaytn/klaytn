@@ -172,7 +172,8 @@ func (sb *backend) computeSignatureAddrs(header *types.Header) error {
 // given engine. Verifying the seal may be done optionally here, or explicitly
 // via the VerifySeal method.
 func (sb *backend) VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool) error {
-	return sb.verifyHeader(chain, header, nil)
+	parents := []*types.Header{chain.GetHeader(header.ParentHash, header.Number.Uint64())}
+	return sb.verifyHeader(chain, header, parents)
 }
 
 // verifyHeader checks whether a header conforms to the consensus rules.The
@@ -184,9 +185,8 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 		return errUnknownBlock
 	}
 
-	// TODO-klaytn header verify before/after kip71 fork
+	// Header verify before/after kip71 fork
 	if !chain.Config().IsKIP71ForkEnabled(header.Number) {
-		// Verify BaseFee not present before EIP-1559 fork.
 		if header.BaseFee != nil {
 			return consensus.ErrInvalidBaseFee
 		}

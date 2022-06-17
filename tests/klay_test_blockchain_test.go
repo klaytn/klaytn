@@ -33,6 +33,7 @@ import (
 	"github.com/klaytn/klaytn/common/profile"
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/consensus/istanbul"
+	"github.com/klaytn/klaytn/consensus/misc"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/crypto/sha3"
 	"github.com/klaytn/klaytn/governance"
@@ -167,7 +168,7 @@ func (bcdata *BCData) prepareHeader() (*types.Header, error) {
 		Vote:       common.Hex2Bytes("e194e733cb4d279da696f30d470f8c04decb54fcb0d28565706f6368853330303030"),
 	}
 	if bcdata.bc.Config().IsKIP71ForkEnabled(num) {
-		header.BaseFee = big.NewInt(0)
+		header.BaseFee = misc.NextBlockBaseFee(parent.Header(), bcdata.bc.Config())
 	}
 
 	if err := bcdata.engine.Prepare(bcdata.bc, header); err != nil {
