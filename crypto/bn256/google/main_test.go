@@ -1,8 +1,9 @@
 package bn256
 
 import (
-	"crypto/rand"
 	"testing"
+
+	"crypto/rand"
 )
 
 func TestRandomG2Marshal(t *testing.T) {

@@ -22,16 +22,15 @@ type PrometheusConfig struct {
 	namespace     string
 	Registry      metrics.Registry // Registry to be exported
 	subsystem     string
-	promRegistry  prometheus.Registerer // Prometheus registry
-	FlushInterval time.Duration         // interval to update prom metrics
+	promRegistry  prometheus.Registerer //Prometheus registry
+	FlushInterval time.Duration         //interval to update prom metrics
 	gauges        map[string]prometheus.Gauge
 }
 
 // NewPrometheusProvider returns a Provider that produces Prometheus metrics.
 // Namespace and subsystem are applied to all produced metrics.
 func NewPrometheusProvider(r metrics.Registry, namespace string, subsystem string, promRegistry prometheus.Registerer,
-	FlushInterval time.Duration,
-) *PrometheusConfig {
+	FlushInterval time.Duration) *PrometheusConfig {
 	return &PrometheusConfig{
 		namespace:     namespace,
 		subsystem:     subsystem,
@@ -74,10 +73,8 @@ func (c *PrometheusConfig) UpdatePrometheusMetrics() {
 	}
 }
 
-var (
-	pv     = []float64{0.5, 0.75, 0.95, 0.99, 0.999, 0.9999}
-	pv_str = []string{"_0_5", "_0_75", "_0_95", "_0_99", "_0_999", "_0_9999"}
-)
+var pv = []float64{0.5, 0.75, 0.95, 0.99, 0.999, 0.9999}
+var pv_str = []string{"_0_5", "_0_75", "_0_95", "_0_99", "_0_999", "_0_9999"}
 
 func (c *PrometheusConfig) UpdatePrometheusMetricsOnce() error {
 	c.Registry.Each(func(name string, i interface{}) {

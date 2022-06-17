@@ -18,7 +18,6 @@
 // This file is derived from core/mkalloc.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
-//go:build none
 // +build none
 
 /*

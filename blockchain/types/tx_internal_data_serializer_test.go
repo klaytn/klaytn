@@ -45,7 +45,7 @@ var (
 
 // TestTransactionSerialization tests RLP/JSON serialization for TxInternalData
 func TestTransactionSerialization(t *testing.T) {
-	txs := []struct {
+	var txs = []struct {
 		Name string
 		tx   TxInternalData
 	}{
@@ -75,7 +75,7 @@ func TestTransactionSerialization(t *testing.T) {
 		{"DynamicFee", genDynamicFeeTransaction()},
 	}
 
-	testcases := []struct {
+	var testcases = []struct {
 		Name string
 		fn   func(t *testing.T, tx TxInternalData)
 	}{
@@ -196,7 +196,7 @@ func newRPCTransaction(tx *Transaction, blockHash common.Hash, blockNumber uint6
 
 func testTransactionRPC(t *testing.T, tx TxInternalData) {
 	// To test AccessList tx, it need to latest signer.
-	// signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
+	//signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
 	signer := LatestSignerForChainID(big.NewInt(2))
 	rawTx := &Transaction{data: tx}
 	rawTx.Sign(signer, key)
@@ -241,6 +241,7 @@ func genLegacyTransaction() TxInternalData {
 		TxValueKeyGasPrice: gasPrice,
 		TxValueKeyData:     []byte("1234"),
 	})
+
 	if err != nil {
 		// Since we do not have testing.T here, call panic() instead of t.Fatal().
 		panic(err)
@@ -260,6 +261,7 @@ func genAccessListTransaction() TxInternalData {
 		TxValueKeyAccessList: accesses,
 		TxValueKeyChainID:    big.NewInt(2),
 	})
+
 	if err != nil {
 		panic(err)
 	}
@@ -279,6 +281,7 @@ func genDynamicFeeTransaction() TxInternalData {
 		TxValueKeyAccessList: accesses,
 		TxValueKeyChainID:    big.NewInt(2),
 	})
+
 	if err != nil {
 		panic(err)
 	}
@@ -295,6 +298,7 @@ func genValueTransferTransaction() TxInternalData {
 		TxValueKeyGasPrice: gasPrice,
 		TxValueKeyFrom:     from,
 	})
+
 	if err != nil {
 		// Since we do not have testing.T here, call panic() instead of t.Fatal().
 		panic(err)
@@ -313,6 +317,7 @@ func genValueTransferMemoTransaction() TxInternalData {
 		TxValueKeyFrom:     from,
 		TxValueKeyData:     []byte(string("hello")),
 	})
+
 	if err != nil {
 		// Since we do not have testing.T here, call panic() instead of t.Fatal().
 		panic(err)
@@ -332,6 +337,7 @@ func genFeeDelegatedValueTransferMemoTransaction() TxInternalData {
 		TxValueKeyData:     []byte(string("hello")),
 		TxValueKeyFeePayer: feePayer,
 	})
+
 	if err != nil {
 		// Since we do not have testing.T here, call panic() instead of t.Fatal().
 		panic(err)
@@ -352,6 +358,7 @@ func genFeeDelegatedValueTransferMemoWithRatioTransaction() TxInternalData {
 		TxValueKeyFeePayer:           feePayer,
 		TxValueKeyFeeRatioOfFeePayer: FeeRatio(30),
 	})
+
 	if err != nil {
 		// Since we do not have testing.T here, call panic() instead of t.Fatal().
 		panic(err)
@@ -373,6 +380,7 @@ func genSmartContractDeployTransaction() TxInternalData {
 		TxValueKeyData:       common.Hex2Bytes("608060405234801561001057600080fd5b506101de806100206000396000f3006080604052600436106100615763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631a39d8ef81146100805780636353586b146100a757806370a08231146100ca578063fd6b7ef8146100f8575b3360009081526001602052604081208054349081019091558154019055005b34801561008c57600080fd5b5061009561010d565b60408051918252519081900360200190f35b6100c873ffffffffffffffffffffffffffffffffffffffff60043516610113565b005b3480156100d657600080fd5b5061009573ffffffffffffffffffffffffffffffffffffffff60043516610147565b34801561010457600080fd5b506100c8610159565b60005481565b73ffffffffffffffffffffffffffffffffffffffff1660009081526001602052604081208054349081019091558154019055565b60016020526000908152604090205481565b336000908152600160205260408120805490829055908111156101af57604051339082156108fc029083906000818181858888f193505050501561019c576101af565b3360009081526001602052604090208190555b505600a165627a7a72305820627ca46bb09478a015762806cc00c431230501118c7c26c30ac58c4e09e51c4f0029"),
 		TxValueKeyCodeFormat: params.CodeFormatEVM,
 	})
+
 	if err != nil {
 		// Since we do not have testing.T here, call panic() instead of t.Fatal().
 		panic(err)
@@ -395,6 +403,7 @@ func genFeeDelegatedSmartContractDeployTransaction() TxInternalData {
 		TxValueKeyData:       common.Hex2Bytes("608060405234801561001057600080fd5b506101de806100206000396000f3006080604052600436106100615763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631a39d8ef81146100805780636353586b146100a757806370a08231146100ca578063fd6b7ef8146100f8575b3360009081526001602052604081208054349081019091558154019055005b34801561008c57600080fd5b5061009561010d565b60408051918252519081900360200190f35b6100c873ffffffffffffffffffffffffffffffffffffffff60043516610113565b005b3480156100d657600080fd5b5061009573ffffffffffffffffffffffffffffffffffffffff60043516610147565b34801561010457600080fd5b506100c8610159565b60005481565b73ffffffffffffffffffffffffffffffffffffffff1660009081526001602052604081208054349081019091558154019055565b60016020526000908152604090205481565b336000908152600160205260408120805490829055908111156101af57604051339082156108fc029083906000818181858888f193505050501561019c576101af565b3360009081526001602052604090208190555b505600a165627a7a72305820627ca46bb09478a015762806cc00c431230501118c7c26c30ac58c4e09e51c4f0029"),
 		TxValueKeyCodeFormat: params.CodeFormatEVM,
 	})
+
 	if err != nil {
 		// Since we do not have testing.T here, call panic() instead of t.Fatal().
 		panic(err)
@@ -418,6 +427,7 @@ func genFeeDelegatedSmartContractDeployWithRatioTransaction() TxInternalData {
 		TxValueKeyFeeRatioOfFeePayer: FeeRatio(30),
 		TxValueKeyCodeFormat:         params.CodeFormatEVM,
 	})
+
 	if err != nil {
 		// Since we do not have testing.T here, call panic() instead of t.Fatal().
 		panic(err)
@@ -427,11 +437,9 @@ func genFeeDelegatedSmartContractDeployWithRatioTransaction() TxInternalData {
 }
 
 func genChainDataTransaction() TxInternalData {
-	data := &AnchoringDataInternalType0{
-		common.HexToHash("0"), common.HexToHash("1"),
+	data := &AnchoringDataInternalType0{common.HexToHash("0"), common.HexToHash("1"),
 		common.HexToHash("2"), common.HexToHash("3"),
-		common.HexToHash("4"), big.NewInt(5), big.NewInt(6), big.NewInt(7),
-	}
+		common.HexToHash("4"), big.NewInt(5), big.NewInt(6), big.NewInt(7)}
 	encodedCCTxData, err := rlp.EncodeToBytes(data)
 	if err != nil {
 		panic(err)
@@ -450,6 +458,7 @@ func genChainDataTransaction() TxInternalData {
 		TxValueKeyGasPrice:     gasPrice,
 		TxValueKeyAnchoredData: anchoredData,
 	})
+
 	if err != nil {
 		// Since we do not have testing.T here, call panic() instead of t.Fatal().
 		panic(err)
@@ -459,11 +468,9 @@ func genChainDataTransaction() TxInternalData {
 }
 
 func genFeeDelegatedChainDataTransaction() TxInternalData {
-	data := &AnchoringDataInternalType0{
-		common.HexToHash("0"), common.HexToHash("1"),
+	data := &AnchoringDataInternalType0{common.HexToHash("0"), common.HexToHash("1"),
 		common.HexToHash("2"), common.HexToHash("3"),
-		common.HexToHash("4"), big.NewInt(5), big.NewInt(6), big.NewInt(7),
-	}
+		common.HexToHash("4"), big.NewInt(5), big.NewInt(6), big.NewInt(7)}
 	encodedCCTxData, err := rlp.EncodeToBytes(data)
 	if err != nil {
 		panic(err)
@@ -483,6 +490,7 @@ func genFeeDelegatedChainDataTransaction() TxInternalData {
 		TxValueKeyAnchoredData: anchoredData,
 		TxValueKeyFeePayer:     feePayer,
 	})
+
 	if err != nil {
 		// Since we do not have testing.T here, call panic() instead of t.Fatal().
 		panic(err)
@@ -492,11 +500,9 @@ func genFeeDelegatedChainDataTransaction() TxInternalData {
 }
 
 func genFeeDelegatedChainDataWithRatioTransaction() TxInternalData {
-	data := &AnchoringDataInternalType0{
-		common.HexToHash("0"), common.HexToHash("1"),
+	data := &AnchoringDataInternalType0{common.HexToHash("0"), common.HexToHash("1"),
 		common.HexToHash("2"), common.HexToHash("3"),
-		common.HexToHash("4"), big.NewInt(5), big.NewInt(6), big.NewInt(7),
-	}
+		common.HexToHash("4"), big.NewInt(5), big.NewInt(6), big.NewInt(7)}
 	encodedCCTxData, err := rlp.EncodeToBytes(data)
 	if err != nil {
 		panic(err)
@@ -517,6 +523,7 @@ func genFeeDelegatedChainDataWithRatioTransaction() TxInternalData {
 		TxValueKeyFeePayer:           feePayer,
 		TxValueKeyFeeRatioOfFeePayer: FeeRatio(30),
 	})
+
 	if err != nil {
 		// Since we do not have testing.T here, call panic() instead of t.Fatal().
 		panic(err)
@@ -555,6 +562,7 @@ func genFeeDelegatedValueTransferTransaction() TxInternalData {
 		TxValueKeyFrom:     from,
 		TxValueKeyFeePayer: feePayer,
 	})
+
 	if err != nil {
 		// Since we do not have testing.T here, call panic() instead of t.Fatal().
 		panic(err)
@@ -574,6 +582,7 @@ func genFeeDelegatedValueTransferWithRatioTransaction() TxInternalData {
 		TxValueKeyFeePayer:           feePayer,
 		TxValueKeyFeeRatioOfFeePayer: FeeRatio(30),
 	})
+
 	if err != nil {
 		// Since we do not have testing.T here, call panic() instead of t.Fatal().
 		panic(err)
@@ -593,6 +602,7 @@ func genSmartContractExecutionTransaction() TxInternalData {
 		// A abi-packed bytes calling "reward" of contracts/reward/contract/KlaytnReward.sol with an address "bc5951f055a85f41a3b62fd6f68ab7de76d299b2".
 		TxValueKeyData: common.Hex2Bytes("6353586b000000000000000000000000bc5951f055a85f41a3b62fd6f68ab7de76d299b2"),
 	})
+
 	if err != nil {
 		// Since we do not have testing.T here, call panic() instead of t.Fatal().
 		panic(err)
@@ -613,6 +623,7 @@ func genFeeDelegatedSmartContractExecutionTransaction() TxInternalData {
 		TxValueKeyData:     common.Hex2Bytes("6353586b000000000000000000000000bc5951f055a85f41a3b62fd6f68ab7de76d299b2"),
 		TxValueKeyFeePayer: feePayer,
 	})
+
 	if err != nil {
 		// Since we do not have testing.T here, call panic() instead of t.Fatal().
 		panic(err)
@@ -634,6 +645,7 @@ func genFeeDelegatedSmartContractExecutionWithRatioTransaction() TxInternalData 
 		TxValueKeyFeePayer:           feePayer,
 		TxValueKeyFeeRatioOfFeePayer: FeeRatio(30),
 	})
+
 	if err != nil {
 		// Since we do not have testing.T here, call panic() instead of t.Fatal().
 		panic(err)
@@ -650,6 +662,7 @@ func genAccountUpdateTransaction() TxInternalData {
 		TxValueKeyFrom:       from,
 		TxValueKeyAccountKey: accountkey.NewAccountKeyPublicWithValue(&key.PublicKey),
 	})
+
 	if err != nil {
 		// Since we do not have testing.T here, call panic() instead of t.Fatal().
 		panic(err)
@@ -667,6 +680,7 @@ func genFeeDelegatedAccountUpdateTransaction() TxInternalData {
 		TxValueKeyAccountKey: accountkey.NewAccountKeyPublicWithValue(&key.PublicKey),
 		TxValueKeyFeePayer:   feePayer,
 	})
+
 	if err != nil {
 		// Since we do not have testing.T here, call panic() instead of t.Fatal().
 		panic(err)
@@ -685,6 +699,7 @@ func genFeeDelegatedAccountUpdateWithRatioTransaction() TxInternalData {
 		TxValueKeyFeePayer:           feePayer,
 		TxValueKeyFeeRatioOfFeePayer: FeeRatio(30),
 	})
+
 	if err != nil {
 		// Since we do not have testing.T here, call panic() instead of t.Fatal().
 		panic(err)
@@ -700,6 +715,7 @@ func genCancelTransaction() TxInternalData {
 		TxValueKeyGasPrice: gasPrice,
 		TxValueKeyFrom:     from,
 	})
+
 	if err != nil {
 		// Since we do not have testing.T here, call panic() instead of t.Fatal().
 		panic(err)
@@ -716,6 +732,7 @@ func genFeeDelegatedCancelTransaction() TxInternalData {
 		TxValueKeyFrom:     from,
 		TxValueKeyFeePayer: feePayer,
 	})
+
 	if err != nil {
 		// Since we do not have testing.T here, call panic() instead of t.Fatal().
 		panic(err)
@@ -733,6 +750,7 @@ func genFeeDelegatedCancelWithRatioTransaction() TxInternalData {
 		TxValueKeyFeePayer:           feePayer,
 		TxValueKeyFeeRatioOfFeePayer: FeeRatio(30),
 	})
+
 	if err != nil {
 		// Since we do not have testing.T here, call panic() instead of t.Fatal().
 		panic(err)

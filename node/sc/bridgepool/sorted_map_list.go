@@ -66,7 +66,9 @@ const (
 	UnlimitedItemSortedMap = -1
 )
 
-var ErrSizeLimit = errors.New("sorted map size limit")
+var (
+	ErrSizeLimit = errors.New("sorted map size limit")
+)
 
 type ItemSortedMap struct {
 	mu        *sync.Mutex

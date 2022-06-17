@@ -354,7 +354,7 @@ func (c *Config) NodeKey() *ecdsa.PrivateKey {
 		logger.Crit("Failed to generate node key", "err", err)
 	}
 	instanceDir := filepath.Join(c.DataDir, c.name())
-	if err := os.MkdirAll(instanceDir, 0o700); err != nil {
+	if err := os.MkdirAll(instanceDir, 0700); err != nil {
 		logger.Crit("Failed to make dir to persist node key", "err", err)
 	}
 	keyfile = filepath.Join(instanceDir, datadirPrivateKey)
@@ -446,7 +446,7 @@ func makeAccountManager(conf *Config) (*accounts.Manager, string, error) {
 	if err != nil {
 		return nil, "", err
 	}
-	if err := os.MkdirAll(keydir, 0o700); err != nil {
+	if err := os.MkdirAll(keydir, 0700); err != nil {
 		return nil, "", err
 	}
 	// Assemble the account manager and supported backends

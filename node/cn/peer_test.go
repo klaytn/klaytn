@@ -137,6 +137,7 @@ func TestBasePeer_ReSendTransactions(t *testing.T) {
 	sendTxBinary, _ := sentTxs[0].MarshalBinary()
 	receivedTxBinary, _ := receivedTxs[0].MarshalBinary()
 	assert.Equal(t, sendTxBinary, receivedTxBinary)
+
 }
 
 func TestBasePeer_AsyncSendTransactions(t *testing.T) {

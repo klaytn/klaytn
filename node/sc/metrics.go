@@ -53,11 +53,11 @@ var (
 	lastAnchoredBlockNumGauge = metrics.NewRegisteredGauge("klay/bridge/anchroing/blocknumber", nil)
 
 	// TODO-Klaytn-Servicechain need to add below metrics
-	// txReceiveCounter     = metrics.NewRegisteredCounter("klay/bridge/tx/recv/counter", nil)
-	// txResendCounter      = metrics.NewRegisteredCounter("klay/bridge/tx/resend/counter", nil)
-	// txResendGauge        = metrics.NewRegisteredGauge("klay/bridge/tx/resend/gauge", nil)
-	// txSendCounter        = metrics.NewRegisteredCounter("klay/bridge/tx/send/counter", nil)
-	// txResendRoutineGauge = metrics.NewRegisteredGauge("klay/bridge/tx/resend/routine/gauge", nil)
+	//txReceiveCounter     = metrics.NewRegisteredCounter("klay/bridge/tx/recv/counter", nil)
+	//txResendCounter      = metrics.NewRegisteredCounter("klay/bridge/tx/resend/counter", nil)
+	//txResendGauge        = metrics.NewRegisteredGauge("klay/bridge/tx/resend/gauge", nil)
+	//txSendCounter        = metrics.NewRegisteredCounter("klay/bridge/tx/send/counter", nil)
+	//txResendRoutineGauge = metrics.NewRegisteredGauge("klay/bridge/tx/resend/routine/gauge", nil)
 )
 
 // meteredMsgReadWriter is a wrapper around a p2p.MsgReadWriter, capable of

@@ -45,11 +45,9 @@ const (
 	running
 )
 
-var (
-	logger              = log.NewModuleLogger(log.ChainDataFetcher)
-	errUnsupportedMode  = errors.New("the given chaindatafetcher mode is not supported")
-	errMaxRetryExceeded = errors.New("the number of retries is exceeded over max")
-)
+var logger = log.NewModuleLogger(log.ChainDataFetcher)
+var errUnsupportedMode = errors.New("the given chaindatafetcher mode is not supported")
+var errMaxRetryExceeded = errors.New("the number of retries is exceeded over max")
 
 //go:generate mockgen -destination=./mocks/blockchain_mock.go -package=mocks github.com/klaytn/klaytn/datasync/chaindatafetcher BlockChain
 type BlockChain interface {

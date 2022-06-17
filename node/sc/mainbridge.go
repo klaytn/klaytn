@@ -285,6 +285,7 @@ func (mb *MainBridge) getChainID() *big.Int {
 // Start implements node.Service, starting all internal goroutines needed by the
 // Klaytn protocol implementation.
 func (mb *MainBridge) Start(srvr p2p.Server) error {
+
 	serverConfig := p2p.Config{}
 	serverConfig.PrivateKey = mb.ctx.NodeKey()
 	serverConfig.Name = mb.ctx.NodeType().String()
@@ -339,7 +340,7 @@ func (mb *MainBridge) Start(srvr p2p.Server) error {
 	mb.netRPCService = api.NewPublicNetAPI(mb.bridgeServer, mb.NetVersion())
 
 	// Figure out a max peers count based on the server limits
-	// s.maxPeers = s.bridgeServer.MaxPhysicalConnections()
+	//s.maxPeers = s.bridgeServer.MaxPhysicalConnections()
 
 	go mb.syncer()
 
@@ -471,8 +472,8 @@ func (mb *MainBridge) removePeer(id string) {
 // handleMsg is invoked whenever an inbound message is received from a remote
 // peer. The remote connection is torn down upon returning any error.
 func (mb *MainBridge) handleMsg(p BridgePeer) error {
-	// Below message size checking is done by handle().
-	// Read the next message from the remote peer, and ensure it's fully consumed
+	//Below message size checking is done by handle().
+	//Read the next message from the remote peer, and ensure it's fully consumed
 	msg, err := p.GetRW().ReadMsg()
 	if err != nil {
 		p.GetP2PPeer().Log().Warn("ProtocolManager failed to read msg", "err", err)
@@ -490,9 +491,9 @@ func (mb *MainBridge) handleMsg(p BridgePeer) error {
 
 func (mb *MainBridge) syncer() {
 	// Start and ensure cleanup of sync mechanisms
-	// pm.fetcher.Start()
-	// defer pm.fetcher.Stop()
-	// defer pm.downloader.Terminate()
+	//pm.fetcher.Start()
+	//defer pm.fetcher.Stop()
+	//defer pm.downloader.Terminate()
 
 	// Wait for different events to fire synchronisation operations
 	forceSync := time.NewTicker(forceSyncCycle)
@@ -520,6 +521,7 @@ func (mb *MainBridge) synchronise(peer BridgePeer) {
 // Stop implements node.Service, terminating all internal goroutines used by the
 // Klaytn protocol.
 func (mb *MainBridge) Stop() error {
+
 	close(mb.quitSync)
 
 	mb.chainHeadSub.Unsubscribe()

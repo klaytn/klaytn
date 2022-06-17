@@ -365,7 +365,7 @@ func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
-	// pAuth := bacc.cAccount.GenerateTransactOpts()
+	//pAuth := bacc.cAccount.GenerateTransactOpts()
 	cAuth := bacc.pAccount.GenerateTransactOpts()
 
 	// Generate a new random account and a funded simulator
@@ -2038,8 +2038,7 @@ func (bm *BridgeManager) DeployBridgeTest(backend *backends.SimulatedBackend, am
 
 func isExpectedBalance(t *testing.T, bridgeManager *BridgeManager,
 	pBridgeAddr, cBridgeAddr common.Address,
-	expectedParentBridgeBalance, expectedChildBridgeBalance int64,
-) {
+	expectedParentBridgeBalance, expectedChildBridgeBalance int64) {
 	pBridgeBalance, err := bridgeManager.subBridge.APIBackend.GetParentBridgeContractBalance(pBridgeAddr)
 	assert.NoError(t, err)
 	cBridgeBalance, err := bridgeManager.subBridge.APIBackend.GetChildBridgeContractBalance(cBridgeAddr)
@@ -2119,4 +2118,5 @@ func TestGetBridgeContractBalance(t *testing.T) {
 			isExpectedBalance(t, bm, pBridgeAddr, cBridgeAddr, initialParentbridgeBalance, initialChildbridgeBalance)
 		}
 	}
+
 }

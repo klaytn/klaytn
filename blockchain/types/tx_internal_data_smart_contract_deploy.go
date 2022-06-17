@@ -263,6 +263,7 @@ func (t *TxInternalDataSmartContractDeploy) String() string {
 		t.HumanReadable,
 		t.CodeFormat.String(),
 		enc)
+
 }
 
 func (t *TxInternalDataSmartContractDeploy) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {

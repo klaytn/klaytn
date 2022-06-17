@@ -219,7 +219,6 @@ func (io StdIOConn) SetReadDeadline(t time.Time) error {
 func (io StdIOConn) SetWriteDeadline(t time.Time) error {
 	return &net.OpError{Op: "set", Net: "stdio", Source: nil, Addr: nil, Err: errors.New("deadline not supported")}
 }
-
 func DialStdIO(ctx context.Context) (*Client, error) {
 	return NewClient(ctx, func(_ context.Context) (net.Conn, error) {
 		return StdIOConn{}, nil

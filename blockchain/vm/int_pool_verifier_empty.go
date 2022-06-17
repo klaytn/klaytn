@@ -18,7 +18,6 @@
 // This file is derived from core/vm/int_pool_verifier_empty.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
-//go:build !VERIFY_EVM_INTEGER_POOL
 // +build !VERIFY_EVM_INTEGER_POOL
 
 package vm

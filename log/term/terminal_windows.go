@@ -3,7 +3,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build windows
 // +build windows
 
 package term
@@ -15,7 +14,9 @@ import (
 
 var kernel32 = syscall.NewLazyDLL("kernel32.dll")
 
-var procGetConsoleMode = kernel32.NewProc("GetConsoleMode")
+var (
+	procGetConsoleMode = kernel32.NewProc("GetConsoleMode")
+)
 
 // IsTty returns true if the given file descriptor is a terminal.
 func IsTty(fd uintptr) bool {

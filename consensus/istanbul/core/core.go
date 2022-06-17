@@ -189,14 +189,14 @@ func (c *core) commit() {
 		}
 
 		if err := c.backend.Commit(proposal, committedSeals); err != nil {
-			c.current.UnlockHash() // Unlock block when insertion fails
+			c.current.UnlockHash() //Unlock block when insertion fails
 			c.sendNextRoundChange("commit failure")
 			return
 		}
 	} else {
 		// TODO-Klaytn never happen, but if proposal is nil, mining is not working.
 		logger.Error("istanbul.core current.Proposal is NULL")
-		c.current.UnlockHash() // Unlock block when insertion fails
+		c.current.UnlockHash() //Unlock block when insertion fails
 		c.sendNextRoundChange("commit failure. proposal is nil")
 		return
 	}
@@ -281,7 +281,7 @@ func (c *core) startNewRound(round *big.Int) {
 		// If we have pending request, propose pending request
 		if c.current.IsHashLocked() {
 			r := &istanbul.Request{
-				Proposal: c.current.Proposal(), // c.current.Proposal would be the locked proposal by previous proposer, see updateRoundState
+				Proposal: c.current.Proposal(), //c.current.Proposal would be the locked proposal by previous proposer, see updateRoundState
 			}
 			c.sendPreprepare(r)
 		} else if c.current.pendingRequest != nil {

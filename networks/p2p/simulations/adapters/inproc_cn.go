@@ -84,13 +84,13 @@ func (s *CnAdapter) NewNode(config *NodeConfig) (Node, error) {
 			MaxPhysicalConnections: math.MaxInt32,
 			NoDiscovery:            true,
 			ListenAddr:             fmt.Sprintf(":%d", config.Port),
-			// Dialer:          s,
+			//Dialer:          s,
 			EnableMsgEvents: config.EnableMsgEvents,
 		},
-		// Logger: log.New("node.id", id.String()),
+		//Logger: log.New("node.id", id.String()),
 		Logger: logger.NewWith("node.name", config.Name),
 
-		// Logger: log.New(),
+		//Logger: log.New(),
 	})
 	if err != nil {
 		return nil, err
@@ -174,7 +174,7 @@ func (sn *CnNode) Addr() []byte {
 
 // Node returns a discover.Node representing the CnNode
 func (sn *CnNode) Node() *discover.Node {
-	// return discover.NewNode(sn.ID, net.IP{127, 0, 0, 1}, 30303, 30303)
+	//return discover.NewNode(sn.ID, net.IP{127, 0, 0, 1}, 30303, 30303)
 	return discover.NewNode(sn.ID, net.IP{127, 0, 0, 1}, sn.config.Port, sn.config.Port, nil, discover.NodeTypeCN)
 }
 

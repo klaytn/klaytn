@@ -2,7 +2,6 @@
 //
 // This file is derived from log/handler_go13.go (2018/06/04).
 // See LICENSE in the top directory for the original copyright and license.
-//go:build !go1.4
 // +build !go1.4
 
 package log

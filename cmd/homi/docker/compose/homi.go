@@ -43,8 +43,7 @@ func New(ipPrefix string, number int, secret string, addresses, nodeKeys []strin
 	genesis, scGenesis, staticCNNodes, staticPNNodes, staticENNodes, staticSCNNodes, staticSPNNodes, staticSENNodes,
 	bridgeNodes, dockerImageId string, useFastHttp bool, networkId, parentChainId int,
 	useGrafana bool, proxyNodeKeys, enNodeKeys, scnNodeKeys, spnNodeKeys, senNodeKeys []string, useTxGen bool,
-	txGenOpt service.TxGenOption,
-) *Homi {
+	txGenOpt service.TxGenOption) *Homi {
 	ist := &Homi{
 		IPPrefix:   ipPrefix,
 		EthStats:   service.NewEthStats(fmt.Sprintf("%v.9", ipPrefix), secret),
@@ -59,8 +58,7 @@ func New(ipPrefix string, number int, secret string, addresses, nodeKeys []strin
 
 func (ist *Homi) init(number int, addresses, nodeKeys []string, genesis, scGenesis, staticCNNodes, staticPNNodes,
 	staticENNodes, staticSCNNodes, staticSPNNodes, staticSENNodes, bridgeNodes, dockerImageId string, useFastHttp bool,
-	networkId, parentChainId int, proxyNodeKeys, enNodeKeys, scnNodeKeys, spnNodeKeys, senNodeKeys []string, txGenOpt service.TxGenOption,
-) {
+	networkId, parentChainId int, proxyNodeKeys, enNodeKeys, scnNodeKeys, spnNodeKeys, senNodeKeys []string, txGenOpt service.TxGenOption) {
 	var validatorNames []string
 	for i := 0; i < number; i++ {
 		s := service.NewValidator(i,

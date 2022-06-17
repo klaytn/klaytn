@@ -184,7 +184,7 @@ func BenchmarkPost1000(b *testing.B) {
 }
 
 func BenchmarkPostConcurrent(b *testing.B) {
-	mux := new(TypeMux)
+	var mux = new(TypeMux)
 	defer mux.Stop()
 	emptySubscriber(mux)
 	emptySubscriber(mux)

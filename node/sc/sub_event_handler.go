@@ -24,7 +24,9 @@ import (
 	"github.com/klaytn/klaytn/common"
 )
 
-var ErrGetServiceChainPHInCCEH = errors.New("ServiceChainPH isn't set in ChildChainEventHandler")
+var (
+	ErrGetServiceChainPHInCCEH = errors.New("ServiceChainPH isn't set in ChildChainEventHandler")
+)
 
 type ChildChainEventHandler struct {
 	subbridge *SubBridge
@@ -52,17 +54,17 @@ func (cce *ChildChainEventHandler) HandleChainHeadEvent(block *types.Block) erro
 }
 
 func (cce *ChildChainEventHandler) HandleTxEvent(tx *types.Transaction) error {
-	// TODO-Klaytn event handle
+	//TODO-Klaytn event handle
 	return nil
 }
 
 func (cce *ChildChainEventHandler) HandleTxsEvent(txs []*types.Transaction) error {
-	// TODO-Klaytn event handle
+	//TODO-Klaytn event handle
 	return nil
 }
 
 func (cce *ChildChainEventHandler) HandleLogsEvent(logs []*types.Log) error {
-	// TODO-Klaytn event handle
+	//TODO-Klaytn event handle
 	return nil
 }
 

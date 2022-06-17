@@ -1,4 +1,3 @@
-//go:build (!amd64 && !arm64) || generic
 // +build !amd64,!arm64 generic
 
 package bn256

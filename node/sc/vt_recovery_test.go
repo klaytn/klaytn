@@ -79,23 +79,25 @@ type operations struct {
 	dummyHandle func(*testInfo, *BridgeInfo)
 }
 
-var ops = map[uint8]*operations{
-	KLAY: {
-		request:     requestKLAYTransfer,
-		handle:      handleKLAYTransfer,
-		dummyHandle: dummyHandleRequestKLAYTransfer,
-	},
-	ERC20: {
-		request:     requestTokenTransfer,
-		handle:      handleTokenTransfer,
-		dummyHandle: dummyHandleRequestTokenTransfer,
-	},
-	ERC721: {
-		request:     requestNFTTransfer,
-		handle:      handleNFTTransfer,
-		dummyHandle: dummyHandleRequestNFTTransfer,
-	},
-}
+var (
+	ops = map[uint8]*operations{
+		KLAY: {
+			request:     requestKLAYTransfer,
+			handle:      handleKLAYTransfer,
+			dummyHandle: dummyHandleRequestKLAYTransfer,
+		},
+		ERC20: {
+			request:     requestTokenTransfer,
+			handle:      handleTokenTransfer,
+			dummyHandle: dummyHandleRequestTokenTransfer,
+		},
+		ERC721: {
+			request:     requestNFTTransfer,
+			handle:      handleNFTTransfer,
+			dummyHandle: dummyHandleRequestNFTTransfer,
+		},
+	}
+)
 
 // TestBasicKLAYTransferRecovery tests each methods of the value transfer recovery.
 func TestBasicKLAYTransferRecovery(t *testing.T) {
@@ -133,7 +135,7 @@ func TestBasicKLAYTransferRecovery(t *testing.T) {
 
 	// 4. Check pending events.
 	t.Log("check pending tx", "len", len(vtr.childEvents))
-	count := 0
+	var count = 0
 	for _, ev := range vtr.childEvents {
 		assert.Equal(t, info.nodeAuth.From, ev.GetFrom())
 		assert.Equal(t, info.aliceAuth.From, ev.GetTo())
@@ -579,7 +581,7 @@ func TestMultiOperatorRequestRecovery(t *testing.T) {
 
 	// 6. Check pending events.
 	t.Log("check pending tx", "len", len(vtr.childEvents))
-	count := 0
+	var count = 0
 	for _, ev := range vtr.childEvents {
 		assert.Equal(t, info.nodeAuth.From, ev.GetFrom())
 		assert.Equal(t, info.aliceAuth.From, ev.GetTo())
@@ -791,15 +793,13 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 		t, sim, sc, bm, localInfo, remoteInfo,
 		tokenLocalAddr, tokenRemoteAddr, tokenLocal, tokenRemote,
 		nftLocalAddr, nftRemoteAddr, nftLocal, nftRemote,
-		cAcc, pAcc, aliceAuth, recoveryCh,
-		sync.Mutex{},
-		testNFT,
+		cAcc, pAcc, aliceAuth, recoveryCh, sync.Mutex{}, testNFT,
 	}
 
 	// Start a event handling loop.
 	wg := sync.WaitGroup{}
 	wg.Add((2 * testTxCount) - testPendingCount)
-	isRecovery := false
+	var isRecovery = false
 	reqHandler := func(ev IRequestValueTransferEvent) {
 		t.Log("request value transfer", "nonce", ev.GetRequestNonce())
 		if ev.GetRequestNonce() >= (testTxCount - testPendingCount) {

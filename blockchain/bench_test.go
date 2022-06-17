@@ -21,7 +21,6 @@
 package blockchain
 
 import (
-	"crypto/ecdsa"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -35,16 +34,16 @@ import (
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
+
+	"crypto/ecdsa"
 )
 
 func BenchmarkInsertChain_empty_memDB(b *testing.B) {
 	benchInsertChain(b, database.MemoryDB, nil)
 }
-
 func BenchmarkInsertChain_empty_levelDB(b *testing.B) {
 	benchInsertChain(b, database.LevelDB, nil)
 }
-
 func BenchmarkInsertChain_empty_badgerDB(b *testing.B) {
 	benchInsertChain(b, database.BadgerDB, nil)
 }
@@ -52,11 +51,9 @@ func BenchmarkInsertChain_empty_badgerDB(b *testing.B) {
 func BenchmarkInsertChain_valueTx_memDB(b *testing.B) {
 	benchInsertChain(b, database.MemoryDB, genValueTx(0))
 }
-
 func BenchmarkInsertChain_valueTx_levelDB(b *testing.B) {
 	benchInsertChain(b, database.LevelDB, genValueTx(0))
 }
-
 func BenchmarkInsertChain_valueTx_badgerDB(b *testing.B) {
 	benchInsertChain(b, database.BadgerDB, genValueTx(0))
 }
@@ -64,11 +61,9 @@ func BenchmarkInsertChain_valueTx_badgerDB(b *testing.B) {
 func BenchmarkInsertChain_valueTx_10kB_memDB(b *testing.B) {
 	benchInsertChain(b, database.MemoryDB, genValueTx(100*1024))
 }
-
 func BenchmarkInsertChain_valueTx_10kB_levelDB(b *testing.B) {
 	benchInsertChain(b, database.LevelDB, genValueTx(100*1024))
 }
-
 func BenchmarkInsertChain_valueTx_10kB_badgerDB(b *testing.B) {
 	benchInsertChain(b, database.BadgerDB, genValueTx(100*1024))
 }
@@ -76,11 +71,9 @@ func BenchmarkInsertChain_valueTx_10kB_badgerDB(b *testing.B) {
 func BenchmarkInsertChain_ring200_memDB(b *testing.B) {
 	benchInsertChain(b, database.MemoryDB, genTxRing(200))
 }
-
 func BenchmarkInsertChain_ring200_levelDB(b *testing.B) {
 	benchInsertChain(b, database.LevelDB, genTxRing(200))
 }
-
 func BenchmarkInsertChain_ring200_badgerDB(b *testing.B) {
 	benchInsertChain(b, database.BadgerDB, genTxRing(200))
 }
@@ -88,11 +81,9 @@ func BenchmarkInsertChain_ring200_badgerDB(b *testing.B) {
 func BenchmarkInsertChain_ring1000_memDB(b *testing.B) {
 	benchInsertChain(b, database.MemoryDB, genTxRing(1000))
 }
-
 func BenchmarkInsertChain_ring1000_levelDB(b *testing.B) {
 	benchInsertChain(b, database.LevelDB, genTxRing(1000))
 }
-
 func BenchmarkInsertChain_ring1000_badgerDB(b *testing.B) {
 	benchInsertChain(b, database.BadgerDB, genTxRing(1000))
 }
@@ -191,7 +182,6 @@ func benchInsertChain(b *testing.B, dbType database.DBType, gen func(int, *Block
 func BenchmarkChainRead_header_10k_levelDB(b *testing.B) {
 	benchReadChain(b, false, database.LevelDB, 10000)
 }
-
 func BenchmarkChainRead_header_10k_badgerDB(b *testing.B) {
 	benchReadChain(b, false, database.BadgerDB, 10000)
 }
@@ -199,7 +189,6 @@ func BenchmarkChainRead_header_10k_badgerDB(b *testing.B) {
 func BenchmarkChainRead_full_10k_levelDB(b *testing.B) {
 	benchReadChain(b, true, database.LevelDB, 10000)
 }
-
 func BenchmarkChainRead_full_10k_badgerDB(b *testing.B) {
 	benchReadChain(b, true, database.BadgerDB, 10000)
 }
@@ -207,7 +196,6 @@ func BenchmarkChainRead_full_10k_badgerDB(b *testing.B) {
 func BenchmarkChainRead_header_100k_levelDB(b *testing.B) {
 	benchReadChain(b, false, database.LevelDB, 100000)
 }
-
 func BenchmarkChainRead_header_100k_badgerDB(b *testing.B) {
 	benchReadChain(b, false, database.BadgerDB, 100000)
 }
@@ -215,7 +203,6 @@ func BenchmarkChainRead_header_100k_badgerDB(b *testing.B) {
 func BenchmarkChainRead_full_100k_levelDB(b *testing.B) {
 	benchReadChain(b, true, database.LevelDB, 100000)
 }
-
 func BenchmarkChainRead_full_100k_badgerDB(b *testing.B) {
 	benchReadChain(b, true, database.BadgerDB, 100000)
 }
@@ -239,7 +226,6 @@ func BenchmarkChainRead_full_100k_badgerDB(b *testing.B) {
 func BenchmarkChainWrite_header_10k_levelDB(b *testing.B) {
 	benchWriteChain(b, false, database.LevelDB, 10000)
 }
-
 func BenchmarkChainWrite_header_10k_badgerDB(b *testing.B) {
 	benchWriteChain(b, false, database.BadgerDB, 10000)
 }
@@ -247,7 +233,6 @@ func BenchmarkChainWrite_header_10k_badgerDB(b *testing.B) {
 func BenchmarkChainWrite_full_10k_levelDB(b *testing.B) {
 	benchWriteChain(b, true, database.LevelDB, 10000)
 }
-
 func BenchmarkChainWrite_full_10k_badgerDB(b *testing.B) {
 	benchWriteChain(b, true, database.BadgerDB, 10000)
 }
@@ -255,7 +240,6 @@ func BenchmarkChainWrite_full_10k_badgerDB(b *testing.B) {
 func BenchmarkChainWrite_header_100k_levelDB(b *testing.B) {
 	benchWriteChain(b, false, database.LevelDB, 100000)
 }
-
 func BenchmarkChainWrite_header_100k_badgerDB(b *testing.B) {
 	benchWriteChain(b, false, database.BadgerDB, 100000)
 }
@@ -263,7 +247,6 @@ func BenchmarkChainWrite_header_100k_badgerDB(b *testing.B) {
 func BenchmarkChainWrite_full_100k_levelDB(b *testing.B) {
 	benchWriteChain(b, true, database.LevelDB, 100000)
 }
-
 func BenchmarkChainWrite_full_100k_badgerDB(b *testing.B) {
 	benchWriteChain(b, true, database.BadgerDB, 100000)
 }

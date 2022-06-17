@@ -38,4 +38,5 @@ type CommitEvent struct {
 }
 
 // FinalCommittedEvent is posted when a proposal is committed
-type FinalCommittedEvent struct{}
+type FinalCommittedEvent struct {
+}

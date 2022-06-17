@@ -31,7 +31,7 @@ import (
 	"github.com/klaytn/klaytn/networks/p2p/simulations/adapters"
 )
 
-// a map of mocker names to its function
+//a map of mocker names to its function
 var mockerList = map[string]func(net *Network, quit chan struct{}, nodeCount int){
 	"startStop":     startStop,
 	"probabilistic": probabilistic,
@@ -40,13 +40,13 @@ var mockerList = map[string]func(net *Network, quit chan struct{}, nodeCount int
 
 var logger = log.NewModuleLogger(log.NetworksP2PSimulations)
 
-// Lookup a mocker by its name, returns the mockerFn
+//Lookup a mocker by its name, returns the mockerFn
 func LookupMocker(mockerType string) func(net *Network, quit chan struct{}, nodeCount int) {
 	return mockerList[mockerType]
 }
 
-// Get a list of mockers (keys of the map)
-// Useful for frontend to build available mocker selection
+//Get a list of mockers (keys of the map)
+//Useful for frontend to build available mocker selection
 func GetMockerList() []string {
 	list := make([]string, 0, len(mockerList))
 	for k := range mockerList {
@@ -55,7 +55,7 @@ func GetMockerList() []string {
 	return list
 }
 
-// The boot mockerFn only connects the node in a ring and doesn't do anything else
+//The boot mockerFn only connects the node in a ring and doesn't do anything else
 func boot(net *Network, quit chan struct{}, nodeCount int) {
 	_, err := connectNodesInRing(net, nodeCount)
 	if err != nil {
@@ -63,7 +63,7 @@ func boot(net *Network, quit chan struct{}, nodeCount int) {
 	}
 }
 
-// The startStop mockerFn stops and starts nodes in a defined period (ticker)
+//The startStop mockerFn stops and starts nodes in a defined period (ticker)
 func startStop(net *Network, quit chan struct{}, nodeCount int) {
 	nodes, err := connectNodesInRing(net, nodeCount)
 	if err != nil {
@@ -109,7 +109,7 @@ func probabilistic(net *Network, quit chan struct{}, nodeCount int) {
 	if err != nil {
 		select {
 		case <-quit:
-			// error may be due to abortion of mocking; so the quit channel is closed
+			//error may be due to abortion of mocking; so the quit channel is closed
 			return
 		default:
 			panic("Could not startup node network for mocker")
@@ -142,7 +142,7 @@ func probabilistic(net *Network, quit chan struct{}, nodeCount int) {
 			lowid = rand1
 			highid = rand2
 		}
-		steps := highid - lowid
+		var steps = highid - lowid
 		wg.Add(steps)
 		for i := lowid; i < highid; i++ {
 			select {
@@ -169,9 +169,10 @@ func probabilistic(net *Network, quit chan struct{}, nodeCount int) {
 		}
 		wg.Wait()
 	}
+
 }
 
-// connect nodeCount number of nodes in a ring
+//connect nodeCount number of nodes in a ring
 func connectNodesInRing(net *Network, nodeCount int) ([]discover.NodeID, error) {
 	ids := make([]discover.NodeID, nodeCount)
 	for i := 0; i < nodeCount; i++ {

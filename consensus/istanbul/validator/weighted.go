@@ -138,6 +138,7 @@ func RecoverWeightedCouncilProposer(valSet istanbul.ValidatorSet, proposerAddrs 
 }
 
 func NewWeightedCouncil(addrs []common.Address, demotedAddrs []common.Address, rewards []common.Address, votingPowers []uint64, weights []uint64, policy istanbul.ProposerPolicy, committeeSize uint64, blockNum uint64, proposersBlockNum uint64, chain consensus.ChainReader) *weightedCouncil {
+
 	if policy != istanbul.WeightedRandom {
 		logger.Error("unsupported proposer policy for weighted council", "policy", policy)
 		return nil
@@ -227,6 +228,7 @@ func NewWeightedCouncil(addrs []common.Address, demotedAddrs []common.Address, r
 }
 
 func GetWeightedCouncilData(valSet istanbul.ValidatorSet) (validators []common.Address, demotedValidators []common.Address, rewardAddrs []common.Address, votingPowers []uint64, weights []uint64, proposers []common.Address, proposersBlockNum uint64) {
+
 	weightedCouncil, ok := valSet.(*weightedCouncil)
 	if !ok {
 		logger.Error("not weightedCouncil type.")
@@ -462,7 +464,7 @@ func (valSet *weightedCouncil) GetDemotedByAddress(addr common.Address) (int, is
 
 func (valSet *weightedCouncil) GetProposer() istanbul.Validator {
 	// TODO-Klaytn-Istanbul: nil check for valSet.proposer is needed
-	// logger.Trace("GetProposer()", "proposer", valSet.proposer)
+	//logger.Trace("GetProposer()", "proposer", valSet.proposer)
 	return valSet.proposer.Load().(istanbul.Validator)
 }
 
@@ -579,7 +581,7 @@ func (valSet *weightedCouncil) Copy() istanbul.ValidatorSet {
 	valSet.validatorMu.RLock()
 	defer valSet.validatorMu.RUnlock()
 
-	newWeightedCouncil := weightedCouncil{
+	var newWeightedCouncil = weightedCouncil{
 		subSize:           valSet.subSize,
 		policy:            valSet.policy,
 		proposer:          valSet.proposer,

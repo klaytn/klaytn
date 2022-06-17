@@ -307,7 +307,7 @@ func (s londonSigner) SenderPubkey(tx *Transaction) ([]*ecdsa.PublicKey, error) 
 
 // SenderFeePayer returns the public key derived from tx signature and txhash.
 func (s londonSigner) SenderFeePayer(tx *Transaction) ([]*ecdsa.PublicKey, error) {
-	// EIP-1559(Dynamic fee transaction) tx don't supported fee-delegation.
+	//EIP-1559(Dynamic fee transaction) tx don't supported fee-delegation.
 	return s.eip2930Signer.SenderFeePayer(tx)
 }
 
@@ -414,7 +414,7 @@ func (s eip2930Signer) SenderPubkey(tx *Transaction) ([]*ecdsa.PublicKey, error)
 
 // SenderFeePayer returns the public key derived from tx signature and txhash.
 func (s eip2930Signer) SenderFeePayer(tx *Transaction) ([]*ecdsa.PublicKey, error) {
-	// EIP-2930(Optional access list transaction) tx don't supported fee-delegation.
+	//EIP-2930(Optional access list transaction) tx don't supported fee-delegation.
 	return s.EIP155Signer.SenderFeePayer(tx)
 }
 

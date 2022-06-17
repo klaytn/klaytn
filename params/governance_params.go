@@ -124,6 +124,7 @@ func CalcProposerBlockNumber(blockNum uint64) uint64 {
 		number = blockNum - proposerInterval
 	} else {
 		number = blockNum - (blockNum % proposerInterval)
+
 	}
 	return number
 }

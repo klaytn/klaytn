@@ -30,7 +30,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-var NoParentPeerErr = errors.New("no parent peer")
+var (
+	NoParentPeerErr = errors.New("no parent peer")
+)
 
 const timeout = 30 * time.Second
 

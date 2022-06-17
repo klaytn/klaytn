@@ -342,8 +342,7 @@ func (api *APIExtension) getConsensusInfo(block *types.Block) (ConsensusInfo, er
 }
 
 func (api *APIExtension) makeRPCBlockOutput(b *types.Block,
-	cInfo ConsensusInfo, transactions types.Transactions, receipts types.Receipts,
-) map[string]interface{} {
+	cInfo ConsensusInfo, transactions types.Transactions, receipts types.Receipts) map[string]interface{} {
 	head := b.Header() // copies the header once
 	hash := head.Hash()
 

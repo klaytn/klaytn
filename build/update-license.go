@@ -18,7 +18,6 @@
 // This file is derived from build/update-license.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
-//go:build none
 // +build none
 
 /*
@@ -787,11 +786,11 @@ var externalLicenseT = template.Must(template.New("").Parse(`
 type info struct {
 	file         string
 	Year         int64
-	LastCommit   int64 // unit: YYYY
+	LastCommit   int64 //unit: YYYY
 	otherLicence string
 }
 
-// File get derived ethereum path
+//File get derived ethereum path
 func (i info) File() string {
 	etherdir, exists := ethereumDir[i.file]
 	if !exists {
@@ -800,7 +799,7 @@ func (i info) File() string {
 	return etherdir
 }
 
-// get original ethereum licence
+//get original ethereum licence
 func (i info) OtherLicence() string {
 	return i.otherLicence
 }
@@ -813,7 +812,7 @@ func main() {
 		wg    sync.WaitGroup
 	)
 
-	// writeAuthors(files)
+	//writeAuthors(files)
 
 	go func() {
 		for _, f := range files {
@@ -834,7 +833,7 @@ func main() {
 	writeLicenses(infoc)
 }
 
-// skipFile returns whether the path updates the license
+//skipFile returns whether the path updates the license
 func skipFile(path string) bool {
 	if strings.Contains(path, "/testdata/") {
 		return true
@@ -854,7 +853,7 @@ func skipFile(path string) bool {
 	return false
 }
 
-// externalLiceceFile returns whether the path has external license
+//externalLiceceFile returns whether the path has external license
 func externalLicenceFile(path string) bool {
 	for _, p := range externalLicencePrefixes {
 		if strings.HasPrefix(path, p) {
@@ -864,7 +863,7 @@ func externalLicenceFile(path string) bool {
 	return false
 }
 
-// getFiles returns all klaytn files
+//getFiles returns all klaytn files
 func getFiles() []string {
 	cmd := exec.Command("git", "ls-tree", "-r", "--name-only", "HEAD")
 	var files []string
@@ -969,7 +968,7 @@ func writeAuthors(files []string) {
 		content.WriteString("\n")
 	}
 	fmt.Println("writing AUTHORS")
-	if err := ioutil.WriteFile("AUTHORS", content.Bytes(), 0o644); err != nil {
+	if err := ioutil.WriteFile("AUTHORS", content.Bytes(), 0644); err != nil {
 		log.Fatalln(err)
 	}
 }

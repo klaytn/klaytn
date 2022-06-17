@@ -44,10 +44,8 @@ import (
 
 const defaultGasPrice = 50 * params.Ston
 
-var (
-	errBlockNumberUnsupported = errors.New("LocalBackend cannot access blocks other than the latest block")
-	errGasEstimationFailed    = errors.New("gas required exceeds allowance or always failing transaction")
-)
+var errBlockNumberUnsupported = errors.New("LocalBackend cannot access blocks other than the latest block")
+var errGasEstimationFailed = errors.New("gas required exceeds allowance or always failing transaction")
 
 // TODO-Klaytn currently LocalBackend is only for ServiceChain, especially Bridge SmartContract
 type LocalBackend struct {
@@ -345,7 +343,6 @@ func (fb *filterLocalBackend) ChainDB() database.DBManager {
 	// TODO-Klaytn consider chain's chainDB instead of bridge's chainDB currently.
 	return fb.subbridge.chainDB
 }
-
 func (fb *filterLocalBackend) EventMux() *event.TypeMux {
 	// TODO-Klaytn consider chain's eventMux instead of bridge's eventMux currently.
 	return fb.subbridge.EventMux()

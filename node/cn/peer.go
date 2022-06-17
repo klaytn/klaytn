@@ -284,7 +284,7 @@ func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) Peer {
 
 // ChannelOfMessage is a map with the index of the channel per message
 var ChannelOfMessage = map[uint64]int{
-	StatusMsg:                   p2p.ConnDefault, // StatusMsg's Channel should to be set ConnDefault
+	StatusMsg:                   p2p.ConnDefault, //StatusMsg's Channel should to be set ConnDefault
 	NewBlockHashesMsg:           p2p.ConnDefault,
 	BlockHeaderFetchRequestMsg:  p2p.ConnDefault,
 	BlockHeaderFetchResponseMsg: p2p.ConnDefault,
@@ -349,7 +349,7 @@ func (p *basePeer) Broadcast() {
 			if err := p.SendTransactions(txs); err != nil {
 				logger.Error("fail to SendTransactions", "peer", p.id, "err", err)
 				continue
-				// return
+				//return
 			}
 			p.Log().Trace("Broadcast transactions", "peer", p.id, "count", len(txs))
 
@@ -357,7 +357,7 @@ func (p *basePeer) Broadcast() {
 			if err := p.SendNewBlock(prop.block, prop.td); err != nil {
 				logger.Error("fail to SendNewBlock", "peer", p.id, "err", err)
 				continue
-				// return
+				//return
 			}
 			p.Log().Trace("Propagated block", "peer", p.id, "number", prop.block.Number(), "hash", prop.block.Hash(), "td", prop.td)
 
@@ -365,7 +365,7 @@ func (p *basePeer) Broadcast() {
 			if err := p.SendNewBlockHashes([]common.Hash{block.Hash()}, []uint64{block.NumberU64()}); err != nil {
 				logger.Error("fail to SendNewBlockHashes", "peer", p.id, "err", err)
 				continue
-				// return
+				//return
 			}
 			p.Log().Trace("Announced block", "peer", p.id, "number", block.Number(), "hash", block.Hash())
 
@@ -781,7 +781,7 @@ func (p *multiChannelPeer) Broadcast() {
 			if err := p.SendTransactions(txs); err != nil {
 				logger.Error("fail to SendTransactions", "peer", p.id, "err", err)
 				continue
-				// return
+				//return
 			}
 			p.Log().Trace("Broadcast transactions", "peer", p.id, "count", len(txs))
 
@@ -789,7 +789,7 @@ func (p *multiChannelPeer) Broadcast() {
 			if err := p.SendNewBlock(prop.block, prop.td); err != nil {
 				logger.Error("fail to SendNewBlock", "peer", p.id, "err", err)
 				continue
-				// return
+				//return
 			}
 			p.Log().Trace("Propagated block", "peer", p.id, "number", prop.block.Number(), "hash", prop.block.Hash(), "td", prop.td)
 
@@ -797,7 +797,7 @@ func (p *multiChannelPeer) Broadcast() {
 			if err := p.SendNewBlockHashes([]common.Hash{block.Hash()}, []uint64{block.NumberU64()}); err != nil {
 				logger.Error("fail to SendNewBlockHashes", "peer", p.id, "err", err)
 				continue
-				// return
+				//return
 			}
 			p.Log().Trace("Announced block", "peer", p.id, "number", block.Number(), "hash", block.Hash())
 
@@ -950,7 +950,7 @@ func (p *multiChannelPeer) msgSender(msgcode uint64, data interface{}) error {
 
 // GetRW returns the MsgReadWriter of the peer.
 func (p *multiChannelPeer) GetRW() p2p.MsgReadWriter {
-	return p.rw // TODO-Klaytn check this function usage
+	return p.rw //TODO-Klaytn check this function usage
 }
 
 // UpdateRWImplementationVersion updates the version of the implementation of RW.

@@ -289,6 +289,7 @@ func ListenUDP(cfg *Config) (Discovery, error) {
 	}
 	logger.Info("UDP listener up", "self", discv.Self())
 	return discv, nil
+
 }
 
 func newUDP(cfg *Config) (Discovery, *udp, error) {
@@ -380,6 +381,7 @@ func (t *udp) findnode(toid NodeID, toaddr *net.UDPAddr, target NodeID, targetNT
 		TargetType: targetNT,
 		Expiration: uint64(time.Now().Add(expiration).Unix()),
 	})
+
 	if err != nil {
 		logger.Debug("[udp] findnode: failed to send FINDNODE", "err", err)
 	}
@@ -733,7 +735,7 @@ func (req *findnode) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte
 		return errUnknownNode
 	}
 	target := crypto.Keccak256Hash(req.Target[:])
-	closest := t.RetrieveNodes(target, req.TargetType, bucketSize) // TODO-Klaytn-Node if NodeType is CN or PN, bucketSize is not a prefer variable.
+	closest := t.RetrieveNodes(target, req.TargetType, bucketSize) //TODO-Klaytn-Node if NodeType is CN or PN, bucketSize is not a prefer variable.
 
 	p := neighbors{Expiration: uint64(time.Now().Add(expiration).Unix()), TargetType: req.TargetType}
 	var sent bool

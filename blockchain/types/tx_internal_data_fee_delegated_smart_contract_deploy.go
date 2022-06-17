@@ -298,6 +298,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) String() string {
 		t.FeePayer.String(),
 		t.FeePayerSignatures.string(),
 		enc)
+
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractDeploy) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {

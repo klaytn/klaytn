@@ -170,7 +170,7 @@ func TestMainBridge_basic(t *testing.T) {
 	}
 	defer mBridge.Stop()
 
-	// TODO more test
+	//TODO more test
 }
 
 // TestMainBridge_removePeer tests correct removal of a peer from `MainBridge.peers`.

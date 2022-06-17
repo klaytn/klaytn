@@ -92,7 +92,7 @@ type TerminalStringer interface {
 //
 func TerminalFormat(usecolor bool) Format {
 	return FormatFunc(func(r *Record) []byte {
-		color := 0
+		var color = 0
 		if usecolor {
 			switch r.Lvl {
 			case LvlCrit:
@@ -110,7 +110,7 @@ func TerminalFormat(usecolor bool) Format {
 			}
 		}
 
-		module := ""
+		var module = ""
 		if r.Ctx[0].(string) == "module" {
 			module = fmt.Sprintf("%v", r.Ctx[1])
 		}

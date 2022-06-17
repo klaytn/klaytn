@@ -36,12 +36,10 @@ import (
 	"github.com/klaytn/klaytn/common/hexutil"
 )
 
-var (
-	errEvmExecutionReverted = errors.New("evm: execution reverted")
-	errExecutionReverted    = errors.New("execution reverted")
-	errInternalFailure      = errors.New("internal failure")
-	emptyAddr               = common.Address{}
-)
+var errEvmExecutionReverted = errors.New("evm: execution reverted")
+var errExecutionReverted = errors.New("execution reverted")
+var errInternalFailure = errors.New("internal failure")
+var emptyAddr = common.Address{}
 
 // InternalTxTracer is a full blown transaction tracer that extracts and reports all
 // the internal calls made by a transaction, along with any useful information.

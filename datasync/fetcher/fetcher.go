@@ -206,8 +206,7 @@ func (f *Fetcher) Stop() {
 // Notify announces the fetcher of the potential availability of a new block in
 // the network.
 func (f *Fetcher) Notify(peer string, hash common.Hash, number uint64, time time.Time,
-	headerFetcher HeaderRequesterFn, bodyFetcher BodyRequesterFn,
-) error {
+	headerFetcher HeaderRequesterFn, bodyFetcher BodyRequesterFn) error {
 	block := &announce{
 		hash:        hash,
 		number:      number,

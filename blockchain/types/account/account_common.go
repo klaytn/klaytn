@@ -197,8 +197,7 @@ func (e *AccountCommon) DeepCopy() *AccountCommon {
 		nonce:         e.nonce,
 		balance:       new(big.Int).Set(e.balance),
 		humanReadable: e.humanReadable,
-		key:           e.key.DeepCopy(),
-	}
+		key:           e.key.DeepCopy()}
 }
 
 func (e *AccountCommon) UpdateKey(newKey accountkey.AccountKey, currentBlockNumber uint64) error {
@@ -214,6 +213,7 @@ func (e *AccountCommon) Equal(ta *AccountCommon) bool {
 		e.balance.Cmp(ta.balance) == 0 &&
 		e.humanReadable == ta.humanReadable &&
 		e.key.Equal(ta.key)
+
 }
 
 func (e *AccountCommon) String() string {

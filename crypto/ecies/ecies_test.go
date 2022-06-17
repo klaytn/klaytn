@@ -361,6 +361,7 @@ func testParamSelection(t *testing.T, c testCase) {
 	if err == nil {
 		t.Fatalf("ecies: encryption should not have succeeded (%s)\n", c.Name)
 	}
+
 }
 
 // Ensure that the basic public key validation in the decryption operation

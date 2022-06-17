@@ -25,11 +25,9 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-var zlManager = zapLoggerManager{
-	"stderr", // Use stderr to outputPath instead of stdout to be aligned with log15.
+var zlManager = zapLoggerManager{"stderr", // Use stderr to outputPath instead of stdout to be aligned with log15.
 	"json", zapcore.InfoLevel,
-	sync.Mutex{},
-	make(map[ModuleID][]*zapLogger),
+	sync.Mutex{}, make(map[ModuleID][]*zapLogger),
 }
 
 type zapLoggerManager struct {
@@ -220,14 +218,14 @@ func genDefaultEncoderConfig() zapcore.EncoderConfig {
 		TimeKey:  "ts",
 		LevelKey: "level",
 		NameKey:  "logger",
-		// CallerKey:      "caller",
+		//CallerKey:      "caller",
 		MessageKey:     "msg",
 		StacktraceKey:  "stacktrace",
 		LineEnding:     zapcore.DefaultLineEnding,
 		EncodeLevel:    zapcore.LowercaseLevelEncoder,
 		EncodeTime:     zapcore.ISO8601TimeEncoder,
 		EncodeDuration: zapcore.SecondsDurationEncoder,
-		// EncodeCaller:   zapcore.ShortCallerEncoder,
+		//EncodeCaller:   zapcore.ShortCallerEncoder,
 	}
 }
 

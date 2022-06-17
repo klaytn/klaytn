@@ -50,4 +50,5 @@ func TestFeeDelegatedCheck(t *testing.T) {
 			}
 		}
 	}
+
 }

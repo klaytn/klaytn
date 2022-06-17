@@ -100,7 +100,7 @@ func (gkc *gKlaytnClient) handleRPCResponse(response *RPCResponse) error {
 		return err
 	}
 
-	// fmt.Println(out.Result)
+	//fmt.Println(out.Result)
 	return nil
 }
 

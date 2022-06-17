@@ -33,11 +33,12 @@ import (
 	"gopkg.in/urfave/cli.v1"
 )
 
-var AccountCommand = cli.Command{
-	Name:     "account",
-	Usage:    "Manage accounts",
-	Category: "ACCOUNT COMMANDS",
-	Description: `
+var (
+	AccountCommand = cli.Command{
+		Name:     "account",
+		Usage:    "Manage accounts",
+		Category: "ACCOUNT COMMANDS",
+		Description: `
 
 Manage accounts, list all existing accounts, import a private key into a new
 account, create a new account or update an existing account.
@@ -57,29 +58,29 @@ It is safe to transfer the entire directory or the individual keys therein
 between klay nodes by simply copying.
 
 Make sure you backup your keys regularly.`,
-	Subcommands: []cli.Command{
-		{
-			Name:   "list",
-			Usage:  "Print summary of existing accounts",
-			Action: utils.MigrateFlags(accountList),
-			Flags: []cli.Flag{
-				utils.DataDirFlag,
-				utils.KeyStoreDirFlag,
-			},
-			Description: `
+		Subcommands: []cli.Command{
+			{
+				Name:   "list",
+				Usage:  "Print summary of existing accounts",
+				Action: utils.MigrateFlags(accountList),
+				Flags: []cli.Flag{
+					utils.DataDirFlag,
+					utils.KeyStoreDirFlag,
+				},
+				Description: `
 Print a short summary of all accounts`,
-		},
-		{
-			Name:   "new",
-			Usage:  "Create a new account",
-			Action: utils.MigrateFlags(accountCreate),
-			Flags: []cli.Flag{
-				utils.DataDirFlag,
-				utils.KeyStoreDirFlag,
-				utils.PasswordFileFlag,
-				utils.LightKDFFlag,
 			},
-			Description: `
+			{
+				Name:   "new",
+				Usage:  "Create a new account",
+				Action: utils.MigrateFlags(accountCreate),
+				Flags: []cli.Flag{
+					utils.DataDirFlag,
+					utils.KeyStoreDirFlag,
+					utils.PasswordFileFlag,
+					utils.LightKDFFlag,
+				},
+				Description: `
     klay account new
 
 Creates a new account and prints the address.
@@ -93,18 +94,18 @@ For non-interactive use the passphrase can be specified with the --password flag
 Note, this is meant to be used for testing only, it is a bad idea to save your
 password to file or expose in any other way.
 `,
-		},
-		{
-			Name:      "update",
-			Usage:     "Update an existing account",
-			Action:    utils.MigrateFlags(accountUpdate),
-			ArgsUsage: "<address>",
-			Flags: []cli.Flag{
-				utils.DataDirFlag,
-				utils.KeyStoreDirFlag,
-				utils.LightKDFFlag,
 			},
-			Description: `
+			{
+				Name:      "update",
+				Usage:     "Update an existing account",
+				Action:    utils.MigrateFlags(accountUpdate),
+				ArgsUsage: "<address>",
+				Flags: []cli.Flag{
+					utils.DataDirFlag,
+					utils.KeyStoreDirFlag,
+					utils.LightKDFFlag,
+				},
+				Description: `
     klay account update <address>
 
 Update an existing account.
@@ -122,19 +123,19 @@ For non-interactive use the passphrase can be specified with the --password flag
 Since only one password can be given, only format update can be performed,
 changing your password is only possible interactively.
 `,
-		},
-		{
-			Name:   "import",
-			Usage:  "Import a private key into a new account",
-			Action: utils.MigrateFlags(accountImport),
-			Flags: []cli.Flag{
-				utils.DataDirFlag,
-				utils.KeyStoreDirFlag,
-				utils.PasswordFileFlag,
-				utils.LightKDFFlag,
 			},
-			ArgsUsage: "<keyFile>",
-			Description: `
+			{
+				Name:   "import",
+				Usage:  "Import a private key into a new account",
+				Action: utils.MigrateFlags(accountImport),
+				Flags: []cli.Flag{
+					utils.DataDirFlag,
+					utils.KeyStoreDirFlag,
+					utils.PasswordFileFlag,
+					utils.LightKDFFlag,
+				},
+				ArgsUsage: "<keyFile>",
+				Description: `
     klay account import <keyfile>
 
 Imports an unencrypted private key from <keyfile> and creates a new account.
@@ -155,9 +156,10 @@ As you can directly copy your encrypted accounts to another klay instance,
 this import mechanism is not needed when you transfer an account between
 nodes.
 `,
+			},
 		},
-	},
-}
+	}
+)
 
 func accountList(ctx *cli.Context) error {
 	if glogger, err := debug.GetGlogger(); err == nil {
@@ -273,6 +275,7 @@ func accountCreate(ctx *cli.Context) error {
 	}
 	utils.SetNodeConfig(ctx, &cfg.Node)
 	scryptN, scryptP, keydir, err := cfg.Node.AccountConfig()
+
 	if err != nil {
 		log.Fatalf("Failed to read configuration: %v", err)
 	}
@@ -280,6 +283,7 @@ func accountCreate(ctx *cli.Context) error {
 	password := getPassPhrase("Your new account is locked with a password. Please give a password. Do not forget this password.", true, 0, utils.MakePasswordList(ctx))
 
 	address, err := keystore.StoreKey(keydir, password, scryptN, scryptP)
+
 	if err != nil {
 		log.Fatalf("Failed to create account: %v", err)
 	}

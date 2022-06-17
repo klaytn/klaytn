@@ -501,7 +501,7 @@ func (gov *Governance) addNewVote(valset istanbul.ValidatorSet, votes []Governan
 			(governanceMode == params.GovernanceMode_Ballot && currentVotes > valset.TotalVotingPower()/2) {
 			switch GovernanceKeyMap[gVote.Key] {
 			case params.AddValidator:
-				// reward.GetStakingInfo()
+				//reward.GetStakingInfo()
 				if addr, ok := gVote.Value.(common.Address); ok {
 					valset.AddValidator(addr)
 				} else {

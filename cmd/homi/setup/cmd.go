@@ -57,10 +57,11 @@ type GrafanaFile struct {
 	name string
 }
 
-var SetupCommand = cli.Command{
-	Name:  "setup",
-	Usage: "Generate klaytn CN's init files",
-	Description: `This tool helps generate:
+var (
+	SetupCommand = cli.Command{
+		Name:  "setup",
+		Usage: "Generate klaytn CN's init files",
+		Description: `This tool helps generate:
 		* Genesis Block (genesis.json)
 		* Static nodes for all CNs(Consensus Node)
 		* CN details
@@ -71,70 +72,70 @@ var SetupCommand = cli.Command{
 Args :
 		type : [local | remote | deploy | docker (default)]
 `,
-	Action: gen,
-	Flags: []cli.Flag{
-		cypressTestFlag,
-		cypressFlag,
-		baobabTestFlag,
-		baobabFlag,
-		serviceChainFlag,
-		serviceChainTestFlag,
-		cliqueFlag,
-		numOfCNsFlag,
-		numOfValidatorsFlag,
-		numOfPNsFlag,
-		numOfENsFlag,
-		numOfSCNsFlag,
-		numOfSPNsFlag,
-		numOfSENsFlag,
-		numOfTestKeyFlag,
-		chainIDFlag,
-		serviceChainIDFlag,
-		unitPriceFlag,
-		deriveShaImplFlag,
-		fundingAddrFlag,
-		outputPathFlag,
-		dockerImageIdFlag,
-		fasthttpFlag,
-		networkIdFlag,
-		nografanaFlag,
-		useTxGenFlag,
-		txGenRateFlag,
-		txGenThFlag,
-		txGenConnFlag,
-		txGenDurFlag,
-		rpcPortFlag,
-		wsPortFlag,
-		p2pPortFlag,
-		dataDirFlag,
-		logDirFlag,
-		governanceFlag,
-		govModeFlag,
-		governingNodeFlag,
-		rewardMintAmountFlag,
-		rewardRatioFlag,
-		rewardGiniCoeffFlag,
-		rewardStakingFlag,
-		rewardProposerFlag,
-		rewardMinimumStakeFlag,
-		rewardDeferredTxFeeFlag,
-		istEpochFlag,
-		istProposerPolicyFlag,
-		istSubGroupFlag,
-		cliqueEpochFlag,
-		cliquePeriodFlag,
-		istanbulCompatibleBlockNumberFlag,
-		londonCompatibleBlockNumberFlag,
-		ethTxTypeCompatibleBlockNumberFlag,
-	},
-	ArgsUsage: "type",
-}
+		Action: gen,
+		Flags: []cli.Flag{
+			cypressTestFlag,
+			cypressFlag,
+			baobabTestFlag,
+			baobabFlag,
+			serviceChainFlag,
+			serviceChainTestFlag,
+			cliqueFlag,
+			numOfCNsFlag,
+			numOfValidatorsFlag,
+			numOfPNsFlag,
+			numOfENsFlag,
+			numOfSCNsFlag,
+			numOfSPNsFlag,
+			numOfSENsFlag,
+			numOfTestKeyFlag,
+			chainIDFlag,
+			serviceChainIDFlag,
+			unitPriceFlag,
+			deriveShaImplFlag,
+			fundingAddrFlag,
+			outputPathFlag,
+			dockerImageIdFlag,
+			fasthttpFlag,
+			networkIdFlag,
+			nografanaFlag,
+			useTxGenFlag,
+			txGenRateFlag,
+			txGenThFlag,
+			txGenConnFlag,
+			txGenDurFlag,
+			rpcPortFlag,
+			wsPortFlag,
+			p2pPortFlag,
+			dataDirFlag,
+			logDirFlag,
+			governanceFlag,
+			govModeFlag,
+			governingNodeFlag,
+			rewardMintAmountFlag,
+			rewardRatioFlag,
+			rewardGiniCoeffFlag,
+			rewardStakingFlag,
+			rewardProposerFlag,
+			rewardMinimumStakeFlag,
+			rewardDeferredTxFeeFlag,
+			istEpochFlag,
+			istProposerPolicyFlag,
+			istSubGroupFlag,
+			cliqueEpochFlag,
+			cliquePeriodFlag,
+			istanbulCompatibleBlockNumberFlag,
+			londonCompatibleBlockNumberFlag,
+			ethTxTypeCompatibleBlockNumberFlag,
+		},
+		ArgsUsage: "type",
+	}
+)
 
 const (
 	baobabOperatorAddress = "0x79deccfacd0599d3166eb76972be7bb20f51b46f"
 	baobabOperatorKey     = "199fd187fdb2ce5f577797e1abaf4dd50e62275949c021f0112be40c9721e1a2"
 )
-
 const (
 	DefaultTcpPort uint16 = 32323
 	TypeNotDefined        = -1
@@ -434,7 +435,7 @@ func genBaobabTestGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Gen
 }
 
 func RandStringRunes(n int) string {
-	letterRunes := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789~!@#$%^&*()_+{}|[]")
+	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789~!@#$%^&*()_+{}|[]")
 
 	rand.Seed(time.Now().UnixNano())
 
@@ -629,8 +630,7 @@ func downLoadGrafanaJson() {
 }
 
 func writeCNInfoKey(num int, nodeAddrs []common.Address, nodeKeys []string, privKeys []*ecdsa.PrivateKey,
-	genesisJsonBytes []byte,
-) {
+	genesisJsonBytes []byte) {
 	const DirCommon = "common"
 	WriteFile(genesisJsonBytes, DirCommon, "genesis.json")
 
@@ -677,8 +677,7 @@ func writePrometheusConfig(cnNum int, pnNum int) {
 }
 
 func writeNodeFiles(isWorkOnSingleHost bool, num int, pnum int, nodeAddrs []common.Address, nodeKeys []string,
-	privKeys []*ecdsa.PrivateKey, genesisJsonBytes []byte,
-) {
+	privKeys []*ecdsa.PrivateKey, genesisJsonBytes []byte) {
 	WriteFile(genesisJsonBytes, DirScript, "genesis.json")
 
 	validators := makeValidators(num, isWorkOnSingleHost, nodeAddrs, nodeKeys, privKeys)
@@ -721,8 +720,7 @@ func filterNodeInfo(validatorInfos []*ValidatorInfo) []string {
 }
 
 func makeValidators(num int, isWorkOnSingleHost bool, nodeAddrs []common.Address, nodeKeys []string,
-	keys []*ecdsa.PrivateKey,
-) []*ValidatorInfo {
+	keys []*ecdsa.PrivateKey) []*ValidatorInfo {
 	var validatorPort uint16
 	var validators []*ValidatorInfo
 	for i := 0; i < num; i++ {
@@ -750,8 +748,7 @@ func makeValidators(num int, isWorkOnSingleHost bool, nodeAddrs []common.Address
 }
 
 func makeValidatorsWithIp(num int, isWorkOnSingleHost bool, nodeAddrs []common.Address, nodeKeys []string,
-	keys []*ecdsa.PrivateKey, networkIds []string,
-) []*ValidatorInfo {
+	keys []*ecdsa.PrivateKey, networkIds []string) []*ValidatorInfo {
 	var validatorPort uint16
 	var validators []*ValidatorInfo
 	for i := 0; i < num; i++ {
@@ -984,7 +981,7 @@ func WriteFile(content []byte, parentFolder string, fileName string) {
 }
 
 func findGenType(ctx *cli.Context) int {
-	genType := TypeNotDefined
+	var genType = TypeNotDefined
 	if len(ctx.Args()) >= 1 {
 		for i, t := range Types {
 			if t == ctx.Args()[0] {

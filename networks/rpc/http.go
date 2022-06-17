@@ -304,6 +304,7 @@ func (srv *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (srv *Server) HandleFastHTTP(requestCtx *fasthttp.RequestCtx) {
+
 	r := &requestCtx.Request
 	w := &requestCtx.Response
 

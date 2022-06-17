@@ -107,7 +107,7 @@ func TestChainDataFetcher_Success_fetchingStartAndStop(t *testing.T) {
 	bc := mocks.NewMockBlockChain(ctrl)
 	bc.EXPECT().SubscribeChainEvent(gomock.Any()).Return(nil).Times(1)
 	// TODO-ChainDataFetcher the below statement is not working, so find out why.
-	// bc.EXPECT().SubscribeChainEvent(gomock.Eq(fetcher.chainCh)).Return(nil).Times(1)
+	//bc.EXPECT().SubscribeChainEvent(gomock.Eq(fetcher.chainCh)).Return(nil).Times(1)
 	bc.EXPECT().CurrentHeader().Return(&types.Header{Number: big.NewInt(1)}).Times(1)
 
 	fetcher.blockchain = bc

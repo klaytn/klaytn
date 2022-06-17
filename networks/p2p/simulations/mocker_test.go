@@ -35,19 +35,19 @@ import (
 )
 
 func TestMocker(t *testing.T) {
-	// start the simulation HTTP server
+	//start the simulation HTTP server
 	_, s := testHTTPServer(t)
 	defer s.Close()
 
-	// create a client
+	//create a client
 	client := NewClient(s.URL)
 
-	// start the network
+	//start the network
 	err := client.StartNetwork()
 	if err != nil {
 		t.Fatalf("Could not start test network: %s", err)
 	}
-	// stop the network to terminate
+	//stop the network to terminate
 	defer func() {
 		err = client.StopNetwork()
 		if err != nil {
@@ -55,7 +55,7 @@ func TestMocker(t *testing.T) {
 		}
 	}()
 
-	// get the list of available mocker types
+	//get the list of available mocker types
 	resp, err := http.Get(s.URL + "/mocker")
 	if err != nil {
 		t.Fatalf("Could not get mocker list: %s", err)
@@ -66,7 +66,7 @@ func TestMocker(t *testing.T) {
 		t.Fatalf("Invalid Status Code received, expected 200, got %d", resp.StatusCode)
 	}
 
-	// check the list is at least 1 in size
+	//check the list is at least 1 in size
 	var mockerlist []string
 	err = json.NewDecoder(resp.Body).Decode(&mockerlist)
 	if err != nil {
@@ -84,8 +84,8 @@ func TestMocker(t *testing.T) {
 	var opts SubscribeOpts
 	sub, err := client.SubscribeNetwork(events, opts)
 	defer sub.Unsubscribe()
-	// wait until all nodes are started and connected
-	// store every node up event in a map (value is irrelevant, mimic Set datatype)
+	//wait until all nodes are started and connected
+	//store every node up event in a map (value is irrelevant, mimic Set datatype)
 	nodemap := make(map[discover.NodeID]bool)
 	wg.Add(1)
 	nodesComplete := false
@@ -94,15 +94,15 @@ func TestMocker(t *testing.T) {
 		for {
 			select {
 			case event := <-events:
-				// if the event is a node Up event only
+				//if the event is a node Up event only
 				if event.Node != nil && event.Node.Up {
-					// add the correspondent node ID to the map
+					//add the correspondent node ID to the map
 					nodemap[event.Node.Config.ID] = true
-					// this means all nodes got a nodeUp event, so we can continue the test
+					//this means all nodes got a nodeUp event, so we can continue the test
 					if len(nodemap) == nodeCount {
 						nodesComplete = true
-						// wait for 3s as the mocker will need time to connect the nodes
-						// time.Sleep( 3 *time.Second)
+						//wait for 3s as the mocker will need time to connect the nodes
+						//time.Sleep( 3 *time.Second)
 					}
 				} else if event.Conn != nil && nodesComplete {
 					connCount += 1
@@ -119,16 +119,16 @@ func TestMocker(t *testing.T) {
 		}
 	}()
 
-	// take the last element of the mockerlist as the default mocker-type to ensure one is enabled
+	//take the last element of the mockerlist as the default mocker-type to ensure one is enabled
 	mockertype := mockerlist[len(mockerlist)-1]
-	// still, use hardcoded "probabilistic" one if available ;)
+	//still, use hardcoded "probabilistic" one if available ;)
 	for _, m := range mockerlist {
 		if m == "probabilistic" {
 			mockertype = m
 			break
 		}
 	}
-	// start the mocker with nodeCount number of nodes
+	//start the mocker with nodeCount number of nodes
 	resp, err = http.PostForm(s.URL+"/mocker/start", url.Values{"mocker-type": {mockertype}, "node-count": {strconv.Itoa(nodeCount)}})
 	if err != nil {
 		t.Fatalf("Could not start mocker: %s", err)
@@ -139,7 +139,7 @@ func TestMocker(t *testing.T) {
 
 	wg.Wait()
 
-	// check there are nodeCount number of nodes in the network
+	//check there are nodeCount number of nodes in the network
 	nodes_info, err := client.GetNodes()
 	if err != nil {
 		t.Fatalf("Could not get nodes list: %s", err)
@@ -149,7 +149,7 @@ func TestMocker(t *testing.T) {
 		t.Fatalf("Expected %d number of nodes, got: %d", nodeCount, len(nodes_info))
 	}
 
-	// stop the mocker
+	//stop the mocker
 	resp, err = http.Post(s.URL+"/mocker/stop", "", nil)
 	if err != nil {
 		t.Fatalf("Could not stop mocker: %s", err)
@@ -158,13 +158,13 @@ func TestMocker(t *testing.T) {
 		t.Fatalf("Invalid Status Code received for stopping mocker, expected 200, got %d", resp.StatusCode)
 	}
 
-	// reset the network
+	//reset the network
 	_, err = http.Post(s.URL+"/reset", "", nil)
 	if err != nil {
 		t.Fatalf("Could not reset network: %s", err)
 	}
 
-	// now the number of nodes in the network should be zero
+	//now the number of nodes in the network should be zero
 	nodes_info, err = client.GetNodes()
 	if err != nil {
 		t.Fatalf("Could not get nodes list: %s", err)

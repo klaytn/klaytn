@@ -173,7 +173,7 @@ type Governance struct {
 	// Map used to keep multiple types of votes
 	voteMap VoteMap
 
-	nodeAddress      atomic.Value // common.Address
+	nodeAddress      atomic.Value //common.Address
 	totalVotingPower uint64
 	votingPower      uint64
 
@@ -186,7 +186,7 @@ type Governance struct {
 	idxCacheLock *sync.RWMutex
 
 	// The block number when current governance information was changed
-	actualGovernanceBlock atomic.Value // uint64
+	actualGovernanceBlock atomic.Value //uint64
 
 	// The last block number at governance state was stored (used not to replay old votes)
 	lastGovernanceStateBlock uint64
@@ -631,7 +631,7 @@ func (gov *Governance) updateChangeSet(vote GovernanceVote) bool {
 func CheckGenesisValues(c *params.ChainConfig) error {
 	gov := NewGovernanceInitialize(c, nil)
 
-	tstMap := map[string]interface{}{
+	var tstMap = map[string]interface{}{
 		"istanbul.epoch":                c.Istanbul.Epoch,
 		"istanbul.committeesize":        c.Istanbul.SubGroupSize,
 		"istanbul.policy":               uint64(c.Istanbul.ProposerPolicy),

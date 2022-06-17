@@ -428,8 +428,7 @@ func TestMatchProtocols(t *testing.T) {
 			Local:  []Protocol{{Name: "match1"}, {Name: "match2"}, {Name: "remote"}},
 			Match: map[string]protoRW{
 				"match1": {Protocol: Protocol{Name: "match1"}, tc: defaultRWTimerConfig},
-				"match2": {Protocol: Protocol{Name: "match2"}, tc: defaultRWTimerConfig},
-			},
+				"match2": {Protocol: Protocol{Name: "match2"}, tc: defaultRWTimerConfig}},
 		},
 		{
 			// Various alphabetical ordering
@@ -439,8 +438,7 @@ func TestMatchProtocols(t *testing.T) {
 				"aa": {Protocol: Protocol{Name: "aa"}, tc: defaultRWTimerConfig},
 				"ab": {Protocol: Protocol{Name: "ab"}, tc: defaultRWTimerConfig},
 				"ba": {Protocol: Protocol{Name: "ba"}, tc: defaultRWTimerConfig},
-				"bb": {Protocol: Protocol{Name: "bb"}, tc: defaultRWTimerConfig},
-			},
+				"bb": {Protocol: Protocol{Name: "bb"}, tc: defaultRWTimerConfig}},
 		},
 		{
 			// No mutual versions
@@ -471,8 +469,7 @@ func TestMatchProtocols(t *testing.T) {
 			Local:  []Protocol{{Version: 1, Length: 1}, {Version: 2, Length: 2}, {Version: 3, Length: 3}, {Name: "a"}},
 			Match: map[string]protoRW{
 				"":  {Protocol: Protocol{Version: 3}, tc: defaultRWTimerConfig},
-				"a": {Protocol: Protocol{Name: "a"}, offset: 3, tc: defaultRWTimerConfig},
-			},
+				"a": {Protocol: Protocol{Name: "a"}, offset: 3, tc: defaultRWTimerConfig}},
 		},
 	}
 

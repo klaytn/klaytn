@@ -56,7 +56,6 @@ func (a *AccountKeyPublic) DeepCopy() AccountKey {
 		a.PublicKeySerializable.DeepCopy(),
 	}
 }
-
 func (a *AccountKeyPublic) Equal(b AccountKey) bool {
 	tb, ok := b.(*AccountKeyPublic)
 	if !ok {

@@ -158,8 +158,8 @@ func TestNotifications(t *testing.T) {
 }
 
 func waitForMessages(t *testing.T, in *json.Decoder, successes chan<- jsonSuccessResponse,
-	failures chan<- jsonErrResponse, notifications chan<- jsonNotification, errors chan<- error,
-) {
+	failures chan<- jsonErrResponse, notifications chan<- jsonNotification, errors chan<- error) {
+
 	// read and parse server messages
 	for {
 		var rmsg json.RawMessage

@@ -71,6 +71,7 @@ type DBSyncer struct {
 }
 
 func NewDBSyncer(ctx *node.ServiceContext, cfg *DBConfig) (*DBSyncer, error) {
+
 	logger.Info("initialize DBSyncer", "db.host",
 		cfg.DBHost, "db.port", cfg.DBPort, "db.name", cfg.DBName, "db.user", cfg.DBUser, "db.max.idle",
 		cfg.MaxIdleConns, "db.password", cfg.DBPassword, "db.max.open", cfg.MaxOpenConns, "db.max.lifetime",
@@ -106,6 +107,7 @@ func (ds *DBSyncer) APIs() []rpc.API {
 }
 
 func (ds *DBSyncer) Start(server p2p.Server) error {
+
 	ds.dataSource = ds.cfg.DBUser + ":" + ds.cfg.DBPassword + "@tcp(" + ds.cfg.DBHost + ":" +
 		ds.cfg.DBPort + ")/" + ds.cfg.DBName + "?writeTimeout=10s&timeout=10s"
 
@@ -184,7 +186,7 @@ func (ds *DBSyncer) SetComponents(components []interface{}) {
 			} else {
 				logger.Error("unknown event.mode (block,head)", "current mode", ds.eventMode)
 			}
-			// ds.logsSub = ds.blockchain.SubscribeLogsEvent(ds.logsCh)
+			//ds.logsSub = ds.blockchain.SubscribeLogsEvent(ds.logsCh)
 		case *blockchain.TxPool:
 		case *work.Miner:
 		}
@@ -226,6 +228,7 @@ func (ds *DBSyncer) loop() {
 }
 
 func (ds *DBSyncer) HandleDiffBlock(block *types.Block) {
+
 	diff := ds.blockchain.CurrentBlock().NumberU64() - block.NumberU64()
 
 	if ds.maxBlockDiff > 0 && diff > ds.maxBlockDiff {
@@ -293,6 +296,7 @@ func (ds *DBSyncer) syncBlockHeader(block *types.Block) error {
 	timestampFos := block.Header().TimeFoS
 
 	stmtIns, err := ds.db.Prepare(ds.blockInsertQuery)
+
 	if err != nil {
 		logger.Error("fail to prepare (block)", "query", ds.blockInsertQuery)
 		return err
@@ -314,6 +318,7 @@ func (ds *DBSyncer) syncBlockHeader(block *types.Block) error {
 }
 
 func (ds *DBSyncer) SyncTransactions(block *types.Block) error {
+
 	txKey := block.NumberU64() * TX_KEY_FACTOR
 	txStr, vals, insertCount := ds.resetTxParameter()
 	summaryStr, summaryVals, summaryInsertCount := ds.resetSummaryParameter()

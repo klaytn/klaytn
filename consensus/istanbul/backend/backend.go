@@ -51,6 +51,7 @@ const (
 var logger = log.NewModuleLogger(log.ConsensusIstanbulBackend)
 
 func New(rewardbase common.Address, config *istanbul.Config, privateKey *ecdsa.PrivateKey, db database.DBManager, governance governance.Engine, nodetype common.ConnType) consensus.Istanbul {
+
 	recents, _ := lru.NewARC(inmemorySnapshots)
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
 	knownMessages, _ := lru.NewARC(inmemoryMessages)
@@ -193,7 +194,7 @@ func (sb *backend) Gossip(valSet istanbul.ValidatorSet, payload []byte) error {
 				Payload:  payload,
 			}
 
-			// go p.Send(IstanbulMsg, payload)
+			//go p.Send(IstanbulMsg, payload)
 			go p.Send(IstanbulMsg, cmsg)
 		}
 	}

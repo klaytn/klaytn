@@ -45,11 +45,8 @@ func NewNoopService(*ServiceContext) (Service, error) { return new(NoopService),
 // Set of services all wrapping the base NoopService resulting in the same method
 // signatures but different outer types.
 type NoopServiceA struct{ NoopService }
-
-type (
-	NoopServiceB struct{ NoopService }
-	NoopServiceC struct{ NoopService }
-)
+type NoopServiceB struct{ NoopService }
+type NoopServiceC struct{ NoopService }
 
 func NewNoopServiceA(*ServiceContext) (Service, error) { return new(NoopServiceA), nil }
 func NewNoopServiceB(*ServiceContext) (Service, error) { return new(NoopServiceB), nil }
@@ -122,11 +119,8 @@ func InstrumentingWrapperMaker(base ServiceConstructor, kind reflect.Type) Servi
 // Set of services all wrapping the base InstrumentedService resulting in the
 // same method signatures but different outer types.
 type InstrumentedServiceA struct{ InstrumentedService }
-
-type (
-	InstrumentedServiceB struct{ InstrumentedService }
-	InstrumentedServiceC struct{ InstrumentedService }
-)
+type InstrumentedServiceB struct{ InstrumentedService }
+type InstrumentedServiceC struct{ InstrumentedService }
 
 func InstrumentedServiceMakerA(base ServiceConstructor) ServiceConstructor {
 	return InstrumentingWrapperMaker(base, reflect.TypeOf(InstrumentedServiceA{}))

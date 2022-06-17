@@ -26,6 +26,7 @@ import (
 )
 
 func TestBridgeJournal(t *testing.T) {
+
 	defer func() {
 		if err := os.Remove(path.Join(os.TempDir(), "test.rlp")); err != nil {
 			t.Fatalf("fail to delete file %v", err)

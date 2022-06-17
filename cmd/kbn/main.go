@@ -40,7 +40,9 @@ import (
 	"gopkg.in/urfave/cli.v1"
 )
 
-var logger = log.NewModuleLogger(log.CMDKBN)
+var (
+	logger = log.NewModuleLogger(log.CMDKBN)
+)
 
 const (
 	generateNodeKeySpecified = iota
@@ -187,22 +189,24 @@ func startNode(node *Node) error {
 }
 
 func main() {
-	cliFlags := []cli.Flag{
-		utils.SrvTypeFlag,
-		utils.DataDirFlag,
-		utils.GenKeyFlag,
-		utils.NodeKeyFileFlag,
-		utils.NodeKeyHexFlag,
-		utils.WriteAddressFlag,
-		utils.BNAddrFlag,
-		utils.NATFlag,
-		utils.NetrestrictFlag,
-		utils.MetricsEnabledFlag,
-		utils.PrometheusExporterFlag,
-		utils.PrometheusExporterPortFlag,
-		utils.AuthorizedNodesFlag,
-		utils.NetworkIdFlag,
-	}
+	var (
+		cliFlags = []cli.Flag{
+			utils.SrvTypeFlag,
+			utils.DataDirFlag,
+			utils.GenKeyFlag,
+			utils.NodeKeyFileFlag,
+			utils.NodeKeyHexFlag,
+			utils.WriteAddressFlag,
+			utils.BNAddrFlag,
+			utils.NATFlag,
+			utils.NetrestrictFlag,
+			utils.MetricsEnabledFlag,
+			utils.PrometheusExporterFlag,
+			utils.PrometheusExporterPortFlag,
+			utils.AuthorizedNodesFlag,
+			utils.NetworkIdFlag,
+		}
+	)
 	// TODO-Klaytn: remove `help` command
 	app := utils.NewApp("", "the Klaytn's bootnode command line interface")
 	app.Name = "kbn"

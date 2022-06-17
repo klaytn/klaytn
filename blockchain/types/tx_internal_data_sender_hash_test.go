@@ -30,7 +30,7 @@ import (
 
 // TestTransactionSenderTxHash tests SenderTxHash() of all transaction types.
 func TestTransactionSenderTxHash(t *testing.T) {
-	txs := []struct {
+	var txs = []struct {
 		Name string
 		tx   TxInternalData
 	}{
@@ -60,7 +60,7 @@ func TestTransactionSenderTxHash(t *testing.T) {
 		{"DynamicFee", genDynamicFeeTransaction()},
 	}
 
-	testcases := []struct {
+	var testcases = []struct {
 		Name string
 		fn   func(t *testing.T, tx TxInternalData)
 	}{
@@ -200,7 +200,7 @@ func testTransactionSenderTxHash(t *testing.T, tx TxInternalData) {
 		senderTxHash := rawTx.GetTxInternalData().SenderTxHash()
 		assert.Equal(t, h, senderTxHash)
 
-	// case *TxInternalDataAccountCreation:
+	//case *TxInternalDataAccountCreation:
 	//	senderTxHash := rawTx.GetTxInternalData().SenderTxHash()
 	//	assert.Equal(t, rawTx.Hash(), senderTxHash)
 

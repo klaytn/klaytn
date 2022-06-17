@@ -38,7 +38,7 @@ import (
 	"github.com/klaytn/klaytn/rlp"
 )
 
-// SignatureLength indicates the byte length required to carry a signature with recovery id.
+//SignatureLength indicates the byte length required to carry a signature with recovery id.
 const SignatureLength = 64 + 1 // 64 bytes ECDSA signature + 1 byte recovery id
 
 // RecoveryIDOffset points to the byte offset within the signature that contains the recovery id.
@@ -194,7 +194,7 @@ func LoadECDSA(file string) (*ecdsa.PrivateKey, error) {
 // restrictive permissions. The key data is saved hex-encoded.
 func SaveECDSA(file string, key *ecdsa.PrivateKey) error {
 	k := hex.EncodeToString(FromECDSA(key))
-	return ioutil.WriteFile(file, []byte(k), 0o600)
+	return ioutil.WriteFile(file, []byte(k), 0600)
 }
 
 func GenerateKey() (*ecdsa.PrivateKey, error) {

@@ -57,7 +57,7 @@ func ToHyphen(s string) string {
 
 // SplitAndJoin converts a camel-case string to a string joined by the provided symbol
 func SplitAndJoin(s string, symbol string) string {
-	camel := regexp.MustCompile("(^[^A-Z0-9]*)?([A-Z0-9]{2,}|[A-Z0-9][^A-Z]+|$)")
+	var camel = regexp.MustCompile("(^[^A-Z0-9]*)?([A-Z0-9]{2,}|[A-Z0-9][^A-Z]+|$)")
 	var a []string
 	for _, sub := range camel.FindAllStringSubmatch(s, -1) {
 		if sub[1] != "" {

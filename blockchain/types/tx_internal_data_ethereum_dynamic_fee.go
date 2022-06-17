@@ -311,6 +311,7 @@ func (t *TxInternalDataEthereumDynamicFee) Equal(a TxInternalData) bool {
 		t.V.Cmp(ta.V) == 0 &&
 		t.R.Cmp(ta.R) == 0 &&
 		t.S.Cmp(ta.S) == 0
+
 }
 
 func (t *TxInternalDataEthereumDynamicFee) String() string {

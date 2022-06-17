@@ -6,7 +6,6 @@
 // This file is derived from crypto/bn256/bn256_slow.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
-//go:build !amd64 && !arm64
 // +build !amd64,!arm64
 
 package bn256

@@ -69,7 +69,7 @@ func prepareMultiBridgeTest(t *testing.T) *bridgeTestInfo {
 
 func prepareMultiBridgeEventTest(t *testing.T) *multiBridgeTestInfo {
 	const maxAccounts = 4
-	res := multiBridgeTestInfo{}
+	var res = multiBridgeTestInfo{}
 
 	accountMap := make(map[common.Address]blockchain.GenesisAccount)
 	res.accounts = make([]*bind.TransactOpts, maxAccounts)

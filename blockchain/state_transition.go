@@ -88,7 +88,7 @@ type Message interface {
 	// 70% will be paid by the sender.
 	FeeRatio() (types.FeeRatio, bool)
 
-	// FromFrontier() (common.Address, error)
+	//FromFrontier() (common.Address, error)
 	To() *common.Address
 
 	Hash() common.Hash
@@ -257,10 +257,12 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 		return nil, 0, kerr
 	}
 
-	// vm errors do not effect consensus and are therefor
-	// not assigned to err, except for insufficient balance
-	// error and total time limit reached error.
-	var errTxFailed error
+	var (
+		// vm errors do not effect consensus and are therefor
+		// not assigned to err, except for insufficient balance
+		// error and total time limit reached error.
+		errTxFailed error
+	)
 
 	ret, st.gas, errTxFailed = msg.Execute(st.evm, st.state, st.evm.BlockNumber.Uint64(), st.gas, st.value)
 

@@ -88,7 +88,7 @@ type BridgeTxPool struct {
 	// TODO-Klaytn-Servicechain consider to remove singer. For now, caused of value transfer tx which don't have `from` value, I leave it.
 	signer types.Signer
 	mu     sync.RWMutex
-	// txMu   sync.RWMutex // TODO-Klaytn-Servicechain: implement fine-grained locks
+	//txMu   sync.RWMutex // TODO-Klaytn-Servicechain: implement fine-grained locks
 
 	journal *bridgeTxJournal // Journal of transaction to back up to disk
 
@@ -388,14 +388,14 @@ func (pool *BridgeTxPool) AddLocals(txs []*types.Transaction) []error {
 
 // addTx enqueues a single transaction into the pool if it is valid.
 func (pool *BridgeTxPool) addTx(tx *types.Transaction) error {
-	// senderCacher.recover(pool.signer, []*types.Transaction{tx})
+	//senderCacher.recover(pool.signer, []*types.Transaction{tx})
 	// Try to inject the transaction and update any state
 	return pool.add(tx)
 }
 
 // addTxs attempts to queue a batch of transactions if they are valid.
 func (pool *BridgeTxPool) addTxs(txs []*types.Transaction) []error {
-	// senderCacher.recover(pool.signer, txs)
+	//senderCacher.recover(pool.signer, txs)
 	// Add the batch of transaction, tracking the accepted ones
 	errs := make([]error, len(txs))
 

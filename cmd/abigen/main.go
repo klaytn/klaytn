@@ -265,7 +265,7 @@ func abigen(c *cli.Context) error {
 		fmt.Printf("%s\n", code)
 		return nil
 	}
-	if err := ioutil.WriteFile(c.GlobalString(outFlag.Name), []byte(code), 0o600); err != nil {
+	if err := ioutil.WriteFile(c.GlobalString(outFlag.Name), []byte(code), 0600); err != nil {
 		log.Fatalf("Failed to write ABI binding: %v", err)
 	}
 	return nil

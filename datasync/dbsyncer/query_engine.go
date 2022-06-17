@@ -87,6 +87,7 @@ func newQueryEngine(ds *DBSyncer, taskQueue int, insertQueue int) *QueryEngine {
 }
 
 func (qe *QueryEngine) make(block *types.Block, txKey uint64, tx *types.Transaction, receipt *types.Receipt, result chan *MakeQueryResult) {
+
 	cols, val, txMapArg, summaryArg, err := MakeTxDBRow(block, txKey, tx, receipt)
 	scols, sval, count, serr := MakeSummaryDBRow(summaryArg)
 	tcols, tval, tcount, terr := MakeTxMappingRow(txMapArg)

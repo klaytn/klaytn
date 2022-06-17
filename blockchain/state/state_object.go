@@ -39,12 +39,14 @@ import (
 
 var emptyCodeHash = crypto.Keccak256(nil)
 
-var errAccountDoesNotExist = errors.New("account does not exist")
+var (
+	errAccountDoesNotExist = errors.New("account does not exist")
+)
 
 type Code []byte
 
 func (self Code) String() string {
-	return string(self) // strings.Join(Disassemble(self), " ")
+	return string(self) //strings.Join(Disassemble(self), " ")
 }
 
 type Storage map[common.Hash]common.Hash

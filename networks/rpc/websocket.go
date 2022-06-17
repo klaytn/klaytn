@@ -21,7 +21,6 @@
 package rpc
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"crypto/tls"
@@ -38,6 +37,8 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"golang.org/x/net/websocket"
 	"gopkg.in/fatih/set.v0"
+
+	"bufio"
 
 	fastws "github.com/clevergo/websocket"
 	"github.com/valyala/fasthttp"
@@ -103,6 +104,7 @@ var upgrader = fastws.Upgrader{
 }
 
 func (srv *Server) FastWebsocketHandler(ctx *fasthttp.RequestCtx) {
+
 	// TODO-Klaytn handle websocket protocol
 	protocol := ctx.Request.Header.Peek("Sec-WebSocket-Protocol")
 	if protocol != nil {
@@ -125,7 +127,7 @@ func (srv *Server) FastWebsocketHandler(ctx *fasthttp.RequestCtx) {
 		if WebsocketWriteDeadline != 0 {
 			conn.SetWriteDeadline(time.Now().Add(time.Duration(WebsocketWriteDeadline) * time.Second))
 		}
-		// Create a custom encode/decode pair to enforce payload size and number encoding
+		//Create a custom encode/decode pair to enforce payload size and number encoding
 		encoder := func(v interface{}) error {
 			msg, err := json.Marshal(v)
 			if err != nil {
@@ -135,7 +137,7 @@ func (srv *Server) FastWebsocketHandler(ctx *fasthttp.RequestCtx) {
 			if err != nil {
 				return err
 			}
-			// return fastws.WriteJSON(conn, v)
+			//return fastws.WriteJSON(conn, v)
 			return err
 		}
 		decoder := func(v interface{}) error {
@@ -146,7 +148,7 @@ func (srv *Server) FastWebsocketHandler(ctx *fasthttp.RequestCtx) {
 			dec := json.NewDecoder(bytes.NewReader(data))
 			dec.UseNumber()
 			return dec.Decode(v)
-			// return fastws.ReadJSON(conn, v)
+			//return fastws.ReadJSON(conn, v)
 		}
 
 		reader := bufio.NewReaderSize(bytes.NewReader(ctx.Request.Body()), common.MaxRequestContentLength)

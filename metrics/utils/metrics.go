@@ -27,20 +27,14 @@ import (
 // This global kill-switch helps quantify the observer effect and makes
 // for less cluttered pprof profiles.
 var Enabled = false
-
-var (
-	EnabledPrometheusExport = false
-	logger                  = log.NewModuleLogger(log.Metrics)
-)
+var EnabledPrometheusExport = false
+var logger = log.NewModuleLogger(log.Metrics)
 
 // MetricsEnabledFlag is the CLI flag name to use to enable metrics collections.
 const MetricsEnabledFlag = "metrics"
-
-const (
-	DashboardEnabledFlag       = "dashboard"
-	PrometheusExporterFlag     = "prometheus"
-	PrometheusExporterPortFlag = "prometheusport"
-)
+const DashboardEnabledFlag = "dashboard"
+const PrometheusExporterFlag = "prometheus"
+const PrometheusExporterPortFlag = "prometheusport"
 
 // Init enables or disables the metrics system. Since we need this to run before
 // any other code gets to create meters and timers, we'll actually do an ugly hack

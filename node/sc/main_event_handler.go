@@ -23,7 +23,9 @@ import (
 	"github.com/klaytn/klaytn/common"
 )
 
-var ErrGetServiceChainPHInMCEH = errors.New("ServiceChainPH isn't set in MainChainEventHandler")
+var (
+	ErrGetServiceChainPHInMCEH = errors.New("ServiceChainPH isn't set in MainChainEventHandler")
+)
 
 type MainChainEventHandler struct {
 	mainbridge *MainBridge

@@ -32,11 +32,13 @@ const (
 	Klay63 = 63
 )
 
-var KlayProtocol = Protocol{
-	Name:     "klay",
-	Versions: []uint{Klay63, Klay62},
-	Lengths:  []uint64{17, 8},
-}
+var (
+	KlayProtocol = Protocol{
+		Name:     "klay",
+		Versions: []uint{Klay63, Klay62},
+		Lengths:  []uint64{17, 8},
+	}
+)
 
 // Protocol defines the protocol of the consensus
 type Protocol struct {

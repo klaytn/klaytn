@@ -276,6 +276,7 @@ func (t *TxInternalDataFeeDelegatedCancel) SenderTxHash() common.Hash {
 
 func (t *TxInternalDataFeeDelegatedCancel) Validate(stateDB StateDB, currentBlockNumber uint64) error {
 	return t.ValidateMutableValue(stateDB, currentBlockNumber)
+
 }
 
 func (t *TxInternalDataFeeDelegatedCancel) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {

@@ -53,10 +53,8 @@ func TestSmartContract(t *testing.T) {
 	sim.Commit()
 
 	// Set reward
-	tx, err := reward.Reward(&bind.TransactOpts{
-		From: auth.From, Signer: auth.Signer,
-		Value: withdrawValue,
-	}, auth2.From)
+	tx, err := reward.Reward(&bind.TransactOpts{From: auth.From, Signer: auth.Signer,
+		Value: withdrawValue}, auth2.From)
 	if err != nil {
 		log.Fatalf("Failed to call reward : %v", err)
 	}
@@ -69,10 +67,8 @@ func TestSmartContract(t *testing.T) {
 	assert.Equal(t, initialValue, balance1)
 
 	// Withdraw reward
-	tx2, err := reward.SafeWithdrawal(&bind.TransactOpts{
-		From: auth2.From, Signer: auth2.Signer,
-		Value: big.NewInt(0),
-	})
+	tx2, err := reward.SafeWithdrawal(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer,
+		Value: big.NewInt(0)})
 	if err != nil {
 		log.Fatalf("Failed to call reward : %v", err)
 	}

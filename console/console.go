@@ -98,7 +98,7 @@ func New(config Config) (*Console, error) {
 		printer:  config.Printer,
 		histPath: filepath.Join(config.DataDir, HistoryFile),
 	}
-	if err := os.MkdirAll(config.DataDir, 0o700); err != nil {
+	if err := os.MkdirAll(config.DataDir, 0700); err != nil {
 		return nil, err
 	}
 	if err := console.init(config.Preload); err != nil {
@@ -160,7 +160,7 @@ func (c *Console) init(preload []string) error {
 		return fmt.Errorf("namespace flattening: %v", err)
 	}
 	// Initialize the global name register (disabled for now)
-	// c.jsre.Run(`var GlobalRegistrar = klay.contract(` + registrar.GlobalRegistrarAbi + `);   registrar = GlobalRegistrar.at("` + registrar.GlobalRegistrarAddr + `");`)
+	//c.jsre.Run(`var GlobalRegistrar = klay.contract(` + registrar.GlobalRegistrarAbi + `);   registrar = GlobalRegistrar.at("` + registrar.GlobalRegistrarAddr + `");`)
 
 	// If the console is in interactive mode, instrument password related methods to query the user
 	if c.prompter != nil {
@@ -453,10 +453,10 @@ func (c *Console) Execute(path string) error {
 
 // Stop cleans up the console and terminates the runtime environment.
 func (c *Console) Stop(graceful bool) error {
-	if err := ioutil.WriteFile(c.histPath, []byte(strings.Join(c.history, "\n")), 0o600); err != nil {
+	if err := ioutil.WriteFile(c.histPath, []byte(strings.Join(c.history, "\n")), 0600); err != nil {
 		return err
 	}
-	if err := os.Chmod(c.histPath, 0o600); err != nil { // Force 0600, even if it was different previously
+	if err := os.Chmod(c.histPath, 0600); err != nil { // Force 0600, even if it was different previously
 		return err
 	}
 	c.jsre.Stop(graceful)

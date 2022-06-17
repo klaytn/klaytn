@@ -185,7 +185,7 @@ type TxPool struct {
 	locals  *accountSet // Set of local transaction to exempt from eviction rules
 	journal *txJournal  // Journal of local transaction to back up to disk
 
-	// TODO-Klaytn
+	//TODO-Klaytn
 	txMu sync.RWMutex
 
 	pending map[common.Address]*txList         // All currently processable transactions
@@ -424,8 +424,8 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	logger.Debug("Reinjecting stale transactions", "count", len(reinject))
 	senderCacher.recover(pool.signer, reinject)
 
-	// pool.mu.Lock()
-	// defer pool.mu.Unlock()
+	//pool.mu.Lock()
+	//defer pool.mu.Unlock()
 
 	pool.addTxsLocked(reinject, false)
 

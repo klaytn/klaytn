@@ -64,7 +64,7 @@ func TestIsHexAddress(t *testing.T) {
 }
 
 func TestHashJsonValidation(t *testing.T) {
-	tests := []struct {
+	var tests = []struct {
 		Prefix string
 		Size   int
 		Error  string
@@ -93,7 +93,7 @@ func TestHashJsonValidation(t *testing.T) {
 }
 
 func TestAddressUnmarshalJSON(t *testing.T) {
-	tests := []struct {
+	var tests = []struct {
 		Input     string
 		ShouldErr bool
 		Output    *big.Int
@@ -124,7 +124,7 @@ func TestAddressUnmarshalJSON(t *testing.T) {
 }
 
 func TestAddressHexChecksum(t *testing.T) {
-	tests := []struct {
+	var tests = []struct {
 		Input  string
 		Output string
 	}{

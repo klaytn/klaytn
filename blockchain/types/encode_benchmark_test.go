@@ -25,7 +25,7 @@ import (
 )
 
 func BenchmarkTxEncode(b *testing.B) {
-	txs := []struct {
+	var txs = []struct {
 		Name string
 		tx   TxInternalData
 	}{
@@ -38,7 +38,7 @@ func BenchmarkTxEncode(b *testing.B) {
 		{"SmartContractExecution", genSmartContractExecutionTransaction()},
 		{"ChainDataTx", genChainDataTransaction()},
 	}
-	testcases := []struct {
+	var testcases = []struct {
 		Name string
 		fn   func(b *testing.B, tx TxInternalData)
 	}{

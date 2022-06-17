@@ -100,8 +100,8 @@ type Config struct {
 	SentChainTxsLimit  uint64          // Number of chain transactions stored for resending. Default value is 1000.
 
 	// Light client options
-	// LightServ  int `toml:",omitempty"` // Maximum percentage of time allowed for serving LES requests
-	// LightPeers int `toml:",omitempty"` // Maximum number of LES client peers
+	//LightServ  int `toml:",omitempty"` // Maximum percentage of time allowed for serving LES requests
+	//LightPeers int `toml:",omitempty"` // Maximum number of LES client peers
 
 	OverwriteGenesis bool
 	StartBlockNumber uint64

@@ -385,6 +385,7 @@ func (s *Server) StopMocker(w http.ResponseWriter, req *http.Request) {
 
 // GetMockerList returns a list of available mockers
 func (s *Server) GetMockers(w http.ResponseWriter, req *http.Request) {
+
 	list := GetMockerList()
 	s.JSON(w, http.StatusOK, list)
 }

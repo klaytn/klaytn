@@ -8,7 +8,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-var ErrUnknownEvent = errors.New("Unknown event type")
+var (
+	ErrUnknownEvent = errors.New("Unknown event type")
+)
 
 var RequestValueTransferEncodeABIs = map[uint]string{
 	2: `[{

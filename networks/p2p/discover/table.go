@@ -301,11 +301,11 @@ func (tab *Table) seedRand() {
 	var b [8]byte
 	crand.Read(b[:])
 
-	// tab.mutex.Lock()
+	//tab.mutex.Lock()
 	tab.randMu.Lock()
 	tab.rand.Seed(int64(binary.BigEndian.Uint64(b[:])))
 	tab.randMu.Unlock()
-	// tab.mutex.Unlock()
+	//tab.mutex.Unlock()
 }
 
 // Self returns the local node.

@@ -14,8 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-//go:build RLPEncodeTest
-// +build RLPEncodeTest
+//+build RLPEncodeTest
 
 package types
 
@@ -101,6 +100,7 @@ func printRLPEncode(chainId *big.Int, signer Signer, sigRLP *bytes.Buffer, txHas
 	fmt.Printf("SenderTxHashRLP %#x\n", senderTxHashRLP.Bytes())
 	fmt.Printf("SenderTxHash %#x\n", rawTx.SenderTxHashAll())
 	fmt.Println(rawTx)
+
 }
 
 func printFeeDelegatedRLPEncode(t *testing.T, chainId *big.Int, signer Signer, sigRLP *bytes.Buffer, feePayerSigRLP *bytes.Buffer, txHashRLP *bytes.Buffer, senderTxHashRLP *bytes.Buffer, rawTx *Transaction) {
@@ -180,14 +180,14 @@ func testTxRLPEncodeLegacy(t *testing.T) {
 }
 
 func testTxRLPEncodeAccessList(t *testing.T) {
-	// prvKey, _:= crypto.HexToECDSA("0cfd086137699e1371a78e648748be0011de423269805c28d2d7b9973dcdb3ad")
+	//prvKey, _:= crypto.HexToECDSA("0cfd086137699e1371a78e648748be0011de423269805c28d2d7b9973dcdb3ad")
 	tx := genAccessListTransaction().(*TxInternalDataEthereumAccessList)
 
 	signer := LatestSignerForChainID(big.NewInt(2))
 	rawTx := &Transaction{data: tx}
 	rawTx.Sign(signer, key)
 
-	// sigRLP := new(bytes.Buffer)
+	//sigRLP := new(bytes.Buffer)
 	sigRLP := new(bytes.Buffer)
 	err := rlp.Encode(sigRLP, byte(tx.Type()))
 	assert.Equal(t, nil, err)

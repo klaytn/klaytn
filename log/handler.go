@@ -68,7 +68,7 @@ func SyncHandler(h Handler) Handler {
 // already exists, FileHandler will append to the given file. If it does not,
 // FileHandler will create the file with mode 0644.
 func FileHandler(path string, fmtr Format) (Handler, error) {
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		return nil, err
 	}

@@ -195,7 +195,6 @@ func (t *testService) RunDum(p *p2p.Peer, rw p2p.MsgReadWriter) error {
 		}
 	}
 }
-
 func (t *testService) RunPrb(p *p2p.Peer, rw p2p.MsgReadWriter) error {
 	peer := t.peer(p.ID())
 

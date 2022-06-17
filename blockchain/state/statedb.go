@@ -704,8 +704,7 @@ func (self *StateDB) createObject(addr common.Address) (newobj, prev *stateObjec
 // If there is an existing account with the given address, it is overwritten and
 // returned as the second return value.
 func (self *StateDB) createObjectWithMap(addr common.Address, accountType account.AccountType,
-	values map[account.AccountValueKeyType]interface{},
-) (newobj, prev *stateObject) {
+	values map[account.AccountValueKeyType]interface{}) (newobj, prev *stateObject) {
 	prev = self.getDeletedStateObject(addr) // Note, prev might have been deleted, we need that!
 
 	var prevdestruct bool
@@ -1077,10 +1076,8 @@ func (s *StateDB) GetTxHash() common.Hash {
 	return s.thash
 }
 
-var (
-	errNotExistingAddress = fmt.Errorf("there is no account corresponding to the given address")
-	errNotContractAddress = fmt.Errorf("given address is not a contract address")
-)
+var errNotExistingAddress = fmt.Errorf("there is no account corresponding to the given address")
+var errNotContractAddress = fmt.Errorf("given address is not a contract address")
 
 func (s *StateDB) GetContractStorageRoot(contractAddr common.Address) (common.Hash, error) {
 	acc := s.GetAccount(contractAddr)

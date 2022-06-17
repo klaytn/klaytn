@@ -437,14 +437,11 @@ type taskgen struct {
 func (tg taskgen) newTasks(running int, peers map[discover.NodeID]*Peer, now time.Time) []task {
 	return tg.newFunc(running, peers)
 }
-
 func (tg taskgen) taskDone(t task, now time.Time) {
 	tg.doneFunc(t)
 }
-
 func (tg taskgen) addStatic(*discover.Node) {
 }
-
 func (tg taskgen) removeStatic(*discover.Node) {
 }
 
@@ -503,6 +500,7 @@ func TestServerAtCap(t *testing.T) {
 	if !c.is(trustedConn) {
 		t.Error("Server did not set trusted flag")
 	}
+
 }
 
 func TestServerSetupConn(t *testing.T) {
@@ -614,7 +612,6 @@ func (c *setupTransport) doEncHandshake(prv *ecdsa.PrivateKey, dialDest *discove
 	c.calls += "doEncHandshake,"
 	return c.id, c.encHandshakeErr
 }
-
 func (c *setupTransport) doProtoHandshake(our *protoHandshake) (*protoHandshake, error) {
 	c.calls += "doProtoHandshake,"
 	if c.protoHandshakeErr != nil {
@@ -622,7 +619,6 @@ func (c *setupTransport) doProtoHandshake(our *protoHandshake) (*protoHandshake,
 	}
 	return c.phs, nil
 }
-
 func (c *setupTransport) close(err error) {
 	c.calls += "close,"
 	c.closeErr = err
@@ -632,7 +628,6 @@ func (c *setupTransport) close(err error) {
 func (c *setupTransport) WriteMsg(Msg) error {
 	panic("WriteMsg called on setupTransport")
 }
-
 func (c *setupTransport) ReadMsg() (Msg, error) {
 	panic("ReadMsg called on setupTransport")
 }

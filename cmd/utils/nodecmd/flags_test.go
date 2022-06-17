@@ -27,7 +27,9 @@ import (
 	"testing"
 )
 
-var genesis = `{"config":{"chainId":2019,"istanbul":{"epoch":30,"policy":2,"sub":13},"unitPrice":25000000000,"deriveShaImpl":2,"governance":{"governingNode":"0xdddfb991127b43e209c2f8ed08b8b3d0b5843d36","governanceMode":"single","reward":{"mintingAmount":9600000000000000000,"ratio":"34/54/12","useGiniCoeff":false,"deferredTxFee":true,"stakingUpdateInterval":60,"proposerUpdateInterval":30,"minimumStake":5000000}}},"timestamp":"0x5ce33d6e","extraData":"0x0000000000000000000000000000000000000000000000000000000000000000f89af85494dddfb991127b43e209c2f8ed08b8b3d0b5843d3694195ba9cc787b00796a7ae6356e5b656d4360353794777fd033b5e3bcaad6006bc9f481ffed6b83cf5a94d473284239f704adccd24647c7ca132992a28973b8410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0","governanceData":null,"blockScore":"0x1","alloc":{"195ba9cc787b00796a7ae6356e5b656d43603537":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"},"777fd033b5e3bcaad6006bc9f481ffed6b83cf5a":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"},"d473284239f704adccd24647c7ca132992a28973":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"},"dddfb991127b43e209c2f8ed08b8b3d0b5843d36":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"},"f4316f69d9522667c0674afcd8638288489f0333":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"}},"number":"0x0","gasUsed":"0x0","parentHash":"0x0000000000000000000000000000000000000000000000000000000000000000"}`
+var (
+	genesis = `{"config":{"chainId":2019,"istanbul":{"epoch":30,"policy":2,"sub":13},"unitPrice":25000000000,"deriveShaImpl":2,"governance":{"governingNode":"0xdddfb991127b43e209c2f8ed08b8b3d0b5843d36","governanceMode":"single","reward":{"mintingAmount":9600000000000000000,"ratio":"34/54/12","useGiniCoeff":false,"deferredTxFee":true,"stakingUpdateInterval":60,"proposerUpdateInterval":30,"minimumStake":5000000}}},"timestamp":"0x5ce33d6e","extraData":"0x0000000000000000000000000000000000000000000000000000000000000000f89af85494dddfb991127b43e209c2f8ed08b8b3d0b5843d3694195ba9cc787b00796a7ae6356e5b656d4360353794777fd033b5e3bcaad6006bc9f481ffed6b83cf5a94d473284239f704adccd24647c7ca132992a28973b8410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0","governanceData":null,"blockScore":"0x1","alloc":{"195ba9cc787b00796a7ae6356e5b656d43603537":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"},"777fd033b5e3bcaad6006bc9f481ffed6b83cf5a":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"},"d473284239f704adccd24647c7ca132992a28973":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"},"dddfb991127b43e209c2f8ed08b8b3d0b5843d36":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"},"f4316f69d9522667c0674afcd8638288489f0333":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"}},"number":"0x0","gasUsed":"0x0","parentHash":"0x0000000000000000000000000000000000000000000000000000000000000000"}`
+)
 
 const (
 	FlagTypeBoolean = iota
@@ -38,7 +40,7 @@ const (
 	ErrorIncorrectUsage = iota
 	ErrorInvalidValue
 	ErrorFatal
-	// TODO-Klaytn-Node fix the configuration to filter wrong input flags before the klay server is launched
+	//TODO-Klaytn-Node fix the configuration to filter wrong input flags before the klay server is launched
 	NonError // This error case expects an error, but currently it does not filter the wrong value.
 )
 
@@ -202,7 +204,7 @@ var flagsWithValues = []struct {
 	{
 		flag:     "--db.num-statetrie-shards",
 		flagType: FlagTypeArgument,
-		// values:    []string{"1", "2"},
+		//values:    []string{"1", "2"},
 		values:      []string{"1"},
 		wrongValues: commonTwoErrors,
 		errors:      []int{ErrorInvalidValue, ErrorInvalidValue},
@@ -777,7 +779,7 @@ func testFlags(t *testing.T, flag string, value string, idx int) {
 	defer os.RemoveAll(datadir)
 
 	json := filepath.Join(datadir, "genesis.json")
-	if err := ioutil.WriteFile(json, []byte(genesis), 0o600); err != nil {
+	if err := ioutil.WriteFile(json, []byte(genesis), 0600); err != nil {
 		t.Fatalf("test %d: failed to write genesis file: %v", idx, err)
 	}
 
@@ -792,7 +794,7 @@ func testWrongFlags(t *testing.T, flag string, value string, idx int, expectedEr
 	defer os.RemoveAll(datadir)
 
 	json := filepath.Join(datadir, "genesis.json")
-	if err := ioutil.WriteFile(json, []byte(genesis), 0o600); err != nil {
+	if err := ioutil.WriteFile(json, []byte(genesis), 0600); err != nil {
 		t.Fatalf("test %d: failed to write genesis file: %v", idx, err)
 	}
 
