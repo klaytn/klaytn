@@ -294,6 +294,11 @@ func (tx *Transaction) EffectiveGasTip(baseFee *big.Int) *big.Int {
 	return tx.GasPrice()
 }
 
+// TODO-klaytn it use calculation algorithm of ethereum.
+// We have used it just like mock function. It returns governance unitprice
+// because GetGasTipCap() is same with GetGasFeeCap()
+// After hard fork, we need to consider new getEffectiveGasPrice API that operates differently
+// effectiveGasPrice = msg.EffectiveGasPrice(baseFee)
 func (tx *Transaction) EffectiveGasPrice(baseFee *big.Int) *big.Int {
 	if tx.Type() == TxTypeEthereumDynamicFee {
 		te := tx.GetTxInternalData().(TxInternalDataBaseFee)

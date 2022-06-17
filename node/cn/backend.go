@@ -219,11 +219,11 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	// Set latest unitPrice/gasPrice
 	chainConfig.UnitPrice = governance.UnitPrice()
 	config.GasPrice = new(big.Int).SetUint64(chainConfig.UnitPrice)
-	logger.Info("Initialised chain configuration", "config", chainConfig)
 
+	// Marked for discussion more about initialization spot of following config
 	// TODO-klaytn set KIP71 forked block number
 	// It's intended not to modify something like genesis in SetupGenesisBlock()
-	if chainConfig.KIP71CompatibleBlock != nil {
+	if chainConfig.KIP71CompatibleBlock == nil {
 		chainConfig.KIP71CompatibleBlock = params.KIP71CompatibleBlockNum
 	}
 	chainConfig.Governance.KIP71 = &params.KIP71Config{
@@ -233,6 +233,8 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		MaxBlockGasUsedForBaseFee: governance.MaxBlockGasUsedForBaseFee(),
 		BaseFeeDenominator:        governance.BaseFeeDenominator(),
 	}
+	logger.Info("Initialised chain configuration", "config", chainConfig)
+	//
 
 	cn := &CN{
 		config:            config,

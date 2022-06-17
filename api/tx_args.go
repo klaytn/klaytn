@@ -152,6 +152,7 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 	}
 	// For the transaction that do not use the gasPrice field, the default value of gasPrice is not set.
 	if args.Price == nil && *args.TypeInt != types.TxTypeEthereumDynamicFee {
+		// TODO-Klaytn: needs to be fixed to double the BaseFee
 		price, err := b.SuggestPrice(ctx)
 		if err != nil {
 			return err
@@ -168,7 +169,7 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 			args.MaxPriorityFeePerGas = (*hexutil.Big)(fixedGasPrice)
 		}
 		if args.MaxFeePerGas == nil {
-			fixedBaseFee := new(big.Int).SetUint64(params.BaseFee)
+			fixedBaseFee := new(big.Int).SetUint64(params.ZeroBaseFee)
 			gasFeeCap := new(big.Int).Add(
 				(*big.Int)(args.MaxPriorityFeePerGas),
 				new(big.Int).Mul(fixedBaseFee, big.NewInt(2)),
