@@ -31,9 +31,7 @@ const (
 	AnchoringJSONDataType uint8 = 128
 )
 
-var (
-	errUnknownAnchoringTxType = errors.New("unknown anchoring tx type")
-)
+var errUnknownAnchoringTxType = errors.New("unknown anchoring tx type")
 
 type AnchoringDataInternal interface {
 	GetBlockHash() common.Hash

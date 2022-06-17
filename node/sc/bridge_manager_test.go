@@ -2038,7 +2038,8 @@ func (bm *BridgeManager) DeployBridgeTest(backend *backends.SimulatedBackend, am
 
 func isExpectedBalance(t *testing.T, bridgeManager *BridgeManager,
 	pBridgeAddr, cBridgeAddr common.Address,
-	expectedParentBridgeBalance, expectedChildBridgeBalance int64) {
+	expectedParentBridgeBalance, expectedChildBridgeBalance int64,
+) {
 	pBridgeBalance, err := bridgeManager.subBridge.APIBackend.GetParentBridgeContractBalance(pBridgeAddr)
 	assert.NoError(t, err)
 	cBridgeBalance, err := bridgeManager.subBridge.APIBackend.GetChildBridgeContractBalance(cBridgeAddr)

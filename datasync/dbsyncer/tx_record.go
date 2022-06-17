@@ -51,7 +51,6 @@ type BulkInsertQuery struct {
 }
 
 func MakeTxDBRow(block *types.Block, txKey uint64, tx *types.Transaction, receipt *types.Receipt) (string, []interface{}, TxMapArguments, SummaryArguments, error) {
-
 	cols := ""
 	vals := []interface{}{}
 
@@ -141,7 +140,7 @@ func MakeSummaryDBRow(sa SummaryArguments) (cols string, vals []interface{}, cou
 			createdTx := sa.txHash
 
 			hra := true
-			//TODO-Klaytn need to use humanreable field
+			// TODO-Klaytn need to use humanreable field
 			internalTx, ok := sa.tx.GetTxInternalData().(*types.TxInternalDataAccountCreation)
 			if !ok {
 				logger.Error("fail to convert TxInternalDataAccountCreation", "txhash", sa.tx.Hash().Hex())
@@ -160,7 +159,7 @@ func MakeSummaryDBRow(sa SummaryArguments) (cols string, vals []interface{}, cou
 			creator := sa.from
 			createdTx := sa.txHash
 
-			//TODO-Klaytn need to use humanreable field
+			// TODO-Klaytn need to use humanreable field
 			hra := false
 
 			switch internalTx := sa.tx.GetTxInternalData().(type) {
@@ -195,7 +194,6 @@ func MakeSummaryDBRow(sa SummaryArguments) (cols string, vals []interface{}, cou
 }
 
 func MakeTxMappingRow(tm TxMapArguments) (cols string, vals []interface{}, count int, err error) {
-
 	if tm.senderTxHash != "" {
 		cols = "(?,?)"
 		vals = append(vals, tm.senderTxHash, tm.txHash)

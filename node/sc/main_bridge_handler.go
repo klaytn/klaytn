@@ -111,7 +111,7 @@ func (mbh *MainBridgeHandler) handleServiceChainTxDataMsg(p BridgePeer, msg p2p.
 
 	// Only valid txs should be pushed into the pool.
 	// Invalid txs found are sent to child chain for further action.
-	var invalidTxs []InvalidParentChainTx
+	invalidTxs := make([]InvalidParentChainTx, 0)
 	for _, tx := range txs {
 		if tx == nil {
 			invalidTxs = append(invalidTxs, InvalidParentChainTx{tx.Hash(), errResp(ErrDecode, "tx is nil").Error()})

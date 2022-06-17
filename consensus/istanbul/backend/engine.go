@@ -39,6 +39,7 @@ import (
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	istanbulCore "github.com/klaytn/klaytn/consensus/istanbul/core"
 	"github.com/klaytn/klaytn/consensus/istanbul/validator"
+	"github.com/klaytn/klaytn/consensus/misc"
 	"github.com/klaytn/klaytn/crypto/sha3"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
@@ -46,10 +47,10 @@ import (
 )
 
 const (
-	//checkpointInterval = 1024 // Number of blocks after which to save the vote snapshot to the database
-	//inmemorySnapshots  = 128  // Number of recent vote snapshots to keep in memory
-	//inmemoryPeers      = 40
-	//inmemoryMessages   = 1024
+	// checkpointInterval = 1024 // Number of blocks after which to save the vote snapshot to the database
+	// inmemorySnapshots  = 128  // Number of recent vote snapshots to keep in memory
+	// inmemoryPeers      = 40
+	// inmemoryMessages   = 1024
 
 	checkpointInterval = 1024 // Number of blocks after which to save the vote snapshot to the database
 	inmemorySnapshots  = 496  // Number of recent vote snapshots to keep in memory
@@ -89,6 +90,7 @@ var (
 	// errMismatchTxhashes is returned if the TxHash in header is mismatch.
 	errMismatchTxhashes = errors.New("mismatch transactions hashes")
 )
+
 var (
 	defaultBlockScore = big.NewInt(1)
 	now               = time.Now
@@ -180,6 +182,16 @@ func (sb *backend) VerifyHeader(chain consensus.ChainReader, header *types.Heade
 func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
 	if header.Number == nil {
 		return errUnknownBlock
+	}
+
+	// TODO-klaytn header verify before/after kip71 fork
+	if !chain.Config().IsKIP71ForkEnabled(header.Number) {
+		// Verify BaseFee not present before EIP-1559 fork.
+		if header.BaseFee != nil {
+			return consensus.ErrInvalidBaseFee
+		}
+	} else if err := misc.VerifyKIP71Header(chain.Config(), parents[len(parents)-1], header); err != nil {
+		return err
 	}
 
 	// Don't waste time checking blocks from the future
@@ -409,7 +421,18 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 // Note, the block header and state database might be updated to reflect any
 // consensus rules that happen at finalization (e.g. block rewards).
 func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
-	receipts []*types.Receipt) (*types.Block, error) {
+	receipts []*types.Receipt,
+) (*types.Block, error) {
+	// We can assure that if the kip71 hard forked block should have the field of base fee
+	if chain.Config().IsKIP71ForkEnabled(header.Number) {
+		if header.BaseFee == nil {
+			logger.Error("KIP-71 hard forked block should have baseFee", "blockNum", header.Number.Uint64())
+			return nil, errors.New("Invalid KIP-71 block without baseFee")
+		}
+	} else if header.BaseFee != nil {
+		logger.Error("A block before KIP-71 hardfork shouldn't have baseFee", "blockNum", header.Number.Uint64())
+		return nil, consensus.ErrInvalidBaseFee
+	}
 
 	// If sb.chain is nil, it means backend is not initialized yet.
 	if sb.chain != nil && sb.governance.ProposerPolicy() == uint64(istanbul.WeightedRandom) {

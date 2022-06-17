@@ -370,6 +370,6 @@ func TestRewardConfigCache_get_exist(t *testing.T) {
 		assert.Equal(t, testCases[i].result.pocRatio, rewardConfig.pocRatio)
 		assert.Equal(t, testCases[i].result.kirRatio, rewardConfig.kirRatio)
 		assert.Equal(t, testCases[i].result.totalRatio, rewardConfig.totalRatio)
-		assert.Equal(t, testCases[i].result.unitPrice, rewardConfig.unitPrice)
+		// assert.Equal(t, testCases[i].result.unitPrice, rewardConfig.unitPrice)
 	}
 }

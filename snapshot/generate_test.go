@@ -22,9 +22,7 @@ package snapshot
 
 import (
 	"fmt"
-	"io"
 	"math/big"
-	"os"
 	"testing"
 	"time"
 
@@ -33,8 +31,6 @@ import (
 	"github.com/klaytn/klaytn/params"
 
 	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/log/term"
-	"github.com/mattn/go-colorable"
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/rlp"
@@ -64,27 +60,9 @@ func genSmartContractAccount(nonce uint64, balance *big.Int, storageRoot common.
 	})
 }
 
-// TODO-Klaytn: To enable logging in the test code, we can use the following function.
-// This function will be moved to somewhere utility functions are located.
-func enableLog() {
-	usecolor := term.IsTty(os.Stderr.Fd()) && os.Getenv("TERM") != "dumb"
-	output := io.Writer(os.Stderr)
-	if usecolor {
-		output = colorable.NewColorableStderr()
-	}
-	glogger := log.NewGlogHandler(log.StreamHandler(output, log.TerminalFormat(usecolor)))
-	log.PrintOrigins(true)
-	log.ChangeGlobalLogLevel(glogger, log.Lvl(5))
-	glogger.Vmodule("")
-	glogger.BacktraceAt("")
-	log.Root().SetHandler(glogger)
-}
-
 // Tests that snapshot generation from an empty database.
 func TestGeneration(t *testing.T) {
-	if false {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 
 	var (
 		dbm    = database.NewMemoryDBManager()
@@ -139,7 +117,7 @@ func TestGeneration(t *testing.T) {
 }
 
 func hashData(input []byte) common.Hash {
-	var hasher = sha3.NewLegacyKeccak256()
+	hasher := sha3.NewLegacyKeccak256()
 	var hash common.Hash
 	hasher.Reset()
 	hasher.Write(input)
@@ -149,9 +127,7 @@ func hashData(input []byte) common.Hash {
 
 // Tests that snapshot generation with existent flat state.
 func TestGenerateExistentState(t *testing.T) {
-	if false {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 
 	// We can't use statedb to make a test trie (circular dependency), so make
 	// a fake one manually. We're going with a small account trie of 3 accounts,
@@ -180,7 +156,7 @@ func TestGenerateExistentState(t *testing.T) {
 	serializer = account.NewAccountSerializerWithAccount(acc)
 	val, _ = rlp.EncodeToBytes(serializer)
 	accTrie.Update([]byte("acc-2"), val) // 0x65145f923027566669a1ae5ccac66f945b55ff6eaeb17d2ea8e048b7d381f2d7
-	//diskdb.Put(hashData([]byte("acc-2")).Bytes(), val)
+	// diskdb.Put(hashData([]byte("acc-2")).Bytes(), val)
 	diskdb.WriteAccountSnapshot(hashData([]byte("acc-2")), val)
 
 	acc, _ = genSmartContractAccount(uint64(0), big.NewInt(3), stTrie.Hash(), emptyCode.Bytes())
@@ -226,7 +202,6 @@ func checkSnapRoot(t *testing.T, snap *diskLayer, trieRoot common.Hash) {
 			}
 			return hash, nil
 		}, newGenerateStats(), true)
-
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -513,9 +488,8 @@ func TestGenerateCorruptAccountTrie(t *testing.T) {
 // trie node for a storage trie. It's similar to internal corruption but it is
 // handled differently inside the generator.
 func TestGenerateMissingStorageTrie(t *testing.T) {
-	if false {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
+
 	// We can't use statedb to make a test trie (circular dependency), so make
 	// a fake one manually. We're going with a small account trie of 3 accounts,
 	// two of which also has the same 3-slot storage trie attached.
@@ -708,9 +682,8 @@ func TestGenerateWithExtraAccounts(t *testing.T) {
 
 // Tests that snapshot generation when an extra account with storage exists in the snap state.
 func TestGenerateWithManyExtraAccounts(t *testing.T) {
-	if false {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
+
 	var (
 		diskdb = database.NewMemoryDBManager()
 		triedb = statedb.NewDatabase(diskdb)
@@ -766,10 +739,8 @@ func TestGenerateWithManyExtraAccounts(t *testing.T) {
 // So in trie, we iterate 2 entries 0x03, 0x07. We create the 0x07 in the database and abort the procedure, because the trie is exhausted.
 // But in the database, we still have the stale storage slots 0x04, 0x05. They are not iterated yet, but the procedure is finished.
 func TestGenerateWithExtraBeforeAndAfter(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	accountCheckRange = 3
-	if false {
-		enableLog()
-	}
 	var (
 		diskdb = database.NewMemoryDBManager()
 		triedb = statedb.NewDatabase(diskdb)
@@ -813,10 +784,8 @@ func TestGenerateWithExtraBeforeAndAfter(t *testing.T) {
 // TestGenerateWithMalformedSnapdata tests what happes if we have some junk
 // in the snapshot database, which cannot be parsed back to an account
 func TestGenerateWithMalformedSnapdata(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	accountCheckRange = 3
-	if false {
-		enableLog()
-	}
 	var (
 		diskdb = database.NewMemoryDBManager()
 		triedb = statedb.NewDatabase(diskdb)
@@ -860,9 +829,7 @@ func TestGenerateWithMalformedSnapdata(t *testing.T) {
 }
 
 func TestGenerateFromEmptySnap(t *testing.T) {
-	if false {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	accountCheckRange = 10
 	storageCheckRange = 20
 	helper := newHelper()

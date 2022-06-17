@@ -55,14 +55,17 @@ var (
 // These are the types in order to add a custom configuration of the test chain.
 // You may need to create a configuration type if necessary.
 type istanbulCompatibleBlock *big.Int
-type minimumStake *big.Int
-type stakingUpdateInterval uint64
-type proposerUpdateInterval uint64
-type proposerPolicy uint64
-type governanceMode string
-type epoch uint64
-type subGroupSize uint64
-type blockPeriod uint64
+
+type (
+	minimumStake           *big.Int
+	stakingUpdateInterval  uint64
+	proposerUpdateInterval uint64
+	proposerPolicy         uint64
+	governanceMode         string
+	epoch                  uint64
+	subGroupSize           uint64
+	blockPeriod            uint64
+)
 
 // makeCommittedSeals returns a list of committed seals for the global variable nodeKeys.
 func makeCommittedSeals(hash common.Hash) [][]byte {
@@ -115,7 +118,7 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 	)
 	// force enable Istanbul engine and governance
 	genesis.Config.Istanbul = params.GetDefaultIstanbulConfig()
-	genesis.Config.Governance = params.GetDefaultGovernanceConfig(params.UseIstanbul)
+	genesis.Config.Governance = params.GetDefaultGovernanceConfig()
 	for _, item := range items {
 		switch v := item.(type) {
 		case istanbulCompatibleBlock:
@@ -793,9 +796,7 @@ func TestSnapshot_Validators_AfterMinimumStakingVotes(t *testing.T) {
 		stakingInfo := makeFakeStakingInfo(0, nodeKeys, tc.stakingInfo)
 		reward.SetTestStakingManagerWithStakingInfoCache(stakingInfo)
 
-		var (
-			previousBlock, currentBlock *types.Block = nil, chain.Genesis()
-		)
+		var previousBlock, currentBlock *types.Block = nil, chain.Genesis()
 
 		for _, v := range tc.votes {
 			// vote a vote in each epoch

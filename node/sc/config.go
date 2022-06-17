@@ -195,7 +195,7 @@ func (c *SCConfig) getKey(path string) *ecdsa.PrivateKey {
 		logger.Crit("Failed to generate chain key", "err", err)
 	}
 	instanceDir := filepath.Join(c.DataDir, c.name())
-	if err := os.MkdirAll(instanceDir, 0700); err != nil {
+	if err := os.MkdirAll(instanceDir, 0o700); err != nil {
 		logger.Crit("Failed to make dir to persist chain key", "err", err)
 	}
 	keyFile = filepath.Join(instanceDir, path)

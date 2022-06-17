@@ -294,6 +294,11 @@ func (tx *Transaction) EffectiveGasTip(baseFee *big.Int) *big.Int {
 	return tx.GasPrice()
 }
 
+// TODO-klaytn it use calculation algorithm of ethereum.
+// We have used it just like mock function. It returns governance unitprice
+// because GetGasTipCap() is same with GetGasFeeCap()
+// After hard fork, we need to consider new getEffectiveGasPrice API that operates differently
+// effectiveGasPrice = msg.EffectiveGasPrice(baseFee)
 func (tx *Transaction) EffectiveGasPrice(baseFee *big.Int) *big.Int {
 	if tx.Type() == TxTypeEthereumDynamicFee {
 		te := tx.GetTxInternalData().(TxInternalDataBaseFee)
@@ -330,11 +335,13 @@ func (tx *Transaction) ValidatedSender() common.Address {
 	defer tx.mu.RUnlock()
 	return tx.validatedSender
 }
+
 func (tx *Transaction) ValidatedFeePayer() common.Address {
 	tx.mu.RLock()
 	defer tx.mu.RUnlock()
 	return tx.validatedFeePayer
 }
+
 func (tx *Transaction) ValidatedIntrinsicGas() uint64 {
 	tx.mu.RLock()
 	defer tx.mu.RUnlock()
@@ -893,7 +900,6 @@ func (s TxByPriceAndTime) Less(i, j int) bool {
 		return s[i].time.Before(s[j].time)
 	}
 	return cmp > 0
-
 }
 func (s TxByPriceAndTime) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 
@@ -967,6 +973,9 @@ func (t *TransactionsByTimeAndNonce) Peek() *Transaction {
 
 // Shift replaces the current best head with the next one from the same account.
 func (t *TransactionsByTimeAndNonce) Shift() {
+	if len(t.heads) == 0 {
+		return
+	}
 	acc, _ := Sender(t.signer, t.heads[0])
 	if txs, ok := t.txs[acc]; ok && len(txs) > 0 {
 		t.heads[0], t.txs[acc] = txs[0], txs[1:]
