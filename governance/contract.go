@@ -23,6 +23,7 @@ var (
 type ContractEngine struct {
 	chainConfig   *params.ChainConfig
 	currentParams *params.GovParamSet
+	initialParams *params.GovParamSet // equals to initial ChainConfig
 
 	defaultGov *Governance // To find the contract address at any block number
 	chain      blockChain  // To access the contract state DB
@@ -33,6 +34,12 @@ func NewContractEngine(config *params.ChainConfig, defaultGov *Governance) *Cont
 		chainConfig:   config,
 		currentParams: params.NewGovParamSet(),
 		defaultGov:    defaultGov,
+	}
+
+	if pset, err := params.NewGovParamSetChainConfig(config); err == nil {
+		e.initialParams = pset
+	} else {
+		logger.Crit("Error parsing initial ChainConfig", "err", err)
 	}
 	return e
 }
@@ -67,7 +74,11 @@ func (e *ContractEngine) ParamsAt(num uint64) (*params.GovParamSet, error) {
 		num = head
 	}
 
-	return e.contractGetAllParams(new(big.Int).SetUint64(num))
+	pset, err := e.contractGetAllParams(new(big.Int).SetUint64(num))
+	if err != nil {
+		return nil, err
+	}
+	return params.NewGovParamSetMerged(e.initialParams, pset), nil
 }
 
 func (e *ContractEngine) UpdateParams() error {
@@ -81,7 +92,8 @@ func (e *ContractEngine) UpdateParams() error {
 	if err != nil {
 		return err
 	}
-	e.currentParams = pset
+
+	e.currentParams = params.NewGovParamSetMerged(e.initialParams, pset)
 	return nil
 }
 

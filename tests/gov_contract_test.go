@@ -35,9 +35,10 @@ func TestGovernance_ContractEngine(t *testing.T) {
 		owner        = validator
 		contractAddr = crypto.CreateAddress(owner.Addr, owner.Nonce)
 
-		paramName  = "istanbul.committeesize"
-		paramValue = uint64(22)
-		paramBytes = []byte{22}
+		paramName     = "istanbul.committeesize"
+		fallbackValue = config.Istanbul.SubGroupSize
+		paramValue    = uint64(22)
+		paramBytes    = []byte{22}
 
 		deployBlock   uint64 // Before deploy: 0, After deploy: the deployed block
 		setParamBlock uint64 // Before setParam: 0, After setParam: the setParam'd block
@@ -79,9 +80,9 @@ func TestGovernance_ContractEngine(t *testing.T) {
 		t.Logf("Params() at block=%2d: %v", num, value)
 
 		if deployBlock == 0 { // not yet deployed
-			assert.Equal(t, nil, value)
+			assert.Equal(t, fallbackValue, value)
 		} else if setParamBlock == 0 { // not yet setParam'd
-			assert.Equal(t, nil, value)
+			assert.Equal(t, fallbackValue, value)
 		} else { // after setParam
 			assert.Equal(t, paramValue, value)
 		}
@@ -99,9 +100,9 @@ func TestGovernance_ContractEngine(t *testing.T) {
 		value, _ := pset.Get(params.CommitteeSize)
 		t.Logf("ParamsAt(block=%2d): %v", num, value)
 		if num < deployBlock { // not yet deployed
-			assert.Equal(t, nil, value)
+			assert.Equal(t, fallbackValue, value)
 		} else if num <= setParamBlock { // not yet setParam'd
-			assert.Equal(t, nil, value)
+			assert.Equal(t, fallbackValue, value)
 		} else { // after setParam
 			assert.Equal(t, paramValue, value)
 		}
