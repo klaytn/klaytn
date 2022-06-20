@@ -466,11 +466,12 @@ func (ps *peerSet) Register(p *peerConnection) error {
 			p.stateThroughput += peer.stateThroughput
 			peer.lock.RUnlock()
 		}
-		p.headerThroughput /= float64(len(ps.peers))
-		p.blockThroughput /= float64(len(ps.peers))
-		p.receiptThroughput /= float64(len(ps.peers))
-		p.stakingInfoThroughput /= float64(len(ps.peers))
-		p.stateThroughput /= float64(len(ps.peers))
+		peerLengthFloat := float64(len(ps.peers))
+		p.headerThroughput /= peerLengthFloat
+		p.blockThroughput /= peerLengthFloat
+		p.receiptThroughput /= peerLengthFloat
+		p.stakingInfoThroughput /= peerLengthFloat
+		p.stateThroughput /= peerLengthFloat
 	}
 	ps.peers[p.id] = p
 	ps.lock.Unlock()
