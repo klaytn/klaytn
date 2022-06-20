@@ -119,6 +119,11 @@ func GetStakingInfoOnStakingBlock(stakingBlockNumber uint64) *StakingInfo {
 		return nil
 	}
 
+	// shortcut if given block is not on staking update interval
+	if !params.IsStakingUpdateInterval(stakingBlockNumber) {
+		return nil
+	}
+
 	// Get staking info from cache
 	if cachedStakingInfo := stakingManager.stakingInfoCache.get(stakingBlockNumber); cachedStakingInfo != nil {
 		logger.Debug("StakingInfoCache hit.", "staking block number", stakingBlockNumber, "stakingInfo", cachedStakingInfo)
