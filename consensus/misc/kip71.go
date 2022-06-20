@@ -24,14 +24,15 @@ func VerifyKIP71Header(config *params.ChainConfig, parentHeader, header *types.H
 }
 
 func NextBlockBaseFee(parentHeader *types.Header, config *params.ChainConfig) *big.Int {
-	// If the parent is the kip71 disabled block or genesis, then return default base fee (250ston)
-	if !config.IsKIP71ForkEnabled(parentHeader.Number) || parentHeader.Number.Cmp(new(big.Int).SetUint64(0)) == 0 {
-		return new(big.Int).SetUint64(config.UnitPrice)
-	}
-
 	// governance parameters
 	lowerBoundBaseFee := new(big.Int).SetUint64(config.Governance.KIP71.LowerBoundBaseFee)
 	upperBoundBaseFee := new(big.Int).SetUint64(config.Governance.KIP71.UpperBoundBaseFee)
+
+	// If the parent is the kip71 disabled block or genesis, then return default base fee (250ston)
+	if !config.IsKIP71ForkEnabled(parentHeader.Number) || parentHeader.Number.Cmp(new(big.Int).SetUint64(0)) == 0 {
+		return lowerBoundBaseFee
+	}
+
 	var baseFeeDenominator *big.Int
 	if config.Governance.KIP71.BaseFeeDenominator == 0 {
 		// To avoid panic, set the fluctuation range small
