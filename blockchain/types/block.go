@@ -29,6 +29,8 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/klaytn/klaytn/params"
+
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/crypto/sha3"
@@ -155,6 +157,14 @@ func (h *Header) EmptyBody() bool {
 // EmptyReceipts returns true if there are no receipts for this header/block.
 func (h *Header) EmptyReceipts() bool {
 	return h.ReceiptHash == EmptyRootHash
+}
+
+// BaseFeePerGas
+func (h *Header) BaseFeePerGas() *big.Int {
+	if h.BaseFee == nil {
+		return new(big.Int).SetUint64(params.ZeroBaseFee)
+	}
+	return h.BaseFee
 }
 
 // Body is a simple (mutable, non-safe) data container for storing and moving
