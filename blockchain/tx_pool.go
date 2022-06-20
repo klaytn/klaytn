@@ -517,6 +517,11 @@ func (pool *TxPool) SetGasPrice(price *big.Int) {
 	}
 }
 
+// only for test
+func (pool *TxPool) SetBaseFee(baseFee *big.Int) {
+	pool.gasPrice = baseFee
+}
+
 // Stats retrieves the current pool stats, namely the number of pending and the
 // number of queued (non-executable) transactions.
 func (pool *TxPool) Stats() (int, int) {

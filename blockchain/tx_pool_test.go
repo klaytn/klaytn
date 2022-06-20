@@ -53,6 +53,9 @@ var (
 
 	// eip1559Config is a chain config with EIP-1559 enabled at block 0.
 	eip1559Config *params.ChainConfig
+
+	// kip71Config is a chain config with KIP-71 enabled at block 0.
+	kip71Config *params.ChainConfig
 )
 
 func init() {
@@ -61,11 +64,18 @@ func init() {
 
 	cpy := *params.TestChainConfig
 	eip1559Config = &cpy
-	eip1559Config.KIP71CompatibleBlock = common.Big0
-	eip1559Config.Governance = &params.GovernanceConfig{KIP71: params.GetDefaultKip71Config()}
 	eip1559Config.IstanbulCompatibleBlock = common.Big0
 	eip1559Config.LondonCompatibleBlock = common.Big0
 	eip1559Config.EthTxTypeCompatibleBlock = common.Big0
+	fork.SetHardForkBlockNumberConfig(eip1559Config)
+
+	cpy = *params.TestChainConfig
+	kip71Config = &cpy
+	kip71Config.KIP71CompatibleBlock = common.Big0
+	kip71Config.IstanbulCompatibleBlock = common.Big0
+	kip71Config.LondonCompatibleBlock = common.Big0
+	kip71Config.EthTxTypeCompatibleBlock = common.Big0
+	kip71Config.Governance = &params.GovernanceConfig{KIP71: params.GetDefaultKip71Config()}
 	fork.SetHardForkBlockNumberConfig(eip1559Config)
 }
 
@@ -1974,9 +1984,9 @@ func TestDynamicFeeTransactionAccepted(t *testing.T) {
 	t.Parallel()
 	baseFee := big.NewInt(30)
 
-	pool, key := setupTxPoolWithConfig(eip1559Config)
+	pool, key := setupTxPoolWithConfig(kip71Config)
 	defer pool.Stop()
-	pool.SetGasPrice(baseFee)
+	pool.SetBaseFee(baseFee)
 
 	testAddBalance(pool, crypto.PubkeyToAddress(key.PublicKey), big.NewInt(10000000000))
 
@@ -2006,7 +2016,7 @@ func TestTransactionAccepted(t *testing.T) {
 
 	pool, key := setupTxPoolWithConfig(eip1559Config)
 	defer pool.Stop()
-	pool.SetGasPrice(baseFee)
+	pool.SetBaseFee(baseFee)
 
 	testAddBalance(pool, crypto.PubkeyToAddress(key.PublicKey), big.NewInt(10000000000))
 
@@ -2028,9 +2038,9 @@ func TestDynamicFeeTransactionNotAcceptedWithLowerGasPrice(t *testing.T) {
 	t.Parallel()
 	baseFee := big.NewInt(30)
 
-	pool, key := setupTxPoolWithConfig(eip1559Config)
+	pool, key := setupTxPoolWithConfig(kip71Config)
 	defer pool.Stop()
-	pool.SetGasPrice(baseFee)
+	pool.SetBaseFee(baseFee)
 
 	testAddBalance(pool, crypto.PubkeyToAddress(key.PublicKey), big.NewInt(10000000000))
 
@@ -2044,12 +2054,12 @@ func TestDynamicFeeTransactionNotAcceptedWithLowerGasPrice(t *testing.T) {
 // TestTransactionNotAcceptedWithLowerGasPrice tests that pool didn't accept the transaction which has gasPrice lower than baseFee.
 func TestTransactionNotAcceptedWithLowerGasPrice(t *testing.T) {
 	t.Parallel()
-	baseFee := big.NewInt(30)
 
-	pool, key := setupTxPoolWithConfig(eip1559Config)
+	pool, key := setupTxPoolWithConfig(kip71Config)
 	defer pool.Stop()
-	pool.SetGasPrice(baseFee)
 
+	baseFee := big.NewInt(30)
+	pool.SetBaseFee(baseFee)
 	testAddBalance(pool, crypto.PubkeyToAddress(key.PublicKey), big.NewInt(10000000000))
 
 	tx := pricedTransaction(0, 21000, big.NewInt(20), key)
@@ -2064,13 +2074,13 @@ func TestTransactionNotAcceptedWithLowerGasPrice(t *testing.T) {
 func TestTransactionsPromoteFull(t *testing.T) {
 	t.Parallel()
 
-	pool, key := setupTxPoolWithConfig(eip1559Config)
+	pool, key := setupTxPoolWithConfig(kip71Config)
 	defer pool.Stop()
 
 	from := crypto.PubkeyToAddress(key.PublicKey)
 
 	baseFee := big.NewInt(10)
-	pool.SetGasPrice(baseFee)
+	pool.SetBaseFee(baseFee)
 
 	testAddBalance(pool, from, big.NewInt(1000000000))
 
@@ -2087,11 +2097,14 @@ func TestTransactionsPromoteFull(t *testing.T) {
 
 	pool.promoteExecutables(nil)
 
-	assert.Equal(t, pool.pending[from].Len(), 4)
-
-	for i, tx := range txs {
-		assert.True(t, reflect.DeepEqual(tx, pool.pending[from].txs.items[uint64(i)]))
+	r := assert.NotEqual(t, len(pool.pending), 0)
+	if r {
+		assert.Equal(t, pool.pending[from].Len(), 4)
+		for i, tx := range txs {
+			assert.True(t, reflect.DeepEqual(tx, pool.pending[from].txs.items[uint64(i)]))
+		}
 	}
+
 }
 
 // TestTransactionsPromotePartial is a test to check whether transactions in the queue are promoted to Pending
@@ -2106,7 +2119,7 @@ func TestTransactionsPromotePartial(t *testing.T) {
 	from := crypto.PubkeyToAddress(key.PublicKey)
 
 	baseFee := big.NewInt(10)
-	pool.SetGasPrice(baseFee)
+	pool.SetBaseFee(baseFee)
 
 	testAddBalance(pool, from, big.NewInt(1000000000))
 
@@ -2147,7 +2160,7 @@ func TestTransactionsPromoteMultipleAccount(t *testing.T) {
 
 	pool, _ := setupTxPoolWithConfig(eip1559Config)
 	defer pool.Stop()
-	pool.SetGasPrice(big.NewInt(10))
+	pool.SetBaseFee(big.NewInt(10))
 
 	keys := make([]*ecdsa.PrivateKey, 3)
 	froms := make([]common.Address, 3)
@@ -2205,7 +2218,7 @@ func TestTransactionsDemotionMultipleAccount(t *testing.T) {
 
 	pool, _ := setupTxPoolWithConfig(eip1559Config)
 	defer pool.Stop()
-	// pool.SetGasPrice(big.NewInt(10))
+	// pool.SetBaseFee(big.NewInt(10))
 	pool.gasPrice = big.NewInt(10)
 
 	keys := make([]*ecdsa.PrivateKey, 3)
@@ -2250,7 +2263,7 @@ func TestTransactionsDemotionMultipleAccount(t *testing.T) {
 	// tx[6] : queue[from[2]]
 	// tx[7] : queue[from[2]]
 	// tx[7] : queue[from[2]]
-	// pool.SetGasPrice(big.NewInt(35))
+	// pool.SetBaseFee(big.NewInt(35))
 	pool.gasPrice = big.NewInt(35)
 	pool.demoteUnexecutables()
 
