@@ -58,8 +58,7 @@ func init() {
 	testTxPoolConfig = DefaultTxPoolConfig
 	testTxPoolConfig.Journal = ""
 
-	cpy := *params.TestChainConfig
-	eip1559Config = &cpy
+	eip1559Config = params.TestChainConfig.Copy()
 	eip1559Config.IstanbulCompatibleBlock = common.Big0
 	eip1559Config.LondonCompatibleBlock = common.Big0
 	eip1559Config.EthTxTypeCompatibleBlock = common.Big0
