@@ -21,6 +21,7 @@
 package params
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/big"
 
@@ -268,6 +269,13 @@ func (c *ChainConfig) String() string {
 			engine,
 		)
 	}
+}
+
+func (c *ChainConfig) Copy() *ChainConfig {
+	r := &ChainConfig{}
+	j, _ := json.Marshal(c)
+	json.Unmarshal(j, r)
+	return r
 }
 
 // IsIstanbulForkEnabled returns whether num is either equal to the istanbul block or greater.
