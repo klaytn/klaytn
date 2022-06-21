@@ -29,6 +29,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/klaytn/klaytn/params"
+
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -231,7 +233,10 @@ func RPCMarshalHeader(head *types.Header, isEnabledEthTxTypeFork bool) map[strin
 	}
 
 	if isEnabledEthTxTypeFork {
-		result["baseFeePerGas"] = (*hexutil.Big)(head.BaseFeePerGas())
+		if head.BaseFee == nil {
+			result["baseFeePerGas"] = (*hexutil.Big)(new(big.Int).SetUint64(params.ZeroBaseFee))
+		}
+		result["baseFeePerGas"] = (*hexutil.Big)(head.BaseFee)
 	}
 
 	return result
