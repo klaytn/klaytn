@@ -256,7 +256,7 @@ func (s *PublicBlockChainAPI) IsSenderTxHashIndexingEnabled() bool {
 }
 
 // CallArgs represents the arguments for a call.
-// TODO-Klaytn add KIP-71 related parameter
+// TODO-Klaytn: add KIP-71 related parameter
 type CallArgs struct {
 	From     common.Address  `json:"from"`
 	To       *common.Address `json:"to"`
@@ -392,7 +392,7 @@ func (s *PublicBlockChainAPI) DoEstimateGas(ctx context.Context, b Backend, args
 		logger.Warn("Caller gas above allowance, capping", "requested", hi, "cap", gasCap)
 		hi = gasCap.Uint64()
 	}
-	// TODO-Klaytn set hi value with account balance
+	// TODO-Klaytn: set hi value with account balance
 	cap = hi
 
 	// Create a helper to check if a gas allowance results in an executable transaction
@@ -682,7 +682,7 @@ func (args *CallArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsic
 			gasPrice = args.GasPrice.ToInt()
 			gasFeeCap, gasTipCap = gasPrice, gasPrice
 		} else {
-			// User specified 1559 gas fields (or none), use those
+			// TODO-Klaytn: User specified 1559 gas fields (or none), use those
 			gasFeeCap = new(big.Int)
 			gasTipCap = new(big.Int)
 			// Backfill the legacy gasPrice for EVM execution, unless we're all zeros
