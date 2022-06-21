@@ -312,7 +312,7 @@ func DoCall(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.Blo
 	// The intrinsicGas is checked again later in the blockchain.ApplyMessage function,
 	// but we check in advance here in order to keep StateTransition.TransactionDb method as unchanged as possible
 	// and to clarify error reason correctly to serve eth namespace APIs.
-	// This case is handled by EthDoEstimateGas function.
+	// This case is handled by DoEstimateGas function.
 	if msg.Gas() < intrinsicGas {
 		return nil, 0, 0, 0, fmt.Errorf("%w: msg.gas %d, want %d", blockchain.ErrIntrinsicGas, msg.Gas(), intrinsicGas)
 	}
