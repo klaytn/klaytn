@@ -173,6 +173,7 @@ type txPool interface {
 // blockChain is an interface for blockchain.Blockchain used in governance package.
 type blockChain interface {
 	CurrentHeader() *types.Header
+	GetHeaderByNumber(val uint64) *types.Header
 	SetProposerPolicy(val uint64)
 	SetUseGiniCoeff(val bool)
 	SetLowerBoundBaseFee(val uint64)
