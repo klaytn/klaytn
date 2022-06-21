@@ -280,8 +280,8 @@ func (args *CallArgs) data() []byte {
 func DoCall(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.BlockNumberOrHash, vmCfg vm.Config, timeout time.Duration, globalGasCap *big.Int) ([]byte, uint64, uint64, uint, error) {
 	defer func(start time.Time) { logger.Debug("Executing EVM call finished", "runtime", time.Since(start)) }(time.Now())
 
-	st, header, err := b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
-	if st == nil || err != nil {
+	state, header, err := b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
+	if state == nil || err != nil {
 		return nil, 0, 0, 0, err
 	}
 	// Setup context so it may be cancelled the call has completed
@@ -303,6 +303,9 @@ func DoCall(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.Blo
 		return nil, 0, 0, 0, err
 	}
 	msg, err := args.ToMessage(globalGasCap.Uint64(), fixedBaseFee, intrinsicGas)
+	// Add gas fee to sender for estimating gasLimit/computing cost or calling a function by insufficient balance sender.
+	state.AddBalance(msg.ValidatedSender(), new(big.Int).Mul(new(big.Int).SetUint64(msg.Gas()), msg.GasPrice()))
+
 	if err != nil {
 		return nil, 0, 0, 0, err
 	}
@@ -313,7 +316,7 @@ func DoCall(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.Blo
 	if msg.Gas() < intrinsicGas {
 		return nil, 0, 0, 0, fmt.Errorf("%w: msg.gas %d, want %d", blockchain.ErrIntrinsicGas, msg.Gas(), intrinsicGas)
 	}
-	evm, vmError, err := b.GetEVM(ctx, msg, st, header, vmCfg)
+	evm, vmError, err := b.GetEVM(ctx, msg, state, header, vmCfg)
 	if err != nil {
 		return nil, 0, 0, 0, err
 	}
