@@ -9,23 +9,20 @@ import (
 )
 
 type MixedEngine struct {
-	initialConfig *params.ChainConfig
-	initialParams *params.GovParamSet
 	currentParams *params.GovParamSet
 
-	db database.DBManager
+	db    database.DBManager
+	chain blockChain
 
 	// Subordinate engines
-	// TODO: Add ContractEngine
-	defaultGov *Governance
+	defaultGov  *Governance
+	contractGov *ContractEngine
 }
 
 // newMixedEngine instantiate a new MixedEngine struct.
 // Only if doInit is true, subordinate engines will be initialized.
 func newMixedEngine(config *params.ChainConfig, db database.DBManager, doInit bool) *MixedEngine {
 	e := &MixedEngine{
-		initialConfig: config,
-		initialParams: nil,
 		currentParams: nil,
 
 		db: db,
@@ -34,7 +31,6 @@ func newMixedEngine(config *params.ChainConfig, db database.DBManager, doInit bo
 	}
 
 	if p, err := params.NewGovParamSetChainConfig(config); err == nil {
-		e.initialParams = p
 		e.currentParams = p
 	} else {
 		logger.Crit("Error parsing initial ChainConfig", "err", err)
@@ -46,6 +42,8 @@ func newMixedEngine(config *params.ChainConfig, db database.DBManager, doInit bo
 	} else {
 		e.defaultGov = NewGovernance(config, db)
 	}
+
+	e.contractGov = NewContractEngine(config, e.defaultGov)
 
 	// Load last state
 	e.UpdateParams()
@@ -64,15 +62,51 @@ func NewMixedEngineNoInit(config *params.ChainConfig, db database.DBManager) *Mi
 }
 
 func (e *MixedEngine) Params() *params.GovParamSet {
-	return e.defaultGov.Params()
+	return e.currentParams
 }
 
 func (e *MixedEngine) ParamsAt(num uint64) (*params.GovParamSet, error) {
-	return e.defaultGov.ParamsAt(num)
+	if e.isContractEnabledAt(num) {
+		return e.contractGov.ParamsAt(num)
+	} else {
+		return e.defaultGov.ParamsAt(num)
+	}
 }
 
 func (e *MixedEngine) UpdateParams() error {
-	return e.defaultGov.UpdateParams()
+	if e.isContractEnabledAtNext() {
+		if err := e.contractGov.UpdateParams(); err != nil {
+			return err
+		}
+		e.currentParams = e.contractGov.Params()
+	} else {
+		if err := e.defaultGov.UpdateParams(); err != nil {
+			return err
+		}
+		e.currentParams = e.defaultGov.Params()
+	}
+	return nil
+}
+
+func (e *MixedEngine) isContractEnabledAt(num uint64) bool {
+	addr := e.contractGov.contractAddrAt(num)
+	enabled := !common.EmptyAddress(addr)
+	return enabled
+}
+
+func (e *MixedEngine) isContractEnabledAtNext() bool {
+	if e.chain != nil {
+		head := e.chain.CurrentHeader().Number.Uint64()
+		return e.isContractEnabledAt(head + 1)
+	} else {
+		return false
+	}
+}
+
+func (e *MixedEngine) SetBlockchain(chain blockChain) {
+	e.chain = chain
+	e.defaultGov.SetBlockchain(chain)
+	e.contractGov.SetBlockchain(chain)
 }
 
 // Pass-through to HeaderEngine
@@ -199,10 +233,6 @@ func (e *MixedEngine) SetTotalVotingPower(t uint64) {
 
 func (e *MixedEngine) SetMyVotingPower(t uint64) {
 	e.defaultGov.SetMyVotingPower(t)
-}
-
-func (e *MixedEngine) SetBlockchain(chain blockChain) {
-	e.defaultGov.SetBlockchain(chain)
 }
 
 func (e *MixedEngine) SetTxPool(txpool txPool) {

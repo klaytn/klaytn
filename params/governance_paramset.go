@@ -398,7 +398,7 @@ func (p *GovParamSet) MustGet(key int) interface{} {
 	if v, ok := p.Get(key); ok {
 		return v
 	} else {
-		logger.Crit("Attempted to get missing GovParam item", "key", key, "name", govParamNamesReverse[key])
+		logger.CritWithStack("Attempted to get missing GovParam item", "key", key, "name", govParamNamesReverse[key])
 		return nil
 	}
 }
