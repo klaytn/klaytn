@@ -263,6 +263,11 @@ func NewFastHTTPServer(cors []string, vhosts []string, timeouts HTTPTimeouts, sr
 		handler = newNewRelicHTTPHandler(nrApp, handler)
 	}
 
+	ddTracer := newDatadogTracer()
+	if ddTracer {
+		handler = newDatadogHTTPHandler(handler)
+	}
+
 	fhandler := fasthttpadaptor.NewFastHTTPHandler(handler)
 	fhandler = fasthttp.TimeoutHandler(fhandler, timeouts.ExecutionTimeout, "timeout")
 
