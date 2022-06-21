@@ -21,6 +21,7 @@
 package params
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/big"
 
@@ -136,14 +137,12 @@ var (
 	}
 )
 
-var (
-	// VMLogTarget sets the output target of vmlog.
-	// The values below can be OR'ed.
-	//  - 0x0: no output (default)
-	//  - 0x1: file (DATADIR/logs/vm.log)
-	//  - 0x2: stdout (like logger.DEBUG)
-	VMLogTarget = 0x0
-)
+// VMLogTarget sets the output target of vmlog.
+// The values below can be OR'ed.
+//  - 0x0: no output (default)
+//  - 0x1: file (DATADIR/logs/vm.log)
+//  - 0x2: stdout (like logger.DEBUG)
+var VMLogTarget = 0x0
 
 const (
 	VMLogToFile   = 0x1
@@ -272,6 +271,13 @@ func (c *ChainConfig) String() string {
 	}
 }
 
+func (c *ChainConfig) Copy() *ChainConfig {
+	r := &ChainConfig{}
+	j, _ := json.Marshal(c)
+	json.Unmarshal(j, r)
+	return r
+}
+
 // IsIstanbulForkEnabled returns whether num is either equal to the istanbul block or greater.
 func (c *ChainConfig) IsIstanbulForkEnabled(num *big.Int) bool {
 	return isForked(c.IstanbulCompatibleBlock, num)
@@ -353,32 +359,18 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *Confi
 	return nil
 }
 
-// GetConsensusEngine returns the consensus engine type specified in ChainConfig.
-// It returns Unknown type if none of engine type is configured or more than one type is configured.
-func (c *ChainConfig) GetConsensusEngine() EngineType {
-	switch {
-	case c.Clique != nil && c.Istanbul == nil:
-		return UseClique
-	case c.Clique == nil && c.Istanbul != nil:
-		return UseIstanbul
-	default:
-		return Unknown
-	}
-}
-
 // SetDefaults fills undefined chain config with default values.
 func (c *ChainConfig) SetDefaults() {
 	logger := log.NewModuleLogger(log.Governance)
 
-	if c.GetConsensusEngine() == Unknown && c.Istanbul == nil {
+	if c.Clique == nil && c.Istanbul == nil {
 		c.Istanbul = GetDefaultIstanbulConfig()
 		logger.Warn("Override the default Istanbul config to the chain config")
 	}
 
 	if c.Governance == nil {
-		engineType := c.GetConsensusEngine()
-		c.Governance = GetDefaultGovernanceConfig(engineType)
-		logger.Warn("Override the default governance config to the chain config", "engineType", engineType)
+		c.Governance = GetDefaultGovernanceConfig()
+		logger.Warn("Override the default governance config to the chain config")
 	}
 
 	if c.Governance.Reward == nil {
@@ -387,12 +379,14 @@ func (c *ChainConfig) SetDefaults() {
 			c.Governance.Reward)
 	}
 
+	// StakingUpdateInterval must be nonzero because it is used as denominator
 	if c.Governance.Reward.StakingUpdateInterval == 0 {
 		c.Governance.Reward.StakingUpdateInterval = StakingUpdateInterval()
 		logger.Warn("Override the default staking update interval to the chain config", "interval",
 			c.Governance.Reward.StakingUpdateInterval)
 	}
 
+	// ProposerUpdateInterval must be nonzero because it is used as denominator
 	if c.Governance.Reward.ProposerUpdateInterval == 0 {
 		c.Governance.Reward.ProposerUpdateInterval = ProposerUpdateInterval()
 		logger.Warn("Override the default proposer update interval to the chain config", "interval",
@@ -479,33 +473,7 @@ func (c *ChainConfig) Rules(num *big.Int) Rules {
 	}
 }
 
-// Copy copies self to a new governance config and return it
-func (g *GovernanceConfig) Copy() *GovernanceConfig {
-	newConfig := &GovernanceConfig{
-		Reward: &RewardConfig{},
-	}
-	newConfig.GovernanceMode = g.GovernanceMode
-	newConfig.Reward.MintingAmount = big.NewInt(0).Set(g.Reward.MintingAmount)
-	newConfig.Reward.Ratio = g.Reward.Ratio
-	newConfig.Reward.UseGiniCoeff = g.Reward.UseGiniCoeff
-	newConfig.Reward.DeferredTxFee = g.Reward.DeferredTxFee
-	newConfig.GoverningNode = g.GoverningNode
-
-	return newConfig
-}
-
-func (c *IstanbulConfig) Copy() *IstanbulConfig {
-	newIC := &IstanbulConfig{}
-
-	newIC.Epoch = c.Epoch
-	newIC.SubGroupSize = c.SubGroupSize
-	newIC.ProposerPolicy = c.ProposerPolicy
-
-	return newIC
-}
-
-// TODO-Klaytn-Governance: Remove input parameter if not needed anymore
-func GetDefaultGovernanceConfig(engine EngineType) *GovernanceConfig {
+func GetDefaultGovernanceConfig() *GovernanceConfig {
 	gov := &GovernanceConfig{
 		GovernanceMode: DefaultGovernanceMode,
 		GoverningNode:  common.HexToAddress(DefaultGoverningNode),

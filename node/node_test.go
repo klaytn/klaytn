@@ -33,9 +33,7 @@ import (
 	"github.com/klaytn/klaytn/networks/rpc"
 )
 
-var (
-	testNodeKey, _ = crypto.GenerateKey()
-)
+var testNodeKey, _ = crypto.GenerateKey()
 
 func testNodeConfig() *Config {
 	return &Config{
@@ -519,17 +517,20 @@ func TestAPIGather(t *testing.T) {
 		Maker InstrumentingWrapper
 	}{
 		"Zero APIs": {
-			[]rpc.API{}, InstrumentedServiceMakerA},
+			[]rpc.API{}, InstrumentedServiceMakerA,
+		},
 		"Single API": {
 			[]rpc.API{
 				{Namespace: "single", Version: "1", Service: makeAPI("single.v1"), Public: true},
-			}, InstrumentedServiceMakerB},
+			}, InstrumentedServiceMakerB,
+		},
 		"Many APIs": {
 			[]rpc.API{
 				{Namespace: "multi", Version: "1", Service: makeAPI("multi.v1"), Public: true},
 				{Namespace: "multi.v2", Version: "2", Service: makeAPI("multi.v2"), Public: true},
 				{Namespace: "multi.v2.nested", Version: "2", Service: makeAPI("multi.v2.nested"), Public: true},
-			}, InstrumentedServiceMakerC},
+			}, InstrumentedServiceMakerC,
+		},
 	}
 
 	for id, config := range services {

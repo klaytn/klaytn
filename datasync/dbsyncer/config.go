@@ -52,7 +52,6 @@ type DBConfig struct {
 }
 
 var DefaultDBConfig = &DBConfig{
-
 	EnabledDBSyncer: false,
 	EnabledLogMode:  false,
 

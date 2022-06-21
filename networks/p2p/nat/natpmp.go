@@ -21,9 +21,8 @@
 package nat
 
 import (
-	"net"
-
 	"fmt"
+	"net"
 	"strings"
 	"time"
 

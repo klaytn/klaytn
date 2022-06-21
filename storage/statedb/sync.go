@@ -64,14 +64,12 @@ type SyncResult struct {
 // persisted data items.
 type syncMemBatch struct {
 	batch map[common.Hash][]byte // In-memory membatch of recently completed items
-	order []common.Hash          // Order of completion to prevent out-of-order data loss
 }
 
 // newSyncMemBatch allocates a new memory-buffer for not-yet persisted trie nodes.
 func newSyncMemBatch() *syncMemBatch {
 	return &syncMemBatch{
 		batch: make(map[common.Hash][]byte),
-		order: make([]common.Hash, 0, 256),
 	}
 }
 
@@ -253,11 +251,12 @@ func (s *TrieSync) Process(results []SyncResult) (bool, int, error) {
 
 // Commit flushes the data stored in the internal membatch out to persistent
 // storage, returning the number of items written and any occurred error.
-func (s *TrieSync) Commit(dbw database.KeyValueWriter) (int, error) {
+func (s *TrieSync) Commit(dbw database.Batch) (int, error) {
+	written := 0
 	// Dump the membatch into a database dbw
-	for i, key := range s.membatch.order {
-		if err := dbw.Put(key[:], s.membatch.batch[key]); err != nil {
-			return i, err
+	for key, value := range s.membatch.batch {
+		if err := dbw.Put(key[:], value); err != nil {
+			return written, err
 		}
 
 		if s.bloom != nil {
@@ -267,8 +266,8 @@ func (s *TrieSync) Commit(dbw database.KeyValueWriter) (int, error) {
 		if s.exist != nil {
 			s.exist.Add(key, nil)
 		}
+		written += 1
 	}
-	written := len(s.membatch.order)
 
 	// Drop the membatch data and return
 	s.membatch = newSyncMemBatch()
@@ -379,7 +378,6 @@ func (s *TrieSync) commit(req *request) (err error) {
 
 	// Write the node content to the membatch
 	s.membatch.batch[req.hash] = req.data
-	s.membatch.order = append(s.membatch.order, req.hash)
 
 	delete(s.requests, req.hash)
 

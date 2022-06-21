@@ -39,14 +39,14 @@ const (
 var logger = log.NewModuleLogger(log.CMDIstanbul)
 
 func GenerateRandomDir() (string, error) {
-	err := os.MkdirAll(filepath.Join(defaultLocalDir), 0700)
+	err := os.MkdirAll(filepath.Join(defaultLocalDir), 0o700)
 	if err != nil {
 		logger.Error("Failed to create dir", "dir", defaultLocalDir, "err", err)
 		return "", err
 	}
 
 	instanceDir := filepath.Join(defaultLocalDir, fmt.Sprintf("%s-%s", clientIdentifier, uuid.NewV4().String()))
-	if err := os.MkdirAll(instanceDir, 0700); err != nil {
+	if err := os.MkdirAll(instanceDir, 0o700); err != nil {
 		logger.Error("Failed to create dir", "dir", instanceDir, "err", err)
 		return "", err
 	}
@@ -91,7 +91,7 @@ func copyFile(src string, dst string) {
 		logger.Error("Failed to read file", "file", src, "err", err)
 		return
 	}
-	err = ioutil.WriteFile(dst, data, 0644)
+	err = ioutil.WriteFile(dst, data, 0o644)
 	if err != nil {
 		logger.Error("Failed to write file", "file", dst, "err", err)
 		return

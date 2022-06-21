@@ -18,6 +18,7 @@
 // This file is derived from p2p/simulations/examples/ping-pong.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
+//go:build none
 // +build none
 
 package main
