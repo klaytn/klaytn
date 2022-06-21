@@ -38,6 +38,7 @@ func NewContractEngine(config *params.ChainConfig, defaultGov *Governance) *Cont
 
 	if pset, err := params.NewGovParamSetChainConfig(config); err == nil {
 		e.initialParams = pset
+		e.currentParams = pset
 	} else {
 		logger.Crit("Error parsing initial ChainConfig", "err", err)
 	}
@@ -61,20 +62,15 @@ func (e *ContractEngine) ParamsAt(num uint64) (*params.GovParamSet, error) {
 	}
 
 	head := e.chain.CurrentHeader().Number.Uint64()
-
-	if num == 0 {
-		num = 0
-	} else if num <= head {
-		num = num - 1
-	} else {
+	if num > head {
 		// Sometimes future blocks are requested.
 		// ex) reward distributor in istanbul.engine.Finalize() requests ParamsAt(head+1)
 		// ex) governance_itemsAt(num) API requests arbitrary num
 		// In those cases we refer to the head block.
-		num = head
+		num = head + 1
 	}
 
-	pset, err := e.contractGetAllParams(new(big.Int).SetUint64(num))
+	pset, err := e.contractGetAllParams(num)
 	if err != nil {
 		return nil, err
 	}
@@ -87,8 +83,8 @@ func (e *ContractEngine) UpdateParams() error {
 		return errContractEngineNotReady
 	}
 
-	head := e.chain.CurrentHeader().Number
-	pset, err := e.contractGetAllParams(head)
+	head := e.chain.CurrentHeader().Number.Uint64()
+	pset, err := e.contractGetAllParams(head + 1)
 	if err != nil {
 		return err
 	}
@@ -97,7 +93,7 @@ func (e *ContractEngine) UpdateParams() error {
 	return nil
 }
 
-func (e *ContractEngine) contractGetAllParams(num *big.Int) (*params.GovParamSet, error) {
+func (e *ContractEngine) contractGetAllParams(num uint64) (*params.GovParamSet, error) {
 	if e.chain == nil {
 		logger.Error("Invoked ContractEngine before SetBlockchain")
 		return nil, errContractEngineNotReady
@@ -105,7 +101,7 @@ func (e *ContractEngine) contractGetAllParams(num *big.Int) (*params.GovParamSet
 
 	addr := e.contractAddrAt(num)
 	if common.EmptyAddress(addr) {
-		logger.Error("Invoked ContractEngine but address is empty", "num", num.Uint64())
+		logger.Error("Invoked ContractEngine but address is empty", "num", num)
 		return nil, errContractEngineNotReady
 	}
 
@@ -114,11 +110,14 @@ func (e *ContractEngine) contractGetAllParams(num *big.Int) (*params.GovParamSet
 		chain:        e.chain,
 		contractAddr: addr,
 	}
-	return caller.getAllParams(num)
+	if num > 0 {
+		num -= 1
+	}
+	return caller.getAllParams(new(big.Int).SetUint64(num))
 }
 
 // Return the GovernanceContract address effective at given block number
-func (e *ContractEngine) contractAddrAt(num *big.Int) common.Address {
+func (e *ContractEngine) contractAddrAt(num uint64) common.Address {
 	// TODO: Load from HeaderEngine
 
 	// If database don't have the item, fallback to ChainConfig
