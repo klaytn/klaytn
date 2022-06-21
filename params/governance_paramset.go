@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/log"
 )
 
 var (
@@ -141,17 +140,14 @@ var (
 		parseValue: func(v interface{}) (interface{}, bool) {
 			switch v.(type) {
 			case string:
-				_, ok := new(big.Int).SetString(v.(string), 10)
-				return v.(string), ok
+				return v.(string), true
 			case *big.Int:
 				return v.(*big.Int).String(), true
 			default:
 				return nil, false
 			}
 		},
-		parseBytes: func(b []byte) (interface{}, bool) {
-			return new(big.Int).SetBytes(b).String(), true
-		},
+		parseBytes: parseBytesString,
 		validate: func(v interface{}) bool {
 			if n, ok := new(big.Int).SetString(v.(string), 10); ok {
 				return n.Sign() >= 0 // must be non-negative.
@@ -349,6 +345,8 @@ func (p *GovParamSet) set(key int, value interface{}) error {
 	}
 	parsed, ok := ty.ParseValue(value)
 	if !ok {
+		logger.Warn("Bad GovParam value",
+			"key", govParamNamesReverse[key], "value", value)
 		return errBadGovParamValue
 	}
 	p.items[key] = parsed
@@ -362,6 +360,8 @@ func (p *GovParamSet) setBytes(key int, bytes []byte) error {
 	}
 	parsed, ok := ty.ParseBytes(bytes)
 	if !ok {
+		logger.Warn("Bad GovParam value",
+			"key", govParamNamesReverse[key], "hex(value)", common.ToHex(bytes))
 		return errBadGovParamValue
 	}
 	p.items[key] = parsed
@@ -395,7 +395,6 @@ func (p *GovParamSet) MustGet(key int) interface{} {
 	if v, ok := p.Get(key); ok {
 		return v
 	} else {
-		logger := log.NewModuleLogger(log.Governance)
 		logger.Crit("Attempted to get missing GovParam item", "key", key, "name", govParamNamesReverse[key])
 		return nil
 	}
