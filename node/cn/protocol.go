@@ -103,6 +103,7 @@ const (
 	ErrSuspendedPeer
 	ErrUnexpectedTxType
 	ErrFailedToGetStateDB
+	ErrUnsupportedEnginePolicy
 )
 
 func (e errCode) String() string {
@@ -123,6 +124,7 @@ var errorToString = map[int]string{
 	ErrSuspendedPeer:           "Suspended peer",
 	ErrUnexpectedTxType:        "Unexpected tx type",
 	ErrFailedToGetStateDB:      "Failed to get stateDB",
+	ErrUnsupportedEnginePolicy: "Unsupported engine or policy",
 }
 
 //go:generate mockgen -destination=node/cn/mocks/downloader_mock.go -package=mocks github.com/klaytn/klaytn/node/cn ProtocolManagerDownloader

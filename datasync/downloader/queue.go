@@ -27,6 +27,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/klaytn/klaytn/consensus/istanbul"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/prque"
@@ -73,7 +75,7 @@ type fetchResult struct {
 	StakingInfo  *reward.StakingInfo
 }
 
-func newFetchResult(header *types.Header, fastSync bool) *fetchResult {
+func newFetchResult(header *types.Header, fastSync bool, proposerPolicy uint64) *fetchResult {
 	item := &fetchResult{
 		Header: header,
 	}
@@ -83,7 +85,7 @@ func newFetchResult(header *types.Header, fastSync bool) *fetchResult {
 	if fastSync && !header.EmptyReceipts() {
 		item.pending |= (1 << receiptType)
 	}
-	if fastSync && params.IsStakingUpdateInterval(header.Number.Uint64()) {
+	if fastSync && proposerPolicy == uint64(istanbul.WeightedRandom) && params.IsStakingUpdateInterval(header.Number.Uint64()) {
 		item.pending |= (1 << stakingInfoType)
 	}
 	return item
@@ -156,11 +158,13 @@ type queue struct {
 	active *sync.Cond
 	closed bool
 
+	proposerPolicy uint64
+
 	lastStatLog time.Time
 }
 
 // newQueue creates a new download queue for scheduling block retrieval.
-func newQueue(blockCacheLimit int, thresholdInitialSize int) *queue {
+func newQueue(blockCacheLimit int, thresholdInitialSize int, proposerPolicy uint64) *queue {
 	lock := new(sync.RWMutex)
 	q := &queue{
 		headerContCh:         make(chan bool),
@@ -169,6 +173,7 @@ func newQueue(blockCacheLimit int, thresholdInitialSize int) *queue {
 		stakingInfoTaskQueue: prque.New(),
 		active:               sync.NewCond(lock),
 		lock:                 lock,
+		proposerPolicy:       proposerPolicy,
 	}
 	q.Reset(blockCacheLimit, thresholdInitialSize)
 	return q
@@ -366,7 +371,7 @@ func (q *queue) Schedule(headers []*types.Header, from uint64) []*types.Header {
 			}
 		}
 
-		if q.mode == FastSync && params.IsStakingUpdateInterval(header.Number.Uint64()) {
+		if q.mode == FastSync && q.proposerPolicy == uint64(istanbul.WeightedRandom) && params.IsStakingUpdateInterval(header.Number.Uint64()) {
 			if _, ok := q.stakingInfoTaskPool[hash]; ok {
 				logger.Trace("Header already scheduled for staking info fetch", "number", header.Number, "hash", hash)
 			} else {
@@ -561,7 +566,7 @@ func (q *queue) reserveHeaders(p *peerConnection, count int, taskPool map[common
 		header := h.(*types.Header)
 		// we can ask the resultCache if this header is within the
 		// "prioritized" segment of blocks. If it is not, we need to throttle
-		stale, throttle, item, err := q.resultCache.AddFetch(header, q.mode == FastSync)
+		stale, throttle, item, err := q.resultCache.AddFetch(header, q.mode == FastSync, q.proposerPolicy)
 		if stale {
 			// Don't put back in the task queue, this item has already been
 			// delivered upstream
