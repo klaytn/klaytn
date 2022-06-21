@@ -32,6 +32,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/klaytn/klaytn/params"
+
 	"github.com/klaytn/klaytn/common/math"
 
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
@@ -301,6 +303,10 @@ func (tx *Transaction) EffectiveGasTip(baseFee *big.Int) *big.Int {
 // effectiveGasPrice = msg.EffectiveGasPrice(baseFee)
 func (tx *Transaction) EffectiveGasPrice(baseFee *big.Int) *big.Int {
 	if tx.Type() == TxTypeEthereumDynamicFee {
+		if baseFee != nil {
+			return baseFee
+		}
+		baseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
 		te := tx.GetTxInternalData().(TxInternalDataBaseFee)
 		return math.BigMin(new(big.Int).Add(te.GetGasTipCap(), baseFee), te.GetGasFeeCap())
 	}

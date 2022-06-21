@@ -206,6 +206,7 @@ func RpcOutputReceipt(tx *types.Transaction, blockHash common.Hash, blockNumber 
 	if tx == nil || receipt == nil {
 		return nil
 	}
+
 	fields := newRPCTransaction(tx, blockHash, blockNumber, index)
 
 	if receipt.Status != types.ReceiptStatusSuccessful {
@@ -217,6 +218,7 @@ func RpcOutputReceipt(tx *types.Transaction, blockHash common.Hash, blockNumber 
 
 	fields["logsBloom"] = receipt.Bloom
 	fields["gasUsed"] = hexutil.Uint64(receipt.GasUsed)
+	fields["effectiveGasPrice"] = hexutil.Uint64(tx.GasPrice().Uint64())
 
 	if receipt.Logs == nil {
 		fields["logs"] = [][]*types.Log{}
@@ -247,12 +249,30 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceiptBySenderTxHash(ctx conte
 
 // GetTransactionReceipt returns the transaction receipt for the given transaction hash.
 func (s *PublicTransactionPoolAPI) GetTransactionReceipt(ctx context.Context, hash common.Hash) (map[string]interface{}, error) {
-	return RpcOutputReceipt(s.b.GetTxLookupInfoAndReceipt(ctx, hash)), nil
+	tx, blockHash, blockNumber, index, receipt := s.b.GetTxLookupInfoAndReceipt(ctx, hash)
+	return s.getTransactionReceipt(ctx, tx, blockHash, blockNumber, index, receipt)
 }
 
 // GetTransactionReceiptInCache returns the transaction receipt for the given transaction hash.
 func (s *PublicTransactionPoolAPI) GetTransactionReceiptInCache(ctx context.Context, hash common.Hash) (map[string]interface{}, error) {
-	return RpcOutputReceipt(s.b.GetTxLookupInfoAndReceiptInCache(hash)), nil
+	tx, blockHash, blockNumber, index, receipt := s.b.GetTxLookupInfoAndReceiptInCache(hash)
+	return s.getTransactionReceipt(ctx, tx, blockHash, blockNumber, index, receipt)
+}
+
+// getTransactionReceipt returns the transaction receipt for the given transaction hash.
+func (s *PublicTransactionPoolAPI) getTransactionReceipt(ctx context.Context, tx *types.Transaction, blockHash common.Hash,
+	blockNumber uint64, index uint64, receipt *types.Receipt,
+) (map[string]interface{}, error) {
+	fields := RpcOutputReceipt(tx, blockHash, blockNumber, index, receipt)
+
+	header, err := s.b.HeaderByHash(ctx, blockHash)
+	if header != nil && err == nil {
+		if header.BaseFee != nil {
+			fields["effectiveGasPrice"] = hexutil.Uint64(header.BaseFee.Uint64())
+		}
+	}
+
+	return fields, nil
 }
 
 // sign is a helper function that signs a transaction with the private key of the given address.

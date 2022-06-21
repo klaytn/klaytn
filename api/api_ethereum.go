@@ -714,7 +714,7 @@ func newEthRPCTransactionFromBlockIndex(b *types.Block, index uint64) *EthRPCTra
 		logger.Error("invalid transaction index", "given index", index, "length of txs", len(txs))
 		return nil
 	}
-	return newEthRPCTransaction(txs[index], b.Hash(), b.NumberU64(), index)
+	return newEthRPCTransaction(b, txs[index], b.Hash(), b.NumberU64(), index)
 }
 
 // newEthRPCTransactionFromBlockHash returns a transaction that will serialize to the RPC representation.
@@ -743,7 +743,7 @@ func resolveToField(tx *types.Transaction) *common.Address {
 }
 
 // newEthRPCTransaction creates an EthRPCTransaction from Klaytn transaction.
-func newEthRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber, index uint64) *EthRPCTransaction {
+func newEthRPCTransaction(b *types.Block, tx *types.Transaction, blockHash common.Hash, blockNumber, index uint64) *EthRPCTransaction {
 	// When an unknown transaction is requested through rpc call,
 	// nil is returned by Klaytn API, and it is handled.
 	if tx == nil {
@@ -792,15 +792,19 @@ func newEthRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNum
 		result.GasTipCap = (*hexutil.Big)(tx.GasTipCap())
 		// TODO-Klaytn: If we change the gas price policy from fixed to dynamic,
 		// we should change the params.ZeroBaseFee(fixed value) to dynamic value.
-		price := math.BigMin(new(big.Int).Add(tx.GasTipCap(), new(big.Int).SetUint64(params.ZeroBaseFee)), tx.GasFeeCap())
-		result.GasPrice = (*hexutil.Big)(price)
+		if b != nil && b.Header().BaseFee != nil {
+			result.GasPrice = (*hexutil.Big)(b.Header().BaseFee)
+		} else {
+			price := math.BigMin(new(big.Int).Add(tx.GasTipCap(), new(big.Int).SetUint64(params.ZeroBaseFee)), tx.GasFeeCap())
+			result.GasPrice = (*hexutil.Big)(price)
+		}
 	}
 	return result
 }
 
 // newEthRPCPendingTransaction creates an EthRPCTransaction for pending tx.
 func newEthRPCPendingTransaction(tx *types.Transaction) *EthRPCTransaction {
-	return newEthRPCTransaction(tx, common.Hash{}, 0, 0)
+	return newEthRPCTransaction(nil, tx, common.Hash{}, 0, 0)
 }
 
 // formatTxToEthTxJSON formats types.Transaction to ethTxJSON.
@@ -907,7 +911,11 @@ func (api *EthereumAPI) GetTransactionCount(ctx context.Context, address common.
 func (api *EthereumAPI) GetTransactionByHash(ctx context.Context, hash common.Hash) (*EthRPCTransaction, error) {
 	// Try to return an already finalized transaction
 	if tx, blockHash, blockNumber, index := api.publicTransactionPoolAPI.b.ChainDB().ReadTxAndLookupInfo(hash); tx != nil {
-		return newEthRPCTransaction(tx, blockHash, blockNumber, index), nil
+		block, err := api.publicTransactionPoolAPI.b.BlockByHash(ctx, blockHash)
+		if block == nil || err != nil {
+			return nil, err
+		}
+		return newEthRPCTransaction(block, tx, blockHash, blockNumber, index), nil
 	}
 	// No finalized transaction, try to retrieve it from the pool
 	if tx := api.publicTransactionPoolAPI.b.GetPoolTransaction(hash); tx != nil {
@@ -943,7 +951,12 @@ func (api *EthereumAPI) GetTransactionReceipt(ctx context.Context, hash common.H
 		cumulativeGasUsed += receipts[i].GasUsed
 	}
 
-	ethTx, err := newEthTransactionReceipt(tx, api.publicTransactionPoolAPI.b, blockHash, blockNumber, index, cumulativeGasUsed, receipt)
+	header, err := api.publicTransactionPoolAPI.b.HeaderByHash(ctx, blockHash)
+	if err != nil {
+		return nil, err
+	}
+
+	ethTx, err := newEthTransactionReceipt(header, tx, api.publicTransactionPoolAPI.b, blockHash, blockNumber, index, cumulativeGasUsed, receipt)
 	if err != nil {
 		return nil, err
 	}
@@ -951,7 +964,7 @@ func (api *EthereumAPI) GetTransactionReceipt(ctx context.Context, hash common.H
 }
 
 // newEthTransactionReceipt creates a transaction receipt in Ethereum format.
-func newEthTransactionReceipt(tx *types.Transaction, b Backend, blockHash common.Hash, blockNumber, index, cumulativeGasUsed uint64, receipt *types.Receipt) (map[string]interface{}, error) {
+func newEthTransactionReceipt(header *types.Header, tx *types.Transaction, b Backend, blockHash common.Hash, blockNumber, index, cumulativeGasUsed uint64, receipt *types.Receipt) (map[string]interface{}, error) {
 	// When an unknown transaction receipt is requested through rpc call,
 	// nil is returned by Klaytn API, and it is handled.
 	if tx == nil || receipt == nil {
@@ -982,8 +995,7 @@ func newEthTransactionReceipt(tx *types.Transaction, b Backend, blockHash common
 	if b.ChainConfig().IsEthTxTypeForkEnabled(new(big.Int).SetUint64(blockNumber)) {
 		// TODO-Klaytn: Klaytn is using fixed BaseFee(0) as now but
 		// if we apply dynamic BaseFee, we should add calculated BaseFee instead of using params.ZeroBaseFee.
-		baseFee := new(big.Int).SetUint64(params.ZeroBaseFee)
-		fields["effectiveGasPrice"] = hexutil.Uint64(tx.EffectiveGasPrice(baseFee).Uint64())
+		fields["effectiveGasPrice"] = hexutil.Uint64(tx.EffectiveGasPrice(header.BaseFee).Uint64())
 	} else {
 		fields["effectiveGasPrice"] = hexutil.Uint64(tx.GasPrice().Uint64())
 	}
@@ -1468,7 +1480,10 @@ func (api *EthereumAPI) rpcMarshalHeader(head *types.Header) (map[string]interfa
 
 	// TODO-Klaytn needs to add kip71 hardfork condition
 	if api.publicBlockChainAPI.b.ChainConfig().IsEthTxTypeForkEnabled(head.Number) {
-		result["baseFeePerGas"] = (*hexutil.Big)(head.BaseFeePerGas())
+		if head.BaseFee == nil {
+			result["baseFeePerGas"] = (*hexutil.Big)(new(big.Int).SetUint64(params.ZeroBaseFee))
+		}
+		result["baseFeePerGas"] = (*hexutil.Big)(head.BaseFee)
 	}
 
 	return result, nil
