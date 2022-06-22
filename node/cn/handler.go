@@ -45,6 +45,7 @@ import (
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/storage/statedb"
@@ -609,6 +610,16 @@ func (pm *ProtocolManager) handleMsg(p Peer, addr common.Address, msg p2p.Msg) e
 			return err
 		}
 
+	case p.GetVersion() >= klay65 && msg.Code == StakingInfoRequestMsg:
+		if err := handleStakingInfoRequestMsg(pm, p, msg); err != nil {
+			return err
+		}
+
+	case p.GetVersion() >= klay65 && msg.Code == StakingInfoMsg:
+		if err := handleStakingInfoMsg(pm, p, msg); err != nil {
+			return err
+		}
+
 	case msg.Code == NewBlockHashesMsg:
 		if err := handleNewBlockHashesMsg(pm, p, msg); err != nil {
 			return err
@@ -903,6 +914,59 @@ func handleReceiptsMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	// Deliver all to the downloader
 	if err := pm.downloader.DeliverReceipts(p.GetID(), receipts); err != nil {
 		logger.Debug("Failed to deliver receipts", "err", err)
+	}
+	return nil
+}
+
+// handleStakingInfoRequestMsg handles staking information request message.
+func handleStakingInfoRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
+	// Decode the retrieval message
+	msgStream := rlp.NewStream(msg.Payload, uint64(msg.Size))
+	if _, err := msgStream.List(); err != nil {
+		return err
+	}
+	// Gather state data until the fetch or network limits is reached
+	var (
+		hash         common.Hash
+		bytes        int
+		stakingInfos []rlp.RawValue
+	)
+	for bytes < softResponseLimit && len(stakingInfos) < downloader.MaxStakingInfoFetch {
+		// Retrieve the hash of the next block
+		if err := msgStream.Decode(&hash); err == rlp.EOL {
+			break
+		} else if err != nil {
+			return errResp(ErrDecode, "msg %v: %v", msg, err)
+		}
+
+		// Retrieve the requested block's staking information, skipping if unknown to us
+		header := pm.blockchain.GetHeaderByHash(hash)
+		result := reward.GetStakingInfoOnStakingBlock(header.Number.Uint64())
+		if result == nil {
+			logger.Error("Failed to get staking information on a specific block", "number", header.Number.Uint64(), "hash", hash)
+			continue
+		}
+		// If known, encode and queue for response packet
+		if encoded, err := rlp.EncodeToBytes(result); err != nil {
+			logger.Error("Failed to encode staking info", "err", err)
+		} else {
+			stakingInfos = append(stakingInfos, encoded)
+			bytes += len(encoded)
+		}
+	}
+	return p.SendStakingInfoRLP(stakingInfos)
+}
+
+// handleStakingInfoMsg handles staking information response message.
+func handleStakingInfoMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
+	// A batch of stakingInfos arrived to one of our previous requests
+	var stakingInfos []*reward.StakingInfo
+	if err := msg.Decode(&stakingInfos); err != nil {
+		return errResp(ErrDecode, "msg %v: %v", msg, err)
+	}
+	// Deliver all to the downloader
+	if err := pm.downloader.DeliverStakingInfos(p.GetID(), stakingInfos); err != nil {
+		logger.Debug("Failed to deliver staking information", "err", err)
 	}
 	return nil
 }

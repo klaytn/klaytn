@@ -31,6 +31,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/datasync/downloader"
 	"github.com/klaytn/klaytn/datasync/fetcher"
+	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/rlp"
 )
 
@@ -38,16 +39,18 @@ import (
 const (
 	klay62 = 62
 	klay63 = 63
+	klay64 = 64
+	klay65 = 65
 )
 
 // ProtocolName is the official short name of the protocol used during capability negotiation.
 var ProtocolName = "klay"
 
 // ProtocolVersions are the upported versions of the klay protocol (first is primary).
-var ProtocolVersions = []uint{klay63, klay62}
+var ProtocolVersions = []uint{klay65, klay64, klay63, klay62}
 
 // ProtocolLengths are the number of implemented message corresponding to different protocol versions.
-var ProtocolLengths = []uint64{17, 8}
+var ProtocolLengths = []uint64{21, 19, 17, 8}
 
 const ProtocolMaxMsgSize = 10 * 1024 * 1024 // Maximum cap on the size of a protocol message
 
@@ -74,7 +77,15 @@ const (
 	ReceiptsRequestMsg = 0x0e
 	ReceiptsMsg        = 0x0f
 
-	MsgCodeEnd = 0x10
+	// Protocol messages belonging to klay/64
+	Unused10 = 0x10 // Skipped a number because 0x11 is already taken
+	Unused11 = 0x11 // Already used by consensus (IstanbulMsg)
+
+	// Protocol messages belonging to klay/65
+	StakingInfoRequestMsg = 0x12
+	StakingInfoMsg        = 0x13
+
+	MsgCodeEnd = 0x14
 )
 
 type errCode int
@@ -124,6 +135,7 @@ type ProtocolManagerDownloader interface {
 	DeliverHeaders(id string, headers []*types.Header) error
 	DeliverNodeData(id string, data [][]byte) error
 	DeliverReceipts(id string, receipts [][]*types.Receipt) error
+	DeliverStakingInfos(id string, stakingInfos []*reward.StakingInfo) error
 
 	Terminate()
 	Synchronise(id string, head common.Hash, td *big.Int, mode downloader.SyncMode) error
