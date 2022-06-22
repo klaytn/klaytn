@@ -65,12 +65,15 @@ var (
 
 // GasPriceAt returns the baseFeePerGas of the given block in peb.
 func (api *GovernanceKlayAPI) GasPriceAt(num *rpc.BlockNumber) (*hexutil.Big, error) {
-	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
+	if num == nil || *num == rpc.LatestBlockNumber {
 		header := api.chain.CurrentHeader()
 		if header.BaseFee == nil {
 			return (*hexutil.Big)(new(big.Int).SetUint64(api.governance.UnitPrice())), nil
 		}
 		return (*hexutil.Big)(header.BaseFee), nil
+	} else if *num == rpc.PendingBlockNumber {
+		txpool := api.governance.GetTxPool()
+		return (*hexutil.Big)(txpool.GasPrice()), nil
 	} else {
 		blockNum := num.Uint64()
 
