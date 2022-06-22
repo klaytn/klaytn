@@ -461,6 +461,7 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	// Enable Ethereum tx type transactions
 	pool.eip2718 = pool.chainconfig.IsEthTxTypeForkEnabled(next)
 	pool.eip1559 = pool.chainconfig.IsEthTxTypeForkEnabled(next)
+	// Enable dynamic base fee
 	pool.kip71 = pool.chainconfig.IsKIP71ForkEnabled(next)
 }
 
