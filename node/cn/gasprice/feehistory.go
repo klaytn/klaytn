@@ -28,10 +28,9 @@ import (
 	"sort"
 	"sync/atomic"
 
-	"github.com/klaytn/klaytn/consensus/misc"
-
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/consensus/misc"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
