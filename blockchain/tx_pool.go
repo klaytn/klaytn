@@ -674,7 +674,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 		if pool.kip71 {
 			// Ensure transaction's gasFeeCap is greater than or equal to transaction pool's gasPrice(baseFee).
 			if pool.gasPrice.Cmp(tx.GasFeeCap()) > 0 {
-				logger.Trace("fail to validate maxFeePerGas", "unitPrice", pool.gasPrice, "maxFeePerGas", tx.GasFeeCap())
+				logger.Trace("fail to validate maxFeePerGas", "pool.gasPrice", pool.gasPrice, "maxFeePerGas", tx.GasFeeCap())
 				return ErrFeeCapBelowBaseFee
 			}
 		} else {
