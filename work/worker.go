@@ -495,6 +495,14 @@ func (self *worker) commitNewWork() {
 	defer self.currentMu.Unlock()
 
 	parent := self.chain.CurrentBlock()
+	nextBlockNum := new(big.Int).Add(parent.Number(), common.Big1)
+	var nextBaseFee *big.Int
+	if self.nodetype == common.CONSENSUSNODE {
+		if self.config.IsKIP71ForkEnabled(nextBlockNum) {
+			nextBaseFee = misc.NextBlockBaseFee(parent.Header(), self.config)
+			pending = types.FilterTransactionWithBaseFee(pending, nextBaseFee)
+		}
+	}
 
 	// TODO-Klaytn drop or missing tx
 	tstart := time.Now()
@@ -513,12 +521,14 @@ func (self *worker) commitNewWork() {
 		}
 	}
 
-	num := parent.Number()
 	header := &types.Header{
 		ParentHash: parent.Hash(),
-		Number:     num.Add(num, common.Big1),
+		Number:     nextBlockNum,
 		Extra:      self.extra,
 		Time:       big.NewInt(tstamp),
+	}
+	if self.config.IsKIP71ForkEnabled(nextBlockNum) {
+		header.BaseFee = nextBaseFee
 	}
 	if err := self.engine.Prepare(self.chain, header); err != nil {
 		logger.Error("Failed to prepare header for mining", "err", err)
@@ -538,10 +548,6 @@ func (self *worker) commitNewWork() {
 	// Create the current work task
 	work := self.current
 	if self.nodetype == common.CONSENSUSNODE {
-		if self.config.IsKIP71ForkEnabled(header.Number) {
-			header.BaseFee = misc.NextBlockBaseFee(parent.Header(), self.config)
-			pending = types.FilterTransactionWithBaseFee(pending, header.BaseFee)
-		}
 		txs := types.NewTransactionsByTimeAndNonce(self.current.signer, pending)
 		work.commitTransactions(self.mux, txs, self.chain, self.rewardbase)
 		finishedCommitTx := time.Now()
