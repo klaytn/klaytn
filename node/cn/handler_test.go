@@ -25,8 +25,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/klaytn/klaytn/reward"
-
 	"github.com/golang/mock/gomock"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -40,6 +38,7 @@ import (
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/node/cn/mocks"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/reward"
 	workmocks "github.com/klaytn/klaytn/work/mocks"
 	"github.com/stretchr/testify/assert"
 )

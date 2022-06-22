@@ -27,11 +27,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/klaytn/klaytn/consensus/istanbul"
-
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/prque"
+	"github.com/klaytn/klaytn/consensus/istanbul"
 	klaytnmetrics "github.com/klaytn/klaytn/metrics"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/reward"
