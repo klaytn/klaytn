@@ -1006,7 +1006,7 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 			if stateObject.IsProgramAccount() {
 				// Write any contract code associated with the state object.
 				if stateObject.code != nil && stateObject.dirtyCode {
-					s.db.TrieDB().InsertBlob(common.BytesToHash(stateObject.CodeHash()), stateObject.code)
+					s.db.TrieDB().DiskDB().WriteCode(common.BytesToHash(stateObject.CodeHash()), stateObject.code)
 					stateObject.dirtyCode = false
 				}
 				// Write any storage changes in the state object to its storage trie.
@@ -1039,10 +1039,6 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 		if pa := account.GetProgramAccount(acc); pa != nil {
 			if pa.GetStorageRoot() != emptyState {
 				s.db.TrieDB().Reference(pa.GetStorageRoot(), parent)
-			}
-			code := common.BytesToHash(pa.GetCodeHash())
-			if code != emptyCode {
-				s.db.TrieDB().Reference(code, parent)
 			}
 		}
 		return nil

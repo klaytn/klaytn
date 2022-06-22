@@ -62,6 +62,10 @@ func (td *stateTrieMigrationDB) HasStateTrieNode(key []byte) (bool, error) {
 	return td.HasStateTrieNodeFromNew(key)
 }
 
+func (td *stateTrieMigrationDB) HasCodeWithPrefix(hash common.Hash) bool {
+	return td.HasCodeWithPrefixFromNew(hash)
+}
+
 func (td *stateTrieMigrationDB) ReadPreimage(hash common.Hash) []byte {
 	return td.ReadPreimageFromNew(hash)
 }
@@ -82,13 +86,16 @@ func (bc *BlockChain) stateMigrationCommit(s *statedb.TrieSync, batch database.B
 	return written, nil
 }
 
-func (bc *BlockChain) concurrentRead(db *statedb.Database, quitCh chan struct{}, hashCh chan common.Hash, resultCh chan statedb.SyncResult) {
+func (bc *BlockChain) concurrentRead(db state.Database, quitCh chan struct{}, hashCh chan common.Hash, resultCh chan statedb.SyncResult) {
 	for {
 		select {
 		case <-quitCh:
 			return
 		case hash := <-hashCh:
-			data, err := db.NodeFromOld(hash)
+			data, err := db.TrieDB().NodeFromOld(hash)
+			if err != nil {
+				data, err = db.ContractCode(hash)
+			}
 			if err != nil {
 				resultCh <- statedb.SyncResult{Hash: hash, Err: err}
 				continue
@@ -136,7 +143,7 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) (returnErr error) {
 	resultCh := make(chan statedb.SyncResult, threads)
 
 	for th := 0; th < threads; th++ {
-		go bc.concurrentRead(srcState.TrieDB(), quitCh, hashCh, resultCh)
+		go bc.concurrentRead(srcState, quitCh, hashCh, resultCh)
 	}
 
 	stateTrieBatch := dstState.TrieDB().DiskDB().NewBatch(database.StateTrieDB)
@@ -169,9 +176,11 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) (returnErr error) {
 
 		// Process trie nodes
 		startProcess := time.Now()
-		if _, index, err := trieSync.Process(results); err != nil {
-			logger.Error("State migration is failed by process error", "err", err)
-			return fmt.Errorf("failed to process result #%d: %v", index, err)
+		for index, result := range results {
+			if err := trieSync.Process(result); err != nil {
+				logger.Error("State migration is failed by process error", "err", err)
+				return fmt.Errorf("failed to process result #%d: %v", index, err)
+			}
 		}
 		stats.processElapsed += time.Since(startProcess)
 

@@ -100,7 +100,7 @@ type Downloader struct {
 	peers *peerSet // Set of active peers from which download can proceed
 
 	stateDB    database.DBManager // Database to state sync into (and deduplicate via)
-	stateBloom *statedb.SyncBloom // Bloom filter for fast trie node existence checks
+	stateBloom *statedb.SyncBloom // Bloom filter for fast trie node and contract code existence checks
 
 	rttEstimate   uint64 // Round trip time to target for download requests
 	rttConfidence uint64 // Confidence in the estimated RTT (unit: millionths to allow atomic ops)
