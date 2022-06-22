@@ -308,7 +308,8 @@ func (api *EthereumAPI) GasPrice(ctx context.Context) (*hexutil.Big, error) {
 
 // MaxPriorityFeePerGas returns a suggestion for a gas tip cap for dynamic fee transactions.
 func (api *EthereumAPI) MaxPriorityFeePerGas(ctx context.Context) (*hexutil.Big, error) {
-	return api.publicKlayAPI.MaxPriorityFeePerGas(ctx)
+	// TODO-Klaytn maybe need to branch kip71 hardfork
+	return api.GasPrice(ctx)
 }
 
 // DecimalOrHex unmarshals a non-negative decimal or hex parameter into a uint64.
@@ -1482,10 +1483,10 @@ func (api *EthereumAPI) rpcMarshalHeader(head *types.Header) (map[string]interfa
 	if api.publicBlockChainAPI.b.ChainConfig().IsEthTxTypeForkEnabled(head.Number) {
 		if head.BaseFee == nil {
 			result["baseFeePerGas"] = (*hexutil.Big)(new(big.Int).SetUint64(params.ZeroBaseFee))
+		} else {
+			result["baseFeePerGas"] = (*hexutil.Big)(head.BaseFee)
 		}
-		result["baseFeePerGas"] = (*hexutil.Big)(head.BaseFee)
 	}
-
 	return result, nil
 }
 

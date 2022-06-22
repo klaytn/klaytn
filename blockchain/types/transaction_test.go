@@ -337,7 +337,7 @@ func TestEffectiveGasPrice(t *testing.T) {
 	assert.Equal(t, want, have)
 
 	have = dynamicTx.EffectiveGasPrice(baseFee)
-	want = big.NewInt(3000)
+	want = baseFee // big.NewInt(3000)
 	assert.Equal(t, want, have)
 
 	baseFee = big.NewInt(0)
@@ -346,7 +346,7 @@ func TestEffectiveGasPrice(t *testing.T) {
 	assert.Equal(t, want, have)
 
 	have = dynamicTx.EffectiveGasPrice(baseFee)
-	want = big.NewInt(1000)
+	want = baseFee // big.NewInt(1000)
 	assert.Equal(t, want, have)
 }
 

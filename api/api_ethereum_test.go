@@ -889,6 +889,7 @@ func TestEthereumAPI_GetTransactionByHash(t *testing.T) {
 
 	// Mock Backend functions.
 	mockBackend.EXPECT().ChainDB().Return(mockDBManager).Times(txs.Len())
+	mockBackend.EXPECT().BlockByHash(gomock.Any(), block.Hash()).Return(block, nil).Times(txs.Len())
 
 	// Get transaction by hash for each transaction types.
 	for i := 0; i < txs.Len(); i++ {
@@ -974,6 +975,7 @@ func TestEthereumAPI_GetTransactionReceipt(t *testing.T) {
 	).Times(txs.Len())
 	mockBackend.EXPECT().GetBlockReceipts(gomock.Any(), gomock.Any()).Return(receipts).Times(txs.Len())
 	mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthereumAPITest).Times(txs.Len())
+	mockBackend.EXPECT().HeaderByHash(gomock.Any(), block.Hash()).Return(block.Header(), nil).Times(txs.Len())
 
 	// Get receipt for each transaction types.
 	for i := 0; i < txs.Len(); i++ {
