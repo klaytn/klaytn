@@ -1577,7 +1577,7 @@ func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, b
 	// Binary search the gas requirement, as it may be higher than the amount used
 	var (
 		lo  uint64 = params.TxGas - 1
-		hi  uint64 = 99999999
+		hi  uint64 = params.UpperGasLimit
 		cap uint64
 	)
 	// Use zero address if sender unspecified.
