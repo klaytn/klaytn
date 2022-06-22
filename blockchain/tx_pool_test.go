@@ -2104,7 +2104,6 @@ func TestTransactionsPromoteFull(t *testing.T) {
 			assert.True(t, reflect.DeepEqual(tx, pool.pending[from].txs.items[uint64(i)]))
 		}
 	}
-
 }
 
 // TestTransactionsPromotePartial is a test to check whether transactions in the queue are promoted to Pending

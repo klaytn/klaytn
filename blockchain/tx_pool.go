@@ -201,6 +201,7 @@ type TxPool struct {
 
 	eip2718 bool // Fork indicator whether we are using EIP-2718 type transactions.
 	eip1559 bool // Fork indicator whether we are using EIP-1559 type transactions.
+	kip71   bool // Fork indicator whether we are using KIP-71 type transactions.
 }
 
 // NewTxPool creates a new transaction pool to gather, sort and filter inbound
@@ -421,7 +422,7 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	pool.pendingNonce = make(map[common.Address]uint64)
 	pool.currentBlockNumber = newHead.Number.Uint64()
 	// It need to update gas price of tx pool after kip71 hardfork
-	if pool.chainconfig.IsKIP71ForkEnabled(new(big.Int).Add(newHead.Number, big.NewInt(1))) {
+	if pool.kip71 {
 		pool.gasPrice = misc.NextBlockBaseFee(newHead, pool.chainconfig)
 	}
 
@@ -460,6 +461,7 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	// Enable Ethereum tx type transactions
 	pool.eip2718 = pool.chainconfig.IsEthTxTypeForkEnabled(next)
 	pool.eip1559 = pool.chainconfig.IsEthTxTypeForkEnabled(next)
+	pool.kip71 = pool.chainconfig.IsKIP71ForkEnabled(next)
 }
 
 // Stop terminates the transaction pool.
@@ -495,7 +497,7 @@ func (pool *TxPool) GasPrice() *big.Int {
 
 // SetGasPrice updates the gas price of the transaction pool for new transactions, and drops all old transactions.
 func (pool *TxPool) SetGasPrice(price *big.Int) {
-	if pool.chainconfig.IsKIP71ForkEnabled(new(big.Int).SetUint64(pool.currentBlockNumber)) {
+	if pool.kip71 {
 		logger.Warn("Ignoring SetGasPrice after KIP71 fork")
 		return
 	}
@@ -659,7 +661,6 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 
 	// NOTE-Klaytn Drop transactions with unexpected gasPrice
 	// If the transaction type is DynamicFee tx, Compare transaction's GasFeeCap(MaxFeePerGas) and GasTipCap with tx pool's gasPrice to check to have same value.
-	isKIP71Forked := pool.chainconfig.IsKIP71ForkEnabled(pool.chain.CurrentBlock().Number())
 	if tx.Type() == types.TxTypeEthereumDynamicFee {
 		// Sanity check for extremely large numbers
 		if tx.GasTipCap().BitLen() > 256 {
@@ -670,7 +671,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 			return ErrFeeCapVeryHigh
 		}
 
-		if isKIP71Forked {
+		if pool.kip71 {
 			// Ensure transaction's gasFeeCap is greater than or equal to transaction pool's gasPrice(baseFee).
 			if pool.gasPrice.Cmp(tx.GasFeeCap()) > 0 {
 				logger.Trace("fail to validate maxFeePerGas", "unitPrice", pool.gasPrice, "maxFeePerGas", tx.GasFeeCap())
@@ -694,7 +695,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 		}
 
 	} else {
-		if isKIP71Forked {
+		if pool.kip71 {
 			// Ensure transaction's gasPrice is greater than or equal to transaction pool's gasPrice(baseFee).
 			if pool.gasPrice.Cmp(tx.GasPrice()) > 0 {
 				logger.Trace("fail to validate gasprice", "pool.gasPrice", pool.gasPrice, "tx.gasPrice", tx.GasPrice())
@@ -886,7 +887,7 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 	from, _ := types.Sender(pool.signer, tx) // already validated
 	if list := pool.pending[from]; list != nil && list.Overlaps(tx) {
 		// Nonce already pending, check if required price bump is met
-		inserted, old := list.Add(tx, pool.config.PriceBump, pool.chainconfig.IsKIP71ForkEnabled(pool.chain.CurrentBlock().Number()))
+		inserted, old := list.Add(tx, pool.config.PriceBump, pool.kip71)
 		if !inserted {
 			pendingDiscardCounter.Inc(1)
 			return false, ErrAlreadyNonceExistInPool
@@ -932,7 +933,7 @@ func (pool *TxPool) enqueueTx(hash common.Hash, tx *types.Transaction) (bool, er
 	if pool.queue[from] == nil {
 		pool.queue[from] = newTxList(false)
 	}
-	inserted, old := pool.queue[from].Add(tx, pool.config.PriceBump, pool.chainconfig.IsKIP71ForkEnabled(pool.chain.CurrentBlock().Number()))
+	inserted, old := pool.queue[from].Add(tx, pool.config.PriceBump, pool.kip71)
 	if !inserted {
 		// An older transaction was better, discard this
 		queuedDiscardCounter.Inc(1)
@@ -976,7 +977,7 @@ func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *types.T
 	}
 	list := pool.pending[addr]
 
-	inserted, old := list.Add(tx, pool.config.PriceBump, pool.chainconfig.IsKIP71ForkEnabled(pool.chain.CurrentBlock().Number()))
+	inserted, old := list.Add(tx, pool.config.PriceBump, pool.kip71)
 	if !inserted {
 		// An older transaction was better, discard this
 		delete(pool.all, hash)
@@ -1373,7 +1374,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 		}
 
 		// Gather all executable transactions and promote them
-		if pool.chainconfig.IsKIP71ForkEnabled(pool.chain.CurrentBlock().Number()) {
+		if pool.kip71 {
 			for _, tx := range list.ReadyWithGasPrice(pool.getPendingNonce(addr), pool.gasPrice) {
 				hash := tx.Hash()
 				if pool.promoteTx(addr, hash, tx) {
@@ -1577,7 +1578,7 @@ func (pool *TxPool) demoteUnexecutables() {
 
 		// Enqueue transaction if gasPrice of transaction is lower than gasPrice of txPool.
 		// All transactions with a nonce greater than enqueued transaction also stored queue.
-		if pool.chainconfig.IsKIP71ForkEnabled(pool.chain.CurrentBlock().Number()) {
+		if pool.kip71 {
 			if list.Len() > 0 {
 				for _, tx := range list.Flatten() {
 					hash := tx.Hash()

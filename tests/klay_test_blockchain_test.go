@@ -33,6 +33,8 @@ import (
 	"github.com/klaytn/klaytn/common/profile"
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/consensus/istanbul"
+	istanbulBackend "github.com/klaytn/klaytn/consensus/istanbul/backend"
+	istanbulCore "github.com/klaytn/klaytn/consensus/istanbul/core"
 	"github.com/klaytn/klaytn/consensus/misc"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/crypto/sha3"
@@ -42,9 +44,6 @@ import (
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/work"
-
-	istanbulBackend "github.com/klaytn/klaytn/consensus/istanbul/backend"
-	istanbulCore "github.com/klaytn/klaytn/consensus/istanbul/core"
 )
 
 const transactionsJournalFilename = "transactions.rlp"
