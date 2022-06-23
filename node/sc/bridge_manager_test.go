@@ -2120,3 +2120,175 @@ func TestGetBridgeContractBalance(t *testing.T) {
 		}
 	}
 }
+
+func TestTokenUnlockLoop(t *testing.T) {
+	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	assert.NoError(t, err)
+	defer func() {
+		if err := os.RemoveAll(tempDir); err != nil {
+			t.Fatalf("fail to delete file %v", err)
+		}
+	}()
+	bm, sim, bacc, alice, bob := testBridgeSetup(t, tempDir)
+	defer sim.Close()
+	// Deploy bridge contracts and register them
+	cBridgeAddr := deployBridge(t, bm, sim, true)
+	pBridgeAddr := deployBridge(t, bm, sim, false)
+
+	// Deploy token Contracts
+	nftAddr, tx, nftToken, err := scnft.DeployServiceChainNFT(alice, sim, cBridgeAddr)
+	assert.NoError(t, err)
+	sim.Commit() // block
+	CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+
+	err = bm.subBridge.APIBackend.RegisterBridge(cBridgeAddr, pBridgeAddr)
+	assert.NoError(t, err)
+
+	bi, ok := bm.GetBridgeInfo(cBridgeAddr)
+	assert.Equal(t, ok, true)
+
+	cAuth := bacc.cAccount.GenerateTransactOpts()
+	tx, err = bi.bridge.RegisterToken(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, nftAddr, nftAddr)
+	assert.NoError(t, err)
+	sim.Commit() // block
+	CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+
+	erc721SCtoken, err := scnft.NewERC721ServiceChain(nftAddr, sim)
+	assert.NoError(t, err)
+	bi.nftToken = erc721SCtoken
+
+	nftTokenIDs := []uint64{4437, 4438, 4439, 4451, 4452}
+	testURIs := []string{"", "testURI", "aaaaaa", "bbb", "bbbbb"}
+	owners := make([]*bind.TransactOpts, len(nftTokenIDs))
+	for i := 0; i < len(nftTokenIDs); i++ {
+		key, _ := crypto.GenerateKey()
+		owners[i] = bind.NewKeyedTransactor(key)
+	}
+	aliceAuth := &bind.TransactOpts{From: alice.From, Signer: alice.Signer, GasLimit: testGasLimit}
+	for i := 0; i < len(nftTokenIDs); i++ {
+		// mint
+		tx, err = nftToken.MintWithTokenURI(aliceAuth, owners[i].From, big.NewInt(int64(nftTokenIDs[i])), testURIs[i])
+		assert.NoError(t, err)
+		t.Log("Register NFT Transaction", tx.Hash().Hex())
+		sim.Commit() // block
+		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+
+		// transfer
+		ownerAuth := &bind.TransactOpts{From: owners[i].From, Signer: owners[i].Signer, GasLimit: testGasLimit}
+		tx, err = nftToken.RequestValueTransfer(ownerAuth, big.NewInt(int64(nftTokenIDs[i])), bob.From, nil)
+		assert.NoError(t, err)
+		t.Log("nft.RequestValueTransfer Transaction", tx.Hash().Hex())
+		sim.Commit() // block
+		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+	}
+
+	{
+		// TEST 1 - Get released locked token IDs
+		lockedTokenIds, err := bi.bridge.GetListOfLockedTokenIds(nil)
+		assert.NoError(t, err)
+		assert.Equal(t, len(lockedTokenIds), len(nftTokenIDs))
+
+		// TEST 2 - Get locked owners
+		lockedIds, lockedOwners, err := bi.bridge.GetListOfLockedTokenOwners(nil)
+		assert.NoError(t, err)
+		for idx, owner := range lockedOwners {
+			t.Log("tokenId:", lockedIds[idx], ", owner:", owner.Hex())
+			assert.Equal(t, owner.Hex(), owners[idx].From.Hex())
+		}
+
+		// TEST 3 - Release locekd one token id (at index 2)
+		tx, err = bi.bridge.ReleaseLockedTokens(cAuth, []*big.Int{lockedIds[2]})
+		assert.NoError(t, err)
+		sim.Commit() // block
+		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+
+		lockedTokenIds, err = bi.bridge.GetListOfLockedTokenIds(nil)
+		assert.NoError(t, err)
+		assert.Equal(t, len(lockedTokenIds), len(nftTokenIDs)-1)
+		assert.Equal(t, lockedTokenIds, []*big.Int{big.NewInt(4437), big.NewInt(4438), big.NewInt(4452), big.NewInt(4451)})
+
+		// TEST 4 - Release all the locked token ids
+		tx, err = bi.bridge.ReleaseLockedTokens(cAuth, lockedTokenIds)
+		assert.NoError(t, err)
+		sim.Commit() // block
+		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+
+		lockedTokenIds, err = bi.bridge.GetListOfLockedTokenIds(nil)
+		assert.NoError(t, err)
+		assert.Equal(t, len(lockedTokenIds), 0)
+	}
+}
+
+// deployBridge deploys bridge contract and returns its address
+func deployBridge(t *testing.T, bm *BridgeManager, backend *backends.SimulatedBackend, local bool) common.Address {
+	var acc *accountInfo
+
+	// When the pending block of backend is updated, commit it
+	// bm.DeployBridge will be waiting until the block is committed
+	pendingBlock := backend.PendingBlock()
+	go func() {
+		for pendingBlock == backend.PendingBlock() {
+			time.Sleep(100 * time.Millisecond)
+		}
+		backend.Commit()
+		return
+	}()
+
+	// Set transfer value of the bridge account
+	if local {
+		acc = bm.subBridge.bridgeAccounts.cAccount
+	} else {
+		acc = bm.subBridge.bridgeAccounts.pAccount
+	}
+
+	auth := acc.GenerateTransactOpts()
+	auth.Value = big.NewInt(10000)
+
+	// Deploy a bridge contract
+	_, addr, err := bm.DeployBridge(auth, backend, local)
+	assert.NoError(t, err)
+	return addr
+}
+
+func testBridgeSetup(t *testing.T, tempDir string) (*BridgeManager, *backends.SimulatedBackend, *BridgeAccounts, *bind.TransactOpts, *bind.TransactOpts) {
+	// Generate a new random account and a funded simulator
+	aliceKey, _ := crypto.GenerateKey()
+	alice := bind.NewKeyedTransactor(aliceKey)
+	bobKey, _ := crypto.GenerateKey()
+	bob := bind.NewKeyedTransactor(bobKey)
+
+	config := &SCConfig{}
+	config.DataDir = tempDir
+
+	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
+	bacc.pAccount.chainID = big.NewInt(0)
+	bacc.cAccount.chainID = big.NewInt(0)
+
+	alloc := blockchain.GenesisAlloc{
+		alice.From:            {Balance: big.NewInt(params.KLAY)},
+		bob.From:              {Balance: big.NewInt(params.KLAY)},
+		bacc.pAccount.address: {Balance: big.NewInt(params.KLAY)},
+		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
+	}
+	sim := backends.NewSimulatedBackend(alloc)
+
+	sc := &SubBridge{
+		config:         config,
+		peers:          newBridgePeerSet(),
+		localBackend:   sim,
+		remoteBackend:  sim,
+		bridgeAccounts: bacc,
+	}
+
+	var err error
+	sc.APIBackend = &SubBridgeAPI{sc}
+	sc.handler, err = NewSubBridgeHandler(sc)
+	assert.NoError(t, err)
+
+	// Prepare manager and deploy bridge contract.
+	bm, err := NewBridgeManager(sc)
+	assert.NoError(t, err)
+	sc.handler.subbridge.bridgeManager = bm
+
+	return bm, sim, bacc, alice, bob
+}

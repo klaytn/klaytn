@@ -546,7 +546,7 @@ func TestExtendedBridgeAndCallbackERC721(t *testing.T) {
 	defer backend.Close()
 
 	// Deploy extBridge
-	bridgeAddr, tx, eb, err := extbridge.DeployExtBridge(bridgeAccount, backend, true)
+	bridgeAddr, tx, eb, err := extbridge.DeployExtBridge(bridgeAccount, backend, false)
 	assert.NoError(t, err)
 	backend.Commit()
 	assert.Nil(t, bind.CheckWaitMined(backend, tx))
