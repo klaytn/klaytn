@@ -33,6 +33,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/klaytn/klaytn/common/math"
+
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
@@ -328,25 +330,39 @@ func TestEIP1559TransactionEncode(t *testing.T) {
 }
 
 func TestEffectiveGasPrice(t *testing.T) {
-	legacyTx := NewTx(&TxInternalDataLegacy{Price: big.NewInt(1000)})
-	dynamicTx := NewTx(&TxInternalDataEthereumDynamicFee{GasFeeCap: big.NewInt(4000), GasTipCap: big.NewInt(1000)})
+	gasPrice := big.NewInt(1000)
+	gasFeeCap, gasTipCap := big.NewInt(4000), big.NewInt(1000)
 
-	baseFee := big.NewInt(2000)
+	legacyTx := NewTx(&TxInternalDataLegacy{Price: gasPrice})
+	dynamicTx := NewTx(&TxInternalDataEthereumDynamicFee{GasFeeCap: gasFeeCap, GasTipCap: gasTipCap})
+
+	var baseFee *big.Int
+
 	have := legacyTx.EffectiveGasPrice(baseFee)
-	want := big.NewInt(1000)
+	want := gasPrice
 	assert.Equal(t, want, have)
 
 	have = dynamicTx.EffectiveGasPrice(baseFee)
-	want = baseFee // big.NewInt(3000)
+	te := dynamicTx.GetTxInternalData().(TxInternalDataBaseFee)
+	want = math.BigMin(new(big.Int).Add(te.GetGasTipCap(), new(big.Int)), te.GetGasFeeCap())
+	assert.Equal(t, want, have)
+
+	baseFee = big.NewInt(2000)
+	have = legacyTx.EffectiveGasPrice(baseFee)
+	want = baseFee
+	assert.Equal(t, want, have)
+
+	have = dynamicTx.EffectiveGasPrice(baseFee)
+	want = baseFee
 	assert.Equal(t, want, have)
 
 	baseFee = big.NewInt(0)
 	have = legacyTx.EffectiveGasPrice(baseFee)
-	want = big.NewInt(1000)
+	want = baseFee
 	assert.Equal(t, want, have)
 
 	have = dynamicTx.EffectiveGasPrice(baseFee)
-	want = baseFee // big.NewInt(1000)
+	want = baseFee
 	assert.Equal(t, want, have)
 }
 

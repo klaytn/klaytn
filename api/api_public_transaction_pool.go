@@ -202,7 +202,7 @@ func (s *PublicTransactionPoolAPI) GetRawTransactionByHash(ctx context.Context, 
 
 // RpcOutputReceipt converts a receipt to the RPC output with the associated information regarding to the
 // block in which the receipt is included, the transaction that outputs the receipt, and the receipt itself.
-func RpcOutputReceipt(tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64, receipt *types.Receipt) map[string]interface{} {
+func RpcOutputReceipt(header *types.Header, tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64, receipt *types.Receipt) map[string]interface{} {
 	if tx == nil || receipt == nil {
 		return nil
 	}
@@ -218,7 +218,12 @@ func RpcOutputReceipt(tx *types.Transaction, blockHash common.Hash, blockNumber 
 
 	fields["logsBloom"] = receipt.Bloom
 	fields["gasUsed"] = hexutil.Uint64(receipt.GasUsed)
-	fields["effectiveGasPrice"] = hexutil.Uint64(tx.GasPrice().Uint64())
+
+	if header != nil && header.BaseFee != nil {
+		fields["effectiveGasPrice"] = hexutil.Uint64(header.BaseFee.Uint64())
+	} else {
+		fields["effectiveGasPrice"] = hexutil.Uint64(tx.GasPrice().Uint64())
+	}
 
 	if receipt.Logs == nil {
 		fields["logs"] = [][]*types.Log{}
@@ -263,16 +268,11 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceiptInCache(ctx context.Cont
 func (s *PublicTransactionPoolAPI) getTransactionReceipt(ctx context.Context, tx *types.Transaction, blockHash common.Hash,
 	blockNumber uint64, index uint64, receipt *types.Receipt,
 ) (map[string]interface{}, error) {
-	fields := RpcOutputReceipt(tx, blockHash, blockNumber, index, receipt)
-
 	header, err := s.b.HeaderByHash(ctx, blockHash)
-	if header != nil && header.BaseFee != nil && err == nil {
-		if header.BaseFee != nil {
-			fields["effectiveGasPrice"] = hexutil.Uint64(header.BaseFee.Uint64())
-		}
+	if err != nil {
+		return nil, err
 	}
-
-	return fields, nil
+	return RpcOutputReceipt(header, tx, blockHash, blockNumber, index, receipt), nil
 }
 
 // sign is a helper function that signs a transaction with the private key of the given address.

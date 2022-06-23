@@ -125,6 +125,9 @@ func (oracle *Oracle) processBlock(bf *blockFees, percentiles []float64) {
 	for i := range bf.block.Transactions() {
 		// TODO-Klaytn: If we change the fixed unit price policy and add baseFee feature, we should re-calculate reward.
 		reward := bf.block.Header().BaseFee
+		if reward == nil {
+			reward = new(big.Int).SetUint64(chainconfig.UnitPrice)
+		}
 		sorter[i] = txGasAndReward{gasUsed: bf.receipts[i].GasUsed, reward: reward}
 	}
 	sort.Sort(sorter)

@@ -598,11 +598,12 @@ func (diff *EthStateOverride) Apply(state *state.StateDB) error {
 // Note, this function doesn't make and changes in the state/blockchain and is
 // useful to execute and retrieve values.
 func (api *EthereumAPI) Call(ctx context.Context, args EthTransactionArgs, blockNrOrHash rpc.BlockNumberOrHash, overrides *EthStateOverride) (hexutil.Bytes, error) {
+	backend := api.publicBlockChainAPI.b
 	gasCap := uint64(0)
-	if rpcGasCap := api.publicBlockChainAPI.b.RPCGasCap(); rpcGasCap != nil {
+	if rpcGasCap := backend.RPCGasCap(); rpcGasCap != nil {
 		gasCap = rpcGasCap.Uint64()
 	}
-	result, _, status, err := EthDoCall(ctx, api.publicBlockChainAPI.b, args, blockNrOrHash, overrides, localTxExecutionTime, gasCap)
+	result, _, status, err := EthDoCall(ctx, backend, args, blockNrOrHash, overrides, localTxExecutionTime, gasCap)
 	if err != nil {
 		return nil, err
 	}
@@ -617,15 +618,16 @@ func (api *EthereumAPI) Call(ctx context.Context, args EthTransactionArgs, block
 // EstimateGas returns an estimate of the amount of gas needed to execute the
 // given transaction against the current pending block.
 func (api *EthereumAPI) EstimateGas(ctx context.Context, args EthTransactionArgs, blockNrOrHash *rpc.BlockNumberOrHash) (hexutil.Uint64, error) {
+	backend := api.publicBlockChainAPI.b
 	bNrOrHash := rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber)
 	if blockNrOrHash != nil {
 		bNrOrHash = *blockNrOrHash
 	}
 	gasCap := uint64(0)
-	if rpcGasCap := api.publicBlockChainAPI.b.RPCGasCap(); rpcGasCap != nil {
+	if rpcGasCap := backend.RPCGasCap(); rpcGasCap != nil {
 		gasCap = rpcGasCap.Uint64()
 	}
-	return EthDoEstimateGas(ctx, api.publicBlockChainAPI.b, args, bNrOrHash, gasCap)
+	return EthDoEstimateGas(ctx, backend, args, bNrOrHash, gasCap)
 }
 
 // GetBlockTransactionCountByNumber returns the number of transactions in the block with the given block number.
@@ -744,7 +746,7 @@ func resolveToField(tx *types.Transaction) *common.Address {
 }
 
 // newEthRPCTransaction creates an EthRPCTransaction from Klaytn transaction.
-func newEthRPCTransaction(b *types.Block, tx *types.Transaction, blockHash common.Hash, blockNumber, index uint64) *EthRPCTransaction {
+func newEthRPCTransaction(block *types.Block, tx *types.Transaction, blockHash common.Hash, blockNumber, index uint64) *EthRPCTransaction {
 	// When an unknown transaction is requested through rpc call,
 	// nil is returned by Klaytn API, and it is handled.
 	if tx == nil {
@@ -793,8 +795,8 @@ func newEthRPCTransaction(b *types.Block, tx *types.Transaction, blockHash commo
 		result.GasTipCap = (*hexutil.Big)(tx.GasTipCap())
 		// TODO-Klaytn: If we change the gas price policy from fixed to dynamic,
 		// we should change the params.ZeroBaseFee(fixed value) to dynamic value.
-		if b != nil && b.Header().BaseFee != nil {
-			result.GasPrice = (*hexutil.Big)(b.Header().BaseFee)
+		if block != nil && block.Header().BaseFee != nil {
+			result.GasPrice = (*hexutil.Big)(block.Header().BaseFee)
 		} else {
 			price := math.BigMin(new(big.Int).Add(tx.GasTipCap(), new(big.Int).SetUint64(params.ZeroBaseFee)), tx.GasFeeCap())
 			result.GasPrice = (*hexutil.Big)(price)
@@ -910,16 +912,18 @@ func (api *EthereumAPI) GetTransactionCount(ctx context.Context, address common.
 
 // GetTransactionByHash returns the transaction for the given hash.
 func (api *EthereumAPI) GetTransactionByHash(ctx context.Context, hash common.Hash) (*EthRPCTransaction, error) {
+	b := api.publicTransactionPoolAPI.b
+
 	// Try to return an already finalized transaction
-	if tx, blockHash, blockNumber, index := api.publicTransactionPoolAPI.b.ChainDB().ReadTxAndLookupInfo(hash); tx != nil {
-		block, err := api.publicTransactionPoolAPI.b.BlockByHash(ctx, blockHash)
-		if block == nil || err != nil {
+	if tx, blockHash, blockNumber, index := b.ChainDB().ReadTxAndLookupInfo(hash); tx != nil {
+		block, err := b.BlockByHash(ctx, blockHash)
+		if err != nil {
 			return nil, err
 		}
 		return newEthRPCTransaction(block, tx, blockHash, blockNumber, index), nil
 	}
 	// No finalized transaction, try to retrieve it from the pool
-	if tx := api.publicTransactionPoolAPI.b.GetPoolTransaction(hash); tx != nil {
+	if tx := b.GetPoolTransaction(hash); tx != nil {
 		return newEthRPCPendingTransaction(tx), nil
 	}
 	// Transaction unknown, return as such
@@ -940,24 +944,26 @@ func (api *EthereumAPI) GetRawTransactionByHash(ctx context.Context, hash common
 
 // GetTransactionReceipt returns the transaction receipt for the given transaction hash.
 func (api *EthereumAPI) GetTransactionReceipt(ctx context.Context, hash common.Hash) (map[string]interface{}, error) {
+	b := api.publicTransactionPoolAPI.b
+
 	// Formats return Klaytn Transaction Receipt to the Ethereum Transaction Receipt.
-	tx, blockHash, blockNumber, index, receipt := api.publicTransactionPoolAPI.b.GetTxLookupInfoAndReceipt(ctx, hash)
+	tx, blockHash, blockNumber, index, receipt := b.GetTxLookupInfoAndReceipt(ctx, hash)
 
 	if tx == nil {
 		return nil, nil
 	}
-	receipts := api.publicTransactionPoolAPI.b.GetBlockReceipts(ctx, blockHash)
+	receipts := b.GetBlockReceipts(ctx, blockHash)
 	cumulativeGasUsed := uint64(0)
 	for i := uint64(0); i <= index; i++ {
 		cumulativeGasUsed += receipts[i].GasUsed
 	}
 
-	header, err := api.publicTransactionPoolAPI.b.HeaderByHash(ctx, blockHash)
+	header, err := b.HeaderByHash(ctx, blockHash)
 	if err != nil {
 		return nil, err
 	}
 
-	ethTx, err := newEthTransactionReceipt(header, tx, api.publicTransactionPoolAPI.b, blockHash, blockNumber, index, cumulativeGasUsed, receipt)
+	ethTx, err := newEthTransactionReceipt(header, tx, b, blockHash, blockNumber, index, cumulativeGasUsed, receipt)
 	if err != nil {
 		return nil, err
 	}
@@ -1377,6 +1383,8 @@ func (api *EthereumAPI) Sign(addr common.Address, data hexutil.Bytes) (hexutil.B
 // The node needs to have the private key of the account corresponding with
 // the given from address and it needs to be unlocked.
 func (api *EthereumAPI) SignTransaction(ctx context.Context, args EthTransactionArgs) (*EthSignTransactionResult, error) {
+	b := api.publicTransactionPoolAPI.b
+
 	if args.Gas == nil {
 		return nil, fmt.Errorf("gas not specified")
 	}
@@ -1386,12 +1394,12 @@ func (api *EthereumAPI) SignTransaction(ctx context.Context, args EthTransaction
 	if args.Nonce == nil {
 		return nil, fmt.Errorf("nonce not specified")
 	}
-	if err := args.setDefaults(ctx, api.publicTransactionPoolAPI.b); err != nil {
+	if err := args.setDefaults(ctx, b); err != nil {
 		return nil, err
 	}
 	// Before actually sign the transaction, ensure the transaction fee is reasonable.
 	tx := args.toTransaction()
-	if err := checkTxFee(tx.GasPrice(), tx.Gas(), api.publicTransactionPoolAPI.b.RPCTxFeeCap()); err != nil {
+	if err := checkTxFee(tx.GasPrice(), tx.Gas(), b.RPCTxFeeCap()); err != nil {
 		return nil, err
 	}
 	signed, err := api.publicTransactionPoolAPI.sign(args.from(), tx)
@@ -1412,11 +1420,12 @@ func (api *EthereumAPI) SignTransaction(ctx context.Context, args EthTransaction
 // PendingTransactions returns the transactions that are in the transaction pool
 // and have a from address that is one of the accounts this node manages.
 func (api *EthereumAPI) PendingTransactions() ([]*EthRPCTransaction, error) {
-	pending, err := api.publicTransactionPoolAPI.b.GetPoolTransactions()
+	b := api.publicTransactionPoolAPI.b
+	pending, err := b.GetPoolTransactions()
 	if err != nil {
 		return nil, err
 	}
-	accounts := getAccountsFromWallets(api.publicTransactionPoolAPI.b.AccountManager().Wallets())
+	accounts := getAccountsFromWallets(b.AccountManager().Wallets())
 	transactions := make([]*EthRPCTransaction, 0, len(pending))
 	for _, tx := range pending {
 		from := getFrom(tx)
@@ -1447,8 +1456,10 @@ func (api *EthereumAPI) Accounts() []common.Address {
 func (api *EthereumAPI) rpcMarshalHeader(head *types.Header) (map[string]interface{}, error) {
 	var proposer common.Address
 	var err error
+
+	b := api.publicKlayAPI.b
 	if head.Number.Sign() != 0 {
-		proposer, err = api.publicKlayAPI.b.Engine().Author(head)
+		proposer, err = b.Engine().Author(head)
 		if err != nil {
 			// miner is the field Klaytn should provide the correct value. It's not the field dummy value is allowed.
 			logger.Error("Failed to fetch author during marshaling header", "err", err.Error())
@@ -1466,7 +1477,7 @@ func (api *EthereumAPI) rpcMarshalHeader(head *types.Header) (map[string]interfa
 		"stateRoot":       head.Root,
 		"miner":           proposer,
 		"difficulty":      (*hexutil.Big)(head.BlockScore),
-		"totalDifficulty": (*hexutil.Big)(api.publicKlayAPI.b.GetTd(head.Hash())),
+		"totalDifficulty": (*hexutil.Big)(b.GetTd(head.Hash())),
 		// extraData always return empty Bytes because actual value of extraData in Klaytn header cannot be used as meaningful way because
 		// we cannot provide original header of Klaytn and this field is used as consensus info which is encoded value of validators addresses, validators signatures, and proposer signature in Klaytn.
 		"extraData": hexutil.Bytes{},

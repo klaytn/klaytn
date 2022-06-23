@@ -302,14 +302,13 @@ func (tx *Transaction) EffectiveGasTip(baseFee *big.Int) *big.Int {
 func (tx *Transaction) EffectiveGasPrice(baseFee *big.Int) *big.Int {
 	if baseFee != nil {
 		return baseFee
-	} else {
-		if tx.Type() == TxTypeEthereumDynamicFee {
-			baseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
-			te := tx.GetTxInternalData().(TxInternalDataBaseFee)
-			return math.BigMin(new(big.Int).Add(te.GetGasTipCap(), baseFee), te.GetGasFeeCap())
-		}
-		return tx.GasPrice()
 	}
+	if tx.Type() == TxTypeEthereumDynamicFee {
+		baseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
+		te := tx.GetTxInternalData().(TxInternalDataBaseFee)
+		return math.BigMin(new(big.Int).Add(te.GetGasTipCap(), baseFee), te.GetGasFeeCap())
+	}
+	return tx.GasPrice()
 }
 
 func (tx *Transaction) AccessList() AccessList {
