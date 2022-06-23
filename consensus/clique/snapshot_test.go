@@ -407,7 +407,7 @@ func TestClique(t *testing.T) {
 		genesis.Commit(common.Hash{}, db)
 
 		// Assemble a chain of headers from the cast votes
-		config := *params.TestChainConfig
+		config := params.TestChainConfig.Copy()
 		config.Clique = &params.CliqueConfig{
 			Period: 1,
 			Epoch:  tt.epoch,
@@ -415,7 +415,7 @@ func TestClique(t *testing.T) {
 		engine := New(config.Clique, db)
 		engine.fakeBlockScore = true
 
-		blocks, _ := blockchain.GenerateChain(&config, genesis.ToBlock(common.Hash{}, db), engine, db, len(tt.votes), func(j int, gen *blockchain.BlockGen) {
+		blocks, _ := blockchain.GenerateChain(config, genesis.ToBlock(common.Hash{}, db), engine, db, len(tt.votes), func(j int, gen *blockchain.BlockGen) {
 			vote := new(governance.GovernanceVote)
 			if tt.votes[j].auth {
 				vote.Key = "addvalidator"
@@ -455,7 +455,7 @@ func TestClique(t *testing.T) {
 			batches[len(batches)-1] = append(batches[len(batches)-1], block)
 		}
 		// Pass all the headers through clique and ensure tallying succeeds
-		chain, err := blockchain.NewBlockChain(db, nil, &config, engine, vm.Config{})
+		chain, err := blockchain.NewBlockChain(db, nil, config, engine, vm.Config{})
 		if err != nil {
 			t.Errorf("test %d: failed to create test chain: %v", i, err)
 			continue

@@ -137,7 +137,7 @@ func (it *NodeIterator) step() error {
 
 		if codeHash := pa.GetCodeHash(); !bytes.Equal(codeHash, emptyCodeHash) {
 			it.codeHash = common.BytesToHash(codeHash)
-			//addrHash := common.BytesToHash(it.stateIt.LeafKey())
+			// addrHash := common.BytesToHash(it.stateIt.LeafKey())
 			it.Code, err = it.state.db.ContractCode(common.BytesToHash(codeHash))
 			if err != nil {
 				return fmt.Errorf("code %x: %v", codeHash, err)
@@ -239,7 +239,6 @@ func CheckStateConsistencyParallel(oldDB Database, newDB Database, root common.H
 			close(iteratorQuitCh)
 			return nil
 		}
-
 	}
 	logger.Info("CheckStateConsistencyParallel is done", "cnt", cnt, "err", resultErr)
 

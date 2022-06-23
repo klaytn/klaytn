@@ -163,6 +163,10 @@ type Peer interface {
 	// ones requested from an already RLP encoded format.
 	SendReceiptsRLP(receipts []rlp.RawValue) error
 
+	// SendStakingInfoRLP sends a batch of staking information, corresponding to the
+	// ones requested from an already RLP encoded format.
+	SendStakingInfoRLP(stakingInfos []rlp.RawValue) error
+
 	// FetchBlockHeader is a wrapper around the header query functions to fetch a
 	// single header. It is used solely by the fetcher.
 	FetchBlockHeader(hash common.Hash) error
@@ -284,7 +288,7 @@ func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) Peer {
 
 // ChannelOfMessage is a map with the index of the channel per message
 var ChannelOfMessage = map[uint64]int{
-	StatusMsg:                   p2p.ConnDefault, //StatusMsg's Channel should to be set ConnDefault
+	StatusMsg:                   p2p.ConnDefault, // StatusMsg's Channel should to be set ConnDefault
 	NewBlockHashesMsg:           p2p.ConnDefault,
 	BlockHeaderFetchRequestMsg:  p2p.ConnDefault,
 	BlockHeaderFetchResponseMsg: p2p.ConnDefault,
@@ -349,7 +353,7 @@ func (p *basePeer) Broadcast() {
 			if err := p.SendTransactions(txs); err != nil {
 				logger.Error("fail to SendTransactions", "peer", p.id, "err", err)
 				continue
-				//return
+				// return
 			}
 			p.Log().Trace("Broadcast transactions", "peer", p.id, "count", len(txs))
 
@@ -357,7 +361,7 @@ func (p *basePeer) Broadcast() {
 			if err := p.SendNewBlock(prop.block, prop.td); err != nil {
 				logger.Error("fail to SendNewBlock", "peer", p.id, "err", err)
 				continue
-				//return
+				// return
 			}
 			p.Log().Trace("Propagated block", "peer", p.id, "number", prop.block.Number(), "hash", prop.block.Hash(), "td", prop.td)
 
@@ -365,7 +369,7 @@ func (p *basePeer) Broadcast() {
 			if err := p.SendNewBlockHashes([]common.Hash{block.Hash()}, []uint64{block.NumberU64()}); err != nil {
 				logger.Error("fail to SendNewBlockHashes", "peer", p.id, "err", err)
 				continue
-				//return
+				// return
 			}
 			p.Log().Trace("Announced block", "peer", p.id, "number", block.Number(), "hash", block.Hash())
 
@@ -546,6 +550,12 @@ func (p *basePeer) SendReceiptsRLP(receipts []rlp.RawValue) error {
 	return p2p.Send(p.rw, ReceiptsMsg, receipts)
 }
 
+// SendStakingInfoRLP sends a batch of staking information, corresponding to the
+// ones requested from an already RLP encoded format.
+func (p *basePeer) SendStakingInfoRLP(stakingInfos []rlp.RawValue) error {
+	return p2p.Send(p.rw, StakingInfoMsg, stakingInfos)
+}
+
 // FetchBlockHeader is a wrapper around the header query functions to fetch a
 // single header. It is used solely by the fetcher.
 func (p *basePeer) FetchBlockHeader(hash common.Hash) error {
@@ -592,6 +602,12 @@ func (p *basePeer) RequestNodeData(hashes []common.Hash) error {
 func (p *basePeer) RequestReceipts(hashes []common.Hash) error {
 	p.Log().Debug("Fetching batch of receipts", "count", len(hashes))
 	return p2p.Send(p.rw, ReceiptsRequestMsg, hashes)
+}
+
+// RequestStakingInfo fetches a batch of staking information from a remote node.
+func (p *basePeer) RequestStakingInfo(hashes []common.Hash) error {
+	p.Log().Debug("Fetching batch of staking infos", "count", len(hashes))
+	return p2p.Send(p.rw, StakingInfoRequestMsg, hashes)
 }
 
 // Handshake executes the Klaytn protocol handshake, negotiating version number,
@@ -781,7 +797,7 @@ func (p *multiChannelPeer) Broadcast() {
 			if err := p.SendTransactions(txs); err != nil {
 				logger.Error("fail to SendTransactions", "peer", p.id, "err", err)
 				continue
-				//return
+				// return
 			}
 			p.Log().Trace("Broadcast transactions", "peer", p.id, "count", len(txs))
 
@@ -789,7 +805,7 @@ func (p *multiChannelPeer) Broadcast() {
 			if err := p.SendNewBlock(prop.block, prop.td); err != nil {
 				logger.Error("fail to SendNewBlock", "peer", p.id, "err", err)
 				continue
-				//return
+				// return
 			}
 			p.Log().Trace("Propagated block", "peer", p.id, "number", prop.block.Number(), "hash", prop.block.Hash(), "td", prop.td)
 
@@ -797,7 +813,7 @@ func (p *multiChannelPeer) Broadcast() {
 			if err := p.SendNewBlockHashes([]common.Hash{block.Hash()}, []uint64{block.NumberU64()}); err != nil {
 				logger.Error("fail to SendNewBlockHashes", "peer", p.id, "err", err)
 				continue
-				//return
+				// return
 			}
 			p.Log().Trace("Announced block", "peer", p.id, "number", block.Number(), "hash", block.Hash())
 
@@ -891,6 +907,12 @@ func (p *multiChannelPeer) SendReceiptsRLP(receipts []rlp.RawValue) error {
 	return p.msgSender(ReceiptsMsg, receipts)
 }
 
+// SendStakingInfoRLP sends a batch of staking information, corresponding to the
+// ones requested from an already RLP encoded format.
+func (p *multiChannelPeer) SendStakingInfoRLP(stakingInfos []rlp.RawValue) error {
+	return p.msgSender(StakingInfoMsg, stakingInfos)
+}
+
 // FetchBlockHeader is a wrapper around the header query functions to fetch a
 // single header. It is used solely by the fetcher.
 func (p *multiChannelPeer) FetchBlockHeader(hash common.Hash) error {
@@ -939,6 +961,12 @@ func (p *multiChannelPeer) RequestReceipts(hashes []common.Hash) error {
 	return p.msgSender(ReceiptsRequestMsg, hashes)
 }
 
+// RequestStakingInfo fetches a batch of staking information from a remote node.
+func (p *multiChannelPeer) RequestStakingInfo(hashes []common.Hash) error {
+	p.Log().Debug("Fetching batch of staking infos", "count", len(hashes))
+	return p.msgSender(StakingInfoRequestMsg, hashes)
+}
+
 // msgSender sends data to the peer.
 func (p *multiChannelPeer) msgSender(msgcode uint64, data interface{}) error {
 	if ch, ok := ChannelOfMessage[msgcode]; ok && len(p.rws) > ch {
@@ -950,7 +978,7 @@ func (p *multiChannelPeer) msgSender(msgcode uint64, data interface{}) error {
 
 // GetRW returns the MsgReadWriter of the peer.
 func (p *multiChannelPeer) GetRW() p2p.MsgReadWriter {
-	return p.rw //TODO-Klaytn check this function usage
+	return p.rw // TODO-Klaytn check this function usage
 }
 
 // UpdateRWImplementationVersion updates the version of the implementation of RW.

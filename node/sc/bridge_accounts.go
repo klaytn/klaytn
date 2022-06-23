@@ -42,9 +42,7 @@ const (
 	ChildBridgeAccountName  = "child_bridge_account"
 )
 
-var (
-	errUnlockDurationTooLarge = errors.New("unlock duration too large")
-)
+var errUnlockDurationTooLarge = errors.New("unlock duration too large")
 
 type feePayerDB interface {
 	WriteParentOperatorFeePayer(feePayer common.Address)

@@ -6,18 +6,19 @@
 package log
 
 import (
+	"os"
 	"runtime"
 	"time"
-
-	"os"
 
 	"github.com/go-stack/stack"
 )
 
-const timeKey = "t"
-const lvlKey = "lvl"
-const msgKey = "msg"
-const errorKey = "LOG15_ERROR"
+const (
+	timeKey  = "t"
+	lvlKey   = "lvl"
+	msgKey   = "msg"
+	errorKey = "LOG15_ERROR"
+)
 
 type Lvl int
 

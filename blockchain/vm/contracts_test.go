@@ -186,7 +186,7 @@ func benchmarkPrecompiled(addr string, test precompiledTest, bench *testing.B) {
 			res, _, err = RunPrecompiledContract(p, data, contract, evm)
 		}
 		bench.StopTimer()
-		//Check if it is correct
+		// Check if it is correct
 		if err != nil {
 			bench.Error(err)
 			return

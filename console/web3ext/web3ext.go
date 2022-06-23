@@ -286,6 +286,7 @@ web3._extend({
 	properties: []
 });
 `
+
 const Governance_JS = `
 web3._extend({
 	property: 'governance',
@@ -358,6 +359,7 @@ web3._extend({
 	]
 });
 `
+
 const Admin_JS = `
 web3._extend({
 	property: 'admin',
@@ -1203,6 +1205,7 @@ web3._extend({
 	]
 });
 `
+
 const MainBridge_JS = `
 web3._extend({
 	property: 'mainbridge',
@@ -1230,6 +1233,7 @@ web3._extend({
 	]
 });
 `
+
 const SubBridge_JS = `
 web3._extend({
 	property: 'subbridge',
@@ -1498,6 +1502,7 @@ web3._extend({
 	]
 });
 `
+
 const CliqueJs = `
 web3._extend({
 	property: 'clique',

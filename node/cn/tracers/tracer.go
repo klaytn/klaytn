@@ -49,7 +49,7 @@ var logger = log.NewModuleLogger(log.NodeCNTracers)
 // If those are duktape stack items, popping them off **will** make the slice
 // contents change.
 func makeSlice(ptr unsafe.Pointer, size uint) []byte {
-	var sl = struct {
+	sl := struct {
 		addr uintptr
 		len  int
 		cap  int

@@ -114,7 +114,13 @@ func (mr *MockBlockChainMockRecorder) Config() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Config", reflect.TypeOf((*MockBlockChain)(nil).Config))
 }
 
-// CurrentBlock mocks base method.
+// ContractCodeWithPrefix indicates an expected call of ContractCodeWithPrefix
+func (mr *MockBlockChainMockRecorder) ContractCodeWithPrefix(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ContractCodeWithPrefix", reflect.TypeOf((*MockBlockChain)(nil).ContractCodeWithPrefix), arg0)
+}
+
+// CurrentBlock mocks base method
 func (m *MockBlockChain) CurrentBlock() *types.Block {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CurrentBlock")

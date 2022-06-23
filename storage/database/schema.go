@@ -21,6 +21,7 @@
 package database
 
 import (
+	"bytes"
 	"encoding/binary"
 
 	"github.com/klaytn/klaytn/common"
@@ -81,6 +82,7 @@ var (
 	txLookupPrefix        = []byte("l") // txLookupPrefix + hash -> transaction/receipt lookup metadata
 	SnapshotAccountPrefix = []byte("a") // SnapshotAccountPrefix + account hash -> account trie value
 	SnapshotStoragePrefix = []byte("o") // SnapshotStoragePrefix + account hash + storage hash -> storage trie value
+	codePrefix            = []byte("c") // codePrefix + code hash -> contract code
 
 	preimagePrefix = []byte("secure-key-")  // preimagePrefix + hash -> preimage
 	configPrefix   = []byte("klay-config-") // config prefix for the db
@@ -195,6 +197,20 @@ func SenderTxHashToTxHashKey(senderTxHash common.Hash) []byte {
 // preimageKey = preimagePrefix + hash
 func preimageKey(hash common.Hash) []byte {
 	return append(preimagePrefix, hash.Bytes()...)
+}
+
+// CodeKey = codePrefix + hash
+func CodeKey(hash common.Hash) []byte {
+	return append(codePrefix, hash.Bytes()...)
+}
+
+// IsCodeKey reports whether the given byte slice is the key of contract code,
+// if so return the raw code hash as well.
+func IsCodeKey(key []byte) (bool, []byte) {
+	if bytes.HasPrefix(key, codePrefix) && len(key) == common.HashLength+len(codePrefix) {
+		return true, key[len(codePrefix):]
+	}
+	return false, nil
 }
 
 // configKey = configPrefix + hash

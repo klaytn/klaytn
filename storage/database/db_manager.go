@@ -131,11 +131,19 @@ type DBManager interface {
 
 	WriteMerkleProof(key, value []byte)
 
+	// Bytecodes related operations
+	ReadCode(hash common.Hash) []byte
+	ReadCodeWithPrefix(hash common.Hash) []byte
+	WriteCode(hash common.Hash, code []byte)
+	DeleteCode(hash common.Hash)
+	HasCode(hash common.Hash) bool
+
 	// State Trie Database related operations
 	ReadCachedTrieNode(hash common.Hash) ([]byte, error)
 	ReadCachedTrieNodePreimage(secureKey []byte) ([]byte, error)
 	ReadStateTrieNode(key []byte) ([]byte, error)
 	HasStateTrieNode(key []byte) (bool, error)
+	HasCodeWithPrefix(hash common.Hash) bool
 	ReadPreimage(hash common.Hash) []byte
 
 	// Read StateTrie from new DB
@@ -143,6 +151,7 @@ type DBManager interface {
 	ReadCachedTrieNodePreimageFromNew(secureKey []byte) ([]byte, error)
 	ReadStateTrieNodeFromNew(key []byte) ([]byte, error)
 	HasStateTrieNodeFromNew(key []byte) (bool, error)
+	HasCodeWithPrefixFromNew(hash common.Hash) bool
 	ReadPreimageFromNew(hash common.Hash) []byte
 
 	// Read StateTrie from old DB
@@ -150,6 +159,7 @@ type DBManager interface {
 	ReadCachedTrieNodePreimageFromOld(secureKey []byte) ([]byte, error)
 	ReadStateTrieNodeFromOld(key []byte) ([]byte, error)
 	HasStateTrieNodeFromOld(key []byte) (bool, error)
+	HasCodeWithPrefixFromOld(hash common.Hash) bool
 	ReadPreimageFromOld(hash common.Hash) []byte
 
 	WritePreimages(number uint64, preimages map[common.Hash][]byte)
@@ -1593,6 +1603,68 @@ func (dbm *databaseManager) WriteMerkleProof(key, value []byte) {
 	}
 }
 
+// ReadCode retrieves the contract code of the provided code hash.
+func (dbm *databaseManager) ReadCode(hash common.Hash) []byte {
+	// Try with the legacy code scheme first, if not then try with current
+	// scheme. Since most of the code will be found with legacy scheme.
+	//
+	// TODO-Klaytn-Snapsync change the order when we forcibly upgrade the code scheme with snapshot.
+	db := dbm.getDatabase(StateTrieDB)
+	if data, _ := db.Get(hash[:]); len(data) > 0 {
+		return data
+	}
+
+	return dbm.ReadCodeWithPrefix(hash)
+}
+
+// ReadCodeWithPrefix retrieves the contract code of the provided code hash.
+// The main difference between this function and ReadCode is this function
+// will only check the existence with latest scheme(with prefix).
+func (dbm *databaseManager) ReadCodeWithPrefix(hash common.Hash) []byte {
+	db := dbm.getDatabase(StateTrieDB)
+	data, _ := db.Get(CodeKey(hash))
+	return data
+}
+
+// HasCode checks if the contract code corresponding to the
+// provided code hash is present in the db.
+func (dbm *databaseManager) HasCode(hash common.Hash) bool {
+	// Try with the prefixed code scheme first, if not then try with legacy
+	// scheme.
+	//
+	// TODO-Klaytn-Snapsync change the order when we forcibly upgrade the code scheme with snapshot.
+	db := dbm.getDatabase(StateTrieDB)
+	if ok, _ := db.Has(hash.Bytes()); ok {
+		return true
+	}
+	return dbm.HasCodeWithPrefix(hash)
+}
+
+// HasCodeWithPrefix checks if the contract code corresponding to the
+// provided code hash is present in the db. This function will only check
+// presence using the prefix-scheme.
+func (dbm *databaseManager) HasCodeWithPrefix(hash common.Hash) bool {
+	db := dbm.getDatabase(StateTrieDB)
+	ok, _ := db.Has(CodeKey(hash))
+	return ok
+}
+
+// WriteCode writes the provided contract code database.
+func (dbm *databaseManager) WriteCode(hash common.Hash, code []byte) {
+	db := dbm.getDatabase(StateTrieDB)
+	if err := db.Put(CodeKey(hash), code); err != nil {
+		logger.Crit("Failed to store contract code", "err", err)
+	}
+}
+
+// DeleteCode deletes the specified contract code from the database.
+func (dbm *databaseManager) DeleteCode(hash common.Hash) {
+	db := dbm.getDatabase(StateTrieDB)
+	if err := db.Delete(CodeKey(hash)); err != nil {
+		logger.Crit("Failed to delete contract code", "err", err)
+	}
+}
+
 // Cached Trie Node operation.
 func (dbm *databaseManager) ReadCachedTrieNode(hash common.Hash) ([]byte, error) {
 	dbm.lockInMigration.RLock()
@@ -1684,6 +1756,12 @@ func (dbm *databaseManager) HasStateTrieNodeFromNew(key []byte) (bool, error) {
 	return true, nil
 }
 
+func (dbm *databaseManager) HasCodeWithPrefixFromNew(hash common.Hash) bool {
+	db := dbm.GetStateTrieMigrationDB()
+	ok, _ := db.Has(CodeKey(hash))
+	return ok
+}
+
 // ReadPreimage retrieves a single preimage of the provided hash.
 func (dbm *databaseManager) ReadPreimageFromNew(hash common.Hash) []byte {
 	data, _ := dbm.GetStateTrieMigrationDB().Get(preimageKey(hash))
@@ -1713,6 +1791,12 @@ func (dbm *databaseManager) HasStateTrieNodeFromOld(key []byte) (bool, error) {
 		return false, err
 	}
 	return true, nil
+}
+
+func (dbm *databaseManager) HasCodeWithPrefixFromOld(hash common.Hash) bool {
+	db := dbm.getDatabase(StateTrieDB)
+	ok, _ := db.Has(CodeKey(hash))
+	return ok
 }
 
 // ReadPreimage retrieves a single preimage of the provided hash.

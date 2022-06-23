@@ -342,7 +342,6 @@ pendingTxLoop:
 	if len(pendingEvents) > 0 {
 		logger.Info("retrieved pending events", "bridge", from.address.String(),
 			"len(pendingEvents)", len(pendingEvents), "1st nonce", pendingEvents[0].Nonce())
-
 	}
 	return pendingEvents, nil
 }

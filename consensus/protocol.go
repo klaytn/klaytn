@@ -30,15 +30,15 @@ import (
 const (
 	Klay62 = 62
 	Klay63 = 63
+	Klay64 = 64
+	Klay65 = 65
 )
 
-var (
-	KlayProtocol = Protocol{
-		Name:     "klay",
-		Versions: []uint{Klay63, Klay62},
-		Lengths:  []uint64{17, 8},
-	}
-)
+var KlayProtocol = Protocol{
+	Name:     "klay",
+	Versions: []uint{Klay65, Klay64, Klay63, Klay62},
+	Lengths:  []uint64{21, 19, 17, 8},
+}
 
 // Protocol defines the protocol of the consensus
 type Protocol struct {

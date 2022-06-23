@@ -45,6 +45,7 @@ import (
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/storage/statedb"
@@ -124,7 +125,7 @@ type ProtocolManager struct {
 	nodetype          common.ConnType
 	txResendUseLegacy bool
 
-	//syncStop is a flag to stop peer sync
+	// syncStop is a flag to stop peer sync
 	syncStop int32
 }
 
@@ -132,7 +133,8 @@ type ProtocolManager struct {
 // with the Klaytn network.
 func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux,
 	txpool work.TxPool, engine consensus.Engine, blockchain work.BlockChain, chainDB database.DBManager, cacheLimit int,
-	nodetype common.ConnType, cnconfig *Config) (*ProtocolManager, error) {
+	nodetype common.ConnType, cnconfig *Config,
+) (*ProtocolManager, error) {
 	// Create the protocol maanger with the base fields
 	manager := &ProtocolManager{
 		networkId:         networkId,
@@ -477,7 +479,7 @@ func (pm *ProtocolManager) handle(p Peer) error {
 			return err
 		case messageChannel <- msg:
 		}
-		//go pm.handleMsg(p, addr, msg)
+		// go pm.handleMsg(p, addr, msg)
 
 		//if err := pm.handleMsg(p); err != nil {
 		//	p.Log().Debug("Klaytn message handling failed", "err", err)
@@ -605,6 +607,16 @@ func (pm *ProtocolManager) handleMsg(p Peer, addr common.Address, msg p2p.Msg) e
 
 	case p.GetVersion() >= klay63 && msg.Code == ReceiptsMsg:
 		if err := handleReceiptsMsg(pm, p, msg); err != nil {
+			return err
+		}
+
+	case p.GetVersion() >= klay65 && msg.Code == StakingInfoRequestMsg:
+		if err := handleStakingInfoRequestMsg(pm, p, msg); err != nil {
+			return err
+		}
+
+	case p.GetVersion() >= klay65 && msg.Code == StakingInfoMsg:
+		if err := handleStakingInfoMsg(pm, p, msg); err != nil {
 			return err
 		}
 
@@ -826,7 +838,13 @@ func handleNodeDataRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
 		// Retrieve the requested state entry, stopping if enough was found
-		if entry, err := pm.blockchain.TrieNode(hash); err == nil {
+		// TODO-Klaytn-Snapsync now the code and trienode is mixed in the protocol level, separate these two types.
+		entry, err := pm.blockchain.TrieNode(hash)
+		if len(entry) == 0 || err != nil {
+			// Read the contract code with prefix only to save unnecessary lookups.
+			entry, err = pm.blockchain.ContractCodeWithPrefix(hash)
+		}
+		if err == nil && len(entry) > 0 {
 			data = append(data, entry)
 			bytes += len(entry)
 		}
@@ -896,6 +914,59 @@ func handleReceiptsMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	// Deliver all to the downloader
 	if err := pm.downloader.DeliverReceipts(p.GetID(), receipts); err != nil {
 		logger.Debug("Failed to deliver receipts", "err", err)
+	}
+	return nil
+}
+
+// handleStakingInfoRequestMsg handles staking information request message.
+func handleStakingInfoRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
+	// Decode the retrieval message
+	msgStream := rlp.NewStream(msg.Payload, uint64(msg.Size))
+	if _, err := msgStream.List(); err != nil {
+		return err
+	}
+	// Gather state data until the fetch or network limits is reached
+	var (
+		hash         common.Hash
+		bytes        int
+		stakingInfos []rlp.RawValue
+	)
+	for bytes < softResponseLimit && len(stakingInfos) < downloader.MaxStakingInfoFetch {
+		// Retrieve the hash of the next block
+		if err := msgStream.Decode(&hash); err == rlp.EOL {
+			break
+		} else if err != nil {
+			return errResp(ErrDecode, "msg %v: %v", msg, err)
+		}
+
+		// Retrieve the requested block's staking information, skipping if unknown to us
+		header := pm.blockchain.GetHeaderByHash(hash)
+		result := reward.GetStakingInfoOnStakingBlock(header.Number.Uint64())
+		if result == nil {
+			logger.Error("Failed to get staking information on a specific block", "number", header.Number.Uint64(), "hash", hash)
+			continue
+		}
+		// If known, encode and queue for response packet
+		if encoded, err := rlp.EncodeToBytes(result); err != nil {
+			logger.Error("Failed to encode staking info", "err", err)
+		} else {
+			stakingInfos = append(stakingInfos, encoded)
+			bytes += len(encoded)
+		}
+	}
+	return p.SendStakingInfoRLP(stakingInfos)
+}
+
+// handleStakingInfoMsg handles staking information response message.
+func handleStakingInfoMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
+	// A batch of stakingInfos arrived to one of our previous requests
+	var stakingInfos []*reward.StakingInfo
+	if err := msg.Decode(&stakingInfos); err != nil {
+		return errResp(ErrDecode, "msg %v: %v", msg, err)
+	}
+	// Deliver all to the downloader
+	if err := pm.downloader.DeliverStakingInfos(p.GetID(), stakingInfos); err != nil {
+		logger.Debug("Failed to deliver staking information", "err", err)
 	}
 	return nil
 }
@@ -1085,7 +1156,7 @@ func (pm *ProtocolManager) BroadcastBlock(block *types.Block) {
 		return
 	}
 	// TODO-Klaytn only send all validators + sub(peer) except subset for this block
-	//transfer := peers[:int(math.Sqrt(float64(len(peers))))]
+	// transfer := peers[:int(math.Sqrt(float64(len(peers))))]
 
 	// Calculate the TD of the block (it's not imported yet, so block.Td is not valid)
 	td := new(big.Int).Add(block.BlockScore(), pm.blockchain.GetTd(block.ParentHash(), block.NumberU64()-1))
@@ -1104,7 +1175,7 @@ func (pm *ProtocolManager) BroadcastBlockHash(block *types.Block) {
 	// Otherwise if the block is indeed in out own chain, announce it
 	peersWithoutBlock := pm.peers.PeersWithoutBlock(block.Hash())
 	for _, peer := range peersWithoutBlock {
-		//peer.SendNewBlockHashes([]common.Hash{hash}, []uint64{block.NumberU64()})
+		// peer.SendNewBlockHashes([]common.Hash{hash}, []uint64{block.NumberU64()})
 		peer.AsyncSendNewBlockHash(block)
 	}
 	logger.Trace("Announced block", "hash", block.Hash(),
@@ -1143,7 +1214,7 @@ func (pm *ProtocolManager) broadcastTxsFromCN(txs types.Transactions) {
 		}
 
 		// TODO-Klaytn Code Check
-		//peers = peers[:int(math.Sqrt(float64(len(peers))))]
+		// peers = peers[:int(math.Sqrt(float64(len(peers))))]
 		half := (len(peers) / 2) + 2
 		peers = samplingPeers(peers, half)
 		for _, peer := range peers {
@@ -1155,7 +1226,7 @@ func (pm *ProtocolManager) broadcastTxsFromCN(txs types.Transactions) {
 	propTxPeersGauge.Update(int64(len(cnPeersWithoutTxs)))
 	// FIXME include this again: peers = peers[:int(math.Sqrt(float64(len(peers))))]
 	for peer, txs2 := range cnPeersWithoutTxs {
-		//peer.SendTransactions(txs)
+		// peer.SendTransactions(txs)
 		peer.AsyncSendTransactions(txs2)
 	}
 }
