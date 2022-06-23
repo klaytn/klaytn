@@ -37,6 +37,12 @@ import (
 	"github.com/rcrowley/go-metrics"
 )
 
+const (
+	// The number in exceptional case
+	// If the number of validators is lower than 6, the chain could be forked by round change
+	ExceptionalValidatorsNumber = 6
+)
+
 var logger = log.NewModuleLogger(log.ConsensusIstanbulCore)
 
 // New creates an Istanbul consensus core
