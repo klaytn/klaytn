@@ -77,15 +77,15 @@ func (api *GovernanceKlayAPI) GasPriceAt(num *rpc.BlockNumber) (*hexutil.Big, er
 	} else {
 		blockNum := num.Uint64()
 
-		if blockNum > api.chain.CurrentHeader().Number.Uint64() {
-			return nil, errUnknownBlock
-		}
-
+		// Return the BaseFee in header at the block number
 		header := api.chain.GetHeaderByNumber(blockNum)
-		if header.BaseFee != nil {
+		if blockNum > api.chain.CurrentHeader().Number.Uint64() || header == nil {
+			return nil, errUnknownBlock
+		} else if header.BaseFee != nil {
 			return (*hexutil.Big)(header.BaseFee), nil
 		}
 
+		// Return the UnitPrice in governance data at the block number
 		if ret, err := api.GasPriceAtNumber(blockNum); err != nil {
 			return nil, err
 		} else {
