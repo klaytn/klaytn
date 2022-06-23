@@ -266,7 +266,7 @@ func (s *PublicTransactionPoolAPI) getTransactionReceipt(ctx context.Context, tx
 	fields := RpcOutputReceipt(tx, blockHash, blockNumber, index, receipt)
 
 	header, err := s.b.HeaderByHash(ctx, blockHash)
-	if header != nil && err == nil {
+	if header != nil && header.BaseFee != nil && err == nil {
 		if header.BaseFee != nil {
 			fields["effectiveGasPrice"] = hexutil.Uint64(header.BaseFee.Uint64())
 		}
