@@ -154,10 +154,12 @@ type SubBridge struct {
 
 	chanReqVTev        chan RequestValueTransferEvent
 	chanReqVTencodedEv chan RequestValueTransferEncodedEvent
+	chanHandleVTev     chan *HandleValueTransferEvent
+	chanNFTLockEv      chan NFTLockEvent
 	reqVTevSub         event.Subscription
 	reqVTencodedEvSub  event.Subscription
-	chanHandleVTev     chan *HandleValueTransferEvent
 	handleVTevSub      event.Subscription
+	NFTLockEvSub       event.Subscription
 
 	bridgeAccounts *BridgeAccounts
 
@@ -196,6 +198,7 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 		chanReqVTev:        make(chan RequestValueTransferEvent, chanReqVTevanSize),
 		chanReqVTencodedEv: make(chan RequestValueTransferEncodedEvent, chanReqVTevanSize),
 		chanHandleVTev:     make(chan *HandleValueTransferEvent, chanHandleVTevanSize),
+		chanNFTLockEv:      make(chan NFTLockEvent, chanReqVTevanSize),
 		quitSync:           make(chan struct{}),
 		maxPeers:           config.MaxPeer,
 		onAnchoringTx:      config.Anchoring,
@@ -379,6 +382,7 @@ func (sb *SubBridge) SetComponents(components []interface{}) {
 	sb.reqVTevSub = sb.bridgeManager.SubscribeReqVTev(sb.chanReqVTev)
 	sb.reqVTencodedEvSub = sb.bridgeManager.SubscribeReqVTencodedEv(sb.chanReqVTencodedEv)
 	sb.handleVTevSub = sb.bridgeManager.SubscribeHandleVTev(sb.chanHandleVTev)
+	sb.NFTLockEvSub = sb.bridgeManager.SubscribeLockNFTev(sb.chanNFTLockEv)
 
 	sb.pmwg.Add(1)
 	go sb.restoreBridgeLoop()
@@ -623,15 +627,15 @@ func (sb *SubBridge) loop() {
 			} else {
 				logger.Error("subbridge block event is nil")
 			}
-		// Handle NewTexsEvent
-		// case ev := <-sb.txCh:
-		//	if ev.Txs != nil {
-		//		if err := sb.eventhandler.HandleTxsEvent(ev.Txs); err != nil {
-		//			logger.Error("subbridge tx event", "err", err)
-		//		}
-		//	} else {
-		//		logger.Error("subbridge tx event is nil")
-		//	}
+			// Handle NewTexsEvent
+			// case ev := <-sb.txCh:
+			//	if ev.Txs != nil {
+			//		if err := sb.eventhandler.HandleTxsEvent(ev.Txs); err != nil {
+			//			logger.Error("subbridge tx event", "err", err)
+			//		}
+			//	} else {
+			//		logger.Error("subbridge tx event is nil")
+			//	}
 		// Handle ChainLogsEvent
 		case logs := <-sb.logsCh:
 			if err := sb.eventhandler.HandleLogsEvent(logs); err != nil {
@@ -652,6 +656,10 @@ func (sb *SubBridge) loop() {
 			vtHandleEventMeter.Mark(1)
 			if err := sb.eventhandler.ProcessHandleEvent(ev); err != nil {
 				logger.Error("fail to process handle value transfer event ", "err", err)
+			}
+		case ev := <-sb.chanNFTLockEv:
+			if err := sb.eventhandler.ProcessLockEvent(ev); err != nil {
+				logger.Error("fail to process NFT Lock event ", "err", err)
 			}
 		case err := <-sb.chainSub.Err():
 			if err != nil {
@@ -681,6 +689,11 @@ func (sb *SubBridge) loop() {
 		case err := <-sb.handleVTevSub.Err():
 			if err != nil {
 				logger.Error("subbridge token-transfer subscription ", "err", err)
+			}
+			return
+		case err := <-sb.NFTLockEvSub.Err():
+			if err != nil {
+				logger.Error("subbridge NFT token lock subscription ", "err", err)
 			}
 			return
 		}
