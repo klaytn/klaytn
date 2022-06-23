@@ -33,10 +33,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/klaytn/klaytn/common/math"
-
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
