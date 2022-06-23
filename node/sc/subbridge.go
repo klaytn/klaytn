@@ -382,7 +382,7 @@ func (sb *SubBridge) SetComponents(components []interface{}) {
 	sb.reqVTevSub = sb.bridgeManager.SubscribeReqVTev(sb.chanReqVTev)
 	sb.reqVTencodedEvSub = sb.bridgeManager.SubscribeReqVTencodedEv(sb.chanReqVTencodedEv)
 	sb.handleVTevSub = sb.bridgeManager.SubscribeHandleVTev(sb.chanHandleVTev)
-	sb.NFTLockEvSub = sb.bridgeManager.SubscribeLockNFTev(sb.chanNFTLockEv)
+	sb.NFTLockEvSub = sb.bridgeManager.SubscribeTemporalLockNFTev(sb.chanNFTLockEv)
 
 	sb.pmwg.Add(1)
 	go sb.restoreBridgeLoop()

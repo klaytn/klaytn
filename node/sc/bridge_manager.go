@@ -556,10 +556,10 @@ type BridgeManager struct {
 	bridges        map[common.Address]*BridgeInfo
 	mu             sync.RWMutex
 
-	reqVTevFeeder        event.Feed
-	reqVTevEncodedFeeder event.Feed
-	handleEventFeeder    event.Feed
-	NFTLockEvFeeder      event.Feed
+	reqVTevFeeder           event.Feed
+	reqVTevEncodedFeeder    event.Feed
+	handleEventFeeder       event.Feed
+	TemporalNFTLockEvFeeder event.Feed
 
 	scope event.SubscriptionScope
 
@@ -681,8 +681,8 @@ func (bm *BridgeManager) SubscribeHandleVTev(ch chan<- *HandleValueTransferEvent
 }
 
 // SubscribeLockNFTev registers a subscription of lockEvent.
-func (bm *BridgeManager) SubscribeLockNFTev(ch chan<- NFTLockEvent) event.Subscription {
-	return bm.scope.Track(bm.NFTLockEvFeeder.Subscribe(ch))
+func (bm *BridgeManager) SubscribeTemporalLockNFTev(ch chan<- NFTLockEvent) event.Subscription {
+	return bm.scope.Track(bm.TemporalNFTLockEvFeeder.Subscribe(ch))
 }
 
 // GetAllBridge returns a slice of journal cache.
@@ -1069,7 +1069,7 @@ func (bm *BridgeManager) subscribeEvent(addr common.Address, bridge *bridgecontr
 
 	NFTLockevSub, err := bridge.WatchTemporalTokenIdLock(nil, chanNFTLockEv, nil, nil, nil)
 	if err != nil {
-		logger.Error("Failed to watch WatchLockNFT event", "err", err)
+		logger.Error("Failed to watch TemporalTokenIdLock event", "err", err)
 		return err
 	}
 	bm.lockEvent[addr] = NFTLockevSub
@@ -1161,7 +1161,7 @@ func (bm *BridgeManager) loop(
 		case ev := <-chanHandleVT:
 			bm.handleEventFeeder.Send(&HandleValueTransferEvent{ev})
 		case ev := <-chanNFTLockEv:
-			bm.NFTLockEvFeeder.Send(NFTLockEvent{ev})
+			bm.TemporalNFTLockEvFeeder.Send(NFTLockEvent{ev})
 		case err := <-reqVTevSub.Err():
 			logger.Info("Contract Event Loop Running Stop by RequestValueTransfer event subscription", "err", err)
 			return
@@ -1172,7 +1172,7 @@ func (bm *BridgeManager) loop(
 			logger.Info("Contract Event Loop Running Stop by HandlerValueTransfer event subscription", "err", err)
 			return
 		case err := <-NFTLockEvSub.Err():
-			logger.Info("Contract Event Loop Running Stop by NFTLock event subscription", "err", err)
+			logger.Info("Contract Event Loop Running Stop by TemporalTokenIdLock event subscription", "err", err)
 			return
 		}
 	}
