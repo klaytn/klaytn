@@ -2165,22 +2165,26 @@ func TestTokenUnlockLoop(t *testing.T) {
 		owners[i] = bind.NewKeyedTransactor(key)
 	}
 	aliceAuth := &bind.TransactOpts{From: alice.From, Signer: alice.Signer, GasLimit: testGasLimit}
-	for i := 0; i < len(nftTokenIDs); i++ {
-		// mint
-		tx, err = nftToken.MintWithTokenURI(aliceAuth, owners[i].From, big.NewInt(int64(nftTokenIDs[i])), testURIs[i])
-		assert.NoError(t, err)
-		t.Log("Register NFT Transaction", tx.Hash().Hex())
-		sim.Commit() // block
-		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
 
-		// transfer
-		ownerAuth := &bind.TransactOpts{From: owners[i].From, Signer: owners[i].Signer, GasLimit: testGasLimit}
-		tx, err = nftToken.RequestValueTransfer(ownerAuth, big.NewInt(int64(nftTokenIDs[i])), bob.From, nil)
-		assert.NoError(t, err)
-		t.Log("nft.RequestValueTransfer Transaction", tx.Hash().Hex())
-		sim.Commit() // block
-		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+	reqVT := func() {
+		for i := 0; i < len(nftTokenIDs); i++ {
+			// mint
+			tx, err = nftToken.MintWithTokenURI(aliceAuth, owners[i].From, big.NewInt(int64(nftTokenIDs[i])), testURIs[i])
+			assert.NoError(t, err)
+			t.Log("Register NFT Transaction", tx.Hash().Hex())
+			sim.Commit() // block
+			CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+
+			// transfer
+			ownerAuth := &bind.TransactOpts{From: owners[i].From, Signer: owners[i].Signer, GasLimit: testGasLimit}
+			tx, err = nftToken.RequestValueTransfer(ownerAuth, big.NewInt(int64(nftTokenIDs[i])), bob.From, nil)
+			assert.NoError(t, err)
+			t.Log("nft.RequestValueTransfer Transaction", tx.Hash().Hex())
+			sim.Commit() // block
+			CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+		}
 	}
+	reqVT()
 
 	{
 		// TEST 1 - Get released locked token IDs
@@ -2216,6 +2220,56 @@ func TestTokenUnlockLoop(t *testing.T) {
 		lockedTokenIds, err = bi.bridge.GetListOfLockedTokenIds(nil)
 		assert.NoError(t, err)
 		assert.Equal(t, len(lockedTokenIds), 0)
+	}
+
+	nftTokenIDs = []uint64{2437, 2438, 2439, 2451, 2452}
+	{
+		reqVT() // makes token locks
+		for _, tokenId := range nftTokenIDs {
+			tokenOwner, err := nftToken.OwnerOf(nil, big.NewInt(int64(tokenId)))
+			assert.NoError(t, err)
+			// Must be owned by bridge contract at this point
+			assert.Equal(t, tokenOwner.Hex(), cBridgeAddr.Hex())
+		}
+		// TEST 5-1 - Assume the token to be transferred is already owned by someone in the counterpart chain.
+		for _, tokenId := range nftTokenIDs {
+			tx, err := bi.bridge.UnlockByAlreadyOwned(cAuth, nftAddr, big.NewInt(int64(tokenId)))
+			assert.NoError(t, err)
+			sim.Commit() // block
+			CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+		}
+		// TEST 6-1 - The locked tokens must be mapped to the origin owners
+		for idx, tokenId := range nftTokenIDs {
+			tokenOwner, err := nftToken.OwnerOf(nil, big.NewInt(int64(tokenId)))
+			assert.NoError(t, err)
+			// Now, the released tokens are mapped to origin owners
+			t.Log("token owner", tokenOwner.Hex(), owners[idx].From.Hex())
+			assert.Equal(t, tokenOwner.Hex(), owners[idx].From.Hex())
+		}
+	}
+
+	nftTokenIDs = []uint64{3437, 3438, 3439, 3451, 3452}
+	{
+		reqVT() // makes token locks
+		for _, tokenId := range nftTokenIDs {
+			tokenOwner, err := nftToken.OwnerOf(nil, big.NewInt(int64(tokenId)))
+			assert.NoError(t, err)
+			// Must be owned by bridge contract at this point
+			assert.Equal(t, tokenOwner.Hex(), cBridgeAddr.Hex())
+		}
+		// TEST 5-2 - Assume the token to be transferred is already owned by someone in the counterpart chain.
+		for _, tokenId := range nftTokenIDs {
+			tx, err := bi.bridge.UnlockByNotOwned(cAuth, nftAddr, big.NewInt(int64(tokenId)))
+			assert.NoError(t, err)
+			sim.Commit() // block
+			CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+		}
+		// TEST 6-2 - The locked tokens must be mapped to the origin owners
+		for _, tokenId := range nftTokenIDs {
+			// Now, the released tokens are burned or still mapped to bridge contract address
+			tokenOwner, _ := nftToken.OwnerOf(nil, big.NewInt(int64(tokenId)))
+			assert.Equal(t, tokenOwner, common.Address{0})
+		}
 	}
 }
 
