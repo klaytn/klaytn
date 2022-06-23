@@ -170,7 +170,9 @@ func TestCalcTotalAmount(t *testing.T) {
 		stakingAmounts := testCase.stakingAmounts
 		totalAmount := calcTotalAmount(testCase.weightedValidators, testCase.stakingInfo, stakingAmounts)
 
-		assert.Equal(t, testCase.expectedGini, testCase.stakingInfo.Gini)
+		// Since calcTotalAmount does not update stakingInfo.Gini, we cannot assert expectedGini.
+		// However asserting expectedStakingAmounts proves that calcTotalAmount() used correct Gini.
+		// assert.Equal(t, testCase.expectedGini, testCase.stakingInfo.Gini)
 		assert.Equal(t, testCase.expectedTotalAmount, totalAmount)
 		assert.Equal(t, testCase.expectedStakingAmounts, stakingAmounts)
 	}

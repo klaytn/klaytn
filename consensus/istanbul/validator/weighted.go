@@ -793,6 +793,11 @@ func calcTotalAmount(weightedValidators []*weightedValidator, stakingInfo *rewar
 		return 0
 	}
 	totalStaking := float64(0)
+
+	// stakingInfo.Gini is calculated among all CNs (i.e. AddressBook.cnStakingContracts)
+	// But we want the gini calculated among the subset of CNs (i.e. validators)
+	gini := reward.DefaultGiniCoefficient
+
 	if stakingInfo.UseGini {
 		var tempStakingAmounts []float64
 		for vIdx, val := range weightedValidators {
@@ -801,10 +806,10 @@ func calcTotalAmount(weightedValidators []*weightedValidator, stakingInfo *rewar
 				tempStakingAmounts = append(tempStakingAmounts, stakingAmounts[vIdx])
 			}
 		}
-		stakingInfo.Gini = reward.CalcGiniCoefficient(tempStakingAmounts)
+		gini := reward.CalcGiniCoefficient(tempStakingAmounts)
 
 		for i := range stakingAmounts {
-			stakingAmounts[i] = math.Round(math.Pow(stakingAmounts[i], 1.0/(1+stakingInfo.Gini)))
+			stakingAmounts[i] = math.Round(math.Pow(stakingAmounts[i], 1.0/(1+gini)))
 			totalStaking += stakingAmounts[i]
 		}
 	} else {
@@ -813,7 +818,7 @@ func calcTotalAmount(weightedValidators []*weightedValidator, stakingInfo *rewar
 		}
 	}
 
-	logger.Debug("calculate totalStaking", "UseGini", stakingInfo.UseGini, "Gini", stakingInfo.Gini, "totalStaking", totalStaking, "stakingAmounts", stakingAmounts)
+	logger.Debug("calculate totalStaking", "UseGini", stakingInfo.UseGini, "Gini", gini, "totalStaking", totalStaking, "stakingAmounts", stakingAmounts)
 	return totalStaking
 }
 
