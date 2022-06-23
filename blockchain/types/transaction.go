@@ -300,16 +300,16 @@ func (tx *Transaction) EffectiveGasTip(baseFee *big.Int) *big.Int {
 // After hard fork, we need to consider new getEffectiveGasPrice API that operates differently
 // effectiveGasPrice = msg.EffectiveGasPrice(baseFee)
 func (tx *Transaction) EffectiveGasPrice(baseFee *big.Int) *big.Int {
-	if tx.Type() == TxTypeEthereumDynamicFee {
-		if baseFee != nil {
-			return baseFee
+	if baseFee != nil {
+		return baseFee
+	} else {
+		if tx.Type() == TxTypeEthereumDynamicFee {
+			baseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
+			te := tx.GetTxInternalData().(TxInternalDataBaseFee)
+			return math.BigMin(new(big.Int).Add(te.GetGasTipCap(), baseFee), te.GetGasFeeCap())
 		}
-		baseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
-		te := tx.GetTxInternalData().(TxInternalDataBaseFee)
-		return math.BigMin(new(big.Int).Add(te.GetGasTipCap(), baseFee), te.GetGasFeeCap())
+		return tx.GasPrice()
 	}
-
-	return tx.GasPrice()
 }
 
 func (tx *Transaction) AccessList() AccessList {
