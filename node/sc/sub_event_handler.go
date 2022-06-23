@@ -103,6 +103,26 @@ func (cce *ChildChainEventHandler) ProcessHandleEvent(ev *HandleValueTransferEve
 	return nil
 }
 
+func (cce *ChildChainEventHandler) ProcessLockEvent(ev NFTLockEvent) error {
+	logger.Trace("NFTLock event received", "tokenAddress", ev.TokenAddress.String(), "to", ev.To.String(), "tokenId", ev.TokenId)
+
+	addr := ev.Raw.Address
+	ctBridgeAddr := cce.subbridge.bridgeManager.GetCounterPartBridgeAddr(addr)
+	if ctBridgeAddr == (common.Address{}) {
+		return fmt.Errorf("No bridge address(%v) found", addr.String())
+	}
+	ctbi, ok := cce.subbridge.bridgeManager.GetBridgeInfo(ctBridgeAddr)
+	if !ok {
+		return fmt.Errorf("No bridge info found from bridge address(%v)", ctBridgeAddr.String())
+	}
+	bi, ok := cce.subbridge.bridgeManager.GetBridgeInfo(addr)
+	if !ok {
+		return fmt.Errorf("No bridge address(%v) found", addr.String())
+	}
+	go bi.GetTokenOwned(ev, ctbi)
+	return nil
+}
+
 // ConvertChildChainBlockHashToParentChainTxHash returns a transaction hash of a transaction which contains
 // AnchoringData, with the key made with given child chain block hash.
 // Index is built when child chain indexing is enabled.

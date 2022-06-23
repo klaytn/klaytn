@@ -19,6 +19,7 @@ package sc
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"math/big"
 	"path"
@@ -29,6 +30,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	bridgecontract "github.com/klaytn/klaytn/contracts/bridge"
+	scnft "github.com/klaytn/klaytn/contracts/sc_erc721"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/node/sc/bridgepool"
 	"github.com/klaytn/klaytn/rlp"
@@ -70,11 +72,6 @@ var handleVTmethods = map[uint8]string{
 	ERC721: "handleERC721Transfer",
 }
 
-// HandleValueTransferEvent from Bridge contract
-type HandleValueTransferEvent struct {
-	*bridgecontract.BridgeHandleValueTransfer
-}
-
 type BridgeJournal struct {
 	ChildAddress  common.Address `json:"childAddress"`
 	ParentAddress common.Address `json:"parentAddress"`
@@ -91,8 +88,11 @@ type BridgeInfo struct {
 	account            *accountInfo
 	bridge             *bridgecontract.Bridge
 	counterpartBridge  *bridgecontract.Bridge
-	onChildChain       bool
-	subscribed         bool
+
+	nftToken *scnft.ERC721ServiceChain
+
+	onChildChain bool
+	subscribed   bool
 
 	counterpartToken map[common.Address]common.Address
 
@@ -128,6 +128,7 @@ func NewBridgeInfo(sb *SubBridge, addr common.Address, bridge *bridgecontract.Br
 		account,
 		bridge,
 		cpBridge,
+		nil,
 		local,
 		subscribed,
 		make(map[common.Address]common.Address),
@@ -147,6 +148,7 @@ func NewBridgeInfo(sb *SubBridge, addr common.Address, bridge *bridgecontract.Br
 	}
 
 	go bi.loop()
+	go bi.releaseTemporalUnlocks()
 
 	return bi, nil
 }
@@ -162,6 +164,57 @@ func handleValueTransferLog(onChild bool, funcName, txHash string, reqNonce uint
 	}
 	logger.Trace("Bridge contract transaction is created", "VTDirection", vtDir,
 		"contractCall", funcName, "nonce", reqNonce, "txHash", txHash, "from", from, "to", to, "valueOrTokenID", valueOrTokenId)
+}
+
+func (bi *BridgeInfo) GetTokenOwned(nftLockEv NFTLockEvent, ctbi *BridgeInfo) {
+	if ctbi.nftToken == nil {
+		var (
+			backend Backend
+			err     error
+		)
+		if ctbi.onChildChain {
+			backend = ctbi.subBridge.localBackend
+		} else {
+			backend = ctbi.subBridge.remoteBackend
+		}
+		tokenAddr := nftLockEv.TokenAddress
+		ctpartTokenAddr := ctbi.GetCounterPartToken(tokenAddr)
+		if ctpartTokenAddr == (common.Address{}) {
+			ctpartTokenAddr, err = ctbi.counterpartBridge.RegisteredTokens(nil, tokenAddr)
+			if err != nil {
+				logger.Error("Failed to find registered token address from counterpart chain",
+					"tokenAddr", tokenAddr.Hex(), "counterpart bridge address", ctbi.counterpartAddress)
+				return
+			}
+		}
+		ctbi.nftToken, err = scnft.NewERC721ServiceChain(ctpartTokenAddr, backend)
+		if err != nil {
+			logger.Error("Failed to initialize nft token contract struct", "err", err, "tokenAddress", ctpartTokenAddr)
+			return
+		}
+	}
+	_, err := ctbi.nftToken.OwnerOf(nil, nftLockEv.TokenId)
+	bridgeAcc := bi.account
+	bridgeAcc.Lock()
+	auth := bridgeAcc.GenerateTransactOpts()
+	defer bridgeAcc.UnLock()
+	var (
+		txStr    string
+		unlockTx *types.Transaction
+	)
+	if err == nil { // already owned by someone
+		unlockTx, err = bi.bridge.UnlockByAlreadyOwned(auth, nftLockEv.TokenAddress, nftLockEv.TokenId)
+		txStr = "UnlockByAlreadyOwned"
+	} else { // Not owned
+		unlockTx, err = bi.bridge.UnlockByNotOwned(auth, nftLockEv.TokenAddress, nftLockEv.TokenId)
+		txStr = "UnlockByNotOwned"
+	}
+	if err != nil {
+		logger.Error(fmt.Sprintf("Failed to create %s transaction", txStr), "tokenAddress", nftLockEv.TokenAddress.String(), "to", nftLockEv.To.String(), "tokenId", nftLockEv.TokenId, "err", err)
+		return
+	}
+	bridgeAcc.IncNonce()
+	logger.Trace(fmt.Sprintf("Bridge %s transaction is created", txStr), "tokenAddress", nftLockEv.TokenAddress.String(), "to", nftLockEv.To.String(), "tokenId", nftLockEv.TokenId, "txHash", unlockTx.Hash().String())
 }
 
 func (bi *BridgeInfo) loop() {
@@ -181,6 +234,52 @@ func (bi *BridgeInfo) loop() {
 		case <-bi.closed:
 			logger.Info("stop bridge loop", "addr", bi.address.String(), "onChildChain", bi.onChildChain)
 			return
+		}
+	}
+}
+
+func (bi *BridgeInfo) releaseTemporalUnlocks() {
+	type LockedToken struct {
+		tokenId uint64
+		t       time.Time
+	}
+
+	defaultExpire := time.Second * 30
+	ticker := time.NewTicker(defaultExpire)
+	defer ticker.Stop()
+
+	lockedTokensWithTime := make(map[uint64]LockedToken)
+	for {
+		select {
+		case <-ticker.C:
+			tobeRemoved := make([]*big.Int, 0)
+			if bi.nftToken != nil {
+				lockedTokens, err := bi.bridge.GetListOfLockedTokenIds(nil)
+				if err == nil {
+					for _, tokenId := range lockedTokens {
+						tokenIdUint := tokenId.Uint64()
+						if _, ok := lockedTokensWithTime[tokenIdUint]; !ok {
+							lockedTokensWithTime[tokenIdUint] = LockedToken{tokenId: tokenIdUint, t: time.Now()}
+						}
+						if time.Now().After(lockedTokensWithTime[tokenIdUint].t.Add(defaultExpire)) {
+							tobeRemoved = append(tobeRemoved, tokenId)
+							delete(lockedTokensWithTime, tokenIdUint)
+						}
+					}
+				}
+			}
+			if len(tobeRemoved) > 0 {
+				bridgeAcc := bi.account
+				bridgeAcc.Lock()
+				releaseTx, err := bi.bridge.ReleaseLockedTokens(bridgeAcc.GenerateTransactOpts(), tobeRemoved)
+				bridgeAcc.IncNonce()
+				bridgeAcc.UnLock()
+				if err != nil {
+					logger.Error("Failed to create transaction of release locked tokens", "err", err)
+				} else {
+					logger.Trace("release locked token transaction is created", "txHash", releaseTx.Hash())
+				}
+			}
 		}
 	}
 }
@@ -284,11 +383,10 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev IRequestValueTransferEv
 		requestNonce, blkNumber           = ev.GetRequestNonce(), ev.GetRaw().BlockNumber
 		extraData                         = ev.GetExtraData()
 	)
-
 	ctpartTokenAddr := bi.GetCounterPartToken(tokenAddr)
 	// TODO-Klaytn-Servicechain Add counterpart token address in requestValueTransferEvent
 	if tokenType != KLAY && ctpartTokenAddr == (common.Address{}) {
-		logger.Warn("Unregistered counter part token address.", "addr", ctpartTokenAddr.Hex())
+		logger.Warn("Unregistered counter part token address.", "addr", tokenAddr.Hex(), "cpaddr", ctpartTokenAddr.String())
 		ctTokenAddr, err := bi.counterpartBridge.RegisteredTokens(nil, tokenAddr)
 		if err != nil {
 			return err
@@ -454,12 +552,14 @@ type BridgeManager struct {
 
 	receivedEvents map[common.Address][]event.Subscription
 	withdrawEvents map[common.Address]event.Subscription
+	lockEvent      map[common.Address]event.Subscription
 	bridges        map[common.Address]*BridgeInfo
 	mu             sync.RWMutex
 
 	reqVTevFeeder        event.Feed
 	reqVTevEncodedFeeder event.Feed
 	handleEventFeeder    event.Feed
+	NFTLockEvFeeder      event.Feed
 
 	scope event.SubscriptionScope
 
@@ -475,6 +575,7 @@ func NewBridgeManager(main *SubBridge) (*BridgeManager, error) {
 		subBridge:      main,
 		receivedEvents: make(map[common.Address][]event.Subscription),
 		withdrawEvents: make(map[common.Address]event.Subscription),
+		lockEvent:      make(map[common.Address]event.Subscription),
 		bridges:        make(map[common.Address]*BridgeInfo),
 		journal:        bridgeAddrJournal,
 		recoveries:     make(map[common.Address]*valueTransferRecovery),
@@ -577,6 +678,11 @@ func (bm *BridgeManager) SubscribeReqVTencodedEv(ch chan<- RequestValueTransferE
 // SubscribeHandleVTev registers a subscription of HandleValueTransferEvent.
 func (bm *BridgeManager) SubscribeHandleVTev(ch chan<- *HandleValueTransferEvent) event.Subscription {
 	return bm.scope.Track(bm.handleEventFeeder.Subscribe(ch))
+}
+
+// SubscribeLockNFTev registers a subscription of lockEvent.
+func (bm *BridgeManager) SubscribeLockNFTev(ch chan<- NFTLockEvent) event.Subscription {
+	return bm.scope.Track(bm.NFTLockEvFeeder.Subscribe(ch))
 }
 
 // GetAllBridge returns a slice of journal cache.
@@ -945,34 +1051,44 @@ func (bm *BridgeManager) subscribeEvent(addr common.Address, bridge *bridgecontr
 	chanReqVT := make(chan *bridgecontract.BridgeRequestValueTransfer, TokenEventChanSize)
 	chanReqVTencoded := make(chan *bridgecontract.BridgeRequestValueTransferEncoded, TokenEventChanSize)
 	chanHandleVT := make(chan *bridgecontract.BridgeHandleValueTransfer, TokenEventChanSize)
+	chanNFTLockEv := make(chan *bridgecontract.BridgeTemporalTokenIdLock, TokenEventChanSize)
 
-	vtEv, err := bridge.WatchRequestValueTransfer(nil, chanReqVT, nil, nil, nil)
+	vtEvSub, err := bridge.WatchRequestValueTransfer(nil, chanReqVT, nil, nil, nil)
 	if err != nil {
 		logger.Error("Failed to watch RequestValueTransfer event", "err", err)
 		return err
 	}
-	bm.receivedEvents[addr] = append(bm.receivedEvents[addr], vtEv)
+	bm.receivedEvents[addr] = append(bm.receivedEvents[addr], vtEvSub)
 
-	vtEncodedev, err := bridge.WatchRequestValueTransferEncoded(nil, chanReqVTencoded, nil, nil, nil)
+	vtEncodedevSub, err := bridge.WatchRequestValueTransferEncoded(nil, chanReqVTencoded, nil, nil, nil)
 	if err != nil {
 		logger.Error("Failed to watch RequestValueTransferEncoded event", "err", err)
 		return err
 	}
-	bm.receivedEvents[addr] = append(bm.receivedEvents[addr], vtEncodedev)
+	bm.receivedEvents[addr] = append(bm.receivedEvents[addr], vtEncodedevSub)
+
+	NFTLockevSub, err := bridge.WatchTemporalTokenIdLock(nil, chanNFTLockEv, nil, nil, nil)
+	if err != nil {
+		logger.Error("Failed to watch WatchLockNFT event", "err", err)
+		return err
+	}
+	bm.lockEvent[addr] = NFTLockevSub
 
 	withdrawnSub, err := bridge.WatchHandleValueTransfer(nil, chanHandleVT, nil, nil, nil)
 	if err != nil {
 		logger.Error("Failed to watch HandleValueTransfer event", "err", err)
-		vtEv.Unsubscribe()
-		vtEncodedev.Unsubscribe()
+		vtEvSub.Unsubscribe()
+		vtEncodedevSub.Unsubscribe()
+		NFTLockevSub.Unsubscribe()
 		delete(bm.receivedEvents, addr)
 		return err
 	}
 	bm.withdrawEvents[addr] = withdrawnSub
 	bridgeInfo, ok := bm.GetBridgeInfo(addr)
 	if !ok {
-		vtEv.Unsubscribe()
-		vtEncodedev.Unsubscribe()
+		vtEvSub.Unsubscribe()
+		vtEncodedevSub.Unsubscribe()
+		NFTLockevSub.Unsubscribe()
 		withdrawnSub.Unsubscribe()
 		delete(bm.receivedEvents, addr)
 		delete(bm.withdrawEvents, addr)
@@ -980,7 +1096,9 @@ func (bm *BridgeManager) subscribeEvent(addr common.Address, bridge *bridgecontr
 	}
 	bridgeInfo.subscribed = true
 
-	go bm.loop(addr, chanReqVT, chanReqVTencoded, chanHandleVT, vtEv, vtEncodedev, withdrawnSub)
+	go bm.loop(addr,
+		chanReqVT, chanReqVTencoded, chanHandleVT, chanNFTLockEv,
+		vtEvSub, vtEncodedevSub, withdrawnSub, NFTLockevSub)
 
 	return nil
 }
@@ -999,6 +1117,12 @@ func (bm *BridgeManager) UnsubscribeEvent(addr common.Address) {
 		delete(bm.withdrawEvents, addr)
 	}
 
+	NFTLocksub := bm.lockEvent[addr]
+	if NFTLocksub != nil {
+		NFTLocksub.Unsubscribe()
+		delete(bm.lockEvent, addr)
+	}
+
 	bridgeInfo, ok := bm.GetBridgeInfo(addr)
 	if ok {
 		bridgeInfo.subscribed = false
@@ -1011,12 +1135,13 @@ func (bm *BridgeManager) loop(
 	chanReqVT <-chan *bridgecontract.BridgeRequestValueTransfer,
 	chanReqVTencoded <-chan *bridgecontract.BridgeRequestValueTransferEncoded,
 	chanHandleVT <-chan *bridgecontract.BridgeHandleValueTransfer,
-	reqVTevSub, reqVTencodedEvSub event.Subscription,
-	handleEventSub event.Subscription,
+	chanNFTLockEv <-chan *bridgecontract.BridgeTemporalTokenIdLock,
+	reqVTevSub, reqVTencodedEvSub, handleEventSub, NFTLockEvSub event.Subscription,
 ) {
 	defer reqVTevSub.Unsubscribe()
 	defer reqVTencodedEvSub.Unsubscribe()
 	defer handleEventSub.Unsubscribe()
+	defer NFTLockEvSub.Unsubscribe()
 
 	bi, ok := bm.GetBridgeInfo(addr)
 	if !ok {
@@ -1035,14 +1160,19 @@ func (bm *BridgeManager) loop(
 			bm.reqVTevEncodedFeeder.Send(RequestValueTransferEncodedEvent{ev})
 		case ev := <-chanHandleVT:
 			bm.handleEventFeeder.Send(&HandleValueTransferEvent{ev})
+		case ev := <-chanNFTLockEv:
+			bm.NFTLockEvFeeder.Send(NFTLockEvent{ev})
 		case err := <-reqVTevSub.Err():
-			logger.Info("Contract Event Loop Running Stop by receivedSub.Err()", "err", err)
+			logger.Info("Contract Event Loop Running Stop by RequestValueTransfer event subscription", "err", err)
 			return
 		case err := <-reqVTencodedEvSub.Err():
-			logger.Info("Contract Event Loop Running Stop by receivedSub.Err()", "err", err)
+			logger.Info("Contract Event Loop Running Stop by RequestValueTransferEncoded event subscription", "err", err)
 			return
 		case err := <-handleEventSub.Err():
-			logger.Info("Contract Event Loop Running Stop by withdrawSub.Err()", "err", err)
+			logger.Info("Contract Event Loop Running Stop by HandlerValueTransfer event subscription", "err", err)
+			return
+		case err := <-NFTLockEvSub.Err():
+			logger.Info("Contract Event Loop Running Stop by NFTLock event subscription", "err", err)
 			return
 		}
 	}
