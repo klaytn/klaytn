@@ -25,6 +25,20 @@ import "./BridgeTransfer.sol";
 
 
 contract BridgeTransferERC721 is BridgeTokens, IERC721BridgeReceiver, BridgeTransfer {
+    function unlockByAlreadyOwned(address tokenAddress, uint256 tokenId) public onlyOperators {
+        IERC721(tokenAddress).transferFrom(address(this), locked[tokenId], tokenId); 
+        releaseLockedToken(tokenId);
+        delete locked[tokenId];
+    }
+
+    function unlockByNotOwned(address tokenAddress, uint256 tokenId) public onlyOperators {
+        if (modeMintBurn) {
+            ERC721Burnable(tokenAddress).burn(tokenId);
+        }
+        releaseLockedToken(tokenId);
+        delete locked[tokenId];
+    }
+
     // handleERC721Transfer sends the ERC721 by the request.
     function handleERC721Transfer(
         bytes32 _requestTxHash,
@@ -66,7 +80,7 @@ contract BridgeTransferERC721 is BridgeTokens, IERC721BridgeReceiver, BridgeTran
         if (modeMintBurn) {
             require(ERC721MetadataMintable(_tokenAddress).mintWithTokenURI(_to, _tokenId, _tokenURI), "mint failed");
         } else {
-            IERC721(_tokenAddress).safeTransferFrom(address(this), _to, _tokenId);
+            IERC721(_tokenAddress).transferFrom(address(this), _to, _tokenId);
         }
     }
 
@@ -87,9 +101,8 @@ contract BridgeTransferERC721 is BridgeTokens, IERC721BridgeReceiver, BridgeTran
         if (success == false) {
             uri = "";
         }
-        if (modeMintBurn) {
-            ERC721Burnable(_tokenAddress).burn(_tokenId);
-        }
+        temporalLock(_tokenAddress, _from, _to, _tokenId);
+
         emit RequestValueTransferEncoded(
             TokenType.ERC721,
             _from,

@@ -33,6 +33,10 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
     uint64 public recoveryBlockNumber = 1; // the block number that recovery start to filter log from.
     mapping(uint64 => uint64) public handleNoncesToBlockNums;  // <request nonce> => <request blockNum>
 
+    mapping (uint256 => address) public locked; // A temporal NFT lock mapping (tokenId, owner)
+    mapping (uint256 => uint) public indexOfLocked; // A mapping for tokenId to index for `lockedIds`
+    uint256[] public lockedIds; // All locekd token IDs
+
     using SafeMath for uint256;
 
     enum TokenType {
@@ -124,6 +128,18 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
         bytes extraData
     );
 
+    /**
+     * Event to log the locked NFT token which should be unlocked by confirmation with p2p message.
+     * @param tokenAddress Address of token contract the token belong to.
+     * @param to address of the account to be received token in the counterpart chain.
+     * @param tokenId token ID of ERC721.
+     */
+    event TemporalTokenIdLock(
+        address indexed tokenAddress,
+        address indexed to,
+        uint256 indexed tokenId
+    );
+
     // _updateHandleNonce increases lower and upper handle nonce after the _requestedNonce is handled.
     function _updateHandleNonce(uint64 _requestedNonce) internal {
         if (_requestedNonce > upperHandleNonce) {
@@ -154,5 +170,41 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
         onlyOwner
     {
         _setFeeReceiver(_feeReceiver);
+    }
+
+    function temporalLock(address tokenAddress, address from, address to, uint256 tokenId) internal {
+        locked[tokenId] = from;
+        indexOfLocked[tokenId] = lockedIds.length;
+        lockedIds.push(tokenId);
+        emit TemporalTokenIdLock(tokenAddress, to, tokenId);
+    }
+
+    function releaseLockedToken(uint256 tokenId) internal {
+        uint idx = indexOfLocked[tokenId];
+        delete indexOfLocked[tokenId];
+        if (idx < lockedIds.length-1) {
+            lockedIds[idx] = lockedIds[lockedIds.length-1];
+            indexOfLocked[lockedIds[idx]] = idx;
+        }
+        lockedIds.pop();
+        delete locked[tokenId];
+    }
+
+    function releaseLockedTokens(uint256[] memory tokenIds) public onlyOperators {
+        for(uint i=0; i<tokenIds.length; i++) {
+            releaseLockedToken(tokenIds[i]);
+        }
+    }
+
+    function getListOfLockedTokenIds() external view returns(uint256[] memory) {
+        return lockedIds;
+    }
+    
+    function getListOfLockedTokenOwners() external view returns(uint256[] memory, address[] memory) {
+        address[] memory lockedAddrs = new address[](lockedIds.length);
+        for (uint i=0; i<lockedIds.length; i++) {
+            lockedAddrs[i] = locked[lockedIds[i]];
+        }
+        return (lockedIds, lockedAddrs);
     }
 }
