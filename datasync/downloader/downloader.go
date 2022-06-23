@@ -587,7 +587,7 @@ func (d *Downloader) Terminate() {
 	d.Cancel()
 }
 
-// fetchHead retrieves the head header and prior pivot block (if available) from
+// fetchHead retrieves the head header and prior pivot header (if available) from
 // a remote peer.
 func (d *Downloader) fetchHead(p *peerConnection) (head *types.Header, pivot *types.Header, err error) {
 	p.logger.Debug("Retrieving remote chain height")
