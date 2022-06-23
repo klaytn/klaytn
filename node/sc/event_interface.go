@@ -112,3 +112,13 @@ func (rEv RequestValueTransferEncodedEvent) GetExtraData() []byte {
 func (rEv RequestValueTransferEncodedEvent) GetRaw() types.Log {
 	return rEv.Raw
 }
+
+//////////////////// type NFTLockEvent struct ////////////////////
+type NFTLockEvent struct {
+	*bridgecontract.BridgeTemporalTokenIdLock
+}
+
+//////////////////// type HandleValueTransferEvent struct ////////////////////
+type HandleValueTransferEvent struct {
+	*bridgecontract.BridgeHandleValueTransfer
+}
