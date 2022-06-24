@@ -27,11 +27,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	klaytnmetrics "github.com/klaytn/klaytn/metrics"
-
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/prque"
+	klaytnmetrics "github.com/klaytn/klaytn/metrics"
 	"github.com/rcrowley/go-metrics"
 )
 
