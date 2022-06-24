@@ -125,8 +125,10 @@ func trieSyncLoop(t *testing.T, count int, sched *TrieSync, srcDB *Database, dis
 			}
 			results[i] = SyncResult{hash, data, nil}
 		}
-		if _, index, err := sched.Process(results); err != nil {
-			t.Fatalf("failed to process result #%d: %v", index, err)
+		for index, result := range results {
+			if err := sched.Process(result); err != nil {
+				t.Fatalf("failed to process result #%d: %v", index, err)
+			}
 		}
 		batch := diskDB.NewBatch()
 		if index, err := sched.Commit(batch); err != nil {
@@ -137,7 +139,7 @@ func trieSyncLoop(t *testing.T, count int, sched *TrieSync, srcDB *Database, dis
 	}
 }
 
-func testIterativeTrieSync(t *testing.T, batch int) {
+func testIterativeTrieSync(t *testing.T, count int) {
 	// Create a random trie to copy
 	srcDb, srcTrie, srcData := makeTestTrie()
 
@@ -148,7 +150,7 @@ func testIterativeTrieSync(t *testing.T, batch int) {
 		triedb := NewDatabase(memDBManager)
 		sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil, NewSyncBloom(1, diskdb), nil)
 
-		trieSyncLoop(t, batch, sched, srcDb, diskdb)
+		trieSyncLoop(t, count, sched, srcDb, diskdb)
 		// Cross check that the two tries are in sync
 		checkTrieContents(t, triedb, srcTrie.Hash().Bytes(), srcData)
 	}
@@ -161,7 +163,7 @@ func testIterativeTrieSync(t *testing.T, batch int) {
 		lruCache, _ := lru.New(int(1 * units.MB / common.HashLength))
 		sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil, nil, lruCache)
 
-		trieSyncLoop(t, batch, sched, srcDb, diskdb)
+		trieSyncLoop(t, count, sched, srcDb, diskdb)
 		// Cross check that the two tries are in sync
 		checkTrieContents(t, triedb, srcTrie.Hash().Bytes(), srcData)
 	}
@@ -173,7 +175,7 @@ func testIterativeTrieSync(t *testing.T, batch int) {
 		triedb := NewDatabase(memDBManager)
 		sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil, nil, nil)
 
-		trieSyncLoop(t, batch, sched, srcDb, diskdb)
+		trieSyncLoop(t, count, sched, srcDb, diskdb)
 		// Cross check that the two tries are in sync
 		checkTrieContents(t, triedb, srcTrie.Hash().Bytes(), srcData)
 	}
@@ -187,7 +189,7 @@ func testIterativeTrieSync(t *testing.T, batch int) {
 		lruCache, _ := lru.New(int(1 * units.MB / common.HashLength))
 		sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil, bloom, lruCache)
 
-		trieSyncLoop(t, batch, sched, srcDb, diskdb)
+		trieSyncLoop(t, count, sched, srcDb, diskdb)
 		// Cross check that the two tries are in sync
 		checkTrieContents(t, triedb, srcTrie.Hash().Bytes(), srcData)
 	}
@@ -216,8 +218,10 @@ func TestIterativeDelayedTrieSync(t *testing.T) {
 			}
 			results[i] = SyncResult{hash, data, nil}
 		}
-		if _, index, err := sched.Process(results); err != nil {
-			t.Fatalf("failed to process result #%d: %v", index, err)
+		for index, result := range results {
+			if err := sched.Process(result); err != nil {
+				t.Fatalf("failed to process result #%d: %v", index, err)
+			}
 		}
 		batch := diskdb.NewBatch()
 		if index, err := sched.Commit(batch); err != nil {
@@ -261,8 +265,10 @@ func testIterativeRandomTrieSync(t *testing.T, count int) {
 			results = append(results, SyncResult{hash, data, nil})
 		}
 		// Feed the retrieved results back and queue new tasks
-		if _, index, err := sched.Process(results); err != nil {
-			t.Fatalf("failed to process result #%d: %v", index, err)
+		for index, result := range results {
+			if err := sched.Process(result); err != nil {
+				t.Fatalf("failed to process result #%d: %v", index, err)
+			}
 		}
 		batch := diskdb.NewBatch()
 		if index, err := sched.Commit(batch); err != nil {
@@ -309,8 +315,10 @@ func TestIterativeRandomDelayedTrieSync(t *testing.T) {
 			}
 		}
 		// Feed the retrieved results back and queue new tasks
-		if _, index, err := sched.Process(results); err != nil {
-			t.Fatalf("failed to process result #%d: %v", index, err)
+		for index, result := range results {
+			if err := sched.Process(result); err != nil {
+				t.Fatalf("failed to process result #%d: %v", index, err)
+			}
 		}
 		batch := diskdb.NewBatch()
 		if index, err := sched.Commit(batch); err != nil {
@@ -357,8 +365,10 @@ func TestDuplicateAvoidanceTrieSync(t *testing.T) {
 
 			results[i] = SyncResult{hash, data, nil}
 		}
-		if _, index, err := sched.Process(results); err != nil {
-			t.Fatalf("failed to process result #%d: %v", index, err)
+		for index, result := range results {
+			if err := sched.Process(result); err != nil {
+				t.Fatalf("failed to process result #%d: %v", index, err)
+			}
 		}
 		batch := diskdb.NewBatch()
 		if index, err := sched.Commit(batch); err != nil {
@@ -396,8 +406,10 @@ func TestIncompleteTrieSync(t *testing.T) {
 			results[i] = SyncResult{hash, data, nil}
 		}
 		// Process each of the trie nodes
-		if _, index, err := sched.Process(results); err != nil {
-			t.Fatalf("failed to process result #%d: %v", index, err)
+		for index, result := range results {
+			if err := sched.Process(result); err != nil {
+				t.Fatalf("failed to process result #%d: %v", index, err)
+			}
 		}
 		batch := diskdb.NewBatch()
 		if index, err := sched.Commit(batch); err != nil {

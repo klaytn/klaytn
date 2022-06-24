@@ -66,6 +66,8 @@ func NewChannelManager(channelSize int) *ChannelManager {
 	channelMgr.RegisterMsgCode(MiscChannel, StatusMsg)
 	channelMgr.RegisterMsgCode(MiscChannel, NodeDataRequestMsg)
 	channelMgr.RegisterMsgCode(MiscChannel, NodeDataMsg)
+	channelMgr.RegisterMsgCode(MiscChannel, StakingInfoRequestMsg)
+	channelMgr.RegisterMsgCode(MiscChannel, StakingInfoMsg)
 
 	return channelMgr
 }

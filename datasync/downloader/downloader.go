@@ -34,19 +34,21 @@ import (
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/storage/statedb"
 	"github.com/rcrowley/go-metrics"
 )
 
 var (
-	MaxHashFetch    = 512 // Amount of hashes to be fetched per retrieval request
-	MaxBlockFetch   = 128 // Amount of blocks to be fetched per retrieval request
-	MaxHeaderFetch  = 192 // Amount of block headers to be fetched per retrieval request
-	MaxSkeletonSize = 128 // Number of header fetches to need for a skeleton assembly
-	MaxBodyFetch    = 128 // Amount of block bodies to be fetched per retrieval request
-	MaxReceiptFetch = 256 // Amount of transaction receipts to allow fetching per request
-	MaxStateFetch   = 384 // Amount of node state values to allow fetching per request
+	MaxHashFetch        = 512 // Amount of hashes to be fetched per retrieval request
+	MaxBlockFetch       = 128 // Amount of blocks to be fetched per retrieval request
+	MaxHeaderFetch      = 192 // Amount of block headers to be fetched per retrieval request
+	MaxSkeletonSize     = 128 // Number of header fetches to need for a skeleton assembly
+	MaxBodyFetch        = 128 // Amount of block bodies to be fetched per retrieval request
+	MaxReceiptFetch     = 256 // Amount of transaction receipts to allow fetching per request
+	MaxStakingInfoFetch = 128 // Amount of staking information to allow fetching per request
+	MaxStateFetch       = 384 // Amount of node state values to allow fetching per request
 
 	MaxForkAncestry  = 3 * params.EpochDuration // Maximum chain reorganisation
 	rttMinEstimate   = 2 * time.Second          // Minimum round-trip time to target for download requests
@@ -100,7 +102,7 @@ type Downloader struct {
 	peers *peerSet // Set of active peers from which download can proceed
 
 	stateDB    database.DBManager // Database to state sync into (and deduplicate via)
-	stateBloom *statedb.SyncBloom // Bloom filter for fast trie node existence checks
+	stateBloom *statedb.SyncBloom // Bloom filter for fast trie node and contract code existence checks
 
 	rttEstimate   uint64 // Round trip time to target for download requests
 	rttConfidence uint64 // Confidence in the estimated RTT (unit: millionths to allow atomic ops)
@@ -124,12 +126,14 @@ type Downloader struct {
 	committed       int32
 
 	// Channels
-	headerCh      chan dataPack        // [klay/62] Channel receiving inbound block headers
-	bodyCh        chan dataPack        // [klay/62] Channel receiving inbound block bodies
-	receiptCh     chan dataPack        // [klay/63] Channel receiving inbound receipts
-	bodyWakeCh    chan bool            // [klay/62] Channel to signal the block body fetcher of new tasks
-	receiptWakeCh chan bool            // [klay/63] Channel to signal the receipt fetcher of new tasks
-	headerProcCh  chan []*types.Header // [klay/62] Channel to feed the header processor new tasks
+	headerCh          chan dataPack        // [klay/62] Channel receiving inbound block headers
+	bodyCh            chan dataPack        // [klay/62] Channel receiving inbound block bodies
+	receiptCh         chan dataPack        // [klay/63] Channel receiving inbound receipts
+	stakingInfoCh     chan dataPack        // [klay/65] Channel receiving inbound staking infos
+	bodyWakeCh        chan bool            // [klay/62] Channel to signal the block body fetcher of new tasks
+	receiptWakeCh     chan bool            // [klay/63] Channel to signal the receipt fetcher of new tasks
+	stakingInfoWakeCh chan bool            // [klay/65] Channel to signal the staking info fetcher of new tasks
+	headerProcCh      chan []*types.Header // [klay/62] Channel to feed the header processor new tasks
 
 	// for stateFetcher
 	stateSyncStart chan *stateSync
@@ -146,10 +150,11 @@ type Downloader struct {
 	quitLock sync.RWMutex  // Lock to prevent double closes
 
 	// Testing hooks
-	syncInitHook     func(uint64, uint64)  // Method to call upon initiating a new sync run
-	bodyFetchHook    func([]*types.Header) // Method to call upon starting a block body fetch
-	receiptFetchHook func([]*types.Header) // Method to call upon starting a receipt fetch
-	chainInsertHook  func([]*fetchResult)  // Method to call upon inserting a chain of blocks (possibly in multiple invocations)
+	syncInitHook         func(uint64, uint64)  // Method to call upon initiating a new sync run
+	bodyFetchHook        func([]*types.Header) // Method to call upon starting a block body fetch
+	receiptFetchHook     func([]*types.Header) // Method to call upon starting a receipt fetch
+	stakingInfoFetchHook func([]*types.Header) // Method to call upon starting a staking info fetch
+	chainInsertHook      func([]*fetchResult)  // Method to call upon inserting a chain of blocks (possibly in multiple invocations)
 }
 
 // LightChain encapsulates functions required to synchronise a light chain.
@@ -200,32 +205,34 @@ type BlockChain interface {
 }
 
 // New creates a new downloader to fetch hashes and blocks from remote peers.
-func New(mode SyncMode, stateDB database.DBManager, stateBloom *statedb.SyncBloom, mux *event.TypeMux, chain BlockChain, lightchain LightChain, dropPeer peerDropFn) *Downloader {
+func New(mode SyncMode, stateDB database.DBManager, stateBloom *statedb.SyncBloom, mux *event.TypeMux, chain BlockChain, lightchain LightChain, dropPeer peerDropFn, proposerPolicy uint64) *Downloader {
 	if lightchain == nil {
 		lightchain = chain
 	}
 
 	dl := &Downloader{
-		mode:           uint32(mode),
-		stateDB:        stateDB,
-		stateBloom:     stateBloom,
-		mux:            mux,
-		queue:          newQueue(blockCacheMaxItems, blockCacheInitialItems),
-		peers:          newPeerSet(),
-		rttEstimate:    uint64(rttMaxEstimate),
-		rttConfidence:  uint64(1000000),
-		blockchain:     chain,
-		lightchain:     lightchain,
-		dropPeer:       dropPeer,
-		headerCh:       make(chan dataPack, 1),
-		bodyCh:         make(chan dataPack, 1),
-		receiptCh:      make(chan dataPack, 1),
-		bodyWakeCh:     make(chan bool, 1),
-		receiptWakeCh:  make(chan bool, 1),
-		headerProcCh:   make(chan []*types.Header, 1),
-		quitCh:         make(chan struct{}),
-		stateCh:        make(chan dataPack),
-		stateSyncStart: make(chan *stateSync),
+		mode:              uint32(mode),
+		stateDB:           stateDB,
+		stateBloom:        stateBloom,
+		mux:               mux,
+		queue:             newQueue(blockCacheMaxItems, blockCacheInitialItems, proposerPolicy),
+		peers:             newPeerSet(),
+		rttEstimate:       uint64(rttMaxEstimate),
+		rttConfidence:     uint64(1000000),
+		blockchain:        chain,
+		lightchain:        lightchain,
+		dropPeer:          dropPeer,
+		headerCh:          make(chan dataPack, 1),
+		bodyCh:            make(chan dataPack, 1),
+		receiptCh:         make(chan dataPack, 1),
+		stakingInfoCh:     make(chan dataPack, 1),
+		bodyWakeCh:        make(chan bool, 1),
+		receiptWakeCh:     make(chan bool, 1),
+		stakingInfoWakeCh: make(chan bool, 1),
+		headerProcCh:      make(chan []*types.Header, 1),
+		quitCh:            make(chan struct{}),
+		stateCh:           make(chan dataPack),
+		stateSyncStart:    make(chan *stateSync),
 		syncStatsState: stateSyncStats{
 			processed: stateDB.ReadFastTrieProgress(),
 		},
@@ -376,13 +383,13 @@ func (d *Downloader) synchronise(id string, hash common.Hash, td *big.Int, mode 
 	d.queue.Reset(blockCacheMaxItems, blockCacheInitialItems)
 	d.peers.Reset()
 
-	for _, ch := range []chan bool{d.bodyWakeCh, d.receiptWakeCh} {
+	for _, ch := range []chan bool{d.bodyWakeCh, d.receiptWakeCh, d.stakingInfoWakeCh} {
 		select {
 		case <-ch:
 		default:
 		}
 	}
-	for _, ch := range []chan dataPack{d.headerCh, d.bodyCh, d.receiptCh} {
+	for _, ch := range []chan dataPack{d.headerCh, d.bodyCh, d.receiptCh, d.stakingInfoCh} {
 		for empty := false; !empty; {
 			select {
 			case <-ch:
@@ -483,6 +490,7 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 		func() error { return d.fetchHeaders(p, origin+1, pivot) }, // Headers are always retrieved
 		func() error { return d.fetchBodies(origin + 1) },          // Bodies are retrieved during normal and fast sync
 		func() error { return d.fetchReceipts(origin + 1) },        // Receipts are retrieved during fast sync
+		func() error { return d.fetchStakingInfos(origin + 1) },    // StakingInfos are retrieved during fast sync
 		func() error { return d.processHeaders(origin+1, pivot, td) },
 	}
 	if mode == FastSync {
@@ -605,6 +613,7 @@ func (d *Downloader) fetchHeight(p *peerConnection) (*types.Header, error) {
 
 		case <-d.bodyCh:
 		case <-d.receiptCh:
+		case <-d.stakingInfoCh:
 			// Out of bounds delivery, ignore
 		}
 	}
@@ -703,6 +712,7 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 
 		case <-d.bodyCh:
 		case <-d.receiptCh:
+		case <-d.stakingInfoCh:
 			// Out of bounds delivery, ignore
 		}
 	}
@@ -767,6 +777,7 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 
 			case <-d.bodyCh:
 			case <-d.receiptCh:
+			case <-d.stakingInfoCh:
 				// Out of bounds delivery, ignore
 			}
 		}
@@ -896,7 +907,7 @@ func (d *Downloader) fetchHeaders(p *peerConnection, from uint64, pivot uint64) 
 			d.dropPeer(p.id)
 
 			// Finish the sync gracefully instead of dumping the gathered data though
-			for _, ch := range []chan bool{d.bodyWakeCh, d.receiptWakeCh} {
+			for _, ch := range []chan bool{d.bodyWakeCh, d.receiptWakeCh, d.stakingInfoWakeCh} {
 				select {
 				case ch <- false:
 				case <-d.cancelCh:
@@ -1000,6 +1011,33 @@ func (d *Downloader) fetchReceipts(from uint64) error {
 		d.receiptFetchHook, fetch, d.queue.CancelReceipts, capacity, d.peers.ReceiptIdlePeers, setIdle, "receipts")
 
 	logger.Debug("Transaction receipt download terminated", "err", err, "elapsed", time.Since(start))
+	return err
+}
+
+// fetchStakingInfos iteratively downloads the scheduled staking information, taking any
+// available peers, reserving a chunk of staking information for each, waiting for delivery
+// and also periodically checking for timeouts.
+func (d *Downloader) fetchStakingInfos(from uint64) error {
+	logger.Debug("Downloading staking information", "origin", from)
+
+	start := time.Now()
+	var (
+		deliver = func(packet dataPack) (int, error) {
+			pack := packet.(*stakingInfoPack)
+			return d.queue.DeliverStakingInfos(pack.peerId, pack.stakingInfos)
+		}
+		expire   = func() map[string]int { return d.queue.ExpireStakingInfos(d.requestTTL()) }
+		fetch    = func(p *peerConnection, req *fetchRequest) error { return p.FetchStakingInfo(req) }
+		capacity = func(p *peerConnection) int { return p.StakingInfoCapacity(d.requestRTT()) }
+		setIdle  = func(p *peerConnection, accepted int, deliveryTime time.Time) {
+			p.SetStakingInfoIdle(accepted, deliveryTime)
+		}
+	)
+	err := d.fetchParts(d.stakingInfoCh, deliver, d.stakingInfoWakeCh, expire,
+		d.queue.PendingStakingInfos, d.queue.InFlightStakingInfos, d.queue.ReserveStakingInfos,
+		d.stakingInfoFetchHook, fetch, d.queue.CancelStakingInfo, capacity, d.peers.StakingInfoIdlePeers, setIdle, "stakingInfos")
+
+	logger.Debug("Staking information download terminated", "err", err, "elapsed", time.Since(start))
 	return err
 }
 
@@ -1253,7 +1291,7 @@ func (d *Downloader) processHeaders(origin uint64, pivot uint64, td *big.Int) er
 			// Terminate header processing if we synced up
 			if len(headers) == 0 {
 				// Notify everyone that headers are fully processed
-				for _, ch := range []chan bool{d.bodyWakeCh, d.receiptWakeCh} {
+				for _, ch := range []chan bool{d.bodyWakeCh, d.receiptWakeCh, d.stakingInfoWakeCh} {
 					select {
 					case ch <- false:
 					case <-d.cancelCh:
@@ -1370,7 +1408,7 @@ func (d *Downloader) processHeaders(origin uint64, pivot uint64, td *big.Int) er
 			d.syncStatsLock.Unlock()
 
 			// Signal the content downloaders of the availablility of new tasks
-			for _, ch := range []chan bool{d.bodyWakeCh, d.receiptWakeCh} {
+			for _, ch := range []chan bool{d.bodyWakeCh, d.receiptWakeCh, d.stakingInfoWakeCh} {
 				select {
 				case ch <- true:
 				default:
@@ -1567,6 +1605,14 @@ func (d *Downloader) commitFastSyncData(results []*fetchResult, stateSync *state
 	for i, result := range results {
 		blocks[i] = types.NewBlockWithHeader(result.Header).WithBody(result.Transactions)
 		receipts[i] = result.Receipts
+		if result.StakingInfo != nil {
+			if err := reward.AddStakingInfoToDB(result.StakingInfo); err != nil {
+				logger.Error("Inserting downloaded staking info is failed", "err", err)
+				return fmt.Errorf("failed to insert the downloaded staking information: %v", err)
+			} else {
+				logger.Info("Imported new staking information", "number", result.StakingInfo.BlockNum)
+			}
+		}
 	}
 	if index, err := d.blockchain.InsertReceiptChain(blocks, receipts); err != nil {
 		logger.Debug("Downloaded item processing failed", "number", results[index].Header.Number, "hash", results[index].Header.Hash(), "err", err)
@@ -1578,6 +1624,14 @@ func (d *Downloader) commitFastSyncData(results []*fetchResult, stateSync *state
 func (d *Downloader) commitPivotBlock(result *fetchResult) error {
 	block := types.NewBlockWithHeader(result.Header).WithBody(result.Transactions)
 	logger.Debug("Committing fast sync pivot as new head", "number", block.Number(), "hash", block.Hash())
+	if result.StakingInfo != nil {
+		if err := reward.AddStakingInfoToDB(result.StakingInfo); err != nil {
+			logger.Error("Inserting downloaded staking info is failed on pivot block", "err", err, "pivot", block.Number())
+			return fmt.Errorf("failed to insert the downloaded staking information on pivot block (%v) : %v", block.Number(), err)
+		} else {
+			logger.Info("Imported new staking information on pivot block", "number", result.StakingInfo.BlockNum, "pivot", block.Number())
+		}
+	}
 	if _, err := d.blockchain.InsertReceiptChain([]*types.Block{block}, []types.Receipts{result.Receipts}); err != nil {
 		return err
 	}
@@ -1611,6 +1665,11 @@ func (d *Downloader) DeliverBodies(id string, transactions [][]*types.Transactio
 // DeliverReceipts injects a new batch of receipts received from a remote node.
 func (d *Downloader) DeliverReceipts(id string, receipts [][]*types.Receipt) (err error) {
 	return d.deliver(id, d.receiptCh, &receiptPack{id, receipts}, receiptInMeter, receiptDropMeter)
+}
+
+// DeliverStakingInfos injects a new batch of staking information received from a remote node.
+func (d *Downloader) DeliverStakingInfos(id string, stakingInfos []*reward.StakingInfo) error {
+	return d.deliver(id, d.stakingInfoCh, &stakingInfoPack{id, stakingInfos}, stakingInfoInMeter, stakingInfoDropMeter)
 }
 
 // DeliverNodeData injects a new batch of node state data received from a remote node.
