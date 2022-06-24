@@ -122,24 +122,11 @@ func (BitCurve *BitCurve) IsOnCurve(x, y *big.Int) bool {
 // affineFromJacobian reverses the Jacobian transform. See the comment at the
 // top of the file.
 func (BitCurve *BitCurve) affineFromJacobian(x, y, z *big.Int) (xOut, yOut *big.Int) {
-	zinv := new(big.Int).ModInverse(z, BitCurve.P)
-	//GX-TODO:	Introduce a permanent fix
-	//	When passed with x==y==z==0, ModInverse(z, BitCurve.P) results `nil` which leads to new(big.Int).Mul(nil, nil).
-	//	The above parameter condition can be easily met in cases such as adding the same elliptic curve points.
-	//
-	//	Problem:
-	// 		big.Int.Mul(nil, nil) causes SIGSEGV
-	//	Analysis:
-	// 		In Go 1.10.3, ModInverse(0, any) returns 0 (not by design though). The implementation has changed in Go 1.11
-	// 		and ModInverse explicitly returns nil. As zinv := new(big.Int).ModInverse(z, BitCurve.P) stores nil in zinv,
-	// 		zinvsq := new(big.Int).Mul(zinv, zinv) fails with SIGSEGV as it invokes new(big.Int).Mul(nil, nil).
-	//	Fix:
-	//		The following if-block is added to fix the problem temporarily. This is okay since the inverse of 0
-	//		resides in ring R = {0}.
-	if zinv == nil {
-		zinv = new(big.Int)
+	if z.Sign() == 0 {
+		return new(big.Int), new(big.Int)
 	}
 
+	zinv := new(big.Int).ModInverse(z, BitCurve.P)
 	zinvsq := new(big.Int).Mul(zinv, zinv)
 
 	xOut = new(big.Int).Mul(x, zinvsq)
