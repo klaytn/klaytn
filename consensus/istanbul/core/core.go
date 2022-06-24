@@ -39,7 +39,7 @@ import (
 
 const (
 	// The number in exceptional case
-	// If the number of validators is lower than 6, the chain could be forked by round change
+	// If the number of validators is 6 or less, the chain could be forked by round change
 	ExceptionalValidatorsNumber = 6
 )
 
