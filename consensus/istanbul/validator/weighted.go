@@ -806,7 +806,7 @@ func calcTotalAmount(weightedValidators []*weightedValidator, stakingInfo *rewar
 				tempStakingAmounts = append(tempStakingAmounts, stakingAmounts[vIdx])
 			}
 		}
-		gini := reward.CalcGiniCoefficient(tempStakingAmounts)
+		gini = reward.CalcGiniCoefficient(tempStakingAmounts)
 
 		for i := range stakingAmounts {
 			stakingAmounts[i] = math.Round(math.Pow(stakingAmounts[i], 1.0/(1+gini)))
