@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
 )
@@ -62,6 +63,11 @@ func generateStakingManagerTestCases() []stakingManagerTestCase {
 	}
 }
 
+func resetStakingManagerForTest() {
+	GetStakingManager().stakingInfoCache = newStakingInfoCache()
+	GetStakingManager().stakingInfoDB = database.NewMemoryDBManager()
+}
+
 func TestStakingManager_NewStakingManager(t *testing.T) {
 	// test if nil
 	assert.Nil(t, GetStakingManager())
@@ -93,10 +99,11 @@ func checkGetStakingInfo(t *testing.T) {
 
 // Check that StakinInfo are loaded from cache
 func TestStakingManager_GetFromCache(t *testing.T) {
-	stakingManager := NewStakingManager(newTestBlockChain(), newDefaultTestGovernance(), nil)
+	log.EnableLogForTest(log.LvlCrit, log.LvlDebug)
+	resetStakingManagerForTest()
 
 	for _, testdata := range stakingManagerTestData {
-		stakingManager.stakingInfoCache.add(testdata)
+		GetStakingManager().stakingInfoCache.add(testdata)
 	}
 
 	checkGetStakingInfo(t)
@@ -104,8 +111,8 @@ func TestStakingManager_GetFromCache(t *testing.T) {
 
 // Check that StakinInfo are loaded from database
 func TestStakingManager_GetFromDB(t *testing.T) {
-	db := database.NewMemoryDBManager()
-	NewStakingManager(newTestBlockChain(), newDefaultTestGovernance(), db)
+	log.EnableLogForTest(log.LvlCrit, log.LvlDebug)
+	resetStakingManagerForTest()
 
 	for _, testdata := range stakingManagerTestData {
 		AddStakingInfoToDB(testdata)
@@ -116,14 +123,15 @@ func TestStakingManager_GetFromDB(t *testing.T) {
 
 // Even if Gini was -1 in the cache, GetStakingInfo returns valid Gini
 func TestStakingManager_FillGiniFromCache(t *testing.T) {
-	stakingManager := NewStakingManager(newTestBlockChain(), newDefaultTestGovernance(), nil)
+	log.EnableLogForTest(log.LvlCrit, log.LvlDebug)
+	resetStakingManagerForTest()
 
 	for _, testdata := range stakingManagerTestData {
 		// Insert a modified copy of testdata to cache
 		copydata := &StakingInfo{}
 		json.Unmarshal([]byte(testdata.String()), copydata)
 		copydata.Gini = -1 // Suppose Gini was -1 in the cache
-		stakingManager.stakingInfoCache.add(copydata)
+		GetStakingManager().stakingInfoCache.add(copydata)
 	}
 
 	checkGetStakingInfo(t)
@@ -131,15 +139,15 @@ func TestStakingManager_FillGiniFromCache(t *testing.T) {
 
 // Even if Gini was -1 in the DB, GetStakingInfo returns valid Gini
 func TestStakingManager_FillGiniFromDB(t *testing.T) {
-	db := database.NewMemoryDBManager()
-	NewStakingManager(newTestBlockChain(), newDefaultTestGovernance(), db)
+	log.EnableLogForTest(log.LvlCrit, log.LvlDebug)
+	resetStakingManagerForTest()
 
 	for _, testdata := range stakingManagerTestData {
 		// Insert a modified copy of testdata to cache
 		copydata := &StakingInfo{}
 		json.Unmarshal([]byte(testdata.String()), copydata)
 		copydata.Gini = -1 // Suppose Gini was -1 in the cache
-		AddStakingInfoToDB(testdata)
+		AddStakingInfoToDB(copydata)
 	}
 
 	checkGetStakingInfo(t)

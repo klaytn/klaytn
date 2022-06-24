@@ -226,7 +226,6 @@ func fillMissingGiniCoefficient(stakingInfo *StakingInfo, number uint64) error {
 	// - Gini was calculated but there was no eligible node, so Gini = -1.
 	// For the second case, in theory we won't have to recalculalte Gini,
 	// but there is no way to distinguish both. So we just recalculate.
-
 	minStaking, err := stakingManager.governanceHelper.GetMinimumStakingAtNumber(number)
 	if err != nil {
 		return err
@@ -238,6 +237,7 @@ func fillMissingGiniCoefficient(stakingInfo *StakingInfo, number uint64) error {
 	}
 
 	stakingInfo.Gini = c.CalcGiniCoefficient(minStaking)
+	logger.Debug("Calculated missing Gini for stored StakingInfo", "number", number, "gini", stakingInfo.Gini)
 	return nil
 }
 

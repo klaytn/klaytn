@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -56,12 +57,15 @@ func generateStakingInfoTestCases() []stakingInfoTestCase {
 
 		a0 uint64 = 0
 		aL uint64 = 1000000  // less than minstaking
-		aM uint64 = 5000000  // exactly minstaking
+		aM uint64 = 2000000  // exactly minstaking (params.DefaultMinimumStake)
 		a1 uint64 = 10000000 // above minstaking. Using 1,2,4,8 to uniquely spot errors
 		a2 uint64 = 20000000
 		a3 uint64 = 40000000
 		a4 uint64 = 80000000
 	)
+	if aM != params.DefaultMinimumStake.Uint64() {
+		panic("broken test assumption")
+	}
 
 	return []stakingInfoTestCase{
 		// Empty
@@ -154,7 +158,7 @@ func generateStakingInfoTestCases() []stakingInfoTestCase {
 				KIRAddr:               kir,
 				PoCAddr:               poc,
 				UseGini:               true,
-				Gini:                  0.30,                     // Gini(20, 5)
+				Gini:                  0.41,                     // Gini(20, 2)
 				CouncilStakingAmounts: []uint64{a2, aM, aL, a0}, // aL and a0 should be ignored in Gini calculation
 			},
 			expectedConsolidated: &ConsolidatedStakingInfo{
@@ -375,7 +379,7 @@ func TestConsolidatedStakingInfo(t *testing.T) {
 
 		// Test CalcGiniCoefficient()
 		expectedGini := testcase.stakingInfo.Gini
-		gini := c.CalcGiniCoefficient(5000000)
+		gini := c.CalcGiniCoefficient(2000000)
 		assert.Equal(t, expectedGini, gini)
 
 		// Test GetConsolidatedNode()
