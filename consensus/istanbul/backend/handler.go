@@ -43,8 +43,8 @@ var (
 	// TODO-Klaytn-Istanbul: define Versions and Lengths with correct values.
 	istanbulProtocol = consensus.Protocol{
 		Name:     "istanbul",
-		Versions: []uint{64},
-		Lengths:  []uint64{21},
+		Versions: []uint{65, 64},
+		Lengths:  []uint64{23, 21},
 	}
 )
 
