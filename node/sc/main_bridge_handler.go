@@ -141,7 +141,7 @@ func (mbh *MainBridgeHandler) handleServiceChainParentChainInfoRequestMsg(p Brid
 	chainCfg := mbh.mainbridge.blockchain.Config()
 	pcInfo := parentChainInfo{
 		nonce,
-		chainCfg.UnitPrice,
+		mbh.mainbridge.txPool.GasPrice().Uint64(),
 		params.KIP71Config{
 			LowerBoundBaseFee:         chainCfg.Governance.KIP71.LowerBoundBaseFee,
 			UpperBoundBaseFee:         chainCfg.Governance.KIP71.UpperBoundBaseFee,

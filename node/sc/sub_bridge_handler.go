@@ -182,13 +182,6 @@ func (sbh *SubBridgeHandler) setRemoteGasPrice(gasPrice uint64) {
 
 // setRemoteChainValues sets parent chain's configuration values
 func (sbh *SubBridgeHandler) setRemoteChainValues(pcInfo parentChainInfo) {
-	/*
-		///////////////////// KIP71 Test ///////////////////////////
-		sbh.subbridge.blockchain.Config().KIP71CompatibleBlock = big.NewInt(100)
-		headerNum := big.NewInt(101)
-		////////////////////////////////////////////////////////////
-	*/
-
 	headerNum := sbh.subbridge.blockchain.CurrentHeader().Number
 	sbh.setRemoteGasPrice(pcInfo.GasPrice)
 	if sbh.subbridge.blockchain.Config().IsKIP71ForkEnabled(headerNum) {
@@ -384,13 +377,6 @@ func (sbh *SubBridgeHandler) LocalChainHeadEvent(block *types.Block) {
 }
 
 func (sbh *SubBridgeHandler) handleParentChainInvalidTxResponseMsg(msg p2p.Msg) error {
-	/*
-		///////////////////// KIP71 Test ///////////////////////////
-		sbh.subbridge.blockchain.Config().KIP71CompatibleBlock = big.NewInt(100)
-		headerNum := big.NewInt(101)
-		////////////////////////////////////////////////////////////
-	*/
-
 	headerNum := sbh.subbridge.blockchain.CurrentHeader().Number
 	var invalidTxs []InvalidParentChainTx
 	if err := msg.Decode(&invalidTxs); err != nil && err != rlp.EOL {
@@ -400,9 +386,9 @@ func (sbh *SubBridgeHandler) handleParentChainInvalidTxResponseMsg(msg p2p.Msg) 
 	for _, invalidTx := range invalidTxs {
 		if tx := txPool.Get(invalidTx.TxHash); tx != nil {
 			logger.Error("A bridge tx was not executed", "err", invalidTx.ErrStr,
-				"prevGasPrice", sbh.subbridge.bridgeAccounts.GetParentGasPrice(), "txHash", invalidTx.TxHash.String(),
-				"txGasPrice", tx.GasPrice().Uint64(),
-				"txHash", tx.Hash().String())
+				"prevGasPrice", sbh.subbridge.bridgeAccounts.GetParentGasPrice(),
+				"txHash", invalidTx.TxHash.String(),
+				"txGasPrice", tx.GasPrice().Uint64())
 			if sbh.subbridge.blockchain.Config().IsKIP71ForkEnabled(headerNum) &&
 				invalidTx.ErrStr == blockchain.ErrGasPriceBelowBaseFee.Error() {
 				logger.Info("Request gasPrice and KIP71 values to parent chain")

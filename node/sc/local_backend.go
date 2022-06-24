@@ -188,7 +188,7 @@ func (lb *LocalBackend) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
 	if err := checkCtx(ctx); err != nil {
 		return nil, err
 	}
-	return new(big.Int).SetUint64(lb.config.UnitPrice), nil
+	return new(big.Int).SetUint64(lb.config.Governance.KIP71.UpperBoundBaseFee), nil
 }
 
 func (lb *LocalBackend) EstimateGas(ctx context.Context, call klaytn.CallMsg) (gas uint64, err error) {
