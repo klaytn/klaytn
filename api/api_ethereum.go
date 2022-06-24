@@ -58,7 +58,10 @@ const (
 	ZeroUncleCount uint = 0
 )
 
-var errNoMiningWork = errors.New("no mining work available yet")
+var (
+	errNoMiningWork  = errors.New("no mining work available yet")
+	errNotFoundBlock = errors.New("can't find a block in database")
+)
 
 // EthereumAPI provides an API to access the Klaytn through the `eth` namespace.
 // TODO-Klaytn: Removed unused variable
@@ -919,6 +922,9 @@ func (api *EthereumAPI) GetTransactionByHash(ctx context.Context, hash common.Ha
 		block, err := txpoolAPI.BlockByHash(ctx, blockHash)
 		if err != nil {
 			return nil, err
+		}
+		if block == nil {
+			return nil, errNotFoundBlock
 		}
 		return newEthRPCTransaction(block, tx, blockHash, blockNumber, index), nil
 	}
