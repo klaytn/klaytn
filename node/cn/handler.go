@@ -38,6 +38,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus"
+	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/datasync/downloader"
 	"github.com/klaytn/klaytn/datasync/fetcher"
@@ -76,7 +77,11 @@ const (
 // errIncompatibleConfig is returned if the requested protocols and configs are
 // not compatible (low protocol version restrictions and high requirements).
 var errIncompatibleConfig = errors.New("incompatible configuration")
-var errUnknownProcessingError = errors.New("unknown error during the msg processing")
+
+var (
+	errUnknownProcessingError  = errors.New("unknown error during the msg processing")
+	errUnsupportedEnginePolicy = errors.New("unsupported engine or policy")
+)
 
 func errResp(code errCode, format string, v ...interface{}) error {
 	return fmt.Errorf("%v - %v", code, fmt.Sprintf(format, v...))
@@ -254,7 +259,11 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		if atomic.LoadUint32(&manager.fastSync) == 1 {
 			stateBloom = statedb.NewSyncBloom(uint64(cacheLimit), chainDB.GetStateTrieDB())
 		}
-		manager.downloader = downloader.New(mode, chainDB, stateBloom, manager.eventMux, blockchain, nil, manager.removePeer)
+		var proposerPolicy uint64
+		if config.Istanbul != nil {
+			proposerPolicy = config.Istanbul.ProposerPolicy
+		}
+		manager.downloader = downloader.New(mode, chainDB, stateBloom, manager.eventMux, blockchain, nil, manager.removePeer, proposerPolicy)
 	}
 
 	// Create and set fetcher
@@ -920,6 +929,10 @@ func handleReceiptsMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 
 // handleStakingInfoRequestMsg handles staking information request message.
 func handleStakingInfoRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
+	if pm.chainconfig.Istanbul == nil || pm.chainconfig.Istanbul.ProposerPolicy != uint64(istanbul.WeightedRandom) {
+		return errResp(ErrUnsupportedEnginePolicy, "the engine is not istanbul or the policy is not weighted random")
+	}
+
 	// Decode the retrieval message
 	msgStream := rlp.NewStream(msg.Payload, uint64(msg.Size))
 	if _, err := msgStream.List(); err != nil {
@@ -959,6 +972,10 @@ func handleStakingInfoRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error
 
 // handleStakingInfoMsg handles staking information response message.
 func handleStakingInfoMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
+	if pm.chainconfig.Istanbul == nil || pm.chainconfig.Istanbul.ProposerPolicy != uint64(istanbul.WeightedRandom) {
+		return errResp(ErrUnsupportedEnginePolicy, "the engine is not istanbul or the policy is not weighted random")
+	}
+
 	// A batch of stakingInfos arrived to one of our previous requests
 	var stakingInfos []*reward.StakingInfo
 	if err := msg.Decode(&stakingInfos); err != nil {
