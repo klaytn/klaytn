@@ -598,12 +598,12 @@ func (diff *EthStateOverride) Apply(state *state.StateDB) error {
 // Note, this function doesn't make and changes in the state/blockchain and is
 // useful to execute and retrieve values.
 func (api *EthereumAPI) Call(ctx context.Context, args EthTransactionArgs, blockNrOrHash rpc.BlockNumberOrHash, overrides *EthStateOverride) (hexutil.Bytes, error) {
-	backend := api.publicBlockChainAPI.b
+	bcAPI := api.publicBlockChainAPI.b
 	gasCap := uint64(0)
-	if rpcGasCap := backend.RPCGasCap(); rpcGasCap != nil {
+	if rpcGasCap := bcAPI.RPCGasCap(); rpcGasCap != nil {
 		gasCap = rpcGasCap.Uint64()
 	}
-	result, _, status, err := EthDoCall(ctx, backend, args, blockNrOrHash, overrides, localTxExecutionTime, gasCap)
+	result, _, status, err := EthDoCall(ctx, bcAPI, args, blockNrOrHash, overrides, localTxExecutionTime, gasCap)
 	if err != nil {
 		return nil, err
 	}
@@ -618,16 +618,16 @@ func (api *EthereumAPI) Call(ctx context.Context, args EthTransactionArgs, block
 // EstimateGas returns an estimate of the amount of gas needed to execute the
 // given transaction against the current pending block.
 func (api *EthereumAPI) EstimateGas(ctx context.Context, args EthTransactionArgs, blockNrOrHash *rpc.BlockNumberOrHash) (hexutil.Uint64, error) {
-	backend := api.publicBlockChainAPI.b
+	bcAPI := api.publicBlockChainAPI.b
 	bNrOrHash := rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber)
 	if blockNrOrHash != nil {
 		bNrOrHash = *blockNrOrHash
 	}
 	gasCap := uint64(0)
-	if rpcGasCap := backend.RPCGasCap(); rpcGasCap != nil {
+	if rpcGasCap := bcAPI.RPCGasCap(); rpcGasCap != nil {
 		gasCap = rpcGasCap.Uint64()
 	}
-	return EthDoEstimateGas(ctx, backend, args, bNrOrHash, gasCap)
+	return EthDoEstimateGas(ctx, bcAPI, args, bNrOrHash, gasCap)
 }
 
 // GetBlockTransactionCountByNumber returns the number of transactions in the block with the given block number.
@@ -912,18 +912,18 @@ func (api *EthereumAPI) GetTransactionCount(ctx context.Context, address common.
 
 // GetTransactionByHash returns the transaction for the given hash.
 func (api *EthereumAPI) GetTransactionByHash(ctx context.Context, hash common.Hash) (*EthRPCTransaction, error) {
-	b := api.publicTransactionPoolAPI.b
+	txpoolAPI := api.publicTransactionPoolAPI.b
 
 	// Try to return an already finalized transaction
-	if tx, blockHash, blockNumber, index := b.ChainDB().ReadTxAndLookupInfo(hash); tx != nil {
-		block, err := b.BlockByHash(ctx, blockHash)
+	if tx, blockHash, blockNumber, index := txpoolAPI.ChainDB().ReadTxAndLookupInfo(hash); tx != nil {
+		block, err := txpoolAPI.BlockByHash(ctx, blockHash)
 		if err != nil {
 			return nil, err
 		}
 		return newEthRPCTransaction(block, tx, blockHash, blockNumber, index), nil
 	}
 	// No finalized transaction, try to retrieve it from the pool
-	if tx := b.GetPoolTransaction(hash); tx != nil {
+	if tx := txpoolAPI.GetPoolTransaction(hash); tx != nil {
 		return newEthRPCPendingTransaction(tx), nil
 	}
 	// Transaction unknown, return as such
@@ -944,26 +944,26 @@ func (api *EthereumAPI) GetRawTransactionByHash(ctx context.Context, hash common
 
 // GetTransactionReceipt returns the transaction receipt for the given transaction hash.
 func (api *EthereumAPI) GetTransactionReceipt(ctx context.Context, hash common.Hash) (map[string]interface{}, error) {
-	b := api.publicTransactionPoolAPI.b
+	txpoolAPI := api.publicTransactionPoolAPI.b
 
 	// Formats return Klaytn Transaction Receipt to the Ethereum Transaction Receipt.
-	tx, blockHash, blockNumber, index, receipt := b.GetTxLookupInfoAndReceipt(ctx, hash)
+	tx, blockHash, blockNumber, index, receipt := txpoolAPI.GetTxLookupInfoAndReceipt(ctx, hash)
 
 	if tx == nil {
 		return nil, nil
 	}
-	receipts := b.GetBlockReceipts(ctx, blockHash)
+	receipts := txpoolAPI.GetBlockReceipts(ctx, blockHash)
 	cumulativeGasUsed := uint64(0)
 	for i := uint64(0); i <= index; i++ {
 		cumulativeGasUsed += receipts[i].GasUsed
 	}
 
-	header, err := b.HeaderByHash(ctx, blockHash)
+	header, err := txpoolAPI.HeaderByHash(ctx, blockHash)
 	if err != nil {
 		return nil, err
 	}
 
-	ethTx, err := newEthTransactionReceipt(header, tx, b, blockHash, blockNumber, index, cumulativeGasUsed, receipt)
+	ethTx, err := newEthTransactionReceipt(header, tx, txpoolAPI, blockHash, blockNumber, index, cumulativeGasUsed, receipt)
 	if err != nil {
 		return nil, err
 	}
