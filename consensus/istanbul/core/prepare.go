@@ -87,13 +87,8 @@ func (c *core) handlePrepare(msg *message, src istanbul.Validator) error {
 			logger.Warn("received prepare of the hash locked proposal and change state to prepared", "msgType", msgPrepare)
 			c.setState(StatePrepared)
 			c.sendCommit()
-		} else if c.current.GetPrepareOrCommitSize() > 2*c.valSet.F() && c.valSet.Size() > ExceptionalValidatorsNumber {
-			logger.Info("received more than 2f agreements and change state to prepared", "msgType", msgPrepare, "prepareMsgNum", c.current.Prepares.Size(), "commitMsgNum", c.current.Commits.Size())
-			c.current.LockHash()
-			c.setState(StatePrepared)
-			c.sendCommit()
-		} else if uint64(c.current.GetPrepareOrCommitSize()) == c.valSet.Size() && c.valSet.Size() <= ExceptionalValidatorsNumber {
-			logger.Info("received all of agreements and change state to prepared", "msgType", msgPrepare, "prepareMsgNum", c.current.Prepares.Size(), "commitMsgNum", c.current.Commits.Size(), "valSet", c.valSet.Size())
+		} else if c.current.GetPrepareOrCommitSize() >= requiredMessageCount(c.valSet) {
+			logger.Info("received enough agreements and change state to prepared", "msgType", msgPrepare, "prepareMsgNum", c.current.Prepares.Size(), "commitMsgNum", c.current.Commits.Size(), "valSet", c.valSet.Size())
 			c.current.LockHash()
 			c.setState(StatePrepared)
 			c.sendCommit()

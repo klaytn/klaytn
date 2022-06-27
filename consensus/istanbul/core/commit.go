@@ -107,13 +107,8 @@ func (c *core) handleCommit(msg *message, src istanbul.Validator) error {
 			logger.Warn("received commit of the hash locked proposal and change state to prepared", "msgType", msgCommit)
 			c.setState(StatePrepared)
 			c.sendCommit()
-		} else if c.current.GetPrepareOrCommitSize() > 2*c.valSet.F() && c.valSet.Size() > ExceptionalValidatorsNumber {
-			logger.Info("received more than 2f agreements and change state to prepared", "msgType", msgCommit)
-			c.current.LockHash()
-			c.setState(StatePrepared)
-			c.sendCommit()
-		} else if uint64(c.current.GetPrepareOrCommitSize()) == c.valSet.Size() && c.valSet.Size() <= ExceptionalValidatorsNumber {
-			logger.Info("received all of agreements and change state to prepared", "msgType", msgCommit, "valSet", c.valSet.Size())
+		} else if c.current.GetPrepareOrCommitSize() >= requiredMessageCount(c.valSet) {
+			logger.Info("received enough agreements and change state to prepared", "msgType", msgCommit, "valSet", c.valSet.Size())
 			c.current.LockHash()
 			c.setState(StatePrepared)
 			c.sendCommit()
@@ -125,11 +120,8 @@ func (c *core) handleCommit(msg *message, src istanbul.Validator) error {
 	// If we already have a proposal, we may have chance to speed up the consensus process
 	// by committing the proposal without PREPARE messages.
 	//logger.Error("### consensus check","len(commits)",c.current.Commits.Size(),"f(2/3)",2*c.valSet.F(),"state",c.state.Cmp(StateCommitted))
-	if c.state.Cmp(StateCommitted) < 0 && c.current.Commits.Size() > 2*c.valSet.F() && c.valSet.Size() > ExceptionalValidatorsNumber {
+	if c.state.Cmp(StateCommitted) < 0 && c.current.Commits.Size() >= requiredMessageCount(c.valSet) {
 		// Still need to call LockHash here since state can skip Prepared state and jump directly to the Committed state.
-		c.current.LockHash()
-		c.commit()
-	} else if uint64(c.current.Commits.Size()) == c.valSet.Size() && c.valSet.Size() <= ExceptionalValidatorsNumber {
 		c.current.LockHash()
 		c.commit()
 	}
