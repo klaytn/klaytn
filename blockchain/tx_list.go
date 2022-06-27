@@ -316,10 +316,8 @@ func (l *txList) Add(tx *types.Transaction, priceBump uint64, kip71Hardforked bo
 			// If tx is CancelTransaction, replace it even thought tx has lower gasPrice than previous tx.
 			if tx.Type().IsCancelTransaction() {
 				logger.Trace("New tx is a cancel transaction. replace it!", "old", old.String(), "new", tx.String())
-			}
-
-			// If gas price of older is bigger than newer, abort.
-			if old.GasPrice().Cmp(tx.GasPrice()) >= 0 {
+			} else if old.GasPrice().Cmp(tx.GasPrice()) >= 0 {
+				// If gas price of older is bigger than newer, abort.
 				logger.Trace("already nonce exist", "nonce", tx.Nonce(), "with gasprice", old.GasPrice(), "priceBump", priceBump, "new tx.gasprice", tx.GasPrice())
 				return false, nil
 			} else {
