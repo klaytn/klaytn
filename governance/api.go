@@ -63,7 +63,9 @@ var (
 	errInvalidUpperBound      = errors.New("upperboundbasefee cannot be set lower than lowerboundbasefee")
 )
 
-// GasPriceAt returns the baseFeePerGas of the given block in peb.
+// GasPriceAt returns the base fee of the given block in peb,
+// or returns unit price by using governance if there is no base fee set in header,
+// or returns gas price of txpool if the block is pending block.
 func (api *GovernanceKlayAPI) GasPriceAt(num *rpc.BlockNumber) (*hexutil.Big, error) {
 	if num == nil || *num == rpc.LatestBlockNumber {
 		header := api.chain.CurrentHeader()
