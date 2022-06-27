@@ -113,7 +113,7 @@ func (c *core) handleCommit(msg *message, src istanbul.Validator) error {
 			c.setState(StatePrepared)
 			c.sendCommit()
 		} else if uint64(c.current.GetPrepareOrCommitSize()) == c.valSet.Size() && c.valSet.Size() <= ExceptionalValidatorsNumber {
-			logger.Info("received all of agreements and change state to prepared", "msgType", msgCommit)
+			logger.Info("received all of agreements and change state to prepared", "msgType", msgCommit, "valSet", c.valSet.Size())
 			c.current.LockHash()
 			c.setState(StatePrepared)
 			c.sendCommit()
