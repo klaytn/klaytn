@@ -54,7 +54,27 @@ func (api *API) GetSnapshot(number *rpc.BlockNumber) (*Snapshot, error) {
 	if header == nil {
 		return nil, errUnknownBlock
 	}
-	return api.istanbul.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
+
+	blockNumber := header.Number.Uint64()
+	if blockNumber == 0 {
+		// The snapshot of genesis block can not be calculated because it requires a previous block.
+		snap, err := api.istanbul.snapshot(api.chain, blockNumber, header.Hash(), nil)
+		if err != nil {
+			logger.Error("Failed to get snapshot.", "hash", header.Hash(), "err", err)
+			return nil, errInternalError
+		}
+		return snap, nil
+	}
+
+	// get the snapshot of the previous block.
+	parentHash := header.ParentHash
+	snap, err := api.istanbul.snapshot(api.chain, blockNumber-1, parentHash, nil)
+	if err != nil {
+		logger.Error("Failed to get snapshot.", "hash", parentHash, "err", err)
+		return nil, errInternalError
+	}
+
+	return snap, nil
 }
 
 // GetSnapshotAtHash retrieves the state snapshot at a given block.
@@ -63,7 +83,27 @@ func (api *API) GetSnapshotAtHash(hash common.Hash) (*Snapshot, error) {
 	if header == nil {
 		return nil, errUnknownBlock
 	}
-	return api.istanbul.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
+
+	blockNumber := header.Number.Uint64()
+	if blockNumber == 0 {
+		// The snapshot of genesis block can not be calculated because it requires a previous block.
+		snap, err := api.istanbul.snapshot(api.chain, blockNumber, header.Hash(), nil)
+		if err != nil {
+			logger.Error("Failed to get snapshot.", "hash", header.Hash(), "err", err)
+			return nil, errInternalError
+		}
+		return snap, nil
+	}
+
+	// get the snapshot of the previous block.
+	parentHash := header.ParentHash
+	snap, err := api.istanbul.snapshot(api.chain, blockNumber-1, parentHash, nil)
+	if err != nil {
+		logger.Error("Failed to get snapshot.", "hash", parentHash, "err", err)
+		return nil, errInternalError
+	}
+
+	return snap, nil
 }
 
 // GetValidators retrieves the list of authorized validators with the given block number.
@@ -168,19 +208,22 @@ func (api *APIExtension) GetCouncil(number *rpc.BlockNumber) ([]common.Address, 
 		return nil, errNoBlockExist // return nil if block is not found.
 	}
 
-	// Since v1.6.1, extra.validators represents a list of council
-	// TODO-Klaytn : replace this to the below calculation logic
-	//istanbulExtra, err := types.ExtractIstanbulExtra(header)
-	//if err == nil {
-	//	return istanbulExtra.Validators, nil
-	//} else {
-	//	return nil, errExtractIstanbulExtra
-	//}
+	blockNumber := header.Number.Uint64()
+	if blockNumber == 0 {
+		// The Council of genesis block can not be calculated because it requires a previous block.
+		snap, err := api.istanbul.snapshot(api.chain, blockNumber, header.Hash(), nil)
+		if err != nil {
+			logger.Error("Failed to get snapshot.", "hash", header.Hash(), "err", err)
+			return nil, errInternalError
+		}
+		return append(snap.validators(), snap.demotedValidators()...), nil
+	}
 
-	// Calculate council list from snapshot
-	snap, err := api.istanbul.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
+	// get the snapshot of the previous block.
+	parentHash := header.ParentHash
+	snap, err := api.istanbul.snapshot(api.chain, blockNumber-1, parentHash, nil)
 	if err != nil {
-		logger.Error("Failed to get snapshot.", "hash", header.Hash(), "err", err)
+		logger.Error("Failed to get snapshot.", "hash", parentHash, "err", err)
 		return nil, errInternalError
 	}
 
