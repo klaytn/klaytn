@@ -421,10 +421,6 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	pool.currentState = stateDB
 	pool.pendingNonce = make(map[common.Address]uint64)
 	pool.currentBlockNumber = newHead.Number.Uint64()
-	// It need to update gas price of tx pool after kip71 hardfork
-	if pool.kip71 {
-		pool.gasPrice = misc.NextBlockBaseFee(newHead, pool.chainconfig)
-	}
 
 	// Inject any transactions discarded due to reorgs
 	logger.Debug("Reinjecting stale transactions", "count", len(reinject))
@@ -463,6 +459,11 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	pool.eip1559 = pool.chainconfig.IsEthTxTypeForkEnabled(next)
 	// Enable dynamic base fee
 	pool.kip71 = pool.chainconfig.IsKIP71ForkEnabled(next)
+
+	// It need to update gas price of tx pool after kip71 hardfork
+	if pool.kip71 {
+		pool.gasPrice = misc.NextBlockBaseFee(newHead, pool.chainconfig)
+	}
 }
 
 // Stop terminates the transaction pool.
