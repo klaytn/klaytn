@@ -255,11 +255,6 @@ func (hc *HeaderChain) InsertHeaderChain(chain []*types.Header, writeHeader WhCa
 			stats.ignored++
 			continue
 		}
-		if !hc.engine.CanVerifyHeadersConcurrently() {
-			if err := hc.engine.VerifyHeader(hc, header, true); err != nil {
-				return i, err
-			}
-		}
 		if err := writeHeader(header); err != nil {
 			return i, err
 		}

@@ -1208,6 +1208,11 @@ func (bc *BlockChain) InsertReceiptChain(blockChain types.Blocks, receiptChain [
 			stats.ignored++
 			continue
 		}
+		if !bc.engine.CanVerifyHeadersConcurrently() {
+			if err := bc.engine.VerifyHeader(bc, block.Header(), true); err != nil {
+				return i, err
+			}
+		}
 		// Compute all the non-consensus fields of the receipts
 		if err := SetReceiptsData(bc.chainConfig, block, receipts); err != nil {
 			return i, fmt.Errorf("failed to set receipts data: %v", err)
