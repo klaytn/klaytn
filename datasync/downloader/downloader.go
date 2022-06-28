@@ -1475,7 +1475,12 @@ func (d *Downloader) processFastSyncContent(latest *types.Header) error {
 	// Start syncing state of the reported head block. This should get us most of
 	// the state of the pivot block.
 	stateSync := d.syncState(latest.Root)
-	defer stateSync.Cancel()
+	defer func() {
+		// The `sync` object is replaced every time the pivot moves. We need to
+		// defer close the very last active one, hence the lazy evaluation vs.
+		// calling defer sync.Cancel() !!!
+		stateSync.Cancel()
+	}()
 	go func() {
 		if err := stateSync.Wait(); err != nil && err != errCancelStateFetch && err != errCanceled {
 			d.queue.Close() // wake up WaitResults
@@ -1534,7 +1539,7 @@ func (d *Downloader) processFastSyncContent(latest *types.Header) error {
 				stateSync.Cancel()
 
 				stateSync = d.syncState(P.Header.Root)
-				defer stateSync.Cancel()
+
 				go func() {
 					if err := stateSync.Wait(); err != nil && err != errCancelStateFetch && err != errCanceled {
 						d.queue.Close() // wake up WaitResults

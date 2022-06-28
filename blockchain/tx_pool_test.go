@@ -114,6 +114,39 @@ func dynamicFeeTx(nonce uint64, gaslimit uint64, gasFee *big.Int, tip *big.Int, 
 	return signedTx
 }
 
+func feeDelegatedTx(nonce uint64, gaslimit uint64, gasPrice *big.Int, amount *big.Int, senderPrvKey *ecdsa.PrivateKey, feePayerPrvKey *ecdsa.PrivateKey) *types.Transaction {
+	delegatedTx := types.NewTx(&types.TxInternalDataFeeDelegatedValueTransfer{
+		AccountNonce: nonce,
+		Price:        gasPrice,
+		GasLimit:     gaslimit,
+		Recipient:    common.Address{},
+		Amount:       amount,
+		From:         crypto.PubkeyToAddress(senderPrvKey.PublicKey),
+		FeePayer:     crypto.PubkeyToAddress(feePayerPrvKey.PublicKey),
+	})
+
+	types.SignTxAsFeePayer(delegatedTx, types.LatestSignerForChainID(params.TestChainConfig.ChainID), feePayerPrvKey)
+	signedTx, _ := types.SignTx(delegatedTx, types.LatestSignerForChainID(params.TestChainConfig.ChainID), senderPrvKey)
+	return signedTx
+}
+
+func feeDelegatedWithRatioTx(nonce uint64, gaslimit uint64, gasPrice *big.Int, amount *big.Int, senderPrvKey *ecdsa.PrivateKey, feePayerPrvKey *ecdsa.PrivateKey, ratio types.FeeRatio) *types.Transaction {
+	delegatedTx := types.NewTx(&types.TxInternalDataFeeDelegatedValueTransferWithRatio{
+		AccountNonce: nonce,
+		Price:        gasPrice,
+		GasLimit:     gaslimit,
+		Recipient:    common.Address{},
+		Amount:       amount,
+		From:         crypto.PubkeyToAddress(senderPrvKey.PublicKey),
+		FeePayer:     crypto.PubkeyToAddress(feePayerPrvKey.PublicKey),
+		FeeRatio:     ratio,
+	})
+
+	types.SignTxAsFeePayer(delegatedTx, types.LatestSignerForChainID(params.TestChainConfig.ChainID), feePayerPrvKey)
+	signedTx, _ := types.SignTx(delegatedTx, types.LatestSignerForChainID(params.TestChainConfig.ChainID), senderPrvKey)
+	return signedTx
+}
+
 func setupTxPool() (*TxPool, *ecdsa.PrivateKey) {
 	return setupTxPoolWithConfig(params.TestChainConfig)
 }
@@ -1950,6 +1983,93 @@ func TestDynamicFeeTransactionNotAccepted(t *testing.T) {
 
 	if err := pool.AddLocal(tx); err != ErrTxTypeNotSupported {
 		t.Error("expected", ErrTxTypeNotSupported, "got", err)
+	}
+}
+
+// TestFeeDelegatedTransaction checks feeDelegatedValueTransfer logic on tx pool
+// the case when sender = feePayer has been included
+func TestFeeDelegatedTransaction(t *testing.T) {
+	t.Parallel()
+
+	pool, key := setupTxPool()
+	senderKey, _ := crypto.GenerateKey()
+	feePayerKey, _ := crypto.GenerateKey()
+	defer pool.Stop()
+
+	testAddBalance(pool, crypto.PubkeyToAddress(senderKey.PublicKey), big.NewInt(60000))
+	testAddBalance(pool, crypto.PubkeyToAddress(feePayerKey.PublicKey), big.NewInt(60000))
+
+	tx := feeDelegatedTx(0, 40000, big.NewInt(1), big.NewInt(40000), senderKey, feePayerKey)
+
+	if err := pool.AddRemote(tx); err != nil {
+		t.Error("expected", "got", err)
+	}
+
+	testAddBalance(pool, crypto.PubkeyToAddress(key.PublicKey), big.NewInt(60000))
+
+	// test on case when sender = feePayer
+	// balance : 60k, tx.value : 40k, tx.fee : 40k
+	tx1 := feeDelegatedTx(0, 40000, big.NewInt(1), big.NewInt(40000), key, key)
+
+	// balance : 60k, tx.value : 10k, tx.fee : 40k
+	tx2 := feeDelegatedTx(0, 40000, big.NewInt(1), big.NewInt(10000), key, key)
+
+	if err := pool.AddRemote(tx1); err != ErrInsufficientFundsFrom {
+		t.Error("expected", ErrInsufficientFundsFrom, "got", err)
+	}
+
+	if err := pool.AddRemote(tx2); err != nil {
+		t.Error("expected", "got", err)
+	}
+}
+
+func TestFeeDelegatedWithRatioTransaction(t *testing.T) {
+	t.Parallel()
+
+	pool, key := setupTxPool()
+	senderKey, _ := crypto.GenerateKey()
+	feePayerKey, _ := crypto.GenerateKey()
+	defer pool.Stop()
+
+	testAddBalance(pool, crypto.PubkeyToAddress(senderKey.PublicKey), big.NewInt(100000))
+	testAddBalance(pool, crypto.PubkeyToAddress(feePayerKey.PublicKey), big.NewInt(100000))
+
+	// Sender balance : 100k, FeePayer balance : 100k tx.value : 50k, tx.fee : 100k, FeeRatio : 10%
+	tx1 := feeDelegatedWithRatioTx(0, 100000, big.NewInt(1), big.NewInt(50000), senderKey, feePayerKey, 10)
+
+	// Sender balance : 100k, FeePayer balance : 100k tx.value : 50k, tx.fee : 100k, FeeRatio : 70%
+	tx2 := feeDelegatedWithRatioTx(0, 100000, big.NewInt(1), big.NewInt(50000), senderKey, feePayerKey, 70)
+
+	// Sender balance : 100k, FeePayer balance : 100k tx.value : 50k, tx.fee : 110k, FeeRatio : 99%
+	tx3 := feeDelegatedWithRatioTx(1, 110000, big.NewInt(1), big.NewInt(50000), senderKey, feePayerKey, 99)
+
+	if err := pool.AddRemote(tx1); err != ErrInsufficientFundsFrom {
+		t.Error("expected", ErrInsufficientFundsFrom, "got", err)
+	}
+
+	if err := pool.AddRemote(tx2); err != nil {
+		t.Error("expected", "got", err)
+	}
+
+	if err := pool.AddRemote(tx3); err != ErrInsufficientFundsFeePayer {
+		t.Error("expected", ErrInsufficientFundsFeePayer, "got", err)
+	}
+
+	testAddBalance(pool, crypto.PubkeyToAddress(key.PublicKey), big.NewInt(60000))
+
+	// test on case when sender = feePayer
+	// balance : 60k, tx.value : 40k, tx.fee : 40k, ratio : 30%
+	tx4 := feeDelegatedWithRatioTx(0, 40000, big.NewInt(1), big.NewInt(40000), key, key, 30)
+
+	// balance : 60k, tx.value : 10k, tx.fee : 40k, ratio : 30%
+	tx5 := feeDelegatedWithRatioTx(0, 40000, big.NewInt(1), big.NewInt(10000), key, key, 30)
+
+	if err := pool.AddRemote(tx4); err != ErrInsufficientFundsFrom {
+		t.Error("expected", ErrInsufficientFundsFrom, "got", err)
+	}
+
+	if err := pool.AddRemote(tx5); err != nil {
+		t.Error("expected", "got", err)
 	}
 }
 
