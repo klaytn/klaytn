@@ -390,11 +390,6 @@ func (s *PublicBlockChainAPI) DoEstimateGas(ctx context.Context, b Backend, args
 		// Retrieve the current pending block to act as the gas ceiling
 		hi = params.UpperGasLimit
 	}
-
-	if gasCap != nil && hi > gasCap.Uint64() {
-		logger.Warn("Caller gas above allowance, capping", "requested", hi, "cap", gasCap)
-		hi = gasCap.Uint64()
-	}
 	// TODO-Klaytn: set hi value with account balance
 	cap = hi
 
