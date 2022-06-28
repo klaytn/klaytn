@@ -622,13 +622,13 @@ func (dlp *downloadTesterPeer) RequestHeadersByNumber(origin uint64, amount int,
 	result := make([]*types.Header, 0, amount)
 	if reverse {
 		for i := 0; i < amount && 0 <= int(origin)-i*(skip+1); i++ {
-			if header, ok := headers[hashes[len(hashes)-int(origin)-1+i*(skip+1)]]; ok {
+			if header, ok := headers[hashes[len(hashes)-1-int(origin)+i*(skip+1)]]; ok {
 				result = append(result, header)
 			}
 		}
 	} else {
-		for i := 0; i < amount && len(hashes)-int(origin)-1-i*(skip+1) >= 0; i++ {
-			if header, ok := headers[hashes[len(hashes)-int(origin)-1-i*(skip+1)]]; ok {
+		for i := 0; i < amount && len(hashes)-1-int(origin)-i*(skip+1) >= 0; i++ {
+			if header, ok := headers[hashes[len(hashes)-1-int(origin)-i*(skip+1)]]; ok {
 				result = append(result, header)
 			}
 		}
