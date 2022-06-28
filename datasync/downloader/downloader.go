@@ -456,7 +456,7 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 	}
 	if mode == FastSync && pivot == nil {
 		// If no pivot block was returned, the head is below the min full block
-		// threshold (i.e. new chian). In that case we won't really fast sync
+		// threshold (i.e. new chain). In that case we won't really fast sync
 		// anyway, but still need a valid pivot block to avoid some code hitting
 		// nil panics on an access.
 		pivot = d.blockchain.CurrentBlock().Header()
