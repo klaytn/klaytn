@@ -76,7 +76,6 @@ func init() {
 	kip71Config.LondonCompatibleBlock = common.Big0
 	kip71Config.EthTxTypeCompatibleBlock = common.Big0
 	kip71Config.Governance = &params.GovernanceConfig{KIP71: params.GetDefaultKip71Config()}
-	fork.SetHardForkBlockNumberConfig(eip1559Config)
 }
 
 type testBlockChain struct {
