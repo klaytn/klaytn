@@ -823,7 +823,7 @@ func TestSnapshot_Validators_AfterMinimumStakingVotes(t *testing.T) {
 		for _, e := range tc.expected {
 			for _, num := range e.blocks {
 				block := chain.GetBlockByNumber(num)
-				snap, err := engine.snapshot(chain, block.NumberU64(), block.Hash(), nil)
+				snap, err := engine.snapshot(chain, block.NumberU64(), block.Hash(), nil, true)
 				assert.NoError(t, err)
 
 				validators := toAddressList(snap.ValSet.List())
@@ -994,7 +994,7 @@ func TestSnapshot_Validators_BasedOnStaking(t *testing.T) {
 		_, err := chain.InsertChain(types.Blocks{block})
 		assert.NoError(t, err)
 
-		snap, err := engine.snapshot(chain, block.NumberU64(), block.Hash(), nil)
+		snap, err := engine.snapshot(chain, block.NumberU64(), block.Hash(), nil, true)
 		assert.NoError(t, err)
 
 		validators := toAddressList(snap.ValSet.List())
@@ -1215,7 +1215,7 @@ func TestSnapshot_Validators_AddRemove(t *testing.T) {
 				continue
 			}
 			block := chain.GetBlockByNumber(uint64(i))
-			snap, err := engine.snapshot(chain, block.NumberU64(), block.Hash(), nil)
+			snap, err := engine.snapshot(chain, block.NumberU64(), block.Hash(), nil, true)
 			assert.NoError(t, err)
 			validators := copyAndSortAddrs(toAddressList(snap.ValSet.List()))
 

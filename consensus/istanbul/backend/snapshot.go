@@ -144,7 +144,7 @@ func (s *Snapshot) checkVote(address common.Address, authorize bool) bool {
 
 // apply creates a new authorization snapshot by applying the given headers to
 // the original one.
-func (s *Snapshot) apply(headers []*types.Header, gov governance.Engine, addr common.Address, policy uint64, chain consensus.ChainReader) (*Snapshot, error) {
+func (s *Snapshot) apply(headers []*types.Header, gov governance.Engine, addr common.Address, policy uint64, chain consensus.ChainReader, writable bool) (*Snapshot, error) {
 	// Allow passing in no headers for cleaner code
 	if len(headers) == 0 {
 		return s, nil
@@ -179,19 +179,20 @@ func (s *Snapshot) apply(headers []*types.Header, gov governance.Engine, addr co
 		}
 
 		if number%snap.Epoch == 0 {
-			gov.UpdateCurrentSet(number)
-			if len(header.Governance) > 0 {
-				gov.WriteGovernanceForNextEpoch(number, header.Governance)
+			if writable {
+				gov.UpdateCurrentSet(number)
+				if len(header.Governance) > 0 {
+					gov.WriteGovernanceForNextEpoch(number, header.Governance)
+				}
+				gov.ClearVotes(number)
 			}
-			gov.ClearVotes(number)
-
 			// Reload governance values because epoch changed
 			snap.Epoch, snap.Policy, snap.CommitteeSize = getGovernanceValue(gov, number)
 			snap.Votes = make([]governance.GovernanceVote, 0)
 			snap.Tally = make([]governance.GovernanceTallyItem, 0)
 		}
 
-		snap.ValSet, snap.Votes, snap.Tally = gov.HandleGovernanceVote(snap.ValSet, snap.Votes, snap.Tally, header, validator, addr)
+		snap.ValSet, snap.Votes, snap.Tally = gov.HandleGovernanceVote(snap.ValSet, snap.Votes, snap.Tally, header, validator, addr, writable)
 		if policy == uint64(params.WeightedRandom) {
 			// Snapshot of block N (Snapshot_N) should contain proposers for N+1 and following blocks.
 			// Validators for Block N+1 can be calculated based on the staking information from the previous stakingUpdateInterval block.
@@ -232,8 +233,10 @@ func (s *Snapshot) apply(headers []*types.Header, gov governance.Engine, addr co
 	}
 	snap.ValSet.SetSubGroupSize(snap.CommitteeSize)
 
-	gov.SetTotalVotingPower(snap.ValSet.TotalVotingPower())
-	gov.SetMyVotingPower(snap.getMyVotingPower(addr))
+	if writable {
+		gov.SetTotalVotingPower(snap.ValSet.TotalVotingPower())
+		gov.SetMyVotingPower(snap.getMyVotingPower(addr))
+	}
 
 	return snap, nil
 }

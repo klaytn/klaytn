@@ -54,7 +54,7 @@ func (api *API) GetSnapshot(number *rpc.BlockNumber) (*Snapshot, error) {
 	if header == nil {
 		return nil, errUnknownBlock
 	}
-	return api.istanbul.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
+	return api.istanbul.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil, false)
 }
 
 // GetSnapshotAtHash retrieves the state snapshot at a given block.
@@ -63,7 +63,7 @@ func (api *API) GetSnapshotAtHash(hash common.Hash) (*Snapshot, error) {
 	if header == nil {
 		return nil, errUnknownBlock
 	}
-	return api.istanbul.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
+	return api.istanbul.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil, false)
 }
 
 // GetValidators retrieves the list of authorized validators with the given block number.
@@ -178,7 +178,7 @@ func (api *APIExtension) GetCouncil(number *rpc.BlockNumber) ([]common.Address, 
 	//}
 
 	// Calculate council list from snapshot
-	snap, err := api.istanbul.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
+	snap, err := api.istanbul.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil, false)
 	if err != nil {
 		logger.Error("Failed to get snapshot.", "hash", header.Hash(), "err", err)
 		return nil, errInternalError
@@ -236,7 +236,7 @@ func (api *APIExtension) GetCommittee(number *rpc.BlockNumber) ([]common.Address
 
 	// get the snapshot of the previous block.
 	parentHash := header.ParentHash
-	snap, err := api.istanbul.snapshot(api.chain, blockNumber-1, parentHash, nil)
+	snap, err := api.istanbul.snapshot(api.chain, blockNumber-1, parentHash, nil, false)
 	if err != nil {
 		return nil, err
 	}
@@ -287,7 +287,7 @@ func (api *APIExtension) getConsensusInfo(block *types.Block) (ConsensusInfo, er
 
 	// get the snapshot of the previous block.
 	parentHash := block.ParentHash()
-	snap, err := api.istanbul.snapshot(api.chain, blockNumber-1, parentHash, nil)
+	snap, err := api.istanbul.snapshot(api.chain, blockNumber-1, parentHash, nil, false)
 	if err != nil {
 		return ConsensusInfo{}, err
 	}
