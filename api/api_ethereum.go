@@ -1101,14 +1101,13 @@ func (args *EthTransactionArgs) setDefaults(ctx context.Context, b Backend) erro
 			if args.MaxFeePerGas == nil {
 				// TODO-Klaytn: Calculating formula of gasFeeCap is same with Ethereum except for
 				// using fixedBaseFee which means gasFeeCap is always same with args.MaxPriorityFeePerGas as now.
-				baseFee := fixedBaseFee
-				if isKIP71 {
-					baseFee = gasPrice
-				}
 				gasFeeCap := new(big.Int).Add(
 					(*big.Int)(args.MaxPriorityFeePerGas),
-					new(big.Int).Mul(baseFee, big.NewInt(2)),
+					new(big.Int).Mul(fixedBaseFee, big.NewInt(2)),
 				)
+				if isKIP71 {
+					gasFeeCap = new(big.Int).Mul(gasPrice, big.NewInt(2))
+				}
 				args.MaxFeePerGas = (*hexutil.Big)(gasFeeCap)
 			}
 			if isKIP71 {
@@ -1119,6 +1118,9 @@ func (args *EthTransactionArgs) setDefaults(ctx context.Context, b Backend) erro
 				if args.MaxPriorityFeePerGas.ToInt().Cmp(gasPrice) != 0 || args.MaxFeePerGas.ToInt().Cmp(gasPrice) != 0 {
 					return fmt.Errorf("only %s is allowed to be used as maxFeePerGas and maxPriorityPerGas", gasPrice.Text(16))
 				}
+			}
+			if args.MaxFeePerGas.ToInt().Cmp(args.MaxPriorityFeePerGas.ToInt()) < 0 {
+				return fmt.Errorf("maxFeePerGas (%v) < maxPriorityFeePerGas (%v)", args.MaxFeePerGas, args.MaxPriorityFeePerGas)
 			}
 		} else {
 			if args.MaxFeePerGas != nil || args.MaxPriorityFeePerGas != nil {
