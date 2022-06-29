@@ -434,8 +434,10 @@ func requiredMessageCount(valSet istanbul.ValidatorSet) int {
 	size := valSet.Size()
 	switch size {
 	// in the certain cases we must receive the messages from all consensus nodes to ensure finality...
-	case 1, 2, 3, 6:
+	case 1, 2, 3:
 		return int(size)
+	case 6:
+		return 2*valSet.F() + 2 // when the number of valSet is 6 and return value is 2*F+1, the return value is not safe. It should return 4 or more.
 	default:
 		return 2*valSet.F() + 1
 	}
