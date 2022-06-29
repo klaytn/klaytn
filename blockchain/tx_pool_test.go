@@ -2142,12 +2142,9 @@ func TestTransactionsPromoteFull(t *testing.T) {
 
 	pool.promoteExecutables(nil)
 
-	r := assert.NotEqual(t, len(pool.pending), 0)
-	if r {
-		assert.Equal(t, pool.pending[from].Len(), 4)
-		for i, tx := range txs {
-			assert.True(t, reflect.DeepEqual(tx, pool.pending[from].txs.items[uint64(i)]))
-		}
+	assert.Equal(t, pool.pending[from].Len(), 4)
+	for i, tx := range txs {
+		assert.True(t, reflect.DeepEqual(tx, pool.pending[from].txs.items[uint64(i)]))
 	}
 }
 
