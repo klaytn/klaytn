@@ -159,6 +159,7 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 		}
 		args.Price = (*hexutil.Big)(price)
 	}
+	// TODO-Klaytn: need to delete this logic, klaytn namespace doesn't have EthereumDynamicFee type
 	if *args.TypeInt == types.TxTypeEthereumDynamicFee {
 		// TODO-Klaytn: The logic below is valid only when using a fixed gas price.
 		fixedGasPrice, err := b.SuggestPrice(ctx)
