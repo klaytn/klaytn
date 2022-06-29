@@ -867,11 +867,11 @@ func (d *Downloader) fetchHeaders(p *peerConnection, from uint64) error {
 		timeout.Reset(ttl)
 
 		d.pivotLock.RLock()
-		pivot := d.pivotHeader.Number.Uint64()
+		pivotNumber := d.pivotHeader.Number.Uint64()
 		d.pivotLock.RUnlock()
 
-		p.logger.Trace("Fetching next pivot header", "number", pivot+uint64(fsMinFullBlocks))
-		go p.peer.RequestHeadersByNumber(pivot+uint64(fsMinFullBlocks), 2, fsMinFullBlocks-9, false) // move +64 when it's 2x64-8 deep
+		p.logger.Trace("Fetching next pivot header", "number", pivotNumber+uint64(fsMinFullBlocks))
+		go p.peer.RequestHeadersByNumber(pivotNumber+uint64(fsMinFullBlocks), 2, fsMinFullBlocks-9, false) // move +64 when it's 2x64-8 deep
 	}
 	// Start pulling the header chain skeleton until all is done
 	getHeaders(from)
