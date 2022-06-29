@@ -311,7 +311,6 @@ func (api *EthereumAPI) GasPrice(ctx context.Context) (*hexutil.Big, error) {
 
 // MaxPriorityFeePerGas returns a suggestion for a gas tip cap for dynamic fee transactions.
 func (api *EthereumAPI) MaxPriorityFeePerGas(ctx context.Context) (*hexutil.Big, error) {
-	// TODO-Klaytn maybe need to branch kip71 hardfork
 	return api.GasPrice(ctx)
 }
 
@@ -1006,8 +1005,6 @@ func newEthTransactionReceipt(header *types.Header, tx *types.Transaction, b Bac
 	}
 
 	if b.ChainConfig().IsEthTxTypeForkEnabled(new(big.Int).SetUint64(blockNumber)) {
-		// TODO-Klaytn: Klaytn is using fixed BaseFee(0) as now but
-		// if we apply dynamic BaseFee, we should add calculated BaseFee instead of using params.ZeroBaseFee.
 		fields["effectiveGasPrice"] = hexutil.Uint64(tx.EffectiveGasPrice(header.BaseFee).Uint64())
 	} else {
 		fields["effectiveGasPrice"] = hexutil.Uint64(tx.GasPrice().Uint64())
@@ -1083,12 +1080,13 @@ func (args *EthTransactionArgs) setDefaults(ctx context.Context, b Backend) erro
 	}
 	// After london, default to 1559 uncles gasPrice is set
 	head := b.CurrentBlock().Header()
-	// TODO-Klaytn: Klaytn is using fixed BaseFee(0) as now but
-	// if we apply dynamic BaseFee, we should add calculated BaseFee instead of using params.ZeroBaseFee.
+	isKIP71 := head.BaseFee != nil
+
 	fixedBaseFee := new(big.Int).SetUint64(params.ZeroBaseFee)
-	// Klaytn uses fixed gasPrice policy determined by Governance, so
-	// only fixedGasPrice value is allowed to be used as args.MaxFeePerGas and args.MaxPriorityFeePerGas.
-	fixedGasPrice, err := b.SuggestPrice(ctx)
+
+	// b.SuggestPrice = unitPrice, for before KIP71
+	//                = baseFee,   for after KIP71
+	gasPrice, err := b.SuggestPrice(ctx)
 	if err != nil {
 		return err
 	}
@@ -1098,25 +1096,29 @@ func (args *EthTransactionArgs) setDefaults(ctx context.Context, b Backend) erro
 	if args.MaxPriorityFeePerGas == nil || args.MaxFeePerGas == nil {
 		if b.ChainConfig().IsEthTxTypeForkEnabled(head.Number) && args.GasPrice == nil {
 			if args.MaxPriorityFeePerGas == nil {
-				// TODO-Klaytn: Original logic of Ethereum uses b.SuggestTipCap which suggests TipCap, not a GasPrice.
-				// But Klaytn currently uses fixed unit price determined by Governance, so using b.SuggestPrice
-				// is fine as now.
-				args.MaxPriorityFeePerGas = (*hexutil.Big)(fixedGasPrice)
+				args.MaxPriorityFeePerGas = (*hexutil.Big)(gasPrice)
 			}
 			if args.MaxFeePerGas == nil {
 				// TODO-Klaytn: Calculating formula of gasFeeCap is same with Ethereum except for
 				// using fixedBaseFee which means gasFeeCap is always same with args.MaxPriorityFeePerGas as now.
+				baseFee := fixedBaseFee
+				if isKIP71 {
+					baseFee = gasPrice
+				}
 				gasFeeCap := new(big.Int).Add(
 					(*big.Int)(args.MaxPriorityFeePerGas),
-					new(big.Int).Mul(fixedBaseFee, big.NewInt(2)),
+					new(big.Int).Mul(baseFee, big.NewInt(2)),
 				)
 				args.MaxFeePerGas = (*hexutil.Big)(gasFeeCap)
 			}
-			if args.MaxPriorityFeePerGas.ToInt().Cmp(fixedGasPrice) != 0 || args.MaxFeePerGas.ToInt().Cmp(fixedGasPrice) != 0 {
-				return fmt.Errorf("only %s is allowed to be used as maxFeePerGas and maxPriorityPerGas", fixedGasPrice.Text(16))
-			}
-			if args.MaxFeePerGas.ToInt().Cmp(args.MaxPriorityFeePerGas.ToInt()) < 0 {
-				return fmt.Errorf("maxFeePerGas (%v) < maxPriorityFeePerGas (%v)", args.MaxFeePerGas, args.MaxPriorityFeePerGas)
+			if isKIP71 {
+				if args.MaxFeePerGas.ToInt().Cmp(gasPrice) < 0 {
+					return fmt.Errorf("maxFeePerGas (%v) < BaseFee (%v)", args.MaxFeePerGas, gasPrice)
+				}
+			} else {
+				if args.MaxPriorityFeePerGas.ToInt().Cmp(gasPrice) != 0 || args.MaxFeePerGas.ToInt().Cmp(gasPrice) != 0 {
+					return fmt.Errorf("only %s is allowed to be used as maxFeePerGas and maxPriorityPerGas", gasPrice.Text(16))
+				}
 			}
 		} else {
 			if args.MaxFeePerGas != nil || args.MaxPriorityFeePerGas != nil {
@@ -1129,15 +1131,21 @@ func (args *EthTransactionArgs) setDefaults(ctx context.Context, b Backend) erro
 				if b.ChainConfig().IsEthTxTypeForkEnabled(head.Number) {
 					// TODO-Klaytn: Klaytn is using fixed BaseFee(0) as now but
 					// if we apply dynamic BaseFee, we should add calculated BaseFee instead of params.ZeroBaseFee.
-					fixedGasPrice.Add(fixedGasPrice, new(big.Int).SetUint64(params.ZeroBaseFee))
+					gasPrice.Add(gasPrice, new(big.Int).SetUint64(params.ZeroBaseFee))
 				}
-				args.GasPrice = (*hexutil.Big)(fixedGasPrice)
+				args.GasPrice = (*hexutil.Big)(gasPrice)
 			}
 		}
 	} else {
 		// Both maxPriorityFee and maxFee set by caller. Sanity-check their internal relation
-		if args.MaxFeePerGas.ToInt().Cmp(args.MaxPriorityFeePerGas.ToInt()) < 0 {
-			return fmt.Errorf("maxFeePerGas (%v) < maxPriorityFeePerGas (%v)", args.MaxFeePerGas, args.MaxPriorityFeePerGas)
+		if isKIP71 {
+			if args.MaxFeePerGas.ToInt().Cmp(gasPrice) < 0 {
+				return fmt.Errorf("maxFeePerGas (%v) < BaseFee (%v)", args.MaxFeePerGas, gasPrice)
+			}
+		} else {
+			if args.MaxFeePerGas.ToInt().Cmp(args.MaxPriorityFeePerGas.ToInt()) < 0 {
+				return fmt.Errorf("maxFeePerGas (%v) < maxPriorityFeePerGas (%v)", args.MaxFeePerGas, args.MaxPriorityFeePerGas)
+			}
 		}
 	}
 	if args.Value == nil {
