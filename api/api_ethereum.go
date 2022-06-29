@@ -1099,13 +1099,13 @@ func (args *EthTransactionArgs) setDefaults(ctx context.Context, b Backend) erro
 				args.MaxPriorityFeePerGas = (*hexutil.Big)(gasPrice)
 			}
 			if args.MaxFeePerGas == nil {
-				// TODO-Klaytn: Calculating formula of gasFeeCap is same with Ethereum except for
-				// using fixedBaseFee which means gasFeeCap is always same with args.MaxPriorityFeePerGas as now.
+				// Before KIP-71 hard fork, `gasFeeCap` was set to `baseFee*2 + maxPriorityFeePerGas` by default.
 				gasFeeCap := new(big.Int).Add(
 					(*big.Int)(args.MaxPriorityFeePerGas),
 					new(big.Int).Mul(fixedBaseFee, big.NewInt(2)),
 				)
 				if isKIP71 {
+					// After KIP-71 hard fork, `gasFeeCap` was set to `baseFee*2` by default.
 					gasFeeCap = new(big.Int).Mul(gasPrice, big.NewInt(2))
 				}
 				args.MaxFeePerGas = (*hexutil.Big)(gasFeeCap)
