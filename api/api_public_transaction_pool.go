@@ -220,7 +220,7 @@ func RpcOutputReceipt(header *types.Header, tx *types.Transaction, blockHash com
 	fields["gasUsed"] = hexutil.Uint64(receipt.GasUsed)
 
 	if header != nil && header.BaseFee != nil {
-		fields["effectiveGasPrice"] = hexutil.Uint64(header.BaseFee.Uint64())
+		fields["effectiveGasPrice"] = hexutil.Uint64(tx.EffectiveGasPrice(header.BaseFee).Uint64())
 	} else {
 		fields["effectiveGasPrice"] = hexutil.Uint64(tx.GasPrice().Uint64())
 	}
