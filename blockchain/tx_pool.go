@@ -699,7 +699,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	} else {
 		if pool.kip71 {
 			// Ensure transaction's gasPrice is greater than or equal to transaction pool's gasPrice(baseFee).
-			if pool.gasPrice.Cmp(tx.GasPrice()) > 0 {
+			if pool.gasPrice.Cmp(tx.GasPrice()) > 0 && tx.Type() != types.TxTypeCancel {
 				logger.Trace("fail to validate gasprice", "pool.gasPrice", pool.gasPrice, "tx.gasPrice", tx.GasPrice())
 				return ErrGasPriceBelowBaseFee
 			}
@@ -1376,21 +1376,17 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 		}
 
 		// Gather all executable transactions and promote them
+		var readyTxs types.Transactions
 		if pool.kip71 {
-			for _, tx := range list.ReadyWithGasPrice(pool.getPendingNonce(addr), pool.gasPrice) {
-				hash := tx.Hash()
-				if pool.promoteTx(addr, hash, tx) {
-					logger.Trace("Promoting queued transaction", "hash", hash)
-					promoted = append(promoted, tx)
-				}
-			}
+			readyTxs = list.ReadyWithGasPrice(pool.getPendingNonce(addr), pool.gasPrice)
 		} else {
-			for _, tx := range list.Ready(pool.getPendingNonce(addr)) {
-				hash := tx.Hash()
-				if pool.promoteTx(addr, hash, tx) {
-					logger.Trace("Promoting queued transaction", "hash", hash)
-					promoted = append(promoted, tx)
-				}
+			readyTxs = list.Ready(pool.getPendingNonce(addr))
+		}
+		for _, tx := range readyTxs {
+			hash := tx.Hash()
+			if pool.promoteTx(addr, hash, tx) {
+				logger.Trace("Promoting queued transaction", "hash", hash)
+				promoted = append(promoted, tx)
 			}
 		}
 

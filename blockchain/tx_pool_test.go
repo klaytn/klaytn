@@ -127,6 +127,22 @@ func dynamicFeeTx(nonce uint64, gaslimit uint64, gasFee *big.Int, tip *big.Int, 
 	return signedTx
 }
 
+func cancelTx(nonce uint64, gasLimit uint64, gasPrice *big.Int, from common.Address, key *ecdsa.PrivateKey) *types.Transaction {
+	d, err := types.NewTxInternalDataWithMap(types.TxTypeCancel, map[types.TxValueKeyType]interface{}{
+		types.TxValueKeyNonce:    nonce,
+		types.TxValueKeyGasLimit: gasLimit,
+		types.TxValueKeyGasPrice: gasPrice,
+		types.TxValueKeyFrom:     from,
+	})
+	if err != nil {
+		// Since we do not have testing.T here, call panic() instead of t.Fatal().
+		panic(err)
+	}
+	cancelTx := types.NewTx(d)
+	signedTx, _ := types.SignTx(cancelTx, types.LatestSignerForChainID(params.TestChainConfig.ChainID), key)
+	return signedTx
+}
+
 func setupTxPool() (*TxPool, *ecdsa.PrivateKey) {
 	return setupTxPoolWithConfig(params.TestChainConfig)
 }
@@ -321,20 +337,11 @@ func TestInvalidTransactions(t *testing.T) {
 
 	// NOTE-Klaytn We only accept txs with an expected gas price only
 	// regardless of local or remote.
-	if pool.chainconfig.IsKIP71ForkEnabled(pool.chain.CurrentBlock().Number()) {
-		if err := pool.AddRemote(tx); err != ErrGasPriceBelowBaseFee {
-			t.Error("expected", ErrGasPriceBelowBaseFee, "got", err)
-		}
-		if err := pool.AddLocal(tx); err != ErrGasPriceBelowBaseFee {
-			t.Error("expected", ErrGasPriceBelowBaseFee, "got", err)
-		}
-	} else {
-		if err := pool.AddRemote(tx); err != ErrInvalidUnitPrice {
-			t.Error("expected", ErrInvalidUnitPrice, "got", err)
-		}
-		if err := pool.AddLocal(tx); err != ErrInvalidUnitPrice {
-			t.Error("expected", ErrInvalidUnitPrice, "got", err)
-		}
+	if err := pool.AddRemote(tx); err != ErrInvalidUnitPrice {
+		t.Error("expected", ErrInvalidUnitPrice, "got", err)
+	}
+	if err := pool.AddLocal(tx); err != ErrInvalidUnitPrice {
+		t.Error("expected", ErrInvalidUnitPrice, "got", err)
 	}
 }
 
@@ -2028,6 +2035,45 @@ func TestTransactionAccepted(t *testing.T) {
 	// The transaction's gasPrice bigger than baseFee.
 	tx2 := pricedTransaction(1, 21000, big.NewInt(40), key)
 	if err := pool.AddRemote(tx2); err != nil {
+		t.Error("error", "got", err)
+	}
+}
+
+func TestCancelTransactionAccepted(t *testing.T) {
+	t.Parallel()
+	baseFee := big.NewInt(30)
+
+	pool, key := setupTxPoolWithConfig(kip71Config)
+	defer pool.Stop()
+	pool.SetBaseFee(baseFee)
+
+	sender := crypto.PubkeyToAddress(key.PublicKey)
+	testAddBalance(pool, sender, big.NewInt(10000000000))
+
+	// The transaction's gasPrice equal to baseFee.
+	tx1 := pricedTransaction(0, 21000, big.NewInt(30), key)
+	if err := pool.AddRemote(tx1); err != nil {
+		t.Error("error", "got", err)
+	}
+	tx2 := pricedTransaction(1, 21000, big.NewInt(30), key)
+	if err := pool.AddRemote(tx2); err != nil {
+		t.Error("error", "got", err)
+	}
+	tx3 := pricedTransaction(2, 21000, big.NewInt(30), key)
+	if err := pool.AddRemote(tx3); err != nil {
+		t.Error("error", "got", err)
+	}
+
+	tx1CancelWithLowerPrice := cancelTx(0, 21000, big.NewInt(20), sender, key)
+	if err := pool.AddRemote(tx1CancelWithLowerPrice); err != nil {
+		t.Error("error", "got", err)
+	}
+	tx2CancelWithSamePrice := cancelTx(1, 21000, big.NewInt(30), sender, key)
+	if err := pool.AddRemote(tx2CancelWithSamePrice); err != nil {
+		t.Error("error", "got", err)
+	}
+	tx3CancelWithExceedPrice := cancelTx(2, 21000, big.NewInt(40), sender, key)
+	if err := pool.AddRemote(tx3CancelWithExceedPrice); err != nil {
 		t.Error("error", "got", err)
 	}
 }
