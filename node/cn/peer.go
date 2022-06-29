@@ -163,6 +163,10 @@ type Peer interface {
 	// ones requested from an already RLP encoded format.
 	SendReceiptsRLP(receipts []rlp.RawValue) error
 
+	// SendStakingInfoRLP sends a batch of staking information, corresponding to the
+	// ones requested from an already RLP encoded format.
+	SendStakingInfoRLP(stakingInfos []rlp.RawValue) error
+
 	// FetchBlockHeader is a wrapper around the header query functions to fetch a
 	// single header. It is used solely by the fetcher.
 	FetchBlockHeader(hash common.Hash) error
@@ -546,6 +550,12 @@ func (p *basePeer) SendReceiptsRLP(receipts []rlp.RawValue) error {
 	return p2p.Send(p.rw, ReceiptsMsg, receipts)
 }
 
+// SendStakingInfoRLP sends a batch of staking information, corresponding to the
+// ones requested from an already RLP encoded format.
+func (p *basePeer) SendStakingInfoRLP(stakingInfos []rlp.RawValue) error {
+	return p2p.Send(p.rw, StakingInfoMsg, stakingInfos)
+}
+
 // FetchBlockHeader is a wrapper around the header query functions to fetch a
 // single header. It is used solely by the fetcher.
 func (p *basePeer) FetchBlockHeader(hash common.Hash) error {
@@ -592,6 +602,12 @@ func (p *basePeer) RequestNodeData(hashes []common.Hash) error {
 func (p *basePeer) RequestReceipts(hashes []common.Hash) error {
 	p.Log().Debug("Fetching batch of receipts", "count", len(hashes))
 	return p2p.Send(p.rw, ReceiptsRequestMsg, hashes)
+}
+
+// RequestStakingInfo fetches a batch of staking information from a remote node.
+func (p *basePeer) RequestStakingInfo(hashes []common.Hash) error {
+	p.Log().Debug("Fetching batch of staking infos", "count", len(hashes))
+	return p2p.Send(p.rw, StakingInfoRequestMsg, hashes)
 }
 
 // Handshake executes the Klaytn protocol handshake, negotiating version number,
@@ -891,6 +907,12 @@ func (p *multiChannelPeer) SendReceiptsRLP(receipts []rlp.RawValue) error {
 	return p.msgSender(ReceiptsMsg, receipts)
 }
 
+// SendStakingInfoRLP sends a batch of staking information, corresponding to the
+// ones requested from an already RLP encoded format.
+func (p *multiChannelPeer) SendStakingInfoRLP(stakingInfos []rlp.RawValue) error {
+	return p.msgSender(StakingInfoMsg, stakingInfos)
+}
+
 // FetchBlockHeader is a wrapper around the header query functions to fetch a
 // single header. It is used solely by the fetcher.
 func (p *multiChannelPeer) FetchBlockHeader(hash common.Hash) error {
@@ -937,6 +959,12 @@ func (p *multiChannelPeer) RequestNodeData(hashes []common.Hash) error {
 func (p *multiChannelPeer) RequestReceipts(hashes []common.Hash) error {
 	p.Log().Debug("Fetching batch of receipts", "count", len(hashes))
 	return p.msgSender(ReceiptsRequestMsg, hashes)
+}
+
+// RequestStakingInfo fetches a batch of staking information from a remote node.
+func (p *multiChannelPeer) RequestStakingInfo(hashes []common.Hash) error {
+	p.Log().Debug("Fetching batch of staking infos", "count", len(hashes))
+	return p.msgSender(StakingInfoRequestMsg, hashes)
 }
 
 // msgSender sends data to the peer.

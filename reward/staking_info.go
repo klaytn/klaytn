@@ -20,12 +20,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"math"
 	"math/big"
 	"sort"
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 const (
@@ -56,6 +58,18 @@ type StakingInfo struct {
 
 	// Derived from CouncilStakingAddrs
 	CouncilStakingAmounts []uint64 // Staking amounts of Council
+}
+
+type stakingInfoRLP struct {
+	BlockNum              uint64
+	CouncilNodeAddrs      []common.Address
+	CouncilStakingAddrs   []common.Address
+	CouncilRewardAddrs    []common.Address
+	KIRAddr               common.Address
+	PoCAddr               common.Address
+	UseGini               bool
+	Gini                  uint64
+	CouncilStakingAmounts []uint64
 }
 
 func newEmptyStakingInfo(blockNum uint64) *StakingInfo {
@@ -141,6 +155,23 @@ func (s *StakingInfo) String() string {
 		return err.Error()
 	}
 	return string(j)
+}
+
+func (s *StakingInfo) EncodeRLP(w io.Writer) error {
+	// float64 is not rlp serializable, so it converts to bytes
+	return rlp.Encode(w, &stakingInfoRLP{s.BlockNum, s.CouncilNodeAddrs, s.CouncilStakingAddrs, s.CouncilRewardAddrs, s.KIRAddr, s.PoCAddr, s.UseGini, math.Float64bits(s.Gini), s.CouncilStakingAmounts})
+}
+
+func (s *StakingInfo) DecodeRLP(st *rlp.Stream) error {
+	var dec stakingInfoRLP
+	if err := st.Decode(&dec); err != nil {
+		return err
+	}
+	s.BlockNum = dec.BlockNum
+	s.CouncilNodeAddrs, s.CouncilStakingAddrs, s.CouncilRewardAddrs = dec.CouncilNodeAddrs, dec.CouncilStakingAddrs, dec.CouncilRewardAddrs
+	s.KIRAddr, s.PoCAddr, s.UseGini, s.Gini = dec.KIRAddr, dec.PoCAddr, dec.UseGini, math.Float64frombits(dec.Gini)
+	s.CouncilStakingAmounts = dec.CouncilStakingAmounts
+	return nil
 }
 
 type float64Slice []float64

@@ -39,7 +39,7 @@ var (
 // LeafCallback is a callback type invoked when a trie operation reaches a leaf
 // node. It's used by state sync and commit to allow handling external references
 // between account and database tries.
-type LeafCallback func(leaf []byte, parent common.Hash, parentDepth int) error
+type LeafCallback func(path []byte, leaf []byte, parent common.Hash, parentDepth int) error
 
 // Trie is a Merkle Patricia Trie.
 // The zero value is an empty trie with no database.

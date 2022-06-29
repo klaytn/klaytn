@@ -83,6 +83,7 @@ func testBlockChain(t *testing.T) *blockchain.BlockChain {
 	var genesis *blockchain.Genesis
 	genesis = blockchain.DefaultGenesisBlock()
 	genesis.BlockScore = big.NewInt(1)
+	genesis.Config = params.CypressChainConfig.Copy()
 	genesis.Config.Governance = params.GetDefaultGovernanceConfig()
 	genesis.Config.Istanbul = params.GetDefaultIstanbulConfig()
 	genesis.Config.UnitPrice = 25 * params.Ston

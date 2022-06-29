@@ -103,38 +103,50 @@ func GetStakingManager() *StakingManager {
 	return stakingManager
 }
 
-// GetStakingInfo returns a corresponding stakingInfo for a blockNum.
+// GetStakingInfo returns a stakingInfo on the staking block of the given block number.
+// Note that staking block is the block on which the associated staking information is stored and used during an interval.
 func GetStakingInfo(blockNum uint64) *StakingInfo {
+	stakingBlockNumber := params.CalcStakingBlockNumber(blockNum)
+	logger.Debug("Staking information is requested", "blockNum", blockNum, "staking block number", stakingBlockNumber)
+	return GetStakingInfoOnStakingBlock(stakingBlockNumber)
+}
+
+// GetStakingInfoOnStakingBlock returns a corresponding StakingInfo for a staking block number.
+// If the given number is not on the staking block, it returns nil.
+func GetStakingInfoOnStakingBlock(stakingBlockNumber uint64) *StakingInfo {
 	if stakingManager == nil {
 		logger.Error("unable to GetStakingInfo", "err", ErrStakingManagerNotSet)
 		return nil
 	}
 
-	stakingBlockNumber := params.CalcStakingBlockNumber(blockNum)
+	// shortcut if given block is not on staking update interval
+	if !params.IsStakingUpdateInterval(stakingBlockNumber) {
+		return nil
+	}
 
 	// Get staking info from cache
 	if cachedStakingInfo := stakingManager.stakingInfoCache.get(stakingBlockNumber); cachedStakingInfo != nil {
-		logger.Debug("StakingInfoCache hit.", "blockNum", blockNum, "staking block number", stakingBlockNumber, "stakingInfo", cachedStakingInfo)
+		logger.Debug("StakingInfoCache hit.", "staking block number", stakingBlockNumber, "stakingInfo", cachedStakingInfo)
 		return cachedStakingInfo
 	}
 
 	// Get staking info from DB
 	if storedStakingInfo, err := getStakingInfoFromDB(stakingBlockNumber); storedStakingInfo != nil && err == nil {
-		logger.Debug("StakingInfoDB hit.", "blockNum", blockNum, "staking block number", stakingBlockNumber, "stakingInfo", storedStakingInfo)
+		logger.Debug("StakingInfoDB hit.", "staking block number", stakingBlockNumber, "stakingInfo", storedStakingInfo)
 		stakingManager.stakingInfoCache.add(storedStakingInfo)
 		return storedStakingInfo
 	} else {
-		logger.Debug("failed to get stakingInfo from DB", "err", err, "blockNum", blockNum)
+		logger.Debug("failed to get stakingInfo from DB", "err", err, "staking block number", stakingBlockNumber)
 	}
 
 	// Calculate staking info from block header and updates it to cache and db
 	calcStakingInfo, err := updateStakingInfo(stakingBlockNumber)
 	if calcStakingInfo == nil {
-		logger.Error("failed to update stakingInfo", "blockNum", blockNum, "staking block number", stakingBlockNumber, "err", err)
+		logger.Error("failed to update stakingInfo", "staking block number", stakingBlockNumber, "err", err)
 		return nil
 	}
 
-	logger.Debug("Get stakingInfo from header.", "blockNum", blockNum, "staking block number", stakingBlockNumber, "stakingInfo", calcStakingInfo)
+	logger.Debug("Get stakingInfo from header.", "staking block number", stakingBlockNumber, "stakingInfo", calcStakingInfo)
 	return calcStakingInfo
 }
 
@@ -151,7 +163,7 @@ func updateStakingInfo(blockNum uint64) (*StakingInfo, error) {
 
 	stakingManager.stakingInfoCache.add(stakingInfo)
 
-	if err := addStakingInfoToDB(stakingInfo); err != nil {
+	if err := AddStakingInfoToDB(stakingInfo); err != nil {
 		logger.Debug("failed to write staking info to db", "err", err, "stakingInfo", stakingInfo)
 		return stakingInfo, err
 	}
@@ -233,6 +245,15 @@ func StakingManagerUnsubscribe() {
 	}
 
 	stakingManager.chainHeadSub.Unsubscribe()
+}
+
+// TODO-Klaytn-Reward the following methods are used for testing purpose, it needs to be moved into test files.
+// SetTestStakingManagerWithDB sets the staking manager with the given database.
+// Note that this method is used only for testing purpose.
+func SetTestStakingManagerWithDB(testDB stakingInfoDB) {
+	SetTestStakingManager(&StakingManager{
+		stakingInfoDB: testDB,
+	})
 }
 
 // SetTestStakingManagerWithStakingInfoCache sets the staking manager with the given test staking information.

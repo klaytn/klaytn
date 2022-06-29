@@ -61,7 +61,8 @@ func (c *core) handlePreprepare(msg *message, src istanbul.Validator) error {
 	var preprepare *istanbul.Preprepare
 	err := msg.Decode(&preprepare)
 	if err != nil {
-		return errFailedDecodePreprepare
+		logger.Error("Failed to decode message", "code", msg.Code, "err", err)
+		return errInvalidMessage
 	}
 
 	// Ensure we have the same view with the PRE-PREPARE message

@@ -76,7 +76,8 @@ func (c *core) handleCommit(msg *message, src istanbul.Validator) error {
 	var commit *istanbul.Subject
 	err := msg.Decode(&commit)
 	if err != nil {
-		return errFailedDecodeCommit
+		logger.Error("Failed to decode message", "code", msg.Code, "err", err)
+		return errInvalidMessage
 	}
 
 	// logger.Error("receive handle commit","num", commit.View.Sequence)

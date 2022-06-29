@@ -310,9 +310,10 @@ func (l *txList) Forward(threshold uint64) types.Transactions {
 // a point in calculating all the costs or if the balance covers all. If the threshold
 // is lower than the costcap, the caps will be reset to a new high after removing
 // the newly invalidated transactions.
-func (l *txList) Filter(senderBalance *big.Int, pool *TxPool) (types.Transactions, types.Transactions) {
+func (l *txList) Filter(sender common.Address, pool *TxPool) (types.Transactions, types.Transactions) {
 	// Filter out all the transactions above the account's funds
 	removed := l.txs.Filter(func(tx *types.Transaction) bool {
+		senderBalance := pool.getBalance(sender)
 		// Drop a tx if it is marked as un-executable on block generation process.
 		if tx.IsMarkedUnexecutable() {
 			return true
@@ -326,6 +327,11 @@ func (l *txList) Filter(senderBalance *big.Int, pool *TxPool) (types.Transaction
 			feePayer, _ := tx.FeePayer()
 			feePayerBalance := pool.getBalance(feePayer)
 			feeRatio, isRatioTx := tx.FeeRatio()
+
+			// Handling the special case when the sender and fee payer are the same.
+			if sender == feePayer {
+				return senderBalance.Cmp(tx.Cost()) < 0
+			}
 			if isRatioTx {
 				feeByFeePayer, feeBySender := types.CalcFeeWithRatio(feeRatio, tx.Fee())
 				return senderBalance.Cmp(new(big.Int).Add(tx.Value(), feeBySender)) < 0 || feePayerBalance.Cmp(feeByFeePayer) < 0
