@@ -363,7 +363,9 @@ func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, votes 
 
 			if addr, ok := gVote.Value.(common.Address); ok {
 				addresses = append(addresses, addr)
-			} else if addresses, ok = gVote.Value.([]common.Address); !ok {
+			} else if addrs, ok := gVote.Value.([]common.Address); ok {
+				addresses = addrs
+			} else {
 				logger.Warn("Invalid value Type", "number", header.Number, "Validator", gVote.Validator, "key", gVote.Key, "value", gVote.Value)
 			}
 
