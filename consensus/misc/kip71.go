@@ -28,7 +28,7 @@ func NextBlockBaseFee(parentHeader *types.Header, config *params.ChainConfig) *b
 	lowerBoundBaseFee := new(big.Int).SetUint64(config.Governance.KIP71.LowerBoundBaseFee)
 	upperBoundBaseFee := new(big.Int).SetUint64(config.Governance.KIP71.UpperBoundBaseFee)
 
-	// If the parent is the kip71 disabled block or genesis, then return default base fee (25ston)
+	// If the parent is the kip71 disabled block or genesis, then return the lowerBoundBaseFee (default 25ston)
 	if !config.IsKIP71ForkEnabled(parentHeader.Number) || parentHeader.Number.Cmp(new(big.Int).SetUint64(0)) == 0 {
 		return lowerBoundBaseFee
 	}
