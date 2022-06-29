@@ -380,7 +380,9 @@ func (sb *SubBridgeAPI) DeregisterBridge(cBridgeAddrOrAlias, pBridgeAddrOrEmpty 
 	if err != nil {
 		return err
 	}
+	sb.subBridge.bridgeManager.journal.cacheMu.Lock()
 	delete(sb.subBridge.bridgeManager.journal.aliasCache, cBridgeAddrOrAliasStr)
+	sb.subBridge.bridgeManager.journal.cacheMu.Unlock()
 	return sb.doDeregisterBridge(cBridgeAddr, pBridgeAddr)
 }
 
