@@ -2298,6 +2298,8 @@ func TestTransactionsDemotionMultipleAccount(t *testing.T) {
 	assert.True(t, reflect.DeepEqual(txs[6], pool.queue[froms[2]].txs.items[1]))
 	assert.True(t, reflect.DeepEqual(txs[7], pool.queue[froms[2]].txs.items[2]))
 	assert.True(t, reflect.DeepEqual(txs[8], pool.queue[froms[2]].txs.items[3]))
+}
+
 // TestFeeDelegatedTransaction checks feeDelegatedValueTransfer logic on tx pool
 // the case when sender = feePayer has been included
 func TestFeeDelegatedTransaction(t *testing.T) {
