@@ -29,8 +29,6 @@ import (
 
 	"github.com/klaytn/klaytn/rlp"
 
-	"github.com/klaytn/klaytn/accounts/abi"
-
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -1543,6 +1541,7 @@ func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrO
 	// but we check in advance here in order to keep StateTransition.TransactionDb method as unchanged as possible
 	// and to clarify error reason correctly to serve eth namespace APIs.
 	// This case is handled by EthDoEstimateGas function.
+
 	if msg.Gas() < intrinsicGas {
 		return nil, 0, 0, fmt.Errorf("%w: msg.gas %d, want %d", blockchain.ErrIntrinsicGas, msg.Gas(), intrinsicGas)
 	}
@@ -1578,7 +1577,7 @@ func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, b
 	// Binary search the gas requirement, as it may be higher than the amount used
 	var (
 		lo  uint64 = params.TxGas - 1
-		hi  uint64
+		hi  uint64 = params.UpperGasLimit
 		cap uint64
 	)
 	// Use zero address if sender unspecified.
@@ -1696,46 +1695,6 @@ func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, b
 		}
 	}
 	return hexutil.Uint64(hi), nil
-}
-
-// isReverted checks given error is vm.ErrExecutionReverted
-func isReverted(err error) bool {
-	if errors.Is(err, vm.ErrExecutionReverted) {
-		return true
-	}
-	return false
-}
-
-// newRevertError wraps data returned when EVM execution was reverted.
-// Make sure that data is returned when execution reverted situation.
-func newRevertError(data []byte) *revertError {
-	reason, errUnpack := abi.UnpackRevert(data)
-	err := errors.New("execution reverted")
-	if errUnpack == nil {
-		err = fmt.Errorf("execution reverted: %v", reason)
-	}
-	return &revertError{
-		error:  err,
-		reason: hexutil.Encode(data),
-	}
-}
-
-// revertError is an API error that encompassas an EVM revertal with JSON error
-// code and a binary data blob.
-type revertError struct {
-	error
-	reason string // revert reason hex encoded
-}
-
-// ErrorCode returns the JSON error code for a revertal.
-// See: https://github.com/ethereum/wiki/wiki/JSON-RPC-Error-Codes-Improvement-Proposal
-func (e *revertError) ErrorCode() int {
-	return 3
-}
-
-// ErrorData returns the hex encoded revert reason.
-func (e *revertError) ErrorData() interface{} {
-	return e.reason
 }
 
 // checkTxFee is an internal function used to check whether the fee of
