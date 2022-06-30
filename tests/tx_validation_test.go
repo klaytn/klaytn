@@ -508,11 +508,7 @@ func decreaseGasPriceKip71(txType types.TxType, values txValueMap, contract comm
 		err = blockchain.ErrFeeCapBelowBaseFee
 	} else {
 		(*big.Int).SetUint64(values[types.TxValueKeyGasPrice].(*big.Int), 12345678)
-		if txType == types.TxTypeCancel {
-			err = nil
-		} else {
-			err = blockchain.ErrGasPriceBelowBaseFee
-		}
+		err = blockchain.ErrGasPriceBelowBaseFee
 	}
 
 	return values, err
