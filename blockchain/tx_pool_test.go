@@ -52,24 +52,23 @@ var (
 	testTxPoolConfig TxPoolConfig
 
 	// eip1559Config is a chain config with EIP-1559 enabled at block 0.
-	eip1559Config params.ChainConfig
+	eip1559Config *params.ChainConfig
 
 	// kip71Config is a chain config with KIP-71 enabled at block 0.
-	kip71Config params.ChainConfig
+	kip71Config *params.ChainConfig
 )
 
 func init() {
 	testTxPoolConfig = DefaultTxPoolConfig
 	testTxPoolConfig.Journal = ""
 
-
 	eip1559Config = params.TestChainConfig.Copy()
 	eip1559Config.IstanbulCompatibleBlock = common.Big0
 	eip1559Config.LondonCompatibleBlock = common.Big0
 	eip1559Config.EthTxTypeCompatibleBlock = common.Big0
-	fork.SetHardForkBlockNumberConfig(&eip1559Config)
+	fork.SetHardForkBlockNumberConfig(eip1559Config)
 
-	kip71Config = *params.TestChainConfig
+	kip71Config = params.TestChainConfig.Copy()
 	kip71Config.KIP71CompatibleBlock = common.Big0
 	kip71Config.IstanbulCompatibleBlock = common.Big0
 	kip71Config.LondonCompatibleBlock = common.Big0
@@ -143,6 +142,8 @@ func cancelTx(nonce uint64, gasLimit uint64, gasPrice *big.Int, from common.Addr
 	}
 	cancelTx := types.NewTx(d)
 	signedTx, _ := types.SignTx(cancelTx, types.LatestSignerForChainID(params.TestChainConfig.ChainID), key)
+	return signedTx
+}
 
 func feeDelegatedTx(nonce uint64, gaslimit uint64, gasPrice *big.Int, amount *big.Int, senderPrvKey *ecdsa.PrivateKey, feePayerPrvKey *ecdsa.PrivateKey) *types.Transaction {
 	delegatedTx := types.NewTx(&types.TxInternalDataFeeDelegatedValueTransfer{
@@ -1946,7 +1947,7 @@ func TestTransactionStatusCheck(t *testing.T) {
 func TestDynamicFeeTransactionVeryHighValues(t *testing.T) {
 	t.Parallel()
 
-	pool, key := setupTxPoolWithConfig(&eip1559Config)
+	pool, key := setupTxPoolWithConfig(eip1559Config)
 	defer pool.Stop()
 
 	veryBigNumber := big.NewInt(1)
@@ -1963,45 +1964,45 @@ func TestDynamicFeeTransactionVeryHighValues(t *testing.T) {
 	}
 }
 
-// func TestDynamicFeeTransactionHasNotSameGasPrice(t *testing.T) {
-// 	t.Parallel()
+func TestDynamicFeeTransactionHasNotSameGasPrice(t *testing.T) {
+	t.Parallel()
 
-// 	pool, key := setupTxPoolWithConfig(eip1559Config)
-// 	defer pool.Stop()
+	pool, key := setupTxPoolWithConfig(eip1559Config)
+	defer pool.Stop()
 
-// 	testAddBalance(pool, crypto.PubkeyToAddress(key.PublicKey), big.NewInt(10000000000))
+	testAddBalance(pool, crypto.PubkeyToAddress(key.PublicKey), big.NewInt(10000000000))
 
-// 	// Ensure gasFeeCap is greater than or equal to gasTipCap.
-// 	tx := dynamicFeeTx(0, 100, big.NewInt(1), big.NewInt(2), key)
-// 	if err := pool.AddRemote(tx); err != ErrTipAboveFeeCap {
-// 		t.Error("expected", ErrTipAboveFeeCap, "got", err)
-// 	}
+	// Ensure gasFeeCap is greater than or equal to gasTipCap.
+	tx := dynamicFeeTx(0, 100, big.NewInt(1), big.NewInt(2), key)
+	if err := pool.AddRemote(tx); err != ErrTipAboveFeeCap {
+		t.Error("expected", ErrTipAboveFeeCap, "got", err)
+	}
 
-// 	// The GasTipCap is equal to gasPrice that config at TxPool.
-// 	tx2 := dynamicFeeTx(0, 100, big.NewInt(2), big.NewInt(2), key)
-// 	if err := pool.AddRemote(tx2); err != ErrInvalidGasTipCap {
-// 		t.Error("expected", ErrInvalidGasTipCap, "got", err)
-// 	}
-// }
+	// The GasTipCap is equal to gasPrice that config at TxPool.
+	tx2 := dynamicFeeTx(0, 100, big.NewInt(2), big.NewInt(2), key)
+	if err := pool.AddRemote(tx2); err != ErrInvalidGasTipCap {
+		t.Error("expected", ErrInvalidGasTipCap, "got", err)
+	}
+}
 
-// func TestDynamicFeeTransactionAccepted(t *testing.T) {
-// 	t.Parallel()
+func TestDynamicFeeTransactionAccepted(t *testing.T) {
+	t.Parallel()
 
-// 	pool, key := setupTxPoolWithConfig(eip1559Config)
-// 	defer pool.Stop()
+	pool, key := setupTxPoolWithConfig(eip1559Config)
+	defer pool.Stop()
 
-// 	testAddBalance(pool, crypto.PubkeyToAddress(key.PublicKey), big.NewInt(1000000))
+	testAddBalance(pool, crypto.PubkeyToAddress(key.PublicKey), big.NewInt(1000000))
 
-// 	tx := dynamicFeeTx(0, 21000, big.NewInt(1), big.NewInt(1), key)
-// 	if err := pool.AddRemote(tx); err != nil {
-// 		t.Error("error", "got", err)
-// 	}
+	tx := dynamicFeeTx(0, 21000, big.NewInt(1), big.NewInt(1), key)
+	if err := pool.AddRemote(tx); err != nil {
+		t.Error("error", "got", err)
+	}
 
-// 	tx2 := dynamicFeeTx(1, 21000, big.NewInt(1), big.NewInt(1), key)
-// 	if err := pool.AddRemote(tx2); err != nil {
-// 		t.Error("error", "got", err)
-// 	}
-// }
+	tx2 := dynamicFeeTx(1, 21000, big.NewInt(1), big.NewInt(1), key)
+	if err := pool.AddRemote(tx2); err != nil {
+		t.Error("error", "got", err)
+	}
+}
 
 // TestDynamicFeeTransactionNotAcceptedNotEnableHardfork tests that the pool didn't accept dynamic tx if the pool didn't enable eip1559 hardfork.
 func TestDynamicFeeTransactionNotAcceptedNotEnableHardfork(t *testing.T) {
@@ -2023,7 +2024,7 @@ func TestDynamicFeeTransactionAcceptedEip1559(t *testing.T) {
 	t.Parallel()
 	baseFee := big.NewInt(30)
 
-	pool, key := setupTxPoolWithConfig(&eip1559Config)
+	pool, key := setupTxPoolWithConfig(eip1559Config)
 	defer pool.Stop()
 	pool.SetBaseFee(baseFee)
 
@@ -2050,7 +2051,7 @@ func TestDynamicFeeTransactionAcceptedKip71(t *testing.T) {
 	t.Parallel()
 	baseFee := big.NewInt(30)
 
-	pool, key := setupTxPoolWithConfig(&kip71Config)
+	pool, key := setupTxPoolWithConfig(kip71Config)
 	defer pool.Stop()
 	pool.SetBaseFee(baseFee)
 
@@ -2079,7 +2080,7 @@ func TestTransactionAcceptedEip1559(t *testing.T) {
 	t.Parallel()
 	baseFee := big.NewInt(30)
 
-	pool, key := setupTxPoolWithConfig(&eip1559Config)
+	pool, key := setupTxPoolWithConfig(eip1559Config)
 	defer pool.Stop()
 	pool.SetBaseFee(baseFee)
 
@@ -2103,7 +2104,7 @@ func TestTransactionAcceptedKip71(t *testing.T) {
 	t.Parallel()
 	baseFee := big.NewInt(30)
 
-	pool, key := setupTxPoolWithConfig(&kip71Config)
+	pool, key := setupTxPoolWithConfig(kip71Config)
 	defer pool.Stop()
 	pool.SetBaseFee(baseFee)
 
@@ -2126,7 +2127,7 @@ func TestCancelTransactionAcceptedKip71(t *testing.T) {
 	t.Parallel()
 	baseFee := big.NewInt(30)
 
-	pool, key := setupTxPoolWithConfig(&kip71Config)
+	pool, key := setupTxPoolWithConfig(kip71Config)
 	defer pool.Stop()
 	pool.SetBaseFee(baseFee)
 
@@ -2166,7 +2167,7 @@ func TestDynamicFeeTransactionNotAcceptedWithLowerGasPrice(t *testing.T) {
 	t.Parallel()
 	baseFee := big.NewInt(30)
 
-	pool, key := setupTxPoolWithConfig(&kip71Config)
+	pool, key := setupTxPoolWithConfig(kip71Config)
 	defer pool.Stop()
 	pool.SetBaseFee(baseFee)
 
@@ -2183,7 +2184,7 @@ func TestDynamicFeeTransactionNotAcceptedWithLowerGasPrice(t *testing.T) {
 func TestTransactionNotAcceptedWithLowerGasPrice(t *testing.T) {
 	t.Parallel()
 
-	pool, key := setupTxPoolWithConfig(&kip71Config)
+	pool, key := setupTxPoolWithConfig(kip71Config)
 	defer pool.Stop()
 
 	baseFee := big.NewInt(30)
@@ -2202,7 +2203,7 @@ func TestTransactionNotAcceptedWithLowerGasPrice(t *testing.T) {
 func TestTransactionsPromoteFull(t *testing.T) {
 	t.Parallel()
 
-	pool, key := setupTxPoolWithConfig(&kip71Config)
+	pool, key := setupTxPoolWithConfig(kip71Config)
 	defer pool.Stop()
 
 	from := crypto.PubkeyToAddress(key.PublicKey)
@@ -2237,7 +2238,7 @@ func TestTransactionsPromoteFull(t *testing.T) {
 func TestTransactionsPromotePartial(t *testing.T) {
 	t.Parallel()
 
-	pool, key := setupTxPoolWithConfig(&kip71Config)
+	pool, key := setupTxPoolWithConfig(kip71Config)
 	defer pool.Stop()
 
 	from := crypto.PubkeyToAddress(key.PublicKey)
@@ -2282,7 +2283,7 @@ func TestTransactionsPromotePartial(t *testing.T) {
 func TestTransactionsPromoteMultipleAccount(t *testing.T) {
 	t.Parallel()
 
-	pool, _ := setupTxPoolWithConfig(&kip71Config)
+	pool, _ := setupTxPoolWithConfig(kip71Config)
 	defer pool.Stop()
 	pool.SetBaseFee(big.NewInt(10))
 
@@ -2340,10 +2341,9 @@ func TestTransactionsPromoteMultipleAccount(t *testing.T) {
 func TestTransactionsDemotionMultipleAccount(t *testing.T) {
 	t.Parallel()
 
-	pool, _ := setupTxPoolWithConfig(&kip71Config)
+	pool, _ := setupTxPoolWithConfig(kip71Config)
 	defer pool.Stop()
-	// pool.SetBaseFee(big.NewInt(10))
-	pool.gasPrice = big.NewInt(10)
+	pool.SetBaseFee(big.NewInt(10))
 
 	keys := make([]*ecdsa.PrivateKey, 3)
 	froms := make([]common.Address, 3)
@@ -2387,8 +2387,7 @@ func TestTransactionsDemotionMultipleAccount(t *testing.T) {
 	// tx[6] : queue[from[2]]
 	// tx[7] : queue[from[2]]
 	// tx[7] : queue[from[2]]
-	// pool.SetBaseFee(big.NewInt(35))
-	pool.gasPrice = big.NewInt(35)
+	pool.SetBaseFee(big.NewInt(35))
 	pool.demoteUnexecutables()
 
 	assert.Equal(t, 2, pool.queue[froms[0]].Len())
@@ -2409,6 +2408,8 @@ func TestTransactionsDemotionMultipleAccount(t *testing.T) {
 	assert.True(t, reflect.DeepEqual(txs[6], pool.queue[froms[2]].txs.items[1]))
 	assert.True(t, reflect.DeepEqual(txs[7], pool.queue[froms[2]].txs.items[2]))
 	assert.True(t, reflect.DeepEqual(txs[8], pool.queue[froms[2]].txs.items[3]))
+}
+
 // TestFeeDelegatedTransaction checks feeDelegatedValueTransfer logic on tx pool
 // the case when sender = feePayer has been included
 func TestFeeDelegatedTransaction(t *testing.T) {
