@@ -487,7 +487,7 @@ type BridgeManager struct {
 	receivedEvents map[common.Address][]event.Subscription
 	withdrawEvents map[common.Address]event.Subscription
 	bridges        map[common.Address]*BridgeInfo
-	bridgeInfoMu   sync.RWMutex
+	bridgesMu      sync.RWMutex
 	tokenEventMu   sync.RWMutex
 
 	reqVTevFeeder        event.Feed
@@ -567,8 +567,8 @@ func (bm *BridgeManager) GetCounterPartBridge(bridgeAddr common.Address) *bridge
 
 // LogBridgeStatus logs the bridge contract requested/handled nonce status as an information.
 func (bm *BridgeManager) LogBridgeStatus() {
-	bm.bridgeInfoMu.RLock()
-	defer bm.bridgeInfoMu.RUnlock()
+	bm.bridgesMu.RLock()
+	defer bm.bridgesMu.RUnlock()
 
 	if len(bm.bridges) == 0 {
 		return
@@ -654,8 +654,8 @@ func (bm *BridgeManager) GetAllBridge() []*BridgeJournal {
 
 // GetBridgeInfo returns bridge contract of the specified address.
 func (bm *BridgeManager) GetBridgeInfo(addr common.Address) (*BridgeInfo, bool) {
-	bm.bridgeInfoMu.RLock()
-	defer bm.bridgeInfoMu.RUnlock()
+	bm.bridgesMu.RLock()
+	defer bm.bridgesMu.RUnlock()
 
 	bridge, ok := bm.bridges[addr]
 	return bridge, ok
@@ -663,8 +663,8 @@ func (bm *BridgeManager) GetBridgeInfo(addr common.Address) (*BridgeInfo, bool) 
 
 // DeleteBridgeInfo deletes the bridge info of the specified address.
 func (bm *BridgeManager) DeleteBridgeInfo(addr common.Address) error {
-	bm.bridgeInfoMu.Lock()
-	defer bm.bridgeInfoMu.Unlock()
+	bm.bridgesMu.Lock()
+	defer bm.bridgesMu.Unlock()
 
 	bi := bm.bridges[addr]
 	if bi == nil {
@@ -679,8 +679,8 @@ func (bm *BridgeManager) DeleteBridgeInfo(addr common.Address) error {
 
 // SetBridgeInfo stores the address and bridge pair with local/remote and subscription status.
 func (bm *BridgeManager) SetBridgeInfo(addr common.Address, bridge *bridgecontract.Bridge, cpAddr common.Address, cpBridge *bridgecontract.Bridge, account *accountInfo, local bool, subscribed bool) error {
-	bm.bridgeInfoMu.Lock()
-	defer bm.bridgeInfoMu.Unlock()
+	bm.bridgesMu.Lock()
+	defer bm.bridgesMu.Unlock()
 
 	if bm.bridges[addr] != nil {
 		return ErrDuplicatedBridgeInfo
@@ -1126,8 +1126,8 @@ func (bm *BridgeManager) loop(
 
 // Stop closes a subscribed event scope of the bridge manager.
 func (bm *BridgeManager) Stop() {
-	bm.bridgeInfoMu.RLock()
-	defer bm.bridgeInfoMu.RUnlock()
+	bm.bridgesMu.RLock()
+	defer bm.bridgesMu.RUnlock()
 
 	for _, bi := range bm.bridges {
 		close(bi.closed)
