@@ -351,7 +351,7 @@ func TestInvalidTransactions(t *testing.T) {
 
 	testAddBalance(pool, from, big.NewInt(1))
 	if err := pool.AddRemote(tx); err != ErrInsufficientFundsFrom {
-		t.Error("expected", ErrInsufficientFundsFrom)
+		t.Error("expected", ErrInsufficientFundsFrom, "got", err)
 	}
 
 	balance := new(big.Int).Add(tx.Value(), new(big.Int).Mul(new(big.Int).SetUint64(tx.Gas()), tx.GasPrice()))
@@ -368,7 +368,7 @@ func TestInvalidTransactions(t *testing.T) {
 	}
 
 	tx = transaction(1, 100000, key)
-	pool.gasPrice = big.NewInt(1000)
+	pool.SetBaseFee(big.NewInt(1000))
 
 	// NOTE-Klaytn We only accept txs with an expected gas price only
 	// regardless of local or remote.
@@ -377,6 +377,47 @@ func TestInvalidTransactions(t *testing.T) {
 	}
 	if err := pool.AddLocal(tx); err != ErrInvalidUnitPrice {
 		t.Error("expected", ErrInvalidUnitPrice, "got", err)
+	}
+}
+
+func TestInvalidTransactionsKip71(t *testing.T) {
+	t.Parallel()
+
+	pool, key := setupTxPoolWithConfig(kip71Config)
+	pool.SetBaseFee(big.NewInt(1))
+	defer pool.Stop()
+
+	tx := transaction(0, 100, key)
+	from, _ := deriveSender(tx)
+
+	testAddBalance(pool, from, big.NewInt(1))
+	if err := pool.AddRemote(tx); err != ErrInsufficientFundsFrom {
+		t.Error("expected", ErrInsufficientFundsFrom, "got", err)
+	}
+
+	balance := new(big.Int).Add(tx.Value(), new(big.Int).Mul(new(big.Int).SetUint64(tx.Gas()), tx.GasPrice()))
+	testAddBalance(pool, from, balance)
+	if err := pool.AddRemote(tx); err != ErrIntrinsicGas {
+		t.Error("expected", ErrIntrinsicGas, "got", err)
+	}
+
+	testSetNonce(pool, from, 1)
+	testAddBalance(pool, from, big.NewInt(0xffffffffffffff))
+	tx = transaction(0, 100000, key)
+	if err := pool.AddRemote(tx); err != ErrNonceTooLow {
+		t.Error("expected", ErrNonceTooLow)
+	}
+
+	tx = transaction(1, 100000, key)
+	pool.SetBaseFee(big.NewInt(1000))
+
+	// NOTE-Klaytn if the gasPrice in tx is lower than txPool's
+	// It should return ErrGasPriceBelowBaseFee error after kip71 hardfork
+	if err := pool.AddRemote(tx); err != ErrGasPriceBelowBaseFee {
+		t.Error("expected", ErrGasPriceBelowBaseFee, "got", err)
+	}
+	if err := pool.AddLocal(tx); err != ErrGasPriceBelowBaseFee {
+		t.Error("expected", ErrGasPriceBelowBaseFee, "got", err)
 	}
 }
 
