@@ -97,6 +97,7 @@ type HeaderEngine interface {
 	SetMyVotingPower(t uint64)
 	SetBlockchain(chain blockChain)
 	SetTxPool(txpool txPool)
+	GetTxPool() txPool
 
 	// Get network params
 	GovernanceMode() string

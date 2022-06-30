@@ -114,7 +114,7 @@ func (s *PublicBlockChainAPI) GetBlockReceipts(ctx context.Context, blockHash co
 	}
 	fieldsList := make([]map[string]interface{}, 0, len(receipts))
 	for index, receipt := range receipts {
-		fields := RpcOutputReceipt(txs[index], blockHash, block.NumberU64(), uint64(index), receipt)
+		fields := RpcOutputReceipt(block.Header(), txs[index], blockHash, block.NumberU64(), uint64(index), receipt)
 		fieldsList = append(fieldsList, fields)
 	}
 	return fieldsList, nil
@@ -569,11 +569,10 @@ func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool, isEna
 	}
 
 	if isEnabledEthTxTypeFork {
-		if head.BaseFee != nil {
-			// KIP71 hardforked block
-			fields["baseFeePerGas"] = (*hexutil.Big)(head.BaseFee)
-		} else {
+		if head.BaseFee == nil {
 			fields["baseFeePerGas"] = (*hexutil.Big)(new(big.Int).SetUint64(params.ZeroBaseFee))
+		} else {
+			fields["baseFeePerGas"] = (*hexutil.Big)(head.BaseFee)
 		}
 	}
 
