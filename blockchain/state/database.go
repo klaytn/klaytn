@@ -21,8 +21,10 @@
 package state
 
 import (
+	"errors"
 	"fmt"
 
+	"github.com/VictoriaMetrics/fastcache"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/storage/statedb"
@@ -31,6 +33,9 @@ import (
 const (
 	// Number of codehash->size associations to keep
 	codeSizeCacheSize = 100000
+
+	// Cache size granted for caching clean code.
+	codeCacheSize = 64 * 1024 * 1024
 
 	// Number of shards in cache
 	shardsCodeSizeCache = 4096
@@ -51,6 +56,9 @@ type Database interface {
 
 	// ContractCode retrieves a particular contract's code.
 	ContractCode(codeHash common.Hash) ([]byte, error)
+
+	// DeleteCode deletes a particular contract's code.
+	DeleteCode(codeHash common.Hash)
 
 	// ContractCodeSize retrieves a particular contracts code's size.
 	ContractCodeSize(codeHash common.Hash) (int, error)
@@ -134,6 +142,7 @@ func NewDatabaseWithNewCache(db database.DBManager, cacheConfig *statedb.TrieNod
 	return &cachingDB{
 		db:            statedb.NewDatabaseWithNewCache(db, cacheConfig),
 		codeSizeCache: getCodeSizeCache(),
+		codeCache:     fastcache.New(codeCacheSize),
 	}
 }
 
@@ -144,12 +153,14 @@ func NewDatabaseWithExistingCache(db database.DBManager, cache statedb.TrieNodeC
 	return &cachingDB{
 		db:            statedb.NewDatabaseWithExistingCache(db, cache),
 		codeSizeCache: getCodeSizeCache(),
+		codeCache:     fastcache.New(codeCacheSize),
 	}
 }
 
 type cachingDB struct {
 	db            *statedb.Database
 	codeSizeCache common.Cache
+	codeCache     *fastcache.Cache
 }
 
 // OpenTrie opens the main account trie at a specific root hash.
@@ -184,11 +195,38 @@ func (db *cachingDB) CopyTrie(t Trie) Trie {
 
 // ContractCode retrieves a particular contract's code.
 func (db *cachingDB) ContractCode(codeHash common.Hash) ([]byte, error) {
-	code, err := db.db.Node(codeHash)
-	if err == nil {
-		db.codeSizeCache.Add(codeHash, len(code))
+	if code := db.codeCache.Get(nil, codeHash.Bytes()); len(code) > 0 {
+		return code, nil
 	}
-	return code, err
+	code := db.db.DiskDB().ReadCode(codeHash)
+	if len(code) > 0 {
+		db.codeCache.Set(codeHash.Bytes(), code)
+		db.codeSizeCache.Add(codeHash, len(code))
+		return code, nil
+	}
+	return nil, errors.New("not found")
+}
+
+// DeleteCode deletes a particular contract's code.
+func (db *cachingDB) DeleteCode(codeHash common.Hash) {
+	db.codeCache.Del(codeHash.Bytes())
+	db.db.DiskDB().DeleteCode(codeHash)
+}
+
+// ContractCodeWithPrefix retrieves a particular contract's code. If the
+// code can't be found in the cache, then check the existence with **new**
+// db scheme.
+func (db *cachingDB) ContractCodeWithPrefix(codeHash common.Hash) ([]byte, error) {
+	if code := db.codeCache.Get(nil, codeHash.Bytes()); len(code) > 0 {
+		return code, nil
+	}
+	code := db.db.DiskDB().ReadCodeWithPrefix(codeHash)
+	if len(code) > 0 {
+		db.codeCache.Set(codeHash.Bytes(), code)
+		db.codeSizeCache.Add(codeHash, len(code))
+		return code, nil
+	}
+	return nil, errors.New("not found")
 }
 
 // ContractCodeSize retrieves a particular contracts code's size.

@@ -22,6 +22,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
 	"time"
@@ -255,6 +256,7 @@ func (s *PublicBlockChainAPI) IsSenderTxHashIndexingEnabled() bool {
 }
 
 // CallArgs represents the arguments for a call.
+// TODO-Klaytn: add KIP-71 related parameter
 type CallArgs struct {
 	From     common.Address  `json:"from"`
 	To       *common.Address `json:"to"`
@@ -262,45 +264,26 @@ type CallArgs struct {
 	GasPrice hexutil.Big     `json:"gasPrice"`
 	Value    hexutil.Big     `json:"value"`
 	Data     hexutil.Bytes   `json:"data"`
+	Input    hexutil.Bytes   `json:"input"`
 }
 
-func DoCall(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.BlockNumberOrHash, vmCfg vm.Config, timeout time.Duration, globalGasCap *big.Int) ([]byte, uint64, uint64, bool, error) {
+func (args *CallArgs) data() []byte {
+	if args.Input != nil {
+		return args.Input
+	}
+	if args.Data != nil {
+		return args.Data
+	}
+	return nil
+}
+
+func DoCall(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.BlockNumberOrHash, vmCfg vm.Config, timeout time.Duration, globalGasCap *big.Int) ([]byte, uint64, uint64, uint, error) {
 	defer func(start time.Time) { logger.Debug("Executing EVM call finished", "runtime", time.Since(start)) }(time.Now())
 
 	state, header, err := b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if state == nil || err != nil {
-		return nil, 0, 0, false, err
+		return nil, 0, 0, 0, err
 	}
-	// Set sender address or use a default if none specified
-	addr := args.From
-	if addr == (common.Address{}) {
-		if wallets := b.AccountManager().Wallets(); len(wallets) > 0 {
-			if accounts := wallets[0].Accounts(); len(accounts) > 0 {
-				addr = accounts[0].Address
-			}
-		}
-	}
-	// Set default gas & gas price if none were set
-	gas, gasPrice := uint64(args.Gas), args.GasPrice.ToInt()
-	if gas == 0 {
-		gas = math.MaxUint64 / 2
-	}
-	if globalGasCap != nil && globalGasCap.Uint64() < gas {
-		logger.Warn("Caller gas above allowance, capping", "requested", gas, "cap", globalGasCap)
-		gas = globalGasCap.Uint64()
-	}
-	if gasPrice.Sign() == 0 {
-		gasPrice = new(big.Int).SetUint64(defaultGasPrice)
-	}
-
-	intrinsicGas, err := types.IntrinsicGas(args.Data, nil, args.To == nil, b.ChainConfig().Rules(header.Number))
-	if err != nil {
-		return nil, 0, 0, false, err
-	}
-
-	// Create new call message
-	msg := types.NewMessage(addr, args.To, 0, args.Value.ToInt(), gas, gasPrice, args.Data, false, intrinsicGas)
-
 	// Setup context so it may be cancelled the call has completed
 	// or, in case of unmetered gas, setup a context with a timeout.
 	var cancel context.CancelFunc
@@ -313,12 +296,29 @@ func DoCall(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.Blo
 	// this makes sure resources are cleaned up.
 	defer cancel()
 
+	// TODO-Klaytn: Klaytn is using fixed baseFee as now but, if we change this fixed baseFee as dynamic baseFee, we should update this logic too.
+	fixedBaseFee := new(big.Int).SetUint64(params.BaseFee)
+	intrinsicGas, err := types.IntrinsicGas(args.data(), nil, args.To == nil, b.ChainConfig().Rules(header.Number))
+	if err != nil {
+		return nil, 0, 0, 0, err
+	}
+	msg, err := args.ToMessage(globalGasCap.Uint64(), fixedBaseFee, intrinsicGas)
 	// Add gas fee to sender for estimating gasLimit/computing cost or calling a function by insufficient balance sender.
 	state.AddBalance(msg.ValidatedSender(), new(big.Int).Mul(new(big.Int).SetUint64(msg.Gas()), msg.GasPrice()))
-	// Get a new instance of the EVM.
+
+	if err != nil {
+		return nil, 0, 0, 0, err
+	}
+	// The intrinsicGas is checked again later in the blockchain.ApplyMessage function,
+	// but we check in advance here in order to keep StateTransition.TransactionDb method as unchanged as possible
+	// and to clarify error reason correctly to serve eth namespace APIs.
+	// This case is handled by DoEstimateGas function.
+	if msg.Gas() < intrinsicGas {
+		return nil, 0, 0, 0, fmt.Errorf("%w: msg.gas %d, want %d", blockchain.ErrIntrinsicGas, msg.Gas(), intrinsicGas)
+	}
 	evm, vmError, err := b.GetEVM(ctx, msg, state, header, vmCfg)
 	if err != nil {
-		return nil, 0, 0, false, err
+		return nil, 0, 0, 0, err
 	}
 	// Wait for the context to be done and cancel the evm. Even if the
 	// EVM has finished, cancelling may be done (repeatedly)
@@ -327,29 +327,40 @@ func DoCall(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.Blo
 		evm.Cancel(vm.CancelByCtxDone)
 	}()
 
+	// Execute the message.
 	res, gas, kerr := blockchain.ApplyMessage(evm, msg)
 	err = kerr.ErrTxInvalid
 	if err := vmError(); err != nil {
-		return nil, 0, 0, false, err
+		return nil, 0, 0, 0, err
 	}
 	// If the timer caused an abort, return an appropriate error message
 	if evm.Cancelled() {
-		return nil, 0, 0, false, fmt.Errorf("execution aborted (timeout = %v)", timeout)
+		return nil, 0, 0, 0, fmt.Errorf("execution aborted (timeout = %v)", timeout)
 	}
-
-	// Propagate error of Receipt as JSON RPC error
-	if err == nil {
-		err = blockchain.GetVMerrFromReceiptStatus(kerr.Status)
+	if err != nil {
+		return res, 0, 0, 0, fmt.Errorf("err: %w (supplied gas %d)", err, msg.Gas())
 	}
-
-	return res, gas, evm.GetOpCodeComputationCost(), kerr.Status != types.ReceiptStatusSuccessful, err
+	// TODO-Klaytn-Interface: Introduce ExecutionResult struct from geth to return more detail information
+	return res, gas, evm.GetOpCodeComputationCost(), kerr.Status, nil
 }
 
 // Call executes the given transaction on the state for the given block number or hash.
 // It doesn't make and changes in the state/blockchain and is useful to execute and retrieve values.
 func (s *PublicBlockChainAPI) Call(ctx context.Context, args CallArgs, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
-	result, _, _, _, err := DoCall(ctx, s.b, args, blockNrOrHash, vm.Config{}, localTxExecutionTime, s.b.RPCGasCap())
-	return (hexutil.Bytes)(result), err
+	gasCap := big.NewInt(0)
+	if rpcGasCap := s.b.RPCGasCap(); rpcGasCap != nil {
+		gasCap = rpcGasCap
+	}
+	result, _, _, status, err := DoCall(ctx, s.b, args, blockNrOrHash, vm.Config{}, localTxExecutionTime, gasCap)
+	if err != nil {
+		return nil, err
+	}
+
+	err = blockchain.GetVMerrFromReceiptStatus(status)
+	if err != nil && isReverted(err) && len(result) > 0 {
+		return nil, newRevertError(result)
+	}
+	return common.CopyBytes(result), err
 }
 
 func (s *PublicBlockChainAPI) EstimateComputationCost(ctx context.Context, args CallArgs, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Uint64, error) {
@@ -359,7 +370,11 @@ func (s *PublicBlockChainAPI) EstimateComputationCost(ctx context.Context, args 
 
 // EstimateGas returns an estimate of the amount of gas needed to execute the given transaction against the latest block.
 func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs) (hexutil.Uint64, error) {
-	return s.DoEstimateGas(ctx, s.b, args, s.b.RPCGasCap())
+	gasCap := uint64(0)
+	if rpcGasCap := s.b.RPCGasCap(); rpcGasCap != nil {
+		gasCap = rpcGasCap.Uint64()
+	}
+	return s.DoEstimateGas(ctx, s.b, args, big.NewInt(int64(gasCap)))
 }
 
 func (s *PublicBlockChainAPI) DoEstimateGas(ctx context.Context, b Backend, args CallArgs, gasCap *big.Int) (hexutil.Uint64, error) {
@@ -375,26 +390,36 @@ func (s *PublicBlockChainAPI) DoEstimateGas(ctx context.Context, b Backend, args
 		// Retrieve the current pending block to act as the gas ceiling
 		hi = params.UpperGasLimit
 	}
-	if gasCap != nil && hi > gasCap.Uint64() {
-		logger.Warn("Caller gas above allowance, capping", "requested", hi, "cap", gasCap)
-		hi = gasCap.Uint64()
-	}
+	// TODO-Klaytn: set hi value with account balance
 	cap = hi
 
 	// Create a helper to check if a gas allowance results in an executable transaction
-	executable := func(gas uint64) bool {
+	executable := func(gas uint64) (bool, []byte, error, error) {
 		args.Gas = hexutil.Uint64(gas)
-
-		_, _, _, failed, err := DoCall(ctx, b, args, rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber), vm.Config{UseOpcodeComputationCost: true}, localTxExecutionTime, gasCap)
-		if err != nil || failed {
-			return false
+		ret, _, _, status, err := DoCall(ctx, b, args, rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber), vm.Config{}, 0, gasCap)
+		if err != nil {
+			if errors.Is(err, blockchain.ErrIntrinsicGas) {
+				// Special case, raise gas limit
+				return false, ret, nil, nil
+			}
+			// Returns error when it is not VM error (less balance or wrong nonce, etc...).
+			return false, nil, nil, err
 		}
-		return true
+		// If err is vmError, return vmError with returned data
+		vmErr := blockchain.GetVMerrFromReceiptStatus(status)
+		if vmErr != nil {
+			return false, ret, vmErr, nil
+		}
+		return true, ret, vmErr, nil
 	}
 	// Execute the binary search and hone in on an executable gas limit
 	for lo+1 < hi {
 		mid := (hi + lo) / 2
-		if !executable(mid) {
+		isExecutable, _, _, err := executable(mid)
+		if err != nil {
+			return 0, err
+		}
+		if !isExecutable {
 			lo = mid
 		} else {
 			hi = mid
@@ -402,8 +427,20 @@ func (s *PublicBlockChainAPI) DoEstimateGas(ctx context.Context, b Backend, args
 	}
 	// Reject the transaction as invalid if it still fails at the highest allowance
 	if hi == cap {
-		if !executable(hi) {
-			return 0, fmt.Errorf("gas required exceeds allowance or always failing transaction")
+		isExecutable, ret, vmErr, err := executable(hi)
+		if err != nil {
+			return 0, err
+		}
+		if !isExecutable {
+			if vmErr != nil {
+				// Treat vmErr as RevertError only when there was returned data from call.
+				if isReverted(vmErr) && len(ret) > 0 {
+					return 0, newRevertError(ret)
+				}
+				return 0, vmErr
+			}
+			// Otherwise, the specified gas cap is too low
+			return 0, fmt.Errorf("gas required exceeds allowance (%d)", cap)
 		}
 	}
 	return hexutil.Uint64(hi), nil
@@ -610,4 +647,63 @@ func newRPCTransactionFromBlockHash(b *types.Block, hash common.Hash) map[string
 		}
 	}
 	return nil
+}
+
+func (args *CallArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsicGas uint64) (*types.Transaction, error) {
+	// Set sender address or use zero address if none specified.
+	addr := args.From
+
+	// Set default gas & gas price if none were set
+	gas := globalGasCap
+	if gas == 0 {
+		gas = uint64(math.MaxUint64 / 2)
+	}
+	if args.Gas != 0 {
+		gas = uint64(args.Gas)
+	}
+	if globalGasCap != 0 && globalGasCap < gas {
+		logger.Warn("Caller gas above allowance, capping", "requested", gas, "cap", globalGasCap)
+		gas = globalGasCap
+	}
+
+	var (
+		gasPrice  *big.Int
+		gasFeeCap *big.Int
+		gasTipCap *big.Int
+	)
+	if baseFee == nil {
+		// If there's no basefee, then it must be a non-1559 execution
+		gasPrice = new(big.Int)
+		if &args.GasPrice != nil {
+			gasPrice = args.GasPrice.ToInt()
+		}
+		gasFeeCap, gasTipCap = gasPrice, gasPrice
+	} else {
+		// A basefee is provided, necessitating 1559-type execution
+		if &args.GasPrice != nil {
+			// User specified the legacy gas field, convert to 1559 gas typing
+			gasPrice = args.GasPrice.ToInt()
+			gasFeeCap, gasTipCap = gasPrice, gasPrice
+		} else {
+			// TODO-Klaytn: User specified 1559 gas fields (or none), use those
+			gasFeeCap = new(big.Int)
+			gasTipCap = new(big.Int)
+			// Backfill the legacy gasPrice for EVM execution, unless we're all zeros
+			gasPrice = new(big.Int)
+			if gasFeeCap.BitLen() > 0 || gasTipCap.BitLen() > 0 {
+				gasPrice = math.BigMin(new(big.Int).Add(gasTipCap, baseFee), gasFeeCap)
+			}
+		}
+	}
+	value := new(big.Int)
+	if &args.Value != nil {
+		value = args.Value.ToInt()
+	}
+
+	// TODO-Klaytn: Klaytn does not support accessList yet.
+	// var accessList types.AccessList
+	// if args.AccessList != nil {
+	//	 accessList = *args.AccessList
+	// }
+	return types.NewMessage(addr, args.To, 0, value, gas, gasPrice, args.data(), false, intrinsicGas), nil
 }

@@ -348,18 +348,16 @@ func TestSetupGenesis(t *testing.T) {
 }
 
 func genCypressGenesisBlock() *Genesis {
-	copyOfCypressChainConfig := *params.CypressChainConfig
 	genesis := DefaultGenesisBlock()
-	genesis.Config = &copyOfCypressChainConfig
+	genesis.Config = params.CypressChainConfig.Copy()
 	genesis.Governance = SetGenesisGovernance(genesis)
 	InitDeriveSha(genesis.Config.DeriveShaImpl)
 	return genesis
 }
 
 func genBaobabGenesisBlock() *Genesis {
-	copyOfBaobabChainConfig := *params.BaobabChainConfig
 	genesis := DefaultBaobabGenesisBlock()
-	genesis.Config = &copyOfBaobabChainConfig
+	genesis.Config = params.BaobabChainConfig.Copy()
 	genesis.Governance = SetGenesisGovernance(genesis)
 	InitDeriveSha(genesis.Config.DeriveShaImpl)
 	return genesis
