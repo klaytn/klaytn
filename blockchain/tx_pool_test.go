@@ -82,6 +82,10 @@ type testBlockChain struct {
 	chainHeadFeed *event.Feed
 }
 
+func (pool *TxPool) SetBaseFee(baseFee *big.Int) {
+	pool.gasPrice = baseFee
+}
+
 func (bc *testBlockChain) CurrentBlock() *types.Block {
 	return types.NewBlock(&types.Header{Number: big.NewInt(0)}, nil, nil)
 }
