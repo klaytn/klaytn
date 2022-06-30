@@ -246,6 +246,7 @@ type BlockChain interface {
 
 	InsertChain(chain types.Blocks) (int, error)
 	TrieNode(hash common.Hash) ([]byte, error)
+	ContractCodeWithPrefix(hash common.Hash) ([]byte, error)
 	Config() *params.ChainConfig
 	State() (*state.StateDB, error)
 	Rollback(chain []common.Hash)

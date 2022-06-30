@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/gin-gonic/gin/binding"
 	"github.com/newrelic/go-agent/v3/newrelic"
 )
 
@@ -24,20 +23,23 @@ func (w dupWriter) Write(b []byte) (int, error) {
 
 // KASAttrs contains identifications for a KAS request
 type KASAttrs struct {
-	ChainID      string `header:"x-chain-id" json:"x-chain-id"`
-	AccountID    string `header:"x-account-id" json:"x-account-id"`
-	RequestID    string `header:"x-request-id" json:"x-request-id"`
-	ParentSpanID string `header:"x-b3-parentspanid,omitempty" json:"x-b3-parentspanid,omitempty"`
-	SpanID       string `header:"x-b3-spanid,omitempty" json:"x-b3-spanid,omitempty"`
-	TraceID      string `header:"x-b3-traceid,omitempty" json:"x-b3-traceid,omitempty"`
+	ChainID      string `json:"x-chain-id"`
+	AccountID    string `json:"x-account-id"`
+	RequestID    string `json:"x-request-id"`
+	ParentSpanID string `json:"x-b3-parentspanid,omitempty"`
+	SpanID       string `json:"x-b3-spanid,omitempty"`
+	TraceID      string `json:"x-b3-traceid,omitempty"`
 }
 
 func parseKASHeader(r *http.Request) KASAttrs {
-	attrs := KASAttrs{}
-	if err := binding.Header.Bind(r, &attrs); err != nil {
-		logger.Error("failed to bind a KAS header")
+	return KASAttrs{
+		ChainID:      r.Header.Get("x-chain-id"),
+		AccountID:    r.Header.Get("x-account-id"),
+		RequestID:    r.Header.Get("x-request-id"),
+		ParentSpanID: r.Header.Get("x-b3-parentspanid"),
+		SpanID:       r.Header.Get("x-b3-spanid"),
+		TraceID:      r.Header.Get("x-b3-traceid"),
 	}
-	return attrs
 }
 
 func newNewRelicApp() *newrelic.Application {

@@ -108,10 +108,15 @@ const (
 
 const (
 	DefaultTriesInMemory = 128
-	// BlockChainVersion ensures that an incompatible database forces a resync from scratch.
-	BlockChainVersion    = 3
 	DefaultBlockInterval = 128
 	MaxPrefetchTxs       = 20000
+
+	// BlockChainVersion ensures that an incompatible database forces a resync from scratch.
+	// Changelog:
+	// - Version 4
+	// The following incompatible database changes were added:
+	//   * New scheme for contract code in order to separate the codes and trie nodes
+	BlockChainVersion = 4
 )
 
 // CacheConfig contains the configuration values for the 1) stateDB caching and
@@ -1006,10 +1011,28 @@ func (bc *BlockChain) GetLogsByHash(hash common.Hash) [][]*types.Log {
 	return logs
 }
 
-// TrieNode retrieves a blob of data associated with a trie node (or code hash)
+// TrieNode retrieves a blob of data associated with a trie node
 // either from ephemeral in-memory cache, or from persistent storage.
 func (bc *BlockChain) TrieNode(hash common.Hash) ([]byte, error) {
 	return bc.stateCache.TrieDB().Node(hash)
+}
+
+// ContractCode retrieves a blob of data associated with a contract hash
+// either from ephemeral in-memory cache, or from persistent storage.
+func (bc *BlockChain) ContractCode(hash common.Hash) ([]byte, error) {
+	return bc.stateCache.ContractCode(hash)
+}
+
+// ContractCodeWithPrefix retrieves a blob of data associated with a contract
+// hash either from ephemeral in-memory cache, or from persistent storage.
+//
+// If the code doesn't exist in the in-memory cache, check the storage with
+// new code scheme.
+func (bc *BlockChain) ContractCodeWithPrefix(hash common.Hash) ([]byte, error) {
+	type codeReader interface {
+		ContractCodeWithPrefix(codeHash common.Hash) ([]byte, error)
+	}
+	return bc.stateCache.(codeReader).ContractCodeWithPrefix(hash)
 }
 
 // Stop stops the blockchain service. If any imports are currently in progress
