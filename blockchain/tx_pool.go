@@ -668,6 +668,11 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 			return ErrFeeCapVeryHigh
 		}
 
+		// Ensure gasFeeCap is greater than or equal to gasTipCap.
+		if tx.GasFeeCap().Cmp(tx.GasTipCap()) < 0 {
+			return ErrTipAboveFeeCap
+		}
+
 		if pool.kip71 {
 			// Ensure transaction's gasFeeCap is greater than or equal to transaction pool's gasPrice(baseFee).
 			if pool.gasPrice.Cmp(tx.GasFeeCap()) > 0 {
@@ -675,10 +680,6 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 				return ErrFeeCapBelowBaseFee
 			}
 		} else {
-			// Ensure gasFeeCap is greater than or equal to gasTipCap.
-			if tx.GasFeeCap().Cmp(tx.GasTipCap()) < 0 {
-				return ErrTipAboveFeeCap
-			}
 
 			if pool.gasPrice.Cmp(tx.GasTipCap()) != 0 {
 				logger.Trace("fail to validate maxPriorityFeePerGas", "unitprice", pool.gasPrice, "maxPriorityFeePerGas", tx.GasFeeCap())
@@ -693,8 +694,8 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 
 	} else {
 		if pool.kip71 {
-			// Ensure transaction's gasPrice is greater than or equal to transaction pool's gasPrice(baseFee).
-			if pool.gasPrice.Cmp(tx.GasPrice()) > 0 && tx.Type() != types.TxTypeCancel {
+			if pool.gasPrice.Cmp(tx.GasPrice()) > 0 {
+				// Ensure transaction's gasPrice is greater than or equal to transaction pool's gasPrice(baseFee).
 				logger.Trace("fail to validate gasprice", "pool.gasPrice", pool.gasPrice, "tx.gasPrice", tx.GasPrice())
 				return ErrGasPriceBelowBaseFee
 			}

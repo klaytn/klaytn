@@ -2191,7 +2191,7 @@ func TestCancelTransactionAcceptedKip71(t *testing.T) {
 
 	tx1CancelWithLowerPrice := cancelTx(0, 21000, big.NewInt(20), sender, key)
 	if err := pool.AddRemote(tx1CancelWithLowerPrice); err != nil {
-		t.Error("error", "got", err)
+		assert.Equal(t, ErrGasPriceBelowBaseFee, err)
 	}
 	tx2CancelWithSamePrice := cancelTx(1, 21000, big.NewInt(30), sender, key)
 	if err := pool.AddRemote(tx2CancelWithSamePrice); err != nil {
