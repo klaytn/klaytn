@@ -35,8 +35,6 @@ import (
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/reward"
 	"github.com/rcrowley/go-metrics"
-
-	klaytnmetrics "github.com/klaytn/klaytn/metrics"
 )
 
 const (
