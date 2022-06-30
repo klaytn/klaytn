@@ -1578,21 +1578,19 @@ func (pool *TxPool) demoteUnexecutables() {
 
 		// Enqueue transaction if gasPrice of transaction is lower than gasPrice of txPool.
 		// All transactions with a nonce greater than enqueued transaction also stored queue.
-		if pool.kip71 {
-			if list.Len() > 0 {
-				for _, tx := range list.Flatten() {
-					hash := tx.Hash()
-					if tx.GasPrice().Cmp(pool.gasPrice) < 0 {
-						logger.Trace("Demoting the tx that is lower than the baseFee and those greater than the nonce of the tx.", "txhash", hash)
-						removed, invalids := list.Remove(tx) // delete all transactions satisfying the nonce value > tx.Nonce()
-						if removed {
-							for _, invalidTx := range invalids {
-								pool.enqueueTx(invalidTx.Hash(), invalidTx)
-							}
-							pool.enqueueTx(hash, tx)
+		if pool.kip71 && list.Len() > 0 {
+			for _, tx := range list.Flatten() {
+				hash := tx.Hash()
+				if tx.GasPrice().Cmp(pool.gasPrice) < 0 {
+					logger.Trace("Demoting the tx that is lower than the baseFee and those greater than the nonce of the tx.", "txhash", hash)
+					removed, invalids := list.Remove(tx) // delete all transactions satisfying the nonce value > tx.Nonce()
+					if removed {
+						for _, invalidTx := range invalids {
+							pool.enqueueTx(invalidTx.Hash(), invalidTx)
 						}
-						break
+						pool.enqueueTx(hash, tx)
 					}
+					break
 				}
 			}
 		}
