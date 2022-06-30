@@ -318,7 +318,7 @@ func (l *txList) Add(tx *types.Transaction, priceBump uint64, kip71Hardforked bo
 		} else if kip71Hardforked {
 			if old.GasPrice().Cmp(tx.GasPrice()) >= 0 {
 				// If gas price of older is bigger than newer, abort.
-				logger.Trace("already nonce exist and it need more gasprice", "nonce", tx.Nonce(), "with gasprice", old.GasPrice(), "priceBump", priceBump, "new tx.gasprice", tx.GasPrice())
+				logger.Trace("already nonce exist and the gasprice is lower then older", "nonce", tx.Nonce(), "with gasprice", old.GasPrice(), "priceBump", priceBump, "new tx.gasprice", tx.GasPrice())
 				return false, nil
 			}
 			// Otherwise overwrite the old transaction with the current one.
