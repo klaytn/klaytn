@@ -312,25 +312,20 @@ func (l *txList) Add(tx *types.Transaction, priceBump uint64, kip71Hardforked bo
 	// If there's an older better transaction, abort
 	old := l.txs.Get(tx.Nonce())
 	if old != nil {
-		if kip71Hardforked {
-			// If tx is CancelTransaction, replace it even thought tx has lower gasPrice than previous tx.
-			if tx.Type().IsCancelTransaction() {
-				logger.Trace("New tx is a cancel transaction. replace it!", "old", old.String(), "new", tx.String())
-			} else if old.GasPrice().Cmp(tx.GasPrice()) >= 0 {
+		// If tx is CancelTransaction, replace it even thought tx has lower gasPrice than previous tx.
+		if tx.Type().IsCancelTransaction() {
+			logger.Trace("New tx is a cancel transaction. replace it!", "old", old.String(), "new", tx.String())
+		} else if kip71Hardforked {
+			if old.GasPrice().Cmp(tx.GasPrice()) >= 0 {
 				// If gas price of older is bigger than newer, abort.
-				logger.Trace("already nonce exist", "nonce", tx.Nonce(), "with gasprice", old.GasPrice(), "priceBump", priceBump, "new tx.gasprice", tx.GasPrice())
+				logger.Trace("already nonce exist and it need more gasprice", "nonce", tx.Nonce(), "with gasprice", old.GasPrice(), "priceBump", priceBump, "new tx.gasprice", tx.GasPrice())
 				return false, nil
-			} else {
-				// Otherwise overwrite the old transaction with the current one.
-				logger.Trace("The transaction was substituted by competitive gas price", "old", old.String(), "new", tx.String())
 			}
+			// Otherwise overwrite the old transaction with the current one.
+			logger.Trace("The transaction was substituted by competitive gas price", "old", old.String(), "new", tx.String())
 		} else {
-			if tx.Type().IsCancelTransaction() {
-				logger.Trace("New tx is a cancel transaction. replace it!", "old", old.String(), "new", tx.String())
-			} else {
-				logger.Trace("already nonce exist", "nonce", tx.Nonce(), "with gasprice", old.GasPrice(), "priceBump", priceBump, "new tx.gasprice", tx.GasPrice())
-				return false, nil
-			}
+			logger.Trace("already nonce exist", "nonce", tx.Nonce(), "with gasprice", old.GasPrice(), "priceBump", priceBump, "new tx.gasprice", tx.GasPrice())
+			return false, nil
 		}
 	}
 
