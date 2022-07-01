@@ -500,7 +500,7 @@ func (pool *TxPool) GasPrice() *big.Int {
 // SetGasPrice updates the gas price of the transaction pool for new transactions, and drops all old transactions.
 func (pool *TxPool) SetGasPrice(price *big.Int) {
 	if pool.kip71 {
-		logger.Warn("Ignoring SetGasPrice after KIP71 fork")
+		logger.Info("Ignoring SetGasPrice after KIP71 fork")
 		return
 	}
 	if pool.gasPrice.Cmp(price) != 0 {
