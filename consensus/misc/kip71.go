@@ -51,6 +51,10 @@ func NextBlockBaseFee(parentHeader *types.Header, config *params.ChainConfig) *b
 	if parentGasUsed == gasTarget {
 		return new(big.Int).Set(parentHeader.BaseFee)
 	} else if parentGasUsed > gasTarget {
+		// shortcut. If parentBaseFee is already reached upperbound, do not calculate.
+		if parentBaseFee.Cmp(upperBoundBaseFee) >= 0 {
+			return upperBoundBaseFee
+		}
 		// If the parent block used more gas than its target,
 		// the baseFee of the next block should increase.
 		// baseFeeDelta = max(1, parentBaseFee * (parentGasUsed - gasTarget) / gasTarget / baseFeeDenominator)
@@ -65,6 +69,10 @@ func NextBlockBaseFee(parentHeader *types.Header, config *params.ChainConfig) *b
 		}
 		return nextBaseFee
 	} else {
+		// shortcut. If parentBaseFee is already reached lower bound, do not calculate.
+		if parentBaseFee.Cmp(lowerBoundBaseFee) <= 0 {
+			return lowerBoundBaseFee
+		}
 		// Otherwise if the parent block used less gas than its target,
 		// the baseFee of the next block should decrease.
 		// baseFeeDelta = parentBaseFee * (gasTarget - parentGasUsed) / gasTarget / baseFeeDenominator
