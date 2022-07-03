@@ -53,6 +53,7 @@ func NextBlockBaseFee(parentHeader *types.Header, config *params.ChainConfig) *b
 	} else if parentGasUsed > gasTarget {
 		// If the parent block used more gas than its target,
 		// the baseFee of the next block should increase.
+		// baseFeeDelta = max(1, parentBaseFee * (parentGasUsed - gasTarget) / gasTarget / baseFeeDenominator)
 		gasUsedDelta := new(big.Int).SetUint64(parentGasUsed - gasTarget)
 		x := new(big.Int).Mul(parentBaseFee, gasUsedDelta)
 		y := x.Div(x, new(big.Int).SetUint64(gasTarget))
@@ -66,6 +67,7 @@ func NextBlockBaseFee(parentHeader *types.Header, config *params.ChainConfig) *b
 	} else {
 		// Otherwise if the parent block used less gas than its target,
 		// the baseFee of the next block should decrease.
+		// baseFeeDelta = parentBaseFee * (gasTarget - parentGasUsed) / gasTarget / baseFeeDenominator
 		gasUsedDelta := new(big.Int).SetUint64(gasTarget - parentGasUsed)
 		x := new(big.Int).Mul(parentBaseFee, gasUsedDelta)
 		y := x.Div(x, new(big.Int).SetUint64(gasTarget))
