@@ -2,6 +2,7 @@ package misc
 
 import (
 	"math/big"
+	"math/rand"
 	"testing"
 
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -136,5 +137,46 @@ func TestActieDynamicPolicyAfterForkedBlock(t *testing.T) {
 	nextBaseFee := NextBlockBaseFee(parent, getTestConfig(big.NewInt(2)))
 	if parentBaseFee.Cmp(nextBaseFee) > 0 {
 		t.Errorf("after fork, dynamic base fee policy should be active, current base fee: %d  next base fee: %d", parentBaseFee, nextBaseFee)
+	}
+}
+
+func BenchmarkNextBlockBaseFeeRandom(b *testing.B) {
+	parentBaseFee := big.NewInt(500000000000)
+	parent := &types.Header{
+		Number:  common.Big3,
+		GasUsed: 10000000,
+		BaseFee: parentBaseFee,
+	}
+	for i := 0; i < b.N; i++ {
+		if rand.Int()%2 == 0 {
+			parent.GasUsed = 10000000
+		} else {
+			parent.GasUsed = 40000000
+		}
+		_ = NextBlockBaseFee(parent, getTestConfig(big.NewInt(2)))
+	}
+}
+
+func BenchmarkNextBlockBaseFeeUpperBound(b *testing.B) {
+	parentBaseFee := big.NewInt(750000000000)
+	parent := &types.Header{
+		Number:  common.Big3,
+		GasUsed: 40000000,
+		BaseFee: parentBaseFee,
+	}
+	for i := 0; i < b.N; i++ {
+		_ = NextBlockBaseFee(parent, getTestConfig(big.NewInt(2)))
+	}
+}
+
+func BenchmarkNextBlockBaseFeeLowerBound(b *testing.B) {
+	parentBaseFee := big.NewInt(25000000000)
+	parent := &types.Header{
+		Number:  common.Big3,
+		GasUsed: 10000000,
+		BaseFee: parentBaseFee,
+	}
+	for i := 0; i < b.N; i++ {
+		_ = NextBlockBaseFee(parent, getTestConfig(big.NewInt(2)))
 	}
 }
