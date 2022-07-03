@@ -24,12 +24,14 @@ import (
 	"context"
 	"net"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/net/websocket"
 )
 
 type echoArgs struct {
@@ -75,6 +77,49 @@ func TestWebsocketLargeCall(t *testing.T) {
 
 	// This call sends slightly less than the limit and should work.
 	arg := strings.Repeat("x", requestMaxLen-1)
+	assert.NoError(t, client.Call(&result, method, arg, 1), "valid call didn't work")
+	assert.Equal(t, arg, result.String, "wrong string echoed")
+
+	// This call sends slightly larger than the allowed size and shouldn't work.
+	arg = strings.Repeat("x", requestMaxLen)
+	assert.Error(t, client.Call(&result, method, arg, 1), "no error for too large call")
+}
+
+func TestWebsocketLargeCallFastws(t *testing.T) {
+	// create server
+	var (
+		srv    = newTestServer("service", new(Service))
+		ln     = newTestListener()
+		wsAddr = "ws://" + ln.Addr().String()
+	)
+	defer srv.Stop()
+	defer ln.Close()
+
+	go NewFastWSServer([]string{"*"}, srv).Serve(ln)
+	time.Sleep(100 * time.Millisecond)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	client, err := DialWebsocket(ctx, wsAddr, "")
+	//fmt.Println("dial web socket ", client, err)
+	if err != nil {
+		t.Fatalf("can't dial: %v", err)
+	}
+	defer client.Close()
+
+	// set configurations before testing
+	var result echoResult
+	method := "service_echo"
+
+	// set message size
+	messageSize := 200
+
+	messageSize, err = client.getMessageSize(method)
+	assert.NoError(t, err)
+	requestMaxLen := common.MaxRequestContentLength - messageSize
+	// This call sends slightly less than the limit and should work.
+	arg := strings.Repeat("x", requestMaxLen-1)
+
 	assert.NoError(t, client.Call(&result, method, arg, 1), "valid call didn't work")
 	assert.Equal(t, arg, result.String, "wrong string echoed")
 
@@ -150,5 +195,28 @@ func testWebsocketMaxConnections(t *testing.T, addr string, maxConnections int) 
 
 	for _, client := range closers {
 		client.Close()
+	}
+}
+
+// This test checks that the server rejects connections from disallowed origins.
+func TestWebsocketOriginCheck(t *testing.T) {
+	t.Parallel()
+
+	var (
+		srv     = newTestServer("service", new(Service))
+		httpsrv = httptest.NewServer(srv.WebsocketHandler([]string{"http://example.com"}))
+		wsURL   = "ws:" + strings.TrimPrefix(httpsrv.URL, "http:")
+	)
+	defer srv.Stop()
+	defer httpsrv.Close()
+
+	client, err := DialWebsocket(context.Background(), wsURL, "http://ezample.com")
+	if err == nil {
+		client.Close()
+		t.Fatal("no error for wrong origin")
+	}
+	wantErr := websocket.ErrBadStatus
+	if !reflect.DeepEqual(err, wantErr) {
+		t.Fatalf("wrong error for wrong origin: %q", err)
 	}
 }

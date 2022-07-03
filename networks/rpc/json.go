@@ -29,6 +29,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 const (
@@ -87,6 +88,12 @@ type jsonCodec struct {
 	encMu  sync.Mutex                // guards the encoder
 	encode func(v interface{}) error // encoder to allow multiple transports
 	rw     io.ReadWriteCloser        // connection
+	conn   deadlineCloser
+}
+
+type deadlineCloser interface {
+	io.Closer
+	SetWriteDeadline(time.Time) error
 }
 
 func (err *jsonError) Error() string {
@@ -108,6 +115,15 @@ func NewCodec(rwc io.ReadWriteCloser, encode, decode func(v interface{}) error) 
 		encode: encode,
 		decode: decode,
 		rw:     rwc,
+	}
+}
+
+func GSNewCodec(conn deadlineCloser, encode, decode func(v interface{}) error) ServerCodec {
+	return &jsonCodec{
+		closed: make(chan interface{}),
+		encode: encode,
+		decode: decode,
+		conn:   conn,
 	}
 }
 
@@ -375,7 +391,12 @@ func (c *jsonCodec) Write(res interface{}) error {
 func (c *jsonCodec) Close() {
 	c.closer.Do(func() {
 		close(c.closed)
-		c.rw.Close()
+		if c.rw != nil {
+			c.rw.Close()
+		}
+		if c.conn != nil {
+			c.conn.Close()
+		}
 	})
 }
 

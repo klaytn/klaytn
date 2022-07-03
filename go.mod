@@ -24,6 +24,7 @@ require (
 	github.com/golang/protobuf v1.4.3
 	github.com/golang/snappy v0.0.4
 	github.com/google/go-cmp v0.5.4 // indirect
+	github.com/gorilla/websocket v1.5.0
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d
 	github.com/huin/goupnp v1.0.3-0.20220313090229-ca81a64b4204
 	github.com/influxdata/influxdb v1.8.3
