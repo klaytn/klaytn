@@ -46,15 +46,18 @@ func TestNextBlockBaseFeeWhenGovernanceUpdated(t *testing.T) {
 	tests := []struct {
 		upperBoundBaseFee uint64 // updated upper bound
 		lowerBoundBaseFee uint64 // updated lower bound
+		parentGasUsed     uint64
 		parentBaseFee     int64
 		nextBaseFee       int64
 	}{
-		{750000000000, 25000000000, 750000000000, 750000000000},
-		{700000000000, 25000000000, 750000000000, 700000000000},
-		{800000000000, 25000000000, 750000000000, 750000000000},
-		{750000000000, 25000000000, 25000000000, 25000000000},
-		{750000000000, 30000000000, 25000000000, 30000000000},
-		{750000000000, 20000000000, 25000000000, 25000000000},
+		{750000000000, 25000000000, 30000000, 750000000000, 750000000000},
+		{700000000000, 25000000000, 30000000, 750000000000, 700000000000},
+		{800000000000, 25000000000, 30000000, 750000000000, 750000000000},
+		{750000000000, 25000000000, 30000000, 25000000000, 25000000000},
+		{750000000000, 30000000000, 30000000, 25000000000, 30000000000},
+		{750000000000, 20000000000, 30000000, 25000000000, 25000000000},
+		{750000000000, 25000000000, 40000000, 750000000000, 750000000000},
+		{750000000000, 25000000000, 20000000, 25000000000, 25000000000},
 	}
 	for i, test := range tests {
 		config := getTestConfig(common.Big2)
@@ -62,7 +65,7 @@ func TestNextBlockBaseFeeWhenGovernanceUpdated(t *testing.T) {
 		config.Governance.KIP71.LowerBoundBaseFee = test.lowerBoundBaseFee
 		parent := &types.Header{
 			Number:  common.Big3,
-			GasUsed: config.Governance.KIP71.GasTarget, // parentGasUsed == gasTarget
+			GasUsed: test.parentGasUsed,
 			BaseFee: big.NewInt(test.parentBaseFee),
 		}
 		if have, want := NextBlockBaseFee(parent, config), big.NewInt(test.nextBaseFee); have.Cmp(want) != 0 {
