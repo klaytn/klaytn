@@ -43,8 +43,8 @@ var (
 	// TODO-Klaytn-Istanbul: define Versions and Lengths with correct values.
 	istanbulProtocol = consensus.Protocol{
 		Name:     "istanbul",
-		Versions: []uint{64},
-		Lengths:  []uint64{21},
+		Versions: []uint{65, 64},
+		Lengths:  []uint64{23, 21},
 	}
 )
 
@@ -65,7 +65,7 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 
 		var cmsg istanbul.ConsensusMsg
 
-		//var data []byte
+		// var data []byte
 		if err := msg.Decode(&cmsg); err != nil {
 			return true, errDecodeFailed
 		}

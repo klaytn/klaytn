@@ -704,7 +704,8 @@ func (self *StateDB) createObject(addr common.Address) (newobj, prev *stateObjec
 // If there is an existing account with the given address, it is overwritten and
 // returned as the second return value.
 func (self *StateDB) createObjectWithMap(addr common.Address, accountType account.AccountType,
-	values map[account.AccountValueKeyType]interface{}) (newobj, prev *stateObject) {
+	values map[account.AccountValueKeyType]interface{},
+) (newobj, prev *stateObject) {
 	prev = self.getDeletedStateObject(addr) // Note, prev might have been deleted, we need that!
 
 	var prevdestruct bool
@@ -1005,7 +1006,7 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 			if stateObject.IsProgramAccount() {
 				// Write any contract code associated with the state object.
 				if stateObject.code != nil && stateObject.dirtyCode {
-					s.db.TrieDB().InsertBlob(common.BytesToHash(stateObject.CodeHash()), stateObject.code)
+					s.db.TrieDB().DiskDB().WriteCode(common.BytesToHash(stateObject.CodeHash()), stateObject.code)
 					stateObject.dirtyCode = false
 				}
 				// Write any storage changes in the state object to its storage trie.
@@ -1028,7 +1029,7 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 	if EnabledExpensive {
 		defer func(start time.Time) { s.AccountCommits += time.Since(start) }(time.Now())
 	}
-	root, err = s.trie.Commit(func(leaf []byte, parent common.Hash, parentDepth int) error {
+	root, err = s.trie.Commit(func(path []byte, leaf []byte, parent common.Hash, parentDepth int) error {
 		serializer := account.NewAccountSerializer()
 		if err := rlp.DecodeBytes(leaf, serializer); err != nil {
 			logger.Warn("RLP decode failed", "err", err, "leaf", string(leaf))
@@ -1038,10 +1039,6 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 		if pa := account.GetProgramAccount(acc); pa != nil {
 			if pa.GetStorageRoot() != emptyState {
 				s.db.TrieDB().Reference(pa.GetStorageRoot(), parent)
-			}
-			code := common.BytesToHash(pa.GetCodeHash())
-			if code != emptyCode {
-				s.db.TrieDB().Reference(code, parent)
 			}
 		}
 		return nil
@@ -1076,8 +1073,10 @@ func (s *StateDB) GetTxHash() common.Hash {
 	return s.thash
 }
 
-var errNotExistingAddress = fmt.Errorf("there is no account corresponding to the given address")
-var errNotContractAddress = fmt.Errorf("given address is not a contract address")
+var (
+	errNotExistingAddress = fmt.Errorf("there is no account corresponding to the given address")
+	errNotContractAddress = fmt.Errorf("given address is not a contract address")
+)
 
 func (s *StateDB) GetContractStorageRoot(contractAddr common.Address) (common.Hash, error) {
 	acc := s.GetAccount(contractAddr)

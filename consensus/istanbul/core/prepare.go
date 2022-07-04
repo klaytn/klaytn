@@ -55,10 +55,11 @@ func (c *core) handlePrepare(msg *message, src istanbul.Validator) error {
 	var prepare *istanbul.Subject
 	err := msg.Decode(&prepare)
 	if err != nil {
-		return errFailedDecodePrepare
+		logger.Error("Failed to decode message", "code", msg.Code, "err", err)
+		return errInvalidMessage
 	}
 
-	//logger.Error("call receive prepare","num",prepare.View.Sequence)
+	// logger.Error("call receive prepare","num",prepare.View.Sequence)
 	if err := c.checkMessage(msgPrepare, prepare.View); err != nil {
 		return err
 	}

@@ -185,7 +185,7 @@ type TxPool struct {
 	locals  *accountSet // Set of local transaction to exempt from eviction rules
 	journal *txJournal  // Journal of local transaction to back up to disk
 
-	//TODO-Klaytn
+	// TODO-Klaytn
 	txMu sync.RWMutex
 
 	pending map[common.Address]*txList         // All currently processable transactions
@@ -442,8 +442,8 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	logger.Debug("Reinjecting stale transactions", "count", len(reinject))
 	senderCacher.recover(pool.signer, reinject)
 
-	//pool.mu.Lock()
-	//defer pool.mu.Unlock()
+	// pool.mu.Lock()
+	// defer pool.mu.Unlock()
 
 	pool.addTxsLocked(reinject, false)
 
@@ -756,6 +756,13 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 				logger.Trace("[tx_pool] insufficient funds for cost(gas * price)", "feePayer", feePayer, "balance", feePayerBalance, "fee", tx.Fee())
 				return ErrInsufficientFundsFeePayer
 			}
+		}
+		// additional balance check in case of sender = feepayer
+		// since a single account has to bear the both cost(feepayer_cost + sender_cost),
+		// it is necessary to check whether the balance is equal to the sum of the cost.
+		if from == feePayer && senderBalance.Cmp(tx.Cost()) < 0 {
+			logger.Trace("[tx_pool] insufficient funds for cost(gas * price + value)", "from", from, "balance", senderBalance, "cost", tx.Cost())
+			return ErrInsufficientFundsFrom
 		}
 	} else {
 		// balance check for non-fee-delegated tx
@@ -1348,7 +1355,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 			pool.priced.Removed()
 		}
 		// Drop all transactions that are too costly (low balance)
-		drops, _ := list.Filter(pool.getBalance(addr), pool)
+		drops, _ := list.Filter(addr, pool)
 		for _, tx := range drops {
 			hash := tx.Hash()
 			logger.Trace("Removed unpayable queued transaction", "hash", hash)
@@ -1521,7 +1528,7 @@ func (pool *TxPool) demoteUnexecutables() {
 		// The logic below loosely checks the tx count for the efficiency and the simplicity.
 		if cnt < demoteUnexecutablesFullValidationTxLimit {
 			cnt += list.Len()
-			drops, invalids = list.Filter(pool.getBalance(addr), pool)
+			drops, invalids = list.Filter(addr, pool)
 		} else {
 			drops, invalids = list.FilterUnexecutable()
 		}

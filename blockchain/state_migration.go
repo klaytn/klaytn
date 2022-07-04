@@ -49,6 +49,7 @@ type stateTrieMigrationDB struct {
 func (td *stateTrieMigrationDB) ReadCachedTrieNode(hash common.Hash) ([]byte, error) {
 	return td.ReadCachedTrieNodeFromNew(hash)
 }
+
 func (td *stateTrieMigrationDB) ReadCachedTrieNodePreimage(secureKey []byte) ([]byte, error) {
 	return td.ReadCachedTrieNodePreimageFromNew(secureKey)
 }
@@ -59,6 +60,10 @@ func (td *stateTrieMigrationDB) ReadStateTrieNode(key []byte) ([]byte, error) {
 
 func (td *stateTrieMigrationDB) HasStateTrieNode(key []byte) (bool, error) {
 	return td.HasStateTrieNodeFromNew(key)
+}
+
+func (td *stateTrieMigrationDB) HasCodeWithPrefix(hash common.Hash) bool {
+	return td.HasCodeWithPrefixFromNew(hash)
 }
 
 func (td *stateTrieMigrationDB) ReadPreimage(hash common.Hash) []byte {
@@ -81,13 +86,16 @@ func (bc *BlockChain) stateMigrationCommit(s *statedb.TrieSync, batch database.B
 	return written, nil
 }
 
-func (bc *BlockChain) concurrentRead(db *statedb.Database, quitCh chan struct{}, hashCh chan common.Hash, resultCh chan statedb.SyncResult) {
+func (bc *BlockChain) concurrentRead(db state.Database, quitCh chan struct{}, hashCh chan common.Hash, resultCh chan statedb.SyncResult) {
 	for {
 		select {
 		case <-quitCh:
 			return
 		case hash := <-hashCh:
-			data, err := db.NodeFromOld(hash)
+			data, err := db.TrieDB().NodeFromOld(hash)
+			if err != nil {
+				data, err = db.ContractCode(hash)
+			}
 			if err != nil {
 				resultCh <- statedb.SyncResult{Hash: hash, Err: err}
 				continue
@@ -135,7 +143,7 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) (returnErr error) {
 	resultCh := make(chan statedb.SyncResult, threads)
 
 	for th := 0; th < threads; th++ {
-		go bc.concurrentRead(srcState.TrieDB(), quitCh, hashCh, resultCh)
+		go bc.concurrentRead(srcState, quitCh, hashCh, resultCh)
 	}
 
 	stateTrieBatch := dstState.TrieDB().DiskDB().NewBatch(database.StateTrieDB)
@@ -143,7 +151,8 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) (returnErr error) {
 
 	// Migration main loop
 	for trieSync.Pending() > 0 {
-		queue = append(queue[:0], trieSync.Missing(1024)...)
+		nodes, _, codes := trieSync.Missing(1024)
+		queue = append(queue[:0], append(nodes, codes...)...)
 		results := make([]statedb.SyncResult, len(queue))
 
 		// Read the trie nodes
@@ -168,9 +177,11 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) (returnErr error) {
 
 		// Process trie nodes
 		startProcess := time.Now()
-		if _, index, err := trieSync.Process(results); err != nil {
-			logger.Error("State migration is failed by process error", "err", err)
-			return fmt.Errorf("failed to process result #%d: %v", index, err)
+		for index, result := range results {
+			if err := trieSync.Process(result); err != nil {
+				logger.Error("State migration is failed by process error", "err", err)
+				return fmt.Errorf("failed to process result #%d: %v", index, err)
+			}
 		}
 		stats.processElapsed += time.Since(startProcess)
 
@@ -266,6 +277,7 @@ func (st *migrationStats) stateMigrationReport(force bool, pending int, progress
 		st.startTime = now
 	}
 }
+
 func (bc *BlockChain) checkTrieContents(oldDB, newDB *statedb.Database, root common.Hash) ([]common.Address, error) {
 	oldTrie, err := statedb.NewSecureTrie(root, oldDB)
 	if err != nil {
@@ -423,7 +435,8 @@ func (bc *BlockChain) iterateStateTrie(root common.Hash, db state.Database, resu
 // If it receives a nil error, it means a child goroutine is successfully terminated.
 // It also periodically checks and logs warm-up progress.
 func (bc *BlockChain) warmUpChecker(mainTrieDB *statedb.Database, numChildren int,
-	resultCh chan struct{}, errCh chan error) {
+	resultCh chan struct{}, errCh chan error,
+) {
 	defer func() { bc.quitWarmUp = nil }()
 
 	cache := mainTrieDB.TrieNodeCache()
@@ -464,7 +477,7 @@ func (bc *BlockChain) warmUpChecker(mainTrieDB *statedb.Database, numChildren in
 			logged = time.Now()
 
 			updateContext()
-			if percent > 90 { //more than 90%
+			if percent > 90 { // more than 90%
 				close(bc.quitWarmUp)
 				logger.Info("Warm up is completed", context...)
 				return

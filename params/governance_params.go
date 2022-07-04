@@ -36,15 +36,6 @@ const (
 	GovernanceCachePrefix = "governance"
 )
 
-type EngineType int
-
-const (
-	// Engine type
-	UseIstanbul EngineType = iota
-	UseClique
-	Unknown
-)
-
 const (
 	// Governance Key
 	GovernanceMode int = iota
@@ -133,7 +124,6 @@ func CalcProposerBlockNumber(blockNum uint64) uint64 {
 		number = blockNum - proposerInterval
 	} else {
 		number = blockNum - (blockNum % proposerInterval)
-
 	}
 	return number
 }

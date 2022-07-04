@@ -19,14 +19,18 @@ package cn
 import (
 	"errors"
 	"math/big"
+	"strings"
 	"sync/atomic"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/networks/p2p"
 	mocks2 "github.com/klaytn/klaytn/node/cn/mocks"
+	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/work/mocks"
 	"github.com/stretchr/testify/assert"
@@ -263,8 +267,8 @@ func TestHandleTxMsg(t *testing.T) {
 		atomic.StoreUint32(&pm.acceptTxs, 1)
 		mockTxPool := mocks.NewMockTxPool(mockCtrl)
 
-		//The time field in received transaction through pm.handleMsg() has different value from generated transaction(`tx1`).
-		//It can check whether the transaction created `HandleTxMsg()` is the same as `tx1` through `AddToKnownTxs(txs[0].Hash())`.
+		// The time field in received transaction through pm.handleMsg() has different value from generated transaction(`tx1`).
+		// It can check whether the transaction created `HandleTxMsg()` is the same as `tx1` through `AddToKnownTxs(txs[0].Hash())`.
 		mockTxPool.EXPECT().HandleTxMsg(gomock.Any()).AnyTimes()
 		pm.txpool = mockTxPool
 
@@ -446,6 +450,140 @@ func TestHandleNodeDataMsg(t *testing.T) {
 
 		msg := generateMsg(t, NodeDataMsg, nodeData)
 		assert.NoError(t, pm.handleMsg(mockPeer, addrs[0], msg))
+		mockCtrl.Finish()
+	}
+}
+
+func TestHandleStakingInfoRequestMsg(t *testing.T) {
+	testChainConfig := params.TestChainConfig
+
+	{
+		// test if chain config istanbul is nil
+		mockCtrl, _, mockPeer, pm := prepareBlockChain(t)
+		testChainConfig.Istanbul = nil
+		pm.chainconfig = testChainConfig
+
+		err := handleStakingInfoRequestMsg(pm, mockPeer, p2p.Msg{})
+		assert.Error(t, err)
+		assert.Equal(t, err, errResp(ErrUnsupportedEnginePolicy, "the engine is not istanbul or the policy is not weighted random"))
+		mockCtrl.Finish()
+	}
+	{
+		// test if chain config istanbul is not nil, but proposer policy is not weighted random
+		mockCtrl, _, mockPeer, pm := prepareBlockChain(t)
+		testChainConfig.Istanbul = params.GetDefaultIstanbulConfig()
+		testChainConfig.Istanbul.ProposerPolicy = uint64(istanbul.RoundRobin)
+		pm.chainconfig = testChainConfig
+
+		err := handleStakingInfoRequestMsg(pm, mockPeer, p2p.Msg{})
+		assert.Error(t, err)
+		assert.Equal(t, err, errResp(ErrUnsupportedEnginePolicy, "the engine is not istanbul or the policy is not weighted random"))
+		mockCtrl.Finish()
+	}
+	{
+		// test if message does not contain expected data
+		mockCtrl, _, mockPeer, pm := prepareBlockChain(t)
+		testChainConfig.Istanbul = params.GetDefaultIstanbulConfig()
+		testChainConfig.Istanbul.ProposerPolicy = uint64(istanbul.WeightedRandom)
+		pm.chainconfig = testChainConfig
+		msg := generateMsg(t, StakingInfoRequestMsg, uint64(123)) // Non-list value to invoke an error
+
+		err := handleStakingInfoRequestMsg(pm, mockPeer, msg)
+		assert.Error(t, err)
+		assert.Equal(t, err, rlp.ErrExpectedList)
+		mockCtrl.Finish()
+	}
+
+	// Setup governance items for testing
+	orig := reward.GetStakingManager()
+	defer reward.SetTestStakingManager(orig)
+
+	testBlock := uint64(4)
+	testStakingInfo := newStakingInfo(testBlock)
+	reward.SetTestStakingManagerWithStakingInfoCache(testStakingInfo)
+	params.SetStakingUpdateInterval(testBlock)
+
+	{
+		requestedHashes := []common.Hash{hashes[0], hashes[1]}
+
+		mockCtrl, mockBlockChain, mockPeer, pm := prepareBlockChain(t)
+		testChainConfig.Istanbul = &params.IstanbulConfig{ProposerPolicy: uint64(istanbul.WeightedRandom)}
+		pm.chainconfig = testChainConfig
+
+		msg := generateMsg(t, StakingInfoRequestMsg, requestedHashes)
+
+		mockBlockChain.EXPECT().GetHeaderByHash(gomock.Eq(hashes[0])).Return(&types.Header{Number: big.NewInt(int64(testBlock))}).Times(1)
+		mockBlockChain.EXPECT().GetHeaderByHash(gomock.Eq(hashes[1])).Return(&types.Header{Number: big.NewInt(int64(5))}).Times(1) // not on staking block
+		data, _ := rlp.EncodeToBytes(testStakingInfo)
+		mockPeer.EXPECT().SendStakingInfoRLP(gomock.Eq([]rlp.RawValue{data})).Return(nil).Times(1)
+
+		err := handleStakingInfoRequestMsg(pm, mockPeer, msg)
+		assert.NoError(t, err)
+		mockCtrl.Finish()
+	}
+}
+
+func TestHandleStakingInfoMsg(t *testing.T) {
+	testChainConfig := params.TestChainConfig
+	{
+		// test if chain config istanbul is nil
+		mockCtrl, _, mockPeer, pm := prepareBlockChain(t)
+		testChainConfig.Istanbul = nil
+		pm.chainconfig = testChainConfig
+
+		err := handleStakingInfoMsg(pm, mockPeer, p2p.Msg{})
+		assert.Error(t, err)
+		assert.Equal(t, err, errResp(ErrUnsupportedEnginePolicy, "the engine is not istanbul or the policy is not weighted random"))
+		mockCtrl.Finish()
+	}
+	{
+		// test if chain config istanbul is not nil, but proposer policy is not weighted random
+		mockCtrl, _, mockPeer, pm := prepareBlockChain(t)
+		testChainConfig.Istanbul = params.GetDefaultIstanbulConfig()
+		testChainConfig.Istanbul.ProposerPolicy = uint64(istanbul.RoundRobin)
+		pm.chainconfig = testChainConfig
+
+		err := handleStakingInfoMsg(pm, mockPeer, p2p.Msg{})
+		assert.Error(t, err)
+		assert.Equal(t, err, errResp(ErrUnsupportedEnginePolicy, "the engine is not istanbul or the policy is not weighted random"))
+		mockCtrl.Finish()
+	}
+	{
+		// test if message does not contain expected data
+		mockCtrl, _, mockPeer, pm := prepareBlockChain(t)
+		testChainConfig.Istanbul = params.GetDefaultIstanbulConfig()
+		testChainConfig.Istanbul.ProposerPolicy = uint64(istanbul.WeightedRandom)
+		pm.chainconfig = testChainConfig
+		msg := generateMsg(t, StakingInfoRequestMsg, uint64(123)) // Non-list value to invoke an error
+
+		err := handleStakingInfoMsg(pm, mockPeer, msg)
+		assert.Error(t, err)
+		assert.True(t, strings.Contains(err.Error(), errCode(ErrDecode).String()))
+		mockCtrl.Finish()
+	}
+
+	// Setup governance items for testing
+	orig := reward.GetStakingManager()
+	defer reward.SetTestStakingManager(orig)
+
+	testBlock := uint64(4)
+	testStakingInfo := newStakingInfo(testBlock)
+	reward.SetTestStakingManagerWithStakingInfoCache(testStakingInfo)
+	params.SetStakingUpdateInterval(testBlock)
+
+	{
+		stakingInfos := []*reward.StakingInfo{testStakingInfo}
+
+		mockCtrl, mockPeer, mockDownloader, pm := preparePeerAndDownloader(t)
+		testChainConfig.Istanbul = params.GetDefaultIstanbulConfig()
+		testChainConfig.Istanbul.ProposerPolicy = uint64(istanbul.WeightedRandom)
+		pm.chainconfig = testChainConfig
+
+		mockDownloader.EXPECT().DeliverStakingInfos(gomock.Eq(nodeids[0].String()), gomock.Eq(stakingInfos)).Times(1).Return(expectedErr)
+
+		msg := generateMsg(t, StakingInfoMsg, stakingInfos)
+		err := handleStakingInfoMsg(pm, mockPeer, msg)
+		assert.NoError(t, err)
 		mockCtrl.Finish()
 	}
 }

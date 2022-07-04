@@ -363,7 +363,7 @@ func gasStaticCall(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memo
 
 func gasSelfdestruct(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 	gas := params.SelfdestructGas
-	var address = common.BigToAddress(stack.Back(0))
+	address := common.BigToAddress(stack.Back(0))
 
 	// This is from eip158
 	// if empty and transfers value
