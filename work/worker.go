@@ -499,6 +499,8 @@ func (self *worker) commitNewWork() {
 	var nextBaseFee *big.Int
 	if self.nodetype == common.CONSENSUSNODE {
 		if self.config.IsKIP71ForkEnabled(nextBlockNum) {
+			// NOTE-klaytn NextBlockBaseFee needs the header of parent, self.chain.CurrentBlock
+			// So above code, TxPool().Pending(), is separated with this and can be refactored later.
 			nextBaseFee = misc.NextBlockBaseFee(parent.Header(), self.config)
 			pending = types.FilterTransactionWithBaseFee(pending, nextBaseFee)
 		}
