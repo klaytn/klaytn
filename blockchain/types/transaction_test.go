@@ -931,7 +931,7 @@ func TestFilterTransactionWithBaseFee(t *testing.T) {
 	pending[from3] = txs3
 
 	baseFee := big.NewInt(30)
-	pending, _ = FilterTransactionWithBaseFee(pending, baseFee)
+	pending = FilterTransactionWithBaseFee(pending, baseFee)
 
 	assert.Equal(t, len(pending[from1]), 3)
 	for i := 0; i < len(pending[from1]); i++ {

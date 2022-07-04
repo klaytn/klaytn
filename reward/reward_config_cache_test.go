@@ -99,6 +99,7 @@ func (governance *testGovernance) setTestGovernance(epoch uint64, mintingAmount 
 	governance.unitPrice = unitprice
 	governance.useGiniCoeff = useGiniCoeff
 	governance.deferredTxFee = deferredTxFee
+	governance.unitPrice = unitprice
 }
 
 func TestRewardConfigCache_parseRewardRatio(t *testing.T) {
@@ -370,6 +371,6 @@ func TestRewardConfigCache_get_exist(t *testing.T) {
 		assert.Equal(t, testCases[i].result.pocRatio, rewardConfig.pocRatio)
 		assert.Equal(t, testCases[i].result.kirRatio, rewardConfig.kirRatio)
 		assert.Equal(t, testCases[i].result.totalRatio, rewardConfig.totalRatio)
-		// assert.Equal(t, testCases[i].result.unitPrice, rewardConfig.unitPrice)
+		assert.Equal(t, testCases[i].result.unitPrice, rewardConfig.unitPrice)
 	}
 }
