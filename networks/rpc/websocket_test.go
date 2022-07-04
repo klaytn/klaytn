@@ -101,7 +101,6 @@ func TestWebsocketLargeCallFastws(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	client, err := DialWebsocket(ctx, wsAddr, "")
-	//fmt.Println("dial web socket ", client, err)
 	if err != nil {
 		t.Fatalf("can't dial: %v", err)
 	}
