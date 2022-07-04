@@ -47,34 +47,18 @@ func (api *API) GetSnapshot(number *rpc.BlockNumber) (*Snapshot, error) {
 	var header *types.Header
 	if number == nil || *number == rpc.LatestBlockNumber {
 		header = api.chain.CurrentHeader()
+	} else if *number == rpc.PendingBlockNumber {
+		logger.Trace("Cannot get snapshot of the pending block.", "number", number)
+		return nil, errPendingNotAllowed
 	} else {
 		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
 	}
 	// Ensure we have an actually valid block and return its snapshot
 	if header == nil {
-		return nil, errUnknownBlock
+		return nil, errUnknownBlock // return nil if block is not found.
 	}
 
-	blockNumber := header.Number.Uint64()
-	if blockNumber == 0 {
-		// The snapshot of genesis block can not be calculated because it requires a previous block.
-		snap, err := api.istanbul.snapshot(api.chain, blockNumber, header.Hash(), nil)
-		if err != nil {
-			logger.Error("Failed to get snapshot.", "hash", header.Hash(), "err", err)
-			return nil, errInternalError
-		}
-		return snap, nil
-	}
-
-	// get the snapshot of the previous block.
-	parentHash := header.ParentHash
-	snap, err := api.istanbul.snapshot(api.chain, blockNumber-1, parentHash, nil)
-	if err != nil {
-		logger.Error("Failed to get snapshot.", "hash", parentHash, "err", err)
-		return nil, errInternalError
-	}
-
-	return snap, nil
+	return api.istanbul.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
 }
 
 // GetSnapshotAtHash retrieves the state snapshot at a given block.
@@ -84,60 +68,64 @@ func (api *API) GetSnapshotAtHash(hash common.Hash) (*Snapshot, error) {
 		return nil, errUnknownBlock
 	}
 
-	blockNumber := header.Number.Uint64()
-	if blockNumber == 0 {
-		// The snapshot of genesis block can not be calculated because it requires a previous block.
-		snap, err := api.istanbul.snapshot(api.chain, blockNumber, header.Hash(), nil)
-		if err != nil {
-			logger.Error("Failed to get snapshot.", "hash", header.Hash(), "err", err)
-			return nil, errInternalError
-		}
-		return snap, nil
-	}
-
-	// get the snapshot of the previous block.
-	parentHash := header.ParentHash
-	snap, err := api.istanbul.snapshot(api.chain, blockNumber-1, parentHash, nil)
-	if err != nil {
-		logger.Error("Failed to get snapshot.", "hash", parentHash, "err", err)
-		return nil, errInternalError
-	}
-
-	return snap, nil
+	return api.istanbul.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
 }
 
 // GetValidators retrieves the list of authorized validators with the given block number.
 func (api *API) GetValidators(number *rpc.BlockNumber) ([]common.Address, error) {
-	snap, err := api.GetSnapshot(number)
+	previousBlockNumber := rpc.BlockNumber(number.Int64() - 1)
+
+	// get the snapshot of the previous block.
+	snap, err := api.GetSnapshot(&previousBlockNumber)
 	if err != nil {
-		return nil, err
+		logger.Error("Failed to get snapshot.", "hash", snap.Hash, "err", err)
+		return nil, errInternalError
 	}
 	return snap.validators(), nil
 }
 
 // GetValidatorsAtHash retrieves the list of authorized validators with the given block hash.
 func (api *API) GetValidatorsAtHash(hash common.Hash) ([]common.Address, error) {
-	snap, err := api.GetSnapshotAtHash(hash)
+	header := api.chain.GetHeaderByHash(hash)
+	if header == nil {
+		return nil, errUnknownBlock
+	}
+
+	// get the snapshot of the previous block.
+	snap, err := api.GetSnapshotAtHash(header.ParentHash)
 	if err != nil {
-		return nil, err
+		logger.Error("Failed to get snapshot.", "hash", snap.Hash, "err", err)
+		return nil, errInternalError
 	}
 	return snap.validators(), nil
 }
 
 // GetDemotedValidators retrieves the list of authorized, but demoted validators with the given block number.
 func (api *API) GetDemotedValidators(number *rpc.BlockNumber) ([]common.Address, error) {
-	snap, err := api.GetSnapshot(number)
+	previousBlockNumber := rpc.BlockNumber(number.Int64() - 1)
+
+	// get the snapshot of the previous block.
+	snap, err := api.GetSnapshot(&previousBlockNumber)
 	if err != nil {
-		return nil, err
+		logger.Error("Failed to get snapshot.", "hash", snap.Hash, "err", err)
+		return nil, errInternalError
 	}
+
 	return snap.demotedValidators(), nil
 }
 
 // GetDemotedValidatorsAtHash retrieves the list of authorized, but demoted validators with the given block hash.
 func (api *API) GetDemotedValidatorsAtHash(hash common.Hash) ([]common.Address, error) {
-	snap, err := api.GetSnapshotAtHash(hash)
+	header := api.chain.GetHeaderByHash(hash)
+	if header == nil {
+		return nil, errUnknownBlock
+	}
+
+	// get the snapshot of the previous block.
+	snap, err := api.GetSnapshotAtHash(header.ParentHash)
 	if err != nil {
-		return nil, err
+		logger.Error("Failed to get snapshot.", "hash", snap.Hash, "err", err)
+		return nil, errInternalError
 	}
 	return snap.demotedValidators(), nil
 }
@@ -193,37 +181,15 @@ var (
 
 // GetCouncil retrieves the list of authorized validators at the specified block.
 func (api *APIExtension) GetCouncil(number *rpc.BlockNumber) ([]common.Address, error) {
-	// Retrieve the requested block number (or current if none requested)
-	var header *types.Header
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else if *number == rpc.PendingBlockNumber {
-		logger.Trace("Cannot get council of the pending block.", "number", number)
-		return nil, errPendingNotAllowed
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	// Ensure we have an actually valid block and return the council from its snapshot
-	if header == nil {
-		return nil, errNoBlockExist // return nil if block is not found.
+	previousBlockNumber := rpc.BlockNumber(number.Int64() - 1)
+	previousBlockHeader := api.chain.GetHeaderByNumber(previousBlockNumber.Uint64())
+	if previousBlockHeader == nil {
+		return nil, errNoBlockExist
 	}
 
-	blockNumber := header.Number.Uint64()
-	if blockNumber == 0 {
-		// The Council of genesis block can not be calculated because it requires a previous block.
-		snap, err := api.istanbul.snapshot(api.chain, blockNumber, header.Hash(), nil)
-		if err != nil {
-			logger.Error("Failed to get snapshot.", "hash", header.Hash(), "err", err)
-			return nil, errInternalError
-		}
-		return append(snap.validators(), snap.demotedValidators()...), nil
-	}
-
-	// get the snapshot of the previous block.
-	parentHash := header.ParentHash
-	snap, err := api.istanbul.snapshot(api.chain, blockNumber-1, parentHash, nil)
+	snap, err := api.istanbul.snapshot(api.chain, previousBlockNumber.Uint64(), previousBlockHeader.Hash(), nil)
 	if err != nil {
-		logger.Error("Failed to get snapshot.", "hash", parentHash, "err", err)
+		logger.Error("Failed to get snapshot.", "hash", snap.Hash, "err", err)
 		return nil, errInternalError
 	}
 
@@ -240,29 +206,17 @@ func (api *APIExtension) GetCouncilSize(number *rpc.BlockNumber) (int, error) {
 }
 
 func (api *APIExtension) GetCommittee(number *rpc.BlockNumber) ([]common.Address, error) {
-	// Retrieve the requested block number (or current if none requested)
-	var header *types.Header
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else if *number == rpc.PendingBlockNumber {
-		logger.Trace("Cannot get validators of the pending block.", "number", number)
-		return nil, errPendingNotAllowed
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-
+	header := api.chain.GetHeaderByNumber(uint64(number.Int64()))
 	if header == nil {
 		return nil, errNoBlockExist
 	}
 
 	blockNumber := header.Number.Uint64()
-	if blockNumber == 0 {
-		// The committee of genesis block can not be calculated because it requires a previous block.
-		istanbulExtra, err := types.ExtractIstanbulExtra(header)
-		if err != nil {
-			return nil, errExtractIstanbulExtra
-		}
-		return istanbulExtra.Validators, nil
+
+	snap, err := api.istanbul.snapshot(api.chain, blockNumber-1, header.ParentHash, nil)
+	if err != nil {
+		logger.Error("Failed to get snapshot.", "hash", snap.Hash, "err", err)
+		return nil, errInternalError
 	}
 
 	round := header.Round()
@@ -279,10 +233,6 @@ func (api *APIExtension) GetCommittee(number *rpc.BlockNumber) ([]common.Address
 
 	// get the snapshot of the previous block.
 	parentHash := header.ParentHash
-	snap, err := api.istanbul.snapshot(api.chain, blockNumber-1, parentHash, nil)
-	if err != nil {
-		return nil, err
-	}
 
 	// get the committee list of this block at the view (blockNumber, round)
 	committee := snap.ValSet.SubListWithProposer(parentHash, proposer, view)
