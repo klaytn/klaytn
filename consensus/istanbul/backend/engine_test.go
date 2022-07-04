@@ -1256,6 +1256,7 @@ func TestSnapshot_Writable(t *testing.T) {
 
 	// save current gov.changeSet's length for the expected value.
 	currentChangeSetLength := len(engine.governance.GetGovernanceChange())
+	assert.Equal(t, 1, currentChangeSetLength)
 
 	// block 3 is the start block of an epoch. In this test, the cache of this block's snapshot is cleared.
 	// If cache is not removed, it will just read the cache rather than making the snapshot itself.
