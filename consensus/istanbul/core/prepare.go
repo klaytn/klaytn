@@ -88,7 +88,7 @@ func (c *core) handlePrepare(msg *message, src istanbul.Validator) error {
 			c.setState(StatePrepared)
 			c.sendCommit()
 		} else if c.current.GetPrepareOrCommitSize() >= requiredMessageCount(c.valSet) {
-			logger.Info("received enough agreements and change state to prepared", "msgType", msgPrepare, "prepareMsgNum", c.current.Prepares.Size(), "commitMsgNum", c.current.Commits.Size(), "valSet", c.valSet.Size())
+			logger.Info("received a quorum of the messages and change state to prepared", "msgType", msgPrepare, "prepareMsgNum", c.current.Prepares.Size(), "commitMsgNum", c.current.Commits.Size(), "valSet", c.valSet.Size())
 			c.current.LockHash()
 			c.setState(StatePrepared)
 			c.sendCommit()
