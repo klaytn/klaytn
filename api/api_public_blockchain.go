@@ -93,13 +93,13 @@ func (s *PublicBlockChainAPI) IsContractAccount(ctx context.Context, address com
 
 // IsHumanReadable returns true if the account associated with addr is a human-readable account.
 // It returns false otherwise.
-//func (s *PublicBlockChainAPI) IsHumanReadable(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (bool, error) {
+// func (s *PublicBlockChainAPI) IsHumanReadable(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (bool, error) {
 //	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
 //	if err != nil {
 //		return false, err
 //	}
 //	return state.IsHumanReadable(address), state.Error()
-//}
+// }
 
 // GetBlockReceipts returns all the transaction receipts for the given block hash.
 func (s *PublicBlockChainAPI) GetBlockReceipts(ctx context.Context, blockHash common.Hash) ([]map[string]interface{}, error) {
@@ -364,7 +364,11 @@ func (s *PublicBlockChainAPI) Call(ctx context.Context, args CallArgs, blockNrOr
 }
 
 func (s *PublicBlockChainAPI) EstimateComputationCost(ctx context.Context, args CallArgs, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Uint64, error) {
-	_, _, computationCost, _, err := DoCall(ctx, s.b, args, blockNrOrHash, vm.Config{UseOpcodeComputationCost: true}, localTxExecutionTime, s.b.RPCGasCap())
+	gasCap := big.NewInt(0)
+	if rpcGasCap := s.b.RPCGasCap(); rpcGasCap != nil {
+		gasCap = rpcGasCap
+	}
+	_, _, computationCost, _, err := DoCall(ctx, s.b, args, blockNrOrHash, vm.Config{UseOpcodeComputationCost: true}, localTxExecutionTime, gasCap)
 	return (hexutil.Uint64)(computationCost), err
 }
 
