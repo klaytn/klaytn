@@ -118,7 +118,7 @@ func TestValidationPoolInsert(t *testing.T) {
 		fn   func(types.TxType, txValueMap, common.Address) (txValueMap, error)
 	}{
 		{"invalidNonce", decreaseNonce},
-		{"invalidGasLimit", decreaseGasPrice},
+		{"invalidGasPrice", decreaseGasPrice},
 		{"invalidTxSize", exceedSizeLimit},
 		{"invalidRecipientProgram", valueTransferToContract},
 		{"invalidRecipientNotProgram", executeToEOA},
@@ -246,7 +246,7 @@ func TestValidationPoolInsertKip71(t *testing.T) {
 		Name string
 		fn   func(types.TxType, txValueMap, common.Address) (txValueMap, error)
 	}{
-		{"invalidGasLimit", decreaseGasPriceKip71},
+		{"invalidGasPrice", decreaseGasPriceKip71},
 	}
 
 	prof := profile.NewProfiler()
