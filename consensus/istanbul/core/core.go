@@ -37,12 +37,6 @@ import (
 	"github.com/rcrowley/go-metrics"
 )
 
-const (
-	// If the number of validators is 6 or less, the chain could be forked by round change if the required minimum consensus message is "2f+1". 
-	// So, the exceptional case such as number of validator is 6, gather more messages than "2f+1". See requiredMessageCount for more specific information.
-	exceptionalValidatorsNumber = 6
-)
-
 var logger = log.NewModuleLogger(log.ConsensusIstanbulCore)
 
 // New creates an Istanbul consensus core
