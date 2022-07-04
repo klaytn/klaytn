@@ -380,16 +380,18 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 			)
 			if rem == nil {
 				// This can happen if a setHead function is performed.
-				// In this case we can simply discard the old head.
+				// In this case we can simply discard the old head from the chain, and replace with newhead.
 
 				// If newNum >= oldNum, then it's not a case of setHead.
 				if newNum >= oldNum {
-					logger.Warn("Transaction pool reset with missing oldhead",
+					logger.Error("Transaction pool reset with missing oldhead",
 						"old", oldHead.Hash(), "oldnum", oldNum, "new", newHead.Hash(), "newnum", newNum)
 					return
 				} else {
 					// When setHead is performed, then oldHead becomes bigger than newHead, since newHead becomes rewinded blockNumber.
-					logger.Debug("Skipping transaction reset caused by setHead",
+					// If that is the case, we don't have the lost transactions anymore, and
+					// there's nothing to add
+					logger.Warn("Skipping transaction reset caused by setHead",
 						"old", oldHead.Hash(), "oldnum", oldNum, "new", newHead.Hash(), "newnum", newNum)
 				}
 			} else {
