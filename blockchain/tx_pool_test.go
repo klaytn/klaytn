@@ -2067,7 +2067,7 @@ func TestDynamicFeeTransactionAcceptedEip1559(t *testing.T) {
 
 	pool, key := setupTxPoolWithConfig(eip1559Config)
 	defer pool.Stop()
-	pool.SetBaseFee(baseFee)
+	pool.SetGasPrice(baseFee)
 
 	testAddBalance(pool, crypto.PubkeyToAddress(key.PublicKey), big.NewInt(10000000000))
 
