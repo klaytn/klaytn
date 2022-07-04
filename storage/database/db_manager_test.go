@@ -394,7 +394,7 @@ func TestDBManager_BadBlock(t *testing.T) {
 
 		// Write a bunch of bad blocks, all the blocks are should sorted
 		// in reverse order. The extra blocks should be truncated.
-		for _, n := range rand.Perm(150) {
+		for _, n := range rand.Perm(110) {
 			block := types.NewBlockWithHeader(&types.Header{
 				Number: big.NewInt(int64(n)),
 			})
