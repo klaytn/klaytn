@@ -1200,6 +1200,12 @@ func (args *EthTransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int,
 	// Reject invalid combinations of pre- and post-1559 fee styles
 	if args.GasPrice != nil && (args.MaxFeePerGas != nil || args.MaxPriorityFeePerGas != nil) {
 		return nil, errors.New("both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified")
+	} else if args.GasPrice == nil && args.MaxFeePerGas == nil {
+		return nil, errors.New("the one of gasPrice and maxFeePerGas is not specified")
+	} else if args.MaxFeePerGas != nil && args.MaxPriorityFeePerGas != nil {
+		if args.MaxFeePerGas.ToInt().Cmp(args.MaxPriorityFeePerGas.ToInt()) < 0 {
+			return nil, errors.New("MaxPriorityFeePerGas is greater than MaxFeePerGas")
+		}
 	}
 	// Set sender address or use zero address if none specified.
 	addr := args.from()
@@ -1571,13 +1577,18 @@ func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrO
 	// this makes sure resources are cleaned up.
 	defer cancel()
 
-	// TODO-Klaytn: Klaytn is using fixed baseFee as now but, if we change this fixed baseFee as dynamic baseFee, we should update this logic too.
-	fixedBaseFee := new(big.Int).SetUint64(params.ZeroBaseFee)
+	// header.BaseFee != nil means kip71 hardforked
+	var baseFee *big.Int
+	if header.BaseFee != nil {
+		baseFee = header.BaseFee
+	} else {
+		baseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
+	}
 	intrinsicGas, err := types.IntrinsicGas(args.data(), nil, args.To == nil, b.ChainConfig().Rules(header.Number))
 	if err != nil {
 		return nil, 0, 0, err
 	}
-	msg, err := args.ToMessage(globalGasCap, fixedBaseFee, intrinsicGas)
+	msg, err := args.ToMessage(globalGasCap, baseFee, intrinsicGas)
 	if err != nil {
 		return nil, 0, 0, err
 	}
