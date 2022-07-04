@@ -45,7 +45,7 @@ func TestStrictTxListAdd(t *testing.T) {
 	// Insert the transactions in a random order
 	list := newTxList(true)
 	for _, v := range rand.Perm(len(txs)) {
-		list.Add(txs[v], DefaultTxPoolConfig.PriceBump)
+		list.Add(txs[v], DefaultTxPoolConfig.PriceBump, false)
 	}
 	// Verify internal state
 	if len(list.txs.items) != len(txs) {
@@ -82,7 +82,7 @@ func TestTxListReadyWithGasPriceBasic(t *testing.T) {
 	list := newTxList(true)
 	rand.Seed(time.Now().UnixNano())
 	for _, v := range rand.Perm(len(txs)) {
-		list.Add(txs[v], DefaultTxPoolConfig.PriceBump)
+		list.Add(txs[v], DefaultTxPoolConfig.PriceBump, true)
 	}
 
 	ready := list.ReadyWithGasPrice(uint64(startNonce), expectedBaseFee)
@@ -141,7 +141,7 @@ func TestTxListReadyWithGasPricePartialFilter(t *testing.T) {
 	// Insert the transactions in a random order
 	list := newTxList(true)
 	for _, v := range rand.Perm(len(txs)) {
-		list.Add(txs[v], DefaultTxPoolConfig.PriceBump)
+		list.Add(txs[v], DefaultTxPoolConfig.PriceBump, true)
 	}
 
 	ready := list.ReadyWithGasPrice(uint64(startNonce), expectedBaseFee)
@@ -173,11 +173,11 @@ func TestSubstituteTxByGasPrice(t *testing.T) {
 	oldTx := pricedTransaction(0, 21000, big.NewInt(50), key)
 	newTx := pricedTransaction(0, 21000, big.NewInt(60), key)
 
-	if result, _ := txList.Add(oldTx, DefaultTxPoolConfig.PriceBump); !result {
+	if result, _ := txList.Add(oldTx, DefaultTxPoolConfig.PriceBump, true); !result {
 		t.Error("it cannot add tx in tx list.")
 	}
 
-	result, replaced := txList.Add(newTx, DefaultTxPoolConfig.PriceBump)
+	result, replaced := txList.Add(newTx, DefaultTxPoolConfig.PriceBump, true)
 	if !result {
 		t.Error("it cannot replace tx in tx list.")
 	}
@@ -195,11 +195,11 @@ func TestSubstituteTransactionAbort(t *testing.T) {
 	oldTx := pricedTransaction(0, 21000, big.NewInt(50), key)
 	newTx := pricedTransaction(0, 21000, big.NewInt(40), key)
 
-	if result, _ := txList.Add(oldTx, DefaultTxPoolConfig.PriceBump); !result {
+	if result, _ := txList.Add(oldTx, DefaultTxPoolConfig.PriceBump, true); !result {
 		t.Error("it cannot add tx in tx list.")
 	}
 
-	if result, replaced := txList.Add(newTx, DefaultTxPoolConfig.PriceBump); result || replaced != nil {
+	if result, replaced := txList.Add(newTx, DefaultTxPoolConfig.PriceBump, true); result || replaced != nil {
 		t.Error("Expected to not substitute by a tx with lower gas price")
 	}
 }
