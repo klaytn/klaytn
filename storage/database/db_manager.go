@@ -1520,6 +1520,7 @@ func (dbm *databaseManager) WriteBadBlock(block *types.Block) {
 	if len(blob) > 0 {
 		if err := rlp.DecodeBytes(blob, &badBlocks); err != nil {
 			logger.Error("failed to decode old bad blocks")
+			return
 		}
 	}
 
