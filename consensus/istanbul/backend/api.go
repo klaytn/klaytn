@@ -58,7 +58,7 @@ func (api *API) GetSnapshot(number *rpc.BlockNumber) (*Snapshot, error) {
 		return nil, errUnknownBlock // return nil if block is not found.
 	}
 
-	return api.istanbul.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
+	return api.istanbul.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil, false)
 }
 
 // GetSnapshotAtHash retrieves the state snapshot at a given block.
@@ -68,7 +68,7 @@ func (api *API) GetSnapshotAtHash(hash common.Hash) (*Snapshot, error) {
 		return nil, errUnknownBlock
 	}
 
-	return api.istanbul.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
+	return api.istanbul.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil, false)
 }
 
 // GetValidators retrieves the list of authorized validators with the given block number.
@@ -187,7 +187,8 @@ func (api *APIExtension) GetCouncil(number *rpc.BlockNumber) ([]common.Address, 
 		return nil, errNoBlockExist
 	}
 
-	snap, err := api.istanbul.snapshot(api.chain, previousBlockNumber.Uint64(), previousBlockHeader.Hash(), nil)
+	// Calculate council list from snapshot
+	snap, err := api.istanbul.snapshot(api.chain, previousBlockNumber.Uint64(), previousBlockHeader.Hash(), nil, false)
 	if err != nil {
 		logger.Error("Failed to get snapshot.", "hash", snap.Hash, "err", err)
 		return nil, errInternalError
@@ -212,7 +213,8 @@ func (api *APIExtension) GetCommittee(number *rpc.BlockNumber) ([]common.Address
 	}
 
 	blockNumber := header.Number.Uint64()
-
+  
+  // get the snapshot of the previous block.
 	snap, err := api.istanbul.snapshot(api.chain, blockNumber-1, header.ParentHash, nil)
 	if err != nil {
 		logger.Error("Failed to get snapshot.", "hash", snap.Hash, "err", err)
@@ -230,8 +232,7 @@ func (api *APIExtension) GetCommittee(number *rpc.BlockNumber) ([]common.Address
 	if err != nil {
 		return nil, err
 	}
-
-	// get the snapshot of the previous block.
+	
 	parentHash := header.ParentHash
 
 	// get the committee list of this block at the view (blockNumber, round)
@@ -280,7 +281,7 @@ func (api *APIExtension) getConsensusInfo(block *types.Block) (ConsensusInfo, er
 
 	// get the snapshot of the previous block.
 	parentHash := block.ParentHash()
-	snap, err := api.istanbul.snapshot(api.chain, blockNumber-1, parentHash, nil)
+	snap, err := api.istanbul.snapshot(api.chain, blockNumber-1, parentHash, nil, false)
 	if err != nil {
 		return ConsensusInfo{}, err
 	}

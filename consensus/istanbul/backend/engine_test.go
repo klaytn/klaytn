@@ -823,7 +823,7 @@ func TestSnapshot_Validators_AfterMinimumStakingVotes(t *testing.T) {
 		for _, e := range tc.expected {
 			for _, num := range e.blocks {
 				block := chain.GetBlockByNumber(num)
-				snap, err := engine.snapshot(chain, block.NumberU64(), block.Hash(), nil)
+				snap, err := engine.snapshot(chain, block.NumberU64(), block.Hash(), nil, true)
 				assert.NoError(t, err)
 
 				validators := toAddressList(snap.ValSet.List())
@@ -994,7 +994,7 @@ func TestSnapshot_Validators_BasedOnStaking(t *testing.T) {
 		_, err := chain.InsertChain(types.Blocks{block})
 		assert.NoError(t, err)
 
-		snap, err := engine.snapshot(chain, block.NumberU64(), block.Hash(), nil)
+		snap, err := engine.snapshot(chain, block.NumberU64(), block.Hash(), nil, true)
 		assert.NoError(t, err)
 
 		validators := toAddressList(snap.ValSet.List())
@@ -1215,7 +1215,7 @@ func TestSnapshot_Validators_AddRemove(t *testing.T) {
 				continue
 			}
 			block := chain.GetBlockByNumber(uint64(i))
-			snap, err := engine.snapshot(chain, block.NumberU64(), block.Hash(), nil)
+			snap, err := engine.snapshot(chain, block.NumberU64(), block.Hash(), nil, true)
 			assert.NoError(t, err)
 			validators := copyAndSortAddrs(toAddressList(snap.ValSet.List()))
 
@@ -1227,6 +1227,52 @@ func TestSnapshot_Validators_AddRemove(t *testing.T) {
 		reward.SetTestStakingManager(oldStakingManager)
 		engine.Stop()
 	}
+}
+
+func TestSnapshot_Writable(t *testing.T) {
+	var configItems []interface{}
+	configItems = append(configItems, proposerPolicy(params.WeightedRandom))
+	configItems = append(configItems, epoch(3))
+	configItems = append(configItems, governanceMode("single"))
+	configItems = append(configItems, blockPeriod(0)) // set block period to 0 to prevent creating future block
+	chain, engine := newBlockChain(1, configItems...)
+
+	// add votes and insert voted blocks
+	var (
+		previousBlock, currentBlock *types.Block = nil, chain.Genesis()
+		err                         error
+	)
+
+	// voteData is inserted at block 4, and current block is block 5.
+	for i := 0; i < 5; i++ {
+		if i == 4 {
+			engine.governance.AddVote("governance.unitprice", uint64(2000000))
+		}
+		previousBlock = currentBlock
+		currentBlock = makeBlockWithSeal(chain, engine, previousBlock)
+		_, err = chain.InsertChain(types.Blocks{currentBlock})
+		assert.NoError(t, err)
+	}
+
+	// save current gov.changeSet's length for the expected value.
+	currentChangeSetLength := len(engine.governance.GetGovernanceChange())
+	assert.Equal(t, 1, currentChangeSetLength)
+
+	// block 3 is the start block of an epoch. In this test, the cache of this block's snapshot is cleared.
+	// If cache is not removed, it will just read the cache rather than making the snapshot itself.
+	block := chain.GetBlockByNumber(uint64(3))
+
+	// case [writable == false]
+	// expected result: gov.changeSet should not be modified.
+	engine.recents.Remove(block.Hash()) // assume node is restarted
+	_, err = engine.snapshot(chain, block.NumberU64(), block.Hash(), nil, false)
+	assert.Equal(t, currentChangeSetLength, len(engine.governance.GetGovernanceChange()))
+
+	// case [writable == true]
+	// expected result: gov.changeSet is modified.
+	engine.recents.Remove(block.Hash()) // assume node is restarted
+	_, err = engine.snapshot(chain, block.NumberU64(), block.Hash(), nil, true)
+	assert.Equal(t, 0, len(engine.governance.GetGovernanceChange()))
 }
 
 func TestGovernance_Votes(t *testing.T) {

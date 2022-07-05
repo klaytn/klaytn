@@ -278,12 +278,12 @@ func (h *hasher) store(n node, db *Database, force bool) (node, uint16) {
 			switch n := n.(type) {
 			case *shortNode:
 				if child, ok := n.Val.(valueNode); ok {
-					h.onleaf(child, hash, 0)
+					h.onleaf(nil, child, hash, 0)
 				}
 			case *fullNode:
 				for i := 0; i < 16; i++ {
 					if child, ok := n.Children[i].(valueNode); ok {
-						h.onleaf(child, hash, 0)
+						h.onleaf(nil, child, hash, 0)
 					}
 				}
 			}
