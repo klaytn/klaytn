@@ -310,7 +310,7 @@ func (sb *SubBridgeAPI) GetAnchoring() bool {
 	return sb.subBridge.GetAnchoringTx()
 }
 
-func (sb *SubBridgeAPI) registerBridgePair(cBridgeAddr common.Address, pBridgeAddr common.Address) error {
+func (sb *SubBridgeAPI) doRegisterBridge(cBridgeAddr common.Address, pBridgeAddr common.Address) error {
 	cBridge, err := bridge.NewBridge(cBridgeAddr, sb.subBridge.localBackend)
 	if err != nil {
 		return err
@@ -338,7 +338,7 @@ func (sb *SubBridgeAPI) RegisterBridge(cBridgeAddr, pBridgeAddr common.Address, 
 	if err := sb.subBridge.bridgeManager.SetJournal(bridgeAlias, cBridgeAddr, pBridgeAddr); err != nil {
 		return err
 	}
-	return sb.registerBridgePair(cBridgeAddr, pBridgeAddr)
+	return sb.doRegisterBridge(cBridgeAddr, pBridgeAddr)
 }
 
 func (sb *SubBridgeAPI) doDeregisterBridge(cBridgeAddr common.Address, pBridgeAddr common.Address) error {

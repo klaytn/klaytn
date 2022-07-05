@@ -2143,16 +2143,20 @@ func TestBridgeAliasAPIs(t *testing.T) {
 	{
 		// TEST 2-4 - Success (Unsubscribe bridge, deregister bridges and tokens)
 		testUnsubscribeAndDeRegister(t, bm, &changedAlias, &cTokenAddrStr, &pTokenAddrStr, nil)
+
+		// TEST 2-5 - Failure (Unsubscribe register bridge already unsubscribed)
+		err := bm.subBridge.APIBackend.UnsubscribeBridge(&changedAlias, nil)
+		assert.Equal(t, err, ErrEmptyBridgeAlias)
 	}
 
 	{
-		// TEST 2-5 - Failure (Try to create a bridge alias with invalid bridge alias name)
+		// TEST 2-6 - Failure (Try to create a bridge alias with invalid bridge alias name)
 		err = bm.subBridge.APIBackend.RegisterBridge(cBridgeAddr, pBridgeAddr, &invalidBridgeAlias)
 		assert.Equal(t, err, ErrNotAllowedAliasFormat)
 	}
 
 	{
-		// TEST 4 - Concurrent API Call
+		// TEST 3 - Concurrent API Call
 		contractPairLen := 10
 		bridgeAddrs := make([]common.Address, contractPairLen)
 		tokenAddrs := make([]common.Address, contractPairLen)
@@ -2199,7 +2203,6 @@ func TestBridgeAliasAPIs(t *testing.T) {
 			wg := sync.WaitGroup{}
 			wg.Add(contractPairLen / 2)
 			for i := 0; i < len(bridgeAddrs); i += 2 {
-				// alias := "MYBRIDGE_v3" + strconv.Itoa(i)
 				cIdx, pIdx := i, i+1
 				go func(cIdx, pIdx int) {
 					cBridgeAddr, pBridgeAddr := bridgeAddrs[cIdx], bridgeAddrs[pIdx]
