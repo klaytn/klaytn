@@ -44,21 +44,7 @@ type API struct {
 // GetSnapshot retrieves the state snapshot at a given block. The namespace is istanbul.
 func (api *API) GetSnapshot(number *rpc.BlockNumber) (*Snapshot, error) {
 	// Retrieve the requested block number (or current if none requested)
-	var header *types.Header
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else if *number == rpc.PendingBlockNumber {
-		logger.Trace("Cannot get snapshot of the pending block.", "number", number)
-		return nil, errPendingNotAllowed
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	// Ensure we have an actually valid block and return its snapshot
-	if header == nil {
-		return nil, errUnknownBlock // return nil if block is not found.
-	}
-
-	return api.istanbul.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil, false)
+	return getSnapshot(api.chain, api.istanbul, number)
 }
 
 // GetSnapshotAtHash retrieves the state snapshot at a given block.
@@ -68,7 +54,9 @@ func (api *API) GetSnapshotAtHash(hash common.Hash) (*Snapshot, error) {
 		return nil, errUnknownBlock
 	}
 
-	return api.istanbul.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil, false)
+	previousBlockNumber := rpc.BlockNumber(header.Number.Uint64() - 1)
+
+	return getSnapshot(api.chain, api.istanbul, &previousBlockNumber)
 }
 
 // GetValidators retrieves the list of authorized validators with the given block number.
@@ -76,7 +64,7 @@ func (api *API) GetValidators(number *rpc.BlockNumber) ([]common.Address, error)
 	previousBlockNumber := rpc.BlockNumber(number.Int64() - 1)
 
 	// get the snapshot of the previous block.
-	snap, err := api.GetSnapshot(&previousBlockNumber)
+	snap, err := getSnapshot(api.chain, api.istanbul, &previousBlockNumber)
 	if err != nil {
 		logger.Error("Failed to get snapshot.", "hash", snap.Hash, "err", err)
 		return nil, err
@@ -105,7 +93,7 @@ func (api *API) GetDemotedValidators(number *rpc.BlockNumber) ([]common.Address,
 	previousBlockNumber := rpc.BlockNumber(number.Int64() - 1)
 
 	// get the snapshot of the previous block.
-	snap, err := api.GetSnapshot(&previousBlockNumber)
+	snap, err := getSnapshot(api.chain, api.istanbul, &previousBlockNumber)
 	if err != nil {
 		logger.Error("Failed to get snapshot.", "hash", snap.Hash, "err", err)
 		return nil, errInternalError
@@ -179,31 +167,11 @@ var (
 	errNoBlockNumber           = errors.New("block number is not assigned")
 )
 
-// GetSnapshot retrieves the state snapshot at a given block. The namespace is klay.
-func (api *APIExtension) GetSnapshot(number *rpc.BlockNumber) (*Snapshot, error) {
-	// Retrieve the requested block number (or current if none requested)
-	var header *types.Header
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else if *number == rpc.PendingBlockNumber {
-		logger.Trace("Cannot get snapshot of the pending block.", "number", number)
-		return nil, errPendingNotAllowed
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	// Ensure we have an actually valid block and return its snapshot
-	if header == nil {
-		return nil, errUnknownBlock // return nil if block is not found.
-	}
-
-	return api.istanbul.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil, false)
-}
-
 // GetCouncil retrieves the list of authorized validators at the specified block.
 func (api *APIExtension) GetCouncil(number *rpc.BlockNumber) ([]common.Address, error) {
 	previousBlockNumber := rpc.BlockNumber(number.Int64() - 1)
 	// get the snapshot of the previous block.
-	snap, err := api.GetSnapshot(&previousBlockNumber)
+	snap, err := getSnapshot(api.chain, api.istanbul, &previousBlockNumber)
 	if err != nil {
 		logger.Error("Failed to get snapshot.", "hash", snap.Hash, "err", err)
 		return nil, errInternalError
@@ -224,7 +192,7 @@ func (api *APIExtension) GetCouncilSize(number *rpc.BlockNumber) (int, error) {
 func (api *APIExtension) GetCommittee(number *rpc.BlockNumber) ([]common.Address, error) {
 	previousBlockNumber := rpc.BlockNumber(number.Int64() - 1)
 	// get the snapshot of the previous block.
-	snap, err := api.GetSnapshot(&previousBlockNumber)
+	snap, err := getSnapshot(api.chain, api.istanbul, &previousBlockNumber)
 	if err != nil {
 		logger.Error("Failed to get snapshot.", "hash", snap.Hash, "err", err)
 		return nil, errInternalError
@@ -307,7 +275,7 @@ func (api *APIExtension) getConsensusInfo(block *types.Block) (ConsensusInfo, er
 	parentHash := block.ParentHash()
 	previousBlockNumber := rpc.BlockNumber(blockNumber - 1)
 	// get the snapshot of the previous block.
-	snap, err := api.GetSnapshot(&previousBlockNumber)
+	snap, err := getSnapshot(api.chain, api.istanbul, &previousBlockNumber)
 	if err != nil {
 		logger.Error("Failed to get snapshot.", "hash", snap.Hash, "err", err)
 		return ConsensusInfo{}, errInternalError
@@ -521,4 +489,34 @@ func (api *APIExtension) GetBlockWithConsensusInfoByHash(blockHash common.Hash) 
 
 func (api *API) GetTimeout() uint64 {
 	return istanbul.DefaultConfig.Timeout
+}
+
+// Retrieve the header at requested block number
+func headerByRpcNumber(chain consensus.ChainReader, number *rpc.BlockNumber) (*types.Header, error) {
+	var header *types.Header
+	if number == nil || *number == rpc.LatestBlockNumber {
+		header = chain.CurrentHeader()
+	} else if *number == rpc.PendingBlockNumber {
+		logger.Trace("Cannot get snapshot of the pending block.", "number", number)
+		return nil, errPendingNotAllowed
+	} else {
+		header = chain.GetHeaderByNumber(uint64(number.Int64()))
+	}
+	// Ensure we have an actually valid block and return its snapshot
+	if header == nil {
+		return nil, errUnknownBlock // return nil if block is not found.
+	}
+	return header, nil
+}
+
+// Retrieve the snapshot at requested block number
+// API and APIExtension calls this
+func getSnapshot(chain consensus.ChainReader, istanbul *backend, number *rpc.BlockNumber) (*Snapshot, error) {
+	// Retrieve the requested block number (or current if none requested)
+	header, err := headerByRpcNumber(chain, number)
+	if err != nil {
+		return nil, err
+	}
+
+	return istanbul.snapshot(chain, header.Number.Uint64(), header.Hash(), nil, false)
 }
