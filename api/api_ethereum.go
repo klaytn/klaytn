@@ -1226,7 +1226,7 @@ func (args *EthTransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int,
 		// If there's no basefee, then it must be a non-1559 execution
 		if args.GasPrice != nil {
 			gasPrice = args.GasPrice.ToInt()
-		} else if &args.MaxFeePerGas != nil {
+		} else if args.MaxFeePerGas != nil {
 			gasPrice = args.MaxFeePerGas.ToInt()
 		} else {
 			return nil, errors.New("Neither GasPrice nor MaxFeePerGas is specified")
@@ -1235,7 +1235,7 @@ func (args *EthTransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int,
 		if args.GasPrice != nil {
 			// User specified the legacy gas field, convert to 1559 gas typing
 			gasPrice = args.GasPrice.ToInt()
-		} else if &args.MaxFeePerGas != nil {
+		} else if args.MaxFeePerGas != nil {
 			// User specified 1559 gas fields (or none), use those
 			gasPrice = args.MaxFeePerGas.ToInt()
 		} else {
