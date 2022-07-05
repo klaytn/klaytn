@@ -119,12 +119,8 @@ status_auto_restart_daemon() {
 }
 
 #------------------------Related to Klaytn node functions-----------------------------
-start_node() {
-    __pid_run
-    [ -n "$pid" ] && echo "ksend already running...[$pid]" && return
 
-    echo -n "Starting ksend: "
-
+__check_option() {
     if [ ! -d $LOG_DIR ]; then
         mkdir -p $LOG_DIR
     fi
@@ -354,6 +350,15 @@ start_node() {
     if [[ ! -z $AUTO_RESTART ]] && [[ $AUTO_RESTART -eq 1 ]]; then
         OPTIONS="$OPTIONS --autorestart.enable"
     fi
+}
+
+start_node() {
+    __pid_run
+    [ -n "$pid" ] && echo "ksend already running...[$pid]" && return
+
+    echo -n "Starting ksend: "
+
+    __check_option
 
     BASEDIR="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
     CURRENTFILE=`basename "$0"`
@@ -401,6 +406,14 @@ start() {
     fi
 }
 
+start_docker() {
+    echo -n "Starting ksend: "
+    __check_option
+
+    echo "$BIN/ksen $OPTIONS"
+    $BIN/ksen $OPTIONS
+}
+
 stop() {
     if [ ! -z $AUTO_RESTART_NODE ] && [[ $AUTO_RESTART_NODE -eq 1 ]]; then
         stop_auto_restart_daemon
@@ -426,6 +439,9 @@ case "$1" in
     start)
         start
         ;;
+    start-docker)
+        start_docker
+        ;;
     stop)
         stop
         ;;
@@ -436,7 +452,7 @@ case "$1" in
         restart
         ;;
     *)
-        echo "Usages: ksend {start|stop|restart|status}"
+        echo "Usages: ksend {start|start-docker|stop|restart|status}"
         exit 1
         ;;
 esac
