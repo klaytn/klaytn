@@ -238,7 +238,7 @@ func fillMissingGiniCoefficient(stakingInfo *StakingInfo, number uint64) error {
 		return errors.New("Cannot create ConsolidatedStakingInfo")
 	}
 
-	stakingInfo.Gini = c.CalcGiniCoefficient(minStaking)
+	stakingInfo.Gini = c.CalcGiniCoefficientMinStake(minStaking)
 	logger.Debug("Calculated missing Gini for stored StakingInfo", "number", number, "gini", stakingInfo.Gini)
 	return nil
 }

@@ -379,7 +379,7 @@ func TestConsolidatedStakingInfo(t *testing.T) {
 
 		// Test CalcGiniCoefficient()
 		expectedGini := testcase.stakingInfo.Gini
-		gini := c.CalcGiniCoefficient(2000000)
+		gini := c.CalcGiniCoefficientMinStake(2000000)
 		assert.Equal(t, expectedGini, gini)
 
 		// Test GetConsolidatedNode()

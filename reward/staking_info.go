@@ -248,7 +248,7 @@ func (c *ConsolidatedStakingInfo) GetConsolidatedNode(nodeAddr common.Address) *
 // Calculate Gini coefficient of the StakingAmounts.
 // Only amounts greater or equal to `minStake` are included in the calculation.
 // Set `minStake` to 0 to calculate Gini coefficient of all amounts.
-func (c *ConsolidatedStakingInfo) CalcGiniCoefficient(minStake uint64) float64 {
+func (c *ConsolidatedStakingInfo) CalcGiniCoefficientMinStake(minStake uint64) float64 {
 	var amounts []float64
 	for _, node := range c.nodes {
 		if node.StakingAmount >= minStake {
