@@ -177,17 +177,19 @@ func updateStakingInfo(blockNum uint64) (*StakingInfo, error) {
 		return nil, err
 	}
 
-	// Fill in Gini coeff before adding to cache and DB.
-	if err := fillMissingGiniCoefficient(stakingInfo, blockNum); err != nil {
-		logger.Warn("Cannot fill in gini coefficient", "blockNum", blockNum, "err", err)
-	}
-
-	stakingManager.stakingInfoCache.add(stakingInfo)
-
+	// Add to DB before setting Gini; DB will contain {Gini: -1}
 	if err := AddStakingInfoToDB(stakingInfo); err != nil {
 		logger.Debug("failed to write staking info to db", "err", err, "stakingInfo", stakingInfo)
 		return stakingInfo, err
 	}
+
+	// Fill in Gini coeff before adding to cache
+	if err := fillMissingGiniCoefficient(stakingInfo, blockNum); err != nil {
+		logger.Warn("Cannot fill in gini coefficient", "blockNum", blockNum, "err", err)
+	}
+
+	// Add to cache after setting Gini
+	stakingManager.stakingInfoCache.add(stakingInfo)
 
 	logger.Info("Add a new stakingInfo to stakingInfoCache and stakingInfoDB", "blockNum", blockNum)
 	logger.Debug("Added stakingInfo", "stakingInfo", stakingInfo)
