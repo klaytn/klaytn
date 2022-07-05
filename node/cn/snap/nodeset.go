@@ -60,10 +60,10 @@ func (db *NodeSet) Put(key []byte, value []byte) error {
 	db.lock.Lock()
 	defer db.lock.Unlock()
 
-	if _, ok := db.nodes[string(key)]; ok {
+	keystr := string(key)
+	if _, ok := db.nodes[keystr]; ok {
 		return nil
 	}
-	keystr := string(key)
 
 	db.nodes[keystr] = common.CopyBytes(value)
 	db.order = append(db.order, keystr)

@@ -205,6 +205,7 @@ func (t *Tracker) Fulfil(peer string, version uint, code uint64, id uint64) {
 	gauge := metrics.GetOrRegisterGauge(g, nil)
 	gauge.Update(gauge.Value() - 1)
 
+	// TODO-Klaytn-SnapSync update the following metrics if necessary
 	//h := fmt.Sprintf("%s/%s/%d/%#02x", waitHistName, t.protocol, req.version, req.reqCode)
 	//sampler := func() metrics.Sample {
 	//	return metrics.ResettingSample(

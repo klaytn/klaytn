@@ -1822,10 +1822,7 @@ func (d *Downloader) DeliverNodeData(id string, data [][]byte) (err error) {
 func (d *Downloader) DeliverSnapPacket(peer *snap.Peer, packet snap.Packet) error {
 	switch packet := packet.(type) {
 	case *snap.AccountRangePacket:
-		hashes, accounts, err := packet.Unpack()
-		if err != nil {
-			return err
-		}
+		hashes, accounts := packet.Unpack()
 		return d.SnapSyncer.OnAccounts(peer, packet.ID, hashes, accounts, packet.Proof)
 
 	case *snap.StorageRangesPacket:

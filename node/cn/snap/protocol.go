@@ -22,10 +22,8 @@ package snap
 
 import (
 	"errors"
-	"io"
 
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/rlp"
 )
 
 // Constants to match up protocol versions and messages
@@ -90,32 +88,8 @@ type AccountRangePacket struct {
 
 // AccountData represents a single account in a query response.
 type AccountData struct {
-	Hash common.Hash  // Hash of the account
-	Body rlp.RawValue // Account body in slim format
-}
-
-type accountData struct {
-	Hash common.Hash
-	Body []byte
-}
-
-// EncodeRLP serializes the istanbul fields into the Klaytn RLP format.
-func (a *AccountData) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, &accountData{
-		Hash: a.Hash,
-		Body: a.Body[:],
-	})
-}
-
-// DecodeRLP implements rlp.Decoder, and load the istanbul fields from a RLP stream.
-func (a *AccountData) DecodeRLP(s *rlp.Stream) error {
-	var dec accountData
-	if err := s.Decode(&dec); err != nil {
-		return err
-	}
-
-	a.Hash, a.Body = dec.Hash, dec.Body
-	return nil
+	Hash common.Hash // Hash of the account
+	Body []byte      // Account body
 }
 
 // Unpack retrieves the accounts from the range packet and converts from slim
@@ -125,7 +99,7 @@ func (a *AccountData) DecodeRLP(s *rlp.Stream) error {
 // Note, this method does a round of RLP decoding and reencoding, so only use it
 // once and cache the results if need be. Ideally discard the packet afterwards
 // to not double the memory use.
-func (p *AccountRangePacket) Unpack() ([]common.Hash, [][]byte, error) {
+func (p *AccountRangePacket) Unpack() ([]common.Hash, [][]byte) {
 	var (
 		hashes   = make([]common.Hash, len(p.Accounts))
 		accounts = make([][]byte, len(p.Accounts))
@@ -133,7 +107,7 @@ func (p *AccountRangePacket) Unpack() ([]common.Hash, [][]byte, error) {
 	for i, acc := range p.Accounts {
 		hashes[i], accounts[i] = acc.Hash, acc.Body
 	}
-	return hashes, accounts, nil
+	return hashes, accounts
 }
 
 // GetStorageRangesPacket represents an storage slot query.
