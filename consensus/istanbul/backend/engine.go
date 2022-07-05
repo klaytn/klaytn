@@ -173,7 +173,7 @@ func (sb *backend) computeSignatureAddrs(header *types.Header) error {
 // via the VerifySeal method.
 func (sb *backend) VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool) error {
 	var parent []*types.Header
-	if header.Number.Cmp(common.Big0) == 0 {
+	if header.Number.Sign() == 0 {
 		// If current block is genesis, the parent is also genesis
 		parent = append(parent, chain.GetHeaderByNumber(0))
 	} else {
