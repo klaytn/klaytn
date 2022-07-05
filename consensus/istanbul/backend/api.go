@@ -79,7 +79,7 @@ func (api *API) GetValidators(number *rpc.BlockNumber) ([]common.Address, error)
 	snap, err := api.GetSnapshot(&previousBlockNumber)
 	if err != nil {
 		logger.Error("Failed to get snapshot.", "hash", snap.Hash, "err", err)
-		return nil, errInternalError
+		return nil, err
 	}
 	return snap.validators(), nil
 }
