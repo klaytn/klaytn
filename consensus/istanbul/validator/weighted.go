@@ -665,7 +665,7 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, config
 		return nil
 	}
 
-	totalStaking := calcTotalAmount(weightedValidators, newStakingInfo, stakingAmounts)
+	totalStaking, _ := calcTotalAmount(weightedValidators, newStakingInfo, stakingAmounts)
 	calcWeight(weightedValidators, stakingAmounts, totalStaking)
 
 	valSet.refreshProposers(seed, blockNum)
@@ -788,15 +788,15 @@ func getStakingAmountsOfValidators(validators istanbul.Validators, stakingInfo *
 
 // calcTotalAmount calculates totalAmount of stakingAmounts.
 // If UseGini is true, gini is reflected to stakingAmounts.
-func calcTotalAmount(weightedValidators []*weightedValidator, stakingInfo *reward.StakingInfo, stakingAmounts []float64) float64 {
-	if len(stakingInfo.CouncilNodeAddrs) == 0 {
-		return 0
-	}
+func calcTotalAmount(weightedValidators []*weightedValidator, stakingInfo *reward.StakingInfo, stakingAmounts []float64) (float64, float64) {
 	totalStaking := float64(0)
-
 	// stakingInfo.Gini is calculated among all CNs (i.e. AddressBook.cnStakingContracts)
 	// But we want the gini calculated among the subset of CNs (i.e. validators)
 	gini := reward.DefaultGiniCoefficient
+
+	if len(stakingInfo.CouncilNodeAddrs) == 0 {
+		return totalStaking, gini
+	}
 
 	if stakingInfo.UseGini {
 		var tempStakingAmounts []float64
@@ -819,7 +819,7 @@ func calcTotalAmount(weightedValidators []*weightedValidator, stakingInfo *rewar
 	}
 
 	logger.Debug("calculate totalStaking", "UseGini", stakingInfo.UseGini, "Gini", gini, "totalStaking", totalStaking, "stakingAmounts", stakingAmounts)
-	return totalStaking
+	return totalStaking, gini
 }
 
 // calcWeight updates each validator's weight based on the ratio of its staking amount vs. the total staking amount.

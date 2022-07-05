@@ -115,28 +115,28 @@ func TestWeightedCouncil_getStakingAmountsOfValidators(t *testing.T) {
 // if UseGini is true, gini is calculated and reflected to stakingAmounts.
 func TestCalcTotalAmount(t *testing.T) {
 	testCases := []struct {
-		weightedValidators     []*weightedValidator
-		stakingInfo            *reward.StakingInfo
-		stakingAmounts         []float64
-		expectedGini           float64
-		expectedTotalAmount    float64
-		expectedStakingAmounts []float64
+		weightedValidators     []*weightedValidator // Produced by getStakingAmountsOfValidators()
+		stakingInfo            *reward.StakingInfo  // Produced by GetStakingInfo()
+		stakingAmounts         []float64            // Produced by getStakingAmountsOfValidators()
+		expectedGini           float64              // Gini among the []weightedValidators which is a subset of CouncilNodeAddrs
+		expectedTotalAmount    float64              // Sum of Gini-adjusted amounts
+		expectedStakingAmounts []float64            // Gini-adjusted amounts
 	}{
-		{
+		{ // Gini disabled
 			[]*weightedValidator{
 				{address: common.StringToAddress("101")}, {address: common.StringToAddress("102")}, {address: common.StringToAddress("103")},
 			},
 			&reward.StakingInfo{
 				CouncilNodeAddrs: []common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103")},
 				UseGini:          false,
-				Gini:             reward.DefaultGiniCoefficient,
+				Gini:             reward.DefaultGiniCoefficient, // To see if calcTotalAmount modifies Gini field, set it to -1.
 			},
 			[]float64{5000000, 5000000, 5000000},
 			reward.DefaultGiniCoefficient,
 			15000000,
 			[]float64{5000000, 5000000, 5000000},
 		},
-		{
+		{ // Gini enabled but equal amounts.
 			[]*weightedValidator{
 				{address: common.StringToAddress("101")}, {address: common.StringToAddress("102")}, {address: common.StringToAddress("103")},
 			},
@@ -150,8 +150,7 @@ func TestCalcTotalAmount(t *testing.T) {
 			15000000,
 			[]float64{5000000, 5000000, 5000000},
 		},
-
-		{
+		{ // Gini enabled and unequal amounts.
 			[]*weightedValidator{
 				{address: common.StringToAddress("101")}, {address: common.StringToAddress("102")}, {address: common.StringToAddress("103")}, {address: common.StringToAddress("104")}, {address: common.StringToAddress("105")},
 			},
@@ -168,11 +167,10 @@ func TestCalcTotalAmount(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		stakingAmounts := testCase.stakingAmounts
-		totalAmount := calcTotalAmount(testCase.weightedValidators, testCase.stakingInfo, stakingAmounts)
+		totalAmount, giniUsed := calcTotalAmount(testCase.weightedValidators, testCase.stakingInfo, stakingAmounts)
 
-		// Since calcTotalAmount does not update stakingInfo.Gini, we cannot assert expectedGini.
-		// However asserting expectedStakingAmounts proves that calcTotalAmount() used correct Gini.
-		// assert.Equal(t, testCase.expectedGini, testCase.stakingInfo.Gini)
+		assert.Equal(t, testCase.expectedGini, giniUsed)                          // calcTotalAmount computes gini among validators on its own
+		assert.Equal(t, reward.DefaultGiniCoefficient, testCase.stakingInfo.Gini) // stakingInfo.Gini left untouched
 		assert.Equal(t, testCase.expectedTotalAmount, totalAmount)
 		assert.Equal(t, testCase.expectedStakingAmounts, stakingAmounts)
 	}
@@ -312,7 +310,7 @@ func TestWeightedCouncil_validatorWeightWithStakingInfo(t *testing.T) {
 		candidates := append(council.validators, council.demotedValidators...)
 		weightedValidators, stakingAmounts, err := getStakingAmountsOfValidators(candidates, testCase.stakingInfo)
 		assert.NoError(t, err)
-		totalStaking := calcTotalAmount(weightedValidators, testCase.stakingInfo, stakingAmounts)
+		totalStaking, _ := calcTotalAmount(weightedValidators, testCase.stakingInfo, stakingAmounts)
 		calcWeight(weightedValidators, stakingAmounts, totalStaking)
 
 		for i, weight := range testCase.expectedWeights {
