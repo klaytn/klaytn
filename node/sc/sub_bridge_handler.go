@@ -174,7 +174,7 @@ func (sbh *SubBridgeHandler) getRemoteGasPrice() uint64 {
 	return sbh.remoteGasPrice
 }
 
-// setRemoteGasPrice sets parent chain's gasprice with upperboundbasefee
+// setRemoteGasPrice sets parent chain's gasprice
 func (sbh *SubBridgeHandler) setRemoteGasPrice(gasPrice uint64) {
 	sbh.subbridge.bridgeAccounts.pAccount.SetGasPrice(big.NewInt(int64(gasPrice)))
 	sbh.remoteGasPrice = gasPrice
