@@ -753,7 +753,7 @@ func TestGovernance_HandleGovernanceVote_None_mode(t *testing.T) {
 	gov.AddVote("governance.unitprice", uint64(22000))
 	header.Vote = gov.GetEncodedVote(proposer, blockCounter.Uint64())
 
-	gov.HandleGovernanceVote(valSet, votes, tally, header, proposer, self)
+	gov.HandleGovernanceVote(valSet, votes, tally, header, proposer, self, true)
 	gov.RemoveVote("governance.unitprice", uint64(22000), 0)
 
 	if _, ok := gov.changeSet.items["governance.unitprice"]; !ok {
@@ -770,7 +770,7 @@ func TestGovernance_HandleGovernanceVote_None_mode(t *testing.T) {
 	gov.AddVote("istanbul.timeout", newValue)
 	header.Vote = gov.GetEncodedVote(proposer, blockCounter.Uint64())
 
-	gov.HandleGovernanceVote(valSet, votes, tally, header, proposer, self)
+	gov.HandleGovernanceVote(valSet, votes, tally, header, proposer, self, true)
 	gov.RemoveVote("istanbul.timeout", newValue, 0)
 	assert.Equal(t, istanbul.DefaultConfig.Timeout, newValue, "Vote had to be applied but it wasn't")
 
@@ -782,7 +782,7 @@ func TestGovernance_HandleGovernanceVote_None_mode(t *testing.T) {
 	gov.AddVote("governance.removevalidator", validators[1].String())
 	header.Vote = gov.GetEncodedVote(proposer, blockCounter.Uint64())
 
-	gov.HandleGovernanceVote(valSet, votes, tally, header, proposer, self)
+	gov.HandleGovernanceVote(valSet, votes, tally, header, proposer, self, true)
 	gov.RemoveVote("governance.removevalidator", validators[1], 0)
 	if i, _ := valSet.GetByAddress(validators[1]); i != -1 {
 		t.Errorf("Validator removal failed, %d validators remains", valSet.Size())
@@ -795,7 +795,7 @@ func TestGovernance_HandleGovernanceVote_None_mode(t *testing.T) {
 	gov.AddVote("governance.removevalidator", validators[1].String())
 	header.Vote = gov.GetEncodedVote(proposer, blockCounter.Uint64())
 
-	gov.HandleGovernanceVote(valSet, votes, tally, header, proposer, proposer) // self = proposer
+	gov.HandleGovernanceVote(valSet, votes, tally, header, proposer, proposer, true) // self = proposer
 	// check if casted
 	if !gov.voteMap.items["governance.removevalidator"].Casted {
 		t.Errorf("Removing a non-existing validator failed")
@@ -812,7 +812,7 @@ func TestGovernance_HandleGovernanceVote_None_mode(t *testing.T) {
 	gov.AddVote("governance.addvalidator", validators[1].String())
 	header.Vote = gov.GetEncodedVote(proposer, blockCounter.Uint64())
 
-	gov.HandleGovernanceVote(valSet, votes, tally, header, proposer, self)
+	gov.HandleGovernanceVote(valSet, votes, tally, header, proposer, self, true)
 	gov.RemoveVote("governance.addvalidator", validators[1], 0)
 	if i, _ := valSet.GetByAddress(validators[1]); i == -1 {
 		t.Errorf("Validator addition failed, %d validators remains", valSet.Size())
@@ -825,7 +825,7 @@ func TestGovernance_HandleGovernanceVote_None_mode(t *testing.T) {
 	gov.AddVote("governance.addvalidator", validators[1].String())
 	header.Vote = gov.GetEncodedVote(proposer, blockCounter.Uint64())
 
-	gov.HandleGovernanceVote(valSet, votes, tally, header, proposer, proposer) // self = proposer
+	gov.HandleGovernanceVote(valSet, votes, tally, header, proposer, proposer, true) // self = proposer
 	// check if casted
 	if !gov.voteMap.items["governance.addvalidator"].Casted {
 		t.Errorf("Adding an existing validator failed")
@@ -842,7 +842,7 @@ func TestGovernance_HandleGovernanceVote_None_mode(t *testing.T) {
 	gov.AddVote("governance.removevalidator", demotedValidators[1].String())
 	header.Vote = gov.GetEncodedVote(proposer, blockCounter.Uint64())
 
-	gov.HandleGovernanceVote(valSet, votes, tally, header, proposer, self)
+	gov.HandleGovernanceVote(valSet, votes, tally, header, proposer, self, true)
 	gov.RemoveVote("governance.removevalidator", demotedValidators[1], 0)
 	if i, _ := valSet.GetDemotedByAddress(demotedValidators[1]); i != -1 {
 		t.Errorf("Demoted validator removal failed, %d demoted validators remains", len(valSet.DemotedList()))
@@ -855,7 +855,7 @@ func TestGovernance_HandleGovernanceVote_None_mode(t *testing.T) {
 	gov.AddVote("governance.addvalidator", demotedValidators[1].String())
 	header.Vote = gov.GetEncodedVote(proposer, blockCounter.Uint64())
 
-	gov.HandleGovernanceVote(valSet, votes, tally, header, proposer, self)
+	gov.HandleGovernanceVote(valSet, votes, tally, header, proposer, self, true)
 	gov.RemoveVote("governance.addvalidator", demotedValidators[1], 0)
 	// At first, demoted validator is added to the validators, but it will be refreshed right after
 	// So, we here check only if the adding demoted validator to validators
@@ -894,17 +894,17 @@ func TestGovernance_HandleGovernanceVote_Ballot_mode(t *testing.T) {
 	gov.AddVote("governance.unitprice", uint64(22000))
 
 	header.Vote = gov.GetEncodedVote(validators[0], blockCounter.Uint64())
-	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[0], self)
+	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[0], self, true)
 
 	header.Vote = gov.GetEncodedVote(validators[1], blockCounter.Uint64())
-	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[1], self)
+	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[1], self, true)
 
 	if _, ok := gov.changeSet.items["governance.unitprice"]; ok {
 		t.Errorf("Vote shouldn't be applied yet but it was applied")
 	}
 
 	header.Vote = gov.GetEncodedVote(validators[2], blockCounter.Uint64())
-	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[2], self)
+	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[2], self, true)
 	if _, ok := gov.changeSet.items["governance.unitprice"]; !ok {
 		t.Errorf("Vote should be applied but it was not")
 	}
@@ -920,15 +920,15 @@ func TestGovernance_HandleGovernanceVote_Ballot_mode(t *testing.T) {
 	gov.AddVote("istanbul.timeout", newValue)
 
 	header.Vote = gov.GetEncodedVote(validators[0], blockCounter.Uint64())
-	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[0], self)
+	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[0], self, true)
 
 	header.Vote = gov.GetEncodedVote(validators[1], blockCounter.Uint64())
-	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[1], self)
+	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[1], self, true)
 
 	assert.NotEqual(t, istanbul.DefaultConfig.Timeout, newValue, "Vote shouldn't be applied yet but it was applied")
 
 	header.Vote = gov.GetEncodedVote(validators[2], blockCounter.Uint64())
-	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[2], self)
+	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[2], self, true)
 
 	assert.Equal(t, istanbul.DefaultConfig.Timeout, newValue, "Vote should be applied but it was not")
 	gov.RemoveVote("istanbul.timeout", newValue, blockCounter.Uint64())
@@ -940,18 +940,18 @@ func TestGovernance_HandleGovernanceVote_Ballot_mode(t *testing.T) {
 
 	header.Number = blockCounter.Add(blockCounter, common.Big1)
 	header.Vote = gov.GetEncodedVote(validators[0], blockCounter.Uint64())
-	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[0], self)
+	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[0], self, true)
 
 	header.Number = blockCounter.Add(blockCounter, common.Big1)
 	header.Vote = gov.GetEncodedVote(validators[2], blockCounter.Uint64())
-	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[2], self)
+	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[2], self, true)
 	if i, _ := valSet.GetByAddress(validators[1]); i == -1 {
 		t.Errorf("Validator removal shouldn't be done yet, %d validators remains", valSet.Size())
 	}
 
 	header.Number = blockCounter.Add(blockCounter, common.Big1)
 	header.Vote = gov.GetEncodedVote(validators[3], blockCounter.Uint64())
-	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[3], self)
+	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[3], self, true)
 
 	if i, _ := valSet.GetByAddress(validators[1]); i != -1 {
 		t.Errorf("Validator removal failed, %d validators remains", valSet.Size())
@@ -965,7 +965,7 @@ func TestGovernance_HandleGovernanceVote_Ballot_mode(t *testing.T) {
 
 	header.Number = blockCounter.Add(blockCounter, common.Big1)
 	header.Vote = gov.GetEncodedVote(validators[0], blockCounter.Uint64())
-	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[0], validators[0])
+	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[0], validators[0], true)
 	// check if casted
 	if !gov.voteMap.items["governance.removevalidator"].Casted {
 		t.Errorf("Removing a non-existing validator failed")
@@ -973,7 +973,7 @@ func TestGovernance_HandleGovernanceVote_Ballot_mode(t *testing.T) {
 
 	header.Number = blockCounter.Add(blockCounter, common.Big1)
 	header.Vote = gov.GetEncodedVote(validators[2], blockCounter.Uint64())
-	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[2], validators[2])
+	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[2], validators[2], true)
 	// check if casted
 	if !gov.voteMap.items["governance.removevalidator"].Casted {
 		t.Errorf("Removing a non-existing validator failed")
@@ -988,14 +988,14 @@ func TestGovernance_HandleGovernanceVote_Ballot_mode(t *testing.T) {
 
 	header.Number = blockCounter.Add(blockCounter, common.Big1)
 	header.Vote = gov.GetEncodedVote(validators[0], blockCounter.Uint64())
-	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[0], self)
+	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[0], self, true)
 	if i, _ := valSet.GetByAddress(validators[1]); i != -1 {
 		t.Errorf("Validator addition shouldn't be done yet, %d validators remains", valSet.Size())
 	}
 
 	header.Number = blockCounter.Add(blockCounter, common.Big1)
 	header.Vote = gov.GetEncodedVote(validators[2], blockCounter.Uint64())
-	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[2], self)
+	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[2], self, true)
 
 	if i, _ := valSet.GetByAddress(validators[1]); i == -1 {
 		t.Errorf("Validator addition failed, %d validators remains", valSet.Size())
@@ -1009,7 +1009,7 @@ func TestGovernance_HandleGovernanceVote_Ballot_mode(t *testing.T) {
 
 	header.Number = blockCounter.Add(blockCounter, common.Big1)
 	header.Vote = gov.GetEncodedVote(validators[0], blockCounter.Uint64())
-	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[0], validators[0])
+	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[0], validators[0], true)
 	// check if casted
 	if !gov.voteMap.items["governance.addvalidator"].Casted {
 		t.Errorf("Adding an existing validator failed")
@@ -1017,7 +1017,7 @@ func TestGovernance_HandleGovernanceVote_Ballot_mode(t *testing.T) {
 
 	header.Number = blockCounter.Add(blockCounter, common.Big1)
 	header.Vote = gov.GetEncodedVote(validators[2], blockCounter.Uint64())
-	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[2], validators[2])
+	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[2], validators[2], true)
 	// check if casted
 	if !gov.voteMap.items["governance.addvalidator"].Casted {
 		t.Errorf("Adding an existing validator failed")
@@ -1032,18 +1032,18 @@ func TestGovernance_HandleGovernanceVote_Ballot_mode(t *testing.T) {
 
 	header.Number = blockCounter.Add(blockCounter, common.Big1)
 	header.Vote = gov.GetEncodedVote(validators[0], blockCounter.Uint64())
-	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[0], self)
+	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[0], self, true)
 
 	header.Number = blockCounter.Add(blockCounter, common.Big1)
 	header.Vote = gov.GetEncodedVote(validators[2], blockCounter.Uint64())
-	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[2], self)
+	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[2], self, true)
 	if i, _ := valSet.GetDemotedByAddress(demotedValidators[1]); i == -1 {
 		t.Errorf("Demoted validator removal shouldn't be done yet, %d validators remains", len(valSet.DemotedList()))
 	}
 
 	header.Number = blockCounter.Add(blockCounter, common.Big1)
 	header.Vote = gov.GetEncodedVote(validators[3], blockCounter.Uint64())
-	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[3], self)
+	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[3], self, true)
 
 	if i, _ := valSet.GetDemotedByAddress(demotedValidators[1]); i != -1 {
 		t.Errorf("Demoted validator removal failed, %d validators remains", len(valSet.DemotedList()))
@@ -1056,18 +1056,18 @@ func TestGovernance_HandleGovernanceVote_Ballot_mode(t *testing.T) {
 
 	header.Number = blockCounter.Add(blockCounter, common.Big1)
 	header.Vote = gov.GetEncodedVote(validators[0], blockCounter.Uint64())
-	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[0], self)
+	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[0], self, true)
 	if i, _ := valSet.GetByAddress(demotedValidators[1]); i != -1 {
 		t.Errorf("Validator addition shouldn't be done yet, %d validators remains", len(valSet.DemotedList()))
 	}
 
 	header.Number = blockCounter.Add(blockCounter, common.Big1)
 	header.Vote = gov.GetEncodedVote(validators[2], blockCounter.Uint64())
-	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[2], self)
+	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[2], self, true)
 
 	header.Number = blockCounter.Add(blockCounter, common.Big1)
 	header.Vote = gov.GetEncodedVote(validators[3], blockCounter.Uint64())
-	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[3], self)
+	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, validators[3], self, true)
 
 	// At first, demoted validator is added to the validators, but it will be refreshed right after
 	// So, we here check only if the adding demoted validator to validators

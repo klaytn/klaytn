@@ -1126,11 +1126,12 @@ func (bm *BridgeManager) loop(
 
 // Stop closes a subscribed event scope of the bridge manager.
 func (bm *BridgeManager) Stop() {
-	bm.bridgesMu.RLock()
-	defer bm.bridgesMu.RUnlock()
+	bm.bridgesMu.Lock()
+	defer bm.bridgesMu.Unlock()
 
-	for _, bi := range bm.bridges {
+	for addr, bi := range bm.bridges {
 		close(bi.closed)
+		delete(bm.bridges, addr)
 	}
 
 	bm.scope.Close()

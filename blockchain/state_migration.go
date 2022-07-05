@@ -151,7 +151,8 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) (returnErr error) {
 
 	// Migration main loop
 	for trieSync.Pending() > 0 {
-		queue = append(queue[:0], trieSync.Missing(1024)...)
+		nodes, _, codes := trieSync.Missing(1024)
+		queue = append(queue[:0], append(nodes, codes...)...)
 		results := make([]statedb.SyncResult, len(queue))
 
 		// Read the trie nodes

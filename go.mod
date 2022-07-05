@@ -56,14 +56,13 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 	github.com/urfave/cli v1.20.0
-	github.com/valyala/fasthttp v1.16.0
+	github.com/valyala/fasthttp v1.34.0
 	go.uber.org/atomic v1.4.0 // indirect
 	go.uber.org/multierr v1.2.0 // indirect
 	go.uber.org/zap v1.10.0
-	golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2
-	golang.org/x/net v0.0.0-20210805182204-aaa1db679c0d
-	golang.org/x/sys v0.0.0-20211025112917-711f33c9992c
-	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/crypto v0.0.0-20220214200702-86341886e292
+	golang.org/x/net v0.0.0-20220225172249-27dd8689420f
+	golang.org/x/sys v0.0.0-20220227234510-4e6760a101f9
 	golang.org/x/tools v0.0.0-20200108203644-89082a384178
 	google.golang.org/grpc v1.27.0
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
