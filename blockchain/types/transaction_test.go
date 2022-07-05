@@ -335,33 +335,33 @@ func TestEffectiveGasPrice(t *testing.T) {
 	legacyTx := NewTx(&TxInternalDataLegacy{Price: gasPrice})
 	dynamicTx := NewTx(&TxInternalDataEthereumDynamicFee{GasFeeCap: gasFeeCap, GasTipCap: gasTipCap})
 
-	var baseFee *big.Int
+	header := new(Header)
 
-	have := legacyTx.EffectiveGasPrice(baseFee)
+	have := legacyTx.EffectiveGasPrice(header)
 	want := gasPrice
 	assert.Equal(t, want, have)
 
-	have = dynamicTx.EffectiveGasPrice(baseFee)
+	have = dynamicTx.EffectiveGasPrice(header)
 	te := dynamicTx.GetTxInternalData().(TxInternalDataBaseFee)
 	want = math.BigMin(new(big.Int).Add(te.GetGasTipCap(), new(big.Int)), te.GetGasFeeCap())
 	assert.Equal(t, want, have)
 
-	baseFee = big.NewInt(2000)
-	have = legacyTx.EffectiveGasPrice(baseFee)
-	want = baseFee
+	header.BaseFee = big.NewInt(2000)
+	have = legacyTx.EffectiveGasPrice(header)
+	want = header.BaseFee
 	assert.Equal(t, want, have)
 
-	have = dynamicTx.EffectiveGasPrice(baseFee)
-	want = baseFee
+	have = dynamicTx.EffectiveGasPrice(header)
+	want = header.BaseFee
 	assert.Equal(t, want, have)
 
-	baseFee = big.NewInt(0)
-	have = legacyTx.EffectiveGasPrice(baseFee)
-	want = baseFee
+	header.BaseFee = big.NewInt(0)
+	have = legacyTx.EffectiveGasPrice(header)
+	want = header.BaseFee
 	assert.Equal(t, want, have)
 
-	have = dynamicTx.EffectiveGasPrice(baseFee)
-	want = baseFee
+	have = dynamicTx.EffectiveGasPrice(header)
+	want = header.BaseFee
 	assert.Equal(t, want, have)
 }
 
