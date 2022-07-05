@@ -1200,6 +1200,10 @@ func (args *EthTransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int,
 	// Reject invalid combinations of pre- and post-1559 fee styles
 	if args.GasPrice != nil && (args.MaxFeePerGas != nil || args.MaxPriorityFeePerGas != nil) {
 		return nil, errors.New("both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified")
+	} else if args.MaxFeePerGas != nil && args.MaxPriorityFeePerGas != nil {
+		if args.MaxFeePerGas.ToInt().Cmp(args.MaxPriorityFeePerGas.ToInt()) < 0 {
+			return nil, errors.New("MaxPriorityFeePerGas is greater than MaxFeePerGas")
+		}
 	}
 	// Set sender address or use zero address if none specified.
 	addr := args.from()
@@ -1216,41 +1220,29 @@ func (args *EthTransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int,
 		logger.Warn("Caller gas above allowance, capping", "requested", gas, "cap", globalGasCap)
 		gas = globalGasCap
 	}
-	var (
-		gasPrice  *big.Int
-		gasFeeCap *big.Int
-		gasTipCap *big.Int
-	)
-	if baseFee == nil {
+
+	gasPrice := new(big.Int)
+	if baseFee.Cmp(new(big.Int).SetUint64(params.ZeroBaseFee)) == 0 {
 		// If there's no basefee, then it must be a non-1559 execution
-		gasPrice = new(big.Int)
 		if args.GasPrice != nil {
 			gasPrice = args.GasPrice.ToInt()
-		}
-		gasFeeCap, gasTipCap = gasPrice, gasPrice
-	} else {
-		// A basefee is provided, necessitating 1559-type execution
-		if args.GasPrice != nil {
-			// User specified the legacy gas field, convert to 1559 gas typing
-			gasPrice = args.GasPrice.ToInt()
-			gasFeeCap, gasTipCap = gasPrice, gasPrice
+		} else if args.MaxFeePerGas != nil {
+			gasPrice = args.MaxFeePerGas.ToInt()
 		} else {
+			return nil, errors.New("Neither GasPrice nor MaxFeePerGas is specified")
+		}
+	} else {
+		if args.GasPrice != nil {
+			gasPrice = args.GasPrice.ToInt()
+		} else if args.MaxFeePerGas != nil {
 			// User specified 1559 gas fields (or none), use those
-			gasFeeCap = new(big.Int)
-			if args.MaxFeePerGas != nil {
-				gasFeeCap = args.MaxFeePerGas.ToInt()
-			}
-			gasTipCap = new(big.Int)
-			if args.MaxPriorityFeePerGas != nil {
-				gasTipCap = args.MaxPriorityFeePerGas.ToInt()
-			}
-			// Backfill the legacy gasPrice for EVM execution, unless we're all zeros
-			gasPrice = new(big.Int)
-			if gasFeeCap.BitLen() > 0 || gasTipCap.BitLen() > 0 {
-				gasPrice = math.BigMin(new(big.Int).Add(gasTipCap, baseFee), gasFeeCap)
-			}
+			gasPrice = args.MaxFeePerGas.ToInt()
+		} else {
+			// User specified neither GasPrice nor MaxFeePerGas, use baseFee
+			gasPrice = baseFee.Mul(baseFee, common.Big2)
 		}
 	}
+
 	value := new(big.Int)
 	if args.Value != nil {
 		value = args.Value.ToInt()
@@ -1571,13 +1563,18 @@ func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrO
 	// this makes sure resources are cleaned up.
 	defer cancel()
 
-	// TODO-Klaytn: Klaytn is using fixed baseFee as now but, if we change this fixed baseFee as dynamic baseFee, we should update this logic too.
-	fixedBaseFee := new(big.Int).SetUint64(params.ZeroBaseFee)
+	// header.BaseFee != nil means kip71 hardforked
+	var baseFee *big.Int
+	if header.BaseFee != nil {
+		baseFee = header.BaseFee
+	} else {
+		baseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
+	}
 	intrinsicGas, err := types.IntrinsicGas(args.data(), nil, args.To == nil, b.ChainConfig().Rules(header.Number))
 	if err != nil {
 		return nil, 0, 0, err
 	}
-	msg, err := args.ToMessage(globalGasCap, fixedBaseFee, intrinsicGas)
+	msg, err := args.ToMessage(globalGasCap, baseFee, intrinsicGas)
 	if err != nil {
 		return nil, 0, 0, err
 	}
