@@ -1233,7 +1233,6 @@ func (args *EthTransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int,
 		}
 	} else {
 		if args.GasPrice != nil {
-			// User specified the legacy gas field, convert to 1559 gas typing
 			gasPrice = args.GasPrice.ToInt()
 		} else if &args.MaxFeePerGas != nil {
 			// User specified 1559 gas fields (or none), use those
