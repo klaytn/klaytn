@@ -264,6 +264,8 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceiptInCache(ctx context.Cont
 func (s *PublicTransactionPoolAPI) getTransactionReceipt(ctx context.Context, tx *types.Transaction, blockHash common.Hash,
 	blockNumber uint64, index uint64, receipt *types.Receipt,
 ) (map[string]interface{}, error) {
+	// No error handling is required here.
+	// Header is checked in the following RpcOutputReceipt function
 	header, _ := s.b.HeaderByHash(ctx, blockHash)
 	return RpcOutputReceipt(header, tx, blockHash, blockNumber, index, receipt), nil
 }
