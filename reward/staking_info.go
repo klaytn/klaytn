@@ -241,9 +241,8 @@ func (c *ConsolidatedStakingInfo) GetAllNodes() []consolidatedNode {
 func (c *ConsolidatedStakingInfo) GetConsolidatedNode(nodeAddr common.Address) *consolidatedNode {
 	if idx, ok := c.nodeIndex[nodeAddr]; ok {
 		return &c.nodes[idx]
-	} else {
-		return nil
 	}
+	return nil
 }
 
 // Calculate Gini coefficient of the StakingAmounts.
