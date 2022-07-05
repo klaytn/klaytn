@@ -659,8 +659,6 @@ func newRPCTransactionFromBlockHash(b *types.Block, hash common.Hash) map[string
 func (args *CallArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsicGas uint64) (*types.Transaction, error) {
 	if args.GasPrice != nil && (args.MaxFeePerGas != nil || args.MaxPriorityFeePerGas != nil) {
 		return nil, errors.New("both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified")
-	} else if args.GasPrice == nil && args.MaxFeePerGas == nil {
-		return nil, errors.New("the one of gasPrice and maxFeePerGas is not specified")
 	} else if args.MaxFeePerGas != nil && args.MaxPriorityFeePerGas != nil {
 		if args.MaxFeePerGas.ToInt().Cmp(args.MaxPriorityFeePerGas.ToInt()) < 0 {
 			return nil, errors.New("MaxPriorityFeePerGas is greater than MaxFeePerGas")
@@ -683,33 +681,24 @@ func (args *CallArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsic
 		gas = globalGasCap
 	}
 
-	var (
-		gasPrice  *big.Int
-		gasFeeCap *big.Int
-		gasTipCap *big.Int
-	)
-	if baseFee == nil {
+	gasPrice := new(big.Int)
+	if baseFee.Cmp(new(big.Int).SetUint64(params.ZeroBaseFee)) == 0 {
 		// If there's no basefee, then it must be a non-1559 execution
-		gasPrice = new(big.Int)
 		if &args.GasPrice != nil {
 			gasPrice = args.GasPrice.ToInt()
+		} else {
+			return nil, errors.New("gasPrice is not specified")
 		}
-		gasFeeCap, gasTipCap = gasPrice, gasPrice
 	} else {
-		// A basefee is provided, necessitating 1559-type execution
 		if &args.GasPrice != nil {
 			// User specified the legacy gas field, convert to 1559 gas typing
 			gasPrice = args.GasPrice.ToInt()
-			gasFeeCap, gasTipCap = gasPrice, gasPrice
+		} else if &args.MaxFeePerGas != nil {
+			// User specified 1559 gas fields (or none), use those
+			gasPrice = args.MaxFeePerGas.ToInt()
 		} else {
-			// TODO-Klaytn: User specified 1559 gas fields (or none), use those
-			gasFeeCap = new(big.Int)
-			gasTipCap = new(big.Int)
-			// Backfill the legacy gasPrice for EVM execution, unless we're all zeros
-			gasPrice = new(big.Int)
-			if gasFeeCap.BitLen() > 0 || gasTipCap.BitLen() > 0 {
-				gasPrice = math.BigMin(new(big.Int).Add(gasTipCap, baseFee), gasFeeCap)
-			}
+			// User specified neither GasPrice nor MaxFeePerGas, use baseFee
+			gasPrice = baseFee
 		}
 	}
 	value := new(big.Int)
