@@ -115,12 +115,11 @@ func GetStakingInfo(blockNum uint64) *StakingInfo {
 // If the given number is not on the staking block, it returns nil.
 //
 // Fixup for Gini coefficients:
-// Klaytn core before fillMissingGiniCoefficient() stores Gini: -1 in its database.
+// Klaytn core stores Gini: -1 in its database.
 // We ensure GetStakingInfoOnStakingBlock() to always return meaningful Gini.
-//   If cache hit -> fillMissingGini -> modifies cached in-memory object
-//   If db hit -> fillMissingGini -> write to cache
-//   If read contract -> fillMissingGini -> write to db -> write to cache
-// The fixup for Gini happens once every staking info block.
+//   If cache hit                               -> fillMissingGini -> modifies cached in-memory object
+//   If db hit                                  -> fillMissingGini -> write to cache
+//   If read contract -> write to db (gini: -1) -> fillMissingGini -> write to cache
 func GetStakingInfoOnStakingBlock(stakingBlockNumber uint64) *StakingInfo {
 	if stakingManager == nil {
 		logger.Error("unable to GetStakingInfo", "err", ErrStakingManagerNotSet)
