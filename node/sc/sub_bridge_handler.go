@@ -26,6 +26,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/networks/p2p"
+	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 )
 
@@ -40,8 +41,14 @@ var (
 
 // parentChainInfo handles the information of parent chain, which is needed from child chain.
 type parentChainInfo struct {
-	Nonce    uint64
-	GasPrice uint64
+	Nonce       uint64
+	GasPrice    uint64
+	KIP71Config params.KIP71Config
+}
+
+type InvalidParentChainTx struct {
+	TxHash common.Hash
+	ErrStr string
 }
 
 type SubBridgeHandler struct {
@@ -167,9 +174,31 @@ func (sbh *SubBridgeHandler) getRemoteGasPrice() uint64 {
 	return sbh.remoteGasPrice
 }
 
+// setRemoteGasPrice sets parent chain's gasprice
 func (sbh *SubBridgeHandler) setRemoteGasPrice(gasPrice uint64) {
 	sbh.subbridge.bridgeAccounts.pAccount.SetGasPrice(big.NewInt(int64(gasPrice)))
 	sbh.remoteGasPrice = gasPrice
+}
+
+// setRemoteChainValues sets parent chain's configuration values
+func (sbh *SubBridgeHandler) setRemoteChainValues(pcInfo parentChainInfo) {
+	headerNum := sbh.subbridge.blockchain.CurrentHeader().Number
+	sbh.setRemoteGasPrice(pcInfo.GasPrice)
+	if sbh.subbridge.blockchain.Config().IsKIP71ForkEnabled(headerNum) {
+		// Set parent chain's gasprice with upperboundbasefee
+		sbh.remoteGasPrice = pcInfo.KIP71Config.UpperBoundBaseFee
+		sbh.subbridge.bridgeAccounts.SetParentKIP71Config(pcInfo.KIP71Config)
+		kip71Config := sbh.subbridge.bridgeAccounts.GetParentKIP71Config()
+
+		logger.Info("Updated parent chain values", "gasPrice", sbh.subbridge.bridgeAccounts.GetParentGasPrice(),
+			"LowerBoundBaseFee", kip71Config.LowerBoundBaseFee,
+			"UpperBoundBaseFee", kip71Config.UpperBoundBaseFee,
+			"GasTarget", kip71Config.GasTarget,
+			"MaxBlockGasUsedForBaseFee", kip71Config.MaxBlockGasUsedForBaseFee,
+			"BaseFeeDenominator", kip71Config.BaseFeeDenominator)
+	} else {
+		logger.Info("Updated parent chain's gas price", "gasPrice", sbh.subbridge.bridgeAccounts.GetParentGasPrice())
+	}
 }
 
 // GetParentOperatorAddr returns a pointer of a hex address of an account used for parent chain.
@@ -226,6 +255,11 @@ func (sbh *SubBridgeHandler) HandleMainMsg(p BridgePeer, msg p2p.Msg) error {
 		if err := sbh.handleParentChainReceiptResponseMsg(p, msg); err != nil {
 			return err
 		}
+	case ServiceChainInvalidTxResponseMsg:
+		logger.Debug("received ServiceChainInvalidTxResponseMsg")
+		if err := sbh.handleParentChainInvalidTxResponseMsg(msg); err != nil {
+			return err
+		}
 	default:
 		return errResp(ErrInvalidMsgCode, "%v", msg.Code)
 	}
@@ -266,7 +300,7 @@ func (sbh *SubBridgeHandler) handleParentChainInfoResponseMsg(p BridgePeer, msg 
 		sbh.setParentOperatorNonce(pcInfo.Nonce)
 	}
 	sbh.setParentOperatorNonceSynced(true)
-	sbh.setRemoteGasPrice(pcInfo.GasPrice)
+	sbh.setRemoteChainValues(pcInfo)
 	logger.Info("ParentChainNonceResponse", "receivedNonce", pcInfo.Nonce, "gasPrice", pcInfo.GasPrice, "mainChainAccountNonce", sbh.getParentOperatorNonce())
 	return nil
 }
@@ -340,6 +374,40 @@ func (sbh *SubBridgeHandler) LocalChainHeadEvent(block *types.Block) {
 		}
 		sbh.skipSyncBlockCount++
 	}
+}
+
+// handleParentChainInvalidTxResponseMsg receives unexecuted txs which were not executed by some of the reasons (e.g., lower gas price)
+// and removes them from bridgeTxPool to prevent resending **as it is without necessary modification**
+func (sbh *SubBridgeHandler) handleParentChainInvalidTxResponseMsg(msg p2p.Msg) error {
+	headerNum := sbh.subbridge.blockchain.CurrentHeader().Number
+	var invalidTxs []InvalidParentChainTx
+	if err := msg.Decode(&invalidTxs); err != nil && err != rlp.EOL {
+		return errResp(ErrDecode, "msg %v: %v", msg, err)
+	}
+	txPool := sbh.subbridge.GetBridgeTxPool()
+	for _, invalidTx := range invalidTxs {
+		if tx := txPool.Get(invalidTx.TxHash); tx != nil {
+			logger.Error("A bridge tx was not executed", "err", invalidTx.ErrStr,
+				"txHash", invalidTx.TxHash.String(),
+				"txGasPrice", tx.GasPrice().Uint64())
+			if sbh.subbridge.blockchain.Config().IsKIP71ForkEnabled(headerNum) &&
+				invalidTx.ErrStr == blockchain.ErrGasPriceBelowBaseFee.Error() {
+				logger.Info("Request gasPrice and KIP71 values to parent chain")
+				sbh.SyncNonceAndGasPrice()
+
+				logger.Error("Bridge tx is removed which has lower gasPrice than UpperBoundBaseFee")
+				// Remove the tx and delegate re-execution of the tx by Value Transfer Recovery feature
+				if err := sbh.subbridge.GetBridgeTxPool().RemoveTx(tx); err != nil {
+					logger.Error("Failed to remove bridge tx",
+						"txType", tx.Type(), "txNonce", tx.Nonce(), "txHash", tx.Hash().String())
+				} else {
+					logger.Info("Removed bridge tx",
+						"txType", tx.Type(), "txNonce", tx.Nonce(), "txHash", tx.Hash().String())
+				}
+			} // TODO-ServiceChain: Consider other types of tx failures with else {}
+		}
+	}
+	return nil
 }
 
 // broadcastServiceChainTx broadcasts service chain transactions to parent chain peers.

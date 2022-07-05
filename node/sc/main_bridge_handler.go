@@ -23,6 +23,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/datasync/downloader"
 	"github.com/klaytn/klaytn/networks/p2p"
+	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/pkg/errors"
 )
@@ -109,18 +110,24 @@ func (mbh *MainBridgeHandler) handleServiceChainTxDataMsg(p BridgePeer, msg p2p.
 	}
 
 	// Only valid txs should be pushed into the pool.
-	validTxs := make([]*types.Transaction, 0, len(txs))
-	// validTxs := []*types.Transaction{}
-	var err error
-	for i, tx := range txs {
+	// Invalid txs found are sent to child chain for further action.
+	invalidTxs := make([]InvalidParentChainTx, 0)
+	for _, tx := range txs {
 		if tx == nil {
-			err = errResp(ErrDecode, "tx %d is nil", i)
+			invalidTxs = append(invalidTxs, InvalidParentChainTx{tx.Hash(), errResp(ErrDecode, "tx is nil").Error()})
 			continue
 		}
-		validTxs = append(validTxs, tx)
+		if err := mbh.mainbridge.txPool.AddRemote(tx); err != nil {
+			txHash := tx.Hash()
+			logger.Trace("Invalid tx found",
+				"txType", tx.Type(), "txNonce", tx.Nonce(), "txHash", txHash.String(), "err", err)
+			invalidTxs = append(invalidTxs, InvalidParentChainTx{txHash, err.Error()})
+		}
 	}
-	mbh.mainbridge.txPool.AddRemotes(validTxs)
-	return err
+	if len(invalidTxs) > 0 {
+		return p.SendServiceChainInvalidTxResponse(invalidTxs)
+	}
+	return nil
 }
 
 // handleServiceChainParentChainInfoRequestMsg handles parent chain info request message from child chain.
@@ -131,9 +138,27 @@ func (mbh *MainBridgeHandler) handleServiceChainParentChainInfoRequestMsg(p Brid
 		return errResp(ErrDecode, "msg %v: %v", msg, err)
 	}
 	nonce := mbh.mainbridge.txPool.GetPendingNonce(addr)
-	pcInfo := parentChainInfo{nonce, mbh.mainbridge.blockchain.Config().UnitPrice}
+	chainCfg := mbh.mainbridge.blockchain.Config()
+	pcInfo := parentChainInfo{
+		nonce,
+		mbh.mainbridge.txPool.GasPrice().Uint64(),
+		params.KIP71Config{
+			LowerBoundBaseFee:         chainCfg.Governance.KIP71.LowerBoundBaseFee,
+			UpperBoundBaseFee:         chainCfg.Governance.KIP71.UpperBoundBaseFee,
+			GasTarget:                 chainCfg.Governance.KIP71.GasTarget,
+			MaxBlockGasUsedForBaseFee: chainCfg.Governance.KIP71.MaxBlockGasUsedForBaseFee,
+			BaseFeeDenominator:        chainCfg.Governance.KIP71.BaseFeeDenominator,
+		},
+	}
 	p.SendServiceChainInfoResponse(&pcInfo)
-	logger.Info("SendServiceChainInfoResponse", "pBridgeAccoount", addr, "nonce", pcInfo.Nonce, "gasPrice", pcInfo.GasPrice)
+	logger.Info("SendServiceChainInfoResponse", "pBridgeAccoount", addr,
+		"nonce", pcInfo.Nonce, "gasPrice", pcInfo.GasPrice,
+		"LowerBoundBaseFee", pcInfo.KIP71Config.LowerBoundBaseFee,
+		"UpperBoundBaseFee", pcInfo.KIP71Config.UpperBoundBaseFee,
+		"GasTarget", pcInfo.KIP71Config.GasTarget,
+		"MaxBlockGasUsedForBaseFee", pcInfo.KIP71Config.MaxBlockGasUsedForBaseFee,
+		"BaseFeeDenominator", pcInfo.KIP71Config.BaseFeeDenominator,
+	)
 	return nil
 }
 

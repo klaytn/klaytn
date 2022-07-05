@@ -1419,6 +1419,11 @@ web3._extend({
 			params: 1,
 			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
 		}),
+		new web3._extend.Method({
+			name: 'requestParentSync',
+			call: 'subbridge_requestParentSync',
+			params: 0,
+		})
 	],
     properties: [
 		new web3._extend.Property({
@@ -1498,6 +1503,15 @@ web3._extend({
 		new web3._extend.Property({
 			name: 'childBridgeOperatorGasLimit',
 			getter: 'subbridge_getChildBridgeOperatorGasLimit',
+		}),
+
+		new web3._extend.Property({
+			name: 'parentGasPrice',
+			getter: 'subbridge_getParentGasPrice',
+		}),
+		new web3._extend.Property({
+			name: 'parentKIP71Config',
+			getter: 'subbridge_getParentKIP71Config',
 		}),
 	]
 });
