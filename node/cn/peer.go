@@ -994,22 +994,29 @@ func (p *multiChannelPeer) UpdateRWImplementationVersion() {
 func (p *multiChannelPeer) ReadMsg(rw p2p.MsgReadWriter, connectionOrder int, errCh chan<- error, wg *sync.WaitGroup, closed <-chan struct{}) {
 	defer wg.Done()
 
-	readMsgCh := make(chan p2p.Msg, channelSizePerPeer)
+	readMsgCh := make(chan struct {
+		p2p.Msg
+		error
+	}, channelSizePerPeer)
 	go func() {
 		for {
 			msg, err := rw.ReadMsg()
-			if err != nil {
-				p.GetP2PPeer().Log().Warn("ProtocolManager failed to read msg", "err", err)
-				errCh <- err
-				return
-			}
-			readMsgCh <- msg
+			readMsgCh <- struct {
+				p2p.Msg
+				error
+			}{msg, err}
 		}
 	}()
 
 	for {
 		select {
-		case msg := <-readMsgCh:
+		case pair := <-readMsgCh:
+			msg, err := pair.Msg, pair.error
+			if err != nil {
+				p.GetP2PPeer().Log().Warn("ProtocolManager failed to read msg", "err", err)
+				errCh <- err
+				return
+			}
 			msgCh, err := p.chMgr.GetChannelWithMsgCode(connectionOrder, msg.Code)
 			if err != nil {
 				p.GetP2PPeer().Log().Warn("ProtocolManager failed to get msg channel", "err", err)
