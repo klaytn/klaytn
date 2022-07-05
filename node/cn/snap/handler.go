@@ -232,6 +232,7 @@ func ServiceGetAccountRangeQuery(chain SnapshotReader, req *GetAccountRangePacke
 	if req.Bytes > softResponseLimit {
 		req.Bytes = softResponseLimit
 	}
+	// TODO-Klaytn-SnapSync investigate the cache pollution
 	// Retrieve the requested state and bail out if non existent
 	tr, err := statedb.NewTrie(req.Root, chain.StateCache().TrieDB())
 	if err != nil {
@@ -263,6 +264,7 @@ func ServiceGetAccountRangeQuery(chain SnapshotReader, req *GetAccountRangePacke
 		if bytes.Compare(hash[:], req.Limit[:]) >= 0 {
 			break
 		}
+		// TODO-Klaytn-SnapSync check if the size is much larger than soft response limit
 		if size > req.Bytes {
 			break
 		}
@@ -373,6 +375,7 @@ func ServiceGetStorageRangesQuery(chain SnapshotReader, req *GetStorageRangesPac
 			acc := serializer.GetAccount()
 			pacc := account.GetProgramAccount(acc)
 			if pacc == nil {
+				// TODO-Klaytn-SnapSync it would be better to continue rather than return. Do not waste the completed job until now.
 				return nil, nil
 			}
 			stTrie, err := statedb.NewTrie(pacc.GetStorageRoot(), chain.StateCache().TrieDB())

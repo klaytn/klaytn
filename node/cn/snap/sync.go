@@ -901,6 +901,7 @@ func (s *Syncer) assignAccountTasks(success chan *accountResponse, fail chan *ac
 		idlers.caps = append(idlers.caps, s.rates.Capacity(id, AccountRangeMsg, targetTTL))
 	}
 	if len(idlers.ids) == 0 {
+		// TODO-Klaytn-SnapSync enhance logging if necessary
 		return
 	}
 	sort.Sort(sort.Reverse(idlers))
