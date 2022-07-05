@@ -549,28 +549,36 @@ func (ps *peerSet) WaitSnapExtension(peer Peer) (*snap.Peer, error) {
 		return nil, nil
 	}
 	// Ensure nobody can double connect
+	wait := make(chan *snap.Peer)
+	snap, err := ps.waitSnapExtension(peer, wait)
+	if err != nil {
+		return nil, err
+	}
+	if snap != nil {
+		return snap, nil
+	}
+
+	return <-wait, nil
+}
+
+func (ps *peerSet) waitSnapExtension(peer Peer, wait chan *snap.Peer) (*snap.Peer, error) {
 	ps.lock.Lock()
+	defer ps.lock.Unlock()
 
 	id := peer.GetID()
 	if _, ok := ps.peers[id]; ok {
-		ps.lock.Unlock()
 		return nil, errPeerAlreadyRegistered // avoid connections with the same id as existing ones
 	}
 	if _, ok := ps.snapWait[id]; ok {
-		ps.lock.Unlock()
 		return nil, errPeerAlreadyRegistered // avoid connections with the same id as pending ones
 	}
 	// If `snap` already connected, retrieve the peer from the pending set
 	if snap, ok := ps.snapPend[id]; ok {
 		delete(ps.snapPend, id)
 
-		ps.lock.Unlock()
 		return snap, nil
 	}
 	// Otherwise wait for `snap` to connect concurrently
-	wait := make(chan *snap.Peer)
 	ps.snapWait[id] = wait
-	ps.lock.Unlock()
-
-	return <-wait, nil
+	return nil, nil
 }
