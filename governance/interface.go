@@ -71,7 +71,7 @@ type HeaderEngine interface {
 	UpdateCurrentSet(num uint64)
 	HandleGovernanceVote(
 		valset istanbul.ValidatorSet, votes []GovernanceVote, tally []GovernanceTallyItem,
-		header *types.Header, proposer common.Address, self common.Address) (
+		header *types.Header, proposer common.Address, self common.Address, writable bool) (
 		istanbul.ValidatorSet, []GovernanceVote, []GovernanceTallyItem)
 
 	// Get internal fields
