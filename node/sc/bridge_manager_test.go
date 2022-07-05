@@ -2251,6 +2251,7 @@ func TestBridgeAliasAPIs(t *testing.T) {
 			}
 			wg.Wait()
 			t.Log("Test Done: ", testCases[uint8(testNum)])
+			// Check the status of conccurent calls with a signle thread
 			switch testNum {
 			case BRIDGE_SETUP:
 				checkBridgeSetup(t, bm, true, 1, contractPairLen/2)
@@ -2456,8 +2457,6 @@ func checkRegisterMultipleToken(t *testing.T, bm *BridgeManager, cBridgeAddr, pB
 	assert.Equal(t, ok, true)
 	pbi, ok := bm.GetBridgeInfo(pBridgeAddr)
 	assert.Equal(t, ok, true)
-	cbi.ctTokenMu.RLock()
-	defer cbi.ctTokenMu.RUnlock()
 	assert.Equal(t, len(cbi.counterpartToken), expectedLen)
 	assert.Equal(t, len(pbi.counterpartToken), expectedLen)
 }
