@@ -126,6 +126,7 @@ Args :
 		istanbulCompatibleBlockNumberFlag,
 		londonCompatibleBlockNumberFlag,
 		ethTxTypeCompatibleBlockNumberFlag,
+		kip71CompatibleBlockNumberFlag,
 	},
 	ArgsUsage: "type",
 }
@@ -526,6 +527,7 @@ func gen(ctx *cli.Context) error {
 	genesisJson.Config.IstanbulCompatibleBlock = big.NewInt(ctx.Int64(istanbulCompatibleBlockNumberFlag.Name))
 	genesisJson.Config.LondonCompatibleBlock = big.NewInt(ctx.Int64(londonCompatibleBlockNumberFlag.Name))
 	genesisJson.Config.EthTxTypeCompatibleBlock = big.NewInt(ctx.Int64(ethTxTypeCompatibleBlockNumberFlag.Name))
+	genesisJson.Config.KIP71CompatibleBlock = big.NewInt(ctx.Int64(kip71CompatibleBlockNumberFlag.Name))
 
 	genesisJsonBytes, _ = json.MarshalIndent(genesisJson, "", "    ")
 	genValidatorKeystore(privKeys)
