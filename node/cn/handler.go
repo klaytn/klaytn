@@ -73,6 +73,9 @@ const (
 
 	// DefaultTxResendInterval is the second of resending transactions period.
 	DefaultTxResendInterval = 4
+
+	// ExtraNonSnapPeers is the number of non-snap peers allowed to connect more than snap peers.
+	ExtraNonSnapPeers = 5
 )
 
 // errIncompatibleConfig is returned if the requested protocols and configs are
@@ -511,8 +514,8 @@ func (pm *ProtocolManager) handle(p Peer) error {
 		if snap == nil {
 			// If we are running snap-sync, we want to reserve roughly half the peer
 			// slots for peers supporting the snap protocol.
-			// The logic here is; we only allow up to 5 more non-snap peers than snap-peers.
-			if all, snp := pm.peers.Len(), pm.peers.SnapLen(); all-snp > snp+5 {
+			// The logic here is; we only allow up to ExtraNonSnapPeers more non-snap peers than snap-peers.
+			if all, snp := pm.peers.Len(), pm.peers.SnapLen(); all-snp > snp+ExtraNonSnapPeers {
 				reject = true
 			}
 		}
