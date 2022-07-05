@@ -700,7 +700,7 @@ func (args *CallArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsic
 			gasPrice = args.MaxFeePerGas.ToInt()
 		} else {
 			// User specified neither GasPrice nor MaxFeePerGas, use baseFee
-			gasPrice = baseFee
+			gasPrice = baseFee.Mul(baseFee, common.Big2)
 		}
 	}
 	value := new(big.Int)
