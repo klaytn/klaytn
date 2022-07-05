@@ -294,6 +294,7 @@ func (acc *accountInfo) SetChainID(cID *big.Int) {
 	acc.chainID = cID
 }
 
+// TODO-Servicechain: Remove `SetGasPrice` function once KIP71-fork is done.
 // SetGasPrice sets the gas price of the chain of the account.
 func (acc *accountInfo) SetGasPrice(gp *big.Int) {
 	acc.gasPrice = gp
