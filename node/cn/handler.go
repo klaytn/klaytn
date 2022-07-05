@@ -261,10 +261,14 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 					Version: version,
 					Length:  snap.ProtocolLengths[version],
 					Run: func(p *p2p.Peer, rw p2p.MsgReadWriter) error {
+						manager.wg.Add(1)
+						defer manager.wg.Done()
 						peer := snap.NewPeer(version, p, rw)
 						return manager.handleSnapPeer(peer)
 					},
 					RunWithRWs: func(p *p2p.Peer, rws []p2p.MsgReadWriter) error {
+						manager.wg.Add(1)
+						defer manager.wg.Done()
 						peer := snap.NewPeer(version, p, rws[p2p.ConnDefault])
 						return manager.handleSnapPeer(peer)
 					},

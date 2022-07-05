@@ -1455,6 +1455,7 @@ func (d *Downloader) processHeaders(origin uint64, td *big.Int) error {
 				// Terminate if something failed in between processing chunks
 				select {
 				case <-d.cancelCh:
+					rollbackErr = errCanceled
 					return errCanceled
 				default:
 				}
