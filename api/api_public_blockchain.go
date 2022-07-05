@@ -694,7 +694,7 @@ func (args *CallArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsic
 	} else {
 		if args.GasPrice != nil {
 			gasPrice = args.GasPrice.ToInt()
-		} else if &args.MaxFeePerGas != nil {
+		} else if args.MaxFeePerGas != nil {
 			// User specified 1559 gas fields (or none), use those
 			gasPrice = args.MaxFeePerGas.ToInt()
 		} else {
