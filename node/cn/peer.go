@@ -1010,28 +1010,36 @@ func (p *multiChannelPeer) ReadMsg(rw p2p.MsgReadWriter, connectionOrder int, er
 	}()
 
 	for {
+		var (
+			msg p2p.Msg
+			err error
+		)
 		select {
 		case pair := <-readMsgCh:
-			msg, err := pair.Msg, pair.error
-			if err != nil {
-				p.GetP2PPeer().Log().Warn("ProtocolManager failed to read msg", "err", err)
-				errCh <- err
-				return
-			}
-			msgCh, err := p.chMgr.GetChannelWithMsgCode(connectionOrder, msg.Code)
-			if err != nil {
-				p.GetP2PPeer().Log().Warn("ProtocolManager failed to get msg channel", "err", err)
-				errCh <- err
-				return
-			}
+			msg, err = pair.Msg, pair.error
+		case <-closed:
+			return
+		}
 
-			if msg.Size > ProtocolMaxMsgSize {
-				err = errResp(ErrMsgTooLarge, "%v > %v", msg.Size, ProtocolMaxMsgSize)
-				p.GetP2PPeer().Log().Warn("ProtocolManager over max msg size", "err", err)
-				errCh <- err
-				return
-			}
-			msgCh <- msg
+		if err != nil {
+			p.GetP2PPeer().Log().Warn("ProtocolManager failed to read msg", "err", err)
+			errCh <- err
+			return
+		}
+		msgCh, err := p.chMgr.GetChannelWithMsgCode(connectionOrder, msg.Code)
+		if err != nil {
+			p.GetP2PPeer().Log().Warn("ProtocolManager failed to get msg channel", "err", err)
+			errCh <- err
+			return
+		}
+		if msg.Size > ProtocolMaxMsgSize {
+			err = errResp(ErrMsgTooLarge, "%v > %v", msg.Size, ProtocolMaxMsgSize)
+			p.GetP2PPeer().Log().Warn("ProtocolManager over max msg size", "err", err)
+			errCh <- err
+			return
+		}
+		select {
+		case msgCh <- msg:
 		case <-closed:
 			return
 		}
