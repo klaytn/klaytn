@@ -213,9 +213,9 @@ func (api *APIExtension) GetCommittee(number *rpc.BlockNumber) ([]common.Address
 	}
 
 	blockNumber := header.Number.Uint64()
-  
-  // get the snapshot of the previous block.
-	snap, err := api.istanbul.snapshot(api.chain, blockNumber-1, header.ParentHash, nil)
+
+	// get the snapshot of the previous block.
+	snap, err := api.istanbul.snapshot(api.chain, blockNumber-1, header.ParentHash, nil, false)
 	if err != nil {
 		logger.Error("Failed to get snapshot.", "hash", snap.Hash, "err", err)
 		return nil, errInternalError
@@ -232,7 +232,7 @@ func (api *APIExtension) GetCommittee(number *rpc.BlockNumber) ([]common.Address
 	if err != nil {
 		return nil, err
 	}
-	
+
 	parentHash := header.ParentHash
 
 	// get the committee list of this block at the view (blockNumber, round)
