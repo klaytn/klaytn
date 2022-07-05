@@ -531,13 +531,12 @@ func (pm *ProtocolManager) processMsg(msgCh <-chan p2p.Msg, p Peer, addr common.
 func (pm *ProtocolManager) processConsensusMsg(msgCh <-chan p2p.Msg, p Peer, addr common.Address, errCh chan<- error) {
 	for msg := range msgCh {
 		if handler, ok := pm.engine.(consensus.Handler); ok {
+			_, err := handler.HandleMsg(addr, msg)
 			// if msg is istanbul msg, handled is true and err is nil if handle msg is successful.
-			if _, err := handler.HandleMsg(addr, msg); err != nil {
+			if err != nil {
 				p.GetP2PPeer().Log().Warn("ProtocolManager failed to handle consensus message. This can happen during block synchronization.", "msg", msg, "err", err)
-				if err != istanbul.ErrStoppedEngine {
-					errCh <- err
-					return
-				}
+				errCh <- err
+				return
 			}
 		}
 		msg.Discard()
