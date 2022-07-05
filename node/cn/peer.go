@@ -1000,6 +1000,7 @@ func (p *multiChannelPeer) ReadMsg(rw p2p.MsgReadWriter, connectionOrder int, er
 	}, channelSizePerPeer)
 	go func() {
 		for {
+			// TODO-klaytn: check 30-second timeout works
 			msg, err := rw.ReadMsg()
 			readMsgCh <- struct {
 				p2p.Msg
