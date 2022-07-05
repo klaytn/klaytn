@@ -961,10 +961,7 @@ func (api *EthereumAPI) GetTransactionReceipt(ctx context.Context, hash common.H
 		cumulativeGasUsed += receipts[i].GasUsed
 	}
 
-	header, err := txpoolAPI.HeaderByHash(ctx, blockHash)
-	if err != nil {
-		return nil, err
-	}
+	header, _ := txpoolAPI.HeaderByHash(ctx, blockHash)
 
 	ethTx, err := newEthTransactionReceipt(header, tx, txpoolAPI, blockHash, blockNumber, index, cumulativeGasUsed, receipt)
 	if err != nil {
@@ -1003,7 +1000,7 @@ func newEthTransactionReceipt(header *types.Header, tx *types.Transaction, b Bac
 	}
 
 	if b.ChainConfig().IsEthTxTypeForkEnabled(new(big.Int).SetUint64(blockNumber)) {
-		fields["effectiveGasPrice"] = hexutil.Uint64(tx.EffectiveGasPrice(header.BaseFee).Uint64())
+		fields["effectiveGasPrice"] = hexutil.Uint64(tx.EffectiveGasPrice(header).Uint64())
 	} else {
 		fields["effectiveGasPrice"] = hexutil.Uint64(tx.GasPrice().Uint64())
 	}
