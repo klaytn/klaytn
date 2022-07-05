@@ -376,6 +376,7 @@ func (sbh *SubBridgeHandler) LocalChainHeadEvent(block *types.Block) {
 	}
 }
 
+// handleParentChainInvalidTxResponseMsg removes txs which were not executed by some of the reasons (e.g., lower gas price)
 func (sbh *SubBridgeHandler) handleParentChainInvalidTxResponseMsg(msg p2p.Msg) error {
 	headerNum := sbh.subbridge.blockchain.CurrentHeader().Number
 	var invalidTxs []InvalidParentChainTx
@@ -386,7 +387,6 @@ func (sbh *SubBridgeHandler) handleParentChainInvalidTxResponseMsg(msg p2p.Msg) 
 	for _, invalidTx := range invalidTxs {
 		if tx := txPool.Get(invalidTx.TxHash); tx != nil {
 			logger.Error("A bridge tx was not executed", "err", invalidTx.ErrStr,
-				"prevGasPrice", sbh.subbridge.bridgeAccounts.GetParentGasPrice(),
 				"txHash", invalidTx.TxHash.String(),
 				"txGasPrice", tx.GasPrice().Uint64())
 			if sbh.subbridge.blockchain.Config().IsKIP71ForkEnabled(headerNum) &&
