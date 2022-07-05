@@ -38,6 +38,7 @@ import (
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/node/cn/mocks"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/reward"
 	workmocks "github.com/klaytn/klaytn/work/mocks"
 	"github.com/stretchr/testify/assert"
 )
@@ -142,6 +143,16 @@ func newReceipt(gasUsed int) *types.Receipt {
 	rct.Logs = []*types.Log{}
 	rct.Bloom = types.Bloom{}
 	return rct
+}
+
+func newStakingInfo(blockNumber uint64) *reward.StakingInfo {
+	return &reward.StakingInfo{
+		BlockNum:              blockNumber,
+		CouncilNodeAddrs:      []common.Address{{0x1}, {0x1}},
+		CouncilStakingAddrs:   []common.Address{{0x2}, {0x2}},
+		CouncilRewardAddrs:    []common.Address{{0x3}, {0x3}},
+		CouncilStakingAmounts: []uint64{2, 5, 6},
+	}
 }
 
 func TestNewProtocolManager(t *testing.T) {

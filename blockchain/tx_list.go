@@ -308,30 +308,28 @@ func (l *txList) Overlaps(tx *types.Transaction) bool {
 //
 // If the new transaction is accepted into the list, the lists' cost and gas
 // thresholds are also potentially updated.
-func (l *txList) Add(tx *types.Transaction, priceBump uint64) (bool, *types.Transaction) {
+func (l *txList) Add(tx *types.Transaction, priceBump uint64, kip71Hardforked bool) (bool, *types.Transaction) {
 	// If there's an older better transaction, abort
 	old := l.txs.Get(tx.Nonce())
 	if old != nil {
-		// TODO : Need to KIP-71 hardfork.
-		//if tx.Type().IsCancelTransaction() {
-		//	logger.Trace("New tx is a cancel transaction. replace it!", "old", old.String(), "new", tx.String())
-		//} else {
-		//	logger.Trace("already nonce exist", "nonce", tx.Nonce(), "with gasprice", old.GasPrice(), "priceBump", priceBump, "new tx.gasprice", tx.GasPrice())
-		//	return false, nil
-		//}
-
-		// If gas price of older is bigger than newer, abort.
-		if old.GasPrice().Cmp(tx.GasPrice()) >= 0 {
+		// If tx is CancelTransaction, replace it even thought tx has lower gasPrice than previous tx.
+		if tx.Type().IsCancelTransaction() {
+			logger.Trace("New tx is a cancel transaction. replace it!", "old", old.String(), "new", tx.String())
+		} else if kip71Hardforked {
+			if old.GasPrice().Cmp(tx.GasPrice()) >= 0 {
+				// If gas price of older is bigger than newer, abort.
+				logger.Trace("already nonce exist and the gasprice is lower then older", "nonce", tx.Nonce(), "with gasprice", old.GasPrice(), "priceBump", priceBump, "new tx.gasprice", tx.GasPrice())
+				return false, nil
+			}
+			// Otherwise overwrite the old transaction with the current one.
+			logger.Trace("The transaction was substituted by competitive gas price", "old", old.String(), "new", tx.String())
+		} else {
 			logger.Trace("already nonce exist", "nonce", tx.Nonce(), "with gasprice", old.GasPrice(), "priceBump", priceBump, "new tx.gasprice", tx.GasPrice())
 			return false, nil
-		} else {
-			// Otherwise overwrite the old transaction with the current one
-			logger.Trace("The transaction was substituted by competitive gas price", "old", old.String(), "new", tx.String())
 		}
 	}
 
 	l.txs.Put(tx)
-
 	return true, old
 }
 
@@ -351,9 +349,10 @@ func (l *txList) Forward(threshold uint64) types.Transactions {
 // a point in calculating all the costs or if the balance covers all. If the threshold
 // is lower than the costcap, the caps will be reset to a new high after removing
 // the newly invalidated transactions.
-func (l *txList) Filter(senderBalance *big.Int, pool *TxPool) (types.Transactions, types.Transactions) {
+func (l *txList) Filter(sender common.Address, pool *TxPool) (types.Transactions, types.Transactions) {
 	// Filter out all the transactions above the account's funds
 	removed := l.txs.Filter(func(tx *types.Transaction) bool {
+		senderBalance := pool.getBalance(sender)
 		// Drop a tx if it is marked as un-executable on block generation process.
 		if tx.IsMarkedUnexecutable() {
 			return true
@@ -367,6 +366,11 @@ func (l *txList) Filter(senderBalance *big.Int, pool *TxPool) (types.Transaction
 			feePayer, _ := tx.FeePayer()
 			feePayerBalance := pool.getBalance(feePayer)
 			feeRatio, isRatioTx := tx.FeeRatio()
+
+			// Handling the special case when the sender and fee payer are the same.
+			if sender == feePayer {
+				return senderBalance.Cmp(tx.Cost()) < 0
+			}
 			if isRatioTx {
 				feeByFeePayer, feeBySender := types.CalcFeeWithRatio(feeRatio, tx.Fee())
 				return senderBalance.Cmp(new(big.Int).Add(tx.Value(), feeBySender)) < 0 || feePayerBalance.Cmp(feeByFeePayer) < 0

@@ -32,12 +32,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/klaytn/klaytn/common/math"
-
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/kerrors"
+	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 )
 
@@ -300,11 +300,14 @@ func (tx *Transaction) EffectiveGasTip(baseFee *big.Int) *big.Int {
 // After hard fork, we need to consider new getEffectiveGasPrice API that operates differently
 // effectiveGasPrice = msg.EffectiveGasPrice(baseFee)
 func (tx *Transaction) EffectiveGasPrice(baseFee *big.Int) *big.Int {
+	if baseFee != nil {
+		return baseFee
+	}
 	if tx.Type() == TxTypeEthereumDynamicFee {
+		baseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
 		te := tx.GetTxInternalData().(TxInternalDataBaseFee)
 		return math.BigMin(new(big.Int).Add(te.GetGasTipCap(), baseFee), te.GetGasFeeCap())
 	}
-
 	return tx.GasPrice()
 }
 
@@ -838,7 +841,7 @@ func TxDifference(a, b Transactions) (keep Transactions) {
 
 // FilterTransactionWithBaseFee returns a list of transactions for each account that filters transactions
 // that are greater than or equal to baseFee.
-func FilterTransactionWithBaseFee(pending map[common.Address]Transactions, baseFee *big.Int) (map[common.Address]Transactions, error) {
+func FilterTransactionWithBaseFee(pending map[common.Address]Transactions, baseFee *big.Int) map[common.Address]Transactions {
 	txMap := make(map[common.Address]Transactions)
 	for addr, list := range pending {
 		txs := list
@@ -853,7 +856,7 @@ func FilterTransactionWithBaseFee(pending map[common.Address]Transactions, baseF
 			txMap[addr] = txs
 		}
 	}
-	return txMap, nil
+	return txMap
 }
 
 // TxByNonce implements the sort interface to allow sorting a list of transactions

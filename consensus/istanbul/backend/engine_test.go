@@ -108,8 +108,7 @@ func excludeNodeByAddr(target common.Address) {
 func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backend) {
 	// generate a genesis block
 	genesis := blockchain.DefaultGenesisBlock()
-	config := *params.TestChainConfig // copy test chain config which may be modified
-	genesis.Config = &config
+	genesis.Config = params.TestChainConfig.Copy()
 	genesis.Timestamp = uint64(time.Now().Unix())
 
 	var (

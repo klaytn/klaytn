@@ -458,6 +458,20 @@ func (mr *MockPeerMockRecorder) RequestReceipts(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequestReceipts", reflect.TypeOf((*MockPeer)(nil).RequestReceipts), arg0)
 }
 
+// RequestStakingInfo mocks base method
+func (m *MockPeer) RequestStakingInfo(arg0 []common.Hash) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RequestStakingInfo", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RequestStakingInfo indicates an expected call of RequestStakingInfo
+func (mr *MockPeerMockRecorder) RequestStakingInfo(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequestStakingInfo", reflect.TypeOf((*MockPeer)(nil).RequestStakingInfo), arg0)
+}
+
 // Send mocks base method
 func (m *MockPeer) Send(arg0 uint64, arg1 interface{}) error {
 	m.ctrl.T.Helper()
@@ -596,6 +610,20 @@ func (m *MockPeer) SendReceiptsRLP(arg0 []rlp.RawValue) error {
 func (mr *MockPeerMockRecorder) SendReceiptsRLP(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendReceiptsRLP", reflect.TypeOf((*MockPeer)(nil).SendReceiptsRLP), arg0)
+}
+
+// SendStakingInfoRLP mocks base method
+func (m *MockPeer) SendStakingInfoRLP(arg0 []rlp.RawValue) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SendStakingInfoRLP", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SendStakingInfoRLP indicates an expected call of SendStakingInfoRLP
+func (mr *MockPeerMockRecorder) SendStakingInfoRLP(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendStakingInfoRLP", reflect.TypeOf((*MockPeer)(nil).SendStakingInfoRLP), arg0)
 }
 
 // SendTransactions mocks base method

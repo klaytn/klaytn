@@ -168,11 +168,13 @@ type VoteMap struct {
 // txPool is an interface for blockchain.TxPool used in governance package.
 type txPool interface {
 	SetGasPrice(price *big.Int)
+	GasPrice() *big.Int
 }
 
 // blockChain is an interface for blockchain.Blockchain used in governance package.
 type blockChain interface {
 	CurrentHeader() *types.Header
+	GetHeaderByNumber(val uint64) *types.Header
 	SetProposerPolicy(val uint64)
 	SetUseGiniCoeff(val bool)
 	SetLowerBoundBaseFee(val uint64)
@@ -1059,6 +1061,10 @@ func (gov *Governance) SetBlockchain(bc blockChain) {
 
 func (gov *Governance) SetTxPool(txpool txPool) {
 	gov.TxPool = txpool
+}
+
+func (gov *Governance) GetTxPool() txPool {
+	return gov.TxPool
 }
 
 func GetGovernanceItemsFromChainConfig(config *params.ChainConfig) GovernanceSet {

@@ -233,11 +233,10 @@ func RPCMarshalHeader(head *types.Header, isEnabledEthTxTypeFork bool) map[strin
 	}
 
 	if isEnabledEthTxTypeFork {
-		if head.BaseFee != nil {
-			// KIP71 hardforked block
-			result["baseFeePerGas"] = (*hexutil.Big)(head.BaseFee)
-		} else {
+		if head.BaseFee == nil {
 			result["baseFeePerGas"] = (*hexutil.Big)(new(big.Int).SetUint64(params.ZeroBaseFee))
+		} else {
+			result["baseFeePerGas"] = (*hexutil.Big)(head.BaseFee)
 		}
 	}
 
