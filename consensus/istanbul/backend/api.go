@@ -41,7 +41,7 @@ type API struct {
 	istanbul *backend
 }
 
-// GetSnapshot retrieves the state snapshot at a given block. The namespace is istanbul.
+// GetSnapshot retrieves the state snapshot at a given block.
 func (api *API) GetSnapshot(number *rpc.BlockNumber) (*Snapshot, error) {
 	// Retrieve the requested block number (or current if none requested)
 	return getSnapshot(api.chain, api.istanbul, number)
@@ -504,7 +504,7 @@ func headerByRpcNumber(chain consensus.ChainReader, number *rpc.BlockNumber) (*t
 	}
 	// Ensure we have an actually valid block and return its snapshot
 	if header == nil {
-		return nil, errUnknownBlock // return nil if block is not found.
+		return nil, errUnknownBlock
 	}
 	return header, nil
 }
