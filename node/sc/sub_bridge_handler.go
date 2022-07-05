@@ -376,7 +376,8 @@ func (sbh *SubBridgeHandler) LocalChainHeadEvent(block *types.Block) {
 	}
 }
 
-// handleParentChainInvalidTxResponseMsg removes txs which were not executed by some of the reasons (e.g., lower gas price)
+// handleParentChainInvalidTxResponseMsg receives unexecuted txs which were not executed by some of the reasons (e.g., lower gas price)
+// and removes them from bridgeTxPool to prevent resending **as it is without necessary modification**
 func (sbh *SubBridgeHandler) handleParentChainInvalidTxResponseMsg(msg p2p.Msg) error {
 	headerNum := sbh.subbridge.blockchain.CurrentHeader().Number
 	var invalidTxs []InvalidParentChainTx
