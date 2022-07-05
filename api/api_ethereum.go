@@ -1226,8 +1226,10 @@ func (args *EthTransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int,
 		// If there's no basefee, then it must be a non-1559 execution
 		if &args.GasPrice != nil {
 			gasPrice = args.GasPrice.ToInt()
+		} else if &args.MaxFeePerGas != nil {
+			gasPrice = args.MaxFeePerGas.ToInt()
 		} else {
-			return nil, errors.New("gasPrice is not specified")
+			return nil, errors.New("Neither GasPrice nor MaxFeePerGas is specified")
 		}
 	} else {
 		if &args.GasPrice != nil {
