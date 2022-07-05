@@ -424,7 +424,6 @@ func TestVerifySeal(t *testing.T) {
 }
 
 func TestVerifyHeaders(t *testing.T) {
-
 	chain, engine := newBlockChain(1)
 	defer engine.Stop()
 
