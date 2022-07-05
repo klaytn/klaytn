@@ -1014,10 +1014,14 @@ func (p *multiChannelPeer) ReadMsg(rw p2p.MsgReadWriter, connectionOrder int, er
 			if err != nil {
 				p.GetP2PPeer().Log().Warn("ProtocolManager failed to get msg channel", "err", err)
 				errCh <- err
-			} else if msg.Size > ProtocolMaxMsgSize {
-				err := errResp(ErrMsgTooLarge, "%v > %v", msg.Size, ProtocolMaxMsgSize)
+				return
+			}
+
+			if msg.Size > ProtocolMaxMsgSize {
+				err = errResp(ErrMsgTooLarge, "%v > %v", msg.Size, ProtocolMaxMsgSize)
 				p.GetP2PPeer().Log().Warn("ProtocolManager over max msg size", "err", err)
 				errCh <- err
+				return
 			}
 			msgCh <- msg
 		case <-closed:
