@@ -793,13 +793,11 @@ func newEthRPCTransaction(block *types.Block, tx *types.Transaction, blockHash c
 		result.ChainID = (*hexutil.Big)(tx.ChainId())
 		result.GasFeeCap = (*hexutil.Big)(tx.GasFeeCap())
 		result.GasTipCap = (*hexutil.Big)(tx.GasTipCap())
-		// TODO-Klaytn: If we change the gas price policy from fixed to dynamic,
-		// we should change the params.ZeroBaseFee(fixed value) to dynamic value.
-		if block != nil && block.Header().BaseFee != nil {
-			result.GasPrice = (*hexutil.Big)(block.Header().BaseFee)
+		if block != nil {
+			result.GasPrice = (*hexutil.Big)(tx.EffectiveGasPrice(block.Header()))
 		} else {
-			price := math.BigMin(new(big.Int).Add(tx.GasTipCap(), new(big.Int).SetUint64(params.ZeroBaseFee)), tx.GasFeeCap())
-			result.GasPrice = (*hexutil.Big)(price)
+			// transaction is not processed yet
+			result.GasPrice = (*hexutil.Big)(tx.EffectiveGasPrice(nil))
 		}
 	}
 	return result
