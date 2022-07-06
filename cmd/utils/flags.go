@@ -1586,6 +1586,9 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 
 	if ctx.GlobalIsSet(SyncModeFlag.Name) {
 		cfg.SyncMode = *GlobalTextMarshaler(ctx, SyncModeFlag.Name).(*downloader.SyncMode)
+		if cfg.SyncMode != downloader.FullSync && cfg.SyncMode != downloader.SnapSync {
+			log.Fatalf("Full Sync or Snap Sync (prototype) is supported only!")
+		}
 		if cfg.SyncMode == downloader.SnapSync {
 			logger.Info("Snap sync requested, enabling --snapshot")
 			ctx.Set(SnapshotFlag.Name, "true")
