@@ -27,6 +27,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"sync"
 
@@ -271,14 +272,14 @@ func (n *Node) Start() error {
 	n.stop = make(chan struct{})
 
 	// Register a labeled metric containing version and build information
-	// e.g.) klaytn_build_info{version="Klaytn/v1.8.4+b3ab199674/darwin-arm64/go1.18.2"} 1
+	// e.g.) klaytn_build_info{version="v1.8.4+b3ab199674" cpu_arch="darwin-arm64" go_version="go1.18.2"} 1
 	if metricutils.Enabled {
 		buildInfo := prometheus.NewGauge(prometheus.GaugeOpts{
 			Namespace:   metricutils.MetricNamespace,
 			Subsystem:   "",
 			Name:        "build_info",
 			Help:        "A metric with a constant '1' value labeled by version",
-			ConstLabels: prometheus.Labels{"version": n.config.NodeName()},
+			ConstLabels: prometheus.Labels{"version": n.config.Version, "cpu_arch": runtime.GOARCH, "go_version": runtime.Version()},
 		})
 		buildInfo.Set(1.0) // dummy value
 		prometheus.DefaultRegisterer.MustRegister(buildInfo)
