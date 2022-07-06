@@ -329,7 +329,7 @@ func (g *Genesis) ToBlock(baseStateRoot common.Hash, db database.DBManager) *typ
 	}
 	// TODO-klaytn should set genesis block's base fee
 	if g.Config != nil && g.Config.IsKIP71ForkEnabled(common.Big0) {
-		head.BaseFee = new(big.Int).SetUint64(g.Config.UnitPrice)
+		head.BaseFee = new(big.Int).SetUint64(g.Config.Governance.KIP71.LowerBoundBaseFee)
 	}
 	stateDB.Commit(false)
 	stateDB.Database().TrieDB().Commit(root, true, g.Number)
