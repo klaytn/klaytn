@@ -24,14 +24,15 @@ func VerifyKIP71Header(config *params.ChainConfig, parentHeader, header *types.H
 }
 
 func NextBlockBaseFee(parentHeader *types.Header, config *params.ChainConfig) *big.Int {
-	// If the parent is the kip71 disabled block or genesis, then return default base fee (250ston)
-	if !config.IsKIP71ForkEnabled(parentHeader.Number) || parentHeader.Number.Cmp(new(big.Int).SetUint64(0)) == 0 {
-		return new(big.Int).SetUint64(config.UnitPrice)
-	}
-
 	// governance parameters
 	lowerBoundBaseFee := new(big.Int).SetUint64(config.Governance.KIP71.LowerBoundBaseFee)
 	upperBoundBaseFee := new(big.Int).SetUint64(config.Governance.KIP71.UpperBoundBaseFee)
+
+	// If the parent is the kip71 disabled block or genesis, then return the lowerBoundBaseFee (default 25ston)
+	if !config.IsKIP71ForkEnabled(parentHeader.Number) || parentHeader.Number.Cmp(new(big.Int).SetUint64(0)) == 0 {
+		return lowerBoundBaseFee
+	}
+
 	var baseFeeDenominator *big.Int
 	if config.Governance.KIP71.BaseFeeDenominator == 0 {
 		// To avoid panic, set the fluctuation range small
@@ -42,17 +43,29 @@ func NextBlockBaseFee(parentHeader *types.Header, config *params.ChainConfig) *b
 	gasTarget := config.Governance.KIP71.GasTarget
 	upperGasLimit := config.Governance.KIP71.MaxBlockGasUsedForBaseFee
 
+	// check the case of upper/lowerBoundBaseFee is updated by governance mechanism
 	parentBaseFee := parentHeader.BaseFee
+	if parentBaseFee.Cmp(upperBoundBaseFee) >= 0 {
+		parentBaseFee = upperBoundBaseFee
+	} else if parentBaseFee.Cmp(lowerBoundBaseFee) <= 0 {
+		parentBaseFee = lowerBoundBaseFee
+	}
+
 	parentGasUsed := parentHeader.GasUsed
 	// upper gas limit cut off the impulse of used gas to upper bound
 	if parentGasUsed > upperGasLimit {
 		parentGasUsed = upperGasLimit
 	}
 	if parentGasUsed == gasTarget {
-		return new(big.Int).Set(parentHeader.BaseFee)
+		return new(big.Int).Set(parentBaseFee)
 	} else if parentGasUsed > gasTarget {
+		// shortcut. If parentBaseFee is already reached upperbound, do not calculate.
+		if parentBaseFee.Cmp(upperBoundBaseFee) == 0 {
+			return upperBoundBaseFee
+		}
 		// If the parent block used more gas than its target,
 		// the baseFee of the next block should increase.
+		// baseFeeDelta = max(1, parentBaseFee * (parentGasUsed - gasTarget) / gasTarget / baseFeeDenominator)
 		gasUsedDelta := new(big.Int).SetUint64(parentGasUsed - gasTarget)
 		x := new(big.Int).Mul(parentBaseFee, gasUsedDelta)
 		y := x.Div(x, new(big.Int).SetUint64(gasTarget))
@@ -64,8 +77,13 @@ func NextBlockBaseFee(parentHeader *types.Header, config *params.ChainConfig) *b
 		}
 		return nextBaseFee
 	} else {
+		// shortcut. If parentBaseFee is already reached lower bound, do not calculate.
+		if parentBaseFee.Cmp(lowerBoundBaseFee) == 0 {
+			return lowerBoundBaseFee
+		}
 		// Otherwise if the parent block used less gas than its target,
 		// the baseFee of the next block should decrease.
+		// baseFeeDelta = parentBaseFee * (gasTarget - parentGasUsed) / gasTarget / baseFeeDenominator
 		gasUsedDelta := new(big.Int).SetUint64(gasTarget - parentGasUsed)
 		x := new(big.Int).Mul(parentBaseFee, gasUsedDelta)
 		y := x.Div(x, new(big.Int).SetUint64(gasTarget))
