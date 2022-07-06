@@ -373,4 +373,10 @@ var (
 		Usage: "ethTxTypeCompatible blockNumber",
 		Value: 0,
 	}
+
+	kip71CompatibleBlockNumberFlag = cli.Int64Flag{
+		Name:  "kip71-compatible-blocknumber",
+		Usage: "kip71Compatible blockNumber",
+		Value: 0,
+	}
 )

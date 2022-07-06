@@ -54,7 +54,12 @@ var (
 
 // These are the types in order to add a custom configuration of the test chain.
 // You may need to create a configuration type if necessary.
-type istanbulCompatibleBlock *big.Int
+type (
+	istanbulCompatibleBlock  *big.Int
+	LondonCompatibleBlock    *big.Int
+	EthTxTypeCompatibleBlock *big.Int
+	kip71CompatibleBlock     *big.Int
+)
 
 type (
 	minimumStake           *big.Int
@@ -122,6 +127,12 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 		switch v := item.(type) {
 		case istanbulCompatibleBlock:
 			genesis.Config.IstanbulCompatibleBlock = v
+		case LondonCompatibleBlock:
+			genesis.Config.LondonCompatibleBlock = v
+		case EthTxTypeCompatibleBlock:
+			genesis.Config.EthTxTypeCompatibleBlock = v
+		case kip71CompatibleBlock:
+			genesis.Config.KIP71CompatibleBlock = v
 		case proposerPolicy:
 			genesis.Config.Istanbul.ProposerPolicy = uint64(v)
 		case epoch:
@@ -201,6 +212,10 @@ func makeHeader(parent *types.Block, config *istanbul.Config) *types.Header {
 		Extra:      parent.Extra(),
 		Time:       new(big.Int).Add(parent.Time(), new(big.Int).SetUint64(config.BlockPeriod)),
 		BlockScore: defaultBlockScore,
+	}
+	if parent.Header().BaseFee != nil {
+		// We don't have chainConfig so the BaseFee of the current block is set by parent's for test
+		header.BaseFee = parent.Header().BaseFee
 	}
 	return header
 }
@@ -312,7 +327,12 @@ func TestSealCommitted(t *testing.T) {
 }
 
 func TestVerifyHeader(t *testing.T) {
-	chain, engine := newBlockChain(1)
+	var configItems []interface{}
+	configItems = append(configItems, istanbulCompatibleBlock(new(big.Int).SetUint64(0)))
+	configItems = append(configItems, LondonCompatibleBlock(new(big.Int).SetUint64(0)))
+	configItems = append(configItems, EthTxTypeCompatibleBlock(new(big.Int).SetUint64(0)))
+	configItems = append(configItems, kip71CompatibleBlock(new(big.Int).SetUint64(0)))
+	chain, engine := newBlockChain(1, configItems...)
 	defer engine.Stop()
 
 	// errEmptyCommittedSeals case
