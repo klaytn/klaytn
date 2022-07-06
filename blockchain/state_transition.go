@@ -99,7 +99,7 @@ type Message interface {
 	GasTipCap() *big.Int
 	GasFeeCap() *big.Int
 	EffectiveGasTip(baseFee *big.Int) *big.Int
-	EffectiveGasPrice(baseFee *big.Int) *big.Int
+	EffectiveGasPrice(header *types.Header) *big.Int
 
 	Gas() uint64
 	Value() *big.Int

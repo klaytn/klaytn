@@ -219,11 +219,7 @@ func RpcOutputReceipt(header *types.Header, tx *types.Transaction, blockHash com
 	fields["logsBloom"] = receipt.Bloom
 	fields["gasUsed"] = hexutil.Uint64(receipt.GasUsed)
 
-	if header != nil && header.BaseFee != nil {
-		fields["effectiveGasPrice"] = hexutil.Uint64(tx.EffectiveGasPrice(header.BaseFee).Uint64())
-	} else {
-		fields["effectiveGasPrice"] = hexutil.Uint64(tx.GasPrice().Uint64())
-	}
+	fields["effectiveGasPrice"] = hexutil.Uint64(tx.EffectiveGasPrice(header).Uint64())
 
 	if receipt.Logs == nil {
 		fields["logs"] = [][]*types.Log{}
@@ -268,10 +264,9 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceiptInCache(ctx context.Cont
 func (s *PublicTransactionPoolAPI) getTransactionReceipt(ctx context.Context, tx *types.Transaction, blockHash common.Hash,
 	blockNumber uint64, index uint64, receipt *types.Receipt,
 ) (map[string]interface{}, error) {
-	header, err := s.b.HeaderByHash(ctx, blockHash)
-	if err != nil {
-		return nil, err
-	}
+	// No error handling is required here.
+	// Header is checked in the following RpcOutputReceipt function
+	header, _ := s.b.HeaderByHash(ctx, blockHash)
 	return RpcOutputReceipt(header, tx, blockHash, blockNumber, index, receipt), nil
 }
 

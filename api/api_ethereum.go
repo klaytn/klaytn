@@ -961,10 +961,9 @@ func (api *EthereumAPI) GetTransactionReceipt(ctx context.Context, hash common.H
 		cumulativeGasUsed += receipts[i].GasUsed
 	}
 
-	header, err := txpoolAPI.HeaderByHash(ctx, blockHash)
-	if err != nil {
-		return nil, err
-	}
+	// No error handling is required here.
+	// Header is checked in the following newEthTransactionReceipt function
+	header, _ := txpoolAPI.HeaderByHash(ctx, blockHash)
 
 	ethTx, err := newEthTransactionReceipt(header, tx, txpoolAPI, blockHash, blockNumber, index, cumulativeGasUsed, receipt)
 	if err != nil {
@@ -1002,11 +1001,11 @@ func newEthTransactionReceipt(header *types.Header, tx *types.Transaction, b Bac
 		"type":              hexutil.Uint(byte(typeInt)),
 	}
 
-	if b.ChainConfig().IsEthTxTypeForkEnabled(new(big.Int).SetUint64(blockNumber)) {
-		fields["effectiveGasPrice"] = hexutil.Uint64(tx.EffectiveGasPrice(header.BaseFee).Uint64())
-	} else {
-		fields["effectiveGasPrice"] = hexutil.Uint64(tx.GasPrice().Uint64())
-	}
+	// After KIP-71 hard fork : return header.baseFee
+	// After EthTxType hard fork : use zero baseFee to calculate effective gas price for EthereumDynamicFeeTx.
+	//    return gas price of tx.
+	// Before EthTxType hard fork : return gas price of tx. (typed ethereum txs are not available.)
+	fields["effectiveGasPrice"] = hexutil.Uint64(tx.EffectiveGasPrice(header).Uint64())
 
 	// Always use the "status" field and Ignore the "root" field.
 	if receipt.Status != types.ReceiptStatusSuccessful {
