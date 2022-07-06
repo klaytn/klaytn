@@ -1997,6 +1997,114 @@ func TestDecodingLegacyAnchoringTx(t *testing.T) {
 	assert.Equal(t, curBlk.Header().Number.String(), decodedData.GetBlockNumber().String())
 }
 
+func TestBridgeAddressType(t *testing.T) {
+	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	assert.NoError(t, err)
+	defer func() {
+		if err := os.RemoveAll(tempDir); err != nil {
+			t.Fatalf("fail to delete file %v", err)
+		}
+	}()
+
+	// Config Bridge Account Manager
+	config := &SCConfig{}
+	config.DataDir = tempDir
+	bacc, _ := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
+	bacc.pAccount.chainID = big.NewInt(0)
+	bacc.cAccount.chainID = big.NewInt(0)
+
+	// Create Simulated backend
+	alloc := blockchain.GenesisAlloc{
+		bacc.pAccount.address: {Balance: big.NewInt(params.KLAY)},
+		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
+	}
+	sim := backends.NewSimulatedBackend(alloc)
+	defer sim.Close()
+
+	sc := &SubBridge{
+		chainDB:        database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}),
+		config:         config,
+		peers:          newBridgePeerSet(),
+		bridgeAccounts: bacc,
+		localBackend:   sim,
+		remoteBackend:  sim,
+	}
+	sc.handler, err = NewSubBridgeHandler(sc)
+	assert.NoError(t, err)
+	bm, err := NewBridgeManager(sc)
+	assert.NoError(t, err)
+
+	auth := bacc.cAccount.GenerateTransactOpts()
+
+	// Deploy Bridge Contract
+	bridgeAddr, err := bm.DeployBridgeTest(sim, 10000, false)
+	assert.NoError(t, err)
+	sim.Commit() // block
+
+	anotherBridgeAddr, err := bm.DeployBridgeTest(sim, 10000, false)
+	assert.NoError(t, err)
+	sim.Commit() // block
+
+	// Case 1 - Success (The bridge address type is contract address)
+	{
+		// 1. Deploy Token Contract
+		_, tx, token, err := sctoken.DeployServiceChainToken(auth, sim, bridgeAddr)
+		assert.NoError(t, err)
+		sim.Commit() // block
+		CheckReceipt(sim, tx, time.Second, types.ReceiptStatusSuccessful, t)
+
+		// 2. Deploy NFT Contract
+		_, tx, nft, err := scnft.DeployServiceChainNFT(auth, sim, bridgeAddr)
+		assert.NoError(t, err)
+		sim.Commit() // block
+		CheckReceipt(sim, tx, time.Second, types.ReceiptStatusSuccessful, t)
+
+		tx, err = token.SetBridge(auth, anotherBridgeAddr)
+		assert.NoError(t, err)
+		sim.Commit() // block
+		CheckReceipt(sim, tx, time.Second, types.ReceiptStatusSuccessful, t)
+		tx, err = nft.SetBridge(auth, anotherBridgeAddr)
+		assert.NoError(t, err)
+		sim.Commit() // block
+		CheckReceipt(sim, tx, time.Second, types.ReceiptStatusSuccessful, t)
+	}
+
+	// Case 2 - Failure (The bridge address type is not a contract address)
+	{
+		_, tx, _, err := sctoken.DeployServiceChainToken(auth, sim, auth.From)
+		assert.NoError(t, err)
+		sim.Commit() // block
+		CheckReceipt(sim, tx, time.Second, types.ReceiptStatusErrExecutionReverted, t)
+
+		_, tx, _, err = scnft.DeployServiceChainNFT(auth, sim, auth.From)
+		assert.NoError(t, err)
+		sim.Commit() // block
+		CheckReceipt(sim, tx, time.Second, types.ReceiptStatusErrExecutionReverted, t)
+	}
+
+	// Case 3 - Failure (The bridge address type is not a contract address)
+	{
+		_, tx, token, err := sctoken.DeployServiceChainToken(auth, sim, bridgeAddr)
+		assert.NoError(t, err)
+		sim.Commit() // block
+		CheckReceipt(sim, tx, time.Second, types.ReceiptStatusSuccessful, t)
+
+		_, tx, nft, err := scnft.DeployServiceChainNFT(auth, sim, bridgeAddr)
+		assert.NoError(t, err)
+		sim.Commit() // block
+		CheckReceipt(sim, tx, time.Second, types.ReceiptStatusSuccessful, t)
+
+		tx, err = token.SetBridge(auth, auth.From)
+		assert.NoError(t, err)
+		sim.Commit() // block
+		CheckReceipt(sim, tx, time.Second, types.ReceiptStatusErrExecutionReverted, t)
+		tx, err = nft.SetBridge(auth, auth.From)
+		assert.NoError(t, err)
+		sim.Commit() // block
+		CheckReceipt(sim, tx, time.Second, types.ReceiptStatusErrExecutionReverted, t)
+	}
+}
+
 // DeployBridgeTest is a test-only function which deploys a bridge contract with some amount of KLAY.
 func (bm *BridgeManager) DeployBridgeTest(backend *backends.SimulatedBackend, amountOfDeposit int64, local bool) (common.Address, error) {
 	var acc *accountInfo

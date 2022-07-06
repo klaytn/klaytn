@@ -107,18 +107,8 @@ status_auto_restart_daemon() {
 }
 
 #------------------------Related to Klaytn node functions-----------------------------
-start_node() {
-    __pid_run
-    [ -n "$pid" ] && echo "kbnd already running...[$pid]" && return
 
-    if [ ! -f $KEY_PATH ]; then
-        echo
-        echo "  [ERROR] : KEY_PATH is not defined in $CONF/kbnd.conf"
-        exit 1
-    fi
-
-    echo -n "Starting kbnd: "
-
+__check_option() {
     if [ ! -d $LOG_DIR ]; then
         mkdir -p $LOG_DIR
     fi
@@ -152,6 +142,21 @@ start_node() {
     if [ ! -z $DATA_DIR ]; then
         OPTIONS="$OPTIONS --datadir $DATA_DIR"
     fi
+}
+
+start_node() {
+    __pid_run
+    [ -n "$pid" ] && echo "kbnd already running...[$pid]" && return
+
+    if [ ! -f $KEY_PATH ]; then
+        echo
+        echo "  [ERROR] : KEY_PATH is not defined in $CONF/kbnd.conf"
+        exit 1
+    fi
+
+    echo -n "Starting kbnd: "
+
+    __check_option
 
     $BIN/kbn ${OPTIONS} >> ${LOG_DIR}/kbnd.out 2>&1 &
     RETVAL=$?
@@ -195,6 +200,14 @@ start() {
     fi
 }
 
+start_docker() {
+    echo -n "Starting kbnd: "
+    __check_option
+
+    echo "$BIN/kbn $OPTIONS"
+    $BIN/kbn $OPTIONS
+}
+
 stop() {
     if [ ! -z $AUTO_RESTART_NODE ] && [[ $AUTO_RESTART_NODE -eq 1 ]]; then
         stop_auto_restart_daemon
@@ -220,6 +233,9 @@ case "$1" in
     start)
         start
         ;;
+    start-docker)
+        start_docker
+        ;;
     stop)
         stop
         ;;
@@ -230,7 +246,7 @@ case "$1" in
         restart
         ;;
     *)
-        echo "Usages: kbnd {start|stop|restart|status}"
+        echo "Usages: kbnd {start|start-docker|stop|restart|status}"
         exit 1
         ;;
 esac

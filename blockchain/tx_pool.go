@@ -297,11 +297,11 @@ func (pool *TxPool) loop() {
 				head = ev.Block
 				pool.mu.Unlock()
 			}
-			// Be unsubscribed due to system stopped
+		// Be unsubscribed due to system stopped
 		case <-pool.chainHeadSub.Err():
 			return
 
-			// Handle stats reporting ticks
+		// Handle stats reporting ticks
 		case <-report.C:
 			pool.mu.RLock()
 			pending, queued := pool.stats()
@@ -315,7 +315,7 @@ func (pool *TxPool) loop() {
 				txPoolQueueGauge.Update(int64(queued))
 			}
 
-			// Handle inactive account transaction eviction
+		// Handle inactive account transaction eviction
 		case <-evict.C:
 			pool.mu.Lock()
 			for addr, beat := range pool.beats {
@@ -337,7 +337,7 @@ func (pool *TxPool) loop() {
 			}
 			pool.mu.Unlock()
 
-			// Handle local transaction journal rotation
+		// Handle local transaction journal rotation
 		case <-journal.C:
 			if pool.journal != nil {
 				pool.mu.Lock()
@@ -380,33 +380,51 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 				rem = pool.chain.GetBlock(oldHead.Hash(), oldHead.Number.Uint64())
 				add = pool.chain.GetBlock(newHead.Hash(), newHead.Number.Uint64())
 			)
-			for rem.NumberU64() > add.NumberU64() {
-				discarded = append(discarded, rem.Transactions()...)
-				if rem = pool.chain.GetBlock(rem.ParentHash(), rem.NumberU64()-1); rem == nil {
-					logger.Error("Unrooted old chain seen by tx pool", "block", oldHead.Number, "hash", oldHead.Hash())
+			if rem == nil {
+				// This can happen if a setHead function is performed.
+				// In this case we can simply discard the old head from the chain, and replace with newhead.
+
+				// If newNum >= oldNum, then it's not a case of setHead.
+				if newNum >= oldNum {
+					logger.Error("Transaction pool reset with missing oldhead",
+						"old", oldHead.Hash(), "oldnum", oldNum, "new", newHead.Hash(), "newnum", newNum)
 					return
+				} else {
+					// When setHead is performed, then oldHead becomes bigger than newHead, since newHead becomes rewinded blockNumber.
+					// If that is the case, we don't have the lost transactions anymore, and
+					// there's nothing to add
+					logger.Warn("Skipping transaction reset caused by setHead",
+						"old", oldHead.Hash(), "oldnum", oldNum, "new", newHead.Hash(), "newnum", newNum)
 				}
+			} else {
+				for rem.NumberU64() > add.NumberU64() {
+					discarded = append(discarded, rem.Transactions()...)
+					if rem = pool.chain.GetBlock(rem.ParentHash(), rem.NumberU64()-1); rem == nil {
+						logger.Error("Unrooted old chain seen by tx pool", "block", oldHead.Number, "hash", oldHead.Hash())
+						return
+					}
+				}
+				for add.NumberU64() > rem.NumberU64() {
+					included = append(included, add.Transactions()...)
+					if add = pool.chain.GetBlock(add.ParentHash(), add.NumberU64()-1); add == nil {
+						logger.Error("Unrooted new chain seen by tx pool", "block", newHead.Number, "hash", newHead.Hash())
+						return
+					}
+				}
+				for rem.Hash() != add.Hash() {
+					discarded = append(discarded, rem.Transactions()...)
+					if rem = pool.chain.GetBlock(rem.ParentHash(), rem.NumberU64()-1); rem == nil {
+						logger.Error("Unrooted old chain seen by tx pool", "block", oldHead.Number, "hash", oldHead.Hash())
+						return
+					}
+					included = append(included, add.Transactions()...)
+					if add = pool.chain.GetBlock(add.ParentHash(), add.NumberU64()-1); add == nil {
+						logger.Error("Unrooted new chain seen by tx pool", "block", newHead.Number, "hash", newHead.Hash())
+						return
+					}
+				}
+				reinject = types.TxDifference(discarded, included)
 			}
-			for add.NumberU64() > rem.NumberU64() {
-				included = append(included, add.Transactions()...)
-				if add = pool.chain.GetBlock(add.ParentHash(), add.NumberU64()-1); add == nil {
-					logger.Error("Unrooted new chain seen by tx pool", "block", newHead.Number, "hash", newHead.Hash())
-					return
-				}
-			}
-			for rem.Hash() != add.Hash() {
-				discarded = append(discarded, rem.Transactions()...)
-				if rem = pool.chain.GetBlock(rem.ParentHash(), rem.NumberU64()-1); rem == nil {
-					logger.Error("Unrooted old chain seen by tx pool", "block", oldHead.Number, "hash", oldHead.Hash())
-					return
-				}
-				included = append(included, add.Transactions()...)
-				if add = pool.chain.GetBlock(add.ParentHash(), add.NumberU64()-1); add == nil {
-					logger.Error("Unrooted new chain seen by tx pool", "block", newHead.Number, "hash", newHead.Hash())
-					return
-				}
-			}
-			reinject = types.TxDifference(discarded, included)
 		}
 	}
 	// Initialize the internal state to the current head

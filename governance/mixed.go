@@ -153,11 +153,11 @@ func (e *MixedEngine) UpdateCurrentSet(num uint64) {
 
 func (e *MixedEngine) HandleGovernanceVote(
 	valset istanbul.ValidatorSet, votes []GovernanceVote, tally []GovernanceTallyItem,
-	header *types.Header, proposer common.Address, self common.Address,
+	header *types.Header, proposer common.Address, self common.Address, writable bool,
 ) (
 	istanbul.ValidatorSet, []GovernanceVote, []GovernanceTallyItem,
 ) {
-	return e.defaultGov.HandleGovernanceVote(valset, votes, tally, header, proposer, self)
+	return e.defaultGov.HandleGovernanceVote(valset, votes, tally, header, proposer, self, writable)
 }
 
 func (e *MixedEngine) ChainId() uint64 {

@@ -36,6 +36,7 @@ type governanceHelper interface {
 	DeferredTxFee() bool
 	ProposerPolicy() uint64
 	StakingUpdateInterval() uint64
+	GetMinimumStakingAtNumber(num uint64) (uint64, error)
 }
 
 type RewardDistributor struct {
