@@ -43,6 +43,7 @@ import (
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node"
+	"github.com/klaytn/klaytn/node/cn"
 	"github.com/klaytn/klaytn/node/sc/bridgepool"
 	"github.com/klaytn/klaytn/node/sc/kas"
 	"github.com/klaytn/klaytn/params"
@@ -100,6 +101,9 @@ type BridgeTxPool interface {
 // SubBridge implements the Klaytn consensus node service.
 type SubBridge struct {
 	config *SCConfig
+
+	// CN
+	cn *cn.CN
 
 	// DB interfaces
 	chainDB database.DBManager // Block chain database
@@ -351,6 +355,10 @@ func (sb *SubBridge) SetComponents(components []interface{}) {
 			// sb.txSub = sb.txPool.SubscribeNewTxsEvent(sb.txCh)
 		// TODO-Klaytn if need pending block, should use miner
 		case *work.Miner:
+
+		case *cn.CN:
+			sb.cn = v
+			return
 		}
 	}
 

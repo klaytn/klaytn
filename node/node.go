@@ -210,6 +210,7 @@ func (n *Node) Start() error {
 		for _, s := range services {
 			// TODO-Klaytn-ServiceChain call setcomponents repeatedly for same component
 			s.SetComponents(service.Components())
+			s.SetComponents([]interface{}{service})
 		}
 	}
 	if err := p2pServer.Start(); err != nil {
