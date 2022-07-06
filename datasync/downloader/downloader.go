@@ -405,8 +405,8 @@ func (d *Downloader) synchronise(id string, hash common.Hash, td *big.Int, mode 
 			// sync completely heals and finishes. Pause snapshot maintenance in the mean
 			// time to prevent access.
 			if snapshots := d.blockchain.Snapshots(); snapshots != nil { // Only nil in tests
-				logger.Warn("State snapshot is disabled")
 				snapshots.Disable()
+				logger.Warn("State snapshot is disabled")
 			}
 			logger.Warn("Enabling snapshot sync prototype")
 			d.snapSync = true
