@@ -38,7 +38,7 @@ var (
 
 func parseBridgeAddrWithAlias(sb *SubBridge, cBridgeAddrOrAlias, pBridgeAddrOrFirstParam string, args ...interface{}) (common.Address, common.Address, []interface{}, error) {
 	if !strings.HasPrefix(cBridgeAddrOrAlias, "0x") {
-		// Takes pBirdgeAddr as the first API argument and append residual arguments.
+		// Takes pBridgeAddr as the first API argument and append residual arguments.
 		var newArgs []interface{}
 		if len(args) > 0 {
 			newArgs = append([]interface{}{pBridgeAddrOrFirstParam}, args[:len(args)-1]...)
