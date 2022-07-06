@@ -164,7 +164,7 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 		}
 		if isKIP71 {
 			// we need to set baseFee * 2 after KIP-71 hard fork
-			price.Mul(price, common.Big2)
+			price = new(big.Int).Mul(price, common.Big2)
 		}
 		args.Price = (*hexutil.Big)(price)
 	}

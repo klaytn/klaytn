@@ -796,7 +796,7 @@ func newEthRPCTransaction(block *types.Block, tx *types.Transaction, blockHash c
 		if block != nil {
 			result.GasPrice = (*hexutil.Big)(tx.EffectiveGasPrice(block.Header()))
 		} else {
-			// transaction is not processed yes
+			// transaction is not processed yet
 			result.GasPrice = (*hexutil.Big)(tx.EffectiveGasPrice(nil))
 		}
 	}
