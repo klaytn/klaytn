@@ -56,7 +56,7 @@ func NewFakePeer(version uint, id string, rw p2p.MsgReadWriter) *Peer {
 		id:      id[:16],
 		rw:      rw,
 		version: version,
-		logger:  logger.NewWith("peer", id[:8]),
+		logger:  logger.NewWith("peer", id[:16]),
 	}
 }
 

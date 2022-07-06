@@ -1054,6 +1054,10 @@ func handleStakingInfoRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error
 
 		// Retrieve the requested block's staking information, skipping if unknown to us
 		header := pm.blockchain.GetHeaderByHash(hash)
+		if header == nil {
+			logger.Error("Failed to get header", "hash", hash)
+			continue
+		}
 		result := reward.GetStakingInfoOnStakingBlock(header.Number.Uint64())
 		if result == nil {
 			logger.Error("Failed to get staking information on a specific block", "number", header.Number.Uint64(), "hash", hash)
