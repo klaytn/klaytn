@@ -92,6 +92,12 @@ func (governance *testGovernance) StakingUpdateInterval() uint64 {
 	return governance.stakingInterval
 }
 
+func (governance *testGovernance) GetMinimumStakingAtNumber(num uint64) (uint64, error) {
+	// Note: this function will be eventually replaced by ParamsAt().MinimumStake().
+	// Until then we use fixed value.
+	return params.DefaultMinimumStake.Uint64(), nil
+}
+
 func (governance *testGovernance) setTestGovernance(epoch uint64, mintingAmount string, ratio string, unitprice uint64, useGiniCoeff bool, deferredTxFee bool) {
 	governance.epoch = epoch
 	governance.mintingAmount = mintingAmount
