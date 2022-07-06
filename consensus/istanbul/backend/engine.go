@@ -191,9 +191,8 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 		return errUnknownBlock
 	}
 
-	// TODO-klaytn header verify before/after kip71 fork
+	// Header verify before/after kip71 fork
 	if !chain.Config().IsKIP71ForkEnabled(header.Number) {
-		// Verify BaseFee not present before EIP-1559 fork.
 		if header.BaseFee != nil {
 			return consensus.ErrInvalidBaseFee
 		}

@@ -237,6 +237,7 @@ func TestRewardDistributor_DistributeBlockReward(t *testing.T) {
 		ratio              string
 		unitprice          uint64
 		baseFee            *big.Int
+		unitPrice          uint64
 		useGiniCoeff       bool
 		deferredTxFee      bool
 		expectedCnBalance  *big.Int
@@ -250,6 +251,7 @@ func TestRewardDistributor_DistributeBlockReward(t *testing.T) {
 			ratio:              "40/50/10",
 			unitprice:          500,
 			baseFee:            big.NewInt(500),
+			unitPrice:          25000000000,
 			useGiniCoeff:       true,
 			deferredTxFee:      true,
 			expectedCnBalance:  big.NewInt(0).SetUint64(30000),
@@ -261,7 +263,7 @@ func TestRewardDistributor_DistributeBlockReward(t *testing.T) {
 			epoch:              30,
 			mintingAmount:      "50000",
 			ratio:              "40/50/10",
-			unitprice:          25000000000,
+			unitPrice:          25000000000,
 			useGiniCoeff:       true,
 			deferredTxFee:      true,
 			expectedCnBalance:  big.NewInt(0).SetUint64(250000005000 * 4),
@@ -275,6 +277,7 @@ func TestRewardDistributor_DistributeBlockReward(t *testing.T) {
 			ratio:              "34/54/12",
 			unitprice:          25000000000,
 			baseFee:            big.NewInt(25000000000),
+			unitPrice:          25000000000,
 			useGiniCoeff:       true,
 			deferredTxFee:      true,
 			expectedCnBalance:  big.NewInt(0).SetUint64(3264000000000000000),
@@ -286,7 +289,7 @@ func TestRewardDistributor_DistributeBlockReward(t *testing.T) {
 			epoch:              3600,
 			mintingAmount:      "0",
 			ratio:              "100/0/0",
-			unitprice:          0,
+			unitPrice:          25000000000,
 			useGiniCoeff:       true,
 			deferredTxFee:      true,
 			expectedCnBalance:  big.NewInt(0).SetUint64(0),
@@ -304,7 +307,7 @@ func TestRewardDistributor_DistributeBlockReward(t *testing.T) {
 
 	for _, testCase := range testCases {
 		BalanceAdder := newTestBalanceAdder()
-		governance.setTestGovernance(testCase.epoch, testCase.mintingAmount, testCase.ratio, testCase.unitprice, testCase.useGiniCoeff, testCase.deferredTxFee)
+		governance.setTestGovernance(testCase.epoch, testCase.mintingAmount, testCase.ratio, testCase.unitPrice, testCase.useGiniCoeff, testCase.deferredTxFee)
 		header.GasUsed = testCase.gasUsed
 		header.BaseFee = testCase.baseFee
 		rewardDistributor := NewRewardDistributor(governance)
