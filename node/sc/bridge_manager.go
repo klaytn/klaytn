@@ -976,9 +976,7 @@ func (bm *BridgeManager) ResetAllSubscribedEvents() error {
 	logger.Info("ResetAllSubscribedEvents is called.")
 
 	bm.journal.cacheMu.RLock()
-	defer func() {
-		bm.journal.cacheMu.RUnlock()
-	}()
+	defer bm.journal.cacheMu.RUnlock()
 	for _, journal := range bm.journal.cache {
 		if journal.Subscribed {
 			bm.UnsubscribeEvent(journal.ChildAddress)
