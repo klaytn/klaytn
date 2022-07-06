@@ -138,8 +138,7 @@ type SendTxArgs struct {
 
 // setDefaults is a helper function that fills in default values for unspecified common tx fields.
 func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
-	head := b.CurrentBlock().Header()
-	isKIP71 := head.BaseFee != nil
+	isKIP71 := b.ChainConfig().IsKIP71ForkEnabled(new(big.Int).Add(b.CurrentBlock().Number(), big.NewInt(1)))
 
 	if args.TypeInt == nil {
 		args.TypeInt = new(types.TxType)
@@ -190,10 +189,8 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 			if args.MaxFeePerGas.ToInt().Cmp(gasPrice) < 0 {
 				return fmt.Errorf("maxFeePerGas (%v) < BaseFee (%v)", args.MaxFeePerGas, gasPrice)
 			}
-		} else {
-			if args.MaxPriorityFeePerGas.ToInt().Cmp(gasPrice) != 0 || args.MaxFeePerGas.ToInt().Cmp(gasPrice) != 0 {
-				return fmt.Errorf("only %s is allowed to be used as maxFeePerGas and maxPriorityPerGas", gasPrice.Text(16))
-			}
+		} else if args.MaxPriorityFeePerGas.ToInt().Cmp(gasPrice) != 0 || args.MaxFeePerGas.ToInt().Cmp(gasPrice) != 0 {
+			return fmt.Errorf("only %s is allowed to be used as maxFeePerGas and maxPriorityPerGas", gasPrice.Text(16))
 		}
 		if args.MaxFeePerGas.ToInt().Cmp(args.MaxPriorityFeePerGas.ToInt()) < 0 {
 			return fmt.Errorf("maxFeePerGas (%v) < maxPriorityFeePerGas (%v)", args.MaxFeePerGas, args.MaxPriorityFeePerGas)
