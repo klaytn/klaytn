@@ -137,12 +137,17 @@ var (
 	}
 )
 
-// VMLogTarget sets the output target of vmlog.
-// The values below can be OR'ed.
-//  - 0x0: no output (default)
-//  - 0x1: file (DATADIR/logs/vm.log)
-//  - 0x2: stdout (like logger.DEBUG)
-var VMLogTarget = 0x0
+var (
+	// VMLogTarget sets the output target of vmlog.
+	// The values below can be OR'ed.
+	//  - 0x0: no output (default)
+	//  - 0x1: file (DATADIR/logs/vm.log)
+	//  - 0x2: stdout (like logger.DEBUG)
+	VMLogTarget = 0x0
+
+	// TODO-klaytn temporal number for test
+	KIP71CompatibleBlockNum = big.NewInt(95000000)
+)
 
 const (
 	VMLogToFile   = 0x1
@@ -169,6 +174,7 @@ type ChainConfig struct {
 	IstanbulCompatibleBlock  *big.Int `json:"istanbulCompatibleBlock,omitempty"`  // IstanbulCompatibleBlock switch block (nil = no fork, 0 = already on istanbul)
 	LondonCompatibleBlock    *big.Int `json:"londonCompatibleBlock,omitempty"`    // LondonCompatibleBlock switch block (nil = no fork, 0 = already on london)
 	EthTxTypeCompatibleBlock *big.Int `json:"ethTxTypeCompatibleBlock,omitempty"` // EthTxTypeCompatibleBlock switch block (nil = no fork, 0 = already on ethTxType)
+	KIP71CompatibleBlock     *big.Int `json:"kip71CompatibleBlock,omitempty"`     // KIP71Compatible switch block (nil = no fork, 0 already on KIP71)
 
 	// Various consensus engines
 	Gxhash   *GxhashConfig   `json:"gxhash,omitempty"` // (deprecated) not supported engine
@@ -185,6 +191,7 @@ type GovernanceConfig struct {
 	GoverningNode  common.Address `json:"governingNode"`
 	GovernanceMode string         `json:"governanceMode"`
 	Reward         *RewardConfig  `json:"reward,omitempty"`
+	KIP71          *KIP71Config   `json:"kip71,omitempty"`
 }
 
 func (g *GovernanceConfig) DeferredTxFee() bool {
@@ -200,6 +207,15 @@ type RewardConfig struct {
 	StakingUpdateInterval  uint64   `json:"stakingUpdateInterval"`  // Interval when staking information is updated
 	ProposerUpdateInterval uint64   `json:"proposerUpdateInterval"` // Interval when proposer information is updated
 	MinimumStake           *big.Int `json:"minimumStake"`           // Minimum amount of peb to join CCO
+}
+
+// TODO-klaytn kip71 governance parameters
+type KIP71Config struct {
+	LowerBoundBaseFee         uint64 `json:"lowerboundbasefee"`         // Minimum base fee for dynamic gas price
+	UpperBoundBaseFee         uint64 `json:"upperboundbasefee"`         // Maximum base fee for dynamic gas price
+	GasTarget                 uint64 `json:"gastarget"`                 // Gauge parameter increasing or decreasing gas price
+	MaxBlockGasUsedForBaseFee uint64 `json:"maxblockgasusedforbasefee"` // Maximum network and process capacity to allow in a block
+	BaseFeeDenominator        uint64 `json:"basefeedenominator"`        // For normalizing effect of the rapid change like impulse gas used
 }
 
 // IstanbulConfig is the consensus engine configs for Istanbul based sealing.
@@ -248,22 +264,24 @@ func (c *ChainConfig) String() string {
 		engine = "unknown"
 	}
 	if c.Istanbul != nil {
-		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d Engine: %v}",
+		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v KIP71CompatibleBlock: %v SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d Engine: %v}",
 			c.ChainID,
 			c.IstanbulCompatibleBlock,
 			c.LondonCompatibleBlock,
 			c.EthTxTypeCompatibleBlock,
+			c.KIP71CompatibleBlock,
 			c.Istanbul.SubGroupSize,
 			c.UnitPrice,
 			c.DeriveShaImpl,
 			engine,
 		)
 	} else {
-		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v UnitPrice: %d DeriveShaImpl: %d Engine: %v }",
+		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v KIP71CompatibleBlock: %v UnitPrice: %d DeriveShaImpl: %d Engine: %v }",
 			c.ChainID,
 			c.IstanbulCompatibleBlock,
 			c.LondonCompatibleBlock,
 			c.EthTxTypeCompatibleBlock,
+			c.KIP71CompatibleBlock,
 			c.UnitPrice,
 			c.DeriveShaImpl,
 			engine,
@@ -291,6 +309,11 @@ func (c *ChainConfig) IsLondonForkEnabled(num *big.Int) bool {
 // IsEthTxTypeForkEnabled returns whether num is either equal to the ethTxType block or greater.
 func (c *ChainConfig) IsEthTxTypeForkEnabled(num *big.Int) bool {
 	return isForked(c.EthTxTypeCompatibleBlock, num)
+}
+
+// IsKIP71ForkedEnabled returns whether num is either equal to the kip71 block or greater.
+func (c *ChainConfig) IsKIP71ForkEnabled(num *big.Int) bool {
+	return isForked(c.KIP71CompatibleBlock, num)
 }
 
 // CheckCompatible checks whether scheduled fork transitions have been imported
@@ -324,6 +347,7 @@ func (c *ChainConfig) CheckConfigForkOrder() error {
 		{name: "istanbulBlock", block: c.IstanbulCompatibleBlock},
 		{name: "londonBlock", block: c.LondonCompatibleBlock},
 		{name: "ethTxTypeBlock", block: c.EthTxTypeCompatibleBlock},
+		{name: "kip71Block", block: c.KIP71CompatibleBlock},
 	} {
 		if lastFork.name != "" {
 			// Next one must be higher number
@@ -355,6 +379,9 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *Confi
 	}
 	if isForkIncompatible(c.EthTxTypeCompatibleBlock, newcfg.EthTxTypeCompatibleBlock, head) {
 		return newCompatError("EthTxType Block", c.EthTxTypeCompatibleBlock, newcfg.EthTxTypeCompatibleBlock)
+	}
+	if isForkIncompatible(c.KIP71CompatibleBlock, newcfg.KIP71CompatibleBlock, head) {
+		return newCompatError("KIP71 Block", c.KIP71CompatibleBlock, newcfg.KIP71CompatibleBlock)
 	}
 	return nil
 }
@@ -458,6 +485,7 @@ type Rules struct {
 	ChainID    *big.Int
 	IsIstanbul bool
 	IsLondon   bool
+	IsKIP71    bool
 }
 
 // Rules ensures c's ChainID is not nil.
@@ -470,6 +498,7 @@ func (c *ChainConfig) Rules(num *big.Int) Rules {
 		ChainID:    new(big.Int).Set(chainID),
 		IsIstanbul: c.IsIstanbulForkEnabled(num),
 		IsLondon:   c.IsLondonForkEnabled(num),
+		IsKIP71:    c.IsKIP71ForkEnabled(num),
 	}
 }
 
@@ -478,6 +507,7 @@ func GetDefaultGovernanceConfig() *GovernanceConfig {
 		GovernanceMode: DefaultGovernanceMode,
 		GoverningNode:  common.HexToAddress(DefaultGoverningNode),
 		Reward:         GetDefaultRewardConfig(),
+		KIP71:          GetDefaultKip71Config(),
 	}
 	return gov
 }
@@ -499,6 +529,16 @@ func GetDefaultRewardConfig() *RewardConfig {
 		StakingUpdateInterval:  DefaultStakeUpdateInterval,
 		ProposerUpdateInterval: DefaultProposerRefreshInterval,
 		MinimumStake:           DefaultMinimumStake,
+	}
+}
+
+func GetDefaultKip71Config() *KIP71Config {
+	return &KIP71Config{
+		LowerBoundBaseFee:         DefaultLowerBoundBaseFee,
+		UpperBoundBaseFee:         DefaultUpperBoundBaseFee,
+		GasTarget:                 DefaultGasTarget,
+		MaxBlockGasUsedForBaseFee: DefaultMaxBlockGasUsedForBaseFee,
+		BaseFeeDenominator:        DefaultBaseFeeDenominator,
 	}
 }
 

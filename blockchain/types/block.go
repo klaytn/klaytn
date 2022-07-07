@@ -64,10 +64,12 @@ type Header struct {
 	GasUsed     uint64         `json:"gasUsed"          gencodec:"required"`
 	Time        *big.Int       `json:"timestamp"        gencodec:"required"`
 	// TimeFoS represents a fraction of a second since `Time`.
-	TimeFoS    uint8  `json:"timestampFoS"     gencodec:"required"`
-	Extra      []byte `json:"extraData"        gencodec:"required"`
-	Governance []byte `json:"governanceData"        gencodec:"required"`
+	TimeFoS    uint8  `json:"timestampFoS"              gencodec:"required"`
+	Extra      []byte `json:"extraData"                 gencodec:"required"`
+	Governance []byte `json:"governanceData"            gencodec:"required"`
 	Vote       []byte `json:"voteData,omitempty"`
+
+	BaseFee *big.Int `json:"baseFeePerGas,omitempty"    rlp:"optional"`
 }
 
 // field type overrides for gencodec
@@ -78,6 +80,7 @@ type headerMarshaling struct {
 	Time       *hexutil.Big
 	TimeFoS    hexutil.Uint
 	Extra      hexutil.Bytes
+	BaseFee    *hexutil.Big
 	Hash       common.Hash `json:"hash"` // adds call to Hash() in MarshalJSON
 	Governance hexutil.Bytes
 	Vote       hexutil.Bytes

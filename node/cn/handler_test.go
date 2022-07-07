@@ -1054,7 +1054,7 @@ func TestBroadcastTxsSortedByTime(t *testing.T) {
 	copy(sortedTxs, txs)
 
 	// Sort transaction by time.
-	sort.Sort(types.TxByPriceAndTime(sortedTxs))
+	sort.Sort(types.TxByTime(sortedTxs))
 
 	pm := &ProtocolManager{}
 	pm.nodetype = common.ENDPOINTNODE
@@ -1115,7 +1115,7 @@ func TestReBroadcastTxsSortedByTime(t *testing.T) {
 	copy(sortedTxs, txs)
 
 	// Sort transaction by time.
-	sort.Sort(types.TxByPriceAndTime(sortedTxs))
+	sort.Sort(types.TxByTime(sortedTxs))
 
 	pm := &ProtocolManager{}
 	pm.nodetype = common.ENDPOINTNODE

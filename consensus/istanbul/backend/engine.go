@@ -39,6 +39,7 @@ import (
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	istanbulCore "github.com/klaytn/klaytn/consensus/istanbul/core"
 	"github.com/klaytn/klaytn/consensus/istanbul/validator"
+	"github.com/klaytn/klaytn/consensus/misc"
 	"github.com/klaytn/klaytn/crypto/sha3"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
@@ -171,7 +172,14 @@ func (sb *backend) computeSignatureAddrs(header *types.Header) error {
 // given engine. Verifying the seal may be done optionally here, or explicitly
 // via the VerifySeal method.
 func (sb *backend) VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool) error {
-	return sb.verifyHeader(chain, header, nil)
+	var parent []*types.Header
+	if header.Number.Sign() == 0 {
+		// If current block is genesis, the parent is also genesis
+		parent = append(parent, chain.GetHeaderByNumber(0))
+	} else {
+		parent = append(parent, chain.GetHeader(header.ParentHash, header.Number.Uint64()-1))
+	}
+	return sb.verifyHeader(chain, header, parent)
 }
 
 // verifyHeader checks whether a header conforms to the consensus rules.The
@@ -181,6 +189,15 @@ func (sb *backend) VerifyHeader(chain consensus.ChainReader, header *types.Heade
 func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
 	if header.Number == nil {
 		return errUnknownBlock
+	}
+
+	// Header verify before/after kip71 fork
+	if !chain.Config().IsKIP71ForkEnabled(header.Number) {
+		if header.BaseFee != nil {
+			return consensus.ErrInvalidBaseFee
+		}
+	} else if err := misc.VerifyKIP71Header(chain.Config(), parents[len(parents)-1], header); err != nil {
+		return err
 	}
 
 	// Don't waste time checking blocks from the future
@@ -412,6 +429,17 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	receipts []*types.Receipt,
 ) (*types.Block, error) {
+	// We can assure that if the kip71 hard forked block should have the field of base fee
+	if chain.Config().IsKIP71ForkEnabled(header.Number) {
+		if header.BaseFee == nil {
+			logger.Error("KIP-71 hard forked block should have baseFee", "blockNum", header.Number.Uint64())
+			return nil, errors.New("Invalid KIP-71 block without baseFee")
+		}
+	} else if header.BaseFee != nil {
+		logger.Error("A block before KIP-71 hardfork shouldn't have baseFee", "blockNum", header.Number.Uint64())
+		return nil, consensus.ErrInvalidBaseFee
+	}
+
 	// If sb.chain is nil, it means backend is not initialized yet.
 	if sb.chain != nil && sb.governance.ProposerPolicy() == uint64(istanbul.WeightedRandom) {
 		// TODO-Klaytn Let's redesign below logic and remove dependency between block reward and istanbul consensus.

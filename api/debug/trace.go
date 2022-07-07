@@ -19,7 +19,6 @@
 // Modified and improved for the klaytn development.
 
 //go:build go1.5
-// +build go1.5
 
 package debug
 

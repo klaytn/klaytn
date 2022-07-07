@@ -91,10 +91,10 @@ func handleValueTransfer(t *testing.T, ev IRequestValueTransferEvent, bridgeInfo
 	t.Log("Request Event",
 		"type", tokenType,
 		"amount", valueOrTokenId,
-		"from", from,
-		"to", to,
-		"contract", contractAddr,
-		"token", tokenAddr,
+		"from", from.String(),
+		"to", to.String(),
+		"contract", contractAddr.String(),
+		"token", tokenAddr.String(),
 		"requestNonce", requestNonce)
 
 	bridge := bridgeInfo.bridge

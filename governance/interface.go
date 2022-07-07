@@ -97,6 +97,7 @@ type HeaderEngine interface {
 	SetMyVotingPower(t uint64)
 	SetBlockchain(chain blockChain)
 	SetTxPool(txpool txPool)
+	GetTxPool() txPool
 
 	// Get network params
 	GovernanceMode() string
@@ -112,6 +113,11 @@ type HeaderEngine interface {
 	Ratio() string
 	StakingUpdateInterval() uint64
 	UseGiniCoeff() bool
+	LowerBoundBaseFee() uint64
+	UpperBoundBaseFee() uint64
+	GasTarget() uint64
+	MaxBlockGasUsedForBaseFee() uint64
+	BaseFeeDenominator() uint64
 	GetGovernanceValue(key int) interface{}
 	GetGovernanceItemAtNumber(num uint64, key string) (interface{}, error)
 	GetItemAtNumberByIntKey(num uint64, key int) (interface{}, error)

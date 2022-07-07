@@ -262,7 +262,7 @@ func (bcdata *BCData) GenABlockWithTxPoolWithoutAccountMap(txPool *blockchain.Tx
 		return errEmptyPending
 	}
 
-	pooltxs := types.NewTransactionsByPriceAndNonce(signer, pending)
+	pooltxs := types.NewTransactionsByTimeAndNonce(signer, pending)
 
 	// Set the block header
 	header, err := bcdata.prepareHeader()
