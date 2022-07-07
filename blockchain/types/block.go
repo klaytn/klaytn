@@ -240,8 +240,9 @@ func CopyHeader(h *Header) *Header {
 	if cpy.Number = new(big.Int); h.Number != nil {
 		cpy.Number.Set(h.Number)
 	}
-	if cpy.BaseFee = new(big.Int); h.BaseFee != nil {
-		cpy.BaseFee.Set(h.BaseFee)
+	if h.BaseFee != nil {
+		// This field exists after kip71 hardfork
+		cpy.BaseFee = new(big.Int).Set(h.BaseFee)
 	}
 	if len(h.Extra) > 0 {
 		cpy.Extra = make([]byte, len(h.Extra))
