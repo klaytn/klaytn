@@ -3850,6 +3850,11 @@ var inputBlockNumberFormatter = function (blockNumber) {
     return utils.toHex(blockNumber);
 };
 
+var inputEmptyFormatter = function (a) {
+  if (a === undefined) return "";
+  else                 return a;
+}
+
 /**
  * Formats the input of a transaction and converts all values to HEX
  *
