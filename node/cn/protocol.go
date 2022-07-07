@@ -31,6 +31,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/datasync/downloader"
 	"github.com/klaytn/klaytn/datasync/fetcher"
+	"github.com/klaytn/klaytn/node/cn/snap"
 	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/rlp"
 )
@@ -138,11 +139,14 @@ type ProtocolManagerDownloader interface {
 	DeliverNodeData(id string, data [][]byte) error
 	DeliverReceipts(id string, receipts [][]*types.Receipt) error
 	DeliverStakingInfos(id string, stakingInfos []*reward.StakingInfo) error
+	DeliverSnapPacket(peer *snap.Peer, packet snap.Packet) error
 
 	Terminate()
 	Synchronise(id string, head common.Hash, td *big.Int, mode downloader.SyncMode) error
 	Progress() klaytn.SyncProgress
 	Cancel()
+
+	GetSnapSyncer() *snap.Syncer
 }
 
 //go:generate mockgen -destination=node/cn/mocks/fetcher_mock.go -package=mocks github.com/klaytn/klaytn/node/cn ProtocolManagerFetcher

@@ -22,6 +22,7 @@ import (
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/node/cn/snap"
 	"github.com/klaytn/klaytn/reward"
 )
 
@@ -46,9 +47,15 @@ func (*FakeDownloader) DeliverStakingInfos(id string, stakingInfos []*reward.Sta
 	return nil
 }
 
+func (*FakeDownloader) DeliverSnapPacket(peer *snap.Peer, packet snap.Packet) error {
+	return nil
+}
+
 func (*FakeDownloader) Terminate() {}
 func (*FakeDownloader) Synchronise(id string, head common.Hash, td *big.Int, mode SyncMode) error {
 	return nil
 }
 func (*FakeDownloader) Progress() klaytn.SyncProgress { return klaytn.SyncProgress{} }
 func (*FakeDownloader) Cancel()                       {}
+
+func (*FakeDownloader) GetSnapSyncer() *snap.Syncer { return nil }

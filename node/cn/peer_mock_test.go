@@ -13,6 +13,7 @@ import (
 	common "github.com/klaytn/klaytn/common"
 	p2p "github.com/klaytn/klaytn/networks/p2p"
 	discover "github.com/klaytn/klaytn/networks/p2p/discover"
+	snap "github.com/klaytn/klaytn/node/cn/snap"
 	rlp "github.com/klaytn/klaytn/rlp"
 )
 
@@ -37,6 +38,18 @@ func NewMockPeer(ctrl *gomock.Controller) *MockPeer {
 // EXPECT returns an object that allows the caller to indicate expected use
 func (m *MockPeer) EXPECT() *MockPeerMockRecorder {
 	return m.recorder
+}
+
+// AddSnapExtension mocks base method
+func (m *MockPeer) AddSnapExtension(arg0 *snap.Peer) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "AddSnapExtension", arg0)
+}
+
+// AddSnapExtension indicates an expected call of AddSnapExtension
+func (mr *MockPeerMockRecorder) AddSnapExtension(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddSnapExtension", reflect.TypeOf((*MockPeer)(nil).AddSnapExtension), arg0)
 }
 
 // AddToKnownBlocks mocks base method
@@ -147,6 +160,20 @@ func (m *MockPeer) DisconnectP2PPeer(arg0 p2p.DiscReason) {
 func (mr *MockPeerMockRecorder) DisconnectP2PPeer(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DisconnectP2PPeer", reflect.TypeOf((*MockPeer)(nil).DisconnectP2PPeer), arg0)
+}
+
+// ExistSnapExtension mocks base method
+func (m *MockPeer) ExistSnapExtension() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExistSnapExtension")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// ExistSnapExtension indicates an expected call of ExistSnapExtension
+func (mr *MockPeerMockRecorder) ExistSnapExtension() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExistSnapExtension", reflect.TypeOf((*MockPeer)(nil).ExistSnapExtension))
 }
 
 // FetchBlockBodies mocks base method
@@ -470,6 +497,20 @@ func (m *MockPeer) RequestStakingInfo(arg0 []common.Hash) error {
 func (mr *MockPeerMockRecorder) RequestStakingInfo(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequestStakingInfo", reflect.TypeOf((*MockPeer)(nil).RequestStakingInfo), arg0)
+}
+
+// RunningCap mocks base method
+func (m *MockPeer) RunningCap(arg0 string, arg1 []uint) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RunningCap", arg0, arg1)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// RunningCap indicates an expected call of RunningCap
+func (mr *MockPeerMockRecorder) RunningCap(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunningCap", reflect.TypeOf((*MockPeer)(nil).RunningCap), arg0, arg1)
 }
 
 // Send mocks base method

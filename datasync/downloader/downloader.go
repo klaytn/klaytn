@@ -33,8 +33,10 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/log"
+	"github.com/klaytn/klaytn/node/cn/snap"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/reward"
+	"github.com/klaytn/klaytn/snapshot"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/storage/statedb"
 	"github.com/rcrowley/go-metrics"
@@ -135,6 +137,10 @@ type Downloader struct {
 	stakingInfoWakeCh chan bool            // [klay/65] Channel to signal the staking info fetcher of new tasks
 	headerProcCh      chan []*types.Header // [klay/62] Channel to feed the header processor new tasks
 
+	// for snapsyncer
+	snapSync   bool         // Whether to run state sync over the snap protocol
+	SnapSyncer *snap.Syncer // TODO-Klaytn-Snapsyncer make private! hack for now
+
 	// for stateFetcher
 	pivotHeader *types.Header
 	pivotLock   sync.RWMutex
@@ -205,6 +211,9 @@ type BlockChain interface {
 
 	// InsertReceiptChain inserts a batch of receipts into the local chain.
 	InsertReceiptChain(types.Blocks, []types.Receipts) (int, error)
+
+	// Snapshots returns the blockchain snapshot tree.
+	Snapshots() *snapshot.Tree
 }
 
 // New creates a new downloader to fetch hashes and blocks from remote peers.
@@ -235,6 +244,7 @@ func New(mode SyncMode, stateDB database.DBManager, stateBloom *statedb.SyncBloo
 		headerProcCh:      make(chan []*types.Header, 1),
 		quitCh:            make(chan struct{}),
 		stateCh:           make(chan dataPack),
+		SnapSyncer:        snap.NewSyncer(stateDB),
 		stateSyncStart:    make(chan *stateSync),
 		syncStatsState: stateSyncStats{
 			processed: stateDB.ReadFastTrieProgress(),
@@ -263,6 +273,8 @@ func (d *Downloader) Progress() klaytn.SyncProgress {
 	switch mode {
 	case FullSync:
 		current = d.blockchain.CurrentBlock().NumberU64()
+	case SnapSync:
+		current = d.blockchain.CurrentFastBlock().NumberU64()
 	case FastSync:
 		current = d.blockchain.CurrentFastBlock().NumberU64()
 	case LightSync:
@@ -319,6 +331,10 @@ func (d *Downloader) UnregisterPeer(id string) error {
 	d.queue.Revoke(id)
 
 	return nil
+}
+
+func (d *Downloader) GetSnapSyncer() *snap.Syncer {
+	return d.SnapSyncer
 }
 
 // Synchronise tries to sync up our local block chain with a remote peer, both
@@ -381,6 +397,20 @@ func (d *Downloader) synchronise(id string, hash common.Hash, td *big.Int, mode 
 	// when the user attempts to fast sync a new empty network.
 	if mode == FullSync && d.stateBloom != nil {
 		d.stateBloom.Close()
+	}
+
+	if mode == SnapSync {
+		if !d.snapSync {
+			// Snap sync uses the snapshot namespace to store potentially flakey data until
+			// sync completely heals and finishes. Pause snapshot maintenance in the mean
+			// time to prevent access.
+			if snapshots := d.blockchain.Snapshots(); snapshots != nil { // Only nil in tests
+				snapshots.Disable()
+				logger.Warn("State snapshot is disabled")
+			}
+			logger.Warn("Enabling snapshot sync prototype")
+			d.snapSync = true
+		}
 	}
 	// Reset the queue, peer set and wake channels to clean any internal leftover state
 	d.queue.Reset(blockCacheMaxItems, blockCacheInitialItems)
@@ -454,7 +484,7 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 	if err != nil {
 		return err
 	}
-	if mode == FastSync && pivot == nil {
+	if (mode == FastSync || mode == SnapSync) && pivot == nil {
 		// If no pivot block was returned, the head is below the min full block
 		// threshold (i.e. new chain). In that case we won't really fast sync
 		// anyway, but still need a valid pivot block to avoid some code hitting
@@ -475,7 +505,7 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 	d.syncStatsLock.Unlock()
 
 	// Ensure our origin point is below any fast sync pivot point
-	if mode == FastSync {
+	if mode == FastSync || mode == SnapSync {
 		if height <= uint64(fsMinFullBlocks) {
 			origin = 0
 		} else {
@@ -486,7 +516,7 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 		}
 	}
 	d.committed = 1
-	if mode == FastSync && pivot.Number.Uint64() != 0 {
+	if (mode == FastSync || mode == SnapSync) && pivot.Number.Uint64() != 0 {
 		d.committed = 0
 	}
 	// Initiate the sync using a concurrent header and content retrieval algorithm
@@ -502,7 +532,7 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 		func() error { return d.fetchStakingInfos(origin + 1) }, // StakingInfos are retrieved during fast sync
 		func() error { return d.processHeaders(origin+1, td) },
 	}
-	if mode == FastSync {
+	if mode == FastSync || mode == SnapSync {
 		d.pivotLock.Lock()
 		d.pivotHeader = pivot
 		d.pivotLock.Unlock()
@@ -596,7 +626,7 @@ func (d *Downloader) fetchHead(p *peerConnection) (head *types.Header, pivot *ty
 	// Request the advertised remote head block and wait for the response
 	latest, _ := p.peer.Head()
 	fetch := 1
-	if mode == FastSync {
+	if mode == FastSync || mode == SnapSync {
 		fetch = 2 // head + pivot headers
 	}
 	go p.peer.RequestHeadersByHash(latest, fetch, fsMinFullBlocks-1, true)
@@ -624,7 +654,7 @@ func (d *Downloader) fetchHead(p *peerConnection) (head *types.Header, pivot *ty
 			// or there was not one requested.
 			head := headers[0]
 			if len(headers) == 1 {
-				if mode == FastSync && head.Number.Uint64() > uint64(fsMinFullBlocks) {
+				if (mode == FastSync || mode == SnapSync) && head.Number.Uint64() > uint64(fsMinFullBlocks) {
 					return nil, nil, fmt.Errorf("%w: no pivot included along head header", errBadPeer)
 				}
 				p.logger.Debug("Remote head identified, no pivot", "number", head.Number, "hash", head.Hash())
@@ -662,7 +692,7 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 	mode := d.getMode()
 	if mode == FullSync {
 		ceil = d.blockchain.CurrentBlock().NumberU64()
-	} else if mode == FastSync {
+	} else if mode == FastSync || mode == SnapSync {
 		ceil = d.blockchain.CurrentFastBlock().NumberU64()
 	}
 	if ceil >= MaxForkAncestry {
@@ -1408,7 +1438,7 @@ func (d *Downloader) processHeaders(origin uint64, td *big.Int) error {
 				// This check cannot be executed "as is" for full imports, since blocks may still be
 				// queued for processing when the header download completes. However, as long as the
 				// peer gave us something useful, we're already happy/progressed (above check).
-				if mode == FastSync || mode == LightSync {
+				if mode == SnapSync || mode == FastSync || mode == LightSync {
 					head := d.lightchain.CurrentHeader()
 					if td.Cmp(d.lightchain.GetTd(head.Hash(), head.Number.Uint64())) > 0 {
 						return errStallingPeer
@@ -1425,6 +1455,7 @@ func (d *Downloader) processHeaders(origin uint64, td *big.Int) error {
 				// Terminate if something failed in between processing chunks
 				select {
 				case <-d.cancelCh:
+					rollbackErr = errCanceled
 					return errCanceled
 				default:
 				}
@@ -1436,7 +1467,7 @@ func (d *Downloader) processHeaders(origin uint64, td *big.Int) error {
 				chunk := headers[:limit]
 
 				// In case of header only syncing, validate the chunk immediately
-				if mode == FastSync || mode == LightSync {
+				if mode == SnapSync || mode == FastSync || mode == LightSync {
 					// Collect the yet unknown headers to mark them as uncertain
 					unknown := make([]*types.Header, 0, len(headers))
 					for _, header := range chunk {
@@ -1472,7 +1503,7 @@ func (d *Downloader) processHeaders(origin uint64, td *big.Int) error {
 					}
 				}
 				// Unless we're doing light chains, schedule the headers for associated content retrieval
-				if mode == FullSync || mode == FastSync {
+				if mode == FullSync || mode == SnapSync || mode == FastSync {
 					// If we've reached the allowed number of pending headers, stall a bit
 					for d.queue.PendingBlocks() >= maxQueuedHeaders || d.queue.PendingReceipts() >= maxQueuedHeaders {
 						select {
@@ -1577,7 +1608,7 @@ func (d *Downloader) processFastSyncContent() error {
 		sync.Cancel()
 	}()
 	closeOnErr := func(s *stateSync) {
-		if err := s.Wait(); err != nil && err != errCancelStateFetch && err != errCanceled {
+		if err := s.Wait(); err != nil && err != errCancelStateFetch && err != errCanceled && err != snap.ErrCancelled {
 			d.queue.Close() // wake up WaitResults
 		}
 	}
@@ -1785,6 +1816,29 @@ func (d *Downloader) DeliverStakingInfos(id string, stakingInfos []*reward.Staki
 // DeliverNodeData injects a new batch of node state data received from a remote node.
 func (d *Downloader) DeliverNodeData(id string, data [][]byte) (err error) {
 	return d.deliver(id, d.stateCh, &statePack{id, data}, stateInMeter, stateDropMeter)
+}
+
+// DeliverSnapPacket is invoked from a peer's message handler when it transmits a
+// data packet for the local node to consume.
+func (d *Downloader) DeliverSnapPacket(peer *snap.Peer, packet snap.Packet) error {
+	switch packet := packet.(type) {
+	case *snap.AccountRangePacket:
+		hashes, accounts := packet.Unpack()
+		return d.SnapSyncer.OnAccounts(peer, packet.ID, hashes, accounts, packet.Proof)
+
+	case *snap.StorageRangesPacket:
+		hashset, slotset := packet.Unpack()
+		return d.SnapSyncer.OnStorage(peer, packet.ID, hashset, slotset, packet.Proof)
+
+	case *snap.ByteCodesPacket:
+		return d.SnapSyncer.OnByteCodes(peer, packet.ID, packet.Codes)
+
+	case *snap.TrieNodesPacket:
+		return d.SnapSyncer.OnTrieNodes(peer, packet.ID, packet.Nodes)
+
+	default:
+		return fmt.Errorf("unexpected snap packet type: %T", packet)
+	}
 }
 
 // deliver injects a new batch of data received from a remote node.

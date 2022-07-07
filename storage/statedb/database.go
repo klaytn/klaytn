@@ -1018,7 +1018,7 @@ func (db *Database) uncache(hash common.Hash) {
 
 // Size returns the current database size of the memory cache in front of the
 // persistent database layer.
-func (db *Database) Size() (common.StorageSize, common.StorageSize) {
+func (db *Database) Size() (common.StorageSize, common.StorageSize, common.StorageSize) {
 	db.lock.RLock()
 	defer db.lock.RUnlock()
 
@@ -1026,7 +1026,7 @@ func (db *Database) Size() (common.StorageSize, common.StorageSize) {
 	// the total memory consumption, the maintenance metadata is also needed to be
 	// counted. For every useful node, we track 2 extra hashes as the flushlist.
 	flushlistSize := common.StorageSize((len(db.nodes) - 1) * 2 * common.HashLength)
-	return db.nodesSize + flushlistSize, db.preimagesSize
+	return db.nodesSize + flushlistSize, db.nodesSize, db.preimagesSize
 }
 
 // verifyIntegrity is a debug method to iterate over the entire trie stored in
