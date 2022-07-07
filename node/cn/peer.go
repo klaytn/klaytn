@@ -993,28 +993,55 @@ func (p *multiChannelPeer) UpdateRWImplementationVersion() {
 
 func (p *multiChannelPeer) ReadMsg(rw p2p.MsgReadWriter, connectionOrder int, errCh chan<- error, wg *sync.WaitGroup, closed <-chan struct{}) {
 	defer wg.Done()
+
+	readMsgCh := make(chan struct {
+		p2p.Msg
+		error
+	}, channelSizePerPeer)
+	go func() {
+		for {
+			// TODO-klaytn: check 30-second timeout works
+			msg, err := rw.ReadMsg()
+			select {
+			case <-closed:
+				return
+			case readMsgCh <- struct {
+				p2p.Msg
+				error
+			}{msg, err}:
+			}
+		}
+	}()
+
 	for {
-		msg, err := rw.ReadMsg()
+		var (
+			msg p2p.Msg
+			err error
+		)
+		select {
+		case pair := <-readMsgCh:
+			msg, err = pair.Msg, pair.error
+		case <-closed:
+			return
+		}
+
 		if err != nil {
 			p.GetP2PPeer().Log().Warn("ProtocolManager failed to read msg", "err", err)
 			errCh <- err
 			return
 		}
-
 		msgCh, err := p.chMgr.GetChannelWithMsgCode(connectionOrder, msg.Code)
 		if err != nil {
 			p.GetP2PPeer().Log().Warn("ProtocolManager failed to get msg channel", "err", err)
 			errCh <- err
 			return
 		}
-
 		if msg.Size > ProtocolMaxMsgSize {
-			err := errResp(ErrMsgTooLarge, "%v > %v", msg.Size, ProtocolMaxMsgSize)
+			err = errResp(ErrMsgTooLarge, "%v > %v", msg.Size, ProtocolMaxMsgSize)
 			p.GetP2PPeer().Log().Warn("ProtocolManager over max msg size", "err", err)
 			errCh <- err
 			return
 		}
-
 		select {
 		case msgCh <- msg:
 		case <-closed:
