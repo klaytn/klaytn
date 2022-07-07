@@ -113,12 +113,13 @@ const (
 	Reward
 	ServiceChain
 	Snapshot
+	SnapshotSync
 	StorageDatabase
 	StorageStateDB
 	VM
-	Work
 
 	// 51~60
+	Work
 	CMDKSPN
 	CMDKSEN
 	ChainDataFetcher
@@ -189,12 +190,13 @@ var moduleNames = [ModuleNameLen]string{
 	"contracts/reward",
 	"servicechain",
 	"snapshot",
+	"node/cn/snap",
 	"storage/database",
 	"storage/statedb",
 	"vm",
-	"work",
 
 	// 51~60
+	"work",
 	"cmd/kspn",
 	"cmd/ksen",
 	"datasync/chaindatafetcher",

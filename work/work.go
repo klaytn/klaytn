@@ -38,6 +38,7 @@ import (
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
+	"github.com/klaytn/klaytn/snapshot"
 	"github.com/klaytn/klaytn/storage/database"
 )
 
@@ -246,6 +247,7 @@ type BlockChain interface {
 
 	InsertChain(chain types.Blocks) (int, error)
 	TrieNode(hash common.Hash) ([]byte, error)
+	ContractCode(hash common.Hash) ([]byte, error)
 	ContractCodeWithPrefix(hash common.Hash) ([]byte, error)
 	Config() *params.ChainConfig
 	State() (*state.StateDB, error)
@@ -311,4 +313,7 @@ type BlockChain interface {
 	// KES
 	BlockSubscriptionLoop(pool *blockchain.TxPool)
 	CloseBlockSubscriptionLoop()
+
+	// Snapshot
+	Snapshots() *snapshot.Tree
 }

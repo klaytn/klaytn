@@ -211,6 +211,10 @@ type DBManager interface {
 	WriteSnapshotRecoveryNumber(number uint64)
 	DeleteSnapshotRecoveryNumber()
 
+	ReadSnapshotSyncStatus() []byte
+	WriteSnapshotSyncStatus(status []byte)
+	DeleteSnapshotSyncStatus()
+
 	ReadSnapshotRoot() common.Hash
 	WriteSnapshotRoot(root common.Hash)
 	DeleteSnapshotRoot()
@@ -2160,6 +2164,30 @@ func (dbm *databaseManager) DeleteSnapshotRecoveryNumber() {
 	db := dbm.getDatabase(SnapshotDB)
 	if err := db.Delete(snapshotRecoveryKey); err != nil {
 		logger.Crit("Failed to remove snapshot recovery number", "err", err)
+	}
+}
+
+// ReadSnapshotSyncStatus retrieves the serialized sync status saved at shutdown.
+func (dbm *databaseManager) ReadSnapshotSyncStatus() []byte {
+	db := dbm.getDatabase(SnapshotDB)
+	data, _ := db.Get(snapshotSyncStatusKey)
+	return data
+}
+
+// WriteSnapshotSyncStatus stores the serialized sync status to save at shutdown.
+func (dbm *databaseManager) WriteSnapshotSyncStatus(status []byte) {
+	db := dbm.getDatabase(SnapshotDB)
+	if err := db.Put(snapshotSyncStatusKey, status); err != nil {
+		logger.Crit("Failed to store snapshot sync status", "err", err)
+	}
+}
+
+// DeleteSnapshotSyncStatus deletes the serialized sync status saved at the last
+// shutdown
+func (dbm *databaseManager) DeleteSnapshotSyncStatus() {
+	db := dbm.getDatabase(SnapshotDB)
+	if err := db.Delete(snapshotSyncStatusKey); err != nil {
+		logger.Crit("Failed to remove snapshot sync status", "err", err)
 	}
 }
 

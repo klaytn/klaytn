@@ -652,6 +652,11 @@ func (bc *BlockChain) FastSyncCommitHead(hash common.Hash) error {
 	bc.lastCommittedBlock = block.NumberU64()
 	bc.mu.Unlock()
 
+	// Destroy any existing state snapshot and regenerate it in the background,
+	// also resuming the normal maintenance of any previously paused snapshot.
+	if bc.snaps != nil {
+		bc.snaps.Rebuild(block.Root())
+	}
 	logger.Info("Committed new head block", "number", block.Number(), "hash", hash)
 	return nil
 }
@@ -1049,7 +1054,7 @@ func (bc *BlockChain) Stop() {
 		for !bc.triegc.Empty() {
 			triedb.Dereference(bc.triegc.PopItem().(common.Hash))
 		}
-		if size, _ := triedb.Size(); size != 0 {
+		if size, _, _ := triedb.Size(); size != 0 {
 			logger.Error("Dangling trie nodes after full cleanup")
 		}
 	}
@@ -1307,8 +1312,8 @@ func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) e
 
 		// If we exceeded our memory allowance, flush matured singleton nodes to disk
 		var (
-			nodesSize, preimagesSize = trieDB.Size()
-			nodesSizeLimit           = common.StorageSize(bc.cacheConfig.CacheSize) * 1024 * 1024
+			nodesSize, _, preimagesSize = trieDB.Size()
+			nodesSizeLimit              = common.StorageSize(bc.cacheConfig.CacheSize) * 1024 * 1024
 		)
 
 		trieDBNodesSizeBytesGauge.Update(int64(nodesSize))
@@ -2012,7 +2017,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		stats.processed++
 		stats.usedGas += usedGas
 
-		cache, _ := bc.stateCache.TrieDB().Size()
+		cache, _, _ := bc.stateCache.TrieDB().Size()
 		stats.report(chain, i, cache)
 
 		// update governance CurrentSet if it is at an epoch block
@@ -2495,6 +2500,11 @@ func (bc *BlockChain) Config() *params.ChainConfig { return bc.chainConfig }
 
 // Engine retrieves the blockchain's consensus engine.
 func (bc *BlockChain) Engine() consensus.Engine { return bc.engine }
+
+// Snapshots returns the blockchain snapshot tree.
+func (bc *BlockChain) Snapshots() *snapshot.Tree {
+	return bc.snaps
+}
 
 // SubscribeRemovedLogsEvent registers a subscription of RemovedLogsEvent.
 func (bc *BlockChain) SubscribeRemovedLogsEvent(ch chan<- RemovedLogsEvent) event.Subscription {

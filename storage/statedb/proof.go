@@ -31,7 +31,14 @@ import (
 	"github.com/klaytn/klaytn/storage/database"
 )
 
-// NOTE-Klaytn-RemoveLater Below Prove is only used in tests, not in core codes.
+type ProofDBWriter interface {
+	WriteMerkleProof(key, value []byte)
+}
+
+type ProofDBReader interface {
+	ReadCachedTrieNode(hash common.Hash) ([]byte, error)
+}
+
 // Prove constructs a merkle proof for key. The result contains all encoded nodes
 // on the path to the value at key. The value itself is also included in the last
 // node and can be retrieved by verifying the proof.
@@ -39,7 +46,7 @@ import (
 // If the trie does not contain a value for key, the returned proof contains all
 // nodes of the longest existing prefix of the key (at least the root node), ending
 // with the node that proves the absence of the key.
-func (t *Trie) Prove(key []byte, fromLevel uint, proofDB database.DBManager) error {
+func (t *Trie) Prove(key []byte, fromLevel uint, proofDB ProofDBWriter) error {
 	// Collect all nodes on the path to key.
 	key = keybytesToHex(key)
 	nodes := []node{}
@@ -141,7 +148,7 @@ func VerifyProof(rootHash common.Hash, key []byte, proofDB database.DBManager) (
 // necessary nodes will be resolved and leave the remaining as hashnode.
 //
 // The given edge proof is allowed to be an existent or non-existent proof.
-func proofToPath(rootHash common.Hash, root node, key []byte, proofDb database.DBManager, allowNonExistent bool) (node, []byte, error) {
+func proofToPath(rootHash common.Hash, root node, key []byte, proofDb ProofDBReader, allowNonExistent bool) (node, []byte, error) {
 	// resolveNode retrieves and resolves trie node from merkle proof stream
 	resolveNode := func(hash common.Hash) (node, error) {
 		buf, _ := proofDb.ReadCachedTrieNode(hash)
@@ -475,7 +482,7 @@ func hasRightElement(node node, key []byte) bool {
 // Note: This method does not verify that the proof is of minimal form. If the input
 // proofs are 'bloated' with neighbour leaves or random data, aside from the 'useful'
 // data, then the proof will still be accepted.
-func VerifyRangeProof(rootHash common.Hash, firstKey []byte, lastKey []byte, keys [][]byte, values [][]byte, proof database.DBManager) (bool, error) {
+func VerifyRangeProof(rootHash common.Hash, firstKey []byte, lastKey []byte, keys [][]byte, values [][]byte, proof ProofDBReader) (bool, error) {
 	if len(keys) != len(values) {
 		return false, fmt.Errorf("inconsistent proof data, keys: %d, values: %d", len(keys), len(values))
 	}

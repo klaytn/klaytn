@@ -41,7 +41,7 @@ var (
 	errInvalidPeerAddress = errors.New("invalid address")
 
 	// TODO-Klaytn-Istanbul: define Versions and Lengths with correct values.
-	istanbulProtocol = consensus.Protocol{
+	IstanbulProtocol = consensus.Protocol{
 		Name:     "istanbul",
 		Versions: []uint{65, 64},
 		Lengths:  []uint64{23, 21},
@@ -50,7 +50,7 @@ var (
 
 // Protocol implements consensus.Engine.Protocol
 func (sb *backend) Protocol() consensus.Protocol {
-	return istanbulProtocol
+	return IstanbulProtocol
 }
 
 // HandleMsg implements consensus.Handler.HandleMsg
