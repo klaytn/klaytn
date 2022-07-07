@@ -37,6 +37,7 @@ var (
 const MetricsEnabledFlag = "metrics"
 
 const (
+	MetricNamespace            = "klaytn"
 	DashboardEnabledFlag       = "dashboard"
 	PrometheusExporterFlag     = "prometheus"
 	PrometheusExporterPortFlag = "prometheusport"
@@ -63,7 +64,7 @@ func StartMetricCollectionAndExport(ctx *cli.Context) {
 		logger.Info("Enabling metrics collection")
 		if EnabledPrometheusExport {
 			logger.Info("Enabling Prometheus Exporter")
-			pClient := prometheusmetrics.NewPrometheusProvider(metrics.DefaultRegistry, "klaytn",
+			pClient := prometheusmetrics.NewPrometheusProvider(metrics.DefaultRegistry, MetricNamespace,
 				"", prometheus.DefaultRegisterer, metricsCollectionInterval)
 			go pClient.UpdatePrometheusMetrics()
 			http.Handle("/metrics", promhttp.Handler())

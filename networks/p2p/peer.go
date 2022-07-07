@@ -143,6 +143,20 @@ func (p *Peer) Name() string {
 	return p.rws[ConnDefault].name
 }
 
+// RunningCap returns true if the peer is actively connected using any of the
+// enumerated versions of a specific protocol, meaning that at least one of the
+// versions is supported by both this node and the peer p.
+func (p *Peer) RunningCap(protocol string, versions []uint) bool {
+	if protos, ok := p.running[protocol]; ok {
+		for _, ver := range versions {
+			if protos[ConnDefault].Version == ver {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // Caps returns the capabilities (supported subprotocols) of the remote peer.
 func (p *Peer) Caps() []Cap {
 	// TODO: maybe return copy
