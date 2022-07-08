@@ -141,11 +141,11 @@ func (api *PublicGovernanceAPI) ItemsAt(num *rpc.BlockNumber) (map[string]interf
 	} else {
 		blockNumber = uint64(num.Int64())
 	}
-	_, data, error := api.governance.ReadGovernance(blockNumber)
-	if error == nil {
-		return data, error
+
+	if pset, err := api.governance.ParamsAt(blockNumber); err != nil {
+		return nil, err
 	} else {
-		return nil, error
+		return pset.StrMap(), nil
 	}
 }
 
