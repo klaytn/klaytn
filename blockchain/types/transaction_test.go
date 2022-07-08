@@ -369,14 +369,14 @@ func TestEffectiveGasTip(t *testing.T) {
 	dynamicTx := NewTx(&TxInternalDataEthereumDynamicFee{GasFeeCap: big.NewInt(4000), GasTipCap: big.NewInt(1000)})
 
 	// before kip71 hardfork
-	baseFee := big.NewInt(0)
+	baseFee := big.NewInt(2000)
 	have := legacyTx.EffectiveGasTip(baseFee)
 	want := big.NewInt(1000)
 	assert.Equal(t, want, have)
 
 	baseFee = big.NewInt(2000)
 	have = dynamicTx.EffectiveGasTip(baseFee)
-	want = big.NewInt(0)
+	want = big.NewInt(1000)
 	assert.Equal(t, want, have)
 
 	// before kip71 hardfork
