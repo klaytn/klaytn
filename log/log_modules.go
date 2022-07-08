@@ -112,17 +112,20 @@ const (
 	NodeCNTracers
 	Reward
 	ServiceChain
+	Snapshot
+	SnapshotSync
 	StorageDatabase
 	StorageStateDB
 	VM
-	Work
-	CMDKSPN
 
 	// 51~60
+	Work
+	CMDKSPN
 	CMDKSEN
 	ChainDataFetcher
 	KAS
 	FORK
+	NodeCnGasPrice
 
 	// ModuleNameLen should be placed at the end of the list.
 	ModuleNameLen
@@ -186,15 +189,18 @@ var moduleNames = [ModuleNameLen]string{
 	"node/cn/tracers",
 	"contracts/reward",
 	"servicechain",
+	"snapshot",
+	"node/cn/snap",
 	"storage/database",
 	"storage/statedb",
 	"vm",
-	"work",
-	"cmd/kspn",
 
 	// 51~60
+	"work",
+	"cmd/kspn",
 	"cmd/ksen",
 	"datasync/chaindatafetcher",
 	"kas",
 	"fork",
+	"node/cn/gasprice",
 }

@@ -137,7 +137,7 @@ func (it *NodeIterator) step() error {
 
 		if codeHash := pa.GetCodeHash(); !bytes.Equal(codeHash, emptyCodeHash) {
 			it.codeHash = common.BytesToHash(codeHash)
-			//addrHash := common.BytesToHash(it.stateIt.LeafKey())
+			// addrHash := common.BytesToHash(it.stateIt.LeafKey())
 			it.Code, err = it.state.db.ContractCode(common.BytesToHash(codeHash))
 			if err != nil {
 				return fmt.Errorf("code %x: %v", codeHash, err)
@@ -239,7 +239,6 @@ func CheckStateConsistencyParallel(oldDB Database, newDB Database, root common.H
 			close(iteratorQuitCh)
 			return nil
 		}
-
 	}
 	logger.Info("CheckStateConsistencyParallel is done", "cnt", cnt, "err", resultErr)
 
@@ -254,12 +253,12 @@ func concurrentIterator(oldDB Database, newDB Database, root common.Hash, quit c
 	}()
 
 	// Create and iterate a state trie rooted in a sub-node
-	oldState, err := New(root, oldDB)
+	oldState, err := New(root, oldDB, nil)
 	if err != nil {
 		return errors.WithMessage(err, "can not open oldDB trie")
 	}
 
-	newState, err := New(root, newDB)
+	newState, err := New(root, newDB, nil)
 	if err != nil {
 		return errors.WithMessage(err, "can not open newDB trie")
 	}
@@ -327,12 +326,12 @@ func concurrentIterator(oldDB Database, newDB Database, root common.Hash, quit c
 // CheckStateConsistency checks the consistency of all state/storage trie of given two state database.
 func CheckStateConsistency(oldDB Database, newDB Database, root common.Hash, mapSize int, quit chan struct{}) error {
 	// Create and iterate a state trie rooted in a sub-node
-	oldState, err := New(root, oldDB)
+	oldState, err := New(root, oldDB, nil)
 	if err != nil {
 		return err
 	}
 
-	newState, err := New(root, newDB)
+	newState, err := New(root, newDB, nil)
 	if err != nil {
 		return err
 	}

@@ -32,8 +32,10 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/gxhash"
+	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/storage/database"
 )
 
@@ -62,21 +64,31 @@ func makeChain(n int, seed byte, parent *types.Block, empty bool) ([]*types.Bloc
 }
 
 type chainData struct {
-	blocks []*types.Block
-	offset int
+	blocks       []*types.Block
+	stakingInfos []*reward.StakingInfo
+	offset       int
 }
 
-var chain *chainData
-var emptyChain *chainData
+var (
+	chain        *chainData
+	emptyChain   *chainData
+	testInterval uint64 = 4
+)
 
 func init() {
 	// Create a chain of blocks to import. 128 blocks are created and a transaction is contained on every 2nd block
 	targetBlocks := 128
+
+	var stakingInfos []*reward.StakingInfo
+	for i := 4; i <= 128; i += 4 {
+		stakingInfos = append(stakingInfos, &reward.StakingInfo{BlockNum: uint64(i)})
+	}
+
 	blocks, _ := makeChain(targetBlocks, 0, genesis, false)
-	chain = &chainData{blocks, 0}
+	chain = &chainData{blocks, stakingInfos, 0}
 
 	blocks, _ = makeChain(targetBlocks, 0, genesis, true)
-	emptyChain = &chainData{blocks, 0}
+	emptyChain = &chainData{blocks, stakingInfos, 0}
 }
 
 func (chain *chainData) headers() []*types.Header {
@@ -100,10 +112,16 @@ func dummyPeer(id string) *peerConnection {
 }
 
 func TestBasics(t *testing.T) {
-	numOfBlocks := len(emptyChain.blocks)
-	numOfReceipts := len(emptyChain.blocks) / 2
+	// set test staking update interval
+	orig := params.StakingUpdateInterval()
+	params.SetStakingUpdateInterval(testInterval)
+	defer params.SetStakingUpdateInterval(orig)
 
-	q := newQueue(10, 10)
+	numOfBlocks := len(chain.blocks)
+	numOfReceipts := len(chain.blocks) / 2
+	numOfStakingInfos := len(chain.stakingInfos)
+
+	q := newQueue(10, 10, uint64(istanbul.WeightedRandom))
 	if !q.Idle() {
 		t.Errorf("new queue should be idle")
 	}
@@ -117,11 +135,15 @@ func TestBasics(t *testing.T) {
 	if q.Idle() {
 		t.Errorf("queue should not be idle")
 	}
-	if got, exp := q.PendingBlocks(), chain.Len(); got != exp {
+	if got, exp := q.PendingBlocks(), numOfBlocks; got != exp {
 		t.Errorf("wrong pending block count, got %d, exp %d", got, exp)
 	}
 	// Only non-empty receipts get added to task-queue
-	if got, exp := q.PendingReceipts(), 64; got != exp {
+	if got, exp := q.PendingReceipts(), numOfReceipts; got != exp {
+		t.Errorf("wrong pending receipt count, got %d, exp %d", got, exp)
+	}
+	// staking info on every 4th block get added to task-queue
+	if got, exp := q.PendingStakingInfos(), numOfStakingInfos; got != exp {
 		t.Errorf("wrong pending receipt count, got %d, exp %d", got, exp)
 	}
 	// Items are now queued for downloading, next step is that we tell the
@@ -145,7 +167,10 @@ func TestBasics(t *testing.T) {
 		t.Errorf("expected block task queue to be %d, got %d", exp, got)
 	}
 	if got, exp := q.receiptTaskQueue.Size(), numOfReceipts; got != exp {
-		t.Errorf("expected block task queue to be %d, got %d", exp, got)
+		t.Errorf("expected receipt task queue to be %d, got %d", exp, got)
+	}
+	if got, exp := q.stakingInfoTaskQueue.Size(), numOfStakingInfos; got != exp {
+		t.Errorf("expected staking info task queue to be %d, got %d", exp, got)
 	}
 	{
 		peer := dummyPeer("peer-2")
@@ -164,7 +189,10 @@ func TestBasics(t *testing.T) {
 		t.Errorf("expected block task queue to be %d, got %d", exp, got)
 	}
 	if got, exp := q.receiptTaskQueue.Size(), numOfReceipts; got != exp {
-		t.Errorf("expected block task queue to be %d, got %d", exp, got)
+		t.Errorf("expected receipt task queue to be %d, got %d", exp, got)
+	}
+	if got, exp := q.stakingInfoTaskQueue.Size(), numOfStakingInfos; got != exp {
+		t.Errorf("expected staking info task queue to be %d, got %d", exp, got)
 	}
 	{
 		// The receipt delivering peer should not be affected
@@ -189,15 +217,50 @@ func TestBasics(t *testing.T) {
 	if got, exp := q.receiptTaskQueue.Size(), numOfReceipts-5; got != exp {
 		t.Fatalf("expected receipt task queue size %d, got %d", exp, got)
 	}
+	if got, exp := q.stakingInfoTaskQueue.Size(), numOfStakingInfos; got != exp {
+		t.Fatalf("expected staking info task queue size %d, got %d", exp, got)
+	}
+	{
+		// The staking info delivering peer should not be affected
+		// by the throttling of body deliveries
+		peer := dummyPeer("peer-4")
+		fetchReq, _, throttle := q.ReserveStakingInfos(peer, 50)
+		if !throttle {
+			// queue size is only 10, so throttling should occur
+			t.Fatal("should throttle")
+		}
+		// But we should still get the first things to fetch
+		if got, exp := len(fetchReq.Headers), 2; got != exp {
+			t.Fatalf("expected %d requests, got %d", exp, got)
+		}
+		if got, exp := fetchReq.Headers[0].Number.Uint64(), uint64(4); got != exp {
+			t.Fatalf("expected header %d, got %d", exp, got)
+		}
+	}
+	if got, exp := q.blockTaskQueue.Size(), numOfBlocks-10; got != exp {
+		t.Fatalf("expected block task queue size %d, got %d", exp, got)
+	}
+	if got, exp := q.receiptTaskQueue.Size(), numOfReceipts-5; got != exp {
+		t.Fatalf("expected receipt task queue size %d, got %d", exp, got)
+	}
+	if got, exp := q.stakingInfoTaskQueue.Size(), numOfStakingInfos-2; got != exp {
+		t.Fatalf("expected staking info task queue size %d, got %d", exp, got)
+	}
 	if got, exp := q.resultCache.countCompleted(), 0; got != exp {
 		t.Errorf("wrong processable count, got %d, exp %d", got, exp)
 	}
 }
 
 func TestEmptyBlocks(t *testing.T) {
-	numOfBlocks := len(emptyChain.blocks)
+	// set test staking update interval
+	orig := params.StakingUpdateInterval()
+	params.SetStakingUpdateInterval(testInterval)
+	defer params.SetStakingUpdateInterval(orig)
 
-	q := newQueue(10, 10)
+	numOfBlocks := len(emptyChain.blocks)
+	numOfStakingInfos := len(emptyChain.stakingInfos)
+
+	q := newQueue(10, 10, uint64(istanbul.WeightedRandom))
 
 	q.Prepare(1, FastSync)
 	// Schedule a batch of headers
@@ -205,11 +268,14 @@ func TestEmptyBlocks(t *testing.T) {
 	if q.Idle() {
 		t.Errorf("queue should not be idle")
 	}
-	if got, exp := q.PendingBlocks(), len(emptyChain.blocks); got != exp {
+	if got, exp := q.PendingBlocks(), numOfBlocks; got != exp {
 		t.Errorf("wrong pending block count, got %d, exp %d", got, exp)
 	}
 	if got, exp := q.PendingReceipts(), 0; got != exp {
 		t.Errorf("wrong pending receipt count, got %d, exp %d", got, exp)
+	}
+	if got, exp := q.PendingStakingInfos(), numOfStakingInfos; got != exp {
+		t.Errorf("wrong pending staking infos count, got %d, exp %d", got, exp)
 	}
 	// They won't be processable, because the fetchresults haven't been
 	// created yet
@@ -236,6 +302,9 @@ func TestEmptyBlocks(t *testing.T) {
 	if q.receiptTaskQueue.Size() != 0 {
 		t.Errorf("expected receipt task queue to be %d, got %d", 0, q.receiptTaskQueue.Size())
 	}
+	if got, exp := q.stakingInfoTaskQueue.Size(), numOfStakingInfos; got != exp {
+		t.Fatalf("expected staking info task queue size %d, got %d", exp, got)
+	}
 	{
 		peer := dummyPeer("peer-3")
 		fetchReq, _, _ := q.ReserveReceipts(peer, 50)
@@ -251,7 +320,36 @@ func TestEmptyBlocks(t *testing.T) {
 	if q.receiptTaskQueue.Size() != 0 {
 		t.Errorf("expected receipt task queue to be %d, got %d", 0, q.receiptTaskQueue.Size())
 	}
-	if got, exp := q.resultCache.countCompleted(), 10; got != exp {
+	if got, exp := q.stakingInfoTaskQueue.Size(), numOfStakingInfos; got != exp {
+		t.Fatalf("expected staking info task queue size %d, got %d", exp, got)
+	}
+	{
+		// The staking info delivering peer should not be affected
+		// by the throttling of body deliveries
+		peer := dummyPeer("peer-4")
+		fetchReq, _, throttle := q.ReserveStakingInfos(peer, 50)
+		if !throttle {
+			// queue size is only 10, so throttling should occur
+			t.Fatal("should throttle")
+		}
+		// But we should still get the first things to fetch
+		if got, exp := len(fetchReq.Headers), 2; got != exp {
+			t.Fatalf("expected %d requests, got %d", exp, got)
+		}
+		if got, exp := fetchReq.Headers[0].Number.Uint64(), uint64(4); got != exp {
+			t.Fatalf("expected header %d, got %d", exp, got)
+		}
+	}
+	if q.blockTaskQueue.Size() != numOfBlocks-10 {
+		t.Errorf("expected block task queue to be %d, got %d", numOfBlocks-10, q.blockTaskQueue.Size())
+	}
+	if q.receiptTaskQueue.Size() != 0 {
+		t.Errorf("expected receipt task queue to be %d, got %d", 0, q.receiptTaskQueue.Size())
+	}
+	if got, exp := q.stakingInfoTaskQueue.Size(), numOfStakingInfos-2; got != exp {
+		t.Fatalf("expected staking info task queue size %d, got %d", exp, got)
+	}
+	if got, exp := q.resultCache.countCompleted(), 3; got != exp {
 		t.Errorf("wrong processable count, got %d, exp %d", got, exp)
 	}
 }
@@ -269,9 +367,8 @@ func XTestDelivery(t *testing.T) {
 	world.progress(10)
 	if false {
 		log.Root().SetHandler(log.StdoutHandler)
-
 	}
-	q := newQueue(10, 10)
+	q := newQueue(10, 10, uint64(istanbul.WeightedRandom))
 	var wg sync.WaitGroup
 	q.Prepare(1, FastSync)
 	wg.Add(1)
@@ -280,10 +377,10 @@ func XTestDelivery(t *testing.T) {
 		defer wg.Done()
 		c := 1
 		for {
-			//fmt.Printf("getting headers from %d\n", c)
+			// fmt.Printf("getting headers from %d\n", c)
 			hdrs := world.headers(c)
 			l := len(hdrs)
-			//fmt.Printf("scheduling %d headers, first %d last %d\n",
+			// fmt.Printf("scheduling %d headers, first %d last %d\n",
 			//	l, hdrs[0].Number.Uint64(), hdrs[len(hdrs)-1].Number.Uint64())
 			q.Schedule(hdrs, uint64(c))
 			c += l
@@ -354,13 +451,12 @@ func XTestDelivery(t *testing.T) {
 		defer wg.Done()
 		for i := 0; i < 50; i++ {
 			time.Sleep(300 * time.Millisecond)
-			//world.tick()
-			//fmt.Printf("trying to progress\n")
+			// world.tick()
+			// fmt.Printf("trying to progress\n")
 			world.progress(rand.Intn(100))
 		}
 		for i := 0; i < 50; i++ {
 			time.Sleep(2990 * time.Millisecond)
-
 		}
 	}()
 	wg.Add(1)
@@ -397,6 +493,7 @@ func (n *network) getTransactions(blocknum uint64) types.Transactions {
 	index := blocknum - uint64(n.offset)
 	return n.chain[index].Transactions()
 }
+
 func (n *network) getReceipts(blocknum uint64) types.Receipts {
 	index := blocknum - uint64(n.offset)
 	if got := n.chain[index].Header().Number.Uint64(); got != blocknum {
@@ -411,17 +508,16 @@ func (n *network) forget(blocknum uint64) {
 	n.chain = n.chain[index:]
 	n.receipts = n.receipts[index:]
 	n.offset = int(blocknum)
-
 }
+
 func (n *network) progress(numBlocks int) {
 	n.lock.Lock()
 	defer n.lock.Unlock()
-	//fmt.Printf("progressing...\n")
+	// fmt.Printf("progressing...\n")
 	newBlocks, newR := makeChain(numBlocks, 0, n.chain[len(n.chain)-1], false)
 	n.chain = append(n.chain, newBlocks...)
 	n.receipts = append(n.receipts, newR...)
 	n.cond.Broadcast()
-
 }
 
 func (n *network) headers(from int) []*types.Header {
@@ -432,7 +528,7 @@ func (n *network) headers(from int) []*types.Header {
 	for index >= len(n.chain) {
 		// wait for progress
 		n.cond.L.Lock()
-		//fmt.Printf("header going into wait\n")
+		// fmt.Printf("header going into wait\n")
 		n.cond.Wait()
 		index = from - n.offset
 		n.cond.L.Unlock()

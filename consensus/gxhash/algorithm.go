@@ -143,10 +143,12 @@ func generateCache(dest []uint32, epoch uint64, seed []byte) {
 		logFn("Generated gxhash verification cache", "elapsed", common.PrettyDuration(elapsed))
 	}()
 	// Convert our destination slice to a byte buffer
-	header := *(*reflect.SliceHeader)(unsafe.Pointer(&dest))
-	header.Len *= 4
-	header.Cap *= 4
-	cache := *(*[]byte)(unsafe.Pointer(&header))
+	var cache []byte
+	cacheHdr := (*reflect.SliceHeader)(unsafe.Pointer(&cache))
+	dstHdr := (*reflect.SliceHeader)(unsafe.Pointer(&dest))
+	cacheHdr.Data = dstHdr.Data
+	cacheHdr.Len = dstHdr.Len * 4
+	cacheHdr.Cap = dstHdr.Cap * 4
 
 	// Calculate the number of theoretical rows (we'll store in one buffer nonetheless)
 	size := uint64(len(cache))
@@ -284,11 +286,12 @@ func generateDataset(dest []uint32, epoch uint64, cache []uint32) {
 	swapped := !isLittleEndian()
 
 	// Convert our destination slice to a byte buffer
-	header := *(*reflect.SliceHeader)(unsafe.Pointer(&dest))
-	header.Len *= 4
-	header.Cap *= 4
-	dataset := *(*[]byte)(unsafe.Pointer(&header))
-
+	var dataset []byte
+	datasetHdr := (*reflect.SliceHeader)(unsafe.Pointer(&dataset))
+	destHdr := (*reflect.SliceHeader)(unsafe.Pointer(&dest))
+	datasetHdr.Data = destHdr.Data
+	datasetHdr.Len = destHdr.Len * 4
+	datasetHdr.Cap = destHdr.Cap * 4
 	// Generate the dataset on many goroutines since it takes a while
 	threads := runtime.NumCPU()
 	size := uint64(len(dataset))
@@ -815,7 +818,8 @@ var datasetSizes = [maxEpoch]uint64{
 	18102613376, 18111004544, 18119388544, 18127781248, 18136170368,
 	18144558976, 18152947328, 18161336192, 18169724288, 18178108544,
 	18186498944, 18194886784, 18203275648, 18211666048, 18220048768,
-	18228444544, 18236833408, 18245220736}
+	18228444544, 18236833408, 18245220736,
+}
 
 // cacheSizes is a lookup table for the gxhash verification cache size for the
 // first 2048 epochs (i.e. 61440000 blocks).
@@ -1146,4 +1150,5 @@ var cacheSizes = [maxEpoch]uint64{
 	282590272, 282720832, 282853184, 282983744, 283115072, 283246144,
 	283377344, 283508416, 283639744, 283770304, 283901504, 284032576,
 	284163136, 284294848, 284426176, 284556992, 284687296, 284819264,
-	284950208, 285081536}
+	284950208, 285081536,
+}

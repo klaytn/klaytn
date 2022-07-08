@@ -33,6 +33,7 @@ import (
 	"github.com/klaytn/klaytn/common/profile"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/kerrors"
+	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/stretchr/testify/assert"
@@ -59,7 +60,8 @@ type testOption struct {
 }
 
 func makeTransactionsFrom(bcdata *BCData, accountMap *AccountMap, signer types.Signer, numTransactions int,
-	amount *big.Int, data []byte) (types.Transactions, error) {
+	amount *big.Int, data []byte,
+) (types.Transactions, error) {
 	from := *bcdata.addrs[0]
 	privKey := bcdata.privKeys[0]
 	toAddrs := bcdata.addrs
@@ -93,7 +95,8 @@ func makeTransactionsFrom(bcdata *BCData, accountMap *AccountMap, signer types.S
 }
 
 func makeIndependentTransactions(bcdata *BCData, accountMap *AccountMap, signer types.Signer, numTransactions int,
-	amount *big.Int, data []byte) (types.Transactions, error) {
+	amount *big.Int, data []byte,
+) (types.Transactions, error) {
 	numAddrs := len(bcdata.addrs) / 2
 	fromAddrs := bcdata.addrs[:numAddrs]
 	toAddrs := bcdata.addrs[numAddrs:]
@@ -134,7 +137,8 @@ func makeIndependentTransactions(bcdata *BCData, accountMap *AccountMap, signer 
 // from accounts in `AccountMap` to a randomly generated account.
 // It returns the generated transactions if successful, or it returns an error if failed.
 func makeTransactionsToRandom(bcdata *BCData, accountMap *AccountMap, signer types.Signer, numTransactions int,
-	amount *big.Int, data []byte) (types.Transactions, error) {
+	amount *big.Int, data []byte,
+) (types.Transactions, error) {
 	numAddrs := len(bcdata.addrs)
 	fromAddrs := bcdata.addrs
 
@@ -181,7 +185,8 @@ func makeTransactionsToRandom(bcdata *BCData, accountMap *AccountMap, signer typ
 // from accounts in `AccountMap` to a randomly generated account.
 // It returns the generated transactions if successful, or it returns an error if failed.
 func makeNewTransactionsToRandom(bcdata *BCData, accountMap *AccountMap, signer types.Signer, numTransactions int,
-	amount *big.Int, data []byte) (types.Transactions, error) {
+	amount *big.Int, data []byte,
+) (types.Transactions, error) {
 	numAddrs := len(bcdata.addrs)
 	fromAddrs := bcdata.addrs
 	fromNonces := make([]uint64, numAddrs)
@@ -236,7 +241,8 @@ func makeNewTransactionsToRandom(bcdata *BCData, accountMap *AccountMap, signer 
 // total number of transactions should be the multiple of number of addresses.
 // It returns the generated transactions if successful, or it returns an error if failed.
 func makeNewTransactionsToRing(bcdata *BCData, accountMap *AccountMap, signer types.Signer, numTransactions int,
-	amount *big.Int, data []byte) (types.Transactions, error) {
+	amount *big.Int, data []byte,
+) (types.Transactions, error) {
 	numAddrs := len(bcdata.addrs)
 	fromAddrs := bcdata.addrs
 
@@ -296,24 +302,36 @@ func TestValueTransfer(t *testing.T) {
 		txPerBlock = int(i)
 	}
 
-	var valueTransferTests = [...]struct {
+	valueTransferTests := [...]struct {
 		name string
 		opt  testOption
 	}{
-		{"SingleSenderMultipleRecipient",
-			testOption{txPerBlock, 1000, 4, nBlocks, []byte{}, makeTransactionsFrom}},
-		{"MultipleSenderMultipleRecipient",
-			testOption{txPerBlock, 2000, 4, nBlocks, []byte{}, makeIndependentTransactions}},
-		{"MultipleSenderRandomRecipient",
-			testOption{txPerBlock, 2000, 4, nBlocks, []byte{}, makeTransactionsToRandom}},
+		{
+			"SingleSenderMultipleRecipient",
+			testOption{txPerBlock, 1000, 4, nBlocks, []byte{}, makeTransactionsFrom},
+		},
+		{
+			"MultipleSenderMultipleRecipient",
+			testOption{txPerBlock, 2000, 4, nBlocks, []byte{}, makeIndependentTransactions},
+		},
+		{
+			"MultipleSenderRandomRecipient",
+			testOption{txPerBlock, 2000, 4, nBlocks, []byte{}, makeTransactionsToRandom},
+		},
 
 		// Below test cases execute one transaction per a block.
-		{"SingleSenderMultipleRecipientSingleTxPerBlock",
-			testOption{1, 1000, 4, 10, []byte{}, makeTransactionsFrom}},
-		{"MultipleSenderMultipleRecipientSingleTxPerBlock",
-			testOption{1, 2000, 4, 10, []byte{}, makeIndependentTransactions}},
-		{"MultipleSenderRandomRecipientSingleTxPerBlock",
-			testOption{1, 2000, 4, 10, []byte{}, makeTransactionsToRandom}},
+		{
+			"SingleSenderMultipleRecipientSingleTxPerBlock",
+			testOption{1, 1000, 4, 10, []byte{}, makeTransactionsFrom},
+		},
+		{
+			"MultipleSenderMultipleRecipientSingleTxPerBlock",
+			testOption{1, 2000, 4, 10, []byte{}, makeIndependentTransactions},
+		},
+		{
+			"MultipleSenderRandomRecipientSingleTxPerBlock",
+			testOption{1, 2000, 4, 10, []byte{}, makeTransactionsToRandom},
+		},
 	}
 
 	for _, test := range valueTransferTests {
@@ -344,7 +362,7 @@ func testValueTransfer(t *testing.T, opt *testOption) {
 	prof.Profile("main_init_accountMap", time.Now().Sub(start))
 
 	for i := 0; i < opt.numGeneratedBlocks; i++ {
-		//fmt.Printf("iteration %d\n", i)
+		// fmt.Printf("iteration %d\n", i)
 		err := bcdata.GenABlock(accountMap, opt, opt.numTransactions, prof)
 		if err != nil {
 			t.Fatal(err)
@@ -357,9 +375,7 @@ func testValueTransfer(t *testing.T, opt *testOption) {
 }
 
 func TestValueTransferRing(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	numTransactions := 20000
@@ -419,9 +435,7 @@ func TestValueTransferRing(t *testing.T) {
 // case 2. FeeDelegatedAccountUpdate
 // case 3. FeeDelegatedAccountUpdateWithRatio
 func TestWronglyEncodedAccountKey(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	numTransactions := 20000
@@ -451,12 +465,12 @@ func TestWronglyEncodedAccountKey(t *testing.T) {
 	prof.Profile("main_init_accountMap", time.Now().Sub(start))
 
 	// make txpool
-	//var txs types.Transactions
+	// var txs types.Transactions
 	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
 
 	// case 1. AccountUpdate
 	{
-		tx := new(types.Transaction)
+		tx := types.NewTx(&types.TxInternalDataAccountUpdate{})
 		txtype := types.TxTypeAccountUpdate
 
 		wrongEncodedKey := []byte{0x10}
@@ -481,7 +495,7 @@ func TestWronglyEncodedAccountKey(t *testing.T) {
 			uint(0),
 			uint(0),
 		})
-		sig, err := types.NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{bcdata.privKeys[0]})
+		sig, err := types.NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{bcdata.privKeys[0]})
 		if err != nil {
 			panic(err)
 		}
@@ -506,7 +520,7 @@ func TestWronglyEncodedAccountKey(t *testing.T) {
 
 	// case 2. FeeDelegatedAccountUpdate
 	{
-		tx := new(types.Transaction)
+		tx := types.NewTx(&types.TxInternalDataFeeDelegatedAccountUpdate{})
 		txtype := types.TxTypeFeeDelegatedAccountUpdate
 
 		wrongEncodedKey := []byte{0x10}
@@ -531,7 +545,7 @@ func TestWronglyEncodedAccountKey(t *testing.T) {
 			uint(0),
 			uint(0),
 		})
-		sig, err := types.NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{bcdata.privKeys[0]})
+		sig, err := types.NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{bcdata.privKeys[0]})
 		if err != nil {
 			panic(err)
 		}
@@ -558,7 +572,7 @@ func TestWronglyEncodedAccountKey(t *testing.T) {
 
 	// case 3. FeeDelegatedAccountUpdateWithRatio
 	{
-		tx := new(types.Transaction)
+		tx := types.NewTx(&types.TxInternalDataFeeDelegatedAccountUpdateWithRatio{})
 		txtype := types.TxTypeFeeDelegatedAccountUpdateWithRatio
 
 		wrongEncodedKey := []byte{0x10}
@@ -584,7 +598,7 @@ func TestWronglyEncodedAccountKey(t *testing.T) {
 			uint(0),
 			uint(0),
 		})
-		sig, err := types.NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{bcdata.privKeys[0]})
+		sig, err := types.NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{bcdata.privKeys[0]})
 		if err != nil {
 			panic(err)
 		}
@@ -632,9 +646,7 @@ func TestWronglyEncodedAccountKey(t *testing.T) {
 // while creating a block. As a disclaimer, this function does not tell that Klaytn
 // can perform this amount of TPS in real environment.
 func BenchmarkValueTransfer(t *testing.B) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 	opt := testOption{t.N, 2000, 4, 1, []byte{}, makeTransactionsToRandom}
 
@@ -688,9 +700,7 @@ func BenchmarkValueTransfer(t *testing.B) {
 // while creating a block. As a disclaimer, this function does not tell that Klaytn
 // can perform this amount of TPS in real environment.
 func BenchmarkNewValueTransfer(t *testing.B) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 	opt := testOption{t.N, 2000, 4, 1, []byte{}, makeNewTransactionsToRandom}
 

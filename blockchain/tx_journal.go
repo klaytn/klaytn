@@ -132,7 +132,7 @@ func (journal *txJournal) insert(tx *types.Transaction) error {
 
 // rotate regenerates the transaction journal based on the current contents of
 // the transaction pool.
-func (journal *txJournal) rotate(all map[common.Address]types.Transactions) error {
+func (journal *txJournal) rotate(all map[common.Address]types.Transactions, signer types.Signer) error {
 	// Close the current journal (if any is open)
 	if journal.writer != nil {
 		if err := journal.writer.Close(); err != nil {
@@ -141,27 +141,29 @@ func (journal *txJournal) rotate(all map[common.Address]types.Transactions) erro
 		journal.writer = nil
 	}
 	// Generate a new journal with the contents of the current pool
-	replacement, err := os.OpenFile(journal.path+".new", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0755)
+	replacement, err := os.OpenFile(journal.path+".new", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o755)
 	if err != nil {
 		return err
 	}
 	journaled := 0
-	for _, txs := range all {
-		for _, tx := range txs {
-			if err = rlp.Encode(replacement, tx); err != nil {
-				replacement.Close()
-				return err
-			}
+
+	txSetByTime := types.NewTransactionsByTimeAndNonce(signer, all)
+	for tx := txSetByTime.Peek(); tx != nil; tx = txSetByTime.Peek() {
+		if err = rlp.Encode(replacement, tx); err != nil {
+			replacement.Close()
+			return err
 		}
-		journaled += len(txs)
+		journaled++
+		txSetByTime.Shift()
 	}
+
 	replacement.Close()
 
 	// Replace the live journal with the newly generated one
 	if err = os.Rename(journal.path+".new", journal.path); err != nil {
 		return err
 	}
-	sink, err := os.OpenFile(journal.path, os.O_WRONLY|os.O_APPEND, 0755)
+	sink, err := os.OpenFile(journal.path, os.O_WRONLY|os.O_APPEND, 0o755)
 	if err != nil {
 		return err
 	}

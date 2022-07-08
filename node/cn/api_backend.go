@@ -33,8 +33,8 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/event"
-	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node/cn/gasprice"
 	"github.com/klaytn/klaytn/params"
@@ -76,14 +76,17 @@ func (b *CNAPIBackend) CurrentBlock() *types.Block {
 }
 
 func (b *CNAPIBackend) SetHead(number uint64) {
-	//b.cn.protocolManager.downloader.Cancel()
+	b.cn.protocolManager.Downloader().Cancel()
+	b.cn.protocolManager.SetSyncStop(true)
 	b.cn.blockchain.SetHead(number)
+	b.cn.protocolManager.SetSyncStop(false)
 }
 
 func (b *CNAPIBackend) HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Header, error) {
 	// Pending block is only known by the miner
 	if blockNr == rpc.PendingBlockNumber {
-		return nil, kerrors.ErrPendingBlockNotSupported
+		block := b.cn.miner.PendingBlock()
+		return block.Header(), nil
 	}
 	// Otherwise resolve and return the block
 	if blockNr == rpc.LatestBlockNumber {
@@ -120,7 +123,8 @@ func (b *CNAPIBackend) HeaderByHash(ctx context.Context, hash common.Hash) (*typ
 func (b *CNAPIBackend) BlockByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Block, error) {
 	// Pending block is only known by the miner
 	if blockNr == rpc.PendingBlockNumber {
-		return nil, kerrors.ErrPendingBlockNotSupported
+		block := b.cn.miner.PendingBlock()
+		return block, nil
 	}
 	// Otherwise resolve and return the block
 	if blockNr == rpc.LatestBlockNumber {
@@ -150,7 +154,8 @@ func (b *CNAPIBackend) BlockByNumberOrHash(ctx context.Context, blockNrOrHash rp
 func (b *CNAPIBackend) StateAndHeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*state.StateDB, *types.Header, error) {
 	// Pending state is only known by the miner
 	if blockNr == rpc.PendingBlockNumber {
-		return nil, nil, kerrors.ErrPendingBlockNotSupported
+		block, state := b.cn.miner.Pending()
+		return state, block.Header(), nil
 	}
 	// Otherwise resolve the block number and return its state
 	header, err := b.HeaderByNumber(ctx, blockNr)
@@ -203,8 +208,6 @@ func (b *CNAPIBackend) GetTd(blockHash common.Hash) *big.Int {
 }
 
 func (b *CNAPIBackend) GetEVM(ctx context.Context, msg blockchain.Message, state *state.StateDB, header *types.Header, vmCfg vm.Config) (*vm.EVM, func() error, error) {
-	// Add gas fee to sender for estimating gasLimit/computing cost or calling a function by insufficient balance sender.
-	state.AddBalance(msg.ValidatedSender(), new(big.Int).Mul(new(big.Int).SetUint64(msg.Gas()), msg.GasPrice()))
 	vmError := func() error { return nil }
 
 	context := blockchain.NewEVMContext(msg, header, b.cn.BlockChain(), nil)
@@ -312,4 +315,16 @@ func (b *CNAPIBackend) IsSenderTxHashIndexingEnabled() bool {
 
 func (b *CNAPIBackend) RPCGasCap() *big.Int {
 	return b.cn.config.RPCGasCap
+}
+
+func (b *CNAPIBackend) RPCTxFeeCap() float64 {
+	return b.cn.config.RPCTxFeeCap
+}
+
+func (b *CNAPIBackend) Engine() consensus.Engine {
+	return b.cn.engine
+}
+
+func (b *CNAPIBackend) FeeHistory(ctx context.Context, blockCount int, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*big.Int, [][]*big.Int, []*big.Int, []float64, error) {
+	return b.gpo.FeeHistory(ctx, blockCount, lastBlock, rewardPercentiles)
 }

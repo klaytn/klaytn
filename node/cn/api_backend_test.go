@@ -20,8 +20,6 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/klaytn/klaytn/kerrors"
-
 	"github.com/golang/mock/gomock"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/state"
@@ -153,10 +151,18 @@ func TestCNAPIBackend_SetHead(t *testing.T) {
 	mockCtrl, mockBlockChain, _, api := newCNAPIBackend(t)
 	defer mockCtrl.Finish()
 
+	mockDownloader := mocks2.NewMockProtocolManagerDownloader(mockCtrl)
+	mockDownloader.EXPECT().Cancel().Times(1)
+	pm := &ProtocolManager{downloader: mockDownloader}
+	api.cn.protocolManager = pm
 	number := uint64(123)
 	mockBlockChain.EXPECT().SetHead(number).Times(1)
 
 	api.SetHead(number)
+	block := newBlock(int(number))
+	expectedHeader := block.Header()
+	mockBlockChain.EXPECT().CurrentHeader().Return(expectedHeader).Times(1)
+	assert.Equal(t, expectedHeader, mockBlockChain.CurrentHeader())
 }
 
 func TestCNAPIBackend_HeaderByNumber(t *testing.T) {
@@ -164,12 +170,13 @@ func TestCNAPIBackend_HeaderByNumber(t *testing.T) {
 	block := newBlock(int(blockNum))
 	expectedHeader := block.Header()
 	{
-		mockCtrl, _, _, api := newCNAPIBackend(t)
+		mockCtrl, _, mockMiner, api := newCNAPIBackend(t)
+		mockMiner.EXPECT().PendingBlock().Return(block).Times(1)
 
 		header, err := api.HeaderByNumber(context.Background(), rpc.PendingBlockNumber)
 
-		assert.Nil(t, header)
-		assert.Equal(t, kerrors.ErrPendingBlockNotSupported, err)
+		assert.Equal(t, expectedHeader, header)
+		assert.NoError(t, err)
 
 		mockCtrl.Finish()
 	}
@@ -212,12 +219,13 @@ func TestCNAPIBackend_HeaderByNumberOrHash(t *testing.T) {
 	block := newBlock(123)
 	expectedHeader := block.Header()
 	{
-		mockCtrl, _, _, api := newCNAPIBackend(t)
+		mockCtrl, _, mockMiner, api := newCNAPIBackend(t)
+		mockMiner.EXPECT().PendingBlock().Return(block).Times(1)
 
 		header, err := api.HeaderByNumberOrHash(context.Background(), rpc.NewBlockNumberOrHashWithNumber(rpc.PendingBlockNumber))
 
-		assert.Nil(t, header)
-		assert.Equal(t, kerrors.ErrPendingBlockNotSupported, err)
+		assert.Equal(t, expectedHeader, header)
+		assert.NoError(t, err)
 
 		mockCtrl.Finish()
 	}
@@ -279,12 +287,13 @@ func TestCNAPIBackend_BlockByNumber(t *testing.T) {
 	block := newBlock(int(blockNum))
 	expectedBlock := block
 	{
-		mockCtrl, _, _, api := newCNAPIBackend(t)
+		mockCtrl, _, mockMiner, api := newCNAPIBackend(t)
+		mockMiner.EXPECT().PendingBlock().Return(block).Times(1)
 
 		block, err := api.BlockByNumber(context.Background(), rpc.PendingBlockNumber)
 
-		assert.Nil(t, block)
-		assert.Equal(t, kerrors.ErrPendingBlockNotSupported, err)
+		assert.Equal(t, expectedBlock, block)
+		assert.NoError(t, err)
 
 		mockCtrl.Finish()
 	}
@@ -324,14 +333,17 @@ func TestCNAPIBackend_BlockByNumber(t *testing.T) {
 }
 
 func TestCNAPIBackend_BlockByNumberOrHash(t *testing.T) {
-	expectedBlock := newBlock(123)
+	blockNum := uint64(123)
+	block := newBlock(int(blockNum))
+	expectedBlock := block
 	{
-		mockCtrl, _, _, api := newCNAPIBackend(t)
+		mockCtrl, _, mockMiner, api := newCNAPIBackend(t)
+		mockMiner.EXPECT().PendingBlock().Return(block).Times(1)
 
-		header, err := api.BlockByNumberOrHash(context.Background(), rpc.NewBlockNumberOrHashWithNumber(rpc.PendingBlockNumber))
+		block, err := api.BlockByNumberOrHash(context.Background(), rpc.NewBlockNumberOrHashWithNumber(rpc.PendingBlockNumber))
 
-		assert.Nil(t, header)
-		assert.Equal(t, kerrors.ErrPendingBlockNotSupported, err)
+		assert.Equal(t, expectedBlock, block)
+		assert.NoError(t, err)
 
 		mockCtrl.Finish()
 	}
@@ -374,7 +386,7 @@ func TestCNAPIBackend_StateAndHeaderByNumber(t *testing.T) {
 	blockNum := uint64(123)
 	block := newBlock(int(blockNum))
 
-	stateDB, err := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
+	stateDB, err := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -383,13 +395,14 @@ func TestCNAPIBackend_StateAndHeaderByNumber(t *testing.T) {
 
 	expectedHeader := block.Header()
 	{
-		mockCtrl, _, _, api := newCNAPIBackend(t)
+		mockCtrl, _, mockMiner, api := newCNAPIBackend(t)
+		mockMiner.EXPECT().Pending().Return(block, stateDB).Times(1)
 
 		returnedStateDB, header, err := api.StateAndHeaderByNumber(context.Background(), rpc.PendingBlockNumber)
 
-		assert.Nil(t, returnedStateDB)
-		assert.Nil(t, header)
-		assert.Equal(t, kerrors.ErrPendingBlockNotSupported, err)
+		assert.Equal(t, stateDB, returnedStateDB)
+		assert.Equal(t, expectedHeader, header)
+		assert.NoError(t, err)
 
 		mockCtrl.Finish()
 	}

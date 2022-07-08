@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"math/big"
+	"math/rand"
 	"os"
 	"strconv"
 	"strings"
@@ -35,38 +36,48 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var dbManagers []DBManager
-var dbConfigs = make([]*DBConfig, 0, len(baseConfigs)*3)
-var baseConfigs = []*DBConfig{
-	{DBType: LevelDB, SingleDB: false, NumStateTrieShards: 1, ParallelDBWrite: false},
-	{DBType: LevelDB, SingleDB: false, NumStateTrieShards: 1, ParallelDBWrite: true},
-	{DBType: LevelDB, SingleDB: false, NumStateTrieShards: 4, ParallelDBWrite: false},
-	{DBType: LevelDB, SingleDB: false, NumStateTrieShards: 4, ParallelDBWrite: true},
+var (
+	dbManagers  []DBManager
+	dbConfigs   = make([]*DBConfig, 0, len(baseConfigs)*3)
+	baseConfigs = []*DBConfig{
+		{DBType: LevelDB, SingleDB: false, NumStateTrieShards: 1, ParallelDBWrite: false},
+		{DBType: LevelDB, SingleDB: false, NumStateTrieShards: 1, ParallelDBWrite: true},
+		{DBType: LevelDB, SingleDB: false, NumStateTrieShards: 4, ParallelDBWrite: false},
+		{DBType: LevelDB, SingleDB: false, NumStateTrieShards: 4, ParallelDBWrite: true},
 
-	{DBType: LevelDB, SingleDB: true, NumStateTrieShards: 1, ParallelDBWrite: false},
-	{DBType: LevelDB, SingleDB: true, NumStateTrieShards: 1, ParallelDBWrite: true},
-	{DBType: LevelDB, SingleDB: true, NumStateTrieShards: 4, ParallelDBWrite: false},
-	{DBType: LevelDB, SingleDB: true, NumStateTrieShards: 4, ParallelDBWrite: true},
-}
+		{DBType: LevelDB, SingleDB: true, NumStateTrieShards: 1, ParallelDBWrite: false},
+		{DBType: LevelDB, SingleDB: true, NumStateTrieShards: 1, ParallelDBWrite: true},
+		{DBType: LevelDB, SingleDB: true, NumStateTrieShards: 4, ParallelDBWrite: false},
+		{DBType: LevelDB, SingleDB: true, NumStateTrieShards: 4, ParallelDBWrite: true},
+	}
+)
 
-var num1 = uint64(20190815)
-var num2 = uint64(20199999)
-var num3 = uint64(12345678)
-var num4 = uint64(87654321)
+var (
+	num1 = uint64(20190815)
+	num2 = uint64(20199999)
+	num3 = uint64(12345678)
+	num4 = uint64(87654321)
+)
 
-var hash1 = common.HexToHash("1341655") // 20190805 in hexadecimal
-var hash2 = common.HexToHash("1343A3F") // 20199999 in hexadecimal
-var hash3 = common.HexToHash("BC614E")  // 12345678 in hexadecimal
-var hash4 = common.HexToHash("5397FB1") // 87654321 in hexadecimal
+var (
+	hash1 = common.HexToHash("1341655") // 20190805 in hexadecimal
+	hash2 = common.HexToHash("1343A3F") // 20199999 in hexadecimal
+	hash3 = common.HexToHash("BC614E")  // 12345678 in hexadecimal
+	hash4 = common.HexToHash("5397FB1") // 87654321 in hexadecimal
+)
 
-var key *ecdsa.PrivateKey
-var addr common.Address
-var signer types.EIP155Signer
+var (
+	key    *ecdsa.PrivateKey
+	addr   common.Address
+	signer types.Signer
+)
 
 func init() {
+	GetOpenFilesLimit()
+
 	key, _ = crypto.GenerateKey()
 	addr = crypto.PubkeyToAddress(key.PublicKey)
-	signer = types.NewEIP155Signer(big.NewInt(18))
+	signer = types.LatestSignerForChainID(big.NewInt(18))
 
 	for _, bc := range baseConfigs {
 		badgerConfig := *bc
@@ -338,6 +349,73 @@ func TestDBManager_Block(t *testing.T) {
 		assert.Nil(t, dbm.ReadBlock(headerHash, num1))
 		assert.Nil(t, dbm.ReadBlockByHash(headerHash))
 		assert.Nil(t, dbm.ReadBlockByNumber(num1))
+	}
+}
+
+func TestDBManager_BadBlock(t *testing.T) {
+	header := &types.Header{Number: big.NewInt(int64(num1))}
+	headertwo := &types.Header{Number: big.NewInt(int64(num2))}
+	for _, dbm := range dbManagers {
+		// block #1 test
+		block := types.NewBlockWithHeader(header)
+
+		if entry := dbm.ReadBadBlock(block.Hash()); entry != nil {
+			t.Fatalf("Non existance block returned, %v", entry)
+		}
+		dbm.WriteBadBlock(block)
+		if entry := dbm.ReadBadBlock(block.Hash()); entry == nil {
+			t.Fatalf("Existing bad block didn't returned, %v", entry)
+		} else if entry.Hash() != block.Hash() {
+			t.Fatalf("retrived block mismatching, have %v, want %v", entry, block)
+		}
+		if badblocks, _ := dbm.ReadAllBadBlocks(); len(badblocks) != 1 {
+			for _, b := range badblocks {
+				t.Log(b)
+			}
+			t.Fatalf("bad blocks length mismatching, have %d, want %d", len(badblocks), 1)
+
+		}
+
+		// block #2 test
+		blocktwo := types.NewBlockWithHeader(headertwo)
+		dbm.WriteBadBlock(blocktwo)
+		if entry := dbm.ReadBadBlock(blocktwo.Hash()); entry == nil {
+			t.Fatalf("Existing bad block didn't returned, %v", entry)
+		} else if entry.Hash() != blocktwo.Hash() {
+			t.Fatalf("retrived block mismatching, have %v, want %v", entry, block)
+		}
+
+		// block #1 insert again
+		dbm.WriteBadBlock(block)
+		badBlocks, _ := dbm.ReadAllBadBlocks()
+		if len(badBlocks) != 2 {
+			t.Fatalf("bad block db len mismatching, have %d, want %d", len(badBlocks), 2)
+		}
+
+		// Write a bunch of bad blocks, all the blocks are should sorted
+		// in reverse order. The extra blocks should be truncated.
+		for _, n := range rand.Perm(110) {
+			block := types.NewBlockWithHeader(&types.Header{
+				Number: big.NewInt(int64(n)),
+			})
+			dbm.WriteBadBlock(block)
+		}
+		badBlocks, _ = dbm.ReadAllBadBlocks()
+		if len(badBlocks) != badBlockToKeep {
+			t.Fatalf("The number of persised bad blocks in incorrect %d", len(badBlocks))
+		}
+		for i := 0; i < len(badBlocks)-1; i++ {
+			if badBlocks[i].NumberU64() < badBlocks[i+1].NumberU64() {
+				t.Fatalf("The bad blocks are not sorted #[%d](%d) < #[%d](%d)", i, i+1, badBlocks[i].NumberU64(), badBlocks[i+1].NumberU64())
+			}
+		}
+
+		// DeleteBadBlocks deletes all the bad blocks from the database. Not used anywhere except this testcode.
+		dbm.DeleteBadBlocks()
+		if badblocks, _ := dbm.ReadAllBadBlocks(); len(badblocks) != 0 {
+			t.Fatalf("Failed to delete bad blocks")
+		}
+
 	}
 }
 
@@ -1013,4 +1091,81 @@ func getFilesInDir(t *testing.T, dirPath string, substr string) []string {
 	}
 
 	return dirNames
+}
+
+func TestDBManager_WriteAndReadAccountSnapshot(t *testing.T) {
+	var (
+		hash     common.Hash
+		expected []byte
+		actual   []byte
+	)
+
+	for _, dbm := range dbManagers {
+		// read unknown key
+		hash, _ = genRandomData()
+		actual = dbm.ReadAccountSnapshot(hash)
+		assert.Nil(t, actual)
+
+		// write and read with empty hash
+		_, expected = genRandomData()
+		dbm.WriteAccountSnapshot(common.Hash{}, expected)
+		actual = dbm.ReadAccountSnapshot(common.Hash{})
+		assert.Equal(t, expected, actual)
+
+		// write and read with empty data
+		hash, _ = genRandomData()
+		dbm.WriteAccountSnapshot(hash, []byte{})
+		actual = dbm.ReadAccountSnapshot(hash)
+		assert.Equal(t, []byte{}, actual)
+
+		// write and read with random hash and data
+		hash, expected = genRandomData()
+		dbm.WriteAccountSnapshot(hash, expected)
+		actual = dbm.ReadAccountSnapshot(hash)
+		assert.Equal(t, expected, actual)
+	}
+}
+
+func TestDBManager_DeleteAccountSnapshot(t *testing.T) {
+	var (
+		hash     common.Hash
+		expected []byte
+		actual   []byte
+	)
+
+	for _, dbm := range dbManagers {
+		// delete unknown key
+		hash, _ = genRandomData()
+		dbm.DeleteAccountSnapshot(hash)
+		actual = dbm.ReadAccountSnapshot(hash)
+		assert.Nil(t, actual)
+
+		// delete empty hash
+		_, expected = genRandomData()
+		dbm.WriteAccountSnapshot(common.Hash{}, expected)
+		dbm.DeleteAccountSnapshot(common.Hash{})
+		actual = dbm.ReadAccountSnapshot(hash)
+		assert.Nil(t, actual)
+
+		// write and read with empty data
+		hash, _ = genRandomData()
+		dbm.WriteAccountSnapshot(hash, []byte{})
+		dbm.DeleteAccountSnapshot(hash)
+		actual = dbm.ReadAccountSnapshot(hash)
+		assert.Nil(t, actual)
+
+		// write and read with random hash and data
+		hash, expected = genRandomData()
+		dbm.WriteAccountSnapshot(hash, expected)
+		dbm.DeleteAccountSnapshot(hash)
+		actual = dbm.ReadAccountSnapshot(hash)
+		assert.Nil(t, actual)
+	}
+}
+
+func genRandomData() (common.Hash, []byte) {
+	rb := common.MakeRandomBytes(common.HashLength)
+	hash := common.BytesToHash(rb)
+	data := common.MakeRandomBytes(100)
+	return hash, data
 }

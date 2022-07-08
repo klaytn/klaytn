@@ -67,6 +67,11 @@ func (gxhash *Gxhash) PreprocessHeaderVerification(headers []*types.Header) (cha
 	panic("this method is not used for PoW engine")
 }
 
+// CreateSnapshot is not used for PoW engine.
+func (gxhash *Gxhash) CreateSnapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) error {
+	return nil
+}
+
 // VerifyHeader checks whether a header conforms to the consensus rules of the
 // stock Klaytn gxhash engine.
 func (gxhash *Gxhash) VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool) error {
@@ -176,6 +181,7 @@ func (gxhash *Gxhash) verifyHeader(chain consensus.ChainReader, header, parent *
 	if uint64(len(header.Extra)) > params.MaximumExtraDataSize {
 		return fmt.Errorf("extra-data too long: %d > %d", len(header.Extra), params.MaximumExtraDataSize)
 	}
+
 	// Verify the header's timestamp
 	if header.Time.Cmp(big.NewInt(time.Now().Add(allowedFutureBlockTime).Unix())) > 0 {
 		return consensus.ErrFutureBlock

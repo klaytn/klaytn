@@ -54,13 +54,13 @@ func (e *invalidParamsError) Error() string { return e.message }
 // logic error, callback returned an error
 type callbackError struct{ message string }
 
-func (e *callbackError) ErrorCode() int { return -32000 }
+func (e *callbackError) ErrorCode() int { return defaultErrorCode }
 
 func (e *callbackError) Error() string { return e.message }
 
 // issued when a request is received after the server is issued to stop.
 type shutdownError struct{}
 
-func (e *shutdownError) ErrorCode() int { return -32000 }
+func (e *shutdownError) ErrorCode() int { return defaultErrorCode }
 
 func (e *shutdownError) Error() string { return "server is shutting down" }

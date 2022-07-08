@@ -24,11 +24,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/klaytn/klaytn/accounts/keystore"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/node/cn"
@@ -41,9 +43,7 @@ import (
 
 // TestSimpleBlockchain
 func TestSimpleBlockchain(t *testing.T) {
-	//if testing.Verbose() {
-	//	enableLog() // Change verbosity level in the function if needed
-	//}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 
 	numAccounts := 12
 	fullNode, node, validator, chainId, workspace := newBlockchain(t)
@@ -144,7 +144,11 @@ func createAccount(t *testing.T, numAccounts int, validator *TestAccountType) (*
 func newKlaytnNode(t *testing.T, dir string, validator *TestAccountType) (*node.Node, *cn.CN, error) {
 	var klaytnNode *cn.CN
 
-	fullNode, err := node.New(&node.Config{DataDir: dir, UseLightweightKDF: true, P2P: p2p.Config{PrivateKey: validator.Keys[0]}})
+	fullNode, err := node.New(&node.Config{
+		DataDir:           dir,
+		UseLightweightKDF: true,
+		P2P:               p2p.Config{PrivateKey: validator.Keys[0], NoListen: true},
+	})
 	if err != nil {
 		t.Fatalf("failed to create node: %v", err)
 	}
@@ -161,6 +165,7 @@ func newKlaytnNode(t *testing.T, dir string, validator *TestAccountType) (*node.
 	genesis := blockchain.DefaultGenesisBlock()
 	genesis.ExtraData = genesis.ExtraData[:types.IstanbulExtraVanity]
 	genesis.ExtraData = append(genesis.ExtraData, istanbulConfData...)
+	genesis.Config = params.CypressChainConfig.Copy()
 	genesis.Config.Istanbul.SubGroupSize = 1
 	genesis.Config.Istanbul.ProposerPolicy = uint64(istanbul.RoundRobin)
 	genesis.Config.Governance.Reward.MintingAmount = new(big.Int).Mul(big.NewInt(9000000000000000000), big.NewInt(params.KLAY))
@@ -170,6 +175,9 @@ func newKlaytnNode(t *testing.T, dir string, validator *TestAccountType) (*node.
 	cnConf.Rewardbase = validator.Addr
 	cnConf.SingleDB = false
 	cnConf.NumStateTrieShards = 4
+
+	ks := fullNode.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
+	_, _ = ks.ImportECDSA(validator.Keys[0], "") // import a node key
 
 	if err = fullNode.Register(func(ctx *node.ServiceContext) (node.Service, error) { return cn.New(ctx, cnConf) }); err != nil {
 		return nil, nil, errors.WithMessage(err, "failed to register Klaytn protocol")
@@ -189,7 +197,7 @@ func newKlaytnNode(t *testing.T, dir string, validator *TestAccountType) (*node.
 // deployRandomTxs creates a random transaction
 func deployRandomTxs(t *testing.T, txpool work.TxPool, chainId *big.Int, sender *TestAccountType, txNum int) {
 	var tx *types.Transaction
-	signer := types.NewEIP155Signer(chainId)
+	signer := types.LatestSignerForChainID(chainId)
 	gasPrice := big.NewInt(25 * params.Ston)
 
 	txNuminABlock := 100
@@ -213,7 +221,7 @@ func deployRandomTxs(t *testing.T, txpool work.TxPool, chainId *big.Int, sender 
 
 // deployValueTransferTx deploy value transfer transactions
 func deployValueTransferTx(t *testing.T, txpool work.TxPool, chainId *big.Int, sender *TestAccountType, toAcc *TestAccountType) {
-	signer := types.NewEIP155Signer(chainId)
+	signer := types.LatestSignerForChainID(chainId)
 	gasPrice := big.NewInt(25 * params.Ston)
 
 	tx, _ := genLegacyTransaction(t, signer, sender, toAcc, nil, gasPrice)
@@ -225,7 +233,7 @@ func deployValueTransferTx(t *testing.T, txpool work.TxPool, chainId *big.Int, s
 
 // deployContractDeployTx deploy contrac
 func deployContractDeployTx(t *testing.T, txpool work.TxPool, chainId *big.Int, sender *TestAccountType, contractDeployCode string) common.Address {
-	signer := types.NewEIP155Signer(chainId)
+	signer := types.LatestSignerForChainID(chainId)
 	gasPrice := big.NewInt(25 * params.Ston)
 
 	values := map[types.TxValueKeyType]interface{}{
@@ -256,7 +264,7 @@ func deployContractDeployTx(t *testing.T, txpool work.TxPool, chainId *big.Int, 
 }
 
 func deployContractExecutionTx(t *testing.T, txpool work.TxPool, chainId *big.Int, sender *TestAccountType, contractAddr common.Address) {
-	signer := types.NewEIP155Signer(chainId)
+	signer := types.LatestSignerForChainID(chainId)
 	gasPrice := big.NewInt(25 * params.Ston)
 	contractExecutionPayload := "0x197e70e40000000000000000000000000000000000000000000000000000000000000001"
 

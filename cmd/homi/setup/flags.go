@@ -22,9 +22,11 @@ import (
 	"gopkg.in/urfave/cli.v1"
 )
 
-var fundingAddr string
-var dockerImageId string
-var outputPath string
+var (
+	fundingAddr   string
+	dockerImageId string
+	outputPath    string
+)
 
 var (
 	cypressTestFlag = cli.BoolFlag{
@@ -294,6 +296,36 @@ var (
 		Value: "2000000",
 	}
 
+	kip71LowerBoundBaseFeeFlag = cli.Uint64Flag{
+		Name:  "lower-bound-base-fee",
+		Usage: "lower bound base fee flag",
+		Value: params.DefaultLowerBoundBaseFee,
+	}
+
+	kip71UpperBoundBaseFeeFlag = cli.Uint64Flag{
+		Name:  "upper-bound-base-fee",
+		Usage: "upper bound base fee flag",
+		Value: params.DefaultUpperBoundBaseFee,
+	}
+
+	kip71GasTarget = cli.Uint64Flag{
+		Name:  "gas-target",
+		Usage: "gas target flag",
+		Value: params.DefaultGasTarget,
+	}
+
+	kip71MaxBlockGasUsedForBaseFee = cli.Uint64Flag{
+		Name:  "block-gas-limit",
+		Usage: "block gas limit flag",
+		Value: params.DefaultMaxBlockGasUsedForBaseFee,
+	}
+
+	kip71BaseFeeDenominator = cli.Uint64Flag{
+		Name:  "base-fee-denominator",
+		Usage: "base fee denominator flag",
+		Value: params.DefaultLowerBoundBaseFee,
+	}
+
 	istEpochFlag = cli.Uint64Flag{
 		Name:  "ist-epoch",
 		Usage: "governance epoch [default: 604800]",
@@ -318,9 +350,33 @@ var (
 		Value: params.DefaultEpoch,
 	}
 
-	cliquePeriodFlag = cli.IntFlag{
+	cliquePeriodFlag = cli.Uint64Flag{
 		Name:  "clique-period",
 		Usage: "clique period",
 		Value: params.DefaultPeriod,
+	}
+
+	istanbulCompatibleBlockNumberFlag = cli.Int64Flag{
+		Name:  "istanbul-compatible-blocknumber",
+		Usage: "istanbulCompatible blockNumber",
+		Value: 0,
+	}
+
+	londonCompatibleBlockNumberFlag = cli.Int64Flag{
+		Name:  "london-compatible-blocknumber",
+		Usage: "londonCompatible blockNumber",
+		Value: 0,
+	}
+
+	ethTxTypeCompatibleBlockNumberFlag = cli.Int64Flag{
+		Name:  "eth-tx-type-compatible-blocknumber",
+		Usage: "ethTxTypeCompatible blockNumber",
+		Value: 0,
+	}
+
+	kip71CompatibleBlockNumberFlag = cli.Int64Flag{
+		Name:  "kip71-compatible-blocknumber",
+		Usage: "kip71Compatible blockNumber",
+		Value: 0,
 	}
 )

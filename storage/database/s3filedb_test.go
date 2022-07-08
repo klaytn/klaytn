@@ -24,10 +24,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/klaytn/klaytn/common"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/storage"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -68,6 +68,8 @@ func (s *SuiteS3FileDB) TearDownSuite() {
 }
 
 func TestSuiteS3FileDB(t *testing.T) {
+	storage.SkipLocalTest(t)
+
 	suite.Run(t, new(SuiteS3FileDB))
 }
 

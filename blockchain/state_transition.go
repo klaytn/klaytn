@@ -60,6 +60,8 @@ type StateTransition struct {
 	msg        Message
 	gas        uint64
 	gasPrice   *big.Int
+	gasTipCap  *big.Int
+	gasFeeCap  *big.Int
 	initialGas uint64
 	value      *big.Int
 	data       []byte
@@ -86,12 +88,19 @@ type Message interface {
 	// 70% will be paid by the sender.
 	FeeRatio() (types.FeeRatio, bool)
 
-	//FromFrontier() (common.Address, error)
+	// FromFrontier() (common.Address, error)
 	To() *common.Address
 
 	Hash() common.Hash
 
 	GasPrice() *big.Int
+
+	// For TxTypeEthereumDynamicFee
+	GasTipCap() *big.Int
+	GasFeeCap() *big.Int
+	EffectiveGasTip(baseFee *big.Int) *big.Int
+	EffectiveGasPrice(header *types.Header) *big.Int
+
 	Gas() uint64
 	Value() *big.Int
 
@@ -126,13 +135,19 @@ type kerror struct {
 
 // NewStateTransition initialises and returns a new state transition object.
 func NewStateTransition(evm *vm.EVM, msg Message) *StateTransition {
+	// before kip71 hardfork, effectiveGasPrice is unitPrice
+	// after kip71 hardfork, effectiveGasPrice is BaseFee
+	effectiveGasPrice := evm.Context.GasPrice
+
 	return &StateTransition{
-		evm:      evm,
-		msg:      msg,
-		gasPrice: msg.GasPrice(),
-		value:    msg.Value(),
-		data:     msg.Data(),
-		state:    evm.StateDB,
+		evm:       evm,
+		msg:       msg,
+		gasPrice:  effectiveGasPrice,
+		gasFeeCap: msg.GasFeeCap(),
+		gasTipCap: msg.GasTipCap(),
+		value:     msg.Value(),
+		data:      msg.Data(),
+		state:     evm.StateDB,
 	}
 }
 
@@ -165,6 +180,15 @@ func (st *StateTransition) useGas(amount uint64) error {
 }
 
 func (st *StateTransition) buyGas() error {
+	// mgval := new(big.Int)
+	// if st.evm.ChainConfig().IsKIP71ForkEnabled(st.evm.BlockNumber) {
+	// 	mgval = mgval.Mul(new(big.Int).SetUint64(st.msg.Gas()), st.evm.BaseFee)
+	// } else {
+	// 	mgval = mgval.Mul(new(big.Int).SetUint64(st.msg.Gas()), st.gasPrice)
+	// }
+
+	// st.gasPrice : gasPrice user set before kip71 hardfork
+	// st.gasPrice : BaseFee after kip71 hardfork
 	mgval := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()), st.gasPrice)
 
 	validatedFeePayer := st.msg.ValidatedFeePayer()
@@ -244,12 +268,10 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 		return nil, 0, kerr
 	}
 
-	var (
-		// vm errors do not effect consensus and are therefor
-		// not assigned to err, except for insufficient balance
-		// error and total time limit reached error.
-		errTxFailed error
-	)
+	// vm errors do not effect consensus and are therefor
+	// not assigned to err, except for insufficient balance
+	// error and total time limit reached error.
+	var errTxFailed error
 
 	ret, st.gas, errTxFailed = msg.Execute(st.evm, st.state, st.evm.BlockNumber.Uint64(), st.gas, st.value)
 
@@ -270,9 +292,11 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 	}
 	st.refundGas()
 
+	// TODO-klaytn need hardfork condition
 	// Defer transferring Tx fee when DeferredTxFee is true
 	if st.evm.ChainConfig().Governance == nil || !st.evm.ChainConfig().Governance.DeferredTxFee() {
-		st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
+		effectiveTip := msg.EffectiveGasTip(st.evm.BaseFee)
+		st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), effectiveTip))
 	}
 
 	kerr.ErrTxInvalid = nil
@@ -377,6 +401,13 @@ func (st *StateTransition) refundGas() {
 
 	// Return KLAY for remaining gas, exchanged at the original rate.
 	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.gas), st.gasPrice)
+
+	// remaining := new(big.Int)
+	// if st.evm.ChainConfig().IsKIP71ForkEnabled(st.evm.BlockNumber) {
+	// 	remaining = remaining.Mul(new(big.Int).SetUint64(st.gas), st.evm.BaseFee)
+	// } else {
+	// 	remaining = remaining.Mul(new(big.Int).SetUint64(st.gas), st.gasPrice)
+	// }
 
 	validatedFeePayer := st.msg.ValidatedFeePayer()
 	validatedSender := st.msg.ValidatedSender()

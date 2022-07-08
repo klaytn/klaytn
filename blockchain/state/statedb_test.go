@@ -46,7 +46,7 @@ func TestUpdateLeaks(t *testing.T) {
 	// Create an empty state database
 	memDBManager := database.NewMemoryDBManager()
 	db := memDBManager.GetMemDB()
-	state, _ := New(common.Hash{}, NewDatabase(memDBManager))
+	state, _ := New(common.Hash{}, NewDatabase(memDBManager), nil)
 
 	// Update it with some accounts
 	for i := byte(0); i < 255; i++ {
@@ -79,8 +79,8 @@ func TestIntermediateLeaks(t *testing.T) {
 	transDb := transDBManager.GetMemDB()
 	finalDb := finalDBManager.GetMemDB()
 
-	transState, _ := New(common.Hash{}, NewDatabase(transDBManager))
-	finalState, _ := New(common.Hash{}, NewDatabase(finalDBManager))
+	transState, _ := New(common.Hash{}, NewDatabase(transDBManager), nil)
+	finalState, _ := New(common.Hash{}, NewDatabase(finalDBManager), nil)
 
 	modify := func(state *StateDB, addr common.Address, i, tweak byte) {
 		if i%2 == 0 {
@@ -133,7 +133,7 @@ func TestIntermediateLeaks(t *testing.T) {
 // https://github.com/ethereum/go-ethereum/pull/15549.
 func TestCopy(t *testing.T) {
 	// Create a random state test to copy and modify "independently"
-	orig, _ := New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()))
+	orig, _ := New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil)
 
 	for i := byte(0); i < 255; i++ {
 		obj := orig.GetOrNewStateObject(common.BytesToAddress([]byte{i}))
@@ -195,7 +195,7 @@ func TestSnapshotRandom(t *testing.T) {
 // TestStateObjects tests basic functional operations of StateObjects.
 // It will be updated by StateDB.Commit() with state objects in StateDB.stateObjects.
 func TestStateObjects(t *testing.T) {
-	stateDB, _ := New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()))
+	stateDB, _ := New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil)
 
 	// Update each account, it will update StateDB.stateObjects.
 	for i := byte(0); i < 128; i++ {
@@ -364,7 +364,7 @@ func (test *snapshotTest) String() string {
 func (test *snapshotTest) run() bool {
 	// Run all actions and create snapshots.
 	var (
-		state, _     = New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()))
+		state, _     = New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil)
 		snapshotRevs = make([]int, len(test.snapshots))
 		sindex       = 0
 	)
@@ -378,7 +378,7 @@ func (test *snapshotTest) run() bool {
 	// Revert all snapshots in reverse order. Each revert must yield a state
 	// that is equivalent to fresh state with all actions up the snapshot applied.
 	for sindex--; sindex >= 0; sindex-- {
-		checkstate, _ := New(common.Hash{}, state.Database())
+		checkstate, _ := New(common.Hash{}, state.Database(), nil)
 		for _, action := range test.actions[:test.snapshots[sindex]] {
 			action.fn(action, checkstate)
 		}
@@ -457,7 +457,7 @@ func (s *StateSuite) TestSnapshotWithJournalDirties(c *check.C) {
 // TestCopyOfCopy tests that modified objects are carried over to the copy, and the copy of the copy.
 // See https://github.com/ethereum/go-ethereum/pull/15225#issuecomment-380191512
 func TestCopyOfCopy(t *testing.T) {
-	sdb, _ := New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()))
+	sdb, _ := New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil)
 	addr := common.HexToAddress("aaaa")
 	sdb.SetBalance(addr, big.NewInt(42))
 
@@ -482,5 +482,51 @@ func TestZeroHashNode(t *testing.T) {
 	}
 	if node != nil {
 		t.Fatalf("node should return nil value for zero hash")
+	}
+}
+
+// TestMissingTrieNodes tests that if the statedb fails to load parts of the trie,
+// the Commit operation fails with an error
+// If we are missing trie nodes, we should not continue writing to the trie
+func TestMissingTrieNodes(t *testing.T) {
+	// Create an initial state with a few accounts
+	memDb := database.NewMemoryDBManager()
+	db := NewDatabase(memDb)
+	var root common.Hash
+	state, _ := New(common.Hash{}, db, nil)
+	addr := toAddr([]byte("so"))
+	{
+		state.SetBalance(addr, big.NewInt(1))
+		state.SetCode(addr, []byte{1, 2, 3})
+		a2 := toAddr([]byte("another"))
+		state.SetBalance(a2, big.NewInt(100))
+		state.SetCode(a2, []byte{1, 2, 4})
+		root, _ = state.Commit(false)
+		t.Logf("root: %x", root)
+		// force-flush
+		state.Database().TrieDB().Cap(0)
+	}
+	// Create a new state on the old root
+	state, _ = New(root, db, nil)
+	// Now we clear out the memdb
+	it := memDb.GetMemDB().NewIterator(nil, nil)
+	for it.Next() {
+		k := it.Key()
+		// Leave the root intact
+		if !bytes.Equal(k, root[:]) {
+			t.Logf("key: %x", k)
+			memDb.GetMemDB().Delete(k)
+		}
+	}
+	balance := state.GetBalance(addr)
+	// The removed elem should lead to it returning zero balance
+	if exp, got := uint64(0), balance.Uint64(); got != exp {
+		t.Errorf("expected %d, got %d", exp, got)
+	}
+	// Modify the state
+	state.SetBalance(addr, big.NewInt(2))
+	root, err := state.Commit(false)
+	if err == nil {
+		t.Fatalf("expected error, got root :%x", root)
 	}
 }

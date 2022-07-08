@@ -73,8 +73,7 @@ type JumpTable [256]*operation
 // constantinople, istanbul, petersburg, berlin and london instructions.
 func newLondonInstructionSet() JumpTable {
 	instructionSet := newIstanbulInstructionSet()
-	// TODO-klaytn: base fee opcode will be enabled
-	//enable3198(&instructionSet) // Base fee opcode https://eips.ethereum.org/EIPS/eip-3198
+	enable3198(&instructionSet) // Base fee opcode https://eips.ethereum.org/EIPS/eip-3198
 	return instructionSet
 }
 

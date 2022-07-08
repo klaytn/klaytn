@@ -40,6 +40,7 @@ var CommonNodeFlags = []cli.Flag{
 	utils.KeyStoreDirFlag,
 	utils.TxPoolNoLocalsFlag,
 	utils.TxPoolAllowLocalAnchorTxFlag,
+	utils.TxPoolDenyRemoteTxFlag,
 	utils.TxPoolJournalFlag,
 	utils.TxPoolJournalIntervalFlag,
 	utils.TxPoolPriceLimitFlag,
@@ -76,6 +77,7 @@ var CommonNodeFlags = []cli.Flag{
 	utils.MemorySizeFlag,
 	utils.TrieNodeCacheTypeFlag,
 	utils.NumFetcherPrefetchWorkerFlag,
+	utils.UseSnapshotForPrefetchFlag,
 	utils.TrieNodeCacheLimitFlag,
 	utils.TrieNodeCacheSavePeriodFlag,
 	utils.TrieNodeCacheRedisEndpointsFlag,
@@ -102,6 +104,7 @@ var CommonNodeFlags = []cli.Flag{
 	utils.NetworkIdFlag,
 	utils.RPCCORSDomainFlag,
 	utils.RPCVirtualHostsFlag,
+	utils.RPCNonEthCompatibleFlag,
 	utils.MetricsEnabledFlag,
 	utils.PrometheusExporterFlag,
 	utils.PrometheusExporterPortFlag,
@@ -114,6 +117,8 @@ var CommonNodeFlags = []cli.Flag{
 	utils.APIFilterGetLogsMaxItemsFlag,
 	utils.APIFilterGetLogsDeadlineFlag,
 	utils.OpcodeComputationCostLimitFlag,
+	utils.SnapshotFlag,
+	utils.SnapshotCacheSizeFlag,
 }
 
 // Common RPC flags
@@ -123,6 +128,7 @@ var CommonRPCFlags = []cli.Flag{
 	utils.RPCPortFlag,
 	utils.RPCApiFlag,
 	utils.RPCGlobalGasCap,
+	utils.RPCGlobalEthTxFeeCapFlag,
 	utils.WSEnabledFlag,
 	utils.WSListenAddrFlag,
 	utils.WSPortFlag,
@@ -138,6 +144,10 @@ var CommonRPCFlags = []cli.Flag{
 	utils.WSMaxConnections,
 	utils.IPCDisabledFlag,
 	utils.IPCPathFlag,
+	utils.RPCReadTimeout,
+	utils.RPCWriteTimeoutFlag,
+	utils.RPCIdleTimeoutFlag,
+	utils.RPCExecutionTimeoutFlag,
 }
 
 var KCNFlags = []cli.Flag{
@@ -154,6 +164,7 @@ var KPNFlags = []cli.Flag{
 	utils.TxResendUseLegacyFlag,
 	utils.CypressFlag,
 	utils.BaobabFlag,
+	utils.TxPoolSpamThrottlerDisableFlag,
 }
 
 var KENFlags = []cli.Flag{
@@ -230,6 +241,8 @@ var KSCNFlags = []cli.Flag{
 	utils.VTRecoveryIntervalFlag,
 	utils.ServiceChainNewAccountFlag,
 	utils.ServiceChainAnchoringFlag,
+	utils.ServiceChainParentOperatorTxGasLimitFlag,
+	utils.ServiceChainChildOperatorTxGasLimitFlag,
 	// KAS
 	utils.KASServiceChainAnchorFlag,
 	utils.KASServiceChainAnchorPeriodFlag,
@@ -238,12 +251,14 @@ var KSCNFlags = []cli.Flag{
 	utils.KASServiceChainSecretKeyFlag,
 	utils.KASServiceChainAccessKeyFlag,
 	utils.KASServiceChainXChainIdFlag,
+	utils.KASServiceChainAnchorRequestTimeoutFlag,
 }
 
 var KSPNFlags = []cli.Flag{
 	utils.TxResendIntervalFlag,
 	utils.TxResendCountFlag,
 	utils.TxResendUseLegacyFlag,
+	utils.TxPoolSpamThrottlerDisableFlag,
 	utils.ServiceChainSignerFlag,
 	utils.AnchoringPeriodFlag,
 	utils.SentChainTxsLimit,
@@ -257,6 +272,8 @@ var KSPNFlags = []cli.Flag{
 	utils.VTRecoveryIntervalFlag,
 	utils.ServiceChainNewAccountFlag,
 	utils.ServiceChainAnchoringFlag,
+	utils.ServiceChainParentOperatorTxGasLimitFlag,
+	utils.ServiceChainChildOperatorTxGasLimitFlag,
 	// KAS
 	utils.KASServiceChainAnchorFlag,
 	utils.KASServiceChainAnchorPeriodFlag,
@@ -265,6 +282,7 @@ var KSPNFlags = []cli.Flag{
 	utils.KASServiceChainSecretKeyFlag,
 	utils.KASServiceChainAccessKeyFlag,
 	utils.KASServiceChainXChainIdFlag,
+	utils.KASServiceChainAnchorRequestTimeoutFlag,
 }
 
 var KSENFlags = []cli.Flag{
@@ -281,6 +299,34 @@ var KSENFlags = []cli.Flag{
 	utils.VTRecoveryIntervalFlag,
 	utils.ServiceChainAnchoringFlag,
 	utils.KESNodeTypeServiceFlag,
+	utils.ServiceChainParentOperatorTxGasLimitFlag,
+	utils.ServiceChainChildOperatorTxGasLimitFlag,
+	// ChainDataFetcher
+	utils.EnableChainDataFetcherFlag,
+	utils.ChainDataFetcherMode,
+	utils.ChainDataFetcherNoDefault,
+	utils.ChainDataFetcherNumHandlers,
+	utils.ChainDataFetcherJobChannelSize,
+	utils.ChainDataFetcherChainEventSizeFlag,
+	utils.ChainDataFetcherKASDBHostFlag,
+	utils.ChainDataFetcherKASDBPortFlag,
+	utils.ChainDataFetcherKASDBNameFlag,
+	utils.ChainDataFetcherKASDBUserFlag,
+	utils.ChainDataFetcherKASDBPasswordFlag,
+	utils.ChainDataFetcherKASCacheUse,
+	utils.ChainDataFetcherKASCacheURLFlag,
+	utils.ChainDataFetcherKASXChainIdFlag,
+	utils.ChainDataFetcherKASBasicAuthParamFlag,
+	utils.ChainDataFetcherKafkaReplicasFlag,
+	utils.ChainDataFetcherKafkaBrokersFlag,
+	utils.ChainDataFetcherKafkaPartitionsFlag,
+	utils.ChainDataFetcherKafkaTopicResourceFlag,
+	utils.ChainDataFetcherKafkaTopicEnvironmentFlag,
+	utils.ChainDataFetcherKafkaMaxMessageBytesFlag,
+	utils.ChainDataFetcherKafkaSegmentSizeBytesFlag,
+	utils.ChainDataFetcherKafkaRequiredAcksFlag,
+	utils.ChainDataFetcherKafkaMessageVersionFlag,
+	utils.ChainDataFetcherKafkaProducerIdFlag,
 	// KAS
 	utils.KASServiceChainAnchorFlag,
 	utils.KASServiceChainAnchorPeriodFlag,
@@ -289,6 +335,7 @@ var KSENFlags = []cli.Flag{
 	utils.KASServiceChainSecretKeyFlag,
 	utils.KASServiceChainAccessKeyFlag,
 	utils.KASServiceChainXChainIdFlag,
+	utils.KASServiceChainAnchorRequestTimeoutFlag,
 	// DBSyncer
 	utils.EnableDBSyncerFlag,
 	utils.DBHostFlag,

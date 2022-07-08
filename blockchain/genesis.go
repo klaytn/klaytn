@@ -145,7 +145,7 @@ func findBlockWithState(db database.DBManager) *types.Block {
 	}
 
 	startBlock := headBlock
-	for _, err := state.New(headBlock.Root(), state.NewDatabase(db)); err != nil; {
+	for _, err := state.New(headBlock.Root(), state.NewDatabase(db), nil); err != nil; {
 		if headBlock.NumberU64() == 0 {
 			logger.Crit("failed to find state from the head block to the genesis block",
 				"headBlockNum", headBlock.NumberU64(),
@@ -206,6 +206,9 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 		// Initialize DeriveSha implementation
 		InitDeriveSha(genesis.Config.DeriveShaImpl)
 		block, err := genesis.Commit(common.Hash{}, db)
+		if err != nil {
+			return genesis.Config, common.Hash{}, err
+		}
 		return genesis.Config, block.Hash(), err
 	}
 
@@ -250,10 +253,6 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 		if storedcfg.Governance.Reward.ProposerUpdateInterval != 0 {
 			params.SetProposerUpdateInterval(storedcfg.Governance.Reward.ProposerUpdateInterval)
 		}
-		if storedcfg.Governance.Reward.MinimumStake != nil &&
-			storedcfg.Governance.Reward.MinimumStake.Cmp(common.Big0) > 0 {
-			params.SetMinimumStakingAmount(storedcfg.Governance.Reward.MinimumStake)
-		}
 	}
 	// Special case: don't change the existing config of a non-mainnet chain if no new
 	// config is supplied. These chains would get AllProtocolChanges (and a compat error)
@@ -295,7 +294,7 @@ func (g *Genesis) ToBlock(baseStateRoot common.Hash, db database.DBManager) *typ
 	if db == nil {
 		db = database.NewMemoryDBManager()
 	}
-	stateDB, _ := state.New(baseStateRoot, state.NewDatabase(db))
+	stateDB, _ := state.New(baseStateRoot, state.NewDatabase(db), nil)
 	for addr, account := range g.Alloc {
 		if len(account.Code) != 0 {
 			originalCode := stateDB.GetCode(addr)
@@ -328,6 +327,10 @@ func (g *Genesis) ToBlock(baseStateRoot common.Hash, db database.DBManager) *typ
 	if g.BlockScore == nil {
 		head.BlockScore = params.GenesisBlockScore
 	}
+	// TODO-klaytn should set genesis block's base fee
+	if g.Config != nil && g.Config.IsKIP71ForkEnabled(common.Big0) {
+		head.BaseFee = new(big.Int).SetUint64(params.DefaultLowerBoundBaseFee)
+	}
 	stateDB.Commit(false)
 	stateDB.Database().TrieDB().Commit(root, true, g.Number)
 
@@ -351,6 +354,9 @@ func (g *Genesis) Commit(baseStateRoot common.Hash, db database.DBManager) (*typ
 	config := g.Config
 	if config == nil {
 		config = params.AllGxhashProtocolChanges
+	}
+	if err := config.CheckConfigForkOrder(); err != nil {
+		return nil, err
 	}
 	db.WriteChainConfig(block.Hash(), config)
 	return block, nil

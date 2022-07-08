@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
+//go:build none
 // +build none
 
 package main
@@ -151,7 +152,7 @@ func doInstall(cmdline []string) {
 	if *arch == "" || *arch == runtime.GOARCH {
 		goinstall := goTool("install", buildFlags(env)...)
 		goinstall.Args = append(goinstall.Args, "-v")
-		//goinstall.Args = append(goinstall.Args, "-race")
+		// goinstall.Args = append(goinstall.Args, "-race")
 		goinstall.Args = append(goinstall.Args, packages...)
 		build.MustRun(goinstall)
 		return
@@ -572,7 +573,7 @@ func doDebianSource(cmdline []string) {
 func makeWorkdir(wdflag string) string {
 	var err error
 	if wdflag != "" {
-		err = os.MkdirAll(wdflag, 0744)
+		err = os.MkdirAll(wdflag, 0o744)
 	} else {
 		wdflag, err = ioutil.TempDir("", "klay-build-")
 	}
@@ -679,7 +680,7 @@ func (meta debMetadata) ExeConflicts(exe debExecutable) string {
 func stageDebianSource(tmpdir string, meta debMetadata) (pkgdir string) {
 	pkg := meta.Name() + "-" + meta.VersionString()
 	pkgdir = filepath.Join(tmpdir, pkg)
-	if err := os.Mkdir(pkgdir, 0755); err != nil {
+	if err := os.Mkdir(pkgdir, 0o755); err != nil {
 		log.Fatal(err)
 	}
 
@@ -688,17 +689,17 @@ func stageDebianSource(tmpdir string, meta debMetadata) (pkgdir string) {
 
 	// Put the debian build files in place.
 	debian := filepath.Join(pkgdir, "debian")
-	build.Render("build/deb.rules", filepath.Join(debian, "rules"), 0755, meta)
-	build.Render("build/deb.changelog", filepath.Join(debian, "changelog"), 0644, meta)
-	build.Render("build/deb.control", filepath.Join(debian, "control"), 0644, meta)
-	build.Render("build/deb.copyright", filepath.Join(debian, "copyright"), 0644, meta)
-	build.RenderString("8\n", filepath.Join(debian, "compat"), 0644, meta)
-	build.RenderString("3.0 (native)\n", filepath.Join(debian, "source/format"), 0644, meta)
+	build.Render("build/deb.rules", filepath.Join(debian, "rules"), 0o755, meta)
+	build.Render("build/deb.changelog", filepath.Join(debian, "changelog"), 0o644, meta)
+	build.Render("build/deb.control", filepath.Join(debian, "control"), 0o644, meta)
+	build.Render("build/deb.copyright", filepath.Join(debian, "copyright"), 0o644, meta)
+	build.RenderString("8\n", filepath.Join(debian, "compat"), 0o644, meta)
+	build.RenderString("3.0 (native)\n", filepath.Join(debian, "source/format"), 0o644, meta)
 	for _, exe := range meta.Executables {
 		install := filepath.Join(debian, meta.ExeName(exe)+".install")
 		docs := filepath.Join(debian, meta.ExeName(exe)+".docs")
-		build.Render("build/deb.install", install, 0644, exe)
-		build.Render("build/deb.docs", docs, 0644, exe)
+		build.Render("build/deb.install", install, 0o644, exe)
+		build.Render("build/deb.docs", docs, 0o644, exe)
 	}
 
 	return pkgdir
@@ -744,13 +745,13 @@ func doWindowsInstaller(cmdline []string) {
 		"Klay":     klayTool,
 		"DevTools": devTools,
 	}
-	build.Render("build/nsis.klay.nsi", filepath.Join(*workdir, "klay.nsi"), 0644, nil)
-	build.Render("build/nsis.install.nsh", filepath.Join(*workdir, "install.nsh"), 0644, templateData)
-	build.Render("build/nsis.uninstall.nsh", filepath.Join(*workdir, "uninstall.nsh"), 0644, allTools)
-	build.Render("build/nsis.pathupdate.nsh", filepath.Join(*workdir, "PathUpdate.nsh"), 0644, nil)
-	build.Render("build/nsis.envvarupdate.nsh", filepath.Join(*workdir, "EnvVarUpdate.nsh"), 0644, nil)
-	build.CopyFile(filepath.Join(*workdir, "SimpleFC.dll"), "build/nsis.simplefc.dll", 0755)
-	build.CopyFile(filepath.Join(*workdir, "COPYING"), "COPYING", 0755)
+	build.Render("build/nsis.klay.nsi", filepath.Join(*workdir, "klay.nsi"), 0o644, nil)
+	build.Render("build/nsis.install.nsh", filepath.Join(*workdir, "install.nsh"), 0o644, templateData)
+	build.Render("build/nsis.uninstall.nsh", filepath.Join(*workdir, "uninstall.nsh"), 0o644, allTools)
+	build.Render("build/nsis.pathupdate.nsh", filepath.Join(*workdir, "PathUpdate.nsh"), 0o644, nil)
+	build.Render("build/nsis.envvarupdate.nsh", filepath.Join(*workdir, "EnvVarUpdate.nsh"), 0o644, nil)
+	build.CopyFile(filepath.Join(*workdir, "SimpleFC.dll"), "build/nsis.simplefc.dll", 0o755)
+	build.CopyFile(filepath.Join(*workdir, "COPYING"), "COPYING", 0o755)
 
 	// Build the installer. This assumes that all the needed files have been previously
 	// built (don't mix building and packaging to keep cross compilation complexity to a
@@ -805,7 +806,7 @@ func doAndroidArchive(cmdline []string) {
 		return
 	}
 	meta := newMavenMetadata(env)
-	build.Render("build/mvn.pom", meta.Package+".pom", 0755, meta)
+	build.Render("build/mvn.pom", meta.Package+".pom", 0o755, meta)
 
 	// Skip Maven deploy and Azure upload for PR builds
 	maybeSkipArchive(env)
@@ -949,7 +950,7 @@ func doXCodeFramework(cmdline []string) {
 	// Prepare and upload a PodSpec to CocoaPods
 	if *deploy != "" {
 		meta := newPodMetadata(env, archive)
-		build.Render("build/pod.podspec", "Klaytn.podspec", 0755, meta)
+		build.Render("build/pod.podspec", "Klaytn.podspec", 0o755, meta)
 		build.MustRunCommand("pod", *deploy, "push", "Klaytn.podspec", "--allow-warnings", "--verbose")
 	}
 }
@@ -1002,14 +1003,17 @@ func newPodMetadata(env build.Environment, archive string) podMetadata {
 // Cross compilation
 
 func doXgo(cmdline []string) {
-	var (
-		alltools = flag.Bool("alltools", false, `Flag whether we're building all known tools, or only on in particular`)
-	)
+	alltools := flag.Bool("alltools", false, `Flag whether we're building all known tools, or only on in particular`)
 	flag.CommandLine.Parse(cmdline)
 	env := build.Env()
 
+	subCmd := "get"
+	if strings.HasPrefix(runtime.Version(), "go1.18") {
+		subCmd = "install"
+	}
+
 	// Make sure xgo is available for cross compilation
-	gogetxgo := goTool("get", "github.com/klaytn/xgo")
+	gogetxgo := goTool(subCmd, "github.com/klaytn/xgo")
 	build.MustRun(gogetxgo)
 
 	// If all tools building is requested, build everything the builder wants

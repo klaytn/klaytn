@@ -36,6 +36,7 @@ import (
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/governance"
+	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
@@ -49,9 +50,7 @@ import (
 // genesis.json, b1.rlp, and b2.rlp has raw data of genesis, and consecutive two blocks after the genesis block.
 // If anything is failed, it can be considered that a hard fork occurs.
 func TestHardForkBlock(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	var genesis blockchain.Genesis
 
 	// If you uncomment the below, you can find this test failed with an error "!!!!!HARD FORK DETECTED!!!!!"
@@ -60,8 +59,8 @@ func TestHardForkBlock(t *testing.T) {
 
 	// If you print out b1.rlp and b2.rlp, uncomment below.
 	// `genBlocks` could be failed sometimes depends on the order of transaction in a block. Just try again.
-	//genBlocks(t)
-	//return
+	// genBlocks(t)
+	// return
 
 	// load raw data from files.
 	genesisJson, err := ioutil.ReadFile("genesis.json")
@@ -120,7 +119,7 @@ func TestHardForkBlock(t *testing.T) {
 
 // genBlock generates two blocks including transactions utilizing all transaction types and account types.
 func genBlocks(t *testing.T) {
-	var testFunctions = []struct {
+	testFunctions := []struct {
 		Name  string
 		genTx genTransaction
 	}{
@@ -143,7 +142,7 @@ func genBlocks(t *testing.T) {
 		{"FeeDelegatedWithRatioCancel", genFeeDelegatedWithRatioCancel},
 	}
 
-	var accountTypes = []struct {
+	accountTypes := []struct {
 		Type    string
 		account TestAccount
 	}{
@@ -154,9 +153,7 @@ func genBlocks(t *testing.T) {
 		{"RoleBasedWithMultiSig", genRoleBasedWithMultiSigAccount(t)},
 	}
 
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
@@ -166,7 +163,7 @@ func genBlocks(t *testing.T) {
 	prof.Profile("main_init_blockchain", time.Now().Sub(start))
 
 	b, err := json.Marshal(bcdata.genesis)
-	ioutil.WriteFile("genesis.json", b, 0755)
+	ioutil.WriteFile("genesis.json", b, 0o755)
 
 	defer bcdata.Shutdown()
 
@@ -186,7 +183,7 @@ func genBlocks(t *testing.T) {
 		Nonce: uint64(0),
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// For smart contract
@@ -472,9 +469,9 @@ func genBlocks(t *testing.T) {
 		b, err := rlp.EncodeToBytes(blk)
 		require.Equal(t, nil, err)
 
-		//fmt.Println(blk.String())
-		//fmt.Println("encoded===")
-		//fmt.Println((hexutil.Bytes)(b))
+		// fmt.Println(blk.String())
+		// fmt.Println("encoded===")
+		// fmt.Println((hexutil.Bytes)(b))
 
 		filename := fmt.Sprintf("b%d.rlp", i)
 		f, err := os.Create(filename)

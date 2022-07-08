@@ -24,11 +24,14 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"math/big"
 	"reflect"
 
+	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
+	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/params"
@@ -50,10 +53,10 @@ var (
 // isTxField checks whether the string is a field name of the specific txType.
 // isTxField[txType][txFieldName] has true/false.
 var isTxField = func() map[types.TxType]map[string]bool {
-	var mapOfFieldMap = map[types.TxType]map[string]bool{}
-	var internalDataTypes = map[types.TxType]interface{}{
+	mapOfFieldMap := map[types.TxType]map[string]bool{}
+	internalDataTypes := map[types.TxType]interface{}{
 		// since legacy tx has optional fields, some fields can be omitted
-		//types.TxTypeLegacyTransaction:                           types.TxInternalDataLegacy{},
+		// types.TxTypeLegacyTransaction:                           types.TxInternalDataLegacy{},
 		types.TxTypeValueTransfer:                               types.TxInternalDataValueTransfer{},
 		types.TxTypeFeeDelegatedValueTransfer:                   types.TxInternalDataFeeDelegatedValueTransfer{},
 		types.TxTypeFeeDelegatedValueTransferWithRatio:          types.TxInternalDataFeeDelegatedValueTransferWithRatio{},
@@ -72,6 +75,9 @@ var isTxField = func() map[types.TxType]map[string]bool {
 		types.TxTypeCancel:                                      types.TxInternalDataCancel{},
 		types.TxTypeFeeDelegatedCancel:                          types.TxInternalDataFeeDelegatedCancel{},
 		types.TxTypeFeeDelegatedCancelWithRatio:                 types.TxInternalDataFeeDelegatedCancelWithRatio{},
+		types.TxTypeChainDataAnchoring:                          types.TxInternalDataChainDataAnchoring{},
+		types.TxTypeFeeDelegatedChainDataAnchoring:              types.TxInternalDataFeeDelegatedChainDataAnchoring{},
+		types.TxTypeFeeDelegatedChainDataAnchoringWithRatio:     types.TxInternalDataFeeDelegatedChainDataAnchoringWithRatio{},
 	}
 
 	// generate field maps for each tx type
@@ -102,13 +108,15 @@ type NewTxArgs interface {
 
 // SendTxArgs represents the arguments to submit a new transaction into the transaction pool.
 type SendTxArgs struct {
-	TypeInt      *types.TxType   `json:"typeInt"`
-	From         common.Address  `json:"from"`
-	Recipient    *common.Address `json:"to"`
-	GasLimit     *hexutil.Uint64 `json:"gas"`
-	Price        *hexutil.Big    `json:"gasPrice"`
-	Amount       *hexutil.Big    `json:"value"`
-	AccountNonce *hexutil.Uint64 `json:"nonce"`
+	TypeInt              *types.TxType   `json:"typeInt"`
+	From                 common.Address  `json:"from"`
+	Recipient            *common.Address `json:"to"`
+	GasLimit             *hexutil.Uint64 `json:"gas"`
+	Price                *hexutil.Big    `json:"gasPrice"`
+	MaxPriorityFeePerGas *hexutil.Big    `json:"maxPriorityFeePerGas"`
+	MaxFeePerGas         *hexutil.Big    `json:"maxFeePerGas"`
+	Amount               *hexutil.Big    `json:"value"`
+	AccountNonce         *hexutil.Uint64 `json:"nonce"`
 	// We accept "data" and "input" for backwards-compatibility reasons. "input" is the
 	// newer name and should be preferred by clients.
 	Data    *hexutil.Bytes `json:"data"`
@@ -119,6 +127,9 @@ type SendTxArgs struct {
 
 	Key *hexutil.Bytes `json:"key"`
 
+	AccessList *types.AccessList `json:"accessList,omitempty"`
+	ChainID    *hexutil.Big      `json:"chainId,omitempty"`
+
 	FeePayer *common.Address `json:"feePayer"`
 	FeeRatio *types.FeeRatio `json:"feeRatio"`
 
@@ -127,6 +138,8 @@ type SendTxArgs struct {
 
 // setDefaults is a helper function that fills in default values for unspecified common tx fields.
 func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
+	isKIP71 := b.ChainConfig().IsKIP71ForkEnabled(new(big.Int).Add(b.CurrentBlock().Number(), big.NewInt(1)))
+
 	if args.TypeInt == nil {
 		args.TypeInt = new(types.TxType)
 		*args.TypeInt = types.TxTypeLegacyTransaction
@@ -135,12 +148,57 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 		args.GasLimit = new(hexutil.Uint64)
 		*args.GasLimit = hexutil.Uint64(90000)
 	}
-	if args.Price == nil {
+	// Eth typed transactions requires chainId.
+	if args.TypeInt.IsEthTypedTransaction() {
+		if args.ChainID == nil {
+			args.ChainID = (*hexutil.Big)(b.ChainConfig().ChainID)
+		}
+	}
+	// For the transaction that do not use the gasPrice field, the default value of gasPrice is not set.
+	if args.Price == nil && *args.TypeInt != types.TxTypeEthereumDynamicFee {
+		// b.SuggestPrice = unitPrice, for before KIP71
+		//                = baseFee,   for after KIP71
 		price, err := b.SuggestPrice(ctx)
 		if err != nil {
 			return err
 		}
+		if isKIP71 {
+			// we need to set baseFee * 2 after KIP-71 hard fork
+			price = new(big.Int).Mul(price, common.Big2)
+		}
 		args.Price = (*hexutil.Big)(price)
+	}
+
+	if *args.TypeInt == types.TxTypeEthereumDynamicFee {
+		gasPrice, err := b.SuggestPrice(ctx)
+		if err != nil {
+			return err
+		}
+		if args.MaxPriorityFeePerGas == nil {
+			args.MaxPriorityFeePerGas = (*hexutil.Big)(gasPrice)
+		}
+		if args.MaxFeePerGas == nil {
+			// Before KIP-71 hard fork, `gasFeeCap` was set to `baseFee*2 + maxPriorityFeePerGas` by default.
+			gasFeeCap := new(big.Int).Add(
+				(*big.Int)(args.MaxPriorityFeePerGas),
+				new(big.Int).Mul(new(big.Int).SetUint64(params.ZeroBaseFee), big.NewInt(2)),
+			)
+			if isKIP71 {
+				// After KIP-71 hard fork, `gasFeeCap` was set to `baseFee*2` by default.
+				gasFeeCap = new(big.Int).Mul(gasPrice, big.NewInt(2))
+			}
+			args.MaxFeePerGas = (*hexutil.Big)(gasFeeCap)
+		}
+		if isKIP71 {
+			if args.MaxFeePerGas.ToInt().Cmp(gasPrice) < 0 {
+				return fmt.Errorf("maxFeePerGas (%v) < BaseFee (%v)", args.MaxFeePerGas, gasPrice)
+			}
+		} else if args.MaxPriorityFeePerGas.ToInt().Cmp(gasPrice) != 0 || args.MaxFeePerGas.ToInt().Cmp(gasPrice) != 0 {
+			return fmt.Errorf("only %s is allowed to be used as maxFeePerGas and maxPriorityPerGas", gasPrice.Text(16))
+		}
+		if args.MaxFeePerGas.ToInt().Cmp(args.MaxPriorityFeePerGas.ToInt()) < 0 {
+			return fmt.Errorf("maxFeePerGas (%v) < maxPriorityFeePerGas (%v)", args.MaxFeePerGas, args.MaxPriorityFeePerGas)
+		}
 	}
 	if args.AccountNonce == nil {
 		nonce := b.GetPoolNonce(ctx, args.From)
@@ -156,8 +214,8 @@ func (args *SendTxArgs) checkArgs() error {
 	if args.TypeInt == nil {
 		return errTxArgNilTxType
 	}
-	// Skip legacy transaction type since it has optional fields
-	if *args.TypeInt == types.TxTypeLegacyTransaction {
+	// Skip ethereum transaction type since it has optional fields
+	if args.TypeInt.IsEthereumTransaction() {
 		return nil
 	}
 
@@ -196,17 +254,26 @@ func (args *SendTxArgs) genTxValuesMap() map[types.TxValueKeyType]interface{} {
 	values := make(map[types.TxValueKeyType]interface{})
 
 	// common tx fields. They should have values after executing "setDefaults" function.
-	if args.TypeInt == nil || args.AccountNonce == nil || args.GasLimit == nil || args.Price == nil {
+	if args.TypeInt == nil || args.AccountNonce == nil || args.GasLimit == nil {
 		return values
 	}
-	values[types.TxValueKeyFrom] = args.From
+	// GasPrice can be an optional tx filed for TxTypeEthereumDynamicFee
+	if args.Price == nil && *args.TypeInt != types.TxTypeEthereumDynamicFee {
+		return values
+	}
+
+	if !args.TypeInt.IsEthereumTransaction() {
+		values[types.TxValueKeyFrom] = args.From
+	}
 	values[types.TxValueKeyNonce] = uint64(*args.AccountNonce)
 	values[types.TxValueKeyGasLimit] = uint64(*args.GasLimit)
-	values[types.TxValueKeyGasPrice] = (*big.Int)(args.Price)
 
 	// optional tx fields
-	if args.TypeInt.IsContractDeploy() {
-		// contract deploy type allows nil as TxValueKeyTo value
+	if args.Price != nil {
+		values[types.TxValueKeyGasPrice] = (*big.Int)(args.Price)
+	}
+	if args.TypeInt.IsContractDeploy() || args.TypeInt.IsEthereumTransaction() {
+		// contract deploy type and ethereum tx types allow nil as TxValueKeyTo value
 		values[types.TxValueKeyTo] = (*common.Address)(args.Recipient)
 	} else if args.Recipient != nil {
 		values[types.TxValueKeyTo] = *args.Recipient
@@ -219,9 +286,19 @@ func (args *SendTxArgs) genTxValuesMap() map[types.TxValueKeyType]interface{} {
 	}
 	if args.Amount != nil {
 		values[types.TxValueKeyAmount] = (*big.Int)(args.Amount)
+	} else if args.TypeInt.IsEthereumTransaction() {
+		values[types.TxValueKeyAmount] = common.Big0
 	}
 	if args.Payload != nil {
-		values[types.TxValueKeyData] = ([]byte)(*args.Payload)
+		// chain data anchoring type uses the TxValueKeyAnchoredData field
+		if args.TypeInt.IsChainDataAnchoring() {
+			values[types.TxValueKeyAnchoredData] = ([]byte)(*args.Payload)
+		} else {
+			values[types.TxValueKeyData] = ([]byte)(*args.Payload)
+		}
+	} else if args.TypeInt.IsEthereumTransaction() {
+		// For Ethereum transactions, Payload is an optional field.
+		values[types.TxValueKeyData] = []byte{}
 	}
 	if args.CodeFormat != nil {
 		values[types.TxValueKeyCodeFormat] = *args.CodeFormat
@@ -234,6 +311,18 @@ func (args *SendTxArgs) genTxValuesMap() map[types.TxValueKeyType]interface{} {
 		if err := rlp.DecodeBytes(*args.Key, &serializer); err == nil {
 			values[types.TxValueKeyAccountKey] = serializer.GetKey()
 		}
+	}
+	if args.ChainID != nil {
+		values[types.TxValueKeyChainID] = (*big.Int)(args.ChainID)
+	}
+	if args.AccessList != nil {
+		values[types.TxValueKeyAccessList] = *args.AccessList
+	}
+	if args.MaxPriorityFeePerGas != nil {
+		values[types.TxValueKeyGasTipCap] = (*big.Int)(args.MaxPriorityFeePerGas)
+	}
+	if args.MaxFeePerGas != nil {
+		values[types.TxValueKeyGasFeeCap] = (*big.Int)(args.MaxFeePerGas)
 	}
 
 	return values
@@ -316,7 +405,6 @@ func (args *ValueTransferTxArgs) toTransaction() (*types.Transaction, error) {
 		types.TxValueKeyTo:       args.To,
 		types.TxValueKeyAmount:   (*big.Int)(args.Value),
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -369,10 +457,49 @@ func (args *AccountUpdateTxArgs) toTransaction() (*types.Transaction, error) {
 		types.TxValueKeyFrom:       args.From,
 		types.TxValueKeyAccountKey: serializer.GetKey(),
 	})
-
 	if err != nil {
 		return nil, err
 	}
 
 	return tx, nil
+}
+
+// isReverted checks given error is vm.ErrExecutionReverted
+func isReverted(err error) bool {
+	if errors.Is(err, vm.ErrExecutionReverted) {
+		return true
+	}
+	return false
+}
+
+// newRevertError wraps data returned when EVM execution was reverted.
+// Make sure that data is returned when execution reverted situation.
+func newRevertError(data []byte) *revertError {
+	reason, errUnpack := abi.UnpackRevert(data)
+	err := errors.New("execution reverted")
+	if errUnpack == nil {
+		err = fmt.Errorf("execution reverted: %v", reason)
+	}
+	return &revertError{
+		error:  err,
+		reason: hexutil.Encode(data),
+	}
+}
+
+// revertError is an API error that encompassas an EVM revertal with JSON error
+// code and a binary data blob.
+type revertError struct {
+	error
+	reason string // revert reason hex encoded
+}
+
+// ErrorCode returns the JSON error code for a revertal.
+// See: https://github.com/ethereum/wiki/wiki/JSON-RPC-Error-Codes-Improvement-Proposal
+func (e *revertError) ErrorCode() int {
+	return 3
+}
+
+// ErrorData returns the hex encoded revert reason.
+func (e *revertError) ErrorData() interface{} {
+	return e.reason
 }

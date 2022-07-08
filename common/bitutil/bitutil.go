@@ -15,8 +15,10 @@ import (
 	"unsafe"
 )
 
-const wordSize = int(unsafe.Sizeof(uintptr(0)))
-const supportsUnaligned = runtime.GOARCH == "386" || runtime.GOARCH == "amd64" || runtime.GOARCH == "ppc64" || runtime.GOARCH == "ppc64le" || runtime.GOARCH == "s390x"
+const (
+	wordSize          = int(unsafe.Sizeof(uintptr(0)))
+	supportsUnaligned = runtime.GOARCH == "386" || runtime.GOARCH == "amd64" || runtime.GOARCH == "ppc64" || runtime.GOARCH == "ppc64le" || runtime.GOARCH == "s390x"
+)
 
 // XORBytes xors the bytes in a and b. The destination is assumed to have enough
 // space. Returns the number of bytes xor'd.

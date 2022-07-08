@@ -72,7 +72,7 @@ func newTxSenderCacher(threads int) *txSenderCacher {
 // Otherwise, it calls SenderPubkey() to cache a pubkey into `Transaction.from`.
 // In addition, if a transaction is a fee-delegated transaction, it also caches a pubkey into `Transaction.feePayer`.
 func cacheSender(signer types.Signer, tx *types.Transaction) {
-	if tx.IsLegacyTransaction() {
+	if tx.IsEthereumTransaction() {
 		types.SenderFrom(signer, tx)
 		return
 	}

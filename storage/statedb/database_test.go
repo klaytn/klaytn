@@ -24,8 +24,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var childHash = common.HexToHash("1341655")  // 20190805 in hexadecimal
-var parentHash = common.HexToHash("1343A3F") // 20199999 in hexadecimal
+var (
+	childHash  = common.HexToHash("1341655") // 20190805 in hexadecimal
+	parentHash = common.HexToHash("1343A3F") // 20199999 in hexadecimal
+)
 
 func TestDatabase_Reference(t *testing.T) {
 	memDB := database.NewMemoryDBManager()
@@ -89,7 +91,7 @@ func TestDatabase_Size(t *testing.T) {
 	memDB := database.NewMemoryDBManager()
 	db := NewDatabaseWithNewCache(memDB, &TrieNodeCacheConfig{CacheType: CacheTypeLocal, LocalCacheSizeMiB: 128})
 
-	totalMemorySize, preimagesSize := db.Size()
+	totalMemorySize, _, preimagesSize := db.Size()
 	assert.Equal(t, common.StorageSize(0), totalMemorySize)
 	assert.Equal(t, common.StorageSize(0), preimagesSize)
 
@@ -100,12 +102,12 @@ func TestDatabase_Size(t *testing.T) {
 
 	db.Reference(childHash, parentHash)
 
-	totalMemorySize, preimagesSize = db.Size()
+	totalMemorySize, _, preimagesSize = db.Size()
 	assert.Equal(t, common.StorageSize(128), totalMemorySize)
 	assert.Equal(t, common.StorageSize(0), preimagesSize)
 
 	db.preimagesSize += 100
-	totalMemorySize, preimagesSize = db.Size()
+	totalMemorySize, _, preimagesSize = db.Size()
 	assert.Equal(t, common.StorageSize(128), totalMemorySize)
 	assert.Equal(t, common.StorageSize(100), preimagesSize)
 }

@@ -21,6 +21,7 @@
 package database
 
 import (
+	"bytes"
 	"encoding/binary"
 
 	"github.com/klaytn/klaytn/common"
@@ -48,7 +49,29 @@ var (
 
 	sectionHeadKeyPrefix = []byte("shead")
 
+	// snapshotKeyPrefix is a governance snapshot prefix
 	snapshotKeyPrefix = []byte("snapshot")
+
+	// snapshotJournalKey tracks the in-memory diff layers across restarts.
+	snapshotJournalKey = []byte("SnapshotJournal")
+
+	// SnapshotGeneratorKey tracks the snapshot generation marker across restarts.
+	SnapshotGeneratorKey = []byte("SnapshotGenerator")
+
+	// snapshotDisabledKey flags that the snapshot should not be maintained due to initial sync.
+	snapshotDisabledKey = []byte("SnapshotDisabled")
+
+	// snapshotRecoveryKey tracks the snapshot recovery marker across restarts.
+	snapshotRecoveryKey = []byte("SnapshotRecovery")
+
+	// snapshotSyncStatusKey tracks the snapshot sync status across restarts.
+	snapshotSyncStatusKey = []byte("SnapshotSyncStatus")
+
+	// snapshotRootKey tracks the hash of the last snapshot.
+	snapshotRootKey = []byte("SnapshotRoot")
+
+	// badBlockKey tracks the list of bad blocks seen by local
+	badBlockKey = []byte("InvalidBlock")
 
 	// Data item prefixes (use single byte to avoid mixing data types, avoid `i`, used for indexes).
 	headerPrefix       = []byte("h") // headerPrefix + num (uint64 big endian) + hash -> header
@@ -59,7 +82,10 @@ var (
 	blockBodyPrefix     = []byte("b") // blockBodyPrefix + num (uint64 big endian) + hash -> block body
 	blockReceiptsPrefix = []byte("r") // blockReceiptsPrefix + num (uint64 big endian) + hash -> block receipts
 
-	txLookupPrefix = []byte("l") // txLookupPrefix + hash -> transaction/receipt lookup metadata
+	txLookupPrefix        = []byte("l") // txLookupPrefix + hash -> transaction/receipt lookup metadata
+	SnapshotAccountPrefix = []byte("a") // SnapshotAccountPrefix + account hash -> account trie value
+	SnapshotStoragePrefix = []byte("o") // SnapshotStoragePrefix + account hash + storage hash -> storage trie value
+	codePrefix            = []byte("c") // codePrefix + code hash -> contract code
 
 	preimagePrefix = []byte("secure-key-")  // preimagePrefix + hash -> preimage
 	configPrefix   = []byte("klay-config-") // config prefix for the db
@@ -105,6 +131,18 @@ type TxLookupEntry struct {
 	Index      uint64
 }
 
+// encodeBlockNumber encodes a block number as big endian uint64
+func encodeBlockNumber(number uint64) []byte {
+	enc := make([]byte, 8)
+	binary.BigEndian.PutUint64(enc, number)
+	return enc
+}
+
+// headerKeyPrefix = headerPrefix + num (uint64 big endian)
+func headerKeyPrefix(number uint64) []byte {
+	return append(headerPrefix, common.Int64ToByteBigEndian(number)...)
+}
+
 // headerKey = headerPrefix + num (uint64 big endian) + hash
 func headerKey(number uint64, hash common.Hash) []byte {
 	return append(append(headerPrefix, common.Int64ToByteBigEndian(number)...), hash.Bytes()...)
@@ -140,6 +178,21 @@ func TxLookupKey(hash common.Hash) []byte {
 	return append(txLookupPrefix, hash.Bytes()...)
 }
 
+// AccountSnapshotKey = SnapshotAccountPrefix + hash
+func AccountSnapshotKey(hash common.Hash) []byte {
+	return append(SnapshotAccountPrefix, hash.Bytes()...)
+}
+
+// StorageSnapshotKey = SnapshotStoragePrefix + account hash + storage hash
+func StorageSnapshotKey(accountHash, storageHash common.Hash) []byte {
+	return append(append(SnapshotStoragePrefix, accountHash.Bytes()...), storageHash.Bytes()...)
+}
+
+// StorageSnapshotsKey = SnapshotStoragePrefix + account hash + storage hash
+func StorageSnapshotsKey(accountHash common.Hash) []byte {
+	return append(SnapshotStoragePrefix, accountHash.Bytes()...)
+}
+
 func SenderTxHashToTxHashKey(senderTxHash common.Hash) []byte {
 	return append(senderTxHashToTxHashPrefix, senderTxHash.Bytes()...)
 }
@@ -147,6 +200,20 @@ func SenderTxHashToTxHashKey(senderTxHash common.Hash) []byte {
 // preimageKey = preimagePrefix + hash
 func preimageKey(hash common.Hash) []byte {
 	return append(preimagePrefix, hash.Bytes()...)
+}
+
+// CodeKey = codePrefix + hash
+func CodeKey(hash common.Hash) []byte {
+	return append(codePrefix, hash.Bytes()...)
+}
+
+// IsCodeKey reports whether the given byte slice is the key of contract code,
+// if so return the raw code hash as well.
+func IsCodeKey(key []byte) (bool, []byte) {
+	if bytes.HasPrefix(key, codePrefix) && len(key) == common.HashLength+len(codePrefix) {
+		return true, key[len(codePrefix):]
+	}
+	return false, nil
 }
 
 // configKey = configPrefix + hash

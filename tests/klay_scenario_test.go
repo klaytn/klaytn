@@ -36,6 +36,7 @@ import (
 	"github.com/klaytn/klaytn/common/compiler"
 	"github.com/klaytn/klaytn/common/profile"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
@@ -200,9 +201,7 @@ func createRoleBasedAccountWithAccountKeyWeightedMultiSig(multisigs []TestCreate
 // Since we provide fee-delegated transactions, it is not true in the above case.
 // This test code should succeed.
 func TestFeeDelegatedWithSmallBalance(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
@@ -238,7 +237,7 @@ func TestFeeDelegatedWithSmallBalance(t *testing.T) {
 		fmt.Println("anonAddr = ", anon.Addr.String())
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := big.NewInt(25 * params.Ston)
 
 	// 1. Transfer (reservoir -> anon) using a legacy transaction.
@@ -298,9 +297,7 @@ func TestFeeDelegatedWithSmallBalance(t *testing.T) {
 // TestSmartContractDeployAddress checks that the smart contract is deployed to the given address or not by
 // checking receipt.ContractAddress.
 func TestSmartContractDeployAddress(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
@@ -336,7 +333,7 @@ func TestSmartContractDeployAddress(t *testing.T) {
 	gasPrice := new(big.Int).SetUint64(0)
 	gasLimit := uint64(100000000000)
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
 	var code string
 
@@ -385,9 +382,7 @@ func TestSmartContractDeployAddress(t *testing.T) {
 // 3. Execute "reward" function with amountToSend
 // 4. Validate "reward" function is executed correctly by executing "balanceOf".
 func TestSmartContractScenario(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
@@ -421,7 +416,7 @@ func TestSmartContractScenario(t *testing.T) {
 	contractAddr := common.Address{}
 
 	gasPrice := new(big.Int).SetUint64(0)
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
 	var abiStr string
 	var code string
@@ -562,9 +557,7 @@ func TestSmartContractScenario(t *testing.T) {
 // 3. Try value transfer. It should be failed.
 // 4. Try fee delegation. It should be failed.
 func TestSmartContractSign(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
@@ -607,7 +600,7 @@ func TestSmartContractSign(t *testing.T) {
 	gasPrice := new(big.Int).SetUint64(0)
 	gasLimit := uint64(100000000000)
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
 	var code string
 
@@ -718,9 +711,7 @@ func TestSmartContractSign(t *testing.T) {
 // 3. Execute "reward" function with amountToSend with fee-delegation.
 // 4. Validate "reward" function is executed correctly by executing "balanceOf".
 func TestFeeDelegatedSmartContractScenario(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
@@ -762,7 +753,7 @@ func TestFeeDelegatedSmartContractScenario(t *testing.T) {
 	gasPrice := new(big.Int).SetUint64(0)
 	gasLimit := uint64(100000000000)
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
 	var abiStr string
 	var code string
@@ -910,9 +901,7 @@ func TestFeeDelegatedSmartContractScenario(t *testing.T) {
 // 3. Execute "reward" function with amountToSend with fee-delegation.
 // 4. Validate "reward" function is executed correctly by executing "balanceOf".
 func TestFeeDelegatedSmartContractScenarioWithRatio(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
@@ -954,7 +943,7 @@ func TestFeeDelegatedSmartContractScenarioWithRatio(t *testing.T) {
 	gasPrice := new(big.Int).SetUint64(0)
 	gasLimit := uint64(100000000000)
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
 	var abiStr string
 	var code string
@@ -1105,9 +1094,7 @@ func TestFeeDelegatedSmartContractScenarioWithRatio(t *testing.T) {
 // 4. Key update of anon using AccountUpdate with multisig keys.
 // 5. Transfer (anon-> reservoir) using TxTypeValueTransfer.
 func TestAccountUpdate(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
@@ -1143,7 +1130,7 @@ func TestAccountUpdate(t *testing.T) {
 		fmt.Println("anonAddr = ", anon.Addr.String())
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 	gasLimit := uint64(100000)
 
@@ -1304,9 +1291,7 @@ func TestAccountUpdate(t *testing.T) {
 // 2. Key update of anon using TxTypeFeeDelegatedAccountUpdate
 // 3. Transfer (anon -> reservoir) using TxTypeValueTransfer.
 func TestFeeDelegatedAccountUpdate(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
@@ -1342,7 +1327,7 @@ func TestFeeDelegatedAccountUpdate(t *testing.T) {
 		fmt.Println("anonAddr = ", anon.Addr.String())
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// 1. Transfer (reservoir -> anon) using a legacy transaction.
@@ -1436,9 +1421,7 @@ func TestFeeDelegatedAccountUpdate(t *testing.T) {
 // 2. Key update of anon using TxTypeFeeDelegatedAccountUpdateWithRatio.
 // 3. Transfer (anon -> reservoir) using TxTypeValueTransfer.
 func TestFeeDelegatedAccountUpdateWithRatio(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
@@ -1474,7 +1457,7 @@ func TestFeeDelegatedAccountUpdateWithRatio(t *testing.T) {
 		fmt.Println("anonAddr = ", anon.Addr.String())
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// 1. Transfer (reservoir -> anon) using a legacy transaction.
@@ -1571,9 +1554,7 @@ func TestFeeDelegatedAccountUpdateWithRatio(t *testing.T) {
 // 3. Transfer (anon -> reservoir) using TxTypeValueTransfer with only two keys.
 // 4. FAILED-CASE: Transfer (anon -> reservoir) using TxTypeValueTransfer with only one key.
 func TestMultisigScenario(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
@@ -1607,9 +1588,11 @@ func TestMultisigScenario(t *testing.T) {
 	// multi-sig account
 	multisig, err := createMultisigAccount(uint(2),
 		[]uint{1, 1, 1},
-		[]string{"bb113e82881499a7a361e8354a5b68f6c6885c7bcba09ea2b0891480396c322e",
+		[]string{
+			"bb113e82881499a7a361e8354a5b68f6c6885c7bcba09ea2b0891480396c322e",
 			"a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae59438e989",
-			"c32c471b732e2f56103e2f8e8cfd52792ef548f05f326e546a7d1fbf9d0419ec"},
+			"c32c471b732e2f56103e2f8e8cfd52792ef548f05f326e546a7d1fbf9d0419ec",
+		},
 		common.HexToAddress("0xbbfa38050bf3167c887c086758f448ce067ea8ea"))
 
 	if testing.Verbose() {
@@ -1617,7 +1600,7 @@ func TestMultisigScenario(t *testing.T) {
 		fmt.Println("multisigAddr = ", multisig.Addr.String())
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// 1. Create an account anon using LegacyTransaction.
@@ -1760,7 +1743,7 @@ func TestValidateSender(t *testing.T) {
 
 	initialBalance := big.NewInt(1000000)
 
-	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
+	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil)
 	statedb.CreateEOA(anon.Addr, false, anon.AccKey)
 	statedb.SetNonce(anon.Addr, nonce)
 	statedb.SetBalance(anon.Addr, initialBalance)

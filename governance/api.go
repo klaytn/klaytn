@@ -19,20 +19,18 @@ package governance
 import (
 	"errors"
 	"math/big"
-	"reflect"
 	"strings"
-	"sync/atomic"
+
+	"github.com/klaytn/klaytn/common/hexutil"
 
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/reward"
 )
 
 type PublicGovernanceAPI struct {
-	governance *Governance // Node interfaced by this API
+	governance Engine // Node interfaced by this API
 }
 
 type returnTally struct {
@@ -41,16 +39,16 @@ type returnTally struct {
 	ApprovalPercentage float64
 }
 
-func NewGovernanceAPI(gov *Governance) *PublicGovernanceAPI {
+func NewGovernanceAPI(gov Engine) *PublicGovernanceAPI {
 	return &PublicGovernanceAPI{governance: gov}
 }
 
 type GovernanceKlayAPI struct {
-	governance *Governance
+	governance Engine
 	chain      blockChain
 }
 
-func NewGovernanceKlayAPI(gov *Governance, chain blockChain) *GovernanceKlayAPI {
+func NewGovernanceKlayAPI(gov Engine, chain blockChain) *GovernanceKlayAPI {
 	return &GovernanceKlayAPI{governance: gov, chain: chain}
 }
 
@@ -61,33 +59,41 @@ var (
 	errPermissionDenied       = errors.New("You don't have the right to vote")
 	errRemoveSelf             = errors.New("You can't vote on removing yourself")
 	errInvalidKeyValue        = errors.New("Your vote couldn't be placed. Please check your vote's key and value")
+	errInvalidLowerBound      = errors.New("lowerboundbasefee cannot be set exceeding upperboundbasefee")
+	errInvalidUpperBound      = errors.New("upperboundbasefee cannot be set lower than lowerboundbasefee")
 )
 
-// TODO-Klaytn-Governance: Refine this API and consider the gas price of txpool
+// GasPriceAt returns the base fee of the given block in peb,
+// or returns unit price by using governance if there is no base fee set in header,
+// or returns gas price of txpool if the block is pending block.
 func (api *GovernanceKlayAPI) GasPriceAt(num *rpc.BlockNumber) (*hexutil.Big, error) {
 	if num == nil || *num == rpc.LatestBlockNumber {
-		ret := api.governance.UnitPrice()
-		return (*hexutil.Big)(big.NewInt(0).SetUint64(ret)), nil
+		header := api.chain.CurrentHeader()
+		if header.BaseFee == nil {
+			return (*hexutil.Big)(new(big.Int).SetUint64(api.governance.UnitPrice())), nil
+		}
+		return (*hexutil.Big)(header.BaseFee), nil
 	} else if *num == rpc.PendingBlockNumber {
-		return nil, kerrors.ErrPendingBlockNotSupported
+		txpool := api.governance.GetTxPool()
+		return (*hexutil.Big)(txpool.GasPrice()), nil
 	} else {
-		blockNum := num.Int64()
+		blockNum := num.Uint64()
 
-		if blockNum > api.chain.CurrentHeader().Number.Int64() {
+		// Return the BaseFee in header at the block number
+		header := api.chain.GetHeaderByNumber(blockNum)
+		if blockNum > api.chain.CurrentHeader().Number.Uint64() || header == nil {
 			return nil, errUnknownBlock
+		} else if header.BaseFee != nil {
+			return (*hexutil.Big)(header.BaseFee), nil
 		}
 
+		// Return the UnitPrice in governance data at the block number
 		if ret, err := api.GasPriceAtNumber(blockNum); err != nil {
 			return nil, err
 		} else {
-			return (*hexutil.Big)(big.NewInt(0).SetUint64(ret)), nil
+			return (*hexutil.Big)(new(big.Int).SetUint64(ret)), nil
 		}
 	}
-}
-
-func (api *GovernanceKlayAPI) GasPrice() *hexutil.Big {
-	ret := api.governance.UnitPrice()
-	return (*hexutil.Big)(big.NewInt(0).SetUint64(ret))
 }
 
 // Vote injects a new vote for governance targets such as unitprice and governingnode.
@@ -95,45 +101,52 @@ func (api *PublicGovernanceAPI) Vote(key string, val interface{}) (string, error
 	gMode := api.governance.GovernanceMode()
 	gNode := api.governance.GoverningNode()
 
-	if GovernanceModeMap[gMode] == params.GovernanceMode_Single && gNode != api.governance.nodeAddress.Load().(common.Address) {
+	if GovernanceModeMap[gMode] == params.GovernanceMode_Single && gNode != api.governance.NodeAddress() {
 		return "", errPermissionDenied
 	}
-	if strings.ToLower(key) == "governance.removevalidator" {
-		if reflect.TypeOf(val).String() != "string" {
-			return "", errInvalidKeyValue
-		}
-		target := val.(string)
-		if !common.IsHexAddress(target) {
-			return "", errInvalidKeyValue
-		}
-		if api.isRemovingSelf(val) {
+	vote, ok := api.governance.ValidateVote(&GovernanceVote{Key: strings.ToLower(key), Value: val})
+	if !ok {
+		return "", errInvalidKeyValue
+	}
+	if vote.Key == "governance.removevalidator" {
+		if api.isRemovingSelf(val.(string)) {
 			return "", errRemoveSelf
 		}
 	}
+	if vote.Key == "kip71.lowerboundbasefee" {
+		if vote.Value.(uint64) > api.governance.UpperBoundBaseFee() {
+			return "", errInvalidLowerBound
+		}
+	}
+	if vote.Key == "kip71.upperboundbasefee" {
+		if vote.Value.(uint64) < api.governance.LowerBoundBaseFee() {
+			return "", errInvalidUpperBound
+		}
+	}
 	if api.governance.AddVote(key, val) {
-		return "Your vote was successfully placed.", nil
+		return "Your vote is prepared. It will be put into the block header or applied when your node generates a block as a proposer. Note that your vote may be duplicate.", nil
 	}
 	return "", errInvalidKeyValue
 }
 
-func (api *PublicGovernanceAPI) isRemovingSelf(val interface{}) bool {
-	target := val.(string)
-
-	if common.HexToAddress(target) == api.governance.nodeAddress.Load().(common.Address) {
-		return true
-	} else {
-		return false
+func (api *PublicGovernanceAPI) isRemovingSelf(val string) bool {
+	for _, str := range strings.Split(val, ",") {
+		str = strings.Trim(str, " ")
+		if common.HexToAddress(str) == api.governance.NodeAddress() {
+			return true
+		}
 	}
+	return false
 }
 
 func (api *PublicGovernanceAPI) ShowTally() []*returnTally {
 	ret := []*returnTally{}
 
-	for _, val := range api.governance.GovernanceTallies.Copy() {
+	for _, val := range api.governance.GetGovernanceTalliesCopy() {
 		item := &returnTally{
 			Key:                val.Key,
 			Value:              val.Value,
-			ApprovalPercentage: float64(val.Votes) / float64(atomic.LoadUint64(&api.governance.totalVotingPower)) * 100,
+			ApprovalPercentage: float64(val.Votes) / float64(api.governance.TotalVotingPower()) * 100,
 		}
 		ret = append(ret, item)
 	}
@@ -145,15 +158,13 @@ func (api *PublicGovernanceAPI) TotalVotingPower() (float64, error) {
 	if !api.isGovernanceModeBallot() {
 		return 0, errNotAvailableInThisMode
 	}
-	return float64(atomic.LoadUint64(&api.governance.totalVotingPower)) / 1000.0, nil
+	return float64(api.governance.TotalVotingPower()) / 1000.0, nil
 }
 
 func (api *PublicGovernanceAPI) ItemsAt(num *rpc.BlockNumber) (map[string]interface{}, error) {
 	blockNumber := uint64(0)
-	if num == nil || *num == rpc.LatestBlockNumber {
-		blockNumber = api.governance.blockChain.CurrentHeader().Number.Uint64()
-	} else if *num == rpc.PendingBlockNumber {
-		return nil, kerrors.ErrPendingBlockNotSupported
+	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
+		blockNumber = api.governance.BlockChain().CurrentHeader().Number.Uint64()
 	} else {
 		blockNumber = uint64(num.Int64())
 	}
@@ -167,10 +178,8 @@ func (api *PublicGovernanceAPI) ItemsAt(num *rpc.BlockNumber) (map[string]interf
 
 func (api *PublicGovernanceAPI) GetStakingInfo(num *rpc.BlockNumber) (*reward.StakingInfo, error) {
 	blockNumber := uint64(0)
-	if num == nil || *num == rpc.LatestBlockNumber {
-		blockNumber = api.governance.blockChain.CurrentHeader().Number.Uint64()
-	} else if *num == rpc.PendingBlockNumber {
-		return nil, kerrors.ErrPendingBlockNotSupported
+	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
+		blockNumber = api.governance.BlockChain().CurrentHeader().Number.Uint64()
 	} else {
 		blockNumber = uint64(num.Int64())
 	}
@@ -196,14 +205,12 @@ func (api *PublicGovernanceAPI) IdxCacheFromDb() []uint64 {
 // TODO-Klaytn: Return error if invalid input is given such as pending or a too big number
 func (api *PublicGovernanceAPI) ItemCacheFromDb(num *rpc.BlockNumber) map[string]interface{} {
 	blockNumber := uint64(0)
-	if num == nil || *num == rpc.LatestBlockNumber {
-		blockNumber = api.governance.blockChain.CurrentHeader().Number.Uint64()
-	} else if *num == rpc.PendingBlockNumber {
-		return nil
+	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
+		blockNumber = api.governance.BlockChain().CurrentHeader().Number.Uint64()
 	} else {
 		blockNumber = uint64(num.Int64())
 	}
-	ret, _ := api.governance.db.ReadGovernance(blockNumber)
+	ret, _ := api.governance.DB().ReadGovernance(blockNumber)
 	return ret
 }
 
@@ -215,11 +222,9 @@ type VoteList struct {
 }
 
 func (api *PublicGovernanceAPI) MyVotes() []*VoteList {
+	ret := []*VoteList{}
 
-	ret := make([]*VoteList, 0, api.governance.voteMap.Size())
-	//ret := []*VoteList{}
-
-	for k, v := range api.governance.voteMap.Copy() {
+	for k, v := range api.governance.GetVoteMapCopy() {
 		item := &VoteList{
 			Key:      k,
 			Value:    v.Value,
@@ -236,15 +241,15 @@ func (api *PublicGovernanceAPI) MyVotingPower() (float64, error) {
 	if !api.isGovernanceModeBallot() {
 		return 0, errNotAvailableInThisMode
 	}
-	return float64(atomic.LoadUint64(&api.governance.votingPower)) / 1000.0, nil
+	return float64(api.governance.MyVotingPower()) / 1000.0, nil
 }
 
 func (api *PublicGovernanceAPI) ChainConfig() *params.ChainConfig {
-	return api.governance.ChainConfig
+	return api.governance.InitialChainConfig()
 }
 
 func (api *PublicGovernanceAPI) NodeAddress() common.Address {
-	return api.governance.nodeAddress.Load().(common.Address)
+	return api.governance.NodeAddress()
 }
 
 func (api *PublicGovernanceAPI) isGovernanceModeBallot() bool {
@@ -254,8 +259,8 @@ func (api *PublicGovernanceAPI) isGovernanceModeBallot() bool {
 	return false
 }
 
-func (api *GovernanceKlayAPI) GasPriceAtNumber(num int64) (uint64, error) {
-	val, err := api.governance.GetGovernanceItemAtNumber(uint64(num), GovernanceKeyMapReverse[params.UnitPrice])
+func (api *GovernanceKlayAPI) GasPriceAtNumber(num uint64) (uint64, error) {
+	val, err := api.governance.GetGovernanceItemAtNumber(num, GovernanceKeyMapReverse[params.UnitPrice])
 	if err != nil {
 		logger.Error("Failed to retrieve unit price", "err", err)
 		return 0, err

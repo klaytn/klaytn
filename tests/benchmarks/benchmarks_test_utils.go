@@ -61,7 +61,7 @@ func makeBenchConfig() *BenchConfig {
 	// EVMConfig   vm.Config
 
 	memDBManager := database.NewMemoryDBManager()
-	cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(memDBManager))
+	cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(memDBManager), nil)
 	cfg.GetHashFn = func(n uint64) common.Hash {
 		return common.BytesToHash(crypto.Keccak256([]byte(new(big.Int).SetUint64(n).String())))
 	}

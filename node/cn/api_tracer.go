@@ -40,7 +40,6 @@ import (
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node/cn/tracers"
@@ -114,10 +113,9 @@ type txTraceTask struct {
 func (api *PrivateDebugAPI) TraceChain(ctx context.Context, start, end rpc.BlockNumber, config *TraceConfig) (*rpc.Subscription, error) {
 	// Fetch the block interval that we want to trace
 	var from, to *types.Block
-
 	switch start {
 	case rpc.PendingBlockNumber:
-		return nil, kerrors.ErrPendingBlockNotSupported
+		from = api.cn.miner.PendingBlock()
 	case rpc.LatestBlockNumber:
 		from = api.cn.blockchain.CurrentBlock()
 	default:
@@ -125,7 +123,7 @@ func (api *PrivateDebugAPI) TraceChain(ctx context.Context, start, end rpc.Block
 	}
 	switch end {
 	case rpc.PendingBlockNumber:
-		return nil, kerrors.ErrPendingBlockNotSupported
+		to = api.cn.miner.PendingBlock()
 	case rpc.LatestBlockNumber:
 		to = api.cn.blockchain.CurrentBlock()
 	default:
@@ -165,7 +163,7 @@ func (api *PrivateDebugAPI) traceChain(ctx context.Context, start, end *types.Bl
 			return nil, fmt.Errorf("parent block #%d not found", number-1)
 		}
 	}
-	statedb, err := state.New(start.Root(), database)
+	statedb, err := state.New(start.Root(), database, nil)
 	if err != nil {
 		// If the starting state is missing, allow some number of blocks to be reexecuted
 		reexec := defaultTraceReexec
@@ -178,7 +176,7 @@ func (api *PrivateDebugAPI) traceChain(ctx context.Context, start, end *types.Bl
 			if start == nil {
 				break
 			}
-			if statedb, err = state.New(start.Root(), database); err == nil {
+			if statedb, err = state.New(start.Root(), database, nil); err == nil {
 				break
 			}
 		}
@@ -279,7 +277,7 @@ func (api *PrivateDebugAPI) traceChain(ctx context.Context, start, end *types.Bl
 			// Print progress logs if long enough time elapsed
 			if time.Since(logged) > log.StatsReportLimit {
 				if number > origin {
-					nodeSize, preimageSize := database.TrieDB().Size()
+					nodeSize, _, preimageSize := database.TrieDB().Size()
 					logger.Info("Tracing chain segment", "start", origin, "end", end.NumberU64(), "current", number, "transactions", traced, "elapsed", time.Since(begin), "nodeSize", nodeSize, "preimageSize", preimageSize)
 				} else {
 					logger.Info("Preparing state for chain trace", "block", number, "start", origin, "elapsed", time.Since(begin))
@@ -371,7 +369,7 @@ func (api *PrivateDebugAPI) TraceBlockByNumber(ctx context.Context, number rpc.B
 
 	switch number {
 	case rpc.PendingBlockNumber:
-		return nil, kerrors.ErrPendingBlockNotSupported
+		block = api.cn.miner.PendingBlock()
 	case rpc.LatestBlockNumber:
 		block = api.cn.blockchain.CurrentBlock()
 	default:
@@ -678,7 +676,7 @@ func (api *PrivateDebugAPI) computeStateDB(block *types.Block, reexec uint64) (*
 	var err error
 
 	for i := uint64(0); i < reexec; i++ {
-		if statedb, err = state.New(block.Root(), database); err == nil {
+		if statedb, err = state.New(block.Root(), database, nil); err == nil {
 			break
 		}
 		blockNumber := block.NumberU64()
@@ -729,7 +727,7 @@ func (api *PrivateDebugAPI) computeStateDB(block *types.Block, reexec uint64) (*
 		}
 		proot = root
 	}
-	nodeSize, preimageSize := database.TrieDB().Size()
+	nodeSize, _, preimageSize := database.TrieDB().Size()
 	logger.Info("Historical state regenerated", "block", block.NumberU64(), "elapsed", time.Since(start), "nodeSize", nodeSize, "preimageSize", preimageSize)
 	return statedb, nil
 }
