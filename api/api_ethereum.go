@@ -1236,7 +1236,7 @@ func (args *EthTransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int,
 			gasPrice = args.MaxFeePerGas.ToInt()
 		} else {
 			// User specified neither GasPrice nor MaxFeePerGas, use baseFee
-			gasPrice = baseFee.Mul(baseFee, common.Big2)
+			gasPrice = new(big.Int).Mul(baseFee, common.Big2)
 		}
 	}
 

@@ -35,7 +35,6 @@ import (
 
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
@@ -343,7 +342,7 @@ func TestEffectiveGasPrice(t *testing.T) {
 
 	have = dynamicTx.EffectiveGasPrice(header)
 	te := dynamicTx.GetTxInternalData().(TxInternalDataBaseFee)
-	want = math.BigMin(new(big.Int).Add(te.GetGasTipCap(), new(big.Int)), te.GetGasFeeCap())
+	want = te.GetGasFeeCap()
 	assert.Equal(t, want, have)
 
 	header.BaseFee = big.NewInt(2000)
@@ -369,15 +368,18 @@ func TestEffectiveGasTip(t *testing.T) {
 	legacyTx := NewTx(&TxInternalDataLegacy{Price: big.NewInt(1000)})
 	dynamicTx := NewTx(&TxInternalDataEthereumDynamicFee{GasFeeCap: big.NewInt(4000), GasTipCap: big.NewInt(1000)})
 
+	// before kip71 hardfork
 	baseFee := big.NewInt(2000)
 	have := legacyTx.EffectiveGasTip(baseFee)
 	want := big.NewInt(1000)
 	assert.Equal(t, want, have)
 
+	baseFee = big.NewInt(2000)
 	have = dynamicTx.EffectiveGasTip(baseFee)
 	want = big.NewInt(1000)
 	assert.Equal(t, want, have)
 
+	// before kip71 hardfork
 	baseFee = big.NewInt(0)
 	have = legacyTx.EffectiveGasTip(baseFee)
 	want = big.NewInt(1000)
