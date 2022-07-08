@@ -29,6 +29,7 @@ type ContractEngine struct {
 	chain      blockChain  // To access the contract state DB
 }
 
+// TODO: remove defaultGov if not necessary
 func NewContractEngine(config *params.ChainConfig, defaultGov *Governance) *ContractEngine {
 	e := &ContractEngine{
 		chainConfig:   config,

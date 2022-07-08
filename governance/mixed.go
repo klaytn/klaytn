@@ -1,6 +1,8 @@
 package governance
 
 import (
+	"math/big"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
@@ -8,16 +10,18 @@ import (
 	"github.com/klaytn/klaytn/storage/database"
 )
 
+// TODO: remove initialConfig, initialParams, currentParams if not necessary
 type MixedEngine struct {
 	initialConfig *params.ChainConfig
 	initialParams *params.GovParamSet
 	currentParams *params.GovParamSet
 
-	db database.DBManager
+	db    database.DBManager
+	chain blockChain
 
 	// Subordinate engines
-	// TODO: Add ContractEngine
-	defaultGov *Governance
+	contractGov *ContractEngine
+	defaultGov  *Governance
 }
 
 // newMixedEngine instantiate a new MixedEngine struct.
@@ -25,12 +29,7 @@ type MixedEngine struct {
 func newMixedEngine(config *params.ChainConfig, db database.DBManager, doInit bool) *MixedEngine {
 	e := &MixedEngine{
 		initialConfig: config,
-		initialParams: nil,
-		currentParams: nil,
-
-		db: db,
-
-		defaultGov: nil,
+		db:            db,
 	}
 
 	if p, err := params.NewGovParamSetChainConfig(config); err == nil {
@@ -46,6 +45,8 @@ func newMixedEngine(config *params.ChainConfig, db database.DBManager, doInit bo
 	} else {
 		e.defaultGov = NewGovernance(config, db)
 	}
+
+	e.contractGov = NewContractEngine(config, e.defaultGov)
 
 	// Load last state
 	e.UpdateParams()
@@ -64,15 +65,45 @@ func NewMixedEngineNoInit(config *params.ChainConfig, db database.DBManager) *Mi
 }
 
 func (e *MixedEngine) Params() *params.GovParamSet {
-	return e.defaultGov.Params()
+	if e.isContractEnabledAtNext() {
+		return e.contractGov.Params()
+	} else {
+		return e.defaultGov.Params()
+	}
 }
 
 func (e *MixedEngine) ParamsAt(num uint64) (*params.GovParamSet, error) {
-	return e.defaultGov.ParamsAt(num)
+	if e.isContractEnabledAt(num) {
+		return e.contractGov.ParamsAt(num)
+	} else {
+		return e.defaultGov.ParamsAt(num)
+	}
 }
 
 func (e *MixedEngine) UpdateParams() error {
-	return e.defaultGov.UpdateParams()
+	if e.isContractEnabledAtNext() {
+		return e.contractGov.UpdateParams()
+	} else {
+		return e.defaultGov.UpdateParams()
+	}
+}
+
+func (e *MixedEngine) SetBlockchain(chain blockChain) {
+	e.chain = chain
+	e.contractGov.SetBlockchain(chain)
+	e.defaultGov.SetBlockchain(chain)
+}
+
+func (e *MixedEngine) isContractEnabledAt(num uint64) bool {
+	return e.initialConfig.IsContractGovForkEnabled(new(big.Int).SetUint64(num))
+}
+
+func (e *MixedEngine) isContractEnabledAtNext() bool {
+	if e.chain == nil {
+		return false
+	}
+	head := e.chain.CurrentHeader().Number.Uint64()
+	return e.isContractEnabledAt(head + 1)
 }
 
 // Pass-through to HeaderEngine
@@ -199,10 +230,6 @@ func (e *MixedEngine) SetTotalVotingPower(t uint64) {
 
 func (e *MixedEngine) SetMyVotingPower(t uint64) {
 	e.defaultGov.SetMyVotingPower(t)
-}
-
-func (e *MixedEngine) SetBlockchain(chain blockChain) {
-	e.defaultGov.SetBlockchain(chain)
 }
 
 func (e *MixedEngine) SetTxPool(txpool txPool) {
