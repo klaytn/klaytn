@@ -1505,7 +1505,8 @@ func (d *Downloader) processHeaders(origin uint64, td *big.Int) error {
 				// Unless we're doing light chains, schedule the headers for associated content retrieval
 				if mode == FullSync || mode == SnapSync || mode == FastSync {
 					// If we've reached the allowed number of pending headers, stall a bit
-					for d.queue.PendingBlocks() >= maxQueuedHeaders || d.queue.PendingReceipts() >= maxQueuedHeaders {
+					for d.queue.PendingBlocks() >= maxQueuedHeaders || d.queue.PendingReceipts() >= maxQueuedHeaders ||
+						d.queue.PendingStakingInfos() >= maxQueuedHeaders {
 						select {
 						case <-d.cancelCh:
 							rollbackErr = errCanceled
