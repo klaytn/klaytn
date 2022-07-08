@@ -44,6 +44,7 @@ var (
 		IstanbulCompatibleBlock:  big.NewInt(86816005),
 		LondonCompatibleBlock:    big.NewInt(86816005),
 		EthTxTypeCompatibleBlock: big.NewInt(86816005),
+		KIP71CompatibleBlock:     big.NewInt(999999999), // TODO-Klaytn-KIP71: Set HF blocknumber correctly
 		DeriveShaImpl:            2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x52d41ca72af615a1ac3301b0a93efa222ecc7541"),
@@ -72,6 +73,7 @@ var (
 		IstanbulCompatibleBlock:  big.NewInt(75373312),
 		LondonCompatibleBlock:    big.NewInt(80295291),
 		EthTxTypeCompatibleBlock: big.NewInt(86513895),
+		KIP71CompatibleBlock:     big.NewInt(999999999), // TODO-Klaytn-KIP71: Set HF blocknumber correctly
 		DeriveShaImpl:            2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x99fb17d324fa0e07f23b49d09028ac0919414db6"),
@@ -137,17 +139,12 @@ var (
 	}
 )
 
-var (
-	// VMLogTarget sets the output target of vmlog.
-	// The values below can be OR'ed.
-	//  - 0x0: no output (default)
-	//  - 0x1: file (DATADIR/logs/vm.log)
-	//  - 0x2: stdout (like logger.DEBUG)
-	VMLogTarget = 0x0
-
-	// TODO-klaytn temporal number for test
-	KIP71CompatibleBlockNum = big.NewInt(95000000)
-)
+// VMLogTarget sets the output target of vmlog.
+// The values below can be OR'ed.
+//  - 0x0: no output (default)
+//  - 0x1: file (DATADIR/logs/vm.log)
+//  - 0x2: stdout (like logger.DEBUG)
+var VMLogTarget = 0x0
 
 const (
 	VMLogToFile   = 0x1
