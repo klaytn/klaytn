@@ -4,7 +4,7 @@ ARG PKG_DIR=/klaytn-docker-pkg
 ARG SRC_DIR=/go/src/github.com/klaytn/klaytn
 
 FROM ${DOCKER_BASE_IMAGE} AS builder
-LABEL maintainer="Austin Brown <austin.brown@groundx.xyz>"
+LABEL maintainer="Tony Lee <tony.jm@krustuniverse.com>"
 ARG SRC_DIR
 ARG PKG_DIR
 
@@ -17,17 +17,18 @@ ENV KLAYTN_STATIC_LINK=$KLAYTN_STATIC_LINK
 ARG KLAYTN_DISABLE_SYMBOL=0
 ENV KLAYTN_DISABLE_SYMBOL=$KLAYTN_DISABLE_SYMBOL
 
+RUN git init
 ADD . $SRC_DIR
+RUN git init
 RUN cd $SRC_DIR && make all
 
-FROM alpine:3
+FROM --platform=linux/amd64 ubuntu:20.04
 ARG SRC_DIR
 ARG PKG_DIR
 
+RUN apt update
+RUN apt install -yq musl-dev
 RUN mkdir -p $PKG_DIR/conf $PKG_DIR/bin
-
-# Add bash as required by the Klaytn startup scripts
-RUN apk add --no-cache bash
 
 # Startup scripts and binaries must be in the same location
 COPY --from=builder $SRC_DIR/build/bin/* $PKG_DIR/bin/

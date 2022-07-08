@@ -21,6 +21,7 @@
 package params
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/big"
 
@@ -39,10 +40,11 @@ var (
 var (
 	// CypressChainConfig is the chain parameters to run a node on the cypress main network.
 	CypressChainConfig = &ChainConfig{
-		ChainID:                 big.NewInt(int64(CypressNetworkId)),
-		IstanbulCompatibleBlock: nil,
-		LondonCompatibleBlock:   nil,
-		DeriveShaImpl:           2,
+		ChainID:                  big.NewInt(int64(CypressNetworkId)),
+		IstanbulCompatibleBlock:  big.NewInt(86816005),
+		LondonCompatibleBlock:    big.NewInt(86816005),
+		EthTxTypeCompatibleBlock: big.NewInt(86816005),
+		DeriveShaImpl:            2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x52d41ca72af615a1ac3301b0a93efa222ecc7541"),
 			GovernanceMode: "single",
@@ -66,10 +68,11 @@ var (
 
 	// BaobabChainConfig contains the chain parameters to run a node on the Baobab test network.
 	BaobabChainConfig = &ChainConfig{
-		ChainID:                 big.NewInt(int64(BaobabNetworkId)),
-		IstanbulCompatibleBlock: big.NewInt(75373312),
-		LondonCompatibleBlock:   nil,
-		DeriveShaImpl:           2,
+		ChainID:                  big.NewInt(int64(BaobabNetworkId)),
+		IstanbulCompatibleBlock:  big.NewInt(75373312),
+		LondonCompatibleBlock:    big.NewInt(80295291),
+		EthTxTypeCompatibleBlock: big.NewInt(86513895),
+		DeriveShaImpl:            2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x99fb17d324fa0e07f23b49d09028ac0919414db6"),
 			GovernanceMode: "single",
@@ -141,6 +144,9 @@ var (
 	//  - 0x1: file (DATADIR/logs/vm.log)
 	//  - 0x2: stdout (like logger.DEBUG)
 	VMLogTarget = 0x0
+
+	// TODO-klaytn temporal number for test
+	KIP71CompatibleBlockNum = big.NewInt(95000000)
 )
 
 const (
@@ -165,8 +171,10 @@ type ChainConfig struct {
 
 	// "Compatible" means that it is EVM compatible(the opcode and precompiled contracts are the same as Ethereum EVM).
 	// In other words, not all the hard fork items are included.
-	IstanbulCompatibleBlock *big.Int `json:"istanbulCompatibleBlock,omitempty"` // IstanbulCompatibleBlock switch block (nil = no fork, 0 = already on istanbul)
-	LondonCompatibleBlock   *big.Int `json:"londonCompatibleBlock,omitempty"`   // LondonCompatibleBlock switch block (nil = no fork, 0 = already on london)
+	IstanbulCompatibleBlock  *big.Int `json:"istanbulCompatibleBlock,omitempty"`  // IstanbulCompatibleBlock switch block (nil = no fork, 0 = already on istanbul)
+	LondonCompatibleBlock    *big.Int `json:"londonCompatibleBlock,omitempty"`    // LondonCompatibleBlock switch block (nil = no fork, 0 = already on london)
+	EthTxTypeCompatibleBlock *big.Int `json:"ethTxTypeCompatibleBlock,omitempty"` // EthTxTypeCompatibleBlock switch block (nil = no fork, 0 = already on ethTxType)
+	KIP71CompatibleBlock     *big.Int `json:"kip71CompatibleBlock,omitempty"`     // KIP71Compatible switch block (nil = no fork, 0 already on KIP71)
 
 	// Various consensus engines
 	Gxhash   *GxhashConfig   `json:"gxhash,omitempty"` // (deprecated) not supported engine
@@ -183,6 +191,7 @@ type GovernanceConfig struct {
 	GoverningNode  common.Address `json:"governingNode"`
 	GovernanceMode string         `json:"governanceMode"`
 	Reward         *RewardConfig  `json:"reward,omitempty"`
+	KIP71          *KIP71Config   `json:"kip71,omitempty"`
 }
 
 func (g *GovernanceConfig) DeferredTxFee() bool {
@@ -198,6 +207,15 @@ type RewardConfig struct {
 	StakingUpdateInterval  uint64   `json:"stakingUpdateInterval"`  // Interval when staking information is updated
 	ProposerUpdateInterval uint64   `json:"proposerUpdateInterval"` // Interval when proposer information is updated
 	MinimumStake           *big.Int `json:"minimumStake"`           // Minimum amount of peb to join CCO
+}
+
+// TODO-klaytn kip71 governance parameters
+type KIP71Config struct {
+	LowerBoundBaseFee         uint64 `json:"lowerboundbasefee"`         // Minimum base fee for dynamic gas price
+	UpperBoundBaseFee         uint64 `json:"upperboundbasefee"`         // Maximum base fee for dynamic gas price
+	GasTarget                 uint64 `json:"gastarget"`                 // Gauge parameter increasing or decreasing gas price
+	MaxBlockGasUsedForBaseFee uint64 `json:"maxblockgasusedforbasefee"` // Maximum network and process capacity to allow in a block
+	BaseFeeDenominator        uint64 `json:"basefeedenominator"`        // For normalizing effect of the rapid change like impulse gas used
 }
 
 // IstanbulConfig is the consensus engine configs for Istanbul based sealing.
@@ -246,20 +264,24 @@ func (c *ChainConfig) String() string {
 		engine = "unknown"
 	}
 	if c.Istanbul != nil {
-		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d Engine: %v}",
+		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v KIP71CompatibleBlock: %v SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d Engine: %v}",
 			c.ChainID,
 			c.IstanbulCompatibleBlock,
 			c.LondonCompatibleBlock,
+			c.EthTxTypeCompatibleBlock,
+			c.KIP71CompatibleBlock,
 			c.Istanbul.SubGroupSize,
 			c.UnitPrice,
 			c.DeriveShaImpl,
 			engine,
 		)
 	} else {
-		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v UnitPrice: %d DeriveShaImpl: %d Engine: %v }",
+		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v KIP71CompatibleBlock: %v UnitPrice: %d DeriveShaImpl: %d Engine: %v }",
 			c.ChainID,
 			c.IstanbulCompatibleBlock,
 			c.LondonCompatibleBlock,
+			c.EthTxTypeCompatibleBlock,
+			c.KIP71CompatibleBlock,
 			c.UnitPrice,
 			c.DeriveShaImpl,
 			engine,
@@ -267,14 +289,31 @@ func (c *ChainConfig) String() string {
 	}
 }
 
-// IsIstanbul returns whether num is either equal to the istanbul block or greater.
-func (c *ChainConfig) IsIstanbul(num *big.Int) bool {
+func (c *ChainConfig) Copy() *ChainConfig {
+	r := &ChainConfig{}
+	j, _ := json.Marshal(c)
+	json.Unmarshal(j, r)
+	return r
+}
+
+// IsIstanbulForkEnabled returns whether num is either equal to the istanbul block or greater.
+func (c *ChainConfig) IsIstanbulForkEnabled(num *big.Int) bool {
 	return isForked(c.IstanbulCompatibleBlock, num)
 }
 
-// IsLondon returns whether num is either equal to the london block or greater.
-func (c *ChainConfig) IsLondon(num *big.Int) bool {
+// IsLondonForkEnabled returns whether num is either equal to the london block or greater.
+func (c *ChainConfig) IsLondonForkEnabled(num *big.Int) bool {
 	return isForked(c.LondonCompatibleBlock, num)
+}
+
+// IsEthTxTypeForkEnabled returns whether num is either equal to the ethTxType block or greater.
+func (c *ChainConfig) IsEthTxTypeForkEnabled(num *big.Int) bool {
+	return isForked(c.EthTxTypeCompatibleBlock, num)
+}
+
+// IsKIP71ForkedEnabled returns whether num is either equal to the kip71 block or greater.
+func (c *ChainConfig) IsKIP71ForkEnabled(num *big.Int) bool {
+	return isForked(c.KIP71CompatibleBlock, num)
 }
 
 // CheckCompatible checks whether scheduled fork transitions have been imported
@@ -307,6 +346,8 @@ func (c *ChainConfig) CheckConfigForkOrder() error {
 	for _, cur := range []fork{
 		{name: "istanbulBlock", block: c.IstanbulCompatibleBlock},
 		{name: "londonBlock", block: c.LondonCompatibleBlock},
+		{name: "ethTxTypeBlock", block: c.EthTxTypeCompatibleBlock},
+		{name: "kip71Block", block: c.KIP71CompatibleBlock},
 	} {
 		if lastFork.name != "" {
 			// Next one must be higher number
@@ -336,35 +377,27 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *Confi
 	if isForkIncompatible(c.LondonCompatibleBlock, newcfg.LondonCompatibleBlock, head) {
 		return newCompatError("London Block", c.LondonCompatibleBlock, newcfg.LondonCompatibleBlock)
 	}
-	return nil
-}
-
-// GetConsensusEngine returns the consensus engine type specified in ChainConfig.
-// It returns Unknown type if none of engine type is configured or more than one type is configured.
-func (c *ChainConfig) GetConsensusEngine() EngineType {
-	switch {
-	case c.Clique != nil && c.Istanbul == nil:
-		return UseClique
-	case c.Clique == nil && c.Istanbul != nil:
-		return UseIstanbul
-	default:
-		return Unknown
+	if isForkIncompatible(c.EthTxTypeCompatibleBlock, newcfg.EthTxTypeCompatibleBlock, head) {
+		return newCompatError("EthTxType Block", c.EthTxTypeCompatibleBlock, newcfg.EthTxTypeCompatibleBlock)
 	}
+	if isForkIncompatible(c.KIP71CompatibleBlock, newcfg.KIP71CompatibleBlock, head) {
+		return newCompatError("KIP71 Block", c.KIP71CompatibleBlock, newcfg.KIP71CompatibleBlock)
+	}
+	return nil
 }
 
 // SetDefaults fills undefined chain config with default values.
 func (c *ChainConfig) SetDefaults() {
 	logger := log.NewModuleLogger(log.Governance)
 
-	if c.GetConsensusEngine() == Unknown && c.Istanbul == nil {
+	if c.Clique == nil && c.Istanbul == nil {
 		c.Istanbul = GetDefaultIstanbulConfig()
 		logger.Warn("Override the default Istanbul config to the chain config")
 	}
 
 	if c.Governance == nil {
-		engineType := c.GetConsensusEngine()
-		c.Governance = GetDefaultGovernanceConfig(engineType)
-		logger.Warn("Override the default governance config to the chain config", "engineType", engineType)
+		c.Governance = GetDefaultGovernanceConfig()
+		logger.Warn("Override the default governance config to the chain config")
 	}
 
 	if c.Governance.Reward == nil {
@@ -373,12 +406,14 @@ func (c *ChainConfig) SetDefaults() {
 			c.Governance.Reward)
 	}
 
+	// StakingUpdateInterval must be nonzero because it is used as denominator
 	if c.Governance.Reward.StakingUpdateInterval == 0 {
 		c.Governance.Reward.StakingUpdateInterval = StakingUpdateInterval()
 		logger.Warn("Override the default staking update interval to the chain config", "interval",
 			c.Governance.Reward.StakingUpdateInterval)
 	}
 
+	// ProposerUpdateInterval must be nonzero because it is used as denominator
 	if c.Governance.Reward.ProposerUpdateInterval == 0 {
 		c.Governance.Reward.ProposerUpdateInterval = ProposerUpdateInterval()
 		logger.Warn("Override the default proposer update interval to the chain config", "interval",
@@ -450,6 +485,7 @@ type Rules struct {
 	ChainID    *big.Int
 	IsIstanbul bool
 	IsLondon   bool
+	IsKIP71    bool
 }
 
 // Rules ensures c's ChainID is not nil.
@@ -460,42 +496,18 @@ func (c *ChainConfig) Rules(num *big.Int) Rules {
 	}
 	return Rules{
 		ChainID:    new(big.Int).Set(chainID),
-		IsIstanbul: c.IsIstanbul(num),
-		IsLondon:   c.IsLondon(num),
+		IsIstanbul: c.IsIstanbulForkEnabled(num),
+		IsLondon:   c.IsLondonForkEnabled(num),
+		IsKIP71:    c.IsKIP71ForkEnabled(num),
 	}
 }
 
-// Copy copies self to a new governance config and return it
-func (g *GovernanceConfig) Copy() *GovernanceConfig {
-	newConfig := &GovernanceConfig{
-		Reward: &RewardConfig{},
-	}
-	newConfig.GovernanceMode = g.GovernanceMode
-	newConfig.Reward.MintingAmount = big.NewInt(0).Set(g.Reward.MintingAmount)
-	newConfig.Reward.Ratio = g.Reward.Ratio
-	newConfig.Reward.UseGiniCoeff = g.Reward.UseGiniCoeff
-	newConfig.Reward.DeferredTxFee = g.Reward.DeferredTxFee
-	newConfig.GoverningNode = g.GoverningNode
-
-	return newConfig
-}
-
-func (c *IstanbulConfig) Copy() *IstanbulConfig {
-	newIC := &IstanbulConfig{}
-
-	newIC.Epoch = c.Epoch
-	newIC.SubGroupSize = c.SubGroupSize
-	newIC.ProposerPolicy = c.ProposerPolicy
-
-	return newIC
-}
-
-// TODO-Klaytn-Governance: Remove input parameter if not needed anymore
-func GetDefaultGovernanceConfig(engine EngineType) *GovernanceConfig {
+func GetDefaultGovernanceConfig() *GovernanceConfig {
 	gov := &GovernanceConfig{
 		GovernanceMode: DefaultGovernanceMode,
 		GoverningNode:  common.HexToAddress(DefaultGoverningNode),
 		Reward:         GetDefaultRewardConfig(),
+		KIP71:          GetDefaultKip71Config(),
 	}
 	return gov
 }
@@ -510,13 +522,23 @@ func GetDefaultIstanbulConfig() *IstanbulConfig {
 
 func GetDefaultRewardConfig() *RewardConfig {
 	return &RewardConfig{
-		MintingAmount:          big.NewInt(DefaultMintingAmount),
+		MintingAmount:          DefaultMintingAmount,
 		Ratio:                  DefaultRatio,
 		UseGiniCoeff:           DefaultUseGiniCoeff,
 		DeferredTxFee:          DefaultDefferedTxFee,
-		StakingUpdateInterval:  uint64(86400),
-		ProposerUpdateInterval: uint64(3600),
-		MinimumStake:           big.NewInt(2000000),
+		StakingUpdateInterval:  DefaultStakeUpdateInterval,
+		ProposerUpdateInterval: DefaultProposerRefreshInterval,
+		MinimumStake:           DefaultMinimumStake,
+	}
+}
+
+func GetDefaultKip71Config() *KIP71Config {
+	return &KIP71Config{
+		LowerBoundBaseFee:         DefaultLowerBoundBaseFee,
+		UpperBoundBaseFee:         DefaultUpperBoundBaseFee,
+		GasTarget:                 DefaultGasTarget,
+		MaxBlockGasUsedForBaseFee: DefaultMaxBlockGasUsedForBaseFee,
+		BaseFeeDenominator:        DefaultBaseFeeDenominator,
 	}
 }
 

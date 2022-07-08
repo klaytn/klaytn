@@ -48,7 +48,7 @@ func NewTxSignature() *TxSignature {
 	}
 }
 
-func NewTxSignatureWithValues(signer Signer, txhash common.Hash, prv *ecdsa.PrivateKey) (*TxSignature, error) {
+func NewTxSignatureWithValues(signer Signer, tx *Transaction, txhash common.Hash, prv *ecdsa.PrivateKey) (*TxSignature, error) {
 	sig, err := crypto.Sign(txhash[:], prv)
 	if err != nil {
 		return nil, err
@@ -56,7 +56,7 @@ func NewTxSignatureWithValues(signer Signer, txhash common.Hash, prv *ecdsa.Priv
 
 	txsig := &TxSignature{}
 
-	txsig.R, txsig.S, txsig.V, err = signer.SignatureValues(sig)
+	txsig.R, txsig.S, txsig.V, err = signer.SignatureValues(tx, sig)
 	if err != nil {
 		return nil, err
 	}

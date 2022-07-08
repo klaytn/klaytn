@@ -99,7 +99,7 @@ func TestSubBridge_basic(t *testing.T) {
 	}
 	defer sBridge.Stop()
 
-	//TODO more test
+	// TODO more test
 }
 
 // TestSubBridge_removePeer tests correct removal of a peer from `SubBridge.peers`.
@@ -176,7 +176,8 @@ func TestSubBridge_handleMsg(t *testing.T) {
 		data := "valid message"
 		go func() {
 			if err := p2p.Send(pipe2, StatusMsg, data); err != nil {
-				t.Fatal(err)
+				t.Error(err)
+				return
 			}
 		}()
 
@@ -190,7 +191,8 @@ func TestSubBridge_handleMsg(t *testing.T) {
 		data := strings.Repeat("a", ProtocolMaxMsgSize+1)
 		go func() {
 			if err := p2p.Send(pipe2, StatusMsg, data); err != nil {
-				t.Fatal(err)
+				t.Error(err)
+				return
 			}
 		}()
 

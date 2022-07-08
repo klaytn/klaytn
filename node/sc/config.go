@@ -57,7 +57,6 @@ func init() {
 	}
 }
 
-//go:generate gencodec -type SCConfig -formats toml -out gen_config.go
 type SCConfig struct {
 	// Name sets the instance name of the node. It must not contain the / character and is
 	// used in the devp2p node identifier. The instance name is "kscn". If no
@@ -91,19 +90,22 @@ type SCConfig struct {
 	AnchoringPeriod       uint64
 	SentChainTxsLimit     uint64
 
-	ParentChainID      uint64
-	VTRecovery         bool
-	VTRecoveryInterval uint64
-	Anchoring          bool
+	ParentChainID                      uint64
+	VTRecovery                         bool
+	VTRecoveryInterval                 uint64
+	Anchoring                          bool
+	ServiceChainParentOperatorGasLimit uint64
+	ServiceChainChildOperatorGasLimit  uint64
 
 	// KAS
-	KASAnchor         bool
-	KASAnchorUrl      string
-	KASAnchorPeriod   uint64
-	KASAnchorOperator string
-	KASAccessKey      string
-	KASSecretKey      string
-	KASXChainId       string
+	KASAnchor               bool
+	KASAnchorUrl            string
+	KASAnchorPeriod         uint64
+	KASAnchorOperator       string
+	KASAccessKey            string
+	KASSecretKey            string
+	KASXChainId             string
+	KASAnchorRequestTimeout time.Duration
 }
 
 // NodeName returns the devp2p node identifier.
@@ -193,7 +195,7 @@ func (c *SCConfig) getKey(path string) *ecdsa.PrivateKey {
 		logger.Crit("Failed to generate chain key", "err", err)
 	}
 	instanceDir := filepath.Join(c.DataDir, c.name())
-	if err := os.MkdirAll(instanceDir, 0700); err != nil {
+	if err := os.MkdirAll(instanceDir, 0o700); err != nil {
 		logger.Crit("Failed to make dir to persist chain key", "err", err)
 	}
 	keyFile = filepath.Join(instanceDir, path)

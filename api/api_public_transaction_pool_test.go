@@ -42,6 +42,9 @@ var internalDataTypes = map[types.TxType]interface{}{
 	types.TxTypeCancel:                                      types.TxInternalDataCancel{},
 	types.TxTypeFeeDelegatedCancel:                          types.TxInternalDataFeeDelegatedCancel{},
 	types.TxTypeFeeDelegatedCancelWithRatio:                 types.TxInternalDataFeeDelegatedCancelWithRatio{},
+	types.TxTypeChainDataAnchoring:                          types.TxInternalDataChainDataAnchoring{},
+	types.TxTypeFeeDelegatedChainDataAnchoring:              types.TxInternalDataFeeDelegatedChainDataAnchoring{},
+	types.TxTypeFeeDelegatedChainDataAnchoringWithRatio:     types.TxInternalDataFeeDelegatedChainDataAnchoringWithRatio{},
 }
 
 // test values of tx field.
@@ -97,6 +100,9 @@ func TestTxTypeSupport(t *testing.T) {
 	mockAccountManager := mock_accounts.NewMockAccountManager(mockCtrl)
 
 	mockBackend.EXPECT().AccountManager().Return(mockAccountManager).AnyTimes()
+	mockBackend.EXPECT().CurrentBlock().Return(
+		types.NewBlockWithHeader(&types.Header{Number: new(big.Int).SetUint64(0)}),
+	).AnyTimes()
 	mockBackend.EXPECT().SuggestPrice(ctx).Return((*big.Int)(testGasPrice), nil).AnyTimes()
 	mockBackend.EXPECT().GetPoolNonce(ctx, gomock.Any()).Return(uint64(testNonce)).AnyTimes()
 	mockBackend.EXPECT().SendTx(ctx, gomock.Any()).Return(nil).AnyTimes()

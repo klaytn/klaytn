@@ -39,6 +39,8 @@ const (
 	notificationMethodSuffix = "_subscription"
 )
 
+const defaultErrorCode = -32000
+
 type jsonRequest struct {
 	Method  string          `json:"method"`
 	Version string          `json:"jsonrpc"`
@@ -200,8 +202,10 @@ func parseRequest(incomingMsg json.RawMessage) ([]rpcRequest, bool, Error) {
 	}
 
 	if strings.HasSuffix(in.Method, unsubscribeMethodSuffix) {
-		return []rpcRequest{{id: &in.Id, isPubSub: true,
-			method: in.Method, params: in.Payload}}, false, nil
+		return []rpcRequest{{
+			id: &in.Id, isPubSub: true,
+			method: in.Method, params: in.Payload,
+		}}, false, nil
 	}
 
 	elems := strings.Split(in.Method, serviceMethodSeparator)
@@ -326,21 +330,34 @@ func (c *jsonCodec) CreateResponse(id interface{}, reply interface{}) interface{
 }
 
 // CreateErrorResponse will create a JSON-RPC error response with the given id and error.
-func (c *jsonCodec) CreateErrorResponse(id interface{}, err Error) interface{} {
-	return &jsonErrResponse{Version: jsonrpcVersion, Id: id, Error: jsonError{Code: err.ErrorCode(), Message: err.Error()}}
+func (c *jsonCodec) CreateErrorResponse(id interface{}, err error) interface{} {
+	response := &jsonErrResponse{Version: jsonrpcVersion, Id: id, Error: jsonError{Code: defaultErrorCode, Message: err.Error()}}
+	e, ok := err.(Error)
+	if ok {
+		response.Error.Code = e.ErrorCode()
+	}
+	de, ok := err.(DataError)
+	if ok {
+		response.Error.Data = de.ErrorData()
+	}
+	return response
 }
 
 // CreateErrorResponseWithInfo will create a JSON-RPC error response with the given id and error.
 // info is optional and contains additional information about the error. When an empty string is passed it is ignored.
 func (c *jsonCodec) CreateErrorResponseWithInfo(id interface{}, err Error, info interface{}) interface{} {
-	return &jsonErrResponse{Version: jsonrpcVersion, Id: id,
-		Error: jsonError{Code: err.ErrorCode(), Message: err.Error(), Data: info}}
+	return &jsonErrResponse{
+		Version: jsonrpcVersion, Id: id,
+		Error: jsonError{Code: err.ErrorCode(), Message: err.Error(), Data: info},
+	}
 }
 
 // CreateNotification will create a JSON-RPC notification with the given subscription id and event as params.
 func (c *jsonCodec) CreateNotification(subid, namespace string, event interface{}) interface{} {
-	return &jsonNotification{Version: jsonrpcVersion, Method: namespace + notificationMethodSuffix,
-		Params: jsonSubscription{Subscription: subid, Result: event}}
+	return &jsonNotification{
+		Version: jsonrpcVersion, Method: namespace + notificationMethodSuffix,
+		Params: jsonSubscription{Subscription: subid, Result: event},
+	}
 }
 
 // Write message to client

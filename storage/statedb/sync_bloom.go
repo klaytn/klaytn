@@ -44,8 +44,8 @@ var (
 )
 
 // syncBloomHasher is a wrapper around a byte blob to satisfy the interface API
-// requirements of the bloom library used. It's used to convert a trie hash into
-// a 64 bit mini hash.
+// requirements of the bloom library used. It's used to convert a trie hash or
+// contract code hash into a 64 bit mini hash.
 type syncBloomHasher []byte
 
 func (f syncBloomHasher) Write(p []byte) (n int, err error) { panic("not implemented") }
@@ -56,9 +56,9 @@ func (f syncBloomHasher) Size() int                         { return 8 }
 func (f syncBloomHasher) Sum64() uint64                     { return binary.BigEndian.Uint64(f) }
 
 // SyncBloom is a bloom filter used during fast sync to quickly decide if a trie
-// node already exists on disk or not. It self populates from the provided disk
-// database on creation in a background thread and will only start returning live
-// results once that's finished.
+// node or contract code already exists on disk or not. It self populates from the
+// provided disk database on creation in a background thread and will only start
+// returning live results once that's finished.
 type SyncBloom struct {
 	bloom  *bloomfilter.Filter
 	inited uint32
@@ -94,7 +94,7 @@ func NewSyncBloom(memory uint64, database database.Iteratee) *SyncBloom {
 }
 
 // init iterates over the database, pushing every trie hash into the bloom filter.
-func (b *SyncBloom) init(database database.Iteratee) {
+func (b *SyncBloom) init(db database.Iteratee) {
 	// Iterate over the database, but restart every now and again to avoid holding
 	// a persistent snapshot since fast sync can push a ton of data concurrently,
 	// bloating the disk.
@@ -102,7 +102,7 @@ func (b *SyncBloom) init(database database.Iteratee) {
 	// Note, this is fine, because everything inserted into leveldb by fast sync is
 	// also pushed into the bloom directly, so we're not missing anything when the
 	// iterator is swapped out for a new one.
-	it := database.NewIterator(nil, nil)
+	it := db.NewIterator(nil, nil)
 
 	var (
 		start = time.Now()
@@ -110,16 +110,23 @@ func (b *SyncBloom) init(database database.Iteratee) {
 	)
 	for it.Next() && atomic.LoadUint32(&b.closed) == 0 {
 		// If the database entry is a trie node, add it to the bloom
-		if key := it.Key(); len(key) == common.HashLength {
+		key := it.Key()
+		if len(key) == common.HashLength {
 			b.bloom.Add(syncBloomHasher(key))
 			bloomLoadMeter.Mark(1)
 		}
+		// If the database entry is a contract code, add it to the bloom
+		if ok, hash := database.IsCodeKey(key); ok {
+			b.bloom.Add(syncBloomHasher(hash))
+			bloomLoadMeter.Mark(1)
+		}
+
 		// If enough time elapsed since the last iterator swap, restart
 		if time.Since(swap) > log.StatsReportLimit {
 			key := common.CopyBytes(it.Key())
 
 			it.Release()
-			it = database.NewIterator(nil, key)
+			it = db.NewIterator(nil, key)
 
 			logger.Info("Initializing fast sync bloom", "items", b.bloom.N(), "errorrate", b.errorRate(), "elapsed", common.PrettyDuration(time.Since(start)))
 			swap = time.Now()

@@ -21,11 +21,90 @@ kspn=/usr/bin/kspn
 prog=kspnd
 lockfile=${LOCKFILE-/var/lock/subsys/kspnd}
 pidfile=${PIDFILE-/var/run/kspnd.pid}
+auto_restart_daemon_pidfile=/var/run/restart_daemon_kspnd.pid
 RETVAL=0
 STOP_TIMEOUT=${STOP_TIMEOUT-10}
 
 set -f
 OPTIONS=""
+
+__pid_run() {
+  __pids_var_run $prog $pidfile
+}
+
+__auto_restart_daemon_pid_run() {
+    unset auto_restart_daemon_pid
+    if [ ! -f $auto_restart_daemon_pidfile ]; then
+        return
+    fi
+    AUTO_RESTART_DAEMON_PID_NUM=$(cat $auto_restart_daemon_pidfile)
+    if [[ ! -z "$AUTO_RESTART_DAEMON_PID_NUM" ]]; then
+        export auto_restart_daemon_pid=$(ps -p $AUTO_RESTART_DAEMON_PID_NUM -o pid=)
+    fi
+}
+#------------------------Related Auto restart daemon functions-----------------------------
+__auto_restart_daemon() {
+    local backOffTime=$AUTO_RESTART_INTERVAL
+    local coeff=2
+    while :
+    do
+        sleep 1
+        __pid_run
+        if [ -z "$pid" ]; then
+            echo "INFO[`date`] node[${PID_NUM}] is down"
+            if [ -f $pidfile ]; then
+                echo "INFO[`date`] remove redundant pid file"
+                rm -f ${lockfile} ${pidfile}
+            fi
+            echo "INFO[`date`] Sleep for backOffTime.... ${backOffTime} seconds."
+            sleep $backOffTime
+            echo -n "INFO[`date`] "
+            start_node
+            backOffTime=$(echo $backOffTime $coeff | awk '{printf "%.1f\n",$1*$2}')
+
+            echo "INFO[`date`] backOffTime = ${backOffTime}, Restarted node pid = ${PID_NUM}"
+            PID_NUM=$(cat $pidfile)
+            echo ""
+        fi
+    done
+}
+
+start_auto_restart_daemon() {
+    __auto_restart_daemon_pid_run
+    if [ -z $auto_restart_daemon_pid ]; then
+        __auto_restart_daemon >> ${LOG_DIR}/restart_daemon.out 2>&1 &
+        disown
+        AUTO_RESTART_DAEMON_PID_NUM=$!
+        AUTO_RESTART_DAEMON_RETVAL=$?
+
+        set +f
+        if [ $AUTO_RESTART_DAEMON_RETVAL = 0 ]; then
+            echo $AUTO_RESTART_DAEMON_PID_NUM > ${auto_restart_daemon_pidfile}
+            echo "Success to start auto restart daemon."
+        else
+            echo "Fail to start auto restart daemon."
+        fi
+    fi
+}
+
+stop_auto_restart_daemon() {
+    echo -n "Shutting down auto restart daemon: "
+    killproc -p ${auto_restart_daemon_pidfile} -d ${STOP_TIMEOUT}
+    RETVAL=$?
+    echo
+    [ $RETVAL = 0 ] && rm -f ${auto_restart_daemon_lockfile} ${auto_restart_daemon_pidfile}
+}
+
+status_auto_restart_daemon() {
+    __auto_restart_daemon_pid_run
+    if [ -n "$auto_restart_daemon_pid" ]; then
+        echo "auto restart daemon is running."
+    else
+        echo "auto restart daemon is down."
+    fi
+}
+
+#------------------------Related to Klaytn node functions-----------------------------
 
 if [[ ! -z $METRICS ]] && [[ $METRICS -eq 1 ]]; then
     OPTIONS="$OPTIONS --metrics"
@@ -45,6 +124,7 @@ fi
 
 if [[ ! -z $RPC_ENABLE ]] && [[ $RPC_ENABLE -eq 1 ]]; then
     OPTIONS="$OPTIONS --rpc"
+    RPC_API=`echo $RPC_API | tr -d "[:space:]"`
     if [ ! -z $RPC_API ]; then
         OPTIONS="$OPTIONS --rpcapi $RPC_API"
     fi
@@ -64,6 +144,7 @@ fi
 
 if [[ ! -z $WS_ENABLE ]] && [[ $WS_ENABLE -eq 1 ]]; then
     OPTIONS="$OPTIONS --ws"
+    WS_API=`echo $WS_API | tr -d "[:space:]"`
     if [ ! -z $WS_API ]; then
         OPTIONS="$OPTIONS --wsapi $WS_API"
     fi
@@ -128,7 +209,7 @@ if [ ! -z $TXPOOL_NONEXEC_SLOTS_ACCOUNT ]; then
     OPTIONS="$OPTIONS --txpool.nonexec-slots.account $TXPOOL_NONEXEC_SLOTS_ACCOUNT"
 fi
 
-if [ ! -z TXPOOL_LIFE_TIME ]; then
+if [ ! -z $TXPOOL_LIFE_TIME ]; then
     OPTIONS="$OPTIONS --txpool.lifetime $TXPOOL_LIFE_TIME"
 fi
 
@@ -207,11 +288,26 @@ if [[ ! -z $SC_SUB_BRIDGE ]] && [[ $SC_SUB_BRIDGE -eq 1 ]]; then
             exit 1
         fi
         OPTIONS="$OPTIONS --kas.x-chain-id $SC_KAS_ANCHOR_X_CHAIN_ID"
+
+        if [ ! -z $SC_KAS_ANCHOR_REQUEST_TIMEOUT ]; then
+            OPTIONS="$OPTIONS --kas.sc.anchor.request.timeout $SC_KAS_ANCHOR_REQUEST_TIMEOUT"
+        fi
     fi
 fi
 
-if [[ ! -z $VTRECOVERY ]] && [[ $VTRECOVERY -eq 1 ]]; then
+if [ ! -z $SC_PARENT_OPERATOR_GASLIMIT ]; then
+    OPTIONS="$OPTIONS --sc.parentoperator.gaslimit $SC_PARENT_OPERATOR_GASLIMIT"
+fi
+
+if [ ! -z $SC_CHILD_OPERATOR_GASLIMIT ]; then
+    OPTIONS="$OPTIONS --sc.childoperator.gaslimit $SC_CHILD_OPERATOR_GASLIMIT"
+fi
+
+if [[ (! -z $VTRECOVERY && $VTRECOVERY -eq 1 ) || (! -z $SC_VTRECOVERY && $SC_VTRECOVERY -eq 1) ]]; then
     OPTIONS="$OPTIONS --vtrecovery"
+    if [[ ! -z $SC_VTRECOVERY_INTERVAL ]]; then
+        OPTIONS="$OPTIONS --vtrecoveryinterval $SC_VTRECOVERY_INTERVAL"
+    fi
 fi
 
 if [[ ! -z $ADDITIONAL ]] && [[ $ADDITIONAL != "" ]]; then
@@ -223,37 +319,57 @@ CURRENTFILE=`basename "$0"`
 OPTIONS="$OPTIONS --autorestart.daemon.path $BASEDIR/$CURRENTFILE"
 set +f
 
+start_node() {
+    echo -n "Starting $prog: "
+    if [ ! -d ${LOG_DIR} ]; then
+            mkdir -p ${LOG_DIR}
+    fi
+
+    __pids_var_run "$prog" "$pidfile"
+    [ -n "$pid" ] && echo && return
+
+    set -f
+    $kspn $OPTIONS >> ${LOG_DIR}/kspnd.out 2>&1 &
+    RETVAL=$?
+    PIDNUM=$!
+    set +f
+    if [ $RETVAL = 0 ]; then
+            echo $PIDNUM > ${pidfile}
+            touch ${lockfile}
+            success "$prog startup"
+    else
+            failure "$prog startup"
+    fi
+    echo
+    return $RETVAL
+}
+
+stop_node() {
+    echo -n "Shutting down $prog: "
+    killproc -p ${pidfile} -d ${STOP_TIMEOUT} $kspn
+    RETVAL=$?
+    echo
+    [ $RETVAL = 0 ] && rm -f ${lockfile} ${pidfile}
+}
+
+#--------------------- Public functions --------------------------
 start() {
-        echo -n "Starting $prog: "
-        if [ ! -d ${LOG_DIR} ]; then
-                mkdir -p ${LOG_DIR}
-        fi
+    if [ ! -d $LOG_DIR ]; then
+        mkdir -p $LOG_DIR
+    fi
 
-        __pids_var_run "$prog" "$pidfile"
-        [ -n "$pid" ] && echo && return
-
-        set -f
-        $kspn $OPTIONS >> ${LOG_DIR}/kspnd.out 2>&1 &
-        RETVAL=$?
-        PIDNUM=$!
-        set +f
-        if [ $RETVAL = 0 ]; then
-                echo $PIDNUM > ${pidfile}
-                touch ${lockfile}
-                success "$prog startup"
-        else
-                failure "$prog startup"
-        fi
-        echo
-        return $RETVAL
+    if [ ! -z $AUTO_RESTART_NODE ] && [[ $AUTO_RESTART_NODE -eq 1 ]]; then
+        start_auto_restart_daemon
+    else
+        start_node
+    fi
 }
 
 stop() {
-        echo -n "Shutting down $prog: "
-        killproc -p ${pidfile} -d ${STOP_TIMEOUT} $kspn
-        RETVAL=$?
-        echo
-        [ $RETVAL = 0 ] && rm -f ${lockfile} ${pidfile}
+    if [ ! -z $AUTO_RESTART_NODE ] && [[ $AUTO_RESTART_NODE -eq 1 ]]; then
+        stop_auto_restart_daemon
+    fi
+    stop_node
 }
 
 case "$1" in

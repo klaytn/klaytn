@@ -25,6 +25,7 @@ import (
 	"io"
 
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/rlp"
 )
 
@@ -160,6 +161,27 @@ func (m *message) Decode(val interface{}) error {
 
 func (m *message) String() string {
 	return fmt.Sprintf("{Code: %v, Address: %v}", m.Code, m.Address.String())
+}
+
+func (m *message) GetView() (*istanbul.View, error) {
+	var msgView *istanbul.View
+	switch m.Code {
+	case msgPreprepare:
+		var preprepare *istanbul.Preprepare
+		if decodeErr := m.Decode(&preprepare); decodeErr != nil {
+			return nil, decodeErr
+		}
+		msgView = preprepare.View
+	case msgPrepare, msgCommit, msgRoundChange:
+		var subject *istanbul.Subject
+		if decodeErr := m.Decode(&subject); decodeErr != nil {
+			return nil, decodeErr
+		}
+		msgView = subject.View
+	default:
+		return nil, errInvalidMessage
+	}
+	return msgView, nil
 }
 
 // ==============================================

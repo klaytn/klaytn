@@ -20,7 +20,11 @@
 
 package blockchain
 
-import "errors"
+import (
+	"errors"
+
+	"github.com/klaytn/klaytn/blockchain/types"
+)
 
 var (
 	// ErrKnownBlock is returned when a block to import is already known locally.
@@ -103,6 +107,10 @@ var (
 	// ErrInvalidReceiptStatus is returned if status of receipt is invalid from GetVMerrFromReceiptStatus
 	ErrInvalidReceiptStatus = errors.New("unknown receipt status")
 
+	// ErrTxTypeNotSupported is returned if a transaction is not supported in the
+	// current network configuration.
+	ErrTxTypeNotSupported = types.ErrTxTypeNotSupported
+
 	// ErrVMDefault is returned if status of receipt is ReceiptStatusErrDefault from GetVMerrFromReceiptStatus
 	ErrVMDefault = errors.New("VM error occurs while running smart contract")
 
@@ -111,4 +119,26 @@ var (
 
 	// ErrInvalidTracer is returned if the tracer type is not vm.InternalTxTracer
 	ErrInvalidTracer = errors.New("tracer type is invalid for internal transaction tracing")
+
+	// ErrTipVeryHigh is a sanity error to avoid extremely big numbers specified in the tip field.
+	ErrTipVeryHigh = errors.New("max priority fee per gas higher than 2^256-1")
+
+	// ErrFeeCapVeryHigh is a sanity error to avoid extremely big numbers specified in the fee cap field.
+	ErrFeeCapVeryHigh = errors.New("max fee per gas higher than 2^256-1")
+
+	// ErrTipAboveFeeCap is a sanity error to ensure no one is able to specify a
+	// transaction with a tip higher than the total fee cap.
+	ErrTipAboveFeeCap = errors.New("max fee per gas higher than max priority fee per gas")
+
+	// ErrInvalidGasFeeCap is returned if gas fee cap of transaction is not equal to UnitPrice
+	ErrInvalidGasFeeCap = errors.New("invalid gas fee cap. It must be set to the same value as gas unit price")
+
+	// ErrInvalidGasTipCap is returned if gas tip cap of transaction is not equal to UnitPrice
+	ErrInvalidGasTipCap = errors.New("invalid gas tip cap. It must be set to the same value as gas unit price")
+
+	// ErrFeeCapBelowBaseFee is returned if gas fee cap of transaction is lower than gas unit price.
+	ErrFeeCapBelowBaseFee = errors.New("invalid gas fee cap. It must be set to value greater than or equal to baseFee")
+
+	// ErrGasPriceBelowBaseFee is returned if gas price of transaction is lower than gas unit price.
+	ErrGasPriceBelowBaseFee = errors.New("invalid gas price. It must be set to value greater than or equal to baseFee")
 )

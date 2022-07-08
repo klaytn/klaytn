@@ -94,13 +94,13 @@ func (s *StateSuite) TestDump(c *checker.C) {
 
 func (s *StateSuite) SetUpTest(c *checker.C) {
 	s.db = database.NewMemoryDBManager()
-	s.state, _ = New(common.Hash{}, NewDatabase(s.db))
+	s.state, _ = New(common.Hash{}, NewDatabase(s.db), nil)
 }
 
 func (s *StateSuite) TestNull(c *checker.C) {
 	address := common.HexToAddress("0x823140710bf13990e4500136726d8b55")
 	s.state.CreateSmartContractAccount(address, params.CodeFormatEVM, params.Rules{IsIstanbul: true})
-	//value := common.FromHex("0x823140710bf13990e4500136726d8b55")
+	// value := common.FromHex("0x823140710bf13990e4500136726d8b55")
 	var value common.Hash
 
 	s.state.SetState(address, common.Hash{}, value)
@@ -151,7 +151,7 @@ func (s *StateSuite) TestSnapshotEmpty(c *checker.C) {
 // This test is to compare deleted/non-deleted stateObject after restoring.
 func TestSnapshotForDeletedObject(t *testing.T) {
 	memDB := database.NewMemoryDBManager()
-	state, _ := New(common.Hash{}, NewDatabase(memDB))
+	state, _ := New(common.Hash{}, NewDatabase(memDB), nil)
 
 	stateObjAddr0 := toAddr([]byte("so0"))
 	stateObjAddr1 := toAddr([]byte("so1"))

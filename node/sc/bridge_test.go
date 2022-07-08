@@ -19,7 +19,6 @@ package sc
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"math/big"
 	"strconv"
@@ -41,7 +40,8 @@ import (
 )
 
 const (
-	timeOut = 3 * time.Second // timeout of context and event loop for simulated backend.
+	timeOut                 = 3 * time.Second // timeout of context and event loop for simulated backend.
+	DefaultBridgeTxGasLimit = uint64(10000000)
 )
 
 // WaitMined waits the tx receipt until the timeout.
@@ -87,7 +87,7 @@ func TransferSignedTx(auth *bind.TransactOpts, backend *backends.SimulatedBacken
 		gasPrice,
 		nil)
 
-	signedTx, err := auth.Signer(types.NewEIP155Signer(chainID), auth.From, tx)
+	signedTx, err := auth.Signer(types.LatestSignerForChainID(chainID), auth.From, tx)
 	assert.Equal(t, err, nil)
 
 	fee := big.NewInt(0)
@@ -273,7 +273,6 @@ func TestBridgeHandleValueTransferNonceAndBlockNumber(t *testing.T) {
 	defer cancelTimeout()
 
 	receipt, err := bind.WaitMined(timeoutContext, backend, tx)
-
 	if err != nil {
 		t.Fatal("Failed to WaitMined.", "err", err, "txHash", tx.Hash().String(), "status", receipt.Status)
 	}
@@ -603,6 +602,10 @@ func TestExtendedBridgeAndCallbackERC721(t *testing.T) {
 	requestSub, err := b.WatchRequestValueTransfer(nil, requestValueTransferEventCh, nil, nil, nil)
 	assert.NoError(t, err)
 	defer requestSub.Unsubscribe()
+	requestValueTransferEncodedEventCh := make(chan *bridge.BridgeRequestValueTransferEncoded, 10)
+	requestEncodedEvSub, err := b.WatchRequestValueTransferEncoded(nil, requestValueTransferEncodedEventCh, nil, nil, nil)
+	assert.NoError(t, err)
+	defer requestEncodedEvSub.Unsubscribe()
 
 	handleValueTransferEventCh := make(chan *bridge.BridgeHandleValueTransfer, 10)
 	handleSub, err := b.WatchHandleValueTransfer(nil, handleValueTransferEventCh, nil, nil, nil)
@@ -639,12 +642,25 @@ func TestExtendedBridgeAndCallbackERC721(t *testing.T) {
 		assert.Equal(t, ERC721, ev.TokenType)
 		assert.Equal(t, bobAcc.From, ev.To)
 
-		// HandleERC20Transfer
+		// HandleERC721Transfer
 		tx, err = b.HandleERC721Transfer(bridgeAccount, ev.Raw.TxHash, ev.From, ev.To, ev.TokenAddress, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, "", ev.ExtraData)
 		assert.NoError(t, err)
 		backend.Commit()
 		assert.Nil(t, bind.CheckWaitMined(backend, tx))
 
+	case ev := <-requestValueTransferEncodedEventCh:
+		assert.Equal(t, testToken.String(), ev.ValueOrTokenId.String())
+		assert.Equal(t, rNonce, ev.RequestNonce)
+		assert.Equal(t, erc721Addr, ev.TokenAddress)
+		assert.Equal(t, ERC721, ev.TokenType)
+		assert.Equal(t, bobAcc.From, ev.To)
+
+		// HandleERC721Transfer
+		uri := GetURI(RequestValueTransferEncodedEvent{ev})
+		tx, err = b.HandleERC721Transfer(bridgeAccount, ev.Raw.TxHash, ev.From, ev.To, ev.TokenAddress, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, uri, ev.ExtraData)
+		assert.NoError(t, err)
+		backend.Commit()
+		assert.Nil(t, bind.CheckWaitMined(backend, tx))
 	case <-time.After(time.Second):
 		t.Fatalf("requestValueTransferEvent was not found.")
 	}
@@ -1186,7 +1202,7 @@ func TestBridgeRequestHandleGasUsed(t *testing.T) {
 
 		select {
 		case ev := <-handleValueTransferEventCh:
-			fmt.Println("Handle value transfer event",
+			t.Log("Handle value transfer event",
 				"handleNonce", ev.HandleNonce,
 				"lowerHandleNonce", ev.LowerHandleNonce,
 				"gasUsed", receipt.GasUsed,
@@ -1219,7 +1235,7 @@ func TestBridgeRequestHandleGasUsed(t *testing.T) {
 	upperHandleNonce, _ = b.UpperHandleNonce(nil)
 	assert.Equal(t, uint64(999), upperHandleNonce)
 
-	//This 500 nonce handle checks whether the handle transaction which has a loop failed.
+	// This 500 nonce handle checks whether the handle transaction which has a loop failed.
 	handleFunc(500)
 
 	lowerHandleNonce, _ = b.LowerHandleNonce(nil)
@@ -1302,7 +1318,7 @@ func TestBridgeMaxOperatorHandleTxGasUsed(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, uint(0x1), receipt.Status)
 
-		fmt.Println("Handle value transfer tx receipt", "gasUsed", receipt.GasUsed, "status", receipt.Status)
+		t.Log("Handle value transfer tx receipt", "gasUsed", receipt.GasUsed, "status", receipt.Status)
 	}
 
 	for i := 0; i < maxOperator; i++ {
@@ -1311,7 +1327,7 @@ func TestBridgeMaxOperatorHandleTxGasUsed(t *testing.T) {
 
 	select {
 	case ev := <-handleValueTransferEventCh:
-		fmt.Println("Handle value transfer event",
+		t.Log("Handle value transfer event",
 			"handleNonce", ev.HandleNonce,
 			"lowerHandleNonce", ev.LowerHandleNonce)
 	case <-time.After(1 * time.Second):

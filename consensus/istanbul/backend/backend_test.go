@@ -668,15 +668,10 @@ func getTestVotingPowers(num int) []uint64 {
 }
 
 func getTestConfig() *params.ChainConfig {
-	config := params.TestChainConfig
-	config.Governance = params.GetDefaultGovernanceConfig(params.UseIstanbul)
+	config := params.TestChainConfig.Copy()
+	config.Governance = params.GetDefaultGovernanceConfig()
 	config.Istanbul = params.GetDefaultIstanbulConfig()
 	return config
-}
-
-func getGovernance(dbm database.DBManager) *governance.Governance {
-	config := getTestConfig()
-	return governance.NewGovernanceInitialize(config, dbm)
 }
 
 func Benchmark_getTargetReceivers(b *testing.B) {
@@ -821,7 +816,7 @@ func newTestBackendWithConfig(chainConfig *params.ChainConfig, blockPeriod uint6
 		// if governance mode is single, set the node key to the governing node.
 		chainConfig.Governance.GoverningNode = crypto.PubkeyToAddress(key.PublicKey)
 	}
-	gov := governance.NewGovernanceInitialize(chainConfig, dbm)
+	gov := governance.NewMixedEngine(chainConfig, dbm)
 	istanbulConfig := istanbul.DefaultConfig
 	istanbulConfig.BlockPeriod = blockPeriod
 	istanbulConfig.ProposerPolicy = istanbul.ProposerPolicy(chainConfig.Istanbul.ProposerPolicy)
@@ -843,7 +838,7 @@ func newTestValidatorSet(n int, policy istanbul.ProposerPolicy) (istanbul.Valida
 		addrs[i] = crypto.PubkeyToAddress(privateKey.PublicKey)
 	}
 	vset := validator.NewSet(addrs, policy)
-	sort.Sort(keys) //Keys need to be sorted by its public key address
+	sort.Sort(keys) // Keys need to be sorted by its public key address
 	return vset, keys
 }
 
@@ -855,7 +850,7 @@ func TestSign(t *testing.T) {
 		t.Errorf("error mismatch: have %v, want nil", err)
 	}
 
-	//Check signature recover
+	// Check signature recover
 	hashData := crypto.Keccak256([]byte(testSigningData))
 	pubkey, _ := crypto.Ecrecover(hashData, sig)
 	actualSigner := common.BytesToAddress(crypto.Keccak256(pubkey[1:])[12:])

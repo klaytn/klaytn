@@ -27,6 +27,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/profile"
 	"github.com/klaytn/klaytn/kerrors"
+	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
 )
@@ -34,7 +35,7 @@ import (
 type genTxWithCodeFormat func(t *testing.T, signer types.Signer, from TestAccount, payer TestAccount, gasPrice *big.Int, codeFormat params.CodeFormat) *types.Transaction
 
 func TestCodeFormat(t *testing.T) {
-	var testFunctions = []struct {
+	testFunctions := []struct {
 		Name  string
 		genTx genTxWithCodeFormat
 	}{
@@ -46,9 +47,7 @@ func TestCodeFormat(t *testing.T) {
 		{"FeeDelegatedWithRatioSmartContractDeployWithInvalidCodeFormat", genFeeDelegatedWithRatioSmartContractDeployWithCodeFormat},
 	}
 
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
@@ -75,7 +74,7 @@ func TestCodeFormat(t *testing.T) {
 		Nonce: uint64(0),
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	testCodeFormat := func(tx *types.Transaction, state error) {

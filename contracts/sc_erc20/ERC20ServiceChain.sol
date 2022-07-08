@@ -31,19 +31,18 @@ contract ERC20ServiceChain is ERC20, Ownable {
     address public bridge;
 
     constructor(address _bridge) internal {
-        if (!_bridge.isContract()) {
-            revert("bridge is not a contract");
-        }
-
-        bridge = _bridge;
+        setBridge(_bridge);
     }
 
     function setBridge(address _bridge) public onlyOwner {
+        if (!_bridge.isContract()) {
+            revert("bridge is not a contract");
+        }
         bridge = _bridge;
     }
 
     function requestValueTransfer(uint256 _amount, address _to, uint256 _feeLimit, bytes calldata _extraData) external {
-        transfer(bridge, _amount.add(_feeLimit));
+        require(transfer(bridge, _amount.add(_feeLimit)), "requestValueTransfer: transfer failed");
         IERC20BridgeReceiver(bridge).onERC20Received(msg.sender, _to, _amount, _feeLimit, _extraData);
     }
 }

@@ -35,7 +35,131 @@ var Modules = map[string]string{
 	"governance":       Governance_JS,
 	"bootnode":         Bootnode_JS,
 	"chaindatafetcher": ChainDataFetcher_JS,
+	"eth":              Eth_JS,
 }
+
+const Eth_JS = `
+web3._extend({
+	property: 'eth',
+	methods: [
+		new web3._extend.Method({
+			name: 'chainId',
+			call: 'eth_chainId',
+			params: 0
+		}),
+		new web3._extend.Method({
+			name: 'sign',
+			call: 'eth_sign',
+			params: 2,
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter, null]
+		}),
+		new web3._extend.Method({
+			name: 'resend',
+			call: 'eth_resend',
+			params: 3,
+			inputFormatter: [web3._extend.formatters.inputTransactionFormatter, web3._extend.utils.fromDecimal, web3._extend.utils.fromDecimal]
+		}),
+		new web3._extend.Method({
+			name: 'signTransaction',
+			call: 'eth_signTransaction',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputTransactionFormatter]
+		}),
+		new web3._extend.Method({
+			name: 'estimateGas',
+			call: 'eth_estimateGas',
+			params: 2,
+			inputFormatter: [web3._extend.formatters.inputCallFormatter, web3._extend.formatters.inputBlockNumberFormatter],
+			outputFormatter: web3._extend.utils.toDecimal
+		}),
+		new web3._extend.Method({
+			name: 'submitTransaction',
+			call: 'eth_submitTransaction',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputTransactionFormatter]
+		}),
+		new web3._extend.Method({
+			name: 'fillTransaction',
+			call: 'eth_fillTransaction',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputTransactionFormatter]
+		}),
+		new web3._extend.Method({
+			name: 'getHeaderByNumber',
+			call: 'eth_getHeaderByNumber',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
+			name: 'getHeaderByHash',
+			call: 'eth_getHeaderByHash',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getBlockByNumber',
+			call: 'eth_getBlockByNumber',
+			params: 2,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter, function (val) { return !!val; }]
+		}),
+		new web3._extend.Method({
+			name: 'getBlockByHash',
+			call: 'eth_getBlockByHash',
+			params: 2,
+			inputFormatter: [null, function (val) { return !!val; }]
+		}),
+		new web3._extend.Method({
+			name: 'getRawTransaction',
+			call: 'eth_getRawTransactionByHash',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getRawTransactionFromBlock',
+			call: function(args) {
+				return (web3._extend.utils.isString(args[0]) && args[0].indexOf('0x') === 0) ? 'eth_getRawTransactionByBlockHashAndIndex' : 'eth_getRawTransactionByBlockNumberAndIndex';
+			},
+			params: 2,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter, web3._extend.utils.toHex]
+		}),
+		new web3._extend.Method({
+			name: 'getProof',
+			call: 'eth_getProof',
+			params: 3,
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter, null, web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
+			name: 'createAccessList',
+			call: 'eth_createAccessList',
+			params: 2,
+			inputFormatter: [null, web3._extend.formatters.inputBlockNumberFormatter],
+		}),
+		new web3._extend.Method({
+			name: 'feeHistory',
+			call: 'eth_feeHistory',
+			params: 3,
+			inputFormatter: [null, web3._extend.formatters.inputBlockNumberFormatter, null]
+		}),
+	],
+	properties: [
+		new web3._extend.Property({
+			name: 'pendingTransactions',
+			getter: 'eth_pendingTransactions',
+			outputFormatter: function(txs) {
+				var formatted = [];
+				for (var i = 0; i < txs.length; i++) {
+					formatted.push(web3._extend.formatters.outputTransactionFormatter(txs[i]));
+					formatted[i].blockHash = null;
+				}
+				return formatted;
+			}
+		}),
+		new web3._extend.Property({
+			name: 'maxPriorityFeePerGas',
+			getter: 'eth_maxPriorityFeePerGas',
+			outputFormatter: web3._extend.utils.toBigNumber
+		}),
+	]
+});
+`
 
 const ChainDataFetcher_JS = `
 web3._extend({
@@ -162,6 +286,7 @@ web3._extend({
 	properties: []
 });
 `
+
 const Governance_JS = `
 web3._extend({
 	property: 'governance',
@@ -234,6 +359,7 @@ web3._extend({
 	]
 });
 `
+
 const Admin_JS = `
 web3._extend({
 	property: 'admin',
@@ -318,6 +444,33 @@ web3._extend({
 			call: 'admin_setMaxSubscriptionPerWSConn',
 			params: 1
 		}),
+		new web3._extend.Method({
+			name: 'startSpamThrottler',
+			call: 'admin_startSpamThrottler',
+			params: 1,
+			inputFormatter: [null]
+		}),
+		new web3._extend.Method({
+			name: 'stopSpamThrottler',
+			call: 'admin_stopSpamThrottler',
+		}),
+		new web3._extend.Method({
+			name: 'setSpamThrottlerWhiteList',
+			call: 'admin_setSpamThrottlerWhiteList',
+			params: 1,
+		}),
+		new web3._extend.Method({
+			name: 'getSpamThrottlerWhiteList',
+			call: 'admin_getSpamThrottlerWhiteList',
+		}),
+		new web3._extend.Method({
+			name: 'getSpamThrottlerThrottleList',
+			call: 'admin_getSpamThrottlerThrottleList',
+		}),
+		new web3._extend.Method({
+			name: 'getSpamThrottlerCandidateList',
+			call: 'admin_getSpamThrottlerCandidateList',
+		}),
 	],
 	properties: [
 		new web3._extend.Property({
@@ -335,6 +488,10 @@ web3._extend({
 		new web3._extend.Property({
 			name: 'stateMigrationStatus',
 			getter: 'admin_stateMigrationStatus'
+		}),
+		new web3._extend.Property({
+			name: 'spamThrottlerConfig',
+			getter: 'admin_spamThrottlerConfig'
 		}),
 	]
 });
@@ -821,6 +978,18 @@ web3._extend({
 			call: 'klay_decodeAccountKey',
 			params: 1,
 		}),
+		new web3._extend.Method({
+			name: 'createAccessList',
+			call: 'klay_createAccessList',
+			params: 2,
+			inputFormatter: [null, web3._extend.formatters.inputBlockNumberFormatter],
+		}),
+		new web3._extend.Method({
+			name: 'feeHistory',
+			call: 'klay_feeHistory',
+			params: 3,
+			inputFormatter: [null, web3._extend.formatters.inputBlockNumberFormatter, null]
+		}),
 	],
 	properties: [
 		new web3._extend.Property({
@@ -844,6 +1013,11 @@ web3._extend({
             getter: 'klay_gasPrice',
             outputFormatter: web3._extend.formatters.outputBigNumberFormatter
         }),
+		new web3._extend.Property({
+			name: 'maxPriorityFeePerGas',
+			getter: 'klay_maxPriorityFeePerGas',
+			outputFormatter: web3._extend.utils.toBigNumber
+		}),
 	]
 });
 `
@@ -1031,6 +1205,7 @@ web3._extend({
 	]
 });
 `
+
 const MainBridge_JS = `
 web3._extend({
 	property: 'mainbridge',
@@ -1058,6 +1233,7 @@ web3._extend({
 	]
 });
 `
+
 const SubBridge_JS = `
 web3._extend({
 	property: 'subbridge',
@@ -1111,12 +1287,14 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'subscribeBridge',
 			call: 'subbridge_subscribeBridge',
-			params: 2
+			params: 2,
+			inputFormatter: [null, web3._extend.formatters.inputEmptyFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'unsubscribeBridge',
 			call: 'subbridge_unsubscribeBridge',
-			params: 2
+			params: 2,
+			inputFormatter: [null, web3._extend.formatters.inputEmptyFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'KASAnchor',
@@ -1131,22 +1309,26 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'registerBridge',
 			call: 'subbridge_registerBridge',
-			params: 2
+			params: 3,
+			inputFormatter: [null, null, web3._extend.formatters.inputEmptyFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'deregisterBridge',
 			call: 'subbridge_deregisterBridge',
-			params: 2
+			params: 2,
+			inputFormatter: [null, web3._extend.formatters.inputEmptyFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'registerToken',
 			call: 'subbridge_registerToken',
-			params: 4
+			params: 4,
+			inputFormatter: [null, null, null, web3._extend.formatters.inputEmptyFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'deregisterToken',
 			call: 'subbridge_deregisterToken',
-			params: 4
+			params: 4,
+			inputFormatter: [null, null, null, web3._extend.formatters.inputEmptyFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'convertRequestTxHashToHandleTxHash',
@@ -1221,6 +1403,43 @@ web3._extend({
 			call: 'subbridge_setChildOperatorFeePayer',
 			params: 1
 		}),
+		new web3._extend.Method({
+			name: 'getBridgePairByAlias',
+			call: 'subbridge_getBridgePairByAlias',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'changeBridgeAlias',
+			call: 'subbridge_changeBridgeAlias',
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'setParentBridgeOperatorGasLimit',
+			call: 'subbridge_setParentBridgeOperatorGasLimit',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'setChildBridgeOperatorGasLimit',
+			call: 'subbridge_setChildBridgeOperatorGasLimit',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getParentBridgeContractBalance',
+			call: 'subbridge_getParentBridgeContractBalance',
+			params: 1,
+			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
+		}),
+		new web3._extend.Method({
+			name: 'getChildBridgeContractBalance',
+			call: 'subbridge_getChildBridgeContractBalance',
+			params: 1,
+			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
+		}),
+		new web3._extend.Method({
+			name: 'requestParentSync',
+			call: 'subbridge_requestParentSync',
+			params: 0,
+		})
 	],
     properties: [
 		new web3._extend.Property({
@@ -1264,7 +1483,7 @@ web3._extend({
 			getter: 'subbridge_getParentOperatorBalance',
 			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
 		}),
-			new web3._extend.Property({
+		new web3._extend.Property({
 			name: 'childOperatorBalance',
 			getter: 'subbridge_getChildOperatorBalance',
 			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
@@ -1293,9 +1512,27 @@ web3._extend({
 			name: 'childOperatorFeePayer',
 			getter: 'subbridge_getChildOperatorFeePayer',
 		}),
+		new web3._extend.Property({
+			name: 'parentBridgeOperatorGasLimit',
+			getter: 'subbridge_getParentBridgeOperatorGasLimit',
+		}),
+		new web3._extend.Property({
+			name: 'childBridgeOperatorGasLimit',
+			getter: 'subbridge_getChildBridgeOperatorGasLimit',
+		}),
+
+		new web3._extend.Property({
+			name: 'parentGasPrice',
+			getter: 'subbridge_getParentGasPrice',
+		}),
+		new web3._extend.Property({
+			name: 'parentKIP71Config',
+			getter: 'subbridge_getParentKIP71Config',
+		}),
 	]
 });
 `
+
 const CliqueJs = `
 web3._extend({
 	property: 'clique',

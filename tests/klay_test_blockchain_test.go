@@ -19,6 +19,7 @@ package tests
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -32,6 +33,9 @@ import (
 	"github.com/klaytn/klaytn/common/profile"
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/consensus/istanbul"
+	istanbulBackend "github.com/klaytn/klaytn/consensus/istanbul/backend"
+	istanbulCore "github.com/klaytn/klaytn/consensus/istanbul/core"
+	"github.com/klaytn/klaytn/consensus/misc"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/crypto/sha3"
 	"github.com/klaytn/klaytn/governance"
@@ -40,9 +44,6 @@ import (
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/work"
-
-	istanbulBackend "github.com/klaytn/klaytn/consensus/istanbul/backend"
-	istanbulCore "github.com/klaytn/klaytn/consensus/istanbul/core"
 )
 
 const transactionsJournalFilename = "transactions.rlp"
@@ -50,9 +51,7 @@ const transactionsJournalFilename = "transactions.rlp"
 // If you don't want to remove 'chaindata', set removeChaindataOnExit = false
 const removeChaindataOnExit = true
 
-var (
-	errEmptyPending = errors.New("pending is empty")
-)
+var errEmptyPending = errors.New("pending is empty")
 
 type BCData struct {
 	bc                 *blockchain.BlockChain
@@ -64,12 +63,14 @@ type BCData struct {
 	validatorPrivKeys  []*ecdsa.PrivateKey
 	engine             consensus.Istanbul
 	genesis            *blockchain.Genesis
-	governance         *governance.Governance
+	governance         governance.Engine
 	rewardDistributor  *reward.RewardDistributor
 }
 
-var dir = "chaindata"
-var nodeAddr = common.StringToAddress("nodeAddr")
+var (
+	dir      = "chaindata"
+	nodeAddr = common.StringToAddress("nodeAddr")
+)
 
 func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 	if numValidators > maxAccounts {
@@ -125,9 +126,11 @@ func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 	governance.AddGovernanceCacheForTest(gov, 0, genesis.Config)
 	rewardDistributor := reward.NewRewardDistributor(gov)
 
-	return &BCData{bc, addrs, privKeys, chainDb,
+	return &BCData{
+		bc, addrs, privKeys, chainDb,
 		&genesisAddr, validatorAddresses,
-		validatorPrivKeys, engine, genesis, gov, rewardDistributor}, nil
+		validatorPrivKeys, engine, genesis, gov, rewardDistributor,
+	}, nil
 }
 
 func (bcdata *BCData) Shutdown() {
@@ -155,13 +158,16 @@ func (bcdata *BCData) prepareHeader() (*types.Header, error) {
 		time.Sleep(wait)
 	}
 
-	num := parent.Number()
+	num := new(big.Int).Add(parent.Number(), common.Big1)
 	header := &types.Header{
 		ParentHash: parent.Hash(),
-		Number:     num.Add(num, common.Big1),
+		Number:     num,
 		Time:       big.NewInt(tstamp),
 		Governance: common.Hex2Bytes("b8dc7b22676f7665726e696e676e6f6465223a22307865373333636234643237396461363936663330643437306638633034646563623534666362306432222c22676f7665726e616e63656d6f6465223a2273696e676c65222c22726577617264223a7b226d696e74696e67616d6f756e74223a393630303030303030303030303030303030302c22726174696f223a2233342f33332f3333227d2c22626674223a7b2265706f6368223a33303030302c22706f6c696379223a302c22737562223a32317d2c22756e69745072696365223a32353030303030303030307d"),
 		Vote:       common.Hex2Bytes("e194e733cb4d279da696f30d470f8c04decb54fcb0d28565706f6368853330303030"),
+	}
+	if bcdata.bc.Config().IsKIP71ForkEnabled(num) {
+		header.BaseFee = misc.NextBlockBaseFee(parent.Header(), bcdata.bc.Config())
 	}
 
 	if err := bcdata.engine.Prepare(bcdata.bc, header); err != nil {
@@ -199,7 +205,7 @@ func (bcdata *BCData) MineABlock(transactions types.Transactions, signer types.S
 
 	// Create a transaction set where transactions are sorted by price and nonce
 	start = time.Now()
-	txset := types.NewTransactionsByPriceAndNonce(signer, txs)
+	txset := types.NewTransactionsByTimeAndNonce(signer, txs)
 	prof.Profile("mine_NewTransactionsByPriceAndNonce", time.Now().Sub(start))
 
 	// Apply the set of transactions
@@ -231,7 +237,8 @@ func (bcdata *BCData) MineABlock(transactions types.Transactions, signer types.S
 }
 
 func (bcdata *BCData) GenABlock(accountMap *AccountMap, opt *testOption,
-	numTransactions int, prof *profile.Profiler) error {
+	numTransactions int, prof *profile.Profiler,
+) error {
 	// Make a set of transactions
 	start := time.Now()
 	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
@@ -245,7 +252,8 @@ func (bcdata *BCData) GenABlock(accountMap *AccountMap, opt *testOption,
 }
 
 func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockchain.TxPool,
-	prof *profile.Profiler) error {
+	prof *profile.Profiler,
+) error {
 	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
 
 	pending, err := txpool.Pending()
@@ -255,7 +263,7 @@ func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockc
 	if len(pending) == 0 {
 		return errEmptyPending
 	}
-	pooltxs := types.NewTransactionsByPriceAndNonce(signer, pending)
+	pooltxs := types.NewTransactionsByTimeAndNonce(signer, pending)
 
 	// Set the block header
 	start := time.Now()
@@ -328,8 +336,8 @@ func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockc
 }
 
 func (bcdata *BCData) GenABlockWithTransactions(accountMap *AccountMap, transactions types.Transactions,
-	prof *profile.Profiler) error {
-
+	prof *profile.Profiler,
+) error {
 	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
 
 	statedb, err := bcdata.bc.State()
@@ -397,9 +405,11 @@ func NewDatabase(dir string, dbType database.DBType) database.DBManager {
 	if dir == "" {
 		return database.NewMemoryDBManager()
 	} else {
-		dbc := &database.DBConfig{Dir: dir, DBType: dbType, LevelDBCacheSize: 768,
+		dbc := &database.DBConfig{
+			Dir: dir, DBType: dbType, LevelDBCacheSize: 768,
 			OpenFilesLimit: 1024, SingleDB: false, NumStateTrieShards: 4, ParallelDBWrite: true,
-			LevelDBCompression: database.AllNoCompression, LevelDBBufferPool: true}
+			LevelDBCompression: database.AllNoCompression, LevelDBBufferPool: true,
+		}
 		return database.NewDBManager(dbc)
 	}
 }
@@ -424,8 +434,8 @@ func prepareIstanbulExtra(validators []common.Address) ([]byte, error) {
 }
 
 func initBlockChain(db database.DBManager, cacheConfig *blockchain.CacheConfig, coinbaseAddrs []*common.Address, validators []common.Address,
-	genesis *blockchain.Genesis, engine consensus.Engine) (*blockchain.BlockChain, *blockchain.Genesis, error) {
-
+	genesis *blockchain.Genesis, engine consensus.Engine,
+) (*blockchain.BlockChain, *blockchain.Genesis, error) {
 	extraData, err := prepareIstanbulExtra(validators)
 
 	if genesis == nil {
@@ -433,7 +443,7 @@ func initBlockChain(db database.DBManager, cacheConfig *blockchain.CacheConfig, 
 		genesis.Config = Forks["Byzantium"]
 		genesis.ExtraData = extraData
 		genesis.BlockScore = big.NewInt(1)
-		genesis.Config.Governance = params.GetDefaultGovernanceConfig(params.UseIstanbul)
+		genesis.Config.Governance = params.GetDefaultGovernanceConfig()
 		genesis.Config.Istanbul = params.GetDefaultIstanbulConfig()
 		genesis.Config.UnitPrice = 25 * params.Ston
 	}
@@ -450,9 +460,22 @@ func initBlockChain(db database.DBManager, cacheConfig *blockchain.CacheConfig, 
 		return nil, nil, err
 	}
 
-	genesis.Config = chainConfig
+	// The chainConfig value has been modified while executing test. (ex, The test included executing applyTransaction())
+	// Therefore, a deep copy is required to prevent the chainConfing value from being modified.
+	var cfg params.ChainConfig
+	b, err := json.Marshal(chainConfig)
+	if err != nil {
+		return nil, nil, err
+	}
 
-	chain, err := blockchain.NewBlockChain(db, cacheConfig, chainConfig, engine, vm.Config{})
+	err = json.Unmarshal(b, &cfg)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	genesis.Config = &cfg
+
+	chain, err := blockchain.NewBlockChain(db, cacheConfig, genesis.Config, engine, vm.Config{})
 	if err != nil {
 		return nil, nil, err
 	}

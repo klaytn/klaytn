@@ -23,6 +23,8 @@ import (
 	"math"
 	"math/big"
 
+	"github.com/klaytn/klaytn/rlp"
+
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/kerrors"
@@ -35,7 +37,7 @@ const MaxFeeRatio FeeRatio = 100
 
 const SubTxTypeBits uint = 3
 
-type TxType uint8
+type TxType uint16
 
 const (
 	// TxType declarations
@@ -43,7 +45,7 @@ const (
 	//   <base type>, <fee-delegated type>, and <fee-delegated type with a fee ratio>
 	// If types other than <base type> are not useful, they are declared with underscore(_).
 	// Each base type is self-descriptive.
-	TxTypeLegacyTransaction, TxTypeFeeDelegatedTransactions, TxTypeFeeDelegatedWithRatioTransactions TxType = iota << SubTxTypeBits, iota<<SubTxTypeBits + 1, iota<<SubTxTypeBits + 2
+	TxTypeLegacyTransaction, _, _ TxType = iota << SubTxTypeBits, iota<<SubTxTypeBits + 1, iota<<SubTxTypeBits + 2
 	TxTypeValueTransfer, TxTypeFeeDelegatedValueTransfer, TxTypeFeeDelegatedValueTransferWithRatio
 	TxTypeValueTransferMemo, TxTypeFeeDelegatedValueTransferMemo, TxTypeFeeDelegatedValueTransferMemoWithRatio
 	TxTypeAccountCreation, _, _
@@ -53,10 +55,15 @@ const (
 	TxTypeCancel, TxTypeFeeDelegatedCancel, TxTypeFeeDelegatedCancelWithRatio
 	TxTypeBatch, _, _
 	TxTypeChainDataAnchoring, TxTypeFeeDelegatedChainDataAnchoring, TxTypeFeeDelegatedChainDataAnchoringWithRatio
-	TxTypeLast, _, _
+	TxTypeKlaytnLast, _, _
+	TxTypeEthereumAccessList = TxType(0x7801)
+	TxTypeEthereumDynamicFee = TxType(0x7802)
+	TxTypeEthereumLast       = TxType(0x7803)
 )
 
 type TxValueKeyType uint
+
+const EthereumTxTypeEnvelope = TxType(0x78)
 
 const (
 	TxValueKeyNonce TxValueKeyType = iota
@@ -72,6 +79,17 @@ const (
 	TxValueKeyFeePayer
 	TxValueKeyFeeRatioOfFeePayer
 	TxValueKeyCodeFormat
+	TxValueKeyAccessList
+	TxValueKeyChainID
+	TxValueKeyGasTipCap
+	TxValueKeyGasFeeCap
+)
+
+type TxTypeMask uint8
+
+const (
+	TxFeeDelegationBitMask          TxTypeMask = 1
+	TxFeeDelegationWithRatioBitMask TxTypeMask = 2
 )
 
 var (
@@ -96,6 +114,12 @@ var (
 	errValueKeyDataMustByteSlice         = errors.New("Data must be a slice of bytes")
 	errValueKeyFeeRatioMustUint8         = errors.New("FeeRatio must be a type of uint8")
 	errValueKeyCodeFormatInvalid         = errors.New("The smart contract code format is invalid")
+	errValueKeyAccessListInvalid         = errors.New("AccessList must be a type of AccessList")
+	errValueKeyChainIDInvalid            = errors.New("ChainID must be a type of ChainID")
+	errValueKeyGasTipCapMustBigInt       = errors.New("GasTipCap must be a type of *big.Int")
+	errValueKeyGasFeeCapMustBigInt       = errors.New("GasFeeCap must be a type of *big.Int")
+
+	ErrTxTypeNotSupported = errors.New("transaction type not supported")
 )
 
 func (t TxValueKeyType) String() string {
@@ -126,6 +150,14 @@ func (t TxValueKeyType) String() string {
 		return "TxValueKeyFeeRatioOfFeePayer"
 	case TxValueKeyCodeFormat:
 		return "TxValueKeyCodeFormat"
+	case TxValueKeyChainID:
+		return "TxValueKeyChainID"
+	case TxValueKeyAccessList:
+		return "TxValueKeyAccessList"
+	case TxValueKeyGasTipCap:
+		return "TxValueKeyGasTipCap"
+	case TxValueKeyGasFeeCap:
+		return "TxValueKeyGasFeeCap"
 	}
 
 	return "UndefinedTxValueKeyType"
@@ -181,6 +213,10 @@ func (t TxType) String() string {
 		return "TxTypeFeeDelegatedChainDataAnchoring"
 	case TxTypeFeeDelegatedChainDataAnchoringWithRatio:
 		return "TxTypeFeeDelegatedChainDataAnchoringWithRatio"
+	case TxTypeEthereumAccessList:
+		return "TxTypeEthereumAccessList"
+	case TxTypeEthereumDynamicFee:
+		return "TxTypeEthereumDynamicFee"
 	}
 
 	return "UndefinedTxType"
@@ -207,11 +243,19 @@ func (t TxType) IsLegacyTransaction() bool {
 }
 
 func (t TxType) IsFeeDelegatedTransaction() bool {
-	return (t & (TxTypeFeeDelegatedTransactions | TxTypeFeeDelegatedWithRatioTransactions)) != 0x0
+	return (TxTypeMask(t)&(TxFeeDelegationBitMask|TxFeeDelegationWithRatioBitMask)) != 0x0 && !t.IsEthereumTransaction()
 }
 
 func (t TxType) IsFeeDelegatedWithRatioTransaction() bool {
-	return (t & TxTypeFeeDelegatedWithRatioTransactions) != 0x0
+	return (TxTypeMask(t)&TxFeeDelegationWithRatioBitMask) != 0x0 && !t.IsEthereumTransaction()
+}
+
+func (t TxType) IsEthTypedTransaction() bool {
+	return (t & 0xff00) == (EthereumTxTypeEnvelope << 8)
+}
+
+func (t TxType) IsEthereumTransaction() bool {
+	return t.IsLegacyTransaction() || t.IsEthTypedTransaction()
 }
 
 func (t TxType) IsChainDataAnchoring() bool {
@@ -342,6 +386,20 @@ type TxInternalDataPayload interface {
 	GetPayload() []byte
 }
 
+// TxInternalDataEthTyped has a function related to EIP-2718 Ethereum typed transaction.
+// For supporting new typed transaction defined EIP-2718, We provide an interface `TxInternalDataEthTyped `
+type TxInternalDataEthTyped interface {
+	setSignatureValues(chainID, v, r, s *big.Int)
+	GetAccessList() AccessList
+	TxHash() common.Hash
+}
+
+// TxInternalDataBaseFee has a function related to EIP-1559 Ethereum typed transaction.
+type TxInternalDataBaseFee interface {
+	GetGasTipCap() *big.Int
+	GetGasFeeCap() *big.Int
+}
+
 // Since we cannot access the package `blockchain/vm` directly, an interface `VM` is introduced.
 // TODO-Klaytn-Refactoring: Transaction and related data structures should be a new package.
 type VM interface {
@@ -381,7 +439,7 @@ func NewTxInternalData(t TxType) (TxInternalData, error) {
 		return newTxInternalDataFeeDelegatedValueTransferMemo(), nil
 	case TxTypeFeeDelegatedValueTransferMemoWithRatio:
 		return newTxInternalDataFeeDelegatedValueTransferMemoWithRatio(), nil
-	//case TxTypeAccountCreation:
+	// case TxTypeAccountCreation:
 	//	return newTxInternalDataAccountCreation(), nil
 	case TxTypeAccountUpdate:
 		return newTxInternalDataAccountUpdate(), nil
@@ -413,6 +471,10 @@ func NewTxInternalData(t TxType) (TxInternalData, error) {
 		return newTxInternalDataFeeDelegatedChainDataAnchoring(), nil
 	case TxTypeFeeDelegatedChainDataAnchoringWithRatio:
 		return newTxInternalDataFeeDelegatedChainDataAnchoringWithRatio(), nil
+	case TxTypeEthereumAccessList:
+		return newTxInternalDataEthereumAccessList(), nil
+	case TxTypeEthereumDynamicFee:
+		return newTxInternalDataEthereumDynamicFee(), nil
 	}
 
 	return nil, errUndefinedTxType
@@ -434,7 +496,7 @@ func NewTxInternalDataWithMap(t TxType, values map[TxValueKeyType]interface{}) (
 		return newTxInternalDataFeeDelegatedValueTransferMemoWithMap(values)
 	case TxTypeFeeDelegatedValueTransferMemoWithRatio:
 		return newTxInternalDataFeeDelegatedValueTransferMemoWithRatioWithMap(values)
-	//case TxTypeAccountCreation:
+	// case TxTypeAccountCreation:
 	//	return newTxInternalDataAccountCreationWithMap(values)
 	case TxTypeAccountUpdate:
 		return newTxInternalDataAccountUpdateWithMap(values)
@@ -466,6 +528,10 @@ func NewTxInternalDataWithMap(t TxType, values map[TxValueKeyType]interface{}) (
 		return newTxInternalDataFeeDelegatedChainDataAnchoringWithMap(values)
 	case TxTypeFeeDelegatedChainDataAnchoringWithRatio:
 		return newTxInternalDataFeeDelegatedChainDataAnchoringWithRatioWithMap(values)
+	case TxTypeEthereumAccessList:
+		return newTxInternalDataEthereumAccessListWithMap(values)
+	case TxTypeEthereumDynamicFee:
+		return newTxInternalDataEthereumDynamicFeeWithMap(values)
 	}
 
 	return nil, errUndefinedTxType
@@ -509,7 +575,7 @@ func IntrinsicGasPayloadLegacy(gas uint64, data []byte) (uint64, error) {
 }
 
 // IntrinsicGas computes the 'intrinsic gas' for a message with the given data.
-func IntrinsicGas(data []byte, contractCreation bool, r params.Rules) (uint64, error) {
+func IntrinsicGas(data []byte, accessList AccessList, contractCreation bool, r params.Rules) (uint64, error) {
 	// Set the starting gas for the raw transaction
 	var gas uint64
 	if contractCreation {
@@ -525,8 +591,17 @@ func IntrinsicGas(data []byte, contractCreation bool, r params.Rules) (uint64, e
 	} else {
 		gasPayloadWithGas, err = IntrinsicGasPayloadLegacy(gas, data)
 	}
+
 	if err != nil {
 		return 0, err
+	}
+
+	// We charge additional gas for the accessList:
+	// ACCESS_LIST_ADDRESS_COST : gas per address in AccessList
+	// ACCESS_LIST_STORAGE_KEY_COST : gas per storage key in AccessList
+	if accessList != nil {
+		gasPayloadWithGas += uint64(len(accessList)) * params.TxAccessListAddressGas
+		gasPayloadWithGas += uint64(accessList.StorageKeys()) * params.TxAccessListStorageKeyGas
 	}
 
 	return gasPayloadWithGas, nil
@@ -558,9 +633,16 @@ func equalRecipient(a, b *common.Address) bool {
 // NewAccountCreationTransactionWithMap is a test only function since the accountCreation tx is disabled.
 // The function generates an accountCreation function like 'NewTxInternalDataWithMap()'.
 func NewAccountCreationTransactionWithMap(values map[TxValueKeyType]interface{}) (*Transaction, error) {
-	txdata, err := newTxInternalDataAccountCreationWithMap(values)
+	txData, err := newTxInternalDataAccountCreationWithMap(values)
 	if err != nil {
 		return nil, err
 	}
-	return &Transaction{data: txdata}, nil
+
+	return NewTx(txData), nil
+}
+
+func calculateTxSize(data TxInternalData) common.StorageSize {
+	c := writeCounter(0)
+	rlp.Encode(&c, data)
+	return common.StorageSize(c)
 }

@@ -31,6 +31,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
@@ -48,7 +49,10 @@ type Backend interface {
 	ChainDB() database.DBManager
 	EventMux() *event.TypeMux
 	AccountManager() accounts.AccountManager
-	RPCGasCap() *big.Int // global gas cap for klay_call over rpc: DoS protection
+	RPCGasCap() *big.Int  // global gas cap for klay_call over rpc: DoS protection
+	RPCTxFeeCap() float64 // global tx fee cap for all transaction related APIs
+	Engine() consensus.Engine
+	FeeHistory(ctx context.Context, blockCount int, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*big.Int, [][]*big.Int, []*big.Int, []float64, error)
 
 	// BlockChain API
 	SetHead(number uint64)
@@ -89,23 +93,36 @@ type Backend interface {
 	GetTxLookupInfoAndReceiptInCache(Hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64, *types.Receipt)
 }
 
-func GetAPIs(apiBackend Backend) []rpc.API {
+func GetAPIs(apiBackend Backend) ([]rpc.API, *EthereumAPI) {
 	nonceLock := new(AddrLocker)
+
+	ethAPI := NewEthereumAPI()
+
+	publicKlayAPI := NewPublicKlayAPI(apiBackend)
+	publicBlockChainAPI := NewPublicBlockChainAPI(apiBackend)
+	publicTransactionPoolAPI := NewPublicTransactionPoolAPI(apiBackend, nonceLock)
+	publicAccountAPI := NewPublicAccountAPI(apiBackend.AccountManager())
+
+	ethAPI.SetPublicKlayAPI(publicKlayAPI)
+	ethAPI.SetPublicBlockChainAPI(publicBlockChainAPI)
+	ethAPI.SetPublicTransactionPoolAPI(publicTransactionPoolAPI)
+	ethAPI.SetPublicAccountAPI(publicAccountAPI)
+
 	return []rpc.API{
 		{
 			Namespace: "klay",
 			Version:   "1.0",
-			Service:   NewPublicKlayAPI(apiBackend),
+			Service:   publicKlayAPI,
 			Public:    true,
 		}, {
 			Namespace: "klay",
 			Version:   "1.0",
-			Service:   NewPublicBlockChainAPI(apiBackend),
+			Service:   publicBlockChainAPI,
 			Public:    true,
 		}, {
 			Namespace: "klay",
 			Version:   "1.0",
-			Service:   NewPublicTransactionPoolAPI(apiBackend, nonceLock),
+			Service:   publicTransactionPoolAPI,
 			Public:    true,
 		}, {
 			Namespace: "txpool",
@@ -124,7 +141,7 @@ func GetAPIs(apiBackend Backend) []rpc.API {
 		}, {
 			Namespace: "klay",
 			Version:   "1.0",
-			Service:   NewPublicAccountAPI(apiBackend.AccountManager()),
+			Service:   publicAccountAPI,
 			Public:    true,
 		}, {
 			Namespace: "personal",
@@ -132,5 +149,5 @@ func GetAPIs(apiBackend Backend) []rpc.API {
 			Service:   NewPrivateAccountAPI(apiBackend, nonceLock),
 			Public:    false,
 		},
-	}
+	}, ethAPI
 }

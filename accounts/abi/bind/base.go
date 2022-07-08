@@ -260,7 +260,7 @@ func (c *BoundContract) transact(opts *TransactOpts, contract *common.Address, i
 		return nil, err
 	}
 
-	signer := types.NewEIP155Signer(chainId)
+	signer := types.LatestSignerForChainID(chainId)
 	signedTx, err := opts.Signer(signer, opts.From, rawTx)
 	if err != nil {
 		return nil, err
@@ -313,7 +313,6 @@ func (c *BoundContract) FilterLogs(opts *FilterOpts, name string, query ...[]int
 		}
 		return nil
 	}), nil
-
 	if err != nil {
 		return nil, nil, err
 	}

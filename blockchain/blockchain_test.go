@@ -22,6 +22,7 @@ package blockchain
 
 import (
 	"crypto/ecdsa"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"math/rand"
@@ -30,23 +31,23 @@ import (
 	"testing"
 	"time"
 
-	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/rlp"
-
-	"github.com/klaytn/klaytn/storage/statedb"
-
 	"github.com/klaytn/klaytn/accounts/abi"
-	"github.com/stretchr/testify/assert"
-
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/compiler"
+	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/consensus/gxhash"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/rlp"
+	"github.com/klaytn/klaytn/storage"
 	"github.com/klaytn/klaytn/storage/database"
+	"github.com/klaytn/klaytn/storage/statedb"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // So we can deterministically seed different blockchains
@@ -161,7 +162,7 @@ func testBlockChainImport(chain types.Blocks, blockchain *BlockChain) error {
 			}
 			return err
 		}
-		statedb, err := state.New(blockchain.GetBlockByHash(block.ParentHash()).Root(), blockchain.stateCache)
+		statedb, err := state.New(blockchain.GetBlockByHash(block.ParentHash()).Root(), blockchain.stateCache, nil)
 		if err != nil {
 			return err
 		}
@@ -622,7 +623,7 @@ func TestFastVsFullChains(t *testing.T) {
 			Alloc:  GenesisAlloc{address: {Balance: funds}},
 		}
 		genesis = gspec.MustCommit(gendb)
-		signer  = types.NewEIP155Signer(gspec.Config.ChainID)
+		signer  = types.LatestSignerForChainID(gspec.Config.ChainID)
 	)
 	blocks, receipts := GenerateChain(gspec.Config, genesis, gxhash.NewFaker(), gendb, 1024, func(i int, block *BlockGen) {
 		// If the block number is multiple of 3, send a few bonus transactions to the miner
@@ -788,7 +789,7 @@ func TestChainTxReorgs(t *testing.T) {
 			},
 		}
 		genesis = gspec.MustCommit(db)
-		signer  = types.NewEIP155Signer(gspec.Config.ChainID)
+		signer  = types.LatestSignerForChainID(gspec.Config.ChainID)
 	)
 
 	// Create two transactions shared between the chains:
@@ -885,7 +886,6 @@ func TestChainTxReorgs(t *testing.T) {
 }
 
 func TestLogReorgs(t *testing.T) {
-
 	var (
 		key1, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 		addr1   = crypto.PubkeyToAddress(key1.PublicKey)
@@ -894,7 +894,7 @@ func TestLogReorgs(t *testing.T) {
 		code    = common.Hex2Bytes("60606040525b7f24ec1d3ff24c2f6ff210738839dbc339cd45a5294d85c79361016243157aae7b60405180905060405180910390a15b600a8060416000396000f360606040526008565b00")
 		gspec   = &Genesis{Config: params.TestChainConfig, Alloc: GenesisAlloc{addr1: {Balance: big.NewInt(10000000000000)}}}
 		genesis = gspec.MustCommit(db)
-		signer  = types.NewEIP155Signer(gspec.Config.ChainID)
+		signer  = types.LatestSignerForChainID(gspec.Config.ChainID)
 	)
 
 	blockchain, _ := NewBlockChain(db, nil, gspec.Config, gxhash.NewFaker(), vm.Config{})
@@ -941,7 +941,7 @@ func TestReorgSideEvent(t *testing.T) {
 			Alloc:  GenesisAlloc{addr1: {Balance: big.NewInt(10000000000000)}},
 		}
 		genesis = gspec.MustCommit(db)
-		signer  = types.NewEIP155Signer(gspec.Config.ChainID)
+		signer  = types.LatestSignerForChainID(gspec.Config.ChainID)
 	)
 
 	blockchain, _ := NewBlockChain(db, nil, gspec.Config, gxhash.NewFaker(), vm.Config{})
@@ -1011,7 +1011,6 @@ done:
 		t.Errorf("unexpected event fired: %v", e)
 	case <-time.After(250 * time.Millisecond):
 	}
-
 }
 
 // Tests if the canonical block can be fetched from the database during chain insertion.
@@ -1038,14 +1037,17 @@ func TestCanonicalBlockRetrieval(t *testing.T) {
 					continue // busy wait for canonical hash to be written
 				}
 				if ch != block.Hash() {
-					t.Fatalf("unknown canonical hash, want %s, got %s", block.Hash().Hex(), ch.Hex())
+					t.Errorf("unknown canonical hash, want %s, got %s", block.Hash().Hex(), ch.Hex())
+					return
 				}
 				fb := blockchain.db.ReadBlock(ch, block.NumberU64())
 				if fb == nil {
-					t.Fatalf("unable to retrieve block %d for canonical hash: %s", block.NumberU64(), ch.Hex())
+					t.Errorf("unable to retrieve block %d for canonical hash: %s", block.NumberU64(), ch.Hex())
+					return
 				}
 				if fb.Hash() != block.Hash() {
-					t.Fatalf("invalid block hash for block %d, want %s, got %s", block.NumberU64(), block.Hash().Hex(), fb.Hash().Hex())
+					t.Errorf("invalid block hash for block %d, want %s, got %s", block.NumberU64(), block.Hash().Hex(), fb.Hash().Hex())
+					return
 				}
 				return
 			}
@@ -1332,7 +1334,7 @@ func benchmarkLargeNumberOfValueToNonexisting(b *testing.B, numTxs, numBlocks in
 				}, // push 1, pop
 			},
 		}
-		signer = types.NewEIP155Signer(gspec.Config.ChainID)
+		signer = types.LatestSignerForChainID(gspec.Config.ChainID)
 	)
 	// Generate the original common chain segment and the two competing forks
 	engine := gxhash.NewFaker()
@@ -1343,7 +1345,7 @@ func benchmarkLargeNumberOfValueToNonexisting(b *testing.B, numTxs, numBlocks in
 		for txi := 0; txi < numTxs; txi++ {
 			uniq := uint64(i*numTxs + txi)
 			recipient := recipientFn(uniq)
-			//recipient := common.BigToAddress(big.NewInt(0).SetUint64(1337 + uniq))
+			// recipient := common.BigToAddress(big.NewInt(0).SetUint64(1337 + uniq))
 			tx, err := types.SignTx(types.NewTransaction(uniq, recipient, big.NewInt(1), params.TxGas, big.NewInt(1), nil), signer, testBankKey)
 			if err != nil {
 				b.Error(err)
@@ -1371,10 +1373,10 @@ func benchmarkLargeNumberOfValueToNonexisting(b *testing.B, numTxs, numBlocks in
 		b.StopTimer()
 		if got := chain.CurrentBlock().Transactions().Len(); got != numTxs*numBlocks {
 			b.Fatalf("Transactions were not included, expected %d, got %d", (numTxs * numBlocks), got)
-
 		}
 	}
 }
+
 func BenchmarkBlockChain_1x1000ValueTransferToNonexisting(b *testing.B) {
 	var (
 		numTxs    = 1000
@@ -1390,6 +1392,7 @@ func BenchmarkBlockChain_1x1000ValueTransferToNonexisting(b *testing.B) {
 
 	benchmarkLargeNumberOfValueToNonexisting(b, numTxs, numBlocks, recipientFn, dataFn)
 }
+
 func BenchmarkBlockChain_1x1000ValueTransferToExisting(b *testing.B) {
 	var (
 		numTxs    = 1000
@@ -1407,6 +1410,7 @@ func BenchmarkBlockChain_1x1000ValueTransferToExisting(b *testing.B) {
 
 	benchmarkLargeNumberOfValueToNonexisting(b, numTxs, numBlocks, recipientFn, dataFn)
 }
+
 func BenchmarkBlockChain_1x1000Executions(b *testing.B) {
 	var (
 		numTxs    = 1000
@@ -1448,9 +1452,10 @@ func TestCheckBlockChainVersion(t *testing.T) {
 	assert.Equal(t, uint64(BlockChainVersion+1), *memDB.ReadDatabaseVersion())
 }
 
-// the compiled code and abi is generated by contracts/internal_tx_contract/internal_tx_contract.sol
-var testCode = "60806040526101ca806100136000396000f300608060405260043610610057576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff16806312065fe01461005c578063b4ebea9914610087578063b6b55f25146100da575b600080fd5b34801561006857600080fd5b506100716100fa565b6040518082815260200191505060405180910390f35b34801561009357600080fd5b506100d8600480360381019080803563ffffffff169060200190929190803573ffffffffffffffffffffffffffffffffffffffff169060200190929190505050610119565b005b6100f86004803603810190808035906020019092919050505061018d565b005b60003073ffffffffffffffffffffffffffffffffffffffff1631905090565b60008090505b8263ffffffff168163ffffffff161015610188578173ffffffffffffffffffffffffffffffffffffffff166108fc60019081150290604051600060405180830381858888f1935050505015801561017a573d6000803e3d6000fd5b50808060010191505061011f565b505050565b803414151561019b57600080fd5b505600a165627a7a72305820ee29ede1bae5608d4c660a11196b4846247aedee2657207fd39c7d736882e1400029"
-var testAbiStr = `[{"constant":true,"inputs":[],"name":"getBalance","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"times","type":"uint32"},{"name":"receiver","type":"address"}],"name":"sendKlay","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"amount","type":"uint256"}],"name":"deposit","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"inputs":[],"payable":true,"stateMutability":"payable","type":"constructor"}]`
+var (
+	internalTxContractCode string
+	internalTxContractAbi  string
+)
 
 func genInternalTxTransaction(t *testing.T, block *BlockGen, address common.Address, signer types.Signer, key *ecdsa.PrivateKey) {
 	// 1. Deploy internal transaction sample contract
@@ -1458,6 +1463,24 @@ func genInternalTxTransaction(t *testing.T, block *BlockGen, address common.Addr
 	amount := new(big.Int).SetUint64(100000000)
 	gasLimit := big.NewInt(500000).Uint64()
 	gasPrice := big.NewInt(25000)
+
+	// It has to be cached because TestBlockChain_SetCanonicalBlock calls it many times
+	if len(internalTxContractCode) == 0 {
+		contracts, err := compiler.CompileSolidityOrLoad("",
+			"../contracts/internal_tx_contract/internal_tx_contract.sol")
+		assert.Nil(t, err)
+
+		var contract compiler.Contract
+		for _, v := range contracts { // take the first one
+			contract = *v
+			break
+		}
+
+		internalTxContractCode = strings.TrimPrefix(contract.Code, "0x")
+		abi, err := json.Marshal(contract.Info.AbiDefinition)
+		assert.Nil(t, err)
+		internalTxContractAbi = string(abi)
+	}
 
 	values := map[types.TxValueKeyType]interface{}{
 		types.TxValueKeyNonce:         nonce,
@@ -1468,7 +1491,7 @@ func genInternalTxTransaction(t *testing.T, block *BlockGen, address common.Addr
 		types.TxValueKeyTo:            (*common.Address)(nil),
 		types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
 		types.TxValueKeyFrom:          address,
-		types.TxValueKeyData:          common.Hex2Bytes(testCode),
+		types.TxValueKeyData:          common.Hex2Bytes(internalTxContractCode),
 	}
 	tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, values)
 	assert.Nil(t, err)
@@ -1481,7 +1504,7 @@ func genInternalTxTransaction(t *testing.T, block *BlockGen, address common.Addr
 	contractAddr := crypto.CreateAddress(address, nonce)
 
 	// 2. Contract Execution
-	abii, err := abi.JSON(strings.NewReader(testAbiStr))
+	abii, err := abi.JSON(strings.NewReader(internalTxContractAbi))
 	assert.Equal(t, nil, err)
 
 	// the contract method "sendKlay" send 1 peb to address 3 times
@@ -1523,7 +1546,7 @@ func TestCallTraceChainEventSubscription(t *testing.T) {
 			Alloc:  GenesisAlloc{address: {Balance: funds}},
 		}
 		genesis = testGenesis.MustCommit(gendb)
-		signer  = types.NewEIP155Signer(testGenesis.Config.ChainID)
+		signer  = types.LatestSignerForChainID(testGenesis.Config.ChainID)
 	)
 	db := database.NewMemoryDBManager()
 	testGenesis.MustCommit(db)
@@ -1561,7 +1584,7 @@ func TestCallTraceChainEventSubscription(t *testing.T) {
 		// compare contract deploy result
 		assert.Equal(t, address, *ev.InternalTxTraces[0].From)
 		assert.Equal(t, 0, len(ev.InternalTxTraces[0].Calls))
-		assert.Equal(t, "0x"+testCode, ev.InternalTxTraces[0].Input)
+		assert.Equal(t, "0x"+internalTxContractCode, ev.InternalTxTraces[0].Input)
 		assert.Equal(t, fmt.Sprintf("0x%x", 100000000), ev.InternalTxTraces[0].Value)
 
 		// compare contract execution result
@@ -1585,7 +1608,7 @@ func TestBlockChain_SetCanonicalBlock(t *testing.T) {
 			Alloc:  GenesisAlloc{address: {Balance: funds}},
 		}
 		genesis = testGenesis.MustCommit(gendb)
-		signer  = types.NewEIP155Signer(testGenesis.Config.ChainID)
+		signer  = types.LatestSignerForChainID(testGenesis.Config.ChainID)
 	)
 	db := database.NewMemoryDBManager()
 	testGenesis.MustCommit(db)
@@ -1598,6 +1621,7 @@ func TestBlockChain_SetCanonicalBlock(t *testing.T) {
 		BlockInterval:       DefaultBlockInterval,
 		TriesInMemory:       DefaultTriesInMemory,
 		TrieNodeCacheConfig: statedb.GetEmptyTrieNodeCacheConfig(),
+		SnapshotCacheSize:   512,
 	}
 	// create new blockchain with enabled internal tx tracing option
 	blockchain, _ := NewBlockChain(db, cacheConfig, testGenesis.Config, gxhash.NewFaker(), vm.Config{Debug: true, EnableInternalTxTracing: true})
@@ -1631,6 +1655,8 @@ func TestBlockChain_SetCanonicalBlock(t *testing.T) {
 }
 
 func TestBlockChain_writeBlockLogsToRemoteCache(t *testing.T) {
+	storage.SkipLocalTest(t)
+
 	// prepare blockchain
 	blockchain := &BlockChain{
 		stateCache: state.NewDatabaseWithNewCache(database.NewMemoryDBManager(), &statedb.TrieNodeCacheConfig{
@@ -1676,4 +1702,125 @@ func TestBlockChain_writeBlockLogsToRemoteCache(t *testing.T) {
 	}
 
 	assert.Equal(t, log, logs[0])
+}
+
+// TestDeleteCreateRevert tests a weird state transition corner case that we hit
+// while changing the internals of statedb. The workflow is that a contract is
+// self destructed, then in a followup transaction (but same block) it's created
+// again and the transaction reverted.
+func TestDeleteCreateRevert(t *testing.T) {
+	var (
+		aa = common.HexToAddress("0x000000000000000000000000000000000000aaaa")
+		bb = common.HexToAddress("0x000000000000000000000000000000000000bbbb")
+		// Generate a canonical chain to act as the main dataset
+		engine = gxhash.NewFaker()
+		db     = database.NewMemoryDBManager()
+
+		// A sender who makes transactions, has some funds
+		key, _  = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+		address = crypto.PubkeyToAddress(key.PublicKey)
+		funds   = big.NewInt(1000000000)
+		gspec   = &Genesis{
+			Config: params.TestChainConfig,
+			Alloc: GenesisAlloc{
+				address: {Balance: funds},
+				// The address 0xAAAAA selfdestructs if called
+				aa: {
+					// Code needs to just selfdestruct
+					Code:    []byte{byte(vm.PC), 0xFF},
+					Nonce:   1,
+					Balance: big.NewInt(0),
+				},
+				// The address 0xBBBB send 1 peb to 0xAAAA, then reverts
+				bb: {
+					Code: []byte{
+						byte(vm.PC),          // [0]
+						byte(vm.DUP1),        // [0,0]
+						byte(vm.DUP1),        // [0,0,0]
+						byte(vm.DUP1),        // [0,0,0,0]
+						byte(vm.PUSH1), 0x01, // [0,0,0,0,1] (value)
+						byte(vm.PUSH2), 0xaa, 0xaa, // [0,0,0,0,1, 0xaaaa]
+						byte(vm.GAS),
+						byte(vm.CALL),
+						byte(vm.REVERT),
+					},
+					Balance: big.NewInt(1),
+				},
+			},
+		}
+		genesis = gspec.MustCommit(db)
+	)
+
+	blocks, _ := GenerateChain(params.TestChainConfig, genesis, engine, db, 1, func(i int, b *BlockGen) {
+		b.SetRewardbase(common.Address{1})
+		signer := types.LatestSignerForChainID(params.TestChainConfig.ChainID)
+		// One transaction to AAAA
+		tx, _ := types.SignTx(types.NewTransaction(0, aa,
+			big.NewInt(0), 50000, big.NewInt(1), nil), signer, key)
+		b.AddTx(tx)
+		// One transaction to BBBB
+		tx, _ = types.SignTx(types.NewTransaction(1, bb,
+			big.NewInt(0), 100000, big.NewInt(1), nil), signer, key)
+		b.AddTx(tx)
+	})
+	// Import the canonical chain
+	diskdb := database.NewMemoryDBManager()
+	gspec.MustCommit(diskdb)
+
+	chain, err := NewBlockChain(diskdb, nil, params.TestChainConfig, engine, vm.Config{})
+	if err != nil {
+		t.Fatalf("failed to create tester chain: %v", err)
+	}
+	if n, err := chain.InsertChain(blocks); err != nil {
+		t.Fatalf("block %d: failed to insert into chain: %v", n, err)
+	}
+}
+
+// TestBlockChain_InsertChain_InsertFutureBlocks inserts future blocks that have a missing ancestor.
+// It should return an expected error, but not panic.
+func TestBlockChain_InsertChain_InsertFutureBlocks(t *testing.T) {
+	// configure and generate a sample blockchain
+	var (
+		db          = database.NewMemoryDBManager()
+		key, _      = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+		address     = crypto.PubkeyToAddress(key.PublicKey)
+		funds       = big.NewInt(100000000000000000)
+		testGenesis = &Genesis{
+			Config: params.TestChainConfig,
+			Alloc:  GenesisAlloc{address: {Balance: funds}},
+		}
+		genesis = testGenesis.MustCommit(db)
+	)
+
+	// Archive mode is given to avoid mismatching between the given starting block number and
+	// the actual block number where the blockchain has been rolled back to due to 128 blocks interval commit.
+	cacheConfig := &CacheConfig{
+		ArchiveMode:         true,
+		CacheSize:           512,
+		BlockInterval:       DefaultBlockInterval,
+		TriesInMemory:       DefaultTriesInMemory,
+		TrieNodeCacheConfig: statedb.GetEmptyTrieNodeCacheConfig(),
+		SnapshotCacheSize:   512,
+	}
+	cacheConfig.TrieNodeCacheConfig.NumFetcherPrefetchWorker = 3
+
+	// create new blockchain with enabled internal tx tracing option
+	blockchain, _ := NewBlockChain(db, cacheConfig, testGenesis.Config, gxhash.NewFaker(), vm.Config{})
+	defer blockchain.Stop()
+
+	// generate blocks
+	blocks, _ := GenerateChain(testGenesis.Config, genesis, gxhash.NewFaker(), db, 10, func(i int, block *BlockGen) {})
+
+	// insert the generated blocks into the test chain
+	if n, err := blockchain.InsertChain(blocks[:2]); err != nil {
+		t.Fatalf("failed to process block %d: %v", n, err)
+	}
+
+	// insert future blocks
+	_, err := blockchain.InsertChain(blocks[4:])
+	if err == nil {
+		t.Fatal("should be failed")
+	}
+
+	assert.Equal(t, consensus.ErrUnknownAncestor, err)
 }

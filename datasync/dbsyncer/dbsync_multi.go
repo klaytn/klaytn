@@ -114,7 +114,6 @@ func (ds *DBSyncer) parallelSyncBlockHeader(block *types.Block) ([]*BulkInsertQu
 }
 
 func (ds *DBSyncer) parallelSyncTransactions(block *types.Block, receipts types.Receipts, bulkInsertQuerys []*BulkInsertQuery) ([]*BulkInsertQuery, error) {
-
 	txStr, vals, insertCount := ds.resetTxParameter()
 	summaryStr, summaryVals, summaryInsertCount := ds.resetSummaryParameter()
 	txMapStr, txMapVals, txMapInsertCount := ds.resetTxMapParameter()

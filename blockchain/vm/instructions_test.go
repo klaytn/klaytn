@@ -47,11 +47,12 @@ type twoOperandParams struct {
 	y string
 }
 
-var commonParams []*twoOperandParams
-var twoOpMethods map[string]executionFunc
+var (
+	commonParams []*twoOperandParams
+	twoOpMethods map[string]executionFunc
+)
 
 func init() {
-
 	// Params is a list of common edgecases that should be used for some common tests
 	params := []string{
 		"0000000000000000000000000000000000000000000000000000000000000000", // 0
@@ -97,7 +98,6 @@ func init() {
 }
 
 func testTwoOperandOp(t *testing.T, tests []TwoOperandTestcase, opFn executionFunc, name string) {
-
 	var (
 		env            = NewEVM(Context{}, nil, params.TestChainConfig, &Config{})
 		stack          = newstack()
@@ -245,7 +245,7 @@ func xTestWriteExpectedValues(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		_ = ioutil.WriteFile(fmt.Sprintf("testdata/testcases_%v.json", name), data, 0644)
+		_ = ioutil.WriteFile(fmt.Sprintf("testdata/testcases_%v.json", name), data, 0o644)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -268,7 +268,7 @@ func TestJsonTestcases(t *testing.T) {
 
 func initStateDB(db database.DBManager) *state.StateDB {
 	sdb := state.NewDatabase(db)
-	statedb, _ := state.New(common.Hash{}, sdb)
+	statedb, _ := state.New(common.Hash{}, sdb, nil)
 
 	contractAddress := common.HexToAddress("0x18f30de96ce789fe778b9a5f420f6fdbbd9b34d8")
 	code := "60ca60205260005b612710811015630000004557602051506020515060205150602051506020515060205150602051506020515060205150602051506001016300000007565b00"
@@ -291,7 +291,7 @@ func initStateDB(db database.DBManager) *state.StateDB {
 
 	// Commit and re-open to start with a clean state.
 	root, _ := statedb.Commit(false)
-	statedb, _ = state.New(root, sdb)
+	statedb, _ = state.New(root, sdb, nil)
 
 	return statedb
 }
@@ -312,6 +312,7 @@ func opBenchmark(bench *testing.B, op func(pc *uint64, evm *EVM, contract *Contr
 			BlockScore:  big.NewInt(0),
 			Coinbase:    common.HexToAddress("0xf4b0cb429b7d341bf467f2d51c09b64cd9add37c"),
 			GasPrice:    big.NewInt(1),
+			BaseFee:     big.NewInt(1000000000000000000),
 			GasLimit:    uint64(1000000000000000),
 			Time:        big.NewInt(1488928920),
 			GetHash: func(num uint64) common.Hash {
@@ -505,11 +506,13 @@ func BenchmarkOpEq(b *testing.B) {
 
 	opBenchmark(b, opEq, x, y)
 }
+
 func BenchmarkOpEq2(b *testing.B) {
 	x := "FBCDEF090807060504030201ffffffffFBCDEF090807060504030201ffffffff"
 	y := "FBCDEF090807060504030201ffffffffFBCDEF090807060504030201fffffffe"
 	opBenchmark(b, opEq, x, y)
 }
+
 func BenchmarkOpAnd(b *testing.B) {
 	x := "ABCDEF090807060504030201ffffffffffffffffffffffffffffffffffffffff"
 	y := "ABCDEF090807060504030201ffffffffffffffffffffffffffffffffffffffff"
@@ -560,18 +563,21 @@ func BenchmarkOpSHL(b *testing.B) {
 
 	opBenchmark(b, opSHL, x, y)
 }
+
 func BenchmarkOpSHR(b *testing.B) {
 	x := "FBCDEF090807060504030201ffffffffFBCDEF090807060504030201ffffffff"
 	y := "ff"
 
 	opBenchmark(b, opSHR, x, y)
 }
+
 func BenchmarkOpSAR(b *testing.B) {
 	x := "FBCDEF090807060504030201ffffffffFBCDEF090807060504030201ffffffff"
 	y := "ff"
 
 	opBenchmark(b, opSAR, x, y)
 }
+
 func BenchmarkOpIsZero(b *testing.B) {
 	x := "FBCDEF090807060504030201ffffffffFBCDEF090807060504030201ffffffff"
 	opBenchmark(b, opIszero, x)
@@ -998,14 +1004,6 @@ func BenchmarkOpSuicide(b *testing.B) {
 	opBenchmark(b, opSuicide, addr)
 }
 
-func BenchmarkOpChainID(b *testing.B) {
-	opBenchmark(b, opChainID)
-}
-
-func BenchmarkOpSelfBalance(b *testing.B) {
-	opBenchmark(b, opSelfBalance)
-}
-
 func BenchmarkOpPush1(b *testing.B) {
 	opBenchmark(b, opPush1)
 }
@@ -1354,6 +1352,18 @@ func BenchmarkOpLog4(b *testing.B) {
 	size := 4
 	stacks := genStacksForLog(size)
 	opBenchmark(b, makeLog(size), stacks...)
+}
+
+func BenchmarkOpChainID(b *testing.B) {
+	opBenchmark(b, opChainID)
+}
+
+func BenchmarkOpSelfBalance(b *testing.B) {
+	opBenchmark(b, opSelfBalance)
+}
+
+func BenchmarkOpBaseFee(b *testing.B) {
+	opBenchmark(b, opBaseFee)
 }
 
 func genStacksForDup(size int) []string {

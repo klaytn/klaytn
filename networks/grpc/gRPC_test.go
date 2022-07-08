@@ -55,6 +55,7 @@ func TestGRPC(t *testing.T) {
 	go testBiCall(t, addr, wg)
 	wg.Wait()
 }
+
 func testCall(t *testing.T, addr string, wg *sync.WaitGroup) {
 	defer wg.Done()
 

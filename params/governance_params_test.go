@@ -17,23 +17,8 @@
 package params
 
 import (
-	"math/big"
 	"testing"
-
-	"github.com/klaytn/klaytn/common"
 )
-
-func TestSetMinimumStakingAmount(t *testing.T) {
-	testData := []*big.Int{common.Big1, common.Big100, common.Big32, common.Big256, common.Big257}
-
-	for i := 0; i < len(testData); i++ {
-		SetMinimumStakingAmount(testData[i])
-
-		if MinimumStakingAmount().Cmp(testData[i]) != 0 {
-			t.Errorf("MinimumStakingAmount is different from the given testData. Result : %v, Expected : %v", MinimumStakingAmount(), testData[i])
-		}
-	}
-}
 
 func TestSetProposerUpdateInterval(t *testing.T) {
 	testData := []uint64{3600, 100, 500, 7200, 10}
