@@ -94,14 +94,14 @@ func (st *StackTrie) MarshalBinary() (data []byte, err error) {
 	)
 	if err := gob.NewEncoder(w).Encode(struct {
 		Nodetype  uint8
+		KeyOffset uint8
 		Val       []byte
 		Key       []byte
-		KeyOffset uint8
 	}{
 		st.nodeType,
+		uint8(st.keyOffset),
 		st.val,
 		st.key,
-		uint8(st.keyOffset),
 	}); err != nil {
 		return nil, err
 	}
@@ -130,9 +130,9 @@ func (st *StackTrie) UnmarshalBinary(data []byte) error {
 func (st *StackTrie) unmarshalBinary(r io.Reader) error {
 	var dec struct {
 		Nodetype  uint8
+		KeyOffset uint8
 		Val       []byte
 		Key       []byte
-		KeyOffset uint8
 	}
 	gob.NewDecoder(r).Decode(&dec)
 	st.nodeType = dec.Nodetype
@@ -140,7 +140,7 @@ func (st *StackTrie) unmarshalBinary(r io.Reader) error {
 	st.key = dec.Key
 	st.keyOffset = int(dec.KeyOffset)
 
-	var hasChild = make([]byte, 1)
+	hasChild := make([]byte, 1)
 	for i := range st.children {
 		if _, err := r.Read(hasChild); err != nil {
 			return err
