@@ -37,7 +37,6 @@ import (
 	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/kerrors"
-	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 )
 
@@ -285,17 +284,13 @@ func (tx *Transaction) GasFeeCap() *big.Int {
 	return tx.data.GetPrice()
 }
 
+// This function is disabled because klaytn has no gas tip
 func (tx *Transaction) EffectiveGasTip(baseFee *big.Int) *big.Int {
-	// BaseFee == 0 means befroe kip71 hardfork
-	if baseFee.Cmp(new(big.Int).SetUint64(params.ZeroBaseFee)) == 0 {
-		if tx.Type() == TxTypeEthereumDynamicFee {
-			te := tx.GetTxInternalData().(TxInternalDataBaseFee)
-			return math.BigMin(te.GetGasTipCap(), new(big.Int).Sub(te.GetGasFeeCap(), baseFee))
-		}
-		return tx.GasPrice()
+	if tx.Type() == TxTypeEthereumDynamicFee {
+		te := tx.GetTxInternalData().(TxInternalDataBaseFee)
+		return math.BigMin(te.GetGasTipCap(), new(big.Int).Sub(te.GetGasFeeCap(), baseFee))
 	}
-	// After kip71 hardfork, return 0 because klaytn doesn't have gas tip.
-	return common.Big0
+	return tx.GasPrice()
 }
 
 func (tx *Transaction) EffectiveGasPrice(header *Header) *big.Int {
