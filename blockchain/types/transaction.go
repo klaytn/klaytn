@@ -286,12 +286,16 @@ func (tx *Transaction) GasFeeCap() *big.Int {
 }
 
 func (tx *Transaction) EffectiveGasTip(baseFee *big.Int) *big.Int {
-	if tx.Type() == TxTypeEthereumDynamicFee {
-		te := tx.GetTxInternalData().(TxInternalDataBaseFee)
-		return math.BigMin(te.GetGasTipCap(), new(big.Int).Sub(te.GetGasFeeCap(), baseFee))
+	// BaseFee == 0 means befroe kip71 hardfork
+	if baseFee.Cmp(new(big.Int).SetUint64(params.ZeroBaseFee)) == 0 {
+		if tx.Type() == TxTypeEthereumDynamicFee {
+			te := tx.GetTxInternalData().(TxInternalDataBaseFee)
+			return math.BigMin(te.GetGasTipCap(), new(big.Int).Sub(te.GetGasFeeCap(), baseFee))
+		}
+		return tx.GasPrice()
 	}
-
-	return tx.GasPrice()
+	// After kip71 hardfork, return 0 because klaytn doesn't have gas tip.
+	return common.Big0
 }
 
 // TODO-klaytn it use calculation algorithm of ethereum.
