@@ -16,6 +16,7 @@ import (
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/log"
+	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node/cn"
 	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
@@ -107,6 +108,58 @@ func TestGovernance_ContractEngine(t *testing.T) {
 			assert.Equal(t, paramValue, value)
 		}
 	}
+}
+
+func TestGovernance_Hardfork(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
+
+	fullNode, node, validator, chainId, workspace := newBlockchain(t)
+	defer os.RemoveAll(workspace)
+	defer fullNode.Stop()
+
+	var (
+		chain        = node.BlockChain().(*blockchain.BlockChain)
+		config       = chain.Config()
+		owner        = validator
+		contractAddr = crypto.CreateAddress(owner.Addr, owner.Nonce)
+		server, _    = fullNode.RPCHandler()
+		client       = rpc.DialInProc(server)
+
+		paramName     = "istanbul.committeesize"
+		fallbackValue = uint64(config.Istanbul.SubGroupSize)
+		paramValue    = uint64(22)
+		paramBytes    = []byte{22}
+
+		hardforkBlock uint64 = 12
+	)
+
+	// Assumptions in this test case
+	require.Equal(t, contractAddr, chain.Config().Governance.GovernanceContract)
+
+	// Override hardfork block. This works because chain.Config() == MixedEngine.initialConfig.
+	chain.Config().IstanbulCompatibleBlock = big.NewInt(0)
+	chain.Config().LondonCompatibleBlock = big.NewInt(0)
+	chain.Config().EthTxTypeCompatibleBlock = big.NewInt(0)
+	chain.Config().ContractGovCompatibleBlock = big.NewInt(int64(hardforkBlock))
+
+	// Deploy contract
+	deployGovParamTx_constructor(t, node, owner, chainId)
+
+	// Set a param
+	deployGovParamTx_setParam(t, node, owner, chainId, contractAddr, paramName, paramBytes)
+
+	// Wait until hardfork
+	require.NotNil(t, waitBlock(chain, hardforkBlock))
+	t.Logf("Past hardfork block=%2d", hardforkBlock)
+
+	// Check that parameter has changed
+	// This confirms that contract is in effect
+	var items map[string]interface{}
+	client.Call(&items, "governance_itemsAt", hardforkBlock+1)
+	assert.Equal(t, float64(paramValue), items[paramName])
+
+	client.Call(&items, "governance_itemsAt", hardforkBlock-1)
+	assert.Equal(t, float64(fallbackValue), items[paramName])
 }
 
 func deployGovParamTx_constructor(t *testing.T, node *cn.CN, owner *TestAccountType, chainId *big.Int,

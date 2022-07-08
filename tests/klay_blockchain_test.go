@@ -170,6 +170,9 @@ func newKlaytnNode(t *testing.T, dir string, validator *TestAccountType) (*node.
 	genesis.Config = params.CypressChainConfig.Copy()
 	genesis.Config.Istanbul.SubGroupSize = 1
 	genesis.Config.Istanbul.ProposerPolicy = uint64(istanbul.RoundRobin)
+	genesis.Config.Governance.GoverningNode = validator.Addr
+	genesis.Config.Governance.GovernanceMode = "none"
+	genesis.Config.Governance.GovernanceContract = crypto.CreateAddress(validator.Addr, validator.Nonce)
 	genesis.Config.Governance.Reward.MintingAmount = new(big.Int).Mul(big.NewInt(9000000000000000000), big.NewInt(params.KLAY))
 
 	cnConf := cn.GetDefaultConfig()
