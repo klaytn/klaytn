@@ -22,12 +22,11 @@ package rpc
 
 import (
 	"encoding/json"
-	"reflect"
-	"sync"
-
 	"fmt"
 	"math"
+	"reflect"
 	"strings"
+	"sync"
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
@@ -70,9 +69,11 @@ type serverRequest struct {
 	err           Error
 }
 
-type serviceRegistry map[string]*service // collection of services
-type callbacks map[string]*callback      // collection of RPC callbacks
-type subscriptions map[string]*callback  // collection of subscription callbacks
+type (
+	serviceRegistry map[string]*service  // collection of services
+	callbacks       map[string]*callback // collection of RPC callbacks
+	subscriptions   map[string]*callback // collection of subscription callbacks
+)
 
 // Server represents a RPC server
 type Server struct {
@@ -101,6 +102,12 @@ type Error interface {
 	ErrorCode() int // returns the code
 }
 
+// A DataError contains some data in addition to the error message.
+type DataError interface {
+	Error() string          // returns the message
+	ErrorData() interface{} // returns the error data
+}
+
 // ServerCodec implements reading, parsing and writing RPC messages for the server side of
 // a RPC session. Implementations must be go-routine safe since the codec can be called in
 // multiple go-routines concurrently.
@@ -112,7 +119,7 @@ type ServerCodec interface {
 	// Assemble success response, expects response id and payload
 	CreateResponse(id interface{}, reply interface{}) interface{}
 	// Assemble error response, expects response id and error
-	CreateErrorResponse(id interface{}, err Error) interface{}
+	CreateErrorResponse(id interface{}, err error) interface{}
 	// Assemble error response with extra information about the error through info
 	CreateErrorResponseWithInfo(id interface{}, err Error, info interface{}) interface{}
 	// Create notification response

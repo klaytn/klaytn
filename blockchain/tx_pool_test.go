@@ -23,12 +23,18 @@ package blockchain
 import (
 	"crypto/ecdsa"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"math/big"
 	"math/rand"
 	"os"
+	"reflect"
 	"testing"
 	"time"
+
+	"github.com/klaytn/klaytn/rlp"
+
+	"github.com/klaytn/klaytn/fork"
 
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -40,13 +46,34 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// testTxPoolConfig is a transaction pool configuration without stateful disk
-// sideeffects used during testing.
-var testTxPoolConfig TxPoolConfig
+var (
+	// testTxPoolConfig is a transaction pool configuration without stateful disk
+	// sideeffects used during testing.
+	testTxPoolConfig TxPoolConfig
+
+	// eip1559Config is a chain config with EIP-1559 enabled at block 0.
+	eip1559Config *params.ChainConfig
+
+	// kip71Config is a chain config with KIP-71 enabled at block 0.
+	kip71Config *params.ChainConfig
+)
 
 func init() {
 	testTxPoolConfig = DefaultTxPoolConfig
 	testTxPoolConfig.Journal = ""
+
+	eip1559Config = params.TestChainConfig.Copy()
+	eip1559Config.IstanbulCompatibleBlock = common.Big0
+	eip1559Config.LondonCompatibleBlock = common.Big0
+	eip1559Config.EthTxTypeCompatibleBlock = common.Big0
+	fork.SetHardForkBlockNumberConfig(eip1559Config)
+
+	kip71Config = params.TestChainConfig.Copy()
+	kip71Config.KIP71CompatibleBlock = common.Big0
+	kip71Config.IstanbulCompatibleBlock = common.Big0
+	kip71Config.LondonCompatibleBlock = common.Big0
+	kip71Config.EthTxTypeCompatibleBlock = common.Big0
+	kip71Config.Governance = &params.GovernanceConfig{KIP71: params.GetDefaultKip71Config()}
 }
 
 type testBlockChain struct {
@@ -55,8 +82,12 @@ type testBlockChain struct {
 	chainHeadFeed *event.Feed
 }
 
+func (pool *TxPool) SetBaseFee(baseFee *big.Int) {
+	pool.gasPrice = baseFee
+}
+
 func (bc *testBlockChain) CurrentBlock() *types.Block {
-	return types.NewBlock(&types.Header{}, nil, nil)
+	return types.NewBlock(&types.Header{Number: big.NewInt(0)}, nil, nil)
 }
 
 func (bc *testBlockChain) GetBlock(hash common.Hash, number uint64) *types.Block {
@@ -77,16 +108,86 @@ func transaction(nonce uint64, gaslimit uint64, key *ecdsa.PrivateKey) *types.Tr
 
 func pricedTransaction(nonce uint64, gaslimit uint64, gasprice *big.Int, key *ecdsa.PrivateKey) *types.Transaction {
 	tx, _ := types.SignTx(types.NewTransaction(nonce, common.HexToAddress("0xAAAA"), big.NewInt(100), gaslimit, gasprice, nil),
-		types.NewEIP155Signer(params.TestChainConfig.ChainID), key)
+		types.LatestSignerForChainID(params.TestChainConfig.ChainID), key)
 	return tx
 }
 
+func dynamicFeeTx(nonce uint64, gaslimit uint64, gasFee *big.Int, tip *big.Int, key *ecdsa.PrivateKey) *types.Transaction {
+	dynamicTx := types.NewTx(&types.TxInternalDataEthereumDynamicFee{
+		ChainID:      params.TestChainConfig.ChainID,
+		AccountNonce: nonce,
+		GasTipCap:    tip,
+		GasFeeCap:    gasFee,
+		GasLimit:     gaslimit,
+		Recipient:    &common.Address{},
+		Amount:       big.NewInt(100),
+		Payload:      nil,
+		AccessList:   nil,
+	})
+
+	signedTx, _ := types.SignTx(dynamicTx, types.LatestSignerForChainID(params.TestChainConfig.ChainID), key)
+	return signedTx
+}
+
+func cancelTx(nonce uint64, gasLimit uint64, gasPrice *big.Int, from common.Address, key *ecdsa.PrivateKey) *types.Transaction {
+	d, err := types.NewTxInternalDataWithMap(types.TxTypeCancel, map[types.TxValueKeyType]interface{}{
+		types.TxValueKeyNonce:    nonce,
+		types.TxValueKeyGasLimit: gasLimit,
+		types.TxValueKeyGasPrice: gasPrice,
+		types.TxValueKeyFrom:     from,
+	})
+	if err != nil {
+		// Since we do not have testing.T here, call panic() instead of t.Fatal().
+		panic(err)
+	}
+	cancelTx := types.NewTx(d)
+	signedTx, _ := types.SignTx(cancelTx, types.LatestSignerForChainID(params.TestChainConfig.ChainID), key)
+	return signedTx
+}
+
+func feeDelegatedTx(nonce uint64, gaslimit uint64, gasPrice *big.Int, amount *big.Int, senderPrvKey *ecdsa.PrivateKey, feePayerPrvKey *ecdsa.PrivateKey) *types.Transaction {
+	delegatedTx := types.NewTx(&types.TxInternalDataFeeDelegatedValueTransfer{
+		AccountNonce: nonce,
+		Price:        gasPrice,
+		GasLimit:     gaslimit,
+		Recipient:    common.Address{},
+		Amount:       amount,
+		From:         crypto.PubkeyToAddress(senderPrvKey.PublicKey),
+		FeePayer:     crypto.PubkeyToAddress(feePayerPrvKey.PublicKey),
+	})
+
+	types.SignTxAsFeePayer(delegatedTx, types.LatestSignerForChainID(params.TestChainConfig.ChainID), feePayerPrvKey)
+	signedTx, _ := types.SignTx(delegatedTx, types.LatestSignerForChainID(params.TestChainConfig.ChainID), senderPrvKey)
+	return signedTx
+}
+
+func feeDelegatedWithRatioTx(nonce uint64, gaslimit uint64, gasPrice *big.Int, amount *big.Int, senderPrvKey *ecdsa.PrivateKey, feePayerPrvKey *ecdsa.PrivateKey, ratio types.FeeRatio) *types.Transaction {
+	delegatedTx := types.NewTx(&types.TxInternalDataFeeDelegatedValueTransferWithRatio{
+		AccountNonce: nonce,
+		Price:        gasPrice,
+		GasLimit:     gaslimit,
+		Recipient:    common.Address{},
+		Amount:       amount,
+		From:         crypto.PubkeyToAddress(senderPrvKey.PublicKey),
+		FeePayer:     crypto.PubkeyToAddress(feePayerPrvKey.PublicKey),
+		FeeRatio:     ratio,
+	})
+
+	types.SignTxAsFeePayer(delegatedTx, types.LatestSignerForChainID(params.TestChainConfig.ChainID), feePayerPrvKey)
+	signedTx, _ := types.SignTx(delegatedTx, types.LatestSignerForChainID(params.TestChainConfig.ChainID), senderPrvKey)
+	return signedTx
+}
+
 func setupTxPool() (*TxPool, *ecdsa.PrivateKey) {
-	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
+	return setupTxPoolWithConfig(params.TestChainConfig)
+}
+
+func setupTxPoolWithConfig(config *params.ChainConfig) (*TxPool, *ecdsa.PrivateKey) {
+	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil)
 	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
 
 	key, _ := crypto.GenerateKey()
-	pool := NewTxPool(testTxPoolConfig, params.TestChainConfig, blockchain)
+	pool := NewTxPool(testTxPoolConfig, config, blockchain)
 
 	return pool, key
 }
@@ -149,7 +250,7 @@ func validateEvents(events chan NewTxsEvent, count int) error {
 }
 
 func deriveSender(tx *types.Transaction) (common.Address, error) {
-	signer := types.NewEIP155Signer(params.TestChainConfig.ChainID)
+	signer := types.LatestSignerForChainID(params.TestChainConfig.ChainID)
 	return types.Sender(signer, tx)
 }
 
@@ -168,7 +269,7 @@ func (c *testChain) State() (*state.StateDB, error) {
 	// a state change between those fetches.
 	stdb := c.statedb
 	if *c.trigger {
-		c.statedb, _ = state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
+		c.statedb, _ = state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil)
 		// simulate that the new head block included tx0 and tx1
 		c.statedb.SetNonce(c.address, 2)
 		c.statedb.SetBalance(c.address, new(big.Int).SetUint64(params.KLAY))
@@ -186,7 +287,7 @@ func TestStateChangeDuringTransactionPoolReset(t *testing.T) {
 	var (
 		key, _     = crypto.GenerateKey()
 		address    = crypto.PubkeyToAddress(key.PublicKey)
-		statedb, _ = state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
+		statedb, _ = state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil)
 		trigger    = false
 	)
 
@@ -227,6 +328,18 @@ func TestStateChangeDuringTransactionPoolReset(t *testing.T) {
 	}
 }
 
+func testAddBalance(pool *TxPool, addr common.Address, amount *big.Int) {
+	pool.mu.Lock()
+	pool.currentState.AddBalance(addr, amount)
+	pool.mu.Unlock()
+}
+
+func testSetNonce(pool *TxPool, addr common.Address, nonce uint64) {
+	pool.mu.Lock()
+	pool.currentState.SetNonce(addr, nonce)
+	pool.mu.Unlock()
+}
+
 func TestInvalidTransactions(t *testing.T) {
 	t.Parallel()
 
@@ -236,34 +349,75 @@ func TestInvalidTransactions(t *testing.T) {
 	tx := transaction(0, 100, key)
 	from, _ := deriveSender(tx)
 
-	pool.currentState.AddBalance(from, big.NewInt(1))
+	testAddBalance(pool, from, big.NewInt(1))
 	if err := pool.AddRemote(tx); err != ErrInsufficientFundsFrom {
-		t.Error("expected", ErrInsufficientFundsFrom)
+		t.Error("expected", ErrInsufficientFundsFrom, "got", err)
 	}
 
 	balance := new(big.Int).Add(tx.Value(), new(big.Int).Mul(new(big.Int).SetUint64(tx.Gas()), tx.GasPrice()))
-	pool.currentState.AddBalance(from, balance)
+	testAddBalance(pool, from, balance)
 	if err := pool.AddRemote(tx); err != ErrIntrinsicGas {
 		t.Error("expected", ErrIntrinsicGas, "got", err)
 	}
 
-	pool.currentState.SetNonce(from, 1)
-	pool.currentState.AddBalance(from, big.NewInt(0xffffffffffffff))
+	testSetNonce(pool, from, 1)
+	testAddBalance(pool, from, big.NewInt(0xffffffffffffff))
 	tx = transaction(0, 100000, key)
 	if err := pool.AddRemote(tx); err != ErrNonceTooLow {
 		t.Error("expected", ErrNonceTooLow)
 	}
 
 	tx = transaction(1, 100000, key)
-	pool.gasPrice = big.NewInt(1000)
+	pool.SetBaseFee(big.NewInt(1000))
 
 	// NOTE-Klaytn We only accept txs with an expected gas price only
-	//         regardless of local or remote.
+	// regardless of local or remote.
 	if err := pool.AddRemote(tx); err != ErrInvalidUnitPrice {
 		t.Error("expected", ErrInvalidUnitPrice, "got", err)
 	}
 	if err := pool.AddLocal(tx); err != ErrInvalidUnitPrice {
 		t.Error("expected", ErrInvalidUnitPrice, "got", err)
+	}
+}
+
+func TestInvalidTransactionsKip71(t *testing.T) {
+	t.Parallel()
+
+	pool, key := setupTxPoolWithConfig(kip71Config)
+	pool.SetBaseFee(big.NewInt(1))
+	defer pool.Stop()
+
+	tx := transaction(0, 100, key)
+	from, _ := deriveSender(tx)
+
+	testAddBalance(pool, from, big.NewInt(1))
+	if err := pool.AddRemote(tx); err != ErrInsufficientFundsFrom {
+		t.Error("expected", ErrInsufficientFundsFrom, "got", err)
+	}
+
+	balance := new(big.Int).Add(tx.Value(), new(big.Int).Mul(new(big.Int).SetUint64(tx.Gas()), tx.GasPrice()))
+	testAddBalance(pool, from, balance)
+	if err := pool.AddRemote(tx); err != ErrIntrinsicGas {
+		t.Error("expected", ErrIntrinsicGas, "got", err)
+	}
+
+	testSetNonce(pool, from, 1)
+	testAddBalance(pool, from, big.NewInt(0xffffffffffffff))
+	tx = transaction(0, 100000, key)
+	if err := pool.AddRemote(tx); err != ErrNonceTooLow {
+		t.Error("expected", ErrNonceTooLow)
+	}
+
+	tx = transaction(1, 100000, key)
+	pool.SetBaseFee(big.NewInt(1000))
+
+	// NOTE-Klaytn if the gasPrice in tx is lower than txPool's
+	// It should return ErrGasPriceBelowBaseFee error after kip71 hardfork
+	if err := pool.AddRemote(tx); err != ErrGasPriceBelowBaseFee {
+		t.Error("expected", ErrGasPriceBelowBaseFee, "got", err)
+	}
+	if err := pool.AddLocal(tx); err != ErrGasPriceBelowBaseFee {
+		t.Error("expected", ErrGasPriceBelowBaseFee, "got", err)
 	}
 }
 
@@ -305,8 +459,8 @@ func TestAnchorTransactions(t *testing.T) {
 	tx2 := genAnchorTx(2)
 
 	from, _ := tx1.From()
-	pool.currentState.AddBalance(from, big.NewInt(10000000))
-	poolAllow.currentState.AddBalance(from, big.NewInt(10000000))
+	testAddBalance(pool, from, big.NewInt(10000000))
+	testAddBalance(poolAllow, from, big.NewInt(10000000))
 
 	// default txPool
 	{
@@ -335,7 +489,7 @@ func TestTransactionQueue(t *testing.T) {
 
 	tx := transaction(0, 100, key)
 	from, _ := deriveSender(tx)
-	pool.currentState.AddBalance(from, big.NewInt(1000))
+	testAddBalance(pool, from, big.NewInt(1000))
 	pool.lockedReset(nil, nil)
 	pool.enqueueTx(tx.Hash(), tx)
 
@@ -346,7 +500,7 @@ func TestTransactionQueue(t *testing.T) {
 
 	tx = transaction(1, 100, key)
 	from, _ = deriveSender(tx)
-	pool.currentState.SetNonce(from, 2)
+	testSetNonce(pool, from, 2)
 	pool.enqueueTx(tx.Hash(), tx)
 	pool.promoteExecutables([]common.Address{from})
 	if _, ok := pool.pending[from].txs.items[tx.Nonce()]; ok {
@@ -387,7 +541,7 @@ func TestTransactionNegativeValue(t *testing.T) {
 	pool, key := setupTxPool()
 	defer pool.Stop()
 
-	signer := types.NewEIP155Signer(params.TestChainConfig.ChainID)
+	signer := types.LatestSignerForChainID(params.TestChainConfig.ChainID)
 	tx, _ := types.SignTx(types.NewTransaction(0, common.Address{}, big.NewInt(-1), 100, big.NewInt(1), nil), signer, key)
 	from, _ := deriveSender(tx)
 	pool.currentState.AddBalance(from, big.NewInt(1))
@@ -404,7 +558,7 @@ func TestTransactionChainFork(t *testing.T) {
 
 	addr := crypto.PubkeyToAddress(key.PublicKey)
 	resetState := func() {
-		statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
+		statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil)
 		statedb.AddBalance(addr, big.NewInt(100000000000000))
 
 		pool.chain = &testBlockChain{statedb, 1000000, new(event.Feed)}
@@ -433,7 +587,7 @@ func TestTransactionDoubleNonce(t *testing.T) {
 
 	addr := crypto.PubkeyToAddress(key.PublicKey)
 	resetState := func() {
-		statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
+		statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil)
 		statedb.AddBalance(addr, big.NewInt(100000000000000))
 
 		pool.chain = &testBlockChain{statedb, 1000000, new(event.Feed)}
@@ -441,9 +595,9 @@ func TestTransactionDoubleNonce(t *testing.T) {
 	}
 	resetState()
 
-	signer := types.NewEIP155Signer(params.TestChainConfig.ChainID)
+	signer := types.LatestSignerForChainID(params.TestChainConfig.ChainID)
 	tx1, _ := types.SignTx(types.NewTransaction(0, common.HexToAddress("0xAAAA"), big.NewInt(100), 100000, big.NewInt(1), nil), signer, key)
-	tx2, _ := types.SignTx(types.NewTransaction(0, common.HexToAddress("0xAAAA"), big.NewInt(100), 1000000, big.NewInt(2), nil), signer, key)
+	tx2, _ := types.SignTx(types.NewTransaction(0, common.HexToAddress("0xAAAA"), big.NewInt(100), 1000000, big.NewInt(1), nil), signer, key)
 	tx3, _ := types.SignTx(types.NewTransaction(0, common.HexToAddress("0xAAAA"), big.NewInt(100), 1000000, big.NewInt(1), nil), signer, key)
 
 	// NOTE-Klaytn Add the first two transaction, ensure the first one stays only
@@ -482,7 +636,7 @@ func TestTransactionMissingNonce(t *testing.T) {
 	defer pool.Stop()
 
 	addr := crypto.PubkeyToAddress(key.PublicKey)
-	pool.currentState.AddBalance(addr, big.NewInt(100000000000000))
+	testAddBalance(pool, addr, big.NewInt(100000000000000))
 	tx := transaction(1, 100000, key)
 	if _, err := pool.add(tx, false); err != nil {
 		t.Error("didn't expect error", err)
@@ -506,8 +660,8 @@ func TestTransactionNonceRecovery(t *testing.T) {
 	defer pool.Stop()
 
 	addr := crypto.PubkeyToAddress(key.PublicKey)
-	pool.currentState.SetNonce(addr, n)
-	pool.currentState.AddBalance(addr, big.NewInt(100000000000000))
+	testSetNonce(pool, addr, n)
+	testAddBalance(pool, addr, big.NewInt(100000000000000))
 	pool.lockedReset(nil, nil)
 
 	tx := transaction(n, 100000, key)
@@ -515,7 +669,7 @@ func TestTransactionNonceRecovery(t *testing.T) {
 		t.Error(err)
 	}
 	// simulate some weird re-order of transactions and missing nonce(s)
-	pool.currentState.SetNonce(addr, n-1)
+	testSetNonce(pool, addr, n-1)
 	pool.lockedReset(nil, nil)
 	if fn := pool.GetPendingNonce(addr); fn != n-1 {
 		t.Errorf("expected nonce to be %d, got %d", n-1, fn)
@@ -532,7 +686,7 @@ func TestTransactionDropping(t *testing.T) {
 	defer pool.Stop()
 
 	account, _ := deriveSender(transaction(0, 0, key))
-	pool.currentState.AddBalance(account, big.NewInt(1000))
+	testAddBalance(pool, account, big.NewInt(1000))
 
 	// Add some pending and some queued transactions
 	var (
@@ -571,7 +725,7 @@ func TestTransactionDropping(t *testing.T) {
 		t.Errorf("total transaction mismatch: have %d, want %d", len(pool.all), 6)
 	}
 	// Reduce the balance of the account, and check that invalidated transactions are dropped
-	pool.currentState.AddBalance(account, big.NewInt(-650))
+	testAddBalance(pool, account, big.NewInt(-650))
 	pool.lockedReset(nil, nil)
 
 	if _, ok := pool.pending[account].txs.items[tx0.Nonce()]; !ok {
@@ -604,7 +758,7 @@ func TestTransactionPostponing(t *testing.T) {
 	t.Parallel()
 
 	// Create the pool to test the postponing with
-	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
+	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil)
 	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
 
 	pool := NewTxPool(testTxPoolConfig, params.TestChainConfig, blockchain)
@@ -618,12 +772,11 @@ func TestTransactionPostponing(t *testing.T) {
 		keys[i], _ = crypto.GenerateKey()
 		accs[i] = crypto.PubkeyToAddress(keys[i].PublicKey)
 
-		pool.currentState.AddBalance(crypto.PubkeyToAddress(keys[i].PublicKey), big.NewInt(50100))
+		testAddBalance(pool, crypto.PubkeyToAddress(keys[i].PublicKey), big.NewInt(50100))
 	}
 	// Add a batch consecutive pending transactions for validation
 	txs := []*types.Transaction{}
 	for i, key := range keys {
-
 		for j := 0; j < 100; j++ {
 			var tx *types.Transaction
 			if (i+j)%2 == 0 {
@@ -661,7 +814,7 @@ func TestTransactionPostponing(t *testing.T) {
 	}
 	// Reduce the balance of the account, and check that transactions are reorganised
 	for _, addr := range accs {
-		pool.currentState.AddBalance(addr, big.NewInt(-1))
+		testAddBalance(pool, addr, big.NewInt(-1))
 	}
 	pool.lockedReset(nil, nil)
 
@@ -722,7 +875,7 @@ func TestTransactionGapFilling(t *testing.T) {
 	defer pool.Stop()
 
 	account, _ := deriveSender(transaction(0, 0, key))
-	pool.currentState.AddBalance(account, big.NewInt(1000000))
+	testAddBalance(pool, account, big.NewInt(1000000))
 
 	// Keep track of transaction events to ensure all executables get announced
 	events := make(chan NewTxsEvent, testTxPoolConfig.NonExecSlotsAccount+5)
@@ -778,7 +931,7 @@ func TestTransactionQueueAccountLimiting(t *testing.T) {
 	defer pool.Stop()
 
 	account, _ := deriveSender(transaction(0, 0, key))
-	pool.currentState.AddBalance(account, big.NewInt(1000000))
+	testAddBalance(pool, account, big.NewInt(1000000))
 
 	// Keep queuing up transactions and make sure all above a limit are dropped
 	for i := uint64(1); i <= testTxPoolConfig.NonExecSlotsAccount+5; i++ {
@@ -811,6 +964,7 @@ func TestTransactionQueueAccountLimiting(t *testing.T) {
 func TestTransactionQueueGlobalLimiting(t *testing.T) {
 	testTransactionQueueGlobalLimiting(t, false)
 }
+
 func TestTransactionQueueGlobalLimitingNoLocals(t *testing.T) {
 	testTransactionQueueGlobalLimiting(t, true)
 }
@@ -819,7 +973,7 @@ func testTransactionQueueGlobalLimiting(t *testing.T, nolocals bool) {
 	t.Parallel()
 
 	// Create the pool to test the limit enforcement with
-	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
+	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil)
 	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
 
 	config := testTxPoolConfig
@@ -833,7 +987,7 @@ func testTransactionQueueGlobalLimiting(t *testing.T, nolocals bool) {
 	keys := make([]*ecdsa.PrivateKey, 5)
 	for i := 0; i < len(keys); i++ {
 		keys[i], _ = crypto.GenerateKey()
-		pool.currentState.AddBalance(crypto.PubkeyToAddress(keys[i].PublicKey), big.NewInt(1000000))
+		testAddBalance(pool, crypto.PubkeyToAddress(keys[i].PublicKey), big.NewInt(1000000))
 	}
 	local := keys[len(keys)-1]
 
@@ -901,12 +1055,15 @@ func testTransactionQueueGlobalLimiting(t *testing.T, nolocals bool) {
 func TestTransactionQueueTimeLimitingKeepLocals(t *testing.T) {
 	testTransactionQueueTimeLimiting(t, false, true)
 }
+
 func TestTransactionQueueTimeLimitingNotKeepLocals(t *testing.T) {
 	testTransactionQueueTimeLimiting(t, false, false)
 }
+
 func TestTransactionQueueTimeLimitingNoLocalsKeepLocals(t *testing.T) {
 	testTransactionQueueTimeLimiting(t, true, true)
 }
+
 func TestTransactionQueueTimeLimitingNoLocalsNoKeepLocals(t *testing.T) {
 	testTransactionQueueTimeLimiting(t, true, false)
 }
@@ -917,7 +1074,7 @@ func testTransactionQueueTimeLimiting(t *testing.T, nolocals, keepLocals bool) {
 	evictionInterval = time.Second
 
 	// Create the pool to test the non-expiration enforcement
-	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
+	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil)
 	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
 
 	config := testTxPoolConfig
@@ -932,8 +1089,8 @@ func testTransactionQueueTimeLimiting(t *testing.T, nolocals, keepLocals bool) {
 	local, _ := crypto.GenerateKey()
 	remote, _ := crypto.GenerateKey()
 
-	pool.currentState.AddBalance(crypto.PubkeyToAddress(local.PublicKey), big.NewInt(1000000000))
-	pool.currentState.AddBalance(crypto.PubkeyToAddress(remote.PublicKey), big.NewInt(1000000000))
+	testAddBalance(pool, crypto.PubkeyToAddress(local.PublicKey), big.NewInt(1000000000))
+	testAddBalance(pool, crypto.PubkeyToAddress(remote.PublicKey), big.NewInt(1000000000))
 
 	// Add the two transactions and ensure they both are queued up
 	if err := pool.AddLocal(pricedTransaction(1, 100000, big.NewInt(1), local)); err != nil {
@@ -991,7 +1148,7 @@ func TestTransactionPendingLimiting(t *testing.T) {
 	defer pool.Stop()
 
 	account, _ := deriveSender(transaction(0, 0, key))
-	pool.currentState.AddBalance(account, big.NewInt(1000000))
+	testAddBalance(pool, account, big.NewInt(1000000))
 
 	// Keep track of transaction events to ensure all executables get announced
 	events := make(chan NewTxsEvent, testTxPoolConfig.NonExecSlotsAccount+5)
@@ -1024,6 +1181,7 @@ func TestTransactionPendingLimiting(t *testing.T) {
 // Tests that the transaction limits are enforced the same way irrelevant whether
 // the transactions are added one by one or in batches.
 func TestTransactionQueueLimitingEquivalency(t *testing.T) { testTransactionLimitingEquivalency(t, 1) }
+
 func TestTransactionPendingLimitingEquivalency(t *testing.T) {
 	testTransactionLimitingEquivalency(t, 0)
 }
@@ -1036,7 +1194,7 @@ func testTransactionLimitingEquivalency(t *testing.T, origin uint64) {
 	defer pool1.Stop()
 
 	account1, _ := deriveSender(transaction(0, 0, key1))
-	pool1.currentState.AddBalance(account1, big.NewInt(1000000))
+	testAddBalance(pool1, account1, big.NewInt(1000000))
 
 	for i := uint64(0); i < testTxPoolConfig.NonExecSlotsAccount+5; i++ {
 		if err := pool1.AddRemote(transaction(origin+i, 100000, key1)); err != nil {
@@ -1048,7 +1206,7 @@ func testTransactionLimitingEquivalency(t *testing.T, origin uint64) {
 	defer pool2.Stop()
 
 	account2, _ := deriveSender(transaction(0, 0, key2))
-	pool2.currentState.AddBalance(account2, big.NewInt(1000000))
+	testAddBalance(pool2, account2, big.NewInt(1000000))
 
 	txs := []*types.Transaction{}
 	for i := uint64(0); i < testTxPoolConfig.NonExecSlotsAccount+5; i++ {
@@ -1081,7 +1239,7 @@ func TestTransactionPendingGlobalLimiting(t *testing.T) {
 	t.Parallel()
 
 	// Create the pool to test the limit enforcement with
-	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
+	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil)
 	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
 
 	config := testTxPoolConfig
@@ -1094,7 +1252,7 @@ func TestTransactionPendingGlobalLimiting(t *testing.T) {
 	keys := make([]*ecdsa.PrivateKey, 5)
 	for i := 0; i < len(keys); i++ {
 		keys[i], _ = crypto.GenerateKey()
-		pool.currentState.AddBalance(crypto.PubkeyToAddress(keys[i].PublicKey), big.NewInt(1000000))
+		testAddBalance(pool, crypto.PubkeyToAddress(keys[i].PublicKey), big.NewInt(1000000))
 	}
 	// Generate and queue a batch of transactions
 	nonces := make(map[common.Address]uint64)
@@ -1127,7 +1285,7 @@ func TestTransactionCapClearsFromAll(t *testing.T) {
 	t.Parallel()
 
 	// Create the pool to test the limit enforcement with
-	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
+	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil)
 	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
 
 	config := testTxPoolConfig
@@ -1161,7 +1319,7 @@ func TestTransactionPendingMinimumAllowance(t *testing.T) {
 	t.Parallel()
 
 	// Create the pool to test the limit enforcement with
-	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
+	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil)
 	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
 
 	config := testTxPoolConfig
@@ -1679,7 +1837,7 @@ func testTransactionJournaling(t *testing.T, nolocals bool) {
 	os.Remove(journal)
 
 	// Create the original pool to inject transaction into the journal
-	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
+	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil)
 	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
 
 	config := testTxPoolConfig
@@ -1693,8 +1851,8 @@ func testTransactionJournaling(t *testing.T, nolocals bool) {
 	local, _ := crypto.GenerateKey()
 	remote, _ := crypto.GenerateKey()
 
-	pool.currentState.AddBalance(crypto.PubkeyToAddress(local.PublicKey), big.NewInt(1000000000))
-	pool.currentState.AddBalance(crypto.PubkeyToAddress(remote.PublicKey), big.NewInt(1000000000))
+	testAddBalance(pool, crypto.PubkeyToAddress(local.PublicKey), big.NewInt(1000000000))
+	testAddBalance(pool, crypto.PubkeyToAddress(remote.PublicKey), big.NewInt(1000000000))
 
 	// Add three local and a remote transactions and ensure they are queued up
 	if err := pool.AddLocal(pricedTransaction(0, 100000, big.NewInt(1), local)); err != nil {
@@ -1777,7 +1935,7 @@ func TestTransactionStatusCheck(t *testing.T) {
 	t.Parallel()
 
 	// Create the pool to test the status retrievals with
-	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
+	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil)
 	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
 
 	pool := NewTxPool(testTxPoolConfig, params.TestChainConfig, blockchain)
@@ -1787,7 +1945,7 @@ func TestTransactionStatusCheck(t *testing.T) {
 	keys := make([]*ecdsa.PrivateKey, 3)
 	for i := 0; i < len(keys); i++ {
 		keys[i], _ = crypto.GenerateKey()
-		pool.currentState.AddBalance(crypto.PubkeyToAddress(keys[i].PublicKey), big.NewInt(1000000))
+		testAddBalance(pool, crypto.PubkeyToAddress(keys[i].PublicKey), big.NewInt(1000000))
 	}
 	// Generate and queue a batch of transactions, both pending and queued
 	txs := types.Transactions{}
@@ -1827,6 +1985,636 @@ func TestTransactionStatusCheck(t *testing.T) {
 	}
 }
 
+func TestDynamicFeeTransactionVeryHighValues(t *testing.T) {
+	t.Parallel()
+
+	pool, key := setupTxPoolWithConfig(eip1559Config)
+	defer pool.Stop()
+
+	veryBigNumber := big.NewInt(1)
+	veryBigNumber.Lsh(veryBigNumber, 300)
+
+	tx := dynamicFeeTx(0, 100, big.NewInt(1), veryBigNumber, key)
+	if err := pool.AddRemote(tx); err != ErrTipVeryHigh {
+		t.Error("expected", ErrTipVeryHigh, "got", err)
+	}
+
+	tx2 := dynamicFeeTx(0, 100, veryBigNumber, big.NewInt(1), key)
+	if err := pool.AddRemote(tx2); err != ErrFeeCapVeryHigh {
+		t.Error("expected", ErrFeeCapVeryHigh, "got", err)
+	}
+}
+
+func TestDynamicFeeTransactionHasNotSameGasPrice(t *testing.T) {
+	t.Parallel()
+
+	pool, key := setupTxPoolWithConfig(eip1559Config)
+	defer pool.Stop()
+
+	testAddBalance(pool, crypto.PubkeyToAddress(key.PublicKey), big.NewInt(10000000000))
+
+	// Ensure gasFeeCap is greater than or equal to gasTipCap.
+	tx := dynamicFeeTx(0, 100, big.NewInt(1), big.NewInt(2), key)
+	if err := pool.AddRemote(tx); err != ErrTipAboveFeeCap {
+		t.Error("expected", ErrTipAboveFeeCap, "got", err)
+	}
+
+	// The GasTipCap is equal to gasPrice that config at TxPool.
+	tx2 := dynamicFeeTx(0, 100, big.NewInt(2), big.NewInt(2), key)
+	if err := pool.AddRemote(tx2); err != ErrInvalidGasTipCap {
+		t.Error("expected", ErrInvalidGasTipCap, "got", err)
+	}
+}
+
+func TestDynamicFeeTransactionAccepted(t *testing.T) {
+	t.Parallel()
+
+	pool, key := setupTxPoolWithConfig(eip1559Config)
+	defer pool.Stop()
+
+	testAddBalance(pool, crypto.PubkeyToAddress(key.PublicKey), big.NewInt(1000000))
+
+	tx := dynamicFeeTx(0, 21000, big.NewInt(1), big.NewInt(1), key)
+	if err := pool.AddRemote(tx); err != nil {
+		t.Error("error", "got", err)
+	}
+
+	tx2 := dynamicFeeTx(1, 21000, big.NewInt(1), big.NewInt(1), key)
+	if err := pool.AddRemote(tx2); err != nil {
+		t.Error("error", "got", err)
+	}
+}
+
+// TestDynamicFeeTransactionNotAcceptedNotEnableHardfork tests that the pool didn't accept dynamic tx if the pool didn't enable eip1559 hardfork.
+func TestDynamicFeeTransactionNotAcceptedNotEnableHardfork(t *testing.T) {
+	t.Parallel()
+
+	pool, key := setupTxPool()
+
+	tx := dynamicFeeTx(0, 21000, big.NewInt(1), big.NewInt(1), key)
+	if err := pool.AddRemote(tx); err != ErrTxTypeNotSupported {
+		t.Error("expected", ErrTxTypeNotSupported, "got", err)
+	}
+
+	if err := pool.AddLocal(tx); err != ErrTxTypeNotSupported {
+		t.Error("expected", ErrTxTypeNotSupported, "got", err)
+	}
+}
+
+func TestDynamicFeeTransactionAcceptedEip1559(t *testing.T) {
+	t.Parallel()
+	baseFee := big.NewInt(30)
+
+	pool, key := setupTxPoolWithConfig(eip1559Config)
+	defer pool.Stop()
+	pool.SetGasPrice(baseFee)
+
+	testAddBalance(pool, crypto.PubkeyToAddress(key.PublicKey), big.NewInt(10000000000))
+
+	tx := dynamicFeeTx(0, 21000, big.NewInt(30), big.NewInt(30), key)
+	if err := pool.AddRemote(tx); err != nil {
+		t.Error("error", "got", err)
+	}
+
+	tx1 := dynamicFeeTx(1, 21000, big.NewInt(30), big.NewInt(1), key)
+	if err := pool.AddRemote(tx1); err != nil {
+		assert.Equal(t, ErrInvalidGasTipCap, err)
+	}
+
+	tx2 := dynamicFeeTx(2, 21000, big.NewInt(40), big.NewInt(30), key)
+	if err := pool.AddRemote(tx2); err != nil {
+		assert.Equal(t, ErrInvalidGasFeeCap, err)
+	}
+}
+
+// TestDynamicFeeTransactionAccepted tests that pool accept the transaction which has gasFeeCap bigger than or equal to baseFee.
+func TestDynamicFeeTransactionAcceptedKip71(t *testing.T) {
+	t.Parallel()
+	baseFee := big.NewInt(30)
+
+	pool, key := setupTxPoolWithConfig(kip71Config)
+	defer pool.Stop()
+	pool.SetBaseFee(baseFee)
+
+	testAddBalance(pool, crypto.PubkeyToAddress(key.PublicKey), big.NewInt(10000000000))
+
+	// The GasFeeCap equal to baseFee and gasTipCap is lower than baseFee(ignored).
+	tx := dynamicFeeTx(0, 21000, big.NewInt(30), big.NewInt(1), key)
+	if err := pool.AddRemote(tx); err != nil {
+		t.Error("error", "got", err)
+	}
+
+	// The GasFeeCap bigger than baseFee and gasTipCap is equal to baseFee(ignored).
+	tx2 := dynamicFeeTx(1, 21000, big.NewInt(40), big.NewInt(30), key)
+	if err := pool.AddRemote(tx2); err != nil {
+		t.Error("error", "got", err)
+	}
+
+	// The GasFeeCap greater than baseFee and gasTipCap is bigger than baseFee(ignored).
+	tx3 := dynamicFeeTx(2, 21000, big.NewInt(50), big.NewInt(50), key)
+	if err := pool.AddRemote(tx3); err != nil {
+		t.Error("error", "got", err)
+	}
+}
+
+func TestTransactionAcceptedEip1559(t *testing.T) {
+	t.Parallel()
+	baseFee := big.NewInt(30)
+
+	pool, key := setupTxPoolWithConfig(eip1559Config)
+	defer pool.Stop()
+	pool.SetBaseFee(baseFee)
+
+	testAddBalance(pool, crypto.PubkeyToAddress(key.PublicKey), big.NewInt(10000000000))
+
+	// The transaction's gasPrice equal to baseFee.
+	tx1 := pricedTransaction(0, 21000, big.NewInt(30), key)
+	if err := pool.AddRemote(tx1); err != nil {
+		t.Error("error", "got", err)
+	}
+
+	// The transaction's gasPrice bigger than baseFee.
+	tx2 := pricedTransaction(1, 21000, big.NewInt(40), key)
+	if err := pool.AddRemote(tx2); err != nil {
+		assert.Equal(t, ErrInvalidUnitPrice, err)
+	}
+}
+
+// TestTransactionAccepted tests that pool accepted transaction which has gasPrice bigger than or equal to baseFee.
+func TestTransactionAcceptedKip71(t *testing.T) {
+	t.Parallel()
+	baseFee := big.NewInt(30)
+
+	pool, key := setupTxPoolWithConfig(kip71Config)
+	defer pool.Stop()
+	pool.SetBaseFee(baseFee)
+
+	testAddBalance(pool, crypto.PubkeyToAddress(key.PublicKey), big.NewInt(10000000000))
+
+	// The transaction's gasPrice equal to baseFee.
+	tx1 := pricedTransaction(0, 21000, big.NewInt(30), key)
+	if err := pool.AddRemote(tx1); err != nil {
+		t.Error("error", "got", err)
+	}
+
+	// The transaction's gasPrice bigger than baseFee.
+	tx2 := pricedTransaction(1, 21000, big.NewInt(40), key)
+	if err := pool.AddRemote(tx2); err != nil {
+		t.Error("error", "got", err)
+	}
+}
+
+func TestCancelTransactionAcceptedKip71(t *testing.T) {
+	t.Parallel()
+	baseFee := big.NewInt(30)
+
+	pool, key := setupTxPoolWithConfig(kip71Config)
+	defer pool.Stop()
+	pool.SetBaseFee(baseFee)
+
+	sender := crypto.PubkeyToAddress(key.PublicKey)
+	testAddBalance(pool, sender, big.NewInt(10000000000))
+
+	// The transaction's gasPrice equal to baseFee.
+	tx1 := pricedTransaction(0, 21000, big.NewInt(30), key)
+	if err := pool.AddRemote(tx1); err != nil {
+		t.Error("error", "got", err)
+	}
+	tx2 := pricedTransaction(1, 21000, big.NewInt(30), key)
+	if err := pool.AddRemote(tx2); err != nil {
+		t.Error("error", "got", err)
+	}
+	tx3 := pricedTransaction(2, 21000, big.NewInt(30), key)
+	if err := pool.AddRemote(tx3); err != nil {
+		t.Error("error", "got", err)
+	}
+
+	tx1CancelWithLowerPrice := cancelTx(0, 21000, big.NewInt(20), sender, key)
+	if err := pool.AddRemote(tx1CancelWithLowerPrice); err != nil {
+		assert.Equal(t, ErrGasPriceBelowBaseFee, err)
+	}
+	tx2CancelWithSamePrice := cancelTx(1, 21000, big.NewInt(30), sender, key)
+	if err := pool.AddRemote(tx2CancelWithSamePrice); err != nil {
+		t.Error("error", "got", err)
+	}
+	tx3CancelWithExceedPrice := cancelTx(2, 21000, big.NewInt(40), sender, key)
+	if err := pool.AddRemote(tx3CancelWithExceedPrice); err != nil {
+		t.Error("error", "got", err)
+	}
+}
+
+// TestDynamicFeeTransactionNotAcceptedWithLowerGasPrice tests that pool didn't accept the transaction which has gasFeeCap lower than baseFee.
+func TestDynamicFeeTransactionNotAcceptedWithLowerGasPrice(t *testing.T) {
+	t.Parallel()
+	baseFee := big.NewInt(30)
+
+	pool, key := setupTxPoolWithConfig(kip71Config)
+	defer pool.Stop()
+	pool.SetBaseFee(baseFee)
+
+	testAddBalance(pool, crypto.PubkeyToAddress(key.PublicKey), big.NewInt(10000000000))
+
+	// The gasFeeCap equal to baseFee and gasTipCap is lower than baseFee(ignored).
+	tx := dynamicFeeTx(0, 21000, big.NewInt(20), big.NewInt(1), key)
+	if err := pool.AddRemote(tx); err != ErrFeeCapBelowBaseFee {
+		t.Error("error", "got", err)
+	}
+}
+
+// TestTransactionNotAcceptedWithLowerGasPrice tests that pool didn't accept the transaction which has gasPrice lower than baseFee.
+func TestTransactionNotAcceptedWithLowerGasPrice(t *testing.T) {
+	t.Parallel()
+
+	pool, key := setupTxPoolWithConfig(kip71Config)
+	defer pool.Stop()
+
+	baseFee := big.NewInt(30)
+	pool.SetBaseFee(baseFee)
+	testAddBalance(pool, crypto.PubkeyToAddress(key.PublicKey), big.NewInt(10000000000))
+
+	tx := pricedTransaction(0, 21000, big.NewInt(20), key)
+	if err := pool.AddRemote(tx); err != ErrGasPriceBelowBaseFee {
+		t.Error("error", "got", err)
+	}
+}
+
+// TestTransactionsPromoteFull is a test to check whether transactions in the queue are promoted to Pending
+// by filtering them with gasPrice greater than or equal to baseFee and sorting them in nonce sequentially order.
+// This test expected that all transactions in queue promoted pending.
+func TestTransactionsPromoteFull(t *testing.T) {
+	t.Parallel()
+
+	pool, key := setupTxPoolWithConfig(kip71Config)
+	defer pool.Stop()
+
+	from := crypto.PubkeyToAddress(key.PublicKey)
+
+	baseFee := big.NewInt(10)
+	pool.SetBaseFee(baseFee)
+
+	testAddBalance(pool, from, big.NewInt(1000000000))
+
+	// Generate and queue a batch of transactions, both pending and queued
+	txs := types.Transactions{}
+	txs = append(txs, pricedTransaction(0, 100000, big.NewInt(50), key))
+	txs = append(txs, pricedTransaction(1, 100000, big.NewInt(30), key))
+	txs = append(txs, pricedTransaction(2, 100000, big.NewInt(30), key))
+	txs = append(txs, pricedTransaction(3, 100000, big.NewInt(30), key))
+
+	for _, tx := range txs {
+		pool.enqueueTx(tx.Hash(), tx)
+	}
+
+	pool.promoteExecutables(nil)
+
+	assert.Equal(t, pool.pending[from].Len(), 4)
+	for i, tx := range txs {
+		assert.True(t, reflect.DeepEqual(tx, pool.pending[from].txs.items[uint64(i)]))
+	}
+}
+
+// TestTransactionsPromotePartial is a test to check whether transactions in the queue are promoted to Pending
+// by filtering them with gasPrice greater than or equal to baseFee and sorting them in nonce sequentially order.
+// This test expected that partially transaction in queue promoted pending.
+func TestTransactionsPromotePartial(t *testing.T) {
+	t.Parallel()
+
+	pool, key := setupTxPoolWithConfig(kip71Config)
+	defer pool.Stop()
+
+	from := crypto.PubkeyToAddress(key.PublicKey)
+
+	baseFee := big.NewInt(10)
+	pool.SetBaseFee(baseFee)
+
+	testAddBalance(pool, from, big.NewInt(1000000000))
+
+	// Generate and queue a batch of transactions, both pending and queued
+	txs := types.Transactions{}
+	txs = append(txs, pricedTransaction(0, 100000, big.NewInt(50), key))
+	txs = append(txs, pricedTransaction(1, 100000, big.NewInt(20), key))
+	txs = append(txs, pricedTransaction(2, 100000, big.NewInt(20), key))
+	txs = append(txs, pricedTransaction(3, 100000, big.NewInt(10), key))
+
+	for _, tx := range txs {
+		pool.enqueueTx(tx.Hash(), tx)
+	}
+
+	// set baseFee to 20.
+	baseFee = big.NewInt(20)
+	pool.gasPrice = baseFee
+
+	pool.promoteExecutables(nil)
+
+	assert.Equal(t, pool.pending[from].Len(), 3)
+	assert.Equal(t, pool.queue[from].Len(), 1)
+
+	// txs[0:2] should be promoted.
+	for i := 0; i < 3; i++ {
+		assert.True(t, reflect.DeepEqual(txs[i], pool.pending[from].txs.items[uint64(i)]))
+	}
+
+	// txs[3] shouldn't be promoted.
+	assert.True(t, reflect.DeepEqual(txs[3], pool.queue[from].txs.items[3]))
+}
+
+// TestTransactionsPromoteMultipleAccount is a test to check whether transactions in the queue are promoted to Pending
+// by filtering them with gasPrice greater than or equal to baseFee and sorting them in nonce sequentially order.
+// This test expected that all transactions in queue promoted pending.
+func TestTransactionsPromoteMultipleAccount(t *testing.T) {
+	t.Parallel()
+
+	pool, _ := setupTxPoolWithConfig(kip71Config)
+	defer pool.Stop()
+	pool.SetBaseFee(big.NewInt(10))
+
+	keys := make([]*ecdsa.PrivateKey, 3)
+	froms := make([]common.Address, 3)
+	for i := 0; i < 3; i++ {
+		keys[i], _ = crypto.GenerateKey()
+		froms[i] = crypto.PubkeyToAddress(keys[i].PublicKey)
+		testAddBalance(pool, froms[i], big.NewInt(1000000000))
+	}
+
+	txs := types.Transactions{}
+
+	txs = append(txs, pricedTransaction(0, 100000, big.NewInt(50), keys[0])) // Pending
+	txs = append(txs, pricedTransaction(1, 100000, big.NewInt(40), keys[0])) // Pending
+	txs = append(txs, pricedTransaction(2, 100000, big.NewInt(30), keys[0])) // Pending
+	txs = append(txs, pricedTransaction(3, 100000, big.NewInt(20), keys[0])) // Pending
+
+	txs = append(txs, pricedTransaction(1, 100000, big.NewInt(10), keys[1])) // Only Queue
+
+	txs = append(txs, pricedTransaction(0, 100000, big.NewInt(50), keys[2])) // Pending
+	txs = append(txs, pricedTransaction(1, 100000, big.NewInt(30), keys[2])) // Pending
+	txs = append(txs, pricedTransaction(2, 100000, big.NewInt(30), keys[2])) // Pending
+	txs = append(txs, pricedTransaction(4, 100000, big.NewInt(10), keys[2])) // Queue
+
+	for i := 0; i < 9; i++ {
+		pool.enqueueTx(txs[i].Hash(), txs[i])
+	}
+
+	pool.gasPrice = big.NewInt(20)
+
+	pool.promoteExecutables(nil)
+
+	assert.Equal(t, pool.pending[froms[0]].Len(), 4)
+
+	assert.True(t, reflect.DeepEqual(txs[0], pool.pending[froms[0]].txs.items[uint64(0)]))
+	assert.True(t, reflect.DeepEqual(txs[1], pool.pending[froms[0]].txs.items[uint64(1)]))
+	assert.True(t, reflect.DeepEqual(txs[2], pool.pending[froms[0]].txs.items[uint64(2)]))
+	assert.True(t, reflect.DeepEqual(txs[3], pool.pending[froms[0]].txs.items[uint64(3)]))
+
+	assert.Equal(t, pool.queue[froms[1]].Len(), 1)
+	assert.True(t, reflect.DeepEqual(txs[4], pool.queue[froms[1]].txs.items[1]))
+
+	assert.Equal(t, pool.queue[froms[2]].Len(), 1)
+	assert.Equal(t, pool.pending[froms[2]].Len(), 3)
+
+	assert.True(t, reflect.DeepEqual(txs[5], pool.pending[froms[2]].txs.items[0]))
+	assert.True(t, reflect.DeepEqual(txs[6], pool.pending[froms[2]].txs.items[1]))
+	assert.True(t, reflect.DeepEqual(txs[7], pool.pending[froms[2]].txs.items[2]))
+	assert.True(t, reflect.DeepEqual(txs[8], pool.queue[froms[2]].txs.items[4]))
+}
+
+// TestTransactionsDemotionMultipleAccount is a test if the transactions in pending are
+// less than the gasPrice of the configured tx pool, check if they are demoted to the queue.
+func TestTransactionsDemotionMultipleAccount(t *testing.T) {
+	t.Parallel()
+
+	pool, _ := setupTxPoolWithConfig(kip71Config)
+	defer pool.Stop()
+	pool.SetBaseFee(big.NewInt(10))
+
+	keys := make([]*ecdsa.PrivateKey, 3)
+	froms := make([]common.Address, 3)
+	for i := 0; i < 3; i++ {
+		keys[i], _ = crypto.GenerateKey()
+		froms[i] = crypto.PubkeyToAddress(keys[i].PublicKey)
+		testAddBalance(pool, froms[i], big.NewInt(1000000000))
+	}
+
+	txs := types.Transactions{}
+
+	txs = append(txs, pricedTransaction(0, 100000, big.NewInt(50), keys[0]))
+	txs = append(txs, pricedTransaction(1, 100000, big.NewInt(40), keys[0]))
+	txs = append(txs, pricedTransaction(2, 100000, big.NewInt(30), keys[0]))
+	txs = append(txs, pricedTransaction(3, 100000, big.NewInt(20), keys[0]))
+
+	txs = append(txs, pricedTransaction(0, 100000, big.NewInt(10), keys[1]))
+
+	txs = append(txs, pricedTransaction(0, 100000, big.NewInt(50), keys[2]))
+	txs = append(txs, pricedTransaction(1, 100000, big.NewInt(30), keys[2]))
+	txs = append(txs, pricedTransaction(2, 100000, big.NewInt(30), keys[2]))
+	txs = append(txs, pricedTransaction(3, 100000, big.NewInt(10), keys[2]))
+
+	for i := 0; i < 9; i++ {
+		pool.enqueueTx(txs[i].Hash(), txs[i])
+	}
+
+	pool.promoteExecutables(nil)
+	assert.Equal(t, 4, pool.pending[froms[0]].Len())
+	assert.Equal(t, 1, pool.pending[froms[1]].Len())
+	assert.Equal(t, 4, pool.pending[froms[2]].Len())
+	// If gasPrice of txPool is set to 35, when demoteUnexecutables() is executed, it is saved for each transaction as shown below.
+	// tx[0] : pending[from[0]]
+	// tx[1] : pending[from[0]]
+	// tx[2] : queue[from[0]]
+	// tx[3] : queue[from[0]]
+
+	// tx[4] : queue[from[1]]
+
+	// tx[5] : pending[from[2]]
+	// tx[6] : queue[from[2]]
+	// tx[7] : queue[from[2]]
+	// tx[7] : queue[from[2]]
+	pool.SetBaseFee(big.NewInt(35))
+	pool.demoteUnexecutables()
+
+	assert.Equal(t, 2, pool.queue[froms[0]].Len())
+	assert.Equal(t, 2, pool.pending[froms[0]].Len())
+
+	assert.True(t, reflect.DeepEqual(txs[0], pool.pending[froms[0]].txs.items[uint64(0)]))
+	assert.True(t, reflect.DeepEqual(txs[1], pool.pending[froms[0]].txs.items[uint64(1)]))
+	assert.True(t, reflect.DeepEqual(txs[2], pool.queue[froms[0]].txs.items[uint64(2)]))
+	assert.True(t, reflect.DeepEqual(txs[3], pool.queue[froms[0]].txs.items[uint64(3)]))
+
+	assert.Equal(t, pool.queue[froms[1]].Len(), 1)
+	assert.True(t, reflect.DeepEqual(txs[4], pool.queue[froms[1]].txs.items[0]))
+
+	assert.Equal(t, pool.queue[froms[2]].Len(), 3)
+	assert.Equal(t, pool.pending[froms[2]].Len(), 1)
+
+	assert.True(t, reflect.DeepEqual(txs[5], pool.pending[froms[2]].txs.items[0]))
+	assert.True(t, reflect.DeepEqual(txs[6], pool.queue[froms[2]].txs.items[1]))
+	assert.True(t, reflect.DeepEqual(txs[7], pool.queue[froms[2]].txs.items[2]))
+	assert.True(t, reflect.DeepEqual(txs[8], pool.queue[froms[2]].txs.items[3]))
+}
+
+// TestFeeDelegatedTransaction checks feeDelegatedValueTransfer logic on tx pool
+// the case when sender = feePayer has been included
+func TestFeeDelegatedTransaction(t *testing.T) {
+	t.Parallel()
+
+	pool, key := setupTxPool()
+	senderKey, _ := crypto.GenerateKey()
+	feePayerKey, _ := crypto.GenerateKey()
+	defer pool.Stop()
+
+	testAddBalance(pool, crypto.PubkeyToAddress(senderKey.PublicKey), big.NewInt(60000))
+	testAddBalance(pool, crypto.PubkeyToAddress(feePayerKey.PublicKey), big.NewInt(60000))
+
+	tx := feeDelegatedTx(0, 40000, big.NewInt(1), big.NewInt(40000), senderKey, feePayerKey)
+
+	if err := pool.AddRemote(tx); err != nil {
+		t.Error("expected", "got", err)
+	}
+
+	testAddBalance(pool, crypto.PubkeyToAddress(key.PublicKey), big.NewInt(60000))
+
+	// test on case when sender = feePayer
+	// balance : 60k, tx.value : 40k, tx.fee : 40k
+	tx1 := feeDelegatedTx(0, 40000, big.NewInt(1), big.NewInt(40000), key, key)
+
+	// balance : 60k, tx.value : 10k, tx.fee : 40k
+	tx2 := feeDelegatedTx(0, 40000, big.NewInt(1), big.NewInt(10000), key, key)
+
+	if err := pool.AddRemote(tx1); err != ErrInsufficientFundsFrom {
+		t.Error("expected", ErrInsufficientFundsFrom, "got", err)
+	}
+
+	if err := pool.AddRemote(tx2); err != nil {
+		t.Error("expected", "got", err)
+	}
+}
+
+func TestFeeDelegatedWithRatioTransaction(t *testing.T) {
+	t.Parallel()
+
+	pool, key := setupTxPool()
+	senderKey, _ := crypto.GenerateKey()
+	feePayerKey, _ := crypto.GenerateKey()
+	defer pool.Stop()
+
+	testAddBalance(pool, crypto.PubkeyToAddress(senderKey.PublicKey), big.NewInt(100000))
+	testAddBalance(pool, crypto.PubkeyToAddress(feePayerKey.PublicKey), big.NewInt(100000))
+
+	// Sender balance : 100k, FeePayer balance : 100k tx.value : 50k, tx.fee : 100k, FeeRatio : 10%
+	tx1 := feeDelegatedWithRatioTx(0, 100000, big.NewInt(1), big.NewInt(50000), senderKey, feePayerKey, 10)
+
+	// Sender balance : 100k, FeePayer balance : 100k tx.value : 50k, tx.fee : 100k, FeeRatio : 70%
+	tx2 := feeDelegatedWithRatioTx(0, 100000, big.NewInt(1), big.NewInt(50000), senderKey, feePayerKey, 70)
+
+	// Sender balance : 100k, FeePayer balance : 100k tx.value : 50k, tx.fee : 110k, FeeRatio : 99%
+	tx3 := feeDelegatedWithRatioTx(1, 110000, big.NewInt(1), big.NewInt(50000), senderKey, feePayerKey, 99)
+
+	if err := pool.AddRemote(tx1); err != ErrInsufficientFundsFrom {
+		t.Error("expected", ErrInsufficientFundsFrom, "got", err)
+	}
+
+	if err := pool.AddRemote(tx2); err != nil {
+		t.Error("expected", "got", err)
+	}
+
+	if err := pool.AddRemote(tx3); err != ErrInsufficientFundsFeePayer {
+		t.Error("expected", ErrInsufficientFundsFeePayer, "got", err)
+	}
+
+	testAddBalance(pool, crypto.PubkeyToAddress(key.PublicKey), big.NewInt(60000))
+
+	// test on case when sender = feePayer
+	// balance : 60k, tx.value : 40k, tx.fee : 40k, ratio : 30%
+	tx4 := feeDelegatedWithRatioTx(0, 40000, big.NewInt(1), big.NewInt(40000), key, key, 30)
+
+	// balance : 60k, tx.value : 10k, tx.fee : 40k, ratio : 30%
+	tx5 := feeDelegatedWithRatioTx(0, 40000, big.NewInt(1), big.NewInt(10000), key, key, 30)
+
+	if err := pool.AddRemote(tx4); err != ErrInsufficientFundsFrom {
+		t.Error("expected", ErrInsufficientFundsFrom, "got", err)
+	}
+
+	if err := pool.AddRemote(tx5); err != nil {
+		t.Error("expected", "got", err)
+	}
+}
+
+func TestTransactionJournalingSortedByTime(t *testing.T) {
+	t.Parallel()
+
+	// Create a temporary file for the journal
+	file, err := ioutil.TempFile("", "")
+	if err != nil {
+		t.Fatalf("failed to create temporary journal: %v", err)
+	}
+	journal := file.Name()
+	defer os.Remove(journal)
+
+	// Clean up the temporary file, we only need the path for now
+	file.Close()
+	os.Remove(journal)
+
+	// Create the pool to test the status retrievals with
+	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil)
+	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
+
+	config := testTxPoolConfig
+	config.Journal = journal
+
+	pool := NewTxPool(config, params.TestChainConfig, blockchain)
+	defer pool.Stop()
+
+	// Create the test accounts to check various transaction statuses with
+	keys := make([]*ecdsa.PrivateKey, 3)
+	for i := 0; i < len(keys); i++ {
+		keys[i], _ = crypto.GenerateKey()
+		testAddBalance(pool, crypto.PubkeyToAddress(keys[i].PublicKey), big.NewInt(1000000))
+	}
+	// Generate and queue a batch of transactions, both pending and queued
+	txs := types.Transactions{}
+
+	txs = append(txs, pricedTransaction(0, 100000, big.NewInt(1), keys[0])) // Pending only
+	txs = append(txs, pricedTransaction(0, 100000, big.NewInt(1), keys[1])) // Pending and queued
+	txs = append(txs, pricedTransaction(2, 100000, big.NewInt(1), keys[1]))
+	txs = append(txs, pricedTransaction(2, 100000, big.NewInt(1), keys[2])) // Queued only
+
+	// Import the transaction locally and ensure they are correctly added
+	pool.AddLocals(txs)
+
+	// Execute rotate() to write transactions to file.
+	pool.mu.Lock()
+	if err := pool.journal.rotate(pool.local(), pool.signer); err != nil {
+		t.Error("Failed to rotate local tx journal", "err", err)
+	}
+	pool.mu.Unlock()
+
+	// Read a journal and load it.
+	input, err := os.Open(pool.journal.path)
+	if err != nil {
+		t.Error(err)
+	}
+	defer input.Close()
+
+	txsFromFile := make(types.Transactions, 4)
+	stream := rlp.NewStream(input, 0)
+	for i := 0; i < 4; i++ {
+		tx := new(types.Transaction)
+		if err = stream.Decode(tx); err != nil {
+			if err != io.EOF {
+				t.Error(err)
+			}
+
+			break
+		}
+		txsFromFile[i] = tx
+	}
+
+	// Check whether transactions loaded from journal file is sorted by time
+	for i, tx := range txsFromFile {
+		assert.Equal(t, txs[i].Hash(), tx.Hash())
+		assert.False(t, txs[i].Time().Equal(tx.Time()))
+	}
+}
+
 // Benchmarks the speed of validating the contents of the pending queue of the
 // transaction pool.
 func BenchmarkPendingDemotion100(b *testing.B)   { benchmarkPendingDemotion(b, 100) }
@@ -1839,7 +2627,7 @@ func benchmarkPendingDemotion(b *testing.B, size int) {
 	defer pool.Stop()
 
 	account, _ := deriveSender(transaction(0, 0, key))
-	pool.currentState.AddBalance(account, big.NewInt(1000000))
+	testAddBalance(pool, account, big.NewInt(1000000))
 
 	for i := 0; i < size; i++ {
 		tx := transaction(uint64(i), 100000, key)
@@ -1864,7 +2652,7 @@ func benchmarkFuturePromotion(b *testing.B, size int) {
 	defer pool.Stop()
 
 	account, _ := deriveSender(transaction(0, 0, key))
-	pool.currentState.AddBalance(account, big.NewInt(1000000))
+	testAddBalance(pool, account, big.NewInt(1000000))
 
 	for i := 0; i < size; i++ {
 		tx := transaction(uint64(1+i), 100000, key)
@@ -1884,7 +2672,7 @@ func BenchmarkPoolInsert(b *testing.B) {
 	defer pool.Stop()
 
 	account, _ := deriveSender(transaction(0, 0, key))
-	pool.currentState.AddBalance(account, big.NewInt(1000000))
+	testAddBalance(pool, account, big.NewInt(1000000))
 
 	txs := make(types.Transactions, b.N)
 	for i := 0; i < b.N; i++ {
@@ -1908,7 +2696,7 @@ func benchmarkPoolBatchInsert(b *testing.B, size int) {
 	defer pool.Stop()
 
 	account, _ := deriveSender(transaction(0, 0, key))
-	pool.currentState.AddBalance(account, big.NewInt(1000000))
+	testAddBalance(pool, account, big.NewInt(1000000))
 
 	batches := make([]types.Transactions, b.N)
 	for i := 0; i < b.N; i++ {

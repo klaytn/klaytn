@@ -22,6 +22,8 @@ import (
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/node/cn/snap"
+	"github.com/klaytn/klaytn/reward"
 )
 
 // fakeDownloader do nothing
@@ -41,9 +43,19 @@ func (*FakeDownloader) DeliverBodies(id string, transactions [][]*types.Transact
 func (*FakeDownloader) DeliverHeaders(id string, headers []*types.Header) error      { return nil }
 func (*FakeDownloader) DeliverNodeData(id string, data [][]byte) error               { return nil }
 func (*FakeDownloader) DeliverReceipts(id string, receipts [][]*types.Receipt) error { return nil }
+func (*FakeDownloader) DeliverStakingInfos(id string, stakingInfos []*reward.StakingInfo) error {
+	return nil
+}
+
+func (*FakeDownloader) DeliverSnapPacket(peer *snap.Peer, packet snap.Packet) error {
+	return nil
+}
 
 func (*FakeDownloader) Terminate() {}
 func (*FakeDownloader) Synchronise(id string, head common.Hash, td *big.Int, mode SyncMode) error {
 	return nil
 }
 func (*FakeDownloader) Progress() klaytn.SyncProgress { return klaytn.SyncProgress{} }
+func (*FakeDownloader) Cancel()                       {}
+
+func (*FakeDownloader) GetSnapSyncer() *snap.Syncer { return nil }

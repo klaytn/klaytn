@@ -29,6 +29,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/profile"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
 )
@@ -36,6 +37,7 @@ import (
 // TestValidateSenderContract tests a precompiled contract "ValidateSender" whose address is 0xb.
 // This contract validates the signature that is signed by the sender with the msgHash.
 func TestValidateSenderContract(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	if isCompilerAvailable() == false {
@@ -43,10 +45,6 @@ func TestValidateSenderContract(t *testing.T) {
 			fmt.Printf("TestFeePayerContract is skipped due to the lack of solc.")
 		}
 		return
-	}
-
-	if testing.Verbose() {
-		enableLog()
 	}
 
 	// Initialize blockchain
@@ -83,19 +81,23 @@ func TestValidateSenderContract(t *testing.T) {
 
 	multisig, err := createMultisigAccount(uint(2),
 		[]uint{1, 1, 1},
-		[]string{"bb113e82881499a7a361e8354a5b68f6c6885c7bcba09ea2b0891480396c322e",
+		[]string{
+			"bb113e82881499a7a361e8354a5b68f6c6885c7bcba09ea2b0891480396c322e",
 			"a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae59438e989",
-			"c32c471b732e2f56103e2f8e8cfd52792ef548f05f326e546a7d1fbf9d0419ec"},
+			"c32c471b732e2f56103e2f8e8cfd52792ef548f05f326e546a7d1fbf9d0419ec",
+		},
 		multisigInitial.Addr)
 
 	multisig2, err := createMultisigAccount(uint(2),
 		[]uint{1, 1, 1},
-		[]string{"bb113e82881499a7a361e8354a5b68f6c6885c7bcba09ea2b0891480396c322f",
+		[]string{
+			"bb113e82881499a7a361e8354a5b68f6c6885c7bcba09ea2b0891480396c322f",
 			"a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae59438e98a",
-			"c32c471b732e2f56103e2f8e8cfd52792ef548f05f326e546a7d1fbf9d0419ed"},
+			"c32c471b732e2f56103e2f8e8cfd52792ef548f05f326e546a7d1fbf9d0419ed",
+		},
 		multisig2Initial.Addr)
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// Transfer (reservoir -> multisig) using a legacy transaction.

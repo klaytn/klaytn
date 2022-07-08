@@ -99,8 +99,8 @@ func defaultNodeConfig() node.Config {
 	cfg := node.DefaultConfig
 	cfg.Name = clientIdentifier
 	cfg.Version = params.VersionWithCommit(gitCommit)
-	cfg.HTTPModules = append(cfg.HTTPModules, "klay", "shh")
-	cfg.WSModules = append(cfg.WSModules, "klay", "shh")
+	cfg.HTTPModules = append(cfg.HTTPModules, "klay", "shh", "eth")
+	cfg.WSModules = append(cfg.WSModules, "klay", "shh", "eth")
 	cfg.IPCPath = "klay.ipc"
 	return cfg
 }
@@ -127,8 +127,8 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, klayConfig) {
 	}
 	utils.SetKlayConfig(ctx, stack, &cfg.CN)
 
-	//utils.SetShhConfig(ctx, stack, &cfg.Shh)
-	//utils.SetDashboardConfig(ctx, &cfg.Dashboard)
+	// utils.SetShhConfig(ctx, stack, &cfg.Shh)
+	// utils.SetDashboardConfig(ctx, &cfg.Dashboard)
 
 	return stack, cfg
 }
@@ -333,6 +333,8 @@ func makeServiceChainConfig(ctx *cli.Context) (config sc.SCConfig) {
 	cfg.VTRecovery = ctx.GlobalBool(utils.VTRecoveryFlag.Name)
 	cfg.VTRecoveryInterval = ctx.GlobalUint64(utils.VTRecoveryIntervalFlag.Name)
 	cfg.ServiceChainConsensus = utils.ServiceChainConsensusFlag.Value
+	cfg.ServiceChainParentOperatorGasLimit = ctx.GlobalUint64(utils.ServiceChainParentOperatorTxGasLimitFlag.Name)
+	cfg.ServiceChainChildOperatorGasLimit = ctx.GlobalUint64(utils.ServiceChainChildOperatorTxGasLimitFlag.Name)
 
 	cfg.KASAnchor = ctx.GlobalBool(utils.KASServiceChainAnchorFlag.Name)
 	if cfg.KASAnchor {
@@ -366,6 +368,8 @@ func makeServiceChainConfig(ctx *cli.Context) (config sc.SCConfig) {
 		if cfg.KASXChainId == "" {
 			logger.Crit("KAS x-chain-id should be set", "key", utils.KASServiceChainXChainIdFlag.Name)
 		}
+
+		cfg.KASAnchorRequestTimeout = ctx.GlobalDuration(utils.KASServiceChainAnchorRequestTimeoutFlag.Name)
 	}
 	return cfg
 }

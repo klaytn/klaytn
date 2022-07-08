@@ -27,6 +27,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus"
+	"github.com/klaytn/klaytn/params"
 )
 
 // ChainContext supports retrieving headers and consensus parameters from the
@@ -42,12 +43,26 @@ type ChainContext interface {
 // NewEVMContext creates a new context for use in the EVM.
 func NewEVMContext(msg Message, header *types.Header, chain ChainContext, author *common.Address) vm.Context {
 	// If we don't have an explicit author (i.e. not mining), extract from the header
-	var beneficiary common.Address
+	var (
+		beneficiary       common.Address
+		baseFee           *big.Int
+		effectiveGasPrice *big.Int
+	)
+
 	if author == nil {
 		beneficiary, _ = chain.Engine().Author(header) // Ignore error, we're past header validation
 	} else {
 		beneficiary = *author
 	}
+	// before kip71 hardfork, base fee is 0, effectiveGasPrice is unitPrice
+	if header.BaseFee != nil {
+		baseFee = header.BaseFee
+		effectiveGasPrice = header.BaseFee
+	} else {
+		baseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
+		effectiveGasPrice = msg.GasPrice()
+	}
+
 	return vm.Context{
 		CanTransfer: CanTransfer,
 		Transfer:    Transfer,
@@ -57,7 +72,8 @@ func NewEVMContext(msg Message, header *types.Header, chain ChainContext, author
 		BlockNumber: new(big.Int).Set(header.Number),
 		Time:        new(big.Int).Set(header.Time),
 		BlockScore:  new(big.Int).Set(header.BlockScore),
-		GasPrice:    new(big.Int).Set(msg.GasPrice()),
+		GasPrice:    new(big.Int).Set(effectiveGasPrice),
+		BaseFee:     baseFee,
 	}
 }
 

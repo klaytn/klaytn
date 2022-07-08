@@ -36,7 +36,6 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
@@ -202,6 +201,64 @@ func (api *PrivateAdminAPI) SaveTrieNodeCacheToDisk() error {
 	return api.cn.BlockChain().SaveTrieNodeCacheToDisk()
 }
 
+func (api *PrivateAdminAPI) SpamThrottlerConfig(ctx context.Context) (*blockchain.ThrottlerConfig, error) {
+	throttler := blockchain.GetSpamThrottler()
+	if throttler == nil {
+		return nil, errors.New("spam throttler is not running")
+	}
+	return throttler.GetConfig(), nil
+}
+
+func (api *PrivateAdminAPI) StopSpamThrottler(ctx context.Context) error {
+	throttler := blockchain.GetSpamThrottler()
+	if throttler == nil {
+		return errors.New("spam throttler was already stopped")
+	}
+	api.cn.txPool.StopSpamThrottler()
+	return nil
+}
+
+func (api *PrivateAdminAPI) StartSpamThrottler(ctx context.Context, config *blockchain.ThrottlerConfig) error {
+	throttler := blockchain.GetSpamThrottler()
+	if throttler != nil {
+		return errors.New("spam throttler is already running")
+	}
+	return api.cn.txPool.StartSpamThrottler(config)
+}
+
+func (api *PrivateAdminAPI) SetSpamThrottlerWhiteList(ctx context.Context, addrs []common.Address) error {
+	throttler := blockchain.GetSpamThrottler()
+	if throttler == nil {
+		return errors.New("spam throttler is not running")
+	}
+	throttler.SetAllowed(addrs)
+	return nil
+}
+
+func (api *PrivateAdminAPI) GetSpamThrottlerWhiteList(ctx context.Context) ([]common.Address, error) {
+	throttler := blockchain.GetSpamThrottler()
+	if throttler == nil {
+		return nil, errors.New("spam throttler is not running")
+	}
+	return throttler.GetAllowed(), nil
+}
+
+func (api *PrivateAdminAPI) GetSpamThrottlerThrottleList(ctx context.Context) ([]common.Address, error) {
+	throttler := blockchain.GetSpamThrottler()
+	if throttler == nil {
+		return nil, errors.New("spam throttler is not running")
+	}
+	return throttler.GetThrottled(), nil
+}
+
+func (api *PrivateAdminAPI) GetSpamThrottlerCandidateList(ctx context.Context) (map[common.Address]int, error) {
+	throttler := blockchain.GetSpamThrottler()
+	if throttler == nil {
+		return nil, errors.New("spam throttler is not running")
+	}
+	return throttler.GetCandidates(), nil
+}
+
 // PublicDebugAPI is the collection of Klaytn full node APIs exposed
 // over the public debugging endpoint.
 type PublicDebugAPI struct {
@@ -217,8 +274,13 @@ func NewPublicDebugAPI(cn *CN) *PublicDebugAPI {
 // DumpBlock retrieves the entire state of the database at a given block.
 func (api *PublicDebugAPI) DumpBlock(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (state.Dump, error) {
 	if *blockNrOrHash.BlockNumber == rpc.PendingBlockNumber {
-		return state.Dump{}, kerrors.ErrPendingBlockNotSupported
+		// If we're dumping the pending state, we need to request
+		// both the pending block as well as the pending state from
+		// the miner and operate on those
+		_, stateDb := api.cn.miner.Pending()
+		return stateDb.RawDump(), nil
 	}
+
 	var block *types.Block
 	var err error
 	if *blockNrOrHash.BlockNumber == rpc.LatestBlockNumber {
@@ -263,7 +325,7 @@ func (api *PublicDebugAPI) DumpStateTrie(ctx context.Context, blockNrOrHash rpc.
 	}
 
 	db := state.NewDatabaseWithExistingCache(api.cn.chainDB, api.cn.blockchain.StateCache().TrieDB().TrieNodeCache())
-	stateDB, err := state.New(block.Root(), db)
+	stateDB, err := state.New(block.Root(), db, nil)
 	if err != nil {
 		return DumpStateTrieResult{}, err
 	}
@@ -342,7 +404,7 @@ type storageEntry struct {
 	Value common.Hash  `json:"value"`
 }
 
-//StorageRangeAt returns the storage at the given block height and transaction index.
+// StorageRangeAt returns the storage at the given block height and transaction index.
 func (api *PrivateDebugAPI) StorageRangeAt(ctx context.Context, blockHash common.Hash, txIndex int, contractAddress common.Address, keyStart hexutil.Bytes, maxResult int) (StorageRangeResult, error) {
 	_, _, statedb, err := api.computeTxEnv(blockHash, txIndex, 0)
 	if err != nil {

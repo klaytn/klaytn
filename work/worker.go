@@ -26,15 +26,15 @@ import (
 	"sync/atomic"
 	"time"
 
-	klaytnmetrics "github.com/klaytn/klaytn/metrics"
-
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus"
+	"github.com/klaytn/klaytn/consensus/misc"
 	"github.com/klaytn/klaytn/event"
+	klaytnmetrics "github.com/klaytn/klaytn/metrics"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/rcrowley/go-metrics"
@@ -83,6 +83,10 @@ var (
 	storageHashTimer   = klaytnmetrics.NewRegisteredHybridTimer("miner/block/storage/hashes", nil)
 	storageUpdateTimer = klaytnmetrics.NewRegisteredHybridTimer("miner/block/storage/updates", nil)
 	storageCommitTimer = klaytnmetrics.NewRegisteredHybridTimer("miner/block/storage/commits", nil)
+
+	snapshotAccountReadTimer = metrics.NewRegisteredTimer("miner/snapshot/account/reads", nil)
+	snapshotStorageReadTimer = metrics.NewRegisteredTimer("miner/snapshot/storage/reads", nil)
+	snapshotCommitTimer      = metrics.NewRegisteredTimer("miner/snapshot/commits", nil)
 )
 
 // Agent can register themself with the worker
@@ -425,6 +429,11 @@ func (self *worker) wait(TxResendUseLegacy bool) {
 				events = append(events, blockchain.ChainHeadEvent{Block: block})
 			}
 
+			// update governance CurrentSet if it is at an epoch block
+			if err := self.engine.CreateSnapshot(self.chain, block.NumberU64(), block.Hash(), nil); err != nil {
+				logger.Error("Failed to call snapshot", "err", err)
+			}
+
 			logger.Info("Successfully wrote mined block", "num", block.NumberU64(),
 				"hash", block.Hash(), "txs", len(block.Transactions()), "elapsed", blockWriteTime)
 			self.chain.PostChainEvents(events, logs)
@@ -457,7 +466,7 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 	if err != nil {
 		return err
 	}
-	work := NewTask(self.config, types.NewEIP155Signer(self.config.ChainID), stateDB, header)
+	work := NewTask(self.config, types.MakeSigner(self.config, header.Number), stateDB, header)
 	if self.nodetype != common.CONSENSUSNODE {
 		work.Block = parent
 	}
@@ -486,16 +495,26 @@ func (self *worker) commitNewWork() {
 	defer self.currentMu.Unlock()
 
 	parent := self.chain.CurrentBlock()
+	nextBlockNum := new(big.Int).Add(parent.Number(), common.Big1)
+	var nextBaseFee *big.Int
+	if self.nodetype == common.CONSENSUSNODE {
+		if self.config.IsKIP71ForkEnabled(nextBlockNum) {
+			// NOTE-klaytn NextBlockBaseFee needs the header of parent, self.chain.CurrentBlock
+			// So above code, TxPool().Pending(), is separated with this and can be refactored later.
+			nextBaseFee = misc.NextBlockBaseFee(parent.Header(), self.config)
+			pending = types.FilterTransactionWithBaseFee(pending, nextBaseFee)
+		}
+	}
 
 	// TODO-Klaytn drop or missing tx
 	tstart := time.Now()
 	tstamp := tstart.Unix()
 	if self.nodetype == common.CONSENSUSNODE {
-		ideal := parent.Time().Int64() + params.BlockGenerationInterval
+		ideal := time.Unix(parent.Time().Int64()+params.BlockGenerationInterval, 0)
 		// If a timestamp of this block is faster than the ideal timestamp,
 		// wait for a while and get a new timestamp
-		if tstamp < ideal {
-			wait := time.Duration(ideal-tstamp) * time.Second
+		if tstart.Before(ideal) {
+			wait := ideal.Sub(tstart)
 			logger.Info("Mining too far in the future", "wait", common.PrettyDuration(wait))
 			time.Sleep(wait)
 
@@ -504,12 +523,14 @@ func (self *worker) commitNewWork() {
 		}
 	}
 
-	num := parent.Number()
 	header := &types.Header{
 		ParentHash: parent.Hash(),
-		Number:     num.Add(num, common.Big1),
+		Number:     nextBlockNum,
 		Extra:      self.extra,
 		Time:       big.NewInt(tstamp),
+	}
+	if self.config.IsKIP71ForkEnabled(nextBlockNum) {
+		header.BaseFee = nextBaseFee
 	}
 	if err := self.engine.Prepare(self.chain, header); err != nil {
 		logger.Error("Failed to prepare header for mining", "err", err)
@@ -529,7 +550,7 @@ func (self *worker) commitNewWork() {
 	// Create the current work task
 	work := self.current
 	if self.nodetype == common.CONSENSUSNODE {
-		txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending)
+		txs := types.NewTransactionsByTimeAndNonce(self.current.signer, pending)
 		work.commitTransactions(self.mux, txs, self.chain, self.rewardbase)
 		finishedCommitTx := time.Now()
 
@@ -552,6 +573,10 @@ func (self *worker) commitNewWork() {
 			storageHashTimer.Update(work.state.StorageHashes)
 			storageUpdateTimer.Update(work.state.StorageUpdates)
 			storageCommitTimer.Update(work.state.StorageCommits)
+
+			snapshotAccountReadTimer.Update(work.state.SnapshotAccountReads)
+			snapshotStorageReadTimer.Update(work.state.SnapshotStorageReads)
+			snapshotCommitTimer.Update(work.state.SnapshotCommits)
 
 			trieAccess := work.state.AccountReads + work.state.AccountHashes + work.state.AccountUpdates + work.state.AccountCommits
 			trieAccess += work.state.StorageReads + work.state.StorageHashes + work.state.StorageUpdates + work.state.StorageCommits
@@ -588,7 +613,7 @@ func (self *worker) updateSnapshot() {
 	self.snapshotState = self.current.state.Copy()
 }
 
-func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc BlockChain, rewardbase common.Address) {
+func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByTimeAndNonce, bc BlockChain, rewardbase common.Address) {
 	coalescedLogs := env.ApplyTransactions(txs, bc, rewardbase)
 
 	if len(coalescedLogs) > 0 || env.tcount > 0 {
@@ -611,7 +636,7 @@ func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 	}
 }
 
-func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc BlockChain, rewardbase common.Address) []*types.Log {
+func (env *Task) ApplyTransactions(txs *types.TransactionsByTimeAndNonce, bc BlockChain, rewardbase common.Address) []*types.Log {
 	var coalescedLogs []*types.Log
 
 	// Limit the execution time of all transactions in a block
@@ -721,6 +746,11 @@ CommitTransactionLoop:
 			}
 			// NOTE-Klaytn Exit for loop immediately without checking abort variable again.
 			break CommitTransactionLoop
+
+		case blockchain.ErrTxTypeNotSupported:
+			// Pop the unsupported transaction without shifting in the next from the account
+			logger.Trace("Skipping unsupported transaction type", "sender", from, "type", tx.Type())
+			txs.Pop()
 
 		case nil:
 			// Everything ok, collect the logs and shift in the next transaction from the same account

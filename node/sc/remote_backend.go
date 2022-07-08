@@ -30,9 +30,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var (
-	NoParentPeerErr = errors.New("no parent peer")
-)
+var NoParentPeerErr = errors.New("no parent peer")
 
 const timeout = 30 * time.Second
 
@@ -71,8 +69,6 @@ func (rb *RemoteBackend) CodeAt(ctx context.Context, contract common.Address, bl
 	if !rb.checkParentPeer() {
 		return nil, NoParentPeerErr
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
 	var result hexutil.Bytes
 	err := rb.rpcClient.CallContext(ctx, &result, "klay_getCode", contract, toBlockNumArg(blockNumber))
 	return result, err
@@ -82,8 +78,6 @@ func (rb *RemoteBackend) BalanceAt(ctx context.Context, account common.Address, 
 	if !rb.checkParentPeer() {
 		return nil, NoParentPeerErr
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
 	var hex hexutil.Big
 	err := rb.rpcClient.CallContext(ctx, &hex, "klay_getBalance", account, toBlockNumArg(blockNumber))
 	if err != nil {
@@ -96,8 +90,6 @@ func (rb *RemoteBackend) CallContract(ctx context.Context, call klaytn.CallMsg, 
 	if !rb.checkParentPeer() {
 		return nil, NoParentPeerErr
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
 	var hex hexutil.Bytes
 	err := rb.rpcClient.CallContext(ctx, &hex, "klay_call", toCallArg(call), toBlockNumArg(blockNumber))
 	return hex, err
@@ -108,8 +100,6 @@ func (rb *RemoteBackend) PendingCodeAt(ctx context.Context, contract common.Addr
 		return nil, NoParentPeerErr
 	}
 	var result hexutil.Bytes
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
 	err := rb.rpcClient.CallContext(ctx, &result, "klay_getCode", contract, "pending")
 	return result, err
 }
@@ -118,8 +108,6 @@ func (rb *RemoteBackend) PendingNonceAt(ctx context.Context, account common.Addr
 	if !rb.checkParentPeer() {
 		return 0, NoParentPeerErr
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
 	var result hexutil.Uint64
 	err := rb.rpcClient.CallContext(ctx, &result, "klay_getTransactionCount", account, "pending")
 	return uint64(result), err
@@ -129,8 +117,6 @@ func (rb *RemoteBackend) SuggestGasPrice(ctx context.Context) (*big.Int, error) 
 	if !rb.checkParentPeer() {
 		return nil, NoParentPeerErr
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
 	var hex hexutil.Big
 	if err := rb.rpcClient.CallContext(ctx, &hex, "klay_gasPrice"); err != nil {
 		return nil, err
@@ -142,8 +128,6 @@ func (rb *RemoteBackend) EstimateGas(ctx context.Context, msg klaytn.CallMsg) (u
 	if !rb.checkParentPeer() {
 		return 0, NoParentPeerErr
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
 
 	var hex hexutil.Uint64
 	err := rb.rpcClient.CallContext(ctx, &hex, "klay_estimateGas", toCallArg(msg))
@@ -157,8 +141,6 @@ func (rb *RemoteBackend) SendTransaction(ctx context.Context, tx *types.Transact
 	if !rb.checkParentPeer() {
 		return NoParentPeerErr
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
 	return rb.subBridge.bridgeTxPool.AddLocal(tx)
 }
 
@@ -166,8 +148,6 @@ func (rb *RemoteBackend) TransactionReceipt(ctx context.Context, txHash common.H
 	if !rb.checkParentPeer() {
 		return nil, NoParentPeerErr
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
 	var r *types.Receipt
 	err := rb.rpcClient.CallContext(ctx, &r, "klay_getTransactionReceipt", txHash)
 	if err == nil && r == nil {
@@ -180,8 +160,6 @@ func (rb *RemoteBackend) TransactionReceiptRpcOutput(ctx context.Context, txHash
 	if !rb.checkParentPeer() {
 		return nil, NoParentPeerErr
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
 
 	err = rb.rpcClient.CallContext(ctx, &r, "klay_getTransactionReceipt", txHash)
 	if err == nil && r == nil {
@@ -199,8 +177,6 @@ func (rb *RemoteBackend) FilterLogs(ctx context.Context, query klaytn.FilterQuer
 	if !rb.checkParentPeer() {
 		return nil, NoParentPeerErr
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
 	err = rb.rpcClient.CallContext(ctx, &result, "klay_getLogs", toFilterArg(query))
 	return
 }
@@ -209,8 +185,6 @@ func (rb *RemoteBackend) SubscribeFilterLogs(ctx context.Context, query klaytn.F
 	if !rb.checkParentPeer() {
 		return nil, NoParentPeerErr
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
 	return rb.rpcClient.KlaySubscribe(ctx, ch, "logs", toFilterArg(query))
 }
 
@@ -219,8 +193,6 @@ func (rb *RemoteBackend) CurrentBlockNumber(ctx context.Context) (uint64, error)
 	if !rb.checkParentPeer() {
 		return 0, NoParentPeerErr
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
 	var result hexutil.Uint64
 	err := rb.rpcClient.CallContext(ctx, &result, "klay_blockNumber")
 	return uint64(result), err

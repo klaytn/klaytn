@@ -6,6 +6,7 @@
 // This file is derived from crypto/bn256/bn256_fuzz.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
+//go:build gofuzz
 // +build gofuzz
 
 package bn256

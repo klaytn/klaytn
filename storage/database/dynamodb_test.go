@@ -15,7 +15,7 @@
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 //
 // For local test, please run the below.
-//    $ docker run -d -p 4566:4566 localstack/localstack:0.11.5
+//    $ docker run -d -p 4566:4566 localstack/localstack:0.13.0
 
 package database
 
@@ -27,10 +27,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
+	"github.com/klaytn/klaytn/log"
+	"github.com/klaytn/klaytn/storage"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -54,25 +55,21 @@ func GetTestDynamoConfig() *DynamoDBConfig {
 
 type SuiteDynamoDB struct {
 	suite.Suite
-	dynamoDBs []*dynamoDB
-}
-
-func (s *SuiteDynamoDB) TearDownSuite() {
-	for _, dynamo := range s.dynamoDBs {
-		dynamo.deleteDB()
-	}
+	database Database
 }
 
 func TestDynamoDB(t *testing.T) {
-	suite.Run(t, new(SuiteDynamoDB))
+	storage.SkipLocalTest(t)
+	db, remove := newTestDynamoS3DB()
+	defer remove()
+
+	suite.Run(t, &SuiteDynamoDB{database: db})
 }
 
 func (s *SuiteDynamoDB) TestDynamoDB_Put() {
-	dynamo, err := newDynamoDB(GetTestDynamoConfig())
-	if err != nil {
-		s.FailNow("failed to create dynamoDB", err)
-	}
-	s.dynamoDBs = append(s.dynamoDBs, dynamo)
+	storage.SkipLocalTest(s.T())
+
+	dynamo := s.database
 
 	testKey := common.MakeRandomBytes(32)
 	testVal := common.MakeRandomBytes(500)
@@ -90,11 +87,9 @@ func (s *SuiteDynamoDB) TestDynamoDB_Put() {
 }
 
 func (s *SuiteDynamoDB) TestDynamoBatch_Write() {
-	dynamo, err := newDynamoDB(GetTestDynamoConfig())
-	if err != nil {
-		s.FailNow("failed to create dynamoDB", err)
-	}
-	s.dynamoDBs = append(s.dynamoDBs, dynamo)
+	storage.SkipLocalTest(s.T())
+
+	dynamo := s.database
 
 	var testKeys [][]byte
 	var testVals [][]byte
@@ -121,11 +116,9 @@ func (s *SuiteDynamoDB) TestDynamoBatch_Write() {
 }
 
 func (s *SuiteDynamoDB) TestDynamoBatch_Write_LargeData() {
-	dynamo, err := newDynamoDB(GetTestDynamoConfig())
-	if err != nil {
-		s.FailNow("failed to create dynamoDB", err)
-	}
-	s.dynamoDBs = append(s.dynamoDBs, dynamo)
+	storage.SkipLocalTest(s.T())
+
+	dynamo := s.database
 
 	var testKeys [][]byte
 	var testVals [][]byte
@@ -152,11 +145,9 @@ func (s *SuiteDynamoDB) TestDynamoBatch_Write_LargeData() {
 }
 
 func (s *SuiteDynamoDB) TestDynamoBatch_Write_DuplicatedKey() {
-	dynamo, err := newDynamoDB(GetTestDynamoConfig())
-	if err != nil {
-		s.FailNow("failed to create dynamoDB", err)
-	}
-	s.dynamoDBs = append(s.dynamoDBs, dynamo)
+	storage.SkipLocalTest(s.T())
+
+	dynamo := s.database
 
 	var testKeys [][]byte
 	var testVals [][]byte
@@ -187,25 +178,25 @@ func (s *SuiteDynamoDB) TestDynamoBatch_Write_DuplicatedKey() {
 // TestDynamoBatch_Write_MultiTables checks if there is no error when working with more than one tables.
 // This also checks if shared workers works as expected.
 func (s *SuiteDynamoDB) TestDynamoBatch_Write_MultiTables() {
-	// this test might end with Crit, enableLog to find out the log
-	//enableLog()
+	storage.SkipLocalTest(s.T())
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace) // this test might end with Crit, enable Log to find out the log
 
 	// create DynamoDB1
-	dynamo, err := newDynamoDB(GetTestDynamoConfig())
-	if err != nil {
-		s.FailNow("failed to create dynamoDB", err)
-	}
-	s.dynamoDBs = append(s.dynamoDBs, dynamo)
+	dynamo := s.database
 
-	// create DynamoDB2
 	dynamo2, err := newDynamoDB(GetTestDynamoConfig())
 	if err != nil {
 		s.FailNow("failed to create dynamoDB", err)
 	}
-	s.dynamoDBs = append(s.dynamoDBs, dynamo2)
+	defer func() {
+		dynamo2.Close()
+		dynamo2.deleteTable()
+	}()
 
-	var testKeys, testVals [][]byte
-	var testKeys2, testVals2 [][]byte
+	var (
+		testKeys, testKeys2 [][]byte
+		testVals, testVals2 [][]byte
+	)
 
 	batch := dynamo.NewBatch()
 	batch2 := dynamo2.NewBatch()
@@ -256,15 +247,10 @@ func (s *SuiteDynamoDB) TestDynamoBatch_Write_MultiTables() {
 	}
 }
 
-func (dynamo *dynamoDB) deleteDB() {
-	dynamo.Close()
-	dynamo.deleteTable()
-	dynamo.fdb.deleteBucket()
-}
-
 // TestDynamoDB_Retry tests whether dynamoDB client retries successfully.
 // A fake server is setup to simulate a server with a request count.
 func TestDynamoDB_Retry(t *testing.T) {
+	storage.SkipLocalTest(t)
 	// This test needs a new dynamoDBClient having a fake endpoint.
 	oldClient := dynamoDBClient
 	dynamoDBClient = nil
@@ -283,12 +269,14 @@ func TestDynamoDB_Retry(t *testing.T) {
 	go func() {
 		tcpAddr, err := net.ResolveTCPAddr("tcp", fakeEndpoint)
 		if err != nil {
-			t.Fatal(err)
+			t.Error(err)
+			return
 		}
 
 		listen, err := net.ListenTCP("tcp", tcpAddr)
 		if err != nil {
-			t.Fatal(err)
+			t.Error(err)
+			return
 		}
 		defer listen.Close()
 
@@ -299,7 +287,8 @@ func TestDynamoDB_Retry(t *testing.T) {
 			// Deadline prevents infinite waiting of the fake server
 			// Wait longer than (maxRetries+1) * timeout
 			if err := listen.SetDeadline(time.Now().Add(10 * time.Second)); err != nil {
-				t.Fatal(err)
+				t.Error(err)
+				return
 			}
 			conn, err := listen.AcceptTCP()
 			if err != nil {

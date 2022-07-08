@@ -88,7 +88,7 @@ type BridgeTxPool struct {
 	// TODO-Klaytn-Servicechain consider to remove singer. For now, caused of value transfer tx which don't have `from` value, I leave it.
 	signer types.Signer
 	mu     sync.RWMutex
-	//txMu   sync.RWMutex // TODO-Klaytn-Servicechain: implement fine-grained locks
+	// txMu   sync.RWMutex // TODO-Klaytn-Servicechain: implement fine-grained locks
 
 	journal *bridgeTxJournal // Journal of transaction to back up to disk
 
@@ -114,7 +114,7 @@ func NewBridgeTxPool(config BridgeTxPoolConfig) *BridgeTxPool {
 		closed: make(chan struct{}),
 	}
 
-	pool.SetEIP155Signer(config.ParentChainID)
+	pool.SetLatestSigner(config.ParentChainID)
 
 	// load from disk
 	pool.journal = newBridgeTxJournal(config.Journal)
@@ -133,9 +133,15 @@ func NewBridgeTxPool(config BridgeTxPoolConfig) *BridgeTxPool {
 	return pool
 }
 
+// Deprecated: This function is deprecated. Use SetLatestSigner instead.
 // SetEIP155Signer set signer of txpool.
 func (pool *BridgeTxPool) SetEIP155Signer(chainID *big.Int) {
 	pool.signer = types.NewEIP155Signer(chainID)
+}
+
+// SetLatestSigner set latest signer to txpool
+func (pool *BridgeTxPool) SetLatestSigner(chainID *big.Int) {
+	pool.signer = types.LatestSignerForChainID(chainID)
 }
 
 // loop is the transaction pool's main event loop, waiting for and reacting to
@@ -382,29 +388,19 @@ func (pool *BridgeTxPool) AddLocals(txs []*types.Transaction) []error {
 
 // addTx enqueues a single transaction into the pool if it is valid.
 func (pool *BridgeTxPool) addTx(tx *types.Transaction) error {
-	//senderCacher.recover(pool.signer, []*types.Transaction{tx})
+	// senderCacher.recover(pool.signer, []*types.Transaction{tx})
 	// Try to inject the transaction and update any state
-	err := pool.add(tx)
-	return err
+	return pool.add(tx)
 }
 
 // addTxs attempts to queue a batch of transactions if they are valid.
 func (pool *BridgeTxPool) addTxs(txs []*types.Transaction) []error {
-	//senderCacher.recover(pool.signer, txs)
+	// senderCacher.recover(pool.signer, txs)
 	// Add the batch of transaction, tracking the accepted ones
-	dirty := make(map[common.Address]struct{})
 	errs := make([]error, len(txs))
 
 	for i, tx := range txs {
-		var replace bool
-		if errs[i] = pool.add(tx); errs[i] == nil {
-			if !replace {
-				from, err := types.Sender(pool.signer, tx)
-				errs[i] = err
-
-				dirty[from] = struct{}{}
-			}
-		}
+		errs[i] = pool.add(tx)
 	}
 
 	return errs

@@ -106,40 +106,27 @@ func (BitCurve *BitCurve) Params() *elliptic.CurveParams {
 // IsOnCurve returns true if the given (x,y) lies on the BitCurve.
 func (BitCurve *BitCurve) IsOnCurve(x, y *big.Int) bool {
 	// y² = x³ + b
-	y2 := new(big.Int).Mul(y, y) //y²
-	y2.Mod(y2, BitCurve.P)       //y²%P
+	y2 := new(big.Int).Mul(y, y) // y²
+	y2.Mod(y2, BitCurve.P)       // y²%P
 
-	x3 := new(big.Int).Mul(x, x) //x²
-	x3.Mul(x3, x)                //x³
+	x3 := new(big.Int).Mul(x, x) // x²
+	x3.Mul(x3, x)                // x³
 
-	x3.Add(x3, BitCurve.B) //x³+B
+	x3.Add(x3, BitCurve.B) // x³+B
 	x3.Mod(x3, BitCurve.P) //(x³+B)%P
 
 	return x3.Cmp(y2) == 0
 }
 
-//TODO: double check if the function is okay
+// TODO: double check if the function is okay
 // affineFromJacobian reverses the Jacobian transform. See the comment at the
 // top of the file.
 func (BitCurve *BitCurve) affineFromJacobian(x, y, z *big.Int) (xOut, yOut *big.Int) {
-	zinv := new(big.Int).ModInverse(z, BitCurve.P)
-	//GX-TODO:	Introduce a permanent fix
-	//	When passed with x==y==z==0, ModInverse(z, BitCurve.P) results `nil` which leads to new(big.Int).Mul(nil, nil).
-	//	The above parameter condition can be easily met in cases such as adding the same elliptic curve points.
-	//
-	//	Problem:
-	// 		big.Int.Mul(nil, nil) causes SIGSEGV
-	//	Analysis:
-	// 		In Go 1.10.3, ModInverse(0, any) returns 0 (not by design though). The implementation has changed in Go 1.11
-	// 		and ModInverse explicitly returns nil. As zinv := new(big.Int).ModInverse(z, BitCurve.P) stores nil in zinv,
-	// 		zinvsq := new(big.Int).Mul(zinv, zinv) fails with SIGSEGV as it invokes new(big.Int).Mul(nil, nil).
-	//	Fix:
-	//		The following if-block is added to fix the problem temporarily. This is okay since the inverse of 0
-	//		resides in ring R = {0}.
-	if zinv == nil {
-		zinv = new(big.Int)
+	if z.Sign() == 0 {
+		return new(big.Int), new(big.Int)
 	}
 
+	zinv := new(big.Int).ModInverse(z, BitCurve.P)
 	zinvsq := new(big.Int).Mul(zinv, zinv)
 
 	xOut = new(big.Int).Mul(x, zinvsq)
@@ -152,7 +139,18 @@ func (BitCurve *BitCurve) affineFromJacobian(x, y, z *big.Int) (xOut, yOut *big.
 
 // Add returns the sum of (x1,y1) and (x2,y2)
 func (BitCurve *BitCurve) Add(x1, y1, x2, y2 *big.Int) (*big.Int, *big.Int) {
+	// If one point is at infinity, return the other point.
+	// Adding the point at infinity to any point will preserve the other point.
+	if x1.Sign() == 0 && y1.Sign() == 0 {
+		return x2, y2
+	}
+	if x2.Sign() == 0 && y2.Sign() == 0 {
+		return x1, y1
+	}
 	z := new(big.Int).SetInt64(1)
+	if x1.Cmp(x2) == 0 && y1.Cmp(y2) == 0 {
+		return BitCurve.affineFromJacobian(BitCurve.doubleJacobian(x1, y1, z))
+	}
 	return BitCurve.affineFromJacobian(BitCurve.addJacobian(x1, y1, z, x2, y2, z))
 }
 
@@ -232,30 +230,30 @@ func (BitCurve *BitCurve) Double(x1, y1 *big.Int) (*big.Int, *big.Int) {
 func (BitCurve *BitCurve) doubleJacobian(x, y, z *big.Int) (*big.Int, *big.Int, *big.Int) {
 	// See http://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-0.html#doubling-dbl-2009-l
 
-	a := new(big.Int).Mul(x, x) //X1²
-	b := new(big.Int).Mul(y, y) //Y1²
-	c := new(big.Int).Mul(b, b) //B²
+	a := new(big.Int).Mul(x, x) // X1²
+	b := new(big.Int).Mul(y, y) // Y1²
+	c := new(big.Int).Mul(b, b) // B²
 
-	d := new(big.Int).Add(x, b) //X1+B
+	d := new(big.Int).Add(x, b) // X1+B
 	d.Mul(d, d)                 //(X1+B)²
 	d.Sub(d, a)                 //(X1+B)²-A
 	d.Sub(d, c)                 //(X1+B)²-A-C
-	d.Mul(d, common.Big2)       //2*((X1+B)²-A-C)
+	d.Mul(d, common.Big2)       // 2*((X1+B)²-A-C)
 
-	e := new(big.Int).Mul(common.Big3, a) //3*A
-	f := new(big.Int).Mul(e, e)           //E²
+	e := new(big.Int).Mul(common.Big3, a) // 3*A
+	f := new(big.Int).Mul(e, e)           // E²
 
-	x3 := new(big.Int).Mul(common.Big2, d) //2*D
-	x3.Sub(f, x3)                          //F-2*D
+	x3 := new(big.Int).Mul(common.Big2, d) // 2*D
+	x3.Sub(f, x3)                          // F-2*D
 	x3.Mod(x3, BitCurve.P)
 
-	y3 := new(big.Int).Sub(d, x3)                  //D-X3
-	y3.Mul(e, y3)                                  //E*(D-X3)
-	y3.Sub(y3, new(big.Int).Mul(big.NewInt(8), c)) //E*(D-X3)-8*C
+	y3 := new(big.Int).Sub(d, x3)                  // D-X3
+	y3.Mul(e, y3)                                  // E*(D-X3)
+	y3.Sub(y3, new(big.Int).Mul(big.NewInt(8), c)) // E*(D-X3)-8*C
 	y3.Mod(y3, BitCurve.P)
 
-	z3 := new(big.Int).Mul(y, z) //Y1*Z1
-	z3.Mul(common.Big2, z3)      //3*Y1*Z1
+	z3 := new(big.Int).Mul(y, z) // Y1*Z1
+	z3.Mul(common.Big2, z3)      // 3*Y1*Z1
 	z3.Mod(z3, BitCurve.P)
 
 	return x3, y3, z3

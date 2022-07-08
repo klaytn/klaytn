@@ -41,6 +41,11 @@ var (
 	receiptDropMeter    = metrics.NewRegisteredMeter("klay/downloader/receipts/drop", nil)
 	receiptTimeoutMeter = metrics.NewRegisteredMeter("klay/downloader/receipts/timeout", nil)
 
+	stakingInfoInMeter      = metrics.NewRegisteredMeter("klay/downloader/stakinginfo/in", nil)
+	stakingInfoReqTimer     = klaytnmetrics.NewRegisteredHybridTimer("klay/downloader/stakinginfo/req", nil)
+	stakingInfoDropMeter    = metrics.NewRegisteredMeter("klay/downloader/stakinginfo/drop", nil)
+	stakingInfoTimeoutMeter = metrics.NewRegisteredMeter("klay/downloader/stakinginfo/timeout", nil)
+
 	stateInMeter   = metrics.NewRegisteredMeter("klay/downloader/states/in", nil)
 	stateDropMeter = metrics.NewRegisteredMeter("klay/downloader/states/drop", nil)
 

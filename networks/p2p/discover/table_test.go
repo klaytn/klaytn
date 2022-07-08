@@ -24,10 +24,9 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"math/rand"
-	"sync"
-
 	"net"
 	"reflect"
+	"sync"
 	"testing"
 	"testing/quick"
 	"time"
@@ -245,6 +244,7 @@ func (t *pingRecorder) close() {}
 func (t *pingRecorder) waitping(from NodeID) error {
 	return nil // remote always pings
 }
+
 func (t *pingRecorder) ping(toid NodeID, toaddr *net.UDPAddr) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()

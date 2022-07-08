@@ -160,6 +160,7 @@ func (c *sha256hash) GetRequiredGasAndComputationCost(input []byte) (uint64, uin
 	return n32Bytes*params.Sha256PerWordGas + params.Sha256BaseGas,
 		n32Bytes*params.Sha256PerWordComputationCost + params.Sha256BaseComputationCost
 }
+
 func (c *sha256hash) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	h := sha256.Sum256(input)
 	return h[:], nil
@@ -179,6 +180,7 @@ func (c *ripemd160hash) GetRequiredGasAndComputationCost(input []byte) (uint64, 
 	return n32Bytes*params.Ripemd160PerWordGas + params.Ripemd160BaseGas,
 		n32Bytes*params.Ripemd160PerWordComputationCost + params.Ripemd160BaseComputationCost
 }
+
 func (c *ripemd160hash) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	ripemd := ripemd160.New()
 	ripemd.Write(input)
@@ -198,6 +200,7 @@ func (c *dataCopy) GetRequiredGasAndComputationCost(input []byte) (uint64, uint6
 	return n32Bytes*params.IdentityPerWordGas + params.IdentityBaseGas,
 		n32Bytes*params.IdentityPerWordComputationCost + params.IdentityBaseComputationCost
 }
+
 func (c *dataCopy) Run(in []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	return in, nil
 }

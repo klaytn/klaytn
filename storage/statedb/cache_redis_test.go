@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v7"
+	"github.com/klaytn/klaytn/storage"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -40,6 +41,8 @@ func getTestRedisConfig() *TrieNodeCacheConfig {
 }
 
 func TestSubscription(t *testing.T) {
+	storage.SkipLocalTest(t)
+
 	msg1 := "testMessage1"
 	msg2 := "testMessage2"
 
@@ -86,6 +89,8 @@ func TestSubscription(t *testing.T) {
 
 // TestRedisCache tests basic operations of redis cache
 func TestRedisCache(t *testing.T) {
+	storage.SkipLocalTest(t)
+
 	cache, err := newRedisCache(getTestRedisConfig())
 	assert.Nil(t, err)
 
@@ -102,6 +107,8 @@ func TestRedisCache(t *testing.T) {
 
 // TestRedisCache_Set_LargeData check whether redis cache can store an large data (5MB).
 func TestRedisCache_Set_LargeData(t *testing.T) {
+	storage.SkipLocalTest(t)
+
 	cache, err := newRedisCache(getTestRedisConfig())
 	if err != nil {
 		t.Fatal(err)
@@ -116,6 +123,8 @@ func TestRedisCache_Set_LargeData(t *testing.T) {
 
 // TestRedisCache_SetAsync tests basic operations of redis cache using SetAsync instead of Set.
 func TestRedisCache_SetAsync(t *testing.T) {
+	storage.SkipLocalTest(t)
+
 	cache, err := newRedisCache(getTestRedisConfig())
 	assert.Nil(t, err)
 
@@ -133,6 +142,8 @@ func TestRedisCache_SetAsync(t *testing.T) {
 
 // TestRedisCache_SetAsync_LargeData check whether redis cache can store an large data asynchronously (5MB).
 func TestRedisCache_SetAsync_LargeData(t *testing.T) {
+	storage.SkipLocalTest(t)
+
 	cache, err := newRedisCache(getTestRedisConfig())
 	if err != nil {
 		t.Fatal(err)
@@ -148,6 +159,8 @@ func TestRedisCache_SetAsync_LargeData(t *testing.T) {
 
 // TestRedisCache_SetAsync_LargeNumberItems asynchronously sets lots of items exceeding channel size.
 func TestRedisCache_SetAsync_LargeNumberItems(t *testing.T) {
+	storage.SkipLocalTest(t)
+
 	cache, err := newRedisCache(getTestRedisConfig())
 	if err != nil {
 		t.Fatal(err)
@@ -194,28 +207,34 @@ func TestRedisCache_SetAsync_LargeNumberItems(t *testing.T) {
 
 // TestRedisCache_Timeout tests timout feature of redis client.
 func TestRedisCache_Timeout(t *testing.T) {
+	storage.SkipLocalTest(t)
+
 	go func() {
 		tcpAddr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:11234")
 		if err != nil {
-			t.Fatal(err)
+			t.Error(err)
+			return
 		}
 
 		listen, err := net.ListenTCP("tcp", tcpAddr)
 		if err != nil {
-			t.Fatal(err)
+			t.Error(err)
+			return
 		}
 		defer listen.Close()
 
 		for {
 			if err := listen.SetDeadline(time.Now().Add(10 * time.Second)); err != nil {
-				t.Fatal(err)
+				t.Error(err)
+				return
 			}
 			_, err := listen.AcceptTCP()
 			if err != nil {
 				if strings.Contains(err.Error(), "timeout") {
 					return
 				}
-				t.Fatal(err)
+				t.Error(err)
+				return
 			}
 		}
 	}()

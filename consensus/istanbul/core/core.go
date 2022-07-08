@@ -189,14 +189,14 @@ func (c *core) commit() {
 		}
 
 		if err := c.backend.Commit(proposal, committedSeals); err != nil {
-			c.current.UnlockHash() //Unlock block when insertion fails
+			c.current.UnlockHash() // Unlock block when insertion fails
 			c.sendNextRoundChange("commit failure")
 			return
 		}
 	} else {
 		// TODO-Klaytn never happen, but if proposal is nil, mining is not working.
 		logger.Error("istanbul.core current.Proposal is NULL")
-		c.current.UnlockHash() //Unlock block when insertion fails
+		c.current.UnlockHash() // Unlock block when insertion fails
 		c.sendNextRoundChange("commit failure. proposal is nil")
 		return
 	}
@@ -281,7 +281,7 @@ func (c *core) startNewRound(round *big.Int) {
 		// If we have pending request, propose pending request
 		if c.current.IsHashLocked() {
 			r := &istanbul.Request{
-				Proposal: c.current.Proposal(), //c.current.Proposal would be the locked proposal by previous proposer, see updateRoundState
+				Proposal: c.current.Proposal(), // c.current.Proposal would be the locked proposal by previous proposer, see updateRoundState
 			}
 			c.sendPreprepare(r)
 		} else if c.current.pendingRequest != nil {
@@ -421,4 +421,18 @@ func PrepareCommittedSeal(hash common.Hash) []byte {
 	buf.Write(hash.Bytes())
 	buf.Write([]byte{byte(msgCommit)})
 	return buf.Bytes()
+}
+
+// Minimum required number of consensus messages to proceed
+func requiredMessageCount(valSet istanbul.ValidatorSet) int {
+	size := valSet.Size()
+	switch size {
+	// in the certain cases we must receive the messages from all consensus nodes to ensure finality...
+	case 1, 2, 3:
+		return int(size)
+	case 6:
+		return 4 // when the number of valSet is 6 and return value is 2*F+1, the return value(int 3) is not safe. It should return 4 or more.
+	default:
+		return 2*valSet.F() + 1
+	}
 }

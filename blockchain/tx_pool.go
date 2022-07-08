@@ -33,6 +33,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/prque"
+	"github.com/klaytn/klaytn/consensus/misc"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/params"
@@ -103,6 +104,7 @@ type blockChain interface {
 type TxPoolConfig struct {
 	NoLocals           bool          // Whether local transaction handling should be disabled
 	AllowLocalAnchorTx bool          // if this is true, the txpool allow locally submitted anchor transactions
+	DenyRemoteTx       bool          // Denies remote transactions receiving from other peers
 	Journal            string        // Journal of local transactions to survive node restarts
 	JournalInterval    time.Duration // Time interval to regenerate the local transaction journal
 
@@ -117,7 +119,8 @@ type TxPoolConfig struct {
 	KeepLocals bool          // Disables removing timed-out local transactions
 	Lifetime   time.Duration // Maximum amount of time non-executable transaction are queued
 
-	NoAccountCreation bool // Whether account creation transactions should be disabled
+	NoAccountCreation            bool // Whether account creation transactions should be disabled
+	EnableSpamThrottlerAtRuntime bool // Enable txpool spam throttler at runtime
 }
 
 // DefaultTxPoolConfig contains the default configurations for the transaction
@@ -183,7 +186,7 @@ type TxPool struct {
 	locals  *accountSet // Set of local transaction to exempt from eviction rules
 	journal *txJournal  // Journal of local transaction to back up to disk
 
-	//TODO-Klaytn
+	// TODO-Klaytn
 	txMu sync.RWMutex
 
 	pending map[common.Address]*txList         // All currently processable transactions
@@ -195,6 +198,10 @@ type TxPool struct {
 	wg sync.WaitGroup // for shutdown sync
 
 	txMsgCh chan types.Transactions
+
+	eip2718 bool // Fork indicator whether we are using EIP-2718 type transactions.
+	eip1559 bool // Fork indicator whether we are using EIP-1559 type transactions.
+	kip71   bool // Fork indicator whether we are using KIP-71 type transactions.
 }
 
 // NewTxPool creates a new transaction pool to gather, sort and filter inbound
@@ -208,17 +215,15 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 		config:       config,
 		chainconfig:  chainconfig,
 		chain:        chain,
-		signer:       types.NewEIP155Signer(chainconfig.ChainID),
+		signer:       types.LatestSignerForChainID(chainconfig.ChainID),
 		pending:      make(map[common.Address]*txList),
 		queue:        make(map[common.Address]*txList),
 		beats:        make(map[common.Address]time.Time),
 		all:          make(map[common.Hash]*types.Transaction),
 		pendingNonce: make(map[common.Address]uint64),
 		chainHeadCh:  make(chan ChainHeadEvent, chainHeadChanSize),
-		// TODO-Klaytn We use ChainConfig.UnitPrice to initialize TxPool.gasPrice,
-		//         later we have to change this rule when governance of UnitPrice is determined.
-		gasPrice: new(big.Int).SetUint64(chainconfig.UnitPrice),
-		txMsgCh:  make(chan types.Transactions, txMsgChSize),
+		gasPrice:     new(big.Int).SetUint64(chainconfig.UnitPrice),
+		txMsgCh:      make(chan types.Transactions, txMsgChSize),
 	}
 	pool.locals = newAccountSet(pool.signer)
 	pool.priced = newTxPricedList(&pool.all)
@@ -231,7 +236,7 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 		if err := pool.journal.load(pool.AddLocals); err != nil {
 			logger.Error("Failed to load transaction journal", "err", err)
 		}
-		if err := pool.journal.rotate(pool.local()); err != nil {
+		if err := pool.journal.rotate(pool.local(), pool.signer); err != nil {
 			logger.Error("Failed to rotate transaction journal", "err", err)
 		}
 	}
@@ -242,6 +247,12 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 	pool.wg.Add(2)
 	go pool.loop()
 	go pool.handleTxMsg()
+
+	if config.EnableSpamThrottlerAtRuntime {
+		if err := pool.StartSpamThrottler(DefaultSpamThrottlerConfig); err != nil {
+			logger.Error("Failed to start spam throttler", "err", err)
+		}
+	}
 
 	return pool
 }
@@ -286,11 +297,11 @@ func (pool *TxPool) loop() {
 				head = ev.Block
 				pool.mu.Unlock()
 			}
-			// Be unsubscribed due to system stopped
+		// Be unsubscribed due to system stopped
 		case <-pool.chainHeadSub.Err():
 			return
 
-			// Handle stats reporting ticks
+		// Handle stats reporting ticks
 		case <-report.C:
 			pool.mu.RLock()
 			pending, queued := pool.stats()
@@ -304,7 +315,7 @@ func (pool *TxPool) loop() {
 				txPoolQueueGauge.Update(int64(queued))
 			}
 
-			// Handle inactive account transaction eviction
+		// Handle inactive account transaction eviction
 		case <-evict.C:
 			pool.mu.Lock()
 			for addr, beat := range pool.beats {
@@ -326,11 +337,11 @@ func (pool *TxPool) loop() {
 			}
 			pool.mu.Unlock()
 
-			// Handle local transaction journal rotation
+		// Handle local transaction journal rotation
 		case <-journal.C:
 			if pool.journal != nil {
 				pool.mu.Lock()
-				if err := pool.journal.rotate(pool.local()); err != nil {
+				if err := pool.journal.rotate(pool.local(), pool.signer); err != nil {
 					logger.Error("Failed to rotate local tx journal", "err", err)
 				}
 				pool.mu.Unlock()
@@ -369,33 +380,51 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 				rem = pool.chain.GetBlock(oldHead.Hash(), oldHead.Number.Uint64())
 				add = pool.chain.GetBlock(newHead.Hash(), newHead.Number.Uint64())
 			)
-			for rem.NumberU64() > add.NumberU64() {
-				discarded = append(discarded, rem.Transactions()...)
-				if rem = pool.chain.GetBlock(rem.ParentHash(), rem.NumberU64()-1); rem == nil {
-					logger.Error("Unrooted old chain seen by tx pool", "block", oldHead.Number, "hash", oldHead.Hash())
+			if rem == nil {
+				// This can happen if a setHead function is performed.
+				// In this case we can simply discard the old head from the chain, and replace with newhead.
+
+				// If newNum >= oldNum, then it's not a case of setHead.
+				if newNum >= oldNum {
+					logger.Error("Transaction pool reset with missing oldhead",
+						"old", oldHead.Hash(), "oldnum", oldNum, "new", newHead.Hash(), "newnum", newNum)
 					return
+				} else {
+					// When setHead is performed, then oldHead becomes bigger than newHead, since newHead becomes rewinded blockNumber.
+					// If that is the case, we don't have the lost transactions anymore, and
+					// there's nothing to add
+					logger.Warn("Skipping transaction reset caused by setHead",
+						"old", oldHead.Hash(), "oldnum", oldNum, "new", newHead.Hash(), "newnum", newNum)
 				}
+			} else {
+				for rem.NumberU64() > add.NumberU64() {
+					discarded = append(discarded, rem.Transactions()...)
+					if rem = pool.chain.GetBlock(rem.ParentHash(), rem.NumberU64()-1); rem == nil {
+						logger.Error("Unrooted old chain seen by tx pool", "block", oldHead.Number, "hash", oldHead.Hash())
+						return
+					}
+				}
+				for add.NumberU64() > rem.NumberU64() {
+					included = append(included, add.Transactions()...)
+					if add = pool.chain.GetBlock(add.ParentHash(), add.NumberU64()-1); add == nil {
+						logger.Error("Unrooted new chain seen by tx pool", "block", newHead.Number, "hash", newHead.Hash())
+						return
+					}
+				}
+				for rem.Hash() != add.Hash() {
+					discarded = append(discarded, rem.Transactions()...)
+					if rem = pool.chain.GetBlock(rem.ParentHash(), rem.NumberU64()-1); rem == nil {
+						logger.Error("Unrooted old chain seen by tx pool", "block", oldHead.Number, "hash", oldHead.Hash())
+						return
+					}
+					included = append(included, add.Transactions()...)
+					if add = pool.chain.GetBlock(add.ParentHash(), add.NumberU64()-1); add == nil {
+						logger.Error("Unrooted new chain seen by tx pool", "block", newHead.Number, "hash", newHead.Hash())
+						return
+					}
+				}
+				reinject = types.TxDifference(discarded, included)
 			}
-			for add.NumberU64() > rem.NumberU64() {
-				included = append(included, add.Transactions()...)
-				if add = pool.chain.GetBlock(add.ParentHash(), add.NumberU64()-1); add == nil {
-					logger.Error("Unrooted new chain seen by tx pool", "block", newHead.Number, "hash", newHead.Hash())
-					return
-				}
-			}
-			for rem.Hash() != add.Hash() {
-				discarded = append(discarded, rem.Transactions()...)
-				if rem = pool.chain.GetBlock(rem.ParentHash(), rem.NumberU64()-1); rem == nil {
-					logger.Error("Unrooted old chain seen by tx pool", "block", oldHead.Number, "hash", oldHead.Hash())
-					return
-				}
-				included = append(included, add.Transactions()...)
-				if add = pool.chain.GetBlock(add.ParentHash(), add.NumberU64()-1); add == nil {
-					logger.Error("Unrooted new chain seen by tx pool", "block", newHead.Number, "hash", newHead.Hash())
-					return
-				}
-			}
-			reinject = types.TxDifference(discarded, included)
 		}
 	}
 	// Initialize the internal state to the current head
@@ -415,8 +444,8 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	logger.Debug("Reinjecting stale transactions", "count", len(reinject))
 	senderCacher.recover(pool.signer, reinject)
 
-	//pool.mu.Lock()
-	//defer pool.mu.Unlock()
+	// pool.mu.Lock()
+	// defer pool.mu.Unlock()
 
 	pool.addTxsLocked(reinject, false)
 
@@ -439,6 +468,20 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	// Check the queue and move transactions over to the pending if possible
 	// or remove those that have become invalid
 	pool.promoteExecutables(nil)
+
+	// Update all fork indicator by next pending block number.
+	next := new(big.Int).Add(newHead.Number, big.NewInt(1))
+
+	// Enable Ethereum tx type transactions
+	pool.eip2718 = pool.chainconfig.IsEthTxTypeForkEnabled(next)
+	pool.eip1559 = pool.chainconfig.IsEthTxTypeForkEnabled(next)
+	// Enable dynamic base fee
+	pool.kip71 = pool.chainconfig.IsKIP71ForkEnabled(next)
+
+	// It need to update gas price of tx pool after kip71 hardfork
+	if pool.kip71 {
+		pool.gasPrice = misc.NextBlockBaseFee(newHead, pool.chainconfig)
+	}
 }
 
 // Stop terminates the transaction pool.
@@ -453,6 +496,8 @@ func (pool *TxPool) Stop() {
 	if pool.journal != nil {
 		pool.journal.close()
 	}
+
+	pool.StopSpamThrottler()
 	logger.Info("Transaction pool stopped")
 }
 
@@ -472,6 +517,10 @@ func (pool *TxPool) GasPrice() *big.Int {
 
 // SetGasPrice updates the gas price of the transaction pool for new transactions, and drops all old transactions.
 func (pool *TxPool) SetGasPrice(price *big.Int) {
+	if pool.kip71 {
+		logger.Info("Ignoring SetGasPrice after KIP71 fork")
+		return
+	}
 	if pool.gasPrice.Cmp(price) != 0 {
 		pool.mu.Lock()
 
@@ -536,8 +585,8 @@ func (pool *TxPool) Content() (map[common.Address]types.Transactions, map[common
 // account and sorted by nonce. The returned transaction set is a copy and can be
 // freely modified by calling code.
 func (pool *TxPool) Pending() (map[common.Address]types.Transactions, error) {
-	//pool.mu.Lock()
-	//defer pool.mu.Unlock()
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
 	pool.txMu.Lock()
 	defer pool.txMu.Unlock()
 
@@ -609,6 +658,15 @@ func (pool *TxPool) local() map[common.Address]types.Transactions {
 // validateTx checks whether a transaction is valid according to the consensus
 // rules and adheres to some heuristic limits of the local node (price and size).
 func (pool *TxPool) validateTx(tx *types.Transaction) error {
+	// Accept only legacy transactions until EIP-2718/2930 activates.
+	if !pool.eip2718 && tx.IsEthTypedTransaction() {
+		return ErrTxTypeNotSupported
+	}
+	// Reject dynamic fee transactions until EIP-1559 activates.
+	if !pool.eip1559 && tx.Type() == types.TxTypeEthereumDynamicFee {
+		return ErrTxTypeNotSupported
+	}
+
 	gasFeePayer := uint64(0)
 
 	// Check chain Id first.
@@ -617,9 +675,55 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	}
 
 	// NOTE-Klaytn Drop transactions with unexpected gasPrice
-	if pool.gasPrice.Cmp(tx.GasPrice()) != 0 {
-		logger.Trace("fail to validate unitprice", "Klaytn unitprice", pool.gasPrice, "tx unitprice", tx.GasPrice())
-		return ErrInvalidUnitPrice
+	// If the transaction type is DynamicFee tx, Compare transaction's GasFeeCap(MaxFeePerGas) and GasTipCap with tx pool's gasPrice to check to have same value.
+	if tx.Type() == types.TxTypeEthereumDynamicFee {
+		// Sanity check for extremely large numbers
+		if tx.GasTipCap().BitLen() > 256 {
+			return ErrTipVeryHigh
+		}
+
+		if tx.GasFeeCap().BitLen() > 256 {
+			return ErrFeeCapVeryHigh
+		}
+
+		// Ensure gasFeeCap is greater than or equal to gasTipCap.
+		if tx.GasFeeCap().Cmp(tx.GasTipCap()) < 0 {
+			return ErrTipAboveFeeCap
+		}
+
+		if pool.kip71 {
+			// Ensure transaction's gasFeeCap is greater than or equal to transaction pool's gasPrice(baseFee).
+			if pool.gasPrice.Cmp(tx.GasFeeCap()) > 0 {
+				logger.Trace("fail to validate maxFeePerGas", "pool.gasPrice", pool.gasPrice, "maxFeePerGas", tx.GasFeeCap())
+				return ErrFeeCapBelowBaseFee
+			}
+		} else {
+
+			if pool.gasPrice.Cmp(tx.GasTipCap()) != 0 {
+				logger.Trace("fail to validate maxPriorityFeePerGas", "unitprice", pool.gasPrice, "maxPriorityFeePerGas", tx.GasFeeCap())
+				return ErrInvalidGasTipCap
+			}
+
+			if pool.gasPrice.Cmp(tx.GasFeeCap()) != 0 {
+				logger.Trace("fail to validate maxFeePerGas", "unitprice", pool.gasPrice, "maxFeePerGas", tx.GasTipCap())
+				return ErrInvalidGasFeeCap
+			}
+		}
+
+	} else {
+		if pool.kip71 {
+			if pool.gasPrice.Cmp(tx.GasPrice()) > 0 {
+				// Ensure transaction's gasPrice is greater than or equal to transaction pool's gasPrice(baseFee).
+				logger.Trace("fail to validate gasprice", "pool.gasPrice", pool.gasPrice, "tx.gasPrice", tx.GasPrice())
+				return ErrGasPriceBelowBaseFee
+			}
+		} else {
+			// Unitprice policy before kip71 hardfork
+			if pool.gasPrice.Cmp(tx.GasPrice()) != 0 {
+				logger.Trace("fail to validate unitprice", "unitPrice", pool.gasPrice, "txUnitPrice", tx.GasPrice())
+				return ErrInvalidUnitPrice
+			}
+		}
 	}
 
 	// Heuristic limit, reject transactions over 32KB to prevent DOS attacks
@@ -684,6 +788,13 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 				logger.Trace("[tx_pool] insufficient funds for cost(gas * price)", "feePayer", feePayer, "balance", feePayerBalance, "fee", tx.Fee())
 				return ErrInsufficientFundsFeePayer
 			}
+		}
+		// additional balance check in case of sender = feepayer
+		// since a single account has to bear the both cost(feepayer_cost + sender_cost),
+		// it is necessary to check whether the balance is equal to the sum of the cost.
+		if from == feePayer && senderBalance.Cmp(tx.Cost()) < 0 {
+			logger.Trace("[tx_pool] insufficient funds for cost(gas * price + value)", "from", from, "balance", senderBalance, "cost", tx.Cost())
+			return ErrInsufficientFundsFrom
 		}
 	} else {
 		// balance check for non-fee-delegated tx
@@ -799,7 +910,7 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 	from, _ := types.Sender(pool.signer, tx) // already validated
 	if list := pool.pending[from]; list != nil && list.Overlaps(tx) {
 		// Nonce already pending, check if required price bump is met
-		inserted, old := list.Add(tx, pool.config.PriceBump)
+		inserted, old := list.Add(tx, pool.config.PriceBump, pool.kip71)
 		if !inserted {
 			pendingDiscardCounter.Inc(1)
 			return false, ErrAlreadyNonceExistInPool
@@ -845,7 +956,7 @@ func (pool *TxPool) enqueueTx(hash common.Hash, tx *types.Transaction) (bool, er
 	if pool.queue[from] == nil {
 		pool.queue[from] = newTxList(false)
 	}
-	inserted, old := pool.queue[from].Add(tx, pool.config.PriceBump)
+	inserted, old := pool.queue[from].Add(tx, pool.config.PriceBump, pool.kip71)
 	if !inserted {
 		// An older transaction was better, discard this
 		queuedDiscardCounter.Inc(1)
@@ -889,7 +1000,7 @@ func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *types.T
 	}
 	list := pool.pending[addr]
 
-	inserted, old := list.Add(tx, pool.config.PriceBump)
+	inserted, old := list.Add(tx, pool.config.PriceBump, pool.kip71)
 	if !inserted {
 		// An older transaction was better, discard this
 		delete(pool.all, hash)
@@ -920,8 +1031,117 @@ func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *types.T
 // HandleTxMsg transfers transactions to a channel where handleTxMsg calls AddRemotes
 // to handle them. This is made not to wait from the results from TxPool.AddRemotes.
 func (pool *TxPool) HandleTxMsg(txs types.Transactions) {
+	if pool.config.DenyRemoteTx {
+		return
+	}
+
+	// Filter spam txs based on to-address of failed txs
+	spamThrottler := GetSpamThrottler()
+	if spamThrottler != nil {
+		pool.mu.RLock()
+		poolSize := uint64(len(pool.all))
+		pool.mu.RUnlock()
+
+		// Activate spam throttler when pool has enough txs
+		if poolSize > uint64(spamThrottler.config.ActivateTxPoolSize) {
+			allowTxs, throttleTxs := spamThrottler.classifyTxs(txs)
+
+			for _, tx := range throttleTxs {
+				select {
+				case spamThrottler.throttleCh <- tx:
+				default:
+					logger.Trace("drop a tx when throttleTxs channel is full", "txHash", tx.Hash())
+					throttlerDropCount.Inc(1)
+				}
+			}
+
+			txs = allowTxs
+		}
+	}
+
+	// TODO-Klaytn: Consider removing the next line and move the above logic to `addTx` or `AddRemotes`
 	senderCacher.recover(pool.signer, txs)
 	pool.txMsgCh <- txs
+}
+
+func (pool *TxPool) throttleLoop(spamThrottler *throttler) {
+	ticker := time.Tick(time.Second)
+	throttleNum := int(spamThrottler.config.ThrottleTPS)
+
+	for {
+		select {
+		case <-spamThrottler.quitCh:
+			logger.Info("Stop spam throttler loop")
+			return
+
+		case <-ticker:
+			txs := types.Transactions{}
+
+			iterNum := len(spamThrottler.throttleCh)
+			if iterNum > throttleNum {
+				iterNum = throttleNum
+			}
+
+			for i := 0; i < iterNum; i++ {
+				tx := <-spamThrottler.throttleCh
+				txs = append(txs, tx)
+			}
+
+			if len(txs) > 0 {
+				pool.AddRemotes(txs)
+			}
+		}
+	}
+}
+
+func (pool *TxPool) StartSpamThrottler(conf *ThrottlerConfig) error {
+	spamThrottlerMu.Lock()
+	defer spamThrottlerMu.Unlock()
+
+	if spamThrottler != nil {
+		return errors.New("spam throttler was already running")
+	}
+
+	if conf == nil {
+		conf = DefaultSpamThrottlerConfig
+	}
+
+	if err := validateConfig(conf); err != nil {
+		return err
+	}
+
+	t := &throttler{
+		config:     conf,
+		candidates: make(map[common.Address]int),
+		throttled:  make(map[common.Address]int),
+		allowed:    make(map[common.Address]bool),
+		mu:         new(sync.RWMutex),
+		threshold:  conf.InitialThreshold,
+		throttleCh: make(chan *types.Transaction, conf.ThrottleTPS*5),
+		quitCh:     make(chan struct{}),
+	}
+
+	go pool.throttleLoop(t)
+
+	spamThrottler = t
+	logger.Info("Start spam throttler", "config", *conf)
+	return nil
+}
+
+func (pool *TxPool) StopSpamThrottler() {
+	spamThrottlerMu.Lock()
+	defer spamThrottlerMu.Unlock()
+
+	if spamThrottler != nil {
+		close(spamThrottler.quitCh)
+	}
+
+	spamThrottler = nil
+	candidateSizeGauge.Update(0)
+	throttledSizeGauge.Update(0)
+	allowedSizeGauge.Update(0)
+	throttlerUpdateTimeGauge.Update(0)
+	throttlerDropCount.Clear()
 }
 
 // handleTxMsg calls TxPool.AddRemotes by retrieving transactions from TxPool.txMsgCh.
@@ -946,7 +1166,9 @@ func (pool *TxPool) AddLocal(tx *types.Transaction) error {
 		return errNotAllowedAnchoringTx
 	}
 
+	pool.mu.RLock()
 	poolSize := uint64(len(pool.all))
+	pool.mu.RUnlock()
 	if poolSize >= pool.config.ExecSlotsAll+pool.config.NonExecSlotsAll {
 		return fmt.Errorf("txpool is full: %d", poolSize)
 	}
@@ -978,7 +1200,9 @@ func (pool *TxPool) AddRemotes(txs []*types.Transaction) []error {
 // If given transactions exceed the capacity of TxPool, it slices the given transactions
 // so it can fit into TxPool's capacity.
 func (pool *TxPool) checkAndAddTxs(txs []*types.Transaction, local bool) []error {
+	pool.mu.RLock()
 	poolSize := uint64(len(pool.all))
+	pool.mu.RUnlock()
 	poolCapacity := int(pool.config.ExecSlotsAll + pool.config.NonExecSlotsAll - poolSize)
 	numTxs := len(txs)
 
@@ -1163,7 +1387,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 			pool.priced.Removed()
 		}
 		// Drop all transactions that are too costly (low balance)
-		drops, _ := list.Filter(pool.getBalance(addr), pool)
+		drops, _ := list.Filter(addr, pool)
 		for _, tx := range drops {
 			hash := tx.Hash()
 			logger.Trace("Removed unpayable queued transaction", "hash", hash)
@@ -1173,13 +1397,20 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 		}
 
 		// Gather all executable transactions and promote them
-		for _, tx := range list.Ready(pool.getPendingNonce(addr)) {
+		var readyTxs types.Transactions
+		if pool.kip71 {
+			readyTxs = list.ReadyWithGasPrice(pool.getPendingNonce(addr), pool.gasPrice)
+		} else {
+			readyTxs = list.Ready(pool.getPendingNonce(addr))
+		}
+		for _, tx := range readyTxs {
 			hash := tx.Hash()
 			if pool.promoteTx(addr, hash, tx) {
 				logger.Trace("Promoting queued transaction", "hash", hash)
 				promoted = append(promoted, tx)
 			}
 		}
+
 		// Drop all transactions over the allowed limit
 		if !pool.locals.contains(addr) {
 			for _, tx := range list.Cap(int(pool.config.NonExecSlotsAccount)) {
@@ -1336,7 +1567,7 @@ func (pool *TxPool) demoteUnexecutables() {
 		// The logic below loosely checks the tx count for the efficiency and the simplicity.
 		if cnt < demoteUnexecutablesFullValidationTxLimit {
 			cnt += list.Len()
-			drops, invalids = list.Filter(pool.getBalance(addr), pool)
+			drops, invalids = list.Filter(addr, pool)
 		} else {
 			drops, invalids = list.FilterUnexecutable()
 		}
@@ -1361,6 +1592,25 @@ func (pool *TxPool) demoteUnexecutables() {
 				hash := tx.Hash()
 				logger.Error("Demoting invalidated transaction", "hash", hash)
 				pool.enqueueTx(hash, tx)
+			}
+		}
+
+		// Enqueue transaction if gasPrice of transaction is lower than gasPrice of txPool.
+		// All transactions with a nonce greater than enqueued transaction also stored queue.
+		if pool.kip71 && list.Len() > 0 {
+			for _, tx := range list.Flatten() {
+				hash := tx.Hash()
+				if tx.GasPrice().Cmp(pool.gasPrice) < 0 {
+					logger.Trace("Demoting the tx that is lower than the baseFee and those greater than the nonce of the tx.", "txhash", hash)
+					removed, invalids := list.Remove(tx) // delete all transactions satisfying the nonce value > tx.Nonce()
+					if removed {
+						for _, invalidTx := range invalids {
+							pool.enqueueTx(invalidTx.Hash(), invalidTx)
+						}
+						pool.enqueueTx(hash, tx)
+					}
+					break
+				}
 			}
 		}
 

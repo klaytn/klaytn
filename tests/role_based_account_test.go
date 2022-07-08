@@ -29,6 +29,7 @@ import (
 	"github.com/klaytn/klaytn/common/profile"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/kerrors"
+	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
 )
@@ -60,9 +61,7 @@ func genTestKeys(len int) []*ecdsa.PrivateKey {
 // 4. Update tx key using colin.UpdateKeys.
 // 5. Transfer value using updated colin.TxKeys.
 func TestRoleBasedAccount(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
@@ -110,7 +109,7 @@ func TestRoleBasedAccount(t *testing.T) {
 		AccKey:     accKey,
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// 0. Transfer (reservoir -> `colin`) using a legacy transaction.
@@ -286,9 +285,7 @@ func TestRoleBasedAccount(t *testing.T) {
 // 2. Update key to RoleBasedKey. If anyone is AccountKeyNil, it should fail. First nil key.
 // 3. Update key to RoleBasedKey. If anyone is AccountKeyNil, it should fail. Second nil key.
 func TestAccountUpdateRoleBasedNil(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
@@ -323,7 +320,7 @@ func TestAccountUpdateRoleBasedNil(t *testing.T) {
 		fmt.Println("colinAddr = ", colin.Addr.String())
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// 1. Create an account colin using TxTypeValueTransfer.
@@ -417,9 +414,7 @@ func TestAccountUpdateRoleBasedNil(t *testing.T) {
 // 5. Test RoleTransfer of the RoleBasedKey with invalid signature
 // 6. Test RoleTransfer of the RoleBasedKey with invalid number of signatures
 func TestAccountUpdateRoleBasedLegacy(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
@@ -454,7 +449,7 @@ func TestAccountUpdateRoleBasedLegacy(t *testing.T) {
 		fmt.Println("anonAddr = ", anon.Addr.String())
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// RoleBasedKey having LegacyKeys for all roles
@@ -630,9 +625,7 @@ func TestAccountUpdateRoleBasedLegacy(t *testing.T) {
 // 2. Update key to RoleBasedKey with four roles. It should fail.
 // 3. Update key to RoleBasedKey with zero role. It should fail.
 func TestAccountUpdateRoleBasedWrongLength(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
@@ -667,7 +660,7 @@ func TestAccountUpdateRoleBasedWrongLength(t *testing.T) {
 		fmt.Println("colinAddr = ", colin.Addr.String())
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// 1. Create an account colin using TxTypeValueTransfer.
@@ -757,9 +750,7 @@ func TestAccountUpdateRoleBasedWrongLength(t *testing.T) {
 // 5. Inserting a tx signed by old key into the pool. It should fail.
 // 6. Inserting a tx signed by new key into the pool. It should pass.
 func TestAccountUpdateRoleBasedTransition(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
@@ -794,7 +785,7 @@ func TestAccountUpdateRoleBasedTransition(t *testing.T) {
 		fmt.Println("colinAddr = ", colin.Addr.String())
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// 1. Create an account colin using TxTypeValueTransfer.
@@ -943,9 +934,7 @@ func TestAccountUpdateRoleBasedTransition(t *testing.T) {
 // 2. Update to newKey using TxTypeAccountUpdate
 // 3. Update back to oldKey using TxTypeAccountUpdate
 func TestAccountUpdateToRoleBasedToPub(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
@@ -980,7 +969,7 @@ func TestAccountUpdateToRoleBasedToPub(t *testing.T) {
 		fmt.Println("colinAddr = ", colin.Addr.String())
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// 1. Create an account colin using TxTypeValueTransfer.

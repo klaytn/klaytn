@@ -57,11 +57,10 @@ type GrafanaFile struct {
 	name string
 }
 
-var (
-	SetupCommand = cli.Command{
-		Name:  "setup",
-		Usage: "Generate klaytn CN's init files",
-		Description: `This tool helps generate:
+var SetupCommand = cli.Command{
+	Name:  "setup",
+	Usage: "Generate klaytn CN's init files",
+	Description: `This tool helps generate:
 		* Genesis Block (genesis.json)
 		* Static nodes for all CNs(Consensus Node)
 		* CN details
@@ -72,67 +71,71 @@ var (
 Args :
 		type : [local | remote | deploy | docker (default)]
 `,
-		Action: gen,
-		Flags: []cli.Flag{
-			cypressTestFlag,
-			cypressFlag,
-			baobabTestFlag,
-			baobabFlag,
-			serviceChainFlag,
-			serviceChainTestFlag,
-			cliqueFlag,
-			numOfCNsFlag,
-			numOfValidatorsFlag,
-			numOfPNsFlag,
-			numOfENsFlag,
-			numOfSCNsFlag,
-			numOfSPNsFlag,
-			numOfSENsFlag,
-			numOfTestKeyFlag,
-			chainIDFlag,
-			serviceChainIDFlag,
-			unitPriceFlag,
-			deriveShaImplFlag,
-			fundingAddrFlag,
-			outputPathFlag,
-			dockerImageIdFlag,
-			fasthttpFlag,
-			networkIdFlag,
-			nografanaFlag,
-			useTxGenFlag,
-			txGenRateFlag,
-			txGenThFlag,
-			txGenConnFlag,
-			txGenDurFlag,
-			rpcPortFlag,
-			wsPortFlag,
-			p2pPortFlag,
-			dataDirFlag,
-			logDirFlag,
-			governanceFlag,
-			govModeFlag,
-			governingNodeFlag,
-			rewardMintAmountFlag,
-			rewardRatioFlag,
-			rewardGiniCoeffFlag,
-			rewardStakingFlag,
-			rewardProposerFlag,
-			rewardMinimumStakeFlag,
-			rewardDeferredTxFeeFlag,
-			istEpochFlag,
-			istProposerPolicyFlag,
-			istSubGroupFlag,
-			cliqueEpochFlag,
-			cliquePeriodFlag,
-		},
-		ArgsUsage: "type",
-	}
-)
+	Action: gen,
+	Flags: []cli.Flag{
+		cypressTestFlag,
+		cypressFlag,
+		baobabTestFlag,
+		baobabFlag,
+		serviceChainFlag,
+		serviceChainTestFlag,
+		cliqueFlag,
+		numOfCNsFlag,
+		numOfValidatorsFlag,
+		numOfPNsFlag,
+		numOfENsFlag,
+		numOfSCNsFlag,
+		numOfSPNsFlag,
+		numOfSENsFlag,
+		numOfTestKeyFlag,
+		chainIDFlag,
+		serviceChainIDFlag,
+		unitPriceFlag,
+		deriveShaImplFlag,
+		fundingAddrFlag,
+		outputPathFlag,
+		dockerImageIdFlag,
+		fasthttpFlag,
+		networkIdFlag,
+		nografanaFlag,
+		useTxGenFlag,
+		txGenRateFlag,
+		txGenThFlag,
+		txGenConnFlag,
+		txGenDurFlag,
+		rpcPortFlag,
+		wsPortFlag,
+		p2pPortFlag,
+		dataDirFlag,
+		logDirFlag,
+		governanceFlag,
+		govModeFlag,
+		governingNodeFlag,
+		rewardMintAmountFlag,
+		rewardRatioFlag,
+		rewardGiniCoeffFlag,
+		rewardStakingFlag,
+		rewardProposerFlag,
+		rewardMinimumStakeFlag,
+		rewardDeferredTxFeeFlag,
+		istEpochFlag,
+		istProposerPolicyFlag,
+		istSubGroupFlag,
+		cliqueEpochFlag,
+		cliquePeriodFlag,
+		istanbulCompatibleBlockNumberFlag,
+		londonCompatibleBlockNumberFlag,
+		ethTxTypeCompatibleBlockNumberFlag,
+		kip71CompatibleBlockNumberFlag,
+	},
+	ArgsUsage: "type",
+}
 
 const (
 	baobabOperatorAddress = "0x79deccfacd0599d3166eb76972be7bb20f51b46f"
 	baobabOperatorKey     = "199fd187fdb2ce5f577797e1abaf4dd50e62275949c021f0112be40c9721e1a2"
 )
+
 const (
 	DefaultTcpPort uint16 = 32323
 	TypeNotDefined        = -1
@@ -193,6 +196,22 @@ func genRewardConfig(ctx *cli.Context) *params.RewardConfig {
 	}
 }
 
+func genKIP71Config(ctx *cli.Context) *params.KIP71Config {
+	lowerBoundBaseFee := ctx.Uint64(kip71LowerBoundBaseFeeFlag.Name)
+	upperBoundBaseFee := ctx.Uint64(kip71UpperBoundBaseFeeFlag.Name)
+	gasTarget := ctx.Uint64(kip71GasTarget.Name)
+	maxBlockGasUsedForBaseFee := ctx.Uint64(kip71MaxBlockGasUsedForBaseFee.Name)
+	baseFeeDenominator := ctx.Uint64(kip71BaseFeeDenominator.Name)
+
+	return &params.KIP71Config{
+		LowerBoundBaseFee:         lowerBoundBaseFee,         // lower bound of the base fee
+		UpperBoundBaseFee:         upperBoundBaseFee,         // upper bound of the base fee
+		GasTarget:                 gasTarget,                 // standard gas usage for whether to raise or lower the base fee
+		MaxBlockGasUsedForBaseFee: maxBlockGasUsedForBaseFee, // maximum gas that can be used to calculate the base fee
+		BaseFeeDenominator:        baseFeeDenominator,        // scaling factor to adjust the gap between used and target gas
+	}
+}
+
 func genIstanbulConfig(ctx *cli.Context) *params.IstanbulConfig {
 	epoch := ctx.Uint64(istEpochFlag.Name)
 	policy := ctx.Uint64(istProposerPolicyFlag.Name)
@@ -215,6 +234,7 @@ func genGovernanceConfig(ctx *cli.Context) *params.GovernanceConfig {
 		GoverningNode:  common.HexToAddress(governingNode),
 		GovernanceMode: govMode,
 		Reward:         genRewardConfig(ctx),
+		KIP71:          genKIP71Config(ctx),
 	}
 }
 
@@ -432,7 +452,7 @@ func genBaobabTestGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Gen
 }
 
 func RandStringRunes(n int) string {
-	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789~!@#$%^&*()_+{}|[]")
+	letterRunes := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789~!@#$%^&*()_+{}|[]")
 
 	rand.Seed(time.Now().UnixNano())
 
@@ -478,28 +498,38 @@ func gen(ctx *cli.Context) error {
 	privKeys, nodeKeys, nodeAddrs := istcommon.GenerateKeys(cnNum)
 	testPrivKeys, testKeys, testAddrs := istcommon.GenerateKeys(numTestAccs)
 
-	var genesisJsonBytes []byte
+	var (
+		genesisJson      *blockchain.Genesis
+		genesisJsonBytes []byte
+	)
 
 	validatorNodeAddrs := make([]common.Address, numValidators)
 	copy(validatorNodeAddrs, nodeAddrs[:numValidators])
 
 	if cypressTest {
-		genesisJsonBytes, _ = json.MarshalIndent(genCypressTestGenesis(validatorNodeAddrs, testAddrs), "", "    ")
+		genesisJson = genCypressTestGenesis(validatorNodeAddrs, testAddrs)
 	} else if cypress {
-		genesisJsonBytes, _ = json.MarshalIndent(genCypressGenesis(validatorNodeAddrs, testAddrs), "", "    ")
+		genesisJson = genCypressGenesis(validatorNodeAddrs, testAddrs)
 	} else if baobabTest {
-		genesisJsonBytes, _ = json.MarshalIndent(genBaobabTestGenesis(validatorNodeAddrs, testAddrs), "", "    ")
+		genesisJson = genBaobabTestGenesis(validatorNodeAddrs, testAddrs)
 	} else if baobab {
-		genesisJsonBytes, _ = json.MarshalIndent(genBaobabGenesis(validatorNodeAddrs, testAddrs), "", "    ")
+		genesisJson = genBaobabGenesis(validatorNodeAddrs, testAddrs)
 	} else if cliqueFlag {
-		genesisJsonBytes, _ = json.MarshalIndent(genCliqueGenesis(ctx, validatorNodeAddrs, testAddrs, chainid), "", "    ")
+		genesisJson = genCliqueGenesis(ctx, validatorNodeAddrs, testAddrs, chainid)
 	} else if serviceChain {
-		genesisJsonBytes, _ = json.MarshalIndent(genServiceChainGenesis(validatorNodeAddrs, testAddrs), "", "    ")
+		genesisJson = genServiceChainGenesis(validatorNodeAddrs, testAddrs)
 	} else if serviceChainTest {
-		genesisJsonBytes, _ = json.MarshalIndent(genServiceChainTestGenesis(validatorNodeAddrs, testAddrs), "", "    ")
+		genesisJson = genServiceChainTestGenesis(validatorNodeAddrs, testAddrs)
 	} else {
-		genesisJsonBytes, _ = json.MarshalIndent(genIstanbulGenesis(ctx, validatorNodeAddrs, testAddrs, chainid), "", "    ")
+		genesisJson = genIstanbulGenesis(ctx, validatorNodeAddrs, testAddrs, chainid)
 	}
+
+	genesisJson.Config.IstanbulCompatibleBlock = big.NewInt(ctx.Int64(istanbulCompatibleBlockNumberFlag.Name))
+	genesisJson.Config.LondonCompatibleBlock = big.NewInt(ctx.Int64(londonCompatibleBlockNumberFlag.Name))
+	genesisJson.Config.EthTxTypeCompatibleBlock = big.NewInt(ctx.Int64(ethTxTypeCompatibleBlockNumberFlag.Name))
+	genesisJson.Config.KIP71CompatibleBlock = big.NewInt(ctx.Int64(kip71CompatibleBlockNumberFlag.Name))
+
+	genesisJsonBytes, _ = json.MarshalIndent(genesisJson, "", "    ")
 	genValidatorKeystore(privKeys)
 	lastIssuedPortNum = uint16(ctx.Int(p2pPortFlag.Name))
 
@@ -618,7 +648,8 @@ func downLoadGrafanaJson() {
 }
 
 func writeCNInfoKey(num int, nodeAddrs []common.Address, nodeKeys []string, privKeys []*ecdsa.PrivateKey,
-	genesisJsonBytes []byte) {
+	genesisJsonBytes []byte,
+) {
 	const DirCommon = "common"
 	WriteFile(genesisJsonBytes, DirCommon, "genesis.json")
 
@@ -665,7 +696,8 @@ func writePrometheusConfig(cnNum int, pnNum int) {
 }
 
 func writeNodeFiles(isWorkOnSingleHost bool, num int, pnum int, nodeAddrs []common.Address, nodeKeys []string,
-	privKeys []*ecdsa.PrivateKey, genesisJsonBytes []byte) {
+	privKeys []*ecdsa.PrivateKey, genesisJsonBytes []byte,
+) {
 	WriteFile(genesisJsonBytes, DirScript, "genesis.json")
 
 	validators := makeValidators(num, isWorkOnSingleHost, nodeAddrs, nodeKeys, privKeys)
@@ -708,7 +740,8 @@ func filterNodeInfo(validatorInfos []*ValidatorInfo) []string {
 }
 
 func makeValidators(num int, isWorkOnSingleHost bool, nodeAddrs []common.Address, nodeKeys []string,
-	keys []*ecdsa.PrivateKey) []*ValidatorInfo {
+	keys []*ecdsa.PrivateKey,
+) []*ValidatorInfo {
 	var validatorPort uint16
 	var validators []*ValidatorInfo
 	for i := 0; i < num; i++ {
@@ -736,7 +769,8 @@ func makeValidators(num int, isWorkOnSingleHost bool, nodeAddrs []common.Address
 }
 
 func makeValidatorsWithIp(num int, isWorkOnSingleHost bool, nodeAddrs []common.Address, nodeKeys []string,
-	keys []*ecdsa.PrivateKey, networkIds []string) []*ValidatorInfo {
+	keys []*ecdsa.PrivateKey, networkIds []string,
+) []*ValidatorInfo {
 	var validatorPort uint16
 	var validators []*ValidatorInfo
 	for i := 0; i < num; i++ {
@@ -969,7 +1003,7 @@ func WriteFile(content []byte, parentFolder string, fileName string) {
 }
 
 func findGenType(ctx *cli.Context) int {
-	var genType = TypeNotDefined
+	genType := TypeNotDefined
 	if len(ctx.Args()) >= 1 {
 		for i, t := range Types {
 			if t == ctx.Args()[0] {

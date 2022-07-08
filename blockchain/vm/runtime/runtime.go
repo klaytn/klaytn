@@ -25,9 +25,8 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/klaytn/klaytn/blockchain/types"
-
 	"github.com/klaytn/klaytn/blockchain/state"
+	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
@@ -49,6 +48,7 @@ type Config struct {
 	Value       *big.Int
 	Debug       bool
 	EVMConfig   vm.Config
+	BaseFee     *big.Int
 
 	State     *state.StateDB
 	GetHashFn func(n uint64) common.Hash
@@ -58,7 +58,10 @@ type Config struct {
 func setDefaults(cfg *Config) {
 	if cfg.ChainConfig == nil {
 		cfg.ChainConfig = &params.ChainConfig{
-			ChainID: big.NewInt(1),
+			ChainID:                  big.NewInt(1),
+			IstanbulCompatibleBlock:  new(big.Int),
+			LondonCompatibleBlock:    new(big.Int),
+			EthTxTypeCompatibleBlock: new(big.Int),
 		}
 	}
 
@@ -85,6 +88,9 @@ func setDefaults(cfg *Config) {
 			return common.BytesToHash(crypto.Keccak256([]byte(new(big.Int).SetUint64(n).String())))
 		}
 	}
+	if cfg.BaseFee == nil {
+		cfg.BaseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
+	}
 }
 
 // Execute executes the code using the input as call data during the execution.
@@ -100,7 +106,7 @@ func Execute(code, input []byte, cfg *Config) ([]byte, *state.StateDB, error) {
 
 	if cfg.State == nil {
 		memDBManager := database.NewMemoryDBManager()
-		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(memDBManager))
+		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(memDBManager), nil)
 	}
 	var (
 		address = common.BytesToAddress([]byte("contract"))
@@ -131,7 +137,7 @@ func Create(input []byte, cfg *Config) ([]byte, common.Address, uint64, error) {
 
 	if cfg.State == nil {
 		memDBManager := database.NewMemoryDBManager()
-		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(memDBManager))
+		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(memDBManager), nil)
 	}
 	var (
 		vmenv  = NewEnv(cfg)

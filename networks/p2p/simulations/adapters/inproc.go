@@ -359,7 +359,6 @@ func (sn *SimNode) GetPeerCount() int {
 }
 
 func (n *SimNode) DisconnectPeer(destID discover.NodeID) {
-
 }
 
 func setSocketBuffer(conn net.Conn, socketReadBuffer int, socketWriteBuffer int) error {

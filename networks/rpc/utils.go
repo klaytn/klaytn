@@ -240,6 +240,10 @@ func sanitizeTimeouts(timeouts HTTPTimeouts) HTTPTimeouts {
 		logger.Warn("Sanitizing invalid HTTP idle timeout", "provided", timeouts.IdleTimeout, "updated", DefaultHTTPTimeouts.IdleTimeout)
 		timeouts.IdleTimeout = DefaultHTTPTimeouts.IdleTimeout
 	}
+	if timeouts.ExecutionTimeout < time.Second {
+		logger.Warn("Sanitizing invalid HTTP execution timeout", "provided", timeouts.ExecutionTimeout, "updated", DefaultHTTPTimeouts.ExecutionTimeout)
+		timeouts.ExecutionTimeout = DefaultHTTPTimeouts.ExecutionTimeout
+	}
 
 	return timeouts
 }

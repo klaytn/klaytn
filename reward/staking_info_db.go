@@ -47,7 +47,7 @@ func getStakingInfoFromDB(blockNum uint64) (*StakingInfo, error) {
 	return stakingInfo, nil
 }
 
-func addStakingInfoToDB(stakingInfo *StakingInfo) error {
+func AddStakingInfoToDB(stakingInfo *StakingInfo) error {
 	if stakingManager.stakingInfoDB == nil {
 		return ErrStakingDBNotSet
 	}

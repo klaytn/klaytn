@@ -202,10 +202,11 @@ func (s *PublicTransactionPoolAPI) GetRawTransactionByHash(ctx context.Context, 
 
 // RpcOutputReceipt converts a receipt to the RPC output with the associated information regarding to the
 // block in which the receipt is included, the transaction that outputs the receipt, and the receipt itself.
-func RpcOutputReceipt(tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64, receipt *types.Receipt) map[string]interface{} {
+func RpcOutputReceipt(header *types.Header, tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64, receipt *types.Receipt) map[string]interface{} {
 	if tx == nil || receipt == nil {
 		return nil
 	}
+
 	fields := newRPCTransaction(tx, blockHash, blockNumber, index)
 
 	if receipt.Status != types.ReceiptStatusSuccessful {
@@ -218,6 +219,8 @@ func RpcOutputReceipt(tx *types.Transaction, blockHash common.Hash, blockNumber 
 	fields["logsBloom"] = receipt.Bloom
 	fields["gasUsed"] = hexutil.Uint64(receipt.GasUsed)
 
+	fields["effectiveGasPrice"] = hexutil.Uint64(tx.EffectiveGasPrice(header).Uint64())
+
 	if receipt.Logs == nil {
 		fields["logs"] = [][]*types.Log{}
 	} else {
@@ -228,7 +231,6 @@ func RpcOutputReceipt(tx *types.Transaction, blockHash common.Hash, blockNumber 
 		fields["contractAddress"] = receipt.ContractAddress
 	} else {
 		fields["contractAddress"] = nil
-
 	}
 
 	// Rename field name `hash` to `transactionHash` since this function returns a JSON object of a receipt.
@@ -248,12 +250,24 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceiptBySenderTxHash(ctx conte
 
 // GetTransactionReceipt returns the transaction receipt for the given transaction hash.
 func (s *PublicTransactionPoolAPI) GetTransactionReceipt(ctx context.Context, hash common.Hash) (map[string]interface{}, error) {
-	return RpcOutputReceipt(s.b.GetTxLookupInfoAndReceipt(ctx, hash)), nil
+	tx, blockHash, blockNumber, index, receipt := s.b.GetTxLookupInfoAndReceipt(ctx, hash)
+	return s.getTransactionReceipt(ctx, tx, blockHash, blockNumber, index, receipt)
 }
 
 // GetTransactionReceiptInCache returns the transaction receipt for the given transaction hash.
 func (s *PublicTransactionPoolAPI) GetTransactionReceiptInCache(ctx context.Context, hash common.Hash) (map[string]interface{}, error) {
-	return RpcOutputReceipt(s.b.GetTxLookupInfoAndReceiptInCache(hash)), nil
+	tx, blockHash, blockNumber, index, receipt := s.b.GetTxLookupInfoAndReceiptInCache(hash)
+	return s.getTransactionReceipt(ctx, tx, blockHash, blockNumber, index, receipt)
+}
+
+// getTransactionReceipt returns the transaction receipt for the given transaction hash.
+func (s *PublicTransactionPoolAPI) getTransactionReceipt(ctx context.Context, tx *types.Transaction, blockHash common.Hash,
+	blockNumber uint64, index uint64, receipt *types.Receipt,
+) (map[string]interface{}, error) {
+	// No error handling is required here.
+	// Header is checked in the following RpcOutputReceipt function
+	header, _ := s.b.HeaderByHash(ctx, blockHash)
+	return RpcOutputReceipt(header, tx, blockHash, blockNumber, index, receipt), nil
 }
 
 // sign is a helper function that signs a transaction with the private key of the given address.
@@ -286,8 +300,8 @@ var submitTxCount = 0
 
 // submitTransaction is a helper function that submits tx to txPool and logs a message.
 func submitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (common.Hash, error) {
-	//submitTxCount++
-	//log.Error("### submitTransaction","tx",submitTxCount)
+	// submitTxCount++
+	// log.Error("### submitTransaction","tx",submitTxCount)
 
 	if err := b.SendTx(ctx, tx); err != nil {
 		return common.Hash{}, err
@@ -400,6 +414,12 @@ type SignTransactionResult struct {
 // The node needs to have the private key of the account corresponding with
 // the given from address and it needs to be unlocked.
 func (s *PublicTransactionPoolAPI) SignTransaction(ctx context.Context, args SendTxArgs) (*SignTransactionResult, error) {
+	if args.TypeInt != nil && args.TypeInt.IsEthTypedTransaction() {
+		if args.Price == nil && (args.MaxPriorityFeePerGas == nil || args.MaxFeePerGas == nil) {
+			return nil, fmt.Errorf("missing gasPrice or maxFeePerGas/maxPriorityFeePerGas")
+		}
+	}
+
 	// No need to obtain the noncelock mutex, since we won't be sending this
 	// tx into the transaction pool, but right back to the user
 	if err := args.setDefaults(ctx, s.b); err != nil {
@@ -451,6 +471,16 @@ func (s *PublicTransactionPoolAPI) SignTransactionAsFeePayer(ctx context.Context
 	return &SignTransactionResult{data, feePayerSignedTx}, nil
 }
 
+func getAccountsFromWallets(wallets []accounts.Wallet) map[common.Address]struct{} {
+	accounts := make(map[common.Address]struct{})
+	for _, wallet := range wallets {
+		for _, account := range wallet.Accounts() {
+			accounts[account.Address] = struct{}{}
+		}
+	}
+	return accounts
+}
+
 // PendingTransactions returns the transactions that are in the transaction pool
 // and have a from address that is one of the accounts this node manages.
 func (s *PublicTransactionPoolAPI) PendingTransactions() ([]map[string]interface{}, error) {
@@ -458,16 +488,10 @@ func (s *PublicTransactionPoolAPI) PendingTransactions() ([]map[string]interface
 	if err != nil {
 		return nil, err
 	}
-	accounts := make(map[common.Address]struct{})
-	for _, wallet := range s.b.AccountManager().Wallets() {
-		for _, account := range wallet.Accounts() {
-			accounts[account.Address] = struct{}{}
-		}
-	}
+	accounts := getAccountsFromWallets(s.b.AccountManager().Wallets())
 	transactions := make([]map[string]interface{}, 0, len(pending))
 	for _, tx := range pending {
-		signer := types.NewEIP155Signer(tx.ChainId())
-		from, _ := types.Sender(signer, tx)
+		from := getFrom(tx)
 		if _, exists := accounts[from]; exists {
 			transactions = append(transactions, newRPCPendingTransaction(tx))
 		}
@@ -494,7 +518,7 @@ func (s *PublicTransactionPoolAPI) Resend(ctx context.Context, sendArgs SendTxAr
 	}
 
 	for _, p := range pending {
-		signer := types.NewEIP155Signer(p.ChainId())
+		signer := types.LatestSignerForChainID(p.ChainId())
 		wantSigHash := signer.Hash(matchTx)
 
 		if pFrom, err := types.Sender(signer, p); err == nil && pFrom == sendArgs.From && signer.Hash(p) == wantSigHash {

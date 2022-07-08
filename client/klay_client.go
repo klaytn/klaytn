@@ -513,7 +513,7 @@ func (ec *Client) SendUnsignedTransaction(ctx context.Context, from common.Addre
 		GasLimit:  &tGas,
 		Price:     tGasPrice,
 		Amount:    hValue,
-		//Nonce : nonce,	Nonce will be determined by Klay node.
+		// Nonce : nonce,	Nonce will be determined by Klay node.
 		Data:    &tData,
 		Payload: &tInput,
 	}
@@ -617,4 +617,19 @@ func (ec *Client) RemovePeer(ctx context.Context, url string) (bool, error) {
 	var result bool
 	err := ec.c.CallContext(ctx, &result, "admin_removePeer", url)
 	return result, err
+}
+
+// CreateAccessList tries to create an access list for a specific transaction based on the
+// current pending state of the blockchain.
+func (ec *Client) CreateAccessList(ctx context.Context, msg klaytn.CallMsg) (*types.AccessList, uint64, string, error) {
+	type AccessListResult struct {
+		Accesslist *types.AccessList `json:"accessList"`
+		Error      string            `json:"error,omitempty"`
+		GasUsed    hexutil.Uint64    `json:"gasUsed"`
+	}
+	var result AccessListResult
+	if err := ec.c.CallContext(ctx, &result, "klay_createAccessList", toCallArg(msg)); err != nil {
+		return nil, 0, "", err
+	}
+	return result.Accesslist, uint64(result.GasUsed), result.Error, nil
 }

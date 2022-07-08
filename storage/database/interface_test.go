@@ -27,10 +27,12 @@ func TestDBType_ToValid(t *testing.T) {
 	validDBType := []DBType{LevelDB, BadgerDB, MemoryDB, DynamoDB}
 
 	// check acceptable dbtype values
-	acceptableDBTypes := []DBType{"LevelDB", "leveldb", "levelDB", "LevelDB",
+	acceptableDBTypes := []DBType{
+		"LevelDB", "leveldb", "levelDB", "LevelDB",
 		"BadgerDB", "badgerdb", "Badgerdb", "badgerDB",
 		"MemoryDB", "memorydb", "Memorydb", "memoryDB",
-		"DynamoDBS3", "dynamodbs3", "Dynamodbs3", "DynamodbS3", "dynamodbS3"}
+		"DynamoDBS3", "dynamodbs3", "Dynamodbs3", "DynamodbS3", "dynamodbS3",
+	}
 
 	for _, dbtype := range acceptableDBTypes {
 		newType := dbtype.ToValid()
@@ -38,8 +40,10 @@ func TestDBType_ToValid(t *testing.T) {
 	}
 
 	// check not acceptable dbtype values
-	notAcceptableDBTypes := []DBType{"level", "ldb", "badger", "memory",
-		"dynamo", "dynamodb", "dynamos3", "ddb", "ShardedDB"}
+	notAcceptableDBTypes := []DBType{
+		"level", "ldb", "badger", "memory",
+		"dynamo", "dynamodb", "dynamos3", "ddb", "ShardedDB",
+	}
 
 	for _, dbtype := range notAcceptableDBTypes {
 		newType := dbtype.ToValid()

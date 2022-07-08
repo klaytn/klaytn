@@ -83,28 +83,72 @@ func Test_isEmptyAddress(t *testing.T) {
 func TestRewardDistributor_getTotalTxFee(t *testing.T) {
 	testCases := []struct {
 		gasUsed            uint64
-		unitPrice          uint64
+		unitPrice          *big.Int
+		baseFee            *big.Int
 		expectedTotalTxFee *big.Int
 	}{
-		{0, 25000000000, big.NewInt(0)},
-		{200000, 25000000000, big.NewInt(5000000000000000)},
-		{129346, 10000000000, big.NewInt(1293460000000000)},
-		{9236192, 50000, big.NewInt(461809600000)},
-		{12936418927364923, 0, big.NewInt(0)},
+		// before kip71 hardfork
+		{0, big.NewInt(25000000000), nil, big.NewInt(0)},
+		{200000, big.NewInt(25000000000), nil, big.NewInt(5000000000000000)},
+		{200000, big.NewInt(25000000000), nil, big.NewInt(5000000000000000)},
+		{129346, big.NewInt(10000000000), nil, big.NewInt(1293460000000000)},
+		{129346, big.NewInt(10000000000), nil, big.NewInt(1293460000000000)},
+		{9236192, big.NewInt(50000), nil, big.NewInt(461809600000)},
+		{9236192, big.NewInt(50000), nil, big.NewInt(461809600000)},
+		{12936418927364923, big.NewInt(0), nil, big.NewInt(0)},
+		// after kip71 hardfork, unitprice ignored
+		{0, big.NewInt(25000000000), big.NewInt(25000000000), big.NewInt(0)},
+		{200000, big.NewInt(25000000000), big.NewInt(25000000000), big.NewInt(5000000000000000)},
+		{200000, big.NewInt(25000000000), big.NewInt(25000000000), big.NewInt(5000000000000000)},
+		{129346, big.NewInt(25000000000), big.NewInt(10000000000), big.NewInt(1293460000000000)},
+		{129346, big.NewInt(250), big.NewInt(10000000000), big.NewInt(1293460000000000)},
+		{9236192, big.NewInt(9876), big.NewInt(50000), big.NewInt(461809600000)},
+		{9236192, big.NewInt(25000000000), big.NewInt(50000), big.NewInt(461809600000)},
+		{12936418927364923, big.NewInt(25000000000), big.NewInt(0), big.NewInt(0)},
 	}
 	rewardDistributor := NewRewardDistributor(newDefaultTestGovernance())
 	rewardConfig := &rewardConfig{}
 
 	header := &types.Header{}
-	unitPrice := big.NewInt(0)
+	for _, testCase := range testCases {
+		header.GasUsed = testCase.gasUsed
+		header.BaseFee = testCase.baseFee
+		rewardConfig.unitPrice = testCase.unitPrice
+
+		result := rewardDistributor.getTotalTxFee(header, rewardConfig)
+		assert.Equal(t, testCase.expectedTotalTxFee.Uint64(), result.Uint64())
+	}
+}
+
+func TestRewardDistributor_TxFeeBurning(t *testing.T) {
+	testCases := []struct {
+		gasUsed            uint64
+		unitPrice          *big.Int
+		baseFee            *big.Int
+		expectedTotalTxFee *big.Int
+	}{
+		{0, nil, big.NewInt(25000000000), big.NewInt(0)},
+		{200000, nil, big.NewInt(25000000000), big.NewInt(5000000000000000 / 2)},
+		{200000, nil, big.NewInt(25000000000), big.NewInt(5000000000000000 / 2)},
+		{129346, nil, big.NewInt(10000000000), big.NewInt(1293460000000000 / 2)},
+		{129346, nil, big.NewInt(10000000000), big.NewInt(1293460000000000 / 2)},
+		{9236192, nil, big.NewInt(50000), big.NewInt(461809600000 / 2)},
+		{9236192, nil, big.NewInt(50000), big.NewInt(461809600000 / 2)},
+		{12936418927364923, nil, big.NewInt(0), big.NewInt(0)},
+	}
+	rewardDistributor := NewRewardDistributor(newDefaultTestGovernance())
+	rewardConfig := &rewardConfig{}
+
+	header := &types.Header{}
 
 	for _, testCase := range testCases {
 		header.GasUsed = testCase.gasUsed
-		rewardConfig.unitPrice = unitPrice.SetUint64(testCase.unitPrice)
+		header.BaseFee = testCase.baseFee
+		rewardConfig.unitPrice = testCase.baseFee
 
-		result := rewardDistributor.getTotalTxFee(header, rewardConfig)
-
-		assert.Equal(t, testCase.expectedTotalTxFee.Uint64(), result.Uint64())
+		txFee := rewardDistributor.getTotalTxFee(header, rewardConfig)
+		burnedTxFee := rewardDistributor.txFeeBurning(txFee)
+		assert.Equal(t, testCase.expectedTotalTxFee.Uint64(), burnedTxFee.Uint64())
 	}
 }
 
@@ -112,6 +156,7 @@ func TestRewardDistributor_MintKLAY(t *testing.T) {
 	BalanceAdder := newTestBalanceAdder()
 	header := &types.Header{}
 	header.Number = big.NewInt(0)
+	header.BaseFee = big.NewInt(30000000000)
 	header.Rewardbase = common.StringToAddress("0x1552F52D459B713E0C4558e66C8c773a75615FA8")
 	governance := newDefaultTestGovernance()
 	rewardDistributor := NewRewardDistributor(governance)
@@ -166,6 +211,7 @@ func TestRewardDistributor_distributeBlockReward(t *testing.T) {
 	}
 
 	header := &types.Header{}
+	header.BaseFee = big.NewInt(30000000000)
 	header.Number = big.NewInt(0)
 	header.Rewardbase = common.StringToAddress("0x1552F52D459B713E0C4558e66C8c773a75615FA8")
 	pocAddress := common.StringToAddress("0x4bCDd8E3F9776d16056815E189EcB5A8bF8E4CBb")
@@ -190,6 +236,8 @@ func TestRewardDistributor_DistributeBlockReward(t *testing.T) {
 		mintingAmount      string
 		ratio              string
 		unitprice          uint64
+		baseFee            *big.Int
+		unitPrice          uint64
 		useGiniCoeff       bool
 		deferredTxFee      bool
 		expectedCnBalance  *big.Int
@@ -202,11 +250,25 @@ func TestRewardDistributor_DistributeBlockReward(t *testing.T) {
 			mintingAmount:      "50000",
 			ratio:              "40/50/10",
 			unitprice:          500,
+			baseFee:            big.NewInt(500),
+			unitPrice:          25000000000,
 			useGiniCoeff:       true,
 			deferredTxFee:      true,
-			expectedCnBalance:  big.NewInt(0).SetUint64(40000),
-			expectedPocBalance: big.NewInt(0).SetUint64(50000),
-			expectedKirBalance: big.NewInt(0).SetUint64(10000),
+			expectedCnBalance:  big.NewInt(0).SetUint64(30000),
+			expectedPocBalance: big.NewInt(0).SetUint64(37500),
+			expectedKirBalance: big.NewInt(0).SetUint64(7500),
+		},
+		{
+			gasUsed:            100,
+			epoch:              30,
+			mintingAmount:      "50000",
+			ratio:              "40/50/10",
+			unitPrice:          25000000000,
+			useGiniCoeff:       true,
+			deferredTxFee:      true,
+			expectedCnBalance:  big.NewInt(0).SetUint64(250000005000 * 4),
+			expectedPocBalance: big.NewInt(0).SetUint64(250000005000 * 5),
+			expectedKirBalance: big.NewInt(0).SetUint64(250000005000),
 		},
 		{
 			gasUsed:            0,
@@ -214,6 +276,8 @@ func TestRewardDistributor_DistributeBlockReward(t *testing.T) {
 			mintingAmount:      "9600000000000000000",
 			ratio:              "34/54/12",
 			unitprice:          25000000000,
+			baseFee:            big.NewInt(25000000000),
+			unitPrice:          25000000000,
 			useGiniCoeff:       true,
 			deferredTxFee:      true,
 			expectedCnBalance:  big.NewInt(0).SetUint64(3264000000000000000),
@@ -225,7 +289,7 @@ func TestRewardDistributor_DistributeBlockReward(t *testing.T) {
 			epoch:              3600,
 			mintingAmount:      "0",
 			ratio:              "100/0/0",
-			unitprice:          0,
+			unitPrice:          25000000000,
 			useGiniCoeff:       true,
 			deferredTxFee:      true,
 			expectedCnBalance:  big.NewInt(0).SetUint64(0),
@@ -243,8 +307,9 @@ func TestRewardDistributor_DistributeBlockReward(t *testing.T) {
 
 	for _, testCase := range testCases {
 		BalanceAdder := newTestBalanceAdder()
-		governance.setTestGovernance(testCase.epoch, testCase.mintingAmount, testCase.ratio, testCase.unitprice, testCase.useGiniCoeff, testCase.deferredTxFee)
+		governance.setTestGovernance(testCase.epoch, testCase.mintingAmount, testCase.ratio, testCase.unitPrice, testCase.useGiniCoeff, testCase.deferredTxFee)
 		header.GasUsed = testCase.gasUsed
+		header.BaseFee = testCase.baseFee
 		rewardDistributor := NewRewardDistributor(governance)
 
 		err := rewardDistributor.DistributeBlockReward(BalanceAdder, header, pocAddress, kirAddress)

@@ -108,6 +108,9 @@ type Engine interface {
 
 	// Protocol returns the protocol for this consensus
 	Protocol() Protocol
+
+	// CreateSnapshot does not return a snapshot but creates a new snapshot at a given point in time.
+	CreateSnapshot(chain ChainReader, number uint64, hash common.Hash, parents []*types.Header) error
 }
 
 // PoW is a consensus engine based on proof-of-work.

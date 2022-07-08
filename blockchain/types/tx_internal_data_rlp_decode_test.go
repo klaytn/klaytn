@@ -32,6 +32,8 @@ type testingF func(t *testing.T)
 func TestTxRLPDecode(t *testing.T) {
 	funcs := []testingF{
 		testTxRLPDecodeLegacy,
+		testTxRLPDecodeAccessList,
+		testTxRLPDecodeDynamicFee,
 
 		testTxRLPDecodeValueTransfer,
 		testTxRLPDecodeValueTransferMemo,
@@ -775,6 +777,75 @@ func testTxRLPDecodeFeeDelegatedChainDataAnchoringWithRatio(t *testing.T) {
 		tx.FeePayer,
 		tx.FeePayerSignatures,
 	})
+	assert.Equal(t, nil, err)
+
+	dec := newTxInternalDataSerializer()
+
+	if err := rlp.DecodeBytes(buffer.Bytes(), &dec); err != nil {
+		panic(err)
+	}
+
+	if !tx.Equal(dec.tx) {
+		t.Fatalf("tx != dec.tx\ntx=%v\ndec.tx=%v", tx, dec.tx)
+	}
+}
+
+func testTxRLPDecodeAccessList(t *testing.T) {
+	tx := genAccessListTransaction().(*TxInternalDataEthereumAccessList)
+
+	buffer := new(bytes.Buffer)
+	err := rlp.Encode(buffer, tx.Type())
+	assert.Equal(t, nil, err)
+
+	err = rlp.Encode(buffer, []interface{}{
+		tx.ChainID,
+		tx.AccountNonce,
+		tx.Price,
+		tx.GasLimit,
+		tx.Recipient,
+		tx.Amount,
+		tx.Payload,
+		tx.AccessList,
+		tx.V,
+		tx.R,
+		tx.S,
+	})
+
+	assert.Equal(t, nil, err)
+
+	dec := newTxInternalDataSerializer()
+
+	if err := rlp.DecodeBytes(buffer.Bytes(), &dec); err != nil {
+		panic(err)
+	}
+
+	if !tx.Equal(dec.tx) {
+		t.Fatalf("tx != dec.tx\ntx=%v\ndec.tx=%v", tx, dec.tx)
+	}
+}
+
+func testTxRLPDecodeDynamicFee(t *testing.T) {
+	tx := genDynamicFeeTransaction().(*TxInternalDataEthereumDynamicFee)
+
+	buffer := new(bytes.Buffer)
+	err := rlp.Encode(buffer, tx.Type())
+	assert.Equal(t, nil, err)
+
+	err = rlp.Encode(buffer, []interface{}{
+		tx.ChainID,
+		tx.AccountNonce,
+		tx.GasTipCap,
+		tx.GasFeeCap,
+		tx.GasLimit,
+		tx.Recipient,
+		tx.Amount,
+		tx.Payload,
+		tx.AccessList,
+		tx.V,
+		tx.R,
+		tx.S,
+	})
+
 	assert.Equal(t, nil, err)
 
 	dec := newTxInternalDataSerializer()

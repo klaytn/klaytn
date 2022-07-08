@@ -47,7 +47,8 @@ type Validator struct {
 
 func NewValidator(identity int, genesis, scGenesis string, nodeAddress string, nodeKey string, staticNodes, bridgeNodes string, port int, rpcPort int,
 	prometheusPort int, ethStats string, ip string, dockerImageId string, useFastHttp bool, networkId, parentChainId int,
-	namePrefix string, nodeType string, addPrivKey bool) *Validator {
+	namePrefix string, nodeType string, addPrivKey bool,
+) *Validator {
 	return &Validator{
 		Identity:       identity,
 		Genesis:        genesis,
@@ -128,7 +129,7 @@ var validatorTemplate = `{{ .Name }}:
         echo 'DATA_DIR="/klaytn"' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
         echo 'LOG_DIR="$$DATA_DIR/log"' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
         echo 'RPC_ENABLE=1' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
-        echo 'RPC_API="db,klay,net,web3,miner,personal,txpool,debug,admin,istanbul,mainbridge,subbridge"' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
+        echo 'RPC_API="db,eth,klay,net,web3,miner,personal,txpool,debug,admin,istanbul,mainbridge,subbridge"' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
         echo 'NETWORK_ID="{{ .NetworkId }}"' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
         echo 'NO_DISCOVER=1' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
         echo 'ADDITIONAL="$$ADDITIONAL --identity \"{{ .Name }}\""' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf

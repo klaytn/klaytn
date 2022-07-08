@@ -39,14 +39,12 @@ import (
 
 var emptyCodeHash = crypto.Keccak256(nil)
 
-var (
-	errAccountDoesNotExist = errors.New("account does not exist")
-)
+var errAccountDoesNotExist = errors.New("account does not exist")
 
 type Code []byte
 
 func (self Code) String() string {
-	return string(self) //strings.Join(Disassemble(self), " ")
+	return string(self) // strings.Join(Disassemble(self), " ")
 }
 
 type Storage map[common.Hash]common.Hash
@@ -75,9 +73,10 @@ func (self Storage) Copy() Storage {
 // Account values can be accessed and modified through the object.
 // Finally, call CommitStorageTrie to write the modified storage trie into a database.
 type stateObject struct {
-	address common.Address
-	account account.Account
-	db      *StateDB
+	address  common.Address
+	addrHash common.Hash // hash of the address of the account
+	account  account.Account
+	db       *StateDB
 
 	// DB error.
 	// State objects are used by the consensus core and VM which are
@@ -92,6 +91,7 @@ type stateObject struct {
 
 	originStorage Storage // Storage cache of original entries to dedup rewrites
 	dirtyStorage  Storage // Storage entries that need to be flushed to disk
+	fakeStorage   Storage // Fake storage which constructed by caller for debugging purpose.
 
 	// Cache flags.
 	// When an object is marked suicided it will be delete from the trie
@@ -120,6 +120,7 @@ func newObject(db *StateDB, address common.Address, data account.Account) *state
 	return &stateObject{
 		db:            db,
 		address:       address,
+		addrHash:      crypto.Keccak256Hash(address[:]),
 		account:       data,
 		originStorage: make(Storage),
 		dirtyStorage:  make(Storage),
@@ -197,14 +198,53 @@ func (self *stateObject) GetCommittedState(db Database, key common.Hash) common.
 		return value
 	}
 	// Track the amount of time wasted on reading the storage trie
+	var (
+		enc   []byte
+		err   error
+		meter *time.Duration
+	)
+	readStart := time.Now()
 	if EnabledExpensive {
-		defer func(start time.Time) { self.db.StorageReads += time.Since(start) }(time.Now())
+		// If the snap is 'under construction', the first lookup may fail. If that
+		// happens, we don't want to double-count the time elapsed. Thus this
+		// dance with the metering.
+		defer func(start time.Time) {
+			if meter != nil {
+				*meter += time.Since(readStart)
+			}
+		}(time.Now())
 	}
-	// Load from DB in case it is missing.
-	enc, err := self.getStorageTrie(db).TryGet(key[:])
-	if err != nil {
-		self.setError(err)
-		return common.Hash{}
+	if self.db.snap != nil {
+		if EnabledExpensive {
+			meter = &self.db.SnapshotStorageReads
+		}
+		// If the object was destructed in *this* block (and potentially resurrected),
+		// the storage has been cleared out, and we should *not* consult the previous
+		// snapshot about any storage values. The only possible alternatives are:
+		//   1) resurrect happened, and new slot values were set -- those should
+		//      have been handles via pendingStorage above.
+		//   2) we don't have new values, and can deliver empty response back
+		if _, destructed := self.db.snapDestructs[self.addrHash]; destructed {
+			return common.Hash{}
+		}
+		enc, err = self.db.snap.Storage(self.addrHash, crypto.Keccak256Hash(key.Bytes()))
+	}
+	// If the snapshot is unavailable or reading from it fails, load from the database.
+	if self.db.snap == nil || err != nil {
+		if EnabledExpensive {
+			if meter != nil {
+				// If we already spent time checking the snapshot, account for it
+				// and reset the readStart
+				*meter += time.Since(readStart)
+				readStart = time.Now()
+			}
+			meter = &self.db.StorageReads
+		}
+		// Load from DB in case it is missing.
+		if enc, err = self.getStorageTrie(db).TryGet(key[:]); err != nil {
+			self.setError(err)
+			return common.Hash{}
+		}
 	}
 	if len(enc) > 0 {
 		_, content, _, err := rlp.Split(enc)
@@ -231,6 +271,24 @@ func (self *stateObject) SetState(db Database, key, value common.Hash) {
 		prevalue: prev,
 	})
 	self.setState(key, value)
+}
+
+// SetStorage replaces the entire state storage with the given one.
+//
+// After this function is called, all original state will be ignored and state
+// lookup only happens in the fake state storage.
+//
+// Note this function should only be used for debugging purpose.
+func (self *stateObject) SetStorage(storage map[common.Hash]common.Hash) {
+	// Allocate fake storage if it's nil.
+	if self.fakeStorage == nil {
+		self.fakeStorage = make(Storage)
+	}
+	for key, value := range storage {
+		self.fakeStorage[key] = value
+	}
+	// Don't bother journal since this function should only be used for
+	// debugging and the `fake` storage won't be committed to database.
 }
 
 // IsContractAccount returns true is the account has a non-empty codeHash.
@@ -277,6 +335,9 @@ func (self *stateObject) updateStorageTrie(db Database) Trie {
 	if EnabledExpensive {
 		defer func(start time.Time) { self.db.StorageUpdates += time.Since(start) }(time.Now())
 	}
+	// The snapshot storage map for the object
+	var storage map[common.Hash][]byte
+	// Insert all the pending updates into the trie
 	tr := self.getStorageTrie(db)
 	for key, value := range self.dirtyStorage {
 		delete(self.dirtyStorage, key)
@@ -287,13 +348,25 @@ func (self *stateObject) updateStorageTrie(db Database) Trie {
 		}
 		self.originStorage[key] = value
 
+		var v []byte
 		if (value == common.Hash{}) {
 			self.setError(tr.TryDelete(key[:]))
-			continue
+		} else {
+			// Encoding []byte cannot fail, ok to ignore the error.
+			v, _ = rlp.EncodeToBytes(bytes.TrimLeft(value[:], "\x00"))
+			self.setError(tr.TryUpdate(key[:], v))
 		}
-		// Encoding []byte cannot fail, ok to ignore the error.
-		v, _ := rlp.EncodeToBytes(bytes.TrimLeft(value[:], "\x00"))
-		self.setError(tr.TryUpdate(key[:], v))
+		// If state snapshotting is active, cache the data til commit
+		if self.db.snap != nil {
+			if storage == nil {
+				// Retrieve the old storage map, if available, create a new one otherwise
+				if storage = self.db.snapStorage[self.addrHash]; storage == nil {
+					storage = make(map[common.Hash][]byte)
+					self.db.snapStorage[self.addrHash] = storage
+				}
+			}
+			storage[crypto.Keccak256Hash(key[:])] = v // v will be nil if it's deleted
+		}
 	}
 	return tr
 }
@@ -423,6 +496,23 @@ func (self *stateObject) Code(db Database) []byte {
 	}
 	self.code = code
 	return code
+}
+
+// CodeSize returns the size of the contract code associated with this object,
+// or zero if none. This method is an almost mirror of Code, but uses a cache
+// inside the database to avoid loading codes seen recently.
+func (self *stateObject) CodeSize(db Database) int {
+	if self.code != nil {
+		return len(self.code)
+	}
+	if bytes.Equal(self.CodeHash(), emptyCodeHash) {
+		return 0
+	}
+	size, err := db.ContractCodeSize(common.BytesToHash(self.CodeHash()))
+	if err != nil {
+		self.setError(fmt.Errorf("can't load code size %x: %v", self.CodeHash(), err))
+	}
+	return size
 }
 
 func (self *stateObject) SetCode(codeHash common.Hash, code []byte) error {

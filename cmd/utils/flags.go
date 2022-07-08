@@ -69,7 +69,7 @@ func NewApp(gitCommit, usage string) *cli.App {
 	app := cli.NewApp()
 	app.Name = filepath.Base(os.Args[0])
 	app.Author = ""
-	//app.Authors = nil
+	// app.Authors = nil
 	app.Email = ""
 	app.Version = params.Version
 	if len(gitCommit) >= 8 {
@@ -123,7 +123,7 @@ var (
 	defaultSyncMode = cn.GetDefaultConfig().SyncMode
 	SyncModeFlag    = TextMarshalerFlag{
 		Name:  "syncmode",
-		Usage: `Blockchain sync mode (only "full" is supported)`,
+		Usage: `Blockchain sync mode ("full" or "snap")`,
 		Value: &defaultSyncMode,
 	}
 	GCModeFlag = cli.StringFlag{
@@ -151,6 +151,10 @@ var (
 	TxPoolAllowLocalAnchorTxFlag = cli.BoolFlag{
 		Name:  "txpool.allow-local-anchortx",
 		Usage: "Allow locally submitted anchoring transactions",
+	}
+	TxPoolDenyRemoteTxFlag = cli.BoolFlag{
+		Name:  "txpool.deny.remotetx",
+		Usage: "Deny remote transaction receiving from other peers. Use only for emergency cases",
 	}
 	TxPoolJournalFlag = cli.StringFlag{
 		Name:  "txpool.journal",
@@ -201,6 +205,12 @@ var (
 		Usage: "Maximum amount of time non-executable transaction are queued",
 		Value: cn.GetDefaultConfig().TxPool.Lifetime,
 	}
+	// PN specific txpool settings
+	TxPoolSpamThrottlerDisableFlag = cli.BoolFlag{
+		Name:  "txpool.spamthrottler.disable",
+		Usage: "Disable txpool spam throttler prototype",
+	}
+
 	// KES
 	KESNodeTypeServiceFlag = cli.BoolFlag{
 		Name:  "kes.nodetype.service",
@@ -265,6 +275,15 @@ var (
 		Name:  "db.no-perf-metrics",
 		Usage: "Disables performance metrics of database's read and write operations",
 	}
+	SnapshotFlag = cli.BoolFlag{
+		Name:  "snapshot",
+		Usage: "Enables snapshot-database mode",
+	}
+	SnapshotCacheSizeFlag = cli.IntFlag{
+		Name:  "snapshot.cache-size",
+		Usage: "Size of in-memory cache of the state snapshot cache (in MiB)",
+		Value: 512,
+	}
 	TrieMemoryCacheSizeFlag = cli.IntFlag{
 		Name:  "state.cache-size",
 		Usage: "Size of in-memory cache of the global state (in MiB) to flush matured singleton trie nodes to disk",
@@ -307,6 +326,10 @@ var (
 		Name:  "statedb.cache.num-fetcher-prefetch-worker",
 		Usage: "Number of workers used to prefetch block when fetcher fetches block",
 		Value: 32,
+	}
+	UseSnapshotForPrefetchFlag = cli.BoolFlag{
+		Name:  "statedb.cache.use-snapshot-for-prefetch",
+		Usage: "Use state snapshot functionality while prefetching",
 	}
 	TrieNodeCacheRedisEndpointsFlag = cli.StringSliceFlag{
 		Name:  "statedb.cache.redis.endpoints",
@@ -372,7 +395,7 @@ var (
 		Usage: "Set the max count of resending transactions",
 		Value: cn.DefaultMaxResendTxCount,
 	}
-	//TODO-Klaytn-RemoveLater Remove this flag when we are confident with the new transaction resend logic
+	// TODO-Klaytn-RemoveLater Remove this flag when we are confident with the new transaction resend logic
 	TxResendUseLegacyFlag = cli.BoolFlag{
 		Name:  "txresend.use-legacy",
 		Usage: "Enable the legacy transaction resend logic (For testing only)",
@@ -451,10 +474,18 @@ var (
 		Name:  "rpc.gascap",
 		Usage: "Sets a cap on gas that can be used in klay_call/estimateGas",
 	}
+	RPCGlobalEthTxFeeCapFlag = cli.Float64Flag{
+		Name:  "rpc.ethtxfeecap",
+		Usage: "Sets a cap on transaction fee (in klay) that can be sent via the eth namespace RPC APIs (0 = no cap)",
+	}
 	RPCConcurrencyLimit = cli.IntFlag{
 		Name:  "rpc.concurrencylimit",
 		Usage: "Sets a limit of concurrent connection number of HTTP-RPC server",
 		Value: rpc.ConcurrencyLimit,
+	}
+	RPCNonEthCompatibleFlag = cli.BoolFlag{
+		Name:  "rpc.eth.noncompatible",
+		Usage: "Disables the eth namespace API return formatting for compatibility",
 	}
 	WSEnabledFlag = cli.BoolFlag{
 		Name:  "ws",
@@ -539,6 +570,26 @@ var (
 		Name:  "api.filter.getLogs.maxitems",
 		Usage: "Maximum allowed number of return items for log collecting filter API",
 		Value: filters.GetLogsMaxItems,
+	}
+	RPCReadTimeout = cli.IntFlag{
+		Name:  "rpcreadtimeout",
+		Usage: "HTTP-RPC server read timeout (seconds)",
+		Value: int(rpc.DefaultHTTPTimeouts.ReadTimeout / time.Second),
+	}
+	RPCWriteTimeoutFlag = cli.IntFlag{
+		Name:  "rpcwritetimeout",
+		Usage: "HTTP-RPC server write timeout (seconds)",
+		Value: int(rpc.DefaultHTTPTimeouts.WriteTimeout / time.Second),
+	}
+	RPCIdleTimeoutFlag = cli.IntFlag{
+		Name:  "rpcidletimeout",
+		Usage: "HTTP-RPC server idle timeout (seconds)",
+		Value: int(rpc.DefaultHTTPTimeouts.IdleTimeout / time.Second),
+	}
+	RPCExecutionTimeoutFlag = cli.IntFlag{
+		Name:  "rpcexecutiontimeout",
+		Usage: "HTTP-RPC server execution timeout (seconds)",
+		Value: int(rpc.DefaultHTTPTimeouts.ExecutionTimeout / time.Second),
 	}
 
 	// Network Settings
@@ -644,7 +695,7 @@ var (
 		Usage: "Comma separated kni URLs for authorized nodes list",
 		Value: "",
 	}
-	//TODO-Klaytn-Bootnode the boodnode flags should be updated when it is implemented
+	// TODO-Klaytn-Bootnode the boodnode flags should be updated when it is implemented
 	BNAddrFlag = cli.StringFlag{
 		Name:  "bnaddr",
 		Usage: `udp address to use node discovery`,
@@ -689,7 +740,17 @@ var (
 	VTRecoveryIntervalFlag = cli.Uint64Flag{
 		Name:  "vtrecoveryinterval",
 		Usage: "Set the value transfer recovery interval (seconds)",
-		Value: 60,
+		Value: 5,
+	}
+	ServiceChainParentOperatorTxGasLimitFlag = cli.Uint64Flag{
+		Name:  "sc.parentoperator.gaslimit",
+		Usage: "Set the default value of gas limit for transactions made by bridge parent operator",
+		Value: 10000000,
+	}
+	ServiceChainChildOperatorTxGasLimitFlag = cli.Uint64Flag{
+		Name:  "sc.childoperator.gaslimit",
+		Usage: "Set the default value of gas limit for transactions made by bridge child operator",
+		Value: 10000000,
 	}
 	ServiceChainNewAccountFlag = cli.BoolFlag{
 		Name:  "scnewaccount",
@@ -704,6 +765,7 @@ var (
 		Name:  "anchoring",
 		Usage: "Enable anchoring for service chain",
 	}
+
 	// KAS
 	KASServiceChainAnchorFlag = cli.BoolFlag{
 		Name:  "kas.sc.anchor",
@@ -721,6 +783,11 @@ var (
 	KASServiceChainAnchorOperatorFlag = cli.StringFlag{
 		Name:  "kas.sc.anchor.operator",
 		Usage: "The operator address for KAS anchor",
+	}
+	KASServiceChainAnchorRequestTimeoutFlag = cli.DurationFlag{
+		Name:  "kas.sc.anchor.request.timeout",
+		Usage: "The reuqest timeout for KAS Anchoring API call",
+		Value: 500 * time.Millisecond,
 	}
 	KASServiceChainXChainIdFlag = cli.StringFlag{
 		Name:  "kas.x-chain-id",
@@ -1175,6 +1242,18 @@ func setHTTP(ctx *cli.Context, cfg *node.Config) {
 		rpc.ConcurrencyLimit = ctx.GlobalInt(RPCConcurrencyLimit.Name)
 		logger.Info("Set the concurrency limit of RPC-HTTP server", "limit", rpc.ConcurrencyLimit)
 	}
+	if ctx.GlobalIsSet(RPCReadTimeout.Name) {
+		cfg.HTTPTimeouts.ReadTimeout = time.Duration(ctx.GlobalInt(RPCReadTimeout.Name)) * time.Second
+	}
+	if ctx.GlobalIsSet(RPCWriteTimeoutFlag.Name) {
+		cfg.HTTPTimeouts.WriteTimeout = time.Duration(ctx.GlobalInt(RPCWriteTimeoutFlag.Name)) * time.Second
+	}
+	if ctx.GlobalIsSet(RPCIdleTimeoutFlag.Name) {
+		cfg.HTTPTimeouts.IdleTimeout = time.Duration(ctx.GlobalInt(RPCIdleTimeoutFlag.Name)) * time.Second
+	}
+	if ctx.GlobalIsSet(RPCExecutionTimeoutFlag.Name) {
+		cfg.HTTPTimeouts.ExecutionTimeout = time.Duration(ctx.GlobalInt(RPCExecutionTimeoutFlag.Name)) * time.Second
+	}
 }
 
 // setWS creates the WebSocket RPC listener interface string from the set
@@ -1389,6 +1468,9 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 	if ctx.GlobalIsSet(LightKDFFlag.Name) {
 		cfg.UseLightweightKDF = ctx.GlobalBool(LightKDFFlag.Name)
 	}
+	if ctx.GlobalIsSet(RPCNonEthCompatibleFlag.Name) {
+		rpc.NonEthCompatible = ctx.GlobalBool(RPCNonEthCompatibleFlag.Name)
+	}
 }
 
 func setTxPool(ctx *cli.Context, cfg *blockchain.TxPoolConfig) {
@@ -1397,6 +1479,9 @@ func setTxPool(ctx *cli.Context, cfg *blockchain.TxPoolConfig) {
 	}
 	if ctx.GlobalIsSet(TxPoolAllowLocalAnchorTxFlag.Name) {
 		cfg.AllowLocalAnchorTx = ctx.GlobalBool(TxPoolAllowLocalAnchorTxFlag.Name)
+	}
+	if ctx.GlobalIsSet(TxPoolDenyRemoteTxFlag.Name) {
+		cfg.DenyRemoteTx = ctx.GlobalBool(TxPoolDenyRemoteTxFlag.Name)
 	}
 	if ctx.GlobalIsSet(TxPoolJournalFlag.Name) {
 		cfg.Journal = ctx.GlobalString(TxPoolJournalFlag.Name)
@@ -1427,6 +1512,11 @@ func setTxPool(ctx *cli.Context, cfg *blockchain.TxPoolConfig) {
 
 	if ctx.GlobalIsSet(TxPoolLifetimeFlag.Name) {
 		cfg.Lifetime = ctx.GlobalDuration(TxPoolLifetimeFlag.Name)
+	}
+
+	// PN specific txpool setting
+	if NodeTypeFlag.Value == "pn" {
+		cfg.EnableSpamThrottlerAtRuntime = !ctx.GlobalIsSet(TxPoolSpamThrottlerDisableFlag.Name)
 	}
 }
 
@@ -1496,8 +1586,14 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 
 	if ctx.GlobalIsSet(SyncModeFlag.Name) {
 		cfg.SyncMode = *GlobalTextMarshaler(ctx, SyncModeFlag.Name).(*downloader.SyncMode)
-		if cfg.SyncMode != downloader.FullSync {
-			log.Fatalf("only syncmode=full can be used for syncmode!")
+		if cfg.SyncMode != downloader.FullSync && cfg.SyncMode != downloader.SnapSync {
+			log.Fatalf("Full Sync or Snap Sync (prototype) is supported only!")
+		}
+		if cfg.SyncMode == downloader.SnapSync {
+			logger.Info("Snap sync requested, enabling --snapshot")
+			ctx.Set(SnapshotFlag.Name, "true")
+		} else {
+			cfg.SnapshotCacheSize = 0 // Disabled
 		}
 	}
 
@@ -1581,6 +1677,7 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 		CacheType: statedb.TrieNodeCacheType(ctx.GlobalString(TrieNodeCacheTypeFlag.
 			Name)).ToValid(),
 		NumFetcherPrefetchWorker:  ctx.GlobalInt(NumFetcherPrefetchWorkerFlag.Name),
+		UseSnapshotForPrefetch:    ctx.GlobalBool(UseSnapshotForPrefetchFlag.Name),
 		LocalCacheSizeMiB:         ctx.GlobalInt(TrieNodeCacheLimitFlag.Name),
 		FastCacheFileDir:          ctx.GlobalString(DataDirFlag.Name) + "/fastcache",
 		FastCacheSavePeriod:       ctx.GlobalDuration(TrieNodeCacheSavePeriodFlag.Name),
@@ -1609,6 +1706,10 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 		cfg.RPCGasCap = new(big.Int).SetUint64(ctx.GlobalUint64(RPCGlobalGasCap.Name))
 	}
 
+	if ctx.GlobalIsSet(RPCGlobalEthTxFeeCapFlag.Name) {
+		cfg.RPCTxFeeCap = ctx.GlobalFloat64(RPCGlobalEthTxFeeCapFlag.Name)
+	}
+
 	// Only CNs could set BlockGenerationIntervalFlag and BlockGenerationTimeLimitFlag
 	if ctx.GlobalIsSet(BlockGenerationIntervalFlag.Name) {
 		params.BlockGenerationInterval = ctx.GlobalInt64(BlockGenerationIntervalFlag.Name)
@@ -1621,6 +1722,16 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	}
 
 	params.OpcodeComputationCostLimit = ctx.GlobalUint64(OpcodeComputationCostLimitFlag.Name)
+
+	if ctx.GlobalIsSet(SnapshotFlag.Name) {
+		cfg.SnapshotCacheSize = ctx.GlobalInt(SnapshotCacheSizeFlag.Name)
+		if cfg.StartBlockNumber != 0 {
+			logger.Crit("State snapshot should not be used with --start-block-num", "num", cfg.StartBlockNumber)
+		}
+		logger.Info("State snapshot is enabled", "cache-size (MB)", cfg.SnapshotCacheSize)
+	} else {
+		cfg.SnapshotCacheSize = 0 // snapshot disabled
+	}
 
 	// Override any default configs for hard coded network.
 	// TODO-Klaytn-Bootnode: Discuss and add `baobab` test network's genesis block

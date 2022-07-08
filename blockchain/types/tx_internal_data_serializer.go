@@ -50,9 +50,17 @@ func (serializer *TxInternalDataSerializer) EncodeRLP(w io.Writer) error {
 		return rlp.Encode(w, serializer.tx)
 	}
 
-	if err := rlp.Encode(w, serializer.txType); err != nil {
-		return err
+	if serializer.txType.IsEthTypedTransaction() {
+		ethType := byte(serializer.txType)
+		if _, err := w.Write([]byte{byte(EthereumTxTypeEnvelope), ethType}); err != nil {
+			return err
+		}
+	} else {
+		if err := rlp.Encode(w, serializer.txType); err != nil {
+			return err
+		}
 	}
+
 	return rlp.Encode(w, serializer.tx)
 }
 
@@ -66,6 +74,14 @@ func (serializer *TxInternalDataSerializer) DecodeRLP(s *rlp.Stream) error {
 		serializer.txType = TxTypeLegacyTransaction
 		serializer.tx = txd
 		return nil
+	}
+
+	if serializer.txType == EthereumTxTypeEnvelope {
+		var ethType TxType
+		if err := s.Decode(&ethType); err != nil {
+			return err
+		}
+		serializer.txType = serializer.txType<<8 | ethType
 	}
 
 	var err error

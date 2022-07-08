@@ -99,7 +99,6 @@ func TestJSONRequestParsing(t *testing.T) {
 }
 
 func TestJSONRequestParamsParsing(t *testing.T) {
-
 	var (
 		stringT = reflect.TypeOf("")
 		intT    = reflect.TypeOf(0)
@@ -111,7 +110,7 @@ func TestJSONRequestParamsParsing(t *testing.T) {
 		intPtrV = reflect.ValueOf(&i)
 	)
 
-	var validTests = []struct {
+	validTests := []struct {
 		input    string
 		argTypes []reflect.Type
 		expected []reflect.Value
@@ -130,7 +129,6 @@ func TestJSONRequestParamsParsing(t *testing.T) {
 	for _, test := range validTests {
 		params := (json.RawMessage)([]byte(test.input))
 		args, err := codec.ParseRequestArguments(test.argTypes, params)
-
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -159,7 +157,7 @@ func TestJSONRequestParamsParsing(t *testing.T) {
 		}
 	}
 
-	var invalidTests = []struct {
+	invalidTests := []struct {
 		input    string
 		argTypes []reflect.Type
 	}{

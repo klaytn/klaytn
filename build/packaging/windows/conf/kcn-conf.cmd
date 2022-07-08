@@ -20,7 +20,7 @@ set TXPOOL_LIFE_TIME="5m"
 
 REM rpc options setting
 set RPC_ENABLE=0 &:: if this is set, the following options will be used
-set RPC_API="klay" &:: available apis: admin,debug,klay,miner,net,personal,rpc,txpool,web3
+set RPC_API="klay" &:: available apis: admin,debug,klay,eth,miner,net,personal,rpc,txpool,web3
 set RPC_PORT=8551
 set RPC_ADDR="0.0.0.0"
 set RPC_CORSDOMAIN="*"
@@ -28,7 +28,7 @@ set RPC_VHOSTS="*"
 
 REM ws options setting
 set WS_ENABLE=0 &:: if this is set, the following options will be used
-set WS_API="klay" &:: available apis: admin,debug,klay,miner,net,personal,rpc,txpool,web3
+set WS_API="klay" &:: available apis: admin,debug,klay,eth,miner,net,personal,rpc,txpool,web3
 set WS_ADDR="0.0.0.0"
 set WS_PORT=8552
 set WS_ORIGINS="*"

@@ -59,8 +59,8 @@ func TestKeyStore(t *testing.T) {
 	if err != nil {
 		t.Fatalf("account file %s doesn't exist (%v)", a.URL, err)
 	}
-	if runtime.GOOS != "windows" && stat.Mode() != 0600 {
-		t.Fatalf("account file has wrong mode: got %o, want %o", stat.Mode(), 0600)
+	if runtime.GOOS != "windows" && stat.Mode() != 0o600 {
+		t.Fatalf("account file has wrong mode: got %o, want %o", stat.Mode(), 0o600)
 	}
 	if !ks.HasAddress(a.Address) {
 		t.Errorf("HasAccount(%x) should've returned true", a.Address)
@@ -344,7 +344,9 @@ func TestWalletNotifications(t *testing.T) {
 
 	// Shut down the event collector and check events.
 	sub.Unsubscribe()
-	<-updates
+	for ev := range updates {
+		events = append(events, walletEvent{ev, ev.Wallet.Accounts()[0]})
+	}
 	checkAccounts(t, live, ks.Wallets())
 	checkEvents(t, wantEvents, events)
 }
@@ -449,7 +451,7 @@ func TestKeyStore_SignTx(t *testing.T) {
 	sig1 := tx.RawSignatureValues()
 
 	// get another signature from a signing function in types package
-	signer := types.NewEIP155Signer(chainID)
+	signer := types.LatestSignerForChainID(chainID)
 	if tx.SignWithKeys(signer, []*ecdsa.PrivateKey{senderPrvKey}) != nil {
 		t.Fatal("Error to sign")
 	}
@@ -490,7 +492,7 @@ func TestKeyStore_SignTxAsFeePayer(t *testing.T) {
 	}
 
 	// get another signature from a signing function in types package
-	signer := types.NewEIP155Signer(chainID)
+	signer := types.LatestSignerForChainID(chainID)
 	if tx.SignFeePayerWithKeys(signer, []*ecdsa.PrivateKey{feePayerPrvKey}) != nil {
 		t.Fatal("Error to sign")
 	}

@@ -40,16 +40,22 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var addr1 = common.HexToAddress("111")
-var addr2 = common.HexToAddress("222")
-var addrs []common.Address
+var (
+	addr1 = common.HexToAddress("111")
+	addr2 = common.HexToAddress("222")
+	addrs []common.Address
+)
 
-var topic1 common.Hash
-var topic2 common.Hash
-var topics [][]common.Hash
+var (
+	topic1 common.Hash
+	topic2 common.Hash
+	topics [][]common.Hash
+)
 
-var begin = int64(12345)
-var end = int64(12345)
+var (
+	begin = int64(12345)
+	end   = int64(12345)
+)
 
 var header *types.Header
 
@@ -169,7 +175,7 @@ func BenchmarkFilters(b *testing.B) {
 		rmLogsFeed = new(event.Feed)
 		logsFeed   = new(event.Feed)
 		chainFeed  = new(event.Feed)
-		backend    = &testBackend{mux, db, 0, txFeed, rmLogsFeed, logsFeed, chainFeed}
+		backend    = &testBackend{mux, db, 0, txFeed, rmLogsFeed, logsFeed, chainFeed, params.TestChainConfig}
 		key1, _    = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 		addr1      = crypto.PubkeyToAddress(key1.PublicKey)
 		addr2      = common.BytesToAddress([]byte("jeff"))
@@ -232,7 +238,7 @@ func TestFilters(t *testing.T) {
 		rmLogsFeed = new(event.Feed)
 		logsFeed   = new(event.Feed)
 		chainFeed  = new(event.Feed)
-		backend    = &testBackend{mux, db, 0, txFeed, rmLogsFeed, logsFeed, chainFeed}
+		backend    = &testBackend{mux, db, 0, txFeed, rmLogsFeed, logsFeed, chainFeed, params.TestChainConfig}
 		key1, _    = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 		addr       = crypto.PubkeyToAddress(key1.PublicKey)
 

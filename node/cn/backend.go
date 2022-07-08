@@ -94,6 +94,7 @@ type BackendProtocolManager interface {
 	NodeType() common.ConnType
 	Start(maxPeers int)
 	Stop()
+	SetSyncStop(flag bool)
 }
 
 // CN implements the Klaytn consensus node service.
@@ -132,7 +133,7 @@ type CN struct {
 
 	components []interface{}
 
-	governance *governance.Governance
+	governance governance.Engine
 }
 
 func (s *CN) AddLesServer(ls LesServer) {
@@ -212,12 +213,25 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	setEngineType(chainConfig)
 
-	// NOTE-Klaytn Now we use ChainConfig.UnitPrice from genesis.json.
-	//         So let's update cn.Config.GasPrice using ChainConfig.UnitPrice.
+	// load governance state
+	governance := governance.NewMixedEngine(chainConfig, chainDB)
+
+	// Set latest unitPrice/gasPrice
+	chainConfig.UnitPrice = governance.UnitPrice()
 	config.GasPrice = new(big.Int).SetUint64(chainConfig.UnitPrice)
 
+	// It's intended not to modify something like genesis in SetupGenesisBlock()
+	if chainConfig.KIP71CompatibleBlock == nil {
+		chainConfig.KIP71CompatibleBlock = params.KIP71CompatibleBlockNum
+	}
+	chainConfig.Governance.KIP71 = &params.KIP71Config{
+		LowerBoundBaseFee:         governance.LowerBoundBaseFee(),
+		UpperBoundBaseFee:         governance.UpperBoundBaseFee(),
+		GasTarget:                 governance.GasTarget(),
+		MaxBlockGasUsedForBaseFee: governance.MaxBlockGasUsedForBaseFee(),
+		BaseFeeDenominator:        governance.BaseFeeDenominator(),
+	}
 	logger.Info("Initialised chain configuration", "config", chainConfig)
-	governance := governance.NewGovernanceInitialize(chainConfig, chainDB)
 
 	cn := &CN{
 		config:            config,
@@ -249,9 +263,11 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	}
 	var (
 		vmConfig    = config.getVMConfig()
-		cacheConfig = &blockchain.CacheConfig{ArchiveMode: config.NoPruning, CacheSize: config.TrieCacheSize,
+		cacheConfig = &blockchain.CacheConfig{
+			ArchiveMode: config.NoPruning, CacheSize: config.TrieCacheSize,
 			BlockInterval: config.TrieBlockInterval, TriesInMemory: config.TriesInMemory,
-			TrieNodeCacheConfig: &config.TrieNodeCacheConfig, SenderTxHashIndexing: config.SenderTxHashIndexing}
+			TrieNodeCacheConfig: &config.TrieNodeCacheConfig, SenderTxHashIndexing: config.SenderTxHashIndexing, SnapshotCacheSize: config.SnapshotCacheSize,
+		}
 	)
 
 	bc, err := blockchain.NewBlockChain(chainDB, cacheConfig, cn.chainConfig, cn.engine, vmConfig)
@@ -291,8 +307,6 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	config.TxPool.NoAccountCreation = config.NoAccountCreation
 	cn.txPool = blockchain.NewTxPool(config.TxPool, cn.chainConfig, bc)
 	governance.SetTxPool(cn.txPool)
-	// Synchronize unitprice
-	cn.txPool.SetGasPrice(big.NewInt(0).SetUint64(governance.UnitPrice()))
 
 	// Permit the downloader to use the trie cache allowance during fast sync
 	cacheLimit := cacheConfig.TrieNodeCacheConfig.LocalCacheSizeMiB
@@ -336,11 +350,11 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	gpoParams := config.GPO
 
-	// NOTE-Klaytn Now we use ChainConfig.UnitPrice from genesis.json and updated config.GasPrice with same value.
+	// NOTE-Klaytn Now we use latest unitPrice
 	//         So let's override gpoParams.Default with config.GasPrice
 	gpoParams.Default = config.GasPrice
 
-	cn.APIBackend.gpo = gasprice.NewOracle(cn.APIBackend, gpoParams)
+	cn.APIBackend.gpo = gasprice.NewOracle(cn.APIBackend, gpoParams, cn.txPool)
 	//@TODO Klaytn add core component
 	cn.addComponent(cn.blockchain)
 	cn.addComponent(cn.txPool)
@@ -447,17 +461,19 @@ func makeExtraData(extra []byte) []byte {
 
 // CreateDB creates the chain database.
 func CreateDB(ctx *node.ServiceContext, config *Config, name string) database.DBManager {
-	dbc := &database.DBConfig{Dir: name, DBType: config.DBType, ParallelDBWrite: config.ParallelDBWrite, SingleDB: config.SingleDB, NumStateTrieShards: config.NumStateTrieShards,
+	dbc := &database.DBConfig{
+		Dir: name, DBType: config.DBType, ParallelDBWrite: config.ParallelDBWrite, SingleDB: config.SingleDB, NumStateTrieShards: config.NumStateTrieShards,
 		LevelDBCacheSize: config.LevelDBCacheSize, OpenFilesLimit: database.GetOpenFilesLimit(), LevelDBCompression: config.LevelDBCompression,
-		LevelDBBufferPool: config.LevelDBBufferPool, EnableDBPerfMetrics: config.EnableDBPerfMetrics, DynamoDBConfig: &config.DynamoDBConfig}
+		LevelDBBufferPool: config.LevelDBBufferPool, EnableDBPerfMetrics: config.EnableDBPerfMetrics, DynamoDBConfig: &config.DynamoDBConfig,
+	}
 	return ctx.OpenDatabase(dbc)
 }
 
 // CreateConsensusEngine creates the required type of consensus engine instance for a Klaytn service
-func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db database.DBManager, gov *governance.Governance, nodetype common.ConnType) consensus.Engine {
+func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db database.DBManager, gov governance.Engine, nodetype common.ConnType) consensus.Engine {
 	// Only istanbul  BFT is allowed in the main net. PoA is supported by service chain
 	if chainConfig.Governance == nil {
-		chainConfig.Governance = params.GetDefaultGovernanceConfig(params.UseIstanbul)
+		chainConfig.Governance = params.GetDefaultGovernanceConfig()
 	}
 	return istanbulBackend.New(config.Rewardbase, &config.Istanbul, ctx.NodeKey(), db, gov, nodetype)
 }
@@ -465,10 +481,19 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 // APIs returns the collection of RPC services the ethereum package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
 func (s *CN) APIs() []rpc.API {
-	apis := api.GetAPIs(s.APIBackend)
+	apis, ethAPI := api.GetAPIs(s.APIBackend)
 
 	// Append any APIs exposed explicitly by the consensus engine
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)
+
+	publicFilterAPI := filters.NewPublicFilterAPI(s.APIBackend, false)
+	governanceKlayAPI := governance.NewGovernanceKlayAPI(s.governance, s.blockchain)
+	publicGovernanceAPI := governance.NewGovernanceAPI(s.governance)
+	publicDownloaderAPI := downloader.NewPublicDownloaderAPI(s.protocolManager.Downloader(), s.eventMux)
+
+	ethAPI.SetPublicFilterAPI(publicFilterAPI)
+	ethAPI.SetGovernanceKlayAPI(governanceKlayAPI)
+	ethAPI.SetPublicGovernanceAPI(publicGovernanceAPI)
 
 	// Append all the local APIs and return
 	return append(apis, []rpc.API{
@@ -480,12 +505,17 @@ func (s *CN) APIs() []rpc.API {
 		}, {
 			Namespace: "klay",
 			Version:   "1.0",
-			Service:   downloader.NewPublicDownloaderAPI(s.protocolManager.Downloader(), s.eventMux),
+			Service:   publicDownloaderAPI,
 			Public:    true,
 		}, {
 			Namespace: "klay",
 			Version:   "1.0",
-			Service:   filters.NewPublicFilterAPI(s.APIBackend, false),
+			Service:   publicFilterAPI,
+			Public:    true,
+		}, {
+			Namespace: "eth",
+			Version:   "1.0",
+			Service:   publicDownloaderAPI,
 			Public:    true,
 		}, {
 			Namespace: "admin",
@@ -513,7 +543,12 @@ func (s *CN) APIs() []rpc.API {
 		}, {
 			Namespace: "klay",
 			Version:   "1.0",
-			Service:   governance.NewGovernanceKlayAPI(s.governance, s.blockchain),
+			Service:   governanceKlayAPI,
+			Public:    true,
+		}, {
+			Namespace: "eth",
+			Version:   "1.0",
+			Service:   ethAPI,
 			Public:    true,
 		},
 	}...)

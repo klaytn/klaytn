@@ -158,7 +158,7 @@ func (a *AccountMap) Update(txs types.Transactions, signer types.Signer, picker 
 
 		a.IncNonce(from)
 
-		if tx.IsLegacyTransaction() && tx.To() == nil {
+		if tx.IsEthereumTransaction() && tx.To() == nil {
 			a.IncNonce(*to)
 		}
 

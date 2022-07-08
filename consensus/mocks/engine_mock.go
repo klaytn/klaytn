@@ -16,30 +16,30 @@ import (
 	rpc "github.com/klaytn/klaytn/networks/rpc"
 )
 
-// MockEngine is a mock of Engine interface
+// MockEngine is a mock of Engine interface.
 type MockEngine struct {
 	ctrl     *gomock.Controller
 	recorder *MockEngineMockRecorder
 }
 
-// MockEngineMockRecorder is the mock recorder for MockEngine
+// MockEngineMockRecorder is the mock recorder for MockEngine.
 type MockEngineMockRecorder struct {
 	mock *MockEngine
 }
 
-// NewMockEngine creates a new mock instance
+// NewMockEngine creates a new mock instance.
 func NewMockEngine(ctrl *gomock.Controller) *MockEngine {
 	mock := &MockEngine{ctrl: ctrl}
 	mock.recorder = &MockEngineMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockEngine) EXPECT() *MockEngineMockRecorder {
 	return m.recorder
 }
 
-// APIs mocks base method
+// APIs mocks base method.
 func (m *MockEngine) APIs(arg0 consensus.ChainReader) []rpc.API {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "APIs", arg0)
@@ -47,13 +47,13 @@ func (m *MockEngine) APIs(arg0 consensus.ChainReader) []rpc.API {
 	return ret0
 }
 
-// APIs indicates an expected call of APIs
+// APIs indicates an expected call of APIs.
 func (mr *MockEngineMockRecorder) APIs(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "APIs", reflect.TypeOf((*MockEngine)(nil).APIs), arg0)
 }
 
-// Author mocks base method
+// Author mocks base method.
 func (m *MockEngine) Author(arg0 *types.Header) (common.Address, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Author", arg0)
@@ -62,13 +62,13 @@ func (m *MockEngine) Author(arg0 *types.Header) (common.Address, error) {
 	return ret0, ret1
 }
 
-// Author indicates an expected call of Author
+// Author indicates an expected call of Author.
 func (mr *MockEngineMockRecorder) Author(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Author", reflect.TypeOf((*MockEngine)(nil).Author), arg0)
 }
 
-// CalcBlockScore mocks base method
+// CalcBlockScore mocks base method.
 func (m *MockEngine) CalcBlockScore(arg0 consensus.ChainReader, arg1 uint64, arg2 *types.Header) *big.Int {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CalcBlockScore", arg0, arg1, arg2)
@@ -76,13 +76,13 @@ func (m *MockEngine) CalcBlockScore(arg0 consensus.ChainReader, arg1 uint64, arg
 	return ret0
 }
 
-// CalcBlockScore indicates an expected call of CalcBlockScore
+// CalcBlockScore indicates an expected call of CalcBlockScore.
 func (mr *MockEngineMockRecorder) CalcBlockScore(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CalcBlockScore", reflect.TypeOf((*MockEngine)(nil).CalcBlockScore), arg0, arg1, arg2)
 }
 
-// CanVerifyHeadersConcurrently mocks base method
+// CanVerifyHeadersConcurrently mocks base method.
 func (m *MockEngine) CanVerifyHeadersConcurrently() bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CanVerifyHeadersConcurrently")
@@ -90,13 +90,27 @@ func (m *MockEngine) CanVerifyHeadersConcurrently() bool {
 	return ret0
 }
 
-// CanVerifyHeadersConcurrently indicates an expected call of CanVerifyHeadersConcurrently
+// CanVerifyHeadersConcurrently indicates an expected call of CanVerifyHeadersConcurrently.
 func (mr *MockEngineMockRecorder) CanVerifyHeadersConcurrently() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CanVerifyHeadersConcurrently", reflect.TypeOf((*MockEngine)(nil).CanVerifyHeadersConcurrently))
 }
 
-// Finalize mocks base method
+// CreateSnapshot mocks base method.
+func (m *MockEngine) CreateSnapshot(arg0 consensus.ChainReader, arg1 uint64, arg2 common.Hash, arg3 []*types.Header) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateSnapshot", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateSnapshot indicates an expected call of CreateSnapshot.
+func (mr *MockEngineMockRecorder) CreateSnapshot(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSnapshot", reflect.TypeOf((*MockEngine)(nil).CreateSnapshot), arg0, arg1, arg2, arg3)
+}
+
+// Finalize mocks base method.
 func (m *MockEngine) Finalize(arg0 consensus.ChainReader, arg1 *types.Header, arg2 *state.StateDB, arg3 []*types.Transaction, arg4 []*types.Receipt) (*types.Block, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Finalize", arg0, arg1, arg2, arg3, arg4)
@@ -105,13 +119,13 @@ func (m *MockEngine) Finalize(arg0 consensus.ChainReader, arg1 *types.Header, ar
 	return ret0, ret1
 }
 
-// Finalize indicates an expected call of Finalize
+// Finalize indicates an expected call of Finalize.
 func (mr *MockEngineMockRecorder) Finalize(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Finalize", reflect.TypeOf((*MockEngine)(nil).Finalize), arg0, arg1, arg2, arg3, arg4)
 }
 
-// Prepare mocks base method
+// Prepare mocks base method.
 func (m *MockEngine) Prepare(arg0 consensus.ChainReader, arg1 *types.Header) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Prepare", arg0, arg1)
@@ -119,13 +133,13 @@ func (m *MockEngine) Prepare(arg0 consensus.ChainReader, arg1 *types.Header) err
 	return ret0
 }
 
-// Prepare indicates an expected call of Prepare
+// Prepare indicates an expected call of Prepare.
 func (mr *MockEngineMockRecorder) Prepare(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Prepare", reflect.TypeOf((*MockEngine)(nil).Prepare), arg0, arg1)
 }
 
-// PreprocessHeaderVerification mocks base method
+// PreprocessHeaderVerification mocks base method.
 func (m *MockEngine) PreprocessHeaderVerification(arg0 []*types.Header) (chan<- struct{}, <-chan error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "PreprocessHeaderVerification", arg0)
@@ -134,13 +148,13 @@ func (m *MockEngine) PreprocessHeaderVerification(arg0 []*types.Header) (chan<- 
 	return ret0, ret1
 }
 
-// PreprocessHeaderVerification indicates an expected call of PreprocessHeaderVerification
+// PreprocessHeaderVerification indicates an expected call of PreprocessHeaderVerification.
 func (mr *MockEngineMockRecorder) PreprocessHeaderVerification(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreprocessHeaderVerification", reflect.TypeOf((*MockEngine)(nil).PreprocessHeaderVerification), arg0)
 }
 
-// Protocol mocks base method
+// Protocol mocks base method.
 func (m *MockEngine) Protocol() consensus.Protocol {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Protocol")
@@ -148,13 +162,13 @@ func (m *MockEngine) Protocol() consensus.Protocol {
 	return ret0
 }
 
-// Protocol indicates an expected call of Protocol
+// Protocol indicates an expected call of Protocol.
 func (mr *MockEngineMockRecorder) Protocol() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Protocol", reflect.TypeOf((*MockEngine)(nil).Protocol))
 }
 
-// Seal mocks base method
+// Seal mocks base method.
 func (m *MockEngine) Seal(arg0 consensus.ChainReader, arg1 *types.Block, arg2 <-chan struct{}) (*types.Block, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Seal", arg0, arg1, arg2)
@@ -163,13 +177,13 @@ func (m *MockEngine) Seal(arg0 consensus.ChainReader, arg1 *types.Block, arg2 <-
 	return ret0, ret1
 }
 
-// Seal indicates an expected call of Seal
+// Seal indicates an expected call of Seal.
 func (mr *MockEngineMockRecorder) Seal(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Seal", reflect.TypeOf((*MockEngine)(nil).Seal), arg0, arg1, arg2)
 }
 
-// VerifyHeader mocks base method
+// VerifyHeader mocks base method.
 func (m *MockEngine) VerifyHeader(arg0 consensus.ChainReader, arg1 *types.Header, arg2 bool) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "VerifyHeader", arg0, arg1, arg2)
@@ -177,13 +191,13 @@ func (m *MockEngine) VerifyHeader(arg0 consensus.ChainReader, arg1 *types.Header
 	return ret0
 }
 
-// VerifyHeader indicates an expected call of VerifyHeader
+// VerifyHeader indicates an expected call of VerifyHeader.
 func (mr *MockEngineMockRecorder) VerifyHeader(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyHeader", reflect.TypeOf((*MockEngine)(nil).VerifyHeader), arg0, arg1, arg2)
 }
 
-// VerifyHeaders mocks base method
+// VerifyHeaders mocks base method.
 func (m *MockEngine) VerifyHeaders(arg0 consensus.ChainReader, arg1 []*types.Header, arg2 []bool) (chan<- struct{}, <-chan error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "VerifyHeaders", arg0, arg1, arg2)
@@ -192,13 +206,13 @@ func (m *MockEngine) VerifyHeaders(arg0 consensus.ChainReader, arg1 []*types.Hea
 	return ret0, ret1
 }
 
-// VerifyHeaders indicates an expected call of VerifyHeaders
+// VerifyHeaders indicates an expected call of VerifyHeaders.
 func (mr *MockEngineMockRecorder) VerifyHeaders(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyHeaders", reflect.TypeOf((*MockEngine)(nil).VerifyHeaders), arg0, arg1, arg2)
 }
 
-// VerifySeal mocks base method
+// VerifySeal mocks base method.
 func (m *MockEngine) VerifySeal(arg0 consensus.ChainReader, arg1 *types.Header) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "VerifySeal", arg0, arg1)
@@ -206,7 +220,7 @@ func (m *MockEngine) VerifySeal(arg0 consensus.ChainReader, arg1 *types.Header) 
 	return ret0
 }
 
-// VerifySeal indicates an expected call of VerifySeal
+// VerifySeal indicates an expected call of VerifySeal.
 func (mr *MockEngineMockRecorder) VerifySeal(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifySeal", reflect.TypeOf((*MockEngine)(nil).VerifySeal), arg0, arg1)

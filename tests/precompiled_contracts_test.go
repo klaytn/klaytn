@@ -18,6 +18,7 @@ package tests
 
 import (
 	"crypto/sha256"
+	"fmt"
 	"math/big"
 	"strings"
 	"testing"
@@ -35,6 +36,13 @@ import (
 
 func TestPrecompiledContract(t *testing.T) {
 	prof := profile.NewProfiler()
+
+	if isCompilerAvailable() == false {
+		if testing.Verbose() {
+			fmt.Printf("TestFeePayerContract is skipped due to the lack of solc.")
+		}
+		return
+	}
 
 	// Initialize blockchain
 	start := time.Now()
