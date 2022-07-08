@@ -294,8 +294,8 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 
 	// Defer transferring Tx fee when DeferredTxFee is true
 	if st.evm.ChainConfig().Governance == nil || !st.evm.ChainConfig().Governance.DeferredTxFee() {
-		effectiveTip := msg.EffectiveGasPrice(nil)
-		st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), effectiveTip))
+		effectiveGasPrice := msg.EffectiveGasPrice(nil)
+		st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), effectiveGasPrice))
 	}
 
 	kerr.ErrTxInvalid = nil
