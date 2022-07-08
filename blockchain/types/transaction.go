@@ -37,7 +37,6 @@ import (
 	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/kerrors"
-	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 )
 
@@ -298,19 +297,14 @@ func (tx *Transaction) EffectiveGasTip(baseFee *big.Int) *big.Int {
 	return common.Big0
 }
 
-// TODO-klaytn it use calculation algorithm of ethereum.
-// We have used it just like mock function. It returns governance unitprice
-// because GetGasTipCap() is same with GetGasFeeCap()
-// After hard fork, we need to consider new getEffectiveGasPrice API that operates differently
-// effectiveGasPrice = msg.EffectiveGasPrice(baseFee)
 func (tx *Transaction) EffectiveGasPrice(header *Header) *big.Int {
 	if header != nil && header.BaseFee != nil {
 		return header.BaseFee
 	}
+	// Only enters if KIP-71 is not enabled. If KIP-71 is enabled, it will return BaseFee in the above if statement.
 	if tx.Type() == TxTypeEthereumDynamicFee {
-		baseFee := new(big.Int).SetUint64(params.ZeroBaseFee)
 		te := tx.GetTxInternalData().(TxInternalDataBaseFee)
-		return math.BigMin(new(big.Int).Add(te.GetGasTipCap(), baseFee), te.GetGasFeeCap())
+		return te.GetGasFeeCap()
 	}
 	return tx.GasPrice()
 }
