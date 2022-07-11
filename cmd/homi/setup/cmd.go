@@ -453,7 +453,25 @@ func genBaobabTestGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Gen
 	return testGenesis
 }
 
+func allocGenesisFund(ctx *cli.Context, genesisJson *blockchain.Genesis) {
+	fundingAddr := ctx.String(fundingAddrFlag.Name)
+	if len(fundingAddr) == 0 {
+		return
+	}
+
+	if !common.IsHexAddress(fundingAddr) {
+		log.Fatalf("'%s' is not a valid hex address", fundingAddr)
+	}
+	addr := common.HexToAddress(fundingAddr)
+	balance := new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil)
+	genesisJson.Alloc[addr] = blockchain.GenesisAccount{Balance: balance}
+}
+
 func patchGenesisAddressBook(ctx *cli.Context, genesisJson *blockchain.Genesis, nodeAddrs []common.Address) {
+	if patchAddressBook := ctx.Bool(patchAddressBookFlag.Name); !patchAddressBook {
+		return
+	}
+
 	var targetAddr common.Address
 
 	patchAddressBookAddr := ctx.String(patchAddressBookAddrFlag.Name)
@@ -505,7 +523,6 @@ func gen(ctx *cli.Context) error {
 	serviceChainTest := ctx.Bool(serviceChainTestFlag.Name)
 	chainid := ctx.Uint64(chainIDFlag.Name)
 	serviceChainId := ctx.Uint64(serviceChainIDFlag.Name)
-	patchAddressBook := ctx.Bool(patchAddressBookFlag.Name)
 
 	if cnNum == 0 && scnNum == 0 {
 		return fmt.Errorf("needed at least one consensus node (--cn-num 1) or one service chain consensus node (--scn-num 1) ")
@@ -547,9 +564,8 @@ func gen(ctx *cli.Context) error {
 		genesisJson = genIstanbulGenesis(ctx, validatorNodeAddrs, testAddrs, chainid)
 	}
 
-	if patchAddressBook {
-		patchGenesisAddressBook(ctx, genesisJson, validatorNodeAddrs)
-	}
+	allocGenesisFund(ctx, genesisJson)
+	patchGenesisAddressBook(ctx, genesisJson, validatorNodeAddrs)
 
 	genesisJson.Config.IstanbulCompatibleBlock = big.NewInt(ctx.Int64(istanbulCompatibleBlockNumberFlag.Name))
 	genesisJson.Config.LondonCompatibleBlock = big.NewInt(ctx.Int64(londonCompatibleBlockNumberFlag.Name))

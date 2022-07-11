@@ -23,7 +23,6 @@ import (
 )
 
 var (
-	fundingAddr   string
 	dockerImageId string
 	outputPath    string
 )
@@ -144,10 +143,9 @@ var (
 	}
 
 	fundingAddrFlag = cli.StringFlag{
-		Name:        "fundingAddr",
-		Value:       "75a59b94889a05c03c66c3c84e9d2f8308ca4abd",
-		Usage:       "Give initial fund to the given addr",
-		Destination: &fundingAddr,
+		Name:  "funding-addr",
+		Value: "",
+		Usage: "Give initial fund to the given addr",
 	}
 
 	patchAddressBookFlag = cli.BoolFlag{

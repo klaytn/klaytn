@@ -129,8 +129,7 @@ func PatchAddressBook(addr common.Address) Option {
 		contractAddr := common.HexToAddress(contract.AddressBookContractAddress)
 		contractAccount, ok := genesis.Alloc[contractAddr]
 		if !ok {
-			logger.Error("No AddressBook to patch")
-			return
+			log.Fatalf("No AddressBook to patch")
 		}
 
 		codeHex := hexutil.Encode(contractAccount.Code)
