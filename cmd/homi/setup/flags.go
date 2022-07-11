@@ -150,6 +150,11 @@ var (
 		Destination: &fundingAddr,
 	}
 
+	patchAddressBookFlag = cli.BoolFlag{
+		Name:  "patch-address-book",
+		Usage: "Patch genesis AddressBook binary to use the first CN's address in constructContract",
+	}
+
 	dockerImageIdFlag = cli.StringFlag{
 		Name:        "docker-image-id",
 		Value:       "klaytn/klaytn:latest", // https://hub.docker.com/r/klaytn/klaytn

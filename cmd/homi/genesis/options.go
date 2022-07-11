@@ -19,6 +19,7 @@ package genesis
 
 import (
 	"math/big"
+	"strings"
 
 	"github.com/klaytn/klaytn/cmd/homi/extra"
 	"github.com/klaytn/klaytn/consensus/clique"
@@ -119,6 +120,38 @@ func AllocWithBaobabContract(addrs []common.Address, balance *big.Int) Option {
 			Balance: big.NewInt(0),
 		}
 		genesis.Alloc = alloc
+	}
+}
+
+// Patch the hardcoded line in AddressBook.sol:constructContract().
+func PatchAddressBook(addr common.Address) Option {
+	return func(genesis *blockchain.Genesis) {
+		contractAddr := common.HexToAddress(contract.AddressBookContractAddress)
+		contractAccount, ok := genesis.Alloc[contractAddr]
+		if !ok {
+			logger.Error("No AddressBook to patch")
+			return
+		}
+
+		codeHex := hexutil.Encode(contractAccount.Code)
+		var oldAddr string
+		switch codeHex {
+		case CypressAddressBookBin:
+			oldAddr = "854ca8508c8be2bb1f3c244045786410cb7d5d0a"
+		case BaobabAddressBookBin:
+			oldAddr = "88bb3838aa0a140acb73eeb3d4b25a8d3afd58d4"
+		case PreCypressAddressBookBin, PrebaobabAddressBookBin:
+			oldAddr = "fe1ffd5293fc94857a33dcd284fe82bc106be4c7"
+		}
+
+		// The hardcoded address appears exactly once, hence Replace(.., 1)
+		newAddr := strings.ToLower(addr.Hex()[2:])
+		codeHex = strings.Replace(codeHex, oldAddr, newAddr, 1)
+
+		genesis.Alloc[contractAddr] = blockchain.GenesisAccount{
+			Code:    common.FromHex(codeHex),
+			Balance: contractAccount.Balance,
+		}
 	}
 }
 

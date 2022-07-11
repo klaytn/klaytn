@@ -93,6 +93,7 @@ Args :
 		unitPriceFlag,
 		deriveShaImplFlag,
 		fundingAddrFlag,
+		patchAddressBookFlag,
 		outputPathFlag,
 		dockerImageIdFlag,
 		fasthttpFlag,
@@ -483,6 +484,7 @@ func gen(ctx *cli.Context) error {
 	serviceChainTest := ctx.Bool(serviceChainTestFlag.Name)
 	chainid := ctx.Uint64(chainIDFlag.Name)
 	serviceChainId := ctx.Uint64(serviceChainIDFlag.Name)
+	patchAddressBook := ctx.Bool(patchAddressBookFlag.Name)
 
 	if cnNum == 0 && scnNum == 0 {
 		return fmt.Errorf("needed at least one consensus node (--cn-num 1) or one service chain consensus node (--scn-num 1) ")
@@ -522,6 +524,14 @@ func gen(ctx *cli.Context) error {
 		genesisJson = genServiceChainTestGenesis(validatorNodeAddrs, testAddrs)
 	} else {
 		genesisJson = genIstanbulGenesis(ctx, validatorNodeAddrs, testAddrs, chainid)
+	}
+
+	if patchAddressBook {
+		if numValidators == 0 {
+			return fmt.Errorf("needed at least one consensus node (--cn-num 1) to make AddressBook callable by the first CN")
+		}
+		allocationFunction := genesis.PatchAddressBook(validatorNodeAddrs[0])
+		allocationFunction(genesisJson)
 	}
 
 	genesisJson.Config.IstanbulCompatibleBlock = big.NewInt(ctx.Int64(istanbulCompatibleBlockNumberFlag.Name))
