@@ -19,13 +19,11 @@ import (
 )
 
 func TestAddressBookConnector(t *testing.T) {
-	log.EnableLogForTest(log.LvlCrit, log.LvlDebug)
+	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
 
 	fullNode, node, validator, chainId, workspace := newBlockchain(t)
 	defer os.RemoveAll(workspace)
 	defer fullNode.Stop()
-	_ = validator
-	_ = chainId
 
 	var (
 		chain  = node.BlockChain().(*blockchain.BlockChain)
@@ -86,8 +84,9 @@ func TestAddressBookConnector(t *testing.T) {
 	defer func() { params.SetStakingUpdateInterval(oldInterval) }()
 
 	// Create the StakingManager singleton
-	stakingManager := reward.NewStakingManager(chain, gov, db)
-	require.NotNil(t, stakingManager)
+	oldStakingManager := reward.GetStakingManager()
+	reward.SetTestStakingManagerWithChain(chain, gov, db)
+	defer reward.SetTestStakingManager(oldStakingManager)
 
 	// Attempt to read contract
 	require.NotNil(t, waitBlock(chain, deployBlock+3))

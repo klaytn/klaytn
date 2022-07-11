@@ -299,6 +299,22 @@ func StakingManagerUnsubscribe() {
 }
 
 // TODO-Klaytn-Reward the following methods are used for testing purpose, it needs to be moved into test files.
+// Unlike NewStakingManager(), SetTestStakingManager*() do not trigger once.Do().
+// This way you can avoid irreversible side effects during tests.
+
+// SetTestStakingManagerWithChain sets a full-featured staking manager with blockchain, database and cache.
+// Note that this method is used only for testing purpose.
+func SetTestStakingManagerWithChain(bc blockChain, gh governanceHelper, db stakingInfoDB) {
+	SetTestStakingManager(&StakingManager{
+		addressBookConnector: newAddressBookConnector(bc, gh),
+		stakingInfoCache:     newStakingInfoCache(),
+		stakingInfoDB:        db,
+		governanceHelper:     gh,
+		blockchain:           bc,
+		chainHeadChan:        make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
+	})
+}
+
 // SetTestStakingManagerWithDB sets the staking manager with the given database.
 // Note that this method is used only for testing purpose.
 func SetTestStakingManagerWithDB(testDB stakingInfoDB) {
