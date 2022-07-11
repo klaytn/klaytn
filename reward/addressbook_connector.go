@@ -42,6 +42,8 @@ const (
 
 var errAddressBookIncomplete = errors.New("incomplete node information from AddressBook")
 
+var addressBookContractAddress = contract.AddressBookContractAddress
+
 type addressBookConnector struct {
 	bc              blockChain
 	gh              governanceHelper
@@ -55,7 +57,7 @@ func newAddressBookConnector(bc blockChain, gh governanceHelper) *addressBookCon
 		bc:              bc,
 		gh:              gh,
 		abi:             contract.AddressBookABI,
-		contractAddress: common.HexToAddress(contract.AddressBookContractAddress),
+		contractAddress: common.HexToAddress(addressBookContractAddress),
 	}
 }
 
@@ -199,4 +201,9 @@ func (ac *addressBookConnector) getStakingInfoFromAddressBook(blockNum uint64) (
 	}
 
 	return newStakingInfo(ac.bc, ac.gh, blockNum, nodeAddrs, stakingAddrs, rewardAddrs, KIRAddr, PoCAddr)
+}
+
+// Only for testing purpose.
+func SetTestAddressBookAddress(addr common.Address) {
+	addressBookContractAddress = addr.Hex()
 }
