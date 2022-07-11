@@ -152,7 +152,13 @@ var (
 
 	patchAddressBookFlag = cli.BoolFlag{
 		Name:  "patch-address-book",
-		Usage: "Patch genesis AddressBook binary to use the first CN's address in constructContract",
+		Usage: "Patch genesis AddressBook's constructContract function",
+	}
+
+	patchAddressBookAddrFlag = cli.StringFlag{
+		Name:  "patch-address-book-addr",
+		Usage: "The address to inject in AddressBook's constructContract function [default: first CN's address]",
+		Value: "",
 	}
 
 	dockerImageIdFlag = cli.StringFlag{

@@ -94,6 +94,7 @@ Args :
 		deriveShaImplFlag,
 		fundingAddrFlag,
 		patchAddressBookFlag,
+		patchAddressBookAddrFlag,
 		outputPathFlag,
 		dockerImageIdFlag,
 		fasthttpFlag,
@@ -452,6 +453,26 @@ func genBaobabTestGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Gen
 	return testGenesis
 }
 
+func patchGenesisAddressBook(ctx *cli.Context, genesisJson *blockchain.Genesis, nodeAddrs []common.Address) {
+	var targetAddr common.Address
+
+	patchAddressBookAddr := ctx.String(patchAddressBookAddrFlag.Name)
+	if len(patchAddressBookAddr) == 0 {
+		if len(nodeAddrs) == 0 {
+			log.Fatalf("Need at least one consensus node (--cn-num 1) to patch AddressBook with the first CN")
+		}
+		targetAddr = nodeAddrs[0]
+	} else {
+		if !common.IsHexAddress(patchAddressBookAddr) {
+			log.Fatalf("'%s' is not a valid hex address", patchAddressBookAddr)
+		}
+		targetAddr = common.HexToAddress(patchAddressBookAddr)
+	}
+
+	allocationFunction := genesis.PatchAddressBook(targetAddr)
+	allocationFunction(genesisJson)
+}
+
 func RandStringRunes(n int) string {
 	letterRunes := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789~!@#$%^&*()_+{}|[]")
 
@@ -527,11 +548,7 @@ func gen(ctx *cli.Context) error {
 	}
 
 	if patchAddressBook {
-		if numValidators == 0 {
-			return fmt.Errorf("needed at least one consensus node (--cn-num 1) to make AddressBook callable by the first CN")
-		}
-		allocationFunction := genesis.PatchAddressBook(validatorNodeAddrs[0])
-		allocationFunction(genesisJson)
+		patchGenesisAddressBook(ctx, genesisJson, validatorNodeAddrs)
 	}
 
 	genesisJson.Config.IstanbulCompatibleBlock = big.NewInt(ctx.Int64(istanbulCompatibleBlockNumberFlag.Name))
