@@ -692,7 +692,7 @@ func (args *CallArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsic
 
 	gasPrice := new(big.Int)
 	if baseFee.Cmp(new(big.Int).SetUint64(params.ZeroBaseFee)) == 0 {
-		// If there's no basefee, then it must be a non-1559 execution
+		// If baseFee is zero, then it must be a magma hardfork
 		if args.GasPrice != nil {
 			gasPrice = args.GasPrice.ToInt()
 		} else if args.MaxFeePerGas != nil {
