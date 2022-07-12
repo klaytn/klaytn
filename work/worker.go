@@ -498,7 +498,7 @@ func (self *worker) commitNewWork() {
 	nextBlockNum := new(big.Int).Add(parent.Number(), common.Big1)
 	var nextBaseFee *big.Int
 	if self.nodetype == common.CONSENSUSNODE {
-		if self.config.IsKIP71ForkEnabled(nextBlockNum) {
+		if self.config.IsMagmaForkEnabled(nextBlockNum) {
 			// NOTE-klaytn NextBlockBaseFee needs the header of parent, self.chain.CurrentBlock
 			// So above code, TxPool().Pending(), is separated with this and can be refactored later.
 			nextBaseFee = misc.NextBlockBaseFee(parent.Header(), self.config)
@@ -529,7 +529,7 @@ func (self *worker) commitNewWork() {
 		Extra:      self.extra,
 		Time:       big.NewInt(tstamp),
 	}
-	if self.config.IsKIP71ForkEnabled(nextBlockNum) {
+	if self.config.IsMagmaForkEnabled(nextBlockNum) {
 		header.BaseFee = nextBaseFee
 	}
 	if err := self.engine.Prepare(self.chain, header); err != nil {

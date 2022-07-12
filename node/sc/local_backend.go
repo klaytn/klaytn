@@ -188,8 +188,8 @@ func (lb *LocalBackend) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
 	if err := checkCtx(ctx); err != nil {
 		return nil, err
 	}
-	if lb.subbridge.blockchain.Config().IsKIP71ForkEnabled(lb.subbridge.blockchain.CurrentHeader().Number) {
-		return new(big.Int).SetUint64(lb.config.Governance.KIP71.UpperBoundBaseFee), nil
+	if lb.subbridge.blockchain.Config().IsMagmaForkEnabled(lb.subbridge.blockchain.CurrentHeader().Number) {
+		return new(big.Int).SetUint64(lb.config.Governance.Magma.UpperBoundBaseFee), nil
 	} else {
 		return new(big.Int).SetUint64(lb.config.UnitPrice), nil
 	}

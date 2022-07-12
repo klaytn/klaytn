@@ -999,9 +999,9 @@ func newEthTransactionReceipt(header *types.Header, tx *types.Transaction, b Bac
 		"type":              hexutil.Uint(byte(typeInt)),
 	}
 
-	// After KIP-71 hard fork : return header.baseFee
-	// After EthTxType hard fork : use zero baseFee to calculate effective gas price for EthereumDynamicFeeTx.
-	//    return gas price of tx.
+	// After Magma hard fork : return header.baseFee
+	// After EthTxType hard fork : use zero baseFee to calculate effective gas price for EthereumDynamicFeeTx :
+	//  return gas price of tx.
 	// Before EthTxType hard fork : return gas price of tx. (typed ethereum txs are not available.)
 	fields["effectiveGasPrice"] = hexutil.Uint64(tx.EffectiveGasPrice(header).Uint64())
 
@@ -1075,12 +1075,12 @@ func (args *EthTransactionArgs) setDefaults(ctx context.Context, b Backend) erro
 	}
 	// After london, default to 1559 uncles gasPrice is set
 	head := b.CurrentBlock().Header()
-	isKIP71 := head.BaseFee != nil
+	isMagma := head.BaseFee != nil
 
 	fixedBaseFee := new(big.Int).SetUint64(params.ZeroBaseFee)
 
-	// b.SuggestPrice = unitPrice, for before KIP71
-	//                = baseFee,   for after KIP71
+	// b.SuggestPrice = unitPrice, for before Magma
+	//                = baseFee,   for after Magma
 	gasPrice, err := b.SuggestPrice(ctx)
 	if err != nil {
 		return err
@@ -1094,18 +1094,18 @@ func (args *EthTransactionArgs) setDefaults(ctx context.Context, b Backend) erro
 				args.MaxPriorityFeePerGas = (*hexutil.Big)(gasPrice)
 			}
 			if args.MaxFeePerGas == nil {
-				// Before KIP-71 hard fork, `gasFeeCap` was set to `baseFee*2 + maxPriorityFeePerGas` by default.
+				// Before Magma hard fork, `gasFeeCap` was set to `baseFee*2 + maxPriorityFeePerGas` by default.
 				gasFeeCap := new(big.Int).Add(
 					(*big.Int)(args.MaxPriorityFeePerGas),
 					new(big.Int).Mul(fixedBaseFee, big.NewInt(2)),
 				)
-				if isKIP71 {
-					// After KIP-71 hard fork, `gasFeeCap` was set to `baseFee*2` by default.
+				if isMagma {
+					// After Magma hard fork, `gasFeeCap` was set to `baseFee*2` by default.
 					gasFeeCap = new(big.Int).Mul(gasPrice, big.NewInt(2))
 				}
 				args.MaxFeePerGas = (*hexutil.Big)(gasFeeCap)
 			}
-			if isKIP71 {
+			if isMagma {
 				if args.MaxFeePerGas.ToInt().Cmp(gasPrice) < 0 {
 					return fmt.Errorf("maxFeePerGas (%v) < BaseFee (%v)", args.MaxFeePerGas, gasPrice)
 				}
@@ -1135,7 +1135,7 @@ func (args *EthTransactionArgs) setDefaults(ctx context.Context, b Backend) erro
 		}
 	} else {
 		// Both maxPriorityFee and maxFee set by caller. Sanity-check their internal relation
-		if isKIP71 {
+		if isMagma {
 			if args.MaxFeePerGas.ToInt().Cmp(gasPrice) < 0 {
 				return fmt.Errorf("maxFeePerGas (%v) < BaseFee (%v)", args.MaxFeePerGas, gasPrice)
 			}
@@ -1559,7 +1559,7 @@ func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrO
 	// this makes sure resources are cleaned up.
 	defer cancel()
 
-	// header.BaseFee != nil means kip71 hardforked
+	// header.BaseFee != nil means magma hardforked
 	var baseFee *big.Int
 	if header.BaseFee != nil {
 		baseFee = header.BaseFee

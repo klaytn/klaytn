@@ -239,7 +239,7 @@ func makeHeader(chain consensus.ChainReader, parent *types.Block, state *state.S
 		Number: new(big.Int).Add(parent.Number(), common.Big1),
 		Time:   time,
 	}
-	if chain.Config().IsKIP71ForkEnabled(header.Number) {
+	if chain.Config().IsMagmaForkEnabled(header.Number) {
 		header.BaseFee = misc.NextBlockBaseFee(parent.Header(), chain.Config())
 	}
 	return header

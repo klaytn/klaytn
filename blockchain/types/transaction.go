@@ -297,7 +297,7 @@ func (tx *Transaction) EffectiveGasPrice(header *Header) *big.Int {
 	if header != nil && header.BaseFee != nil {
 		return header.BaseFee
 	}
-	// Only enters if KIP-71 is not enabled. If KIP-71 is enabled, it will return BaseFee in the above if statement.
+	// Only enters if Magma is not enabled. If Magma is enabled, it will return BaseFee in the above if statement.
 	if tx.Type() == TxTypeEthereumDynamicFee {
 		te := tx.GetTxInternalData().(TxInternalDataBaseFee)
 		return te.GetGasFeeCap()
