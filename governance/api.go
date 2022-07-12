@@ -113,12 +113,12 @@ func (api *PublicGovernanceAPI) Vote(key string, val interface{}) (string, error
 			return "", errRemoveSelf
 		}
 	}
-	if vote.Key == "kip71.lowerboundbasefee" {
+	if vote.Key == "magma.lowerboundbasefee" {
 		if vote.Value.(uint64) > api.governance.UpperBoundBaseFee() {
 			return "", errInvalidLowerBound
 		}
 	}
-	if vote.Key == "kip71.upperboundbasefee" {
+	if vote.Key == "magma.upperboundbasefee" {
 		if vote.Value.(uint64) < api.governance.LowerBoundBaseFee() {
 			return "", errInvalidUpperBound
 		}

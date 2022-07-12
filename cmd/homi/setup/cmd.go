@@ -126,7 +126,7 @@ Args :
 		istanbulCompatibleBlockNumberFlag,
 		londonCompatibleBlockNumberFlag,
 		ethTxTypeCompatibleBlockNumberFlag,
-		kip71CompatibleBlockNumberFlag,
+		magmaCompatibleBlockNumberFlag,
 	},
 	ArgsUsage: "type",
 }
@@ -196,14 +196,14 @@ func genRewardConfig(ctx *cli.Context) *params.RewardConfig {
 	}
 }
 
-func genKIP71Config(ctx *cli.Context) *params.KIP71Config {
-	lowerBoundBaseFee := ctx.Uint64(kip71LowerBoundBaseFeeFlag.Name)
-	upperBoundBaseFee := ctx.Uint64(kip71UpperBoundBaseFeeFlag.Name)
-	gasTarget := ctx.Uint64(kip71GasTarget.Name)
-	maxBlockGasUsedForBaseFee := ctx.Uint64(kip71MaxBlockGasUsedForBaseFee.Name)
-	baseFeeDenominator := ctx.Uint64(kip71BaseFeeDenominator.Name)
+func genMagmaConfig(ctx *cli.Context) *params.MagmaConfig {
+	lowerBoundBaseFee := ctx.Uint64(magmaLowerBoundBaseFeeFlag.Name)
+	upperBoundBaseFee := ctx.Uint64(magmaUpperBoundBaseFeeFlag.Name)
+	gasTarget := ctx.Uint64(magmaGasTarget.Name)
+	maxBlockGasUsedForBaseFee := ctx.Uint64(magmaMaxBlockGasUsedForBaseFee.Name)
+	baseFeeDenominator := ctx.Uint64(magmaBaseFeeDenominator.Name)
 
-	return &params.KIP71Config{
+	return &params.MagmaConfig{
 		LowerBoundBaseFee:         lowerBoundBaseFee,         // lower bound of the base fee
 		UpperBoundBaseFee:         upperBoundBaseFee,         // upper bound of the base fee
 		GasTarget:                 gasTarget,                 // standard gas usage for whether to raise or lower the base fee
@@ -234,7 +234,7 @@ func genGovernanceConfig(ctx *cli.Context) *params.GovernanceConfig {
 		GoverningNode:  common.HexToAddress(governingNode),
 		GovernanceMode: govMode,
 		Reward:         genRewardConfig(ctx),
-		KIP71:          genKIP71Config(ctx),
+		Magma:          genMagmaConfig(ctx),
 	}
 }
 
@@ -527,7 +527,7 @@ func gen(ctx *cli.Context) error {
 	genesisJson.Config.IstanbulCompatibleBlock = big.NewInt(ctx.Int64(istanbulCompatibleBlockNumberFlag.Name))
 	genesisJson.Config.LondonCompatibleBlock = big.NewInt(ctx.Int64(londonCompatibleBlockNumberFlag.Name))
 	genesisJson.Config.EthTxTypeCompatibleBlock = big.NewInt(ctx.Int64(ethTxTypeCompatibleBlockNumberFlag.Name))
-	genesisJson.Config.KIP71CompatibleBlock = big.NewInt(ctx.Int64(kip71CompatibleBlockNumberFlag.Name))
+	genesisJson.Config.MagmaCompatibleBlock = big.NewInt(ctx.Int64(magmaCompatibleBlockNumberFlag.Name))
 
 	genesisJsonBytes, _ = json.MarshalIndent(genesisJson, "", "    ")
 	genValidatorKeystore(privKeys)

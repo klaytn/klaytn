@@ -10,7 +10,7 @@ import (
 	"github.com/klaytn/klaytn/params"
 )
 
-func VerifyKIP71Header(config *params.ChainConfig, parentHeader, header *types.Header) error {
+func VerifyMagmaHeader(config *params.ChainConfig, parentHeader, header *types.Header) error {
 	if header.BaseFee == nil {
 		return fmt.Errorf("header is missing baseFee")
 	}
@@ -25,23 +25,23 @@ func VerifyKIP71Header(config *params.ChainConfig, parentHeader, header *types.H
 
 func NextBlockBaseFee(parentHeader *types.Header, config *params.ChainConfig) *big.Int {
 	// governance parameters
-	lowerBoundBaseFee := new(big.Int).SetUint64(config.Governance.KIP71.LowerBoundBaseFee)
-	upperBoundBaseFee := new(big.Int).SetUint64(config.Governance.KIP71.UpperBoundBaseFee)
+	lowerBoundBaseFee := new(big.Int).SetUint64(config.Governance.Magma.LowerBoundBaseFee)
+	upperBoundBaseFee := new(big.Int).SetUint64(config.Governance.Magma.UpperBoundBaseFee)
 
-	// If the parent is the kip71 disabled block or genesis, then return the lowerBoundBaseFee (default 25ston)
-	if !config.IsKIP71ForkEnabled(parentHeader.Number) || parentHeader.Number.Cmp(new(big.Int).SetUint64(0)) == 0 {
+	// If the parent is the magma disabled block or genesis, then return the lowerBoundBaseFee (default 25ston)
+	if !config.IsMagmaForkEnabled(parentHeader.Number) || parentHeader.Number.Cmp(new(big.Int).SetUint64(0)) == 0 {
 		return lowerBoundBaseFee
 	}
 
 	var baseFeeDenominator *big.Int
-	if config.Governance.KIP71.BaseFeeDenominator == 0 {
+	if config.Governance.Magma.BaseFeeDenominator == 0 {
 		// To avoid panic, set the fluctuation range small
 		baseFeeDenominator = new(big.Int).SetUint64(64)
 	} else {
-		baseFeeDenominator = new(big.Int).SetUint64(config.Governance.KIP71.BaseFeeDenominator)
+		baseFeeDenominator = new(big.Int).SetUint64(config.Governance.Magma.BaseFeeDenominator)
 	}
-	gasTarget := config.Governance.KIP71.GasTarget
-	upperGasLimit := config.Governance.KIP71.MaxBlockGasUsedForBaseFee
+	gasTarget := config.Governance.Magma.GasTarget
+	upperGasLimit := config.Governance.Magma.MaxBlockGasUsedForBaseFee
 
 	// check the case of upper/lowerBoundBaseFee is updated by governance mechanism
 	parentBaseFee := parentHeader.BaseFee

@@ -191,12 +191,12 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 		return errUnknownBlock
 	}
 
-	// Header verify before/after kip71 fork
-	if !chain.Config().IsKIP71ForkEnabled(header.Number) {
+	// Header verify before/after magma fork
+	if !chain.Config().IsMagmaForkEnabled(header.Number) {
 		if header.BaseFee != nil {
 			return consensus.ErrInvalidBaseFee
 		}
-	} else if err := misc.VerifyKIP71Header(chain.Config(), parents[len(parents)-1], header); err != nil {
+	} else if err := misc.VerifyMagmaHeader(chain.Config(), parents[len(parents)-1], header); err != nil {
 		return err
 	}
 
@@ -429,14 +429,14 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	receipts []*types.Receipt,
 ) (*types.Block, error) {
-	// We can assure that if the kip71 hard forked block should have the field of base fee
-	if chain.Config().IsKIP71ForkEnabled(header.Number) {
+	// We can assure that if the magma hard forked block should have the field of base fee
+	if chain.Config().IsMagmaForkEnabled(header.Number) {
 		if header.BaseFee == nil {
-			logger.Error("KIP-71 hard forked block should have baseFee", "blockNum", header.Number.Uint64())
-			return nil, errors.New("Invalid KIP-71 block without baseFee")
+			logger.Error("Magma hard forked block should have baseFee", "blockNum", header.Number.Uint64())
+			return nil, errors.New("Invalid Magma block without baseFee")
 		}
 	} else if header.BaseFee != nil {
-		logger.Error("A block before KIP-71 hardfork shouldn't have baseFee", "blockNum", header.Number.Uint64())
+		logger.Error("A block before Magma hardfork shouldn't have baseFee", "blockNum", header.Number.Uint64())
 		return nil, consensus.ErrInvalidBaseFee
 	}
 

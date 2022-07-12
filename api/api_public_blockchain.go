@@ -302,7 +302,7 @@ func DoCall(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.Blo
 		return nil, 0, 0, 0, err
 	}
 
-	// header.BaseFee != nil means kip71 hardforked
+	// header.BaseFee != nil means magma hardforked
 	var baseFee *big.Int
 	if header.BaseFee != nil {
 		baseFee = header.BaseFee

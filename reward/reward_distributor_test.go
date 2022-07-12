@@ -87,7 +87,7 @@ func TestRewardDistributor_getTotalTxFee(t *testing.T) {
 		baseFee            *big.Int
 		expectedTotalTxFee *big.Int
 	}{
-		// before kip71 hardfork
+		// before magma hardfork
 		{0, big.NewInt(25000000000), nil, big.NewInt(0)},
 		{200000, big.NewInt(25000000000), nil, big.NewInt(5000000000000000)},
 		{200000, big.NewInt(25000000000), nil, big.NewInt(5000000000000000)},
@@ -96,7 +96,7 @@ func TestRewardDistributor_getTotalTxFee(t *testing.T) {
 		{9236192, big.NewInt(50000), nil, big.NewInt(461809600000)},
 		{9236192, big.NewInt(50000), nil, big.NewInt(461809600000)},
 		{12936418927364923, big.NewInt(0), nil, big.NewInt(0)},
-		// after kip71 hardfork, unitprice ignored
+		// after magma hardfork, unitprice ignored
 		{0, big.NewInt(25000000000), big.NewInt(25000000000), big.NewInt(0)},
 		{200000, big.NewInt(25000000000), big.NewInt(25000000000), big.NewInt(5000000000000000)},
 		{200000, big.NewInt(25000000000), big.NewInt(25000000000), big.NewInt(5000000000000000)},

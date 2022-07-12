@@ -58,7 +58,7 @@ type (
 	istanbulCompatibleBlock  *big.Int
 	LondonCompatibleBlock    *big.Int
 	EthTxTypeCompatibleBlock *big.Int
-	kip71CompatibleBlock     *big.Int
+	magmaCompatibleBlock     *big.Int
 )
 
 type (
@@ -131,8 +131,8 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 			genesis.Config.LondonCompatibleBlock = v
 		case EthTxTypeCompatibleBlock:
 			genesis.Config.EthTxTypeCompatibleBlock = v
-		case kip71CompatibleBlock:
-			genesis.Config.KIP71CompatibleBlock = v
+		case magmaCompatibleBlock:
+			genesis.Config.MagmaCompatibleBlock = v
 		case proposerPolicy:
 			genesis.Config.Istanbul.ProposerPolicy = uint64(v)
 		case epoch:
@@ -331,7 +331,7 @@ func TestVerifyHeader(t *testing.T) {
 	configItems = append(configItems, istanbulCompatibleBlock(new(big.Int).SetUint64(0)))
 	configItems = append(configItems, LondonCompatibleBlock(new(big.Int).SetUint64(0)))
 	configItems = append(configItems, EthTxTypeCompatibleBlock(new(big.Int).SetUint64(0)))
-	configItems = append(configItems, kip71CompatibleBlock(new(big.Int).SetUint64(0)))
+	configItems = append(configItems, magmaCompatibleBlock(new(big.Int).SetUint64(0)))
 	chain, engine := newBlockChain(1, configItems...)
 	defer engine.Stop()
 
@@ -1424,66 +1424,66 @@ func TestGovernance_Votes(t *testing.T) {
 		{
 			votes: []vote{
 				{}, // voted on block 1
-				{"kip71.lowerboundbasefee", uint64(750000000000)}, // voted on block 2
+				{"magma.lowerboundbasefee", uint64(750000000000)}, // voted on block 2
 				{}, // voted on block 3
 				{}, // voted on block 4
-				{"kip71.lowerboundbasefee", uint64(25000000000)}, // voted on block 5
+				{"magma.lowerboundbasefee", uint64(25000000000)}, // voted on block 5
 			},
 			expected: []governanceItem{
-				{vote{"kip71.lowerboundbasefee", uint64(750000000000)}, 6},
-				{vote{"kip71.lowerboundbasefee", uint64(25000000000)}, 9},
+				{vote{"magma.lowerboundbasefee", uint64(750000000000)}, 6},
+				{vote{"magma.lowerboundbasefee", uint64(25000000000)}, 9},
 			},
 		},
 		{
 			votes: []vote{
 				{}, // voted on block 1
-				{"kip71.upperboundbasefee", uint64(750000000000)}, // voted on block 2
+				{"magma.upperboundbasefee", uint64(750000000000)}, // voted on block 2
 				{}, // voted on block 3
 				{}, // voted on block 4
-				{"kip71.upperboundbasefee", uint64(25000000000)}, // voted on block 5
+				{"magma.upperboundbasefee", uint64(25000000000)}, // voted on block 5
 			},
 			expected: []governanceItem{
-				{vote{"kip71.upperboundbasefee", uint64(750000000000)}, 6},
-				{vote{"kip71.upperboundbasefee", uint64(25000000000)}, 9},
+				{vote{"magma.upperboundbasefee", uint64(750000000000)}, 6},
+				{vote{"magma.upperboundbasefee", uint64(25000000000)}, 9},
 			},
 		},
 		{
 			votes: []vote{
 				{}, // voted on block 1
-				{"kip71.maxblockgasusedforbasefee", uint64(840000000)}, // voted on block 2
+				{"magma.maxblockgasusedforbasefee", uint64(840000000)}, // voted on block 2
 				{}, // voted on block 3
 				{}, // voted on block 4
-				{"kip71.maxblockgasusedforbasefee", uint64(84000000)}, // voted on block 5
+				{"magma.maxblockgasusedforbasefee", uint64(84000000)}, // voted on block 5
 			},
 			expected: []governanceItem{
-				{vote{"kip71.maxblockgasusedforbasefee", uint64(840000000)}, 6},
-				{vote{"kip71.maxblockgasusedforbasefee", uint64(84000000)}, 9},
+				{vote{"magma.maxblockgasusedforbasefee", uint64(840000000)}, 6},
+				{vote{"magma.maxblockgasusedforbasefee", uint64(84000000)}, 9},
 			},
 		},
 		{
 			votes: []vote{
 				{},                                    // voted on block 1
-				{"kip71.gastarget", uint64(50000000)}, // voted on block 2
+				{"magma.gastarget", uint64(50000000)}, // voted on block 2
 				{},                                    // voted on block 3
 				{},                                    // voted on block 4
-				{"kip71.gastarget", uint64(30000000)}, // voted on block 5
+				{"magma.gastarget", uint64(30000000)}, // voted on block 5
 			},
 			expected: []governanceItem{
-				{vote{"kip71.gastarget", uint64(50000000)}, 6},
-				{vote{"kip71.gastarget", uint64(30000000)}, 9},
+				{vote{"magma.gastarget", uint64(50000000)}, 6},
+				{vote{"magma.gastarget", uint64(30000000)}, 9},
 			},
 		},
 		{
 			votes: []vote{
 				{},                                       // voted on block 1
-				{"kip71.basefeedenominator", uint64(32)}, // voted on block 2
+				{"magma.basefeedenominator", uint64(32)}, // voted on block 2
 				{},                                       // voted on block 3
 				{},                                       // voted on block 4
-				{"kip71.basefeedenominator", uint64(64)}, // voted on block 5
+				{"magma.basefeedenominator", uint64(64)}, // voted on block 5
 			},
 			expected: []governanceItem{
-				{vote{"kip71.basefeedenominator", uint64(32)}, 6},
-				{vote{"kip71.basefeedenominator", uint64(64)}, 9},
+				{vote{"magma.basefeedenominator", uint64(32)}, 6},
+				{vote{"magma.basefeedenominator", uint64(64)}, 9},
 			},
 		},
 	}
@@ -1646,24 +1646,24 @@ func TestChainConfig_UpdateAfterVotes(t *testing.T) {
 
 	testcases := []testcase{
 		{
-			voting:   vote{"kip71.lowerboundbasefee", uint64(20000000000)}, // voted on block 1
-			expected: vote{"kip71.lowerboundbasefee", uint64(20000000000)},
+			voting:   vote{"magma.lowerboundbasefee", uint64(20000000000)}, // voted on block 1
+			expected: vote{"magma.lowerboundbasefee", uint64(20000000000)},
 		},
 		{
-			voting:   vote{"kip71.upperboundbasefee", uint64(500000000000)}, // voted on block 1
-			expected: vote{"kip71.upperboundbasefee", uint64(500000000000)},
+			voting:   vote{"magma.upperboundbasefee", uint64(500000000000)}, // voted on block 1
+			expected: vote{"magma.upperboundbasefee", uint64(500000000000)},
 		},
 		{
-			voting:   vote{"kip71.maxblockgasusedforbasefee", uint64(100000000)}, // voted on block 1
-			expected: vote{"kip71.maxblockgasusedforbasefee", uint64(100000000)},
+			voting:   vote{"magma.maxblockgasusedforbasefee", uint64(100000000)}, // voted on block 1
+			expected: vote{"magma.maxblockgasusedforbasefee", uint64(100000000)},
 		},
 		{
-			voting:   vote{"kip71.gastarget", uint64(50000000)}, // voted on block 1
-			expected: vote{"kip71.gastarget", uint64(50000000)},
+			voting:   vote{"magma.gastarget", uint64(50000000)}, // voted on block 1
+			expected: vote{"magma.gastarget", uint64(50000000)},
 		},
 		{
-			voting:   vote{"kip71.basefeedenominator", uint64(32)}, // voted on block 1
-			expected: vote{"kip71.basefeedenominator", uint64(32)},
+			voting:   vote{"magma.basefeedenominator", uint64(32)}, // voted on block 1
+			expected: vote{"magma.basefeedenominator", uint64(32)},
 		},
 	}
 
@@ -1675,11 +1675,11 @@ func TestChainConfig_UpdateAfterVotes(t *testing.T) {
 		chain, engine := newBlockChain(1, configItems...)
 
 		// test initial governance items
-		assert.Equal(t, uint64(25000000000), chain.Config().Governance.KIP71.LowerBoundBaseFee)
-		assert.Equal(t, uint64(750000000000), chain.Config().Governance.KIP71.UpperBoundBaseFee)
-		assert.Equal(t, uint64(20), chain.Config().Governance.KIP71.BaseFeeDenominator)
-		assert.Equal(t, uint64(60000000), chain.Config().Governance.KIP71.MaxBlockGasUsedForBaseFee)
-		assert.Equal(t, uint64(30000000), chain.Config().Governance.KIP71.GasTarget)
+		assert.Equal(t, uint64(25000000000), chain.Config().Governance.Magma.LowerBoundBaseFee)
+		assert.Equal(t, uint64(750000000000), chain.Config().Governance.Magma.UpperBoundBaseFee)
+		assert.Equal(t, uint64(20), chain.Config().Governance.Magma.BaseFeeDenominator)
+		assert.Equal(t, uint64(60000000), chain.Config().Governance.Magma.MaxBlockGasUsedForBaseFee)
+		assert.Equal(t, uint64(30000000), chain.Config().Governance.Magma.GasTarget)
 
 		// add votes and insert voted blocks
 		var (
@@ -1704,16 +1704,16 @@ func TestChainConfig_UpdateAfterVotes(t *testing.T) {
 
 		govConfig := chain.Config().Governance
 		switch tc.expected.key {
-		case "kip71.lowerboundbasefee":
-			assert.Equal(t, tc.expected.value, govConfig.KIP71.LowerBoundBaseFee)
-		case "kip71.upperboundbasefee":
-			assert.Equal(t, tc.expected.value, govConfig.KIP71.UpperBoundBaseFee)
-		case "kip71.gastarget":
-			assert.Equal(t, tc.expected.value, govConfig.KIP71.GasTarget)
-		case "kip71.maxblockgasusedforbasefee":
-			assert.Equal(t, tc.expected.value, govConfig.KIP71.MaxBlockGasUsedForBaseFee)
-		case "kip71.basefeedenominator":
-			assert.Equal(t, tc.expected.value, govConfig.KIP71.BaseFeeDenominator)
+		case "magma.lowerboundbasefee":
+			assert.Equal(t, tc.expected.value, govConfig.Magma.LowerBoundBaseFee)
+		case "magma.upperboundbasefee":
+			assert.Equal(t, tc.expected.value, govConfig.Magma.UpperBoundBaseFee)
+		case "magma.gastarget":
+			assert.Equal(t, tc.expected.value, govConfig.Magma.GasTarget)
+		case "magma.maxblockgasusedforbasefee":
+			assert.Equal(t, tc.expected.value, govConfig.Magma.MaxBlockGasUsedForBaseFee)
+		case "magma.basefeedenominator":
+			assert.Equal(t, tc.expected.value, govConfig.Magma.BaseFeeDenominator)
 		default:
 			assert.Error(t, nil)
 		}
@@ -1732,24 +1732,24 @@ func TestChainConfig_ReadFromDBAfterVotes(t *testing.T) {
 
 	testcases := []testcase{
 		{
-			voting:   vote{"kip71.lowerboundbasefee", uint64(20000000000)}, // voted on block 1
-			expected: vote{"kip71.lowerboundbasefee", uint64(20000000000)},
+			voting:   vote{"magma.lowerboundbasefee", uint64(20000000000)}, // voted on block 1
+			expected: vote{"magma.lowerboundbasefee", uint64(20000000000)},
 		},
 		{
-			voting:   vote{"kip71.upperboundbasefee", uint64(500000000000)}, // voted on block 1
-			expected: vote{"kip71.upperboundbasefee", uint64(500000000000)},
+			voting:   vote{"magma.upperboundbasefee", uint64(500000000000)}, // voted on block 1
+			expected: vote{"magma.upperboundbasefee", uint64(500000000000)},
 		},
 		{
-			voting:   vote{"kip71.maxblockgasusedforbasefee", uint64(100000000)}, // voted on block 1
-			expected: vote{"kip71.maxblockgasusedforbasefee", uint64(100000000)},
+			voting:   vote{"magma.maxblockgasusedforbasefee", uint64(100000000)}, // voted on block 1
+			expected: vote{"magma.maxblockgasusedforbasefee", uint64(100000000)},
 		},
 		{
-			voting:   vote{"kip71.gastarget", uint64(50000000)}, // voted on block 1
-			expected: vote{"kip71.gastarget", uint64(50000000)},
+			voting:   vote{"magma.gastarget", uint64(50000000)}, // voted on block 1
+			expected: vote{"magma.gastarget", uint64(50000000)},
 		},
 		{
-			voting:   vote{"kip71.basefeedenominator", uint64(32)}, // voted on block 1
-			expected: vote{"kip71.basefeedenominator", uint64(32)},
+			voting:   vote{"magma.basefeedenominator", uint64(32)}, // voted on block 1
+			expected: vote{"magma.basefeedenominator", uint64(32)},
 		},
 	}
 
@@ -1762,11 +1762,11 @@ func TestChainConfig_ReadFromDBAfterVotes(t *testing.T) {
 		chain, engine := newBlockChain(1, configItems...)
 
 		// test initial governance items
-		assert.Equal(t, uint64(25000000000), chain.Config().Governance.KIP71.LowerBoundBaseFee)
-		assert.Equal(t, uint64(750000000000), chain.Config().Governance.KIP71.UpperBoundBaseFee)
-		assert.Equal(t, uint64(20), chain.Config().Governance.KIP71.BaseFeeDenominator)
-		assert.Equal(t, uint64(60000000), chain.Config().Governance.KIP71.MaxBlockGasUsedForBaseFee)
-		assert.Equal(t, uint64(30000000), chain.Config().Governance.KIP71.GasTarget)
+		assert.Equal(t, uint64(25000000000), chain.Config().Governance.Magma.LowerBoundBaseFee)
+		assert.Equal(t, uint64(750000000000), chain.Config().Governance.Magma.UpperBoundBaseFee)
+		assert.Equal(t, uint64(20), chain.Config().Governance.Magma.BaseFeeDenominator)
+		assert.Equal(t, uint64(60000000), chain.Config().Governance.Magma.MaxBlockGasUsedForBaseFee)
+		assert.Equal(t, uint64(30000000), chain.Config().Governance.Magma.GasTarget)
 
 		// add votes and insert voted blocks
 		var (
@@ -1791,16 +1791,16 @@ func TestChainConfig_ReadFromDBAfterVotes(t *testing.T) {
 
 		gov := governance.NewGovernanceInitialize(chain.Config(), engine.db)
 		switch tc.expected.key {
-		case "kip71.lowerboundbasefee":
-			assert.Equal(t, tc.expected.value, gov.ChainConfig.Governance.KIP71.LowerBoundBaseFee)
-		case "kip71.upperboundbasefee":
-			assert.Equal(t, tc.expected.value, gov.ChainConfig.Governance.KIP71.UpperBoundBaseFee)
-		case "kip71.gastarget":
-			assert.Equal(t, tc.expected.value, gov.ChainConfig.Governance.KIP71.GasTarget)
-		case "kip71.maxblockgasusedforbasefee":
-			assert.Equal(t, tc.expected.value, gov.ChainConfig.Governance.KIP71.MaxBlockGasUsedForBaseFee)
-		case "kip71.basefeedenominator":
-			assert.Equal(t, tc.expected.value, gov.ChainConfig.Governance.KIP71.BaseFeeDenominator)
+		case "magma.lowerboundbasefee":
+			assert.Equal(t, tc.expected.value, gov.ChainConfig.Governance.Magma.LowerBoundBaseFee)
+		case "magma.upperboundbasefee":
+			assert.Equal(t, tc.expected.value, gov.ChainConfig.Governance.Magma.UpperBoundBaseFee)
+		case "magma.gastarget":
+			assert.Equal(t, tc.expected.value, gov.ChainConfig.Governance.Magma.GasTarget)
+		case "magma.maxblockgasusedforbasefee":
+			assert.Equal(t, tc.expected.value, gov.ChainConfig.Governance.Magma.MaxBlockGasUsedForBaseFee)
+		case "magma.basefeedenominator":
+			assert.Equal(t, tc.expected.value, gov.ChainConfig.Governance.Magma.BaseFeeDenominator)
 		default:
 			assert.Error(t, nil)
 		}

@@ -227,7 +227,7 @@ func TestValidationPoolInsert(t *testing.T) {
 	}
 }
 
-func TestValidationPoolInsertKip71(t *testing.T) {
+func TestValidationPoolInsertMagma(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 
 	testTxTypes := []testTxType{}
@@ -246,7 +246,7 @@ func TestValidationPoolInsertKip71(t *testing.T) {
 		Name string
 		fn   func(types.TxType, txValueMap, common.Address) (txValueMap, error)
 	}{
-		{"invalidGasPrice", decreaseGasPriceKip71},
+		{"invalidGasPrice", decreaseGasPriceMagma},
 	}
 
 	prof := profile.NewProfiler()
@@ -259,7 +259,7 @@ func TestValidationPoolInsertKip71(t *testing.T) {
 	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
 	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
 	bcdata.bc.Config().EthTxTypeCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().KIP71CompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().MagmaCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -499,8 +499,8 @@ func decreaseGasPrice(txType types.TxType, values txValueMap, contract common.Ad
 	return values, err
 }
 
-// decreaseGasPrice changes gasPrice to 12345678 and return an error with kip71 policy
-func decreaseGasPriceKip71(txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
+// decreaseGasPrice changes gasPrice to 12345678 and return an error with magma policy
+func decreaseGasPriceMagma(txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
 	var err error
 	if txType == types.TxTypeEthereumDynamicFee {
 		(*big.Int).SetUint64(values[types.TxValueKeyGasFeeCap].(*big.Int), 12345678)
