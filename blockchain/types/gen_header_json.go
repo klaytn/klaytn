@@ -26,10 +26,11 @@ func (h Header) MarshalJSON() ([]byte, error) {
 		Number      *hexutil.Big   `json:"number"           gencodec:"required"`
 		GasUsed     hexutil.Uint64 `json:"gasUsed"          gencodec:"required"`
 		Time        *hexutil.Big   `json:"timestamp"        gencodec:"required"`
-		TimeFoS     hexutil.Uint   `json:"timestampFoS"     gencodec:"required"`
-		Extra       hexutil.Bytes  `json:"extraData"        gencodec:"required"`
-		Governance  hexutil.Bytes  `json:"governanceData"        gencodec:"required"`
+		TimeFoS     hexutil.Uint   `json:"timestampFoS"              gencodec:"required"`
+		Extra       hexutil.Bytes  `json:"extraData"                 gencodec:"required"`
+		Governance  hexutil.Bytes  `json:"governanceData"            gencodec:"required"`
 		Vote        hexutil.Bytes  `json:"voteData,omitempty"`
+		BaseFee     *hexutil.Big   `json:"baseFeePerGas,omitempty"    rlp:"optional"`
 		Hash        common.Hash    `json:"hash"`
 	}
 	var enc Header
@@ -47,6 +48,7 @@ func (h Header) MarshalJSON() ([]byte, error) {
 	enc.Extra = h.Extra
 	enc.Governance = h.Governance
 	enc.Vote = h.Vote
+	enc.BaseFee = (*hexutil.Big)(h.BaseFee)
 	enc.Hash = h.Hash()
 	return json.Marshal(&enc)
 }
@@ -64,10 +66,11 @@ func (h *Header) UnmarshalJSON(input []byte) error {
 		Number      *hexutil.Big    `json:"number"           gencodec:"required"`
 		GasUsed     *hexutil.Uint64 `json:"gasUsed"          gencodec:"required"`
 		Time        *hexutil.Big    `json:"timestamp"        gencodec:"required"`
-		TimeFoS     *hexutil.Uint   `json:"timestampFoS"     gencodec:"required"`
-		Extra       *hexutil.Bytes  `json:"extraData"        gencodec:"required"`
-		Governance  *hexutil.Bytes  `json:"governanceData"        gencodec:"required"`
+		TimeFoS     *hexutil.Uint   `json:"timestampFoS"              gencodec:"required"`
+		Extra       *hexutil.Bytes  `json:"extraData"                 gencodec:"required"`
+		Governance  *hexutil.Bytes  `json:"governanceData"            gencodec:"required"`
 		Vote        *hexutil.Bytes  `json:"voteData,omitempty"`
+		BaseFee     *hexutil.Big    `json:"baseFeePerGas,omitempty"    rlp:"optional"`
 	}
 	var dec Header
 	if err := json.Unmarshal(input, &dec); err != nil {
@@ -127,6 +130,9 @@ func (h *Header) UnmarshalJSON(input []byte) error {
 	h.Governance = *dec.Governance
 	if dec.Vote != nil {
 		h.Vote = *dec.Vote
+	}
+	if dec.BaseFee != nil {
+		h.BaseFee = (*big.Int)(dec.BaseFee)
 	}
 	return nil
 }
