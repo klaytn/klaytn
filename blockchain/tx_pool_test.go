@@ -54,8 +54,8 @@ var (
 	// eip1559Config is a chain config with EIP-1559 enabled at block 0.
 	eip1559Config *params.ChainConfig
 
-	// kip71Config is a chain config with KIP-71 enabled at block 0.
-	kip71Config *params.ChainConfig
+	// magmaConfig is a chain config with KIP-71 enabled at block 0.
+	magmaConfig *params.ChainConfig
 )
 
 func init() {
@@ -68,12 +68,12 @@ func init() {
 	eip1559Config.EthTxTypeCompatibleBlock = common.Big0
 	fork.SetHardForkBlockNumberConfig(eip1559Config)
 
-	kip71Config = params.TestChainConfig.Copy()
-	kip71Config.KIP71CompatibleBlock = common.Big0
-	kip71Config.IstanbulCompatibleBlock = common.Big0
-	kip71Config.LondonCompatibleBlock = common.Big0
-	kip71Config.EthTxTypeCompatibleBlock = common.Big0
-	kip71Config.Governance = &params.GovernanceConfig{KIP71: params.GetDefaultKip71Config()}
+	magmaConfig = params.TestChainConfig.Copy()
+	magmaConfig.MagmaCompatibleBlock = common.Big0
+	magmaConfig.IstanbulCompatibleBlock = common.Big0
+	magmaConfig.LondonCompatibleBlock = common.Big0
+	magmaConfig.EthTxTypeCompatibleBlock = common.Big0
+	magmaConfig.Governance = &params.GovernanceConfig{Magma: params.GetDefaultMagmaConfig()}
 }
 
 type testBlockChain struct {
@@ -380,10 +380,10 @@ func TestInvalidTransactions(t *testing.T) {
 	}
 }
 
-func TestInvalidTransactionsKip71(t *testing.T) {
+func TestInvalidTransactionsMagma(t *testing.T) {
 	t.Parallel()
 
-	pool, key := setupTxPoolWithConfig(kip71Config)
+	pool, key := setupTxPoolWithConfig(magmaConfig)
 	pool.SetBaseFee(big.NewInt(1))
 	defer pool.Stop()
 
@@ -412,7 +412,7 @@ func TestInvalidTransactionsKip71(t *testing.T) {
 	pool.SetBaseFee(big.NewInt(1000))
 
 	// NOTE-Klaytn if the gasPrice in tx is lower than txPool's
-	// It should return ErrGasPriceBelowBaseFee error after kip71 hardfork
+	// It should return ErrGasPriceBelowBaseFee error after magma hardfork
 	if err := pool.AddRemote(tx); err != ErrGasPriceBelowBaseFee {
 		t.Error("expected", ErrGasPriceBelowBaseFee, "got", err)
 	}
@@ -2088,11 +2088,11 @@ func TestDynamicFeeTransactionAcceptedEip1559(t *testing.T) {
 }
 
 // TestDynamicFeeTransactionAccepted tests that pool accept the transaction which has gasFeeCap bigger than or equal to baseFee.
-func TestDynamicFeeTransactionAcceptedKip71(t *testing.T) {
+func TestDynamicFeeTransactionAcceptedMagma(t *testing.T) {
 	t.Parallel()
 	baseFee := big.NewInt(30)
 
-	pool, key := setupTxPoolWithConfig(kip71Config)
+	pool, key := setupTxPoolWithConfig(magmaConfig)
 	defer pool.Stop()
 	pool.SetBaseFee(baseFee)
 
@@ -2141,11 +2141,11 @@ func TestTransactionAcceptedEip1559(t *testing.T) {
 }
 
 // TestTransactionAccepted tests that pool accepted transaction which has gasPrice bigger than or equal to baseFee.
-func TestTransactionAcceptedKip71(t *testing.T) {
+func TestTransactionAcceptedMagma(t *testing.T) {
 	t.Parallel()
 	baseFee := big.NewInt(30)
 
-	pool, key := setupTxPoolWithConfig(kip71Config)
+	pool, key := setupTxPoolWithConfig(magmaConfig)
 	defer pool.Stop()
 	pool.SetBaseFee(baseFee)
 
@@ -2164,11 +2164,11 @@ func TestTransactionAcceptedKip71(t *testing.T) {
 	}
 }
 
-func TestCancelTransactionAcceptedKip71(t *testing.T) {
+func TestCancelTransactionAcceptedMagma(t *testing.T) {
 	t.Parallel()
 	baseFee := big.NewInt(30)
 
-	pool, key := setupTxPoolWithConfig(kip71Config)
+	pool, key := setupTxPoolWithConfig(magmaConfig)
 	defer pool.Stop()
 	pool.SetBaseFee(baseFee)
 
@@ -2208,7 +2208,7 @@ func TestDynamicFeeTransactionNotAcceptedWithLowerGasPrice(t *testing.T) {
 	t.Parallel()
 	baseFee := big.NewInt(30)
 
-	pool, key := setupTxPoolWithConfig(kip71Config)
+	pool, key := setupTxPoolWithConfig(magmaConfig)
 	defer pool.Stop()
 	pool.SetBaseFee(baseFee)
 
@@ -2225,7 +2225,7 @@ func TestDynamicFeeTransactionNotAcceptedWithLowerGasPrice(t *testing.T) {
 func TestTransactionNotAcceptedWithLowerGasPrice(t *testing.T) {
 	t.Parallel()
 
-	pool, key := setupTxPoolWithConfig(kip71Config)
+	pool, key := setupTxPoolWithConfig(magmaConfig)
 	defer pool.Stop()
 
 	baseFee := big.NewInt(30)
@@ -2244,7 +2244,7 @@ func TestTransactionNotAcceptedWithLowerGasPrice(t *testing.T) {
 func TestTransactionsPromoteFull(t *testing.T) {
 	t.Parallel()
 
-	pool, key := setupTxPoolWithConfig(kip71Config)
+	pool, key := setupTxPoolWithConfig(magmaConfig)
 	defer pool.Stop()
 
 	from := crypto.PubkeyToAddress(key.PublicKey)
@@ -2279,7 +2279,7 @@ func TestTransactionsPromoteFull(t *testing.T) {
 func TestTransactionsPromotePartial(t *testing.T) {
 	t.Parallel()
 
-	pool, key := setupTxPoolWithConfig(kip71Config)
+	pool, key := setupTxPoolWithConfig(magmaConfig)
 	defer pool.Stop()
 
 	from := crypto.PubkeyToAddress(key.PublicKey)
@@ -2324,7 +2324,7 @@ func TestTransactionsPromotePartial(t *testing.T) {
 func TestTransactionsPromoteMultipleAccount(t *testing.T) {
 	t.Parallel()
 
-	pool, _ := setupTxPoolWithConfig(kip71Config)
+	pool, _ := setupTxPoolWithConfig(magmaConfig)
 	defer pool.Stop()
 	pool.SetBaseFee(big.NewInt(10))
 
@@ -2382,7 +2382,7 @@ func TestTransactionsPromoteMultipleAccount(t *testing.T) {
 func TestTransactionsDemotionMultipleAccount(t *testing.T) {
 	t.Parallel()
 
-	pool, _ := setupTxPoolWithConfig(kip71Config)
+	pool, _ := setupTxPoolWithConfig(magmaConfig)
 	defer pool.Stop()
 	pool.SetBaseFee(big.NewInt(10))
 

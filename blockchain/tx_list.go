@@ -308,14 +308,14 @@ func (l *txList) Overlaps(tx *types.Transaction) bool {
 //
 // If the new transaction is accepted into the list, the lists' cost and gas
 // thresholds are also potentially updated.
-func (l *txList) Add(tx *types.Transaction, priceBump uint64, kip71Hardforked bool) (bool, *types.Transaction) {
+func (l *txList) Add(tx *types.Transaction, priceBump uint64, magmaHardforked bool) (bool, *types.Transaction) {
 	// If there's an older better transaction, abort
 	old := l.txs.Get(tx.Nonce())
 	if old != nil {
 		// If tx is CancelTransaction, replace it even thought tx has lower gasPrice than previous tx.
 		if tx.Type().IsCancelTransaction() {
 			logger.Trace("New tx is a cancel transaction. replace it!", "old", old.String(), "new", tx.String())
-		} else if kip71Hardforked {
+		} else if magmaHardforked {
 			if old.GasPrice().Cmp(tx.GasPrice()) >= 0 {
 				// If gas price of older is bigger than newer, abort.
 				logger.Trace("already nonce exist and the gasprice is lower then older", "nonce", tx.Nonce(), "with gasprice", old.GasPrice(), "priceBump", priceBump, "new tx.gasprice", tx.GasPrice())

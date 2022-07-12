@@ -296,31 +296,31 @@ var (
 		Value: "2000000",
 	}
 
-	kip71LowerBoundBaseFeeFlag = cli.Uint64Flag{
+	magmaLowerBoundBaseFeeFlag = cli.Uint64Flag{
 		Name:  "lower-bound-base-fee",
 		Usage: "lower bound base fee flag",
 		Value: params.DefaultLowerBoundBaseFee,
 	}
 
-	kip71UpperBoundBaseFeeFlag = cli.Uint64Flag{
+	magmaUpperBoundBaseFeeFlag = cli.Uint64Flag{
 		Name:  "upper-bound-base-fee",
 		Usage: "upper bound base fee flag",
 		Value: params.DefaultUpperBoundBaseFee,
 	}
 
-	kip71GasTarget = cli.Uint64Flag{
+	magmaGasTarget = cli.Uint64Flag{
 		Name:  "gas-target",
 		Usage: "gas target flag",
 		Value: params.DefaultGasTarget,
 	}
 
-	kip71MaxBlockGasUsedForBaseFee = cli.Uint64Flag{
+	magmaMaxBlockGasUsedForBaseFee = cli.Uint64Flag{
 		Name:  "block-gas-limit",
 		Usage: "block gas limit flag",
 		Value: params.DefaultMaxBlockGasUsedForBaseFee,
 	}
 
-	kip71BaseFeeDenominator = cli.Uint64Flag{
+	magmaBaseFeeDenominator = cli.Uint64Flag{
 		Name:  "base-fee-denominator",
 		Usage: "base fee denominator flag",
 		Value: params.DefaultLowerBoundBaseFee,
@@ -374,9 +374,9 @@ var (
 		Value: 0,
 	}
 
-	kip71CompatibleBlockNumberFlag = cli.Int64Flag{
-		Name:  "kip71-compatible-blocknumber",
-		Usage: "kip71Compatible blockNumber",
+	magmaCompatibleBlockNumberFlag = cli.Int64Flag{
+		Name:  "magma-compatible-blocknumber",
+		Usage: "magmaCompatible blockNumber",
 		Value: 0,
 	}
 )

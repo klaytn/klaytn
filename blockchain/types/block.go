@@ -241,7 +241,7 @@ func CopyHeader(h *Header) *Header {
 		cpy.Number.Set(h.Number)
 	}
 	if h.BaseFee != nil {
-		// This field exists after kip71 hardfork
+		// This field exists after magma hardfork
 		cpy.BaseFee = new(big.Int).Set(h.BaseFee)
 	}
 	if len(h.Extra) > 0 {

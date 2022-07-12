@@ -1526,8 +1526,8 @@ web3._extend({
 			getter: 'subbridge_getParentGasPrice',
 		}),
 		new web3._extend.Property({
-			name: 'parentKIP71Config',
-			getter: 'subbridge_getParentKIP71Config',
+			name: 'parentMagmaConfig',
+			getter: 'subbridge_getParentMagmaConfig',
 		}),
 	]
 });

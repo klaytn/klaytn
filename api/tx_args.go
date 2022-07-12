@@ -138,7 +138,7 @@ type SendTxArgs struct {
 
 // setDefaults is a helper function that fills in default values for unspecified common tx fields.
 func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
-	isKIP71 := b.ChainConfig().IsKIP71ForkEnabled(new(big.Int).Add(b.CurrentBlock().Number(), big.NewInt(1)))
+	isMagma := b.ChainConfig().IsMagmaForkEnabled(new(big.Int).Add(b.CurrentBlock().Number(), big.NewInt(1)))
 
 	if args.TypeInt == nil {
 		args.TypeInt = new(types.TxType)
@@ -156,13 +156,13 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 	}
 	// For the transaction that do not use the gasPrice field, the default value of gasPrice is not set.
 	if args.Price == nil && *args.TypeInt != types.TxTypeEthereumDynamicFee {
-		// b.SuggestPrice = unitPrice, for before KIP71
-		//                = baseFee,   for after KIP71
+		// b.SuggestPrice = unitPrice, for before Magma
+		//                = baseFee,   for after Magma
 		price, err := b.SuggestPrice(ctx)
 		if err != nil {
 			return err
 		}
-		if isKIP71 {
+		if isMagma {
 			// we need to set baseFee * 2 after KIP-71 hard fork
 			price = new(big.Int).Mul(price, common.Big2)
 		}
@@ -183,13 +183,13 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 				(*big.Int)(args.MaxPriorityFeePerGas),
 				new(big.Int).Mul(new(big.Int).SetUint64(params.ZeroBaseFee), big.NewInt(2)),
 			)
-			if isKIP71 {
+			if isMagma {
 				// After KIP-71 hard fork, `gasFeeCap` was set to `baseFee*2` by default.
 				gasFeeCap = new(big.Int).Mul(gasPrice, big.NewInt(2))
 			}
 			args.MaxFeePerGas = (*hexutil.Big)(gasFeeCap)
 		}
-		if isKIP71 {
+		if isMagma {
 			if args.MaxFeePerGas.ToInt().Cmp(gasPrice) < 0 {
 				return fmt.Errorf("maxFeePerGas (%v) < BaseFee (%v)", args.MaxFeePerGas, gasPrice)
 			}

@@ -55,7 +55,7 @@ func NewRewardDistributor(gh governanceHelper) *RewardDistributor {
 func (rd *RewardDistributor) getTotalTxFee(header *types.Header, rewardConfig *rewardConfig) *big.Int {
 	totalGasUsed := big.NewInt(0).SetUint64(header.GasUsed)
 	if header.BaseFee != nil {
-		// kip71 hardfork
+		// magma hardfork
 		return totalGasUsed.Mul(totalGasUsed, header.BaseFee)
 	} else {
 		return totalGasUsed.Mul(totalGasUsed, rewardConfig.unitPrice)
@@ -75,7 +75,7 @@ func (rd *RewardDistributor) MintKLAY(b BalanceAdder, header *types.Header) erro
 
 	totalTxFee := rd.getTotalTxFee(header, rewardConfig)
 	if header.BaseFee != nil {
-		// kip71 hardfork
+		// magma hardfork
 		totalTxFee = totalTxFee.Add(rewardConfig.mintingAmount, rd.txFeeBurning(totalTxFee))
 	} else {
 		totalTxFee = totalTxFee.Add(rewardConfig.mintingAmount, totalTxFee)
@@ -96,7 +96,7 @@ func (rd *RewardDistributor) DistributeBlockReward(b BalanceAdder, header *types
 	totalTxFee := common.Big0
 	if rd.gh.DeferredTxFee() {
 		totalTxFee = rd.getTotalTxFee(header, rewardConfig)
-		// kip71 hardfork
+		// magma hardfork
 		if header.BaseFee != nil {
 			totalTxFee = rd.txFeeBurning(totalTxFee)
 		}
