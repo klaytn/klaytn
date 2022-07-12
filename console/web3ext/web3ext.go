@@ -1013,6 +1013,16 @@ web3._extend({
             getter: 'klay_gasPrice',
             outputFormatter: web3._extend.formatters.outputBigNumberFormatter
         }),
+        new web3._extend.Property({
+            name : 'upperBoundGasPrice',
+            getter: 'klay_upperBoundGasPrice',
+            outputFormatter: web3._extend.formatters.outputBigNumberFormatter
+        }),
+        new web3._extend.Property({
+            name : 'lowerBoundGasPrice',
+            getter: 'klay_lowerBoundGasPrice',
+            outputFormatter: web3._extend.formatters.outputBigNumberFormatter
+        }),
 		new web3._extend.Property({
 			name: 'maxPriorityFeePerGas',
 			getter: 'klay_maxPriorityFeePerGas',
