@@ -201,7 +201,7 @@ type TxPool struct {
 
 	eip2718 bool // Fork indicator whether we are using EIP-2718 type transactions.
 	eip1559 bool // Fork indicator whether we are using EIP-1559 type transactions.
-	magma   bool // Fork indicator whether we are using KIP-71 type transactions.
+	magma   bool // Fork indicator whether we are using Magma type transactions.
 }
 
 // NewTxPool creates a new transaction pool to gather, sort and filter inbound

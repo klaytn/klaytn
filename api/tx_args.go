@@ -163,7 +163,7 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 			return err
 		}
 		if isMagma {
-			// we need to set baseFee * 2 after KIP-71 hard fork
+			// we need to set baseFee * 2 after Magma hard fork
 			price = new(big.Int).Mul(price, common.Big2)
 		}
 		args.Price = (*hexutil.Big)(price)
@@ -178,13 +178,13 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 			args.MaxPriorityFeePerGas = (*hexutil.Big)(gasPrice)
 		}
 		if args.MaxFeePerGas == nil {
-			// Before KIP-71 hard fork, `gasFeeCap` was set to `baseFee*2 + maxPriorityFeePerGas` by default.
+			// Before Magma hard fork, `gasFeeCap` was set to `baseFee*2 + maxPriorityFeePerGas` by default.
 			gasFeeCap := new(big.Int).Add(
 				(*big.Int)(args.MaxPriorityFeePerGas),
 				new(big.Int).Mul(new(big.Int).SetUint64(params.ZeroBaseFee), big.NewInt(2)),
 			)
 			if isMagma {
-				// After KIP-71 hard fork, `gasFeeCap` was set to `baseFee*2` by default.
+				// After Magma hard fork, `gasFeeCap` was set to `baseFee*2` by default.
 				gasFeeCap = new(big.Int).Mul(gasPrice, big.NewInt(2))
 			}
 			args.MaxFeePerGas = (*hexutil.Big)(gasFeeCap)

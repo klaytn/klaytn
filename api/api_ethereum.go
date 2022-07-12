@@ -999,9 +999,9 @@ func newEthTransactionReceipt(header *types.Header, tx *types.Transaction, b Bac
 		"type":              hexutil.Uint(byte(typeInt)),
 	}
 
-	// After KIP-71 hard fork : return header.baseFee
-	// After EthTxType hard fork : use zero baseFee to calculate effective gas price for EthereumDynamicFeeTx.
-	//    return gas price of tx.
+	// After Magma hard fork : return header.baseFee
+	// After EthTxType hard fork : use zero baseFee to calculate effective gas price for EthereumDynamicFeeTx :
+	//  return gas price of tx.
 	// Before EthTxType hard fork : return gas price of tx. (typed ethereum txs are not available.)
 	fields["effectiveGasPrice"] = hexutil.Uint64(tx.EffectiveGasPrice(header).Uint64())
 
@@ -1094,13 +1094,13 @@ func (args *EthTransactionArgs) setDefaults(ctx context.Context, b Backend) erro
 				args.MaxPriorityFeePerGas = (*hexutil.Big)(gasPrice)
 			}
 			if args.MaxFeePerGas == nil {
-				// Before KIP-71 hard fork, `gasFeeCap` was set to `baseFee*2 + maxPriorityFeePerGas` by default.
+				// Before Magma hard fork, `gasFeeCap` was set to `baseFee*2 + maxPriorityFeePerGas` by default.
 				gasFeeCap := new(big.Int).Add(
 					(*big.Int)(args.MaxPriorityFeePerGas),
 					new(big.Int).Mul(fixedBaseFee, big.NewInt(2)),
 				)
 				if isMagma {
-					// After KIP-71 hard fork, `gasFeeCap` was set to `baseFee*2` by default.
+					// After Magma hard fork, `gasFeeCap` was set to `baseFee*2` by default.
 					gasFeeCap = new(big.Int).Mul(gasPrice, big.NewInt(2))
 				}
 				args.MaxFeePerGas = (*hexutil.Big)(gasFeeCap)

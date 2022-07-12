@@ -54,7 +54,7 @@ var (
 	// eip1559Config is a chain config with EIP-1559 enabled at block 0.
 	eip1559Config *params.ChainConfig
 
-	// magmaConfig is a chain config with KIP-71 enabled at block 0.
+	// magmaConfig is a chain config with Magma enabled at block 0.
 	magmaConfig *params.ChainConfig
 )
 

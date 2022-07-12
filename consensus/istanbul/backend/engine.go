@@ -432,11 +432,11 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 	// We can assure that if the magma hard forked block should have the field of base fee
 	if chain.Config().IsMagmaForkEnabled(header.Number) {
 		if header.BaseFee == nil {
-			logger.Error("KIP-71 hard forked block should have baseFee", "blockNum", header.Number.Uint64())
-			return nil, errors.New("Invalid KIP-71 block without baseFee")
+			logger.Error("Magma hard forked block should have baseFee", "blockNum", header.Number.Uint64())
+			return nil, errors.New("Invalid Magma block without baseFee")
 		}
 	} else if header.BaseFee != nil {
-		logger.Error("A block before KIP-71 hardfork shouldn't have baseFee", "blockNum", header.Number.Uint64())
+		logger.Error("A block before Magma hardfork shouldn't have baseFee", "blockNum", header.Number.Uint64())
 		return nil, consensus.ErrInvalidBaseFee
 	}
 
