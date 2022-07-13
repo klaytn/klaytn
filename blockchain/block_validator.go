@@ -73,13 +73,10 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 	baseFee := block.Header().BaseFee
 	if baseFee != nil {
 		for _, tx := range block.Transactions() {
-			if tx.Type() == types.TxTypeEthereumDynamicFee && baseFee.Cmp(tx.GasFeeCap()) > 0 {
-				return fmt.Errorf("Invalid GasFeeCap: txHash %x, GasFeeCap %d, BaseFee %d", tx.Hash(), tx.GasFeeCap(), baseFee)
-			} 
 			if baseFee.Cmp(tx.GasPrice()) > 0 {
 				return fmt.Errorf("Invalid GasPrice: txHash %x, GasPrice %d, BaseFee %d", tx.Hash(), tx.GasPrice(), baseFee)
 			}
-		} 
+		}
 	}
 	return nil
 }
