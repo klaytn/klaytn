@@ -307,6 +307,14 @@ func (api *EthereumAPI) GasPrice(ctx context.Context) (*hexutil.Big, error) {
 	return api.publicKlayAPI.GasPrice(ctx)
 }
 
+func (api *EthereumAPI) UpperBoundGasPrice(ctx context.Context) *hexutil.Big {
+	return (*hexutil.Big)(api.publicKlayAPI.UpperBoundGasPrice(ctx))
+}
+
+func (api *EthereumAPI) LowerBoundGasPrice(ctx context.Context) *hexutil.Big {
+	return (*hexutil.Big)(api.publicKlayAPI.LowerBoundGasPrice(ctx))
+}
+
 // MaxPriorityFeePerGas returns a suggestion for a gas tip cap for dynamic fee transactions.
 func (api *EthereumAPI) MaxPriorityFeePerGas(ctx context.Context) (*hexutil.Big, error) {
 	return api.GasPrice(ctx)

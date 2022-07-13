@@ -301,6 +301,7 @@ func TestMagmaBlockEncoding(t *testing.T) {
 	check("TimeFoS", block.TimeFoS(), b.TimeFoS())
 	check("Extra", block.Extra(), b.Extra())
 	check("Hash", block.Hash(), b.Hash())
+	check("BaseFee", block.header.BaseFee, b.Header().BaseFee)
 	check("Size", block.Size(), common.StorageSize(len(blockEnc)))
 
 	// Create legacy tx.
