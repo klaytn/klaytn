@@ -161,6 +161,25 @@ func (api *PublicGovernanceAPI) TotalVotingPower() (float64, error) {
 	return float64(api.governance.TotalVotingPower()) / 1000.0, nil
 }
 
+// added parameters only if there is no key
+func addDefaultKip71config(items map[string]interface{}) (*params.GovParamSet, error) {
+	base, err := params.NewGovParamSetStrMap(map[string]interface{}{
+		"magma.lowerboundbasefee":         params.DefaultLowerBoundBaseFee,
+		"magma.upperboundbasefee":         params.DefaultUpperBoundBaseFee,
+		"magma.gastarget":                 params.DefaultGasTarget,
+		"magma.basefeedenominator":        params.DefaultBaseFeeDenominator,
+		"magma.maxblockgasusedforbasefee": params.DefaultMaxBlockGasUsedForBaseFee,
+	})
+	if err != nil {
+		return nil, err
+	}
+	update, err := params.NewGovParamSetStrMap(items)
+	if err != nil {
+		return nil, err
+	}
+	return params.NewGovParamSetMerged(base, update), nil
+}
+
 func (api *PublicGovernanceAPI) ItemsAt(num *rpc.BlockNumber) (map[string]interface{}, error) {
 	blockNumber := uint64(0)
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
@@ -168,11 +187,15 @@ func (api *PublicGovernanceAPI) ItemsAt(num *rpc.BlockNumber) (map[string]interf
 	} else {
 		blockNumber = uint64(num.Int64())
 	}
-	_, data, error := api.governance.ReadGovernance(blockNumber)
-	if error == nil {
-		return data, error
+	_, data, err := api.governance.ReadGovernance(blockNumber)
+	if err != nil {
+		return nil, err
+	}
+	mergedData, err := addDefaultKip71config(data)
+	if err == nil {
+		return mergedData.StrMap(), nil
 	} else {
-		return nil, error
+		return nil, err
 	}
 }
 
