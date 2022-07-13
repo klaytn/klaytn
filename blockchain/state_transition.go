@@ -135,7 +135,7 @@ type kerror struct {
 
 // NewStateTransition initialises and returns a new state transition object.
 func NewStateTransition(evm *vm.EVM, msg Message) *StateTransition {
-	// before magma hardfork, effectiveGasPrice is unitPrice
+	// before magma hardfork, effectiveGasPrice is  GasPrice of tx
 	// after magma hardfork, effectiveGasPrice is BaseFee
 	effectiveGasPrice := evm.Context.GasPrice
 
@@ -180,13 +180,6 @@ func (st *StateTransition) useGas(amount uint64) error {
 }
 
 func (st *StateTransition) buyGas() error {
-	// mgval := new(big.Int)
-	// if st.evm.ChainConfig().IsMagmaForkEnabled(st.evm.BlockNumber) {
-	// 	mgval = mgval.Mul(new(big.Int).SetUint64(st.msg.Gas()), st.evm.BaseFee)
-	// } else {
-	// 	mgval = mgval.Mul(new(big.Int).SetUint64(st.msg.Gas()), st.gasPrice)
-	// }
-
 	// st.gasPrice : gasPrice user set before magma hardfork
 	// st.gasPrice : BaseFee after magma hardfork
 	mgval := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()), st.gasPrice)

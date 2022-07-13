@@ -1225,8 +1225,6 @@ func (args *EthTransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int,
 			gasPrice = args.GasPrice.ToInt()
 		} else if args.MaxFeePerGas != nil {
 			gasPrice = args.MaxFeePerGas.ToInt()
-		} else {
-			return nil, errors.New("Neither GasPrice nor MaxFeePerGas is specified")
 		}
 	} else {
 		if args.GasPrice != nil {
