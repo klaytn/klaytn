@@ -19,6 +19,7 @@ package database
 import (
 	"crypto/ecdsa"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"math/big"
 	"math/rand"
@@ -31,6 +32,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/stretchr/testify/assert"
@@ -97,8 +99,8 @@ func init() {
 func createDBManagers(configs []*DBConfig) []DBManager {
 	dbManagers := make([]DBManager, 0, len(configs))
 
-	for _, c := range configs {
-		c.Dir, _ = ioutil.TempDir(os.TempDir(), "test-db-manager")
+	for i, c := range configs {
+		c.Dir, _ = ioutil.TempDir(os.TempDir(), fmt.Sprintf("test-db-manager-%v", i))
 		dbManagers = append(dbManagers, NewDBManager(c))
 	}
 
@@ -1160,6 +1162,53 @@ func TestDBManager_DeleteAccountSnapshot(t *testing.T) {
 		dbm.DeleteAccountSnapshot(hash)
 		actual = dbm.ReadAccountSnapshot(hash)
 		assert.Nil(t, actual)
+	}
+}
+
+func TestDBManager_WriteCode(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
+	for i, dbm := range dbManagers {
+		if dbm.IsSingle() || dbConfigs[i].DBType == MemoryDB {
+			continue
+		}
+
+		// write code before statedb migration
+		hash1, data1 := genRandomData()
+		dbm.WriteCode(hash1, data1)
+
+		ret1 := dbm.ReadCode(hash1)
+		assert.Equal(t, data1, ret1)
+
+		// start migration
+		assert.NoError(t, dbm.CreateMigrationDBAndSetStatus(uint64(i+100)))
+
+		// write code while statedb migration
+		hash2, data2 := genRandomData()
+		dbm.WriteCode(hash2, data2)
+
+		ret1 = dbm.ReadCode(hash1)
+		assert.Equal(t, data1, ret1)
+		ret2 := dbm.ReadCode(hash2)
+		assert.Equal(t, data2, ret2)
+
+		// finished migration
+		errCh := dbm.FinishStateMigration(true)
+		select {
+		case <-errCh:
+		case <-time.NewTicker(1 * time.Second).C:
+			t.Fatalf("takes too much time to delete original db")
+		}
+
+		// write code after statedb migration
+		hash3, data3 := genRandomData()
+		dbm.WriteCode(hash3, data3)
+
+		ret1 = dbm.ReadCode(hash1)
+		assert.Nil(t, ret1) // returns nil after removing original db
+		ret2 = dbm.ReadCode(hash2)
+		assert.Equal(t, data2, ret2)
+		ret3 := dbm.ReadCode(hash3)
+		assert.Equal(t, data3, ret3)
 	}
 }
 

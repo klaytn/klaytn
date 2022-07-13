@@ -1656,9 +1656,18 @@ func (dbm *databaseManager) HasCodeWithPrefix(hash common.Hash) bool {
 
 // WriteCode writes the provided contract code database.
 func (dbm *databaseManager) WriteCode(hash common.Hash, code []byte) {
-	db := dbm.getDatabase(StateTrieDB)
-	if err := db.Put(CodeKey(hash), code); err != nil {
-		logger.Crit("Failed to store contract code", "err", err)
+	dbm.lockInMigration.RLock()
+	defer dbm.lockInMigration.RUnlock()
+
+	var dbs []Database
+	if dbm.inMigration {
+		dbs = append(dbs, dbm.getDatabase(StateTrieMigrationDB))
+	}
+	dbs = append(dbs, dbm.getDatabase(StateTrieDB))
+	for _, db := range dbs {
+		if err := db.Put(CodeKey(hash), code); err != nil {
+			logger.Crit("Failed to store contract code", "err", err)
+		}
 	}
 }
 

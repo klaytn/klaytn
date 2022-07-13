@@ -149,6 +149,10 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) (returnErr error) {
 	stateTrieBatch := dstState.TrieDB().DiskDB().NewBatch(database.StateTrieDB)
 	stats := migrationStats{initialStartTime: start, startTime: mclock.Now()}
 
+	if bc.testMigrationHook != nil {
+		bc.testMigrationHook()
+	}
+
 	// Migration main loop
 	for trieSync.Pending() > 0 {
 		nodes, _, codes := trieSync.Missing(1024)
