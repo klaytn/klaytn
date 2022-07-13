@@ -77,7 +77,7 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 			if tx.Type() == types.TxTypeEthereumDynamicFee && baseFee.Cmp(tx.GasFeeCap()) > 0 {
 				return fmt.Errorf("Invalid GasFeeCap: txHash %x, GasFeeCap %d, BaseFee %d", tx.Hash(), tx.GasFeeCap(), baseFee)
 			} else if baseFee.Cmp(tx.GasPrice()) > 0 {
-				return fmt.Errorf("Invalid GasPrice: txHash %x, GasFeeCap %d, BaseFee %d", tx.Hash(), tx.GasFeeCap(), baseFee)
+				return fmt.Errorf("Invalid GasPrice: txHash %x, GasPrice %d, BaseFee %d", tx.Hash(), tx.GasPrice(), baseFee)
 			}
 		} else {
 			// TODO-klaytn before mamga hardfork,
