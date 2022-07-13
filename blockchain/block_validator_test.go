@@ -170,7 +170,6 @@ func TestVerifyBlockBody(t *testing.T) {
 			assert.Error(t, err)
 		}
 	}
-
 }
 
 // Tests that concurrent header verification works, for both good and bad blocks.
