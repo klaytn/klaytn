@@ -70,6 +70,21 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 	if hash := types.DeriveSha(block.Transactions()); hash != header.TxHash {
 		return fmt.Errorf("transaction root hash mismatch: have %x, want %x", hash, header.TxHash)
 	}
+	baseFee := block.Header().BaseFee
+	for _, tx := range block.Transactions() {
+		// Is magma
+		if baseFee != nil {
+			if tx.Type() == types.TxTypeEthereumDynamicFee && baseFee.Cmp(tx.GasFeeCap()) > 0 {
+				return fmt.Errorf("Invalid GasFeeCap: txHash %x, GasFeeCap %d, BaseFee %d", tx.Hash(), tx.GasFeeCap(), baseFee)
+			} else if baseFee.Cmp(tx.GasPrice()) > 0 {
+				return fmt.Errorf("Invalid GasPrice: txHash %x, GasFeeCap %d, BaseFee %d", tx.Hash(), tx.GasFeeCap(), baseFee)
+			}
+		} else {
+			// TODO-klaytn before mamga hardfork,
+			// we cannot validate the gasPrice of tx because we do not have the unitPrice of governance here
+			return nil
+		}
+	}
 	return nil
 }
 

@@ -21,15 +21,19 @@
 package blockchain
 
 import (
+	"math/big"
 	"runtime"
 	"testing"
 	"time"
 
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
+	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/gxhash"
+	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
+	"github.com/stretchr/testify/assert"
 )
 
 // Tests that simple header verification works, for both good and bad blocks.
@@ -78,6 +82,95 @@ func TestHeaderVerification(t *testing.T) {
 		}
 		chain.InsertChain(blocks[i : i+1])
 	}
+}
+
+func TestVerifyBlockBody(t *testing.T) {
+	testcases := []struct {
+		baseFee *big.Int
+		txData  types.TxInternalData
+		err     bool
+	}{
+		{
+			big.NewInt(100),
+			&types.TxInternalDataLegacy{
+				GasLimit: 1,
+				Price:    big.NewInt(200),
+				Payload:  []byte("abcdef"),
+			},
+			false,
+		},
+
+		{
+			big.NewInt(100),
+			&types.TxInternalDataEthereumDynamicFee{
+				ChainID:   big.NewInt(1),
+				GasLimit:  123457,
+				GasFeeCap: big.NewInt(10),
+				GasTipCap: big.NewInt(10),
+				Payload:   []byte("abcdef"),
+			},
+			true,
+		},
+		{
+			big.NewInt(100),
+			&types.TxInternalDataEthereumDynamicFee{
+				ChainID:   big.NewInt(1),
+				GasLimit:  123457,
+				GasFeeCap: big.NewInt(100),
+				GasTipCap: big.NewInt(10),
+				Payload:   []byte("abcdef"),
+			},
+			false,
+		},
+		{
+			big.NewInt(100),
+			&types.TxInternalDataEthereumDynamicFee{
+				ChainID:   big.NewInt(1),
+				GasLimit:  123457,
+				GasFeeCap: big.NewInt(200),
+				GasTipCap: big.NewInt(10),
+			},
+			false,
+		},
+	}
+
+	// Create a simple chain to verify
+	var (
+		testdb  = database.NewMemoryDBManager()
+		gspec   = &Genesis{Config: params.TestChainConfig}
+		genesis = gspec.MustCommit(testdb)
+	)
+
+	// We don't need istanbul instance here because validateBody is in BlockValidator instance
+	GenerateChain(params.TestChainConfig, genesis, gxhash.NewFaker(), testdb, 8, nil)
+	chain, _ := NewBlockChain(testdb, nil, params.TestChainConfig, gxhash.NewFaker(), vm.Config{})
+	defer chain.Stop()
+
+	// Generate a batch of accounts to start with
+	privKey, _ := crypto.GenerateKey()
+	signer := types.LatestSignerForChainID(big.NewInt(1))
+	var block *types.Block
+	for _, testcase := range testcases {
+		// Generate a block header
+		header := &types.Header{
+			ParentHash: chain.hc.currentHeaderHash,
+			Number:     common.Big1,
+			GasUsed:    0,
+			Extra:      []byte{},
+			BaseFee:    testcase.baseFee,
+		}
+
+		// Generate a block with tx
+		tx := types.NewTx(testcase.txData)
+		tx.Sign(signer, privKey)
+		block = types.NewBlock(header, append(types.Transactions{}, tx), nil)
+
+		err := chain.validator.ValidateBody(block)
+		if errExist := err != nil; errExist != testcase.err {
+			assert.Error(t, err)
+		}
+	}
+
 }
 
 // Tests that concurrent header verification works, for both good and bad blocks.
