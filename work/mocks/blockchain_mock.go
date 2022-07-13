@@ -20,9 +20,9 @@ import (
 	event "github.com/klaytn/klaytn/event"
 	params "github.com/klaytn/klaytn/params"
 	rlp "github.com/klaytn/klaytn/rlp"
+	snapshot "github.com/klaytn/klaytn/snapshot"
 	database "github.com/klaytn/klaytn/storage/database"
 	work "github.com/klaytn/klaytn/work"
-	snapshot "github.com/klaytn/klaytn/snapshot"
 )
 
 // MockBackend is a mock of Backend interface.
