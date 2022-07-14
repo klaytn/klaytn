@@ -17,6 +17,7 @@
 package sc
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -24,10 +25,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-var (
-	filterLogsStride = uint64(100)
-	maxPendingTxs    = 1000
-)
+const LeastRecoveryInterval = time.Second * 5
+
+var filterLogsStride = uint64(100)
 
 // valueTransferHint stores the last handled block number and nonce (Request or Handle).
 type valueTransferHint struct {
@@ -86,6 +86,11 @@ func NewValueTransferRecovery(config *SCConfig, cBridgeInfo, pBridgeInfo *Bridge
 
 // Start implements starting all internal goroutines used by the value transfer recovery.
 func (vtr *valueTransferRecovery) Start() error {
+	recoveryInterval := time.Duration(vtr.config.VTRecoveryInterval) * time.Second
+	if recoveryInterval < LeastRecoveryInterval {
+		panic(fmt.Sprintf("Recovery interval must be larger than %v (given: %v)", LeastRecoveryInterval, recoveryInterval))
+	}
+
 	if !vtr.config.VTRecovery {
 		return ErrVtrDisabled
 	}
@@ -98,7 +103,7 @@ func (vtr *valueTransferRecovery) Start() error {
 	vtr.wg.Add(1)
 
 	go func() {
-		ticker := time.NewTicker(time.Duration(vtr.config.VTRecoveryInterval) * time.Second)
+		ticker := time.NewTicker(recoveryInterval)
 		defer func() {
 			ticker.Stop()
 			vtr.wg.Done()
@@ -196,7 +201,7 @@ func (vtr *valueTransferRecovery) updateRecoveryHint() error {
 	return nil
 }
 
-// updateRecoveryHint updates a hint for the one-way value transfers.
+// updateRecoveryHintFromTo updates a hint for the one-way value transfers.
 func updateRecoveryHintFromTo(prevHint *valueTransferHint, from, to *BridgeInfo) (*valueTransferHint, error) {
 	var err error
 	var hint valueTransferHint
@@ -311,7 +316,7 @@ pendingTxLoop:
 				}
 				logger.Trace("filtered pending nonce", "requestNonce", reqVTevIt.Event.RequestNonce, "handledNonce", hint.handleNonce)
 				pendingEvents = append(pendingEvents, RequestValueTransferEvent{reqVTevIt.Event})
-				if len(pendingEvents) >= maxPendingTxs {
+				if len(pendingEvents) >= maxPendingNonceDiff {
 					reqVTevIt.Close()
 					break pendingTxLoop
 				}
@@ -327,7 +332,7 @@ pendingTxLoop:
 				}
 				logger.Trace("filtered pending nonce", "requestNonce", reqVTencodedDataIt.Event.RequestNonce, "handledNonce", hint.handleNonce)
 				pendingEvents = append(pendingEvents, RequestValueTransferEncodedEvent{reqVTencodedDataIt.Event})
-				if len(pendingEvents) >= maxPendingTxs {
+				if len(pendingEvents) >= maxPendingNonceDiff {
 					reqVTencodedDataIt.Close()
 					break pendingTxLoop
 				}
@@ -376,6 +381,43 @@ func checkRecoveryCondition(hint *valueTransferHint) bool {
 	return false
 }
 
+func furtherTreatment(bi *BridgeInfo, respReasoning ResponseVTReasoningWrapper, ev IRequestValueTransferEvent) {
+	reasoning, resendable := respReasoning.decideResend()
+	if !resendable {
+		if reasoning == VALUE_TRANSFER_KLAY_NOT_ENOUGH_CONTRACT_BALANCE {
+			bi.refund(ev)
+		}
+		respReasoning.hardening(ev)
+	}
+}
+
+func (vtr *valueTransferRecovery) filterOfPotentialAttack() {
+	replaceReceiverAcc2Zero := func(events []IRequestValueTransferEvent, bi *BridgeInfo) {
+		defaultExpired := time.Second * 5
+		subBridge := bi.subBridge
+		for _, ev := range events {
+			if ev.GetTokenType() == 0 { // KLAY
+				reqReasoning := makeRequestKLAYHandleDebug(bi, ev)
+				if !bi.onChildChain { // parent sent, child do reasoning
+					respReasoning := reqReasoning.reasoning(subBridge.blockchain, subBridge.debugAPI)
+					furtherTreatment(bi, respReasoning, ev)
+				} else { // child sent, parent do reasoning
+					subBridge.handler.requestTxDebug(reqReasoning)
+					expired := time.After(defaultExpired)
+					select {
+					case respReasoning := <-bi.respVTReasoingCh:
+						furtherTreatment(bi, respReasoning, ev)
+					case <-expired:
+						logger.Error("[SC][Reasoning] ResponseTxDebug is not arrived from paretn chain")
+					}
+				}
+			}
+		}
+	}
+	replaceReceiverAcc2Zero(vtr.childEvents, vtr.cBridgeInfo)
+	replaceReceiverAcc2Zero(vtr.parentEvents, vtr.pBridgeInfo)
+}
+
 // recoverPendingEvents recovers all pending events by resending them.
 func (vtr *valueTransferRecovery) recoverPendingEvents() error {
 	defer func() {
@@ -389,6 +431,8 @@ func (vtr *valueTransferRecovery) recoverPendingEvents() error {
 
 	vtRequestEventMeter.Mark(int64(len(vtr.childEvents)))
 	vtRecoveredRequestEventMeter.Mark(int64(len(vtr.childEvents)))
+
+	vtr.filterOfPotentialAttack()
 
 	events := make([]IRequestValueTransferEvent, len(vtr.childEvents))
 	for i, event := range vtr.childEvents {
