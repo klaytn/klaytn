@@ -40,6 +40,7 @@ import (
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node"
+	"github.com/klaytn/klaytn/node/cn"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
 )
@@ -95,6 +96,7 @@ type MainBridge struct {
 
 	blockchain *blockchain.BlockChain
 	txPool     *blockchain.TxPool
+	debugAPI   *cn.PrivateDebugAPI
 
 	chainHeadCh  chan blockchain.ChainHeadEvent
 	chainHeadSub event.Subscription
@@ -244,11 +246,22 @@ func (mb *MainBridge) SetComponents(components []interface{}) {
 					}
 				}
 			}
+			mb.setDebugAPI(v)
 		}
 	}
 
 	mb.pmwg.Add(1)
 	go mb.loop()
+}
+
+func (mb *MainBridge) setDebugAPI(apis []rpc.API) {
+	for _, api := range apis {
+		switch svc := api.Service.(type) {
+		case *cn.PrivateDebugAPI:
+			mb.debugAPI = svc
+			break
+		}
+	}
 }
 
 // Protocols implements node.Service, returning all the currently configured
