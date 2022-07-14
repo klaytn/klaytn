@@ -1659,7 +1659,7 @@ func (dbm *databaseManager) WriteCode(hash common.Hash, code []byte) {
 	dbm.lockInMigration.RLock()
 	defer dbm.lockInMigration.RUnlock()
 
-	var dbs []Database
+	dbs := make([]Database, 0, 2)
 	if dbm.inMigration {
 		dbs = append(dbs, dbm.getDatabase(StateTrieMigrationDB))
 	}
