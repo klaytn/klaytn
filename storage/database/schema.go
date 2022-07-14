@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"encoding/binary"
 
+	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/rcrowley/go-metrics"
 )
@@ -98,7 +99,8 @@ var (
 	parentOperatorFeePayerPrefix = []byte("parentOperatorFeePayer")
 	childOperatorFeePayerPrefix  = []byte("childOperatorFeePayer")
 
-	valueTransferTxHashPrefix = []byte("vt-tx-hash-key-") // Prefix + hash -> hash
+	valueTransferTxHashPrefix = []byte("vt-tx-hash-key-")              // Prefix + hash -> key
+	refundTxKeyPrefix         = []byte("vt-refund-request-nonce-key-") // Prefix + request nonce -> key
 
 	// bloomBitsPrefix + bit (uint16 big endian) + section (uint64 big endian) + hash -> bloom bits
 	bloomBitsPrefix = []byte("B")
@@ -233,6 +235,17 @@ func receiptFromParentChainKey(blockHash common.Hash) []byte {
 
 func valueTransferTxHashKey(rTxHash common.Hash) []byte {
 	return append(valueTransferTxHashPrefix, rTxHash.Bytes()...)
+}
+
+// Used to write/read refund tx
+type RefundInfo struct {
+	RequestNonce uint64
+	Sender       common.Address
+	Tx           types.Transaction
+}
+
+func refundTxKey(rNonce uint64) []byte {
+	return append(refundTxKeyPrefix, common.Int64ToByteBigEndian(rNonce)...)
 }
 
 // bloomBitsKey = bloomBitsPrefix + bit (uint16 big endian) + section (uint64 big endian) + hash

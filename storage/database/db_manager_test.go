@@ -658,6 +658,21 @@ func TestDBManager_ChildChain(t *testing.T) {
 
 		dbm.WriteHandleTxHashFromRequestTxHash(hash1, hash2)
 		assert.Equal(t, hash2, dbm.ReadHandleTxHashFromRequestTxHash(hash1))
+
+		// 3. Write/Read handle tx
+		tx, err := genTransaction(num1)
+		assert.NoError(t, err, "Failed to generate a transaction")
+		dbm.WriteHandleTxFromRequestTxHash(hash1, tx)
+		retrivedTx := dbm.ReadHandleTxFromRequestTxHash(hash1)
+		assert.Equal(t, retrivedTx.Hash(), tx.Hash())
+
+		// 4. Write/Read refund tx
+		nonce := uint64(123)
+		addr := common.HexToAddress("0x000000000000000000000000000000000000000A")
+		dbm.WriteRefundTxFromRequestNonce(nonce, addr, tx)
+		refundInfo := dbm.ReadRefundTxFromRequestNonce(nonce)
+		assert.Equal(t, refundInfo.Sender, addr)
+		assert.Equal(t, refundInfo.Tx.Hash(), tx.Hash())
 	}
 }
 

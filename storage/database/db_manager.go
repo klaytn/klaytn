@@ -236,8 +236,14 @@ type DBManager interface {
 	WriteReceiptFromParentChain(blockHash common.Hash, receipt *types.Receipt)
 	ReadReceiptFromParentChain(blockHash common.Hash) *types.Receipt
 
-	WriteHandleTxHashFromRequestTxHash(rTx, hTx common.Hash)
-	ReadHandleTxHashFromRequestTxHash(rTx common.Hash) common.Hash
+	WriteHandleTxHashFromRequestTxHash(rTx, hTx common.Hash) // deprecated
+	ReadHandleTxHashFromRequestTxHash(rTx common.Hash) common.Hash // deprecated
+
+	WriteHandleTxFromRequestTxHash(rTxHash common.Hash, hTx *types.Transaction)
+	ReadHandleTxFromRequestTxHash(rTxHash common.Hash) *types.Transaction
+
+	WriteRefundTxFromRequestNonce(rNonce uint64, sender common.Address, refundTx *types.Transaction)
+	ReadRefundTxFromRequestNonce(rNonce uint64) *RefundInfo
 
 	WriteParentOperatorFeePayer(feePayer common.Address)
 	WriteChildOperatorFeePayer(feePayer common.Address)
@@ -2190,6 +2196,7 @@ func (dbm *databaseManager) ReadAnchoredBlockNumber() uint64 {
 	return binary.BigEndian.Uint64(data)
 }
 
+// Deprecated
 // WriteHandleTxHashFromRequestTxHash writes handle value transfer tx hash
 // with corresponding request value transfer tx hash.
 func (dbm *databaseManager) WriteHandleTxHashFromRequestTxHash(rTx, hTx common.Hash) {
@@ -2200,6 +2207,7 @@ func (dbm *databaseManager) WriteHandleTxHashFromRequestTxHash(rTx, hTx common.H
 	}
 }
 
+// Deprecated
 // ReadHandleTxHashFromRequestTxHash returns handle value transfer tx hash
 // with corresponding the given request value transfer tx hash.
 func (dbm *databaseManager) ReadHandleTxHashFromRequestTxHash(rTx common.Hash) common.Hash {
@@ -2210,6 +2218,70 @@ func (dbm *databaseManager) ReadHandleTxHashFromRequestTxHash(rTx common.Hash) c
 		return common.Hash{}
 	}
 	return common.BytesToHash(data)
+}
+
+// WriteHandleTxFromRequestTxHash writes handle value transfer tx
+// with corresponding request value transfer tx hash.
+func (dbm *databaseManager) WriteHandleTxFromRequestTxHash(rTxHash common.Hash, hTx *types.Transaction) {
+	db := dbm.getDatabase(bridgeServiceDB)
+	key := valueTransferTxHashKey(rTxHash)
+
+	rTxHashStr := rTxHash.String()
+	hTxHashStr := hTx.Hash().String()
+
+	bytes, err := rlp.EncodeToBytes(hTx)
+	if err != nil {
+		logger.Crit("Failed to RLP encode a handle transaction", "request tx hash", rTxHashStr, "handle tx hash", hTxHashStr, "err", err)
+	}
+	if err := db.Put(key, bytes); err != nil {
+		logger.Crit("Failed to store handle value transfer tx", "request tx hash", rTxHashStr, "handle tx hash", hTxHashStr, "err", err)
+	}
+}
+
+// ReadHandleTxFromRequestTxHash returns a handle value transfer tx from request value transfer tx hash
+func (dbm *databaseManager) ReadHandleTxFromRequestTxHash(rTxHash common.Hash) *types.Transaction {
+	db := dbm.getDatabase(bridgeServiceDB)
+	key := valueTransferTxHashKey(rTxHash)
+	data, _ := db.Get(key)
+	if data == nil || len(data) == 0 {
+		return nil
+	}
+	var tx types.Transaction
+	if err := rlp.Decode(bytes.NewReader(data), &tx); err != nil {
+		logger.Error("Failed to decode handle tx", "txHash", rTxHash.String(), "err", err)
+		return nil
+	}
+	return &tx
+}
+
+// WriteRefundTxFromRequestNonce writes refund tx of corresponding request nonce
+func (dbm *databaseManager) WriteRefundTxFromRequestNonce(rNonce uint64, sender common.Address, refundTx *types.Transaction) {
+	db := dbm.getDatabase(bridgeServiceDB)
+	key := refundTxKey(rNonce)
+	bytes, err := rlp.EncodeToBytes(&RefundInfo{rNonce, sender, *refundTx})
+	if err != nil {
+		logger.Crit("Failed to RLP encode a refund transaction", "requestNonce", rNonce, "refund tx hash", refundTx.Hash().Hex(), "err", err)
+	}
+	if err := db.Put(key, bytes); err != nil {
+		logger.Crit("Failed to store refund info", "requestNonce", rNonce, "refund tx hash", refundTx.Hash().Hex(), 
+			"sender", sender.String(), "err", err)
+	}
+}
+
+// ReadRefundTxFromRequestNonce returns refund tx of corresponding request nonce
+func (dbm *databaseManager) ReadRefundTxFromRequestNonce(rNonce uint64) *RefundInfo {
+	db := dbm.getDatabase(bridgeServiceDB)
+	key := refundTxKey(rNonce)
+	data, _ := db.Get(key)
+	if data == nil || len(data) == 0 {
+		return nil
+	}
+	var refundInfo RefundInfo
+	if err := rlp.Decode(bytes.NewReader(data), &refundInfo); err != nil {
+		logger.Error("Failed to decode refund info", "requestNonce", rNonce, "err", err)
+		return nil
+	}
+	return &refundInfo
 }
 
 // WriteReceiptFromParentChain writes a receipt received from parent chain to child chain
@@ -2346,7 +2418,7 @@ func (dbm *databaseManager) WriteGovernanceIdx(num uint64) error {
 
 	if len(newSlice) > 0 && num <= newSlice[len(newSlice)-1] {
 		logger.Error("The same or more recent governance index exist. Skip writing governance index",
-			"newIdx", num, "govIdxes", newSlice)
+		"newIdx", num, "govIdxes", newSlice)
 		return errGovIdxAlreadyExist
 	}
 
@@ -2441,7 +2513,7 @@ func (dbm *databaseManager) ReadChainDataFetcherCheckpoint() (uint64, error) {
 	if err != nil {
 		// if the key is not in the database, 0 is returned as the checkpoint
 		if err == leveldb.ErrNotFound || err == badger.ErrKeyNotFound ||
-			strings.Contains(err.Error(), "not found") { // memoryDB
+		strings.Contains(err.Error(), "not found") { // memoryDB
 			return 0, nil
 		}
 		return 0, err
