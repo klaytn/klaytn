@@ -33,6 +33,7 @@ contract BridgeOperator is Ownable {
 
     mapping(uint8 => mapping (uint64 => VotesData)) private votes; // <voteType, <nonce, VotesData>
     mapping(uint64 => bool) public closedValueTransferVotes; // <nonce, bool>
+    mapping(uint64 => bool) public closedRefundVote; // <nonce, bool>
 
     uint64 public constant MAX_OPERATOR = 12;
     mapping(address => bool) public operators;
@@ -41,9 +42,12 @@ contract BridgeOperator is Ownable {
     mapping(uint8 => uint8) public operatorThresholds; // <vote type, uint8>
     uint64 public configurationNonce;
 
+    string public CLOSED_VOTE_ERR_STR = "closed vote";
+
     enum VoteType {
         ValueTransfer,
         Configuration,
+        Refund,
         Max
     }
 
@@ -116,7 +120,7 @@ contract BridgeOperator is Ownable {
         internal
         returns(bool)
     {
-        require(!closedValueTransferVotes[_requestNonce], "closed vote");
+        require(!closedValueTransferVotes[_requestNonce], CLOSED_VOTE_ERR_STR);
 
         bytes32 voteKey = keccak256(msg.data);
         if (_voteCommon(VoteType.ValueTransfer, _requestNonce, voteKey)) {
@@ -137,6 +141,22 @@ contract BridgeOperator is Ownable {
         bytes32 voteKey = keccak256(msg.data);
         if (_voteCommon(VoteType.Configuration, _requestNonce, voteKey)) {
             configurationNonce++;
+            return true;
+        }
+
+        return false;
+    }
+
+    // _voteRefund votes for refund in case of failure of handle value transfer.
+    function _voteRefund(uint64 _requestNonce)
+        internal
+        returns(bool)
+    {
+        require(!closedRefundVote[_requestNonce], CLOSED_VOTE_ERR_STR);
+
+        bytes32 voteKey = keccak256(msg.data);
+        if (_voteCommon(VoteType.Refund, _requestNonce, voteKey)) {
+            closedRefundVote[_requestNonce] = true;
             return true;
         }
 
@@ -171,7 +191,7 @@ contract BridgeOperator is Ownable {
         }
     }
 
-// setOperatorThreshold sets the operator threshold.
+    // setOperatorThreshold sets the operator threshold.
     function setOperatorThreshold(VoteType _voteType, uint8 _threshold)
     external
     onlyOwner

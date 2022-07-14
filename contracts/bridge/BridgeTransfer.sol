@@ -33,6 +33,8 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
     uint64 public recoveryBlockNumber = 1; // the block number that recovery start to filter log from.
     mapping(uint64 => uint64) public handleNoncesToBlockNums;  // <request nonce> => <request blockNum>
 
+    string public REMOVED_VOTE_ERR_STR = "removed vote";
+
     using SafeMath for uint256;
 
     enum TokenType {
@@ -145,7 +147,7 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
     }
 
     function _lowerHandleNonceCheck(uint64 _requestedNonce) internal {
-        require(lowerHandleNonce <= _requestedNonce, "removed vote");
+        require(lowerHandleNonce <= _requestedNonce, REMOVED_VOTE_ERR_STR);
     }
 
     // setFeeReceivers sets fee receiver.

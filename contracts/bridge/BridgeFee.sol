@@ -50,7 +50,10 @@ contract BridgeFee {
             return fee;
         }
 
-        msg.sender.transfer(_feeLimit);
+        if (_feeLimit > 0) { // Fee saving
+            msg.sender.transfer(_feeLimit);
+        }
+        //msg.sender.transfer(_feeLimit);
         return 0;
     }
 
@@ -71,6 +74,8 @@ contract BridgeFee {
         require(IERC20(_token).transfer(from, _feeLimit), "_payERC20FeeAndRefundChange: transfer failed");
         return 0;
     }
+
+    // TODO-hyunsooda: Add the same functionality for ERC-721
 
     function _setKLAYFee(uint256 _fee) internal {
         feeOfKLAY = _fee;
