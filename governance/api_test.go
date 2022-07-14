@@ -11,7 +11,7 @@ import (
 
 func newTestGovernanceApi() *PublicGovernanceAPI {
 	config := params.CypressChainConfig
-	config.Governance.Magma = params.GetDefaultMagmaConfig()
+	config.Governance.KIP71 = params.GetDefaultKIP71Config()
 	govApi := NewGovernanceAPI(NewMixedEngine(config, database.NewMemoryDBManager()))
 	govApi.governance.SetNodeAddress(common.HexToAddress("0x52d41ca72af615a1ac3301b0a93efa222ecc7541"))
 	return govApi

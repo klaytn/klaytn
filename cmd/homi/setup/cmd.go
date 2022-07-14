@@ -196,14 +196,14 @@ func genRewardConfig(ctx *cli.Context) *params.RewardConfig {
 	}
 }
 
-func genMagmaConfig(ctx *cli.Context) *params.MagmaConfig {
+func genKIP71Config(ctx *cli.Context) *params.KIP71Config {
 	lowerBoundBaseFee := ctx.Uint64(magmaLowerBoundBaseFeeFlag.Name)
 	upperBoundBaseFee := ctx.Uint64(magmaUpperBoundBaseFeeFlag.Name)
 	gasTarget := ctx.Uint64(magmaGasTarget.Name)
 	maxBlockGasUsedForBaseFee := ctx.Uint64(magmaMaxBlockGasUsedForBaseFee.Name)
 	baseFeeDenominator := ctx.Uint64(magmaBaseFeeDenominator.Name)
 
-	return &params.MagmaConfig{
+	return &params.KIP71Config{
 		LowerBoundBaseFee:         lowerBoundBaseFee,         // lower bound of the base fee
 		UpperBoundBaseFee:         upperBoundBaseFee,         // upper bound of the base fee
 		GasTarget:                 gasTarget,                 // standard gas usage for whether to raise or lower the base fee
@@ -234,7 +234,7 @@ func genGovernanceConfig(ctx *cli.Context) *params.GovernanceConfig {
 		GoverningNode:  common.HexToAddress(governingNode),
 		GovernanceMode: govMode,
 		Reward:         genRewardConfig(ctx),
-		Magma:          genMagmaConfig(ctx),
+		KIP71:          genKIP71Config(ctx),
 	}
 }
 

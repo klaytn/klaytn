@@ -54,8 +54,8 @@ var (
 	// eip1559Config is a chain config with EIP-1559 enabled at block 0.
 	eip1559Config *params.ChainConfig
 
-	// magmaConfig is a chain config with Magma enabled at block 0.
-	magmaConfig *params.ChainConfig
+	// kip71Config is a chain config with Magma enabled at block 0.
+	kip71Config *params.ChainConfig
 )
 
 func init() {
@@ -68,12 +68,12 @@ func init() {
 	eip1559Config.EthTxTypeCompatibleBlock = common.Big0
 	fork.SetHardForkBlockNumberConfig(eip1559Config)
 
-	magmaConfig = params.TestChainConfig.Copy()
-	magmaConfig.MagmaCompatibleBlock = common.Big0
-	magmaConfig.IstanbulCompatibleBlock = common.Big0
-	magmaConfig.LondonCompatibleBlock = common.Big0
-	magmaConfig.EthTxTypeCompatibleBlock = common.Big0
-	magmaConfig.Governance = &params.GovernanceConfig{Magma: params.GetDefaultMagmaConfig()}
+	kip71Config = params.TestChainConfig.Copy()
+	kip71Config.MagmaCompatibleBlock = common.Big0
+	kip71Config.IstanbulCompatibleBlock = common.Big0
+	kip71Config.LondonCompatibleBlock = common.Big0
+	kip71Config.EthTxTypeCompatibleBlock = common.Big0
+	kip71Config.Governance = &params.GovernanceConfig{KIP71: params.GetDefaultKIP71Config()}
 }
 
 type testBlockChain struct {
@@ -383,7 +383,7 @@ func TestInvalidTransactions(t *testing.T) {
 func TestInvalidTransactionsMagma(t *testing.T) {
 	t.Parallel()
 
-	pool, key := setupTxPoolWithConfig(magmaConfig)
+	pool, key := setupTxPoolWithConfig(kip71Config)
 	pool.SetBaseFee(big.NewInt(1))
 	defer pool.Stop()
 
@@ -2092,7 +2092,7 @@ func TestDynamicFeeTransactionAcceptedMagma(t *testing.T) {
 	t.Parallel()
 	baseFee := big.NewInt(30)
 
-	pool, key := setupTxPoolWithConfig(magmaConfig)
+	pool, key := setupTxPoolWithConfig(kip71Config)
 	defer pool.Stop()
 	pool.SetBaseFee(baseFee)
 
@@ -2145,7 +2145,7 @@ func TestTransactionAcceptedMagma(t *testing.T) {
 	t.Parallel()
 	baseFee := big.NewInt(30)
 
-	pool, key := setupTxPoolWithConfig(magmaConfig)
+	pool, key := setupTxPoolWithConfig(kip71Config)
 	defer pool.Stop()
 	pool.SetBaseFee(baseFee)
 
@@ -2168,7 +2168,7 @@ func TestCancelTransactionAcceptedMagma(t *testing.T) {
 	t.Parallel()
 	baseFee := big.NewInt(30)
 
-	pool, key := setupTxPoolWithConfig(magmaConfig)
+	pool, key := setupTxPoolWithConfig(kip71Config)
 	defer pool.Stop()
 	pool.SetBaseFee(baseFee)
 
@@ -2208,7 +2208,7 @@ func TestDynamicFeeTransactionNotAcceptedWithLowerGasPrice(t *testing.T) {
 	t.Parallel()
 	baseFee := big.NewInt(30)
 
-	pool, key := setupTxPoolWithConfig(magmaConfig)
+	pool, key := setupTxPoolWithConfig(kip71Config)
 	defer pool.Stop()
 	pool.SetBaseFee(baseFee)
 
@@ -2225,7 +2225,7 @@ func TestDynamicFeeTransactionNotAcceptedWithLowerGasPrice(t *testing.T) {
 func TestTransactionNotAcceptedWithLowerGasPrice(t *testing.T) {
 	t.Parallel()
 
-	pool, key := setupTxPoolWithConfig(magmaConfig)
+	pool, key := setupTxPoolWithConfig(kip71Config)
 	defer pool.Stop()
 
 	baseFee := big.NewInt(30)
@@ -2244,7 +2244,7 @@ func TestTransactionNotAcceptedWithLowerGasPrice(t *testing.T) {
 func TestTransactionsPromoteFull(t *testing.T) {
 	t.Parallel()
 
-	pool, key := setupTxPoolWithConfig(magmaConfig)
+	pool, key := setupTxPoolWithConfig(kip71Config)
 	defer pool.Stop()
 
 	from := crypto.PubkeyToAddress(key.PublicKey)
@@ -2279,7 +2279,7 @@ func TestTransactionsPromoteFull(t *testing.T) {
 func TestTransactionsPromotePartial(t *testing.T) {
 	t.Parallel()
 
-	pool, key := setupTxPoolWithConfig(magmaConfig)
+	pool, key := setupTxPoolWithConfig(kip71Config)
 	defer pool.Stop()
 
 	from := crypto.PubkeyToAddress(key.PublicKey)
@@ -2324,7 +2324,7 @@ func TestTransactionsPromotePartial(t *testing.T) {
 func TestTransactionsPromoteMultipleAccount(t *testing.T) {
 	t.Parallel()
 
-	pool, _ := setupTxPoolWithConfig(magmaConfig)
+	pool, _ := setupTxPoolWithConfig(kip71Config)
 	defer pool.Stop()
 	pool.SetBaseFee(big.NewInt(10))
 
@@ -2382,7 +2382,7 @@ func TestTransactionsPromoteMultipleAccount(t *testing.T) {
 func TestTransactionsDemotionMultipleAccount(t *testing.T) {
 	t.Parallel()
 
-	pool, _ := setupTxPoolWithConfig(magmaConfig)
+	pool, _ := setupTxPoolWithConfig(kip71Config)
 	defer pool.Stop()
 	pool.SetBaseFee(big.NewInt(10))
 

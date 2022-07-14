@@ -1675,11 +1675,11 @@ func TestChainConfig_UpdateAfterVotes(t *testing.T) {
 		chain, engine := newBlockChain(1, configItems...)
 
 		// test initial governance items
-		assert.Equal(t, uint64(25000000000), chain.Config().Governance.Magma.LowerBoundBaseFee)
-		assert.Equal(t, uint64(750000000000), chain.Config().Governance.Magma.UpperBoundBaseFee)
-		assert.Equal(t, uint64(20), chain.Config().Governance.Magma.BaseFeeDenominator)
-		assert.Equal(t, uint64(60000000), chain.Config().Governance.Magma.MaxBlockGasUsedForBaseFee)
-		assert.Equal(t, uint64(30000000), chain.Config().Governance.Magma.GasTarget)
+		assert.Equal(t, uint64(25000000000), chain.Config().Governance.KIP71.LowerBoundBaseFee)
+		assert.Equal(t, uint64(750000000000), chain.Config().Governance.KIP71.UpperBoundBaseFee)
+		assert.Equal(t, uint64(20), chain.Config().Governance.KIP71.BaseFeeDenominator)
+		assert.Equal(t, uint64(60000000), chain.Config().Governance.KIP71.MaxBlockGasUsedForBaseFee)
+		assert.Equal(t, uint64(30000000), chain.Config().Governance.KIP71.GasTarget)
 
 		// add votes and insert voted blocks
 		var (
@@ -1705,15 +1705,15 @@ func TestChainConfig_UpdateAfterVotes(t *testing.T) {
 		govConfig := chain.Config().Governance
 		switch tc.expected.key {
 		case "magma.lowerboundbasefee":
-			assert.Equal(t, tc.expected.value, govConfig.Magma.LowerBoundBaseFee)
+			assert.Equal(t, tc.expected.value, govConfig.KIP71.LowerBoundBaseFee)
 		case "magma.upperboundbasefee":
-			assert.Equal(t, tc.expected.value, govConfig.Magma.UpperBoundBaseFee)
+			assert.Equal(t, tc.expected.value, govConfig.KIP71.UpperBoundBaseFee)
 		case "magma.gastarget":
-			assert.Equal(t, tc.expected.value, govConfig.Magma.GasTarget)
+			assert.Equal(t, tc.expected.value, govConfig.KIP71.GasTarget)
 		case "magma.maxblockgasusedforbasefee":
-			assert.Equal(t, tc.expected.value, govConfig.Magma.MaxBlockGasUsedForBaseFee)
+			assert.Equal(t, tc.expected.value, govConfig.KIP71.MaxBlockGasUsedForBaseFee)
 		case "magma.basefeedenominator":
-			assert.Equal(t, tc.expected.value, govConfig.Magma.BaseFeeDenominator)
+			assert.Equal(t, tc.expected.value, govConfig.KIP71.BaseFeeDenominator)
 		default:
 			assert.Error(t, nil)
 		}
@@ -1762,11 +1762,11 @@ func TestChainConfig_ReadFromDBAfterVotes(t *testing.T) {
 		chain, engine := newBlockChain(1, configItems...)
 
 		// test initial governance items
-		assert.Equal(t, uint64(25000000000), chain.Config().Governance.Magma.LowerBoundBaseFee)
-		assert.Equal(t, uint64(750000000000), chain.Config().Governance.Magma.UpperBoundBaseFee)
-		assert.Equal(t, uint64(20), chain.Config().Governance.Magma.BaseFeeDenominator)
-		assert.Equal(t, uint64(60000000), chain.Config().Governance.Magma.MaxBlockGasUsedForBaseFee)
-		assert.Equal(t, uint64(30000000), chain.Config().Governance.Magma.GasTarget)
+		assert.Equal(t, uint64(25000000000), chain.Config().Governance.KIP71.LowerBoundBaseFee)
+		assert.Equal(t, uint64(750000000000), chain.Config().Governance.KIP71.UpperBoundBaseFee)
+		assert.Equal(t, uint64(20), chain.Config().Governance.KIP71.BaseFeeDenominator)
+		assert.Equal(t, uint64(60000000), chain.Config().Governance.KIP71.MaxBlockGasUsedForBaseFee)
+		assert.Equal(t, uint64(30000000), chain.Config().Governance.KIP71.GasTarget)
 
 		// add votes and insert voted blocks
 		var (
@@ -1792,15 +1792,15 @@ func TestChainConfig_ReadFromDBAfterVotes(t *testing.T) {
 		gov := governance.NewGovernanceInitialize(chain.Config(), engine.db)
 		switch tc.expected.key {
 		case "magma.lowerboundbasefee":
-			assert.Equal(t, tc.expected.value, gov.ChainConfig.Governance.Magma.LowerBoundBaseFee)
+			assert.Equal(t, tc.expected.value, gov.ChainConfig.Governance.KIP71.LowerBoundBaseFee)
 		case "magma.upperboundbasefee":
-			assert.Equal(t, tc.expected.value, gov.ChainConfig.Governance.Magma.UpperBoundBaseFee)
+			assert.Equal(t, tc.expected.value, gov.ChainConfig.Governance.KIP71.UpperBoundBaseFee)
 		case "magma.gastarget":
-			assert.Equal(t, tc.expected.value, gov.ChainConfig.Governance.Magma.GasTarget)
+			assert.Equal(t, tc.expected.value, gov.ChainConfig.Governance.KIP71.GasTarget)
 		case "magma.maxblockgasusedforbasefee":
-			assert.Equal(t, tc.expected.value, gov.ChainConfig.Governance.Magma.MaxBlockGasUsedForBaseFee)
+			assert.Equal(t, tc.expected.value, gov.ChainConfig.Governance.KIP71.MaxBlockGasUsedForBaseFee)
 		case "magma.basefeedenominator":
-			assert.Equal(t, tc.expected.value, gov.ChainConfig.Governance.Magma.BaseFeeDenominator)
+			assert.Equal(t, tc.expected.value, gov.ChainConfig.Governance.KIP71.BaseFeeDenominator)
 		default:
 			assert.Error(t, nil)
 		}

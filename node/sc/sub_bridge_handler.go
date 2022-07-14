@@ -43,7 +43,7 @@ var (
 type parentChainInfo struct {
 	Nonce       uint64
 	GasPrice    uint64
-	MagmaConfig params.MagmaConfig
+	KIP71Config params.KIP71Config
 }
 
 type InvalidParentChainTx struct {
@@ -186,16 +186,16 @@ func (sbh *SubBridgeHandler) setRemoteChainValues(pcInfo parentChainInfo) {
 	sbh.setRemoteGasPrice(pcInfo.GasPrice)
 	if sbh.subbridge.blockchain.Config().IsMagmaForkEnabled(headerNum) {
 		// Set parent chain's gasprice with upperboundbasefee
-		sbh.remoteGasPrice = pcInfo.MagmaConfig.UpperBoundBaseFee
-		sbh.subbridge.bridgeAccounts.SetParentMagmaConfig(pcInfo.MagmaConfig)
-		magmaConfig := sbh.subbridge.bridgeAccounts.GetParentMagmaConfig()
+		sbh.remoteGasPrice = pcInfo.KIP71Config.UpperBoundBaseFee
+		sbh.subbridge.bridgeAccounts.SetParentKIP71Config(pcInfo.KIP71Config)
+		kip71Config := sbh.subbridge.bridgeAccounts.GetParentKIP71Config()
 
 		logger.Info("Updated parent chain values", "gasPrice", sbh.subbridge.bridgeAccounts.GetParentGasPrice(),
-			"LowerBoundBaseFee", magmaConfig.LowerBoundBaseFee,
-			"UpperBoundBaseFee", magmaConfig.UpperBoundBaseFee,
-			"GasTarget", magmaConfig.GasTarget,
-			"MaxBlockGasUsedForBaseFee", magmaConfig.MaxBlockGasUsedForBaseFee,
-			"BaseFeeDenominator", magmaConfig.BaseFeeDenominator)
+			"LowerBoundBaseFee", kip71Config.LowerBoundBaseFee,
+			"UpperBoundBaseFee", kip71Config.UpperBoundBaseFee,
+			"GasTarget", kip71Config.GasTarget,
+			"MaxBlockGasUsedForBaseFee", kip71Config.MaxBlockGasUsedForBaseFee,
+			"BaseFeeDenominator", kip71Config.BaseFeeDenominator)
 	} else {
 		logger.Info("Updated parent chain's gas price", "gasPrice", sbh.subbridge.bridgeAccounts.GetParentGasPrice())
 	}

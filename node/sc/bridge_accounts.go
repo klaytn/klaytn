@@ -60,7 +60,7 @@ type accountInfo struct {
 	chainID     *big.Int
 	gasPrice    *big.Int
 	gasLimit    uint64
-	magmaConfig params.MagmaConfig
+	kip71Config params.KIP71Config
 
 	isNonceSynced bool
 	mu            sync.RWMutex
@@ -137,12 +137,12 @@ func (ba *BridgeAccounts) GetParentGasPrice() uint64 {
 	return ba.pAccount.gasPrice.Uint64()
 }
 
-func (ba *BridgeAccounts) SetParentMagmaConfig(magmaConfig params.MagmaConfig) {
-	ba.pAccount.magmaConfig = magmaConfig
+func (ba *BridgeAccounts) SetParentKIP71Config(kip71Config params.KIP71Config) {
+	ba.pAccount.kip71Config = kip71Config
 }
 
-func (ba *BridgeAccounts) GetParentMagmaConfig() params.MagmaConfig {
-	return ba.pAccount.magmaConfig
+func (ba *BridgeAccounts) GetParentKIP71Config() params.KIP71Config {
+	return ba.pAccount.kip71Config
 }
 
 // NewBridgeAccounts returns bridgeAccounts created by main/service bridge account keys.
@@ -261,8 +261,8 @@ func (acc *accountInfo) GenerateTransactOpts() *bind.TransactOpts {
 	}
 
 	gasPrice := acc.gasPrice
-	if acc.magmaConfig.UpperBoundBaseFee != 0 {
-		gasPrice = new(big.Int).SetUint64(acc.magmaConfig.UpperBoundBaseFee)
+	if acc.kip71Config.UpperBoundBaseFee != 0 {
+		gasPrice = new(big.Int).SetUint64(acc.kip71Config.UpperBoundBaseFee)
 	}
 
 	return bind.MakeTransactOptsWithKeystore(acc.keystore, acc.address, nonce, acc.chainID, acc.gasLimit, gasPrice)
