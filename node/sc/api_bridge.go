@@ -194,8 +194,32 @@ func (sb *SubBridgeAPI) UnsubscribeBridge(cBridgeAddr, pBridgeAddr common.Addres
 	return nil
 }
 
-func (sb *SubBridgeAPI) ConvertRequestTxHashToHandleTxHash(hash common.Hash) common.Hash {
-	return sb.subBridge.chainDB.ReadHandleTxHashFromRequestTxHash(hash)
+func (sb *SubBridgeAPI) ConvertRequestTxHashToHandleTx(hash common.Hash) map[string]interface{} {
+	tx := sb.subBridge.chainDB.ReadHandleTxFromRequestTxHash(hash)
+	if tx != nil {
+		output := tx.MakeRPCOutput()
+		output["hash"] = tx.Hash()
+		output["cost"] = tx.Cost()
+		output["fee"] = tx.Fee()
+		output["size"] = tx.Size()
+		return output
+	}
+	return nil
+}
+
+func (sb *SubBridgeAPI) GetRefundTx(requestNonce uint64) map[string]interface{} {
+	refundInfo := sb.subBridge.chainDB.ReadRefundTxFromRequestNonce(requestNonce)
+	if refundInfo != nil {
+		tx := refundInfo.Tx
+		output := tx.MakeRPCOutput()
+		output["sender"] = refundInfo.Sender
+		output["hash"] = tx.Hash()
+		output["cost"] = tx.Cost()
+		output["fee"] = tx.Fee()
+		output["size"] = tx.Size()
+		return output
+	}
+	return nil
 }
 
 func (sb *SubBridgeAPI) TxPendingCount() int {

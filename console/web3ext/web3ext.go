@@ -1325,8 +1325,13 @@ web3._extend({
 			params: 4
 		}),
 		new web3._extend.Method({
-			name: 'convertRequestTxHashToHandleTxHash',
-			call: 'subbridge_convertRequestTxHashToHandleTxHash',
+			name: 'convertRequestTxHashToHandleTx',
+			call: 'subbridge_convertRequestTxHashToHandleTx',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getRefundTx',
+			call: 'subbridge_getRefundTx',
 			params: 1
 		}),
 		new web3._extend.Method({
