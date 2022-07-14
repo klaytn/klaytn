@@ -701,9 +701,9 @@ func (sb *SubBridgeAPI) GetParentGasPrice() uint64 {
 	return sb.subBridge.bridgeAccounts.GetParentGasPrice()
 }
 
-// GetParentMagmaConfig returns the recently synced parent chain's Magma config values
-func (sb *SubBridgeAPI) GetParentMagmaConfig() params.MagmaConfig {
-	return sb.subBridge.bridgeAccounts.GetParentMagmaConfig()
+// GetParentKIP71Config returns the recently synced parent chain's Magma config values
+func (sb *SubBridgeAPI) GetParentKIP71Config() params.KIP71Config {
+	return sb.subBridge.bridgeAccounts.GetParentKIP71Config()
 }
 
 // RequestParentSync request to synchronize the parent chain values

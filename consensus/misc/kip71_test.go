@@ -15,7 +15,7 @@ func getTestConfig(forkedBlockNum *big.Int) *params.ChainConfig {
 	testConfig.UnitPrice = uint64(25000000000)
 	testConfig.MagmaCompatibleBlock = forkedBlockNum
 	testConfig.Governance = &params.GovernanceConfig{
-		Magma: params.GetDefaultMagmaConfig(),
+		KIP71: params.GetDefaultKIP71Config(),
 	}
 	return testConfig
 }
@@ -61,8 +61,8 @@ func TestNextBlockBaseFeeWhenGovernanceUpdated(t *testing.T) {
 	}
 	for i, test := range tests {
 		config := getTestConfig(common.Big2)
-		config.Governance.Magma.UpperBoundBaseFee = test.upperBoundBaseFee
-		config.Governance.Magma.LowerBoundBaseFee = test.lowerBoundBaseFee
+		config.Governance.KIP71.UpperBoundBaseFee = test.upperBoundBaseFee
+		config.Governance.KIP71.LowerBoundBaseFee = test.lowerBoundBaseFee
 		parent := &types.Header{
 			Number:  common.Big3,
 			GasUsed: test.parentGasUsed,
