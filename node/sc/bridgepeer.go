@@ -131,6 +131,12 @@ type BridgePeer interface {
 
 	// SendServiceChainReceiptResponse sends a receipt as a response to request from child chain.
 	SendServiceChainReceiptResponse(receipts []*types.ReceiptForStorage) error
+
+	// SendServiceChainRequestVTReasoning sends reasoning materials to request trace transaction
+	SendServiceChainRequestVTReasoning(reqVTReasoning *RequestVTReasoningWrapper) error
+
+	// SendServiceChainResponseVTReasoning sends result of VT reasoning
+	SendServiceChainResponseVTReasoning(respVTReasoning *ResponseVTReasoningWrapper) error
 }
 
 // baseBridgePeer is a common data structure used by implementation of Peer.
@@ -250,6 +256,14 @@ func (p *baseBridgePeer) SendServiceChainReceiptRequest(txHashes []common.Hash) 
 
 func (p *baseBridgePeer) SendServiceChainReceiptResponse(receipts []*types.ReceiptForStorage) error {
 	return p2p.Send(p.rw, ServiceChainReceiptResponseMsg, receipts)
+}
+
+func (p *baseBridgePeer) SendServiceChainRequestVTReasoning(reqVTReasoning *RequestVTReasoningWrapper) error {
+	return p2p.Send(p.rw, ServiceChainRequestVTReasoningMsg, reqVTReasoning)
+}
+
+func (p *baseBridgePeer) SendServiceChainResponseVTReasoning(respVTReasoning *ResponseVTReasoningWrapper) error {
+	return p2p.Send(p.rw, ServiceChainResponseVTReasoningMsg, respVTReasoning)
 }
 
 // Handshake executes the Klaytn protocol handshake, negotiating version number,

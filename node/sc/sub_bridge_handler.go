@@ -226,6 +226,11 @@ func (sbh *SubBridgeHandler) HandleMainMsg(p BridgePeer, msg p2p.Msg) error {
 		if err := sbh.handleParentChainReceiptResponseMsg(p, msg); err != nil {
 			return err
 		}
+	case ServiceChainResponseVTReasoningMsg:
+		logger.Debug("[SC] received ServiceChainResponseVTReasoningMsg")
+		if err := sbh.handleParentChainResponseVTReasoningMsg(p, msg); err != nil {
+			return err
+		}
 	default:
 		return errResp(ErrInvalidMsgCode, "%v", msg.Code)
 	}
@@ -411,6 +416,28 @@ func (sbh *SubBridgeHandler) broadcastServiceChainReceiptRequest() {
 		peer.SendServiceChainReceiptRequest(hashes)
 		logger.Debug("sent ServiceChainReceiptRequest", "peerID", peer.GetID(), "numReceiptsRequested", len(hashes))
 	}
+}
+
+func (sbh *SubBridgeHandler) requestTxDebug(reqVTReasoning *RequestVTReasoningWrapper) {
+	for _, peer := range sbh.subbridge.BridgePeerSet().peers {
+		peer.SendServiceChainRequestVTReasoning(reqVTReasoning)
+	}
+}
+
+func (sbh *SubBridgeHandler) handleParentChainResponseVTReasoningMsg(p BridgePeer, msg p2p.Msg) error {
+	var respVTReasoing ResponseVTReasoningWrapper
+	if err := msg.Decode(&respVTReasoing); err != nil {
+		logger.Error("[SC] failed to decode", "err", err)
+		return errResp(ErrDecode, "msg %v: %v", msg, err)
+	}
+	bridgeAddr := respVTReasoing.getBridgeAddr()
+	bi, ok := sbh.subbridge.bridgeManager.GetBridgeInfo(bridgeAddr)
+	if !ok {
+		logger.Error("[SC] Failed to get bridgeInfo from the handler of response tx debug", "bridgeAddr", bridgeAddr.Hex())
+	}
+	logger.Debug("[SC] Before sending respTxDebug to bridgeInfo", "bridgeInfoAddr", bi.address)
+	bi.respVTReasoingCh <- respVTReasoing
+	return nil
 }
 
 // updateTxCount update txCount to insert into anchoring tx.

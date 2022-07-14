@@ -74,6 +74,11 @@ func (mbh *MainBridgeHandler) HandleSubMsg(p BridgePeer, msg p2p.Msg) error {
 		if err := mbh.handleServiceChainReceiptRequestMsg(p, msg); err != nil {
 			return err
 		}
+	case ServiceChainRequestVTReasoningMsg:
+		logger.Debug("[SC] received ServiceChainRequestVTReasoningMsg")
+		if err := mbh.handleServiceChainRequestVTReasoningMsg(p, msg); err != nil {
+			return err
+		}
 	default:
 		return errResp(ErrInvalidMsgCode, "%v", msg.Code)
 	}
@@ -169,4 +174,15 @@ func (mbh *MainBridgeHandler) handleServiceChainReceiptRequestMsg(p BridgePeer, 
 		return nil
 	}
 	return p.SendServiceChainReceiptResponse(receiptsForStorage)
+}
+
+func (mbh *MainBridgeHandler) handleServiceChainRequestVTReasoningMsg(p BridgePeer, msg p2p.Msg) error {
+	var reqVTReasoning RequestVTReasoningWrapper
+	if err := msg.Decode(&reqVTReasoning); err != nil {
+		logger.Error("[SC] failed to decode", "err", err)
+		return errResp(ErrDecode, "msg %v: %v", msg, err)
+	}
+
+	respVTReasoning := reqVTReasoning.reasoning(mbh.mainbridge.blockchain, mbh.mainbridge.debugAPI)
+	return p.SendServiceChainResponseVTReasoning(&respVTReasoning)
 }
