@@ -108,6 +108,8 @@ type BridgeInfo struct {
 	closed   chan struct{}
 
 	handledEvent *bridgepool.ItemSortedMap
+
+	respVTReasoingCh chan ResponseVTReasoningWrapper
 }
 
 type requestEvent struct {
@@ -140,31 +142,41 @@ func NewBridgeInfo(sb *SubBridge, addr common.Address, bridge *bridgecontract.Br
 		make(chan struct{}),
 		make(chan struct{}),
 		bridgepool.NewItemSortedMap(maxHandledEventSize),
+		make(chan ResponseVTReasoningWrapper, maxPendingNonceDiff),
 	}
 
 	if err := bi.UpdateInfo(); err != nil {
 		return bi, err
 	}
 
-	go bi.loop()
+	go bi.eventHandleLoop()
 
 	return bi, nil
 }
 
 // handleValueTransferLog records value transfer transaction's log
-func handleValueTransferLog(onChild bool, funcName, txHash string, reqNonce uint64, from, to common.Address, valueOrTokenId *big.Int) {
+func handleValueTransferLog(onChild bool, funcName, reqTxHash, handleTxHash string, reqNonce uint64, from, to common.Address, valueOrTokenId *big.Int) {
 	// Note the `onChild` should be interpreted as reverse. Refer `ProcessRequestEvent()` in sub_event_handler.go
-	var vtDir string
+	var (
+		vtDir         string
+		reqHashStr    string
+		handleHashStr string
+	)
 	if onChild {
 		vtDir = "(parent--->child)"
+		reqHashStr = "parentReqTxHash"
+		handleHashStr = "childHandleTxHash"
 	} else {
 		vtDir = "(child--->parent)"
+		reqHashStr = "childReqTxHash"
+		handleHashStr = "parentHandleTxHash"
 	}
 	logger.Trace("Bridge contract transaction is created", "VTDirection", vtDir,
-		"contractCall", funcName, "nonce", reqNonce, "txHash", txHash, "from", from, "to", to, "valueOrTokenID", valueOrTokenId)
+		"contractCall", funcName, "nonce", reqNonce,
+		reqHashStr, reqTxHash, handleHashStr, handleTxHash, "from", from, "to", to, "valueOrTokenID", valueOrTokenId)
 }
 
-func (bi *BridgeInfo) loop() {
+func (bi *BridgeInfo) eventHandleLoop() {
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 
@@ -319,20 +331,20 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev IRequestValueTransferEv
 		if err != nil {
 			return err
 		}
-		handleValueTransferLog(bi.onChildChain, handleVTmethods[KLAY], handleTx.Hash().String(), requestNonce, from, to, valueOrTokenId)
+		handleValueTransferLog(bi.onChildChain, handleVTmethods[KLAY], txHash.String(), handleTx.Hash().String(), requestNonce, from, to, valueOrTokenId)
 	case ERC20:
 		handleTx, err = bi.bridge.HandleERC20Transfer(auth, txHash, from, to, ctpartTokenAddr, valueOrTokenId, requestNonce, blkNumber, extraData)
 		if err != nil {
 			return err
 		}
-		handleValueTransferLog(bi.onChildChain, handleVTmethods[ERC20], handleTx.Hash().String(), requestNonce, from, to, valueOrTokenId)
+		handleValueTransferLog(bi.onChildChain, handleVTmethods[ERC20], txHash.String(), handleTx.Hash().String(), requestNonce, from, to, valueOrTokenId)
 	case ERC721:
 		uri := GetURI(ev)
 		handleTx, err = bi.bridge.HandleERC721Transfer(auth, txHash, from, to, ctpartTokenAddr, valueOrTokenId, requestNonce, blkNumber, uri, extraData)
 		if err != nil {
 			return err
 		}
-		handleValueTransferLog(bi.onChildChain, handleVTmethods[ERC721], handleTx.Hash().String(), requestNonce, from, to, valueOrTokenId)
+		handleValueTransferLog(bi.onChildChain, handleVTmethods[ERC721], txHash.String(), handleTx.Hash().String(), requestNonce, from, to, valueOrTokenId)
 	default:
 		logger.Error("Got Unknown Token Type ReceivedEvent", "bridge", contractAddr, "nonce", requestNonce, "from", from)
 		return nil
@@ -340,7 +352,38 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev IRequestValueTransferEv
 
 	bridgeAcc.IncNonce()
 
-	bi.bridgeDB.WriteHandleTxHashFromRequestTxHash(txHash, handleTx.Hash())
+	// bi.bridgeDB.WriteHandleTxHashFromRequestTxHash(txHash, handleTx.Hash())
+	bi.bridgeDB.WriteHandleTxFromRequestTxHash(txHash, handleTx)
+	return nil
+}
+
+func (bi *BridgeInfo) refund(ev IRequestValueTransferEvent) error {
+	bridgeAcc := bi.account
+	bridgeAcc.Lock()
+	defer bridgeAcc.UnLock()
+	auth := bridgeAcc.GenerateTransactOpts()
+
+	reqNonce := ev.GetRequestNonce()
+	refundTx, err := bi.bridge.RefundKLAYTransfer(auth, reqNonce)
+	if err != nil {
+		return err
+	}
+	bridgeAcc.IncNonce()
+	var vtDir string
+	if bi.onChildChain {
+		vtDir = "child"
+	} else {
+		vtDir = "parent"
+	}
+	sender := ev.GetFrom()
+	logger.Trace("[SC][Refund] Refund transaction is created",
+		"chain", vtDir,
+		"txHash", refundTx.Hash().Hex(),
+		"requestNonce", reqNonce,
+		"sender", sender.Hex(),
+		"value", ev.GetValueOrTokenId(),
+	)
+	bi.bridgeDB.WriteRefundTxFromRequestNonce(reqNonce, sender, refundTx)
 	return nil
 }
 
@@ -980,7 +1023,7 @@ func (bm *BridgeManager) subscribeEvent(addr common.Address, bridge *bridgecontr
 	}
 	bridgeInfo.subscribed = true
 
-	go bm.loop(addr, chanReqVT, chanReqVTencoded, chanHandleVT, vtEv, vtEncodedev, withdrawnSub)
+	go bm.eventReceiverLoop(addr, chanReqVT, chanReqVTencoded, chanHandleVT, vtEv, vtEncodedev, withdrawnSub)
 
 	return nil
 }
@@ -1006,7 +1049,7 @@ func (bm *BridgeManager) UnsubscribeEvent(addr common.Address) {
 }
 
 // Loop handles subscribed event messages.
-func (bm *BridgeManager) loop(
+func (bm *BridgeManager) eventReceiverLoop(
 	addr common.Address,
 	chanReqVT <-chan *bridgecontract.BridgeRequestValueTransfer,
 	chanReqVTencoded <-chan *bridgecontract.BridgeRequestValueTransferEncoded,
