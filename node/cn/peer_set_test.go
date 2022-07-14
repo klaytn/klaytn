@@ -53,20 +53,20 @@ func TestPeerSet_Register(t *testing.T) {
 	setMockPeersConnType(cnPeer, pnPeer, enPeer)
 	setMockPeers([]*MockPeer{cnPeer, pnPeer, enPeer})
 
-	assert.NoError(t, peerSet.Register(cnPeer))
-	assert.NoError(t, peerSet.Register(pnPeer))
-	assert.NoError(t, peerSet.Register(enPeer))
+	assert.NoError(t, peerSet.Register(cnPeer, nil))
+	assert.NoError(t, peerSet.Register(pnPeer, nil))
+	assert.NoError(t, peerSet.Register(enPeer, nil))
 	assert.Equal(t, 3, len(peerSet.peers))
 
-	assert.Equal(t, errAlreadyRegistered, peerSet.Register(cnPeer))
-	assert.Equal(t, errAlreadyRegistered, peerSet.Register(pnPeer))
-	assert.Equal(t, errAlreadyRegistered, peerSet.Register(enPeer))
+	assert.Equal(t, errAlreadyRegistered, peerSet.Register(cnPeer, nil))
+	assert.Equal(t, errAlreadyRegistered, peerSet.Register(pnPeer, nil))
+	assert.Equal(t, errAlreadyRegistered, peerSet.Register(enPeer, nil))
 	assert.Equal(t, 3, len(peerSet.peers))
 
 	peerSet.closed = true
-	assert.Equal(t, errClosed, peerSet.Register(cnPeer))
-	assert.Equal(t, errClosed, peerSet.Register(pnPeer))
-	assert.Equal(t, errClosed, peerSet.Register(enPeer))
+	assert.Equal(t, errClosed, peerSet.Register(cnPeer, nil))
+	assert.Equal(t, errClosed, peerSet.Register(pnPeer, nil))
+	assert.Equal(t, errClosed, peerSet.Register(enPeer, nil))
 }
 
 func TestPeerSet_Unregister(t *testing.T) {
@@ -82,16 +82,19 @@ func TestPeerSet_Unregister(t *testing.T) {
 	setMockPeers([]*MockPeer{cnPeer, pnPeer, enPeer})
 
 	cnPeer.EXPECT().Close().Times(1)
+	cnPeer.EXPECT().ExistSnapExtension().Return(false).Times(1)
 	pnPeer.EXPECT().Close().Times(1)
+	pnPeer.EXPECT().ExistSnapExtension().Return(false).Times(1)
 	enPeer.EXPECT().Close().Times(1)
+	enPeer.EXPECT().ExistSnapExtension().Return(false).Times(1)
 
 	assert.Equal(t, errNotRegistered, peerSet.Unregister(nodeids[0].String()))
 	assert.Equal(t, errNotRegistered, peerSet.Unregister(nodeids[1].String()))
 	assert.Equal(t, errNotRegistered, peerSet.Unregister(nodeids[2].String()))
 
-	assert.NoError(t, peerSet.Register(cnPeer))
-	assert.NoError(t, peerSet.Register(pnPeer))
-	assert.NoError(t, peerSet.Register(enPeer))
+	assert.NoError(t, peerSet.Register(cnPeer, nil))
+	assert.NoError(t, peerSet.Register(pnPeer, nil))
+	assert.NoError(t, peerSet.Register(enPeer, nil))
 	assert.Equal(t, 3, len(peerSet.peers))
 
 	assert.NoError(t, peerSet.Unregister(nodeids[0].String()))
@@ -112,9 +115,9 @@ func TestPeerSet_Peers(t *testing.T) {
 	setMockPeersConnType(cnPeer, pnPeer, enPeer)
 	setMockPeers([]*MockPeer{cnPeer, pnPeer, enPeer})
 
-	assert.NoError(t, peerSet.Register(cnPeer))
-	assert.NoError(t, peerSet.Register(pnPeer))
-	assert.NoError(t, peerSet.Register(enPeer))
+	assert.NoError(t, peerSet.Register(cnPeer, nil))
+	assert.NoError(t, peerSet.Register(pnPeer, nil))
+	assert.NoError(t, peerSet.Register(enPeer, nil))
 
 	peers := peerSet.Peers()
 	expectedPeers := map[string]Peer{nodeids[0].String(): cnPeer, nodeids[1].String(): pnPeer, nodeids[2].String(): enPeer}
@@ -131,7 +134,7 @@ func TestPeerSet_CNPeers(t *testing.T) {
 	setMockPeers([]*MockPeer{cnPeer})
 
 	assert.EqualValues(t, map[common.Address]Peer{}, peerSet.CNPeers())
-	assert.NoError(t, peerSet.Register(cnPeer))
+	assert.NoError(t, peerSet.Register(cnPeer, nil))
 	assert.EqualValues(t, map[common.Address]Peer{addrs[0]: cnPeer}, peerSet.CNPeers())
 }
 
@@ -145,7 +148,7 @@ func TestPeerSet_PNPeers(t *testing.T) {
 	setMockPeers([]*MockPeer{pnPeer})
 
 	assert.EqualValues(t, map[common.Address]Peer{}, peerSet.PNPeers())
-	assert.NoError(t, peerSet.Register(pnPeer))
+	assert.NoError(t, peerSet.Register(pnPeer, nil))
 	assert.EqualValues(t, map[common.Address]Peer{addrs[0]: pnPeer}, peerSet.PNPeers())
 }
 
@@ -159,7 +162,7 @@ func TestPeerSet_ENPeers(t *testing.T) {
 	setMockPeers([]*MockPeer{enPeer})
 
 	assert.EqualValues(t, map[common.Address]Peer{}, peerSet.ENPeers())
-	assert.NoError(t, peerSet.Register(enPeer))
+	assert.NoError(t, peerSet.Register(enPeer, nil))
 	assert.EqualValues(t, map[common.Address]Peer{addrs[0]: enPeer}, peerSet.ENPeers())
 }
 
@@ -176,11 +179,11 @@ func TestPeerSet_Peer_And_Len(t *testing.T) {
 	setMockPeers([]*MockPeer{cnPeer, pnPeer, enPeer})
 
 	assert.Equal(t, 0, peerSet.Len())
-	assert.NoError(t, peerSet.Register(cnPeer))
+	assert.NoError(t, peerSet.Register(cnPeer, nil))
 	assert.Equal(t, 1, peerSet.Len())
-	assert.NoError(t, peerSet.Register(pnPeer))
+	assert.NoError(t, peerSet.Register(pnPeer, nil))
 	assert.Equal(t, 2, peerSet.Len())
-	assert.NoError(t, peerSet.Register(enPeer))
+	assert.NoError(t, peerSet.Register(enPeer, nil))
 	assert.Equal(t, 3, peerSet.Len())
 
 	assert.Equal(t, cnPeer, peerSet.Peer(nodeids[0].String()))
@@ -206,9 +209,9 @@ func TestPeerSet_PeersWithoutBlock(t *testing.T) {
 	pnPeer.EXPECT().KnowsBlock(block.Hash()).Return(true).AnyTimes()
 	enPeer.EXPECT().KnowsBlock(block.Hash()).Return(false).AnyTimes()
 
-	assert.NoError(t, peerSet.Register(cnPeer))
-	assert.NoError(t, peerSet.Register(pnPeer))
-	assert.NoError(t, peerSet.Register(enPeer))
+	assert.NoError(t, peerSet.Register(cnPeer, nil))
+	assert.NoError(t, peerSet.Register(pnPeer, nil))
+	assert.NoError(t, peerSet.Register(enPeer, nil))
 
 	peersWithoutBlock := peerSet.PeersWithoutBlock(block.Hash())
 	assert.Equal(t, 2, len(peersWithoutBlock))
@@ -246,9 +249,9 @@ func TestPeerSet_PeersWithoutTx(t *testing.T) {
 
 	assert.EqualValues(t, []Peer{}, peerSet.PeersWithoutTx(tx.Hash()))
 
-	assert.NoError(t, peerSet.Register(cnPeer))
-	assert.NoError(t, peerSet.Register(pnPeer))
-	assert.NoError(t, peerSet.Register(enPeer))
+	assert.NoError(t, peerSet.Register(cnPeer, nil))
+	assert.NoError(t, peerSet.Register(pnPeer, nil))
+	assert.NoError(t, peerSet.Register(enPeer, nil))
 
 	peersWithoutTx := peerSet.PeersWithoutTx(tx.Hash())
 
@@ -277,9 +280,9 @@ func TestPeerSet_TypePeersWithoutTx(t *testing.T) {
 	assert.EqualValues(t, []Peer{}, peerSet.TypePeersWithoutTx(tx.Hash(), common.PROXYNODE))
 	assert.EqualValues(t, []Peer{}, peerSet.TypePeersWithoutTx(tx.Hash(), common.ENDPOINTNODE))
 
-	assert.NoError(t, peerSet.Register(cnPeer))
-	assert.NoError(t, peerSet.Register(pnPeer))
-	assert.NoError(t, peerSet.Register(enPeer))
+	assert.NoError(t, peerSet.Register(cnPeer, nil))
+	assert.NoError(t, peerSet.Register(pnPeer, nil))
+	assert.NoError(t, peerSet.Register(enPeer, nil))
 
 	assert.EqualValues(t, []Peer{cnPeer}, peerSet.TypePeersWithoutTx(tx.Hash(), common.CONSENSUSNODE))
 	assert.EqualValues(t, []Peer{}, peerSet.TypePeersWithoutTx(tx.Hash(), common.PROXYNODE))
@@ -298,7 +301,7 @@ func TestPeerSet_CNWithoutTx(t *testing.T) {
 	setMockPeers([]*MockPeer{cnPeer})
 
 	assert.EqualValues(t, []Peer{}, peerSet.CNWithoutTx(tx.Hash()))
-	assert.NoError(t, peerSet.Register(cnPeer))
+	assert.NoError(t, peerSet.Register(cnPeer, nil))
 	assert.EqualValues(t, []Peer{cnPeer}, peerSet.CNWithoutTx(tx.Hash()))
 }
 
@@ -317,6 +320,7 @@ func TestPeerSet_BestPeer(t *testing.T) {
 	cnPeer.EXPECT().Head().Return(common.Hash{}, big.NewInt(111)).Times(2)
 	pnPeer.EXPECT().Head().Return(common.Hash{}, big.NewInt(222)).Times(2)
 	enPeer.EXPECT().Head().Return(common.Hash{}, big.NewInt(333)).Times(1)
+	enPeer.EXPECT().ExistSnapExtension().Return(false).Times(1)
 	enPeer.EXPECT().Close().Times(1)
 
 	setMockPeersConnType(cnPeer, pnPeer, enPeer)
@@ -324,9 +328,9 @@ func TestPeerSet_BestPeer(t *testing.T) {
 
 	assert.Nil(t, peerSet.BestPeer())
 
-	assert.NoError(t, peerSet.Register(cnPeer))
-	assert.NoError(t, peerSet.Register(pnPeer))
-	assert.NoError(t, peerSet.Register(enPeer))
+	assert.NoError(t, peerSet.Register(cnPeer, nil))
+	assert.NoError(t, peerSet.Register(pnPeer, nil))
+	assert.NoError(t, peerSet.Register(enPeer, nil))
 
 	assert.Equal(t, enPeer, peerSet.BestPeer())
 
@@ -351,9 +355,9 @@ func TestPeerSet_Close(t *testing.T) {
 	setMockPeersConnType(cnPeer, pnPeer, enPeer)
 	setMockPeers([]*MockPeer{cnPeer, pnPeer, enPeer})
 
-	assert.NoError(t, peerSet.Register(cnPeer))
-	assert.NoError(t, peerSet.Register(pnPeer))
-	assert.NoError(t, peerSet.Register(enPeer))
+	assert.NoError(t, peerSet.Register(cnPeer, nil))
+	assert.NoError(t, peerSet.Register(pnPeer, nil))
+	assert.NoError(t, peerSet.Register(enPeer, nil))
 
 	assert.False(t, peerSet.closed)
 	peerSet.Close()
@@ -371,7 +375,7 @@ func TestPeerSet_SampleResendPeersByType_PN(t *testing.T) {
 		setMockPeers([]*MockPeer{cnPeer})
 
 		assert.Equal(t, []Peer{}, peerSet.SampleResendPeersByType(common.PROXYNODE))
-		assert.NoError(t, peerSet.Register(cnPeer))
+		assert.NoError(t, peerSet.Register(cnPeer, nil))
 		assert.Equal(t, []Peer{cnPeer}, peerSet.SampleResendPeersByType(common.PROXYNODE))
 
 		mockCtrl.Finish()
@@ -386,7 +390,7 @@ func TestPeerSet_SampleResendPeersByType_PN(t *testing.T) {
 		setMockPeers([]*MockPeer{pnPeer})
 
 		assert.Equal(t, []Peer{}, peerSet.SampleResendPeersByType(common.PROXYNODE))
-		assert.NoError(t, peerSet.Register(pnPeer))
+		assert.NoError(t, peerSet.Register(pnPeer, nil))
 		assert.Equal(t, []Peer{pnPeer}, peerSet.SampleResendPeersByType(common.PROXYNODE))
 
 		mockCtrl.Finish()
@@ -405,8 +409,8 @@ func TestPeerSet_SampleResendPeersByType_PN(t *testing.T) {
 		setMockPeers([]*MockPeer{cnPeer, pnPeer})
 
 		assert.Equal(t, []Peer{}, peerSet.SampleResendPeersByType(common.PROXYNODE))
-		assert.NoError(t, peerSet.Register(cnPeer))
-		assert.NoError(t, peerSet.Register(pnPeer))
+		assert.NoError(t, peerSet.Register(cnPeer, nil))
+		assert.NoError(t, peerSet.Register(pnPeer, nil))
 		assert.Equal(t, []Peer{cnPeer}, peerSet.SampleResendPeersByType(common.PROXYNODE))
 
 		mockCtrl.Finish()
@@ -429,10 +433,10 @@ func TestPeerSet_SampleResendPeersByType_PN(t *testing.T) {
 		setMockPeers([]*MockPeer{cnPeer1, cnPeer2, cnPeer3, pnPeer})
 
 		assert.Equal(t, []Peer{}, peerSet.SampleResendPeersByType(common.PROXYNODE))
-		assert.NoError(t, peerSet.Register(cnPeer1))
-		assert.NoError(t, peerSet.Register(cnPeer2))
-		assert.NoError(t, peerSet.Register(cnPeer3))
-		assert.NoError(t, peerSet.Register(pnPeer))
+		assert.NoError(t, peerSet.Register(cnPeer1, nil))
+		assert.NoError(t, peerSet.Register(cnPeer2, nil))
+		assert.NoError(t, peerSet.Register(cnPeer3, nil))
+		assert.NoError(t, peerSet.Register(pnPeer, nil))
 		resendPeers := peerSet.SampleResendPeersByType(common.PROXYNODE)
 
 		assert.Equal(t, 2, len(resendPeers))
@@ -453,7 +457,7 @@ func TestPeerSet_SampleResendPeersByType_EN(t *testing.T) {
 		setMockPeers([]*MockPeer{pnPeer})
 
 		assert.Equal(t, []Peer{}, peerSet.SampleResendPeersByType(common.ENDPOINTNODE))
-		assert.NoError(t, peerSet.Register(pnPeer))
+		assert.NoError(t, peerSet.Register(pnPeer, nil))
 		assert.Equal(t, []Peer{pnPeer}, peerSet.SampleResendPeersByType(common.ENDPOINTNODE))
 
 		mockCtrl.Finish()
@@ -468,7 +472,7 @@ func TestPeerSet_SampleResendPeersByType_EN(t *testing.T) {
 		setMockPeers([]*MockPeer{enPeer})
 
 		assert.Equal(t, []Peer{}, peerSet.SampleResendPeersByType(common.ENDPOINTNODE))
-		assert.NoError(t, peerSet.Register(enPeer))
+		assert.NoError(t, peerSet.Register(enPeer, nil))
 		assert.Equal(t, []Peer{enPeer}, peerSet.SampleResendPeersByType(common.ENDPOINTNODE))
 
 		mockCtrl.Finish()
@@ -487,8 +491,8 @@ func TestPeerSet_SampleResendPeersByType_EN(t *testing.T) {
 		setMockPeers([]*MockPeer{pnPeer, enPeer})
 
 		assert.Equal(t, []Peer{}, peerSet.SampleResendPeersByType(common.ENDPOINTNODE))
-		assert.NoError(t, peerSet.Register(pnPeer))
-		assert.NoError(t, peerSet.Register(enPeer))
+		assert.NoError(t, peerSet.Register(pnPeer, nil))
+		assert.NoError(t, peerSet.Register(enPeer, nil))
 		assert.Equal(t, []Peer{pnPeer, enPeer}, peerSet.SampleResendPeersByType(common.ENDPOINTNODE))
 
 		mockCtrl.Finish()
@@ -708,7 +712,7 @@ func countPeerType(t common.ConnType, peers []Peer) int {
 
 func registerPeers(t *testing.T, ps *peerSet, peers []Peer) {
 	for i, p := range peers {
-		if err := ps.Register(p); err != nil {
+		if err := ps.Register(p, nil); err != nil {
 			t.Fatalf("Failed to register peer to peerSet. index: %v, peer: %v", i, p)
 		}
 	}

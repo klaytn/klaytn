@@ -30,6 +30,7 @@ import (
 
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/consensus/misc"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
@@ -90,9 +91,16 @@ func (s sortGasAndReward) Less(i, j int) bool {
 func (oracle *Oracle) processBlock(bf *blockFees, percentiles []float64) {
 	chainconfig := oracle.backend.ChainConfig()
 	// TODO-Klaytn: If we implement baseFee feature like Ethereum does, we should set it from header, not constant.
-	bf.results.baseFee = new(big.Int).SetUint64(params.BaseFee)
+	if bf.results.baseFee = bf.header.BaseFee; bf.results.baseFee == nil {
+		bf.results.baseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
+	}
 	// TODO-Klaytn: If we implement baseFee feature like Ethereum does, we should calculate nextBaseFee from parent block header.
-	bf.results.nextBaseFee = new(big.Int).SetUint64(params.BaseFee)
+	if chainconfig.IsMagmaForkEnabled(big.NewInt(int64(bf.blockNumber + 1))) {
+		bf.results.nextBaseFee = misc.NextBlockBaseFee(bf.header, chainconfig)
+	} else {
+		bf.results.nextBaseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
+	}
+
 	// There is no GasLimit in Klaytn, so it is enough to use pre-defined constant in api package as now.
 	bf.results.gasUsedRatio = float64(bf.header.GasUsed) / float64(params.UpperGasLimit)
 	if len(percentiles) == 0 {
@@ -116,7 +124,10 @@ func (oracle *Oracle) processBlock(bf *blockFees, percentiles []float64) {
 	sorter := make(sortGasAndReward, len(bf.block.Transactions()))
 	for i := range bf.block.Transactions() {
 		// TODO-Klaytn: If we change the fixed unit price policy and add baseFee feature, we should re-calculate reward.
-		reward := new(big.Int).SetUint64(chainconfig.UnitPrice) // As now, reward is always same because the baseFee in Klaytn is 0 and gasPrice is fixed.
+		reward := bf.block.Header().BaseFee
+		if reward == nil {
+			reward = new(big.Int).SetUint64(chainconfig.UnitPrice)
+		}
 		sorter[i] = txGasAndReward{gasUsed: bf.receipts[i].GasUsed, reward: reward}
 	}
 	sort.Sort(sorter)

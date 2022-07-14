@@ -132,7 +132,7 @@ func (s *PublicTransactionPoolAPI) GetTransactionBySenderTxHash(ctx context.Cont
 func (s *PublicTransactionPoolAPI) GetTransactionByHash(ctx context.Context, hash common.Hash) map[string]interface{} {
 	// Try to return an already finalized transaction
 	if tx, blockHash, blockNumber, index := s.b.ChainDB().ReadTxAndLookupInfo(hash); tx != nil {
-		return newRPCTransaction(tx, blockHash, blockNumber, index)
+		return newRPCTransaction(nil, tx, blockHash, blockNumber, index)
 	}
 	// No finalized transaction, try to retrieve it from the pool
 	if tx := s.b.GetPoolTransaction(hash); tx != nil {
@@ -202,11 +202,12 @@ func (s *PublicTransactionPoolAPI) GetRawTransactionByHash(ctx context.Context, 
 
 // RpcOutputReceipt converts a receipt to the RPC output with the associated information regarding to the
 // block in which the receipt is included, the transaction that outputs the receipt, and the receipt itself.
-func RpcOutputReceipt(tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64, receipt *types.Receipt) map[string]interface{} {
+func RpcOutputReceipt(header *types.Header, tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64, receipt *types.Receipt) map[string]interface{} {
 	if tx == nil || receipt == nil {
 		return nil
 	}
-	fields := newRPCTransaction(tx, blockHash, blockNumber, index)
+
+	fields := newRPCTransaction(nil, tx, blockHash, blockNumber, index)
 
 	if receipt.Status != types.ReceiptStatusSuccessful {
 		fields["status"] = hexutil.Uint(types.ReceiptStatusFailed)
@@ -217,6 +218,8 @@ func RpcOutputReceipt(tx *types.Transaction, blockHash common.Hash, blockNumber 
 
 	fields["logsBloom"] = receipt.Bloom
 	fields["gasUsed"] = hexutil.Uint64(receipt.GasUsed)
+
+	fields["effectiveGasPrice"] = hexutil.Uint64(tx.EffectiveGasPrice(header).Uint64())
 
 	if receipt.Logs == nil {
 		fields["logs"] = [][]*types.Log{}
@@ -247,12 +250,24 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceiptBySenderTxHash(ctx conte
 
 // GetTransactionReceipt returns the transaction receipt for the given transaction hash.
 func (s *PublicTransactionPoolAPI) GetTransactionReceipt(ctx context.Context, hash common.Hash) (map[string]interface{}, error) {
-	return RpcOutputReceipt(s.b.GetTxLookupInfoAndReceipt(ctx, hash)), nil
+	tx, blockHash, blockNumber, index, receipt := s.b.GetTxLookupInfoAndReceipt(ctx, hash)
+	return s.getTransactionReceipt(ctx, tx, blockHash, blockNumber, index, receipt)
 }
 
 // GetTransactionReceiptInCache returns the transaction receipt for the given transaction hash.
 func (s *PublicTransactionPoolAPI) GetTransactionReceiptInCache(ctx context.Context, hash common.Hash) (map[string]interface{}, error) {
-	return RpcOutputReceipt(s.b.GetTxLookupInfoAndReceiptInCache(hash)), nil
+	tx, blockHash, blockNumber, index, receipt := s.b.GetTxLookupInfoAndReceiptInCache(hash)
+	return s.getTransactionReceipt(ctx, tx, blockHash, blockNumber, index, receipt)
+}
+
+// getTransactionReceipt returns the transaction receipt for the given transaction hash.
+func (s *PublicTransactionPoolAPI) getTransactionReceipt(ctx context.Context, tx *types.Transaction, blockHash common.Hash,
+	blockNumber uint64, index uint64, receipt *types.Receipt,
+) (map[string]interface{}, error) {
+	// No error handling is required here.
+	// Header is checked in the following RpcOutputReceipt function
+	header, _ := s.b.HeaderByHash(ctx, blockHash)
+	return RpcOutputReceipt(header, tx, blockHash, blockNumber, index, receipt), nil
 }
 
 // sign is a helper function that signs a transaction with the private key of the given address.

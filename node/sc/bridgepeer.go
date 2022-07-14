@@ -56,7 +56,7 @@ type PeerSetManager interface {
 	BridgePeerSet() *bridgePeerSet
 }
 
-//go:generate mockgen -destination=node/sc/bridgepeer_mock_test.go -package=sc github.com/klaytn/klaytn/node/sc BridgePeer
+//go:generate mockgen -destination=bridgepeer_mock_test.go -package=sc github.com/klaytn/klaytn/node/sc BridgePeer
 type BridgePeer interface {
 	// Close signals the broadcast goroutine to terminate.
 	Close()
@@ -131,6 +131,9 @@ type BridgePeer interface {
 
 	// SendServiceChainReceiptResponse sends a receipt as a response to request from child chain.
 	SendServiceChainReceiptResponse(receipts []*types.ReceiptForStorage) error
+
+	// SendServiceChainInvalidTxResponse sends a response that contains list of invalid tx and error from parent chain.
+	SendServiceChainInvalidTxResponse(invalidTxs []InvalidParentChainTx) error
 
 	// SendServiceChainRequestVTReasoning sends reasoning materials to request trace transaction
 	SendServiceChainRequestVTReasoning(reqVTReasoning *RequestVTReasoningWrapper) error
@@ -256,6 +259,10 @@ func (p *baseBridgePeer) SendServiceChainReceiptRequest(txHashes []common.Hash) 
 
 func (p *baseBridgePeer) SendServiceChainReceiptResponse(receipts []*types.ReceiptForStorage) error {
 	return p2p.Send(p.rw, ServiceChainReceiptResponseMsg, receipts)
+}
+
+func (p *baseBridgePeer) SendServiceChainInvalidTxResponse(invalidTxs []InvalidParentChainTx) error {
+	return p2p.Send(p.rw, ServiceChainInvalidTxResponseMsg, invalidTxs)
 }
 
 func (p *baseBridgePeer) SendServiceChainRequestVTReasoning(reqVTReasoning *RequestVTReasoningWrapper) error {

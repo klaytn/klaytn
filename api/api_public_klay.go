@@ -48,6 +48,14 @@ func (s *PublicKlayAPI) GasPrice(ctx context.Context) (*hexutil.Big, error) {
 	return (*hexutil.Big)(price), err
 }
 
+func (s *PublicKlayAPI) UpperBoundGasPrice(ctx context.Context) *hexutil.Big {
+	return (*hexutil.Big)(s.b.UpperBoundGasPrice(ctx))
+}
+
+func (s *PublicKlayAPI) LowerBoundGasPrice(ctx context.Context) *hexutil.Big {
+	return (*hexutil.Big)(s.b.LowerBoundGasPrice(ctx))
+}
+
 // ProtocolVersion returns the current Klaytn protocol version this node supports.
 func (s *PublicKlayAPI) ProtocolVersion() hexutil.Uint {
 	return hexutil.Uint(s.b.ProtocolVersion())

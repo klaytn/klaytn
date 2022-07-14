@@ -394,7 +394,7 @@ func TestBasePeer_SendTransactionWithSortedByTime(t *testing.T) {
 	copy(sortedTxs, txs)
 
 	// Sort transaction by time.
-	sort.Sort(types.TxByPriceAndTime(sortedTxs))
+	sort.Sort(types.TxByTime(sortedTxs))
 
 	basePeer, _, oppositePipe := newBasePeer()
 	for _, tx := range txs {
@@ -454,7 +454,7 @@ func TestBasePeer_ReSendTransactionWithSortedByTime(t *testing.T) {
 	copy(sortedTxs, txs)
 
 	// Sort transaction by time.
-	sort.Sort(types.TxByPriceAndTime(sortedTxs))
+	sort.Sort(types.TxByTime(sortedTxs))
 
 	basePeer, _, oppositePipe := newBasePeer()
 	go func(t *testing.T) {
@@ -509,7 +509,7 @@ func TestMultiChannelPeer_SendTransactionWithSortedByTime(t *testing.T) {
 	copy(sortedTxs, txs)
 
 	// Sort transaction by time.
-	sort.Sort(types.TxByPriceAndTime(sortedTxs))
+	sort.Sort(types.TxByTime(sortedTxs))
 
 	_, oppositePipe1, oppositePipe2 := newBasePeer()
 	multiPeer, _ := newPeerWithRWs(version, p2pPeers[0], []p2p.MsgReadWriter{oppositePipe1, oppositePipe2})
@@ -571,7 +571,7 @@ func TestMultiChannelPeer_ReSendTransactionWithSortedByTime(t *testing.T) {
 	copy(sortedTxs, txs)
 
 	// Sort transaction by time.
-	sort.Sort(types.TxByPriceAndTime(sortedTxs))
+	sort.Sort(types.TxByTime(sortedTxs))
 
 	_, oppositePipe1, oppositePipe2 := newBasePeer()
 	multiPeer, _ := newPeerWithRWs(version, p2pPeers[0], []p2p.MsgReadWriter{oppositePipe1, oppositePipe2})

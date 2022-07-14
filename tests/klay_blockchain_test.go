@@ -170,6 +170,13 @@ func newKlaytnNode(t *testing.T, dir string, validator *TestAccountType) (*node.
 	genesis.Config.Istanbul.ProposerPolicy = uint64(istanbul.RoundRobin)
 	genesis.Config.Governance.Reward.MintingAmount = new(big.Int).Mul(big.NewInt(9000000000000000000), big.NewInt(params.KLAY))
 
+	// NOTE: Uncomment these lines to enable features
+	// TODO: Receive ChainConfig as optional argument
+	// genesis.Config.IstanbulCompatibleBlock = big.NewInt(0)
+	// genesis.Config.LondonCompatibleBlock = big.NewInt(0)
+	// genesis.Config.EthTxTypeCompatibleBlock = big.NewInt(0)
+	// genesis.Config.KIP71CompatibleBlock = big.NewInt(0)
+
 	cnConf := cn.GetDefaultConfig()
 	cnConf.Genesis = genesis
 	cnConf.Rewardbase = validator.Addr
@@ -289,4 +296,54 @@ func deployContractExecutionTx(t *testing.T, txpool work.TxPool, chainId *big.In
 		t.Fatal(err)
 	}
 	sender.AddNonce()
+}
+
+// Wait until the receipt for `txhash` is ready
+// Returns the receipt
+// Returns nil after a reasonable timeout
+func waitReceipt(chain *blockchain.BlockChain, txhash common.Hash) *types.Receipt {
+	if receipt := chain.GetReceiptByTxHash(txhash); receipt != nil {
+		return receipt
+	}
+	chainEventCh := make(chan blockchain.ChainEvent)
+	subscription := chain.SubscribeChainEvent(chainEventCh)
+	defer subscription.Unsubscribe()
+	timeout := time.NewTimer(15 * time.Second)
+	for {
+		select {
+		case <-chainEventCh:
+			if receipt := chain.GetReceiptByTxHash(txhash); receipt != nil {
+				return receipt
+			}
+		case <-timeout.C:
+			return nil
+		}
+	}
+}
+
+// Wait until `num` block is mined
+// Returns the header with the number larger or equal to `num`
+// Returns nil after a reasonable timeout
+func waitBlock(chain *blockchain.BlockChain, num uint64) *types.Header {
+	head := chain.CurrentHeader()
+	if head.Number.Uint64() >= num {
+		return head
+	}
+
+	chainEventCh := make(chan blockchain.ChainEvent)
+	subscription := chain.SubscribeChainEvent(chainEventCh)
+	defer subscription.Unsubscribe()
+	// Wait until desired `num` plus 10 seconds margin
+	timeoutSec := num - head.Number.Uint64() + 10
+	timeout := time.NewTimer(time.Duration(timeoutSec) * time.Second)
+	for {
+		select {
+		case <-chainEventCh:
+			if head := chain.CurrentHeader(); head.Number.Uint64() >= num {
+				return head
+			}
+		case <-timeout.C:
+			return nil
+		}
+	}
 }

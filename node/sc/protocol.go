@@ -43,14 +43,16 @@ const (
 	ServiceChainResponse = 0x07
 	ServiceChainNotify   = 0x08
 
-	ServiceChainRequestVTReasoningMsg  = 0x09
-	ServiceChainResponseVTReasoningMsg = 0xA
+	ServiceChainInvalidTxResponseMsg = 0x09
+
+	ServiceChainRequestVTReasoningMsg  = 0xA
+	ServiceChainResponseVTReasoningMsg = 0xB
 )
 
 var (
 	SCProtocolName    = "servicechain"
-	SCProtocolVersion = []uint{2}
-	SCProtocolLength  = []uint64{11}
+	SCProtocolVersion = []uint{3}
+	SCProtocolLength  = []uint64{12}
 )
 
 // Protocol defines the protocol of the consensus

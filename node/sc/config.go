@@ -57,7 +57,6 @@ func init() {
 	}
 }
 
-//go:generate gencodec -type SCConfig -formats toml -out gen_config.go
 type SCConfig struct {
 	// Name sets the instance name of the node. It must not contain the / character and is
 	// used in the devp2p node identifier. The instance name is "kscn". If no

@@ -131,7 +131,7 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) (returnErr error) {
 
 	// NOTE: lruCache is mandatory when state migration and block processing are executed simultaneously
 	lruCache, _ := lru.New(int(2 * units.Giga / common.HashLength)) // 2GB for 62,500,000 common.Hash key values
-	trieSync := state.NewStateSync(rootHash, dstState.TrieDB().DiskDB(), nil, lruCache)
+	trieSync := state.NewStateSync(rootHash, dstState.TrieDB().DiskDB(), nil, lruCache, nil)
 	var queue []common.Hash
 
 	quitCh := make(chan struct{})
@@ -151,7 +151,8 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) (returnErr error) {
 
 	// Migration main loop
 	for trieSync.Pending() > 0 {
-		queue = append(queue[:0], trieSync.Missing(1024)...)
+		nodes, _, codes := trieSync.Missing(1024)
+		queue = append(queue[:0], append(nodes, codes...)...)
 		results := make([]statedb.SyncResult, len(queue))
 
 		// Read the trie nodes

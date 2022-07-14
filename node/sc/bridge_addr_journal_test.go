@@ -45,15 +45,15 @@ func TestBridgeJournal(t *testing.T) {
 		t.Fatalf("fail to rotate journal %v", err)
 	}
 
-	err := journal.insert(common.BytesToAddress([]byte("test1")), common.BytesToAddress([]byte("test2")))
+	err := journal.insert("", common.BytesToAddress([]byte("test1")), common.BytesToAddress([]byte("test2")))
 	if err != nil {
 		t.Fatalf("fail to insert address %v", err)
 	}
-	err = journal.insert(common.BytesToAddress([]byte("test2")), common.BytesToAddress([]byte("test3")))
+	err = journal.insert("", common.BytesToAddress([]byte("test2")), common.BytesToAddress([]byte("test3")))
 	if err != nil {
 		t.Fatalf("fail to insert address %v", err)
 	}
-	err = journal.insert(common.BytesToAddress([]byte("test3")), common.BytesToAddress([]byte("test1")))
+	err = journal.insert("", common.BytesToAddress([]byte("test3")), common.BytesToAddress([]byte("test1")))
 	if err != nil {
 		t.Fatalf("fail to insert address %v", err)
 	}
@@ -108,7 +108,7 @@ func TestBridgeJournalCache(t *testing.T) {
 	localAddr := common.BytesToAddress([]byte("test1"))
 	remoteAddr := common.BytesToAddress([]byte("test2"))
 
-	err := journals.insert(localAddr, remoteAddr)
+	err := journals.insert("", localAddr, remoteAddr)
 	if err != nil {
 		t.Fatalf("fail to insert address %v", err)
 	}

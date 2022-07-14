@@ -147,7 +147,7 @@ func (journal *txJournal) rotate(all map[common.Address]types.Transactions, sign
 	}
 	journaled := 0
 
-	txSetByTime := types.NewTransactionsByPriceAndNonce(signer, all)
+	txSetByTime := types.NewTransactionsByTimeAndNonce(signer, all)
 	for tx := txSetByTime.Peek(); tx != nil; tx = txSetByTime.Peek() {
 		if err = rlp.Encode(replacement, tx); err != nil {
 			replacement.Close()

@@ -39,6 +39,7 @@ import (
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/consensus/istanbul/core"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/rlp"
@@ -53,7 +54,12 @@ var (
 
 // These are the types in order to add a custom configuration of the test chain.
 // You may need to create a configuration type if necessary.
-type istanbulCompatibleBlock *big.Int
+type (
+	istanbulCompatibleBlock  *big.Int
+	LondonCompatibleBlock    *big.Int
+	EthTxTypeCompatibleBlock *big.Int
+	magmaCompatibleBlock     *big.Int
+)
 
 type (
 	minimumStake           *big.Int
@@ -121,6 +127,12 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 		switch v := item.(type) {
 		case istanbulCompatibleBlock:
 			genesis.Config.IstanbulCompatibleBlock = v
+		case LondonCompatibleBlock:
+			genesis.Config.LondonCompatibleBlock = v
+		case EthTxTypeCompatibleBlock:
+			genesis.Config.EthTxTypeCompatibleBlock = v
+		case magmaCompatibleBlock:
+			genesis.Config.MagmaCompatibleBlock = v
 		case proposerPolicy:
 			genesis.Config.Istanbul.ProposerPolicy = uint64(v)
 		case epoch:
@@ -200,6 +212,10 @@ func makeHeader(parent *types.Block, config *istanbul.Config) *types.Header {
 		Extra:      parent.Extra(),
 		Time:       new(big.Int).Add(parent.Time(), new(big.Int).SetUint64(config.BlockPeriod)),
 		BlockScore: defaultBlockScore,
+	}
+	if parent.Header().BaseFee != nil {
+		// We don't have chainConfig so the BaseFee of the current block is set by parent's for test
+		header.BaseFee = parent.Header().BaseFee
 	}
 	return header
 }
@@ -311,7 +327,12 @@ func TestSealCommitted(t *testing.T) {
 }
 
 func TestVerifyHeader(t *testing.T) {
-	chain, engine := newBlockChain(1)
+	var configItems []interface{}
+	configItems = append(configItems, istanbulCompatibleBlock(new(big.Int).SetUint64(0)))
+	configItems = append(configItems, LondonCompatibleBlock(new(big.Int).SetUint64(0)))
+	configItems = append(configItems, EthTxTypeCompatibleBlock(new(big.Int).SetUint64(0)))
+	configItems = append(configItems, magmaCompatibleBlock(new(big.Int).SetUint64(0)))
+	chain, engine := newBlockChain(1, configItems...)
 	defer engine.Stop()
 
 	// errEmptyCommittedSeals case
@@ -823,7 +844,7 @@ func TestSnapshot_Validators_AfterMinimumStakingVotes(t *testing.T) {
 		for _, e := range tc.expected {
 			for _, num := range e.blocks {
 				block := chain.GetBlockByNumber(num)
-				snap, err := engine.snapshot(chain, block.NumberU64(), block.Hash(), nil)
+				snap, err := engine.snapshot(chain, block.NumberU64(), block.Hash(), nil, true)
 				assert.NoError(t, err)
 
 				validators := toAddressList(snap.ValSet.List())
@@ -994,7 +1015,7 @@ func TestSnapshot_Validators_BasedOnStaking(t *testing.T) {
 		_, err := chain.InsertChain(types.Blocks{block})
 		assert.NoError(t, err)
 
-		snap, err := engine.snapshot(chain, block.NumberU64(), block.Hash(), nil)
+		snap, err := engine.snapshot(chain, block.NumberU64(), block.Hash(), nil, true)
 		assert.NoError(t, err)
 
 		validators := toAddressList(snap.ValSet.List())
@@ -1215,7 +1236,7 @@ func TestSnapshot_Validators_AddRemove(t *testing.T) {
 				continue
 			}
 			block := chain.GetBlockByNumber(uint64(i))
-			snap, err := engine.snapshot(chain, block.NumberU64(), block.Hash(), nil)
+			snap, err := engine.snapshot(chain, block.NumberU64(), block.Hash(), nil, true)
 			assert.NoError(t, err)
 			validators := copyAndSortAddrs(toAddressList(snap.ValSet.List()))
 
@@ -1227,6 +1248,52 @@ func TestSnapshot_Validators_AddRemove(t *testing.T) {
 		reward.SetTestStakingManager(oldStakingManager)
 		engine.Stop()
 	}
+}
+
+func TestSnapshot_Writable(t *testing.T) {
+	var configItems []interface{}
+	configItems = append(configItems, proposerPolicy(params.WeightedRandom))
+	configItems = append(configItems, epoch(3))
+	configItems = append(configItems, governanceMode("single"))
+	configItems = append(configItems, blockPeriod(0)) // set block period to 0 to prevent creating future block
+	chain, engine := newBlockChain(1, configItems...)
+
+	// add votes and insert voted blocks
+	var (
+		previousBlock, currentBlock *types.Block = nil, chain.Genesis()
+		err                         error
+	)
+
+	// voteData is inserted at block 4, and current block is block 5.
+	for i := 0; i < 5; i++ {
+		if i == 4 {
+			engine.governance.AddVote("governance.unitprice", uint64(2000000))
+		}
+		previousBlock = currentBlock
+		currentBlock = makeBlockWithSeal(chain, engine, previousBlock)
+		_, err = chain.InsertChain(types.Blocks{currentBlock})
+		assert.NoError(t, err)
+	}
+
+	// save current gov.changeSet's length for the expected value.
+	currentChangeSetLength := len(engine.governance.GetGovernanceChange())
+	assert.Equal(t, 1, currentChangeSetLength)
+
+	// block 3 is the start block of an epoch. In this test, the cache of this block's snapshot is cleared.
+	// If cache is not removed, it will just read the cache rather than making the snapshot itself.
+	block := chain.GetBlockByNumber(uint64(3))
+
+	// case [writable == false]
+	// expected result: gov.changeSet should not be modified.
+	engine.recents.Remove(block.Hash()) // assume node is restarted
+	_, err = engine.snapshot(chain, block.NumberU64(), block.Hash(), nil, false)
+	assert.Equal(t, currentChangeSetLength, len(engine.governance.GetGovernanceChange()))
+
+	// case [writable == true]
+	// expected result: gov.changeSet is modified.
+	engine.recents.Remove(block.Hash()) // assume node is restarted
+	_, err = engine.snapshot(chain, block.NumberU64(), block.Hash(), nil, true)
+	assert.Equal(t, 0, len(engine.governance.GetGovernanceChange()))
 }
 
 func TestGovernance_Votes(t *testing.T) {
@@ -1352,6 +1419,71 @@ func TestGovernance_Votes(t *testing.T) {
 				{vote{"governance.unitprice", uint64(2)}, 13},
 				{vote{"governance.unitprice", uint64(2)}, 14},
 				{vote{"governance.unitprice", uint64(2)}, 0}, // check on current
+			},
+		},
+		{
+			votes: []vote{
+				{}, // voted on block 1
+				{"magma.lowerboundbasefee", uint64(750000000000)}, // voted on block 2
+				{}, // voted on block 3
+				{}, // voted on block 4
+				{"magma.lowerboundbasefee", uint64(25000000000)}, // voted on block 5
+			},
+			expected: []governanceItem{
+				{vote{"magma.lowerboundbasefee", uint64(750000000000)}, 6},
+				{vote{"magma.lowerboundbasefee", uint64(25000000000)}, 9},
+			},
+		},
+		{
+			votes: []vote{
+				{}, // voted on block 1
+				{"magma.upperboundbasefee", uint64(750000000000)}, // voted on block 2
+				{}, // voted on block 3
+				{}, // voted on block 4
+				{"magma.upperboundbasefee", uint64(25000000000)}, // voted on block 5
+			},
+			expected: []governanceItem{
+				{vote{"magma.upperboundbasefee", uint64(750000000000)}, 6},
+				{vote{"magma.upperboundbasefee", uint64(25000000000)}, 9},
+			},
+		},
+		{
+			votes: []vote{
+				{}, // voted on block 1
+				{"magma.maxblockgasusedforbasefee", uint64(840000000)}, // voted on block 2
+				{}, // voted on block 3
+				{}, // voted on block 4
+				{"magma.maxblockgasusedforbasefee", uint64(84000000)}, // voted on block 5
+			},
+			expected: []governanceItem{
+				{vote{"magma.maxblockgasusedforbasefee", uint64(840000000)}, 6},
+				{vote{"magma.maxblockgasusedforbasefee", uint64(84000000)}, 9},
+			},
+		},
+		{
+			votes: []vote{
+				{},                                    // voted on block 1
+				{"magma.gastarget", uint64(50000000)}, // voted on block 2
+				{},                                    // voted on block 3
+				{},                                    // voted on block 4
+				{"magma.gastarget", uint64(30000000)}, // voted on block 5
+			},
+			expected: []governanceItem{
+				{vote{"magma.gastarget", uint64(50000000)}, 6},
+				{vote{"magma.gastarget", uint64(30000000)}, 9},
+			},
+		},
+		{
+			votes: []vote{
+				{},                                       // voted on block 1
+				{"magma.basefeedenominator", uint64(32)}, // voted on block 2
+				{},                                       // voted on block 3
+				{},                                       // voted on block 4
+				{"magma.basefeedenominator", uint64(64)}, // voted on block 5
+			},
+			expected: []governanceItem{
+				{vote{"magma.basefeedenominator", uint64(32)}, 6},
+				{vote{"magma.basefeedenominator", uint64(64)}, 9},
 			},
 		},
 	}
@@ -1498,6 +1630,181 @@ func TestGovernance_ReaderEngine(t *testing.T) {
 		}
 
 		reward.SetTestStakingManager(oldStakingManager)
+		engine.Stop()
+	}
+}
+
+func TestChainConfig_UpdateAfterVotes(t *testing.T) {
+	type vote struct {
+		key   string
+		value interface{}
+	}
+	type testcase struct {
+		voting   vote
+		expected vote
+	}
+
+	testcases := []testcase{
+		{
+			voting:   vote{"magma.lowerboundbasefee", uint64(20000000000)}, // voted on block 1
+			expected: vote{"magma.lowerboundbasefee", uint64(20000000000)},
+		},
+		{
+			voting:   vote{"magma.upperboundbasefee", uint64(500000000000)}, // voted on block 1
+			expected: vote{"magma.upperboundbasefee", uint64(500000000000)},
+		},
+		{
+			voting:   vote{"magma.maxblockgasusedforbasefee", uint64(100000000)}, // voted on block 1
+			expected: vote{"magma.maxblockgasusedforbasefee", uint64(100000000)},
+		},
+		{
+			voting:   vote{"magma.gastarget", uint64(50000000)}, // voted on block 1
+			expected: vote{"magma.gastarget", uint64(50000000)},
+		},
+		{
+			voting:   vote{"magma.basefeedenominator", uint64(32)}, // voted on block 1
+			expected: vote{"magma.basefeedenominator", uint64(32)},
+		},
+	}
+
+	var configItems []interface{}
+	configItems = append(configItems, epoch(3))
+	configItems = append(configItems, governanceMode("single"))
+	configItems = append(configItems, blockPeriod(0)) // set block period to 0 to prevent creating future block
+	for _, tc := range testcases {
+		chain, engine := newBlockChain(1, configItems...)
+
+		// test initial governance items
+		assert.Equal(t, uint64(25000000000), chain.Config().Governance.Magma.LowerBoundBaseFee)
+		assert.Equal(t, uint64(750000000000), chain.Config().Governance.Magma.UpperBoundBaseFee)
+		assert.Equal(t, uint64(20), chain.Config().Governance.Magma.BaseFeeDenominator)
+		assert.Equal(t, uint64(60000000), chain.Config().Governance.Magma.MaxBlockGasUsedForBaseFee)
+		assert.Equal(t, uint64(30000000), chain.Config().Governance.Magma.GasTarget)
+
+		// add votes and insert voted blocks
+		var (
+			previousBlock, currentBlock *types.Block = nil, chain.Genesis()
+			err                         error
+		)
+
+		engine.governance.SetBlockchain(chain)
+		engine.governance.AddVote(tc.voting.key, tc.voting.value)
+		previousBlock = currentBlock
+		currentBlock = makeBlockWithSeal(chain, engine, previousBlock)
+		_, err = chain.InsertChain(types.Blocks{currentBlock})
+		assert.NoError(t, err)
+
+		// insert blocks until the vote is applied
+		for i := 0; i < 6; i++ {
+			previousBlock = currentBlock
+			currentBlock = makeBlockWithSeal(chain, engine, previousBlock)
+			_, err = chain.InsertChain(types.Blocks{currentBlock})
+			assert.NoError(t, err)
+		}
+
+		govConfig := chain.Config().Governance
+		switch tc.expected.key {
+		case "magma.lowerboundbasefee":
+			assert.Equal(t, tc.expected.value, govConfig.Magma.LowerBoundBaseFee)
+		case "magma.upperboundbasefee":
+			assert.Equal(t, tc.expected.value, govConfig.Magma.UpperBoundBaseFee)
+		case "magma.gastarget":
+			assert.Equal(t, tc.expected.value, govConfig.Magma.GasTarget)
+		case "magma.maxblockgasusedforbasefee":
+			assert.Equal(t, tc.expected.value, govConfig.Magma.MaxBlockGasUsedForBaseFee)
+		case "magma.basefeedenominator":
+			assert.Equal(t, tc.expected.value, govConfig.Magma.BaseFeeDenominator)
+		default:
+			assert.Error(t, nil)
+		}
+	}
+}
+
+func TestChainConfig_ReadFromDBAfterVotes(t *testing.T) {
+	type vote struct {
+		key   string
+		value interface{}
+	}
+	type testcase struct {
+		voting   vote
+		expected vote
+	}
+
+	testcases := []testcase{
+		{
+			voting:   vote{"magma.lowerboundbasefee", uint64(20000000000)}, // voted on block 1
+			expected: vote{"magma.lowerboundbasefee", uint64(20000000000)},
+		},
+		{
+			voting:   vote{"magma.upperboundbasefee", uint64(500000000000)}, // voted on block 1
+			expected: vote{"magma.upperboundbasefee", uint64(500000000000)},
+		},
+		{
+			voting:   vote{"magma.maxblockgasusedforbasefee", uint64(100000000)}, // voted on block 1
+			expected: vote{"magma.maxblockgasusedforbasefee", uint64(100000000)},
+		},
+		{
+			voting:   vote{"magma.gastarget", uint64(50000000)}, // voted on block 1
+			expected: vote{"magma.gastarget", uint64(50000000)},
+		},
+		{
+			voting:   vote{"magma.basefeedenominator", uint64(32)}, // voted on block 1
+			expected: vote{"magma.basefeedenominator", uint64(32)},
+		},
+	}
+
+	var configItems []interface{}
+	configItems = append(configItems, proposerPolicy(params.WeightedRandom))
+	configItems = append(configItems, epoch(3))
+	configItems = append(configItems, governanceMode("single"))
+	configItems = append(configItems, blockPeriod(0)) // set block period to 0 to prevent creating future block
+	for _, tc := range testcases {
+		chain, engine := newBlockChain(1, configItems...)
+
+		// test initial governance items
+		assert.Equal(t, uint64(25000000000), chain.Config().Governance.Magma.LowerBoundBaseFee)
+		assert.Equal(t, uint64(750000000000), chain.Config().Governance.Magma.UpperBoundBaseFee)
+		assert.Equal(t, uint64(20), chain.Config().Governance.Magma.BaseFeeDenominator)
+		assert.Equal(t, uint64(60000000), chain.Config().Governance.Magma.MaxBlockGasUsedForBaseFee)
+		assert.Equal(t, uint64(30000000), chain.Config().Governance.Magma.GasTarget)
+
+		// add votes and insert voted blocks
+		var (
+			previousBlock, currentBlock *types.Block = nil, chain.Genesis()
+			err                         error
+		)
+
+		engine.governance.SetBlockchain(chain)
+		engine.governance.AddVote(tc.voting.key, tc.voting.value)
+		previousBlock = currentBlock
+		currentBlock = makeBlockWithSeal(chain, engine, previousBlock)
+		_, err = chain.InsertChain(types.Blocks{currentBlock})
+		assert.NoError(t, err)
+
+		// insert blocks until the vote is applied
+		for i := 0; i < checkpointInterval; i++ {
+			previousBlock = currentBlock
+			currentBlock = makeBlockWithSeal(chain, engine, previousBlock)
+			_, err = chain.InsertChain(types.Blocks{currentBlock})
+			assert.NoError(t, err)
+		}
+
+		gov := governance.NewGovernanceInitialize(chain.Config(), engine.db)
+		switch tc.expected.key {
+		case "magma.lowerboundbasefee":
+			assert.Equal(t, tc.expected.value, gov.ChainConfig.Governance.Magma.LowerBoundBaseFee)
+		case "magma.upperboundbasefee":
+			assert.Equal(t, tc.expected.value, gov.ChainConfig.Governance.Magma.UpperBoundBaseFee)
+		case "magma.gastarget":
+			assert.Equal(t, tc.expected.value, gov.ChainConfig.Governance.Magma.GasTarget)
+		case "magma.maxblockgasusedforbasefee":
+			assert.Equal(t, tc.expected.value, gov.ChainConfig.Governance.Magma.MaxBlockGasUsedForBaseFee)
+		case "magma.basefeedenominator":
+			assert.Equal(t, tc.expected.value, gov.ChainConfig.Governance.Magma.BaseFeeDenominator)
+		default:
+			assert.Error(t, nil)
+		}
+
 		engine.Stop()
 	}
 }

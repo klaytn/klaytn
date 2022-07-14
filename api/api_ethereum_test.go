@@ -250,6 +250,9 @@ func testGetHeader(t *testing.T, testAPIName string, forkEnabled bool) {
 	assert.Equal(t, true, ok)
 	assert.NotEqual(t, ethHeader, nil)
 
+	// TODO-klaytn size set to 0x214
+	// We can get a real mashaled data by using real backend instance, not mock
+	// Mock just return a header instance, not rlp decoded json data
 	expected := make(map[string]interface{})
 	assert.NoError(t, json.Unmarshal([]byte(`
 	{
@@ -269,7 +272,7 @@ func testGetHeader(t *testing.T, testAPIName string, forkEnabled bool) {
 		"parentHash": "0xc8036293065bacdfce87debec0094a71dbbe40345b078d21dcc47adb4513f348",
 		"receiptsRoot": "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470",
 		"sha3Uncles": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347",
-		"size": "0x20c",
+		"size": "0x214",
 		"stateRoot": "0xad31c32942fa033166e4ef588ab973dbe26657c594de4ba98192108becf0fec9",
 		"timestamp": "0x61d53854",
 		"totalDifficulty": "0x5",
@@ -886,6 +889,7 @@ func TestEthereumAPI_GetTransactionByHash(t *testing.T) {
 
 	// Mock Backend functions.
 	mockBackend.EXPECT().ChainDB().Return(mockDBManager).Times(txs.Len())
+	mockBackend.EXPECT().BlockByHash(gomock.Any(), block.Hash()).Return(block, nil).Times(txs.Len())
 
 	// Get transaction by hash for each transaction types.
 	for i := 0; i < txs.Len(); i++ {
@@ -970,7 +974,7 @@ func TestEthereumAPI_GetTransactionReceipt(t *testing.T) {
 		},
 	).Times(txs.Len())
 	mockBackend.EXPECT().GetBlockReceipts(gomock.Any(), gomock.Any()).Return(receipts).Times(txs.Len())
-	mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthereumAPITest).Times(txs.Len())
+	mockBackend.EXPECT().HeaderByHash(gomock.Any(), block.Hash()).Return(block.Header(), nil).Times(txs.Len())
 
 	// Get receipt for each transaction types.
 	for i := 0; i < txs.Len(); i++ {
@@ -979,7 +983,7 @@ func TestEthereumAPI_GetTransactionReceipt(t *testing.T) {
 			t.Fatal(err)
 		}
 		txIdx := uint64(i)
-		checkEthTransactionReceiptFormat(t, block, receipts, receipt, RpcOutputReceipt(txs[i], block.Hash(), block.NumberU64(), txIdx, receiptMap[txs[i].Hash()]), txIdx)
+		checkEthTransactionReceiptFormat(t, block, receipts, receipt, RpcOutputReceipt(block.Header(), txs[i], block.Hash(), block.NumberU64(), txIdx, receiptMap[txs[i].Hash()]), txIdx)
 	}
 
 	mockCtrl.Finish()

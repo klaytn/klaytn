@@ -36,6 +36,7 @@ type governanceHelper interface {
 	DeferredTxFee() bool
 	ProposerPolicy() uint64
 	StakingUpdateInterval() uint64
+	GetMinimumStakingAtNumber(num uint64) (uint64, error)
 }
 
 type RewardDistributor struct {
@@ -53,8 +54,16 @@ func NewRewardDistributor(gh governanceHelper) *RewardDistributor {
 // getTotalTxFee returns the total transaction gas fee of the block.
 func (rd *RewardDistributor) getTotalTxFee(header *types.Header, rewardConfig *rewardConfig) *big.Int {
 	totalGasUsed := big.NewInt(0).SetUint64(header.GasUsed)
-	totalTxFee := totalGasUsed.Mul(totalGasUsed, rewardConfig.unitPrice)
-	return totalTxFee
+	if header.BaseFee != nil {
+		// magma hardfork
+		return totalGasUsed.Mul(totalGasUsed, header.BaseFee)
+	} else {
+		return totalGasUsed.Mul(totalGasUsed, rewardConfig.unitPrice)
+	}
+}
+
+func (rd *RewardDistributor) txFeeBurning(txFee *big.Int) *big.Int {
+	return txFee.Div(txFee, big.NewInt(2))
 }
 
 // MintKLAY mints KLAY and gives the KLAY and the total transaction gas fee to the block proposer.
@@ -65,9 +74,14 @@ func (rd *RewardDistributor) MintKLAY(b BalanceAdder, header *types.Header) erro
 	}
 
 	totalTxFee := rd.getTotalTxFee(header, rewardConfig)
-	blockReward := totalTxFee.Add(rewardConfig.mintingAmount, totalTxFee)
+	if header.BaseFee != nil {
+		// magma hardfork
+		totalTxFee = totalTxFee.Add(rewardConfig.mintingAmount, rd.txFeeBurning(totalTxFee))
+	} else {
+		totalTxFee = totalTxFee.Add(rewardConfig.mintingAmount, totalTxFee)
+	}
 
-	b.AddBalance(header.Rewardbase, blockReward)
+	b.AddBalance(header.Rewardbase, totalTxFee)
 	return nil
 }
 
@@ -82,6 +96,10 @@ func (rd *RewardDistributor) DistributeBlockReward(b BalanceAdder, header *types
 	totalTxFee := common.Big0
 	if rd.gh.DeferredTxFee() {
 		totalTxFee = rd.getTotalTxFee(header, rewardConfig)
+		// magma hardfork
+		if header.BaseFee != nil {
+			totalTxFee = rd.txFeeBurning(totalTxFee)
+		}
 	}
 
 	rd.distributeBlockReward(b, header, totalTxFee, rewardConfig, pocAddr, kirAddr)

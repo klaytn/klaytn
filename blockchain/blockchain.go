@@ -99,7 +99,6 @@ var (
 const (
 	maxFutureBlocks     = 256
 	maxTimeFutureBlocks = 30
-	maxBadBlocks        = 10
 	// TODO-Klaytn-Issue1911  This flag needs to be adjusted to the appropriate value.
 	//  Currently, this value is taken to cache all 10 million accounts
 	//  and should be optimized considering memory size and performance.
@@ -192,8 +191,6 @@ type BlockChain struct {
 	validator  Validator  // block and state validator interface
 	vmConfig   vm.Config
 
-	badBlocks *lru.Cache // Bad block cache
-
 	parallelDBWrite bool // TODO-Klaytn-Storage parallelDBWrite will be replaced by number of goroutines when worker pool pattern is introduced.
 
 	// State migration
@@ -244,7 +241,6 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 	InitDeriveSha(chainConfig.DeriveShaImpl)
 
 	futureBlocks, _ := lru.New(maxFutureBlocks)
-	badBlocks, _ := lru.New(maxBadBlocks)
 
 	bc := &BlockChain{
 		chainConfig:        chainConfig,
@@ -258,7 +254,6 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		futureBlocks:       futureBlocks,
 		engine:             engine,
 		vmConfig:           vmConfig,
-		badBlocks:          badBlocks,
 		parallelDBWrite:    db.IsParallelDBWrite(),
 		stopStateMigration: make(chan struct{}),
 		prefetchTxCh:       make(chan prefetchTx, MaxPrefetchTxs),
@@ -459,6 +454,36 @@ func (bc *BlockChain) SetProposerPolicy(val uint64) {
 	bc.chainConfig.Istanbul.ProposerPolicy = val
 }
 
+func (bc *BlockChain) SetLowerBoundBaseFee(val uint64) {
+	bc.chainConfigMu.Lock()
+	defer bc.chainConfigMu.Unlock()
+	bc.chainConfig.Governance.Magma.LowerBoundBaseFee = val
+}
+
+func (bc *BlockChain) SetUpperBoundBaseFee(val uint64) {
+	bc.chainConfigMu.Lock()
+	defer bc.chainConfigMu.Unlock()
+	bc.chainConfig.Governance.Magma.UpperBoundBaseFee = val
+}
+
+func (bc *BlockChain) SetGasTarget(val uint64) {
+	bc.chainConfigMu.Lock()
+	defer bc.chainConfigMu.Unlock()
+	bc.chainConfig.Governance.Magma.GasTarget = val
+}
+
+func (bc *BlockChain) SetMaxBlockGasUsedForBaseFee(val uint64) {
+	bc.chainConfigMu.Lock()
+	defer bc.chainConfigMu.Unlock()
+	bc.chainConfig.Governance.Magma.MaxBlockGasUsedForBaseFee = val
+}
+
+func (bc *BlockChain) SetBaseFeeDenominator(val uint64) {
+	bc.chainConfigMu.Lock()
+	defer bc.chainConfigMu.Unlock()
+	bc.chainConfig.Governance.Magma.BaseFeeDenominator = val
+}
+
 func (bc *BlockChain) getProcInterrupt() bool {
 	return atomic.LoadInt32(&bc.procInterrupt) == 1
 }
@@ -657,6 +682,11 @@ func (bc *BlockChain) FastSyncCommitHead(hash common.Hash) error {
 	bc.lastCommittedBlock = block.NumberU64()
 	bc.mu.Unlock()
 
+	// Destroy any existing state snapshot and regenerate it in the background,
+	// also resuming the normal maintenance of any previously paused snapshot.
+	if bc.snaps != nil {
+		bc.snaps.Rebuild(block.Root())
+	}
 	logger.Info("Committed new head block", "number", block.Number(), "hash", hash)
 	return nil
 }
@@ -1054,7 +1084,7 @@ func (bc *BlockChain) Stop() {
 		for !bc.triegc.Empty() {
 			triedb.Dereference(bc.triegc.PopItem().(common.Hash))
 		}
-		if size, _ := triedb.Size(); size != 0 {
+		if size, _, _ := triedb.Size(); size != 0 {
 			logger.Error("Dangling trie nodes after full cleanup")
 		}
 	}
@@ -1312,8 +1342,8 @@ func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) e
 
 		// If we exceeded our memory allowance, flush matured singleton nodes to disk
 		var (
-			nodesSize, preimagesSize = trieDB.Size()
-			nodesSizeLimit           = common.StorageSize(bc.cacheConfig.CacheSize) * 1024 * 1024
+			nodesSize, _, preimagesSize = trieDB.Size()
+			nodesSizeLimit              = common.StorageSize(bc.cacheConfig.CacheSize) * 1024 * 1024
 		)
 
 		trieDBNodesSizeBytesGauge.Update(int64(nodesSize))
@@ -2017,7 +2047,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		stats.processed++
 		stats.usedGas += usedGas
 
-		cache, _ := bc.stateCache.TrieDB().Size()
+		cache, _, _ := bc.stateCache.TrieDB().Size()
 		stats.report(chain, i, cache)
 
 		// update governance CurrentSet if it is at an epoch block
@@ -2383,39 +2413,31 @@ type BadBlockArgs struct {
 
 // BadBlocks returns a list of the last 'bad blocks' that the client has seen on the network
 func (bc *BlockChain) BadBlocks() ([]BadBlockArgs, error) {
-	blocks := make([]BadBlockArgs, 0, bc.badBlocks.Len())
-	for _, hash := range bc.badBlocks.Keys() {
-		hashKey, ok := hash.(common.CacheKey)
-		if !ok {
-			logger.Error("invalid key type", "expect", "common.CacheKey", "actual", reflect.TypeOf(hash))
-			continue
-		}
-
-		if blk, exist := bc.badBlocks.Peek(hashKey); exist {
-			cacheGetBadBlockHitMeter.Mark(1)
-			block := blk.(*types.Block)
-			blocks = append(blocks, BadBlockArgs{block.Hash(), block})
-		} else {
-			cacheGetBadBlockMissMeter.Mark(1)
-		}
+	blocks, err := bc.db.ReadAllBadBlocks()
+	if err != nil {
+		return nil, err
 	}
-	return blocks, nil
+	badBlockArgs := make([]BadBlockArgs, len(blocks))
+	for i, block := range blocks {
+		hash := block.Hash()
+		badBlockArgs[i] = BadBlockArgs{Hash: hash, Block: block}
+	}
+	return badBlockArgs, err
 }
 
 // istanbul BFT
 func (bc *BlockChain) HasBadBlock(hash common.Hash) bool {
-	return bc.badBlocks.Contains(hash)
-}
-
-// addBadBlock adds a bad block to the bad-block LRU cache
-func (bc *BlockChain) addBadBlock(block *types.Block) {
-	bc.badBlocks.Add(block.Header().Hash(), block)
+	badBlock := bc.db.ReadBadBlock(hash)
+	if badBlock != nil {
+		return true
+	}
+	return false
 }
 
 // reportBlock logs a bad block error.
 func (bc *BlockChain) reportBlock(block *types.Block, receipts types.Receipts, err error) {
 	badBlockCounter.Inc(1)
-	bc.addBadBlock(block)
+	bc.db.WriteBadBlock(block)
 
 	var receiptString string
 	for i, receipt := range receipts {
@@ -2423,17 +2445,7 @@ func (bc *BlockChain) reportBlock(block *types.Block, receipts types.Receipts, e
 			i, receipt.TxHash.Hex(), receipt.Status, receipt.GasUsed, receipt.ContractAddress.Hex(),
 			receipt.Bloom, receipt.Logs)
 	}
-	logger.Error(fmt.Sprintf(`
-########## BAD BLOCK #########
-Chain config: %v
-
-Number: %v
-Hash: 0x%x
-%v
-
-Error: %v
-##############################
-`, bc.chainConfig, block.Number(), block.Hash(), receiptString, err))
+	logger.Error(fmt.Sprintf(`########## BAD BLOCK ######### Chain config: %v Number: %v Hash: 0x%x Receipt: %v Error: %v`, bc.chainConfig, block.Number(), block.Hash(), receiptString, err))
 }
 
 // InsertHeaderChain attempts to insert the given header chain in to the local
@@ -2518,6 +2530,11 @@ func (bc *BlockChain) Config() *params.ChainConfig { return bc.chainConfig }
 
 // Engine retrieves the blockchain's consensus engine.
 func (bc *BlockChain) Engine() consensus.Engine { return bc.engine }
+
+// Snapshots returns the blockchain snapshot tree.
+func (bc *BlockChain) Snapshots() *snapshot.Tree {
+	return bc.snaps
+}
 
 // SubscribeRemovedLogsEvent registers a subscription of RemovedLogsEvent.
 func (bc *BlockChain) SubscribeRemovedLogsEvent(ch chan<- RemovedLogsEvent) event.Subscription {

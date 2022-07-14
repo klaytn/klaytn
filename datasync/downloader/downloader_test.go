@@ -34,10 +34,12 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/gxhash"
+	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/reward"
+	"github.com/klaytn/klaytn/snapshot"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/storage/statedb"
 )
@@ -145,7 +147,7 @@ func newTester() *downloadTester {
 	tester.stateDb = database.NewMemoryDBManager()
 	tester.stateDb.GetMemDB().Put(genesis.Root().Bytes(), []byte{0x00})
 
-	tester.downloader = New(FullSync, tester.stateDb, statedb.NewSyncBloom(1, tester.stateDb.GetMemDB()), new(event.TypeMux), tester, nil, tester.dropPeer)
+	tester.downloader = New(FullSync, tester.stateDb, statedb.NewSyncBloom(1, tester.stateDb.GetMemDB()), new(event.TypeMux), tester, nil, tester.dropPeer, uint64(istanbul.WeightedRandom))
 
 	return tester
 }
@@ -459,6 +461,11 @@ func (dl *downloadTester) InsertReceiptChain(blocks types.Blocks, receipts []typ
 	return len(blocks), nil
 }
 
+// Snapshots returns the blockchain snapshot tree.
+func (dl *downloadTester) Snapshots() *snapshot.Tree {
+	return nil
+}
+
 // Rollback removes some recently added elements from the chain.
 func (dl *downloadTester) Rollback(hashes []common.Hash) {
 	dl.lock.Lock()
@@ -619,9 +626,17 @@ func (dlp *downloadTesterPeer) RequestHeadersByNumber(origin uint64, amount int,
 	hashes := dlp.dl.peerHashes[dlp.id]
 	headers := dlp.dl.peerHeaders[dlp.id]
 	result := make([]*types.Header, 0, amount)
-	for i := 0; i < amount && len(hashes)-int(origin)-1-i*(skip+1) >= 0; i++ {
-		if header, ok := headers[hashes[len(hashes)-int(origin)-1-i*(skip+1)]]; ok {
-			result = append(result, header)
+	if reverse {
+		for i := 0; i < amount && 0 <= int(origin)-i*(skip+1); i++ {
+			if header, ok := headers[hashes[len(hashes)-1-int(origin)+i*(skip+1)]]; ok {
+				result = append(result, header)
+			}
+		}
+	} else {
+		for i := 0; i < amount && len(hashes)-1-int(origin)-i*(skip+1) >= 0; i++ {
+			if header, ok := headers[hashes[len(hashes)-1-int(origin)-i*(skip+1)]]; ok {
+				result = append(result, header)
+			}
 		}
 	}
 	// Delay delivery a bit to allow attacks to unfold

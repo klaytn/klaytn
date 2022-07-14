@@ -11,6 +11,7 @@ import (
 	types "github.com/klaytn/klaytn/blockchain/types"
 	common "github.com/klaytn/klaytn/common"
 	p2p "github.com/klaytn/klaytn/networks/p2p"
+	snap "github.com/klaytn/klaytn/node/cn/snap"
 )
 
 // MockPeerSet is a mock of PeerSet interface
@@ -189,17 +190,31 @@ func (mr *MockPeerSetMockRecorder) PeersWithoutTx(arg0 interface{}) *gomock.Call
 }
 
 // Register mocks base method
-func (m *MockPeerSet) Register(arg0 Peer) error {
+func (m *MockPeerSet) Register(arg0 Peer, arg1 *snap.Peer) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Register", arg0)
+	ret := m.ctrl.Call(m, "Register", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Register indicates an expected call of Register
-func (mr *MockPeerSetMockRecorder) Register(arg0 interface{}) *gomock.Call {
+func (mr *MockPeerSetMockRecorder) Register(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Register", reflect.TypeOf((*MockPeerSet)(nil).Register), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Register", reflect.TypeOf((*MockPeerSet)(nil).Register), arg0, arg1)
+}
+
+// RegisterSnapExtension mocks base method
+func (m *MockPeerSet) RegisterSnapExtension(arg0 *snap.Peer) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RegisterSnapExtension", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RegisterSnapExtension indicates an expected call of RegisterSnapExtension
+func (mr *MockPeerSetMockRecorder) RegisterSnapExtension(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterSnapExtension", reflect.TypeOf((*MockPeerSet)(nil).RegisterSnapExtension), arg0)
 }
 
 // RegisterValidator mocks base method
@@ -242,6 +257,20 @@ func (mr *MockPeerSetMockRecorder) SampleResendPeersByType(arg0 interface{}) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SampleResendPeersByType", reflect.TypeOf((*MockPeerSet)(nil).SampleResendPeersByType), arg0)
 }
 
+// SnapLen mocks base method
+func (m *MockPeerSet) SnapLen() int {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SnapLen")
+	ret0, _ := ret[0].(int)
+	return ret0
+}
+
+// SnapLen indicates an expected call of SnapLen
+func (mr *MockPeerSetMockRecorder) SnapLen() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SnapLen", reflect.TypeOf((*MockPeerSet)(nil).SnapLen))
+}
+
 // TypePeersWithoutTx mocks base method
 func (m *MockPeerSet) TypePeersWithoutTx(arg0 common.Hash, arg1 common.ConnType) []Peer {
 	m.ctrl.T.Helper()
@@ -280,4 +309,19 @@ func (m *MockPeerSet) UpdateTypePeersWithoutTxs(arg0 *types.Transaction, arg1 co
 func (mr *MockPeerSetMockRecorder) UpdateTypePeersWithoutTxs(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateTypePeersWithoutTxs", reflect.TypeOf((*MockPeerSet)(nil).UpdateTypePeersWithoutTxs), arg0, arg1, arg2)
+}
+
+// WaitSnapExtension mocks base method
+func (m *MockPeerSet) WaitSnapExtension(arg0 Peer) (*snap.Peer, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WaitSnapExtension", arg0)
+	ret0, _ := ret[0].(*snap.Peer)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// WaitSnapExtension indicates an expected call of WaitSnapExtension
+func (mr *MockPeerSetMockRecorder) WaitSnapExtension(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitSnapExtension", reflect.TypeOf((*MockPeerSet)(nil).WaitSnapExtension), arg0)
 }

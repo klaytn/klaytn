@@ -129,7 +129,7 @@ func TestBackend_HandleMsg(t *testing.T) {
 
 func TestBackend_Protocol(t *testing.T) {
 	backend := newTestBackend()
-	assert.Equal(t, istanbulProtocol, backend.Protocol())
+	assert.Equal(t, IstanbulProtocol, backend.Protocol())
 }
 
 func TestBackend_ValidatePeerType(t *testing.T) {

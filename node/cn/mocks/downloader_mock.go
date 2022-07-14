@@ -13,6 +13,7 @@ import (
 	types "github.com/klaytn/klaytn/blockchain/types"
 	common "github.com/klaytn/klaytn/common"
 	downloader "github.com/klaytn/klaytn/datasync/downloader"
+	snap "github.com/klaytn/klaytn/node/cn/snap"
 	reward "github.com/klaytn/klaytn/reward"
 )
 
@@ -107,6 +108,20 @@ func (mr *MockProtocolManagerDownloaderMockRecorder) DeliverReceipts(arg0, arg1 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeliverReceipts", reflect.TypeOf((*MockProtocolManagerDownloader)(nil).DeliverReceipts), arg0, arg1)
 }
 
+// DeliverSnapPacket mocks base method
+func (m *MockProtocolManagerDownloader) DeliverSnapPacket(arg0 *snap.Peer, arg1 snap.Packet) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeliverSnapPacket", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeliverSnapPacket indicates an expected call of DeliverSnapPacket
+func (mr *MockProtocolManagerDownloaderMockRecorder) DeliverSnapPacket(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeliverSnapPacket", reflect.TypeOf((*MockProtocolManagerDownloader)(nil).DeliverSnapPacket), arg0, arg1)
+}
+
 // DeliverStakingInfos mocks base method
 func (m *MockProtocolManagerDownloader) DeliverStakingInfos(arg0 string, arg1 []*reward.StakingInfo) error {
 	m.ctrl.T.Helper()
@@ -119,6 +134,20 @@ func (m *MockProtocolManagerDownloader) DeliverStakingInfos(arg0 string, arg1 []
 func (mr *MockProtocolManagerDownloaderMockRecorder) DeliverStakingInfos(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeliverStakingInfos", reflect.TypeOf((*MockProtocolManagerDownloader)(nil).DeliverStakingInfos), arg0, arg1)
+}
+
+// GetSnapSyncer mocks base method
+func (m *MockProtocolManagerDownloader) GetSnapSyncer() *snap.Syncer {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSnapSyncer")
+	ret0, _ := ret[0].(*snap.Syncer)
+	return ret0
+}
+
+// GetSnapSyncer indicates an expected call of GetSnapSyncer
+func (mr *MockProtocolManagerDownloaderMockRecorder) GetSnapSyncer() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSnapSyncer", reflect.TypeOf((*MockProtocolManagerDownloader)(nil).GetSnapSyncer))
 }
 
 // Progress mocks base method

@@ -1007,14 +1007,13 @@ func doXgo(cmdline []string) {
 	flag.CommandLine.Parse(cmdline)
 	env := build.Env()
 
-	subCmd := "get"
-	if strings.HasPrefix(runtime.Version(), "go1.18") {
-		subCmd = "install"
-	}
-
 	// Make sure xgo is available for cross compilation
-	gogetxgo := goTool(subCmd, "github.com/klaytn/xgo")
-	build.MustRun(gogetxgo)
+	build.MustRun(goTool("get", "github.com/klaytn/xgo"))
+
+	// From go1.18, golang requires 'go install' to install a package binary
+	if strings.Compare(runtime.Version(), "go1.18") >= 0 {
+		build.MustRun(goTool("install", "github.com/klaytn/xgo"))
+	}
 
 	// If all tools building is requested, build everything the builder wants
 	args := append(buildFlags(env), flag.Args()...)
