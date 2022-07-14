@@ -47,6 +47,19 @@ var (
 	exit           = regexp.MustCompile(`^\s*exit\s*;*\s*$`)
 )
 
+var apisAll = map[string]string{
+	"eth":        "1.0",
+	"klay":       "1.0",
+	"net":        "1.0",
+	"debug":      "1.0",
+	"admin":      "1.0",
+	"personal":   "1.0",
+	"txpool":     "1.0",
+	"web3":       "1.0",
+	"rpc":        "1.0",
+	"governance": "1.0",
+}
+
 // HistoryFile is the file within the data directory to store input scrollback.
 const HistoryFile = "history"
 
@@ -138,7 +151,10 @@ func (c *Console) init(preload []string) error {
 	// Load the supported APIs into the JavaScript runtime environment
 	apis, err := c.client.SupportedModules()
 	if err != nil {
-		return fmt.Errorf("api modules: %v", err)
+		if !isMethodNotFoundError(err) {
+			return fmt.Errorf("api modules: %v", err)
+		}
+		apis = apisAll
 	}
 	flatten := "var klay = web3.klay; var personal = web3.personal; var eth = web3.eth; "
 	for api := range apis {
@@ -305,14 +321,22 @@ func (c *Console) Welcome() {
 		console.log(" datadir: " + admin.datadir);
 	`)
 	// List all the supported modules for the user to call
-	if apis, err := c.client.SupportedModules(); err == nil {
-		modules := make([]string, 0, len(apis))
-		for api, version := range apis {
-			modules = append(modules, fmt.Sprintf("%s:%s", api, version))
+	apis, err := c.client.SupportedModules()
+	if err != nil {
+		if !isMethodNotFoundError(err) {
+			fmt.Fprintln(c.printer)
+			return
 		}
-		sort.Strings(modules)
-		fmt.Fprintln(c.printer, " modules:", strings.Join(modules, " "))
+		apis = apisAll
+		fmt.Fprintln(c.printer, `WARNING: Supporting module information is unknown since "rpc_modules" api is not supported`)
+		fmt.Fprintln(c.printer, `Since the console doesn't know the available modules, the console made it possible to call all modules but it fails if it's unsupported`)
 	}
+	modules := make([]string, 0, len(apis))
+	for api, version := range apis {
+		modules = append(modules, fmt.Sprintf("%s:%s", api, version))
+	}
+	sort.Strings(modules)
+	fmt.Fprintln(c.printer, " modules:", strings.Join(modules, " "))
 	fmt.Fprintln(c.printer)
 }
 
@@ -461,4 +485,13 @@ func (c *Console) Stop(graceful bool) error {
 	}
 	c.jsre.Stop(graceful)
 	return nil
+}
+
+// isMethodNotFoundError returns a true if error code is equals to -32601 or msg contains "unsupported method"
+// (maybe klaytn api services), otherwise false.
+func isMethodNotFoundError(err error) bool {
+	if rpcErr, ok := err.(rpc.Error); ok {
+		return rpcErr.ErrorCode() == -32601
+	}
+	return strings.Contains(strings.ToLower(err.Error()), "unsupported method")
 }

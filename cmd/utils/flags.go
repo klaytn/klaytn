@@ -674,6 +674,10 @@ var (
 		Usage:  "Comma separated list of JavaScript files to preload into the console",
 		EnvVar: "KLAYTN_PRELOAD",
 	}
+	HeaderFlag = cli.StringSliceFlag{
+		Name:  "header",
+		Usage: "Set an HTTP header. <header:value>",
+	}
 	APIFilterGetLogsDeadlineFlag = cli.DurationFlag{
 		Name:   "api.filter.getLogs.deadline",
 		Usage:  "Execution deadline for log collecting filter APIs",
