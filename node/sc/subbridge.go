@@ -43,6 +43,7 @@ import (
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node"
+	"github.com/klaytn/klaytn/node/cn"
 	"github.com/klaytn/klaytn/node/sc/bridgepool"
 	"github.com/klaytn/klaytn/node/sc/kas"
 	"github.com/klaytn/klaytn/params"
@@ -131,6 +132,7 @@ type SubBridge struct {
 	blockchain   *blockchain.BlockChain
 	txPool       *blockchain.TxPool
 	bridgeTxPool BridgeTxPool
+	debugAPI     *cn.PrivateDebugAPI
 
 	// chain event
 	chainCh  chan blockchain.ChainEvent
@@ -349,6 +351,8 @@ func (sb *SubBridge) SetComponents(components []interface{}) {
 			sb.txPool = v
 			// event from core-service
 			// sb.txSub = sb.txPool.SubscribeNewTxsEvent(sb.txCh)
+		case []rpc.API:
+			sb.setDebugAPI(v)
 		// TODO-Klaytn if need pending block, should use miner
 		case *work.Miner:
 		}
@@ -390,6 +394,16 @@ func (sb *SubBridge) SetComponents(components []interface{}) {
 
 	sb.pmwg.Add(1)
 	go sb.loop()
+}
+
+func (sb *SubBridge) setDebugAPI(apis []rpc.API) {
+	for _, api := range apis {
+		switch svc := api.Service.(type) {
+		case *cn.PrivateDebugAPI:
+			sb.debugAPI = svc
+			break
+		}
+	}
 }
 
 // Protocols implements node.Service, returning all the currently configured
