@@ -954,7 +954,6 @@ func (gov *Governance) VerifyGovernance(received []byte) error {
 
 	if len(rChangeSet) != gov.changeSet.Size() {
 		logger.Error("Verification Error", "len(receivedChangeSet)", len(rChangeSet), "len(changeSet)", gov.changeSet.Size())
-		return ErrVoteValueMismatch
 	}
 
 	for k, v := range rChangeSet {
