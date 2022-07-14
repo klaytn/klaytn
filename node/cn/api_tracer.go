@@ -62,6 +62,8 @@ const (
 	fastCallTracer = "fastCallTracer"
 )
 
+var ErrNotFoundTx = errors.New("Failed to retrive tx")
+
 // TraceConfig holds extra parameters to trace functions.
 type TraceConfig struct {
 	*vm.LogConfig
@@ -738,7 +740,8 @@ func (api *PrivateDebugAPI) TraceTransaction(ctx context.Context, hash common.Ha
 	// Retrieve the transaction and assemble its EVM context
 	tx, blockHash, _, index := api.cn.ChainDB().ReadTxAndLookupInfo(hash)
 	if tx == nil {
-		return nil, fmt.Errorf("transaction %#x not found", hash)
+		logger.Error("transaction %#x not found", "txHash", hash.Hex())
+		return nil, ErrNotFoundTx
 	}
 	reexec := defaultTraceReexec
 	if config != nil && config.Reexec != nil {
