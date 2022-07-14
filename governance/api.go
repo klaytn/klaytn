@@ -113,12 +113,12 @@ func (api *PublicGovernanceAPI) Vote(key string, val interface{}) (string, error
 			return "", errRemoveSelf
 		}
 	}
-	if vote.Key == "magma.lowerboundbasefee" {
+	if vote.Key == "kip71.lowerboundbasefee" {
 		if vote.Value.(uint64) > api.governance.UpperBoundBaseFee() {
 			return "", errInvalidLowerBound
 		}
 	}
-	if vote.Key == "magma.upperboundbasefee" {
+	if vote.Key == "kip71.upperboundbasefee" {
 		if vote.Value.(uint64) < api.governance.LowerBoundBaseFee() {
 			return "", errInvalidUpperBound
 		}
@@ -164,11 +164,11 @@ func (api *PublicGovernanceAPI) TotalVotingPower() (float64, error) {
 // added parameters only if there is no key
 func addDefaultKip71config(items map[string]interface{}) (*params.GovParamSet, error) {
 	base, err := params.NewGovParamSetStrMap(map[string]interface{}{
-		"magma.lowerboundbasefee":         params.DefaultLowerBoundBaseFee,
-		"magma.upperboundbasefee":         params.DefaultUpperBoundBaseFee,
-		"magma.gastarget":                 params.DefaultGasTarget,
-		"magma.basefeedenominator":        params.DefaultBaseFeeDenominator,
-		"magma.maxblockgasusedforbasefee": params.DefaultMaxBlockGasUsedForBaseFee,
+		"kip71.lowerboundbasefee":         params.DefaultLowerBoundBaseFee,
+		"kip71.upperboundbasefee":         params.DefaultUpperBoundBaseFee,
+		"kip71.gastarget":                 params.DefaultGasTarget,
+		"kip71.basefeedenominator":        params.DefaultBaseFeeDenominator,
+		"kip71.maxblockgasusedforbasefee": params.DefaultMaxBlockGasUsedForBaseFee,
 	})
 	if err != nil {
 		return nil, err

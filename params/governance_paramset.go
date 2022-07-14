@@ -235,11 +235,11 @@ var govParamNames = map[string]int{
 	"reward.minimumstake":             MinimumStake,
 	"reward.stakingupdateinterval":    StakeUpdateInterval,
 	"reward.proposerupdateinterval":   ProposerRefreshInterval,
-	"magma.lowerboundbasefee":         LowerBoundBaseFee,
-	"magma.upperboundbasefee":         UpperBoundBaseFee,
-	"magma.gastarget":                 GasTarget,
-	"magma.maxblockgasusedforbasefee": MaxBlockGasUsedForBaseFee,
-	"magma.basefeedenominator":        BaseFeeDenominator,
+	"kip71.lowerboundbasefee":         LowerBoundBaseFee,
+	"kip71.upperboundbasefee":         UpperBoundBaseFee,
+	"kip71.gastarget":                 GasTarget,
+	"kip71.maxblockgasusedforbasefee": MaxBlockGasUsedForBaseFee,
+	"kip71.basefeedenominator":        BaseFeeDenominator,
 }
 
 var govParamNamesReverse = map[int]string{}

@@ -23,7 +23,7 @@ func TestUpperBoundBaseFeeSet(t *testing.T) {
 	curLowerBoundBaseFee := govApi.governance.LowerBoundBaseFee()
 	// unexpected case : upperboundbasefee < lowerboundbasefee
 	invalidUpperBoundBaseFee := curLowerBoundBaseFee - 100
-	_, err := govApi.Vote("magma.upperboundbasefee", invalidUpperBoundBaseFee)
+	_, err := govApi.Vote("kip71.upperboundbasefee", invalidUpperBoundBaseFee)
 	assert.Equal(t, err, errInvalidUpperBound)
 }
 
@@ -33,6 +33,6 @@ func TestLowerBoundFeeSet(t *testing.T) {
 	curUpperBoundBaseFee := govApi.governance.UpperBoundBaseFee()
 	// unexpected case : upperboundbasefee < lowerboundbasefee
 	invalidLowerBoundBaseFee := curUpperBoundBaseFee + 100
-	_, err := govApi.Vote("magma.lowerboundbasefee", invalidLowerBoundBaseFee)
+	_, err := govApi.Vote("kip71.lowerboundbasefee", invalidLowerBoundBaseFee)
 	assert.Equal(t, err, errInvalidLowerBound)
 }
