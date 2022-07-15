@@ -201,6 +201,7 @@ type BlockChain struct {
 	pendingCnt            int
 	progress              float64
 	migrationErr          error
+	testMigrationHook     func()
 
 	// Warm up
 	lastCommittedBlock uint64
