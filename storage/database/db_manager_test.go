@@ -109,6 +109,7 @@ func createDBManagers(configs []*DBConfig) []DBManager {
 
 // TestDBManager_IsParallelDBWrite compares the return value of IsParallelDBWrite with the value in the config.
 func TestDBManager_IsParallelDBWrite(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	for i, dbm := range dbManagers {
 		c := dbConfigs[i]
 		assert.Equal(t, c.ParallelDBWrite, dbm.IsParallelDBWrite())
@@ -117,6 +118,7 @@ func TestDBManager_IsParallelDBWrite(t *testing.T) {
 
 // TestDBManager_CanonicalHash tests read, write and delete operations of canonical hash.
 func TestDBManager_CanonicalHash(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	for _, dbm := range dbManagers {
 		// 1. Read from empty database, shouldn't be found.
 		assert.Equal(t, common.Hash{}, dbm.ReadCanonicalHash(0))
@@ -147,6 +149,7 @@ func TestDBManager_CanonicalHash(t *testing.T) {
 
 // TestDBManager_HeadHeaderHash tests read and write operations of head header hash.
 func TestDBManager_HeadHeaderHash(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	for _, dbm := range dbManagers {
 		assert.Equal(t, common.Hash{}, dbm.ReadHeadHeaderHash())
 
@@ -160,6 +163,7 @@ func TestDBManager_HeadHeaderHash(t *testing.T) {
 
 // TestDBManager_HeadBlockHash tests read and write operations of head block hash.
 func TestDBManager_HeadBlockHash(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	for _, dbm := range dbManagers {
 		assert.Equal(t, common.Hash{}, dbm.ReadHeadBlockHash())
 
@@ -173,6 +177,7 @@ func TestDBManager_HeadBlockHash(t *testing.T) {
 
 // TestDBManager_HeadFastBlockHash tests read and write operations of head fast block hash.
 func TestDBManager_HeadFastBlockHash(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	for _, dbm := range dbManagers {
 		assert.Equal(t, common.Hash{}, dbm.ReadHeadFastBlockHash())
 
@@ -186,6 +191,7 @@ func TestDBManager_HeadFastBlockHash(t *testing.T) {
 
 // TestDBManager_FastTrieProgress tests read and write operations of fast trie progress.
 func TestDBManager_FastTrieProgress(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	for _, dbm := range dbManagers {
 		assert.Equal(t, uint64(0), dbm.ReadFastTrieProgress())
 
@@ -199,6 +205,7 @@ func TestDBManager_FastTrieProgress(t *testing.T) {
 
 // TestDBManager_Header tests read, write and delete operations of blockchain headers.
 func TestDBManager_Header(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	header := &types.Header{Number: big.NewInt(int64(num1))}
 	headerHash := header.Hash()
 
@@ -229,6 +236,7 @@ func TestDBManager_Header(t *testing.T) {
 
 // TestDBManager_Body tests read, write and delete operations of blockchain bodies.
 func TestDBManager_Body(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	body := &types.Body{Transactions: types.Transactions{}}
 	encodedBody, err := rlp.EncodeToBytes(body)
 	if err != nil {
@@ -282,6 +290,7 @@ func TestDBManager_Body(t *testing.T) {
 
 // TestDBManager_Td tests read, write and delete operations of blockchain headers' total difficulty.
 func TestDBManager_Td(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	for _, dbm := range dbManagers {
 		assert.Nil(t, dbm.ReadTd(hash1, num1))
 
@@ -298,6 +307,7 @@ func TestDBManager_Td(t *testing.T) {
 
 // TestDBManager_Receipts read, write and delete operations of blockchain receipts.
 func TestDBManager_Receipts(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	header := &types.Header{Number: big.NewInt(int64(num1))}
 	headerHash := header.Hash()
 	receipts := types.Receipts{genReceipt(111)}
@@ -321,6 +331,7 @@ func TestDBManager_Receipts(t *testing.T) {
 
 // TestDBManager_Block read, write and delete operations of blockchain blocks.
 func TestDBManager_Block(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	header := &types.Header{Number: big.NewInt(int64(num1))}
 	headerHash := header.Hash()
 	block := types.NewBlockWithHeader(header)
@@ -355,6 +366,7 @@ func TestDBManager_Block(t *testing.T) {
 }
 
 func TestDBManager_BadBlock(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	header := &types.Header{Number: big.NewInt(int64(num1))}
 	headertwo := &types.Header{Number: big.NewInt(int64(num2))}
 	for _, dbm := range dbManagers {
@@ -423,6 +435,7 @@ func TestDBManager_BadBlock(t *testing.T) {
 
 // TestDBManager_IstanbulSnapshot tests read and write operations of istanbul snapshots.
 func TestDBManager_IstanbulSnapshot(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	for _, dbm := range dbManagers {
 		snapshot, _ := dbm.ReadIstanbulSnapshot(hash3)
 		assert.Nil(t, snapshot)
@@ -439,6 +452,7 @@ func TestDBManager_IstanbulSnapshot(t *testing.T) {
 
 // TestDBManager_TrieNode tests read and write operations of state trie nodes.
 func TestDBManager_TrieNode(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	for _, dbm := range dbManagers {
 		cachedNode, _ := dbm.ReadCachedTrieNode(hash1)
 		assert.Nil(t, cachedNode)
@@ -522,6 +536,7 @@ func TestDBManager_TrieNode(t *testing.T) {
 
 // TestDBManager_TxLookupEntry tests read, write and delete operations of TxLookupEntries.
 func TestDBManager_TxLookupEntry(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	tx, err := genTransaction(num1)
 	assert.NoError(t, err, "Failed to generate a transaction")
 
@@ -571,6 +586,7 @@ func TestDBManager_TxLookupEntry(t *testing.T) {
 
 // TestDBManager_BloomBits tests read, write and delete operations of bloom bits
 func TestDBManager_BloomBits(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	for _, dbm := range dbManagers {
 		hash1 := common.HexToHash("123456")
 		hash2 := common.HexToHash("654321")
@@ -604,6 +620,7 @@ func TestDBManager_BloomBits(t *testing.T) {
 
 // TestDBManager_Sections tests read, write and delete operations of ValidSections and SectionHead.
 func TestDBManager_Sections(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	for _, dbm := range dbManagers {
 		// ValidSections
 		vs, _ := dbm.ReadValidSections()
@@ -632,6 +649,7 @@ func TestDBManager_Sections(t *testing.T) {
 
 // TestDBManager_DatabaseVersion tests read/write operations of database version.
 func TestDBManager_DatabaseVersion(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	for _, dbm := range dbManagers {
 		assert.Nil(t, dbm.ReadDatabaseVersion())
 
@@ -647,6 +665,7 @@ func TestDBManager_DatabaseVersion(t *testing.T) {
 
 // TestDBManager_ChainConfig tests read/write operations of chain configuration.
 func TestDBManager_ChainConfig(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	for _, dbm := range dbManagers {
 		assert.Nil(t, nil, dbm.ReadChainConfig(hash1))
 
@@ -665,6 +684,7 @@ func TestDBManager_ChainConfig(t *testing.T) {
 
 // TestDBManager_Preimage tests read/write operations of preimages.
 func TestDBManager_Preimage(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	for _, dbm := range dbManagers {
 		assert.Nil(t, nil, dbm.ReadPreimage(hash1))
 
@@ -684,6 +704,7 @@ func TestDBManager_Preimage(t *testing.T) {
 
 // TestDBManager_ParentChain tests service chain related database operations, used in the parent chain.
 func TestDBManager_ParentChain(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	for _, dbm := range dbManagers {
 		// 1. Read/Write SerivceChainTxHash
 		assert.Equal(t, common.Hash{}, dbm.ConvertChildChainBlockHashToParentChainTxHash(hash1))
@@ -707,6 +728,7 @@ func TestDBManager_ParentChain(t *testing.T) {
 
 // TestDBManager_ChildChain tests service chain related database operations, used in the child chain.
 func TestDBManager_ChildChain(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	for _, dbm := range dbManagers {
 		// 1. Read/Write AnchoredBlockNumber
 		assert.Equal(t, uint64(0), dbm.ReadAnchoredBlockNumber())
@@ -733,6 +755,7 @@ func TestDBManager_ChildChain(t *testing.T) {
 
 // TestDBManager_CliqueSnapshot tests read and write operations of clique snapshots.
 func TestDBManager_CliqueSnapshot(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	for _, dbm := range dbManagers {
 		data, err := dbm.ReadCliqueSnapshot(hash1)
 		assert.NotNil(t, err)
@@ -753,10 +776,12 @@ func TestDBManager_CliqueSnapshot(t *testing.T) {
 }
 
 func TestDBManager_Governance(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	// TODO-Klaytn-Database Implement this!
 }
 
 func TestDatabaseManager_CreateMigrationDBAndSetStatus(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	for i, dbm := range dbManagers {
 		if dbConfigs[i].DBType == MemoryDB {
 			continue
@@ -827,6 +852,7 @@ func TestDatabaseManager_CreateMigrationDBAndSetStatus(t *testing.T) {
 }
 
 func TestDatabaseManager_FinishStateMigration(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	for i, dbm := range dbManagers {
 		if dbm.IsSingle() || dbConfigs[i].DBType == MemoryDB {
 			continue
@@ -921,6 +947,7 @@ func TestDatabaseManager_FinishStateMigration(t *testing.T) {
 
 // While state trie migration, directory should be created with expected name
 func TestDBManager_StateMigrationDBPath(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	for i, dbm := range dbManagers {
 		if dbm.IsSingle() || dbConfigs[i].DBType == MemoryDB {
 			continue
@@ -990,6 +1017,7 @@ func TestDBManager_StateMigrationDBPath(t *testing.T) {
 }
 
 func TestDBManager_WriteGovernanceIdx(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	testIdxes := []uint64{100, 200, 300}
 
 	for _, dbm := range dbManagers {
@@ -1021,6 +1049,7 @@ func TestDBManager_WriteGovernanceIdx(t *testing.T) {
 }
 
 func TestDBManager_ReadRecentGovernanceIdx(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	testIdxes := []uint64{100, 200, 300}
 
 	for _, dbm := range dbManagers {
@@ -1096,6 +1125,7 @@ func getFilesInDir(t *testing.T, dirPath string, substr string) []string {
 }
 
 func TestDBManager_WriteAndReadAccountSnapshot(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	var (
 		hash     common.Hash
 		expected []byte
@@ -1129,6 +1159,7 @@ func TestDBManager_WriteAndReadAccountSnapshot(t *testing.T) {
 }
 
 func TestDBManager_DeleteAccountSnapshot(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	var (
 		hash     common.Hash
 		expected []byte
