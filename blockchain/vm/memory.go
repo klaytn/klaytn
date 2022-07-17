@@ -133,6 +133,9 @@ func (m *Memory) Print() {
 }
 
 func (m *Memory) Slice(from, to int64) []byte {
+	if from == to {
+		return nil
+	}
 	if from > int64(m.Len()) {
 		return nil
 	}
