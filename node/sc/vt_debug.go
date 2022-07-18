@@ -108,15 +108,6 @@ func (respVTReasoningWrapper *ResponseVTReasoningWrapper) refundable() bool {
 	}
 }
 
-/*
-func (respVTReasoningWrapper *ResponseVTReasoningWrapper) hardening(ev IRequestValueTransferEvent) {
-	switch respVTReasoningWrapper.TokenType {
-	case KLAY:
-		respVTReasoningWrapper.KLAYReasoning.hardening(ev)
-	}
-}
-*/
-
 func (respVTReasoningWrapper *ResponseVTReasoningWrapper) getBridgeAddr() common.Address {
 	switch respVTReasoningWrapper.TokenType {
 	case KLAY:

@@ -381,41 +381,51 @@ func checkRecoveryCondition(hint *valueTransferHint) bool {
 	return false
 }
 
-func furtherTreatment(bi *BridgeInfo, respReasoning ResponseVTReasoningWrapper, ev IRequestValueTransferEvent) {
-	reasoning, resendable := respReasoning.decideResend()
-	if !resendable {
-		if reasoning == VALUE_TRANSFER_KLAY_NOT_ENOUGH_CONTRACT_BALANCE {
+func furtherTreatment(bi, ctbi *BridgeInfo, respReasoning ResponseVTReasoningWrapper, ev IRequestValueTransferEvent) bool {
+	if !respReasoning.decideResend() {
+		if respReasoning.refundable() {
 			bi.refund(ev)
 		}
-		respReasoning.hardening(ev)
+		ctbi.updateHandleStatus(ev)
+		ctbi.MarkFailedHandleEvents(ev.GetRequestNonce())
+		bi.bridgeDB.WriteFailedHandleInfo(bi.address, bi.counterpartAddress, makeFailedHandleInfo(ev))
+		return false
+	} else {
+		return true
 	}
 }
 
-func (vtr *valueTransferRecovery) filterOfPotentialAttack() {
-	replaceReceiverAcc2Zero := func(events []IRequestValueTransferEvent, bi *BridgeInfo) {
+func (vtr *valueTransferRecovery) reasoning() {
+	replaceReceiverAcc2Zero := func(events []IRequestValueTransferEvent, bi, ctbi *BridgeInfo) []IRequestValueTransferEvent {
 		defaultExpired := time.Second * 5
 		subBridge := bi.subBridge
+		unexecutedEvents := make([]IRequestValueTransferEvent, 0)
 		for _, ev := range events {
 			if ev.GetTokenType() == 0 { // KLAY
 				reqReasoning := makeRequestKLAYHandleDebug(bi, ev)
 				if !bi.onChildChain { // parent sent, child do reasoning
 					respReasoning := reqReasoning.reasoning(subBridge.blockchain, subBridge.debugAPI)
-					furtherTreatment(bi, respReasoning, ev)
+					if furtherTreatment(bi, ctbi, respReasoning, ev) {
+						unexecutedEvents = append(unexecutedEvents, ev)
+					}
 				} else { // child sent, parent do reasoning
 					subBridge.handler.requestTxDebug(reqReasoning)
 					expired := time.After(defaultExpired)
 					select {
 					case respReasoning := <-bi.respVTReasoingCh:
-						furtherTreatment(bi, respReasoning, ev)
+						if furtherTreatment(bi, ctbi, respReasoning, ev) {
+							unexecutedEvents = append(unexecutedEvents, ev)
+						}
 					case <-expired:
 						logger.Error("[SC][Reasoning] ResponseTxDebug is not arrived from paretn chain")
 					}
 				}
 			}
 		}
+		return unexecutedEvents
 	}
-	replaceReceiverAcc2Zero(vtr.childEvents, vtr.cBridgeInfo)
-	replaceReceiverAcc2Zero(vtr.parentEvents, vtr.pBridgeInfo)
+	vtr.childEvents = replaceReceiverAcc2Zero(vtr.childEvents, vtr.cBridgeInfo, vtr.pBridgeInfo)
+	vtr.parentEvents = replaceReceiverAcc2Zero(vtr.parentEvents, vtr.pBridgeInfo, vtr.cBridgeInfo)
 }
 
 // recoverPendingEvents recovers all pending events by resending them.
@@ -432,7 +442,7 @@ func (vtr *valueTransferRecovery) recoverPendingEvents() error {
 	vtRequestEventMeter.Mark(int64(len(vtr.childEvents)))
 	vtRecoveredRequestEventMeter.Mark(int64(len(vtr.childEvents)))
 
-	vtr.filterOfPotentialAttack()
+	vtr.reasoning()
 
 	events := make([]IRequestValueTransferEvent, len(vtr.childEvents))
 	for i, event := range vtr.childEvents {

@@ -316,24 +316,6 @@ func (respKLAYReasoning *ResponseKLAYReasoningVT) refunadable() bool {
 	}
 }
 
-/*
-func (respKLAYReasoning *ResponseKLAYReasoningVT) hardening(ev IRequestValueTransferEvent) {
-	switch reqEv := ev.(type) {
-	case RequestValueTransferEvent:
-		reqEv.To = common.HexToAddress("0x0000000000000000000000000000000000000000")
-		reqEv.ValueOrTokenId = common.Big0
-	case RequestValueTransferEncodedEvent:
-		reqEv.To = common.HexToAddress("0x0000000000000000000000000000000000000000")
-		reqEv.ValueOrTokenId = common.Big0
-	}
-	logger.Warn("[SC][Reasoning] Make hardening against handle value transfer tx.",
-		"Reasoning", KLAYReasoingResultStringMap[respKLAYReasoning.Reasoning],
-		"RequestTxHash", respKLAYReasoning.RequestTxHash.Hex(),
-		"HandleTxHash", respKLAYReasoning.HandleTxHash.Hex(),
-	)
-}
-*/
-
 func NewObj(s interface{}, targetType reflect.Type) interface{} {
 	oldObj := reflect.ValueOf(s).Elem()
 	newObj := reflect.New(targetType.Elem()).Elem()
