@@ -28,6 +28,7 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/reward"
 
 	lru "github.com/hashicorp/golang-lru"
@@ -182,6 +183,39 @@ func (sb *backend) VerifyHeader(chain consensus.ChainReader, header *types.Heade
 	return sb.verifyHeader(chain, header, parent)
 }
 
+func getCopiedKIP71ConfigAt(sb *backend, config *params.ChainConfig, header *types.Header) (*params.ChainConfig, error) {
+	gkmr := governance.GovernanceKeyMapReverse
+	l, err := sb.governance.GetGovernanceItemAtNumber(header.Number.Uint64(), gkmr[params.LowerBoundBaseFee])
+	if err != nil {
+		return nil, err
+	}
+	u, err := sb.governance.GetGovernanceItemAtNumber(header.Number.Uint64(), gkmr[params.UpperBoundBaseFee])
+	if err != nil {
+		return nil, err
+	}
+	g, err := sb.governance.GetGovernanceItemAtNumber(header.Number.Uint64(), gkmr[params.GasTarget])
+	if err != nil {
+		return nil, err
+	}
+	d, err := sb.governance.GetGovernanceItemAtNumber(header.Number.Uint64(), gkmr[params.BaseFeeDenominator])
+	if err != nil {
+		return nil, err
+	}
+	m, err := sb.governance.GetGovernanceItemAtNumber(header.Number.Uint64(), gkmr[params.MaxBlockGasUsedForBaseFee])
+	if err != nil {
+		return nil, err
+	}
+	copiedConfig := config.Copy()
+	copiedConfig.Governance.KIP71 = &params.KIP71Config{
+		LowerBoundBaseFee:         l.(uint64),
+		UpperBoundBaseFee:         u.(uint64),
+		GasTarget:                 g.(uint64),
+		BaseFeeDenominator:        d.(uint64),
+		MaxBlockGasUsedForBaseFee: m.(uint64),
+	}
+	return copiedConfig, nil
+}
+
 // verifyHeader checks whether a header conforms to the consensus rules.The
 // caller may optionally pass in a batch of parents (ascending order) to avoid
 // looking those up from the database. This is useful for concurrently verifying
@@ -196,8 +230,14 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 		if header.BaseFee != nil {
 			return consensus.ErrInvalidBaseFee
 		}
-	} else if err := misc.VerifyMagmaHeader(chain.Config(), parents[len(parents)-1], header); err != nil {
-		return err
+	} else {
+		kip71ConfigAt, err := getCopiedKIP71ConfigAt(sb, chain.Config(), header)
+		if err != nil {
+			return err
+		}
+		if err := misc.VerifyMagmaHeader(kip71ConfigAt, parents[len(parents)-1], header); err != nil {
+			return err
+		}
 	}
 
 	// Don't waste time checking blocks from the future
