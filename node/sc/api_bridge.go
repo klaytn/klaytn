@@ -239,30 +239,26 @@ func (sb *SubBridgeAPI) UnsubscribeBridge(cBridgeAddrOrAlias, pBridgeAddrOrEmpty
 	return sb.doUnsubscribeBridge(cBridgeAddr, pBridgeAddr)
 }
 
-func (sb *SubBridgeAPI) ConvertRequestTxHashToHandleTx(hash common.Hash) map[string]interface{} {
-	tx := sb.subBridge.chainDB.ReadHandleTxFromRequestTxHash(hash)
-	if tx != nil {
-		output := tx.MakeRPCOutput()
-		output["hash"] = tx.Hash()
-		output["cost"] = tx.Cost()
-		output["fee"] = tx.Fee()
-		output["size"] = tx.Size()
-		return output
+func (sb *SubBridgeAPI) GetHandleValueTransferInfo(bridgeAddr, counterpartAddr common.Address, hash common.Hash) map[string]interface{} {
+	handleInfo := sb.subBridge.chainDB.ReadAllHandleInfo(bridgeAddr, counterpartAddr, hash)
+	if handleInfo != nil {
+		return handleInfo.MakeRPCOutput()
 	}
 	return nil
 }
 
-func (sb *SubBridgeAPI) GetRefundTx(requestNonce uint64) map[string]interface{} {
-	refundInfo := sb.subBridge.chainDB.ReadRefundTxFromRequestNonce(requestNonce)
+func (sb *SubBridgeAPI) GetRefundInfo(bridgeAddr, counterpartAddr common.Address, hash common.Hash) map[string]interface{} {
+	refundInfo := sb.subBridge.chainDB.ReadRefundInfo(bridgeAddr, counterpartAddr, hash)
 	if refundInfo != nil {
-		tx := refundInfo.Tx
-		output := tx.MakeRPCOutput()
-		output["sender"] = refundInfo.Sender
-		output["hash"] = tx.Hash()
-		output["cost"] = tx.Cost()
-		output["fee"] = tx.Fee()
-		output["size"] = tx.Size()
-		return output
+		return refundInfo.MakeRPCOutput()
+	}
+	return nil
+}
+
+func (sb *SubBridgeAPI) GetFailedHandleValueTransferInfo(bridgeAddr, counterpartAddr common.Address, hash common.Hash) map[string]interface{} {
+	handleInfo := sb.subBridge.chainDB.ReadFailedHandleInfo(bridgeAddr, counterpartAddr, hash)
+	if handleInfo != nil {
+		return handleInfo.MakeRPCOutput()
 	}
 	return nil
 }
