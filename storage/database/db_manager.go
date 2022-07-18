@@ -245,14 +245,20 @@ type DBManager interface {
 	WriteReceiptFromParentChain(blockHash common.Hash, receipt *types.Receipt)
 	ReadReceiptFromParentChain(blockHash common.Hash) *types.Receipt
 
-	WriteHandleTxHashFromRequestTxHash(rTx, hTx common.Hash) // deprecated
+	WriteHandleTxHashFromRequestTxHash(rTx, hTx common.Hash)       // deprecated
 	ReadHandleTxHashFromRequestTxHash(rTx common.Hash) common.Hash // deprecated
 
-	WriteHandleTxFromRequestTxHash(rTxHash common.Hash, hTx *types.Transaction)
-	ReadHandleTxFromRequestTxHash(rTxHash common.Hash) *types.Transaction
+	// request tx hash -> (request event, handle tx)
+	WriteAllHandleInfo(bridgeAddr, counterpartBridgeAddr common.Address, handleInfo *HandleInfo)
+	ReadAllHandleInfo(bridgeAddr, counterpartBridgeAddr common.Address, rTxHash common.Hash) *HandleInfo
 
-	WriteRefundTxFromRequestNonce(rNonce uint64, sender common.Address, refundTx *types.Transaction)
-	ReadRefundTxFromRequestNonce(rNonce uint64) *RefundInfo
+	// request tx hash -> (request event, refund tx)
+	WriteRefundInfo(bridgeAddr, counterpartBridgeAddr common.Address, refundInfo *RefundInfo)
+	ReadRefundInfo(bridgeAddress, counterpartBridgeAddr common.Address, rTxHash common.Hash) *RefundInfo
+
+	// request tx hash -> (request event, failed tx)
+	WriteFailedHandleInfo(bridgeAddr, counterpartBridgeAddr common.Address, handleInfo *FailedHandleInfo)
+	ReadFailedHandleInfo(bridgeAddr, counterpartBridgeAddr common.Address, rTxHash common.Hash) *FailedHandleInfo
 
 	WriteParentOperatorFeePayer(feePayer common.Address)
 	WriteChildOperatorFeePayer(feePayer common.Address)
@@ -2357,68 +2363,92 @@ func (dbm *databaseManager) ReadHandleTxHashFromRequestTxHash(rTx common.Hash) c
 	return common.BytesToHash(data)
 }
 
-// WriteHandleTxFromRequestTxHash writes handle value transfer tx
-// with corresponding request value transfer tx hash.
-func (dbm *databaseManager) WriteHandleTxFromRequestTxHash(rTxHash common.Hash, hTx *types.Transaction) {
+// WriteAllHandleInfo writes handle value transfer info with corresponding request value transfer tx hash.
+func (dbm *databaseManager) WriteAllHandleInfo(bridgeAddr, counterpartBridgeaddr common.Address, handleInfo *HandleInfo) {
 	db := dbm.getDatabase(bridgeServiceDB)
-	key := valueTransferTxHashKey(rTxHash)
+	key := reuqestValueTransferHashKey(bridgeAddr, counterpartBridgeaddr, handleInfo.RequestTxHash)
 
-	rTxHashStr := rTxHash.String()
-	hTxHashStr := hTx.Hash().String()
-
-	bytes, err := rlp.EncodeToBytes(hTx)
+	bytes, err := rlp.EncodeToBytes(handleInfo)
 	if err != nil {
-		logger.Crit("Failed to RLP encode a handle transaction", "request tx hash", rTxHashStr, "handle tx hash", hTxHashStr, "err", err)
+		logger.Crit("Failed to RLP encode a successful handle info", "request tx hash", handleInfo.RequestTxHash.Hex(), "handle tx hash", handleInfo.HandleTx.Hash().Hex(), "err", err)
 	}
 	if err := db.Put(key, bytes); err != nil {
-		logger.Crit("Failed to store handle value transfer tx", "request tx hash", rTxHashStr, "handle tx hash", hTxHashStr, "err", err)
+		logger.Crit("Failed to store a successful handle info", "request tx hash", handleInfo.RequestTxHash.Hex(), "handle tx hash", handleInfo.HandleTx.Hash().Hex(), "err", err)
 	}
 }
 
-// ReadHandleTxFromRequestTxHash returns a handle value transfer tx from request value transfer tx hash
-func (dbm *databaseManager) ReadHandleTxFromRequestTxHash(rTxHash common.Hash) *types.Transaction {
+// ReadAllHandleInfo returns a handle value transfer info from request value transfer tx hash.
+func (dbm *databaseManager) ReadAllHandleInfo(bridgeAddr, counterpartBridgeaddr common.Address, rTxHash common.Hash) *HandleInfo {
 	db := dbm.getDatabase(bridgeServiceDB)
-	key := valueTransferTxHashKey(rTxHash)
+	key := reuqestValueTransferHashKey(bridgeAddr, counterpartBridgeaddr, rTxHash)
 	data, _ := db.Get(key)
 	if data == nil || len(data) == 0 {
 		return nil
 	}
-	var tx types.Transaction
-	if err := rlp.Decode(bytes.NewReader(data), &tx); err != nil {
-		logger.Error("Failed to decode handle tx", "txHash", rTxHash.String(), "err", err)
+	var handleInfo HandleInfo
+	if err := rlp.Decode(bytes.NewReader(data), &handleInfo); err != nil {
+		logger.Error("Failed to decode a successfu handle info", "request tx hgash", rTxHash.String(), "err", err)
 		return nil
 	}
-	return &tx
+	return &handleInfo
 }
 
-// WriteRefundTxFromRequestNonce writes refund tx of corresponding request nonce
-func (dbm *databaseManager) WriteRefundTxFromRequestNonce(rNonce uint64, sender common.Address, refundTx *types.Transaction) {
+// WriteRefundInfo writes refund info of corresponding request tx hash
+func (dbm *databaseManager) WriteRefundInfo(bridgeAddr, counterpartBridgeaddr common.Address, refundInfo *RefundInfo) {
 	db := dbm.getDatabase(bridgeServiceDB)
-	key := refundTxKey(rNonce)
-	bytes, err := rlp.EncodeToBytes(&RefundInfo{rNonce, sender, *refundTx})
+	key := refundTxKey(bridgeAddr, counterpartBridgeaddr, refundInfo.RequestTxHash)
+	bytes, err := rlp.EncodeToBytes(refundInfo)
 	if err != nil {
-		logger.Crit("Failed to RLP encode a refund transaction", "requestNonce", rNonce, "refund tx hash", refundTx.Hash().Hex(), "err", err)
+		logger.Crit("Failed to RLP encode a refund transaction", "request tx hash", refundInfo.RequestTxHash.Hex(), "refund tx hash", refundInfo.RefundTx.Hash().Hex(), "err", err)
 	}
 	if err := db.Put(key, bytes); err != nil {
-		logger.Crit("Failed to store refund info", "requestNonce", rNonce, "refund tx hash", refundTx.Hash().Hex(), 
-			"sender", sender.String(), "err", err)
+		logger.Crit("Failed to store refund info", "request tx hash", refundInfo.RequestTxHash, "refund tx hash", refundInfo.RefundTx.Hash().Hex(), "err", err)
 	}
 }
 
-// ReadRefundTxFromRequestNonce returns refund tx of corresponding request nonce
-func (dbm *databaseManager) ReadRefundTxFromRequestNonce(rNonce uint64) *RefundInfo {
+// ReadRefundInfo returns refund info from a corresponding request value transfer hash
+func (dbm *databaseManager) ReadRefundInfo(bridgeAddr, counterpartBridgeaddr common.Address, rTxHash common.Hash) *RefundInfo {
 	db := dbm.getDatabase(bridgeServiceDB)
-	key := refundTxKey(rNonce)
+	key := refundTxKey(bridgeAddr, counterpartBridgeaddr, rTxHash)
 	data, _ := db.Get(key)
 	if data == nil || len(data) == 0 {
 		return nil
 	}
 	var refundInfo RefundInfo
 	if err := rlp.Decode(bytes.NewReader(data), &refundInfo); err != nil {
-		logger.Error("Failed to decode refund info", "requestNonce", rNonce, "err", err)
+		logger.Error("Failed to decode refund info", "request tx hash", rTxHash, "err", err)
 		return nil
 	}
 	return &refundInfo
+}
+
+// WriteFailedHandleInfo writes failed handle info of a coressponding request value transfer tx hash
+func (dbm *databaseManager) WriteFailedHandleInfo(bridgeAddr, counterpartBridgeAddr common.Address, failedHandleInfo *FailedHandleInfo) {
+	db := dbm.getDatabase(bridgeServiceDB)
+	key := failedRequestNonceKey(bridgeAddr, counterpartBridgeAddr, failedHandleInfo.RequestTxHash)
+	bytes, err := rlp.EncodeToBytes(failedHandleInfo)
+	if err != nil {
+		logger.Crit("Failed to RLP encode a failed request nonce", "request tx hash", failedHandleInfo.RequestTxHash, "err", err)
+	}
+	if err := db.Put(key, bytes); err != nil {
+		logger.Crit("Failed to store failed request nonce", "request tx hash", failedHandleInfo.RequestTxHash, "err", err)
+	}
+}
+
+// ReadFailedHandleInfo returns failed handle info from a coressponding request value transfer tx hah
+func (dbm *databaseManager) ReadFailedHandleInfo(bridgeAddr, counterpartBridgeaddr common.Address, rTxHash common.Hash) *FailedHandleInfo {
+	db := dbm.getDatabase(bridgeServiceDB)
+	key := failedRequestNonceKey(bridgeAddr, counterpartBridgeaddr, rTxHash)
+	data, _ := db.Get(key)
+	if data == nil || len(data) == 0 {
+		return nil
+	}
+	var failedHandleInfo FailedHandleInfo
+	if err := rlp.Decode(bytes.NewReader(data), &failedHandleInfo); err != nil {
+		logger.Error("Failed to decode failed request nonce", "request tx hash", failedHandleInfo.RequestTxHash, "err", err)
+		return nil
+	}
+	return &failedHandleInfo
 }
 
 // WriteReceiptFromParentChain writes a receipt received from parent chain to child chain
@@ -2555,7 +2585,7 @@ func (dbm *databaseManager) WriteGovernanceIdx(num uint64) error {
 
 	if len(newSlice) > 0 && num <= newSlice[len(newSlice)-1] {
 		logger.Error("The same or more recent governance index exist. Skip writing governance index",
-		"newIdx", num, "govIdxes", newSlice)
+			"newIdx", num, "govIdxes", newSlice)
 		return errGovIdxAlreadyExist
 	}
 
@@ -2650,7 +2680,7 @@ func (dbm *databaseManager) ReadChainDataFetcherCheckpoint() (uint64, error) {
 	if err != nil {
 		// if the key is not in the database, 0 is returned as the checkpoint
 		if err == leveldb.ErrNotFound || err == badger.ErrKeyNotFound ||
-		strings.Contains(err.Error(), "not found") { // memoryDB
+			strings.Contains(err.Error(), "not found") { // memoryDB
 			return 0, nil
 		}
 		return 0, err

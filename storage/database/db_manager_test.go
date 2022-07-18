@@ -727,20 +727,55 @@ func TestDBManager_ChildChain(t *testing.T) {
 		dbm.WriteHandleTxHashFromRequestTxHash(hash1, hash2)
 		assert.Equal(t, hash2, dbm.ReadHandleTxHashFromRequestTxHash(hash1))
 
-		// 3. Write/Read handle tx
-		tx, err := genTransaction(num1)
+		// 3. Write/Read handle info
+		bridgeAddr := common.HexToAddress("0x1")
+		counterpartBridgeAddr := common.HexToAddress("0x2")
+		reqTx, err := genTransaction(num1)
 		assert.NoError(t, err, "Failed to generate a transaction")
-		dbm.WriteHandleTxFromRequestTxHash(hash1, tx)
-		retrivedTx := dbm.ReadHandleTxFromRequestTxHash(hash1)
-		assert.Equal(t, retrivedTx.Hash(), tx.Hash())
+		handleTx, err := genTransaction(num2)
+		assert.NoError(t, err, "Failed to generate a transaction")
+		refundTx, err := genTransaction(num3)
+		assert.NoError(t, err, "Failed to generate a transaction")
+		reqEvent := BridgeRequestEvent{
+			TokenType:      0,
+			From:           common.HexToAddress("0x1"),
+			To:             common.HexToAddress("0x1"),
+			TokenAddr:      common.HexToAddress("0x1"),
+			ValueOrTokenId: common.Big0,
+			RequestNonce:   uint64(0),
+			Fee:            common.Big0,
+			ExtraData:      []byte{},
+		}
+		handleInfo := HandleInfo{
+			RequestEvent:  reqEvent,
+			RequestTxHash: reqTx.Hash(),
+			HandleTx:      *handleTx,
+		}
+		dbm.WriteAllHandleInfo(bridgeAddr, counterpartBridgeAddr, &handleInfo)
+		retrievedHandleInfo := dbm.ReadAllHandleInfo(bridgeAddr, counterpartBridgeAddr, reqTx.Hash())
+		assert.Equal(t, handleInfo.RequestEvent, retrievedHandleInfo.RequestEvent)
+		assert.Equal(t, handleInfo.RequestTxHash, retrievedHandleInfo.RequestTxHash)
 
-		// 4. Write/Read refund tx
-		nonce := uint64(123)
-		addr := common.HexToAddress("0x000000000000000000000000000000000000000A")
-		dbm.WriteRefundTxFromRequestNonce(nonce, addr, tx)
-		refundInfo := dbm.ReadRefundTxFromRequestNonce(nonce)
-		assert.Equal(t, refundInfo.Sender, addr)
-		assert.Equal(t, refundInfo.Tx.Hash(), tx.Hash())
+		// 4. Write/Read refund info
+		refundInfo := RefundInfo{
+			RequestEvent:  reqEvent,
+			RequestTxHash: reqTx.Hash(),
+			RefundTx:      *refundTx,
+		}
+		dbm.WriteRefundInfo(bridgeAddr, counterpartBridgeAddr, &refundInfo)
+		retrievedRefundInfo := dbm.ReadRefundInfo(bridgeAddr, counterpartBridgeAddr, reqTx.Hash())
+		assert.Equal(t, refundInfo.RequestEvent, retrievedRefundInfo.RequestEvent)
+		assert.Equal(t, refundInfo.RequestTxHash, retrievedRefundInfo.RequestTxHash)
+
+		// 5. Write/Read failed handle info
+		failedHandleInfo := FailedHandleInfo{
+			RequestEvent:  reqEvent,
+			RequestTxHash: reqTx.Hash(),
+		}
+		dbm.WriteFailedHandleInfo(bridgeAddr, counterpartBridgeAddr, &failedHandleInfo)
+		retrievedFailedHandleInfo := dbm.ReadFailedHandleInfo(bridgeAddr, counterpartBridgeAddr, reqTx.Hash())
+		assert.Equal(t, failedHandleInfo.RequestEvent, retrievedFailedHandleInfo.RequestEvent)
+		assert.Equal(t, failedHandleInfo.RequestTxHash, retrievedFailedHandleInfo.RequestTxHash)
 	}
 }
 
