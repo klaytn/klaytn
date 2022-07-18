@@ -90,21 +90,32 @@ func (reqVTReasoningWrapper *RequestVTReasoningWrapper) reasoning(blockchain *bl
 	}
 }
 
-func (respVTReasoningWrapper *ResponseVTReasoningWrapper) decideResend() (ValueTransferException, bool) {
+func (respVTReasoningWrapper *ResponseVTReasoningWrapper) decideResend() bool {
 	switch respVTReasoningWrapper.TokenType {
 	case KLAY:
 		return respVTReasoningWrapper.KLAYReasoning.decideResend()
 	default:
-		return VALUE_TRANSFER_UNREACHABLE, false
+		return false
 	}
 }
 
+func (respVTReasoningWrapper *ResponseVTReasoningWrapper) refundable() bool {
+	switch respVTReasoningWrapper.TokenType {
+	case KLAY:
+		return respVTReasoningWrapper.KLAYReasoning.refunadable()
+	default:
+		return false
+	}
+}
+
+/*
 func (respVTReasoningWrapper *ResponseVTReasoningWrapper) hardening(ev IRequestValueTransferEvent) {
 	switch respVTReasoningWrapper.TokenType {
 	case KLAY:
 		respVTReasoningWrapper.KLAYReasoning.hardening(ev)
 	}
 }
+*/
 
 func (respVTReasoningWrapper *ResponseVTReasoningWrapper) getBridgeAddr() common.Address {
 	switch respVTReasoningWrapper.TokenType {
@@ -138,10 +149,19 @@ func getRevertedAddrAndMsg(traceResult interface{}) (common.Address, string) {
 	return common.Address{}, ""
 }
 
+func getErrorWithGasUsed(traceResult interface{}) (string, uint64, uint64) {
+	if tr, ok := traceResult.(*vm.InternalTxTrace); ok {
+		if tr.Error != nil {
+			return tr.Error.Error(), tr.Gas, tr.GasUsed
+		}
+	}
+	return "", 0, 0
+}
+
 func makeRequestKLAYHandleDebug(bi *BridgeInfo, ev IRequestValueTransferEvent) *RequestVTReasoningWrapper {
 	isOnChild := bi.onChildChain
 	reqTxHash := ev.GetRaw().TxHash
-	handleTx := bi.subBridge.chainDB.ReadHandleTxFromRequestTxHash(reqTxHash)
+	handleTx := bi.bridgeDB.ReadAllHandleInfo(bi.address, bi.counterpartAddress, reqTxHash).HandleTx
 	var counterpartOperatorAddr common.Address
 	if isOnChild {
 		counterpartOperatorAddr = bi.subBridge.APIBackend.GetParentOperatorAddr()

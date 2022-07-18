@@ -25,6 +25,7 @@ import (
 
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/node/cn"
 	"github.com/klaytn/klaytn/rlp"
 )
@@ -32,6 +33,8 @@ import (
 const (
 	VALUE_TRANSFER_KLAY_TRACETRANSACTION_FAILED ValueTransferException = iota
 	VALUE_TRANSFER_KLAY_SUCCEEDED_TX
+	VALUE_TRANSFER_KLAY_OUT_OF_GAS
+	VALUE_TRANSFER_KLAY_VM_ERR
 	VALUE_TRANSFER_KLAY_INVALID_VOTE_OR_NONCE
 	VALUE_TRANSFER_KLAY_UNEXECUTED // (1) if the operator does not have KLAY to execute its handle value transfer tx, or (2) Bridge node is not servicing (connection down or synching)
 	VALUE_TRANSFER_KLAY_NOT_ENOUGH_CONTRACT_BALANCE
@@ -42,6 +45,8 @@ const (
 var KLAYReasoingResultStringMap = map[ValueTransferException]string{
 	VALUE_TRANSFER_KLAY_TRACETRANSACTION_FAILED:     "VALUE_TRANSFER_KLAY_TRACETRANSACTION_FAILED",
 	VALUE_TRANSFER_KLAY_SUCCEEDED_TX:                "VALUE_TRANSFER_KLAY_SUCCEEDED_TX",
+	VALUE_TRANSFER_KLAY_OUT_OF_GAS:                  "VALUE_TRANSFER_KLAY_OUT_OF_GAS",
+	VALUE_TRANSFER_KLAY_VM_ERR:                      "VALUE_TRANSFER_KLAY_VM_ERR",
 	VALUE_TRANSFER_KLAY_INVALID_VOTE_OR_NONCE:       "VALUE_TRANSFER_KLAY_INVALID_VOTE_OR_NONCE",
 	VALUE_TRANSFER_KLAY_UNEXECUTED:                  "VALUE_TRANSFER_KLAY_UNEXECUTED",
 	VALUE_TRANSFER_KLAY_NOT_ENOUGH_CONTRACT_BALANCE: "VALUE_TRANSFER_KLAY_NOT_ENOUGH_CONTRACT_BALANCE",
@@ -85,6 +90,9 @@ type ResponseKLAYReasoningVT struct {
 	HandleTxHash         common.Hash
 	RevertedAddr         common.Address // Wherefrom the valeu transfer is reverted
 	RevertedMsg          string
+	Error                string
+	GasLimit             uint64
+	GasUsed              uint64
 	TraceError           string
 	StateDBError         string
 	TxCost               *big.Int
@@ -104,6 +112,9 @@ type ResponseKLAYReasoningVTForRLP struct {
 	HandleTxHash         common.Hash
 	RevertedAddr         common.Address
 	RevertedMsg          string
+	Error                string
+	GasLimit             uint64
+	GasUsed              uint64
 	TraceError           string
 	StateDBError         string
 	TxCost               *big.Int
@@ -185,10 +196,23 @@ func (reqKLAYReasoning *RequestKLAYReasoningVT) reasoning(blockchain *blockchain
 		respKLAYReasoning.RevertedAddr = revertedAddr
 		respKLAYReasoning.RevertedMsg = revertedMsg
 
+		err, gasLimit, gasUsed := getErrorWithGasUsed(traceResult)
+		respKLAYReasoning.Error = err
+		respKLAYReasoning.GasLimit = gasLimit
+		respKLAYReasoning.GasUsed = gasUsed
+
 		// TODO-hyunsooda: Add KLAY `transfer` failure error at EVM execution
-		// Check 1. if its tx is not reverted
+		// Check 1. if its tx is not reverted and failed by out of gas
 		if revertedAddr == (common.Address{}) {
-			respKLAYReasoning.Reasoning = VALUE_TRANSFER_KLAY_SUCCEEDED_TX
+			if err != "" {
+				if err == kerrors.ErrOutOfGas.Error() {
+					respKLAYReasoning.Reasoning = VALUE_TRANSFER_KLAY_OUT_OF_GAS
+				} else {
+					respKLAYReasoning.Reasoning = VALUE_TRANSFER_KLAY_VM_ERR
+				}
+			} else {
+				respKLAYReasoning.Reasoning = VALUE_TRANSFER_KLAY_SUCCEEDED_TX
+			}
 		} else if revertedAddr == reqKLAYReasoning.CounterpartBridgeAddr {
 			// Check 2. if the bridge contract's balance is not enough
 			if revertedMsg == "" { // Do not compare the contract's balance due to the balance retrive timing
@@ -217,14 +241,18 @@ func (reqKLAYReasoning *RequestKLAYReasoningVT) reasoning(blockchain *blockchain
 }
 
 func (respKLAYReasoning *ResponseKLAYReasoningVT) log(reasoningWord string) {
-	operatorAddr := respKLAYReasoning.OperatorAddr
-	operatorBalance := respKLAYReasoning.OperatorBalance
-	txCost := respKLAYReasoning.TxCost
 	var parentOrChild string
 	if respKLAYReasoning.IsChildSent {
 		parentOrChild = "parent"
 	} else {
 		parentOrChild = "child"
+	}
+	var cause string
+	if respKLAYReasoning.OperatorBalance.Cmp(respKLAYReasoning.Value) < 1 {
+		cause = "The bridge operator may not have enough balance to execute value transfer transaction"
+	}
+	if respKLAYReasoning.Reasoning == VALUE_TRANSFER_KLAY_OUT_OF_GAS {
+		cause = "Please validate the operator's gaslmiit value"
 	}
 
 	logger.Error(reasoningWord,
@@ -233,51 +261,62 @@ func (respKLAYReasoning *ResponseKLAYReasoningVT) log(reasoningWord string) {
 		"OperatorAddr", respKLAYReasoning.OperatorAddr.Hex(),
 		"Value", respKLAYReasoning.Value,
 		"ContractBalance", respKLAYReasoning.ContractBalance,
-		"OperatorBalance", operatorBalance,
+		"OperatorBalance", respKLAYReasoning.OperatorBalance,
 		"RequestTxHash", respKLAYReasoning.RequestTxHash.Hex(),
 		"HandleTxHash", respKLAYReasoning.HandleTxHash.Hex(),
 		"RevertedAddr", respKLAYReasoning.RevertedAddr.Hex(),
 		"RevertedMsg", respKLAYReasoning.RevertedMsg,
+		"Error", respKLAYReasoning.Error,
+		"GasLimit", respKLAYReasoning.GasLimit,
+		"GasUsed", respKLAYReasoning.GasUsed,
 		"StateDBErr", respKLAYReasoning.StateDBError,
 		"TraceResultErr", respKLAYReasoning.TraceError,
-		"TxCost", txCost,
+		"TxCost", respKLAYReasoning.TxCost,
 		"Reasoning", KLAYReasoingResultStringMap[respKLAYReasoning.Reasoning],
+		"Cause", cause,
 	)
-
-	if operatorBalance.Cmp(txCost) < 1 {
-		logger.Error("[SC][Reasoning] The bridge operator may not have enough balance to execute value transfer transaction",
-			"chain", parentOrChild,
-			"operaotrAddr", operatorAddr.Hex(),
-			"txCost", txCost,
-			"operatorBalance", operatorBalance,
-		)
-	}
 }
 
-func (respKLAYReasoning *ResponseKLAYReasoningVT) decideResend() (ValueTransferException, bool) {
+func (respKLAYReasoning *ResponseKLAYReasoningVT) decideResend() bool {
 	switch respKLAYReasoning.Reasoning {
 	case VALUE_TRANSFER_KLAY_TRACETRANSACTION_FAILED:
 		respKLAYReasoning.log("[SC][Reasoning] Failed to execute trace transaction call. No resend its transaction again")
-		return VALUE_TRANSFER_KLAY_TRACETRANSACTION_FAILED, false
+		return false
 	case VALUE_TRANSFER_KLAY_SUCCEEDED_TX:
 		respKLAYReasoning.log("[SC][Reasoning] Succeeded tx. No resend its transaction")
-		return VALUE_TRANSFER_KLAY_SUCCEEDED_TX, false
+		return false
+	case VALUE_TRANSFER_KLAY_OUT_OF_GAS:
+		respKLAYReasoning.log("[SC][Reasoning] Failed by out of gas. No resend its transaction")
+		return false
+	case VALUE_TRANSFER_KLAY_VM_ERR:
+		respKLAYReasoning.log("[SC][Reasoning] Failed by vm execution error. No resend its transaction")
+		return false
 	case VALUE_TRANSFER_KLAY_INVALID_VOTE_OR_NONCE:
 		respKLAYReasoning.log("[SC][Reasoning] Failed by some of internal errors. Expected to never happen this error. No resend its transaction")
-		return VALUE_TRANSFER_KLAY_INVALID_VOTE_OR_NONCE, false
+		return false
 	case VALUE_TRANSFER_KLAY_UNEXECUTED:
 		respKLAYReasoning.log("[SC][Reasoning] Tx was not found. Send its transaction again")
-		return VALUE_TRANSFER_KLAY_UNEXECUTED, true
+		return true
 	case VALUE_TRANSFER_KLAY_NOT_ENOUGH_CONTRACT_BALANCE:
-		respKLAYReasoning.log("[SC][Reasoning] Failed by not enough bridge contract balance. No resend its transaction")
-		return VALUE_TRANSFER_KLAY_NOT_ENOUGH_CONTRACT_BALANCE, false
+		respKLAYReasoning.log("[SC][Reasoning] Failed by not enough bridge contract balance. No resend its transaction.")
+		return false
 	case VALUE_TRANSFER_KLAY_REVERT_ON_THE_OTHER_ADDRESS:
 		respKLAYReasoning.log("[SC][Reasoning] The contract execution was reverted in the other contract address. No resend its transaction")
-		return VALUE_TRANSFER_KLAY_REVERT_ON_THE_OTHER_ADDRESS, false
+		return false
 	}
-	return VALUE_TRANSFER_UNREACHABLE, false
+	return false
 }
 
+func (respKLAYReasoning *ResponseKLAYReasoningVT) refunadable() bool {
+	switch respKLAYReasoning.Reasoning {
+	case VALUE_TRANSFER_KLAY_OUT_OF_GAS, VALUE_TRANSFER_KLAY_NOT_ENOUGH_CONTRACT_BALANCE:
+		return true
+	default:
+		return false
+	}
+}
+
+/*
 func (respKLAYReasoning *ResponseKLAYReasoningVT) hardening(ev IRequestValueTransferEvent) {
 	switch reqEv := ev.(type) {
 	case RequestValueTransferEvent:
@@ -293,6 +332,7 @@ func (respKLAYReasoning *ResponseKLAYReasoningVT) hardening(ev IRequestValueTran
 		"HandleTxHash", respKLAYReasoning.HandleTxHash.Hex(),
 	)
 }
+*/
 
 func NewObj(s interface{}, targetType reflect.Type) interface{} {
 	oldObj := reflect.ValueOf(s).Elem()
