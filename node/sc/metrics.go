@@ -40,8 +40,10 @@ var (
 	miscOutPacketsMeter       = metrics.NewRegisteredMeter("klay/bridge/misc/out/packets", nil)
 	miscOutTrafficMeter       = metrics.NewRegisteredMeter("klay/bridge/misc/out/traffic", nil)
 
-	vtRequestEventMeter = metrics.NewRegisteredMeter("klay/bridge/vt/event/request", nil)
-	vtHandleEventMeter  = metrics.NewRegisteredMeter("klay/bridge/vt/event/handle", nil)
+	vtRequestEventMeter      = metrics.NewRegisteredMeter("klay/bridge/vt/event/request", nil)
+	vtHandleEventMeter       = metrics.NewRegisteredMeter("klay/bridge/vt/event/handle", nil)
+	vtRefundEventMeter       = metrics.NewRegisteredMeter("klay/bridge/vt/event/refund", nil)
+	vtFailedHandleEventMeter = metrics.NewRegisteredMeter("klay/bridge/vt/event/failedhandle", nil)
 
 	vtRecoveredRequestEventMeter = metrics.NewRegisteredMeter("klay/bridge/vt/event/recovery/request", nil)
 	vtPendingRequestEventCounter = metrics.NewRegisteredCounter("klay/bridge/vt/event/pend/request", nil)

@@ -156,10 +156,12 @@ type SubBridge struct {
 
 	chanReqVTev        chan RequestValueTransferEvent
 	chanReqVTencodedEv chan RequestValueTransferEncodedEvent
+	chanHandleVTev     chan *HandleValueTransferEvent
+	chanRefund         chan *RefundEvent
 	reqVTevSub         event.Subscription
 	reqVTencodedEvSub  event.Subscription
-	chanHandleVTev     chan *HandleValueTransferEvent
 	handleVTevSub      event.Subscription
+	refundSub          event.Subscription
 
 	bridgeAccounts *BridgeAccounts
 
@@ -198,6 +200,7 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 		chanReqVTev:        make(chan RequestValueTransferEvent, chanReqVTevanSize),
 		chanReqVTencodedEv: make(chan RequestValueTransferEncodedEvent, chanReqVTevanSize),
 		chanHandleVTev:     make(chan *HandleValueTransferEvent, chanHandleVTevanSize),
+		chanRefund:         make(chan *RefundEvent, chanHandleVTevanSize),
 		quitSync:           make(chan struct{}),
 		maxPeers:           config.MaxPeer,
 		onAnchoringTx:      config.Anchoring,
@@ -383,6 +386,7 @@ func (sb *SubBridge) SetComponents(components []interface{}) {
 	sb.reqVTevSub = sb.bridgeManager.SubscribeReqVTev(sb.chanReqVTev)
 	sb.reqVTencodedEvSub = sb.bridgeManager.SubscribeReqVTencodedEv(sb.chanReqVTencodedEv)
 	sb.handleVTevSub = sb.bridgeManager.SubscribeHandleVTev(sb.chanHandleVTev)
+	sb.refundSub = sb.bridgeManager.SubscribeRefundEv(sb.chanRefund)
 
 	sb.pmwg.Add(1)
 	go sb.restoreBridgeLoop()
@@ -667,6 +671,11 @@ func (sb *SubBridge) loop() {
 			if err := sb.eventhandler.ProcessHandleEvent(ev); err != nil {
 				logger.Error("fail to process handle value transfer event ", "err", err)
 			}
+		case ev := <-sb.chanRefund:
+			vtRefundEventMeter.Mark(1)
+			if err := sb.eventhandler.ProcessRefundEvent(ev); err != nil {
+				logger.Error("fail to process refund event ", "err", err)
+			}
 		case err := <-sb.chainSub.Err():
 			if err != nil {
 				logger.Error("subbridge block subscription ", "err", err)
@@ -695,6 +704,11 @@ func (sb *SubBridge) loop() {
 		case err := <-sb.handleVTevSub.Err():
 			if err != nil {
 				logger.Error("subbridge token-transfer subscription ", "err", err)
+			}
+			return
+		case err := <-sb.refundSub.Err():
+			if err != nil {
+				logger.Error("subbridge refund subscription ", "err", err)
 			}
 			return
 		}
@@ -781,6 +795,7 @@ func (sb *SubBridge) Stop() error {
 	sb.reqVTevSub.Unsubscribe()
 	sb.reqVTencodedEvSub.Unsubscribe()
 	sb.handleVTevSub.Unsubscribe()
+	sb.refundSub.Unsubscribe()
 	sb.eventMux.Stop()
 	sb.chainDB.Close()
 

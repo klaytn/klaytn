@@ -112,3 +112,13 @@ func (rEv RequestValueTransferEncodedEvent) GetExtraData() []byte {
 func (rEv RequestValueTransferEncodedEvent) GetRaw() types.Log {
 	return rEv.Raw
 }
+
+// HandleValueTransferEvent from Bridge contract
+type HandleValueTransferEvent struct {
+	*bridgecontract.BridgeHandleValueTransfer
+}
+
+// `Refunded` event` from Bridge contract
+type RefundEvent struct {
+	*bridgecontract.BridgeRefunded
+}
