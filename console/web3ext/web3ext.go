@@ -1341,14 +1341,19 @@ web3._extend({
 			inputFormatter: [null, null, null, web3._extend.formatters.inputEmptyFormatter]
 		}),
 		new web3._extend.Method({
-			name: 'convertRequestTxHashToHandleTx',
-			call: 'subbridge_convertRequestTxHashToHandleTx',
-			params: 1
+			name: 'getHandleValueTransferInfo',
+			call: 'subbridge_getHandleValueTransferInfo',
+			params: 3
 		}),
 		new web3._extend.Method({
-			name: 'getRefundTx',
-			call: 'subbridge_getRefundTx',
-			params: 1
+			name: 'getFailedHandleValueTransferInfo',
+			call: 'subbridge_getFailedHandleValueTransferInfo',
+			params: 3
+		}),
+		new web3._extend.Method({
+			name: 'getRefundInfo',
+			call: 'subbridge_getRefundInfo',
+			params: 3
 		}),
 		new web3._extend.Method({
 			name: 'getBridgeInformation',
