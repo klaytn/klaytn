@@ -105,6 +105,7 @@ func (governance *testGovernance) setTestGovernance(epoch uint64, mintingAmount 
 	governance.unitPrice = unitprice
 	governance.useGiniCoeff = useGiniCoeff
 	governance.deferredTxFee = deferredTxFee
+	governance.unitPrice = unitprice
 }
 
 func TestRewardConfigCache_parseRewardRatio(t *testing.T) {

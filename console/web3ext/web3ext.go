@@ -1013,6 +1013,16 @@ web3._extend({
             getter: 'klay_gasPrice',
             outputFormatter: web3._extend.formatters.outputBigNumberFormatter
         }),
+        new web3._extend.Property({
+            name : 'upperBoundGasPrice',
+            getter: 'klay_upperBoundGasPrice',
+            outputFormatter: web3._extend.formatters.outputBigNumberFormatter
+        }),
+        new web3._extend.Property({
+            name : 'lowerBoundGasPrice',
+            getter: 'klay_lowerBoundGasPrice',
+            outputFormatter: web3._extend.formatters.outputBigNumberFormatter
+        }),
 		new web3._extend.Property({
 			name: 'maxPriorityFeePerGas',
 			getter: 'klay_maxPriorityFeePerGas',
@@ -1287,12 +1297,14 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'subscribeBridge',
 			call: 'subbridge_subscribeBridge',
-			params: 2
+			params: 2,
+			inputFormatter: [null, web3._extend.formatters.inputEmptyFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'unsubscribeBridge',
 			call: 'subbridge_unsubscribeBridge',
-			params: 2
+			params: 2,
+			inputFormatter: [null, web3._extend.formatters.inputEmptyFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'KASAnchor',
@@ -1307,22 +1319,26 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'registerBridge',
 			call: 'subbridge_registerBridge',
-			params: 2
+			params: 3,
+			inputFormatter: [null, null, web3._extend.formatters.inputEmptyFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'deregisterBridge',
 			call: 'subbridge_deregisterBridge',
-			params: 2
+			params: 2,
+			inputFormatter: [null, web3._extend.formatters.inputEmptyFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'registerToken',
 			call: 'subbridge_registerToken',
-			params: 4
+			params: 4,
+			inputFormatter: [null, null, null, web3._extend.formatters.inputEmptyFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'deregisterToken',
 			call: 'subbridge_deregisterToken',
-			params: 4
+			params: 4,
+			inputFormatter: [null, null, null, web3._extend.formatters.inputEmptyFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'convertRequestTxHashToHandleTxHash',
@@ -1398,6 +1414,16 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
+			name: 'getBridgePairByAlias',
+			call: 'subbridge_getBridgePairByAlias',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'changeBridgeAlias',
+			call: 'subbridge_changeBridgeAlias',
+			params: 2
+		}),
+		new web3._extend.Method({
 			name: 'setParentBridgeOperatorGasLimit',
 			call: 'subbridge_setParentBridgeOperatorGasLimit',
 			params: 1
@@ -1419,6 +1445,11 @@ web3._extend({
 			params: 1,
 			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
 		}),
+		new web3._extend.Method({
+			name: 'requestParentSync',
+			call: 'subbridge_requestParentSync',
+			params: 0,
+		})
 	],
     properties: [
 		new web3._extend.Property({
@@ -1498,6 +1529,15 @@ web3._extend({
 		new web3._extend.Property({
 			name: 'childBridgeOperatorGasLimit',
 			getter: 'subbridge_getChildBridgeOperatorGasLimit',
+		}),
+
+		new web3._extend.Property({
+			name: 'parentGasPrice',
+			getter: 'subbridge_getParentGasPrice',
+		}),
+		new web3._extend.Property({
+			name: 'parentKIP71Config',
+			getter: 'subbridge_getParentKIP71Config',
 		}),
 	]
 });

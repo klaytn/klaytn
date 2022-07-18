@@ -39,6 +39,7 @@ import (
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/reward"
+	"github.com/klaytn/klaytn/snapshot"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/storage/statedb"
 )
@@ -458,6 +459,11 @@ func (dl *downloadTester) InsertReceiptChain(blocks types.Blocks, receipts []typ
 		}
 	}
 	return len(blocks), nil
+}
+
+// Snapshots returns the blockchain snapshot tree.
+func (dl *downloadTester) Snapshots() *snapshot.Tree {
+	return nil
 }
 
 // Rollback removes some recently added elements from the chain.

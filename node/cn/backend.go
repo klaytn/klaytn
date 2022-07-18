@@ -219,6 +219,14 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	// Set latest unitPrice/gasPrice
 	chainConfig.UnitPrice = governance.UnitPrice()
 	config.GasPrice = new(big.Int).SetUint64(chainConfig.UnitPrice)
+
+	chainConfig.Governance.KIP71 = &params.KIP71Config{
+		LowerBoundBaseFee:         governance.LowerBoundBaseFee(),
+		UpperBoundBaseFee:         governance.UpperBoundBaseFee(),
+		GasTarget:                 governance.GasTarget(),
+		MaxBlockGasUsedForBaseFee: governance.MaxBlockGasUsedForBaseFee(),
+		BaseFeeDenominator:        governance.BaseFeeDenominator(),
+	}
 	logger.Info("Initialised chain configuration", "config", chainConfig)
 
 	cn := &CN{

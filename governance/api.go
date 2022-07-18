@@ -21,8 +21,9 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
+
+	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/reward"
@@ -58,24 +59,39 @@ var (
 	errPermissionDenied       = errors.New("You don't have the right to vote")
 	errRemoveSelf             = errors.New("You can't vote on removing yourself")
 	errInvalidKeyValue        = errors.New("Your vote couldn't be placed. Please check your vote's key and value")
+	errInvalidLowerBound      = errors.New("lowerboundbasefee cannot be set exceeding upperboundbasefee")
+	errInvalidUpperBound      = errors.New("upperboundbasefee cannot be set lower than lowerboundbasefee")
 )
 
-// TODO-Klaytn-Governance: Refine this API and consider the gas price of txpool
+// GasPriceAt returns the base fee of the given block in peb,
+// or returns unit price by using governance if there is no base fee set in header,
+// or returns gas price of txpool if the block is pending block.
 func (api *GovernanceKlayAPI) GasPriceAt(num *rpc.BlockNumber) (*hexutil.Big, error) {
-	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
-		ret := api.governance.UnitPrice()
-		return (*hexutil.Big)(big.NewInt(0).SetUint64(ret)), nil
+	if num == nil || *num == rpc.LatestBlockNumber {
+		header := api.chain.CurrentHeader()
+		if header.BaseFee == nil {
+			return (*hexutil.Big)(new(big.Int).SetUint64(api.governance.UnitPrice())), nil
+		}
+		return (*hexutil.Big)(header.BaseFee), nil
+	} else if *num == rpc.PendingBlockNumber {
+		txpool := api.governance.GetTxPool()
+		return (*hexutil.Big)(txpool.GasPrice()), nil
 	} else {
-		blockNum := num.Int64()
+		blockNum := num.Uint64()
 
-		if blockNum > api.chain.CurrentHeader().Number.Int64() {
+		// Return the BaseFee in header at the block number
+		header := api.chain.GetHeaderByNumber(blockNum)
+		if blockNum > api.chain.CurrentHeader().Number.Uint64() || header == nil {
 			return nil, errUnknownBlock
+		} else if header.BaseFee != nil {
+			return (*hexutil.Big)(header.BaseFee), nil
 		}
 
+		// Return the UnitPrice in governance data at the block number
 		if ret, err := api.GasPriceAtNumber(blockNum); err != nil {
 			return nil, err
 		} else {
-			return (*hexutil.Big)(big.NewInt(0).SetUint64(ret)), nil
+			return (*hexutil.Big)(new(big.Int).SetUint64(ret)), nil
 		}
 	}
 }
@@ -88,12 +104,23 @@ func (api *PublicGovernanceAPI) Vote(key string, val interface{}) (string, error
 	if GovernanceModeMap[gMode] == params.GovernanceMode_Single && gNode != api.governance.NodeAddress() {
 		return "", errPermissionDenied
 	}
-	if strings.ToLower(key) == "governance.removevalidator" {
-		if _, ok := api.governance.ValidateVote(&GovernanceVote{Key: key, Value: val}); !ok {
-			return "", errInvalidKeyValue
-		}
+	vote, ok := api.governance.ValidateVote(&GovernanceVote{Key: strings.ToLower(key), Value: val})
+	if !ok {
+		return "", errInvalidKeyValue
+	}
+	if vote.Key == "governance.removevalidator" {
 		if api.isRemovingSelf(val.(string)) {
 			return "", errRemoveSelf
+		}
+	}
+	if vote.Key == "kip71.lowerboundbasefee" {
+		if vote.Value.(uint64) > api.governance.UpperBoundBaseFee() {
+			return "", errInvalidLowerBound
+		}
+	}
+	if vote.Key == "kip71.upperboundbasefee" {
+		if vote.Value.(uint64) < api.governance.LowerBoundBaseFee() {
+			return "", errInvalidUpperBound
 		}
 	}
 	if api.governance.AddVote(key, val) {
@@ -134,6 +161,25 @@ func (api *PublicGovernanceAPI) TotalVotingPower() (float64, error) {
 	return float64(api.governance.TotalVotingPower()) / 1000.0, nil
 }
 
+// added parameters only if there is no key
+func addDefaultKip71config(items map[string]interface{}) (*params.GovParamSet, error) {
+	base, err := params.NewGovParamSetStrMap(map[string]interface{}{
+		"kip71.lowerboundbasefee":         params.DefaultLowerBoundBaseFee,
+		"kip71.upperboundbasefee":         params.DefaultUpperBoundBaseFee,
+		"kip71.gastarget":                 params.DefaultGasTarget,
+		"kip71.basefeedenominator":        params.DefaultBaseFeeDenominator,
+		"kip71.maxblockgasusedforbasefee": params.DefaultMaxBlockGasUsedForBaseFee,
+	})
+	if err != nil {
+		return nil, err
+	}
+	update, err := params.NewGovParamSetStrMap(items)
+	if err != nil {
+		return nil, err
+	}
+	return params.NewGovParamSetMerged(base, update), nil
+}
+
 func (api *PublicGovernanceAPI) ItemsAt(num *rpc.BlockNumber) (map[string]interface{}, error) {
 	blockNumber := uint64(0)
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
@@ -141,11 +187,15 @@ func (api *PublicGovernanceAPI) ItemsAt(num *rpc.BlockNumber) (map[string]interf
 	} else {
 		blockNumber = uint64(num.Int64())
 	}
-	_, data, error := api.governance.ReadGovernance(blockNumber)
-	if error == nil {
-		return data, error
+	_, data, err := api.governance.ReadGovernance(blockNumber)
+	if err != nil {
+		return nil, err
+	}
+	mergedData, err := addDefaultKip71config(data)
+	if err == nil {
+		return mergedData.StrMap(), nil
 	} else {
-		return nil, error
+		return nil, err
 	}
 }
 
@@ -232,8 +282,8 @@ func (api *PublicGovernanceAPI) isGovernanceModeBallot() bool {
 	return false
 }
 
-func (api *GovernanceKlayAPI) GasPriceAtNumber(num int64) (uint64, error) {
-	val, err := api.governance.GetGovernanceItemAtNumber(uint64(num), GovernanceKeyMapReverse[params.UnitPrice])
+func (api *GovernanceKlayAPI) GasPriceAtNumber(num uint64) (uint64, error) {
+	val, err := api.governance.GetGovernanceItemAtNumber(num, GovernanceKeyMapReverse[params.UnitPrice])
 	if err != nil {
 		logger.Error("Failed to retrieve unit price", "err", err)
 		return 0, err

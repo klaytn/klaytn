@@ -99,7 +99,7 @@ type Message interface {
 	GasTipCap() *big.Int
 	GasFeeCap() *big.Int
 	EffectiveGasTip(baseFee *big.Int) *big.Int
-	EffectiveGasPrice(baseFee *big.Int) *big.Int
+	EffectiveGasPrice(header *types.Header) *big.Int
 
 	Gas() uint64
 	Value() *big.Int
@@ -135,7 +135,9 @@ type kerror struct {
 
 // NewStateTransition initialises and returns a new state transition object.
 func NewStateTransition(evm *vm.EVM, msg Message) *StateTransition {
-	effectiveGasPrice := msg.EffectiveGasPrice(evm.BaseFee)
+	// before magma hardfork, effectiveGasPrice is  GasPrice of tx
+	// after magma hardfork, effectiveGasPrice is BaseFee
+	effectiveGasPrice := evm.Context.GasPrice
 
 	return &StateTransition{
 		evm:       evm,
@@ -178,6 +180,8 @@ func (st *StateTransition) useGas(amount uint64) error {
 }
 
 func (st *StateTransition) buyGas() error {
+	// st.gasPrice : gasPrice user set before magma hardfork
+	// st.gasPrice : BaseFee after magma hardfork
 	mgval := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()), st.gasPrice)
 
 	validatedFeePayer := st.msg.ValidatedFeePayer()
@@ -283,8 +287,8 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 
 	// Defer transferring Tx fee when DeferredTxFee is true
 	if st.evm.ChainConfig().Governance == nil || !st.evm.ChainConfig().Governance.DeferredTxFee() {
-		effectiveTip := msg.EffectiveGasTip(st.evm.BaseFee)
-		st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), effectiveTip))
+		effectiveGasPrice := msg.EffectiveGasPrice(nil)
+		st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), effectiveGasPrice))
 	}
 
 	kerr.ErrTxInvalid = nil
@@ -389,6 +393,13 @@ func (st *StateTransition) refundGas() {
 
 	// Return KLAY for remaining gas, exchanged at the original rate.
 	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.gas), st.gasPrice)
+
+	// remaining := new(big.Int)
+	// if st.evm.ChainConfig().IsMagmaForkEnabled(st.evm.BlockNumber) {
+	// 	remaining = remaining.Mul(new(big.Int).SetUint64(st.gas), st.evm.BaseFee)
+	// } else {
+	// 	remaining = remaining.Mul(new(big.Int).SetUint64(st.gas), st.gasPrice)
+	// }
 
 	validatedFeePayer := st.msg.ValidatedFeePayer()
 	validatedSender := st.msg.ValidatedSender()

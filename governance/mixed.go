@@ -236,6 +236,10 @@ func (e *MixedEngine) SetTxPool(txpool txPool) {
 	e.defaultGov.SetTxPool(txpool)
 }
 
+func (e *MixedEngine) GetTxPool() txPool {
+	return e.defaultGov.GetTxPool()
+}
+
 func (e *MixedEngine) GovernanceMode() string {
 	return e.defaultGov.GovernanceMode()
 }
@@ -286,6 +290,26 @@ func (e *MixedEngine) StakingUpdateInterval() uint64 {
 
 func (e *MixedEngine) UseGiniCoeff() bool {
 	return e.defaultGov.UseGiniCoeff()
+}
+
+func (e *MixedEngine) LowerBoundBaseFee() uint64 {
+	return e.defaultGov.LowerBoundBaseFee()
+}
+
+func (e *MixedEngine) UpperBoundBaseFee() uint64 {
+	return e.defaultGov.UpperBoundBaseFee()
+}
+
+func (e *MixedEngine) GasTarget() uint64 {
+	return e.defaultGov.GasTarget()
+}
+
+func (e *MixedEngine) MaxBlockGasUsedForBaseFee() uint64 {
+	return e.defaultGov.MaxBlockGasUsedForBaseFee()
+}
+
+func (e *MixedEngine) BaseFeeDenominator() uint64 {
+	return e.defaultGov.BaseFeeDenominator()
 }
 
 func (e *MixedEngine) GetGovernanceValue(key int) interface{} {

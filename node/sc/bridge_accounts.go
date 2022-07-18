@@ -53,13 +53,14 @@ type feePayerDB interface {
 
 // accountInfo has bridge account's information to make and sign a transaction.
 type accountInfo struct {
-	am       *accounts.Manager  // the account manager of the node for the fee payer.
-	keystore *keystore.KeyStore // the keystore of the operator.
-	address  common.Address
-	nonce    uint64
-	chainID  *big.Int
-	gasPrice *big.Int
-	gasLimit uint64
+	am          *accounts.Manager  // the account manager of the node for the fee payer.
+	keystore    *keystore.KeyStore // the keystore of the operator.
+	address     common.Address
+	nonce       uint64
+	chainID     *big.Int
+	gasPrice    *big.Int
+	gasLimit    uint64
+	kip71Config params.KIP71Config
 
 	isNonceSynced bool
 	mu            sync.RWMutex
@@ -126,6 +127,22 @@ func (ba *BridgeAccounts) SetParentBridgeOperatorGasLimit(fee uint64) {
 // SetChildBridgeOperatorGasLimit changes GasLimit of child operator.
 func (ba *BridgeAccounts) SetChildBridgeOperatorGasLimit(fee uint64) {
 	ba.cAccount.gasLimit = fee
+}
+
+// GetParentGasPrice returns the parent chain's gas price.
+func (ba *BridgeAccounts) GetParentGasPrice() uint64 {
+	if ba.pAccount.gasPrice == nil {
+		return 0
+	}
+	return ba.pAccount.gasPrice.Uint64()
+}
+
+func (ba *BridgeAccounts) SetParentKIP71Config(kip71Config params.KIP71Config) {
+	ba.pAccount.kip71Config = kip71Config
+}
+
+func (ba *BridgeAccounts) GetParentKIP71Config() params.KIP71Config {
+	return ba.pAccount.kip71Config
 }
 
 // NewBridgeAccounts returns bridgeAccounts created by main/service bridge account keys.
@@ -243,7 +260,12 @@ func (acc *accountInfo) GenerateTransactOpts() *bind.TransactOpts {
 		nonce = new(big.Int).SetUint64(acc.nonce)
 	}
 
-	return bind.MakeTransactOptsWithKeystore(acc.keystore, acc.address, nonce, acc.chainID, acc.gasLimit, acc.gasPrice)
+	gasPrice := acc.gasPrice
+	if acc.kip71Config.UpperBoundBaseFee != 0 {
+		gasPrice = new(big.Int).SetUint64(acc.kip71Config.UpperBoundBaseFee)
+	}
+
+	return bind.MakeTransactOptsWithKeystore(acc.keystore, acc.address, nonce, acc.chainID, acc.gasLimit, gasPrice)
 }
 
 // SignTx signs a transaction with the accountInfo.
@@ -272,6 +294,7 @@ func (acc *accountInfo) SetChainID(cID *big.Int) {
 	acc.chainID = cID
 }
 
+// TODO-Servicechain: Remove `SetGasPrice` function once Magma-fork is done.
 // SetGasPrice sets the gas price of the chain of the account.
 func (acc *accountInfo) SetGasPrice(gp *big.Int) {
 	acc.gasPrice = gp

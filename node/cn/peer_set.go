@@ -21,6 +21,7 @@
 package cn
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
 	"sync"
@@ -28,12 +29,24 @@ import (
 
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/consensus/istanbul/backend"
 	"github.com/klaytn/klaytn/networks/p2p"
+	"github.com/klaytn/klaytn/node/cn/snap"
+)
+
+var (
+	// errPeerAlreadyRegistered is returned if a peer is attempted to be added
+	// to the peer set, but one with the same id already exists.
+	errPeerAlreadyRegistered = errors.New("peer already registered")
+
+	// errSnapWithoutIstanbul is returned if a peer attempts to connect only on the
+	// snap protocol without advertizing the istanbul main protocol.
+	errSnapWithoutIstanbul = errors.New("peer connected on snap without compatible istanbul support")
 )
 
 //go:generate mockgen -destination=node/cn/peer_set_mock_test.go -package=cn github.com/klaytn/klaytn/node/cn PeerSet
 type PeerSet interface {
-	Register(p Peer) error
+	Register(p Peer, ext *snap.Peer) error
 	Unregister(id string) error
 
 	Peers() map[string]Peer
@@ -42,6 +55,7 @@ type PeerSet interface {
 	PNPeers() map[common.Address]Peer
 	Peer(id string) Peer
 	Len() int
+	SnapLen() int
 
 	PeersWithoutBlock(hash common.Hash) []Peer
 
@@ -52,6 +66,9 @@ type PeerSet interface {
 	TypePeersWithoutTx(hash common.Hash, nodetype common.ConnType) []Peer
 	CNWithoutTx(hash common.Hash) []Peer
 	UpdateTypePeersWithoutTxs(tx *types.Transaction, nodeType common.ConnType, peersWithoutTxsMap map[Peer]types.Transactions)
+
+	RegisterSnapExtension(peer *snap.Peer) error
+	WaitSnapExtension(peer Peer) (*snap.Peer, error)
 
 	BestPeer() Peer
 	RegisterValidator(connType common.ConnType, validator p2p.PeerTypeValidator)
@@ -65,8 +82,13 @@ type peerSet struct {
 	cnpeers map[common.Address]Peer
 	pnpeers map[common.Address]Peer
 	enpeers map[common.Address]Peer
-	lock    sync.RWMutex
-	closed  bool
+
+	snapPeers int                        // Number of `snap` compatible peers for connection prioritization
+	snapWait  map[string]chan *snap.Peer // Peers connected on `eth` waiting for their snap extension
+	snapPend  map[string]*snap.Peer      // Peers connected on the `snap` protocol, but not yet on `eth`
+
+	lock   sync.RWMutex
+	closed bool
 
 	validator map[common.ConnType]p2p.PeerTypeValidator
 }
@@ -78,6 +100,8 @@ func newPeerSet() *peerSet {
 		cnpeers:   make(map[common.Address]Peer),
 		pnpeers:   make(map[common.Address]Peer),
 		enpeers:   make(map[common.Address]Peer),
+		snapWait:  make(map[string]chan *snap.Peer),
+		snapPend:  make(map[string]*snap.Peer),
 		validator: make(map[common.ConnType]p2p.PeerTypeValidator),
 	}
 
@@ -90,7 +114,7 @@ func newPeerSet() *peerSet {
 
 // Register injects a new peer into the working set, or returns an error if the
 // peer is already known.
-func (ps *peerSet) Register(p Peer) error {
+func (ps *peerSet) Register(p Peer, ext *snap.Peer) error {
 	ps.lock.Lock()
 	defer ps.lock.Unlock()
 
@@ -126,6 +150,11 @@ func (ps *peerSet) Register(p Peer) error {
 		return fmt.Errorf("fail to validate peer type: %s", err)
 	}
 
+	if ext != nil {
+		p.AddSnapExtension(ext)
+		ps.snapPeers++
+	}
+
 	peersByNodeType[p.GetAddr()] = p // add peer to its node type peer map.
 	ps.peers[p.GetID()] = p          // add peer to entire peer map.
 
@@ -159,6 +188,10 @@ func (ps *peerSet) Unregister(id string) error {
 		delete(ps.enpeers, p.GetAddr())
 	default:
 		return errUnexpectedNodeType
+	}
+
+	if p.ExistSnapExtension() {
+		ps.snapPeers--
 	}
 
 	cnPeerCountGauge.Update(int64(len(ps.cnpeers)))
@@ -225,6 +258,14 @@ func (ps *peerSet) Len() int {
 	defer ps.lock.RUnlock()
 
 	return len(ps.peers)
+}
+
+// SnapLen returns if the current number of `snap` peers in the set.
+func (ps *peerSet) SnapLen() int {
+	ps.lock.RLock()
+	defer ps.lock.RUnlock()
+
+	return ps.snapPeers
 }
 
 // PeersWithoutBlock retrieves a list of peers that do not have a given block in
@@ -468,4 +509,76 @@ func (peers *peerSet) UpdateTypePeersWithoutTxs(tx *types.Transaction, nodeType 
 		peersWithoutTxsMap[peer] = append(peersWithoutTxsMap[peer], tx)
 	}
 	logger.Trace("Broadcast transaction", "hash", tx.Hash(), "recipients", len(typePeers))
+}
+
+// RegisterSnapExtension unblocks an already connected `klay` peer waiting for its
+// `snap` extension, or if no such peer exists, tracks the extension for the time
+// being until the `eth` main protocol starts looking for it.
+func (peers *peerSet) RegisterSnapExtension(peer *snap.Peer) error {
+	// Reject the peer if it advertises `snap` without `klay` as `snap` is only a
+	// satellite protocol meaningful with the chain selection of `klay`
+	if !peer.RunningCap(backend.IstanbulProtocol.Name, backend.IstanbulProtocol.Versions) {
+		return errSnapWithoutIstanbul
+	}
+	// Ensure nobody can double connect
+	peers.lock.Lock()
+	defer peers.lock.Unlock()
+
+	id := peer.ID()
+	if _, ok := peers.peers[id]; ok {
+		return errPeerAlreadyRegistered // avoid connections with the same id as existing ones
+	}
+	if _, ok := peers.snapPend[id]; ok {
+		return errPeerAlreadyRegistered // avoid connections with the same id as pending ones
+	}
+	// Inject the peer into an `eth` counterpart is available, otherwise save for later
+	if wait, ok := peers.snapWait[id]; ok {
+		delete(peers.snapWait, id)
+		wait <- peer
+		return nil
+	}
+	peers.snapPend[id] = peer
+	return nil
+}
+
+// WaitSnapExtension blocks until all satellite protocols are connected and tracked
+// by the peerset.
+func (ps *peerSet) WaitSnapExtension(peer Peer) (*snap.Peer, error) {
+	// If the peer does not support a compatible `snap`, don't wait
+	if !peer.RunningCap(snap.ProtocolName, snap.ProtocolVersions) {
+		return nil, nil
+	}
+	// Ensure nobody can double connect
+	wait := make(chan *snap.Peer)
+	snap, err := ps.waitSnapExtension(peer, wait)
+	if err != nil {
+		return nil, err
+	}
+	if snap != nil {
+		return snap, nil
+	}
+
+	return <-wait, nil
+}
+
+func (ps *peerSet) waitSnapExtension(peer Peer, wait chan *snap.Peer) (*snap.Peer, error) {
+	ps.lock.Lock()
+	defer ps.lock.Unlock()
+
+	id := peer.GetID()
+	if _, ok := ps.peers[id]; ok {
+		return nil, errPeerAlreadyRegistered // avoid connections with the same id as existing ones
+	}
+	if _, ok := ps.snapWait[id]; ok {
+		return nil, errPeerAlreadyRegistered // avoid connections with the same id as pending ones
+	}
+	// If `snap` already connected, retrieve the peer from the pending set
+	if snap, ok := ps.snapPend[id]; ok {
+		delete(ps.snapPend, id)
+
+		return snap, nil
+	}
+	// Otherwise wait for `snap` to connect concurrently
+	ps.snapWait[id] = wait
+	return nil, nil
 }

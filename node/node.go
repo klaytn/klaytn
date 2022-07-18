@@ -27,6 +27,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"sync"
 
@@ -34,10 +35,12 @@ import (
 	"github.com/klaytn/klaytn/api/debug"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/log"
+	metricutils "github.com/klaytn/klaytn/metrics/utils"
 	"github.com/klaytn/klaytn/networks/grpc"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/storage/database"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/prometheus/util/flock"
 )
 
@@ -268,6 +271,20 @@ func (n *Node) Start() error {
 	n.services = coreservices
 	n.server = p2pServer
 	n.stop = make(chan struct{})
+
+	// Register a labeled metric containing version and build information
+	// e.g.) klaytn_build_info{version="v1.8.4+b3ab199674" cpu_arch="darwin-arm64" go_version="go1.18.2"} 1
+	if metricutils.Enabled {
+		buildInfo := prometheus.NewGauge(prometheus.GaugeOpts{
+			Namespace:   metricutils.MetricNamespace,
+			Subsystem:   "",
+			Name:        "build_info",
+			Help:        "A metric with a constant '1' value labeled by version",
+			ConstLabels: prometheus.Labels{"version": n.config.Version, "cpu_arch": runtime.GOARCH, "go_version": runtime.Version()},
+		})
+		buildInfo.Set(1.0) // dummy value
+		prometheus.DefaultRegisterer.MustRegister(buildInfo)
+	}
 	return nil
 }
 

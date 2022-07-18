@@ -26,6 +26,7 @@ import (
 	"math/big"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -35,6 +36,7 @@ import (
 	"github.com/klaytn/klaytn/datasync/downloader"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
+	"github.com/klaytn/klaytn/node/cn/snap"
 	"github.com/klaytn/klaytn/rlp"
 )
 
@@ -228,6 +230,17 @@ type Peer interface {
 
 	// RegisterConsensusMsgCode registers the channel of consensus msg.
 	RegisterConsensusMsgCode(msgCode uint64) error
+
+	// RunningCap returns true if the peer is actively connected using any of the
+	// enumerated versions of a specific protocol, meaning that at least one of the
+	// versions is supported by both this node and the peer p.
+	RunningCap(protocol string, versions []uint) bool
+
+	// AddSnapExtension extends the peer to support snap protocol.
+	AddSnapExtension(peer *snap.Peer)
+
+	// ExistSnapExtension returns true if the peer supports snap protocol.
+	ExistSnapExtension() bool
 }
 
 // basePeer is a common data structure used by implementation of Peer.
@@ -254,6 +267,8 @@ type basePeer struct {
 	term             chan struct{}             // Termination channel to stop the broadcaster
 
 	chainID *big.Int // ChainID to sign a transaction
+
+	snapExt *snap.Peer // Satellite `snap` connection
 }
 
 // newKnownBlockCache returns an empty cache for knownBlocksCache.
@@ -306,6 +321,10 @@ var ChannelOfMessage = map[uint64]int{
 	NodeDataMsg:        p2p.ConnDefault,
 	ReceiptsRequestMsg: p2p.ConnDefault,
 	ReceiptsMsg:        p2p.ConnDefault,
+
+	// Protocol messages belonging to klay/65
+	StakingInfoRequestMsg: p2p.ConnDefault,
+	StakingInfoMsg:        p2p.ConnDefault,
 }
 
 var ConcurrentOfChannel = []int{
@@ -437,8 +456,8 @@ func (p *basePeer) Send(msgcode uint64, data interface{}) error {
 // in its transaction hash set for future reference.
 func (p *basePeer) SendTransactions(txs types.Transactions) error {
 	// Before sending transactions, sort transactions in ascending order by time.
-	if !sort.IsSorted(types.TxByPriceAndTime(txs)) {
-		sort.Sort(types.TxByPriceAndTime(txs))
+	if !sort.IsSorted(types.TxByTime(txs)) {
+		sort.Sort(types.TxByTime(txs))
 	}
 
 	for _, tx := range txs {
@@ -450,8 +469,8 @@ func (p *basePeer) SendTransactions(txs types.Transactions) error {
 // ReSendTransactions sends txs to a peer in order to prevent the txs from missing.
 func (p *basePeer) ReSendTransactions(txs types.Transactions) error {
 	// Before sending transactions, sort transactions in ascending order by time.
-	if !sort.IsSorted(types.TxByPriceAndTime(txs)) {
-		sort.Sort(types.TxByPriceAndTime(txs))
+	if !sort.IsSorted(types.TxByTime(txs)) {
+		sort.Sort(types.TxByTime(txs))
 	}
 
 	return p2p.Send(p.rw, TxMsg, txs)
@@ -763,6 +782,16 @@ func (p *basePeer) RegisterConsensusMsgCode(msgCode uint64) error {
 	return fmt.Errorf("%v peerID: %v ", errNotSupportedByBasePeer, p.GetID())
 }
 
+// AddSnapExtension extends this peer to support snap protocol.
+func (p *basePeer) AddSnapExtension(peer *snap.Peer) {
+	p.snapExt = peer
+}
+
+// ExistSnapExtension returns true if this peer supports snap protocol.
+func (p *basePeer) ExistSnapExtension() bool {
+	return p.snapExt != nil
+}
+
 // singleChannelPeer is a peer that uses a single channel.
 type singleChannelPeer struct {
 	*basePeer
@@ -828,8 +857,8 @@ func (p *multiChannelPeer) Broadcast() {
 // in its transaction hash set for future reference.
 func (p *multiChannelPeer) SendTransactions(txs types.Transactions) error {
 	// Before sending transactions, sort transactions in ascending order by time.
-	if !sort.IsSorted(types.TxByPriceAndTime(txs)) {
-		sort.Sort(types.TxByPriceAndTime(txs))
+	if !sort.IsSorted(types.TxByTime(txs)) {
+		sort.Sort(types.TxByTime(txs))
 	}
 
 	for _, tx := range txs {
@@ -841,8 +870,8 @@ func (p *multiChannelPeer) SendTransactions(txs types.Transactions) error {
 // ReSendTransactions sends txs to a peer in order to prevent the txs from missing.
 func (p *multiChannelPeer) ReSendTransactions(txs types.Transactions) error {
 	// Before sending transactions, sort transactions in ascending order by time.
-	if !sort.IsSorted(types.TxByPriceAndTime(txs)) {
-		sort.Sort(types.TxByPriceAndTime(txs))
+	if !sort.IsSorted(types.TxByTime(txs)) {
+		sort.Sort(types.TxByTime(txs))
 	}
 
 	return p.msgSender(TxMsg, txs)
@@ -993,28 +1022,55 @@ func (p *multiChannelPeer) UpdateRWImplementationVersion() {
 
 func (p *multiChannelPeer) ReadMsg(rw p2p.MsgReadWriter, connectionOrder int, errCh chan<- error, wg *sync.WaitGroup, closed <-chan struct{}) {
 	defer wg.Done()
+
+	readMsgCh := make(chan struct {
+		p2p.Msg
+		error
+	}, channelSizePerPeer)
+	go func() {
+		for {
+			// TODO-klaytn: check 30-second timeout works
+			msg, err := rw.ReadMsg()
+			select {
+			case <-closed:
+				return
+			case readMsgCh <- struct {
+				p2p.Msg
+				error
+			}{msg, err}:
+			}
+		}
+	}()
+
 	for {
-		msg, err := rw.ReadMsg()
+		var (
+			msg p2p.Msg
+			err error
+		)
+		select {
+		case pair := <-readMsgCh:
+			msg, err = pair.Msg, pair.error
+		case <-closed:
+			return
+		}
+
 		if err != nil {
 			p.GetP2PPeer().Log().Warn("ProtocolManager failed to read msg", "err", err)
 			errCh <- err
 			return
 		}
-
 		msgCh, err := p.chMgr.GetChannelWithMsgCode(connectionOrder, msg.Code)
 		if err != nil {
 			p.GetP2PPeer().Log().Warn("ProtocolManager failed to get msg channel", "err", err)
 			errCh <- err
 			return
 		}
-
 		if msg.Size > ProtocolMaxMsgSize {
-			err := errResp(ErrMsgTooLarge, "%v > %v", msg.Size, ProtocolMaxMsgSize)
+			err = errResp(ErrMsgTooLarge, "%v > %v", msg.Size, ProtocolMaxMsgSize)
 			p.GetP2PPeer().Log().Warn("ProtocolManager over max msg size", "err", err)
 			errCh <- err
 			return
 		}
-
 		select {
 		case msgCh <- msg:
 		case <-closed:
@@ -1026,11 +1082,22 @@ func (p *multiChannelPeer) ReadMsg(rw p2p.MsgReadWriter, connectionOrder int, er
 // Handle is the callback invoked to manage the life cycle of a Klaytn Peer. When
 // this function terminates, the Peer is disconnected.
 func (p *multiChannelPeer) Handle(pm *ProtocolManager) error {
+	// If the peer has a `snap` extension, wait for it to connect so we can have
+	// a uniform initialization/teardown mechanism
+	snap, err := pm.peers.WaitSnapExtension(p)
+	if err != nil {
+		p.GetP2PPeer().Log().Error("Snapshot extension barrier failed", "err", err)
+		return err
+	}
+
 	// Ignore maxPeers if this is a trusted peer
 	if pm.peers.Len() >= pm.maxPeers && !p.GetP2PPeer().Info().Networks[p2p.ConnDefault].Trusted {
 		return p2p.DiscTooManyPeers
 	}
 	p.GetP2PPeer().Log().Debug("Klaytn peer connected", "name", p.GetP2PPeer().Name())
+
+	pm.peerWg.Add(1)
+	defer pm.peerWg.Done()
 
 	// Execute the handshake
 	var (
@@ -1041,16 +1108,32 @@ func (p *multiChannelPeer) Handle(pm *ProtocolManager) error {
 		td      = pm.blockchain.GetTd(hash, number)
 	)
 
-	err := p.Handshake(pm.networkId, pm.getChainID(), td, hash, genesis.Hash())
-	if err != nil {
+	if err := p.Handshake(pm.networkId, pm.getChainID(), td, hash, genesis.Hash()); err != nil {
 		p.GetP2PPeer().Log().Debug("Klaytn peer handshake failed", "err", err)
 		return err
+	}
+	reject := false
+	if atomic.LoadUint32(&pm.snapSync) == 1 {
+		if snap == nil {
+			// If we are running snap-sync, we want to reserve roughly half the peer
+			// slots for peers supporting the snap protocol.
+			// The logic here is; we only allow up to 5 more non-snap peers than snap-peers.
+			if all, snp := pm.peers.Len(), pm.peers.SnapLen(); all-snp > snp+5 {
+				reject = true
+			}
+		}
+	}
+	// Ignore maxPeers if this is a trusted peer
+	if p.GetP2PPeer().Info().Networks[p2p.ConnDefault].Trusted {
+		if reject || pm.peers.Len() >= pm.maxPeers {
+			return p2p.DiscTooManyPeers
+		}
 	}
 
 	p.UpdateRWImplementationVersion()
 
 	// Register the peer locally
-	if err := pm.peers.Register(p); err != nil {
+	if err := pm.peers.Register(p, snap); err != nil {
 		// if starting node with unlock account, can't register peer until finish unlock
 		p.GetP2PPeer().Log().Info("Klaytn peer registration failed", "err", err)
 		return err
@@ -1061,6 +1144,13 @@ func (p *multiChannelPeer) Handle(pm *ProtocolManager) error {
 	if err := pm.downloader.RegisterPeer(p.GetID(), p.GetVersion(), p); err != nil {
 		return err
 	}
+	if snap != nil {
+		if err := pm.downloader.GetSnapSyncer().Register(snap); err != nil {
+			p.GetP2PPeer().Log().Info("Failed to register peer in snap syncer", "err", err)
+			return err
+		}
+	}
+
 	// Propagate existing transactions. new transactions appearing
 	// after this will be sent via broadcasts.
 	pm.syncTransactions(p)

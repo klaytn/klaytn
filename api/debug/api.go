@@ -42,8 +42,10 @@ import (
 )
 
 // Handler is the global debugging handler.
-var Handler = new(HandlerT)
-var logger = log.NewModuleLogger(log.APIDebug)
+var (
+	Handler = new(HandlerT)
+	logger  = log.NewModuleLogger(log.APIDebug)
+)
 
 // HandlerT implements the debugging API.
 // Do not create values of this type, use the one

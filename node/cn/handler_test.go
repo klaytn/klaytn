@@ -247,6 +247,8 @@ func TestProtocolManager_removePeer(t *testing.T) {
 		pm.downloader = mockDownloader
 
 		// Return
+		mockPeer.EXPECT().ExistSnapExtension().Return(false).Times(1)
+
 		mockPeerSet.EXPECT().Unregister(peerID).Return(expectedErr).Times(1)
 
 		mockPeer.EXPECT().GetP2PPeer().Return(p2pPeers[0]).Times(1)
@@ -271,6 +273,8 @@ func TestProtocolManager_removePeer(t *testing.T) {
 		pm.downloader = mockDownloader
 
 		// Return
+		mockPeer.EXPECT().ExistSnapExtension().Return(false).Times(1)
+
 		mockPeerSet.EXPECT().Unregister(peerID).Return(nil).Times(1)
 
 		mockPeer.EXPECT().GetP2PPeer().Return(p2pPeers[0]).Times(1)
@@ -1050,7 +1054,7 @@ func TestBroadcastTxsSortedByTime(t *testing.T) {
 	copy(sortedTxs, txs)
 
 	// Sort transaction by time.
-	sort.Sort(types.TxByPriceAndTime(sortedTxs))
+	sort.Sort(types.TxByTime(sortedTxs))
 
 	pm := &ProtocolManager{}
 	pm.nodetype = common.ENDPOINTNODE
@@ -1059,7 +1063,7 @@ func TestBroadcastTxsSortedByTime(t *testing.T) {
 	basePeer, _, oppositePipe := newBasePeer()
 
 	pm.peers = peers
-	pm.peers.Register(basePeer)
+	pm.peers.Register(basePeer, nil)
 
 	go func(t *testing.T) {
 		pm.BroadcastTxs(txs)
@@ -1111,7 +1115,7 @@ func TestReBroadcastTxsSortedByTime(t *testing.T) {
 	copy(sortedTxs, txs)
 
 	// Sort transaction by time.
-	sort.Sort(types.TxByPriceAndTime(sortedTxs))
+	sort.Sort(types.TxByTime(sortedTxs))
 
 	pm := &ProtocolManager{}
 	pm.nodetype = common.ENDPOINTNODE
@@ -1120,7 +1124,7 @@ func TestReBroadcastTxsSortedByTime(t *testing.T) {
 	basePeer, _, oppositePipe := newBasePeer()
 
 	pm.peers = peers
-	pm.peers.Register(basePeer)
+	pm.peers.Register(basePeer, nil)
 
 	go func(t *testing.T) {
 		pm.ReBroadcastTxs(txs)
