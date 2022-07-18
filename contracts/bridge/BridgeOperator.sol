@@ -34,10 +34,13 @@ contract BridgeOperator is Ownable {
     mapping(uint8 => mapping (uint64 => VotesData)) private votes; // <voteType, <nonce, VotesData>
     mapping(uint64 => bool) public closedValueTransferVotes; // <nonce, bool>
     mapping(uint64 => bool) public closedRefundVote; // <nonce, bool>
+    mapping(uint64 => bool) public closedWithdrawVote; // <nonce, bool>
+
+    uint64 private withdrawNonce;
 
     uint64 public constant MAX_OPERATOR = 12;
     mapping(address => bool) public operators;
-    address[] public operatorList;
+    address payable [] public operatorList;
 
     mapping(uint8 => uint8) public operatorThresholds; // <vote type, uint8>
     uint64 public configurationNonce;
@@ -48,6 +51,7 @@ contract BridgeOperator is Ownable {
         ValueTransfer,
         Configuration,
         Refund,
+        Withdraw,
         Max
     }
 
@@ -66,7 +70,7 @@ contract BridgeOperator is Ownable {
         _;
     }
 
-    function getOperatorList() external view returns(address[] memory) {
+    function getOperatorList() external view returns(address payable[] memory) {
         return operatorList;
     }
 
@@ -163,8 +167,41 @@ contract BridgeOperator is Ownable {
         return false;
     }
 
+    function _voteWithdraw(uint64 withdrawNonce_) 
+        internal
+        returns(bool)
+    {
+        require(!closedWithdrawVote[withdrawNonce_], CLOSED_VOTE_ERR_STR);
+        
+        bytes32 voteKey = keccak256(msg.data);
+        if (_voteCommon(VoteType.Withdraw, withdrawNonce_, voteKey)) {
+            closedWithdrawVote[withdrawNonce_] = true;
+            return true;
+        }
+
+        return false;
+    }
+
+    function withdrawKLAY(uint256 value) public onlyOperators {
+        require(operatorList.length > 0, "A number of operators < 0");
+        if (!_voteWithdraw(withdrawNonce)) {
+            return;
+        }
+        uint256 divided = value / operatorList.length;
+        for (uint i=0; i<operatorList.length; i++) {
+            operatorList[i].transfer(divided); 
+        }
+        withdrawNonce++;
+    }
+
+    /*
+     * TODO-hyunsooda: Implement both of them
+    function withdrawERC20() public onlyOperators {}
+    function withdrawERC721() public onlyOperators {}
+    */
+
     // registerOperator registers a new operator.
-    function registerOperator(address _operator)
+    function registerOperator(address payable _operator)
     external
     onlyOwner
     {

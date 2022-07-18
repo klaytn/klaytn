@@ -20,13 +20,10 @@ import "./BridgeTransfer.sol";
 
 
 contract BridgeTransferKLAY is BridgeTransfer {
-    mapping(uint64 => address payable) private refundAddrMap; // <nonce of request, sender>
-    mapping(uint64 => uint256) private refundValueMap; // <nonce of request, value>
     bool public isLockedKLAY;
 
     event KLAYLocked();
     event KLAYUnlocked();
-    event Refunded(uint64 indexed requestNonce, address indexed sender, uint256 value);
 
     modifier lockedKLAY {
         require(isLockedKLAY == true, "unlocked");
@@ -60,33 +57,6 @@ contract BridgeTransferKLAY is BridgeTransfer {
         emit KLAYUnlocked();
     }
 
-    // suggestRecommendedFee calculates minimum fee to be used for value transfer fee.
-    // The calculated value is larger than three cost of transaction (two of handle value trasnfer call and one refund call)
-    // 1. Normal case (no error): the operator pays the value transfer transaction cost in the counterpart chain.
-    // 2. Hardening case: the operator pays two value transfer transaction cost
-    // 3. Refund case: the operator pays two value transfer transaction cost in the counterpart chain and one refund call
-    // Warning: The ServiceChian package would not provide a control for a number of gas per specific opcode.
-    //          A modified binary that changed a number of gas for corresponding opcode would have different `gasUsed` (i.e., different with precomputed(hardcoded) cost)
-    function suggestLeastFee(uint256 gasPrice) external pure returns (uint256) {
-        uint256 complement = 30000; // To make conservative upper bound of expected tx cost
-        uint256 precomputedGasUsedOfRefundCall = 110000 + complement;
-        uint256 precomputedGasUsedOfHandleValueTransferCall = 150000 + complement;
-        return gasPrice * (precomputedGasUsedOfHandleValueTransferCall * 2 + precomputedGasUsedOfRefundCall);
-    }
-
-    // refundKLAYTransfer refunds the requested amount of KLAY to sender if its corresponding value transfer is failed from the bridge contract of counterpart chain
-    function refundKLAYTransfer(uint64 requestNonce) public onlyOperators {
-        if (!_voteRefund(requestNonce)) {
-            return;
-        }
-        address payable sender = refundAddrMap[requestNonce];
-        uint256 value = refundValueMap[requestNonce];
-        if (sender != address(0) && value != 0) {
-            sender.transfer(value);
-            emit Refunded(requestNonce, sender, value);
-        }
-    }
-
     // handleKLAYTransfer sends the KLAY by the request.
     function handleKLAYTransfer(
         bytes32 _requestTxHash,
@@ -100,18 +70,9 @@ contract BridgeTransferKLAY is BridgeTransfer {
         public
         onlyOperators
     {
-        // Check needed (by replay attack, by malicious operator)
-        _lowerHandleNonceCheck(_requestedNonce);
-
-        // Check needed (by replay attack (by malicious operator))
-        if (!_voteValueTransfer(_requestedNonce)) {
+        if (!updateHandleStatus(_requestedNonce, _requestTxHash, _requestedBlockNumber)) {
             return;
         }
-
-        _setHandledRequestTxHash(_requestTxHash);
-
-        handleNoncesToBlockNums[_requestedNonce] = _requestedBlockNumber;
-        _updateHandleNonce(_requestedNonce);
 
         emit HandleValueTransfer(
             _requestTxHash,
@@ -149,8 +110,7 @@ contract BridgeTransferKLAY is BridgeTransfer {
             fee,
             _extraData
         );
-        refundAddrMap[requestNonce] = msg.sender;
-        refundValueMap[requestNonce] = amountOfKLAY;
+        setRefundLedger(requestNonce, amountOfKLAY); 
         requestNonce++;
     }
 

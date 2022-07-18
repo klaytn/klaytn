@@ -33,6 +33,9 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
     uint64 public recoveryBlockNumber = 1; // the block number that recovery start to filter log from.
     mapping(uint64 => uint64) public handleNoncesToBlockNums;  // <request nonce> => <request blockNum>
 
+    mapping(uint64 => address payable) internal refundAddrMap; // <nonce of request, sender>
+    mapping(uint64 => uint256) internal refundValueMap; // <nonce of request, value>
+
     string public REMOVED_VOTE_ERR_STR = "removed vote";
 
     using SafeMath for uint256;
@@ -126,6 +129,14 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
         bytes extraData
     );
 
+    /**
+     * Event to log the refund by failed handle value transfer.
+     * @param requestNonce is the order number of the request value transfer.
+     * @param sender is the address of sedner that created request value transfer.
+     * @param value amount of KLAY.
+     */
+    event Refunded(uint64 indexed requestNonce, address indexed sender, uint256 indexed value);
+
     // _updateHandleNonce increases lower and upper handle nonce after the _requestedNonce is handled.
     function _updateHandleNonce(uint64 _requestedNonce) internal {
         if (_requestedNonce > upperHandleNonce) {
@@ -156,5 +167,72 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
         onlyOwner
     {
         _setFeeReceiver(_feeReceiver);
+    }
+
+    function updateHandleStatus(uint64 _requestNonce, bytes32 _requestTxHash, uint64 _requestedBlockNumber) 
+        public 
+        onlyOperators
+        returns (bool)
+    {
+        // Check needed (by replay attack, by malicious operator)
+        _lowerHandleNonceCheck(_requestNonce);
+
+        // Check needed (by replay attack (by malicious operator))
+        if (!_voteValueTransfer(_requestNonce)) {
+            return false;
+        }
+
+        _setHandledRequestTxHash(_requestTxHash);
+
+        handleNoncesToBlockNums[_requestNonce] = _requestedBlockNumber;
+        _updateHandleNonce(_requestNonce);
+        return true;
+    }
+
+    // TODO-hyunsooda: Recalculate the precomuted cost
+    // suggestRecommendedFee calculates minimum fee to be used for value transfer fee.
+    // The calculated value is larger than three cost of transaction (two of handle value trasnfer call and one refund call)
+    // 1. Normal case (no error): the operator pays the value transfer transaction cost in the counterpart chain.
+    // 2. Hardening case: the operator pays two value transfer transaction cost
+    // 3. Refund case: the operator pays two value transfer transaction cost in the counterpart chain and one refund call
+    // Warning: The ServiceChian package would not provide a control for a number of gas per specific opcode.
+    //          A modified binary that changed a number of gas for corresponding opcode would have different `gasUsed` (i.e., different with precomputed(hardcoded) cost)
+    function suggestLeastFee(uint256 gasPrice) external pure returns (uint256) {
+        uint256 complement = 30000; // To make conservative upper bound of expected tx cost
+        uint256 precomputedGasUsedOfRefundCall = 110000 + complement;
+        uint256 precomputedGasUsedOfHandleValueTransferCall = 150000 + complement;
+        uint256 precomputedGasUsedUpdateHandleStatus = 150000 + complement;
+        return gasPrice * (precomputedGasUsedOfHandleValueTransferCall * 2 + precomputedGasUsedOfRefundCall + precomputedGasUsedUpdateHandleStatus);
+    }
+
+    // setRefundLedger sets refund ledger (sender and value)
+    function setRefundLedger(uint64 requestNonce_, uint256 value) internal onlyOperators {
+        refundAddrMap[requestNonce_] = msg.sender;
+        refundValueMap[requestNonce_] = value;
+    }
+
+    // refund refunds the requested amount of KLAY to sender if its corresponding value transfer is failed from the bridge contract of counterpart chain
+    function refund(uint64 requestNonce_) public onlyOperators {
+        if (!_voteRefund(requestNonce_)) {
+            return;
+        }
+        address payable sender = refundAddrMap[requestNonce_];
+        uint256 value = refundValueMap[requestNonce_];
+        if (sender != address(0) && value != 0) {
+            sender.transfer(value);
+            emit Refunded(requestNonce_, sender, value);
+            delete refundAddrMap[requestNonce_]; 
+            delete refundValueMap[requestNonce_];
+        }
+    }
+
+    // removeRefundLedger removes refund info (sender address and amount of KLAY).
+    // This function is only called when a `HandleValueTransfer` event is emitted.
+    function removeRefundLedger(uint64 requestNonce_) public onlyOperators {
+        if (!_voteRefund(requestNonce_)) {
+            return;
+        }
+        delete refundAddrMap[requestNonce_]; 
+        delete refundValueMap[requestNonce_];
     }
 }
