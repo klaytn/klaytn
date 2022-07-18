@@ -183,25 +183,25 @@ func (sb *backend) VerifyHeader(chain consensus.ChainReader, header *types.Heade
 	return sb.verifyHeader(chain, header, parent)
 }
 
-func getCopiedKIP71ConfigAt(sb *backend, config *params.ChainConfig, header *types.Header) (*params.ChainConfig, error) {
+func getCopiedKIP71ConfigAt(sb *backend, config *params.ChainConfig, blockNum uint64) (*params.ChainConfig, error) {
 	gkmr := governance.GovernanceKeyMapReverse
-	l, err := sb.governance.GetGovernanceItemAtNumber(header.Number.Uint64(), gkmr[params.LowerBoundBaseFee])
+	l, err := sb.governance.GetGovernanceItemAtNumber(blockNum, gkmr[params.LowerBoundBaseFee])
 	if err != nil {
 		return nil, err
 	}
-	u, err := sb.governance.GetGovernanceItemAtNumber(header.Number.Uint64(), gkmr[params.UpperBoundBaseFee])
+	u, err := sb.governance.GetGovernanceItemAtNumber(blockNum, gkmr[params.UpperBoundBaseFee])
 	if err != nil {
 		return nil, err
 	}
-	g, err := sb.governance.GetGovernanceItemAtNumber(header.Number.Uint64(), gkmr[params.GasTarget])
+	g, err := sb.governance.GetGovernanceItemAtNumber(blockNum, gkmr[params.GasTarget])
 	if err != nil {
 		return nil, err
 	}
-	d, err := sb.governance.GetGovernanceItemAtNumber(header.Number.Uint64(), gkmr[params.BaseFeeDenominator])
+	d, err := sb.governance.GetGovernanceItemAtNumber(blockNum, gkmr[params.BaseFeeDenominator])
 	if err != nil {
 		return nil, err
 	}
-	m, err := sb.governance.GetGovernanceItemAtNumber(header.Number.Uint64(), gkmr[params.MaxBlockGasUsedForBaseFee])
+	m, err := sb.governance.GetGovernanceItemAtNumber(blockNum, gkmr[params.MaxBlockGasUsedForBaseFee])
 	if err != nil {
 		return nil, err
 	}
@@ -231,7 +231,7 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 			return consensus.ErrInvalidBaseFee
 		}
 	} else {
-		kip71ConfigAt, err := getCopiedKIP71ConfigAt(sb, chain.Config(), header)
+		kip71ConfigAt, err := getCopiedKIP71ConfigAt(sb, chain.Config(), header.Number.Uint64())
 		if err != nil {
 			return err
 		}
