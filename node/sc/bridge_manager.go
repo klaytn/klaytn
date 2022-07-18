@@ -534,7 +534,8 @@ func (bm *BridgeManager) LogBridgeStatus() {
 	defer bm.mu.RUnlock()
 
 	// node is syncing
-	if bm.subBridge.cn.APIBackend.Progress().HighestBlock > bm.subBridge.blockchain.CurrentBlock().Number().Uint64() {
+	syncProg := bm.subBridge.cn.APIBackend.Progress()
+	if syncProg.HighestBlock > syncProg.CurrentBlock {
 		return
 	}
 	// no connected bridges
