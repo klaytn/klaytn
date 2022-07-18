@@ -45,6 +45,18 @@ func (cce *ChildChainEventHandler) HandleChainHeadEvent(block *types.Block) erro
 	logger.Trace("bridgeNode block number", "number", block.Number())
 	cce.handler.LocalChainHeadEvent(block)
 
+	pBalance, _ := cce.handler.getParentOperatorBalance()
+	cBalance, _ := cce.handler.getChildOperatorBalance()
+
+	if pBalance != nil {
+		logger.Trace("parentOperator balance", "number", pBalance)
+		parentOperatorBalanceGauge.Update(int64(pBalance.Int64()))
+	}
+	if cBalance != nil {
+		logger.Trace("childOperator balance", "number", cBalance)
+		childOperatorBalanceGauge.Update(int64(cBalance.Int64()))
+	}
+
 	// Logging information of value transfer
 	cce.subbridge.bridgeManager.LogBridgeStatus()
 

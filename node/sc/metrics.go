@@ -52,6 +52,9 @@ var (
 
 	lastAnchoredBlockNumGauge = metrics.NewRegisteredGauge("klay/bridge/anchroing/blocknumber", nil)
 
+	parentOperatorBalanceGauge = metrics.NewRegisteredGauge("klay/bridge/operator/parent", nil)
+	childOperatorBalanceGauge  = metrics.NewRegisteredGauge("klay/bridge/operator/child", nil)
+
 	// TODO-Klaytn-Servicechain need to add below metrics
 	// txReceiveCounter     = metrics.NewRegisteredCounter("klay/bridge/tx/recv/counter", nil)
 	// txResendCounter      = metrics.NewRegisteredCounter("klay/bridge/tx/resend/counter", nil)
