@@ -49,11 +49,11 @@ func (cce *ChildChainEventHandler) HandleChainHeadEvent(block *types.Block) erro
 	cBalance, _ := cce.handler.getChildOperatorBalance()
 
 	if pBalance != nil {
-		logger.Info("parentOperator balance", "number", pBalance)
+		logger.Info("parentOperator", "address", cce.handler.GetParentOperatorAddr(), "balance", pBalance)
 		parentOperatorBalanceGauge.Update(int64(pBalance.Int64()))
 	}
 	if cBalance != nil {
-		logger.Info("childOperator balance", "number", cBalance)
+		logger.Info("childOperator", "address", cce.handler.GetChildOperatorAddr(), "balance", cBalance)
 		childOperatorBalanceGauge.Update(int64(cBalance.Int64()))
 	}
 
