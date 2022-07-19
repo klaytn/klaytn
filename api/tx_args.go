@@ -186,7 +186,7 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 			args.MaxFeePerGas = (*hexutil.Big)(gasFeeCap)
 		}
 		if isMagma {
-			if args.MaxFeePerGas.ToInt().Cmp(gasPrice) < 0 {
+			if args.MaxFeePerGas.ToInt().Cmp(new(big.Int).Div(gasPrice, common.Big2)) < 0 {
 				return fmt.Errorf("maxFeePerGas (%v) < BaseFee (%v)", args.MaxFeePerGas, gasPrice)
 			}
 		} else if args.MaxPriorityFeePerGas.ToInt().Cmp(gasPrice) != 0 || args.MaxFeePerGas.ToInt().Cmp(gasPrice) != 0 {
