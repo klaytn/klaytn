@@ -282,7 +282,7 @@ func (b *CNAPIBackend) ProtocolVersion() int {
 // Other cases, it returns the unitPrice.
 func (b *CNAPIBackend) SuggestPrice(ctx context.Context) (*big.Int, error) {
 	suggestedPrice, _ := b.gpo.SuggestPrice(ctx)
-	if b.ChainConfig().IsMagmaForkEnabled(b.CurrentBlock().Number()) {
+	if b.ChainConfig().IsMagmaForkEnabled(new(big.Int).Add(b.CurrentBlock().Number(), common.Big1)) {
 		return new(big.Int).Mul(suggestedPrice, common.Big2), nil
 	}
 	return suggestedPrice, nil

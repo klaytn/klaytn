@@ -1113,14 +1113,8 @@ func (args *EthTransactionArgs) setDefaults(ctx context.Context, b Backend) erro
 				}
 				args.MaxFeePerGas = (*hexutil.Big)(gasFeeCap)
 			}
-			if isMagma {
-				if args.MaxFeePerGas.ToInt().Cmp(gasPrice) < 0 {
-					return fmt.Errorf("maxFeePerGas (%v) < BaseFee (%v)", args.MaxFeePerGas, gasPrice)
-				}
-			} else {
-				if args.MaxPriorityFeePerGas.ToInt().Cmp(gasPrice) != 0 || args.MaxFeePerGas.ToInt().Cmp(gasPrice) != 0 {
-					return fmt.Errorf("only %s is allowed to be used as maxFeePerGas and maxPriorityPerGas", gasPrice.Text(16))
-				}
+			if !isMagma && (args.MaxPriorityFeePerGas.ToInt().Cmp(gasPrice) != 0 || args.MaxFeePerGas.ToInt().Cmp(gasPrice) != 0) {
+				return fmt.Errorf("only %s is allowed to be used as maxFeePerGas and maxPriorityPerGas", gasPrice.Text(16))
 			}
 			if args.MaxFeePerGas.ToInt().Cmp(args.MaxPriorityFeePerGas.ToInt()) < 0 {
 				return fmt.Errorf("maxFeePerGas (%v) < maxPriorityFeePerGas (%v)", args.MaxFeePerGas, args.MaxPriorityFeePerGas)
