@@ -23,7 +23,7 @@ func VerifyMagmaHeader(config *params.ChainConfig, parentHeader, header *types.H
 	return nil
 }
 
-// If the upperBoundBaseFee is Odd number then the baseFee cna be upperBoundBaseFee + 1
+// If the upperBoundBaseFee is Odd number then the baseFee can be upperBoundBaseFee + 1
 func makeEven(baseFee *big.Int) *big.Int {
 	if baseFee.Bit(0) != 0 {
 		return baseFee.Add(baseFee, common.Big1)
