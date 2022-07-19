@@ -278,8 +278,14 @@ func (b *CNAPIBackend) ProtocolVersion() int {
 	return b.cn.ProtocolVersion()
 }
 
+// If current block is magma hard forked, it returns the baseFee * 2.
+// Other cases, it returns the unitPrice.
 func (b *CNAPIBackend) SuggestPrice(ctx context.Context) (*big.Int, error) {
-	return b.gpo.SuggestPrice(ctx)
+	suggestedPrice, _ := b.gpo.SuggestPrice(ctx)
+	if b.ChainConfig().IsMagmaForkEnabled(b.CurrentBlock().Number()) {
+		return new(big.Int).Mul(suggestedPrice, common.Big2), nil
+	}
+	return suggestedPrice, nil
 }
 
 func (b *CNAPIBackend) UpperBoundGasPrice(ctx context.Context) *big.Int {

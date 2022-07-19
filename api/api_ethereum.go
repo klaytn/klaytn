@@ -1109,7 +1109,7 @@ func (args *EthTransactionArgs) setDefaults(ctx context.Context, b Backend) erro
 				)
 				if isMagma {
 					// After Magma hard fork, `gasFeeCap` was set to `baseFee*2` by default.
-					gasFeeCap = new(big.Int).Mul(gasPrice, big.NewInt(2))
+					gasFeeCap = gasPrice
 				}
 				args.MaxFeePerGas = (*hexutil.Big)(gasFeeCap)
 			}
