@@ -23,6 +23,14 @@ func VerifyMagmaHeader(config *params.ChainConfig, parentHeader, header *types.H
 	return nil
 }
 
+// If the upperBoundBaseFee is Odd number then the baseFee cna be upperBoundBaseFee + 1
+func makeEven(baseFee *big.Int) *big.Int {
+	if baseFee.Bit(0) != 0 {
+		return baseFee.Add(baseFee, common.Big1)
+	}
+	return baseFee
+}
+
 func NextBlockBaseFee(parentHeader *types.Header, config *params.ChainConfig) *big.Int {
 	// governance parameters
 	lowerBoundBaseFee := new(big.Int).SetUint64(config.Governance.KIP71.LowerBoundBaseFee)
@@ -30,7 +38,7 @@ func NextBlockBaseFee(parentHeader *types.Header, config *params.ChainConfig) *b
 
 	// If the parent is the magma disabled block or genesis, then return the lowerBoundBaseFee (default 25ston)
 	if !config.IsMagmaForkEnabled(parentHeader.Number) || parentHeader.Number.Cmp(new(big.Int).SetUint64(0)) == 0 {
-		return lowerBoundBaseFee
+		return makeEven(lowerBoundBaseFee)
 	}
 
 	var baseFeeDenominator *big.Int
@@ -57,11 +65,11 @@ func NextBlockBaseFee(parentHeader *types.Header, config *params.ChainConfig) *b
 		parentGasUsed = upperGasLimit
 	}
 	if parentGasUsed == gasTarget {
-		return new(big.Int).Set(parentBaseFee)
+		return makeEven(parentBaseFee)
 	} else if parentGasUsed > gasTarget {
 		// shortcut. If parentBaseFee is already reached upperbound, do not calculate.
 		if parentBaseFee.Cmp(upperBoundBaseFee) == 0 {
-			return upperBoundBaseFee
+			return makeEven(upperBoundBaseFee)
 		}
 		// If the parent block used more gas than its target,
 		// the baseFee of the next block should increase.
@@ -73,13 +81,13 @@ func NextBlockBaseFee(parentHeader *types.Header, config *params.ChainConfig) *b
 
 		nextBaseFee := x.Add(parentBaseFee, baseFeeDelta)
 		if nextBaseFee.Cmp(upperBoundBaseFee) > 0 {
-			return upperBoundBaseFee
+			return makeEven(upperBoundBaseFee)
 		}
-		return nextBaseFee
+		return makeEven(nextBaseFee)
 	} else {
 		// shortcut. If parentBaseFee is already reached lower bound, do not calculate.
 		if parentBaseFee.Cmp(lowerBoundBaseFee) == 0 {
-			return lowerBoundBaseFee
+			return makeEven(lowerBoundBaseFee)
 		}
 		// Otherwise if the parent block used less gas than its target,
 		// the baseFee of the next block should decrease.
@@ -91,8 +99,8 @@ func NextBlockBaseFee(parentHeader *types.Header, config *params.ChainConfig) *b
 
 		nextBaseFee := x.Sub(parentBaseFee, baseFeeDelta)
 		if nextBaseFee.Cmp(lowerBoundBaseFee) < 0 {
-			return lowerBoundBaseFee
+			return makeEven(lowerBoundBaseFee)
 		}
-		return nextBaseFee
+		return makeEven(nextBaseFee)
 	}
 }
