@@ -162,7 +162,6 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 		if err != nil {
 			return err
 		}
-		price = new(big.Int).Mul(price, common.Big2)
 		args.Price = (*hexutil.Big)(price)
 	}
 
