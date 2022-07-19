@@ -24,8 +24,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math/big"
 
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
+	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/rlp"
@@ -42,9 +44,10 @@ func NewPublicKlayAPI(b Backend) *PublicKlayAPI {
 	return &PublicKlayAPI{b}
 }
 
-// GasPrice returns a suggestion for a gas price.
+// GasPrice returns a suggestion for a gas price (baseFee * 2).
 func (s *PublicKlayAPI) GasPrice(ctx context.Context) (*hexutil.Big, error) {
 	price, err := s.b.SuggestPrice(ctx)
+	price = new(big.Int).Mul(price, common.Big2)
 	return (*hexutil.Big)(price), err
 }
 
