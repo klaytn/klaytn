@@ -219,10 +219,8 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 		if err := misc.VerifyMagmaHeader(parents[len(parents)-1], header, kip71); err != nil {
 			return err
 		}
-	} else {
-		if header.BaseFee != nil {
-			return consensus.ErrInvalidBaseFee
-		}
+	} else if header.BaseFee != nil {
+		return consensus.ErrInvalidBaseFee
 	}
 
 	// Don't waste time checking blocks from the future
