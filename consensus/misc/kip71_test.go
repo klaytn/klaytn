@@ -88,7 +88,9 @@ func TestEvenBaseFee(t *testing.T) {
 			GasUsed: test.parentGasUsed,
 			BaseFee: new(big.Int).SetUint64(test.parentBaseFee),
 		}
+    
 		even := NextMagmaBlockBaseFee(parent, testConfig.Governance.KIP71)
+
 		// even check
 		if even.Bit(0) != 0 {
 			t.Errorf("NextBlockBaseFee:%d is not a even number", even)
