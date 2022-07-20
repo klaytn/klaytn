@@ -132,22 +132,19 @@ func (m *Memory) Print() {
 	fmt.Println("####################")
 }
 
-func (m *Memory) Slice(from, to int64) []byte {
-	if from == to {
+func (m *Memory) Slice(begin, end int64) []byte {
+	if end == begin {
 		return []byte{}
 	}
-	if to < from || from < 0 {
+	if end < begin || begin < 0 {
+		logger.Warn("Tracer accessed out of bound memory", "offset", begin, "end", end)
 		return nil
 	}
-	if from > int64(m.Len()) {
+	if m.Len() < int(end) {
+		// TODO(karalabe): We can't js-throw from Go inside duktape inside Go. The Go
+		// runtime goes belly up https://github.com/golang/go/issues/15639.
+		logger.Warn("Tracer accessed out of bound memory", "available", m.Len(), "offset", begin, "size", end-begin)
 		return nil
 	}
-	if to > int64(m.Len()) {
-		to = int64(m.Len())
-	}
-
-	sliced := m.store[from:to]
-	copied := make([]byte, len(sliced))
-	copy(copied, sliced)
-	return copied
+	return m.GetCopy(begin, end-begin)
 }
