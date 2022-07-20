@@ -23,7 +23,6 @@ func VerifyMagmaHeader(config *params.ChainConfig, parentHeader, header *types.H
 	return nil
 }
 
-// If the upperBoundBaseFee is Odd number then the baseFee cna be upperBoundBaseFee + 1
 func makeEvenByDown(baseFee *big.Int) *big.Int {
 	if baseFee.Bit(0) != 0 {
 		baseFee.Rsh(baseFee, 1)
