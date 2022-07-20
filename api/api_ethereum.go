@@ -1241,6 +1241,9 @@ func (args *EthTransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int,
 		} else if args.MaxFeePerGas != nil {
 			// User specified 1559 gas fields (or none), use those
 			gasPrice = args.MaxFeePerGas.ToInt()
+		} else {
+			// User specified neither GasPrice nor MaxFeePerGas, use baseFee
+			gasPrice = new(big.Int).Mul(baseFee, common.Big2)
 		}
 	}
 
@@ -1577,6 +1580,9 @@ func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrO
 	msg, err := args.ToMessage(globalGasCap, baseFee, intrinsicGas)
 	if err != nil {
 		return nil, 0, 0, err
+	}
+	if args.From == nil {
+		st.AddBalance(msg.ValidatedSender(), new(big.Int).Mul(new(big.Int).SetUint64(msg.Gas()), msg.GasPrice()))
 	}
 	// The intrinsicGas is checked again later in the blockchain.ApplyMessage function,
 	// but we check in advance here in order to keep StateTransition.TransactionDb method as unchanged as possible

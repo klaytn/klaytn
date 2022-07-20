@@ -705,6 +705,9 @@ func (args *CallArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsic
 		} else if args.MaxFeePerGas != nil {
 			// User specified 1559 gas fields (or none), use those
 			gasPrice = args.MaxFeePerGas.ToInt()
+		} else {
+			// User specified neither GasPrice nor MaxFeePerGas, use baseFee
+			gasPrice = new(big.Int).Mul(baseFee, common.Big2)
 		}
 	}
 	value := new(big.Int)
