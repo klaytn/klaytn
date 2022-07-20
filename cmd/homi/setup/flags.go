@@ -323,7 +323,7 @@ var (
 	magmaBaseFeeDenominator = cli.Uint64Flag{
 		Name:  "base-fee-denominator",
 		Usage: "base fee denominator flag",
-		Value: params.DefaultLowerBoundBaseFee,
+		Value: params.DefaultBaseFeeDenominator,
 	}
 
 	istEpochFlag = cli.Uint64Flag{
