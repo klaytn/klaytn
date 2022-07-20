@@ -34,7 +34,6 @@ func makeEvenByDown(baseFee *big.Int) *big.Int {
 func makeEvenByUp(baseFee *big.Int) *big.Int {
 	if baseFee.Bit(0) != 0 {
 		baseFee.Add(baseFee, common.Big1)
-		return baseFee
 	}
 	return baseFee
 }
