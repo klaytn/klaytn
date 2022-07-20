@@ -10,12 +10,12 @@ import (
 	"github.com/klaytn/klaytn/params"
 )
 
-func VerifyMagmaHeader(config *params.ChainConfig, parentHeader, header *types.Header) error {
+func VerifyMagmaHeader(parentHeader, header *types.Header, kip71Config *params.KIP71Config) error {
 	if header.BaseFee == nil {
 		return fmt.Errorf("header is missing baseFee")
 	}
 	// Verify the baseFee is correct based on the parent header.
-	expectedBaseFee := NextBlockBaseFee(parentHeader, config)
+	expectedBaseFee := NextMagmaBlockBaseFee(parentHeader, kip71Config)
 	if header.BaseFee.Cmp(expectedBaseFee) != 0 {
 		return fmt.Errorf("invalid baseFee: have %s, want %s, parentBaseFee %s, parentGasUsed %d",
 			header.BaseFee, expectedBaseFee, parentHeader.BaseFee, parentHeader.GasUsed)
@@ -23,25 +23,42 @@ func VerifyMagmaHeader(config *params.ChainConfig, parentHeader, header *types.H
 	return nil
 }
 
-func NextBlockBaseFee(parentHeader *types.Header, config *params.ChainConfig) *big.Int {
+func makeEvenByDown(baseFee *big.Int) *big.Int {
+	if baseFee.Bit(0) != 0 {
+		baseFee.Rsh(baseFee, 1)
+		baseFee.Lsh(baseFee, 1)
+	}
+	return baseFee
+}
+
+func makeEvenByUp(baseFee *big.Int) *big.Int {
+	if baseFee.Bit(0) != 0 {
+		baseFee.Add(baseFee, common.Big1)
+	}
+	return baseFee
+}
+
+func NextMagmaBlockBaseFee(parentHeader *types.Header, kip71Config *params.KIP71Config) *big.Int {
 	// governance parameters
-	lowerBoundBaseFee := new(big.Int).SetUint64(config.Governance.KIP71.LowerBoundBaseFee)
-	upperBoundBaseFee := new(big.Int).SetUint64(config.Governance.KIP71.UpperBoundBaseFee)
+	lowerBoundBaseFee := new(big.Int).SetUint64(kip71Config.LowerBoundBaseFee)
+	upperBoundBaseFee := new(big.Int).SetUint64(kip71Config.UpperBoundBaseFee)
+	makeEvenByUp(lowerBoundBaseFee)
+	makeEvenByDown(upperBoundBaseFee)
 
 	// If the parent is the magma disabled block or genesis, then return the lowerBoundBaseFee (default 25ston)
-	if !config.IsMagmaForkEnabled(parentHeader.Number) || parentHeader.Number.Cmp(new(big.Int).SetUint64(0)) == 0 {
+	if parentHeader.Number.Cmp(new(big.Int).SetUint64(0)) == 0 || parentHeader.BaseFee == nil {
 		return lowerBoundBaseFee
 	}
 
 	var baseFeeDenominator *big.Int
-	if config.Governance.KIP71.BaseFeeDenominator == 0 {
+	if kip71Config.BaseFeeDenominator == 0 {
 		// To avoid panic, set the fluctuation range small
 		baseFeeDenominator = new(big.Int).SetUint64(64)
 	} else {
-		baseFeeDenominator = new(big.Int).SetUint64(config.Governance.KIP71.BaseFeeDenominator)
+		baseFeeDenominator = new(big.Int).SetUint64(kip71Config.BaseFeeDenominator)
 	}
-	gasTarget := config.Governance.KIP71.GasTarget
-	upperGasLimit := config.Governance.KIP71.MaxBlockGasUsedForBaseFee
+	gasTarget := kip71Config.GasTarget
+	upperGasLimit := kip71Config.MaxBlockGasUsedForBaseFee
 
 	// check the case of upper/lowerBoundBaseFee is updated by governance mechanism
 	parentBaseFee := parentHeader.BaseFee
@@ -57,7 +74,7 @@ func NextBlockBaseFee(parentHeader *types.Header, config *params.ChainConfig) *b
 		parentGasUsed = upperGasLimit
 	}
 	if parentGasUsed == gasTarget {
-		return new(big.Int).Set(parentBaseFee)
+		return makeEvenByDown(parentBaseFee)
 	} else if parentGasUsed > gasTarget {
 		// shortcut. If parentBaseFee is already reached upperbound, do not calculate.
 		if parentBaseFee.Cmp(upperBoundBaseFee) == 0 {
@@ -75,7 +92,7 @@ func NextBlockBaseFee(parentHeader *types.Header, config *params.ChainConfig) *b
 		if nextBaseFee.Cmp(upperBoundBaseFee) > 0 {
 			return upperBoundBaseFee
 		}
-		return nextBaseFee
+		return makeEvenByDown(nextBaseFee)
 	} else {
 		// shortcut. If parentBaseFee is already reached lower bound, do not calculate.
 		if parentBaseFee.Cmp(lowerBoundBaseFee) == 0 {
@@ -93,6 +110,6 @@ func NextBlockBaseFee(parentHeader *types.Header, config *params.ChainConfig) *b
 		if nextBaseFee.Cmp(lowerBoundBaseFee) < 0 {
 			return lowerBoundBaseFee
 		}
-		return nextBaseFee
+		return makeEvenByDown(nextBaseFee)
 	}
 }

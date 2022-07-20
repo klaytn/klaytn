@@ -240,7 +240,7 @@ func makeHeader(chain consensus.ChainReader, parent *types.Block, state *state.S
 		Time:   time,
 	}
 	if chain.Config().IsMagmaForkEnabled(header.Number) {
-		header.BaseFee = misc.NextBlockBaseFee(parent.Header(), chain.Config())
+		header.BaseFee = misc.NextMagmaBlockBaseFee(parent.Header(), chain.Config().Governance.KIP71)
 	}
 	return header
 }

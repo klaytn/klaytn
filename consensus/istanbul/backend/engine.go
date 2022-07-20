@@ -182,35 +182,6 @@ func (sb *backend) VerifyHeader(chain consensus.ChainReader, header *types.Heade
 	return sb.verifyHeader(chain, header, parent)
 }
 
-func getCopiedKIP71ConfigAt(sb *backend, config *params.ChainConfig, blockNum uint64) (*params.ChainConfig, error) {
-	_, data, err := sb.governance.ReadGovernance(blockNum)
-	if err != nil {
-		return nil, err
-	}
-
-	kip71 := params.GetDefaultKIP71Config()
-	gkmr := governance.GovernanceKeyMapReverse
-	if l := data[gkmr[params.LowerBoundBaseFee]]; l != nil {
-		kip71.LowerBoundBaseFee = l.(uint64)
-	}
-	if u := data[gkmr[params.UpperBoundBaseFee]]; u != nil {
-		kip71.UpperBoundBaseFee = u.(uint64)
-	}
-	if g := data[gkmr[params.GasTarget]]; g != nil {
-		kip71.GasTarget = g.(uint64)
-	}
-	if b := data[gkmr[params.BaseFeeDenominator]]; b != nil {
-		kip71.BaseFeeDenominator = b.(uint64)
-	}
-	if m := data[gkmr[params.MaxBlockGasUsedForBaseFee]]; m != nil {
-		kip71.MaxBlockGasUsedForBaseFee = m.(uint64)
-	}
-
-	copiedConfig := config.Copy()
-	copiedConfig.Governance.KIP71 = kip71
-	return copiedConfig, nil
-}
-
 // verifyHeader checks whether a header conforms to the consensus rules.The
 // caller may optionally pass in a batch of parents (ascending order) to avoid
 // looking those up from the database. This is useful for concurrently verifying
@@ -221,17 +192,36 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 	}
 
 	// Header verify before/after magma fork
-	if !chain.Config().IsMagmaForkEnabled(header.Number) {
-		if header.BaseFee != nil {
-			return consensus.ErrInvalidBaseFee
-		}
-	} else {
-		kip71ConfigAt, err := getCopiedKIP71ConfigAt(sb, chain.Config(), header.Number.Uint64())
+	if chain.Config().IsMagmaForkEnabled(header.Number) {
+		_, data, err := sb.governance.ReadGovernance(header.Number.Uint64())
 		if err != nil {
 			return err
 		}
-		if err := misc.VerifyMagmaHeader(kip71ConfigAt, parents[len(parents)-1], header); err != nil {
+
+		kip71 := params.GetDefaultKIP71Config()
+		gkmr := governance.GovernanceKeyMapReverse
+		if l := data[gkmr[params.LowerBoundBaseFee]]; l != nil {
+			kip71.LowerBoundBaseFee = l.(uint64)
+		}
+		if u := data[gkmr[params.UpperBoundBaseFee]]; u != nil {
+			kip71.UpperBoundBaseFee = u.(uint64)
+		}
+		if g := data[gkmr[params.GasTarget]]; g != nil {
+			kip71.GasTarget = g.(uint64)
+		}
+		if b := data[gkmr[params.BaseFeeDenominator]]; b != nil {
+			kip71.BaseFeeDenominator = b.(uint64)
+		}
+		if m := data[gkmr[params.MaxBlockGasUsedForBaseFee]]; m != nil {
+			kip71.MaxBlockGasUsedForBaseFee = m.(uint64)
+		}
+
+		if err := misc.VerifyMagmaHeader(parents[len(parents)-1], header, kip71); err != nil {
 			return err
+		}
+	} else {
+		if header.BaseFee != nil {
+			return consensus.ErrInvalidBaseFee
 		}
 	}
 
