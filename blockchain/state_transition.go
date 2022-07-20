@@ -394,13 +394,6 @@ func (st *StateTransition) refundGas() {
 	// Return KLAY for remaining gas, exchanged at the original rate.
 	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.gas), st.gasPrice)
 
-	// remaining := new(big.Int)
-	// if st.evm.ChainConfig().IsMagmaForkEnabled(st.evm.BlockNumber) {
-	// 	remaining = remaining.Mul(new(big.Int).SetUint64(st.gas), st.evm.BaseFee)
-	// } else {
-	// 	remaining = remaining.Mul(new(big.Int).SetUint64(st.gas), st.gasPrice)
-	// }
-
 	validatedFeePayer := st.msg.ValidatedFeePayer()
 	validatedSender := st.msg.ValidatedSender()
 	feeRatio, isRatioTx := st.msg.FeeRatio()

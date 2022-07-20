@@ -690,6 +690,7 @@ func (args *CallArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsic
 		gas = globalGasCap
 	}
 
+	// gasPrice is 0 if the user don't specified any fields.
 	gasPrice := new(big.Int)
 	if baseFee.Cmp(new(big.Int).SetUint64(params.ZeroBaseFee)) == 0 {
 		// If baseFee is zero, then it must be a magma hardfork
@@ -704,9 +705,6 @@ func (args *CallArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsic
 		} else if args.MaxFeePerGas != nil {
 			// User specified 1559 gas fields (or none), use those
 			gasPrice = args.MaxFeePerGas.ToInt()
-		} else {
-			// User specified neither GasPrice nor MaxFeePerGas, use baseFee
-			gasPrice = new(big.Int).Mul(baseFee, common.Big2)
 		}
 	}
 	value := new(big.Int)
