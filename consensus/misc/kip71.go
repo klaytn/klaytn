@@ -23,10 +23,27 @@ func VerifyMagmaHeader(config *params.ChainConfig, parentHeader, header *types.H
 	return nil
 }
 
+func makeEvenByDown(baseFee *big.Int) *big.Int {
+	if baseFee.Bit(0) != 0 {
+		baseFee.Rsh(baseFee, 1)
+		baseFee.Lsh(baseFee, 1)
+	}
+	return baseFee
+}
+
+func makeEvenByUp(baseFee *big.Int) *big.Int {
+	if baseFee.Bit(0) != 0 {
+		baseFee.Add(baseFee, common.Big1)
+	}
+	return baseFee
+}
+
 func NextBlockBaseFee(parentHeader *types.Header, config *params.ChainConfig) *big.Int {
 	// governance parameters
 	lowerBoundBaseFee := new(big.Int).SetUint64(config.Governance.KIP71.LowerBoundBaseFee)
 	upperBoundBaseFee := new(big.Int).SetUint64(config.Governance.KIP71.UpperBoundBaseFee)
+	makeEvenByUp(lowerBoundBaseFee)
+	makeEvenByDown(upperBoundBaseFee)
 
 	// If the parent is the magma disabled block or genesis, then return the lowerBoundBaseFee (default 25ston)
 	if !config.IsMagmaForkEnabled(parentHeader.Number) || parentHeader.Number.Cmp(new(big.Int).SetUint64(0)) == 0 {
@@ -57,7 +74,7 @@ func NextBlockBaseFee(parentHeader *types.Header, config *params.ChainConfig) *b
 		parentGasUsed = upperGasLimit
 	}
 	if parentGasUsed == gasTarget {
-		return new(big.Int).Set(parentBaseFee)
+		return makeEvenByDown(parentBaseFee)
 	} else if parentGasUsed > gasTarget {
 		// shortcut. If parentBaseFee is already reached upperbound, do not calculate.
 		if parentBaseFee.Cmp(upperBoundBaseFee) == 0 {
@@ -75,7 +92,7 @@ func NextBlockBaseFee(parentHeader *types.Header, config *params.ChainConfig) *b
 		if nextBaseFee.Cmp(upperBoundBaseFee) > 0 {
 			return upperBoundBaseFee
 		}
-		return nextBaseFee
+		return makeEvenByDown(nextBaseFee)
 	} else {
 		// shortcut. If parentBaseFee is already reached lower bound, do not calculate.
 		if parentBaseFee.Cmp(lowerBoundBaseFee) == 0 {
@@ -93,6 +110,6 @@ func NextBlockBaseFee(parentHeader *types.Header, config *params.ChainConfig) *b
 		if nextBaseFee.Cmp(lowerBoundBaseFee) < 0 {
 			return lowerBoundBaseFee
 		}
-		return nextBaseFee
+		return makeEvenByDown(nextBaseFee)
 	}
 }
