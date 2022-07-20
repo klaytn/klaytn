@@ -340,6 +340,29 @@ func testSetNonce(pool *TxPool, addr common.Address, nonce uint64) {
 	pool.mu.Unlock()
 }
 
+func TestHomesteadTransaction(t *testing.T) {
+	t.Parallel()
+	baseFee := big.NewInt(30)
+
+	pool, _ := setupTxPoolWithConfig(kip71Config)
+	defer pool.Stop()
+	pool.SetBaseFee(baseFee)
+
+	rlpTx := common.Hex2Bytes("f87e8085174876e800830186a08080ad601f80600e600039806000f350fe60003681823780368234f58015156014578182fd5b80825250506014600cf31ba02222222222222222222222222222222222222222222222222222222222222222a02222222222222222222222222222222222222222222222222222222222222222")
+	tx := new(types.Transaction)
+
+	err := rlp.DecodeBytes(rlpTx, tx)
+	assert.NoError(t, err)
+
+	from, err := types.EIP155Signer{}.Sender(tx)
+	assert.NoError(t, err)
+	assert.Equal(t, "0x4c8D290a1B368ac4728d83a9e8321fC3af2b39b1", from.String())
+
+	testAddBalance(pool, from, new(big.Int).Mul(big.NewInt(10), big.NewInt(params.KLAY)))
+	err = pool.AddRemote(tx)
+	assert.NoError(t, err)
+}
+
 func TestInvalidTransactions(t *testing.T) {
 	t.Parallel()
 

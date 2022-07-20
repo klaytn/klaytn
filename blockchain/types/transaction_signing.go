@@ -431,7 +431,7 @@ func (s eip2930Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *bi
 		return nil, nil, nil, ErrInvalidChainId
 	}
 
-	R, S = decodeSignature(sig)
+	R, S, _ = decodeSignature(sig)
 	V = big.NewInt(int64(sig[64]))
 
 	return R, S, V, nil
@@ -458,6 +458,96 @@ func (s eip2930Signer) Hash(tx *Transaction) common.Hash {
 // It does not uniquely identify the transaction.
 func (s eip2930Signer) HashFeePayer(tx *Transaction) (common.Hash, error) {
 	return s.EIP155Signer.HashFeePayer(tx)
+}
+
+type FrontierSigner struct{}
+
+func (s FrontierSigner) ChainID() *big.Int {
+	return nil
+}
+
+func (s FrontierSigner) Equal(s2 Signer) bool {
+	_, ok := s2.(FrontierSigner)
+	return ok
+}
+
+func (fs FrontierSigner) Sender(tx *Transaction) (common.Address, error) {
+	if !tx.IsLegacyTransaction() {
+		return common.Address{}, ErrTxTypeNotSupported
+	}
+	sigs := tx.RawSignatureValues()
+	if len(sigs) != 1 {
+		return common.Address{}, ErrShouldBeSingleSignature
+	}
+	v, r, s := sigs[0].V, sigs[0].R, sigs[0].S
+	return recoverPlain(fs.Hash(tx), r, s, v, false)
+}
+
+func (fs FrontierSigner) SenderPubkey(tx *Transaction) ([]*ecdsa.PublicKey, error) {
+	return nil, ErrSenderPubkeyNotSupported
+}
+
+func (fs FrontierSigner) SenderFeePayer(tx *Transaction) ([]*ecdsa.PublicKey, error) {
+	return nil, ErrSenderFeePayerNotSupported
+}
+
+// SignatureValues returns signature values. This signature
+// needs to be in the [R || S || V] format where V is 0 or 1.
+func (fs FrontierSigner) SignatureValues(tx *Transaction, sig []byte) (r, s, v *big.Int, err error) {
+	if tx.IsLegacyTransaction() {
+		return nil, nil, nil, ErrTxTypeNotSupported
+	}
+	r, s, v = decodeSignature(sig)
+	return r, s, v, nil
+}
+
+// Hash returns the hash to be signed by the sender.
+// It does not uniquely identify the transaction.
+func (fs FrontierSigner) Hash(tx *Transaction) common.Hash {
+	return rlpHash([]interface{}{
+		tx.Nonce(),
+		tx.GasPrice(),
+		tx.Gas(),
+		tx.To(),
+		tx.Value(),
+		tx.Data(),
+	})
+}
+
+func (fs FrontierSigner) HashFeePayer(tx *Transaction) (common.Hash, error) {
+	return common.Hash{}, ErrHashFeePayerNotSupported
+}
+
+// HomesteadTransaction implements TransactionInterface using the
+// homestead rules.
+type HomesteadSigner struct{ FrontierSigner }
+
+func (s HomesteadSigner) ChainID() *big.Int {
+	return nil
+}
+
+func (s HomesteadSigner) Equal(s2 Signer) bool {
+	_, ok := s2.(HomesteadSigner)
+	return ok
+}
+
+// SignatureValues returns signature values. This signature
+// needs to be in the [R || S || V] format where V is 0 or 1.
+func (hs HomesteadSigner) SignatureValues(tx *Transaction, sig []byte) (r, s, v *big.Int, err error) {
+	return hs.FrontierSigner.SignatureValues(tx, sig)
+}
+
+func (hs HomesteadSigner) Sender(tx *Transaction) (common.Address, error) {
+	if !tx.IsLegacyTransaction() {
+		return common.Address{}, ErrTxTypeNotSupported
+	}
+	sigs := tx.RawSignatureValues()
+	if len(sigs) != 1 {
+		return common.Address{}, ErrShouldBeSingleSignature
+	}
+	v, r, s := sigs[0].V, sigs[0].R, sigs[0].S
+
+	return recoverPlain(hs.Hash(tx), r, s, v, true)
 }
 
 // EIP155Transaction implements Signer using the EIP155 rules.
@@ -490,6 +580,10 @@ var big8 = big.NewInt(8)
 func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
 	if tx.IsEthTypedTransaction() {
 		return common.Address{}, ErrTxTypeNotSupported
+	}
+
+	if !tx.Protected() {
+		return HomesteadSigner{}.Sender(tx)
 	}
 
 	if !tx.IsLegacyTransaction() {
@@ -562,7 +656,7 @@ func (s EIP155Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big
 		return nil, nil, nil, ErrTxTypeNotSupported
 	}
 
-	R, S = decodeSignature(sig)
+	R, S, _ = decodeSignature(sig)
 	V = big.NewInt(int64(sig[crypto.RecoveryIDOffset] + 35))
 	V.Add(V, s.chainIdMul)
 
@@ -686,11 +780,12 @@ func deriveChainId(v *big.Int) *big.Int {
 	return v.Div(v, common.Big2)
 }
 
-func decodeSignature(sig []byte) (r, s *big.Int) {
+func decodeSignature(sig []byte) (r, s, v *big.Int) {
 	if len(sig) != crypto.SignatureLength {
 		panic(fmt.Sprintf("wrong size for signature: got %d, want %d", len(sig), crypto.SignatureLength))
 	}
 	r = new(big.Int).SetBytes(sig[:32])
 	s = new(big.Int).SetBytes(sig[32:64])
-	return r, s
+	v = new(big.Int).SetBytes([]byte{sig[64] + 27})
+	return r, s, v
 }
