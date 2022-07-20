@@ -42,7 +42,7 @@ func NewPublicKlayAPI(b Backend) *PublicKlayAPI {
 	return &PublicKlayAPI{b}
 }
 
-// GasPrice returns a suggestion for a gas price.
+// GasPrice returns a suggestion for a gas price (baseFee * 2).
 func (s *PublicKlayAPI) GasPrice(ctx context.Context) (*hexutil.Big, error) {
 	price, err := s.b.SuggestPrice(ctx)
 	return (*hexutil.Big)(price), err
