@@ -178,6 +178,10 @@ func (tx *Transaction) SenderTxHashAll() common.Hash {
 func validateSignature(v, r, s *big.Int) bool {
 	// TODO-Klaytn: Need to consider the case v.BitLen() > 64.
 	// Since ValidateSignatureValues receives v as type of byte, leave it as a future work.
+	if v != nil && !isProtectedV(v) {
+		return crypto.ValidateSignatureValues(byte(v.Uint64()-27), r, s, true)
+	}
+
 	chainID := deriveChainId(v).Uint64()
 	V := byte(v.Uint64() - 35 - 2*chainID)
 
@@ -325,6 +329,24 @@ func (tx *Transaction) IsLegacyTransaction() bool   { return tx.Type().IsLegacyT
 func (tx *Transaction) IsEthTypedTransaction() bool { return tx.Type().IsEthTypedTransaction() }
 func (tx *Transaction) IsEthereumTransaction() bool {
 	return tx.Type().IsEthereumTransaction()
+}
+
+func isProtectedV(V *big.Int) bool {
+	if V.BitLen() <= 8 {
+		v := V.Uint64()
+		return v != 27 && v != 28 && v != 1 && v != 0
+	}
+	// anything not 27 or 28 is considered protected
+	return true
+}
+
+// Protected says whether the transaction is replay-protected.
+func (tx *Transaction) Protected() bool {
+	if tx.IsLegacyTransaction() {
+		v := tx.RawSignatureValues()[0].V
+		return v != nil && isProtectedV(v)
+	}
+	return true
 }
 
 func (tx *Transaction) ValidatedSender() common.Address {

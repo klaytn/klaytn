@@ -212,6 +212,17 @@ func TestEIP2930Signer(t *testing.T) {
 	}
 }
 
+func TestHomesteadSigner(t *testing.T) {
+	rlpTx := common.Hex2Bytes("f87e8085174876e800830186a08080ad601f80600e600039806000f350fe60003681823780368234f58015156014578182fd5b80825250506014600cf31ba02222222222222222222222222222222222222222222222222222222222222222a02222222222222222222222222222222222222222222222222222222222222222")
+
+	tx, err := decodeTx(rlpTx)
+	assert.NoError(t, err)
+
+	addr, err := EIP155Signer{}.Sender(tx)
+	assert.NoError(t, err)
+	assert.Equal(t, "0x4c8D290a1B368ac4728d83a9e8321fC3af2b39b1", addr.String())
+}
+
 // This test checks signature operations on dynamic fee transactions.
 func TestLondonSigner(t *testing.T) {
 	var (

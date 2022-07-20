@@ -670,7 +670,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	gasFeePayer := uint64(0)
 
 	// Check chain Id first.
-	if tx.ChainId().Cmp(pool.chainconfig.ChainID) != 0 {
+	if tx.Protected() && tx.ChainId().Cmp(pool.chainconfig.ChainID) != 0 {
 		return ErrInvalidChainId
 	}
 
