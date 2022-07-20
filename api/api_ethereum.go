@@ -1226,7 +1226,7 @@ func (args *EthTransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int,
 		gas = globalGasCap
 	}
 
-	// gasPrice is 0 if the user don't specified any fields.
+	// Do not update gasPrice unless any of args.GasPrice and args.MaxFeePerGas is specified.
 	gasPrice := new(big.Int)
 	if baseFee.Cmp(new(big.Int).SetUint64(params.ZeroBaseFee)) == 0 {
 		// If there's no basefee, then it must be a non-1559 execution
