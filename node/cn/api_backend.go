@@ -278,7 +278,7 @@ func (b *CNAPIBackend) ProtocolVersion() int {
 	return b.cn.ProtocolVersion()
 }
 
-// If current block is magma hard forked, it returns the baseFee * 2.
+// SuggestPrice returns the baseFee * 2 if the current block is magma hard forked.
 // Other cases, it returns the unitPrice.
 func (b *CNAPIBackend) SuggestPrice(ctx context.Context) (*big.Int, error) {
 	return b.gpo.SuggestPrice(ctx)
