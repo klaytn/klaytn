@@ -88,7 +88,7 @@ func TestEvenBaseFee(t *testing.T) {
 			GasUsed: test.parentGasUsed,
 			BaseFee: new(big.Int).SetUint64(test.parentBaseFee),
 		}
-		even := NextBlockBaseFee(parent, testConfig)
+		even := NextMagmaBlockBaseFee(parent, testConfig.Governance.KIP71)
 		// even check
 		if even.Bit(0) != 0 {
 			t.Errorf("NextBlockBaseFee:%d is not a even number", even)
@@ -120,7 +120,10 @@ func TestNextBlockBaseFee(t *testing.T) {
 			GasUsed: test.parentGasUsed,
 			BaseFee: big.NewInt(test.parentBaseFee),
 		}
-		if have, want := NextBlockBaseFee(parent, getTestConfig(big.NewInt(3))), big.NewInt(test.nextBaseFee); have.Cmp(want) != 0 {
+		if have, want := NextMagmaBlockBaseFee(
+			parent,
+			getTestConfig(big.NewInt(3)).Governance.KIP71),
+			big.NewInt(test.nextBaseFee); have.Cmp(want) != 0 {
 			t.Errorf("test %d: have %d  want %d, ", i, have, want)
 		}
 	}
@@ -152,7 +155,7 @@ func TestNextBlockBaseFeeWhenGovernanceUpdated(t *testing.T) {
 			GasUsed: test.parentGasUsed,
 			BaseFee: big.NewInt(test.parentBaseFee),
 		}
-		if have, want := NextBlockBaseFee(parent, config), big.NewInt(test.nextBaseFee); have.Cmp(want) != 0 {
+		if have, want := NextMagmaBlockBaseFee(parent, config.Governance.KIP71), big.NewInt(test.nextBaseFee); have.Cmp(want) != 0 {
 			t.Errorf("test %d: have %d  want %d, ", i, have, want)
 		}
 	}
@@ -219,7 +222,7 @@ func blocksToReachExpectedBaseFee(t *testing.T, testCase BaseFeeTestCase) {
 			GasUsed: testCase.GasUsed,
 			BaseFee: parentBaseFee,
 		}
-		parentBaseFee = NextBlockBaseFee(parent, testConfig)
+		parentBaseFee = NextMagmaBlockBaseFee(parent, testConfig.Governance.KIP71)
 
 		if testCase.compMethod(parentBaseFee, testCase.expectedBaseFee) {
 			break
@@ -235,9 +238,8 @@ func TestInactieDynamicPolicyBeforeForkedBlock(t *testing.T) {
 	parent := &types.Header{
 		Number:  common.Big3,
 		GasUsed: 84000000,
-		BaseFee: parentBaseFee,
 	}
-	nextBaseFee := NextBlockBaseFee(parent, getTestConfig(big.NewInt(5)))
+	nextBaseFee := NextMagmaBlockBaseFee(parent, getTestConfig(big.NewInt(5)).Governance.KIP71)
 	if parentBaseFee.Cmp(nextBaseFee) < 0 {
 		t.Errorf("before fork, dynamic base fee policy should be inactive, current base fee: %d  next base fee: %d", parentBaseFee, nextBaseFee)
 	}
@@ -250,7 +252,7 @@ func TestActieDynamicPolicyAfterForkedBlock(t *testing.T) {
 		GasUsed: 84000000,
 		BaseFee: parentBaseFee,
 	}
-	nextBaseFee := NextBlockBaseFee(parent, getTestConfig(big.NewInt(2)))
+	nextBaseFee := NextMagmaBlockBaseFee(parent, getTestConfig(big.NewInt(2)).Governance.KIP71)
 	if parentBaseFee.Cmp(nextBaseFee) > 0 {
 		t.Errorf("after fork, dynamic base fee policy should be active, current base fee: %d  next base fee: %d", parentBaseFee, nextBaseFee)
 	}
@@ -269,7 +271,7 @@ func BenchmarkNextBlockBaseFeeRandom(b *testing.B) {
 		} else {
 			parent.GasUsed = 40000000
 		}
-		_ = NextBlockBaseFee(parent, getTestConfig(big.NewInt(2)))
+		_ = NextMagmaBlockBaseFee(parent, getTestConfig(big.NewInt(2)).Governance.KIP71)
 	}
 }
 
@@ -281,7 +283,7 @@ func BenchmarkNextBlockBaseFeeUpperBound(b *testing.B) {
 		BaseFee: parentBaseFee,
 	}
 	for i := 0; i < b.N; i++ {
-		_ = NextBlockBaseFee(parent, getTestConfig(big.NewInt(2)))
+		_ = NextMagmaBlockBaseFee(parent, getTestConfig(big.NewInt(2)).Governance.KIP71)
 	}
 }
 
@@ -293,6 +295,6 @@ func BenchmarkNextBlockBaseFeeLowerBound(b *testing.B) {
 		BaseFee: parentBaseFee,
 	}
 	for i := 0; i < b.N; i++ {
-		_ = NextBlockBaseFee(parent, getTestConfig(big.NewInt(2)))
+		_ = NextMagmaBlockBaseFee(parent, getTestConfig(big.NewInt(2)).Governance.KIP71)
 	}
 }
