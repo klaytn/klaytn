@@ -2,6 +2,7 @@ package database
 
 import (
 	"math/big"
+	"reflect"
 
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -59,25 +60,21 @@ func NewBridgeRequestEvent(tokenType uint8, from, to, tokenAddr common.Address,
 }
 
 func (ev BridgeRequestEvent) makeRPCOutput() map[string]interface{} {
-	// TODO-hyunsooda: Assign thru reflect loop
 	m := make(map[string]interface{})
-	var tokenType string
+	val := reflect.ValueOf(&ev).Elem()
+	for i := 0; i < reflect.TypeOf(&ev).Elem().NumField(); i++ {
+		fieldName := val.Type().Field(i).Name
+		fieldVal := reflect.Indirect(val).FieldByName(fieldName)
+		m[fieldName] = fieldVal.Interface()
+	}
 	switch ev.TokenType {
 	case 0:
-		tokenType = "KLAY"
+		m["TokenType"] = "KLAY"
 	case 1:
-		tokenType = "ERC20"
+		m["TokenType"] = "ERC20"
 	case 2:
-		tokenType = "ERC721"
+		m["TokenType"] = "ERC721"
 	}
-	m["TokenType"] = tokenType
-	m["From"] = ev.From
-	m["To"] = ev.To
-	m["TokenAddr"] = ev.TokenAddr
-	m["ValueOrTokenId"] = ev.ValueOrTokenId
-	m["RequestNonce"] = ev.RequestNonce
-	m["Fee"] = ev.Fee
-	m["ExtraData"] = ev.ExtraData
 	return m
 }
 
@@ -86,7 +83,7 @@ func makeTxRPCOutput(tx *types.Transaction) map[string]interface{} {
 		return nil
 	}
 	output := tx.MakeRPCOutput()
-	output["hash"] = tx.Hash()
+	output["HandleTxHash"] = tx.Hash()
 	output["cost"] = tx.Cost()
 	output["fee"] = tx.Fee()
 	output["size"] = tx.Size()
