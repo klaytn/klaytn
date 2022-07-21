@@ -1,6 +1,7 @@
 package sc
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -20,6 +21,8 @@ type IRequestValueTransferEvent interface {
 	GetExtraData() []byte
 
 	GetRaw() types.Log
+
+	String() string
 }
 
 //////////////////// type RequestValueTransferEvent struct ////////////////////
@@ -68,6 +71,10 @@ func (rEv RequestValueTransferEvent) GetRaw() types.Log {
 	return rEv.Raw
 }
 
+func (rEv RequestValueTransferEvent) String() string {
+	return fmt.Sprintf("requestNonce = %v, tokenType = %v, from = %v, to = %v,tokenAddr = %v, valueOrTokenId = %v, fee = %v, extraData = %v", rEv.RequestNonce, rEv.TokenType, rEv.From.Hex(), rEv.To.Hex(), rEv.TokenAddress.Hex(), rEv.ValueOrTokenId, rEv.Fee, rEv.ExtraData)
+}
+
 //////////////////// type RequestValueTransferEncodedEvent struct ////////////////////
 type RequestValueTransferEncodedEvent struct {
 	*bridgecontract.BridgeRequestValueTransferEncoded
@@ -111,6 +118,10 @@ func (rEv RequestValueTransferEncodedEvent) GetExtraData() []byte {
 
 func (rEv RequestValueTransferEncodedEvent) GetRaw() types.Log {
 	return rEv.Raw
+}
+
+func (rEv RequestValueTransferEncodedEvent) String() string {
+	return fmt.Sprintf("requestNonce = %v, tokenType = %v, from = %v, to = %v,tokenAddr = %v, valueOrTokenId = %v, fee = %v, extraData = %v, encodingVer = %v, encodingData = %v", rEv.RequestNonce, rEv.TokenType, rEv.From.Hex(), rEv.To.Hex(), rEv.TokenAddress.Hex(), rEv.ValueOrTokenId, rEv.Fee, rEv.ExtraData, rEv.EncodingVer, rEv.EncodedData)
 }
 
 // HandleValueTransferEvent from Bridge contract
