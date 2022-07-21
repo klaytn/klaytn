@@ -1459,6 +1459,11 @@ web3._extend({
 			name: 'requestParentSync',
 			call: 'subbridge_requestParentSync',
 			params: 0,
+		}),
+		new web3._extend.Method({
+			name: 'suggestLeastFee',
+			call: 'subbridge_suggestLeastFee',
+			params: 2
 		})
 	],
     properties: [
