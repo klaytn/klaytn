@@ -31,10 +31,14 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
     uint64 public lowerHandleNonce; // a minimum nonce of a value transfer request that will be handled.
     uint64 public upperHandleNonce; // a maximum nonce of the counterpart bridge's value transfer request that is handled.
     uint64 public recoveryBlockNumber = 1; // the block number that recovery start to filter log from.
+    uint64 public failedHandles; // a count of failed handle value transfer
+    uint64 public nRefunds; // a count of refunds
     mapping(uint64 => uint64) public handleNoncesToBlockNums;  // <request nonce> => <request blockNum>
 
     mapping(uint64 => address payable) internal refundAddrMap; // <nonce of request, sender>
     mapping(uint64 => uint256) internal refundValueMap; // <nonce of request, value>
+    mapping(uint64 => TokenType) internal refundTokenType; // <nonce of request, token type>
+    mapping(uint64 => uint) internal refundTimestampMap; // <nonce of request, token type>
 
     string public REMOVED_VOTE_ERR_STR = "removed vote";
 
@@ -169,8 +173,8 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
         _setFeeReceiver(_feeReceiver);
     }
 
-    function updateHandleStatus(uint64 _requestNonce, bytes32 _requestTxHash, uint64 _requestedBlockNumber) 
-        public 
+    function updateHandleStatus(uint64 _requestNonce, bytes32 _requestTxHash, uint64 _requestedBlockNumber, bool failed)
+        public
         onlyOperators
         returns (bool)
     {
@@ -186,44 +190,58 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
 
         handleNoncesToBlockNums[_requestNonce] = _requestedBlockNumber;
         _updateHandleNonce(_requestNonce);
+
+        if (failed) {
+            failedHandles += 1;
+        }
         return true;
     }
 
-    // TODO-hyunsooda: Recalculate the precomuted cost
-    // suggestRecommendedFee calculates minimum fee to be used for value transfer fee.
-    // The calculated value is larger than three cost of transaction (two of handle value trasnfer call and one refund call)
-    // 1. Normal case (no error): the operator pays the value transfer transaction cost in the counterpart chain.
-    // 2. Hardening case: the operator pays two value transfer transaction cost
-    // 3. Refund case: the operator pays two value transfer transaction cost in the counterpart chain and one refund call
-    // Warning: The ServiceChian package would not provide a control for a number of gas per specific opcode.
-    //          A modified binary that changed a number of gas for corresponding opcode would have different `gasUsed` (i.e., different with precomputed(hardcoded) cost)
-    function suggestLeastFee(uint256 gasPrice) external pure returns (uint256) {
-        uint256 complement = 30000; // To make conservative upper bound of expected tx cost
-        uint256 precomputedGasUsedOfRefundCall = 110000 + complement;
-        uint256 precomputedGasUsedOfHandleValueTransferCall = 150000 + complement;
-        uint256 precomputedGasUsedUpdateHandleStatus = 150000 + complement;
-        return gasPrice * (precomputedGasUsedOfHandleValueTransferCall * 2 + precomputedGasUsedOfRefundCall + precomputedGasUsedUpdateHandleStatus);
-    }
-
     // setRefundLedger sets refund ledger (sender and value)
-    function setRefundLedger(uint64 requestNonce_, uint256 value) internal onlyOperators {
+    function setRefundLedger(uint64 requestNonce_, uint256 value, TokenType tokenType) internal {
         refundAddrMap[requestNonce_] = msg.sender;
         refundValueMap[requestNonce_] = value;
+        refundTokenType[requestNonce_] = tokenType;
+        refundTimestampMap[requestNonce_] = block.timestamp;
+        amountOfLockedRefundKLAYs += value;
     }
 
     // refund refunds the requested amount of KLAY to sender if its corresponding value transfer is failed from the bridge contract of counterpart chain
-    function refund(uint64 requestNonce_) public onlyOperators {
-        if (!_voteRefund(requestNonce_)) {
+    function refund(uint64 requestNonce_) public {
+        if (!refundCond(requestNonce_)) {
             return;
         }
+
         address payable sender = refundAddrMap[requestNonce_];
         uint256 value = refundValueMap[requestNonce_];
         if (sender != address(0) && value != 0) {
-            sender.transfer(value);
+            if (refundTokenType[requestNonce_] == TokenType.KLAY) {
+                sender.transfer(value);
+            } else if (refundTokenType[requestNonce_] == TokenType.ERC20) {
+                revert("unimplemented ERC20 refund");
+            } else if (refundTokenType[requestNonce_] == TokenType.ERC721) {
+                revert("unimplemented ERC721 refund");
+            }
+            nRefunds += 1;
             emit Refunded(requestNonce_, sender, value);
-            delete refundAddrMap[requestNonce_]; 
+            delete refundAddrMap[requestNonce_];
             delete refundValueMap[requestNonce_];
+            delete refundTimestampMap[requestNonce_];
+            amountOfLockedRefundKLAYs.sub(value);
         }
+    }
+
+    function refundCond(uint64 requestNonce_) internal returns (bool) {
+        // if a refund was not correctly executed during one day (by gas error of operators and etc),
+        // the sender can have authroization to refund himself/herself
+        if (block.timestamp > refundTimestampMap[requestNonce_] + 1 days) {
+            return true;
+        }
+        require(operators[msg.sender], "msg.sender is not an operator");
+        if (!_voteRefund(requestNonce_)) {
+            return false;
+        }
+        return true;
     }
 
     // removeRefundLedger removes refund info (sender address and amount of KLAY).
@@ -232,7 +250,9 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
         if (!_voteRefund(requestNonce_)) {
             return;
         }
-        delete refundAddrMap[requestNonce_]; 
+        amountOfLockedRefundKLAYs.sub(refundValueMap[requestNonce_]);
+        delete refundAddrMap[requestNonce_];
         delete refundValueMap[requestNonce_];
+        delete refundTimestampMap[requestNonce_];
     }
 }

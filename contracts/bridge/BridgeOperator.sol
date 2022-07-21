@@ -23,6 +23,8 @@ import "../externals/openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
 
 contract BridgeOperator is Ownable {
+    using SafeMath for uint256;
+
     struct VotesData {
         address[] voters;   // voter list for deleting voted map
         mapping(address => bytes32) voted; // <operator, sha3(type, args, nonce)>
@@ -36,6 +38,7 @@ contract BridgeOperator is Ownable {
     mapping(uint64 => bool) public closedRefundVote; // <nonce, bool>
     mapping(uint64 => bool) public closedWithdrawVote; // <nonce, bool>
 
+    uint256 internal amountOfLockedRefundKLAYs; // amount of locked KLAYs for refund
     uint64 private withdrawNonce;
 
     uint64 public constant MAX_OPERATOR = 12;
@@ -187,7 +190,7 @@ contract BridgeOperator is Ownable {
         if (!_voteWithdraw(withdrawNonce)) {
             return;
         }
-        uint256 divided = value / operatorList.length;
+        uint256 divided = value.sub(amountOfLockedRefundKLAYs) / operatorList.length;
         for (uint i=0; i<operatorList.length; i++) {
             operatorList[i].transfer(divided); 
         }

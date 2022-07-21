@@ -70,7 +70,7 @@ contract BridgeTransferKLAY is BridgeTransfer {
         public
         onlyOperators
     {
-        if (!updateHandleStatus(_requestedNonce, _requestTxHash, _requestedBlockNumber)) {
+        if (!updateHandleStatus(_requestedNonce, _requestTxHash, _requestedBlockNumber, false)) {
             return;
         }
 
@@ -110,7 +110,7 @@ contract BridgeTransferKLAY is BridgeTransfer {
             fee,
             _extraData
         );
-        setRefundLedger(requestNonce, amountOfKLAY); 
+        setRefundLedger(requestNonce, amountOfKLAY, TokenType.KLAY);
         requestNonce++;
     }
 
