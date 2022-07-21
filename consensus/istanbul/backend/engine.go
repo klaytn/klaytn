@@ -273,8 +273,8 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 	}
 
 	// At every epoch governance data will come in block header. Verify it.
-	currentBlockNum := chain.CurrentHeader().Number
-	if number%sb.governance.Epoch() == 0 && len(header.Governance) > 0 && currentBlockNum.Cmp(header.Number) != 0 {
+	pendingBlockNum := new(big.Int).Add(chain.CurrentHeader().Number, common.Big1)
+	if number%sb.governance.Epoch() == 0 && len(header.Governance) > 0 && pendingBlockNum.Cmp(header.Number) == 0 {
 		return sb.governance.VerifyGovernance(header.Governance)
 	}
 	return sb.verifyCommittedSeals(chain, header, parents)
