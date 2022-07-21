@@ -323,6 +323,8 @@ func (bi *BridgeInfo) UpdateInfo() error {
 
 	bi.SetHandleNonce(hn)
 	bi.SetRequestNonceFromCounterpart(hn)
+	bi.SetFailedHandleEvents(0)
+	bi.SetRefundEvents()
 
 	isRunning, err := bi.bridge.IsRunning(nil)
 	if err != nil {
@@ -450,7 +452,7 @@ func (bi *BridgeInfo) removeRefundLedger(reqNonce uint64) error {
 	return nil
 }
 
-func (bi *BridgeInfo) updateHandleStatus(ev IRequestValueTransferEvent) error {
+func (bi *BridgeInfo) updateHandleStatus(ev IRequestValueTransferEvent, failed bool) error {
 	bridgeAcc := bi.account
 	bridgeAcc.Lock()
 	defer bridgeAcc.UnLock()
@@ -458,7 +460,7 @@ func (bi *BridgeInfo) updateHandleStatus(ev IRequestValueTransferEvent) error {
 	auth.GasLimit = 0 // allow max gaslimit
 
 	reqNonce, reqTxHash, reqBlkNum := ev.GetRequestNonce(), ev.GetRaw().TxHash, ev.GetRaw().BlockNumber
-	updateHandleStatusTx, err := bi.bridge.UpdateHandleStatus(auth, reqNonce, reqTxHash, reqBlkNum)
+	updateHandleStatusTx, err := bi.bridge.UpdateHandleStatus(auth, reqNonce, reqTxHash, reqBlkNum, failed)
 	if err != nil {
 		return err
 	}
@@ -504,13 +506,22 @@ func (bi *BridgeInfo) MarkHandledNonce(nonce uint64) {
 }
 
 // MarkRefund adds one to `nRefunds` field and it is called only when a `Refunded` event was discovered.
-func (bi *BridgeInfo) MarkRefund(nonce uint64) {
-	bi.nRefunds += 1
+func (bi *BridgeInfo) SetRefundEvents() {
+	if nRefunds, err := bi.bridge.NRefunds(nil); err != nil {
+		logger.Error("[SC][Contract] Failed to get a filed of value of contract", "contract", bi.address.Hex(), "func", "nRefunds")
+	} else {
+		bi.nRefunds = nRefunds
+	}
 }
 
-func (bi *BridgeInfo) MarkFailedHandleEvents(nonce uint64) {
-	vtFailedHandleEventMeter.Mark(1)
-	bi.nFailedHandle += 1
+// SetFailedHandleEvents adds one to `nFailedHandle` field.
+func (bi *BridgeInfo) SetFailedHandleEvents(cnt uint64) {
+	if nFailedHandle, err := bi.bridge.FailedHandles(nil); err != nil {
+		logger.Error("[SC][Contract] Failed to get a filed of value of contract", "contract", bi.address.Hex(), "func", "FailedHandles")
+	} else {
+		bi.nFailedHandle = nFailedHandle
+	}
+	bi.nFailedHandle += cnt
 }
 
 // SetHandleNonce sets the handled nonce with a new nonce.
@@ -723,17 +734,25 @@ func (bm *BridgeManager) LogBridgeStatus() {
 			if b.onChildChain {
 				headStr = "Bridge(Parent -> Child Chain)"
 				p2cTotalRequestNonce += b.requestNonceFromCounterPart
-				p2cTotalHandleNonce += b.handleNonce
 				c2pNumberOfRefunds += b.nRefunds
 				p2cNumberOfHandleFailures += b.nFailedHandle
 				p2cTotalLowerHandleNonce += b.lowerHandleNonce
+				if b.handleNonce > b.nFailedHandle {
+					p2cTotalHandleNonce += b.handleNonce - b.nFailedHandle
+				} else {
+					p2cTotalHandleNonce = 0
+				}
 			} else {
 				headStr = "Bridge(Child -> Parent Chain)"
 				c2pTotalRequestNonce += b.requestNonceFromCounterPart
-				c2pTotalHandleNonce += b.handleNonce
 				p2cNumberOfRefunds += b.nRefunds
 				c2pNumberOfHandleFailures += b.nFailedHandle
 				c2pTotalLowerHandleNonce += b.lowerHandleNonce
+				if b.handleNonce > b.nFailedHandle {
+					c2pTotalHandleNonce += b.handleNonce - b.nFailedHandle
+				} else {
+					c2pTotalHandleNonce = 0
+				}
 			}
 			logger.Debug(headStr, "bridge", bAddr.String(), "requestNonce", b.requestNonceFromCounterPart, "numberOfRefunds", b.nRefunds, "numberOfFailedHandle", b.nFailedHandle, "lowerHandleNonce", b.lowerHandleNonce, "handleNonce", b.handleNonce, "pending", diffNonce)
 		}

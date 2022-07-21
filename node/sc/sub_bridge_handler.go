@@ -502,7 +502,6 @@ func (sbh *SubBridgeHandler) handleParentChainResponseVTReasoningMsg(p BridgePee
 	if !ok {
 		logger.Error("[SC] Failed to get bridgeInfo from the handler of response tx debug", "bridgeAddr", bridgeAddr.Hex())
 	}
-	logger.Debug("[SC] Before sending respTxDebug to bridgeInfo", "bridgeInfoAddr", bi.address)
 	bi.respVTReasoingCh <- respVTReasoing
 	return nil
 }
