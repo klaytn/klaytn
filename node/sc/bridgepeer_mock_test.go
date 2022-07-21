@@ -357,6 +357,34 @@ func (mr *MockBridgePeerMockRecorder) SendServiceChainReceiptResponse(arg0 inter
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendServiceChainReceiptResponse", reflect.TypeOf((*MockBridgePeer)(nil).SendServiceChainReceiptResponse), arg0)
 }
 
+// SendServiceChainRequestVTReasoning mocks base method.
+func (m *MockBridgePeer) SendServiceChainRequestVTReasoning(arg0 *RequestVTReasoningWrapper) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SendServiceChainRequestVTReasoning", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SendServiceChainRequestVTReasoning indicates an expected call of SendServiceChainRequestVTReasoning.
+func (mr *MockBridgePeerMockRecorder) SendServiceChainRequestVTReasoning(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendServiceChainRequestVTReasoning", reflect.TypeOf((*MockBridgePeer)(nil).SendServiceChainRequestVTReasoning), arg0)
+}
+
+// SendServiceChainResponseVTReasoning mocks base method.
+func (m *MockBridgePeer) SendServiceChainResponseVTReasoning(arg0 *ResponseVTReasoningWrapper) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SendServiceChainResponseVTReasoning", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SendServiceChainResponseVTReasoning indicates an expected call of SendServiceChainResponseVTReasoning.
+func (mr *MockBridgePeerMockRecorder) SendServiceChainResponseVTReasoning(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendServiceChainResponseVTReasoning", reflect.TypeOf((*MockBridgePeer)(nil).SendServiceChainResponseVTReasoning), arg0)
+}
+
 // SendServiceChainTxs mocks base method.
 func (m *MockBridgePeer) SendServiceChainTxs(arg0 types.Transactions) error {
 	m.ctrl.T.Helper()
