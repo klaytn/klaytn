@@ -54,8 +54,8 @@ var (
 	// eip1559Config is a chain config with EIP-1559 enabled at block 0.
 	eip1559Config *params.ChainConfig
 
-	// magmaConfig is a chain config with Magma enabled at block 0.
-	magmaConfig *params.ChainConfig
+	// kip71Config is a chain config with Magma enabled at block 0.
+	kip71Config *params.ChainConfig
 )
 
 func init() {
@@ -68,12 +68,12 @@ func init() {
 	eip1559Config.EthTxTypeCompatibleBlock = common.Big0
 	fork.SetHardForkBlockNumberConfig(eip1559Config)
 
-	magmaConfig = params.TestChainConfig.Copy()
-	magmaConfig.MagmaCompatibleBlock = common.Big0
-	magmaConfig.IstanbulCompatibleBlock = common.Big0
-	magmaConfig.LondonCompatibleBlock = common.Big0
-	magmaConfig.EthTxTypeCompatibleBlock = common.Big0
-	magmaConfig.Governance = &params.GovernanceConfig{Magma: params.GetDefaultMagmaConfig()}
+	kip71Config = params.TestChainConfig.Copy()
+	kip71Config.MagmaCompatibleBlock = common.Big0
+	kip71Config.IstanbulCompatibleBlock = common.Big0
+	kip71Config.LondonCompatibleBlock = common.Big0
+	kip71Config.EthTxTypeCompatibleBlock = common.Big0
+	kip71Config.Governance = &params.GovernanceConfig{KIP71: params.GetDefaultKIP71Config()}
 }
 
 type testBlockChain struct {
@@ -340,6 +340,29 @@ func testSetNonce(pool *TxPool, addr common.Address, nonce uint64) {
 	pool.mu.Unlock()
 }
 
+func TestHomesteadTransaction(t *testing.T) {
+	t.Parallel()
+	baseFee := big.NewInt(30)
+
+	pool, _ := setupTxPoolWithConfig(kip71Config)
+	defer pool.Stop()
+	pool.SetBaseFee(baseFee)
+
+	rlpTx := common.Hex2Bytes("f87e8085174876e800830186a08080ad601f80600e600039806000f350fe60003681823780368234f58015156014578182fd5b80825250506014600cf31ba02222222222222222222222222222222222222222222222222222222222222222a02222222222222222222222222222222222222222222222222222222222222222")
+	tx := new(types.Transaction)
+
+	err := rlp.DecodeBytes(rlpTx, tx)
+	assert.NoError(t, err)
+
+	from, err := types.EIP155Signer{}.Sender(tx)
+	assert.NoError(t, err)
+	assert.Equal(t, "0x4c8D290a1B368ac4728d83a9e8321fC3af2b39b1", from.String())
+
+	testAddBalance(pool, from, new(big.Int).Mul(big.NewInt(10), big.NewInt(params.KLAY)))
+	err = pool.AddRemote(tx)
+	assert.NoError(t, err)
+}
+
 func TestInvalidTransactions(t *testing.T) {
 	t.Parallel()
 
@@ -383,7 +406,7 @@ func TestInvalidTransactions(t *testing.T) {
 func TestInvalidTransactionsMagma(t *testing.T) {
 	t.Parallel()
 
-	pool, key := setupTxPoolWithConfig(magmaConfig)
+	pool, key := setupTxPoolWithConfig(kip71Config)
 	pool.SetBaseFee(big.NewInt(1))
 	defer pool.Stop()
 
@@ -2092,7 +2115,7 @@ func TestDynamicFeeTransactionAcceptedMagma(t *testing.T) {
 	t.Parallel()
 	baseFee := big.NewInt(30)
 
-	pool, key := setupTxPoolWithConfig(magmaConfig)
+	pool, key := setupTxPoolWithConfig(kip71Config)
 	defer pool.Stop()
 	pool.SetBaseFee(baseFee)
 
@@ -2145,7 +2168,7 @@ func TestTransactionAcceptedMagma(t *testing.T) {
 	t.Parallel()
 	baseFee := big.NewInt(30)
 
-	pool, key := setupTxPoolWithConfig(magmaConfig)
+	pool, key := setupTxPoolWithConfig(kip71Config)
 	defer pool.Stop()
 	pool.SetBaseFee(baseFee)
 
@@ -2168,7 +2191,7 @@ func TestCancelTransactionAcceptedMagma(t *testing.T) {
 	t.Parallel()
 	baseFee := big.NewInt(30)
 
-	pool, key := setupTxPoolWithConfig(magmaConfig)
+	pool, key := setupTxPoolWithConfig(kip71Config)
 	defer pool.Stop()
 	pool.SetBaseFee(baseFee)
 
@@ -2208,7 +2231,7 @@ func TestDynamicFeeTransactionNotAcceptedWithLowerGasPrice(t *testing.T) {
 	t.Parallel()
 	baseFee := big.NewInt(30)
 
-	pool, key := setupTxPoolWithConfig(magmaConfig)
+	pool, key := setupTxPoolWithConfig(kip71Config)
 	defer pool.Stop()
 	pool.SetBaseFee(baseFee)
 
@@ -2225,7 +2248,7 @@ func TestDynamicFeeTransactionNotAcceptedWithLowerGasPrice(t *testing.T) {
 func TestTransactionNotAcceptedWithLowerGasPrice(t *testing.T) {
 	t.Parallel()
 
-	pool, key := setupTxPoolWithConfig(magmaConfig)
+	pool, key := setupTxPoolWithConfig(kip71Config)
 	defer pool.Stop()
 
 	baseFee := big.NewInt(30)
@@ -2244,7 +2267,7 @@ func TestTransactionNotAcceptedWithLowerGasPrice(t *testing.T) {
 func TestTransactionsPromoteFull(t *testing.T) {
 	t.Parallel()
 
-	pool, key := setupTxPoolWithConfig(magmaConfig)
+	pool, key := setupTxPoolWithConfig(kip71Config)
 	defer pool.Stop()
 
 	from := crypto.PubkeyToAddress(key.PublicKey)
@@ -2279,7 +2302,7 @@ func TestTransactionsPromoteFull(t *testing.T) {
 func TestTransactionsPromotePartial(t *testing.T) {
 	t.Parallel()
 
-	pool, key := setupTxPoolWithConfig(magmaConfig)
+	pool, key := setupTxPoolWithConfig(kip71Config)
 	defer pool.Stop()
 
 	from := crypto.PubkeyToAddress(key.PublicKey)
@@ -2324,7 +2347,7 @@ func TestTransactionsPromotePartial(t *testing.T) {
 func TestTransactionsPromoteMultipleAccount(t *testing.T) {
 	t.Parallel()
 
-	pool, _ := setupTxPoolWithConfig(magmaConfig)
+	pool, _ := setupTxPoolWithConfig(kip71Config)
 	defer pool.Stop()
 	pool.SetBaseFee(big.NewInt(10))
 
@@ -2382,7 +2405,7 @@ func TestTransactionsPromoteMultipleAccount(t *testing.T) {
 func TestTransactionsDemotionMultipleAccount(t *testing.T) {
 	t.Parallel()
 
-	pool, _ := setupTxPoolWithConfig(magmaConfig)
+	pool, _ := setupTxPoolWithConfig(kip71Config)
 	defer pool.Stop()
 	pool.SetBaseFee(big.NewInt(10))
 

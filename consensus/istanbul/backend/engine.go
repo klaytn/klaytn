@@ -28,8 +28,6 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/klaytn/klaytn/reward"
-
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -41,8 +39,10 @@ import (
 	"github.com/klaytn/klaytn/consensus/istanbul/validator"
 	"github.com/klaytn/klaytn/consensus/misc"
 	"github.com/klaytn/klaytn/crypto/sha3"
+	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/rlp"
 )
 
@@ -192,12 +192,35 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 	}
 
 	// Header verify before/after magma fork
-	if !chain.Config().IsMagmaForkEnabled(header.Number) {
-		if header.BaseFee != nil {
-			return consensus.ErrInvalidBaseFee
+	if chain.Config().IsMagmaForkEnabled(header.Number) {
+		_, data, err := sb.governance.ReadGovernance(header.Number.Uint64())
+		if err != nil {
+			return err
 		}
-	} else if err := misc.VerifyMagmaHeader(chain.Config(), parents[len(parents)-1], header); err != nil {
-		return err
+
+		kip71 := params.GetDefaultKIP71Config()
+		gkmr := governance.GovernanceKeyMapReverse
+		if l := data[gkmr[params.LowerBoundBaseFee]]; l != nil {
+			kip71.LowerBoundBaseFee = l.(uint64)
+		}
+		if u := data[gkmr[params.UpperBoundBaseFee]]; u != nil {
+			kip71.UpperBoundBaseFee = u.(uint64)
+		}
+		if g := data[gkmr[params.GasTarget]]; g != nil {
+			kip71.GasTarget = g.(uint64)
+		}
+		if b := data[gkmr[params.BaseFeeDenominator]]; b != nil {
+			kip71.BaseFeeDenominator = b.(uint64)
+		}
+		if m := data[gkmr[params.MaxBlockGasUsedForBaseFee]]; m != nil {
+			kip71.MaxBlockGasUsedForBaseFee = m.(uint64)
+		}
+
+		if err := misc.VerifyMagmaHeader(parents[len(parents)-1], header, kip71); err != nil {
+			return err
+		}
+	} else if header.BaseFee != nil {
+		return consensus.ErrInvalidBaseFee
 	}
 
 	// Don't waste time checking blocks from the future

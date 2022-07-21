@@ -201,6 +201,7 @@ type BlockChain struct {
 	pendingCnt            int
 	progress              float64
 	migrationErr          error
+	testMigrationHook     func()
 
 	// Warm up
 	lastCommittedBlock uint64
@@ -457,31 +458,31 @@ func (bc *BlockChain) SetProposerPolicy(val uint64) {
 func (bc *BlockChain) SetLowerBoundBaseFee(val uint64) {
 	bc.chainConfigMu.Lock()
 	defer bc.chainConfigMu.Unlock()
-	bc.chainConfig.Governance.Magma.LowerBoundBaseFee = val
+	bc.chainConfig.Governance.KIP71.LowerBoundBaseFee = val
 }
 
 func (bc *BlockChain) SetUpperBoundBaseFee(val uint64) {
 	bc.chainConfigMu.Lock()
 	defer bc.chainConfigMu.Unlock()
-	bc.chainConfig.Governance.Magma.UpperBoundBaseFee = val
+	bc.chainConfig.Governance.KIP71.UpperBoundBaseFee = val
 }
 
 func (bc *BlockChain) SetGasTarget(val uint64) {
 	bc.chainConfigMu.Lock()
 	defer bc.chainConfigMu.Unlock()
-	bc.chainConfig.Governance.Magma.GasTarget = val
+	bc.chainConfig.Governance.KIP71.GasTarget = val
 }
 
 func (bc *BlockChain) SetMaxBlockGasUsedForBaseFee(val uint64) {
 	bc.chainConfigMu.Lock()
 	defer bc.chainConfigMu.Unlock()
-	bc.chainConfig.Governance.Magma.MaxBlockGasUsedForBaseFee = val
+	bc.chainConfig.Governance.KIP71.MaxBlockGasUsedForBaseFee = val
 }
 
 func (bc *BlockChain) SetBaseFeeDenominator(val uint64) {
 	bc.chainConfigMu.Lock()
 	defer bc.chainConfigMu.Unlock()
-	bc.chainConfig.Governance.Magma.BaseFeeDenominator = val
+	bc.chainConfig.Governance.KIP71.BaseFeeDenominator = val
 }
 
 func (bc *BlockChain) getProcInterrupt() bool {

@@ -480,7 +480,7 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 
 	// It need to update gas price of tx pool after magma hardfork
 	if pool.magma {
-		pool.gasPrice = misc.NextBlockBaseFee(newHead, pool.chainconfig)
+		pool.gasPrice = misc.NextMagmaBlockBaseFee(newHead, pool.chainconfig.Governance.KIP71)
 	}
 }
 
@@ -670,7 +670,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	gasFeePayer := uint64(0)
 
 	// Check chain Id first.
-	if tx.ChainId().Cmp(pool.chainconfig.ChainID) != 0 {
+	if tx.Protected() && tx.ChainId().Cmp(pool.chainconfig.ChainID) != 0 {
 		return ErrInvalidChainId
 	}
 

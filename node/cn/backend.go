@@ -220,7 +220,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	chainConfig.UnitPrice = governance.UnitPrice()
 	config.GasPrice = new(big.Int).SetUint64(chainConfig.UnitPrice)
 
-	chainConfig.Governance.Magma = &params.MagmaConfig{
+	chainConfig.Governance.KIP71 = &params.KIP71Config{
 		LowerBoundBaseFee:         governance.LowerBoundBaseFee(),
 		UpperBoundBaseFee:         governance.UpperBoundBaseFee(),
 		GasTarget:                 governance.GasTarget(),

@@ -96,7 +96,7 @@ func (oracle *Oracle) processBlock(bf *blockFees, percentiles []float64) {
 	}
 	// TODO-Klaytn: If we implement baseFee feature like Ethereum does, we should calculate nextBaseFee from parent block header.
 	if chainconfig.IsMagmaForkEnabled(big.NewInt(int64(bf.blockNumber + 1))) {
-		bf.results.nextBaseFee = misc.NextBlockBaseFee(bf.header, chainconfig)
+		bf.results.nextBaseFee = misc.NextMagmaBlockBaseFee(bf.header, chainconfig.Governance.KIP71)
 	} else {
 		bf.results.nextBaseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
 	}

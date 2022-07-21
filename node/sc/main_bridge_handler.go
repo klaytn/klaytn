@@ -147,22 +147,23 @@ func (mbh *MainBridgeHandler) handleServiceChainParentChainInfoRequestMsg(p Brid
 	pcInfo := parentChainInfo{
 		nonce,
 		mbh.mainbridge.txPool.GasPrice().Uint64(),
-		params.MagmaConfig{
-			LowerBoundBaseFee:         chainCfg.Governance.Magma.LowerBoundBaseFee,
-			UpperBoundBaseFee:         chainCfg.Governance.Magma.UpperBoundBaseFee,
-			GasTarget:                 chainCfg.Governance.Magma.GasTarget,
-			MaxBlockGasUsedForBaseFee: chainCfg.Governance.Magma.MaxBlockGasUsedForBaseFee,
-			BaseFeeDenominator:        chainCfg.Governance.Magma.BaseFeeDenominator,
+		params.KIP71Config{
+			LowerBoundBaseFee:         chainCfg.Governance.KIP71.LowerBoundBaseFee,
+			UpperBoundBaseFee:         chainCfg.Governance.KIP71.UpperBoundBaseFee,
+			GasTarget:                 chainCfg.Governance.KIP71.GasTarget,
+			MaxBlockGasUsedForBaseFee: chainCfg.Governance.KIP71.MaxBlockGasUsedForBaseFee,
+			BaseFeeDenominator:        chainCfg.Governance.KIP71.BaseFeeDenominator,
 		},
+		chainCfg.IsMagmaForkEnabled(mbh.mainbridge.blockchain.CurrentBlock().Number()),
 	}
 	p.SendServiceChainInfoResponse(&pcInfo)
 	logger.Info("SendServiceChainInfoResponse", "pBridgeAccoount", addr,
 		"nonce", pcInfo.Nonce, "gasPrice", pcInfo.GasPrice,
-		"LowerBoundBaseFee", pcInfo.MagmaConfig.LowerBoundBaseFee,
-		"UpperBoundBaseFee", pcInfo.MagmaConfig.UpperBoundBaseFee,
-		"GasTarget", pcInfo.MagmaConfig.GasTarget,
-		"MaxBlockGasUsedForBaseFee", pcInfo.MagmaConfig.MaxBlockGasUsedForBaseFee,
-		"BaseFeeDenominator", pcInfo.MagmaConfig.BaseFeeDenominator,
+		"LowerBoundBaseFee", pcInfo.KIP71Config.LowerBoundBaseFee,
+		"UpperBoundBaseFee", pcInfo.KIP71Config.UpperBoundBaseFee,
+		"GasTarget", pcInfo.KIP71Config.GasTarget,
+		"MaxBlockGasUsedForBaseFee", pcInfo.KIP71Config.MaxBlockGasUsedForBaseFee,
+		"BaseFeeDenominator", pcInfo.KIP71Config.BaseFeeDenominator,
 	)
 	return nil
 }

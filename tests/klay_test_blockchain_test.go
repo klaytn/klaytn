@@ -167,7 +167,7 @@ func (bcdata *BCData) prepareHeader() (*types.Header, error) {
 		Vote:       common.Hex2Bytes("e194e733cb4d279da696f30d470f8c04decb54fcb0d28565706f6368853330303030"),
 	}
 	if bcdata.bc.Config().IsMagmaForkEnabled(num) {
-		header.BaseFee = misc.NextBlockBaseFee(parent.Header(), bcdata.bc.Config())
+		header.BaseFee = misc.NextMagmaBlockBaseFee(parent.Header(), bcdata.bc.Config().Governance.KIP71)
 	}
 
 	if err := bcdata.engine.Prepare(bcdata.bc, header); err != nil {

@@ -188,7 +188,7 @@ type GovernanceConfig struct {
 	GoverningNode  common.Address `json:"governingNode"`
 	GovernanceMode string         `json:"governanceMode"`
 	Reward         *RewardConfig  `json:"reward,omitempty"`
-	Magma          *MagmaConfig   `json:"magma,omitempty"`
+	KIP71          *KIP71Config   `json:"kip71,omitempty"`
 }
 
 func (g *GovernanceConfig) DeferredTxFee() bool {
@@ -207,7 +207,7 @@ type RewardConfig struct {
 }
 
 // Magma governance parameters
-type MagmaConfig struct {
+type KIP71Config struct {
 	LowerBoundBaseFee         uint64 `json:"lowerboundbasefee"`         // Minimum base fee for dynamic gas price
 	UpperBoundBaseFee         uint64 `json:"upperboundbasefee"`         // Maximum base fee for dynamic gas price
 	GasTarget                 uint64 `json:"gastarget"`                 // Gauge parameter increasing or decreasing gas price
@@ -504,7 +504,7 @@ func GetDefaultGovernanceConfig() *GovernanceConfig {
 		GovernanceMode: DefaultGovernanceMode,
 		GoverningNode:  common.HexToAddress(DefaultGoverningNode),
 		Reward:         GetDefaultRewardConfig(),
-		Magma:          GetDefaultMagmaConfig(),
+		KIP71:          GetDefaultKIP71Config(),
 	}
 	return gov
 }
@@ -529,8 +529,8 @@ func GetDefaultRewardConfig() *RewardConfig {
 	}
 }
 
-func GetDefaultMagmaConfig() *MagmaConfig {
-	return &MagmaConfig{
+func GetDefaultKIP71Config() *KIP71Config {
+	return &KIP71Config{
 		LowerBoundBaseFee:         DefaultLowerBoundBaseFee,
 		UpperBoundBaseFee:         DefaultUpperBoundBaseFee,
 		GasTarget:                 DefaultGasTarget,

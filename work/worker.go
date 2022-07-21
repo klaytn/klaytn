@@ -501,7 +501,7 @@ func (self *worker) commitNewWork() {
 		if self.config.IsMagmaForkEnabled(nextBlockNum) {
 			// NOTE-klaytn NextBlockBaseFee needs the header of parent, self.chain.CurrentBlock
 			// So above code, TxPool().Pending(), is separated with this and can be refactored later.
-			nextBaseFee = misc.NextBlockBaseFee(parent.Header(), self.config)
+			nextBaseFee = misc.NextMagmaBlockBaseFee(parent.Header(), self.config.Governance.KIP71)
 			pending = types.FilterTransactionWithBaseFee(pending, nextBaseFee)
 		}
 	}
