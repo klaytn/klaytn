@@ -149,6 +149,7 @@ func (mbh *MainBridgeHandler) handleServiceChainParentChainInfoRequestMsg(p Brid
 			MaxBlockGasUsedForBaseFee: chainCfg.Governance.KIP71.MaxBlockGasUsedForBaseFee,
 			BaseFeeDenominator:        chainCfg.Governance.KIP71.BaseFeeDenominator,
 		},
+		chainCfg.IsMagmaForkEnabled(mbh.mainbridge.blockchain.CurrentBlock().Number()),
 	}
 	p.SendServiceChainInfoResponse(&pcInfo)
 	logger.Info("SendServiceChainInfoResponse", "pBridgeAccoount", addr,
