@@ -35,11 +35,10 @@ const (
 	VALUE_TRANSFER_KLAY_SUCCEEDED_TX
 	VALUE_TRANSFER_KLAY_OUT_OF_GAS
 	VALUE_TRANSFER_KLAY_VM_ERR
-	VALUE_TRANSFER_KLAY_INVALID_VOTE_OR_NONCE
+	VALUE_TRANSFER_KLAY_REVERTED
 	VALUE_TRANSFER_KLAY_UNEXECUTED // (1) if the operator does not have KLAY to execute its handle value transfer tx, or (2) Bridge node is not servicing (connection down or synching)
 	VALUE_TRANSFER_KLAY_NOT_ENOUGH_CONTRACT_BALANCE
 	VALUE_TRANSFER_KLAY_REVERT_ON_THE_OTHER_ADDRESS // means potential attacker sent KLAY value transfer
-	VALUE_TRANSFER_UNREACHABLE
 )
 
 var KLAYReasoingResultStringMap = map[ValueTransferException]string{
@@ -47,7 +46,7 @@ var KLAYReasoingResultStringMap = map[ValueTransferException]string{
 	VALUE_TRANSFER_KLAY_SUCCEEDED_TX:                "VALUE_TRANSFER_KLAY_SUCCEEDED_TX",
 	VALUE_TRANSFER_KLAY_OUT_OF_GAS:                  "VALUE_TRANSFER_KLAY_OUT_OF_GAS",
 	VALUE_TRANSFER_KLAY_VM_ERR:                      "VALUE_TRANSFER_KLAY_VM_ERR",
-	VALUE_TRANSFER_KLAY_INVALID_VOTE_OR_NONCE:       "VALUE_TRANSFER_KLAY_INVALID_VOTE_OR_NONCE",
+	VALUE_TRANSFER_KLAY_REVERTED:                    "VALUE_TRANSFER_KLAY_REVERTED",
 	VALUE_TRANSFER_KLAY_UNEXECUTED:                  "VALUE_TRANSFER_KLAY_UNEXECUTED",
 	VALUE_TRANSFER_KLAY_NOT_ENOUGH_CONTRACT_BALANCE: "VALUE_TRANSFER_KLAY_NOT_ENOUGH_CONTRACT_BALANCE",
 	VALUE_TRANSFER_KLAY_REVERT_ON_THE_OTHER_ADDRESS: "VALUE_TRANSFER_KLAY_REVERT_ON_THE_OTHER_ADDRESS",
@@ -219,7 +218,7 @@ func (reqKLAYReasoning *RequestKLAYReasoningVT) reasoning(blockchain *blockchain
 				respKLAYReasoning.Reasoning = VALUE_TRANSFER_KLAY_NOT_ENOUGH_CONTRACT_BALANCE
 			} else if revertedMsg != "" {
 				// Check 3. The internal error of bridge contract must have revert message unless its failure is not by insufficient balance error
-				respKLAYReasoning.Reasoning = VALUE_TRANSFER_KLAY_INVALID_VOTE_OR_NONCE
+				respKLAYReasoning.Reasoning = VALUE_TRANSFER_KLAY_REVERTED
 			}
 		} else {
 			// Check 4. If the `to` address is contract account and reverted on its fallback function
@@ -252,7 +251,7 @@ func (respKLAYReasoning *ResponseKLAYReasoningVT) log(reasoningWord string) {
 		cause = "The bridge operator may not have enough balance to execute value transfer transaction"
 	}
 	if respKLAYReasoning.Reasoning == VALUE_TRANSFER_KLAY_OUT_OF_GAS {
-		cause = "Please validate the operator's gaslmiit value"
+		cause = "Please validate the operator's klay balance and gaslmiit value (`subbridge_getParentBridgeOperatorGasLimit` and `subbridge_getChildBridgeOperatorGasLimit`)"
 	}
 
 	logger.Error(reasoningWord,
@@ -291,11 +290,11 @@ func (respKLAYReasoning *ResponseKLAYReasoningVT) decideResend() bool {
 	case VALUE_TRANSFER_KLAY_VM_ERR:
 		respKLAYReasoning.log("[SC][Reasoning] Failed by vm execution error. No resend its transaction")
 		return false
-	case VALUE_TRANSFER_KLAY_INVALID_VOTE_OR_NONCE:
-		respKLAYReasoning.log("[SC][Reasoning] Failed by some of internal errors. Expected to never happen this error. No resend its transaction")
+	case VALUE_TRANSFER_KLAY_REVERTED:
+		respKLAYReasoning.log("[SC][Reasoning] Failed by revert. Expected to never happen this error. No resend its transaction")
 		return false
 	case VALUE_TRANSFER_KLAY_UNEXECUTED:
-		respKLAYReasoning.log("[SC][Reasoning] Tx was not found. Send its transaction again")
+		respKLAYReasoning.log("[SC][Reasoning] Tx was not found. Try to Resend it if its reasoning timeout exceeded")
 		return true
 	case VALUE_TRANSFER_KLAY_NOT_ENOUGH_CONTRACT_BALANCE:
 		respKLAYReasoning.log("[SC][Reasoning] Failed by not enough bridge contract balance. No resend its transaction.")
@@ -307,7 +306,7 @@ func (respKLAYReasoning *ResponseKLAYReasoningVT) decideResend() bool {
 	return false
 }
 
-func (respKLAYReasoning *ResponseKLAYReasoningVT) refunadable() bool {
+func (respKLAYReasoning *ResponseKLAYReasoningVT) refundable() bool {
 	switch respKLAYReasoning.Reasoning {
 	case VALUE_TRANSFER_KLAY_OUT_OF_GAS, VALUE_TRANSFER_KLAY_NOT_ENOUGH_CONTRACT_BALANCE:
 		return true

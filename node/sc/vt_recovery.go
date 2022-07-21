@@ -17,7 +17,6 @@
 package sc
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -25,9 +24,18 @@ import (
 	"github.com/pkg/errors"
 )
 
-const LeastRecoveryInterval = time.Second * 5
+// const LeastRecoveryInterval = time.Second * 5
 
-var filterLogsStride = uint64(100)
+var (
+	filterLogsStride = uint64(100)
+	maxPendingTxs    = maxPendingNonceDiff
+	ReasoingTimeouts = make(map[uint64]time.Time) // <request nonce, stacked timeout>
+)
+
+const (
+	DefaultReasoingTimeout   = time.Second * 5
+	DefaultUnexecutedTimeout = time.Second * 30
+)
 
 // valueTransferHint stores the last handled block number and nonce (Request or Handle).
 type valueTransferHint struct {
@@ -87,9 +95,11 @@ func NewValueTransferRecovery(config *SCConfig, cBridgeInfo, pBridgeInfo *Bridge
 // Start implements starting all internal goroutines used by the value transfer recovery.
 func (vtr *valueTransferRecovery) Start() error {
 	recoveryInterval := time.Duration(vtr.config.VTRecoveryInterval) * time.Second
-	if recoveryInterval < LeastRecoveryInterval {
-		panic(fmt.Sprintf("Recovery interval must be larger than %v (given: %v)", LeastRecoveryInterval, recoveryInterval))
-	}
+	/*
+		if recoveryInterval < LeastRecoveryInterval {
+			panic(fmt.Sprintf("Recovery interval must be larger than %v (given: %v)", LeastRecoveryInterval, recoveryInterval))
+		}
+	*/
 
 	if !vtr.config.VTRecovery {
 		return ErrVtrDisabled
@@ -316,7 +326,7 @@ pendingTxLoop:
 				}
 				logger.Trace("filtered pending nonce", "requestNonce", reqVTevIt.Event.RequestNonce, "handledNonce", hint.handleNonce)
 				pendingEvents = append(pendingEvents, RequestValueTransferEvent{reqVTevIt.Event})
-				if len(pendingEvents) >= maxPendingNonceDiff {
+				if len(pendingEvents) >= maxPendingTxs {
 					reqVTevIt.Close()
 					break pendingTxLoop
 				}
@@ -332,7 +342,7 @@ pendingTxLoop:
 				}
 				logger.Trace("filtered pending nonce", "requestNonce", reqVTencodedDataIt.Event.RequestNonce, "handledNonce", hint.handleNonce)
 				pendingEvents = append(pendingEvents, RequestValueTransferEncodedEvent{reqVTencodedDataIt.Event})
-				if len(pendingEvents) >= maxPendingNonceDiff {
+				if len(pendingEvents) >= maxPendingTxs {
 					reqVTencodedDataIt.Close()
 					break pendingTxLoop
 				}
@@ -382,44 +392,83 @@ func checkRecoveryCondition(hint *valueTransferHint) bool {
 }
 
 func furtherTreatment(bi, ctbi *BridgeInfo, respReasoning ResponseVTReasoningWrapper, ev IRequestValueTransferEvent) bool {
-	if !respReasoning.decideResend() {
-		if respReasoning.refundable() {
-			bi.refund(ev)
-		}
-		ctbi.updateHandleStatus(ev)
-		ctbi.MarkFailedHandleEvents(ev.GetRequestNonce())
-		bi.bridgeDB.WriteFailedHandleInfo(bi.address, bi.counterpartAddress, makeFailedHandleInfo(ev))
+	// Do not push a log if its failed transaction was discovered. The contract call `UpdateHandleStatus` is not executed yet
+	if bi.bridgeDB.ReadFailedHandleInfo(bi.address, bi.counterpartAddress, ev.GetRaw().TxHash) != nil {
 		return false
 	} else {
-		return true
+		if !respReasoning.decideResend() {
+			if respReasoning.refundable() {
+				bi.refund(ev)
+			}
+			if bi.bridgeDB.ReadFailedHandleInfo(bi.address, bi.counterpartAddress, ev.GetRaw().TxHash) == nil {
+				ctbi.updateHandleStatus(ev, true)
+				vtFailedHandleEventMeter.Mark(1)
+				ctbi.SetFailedHandleEvents(1)
+				bi.bridgeDB.WriteFailedHandleInfo(bi.address, bi.counterpartAddress, makeFailedHandleInfo(ev))
+			}
+			return false
+		} else {
+			return true
+		}
 	}
+}
+
+func updateReasoingTimeout(unexecuted bool, ev IRequestValueTransferEvent) bool {
+	if unexecuted {
+		if ReasoingTimeouts[ev.GetRequestNonce()].IsZero() {
+			ReasoingTimeouts[ev.GetRequestNonce()] = time.Now()
+		} else if time.Since(ReasoingTimeouts[ev.GetRequestNonce()]) >= DefaultUnexecutedTimeout {
+			logger.Error("[SC][Reasoning] A handle value transfer transaction was not found during default timeout. Resend again", "elapsed", time.Since(ReasoingTimeouts[ev.GetRequestNonce()]), "timeout", DefaultUnexecutedTimeout,
+				"requestNonce", ev.GetRequestNonce(), "reqTxHash", ev.GetRaw().TxHash.Hex())
+			ReasoingTimeouts[ev.GetRequestNonce()] = time.Time{}
+			return true
+		}
+		return false
+	}
+	return false
 }
 
 func (vtr *valueTransferRecovery) reasoning() {
 	replaceReceiverAcc2Zero := func(events []IRequestValueTransferEvent, bi, ctbi *BridgeInfo) []IRequestValueTransferEvent {
-		defaultExpired := time.Second * 5
 		subBridge := bi.subBridge
 		unexecutedEvents := make([]IRequestValueTransferEvent, 0)
 		for _, ev := range events {
-			if ev.GetTokenType() == 0 { // KLAY
-				reqReasoning := makeRequestKLAYHandleDebug(bi, ev)
+			unexecuted := false
+			switch ev.GetTokenType() {
+			case KLAY:
+				reqReasoning, err := makeRequestKLAYHandleDebug(bi, ev)
+				if err != nil {
+					logger.Error("[SC][Reasoning] Not found such an event", "event", ev.String())
+					unexecutedEvents = append(unexecutedEvents, ev)
+					continue
+				}
 				if !bi.onChildChain { // parent sent, child do reasoning
 					respReasoning := reqReasoning.reasoning(subBridge.blockchain, subBridge.debugAPI)
 					if furtherTreatment(bi, ctbi, respReasoning, ev) {
-						unexecutedEvents = append(unexecutedEvents, ev)
+						unexecuted = true
 					}
 				} else { // child sent, parent do reasoning
 					subBridge.handler.requestTxDebug(reqReasoning)
-					expired := time.After(defaultExpired)
+					expired := time.After(DefaultReasoingTimeout)
 					select {
 					case respReasoning := <-bi.respVTReasoingCh:
 						if furtherTreatment(bi, ctbi, respReasoning, ev) {
-							unexecutedEvents = append(unexecutedEvents, ev)
+							unexecuted = true
 						}
 					case <-expired:
-						logger.Error("[SC][Reasoning] ResponseTxDebug is not arrived from paretn chain")
+						unexecuted = true
+						logger.Error("[SC][Reasoning] Response of reasoning was not received from paretn chain", "requestNonce", ev.GetRequestNonce(), "reqTxHash", ev.GetRaw().TxHash.Hex())
 					}
 				}
+				if updateReasoingTimeout(unexecuted, ev) {
+					logger.Debug("[SC][Reasoning] Put unexecuted handle value transfer transaction", "event", ev.String())
+					unexecutedEvents = append(unexecutedEvents, ev)
+				}
+			case ERC20, ERC721:
+				// TODO-hyunsooda: Implement further treatmenet for ERC20 and ERC721
+				unexecutedEvents = append(unexecutedEvents, ev)
+			default:
+				logger.Error("[SC][Reasoning] Not a supported token type", "event", ev.String())
 			}
 		}
 		return unexecutedEvents

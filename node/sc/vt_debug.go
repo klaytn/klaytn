@@ -17,9 +17,11 @@
 package sc
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/node/cn"
@@ -102,7 +104,7 @@ func (respVTReasoningWrapper *ResponseVTReasoningWrapper) decideResend() bool {
 func (respVTReasoningWrapper *ResponseVTReasoningWrapper) refundable() bool {
 	switch respVTReasoningWrapper.TokenType {
 	case KLAY:
-		return respVTReasoningWrapper.KLAYReasoning.refunadable()
+		return respVTReasoningWrapper.KLAYReasoning.refundable()
 	default:
 		return false
 	}
@@ -149,10 +151,16 @@ func getErrorWithGasUsed(traceResult interface{}) (string, uint64, uint64) {
 	return "", 0, 0
 }
 
-func makeRequestKLAYHandleDebug(bi *BridgeInfo, ev IRequestValueTransferEvent) *RequestVTReasoningWrapper {
+func makeRequestKLAYHandleDebug(bi *BridgeInfo, ev IRequestValueTransferEvent) (*RequestVTReasoningWrapper, error) {
 	isOnChild := bi.onChildChain
 	reqTxHash := ev.GetRaw().TxHash
-	handleTx := bi.bridgeDB.ReadAllHandleInfo(bi.address, bi.counterpartAddress, reqTxHash).HandleTx
+	handleInfo := bi.bridgeDB.ReadAllHandleInfo(bi.address, bi.counterpartAddress, reqTxHash)
+	var handleTx types.Transaction
+	if handleInfo != nil {
+		handleTx = handleInfo.HandleTx
+	} else {
+		return nil, fmt.Errorf("No handle info was found (reqNonce = %d)", ev.GetRequestNonce())
+	}
 	var counterpartOperatorAddr common.Address
 	if isOnChild {
 		counterpartOperatorAddr = bi.subBridge.APIBackend.GetParentOperatorAddr()
@@ -169,5 +177,5 @@ func makeRequestKLAYHandleDebug(bi *BridgeInfo, ev IRequestValueTransferEvent) *
 		isOnChild,
 		reqTxHash,
 		handleTx.Hash(),
-	)
+	), nil
 }
