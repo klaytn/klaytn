@@ -730,3 +730,40 @@ func (sb *SubBridgeAPI) GetParentMagmaConfig() params.MagmaConfig {
 func (sb *SubBridgeAPI) RequestParentSync() {
 	sb.subBridge.handler.SyncNonceAndGasPrice()
 }
+
+func (sb *SubBridgeAPI) SuggestLeastFee(bridgeAddr common.Address, tokenTypeStr string) (map[string]interface{}, error) {
+	types := strings.Split(tokenTypeStr, ",")
+	m := make(map[uint8]bool)
+	handleValueTransfers := make([]string, 0)
+	for _, t := range types {
+		switch t {
+		case "KLAY":
+			if !m[KLAY] {
+				handleValueTransfers = append(handleValueTransfers, "handleKLAYTransfer")
+				m[KLAY] = true
+			}
+		case "ERC20":
+			if !m[ERC20] {
+				handleValueTransfers = append(handleValueTransfers, "handleERC20Transfer")
+				m[ERC20] = true
+			}
+		case "ERC721":
+			if !m[ERC721] {
+				handleValueTransfers = append(handleValueTransfers, "handleERC721Transfer")
+				m[ERC721] = true
+			}
+		default:
+			return nil, fmt.Errorf("Wrong types of parameters: %s (The parameter of token types must be comma seperated)", tokenTypeStr)
+		}
+	}
+	if bi, ok := sb.subBridge.bridgeManager.GetBridgeInfo(bridgeAddr); ok {
+		if ctBridgeAddr := sb.subBridge.bridgeManager.GetCounterPartBridgeAddr(bridgeAddr); ctBridgeAddr != (common.Address{}) {
+			if ctbi, ok := sb.subBridge.bridgeManager.GetBridgeInfo(ctBridgeAddr); ok {
+				return bi.suggestLeastFee(ctbi, handleValueTransfers)
+			}
+			return nil, fmt.Errorf("%s (bridge addr = %s)", ErrNoBridgeInfo.Error(), ctBridgeAddr.String())
+		}
+		return nil, fmt.Errorf("counterpart bridge address does not exist (bridge addr = %s)", bridgeAddr.String())
+	}
+	return nil, fmt.Errorf("%s (bridge addr = %s)", ErrNoBridgeInfo.Error(), bridgeAddr.String())
+}
