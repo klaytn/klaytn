@@ -258,3 +258,14 @@ func TestInternalTxTrace_MarshalJSON(t *testing.T) {
 		})
 	}
 }
+
+func TestInternalTxTracer_result_invalidOutput(t *testing.T) {
+	tracer := NewInternalTxTracer()
+	tracer.ctx["error"] = errEvmExecutionReverted
+	tracer.ctx["output"] = "0x08c379a0000000000000000000000000000000000000000000000000ffffffffffffffff000000000000000000000000000000000000000000000000ffffffffffffffff"
+
+	_, err := tracer.result()
+	if err != nil {
+		t.Fatal(err)
+	}
+}

@@ -515,24 +515,57 @@ func (this *InternalTxTracer) result() (*InternalTxTrace, error) {
 	}
 	if err := this.ctx["error"]; err != nil && err.(error).Error() == errEvmExecutionReverted.Error() {
 		outputHex := this.ctx["output"].(string) // it is already a hex string
-		if len(outputHex) >= 11 && outputHex[2:10] == "08c379a0" {
+		outputHexLength := len(outputHex)
+
+		// outputHexLength should be equal for larger than 138 (10+32*2+32*2) to parse a revert string
+		// outputHex[:10]: "0x08c379a0"
+		// outputHex[10:10+32*2]: a revert string
+		// outputHex[10+32*2:10+32*2+32*2]: the length of a revert string
+		if outputHexLength >= 138 && outputHex[2:10] == "08c379a0" {
 			defaultOffset := 10
 
-			stringOffset, err := strconv.ParseInt(outputHex[defaultOffset:defaultOffset+32*2], 16, 64)
+			// TODO-Klaytn: introduce error handling logic for the case the parsing data is bigger than math.MaxUint64
+			stringOffset, err := strconv.ParseUint(outputHex[defaultOffset:defaultOffset+32*2], 16, 64)
 			if err != nil {
 				logger.Error("failed to parse hex string to get stringOffset",
 					"err", err, "outputHex", outputHex)
 				return nil, err
 			}
-			stringLength, err := strconv.ParseInt(outputHex[defaultOffset+32*2:defaultOffset+32*2+32*2], 16, 64)
+			stringLength, err := strconv.ParseUint(outputHex[defaultOffset+32*2:defaultOffset+32*2+32*2], 16, 64)
 			if err != nil {
 				logger.Error("failed to parse hex string to get stringLength",
 					"err", err, "outputHex", outputHex)
 				return nil, err
 			}
+
+			if stringOffset > uint64(outputHexLength) {
+				stringOffset = 0
+			}
+			if stringLength > uint64(outputHexLength) {
+				stringLength = 0
+			}
+
 			start := defaultOffset + 32*2 + int(stringOffset*2)
 			end := start + int(stringLength*2)
-			asciiInBytes, err := hex.DecodeString(outputHex[start:end])
+
+			if start < 0 {
+				start = 0
+			}
+			if end < 0 {
+				end = 0
+			}
+			// return nothing if end is out of the range
+			if end > outputHexLength {
+				start = outputHexLength
+				end = outputHexLength
+			}
+
+			// left-padding with 0 for hex decoding
+			outputHexSlice := outputHex[start:end]
+			if len(outputHexSlice)%2 == 1 {
+				outputHexSlice = "0" + outputHexSlice
+			}
+			asciiInBytes, err := hex.DecodeString(outputHexSlice)
 			if err != nil {
 				logger.Error("failed to parse hex string to get ASCII representation",
 					"err", err, "outputHex", outputHex)
