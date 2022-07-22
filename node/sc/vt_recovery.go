@@ -133,7 +133,7 @@ func (vtr *valueTransferRecovery) Start() error {
 			case <-ticker.C:
 				if vtr.isRunning {
 					if err := vtr.Recover(); err != nil {
-						logger.Trace("value transfer recovery is failed", "err", err)
+						logger.Error("value transfer recovery is failed", "err", err)
 					}
 				}
 			}
@@ -302,6 +302,7 @@ func retrievePendingEventsFrom(hint *valueTransferHint, from, to *BridgeInfo) ([
 
 pendingTxLoop:
 	for startBlkNum <= curBlkNum {
+		logger.Trace("[SC][Recovery] Block iteration...", "startAt", startBlkNum, "endAt", endBlkNum)
 		if endBlkNum > curBlkNum {
 			endBlkNum = curBlkNum
 		}
