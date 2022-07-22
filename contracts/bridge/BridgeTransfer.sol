@@ -141,7 +141,8 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
      */
     event Refunded(uint64 indexed requestNonce, address indexed sender, uint256 indexed value);
 
-    // _updateHandleNonce increases lower and upper handle nonce after the _requestedNonce is handled.
+    // updateHandleNonce increases lower and upper handle nonce after the _requestedNonce is handled.
+    // DO NOT OPERATE WITH OTHER CONTRACT ADDRESS IN THIS FUNCTION
     function _updateHandleNonce(uint64 _requestedNonce) internal {
         if (_requestedNonce > upperHandleNonce) {
             upperHandleNonce = _requestedNonce;
@@ -207,6 +208,7 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
     }
 
     // refund refunds the requested amount of KLAY to sender if its corresponding value transfer is failed from the bridge contract of counterpart chain
+    // DO NOT OPERATE WITH OTHER CONTRACT ADDRESS IN THIS FUNCTION
     function refund(uint64 requestNonce_) public {
         if (!refundCond(requestNonce_)) {
             return;
@@ -246,11 +248,12 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
 
     // removeRefundLedger removes refund info (sender address and amount of KLAY).
     // This function is only called when a `HandleValueTransfer` event is emitted.
+    // DO NOT OPERATE WITH OTHER CONTRACT ADDRESS IN THIS FUNCTION
     function removeRefundLedger(uint64 requestNonce_) public onlyOperators {
         if (!_voteRefund(requestNonce_)) {
             return;
         }
-        amountOfLockedRefundKLAYs.sub(refundValueMap[requestNonce_]);
+        amountOfLockedRefundKLAYs = amountOfLockedRefundKLAYs.sub(refundValueMap[requestNonce_]);
         delete refundAddrMap[requestNonce_];
         delete refundValueMap[requestNonce_];
         delete refundTimestampMap[requestNonce_];
