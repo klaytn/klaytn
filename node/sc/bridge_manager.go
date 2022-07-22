@@ -31,6 +31,7 @@ import (
 	bridgecontract "github.com/klaytn/klaytn/contracts/bridge"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/node/sc/bridgepool"
+	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
 )
@@ -410,7 +411,7 @@ func (bi *BridgeInfo) refund(ev IRequestValueTransferEvent) error {
 	bridgeAcc.Lock()
 	defer bridgeAcc.UnLock()
 	auth := bridgeAcc.GenerateTransactOpts()
-	auth.GasLimit = 0 // allow max gaslimit
+	auth.GasLimit = params.UpperGasLimit / 1000000 // allow gas limit to 999999
 
 	reqNonce := ev.GetRequestNonce()
 	refundTx, err := bi.bridge.Refund(auth, reqNonce)
@@ -436,7 +437,7 @@ func (bi *BridgeInfo) removeRefundLedger(reqNonce uint64) error {
 	bridgeAcc.Lock()
 	defer bridgeAcc.UnLock()
 	auth := bridgeAcc.GenerateTransactOpts()
-	auth.GasLimit = 0 // allow max gaslimit
+	auth.GasLimit = params.UpperGasLimit / 1000000 // allow gas limit to 999999
 
 	refundLedgerRemovalTx, err := bi.bridge.RemoveRefundLedger(auth, reqNonce)
 	if err != nil {
@@ -457,7 +458,7 @@ func (bi *BridgeInfo) updateHandleStatus(ev IRequestValueTransferEvent, failed b
 	bridgeAcc.Lock()
 	defer bridgeAcc.UnLock()
 	auth := bridgeAcc.GenerateTransactOpts()
-	auth.GasLimit = 0 // allow max gaslimit
+	auth.GasLimit = params.UpperGasLimit / 1000000 // allow gas limit to 999999
 
 	reqNonce, reqTxHash, reqBlkNum := ev.GetRequestNonce(), ev.GetRaw().TxHash, ev.GetRaw().BlockNumber
 	updateHandleStatusTx, err := bi.bridge.UpdateHandleStatus(auth, reqNonce, reqTxHash, reqBlkNum, failed)
@@ -723,43 +724,45 @@ func (bm *BridgeManager) LogBridgeStatus() {
 		return
 	}
 
-	var p2cTotalRequestNonce, p2cTotalHandleNonce, p2cNumberOfRefunds, p2cNumberOfHandleFailures, p2cTotalLowerHandleNonce uint64
-	var c2pTotalRequestNonce, c2pTotalHandleNonce, c2pNumberOfRefunds, c2pNumberOfHandleFailures, c2pTotalLowerHandleNonce uint64
+	var p2cTotalRequestNonce, p2cTotalHandleNonce, p2cNumberOfRefunds, p2cNumberOfHandleFailures, p2cTotalLowerHandleNonce, p2cTotalPendings uint64
+	var c2pTotalRequestNonce, c2pTotalHandleNonce, c2pNumberOfRefunds, c2pNumberOfHandleFailures, c2pTotalLowerHandleNonce, c2pTotalPendings uint64
 
 	for bAddr, b := range bm.bridges {
-		diffNonce := b.requestNonceFromCounterPart - b.handleNonce
+		// diffNonce := b.requestNonceFromCounterPart - b.handleNonce
+
+		handleNonce := uint64(0)
+		if b.handleNonce > b.nFailedHandle {
+			handleNonce += b.handleNonce - b.nFailedHandle
+		}
+		// # of request - (# of handled + # of failed)
+		pendings := b.requestNonceFromCounterPart - (handleNonce + b.nFailedHandle)
 
 		if b.subscribed {
 			var headStr string
 			if b.onChildChain {
-				headStr = "Bridge(Parent -> Child Chain)"
+				headStr = "[SC][Pair] Bridge(Parent -> Child Chain)"
 				p2cTotalRequestNonce += b.requestNonceFromCounterPart
 				c2pNumberOfRefunds += b.nRefunds
 				p2cNumberOfHandleFailures += b.nFailedHandle
 				p2cTotalLowerHandleNonce += b.lowerHandleNonce
-				if b.handleNonce > b.nFailedHandle {
-					p2cTotalHandleNonce += b.handleNonce - b.nFailedHandle
-				} else {
-					p2cTotalHandleNonce = 0
-				}
+				p2cTotalHandleNonce += handleNonce
+				p2cTotalPendings += pendings
 			} else {
-				headStr = "Bridge(Child -> Parent Chain)"
+				headStr = "[SC][Pair] Bridge(Child -> Parent Chain)"
 				c2pTotalRequestNonce += b.requestNonceFromCounterPart
 				p2cNumberOfRefunds += b.nRefunds
 				c2pNumberOfHandleFailures += b.nFailedHandle
 				c2pTotalLowerHandleNonce += b.lowerHandleNonce
-				if b.handleNonce > b.nFailedHandle {
-					c2pTotalHandleNonce += b.handleNonce - b.nFailedHandle
-				} else {
-					c2pTotalHandleNonce = 0
-				}
+				c2pTotalHandleNonce += handleNonce
+				c2pTotalPendings += pendings
 			}
-			logger.Debug(headStr, "bridge", bAddr.String(), "requestNonce", b.requestNonceFromCounterPart, "numberOfRefunds", b.nRefunds, "numberOfFailedHandle", b.nFailedHandle, "lowerHandleNonce", b.lowerHandleNonce, "handleNonce", b.handleNonce, "pending", diffNonce)
+			logger.Info(headStr, "bridge", bAddr.String(), "counterpartBridge", b.counterpartAddress.String(), "requestNonce", b.requestNonceFromCounterPart,
+				"numberOfRefunds", b.nRefunds, "numberOfFailedHandle", b.nFailedHandle, "lowerHandleNonce",
+				b.lowerHandleNonce, "handleNonce", b.handleNonce, "pending", pendings)
 		}
 	}
-
-	logger.Info("VT : Parent -> Child Chain", "request", p2cTotalRequestNonce, "handled", p2cTotalHandleNonce, "numberOfRefunds", p2cNumberOfRefunds, "numberOfFailedHandle", p2cNumberOfHandleFailures, "lowerHandle", p2cTotalLowerHandleNonce, "pending", p2cTotalRequestNonce-p2cTotalLowerHandleNonce)
-	logger.Info("VT : Child -> Parent Chain", "request", c2pTotalRequestNonce, "handled", c2pTotalHandleNonce, "numberOfRefunds", c2pNumberOfRefunds, "numberOfFailedHandle", c2pNumberOfHandleFailures, "lowerHandle", c2pTotalLowerHandleNonce, "pending", c2pTotalRequestNonce-c2pTotalLowerHandleNonce)
+	logger.Info("[SC][All] VT : Parent -> Child Chain", "request", p2cTotalRequestNonce, "handled", p2cTotalHandleNonce, "numberOfRefunds", p2cNumberOfRefunds, "numberOfFailedHandle", p2cNumberOfHandleFailures, "lowerHandle", p2cTotalLowerHandleNonce, "pending", p2cTotalPendings)
+	logger.Info("[SC][All] VT : Child -> Parent Chain", "request", c2pTotalRequestNonce, "handled", c2pTotalHandleNonce, "numberOfRefunds", c2pNumberOfRefunds, "numberOfFailedHandle", c2pNumberOfHandleFailures, "lowerHandle", c2pTotalLowerHandleNonce, "pending", c2pTotalPendings)
 }
 
 // SubscribeReqVTev registers a subscription of RequestValueTransferEvent.
