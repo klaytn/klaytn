@@ -396,17 +396,17 @@ func (sbh *SubBridgeHandler) handleParentChainInvalidTxResponseMsg(msg p2p.Msg) 
 			if invalidTx.ErrStr == blockchain.ErrGasPriceBelowBaseFee.Error() {
 				logger.Info("[SC][HandleTxDropped] Request gasPrice and Magma values to parent chain")
 				sbh.SyncNonceAndGasPrice()
-
 				logger.Error("Bridge tx is removed which has lower gasPrice than UpperBoundBaseFee")
-				// Remove the tx and delegate re-execution of the tx by Value Transfer Recovery feature
-				if err := sbh.subbridge.GetBridgeTxPool().RemoveTx(tx); err != nil {
-					logger.Error("Failed to remove bridge tx",
-						"txType", tx.Type(), "txNonce", tx.Nonce(), "txHash", tx.Hash().String())
-				} else {
-					logger.Info("Removed bridge tx",
-						"txType", tx.Type(), "txNonce", tx.Nonce(), "txHash", tx.Hash().String())
-				}
+
 			} // TODO-ServiceChain: Consider other types of tx failures with else {}
+			// Remove the tx and delegate re-execution of the tx by Value Transfer Recovery feature
+			if err := sbh.subbridge.GetBridgeTxPool().RemoveTx(tx); err != nil {
+				logger.Error("Failed to remove bridge tx",
+					"txType", tx.Type(), "txNonce", tx.Nonce(), "txHash", tx.Hash().String())
+			} else {
+				logger.Info("Removed bridge tx",
+					"txType", tx.Type(), "txNonce", tx.Nonce(), "txHash", tx.Hash().String())
+			}
 		}
 	}
 	return nil
