@@ -556,8 +556,8 @@ func (this *InternalTxTracer) result() (*InternalTxTrace, error) {
 			}
 			// return nothing if end is out of the range
 			if end > outputHexLength {
-				start = outputHexLength
-				end = outputHexLength
+				start = outputHexLength-1
+				end = outputHexLength-1
 			}
 
 			// left-padding with 0 for hex decoding
