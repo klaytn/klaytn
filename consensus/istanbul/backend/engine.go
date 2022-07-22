@@ -193,7 +193,12 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 
 	// Header verify before/after magma fork
 	if chain.Config().IsMagmaForkEnabled(header.Number) {
-		_, data, err := sb.governance.ReadGovernance(header.Number.Uint64())
+		// the kip71Config used when creating the block number is a previous block config.
+		blockNum := header.Number.Uint64()
+		if header.Number.BitLen() != 0 {
+			blockNum = blockNum - 1
+		}
+		_, data, err := sb.governance.ReadGovernance(blockNum)
 		if err != nil {
 			return err
 		}
@@ -268,7 +273,8 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 	}
 
 	// At every epoch governance data will come in block header. Verify it.
-	if number%sb.governance.Epoch() == 0 && len(header.Governance) > 0 {
+	pendingBlockNum := new(big.Int).Add(chain.CurrentHeader().Number, common.Big1)
+	if number%sb.governance.Epoch() == 0 && len(header.Governance) > 0 && pendingBlockNum.Cmp(header.Number) == 0 {
 		return sb.governance.VerifyGovernance(header.Governance)
 	}
 	return sb.verifyCommittedSeals(chain, header, parents)
