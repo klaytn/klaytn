@@ -518,7 +518,7 @@ func (this *InternalTxTracer) result() (*InternalTxTrace, error) {
 		outputHexLength := len(outputHex)
 
 		// outputHexLength should be equal for larger than 138 (10+32*2+32*2) to parse a revert string
-		// outputHex[:10]: "0x08c379a0"
+		// outputHex[:10]: "0x08c379a0" == crypto.Keccak256([]byte("Error(string)"))[:4]
 		// outputHex[10:10+32*2]: a revert string
 		// outputHex[10+32*2:10+32*2+32*2]: the length of a revert string
 		if outputHexLength >= 138 && outputHex[2:10] == "08c379a0" {
