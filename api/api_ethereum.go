@@ -1142,7 +1142,7 @@ func (args *EthTransactionArgs) setDefaults(ctx context.Context, b Backend) erro
 	} else {
 		// Both maxPriorityFee and maxFee set by caller. Sanity-check their internal relation
 		if isMagma {
-			if args.MaxFeePerGas.ToInt().Cmp(gasPrice) < 0 {
+			if args.MaxFeePerGas.ToInt().Cmp(new(big.Int).Div(gasPrice, common.Big2)) < 0 {
 				return fmt.Errorf("maxFeePerGas (%v) < BaseFee (%v)", args.MaxFeePerGas, gasPrice)
 			}
 		} else {
