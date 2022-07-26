@@ -377,23 +377,35 @@ Transactions:
 }
 
 func (h *Header) String() string {
-	return fmt.Sprintf(`Header(%x):
-[
-	ParentHash:       %x
-	Rewardbase:       %x
-	Root:             %x
-	TxSha:            %x
-	ReceiptSha:       %x
-	Bloom:            %x
-	BlockScore:       %v
-	Number:           %v
-	GasUsed:          %v
-	Time:             %v
-	TimeFoS:          %v
-	Extra:            %s
-	Governance:       %x
-	Vote:             %x
-]`, h.Hash(), h.ParentHash, h.Rewardbase, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.BlockScore, h.Number, h.GasUsed, h.Time, h.TimeFoS, h.Extra, h.Governance, h.Vote)
+	prefix := `Header(%x):
+	[`
+	strBaseHeader := `
+		ParentHash:       %x
+		Rewardbase:       %x
+		Root:             %x
+		TxSha:            %x
+		ReceiptSha:       %x
+		Bloom:            %x
+		BlockScore:       %v
+		Number:           %v
+		GasUsed:          %v
+		Time:             %v
+		TimeFoS:          %v
+		Extra:            %s
+		Governance:       %x
+		Vote:             %x
+	`
+	suffix := `
+	]`
+	strHeader := ""
+	if h.BaseFee != nil {
+		strBaseHeader = strBaseHeader + `	BaseFee:          %x
+		`
+		strHeader = fmt.Sprintf(prefix+strBaseHeader+suffix, h.Hash(), h.ParentHash, h.Rewardbase, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.BlockScore, h.Number, h.GasUsed, h.Time, h.TimeFoS, h.Extra, h.Governance, h.Vote, h.BaseFee)
+	} else {
+		strHeader = fmt.Sprintf(prefix+strBaseHeader+suffix, h.Hash(), h.ParentHash, h.Rewardbase, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.BlockScore, h.Number, h.GasUsed, h.Time, h.TimeFoS, h.Extra, h.Governance, h.Vote)
+	}
+	return strHeader
 }
 
 type Blocks []*Block
