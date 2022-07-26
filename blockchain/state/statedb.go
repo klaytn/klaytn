@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"math/big"
 	"sort"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -56,6 +57,15 @@ var (
 
 	// TODO-Klaytn EnabledExpensive and DBConfig.EnableDBPerfMetrics will be merged
 	EnabledExpensive = false
+
+	midAccountCnt  = uint64(0)
+	midStorageCnt  = uint64(0)
+	codeCnt        = uint64(0)
+	leafAccountCnt = uint64(0)
+	leafStorageCnt = uint64(0)
+	unknownCnt     = uint64(0)
+	mutex          = &sync.Mutex{}
+	once           sync.Once
 )
 
 // StateDBs within the Klaytn protocol are used to cache stateObjects from Merkle Patricia Trie
@@ -1091,4 +1101,49 @@ func (s *StateDB) GetContractStorageRoot(contractAddr common.Address) (common.Ha
 		return common.Hash{}, errNotContractAddress
 	}
 	return contract.GetStorageRoot(), nil
+}
+
+func Tracer(db Database, root common.Hash) (resultErr error) {
+	once.Do(func() {
+		go func() {
+			for {
+				time.Sleep(time.Second * 5)
+				logger.Info("Trie Tracer", "AccNode", midAccountCnt, "AccLeaf", leafAccountCnt, "StrgNode", midStorageCnt, "StrgLeaf", leafStorageCnt, "Unknown", unknownCnt, "CodeAcc", codeCnt)
+			}
+		}()
+	})
+
+	logger.Info("Trie Tracer Start", "Hash Root", root)
+	// Create and iterate a state trie rooted in a sub-node
+	oldState, err := New(root, db, nil)
+	if err != nil {
+		logger.Error("can not open trie DB", err.Error())
+		panic(err)
+	}
+
+	oldIt := NewNodeIterator(oldState)
+
+	for oldIt.Next() {
+		mutex.Lock()
+		switch oldIt.Type {
+		case "state":
+			midAccountCnt++
+		case "storage":
+			midStorageCnt++
+		case "code":
+			codeCnt++
+		case "state_leaf":
+			leafAccountCnt++
+		case "storage_leaf":
+			leafStorageCnt++
+		default:
+			unknownCnt++
+		}
+		mutex.Unlock()
+	}
+	if oldIt.Error != nil {
+		logger.Error("Error Finished", "Root Hash", root, "Message", oldIt.Error)
+	}
+	logger.Info("Trie Tracer Finished", "Root Hash", root, "AccNode", midAccountCnt, "AccLeaf", leafAccountCnt, "StrgNode", midStorageCnt, "StrgLeaf", leafStorageCnt, "Unknown", unknownCnt, "CodeAcc", codeCnt)
+	return nil
 }

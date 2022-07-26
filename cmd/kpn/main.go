@@ -74,6 +74,9 @@ func init() {
 
 		// See utils/nodecmd/db_migration.go:
 		nodecmd.MigrationCommand,
+
+		// See utils/nodecmd/snapshot.go:
+		nodecmd.SnapshotCommand,
 	}
 	sort.Sort(cli.CommandsByName(app.Commands))
 
