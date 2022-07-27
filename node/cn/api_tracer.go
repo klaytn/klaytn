@@ -62,8 +62,6 @@ const (
 	fastCallTracer = "fastCallTracer"
 )
 
-var ErrNotFoundTx = errors.New("Failed to retrive tx")
-
 // TraceConfig holds extra parameters to trace functions.
 type TraceConfig struct {
 	*vm.LogConfig
@@ -108,6 +106,10 @@ type blockTraceResult struct {
 type txTraceTask struct {
 	statedb *state.StateDB // Intermediate state prepped for tracing
 	index   int            // Transaction offset in the block
+}
+
+func MakeNotFoundTxErr(hash common.Hash) error {
+	return fmt.Errorf("transaction %#x not found", hash)
 }
 
 // TraceChain returns the structured logs created during the execution of EVM
@@ -740,8 +742,7 @@ func (api *PrivateDebugAPI) TraceTransaction(ctx context.Context, hash common.Ha
 	// Retrieve the transaction and assemble its EVM context
 	tx, blockHash, _, index := api.cn.ChainDB().ReadTxAndLookupInfo(hash)
 	if tx == nil {
-		logger.Error("transaction %#x not found", "txHash", hash.Hex())
-		return nil, ErrNotFoundTx
+		return nil, MakeNotFoundTxErr(hash)
 	}
 	reexec := defaultTraceReexec
 	if config != nil && config.Reexec != nil {
