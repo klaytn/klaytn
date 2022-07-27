@@ -196,7 +196,7 @@ func bridgeSetup(t *testing.T) (*backends.SimulatedBackend,
 	return sim, bm, cbi, pbi, vtr, alice, bob, node.DefaultConfig.ResolvePath("chaindata")
 }
 
-func handleLoop(t *testing.T, sim *backends.SimulatedBackend, bm *BridgeManager, bi *BridgeInfo, handled chan<- struct{}, nRequest int, unexecutedTest bool, exit <-chan struct{}) {
+func handleLoop(t *testing.T, sim *backends.SimulatedBackend, bm *BridgeManager, bi *BridgeInfo, handled chan<- struct{}, nRequest int, unexecutedTest bool) {
 	reqVTevCh := make(chan RequestValueTransferEvent)
 	handleValueTransferEventCh := make(chan *HandleValueTransferEvent)
 	bm.SubscribeReqVTev(reqVTevCh)
@@ -224,35 +224,32 @@ func handleLoop(t *testing.T, sim *backends.SimulatedBackend, bm *BridgeManager,
 				assert.Equal(t, ok, true)
 
 				auth := reqBridgeInfo.account.GenerateTransactOpts()
+				auth.Nonce = nil
 				auth.GasLimit = params.UpperGasLimit / 1000000 // allow gas limit to 999999
 				tx, err := reqBridgeInfo.bridge.RemoveRefundLedger(auth, ev.HandleNonce)
 				assert.NoError(t, err)
 				sim.Commit()
 				CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
 				handled <- struct{}{}
-			case <-exit:
-				return
 			}
 		}
 	}()
 }
 
-func cleanup(t *testing.T, sim *backends.SimulatedBackend, dataDir string, exit chan<- struct{}) {
+func cleanup(t *testing.T, sim *backends.SimulatedBackend, dataDir string) {
 	sim.Close()
 	if err := os.RemoveAll(dataDir); err != nil {
 		t.Fatalf("fail to delete file %v", err)
 	}
-	exit <- struct{}{}
 }
 
 func TestKLAYReasoing(t *testing.T) {
 	sim, bm, cbi, pbi, vtr, alice, bob, dataDir := bridgeSetup(t)
-	exit := make(chan struct{}, 1)
-	defer cleanup(t, sim, dataDir, exit)
+	defer cleanup(t, sim, dataDir)
 
 	nRequest := 5
 	handled := make(chan struct{}, 1)
-	handleLoop(t, sim, bm, cbi, handled, nRequest, true, exit)
+	handleLoop(t, sim, bm, cbi, handled, nRequest, true)
 
 	// Do request KLAY transfer
 	for TEST_CASE := 0; TEST_CASE < nRequest; TEST_CASE++ {
@@ -274,7 +271,7 @@ func TestKLAYReasoing(t *testing.T) {
 		prevAliceBalance, prevBobBalance := getBalance(t, sim, alice.From), getBalance(t, sim, bob.From)
 		tx, err := pbi.bridge.RequestKLAYTransfer(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, Value: big.NewInt(int64(TEST_AMOUNT_OF_KLAY)), GasLimit: testGasLimit}, to, big.NewInt(int64(TEST_AMOUNT_OF_KLAY)), nil)
 		assert.NoError(t, err)
-		sim.Commit() // block
+		sim.Commit()
 		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
 
 		<-handled
@@ -285,7 +282,7 @@ func TestKLAYReasoing(t *testing.T) {
 			assert.Equal(t, 1, len(vtr.parentEvents))
 			cbi.AddRequestValueTransferEvents(vtr.parentEvents)
 			cbi.processingPendingRequestEvents()
-			sim.Commit() // block
+			sim.Commit()
 		}
 		isExpected(t, sim, TEST_CASE, alice.From, bob.From, prevAliceBalance, prevBobBalance)
 
@@ -315,7 +312,7 @@ func TestWithdraw(t *testing.T) {
 		for i := 0; i < nRequest; i++ {
 			tx, err := pbi.bridge.RequestKLAYTransfer(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, Value: big.NewInt(int64(TEST_AMOUNT_OF_KLAY)), GasLimit: testGasLimit}, bob.From, big.NewInt(int64(TEST_AMOUNT_OF_KLAY)), nil)
 			assert.NoError(t, err)
-			sim.Commit() // block
+			sim.Commit()
 			CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
 		}
 
@@ -338,24 +335,22 @@ func TestWithdraw(t *testing.T) {
 
 		assert.Equal(t, bridgeBalance, TEST_AMOUNT_OF_KLAY*3)
 		assert.Equal(t, operatorBalance-prevOperatorBalance, prevBridgeBalance-bridgeBalance)
-		exit := make(chan struct{}, 1)
-		cleanup(t, sim, dataDir, exit)
+		cleanup(t, sim, dataDir)
 	}
 
 	{
 		sim, bm, cbi, pbi, _, alice, bob, dataDir := bridgeSetup(t)
-		exit := make(chan struct{}, 1)
-		defer cleanup(t, sim, dataDir, exit)
+		defer cleanup(t, sim, dataDir)
 
 		nRequest := 3
 		handled := make(chan struct{}, 1)
-		handleLoop(t, sim, bm, cbi, handled, nRequest, false, exit)
+		handleLoop(t, sim, bm, cbi, handled, nRequest, false)
 
 		// 1. Send KLAY three times
 		for i := 0; i < nRequest; i++ {
 			tx, err := pbi.bridge.RequestKLAYTransfer(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, Value: big.NewInt(int64(TEST_AMOUNT_OF_KLAY)), GasLimit: testGasLimit}, bob.From, big.NewInt(int64(TEST_AMOUNT_OF_KLAY)), nil)
 			assert.NoError(t, err)
-			sim.Commit() // block
+			sim.Commit()
 			CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
 			<-handled
 			sim.Commit()
@@ -368,7 +363,7 @@ func TestWithdraw(t *testing.T) {
 
 		// 2. Try to refund all the KLAYs of bridge contract holds.
 		auth := pbi.account.GenerateTransactOpts()
-		auth.Nonce = big.NewInt(int64(nRequest + 1))
+		auth.Nonce = nil
 		tx, err := pbi.bridge.WithdrawKLAY(auth, big.NewInt(int64(prevBridgeBalance)))
 		assert.NoError(t, err)
 		sim.Commit()
@@ -386,8 +381,7 @@ func TestWithdraw(t *testing.T) {
 
 func TestSuggestLeastFee(t *testing.T) {
 	sim, bm, cbi, pbi, _, _, _, dataDir := bridgeSetup(t)
-	exit := make(chan struct{}, 1)
-	defer cleanup(t, sim, dataDir, exit)
+	defer cleanup(t, sim, dataDir)
 
 	ston25 := big.NewInt(1000000000 * 25)
 	ston750 := big.NewInt(1000000000 * 750)
