@@ -159,7 +159,7 @@ func makeRequestKLAYHandleDebug(bi *BridgeInfo, ev IRequestValueTransferEvent) (
 	if handleInfo != nil {
 		handleTx = handleInfo.HandleTx
 	} else {
-		return nil, fmt.Errorf("No handle info was found (reqNonce = %d)", ev.GetRequestNonce())
+		return nil, fmt.Errorf("No handle info was found (reqNonce = %d, handleTx = %x)", ev.GetRequestNonce(), reqTxHash)
 	}
 	var counterpartOperatorAddr common.Address
 	if isOnChild {
