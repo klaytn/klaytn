@@ -18,6 +18,7 @@ package sc
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"math/big"
 	"reflect"
@@ -227,7 +228,8 @@ func (reqKLAYReasoning *RequestKLAYReasoningVT) reasoning(blockchain *blockchain
 	} else {
 		// `VALUE_TRANSFER_KLAY_TRACETRANSACTION_FAILED` is set if the trace result is failed,
 		respKLAYReasoning.TraceError = err.Error()
-		if err == cn.ErrNotFoundTx {
+		// if err == cn.ErrNotFoundTx {
+		if err.Error() == cn.MakeNotFoundTxErr(reqKLAYReasoning.HandleTxHash).Error() {
 			respKLAYReasoning.Reasoning = VALUE_TRANSFER_KLAY_UNEXECUTED
 		} else {
 			respKLAYReasoning.Reasoning = VALUE_TRANSFER_KLAY_TRACETRANSACTION_FAILED
