@@ -16,6 +16,7 @@
 
 package contracts
 
+//go:generate abigen --sol ./revert_test/revert_test.sol --pkg revertcontract --out ./revert_test/reverttest.go
 //go:generate abigen --sol ./bridge/Bridge.sol --pkg bridge --out ./bridge/Bridge.go
 //go:generate abigen --sol ./extbridge/ext_bridge.sol --pkg extbridge --out ./extbridge/ext_bridge.go
 
