@@ -209,7 +209,7 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
 
     // refund refunds the requested amount of KLAY to sender if its corresponding value transfer is failed from the bridge contract of counterpart chain
     // DO NOT OPERATE WITH OTHER CONTRACT ADDRESS IN THIS FUNCTION
-    function refund(uint64 requestNonce_) public {
+    function refund(uint64 requestNonce_) public onlyOperators {
         if (!refundCond(requestNonce_)) {
             return;
         }
@@ -234,11 +234,14 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
     }
 
     function refundCond(uint64 requestNonce_) internal returns (bool) {
+        /*
         // if a refund was not correctly executed during one day (by gas error of operators and etc),
         // the sender can have authroization to refund himself/herself
         if (block.timestamp > refundTimestampMap[requestNonce_] + 1 days) {
             return true;
         }
+        */
+
         require(operators[msg.sender], "msg.sender is not an operator");
         if (!_voteRefund(requestNonce_)) {
             return false;
