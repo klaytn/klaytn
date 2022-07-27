@@ -421,3 +421,36 @@ func TestSuggestLeastFee(t *testing.T) {
 		assert.Equal(t, cDetailMap["SumOfGasUsed"], pDetailMap["SumOfGasUsed"])
 	}
 }
+
+func TestQueryOfLeastAmountKLAY(t *testing.T) {
+	sim, _, cbi, _, _, _, bob, dataDir := bridgeSetup(t)
+	defer cleanup(t, sim, dataDir)
+
+	wantToSend := big.NewInt(100)
+
+	k, err := cbi.bridge.GetMinimumAmountOfKLAY(nil, wantToSend)
+	assert.NoError(t, err)
+	assert.Equal(t, k, wantToSend)
+
+	configNonce, err := cbi.bridge.ConfigurationNonce(nil)
+	assert.NoError(t, err)
+
+	// Set fee receiver
+	auth := cbi.account.GenerateTransactOpts()
+	tx, err := cbi.bridge.SetFeeReceiver(auth, bob.From)
+	assert.NoError(t, err)
+	sim.Commit()
+	CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+	sim.Commit() // block
+
+	// Set KLAY fee
+	fee := big.NewInt(50)
+	tx, err = cbi.bridge.SetKLAYFee(auth, fee, configNonce)
+	assert.NoError(t, err)
+	sim.Commit()
+	CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+
+	k, err = cbi.bridge.GetMinimumAmountOfKLAY(nil, wantToSend)
+	assert.NoError(t, err)
+	assert.Equal(t, k, new(big.Int).Add(wantToSend, fee))
+}

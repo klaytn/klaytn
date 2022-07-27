@@ -18,7 +18,6 @@ package sc
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"math/big"
 	"reflect"
