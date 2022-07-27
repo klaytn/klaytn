@@ -100,7 +100,6 @@ func TestMixedEngine_Header_ParamsAt(t *testing.T) {
 		assert.Equal(t, tc.value, pset.CommitteeSize())
 
 		// Check that defaultGov.ReadGovernance() == tc
-		// and by extension defaultGov.ReadGovernance() == e.ParamsAt().
 		_, strMap, err := defaultGov.ReadGovernance(tc.num)
 		assert.Nil(t, err)
 		pset, err = params.NewGovParamSetStrMap(strMap)

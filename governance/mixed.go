@@ -8,10 +8,23 @@ import (
 	"github.com/klaytn/klaytn/storage/database"
 )
 
+// Mixed engine consists of multiple governance engines
+//
+// Each parameter is added to a parameter set from one of the following sources:
+// The highest priority is 1, and falls back to lower ones if non-existent
+//  1. contractParams: ContractEngine items (when enabled)
+//  2. defaultParams:  Header Governance items
+//  3. initialParams:  initial ChainConfig from genesis.json
+//  4. constParams:    Constants such as params.Default*
+//                     Note that some items are not backed by constParams.
+//
 type MixedEngine struct {
 	initialConfig *params.ChainConfig
-	initialParams *params.GovParamSet
-	currentParams *params.GovParamSet
+
+	initialParams *params.GovParamSet // initial ChainConfig
+	constParams   *params.GovParamSet // constants used as last fallback
+
+	currentParams *params.GovParamSet // latest params to be returned by Params()
 
 	db database.DBManager
 
@@ -25,12 +38,7 @@ type MixedEngine struct {
 func newMixedEngine(config *params.ChainConfig, db database.DBManager, doInit bool) *MixedEngine {
 	e := &MixedEngine{
 		initialConfig: config,
-		initialParams: nil,
-		currentParams: nil,
-
-		db: db,
-
-		defaultGov: nil,
+		db:            db,
 	}
 
 	if p, err := params.NewGovParamSetChainConfig(config); err == nil {
@@ -38,6 +46,19 @@ func newMixedEngine(config *params.ChainConfig, db database.DBManager, doInit bo
 		e.currentParams = p
 	} else {
 		logger.Crit("Error parsing initial ChainConfig", "err", err)
+	}
+
+	constMap := map[int]interface{}{
+		params.LowerBoundBaseFee:         params.DefaultLowerBoundBaseFee,
+		params.UpperBoundBaseFee:         params.DefaultUpperBoundBaseFee,
+		params.GasTarget:                 params.DefaultGasTarget,
+		params.MaxBlockGasUsedForBaseFee: params.DefaultMaxBlockGasUsedForBaseFee,
+		params.BaseFeeDenominator:        params.DefaultBaseFeeDenominator,
+	}
+	if p, err := params.NewGovParamSetIntMap(constMap); err == nil {
+		e.constParams = p
+	} else {
+		logger.Crit("Error parsing initial ParamSet", "err", err)
 	}
 
 	// Setup subordinate engines
@@ -68,11 +89,34 @@ func (e *MixedEngine) Params() *params.GovParamSet {
 }
 
 func (e *MixedEngine) ParamsAt(num uint64) (*params.GovParamSet, error) {
-	return e.defaultGov.ParamsAt(num)
+	defaultParams, err := e.defaultGov.ParamsAt(num)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO-Klaytn-Kore: merge contractParams
+	return e.assembleParams(defaultParams), nil
 }
 
 func (e *MixedEngine) UpdateParams() error {
-	return e.defaultGov.UpdateParams()
+	if err := e.defaultGov.UpdateParams(); err != nil {
+		return err
+	}
+
+	defaultParams := e.defaultGov.Params()
+
+	// TODO-Klaytn-Kore: merge contractParams
+	e.currentParams = e.assembleParams(defaultParams)
+	return nil
+}
+
+func (e *MixedEngine) assembleParams(defaultParams *params.GovParamSet) *params.GovParamSet {
+	// Refer to the comments above `type MixedEngine` for assembly order
+	p := params.NewGovParamSet()
+	p = params.NewGovParamSetMerged(p, e.constParams)
+	p = params.NewGovParamSetMerged(p, e.initialParams)
+	p = params.NewGovParamSetMerged(p, defaultParams)
+	return p
 }
 
 // Pass-through to HeaderEngine

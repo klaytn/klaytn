@@ -189,7 +189,7 @@ var goodVotes = []voteValue{
 }
 
 func getTestConfig() *params.ChainConfig {
-	config := params.TestChainConfig
+	config := params.TestChainConfig.Copy()
 	config.Governance = params.GetDefaultGovernanceConfig()
 	config.Istanbul = params.GetDefaultIstanbulConfig()
 	return config
