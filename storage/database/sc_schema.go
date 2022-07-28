@@ -46,7 +46,8 @@ type RefundInfo struct {
 }
 
 func NewBridgeRequestEvent(tokenType uint8, from, to, tokenAddr common.Address,
-	valueOrTokenId *big.Int, reqNonce uint64, fee *big.Int, extraData []byte) BridgeRequestEvent {
+	valueOrTokenId *big.Int, reqNonce uint64, fee *big.Int, extraData []byte,
+) BridgeRequestEvent {
 	return BridgeRequestEvent{
 		tokenType,
 		from,

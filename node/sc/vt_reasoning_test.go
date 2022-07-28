@@ -164,7 +164,8 @@ func testKLAYReasoningRevertOnTheOhterAddr(t *testing.T, sim *backends.Simulated
 
 func bridgeSetup(t *testing.T) (*backends.SimulatedBackend,
 	*BridgeManager, *BridgeInfo, *BridgeInfo,
-	*valueTransferRecovery, *bind.TransactOpts, *bind.TransactOpts, string) {
+	*valueTransferRecovery, *bind.TransactOpts, *bind.TransactOpts, string,
+) {
 	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
 	assert.NoError(t, err)
 	defer func() {

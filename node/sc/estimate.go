@@ -26,9 +26,9 @@ func (bi *BridgeInfo) suggestLeastFee(ctbi *BridgeInfo, handleValueTransfers []s
 	methods := []string{"removeRefundLedger", "updateHandleStatus"}
 	methods = append(methods, handleValueTransfers...)
 	params := [][]interface{}{
-		[]interface{}{unhandledReqNonce},
-		[]interface{}{unhandledReqNonce, common.HexToHash("0"), uint64(1), false},
-		[]interface{}{common.HexToHash("0"), common.HexToAddress("0x1"), common.HexToAddress("0x2"), common.Big0, unhandledReqNonce, uint64(1), []byte{}},
+		{unhandledReqNonce},
+		{unhandledReqNonce, common.HexToHash("0"), uint64(1), false},
+		{common.HexToHash("0"), common.HexToAddress("0x1"), common.HexToAddress("0x2"), common.Big0, unhandledReqNonce, uint64(1), []byte{}},
 	}
 	bridgeInfos := []*BridgeInfo{bi, ctbi, ctbi}
 	totalCost, totalGasUsed := uint64(0), uint64(0)
