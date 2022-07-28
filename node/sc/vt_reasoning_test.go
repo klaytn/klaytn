@@ -65,7 +65,7 @@ func revertConfiguration(t *testing.T, sim *backends.SimulatedBackend, bm *Bridg
 	case OUT_OF_GAS_TEST:
 		bm.subBridge.APIBackend.SetChildBridgeOperatorGasLimit(DefaultBridgeTxGasLimit)
 	case NOT_ENOUGH_CONTRACT_BALANCE_TEST:
-		sendKLAY(t, sim, bi, auth)
+		chargeKLAY(t, sim, bi, auth)
 	}
 }
 
@@ -75,10 +75,24 @@ func getBalance(t *testing.T, sim *backends.SimulatedBackend, addr common.Addres
 	return balance.Uint64()
 }
 
-func sendKLAY(t *testing.T, sim *backends.SimulatedBackend, bi *BridgeInfo, auth *bind.TransactOpts) {
-	_, err := bi.bridge.ChargeWithoutEvent(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, Value: big.NewInt(int64(10000)), GasLimit: testGasLimit})
+func chargeKLAY(t *testing.T, sim *backends.SimulatedBackend, bi *BridgeInfo, auth *bind.TransactOpts) {
+	tx, err := bi.bridge.ChargeWithoutEvent(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, Value: big.NewInt(int64(10000)), GasLimit: testGasLimit})
 	assert.Equal(t, nil, err)
 	sim.Commit()
+	CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+}
+
+func sendKLAY(t *testing.T, sim *backends.SimulatedBackend, from *bind.TransactOpts, to common.Address, value *big.Int) {
+	nonce, _ := sim.PendingNonceAt(context.Background(), from.From)
+	gasPrice, _ := sim.SuggestGasPrice(context.Background())
+	unsignedTx := types.NewTransaction(nonce, to, value, testGasLimit, gasPrice, []byte{})
+
+	chainID, _ := sim.ChainID(context.Background())
+	tx, err := from.Signer(types.LatestSignerForChainID(chainID), from.From, unsignedTx)
+	sim.SendTransaction(context.Background(), tx)
+	assert.Equal(t, nil, err)
+	sim.Commit()
+	CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
 }
 
 func isExpected(t *testing.T, sim *backends.SimulatedBackend, TEST_CASE int, from, to common.Address, prevFromBalance, prevToBalance uint64) {
@@ -96,6 +110,30 @@ func isExpected(t *testing.T, sim *backends.SimulatedBackend, TEST_CASE int, fro
 	}
 }
 
+func balanceCheck(t *testing.T, sim *backends.SimulatedBackend, users []*bind.TransactOpts, expected uint64) {
+	for _, user := range users {
+		assert.Equal(t, getBalance(t, sim, user.From), expected)
+	}
+}
+
+func sendRefundCall(t *testing.T, sim *backends.SimulatedBackend, operator *bind.TransactOpts, bi *BridgeInfo, reqNonce uint64) *types.Transaction {
+	auth := &bind.TransactOpts{From: operator.From, Signer: operator.Signer, GasLimit: testGasLimit}
+	auth.Nonce = nil
+	tx, err := bi.bridge.Refund(auth, reqNonce)
+	assert.NoError(t, err)
+	sim.Commit()
+	return tx
+}
+
+func sendWithdrawKLAYCall(t *testing.T, sim *backends.SimulatedBackend, operator *bind.TransactOpts, bi *BridgeInfo, value *big.Int) *types.Transaction {
+	auth := &bind.TransactOpts{From: operator.From, Signer: operator.Signer, GasLimit: testGasLimit}
+	auth.Nonce = nil
+	tx, err := bi.bridge.WithdrawKLAY(auth, value)
+	assert.NoError(t, err)
+	sim.Commit()
+	return tx
+}
+
 func testKLAYReasoningOutOfGas(t *testing.T, bm *BridgeManager) {
 	t.Log("parent operator gas limit", bm.subBridge.APIBackend.GetChildBridgeOperatorGasLimit())
 	bm.subBridge.APIBackend.SetChildBridgeOperatorGasLimit(100000)
@@ -103,8 +141,9 @@ func testKLAYReasoningOutOfGas(t *testing.T, bm *BridgeManager) {
 }
 
 func testKLAYReasoningNotEnoughContractBalance(t *testing.T, sim *backends.SimulatedBackend, bi *BridgeInfo) {
-	// Withdraw all KLAYs to test not enough balance error
+	// Withdraw all KLAY to test not enough balance error
 	auth := bi.account.GenerateTransactOpts()
+	auth.Nonce = nil
 	bridgeBalance := getBalance(t, sim, bi.address)
 	tx, err := bi.bridge.WithdrawKLAY(auth, big.NewInt(int64(bridgeBalance)))
 	assert.NoError(t, err)
@@ -115,6 +154,7 @@ func testKLAYReasoningNotEnoughContractBalance(t *testing.T, sim *backends.Simul
 
 func testKLAYReasoningRevertOnTheOhterAddr(t *testing.T, sim *backends.SimulatedBackend, bi *BridgeInfo) common.Address {
 	auth := bi.account.GenerateTransactOpts()
+	auth.Nonce = nil
 	contractAddr, tx, _, err := revertcontract.DeployRevertContract(auth, sim)
 	assert.NoError(t, err)
 	sim.Commit()
@@ -155,7 +195,6 @@ func bridgeSetup(t *testing.T) (*backends.SimulatedBackend,
 		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
 		bacc.pAccount.address: {Balance: big.NewInt(params.KLAY)},
 	}
-	// sim := backends.NewSimulatedBackend222(cAlloc, cnInstance.ChainDB())
 	sim := backends.NewSimulatedBackendWithDatabase(
 		cnInstance.ChainDB(),
 		cAlloc,
@@ -163,7 +202,6 @@ func bridgeSetup(t *testing.T) (*backends.SimulatedBackend,
 	)
 
 	sc := &SubBridge{
-		// chainDB:        database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}),
 		blockchain:     testBlockChain(t),
 		config:         config,
 		peers:          newBridgePeerSet(),
@@ -196,7 +234,7 @@ func bridgeSetup(t *testing.T) (*backends.SimulatedBackend,
 	return sim, bm, cbi, pbi, vtr, alice, bob, node.DefaultConfig.ResolvePath("chaindata")
 }
 
-func handleLoop(t *testing.T, sim *backends.SimulatedBackend, bm *BridgeManager, bi *BridgeInfo, handled chan<- struct{}, nRequest int, unexecutedTest bool) {
+func handleLoop(t *testing.T, sim *backends.SimulatedBackend, bm *BridgeManager, bi *BridgeInfo, handled chan<- struct{}, nRequest int, unexecutedTest bool, exit chan struct{}) {
 	reqVTevCh := make(chan RequestValueTransferEvent)
 	handleValueTransferEventCh := make(chan *HandleValueTransferEvent)
 	bm.SubscribeReqVTev(reqVTevCh)
@@ -218,25 +256,32 @@ func handleLoop(t *testing.T, sim *backends.SimulatedBackend, bm *BridgeManager,
 				}
 				nReq++
 			case ev := <-handleValueTransferEventCh:
-				reqBridgeAddr := bm.GetCounterPartBridgeAddr(bi.address)
-				assert.NotEqual(t, reqBridgeAddr, common.Address{})
-				reqBridgeInfo, ok := bm.GetBridgeInfo(reqBridgeAddr)
-				assert.Equal(t, ok, true)
+				if !unexecutedTest {
+					reqBridgeAddr := bm.GetCounterPartBridgeAddr(bi.address)
+					assert.NotEqual(t, reqBridgeAddr, common.Address{})
+					reqBridgeInfo, ok := bm.GetBridgeInfo(reqBridgeAddr)
+					assert.Equal(t, ok, true)
 
-				auth := reqBridgeInfo.account.GenerateTransactOpts()
-				auth.Nonce = nil
-				auth.GasLimit = params.UpperGasLimit / 1000000 // allow gas limit to 999999
-				tx, err := reqBridgeInfo.bridge.RemoveRefundLedger(auth, ev.HandleNonce)
-				assert.NoError(t, err)
-				sim.Commit()
-				CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
-				handled <- struct{}{}
+					auth := reqBridgeInfo.account.GenerateTransactOpts()
+					auth.Nonce = nil
+					auth.GasLimit = params.UpperGasLimit
+					tx, err := reqBridgeInfo.bridge.RemoveRefundLedger(auth, ev.HandleNonce)
+					assert.NoError(t, err)
+					sim.Commit()
+					CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+					handled <- struct{}{}
+				}
+			case <-exit:
+				exit <- struct{}{}
+				return
 			}
 		}
 	}()
 }
 
-func cleanup(t *testing.T, sim *backends.SimulatedBackend, dataDir string) {
+func cleanup(t *testing.T, sim *backends.SimulatedBackend, dataDir string, exit chan struct{}) {
+	exit <- struct{}{}
+	<-exit
 	sim.Close()
 	if err := os.RemoveAll(dataDir); err != nil {
 		t.Fatalf("fail to delete file %v", err)
@@ -245,11 +290,12 @@ func cleanup(t *testing.T, sim *backends.SimulatedBackend, dataDir string) {
 
 func TestKLAYReasoing(t *testing.T) {
 	sim, bm, cbi, pbi, vtr, alice, bob, dataDir := bridgeSetup(t)
-	defer cleanup(t, sim, dataDir)
+	exit := make(chan struct{}, 1)
+	defer cleanup(t, sim, dataDir, exit)
 
 	nRequest := 5
 	handled := make(chan struct{}, 1)
-	handleLoop(t, sim, bm, cbi, handled, nRequest, true)
+	handleLoop(t, sim, bm, cbi, handled, nRequest, true, exit)
 
 	// Do request KLAY transfer
 	for TEST_CASE := 0; TEST_CASE < nRequest; TEST_CASE++ {
@@ -284,6 +330,7 @@ func TestKLAYReasoing(t *testing.T) {
 			cbi.processingPendingRequestEvents()
 			sim.Commit()
 		}
+		sim.Commit()
 		isExpected(t, sim, TEST_CASE, alice.From, bob.From, prevAliceBalance, prevBobBalance)
 
 		revertConfiguration(t, sim, bm, cbi, TEST_CASE, alice)
@@ -321,8 +368,9 @@ func TestWithdraw(t *testing.T) {
 		t.Log("bridge balance", prevBridgeBalance)
 		t.Log("operator balance", prevOperatorBalance)
 
-		// 2. Try to refund all the KLAYs of bridge contract holds.
+		// 2. Try to refund all the KLAY of bridge contract holds.
 		auth := pbi.account.GenerateTransactOpts()
+		auth.Nonce = nil
 		tx, err := pbi.bridge.WithdrawKLAY(auth, big.NewInt(int64(prevBridgeBalance)))
 		assert.NoError(t, err)
 		sim.Commit()
@@ -335,16 +383,18 @@ func TestWithdraw(t *testing.T) {
 
 		assert.Equal(t, bridgeBalance, TEST_AMOUNT_OF_KLAY*3)
 		assert.Equal(t, operatorBalance-prevOperatorBalance, prevBridgeBalance-bridgeBalance)
-		cleanup(t, sim, dataDir)
+		exit := make(chan struct{}, 1)
+		cleanup(t, sim, dataDir, exit)
 	}
 
 	{
 		sim, bm, cbi, pbi, _, alice, bob, dataDir := bridgeSetup(t)
-		defer cleanup(t, sim, dataDir)
+		exit := make(chan struct{}, 1)
+		defer cleanup(t, sim, dataDir, exit)
 
 		nRequest := 3
 		handled := make(chan struct{}, 1)
-		handleLoop(t, sim, bm, cbi, handled, nRequest, false)
+		handleLoop(t, sim, bm, cbi, handled, nRequest, false, exit)
 
 		// 1. Send KLAY three times
 		for i := 0; i < nRequest; i++ {
@@ -361,7 +411,7 @@ func TestWithdraw(t *testing.T) {
 		t.Log("bridge balance", prevBridgeBalance)
 		t.Log("operator balance", prevOperatorBalance)
 
-		// 2. Try to refund all the KLAYs of bridge contract holds.
+		// 2. Try to refund all the KLAY of bridge contract holds.
 		auth := pbi.account.GenerateTransactOpts()
 		auth.Nonce = nil
 		tx, err := pbi.bridge.WithdrawKLAY(auth, big.NewInt(int64(prevBridgeBalance)))
@@ -381,7 +431,8 @@ func TestWithdraw(t *testing.T) {
 
 func TestSuggestLeastFee(t *testing.T) {
 	sim, bm, cbi, pbi, _, _, _, dataDir := bridgeSetup(t)
-	defer cleanup(t, sim, dataDir)
+	exit := make(chan struct{}, 1)
+	defer cleanup(t, sim, dataDir, exit)
 
 	ston25 := big.NewInt(1000000000 * 25)
 	ston750 := big.NewInt(1000000000 * 750)
@@ -424,7 +475,8 @@ func TestSuggestLeastFee(t *testing.T) {
 
 func TestQueryOfLeastAmountKLAY(t *testing.T) {
 	sim, _, cbi, _, _, _, bob, dataDir := bridgeSetup(t)
-	defer cleanup(t, sim, dataDir)
+	exit := make(chan struct{}, 1)
+	defer cleanup(t, sim, dataDir, exit)
 
 	wantToSend := big.NewInt(100)
 
@@ -437,6 +489,7 @@ func TestQueryOfLeastAmountKLAY(t *testing.T) {
 
 	// Set fee receiver
 	auth := cbi.account.GenerateTransactOpts()
+	auth.Nonce = nil
 	tx, err := cbi.bridge.SetFeeReceiver(auth, bob.From)
 	assert.NoError(t, err)
 	sim.Commit()
@@ -453,4 +506,111 @@ func TestQueryOfLeastAmountKLAY(t *testing.T) {
 	k, err = cbi.bridge.GetMinimumAmountOfKLAY(nil, wantToSend)
 	assert.NoError(t, err)
 	assert.Equal(t, k, new(big.Int).Add(wantToSend, fee))
+}
+
+func TestMultiBridgeOperation(t *testing.T) {
+	sim, _, _, pbi, _, _, bob, dataDir := bridgeSetup(t)
+	exit := make(chan struct{}, 1)
+	defer cleanup(t, sim, dataDir, exit)
+
+	// Prepare N of operators and N of EOAs
+	nOperators := 3
+	operators := make([]*bind.TransactOpts, nOperators)
+	users := make([]*bind.TransactOpts, nOperators)
+	auth := pbi.account.GenerateTransactOpts()
+	auth.Nonce = nil
+	for i := 0; i < nOperators; i++ {
+		key, _ := crypto.GenerateKey()
+		operators[i] = bind.NewKeyedTransactor(key)
+		tx, err := pbi.bridge.RegisterOperator(auth, operators[i].From)
+		assert.NoError(t, err)
+		sim.Commit()
+		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+
+		// Prepare refund ledger
+		key, _ = crypto.GenerateKey()
+		users[i] = bind.NewKeyedTransactor(key)
+		sendKLAY(t, sim, auth, users[i].From, big.NewInt(100))
+	}
+
+	// Set threshold for refund vote
+	tx, err := pbi.bridge.SetOperatorThreshold(auth, voteTypeRefund, uint8(nOperators))
+	assert.NoError(t, err)
+	sim.Commit()
+	CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+
+	// Set threshold for withdraw vote
+	tx, err = pbi.bridge.SetOperatorThreshold(auth, voteTypeWithdraw, uint8(nOperators))
+	assert.NoError(t, err)
+	sim.Commit()
+	CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+
+	// (1) Test of refund KLAY
+	{
+		expectedBalance := uint64(100)
+		for _, user := range users {
+			assert.Equal(t, getBalance(t, sim, user.From), expectedBalance)
+		}
+		tobeSent := big.NewInt(3)
+		for _, user := range users {
+			tx, err := pbi.bridge.RequestKLAYTransfer(&bind.TransactOpts{From: user.From, Signer: user.Signer, Value: tobeSent, GasLimit: testGasLimit}, bob.From, tobeSent, nil)
+			assert.NoError(t, err)
+			sim.Commit()
+			CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+		}
+		balanceCheck(t, sim, users, expectedBalance-tobeSent.Uint64())
+
+		// TEST 1-1 - Failure: quorum not satisfied
+		reqNonce, err := pbi.bridge.RequestNonce(nil)
+		assert.NoError(t, err)
+		reqNonces := make([]uint64, reqNonce)
+		for i := 0; i < int(reqNonce); i++ {
+			reqNonces[i] = uint64(i)
+		}
+		for _, reqNonce := range reqNonces {
+			for i := 0; i < len(operators)-1; i++ {
+				tx := sendRefundCall(t, sim, operators[i], pbi, reqNonce)
+				CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+			}
+		}
+		balanceCheck(t, sim, users, expectedBalance-tobeSent.Uint64())
+
+		// TEST 1-2 - Success: quorum satisfied
+		for _, reqNonce := range reqNonces {
+			tx := sendRefundCall(t, sim, operators[len(operators)-1], pbi, reqNonce)
+			CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+		}
+		balanceCheck(t, sim, users, expectedBalance)
+
+		// TEST 1-3 - Failure: vote to closed nonce
+		for _, reqNonce := range reqNonces {
+			for _, operator := range operators {
+				tx := sendRefundCall(t, sim, operator, pbi, reqNonce)
+				CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusErrExecutionReverted, t)
+			}
+		}
+	}
+
+	// (2) Test of refund KLAY
+	{
+		ownerBalance := getBalance(t, sim, pbi.account.address)
+		bridgeBalance := getBalance(t, sim, pbi.address)
+
+		// TEST 2-1 - Failure: quorum not satisfied
+		for i := 0; i < len(operators)-1; i++ {
+			tx := sendWithdrawKLAYCall(t, sim, operators[i], pbi, big.NewInt(int64(bridgeBalance)))
+			CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+		}
+		assert.Equal(t, bridgeBalance, getBalance(t, sim, pbi.address))
+
+		// TEST 2-2 - Success: quorum satisfied
+		tx := sendWithdrawKLAYCall(t, sim, operators[len(operators)-1], pbi, big.NewInt(int64(bridgeBalance)))
+		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+		withdrawal := uint64(0)
+		for _, operator := range operators {
+			withdrawal += getBalance(t, sim, operator.From)
+		}
+		withdrawal += getBalance(t, sim, pbi.account.address) - ownerBalance
+		assert.Equal(t, getBalance(t, sim, pbi.address), bridgeBalance-withdrawal)
+	}
 }

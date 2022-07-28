@@ -51,8 +51,10 @@ const (
 )
 
 const (
-	voteTypeValueTransfer = 0
-	voteTypeConfiguration = 1
+	voteTypeValueTransfer = iota
+	voteTypeConfiguration
+	voteTypeRefund
+	voteTypeWithdraw
 )
 
 var (
