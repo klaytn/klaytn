@@ -53,70 +53,70 @@ var KLAYReasoingResultStringMap = map[ValueTransferException]string{
 }
 
 type RequestKLAYReasoningVT struct {
+	HandleTxCost            *big.Int
+	Value                   *big.Int
+	RequestTxHash           common.Hash
+	HandleTxHash            common.Hash
+	ToAddr                  common.Address
 	BridgeAddr              common.Address
 	CounterpartBridgeAddr   common.Address
 	CounterpartOperatorAddr common.Address
-	Value                   *big.Int // Amount of requested value
 	IsChildSent             bool
-	ToAddr                  common.Address // `to` address in the event of `reuqestValueTransfer` and `requestValueTransferEncoded`
-	HandleTxCost            *big.Int
-	RequestTxHash           common.Hash
-	HandleTxHash            common.Hash
 }
 
 // The same struct with `RequestKLAYReasoningVT`
 type RequestKLAYReasoningVTForRLP struct {
+	HandleTxCost            *big.Int
+	Value                   *big.Int
+	RequestTxHash           common.Hash
+	HandleTxHash            common.Hash
+	ToAddr                  common.Address
 	BridgeAddr              common.Address
 	CounterpartBridgeAddr   common.Address
 	CounterpartOperatorAddr common.Address
-	Value                   *big.Int
 	IsChildSent             bool
-	ToAddr                  common.Address
-	HandleTxCost            *big.Int
-	RequestTxHash           common.Hash
-	HandleTxHash            common.Hash
 }
 
 type ResponseKLAYReasoningVT struct {
-	BridgeAddr           common.Address
-	OperatorAddr         common.Address
-	Value                *big.Int // Amount of requested value
-	IsChildSent          bool
-	ContractBalance      *big.Int // The bridge contract balance in the counterpart chain
+	Value                *big.Int
+	TxCost               *big.Int
+	ContractBalance      *big.Int
 	OperatorBalance      *big.Int
-	ToAddrIsContractAddr bool
-	RequestTxHash        common.Hash
-	HandleTxHash         common.Hash
-	RevertedAddr         common.Address // Wherefrom the valeu transfer is reverted
+	StateDBError         string
+	TraceError           string
 	RevertedMsg          string
 	Error                string
 	GasLimit             uint64
 	GasUsed              uint64
-	TraceError           string
-	StateDBError         string
-	TxCost               *big.Int
+	RequestTxHash        common.Hash
+	HandleTxHash         common.Hash
+	BridgeAddr           common.Address
+	RevertedAddr         common.Address
+	OperatorAddr         common.Address
+	ToAddrIsContractAddr bool
+	IsChildSent          bool
 	Reasoning            ValueTransferException
 }
 
 // The same struct with `ResponseKLAYReasoningVT`
 type ResponseKLAYReasoningVTForRLP struct {
-	BridgeAddr           common.Address
-	OperatorAddr         common.Address
 	Value                *big.Int
-	IsChildSent          bool
+	TxCost               *big.Int
 	ContractBalance      *big.Int
 	OperatorBalance      *big.Int
-	ToAddrIsContractAddr bool
-	RequestTxHash        common.Hash
-	HandleTxHash         common.Hash
-	RevertedAddr         common.Address
+	StateDBError         string
+	TraceError           string
 	RevertedMsg          string
 	Error                string
 	GasLimit             uint64
 	GasUsed              uint64
-	TraceError           string
-	StateDBError         string
-	TxCost               *big.Int
+	RequestTxHash        common.Hash
+	HandleTxHash         common.Hash
+	BridgeAddr           common.Address
+	RevertedAddr         common.Address
+	OperatorAddr         common.Address
+	ToAddrIsContractAddr bool
+	IsChildSent          bool
 	Reasoning            ValueTransferException
 }
 
