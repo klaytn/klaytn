@@ -27,40 +27,38 @@ import (
 	"github.com/naoina/toml"
 )
 
-var (
-	ExtraCommand = cli.Command{
-		Name:  "extra",
-		Usage: "Istanbul extraData manipulation",
-		Subcommands: []cli.Command{
-			{
-				Action:    decode,
-				Name:      "decode",
-				Usage:     "To decode an Istanbul extraData",
-				ArgsUsage: "<extra data>",
-				Flags: []cli.Flag{
-					extraDataFlag,
-				},
-				Description: `
+var ExtraCommand = cli.Command{
+	Name:  "extra",
+	Usage: "Istanbul extraData manipulation",
+	Subcommands: []cli.Command{
+		{
+			Action:    decode,
+			Name:      "decode",
+			Usage:     "To decode an Istanbul extraData",
+			ArgsUsage: "<extra data>",
+			Flags: []cli.Flag{
+				extraDataFlag,
+			},
+			Description: `
 		This command decodes extraData to vanity and validators.
 		`,
+		},
+		{
+			Action:    encode,
+			Name:      "encode",
+			Usage:     "To encode an Istanbul extraData",
+			ArgsUsage: "<config file> or \"0xValidator1,0xValidator2...\"",
+			Flags: []cli.Flag{
+				configFlag,
+				validatorsFlag,
+				vanityFlag,
 			},
-			{
-				Action:    encode,
-				Name:      "encode",
-				Usage:     "To encode an Istanbul extraData",
-				ArgsUsage: "<config file> or \"0xValidator1,0xValidator2...\"",
-				Flags: []cli.Flag{
-					configFlag,
-					validatorsFlag,
-					vanityFlag,
-				},
-				Description: `
+			Description: `
 		This command encodes vanity and validators to extraData. Please refer to example/config.toml.
 		`,
-			},
 		},
-	}
-)
+	},
+}
 
 func encode(ctx *cli.Context) error {
 	path := ctx.String(configFlag.Name)

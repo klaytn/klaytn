@@ -88,7 +88,7 @@ type Message interface {
 	// 70% will be paid by the sender.
 	FeeRatio() (types.FeeRatio, bool)
 
-	//FromFrontier() (common.Address, error)
+	// FromFrontier() (common.Address, error)
 	To() *common.Address
 
 	Hash() common.Hash
@@ -99,7 +99,7 @@ type Message interface {
 	GasTipCap() *big.Int
 	GasFeeCap() *big.Int
 	EffectiveGasTip(baseFee *big.Int) *big.Int
-	EffectiveGasPrice(baseFee *big.Int) *big.Int
+	EffectiveGasPrice(header *types.Header) *big.Int
 
 	Gas() uint64
 	Value() *big.Int
@@ -135,7 +135,9 @@ type kerror struct {
 
 // NewStateTransition initialises and returns a new state transition object.
 func NewStateTransition(evm *vm.EVM, msg Message) *StateTransition {
-	effectiveGasPrice := msg.EffectiveGasPrice(evm.BaseFee)
+	// before magma hardfork, effectiveGasPrice is  GasPrice of tx
+	// after magma hardfork, effectiveGasPrice is BaseFee
+	effectiveGasPrice := evm.Context.GasPrice
 
 	return &StateTransition{
 		evm:       evm,
@@ -178,6 +180,8 @@ func (st *StateTransition) useGas(amount uint64) error {
 }
 
 func (st *StateTransition) buyGas() error {
+	// st.gasPrice : gasPrice user set before magma hardfork
+	// st.gasPrice : BaseFee after magma hardfork
 	mgval := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()), st.gasPrice)
 
 	validatedFeePayer := st.msg.ValidatedFeePayer()
@@ -257,12 +261,10 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 		return nil, 0, kerr
 	}
 
-	var (
-		// vm errors do not effect consensus and are therefor
-		// not assigned to err, except for insufficient balance
-		// error and total time limit reached error.
-		errTxFailed error
-	)
+	// vm errors do not effect consensus and are therefor
+	// not assigned to err, except for insufficient balance
+	// error and total time limit reached error.
+	var errTxFailed error
 
 	ret, st.gas, errTxFailed = msg.Execute(st.evm, st.state, st.evm.BlockNumber.Uint64(), st.gas, st.value)
 
@@ -285,8 +287,8 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 
 	// Defer transferring Tx fee when DeferredTxFee is true
 	if st.evm.ChainConfig().Governance == nil || !st.evm.ChainConfig().Governance.DeferredTxFee() {
-		effectiveTip := msg.EffectiveGasTip(st.evm.BaseFee)
-		st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), effectiveTip))
+		effectiveGasPrice := msg.EffectiveGasPrice(nil)
+		st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), effectiveGasPrice))
 	}
 
 	kerr.ErrTxInvalid = nil

@@ -64,10 +64,12 @@ type Header struct {
 	GasUsed     uint64         `json:"gasUsed"          gencodec:"required"`
 	Time        *big.Int       `json:"timestamp"        gencodec:"required"`
 	// TimeFoS represents a fraction of a second since `Time`.
-	TimeFoS    uint8  `json:"timestampFoS"     gencodec:"required"`
-	Extra      []byte `json:"extraData"        gencodec:"required"`
-	Governance []byte `json:"governanceData"        gencodec:"required"`
+	TimeFoS    uint8  `json:"timestampFoS"              gencodec:"required"`
+	Extra      []byte `json:"extraData"                 gencodec:"required"`
+	Governance []byte `json:"governanceData"            gencodec:"required"`
 	Vote       []byte `json:"voteData,omitempty"`
+
+	BaseFee *big.Int `json:"baseFeePerGas,omitempty"    rlp:"optional"`
 }
 
 // field type overrides for gencodec
@@ -78,6 +80,7 @@ type headerMarshaling struct {
 	Time       *hexutil.Big
 	TimeFoS    hexutil.Uint
 	Extra      hexutil.Bytes
+	BaseFee    *hexutil.Big
 	Hash       common.Hash `json:"hash"` // adds call to Hash() in MarshalJSON
 	Governance hexutil.Bytes
 	Vote       hexutil.Bytes
@@ -237,6 +240,10 @@ func CopyHeader(h *Header) *Header {
 	if cpy.Number = new(big.Int); h.Number != nil {
 		cpy.Number.Set(h.Number)
 	}
+	if h.BaseFee != nil {
+		// This field exists after magma hardfork
+		cpy.BaseFee = new(big.Int).Set(h.BaseFee)
+	}
 	if len(h.Extra) > 0 {
 		cpy.Extra = make([]byte, len(h.Extra))
 		copy(cpy.Extra, h.Extra)
@@ -370,23 +377,35 @@ Transactions:
 }
 
 func (h *Header) String() string {
-	return fmt.Sprintf(`Header(%x):
-[
-	ParentHash:       %x
-	Rewardbase:       %x
-	Root:             %x
-	TxSha:            %x
-	ReceiptSha:       %x
-	Bloom:            %x
-	BlockScore:       %v
-	Number:           %v
-	GasUsed:          %v
-	Time:             %v
-	TimeFoS:          %v
-	Extra:            %s
-	Governance:       %x
-	Vote:             %x
-]`, h.Hash(), h.ParentHash, h.Rewardbase, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.BlockScore, h.Number, h.GasUsed, h.Time, h.TimeFoS, h.Extra, h.Governance, h.Vote)
+	prefix := `Header(%x):
+	[`
+	strBaseHeader := `
+		ParentHash:       %x
+		Rewardbase:       %x
+		Root:             %x
+		TxSha:            %x
+		ReceiptSha:       %x
+		Bloom:            %x
+		BlockScore:       %v
+		Number:           %v
+		GasUsed:          %v
+		Time:             %v
+		TimeFoS:          %v
+		Extra:            %s
+		Governance:       %x
+		Vote:             %x
+	`
+	suffix := `
+	]`
+	strHeader := ""
+	if h.BaseFee != nil {
+		strBaseHeader = strBaseHeader + `	BaseFee:          %x
+		`
+		strHeader = fmt.Sprintf(prefix+strBaseHeader+suffix, h.Hash(), h.ParentHash, h.Rewardbase, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.BlockScore, h.Number, h.GasUsed, h.Time, h.TimeFoS, h.Extra, h.Governance, h.Vote, h.BaseFee)
+	} else {
+		strHeader = fmt.Sprintf(prefix+strBaseHeader+suffix, h.Hash(), h.ParentHash, h.Rewardbase, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.BlockScore, h.Number, h.GasUsed, h.Time, h.TimeFoS, h.Extra, h.Governance, h.Vote)
+	}
+	return strHeader
 }
 
 type Blocks []*Block

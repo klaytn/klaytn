@@ -32,6 +32,7 @@ import (
 	"github.com/klaytn/klaytn/common/profile"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/kerrors"
+	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/stretchr/testify/assert"
@@ -98,11 +99,9 @@ func genMapForTxTypes(from TestAccount, to TestAccount, txType types.TxType) (tx
 
 // TestValidationPoolInsert generates invalid txs which will be invalidated during txPool insert process.
 func TestValidationPoolInsert(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 
-	var testTxTypes = []testTxType{}
+	testTxTypes := []testTxType{}
 	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
 		if i == types.TxTypeKlaytnLast {
 			i = types.TxTypeEthereumAccessList
@@ -114,12 +113,12 @@ func TestValidationPoolInsert(t *testing.T) {
 		}
 	}
 
-	var invalidCases = []struct {
+	invalidCases := []struct {
 		Name string
 		fn   func(types.TxType, txValueMap, common.Address) (txValueMap, error)
 	}{
 		{"invalidNonce", decreaseNonce},
-		{"invalidGasLimit", decreaseGasLimit},
+		{"invalidGasPrice", decreaseGasPrice},
 		{"invalidTxSize", exceedSizeLimit},
 		{"invalidRecipientProgram", valueTransferToContract},
 		{"invalidRecipientNotProgram", executeToEOA},
@@ -228,13 +227,10 @@ func TestValidationPoolInsert(t *testing.T) {
 	}
 }
 
-// TestValidationBlockTx generates invalid txs which will be invalidated during block insert process.
-func TestValidationBlockTx(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
+func TestValidationPoolInsertMagma(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 
-	var testTxTypes = []testTxType{}
+	testTxTypes := []testTxType{}
 	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
 		if i == types.TxTypeKlaytnLast {
 			i = types.TxTypeEthereumAccessList
@@ -246,7 +242,133 @@ func TestValidationBlockTx(t *testing.T) {
 		}
 	}
 
-	var invalidCases = []struct {
+	invalidCases := []struct {
+		Name string
+		fn   func(types.TxType, txValueMap, common.Address) (txValueMap, error)
+	}{
+		{"invalidGasPrice", decreaseGasPriceMagma},
+	}
+
+	prof := profile.NewProfiler()
+
+	// Initialize blockchain
+	bcdata, err := NewBCData(6, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().EthTxTypeCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().MagmaCompatibleBlock = big.NewInt(0)
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
+
+	// reservoir account
+	reservoir := &TestAccountType{
+		Addr:  *bcdata.addrs[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
+		Nonce: uint64(0),
+	}
+
+	// for contract execution txs
+	contract, err := createAnonymousAccount("a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae59438e989")
+	assert.Equal(t, nil, err)
+
+	// deploy a contract for contract execution tx type
+	{
+		var txs types.Transactions
+
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.GetNonce(),
+			types.TxValueKeyFrom:          reservoir.GetAddr(),
+			types.TxValueKeyTo:            (*common.Address)(nil),
+			types.TxValueKeyAmount:        big.NewInt(0),
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Ston),
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyData:          common.FromHex(code),
+			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
+		}
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+
+		contract.Addr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce)
+
+		reservoir.AddNonce()
+	}
+
+	// make TxPool to test validation in 'TxPool add' process
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc)
+
+	// test for all tx types
+	for _, testTxType := range testTxTypes {
+		txType := testTxType.txType
+
+		// generate invalid txs and check the return error
+		for _, invalidCase := range invalidCases {
+			to := reservoir
+			if toBasicType(testTxType.txType) == types.TxTypeSmartContractExecution {
+				to = contract
+			}
+
+			// generate a new tx and mutate it
+			valueMap, _ := genMapForTxTypes(reservoir, to, txType)
+			invalidMap, expectedErr := invalidCase.fn(txType, valueMap, contract.Addr)
+
+			tx, err := types.NewTransactionWithMap(txType, invalidMap)
+			assert.Equal(t, nil, err)
+
+			err = tx.SignWithKeys(signer, reservoir.Keys)
+			assert.Equal(t, nil, err)
+
+			if txType.IsFeeDelegatedTransaction() {
+				tx.SignFeePayerWithKeys(signer, reservoir.Keys)
+				assert.Equal(t, nil, err)
+			}
+
+			err = txpool.AddRemote(tx)
+			assert.Equal(t, expectedErr, err)
+			if expectedErr == nil {
+				reservoir.Nonce += 1
+			}
+		}
+	}
+}
+
+// TestValidationBlockTx generates invalid txs which will be invalidated during block insert process.
+func TestValidationBlockTx(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
+
+	testTxTypes := []testTxType{}
+	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
+		if i == types.TxTypeKlaytnLast {
+			i = types.TxTypeEthereumAccessList
+		}
+
+		_, err := types.NewTxInternalData(i)
+		if err == nil {
+			testTxTypes = append(testTxTypes, testTxType{i.String(), i})
+		}
+	}
+
+	invalidCases := []struct {
 		Name string
 		fn   func(types.TxType, txValueMap, common.Address) (txValueMap, error)
 	}{
@@ -361,8 +483,8 @@ func decreaseNonce(txType types.TxType, values txValueMap, contract common.Addre
 	return values, blockchain.ErrNonceTooLow
 }
 
-// decreaseGasLimit changes gasLimit to 12345678
-func decreaseGasLimit(txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
+// decreaseGasPrice changes gasPrice to 12345678
+func decreaseGasPrice(txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
 	var err error
 	if txType == types.TxTypeEthereumDynamicFee {
 		(*big.Int).SetUint64(values[types.TxValueKeyGasFeeCap].(*big.Int), 12345678)
@@ -371,6 +493,22 @@ func decreaseGasLimit(txType types.TxType, values txValueMap, contract common.Ad
 	} else {
 		(*big.Int).SetUint64(values[types.TxValueKeyGasPrice].(*big.Int), 12345678)
 		err = blockchain.ErrInvalidUnitPrice
+
+	}
+
+	return values, err
+}
+
+// decreaseGasPrice changes gasPrice to 12345678 and return an error with magma policy
+func decreaseGasPriceMagma(txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
+	var err error
+	if txType == types.TxTypeEthereumDynamicFee {
+		(*big.Int).SetUint64(values[types.TxValueKeyGasFeeCap].(*big.Int), 12345678)
+		(*big.Int).SetUint64(values[types.TxValueKeyGasTipCap].(*big.Int), 12345678)
+		err = blockchain.ErrFeeCapBelowBaseFee
+	} else {
+		(*big.Int).SetUint64(values[types.TxValueKeyGasPrice].(*big.Int), 12345678)
+		err = blockchain.ErrGasPriceBelowBaseFee
 	}
 
 	return values, err
@@ -424,7 +562,7 @@ func invalidCodeFormat(txType types.TxType, values txValueMap, contract common.A
 
 // TestValidationInvalidSig generates txs signed by an invalid sender or a fee payer.
 func TestValidationInvalidSig(t *testing.T) {
-	var testTxTypes = []testTxType{}
+	testTxTypes := []testTxType{}
 	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
 		if i == types.TxTypeKlaytnLast {
 			i = types.TxTypeEthereumAccessList
@@ -436,7 +574,7 @@ func TestValidationInvalidSig(t *testing.T) {
 		}
 	}
 
-	var invalidCases = []struct {
+	invalidCases := []struct {
 		Name string
 		fn   func(*testing.T, types.TxType, *TestAccountType, *TestAccountType, types.Signer) (*types.Transaction, error)
 	}{
@@ -649,7 +787,7 @@ func TestLegacyTxFromNonLegacyAcc(t *testing.T) {
 
 // TestInvalidBalance generates invalid txs which don't have enough KLAY, and will be invalidated during txPool insert process.
 func TestInvalidBalance(t *testing.T) {
-	var testTxTypes = []testTxType{}
+	testTxTypes := []testTxType{}
 	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
 		if i == types.TxTypeKlaytnLast {
 			i = types.TxTypeEthereumAccessList
@@ -1040,11 +1178,9 @@ func TestInvalidBalance(t *testing.T) {
 
 // TestInvalidBalanceBlockTx generates invalid txs which don't have enough KLAY, and will be invalidated during block insert process.
 func TestInvalidBalanceBlockTx(t *testing.T) {
-	if testing.Verbose() {
-		enableLog()
-	}
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 
-	var testTxTypes = []testTxType{}
+	testTxTypes := []testTxType{}
 	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
 		if i == types.TxTypeKlaytnLast {
 			i = types.TxTypeEthereumAccessList
@@ -1458,7 +1594,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 // TestValidationTxSizeAfterRLP tests tx size validation during txPool insert process.
 // Since the size is RLP encoded tx size, the test also includes RLP encoding/decoding process which may raise an issue.
 func TestValidationTxSizeAfterRLP(t *testing.T) {
-	var testTxTypes = []types.TxType{}
+	testTxTypes := []types.TxType{}
 	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
 		if i == types.TxTypeKlaytnLast {
 			i = types.TxTypeEthereumAccessList

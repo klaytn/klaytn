@@ -28,8 +28,10 @@ import (
 	"math/big"
 	"reflect"
 
+	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
+	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/params"
@@ -51,10 +53,10 @@ var (
 // isTxField checks whether the string is a field name of the specific txType.
 // isTxField[txType][txFieldName] has true/false.
 var isTxField = func() map[types.TxType]map[string]bool {
-	var mapOfFieldMap = map[types.TxType]map[string]bool{}
-	var internalDataTypes = map[types.TxType]interface{}{
+	mapOfFieldMap := map[types.TxType]map[string]bool{}
+	internalDataTypes := map[types.TxType]interface{}{
 		// since legacy tx has optional fields, some fields can be omitted
-		//types.TxTypeLegacyTransaction:                           types.TxInternalDataLegacy{},
+		// types.TxTypeLegacyTransaction:                           types.TxInternalDataLegacy{},
 		types.TxTypeValueTransfer:                               types.TxInternalDataValueTransfer{},
 		types.TxTypeFeeDelegatedValueTransfer:                   types.TxInternalDataFeeDelegatedValueTransfer{},
 		types.TxTypeFeeDelegatedValueTransferWithRatio:          types.TxInternalDataFeeDelegatedValueTransferWithRatio{},
@@ -136,6 +138,8 @@ type SendTxArgs struct {
 
 // setDefaults is a helper function that fills in default values for unspecified common tx fields.
 func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
+	isMagma := b.ChainConfig().IsMagmaForkEnabled(new(big.Int).Add(b.CurrentBlock().Number(), big.NewInt(1)))
+
 	if args.TypeInt == nil {
 		args.TypeInt = new(types.TxType)
 		*args.TypeInt = types.TxTypeLegacyTransaction
@@ -152,31 +156,41 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 	}
 	// For the transaction that do not use the gasPrice field, the default value of gasPrice is not set.
 	if args.Price == nil && *args.TypeInt != types.TxTypeEthereumDynamicFee {
+		// b.SuggestPrice = unitPrice, for before Magma
+		//                = baseFee * 2,   for after Magma
 		price, err := b.SuggestPrice(ctx)
 		if err != nil {
 			return err
 		}
 		args.Price = (*hexutil.Big)(price)
 	}
+
 	if *args.TypeInt == types.TxTypeEthereumDynamicFee {
-		// TODO-Klaytn: The logic below is valid only when using a fixed gas price.
-		fixedGasPrice, err := b.SuggestPrice(ctx)
+		gasPrice, err := b.SuggestPrice(ctx)
 		if err != nil {
 			return err
 		}
 		if args.MaxPriorityFeePerGas == nil {
-			args.MaxPriorityFeePerGas = (*hexutil.Big)(fixedGasPrice)
+			args.MaxPriorityFeePerGas = (*hexutil.Big)(gasPrice)
 		}
 		if args.MaxFeePerGas == nil {
-			fixedBaseFee := new(big.Int).SetUint64(params.BaseFee)
+			// Before Magma hard fork, `gasFeeCap` was set to `baseFee*2 + maxPriorityFeePerGas` by default.
 			gasFeeCap := new(big.Int).Add(
 				(*big.Int)(args.MaxPriorityFeePerGas),
-				new(big.Int).Mul(fixedBaseFee, big.NewInt(2)),
+				new(big.Int).Mul(new(big.Int).SetUint64(params.ZeroBaseFee), big.NewInt(2)),
 			)
+			if isMagma {
+				// After Magma hard fork, `gasFeeCap` was set to `baseFee*2` by default.
+				gasFeeCap = gasPrice
+			}
 			args.MaxFeePerGas = (*hexutil.Big)(gasFeeCap)
 		}
-		if args.MaxPriorityFeePerGas.ToInt().Cmp(fixedGasPrice) != 0 || args.MaxFeePerGas.ToInt().Cmp(fixedGasPrice) != 0 {
-			return fmt.Errorf("only %s is allowed to be used as maxFeePerGas and maxPriorityPerGas", fixedGasPrice.Text(16))
+		if isMagma {
+			if args.MaxFeePerGas.ToInt().Cmp(new(big.Int).Div(gasPrice, common.Big2)) < 0 {
+				return fmt.Errorf("maxFeePerGas (%v) < BaseFee (%v)", args.MaxFeePerGas, gasPrice)
+			}
+		} else if args.MaxPriorityFeePerGas.ToInt().Cmp(gasPrice) != 0 || args.MaxFeePerGas.ToInt().Cmp(gasPrice) != 0 {
+			return fmt.Errorf("only %s is allowed to be used as maxFeePerGas and maxPriorityPerGas", gasPrice.Text(16))
 		}
 		if args.MaxFeePerGas.ToInt().Cmp(args.MaxPriorityFeePerGas.ToInt()) < 0 {
 			return fmt.Errorf("maxFeePerGas (%v) < maxPriorityFeePerGas (%v)", args.MaxFeePerGas, args.MaxPriorityFeePerGas)
@@ -387,7 +401,6 @@ func (args *ValueTransferTxArgs) toTransaction() (*types.Transaction, error) {
 		types.TxValueKeyTo:       args.To,
 		types.TxValueKeyAmount:   (*big.Int)(args.Value),
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -440,10 +453,49 @@ func (args *AccountUpdateTxArgs) toTransaction() (*types.Transaction, error) {
 		types.TxValueKeyFrom:       args.From,
 		types.TxValueKeyAccountKey: serializer.GetKey(),
 	})
-
 	if err != nil {
 		return nil, err
 	}
 
 	return tx, nil
+}
+
+// isReverted checks given error is vm.ErrExecutionReverted
+func isReverted(err error) bool {
+	if errors.Is(err, vm.ErrExecutionReverted) {
+		return true
+	}
+	return false
+}
+
+// newRevertError wraps data returned when EVM execution was reverted.
+// Make sure that data is returned when execution reverted situation.
+func newRevertError(data []byte) *revertError {
+	reason, errUnpack := abi.UnpackRevert(data)
+	err := errors.New("execution reverted")
+	if errUnpack == nil {
+		err = fmt.Errorf("execution reverted: %v", reason)
+	}
+	return &revertError{
+		error:  err,
+		reason: hexutil.Encode(data),
+	}
+}
+
+// revertError is an API error that encompassas an EVM revertal with JSON error
+// code and a binary data blob.
+type revertError struct {
+	error
+	reason string // revert reason hex encoded
+}
+
+// ErrorCode returns the JSON error code for a revertal.
+// See: https://github.com/ethereum/wiki/wiki/JSON-RPC-Error-Codes-Improvement-Proposal
+func (e *revertError) ErrorCode() int {
+	return 3
+}
+
+// ErrorData returns the hex encoded revert reason.
+func (e *revertError) ErrorData() interface{} {
+	return e.reason
 }

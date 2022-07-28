@@ -17,35 +17,56 @@
 package reward
 
 import (
+	"encoding/json"
 	"testing"
 
+	"github.com/klaytn/klaytn/log"
+	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
 )
 
-var (
-	stakingInterval = uint64(86400)
-	testData        = []uint64{
-		0, 1, 2, 3,
+type stakingManagerTestCase struct {
+	blockNum    uint64       // Requested num in GetStakingInfo(num)
+	stakingNum  uint64       // Corresponding staking info block number
+	stakingInfo *StakingInfo // Expected GetStakingInfo() output
+}
+
+// Note that Golang will correctly initialize these globals according to dependency.
+// https://go.dev/ref/spec#Order_of_evaluation
+
+// Note the testdata must not exceed maxStakingCache because otherwise cache test will fail.
+var stakingManagerTestData = []*StakingInfo{
+	stakingInfoTestCases[0].stakingInfo,
+	stakingInfoTestCases[1].stakingInfo,
+	stakingInfoTestCases[2].stakingInfo,
+	stakingInfoTestCases[3].stakingInfo,
+}
+var stakingManagerTestCases = generateStakingManagerTestCases()
+
+func generateStakingManagerTestCases() []stakingManagerTestCase {
+	s := stakingManagerTestData
+
+	return []stakingManagerTestCase{
+		{1, 0, s[0]},
+		{100, 0, s[0]},
+		{86400, 0, s[0]},
+		{86401, 0, s[0]},
+		{172800, 0, s[0]},
+		{172801, 86400, s[1]},
+		{200000, 86400, s[1]},
+		{259200, 86400, s[1]},
+		{259201, 172800, s[2]},
+		{300000, 172800, s[2]},
+		{345600, 172800, s[2]},
+		{345601, 259200, s[3]},
+		{400000, 259200, s[3]},
 	}
-	testCases = []struct {
-		stakingNumber  uint64
-		expectedNumber uint64
-	}{
-		{1, 0},
-		{100, 0},
-		{86400, 0},
-		{86401, 0},
-		{172800, 0},
-		{172801, 86400},
-		{200000, 86400},
-		{259200, 86400},
-		{259201, 172800},
-		{300000, 172800},
-		{345600, 172800},
-		{345601, 259200},
-		{400000, 259200},
-	}
-)
+}
+
+func resetStakingManagerForTest() {
+	GetStakingManager().stakingInfoCache = newStakingInfoCache()
+	GetStakingManager().stakingInfoDB = database.NewMemoryDBManager()
+}
 
 func TestStakingManager_NewStakingManager(t *testing.T) {
 	// test if nil
@@ -65,18 +86,69 @@ func TestStakingManager_NewStakingManager(t *testing.T) {
 	assert.Equal(t, stGet, stNew)
 }
 
-// checking calculate blockNumber of stakingInfo and return the stakingInfo with the blockNumber correct when stakingInfo is stored in cache
-func TestStakingManager_getStakingInfoFromStakingCache(t *testing.T) {
-	stakingManager := NewStakingManager(newTestBlockChain(), newDefaultTestGovernance(), nil)
+// Check that appropriate StakingInfo is returned given various blockNum argument.
+func checkGetStakingInfo(t *testing.T) {
+	for _, testcase := range stakingManagerTestCases {
+		expcectedInfo := testcase.stakingInfo
+		actualInfo := GetStakingInfo(testcase.blockNum)
 
-	for i := 0; i < len(testData); i++ {
-		testStakingInfo := newEmptyStakingInfo(testData[i] * stakingInterval)
-		stakingManager.stakingInfoCache.add(testStakingInfo)
+		assert.Equal(t, testcase.stakingNum, actualInfo.BlockNum)
+		assert.Equal(t, expcectedInfo, actualInfo)
+	}
+}
+
+// Check that StakinInfo are loaded from cache
+func TestStakingManager_GetFromCache(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlDebug)
+	resetStakingManagerForTest()
+
+	for _, testdata := range stakingManagerTestData {
+		GetStakingManager().stakingInfoCache.add(testdata)
 	}
 
-	// should find a correct stakingInfo with a given block number
-	for i := 0; i < len(testCases); i++ {
-		resultStakingInfo := GetStakingInfo(testCases[i].stakingNumber)
-		assert.Equal(t, testCases[i].expectedNumber, resultStakingInfo.BlockNum)
+	checkGetStakingInfo(t)
+}
+
+// Check that StakinInfo are loaded from database
+func TestStakingManager_GetFromDB(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlDebug)
+	resetStakingManagerForTest()
+
+	for _, testdata := range stakingManagerTestData {
+		AddStakingInfoToDB(testdata)
 	}
+
+	checkGetStakingInfo(t)
+}
+
+// Even if Gini was -1 in the cache, GetStakingInfo returns valid Gini
+func TestStakingManager_FillGiniFromCache(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlDebug)
+	resetStakingManagerForTest()
+
+	for _, testdata := range stakingManagerTestData {
+		// Insert a modified copy of testdata to cache
+		copydata := &StakingInfo{}
+		json.Unmarshal([]byte(testdata.String()), copydata)
+		copydata.Gini = -1 // Suppose Gini was -1 in the cache
+		GetStakingManager().stakingInfoCache.add(copydata)
+	}
+
+	checkGetStakingInfo(t)
+}
+
+// Even if Gini was -1 in the DB, GetStakingInfo returns valid Gini
+func TestStakingManager_FillGiniFromDB(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlDebug)
+	resetStakingManagerForTest()
+
+	for _, testdata := range stakingManagerTestData {
+		// Insert a modified copy of testdata to cache
+		copydata := &StakingInfo{}
+		json.Unmarshal([]byte(testdata.String()), copydata)
+		copydata.Gini = -1 // Suppose Gini was -1 in the cache
+		AddStakingInfoToDB(copydata)
+	}
+
+	checkGetStakingInfo(t)
 }

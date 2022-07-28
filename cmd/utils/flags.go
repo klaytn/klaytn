@@ -69,7 +69,7 @@ func NewApp(gitCommit, usage string) *cli.App {
 	app := cli.NewApp()
 	app.Name = filepath.Base(os.Args[0])
 	app.Author = ""
-	//app.Authors = nil
+	// app.Authors = nil
 	app.Email = ""
 	app.Version = params.Version
 	if len(gitCommit) >= 8 {
@@ -123,7 +123,7 @@ var (
 	defaultSyncMode = cn.GetDefaultConfig().SyncMode
 	SyncModeFlag    = TextMarshalerFlag{
 		Name:  "syncmode",
-		Usage: `Blockchain sync mode (only "full" is supported)`,
+		Usage: `Blockchain sync mode ("full" or "snap")`,
 		Value: &defaultSyncMode,
 	}
 	GCModeFlag = cli.StringFlag{
@@ -395,7 +395,7 @@ var (
 		Usage: "Set the max count of resending transactions",
 		Value: cn.DefaultMaxResendTxCount,
 	}
-	//TODO-Klaytn-RemoveLater Remove this flag when we are confident with the new transaction resend logic
+	// TODO-Klaytn-RemoveLater Remove this flag when we are confident with the new transaction resend logic
 	TxResendUseLegacyFlag = cli.BoolFlag{
 		Name:  "txresend.use-legacy",
 		Usage: "Enable the legacy transaction resend logic (For testing only)",
@@ -695,7 +695,7 @@ var (
 		Usage: "Comma separated kni URLs for authorized nodes list",
 		Value: "",
 	}
-	//TODO-Klaytn-Bootnode the boodnode flags should be updated when it is implemented
+	// TODO-Klaytn-Bootnode the boodnode flags should be updated when it is implemented
 	BNAddrFlag = cli.StringFlag{
 		Name:  "bnaddr",
 		Usage: `udp address to use node discovery`,
@@ -1586,8 +1586,14 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 
 	if ctx.GlobalIsSet(SyncModeFlag.Name) {
 		cfg.SyncMode = *GlobalTextMarshaler(ctx, SyncModeFlag.Name).(*downloader.SyncMode)
-		if cfg.SyncMode != downloader.FullSync {
-			log.Fatalf("only syncmode=full can be used for syncmode!")
+		if cfg.SyncMode != downloader.FullSync && cfg.SyncMode != downloader.SnapSync {
+			log.Fatalf("Full Sync or Snap Sync (prototype) is supported only!")
+		}
+		if cfg.SyncMode == downloader.SnapSync {
+			logger.Info("Snap sync requested, enabling --snapshot")
+			ctx.Set(SnapshotFlag.Name, "true")
+		} else {
+			cfg.SnapshotCacheSize = 0 // Disabled
 		}
 	}
 

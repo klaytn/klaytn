@@ -38,6 +38,7 @@ import (
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
+	"github.com/klaytn/klaytn/snapshot"
 	"github.com/klaytn/klaytn/storage/database"
 )
 
@@ -246,6 +247,8 @@ type BlockChain interface {
 
 	InsertChain(chain types.Blocks) (int, error)
 	TrieNode(hash common.Hash) ([]byte, error)
+	ContractCode(hash common.Hash) ([]byte, error)
+	ContractCodeWithPrefix(hash common.Hash) ([]byte, error)
 	Config() *params.ChainConfig
 	State() (*state.StateDB, error)
 	Rollback(chain []common.Hash)
@@ -268,6 +271,11 @@ type BlockChain interface {
 	// Used in governance pkg
 	SetProposerPolicy(val uint64)
 	SetUseGiniCoeff(val bool)
+	SetLowerBoundBaseFee(val uint64)
+	SetUpperBoundBaseFee(val uint64)
+	SetGasTarget(val uint64)
+	SetMaxBlockGasUsedForBaseFee(val uint64)
+	SetBaseFeeDenominator(val uint64)
 
 	Processor() blockchain.Processor
 	BadBlocks() ([]blockchain.BadBlockArgs, error)
@@ -310,4 +318,7 @@ type BlockChain interface {
 	// KES
 	BlockSubscriptionLoop(pool *blockchain.TxPool)
 	CloseBlockSubscriptionLoop()
+
+	// Snapshot
+	Snapshots() *snapshot.Tree
 }

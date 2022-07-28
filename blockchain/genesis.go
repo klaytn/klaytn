@@ -253,10 +253,6 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 		if storedcfg.Governance.Reward.ProposerUpdateInterval != 0 {
 			params.SetProposerUpdateInterval(storedcfg.Governance.Reward.ProposerUpdateInterval)
 		}
-		if storedcfg.Governance.Reward.MinimumStake != nil &&
-			storedcfg.Governance.Reward.MinimumStake.Cmp(common.Big0) > 0 {
-			params.SetMinimumStakingAmount(storedcfg.Governance.Reward.MinimumStake)
-		}
 	}
 	// Special case: don't change the existing config of a non-mainnet chain if no new
 	// config is supplied. These chains would get AllProtocolChanges (and a compat error)
@@ -330,6 +326,10 @@ func (g *Genesis) ToBlock(baseStateRoot common.Hash, db database.DBManager) *typ
 	}
 	if g.BlockScore == nil {
 		head.BlockScore = params.GenesisBlockScore
+	}
+	// TODO-klaytn should set genesis block's base fee
+	if g.Config != nil && g.Config.IsMagmaForkEnabled(common.Big0) {
+		head.BaseFee = new(big.Int).SetUint64(params.DefaultLowerBoundBaseFee)
 	}
 	stateDB.Commit(false)
 	stateDB.Database().TrieDB().Commit(root, true, g.Number)

@@ -96,7 +96,7 @@ type DatabaseReader interface {
 type Database struct {
 	diskDB database.DBManager // Persistent storage for matured trie nodes
 
-	nodes  map[common.Hash]*cachedNode // Data and references relationships of a node
+	nodes  map[common.Hash]*cachedNode // Data and references relationships of a trie node
 	oldest common.Hash                 // Oldest tracked node, flush-list head
 	newest common.Hash                 // Newest tracked node, flush-list tail
 
@@ -169,8 +169,8 @@ func (n rawShortNode) cache() (hashNode, bool)   { panic("this should never end 
 func (n rawShortNode) fstring(ind string) string { panic("this should never end up in a live trie") }
 func (n rawShortNode) lenEncoded() uint16        { panic("this should never end up in a live trie") }
 
-// cachedNode is all the information we know about a single cached node in the
-// memory database write layer.
+// cachedNode is all the information we know about a single cached trie node
+// in the memory database write layer.
 type cachedNode struct {
 	node node // Cached collapsed trie node, or raw rlp data
 	// TODO-Klaytn: need to change data type of this if we increase the code size limit
@@ -183,8 +183,8 @@ type cachedNode struct {
 	flushNext common.Hash // Next node in the flush-list
 }
 
-// rlp returns the raw rlp encoded blob of the cached node, either directly from
-// the cache, or by regenerating it from the collapsed node.
+// rlp returns the raw rlp encoded blob of the cached trie node, either directly
+// from the cache, or by regenerating it from the collapsed node.
 func (n *cachedNode) rlp() []byte {
 	if node, ok := n.node.(rawNode); ok {
 		return node
@@ -421,21 +421,10 @@ func (db *Database) NodeChildren(hash common.Hash) ([]common.Hash, error) {
 	return childrenHash, nil
 }
 
-// InsertBlob writes a new reference tracked blob to the memory database if it's
-// yet unknown. This method should only be used for non-trie nodes that require
-// reference counting, since trie nodes are garbage collected directly through
-// their embedded children.
-func (db *Database) InsertBlob(hash common.Hash, blob []byte) {
-	db.lock.Lock()
-	defer db.lock.Unlock()
-
-	db.insert(hash, uint16(len(blob)), rawNode(blob))
-}
-
-// insert inserts a collapsed trie node into the memory database. This method is
-// a more generic version of InsertBlob, supporting both raw blob insertions as
-// well ex trie node insertions. The blob must always be specified to allow proper
-// size tracking.
+// insert inserts a collapsed trie node into the memory database.
+// The blob size must be specified to allow proper size tracking.
+// All nodes inserted by this function will be reference tracked
+// and in theory should only used for **trie nodes** insertion.
 func (db *Database) insert(hash common.Hash, lenEncoded uint16, node node) {
 	// If the node's already cached, skip
 	if _, ok := db.nodes[hash]; ok {
@@ -641,7 +630,7 @@ func (db *Database) Nodes() []common.Hash {
 	db.lock.RLock()
 	defer db.lock.RUnlock()
 
-	var hashes = make([]common.Hash, 0, len(db.nodes))
+	hashes := make([]common.Hash, 0, len(db.nodes))
 	for hash := range db.nodes {
 		if hash != (common.Hash{}) { // Special case for "root" references/nodes
 			hashes = append(hashes, hash)
@@ -651,6 +640,9 @@ func (db *Database) Nodes() []common.Hash {
 }
 
 // Reference adds a new reference from a parent node to a child node.
+// This function is used to add reference between internal trie node
+// and external node(e.g. storage trie root), all internal trie nodes
+// are referenced together by database itself.
 func (db *Database) Reference(child common.Hash, parent common.Hash) {
 	db.lock.Lock()
 	defer db.lock.Unlock()
@@ -1026,15 +1018,15 @@ func (db *Database) uncache(hash common.Hash) {
 
 // Size returns the current database size of the memory cache in front of the
 // persistent database layer.
-func (db *Database) Size() (common.StorageSize, common.StorageSize) {
+func (db *Database) Size() (common.StorageSize, common.StorageSize, common.StorageSize) {
 	db.lock.RLock()
 	defer db.lock.RUnlock()
 
 	// db.nodesSize only contains the useful data in the cache, but when reporting
 	// the total memory consumption, the maintenance metadata is also needed to be
 	// counted. For every useful node, we track 2 extra hashes as the flushlist.
-	var flushlistSize = common.StorageSize((len(db.nodes) - 1) * 2 * common.HashLength)
-	return db.nodesSize + flushlistSize, db.preimagesSize
+	flushlistSize := common.StorageSize((len(db.nodes) - 1) * 2 * common.HashLength)
+	return db.nodesSize + flushlistSize, db.nodesSize, db.preimagesSize
 }
 
 // verifyIntegrity is a debug method to iterate over the entire trie stored in
@@ -1129,8 +1121,10 @@ func (db *Database) UpdateMetricNodes() {
 	}
 }
 
-var errDisabledTrieNodeCache = errors.New("trie node cache is disabled, nothing to save to file")
-var errSavingTrieNodeCacheInProgress = errors.New("saving trie node cache has been triggered already")
+var (
+	errDisabledTrieNodeCache         = errors.New("trie node cache is disabled, nothing to save to file")
+	errSavingTrieNodeCacheInProgress = errors.New("saving trie node cache has been triggered already")
+)
 
 func (db *Database) CanSaveTrieNodeCacheToFile() error {
 	if db.trieNodeCache == nil {

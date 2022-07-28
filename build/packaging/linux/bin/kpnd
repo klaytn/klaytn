@@ -119,12 +119,8 @@ status_auto_restart_daemon() {
 }
 
 #------------------------Related to Klaytn node functions-----------------------------
-start_node() {
-    __pid_run
-    [ -n "$pid" ] && echo "kpnd already running...[$pid]" && return
 
-    echo -n "Starting kpnd: "
-
+__check_option() {
     if [ ! -d $LOG_DIR ]; then
         mkdir -p $LOG_DIR
     fi
@@ -150,6 +146,7 @@ start_node() {
 
     if [[ ! -z $RPC_ENABLE ]] && [[ $RPC_ENABLE -eq 1 ]]; then
         OPTIONS="$OPTIONS --rpc"
+        RPC_API=`echo $RPC_API | tr -d "[:space:]"`
         if [ ! -z $RPC_API ]; then
             OPTIONS="$OPTIONS --rpcapi $RPC_API"
         fi
@@ -169,6 +166,7 @@ start_node() {
 
     if [[ ! -z $WS_ENABLE ]] && [[ $WS_ENABLE -eq 1 ]]; then
         OPTIONS="$OPTIONS --ws"
+        WS_API=`echo $WS_API | tr -d "[:space:]"`
         if [ ! -z $WS_API ]; then
             OPTIONS="$OPTIONS --wsapi $WS_API"
         fi
@@ -265,6 +263,15 @@ start_node() {
     if [[ ! -z $ADDITIONAL ]] && [[ $ADDITIONAL != "" ]]; then
         OPTIONS="$OPTIONS $ADDITIONAL"
     fi
+}
+
+start_node() {
+    __pid_run
+    [ -n "$pid" ] && echo "kpnd already running...[$pid]" && return
+
+    echo -n "Starting kpnd: "
+
+    __check_option
 
     BASEDIR="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
     CURRENTFILE=`basename "$0"`
@@ -312,6 +319,14 @@ start() {
     fi
 }
 
+start_docker() {
+    echo -n "Starting kpnd: "
+    __check_option
+
+    echo "$BIN/kpn $OPTIONS"
+    $BIN/kpn $OPTIONS
+}
+
 stop() {
     if [ ! -z $AUTO_RESTART_NODE ] && [[ $AUTO_RESTART_NODE -eq 1 ]]; then
         stop_auto_restart_daemon
@@ -336,6 +351,9 @@ case "$1" in
     start)
         start
         ;;
+    start-docker)
+        start_docker
+        ;;
     stop)
         stop
         ;;
@@ -346,7 +364,7 @@ case "$1" in
         restart
         ;;
     *)
-        echo "Usages: kpnd {start|stop|restart|status}"
+        echo "Usages: kpnd {start|start-docker|stop|restart|status}"
         exit 1
         ;;
 esac

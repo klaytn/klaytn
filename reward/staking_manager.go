@@ -103,38 +103,65 @@ func GetStakingManager() *StakingManager {
 	return stakingManager
 }
 
-// GetStakingInfo returns a corresponding stakingInfo for a blockNum.
+// GetStakingInfo returns a stakingInfo on the staking block of the given block number.
+// Note that staking block is the block on which the associated staking information is stored and used during an interval.
 func GetStakingInfo(blockNum uint64) *StakingInfo {
+	stakingBlockNumber := params.CalcStakingBlockNumber(blockNum)
+	logger.Debug("Staking information is requested", "blockNum", blockNum, "staking block number", stakingBlockNumber)
+	return GetStakingInfoOnStakingBlock(stakingBlockNumber)
+}
+
+// GetStakingInfoOnStakingBlock returns a corresponding StakingInfo for a staking block number.
+// If the given number is not on the staking block, it returns nil.
+//
+// Fixup for Gini coefficients:
+// Klaytn core stores Gini: -1 in its database.
+// We ensure GetStakingInfoOnStakingBlock() to always return meaningful Gini.
+//   If cache hit                               -> fillMissingGini -> modifies cached in-memory object
+//   If db hit                                  -> fillMissingGini -> write to cache
+//   If read contract -> write to db (gini: -1) -> fillMissingGini -> write to cache
+func GetStakingInfoOnStakingBlock(stakingBlockNumber uint64) *StakingInfo {
 	if stakingManager == nil {
 		logger.Error("unable to GetStakingInfo", "err", ErrStakingManagerNotSet)
 		return nil
 	}
 
-	stakingBlockNumber := params.CalcStakingBlockNumber(blockNum)
+	// shortcut if given block is not on staking update interval
+	if !params.IsStakingUpdateInterval(stakingBlockNumber) {
+		return nil
+	}
 
 	// Get staking info from cache
 	if cachedStakingInfo := stakingManager.stakingInfoCache.get(stakingBlockNumber); cachedStakingInfo != nil {
-		logger.Debug("StakingInfoCache hit.", "blockNum", blockNum, "staking block number", stakingBlockNumber, "stakingInfo", cachedStakingInfo)
+		logger.Debug("StakingInfoCache hit.", "staking block number", stakingBlockNumber, "stakingInfo", cachedStakingInfo)
+		// Fill in Gini coeff if not set. Modifies the cached object.
+		if err := fillMissingGiniCoefficient(cachedStakingInfo, stakingBlockNumber); err != nil {
+			logger.Warn("Cannot fill in gini coefficient", "staking block number", stakingBlockNumber, "err", err)
+		}
 		return cachedStakingInfo
 	}
 
 	// Get staking info from DB
 	if storedStakingInfo, err := getStakingInfoFromDB(stakingBlockNumber); storedStakingInfo != nil && err == nil {
-		logger.Debug("StakingInfoDB hit.", "blockNum", blockNum, "staking block number", stakingBlockNumber, "stakingInfo", storedStakingInfo)
+		logger.Debug("StakingInfoDB hit.", "staking block number", stakingBlockNumber, "stakingInfo", storedStakingInfo)
+		// Fill in Gini coeff before adding to cache.
+		if err := fillMissingGiniCoefficient(storedStakingInfo, stakingBlockNumber); err != nil {
+			logger.Warn("Cannot fill in gini coefficient", "staking block number", stakingBlockNumber, "err", err)
+		}
 		stakingManager.stakingInfoCache.add(storedStakingInfo)
 		return storedStakingInfo
 	} else {
-		logger.Debug("failed to get stakingInfo from DB", "err", err, "blockNum", blockNum)
+		logger.Debug("failed to get stakingInfo from DB", "err", err, "staking block number", stakingBlockNumber)
 	}
 
 	// Calculate staking info from block header and updates it to cache and db
 	calcStakingInfo, err := updateStakingInfo(stakingBlockNumber)
 	if calcStakingInfo == nil {
-		logger.Error("failed to update stakingInfo", "blockNum", blockNum, "staking block number", stakingBlockNumber, "err", err)
+		logger.Error("failed to update stakingInfo", "staking block number", stakingBlockNumber, "err", err)
 		return nil
 	}
 
-	logger.Debug("Get stakingInfo from header.", "blockNum", blockNum, "staking block number", stakingBlockNumber, "stakingInfo", calcStakingInfo)
+	logger.Debug("Get stakingInfo from header.", "staking block number", stakingBlockNumber, "stakingInfo", calcStakingInfo)
 	return calcStakingInfo
 }
 
@@ -149,12 +176,19 @@ func updateStakingInfo(blockNum uint64) (*StakingInfo, error) {
 		return nil, err
 	}
 
-	stakingManager.stakingInfoCache.add(stakingInfo)
-
-	if err := addStakingInfoToDB(stakingInfo); err != nil {
+	// Add to DB before setting Gini; DB will contain {Gini: -1}
+	if err := AddStakingInfoToDB(stakingInfo); err != nil {
 		logger.Debug("failed to write staking info to db", "err", err, "stakingInfo", stakingInfo)
 		return stakingInfo, err
 	}
+
+	// Fill in Gini coeff before adding to cache
+	if err := fillMissingGiniCoefficient(stakingInfo, blockNum); err != nil {
+		logger.Warn("Cannot fill in gini coefficient", "blockNum", blockNum, "err", err)
+	}
+
+	// Add to cache after setting Gini
+	stakingManager.stakingInfoCache.add(stakingInfo)
 
 	logger.Info("Add a new stakingInfo to stakingInfoCache and stakingInfoDB", "blockNum", blockNum)
 	logger.Debug("Added stakingInfo", "stakingInfo", stakingInfo)
@@ -177,6 +211,35 @@ func CheckStakingInfoStored(blockNum uint64) error {
 	// update staking info in DB and cache from address book
 	_, err := updateStakingInfo(stakingBlockNumber)
 	return err
+}
+
+// Fill in StakingInfo.Gini value if not set.
+func fillMissingGiniCoefficient(stakingInfo *StakingInfo, number uint64) error {
+	if !stakingInfo.UseGini {
+		return nil
+	}
+	if stakingInfo.Gini >= 0 {
+		return nil
+	}
+
+	// We reach here if UseGini == true && Gini == -1. There are two such cases.
+	// - Gini was never been calculated, so it is DefaultGiniCoefficient.
+	// - Gini was calculated but there was no eligible node, so Gini = -1.
+	// For the second case, in theory we won't have to recalculalte Gini,
+	// but there is no way to distinguish both. So we just recalculate.
+	minStaking, err := stakingManager.governanceHelper.GetMinimumStakingAtNumber(number)
+	if err != nil {
+		return err
+	}
+
+	c := stakingInfo.GetConsolidatedStakingInfo()
+	if c == nil {
+		return errors.New("Cannot create ConsolidatedStakingInfo")
+	}
+
+	stakingInfo.Gini = c.CalcGiniCoefficientMinStake(minStaking)
+	logger.Debug("Calculated missing Gini for stored StakingInfo", "number", number, "gini", stakingInfo.Gini)
+	return nil
 }
 
 // StakingManagerSubscribe setups a channel to listen chain head event and starts a goroutine to update staking cache.
@@ -233,6 +296,31 @@ func StakingManagerUnsubscribe() {
 	}
 
 	stakingManager.chainHeadSub.Unsubscribe()
+}
+
+// TODO-Klaytn-Reward the following methods are used for testing purpose, it needs to be moved into test files.
+// Unlike NewStakingManager(), SetTestStakingManager*() do not trigger once.Do().
+// This way you can avoid irreversible side effects during tests.
+
+// SetTestStakingManagerWithChain sets a full-featured staking manager with blockchain, database and cache.
+// Note that this method is used only for testing purpose.
+func SetTestStakingManagerWithChain(bc blockChain, gh governanceHelper, db stakingInfoDB) {
+	SetTestStakingManager(&StakingManager{
+		addressBookConnector: newAddressBookConnector(bc, gh),
+		stakingInfoCache:     newStakingInfoCache(),
+		stakingInfoDB:        db,
+		governanceHelper:     gh,
+		blockchain:           bc,
+		chainHeadChan:        make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
+	})
+}
+
+// SetTestStakingManagerWithDB sets the staking manager with the given database.
+// Note that this method is used only for testing purpose.
+func SetTestStakingManagerWithDB(testDB stakingInfoDB) {
+	SetTestStakingManager(&StakingManager{
+		stakingInfoDB: testDB,
+	})
 }
 
 // SetTestStakingManagerWithStakingInfoCache sets the staking manager with the given test staking information.

@@ -46,24 +46,63 @@ var (
 )
 
 var GovernanceItems = map[int]check{
-	params.GovernanceMode:          {stringT, checkGovernanceMode, nil},
-	params.GoverningNode:           {addressT, checkAddress, nil},
-	params.UnitPrice:               {uint64T, checkUint64andBool, updateUnitPrice},
-	params.AddValidator:            {addressT, checkAddressOrListOfUniqueAddresses, nil},
-	params.RemoveValidator:         {addressT, checkAddressOrListOfUniqueAddresses, nil},
-	params.MintingAmount:           {stringT, checkBigInt, nil},
-	params.Ratio:                   {stringT, checkRatio, nil},
-	params.UseGiniCoeff:            {boolT, checkUint64andBool, updateUseGiniCoeff},
-	params.DeferredTxFee:           {boolT, checkUint64andBool, nil},
-	params.MinimumStake:            {stringT, checkRewardMinimumStake, nil},
-	params.StakeUpdateInterval:     {uint64T, checkUint64andBool, updateStakingUpdateInterval},
-	params.ProposerRefreshInterval: {uint64T, checkUint64andBool, updateProposerUpdateInterval},
-	params.Epoch:                   {uint64T, checkUint64andBool, nil},
-	params.Policy:                  {uint64T, checkUint64andBool, updateProposerPolicy},
-	params.CommitteeSize:           {uint64T, checkCommitteeSize, nil},
-	params.ConstTxGasHumanReadable: {uint64T, checkUint64andBool, updateTxGasHumanReadable},
-	params.Timeout:                 {uint64T, checkUint64andBool, nil},
+	params.GovernanceMode:            {stringT, checkGovernanceMode, nil},
+	params.GoverningNode:             {addressT, checkAddress, nil},
+	params.UnitPrice:                 {uint64T, checkUint64andBool, updateUnitPrice},
+	params.LowerBoundBaseFee:         {uint64T, checkUint64andBool, updateLowerBoundBaseFee},
+	params.UpperBoundBaseFee:         {uint64T, checkUint64andBool, updateUpperBoundBaseFee},
+	params.GasTarget:                 {uint64T, checkUint64andBool, updateGasTarget},
+	params.MaxBlockGasUsedForBaseFee: {uint64T, checkUint64andBool, updateMaxBlockGasUsedForBaseFee},
+	params.BaseFeeDenominator:        {uint64T, checkUint64andBool, updateBaseFeeDenominator},
+	params.AddValidator:              {addressT, checkAddressOrListOfUniqueAddresses, nil},
+	params.RemoveValidator:           {addressT, checkAddressOrListOfUniqueAddresses, nil},
+	params.MintingAmount:             {stringT, checkBigInt, nil},
+	params.Ratio:                     {stringT, checkRatio, nil},
+	params.UseGiniCoeff:              {boolT, checkUint64andBool, updateUseGiniCoeff},
+	params.DeferredTxFee:             {boolT, checkUint64andBool, nil},
+	params.MinimumStake:              {stringT, checkRewardMinimumStake, nil},
+	params.StakeUpdateInterval:       {uint64T, checkUint64andBool, updateStakingUpdateInterval},
+	params.ProposerRefreshInterval:   {uint64T, checkUint64andBool, updateProposerUpdateInterval},
+	params.Epoch:                     {uint64T, checkUint64andBool, nil},
+	params.Policy:                    {uint64T, checkUint64andBool, updateProposerPolicy},
+	params.CommitteeSize:             {uint64T, checkCommitteeSize, nil},
+	params.ConstTxGasHumanReadable:   {uint64T, checkUint64andBool, updateTxGasHumanReadable},
+	params.Timeout:                   {uint64T, checkUint64andBool, nil},
 }
+
+// TODO-klaytn chainConfig in blockchain, cn, worker, and governance after governance vote
+// Every instances share the chainConfig
+func updateLowerBoundBaseFee(g *Governance, k string, v interface{}) {
+	if g.blockChain != nil {
+		g.blockChain.SetLowerBoundBaseFee(v.(uint64))
+	}
+}
+
+func updateUpperBoundBaseFee(g *Governance, k string, v interface{}) {
+	if g.blockChain != nil {
+		g.blockChain.SetUpperBoundBaseFee(v.(uint64))
+	}
+}
+
+func updateGasTarget(g *Governance, k string, v interface{}) {
+	if g.blockChain != nil {
+		g.blockChain.SetGasTarget(v.(uint64))
+	}
+}
+
+func updateMaxBlockGasUsedForBaseFee(g *Governance, k string, v interface{}) {
+	if g.blockChain != nil {
+		g.blockChain.SetMaxBlockGasUsedForBaseFee(v.(uint64))
+	}
+}
+
+func updateBaseFeeDenominator(g *Governance, k string, v interface{}) {
+	if g.blockChain != nil {
+		g.blockChain.SetBaseFeeDenominator(v.(uint64))
+	}
+}
+
+// end TODO-klaytn
 
 func updateTxGasHumanReadable(g *Governance, k string, v interface{}) {
 	params.TxGasHumanReadable = v.(uint64)
@@ -89,12 +128,6 @@ func updateStakingUpdateInterval(g *Governance, k string, v interface{}) {
 
 func updateProposerUpdateInterval(g *Governance, k string, v interface{}) {
 	params.SetProposerUpdateInterval(g.ProposerUpdateInterval())
-}
-
-func updateMinimumStakingAmount(g *Governance, k string, v interface{}) {
-	if val, ok := new(big.Int).SetString(g.MinimumStake(), 10); ok {
-		params.SetMinimumStakingAmount(val)
-	}
 }
 
 func updateProposerPolicy(g *Governance, k string, v interface{}) {
@@ -330,13 +363,13 @@ func isEqualValue(k int, v1 interface{}, v2 interface{}) bool {
 	return v1 == v2
 }
 
-func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, votes []GovernanceVote, tally []GovernanceTallyItem, header *types.Header, proposer common.Address, self common.Address) (istanbul.ValidatorSet, []GovernanceVote, []GovernanceTallyItem) {
+func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, votes []GovernanceVote, tally []GovernanceTallyItem, header *types.Header, proposer common.Address, self common.Address, writable bool) (istanbul.ValidatorSet, []GovernanceVote, []GovernanceTallyItem) {
 	gVote := new(GovernanceVote)
 
 	if len(header.Vote) > 0 {
 		var err error
 
-		if err := rlp.DecodeBytes(header.Vote, gVote); err != nil {
+		if err = rlp.DecodeBytes(header.Vote, gVote); err != nil {
 			logger.Error("Failed to decode a vote. This vote will be ignored", "number", header.Number)
 			return valset, votes, tally
 		}
@@ -365,19 +398,24 @@ func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, votes 
 				return valset, votes, tally
 			}
 		case params.AddValidator, params.RemoveValidator:
-			authorize := key == params.AddValidator
+			var addresses []common.Address
+
 			if addr, ok := gVote.Value.(common.Address); ok {
-				if !gov.checkVote(addr, authorize, valset) {
-					return valset, votes, tally
-				}
-			} else if addresses, ok := gVote.Value.([]common.Address); ok {
-				for _, address := range addresses {
-					if !gov.checkVote(address, authorize, valset) {
-						return valset, votes, tally
-					}
-				}
+				addresses = append(addresses, addr)
+			} else if addrs, ok := gVote.Value.([]common.Address); ok {
+				addresses = addrs
 			} else {
 				logger.Warn("Invalid value Type", "number", header.Number, "Validator", gVote.Validator, "key", gVote.Key, "value", gVote.Value)
+			}
+
+			for _, address := range addresses {
+				if !gov.checkVote(address, key == params.AddValidator, valset) {
+					if writable && proposer == self {
+						logger.Warn("A meaningless vote has been proposed. It is being removed without further handling", "key", gVote.Key, "value", gVote.Value)
+						gov.removeDuplicatedVote(gVote, header.Number.Uint64())
+					}
+					return valset, votes, tally
+				}
 			}
 		}
 
@@ -388,23 +426,23 @@ func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, votes 
 			governingNode := gov.GoverningNode()
 
 			// Remove old vote with same validator and key
-			votes, tally = gov.removePreviousVote(valset, votes, tally, proposer, gVote, governanceMode, governingNode)
+			votes, tally = gov.removePreviousVote(valset, votes, tally, proposer, gVote, governanceMode, governingNode, writable)
 
 			// Add new Vote to snapshot.GovernanceVotes
 			votes = append(votes, *gVote)
 
 			// Tally up the new vote. This will be cleared when Epoch ends.
 			// Add to GovernanceTallies if it doesn't exist
-			valset, votes, tally = gov.addNewVote(valset, votes, tally, gVote, governanceMode, governingNode, number)
+			valset, votes, tally = gov.addNewVote(valset, votes, tally, gVote, governanceMode, governingNode, number, writable)
 
 			// If this vote was casted by this node, remove it
-			if self == proposer {
+			if writable && self == proposer {
 				gov.removeDuplicatedVote(gVote, header.Number.Uint64())
 			}
 		} else {
 			logger.Warn("Received Vote was invalid", "number", header.Number, "Validator", gVote.Validator, "key", gVote.Key, "value", gVote.Value)
 		}
-		if number > atomic.LoadUint64(&gov.lastGovernanceStateBlock) {
+		if writable && number > atomic.LoadUint64(&gov.lastGovernanceStateBlock) {
 			gov.GovernanceVotes.Import(votes)
 			gov.GovernanceTallies.Import(tally)
 		}
@@ -412,19 +450,19 @@ func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, votes 
 	return valset, votes, tally
 }
 
-func (gov *Governance) checkVote(address common.Address, authorize bool, valset istanbul.ValidatorSet) bool {
+func (gov *Governance) checkVote(address common.Address, isKeyAddValidator bool, valset istanbul.ValidatorSet) bool {
 	_, validator := valset.GetByAddress(address)
 	if validator == nil {
 		_, validator = valset.GetDemotedByAddress(address)
 	}
-	return (validator != nil && !authorize) || (validator == nil && authorize)
+	return (validator != nil && !isKeyAddValidator) || (validator == nil && isKeyAddValidator)
 }
 
 func (gov *Governance) isGovernanceModeSingleOrNone(governanceMode int, governingNode common.Address, voter common.Address) bool {
 	return governanceMode == params.GovernanceMode_None || (governanceMode == params.GovernanceMode_Single && voter == governingNode)
 }
 
-func (gov *Governance) removePreviousVote(valset istanbul.ValidatorSet, votes []GovernanceVote, tally []GovernanceTallyItem, validator common.Address, gVote *GovernanceVote, governanceMode int, governingNode common.Address) ([]GovernanceVote, []GovernanceTallyItem) {
+func (gov *Governance) removePreviousVote(valset istanbul.ValidatorSet, votes []GovernanceVote, tally []GovernanceTallyItem, validator common.Address, gVote *GovernanceVote, governanceMode int, governingNode common.Address, writable bool) ([]GovernanceVote, []GovernanceTallyItem) {
 	ret := make([]GovernanceVote, len(votes))
 	copy(ret, votes)
 
@@ -440,10 +478,12 @@ func (gov *Governance) removePreviousVote(valset istanbul.ValidatorSet, votes []
 
 			// Remove the old vote from GovernanceVotes
 			ret = append(votes[:idx], votes[idx+1:]...)
-			if gov.isGovernanceModeSingleOrNone(governanceMode, governingNode, gVote.Validator) ||
-				(governanceMode == params.GovernanceMode_Ballot && currentVotes <= valset.TotalVotingPower()/2) {
-				if v, ok := gov.changeSet.GetValue(GovernanceKeyMap[vote.Key]); ok && v == vote.Value {
-					gov.changeSet.RemoveItem(vote.Key)
+			if writable {
+				if gov.isGovernanceModeSingleOrNone(governanceMode, governingNode, gVote.Validator) ||
+					(governanceMode == params.GovernanceMode_Ballot && currentVotes <= valset.TotalVotingPower()/2) {
+					if v, ok := gov.changeSet.GetValue(GovernanceKeyMap[vote.Key]); ok && v == vote.Value {
+						gov.changeSet.RemoveItem(vote.Key)
+					}
 				}
 			}
 			break
@@ -489,7 +529,7 @@ func (gov *Governance) changeGovernanceTally(tally []GovernanceTallyItem, key st
 	}
 }
 
-func (gov *Governance) addNewVote(valset istanbul.ValidatorSet, votes []GovernanceVote, tally []GovernanceTallyItem, gVote *GovernanceVote, governanceMode int, governingNode common.Address, blockNum uint64) (istanbul.ValidatorSet, []GovernanceVote, []GovernanceTallyItem) {
+func (gov *Governance) addNewVote(valset istanbul.ValidatorSet, votes []GovernanceVote, tally []GovernanceTallyItem, gVote *GovernanceVote, governanceMode int, governingNode common.Address, blockNum uint64, writable bool) (istanbul.ValidatorSet, []GovernanceVote, []GovernanceTallyItem) {
 	_, v := valset.GetByAddress(gVote.Validator)
 	if v != nil {
 		vp := v.VotingPower()
@@ -499,7 +539,7 @@ func (gov *Governance) addNewVote(valset istanbul.ValidatorSet, votes []Governan
 			(governanceMode == params.GovernanceMode_Ballot && currentVotes > valset.TotalVotingPower()/2) {
 			switch GovernanceKeyMap[gVote.Key] {
 			case params.AddValidator:
-				//reward.GetStakingInfo()
+				// reward.GetStakingInfo()
 				if addr, ok := gVote.Value.(common.Address); ok {
 					valset.AddValidator(addr)
 				} else {
@@ -519,11 +559,9 @@ func (gov *Governance) addNewVote(valset istanbul.ValidatorSet, votes []Governan
 			case params.Timeout:
 				timeout := gVote.Value.(uint64)
 				atomic.StoreUint64(&istanbul.DefaultConfig.Timeout, timeout)
-				if blockNum > atomic.LoadUint64(&gov.lastGovernanceStateBlock) {
-					gov.ReflectVotes(*gVote)
-				}
+				fallthrough
 			default:
-				if blockNum > atomic.LoadUint64(&gov.lastGovernanceStateBlock) {
+				if writable && blockNum > atomic.LoadUint64(&gov.lastGovernanceStateBlock) {
 					gov.ReflectVotes(*gVote)
 				}
 			}

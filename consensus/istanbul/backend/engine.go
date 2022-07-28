@@ -28,8 +28,6 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/klaytn/klaytn/reward"
-
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -39,17 +37,20 @@ import (
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	istanbulCore "github.com/klaytn/klaytn/consensus/istanbul/core"
 	"github.com/klaytn/klaytn/consensus/istanbul/validator"
+	"github.com/klaytn/klaytn/consensus/misc"
 	"github.com/klaytn/klaytn/crypto/sha3"
+	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/rlp"
 )
 
 const (
-	//checkpointInterval = 1024 // Number of blocks after which to save the vote snapshot to the database
-	//inmemorySnapshots  = 128  // Number of recent vote snapshots to keep in memory
-	//inmemoryPeers      = 40
-	//inmemoryMessages   = 1024
+	// checkpointInterval = 1024 // Number of blocks after which to save the vote snapshot to the database
+	// inmemorySnapshots  = 128  // Number of recent vote snapshots to keep in memory
+	// inmemoryPeers      = 40
+	// inmemoryMessages   = 1024
 
 	checkpointInterval = 1024 // Number of blocks after which to save the vote snapshot to the database
 	inmemorySnapshots  = 496  // Number of recent vote snapshots to keep in memory
@@ -89,6 +90,7 @@ var (
 	// errMismatchTxhashes is returned if the TxHash in header is mismatch.
 	errMismatchTxhashes = errors.New("mismatch transactions hashes")
 )
+
 var (
 	defaultBlockScore = big.NewInt(1)
 	now               = time.Now
@@ -170,7 +172,14 @@ func (sb *backend) computeSignatureAddrs(header *types.Header) error {
 // given engine. Verifying the seal may be done optionally here, or explicitly
 // via the VerifySeal method.
 func (sb *backend) VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool) error {
-	return sb.verifyHeader(chain, header, nil)
+	var parent []*types.Header
+	if header.Number.Sign() == 0 {
+		// If current block is genesis, the parent is also genesis
+		parent = append(parent, chain.GetHeaderByNumber(0))
+	} else {
+		parent = append(parent, chain.GetHeader(header.ParentHash, header.Number.Uint64()-1))
+	}
+	return sb.verifyHeader(chain, header, parent)
 }
 
 // verifyHeader checks whether a header conforms to the consensus rules.The
@@ -180,6 +189,43 @@ func (sb *backend) VerifyHeader(chain consensus.ChainReader, header *types.Heade
 func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
 	if header.Number == nil {
 		return errUnknownBlock
+	}
+
+	// Header verify before/after magma fork
+	if chain.Config().IsMagmaForkEnabled(header.Number) {
+		// the kip71Config used when creating the block number is a previous block config.
+		blockNum := header.Number.Uint64()
+		if header.Number.BitLen() != 0 {
+			blockNum = blockNum - 1
+		}
+		_, data, err := sb.governance.ReadGovernance(blockNum)
+		if err != nil {
+			return err
+		}
+
+		kip71 := params.GetDefaultKIP71Config()
+		gkmr := governance.GovernanceKeyMapReverse
+		if l := data[gkmr[params.LowerBoundBaseFee]]; l != nil {
+			kip71.LowerBoundBaseFee = l.(uint64)
+		}
+		if u := data[gkmr[params.UpperBoundBaseFee]]; u != nil {
+			kip71.UpperBoundBaseFee = u.(uint64)
+		}
+		if g := data[gkmr[params.GasTarget]]; g != nil {
+			kip71.GasTarget = g.(uint64)
+		}
+		if b := data[gkmr[params.BaseFeeDenominator]]; b != nil {
+			kip71.BaseFeeDenominator = b.(uint64)
+		}
+		if m := data[gkmr[params.MaxBlockGasUsedForBaseFee]]; m != nil {
+			kip71.MaxBlockGasUsedForBaseFee = m.(uint64)
+		}
+
+		if err := misc.VerifyMagmaHeader(parents[len(parents)-1], header, kip71); err != nil {
+			return err
+		}
+	} else if header.BaseFee != nil {
+		return consensus.ErrInvalidBaseFee
 	}
 
 	// Don't waste time checking blocks from the future
@@ -227,7 +273,8 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 	}
 
 	// At every epoch governance data will come in block header. Verify it.
-	if number%sb.governance.Epoch() == 0 && len(header.Governance) > 0 {
+	pendingBlockNum := new(big.Int).Add(chain.CurrentHeader().Number, common.Big1)
+	if number%sb.governance.Epoch() == 0 && len(header.Governance) > 0 && pendingBlockNum.Cmp(header.Number) == 0 {
 		return sb.governance.VerifyGovernance(header.Governance)
 	}
 	return sb.verifyCommittedSeals(chain, header, parents)
@@ -263,7 +310,7 @@ func (sb *backend) verifySigner(chain consensus.ChainReader, header *types.Heade
 	}
 
 	// Retrieve the snapshot needed to verify this header and cache it
-	snap, err := sb.snapshot(chain, number-1, header.ParentHash, parents)
+	snap, err := sb.snapshot(chain, number-1, header.ParentHash, parents, true)
 	if err != nil {
 		return err
 	}
@@ -290,7 +337,7 @@ func (sb *backend) verifyCommittedSeals(chain consensus.ChainReader, header *typ
 	}
 
 	// Retrieve the snapshot needed to verify this header and cache it
-	snap, err := sb.snapshot(chain, number-1, header.ParentHash, parents)
+	snap, err := sb.snapshot(chain, number-1, header.ParentHash, parents, true)
 	if err != nil {
 		return err
 	}
@@ -364,7 +411,7 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	header.BlockScore = defaultBlockScore
 
 	// Assemble the voting snapshot
-	snap, err := sb.snapshot(chain, number-1, header.ParentHash, nil)
+	snap, err := sb.snapshot(chain, number-1, header.ParentHash, nil, true)
 	if err != nil {
 		return err
 	}
@@ -409,7 +456,18 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 // Note, the block header and state database might be updated to reflect any
 // consensus rules that happen at finalization (e.g. block rewards).
 func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
-	receipts []*types.Receipt) (*types.Block, error) {
+	receipts []*types.Receipt,
+) (*types.Block, error) {
+	// We can assure that if the magma hard forked block should have the field of base fee
+	if chain.Config().IsMagmaForkEnabled(header.Number) {
+		if header.BaseFee == nil {
+			logger.Error("Magma hard forked block should have baseFee", "blockNum", header.Number.Uint64())
+			return nil, errors.New("Invalid Magma block without baseFee")
+		}
+	} else if header.BaseFee != nil {
+		logger.Error("A block before Magma hardfork shouldn't have baseFee", "blockNum", header.Number.Uint64())
+		return nil, consensus.ErrInvalidBaseFee
+	}
 
 	// If sb.chain is nil, it means backend is not initialized yet.
 	if sb.chain != nil && sb.governance.ProposerPolicy() == uint64(istanbul.WeightedRandom) {
@@ -465,7 +523,7 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, stop <-
 	number := header.Number.Uint64()
 
 	// Bail out if we're unauthorized to sign a block
-	snap, err := sb.snapshot(chain, number-1, header.ParentHash, nil)
+	snap, err := sb.snapshot(chain, number-1, header.ParentHash, nil, true)
 	if err != nil {
 		return nil, err
 	}
@@ -656,12 +714,12 @@ func getPrevHeaderAndUpdateParents(chain consensus.ChainReader, number uint64, h
 
 // CreateSnapshot does not return a snapshot but creates a new snapshot at a given point in time.
 func (sb *backend) CreateSnapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) error {
-	_, err := sb.snapshot(chain, number, hash, parents)
+	_, err := sb.snapshot(chain, number, hash, parents, true)
 	return err
 }
 
 // snapshot retrieves the authorization snapshot at a given point in time.
-func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*Snapshot, error) {
+func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header, writable bool) (*Snapshot, error) {
 	// Search for a snapshot in memory or on disk for checkpoints
 	var (
 		headers []*types.Header
@@ -702,13 +760,13 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 	for i := 0; i < len(headers)/2; i++ {
 		headers[i], headers[len(headers)-1-i] = headers[len(headers)-1-i], headers[i]
 	}
-	snap, err := snap.apply(headers, sb.governance, sb.address, sb.governance.ProposerPolicy(), chain)
+	snap, err := snap.apply(headers, sb.governance, sb.address, sb.governance.ProposerPolicy(), chain, writable)
 	if err != nil {
 		return nil, err
 	}
 
 	// If we've generated a new checkpoint snapshot, save to disk
-	if snap.Number%checkpointInterval == 0 && len(headers) > 0 {
+	if writable && snap.Number%checkpointInterval == 0 && len(headers) > 0 {
 		if sb.governance.CanWriteGovernanceState(snap.Number) {
 			sb.governance.WriteGovernanceState(snap.Number, true)
 		}

@@ -42,10 +42,18 @@ func NewPublicKlayAPI(b Backend) *PublicKlayAPI {
 	return &PublicKlayAPI{b}
 }
 
-// GasPrice returns a suggestion for a gas price.
+// GasPrice returns a suggestion for a gas price (baseFee * 2).
 func (s *PublicKlayAPI) GasPrice(ctx context.Context) (*hexutil.Big, error) {
 	price, err := s.b.SuggestPrice(ctx)
 	return (*hexutil.Big)(price), err
+}
+
+func (s *PublicKlayAPI) UpperBoundGasPrice(ctx context.Context) *hexutil.Big {
+	return (*hexutil.Big)(s.b.UpperBoundGasPrice(ctx))
+}
+
+func (s *PublicKlayAPI) LowerBoundGasPrice(ctx context.Context) *hexutil.Big {
+	return (*hexutil.Big)(s.b.LowerBoundGasPrice(ctx))
 }
 
 // ProtocolVersion returns the current Klaytn protocol version this node supports.

@@ -99,7 +99,6 @@ var (
 const (
 	maxFutureBlocks     = 256
 	maxTimeFutureBlocks = 30
-	maxBadBlocks        = 10
 	// TODO-Klaytn-Issue1911  This flag needs to be adjusted to the appropriate value.
 	//  Currently, this value is taken to cache all 10 million accounts
 	//  and should be optimized considering memory size and performance.
@@ -108,10 +107,15 @@ const (
 
 const (
 	DefaultTriesInMemory = 128
-	// BlockChainVersion ensures that an incompatible database forces a resync from scratch.
-	BlockChainVersion    = 3
 	DefaultBlockInterval = 128
 	MaxPrefetchTxs       = 20000
+
+	// BlockChainVersion ensures that an incompatible database forces a resync from scratch.
+	// Changelog:
+	// - Version 4
+	// The following incompatible database changes were added:
+	//   * New scheme for contract code in order to separate the codes and trie nodes
+	BlockChainVersion = 4
 )
 
 // CacheConfig contains the configuration values for the 1) stateDB caching and
@@ -187,8 +191,6 @@ type BlockChain struct {
 	validator  Validator  // block and state validator interface
 	vmConfig   vm.Config
 
-	badBlocks *lru.Cache // Bad block cache
-
 	parallelDBWrite bool // TODO-Klaytn-Storage parallelDBWrite will be replaced by number of goroutines when worker pool pattern is introduced.
 
 	// State migration
@@ -199,6 +201,7 @@ type BlockChain struct {
 	pendingCnt            int
 	progress              float64
 	migrationErr          error
+	testMigrationHook     func()
 
 	// Warm up
 	lastCommittedBlock uint64
@@ -239,7 +242,6 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 	InitDeriveSha(chainConfig.DeriveShaImpl)
 
 	futureBlocks, _ := lru.New(maxFutureBlocks)
-	badBlocks, _ := lru.New(maxBadBlocks)
 
 	bc := &BlockChain{
 		chainConfig:        chainConfig,
@@ -253,7 +255,6 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		futureBlocks:       futureBlocks,
 		engine:             engine,
 		vmConfig:           vmConfig,
-		badBlocks:          badBlocks,
 		parallelDBWrite:    db.IsParallelDBWrite(),
 		stopStateMigration: make(chan struct{}),
 		prefetchTxCh:       make(chan prefetchTx, MaxPrefetchTxs),
@@ -454,6 +455,36 @@ func (bc *BlockChain) SetProposerPolicy(val uint64) {
 	bc.chainConfig.Istanbul.ProposerPolicy = val
 }
 
+func (bc *BlockChain) SetLowerBoundBaseFee(val uint64) {
+	bc.chainConfigMu.Lock()
+	defer bc.chainConfigMu.Unlock()
+	bc.chainConfig.Governance.KIP71.LowerBoundBaseFee = val
+}
+
+func (bc *BlockChain) SetUpperBoundBaseFee(val uint64) {
+	bc.chainConfigMu.Lock()
+	defer bc.chainConfigMu.Unlock()
+	bc.chainConfig.Governance.KIP71.UpperBoundBaseFee = val
+}
+
+func (bc *BlockChain) SetGasTarget(val uint64) {
+	bc.chainConfigMu.Lock()
+	defer bc.chainConfigMu.Unlock()
+	bc.chainConfig.Governance.KIP71.GasTarget = val
+}
+
+func (bc *BlockChain) SetMaxBlockGasUsedForBaseFee(val uint64) {
+	bc.chainConfigMu.Lock()
+	defer bc.chainConfigMu.Unlock()
+	bc.chainConfig.Governance.KIP71.MaxBlockGasUsedForBaseFee = val
+}
+
+func (bc *BlockChain) SetBaseFeeDenominator(val uint64) {
+	bc.chainConfigMu.Lock()
+	defer bc.chainConfigMu.Unlock()
+	bc.chainConfig.Governance.KIP71.BaseFeeDenominator = val
+}
+
 func (bc *BlockChain) getProcInterrupt() bool {
 	return atomic.LoadInt32(&bc.procInterrupt) == 1
 }
@@ -610,7 +641,6 @@ func (bc *BlockChain) setHeadBeyondRoot(head uint64, root common.Hash, repair bo
 		// removed in the hc.SetHead function.
 		bc.db.DeleteBody(hash, num)
 		bc.db.DeleteReceipts(hash, num)
-
 	}
 
 	// If SetHead was only called as a chain reparation method, try to skip
@@ -631,7 +661,7 @@ func (bc *BlockChain) setHeadBeyondRoot(head uint64, root common.Hash, repair bo
 	// Clear out any stale content from the caches
 	bc.futureBlocks.Purge()
 	bc.db.ClearBlockChainCache()
-	//TODO-Klaytn add governance DB deletion logic.
+	// TODO-Klaytn add governance DB deletion logic.
 
 	return rootNumber, bc.loadLastState()
 }
@@ -653,6 +683,11 @@ func (bc *BlockChain) FastSyncCommitHead(hash common.Hash) error {
 	bc.lastCommittedBlock = block.NumberU64()
 	bc.mu.Unlock()
 
+	// Destroy any existing state snapshot and regenerate it in the background,
+	// also resuming the normal maintenance of any previously paused snapshot.
+	if bc.snaps != nil {
+		bc.snaps.Rebuild(block.Root())
+	}
 	logger.Info("Committed new head block", "number", block.Number(), "hash", hash)
 	return nil
 }
@@ -820,7 +855,6 @@ func (bc *BlockChain) ExportN(w io.Writer, first uint64, last uint64) error {
 //
 // Note, this function assumes that the `mu` mutex is held!
 func (bc *BlockChain) insert(block *types.Block) {
-
 	// If the block is on a side chain or an unknown one, force other heads onto it too
 	updateHeads := bc.db.ReadCanonicalHash(block.NumberU64()) != block.Hash()
 
@@ -978,10 +1012,28 @@ func (bc *BlockChain) GetLogsByHash(hash common.Hash) [][]*types.Log {
 	return logs
 }
 
-// TrieNode retrieves a blob of data associated with a trie node (or code hash)
+// TrieNode retrieves a blob of data associated with a trie node
 // either from ephemeral in-memory cache, or from persistent storage.
 func (bc *BlockChain) TrieNode(hash common.Hash) ([]byte, error) {
 	return bc.stateCache.TrieDB().Node(hash)
+}
+
+// ContractCode retrieves a blob of data associated with a contract hash
+// either from ephemeral in-memory cache, or from persistent storage.
+func (bc *BlockChain) ContractCode(hash common.Hash) ([]byte, error) {
+	return bc.stateCache.ContractCode(hash)
+}
+
+// ContractCodeWithPrefix retrieves a blob of data associated with a contract
+// hash either from ephemeral in-memory cache, or from persistent storage.
+//
+// If the code doesn't exist in the in-memory cache, check the storage with
+// new code scheme.
+func (bc *BlockChain) ContractCodeWithPrefix(hash common.Hash) ([]byte, error) {
+	type codeReader interface {
+		ContractCodeWithPrefix(codeHash common.Hash) ([]byte, error)
+	}
+	return bc.stateCache.(codeReader).ContractCodeWithPrefix(hash)
 }
 
 // Stop stops the blockchain service. If any imports are currently in progress
@@ -1033,7 +1085,7 @@ func (bc *BlockChain) Stop() {
 		for !bc.triegc.Empty() {
 			triedb.Dereference(bc.triegc.PopItem().(common.Hash))
 		}
-		if size, _ := triedb.Size(); size != 0 {
+		if size, _, _ := triedb.Size(); size != 0 {
 			logger.Error("Dangling trie nodes after full cleanup")
 		}
 	}
@@ -1291,8 +1343,8 @@ func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) e
 
 		// If we exceeded our memory allowance, flush matured singleton nodes to disk
 		var (
-			nodesSize, preimagesSize = trieDB.Size()
-			nodesSizeLimit           = common.StorageSize(bc.cacheConfig.CacheSize) * 1024 * 1024
+			nodesSize, _, preimagesSize = trieDB.Size()
+			nodesSizeLimit              = common.StorageSize(bc.cacheConfig.CacheSize) * 1024 * 1024
 		)
 
 		trieDBNodesSizeBytesGauge.Update(int64(nodesSize))
@@ -1996,7 +2048,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		stats.processed++
 		stats.usedGas += usedGas
 
-		cache, _ := bc.stateCache.TrieDB().Size()
+		cache, _, _ := bc.stateCache.TrieDB().Size()
 		stats.report(chain, i, cache)
 
 		// update governance CurrentSet if it is at an epoch block
@@ -2362,39 +2414,31 @@ type BadBlockArgs struct {
 
 // BadBlocks returns a list of the last 'bad blocks' that the client has seen on the network
 func (bc *BlockChain) BadBlocks() ([]BadBlockArgs, error) {
-	blocks := make([]BadBlockArgs, 0, bc.badBlocks.Len())
-	for _, hash := range bc.badBlocks.Keys() {
-		hashKey, ok := hash.(common.CacheKey)
-		if !ok {
-			logger.Error("invalid key type", "expect", "common.CacheKey", "actual", reflect.TypeOf(hash))
-			continue
-		}
-
-		if blk, exist := bc.badBlocks.Peek(hashKey); exist {
-			cacheGetBadBlockHitMeter.Mark(1)
-			block := blk.(*types.Block)
-			blocks = append(blocks, BadBlockArgs{block.Hash(), block})
-		} else {
-			cacheGetBadBlockMissMeter.Mark(1)
-		}
+	blocks, err := bc.db.ReadAllBadBlocks()
+	if err != nil {
+		return nil, err
 	}
-	return blocks, nil
+	badBlockArgs := make([]BadBlockArgs, len(blocks))
+	for i, block := range blocks {
+		hash := block.Hash()
+		badBlockArgs[i] = BadBlockArgs{Hash: hash, Block: block}
+	}
+	return badBlockArgs, err
 }
 
 // istanbul BFT
 func (bc *BlockChain) HasBadBlock(hash common.Hash) bool {
-	return bc.badBlocks.Contains(hash)
-}
-
-// addBadBlock adds a bad block to the bad-block LRU cache
-func (bc *BlockChain) addBadBlock(block *types.Block) {
-	bc.badBlocks.Add(block.Header().Hash(), block)
+	badBlock := bc.db.ReadBadBlock(hash)
+	if badBlock != nil {
+		return true
+	}
+	return false
 }
 
 // reportBlock logs a bad block error.
 func (bc *BlockChain) reportBlock(block *types.Block, receipts types.Receipts, err error) {
 	badBlockCounter.Inc(1)
-	bc.addBadBlock(block)
+	bc.db.WriteBadBlock(block)
 
 	var receiptString string
 	for i, receipt := range receipts {
@@ -2402,17 +2446,7 @@ func (bc *BlockChain) reportBlock(block *types.Block, receipts types.Receipts, e
 			i, receipt.TxHash.Hex(), receipt.Status, receipt.GasUsed, receipt.ContractAddress.Hex(),
 			receipt.Bloom, receipt.Logs)
 	}
-	logger.Error(fmt.Sprintf(`
-########## BAD BLOCK #########
-Chain config: %v
-
-Number: %v
-Hash: 0x%x
-%v
-
-Error: %v
-##############################
-`, bc.chainConfig, block.Number(), block.Hash(), receiptString, err))
+	logger.Error(fmt.Sprintf(`########## BAD BLOCK ######### Chain config: %v Number: %v Hash: 0x%x Receipt: %v Error: %v`, bc.chainConfig, block.Number(), block.Hash(), receiptString, err))
 }
 
 // InsertHeaderChain attempts to insert the given header chain in to the local
@@ -2437,7 +2471,6 @@ func (bc *BlockChain) InsertHeaderChain(chain []*types.Header, checkFreq int) (i
 	defer bc.wg.Done()
 
 	whFunc := func(header *types.Header) error {
-
 		_, err := bc.hc.WriteHeader(header)
 		return err
 	}
@@ -2499,6 +2532,11 @@ func (bc *BlockChain) Config() *params.ChainConfig { return bc.chainConfig }
 // Engine retrieves the blockchain's consensus engine.
 func (bc *BlockChain) Engine() consensus.Engine { return bc.engine }
 
+// Snapshots returns the blockchain snapshot tree.
+func (bc *BlockChain) Snapshots() *snapshot.Tree {
+	return bc.snaps
+}
+
 // SubscribeRemovedLogsEvent registers a subscription of RemovedLogsEvent.
 func (bc *BlockChain) SubscribeRemovedLogsEvent(ch chan<- RemovedLogsEvent) event.Subscription {
 	return bc.scope.Track(bc.rmLogsFeed.Subscribe(ch))
@@ -2555,7 +2593,6 @@ func (bc *BlockChain) SaveTrieNodeCacheToDisk() error {
 // for the transaction, gas used and an error if the transaction failed,
 // indicating the block was invalid.
 func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *common.Address, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *uint64, vmConfig *vm.Config) (*types.Receipt, uint64, *vm.InternalTxTrace, error) {
-
 	// TODO-Klaytn We reject transactions with unexpected gasPrice and do not put the transaction into TxPool.
 	//         And we run transactions regardless of gasPrice if we push transactions in the TxPool.
 	/*

@@ -119,7 +119,10 @@ var (
 	errValueKeyGasTipCapMustBigInt       = errors.New("GasTipCap must be a type of *big.Int")
 	errValueKeyGasFeeCapMustBigInt       = errors.New("GasFeeCap must be a type of *big.Int")
 
-	ErrTxTypeNotSupported = errors.New("transaction type not supported")
+	ErrTxTypeNotSupported         = errors.New("transaction type not supported")
+	ErrSenderPubkeyNotSupported   = errors.New("SenderPubkey is not supported for this signer")
+	ErrSenderFeePayerNotSupported = errors.New("SenderFeePayer is not supported for this signer")
+	ErrHashFeePayerNotSupported   = errors.New("HashFeePayer is not supported for this signer")
 )
 
 func (t TxValueKeyType) String() string {
@@ -439,7 +442,7 @@ func NewTxInternalData(t TxType) (TxInternalData, error) {
 		return newTxInternalDataFeeDelegatedValueTransferMemo(), nil
 	case TxTypeFeeDelegatedValueTransferMemoWithRatio:
 		return newTxInternalDataFeeDelegatedValueTransferMemoWithRatio(), nil
-	//case TxTypeAccountCreation:
+	// case TxTypeAccountCreation:
 	//	return newTxInternalDataAccountCreation(), nil
 	case TxTypeAccountUpdate:
 		return newTxInternalDataAccountUpdate(), nil
@@ -496,7 +499,7 @@ func NewTxInternalDataWithMap(t TxType, values map[TxValueKeyType]interface{}) (
 		return newTxInternalDataFeeDelegatedValueTransferMemoWithMap(values)
 	case TxTypeFeeDelegatedValueTransferMemoWithRatio:
 		return newTxInternalDataFeeDelegatedValueTransferMemoWithRatioWithMap(values)
-	//case TxTypeAccountCreation:
+	// case TxTypeAccountCreation:
 	//	return newTxInternalDataAccountCreationWithMap(values)
 	case TxTypeAccountUpdate:
 		return newTxInternalDataAccountUpdateWithMap(values)

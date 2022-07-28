@@ -143,6 +143,20 @@ func (p *Peer) Name() string {
 	return p.rws[ConnDefault].name
 }
 
+// RunningCap returns true if the peer is actively connected using any of the
+// enumerated versions of a specific protocol, meaning that at least one of the
+// versions is supported by both this node and the peer p.
+func (p *Peer) RunningCap(protocol string, versions []uint) bool {
+	if protos, ok := p.running[protocol]; ok {
+		for _, ver := range versions {
+			if protos[ConnDefault].Version == ver {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // Caps returns the capabilities (supported subprotocols) of the remote peer.
 func (p *Peer) Caps() []Cap {
 	// TODO: maybe return copy
@@ -321,7 +335,7 @@ func (p *Peer) runWithRWs() (remoteRequested bool, err error) {
 	return errs.remoteRequested, errs.err
 }
 
-//handleError handles read, write, and protocol errors on rw
+// handleError handles read, write, and protocol errors on rw
 func (p *Peer) handleError(rw *conn, errCh chan<- ErrorPeer, writeErr <-chan error, writeStart chan<- struct{}, readErr <-chan error) {
 	defer p.wg.Done()
 	var errRW ErrorPeer
@@ -495,7 +509,7 @@ func (p *Peer) startProtocols(writeStart <-chan struct{}, writeErr chan<- error)
 		}
 		p.logger.Trace(fmt.Sprintf("Starting protocol %s/%d", proto.Name, proto.Version))
 		go func() {
-			//p.wg.Add(1)
+			// p.wg.Add(1)
 			defer p.wg.Done()
 			err := proto.Run(p, rw)
 			if err == nil {
@@ -506,7 +520,7 @@ func (p *Peer) startProtocols(writeStart <-chan struct{}, writeErr chan<- error)
 			}
 			p.protoErr <- err
 			p.logger.Debug(fmt.Sprintf("Protocol go routine stopped, peer: %v", p.ID()))
-			//p.wg.Done()
+			// p.wg.Done()
 		}()
 	}
 }
@@ -536,7 +550,7 @@ func (p *Peer) startProtocolsWithRWs(writeStarts []chan struct{}, writeErrs []ch
 
 		p.logger.Trace(fmt.Sprintf("Starting protocol %s/%d", protos[ConnDefault].Name, protos[ConnDefault].Version))
 		go func() {
-			//p.wg.Add(1)
+			// p.wg.Add(1)
 			defer p.wg.Done()
 			err := protos[ConnDefault].RunWithRWs(p, rws)
 			if err == nil {
@@ -547,7 +561,7 @@ func (p *Peer) startProtocolsWithRWs(writeStarts []chan struct{}, writeErrs []ch
 			}
 			p.protoErr <- err
 			p.logger.Debug(fmt.Sprintf("Protocol go routine stopped, peer: %v", p.ID()))
-			//p.wg.Done()
+			// p.wg.Done()
 		}()
 	}
 }

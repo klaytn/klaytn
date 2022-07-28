@@ -135,6 +135,9 @@ func (pm *ProtocolManager) txsyncLoop() {
 // syncer is responsible for periodically synchronising with the network, both
 // downloading hashes and blocks as well as handling the announcement handler.
 func (pm *ProtocolManager) syncer() {
+	pm.wg.Add(1)
+	defer pm.wg.Done()
+
 	// Start and ensure cleanup of sync mechanisms
 	pm.fetcher.Start()
 	defer pm.fetcher.Stop()
@@ -165,7 +168,10 @@ func (pm *ProtocolManager) syncer() {
 
 // getSyncMode returns SyncMode based on currentBlockNumber.
 func (pm *ProtocolManager) getSyncMode(currentBlock *types.Block) downloader.SyncMode {
-	if atomic.LoadUint32(&pm.fastSync) == 1 {
+	if atomic.LoadUint32(&pm.snapSync) == 1 {
+		// Snap sync was explicitly requested, and explicitly granted
+		return downloader.SnapSync
+	} else if atomic.LoadUint32(&pm.fastSync) == 1 {
 		// Fast sync was explicitly requested, and explicitly granted
 		return downloader.FastSync
 	} else if currentBlock.NumberU64() == 0 && pm.blockchain.CurrentFastBlock().NumberU64() > 0 {
@@ -174,8 +180,8 @@ func (pm *ProtocolManager) getSyncMode(currentBlock *types.Block) downloader.Syn
 		// The only scenario where this can happen is if the user manually (or via a
 		// bad block) rolled back a fast sync node below the sync point. In this case
 		// however it's safe to reenable fast sync.
-		atomic.StoreUint32(&pm.fastSync, 1)
-		return downloader.FastSync
+		atomic.StoreUint32(&pm.snapSync, 1)
+		return downloader.SnapSync
 	}
 	return downloader.FullSync
 }
@@ -196,7 +202,7 @@ func (pm *ProtocolManager) synchronise(peer Peer) {
 	}
 	// Otherwise try to sync with the downloader
 	mode := pm.getSyncMode(currentBlock)
-	if mode == downloader.FastSync {
+	if mode == downloader.FastSync || mode == downloader.SnapSync {
 		// Make sure the peer's total blockscore we are synchronizing is higher.
 		if pm.blockchain.GetTdByHash(pm.blockchain.CurrentFastBlock().Hash()).Cmp(pTd) >= 0 {
 			return
@@ -210,6 +216,10 @@ func (pm *ProtocolManager) synchronise(peer Peer) {
 	if atomic.LoadUint32(&pm.fastSync) == 1 {
 		logger.Info("Fast sync complete, auto disabling")
 		atomic.StoreUint32(&pm.fastSync, 0)
+	}
+	if atomic.LoadUint32(&pm.snapSync) == 1 {
+		logger.Info("Snap sync complete, auto disabling")
+		atomic.StoreUint32(&pm.snapSync, 0)
 	}
 	atomic.StoreUint32(&pm.acceptTxs, 1) // Mark initial sync done
 	if head := pm.blockchain.CurrentBlock(); head.NumberU64() > 0 {

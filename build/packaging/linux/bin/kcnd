@@ -56,7 +56,6 @@ __kill_timeout() {
     done
     kill -9 $PIDNUM && echo "Killed"
 }
-
 #------------------------Related Auto restart daemon functions-----------------------------
 __auto_restart_daemon() {
     local backOffTime=$AUTO_RESTART_INTERVAL
@@ -119,12 +118,8 @@ status_auto_restart_daemon() {
 }
 
 #------------------------Related to Klaytn node functions-----------------------------
-start_node() {
-    __pid_run
-    [ -n "$pid" ] && echo "kcnd already running...[$pid]" && return
 
-    echo -n "Starting kcnd: "
-
+__check_option() {
     if [ ! -d $LOG_DIR ]; then
         mkdir -p $LOG_DIR
     fi
@@ -150,6 +145,7 @@ start_node() {
 
     if [[ ! -z $RPC_ENABLE ]] && [[ $RPC_ENABLE -eq 1 ]]; then
         OPTIONS="$OPTIONS --rpc"
+        RPC_API=`echo $RPC_API | tr -d "[:space:]"`
         if [ ! -z $RPC_API ]; then
             OPTIONS="$OPTIONS --rpcapi $RPC_API"
         fi
@@ -169,6 +165,7 @@ start_node() {
 
     if [[ ! -z $WS_ENABLE ]] && [[ $WS_ENABLE -eq 1 ]]; then
         OPTIONS="$OPTIONS --ws"
+        WS_API=`echo $WS_API | tr -d "[:space:]"`
         if [ ! -z $WS_API ]; then
             OPTIONS="$OPTIONS --wsapi $WS_API"
         fi
@@ -273,6 +270,15 @@ start_node() {
     if [[ ! -z $AUTO_RESTART ]] && [[ $AUTO_RESTART -eq 1 ]]; then
         OPTIONS="$OPTIONS --autorestart.enable"
     fi
+}
+
+start_node() {
+    __pid_run
+    [ -n "$pid" ] && echo "kcnd already running...[$pid]" && return
+
+    echo -n "Starting kcnd: "
+
+    __check_option
 
     BASEDIR="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
     CURRENTFILE=`basename "$0"`
@@ -322,6 +328,14 @@ start() {
     fi
 }
 
+start_docker() {
+    echo -n "Starting kcnd: "
+    __check_option
+
+    echo "$BIN/kcn $OPTIONS"
+    $BIN/kcn $OPTIONS
+}
+
 stop() {
     if [ ! -z $AUTO_RESTART_NODE ] && [[ $AUTO_RESTART_NODE -eq 1 ]]; then
         stop_auto_restart_daemon
@@ -348,6 +362,9 @@ case "$1" in
     start)
         start
         ;;
+    start-docker)
+        start_docker
+        ;;
     stop)
         stop
         ;;
@@ -358,7 +375,7 @@ case "$1" in
         restart
         ;;
     *)
-        echo "Usages: kcnd {start|stop|restart|status}"
+        echo "Usages: kcnd {start|start-docker|stop|restart|status}"
         exit 1
         ;;
 esac

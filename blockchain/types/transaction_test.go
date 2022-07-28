@@ -212,6 +212,17 @@ func TestEIP2930Signer(t *testing.T) {
 	}
 }
 
+func TestHomesteadSigner(t *testing.T) {
+	rlpTx := common.Hex2Bytes("f87e8085174876e800830186a08080ad601f80600e600039806000f350fe60003681823780368234f58015156014578182fd5b80825250506014600cf31ba02222222222222222222222222222222222222222222222222222222222222222a02222222222222222222222222222222222222222222222222222222222222222")
+
+	tx, err := decodeTx(rlpTx)
+	assert.NoError(t, err)
+
+	addr, err := EIP155Signer{}.Sender(tx)
+	assert.NoError(t, err)
+	assert.Equal(t, "0x4c8D290a1B368ac4728d83a9e8321fC3af2b39b1", addr.String())
+}
+
 // This test checks signature operations on dynamic fee transactions.
 func TestLondonSigner(t *testing.T) {
 	var (
@@ -328,25 +339,39 @@ func TestEIP1559TransactionEncode(t *testing.T) {
 }
 
 func TestEffectiveGasPrice(t *testing.T) {
-	legacyTx := NewTx(&TxInternalDataLegacy{Price: big.NewInt(1000)})
-	dynamicTx := NewTx(&TxInternalDataEthereumDynamicFee{GasFeeCap: big.NewInt(4000), GasTipCap: big.NewInt(1000)})
+	gasPrice := big.NewInt(1000)
+	gasFeeCap, gasTipCap := big.NewInt(4000), big.NewInt(1000)
 
-	baseFee := big.NewInt(2000)
-	have := legacyTx.EffectiveGasPrice(baseFee)
-	want := big.NewInt(1000)
+	legacyTx := NewTx(&TxInternalDataLegacy{Price: gasPrice})
+	dynamicTx := NewTx(&TxInternalDataEthereumDynamicFee{GasFeeCap: gasFeeCap, GasTipCap: gasTipCap})
+
+	header := new(Header)
+
+	have := legacyTx.EffectiveGasPrice(header)
+	want := gasPrice
 	assert.Equal(t, want, have)
 
-	have = dynamicTx.EffectiveGasPrice(baseFee)
-	want = big.NewInt(3000)
+	have = dynamicTx.EffectiveGasPrice(header)
+	te := dynamicTx.GetTxInternalData().(TxInternalDataBaseFee)
+	want = te.GetGasFeeCap()
 	assert.Equal(t, want, have)
 
-	baseFee = big.NewInt(0)
-	have = legacyTx.EffectiveGasPrice(baseFee)
-	want = big.NewInt(1000)
+	header.BaseFee = big.NewInt(2000)
+	have = legacyTx.EffectiveGasPrice(header)
+	want = header.BaseFee
 	assert.Equal(t, want, have)
 
-	have = dynamicTx.EffectiveGasPrice(baseFee)
-	want = big.NewInt(1000)
+	have = dynamicTx.EffectiveGasPrice(header)
+	want = header.BaseFee
+	assert.Equal(t, want, have)
+
+	header.BaseFee = big.NewInt(0)
+	have = legacyTx.EffectiveGasPrice(header)
+	want = header.BaseFee
+	assert.Equal(t, want, have)
+
+	have = dynamicTx.EffectiveGasPrice(header)
+	want = header.BaseFee
 	assert.Equal(t, want, have)
 }
 
@@ -354,15 +379,18 @@ func TestEffectiveGasTip(t *testing.T) {
 	legacyTx := NewTx(&TxInternalDataLegacy{Price: big.NewInt(1000)})
 	dynamicTx := NewTx(&TxInternalDataEthereumDynamicFee{GasFeeCap: big.NewInt(4000), GasTipCap: big.NewInt(1000)})
 
+	// before magma hardfork
 	baseFee := big.NewInt(2000)
 	have := legacyTx.EffectiveGasTip(baseFee)
 	want := big.NewInt(1000)
 	assert.Equal(t, want, have)
 
+	baseFee = big.NewInt(2000)
 	have = dynamicTx.EffectiveGasTip(baseFee)
 	want = big.NewInt(1000)
 	assert.Equal(t, want, have)
 
+	// before magma hardfork
 	baseFee = big.NewInt(0)
 	have = legacyTx.EffectiveGasTip(baseFee)
 	want = big.NewInt(1000)
@@ -448,7 +476,7 @@ func TestTransactionPriceNonceSort(t *testing.T) {
 		}
 	}
 	// Sort the transactions and cross check the nonce ordering
-	txset := NewTransactionsByPriceAndNonce(signer, groups)
+	txset := NewTransactionsByTimeAndNonce(signer, groups)
 
 	txs := Transactions{}
 	for tx := txset.Peek(); tx != nil; tx = txset.Peek() {
@@ -623,7 +651,7 @@ func TestTransactionTimeSort(t *testing.T) {
 		groups[addr] = append(groups[addr], tx)
 	}
 	// Sort the transactions and cross check the nonce ordering
-	txset := NewTransactionsByPriceAndNonce(signer, groups)
+	txset := NewTransactionsByTimeAndNonce(signer, groups)
 
 	txs := Transactions{}
 	for tx := txset.Peek(); tx != nil; tx = txset.Peek() {
@@ -645,6 +673,54 @@ func TestTransactionTimeSort(t *testing.T) {
 			// Make sure time order is ascending if the txs have the same gas price
 			if txi.GasPrice().Cmp(next.GasPrice()) == 0 && txi.time.After(next.time) {
 				t.Errorf("invalid received time ordering: tx #%d (A=%x T=%v) > tx #%d (A=%x T=%v)", i, fromi[:4], txi.time, i+1, fromNext[:4], next.time)
+			}
+		}
+	}
+}
+
+// TestTransactionTimeSortDifferentGasPrice tests that although multiple transactions have the different price, the ones seen earlier
+// are prioritized to avoid network spam attacks aiming for a specific ordering.
+func TestTransactionTimeSortDifferentGasPrice(t *testing.T) {
+	// Generate a batch of accounts to start with
+	keys := make([]*ecdsa.PrivateKey, 5)
+	for i := 0; i < len(keys); i++ {
+		keys[i], _ = crypto.GenerateKey()
+	}
+	signer := LatestSignerForChainID(big.NewInt(1))
+
+	// Generate a batch of transactions with overlapping prices, but different creation times
+	groups := map[common.Address]Transactions{}
+	gasPrice := big.NewInt(1)
+	for start, key := range keys {
+		addr := crypto.PubkeyToAddress(key.PublicKey)
+
+		tx, _ := SignTx(NewTransaction(0, common.Address{}, big.NewInt(100), 100, gasPrice, nil), signer, key)
+		tx.time = time.Unix(0, int64(len(keys)-start))
+
+		groups[addr] = append(groups[addr], tx)
+
+		gasPrice = gasPrice.Add(gasPrice, big.NewInt(1))
+	}
+	// Sort the transactions and cross check the nonce ordering
+	txset := NewTransactionsByTimeAndNonce(signer, groups)
+
+	txs := Transactions{}
+	for tx := txset.Peek(); tx != nil; tx = txset.Peek() {
+		txs = append(txs, tx)
+		txset.Shift()
+	}
+	if len(txs) != len(keys) {
+		t.Errorf("expected %d transactions, found %d", len(keys), len(txs))
+	}
+	for i, tx := range txs {
+		from, _ := Sender(signer, tx)
+		if i+1 < len(txs) {
+			next := txs[i+1]
+			fromNext, _ := Sender(signer, next)
+
+			// Make sure time order is ascending.
+			if tx.time.After(next.time) {
+				t.Errorf("invalid received time ordering: tx #%d (A=%x T=%v) > tx #%d (A=%x T=%v)", i, from[:4], tx.time, i+1, fromNext[:4], next.time)
 			}
 		}
 	}
@@ -773,7 +849,7 @@ func encodeDecodeJSON(tx *Transaction) (*Transaction, error) {
 	if err != nil {
 		return nil, fmt.Errorf("json encoding failed: %v", err)
 	}
-	var parsedTx = &Transaction{}
+	parsedTx := &Transaction{}
 	if err := json.Unmarshal(data, &parsedTx); err != nil {
 		return nil, fmt.Errorf("json decoding failed: %v", err)
 	}
@@ -785,7 +861,7 @@ func encodeDecodeBinary(tx *Transaction) (*Transaction, error) {
 	if err != nil {
 		return nil, fmt.Errorf("rlp encoding failed: %v", err)
 	}
-	var parsedTx = &Transaction{}
+	parsedTx := &Transaction{}
 	if err := parsedTx.UnmarshalBinary(data); err != nil {
 		return nil, fmt.Errorf("rlp decoding failed: %v", err)
 	}
@@ -831,6 +907,56 @@ func TestIsSorted(t *testing.T) {
 
 	sort.Sort(TxByPriceAndTime(batches))
 	assert.True(t, sort.IsSorted(TxByPriceAndTime(batches)))
+}
+
+func TestFilterTransactionWithBaseFee(t *testing.T) {
+	signer := LatestSignerForChainID(big.NewInt(1))
+
+	pending := make(map[common.Address]Transactions)
+	keys := make([]*ecdsa.PrivateKey, 3)
+
+	for i := 0; i < len(keys); i++ {
+		keys[i], _ = crypto.GenerateKey()
+	}
+
+	from1 := crypto.PubkeyToAddress(keys[0].PublicKey)
+	txs1 := make(Transactions, 3)
+	txs1[0], _ = SignTx(NewTransaction(uint64(0), common.Address{}, big.NewInt(100), 100, big.NewInt(30), nil), signer, keys[0])
+	txs1[1], _ = SignTx(NewTransaction(uint64(1), common.Address{}, big.NewInt(100), 100, big.NewInt(40), nil), signer, keys[0])
+	txs1[2], _ = SignTx(NewTransaction(uint64(2), common.Address{}, big.NewInt(100), 100, big.NewInt(50), nil), signer, keys[0])
+	pending[from1] = txs1
+
+	from2 := crypto.PubkeyToAddress(keys[1].PublicKey)
+	txs2 := make(Transactions, 4)
+	txs2[0], _ = SignTx(NewTransaction(uint64(0), common.Address{}, big.NewInt(100), 100, big.NewInt(30), nil), signer, keys[1])
+	txs2[1], _ = SignTx(NewTransaction(uint64(1), common.Address{}, big.NewInt(100), 100, big.NewInt(20), nil), signer, keys[1])
+	txs2[2], _ = SignTx(NewTransaction(uint64(2), common.Address{}, big.NewInt(100), 100, big.NewInt(40), nil), signer, keys[1])
+	txs2[3], _ = SignTx(NewTransaction(uint64(3), common.Address{}, big.NewInt(100), 100, big.NewInt(40), nil), signer, keys[1])
+	pending[from2] = txs2
+
+	from3 := crypto.PubkeyToAddress(keys[2].PublicKey)
+	txs3 := make(Transactions, 5)
+	txs3[0], _ = SignTx(NewTransaction(uint64(0), common.Address{}, big.NewInt(100), 100, big.NewInt(10), nil), signer, keys[2])
+	txs3[1], _ = SignTx(NewTransaction(uint64(1), common.Address{}, big.NewInt(100), 100, big.NewInt(30), nil), signer, keys[2])
+	txs3[2], _ = SignTx(NewTransaction(uint64(2), common.Address{}, big.NewInt(100), 100, big.NewInt(30), nil), signer, keys[2])
+	txs3[3], _ = SignTx(NewTransaction(uint64(3), common.Address{}, big.NewInt(100), 100, big.NewInt(30), nil), signer, keys[2])
+	txs3[4], _ = SignTx(NewTransaction(uint64(4), common.Address{}, big.NewInt(100), 100, big.NewInt(30), nil), signer, keys[2])
+	pending[from3] = txs3
+
+	baseFee := big.NewInt(30)
+	pending = FilterTransactionWithBaseFee(pending, baseFee)
+
+	assert.Equal(t, len(pending[from1]), 3)
+	for i := 0; i < len(pending[from1]); i++ {
+		assert.Equal(t, txs1[i], pending[from1][i])
+	}
+
+	assert.Equal(t, len(pending[from2]), 1)
+	for i := 0; i < len(pending[from2]); i++ {
+		assert.Equal(t, txs2[i], pending[from2][i])
+	}
+
+	assert.Equal(t, len(pending[from3]), 0)
 }
 
 func BenchmarkTxSortByTime30000(b *testing.B) { benchmarkTxSortByTime(b, 30000) }

@@ -22,11 +22,10 @@ package debug
 
 import (
 	"fmt"
+	"io"
 	_ "net/http/pprof"
 	"os"
 	"runtime"
-
-	"io"
 
 	"github.com/fjl/memsize/memsizeui"
 	"github.com/klaytn/klaytn/log"
@@ -128,7 +127,7 @@ func CreateLogDir(logDir string) {
 	Handler.logDir = logDir
 
 	// Currently failures on directory or file creation is treated as a warning.
-	if err := os.MkdirAll(logDir, 0700); err != nil {
+	if err := os.MkdirAll(logDir, 0o700); err != nil {
 		logger.Warn("Failed to create a directory", "logDir", logDir, "err", err)
 	}
 }

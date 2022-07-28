@@ -18,12 +18,14 @@ package sc
 
 import (
 	"context"
+	"encoding/hex"
 	"io/ioutil"
 	"log"
 	"math/big"
 	"math/rand"
 	"os"
 	"path"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -89,10 +91,10 @@ func handleValueTransfer(t *testing.T, ev IRequestValueTransferEvent, bridgeInfo
 	t.Log("Request Event",
 		"type", tokenType,
 		"amount", valueOrTokenId,
-		"from", from,
-		"to", to,
-		"contract", contractAddr,
-		"token", tokenAddr,
+		"from", from.String(),
+		"to", to.String(),
+		"contract", contractAddr.String(),
+		"token", tokenAddr.String(),
 		"requestNonce", requestNonce)
 
 	bridge := bridgeInfo.bridge
@@ -365,7 +367,7 @@ func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
-	//pAuth := bacc.cAccount.GenerateTransactOpts()
+	// pAuth := bacc.cAccount.GenerateTransactOpts()
 	cAuth := bacc.pAccount.GenerateTransactOpts()
 
 	// Generate a new random account and a funded simulator
@@ -980,7 +982,7 @@ func TestBasicJournal(t *testing.T) {
 	remoteAddr, err := bm.DeployBridgeTest(sim, 10000, false)
 	assert.NoError(t, err)
 
-	bm.SetJournal(localAddr, remoteAddr)
+	bm.SetJournal("", localAddr, remoteAddr)
 
 	ps := sc.BridgePeerSet()
 	ps.peers["test"] = nil
@@ -1072,9 +1074,9 @@ func TestMethodRestoreBridges(t *testing.T) {
 	sim.Commit()
 
 	// Set journal
-	bm.SetJournal(bridgeAddrs[0], bridgeAddrs[1])
+	bm.SetJournal("", bridgeAddrs[0], bridgeAddrs[1])
 	bm.journal.cache[bridgeAddrs[0]].Subscribed = true
-	bm.SetJournal(bridgeAddrs[2], bridgeAddrs[3])
+	bm.SetJournal("", bridgeAddrs[2], bridgeAddrs[3])
 	bm.journal.cache[bridgeAddrs[2]].Subscribed = true
 
 	ps := sc.BridgePeerSet()
@@ -1138,8 +1140,8 @@ func TestMethodGetAllBridge(t *testing.T) {
 	testBridge1 := common.BytesToAddress([]byte("test1"))
 	testBridge2 := common.BytesToAddress([]byte("test2"))
 
-	bm.journal.insert(testBridge1, testBridge2)
-	bm.journal.insert(testBridge2, testBridge1)
+	bm.journal.insert("", testBridge1, testBridge2)
+	bm.journal.insert("", testBridge2, testBridge1)
 
 	bridges := bm.GetAllBridge()
 	assert.Equal(t, 2, len(bridges))
@@ -1169,15 +1171,15 @@ func TestErrorDuplication(t *testing.T) {
 	localAddr := common.BytesToAddress([]byte("test1"))
 	remoteAddr := common.BytesToAddress([]byte("test2"))
 
-	err = bm.journal.insert(localAddr, remoteAddr)
+	err = bm.journal.insert("", localAddr, remoteAddr)
 	assert.Equal(t, nil, err)
-	err = bm.journal.insert(remoteAddr, localAddr)
+	err = bm.journal.insert("", remoteAddr, localAddr)
 	assert.Equal(t, nil, err)
 
 	// try duplicated insert.
-	err = bm.journal.insert(localAddr, remoteAddr)
+	err = bm.journal.insert("", localAddr, remoteAddr)
 	assert.NotEqual(t, nil, err)
-	err = bm.journal.insert(remoteAddr, localAddr)
+	err = bm.journal.insert("", remoteAddr, localAddr)
 	assert.NotEqual(t, nil, err)
 
 	// check cache size for checking duplication
@@ -1210,11 +1212,11 @@ func TestMethodSetJournal(t *testing.T) {
 	remoteAddr := common.BytesToAddress([]byte("test2"))
 
 	// Simple insert case
-	err = bm.SetJournal(localAddr, remoteAddr)
+	err = bm.SetJournal("", localAddr, remoteAddr)
 	assert.Equal(t, nil, err)
 
 	// Error case
-	err = bm.SetJournal(localAddr, remoteAddr)
+	err = bm.SetJournal("", localAddr, remoteAddr)
 	assert.NotEqual(t, nil, err)
 
 	// Check the number of bridge elements for checking duplication
@@ -1388,10 +1390,10 @@ func TestErrorEmptyAccount(t *testing.T) {
 	localAddr := common.BytesToAddress([]byte("test1"))
 	remoteAddr := common.BytesToAddress([]byte("test2"))
 
-	err = bm.journal.insert(localAddr, common.Address{})
+	err = bm.journal.insert("", localAddr, common.Address{})
 	assert.NotEqual(t, nil, err)
 
-	err = bm.journal.insert(common.Address{}, remoteAddr)
+	err = bm.journal.insert("", common.Address{}, remoteAddr)
 	assert.NotEqual(t, nil, err)
 
 	bm.Stop()
@@ -1463,7 +1465,7 @@ func TestErrorDupSubscription(t *testing.T) {
 
 	bm.bridges[addr], err = NewBridgeInfo(sc, addr, bridge, common.Address{}, nil, bacc.cAccount, true, true, sim)
 
-	bm.journal.cache[addr] = &BridgeJournal{addr, addr, true}
+	bm.journal.cache[addr] = &BridgeJournal{"", addr, addr, true, false}
 
 	bm.SubscribeEvent(addr)
 	err = bm.SubscribeEvent(addr)
@@ -1997,6 +1999,584 @@ func TestDecodingLegacyAnchoringTx(t *testing.T) {
 	assert.Equal(t, curBlk.Header().Number.String(), decodedData.GetBlockNumber().String())
 }
 
+func TestBridgeAliasAPIs(t *testing.T) {
+	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	assert.NoError(t, err)
+	defer func() {
+		if err := os.RemoveAll(tempDir); err != nil {
+			t.Fatalf("fail to delete file %v", err)
+		}
+	}()
+
+	// Generate a new random account and a funded simulator
+	aliceKey, _ := crypto.GenerateKey()
+	alice := bind.NewKeyedTransactor(aliceKey)
+	bobKey, _ := crypto.GenerateKey()
+	bob := bind.NewKeyedTransactor(bobKey)
+
+	config := &SCConfig{}
+	config.DataDir = tempDir
+
+	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
+	bacc.pAccount.chainID = big.NewInt(0)
+	bacc.cAccount.chainID = big.NewInt(0)
+
+	alloc := blockchain.GenesisAlloc{
+		alice.From:            {Balance: big.NewInt(params.KLAY)},
+		bob.From:              {Balance: big.NewInt(params.KLAY)},
+		bacc.pAccount.address: {Balance: big.NewInt(params.KLAY)},
+		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
+	}
+	sim := backends.NewSimulatedBackend(alloc)
+	defer sim.Close()
+
+	sc := &SubBridge{
+		config:         config,
+		peers:          newBridgePeerSet(),
+		localBackend:   sim,
+		remoteBackend:  sim,
+		bridgeAccounts: bacc,
+	}
+
+	sc.APIBackend = &SubBridgeAPI{sc}
+	sc.handler, err = NewSubBridgeHandler(sc)
+	assert.NoError(t, err)
+
+	// Prepare manager and deploy bridge contract.
+	bm, err := NewBridgeManager(sc)
+	assert.NoError(t, err)
+	sc.handler.subbridge.bridgeManager = bm
+
+	// 1. Deploy bridge contracts and register them
+	cBridgeAddr := deployBridge(t, bm, sim, true)
+	pBridgeAddr := deployBridge(t, bm, sim, false)
+
+	// 2. Deploy token Contracts
+	cTokenAddr, _, _, err := sctoken.DeployServiceChainToken(alice, sim, cBridgeAddr)
+	assert.NoError(t, err)
+	pTokenAddr, _, _, err := sctoken.DeployServiceChainToken(alice, sim, pBridgeAddr)
+	assert.NoError(t, err)
+	sim.Commit() // block
+
+	cBridgeAddrStr := cBridgeAddr.String()
+	pBridgeAddrStr := pBridgeAddr.String()
+	cTokenAddrStr := cTokenAddr.String()
+	pTokenAddrStr := pTokenAddr.String()
+	// -------------------------- Done prepration --------------------------
+
+	// -------------------------- API test with the raw addresss format --------------------------
+	{
+		// TEST 1-1 - Success (Register bridge, tokens and subscribe registered bridges)
+		bridgePairs := bm.subBridge.APIBackend.ListBridge()
+		assert.Equal(t, len(bridgePairs), 0)
+
+		testBridgeAPIBasic(t, bm, cBridgeAddr, pBridgeAddr, nil, cTokenAddr, pTokenAddr)
+
+		bridgePairs = bm.subBridge.APIBackend.ListBridge()
+		assert.Equal(t, len(bridgePairs), 1)
+		assert.Equal(t, bridgePairs[0].Subscribed, true)
+	}
+
+	{
+		// TEST 1-2 - Failure
+		// Duplicated journal
+		testDuplicatedJournal(t, bm, cBridgeAddr, pBridgeAddr, nil)
+
+		// Duplicated token
+		testDuplicatedToken(t, bm, &cBridgeAddrStr, &pBridgeAddrStr, &cTokenAddrStr, &pTokenAddrStr)
+
+		// Already subscribed
+		testAlreadySubscribed(t, bm, &cBridgeAddrStr, &pBridgeAddrStr)
+	}
+
+	{
+		// TEST 1-3 - Success (Unsubscribe bridge, deregister bridges and tokens)
+		testUnsubscribeAndDeRegister(t, bm, &cBridgeAddrStr, &pBridgeAddrStr, &cTokenAddrStr, &pTokenAddrStr)
+	}
+
+	// -------------------------- API test with the bridge format --------------------------
+	alias := "MYBRIDGE"
+	changedAlias := "MYBRIDGE_v2"
+	invalidBridgeAlias := "0xMYBRIDGE"
+	{
+		// TEST 2-1 - Success (Register bridge, tokens and subscribe registered bridges)
+		bridgePairs := bm.subBridge.APIBackend.ListBridge()
+		assert.Equal(t, len(bridgePairs), 0)
+
+		testBridgeAPIBasic(t, bm, cBridgeAddr, pBridgeAddr, &alias, cTokenAddr, pTokenAddr)
+
+		bridgePairs = bm.subBridge.APIBackend.ListBridge()
+		assert.Equal(t, len(bridgePairs), 1)
+		assert.Equal(t, bridgePairs[0].Subscribed, true)
+		bridgePair := bm.subBridge.APIBackend.GetBridgePairByAlias(alias)
+		assert.Equal(t, bridgePair.BridgeAlias, alias)
+	}
+
+	{
+		// TEST 2-2 - Failure
+		// Duplicated bridge alias
+		testDuplicatedJournal(t, bm, cBridgeAddr, pBridgeAddr, &alias)
+
+		// Duplicated token
+		testDuplicatedToken(t, bm, &alias, &cTokenAddrStr, &pTokenAddrStr, nil)
+
+		// Already subscribed
+		testAlreadySubscribed(t, bm, &alias, nil)
+	}
+
+	{
+		// TEST 2-3 - Success (change bridge alias)
+		err = bm.subBridge.APIBackend.ChangeBridgeAlias(alias, changedAlias)
+		assert.NoError(t, err)
+
+		// Try to deregister with empty bridge alias
+		err = bm.subBridge.APIBackend.DeregisterBridge(&alias, nil)
+		assert.Equal(t, err, ErrEmptyBridgeAlias)
+
+		bridgePair := bm.subBridge.APIBackend.GetBridgePairByAlias(alias)
+		assert.Nil(t, bridgePair)
+
+		bridgePair = bm.subBridge.APIBackend.GetBridgePairByAlias(changedAlias)
+		assert.Equal(t, bridgePair.BridgeAlias, changedAlias)
+	}
+
+	{
+		// TEST 2-4 - Success (Unsubscribe bridge, deregister bridges and tokens)
+		testUnsubscribeAndDeRegister(t, bm, &changedAlias, &cTokenAddrStr, &pTokenAddrStr, nil)
+
+		// TEST 2-5 - Failure (Unsubscribe register bridge already unsubscribed)
+		err := bm.subBridge.APIBackend.UnsubscribeBridge(&changedAlias, nil)
+		assert.Equal(t, err, ErrEmptyBridgeAlias)
+	}
+
+	{
+		// TEST 2-6 - Failure (Try to create a bridge alias with invalid bridge alias name)
+		err = bm.subBridge.APIBackend.RegisterBridge(cBridgeAddr, pBridgeAddr, &invalidBridgeAlias)
+		assert.Equal(t, err, ErrNotAllowedAliasFormat)
+	}
+
+	{
+		// TEST 3 - Concurrent API Call
+		contractPairLen := 10
+		bridgeAddrs := make([]common.Address, contractPairLen)
+		tokenAddrs := make([]common.Address, contractPairLen)
+		t.Logf("Prepare %d contracts\n", contractPairLen)
+		// Preparation: Deploy bridge and token contracts
+		for i := 0; i < contractPairLen/2; i++ {
+			cBridgeAddr, pBridgeAddr = deployBridge(t, bm, sim, true), deployBridge(t, bm, sim, false)
+			cIdx, pIdx := i*2, i*2+1
+			bridgeAddrs[cIdx], bridgeAddrs[pIdx] = cBridgeAddr, pBridgeAddr
+
+			cTokenAddr, _, _, err := sctoken.DeployServiceChainToken(alice, sim, cBridgeAddr)
+			assert.NoError(t, err)
+			pTokenAddr, _, _, err := sctoken.DeployServiceChainToken(alice, sim, pBridgeAddr)
+			assert.NoError(t, err)
+			tokenAddrs[cIdx], tokenAddrs[pIdx] = cTokenAddr, pTokenAddr
+
+			t.Logf("Deployed bridge contracts %d, %d\n", cIdx, pIdx)
+		}
+
+		// Declare another bridge and token contracts that did not initialize
+		fixedChildBridgeAddr, fixedParentBridgeAddr := deployBridge(t, bm, sim, true), deployBridge(t, bm, sim, false)
+
+		const (
+			BRIDGE_SETUP = iota
+			FAILURE
+			CLEANUP_BRIDGE
+			ALIAS_BRIDGE_SETUP
+			ALIAS_FAILURE
+			ALIAS_CLEANUP_BRIDGE
+			REGISTER_MULTIPLE_TOKEN_WITH_SINGLE_BRIDGE
+		)
+		// DO NOT CHANGE THE TEST ORDER
+		testCases := map[uint8]string{
+			BRIDGE_SETUP:         "BRIDGE_SETUP",
+			FAILURE:              "FAILURE",
+			CLEANUP_BRIDGE:       "CLEANUP_BRIDGE",
+			ALIAS_BRIDGE_SETUP:   "ALIAS_BRIDGE_SETUP",
+			ALIAS_FAILURE:        "ALIAS_FAILURE",
+			ALIAS_CLEANUP_BRIDGE: "ALIAS_CLEANUP_BRIDGE",
+			REGISTER_MULTIPLE_TOKEN_WITH_SINGLE_BRIDGE: "REGISTER_MULTIPLE_TOKEN_WITH_SINGLE_BRIDGE",
+		}
+
+		for testNum := 0; testNum < len(testCases); testNum++ {
+			wg := sync.WaitGroup{}
+			wg.Add(contractPairLen / 2)
+			for i := 0; i < len(bridgeAddrs); i += 2 {
+				cIdx, pIdx := i, i+1
+				go func(cIdx, pIdx int) {
+					cBridgeAddr, pBridgeAddr := bridgeAddrs[cIdx], bridgeAddrs[pIdx]
+					cBridgeAddrStr, pBridgeAddrStr := cBridgeAddr.String(), pBridgeAddr.String()
+					cTokenAddr, pTokenAddr := tokenAddrs[cIdx], tokenAddrs[pIdx]
+					cTokenAddrStr, pTokenAddrStr := cTokenAddr.String(), pTokenAddr.String()
+					alias := "MYBRIDGE_v3" + strconv.Itoa(cIdx)
+
+					switch testNum {
+					case BRIDGE_SETUP:
+						// TEST 3-1. `testBridgeAPIBasic` again with concurrent calls using raw-address-format APIS
+						testBridgeAPIBasic(t, bm, cBridgeAddr, pBridgeAddr, nil, cTokenAddr, pTokenAddr)
+						t.Log("passed:", testCases[uint8(testNum)], cIdx, pIdx)
+					case FAILURE:
+						// TEST 3-2 - Failure
+						testDuplicatedJournal(t, bm, cBridgeAddr, pBridgeAddr, nil)
+						testDuplicatedToken(t, bm, &cBridgeAddrStr, &pBridgeAddrStr, &cTokenAddrStr, &pTokenAddrStr)
+						testAlreadySubscribed(t, bm, &cBridgeAddrStr, &pBridgeAddrStr)
+						t.Log("passed:", testCases[uint8(testNum)], cIdx, pIdx)
+					case ALIAS_BRIDGE_SETUP:
+						// TEST 3-3. `testBridgeAPIBasic` again with concurrent calls using alias APIS
+						testBridgeAPIBasic(t, bm, cBridgeAddr, pBridgeAddr, &alias, cTokenAddr, pTokenAddr)
+						t.Log("passed:", testCases[uint8(testNum)], cIdx, pIdx)
+					case ALIAS_FAILURE:
+						// TEST 3-4 - Failure
+						testDuplicatedJournal(t, bm, cBridgeAddr, pBridgeAddr, &alias)
+						testDuplicatedToken(t, bm, &alias, &cTokenAddrStr, &pTokenAddrStr, nil)
+						testAlreadySubscribed(t, bm, &alias, nil)
+						t.Log("passed:", testCases[uint8(testNum)], cIdx, pIdx)
+					case CLEANUP_BRIDGE:
+						// TEST 3-5 - Success (Unsubscribe bridge, deregister bridges and tokens)
+						testUnsubscribeAndDeRegister(t, bm, &cBridgeAddrStr, &pBridgeAddrStr, &cTokenAddrStr, &pTokenAddrStr)
+						t.Log("passed:", testCases[uint8(testNum)], cIdx, pIdx)
+					case ALIAS_CLEANUP_BRIDGE:
+						// TEST 3-6 - Success (Unsubscribe bridge, deregister bridges and tokens)
+						testUnsubscribeAndDeRegister(t, bm, &alias, &cTokenAddrStr, &pTokenAddrStr, nil)
+						t.Log("passed:", testCases[uint8(testNum)], cIdx, pIdx)
+					case REGISTER_MULTIPLE_TOKEN_WITH_SINGLE_BRIDGE:
+						// TEST 3-7 - Use the fresh bridge that did not register any token contracts
+						cbAddr, pbAddr := fixedChildBridgeAddr.String(), fixedParentBridgeAddr.String()
+						testRegisterToken(t, bm, &cbAddr, &pbAddr, &cTokenAddrStr, &pTokenAddrStr)
+						t.Log("passed:", testCases[uint8(testNum)], cIdx, pIdx)
+					}
+					wg.Done()
+				}(cIdx, pIdx)
+			}
+			wg.Wait()
+			t.Log("Test Done: ", testCases[uint8(testNum)])
+			// Check the status of conccurent calls with a signle thread
+			switch testNum {
+			case BRIDGE_SETUP:
+				checkBridgeSetup(t, bm, true, 1, contractPairLen/2)
+			case CLEANUP_BRIDGE:
+				checkBridgeSetup(t, bm, false, 0, 0)
+			case ALIAS_BRIDGE_SETUP:
+				checkBridgeSetup(t, bm, true, 1, contractPairLen/2)
+			case ALIAS_CLEANUP_BRIDGE:
+				checkBridgeSetup(t, bm, false, 0, 0)
+				// Initiailize another two bridge contracts for the test `REGISTER_MULTIPLE_TOKEN_WITH_SINGLE_BRIDGE`
+				err = bm.subBridge.APIBackend.RegisterBridge(fixedChildBridgeAddr, fixedParentBridgeAddr, nil)
+				assert.NoError(t, err)
+			case REGISTER_MULTIPLE_TOKEN_WITH_SINGLE_BRIDGE:
+				checkRegisterMultipleToken(t, bm, fixedChildBridgeAddr, fixedParentBridgeAddr, contractPairLen/2)
+			}
+		}
+		t.Log("All Done")
+	}
+}
+
+func testBridgeAPIBasic(t *testing.T, bm *BridgeManager,
+	cBridgeAddr, pBridgeAddr common.Address,
+	alias *string,
+	cTokenAddr, pTokenAddr common.Address,
+) {
+	// TEST 1 - Success (Register bridge, tokens and subscribe registered bridges)
+	cBridgeAddrStr := cBridgeAddr.String()
+	pBridgeAddrStr := pBridgeAddr.String()
+	cTokenAddrStr := cTokenAddr.String()
+	pTokenAddrStr := pTokenAddr.String()
+
+	// Register Bridge
+	err := bm.subBridge.APIBackend.RegisterBridge(cBridgeAddr, pBridgeAddr, alias)
+	assert.NoError(t, err)
+
+	// Register tokens
+	if alias != nil {
+		err = bm.subBridge.APIBackend.RegisterToken(alias, &cTokenAddrStr, &pTokenAddrStr, nil)
+	} else {
+		err = bm.subBridge.APIBackend.RegisterToken(&cBridgeAddrStr, &pBridgeAddrStr, &cTokenAddrStr, &pTokenAddrStr)
+	}
+	assert.NoError(t, err)
+
+	// Subscribe bridges
+	if alias != nil {
+		err = bm.subBridge.APIBackend.SubscribeBridge(alias, nil)
+	} else {
+		err = bm.subBridge.APIBackend.SubscribeBridge(&cBridgeAddrStr, &pBridgeAddrStr)
+	}
+	assert.NoError(t, err)
+}
+
+func testDuplicatedJournal(t *testing.T, bm *BridgeManager, cBridgeAddr, pBridgeAddr common.Address, alias *string) {
+	err := bm.subBridge.APIBackend.RegisterBridge(cBridgeAddr, pBridgeAddr, alias)
+	if err != ErrDuplicatedJournal && err != ErrDuplicatedAlias {
+		t.Fatal("Unexpected error", err)
+	}
+}
+
+func testDuplicatedToken(t *testing.T, bm *BridgeManager, cBridgeAddrStr, pBridgeAddrStr, cTokenAddrStr, pTokenAddrStr *string) {
+	err := bm.subBridge.APIBackend.RegisterToken(cBridgeAddrStr, pBridgeAddrStr, cTokenAddrStr, pTokenAddrStr)
+	assert.Equal(t, err, ErrDuplicatedToken)
+}
+
+func testAlreadySubscribed(t *testing.T, bm *BridgeManager, cBridgeAddrStr, pBridgeAddrStr *string) {
+	err := bm.subBridge.APIBackend.SubscribeBridge(cBridgeAddrStr, pBridgeAddrStr)
+	assert.Equal(t, err, ErrAlreadySubscribed)
+}
+
+func testRegisterToken(t *testing.T, bm *BridgeManager, cBridgeAddrStr, pBridgeAddrStr, cTokenAddrStr, pTokenAddrStr *string) {
+	err := bm.subBridge.APIBackend.RegisterToken(cBridgeAddrStr, pBridgeAddrStr, cTokenAddrStr, pTokenAddrStr)
+	assert.NoError(t, err)
+}
+
+func testUnsubscribeAndDeRegister(t *testing.T, bm *BridgeManager,
+	cBridgeAddrStr, pBridgeAddrStr, cTokenAddrStr, pTokenAddrStr *string,
+) {
+	findBridgePair := func(addrStr string) *BridgeJournal {
+		bridgePairs := bm.subBridge.APIBackend.ListBridge()
+		for _, bridgePair := range bridgePairs {
+			if bridgePair.ChildAddress.String() == addrStr || bridgePair.BridgeAlias == addrStr {
+				return bridgePair
+			}
+		}
+		return nil
+	}
+	bridgePairLen := len(bm.subBridge.APIBackend.ListBridge())
+	defer func() {
+		err := bm.subBridge.APIBackend.DeregisterBridge(cBridgeAddrStr, pBridgeAddrStr)
+		assert.NoError(t, err)
+		assert.Equal(t, len(bm.subBridge.APIBackend.ListBridge()) < bridgePairLen, true)
+	}()
+
+	bridgePair := findBridgePair(*cBridgeAddrStr)
+	assert.NotNil(t, bridgePair)
+	assert.Equal(t, bridgePair.Subscribed, true)
+	err := bm.subBridge.APIBackend.UnsubscribeBridge(cBridgeAddrStr, pBridgeAddrStr)
+	assert.NoError(t, err)
+	assert.Equal(t, bridgePair.Subscribed, false)
+
+	cBi, ok := bm.GetBridgeInfo(bridgePair.ChildAddress)
+	assert.Equal(t, ok, true)
+	assert.Equal(t, len(cBi.counterpartToken), 1)
+	pBi, ok := bm.GetBridgeInfo(bridgePair.ParentAddress)
+	assert.Equal(t, ok, true)
+	assert.Equal(t, len(pBi.counterpartToken), 1)
+
+	err = bm.subBridge.APIBackend.DeregisterToken(cBridgeAddrStr, pBridgeAddrStr, cTokenAddrStr, pTokenAddrStr)
+	assert.NoError(t, err)
+	assert.Equal(t, len(cBi.counterpartToken), 0)
+	assert.Equal(t, len(pBi.counterpartToken), 0)
+}
+
+func TestLegacyBridgeJournalDecode(t *testing.T) {
+	// `encodedJournalHexStr` is an encoded legacy bridge journals. The code below generate the following hex.
+	encodedJournalHexStr := "eb9485564429cce278d4399436f1af2f91e1be6f0bd494c12701e0cb09d6600f774be1dbb585ddc749f9da80eb9485564429cce278d4399436f1af2f91e1be6f0bd594c12701e0cb09d6600f774be1dbb585ddc749f9db01eb9485564429cce278d4399436f1af2f91e1be6f0bd694c12701e0cb09d6600f774be1dbb585ddc749f9dc01"
+	/*
+		legacyJournals := []BridgeJournal{
+			{
+				ChildAddress:  common.HexToAddress("0x85564429cce278d4399436f1af2f91e1be6f0bd4"),
+				ParentAddress: common.HexToAddress("0xc12701e0cb09d6600f774be1dbb585ddc749f9da"),
+				Subscribed:    false,
+			},
+			{
+				ChildAddress:  common.HexToAddress("0x85564429cce278d4399436f1af2f91e1be6f0bd5"),
+				ParentAddress: common.HexToAddress("0xc12701e0cb09d6600f774be1dbb585ddc749f9db"),
+				Subscribed:    true,
+			},
+			{
+				ChildAddress:  common.HexToAddress("0x85564429cce278d4399436f1af2f91e1be6f0bd6"),
+				ParentAddress: common.HexToAddress("0xc12701e0cb09d6600f774be1dbb585ddc749f9dc"),
+				Subscribed:    true,
+			},
+		}
+			encodedBuf := new(bytes.Buffer)
+			for i := 0; i < len(journals); i++ {
+				err := rlp.Encode(encodedBuf, &journals[i])
+				assert.NoError(t, err)
+			}
+			encodedString := hex.EncodeToString(encodedBuf.Bytes())
+			fmt.Println(encodedString)
+	*/
+
+	legacyJournals := []BridgeJournal{
+		{
+			ChildAddress:  common.HexToAddress("0x85564429cce278d4399436f1af2f91e1be6f0bd4"),
+			ParentAddress: common.HexToAddress("0xc12701e0cb09d6600f774be1dbb585ddc749f9da"),
+			Subscribed:    false,
+		},
+		{
+			ChildAddress:  common.HexToAddress("0x85564429cce278d4399436f1af2f91e1be6f0bd5"),
+			ParentAddress: common.HexToAddress("0xc12701e0cb09d6600f774be1dbb585ddc749f9db"),
+			Subscribed:    true,
+		},
+		{
+			ChildAddress:  common.HexToAddress("0x85564429cce278d4399436f1af2f91e1be6f0bd6"),
+			ParentAddress: common.HexToAddress("0xc12701e0cb09d6600f774be1dbb585ddc749f9dc"),
+			Subscribed:    true,
+		},
+	}
+
+	tempJournalPath := "legacy-journal-decoding-test"
+	tempFile, err := ioutil.TempFile(".", tempJournalPath)
+	assert.NoError(t, err)
+
+	encodedHex, err := hex.DecodeString(encodedJournalHexStr)
+	assert.NoError(t, err)
+
+	_, err = tempFile.Write(encodedHex)
+	assert.NoError(t, err)
+	defer os.Remove(tempFile.Name())
+
+	readJournalIdx := 0
+	load := func(gwjournal BridgeJournal) error {
+		assert.Equal(t, len(gwjournal.BridgeAlias), 0)
+		assert.Equal(t, gwjournal.ChildAddress.String(), legacyJournals[readJournalIdx].ChildAddress.String())
+		assert.Equal(t, gwjournal.ParentAddress.String(), legacyJournals[readJournalIdx].ParentAddress.String())
+		assert.Equal(t, gwjournal.Subscribed, legacyJournals[readJournalIdx].Subscribed)
+		readJournalIdx++
+		return nil
+	}
+	journalAddr := newBridgeAddrJournal(tempFile.Name())
+	err = journalAddr.load(load)
+	assert.NoError(t, err)
+}
+
+func checkBridgeSetup(t *testing.T, bm *BridgeManager, expectedSubscribed bool, expectedNumberOfToken, expectedBridgeLen int) {
+	bridgePairs := bm.subBridge.APIBackend.ListBridge()
+	assert.Equal(t, len(bridgePairs), expectedBridgeLen)
+	for _, bridgePair := range bridgePairs {
+		assert.Equal(t, bridgePair.Subscribed, expectedSubscribed)
+		cbi, ok := bm.GetBridgeInfo(bridgePair.ChildAddress)
+		assert.Equal(t, ok, true)
+		pbi, ok := bm.GetBridgeInfo(bridgePair.ChildAddress)
+		assert.Equal(t, ok, true)
+		assert.Equal(t, len(cbi.counterpartToken), expectedNumberOfToken)
+		assert.Equal(t, len(pbi.counterpartToken), expectedNumberOfToken)
+	}
+}
+
+func checkRegisterMultipleToken(t *testing.T, bm *BridgeManager, cBridgeAddr, pBridgeAddr common.Address, expectedLen int) {
+	cbi, ok := bm.GetBridgeInfo(cBridgeAddr)
+	assert.Equal(t, ok, true)
+	pbi, ok := bm.GetBridgeInfo(pBridgeAddr)
+	assert.Equal(t, ok, true)
+	assert.Equal(t, len(cbi.counterpartToken), expectedLen)
+	assert.Equal(t, len(pbi.counterpartToken), expectedLen)
+}
+
+func randomHex(n int) (string, error) {
+	bytes := make([]byte, n)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes), nil
+}
+
+func TestBridgeAddressType(t *testing.T) {
+	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	assert.NoError(t, err)
+	defer func() {
+		if err := os.RemoveAll(tempDir); err != nil {
+			t.Fatalf("fail to delete file %v", err)
+		}
+	}()
+
+	// Config Bridge Account Manager
+	config := &SCConfig{}
+	config.DataDir = tempDir
+	bacc, _ := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
+	bacc.pAccount.chainID = big.NewInt(0)
+	bacc.cAccount.chainID = big.NewInt(0)
+
+	// Create Simulated backend
+	alloc := blockchain.GenesisAlloc{
+		bacc.pAccount.address: {Balance: big.NewInt(params.KLAY)},
+		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
+	}
+	sim := backends.NewSimulatedBackend(alloc)
+	defer sim.Close()
+
+	sc := &SubBridge{
+		chainDB:        database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}),
+		config:         config,
+		peers:          newBridgePeerSet(),
+		bridgeAccounts: bacc,
+		localBackend:   sim,
+		remoteBackend:  sim,
+	}
+	sc.handler, err = NewSubBridgeHandler(sc)
+	assert.NoError(t, err)
+	bm, err := NewBridgeManager(sc)
+	assert.NoError(t, err)
+
+	auth := bacc.cAccount.GenerateTransactOpts()
+
+	// Deploy Bridge Contract
+	bridgeAddr, err := bm.DeployBridgeTest(sim, 10000, false)
+	assert.NoError(t, err)
+	sim.Commit() // block
+
+	anotherBridgeAddr, err := bm.DeployBridgeTest(sim, 10000, false)
+	assert.NoError(t, err)
+	sim.Commit() // block
+
+	// Case 1 - Success (The bridge address type is contract address)
+	{
+		// 1. Deploy Token Contract
+		_, tx, token, err := sctoken.DeployServiceChainToken(auth, sim, bridgeAddr)
+		assert.NoError(t, err)
+		sim.Commit() // block
+		CheckReceipt(sim, tx, time.Second, types.ReceiptStatusSuccessful, t)
+
+		// 2. Deploy NFT Contract
+		_, tx, nft, err := scnft.DeployServiceChainNFT(auth, sim, bridgeAddr)
+		assert.NoError(t, err)
+		sim.Commit() // block
+		CheckReceipt(sim, tx, time.Second, types.ReceiptStatusSuccessful, t)
+
+		tx, err = token.SetBridge(auth, anotherBridgeAddr)
+		assert.NoError(t, err)
+		sim.Commit() // block
+		CheckReceipt(sim, tx, time.Second, types.ReceiptStatusSuccessful, t)
+		tx, err = nft.SetBridge(auth, anotherBridgeAddr)
+		assert.NoError(t, err)
+		sim.Commit() // block
+		CheckReceipt(sim, tx, time.Second, types.ReceiptStatusSuccessful, t)
+	}
+
+	// Case 2 - Failure (The bridge address type is not a contract address)
+	{
+		_, tx, _, err := sctoken.DeployServiceChainToken(auth, sim, auth.From)
+		assert.NoError(t, err)
+		sim.Commit() // block
+		CheckReceipt(sim, tx, time.Second, types.ReceiptStatusErrExecutionReverted, t)
+
+		_, tx, _, err = scnft.DeployServiceChainNFT(auth, sim, auth.From)
+		assert.NoError(t, err)
+		sim.Commit() // block
+		CheckReceipt(sim, tx, time.Second, types.ReceiptStatusErrExecutionReverted, t)
+	}
+
+	// Case 3 - Failure (The bridge address type is not a contract address)
+	{
+		_, tx, token, err := sctoken.DeployServiceChainToken(auth, sim, bridgeAddr)
+		assert.NoError(t, err)
+		sim.Commit() // block
+		CheckReceipt(sim, tx, time.Second, types.ReceiptStatusSuccessful, t)
+
+		_, tx, nft, err := scnft.DeployServiceChainNFT(auth, sim, bridgeAddr)
+		assert.NoError(t, err)
+		sim.Commit() // block
+		CheckReceipt(sim, tx, time.Second, types.ReceiptStatusSuccessful, t)
+
+		tx, err = token.SetBridge(auth, auth.From)
+		assert.NoError(t, err)
+		sim.Commit() // block
+		CheckReceipt(sim, tx, time.Second, types.ReceiptStatusErrExecutionReverted, t)
+		tx, err = nft.SetBridge(auth, auth.From)
+		assert.NoError(t, err)
+		sim.Commit() // block
+		CheckReceipt(sim, tx, time.Second, types.ReceiptStatusErrExecutionReverted, t)
+	}
+}
+
 // DeployBridgeTest is a test-only function which deploys a bridge contract with some amount of KLAY.
 func (bm *BridgeManager) DeployBridgeTest(backend *backends.SimulatedBackend, amountOfDeposit int64, local bool) (common.Address, error) {
 	var acc *accountInfo
@@ -2036,9 +2616,41 @@ func (bm *BridgeManager) DeployBridgeTest(backend *backends.SimulatedBackend, am
 	return addr, err
 }
 
+// deployBridge deploys bridge contract and returns its address
+func deployBridge(t *testing.T, bm *BridgeManager, backend *backends.SimulatedBackend, local bool) common.Address {
+	var acc *accountInfo
+
+	// When the pending block of backend is updated, commit it
+	// bm.DeployBridge will be waiting until the block is committed
+	pendingBlock := backend.PendingBlock()
+	go func() {
+		for pendingBlock == backend.PendingBlock() {
+			time.Sleep(100 * time.Millisecond)
+		}
+		backend.Commit()
+		return
+	}()
+
+	// Set transfer value of the bridge account
+	if local {
+		acc = bm.subBridge.bridgeAccounts.cAccount
+	} else {
+		acc = bm.subBridge.bridgeAccounts.pAccount
+	}
+
+	auth := acc.GenerateTransactOpts()
+	auth.Value = big.NewInt(10000)
+
+	// Deploy a bridge contract
+	_, addr, err := bm.DeployBridge(auth, backend, local)
+	assert.NoError(t, err)
+	return addr
+}
+
 func isExpectedBalance(t *testing.T, bridgeManager *BridgeManager,
 	pBridgeAddr, cBridgeAddr common.Address,
-	expectedParentBridgeBalance, expectedChildBridgeBalance int64) {
+	expectedParentBridgeBalance, expectedChildBridgeBalance int64,
+) {
 	pBridgeBalance, err := bridgeManager.subBridge.APIBackend.GetParentBridgeContractBalance(pBridgeAddr)
 	assert.NoError(t, err)
 	cBridgeBalance, err := bridgeManager.subBridge.APIBackend.GetChildBridgeContractBalance(cBridgeAddr)
@@ -2097,7 +2709,7 @@ func TestGetBridgeContractBalance(t *testing.T) {
 		assert.NoError(t, err)
 		pBridgeAddr, err := bm.DeployBridgeTest(sim, initialParentbridgeBalance, false)
 		assert.NoError(t, err)
-		bm.SetJournal(cBridgeAddr, pBridgeAddr)
+		bm.SetJournal("", cBridgeAddr, pBridgeAddr)
 		assert.NoError(t, err)
 		sim.Commit()
 		isExpectedBalance(t, bm, pBridgeAddr, cBridgeAddr, initialParentbridgeBalance, initialChildbridgeBalance)
@@ -2112,11 +2724,10 @@ func TestGetBridgeContractBalance(t *testing.T) {
 			assert.NoError(t, err)
 			pBridgeAddr, err := bm.DeployBridgeTest(sim, initialParentbridgeBalance, false)
 			assert.NoError(t, err)
-			bm.SetJournal(cBridgeAddr, pBridgeAddr)
+			bm.SetJournal("", cBridgeAddr, pBridgeAddr)
 			assert.NoError(t, err)
 			sim.Commit()
 			isExpectedBalance(t, bm, pBridgeAddr, cBridgeAddr, initialParentbridgeBalance, initialChildbridgeBalance)
 		}
 	}
-
 }

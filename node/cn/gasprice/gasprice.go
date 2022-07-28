@@ -48,6 +48,7 @@ type OracleBackend interface {
 	BlockByNumber(ctx context.Context, number rpc.BlockNumber) (*types.Block, error)
 	GetBlockReceipts(ctx context.Context, hash common.Hash) types.Receipts
 	ChainConfig() *params.ChainConfig
+	CurrentBlock() *types.Block
 }
 
 type TxPool interface {
@@ -97,13 +98,16 @@ func NewOracle(backend OracleBackend, params Config, txPool TxPool) *Oracle {
 
 // SuggestPrice returns the recommended gas price.
 func (gpo *Oracle) SuggestPrice(ctx context.Context) (*big.Int, error) {
-
 	if gpo.txPool == nil {
 		// If txpool is not set, just return 0. This is used for testing.
 		return common.Big0, nil
 	}
 	// Since we have fixed gas price, we can directly get this value from TxPool.
-	return gpo.txPool.GasPrice(), nil
+	suggestedPrice := gpo.txPool.GasPrice()
+	if gpo.backend.ChainConfig().IsMagmaForkEnabled(new(big.Int).Add(gpo.backend.CurrentBlock().Number(), common.Big1)) {
+		return new(big.Int).Mul(suggestedPrice, common.Big2), nil
+	}
+	return suggestedPrice, nil
 	/*
 		// TODO-Klaytn-RemoveLater Later remove below obsolete code if we don't need them anymore.
 		gpo.cacheLock.RLock()

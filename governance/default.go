@@ -48,23 +48,28 @@ var (
 
 var (
 	GovernanceKeyMap = map[string]int{
-		"governance.governancemode":     params.GovernanceMode,
-		"governance.governingnode":      params.GoverningNode,
-		"istanbul.epoch":                params.Epoch,
-		"istanbul.policy":               params.Policy,
-		"istanbul.committeesize":        params.CommitteeSize,
-		"governance.unitprice":          params.UnitPrice,
-		"reward.mintingamount":          params.MintingAmount,
-		"reward.ratio":                  params.Ratio,
-		"reward.useginicoeff":           params.UseGiniCoeff,
-		"reward.deferredtxfee":          params.DeferredTxFee,
-		"reward.minimumstake":           params.MinimumStake,
-		"reward.stakingupdateinterval":  params.StakeUpdateInterval,
-		"reward.proposerupdateinterval": params.ProposerRefreshInterval,
-		"governance.addvalidator":       params.AddValidator,
-		"governance.removevalidator":    params.RemoveValidator,
-		"param.txgashumanreadable":      params.ConstTxGasHumanReadable,
-		"istanbul.timeout":              params.Timeout,
+		"governance.governancemode":       params.GovernanceMode,
+		"governance.governingnode":        params.GoverningNode,
+		"istanbul.epoch":                  params.Epoch,
+		"istanbul.policy":                 params.Policy,
+		"istanbul.committeesize":          params.CommitteeSize,
+		"governance.unitprice":            params.UnitPrice,
+		"kip71.lowerboundbasefee":         params.LowerBoundBaseFee,
+		"kip71.gastarget":                 params.GasTarget,
+		"kip71.maxblockgasusedforbasefee": params.MaxBlockGasUsedForBaseFee,
+		"kip71.basefeedenominator":        params.BaseFeeDenominator,
+		"kip71.upperboundbasefee":         params.UpperBoundBaseFee,
+		"reward.mintingamount":            params.MintingAmount,
+		"reward.ratio":                    params.Ratio,
+		"reward.useginicoeff":             params.UseGiniCoeff,
+		"reward.deferredtxfee":            params.DeferredTxFee,
+		"reward.minimumstake":             params.MinimumStake,
+		"reward.stakingupdateinterval":    params.StakeUpdateInterval,
+		"reward.proposerupdateinterval":   params.ProposerRefreshInterval,
+		"governance.addvalidator":         params.AddValidator,
+		"governance.removevalidator":      params.RemoveValidator,
+		"param.txgashumanreadable":        params.ConstTxGasHumanReadable,
+		"istanbul.timeout":                params.Timeout,
 	}
 
 	GovernanceForbiddenKeyMap = map[string]int{
@@ -74,24 +79,29 @@ var (
 	}
 
 	GovernanceKeyMapReverse = map[int]string{
-		params.GovernanceMode:          "governance.governancemode",
-		params.GoverningNode:           "governance.governingnode",
-		params.Epoch:                   "istanbul.epoch",
-		params.CliqueEpoch:             "clique.epoch",
-		params.Policy:                  "istanbul.policy",
-		params.CommitteeSize:           "istanbul.committeesize",
-		params.UnitPrice:               "governance.unitprice",
-		params.MintingAmount:           "reward.mintingamount",
-		params.Ratio:                   "reward.ratio",
-		params.UseGiniCoeff:            "reward.useginicoeff",
-		params.DeferredTxFee:           "reward.deferredtxfee",
-		params.MinimumStake:            "reward.minimumstake",
-		params.StakeUpdateInterval:     "reward.stakingupdateinterval",
-		params.ProposerRefreshInterval: "reward.proposerupdateinterval",
-		params.AddValidator:            "governance.addvalidator",
-		params.RemoveValidator:         "governance.removevalidator",
-		params.ConstTxGasHumanReadable: "param.txgashumanreadable",
-		params.Timeout:                 "istanbul.timeout",
+		params.GovernanceMode:            "governance.governancemode",
+		params.GoverningNode:             "governance.governingnode",
+		params.Epoch:                     "istanbul.epoch",
+		params.CliqueEpoch:               "clique.epoch",
+		params.Policy:                    "istanbul.policy",
+		params.CommitteeSize:             "istanbul.committeesize",
+		params.UnitPrice:                 "governance.unitprice",
+		params.LowerBoundBaseFee:         "kip71.lowerboundbasefee",
+		params.UpperBoundBaseFee:         "kip71.upperboundbasefee",
+		params.GasTarget:                 "kip71.gastarget",
+		params.MaxBlockGasUsedForBaseFee: "kip71.maxblockgasusedforbasefee",
+		params.BaseFeeDenominator:        "kip71.basefeedenominator",
+		params.MintingAmount:             "reward.mintingamount",
+		params.Ratio:                     "reward.ratio",
+		params.UseGiniCoeff:              "reward.useginicoeff",
+		params.DeferredTxFee:             "reward.deferredtxfee",
+		params.MinimumStake:              "reward.minimumstake",
+		params.StakeUpdateInterval:       "reward.stakingupdateinterval",
+		params.ProposerRefreshInterval:   "reward.proposerupdateinterval",
+		params.AddValidator:              "governance.addvalidator",
+		params.RemoveValidator:           "governance.removevalidator",
+		params.ConstTxGasHumanReadable:   "param.txgashumanreadable",
+		params.Timeout:                   "istanbul.timeout",
 	}
 
 	ProposerPolicyMap = map[string]int{
@@ -158,13 +168,20 @@ type VoteMap struct {
 // txPool is an interface for blockchain.TxPool used in governance package.
 type txPool interface {
 	SetGasPrice(price *big.Int)
+	GasPrice() *big.Int
 }
 
 // blockChain is an interface for blockchain.Blockchain used in governance package.
 type blockChain interface {
 	CurrentHeader() *types.Header
+	GetHeaderByNumber(val uint64) *types.Header
 	SetProposerPolicy(val uint64)
 	SetUseGiniCoeff(val bool)
+	SetLowerBoundBaseFee(val uint64)
+	SetUpperBoundBaseFee(val uint64)
+	SetGasTarget(val uint64)
+	SetMaxBlockGasUsedForBaseFee(val uint64)
+	SetBaseFeeDenominator(val uint64)
 }
 
 type Governance struct {
@@ -173,7 +190,7 @@ type Governance struct {
 	// Map used to keep multiple types of votes
 	voteMap VoteMap
 
-	nodeAddress      atomic.Value //common.Address
+	nodeAddress      atomic.Value // common.Address
 	totalVotingPower uint64
 	votingPower      uint64
 
@@ -186,7 +203,7 @@ type Governance struct {
 	idxCacheLock *sync.RWMutex
 
 	// The block number when current governance information was changed
-	actualGovernanceBlock atomic.Value //uint64
+	actualGovernanceBlock atomic.Value // uint64
 
 	// The last block number at governance state was stored (used not to replay old votes)
 	lastGovernanceStateBlock uint64
@@ -449,10 +466,6 @@ func (g *Governance) updateGovernanceParams() {
 	params.SetStakingUpdateInterval(g.StakingUpdateInterval())
 	params.SetProposerUpdateInterval(g.ProposerUpdateInterval())
 
-	if minimumStakingAmount, ok := new(big.Int).SetString(g.MinimumStake(), 10); ok {
-		params.SetMinimumStakingAmount(minimumStakingAmount)
-	}
-
 	// NOTE: HumanReadable related functions are inactivated now
 	if txGasHumanReadable, ok := g.currentSet.GetValue(params.ConstTxGasHumanReadable); ok {
 		params.TxGasHumanReadable = txGasHumanReadable.(uint64)
@@ -469,6 +482,26 @@ func (g *Governance) SetTotalVotingPower(t uint64) {
 
 func (g *Governance) SetMyVotingPower(t uint64) {
 	atomic.StoreUint64(&g.votingPower, t)
+}
+
+func (g *Governance) NodeAddress() common.Address {
+	return g.nodeAddress.Load().(common.Address)
+}
+
+func (g *Governance) TotalVotingPower() uint64 {
+	return atomic.LoadUint64(&g.totalVotingPower)
+}
+
+func (g *Governance) MyVotingPower() uint64 {
+	return atomic.LoadUint64(&g.votingPower)
+}
+
+func (gov *Governance) BlockChain() blockChain {
+	return gov.blockChain
+}
+
+func (gov *Governance) DB() database.DBManager {
+	return gov.db
 }
 
 func (g *Governance) GetEncodedVote(addr common.Address, number uint64) []byte {
@@ -560,7 +593,9 @@ func (g *Governance) ParseVoteValue(gVote *GovernanceVote) (*GovernanceVote, err
 		} else {
 			return nil, ErrValueTypeMismatch
 		}
-	case params.Epoch, params.CommitteeSize, params.UnitPrice, params.StakeUpdateInterval, params.ProposerRefreshInterval, params.ConstTxGasHumanReadable, params.Policy, params.Timeout:
+	case params.Epoch, params.CommitteeSize, params.UnitPrice, params.StakeUpdateInterval,
+		params.ProposerRefreshInterval, params.ConstTxGasHumanReadable, params.Policy, params.Timeout,
+		params.LowerBoundBaseFee, params.UpperBoundBaseFee, params.GasTarget, params.MaxBlockGasUsedForBaseFee, params.BaseFeeDenominator:
 		v, ok := gVote.Value.([]uint8)
 		if !ok {
 			return nil, ErrValueTypeMismatch
@@ -597,7 +632,9 @@ func (gov *Governance) updateChangeSet(vote GovernanceVote) bool {
 	case params.GovernanceMode, params.Ratio:
 		gov.changeSet.SetValue(GovernanceKeyMap[vote.Key], vote.Value.(string))
 		return true
-	case params.Epoch, params.StakeUpdateInterval, params.ProposerRefreshInterval, params.CommitteeSize, params.UnitPrice, params.ConstTxGasHumanReadable, params.Policy, params.Timeout:
+	case params.Epoch, params.StakeUpdateInterval, params.ProposerRefreshInterval, params.CommitteeSize,
+		params.UnitPrice, params.ConstTxGasHumanReadable, params.Policy, params.Timeout,
+		params.LowerBoundBaseFee, params.UpperBoundBaseFee, params.GasTarget, params.MaxBlockGasUsedForBaseFee, params.BaseFeeDenominator:
 		gov.changeSet.SetValue(GovernanceKeyMap[vote.Key], vote.Value.(uint64))
 		return true
 	case params.MintingAmount, params.MinimumStake:
@@ -615,7 +652,7 @@ func (gov *Governance) updateChangeSet(vote GovernanceVote) bool {
 func CheckGenesisValues(c *params.ChainConfig) error {
 	gov := NewGovernanceInitialize(c, nil)
 
-	var tstMap = map[string]interface{}{
+	tstMap := map[string]interface{}{
 		"istanbul.epoch":                c.Istanbul.Epoch,
 		"istanbul.committeesize":        c.Istanbul.SubGroupSize,
 		"istanbul.policy":               uint64(c.Istanbul.ProposerPolicy),
@@ -915,19 +952,21 @@ func (gov *Governance) VerifyGovernance(received []byte) error {
 	}
 	rChangeSet = adjustDecodedSet(rChangeSet)
 
-	if len(rChangeSet) == gov.changeSet.Size() {
-		for k, v := range rChangeSet {
-			if GovernanceKeyMap[k] == params.GoverningNode {
-				if reflect.TypeOf(v) == stringT {
-					v = common.HexToAddress(v.(string))
-				}
-			}
+	if len(rChangeSet) != gov.changeSet.Size() {
+		logger.Error("Verification Error", "len(receivedChangeSet)", len(rChangeSet), "len(changeSet)", gov.changeSet.Size())
+	}
 
-			have, _ := gov.changeSet.GetValue(GovernanceKeyMap[k])
-			if have != v {
-				logger.Error("Verification Error", "key", k, "received", rChangeSet[k], "have", have, "receivedType", reflect.TypeOf(rChangeSet[k]), "haveType", reflect.TypeOf(have))
-				return ErrVoteValueMismatch
+	for k, v := range rChangeSet {
+		if GovernanceKeyMap[k] == params.GoverningNode {
+			if reflect.TypeOf(v) == stringT {
+				v = common.HexToAddress(v.(string))
 			}
+		}
+
+		have, _ := gov.changeSet.GetValue(GovernanceKeyMap[k])
+		if have != v {
+			logger.Error("Verification Error", "key", k, "received", rChangeSet[k], "have", have, "receivedType", reflect.TypeOf(rChangeSet[k]), "haveType", reflect.TypeOf(have))
+			return ErrVoteValueMismatch
 		}
 	}
 	return nil
@@ -1023,6 +1062,10 @@ func (gov *Governance) SetTxPool(txpool txPool) {
 	gov.TxPool = txpool
 }
 
+func (gov *Governance) GetTxPool() txPool {
+	return gov.TxPool
+}
+
 func GetGovernanceItemsFromChainConfig(config *params.ChainConfig) GovernanceSet {
 	g := NewGovernanceSet()
 
@@ -1070,11 +1113,12 @@ func writeFailLog(key int, err error) {
 	logger.Crit(msg, "err", err)
 }
 
-func AddGovernanceCacheForTest(g *Governance, num uint64, config *params.ChainConfig) {
-	// Don't update cache if num (block number) is smaller than the biggest number of cached block number
-
-	data := GetGovernanceItemsFromChainConfig(config)
-	g.addGovernanceCache(num, data)
+func AddGovernanceCacheForTest(e HeaderEngine, num uint64, config *params.ChainConfig) {
+	// addGovernanceCache only exists and relevant in *Governance.
+	if g, ok := e.(*Governance); ok {
+		data := GetGovernanceItemsFromChainConfig(config)
+		g.addGovernanceCache(num, data)
+	}
 }
 
 func (gov *Governance) GovernanceMode() string {
@@ -1133,8 +1177,64 @@ func (gov *Governance) UseGiniCoeff() bool {
 	return gov.GetGovernanceValue(params.UseGiniCoeff).(bool)
 }
 
+func (gov *Governance) LowerBoundBaseFee() uint64 {
+	ret := gov.GetGovernanceValue(params.LowerBoundBaseFee)
+	if ret != nil {
+		return ret.(uint64)
+	}
+	return params.DefaultLowerBoundBaseFee
+}
+
+func (gov *Governance) UpperBoundBaseFee() uint64 {
+	ret := gov.GetGovernanceValue(params.UpperBoundBaseFee)
+	if ret != nil {
+		return ret.(uint64)
+	}
+	return params.DefaultUpperBoundBaseFee
+}
+
+func (gov *Governance) GasTarget() uint64 {
+	ret := gov.GetGovernanceValue(params.GasTarget)
+	if ret != nil {
+		return ret.(uint64)
+	}
+	return params.DefaultGasTarget
+}
+
+func (gov *Governance) MaxBlockGasUsedForBaseFee() uint64 {
+	ret := gov.GetGovernanceValue(params.MaxBlockGasUsedForBaseFee)
+	if ret != nil {
+		return ret.(uint64)
+	}
+	return params.DefaultMaxBlockGasUsedForBaseFee
+}
+
+func (gov *Governance) BaseFeeDenominator() uint64 {
+	ret := gov.GetGovernanceValue(params.BaseFeeDenominator)
+	if ret != nil {
+		return ret.(uint64)
+	}
+	return params.DefaultBaseFeeDenominator
+}
+
 func (gov *Governance) ChainId() uint64 {
 	return gov.ChainConfig.ChainID.Uint64()
+}
+
+func (gov *Governance) InitialChainConfig() *params.ChainConfig {
+	return gov.ChainConfig
+}
+
+func (g *Governance) GetVoteMapCopy() map[string]VoteStatus {
+	return g.voteMap.Copy()
+}
+
+func (g *Governance) GetGovernanceTalliesCopy() []GovernanceTallyItem {
+	return g.GovernanceTallies.Copy()
+}
+
+func (gov *Governance) CurrentSetCopy() map[string]interface{} {
+	return gov.currentSet.Items()
 }
 
 func (gov *Governance) PendingChanges() map[string]interface{} {

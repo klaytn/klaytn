@@ -38,13 +38,16 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus"
+	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/datasync/downloader"
 	"github.com/klaytn/klaytn/datasync/fetcher"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
+	"github.com/klaytn/klaytn/node/cn/snap"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/storage/statedb"
@@ -70,12 +73,19 @@ const (
 
 	// DefaultTxResendInterval is the second of resending transactions period.
 	DefaultTxResendInterval = 4
+
+	// ExtraNonSnapPeers is the number of non-snap peers allowed to connect more than snap peers.
+	ExtraNonSnapPeers = 5
 )
 
 // errIncompatibleConfig is returned if the requested protocols and configs are
 // not compatible (low protocol version restrictions and high requirements).
 var errIncompatibleConfig = errors.New("incompatible configuration")
-var errUnknownProcessingError = errors.New("unknown error during the msg processing")
+
+var (
+	errUnknownProcessingError  = errors.New("unknown error during the msg processing")
+	errUnsupportedEnginePolicy = errors.New("unsupported engine or policy")
+)
 
 func errResp(code errCode, format string, v ...interface{}) error {
 	return fmt.Errorf("%v - %v", code, fmt.Sprintf(format, v...))
@@ -85,6 +95,7 @@ type ProtocolManager struct {
 	networkId uint64
 
 	fastSync  uint32 // Flag whether fast sync is enabled (gets disabled if we already have blocks)
+	snapSync  uint32 // Flag whether fast sync should operate on top of the snap protocol
 	acceptTxs uint32 // Flag whether we're considered synchronised (enables transaction processing)
 
 	txpool      work.TxPool
@@ -112,7 +123,8 @@ type ProtocolManager struct {
 	quitResendCh chan struct{}
 	// wait group is used for graceful shutdowns during downloading
 	// and processing
-	wg sync.WaitGroup
+	wg     sync.WaitGroup
+	peerWg sync.WaitGroup
 	// istanbul BFT
 	engine consensus.Engine
 
@@ -124,7 +136,7 @@ type ProtocolManager struct {
 	nodetype          common.ConnType
 	txResendUseLegacy bool
 
-	//syncStop is a flag to stop peer sync
+	// syncStop is a flag to stop peer sync
 	syncStop int32
 }
 
@@ -132,7 +144,8 @@ type ProtocolManager struct {
 // with the Klaytn network.
 func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux,
 	txpool work.TxPool, engine consensus.Engine, blockchain work.BlockChain, chainDB database.DBManager, cacheLimit int,
-	nodetype common.ConnType, cnconfig *Config) (*ProtocolManager, error) {
+	nodetype common.ConnType, cnconfig *Config,
+) (*ProtocolManager, error) {
 	// Create the protocol maanger with the base fields
 	manager := &ProtocolManager{
 		networkId:         networkId,
@@ -157,12 +170,17 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 	}
 
 	// Figure out whether to allow fast sync or not
-	if mode == downloader.FastSync && blockchain.CurrentBlock().NumberU64() > 0 {
+	if (mode == downloader.FastSync || mode == downloader.SnapSync) && blockchain.CurrentBlock().NumberU64() > 0 {
 		logger.Error("Blockchain not empty, fast sync disabled")
 		mode = downloader.FullSync
 	}
 	if mode == downloader.FastSync {
 		manager.fastSync = uint32(1)
+		manager.snapSync = uint32(0)
+	}
+	if mode == downloader.SnapSync {
+		manager.fastSync = uint32(0)
+		manager.snapSync = uint32(1)
 	}
 	// istanbul BFT
 	protocol := engine.Protocol()
@@ -171,6 +189,10 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 	for i, version := range protocol.Versions {
 		// Skip protocol version if incompatible with the mode of operation
 		if mode == downloader.FastSync && version < klay63 {
+			continue
+		}
+		// TODO-Klaytn-Snapsync add snapsync and version check here
+		if mode == downloader.SnapSync && version < klay65 {
 			continue
 		}
 		// Compatible; initialise the sub-protocol
@@ -234,6 +256,37 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 				return nil
 			},
 		})
+
+		if cnconfig.SnapshotCacheSize > 0 {
+			for _, version := range snap.ProtocolVersions {
+				manager.SubProtocols = append(manager.SubProtocols, p2p.Protocol{
+					Name:    snap.ProtocolName,
+					Version: version,
+					Length:  snap.ProtocolLengths[version],
+					Run: func(p *p2p.Peer, rw p2p.MsgReadWriter) error {
+						manager.wg.Add(1)
+						defer manager.wg.Done()
+						peer := snap.NewPeer(version, p, rw)
+						return manager.handleSnapPeer(peer)
+					},
+					RunWithRWs: func(p *p2p.Peer, rws []p2p.MsgReadWriter) error {
+						manager.wg.Add(1)
+						defer manager.wg.Done()
+						peer := snap.NewPeer(version, p, rws[p2p.ConnDefault])
+						return manager.handleSnapPeer(peer)
+					},
+					NodeInfo: func() interface{} {
+						return manager.NodeInfo()
+					},
+					PeerInfo: func(id discover.NodeID) interface{} {
+						if p := manager.peers.Peer(fmt.Sprintf("%x", id[:8])); p != nil {
+							return p.Info()
+						}
+						return nil
+					},
+				})
+			}
+		}
 	}
 
 	if len(manager.SubProtocols) == 0 {
@@ -248,11 +301,19 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		// sync is requested. The downloader is responsible for deallocating the state
 
 		// bloom when it's done.
+		// Note: we don't enable it if snap-sync is performed, since it's very heavy
+		// and the heal-portion of the snap sync is much lighter than fast. What we particularly
+		// want to avoid, is a 90%-finished (but restarted) snap-sync to begin
+		// indexing the entire trie
 		var stateBloom *statedb.SyncBloom
-		if atomic.LoadUint32(&manager.fastSync) == 1 {
+		if atomic.LoadUint32(&manager.fastSync) == 1 && atomic.LoadUint32(&manager.snapSync) == 0 {
 			stateBloom = statedb.NewSyncBloom(uint64(cacheLimit), chainDB.GetStateTrieDB())
 		}
-		manager.downloader = downloader.New(mode, chainDB, stateBloom, manager.eventMux, blockchain, nil, manager.removePeer)
+		var proposerPolicy uint64
+		if config.Istanbul != nil {
+			proposerPolicy = config.Istanbul.ProposerPolicy
+		}
+		manager.downloader = downloader.New(mode, chainDB, stateBloom, manager.eventMux, blockchain, nil, manager.removePeer, proposerPolicy)
 	}
 
 	// Create and set fetcher
@@ -267,7 +328,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		}
 		inserter := func(blocks types.Blocks) (int, error) {
 			// If fast sync is running, deny importing weird blocks
-			if atomic.LoadUint32(&manager.fastSync) == 1 {
+			if atomic.LoadUint32(&manager.fastSync) == 1 || atomic.LoadUint32(&manager.snapSync) == 1 {
 				logger.Warn("Discarded bad propagated block", "number", blocks[0].Number(), "hash", blocks[0].Hash())
 				return 0, nil
 			}
@@ -307,6 +368,9 @@ func (pm *ProtocolManager) removePeer(id string) {
 		return
 	}
 	logger.Debug("Removing Klaytn peer", "peer", id)
+	if peer.ExistSnapExtension() {
+		pm.downloader.GetSnapSyncer().Unregister(id)
+	}
 
 	// Unregister the peer from the downloader and peer set
 	pm.downloader.UnregisterPeer(id)
@@ -400,14 +464,37 @@ func (pm *ProtocolManager) newPeerWithRWs(pv int, p *p2p.Peer, rws []p2p.MsgRead
 	return newPeerWithRWs(pv, p, meteredRWs)
 }
 
+func (pm *ProtocolManager) handleSnapPeer(peer *snap.Peer) error {
+	pm.peerWg.Add(1)
+	defer pm.peerWg.Done()
+
+	if err := pm.peers.RegisterSnapExtension(peer); err != nil {
+		peer.Log().Warn("Snapshot extension registration failed", "err", err)
+		return err
+	}
+
+	return snap.Handle(pm.blockchain, pm.downloader, peer)
+}
+
 // handle is the callback invoked to manage the life cycle of a Klaytn peer. When
 // this function terminates, the peer is disconnected.
 func (pm *ProtocolManager) handle(p Peer) error {
+	// If the peer has a `snap` extension, wait for it to connect so we can have
+	// a uniform initialization/teardown mechanism
+	snap, err := pm.peers.WaitSnapExtension(p)
+	if err != nil {
+		p.GetP2PPeer().Log().Error("Snapshot extension barrier failed", "err", err)
+		return err
+	}
+
 	// Ignore maxPeers if this is a trusted peer
 	if pm.peers.Len() >= pm.maxPeers && !p.GetP2PPeer().Info().Networks[p2p.ConnDefault].Trusted {
 		return p2p.DiscTooManyPeers
 	}
 	p.GetP2PPeer().Log().Debug("Klaytn peer connected", "name", p.GetP2PPeer().Name())
+
+	pm.peerWg.Add(1)
+	defer pm.peerWg.Done()
 
 	// Execute the handshake
 	var (
@@ -418,17 +505,34 @@ func (pm *ProtocolManager) handle(p Peer) error {
 		td      = pm.blockchain.GetTd(hash, number)
 	)
 
-	err := p.Handshake(pm.networkId, pm.getChainID(), td, hash, genesis.Hash())
-	if err != nil {
+	if err := p.Handshake(pm.networkId, pm.getChainID(), td, hash, genesis.Hash()); err != nil {
 		p.GetP2PPeer().Log().Debug("Klaytn peer handshake failed", "err", err)
 		return err
 	}
+	reject := false
+	if atomic.LoadUint32(&pm.snapSync) == 1 {
+		if snap == nil {
+			// If we are running snap-sync, we want to reserve roughly half the peer
+			// slots for peers supporting the snap protocol.
+			// The logic here is; we only allow up to ExtraNonSnapPeers more non-snap peers than snap-peers.
+			if all, snp := pm.peers.Len(), pm.peers.SnapLen(); all-snp > snp+ExtraNonSnapPeers {
+				reject = true
+			}
+		}
+	}
+	// Ignore maxPeers if this is a trusted peer
+	if p.GetP2PPeer().Info().Networks[p2p.ConnDefault].Trusted {
+		if reject || pm.peers.Len() >= pm.maxPeers {
+			return p2p.DiscTooManyPeers
+		}
+	}
+
 	if rw, ok := p.GetRW().(*meteredMsgReadWriter); ok {
 		rw.Init(p.GetVersion())
 	}
 
 	// Register the peer locally
-	if err := pm.peers.Register(p); err != nil {
+	if err := pm.peers.Register(p, snap); err != nil {
 		// if starting node with unlock account, can't register peer until finish unlock
 		p.GetP2PPeer().Log().Info("Klaytn peer registration failed", "err", err)
 		return err
@@ -439,6 +543,13 @@ func (pm *ProtocolManager) handle(p Peer) error {
 	if err := pm.downloader.RegisterPeer(p.GetID(), p.GetVersion(), p); err != nil {
 		return err
 	}
+	if snap != nil {
+		if err := pm.downloader.GetSnapSyncer().Register(snap); err != nil {
+			p.GetP2PPeer().Log().Info("Failed to register peer in snap syncer", "err", err)
+			return err
+		}
+	}
+
 	// Propagate existing transactions. new transactions appearing
 	// after this will be sent via broadcasts.
 	pm.syncTransactions(p)
@@ -477,7 +588,7 @@ func (pm *ProtocolManager) handle(p Peer) error {
 			return err
 		case messageChannel <- msg:
 		}
-		//go pm.handleMsg(p, addr, msg)
+		// go pm.handleMsg(p, addr, msg)
 
 		//if err := pm.handleMsg(p); err != nil {
 		//	p.Log().Debug("Klaytn message handling failed", "err", err)
@@ -605,6 +716,16 @@ func (pm *ProtocolManager) handleMsg(p Peer, addr common.Address, msg p2p.Msg) e
 
 	case p.GetVersion() >= klay63 && msg.Code == ReceiptsMsg:
 		if err := handleReceiptsMsg(pm, p, msg); err != nil {
+			return err
+		}
+
+	case p.GetVersion() >= klay65 && msg.Code == StakingInfoRequestMsg:
+		if err := handleStakingInfoRequestMsg(pm, p, msg); err != nil {
+			return err
+		}
+
+	case p.GetVersion() >= klay65 && msg.Code == StakingInfoMsg:
+		if err := handleStakingInfoMsg(pm, p, msg); err != nil {
 			return err
 		}
 
@@ -826,7 +947,13 @@ func handleNodeDataRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
 		// Retrieve the requested state entry, stopping if enough was found
-		if entry, err := pm.blockchain.TrieNode(hash); err == nil {
+		// TODO-Klaytn-Snapsync now the code and trienode is mixed in the protocol level, separate these two types.
+		entry, err := pm.blockchain.TrieNode(hash)
+		if len(entry) == 0 || err != nil {
+			// Read the contract code with prefix only to save unnecessary lookups.
+			entry, err = pm.blockchain.ContractCodeWithPrefix(hash)
+		}
+		if err == nil && len(entry) > 0 {
 			data = append(data, entry)
 			bytes += len(entry)
 		}
@@ -896,6 +1023,71 @@ func handleReceiptsMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	// Deliver all to the downloader
 	if err := pm.downloader.DeliverReceipts(p.GetID(), receipts); err != nil {
 		logger.Debug("Failed to deliver receipts", "err", err)
+	}
+	return nil
+}
+
+// handleStakingInfoRequestMsg handles staking information request message.
+func handleStakingInfoRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
+	if pm.chainconfig.Istanbul == nil || pm.chainconfig.Istanbul.ProposerPolicy != uint64(istanbul.WeightedRandom) {
+		return errResp(ErrUnsupportedEnginePolicy, "the engine is not istanbul or the policy is not weighted random")
+	}
+
+	// Decode the retrieval message
+	msgStream := rlp.NewStream(msg.Payload, uint64(msg.Size))
+	if _, err := msgStream.List(); err != nil {
+		return err
+	}
+	// Gather state data until the fetch or network limits is reached
+	var (
+		hash         common.Hash
+		bytes        int
+		stakingInfos []rlp.RawValue
+	)
+	for bytes < softResponseLimit && len(stakingInfos) < downloader.MaxStakingInfoFetch {
+		// Retrieve the hash of the next block
+		if err := msgStream.Decode(&hash); err == rlp.EOL {
+			break
+		} else if err != nil {
+			return errResp(ErrDecode, "msg %v: %v", msg, err)
+		}
+
+		// Retrieve the requested block's staking information, skipping if unknown to us
+		header := pm.blockchain.GetHeaderByHash(hash)
+		if header == nil {
+			logger.Error("Failed to get header", "hash", hash)
+			continue
+		}
+		result := reward.GetStakingInfoOnStakingBlock(header.Number.Uint64())
+		if result == nil {
+			logger.Error("Failed to get staking information on a specific block", "number", header.Number.Uint64(), "hash", hash)
+			continue
+		}
+		// If known, encode and queue for response packet
+		if encoded, err := rlp.EncodeToBytes(result); err != nil {
+			logger.Error("Failed to encode staking info", "err", err)
+		} else {
+			stakingInfos = append(stakingInfos, encoded)
+			bytes += len(encoded)
+		}
+	}
+	return p.SendStakingInfoRLP(stakingInfos)
+}
+
+// handleStakingInfoMsg handles staking information response message.
+func handleStakingInfoMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
+	if pm.chainconfig.Istanbul == nil || pm.chainconfig.Istanbul.ProposerPolicy != uint64(istanbul.WeightedRandom) {
+		return errResp(ErrUnsupportedEnginePolicy, "the engine is not istanbul or the policy is not weighted random")
+	}
+
+	// A batch of stakingInfos arrived to one of our previous requests
+	var stakingInfos []*reward.StakingInfo
+	if err := msg.Decode(&stakingInfos); err != nil {
+		return errResp(ErrDecode, "msg %v: %v", msg, err)
+	}
+	// Deliver all to the downloader
+	if err := pm.downloader.DeliverStakingInfos(p.GetID(), stakingInfos); err != nil {
+		logger.Debug("Failed to deliver staking information", "err", err)
 	}
 	return nil
 }
@@ -1085,7 +1277,7 @@ func (pm *ProtocolManager) BroadcastBlock(block *types.Block) {
 		return
 	}
 	// TODO-Klaytn only send all validators + sub(peer) except subset for this block
-	//transfer := peers[:int(math.Sqrt(float64(len(peers))))]
+	// transfer := peers[:int(math.Sqrt(float64(len(peers))))]
 
 	// Calculate the TD of the block (it's not imported yet, so block.Td is not valid)
 	td := new(big.Int).Add(block.BlockScore(), pm.blockchain.GetTd(block.ParentHash(), block.NumberU64()-1))
@@ -1104,7 +1296,7 @@ func (pm *ProtocolManager) BroadcastBlockHash(block *types.Block) {
 	// Otherwise if the block is indeed in out own chain, announce it
 	peersWithoutBlock := pm.peers.PeersWithoutBlock(block.Hash())
 	for _, peer := range peersWithoutBlock {
-		//peer.SendNewBlockHashes([]common.Hash{hash}, []uint64{block.NumberU64()})
+		// peer.SendNewBlockHashes([]common.Hash{hash}, []uint64{block.NumberU64()})
 		peer.AsyncSendNewBlockHash(block)
 	}
 	logger.Trace("Announced block", "hash", block.Hash(),
@@ -1117,8 +1309,8 @@ func (pm *ProtocolManager) BroadcastTxs(txs types.Transactions) {
 	// This function calls sendTransaction() to broadcast the transactions for each peer.
 	// In that case, transactions are sorted for each peer in sendTransaction().
 	// Therefore, it prevents sorting transactions by each peer.
-	if !sort.IsSorted(types.TxByPriceAndTime(txs)) {
-		sort.Sort(types.TxByPriceAndTime(txs))
+	if !sort.IsSorted(types.TxByTime(txs)) {
+		sort.Sort(types.TxByTime(txs))
 	}
 
 	switch pm.nodetype {
@@ -1143,7 +1335,7 @@ func (pm *ProtocolManager) broadcastTxsFromCN(txs types.Transactions) {
 		}
 
 		// TODO-Klaytn Code Check
-		//peers = peers[:int(math.Sqrt(float64(len(peers))))]
+		// peers = peers[:int(math.Sqrt(float64(len(peers))))]
 		half := (len(peers) / 2) + 2
 		peers = samplingPeers(peers, half)
 		for _, peer := range peers {
@@ -1155,7 +1347,7 @@ func (pm *ProtocolManager) broadcastTxsFromCN(txs types.Transactions) {
 	propTxPeersGauge.Update(int64(len(cnPeersWithoutTxs)))
 	// FIXME include this again: peers = peers[:int(math.Sqrt(float64(len(peers))))]
 	for peer, txs2 := range cnPeersWithoutTxs {
-		//peer.SendTransactions(txs)
+		// peer.SendTransactions(txs)
 		peer.AsyncSendTransactions(txs2)
 	}
 }
@@ -1206,8 +1398,8 @@ func (pm *ProtocolManager) ReBroadcastTxs(txs types.Transactions) {
 	// This function calls sendTransaction() to broadcast the transactions for each peer.
 	// In that case, transactions are sorted for each peer in sendTransaction().
 	// Therefore, it prevents sorting transactions by each peer.
-	if !sort.IsSorted(types.TxByPriceAndTime(txs)) {
-		sort.Sort(types.TxByPriceAndTime(txs))
+	if !sort.IsSorted(types.TxByTime(txs)) {
+		sort.Sort(types.TxByTime(txs))
 	}
 
 	peersWithoutTxs := make(map[Peer]types.Transactions)

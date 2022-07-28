@@ -233,7 +233,11 @@ func RPCMarshalHeader(head *types.Header, isEnabledEthTxTypeFork bool) map[strin
 	}
 
 	if isEnabledEthTxTypeFork {
-		result["baseFeePerGas"] = (*hexutil.Big)(new(big.Int).SetUint64(params.BaseFee))
+		if head.BaseFee == nil {
+			result["baseFeePerGas"] = (*hexutil.Big)(new(big.Int).SetUint64(params.ZeroBaseFee))
+		} else {
+			result["baseFeePerGas"] = (*hexutil.Big)(head.BaseFee)
+		}
 	}
 
 	return result
@@ -288,7 +292,6 @@ func (api *PublicFilterAPI) Logs(ctx context.Context, crit FilterCriteria) (*rpc
 	}
 
 	go func() {
-
 		for {
 			select {
 			case logs := <-matchedLogs:

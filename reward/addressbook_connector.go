@@ -40,9 +40,9 @@ const (
 	addressTypeKIRAddr
 )
 
-var (
-	errAddressBookIncomplete = errors.New("incomplete node information from AddressBook")
-)
+var errAddressBookIncomplete = errors.New("incomplete node information from AddressBook")
+
+var addressBookContractAddress = contract.AddressBookContractAddress
 
 type addressBookConnector struct {
 	bc              blockChain
@@ -57,7 +57,7 @@ func newAddressBookConnector(bc blockChain, gh governanceHelper) *addressBookCon
 		bc:              bc,
 		gh:              gh,
 		abi:             contract.AddressBookABI,
-		contractAddress: common.HexToAddress(contract.AddressBookContractAddress),
+		contractAddress: common.HexToAddress(addressBookContractAddress),
 	}
 }
 
@@ -80,8 +80,17 @@ func (ac *addressBookConnector) makeMsgToAddressBook(r params.Rules) (*types.Tra
 
 	// Create new call message
 	// TODO-Klaytn-Issue1166 Decide who will be sender(i.e. from)
-	msg := types.NewMessage(common.Address{}, &ac.contractAddress, 0, big.NewInt(0), 10000000, big.NewInt(0), data, false, intrinsicGas)
-
+	var (
+		from       = common.Address{}
+		to         = &ac.contractAddress
+		nonce      = uint64(0)
+		amount     = big.NewInt(0)
+		gasLimit   = uint64(10000000)
+		gasPrice   = big.NewInt(0)
+		checkNonce = false
+	)
+	msg := types.NewMessage(from, to, nonce, amount, gasLimit, gasPrice,
+		data, checkNonce, intrinsicGas)
 	return msg, nil
 }
 
@@ -180,6 +189,10 @@ func (ac *addressBookConnector) getStakingInfoFromAddressBook(blockNum uint64) (
 
 	// Create a new context to be used in the EVM environment
 	context := blockchain.NewEVMContext(msg, intervalBlock.Header(), ac.bc, nil)
+	// EVM demands the sender to have enough KLAY balance (gasPrice * gasLimit) in buyGas()
+	// After KIP-71, gasPrice is baseFee (=nonzero), regardless of the msg.gasPrice (=zero)
+	// But our sender (0x0) won't have enough balance. Instead we override gasPrice = 0 here
+	context.GasPrice = big.NewInt(0)
 	evm := vm.NewEVM(context, statedb, ac.bc.Config(), &vm.Config{})
 
 	res, gas, kerr := blockchain.ApplyMessage(evm, msg)
@@ -201,4 +214,9 @@ func (ac *addressBookConnector) getStakingInfoFromAddressBook(blockNum uint64) (
 	}
 
 	return newStakingInfo(ac.bc, ac.gh, blockNum, nodeAddrs, stakingAddrs, rewardAddrs, KIRAddr, PoCAddr)
+}
+
+// Only for testing purpose.
+func SetTestAddressBookAddress(addr common.Address) {
+	addressBookContractAddress = addr.Hex()
 }

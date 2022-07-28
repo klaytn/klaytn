@@ -38,6 +38,7 @@ import (
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/node/cn/mocks"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/reward"
 	workmocks "github.com/klaytn/klaytn/work/mocks"
 	"github.com/stretchr/testify/assert"
 )
@@ -48,15 +49,19 @@ var td1 = big.NewInt(123)
 
 const numVals = 6
 
-var addrs []common.Address
-var keys []*ecdsa.PrivateKey
-var nodeids []discover.NodeID
-var p2pPeers []*p2p.Peer
-var blocks []*types.Block
-var hashes []common.Hash
+var (
+	addrs    []common.Address
+	keys     []*ecdsa.PrivateKey
+	nodeids  []discover.NodeID
+	p2pPeers []*p2p.Peer
+	blocks   []*types.Block
+	hashes   []common.Hash
+)
 
-var tx1 *types.Transaction
-var txs types.Transactions
+var (
+	tx1 *types.Transaction
+	txs types.Transactions
+)
 
 var hash1 common.Hash
 
@@ -140,8 +145,18 @@ func newReceipt(gasUsed int) *types.Receipt {
 	return rct
 }
 
+func newStakingInfo(blockNumber uint64) *reward.StakingInfo {
+	return &reward.StakingInfo{
+		BlockNum:              blockNumber,
+		CouncilNodeAddrs:      []common.Address{{0x1}, {0x1}},
+		CouncilStakingAddrs:   []common.Address{{0x2}, {0x2}},
+		CouncilRewardAddrs:    []common.Address{{0x3}, {0x3}},
+		CouncilStakingAmounts: []uint64{2, 5, 6},
+	}
+}
+
 func TestNewProtocolManager(t *testing.T) {
-	//1. If consensus.Engine returns an empty Protocol, NewProtocolManager throws an error.
+	// 1. If consensus.Engine returns an empty Protocol, NewProtocolManager throws an error.
 	{
 		mockCtrl, mockEngine, mockBlockChain, mockTxPool := newMocks(t)
 		defer mockCtrl.Finish()
@@ -232,6 +247,8 @@ func TestProtocolManager_removePeer(t *testing.T) {
 		pm.downloader = mockDownloader
 
 		// Return
+		mockPeer.EXPECT().ExistSnapExtension().Return(false).Times(1)
+
 		mockPeerSet.EXPECT().Unregister(peerID).Return(expectedErr).Times(1)
 
 		mockPeer.EXPECT().GetP2PPeer().Return(p2pPeers[0]).Times(1)
@@ -256,6 +273,8 @@ func TestProtocolManager_removePeer(t *testing.T) {
 		pm.downloader = mockDownloader
 
 		// Return
+		mockPeer.EXPECT().ExistSnapExtension().Return(false).Times(1)
+
 		mockPeerSet.EXPECT().Unregister(peerID).Return(nil).Times(1)
 
 		mockPeer.EXPECT().GetP2PPeer().Return(p2pPeers[0]).Times(1)
@@ -265,7 +284,6 @@ func TestProtocolManager_removePeer(t *testing.T) {
 
 		mockCtrl.Finish()
 	}
-
 }
 
 func TestProtocolManager_getChainID(t *testing.T) {
@@ -1036,7 +1054,7 @@ func TestBroadcastTxsSortedByTime(t *testing.T) {
 	copy(sortedTxs, txs)
 
 	// Sort transaction by time.
-	sort.Sort(types.TxByPriceAndTime(sortedTxs))
+	sort.Sort(types.TxByTime(sortedTxs))
 
 	pm := &ProtocolManager{}
 	pm.nodetype = common.ENDPOINTNODE
@@ -1045,7 +1063,7 @@ func TestBroadcastTxsSortedByTime(t *testing.T) {
 	basePeer, _, oppositePipe := newBasePeer()
 
 	pm.peers = peers
-	pm.peers.Register(basePeer)
+	pm.peers.Register(basePeer, nil)
 
 	go func(t *testing.T) {
 		pm.BroadcastTxs(txs)
@@ -1069,7 +1087,6 @@ func TestBroadcastTxsSortedByTime(t *testing.T) {
 		assert.Equal(t, sortedTxs[i].Hash(), tx.Hash())
 		assert.False(t, sortedTxs[i].Time().Equal(tx.Time()))
 	}
-
 }
 
 func TestReBroadcastTxsSortedByTime(t *testing.T) {
@@ -1098,7 +1115,7 @@ func TestReBroadcastTxsSortedByTime(t *testing.T) {
 	copy(sortedTxs, txs)
 
 	// Sort transaction by time.
-	sort.Sort(types.TxByPriceAndTime(sortedTxs))
+	sort.Sort(types.TxByTime(sortedTxs))
 
 	pm := &ProtocolManager{}
 	pm.nodetype = common.ENDPOINTNODE
@@ -1107,7 +1124,7 @@ func TestReBroadcastTxsSortedByTime(t *testing.T) {
 	basePeer, _, oppositePipe := newBasePeer()
 
 	pm.peers = peers
-	pm.peers.Register(basePeer)
+	pm.peers.Register(basePeer, nil)
 
 	go func(t *testing.T) {
 		pm.ReBroadcastTxs(txs)
@@ -1130,7 +1147,6 @@ func TestReBroadcastTxsSortedByTime(t *testing.T) {
 		assert.Equal(t, sortedTxs[i].Hash(), tx.Hash())
 		assert.False(t, sortedTxs[i].Time().Equal(tx.Time()))
 	}
-
 }
 
 func contains(addrs []common.Address, item common.Address) bool {

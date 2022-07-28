@@ -63,7 +63,6 @@ type HeaderChain struct {
 //  procInterrupt points to the parent's interrupt semaphore
 //  wg points to the parent's shutdown wait group
 func NewHeaderChain(chainDB database.DBManager, config *params.ChainConfig, engine consensus.Engine, procInterrupt func() bool) (*HeaderChain, error) {
-
 	// Seed a fast but crypto originating random generator
 	seed, err := crand.Int(crand.Reader, big.NewInt(math.MaxInt64))
 	if err != nil {
@@ -202,7 +201,15 @@ func (hc *HeaderChain) ValidateHeaderChain(chain []*types.Header, checkFreq int)
 	}
 	seals[len(seals)-1] = true // Last should always be verified to avoid junk
 
-	abort, results := hc.engine.VerifyHeaders(hc, chain, seals)
+	var (
+		abort   chan<- struct{}
+		results <-chan error
+	)
+	if hc.engine.CanVerifyHeadersConcurrently() {
+		abort, results = hc.engine.VerifyHeaders(hc, chain, seals)
+	} else {
+		abort, results = hc.engine.PreprocessHeaderVerification(chain)
+	}
 	defer close(abort)
 
 	// Iterate over the headers and ensure they all check out
@@ -247,6 +254,11 @@ func (hc *HeaderChain) InsertHeaderChain(chain []*types.Header, writeHeader WhCa
 		if hc.HasHeader(header.Hash(), header.Number.Uint64()) {
 			stats.ignored++
 			continue
+		}
+		if !hc.engine.CanVerifyHeadersConcurrently() {
+			if err := hc.engine.VerifyHeader(hc, header, true); err != nil {
+				return i, err
+			}
 		}
 		if err := writeHeader(header); err != nil {
 			return i, err
@@ -364,9 +376,7 @@ type (
 )
 
 func (hc *HeaderChain) SetHead(head uint64, updateFn UpdateHeadBlocksCallback, delFn DeleteBlockContentCallback) error {
-	var (
-		parentHash common.Hash
-	)
+	var parentHash common.Hash
 	for hdr := hc.CurrentHeader(); hdr != nil && hdr.Number.Uint64() > head; hdr = hc.CurrentHeader() {
 		hash, num := hdr.Hash(), hdr.Number.Uint64()
 
@@ -397,7 +407,7 @@ func (hc *HeaderChain) SetHead(head uint64, updateFn UpdateHeadBlocksCallback, d
 			delFn(hash, num)
 		}
 
-		//Rewind header chain to new head.
+		// Rewind header chain to new head.
 		hc.chainDB.DeleteHeader(hash, num)
 		hc.chainDB.DeleteTd(hash, num)
 		hc.chainDB.DeleteCanonicalHash(num)

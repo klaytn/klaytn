@@ -181,6 +181,7 @@ func (gxhash *Gxhash) verifyHeader(chain consensus.ChainReader, header, parent *
 	if uint64(len(header.Extra)) > params.MaximumExtraDataSize {
 		return fmt.Errorf("extra-data too long: %d > %d", len(header.Extra), params.MaximumExtraDataSize)
 	}
+
 	// Verify the header's timestamp
 	if header.Time.Cmp(big.NewInt(time.Now().Add(allowedFutureBlockTime).Unix())) > 0 {
 		return consensus.ErrFutureBlock

@@ -22,9 +22,11 @@ import (
 	"gopkg.in/urfave/cli.v1"
 )
 
-var fundingAddr string
-var dockerImageId string
-var outputPath string
+var (
+	fundingAddr   string
+	dockerImageId string
+	outputPath    string
+)
 
 var (
 	cypressTestFlag = cli.BoolFlag{
@@ -294,6 +296,36 @@ var (
 		Value: "2000000",
 	}
 
+	magmaLowerBoundBaseFeeFlag = cli.Uint64Flag{
+		Name:  "lower-bound-base-fee",
+		Usage: "lower bound base fee flag",
+		Value: params.DefaultLowerBoundBaseFee,
+	}
+
+	magmaUpperBoundBaseFeeFlag = cli.Uint64Flag{
+		Name:  "upper-bound-base-fee",
+		Usage: "upper bound base fee flag",
+		Value: params.DefaultUpperBoundBaseFee,
+	}
+
+	magmaGasTarget = cli.Uint64Flag{
+		Name:  "gas-target",
+		Usage: "gas target flag",
+		Value: params.DefaultGasTarget,
+	}
+
+	magmaMaxBlockGasUsedForBaseFee = cli.Uint64Flag{
+		Name:  "block-gas-limit",
+		Usage: "block gas limit flag",
+		Value: params.DefaultMaxBlockGasUsedForBaseFee,
+	}
+
+	magmaBaseFeeDenominator = cli.Uint64Flag{
+		Name:  "base-fee-denominator",
+		Usage: "base fee denominator flag",
+		Value: params.DefaultBaseFeeDenominator,
+	}
+
 	istEpochFlag = cli.Uint64Flag{
 		Name:  "ist-epoch",
 		Usage: "governance epoch [default: 604800]",
@@ -318,7 +350,7 @@ var (
 		Value: params.DefaultEpoch,
 	}
 
-	cliquePeriodFlag = cli.IntFlag{
+	cliquePeriodFlag = cli.Uint64Flag{
 		Name:  "clique-period",
 		Usage: "clique period",
 		Value: params.DefaultPeriod,
@@ -339,6 +371,12 @@ var (
 	ethTxTypeCompatibleBlockNumberFlag = cli.Int64Flag{
 		Name:  "eth-tx-type-compatible-blocknumber",
 		Usage: "ethTxTypeCompatible blockNumber",
+		Value: 0,
+	}
+
+	magmaCompatibleBlockNumberFlag = cli.Int64Flag{
+		Name:  "magma-compatible-blocknumber",
+		Usage: "magmaCompatible blockNumber",
 		Value: 0,
 	}
 )

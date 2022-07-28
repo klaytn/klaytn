@@ -70,6 +70,14 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 	if hash := types.DeriveSha(block.Transactions()); hash != header.TxHash {
 		return fmt.Errorf("transaction root hash mismatch: have %x, want %x", hash, header.TxHash)
 	}
+	baseFee := block.Header().BaseFee
+	if baseFee != nil {
+		for _, tx := range block.Transactions() {
+			if baseFee.Cmp(tx.GasPrice()) > 0 {
+				return fmt.Errorf("Invalid GasPrice: txHash %x, GasPrice %d, BaseFee %d", tx.Hash(), tx.GasPrice(), baseFee)
+			}
+		}
+	}
 	return nil
 }
 

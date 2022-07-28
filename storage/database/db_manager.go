@@ -119,6 +119,11 @@ type DBManager interface {
 	WriteBlock(block *types.Block)
 	DeleteBlock(hash common.Hash, number uint64)
 
+	ReadBadBlock(hash common.Hash) *types.Block
+	WriteBadBlock(block *types.Block)
+	ReadAllBadBlocks() ([]*types.Block, error)
+	DeleteBadBlocks()
+
 	FindCommonAncestor(a, b *types.Header) *types.Header
 
 	ReadIstanbulSnapshot(hash common.Hash) ([]byte, error)
@@ -126,11 +131,19 @@ type DBManager interface {
 
 	WriteMerkleProof(key, value []byte)
 
+	// Bytecodes related operations
+	ReadCode(hash common.Hash) []byte
+	ReadCodeWithPrefix(hash common.Hash) []byte
+	WriteCode(hash common.Hash, code []byte)
+	DeleteCode(hash common.Hash)
+	HasCode(hash common.Hash) bool
+
 	// State Trie Database related operations
 	ReadCachedTrieNode(hash common.Hash) ([]byte, error)
 	ReadCachedTrieNodePreimage(secureKey []byte) ([]byte, error)
 	ReadStateTrieNode(key []byte) ([]byte, error)
 	HasStateTrieNode(key []byte) (bool, error)
+	HasCodeWithPrefix(hash common.Hash) bool
 	ReadPreimage(hash common.Hash) []byte
 
 	// Read StateTrie from new DB
@@ -138,6 +151,7 @@ type DBManager interface {
 	ReadCachedTrieNodePreimageFromNew(secureKey []byte) ([]byte, error)
 	ReadStateTrieNodeFromNew(key []byte) ([]byte, error)
 	HasStateTrieNodeFromNew(key []byte) (bool, error)
+	HasCodeWithPrefixFromNew(hash common.Hash) bool
 	ReadPreimageFromNew(hash common.Hash) []byte
 
 	// Read StateTrie from old DB
@@ -145,6 +159,7 @@ type DBManager interface {
 	ReadCachedTrieNodePreimageFromOld(secureKey []byte) ([]byte, error)
 	ReadStateTrieNodeFromOld(key []byte) ([]byte, error)
 	HasStateTrieNodeFromOld(key []byte) (bool, error)
+	HasCodeWithPrefixFromOld(hash common.Hash) bool
 	ReadPreimageFromOld(hash common.Hash) []byte
 
 	WritePreimages(number uint64, preimages map[common.Hash][]byte)
@@ -195,6 +210,10 @@ type DBManager interface {
 	ReadSnapshotRecoveryNumber() *uint64
 	WriteSnapshotRecoveryNumber(number uint64)
 	DeleteSnapshotRecoveryNumber()
+
+	ReadSnapshotSyncStatus() []byte
+	WriteSnapshotSyncStatus(status []byte)
+	DeleteSnapshotSyncStatus()
 
 	ReadSnapshotRoot() common.Hash
 	WriteSnapshotRoot(root common.Hash)
@@ -253,7 +272,7 @@ type DBManager interface {
 	ReadGovernanceAtNumber(num uint64, epoch uint64) (uint64, map[string]interface{}, error)
 	WriteGovernanceState(b []byte) error
 	ReadGovernanceState() ([]byte, error)
-	//TODO-Klaytn implement governance DB deletion methods.
+	// TODO-Klaytn implement governance DB deletion methods.
 
 	// StakingInfo related functions
 	ReadStakingInfo(blockNum uint64) ([]byte, error)
@@ -287,8 +306,10 @@ func (et DBEntryType) String() string {
 	return dbBaseDirs[et]
 }
 
-const notInMigrationFlag = 0
-const inMigrationFlag = 1
+const (
+	notInMigrationFlag = 0
+	inMigrationFlag    = 1
+)
 
 var dbBaseDirs = [databaseEntryTypeSize]string{
 	"misc", // do not move misc
@@ -1436,6 +1457,110 @@ func (dbm *databaseManager) DeleteBlock(hash common.Hash, number uint64) {
 	dbm.cm.deleteBlockCache(hash)
 }
 
+const badBlockToKeep = 100
+
+type badBlock struct {
+	Header *types.Header
+	Body   *types.Body
+}
+
+// badBlockList implements the sort interface to allow sorting a list of
+// bad blocks by their number in the reverse order.
+type badBlockList []*badBlock
+
+func (s badBlockList) Len() int { return len(s) }
+func (s badBlockList) Less(i, j int) bool {
+	return s[i].Header.Number.Uint64() < s[j].Header.Number.Uint64()
+}
+func (s badBlockList) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+
+// ReadBadBlock retrieves the bad block with the corresponding block hash.
+func (dbm *databaseManager) ReadBadBlock(hash common.Hash) *types.Block {
+	db := dbm.getDatabase(MiscDB)
+	blob, err := db.Get(badBlockKey)
+	if err != nil {
+		return nil
+	}
+	var badBlocks badBlockList
+	if err := rlp.DecodeBytes(blob, &badBlocks); err != nil {
+		return nil
+	}
+	for _, bad := range badBlocks {
+		if bad.Header.Hash() == hash {
+			return types.NewBlockWithHeader(bad.Header).WithBody(bad.Body.Transactions)
+		}
+	}
+	return nil
+}
+
+// ReadAllBadBlocks retrieves all the bad blocks in the database.
+// All returned blocks are sorted in reverse order by number.
+func (dbm *databaseManager) ReadAllBadBlocks() ([]*types.Block, error) {
+	var badBlocks badBlockList
+	db := dbm.getDatabase(MiscDB)
+	blob, err := db.Get(badBlockKey)
+	if err != nil {
+		return nil, err
+	}
+	if err := rlp.DecodeBytes(blob, &badBlocks); err != nil {
+		return nil, err
+	}
+	blocks := make([]*types.Block, len(badBlocks))
+	for i, bad := range badBlocks {
+		blocks[i] = types.NewBlockWithHeader(bad.Header).WithBody(bad.Body.Transactions)
+	}
+	return blocks, nil
+}
+
+// WriteBadBlock serializes the bad block into the database. If the cumulated
+// bad blocks exceed the capacity, the oldest will be dropped.
+func (dbm *databaseManager) WriteBadBlock(block *types.Block) {
+	db := dbm.getDatabase(MiscDB)
+	blob, err := db.Get(badBlockKey)
+	if err != nil {
+		logger.Warn("Failed to load old bad blocks", "error", err)
+	}
+	var badBlocks badBlockList
+	if len(blob) > 0 {
+		if err := rlp.DecodeBytes(blob, &badBlocks); err != nil {
+			logger.Error("failed to decode old bad blocks")
+			return
+		}
+	}
+
+	for _, badblock := range badBlocks {
+		if badblock.Header.Hash() == block.Hash() && badblock.Header.Number.Uint64() == block.NumberU64() {
+			logger.Info("There is already corresponding badblock in db.", "badblock number", block.NumberU64())
+			return
+		}
+	}
+
+	badBlocks = append(badBlocks, &badBlock{
+		Header: block.Header(),
+		Body:   block.Body(),
+	})
+	sort.Sort(sort.Reverse(badBlocks))
+	if len(badBlocks) > badBlockToKeep {
+		badBlocks = badBlocks[:badBlockToKeep]
+	}
+	data, err := rlp.EncodeToBytes(badBlocks)
+	if err != nil {
+		logger.Crit("Failed to encode bad blocks", "err", err)
+		return
+	}
+	if err := db.Put(badBlockKey, data); err != nil {
+		logger.Crit("Failed to write bad blocks", "err", err)
+		return
+	}
+}
+
+func (dbm *databaseManager) DeleteBadBlocks() {
+	db := dbm.getDatabase(MiscDB)
+	if err := db.Delete(badBlockKey); err != nil {
+		logger.Error("Failed to delete bad blocks", "err", err)
+	}
+}
+
 // Find Common Ancestor operation
 // FindCommonAncestor returns the last common ancestor of two block headers
 func (dbm *databaseManager) FindCommonAncestor(a, b *types.Header) *types.Header {
@@ -1480,6 +1605,77 @@ func (dbm *databaseManager) WriteMerkleProof(key, value []byte) {
 	db := dbm.getDatabase(MiscDB)
 	if err := db.Put(key, value); err != nil {
 		logger.Crit("Failed to write merkle proof", "err", err)
+	}
+}
+
+// ReadCode retrieves the contract code of the provided code hash.
+func (dbm *databaseManager) ReadCode(hash common.Hash) []byte {
+	// Try with the legacy code scheme first, if not then try with current
+	// scheme. Since most of the code will be found with legacy scheme.
+	//
+	// TODO-Klaytn-Snapsync change the order when we forcibly upgrade the code scheme with snapshot.
+	db := dbm.getDatabase(StateTrieDB)
+	if data, _ := db.Get(hash[:]); len(data) > 0 {
+		return data
+	}
+
+	return dbm.ReadCodeWithPrefix(hash)
+}
+
+// ReadCodeWithPrefix retrieves the contract code of the provided code hash.
+// The main difference between this function and ReadCode is this function
+// will only check the existence with latest scheme(with prefix).
+func (dbm *databaseManager) ReadCodeWithPrefix(hash common.Hash) []byte {
+	db := dbm.getDatabase(StateTrieDB)
+	data, _ := db.Get(CodeKey(hash))
+	return data
+}
+
+// HasCode checks if the contract code corresponding to the
+// provided code hash is present in the db.
+func (dbm *databaseManager) HasCode(hash common.Hash) bool {
+	// Try with the prefixed code scheme first, if not then try with legacy
+	// scheme.
+	//
+	// TODO-Klaytn-Snapsync change the order when we forcibly upgrade the code scheme with snapshot.
+	db := dbm.getDatabase(StateTrieDB)
+	if ok, _ := db.Has(hash.Bytes()); ok {
+		return true
+	}
+	return dbm.HasCodeWithPrefix(hash)
+}
+
+// HasCodeWithPrefix checks if the contract code corresponding to the
+// provided code hash is present in the db. This function will only check
+// presence using the prefix-scheme.
+func (dbm *databaseManager) HasCodeWithPrefix(hash common.Hash) bool {
+	db := dbm.getDatabase(StateTrieDB)
+	ok, _ := db.Has(CodeKey(hash))
+	return ok
+}
+
+// WriteCode writes the provided contract code database.
+func (dbm *databaseManager) WriteCode(hash common.Hash, code []byte) {
+	dbm.lockInMigration.RLock()
+	defer dbm.lockInMigration.RUnlock()
+
+	dbs := make([]Database, 0, 2)
+	if dbm.inMigration {
+		dbs = append(dbs, dbm.getDatabase(StateTrieMigrationDB))
+	}
+	dbs = append(dbs, dbm.getDatabase(StateTrieDB))
+	for _, db := range dbs {
+		if err := db.Put(CodeKey(hash), code); err != nil {
+			logger.Crit("Failed to store contract code", "err", err)
+		}
+	}
+}
+
+// DeleteCode deletes the specified contract code from the database.
+func (dbm *databaseManager) DeleteCode(hash common.Hash) {
+	db := dbm.getDatabase(StateTrieDB)
+	if err := db.Delete(CodeKey(hash)); err != nil {
+		logger.Crit("Failed to delete contract code", "err", err)
 	}
 }
 
@@ -1574,6 +1770,12 @@ func (dbm *databaseManager) HasStateTrieNodeFromNew(key []byte) (bool, error) {
 	return true, nil
 }
 
+func (dbm *databaseManager) HasCodeWithPrefixFromNew(hash common.Hash) bool {
+	db := dbm.GetStateTrieMigrationDB()
+	ok, _ := db.Has(CodeKey(hash))
+	return ok
+}
+
 // ReadPreimage retrieves a single preimage of the provided hash.
 func (dbm *databaseManager) ReadPreimageFromNew(hash common.Hash) []byte {
 	data, _ := dbm.GetStateTrieMigrationDB().Get(preimageKey(hash))
@@ -1603,6 +1805,12 @@ func (dbm *databaseManager) HasStateTrieNodeFromOld(key []byte) (bool, error) {
 		return false, err
 	}
 	return true, nil
+}
+
+func (dbm *databaseManager) HasCodeWithPrefixFromOld(hash common.Hash) bool {
+	db := dbm.getDatabase(StateTrieDB)
+	ok, _ := db.Has(CodeKey(hash))
+	return ok
 }
 
 // ReadPreimage retrieves a single preimage of the provided hash.
@@ -1968,6 +2176,30 @@ func (dbm *databaseManager) DeleteSnapshotRecoveryNumber() {
 	}
 }
 
+// ReadSnapshotSyncStatus retrieves the serialized sync status saved at shutdown.
+func (dbm *databaseManager) ReadSnapshotSyncStatus() []byte {
+	db := dbm.getDatabase(SnapshotDB)
+	data, _ := db.Get(snapshotSyncStatusKey)
+	return data
+}
+
+// WriteSnapshotSyncStatus stores the serialized sync status to save at shutdown.
+func (dbm *databaseManager) WriteSnapshotSyncStatus(status []byte) {
+	db := dbm.getDatabase(SnapshotDB)
+	if err := db.Put(snapshotSyncStatusKey, status); err != nil {
+		logger.Crit("Failed to store snapshot sync status", "err", err)
+	}
+}
+
+// DeleteSnapshotSyncStatus deletes the serialized sync status saved at the last
+// shutdown
+func (dbm *databaseManager) DeleteSnapshotSyncStatus() {
+	db := dbm.getDatabase(SnapshotDB)
+	if err := db.Delete(snapshotSyncStatusKey); err != nil {
+		logger.Crit("Failed to remove snapshot sync status", "err", err)
+	}
+}
+
 // ReadSnapshotRoot retrieves the root of the block whose state is contained in
 // the persisted snapshot.
 func (dbm *databaseManager) ReadSnapshotRoot() common.Hash {
@@ -2320,7 +2552,7 @@ func (dbm *databaseManager) ReadRecentGovernanceIdx(count int) ([]uint64, error)
 
 // ReadGovernanceAtNumber returns the block number and governance information which to be used for the block `num`
 func (dbm *databaseManager) ReadGovernanceAtNumber(num uint64, epoch uint64) (uint64, map[string]interface{}, error) {
-	var minimum = num - (num % epoch)
+	minimum := num - (num % epoch)
 	if minimum >= epoch {
 		minimum -= epoch
 	}
