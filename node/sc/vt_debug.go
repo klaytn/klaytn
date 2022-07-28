@@ -155,7 +155,7 @@ func makeRequestKLAYHandleDebug(bi *BridgeInfo, ev IRequestValueTransferEvent) (
 	isOnChild := bi.onChildChain
 	reqTxHash := ev.GetRaw().TxHash
 	handleInfo := bi.bridgeDB.ReadAllHandleInfo(bi.address, bi.counterpartAddress, reqTxHash)
-	var handleTx types.Transaction
+	var handleTx *types.Transaction
 	if handleInfo != nil {
 		handleTx = handleInfo.HandleTx
 	} else {

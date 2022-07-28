@@ -773,7 +773,7 @@ func TestDBManager_ChildChain(t *testing.T) {
 		handleInfo := HandleInfo{
 			RequestEvent:  reqEvent,
 			RequestTxHash: reqTx.Hash(),
-			HandleTx:      *handleTx,
+			HandleTx:      handleTx,
 		}
 		dbm.WriteAllHandleInfo(bridgeAddr, counterpartBridgeAddr, &handleInfo)
 		retrievedHandleInfo := dbm.ReadAllHandleInfo(bridgeAddr, counterpartBridgeAddr, reqTx.Hash())
@@ -784,7 +784,7 @@ func TestDBManager_ChildChain(t *testing.T) {
 		refundInfo := RefundInfo{
 			RequestEvent:  reqEvent,
 			RequestTxHash: reqTx.Hash(),
-			RefundTx:      *refundTx,
+			RefundTx:      refundTx,
 		}
 		dbm.WriteRefundInfo(bridgeAddr, counterpartBridgeAddr, &refundInfo)
 		retrievedRefundInfo := dbm.ReadRefundInfo(bridgeAddr, counterpartBridgeAddr, reqTx.Hash())

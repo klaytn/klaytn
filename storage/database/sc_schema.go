@@ -31,7 +31,7 @@ type BridgeRequestEvent struct {
 type HandleInfo struct {
 	RequestEvent  BridgeRequestEvent
 	RequestTxHash common.Hash
-	HandleTx      types.Transaction
+	HandleTx      *types.Transaction
 }
 
 type FailedHandleInfo struct {
@@ -42,7 +42,7 @@ type FailedHandleInfo struct {
 type RefundInfo struct {
 	RequestEvent  BridgeRequestEvent
 	RequestTxHash common.Hash
-	RefundTx      types.Transaction
+	RefundTx      *types.Transaction
 }
 
 func NewBridgeRequestEvent(tokenType uint8, from, to, tokenAddr common.Address,
@@ -103,7 +103,7 @@ func makeRPCOutput(ev *BridgeRequestEvent, reqTxHash common.Hash, handleTx *type
 }
 
 func (handleInfo HandleInfo) MakeRPCOutput() map[string]interface{} {
-	return makeRPCOutput(&handleInfo.RequestEvent, handleInfo.RequestTxHash, &handleInfo.HandleTx)
+	return makeRPCOutput(&handleInfo.RequestEvent, handleInfo.RequestTxHash, handleInfo.HandleTx)
 }
 
 func (handleInfo FailedHandleInfo) MakeRPCOutput() map[string]interface{} {
@@ -111,7 +111,7 @@ func (handleInfo FailedHandleInfo) MakeRPCOutput() map[string]interface{} {
 }
 
 func (refundInfo RefundInfo) MakeRPCOutput() map[string]interface{} {
-	return makeRPCOutput(&refundInfo.RequestEvent, refundInfo.RequestTxHash, &refundInfo.RefundTx)
+	return makeRPCOutput(&refundInfo.RequestEvent, refundInfo.RequestTxHash, refundInfo.RefundTx)
 }
 
 // Deprecated

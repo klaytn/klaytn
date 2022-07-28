@@ -152,8 +152,7 @@ func (respKLAYReasoning *ResponseKLAYReasoningVT) DecodeRLP(s *rlp.Stream) error
 
 func NewRequestKLAYReasoningVT(bridgeAddr, counterpartAddr, counterpartOperatorAddr, toAddr common.Address,
 	valueOrTokenId, handleTxCost *big.Int, isChildSent bool,
-	requestTxHash, handleTxHash common.Hash,
-) *RequestVTReasoningWrapper {
+	requestTxHash, handleTxHash common.Hash) *RequestVTReasoningWrapper {
 	return &RequestVTReasoningWrapper{
 		TokenType: KLAY,
 		KLAYReasoning: &RequestKLAYReasoningVT{

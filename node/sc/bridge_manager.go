@@ -198,7 +198,7 @@ func makeHandleInfo(ev IRequestValueTransferEvent, reqTxHash common.Hash, handle
 	return &database.HandleInfo{
 		RequestEvent:  makeDatabaseBridgeRequestEvent(ev),
 		RequestTxHash: reqTxHash,
-		HandleTx:      *handleTx,
+		HandleTx:      handleTx,
 	}
 }
 
@@ -213,7 +213,7 @@ func makeRefundInfo(ev IRequestValueTransferEvent, refundTx *types.Transaction) 
 	return &database.RefundInfo{
 		RequestEvent:  makeDatabaseBridgeRequestEvent(ev),
 		RequestTxHash: ev.GetRaw().TxHash,
-		RefundTx:      *refundTx,
+		RefundTx:      refundTx,
 	}
 }
 
