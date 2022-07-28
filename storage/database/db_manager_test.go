@@ -24,6 +24,7 @@ import (
 	"math/big"
 	"math/rand"
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
@@ -779,6 +780,7 @@ func TestDBManager_ChildChain(t *testing.T) {
 		retrievedHandleInfo := dbm.ReadAllHandleInfo(bridgeAddr, counterpartBridgeAddr, reqTx.Hash())
 		assert.Equal(t, handleInfo.RequestEvent, retrievedHandleInfo.RequestEvent)
 		assert.Equal(t, handleInfo.RequestTxHash, retrievedHandleInfo.RequestTxHash)
+		assert.Equal(t, true, reflect.DeepEqual(handleInfo.HandleTx, handleTx))
 
 		// 4. Write/Read refund info
 		refundInfo := RefundInfo{
@@ -790,6 +792,7 @@ func TestDBManager_ChildChain(t *testing.T) {
 		retrievedRefundInfo := dbm.ReadRefundInfo(bridgeAddr, counterpartBridgeAddr, reqTx.Hash())
 		assert.Equal(t, refundInfo.RequestEvent, retrievedRefundInfo.RequestEvent)
 		assert.Equal(t, refundInfo.RequestTxHash, retrievedRefundInfo.RequestTxHash)
+		assert.Equal(t, true, reflect.DeepEqual(refundInfo.RefundTx, refundTx))
 
 		// 5. Write/Read failed handle info
 		failedHandleInfo := FailedHandleInfo{
