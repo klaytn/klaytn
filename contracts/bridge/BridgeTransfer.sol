@@ -204,7 +204,7 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
         refundValueMap[requestNonce_] = value;
         refundTokenType[requestNonce_] = tokenType;
         refundTimestampMap[requestNonce_] = block.timestamp;
-        amountOfLockedRefundKLAYs += value;
+        amountOfLockedRefundKLAY += value;
     }
 
     // refund refunds the requested amount of KLAY to sender if its corresponding value transfer is failed from the bridge contract of counterpart chain
@@ -229,7 +229,7 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
             delete refundAddrMap[requestNonce_];
             delete refundValueMap[requestNonce_];
             delete refundTimestampMap[requestNonce_];
-            amountOfLockedRefundKLAYs.sub(value);
+            amountOfLockedRefundKLAY.sub(value);
         }
     }
 
@@ -256,7 +256,7 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
         if (!_voteRefund(requestNonce_)) {
             return;
         }
-        amountOfLockedRefundKLAYs = amountOfLockedRefundKLAYs.sub(refundValueMap[requestNonce_]);
+        amountOfLockedRefundKLAY = amountOfLockedRefundKLAY.sub(refundValueMap[requestNonce_]);
         delete refundAddrMap[requestNonce_];
         delete refundValueMap[requestNonce_];
         delete refundTimestampMap[requestNonce_];

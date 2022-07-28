@@ -38,7 +38,7 @@ contract BridgeOperator is Ownable {
     mapping(uint64 => bool) public closedRefundVote; // <nonce, bool>
     mapping(uint64 => bool) public closedWithdrawVote; // <nonce, bool>
 
-    uint256 internal amountOfLockedRefundKLAYs; // amount of locked KLAYs for refund
+    uint256 internal amountOfLockedRefundKLAY; // amount of locked KLAY for refund
     uint64 private withdrawNonce;
 
     uint64 public constant MAX_OPERATOR = 12;
@@ -190,7 +190,7 @@ contract BridgeOperator is Ownable {
         if (!_voteWithdraw(withdrawNonce)) {
             return;
         }
-        uint256 divided = value.sub(amountOfLockedRefundKLAYs) / operatorList.length;
+        uint256 divided = value.sub(amountOfLockedRefundKLAY) / uint256(operatorList.length);
         for (uint i=0; i<operatorList.length; i++) {
             operatorList[i].transfer(divided); 
         }
