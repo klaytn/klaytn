@@ -690,6 +690,7 @@ func (args *CallArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsic
 		gas = globalGasCap
 	}
 
+	// Do not update gasPrice unless any of args.GasPrice and args.MaxFeePerGas is specified.
 	gasPrice := new(big.Int)
 	if baseFee.Cmp(new(big.Int).SetUint64(params.ZeroBaseFee)) == 0 {
 		// If baseFee is zero, then it must be a magma hardfork

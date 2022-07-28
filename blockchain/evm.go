@@ -54,11 +54,12 @@ func NewEVMContext(msg Message, header *types.Header, chain ChainContext, author
 	} else {
 		beneficiary = *author
 	}
-	// before magma hardfork, base fee is 0, effectiveGasPrice is unitPrice
+
 	if header.BaseFee != nil {
 		baseFee = header.BaseFee
 		effectiveGasPrice = header.BaseFee
 	} else {
+		// before magma hardfork, base fee is 0, effectiveGasPrice is unitPrice
 		baseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
 		effectiveGasPrice = msg.GasPrice()
 	}

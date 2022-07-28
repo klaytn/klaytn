@@ -23,15 +23,14 @@ func VerifyMagmaHeader(parentHeader, header *types.Header, kip71Config *params.K
 	return nil
 }
 
-func makeEvenByDown(baseFee *big.Int) *big.Int {
+func makeEvenByFloor(baseFee *big.Int) *big.Int {
 	if baseFee.Bit(0) != 0 {
-		baseFee.Rsh(baseFee, 1)
-		baseFee.Lsh(baseFee, 1)
+		baseFee.Sub(baseFee, common.Big1)
 	}
 	return baseFee
 }
 
-func makeEvenByUp(baseFee *big.Int) *big.Int {
+func makeEvenByCeil(baseFee *big.Int) *big.Int {
 	if baseFee.Bit(0) != 0 {
 		baseFee.Add(baseFee, common.Big1)
 	}
@@ -42,9 +41,14 @@ func NextMagmaBlockBaseFee(parentHeader *types.Header, kip71Config *params.KIP71
 	// governance parameters
 	lowerBoundBaseFee := new(big.Int).SetUint64(kip71Config.LowerBoundBaseFee)
 	upperBoundBaseFee := new(big.Int).SetUint64(kip71Config.UpperBoundBaseFee)
-	makeEvenByUp(lowerBoundBaseFee)
-	makeEvenByDown(upperBoundBaseFee)
+	makeEvenByCeil(lowerBoundBaseFee)
+	makeEvenByFloor(upperBoundBaseFee)
 
+	nextFee := nextBlockBaseFee(parentHeader, kip71Config, lowerBoundBaseFee, upperBoundBaseFee)
+	return makeEvenByFloor(nextFee)
+}
+
+func nextBlockBaseFee(parentHeader *types.Header, kip71Config *params.KIP71Config, lowerBoundBaseFee, upperBoundBaseFee *big.Int) *big.Int {
 	// If the parent is the magma disabled block or genesis, then return the lowerBoundBaseFee (default 25ston)
 	if parentHeader.Number.Cmp(new(big.Int).SetUint64(0)) == 0 || parentHeader.BaseFee == nil {
 		return lowerBoundBaseFee
@@ -74,7 +78,7 @@ func NextMagmaBlockBaseFee(parentHeader *types.Header, kip71Config *params.KIP71
 		parentGasUsed = upperGasLimit
 	}
 	if parentGasUsed == gasTarget {
-		return makeEvenByDown(parentBaseFee)
+		return parentBaseFee
 	} else if parentGasUsed > gasTarget {
 		// shortcut. If parentBaseFee is already reached upperbound, do not calculate.
 		if parentBaseFee.Cmp(upperBoundBaseFee) == 0 {
@@ -92,7 +96,7 @@ func NextMagmaBlockBaseFee(parentHeader *types.Header, kip71Config *params.KIP71
 		if nextBaseFee.Cmp(upperBoundBaseFee) > 0 {
 			return upperBoundBaseFee
 		}
-		return makeEvenByDown(nextBaseFee)
+		return nextBaseFee
 	} else {
 		// shortcut. If parentBaseFee is already reached lower bound, do not calculate.
 		if parentBaseFee.Cmp(lowerBoundBaseFee) == 0 {
@@ -110,6 +114,6 @@ func NextMagmaBlockBaseFee(parentHeader *types.Header, kip71Config *params.KIP71
 		if nextBaseFee.Cmp(lowerBoundBaseFee) < 0 {
 			return lowerBoundBaseFee
 		}
-		return makeEvenByDown(nextBaseFee)
+		return nextBaseFee
 	}
 }
