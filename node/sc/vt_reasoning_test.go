@@ -173,7 +173,9 @@ func bridgeSetup(t *testing.T) (*backends.SimulatedBackend,
 		}
 	}()
 
-	sCtx := node.NewServiceContext(&node.DefaultConfig, map[reflect.Type]node.Service{}, &event.TypeMux{}, &accounts.Manager{})
+	nodeCfg := &node.DefaultConfig
+	nodeCfg.DataDir = tempDir
+	sCtx := node.NewServiceContext(nodeCfg, map[reflect.Type]node.Service{}, &event.TypeMux{}, &accounts.Manager{})
 	cnInstance, err := cn.New(sCtx, cn.GetDefaultConfig())
 	assert.NoError(t, err)
 
