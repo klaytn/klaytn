@@ -9,14 +9,13 @@ import (
 	"testing"
 	"time"
 
-	revertcontract "github.com/klaytn/klaytn/contracts/revert_test"
-
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
+	revertcontract "github.com/klaytn/klaytn/contracts/revert_test"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/node"
