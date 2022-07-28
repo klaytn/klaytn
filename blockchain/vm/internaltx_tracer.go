@@ -525,13 +525,13 @@ func (this *InternalTxTracer) result() (*InternalTxTrace, error) {
 			defaultOffset := 10
 
 			// TODO-Klaytn: introduce error handling logic for the case the parsing data is bigger than math.MaxUint64
-			stringOffset, err := strconv.ParseUint(outputHex[defaultOffset:defaultOffset+32*2], 16, 64)
+			stringOffset, err := strconv.ParseUint(outputHex[defaultOffset+32*2-8:defaultOffset+32*2], 16, 64)
 			if err != nil {
 				logger.Error("failed to parse hex string to get stringOffset",
 					"err", err, "outputHex", outputHex)
 				return nil, err
 			}
-			stringLength, err := strconv.ParseUint(outputHex[defaultOffset+32*2:defaultOffset+32*2+32*2], 16, 64)
+			stringLength, err := strconv.ParseUint(outputHex[defaultOffset+32*2+32*2-8:defaultOffset+32*2+32*2], 16, 64)
 			if err != nil {
 				logger.Error("failed to parse hex string to get stringLength",
 					"err", err, "outputHex", outputHex)
