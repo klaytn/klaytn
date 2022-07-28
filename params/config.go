@@ -44,7 +44,7 @@ var (
 		IstanbulCompatibleBlock:  big.NewInt(86816005),
 		LondonCompatibleBlock:    big.NewInt(86816005),
 		EthTxTypeCompatibleBlock: big.NewInt(86816005),
-		MagmaCompatibleBlock:     big.NewInt(999999999), // TODO-Klaytn-Magma: Set HF blocknumber correctly
+		MagmaCompatibleBlock:     big.NewInt(99837900),
 		DeriveShaImpl:            2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x52d41ca72af615a1ac3301b0a93efa222ecc7541"),
@@ -73,7 +73,7 @@ var (
 		IstanbulCompatibleBlock:  big.NewInt(75373312),
 		LondonCompatibleBlock:    big.NewInt(80295291),
 		EthTxTypeCompatibleBlock: big.NewInt(86513895),
-		MagmaCompatibleBlock:     big.NewInt(999999999), // TODO-Klaytn-Magma: Set HF blocknumber correctly
+		MagmaCompatibleBlock:     big.NewInt(98347376),
 		DeriveShaImpl:            2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x99fb17d324fa0e07f23b49d09028ac0919414db6"),
