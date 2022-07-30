@@ -7,7 +7,7 @@ This document describe how to setup automatically or manually linting your chang
   - go version should be equal to or higher than v1.18.0
 - `goimports` should be installed. To install it, run `go install golang.org/x/tools/cmd/goimports@latest`
 
-## Setup Git Hook
+## Git Hook Setup
 This will apply code formating automatically when you commit to git repository. So you can pass the linting tests registered in Klaytn Circle CI.
 
 - Copy and paste below pre-commit script to `klaytn/.git/hooks/pre-commit` file and change the file to be executable eg. `chmod +x pre-commit`
