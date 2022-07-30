@@ -4,7 +4,7 @@ This document describe how to setup automatically or manually linting your chang
 
 ## Prerequisites
 - `gofumpt` should be installed. `go install mvdan.cc/gofumpt@latest`
-  - go version should be equal or later than v1.18.0
+  - go version should be equal to or higher than v1.18.0
 - `goimports` should be installed. eg. `go install golang.org/x/tools/cmd/goimports@latest`
 
 ## Setup Git Hook
