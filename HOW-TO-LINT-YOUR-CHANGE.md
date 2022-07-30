@@ -5,7 +5,7 @@ This document describe how to setup automatically or manually linting your chang
 ## Prerequisites
 - `gofumpt` should be installed. `go install mvdan.cc/gofumpt@latest`
   - go version should be equal to or higher than v1.18.0
-- `goimports` should be installed. eg. `go install golang.org/x/tools/cmd/goimports@latest`
+- `goimports` should be installed. To install it, run `go install golang.org/x/tools/cmd/goimports@latest`
 
 ## Setup Git Hook
 This will apply code formating automatically when you commit to git repository. So you can pass the linting tests registered in Klaytn Circle CI.
