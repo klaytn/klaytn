@@ -10,7 +10,7 @@ This document describe how to setup automatically or manually linting your chang
 ## Git Hook Setup
 This will apply code formatting automatically when you commit your change. So you can pass the lint tests registered in Klaytn's CI.
 
-- Copy and paste below pre-commit script to `klaytn/.git/hooks/pre-commit` file and change the file to be executable eg. `chmod +x pre-commit`
+- Copy and paste below pre-commit script to `klaytn/.git/hooks/pre-commit` file and make the file executable (e.g., `chmod +x pre-commit`).
 
 ```go
 #!/bin/sh
