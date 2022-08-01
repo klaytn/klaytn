@@ -48,18 +48,18 @@ func (cce *ChildChainEventHandler) HandleChainHeadEvent(block *types.Block) erro
 	go func() {
 		pBalance, err := cce.handler.getParentOperatorBalance()
 		if err != nil {
-			logger.Info("can't check parentOperatorBalance info", "_p", err)
+			logger.Trace("can't check parentOperatorBalance info")
 		} else {
-			logger.Info("parentOperator", "address", cce.handler.GetParentOperatorAddr(), "balance", pBalance.Int64())
+			logger.Trace("parentOperator", "address", cce.handler.GetParentOperatorAddr(), "balance", pBalance.Int64())
 			parentOperatorBalanceGauge.Update(pBalance.Int64())
 		}
 	}()
 
 	cBalance, err := cce.handler.getChildOperatorBalance()
 	if err != nil {
-		logger.Info("can't check childOperatorBalance info", "err", err)
+		logger.Trace("can't check childOperatorBalance info")
 	} else {
-		logger.Info("childOperator", "address", cce.handler.GetChildOperatorAddr(), "balance", cBalance.Int64())
+		logger.Trace("childOperator", "address", cce.handler.GetChildOperatorAddr(), "balance", cBalance.Int64())
 		childOperatorBalanceGauge.Update(cBalance.Int64())
 	}
 
