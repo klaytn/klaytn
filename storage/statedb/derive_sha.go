@@ -31,9 +31,25 @@ import (
 type DeriveShaOrig struct{}
 
 func (d DeriveShaOrig) DeriveSha(list types.DerivableList) common.Hash {
+	trie := NewStackTrie(nil)
+	trie.Reset()
 	keybuf := new(bytes.Buffer)
-	trie := new(Trie)
-	for i := 0; i < list.Len(); i++ {
+
+	// StackTrie requires values to be inserted in increasing
+	// hash order, which is not the order that `list` provides
+	// hashes in. This insertion sequence ensures that the
+	// order is correct.
+	for i := 1; i < list.Len() && i <= 0x7f; i++ {
+		keybuf.Reset()
+		rlp.Encode(keybuf, uint(i))
+		trie.Update(keybuf.Bytes(), list.GetRlp(i))
+	}
+	if list.Len() > 0 {
+		keybuf.Reset()
+		rlp.Encode(keybuf, uint(0))
+		trie.Update(keybuf.Bytes(), list.GetRlp(0))
+	}
+	for i := 0x80; i < list.Len(); i++ {
 		keybuf.Reset()
 		rlp.Encode(keybuf, uint(i))
 		trie.Update(keybuf.Bytes(), list.GetRlp(i))
