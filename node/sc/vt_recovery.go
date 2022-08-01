@@ -402,6 +402,7 @@ func furtherTreatment(bi, ctbi *BridgeInfo, respReasoning ResponseVTReasoningWra
 				bi.refund(ev)
 			}
 			if bi.bridgeDB.ReadFailedHandleInfo(bi.address, bi.counterpartAddress, ev.GetRaw().TxHash) == nil {
+				bi.removeRefundLedger(ev.GetRequestNonce())
 				ctbi.updateHandleStatus(ev, true)
 				vtFailedHandleEventMeter.Mark(1)
 				ctbi.SetFailedHandleEvents(1)

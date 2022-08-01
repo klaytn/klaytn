@@ -290,7 +290,7 @@ func cleanup(t *testing.T, sim *backends.SimulatedBackend, dataDir string, exit 
 	}
 }
 
-func TestKLAYReasoing(t *testing.T) {
+func TestKLAYReasoning(t *testing.T) {
 	sim, bm, cbi, pbi, vtr, alice, bob, dataDir := bridgeSetup(t)
 	exit := make(chan struct{}, 1)
 	defer cleanup(t, sim, dataDir, exit)

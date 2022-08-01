@@ -86,14 +86,6 @@ func (cce *ChildChainEventHandler) ProcessRequestEvent(ev IRequestValueTransferE
 
 func (cce *ChildChainEventHandler) ProcessHandleEvent(ev *HandleValueTransferEvent) error {
 	addr := ev.Raw.Address
-	handleBridgeInfo, ok := cce.subbridge.bridgeManager.GetBridgeInfo(addr)
-	if !ok {
-		return errors.New("there is no bridge")
-	}
-
-	handleBridgeInfo.MarkHandledNonce(ev.HandleNonce)
-	handleBridgeInfo.UpdateLowerHandleNonce(ev.LowerHandleNonce)
-
 	logger.Trace("[SC][HandleValueTransfer Event]",
 		"bridgeAddr", addr.String(),
 		"handleNonce", ev.HandleNonce,
@@ -102,6 +94,14 @@ func (cce *ChildChainEventHandler) ProcessHandleEvent(ev *HandleValueTransferEve
 		"token/NFT contract", ev.TokenAddress,
 		"txHash", ev.Raw.TxHash.Hex(),
 		"value", ev.ValueOrTokenId.String())
+
+	handleBridgeInfo, ok := cce.subbridge.bridgeManager.GetBridgeInfo(addr)
+	if !ok {
+		return errors.New("there is no bridge")
+	}
+
+	handleBridgeInfo.MarkHandledNonce(ev.HandleNonce)
+	handleBridgeInfo.UpdateLowerHandleNonce(ev.LowerHandleNonce)
 
 	reqBridgeAddr := cce.subbridge.bridgeManager.GetCounterPartBridgeAddr(addr)
 	if reqBridgeAddr == (common.Address{}) {
@@ -115,12 +115,12 @@ func (cce *ChildChainEventHandler) ProcessHandleEvent(ev *HandleValueTransferEve
 }
 
 func (cce *ChildChainEventHandler) ProcessRefundEvent(ev *RefundEvent) error {
+	logger.Trace("[SC][Refund] Refund event received", "reqNonce", ev.RequestNonce, "sender", ev.Sender, "value", ev.Value)
 	refundBridgeInfo, ok := cce.subbridge.bridgeManager.GetBridgeInfo(ev.Raw.Address)
 	if !ok {
 		return errors.New("there is no bridge")
 	}
 	refundBridgeInfo.SetRefundEvents()
-	logger.Trace("[SC][Refund] Refund event received", "reqNonce", ev.RequestNonce, "sender", ev.Sender, "value", ev.Value)
 	return nil
 }
 
