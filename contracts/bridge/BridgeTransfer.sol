@@ -226,10 +226,7 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
             }
             nRefunds += 1;
             emit Refunded(requestNonce_, sender, value);
-            delete refundAddrMap[requestNonce_];
-            delete refundValueMap[requestNonce_];
-            delete refundTimestampMap[requestNonce_];
-            amountOfLockedRefundKLAY.sub(value);
+            removeRefundInfo(requestNonce_, value);
         }
     }
 
@@ -256,7 +253,11 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
         if (!_voteRefund(requestNonce_)) {
             return;
         }
-        amountOfLockedRefundKLAY = amountOfLockedRefundKLAY.sub(refundValueMap[requestNonce_]);
+        removeRefundInfo(requestNonce_, refundValueMap[requestNonce_]);
+    }
+
+    function removeRefundInfo(uint64 requestNonce_, uint256 value) internal {
+        amountOfLockedRefundKLAY = amountOfLockedRefundKLAY.sub(value);
         delete refundAddrMap[requestNonce_];
         delete refundValueMap[requestNonce_];
         delete refundTimestampMap[requestNonce_];

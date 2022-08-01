@@ -203,6 +203,12 @@ contract BridgeOperator is Ownable {
     function withdrawERC721() public onlyOperators {}
     */
 
+    /*
+     * TODO-hyunsooda: Implement both of them
+    function getAmountOfLockedRefundERC20() public onlyOperators {}
+    function getAmountOfLockedRefundERC721() public onlyOperators {}
+    */
+
     // registerOperator registers a new operator.
     function registerOperator(address payable _operator)
     external
