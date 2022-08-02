@@ -23,7 +23,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"runtime"
 	"sort"
 
 	"github.com/klaytn/klaytn/api/debug"
@@ -31,8 +30,6 @@ import (
 	"github.com/klaytn/klaytn/cmd/utils/nodecmd"
 	"github.com/klaytn/klaytn/console"
 	"github.com/klaytn/klaytn/log"
-	metricutils "github.com/klaytn/klaytn/metrics/utils"
-	"github.com/klaytn/klaytn/node"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -84,17 +81,7 @@ func init() {
 
 	app.CommandNotFound = nodecmd.CommandNotExist
 
-	app.Before = func(ctx *cli.Context) error {
-		runtime.GOMAXPROCS(runtime.NumCPU())
-		logDir := (&node.Config{DataDir: utils.MakeDataDir(ctx)}).ResolvePath("logs")
-		debug.CreateLogDir(logDir)
-		if err := debug.Setup(ctx); err != nil {
-			return err
-		}
-		metricutils.StartMetricCollectionAndExport(ctx)
-		utils.SetupNetwork(ctx)
-		return nil
-	}
+	app.Before = nodecmd.BeforeRunNode
 
 	app.After = func(ctx *cli.Context) error {
 		debug.Exit()

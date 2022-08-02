@@ -86,7 +86,12 @@ func init() {
 	app.CommandNotFound = nodecmd.CommandNotExist
 	app.OnUsageError = nodecmd.OnUsageError
 
-	app.Before = nodecmd.BeforeRunKlaytn
+	app.Before = func(ctx *cli.Context) error {
+		if err := nodecmd.CheckCommands(ctx); err != nil {
+			return err
+		}
+		return nodecmd.BeforeRunNode(ctx)
+	}
 
 	app.After = func(ctx *cli.Context) error {
 		debug.Exit()

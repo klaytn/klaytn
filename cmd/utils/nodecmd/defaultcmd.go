@@ -35,6 +35,7 @@ import (
 	metricutils "github.com/klaytn/klaytn/metrics/utils"
 	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/node/cn"
+	"github.com/urfave/cli/altsrc"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -162,8 +163,51 @@ func CheckCommands(ctx *cli.Context) error {
 	return nil
 }
 
-func BeforeRunKlaytn(ctx *cli.Context) error {
-	if err := CheckCommands(ctx); err != nil {
+func contains(list []cli.Flag, item cli.Flag) bool {
+	for _, flag := range list {
+		if flag.GetName() == item.GetName() {
+			return true
+		}
+	}
+	return false
+}
+
+func union(list1, list2 []cli.Flag) []cli.Flag {
+	for _, item := range list2 {
+		if !contains(list1, item) {
+			list1 = append(list1, item)
+		}
+	}
+	return list1
+}
+
+func allNodeFlags() *[]cli.Flag {
+	nodeFlags := []cli.Flag{}
+	nodeFlags = append(nodeFlags, CommonNodeFlags...)
+	nodeFlags = append(nodeFlags, CommonRPCFlags...)
+	nodeFlags = append(nodeFlags, ConsoleFlags...)
+	nodeFlags = append(nodeFlags, debug.Flags...)
+	nodeFlags = union(nodeFlags, KCNFlags)
+	nodeFlags = union(nodeFlags, KPNFlags)
+	nodeFlags = union(nodeFlags, KENFlags)
+	nodeFlags = union(nodeFlags, KSCNFlags)
+	nodeFlags = union(nodeFlags, KSPNFlags)
+	nodeFlags = union(nodeFlags, KSENFlags)
+	return &nodeFlags
+}
+
+func flagsFromYaml(ctx *cli.Context) error {
+	if ctx.String("conf") != "" {
+		if err := altsrc.InitInputSourceWithContext(*allNodeFlags(), altsrc.NewYamlSourceFromFlagFunc("conf"))(ctx); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func BeforeRunNode(ctx *cli.Context) error {
+	err := flagsFromYaml(ctx)
+	if err != nil {
 		return err
 	}
 	runtime.GOMAXPROCS(runtime.NumCPU())
@@ -178,6 +222,10 @@ func BeforeRunKlaytn(ctx *cli.Context) error {
 }
 
 func BeforeRunBootnode(ctx *cli.Context) error {
+	err := flagsFromYaml(ctx)
+	if err != nil {
+		return err
+	}
 	if err := debug.Setup(ctx); err != nil {
 		return err
 	}

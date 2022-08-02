@@ -54,9 +54,10 @@ func (self *DirectoryString) Set(value string) error {
 // Custom cli.Flag type which expand the received string to an absolute path.
 // e.g. ~/.ethereum -> /home/username/.ethereum
 type DirectoryFlag struct {
-	Name  string
-	Value DirectoryString
-	Usage string
+	Name   string
+	Value  DirectoryString
+	Usage  string
+	EnvVar string
 }
 
 func (self DirectoryFlag) String() string {
@@ -107,9 +108,10 @@ func (v textMarshalerVal) Set(s string) error {
 
 // TextMarshalerFlag wraps a TextMarshaler value.
 type TextMarshalerFlag struct {
-	Name  string
-	Value TextMarshaler
-	Usage string
+	Name   string
+	Value  TextMarshaler
+	Usage  string
+	EnvVar string
 }
 
 func (f TextMarshalerFlag) GetName() string {

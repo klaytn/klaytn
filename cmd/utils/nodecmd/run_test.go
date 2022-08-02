@@ -63,24 +63,6 @@ var (
 	rpcFlags = CommonRPCFlags
 )
 
-func contains(list []cli.Flag, item cli.Flag) bool {
-	for _, flag := range list {
-		if flag.GetName() == item.GetName() {
-			return true
-		}
-	}
-	return false
-}
-
-func union(list1, list2 []cli.Flag) []cli.Flag {
-	for _, item := range list2 {
-		if !contains(list1, item) {
-			list1 = append(list1, item)
-		}
-	}
-	return list1
-}
-
 func init() {
 	// Initialize the CLI app and start Klay
 	app.Action = RunKlaytnNode

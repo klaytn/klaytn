@@ -31,10 +31,15 @@ import (
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node"
 	"gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1/altsrc"
 )
 
 var (
-	ConsoleFlags = []cli.Flag{utils.JSpathFlag, utils.ExecFlag, utils.PreloadJSFlag}
+	ConsoleFlags = []cli.Flag{
+		altsrc.NewStringFlag(utils.JSpathFlag),
+		altsrc.NewStringFlag(utils.ExecFlag),
+		altsrc.NewStringFlag(utils.PreloadJSFlag),
+	}
 
 	AttachCommand = cli.Command{
 		Action:    utils.MigrateFlags(remoteConsole),
