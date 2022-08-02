@@ -6,10 +6,13 @@ import (
 	"testing"
 
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/log"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestGovParamSet_ParseValue(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
+
 	zeroAddr := common.HexToAddress("0x0000000000000000000000000000000000000000")
 	mintingAmount := "9600000000000000000"
 	mintingAmountBig, _ := new(big.Int).SetString(mintingAmount, 10)
@@ -193,6 +196,22 @@ func TestGovParamSet_New(t *testing.T) {
 	v, ok = p.Get(Epoch)
 	assert.Equal(t, c.Istanbul.Epoch, v)
 	assert.True(t, ok)
+
+	// Error cases
+	_, err = NewGovParamSetStrMap(map[string]interface{}{
+		"istanbul.epoch": "asdf",
+	})
+	assert.NotNil(t, err)
+
+	_, err = NewGovParamSetIntMap(map[int]interface{}{
+		Epoch: "asdf",
+	})
+	assert.NotNil(t, err)
+
+	_, err = NewGovParamSetBytesMap(map[string][]byte{
+		"istanbul.epoch": {1, 1, 2, 3, 4, 5, 6, 7, 8},
+	})
+	assert.NotNil(t, err)
 }
 
 func TestGovParamSet_Merged(t *testing.T) {

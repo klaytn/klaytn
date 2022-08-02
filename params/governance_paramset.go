@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/log"
 )
 
@@ -359,6 +360,8 @@ func (p *GovParamSet) set(key int, value interface{}) error {
 	}
 	parsed, ok := ty.ParseValue(value)
 	if !ok {
+		logger.Error("Bad GovParam value",
+			"key", govParamNamesReverse[key], "value", value)
 		return errBadGovParamValue
 	}
 	p.items[key] = parsed
@@ -372,6 +375,8 @@ func (p *GovParamSet) setBytes(key int, bytes []byte) error {
 	}
 	parsed, ok := ty.ParseBytes(bytes)
 	if !ok {
+		logger.Error("Bad GovParam value",
+			"key", govParamNamesReverse[key], "bytes", hexutil.Encode(bytes))
 		return errBadGovParamValue
 	}
 	p.items[key] = parsed
