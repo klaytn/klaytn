@@ -467,8 +467,8 @@ func NewGovernanceInitialize(chainConfig *params.ChainConfig, dbm database.DBMan
 }
 
 func (g *Governance) updateGovernanceParams() {
-	params.SetStakingUpdateInterval(g.StakingUpdateInterval())
-	params.SetProposerUpdateInterval(g.ProposerUpdateInterval())
+	params.SetStakingUpdateInterval(g.stakingUpdateInterval())
+	params.SetProposerUpdateInterval(g.proposerUpdateInterval())
 
 	// NOTE: HumanReadable related functions are inactivated now
 	if v, ok := g.Params().Get(params.ConstTxGasHumanReadable); ok {
@@ -1136,11 +1136,11 @@ func AddGovernanceCacheForTest(e HeaderEngine, num uint64, config *params.ChainC
 	}
 }
 
-func (gov *Governance) ProposerUpdateInterval() uint64 {
+func (gov *Governance) proposerUpdateInterval() uint64 {
 	return gov.GetGovernanceValue(params.ProposerRefreshInterval).(uint64)
 }
 
-func (gov *Governance) StakingUpdateInterval() uint64 {
+func (gov *Governance) stakingUpdateInterval() uint64 {
 	return gov.GetGovernanceValue(params.StakeUpdateInterval).(uint64)
 }
 

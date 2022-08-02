@@ -751,8 +751,8 @@ func TestGovernance_ReadGovernanceState(t *testing.T) {
 	assert.Equal(t, gjson.CurrentSet, gov.currentSet.items)
 	assert.Equal(t, gjson.ChangeSet, gov.changeSet.items)
 
-	assert.Equal(t, config.Governance.Reward.StakingUpdateInterval, gov.StakingUpdateInterval())
-	assert.Equal(t, config.Governance.Reward.ProposerUpdateInterval, gov.ProposerUpdateInterval())
+	assert.Equal(t, config.Governance.Reward.StakingUpdateInterval, gov.stakingUpdateInterval())
+	assert.Equal(t, config.Governance.Reward.ProposerUpdateInterval, gov.proposerUpdateInterval())
 }
 
 func TestWriteGovernance_idxCache(t *testing.T) {
