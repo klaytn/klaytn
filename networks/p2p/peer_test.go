@@ -23,11 +23,14 @@ package p2p
 import (
 	"errors"
 	"fmt"
+	"math"
 	"math/rand"
 	"net"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 var discard = Protocol{
@@ -167,18 +170,19 @@ func TestPeerPing(t *testing.T) {
 }
 
 func TestPeerDisconnect(t *testing.T) {
-	closer, rw, _, disc := testPeer(nil)
-	defer closer()
-	if err := SendItems(rw, discMsg, DiscQuitting); err != nil {
-		t.Fatal(err)
-	}
-	select {
-	case reason := <-disc:
-		if reason != DiscQuitting {
-			t.Errorf("run returned wrong reason: got %v, want %v", reason, DiscQuitting)
+	testData := []DiscReason{DiscQuitting, math.MaxUint}
+	for _, tc := range testData {
+		closer, rw, _, disc := testPeer(nil)
+		if err := SendItems(rw, discMsg, tc); err != nil {
+			t.Fatal(err)
 		}
-	case <-time.After(500 * time.Millisecond):
-		t.Error("peer did not return")
+		select {
+		case reason := <-disc:
+			assert.Equal(t, reason.Error(), tc.Error())
+		case <-time.After(500 * time.Millisecond):
+			t.Error("peer did not return")
+		}
+		closer()
 	}
 }
 
