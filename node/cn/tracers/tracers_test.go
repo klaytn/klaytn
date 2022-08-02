@@ -46,53 +46,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// To generate a new callTracer test, copy paste the makeTest method below into
-// the klaytn console and call it with a transaction hash you which to export.
-
-/*
-// makeTest generates a callTracer test by running a prestate reassembled and a
-// call trace run, assembling all the gathered information into a test case.
-var makeTest = function(tx, rewind) {
-  // Generate the genesis block from the block, transaction and prestate data
-  var block   = klay.getBlock(klay.getTransaction(tx).blockHash);
-  var genesis = klay.getBlock(block.parentHash);
-
-  delete genesis.gasUsed;
-  delete genesis.logsBloom;
-  delete genesis.parentHash;
-  delete genesis.receiptsRoot;
-  delete genesis.size;
-  delete genesis.transactions;
-  delete genesis.transactionsRoot;
-
-  genesis.gasLimit  = genesis.gasLimit.toString();
-  genesis.number    = genesis.number.toString();
-  genesis.timestamp = genesis.timestamp.toString();
-
-  genesis.alloc = debug.traceTransaction(tx, {tracer: "prestateTracer", rewind: rewind});
-  for (var key in genesis.alloc) {
-    genesis.alloc[key].nonce = genesis.alloc[key].nonce.toString();
-  }
-  genesis.config = admin.nodeInfo.protocols.klay.config;
-
-  // Generate the call trace and produce the test input
-  var result = debug.traceTransaction(tx, {tracer: "callTracer", rewind: rewind});
-  delete result.time;
-
-  console.log(JSON.stringify({
-    genesis: genesis,
-    context: {
-      number:     block.number.toString(),
-      blockscore: block.blockscore,
-      timestamp:  block.timestamp.toString(),
-      gasLimit:   block.gasLimit.toString(),
-      miner:      block.miner,
-    },
-    input:  klay.getRawTransaction(tx),
-    result: result,
-  }, null, 2));
-}
-*/
+// To generate a new callTracer test, use the `make_testdata.sh` script.
 
 type reverted struct {
 	Contract *common.Address `json:"contract"`
