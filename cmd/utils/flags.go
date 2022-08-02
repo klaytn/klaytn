@@ -472,13 +472,13 @@ var (
 	UnlockedAccountFlag = cli.StringFlag{
 		Name:   "unlock",
 		Usage:  "Comma separated list of accounts to unlock",
-		Value:  "KLAYTN_",
+		Value:  "",
 		EnvVar: "KLAYTN_UNLOCK",
 	}
 	PasswordFileFlag = cli.StringFlag{
 		Name:   "password",
 		Usage:  "Password file to use for non-interactive password input",
-		Value:  "KLAYTN_",
+		Value:  "",
 		EnvVar: "KLAYTN_PASSWORD",
 	}
 
@@ -537,7 +537,7 @@ var (
 	RPCCORSDomainFlag = cli.StringFlag{
 		Name:   "rpccorsdomain",
 		Usage:  "Comma separated list of domains from which to accept cross origin requests (browser enforced)",
-		Value:  "KLAYTN_",
+		Value:  "",
 		EnvVar: "KLAYTN_RPCCORSDOMAIN",
 	}
 	RPCVirtualHostsFlag = cli.StringFlag{
@@ -549,7 +549,7 @@ var (
 	RPCApiFlag = cli.StringFlag{
 		Name:   "rpcapi",
 		Usage:  "API's offered over the HTTP-RPC interface",
-		Value:  "KLAYTN_",
+		Value:  "",
 		EnvVar: "KLAYTN_RPCAPI",
 	}
 	RPCGlobalGasCap = cli.Uint64Flag{
@@ -593,13 +593,13 @@ var (
 	WSApiFlag = cli.StringFlag{
 		Name:   "wsapi",
 		Usage:  "API's offered over the WS-RPC interface",
-		Value:  "KLAYTN_",
+		Value:  "",
 		EnvVar: "KLAYTN_WSAPI",
 	}
 	WSAllowedOriginsFlag = cli.StringFlag{
 		Name:   "wsorigins",
 		Usage:  "Origins from which to accept websockets requests",
-		Value:  "KLAYTN_",
+		Value:  "",
 		EnvVar: "KLAYTN_WSORIGINS",
 	}
 	WSMaxSubscriptionPerConn = cli.IntFlag{
@@ -739,7 +739,7 @@ var (
 	BootnodesFlag = cli.StringFlag{
 		Name:   "bootnodes",
 		Usage:  "Comma separated kni URLs for P2P discovery bootstrap",
-		Value:  "KLAYTN_",
+		Value:  "",
 		EnvVar: "KLAYTN_BOOTNODES",
 	}
 	NodeKeyFileFlag = cli.StringFlag{
@@ -821,7 +821,7 @@ var (
 	AuthorizedNodesFlag = cli.StringFlag{
 		Name:   "authorized-nodes",
 		Usage:  "Comma separated kni URLs for authorized nodes list",
-		Value:  "KLAYTN_",
+		Value:  "",
 		EnvVar: "KLAYTN_AUTHORIZED_NODES",
 	}
 	// TODO-Klaytn-Bootnode the boodnode flags should be updated when it is implemented
