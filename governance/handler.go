@@ -17,7 +17,6 @@
 package governance
 
 import (
-	"fmt"
 	"math/big"
 	"reflect"
 	"strconv"
@@ -582,55 +581,4 @@ func (gov *Governance) removeVotesFromRemovedNode(votes []GovernanceVote, addr c
 		}
 	}
 	return ret
-}
-
-func (gov *Governance) GetGovernanceItemAtNumber(num uint64, key string) (interface{}, error) {
-	_, data, err := gov.ReadGovernance(num)
-	if err != nil {
-		return nil, err
-	}
-
-	if item, ok := data[key]; ok {
-		if item == nil {
-			return nil, ErrItemNil
-		}
-		return item, nil
-	} else {
-		return nil, ErrItemNotFound
-	}
-}
-
-func (gov *Governance) GetItemAtNumberByIntKey(num uint64, key int) (interface{}, error) {
-	return gov.GetGovernanceItemAtNumber(num, GovernanceKeyMapReverse[key])
-}
-
-// GetGoverningInfoAtNumber returns whether the governing mode is single or not and the governing node.
-func (gov *Governance) GetGoverningInfoAtNumber(num uint64) (bool, common.Address, error) {
-	govMode, err := gov.GetItemAtNumberByIntKey(num, params.GovernanceMode)
-	if err != nil {
-		return false, common.Address{}, err
-	}
-
-	if GovernanceModeMap[govMode.(string)] != params.GovernanceMode_Single {
-		return false, common.Address{}, nil
-	}
-
-	govNode, err := gov.GetItemAtNumberByIntKey(num, params.GoverningNode)
-	if err != nil {
-		return true, common.Address{}, err
-	}
-
-	return true, govNode.(common.Address), nil
-}
-
-func (gov *Governance) GetMinimumStakingAtNumber(num uint64) (uint64, error) {
-	minStaking, err := gov.GetItemAtNumberByIntKey(num, params.MinimumStake)
-	if err != nil {
-		return 0, err
-	}
-	bigMinStaking, ok := new(big.Int).SetString(minStaking.(string), 10)
-	if !ok {
-		return 0, fmt.Errorf("invalid number string: %v", minStaking)
-	}
-	return bigMinStaking.Uint64(), nil
 }
