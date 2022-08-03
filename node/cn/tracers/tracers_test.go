@@ -306,7 +306,7 @@ func TestCallTracer(t *testing.T) {
 			}
 			evm := vm.NewEVM(context, statedb, test.Genesis.Config, &vm.Config{Debug: true, Tracer: tracer})
 
-			fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+			fork.SetHardForkBlockNumberConfig(test.Genesis.Config)
 			msg, err := tx.AsMessageWithAccountKeyPicker(signer, statedb, context.BlockNumber.Uint64())
 			if err != nil {
 				t.Fatalf("failed to prepare transaction for tracing: %v", err)
@@ -414,7 +414,7 @@ func TestInternalCallTracer(t *testing.T) {
 			tracer := vm.NewInternalTxTracer()
 			evm := vm.NewEVM(context, statedb, test.Genesis.Config, &vm.Config{Debug: true, Tracer: tracer})
 
-			fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+			fork.SetHardForkBlockNumberConfig(test.Genesis.Config)
 			msg, err := tx.AsMessageWithAccountKeyPicker(signer, statedb, context.BlockNumber.Uint64())
 			if err != nil {
 				t.Fatalf("failed to prepare transaction for tracing: %v", err)
