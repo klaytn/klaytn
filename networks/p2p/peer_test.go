@@ -178,7 +178,7 @@ func TestPeerDisconnect(t *testing.T) {
 		}
 		select {
 		case reason := <-disc:
-			assert.Equal(t, reason.Error(), tc.Error())
+			assert.Equal(t, tc.Error(), reason.Error())
 		case <-time.After(500 * time.Millisecond):
 			t.Error("peer did not return")
 		}
