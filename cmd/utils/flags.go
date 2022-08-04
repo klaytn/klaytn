@@ -81,6 +81,9 @@ func NewApp(gitCommit, usage string) *cli.App {
 
 var (
 	// General settings
+	ConfFlag = cli.StringFlag{
+		Name: "conf",
+	}
 	NetworkTypeFlag = cli.StringFlag{
 		Name:   "networktype",
 		Usage:  "Klaytn network type (main-net (mn), service chain-net (scn))",

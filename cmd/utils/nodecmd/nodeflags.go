@@ -30,15 +30,16 @@ import (
 
 // Common flags that configure the node
 var CommonNodeFlags = []cli.Flag{
+	utils.ConfFlag,
 	altsrc.NewStringFlag(utils.BootnodesFlag),
 	altsrc.NewStringFlag(utils.IdentityFlag),
 	altsrc.NewStringFlag(utils.UnlockedAccountFlag),
 	altsrc.NewStringFlag(utils.PasswordFileFlag),
 	altsrc.NewStringFlag(utils.DbTypeFlag),
-	utils.DataDirFlag,
+	utils.NewWrappedDirectoryFlag(utils.DataDirFlag),
 	altsrc.NewBoolFlag(utils.OverwriteGenesisFlag),
 	altsrc.NewUint64Flag(utils.StartBlockNumberFlag),
-	utils.KeyStoreDirFlag,
+	utils.NewWrappedDirectoryFlag(utils.KeyStoreDirFlag),
 	altsrc.NewBoolFlag(utils.TxPoolNoLocalsFlag),
 	altsrc.NewBoolFlag(utils.TxPoolAllowLocalAnchorTxFlag),
 	altsrc.NewBoolFlag(utils.TxPoolDenyRemoteTxFlag),
@@ -52,7 +53,7 @@ var CommonNodeFlags = []cli.Flag{
 	altsrc.NewUint64Flag(utils.TxPoolNonExecSlotsAllFlag),
 	altsrc.NewDurationFlag(utils.TxPoolLifetimeFlag),
 	altsrc.NewBoolFlag(utils.TxPoolKeepLocalsFlag),
-	utils.SyncModeFlag,
+	utils.NewWrappedTextMarshalerFlag(utils.SyncModeFlag),
 	altsrc.NewStringFlag(utils.GCModeFlag),
 	altsrc.NewBoolFlag(utils.LightKDFFlag),
 	altsrc.NewBoolFlag(utils.SingleDBFlag),
@@ -144,7 +145,7 @@ var CommonRPCFlags = []cli.Flag{
 	altsrc.NewInt64Flag(utils.WSWriteDeadLine),
 	altsrc.NewIntFlag(utils.WSMaxConnections),
 	altsrc.NewBoolFlag(utils.IPCDisabledFlag),
-	utils.IPCPathFlag,
+	utils.NewWrappedDirectoryFlag(utils.IPCPathFlag),
 	altsrc.NewIntFlag(utils.RPCReadTimeout),
 	altsrc.NewIntFlag(utils.RPCWriteTimeoutFlag),
 	altsrc.NewIntFlag(utils.RPCIdleTimeoutFlag),
@@ -364,7 +365,7 @@ var KSENFlags = []cli.Flag{
 
 var DBMigrationFlags = []cli.Flag{
 	altsrc.NewStringFlag(utils.DstDbTypeFlag),
-	utils.DstDataDirFlag,
+	utils.NewWrappedDirectoryFlag(utils.DstDataDirFlag),
 	altsrc.NewBoolFlag(utils.DstSingleDBFlag),
 	altsrc.NewIntFlag(utils.DstLevelDBCompressionTypeFlag),
 	altsrc.NewUintFlag(utils.DstNumStateTrieShardsFlag),

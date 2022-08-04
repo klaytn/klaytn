@@ -30,9 +30,12 @@ import (
 	"os/user"
 	"path"
 	"strings"
+	"syscall"
 
 	"github.com/klaytn/klaytn/common/math"
+	"github.com/klaytn/klaytn/datasync/downloader"
 	"gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1/altsrc"
 )
 
 // Custom type which is registered in the flags library which cli uses for
@@ -49,6 +52,51 @@ func (self *DirectoryString) String() string {
 func (self *DirectoryString) Set(value string) error {
 	self.Value = expandPath(value)
 	return nil
+}
+
+type WrappedDirectoryFlag struct {
+	DirectoryFlag
+	set *flag.FlagSet
+}
+
+func NewWrappedDirectoryFlag(fl DirectoryFlag) *WrappedDirectoryFlag {
+	return &WrappedDirectoryFlag{DirectoryFlag: fl, set: nil}
+}
+
+func (f *WrappedDirectoryFlag) Apply(set *flag.FlagSet) {
+	f.set = set
+	f.DirectoryFlag.Apply(set)
+}
+
+func (f *WrappedDirectoryFlag) ApplyInputSourceValue(context *cli.Context, isc altsrc.InputSourceContext) error {
+	if f.set != nil {
+		// if !isEnvVarSet(f.EnvVar) {
+		value, err := isc.String(f.DirectoryFlag.Name)
+		if err != nil {
+			return err
+		}
+		if value != "" {
+			eachName(f.Name, func(name string) {
+				f.set.Set(f.Name, value)
+			})
+		}
+		// }
+	}
+	return nil
+}
+
+func isEnvVarSet(envVars string) bool {
+	for _, envVar := range strings.Split(envVars, ",") {
+		envVar = strings.TrimSpace(envVar)
+		if env, ok := syscall.Getenv(envVar); ok {
+			// TODO: Can't use this for bools as
+			// set means that it was true or false based on
+			// Bool flag type, should work for other types
+			logger.Info("env", "env", env)
+			return true
+		}
+	}
+	return false
 }
 
 // Custom cli.Flag type which expand the received string to an absolute path.
@@ -79,6 +127,11 @@ func eachName(longName string, fn func(string)) {
 // called by cli library, grabs variable from environment (if in env)
 // and adds variable to flag set for parsing.
 func (self DirectoryFlag) Apply(set *flag.FlagSet) {
+	if self.EnvVar != "" {
+		if envVal, ok := syscall.Getenv(self.EnvVar); ok {
+			self.Value.Value = envVal
+		}
+	}
 	eachName(self.Name, func(name string) {
 		set.Var(&self.Value, self.Name, self.Usage)
 	})
@@ -123,9 +176,56 @@ func (f TextMarshalerFlag) String() string {
 }
 
 func (f TextMarshalerFlag) Apply(set *flag.FlagSet) {
+	if f.EnvVar != "" && f.Value != nil {
+		if envVal, ok := syscall.Getenv(f.EnvVar); ok {
+			var mode downloader.SyncMode
+			switch envVal {
+			case "full":
+				mode = downloader.FullSync
+			case "fast":
+				mode = downloader.FastSync
+			case "snap":
+				mode = downloader.SnapSync
+			case "light":
+				mode = downloader.LightSync
+			}
+			f.Value = &mode
+		}
+	}
 	eachName(f.Name, func(name string) {
 		set.Var(textMarshalerVal{f.Value}, f.Name, f.Usage)
 	})
+}
+
+type WrappedTextMarshalerFlag struct {
+	TextMarshalerFlag
+	set *flag.FlagSet
+}
+
+func NewWrappedTextMarshalerFlag(fl TextMarshalerFlag) *WrappedTextMarshalerFlag {
+	return &WrappedTextMarshalerFlag{TextMarshalerFlag: fl, set: nil}
+}
+
+func (f *WrappedTextMarshalerFlag) Apply(set *flag.FlagSet) {
+	f.set = set
+	f.TextMarshalerFlag.Apply(set)
+}
+
+func (f *WrappedTextMarshalerFlag) ApplyInputSourceValue(context *cli.Context, isc altsrc.InputSourceContext) error {
+	if f.set != nil {
+		if !context.IsSet(f.Name) && !isEnvVarSet(f.EnvVar) {
+			value, err := isc.String(f.TextMarshalerFlag.Name)
+			if err != nil {
+				return err
+			}
+			if value != "" {
+				eachName(f.Name, func(name string) {
+					f.set.Set(f.Name, value)
+				})
+			}
+		}
+	}
+	return nil
 }
 
 // GlobalTextMarshaler returns the value of a TextMarshalerFlag from the global flag set.

@@ -31,8 +31,8 @@ import (
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/log/term"
 	colorable "github.com/mattn/go-colorable"
-	"github.com/urfave/cli/altsrc"
 	"gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1/altsrc"
 )
 
 var Memsize memsizeui.Handler

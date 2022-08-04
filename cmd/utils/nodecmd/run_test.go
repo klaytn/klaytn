@@ -87,16 +87,7 @@ func init() {
 	}
 	sort.Sort(cli.CommandsByName(app.Commands))
 
-	app.Flags = append(app.Flags, nodeFlags...)
-	app.Flags = append(app.Flags, rpcFlags...)
-	app.Flags = append(app.Flags, ConsoleFlags...)
-	app.Flags = append(app.Flags, debug.Flags...)
-	app.Flags = union(app.Flags, KCNFlags)
-	app.Flags = union(app.Flags, KPNFlags)
-	app.Flags = union(app.Flags, KENFlags)
-	app.Flags = union(app.Flags, KSCNFlags)
-	app.Flags = union(app.Flags, KSPNFlags)
-	app.Flags = union(app.Flags, KSENFlags)
+	app.Flags = allNodeFlags()
 
 	app.Before = func(ctx *cli.Context) error {
 		runtime.GOMAXPROCS(runtime.NumCPU())

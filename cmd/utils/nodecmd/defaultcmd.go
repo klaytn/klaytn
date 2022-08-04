@@ -35,8 +35,8 @@ import (
 	metricutils "github.com/klaytn/klaytn/metrics/utils"
 	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/node/cn"
-	"github.com/urfave/cli/altsrc"
 	"gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1/altsrc"
 )
 
 const (
@@ -181,7 +181,7 @@ func union(list1, list2 []cli.Flag) []cli.Flag {
 	return list1
 }
 
-func allNodeFlags() *[]cli.Flag {
+func allNodeFlags() []cli.Flag {
 	nodeFlags := []cli.Flag{}
 	nodeFlags = append(nodeFlags, CommonNodeFlags...)
 	nodeFlags = append(nodeFlags, CommonRPCFlags...)
@@ -193,21 +193,25 @@ func allNodeFlags() *[]cli.Flag {
 	nodeFlags = union(nodeFlags, KSCNFlags)
 	nodeFlags = union(nodeFlags, KSPNFlags)
 	nodeFlags = union(nodeFlags, KSENFlags)
-	return &nodeFlags
+	return nodeFlags
 }
 
-func flagsFromYaml(ctx *cli.Context) error {
+func FlagsFromYaml(ctx *cli.Context) error {
 	if ctx.String("conf") != "" {
-		if err := altsrc.InitInputSourceWithContext(*allNodeFlags(), altsrc.NewYamlSourceFromFlagFunc("conf"))(ctx); err != nil {
+		if err := altsrc.InitInputSourceWithContext(allNodeFlags(), altsrc.NewYamlSourceFromFlagFunc("conf"))(ctx); err != nil {
 			return err
 		}
 	}
+	isSet := ctx.IsSet("rewardbase")
+	isGlobalSet := ctx.GlobalIsSet("rewardbase")
+	rewardbase := ctx.String("rewardbase")
+	datadir := ctx.String("datadir")
+	logger.Debug("a", "isSet", isSet, "rewardbase", rewardbase, "global", isGlobalSet, "datadir", datadir)
 	return nil
 }
 
 func BeforeRunNode(ctx *cli.Context) error {
-	err := flagsFromYaml(ctx)
-	if err != nil {
+	if err := FlagsFromYaml(ctx); err != nil {
 		return err
 	}
 	runtime.GOMAXPROCS(runtime.NumCPU())
@@ -222,8 +226,7 @@ func BeforeRunNode(ctx *cli.Context) error {
 }
 
 func BeforeRunBootnode(ctx *cli.Context) error {
-	err := flagsFromYaml(ctx)
-	if err != nil {
+	if err := FlagsFromYaml(ctx); err != nil {
 		return err
 	}
 	if err := debug.Setup(ctx); err != nil {
