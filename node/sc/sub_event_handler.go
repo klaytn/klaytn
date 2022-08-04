@@ -45,21 +45,25 @@ func (cce *ChildChainEventHandler) HandleChainHeadEvent(block *types.Block) erro
 	logger.Trace("bridgeNode block number", "number", block.Number())
 	cce.handler.LocalChainHeadEvent(block)
 
+	// During HandleChainHeadEvent, RPC was sent to inquire the balance of parentOperator,
+	// but RPC send was not processed until chainHeadEvent processing was finished,
+	// and RPC failed due to timeout after event handling was finished.
+	// So, only the logic to inquire the parentOperator's balance was handled as a goroutine.
 	go func() {
 		pBalance, err := cce.handler.getParentOperatorBalance()
 		if err != nil {
-			logger.Trace("can't check parentOperatorBalance info")
+			logger.Trace("[SC][View] Failed to get parent operator's balance", "err", err)
 		} else {
-			logger.Trace("parentOperator", "address", cce.handler.GetParentOperatorAddr(), "balance", pBalance.Int64())
+			logger.Trace("[SC][View] Got parent operator's balance", "parentOperator", cce.handler.GetParentOperatorAddr(), "block", block.Number(), "balance", pBalance)
 			parentOperatorBalanceGauge.Update(pBalance.Int64())
 		}
 	}()
 
 	cBalance, err := cce.handler.getChildOperatorBalance()
 	if err != nil {
-		logger.Trace("can't check childOperatorBalance info")
+		logger.Trace("[SC][View] Failed to get child operator's balance", "err", err)
 	} else {
-		logger.Trace("childOperator", "address", cce.handler.GetChildOperatorAddr(), "balance", cBalance.Int64())
+		logger.Trace("[SC][View] Got child operator's balance", "childOperator", cce.handler.GetParentOperatorAddr(), "block", block.Number(), "balance", cBalance)
 		childOperatorBalanceGauge.Update(cBalance.Int64())
 	}
 
