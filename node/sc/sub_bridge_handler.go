@@ -498,34 +498,6 @@ func (sbh *SubBridgeHandler) requestHandleReceipt(reqHandleReceipt *RequestHandl
 	}
 }
 
-//func (sbh *SubBridgeHandler) handleParentChainResponseHandleReceiptMsg(p BridgePeer, msg p2p.Msg) error {
-//	/*
-//		var respVTReasoing ResponseVTReasoningWrapper
-//		if err := msg.Decode(&respVTReasoing); err != nil {
-//			logger.Error("[SC] failed to decode", "err", err)
-//			return errResp(ErrDecode, "msg %v: %v", msg, err)
-//		}
-//		bridgeAddr := respVTReasoing.getBridgeAddr()
-//		bi, ok := sbh.subbridge.bridgeManager.GetBridgeInfo(bridgeAddr)
-//		if !ok {
-//			logger.Error("[SC] Failed to get bridgeInfo from the handler of response tx debug", "bridgeAddr", bridgeAddr.Hex())
-//		}
-//		bi.respVTReasoingCh <- respVTReasoing
-//		return nil
-//	*/
-//	var respHandleReceipt ResponseHandleReceipt
-//	if err := msg.Decode(&respHandleReceipt); err != nil {
-//		logger.Error("[SC][P2P] failed to decode", "err", err)
-//		return errResp(ErrDecode, "msg %v: %v", msg, err)
-//	}
-//	bi, ok := sbh.subbridge.bridgeManager.GetBridgeInfo(respHandleReceipt.BridgeAddr)
-//	if !ok {
-//		logger.Error("[SC][P2P] Failed to get bridgeInfo from the handler of response tx debug", "bridgeAddr", respHandleReceipt.BridgeAddr.Hex())
-//	}
-//	bi.respHandleReceipt <- respHandleReceipt
-//	return nil
-//}
-
 // updateTxCount update txCount to insert into anchoring tx.
 func (sbh *SubBridgeHandler) updateTxCount(block *types.Block) error {
 	if block == nil {
