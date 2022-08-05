@@ -135,11 +135,8 @@ type BridgePeer interface {
 	// SendServiceChainInvalidTxResponse sends a response that contains list of invalid tx and error from parent chain.
 	SendServiceChainInvalidTxResponse(invalidTxs []InvalidParentChainTx) error
 
-	// SendServiceChainRequestVTReasoning sends reasoning materials to request trace transaction
-	SendServiceChainRequestVTReasoning(reqVTReasoning *RequestVTReasoningWrapper) error
-
-	// SendServiceChainResponseVTReasoning sends result of VT reasoning
-	SendServiceChainResponseVTReasoning(respVTReasoning *ResponseVTReasoningWrapper) error
+	// SendServiceChainRequestHandleReceipt sends a handle tx hash to retrieve the corresponding receipt
+	SendServiceChainRequestHandleReceipt(reqHandleRecept *RequestHandleReceipt) error
 }
 
 // baseBridgePeer is a common data structure used by implementation of Peer.
@@ -265,12 +262,8 @@ func (p *baseBridgePeer) SendServiceChainInvalidTxResponse(invalidTxs []InvalidP
 	return p2p.Send(p.rw, ServiceChainInvalidTxResponseMsg, invalidTxs)
 }
 
-func (p *baseBridgePeer) SendServiceChainRequestVTReasoning(reqVTReasoning *RequestVTReasoningWrapper) error {
-	return p2p.Send(p.rw, ServiceChainRequestVTReasoningMsg, reqVTReasoning)
-}
-
-func (p *baseBridgePeer) SendServiceChainResponseVTReasoning(respVTReasoning *ResponseVTReasoningWrapper) error {
-	return p2p.Send(p.rw, ServiceChainResponseVTReasoningMsg, respVTReasoning)
+func (p *baseBridgePeer) SendServiceChainRequestHandleReceipt(reqHandleRecept *RequestHandleReceipt) error {
+	return p2p.Send(p.rw, ServiceChainRequestHandleReceiptMsg, reqHandleRecept)
 }
 
 // Handshake executes the Klaytn protocol handshake, negotiating version number,

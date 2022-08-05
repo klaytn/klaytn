@@ -45,8 +45,8 @@ const (
 
 	ServiceChainInvalidTxResponseMsg = 0x09
 
-	ServiceChainRequestVTReasoningMsg  = 0xA
-	ServiceChainResponseVTReasoningMsg = 0xB
+	ServiceChainRequestHandleReceiptMsg  = 0xA
+	ServiceChainResponseHandleReceiptMsg = 0xB
 )
 
 var (
