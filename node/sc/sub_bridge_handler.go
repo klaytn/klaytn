@@ -259,11 +259,13 @@ func (sbh *SubBridgeHandler) HandleMainMsg(p BridgePeer, msg p2p.Msg) error {
 		if err := sbh.handleParentChainReceiptResponseMsg(p, msg); err != nil {
 			return err
 		}
-	case ServiceChainResponseVTReasoningMsg:
-		logger.Debug("[SC] received ServiceChainResponseVTReasoningMsg")
-		if err := sbh.handleParentChainResponseVTReasoningMsg(p, msg); err != nil {
-			return err
-		}
+		/*
+			case ServiceChainResponseHandleReceiptMsg:
+				logger.Debug("[SC] received ServiceChainResponseHandleReceiptMsg")
+				if err := sbh.handleParentChainResponseHandleReceiptMsg(p, msg); err != nil {
+					return err
+				}
+		*/
 	default:
 		return errResp(ErrInvalidMsgCode, "%v", msg.Code)
 	}
@@ -450,8 +452,8 @@ func (sbh *SubBridgeHandler) writeServiceChainTxReceipts(bc *blockchain.BlockCha
 					logger.Error("failed to decode anchoring tx", "txHash", txHash.String(), "err", err)
 					continue
 				}
-				sbh.WriteReceiptFromParentChain(decodedData.GetBlockHash(), (*types.Receipt)(receipt))
 				sbh.WriteAnchoredBlockNumber(decodedData.GetBlockNumber().Uint64())
+				sbh.WriteReceiptFromParentChain(decodedData.GetBlockHash(), (*types.Receipt)(receipt))
 			}
 			// TODO-Klaytn-ServiceChain: support other tx types if needed.
 			sbh.subbridge.GetBridgeTxPool().RemoveTx(tx)
@@ -483,26 +485,46 @@ func (sbh *SubBridgeHandler) broadcastServiceChainReceiptRequest() {
 	}
 }
 
+/*
 func (sbh *SubBridgeHandler) requestTxDebug(reqVTReasoning *RequestVTReasoningWrapper) {
 	for _, peer := range sbh.subbridge.BridgePeerSet().peers {
 		peer.SendServiceChainRequestVTReasoning(reqVTReasoning)
 	}
 }
-
-func (sbh *SubBridgeHandler) handleParentChainResponseVTReasoningMsg(p BridgePeer, msg p2p.Msg) error {
-	var respVTReasoing ResponseVTReasoningWrapper
-	if err := msg.Decode(&respVTReasoing); err != nil {
-		logger.Error("[SC] failed to decode", "err", err)
-		return errResp(ErrDecode, "msg %v: %v", msg, err)
+*/
+func (sbh *SubBridgeHandler) requestHandleReceipt(reqHandleReceipt *RequestHandleReceipt) {
+	for _, peer := range sbh.subbridge.BridgePeerSet().peers {
+		peer.SendServiceChainRequestHandleReceipt(reqHandleReceipt)
 	}
-	bridgeAddr := respVTReasoing.getBridgeAddr()
-	bi, ok := sbh.subbridge.bridgeManager.GetBridgeInfo(bridgeAddr)
-	if !ok {
-		logger.Error("[SC] Failed to get bridgeInfo from the handler of response tx debug", "bridgeAddr", bridgeAddr.Hex())
-	}
-	bi.respVTReasoingCh <- respVTReasoing
-	return nil
 }
+
+//func (sbh *SubBridgeHandler) handleParentChainResponseHandleReceiptMsg(p BridgePeer, msg p2p.Msg) error {
+//	/*
+//		var respVTReasoing ResponseVTReasoningWrapper
+//		if err := msg.Decode(&respVTReasoing); err != nil {
+//			logger.Error("[SC] failed to decode", "err", err)
+//			return errResp(ErrDecode, "msg %v: %v", msg, err)
+//		}
+//		bridgeAddr := respVTReasoing.getBridgeAddr()
+//		bi, ok := sbh.subbridge.bridgeManager.GetBridgeInfo(bridgeAddr)
+//		if !ok {
+//			logger.Error("[SC] Failed to get bridgeInfo from the handler of response tx debug", "bridgeAddr", bridgeAddr.Hex())
+//		}
+//		bi.respVTReasoingCh <- respVTReasoing
+//		return nil
+//	*/
+//	var respHandleReceipt ResponseHandleReceipt
+//	if err := msg.Decode(&respHandleReceipt); err != nil {
+//		logger.Error("[SC][P2P] failed to decode", "err", err)
+//		return errResp(ErrDecode, "msg %v: %v", msg, err)
+//	}
+//	bi, ok := sbh.subbridge.bridgeManager.GetBridgeInfo(respHandleReceipt.BridgeAddr)
+//	if !ok {
+//		logger.Error("[SC][P2P] Failed to get bridgeInfo from the handler of response tx debug", "bridgeAddr", respHandleReceipt.BridgeAddr.Hex())
+//	}
+//	bi.respHandleReceipt <- respHandleReceipt
+//	return nil
+//}
 
 // updateTxCount update txCount to insert into anchoring tx.
 func (sbh *SubBridgeHandler) updateTxCount(block *types.Block) error {

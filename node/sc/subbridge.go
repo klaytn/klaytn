@@ -43,7 +43,6 @@ import (
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node"
-	"github.com/klaytn/klaytn/node/cn"
 	"github.com/klaytn/klaytn/node/sc/bridgepool"
 	"github.com/klaytn/klaytn/node/sc/kas"
 	"github.com/klaytn/klaytn/params"
@@ -54,8 +53,7 @@ import (
 const (
 	forceSyncCycle = 10 * time.Second // Time interval to force syncs, even if few peers are available
 
-	chanReqVTevanSize    = 10000
-	chanHandleVTevanSize = 10000
+	chanEvSize = 10000
 
 	resetBridgeCycle   = 3 * time.Second
 	restoreBridgeCycle = 3 * time.Second
@@ -73,6 +71,13 @@ type Backend interface {
 	bind.ContractBackend
 	CurrentBlockNumber(context.Context) (uint64, error)
 	BalanceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (*big.Int, error)
+}
+
+type ItfBridge interface {
+	BlockChain() *blockchain.BlockChain
+	TxPool() *blockchain.TxPool
+	EventMux() *event.TypeMux
+	ChainDB() database.DBManager
 }
 
 // NodeInfo represents a short summary of the ServiceChain sub-protocol metadata
@@ -132,7 +137,6 @@ type SubBridge struct {
 	blockchain   *blockchain.BlockChain
 	txPool       *blockchain.TxPool
 	bridgeTxPool BridgeTxPool
-	debugAPI     *cn.PrivateDebugAPI
 
 	// chain event
 	chainCh  chan blockchain.ChainEvent
@@ -157,11 +161,13 @@ type SubBridge struct {
 	chanReqVTev        chan RequestValueTransferEvent
 	chanReqVTencodedEv chan RequestValueTransferEncodedEvent
 	chanHandleVTev     chan *HandleValueTransferEvent
-	chanRefund         chan *RefundEvent
+	chanReqRefund      chan *RequestRefundEvent
+	chanHandleRefund   chan *HandleRefundEvent
 	reqVTevSub         event.Subscription
 	reqVTencodedEvSub  event.Subscription
 	handleVTevSub      event.Subscription
-	refundSub          event.Subscription
+	reqRefundSub       event.Subscription
+	handleRefundSub    event.Subscription
 
 	bridgeAccounts *BridgeAccounts
 
@@ -197,10 +203,11 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 		chainCh:        make(chan blockchain.ChainEvent, chainEventChanSize),
 		logsCh:         make(chan []*types.Log, chainLogChanSize),
 		// txCh:            make(chan blockchain.NewTxsEvent, transactionChanSize),
-		chanReqVTev:        make(chan RequestValueTransferEvent, chanReqVTevanSize),
-		chanReqVTencodedEv: make(chan RequestValueTransferEncodedEvent, chanReqVTevanSize),
-		chanHandleVTev:     make(chan *HandleValueTransferEvent, chanHandleVTevanSize),
-		chanRefund:         make(chan *RefundEvent, chanHandleVTevanSize),
+		chanReqVTev:        make(chan RequestValueTransferEvent, chanEvSize),
+		chanReqVTencodedEv: make(chan RequestValueTransferEncodedEvent, chanEvSize),
+		chanHandleVTev:     make(chan *HandleValueTransferEvent, chanEvSize),
+		chanReqRefund:      make(chan *RequestRefundEvent, chanEvSize),
+		chanHandleRefund:   make(chan *HandleRefundEvent, chanEvSize),
 		quitSync:           make(chan struct{}),
 		maxPeers:           config.MaxPeer,
 		onAnchoringTx:      config.Anchoring,
@@ -317,6 +324,9 @@ func (sb *SubBridge) APIs() []rpc.API {
 	}
 }
 
+func (sb *SubBridge) BlockChain() *blockchain.BlockChain { return sb.blockchain }
+func (sb *SubBridge) TxPool() *blockchain.TxPool         { return sb.txPool }
+
 func (sb *SubBridge) AccountManager() *accounts.Manager { return sb.accountManager }
 func (sb *SubBridge) EventMux() *event.TypeMux          { return sb.eventMux }
 func (sb *SubBridge) ChainDB() database.DBManager       { return sb.chainDB }
@@ -354,8 +364,6 @@ func (sb *SubBridge) SetComponents(components []interface{}) {
 			sb.txPool = v
 			// event from core-service
 			// sb.txSub = sb.txPool.SubscribeNewTxsEvent(sb.txCh)
-		case []rpc.API:
-			sb.setDebugAPI(v)
 		// TODO-Klaytn if need pending block, should use miner
 		case *work.Miner:
 		}
@@ -370,7 +378,7 @@ func (sb *SubBridge) SetComponents(components []interface{}) {
 			return
 		}
 	}
-	sb.localBackend, err = NewLocalBackend(sb)
+	sb.localBackend, err = NewLocalBackend(ItfBridge(sb))
 	if err != nil {
 		logger.Error("fail to initialize LocalBackend", "err", err)
 		sb.bootFail = true
@@ -386,7 +394,8 @@ func (sb *SubBridge) SetComponents(components []interface{}) {
 	sb.reqVTevSub = sb.bridgeManager.SubscribeReqVTev(sb.chanReqVTev)
 	sb.reqVTencodedEvSub = sb.bridgeManager.SubscribeReqVTencodedEv(sb.chanReqVTencodedEv)
 	sb.handleVTevSub = sb.bridgeManager.SubscribeHandleVTev(sb.chanHandleVTev)
-	sb.refundSub = sb.bridgeManager.SubscribeRefundEv(sb.chanRefund)
+	sb.reqRefundSub = sb.bridgeManager.SubscribeReqRefundEv(sb.chanReqRefund)
+	sb.handleRefundSub = sb.bridgeManager.SubscribeHandleRefundEv(sb.chanHandleRefund)
 
 	sb.pmwg.Add(1)
 	go sb.restoreBridgeLoop()
@@ -398,16 +407,6 @@ func (sb *SubBridge) SetComponents(components []interface{}) {
 
 	sb.pmwg.Add(1)
 	go sb.loop()
-}
-
-func (sb *SubBridge) setDebugAPI(apis []rpc.API) {
-	for _, api := range apis {
-		switch svc := api.Service.(type) {
-		case *cn.PrivateDebugAPI:
-			sb.debugAPI = svc
-			break
-		}
-	}
 }
 
 // Protocols implements node.Service, returning all the currently configured
@@ -671,10 +670,15 @@ func (sb *SubBridge) loop() {
 			if err := sb.eventhandler.ProcessHandleEvent(ev); err != nil {
 				logger.Error("fail to process handle value transfer event ", "err", err)
 			}
-		case ev := <-sb.chanRefund:
-			vtRefundEventMeter.Mark(1)
-			if err := sb.eventhandler.ProcessRefundEvent(ev); err != nil {
-				logger.Error("fail to process refund event ", "err", err)
+		case ev := <-sb.chanReqRefund:
+			vtReqRefundEventMeter.Mark(1)
+			if err := sb.eventhandler.ProcessRequestRefundEvent(ev); err != nil {
+				logger.Error("fail to process refund request event ", "err", err)
+			}
+		case ev := <-sb.chanHandleRefund:
+			vtHandleRefundEventMeter.Mark(1)
+			if err := sb.eventhandler.ProcessHandleRefundEvent(ev); err != nil {
+				logger.Error("fail to process refund handle event ", "err", err)
 			}
 		case err := <-sb.chainSub.Err():
 			if err != nil {
@@ -693,22 +697,27 @@ func (sb *SubBridge) loop() {
 			return
 		case err := <-sb.reqVTevSub.Err():
 			if err != nil {
-				logger.Error("subbridge token-received subscription ", "err", err)
+				logger.Error("subbridge asset-request subscription ", "err", err)
 			}
 			return
 		case err := <-sb.reqVTencodedEvSub.Err():
 			if err != nil {
-				logger.Error("subbridge token-received subscription ", "err", err)
+				logger.Error("subbridge asset-request subscription ", "err", err)
 			}
 			return
 		case err := <-sb.handleVTevSub.Err():
 			if err != nil {
-				logger.Error("subbridge token-transfer subscription ", "err", err)
+				logger.Error("subbridge asset-handle subscription ", "err", err)
 			}
 			return
-		case err := <-sb.refundSub.Err():
+		case err := <-sb.reqRefundSub.Err():
 			if err != nil {
-				logger.Error("subbridge refund subscription ", "err", err)
+				logger.Error("subbridge refund-request subscription ", "err", err)
+			}
+			return
+		case err := <-sb.handleRefundSub.Err():
+			if err != nil {
+				logger.Error("subbridge refund-handle subscription ", "err", err)
 			}
 			return
 		}
@@ -795,7 +804,8 @@ func (sb *SubBridge) Stop() error {
 	sb.reqVTevSub.Unsubscribe()
 	sb.reqVTencodedEvSub.Unsubscribe()
 	sb.handleVTevSub.Unsubscribe()
-	sb.refundSub.Unsubscribe()
+	sb.reqRefundSub.Unsubscribe()
+	sb.handleRefundSub.Unsubscribe()
 	sb.eventMux.Stop()
 	sb.chainDB.Close()
 

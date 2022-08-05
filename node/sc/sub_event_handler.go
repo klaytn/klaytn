@@ -73,7 +73,6 @@ func (cce *ChildChainEventHandler) ProcessRequestEvent(ev IRequestValueTransferE
 	if handleBridgeAddr == (common.Address{}) {
 		return fmt.Errorf("there is no counter part bridge of the bridge(%v)", addr.String())
 	}
-
 	handleBridgeInfo, ok := cce.subbridge.bridgeManager.GetBridgeInfo(handleBridgeAddr)
 	if !ok {
 		return fmt.Errorf("there is no counter part bridge info(%v) of the bridge(%v)", handleBridgeAddr.String(), addr.String())
@@ -111,16 +110,56 @@ func (cce *ChildChainEventHandler) ProcessHandleEvent(ev *HandleValueTransferEve
 	if !ok {
 		return fmt.Errorf("there is no counter part bridge info(%v) of the bridge(%v)", reqBridgeAddr.String(), addr.String())
 	}
-	return reqBridgeInfo.removeRefundLedger(ev.HandleNonce)
+	go reqBridgeInfo.removeRefundLedger(ev.HandleNonce)
+	return nil
 }
 
-func (cce *ChildChainEventHandler) ProcessRefundEvent(ev *RefundEvent) error {
-	logger.Trace("[SC][Refund] Refund event received", "reqNonce", ev.RequestNonce, "sender", ev.Sender, "value", ev.Value)
-	refundBridgeInfo, ok := cce.subbridge.bridgeManager.GetBridgeInfo(ev.Raw.Address)
+func (cce *ChildChainEventHandler) ProcessRequestRefundEvent(ev *RequestRefundEvent) error {
+	logger.Trace("[SC][Refund] Refund request event received", "reqNonce", ev.RequestNonce)
+
+	addr := ev.Raw.Address
+	requestedBridgeInfo, ok := cce.subbridge.bridgeManager.GetBridgeInfo(addr)
 	if !ok {
-		return errors.New("there is no bridge")
+		return fmt.Errorf("[SC][Bridge] No bridge info was found (%v)", addr.String())
 	}
-	refundBridgeInfo.SetRefundEvents()
+	refundBridgeAddr := cce.subbridge.bridgeManager.GetCounterPartBridgeAddr(addr)
+	if refundBridgeAddr == (common.Address{}) {
+		return fmt.Errorf("[SC][Bridge] No counterpart bridge address was found (%v)", addr.String())
+	}
+	refundBridgeInfo, ok := cce.subbridge.bridgeManager.GetBridgeInfo(refundBridgeAddr)
+	if !ok {
+		return fmt.Errorf("[SC][Bridge] No counterpart bridge info was found (bridge addr = %v, counterpart bridge addr = %v)", addr.String(), refundBridgeAddr.String())
+	}
+
+	go func() {
+		refundBridgeInfo.handleRefund(ev)
+		vtFailedHandleEventMeter.Mark(1)
+		requestedBridgeInfo.SetFailedHandleEvents(1)
+		refundBridgeInfo.bridgeDB.WriteFailedHandleInfo(refundBridgeInfo.address, refundBridgeInfo.counterpartAddress, makeFailedHandleInfo(ev))
+	}()
+	return nil
+}
+
+func (cce *ChildChainEventHandler) ProcessHandleRefundEvent(ev *HandleRefundEvent) error {
+	logger.Trace("[SC][Refund] Refund handle event received", "reqNonce", ev.RequestNonce, "sender", ev.Sender, "value", ev.Value)
+
+	addr := ev.Raw.Address
+	bi, ok := cce.subbridge.bridgeManager.GetBridgeInfo(addr)
+	if !ok {
+		return fmt.Errorf("[SC][Bridge] No bridge info was found (%v)", addr.String())
+	}
+	ctBridgeAddr := cce.subbridge.bridgeManager.GetCounterPartBridgeAddr(addr)
+	if ctBridgeAddr == (common.Address{}) {
+		return fmt.Errorf("[SC][Bridge] No counterpart bridge address was found (%v)", addr.String())
+	}
+	ctbi, ok := cce.subbridge.bridgeManager.GetBridgeInfo(ctBridgeAddr)
+	if !ok {
+		return fmt.Errorf("[SC][Bridge] No counterpart bridge info was found (bridge addr = %v, counterpart bridge addr = %v)", addr.String(), ctBridgeAddr.String())
+	}
+	go func() {
+		ctbi.updateHandleStatus(ev, true)
+		bi.SetRefundEvents()
+	}()
 	return nil
 }
 

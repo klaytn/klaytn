@@ -113,7 +113,7 @@ type BridgeInfo struct {
 
 	handledEvent *bridgepool.ItemSortedMap
 
-	respVTReasoingCh chan ResponseVTReasoningWrapper
+	// respHandleReceipt chan ResponseHandleReceipt
 }
 
 type requestEvent struct {
@@ -147,7 +147,7 @@ func NewBridgeInfo(sb *SubBridge, addr common.Address, bridge *bridgecontract.Br
 		newEvent:                    make(chan struct{}),
 		closed:                      make(chan struct{}),
 		handledEvent:                bridgepool.NewItemSortedMap(maxHandledEventSize),
-		respVTReasoingCh:            make(chan ResponseVTReasoningWrapper, maxPendingNonceDiff),
+		// respHandleReceipt:           make(chan ResponseHandleReceipt, maxPendingNonceDiff),
 	}
 
 	if err := bi.UpdateInfo(); err != nil {
@@ -202,17 +202,17 @@ func makeHandleInfo(ev IRequestValueTransferEvent, reqTxHash common.Hash, handle
 	}
 }
 
-func makeFailedHandleInfo(ev IRequestValueTransferEvent) *database.FailedHandleInfo {
+func makeFailedHandleInfo(ev *RequestRefundEvent) *database.FailedHandleInfo {
 	return &database.FailedHandleInfo{
-		RequestEvent:  makeDatabaseBridgeRequestEvent(ev),
-		RequestTxHash: ev.GetRaw().TxHash,
+		RequestNonce:  ev.RequestNonce,
+		RequestTxHash: ev.RequestTxHash,
 	}
 }
 
-func makeRefundInfo(ev IRequestValueTransferEvent, refundTx *types.Transaction) *database.RefundInfo {
+func makeRefundInfo(ev *RequestRefundEvent, refundTx *types.Transaction) *database.RefundInfo {
 	return &database.RefundInfo{
-		RequestEvent:  makeDatabaseBridgeRequestEvent(ev),
-		RequestTxHash: ev.GetRaw().TxHash,
+		RequestNonce:  ev.RequestNonce,
+		RequestTxHash: ev.RequestTxHash,
 		RefundTx:      refundTx,
 	}
 }
@@ -408,29 +408,60 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev IRequestValueTransferEv
 	return nil
 }
 
-func (bi *BridgeInfo) refund(ev IRequestValueTransferEvent) error {
+func (bi *BridgeInfo) handleRefund(ev *RequestRefundEvent) error {
 	bridgeAcc := bi.account
 	bridgeAcc.Lock()
 	defer bridgeAcc.UnLock()
-	auth := bridgeAcc.GenerateTransactOpts()
-	auth.GasLimit = params.UpperGasLimit / 1000000 // allow gas limit to 999999
+	auth := bi.AuthWithUnlimitedGas()
 
-	reqNonce := ev.GetRequestNonce()
-	refundTx, err := bi.bridge.Refund(auth, reqNonce)
+	sender, err := bi.bridge.RefundAddrMap(nil, ev.RequestNonce)
+	if err != nil {
+		return err
+	}
+	value, err := bi.bridge.RefundValueMap(nil, ev.RequestNonce)
+	if err != nil {
+		return err
+	}
+	tokenType, err := bi.bridge.RefundTokenType(nil, ev.RequestNonce)
+	if err != nil {
+		return err
+	}
+
+	handleRefundTx, err := bi.bridge.HandleRefund(auth, ev.RequestNonce)
 	if err != nil {
 		return err
 	}
 	bridgeAcc.IncNonce()
 
-	sender := ev.GetFrom()
-	logger.Trace("[SC][Refund] Refund transaction is created",
+	logger.Trace("[SC][Refund] HandleRefund transaction is created",
 		"chain", bi.getVTDirectionStr(),
-		"refundTxHash", refundTx.Hash().Hex(),
-		"requestNonce", reqNonce,
-		"sender", sender.Hex(),
-		"value", ev.GetValueOrTokenId(),
+		"refundTxHash", handleRefundTx.Hash().Hex(),
+		"requestNonce", ev.RequestNonce,
+		"tokenType", tokenType,
+		"sender", sender,
+		"value", value,
 	)
-	bi.bridgeDB.WriteRefundInfo(bi.address, bi.counterpartAddress, makeRefundInfo(ev, refundTx))
+	bi.bridgeDB.WriteRefundInfo(bi.address, bi.counterpartAddress, makeRefundInfo(ev, handleRefundTx))
+	return nil
+}
+
+func (bi *BridgeInfo) requestRefund(ev IRequestValueTransferEvent) error {
+	bridgeAcc := bi.account
+	bridgeAcc.Lock()
+	defer bridgeAcc.UnLock()
+	auth := bi.AuthWithUnlimitedGas()
+
+	reqRefundTx, err := bi.bridge.RequestRefund(auth, ev.GetRequestNonce(), ev.GetRaw().TxHash)
+	if err != nil {
+		return err
+	}
+	bridgeAcc.IncNonce()
+
+	logger.Trace("[SC][Refund] RequestRefund transaction is created",
+		"chain", bi.getVTDirectionStr(),
+		"refundTxHash", reqRefundTx.Hash().Hex(),
+		"requestNonce", ev.GetRequestNonce(),
+	)
 	return nil
 }
 
@@ -438,8 +469,7 @@ func (bi *BridgeInfo) removeRefundLedger(reqNonce uint64) error {
 	bridgeAcc := bi.account
 	bridgeAcc.Lock()
 	defer bridgeAcc.UnLock()
-	auth := bridgeAcc.GenerateTransactOpts()
-	auth.GasLimit = params.UpperGasLimit / 1000000 // allow gas limit to 999999
+	auth := bi.AuthWithUnlimitedGas()
 
 	refundLedgerRemovalTx, err := bi.bridge.RemoveRefundLedger(auth, reqNonce)
 	if err != nil {
@@ -455,14 +485,13 @@ func (bi *BridgeInfo) removeRefundLedger(reqNonce uint64) error {
 	return nil
 }
 
-func (bi *BridgeInfo) updateHandleStatus(ev IRequestValueTransferEvent, failed bool) error {
+func (bi *BridgeInfo) updateHandleStatus(ev *HandleRefundEvent, failed bool) error {
 	bridgeAcc := bi.account
 	bridgeAcc.Lock()
 	defer bridgeAcc.UnLock()
-	auth := bridgeAcc.GenerateTransactOpts()
-	auth.GasLimit = params.UpperGasLimit / 1000000 // allow gas limit to 999999
+	auth := bi.AuthWithUnlimitedGas()
 
-	reqNonce, reqTxHash, reqBlkNum := ev.GetRequestNonce(), ev.GetRaw().TxHash, ev.GetRaw().BlockNumber
+	reqNonce, reqTxHash, reqBlkNum := ev.RequestNonce, ev.Raw.TxHash, ev.Raw.BlockNumber
 	updateHandleStatusTx, err := bi.bridge.UpdateHandleStatus(auth, reqNonce, reqTxHash, reqBlkNum, failed)
 	if err != nil {
 		return err
@@ -477,6 +506,12 @@ func (bi *BridgeInfo) updateHandleStatus(ev IRequestValueTransferEvent, failed b
 		"reqBlkNum", reqBlkNum,
 	)
 	return nil
+}
+
+func (bi *BridgeInfo) AuthWithUnlimitedGas() *bind.TransactOpts {
+	auth := bi.account.GenerateTransactOpts()
+	auth.GasLimit = params.UpperGasLimit / 1000000 // allow gas limit to 999999
+	return auth
 }
 
 func (bi *BridgeInfo) getVTDirectionStr() string {
@@ -633,17 +668,17 @@ func (b *BridgeJournal) EncodeRLP(w io.Writer) error {
 type BridgeManager struct {
 	subBridge *SubBridge
 
-	receivedEvents map[common.Address][]event.Subscription
-	withdrawEvents map[common.Address]event.Subscription
-	refundEvents   map[common.Address]event.Subscription
-	bridges        map[common.Address]*BridgeInfo
-	bridgesMu      sync.RWMutex
-	tokenEventMu   sync.RWMutex
+	requestEvents map[common.Address][]event.Subscription
+	handleEvents  map[common.Address][]event.Subscription
+	bridges       map[common.Address]*BridgeInfo
+	bridgesMu     sync.RWMutex
+	tokenEventMu  sync.RWMutex
 
 	reqVTevFeeder        event.Feed
 	reqVTevEncodedFeeder event.Feed
-	handleEventFeeder    event.Feed
-	refundEventFeeder    event.Feed
+	handleVTevFeeder     event.Feed
+	reqRefundEvFeeder    event.Feed
+	handleRefundEvFeeder event.Feed
 
 	scope event.SubscriptionScope
 
@@ -656,13 +691,12 @@ func NewBridgeManager(main *SubBridge) (*BridgeManager, error) {
 	bridgeAddrJournal := newBridgeAddrJournal(path.Join(main.config.DataDir, BridgeAddrJournal))
 
 	bridgeManager := &BridgeManager{
-		subBridge:      main,
-		receivedEvents: make(map[common.Address][]event.Subscription),
-		withdrawEvents: make(map[common.Address]event.Subscription),
-		refundEvents:   make(map[common.Address]event.Subscription),
-		bridges:        make(map[common.Address]*BridgeInfo),
-		journal:        bridgeAddrJournal,
-		recoveries:     make(map[common.Address]*valueTransferRecovery),
+		subBridge:     main,
+		requestEvents: make(map[common.Address][]event.Subscription),
+		handleEvents:  make(map[common.Address][]event.Subscription),
+		bridges:       make(map[common.Address]*BridgeInfo),
+		journal:       bridgeAddrJournal,
+		recoveries:    make(map[common.Address]*valueTransferRecovery),
 	}
 
 	logger.Info("Load Bridge Address from JournalFiles ", "path", bridgeManager.journal.path)
@@ -767,24 +801,29 @@ func (bm *BridgeManager) LogBridgeStatus() {
 	logger.Info("[SC][All] VT : Child -> Parent Chain", "request", c2pTotalRequestNonce, "handled", c2pTotalHandleNonce, "numberOfRefunds", c2pNumberOfRefunds, "numberOfFailedHandle", c2pNumberOfHandleFailures, "lowerHandle", c2pTotalLowerHandleNonce, "pending", c2pTotalPendings)
 }
 
-// SubscribeReqVTev registers a subscription of RequestValueTransferEvent.
+// SubscribeReqVTev registers a subscription of RequestValueTransfer event.
 func (bm *BridgeManager) SubscribeReqVTev(ch chan<- RequestValueTransferEvent) event.Subscription {
 	return bm.scope.Track(bm.reqVTevFeeder.Subscribe(ch))
 }
 
-// SubscribeReqVTencodedEv registers a subscription of RequestValueTransferEncoded.
+// SubscribeReqVTencodedEv registers a subscription of RequestValueTransferEncoded event.
 func (bm *BridgeManager) SubscribeReqVTencodedEv(ch chan<- RequestValueTransferEncodedEvent) event.Subscription {
 	return bm.scope.Track(bm.reqVTevEncodedFeeder.Subscribe(ch))
 }
 
-// SubscribeHandleVTev registers a subscription of HandleValueTransferEvent.
+// SubscribeHandleVTev registers a subscription of HandleValueTransfer event.
 func (bm *BridgeManager) SubscribeHandleVTev(ch chan<- *HandleValueTransferEvent) event.Subscription {
-	return bm.scope.Track(bm.handleEventFeeder.Subscribe(ch))
+	return bm.scope.Track(bm.handleVTevFeeder.Subscribe(ch))
 }
 
-// SubscribeRefundEv registers a subscription of HandleValueTransferEvent.
-func (bm *BridgeManager) SubscribeRefundEv(ch chan<- *RefundEvent) event.Subscription {
-	return bm.scope.Track(bm.refundEventFeeder.Subscribe(ch))
+// SubscribeReqRefundEv registers a subscription of RequestRefund event.
+func (bm *BridgeManager) SubscribeReqRefundEv(ch chan<- *RequestRefundEvent) event.Subscription {
+	return bm.scope.Track(bm.reqRefundEvFeeder.Subscribe(ch))
+}
+
+// SubscribeHandleRefundEv registers a subscription of HandleRefund event.
+func (bm *BridgeManager) SubscribeHandleRefundEv(ch chan<- *HandleRefundEvent) event.Subscription {
+	return bm.scope.Track(bm.handleRefundEvFeeder.Subscribe(ch))
 }
 
 // getAddrByAlias returns a pair of child bridge address and parent bridge address
@@ -1178,6 +1217,14 @@ func (bm *BridgeManager) ResetAllSubscribedEvents() error {
 	return nil
 }
 
+func (bm *BridgeManager) subscribeFailure(addr common.Address, subs ...event.Subscription) {
+	for _, sub := range subs {
+		sub.Unsubscribe()
+	}
+	delete(bm.requestEvents, addr)
+	delete(bm.handleEvents, addr)
+}
+
 // SubscribeEvent sets watch logs and creates a goroutine loop to handle event messages.
 func (bm *BridgeManager) subscribeEvent(addr common.Address, bridge *bridgecontract.Bridge) error {
 	bm.tokenEventMu.Lock()
@@ -1186,59 +1233,59 @@ func (bm *BridgeManager) subscribeEvent(addr common.Address, bridge *bridgecontr
 	chanReqVT := make(chan *bridgecontract.BridgeRequestValueTransfer, TokenEventChanSize)
 	chanReqVTencoded := make(chan *bridgecontract.BridgeRequestValueTransferEncoded, TokenEventChanSize)
 	chanHandleVT := make(chan *bridgecontract.BridgeHandleValueTransfer, TokenEventChanSize)
-	chanRefund := make(chan *bridgecontract.BridgeRefunded, TokenEventChanSize)
+	chanReqRefund := make(chan *bridgecontract.BridgeRequestRefund, TokenEventChanSize)
+	chanHandleRefund := make(chan *bridgecontract.BridgeHandleRefund, TokenEventChanSize)
 
-	vtEv, err := bridge.WatchRequestValueTransfer(nil, chanReqVT, nil, nil, nil)
+	vtEvSub, err := bridge.WatchRequestValueTransfer(nil, chanReqVT, nil, nil, nil)
 	if err != nil {
 		logger.Error("Failed to watch RequestValueTransfer event", "err", err)
 		return err
 	}
-	bm.receivedEvents[addr] = append(bm.receivedEvents[addr], vtEv)
+	bm.requestEvents[addr] = append(bm.requestEvents[addr], vtEvSub)
 
-	vtEncodedev, err := bridge.WatchRequestValueTransferEncoded(nil, chanReqVTencoded, nil, nil, nil)
+	vtEncodedEvSub, err := bridge.WatchRequestValueTransferEncoded(nil, chanReqVTencoded, nil, nil, nil)
 	if err != nil {
+		bm.subscribeFailure(addr, vtEvSub)
 		logger.Error("Failed to watch RequestValueTransferEncoded event", "err", err)
 		return err
 	}
-	bm.receivedEvents[addr] = append(bm.receivedEvents[addr], vtEncodedev)
+	bm.requestEvents[addr] = append(bm.requestEvents[addr], vtEncodedEvSub)
 
-	withdrawnSub, err := bridge.WatchHandleValueTransfer(nil, chanHandleVT, nil, nil, nil)
+	handleVTSub, err := bridge.WatchHandleValueTransfer(nil, chanHandleVT, nil, nil, nil)
 	if err != nil {
 		logger.Error("Failed to watch HandleValueTransfer event", "err", err)
-		vtEv.Unsubscribe()
-		vtEncodedev.Unsubscribe()
-		delete(bm.receivedEvents, addr)
+		bm.subscribeFailure(addr, vtEvSub, vtEncodedEvSub)
 		return err
 	}
-	bm.withdrawEvents[addr] = withdrawnSub
+	bm.handleEvents[addr] = append(bm.handleEvents[addr], handleVTSub)
 
-	refundSub, err := bridge.WatchRefunded(nil, chanRefund, nil, nil, nil)
+	reqRefundSub, err := bridge.WatchRequestRefund(nil, chanReqRefund, nil, nil)
 	if err != nil {
-		logger.Error("Failed to watch HandleValueTransfer event", "err", err)
-		vtEv.Unsubscribe()
-		vtEncodedev.Unsubscribe()
-		withdrawnSub.Unsubscribe()
-		delete(bm.receivedEvents, addr)
-		delete(bm.withdrawEvents, addr)
+		logger.Error("Failed to watch RequestRefund event", "err", err)
+		bm.subscribeFailure(addr, vtEvSub, vtEncodedEvSub, handleVTSub)
 		return err
 	}
-	bm.refundEvents[addr] = refundSub
+	bm.requestEvents[addr] = append(bm.requestEvents[addr], reqRefundSub)
+
+	handleRefundSub, err := bridge.WatchHandleRefund(nil, chanHandleRefund, nil, nil, nil)
+	if err != nil {
+		logger.Error("Failed to watch HandleRefund event", "err", err)
+		bm.subscribeFailure(addr, vtEvSub, vtEncodedEvSub, handleVTSub, reqRefundSub)
+		return err
+	}
+	bm.handleEvents[addr] = append(bm.handleEvents[addr], handleRefundSub)
 
 	bridgeInfo, ok := bm.GetBridgeInfo(addr)
 	if !ok {
-		vtEv.Unsubscribe()
-		vtEncodedev.Unsubscribe()
-		withdrawnSub.Unsubscribe()
-		refundSub.Unsubscribe()
-		delete(bm.receivedEvents, addr)
-		delete(bm.withdrawEvents, addr)
-		delete(bm.refundEvents, addr)
+		logger.Error("Failed to retrieve bridge info", "bridgeAddr", addr)
+		bm.subscribeFailure(addr, vtEvSub, vtEncodedEvSub, handleVTSub, reqRefundSub, handleRefundSub)
 		return ErrNoBridgeInfo
 	}
 	bridgeInfo.subscribed = true
 
-	go bm.eventReceiverLoop(addr, chanReqVT, chanReqVTencoded, chanHandleVT, chanRefund, vtEv, vtEncodedev, withdrawnSub, refundSub)
-
+	go bm.eventReceiverLoop(addr, chanReqVT, chanReqVTencoded, chanHandleVT,
+		chanReqRefund, chanHandleRefund,
+		vtEvSub, vtEncodedEvSub, handleVTSub, reqRefundSub, handleRefundSub)
 	return nil
 }
 
@@ -1247,17 +1294,16 @@ func (bm *BridgeManager) UnsubscribeEvent(addr common.Address) {
 	bm.tokenEventMu.Lock()
 	defer bm.tokenEventMu.Unlock()
 
-	receivedSub := bm.receivedEvents[addr]
+	receivedSub := bm.requestEvents[addr]
 	for _, sub := range receivedSub {
 		sub.Unsubscribe()
 	}
-	delete(bm.receivedEvents, addr)
+	delete(bm.requestEvents, addr)
 
-	withdrawSub := bm.withdrawEvents[addr]
-	if withdrawSub != nil {
-		withdrawSub.Unsubscribe()
-		delete(bm.withdrawEvents, addr)
+	for _, sub := range bm.handleEvents[addr] {
+		sub.Unsubscribe()
 	}
+	delete(bm.handleEvents, addr)
 
 	bridgeInfo, ok := bm.GetBridgeInfo(addr)
 	if ok {
@@ -1271,13 +1317,17 @@ func (bm *BridgeManager) eventReceiverLoop(
 	chanReqVT <-chan *bridgecontract.BridgeRequestValueTransfer,
 	chanReqVTencoded <-chan *bridgecontract.BridgeRequestValueTransferEncoded,
 	chanHandleVT <-chan *bridgecontract.BridgeHandleValueTransfer,
-	chanRefund <-chan *bridgecontract.BridgeRefunded,
-	reqVTevSub, reqVTencodedEvSub, handleEventSub, refundSub event.Subscription,
+	chanReqRefund <-chan *bridgecontract.BridgeRequestRefund,
+	chanHandleRefund <-chan *bridgecontract.BridgeHandleRefund,
+	reqVTevSub, reqVTencodedEvSub, handleEventSub, reqRefundSub, handleRefundSub event.Subscription,
 ) {
-	defer reqVTevSub.Unsubscribe()
-	defer reqVTencodedEvSub.Unsubscribe()
-	defer handleEventSub.Unsubscribe()
-	defer refundSub.Unsubscribe()
+	defer func() {
+		reqVTevSub.Unsubscribe()
+		reqVTencodedEvSub.Unsubscribe()
+		handleEventSub.Unsubscribe()
+		reqRefundSub.Unsubscribe()
+		handleRefundSub.Unsubscribe()
+	}()
 
 	bi, ok := bm.GetBridgeInfo(addr)
 	if !ok {
@@ -1295,20 +1345,25 @@ func (bm *BridgeManager) eventReceiverLoop(
 		case ev := <-chanReqVTencoded:
 			bm.reqVTevEncodedFeeder.Send(RequestValueTransferEncodedEvent{ev})
 		case ev := <-chanHandleVT:
-			bm.handleEventFeeder.Send(&HandleValueTransferEvent{ev})
-		case ev := <-chanRefund:
-			bm.refundEventFeeder.Send(&RefundEvent{ev})
+			bm.handleVTevFeeder.Send(&HandleValueTransferEvent{ev})
+		case ev := <-chanReqRefund:
+			bm.reqRefundEvFeeder.Send(&RequestRefundEvent{ev})
+		case ev := <-chanHandleRefund:
+			bm.handleRefundEvFeeder.Send(&HandleRefundEvent{ev})
 		case err := <-reqVTevSub.Err():
-			logger.Info("Contract Event Loop Running Stop by receivedSub.Err()", "err", err)
+			logger.Info("Contract Event Loop Running Stop by requestValueTransfer watcher", "err", err)
 			return
 		case err := <-reqVTencodedEvSub.Err():
-			logger.Info("Contract Event Loop Running Stop by receivedSub.Err()", "err", err)
+			logger.Info("Contract Event Loop Running Stop by requestValueTransferEncoded watcher", "err", err)
 			return
 		case err := <-handleEventSub.Err():
-			logger.Info("Contract Event Loop Running Stop by withdrawSub.Err()", "err", err)
+			logger.Info("Contract Event Loop Running Stop by handleValueTransfer watcher", "err", err)
 			return
-		case err := <-refundSub.Err():
-			logger.Info("Contract Event Loop Running Stop by refundSub.Err()", "err", err)
+		case err := <-reqRefundSub.Err():
+			logger.Info("Contract Event Loop Running Stop by requestRefund watcher", "err", err)
+			return
+		case err := <-handleRefundSub.Err():
+			logger.Info("Contract Event Loop Running Stop by handleRefund watcher", "err", err)
 			return
 		}
 	}
