@@ -51,7 +51,7 @@ var (
 
 // TODO-Klaytn currently LocalBackend is only for ServiceChain, especially Bridge SmartContract
 type LocalBackend struct {
-	subbridge *SubBridge
+	bridge ItfBridge
 
 	events *filters.EventSystem // Event system for filtering log events live
 	config *params.ChainConfig
@@ -66,11 +66,11 @@ func checkCtx(ctx context.Context) error {
 	}
 }
 
-func NewLocalBackend(main *SubBridge) (*LocalBackend, error) {
+func NewLocalBackend(bridge ItfBridge) (*LocalBackend, error) {
 	return &LocalBackend{
-		subbridge: main,
-		config:    main.blockchain.Config(),
-		events:    filters.NewEventSystem(main.EventMux(), &filterLocalBackend{main}, false),
+		bridge: bridge,
+		config: bridge.BlockChain().Config(),
+		events: filters.NewEventSystem(bridge.EventMux(), &filterLocalBackend{bridge}, false),
 	}, nil
 }
 
@@ -78,10 +78,10 @@ func (lb *LocalBackend) CodeAt(ctx context.Context, contract common.Address, blo
 	if err := checkCtx(ctx); err != nil {
 		return nil, err
 	}
-	if blockNumber != nil && blockNumber.Cmp(lb.subbridge.blockchain.CurrentBlock().Number()) != 0 {
+	if blockNumber != nil && blockNumber.Cmp(lb.bridge.BlockChain().CurrentBlock().Number()) != 0 {
 		return nil, errBlockNumberUnsupported
 	}
-	statedb, err := lb.subbridge.blockchain.State()
+	statedb, err := lb.bridge.BlockChain().State()
 	if err != nil {
 		return nil, err
 	}
@@ -92,10 +92,10 @@ func (lb *LocalBackend) BalanceAt(ctx context.Context, account common.Address, b
 	if err := checkCtx(ctx); err != nil {
 		return nil, err
 	}
-	if blockNumber != nil && blockNumber.Cmp(lb.subbridge.blockchain.CurrentBlock().Number()) != 0 {
+	if blockNumber != nil && blockNumber.Cmp(lb.bridge.BlockChain().CurrentBlock().Number()) != 0 {
 		return nil, errBlockNumberUnsupported
 	}
-	statedb, err := lb.subbridge.blockchain.State()
+	statedb, err := lb.bridge.BlockChain().State()
 	if err != nil {
 		return nil, err
 	}
@@ -106,14 +106,14 @@ func (lb *LocalBackend) CallContract(ctx context.Context, call klaytn.CallMsg, b
 	if err := checkCtx(ctx); err != nil {
 		return nil, err
 	}
-	if blockNumber != nil && blockNumber.Cmp(lb.subbridge.blockchain.CurrentBlock().Number()) != 0 {
+	if blockNumber != nil && blockNumber.Cmp(lb.bridge.BlockChain().CurrentBlock().Number()) != 0 {
 		return nil, errBlockNumberUnsupported
 	}
-	currentState, err := lb.subbridge.blockchain.State()
+	currentState, err := lb.bridge.BlockChain().State()
 	if err != nil {
 		return nil, err
 	}
-	rval, _, _, err := lb.callContract(ctx, call, lb.subbridge.blockchain.CurrentBlock(), currentState)
+	rval, _, _, err := lb.callContract(ctx, call, lb.bridge.BlockChain().CurrentBlock(), currentState)
 	return rval, err
 }
 
@@ -146,7 +146,7 @@ func (b *LocalBackend) callContract(ctx context.Context, call klaytn.CallMsg, bl
 	statedb.SetBalance(msg.ValidatedSender(), math.MaxBig256)
 	vmError := func() error { return nil }
 
-	context := blockchain.NewEVMContext(msg, block.Header(), b.subbridge.blockchain, nil)
+	context := blockchain.NewEVMContext(msg, block.Header(), b.bridge.BlockChain(), nil)
 	evm := vm.NewEVM(context, statedb, b.config, &vm.Config{})
 	// Wait for the context to be done and cancel the evm. Even if the
 	// EVM has finished, cancelling may be done (repeatedly)
@@ -174,21 +174,21 @@ func (lb *LocalBackend) PendingCodeAt(ctx context.Context, contract common.Addre
 		return nil, err
 	}
 	// TODO-Klaytn this is not pending code but latest code
-	return lb.CodeAt(ctx, contract, lb.subbridge.blockchain.CurrentBlock().Number())
+	return lb.CodeAt(ctx, contract, lb.bridge.BlockChain().CurrentBlock().Number())
 }
 
 func (lb *LocalBackend) PendingNonceAt(ctx context.Context, account common.Address) (uint64, error) {
 	if err := checkCtx(ctx); err != nil {
 		return 0, err
 	}
-	return lb.subbridge.txPool.GetPendingNonce(account), nil
+	return lb.bridge.TxPool().GetPendingNonce(account), nil
 }
 
 func (lb *LocalBackend) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
 	if err := checkCtx(ctx); err != nil {
 		return nil, err
 	}
-	if lb.subbridge.blockchain.Config().IsMagmaForkEnabled(lb.subbridge.blockchain.CurrentHeader().Number) {
+	if lb.bridge.BlockChain().Config().IsMagmaForkEnabled(lb.bridge.BlockChain().CurrentHeader().Number) {
 		return new(big.Int).SetUint64(lb.config.Governance.KIP71.UpperBoundBaseFee), nil
 	} else {
 		return new(big.Int).SetUint64(lb.config.UnitPrice), nil
@@ -216,11 +216,11 @@ func (lb *LocalBackend) EstimateGas(ctx context.Context, call klaytn.CallMsg) (g
 	executable := func(gas uint64) bool {
 		call.Gas = gas
 
-		currentState, err := lb.subbridge.blockchain.State()
+		currentState, err := lb.bridge.BlockChain().State()
 		if err != nil {
 			return false
 		}
-		_, _, failed, err := lb.callContract(ctx, call, lb.subbridge.blockchain.CurrentBlock(), currentState)
+		_, _, failed, err := lb.callContract(ctx, call, lb.bridge.BlockChain().CurrentBlock(), currentState)
 		if err != nil || failed {
 			return false
 		}
@@ -248,7 +248,7 @@ func (lb *LocalBackend) SendTransaction(ctx context.Context, tx *types.Transacti
 	if err := checkCtx(ctx); err != nil {
 		return err
 	}
-	return lb.subbridge.txPool.AddLocal(tx)
+	return lb.bridge.TxPool().AddLocal(tx)
 }
 
 // ChainID can return the chain ID of the chain.
@@ -263,7 +263,7 @@ func (lb *LocalBackend) TransactionReceipt(ctx context.Context, txHash common.Ha
 	if err := checkCtx(ctx); err != nil {
 		return nil, err
 	}
-	receipt := lb.subbridge.blockchain.GetReceiptByTxHash(txHash)
+	receipt := lb.bridge.BlockChain().GetReceiptByTxHash(txHash)
 	if receipt != nil {
 		return receipt, nil
 	}
@@ -285,7 +285,7 @@ func (lb *LocalBackend) FilterLogs(ctx context.Context, query klaytn.FilterQuery
 	to := query.ToBlock.Int64()
 
 	// Construct and execute the filter
-	filter := filters.NewRangeFilter(&filterLocalBackend{lb.subbridge}, from, to, query.Addresses, query.Topics)
+	filter := filters.NewRangeFilter(&filterLocalBackend{lb.bridge}, from, to, query.Addresses, query.Topics)
 
 	logs, err := filter.Logs(ctx)
 	if err != nil {
@@ -338,21 +338,21 @@ func (lb *LocalBackend) CurrentBlockNumber(ctx context.Context) (uint64, error) 
 	if err := checkCtx(ctx); err != nil {
 		return 0, err
 	}
-	return lb.subbridge.blockchain.CurrentBlock().NumberU64(), nil
+	return lb.bridge.BlockChain().CurrentBlock().NumberU64(), nil
 }
 
 type filterLocalBackend struct {
-	subbridge *SubBridge
+	bridge ItfBridge
 }
 
 func (fb *filterLocalBackend) ChainDB() database.DBManager {
 	// TODO-Klaytn consider chain's chainDB instead of bridge's chainDB currently.
-	return fb.subbridge.chainDB
+	return fb.bridge.ChainDB()
 }
 
 func (fb *filterLocalBackend) EventMux() *event.TypeMux {
 	// TODO-Klaytn consider chain's eventMux instead of bridge's eventMux currently.
-	return fb.subbridge.EventMux()
+	return fb.bridge.EventMux()
 }
 
 func (fb *filterLocalBackend) HeaderByNumber(ctx context.Context, block rpc.BlockNumber) (*types.Header, error) {
@@ -361,39 +361,39 @@ func (fb *filterLocalBackend) HeaderByNumber(ctx context.Context, block rpc.Bloc
 	}
 	// TODO-Klaytn consider pendingblock instead of latest block
 	if block == rpc.LatestBlockNumber {
-		return fb.subbridge.blockchain.CurrentHeader(), nil
+		return fb.bridge.BlockChain().CurrentHeader(), nil
 	}
-	return fb.subbridge.blockchain.GetHeaderByNumber(uint64(block.Int64())), nil
+	return fb.bridge.BlockChain().GetHeaderByNumber(uint64(block.Int64())), nil
 }
 
 func (fb *filterLocalBackend) GetBlockReceipts(ctx context.Context, hash common.Hash) types.Receipts {
 	if err := checkCtx(ctx); err != nil {
 		return nil
 	}
-	return fb.subbridge.blockchain.GetReceiptsByBlockHash(hash)
+	return fb.bridge.BlockChain().GetReceiptsByBlockHash(hash)
 }
 
 func (fb *filterLocalBackend) GetLogs(ctx context.Context, hash common.Hash) ([][]*types.Log, error) {
 	if err := checkCtx(ctx); err != nil {
 		return nil, err
 	}
-	return fb.subbridge.blockchain.GetLogsByHash(hash), nil
+	return fb.bridge.BlockChain().GetLogsByHash(hash), nil
 }
 
 func (fb *filterLocalBackend) SubscribeNewTxsEvent(ch chan<- blockchain.NewTxsEvent) event.Subscription {
-	return fb.subbridge.txPool.SubscribeNewTxsEvent(ch)
+	return fb.bridge.TxPool().SubscribeNewTxsEvent(ch)
 }
 
 func (fb *filterLocalBackend) SubscribeChainEvent(ch chan<- blockchain.ChainEvent) event.Subscription {
-	return fb.subbridge.blockchain.SubscribeChainEvent(ch)
+	return fb.bridge.BlockChain().SubscribeChainEvent(ch)
 }
 
 func (fb *filterLocalBackend) SubscribeRemovedLogsEvent(ch chan<- blockchain.RemovedLogsEvent) event.Subscription {
-	return fb.subbridge.blockchain.SubscribeRemovedLogsEvent(ch)
+	return fb.bridge.BlockChain().SubscribeRemovedLogsEvent(ch)
 }
 
 func (fb *filterLocalBackend) SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscription {
-	return fb.subbridge.blockchain.SubscribeLogsEvent(ch)
+	return fb.bridge.BlockChain().SubscribeLogsEvent(ch)
 }
 
 func (fb *filterLocalBackend) BloomStatus() (uint64, uint64) {
@@ -410,5 +410,5 @@ func (fb *filterLocalBackend) ServiceFilter(_dummyCtx context.Context, session *
 }
 
 func (fb *filterLocalBackend) ChainConfig() *params.ChainConfig {
-	return fb.subbridge.blockchain.Config()
+	return fb.bridge.BlockChain().Config()
 }
