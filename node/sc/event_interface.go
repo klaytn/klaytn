@@ -129,7 +129,12 @@ type HandleValueTransferEvent struct {
 	*bridgecontract.BridgeHandleValueTransfer
 }
 
-// `Refunded` event` from Bridge contract
-type RefundEvent struct {
-	*bridgecontract.BridgeRefunded
+// `RequestRefundEvent` event` from Bridge contract
+type RequestRefundEvent struct {
+	*bridgecontract.BridgeRequestRefund
+}
+
+// `HandleRefundEvent` event` from Bridge contract
+type HandleRefundEvent struct {
+	*bridgecontract.BridgeHandleRefund
 }

@@ -112,8 +112,6 @@ type BridgeInfo struct {
 	closed   chan struct{}
 
 	handledEvent *bridgepool.ItemSortedMap
-
-	// respHandleReceipt chan ResponseHandleReceipt
 }
 
 type requestEvent struct {
@@ -147,7 +145,6 @@ func NewBridgeInfo(sb *SubBridge, addr common.Address, bridge *bridgecontract.Br
 		newEvent:                    make(chan struct{}),
 		closed:                      make(chan struct{}),
 		handledEvent:                bridgepool.NewItemSortedMap(maxHandledEventSize),
-		// respHandleReceipt:           make(chan ResponseHandleReceipt, maxPendingNonceDiff),
 	}
 
 	if err := bi.UpdateInfo(); err != nil {
