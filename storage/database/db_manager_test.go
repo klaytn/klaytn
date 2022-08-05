@@ -784,24 +784,24 @@ func TestDBManager_ChildChain(t *testing.T) {
 
 		// 4. Write/Read refund info
 		refundInfo := RefundInfo{
-			RequestEvent:  reqEvent,
+			RequestNonce:  uint64(123),
 			RequestTxHash: reqTx.Hash(),
 			RefundTx:      refundTx,
 		}
 		dbm.WriteRefundInfo(bridgeAddr, counterpartBridgeAddr, &refundInfo)
 		retrievedRefundInfo := dbm.ReadRefundInfo(bridgeAddr, counterpartBridgeAddr, reqTx.Hash())
-		assert.Equal(t, refundInfo.RequestEvent, retrievedRefundInfo.RequestEvent)
+		assert.Equal(t, refundInfo.RequestNonce, retrievedRefundInfo.RequestNonce)
 		assert.Equal(t, refundInfo.RequestTxHash, retrievedRefundInfo.RequestTxHash)
 		assert.Equal(t, true, reflect.DeepEqual(refundInfo.RefundTx, refundTx))
 
 		// 5. Write/Read failed handle info
 		failedHandleInfo := FailedHandleInfo{
-			RequestEvent:  reqEvent,
+			RequestNonce:  uint64(456),
 			RequestTxHash: reqTx.Hash(),
 		}
 		dbm.WriteFailedHandleInfo(bridgeAddr, counterpartBridgeAddr, &failedHandleInfo)
 		retrievedFailedHandleInfo := dbm.ReadFailedHandleInfo(bridgeAddr, counterpartBridgeAddr, reqTx.Hash())
-		assert.Equal(t, failedHandleInfo.RequestEvent, retrievedFailedHandleInfo.RequestEvent)
+		assert.Equal(t, failedHandleInfo.RequestNonce, retrievedFailedHandleInfo.RequestNonce)
 		assert.Equal(t, failedHandleInfo.RequestTxHash, retrievedFailedHandleInfo.RequestTxHash)
 	}
 }

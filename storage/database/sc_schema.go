@@ -1,6 +1,7 @@
 package database
 
 import (
+	"fmt"
 	"math/big"
 	"reflect"
 
@@ -35,12 +36,12 @@ type HandleInfo struct {
 }
 
 type FailedHandleInfo struct {
-	RequestEvent  BridgeRequestEvent
+	RequestNonce  uint64
 	RequestTxHash common.Hash
 }
 
 type RefundInfo struct {
-	RequestEvent  BridgeRequestEvent
+	RequestNonce  uint64
 	RequestTxHash common.Hash
 	RefundTx      *types.Transaction
 }
@@ -84,7 +85,6 @@ func makeTxRPCOutput(tx *types.Transaction) map[string]interface{} {
 		return nil
 	}
 	output := tx.MakeRPCOutput()
-	output["HandleTxHash"] = tx.Hash()
 	output["cost"] = tx.Cost()
 	output["fee"] = tx.Fee()
 	output["size"] = tx.Size()
@@ -92,7 +92,12 @@ func makeTxRPCOutput(tx *types.Transaction) map[string]interface{} {
 }
 
 func makeRPCOutput(ev *BridgeRequestEvent, reqTxHash common.Hash, handleTx *types.Transaction) map[string]interface{} {
-	output := ev.makeRPCOutput()
+	var output map[string]interface{}
+	if ev != nil {
+		output = ev.makeRPCOutput()
+	} else {
+		output = make(map[string]interface{})
+	}
 	output["RequestTxHash"] = reqTxHash
 	if handleTx != nil {
 		for prop, value := range makeTxRPCOutput(handleTx) {
@@ -103,15 +108,22 @@ func makeRPCOutput(ev *BridgeRequestEvent, reqTxHash common.Hash, handleTx *type
 }
 
 func (handleInfo HandleInfo) MakeRPCOutput() map[string]interface{} {
-	return makeRPCOutput(&handleInfo.RequestEvent, handleInfo.RequestTxHash, handleInfo.HandleTx)
+	m := makeRPCOutput(&handleInfo.RequestEvent, handleInfo.RequestTxHash, handleInfo.HandleTx)
+	m["HandleTxHash"] = handleInfo.HandleTx.Hash()
+	return m
 }
 
-func (handleInfo FailedHandleInfo) MakeRPCOutput() map[string]interface{} {
-	return makeRPCOutput(&handleInfo.RequestEvent, handleInfo.RequestTxHash, nil)
+func (failedHandleInfo FailedHandleInfo) MakeRPCOutput() map[string]interface{} {
+	m := makeRPCOutput(nil, failedHandleInfo.RequestTxHash, nil)
+	m["RequestNonce"] = failedHandleInfo.RequestNonce
+	return m
 }
 
 func (refundInfo RefundInfo) MakeRPCOutput() map[string]interface{} {
-	return makeRPCOutput(&refundInfo.RequestEvent, refundInfo.RequestTxHash, refundInfo.RefundTx)
+	m := makeRPCOutput(nil, refundInfo.RequestTxHash, refundInfo.RefundTx)
+	m["RequestNonce"] = refundInfo.RequestNonce
+	m["RefundTxHash"] = refundInfo.RefundTx.Hash()
+	return m
 }
 
 // Deprecated
@@ -120,13 +132,26 @@ func valueTransferTxHashKey(rTxHash common.Hash) []byte {
 }
 
 func reuqestValueTransferHashKey(bridgeAddr, counterpartBridgeAddr common.Address, rTxHash common.Hash) []byte {
-	return append(append(append(requestValueTransferTxPrefix, bridgeAddr.Bytes()...), counterpartBridgeAddr.Bytes()...), rTxHash.Bytes()...)
+	b1, b2 := align(bridgeAddr, counterpartBridgeAddr)
+	return append(append(append(requestValueTransferTxPrefix, b1...), b2...), rTxHash.Bytes()...)
 }
 
 func refundTxKey(bridgeAddr, counterpartBridgeAddr common.Address, rTxHash common.Hash) []byte {
-	return append(append(append(refundTxKeyPrefix, bridgeAddr.Bytes()...), counterpartBridgeAddr.Bytes()...), rTxHash.Bytes()...)
+	fmt.Println("WWWW refund", rTxHash.Hex())
+	b1, b2 := align(bridgeAddr, counterpartBridgeAddr)
+	return append(append(append(refundTxKeyPrefix, b1...), b2...), rTxHash.Bytes()...)
 }
 
 func failedRequestNonceKey(bridgeAddr, counterpartBridgeAddr common.Address, rTxHash common.Hash) []byte {
-	return append(append(append(failedRequestNonceKeyPrefix, bridgeAddr.Bytes()...), counterpartBridgeAddr.Bytes()...), rTxHash.Bytes()...)
+	b1, b2 := align(bridgeAddr, counterpartBridgeAddr)
+	return append(append(append(failedRequestNonceKeyPrefix, b1...), b2...), rTxHash.Bytes()...)
+}
+
+func align(addr1, addr2 common.Address) ([]byte, []byte) {
+	b1 := addr1.Bytes()
+	b2 := addr2.Bytes()
+	if b1[0] <= b2[0] {
+		b1, b2 = b2, b1
+	}
+	return b1, b2
 }
