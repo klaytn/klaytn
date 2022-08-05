@@ -108,10 +108,6 @@ type txTraceTask struct {
 	index   int            // Transaction offset in the block
 }
 
-func MakeNotFoundTxErr(hash common.Hash) error {
-	return fmt.Errorf("transaction %#x not found", hash)
-}
-
 // TraceChain returns the structured logs created during the execution of EVM
 // between two blocks (excluding start) and returns them as a JSON object.
 func (api *PrivateDebugAPI) TraceChain(ctx context.Context, start, end rpc.BlockNumber, config *TraceConfig) (*rpc.Subscription, error) {
@@ -742,7 +738,7 @@ func (api *PrivateDebugAPI) TraceTransaction(ctx context.Context, hash common.Ha
 	// Retrieve the transaction and assemble its EVM context
 	tx, blockHash, _, index := api.cn.ChainDB().ReadTxAndLookupInfo(hash)
 	if tx == nil {
-		return nil, MakeNotFoundTxErr(hash)
+		return nil, fmt.Errorf("transaction %#x not found", hash)
 	}
 	reexec := defaultTraceReexec
 	if config != nil && config.Reexec != nil {
