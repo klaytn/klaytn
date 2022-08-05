@@ -35,10 +35,10 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
     uint64 public nRefunds; // a count of refunds
     mapping(uint64 => uint64) public handleNoncesToBlockNums;  // <request nonce> => <request blockNum>
 
-    mapping(uint64 => address payable) internal refundAddrMap; // <nonce of request, sender>
-    mapping(uint64 => uint256) internal refundValueMap; // <nonce of request, value>
-    mapping(uint64 => TokenType) internal refundTokenType; // <nonce of request, token type>
-    mapping(uint64 => uint) internal refundTimestampMap; // <nonce of request, token type>
+    mapping(uint64 => address payable) public refundAddrMap; // <nonce of request, sender>
+    mapping(uint64 => uint256) public refundValueMap; // <nonce of request, value>
+    mapping(uint64 => TokenType) public refundTokenType; // <nonce of request, token type>
+    mapping(uint64 => uint) public refundTimestampMap; // <nonce of request, token type>
 
     string public REMOVED_VOTE_ERR_STR = "removed vote";
 
@@ -134,12 +134,18 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
     );
 
     /**
+     * Emitted to deliver a refund request to established counterpart chain
+     * @param requestNonce is the order number of the request value transfer.
+     */
+    event RequestRefund(uint64 indexed requestNonce, bytes32 indexed requestTxHash);
+
+    /** Emitted when a refund request is handled
      * Event to log the refund by failed handle value transfer.
      * @param requestNonce is the order number of the request value transfer.
      * @param sender is the address of sedner that created request value transfer.
      * @param value amount of KLAY.
      */
-    event Refunded(uint64 indexed requestNonce, address indexed sender, uint256 indexed value);
+    event HandleRefund(uint64 indexed requestNonce, address indexed sender, uint256 indexed value);
 
     // updateHandleNonce increases lower and upper handle nonce after the _requestedNonce is handled.
     // DO NOT OPERATE WITH OTHER CONTRACT ADDRESS IN THIS FUNCTION
@@ -162,7 +168,7 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
         lowerHandleNonce = i;
     }
 
-    function _lowerHandleNonceCheck(uint64 _requestedNonce) internal {
+    function _lowerHandleNonceCheck(uint64 _requestedNonce) internal view {
         require(lowerHandleNonce <= _requestedNonce, REMOVED_VOTE_ERR_STR);
     }
 
@@ -207,9 +213,16 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
         amountOfLockedRefundKLAY += value;
     }
 
-    // refund refunds the requested amount of KLAY to sender if its corresponding value transfer is failed from the bridge contract of counterpart chain
-    // DO NOT OPERATE WITH OTHER CONTRACT ADDRESS IN THIS FUNCTION
-    function refund(uint64 requestNonce_) public onlyOperators {
+    // requestRefund emit `RequestRefund` event to be watched and handled by established counterpart chain
+    function requestRefund(uint64 requestNonce_, bytes32 requestTxHash) public onlyOperators {
+        if (!refundCond(requestNonce_)) {
+            return;
+        }
+        emit RequestRefund(requestNonce_, requestTxHash);
+    }
+
+    // handleRefund refunds the requested amount of KLAY or tokens
+    function handleRefund(uint64 requestNonce_) public onlyOperators {
         if (!refundCond(requestNonce_)) {
             return;
         }
@@ -225,7 +238,7 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
                 revert("unimplemented ERC721 refund");
             }
             nRefunds += 1;
-            emit Refunded(requestNonce_, sender, value);
+            emit HandleRefund(requestNonce_, sender, value);
             removeRefundInfo(requestNonce_, value);
         }
     }
