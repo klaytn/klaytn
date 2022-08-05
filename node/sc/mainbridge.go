@@ -24,23 +24,26 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"math/big"
 	"net"
+	"path"
 	"sync"
 	"time"
 
 	"github.com/klaytn/klaytn/accounts"
+	"github.com/klaytn/klaytn/accounts/keystore"
 	"github.com/klaytn/klaytn/api"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
+	bridgecontract "github.com/klaytn/klaytn/contracts/bridge"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node"
-	"github.com/klaytn/klaytn/node/cn"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
 )
@@ -96,7 +99,6 @@ type MainBridge struct {
 
 	blockchain *blockchain.BlockChain
 	txPool     *blockchain.TxPool
-	debugAPI   *cn.PrivateDebugAPI
 
 	chainHeadCh  chan blockchain.ChainHeadEvent
 	chainHeadSub event.Subscription
@@ -112,6 +114,11 @@ type MainBridge struct {
 	rpcServer     *rpc.Server
 	rpcConn       net.Conn
 	rpcResponseCh chan []byte
+
+	acc             *accountInfo
+	bridges         map[common.Address]*bridgecontract.Bridge
+	reqRefundNonces map[uint64]bool
+	localBackend    Backend
 }
 
 // NewMainBridge creates a new MainBridge object (including the
@@ -181,6 +188,35 @@ func NewMainBridge(ctx *node.ServiceContext, config *SCConfig) (*MainBridge, err
 	return mb, nil
 }
 
+func parentAccInit(am *accounts.Manager, dataDir string, gasLimit uint64) *accountInfo {
+	keystorePath := path.Join(dataDir, ParentBridgeAccountName)
+	ks := keystore.NewKeyStore(keystorePath, keystore.StandardScryptN, keystore.StandardScryptP)
+	if len(ks.Accounts()) == 0 {
+		panic(fmt.Sprintf("[SC][Account] No keystore file of parent chain's operator does not exist in %v", keystorePath))
+	}
+
+	// Try to unlock 1st account if valid password file exist. (optional behavior)
+	// If unlocking failed, user should unlock it through API.
+	acc := ks.Accounts()[0]
+	pwdFilePath := path.Join(keystorePath, acc.Address.String())
+	pwdStr, err := ioutil.ReadFile(pwdFilePath)
+	if err == nil {
+		if err := ks.Unlock(acc, string(pwdStr)); err != nil {
+			panic(fmt.Sprintf("[SC][Account] parent bridge account wallet is failed to unlock by wrong password file. (address = %v, err = %v)", acc.Address, err))
+		}
+	}
+	logger.Trace("[SC][Account] Parent operator's account is loaded", "addr", acc.Address)
+	return &accountInfo{
+		am:       am,
+		keystore: ks,
+		address:  acc.Address,
+		nonce:    0,
+		chainID:  nil,
+		gasPrice: nil,
+		gasLimit: gasLimit,
+	}
+}
+
 // CreateDB creates the chain database.
 func CreateDB(ctx *node.ServiceContext, config *SCConfig, name string) database.DBManager {
 	// OpenFilesLimit and LevelDBCacheSize are used by minimum value.
@@ -212,6 +248,9 @@ func (mb *MainBridge) APIs() []rpc.API {
 		},
 	}
 }
+
+func (mb *MainBridge) BlockChain() *blockchain.BlockChain { return mb.blockchain }
+func (mb *MainBridge) TxPool() *blockchain.TxPool         { return mb.txPool }
 
 func (mb *MainBridge) AccountManager() *accounts.Manager { return mb.accountManager }
 func (mb *MainBridge) EventMux() *event.TypeMux          { return mb.eventMux }
@@ -246,22 +285,20 @@ func (mb *MainBridge) SetComponents(components []interface{}) {
 					}
 				}
 			}
-			mb.setDebugAPI(v)
 		}
 	}
+	mb.acc = parentAccInit(mb.accountManager, mb.config.DataDir, mb.config.ServiceChainParentOperatorGasLimit)
+	mb.acc.SetChainID(mb.blockchain.Config().ChainID)
+	backend, err := NewLocalBackend(ItfBridge(mb))
+	if err != nil {
+		panic("[SC][Backend] Failed to initialize backend")
+	}
+	mb.localBackend = backend
+	mb.bridges = make(map[common.Address]*bridgecontract.Bridge)
+	mb.reqRefundNonces = make(map[uint64]bool)
 
 	mb.pmwg.Add(1)
 	go mb.loop()
-}
-
-func (mb *MainBridge) setDebugAPI(apis []rpc.API) {
-	for _, api := range apis {
-		switch svc := api.Service.(type) {
-		case *cn.PrivateDebugAPI:
-			mb.debugAPI = svc
-			break
-		}
-	}
 }
 
 // Protocols implements node.Service, returning all the currently configured
