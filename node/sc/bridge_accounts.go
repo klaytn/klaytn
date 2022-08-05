@@ -252,13 +252,7 @@ func (acc *accountInfo) GetAccountInfo() map[string]interface{} {
 
 // GenerateTransactOpts returns a transactOpts for transact on local/remote backend.
 func (acc *accountInfo) GenerateTransactOpts() *bind.TransactOpts {
-	var nonce *big.Int
-
-	// Only for unit test, if the nonce is not synced yet, return transaction option with nil nonce.
-	// Backend will use state nonce.
-	if acc.isNonceSynced {
-		nonce = new(big.Int).SetUint64(acc.nonce)
-	}
+	var nonce *big.Int = nil
 
 	gasPrice := acc.gasPrice
 	if acc.kip71Config.UpperBoundBaseFee != 0 {
