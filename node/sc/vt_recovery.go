@@ -21,20 +21,19 @@ import (
 	"time"
 
 	"github.com/klaytn/klaytn/accounts/abi/bind"
+	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/pkg/errors"
 )
 
-// const LeastRecoveryInterval = time.Second * 5
+const (
+	DefaultReasoingTimeout   = time.Second * 5
+	DefaultUnexecutedTimeout = time.Second * 60
+)
 
 var (
 	filterLogsStride = uint64(100)
 	maxPendingTxs    = maxPendingNonceDiff
 	ReasoingTimeouts = make(map[uint64]time.Time) // <request nonce, stacked timeout>
-)
-
-const (
-	DefaultReasoingTimeout   = time.Second * 5
-	DefaultUnexecutedTimeout = time.Second * 30
 )
 
 // valueTransferHint stores the last handled block number and nonce (Request or Handle).
@@ -95,12 +94,6 @@ func NewValueTransferRecovery(config *SCConfig, cBridgeInfo, pBridgeInfo *Bridge
 // Start implements starting all internal goroutines used by the value transfer recovery.
 func (vtr *valueTransferRecovery) Start() error {
 	recoveryInterval := time.Duration(vtr.config.VTRecoveryInterval) * time.Second
-	/*
-		if recoveryInterval < LeastRecoveryInterval {
-			panic(fmt.Sprintf("Recovery interval must be larger than %v (given: %v)", LeastRecoveryInterval, recoveryInterval))
-		}
-	*/
-
 	if !vtr.config.VTRecovery {
 		return ErrVtrDisabled
 	}
@@ -392,27 +385,17 @@ func checkRecoveryCondition(hint *valueTransferHint) bool {
 	return false
 }
 
-func furtherTreatment(bi, ctbi *BridgeInfo, respReasoning ResponseVTReasoningWrapper, ev IRequestValueTransferEvent) bool {
-	// Do not push a log if its failed transaction was discovered. The contract call `UpdateHandleStatus` is not executed yet
-	if bi.bridgeDB.ReadFailedHandleInfo(bi.address, bi.counterpartAddress, ev.GetRaw().TxHash) != nil {
+// isUnexecuted looks up the receipt of handle value transfer tx
+func isUnexecuted(bi, ctbi *BridgeInfo, ev IRequestValueTransferEvent, receipt *types.Receipt) bool {
+	if receipt != nil && receipt.Status != types.ReceiptStatusSuccessful { // executed
+		logger.Error("[SC][HandleVT] A handle value transfer was failed",
+			"requestNonce", ev.GetRequestNonce(),
+			"requestTxHash", ev.GetRaw().TxHash.Hex(),
+			"handleTxHash", receipt.TxHash.Hex(),
+		)
 		return false
-	} else {
-		if !respReasoning.decideResend() {
-			if respReasoning.refundable() {
-				bi.refund(ev)
-			}
-			if bi.bridgeDB.ReadFailedHandleInfo(bi.address, bi.counterpartAddress, ev.GetRaw().TxHash) == nil {
-				bi.removeRefundLedger(ev.GetRequestNonce())
-				ctbi.updateHandleStatus(ev, true)
-				vtFailedHandleEventMeter.Mark(1)
-				ctbi.SetFailedHandleEvents(1)
-				bi.bridgeDB.WriteFailedHandleInfo(bi.address, bi.counterpartAddress, makeFailedHandleInfo(ev))
-			}
-			return false
-		} else {
-			return true
-		}
 	}
+	return true
 }
 
 func updateReasoingTimeout(unexecuted bool, ev IRequestValueTransferEvent) bool {
@@ -420,8 +403,8 @@ func updateReasoingTimeout(unexecuted bool, ev IRequestValueTransferEvent) bool 
 		if ReasoingTimeouts[ev.GetRequestNonce()].IsZero() {
 			ReasoingTimeouts[ev.GetRequestNonce()] = time.Now()
 		} else if time.Since(ReasoingTimeouts[ev.GetRequestNonce()]) >= DefaultUnexecutedTimeout {
-			logger.Error("[SC][Reasoning] A handle value transfer transaction was not found during default timeout. Resend again", "elapsed", time.Since(ReasoingTimeouts[ev.GetRequestNonce()]), "timeout", DefaultUnexecutedTimeout,
-				"requestNonce", ev.GetRequestNonce(), "reqTxHash", ev.GetRaw().TxHash.Hex())
+			logger.Error("[SC][HandleVT] Resend the unexecutd transaction of the handle value transfer again", "elapsed", time.Since(ReasoingTimeouts[ev.GetRequestNonce()]), "timeout", DefaultUnexecutedTimeout,
+				"requestNonce", ev.GetRequestNonce(), "requestTxHash", ev.GetRaw().TxHash.Hex())
 			ReasoingTimeouts[ev.GetRequestNonce()] = time.Time{}
 			return true
 		}
@@ -430,7 +413,7 @@ func updateReasoingTimeout(unexecuted bool, ev IRequestValueTransferEvent) bool 
 	return false
 }
 
-func (vtr *valueTransferRecovery) reasoning() {
+func (vtr *valueTransferRecovery) lookupReceipt() {
 	replaceReceiverAcc2Zero := func(events []IRequestValueTransferEvent, bi, ctbi *BridgeInfo) []IRequestValueTransferEvent {
 		subBridge := bi.subBridge
 		unexecutedEvents := make([]IRequestValueTransferEvent, 0)
@@ -438,29 +421,22 @@ func (vtr *valueTransferRecovery) reasoning() {
 			unexecuted := false
 			switch ev.GetTokenType() {
 			case KLAY:
-				reqReasoning, err := makeRequestKLAYHandleDebug(bi, ev)
+				handleTx, err := getHandleTx(bi, ev)
 				if err != nil {
 					logger.Error("[SC][Reasoning] Not found such an event", "event", ev.String())
 					unexecutedEvents = append(unexecutedEvents, ev)
 					continue
 				}
-				if !bi.onChildChain { // parent sent, child do reasoning
-					respReasoning := reqReasoning.reasoning(subBridge.blockchain, subBridge.debugAPI)
-					if furtherTreatment(bi, ctbi, respReasoning, ev) {
-						unexecuted = true
+				if !bi.onChildChain { // parent sent, child looks up the tx hash
+					receipt := getReceipt(subBridge.blockchain, handleTx.Hash())
+					unexecuted = isUnexecuted(bi, ctbi, ev, receipt)
+					if !unexecuted {
+						ctbi.requestRefund(ev)
 					}
-				} else { // child sent, parent do reasoning
-					subBridge.handler.requestTxDebug(reqReasoning)
-					expired := time.After(DefaultReasoingTimeout)
-					select {
-					case respReasoning := <-bi.respVTReasoingCh:
-						if furtherTreatment(bi, ctbi, respReasoning, ev) {
-							unexecuted = true
-						}
-					case <-expired:
-						unexecuted = true
-						logger.Error("[SC][Reasoning] Response of reasoning was not received from paretn chain", "requestNonce", ev.GetRequestNonce(), "reqTxHash", ev.GetRaw().TxHash.Hex())
-					}
+				} else { // child sent, parent looks up the tx hash
+					reqHandleReceipt := newRequestReceiptHandle(bi.address, ctbi.address, handleTx.Hash(), ev)
+					subBridge.handler.requestHandleReceipt(reqHandleReceipt)
+					unexecuted = true
 				}
 				if updateReasoingTimeout(unexecuted, ev) {
 					logger.Debug("[SC][Reasoning] Put unexecuted handle value transfer transaction", "event", ev.String())
@@ -493,7 +469,7 @@ func (vtr *valueTransferRecovery) recoverPendingEvents() error {
 	vtRequestEventMeter.Mark(int64(len(vtr.childEvents)))
 	vtRecoveredRequestEventMeter.Mark(int64(len(vtr.childEvents)))
 
-	vtr.reasoning()
+	vtr.lookupReceipt()
 
 	events := make([]IRequestValueTransferEvent, len(vtr.childEvents))
 	for i, event := range vtr.childEvents {
