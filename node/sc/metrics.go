@@ -42,7 +42,8 @@ var (
 
 	vtRequestEventMeter      = metrics.NewRegisteredMeter("klay/bridge/vt/event/request", nil)
 	vtHandleEventMeter       = metrics.NewRegisteredMeter("klay/bridge/vt/event/handle", nil)
-	vtRefundEventMeter       = metrics.NewRegisteredMeter("klay/bridge/vt/event/refund", nil)
+	vtReqRefundEventMeter    = metrics.NewRegisteredMeter("klay/bridge/vt/event/refund/request", nil)
+	vtHandleRefundEventMeter = metrics.NewRegisteredMeter("klay/bridge/vt/event/refund/handle", nil)
 	vtFailedHandleEventMeter = metrics.NewRegisteredMeter("klay/bridge/vt/event/failedhandle", nil)
 
 	vtRecoveredRequestEventMeter = metrics.NewRegisteredMeter("klay/bridge/vt/event/recovery/request", nil)
