@@ -19,8 +19,10 @@ package sc
 import (
 	"math/big"
 
+	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
+	bridgecontract "github.com/klaytn/klaytn/contracts/bridge"
 	"github.com/klaytn/klaytn/datasync/downloader"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/params"
@@ -75,9 +77,9 @@ func (mbh *MainBridgeHandler) HandleSubMsg(p BridgePeer, msg p2p.Msg) error {
 		if err := mbh.handleServiceChainReceiptRequestMsg(p, msg); err != nil {
 			return err
 		}
-	case ServiceChainRequestVTReasoningMsg:
-		logger.Debug("[SC] received ServiceChainRequestVTReasoningMsg")
-		if err := mbh.handleServiceChainRequestVTReasoningMsg(p, msg); err != nil {
+	case ServiceChainRequestHandleReceiptMsg:
+		logger.Debug("[SC] received ServiceChainRequestHandleReceiptMsg")
+		if err := mbh.handleServiceChainRequestHandleReceiptMsg(p, msg); err != nil {
 			return err
 		}
 	default:
@@ -193,7 +195,6 @@ func (mbh *MainBridgeHandler) handleServiceChainReceiptRequestMsg(p BridgePeer, 
 		if receipt == nil {
 			continue
 		}
-
 		receiptsForStorage = append(receiptsForStorage, (*types.ReceiptForStorage)(receipt))
 	}
 	if len(receiptsForStorage) == 0 {
@@ -202,13 +203,51 @@ func (mbh *MainBridgeHandler) handleServiceChainReceiptRequestMsg(p BridgePeer, 
 	return p.SendServiceChainReceiptResponse(receiptsForStorage)
 }
 
-func (mbh *MainBridgeHandler) handleServiceChainRequestVTReasoningMsg(p BridgePeer, msg p2p.Msg) error {
-	var reqVTReasoning RequestVTReasoningWrapper
-	if err := msg.Decode(&reqVTReasoning); err != nil {
-		logger.Error("[SC] failed to decode", "err", err)
+func (mbh *MainBridgeHandler) requestRefund(reqHandleReceipt RequestHandleReceipt) {
+	var gasPrice *big.Int
+	mb := mbh.mainbridge
+	if mb.blockchain.Config().IsMagmaForkEnabled(mb.blockchain.CurrentHeader().Number) {
+		gasPrice = new(big.Int).SetUint64(mb.blockchain.Config().Governance.KIP71.UpperBoundBaseFee)
+	} else {
+		gasPrice = new(big.Int).SetUint64(mb.blockchain.Config().UnitPrice)
+	}
+	gasLimit := params.UpperGasLimit / 1000000 // allow gas limit to 999999
+	var nonce *big.Int = nil
+	auth := bind.MakeTransactOptsWithKeystore(mb.acc.keystore, mb.acc.address, nonce, mb.acc.chainID, gasLimit, gasPrice)
+
+	bridgeAddr := reqHandleReceipt.CounterpartBridgeAddr
+	bridge, ok := mb.bridges[bridgeAddr]
+	if !ok {
+		b, err := bridgecontract.NewBridge(bridgeAddr, mb.localBackend)
+		if err != nil {
+			logger.Error("[SC][MainBridge] Failed to initialize bridge backend. RequestRefund event cannot be emitted", "addr", bridgeAddr, "err", err)
+			return
+		}
+		bridge = b
+		mb.bridges[bridgeAddr] = bridge
+	}
+	reqRefundTx, err := bridge.RequestRefund(auth, reqHandleReceipt.RequestNonce, reqHandleReceipt.RequestTxHash)
+	if err != nil {
+		logger.Error("[SC][Refund] Failed to create RequestRefund transaction", "requestTxHash", reqHandleReceipt.RequestTxHash, "err", err)
+	} else {
+		logger.Trace("[SC][Refund] RequestRefund transaction is created",
+			"chain", "parent",
+			"refundTxHash", reqRefundTx.Hash().Hex(),
+			"requestNonce", reqHandleReceipt.RequestNonce,
+		)
+	}
+	mb.reqRefundNonces[reqHandleReceipt.RequestNonce] = true
+}
+
+func (mbh *MainBridgeHandler) handleServiceChainRequestHandleReceiptMsg(p BridgePeer, msg p2p.Msg) error {
+	var reqHandleReceipt RequestHandleReceipt
+	if err := msg.Decode(&reqHandleReceipt); err != nil {
+		logger.Error("[SC][P2P] failed to decode", "err", err)
 		return errResp(ErrDecode, "msg %v: %v", msg, err)
 	}
-
-	respVTReasoning := reqVTReasoning.reasoning(mbh.mainbridge.blockchain, mbh.mainbridge.debugAPI)
-	return p.SendServiceChainResponseVTReasoning(&respVTReasoning)
+	receipt := mbh.mainbridge.blockchain.GetReceiptByTxHash(reqHandleReceipt.HandleTxHash)
+	if receipt != nil && receipt.Status != types.ReceiptStatusSuccessful && !mbh.mainbridge.reqRefundNonces[reqHandleReceipt.RequestNonce] { // executed
+		mbh.requestRefund(reqHandleReceipt)
+	}
+	return nil
 }
