@@ -14,7 +14,7 @@ import (
 
 // suggestLeastFee calculates least fee to be set as value transfer service fee.
 // It returns by addition of four estimated gas of contract calls (`BridgeTransfer.sol/removeRefundLedger`, `BridgeTransfer.sol/updateHandleStatus`, 'handleValueTransfer')
-func (bi *BridgeInfo) suggestLeastFee(ctbi *BridgeInfo, handleValueTransfers []string) (map[string]interface{}, error) {
+func (bi *BridgeInfo) suggestLeastFee(ctbi *BridgeInfo, handleValueTransfer string) (map[string]interface{}, error) {
 	reqNonce, err := bi.bridge.RequestNonce(nil)
 	if err != nil {
 		return nil, err
@@ -23,14 +23,17 @@ func (bi *BridgeInfo) suggestLeastFee(ctbi *BridgeInfo, handleValueTransfers []s
 	// TODO-hyunsooda: Consider two options below
 	// (1) Return the gratest cost from `handleKLAYTransfer`, `handleValueTransfer for ERC20 and ERC721`.
 	// (2) Or, consider a fine-grained fee per types of value (token)
-	methods := []string{"removeRefundLedger", "updateHandleStatus"}
-	methods = append(methods, handleValueTransfers...)
+	txHash := common.HexToHash("0")
+	methods := []string{"removeRefundLedger", "updateHandleStatus", "requestRefund", "handleRefund"}
+	methods = append(methods, handleValueTransfer)
 	params := [][]interface{}{
 		{unhandledReqNonce},
-		{unhandledReqNonce, common.HexToHash("0"), uint64(1), false},
-		{common.HexToHash("0"), common.HexToAddress("0x1"), common.HexToAddress("0x2"), common.Big0, unhandledReqNonce, uint64(1), []byte{}},
+		{unhandledReqNonce, txHash, uint64(0), false},
+		{unhandledReqNonce, txHash},
+		{unhandledReqNonce},
+		{txHash, common.HexToAddress("0x1"), common.HexToAddress("0x2"), common.Big0, unhandledReqNonce, uint64(1), []byte{}},
 	}
-	bridgeInfos := []*BridgeInfo{bi, ctbi, ctbi}
+	bridgeInfos := []*BridgeInfo{bi, ctbi, ctbi, bi, ctbi}
 	totalCost, totalGasUsed := uint64(0), uint64(0)
 	output := make(map[string]interface{})
 	for idx, method := range methods {
