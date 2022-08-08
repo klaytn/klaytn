@@ -732,34 +732,21 @@ func (sb *SubBridgeAPI) RequestParentSync() {
 }
 
 func (sb *SubBridgeAPI) SuggestLeastFee(bridgeAddr common.Address, tokenTypeStr string) (map[string]interface{}, error) {
-	types := strings.Split(tokenTypeStr, ",")
-	m := make(map[uint8]bool)
-	handleValueTransfers := make([]string, 0)
-	for _, t := range types {
-		switch t {
-		case "KLAY":
-			if !m[KLAY] {
-				handleValueTransfers = append(handleValueTransfers, "handleKLAYTransfer")
-				m[KLAY] = true
-			}
-		case "ERC20":
-			if !m[ERC20] {
-				handleValueTransfers = append(handleValueTransfers, "handleERC20Transfer")
-				m[ERC20] = true
-			}
-		case "ERC721":
-			if !m[ERC721] {
-				handleValueTransfers = append(handleValueTransfers, "handleERC721Transfer")
-				m[ERC721] = true
-			}
-		default:
-			return nil, fmt.Errorf("Wrong types of parameters: %s (The parameter of token types must be comma seperated)", tokenTypeStr)
-		}
+	handleValueTransfer := ""
+	switch tokenTypeStr {
+	case "KLAY":
+		handleValueTransfer = "handleKLAYTransfer"
+	case "ERC20":
+		handleValueTransfer = "handleERC20Transfer"
+	case "ERC721":
+		handleValueTransfer = "handleERC721Transfer"
+	default:
+		return nil, fmt.Errorf("Wrong types of parameters: %s (The parameter of token types must be comma seperated)", tokenTypeStr)
 	}
 	if bi, ok := sb.subBridge.bridgeManager.GetBridgeInfo(bridgeAddr); ok {
 		if ctBridgeAddr := sb.subBridge.bridgeManager.GetCounterPartBridgeAddr(bridgeAddr); ctBridgeAddr != (common.Address{}) {
 			if ctbi, ok := sb.subBridge.bridgeManager.GetBridgeInfo(ctBridgeAddr); ok {
-				return bi.suggestLeastFee(ctbi, handleValueTransfers)
+				return bi.suggestLeastFee(ctbi, handleValueTransfer)
 			}
 			return nil, fmt.Errorf("%s (bridge addr = %s)", ErrNoBridgeInfo.Error(), ctBridgeAddr.String())
 		}

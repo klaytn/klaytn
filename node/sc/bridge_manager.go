@@ -206,10 +206,10 @@ func makeFailedHandleInfo(ev *RequestRefundEvent) *database.FailedHandleInfo {
 	}
 }
 
-func makeRefundInfo(ev *RequestRefundEvent, refundTx *types.Transaction) *database.RefundInfo {
+func makeRefundInfo(reqNonce uint64, txHash common.Hash, refundTx *types.Transaction) *database.RefundInfo {
 	return &database.RefundInfo{
-		RequestNonce:  ev.RequestNonce,
-		RequestTxHash: ev.RequestTxHash,
+		RequestNonce:  reqNonce,
+		RequestTxHash: txHash,
 		RefundTx:      refundTx,
 	}
 }
@@ -405,26 +405,26 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev IRequestValueTransferEv
 	return nil
 }
 
-func (bi *BridgeInfo) handleRefund(ev *RequestRefundEvent) error {
+func (bi *BridgeInfo) handleRefund(reqNonce uint64, reqTxHash common.Hash) error {
 	bridgeAcc := bi.account
 	bridgeAcc.Lock()
 	defer bridgeAcc.UnLock()
 	auth := bi.AuthWithUnlimitedGas()
 
-	sender, err := bi.bridge.RefundAddrMap(nil, ev.RequestNonce)
+	sender, err := bi.bridge.RefundAddrMap(nil, reqNonce)
 	if err != nil {
 		return err
 	}
-	value, err := bi.bridge.RefundValueMap(nil, ev.RequestNonce)
+	value, err := bi.bridge.RefundValueMap(nil, reqNonce)
 	if err != nil {
 		return err
 	}
-	tokenType, err := bi.bridge.RefundTokenType(nil, ev.RequestNonce)
+	tokenType, err := bi.bridge.RefundTokenType(nil, reqNonce)
 	if err != nil {
 		return err
 	}
 
-	handleRefundTx, err := bi.bridge.HandleRefund(auth, ev.RequestNonce)
+	handleRefundTx, err := bi.bridge.HandleRefund(auth, reqNonce)
 	if err != nil {
 		return err
 	}
@@ -433,22 +433,22 @@ func (bi *BridgeInfo) handleRefund(ev *RequestRefundEvent) error {
 	logger.Trace("[SC][Refund] HandleRefund transaction is created",
 		"chain", bi.getVTDirectionStr(),
 		"refundTxHash", handleRefundTx.Hash().Hex(),
-		"requestNonce", ev.RequestNonce,
+		"requestNonce", reqNonce,
 		"tokenType", tokenType,
 		"sender", sender,
 		"value", value,
 	)
-	bi.bridgeDB.WriteRefundInfo(bi.address, bi.counterpartAddress, makeRefundInfo(ev, handleRefundTx))
+	bi.bridgeDB.WriteRefundInfo(bi.address, bi.counterpartAddress, makeRefundInfo(reqNonce, reqTxHash, handleRefundTx))
 	return nil
 }
 
-func (bi *BridgeInfo) requestRefund(ev IRequestValueTransferEvent) error {
+func (bi *BridgeInfo) requestRefund(reqNonce uint64, reqTxHash common.Hash) error {
 	bridgeAcc := bi.account
 	bridgeAcc.Lock()
 	defer bridgeAcc.UnLock()
 	auth := bi.AuthWithUnlimitedGas()
 
-	reqRefundTx, err := bi.bridge.RequestRefund(auth, ev.GetRequestNonce(), ev.GetRaw().TxHash)
+	reqRefundTx, err := bi.bridge.RequestRefund(auth, reqNonce, reqTxHash)
 	if err != nil {
 		return err
 	}
@@ -457,7 +457,8 @@ func (bi *BridgeInfo) requestRefund(ev IRequestValueTransferEvent) error {
 	logger.Trace("[SC][Refund] RequestRefund transaction is created",
 		"chain", bi.getVTDirectionStr(),
 		"refundTxHash", reqRefundTx.Hash().Hex(),
-		"requestNonce", ev.GetRequestNonce(),
+		"requestNonce", reqNonce,
+		"requestTxHash", reqTxHash.Hex(),
 	)
 	return nil
 }
@@ -482,13 +483,12 @@ func (bi *BridgeInfo) removeRefundLedger(reqNonce uint64) error {
 	return nil
 }
 
-func (bi *BridgeInfo) updateHandleStatus(ev *HandleRefundEvent, failed bool) error {
+func (bi *BridgeInfo) updateHandleStatus(reqNonce uint64, reqTxHash common.Hash, reqBlkNum uint64, failed bool) error {
 	bridgeAcc := bi.account
 	bridgeAcc.Lock()
 	defer bridgeAcc.UnLock()
 	auth := bi.AuthWithUnlimitedGas()
 
-	reqNonce, reqTxHash, reqBlkNum := ev.RequestNonce, ev.Raw.TxHash, ev.Raw.BlockNumber
 	updateHandleStatusTx, err := bi.bridge.UpdateHandleStatus(auth, reqNonce, reqTxHash, reqBlkNum, failed)
 	if err != nil {
 		return err

@@ -132,7 +132,7 @@ func (cce *ChildChainEventHandler) ProcessRequestRefundEvent(ev *RequestRefundEv
 	}
 
 	go func() {
-		refundBridgeInfo.handleRefund(ev)
+		refundBridgeInfo.handleRefund(ev.RequestNonce, ev.RequestTxHash)
 		vtFailedHandleEventMeter.Mark(1)
 		requestedBridgeInfo.SetFailedHandleEvents(1)
 		refundBridgeInfo.bridgeDB.WriteFailedHandleInfo(refundBridgeInfo.address, refundBridgeInfo.counterpartAddress, makeFailedHandleInfo(ev))
@@ -157,7 +157,7 @@ func (cce *ChildChainEventHandler) ProcessHandleRefundEvent(ev *HandleRefundEven
 		return fmt.Errorf("[SC][Bridge] No counterpart bridge info was found (bridge addr = %v, counterpart bridge addr = %v)", addr.String(), ctBridgeAddr.String())
 	}
 	go func() {
-		ctbi.updateHandleStatus(ev, true)
+		ctbi.updateHandleStatus(ev.RequestNonce, ev.Raw.TxHash, ev.Raw.BlockNumber, true)
 		bi.SetRefundEvents()
 	}()
 	return nil

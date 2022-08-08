@@ -431,7 +431,7 @@ func (vtr *valueTransferRecovery) lookupReceipt() {
 					receipt := getReceipt(subBridge.blockchain, handleTx.Hash())
 					unexecuted = isUnexecuted(bi, ctbi, ev, receipt)
 					if !unexecuted {
-						ctbi.requestRefund(ev)
+						ctbi.requestRefund(ev.GetRequestNonce(), ev.GetRaw().TxHash)
 					}
 				} else { // child sent, parent looks up the tx hash
 					reqHandleReceipt := newRequestReceiptHandle(bi.address, ctbi.address, handleTx.Hash(), ev)
