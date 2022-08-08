@@ -115,9 +115,10 @@ type MainBridge struct {
 	rpcConn       net.Conn
 	rpcResponseCh chan []byte
 
-	acc             *accountInfo
-	bridges         map[common.Address]*bridgecontract.Bridge
-	reqRefundNonces map[uint64]bool
+	acc     *accountInfo
+	bridges map[common.Address]*bridgecontract.Bridge
+
+	reqRefundNonces map[uint64]bool // This map prevents consecutive contract call until the first contract call is executed to not pay unncessary gas
 	localBackend    Backend
 }
 

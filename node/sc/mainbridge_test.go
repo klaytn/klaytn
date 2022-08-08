@@ -19,6 +19,7 @@ package sc
 import (
 	"fmt"
 	"math/big"
+	"os"
 	"path"
 	"reflect"
 	"strings"
@@ -26,9 +27,11 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/klaytn/klaytn/accounts"
+	"github.com/klaytn/klaytn/accounts/keystore"
 	"github.com/klaytn/klaytn/api"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/vm"
+	"github.com/klaytn/klaytn/cmd/homi/setup"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/consensus/istanbul/backend"
@@ -139,7 +142,7 @@ func TestMainBridge_basic(t *testing.T) {
 	assert.Equal(t, testNetVersion, mBridge.NetVersion())
 
 	// New components of MainBridge which will update old components
-	bc := &blockchain.BlockChain{}
+	bc := testBlockChain(t)
 	txPool := &blockchain.TxPool{}
 	compAPIs := []rpc.API{
 		{
@@ -158,6 +161,19 @@ func TestMainBridge_basic(t *testing.T) {
 	assert.Nil(t, mBridge.blockchain)
 	assert.Nil(t, mBridge.txPool)
 	assert.Nil(t, mBridge.rpcServer.GetServices()["klay"])
+
+	// To avoid a panic by absensce of keystore file
+	keystorePath := path.Join(mBridge.config.DataDir, ParentBridgeAccountName)
+	password := setup.RandStringRunes(params.PasswordLength)
+	ks := keystore.NewKeyStore(keystorePath, keystore.StandardScryptN, keystore.StandardScryptP)
+	acc, err := ks.NewAccount(password)
+	assert.NoError(t, err)
+	setup.WriteFile([]byte(password), keystorePath, acc.Address.String())
+	defer func() {
+		if err := os.RemoveAll(keystorePath); err != nil {
+			t.Fatalf("fail to delete file %v", err)
+		}
+	}()
 
 	// Update and check MainBridge components
 	mBridge.SetComponents(comp)
