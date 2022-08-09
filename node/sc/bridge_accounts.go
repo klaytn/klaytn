@@ -362,3 +362,13 @@ func (acc *accountInfo) IsUnlockedAccount() bool {
 	defer acc.mu.Unlock()
 	return acc.keystore.IsUnlocked(acc.address)
 }
+
+// SignHash signs a given hash and returns bytes of hash, signature, and error
+func (acc *accountInfo) SignHash(h []byte) ([]byte, error) {
+	sig, err := acc.keystore.SignHash(accounts.Account{Address: acc.address}, h)
+	if err != nil {
+		return nil, err
+	} else {
+		return sig, nil
+	}
+}
