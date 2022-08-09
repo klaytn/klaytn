@@ -259,13 +259,6 @@ func (sbh *SubBridgeHandler) HandleMainMsg(p BridgePeer, msg p2p.Msg) error {
 		if err := sbh.handleParentChainReceiptResponseMsg(p, msg); err != nil {
 			return err
 		}
-		/*
-			case ServiceChainResponseHandleReceiptMsg:
-				logger.Debug("[SC] received ServiceChainResponseHandleReceiptMsg")
-				if err := sbh.handleParentChainResponseHandleReceiptMsg(p, msg); err != nil {
-					return err
-				}
-		*/
 	default:
 		return errResp(ErrInvalidMsgCode, "%v", msg.Code)
 	}
@@ -485,13 +478,6 @@ func (sbh *SubBridgeHandler) broadcastServiceChainReceiptRequest() {
 	}
 }
 
-/*
-func (sbh *SubBridgeHandler) requestTxDebug(reqVTReasoning *RequestVTReasoningWrapper) {
-	for _, peer := range sbh.subbridge.BridgePeerSet().peers {
-		peer.SendServiceChainRequestVTReasoning(reqVTReasoning)
-	}
-}
-*/
 func (sbh *SubBridgeHandler) requestHandleReceipt(reqHandleReceipt *RequestHandleReceipt) {
 	for _, peer := range sbh.subbridge.BridgePeerSet().peers {
 		peer.SendServiceChainRequestHandleReceipt(reqHandleReceipt)
