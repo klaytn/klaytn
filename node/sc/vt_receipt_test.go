@@ -229,7 +229,7 @@ func bridgeSetup(t *testing.T) (*backends.SimulatedBackend,
 	return sim, bm, cbi, pbi, vtr, alice, bob, node.DefaultConfig.ResolvePath("chaindata")
 }
 
-func handleLoop(t *testing.T, sim *backends.SimulatedBackend, bm *BridgeManager, bi *BridgeInfo, handled chan<- struct{}, nRequest int, unexecutedTest bool, exit chan struct{}) {
+func handleLoop(t *testing.T, sim *backends.SimulatedBackend, bm *BridgeManager, bi *BridgeInfo, handled chan<- struct{}, unexecutedTest bool, exit chan struct{}) {
 	reqVTevCh := make(chan RequestValueTransferEvent)
 	handleValueTransferEventCh := make(chan *HandleValueTransferEvent)
 	requestRefundEventCh := make(chan *RequestRefundEvent)
@@ -305,7 +305,7 @@ func TestHandleVTFailure(t *testing.T) {
 
 	nRequest := 5
 	handled := make(chan struct{}, 1)
-	handleLoop(t, sim, bm, cbi, handled, nRequest, true, exit)
+	handleLoop(t, sim, bm, cbi, handled, true, exit)
 
 	// Do request KLAY transfer
 	for TEST_CASE := 0; TEST_CASE < nRequest; TEST_CASE++ {
@@ -406,7 +406,7 @@ func TestWithdraw(t *testing.T) {
 
 		nRequest := 3
 		handled := make(chan struct{}, 1)
-		handleLoop(t, sim, bm, cbi, handled, nRequest, false, exit)
+		handleLoop(t, sim, bm, cbi, handled, false, exit)
 
 		// 1. Send KLAY three times
 		for i := 0; i < nRequest; i++ {
@@ -669,4 +669,95 @@ func TestMsgIntegrity(t *testing.T) {
 	isSamePubkey(t, operatorPubkey, operatorSig, txHash2, true)
 	isSamePubkey(t, operatorPubkey, attackerSig, txHash2, false)
 	isSamePubkey(t, operatorPubkey, operatorSig, txHash3, false)
+}
+
+func TestHandleRefundRecovery(t *testing.T) {
+	sim, bm, cbi, pbi, vtr, alice, bob, dataDir := bridgeSetup(t)
+	exit := make(chan struct{}, 1)
+	defer cleanup(t, sim, dataDir, exit)
+
+	handled := make(chan struct{}, 1)
+	testHandleRefundFailure(t, sim, vtr, bm, cbi, handled, true, exit)
+
+	// Do request KLAY transfer
+	testKLAYNotEnoughContractBalanceFailure(t, sim, cbi)
+	to := bob.From
+	prevAliceBalance, prevBobBalance := getBalance(t, sim, alice.From), getBalance(t, sim, bob.From)
+	tx, err := pbi.bridge.RequestKLAYTransfer(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, Value: big.NewInt(int64(TEST_AMOUNT_OF_KLAY)), GasLimit: testGasLimit}, to, big.NewInt(int64(TEST_AMOUNT_OF_KLAY)), nil)
+	assert.NoError(t, err)
+	sim.Commit()
+	CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+
+	<-handled
+	recovery(t, sim, vtr)
+	<-handled
+
+	sim.Commit()
+	isExpected(t, sim, NOT_ENOUGH_CONTRACT_BALANCE_TEST, alice.From, bob.From, prevAliceBalance, prevBobBalance)
+	revertConfiguration(t, sim, bm, cbi, NOT_ENOUGH_CONTRACT_BALANCE_TEST, alice)
+
+	// An arbitrary sleep bypasses the access of deallocated memory.
+	time.Sleep(time.Second * 5)
+}
+
+func testHandleRefundFailure(t *testing.T, sim *backends.SimulatedBackend, vtr *valueTransferRecovery, bm *BridgeManager, bi *BridgeInfo, handled chan<- struct{}, unexecutedTest bool, exit chan struct{}) {
+	reqVTevCh := make(chan RequestValueTransferEvent)
+	handleValueTransferEventCh := make(chan *HandleValueTransferEvent)
+	requestRefundEventCh := make(chan *RequestRefundEvent)
+	handleRefundEventCh := make(chan *HandleRefundEvent)
+
+	bm.SubscribeReqVTev(reqVTevCh)
+	bm.SubscribeHandleVTev(handleValueTransferEventCh)
+	bm.SubscribeReqRefundEv(requestRefundEventCh)
+	bm.SubscribeHandleRefundEv(handleRefundEventCh)
+
+	// Handle the request and handle events
+	nReceivedHandleRefund := 0
+	go func() {
+		for {
+			select {
+			case ev := <-reqVTevCh:
+				handle(t, ev, bi, sim)
+				handled <- struct{}{}
+			case ev := <-handleValueTransferEventCh:
+				reqBridgeInfo := getCounterpartBridgeInfo(t, bm, bi.address)
+				auth := reqBridgeInfo.account.GenerateTransactOpts()
+				auth.GasLimit = params.UpperGasLimit
+
+				tx, err := reqBridgeInfo.bridge.RemoveRefundLedger(auth, ev.HandleNonce)
+				assert.NoError(t, err)
+				sim.Commit()
+				CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+			case ev := <-requestRefundEventCh:
+				t.Log("RequestRefund event received")
+				if nReceivedHandleRefund == 0 {
+					t.Log("Do not execute the refund handle if its receive is the first time")
+					nReceivedHandleRefund++
+					recovery(t, sim, vtr)
+				} else {
+					reqBridgeInfo := getCounterpartBridgeInfo(t, bm, bi.address)
+					auth := reqBridgeInfo.account.GenerateTransactOpts()
+					auth.GasLimit = params.UpperGasLimit
+
+					tx, err := reqBridgeInfo.bridge.HandleRefund(auth, ev.RequestNonce)
+					assert.NoError(t, err)
+					sim.Commit()
+					CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+				}
+			case ev := <-handleRefundEventCh:
+				auth := bi.account.GenerateTransactOpts()
+				auth.GasLimit = params.UpperGasLimit
+
+				reqNonce, reqTxHash, reqBlkNum := ev.RequestNonce, ev.Raw.TxHash, ev.Raw.BlockNumber
+				tx, err := bi.bridge.UpdateHandleStatus(auth, reqNonce, reqTxHash, reqBlkNum, true)
+				assert.NoError(t, err)
+				sim.Commit()
+				CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+				handled <- struct{}{}
+			case <-exit:
+				exit <- struct{}{}
+				return
+			}
+		}
+	}()
 }
