@@ -1,20 +1,26 @@
 package sc
 
 import (
+	"bytes"
 	"context"
 	"io/ioutil"
 	"math/big"
 	"os"
+	"path"
 	"testing"
 	"time"
 
+	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
+	"github.com/klaytn/klaytn/accounts/keystore"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/cmd/homi/setup"
 	"github.com/klaytn/klaytn/common"
 	revertcontract "github.com/klaytn/klaytn/contracts/revert_test"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/crypto/secp256k1"
 	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
@@ -523,7 +529,7 @@ func TestMultiBridgeOperation(t *testing.T) {
 	}
 
 	// Set threshold for refund vote
-	tx, err := pbi.bridge.SetOperatorThreshold(auth, voteTypeRefund, uint8(nOperators))
+	tx, err := pbi.bridge.SetOperatorThreshold(auth, voteTypeHandleRefund, uint8(nOperators))
 	assert.NoError(t, err)
 	sim.Commit()
 	CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
@@ -602,4 +608,65 @@ func TestMultiBridgeOperation(t *testing.T) {
 		withdrawal += getBalance(t, sim, pbi.account.address) - ownerBalance
 		assert.Equal(t, getBalance(t, sim, pbi.address), bridgeBalance-withdrawal)
 	}
+}
+
+func makeParentOperatorKey(t *testing.T, path string) {
+	password := setup.RandStringRunes(params.PasswordLength)
+	ks := keystore.NewKeyStore(path, keystore.StandardScryptN, keystore.StandardScryptP)
+	acc, err := ks.NewAccount(password)
+	assert.NoError(t, err)
+	setup.WriteFile([]byte(password), path, acc.Address.String())
+}
+
+func getPubkey(t *testing.T, dir string, h []byte) (*accountInfo, []byte) {
+	acc := parentAccInit(nil, dir, params.UpperGasLimit)
+	sig, err := acc.keystore.SignHash(accounts.Account{Address: acc.address}, h)
+	assert.NoError(t, err)
+	pubkey, err := secp256k1.RecoverPubkey(h, sig)
+	assert.NoError(t, err)
+	return acc, pubkey
+}
+
+func isSamePubkey(t *testing.T, operatorPubkey, sig, data []byte, shouldBeTrue bool) {
+	recovered, err := secp256k1.RecoverPubkey(data, sig)
+	assert.NoError(t, err)
+	if shouldBeTrue {
+		assert.Equal(t, bytes.Compare(recovered, operatorPubkey), 0)
+	} else {
+		assert.NotEqual(t, bytes.Compare(recovered, operatorPubkey), 0)
+	}
+}
+
+func makeHash() ([]byte, []byte, []byte) {
+	txHash1 := [common.HashLength]byte(common.HexToHash("0x1"))
+	txHash2 := [common.HashLength]byte(common.HexToHash("0x2"))
+	txHash3 := [common.HashLength]byte(common.HexToHash("0x3"))
+	return txHash1[:], txHash2[:], txHash3[:]
+}
+
+func TestMsgIntegrity(t *testing.T) {
+	operatorKeyDir := "sc_test_temporal_key"
+	attackerKeyDir := "sc_test_attacker_key"
+	makeParentOperatorKey(t, path.Join(operatorKeyDir, ParentBridgeAccountName))
+	makeParentOperatorKey(t, path.Join(attackerKeyDir, ParentBridgeAccountName))
+	defer func() {
+		if err := os.RemoveAll(operatorKeyDir); err != nil {
+			t.Fatalf("fail to delete file %v", err)
+		}
+		if err := os.RemoveAll(attackerKeyDir); err != nil {
+			t.Fatalf("fail to delete file %v", err)
+		}
+	}()
+
+	txHash1, txHash2, txHash3 := makeHash()
+	operatorAcc, operatorPubkey := getPubkey(t, operatorKeyDir, txHash1)
+	attackerAcc, _ := getPubkey(t, attackerKeyDir, txHash1)
+
+	operatorSig, err := operatorAcc.keystore.SignHash(accounts.Account{Address: operatorAcc.address}, txHash2)
+	assert.NoError(t, err)
+	attackerSig, err := attackerAcc.keystore.SignHash(accounts.Account{Address: attackerAcc.address}, txHash2)
+	assert.NoError(t, err)
+	isSamePubkey(t, operatorPubkey, operatorSig, txHash2, true)
+	isSamePubkey(t, operatorPubkey, attackerSig, txHash2, false)
+	isSamePubkey(t, operatorPubkey, operatorSig, txHash3, false)
 }

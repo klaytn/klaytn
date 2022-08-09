@@ -53,7 +53,9 @@ const (
 const (
 	voteTypeValueTransfer = iota
 	voteTypeConfiguration
-	voteTypeRefund
+	voteTypeRequestRefund
+	voteTypeHandleRefund
+	voteTypeRemoveLedgerLedger
 	voteTypeWithdraw
 )
 
