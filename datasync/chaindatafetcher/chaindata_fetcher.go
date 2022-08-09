@@ -24,6 +24,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/klaytn/klaytn/node/cn/tracers"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
@@ -36,7 +38,6 @@ import (
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node"
-	"github.com/klaytn/klaytn/node/cn"
 	"github.com/rcrowley/go-metrics"
 )
 
@@ -63,7 +64,7 @@ type ChainDataFetcher struct {
 	config *ChainDataFetcherConfig
 
 	blockchain BlockChain
-	debugAPI   *cn.PrivateDebugAPI
+	debugAPI   *tracers.API
 
 	chainCh  chan blockchain.ChainEvent
 	chainSub event.Subscription
@@ -281,7 +282,7 @@ func (f *ChainDataFetcher) makeChainEvent(blockNumber uint64) (blockchain.ChainE
 	if block.Transactions().Len() > 0 {
 		fct := "fastCallTracer"
 		timeout := "24h"
-		results, err := f.debugAPI.TraceBlockByNumber(context.Background(), rpc.BlockNumber(block.Number().Int64()), &cn.TraceConfig{
+		results, err := f.debugAPI.TraceBlockByNumber(context.Background(), rpc.BlockNumber(block.Number().Int64()), &tracers.TraceConfig{
 			Tracer:  &fct,
 			Timeout: &timeout,
 		})
@@ -317,7 +318,7 @@ func (f *ChainDataFetcher) Components() []interface{} {
 func (f *ChainDataFetcher) setDebugAPI(apis []rpc.API) {
 	for _, a := range apis {
 		switch s := a.Service.(type) {
-		case *cn.PrivateDebugAPI:
+		case *tracers.API:
 			f.debugAPI = s
 		}
 	}

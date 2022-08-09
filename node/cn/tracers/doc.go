@@ -22,5 +22,7 @@ Source Files
 
   - tracer.go  : implementation of Tracer
   - tracers.go : provides managing functions of tracers
+  - api.go     : implementation of tracer apis
+  - api_test.go: unit test of tracer apis
 */
 package tracers

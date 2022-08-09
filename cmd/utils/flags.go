@@ -1761,6 +1761,7 @@ func MakeGenesis(ctx *cli.Context) *blockchain.Genesis {
 // RegisterCNService adds a CN client to the stack.
 func RegisterCNService(stack *node.Node, cfg *cn.Config) {
 	// TODO-Klaytn add syncMode.LightSync func and add LesServer
+
 	err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
 		cfg.WsEndpoint = stack.WSEndpoint()
 		fullNode, err := cn.New(ctx, cfg)
