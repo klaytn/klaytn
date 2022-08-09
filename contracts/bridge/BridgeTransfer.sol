@@ -215,7 +215,7 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
 
     // requestRefund emit `RequestRefund` event to be watched and handled by established counterpart chain
     function requestRefund(uint64 requestNonce_, bytes32 requestTxHash) public onlyOperators {
-        if (!refundCond(requestNonce_)) {
+        if (!requestRefundCond(requestNonce_)) {
             return;
         }
         emit RequestRefund(requestNonce_, requestTxHash);
@@ -223,7 +223,7 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
 
     // handleRefund refunds the requested amount of KLAY or tokens
     function handleRefund(uint64 requestNonce_) public onlyOperators {
-        if (!refundCond(requestNonce_)) {
+        if (!handleRefundCond(requestNonce_)) {
             return;
         }
 
@@ -240,10 +240,37 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
             nRefunds += 1;
             emit HandleRefund(requestNonce_, sender, value);
             removeRefundInfo(requestNonce_, value);
+            //updateRefundNonce();
         }
     }
 
-    function refundCond(uint64 requestNonce_) internal returns (bool) {
+    /*
+    function updateRefundNonce() internal {
+        if (_refundNonce > upperHandleNonce) {
+            upperHandleNonce = _requestedNonce;
+        }
+
+        uint64 limit = lowerHandleNonce + 200;
+        if (limit > upperHandleNonce) {
+            limit = upperHandleNonce;
+        }
+
+        uint64 i;
+        for (i = lowerHandleNonce; i <= limit && handleNoncesToBlockNums[i] > 0; i++) {
+            recoveryBlockNumber = handleNoncesToBlockNums[i];
+            delete handleNoncesToBlockNums[i];
+            delete closedValueTransferVotes[i];
+        }
+        lowerHandleNonce = i;
+
+
+
+        lowerRefundNonce 
+        refunRecoveryBlkNum
+    }
+    */
+
+    function handleRefundCond(uint64 requestNonce_) internal returns (bool) {
         /*
         // if a refund was not correctly executed during one day (by gas error of operators and etc),
         // the sender can have authroization to refund himself/herself
@@ -253,7 +280,15 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
         */
 
         require(operators[msg.sender], "msg.sender is not an operator");
-        if (!_voteRefund(requestNonce_)) {
+        if (!_voteHandleRefund(requestNonce_)) {
+            return false;
+        }
+        return true;
+    }
+
+    function requestRefundCond(uint64 requestNonce_) internal returns (bool) {
+        require(operators[msg.sender], "msg.sender is not an operator");
+        if (!_voteRequestRefund(requestNonce_)) {
             return false;
         }
         return true;
@@ -263,7 +298,7 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
     // This function is only called when a `HandleValueTransfer` event is emitted.
     // DO NOT OPERATE WITH OTHER CONTRACT ADDRESS IN THIS FUNCTION
     function removeRefundLedger(uint64 requestNonce_) public onlyOperators {
-        if (!_voteRefund(requestNonce_)) {
+        if (!_voteRemoveRefundLedgerVote(requestNonce_)) {
             return;
         }
         removeRefundInfo(requestNonce_, refundValueMap[requestNonce_]);

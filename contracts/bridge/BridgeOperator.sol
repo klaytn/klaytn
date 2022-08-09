@@ -35,8 +35,11 @@ contract BridgeOperator is Ownable {
 
     mapping(uint8 => mapping (uint64 => VotesData)) private votes; // <voteType, <nonce, VotesData>
     mapping(uint64 => bool) public closedValueTransferVotes; // <nonce, bool>
-    mapping(uint64 => bool) public closedRefundVote; // <nonce, bool>
     mapping(uint64 => bool) public closedWithdrawVote; // <nonce, bool>
+
+    mapping(uint64 => bool) public closedRequestRefundVote; // <nonce, bool>
+    mapping(uint64 => bool) public closedHandleRefundVote; // <nonce, bool>
+    mapping(uint64 => bool) public closedRemoveRefundLedgerVote; // <nonce, bool>
 
     uint256 internal amountOfLockedRefundKLAY; // amount of locked KLAY for refund
     uint64 private withdrawNonce;
@@ -53,7 +56,9 @@ contract BridgeOperator is Ownable {
     enum VoteType {
         ValueTransfer,
         Configuration,
-        Refund,
+        RefundRequest,
+        RefundHandle,
+        RefundRemoveLedger,
         Withdraw,
         Max
     }
@@ -154,16 +159,45 @@ contract BridgeOperator is Ownable {
         return false;
     }
 
-    // _voteRefund votes for refund in case of failure of handle value transfer.
-    function _voteRefund(uint64 _requestNonce)
+    function _voteRemoveRefundLedgerVote(uint64 _requestNonce)
         internal
         returns(bool)
     {
-        require(!closedRefundVote[_requestNonce], CLOSED_VOTE_ERR_STR);
+        require(!closedRemoveRefundLedgerVote[_requestNonce], CLOSED_VOTE_ERR_STR);
 
         bytes32 voteKey = keccak256(msg.data);
-        if (_voteCommon(VoteType.Refund, _requestNonce, voteKey)) {
-            closedRefundVote[_requestNonce] = true;
+        if (_voteCommon(VoteType.RefundRemoveLedger, _requestNonce, voteKey)) {
+            closedRemoveRefundLedgerVote[_requestNonce] = true;
+            return true;
+        }
+
+        return false;
+    }
+
+    function _voteRequestRefund(uint64 _requestNonce)
+        internal
+        returns(bool)
+    {
+        require(!closedRequestRefundVote[_requestNonce], CLOSED_VOTE_ERR_STR);
+
+        bytes32 voteKey = keccak256(msg.data);
+        if (_voteCommon(VoteType.RefundRequest, _requestNonce, voteKey)) {
+            closedRequestRefundVote[_requestNonce] = true;
+            return true;
+        }
+
+        return false;
+    }
+
+    function _voteHandleRefund(uint64 _requestNonce)
+        internal
+        returns(bool)
+    {
+        require(!closedHandleRefundVote[_requestNonce], CLOSED_VOTE_ERR_STR);
+
+        bytes32 voteKey = keccak256(msg.data);
+        if (_voteCommon(VoteType.RefundHandle, _requestNonce, voteKey)) {
+            closedHandleRefundVote[_requestNonce] = true;
             return true;
         }
 
