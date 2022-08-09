@@ -222,7 +222,7 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
     }
 
     // handleRefund refunds the requested amount of KLAY or tokens
-    function handleRefund(uint64 requestNonce_) public onlyOperators {
+    function handleRefund(uint64 requestNonce_) external {
         if (!handleRefundCond(requestNonce_)) {
             return;
         }
@@ -244,13 +244,11 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
     }
 
     function handleRefundCond(uint64 requestNonce_) internal returns (bool) {
-        /*
         // if a refund was not correctly executed during one day (by gas error of operators and etc),
         // the sender can have authroization to refund himself/herself
         if (block.timestamp > refundTimestampMap[requestNonce_] + 1 days) {
             return true;
         }
-        */
 
         require(operators[msg.sender], "msg.sender is not an operator");
         if (!_voteHandleRefund(requestNonce_)) {
