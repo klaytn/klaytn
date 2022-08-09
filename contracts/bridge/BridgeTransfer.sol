@@ -240,35 +240,8 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
             nRefunds += 1;
             emit HandleRefund(requestNonce_, sender, value);
             removeRefundInfo(requestNonce_, value);
-            //updateRefundNonce();
         }
     }
-
-    /*
-    function updateRefundNonce() internal {
-        if (_refundNonce > upperHandleNonce) {
-            upperHandleNonce = _requestedNonce;
-        }
-
-        uint64 limit = lowerHandleNonce + 200;
-        if (limit > upperHandleNonce) {
-            limit = upperHandleNonce;
-        }
-
-        uint64 i;
-        for (i = lowerHandleNonce; i <= limit && handleNoncesToBlockNums[i] > 0; i++) {
-            recoveryBlockNumber = handleNoncesToBlockNums[i];
-            delete handleNoncesToBlockNums[i];
-            delete closedValueTransferVotes[i];
-        }
-        lowerHandleNonce = i;
-
-
-
-        lowerRefundNonce 
-        refunRecoveryBlkNum
-    }
-    */
 
     function handleRefundCond(uint64 requestNonce_) internal returns (bool) {
         /*

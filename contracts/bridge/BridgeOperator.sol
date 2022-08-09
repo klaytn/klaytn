@@ -37,7 +37,6 @@ contract BridgeOperator is Ownable {
     mapping(uint64 => bool) public closedValueTransferVotes; // <nonce, bool>
     mapping(uint64 => bool) public closedWithdrawVote; // <nonce, bool>
 
-    mapping(uint64 => bool) public closedRequestRefundVote; // <nonce, bool>
     mapping(uint64 => bool) public closedHandleRefundVote; // <nonce, bool>
     mapping(uint64 => bool) public closedRemoveRefundLedgerVote; // <nonce, bool>
 
@@ -178,11 +177,8 @@ contract BridgeOperator is Ownable {
         internal
         returns(bool)
     {
-        require(!closedRequestRefundVote[_requestNonce], CLOSED_VOTE_ERR_STR);
-
         bytes32 voteKey = keccak256(msg.data);
         if (_voteCommon(VoteType.RefundRequest, _requestNonce, voteKey)) {
-            closedRequestRefundVote[_requestNonce] = true;
             return true;
         }
 
