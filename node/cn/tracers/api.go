@@ -378,7 +378,7 @@ func (api *API) traceChain(ctx context.Context, start, end *types.Block, config 
 			parent = block.Root()
 
 			next, err := api.blockByNumber(localctx, rpc.BlockNumber(number+1))
-			if err != nil{
+			if err != nil {
 				failed = err
 				break
 			}
@@ -531,7 +531,7 @@ func (api *API) traceBlock(ctx context.Context, block *types.Block, config *Trac
 	}
 	// Execute all the transaction contained within the block concurrently
 	var (
-		signer = types.MakeSigner(api.backend.ChainConfig(), block.Number())
+		signer  = types.MakeSigner(api.backend.ChainConfig(), block.Number())
 		txs     = block.Transactions()
 		results = make([]*txTraceResult, len(txs))
 
