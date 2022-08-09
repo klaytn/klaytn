@@ -17,12 +17,14 @@
 package sc
 
 import (
+	"bytes"
 	"math/big"
 
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	bridgecontract "github.com/klaytn/klaytn/contracts/bridge"
+	"github.com/klaytn/klaytn/crypto/secp256k1"
 	"github.com/klaytn/klaytn/datasync/downloader"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/params"
@@ -245,9 +247,16 @@ func (mbh *MainBridgeHandler) handleServiceChainRequestHandleReceiptMsg(p Bridge
 		logger.Error("[SC][P2P] failed to decode", "err", err)
 		return errResp(ErrDecode, "msg %v: %v", msg, err)
 	}
-	receipt := mbh.mainbridge.blockchain.GetReceiptByTxHash(reqHandleReceipt.HandleTxHash)
-	if receipt != nil && receipt.Status != types.ReceiptStatusSuccessful && !mbh.mainbridge.reqRefundNonces[reqHandleReceipt.RequestNonce] { // executed
-		mbh.requestRefund(reqHandleReceipt)
+	handleTxHash := reqHandleReceipt.HandleTxHash[:]
+	if pubkey, err := secp256k1.RecoverPubkey(handleTxHash, reqHandleReceipt.HandleTxSig); err == nil {
+		if bytes.Compare(pubkey, mbh.mainbridge.accPubkey) == 0 {
+			receipt := mbh.mainbridge.blockchain.GetReceiptByTxHash(reqHandleReceipt.HandleTxHash)
+			if receipt != nil && receipt.Status != types.ReceiptStatusSuccessful && !mbh.mainbridge.reqRefundNonces[reqHandleReceipt.RequestNonce] { // executed
+				mbh.requestRefund(reqHandleReceipt)
+			}
+		}
+	} else {
+		logger.Warn("[SC][Handler] Failed to recover a public key", "err", err, "handleTxHash", reqHandleReceipt.HandleTxHash.Hex())
 	}
 	return nil
 }
