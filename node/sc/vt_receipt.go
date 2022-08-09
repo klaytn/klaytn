@@ -27,13 +27,14 @@ import (
 	"github.com/klaytn/klaytn/rlp"
 )
 
-func newRequestReceiptHandle(bridgeAddr, counterpartBridgeAddr common.Address, handleTxHash common.Hash, ev IRequestValueTransferEvent) *RequestHandleReceipt {
+func newRequestReceiptHandle(bridgeAddr, counterpartBridgeAddr common.Address, handleTxHash common.Hash, handleTxSig []byte, ev IRequestValueTransferEvent) *RequestHandleReceipt {
 	return &RequestHandleReceipt{
 		RequestNonce:          ev.GetRequestNonce(),
 		RequestTxHash:         ev.GetRaw().TxHash,
 		BridgeAddr:            bridgeAddr,
 		CounterpartBridgeAddr: counterpartBridgeAddr,
 		HandleTxHash:          handleTxHash,
+		HandleTxSig:           handleTxSig,
 	}
 }
 
@@ -52,6 +53,7 @@ type RequestHandleReceipt struct {
 	CounterpartBridgeAddr common.Address
 	RequestTxHash         common.Hash
 	HandleTxHash          common.Hash
+	HandleTxSig           []byte
 }
 
 // The same struct with `RequestHandleReceipt`
@@ -61,6 +63,7 @@ type RequestHandleReceiptForRLP struct {
 	CounterpartBridgeAddr common.Address
 	RequestTxHash         common.Hash
 	HandleTxHash          common.Hash
+	HandleTxSig           []byte
 }
 
 func (reqHandleReceipt *RequestHandleReceipt) EncodeRLP(w io.Writer) error {
