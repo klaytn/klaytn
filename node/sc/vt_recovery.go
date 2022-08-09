@@ -22,12 +22,13 @@ import (
 
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/common"
 	"github.com/pkg/errors"
 )
 
 const (
 	DefaultReasoingTimeout   = time.Second * 5
-	DefaultUnexecutedTimeout = time.Second * 60
+	DefaultUnexecutedTimeout = time.Second * 30
 )
 
 var (
@@ -156,20 +157,60 @@ func (vtr *valueTransferRecovery) Recover() error {
 		return err
 	}
 
-	logger.Trace("retrieve pending events")
+	logger.Trace("[SC][Recovery] start to retrieve request transfer events")
 	err = vtr.retrievePendingEvents()
 	if err != nil {
 		return err
 	}
 
-	logger.Trace("recover pending events")
 	err = vtr.recoverPendingEvents()
 	if err != nil {
 		return err
 	}
+	logger.Trace("[SC][Recovery] added retrieved request transfer events")
+
+	/*
+		logger.Trace("[SC][Recovery] start to recover refund events")
+		err = vtr.recoverPendingRefunds()
+		if err != nil {
+			return err
+		}
+	*/
 
 	return nil
 }
+
+//func (vtr *valueTransferRecovery) recoverPendingRefunds(from, to *BridgeInfo) error {
+//	toBlkNum, err = to.bridge.RefundRecoveryBlkNum(nil)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	/*
+//	fromReqNonce, err := from.bridge.RequestNonce(nil)
+//	if err != nil {
+//		return nil, err
+//	}
+//	from.SetRequestNonce(requestNonce)
+//	to.SetRequestNonceFromCounterpart(requestNonce)
+//	hint.requestNonce = requestNonce
+//	*/
+//
+//	handleNonce, err := to.bridge.LowerHandleNonce(nil)
+//	if err != nil {
+//		return nil, err
+//	}
+//	to.UpdateLowerHandleNonce(handleNonce)
+//
+//	if prevHint != nil {
+//		hint.prevHandleNonce = prevHint.handleNonce
+//		hint.candidate = prevHint.candidate
+//	}
+//	hint.handleNonce = handleNonce
+//	logger.Trace("updateRecoveryHintFromTo finish", "rnonce", hint.requestNonce, "hnonce", hint.handleNonce, "phnonce", hint.prevHandleNonce, "cand", hint.candidate)
+//
+//
+//}
 
 // updateRecoveryHint updates hints for value transfers on the both side.
 // One is from child chain to parent chain, the other is from parent chain to child chain value transfers.
@@ -423,7 +464,7 @@ func (vtr *valueTransferRecovery) lookupReceipt() {
 			case KLAY:
 				handleTx, err := getHandleTx(bi, ev)
 				if err != nil {
-					logger.Error("[SC][Reasoning] Not found such an event", "event", ev.String())
+					logger.Error("[SC][Recovery] Not found such an event", "event", ev.String())
 					unexecutedEvents = append(unexecutedEvents, ev)
 					continue
 				}
@@ -434,19 +475,25 @@ func (vtr *valueTransferRecovery) lookupReceipt() {
 						ctbi.requestRefund(ev.GetRequestNonce(), ev.GetRaw().TxHash)
 					}
 				} else { // child sent, parent looks up the tx hash
-					reqHandleReceipt := newRequestReceiptHandle(bi.address, ctbi.address, handleTx.Hash(), ev)
-					subBridge.handler.requestHandleReceipt(reqHandleReceipt)
-					unexecuted = true
+					h := [common.HashLength]byte(handleTx.Hash())
+					sig, err := subBridge.bridgeAccounts.pAccount.SignHash(h[:])
+					if err != nil {
+						logger.Error("[SC][Recovery] Failed to sign a handle value transfer tx", "err", err, "txHash", handleTx.Hash())
+					} else {
+						reqHandleReceipt := newRequestReceiptHandle(bi.address, ctbi.address, handleTx.Hash(), sig, ev)
+						subBridge.handler.requestHandleReceipt(reqHandleReceipt)
+						unexecuted = true
+					}
 				}
 				if updateReasoingTimeout(unexecuted, ev) {
-					logger.Debug("[SC][Reasoning] Put unexecuted handle value transfer transaction", "event", ev.String())
+					logger.Debug("[SC][Recovery] Put unexecuted handle value transfer transaction", "event", ev.String())
 					unexecutedEvents = append(unexecutedEvents, ev)
 				}
 			case ERC20, ERC721:
 				// TODO-hyunsooda: Implement further treatmenet for ERC20 and ERC721
 				unexecutedEvents = append(unexecutedEvents, ev)
 			default:
-				logger.Error("[SC][Reasoning] Not a supported token type", "event", ev.String())
+				logger.Error("[SC][Recovery] Not a supported token type", "event", ev.String())
 			}
 		}
 		return unexecutedEvents
