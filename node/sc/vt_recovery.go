@@ -168,49 +168,8 @@ func (vtr *valueTransferRecovery) Recover() error {
 		return err
 	}
 	logger.Trace("[SC][Recovery] added retrieved request transfer events")
-
-	/*
-		logger.Trace("[SC][Recovery] start to recover refund events")
-		err = vtr.recoverPendingRefunds()
-		if err != nil {
-			return err
-		}
-	*/
-
 	return nil
 }
-
-//func (vtr *valueTransferRecovery) recoverPendingRefunds(from, to *BridgeInfo) error {
-//	toBlkNum, err = to.bridge.RefundRecoveryBlkNum(nil)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	/*
-//	fromReqNonce, err := from.bridge.RequestNonce(nil)
-//	if err != nil {
-//		return nil, err
-//	}
-//	from.SetRequestNonce(requestNonce)
-//	to.SetRequestNonceFromCounterpart(requestNonce)
-//	hint.requestNonce = requestNonce
-//	*/
-//
-//	handleNonce, err := to.bridge.LowerHandleNonce(nil)
-//	if err != nil {
-//		return nil, err
-//	}
-//	to.UpdateLowerHandleNonce(handleNonce)
-//
-//	if prevHint != nil {
-//		hint.prevHandleNonce = prevHint.handleNonce
-//		hint.candidate = prevHint.candidate
-//	}
-//	hint.handleNonce = handleNonce
-//	logger.Trace("updateRecoveryHintFromTo finish", "rnonce", hint.requestNonce, "hnonce", hint.handleNonce, "phnonce", hint.prevHandleNonce, "cand", hint.candidate)
-//
-//
-//}
 
 // updateRecoveryHint updates hints for value transfers on the both side.
 // One is from child chain to parent chain, the other is from parent chain to child chain value transfers.
