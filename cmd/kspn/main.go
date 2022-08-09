@@ -38,11 +38,6 @@ var (
 
 	// The app that holds all commands and flags.
 	app = utils.NewApp(nodecmd.GetGitCommit(), "The command line interface for Klaytn Proxy Node")
-
-	// flags that configure the node
-	nodeFlags = append(nodecmd.CommonNodeFlags, nodecmd.KSPNFlags...)
-
-	rpcFlags = nodecmd.CommonRPCFlags
 )
 
 func init() {
@@ -60,21 +55,18 @@ func init() {
 		nodecmd.AccountCommand,
 
 		// See utils/nodecmd/consolecmd.go:
-		nodecmd.GetConsoleCommand(nodeFlags, rpcFlags),
+		nodecmd.GetConsoleCommand(nodecmd.KspnNodeFlags(), nodecmd.CommonRPCFlags),
 		nodecmd.AttachCommand,
 
 		// See utils/nodecmd/versioncmd.go:
 		nodecmd.VersionCommand,
 
 		// See utils/nodecmd/dumpconfigcmd.go:
-		nodecmd.GetDumpConfigCommand(nodeFlags, rpcFlags),
+		nodecmd.GetDumpConfigCommand(nodecmd.KspnNodeFlags(), nodecmd.CommonRPCFlags),
 	}
 	sort.Sort(cli.CommandsByName(app.Commands))
 
-	app.Flags = append(app.Flags, nodeFlags...)
-	app.Flags = append(app.Flags, rpcFlags...)
-	app.Flags = append(app.Flags, nodecmd.ConsoleFlags...)
-	app.Flags = append(app.Flags, debug.Flags...)
+	app.Flags = nodecmd.KspnAppFlags()
 
 	cli.AppHelpTemplate = utils.GlobalAppHelpTemplate
 	cli.HelpPrinter = utils.NewHelpPrinter(utils.CategorizeFlags(app.Flags))

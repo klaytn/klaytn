@@ -202,11 +202,6 @@ func FlagsFromYaml(ctx *cli.Context) error {
 			return err
 		}
 	}
-	isSet := ctx.IsSet("rewardbase")
-	isGlobalSet := ctx.GlobalIsSet("rewardbase")
-	rewardbase := ctx.String("rewardbase")
-	datadir := ctx.String("datadir")
-	logger.Debug("a", "isSet", isSet, "rewardbase", rewardbase, "global", isGlobalSet, "datadir", datadir)
 	return nil
 }
 

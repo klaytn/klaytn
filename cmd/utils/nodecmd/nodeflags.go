@@ -21,12 +21,89 @@
 package nodecmd
 
 import (
+	"github.com/klaytn/klaytn/api/debug"
 	"github.com/klaytn/klaytn/cmd/utils"
 	"gopkg.in/urfave/cli.v1"
 	"gopkg.in/urfave/cli.v1/altsrc"
 )
 
 // TODO-Klaytn: Check whether all flags are registered in utils.FlagGroups
+
+// All flags used for each node type
+func KcnNodeFlags() []cli.Flag {
+	return append(CommonNodeFlags, KCNFlags...)
+}
+
+func KpnNodeFlags() []cli.Flag {
+	return append(CommonNodeFlags, KPNFlags...)
+}
+
+func KenNodeFlags() []cli.Flag {
+	return append(CommonNodeFlags, KENFlags...)
+}
+
+func KscnNodeFlags() []cli.Flag {
+	return append(CommonNodeFlags, KSCNFlags...)
+}
+
+func KspnNodeFlags() []cli.Flag {
+	return append(CommonNodeFlags, KSPNFlags...)
+}
+
+func KsenNodeFlags() []cli.Flag {
+	return append(CommonNodeFlags, KSENFlags...)
+}
+
+func KcnAppFlags() []cli.Flag {
+	flags := append([]cli.Flag{}, KcnNodeFlags()...)
+	flags = append(flags, CommonRPCFlags...)
+	flags = append(flags, ConsoleFlags...)
+	flags = append(flags, debug.Flags...)
+	flags = append(flags, DBMigrationFlags...)
+	return flags
+}
+
+func KpnAppFlags() []cli.Flag {
+	flags := append([]cli.Flag{}, KpnNodeFlags()...)
+	flags = append(flags, CommonRPCFlags...)
+	flags = append(flags, ConsoleFlags...)
+	flags = append(flags, debug.Flags...)
+	flags = append(flags, DBMigrationFlags...)
+	return flags
+}
+
+func KenAppFlags() []cli.Flag {
+	flags := append([]cli.Flag{}, KenNodeFlags()...)
+	flags = append(flags, CommonRPCFlags...)
+	flags = append(flags, ConsoleFlags...)
+	flags = append(flags, debug.Flags...)
+	flags = append(flags, DBMigrationFlags...)
+	return flags
+}
+
+func KscnAppFlags() []cli.Flag {
+	flags := append([]cli.Flag{}, KscnNodeFlags()...)
+	flags = append(flags, CommonRPCFlags...)
+	flags = append(flags, ConsoleFlags...)
+	flags = append(flags, debug.Flags...)
+	return flags
+}
+
+func KspnAppFlags() []cli.Flag {
+	flags := append([]cli.Flag{}, KspnNodeFlags()...)
+	flags = append(flags, CommonRPCFlags...)
+	flags = append(flags, ConsoleFlags...)
+	flags = append(flags, debug.Flags...)
+	return flags
+}
+
+func KsenAppFlags() []cli.Flag {
+	flags := append([]cli.Flag{}, KsenNodeFlags()...)
+	flags = append(flags, CommonRPCFlags...)
+	flags = append(flags, ConsoleFlags...)
+	flags = append(flags, debug.Flags...)
+	return flags
+}
 
 // Common flags that configure the node
 var CommonNodeFlags = []cli.Flag{
