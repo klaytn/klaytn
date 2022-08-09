@@ -39,6 +39,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	bridgecontract "github.com/klaytn/klaytn/contracts/bridge"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/crypto/secp256k1"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
@@ -115,8 +116,9 @@ type MainBridge struct {
 	rpcConn       net.Conn
 	rpcResponseCh chan []byte
 
-	acc     *accountInfo
-	bridges map[common.Address]*bridgecontract.Bridge
+	acc       *accountInfo
+	accPubkey []byte
+	bridges   map[common.Address]*bridgecontract.Bridge
 
 	reqRefundNonces map[uint64]bool // This map prevents consecutive contract call until the first contract call is executed to not pay unncessary gas
 	localBackend    Backend
@@ -290,6 +292,18 @@ func (mb *MainBridge) SetComponents(components []interface{}) {
 	}
 	mb.acc = parentAccInit(mb.accountManager, mb.config.DataDir, mb.config.ServiceChainParentOperatorGasLimit)
 	mb.acc.SetChainID(mb.blockchain.Config().ChainID)
+
+	tempHash := [common.HashLength]byte(common.HexToHash("0x1"))
+	sig, err := mb.acc.SignHash(tempHash[:])
+	if err != nil {
+		panic(fmt.Sprintf("[SC][Account] Failed to get signature, (err = %v)", err))
+	}
+	pubkey, err := secp256k1.RecoverPubkey(tempHash[:], sig)
+	if err != nil {
+		panic(fmt.Sprintf("[SC][Account] Failed to get pubkey, (err = %v)", err))
+	}
+	mb.accPubkey = pubkey
+
 	backend, err := NewLocalBackend(ItfBridge(mb))
 	if err != nil {
 		panic("[SC][Backend] Failed to initialize backend")
