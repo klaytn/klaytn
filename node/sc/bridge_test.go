@@ -352,7 +352,7 @@ func TestBridgePublicVariables(t *testing.T) {
 	assert.Nil(t, WaitMined(tx, backend, t))
 
 	version, err := b.VERSION(nil)
-	assert.Equal(t, uint64(0x1), version)
+	assert.Equal(t, uint64(0x2), version)
 
 	allowedTokens, err := b.RegisteredTokens(nil, common.Address{1})
 	assert.Equal(t, common.Address{0}, allowedTokens)
