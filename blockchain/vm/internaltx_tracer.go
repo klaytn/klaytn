@@ -424,10 +424,7 @@ func (this *InternalTxTracer) CaptureEnd(output []byte, gasUsed uint64, t time.D
 }
 
 func (this *InternalTxTracer) GetResult() (*InternalTxTrace, error) {
-	result, err := this.result()
-	if err != nil {
-		this.err = wrapError("result", err)
-	}
+	result := this.result()
 	// Clean up the JavaScript environment
 	this.reset()
 	return result, this.err
@@ -447,7 +444,7 @@ func (this *InternalTxTracer) reset() {
 
 // result is invoked when all the opcodes have been iterated over and returns
 // the final result of the tracing.
-func (this *InternalTxTracer) result() (*InternalTxTrace, error) {
+func (this *InternalTxTracer) result() *InternalTxTrace {
 	if _, exist := this.ctx["type"]; !exist {
 		this.ctx["type"] = ""
 	}
@@ -525,7 +522,7 @@ func (this *InternalTxTracer) result() (*InternalTxTrace, error) {
 		message := this.revertString
 		result.Reverted = &RevertedInfo{Contract: &contract, Message: message}
 	}
-	return result, nil
+	return result
 }
 
 // InternalTxLogs returns the captured tracerLog entries.
