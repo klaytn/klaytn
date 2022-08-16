@@ -265,7 +265,7 @@ func TestInternalTxTracer_result_invalidOutput(t *testing.T) {
 	// An 8 bytes value that might cause a string version error or out-of-range error.
 	tracer.ctx["output"] = "0x08c379a0000000000000000000000000000000000000000000000000ffffffffffffffff000000000000000000000000000000000000000000000000ffffffffffffffff"
 
-	_, err := tracer.result()
+	_, err := tracer.GetResult()
 	if err != nil {
 		t.Fatal(err)
 	}
