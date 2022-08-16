@@ -435,16 +435,10 @@ func (f *ChainDataFetcher) pause() {
 	f.resetRequestCh()
 }
 
-func (f *ChainDataFetcher) updateDataSize(ev *blockchain.ChainEvent) {
+func (f *ChainDataFetcher) updateDataSize(dataSize common.StorageSize) {
 	f.lock.Lock()
 	defer f.lock.Unlock()
-	f.onProcessingDataSize += ev.JsonSize()
-}
-
-func (f *ChainDataFetcher) resetDataSize(ev *blockchain.ChainEvent) {
-	f.lock.Lock()
-	defer f.lock.Unlock()
-	f.onProcessingDataSize -= ev.JsonSize()
+	f.onProcessingDataSize += dataSize
 }
 
 func (f *ChainDataFetcher) handleRequest() {
@@ -480,13 +474,13 @@ func (f *ChainDataFetcher) handleRequest() {
 				break
 			}
 
-			f.updateDataSize(&ev)
+			f.updateDataSize(ev.JsonSize())
 			err = f.handleRequestByType(req.ReqType, req.ShouldUpdateCheckpoint, ev)
 			if err != nil && err == errMaxRetryExceeded {
 				logger.Error("the chaindatafetcher reaches the maximum retries. it pauses fetching and clear the channels", "blockNum", ev.Block.NumberU64())
 				f.pause()
 			}
-			f.resetDataSize(&ev)
+			f.updateDataSize(-ev.JsonSize())
 		}
 	}
 }
