@@ -90,8 +90,8 @@ type ChainDataFetcher struct {
 	rangeFetchingStopCh  chan struct{}
 	rangeFetchingWg      sync.WaitGroup
 
-	lock                  sync.RWMutex
-	onProcessingDataSize  common.StorageSize
+	dataSizeLocker        sync.RWMutex
+	processingDataSize    common.StorageSize
 	maxProcessingDataSize common.StorageSize
 }
 
@@ -127,7 +127,7 @@ func NewChainDataFetcher(ctx *node.ServiceContext, cfg *ChainDataFetcherConfig) 
 		repo:                  repo,
 		checkpointDB:          checkpointDB,
 		setters:               setters,
-		onProcessingDataSize:  common.StorageSize(0),
+		processingDataSize:    common.StorageSize(0),
 		maxProcessingDataSize: common.StorageSize(cfg.MaxProcessingDataSize * 1024 * 1024), // in MB
 	}, nil
 }
@@ -201,14 +201,14 @@ func (f *ChainDataFetcher) sendRequests(startBlock, endBlock uint64, reqType cfT
 			default:
 			}
 
-			f.lock.RLock()
-			if f.onProcessingDataSize <= f.maxProcessingDataSize {
-				f.lock.RUnlock()
+			f.dataSizeLocker.RLock()
+			if f.processingDataSize <= f.maxProcessingDataSize {
+				f.dataSizeLocker.RUnlock()
 				break
 			}
-			f.lock.RUnlock()
+			f.dataSizeLocker.RUnlock()
 
-			logger.Debug("throttling the requests, sleeping", "interval", DefaultThrottlingInterval, "processingDataSize", f.onProcessingDataSize, "maxDatasize", f.maxProcessingDataSize)
+			logger.Debug("throttling the requests, sleeping", "interval", DefaultThrottlingInterval, "processingDataSize", f.processingDataSize, "maxDatasize", f.maxProcessingDataSize)
 			time.Sleep(DefaultThrottlingInterval)
 		}
 		select {
@@ -436,9 +436,9 @@ func (f *ChainDataFetcher) pause() {
 }
 
 func (f *ChainDataFetcher) updateDataSize(dataSize common.StorageSize) {
-	f.lock.Lock()
-	defer f.lock.Unlock()
-	f.onProcessingDataSize += dataSize
+	f.dataSizeLocker.Lock()
+	defer f.dataSizeLocker.Unlock()
+	f.processingDataSize += dataSize
 }
 
 func (f *ChainDataFetcher) handleRequest() {

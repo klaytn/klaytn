@@ -155,7 +155,7 @@ func TestChainDataFetcher_Success_rangeFetchingThrottling(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 
 	fetcher := newTestChainDataFetcher()
-	fetcher.onProcessingDataSize = fetcher.maxProcessingDataSize + common.StorageSize(100*1024*1024) // assume that the processing data size is bigger than max
+	fetcher.processingDataSize = fetcher.maxProcessingDataSize + common.StorageSize(100*1024*1024) // assume that the processing data size is bigger than max
 
 	assert.NoError(t, fetcher.startRangeFetching(0, 10, cfTypes.RequestTypeGroupAll))
 	update := make(chan struct{})
@@ -173,9 +173,9 @@ func TestChainDataFetcher_Success_rangeFetchingThrottling(t *testing.T) {
 	}
 
 	// update data processing size
-	fetcher.lock.Lock()
-	fetcher.onProcessingDataSize = 0
-	fetcher.lock.Unlock()
+	fetcher.dataSizeLocker.Lock()
+	fetcher.processingDataSize = 0
+	fetcher.dataSizeLocker.Unlock()
 
 	select {
 	case <-fetcher.reqCh:
