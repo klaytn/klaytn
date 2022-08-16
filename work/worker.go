@@ -69,6 +69,7 @@ var (
 	gasLimitReachedTxsGauge = metrics.NewRegisteredGauge("miner/limitreached/gas/txs", nil)
 	strangeErrorTxsCounter  = metrics.NewRegisteredCounter("miner/strangeerror/txs", nil)
 
+	blockBaseFee              = metrics.NewRegisteredGauge("miner/block/mining/basefee", nil)
 	blockMiningTimer          = klaytnmetrics.NewRegisteredHybridTimer("miner/block/mining/time", nil)
 	blockMiningExecuteTxTimer = klaytnmetrics.NewRegisteredHybridTimer("miner/block/execute/time", nil)
 	blockMiningCommitTxTimer  = klaytnmetrics.NewRegisteredHybridTimer("miner/block/commit/time", nil)
@@ -586,6 +587,9 @@ func (self *worker) commitNewWork() {
 			commitTxTime := finishedCommitTx.Sub(tstart)
 			finalizeTime := finishedFinalize.Sub(finishedCommitTx)
 
+			if header.BaseFee != nil {
+				blockBaseFee.Update(header.BaseFee.Int64() / int64(params.Ston))
+			}
 			blockMiningTimer.Update(blockMiningTime)
 			blockMiningCommitTxTimer.Update(commitTxTime)
 			blockMiningExecuteTxTimer.Update(commitTxTime - trieAccess)

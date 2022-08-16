@@ -76,6 +76,7 @@ var (
 	snapshotStorageReadTimer = metrics.NewRegisteredTimer("state/snapshot/storage/reads", nil)
 	snapshotCommitTimer      = metrics.NewRegisteredTimer("state/snapshot/commits", nil)
 
+	blockBaseFee        = metrics.NewRegisteredGauge("chain/basefee", nil)
 	blockInsertTimer    = klaytnmetrics.NewRegisteredHybridTimer("chain/inserts", nil)
 	blockProcessTimer   = klaytnmetrics.NewRegisteredHybridTimer("chain/process", nil)
 	blockExecutionTimer = klaytnmetrics.NewRegisteredHybridTimer("chain/execution", nil)
@@ -2023,6 +2024,9 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 				"processTxs", processTxsTime, "finalize", processFinalizeTime, "validateState", validateTime,
 				"totalWrite", writeResult.TotalWriteTime, "trieWrite", writeResult.TrieWriteTime)
 
+			if block.Header().BaseFee != nil {
+				blockBaseFee.Update(block.Header().BaseFee.Int64() / int64(params.Ston))
+			}
 			blockProcessTimer.Update(time.Duration(processTxsTime))
 			blockExecutionTimer.Update(time.Duration(processTxsTime) - trieAccess)
 			blockFinalizeTimer.Update(time.Duration(processFinalizeTime))
