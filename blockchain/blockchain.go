@@ -2634,7 +2634,6 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 		internalTrace, err = GetInternalTxTrace(vmConfig.Tracer)
 		if err != nil {
 			logger.Error("failed to get tracing result from a transaction", "txHash", tx.Hash().String(), "err", err)
-			return nil, 0, nil, err
 		}
 	}
 	// Update the state with pending changes
