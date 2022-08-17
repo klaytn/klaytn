@@ -144,7 +144,14 @@ func TestGovParamSet_Get(t *testing.T) {
 }
 
 func TestGovParamSet_Nominal(t *testing.T) {
-	c := CypressChainConfig
+	c := CypressChainConfig.Copy()
+	c.Governance.KIP71 = &KIP71Config{
+		LowerBoundBaseFee:         12340000,
+		UpperBoundBaseFee:         56780000,
+		GasTarget:                 3000,
+		MaxBlockGasUsedForBaseFee: 6000,
+		BaseFeeDenominator:        100,
+	}
 	p, err := NewGovParamSetChainConfig(c)
 	assert.Nil(t, err)
 
@@ -163,6 +170,11 @@ func TestGovParamSet_Nominal(t *testing.T) {
 	assert.Equal(t, c.Governance.Reward.MinimumStake, p.MinimumStakeBig())
 	assert.Equal(t, c.Governance.Reward.StakingUpdateInterval, p.StakeUpdateInterval())
 	assert.Equal(t, c.Governance.Reward.ProposerUpdateInterval, p.ProposerRefreshInterval())
+	assert.Equal(t, c.Governance.KIP71.LowerBoundBaseFee, p.LowerBoundBaseFee())
+	assert.Equal(t, c.Governance.KIP71.UpperBoundBaseFee, p.UpperBoundBaseFee())
+	assert.Equal(t, c.Governance.KIP71.GasTarget, p.GasTarget())
+	assert.Equal(t, c.Governance.KIP71.MaxBlockGasUsedForBaseFee, p.MaxBlockGasUsedForBaseFee())
+	assert.Equal(t, c.Governance.KIP71.BaseFeeDenominator, p.BaseFeeDenominator())
 }
 
 func TestGovParamSet_New(t *testing.T) {

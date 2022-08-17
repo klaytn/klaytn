@@ -348,6 +348,13 @@ func NewGovParamSetChainConfig(config *ChainConfig) (*GovParamSet, error) {
 				items[MinimumStake] = config.Governance.Reward.MinimumStake.String()
 			}
 		}
+		if config.Governance.KIP71 != nil {
+			items[LowerBoundBaseFee] = config.Governance.KIP71.LowerBoundBaseFee
+			items[UpperBoundBaseFee] = config.Governance.KIP71.UpperBoundBaseFee
+			items[GasTarget] = config.Governance.KIP71.GasTarget
+			items[MaxBlockGasUsedForBaseFee] = config.Governance.KIP71.MaxBlockGasUsedForBaseFee
+			items[BaseFeeDenominator] = config.Governance.KIP71.BaseFeeDenominator
+		}
 	}
 
 	return NewGovParamSetIntMap(items)
@@ -486,4 +493,24 @@ func (p *GovParamSet) ProposerRefreshInterval() uint64 {
 
 func (p *GovParamSet) Timeout() uint64 {
 	return p.MustGet(Timeout).(uint64)
+}
+
+func (p *GovParamSet) LowerBoundBaseFee() uint64 {
+	return p.MustGet(LowerBoundBaseFee).(uint64)
+}
+
+func (p *GovParamSet) UpperBoundBaseFee() uint64 {
+	return p.MustGet(UpperBoundBaseFee).(uint64)
+}
+
+func (p *GovParamSet) GasTarget() uint64 {
+	return p.MustGet(GasTarget).(uint64)
+}
+
+func (p *GovParamSet) MaxBlockGasUsedForBaseFee() uint64 {
+	return p.MustGet(MaxBlockGasUsedForBaseFee).(uint64)
+}
+
+func (p *GovParamSet) BaseFeeDenominator() uint64 {
+	return p.MustGet(BaseFeeDenominator).(uint64)
 }
