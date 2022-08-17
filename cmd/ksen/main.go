@@ -73,14 +73,7 @@ func init() {
 
 	app.CommandNotFound = nodecmd.CommandNotExist
 	app.OnUsageError = nodecmd.OnUsageError
-
-	app.Before = func(ctx *cli.Context) error {
-		if err := nodecmd.CheckCommands(ctx); err != nil {
-			return err
-		}
-		return nodecmd.BeforeRunNode(ctx)
-	}
-
+	app.Before = nodecmd.BeforeRunNode
 	app.After = func(ctx *cli.Context) error {
 		debug.Exit()
 		console.Stdin.Close() // Resets terminal mode.

@@ -209,6 +209,9 @@ func BeforeRunNode(ctx *cli.Context) error {
 	if err := FlagsFromYaml(ctx); err != nil {
 		return err
 	}
+	if err := CheckCommands(ctx); err != nil {
+		return err
+	}
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	logDir := (&node.Config{DataDir: utils.MakeDataDir(ctx)}).ResolvePath("logs")
 	debug.CreateLogDir(logDir)

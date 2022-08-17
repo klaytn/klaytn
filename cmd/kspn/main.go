@@ -72,9 +72,8 @@ func init() {
 	cli.HelpPrinter = utils.NewHelpPrinter(utils.CategorizeFlags(app.Flags))
 
 	app.CommandNotFound = nodecmd.CommandNotExist
-
+	app.OnUsageError = nodecmd.OnUsageError
 	app.Before = nodecmd.BeforeRunNode
-
 	app.After = func(ctx *cli.Context) error {
 		debug.Exit()
 		console.Stdin.Close() // Resets terminal mode.
