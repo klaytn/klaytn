@@ -201,43 +201,54 @@ type txTraceTask struct {
 	index   int            // Transaction offset in the block
 }
 
-// TraceChain returns the structured logs created during the execution of EVM
-// between two blocks (excluding start) and returns them as a JSON object.
-func (api *API) TraceChain(ctx context.Context, start, end rpc.BlockNumber, config *TraceConfig) (*rpc.Subscription, error) {
+func checkRangeAndReturnBlock(api *API, ctx context.Context, start, end rpc.BlockNumber) (*types.Block, *types.Block, error) {
 	// Fetch the block interval that we want to trace
 	from, err := api.blockByNumber(ctx, start)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	to, err := api.blockByNumber(ctx, end)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// Trace the chain if we've found all our blocks
 	if from == nil {
-		return nil, fmt.Errorf("starting block #%d not found", start)
+		return nil, nil, fmt.Errorf("starting block #%d not found", start)
 	}
 	if to == nil {
-		return nil, fmt.Errorf("end block #%d not found", end)
+		return nil, nil, fmt.Errorf("end block #%d not found", end)
 	}
 	if from.Number().Cmp(to.Number()) >= 0 {
-		return nil, fmt.Errorf("end block #%d needs to come after start block #%d", end, start)
+		return nil, nil, fmt.Errorf("end block #%d needs to come after start block #%d", end, start)
 	}
-	return api.traceChain(ctx, from, to, config)
+	return from, to, nil
 }
 
-// traceChain configures a new tracer according to the provided configuration, and
-// executes all the transactions contained within. The return value will be one item
-// per transaction, dependent on the requestd tracer.
-func (api *API) traceChain(ctx context.Context, start, end *types.Block, config *TraceConfig) (*rpc.Subscription, error) {
+// TraceChain returns the structured logs created during the execution of EVM
+// between two blocks (excluding start) and returns them as a JSON object.
+func (api *API) TraceChain(ctx context.Context, start, end rpc.BlockNumber, config *TraceConfig) (*rpc.Subscription, error) {
+	from, to, err := checkRangeAndReturnBlock(api, ctx, start, end)
+	if err != nil {
+		return nil, err
+	}
 	// Tracing a chain is a **long** operation, only do with subscriptions
 	notifier, supported := rpc.NotifierFromContext(ctx)
 	if !supported {
 		return &rpc.Subscription{}, rpc.ErrNotificationsUnsupported
 	}
-	sub := notifier.CreateSubscription()
+	var sub *rpc.Subscription
+	sub = notifier.CreateSubscription()
+	_, err = api.traceChain(from, to, config, notifier, sub)
+	return sub, err
+}
 
+// traceChain configures a new tracer according to the provided configuration, and
+// executes all the transactions contained within.
+// The traceChain operates in two modes: subscription mode and rpc mode
+//  - if notifier and sub is not nil, it works as a subscription mode and returns nothing
+//  - if those parameters are nil, it works as a rpc mode and returns the block trace results, so it can pass the result through rpc-call
+func (api *API) traceChain(start, end *types.Block, config *TraceConfig, notifier *rpc.Notifier, sub *rpc.Subscription) (map[uint64]*blockTraceResult, error) {
 	// Prepare all the states for tracing. Note this procedure can take very
 	// long time. Timeout mechanism is necessary.
 	reexec := defaultTraceReexec
@@ -285,11 +296,15 @@ func (api *API) traceChain(ctx context.Context, start, end *types.Block, config 
 					task.statedb.Finalise(true, true)
 					task.results[i] = &txTraceResult{TxHash: tx.Hash(), Result: res}
 				}
-				// Stream the result back to the user or abort on teardown
-				select {
-				case results <- task:
-				case <-notifier.Closed():
-					return
+				if notifier != nil {
+					// Stream the result back to the user or abort on teardown
+					select {
+					case results <- task:
+					case <-notifier.Closed():
+						return
+					}
+				} else {
+					results <- task
 				}
 			}
 		}()
@@ -324,15 +339,18 @@ func (api *API) traceChain(ctx context.Context, start, end *types.Block, config 
 		var preferDisk bool
 		// Feed all the blocks both into the tracer, as well as fast process concurrently
 		for number = start.NumberU64(); number < end.NumberU64(); number++ {
-			// Stop tracing if interruption was requested
-			select {
-			case <-notifier.Closed():
-				return
-			default:
+			if notifier != nil {
+				// Stop tracing if interruption was requested
+				select {
+				case <-notifier.Closed():
+					return
+				default:
+				}
 			}
 			// Print progress logs if long enough time elapsed
 			if time.Since(logged) > log.StatsReportLimit {
 				logged = time.Now()
+				logger.Info("Tracing chain segment", "start", start.NumberU64(), "end", end.NumberU64(), "current", number, "transactions", traced, "elapsed", time.Since(begin))
 			}
 			// Retrieve the parent state to trace on top
 			block, err := api.blockByNumber(localctx, rpc.BlockNumber(number))
@@ -371,17 +389,21 @@ func (api *API) traceChain(ctx context.Context, start, end *types.Block, config 
 			}
 			// Send the block over to the concurrent tracers (if not in the fast-forward phase)
 			txs := next.Transactions()
-			select {
-			case tasks <- &blockTraceTask{statedb: statedb.Copy(), block: next, rootref: block.Root(), results: make([]*txTraceResult, len(txs))}:
-			case <-notifier.Closed():
-				return
+			if notifier != nil {
+				select {
+				case tasks <- &blockTraceTask{statedb: statedb.Copy(), block: next, rootref: block.Root(), results: make([]*txTraceResult, len(txs))}:
+				case <-notifier.Closed():
+					return
+				}
+			} else {
+				tasks <- &blockTraceTask{statedb: statedb.Copy(), block: next, rootref: block.Root(), results: make([]*txTraceResult, len(txs))}
 			}
 			traced += uint64(len(txs))
 		}
 	}()
 
-	// Keep reading the trace results and stream the to the user
-	go func() {
+	waitForResult := func() map[uint64]*blockTraceResult {
+		// Keep reading the trace results and stream the to the user
 		var (
 			done = make(map[uint64]*blockTraceResult)
 			next = start.NumberU64() + 1
@@ -399,17 +421,30 @@ func (api *API) traceChain(ctx context.Context, start, end *types.Block, config 
 			if res.statedb.Database().TrieDB() != nil {
 				res.statedb.Database().TrieDB().Dereference(res.rootref)
 			}
-			// Stream completed traces to the user, aborting on the first error
-			for result, ok := done[next]; ok; result, ok = done[next] {
-				if len(result.Traces) > 0 || next == end.NumberU64() {
-					notifier.Notify(sub.ID, result)
+			if notifier != nil {
+				// Stream completed traces to the user, aborting on the first error
+				for result, ok := done[next]; ok; result, ok = done[next] {
+					if len(result.Traces) > 0 || next == end.NumberU64() {
+						notifier.Notify(sub.ID, result)
+					}
+					delete(done, next)
+					next++
 				}
-				delete(done, next)
-				next++
+			} else {
+				if len(done) == blocks {
+					return done
+				}
 			}
 		}
-	}()
-	return sub, nil
+		return nil
+	}
+
+	if notifier != nil {
+		go waitForResult()
+		return nil, nil
+	}
+
+	return waitForResult(), nil
 }
 
 // TraceBlockByNumber returns the structured logs created during the execution of
@@ -420,6 +455,18 @@ func (api *API) TraceBlockByNumber(ctx context.Context, number rpc.BlockNumber, 
 		return nil, err
 	}
 	return api.traceBlock(ctx, block, config)
+}
+
+// TraceBlockByNumberRange returns the ranged blocks tracing results
+// TODO-tracer: limit the result by the size of the return
+func (api *API) TraceBlockByNumberRange(ctx context.Context, start, end rpc.BlockNumber, config *TraceConfig) (map[uint64]*blockTraceResult, error) {
+	// When the block range is [start,end], the actual tracing block would be [start+1,end]
+	// this is the reason why we change the block range to [start-1, end] so that we can trace [start,end] blocks
+	from, to, err := checkRangeAndReturnBlock(api, ctx, start-1, end)
+	if err != nil {
+		return nil, err
+	}
+	return api.traceChain(from, to, config, nil, nil)
 }
 
 // TraceBlockByHash returns the structured logs created during the execution of
