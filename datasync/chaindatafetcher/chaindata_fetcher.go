@@ -208,7 +208,7 @@ func (f *ChainDataFetcher) sendRequests(startBlock, endBlock uint64, reqType cfT
 			}
 			f.dataSizeLocker.RUnlock()
 
-			logger.Debug("throttling the requests, sleeping", "interval", DefaultThrottlingInterval, "processingDataSize", f.processingDataSize, "maxDatasize", f.maxProcessingDataSize)
+			logger.Warn("throttling the requests, sleeping", "interval", DefaultThrottlingInterval, "processingDataSize", f.processingDataSize, "maxDatasize", f.maxProcessingDataSize)
 			time.Sleep(DefaultThrottlingInterval)
 		}
 		select {
