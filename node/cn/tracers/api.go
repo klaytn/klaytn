@@ -139,14 +139,7 @@ func (api *API) blockByNumber(ctx context.Context, number rpc.BlockNumber) (*typ
 // blockByHash is the wrapper of the chain access function offered by the backend.
 // It will return an error if the block is not found.
 func (api *API) blockByHash(ctx context.Context, hash common.Hash) (*types.Block, error) {
-	block, err := api.backend.BlockByHash(ctx, hash)
-	if err != nil {
-		return nil, err
-	}
-	if block == nil {
-		return nil, fmt.Errorf("block %s not found", hash.Hex())
-	}
-	return block, nil
+	return api.backend.BlockByHash(ctx, hash)
 }
 
 // blockByNumberAndHash is the wrapper of the chain access function offered by
