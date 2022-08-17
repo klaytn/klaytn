@@ -13,16 +13,16 @@ import (
 // Each parameter is added to a parameter set from one of the following sources:
 // The highest priority is 1, and falls back to lower ones if non-existent
 //  1. contractParams: ContractEngine items (when enabled)
-//  2. defaultParams:  Header Governance items
+//  2. headerParams:   Header Governance items
 //  3. initialParams:  initial ChainConfig from genesis.json
-//  4. constParams:    Constants such as params.Default*
-//                     Note that some items are not backed by constParams.
+//  4. defaultParams:  Default params such as params.Default*
+//                     Note that some items are not backed by defaultParams.
 //
 type MixedEngine struct {
 	initialConfig *params.ChainConfig
 
 	initialParams *params.GovParamSet // initial ChainConfig
-	constParams   *params.GovParamSet // constants used as last fallback
+	defaultParams *params.GovParamSet // constants used as last fallback
 
 	currentParams *params.GovParamSet // latest params to be returned by Params()
 
@@ -30,7 +30,7 @@ type MixedEngine struct {
 
 	// Subordinate engines
 	// TODO: Add ContractEngine
-	defaultGov *Governance
+	headerGov *Governance
 }
 
 // newMixedEngine instantiate a new MixedEngine struct.
@@ -56,16 +56,16 @@ func newMixedEngine(config *params.ChainConfig, db database.DBManager, doInit bo
 		params.BaseFeeDenominator:        params.DefaultBaseFeeDenominator,
 	}
 	if p, err := params.NewGovParamSetIntMap(constMap); err == nil {
-		e.constParams = p
+		e.defaultParams = p
 	} else {
 		logger.Crit("Error parsing initial ParamSet", "err", err)
 	}
 
 	// Setup subordinate engines
 	if doInit {
-		e.defaultGov = NewGovernanceInitialize(config, db)
+		e.headerGov = NewGovernanceInitialize(config, db)
 	} else {
-		e.defaultGov = NewGovernance(config, db)
+		e.headerGov = NewGovernance(config, db)
 	}
 
 	// Load last state
@@ -85,88 +85,88 @@ func NewMixedEngineNoInit(config *params.ChainConfig, db database.DBManager) *Mi
 }
 
 func (e *MixedEngine) Params() *params.GovParamSet {
-	defaultParams := e.defaultGov.Params()
-	return e.assembleParams(defaultParams)
+	headerParams := e.headerGov.Params()
+	return e.assembleParams(headerParams)
 }
 
 func (e *MixedEngine) ParamsAt(num uint64) (*params.GovParamSet, error) {
-	defaultParams, err := e.defaultGov.ParamsAt(num)
+	headerParams, err := e.headerGov.ParamsAt(num)
 	if err != nil {
 		return nil, err
 	}
 
 	// TODO-Klaytn-Kore: merge contractParams
-	return e.assembleParams(defaultParams), nil
+	return e.assembleParams(headerParams), nil
 }
 
 func (e *MixedEngine) UpdateParams() error {
-	if err := e.defaultGov.UpdateParams(); err != nil {
+	if err := e.headerGov.UpdateParams(); err != nil {
 		return err
 	}
 
-	defaultParams := e.defaultGov.Params()
+	headerParams := e.headerGov.Params()
 
 	// TODO-Klaytn-Kore: merge contractParams
-	e.currentParams = e.assembleParams(defaultParams)
+	e.currentParams = e.assembleParams(headerParams)
 	return nil
 }
 
-func (e *MixedEngine) assembleParams(defaultParams *params.GovParamSet) *params.GovParamSet {
+func (e *MixedEngine) assembleParams(headerParams *params.GovParamSet) *params.GovParamSet {
 	// Refer to the comments above `type MixedEngine` for assembly order
 	p := params.NewGovParamSet()
-	p = params.NewGovParamSetMerged(p, e.constParams)
+	p = params.NewGovParamSetMerged(p, e.defaultParams)
 	p = params.NewGovParamSetMerged(p, e.initialParams)
-	p = params.NewGovParamSetMerged(p, defaultParams)
+	p = params.NewGovParamSetMerged(p, headerParams)
 	return p
 }
 
 // Pass-through to HeaderEngine
 func (e *MixedEngine) AddVote(key string, val interface{}) bool {
-	return e.defaultGov.AddVote(key, val)
+	return e.headerGov.AddVote(key, val)
 }
 
 func (e *MixedEngine) ValidateVote(vote *GovernanceVote) (*GovernanceVote, bool) {
-	return e.defaultGov.ValidateVote(vote)
+	return e.headerGov.ValidateVote(vote)
 }
 
 func (e *MixedEngine) CanWriteGovernanceState(num uint64) bool {
-	return e.defaultGov.CanWriteGovernanceState(num)
+	return e.headerGov.CanWriteGovernanceState(num)
 }
 
 func (e *MixedEngine) WriteGovernanceState(num uint64, isCheckpoint bool) error {
-	return e.defaultGov.WriteGovernanceState(num, isCheckpoint)
+	return e.headerGov.WriteGovernanceState(num, isCheckpoint)
 }
 
 func (e *MixedEngine) ReadGovernance(num uint64) (uint64, map[string]interface{}, error) {
-	return e.defaultGov.ReadGovernance(num)
+	return e.headerGov.ReadGovernance(num)
 }
 
 func (e *MixedEngine) WriteGovernance(num uint64, data GovernanceSet, delta GovernanceSet) error {
-	return e.defaultGov.WriteGovernance(num, data, delta)
+	return e.headerGov.WriteGovernance(num, data, delta)
 }
 
 func (e *MixedEngine) GetEncodedVote(addr common.Address, number uint64) []byte {
-	return e.defaultGov.GetEncodedVote(addr, number)
+	return e.headerGov.GetEncodedVote(addr, number)
 }
 
 func (e *MixedEngine) GetGovernanceChange() map[string]interface{} {
-	return e.defaultGov.GetGovernanceChange()
+	return e.headerGov.GetGovernanceChange()
 }
 
 func (e *MixedEngine) VerifyGovernance(received []byte) error {
-	return e.defaultGov.VerifyGovernance(received)
+	return e.headerGov.VerifyGovernance(received)
 }
 
 func (e *MixedEngine) ClearVotes(num uint64) {
-	e.defaultGov.ClearVotes(num)
+	e.headerGov.ClearVotes(num)
 }
 
 func (e *MixedEngine) WriteGovernanceForNextEpoch(number uint64, governance []byte) {
-	e.defaultGov.WriteGovernanceForNextEpoch(number, governance)
+	e.headerGov.WriteGovernanceForNextEpoch(number, governance)
 }
 
 func (e *MixedEngine) UpdateCurrentSet(num uint64) {
-	e.defaultGov.UpdateCurrentSet(num)
+	e.headerGov.UpdateCurrentSet(num)
 }
 
 func (e *MixedEngine) HandleGovernanceVote(
@@ -175,85 +175,85 @@ func (e *MixedEngine) HandleGovernanceVote(
 ) (
 	istanbul.ValidatorSet, []GovernanceVote, []GovernanceTallyItem,
 ) {
-	return e.defaultGov.HandleGovernanceVote(valset, votes, tally, header, proposer, self, writable)
+	return e.headerGov.HandleGovernanceVote(valset, votes, tally, header, proposer, self, writable)
 }
 
 func (e *MixedEngine) ChainId() uint64 {
-	return e.defaultGov.ChainId()
+	return e.headerGov.ChainId()
 }
 
 func (e *MixedEngine) InitialChainConfig() *params.ChainConfig {
-	return e.defaultGov.InitialChainConfig()
+	return e.headerGov.InitialChainConfig()
 }
 
 func (e *MixedEngine) GetVoteMapCopy() map[string]VoteStatus {
-	return e.defaultGov.GetVoteMapCopy()
+	return e.headerGov.GetVoteMapCopy()
 }
 
 func (e *MixedEngine) GetGovernanceTalliesCopy() []GovernanceTallyItem {
-	return e.defaultGov.GetGovernanceTalliesCopy()
+	return e.headerGov.GetGovernanceTalliesCopy()
 }
 
 func (e *MixedEngine) CurrentSetCopy() map[string]interface{} {
-	return e.defaultGov.CurrentSetCopy()
+	return e.headerGov.CurrentSetCopy()
 }
 
 func (e *MixedEngine) PendingChanges() map[string]interface{} {
-	return e.defaultGov.PendingChanges()
+	return e.headerGov.PendingChanges()
 }
 
 func (e *MixedEngine) Votes() []GovernanceVote {
-	return e.defaultGov.Votes()
+	return e.headerGov.Votes()
 }
 
 func (e *MixedEngine) IdxCache() []uint64 {
-	return e.defaultGov.IdxCache()
+	return e.headerGov.IdxCache()
 }
 
 func (e *MixedEngine) IdxCacheFromDb() []uint64 {
-	return e.defaultGov.IdxCacheFromDb()
+	return e.headerGov.IdxCacheFromDb()
 }
 
 func (e *MixedEngine) NodeAddress() common.Address {
-	return e.defaultGov.NodeAddress()
+	return e.headerGov.NodeAddress()
 }
 
 func (e *MixedEngine) TotalVotingPower() uint64 {
-	return e.defaultGov.TotalVotingPower()
+	return e.headerGov.TotalVotingPower()
 }
 
 func (e *MixedEngine) MyVotingPower() uint64 {
-	return e.defaultGov.MyVotingPower()
+	return e.headerGov.MyVotingPower()
 }
 
 func (e *MixedEngine) BlockChain() blockChain {
-	return e.defaultGov.BlockChain()
+	return e.headerGov.BlockChain()
 }
 
 func (e *MixedEngine) DB() database.DBManager {
-	return e.defaultGov.DB()
+	return e.headerGov.DB()
 }
 
 func (e *MixedEngine) SetNodeAddress(addr common.Address) {
-	e.defaultGov.SetNodeAddress(addr)
+	e.headerGov.SetNodeAddress(addr)
 }
 
 func (e *MixedEngine) SetTotalVotingPower(t uint64) {
-	e.defaultGov.SetTotalVotingPower(t)
+	e.headerGov.SetTotalVotingPower(t)
 }
 
 func (e *MixedEngine) SetMyVotingPower(t uint64) {
-	e.defaultGov.SetMyVotingPower(t)
+	e.headerGov.SetMyVotingPower(t)
 }
 
 func (e *MixedEngine) SetBlockchain(chain blockChain) {
-	e.defaultGov.SetBlockchain(chain)
+	e.headerGov.SetBlockchain(chain)
 }
 
 func (e *MixedEngine) SetTxPool(txpool txPool) {
-	e.defaultGov.SetTxPool(txpool)
+	e.headerGov.SetTxPool(txpool)
 }
 
 func (e *MixedEngine) GetTxPool() txPool {
-	return e.defaultGov.GetTxPool()
+	return e.headerGov.GetTxPool()
 }
