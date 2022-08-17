@@ -64,7 +64,8 @@ const (
 	// on top of memory.
 	// For non-archive nodes, this limit _will_ be overblown, as disk-backed tries
 	// will only be found every ~15K blocks or so.
-	defaultTracechainMemLimit = common.StorageSize(500 * 1024 * 1024)
+	// For klaytn, this value is set to a value 4 times larger compared to the ethereum setting.
+	defaultTracechainMemLimit = common.StorageSize(4 * 500 * 1024 * 1024)
 
 	// fastCallTracer is the go-version callTracer which is lighter and faster than
 	// Javascript version.
@@ -132,14 +133,7 @@ func (api *API) chainContext(ctx context.Context) blockchain.ChainContext {
 // blockByNumber is the wrapper of the chain access function offered by the backend.
 // It will return an error if the block is not found.
 func (api *API) blockByNumber(ctx context.Context, number rpc.BlockNumber) (*types.Block, error) {
-	block, err := api.backend.BlockByNumber(ctx, number)
-	if err != nil {
-		return nil, err
-	}
-	if block == nil {
-		return nil, fmt.Errorf("block #%d not found", number)
-	}
-	return block, nil
+	return api.backend.BlockByNumber(ctx, number)
 }
 
 // blockByHash is the wrapper of the chain access function offered by the backend.
@@ -766,7 +760,7 @@ func (api *API) traceTx(ctx context.Context, message blockchain.Message, vmctx v
 		deadlineCtx, cancel := context.WithTimeout(ctx, timeout)
 		go func() {
 			<-deadlineCtx.Done()
-			if deadlineCtx.Err() == context.DeadlineExceeded {
+			if errors.Is(deadlineCtx.Err(), context.DeadlineExceeded) {
 				switch t := tracer.(type) {
 				case *Tracer:
 					t.Stop(errors.New("execution timeout"))

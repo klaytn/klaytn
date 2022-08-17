@@ -111,7 +111,11 @@ func (b *testBackend) BlockByNumber(ctx context.Context, number rpc.BlockNumber)
 	if number == rpc.PendingBlockNumber || number == rpc.LatestBlockNumber {
 		return b.chain.CurrentBlock(), nil
 	}
-	return b.chain.GetBlockByNumber(uint64(number)), nil
+	block := b.chain.GetBlockByNumber(uint64(number))
+	if block == nil {
+		return nil, fmt.Errorf("the block does not exist (block number: %d)", number)
+	}
+	return block, nil
 }
 
 func (b *testBackend) GetTxAndLookupInfo(txHash common.Hash) (*types.Transaction, common.Hash, uint64, uint64) {
@@ -246,7 +250,7 @@ func (b *testBackend) StateAtTransaction(ctx context.Context, block *types.Block
 //				Value: (hexutil.Big)(*big.NewInt(1000)),
 //			},
 //			config:    nil,
-//			expectErr: fmt.Errorf("block #%d not found", genBlocks+1),
+//			expectErr: fmt.Errorf("the block does not exist (block number: %d)", genBlocks+1),
 //			expect:    nil,
 //		},
 //		// Standard JSON trace upon the latest block
@@ -392,7 +396,7 @@ func TestTraceBlock(t *testing.T) {
 		{
 			blockNumber: rpc.BlockNumber(genBlocks + 1),
 			config:      nil,
-			expectErr:   fmt.Errorf("block #%d not found", genBlocks+1),
+			expectErr:   fmt.Errorf("the block does not exist (block number: %d)", genBlocks+1),
 			expect:      nil,
 		},
 		// Trace latest block
