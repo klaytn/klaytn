@@ -1201,8 +1201,9 @@ var (
 		EnvVar: "KLAYTN_DBSYNCER_MAX_BLOCK_DIFF",
 	}
 	AutoRestartFlag = cli.BoolFlag{
-		Name:  "autorestart.enable",
-		Usage: "Node can restart itself when there is a problem in making consensus",
+		Name:   "autorestart.enable",
+		Usage:  "Node can restart itself when there is a problem in making consensus",
+		EnvVar: "KLAYTN_AUTORESTART_ENABLE",
 	}
 	RestartTimeOutFlag = cli.DurationFlag{
 		Name:   "autorestart.timeout",
