@@ -89,6 +89,10 @@ type ChainDataFetcher struct {
 	rangeFetchingStarted uint32
 	rangeFetchingStopCh  chan struct{}
 	rangeFetchingWg      sync.WaitGroup
+
+	dataSizeLocker        sync.RWMutex
+	processingDataSize    common.StorageSize
+	maxProcessingDataSize common.StorageSize
 }
 
 func NewChainDataFetcher(ctx *node.ServiceContext, cfg *ChainDataFetcherConfig) (*ChainDataFetcher, error) {
@@ -114,15 +118,17 @@ func NewChainDataFetcher(ctx *node.ServiceContext, cfg *ChainDataFetcherConfig) 
 		return nil, errUnsupportedMode
 	}
 	return &ChainDataFetcher{
-		config:        cfg,
-		chainCh:       make(chan blockchain.ChainEvent, cfg.BlockChannelSize),
-		reqCh:         make(chan *cfTypes.Request, cfg.JobChannelSize),
-		stopCh:        make(chan struct{}),
-		numHandlers:   cfg.NumHandlers,
-		checkpointMap: make(map[int64]struct{}),
-		repo:          repo,
-		checkpointDB:  checkpointDB,
-		setters:       setters,
+		config:                cfg,
+		chainCh:               make(chan blockchain.ChainEvent, cfg.BlockChannelSize),
+		reqCh:                 make(chan *cfTypes.Request, cfg.JobChannelSize),
+		stopCh:                make(chan struct{}),
+		numHandlers:           cfg.NumHandlers,
+		checkpointMap:         make(map[int64]struct{}),
+		repo:                  repo,
+		checkpointDB:          checkpointDB,
+		setters:               setters,
+		processingDataSize:    common.StorageSize(0),
+		maxProcessingDataSize: common.StorageSize(cfg.MaxProcessingDataSize * 1024 * 1024), // in MB
 	}, nil
 }
 
@@ -187,6 +193,24 @@ func (f *ChainDataFetcher) Stop() error {
 func (f *ChainDataFetcher) sendRequests(startBlock, endBlock uint64, reqType cfTypes.RequestType, shouldUpdateCheckpoint bool, stopCh chan struct{}) {
 	logger.Info("sending requests is started", "startBlock", startBlock, "endBlock", endBlock)
 	for i := startBlock; i <= endBlock; i++ {
+		for { // spin lock if processing data size is larger than max
+			select {
+			case <-stopCh:
+				logger.Info("stopped making requests", "startBlock", startBlock, "endBlock", endBlock, "stoppedBlock", i)
+				return
+			default:
+			}
+
+			f.dataSizeLocker.RLock()
+			if f.processingDataSize <= f.maxProcessingDataSize {
+				f.dataSizeLocker.RUnlock()
+				break
+			}
+			f.dataSizeLocker.RUnlock()
+
+			logger.Warn("throttling the requests, sleeping", "interval", DefaultThrottlingInterval, "processingDataSize", f.processingDataSize, "maxDatasize", f.maxProcessingDataSize)
+			time.Sleep(DefaultThrottlingInterval)
+		}
 		select {
 		case <-stopCh:
 			logger.Info("stopped making requests", "startBlock", startBlock, "endBlock", endBlock, "stoppedBlock", i)
@@ -411,6 +435,12 @@ func (f *ChainDataFetcher) pause() {
 	f.resetRequestCh()
 }
 
+func (f *ChainDataFetcher) updateDataSize(dataSize common.StorageSize) {
+	f.dataSizeLocker.Lock()
+	defer f.dataSizeLocker.Unlock()
+	f.processingDataSize += dataSize
+}
+
 func (f *ChainDataFetcher) handleRequest() {
 	f.wg.Add(1)
 	defer f.wg.Done()
@@ -443,11 +473,14 @@ func (f *ChainDataFetcher) handleRequest() {
 				logger.Error("making chain event is failed", "err", err)
 				break
 			}
+
+			f.updateDataSize(ev.JsonSize())
 			err = f.handleRequestByType(req.ReqType, req.ShouldUpdateCheckpoint, ev)
 			if err != nil && err == errMaxRetryExceeded {
 				logger.Error("the chaindatafetcher reaches the maximum retries. it pauses fetching and clear the channels", "blockNum", ev.Block.NumberU64())
 				f.pause()
 			}
+			f.updateDataSize(-ev.JsonSize())
 		}
 	}
 }

@@ -831,6 +831,12 @@ var (
 		Usage: "Block received channel size",
 		Value: chaindatafetcher.DefaultJobChannelSize,
 	}
+	ChainDataFetcherMaxProcessingDataSize = cli.IntFlag{
+		Name:   "chaindatafetcher.max.processing.data.size",
+		Usage:  "Maximum size of processing data before requesting range fetching of blocks (in MB)",
+		Value:  chaindatafetcher.DefaultMaxProcessingDataSize,
+		EnvVar: "KLAYTN_CHAINDATAFETCHER_MAX_PROCESSING_DATA_SIZE",
+	}
 	ChainDataFetcherKASDBHostFlag = cli.StringFlag{
 		Name:  "chaindatafetcher.kas.db.host",
 		Usage: "KAS specific DB host in chaindatafetcher",
