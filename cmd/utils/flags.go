@@ -506,7 +506,7 @@ var (
 	MetricsEnabledFlag = cli.BoolFlag{
 		Name:   metricutils.MetricsEnabledFlag,
 		Usage:  "Enable metrics collection and reporting",
-		EnvVar: "KLAYTN_ETRICUTILS_METRICSENABLEDFLA",
+		EnvVar: "KLAYTN_METRICUTILS_METRICSENABLEDFLAG",
 	}
 	PrometheusExporterFlag = cli.BoolFlag{
 		Name:   metricutils.PrometheusExporterFlag,
