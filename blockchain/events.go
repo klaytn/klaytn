@@ -21,6 +21,8 @@
 package blockchain
 
 import (
+	"encoding/json"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
@@ -49,6 +51,14 @@ type ChainEvent struct {
 	Receipts         types.Receipts
 	Logs             []*types.Log
 	InternalTxTraces []*vm.InternalTxTrace
+}
+
+func (ev *ChainEvent) JsonSize() common.StorageSize {
+	jsonBytes, err := json.Marshal(ev)
+	if err != nil {
+		return common.StorageSize(0)
+	}
+	return common.StorageSize(len(jsonBytes))
 }
 
 type ChainSideEvent struct {

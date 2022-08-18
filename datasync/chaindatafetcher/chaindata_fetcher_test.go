@@ -27,22 +27,25 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/datasync/chaindatafetcher/mocks"
 	cfTypes "github.com/klaytn/klaytn/datasync/chaindatafetcher/types"
 	eventMocks "github.com/klaytn/klaytn/event/mocks"
+	"github.com/klaytn/klaytn/log"
 	"github.com/stretchr/testify/assert"
 )
 
 func newTestChainDataFetcher() *ChainDataFetcher {
 	return &ChainDataFetcher{
-		config:        DefaultChainDataFetcherConfig,
-		chainCh:       make(chan blockchain.ChainEvent),
-		reqCh:         make(chan *cfTypes.Request),
-		stopCh:        make(chan struct{}),
-		numHandlers:   3,
-		checkpoint:    0,
-		checkpointMap: make(map[int64]struct{}),
-		repo:          nil,
+		config:                DefaultChainDataFetcherConfig,
+		chainCh:               make(chan blockchain.ChainEvent),
+		reqCh:                 make(chan *cfTypes.Request),
+		stopCh:                make(chan struct{}),
+		numHandlers:           3,
+		checkpoint:            0,
+		checkpointMap:         make(map[int64]struct{}),
+		repo:                  nil,
+		maxProcessingDataSize: common.StorageSize(DefaultMaxProcessingDataSize * 1024 * 1024),
 	}
 }
 
@@ -146,6 +149,43 @@ func TestChainDataFetcher_Success_rangeFetchingStartAndFinishedAlready(t *testin
 	err := fetcher.stopRangeFetching()
 	assert.Error(t, err)
 	assert.True(t, strings.Contains(err.Error(), "range fetching is not running"))
+}
+
+func TestChainDataFetcher_Success_rangeFetchingThrottling(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
+
+	fetcher := newTestChainDataFetcher()
+	fetcher.processingDataSize = fetcher.maxProcessingDataSize + common.StorageSize(100*1024*1024) // assume that the processing data size is bigger than max
+
+	assert.NoError(t, fetcher.startRangeFetching(0, 10, cfTypes.RequestTypeGroupAll))
+	update := make(chan struct{})
+
+	go func() {
+		time.Sleep(1 * time.Second)
+		update <- struct{}{}
+	}()
+
+	select {
+	case <-fetcher.reqCh:
+		t.Fatal("failed throttling")
+	case <-update:
+		t.Log("working throttling")
+	}
+
+	// update data processing size
+	fetcher.dataSizeLocker.Lock()
+	fetcher.processingDataSize = 0
+	fetcher.dataSizeLocker.Unlock()
+
+	select {
+	case <-fetcher.reqCh:
+		t.Log("working after updating processing data size")
+	case <-time.NewTimer(1 * time.Second).C:
+		t.Fatal("failed update throttling")
+	}
+
+	// stop fetching while waiting
+	assert.NoError(t, fetcher.stopRangeFetching())
 }
 
 func TestChainDataFetcher_updateCheckpoint(t *testing.T) {

@@ -151,6 +151,9 @@ func makeChainDataFetcherConfig(ctx *cli.Context) chaindatafetcher.ChainDataFetc
 		if ctx.GlobalIsSet(utils.ChainDataFetcherChainEventSizeFlag.Name) {
 			cfg.BlockChannelSize = ctx.GlobalInt(utils.ChainDataFetcherChainEventSizeFlag.Name)
 		}
+		if ctx.GlobalIsSet(utils.ChainDataFetcherMaxProcessingDataSize.Name) {
+			cfg.MaxProcessingDataSize = ctx.GlobalInt(utils.ChainDataFetcherMaxProcessingDataSize.Name)
+		}
 
 		mode := ctx.GlobalString(utils.ChainDataFetcherMode.Name)
 		mode = strings.ToLower(mode)
