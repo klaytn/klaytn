@@ -77,6 +77,8 @@ contract BridgeOperator is Ownable {
         _;
     }
 
+    event WithdrawKLAY(uint64 indexed withdrawNonce, uint256 indexed amountOfKLAY, uint numberOfOperators);
+
     function getOperatorList() external view returns(address payable[] memory) {
         return operatorList;
     }
@@ -220,10 +222,12 @@ contract BridgeOperator is Ownable {
         if (!_voteWithdraw(withdrawNonce)) {
             return;
         }
-        uint256 divided = value.sub(amountOfLockedRefundKLAY) / uint256(operatorList.length);
+        uint256 withdrawl = value.sub(amountOfLockedRefundKLAY);
+        uint256 divided = withdrawl / uint256(operatorList.length);
         for (uint i=0; i<operatorList.length; i++) {
             operatorList[i].transfer(divided); 
         }
+        emit WithdrawKLAY(withdrawNonce, withdrawl, operatorList.length);
         withdrawNonce++;
     }
 
