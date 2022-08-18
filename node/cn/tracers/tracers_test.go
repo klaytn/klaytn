@@ -242,7 +242,7 @@ func TestCallTracer(t *testing.T) {
 		}
 		file := file // capture range variable
 		t.Run(camel(strings.TrimSuffix(strings.TrimPrefix(file.Name(), "call_tracer_"), ".json")), func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel()
 
 			// Call tracer test found, read if from disk
 			blob, err := ioutil.ReadFile(filepath.Join("testdata", file.Name()))
@@ -353,7 +353,7 @@ func TestInternalCallTracer(t *testing.T) {
 		}
 		file := file // capture range variable
 		t.Run(camel(strings.TrimSuffix(strings.TrimPrefix(file.Name(), "call_tracer_"), ".json")), func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel()
 
 			// Call tracer test found, read if from disk
 			blob, err := ioutil.ReadFile(filepath.Join("testdata", file.Name()))
