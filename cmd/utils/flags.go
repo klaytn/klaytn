@@ -511,7 +511,7 @@ var (
 	PrometheusExporterFlag = cli.BoolFlag{
 		Name:   metricutils.PrometheusExporterFlag,
 		Usage:  "Enable prometheus exporter",
-		EnvVar: "KLAYTN_ETRICUTILS_PROMETHEUSEXPORTERFLA",
+		EnvVar: "KLAYTN_METRICUTILS_PROMETHEUSEXPORTERFLAG",
 	}
 	PrometheusExporterPortFlag = cli.IntFlag{
 		Name:   metricutils.PrometheusExporterPortFlag,
