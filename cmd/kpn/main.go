@@ -23,7 +23,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"runtime"
 	"sort"
 
 	"github.com/klaytn/klaytn/api/debug"
@@ -31,8 +30,6 @@ import (
 	"github.com/klaytn/klaytn/cmd/utils/nodecmd"
 	"github.com/klaytn/klaytn/console"
 	"github.com/klaytn/klaytn/log"
-	metricutils "github.com/klaytn/klaytn/metrics/utils"
-	"github.com/klaytn/klaytn/node"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -41,11 +38,6 @@ var (
 
 	// The app that holds all commands and flags.
 	app = utils.NewApp(nodecmd.GetGitCommit(), "The command line interface for Klaytn Proxy Node")
-
-	// flags that configure the node
-	nodeFlags = append(nodecmd.CommonNodeFlags, nodecmd.KPNFlags...)
-
-	rpcFlags = nodecmd.CommonRPCFlags
 )
 
 func init() {
@@ -63,43 +55,28 @@ func init() {
 		nodecmd.AccountCommand,
 
 		// See utils/nodecmd/consolecmd.go:
-		nodecmd.GetConsoleCommand(nodeFlags, rpcFlags),
+		nodecmd.GetConsoleCommand(nodecmd.KpnNodeFlags(), nodecmd.CommonRPCFlags),
 		nodecmd.AttachCommand,
 
 		// See utils/nodecmd/versioncmd.go:
 		nodecmd.VersionCommand,
 
 		// See utils/nodecmd/dumpconfigcmd.go:
-		nodecmd.GetDumpConfigCommand(nodeFlags, rpcFlags),
+		nodecmd.GetDumpConfigCommand(nodecmd.KpnNodeFlags(), nodecmd.CommonRPCFlags),
 
 		// See utils/nodecmd/db_migration.go:
 		nodecmd.MigrationCommand,
 	}
 	sort.Sort(cli.CommandsByName(app.Commands))
 
-	app.Flags = append(app.Flags, nodeFlags...)
-	app.Flags = append(app.Flags, rpcFlags...)
-	app.Flags = append(app.Flags, nodecmd.ConsoleFlags...)
-	app.Flags = append(app.Flags, debug.Flags...)
-	app.Flags = append(app.Flags, nodecmd.DBMigrationFlags...)
+	app.Flags = nodecmd.KpnAppFlags()
 
 	cli.AppHelpTemplate = utils.GlobalAppHelpTemplate
 	cli.HelpPrinter = utils.NewHelpPrinter(utils.CategorizeFlags(app.Flags))
 
 	app.CommandNotFound = nodecmd.CommandNotExist
-
-	app.Before = func(ctx *cli.Context) error {
-		runtime.GOMAXPROCS(runtime.NumCPU())
-		logDir := (&node.Config{DataDir: utils.MakeDataDir(ctx)}).ResolvePath("logs")
-		debug.CreateLogDir(logDir)
-		if err := debug.Setup(ctx); err != nil {
-			return err
-		}
-		metricutils.StartMetricCollectionAndExport(ctx)
-		utils.SetupNetwork(ctx)
-		return nil
-	}
-
+	app.OnUsageError = nodecmd.OnUsageError
+	app.Before = nodecmd.BeforeRunNode
 	app.After = func(ctx *cli.Context) error {
 		debug.Exit()
 		console.Stdin.Close() // Resets terminal mode.
