@@ -540,7 +540,7 @@ func TestMultiBridgeOperation(t *testing.T) {
 	sim.Commit()
 	CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
 
-	// (1) Test of withdraw
+	// (1) Test of refund KLAY
 	{
 		expectedBalance := uint64(100)
 		for _, user := range users {
@@ -586,7 +586,7 @@ func TestMultiBridgeOperation(t *testing.T) {
 		}
 	}
 
-	// (2) Test of refund KLAY
+	// (2) Test of withdraw KLAY
 	{
 		ownerBalance := getBalance(t, sim, pbi.account.address)
 		bridgeBalance := getBalance(t, sim, pbi.address)
