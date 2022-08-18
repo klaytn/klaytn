@@ -196,9 +196,11 @@ func allNodeFlags() []cli.Flag {
 	return nodeFlags
 }
 
+var confFile = "conf" // flag option for yaml file name
+
 func FlagsFromYaml(ctx *cli.Context) error {
-	if ctx.String("conf") != "" {
-		if err := altsrc.InitInputSourceWithContext(allNodeFlags(), altsrc.NewYamlSourceFromFlagFunc("conf"))(ctx); err != nil {
+	if ctx.String(confFile) != "" {
+		if err := altsrc.InitInputSourceWithContext(allNodeFlags(), altsrc.NewYamlSourceFromFlagFunc(confFile))(ctx); err != nil {
 			return err
 		}
 	}
