@@ -517,7 +517,7 @@ var (
 		Name:   metricutils.PrometheusExporterPortFlag,
 		Usage:  "Prometheus exporter listening port",
 		Value:  61001,
-		EnvVar: "KLAYTN_ETRICUTILS_PROMETHEUSEXPORTERPORTFLA",
+		EnvVar: "KLAYTN_METRICUTILS_PROMETHEUSEXPORTERPORTFLAG",
 	}
 	// RPC settings
 	RPCEnabledFlag = cli.BoolFlag{
