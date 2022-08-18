@@ -747,8 +747,10 @@ func containsTx(block *types.Block, hash common.Hash) bool {
 // and returns them as a JSON object.
 func (api *API) TraceTransaction(ctx context.Context, hash common.Hash, config *TraceConfig) (interface{}, error) {
 	// Retrieve the transaction and assemble its EVM context
-	_, blockHash, blockNumber, index := api.backend.GetTxAndLookupInfo(hash)
-
+	tx, blockHash, blockNumber, index := api.backend.GetTxAndLookupInfo(hash)
+	if tx == nil {
+		return nil, fmt.Errorf("transaction %#x not found", hash)
+	}
 	// It shouldn't happen in practice.
 	if blockNumber == 0 {
 		return nil, errors.New("genesis is not traceable")
