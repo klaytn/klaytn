@@ -70,17 +70,17 @@ func (f *WrappedDirectoryFlag) Apply(set *flag.FlagSet) {
 
 func (f *WrappedDirectoryFlag) ApplyInputSourceValue(context *cli.Context, isc altsrc.InputSourceContext) error {
 	if f.set != nil {
-		// if !isEnvVarSet(f.EnvVar) {
-		value, err := isc.String(f.DirectoryFlag.Name)
-		if err != nil {
-			return err
+		if !isEnvVarSet(f.EnvVar) {
+			value, err := isc.String(f.DirectoryFlag.Name)
+			if err != nil {
+				return err
+			}
+			if value != "" {
+				eachName(f.Name, func(name string) {
+					f.set.Set(f.Name, value)
+				})
+			}
 		}
-		if value != "" {
-			eachName(f.Name, func(name string) {
-				f.set.Set(f.Name, value)
-			})
-		}
-		// }
 	}
 	return nil
 }
