@@ -63,24 +63,6 @@ var (
 	rpcFlags = CommonRPCFlags
 )
 
-func contains(list []cli.Flag, item cli.Flag) bool {
-	for _, flag := range list {
-		if flag.GetName() == item.GetName() {
-			return true
-		}
-	}
-	return false
-}
-
-func union(list1, list2 []cli.Flag) []cli.Flag {
-	for _, item := range list2 {
-		if !contains(list1, item) {
-			list1 = append(list1, item)
-		}
-	}
-	return list1
-}
-
 func init() {
 	// Initialize the CLI app and start Klay
 	app.Action = RunKlaytnNode
@@ -105,16 +87,7 @@ func init() {
 	}
 	sort.Sort(cli.CommandsByName(app.Commands))
 
-	app.Flags = append(app.Flags, nodeFlags...)
-	app.Flags = append(app.Flags, rpcFlags...)
-	app.Flags = append(app.Flags, ConsoleFlags...)
-	app.Flags = append(app.Flags, debug.Flags...)
-	app.Flags = union(app.Flags, KCNFlags)
-	app.Flags = union(app.Flags, KPNFlags)
-	app.Flags = union(app.Flags, KENFlags)
-	app.Flags = union(app.Flags, KSCNFlags)
-	app.Flags = union(app.Flags, KSPNFlags)
-	app.Flags = union(app.Flags, KSENFlags)
+	app.Flags = allNodeFlags()
 
 	app.Before = func(ctx *cli.Context) error {
 		runtime.GOMAXPROCS(runtime.NumCPU())

@@ -32,73 +32,94 @@ import (
 	"github.com/klaytn/klaytn/log/term"
 	colorable "github.com/mattn/go-colorable"
 	"gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1/altsrc"
 )
 
 var Memsize memsizeui.Handler
 
 var (
 	verbosityFlag = cli.IntFlag{
-		Name:  "verbosity",
-		Usage: "Logging verbosity: 0=silent, 1=error, 2=warn, 3=info, 4=debug, 5=detail",
-		Value: 3,
+		Name:   "verbosity",
+		Usage:  "Logging verbosity: 0=silent, 1=error, 2=warn, 3=info, 4=debug, 5=detail",
+		Value:  3,
+		EnvVar: "KLAYTN_VERBOSITY",
 	}
 	vmoduleFlag = cli.StringFlag{
-		Name:  "vmodule",
-		Usage: "Per-module verbosity: comma-separated list of <pattern>=<level> (e.g. klay/*=5,p2p=4)",
-		Value: "",
+		Name:   "vmodule",
+		Usage:  "Per-module verbosity: comma-separated list of <pattern>=<level> (e.g. klay/*=5,p2p=4)",
+		Value:  "",
+		EnvVar: "KLAYTN_VMODULE",
 	}
 	backtraceAtFlag = cli.StringFlag{
-		Name:  "backtrace",
-		Usage: "Request a stack trace at a specific logging statement (e.g. \"block.go:271\")",
-		Value: "",
+		Name:   "backtrace",
+		Usage:  "Request a stack trace at a specific logging statement (e.g. \"block.go:271\")",
+		Value:  "",
+		EnvVar: "KLAYTN_BACKTRACE",
 	}
 	debugFlag = cli.BoolFlag{
-		Name:  "debug",
-		Usage: "Prepends log messages with call-site location (file and line number)",
+		Name:   "debug",
+		Usage:  "Prepends log messages with call-site location (file and line number)",
+		EnvVar: "KLAYTN_DEBUG",
 	}
 	pprofFlag = cli.BoolFlag{
-		Name:  "pprof",
-		Usage: "Enable the pprof HTTP server",
+		Name:   "pprof",
+		Usage:  "Enable the pprof HTTP server",
+		EnvVar: "KLAYTN_PPROF",
 	}
 	pprofPortFlag = cli.IntFlag{
-		Name:  "pprofport",
-		Usage: "pprof HTTP server listening port",
-		Value: 6060,
+		Name:   "pprofport",
+		Usage:  "pprof HTTP server listening port",
+		Value:  6060,
+		EnvVar: "KLAYTN_PPROFPORT",
 	}
 	pprofAddrFlag = cli.StringFlag{
-		Name:  "pprofaddr",
-		Usage: "pprof HTTP server listening interface",
-		Value: "127.0.0.1",
+		Name:   "pprofaddr",
+		Usage:  "pprof HTTP server listening interface",
+		Value:  "127.0.0.1",
+		EnvVar: "KLAYTN_PPROFADDR",
 	}
 	memprofileFlag = cli.StringFlag{
-		Name:  "memprofile",
-		Usage: "Write memory profile to the given file",
+		Name:   "memprofile",
+		Usage:  "Write memory profile to the given file",
+		EnvVar: "KLAYTN_MEMPROFILE",
 	}
 	memprofilerateFlag = cli.IntFlag{
-		Name:  "memprofilerate",
-		Usage: "Turn on memory profiling with the given rate",
-		Value: runtime.MemProfileRate,
+		Name:   "memprofilerate",
+		Usage:  "Turn on memory profiling with the given rate",
+		Value:  runtime.MemProfileRate,
+		EnvVar: "KLAYTN_MEMPROFILERATE",
 	}
 	blockprofilerateFlag = cli.IntFlag{
-		Name:  "blockprofilerate",
-		Usage: "Turn on block profiling with the given rate",
+		Name:   "blockprofilerate",
+		Usage:  "Turn on block profiling with the given rate",
+		EnvVar: "KLAYTN_BLOCKPROFILERATE",
 	}
 	cpuprofileFlag = cli.StringFlag{
-		Name:  "cpuprofile",
-		Usage: "Write CPU profile to the given file",
+		Name:   "cpuprofile",
+		Usage:  "Write CPU profile to the given file",
+		EnvVar: "KLAYTN_CPUPROFILE",
 	}
 	traceFlag = cli.StringFlag{
-		Name:  "trace",
-		Usage: "Write execution trace to the given file",
+		Name:   "trace",
+		Usage:  "Write execution trace to the given file",
+		EnvVar: "KLAYTN_TRACE",
 	}
 )
 
 // Flags holds all command-line flags required for debugging.
 var Flags = []cli.Flag{
-	verbosityFlag, vmoduleFlag, backtraceAtFlag, debugFlag,
-	pprofFlag, pprofAddrFlag, pprofPortFlag,
-	memprofileFlag, memprofilerateFlag,
-	blockprofilerateFlag, cpuprofileFlag, traceFlag,
+	altsrc.NewIntFlag(verbosityFlag),
+	altsrc.NewStringFlag(vmoduleFlag),
+	altsrc.NewStringFlag(backtraceAtFlag),
+	altsrc.NewBoolFlag(debugFlag),
+	altsrc.NewBoolFlag(pprofFlag),
+	altsrc.NewStringFlag(pprofAddrFlag),
+	altsrc.NewIntFlag(pprofPortFlag),
+	altsrc.NewStringFlag(memprofileFlag),
+	altsrc.NewIntFlag(memprofilerateFlag),
+	altsrc.NewIntFlag(blockprofilerateFlag),
+	altsrc.NewStringFlag(cpuprofileFlag),
+	altsrc.NewStringFlag(traceFlag),
 }
 
 var glogger *log.GlogHandler
