@@ -343,6 +343,14 @@ func (b *CNAPIBackend) Engine() consensus.Engine {
 	return b.cn.engine
 }
 
+func (b *CNAPIBackend) StateAtBlock(ctx context.Context, block *types.Block, reexec uint64, base *state.StateDB, checkLive bool, preferDisk bool) (*state.StateDB, error) {
+	return b.cn.stateAtBlock(block, reexec, base, checkLive, preferDisk)
+}
+
+func (b *CNAPIBackend) StateAtTransaction(ctx context.Context, block *types.Block, txIndex int, reexec uint64) (blockchain.Message, vm.Context, *state.StateDB, error) {
+	return b.cn.stateAtTransaction(block, txIndex, reexec)
+}
+
 func (b *CNAPIBackend) FeeHistory(ctx context.Context, blockCount int, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*big.Int, [][]*big.Int, []*big.Int, []float64, error) {
 	return b.gpo.FeeHistory(ctx, blockCount, lastBlock, rewardPercentiles)
 }

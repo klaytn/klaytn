@@ -131,6 +131,7 @@ var FlagGroups = []FlagGroup{
 			ChainDataFetcherNumHandlers,
 			ChainDataFetcherJobChannelSize,
 			ChainDataFetcherChainEventSizeFlag,
+			ChainDataFetcherMaxProcessingDataSize,
 			ChainDataFetcherKASDBHostFlag,
 			ChainDataFetcherKASDBPortFlag,
 			ChainDataFetcherKASDBNameFlag,

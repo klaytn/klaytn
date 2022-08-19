@@ -728,6 +728,12 @@ web3._extend({
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter, null]
 		}),
 		new web3._extend.Method({
+			name: 'traceBlockByNumberRange',
+			call: 'debug_traceBlockByNumberRange',
+			params: 3,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter, web3._extend.formatters.inputBlockNumberFormatter, null]
+		}),
+		new web3._extend.Method({
 			name: 'traceBlockByHash',
 			call: 'debug_traceBlockByHash',
 			params: 2,

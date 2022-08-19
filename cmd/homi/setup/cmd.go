@@ -677,16 +677,7 @@ func writePNInfoKey(num int) {
 }
 
 func writeKlayConfig(networkId int, rpcPort int, wsPort int, p2pPort int, dataDir string, logDir string, nodeType string) {
-	kConfig := KlaytnConfig{
-		networkId,
-		rpcPort,
-		wsPort,
-		p2pPort,
-		dataDir,
-		logDir,
-		"/var/run/klay",
-		nodeType,
-	}
+	kConfig := NewKlaytnConfig(networkId, rpcPort, wsPort, p2pPort, dataDir, logDir, "/var/run/klay", nodeType)
 	WriteFile([]byte(kConfig.String()), strings.ToLower(nodeType), "klay.conf")
 }
 

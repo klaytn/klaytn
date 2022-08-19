@@ -50,6 +50,7 @@ import (
 	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/node/cn/filters"
 	"github.com/klaytn/klaytn/node/cn/gasprice"
+	"github.com/klaytn/klaytn/node/cn/tracers"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/rlp"
@@ -486,6 +487,7 @@ func (s *CN) APIs() []rpc.API {
 	governanceKlayAPI := governance.NewGovernanceKlayAPI(s.governance, s.blockchain)
 	publicGovernanceAPI := governance.NewGovernanceAPI(s.governance)
 	publicDownloaderAPI := downloader.NewPublicDownloaderAPI(s.protocolManager.Downloader(), s.eventMux)
+	privateTracerAPI := tracers.NewAPI(s.APIBackend)
 
 	ethAPI.SetPublicFilterAPI(publicFilterAPI)
 	ethAPI.SetGovernanceKlayAPI(governanceKlayAPI)
@@ -526,6 +528,11 @@ func (s *CN) APIs() []rpc.API {
 			Namespace: "debug",
 			Version:   "1.0",
 			Service:   NewPrivateDebugAPI(s.chainConfig, s),
+		}, {
+			Namespace: "debug",
+			Version:   "1.0",
+			Service:   privateTracerAPI,
+			Public:    false,
 		}, {
 			Namespace: "net",
 			Version:   "1.0",
