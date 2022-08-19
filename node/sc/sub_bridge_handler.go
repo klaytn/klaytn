@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"sync"
 	"time"
 
 	"github.com/klaytn/klaytn/blockchain"
@@ -75,7 +76,8 @@ type SubBridgeHandler struct {
 
 	skipSyncBlockCount int32
 
-	resendCandidates map[common.Hash]time.Duration
+	resendCandidates     map[common.Hash]time.Duration
+	resendCandidatesLock sync.Mutex
 }
 
 func NewSubBridgeHandler(main *SubBridge) (*SubBridgeHandler, error) {
@@ -397,15 +399,9 @@ func (sbh *SubBridgeHandler) handleParentChainInvalidTxResponseMsg(msg p2p.Msg) 
 				logger.Error("[SC][HandleTxDropped] Bridge tx was dropped by lower gas price")
 				logger.Info("[SC][HandleTxDropped] Request gasPrice and Magma values to parent chain")
 				sbh.SyncNonceAndGasPrice()
-				// Remove the tx and delegate re-execution of the tx by Value Transfer Recovery feature
-			} // TODO-ServiceChain: Consider other types of tx failures with else {}
-			if err := sbh.subbridge.GetBridgeTxPool().RemoveTx(tx); err != nil {
-				logger.Error("[SC][HandleResponse] Failed to remove bridge tx",
-					"txType", tx.Type(), "txNonce", tx.Nonce(), "txHash", tx.Hash().String())
-			} else {
-				logger.Info("[SC][HandleResponse] Removed bridge tx",
-					"txType", tx.Type(), "txNonce", tx.Nonce(), "txHash", tx.Hash().String())
 			}
+			// Remove the tx and delegate re-execution of the tx by Value Transfer Recovery
+			sbh.removeBridgeTx(tx)
 		}
 	}
 	return nil
@@ -422,6 +418,7 @@ func (sbh *SubBridgeHandler) broadcastServiceChainTx() {
 	peers := sbh.subbridge.BridgePeerSet().peers
 	var txs types.Transactions
 	allPendingTxs := sbh.subbridge.GetBridgeTxPool().PendingTxsByAddress(&sbh.subbridge.bridgeAccounts.pAccount.address, int(sbh.GetSentChainTxsLimit())) // TODO-Klaytn-Servicechain change GetSentChainTxsLimit type to int from uint64
+	sbh.resendCandidatesLock.Lock()
 	for _, tx := range allPendingTxs {
 		txHash := tx.Hash()
 		if stayed, ok := sbh.resendCandidates[txHash]; ok {
@@ -435,6 +432,7 @@ func (sbh *SubBridgeHandler) broadcastServiceChainTx() {
 			txs = append(txs, tx)
 		}
 	}
+	sbh.resendCandidatesLock.Unlock()
 	for _, peer := range peers {
 		if peer.GetChainID().Cmp(parentChainID) != 0 {
 			logger.Error("parent peer with different parent chainID", "peerID", peer.GetID(), "peer chainID", peer.GetChainID(), "parent chainID", parentChainID)
@@ -466,7 +464,7 @@ func (sbh *SubBridgeHandler) writeServiceChainTxReceipts(bc *blockchain.BlockCha
 				sbh.WriteAnchoredBlockNumber(decodedData.GetBlockNumber().Uint64())
 			}
 			// TODO-Klaytn-ServiceChain: support other tx types if needed.
-			sbh.subbridge.GetBridgeTxPool().RemoveTx(tx)
+			sbh.removeBridgeTx(tx)
 		} else {
 			logger.Trace("received service chain transaction receipt does not exist in sentServiceChainTxs", "txHash", txHash.String())
 		}
@@ -615,4 +613,17 @@ func (sbh *SubBridgeHandler) WriteReceiptFromParentChain(blockHash common.Hash, 
 // with corresponding block hash. It assumes that a child chain has only one parent chain.
 func (sbh *SubBridgeHandler) GetReceiptFromParentChain(blockHash common.Hash) *types.Receipt {
 	return sbh.subbridge.chainDB.ReadReceiptFromParentChain(blockHash)
+}
+
+func (sbh *SubBridgeHandler) removeBridgeTx(tx *types.Transaction) {
+	if err := sbh.subbridge.GetBridgeTxPool().RemoveTx(tx); err != nil {
+		logger.Error("[SC][HandleResponse] Failed to remove bridge tx",
+			"txType", tx.Type(), "txNonce", tx.Nonce(), "txHash", tx.Hash().String())
+	} else {
+		logger.Info("[SC][HandleResponse] Removed bridge tx",
+			"txType", tx.Type(), "txNonce", tx.Nonce(), "txHash", tx.Hash().String())
+	}
+	sbh.resendCandidatesLock.Lock()
+	defer sbh.resendCandidatesLock.Unlock()
+	delete(sbh.resendCandidates, tx.Hash())
 }
