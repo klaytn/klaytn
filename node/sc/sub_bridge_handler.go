@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -31,7 +32,8 @@ import (
 )
 
 const (
-	SyncRequestInterval = 10
+	SyncRequestInterval           = 10
+	DefaultResendBridgeTxInterval = time.Second * 30
 )
 
 var (
@@ -72,6 +74,8 @@ type SubBridgeHandler struct {
 	sentServiceChainTxsLimit uint64
 
 	skipSyncBlockCount int32
+
+	resendCandidates map[common.Hash]time.Duration
 }
 
 func NewSubBridgeHandler(main *SubBridge) (*SubBridgeHandler, error) {
@@ -84,6 +88,7 @@ func NewSubBridgeHandler(main *SubBridge) (*SubBridgeHandler, error) {
 		chainTxPeriod:                 main.config.AnchoringPeriod,
 		latestTxCountAddedBlockNumber: uint64(0),
 		sentServiceChainTxsLimit:      main.config.SentChainTxsLimit,
+		resendCandidates:              make(map[common.Hash]time.Duration),
 	}, nil
 }
 
@@ -383,26 +388,24 @@ func (sbh *SubBridgeHandler) handleParentChainInvalidTxResponseMsg(msg p2p.Msg) 
 	if err := msg.Decode(&invalidTxs); err != nil && err != rlp.EOL {
 		return errResp(ErrDecode, "msg %v: %v", msg, err)
 	}
-	txPool := sbh.subbridge.GetBridgeTxPool()
 	for _, invalidTx := range invalidTxs {
-		if tx := txPool.Get(invalidTx.TxHash); tx != nil {
-			logger.Error("A bridge tx was not executed", "err", invalidTx.ErrStr,
+		if tx := sbh.subbridge.GetBridgeTxPool().Get(invalidTx.TxHash); tx != nil {
+			logger.Error("[SC][HandleResponse] A bridge tx was not executed", "err", invalidTx.ErrStr,
 				"txHash", invalidTx.TxHash.String(),
 				"txGasPrice", tx.GasPrice().Uint64())
 			if invalidTx.ErrStr == blockchain.ErrGasPriceBelowBaseFee.Error() {
+				logger.Error("[SC][HandleTxDropped] Bridge tx was dropped by lower gas price")
 				logger.Info("[SC][HandleTxDropped] Request gasPrice and Magma values to parent chain")
 				sbh.SyncNonceAndGasPrice()
-
-				logger.Error("Bridge tx is removed which has lower gasPrice than UpperBoundBaseFee")
 				// Remove the tx and delegate re-execution of the tx by Value Transfer Recovery feature
-				if err := sbh.subbridge.GetBridgeTxPool().RemoveTx(tx); err != nil {
-					logger.Error("Failed to remove bridge tx",
-						"txType", tx.Type(), "txNonce", tx.Nonce(), "txHash", tx.Hash().String())
-				} else {
-					logger.Info("Removed bridge tx",
-						"txType", tx.Type(), "txNonce", tx.Nonce(), "txHash", tx.Hash().String())
-				}
 			} // TODO-ServiceChain: Consider other types of tx failures with else {}
+			if err := sbh.subbridge.GetBridgeTxPool().RemoveTx(tx); err != nil {
+				logger.Error("[SC][HandleResponse] Failed to remove bridge tx",
+					"txType", tx.Type(), "txNonce", tx.Nonce(), "txHash", tx.Hash().String())
+			} else {
+				logger.Info("[SC][HandleResponse] Removed bridge tx",
+					"txType", tx.Type(), "txNonce", tx.Nonce(), "txHash", tx.Hash().String())
+			}
 		}
 	}
 	return nil
@@ -416,9 +419,22 @@ func (sbh *SubBridgeHandler) broadcastServiceChainTx() {
 	if parentChainID == nil {
 		logger.Error("unexpected nil parentChainID while broadcastServiceChainTx")
 	}
-	txs := sbh.subbridge.GetBridgeTxPool().PendingTxsByAddress(&sbh.subbridge.bridgeAccounts.pAccount.address, int(sbh.GetSentChainTxsLimit())) // TODO-Klaytn-Servicechain change GetSentChainTxsLimit type to int from uint64
 	peers := sbh.subbridge.BridgePeerSet().peers
-
+	var txs types.Transactions
+	allPendingTxs := sbh.subbridge.GetBridgeTxPool().PendingTxsByAddress(&sbh.subbridge.bridgeAccounts.pAccount.address, int(sbh.GetSentChainTxsLimit())) // TODO-Klaytn-Servicechain change GetSentChainTxsLimit type to int from uint64
+	for _, tx := range allPendingTxs {
+		txHash := tx.Hash()
+		if stayed, ok := sbh.resendCandidates[txHash]; ok {
+			if stayed > DefaultResendBridgeTxInterval {
+				logger.Info("[SC][Broadcast] Added to resend tx list", "stayed", stayed, "txHash", txHash.Hex())
+				txs = append(txs, tx)
+				sbh.resendCandidates[txHash] = 0
+			}
+		} else {
+			sbh.resendCandidates[txHash] = time.Since(tx.Time())
+			txs = append(txs, tx)
+		}
+	}
 	for _, peer := range peers {
 		if peer.GetChainID().Cmp(parentChainID) != 0 {
 			logger.Error("parent peer with different parent chainID", "peerID", peer.GetID(), "peer chainID", peer.GetChainID(), "parent chainID", parentChainID)
