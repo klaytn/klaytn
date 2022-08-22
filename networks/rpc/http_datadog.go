@@ -12,19 +12,28 @@ import (
 	"strings"
 )
 
-func newDatadogTracer() bool {
+type DatadogTracer struct {
+	Tags           []string
+	Service        string
+	KlaytnResponse bool
+}
+
+func newDatadogTracer() *DatadogTracer {
 	ddTraceEnabled := os.Getenv("DD_TRACE_ENABLED")
 	if strings.ToLower(ddTraceEnabled) != "true" {
-		return false
+		return nil
 	}
 
 	tracer.Start()
-	return true
+
+	tags := strings.Split(os.Getenv("DD_TRACE_HEADER_TAGS"), ",")
+	service := os.Getenv("DD_SERVICE")
+	klaytnResponse := strings.ToLower(os.Getenv("DD_KLAYTN_RPC_RESPONSE")) == "true"
+
+	return &DatadogTracer{tags, service, klaytnResponse}
 }
 
-func newDatadogHTTPHandler(handler http.Handler) http.Handler {
-	headers := strings.Split(os.Getenv("DD_TRACE_HEADER_TAGS"), ",")
-	traceResponseBody := strings.ToLower(os.Getenv("DD_KLAYTN_RPC_RESPONSE")) == "true"
+func newDatadogHTTPHandler(ddTracer *DatadogTracer, handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
@@ -50,7 +59,7 @@ func newDatadogHTTPHandler(handler http.Handler) http.Handler {
 			reqParam = string(encoded)
 		}
 
-		// new relic transaction name contains the first API method of the request
+		// datadog transaction name contains the first API method of the request
 		resource := r.Method + " " + r.URL.String() + " " + reqMethod
 
 		// duplicate writer
@@ -64,7 +73,7 @@ func newDatadogHTTPHandler(handler http.Handler) http.Handler {
 			tracer.Tag("request.params", reqParam),
 		}
 
-		for _, header := range headers {
+		for _, header := range ddTracer.Tags {
 			header = strings.TrimSpace(header)
 			header = strings.ToLower(header)
 			key := fmt.Sprintf("http.%s", header)
@@ -87,18 +96,18 @@ func newDatadogHTTPHandler(handler http.Handler) http.Handler {
 						var span, _ = tracer.StartSpanFromContext(r.Context(), "response.batch")
 						span.SetTag("index", i)
 						if data, err := json.Marshal(rpcReturn); err == nil {
-							traceRpcResponse(data, reqs[i].method, span, traceResponseBody)
+							ddTracer.traceRpcResponse(data, reqs[i].method, span)
 						}
 					}
 				}
 			} else {
 				var span, _ = tracer.SpanFromContext(r.Context())
-				traceRpcResponse(dupW.body.Bytes(), reqMethod, span, traceResponseBody)
+				ddTracer.traceRpcResponse(dupW.body.Bytes(), reqMethod, span)
 			}
 		})
 
 		httptrace.TraceAndServe(responseHandler, dupW, r, &httptrace.ServeConfig{
-			Service:     os.Getenv("DD_SERVICE"),
+			Service:     ddTracer.Service,
 			Resource:    resource,
 			QueryParams: true,
 			SpanOpts:    spanOpts,
@@ -106,7 +115,7 @@ func newDatadogHTTPHandler(handler http.Handler) http.Handler {
 	})
 }
 
-func traceRpcResponse(response []byte, method string, span tracer.Span, traceResponseBody bool) {
+func (dt *DatadogTracer) traceRpcResponse(response []byte, method string, span tracer.Span) {
 	var rpcError jsonErrResponse
 	if err := json.Unmarshal(response, &rpcError); err == nil && rpcError.Error.Code != 0 {
 		span.SetTag("response.code", rpcError.Error.Code)
@@ -120,7 +129,7 @@ func traceRpcResponse(response []byte, method string, span tracer.Span, traceRes
 		span.SetTag("response.code", 0)
 	}
 
-	if traceResponseBody {
+	if dt.KlaytnResponse {
 		var rpcSuccess jsonSuccessResponse
 		if err := json.Unmarshal(response, &rpcSuccess); err == nil && rpcSuccess.Result != nil {
 			successJson, _ := json.Marshal(rpcSuccess.Result)

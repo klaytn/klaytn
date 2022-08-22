@@ -263,9 +263,10 @@ func NewFastHTTPServer(cors []string, vhosts []string, timeouts HTTPTimeouts, sr
 		handler = newNewRelicHTTPHandler(nrApp, handler)
 	}
 
+	// If os environment variables for Datadog exist, register the NewDatadogHTTPHandler
 	ddTracer := newDatadogTracer()
-	if ddTracer {
-		handler = newDatadogHTTPHandler(handler)
+	if ddTracer != nil {
+		handler = newDatadogHTTPHandler(ddTracer, handler)
 	}
 
 	fhandler := fasthttpadaptor.NewFastHTTPHandler(handler)
