@@ -48,7 +48,7 @@ func (cce *ChildChainEventHandler) HandleChainHeadEvent(block *types.Block) erro
 	// During HandleChainHeadEvent, RPC was sent to inquire the balance of parentOperator,
 	// but RPC send was not processed until chainHeadEvent processing was finished,
 	// and RPC failed due to timeout after event handling was finished.
-	// So, only the logic to inquire the parentOperator's balance was handled as a goroutine.
+	// So, the logic to inquire the parentOperator's balance was handled as a goroutine.
 	go func() {
 		pBalance, err := cce.handler.getParentOperatorBalance()
 		if err != nil {

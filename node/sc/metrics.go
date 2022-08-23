@@ -50,8 +50,7 @@ var (
 	vtHandleNonceCount      = metrics.NewRegisteredCounter("klay/bridge/vt/nonce/handle", nil)
 	vtLowerHandleNonceCount = metrics.NewRegisteredCounter("klay/bridge/vt/nonce/lowerhandle", nil)
 
-	lastAnchoredBlockNumGauge = metrics.NewRegisteredGauge("klay/bridge/anchroing/blocknumber", nil)
-
+	lastAnchoredBlockNumGauge  = metrics.NewRegisteredGauge("klay/bridge/anchroing/blocknumber", nil)
 	parentOperatorBalanceGauge = metrics.NewRegisteredGauge("klay/bridge/operator/parent", nil)
 	childOperatorBalanceGauge  = metrics.NewRegisteredGauge("klay/bridge/operator/child", nil)
 
