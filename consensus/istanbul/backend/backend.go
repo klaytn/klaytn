@@ -220,8 +220,12 @@ func (sb *backend) getTargetReceivers(prevHash common.Hash, valSet istanbul.Vali
 	}
 
 	proposer := valSet.GetProposer()
+	proposerAddr := common.Address{}
+	if proposer != nil {
+		proposerAddr = proposer.Address()
+	}
 	for i := 0; i < 2; i++ {
-		committee := valSet.SubListWithProposer(prevHash, proposer.Address(), view)
+		committee := valSet.SubListWithProposer(prevHash, proposerAddr, view)
 		for _, val := range committee {
 			if val.Address() != sb.Address() {
 				targets[val.Address()] = true
@@ -229,6 +233,7 @@ func (sb *backend) getTargetReceivers(prevHash common.Hash, valSet istanbul.Vali
 		}
 		view.Round = view.Round.Add(view.Round, common.Big1)
 		proposer = valSet.Selector(valSet, common.Address{}, view.Round.Uint64())
+		proposerAddr = proposer.Address()
 	}
 	return targets
 }

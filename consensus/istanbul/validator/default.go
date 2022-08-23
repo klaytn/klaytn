@@ -279,7 +279,7 @@ func (valSet *defaultSet) CalcProposer(lastProposer common.Address, round uint64
 	defer valSet.validatorMu.RUnlock()
 
 	if len(valSet.validators) == 0 {
-		logger.Error("len of validators is 0, Proposer is nil", "validators", valSet.validators)
+		logger.Error("List of validators is empty", "validators", len(valSet.validators))
 		return
 	}
 
@@ -358,8 +358,12 @@ func (valSet *defaultSet) Copy() istanbul.ValidatorSet {
 	}
 
 	newValSet := NewSubSet(addresses, valSet.policy, valSet.subSize).(*defaultSet)
-	_, proposer := newValSet.GetByAddress(valSet.GetProposer().Address())
-	newValSet.proposer.Store(proposer)
+	if proposer := valSet.GetProposer(); proposer != nil {
+		_, proposer := newValSet.GetByAddress(proposer.Address())
+		newValSet.proposer.Store(proposer)
+	} else {
+		logger.Error("Found nil proposer", "validators", len(valSet.validators))
+	}
 	return newValSet
 }
 

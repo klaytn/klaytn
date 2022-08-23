@@ -337,7 +337,9 @@ func (api *APIExtension) getConsensusInfo(block *types.Block) (ConsensusInfo, er
 
 	newValSet := snap.ValSet.Copy()
 	newValSet.CalcProposer(lastProposer, 0)
-	originProposer = newValSet.GetProposer().Address()
+	if proposer := newValSet.GetProposer(); proposer != nil {
+		originProposer = proposer.Address()
+	}
 
 	// get the committee list of this block at the view (blockNumber, round)
 	committee := snap.ValSet.SubListWithProposer(parentHash, proposer, view)
