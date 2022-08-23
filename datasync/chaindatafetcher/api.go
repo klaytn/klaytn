@@ -49,7 +49,11 @@ func (api *PublicChainDataFetcherAPI) StartRangeFetching(start, end uint64, reqT
 	case "trace":
 		t = types.RequestTypeTraceGroup
 	default:
-		return errors.New("the request type should be 'all', 'block', or 'trace'")
+		ut, ok := reqType.(float64)
+		if !ok {
+			return errors.New("the request type should be 'all', 'block', 'trace', or uint type")
+		}
+		t = types.RequestType(ut)
 	}
 
 	return api.f.startRangeFetching(start, end, t)
