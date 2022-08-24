@@ -37,6 +37,9 @@ const (
 	DefaultDBPort                = "3306"
 	DefaultMaxProcessingDataSize = 500 // in MB
 	DefaultThrottlingInterval    = 300 * time.Millisecond
+
+	FastCallTracer = "fastCallTracer"
+	CallTracer     = "callTracer"
 )
 
 //go:generate gencodec -type ChainDataFetcherConfig -formats toml -out gen_config.go
@@ -48,6 +51,7 @@ type ChainDataFetcherConfig struct {
 	JobChannelSize          int
 	BlockChannelSize        int
 	MaxProcessingDataSize   int
+	RangeFetchingTracer     string
 
 	KasConfig   *kas.KASConfig `json:"-"` // Deprecated: This configuration is not used anymore.
 	KafkaConfig *kafka.KafkaConfig
@@ -61,6 +65,7 @@ var DefaultChainDataFetcherConfig = &ChainDataFetcherConfig{
 	JobChannelSize:          DefaultJobChannelSize,
 	BlockChannelSize:        DefaultBlockChannelSize,
 	MaxProcessingDataSize:   DefaultMaxProcessingDataSize,
+	RangeFetchingTracer:     FastCallTracer,
 
 	KasConfig:   kas.DefaultKASConfig,
 	KafkaConfig: kafka.GetDefaultKafkaConfig(),

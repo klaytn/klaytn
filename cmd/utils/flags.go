@@ -998,6 +998,12 @@ var (
 		Value:  chaindatafetcher.DefaultMaxProcessingDataSize,
 		EnvVar: "KLAYTN_CHAINDATAFETCHER_MAX_PROCESSING_DATA_SIZE",
 	}
+	ChainDataFetcherRangeFetchingTracerFlag = cli.StringFlag{
+		Name:   "chaindatafetcher.rangefetching.tracer",
+		Usage:  "Chaindatafetcher range fetching tracer (callTracer or fastCallTracer)",
+		Value:  chaindatafetcher.FastCallTracer,
+		EnvVar: "KLAYTN_CHAINDATAFETCHER_RANGEFETCHING_TRACER",
+	}
 	ChainDataFetcherKASDBHostFlag = cli.StringFlag{
 		Name:   "chaindatafetcher.kas.db.host",
 		Usage:  "KAS specific DB host in chaindatafetcher",

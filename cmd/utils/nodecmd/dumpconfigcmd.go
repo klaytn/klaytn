@@ -154,6 +154,13 @@ func makeChainDataFetcherConfig(ctx *cli.Context) chaindatafetcher.ChainDataFetc
 		if ctx.GlobalIsSet(utils.ChainDataFetcherMaxProcessingDataSize.Name) {
 			cfg.MaxProcessingDataSize = ctx.GlobalInt(utils.ChainDataFetcherMaxProcessingDataSize.Name)
 		}
+		if ctx.GlobalIsSet(utils.ChainDataFetcherRangeFetchingTracerFlag.Name) {
+			tracer := ctx.GlobalString(utils.ChainDataFetcherRangeFetchingTracerFlag.Name)
+			if tracer != chaindatafetcher.CallTracer && tracer != chaindatafetcher.FastCallTracer {
+				logger.Crit("chaindatafetcher range fetching tracer must be either 'callTracer' or 'fastCallTracer'")
+			}
+			cfg.RangeFetchingTracer = tracer
+		}
 
 		mode := ctx.GlobalString(utils.ChainDataFetcherMode.Name)
 		mode = strings.ToLower(mode)

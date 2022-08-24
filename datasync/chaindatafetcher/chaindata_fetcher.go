@@ -17,7 +17,9 @@
 package chaindatafetcher
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
@@ -49,6 +51,7 @@ var (
 	logger              = log.NewModuleLogger(log.ChainDataFetcher)
 	errUnsupportedMode  = errors.New("the given chaindatafetcher mode is not supported")
 	errMaxRetryExceeded = errors.New("the number of retries is exceeded over max")
+	emptyTraceJson      = []byte(`{"type":0,"from":"0x","to":"0x","value":"0x0","gas":"0x0","gasUsed":"0x0","input":"0x","output":"0x","time":0}`)
 )
 
 //go:generate mockgen -destination=./mocks/blockchain_mock.go -package=mocks github.com/klaytn/klaytn/datasync/chaindatafetcher BlockChain
@@ -93,6 +96,8 @@ type ChainDataFetcher struct {
 	dataSizeLocker        sync.RWMutex
 	processingDataSize    common.StorageSize
 	maxProcessingDataSize common.StorageSize
+
+	rangeFetchingTracer string
 }
 
 func NewChainDataFetcher(ctx *node.ServiceContext, cfg *ChainDataFetcherConfig) (*ChainDataFetcher, error) {
@@ -129,6 +134,7 @@ func NewChainDataFetcher(ctx *node.ServiceContext, cfg *ChainDataFetcherConfig) 
 		setters:               setters,
 		processingDataSize:    common.StorageSize(0),
 		maxProcessingDataSize: common.StorageSize(cfg.MaxProcessingDataSize * 1024 * 1024), // in MB
+		rangeFetchingTracer:   cfg.RangeFetchingTracer,
 	}, nil
 }
 
@@ -303,7 +309,7 @@ func (f *ChainDataFetcher) makeChainEvent(blockNumber uint64) (blockchain.ChainE
 	}
 	var internalTraces []*vm.InternalTxTrace
 	if block.Transactions().Len() > 0 {
-		fct := "fastCallTracer"
+		fct := f.rangeFetchingTracer
 		timeout := "24h"
 		results, err := f.debugAPI.TraceBlockByNumber(context.Background(), rpc.BlockNumber(block.Number().Int64()), &tracers.TraceConfig{
 			Tracer:  &fct,
@@ -315,13 +321,30 @@ func (f *ChainDataFetcher) makeChainEvent(blockNumber uint64) (blockchain.ChainE
 			return blockchain.ChainEvent{}, err
 		}
 		for _, r := range results {
-			if r.Result != nil {
-				internalTraces = append(internalTraces, r.Result.(*vm.InternalTxTrace))
-			} else {
+			emptyTrace := &vm.InternalTxTrace{Value: "0x0", Calls: []*vm.InternalTxTrace{}}
+			var result *vm.InternalTxTrace
+			if r.Result == nil {
 				traceAPIErrorCounter.Inc(1)
 				logger.Error("the trace result is nil", "err", r.Error, "blockNumber", blockNumber)
-				internalTraces = append(internalTraces, &vm.InternalTxTrace{Value: "0x0", Calls: []*vm.InternalTxTrace{}})
+				internalTraces = append(internalTraces, emptyTrace)
+				continue
 			}
+
+			switch rawResult := r.Result.(type) {
+			case json.RawMessage: // callTracer result type
+				if bytes.Compare(rawResult, emptyTraceJson) == 0 {
+					result = emptyTrace
+				} else if err := json.Unmarshal(rawResult, &result); err != nil {
+					traceAPIErrorCounter.Inc(1)
+					logger.Error("failed to unmarshal the tracing result", "err", err, "rawMessage", string(rawResult), "blockNumber", blockNumber)
+					result = emptyTrace
+				}
+
+			case *vm.InternalTxTrace: // fastCallTracer result type
+				result = rawResult
+			}
+
+			internalTraces = append(internalTraces, result)
 		}
 	}
 
