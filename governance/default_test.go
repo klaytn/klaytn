@@ -696,6 +696,65 @@ func TestGovernance_initializeCache(t *testing.T) {
 	}
 }
 
+func TestGovernance_ReadGovernanceState(t *testing.T) {
+	dbm := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
+	config := getTestConfig()
+	bn := uint64(1024)
+
+	gjson := &governanceJSON{
+		BlockNumber: bn,
+		ChainConfig: config,
+		VoteMap: map[string]VoteStatus{
+			"governance.unitprice": {
+				Value:  float64(0),
+				Casted: true,
+				Num:    304,
+			},
+		},
+		NodeAddress: common.StringToAddress("0x0000000000000000000000000000000000000000"),
+		GovernanceVotes: []GovernanceVote{
+			{
+				Validator: common.StringToAddress("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+				Key:       "governance.unitprice",
+				Value:     float64(50000000000),
+			},
+		},
+		GovernanceTally: []GovernanceTallyItem{
+			{
+				Key:   "governance.unitprice",
+				Value: float64(50000000000),
+				Votes: 3,
+			},
+		},
+		CurrentSet: map[string]interface{}{
+			"reward.stakingupdateinterval":  config.Governance.Reward.StakingUpdateInterval,
+			"reward.proposerupdateinterval": config.Governance.Reward.ProposerUpdateInterval,
+		},
+		ChangeSet: map[string]interface{}{
+			"governance.unitprice": uint64(50000000000),
+		},
+	}
+
+	b, err := json.Marshal(gjson)
+	assert.Nil(t, err)
+
+	dbm.WriteGovernanceState(b)
+	gov := NewGovernanceInitialize(config, dbm)
+	gov.ReadGovernanceState()
+
+	assert.Equal(t, bn, gov.lastGovernanceStateBlock)
+	assert.Equal(t, config, gov.ChainConfig)
+	assert.Equal(t, gjson.VoteMap, gov.voteMap.items)
+	assert.Equal(t, gjson.NodeAddress, gov.nodeAddress.Load())
+	assert.Equal(t, gjson.GovernanceVotes, gov.GovernanceVotes.items)
+	assert.Equal(t, gjson.GovernanceTally, gov.GovernanceTallies.items)
+	assert.Equal(t, gjson.CurrentSet, gov.currentSet.items)
+	assert.Equal(t, gjson.ChangeSet, gov.changeSet.items)
+
+	assert.Equal(t, config.Governance.Reward.StakingUpdateInterval, gov.StakingUpdateInterval())
+	assert.Equal(t, config.Governance.Reward.ProposerUpdateInterval, gov.ProposerUpdateInterval())
+}
+
 func TestWriteGovernance_idxCache(t *testing.T) {
 	gov := getGovernance()
 

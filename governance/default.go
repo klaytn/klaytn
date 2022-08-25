@@ -471,8 +471,8 @@ func (g *Governance) updateGovernanceParams() {
 	params.SetProposerUpdateInterval(g.ProposerUpdateInterval())
 
 	// NOTE: HumanReadable related functions are inactivated now
-	if txGasHumanReadable, ok := g.currentSet.GetValue(params.ConstTxGasHumanReadable); ok {
-		params.TxGasHumanReadable = txGasHumanReadable.(uint64)
+	if v, ok := g.Params().Get(params.ConstTxGasHumanReadable); ok {
+		params.TxGasHumanReadable = v.(uint64)
 	}
 }
 
@@ -738,7 +738,7 @@ func (g *Governance) initializeCache() error {
 		g.currentSet.Import(ret.(map[string]interface{}))
 	}
 
-	// Populate g.initialParams from ChainConfig
+	// Reflect CurrentSet -> g.initialParams
 	if pset, err := params.NewGovParamSetChainConfig(g.ChainConfig); err == nil {
 		g.initialParams = pset
 	} else {
@@ -829,7 +829,7 @@ func (g *Governance) ReadGovernance(num uint64) (uint64, map[string]interface{},
 	if g.ChainConfig.Istanbul == nil {
 		logger.Crit("Failed to read governance. ChainConfig.Istanbul == nil")
 	}
-	blockNum := CalcGovernanceInfoBlock(num, g.Epoch())
+	blockNum := CalcGovernanceInfoBlock(num, g.epochWithFallback())
 	// Check cache first
 	if gBlockNum, ok := g.searchCache(blockNum); ok {
 		if data, okay := g.getGovernanceCache(gBlockNum); okay {
@@ -837,7 +837,7 @@ func (g *Governance) ReadGovernance(num uint64) (uint64, map[string]interface{},
 		}
 	}
 	if g.db != nil {
-		bn, result, err := g.db.ReadGovernanceAtNumber(num, g.Epoch())
+		bn, result, err := g.db.ReadGovernanceAtNumber(num, g.epochWithFallback())
 		result = adjustDecodedSet(result)
 		return bn, result, err
 	} else {
@@ -1274,13 +1274,33 @@ func (gov *Governance) IdxCacheFromDb() []uint64 {
 	return res
 }
 
+// Returns the istanbul epoch. This function works even before loading any params
+// from database. We need epoch to load any param from database.
+func (gov *Governance) epochWithFallback() uint64 {
+	// After UpdateParams() is called at least once, Params() should contain the Epoch
+	if v, ok := gov.Params().Get(params.Epoch); ok {
+		return v.(uint64)
+	}
+	// Otherwise after initializeCache() is called, initialParams should contain the Epoch
+	if v, ok := gov.initialParams.Get(params.Epoch); ok {
+		return v.(uint64)
+	}
+	// Otherwise fallback to ChainConfig that is supplied to NewGovernance()
+	if gov.ChainConfig.Istanbul != nil {
+		return gov.ChainConfig.Istanbul.Epoch
+	}
+	// We shouldn't reach here because Governance is only relevant with Istanbul engine.
+	logger.Crit("Failed to read governance. ChainConfig.Istanbul == nil")
+	return params.DefaultEpoch // unreachable. just satisfying compiler.
+}
+
 func (gov *Governance) Params() *params.GovParamSet {
 	return gov.currentParams
 }
 
 func (gov *Governance) ParamsAt(num uint64) (*params.GovParamSet, error) {
 	// TODO-Klaytn: Either handle epoch change, or permanently forbid epoch change.
-	epoch := gov.Params().Epoch()
+	epoch := gov.epochWithFallback()
 
 	// Should be equivalent to Governance.ReadGovernance(), but without in-memory caches.
 	// Not using in-memory caches to make it stateless, hence less error-prone.
