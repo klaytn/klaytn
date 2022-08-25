@@ -93,11 +93,7 @@ func newDatadogHTTPHandler(ddTracer *DatadogTracer, handler http.Handler) http.H
 				var rpcReturns []interface{}
 				if err := json.Unmarshal(dupW.body.Bytes(), &rpcReturns); err == nil {
 					for i, rpcReturn := range rpcReturns {
-						var span, _ = tracer.StartSpanFromContext(r.Context(), "response.batch")
-						span.SetTag("index", i)
-						if data, err := json.Marshal(rpcReturn); err == nil {
-							ddTracer.traceRpcResponse(data, reqs[i].method, span)
-						}
+						ddTracer.traceBatchRpcResponse(r, rpcReturn, reqs[i], i)
 					}
 				}
 			} else {
@@ -113,6 +109,15 @@ func newDatadogHTTPHandler(ddTracer *DatadogTracer, handler http.Handler) http.H
 			SpanOpts:    spanOpts,
 		})
 	})
+}
+
+func (dt *DatadogTracer) traceBatchRpcResponse(r *http.Request, rpcReturn interface{}, req rpcRequest, offset int) {
+	var span, _ = tracer.StartSpanFromContext(r.Context(), "response.batch")
+	defer span.Finish()
+	span.SetTag("offset", offset)
+	if data, err := json.Marshal(rpcReturn); err == nil {
+		dt.traceRpcResponse(data, req.method, span)
+	}
 }
 
 func (dt *DatadogTracer) traceRpcResponse(response []byte, method string, span tracer.Span) {
