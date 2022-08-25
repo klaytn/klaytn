@@ -127,6 +127,7 @@ func (dt *DatadogTracer) traceRpcResponse(response []byte, method string, span t
 
 		errJson, _ := json.Marshal(rpcError.Error)
 		span.SetTag("response.error", string(errJson))
+		span.SetTag("error", string(errJson))
 
 		message := fmt.Sprintf("RPC error response %v", span)
 		logger.Error(message, "rpcErr", rpcError.Error.Message, "method", method)
