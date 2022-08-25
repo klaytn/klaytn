@@ -11,6 +11,9 @@ import (
 )
 
 func VerifyMagmaHeader(parentHeader, header *types.Header, kip71Config *params.KIP71Config) error {
+	if parentHeader == nil {
+		return fmt.Errorf("parent header is empty. (header number = %v)", header.Number)
+	}
 	if header.BaseFee == nil {
 		return fmt.Errorf("header is missing baseFee")
 	}
