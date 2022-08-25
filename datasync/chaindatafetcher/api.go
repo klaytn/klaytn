@@ -56,6 +56,10 @@ func (api *PublicChainDataFetcherAPI) StartRangeFetching(start, end uint64, reqT
 		t = types.RequestType(ut)
 	}
 
+	if !t.IsValid() {
+		return errors.New("the request type is not valid")
+	}
+
 	return api.f.startRangeFetching(start, end, t)
 }
 

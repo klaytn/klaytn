@@ -38,6 +38,10 @@ const (
 	RequestTypeGroupAll = RequestTypeBlockGroup | RequestTypeTraceGroup
 )
 
+func (t RequestType) IsValid() bool {
+	return t == RequestTypeBlockGroup || t == RequestTypeTraceGroup || t == RequestTypeGroupAll
+}
+
 func (t RequestType) String() string {
 	switch t {
 	case RequestTypeGroupAll:
