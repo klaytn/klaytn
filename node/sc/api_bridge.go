@@ -339,7 +339,15 @@ func (sb *SubBridgeAPI) RegisterBridge(cBridgeAddr, pBridgeAddr common.Address, 
 	if err := sb.subBridge.bridgeManager.SetJournal(bridgeAlias, cBridgeAddr, pBridgeAddr); err != nil {
 		return err
 	}
-	return sb.doRegisterBridge(cBridgeAddr, pBridgeAddr)
+	if err := sb.doRegisterBridge(cBridgeAddr, pBridgeAddr); err != nil {
+		journal := sb.subBridge.bridgeManager.journal
+		journal.cacheMu.Lock()
+		delete(journal.cache, cBridgeAddr)
+		delete(journal.aliasCache, bridgeAlias)
+		journal.cacheMu.Unlock()
+		return err
+	}
+	return nil
 }
 
 func (sb *SubBridgeAPI) doDeregisterBridge(cBridgeAddr common.Address, pBridgeAddr common.Address) error {
