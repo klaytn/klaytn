@@ -85,8 +85,7 @@ func NewMixedEngineNoInit(config *params.ChainConfig, db database.DBManager) *Mi
 }
 
 func (e *MixedEngine) Params() *params.GovParamSet {
-	headerParams := e.headerGov.Params()
-	return e.assembleParams(headerParams)
+	return e.currentParams
 }
 
 func (e *MixedEngine) ParamsAt(num uint64) (*params.GovParamSet, error) {
