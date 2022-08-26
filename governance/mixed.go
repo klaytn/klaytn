@@ -1,6 +1,8 @@
 package governance
 
 import (
+	"math/big"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
@@ -19,7 +21,7 @@ import (
 //                     Note that some items are not backed by defaultParams.
 //
 type MixedEngine struct {
-	initialConfig *params.ChainConfig
+	config *params.ChainConfig
 
 	initialParams *params.GovParamSet // initial ChainConfig
 	defaultParams *params.GovParamSet // default constants used as last fallback
@@ -31,14 +33,18 @@ type MixedEngine struct {
 	// Subordinate engines
 	// TODO: Add ContractEngine
 	headerGov *Governance
+
+	// for param update
+	txpool     txPool
+	blockchain blockChain
 }
 
 // newMixedEngine instantiate a new MixedEngine struct.
 // Only if doInit is true, subordinate engines will be initialized.
 func newMixedEngine(config *params.ChainConfig, db database.DBManager, doInit bool) *MixedEngine {
 	e := &MixedEngine{
-		initialConfig: config,
-		db:            db,
+		config: config,
+		db:     db,
 	}
 
 	if p, err := params.NewGovParamSetChainConfig(config); err == nil {
@@ -102,11 +108,14 @@ func (e *MixedEngine) UpdateParams() error {
 	if err := e.headerGov.UpdateParams(); err != nil {
 		return err
 	}
-
 	headerParams := e.headerGov.Params()
 
 	// TODO-Klaytn-Kore: merge contractParams
-	e.currentParams = e.assembleParams(headerParams)
+	newParams := e.assembleParams(headerParams)
+	e.handleParamUpdate(e.currentParams, newParams)
+
+	e.currentParams = newParams
+
 	return nil
 }
 
@@ -117,6 +126,62 @@ func (e *MixedEngine) assembleParams(headerParams *params.GovParamSet) *params.G
 	p = params.NewGovParamSetMerged(p, e.initialParams)
 	p = params.NewGovParamSetMerged(p, headerParams)
 	return p
+}
+
+func (e *MixedEngine) handleParamUpdate(old, new *params.GovParamSet) {
+	// TODO: key set must be the same, which is guaranteed at NewMixedEngine
+	for k, oldval := range old.IntMap() {
+		if newval := new.MustGet(k); oldval != newval {
+			switch k {
+			// config.Istanbul
+			case params.Epoch:
+				e.config.Istanbul.Epoch = new.Epoch()
+			case params.Policy:
+				e.config.Istanbul.ProposerPolicy = new.Policy()
+			case params.CommitteeSize:
+				e.config.Istanbul.SubGroupSize = new.CommitteeSize()
+			// config.Governance
+			case params.GoverningNode:
+				e.config.Governance.GoverningNode = new.GoverningNode()
+			case params.GovernanceMode:
+				e.config.Governance.GovernanceMode = new.GovernanceModeStr()
+			// config.Governance.Reward
+			case params.MintingAmount:
+				e.config.Governance.Reward.MintingAmount = new.MintingAmountBig()
+			case params.Ratio:
+				e.config.Governance.Reward.Ratio = new.Ratio()
+			case params.UseGiniCoeff:
+				e.config.Governance.Reward.UseGiniCoeff = new.UseGiniCoeff()
+			case params.DeferredTxFee:
+				e.config.Governance.Reward.DeferredTxFee = new.DeferredTxFee()
+			case params.MinimumStake:
+				e.config.Governance.Reward.MinimumStake = new.MinimumStakeBig()
+			case params.StakeUpdateInterval:
+				e.config.Governance.Reward.StakingUpdateInterval = new.StakeUpdateInterval()
+				params.SetStakingUpdateInterval(new.StakeUpdateInterval())
+			case params.ProposerRefreshInterval:
+				e.config.Governance.Reward.ProposerUpdateInterval = new.ProposerRefreshInterval()
+				params.SetProposerUpdateInterval(new.ProposerRefreshInterval())
+			// config.Governance.KIP17
+			case params.LowerBoundBaseFee:
+				e.config.Governance.KIP71.LowerBoundBaseFee = new.LowerBoundBaseFee()
+			case params.UpperBoundBaseFee:
+				e.config.Governance.KIP71.UpperBoundBaseFee = new.UpperBoundBaseFee()
+			case params.GasTarget:
+				e.config.Governance.KIP71.GasTarget = new.GasTarget()
+			case params.MaxBlockGasUsedForBaseFee:
+				e.config.Governance.KIP71.MaxBlockGasUsedForBaseFee = new.MaxBlockGasUsedForBaseFee()
+			case params.BaseFeeDenominator:
+				e.config.Governance.KIP71.BaseFeeDenominator = new.BaseFeeDenominator()
+			// others
+			case params.UnitPrice:
+				e.config.UnitPrice = new.UnitPrice()
+				if e.txpool != nil {
+					e.txpool.SetGasPrice(big.NewInt(0).SetUint64(new.UnitPrice()))
+				}
+			}
+		}
+	}
 }
 
 // Pass-through to HeaderEngine
@@ -246,10 +311,12 @@ func (e *MixedEngine) SetMyVotingPower(t uint64) {
 }
 
 func (e *MixedEngine) SetBlockchain(chain blockChain) {
+	e.blockchain = chain
 	e.headerGov.SetBlockchain(chain)
 }
 
 func (e *MixedEngine) SetTxPool(txpool txPool) {
+	e.txpool = txpool
 	e.headerGov.SetTxPool(txpool)
 }
 

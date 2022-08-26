@@ -153,9 +153,8 @@ type gcBlock struct {
 // included in the canonical one where as GetBlockByNumber always represents the
 // canonical chain.
 type BlockChain struct {
-	chainConfig   *params.ChainConfig // Chain & network configuration
-	chainConfigMu *sync.RWMutex
-	cacheConfig   *CacheConfig // stateDB caching and trie caching/pruning configuration
+	chainConfig *params.ChainConfig // Chain & network configuration
+	cacheConfig *CacheConfig        // stateDB caching and trie caching/pruning configuration
 
 	db      database.DBManager // Low level persistent database to store final content in
 	snaps   *snapshot.Tree     // Snapshot tree for fast trie leaf access
@@ -246,7 +245,6 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 
 	bc := &BlockChain{
 		chainConfig:        chainConfig,
-		chainConfigMu:      new(sync.RWMutex),
 		cacheConfig:        cacheConfig,
 		db:                 db,
 		triegc:             prque.New(),
@@ -429,61 +427,11 @@ func (bc *BlockChain) SetCanonicalBlock(blockNum uint64) {
 }
 
 func (bc *BlockChain) UseGiniCoeff() bool {
-	bc.chainConfigMu.RLock()
-	defer bc.chainConfigMu.RUnlock()
-
 	return bc.chainConfig.Governance.Reward.UseGiniCoeff
 }
 
-func (bc *BlockChain) SetUseGiniCoeff(val bool) {
-	bc.chainConfigMu.Lock()
-	defer bc.chainConfigMu.Unlock()
-
-	bc.chainConfig.Governance.Reward.UseGiniCoeff = val
-}
-
 func (bc *BlockChain) ProposerPolicy() uint64 {
-	bc.chainConfigMu.RLock()
-	defer bc.chainConfigMu.RUnlock()
-
 	return bc.chainConfig.Istanbul.ProposerPolicy
-}
-
-func (bc *BlockChain) SetProposerPolicy(val uint64) {
-	bc.chainConfigMu.Lock()
-	defer bc.chainConfigMu.Unlock()
-
-	bc.chainConfig.Istanbul.ProposerPolicy = val
-}
-
-func (bc *BlockChain) SetLowerBoundBaseFee(val uint64) {
-	bc.chainConfigMu.Lock()
-	defer bc.chainConfigMu.Unlock()
-	bc.chainConfig.Governance.KIP71.LowerBoundBaseFee = val
-}
-
-func (bc *BlockChain) SetUpperBoundBaseFee(val uint64) {
-	bc.chainConfigMu.Lock()
-	defer bc.chainConfigMu.Unlock()
-	bc.chainConfig.Governance.KIP71.UpperBoundBaseFee = val
-}
-
-func (bc *BlockChain) SetGasTarget(val uint64) {
-	bc.chainConfigMu.Lock()
-	defer bc.chainConfigMu.Unlock()
-	bc.chainConfig.Governance.KIP71.GasTarget = val
-}
-
-func (bc *BlockChain) SetMaxBlockGasUsedForBaseFee(val uint64) {
-	bc.chainConfigMu.Lock()
-	defer bc.chainConfigMu.Unlock()
-	bc.chainConfig.Governance.KIP71.MaxBlockGasUsedForBaseFee = val
-}
-
-func (bc *BlockChain) SetBaseFeeDenominator(val uint64) {
-	bc.chainConfigMu.Lock()
-	defer bc.chainConfigMu.Unlock()
-	bc.chainConfig.Governance.KIP71.BaseFeeDenominator = val
 }
 
 func (bc *BlockChain) getProcInterrupt() bool {

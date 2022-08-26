@@ -47,92 +47,31 @@ var (
 var GovernanceItems = map[int]check{
 	params.GovernanceMode:            {stringT, checkGovernanceMode, nil},
 	params.GoverningNode:             {addressT, checkAddress, nil},
-	params.UnitPrice:                 {uint64T, checkUint64andBool, updateUnitPrice},
-	params.LowerBoundBaseFee:         {uint64T, checkUint64andBool, updateLowerBoundBaseFee},
-	params.UpperBoundBaseFee:         {uint64T, checkUint64andBool, updateUpperBoundBaseFee},
-	params.GasTarget:                 {uint64T, checkUint64andBool, updateGasTarget},
-	params.MaxBlockGasUsedForBaseFee: {uint64T, checkUint64andBool, updateMaxBlockGasUsedForBaseFee},
-	params.BaseFeeDenominator:        {uint64T, checkUint64andBool, updateBaseFeeDenominator},
+	params.UnitPrice:                 {uint64T, checkUint64andBool, nil},
+	params.LowerBoundBaseFee:         {uint64T, checkUint64andBool, nil},
+	params.UpperBoundBaseFee:         {uint64T, checkUint64andBool, nil},
+	params.GasTarget:                 {uint64T, checkUint64andBool, nil},
+	params.MaxBlockGasUsedForBaseFee: {uint64T, checkUint64andBool, nil},
+	params.BaseFeeDenominator:        {uint64T, checkUint64andBool, nil},
 	params.AddValidator:              {addressT, checkAddressOrListOfUniqueAddresses, nil},
 	params.RemoveValidator:           {addressT, checkAddressOrListOfUniqueAddresses, nil},
 	params.MintingAmount:             {stringT, checkBigInt, nil},
 	params.Ratio:                     {stringT, checkRatio, nil},
-	params.UseGiniCoeff:              {boolT, checkUint64andBool, updateUseGiniCoeff},
+	params.UseGiniCoeff:              {boolT, checkUint64andBool, nil},
 	params.DeferredTxFee:             {boolT, checkUint64andBool, nil},
 	params.MinimumStake:              {stringT, checkRewardMinimumStake, nil},
-	params.StakeUpdateInterval:       {uint64T, checkUint64andBool, updateStakingUpdateInterval},
-	params.ProposerRefreshInterval:   {uint64T, checkUint64andBool, updateProposerUpdateInterval},
+	params.StakeUpdateInterval:       {uint64T, checkUint64andBool, nil},
+	params.ProposerRefreshInterval:   {uint64T, checkUint64andBool, nil},
 	params.Epoch:                     {uint64T, checkUint64andBool, nil},
-	params.Policy:                    {uint64T, checkUint64andBool, updateProposerPolicy},
+	params.Policy:                    {uint64T, checkUint64andBool, nil},
 	params.CommitteeSize:             {uint64T, checkCommitteeSize, nil},
 	params.ConstTxGasHumanReadable:   {uint64T, checkUint64andBool, updateTxGasHumanReadable},
 	params.Timeout:                   {uint64T, checkUint64andBool, nil},
 }
 
-// TODO-klaytn chainConfig in blockchain, cn, worker, and governance after governance vote
-// Every instances share the chainConfig
-func updateLowerBoundBaseFee(g *Governance, k string, v interface{}) {
-	if g.blockChain != nil {
-		g.blockChain.SetLowerBoundBaseFee(v.(uint64))
-	}
-}
-
-func updateUpperBoundBaseFee(g *Governance, k string, v interface{}) {
-	if g.blockChain != nil {
-		g.blockChain.SetUpperBoundBaseFee(v.(uint64))
-	}
-}
-
-func updateGasTarget(g *Governance, k string, v interface{}) {
-	if g.blockChain != nil {
-		g.blockChain.SetGasTarget(v.(uint64))
-	}
-}
-
-func updateMaxBlockGasUsedForBaseFee(g *Governance, k string, v interface{}) {
-	if g.blockChain != nil {
-		g.blockChain.SetMaxBlockGasUsedForBaseFee(v.(uint64))
-	}
-}
-
-func updateBaseFeeDenominator(g *Governance, k string, v interface{}) {
-	if g.blockChain != nil {
-		g.blockChain.SetBaseFeeDenominator(v.(uint64))
-	}
-}
-
-// end TODO-klaytn
-
 func updateTxGasHumanReadable(g *Governance, k string, v interface{}) {
 	params.TxGasHumanReadable = v.(uint64)
 	logger.Info("TxGasHumanReadable changed", "New value", params.TxGasHumanReadable)
-}
-
-func updateUnitPrice(g *Governance, k string, v interface{}) {
-	newPrice := v.(uint64)
-	if g.TxPool != nil {
-		g.TxPool.SetGasPrice(big.NewInt(0).SetUint64(newPrice))
-	}
-}
-
-func updateUseGiniCoeff(g *Governance, k string, v interface{}) {
-	if g.blockChain != nil {
-		g.blockChain.SetUseGiniCoeff(g.Params().UseGiniCoeff())
-	}
-}
-
-func updateStakingUpdateInterval(g *Governance, k string, v interface{}) {
-	params.SetStakingUpdateInterval(g.Params().StakeUpdateInterval())
-}
-
-func updateProposerUpdateInterval(g *Governance, k string, v interface{}) {
-	params.SetProposerUpdateInterval(g.Params().ProposerRefreshInterval())
-}
-
-func updateProposerPolicy(g *Governance, k string, v interface{}) {
-	if g.blockChain != nil {
-		g.blockChain.SetProposerPolicy(g.Params().Policy())
-	}
 }
 
 // AddVote adds a vote to the voteMap
