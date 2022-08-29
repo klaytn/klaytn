@@ -706,6 +706,82 @@ func (sb *backend) CreateSnapshot(chain consensus.ChainReader, number uint64, ha
 	return nil
 }
 
+// GetConsensusInfo returns consensus information regarind to the given block number.
+func (sb *backend) GetConsensusInfo(block *types.Block) (consensus.ConsensusInfo, error) {
+	blockNumber := block.NumberU64()
+	if blockNumber == 0 {
+		return consensus.ConsensusInfo{}, nil
+	}
+
+	round := block.Header().Round()
+	view := &istanbul.View{
+		Sequence: new(big.Int).Set(block.Number()),
+		Round:    new(big.Int).SetInt64(int64(round)),
+	}
+
+	// get the proposer of this block.
+	proposer, err := ecrecover(block.Header())
+	if err != nil {
+		return consensus.ConsensusInfo{}, err
+	}
+
+	// get the snapshot of the previous block.
+	parentHash := block.ParentHash()
+	snap, err := sb.snapshot(sb.chain, blockNumber-1, parentHash, nil, false)
+	if err != nil {
+		logger.Error("Failed to get snapshot.", "hash", snap.Hash, "err", err)
+		return consensus.ConsensusInfo{}, errInternalError
+	}
+
+	// get origin proposer at 0 round.
+	originProposer := common.Address{}
+	lastProposer := sb.GetProposer(blockNumber - 1)
+
+	newValSet := snap.ValSet.Copy()
+	newValSet.CalcProposer(lastProposer, 0)
+	originProposer = newValSet.GetProposer().Address()
+
+	// get the committee list of this block at the view (blockNumber, round)
+	committee := snap.ValSet.SubListWithProposer(parentHash, proposer, view)
+	committeeAddrs := make([]common.Address, len(committee))
+	for i, v := range committee {
+		committeeAddrs[i] = v.Address()
+	}
+
+	// verify the committee list of the block using istanbul
+	//proposalSeal := istanbulCore.PrepareCommittedSeal(block.Hash())
+	//extra, err := types.ExtractIstanbulExtra(block.Header())
+	//istanbulAddrs := make([]common.Address, len(committeeAddrs))
+	//for i, seal := range extra.CommittedSeal {
+	//	addr, err := istanbul.GetSignatureAddress(proposalSeal, seal)
+	//	istanbulAddrs[i] = addr
+	//	if err != nil {
+	//		return proposer, []common.Address{}, err
+	//	}
+	//
+	//	var found bool = false
+	//	for _, v := range committeeAddrs {
+	//		if addr == v {
+	//			found = true
+	//			break
+	//		}
+	//	}
+	//	if found == false {
+	//		logger.Trace("validator is different!", "snap", committeeAddrs, "istanbul", istanbulAddrs)
+	//		return proposer, committeeAddrs, errors.New("validator set is different from Istanbul engine!!")
+	//	}
+	//}
+
+	cInfo := consensus.ConsensusInfo{
+		Proposer:       proposer,
+		OriginProposer: originProposer,
+		Committee:      committeeAddrs,
+		Round:          round,
+	}
+
+	return cInfo, nil
+}
+
 // snapshot retrieves the authorization snapshot at a given point in time.
 func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header, writable bool) (*Snapshot, error) {
 	// Search for a snapshot in memory or on disk for checkpoints
