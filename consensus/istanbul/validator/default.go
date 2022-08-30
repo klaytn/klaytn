@@ -358,7 +358,7 @@ func (valSet *defaultSet) Copy() istanbul.ValidatorSet {
 	}
 
 	newValSet := NewSubSet(addresses, valSet.policy, valSet.subSize).(*defaultSet)
-	if proposer := valSet.GetProposer(); proposer != nil {
+	if proposer := newValSet.GetProposer(); proposer != nil {
 		_, proposer := newValSet.GetByAddress(proposer.Address())
 		newValSet.proposer.Store(proposer)
 	} else {
