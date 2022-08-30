@@ -51,15 +51,18 @@ func TestMixedEngine_Header_Params(t *testing.T) {
 	valueB := uint64(0x22)
 
 	config := getTestConfig()
-	config.Istanbul.SubGroupSize = valueA
+	config.Governance.KIP71.GasTarget = valueA
 	e, _, headerGov := newTestMixedEngine(t, config)
 
-	headerGov.currentSet.SetValue(params.CommitteeSize, valueB)
+	headerGov.currentSet.SetValue(params.GasTarget, valueB)
 	err := e.UpdateParams()
 	assert.Nil(t, err)
 
 	pset := e.Params()
-	assert.Equal(t, valueB, pset.CommitteeSize())
+	assert.Equal(t, valueB, pset.GasTarget())
+
+	// check if config is updated as well
+	assert.Equal(t, valueB, config.Governance.KIP71.GasTarget)
 }
 
 // Without ContractGov, Check that
