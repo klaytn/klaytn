@@ -27,7 +27,8 @@ ARG SRC_DIR
 ARG PKG_DIR
 
 RUN apt update
-RUN apt install -yq musl-dev
+RUN apt install -yq musl-dev ca-certificates
+RUN update-ca-certificates
 RUN mkdir -p $PKG_DIR/conf $PKG_DIR/bin
 
 # Startup scripts and binaries must be in the same location
