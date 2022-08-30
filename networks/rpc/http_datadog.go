@@ -9,6 +9,7 @@ import (
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -19,16 +20,27 @@ type DatadogTracer struct {
 }
 
 func newDatadogTracer() *DatadogTracer {
-	ddTraceEnabled := os.Getenv("DD_TRACE_ENABLED")
-	if strings.ToLower(ddTraceEnabled) != "true" {
-		return nil
+	var err error
+	ddTraceEnabled := false
+	if v := os.Getenv("DD_TRACE_ENABLED"); v != "" {
+		ddTraceEnabled, err = strconv.ParseBool(v)
+		if err != nil || ddTraceEnabled == false {
+			return nil
+		}
 	}
 
 	tracer.Start()
 
 	tags := strings.Split(os.Getenv("DD_TRACE_HEADER_TAGS"), ",")
 	service := os.Getenv("DD_SERVICE")
-	klaytnResponse := strings.ToLower(os.Getenv("DD_KLAYTN_RPC_RESPONSE")) == "true"
+
+	klaytnResponse := false
+	if v := os.Getenv("DD_KLAYTN_RPC_RESPONSE"); v != "" {
+		klaytnResponse, err = strconv.ParseBool(v)
+		if err != nil {
+			return nil
+		}
+	}
 
 	return &DatadogTracer{tags, service, klaytnResponse}
 }
