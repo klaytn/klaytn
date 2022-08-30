@@ -60,7 +60,7 @@ func newDatadogHTTPHandler(ddTracer *DatadogTracer, handler http.Handler) http.H
 		}
 
 		// datadog transaction name contains the first API method of the request
-		resource := r.Method + " " + r.URL.String() + " " + reqMethod
+		resource := fmt.Sprintf("%s %s %s", r.Method, r.URL.String(), reqMethod)
 
 		// duplicate writer
 		dupW := &dupWriter{
