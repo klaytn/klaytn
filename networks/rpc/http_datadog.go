@@ -29,8 +29,6 @@ func newDatadogTracer() *DatadogTracer {
 		}
 	}
 
-	tracer.Start()
-
 	tags := strings.Split(os.Getenv("DD_TRACE_HEADER_TAGS"), ",")
 	service := os.Getenv("DD_SERVICE")
 
@@ -41,6 +39,8 @@ func newDatadogTracer() *DatadogTracer {
 			return nil
 		}
 	}
+
+	tracer.Start()
 
 	return &DatadogTracer{tags, service, klaytnResponse}
 }
