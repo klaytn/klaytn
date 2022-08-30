@@ -410,6 +410,7 @@ var ChainDataFetcherFlags = []cli.Flag{
 	altsrc.NewIntFlag(utils.ChainDataFetcherNumHandlers),
 	altsrc.NewIntFlag(utils.ChainDataFetcherJobChannelSize),
 	altsrc.NewIntFlag(utils.ChainDataFetcherChainEventSizeFlag),
+	altsrc.NewIntFlag(utils.ChainDataFetcherMaxProcessingDataSize),
 	altsrc.NewStringFlag(utils.ChainDataFetcherKASDBHostFlag),
 	altsrc.NewStringFlag(utils.ChainDataFetcherKASDBPortFlag),
 	altsrc.NewStringFlag(utils.ChainDataFetcherKASDBNameFlag),
