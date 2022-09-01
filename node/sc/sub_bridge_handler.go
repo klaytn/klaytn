@@ -76,7 +76,7 @@ type SubBridgeHandler struct {
 
 	skipSyncBlockCount int32
 
-	resendCandidates     map[common.Hash]time.Duration
+	resendCandidates     map[common.Hash]time.Time
 	resendCandidatesLock sync.Mutex
 }
 
@@ -90,7 +90,7 @@ func NewSubBridgeHandler(main *SubBridge) (*SubBridgeHandler, error) {
 		chainTxPeriod:                 main.config.AnchoringPeriod,
 		latestTxCountAddedBlockNumber: uint64(0),
 		sentServiceChainTxsLimit:      main.config.SentChainTxsLimit,
-		resendCandidates:              make(map[common.Hash]time.Duration),
+		resendCandidates:              make(map[common.Hash]time.Time),
 	}, nil
 }
 
@@ -422,13 +422,13 @@ func (sbh *SubBridgeHandler) broadcastServiceChainTx() {
 	for _, tx := range allPendingTxs {
 		txHash := tx.Hash()
 		if stayed, ok := sbh.resendCandidates[txHash]; ok {
-			if stayed > DefaultResendBridgeTxInterval {
-				logger.Info("[SC][Broadcast] Added to resend tx list", "stayed", stayed, "txHash", txHash.Hex())
+			if time.Since(stayed) > DefaultResendBridgeTxInterval {
+				logger.Info("[SC][Broadcast] Added to resend tx list", "stayed", time.Since(stayed), "txHash", txHash.Hex())
 				txs = append(txs, tx)
-				sbh.resendCandidates[txHash] = 0
+				sbh.resendCandidates[txHash] = time.Now()
 			}
 		} else {
-			sbh.resendCandidates[txHash] = time.Since(tx.Time())
+			sbh.resendCandidates[txHash] = tx.Time()
 			txs = append(txs, tx)
 		}
 	}
