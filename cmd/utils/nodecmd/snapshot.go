@@ -25,6 +25,8 @@ import (
 	"fmt"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"sync"
+	"time"
+	"bytes"
 
 	"github.com/klaytn/klaytn/cmd/utils"
 	"github.com/klaytn/klaytn/common"
@@ -86,6 +88,28 @@ trace all account and storage nodes to find missing data
 during the migration process.
 Start tracing from the state root of the last block,
 reading all nodes and logging the missing nodes.
+`,
+		},
+		{
+			Name:      "iterate-triedb",
+			Usage:     "Iterate StateTrie DB for node count",
+			ArgsUsage: "<root>",
+			Action:    utils.MigrateFlags(iterateTrie),
+			Flags: []cli.Flag{
+				utils.DbTypeFlag,
+				utils.SingleDBFlag,
+				utils.NumStateTrieShardsFlag,
+				utils.DynamoDBTableNameFlag,
+				utils.DynamoDBRegionFlag,
+				utils.DynamoDBIsProvisionedFlag,
+				utils.DynamoDBReadCapacityFlag,
+				utils.DynamoDBWriteCapacityFlag,
+				utils.LevelDBCompressionTypeFlag,
+				utils.DataDirFlag,
+			},
+			Description: `
+klaytn statedb iterate-triedb
+Coount the number of nodes in the state-trie db.
 `,
 		},
 	},
@@ -215,5 +239,34 @@ func traceTrie(ctx *cli.Context) error {
 
 	wait.Wait()
 	logger.Info("Trie Tracer finished")
+	return nil
+}
+
+func iterateTrie(ctx *cli.Context) error {
+	stack := MakeFullNode(ctx)
+	dbm := stack.OpenDatabase(getConfig(ctx))
+	sdb, err := state.New(common.Hash{}, state.NewDatabase(dbm), nil)
+	if err != nil {
+		return fmt.Errorf("Failed to open newDB trie : %v", err)
+	}
+
+	logger.Info("TrieDB Iterator Start","node count : all node count, nil node count : key or value is nil node count"  )
+	Cnt, nilCnt := uint64(0), uint64(0)
+	go func() {
+		for {
+			time.Sleep(time.Second * 5)
+			logger.Info("TrieDB Iterator", "node count", Cnt, "nil node count", nilCnt)
+		}
+	}()
+
+	it := sdb.Database().TrieDB().DiskDB().GetStateTrieDB().NewIterator(nil, nil)
+	for it.Next() {
+		Cnt++
+		if it.Key() == nil || it.Value() == nil || bytes.Equal(it.Key(), []byte("")) || bytes.Equal(it.Value(), []byte("")) {
+			nilCnt++
+		}
+	}
+	it.Release()
+	logger.Info("TrieDB Iterator finished", "total node count", Cnt, "nil node count", nilCnt)
 	return nil
 }
