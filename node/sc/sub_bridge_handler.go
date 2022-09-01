@@ -390,8 +390,9 @@ func (sbh *SubBridgeHandler) handleParentChainInvalidTxResponseMsg(msg p2p.Msg) 
 	if err := msg.Decode(&invalidTxs); err != nil && err != rlp.EOL {
 		return errResp(ErrDecode, "msg %v: %v", msg, err)
 	}
+	txPool := sbh.subbridge.GetBridgeTxPool()
 	for _, invalidTx := range invalidTxs {
-		if tx := sbh.subbridge.GetBridgeTxPool().Get(invalidTx.TxHash); tx != nil {
+		if tx := txPool.Get(invalidTx.TxHash); tx != nil {
 			logger.Error("[SC][HandleResponse] A bridge tx was not executed", "err", invalidTx.ErrStr,
 				"txHash", invalidTx.TxHash.String(),
 				"txGasPrice", tx.GasPrice().Uint64())
@@ -446,9 +447,10 @@ func (sbh *SubBridgeHandler) broadcastServiceChainTx() {
 
 // writeServiceChainTxReceipts writes the received receipts of service chain transactions.
 func (sbh *SubBridgeHandler) writeServiceChainTxReceipts(bc *blockchain.BlockChain, receipts []*types.ReceiptForStorage) {
+	txPool := sbh.subbridge.GetBridgeTxPool()
 	for _, receipt := range receipts {
 		txHash := receipt.TxHash
-		if tx := sbh.subbridge.GetBridgeTxPool().Get(txHash); tx != nil {
+		if tx := txPool.Get(txHash); tx != nil {
 			if tx.Type().IsChainDataAnchoring() {
 				data, err := tx.AnchoredData()
 				if err != nil {
