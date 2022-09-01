@@ -7,12 +7,13 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/math"
+	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/params"
 )
 
 func VerifyMagmaHeader(parentHeader, header *types.Header, kip71Config *params.KIP71Config) error {
 	if parentHeader == nil {
-		return ErrUnknownAncestor
+		return consensus.ErrUnknownAncestor
 	}
 	if header.BaseFee == nil {
 		return fmt.Errorf("header is missing baseFee")
