@@ -13,8 +13,13 @@ import (
 	"strings"
 )
 
+type tagInfo struct {
+	header string
+	key    string
+}
+
 type DatadogTracer struct {
-	Tags           []string
+	Tags           []tagInfo
 	Service        string
 	KlaytnResponse bool
 }
@@ -29,7 +34,16 @@ func newDatadogTracer() *DatadogTracer {
 		}
 	}
 
-	tags := strings.Split(os.Getenv("DD_TRACE_HEADER_TAGS"), ",")
+	headers := strings.Split(os.Getenv("DD_TRACE_HEADER_TAGS"), ",")
+	tags := make([]tagInfo, len(headers))
+	for i, header := range headers {
+		header = strings.TrimSpace(header)
+		header = strings.ToLower(header)
+		key := fmt.Sprintf("http.%s", header)
+
+		tags[i].header = header
+		tags[i].key = key
+	}
 	service := os.Getenv("DD_SERVICE")
 
 	klaytnResponse := false
@@ -85,16 +99,12 @@ func newDatadogHTTPHandler(ddTracer *DatadogTracer, handler http.Handler) http.H
 			tracer.Tag("request.params", reqParam),
 		}
 
-		for _, header := range ddTracer.Tags {
-			header = strings.TrimSpace(header)
-			header = strings.ToLower(header)
-			key := fmt.Sprintf("http.%s", header)
-
+		for _, ti := range ddTracer.Tags {
 			var tag tracer.StartSpanOption
-			if header == "remote_addr" {
-				tag = tracer.Tag(key, r.RemoteAddr)
+			if ti.header == "remote_addr" {
+				tag = tracer.Tag(ti.key, r.RemoteAddr)
 			} else {
-				tag = tracer.Tag(key, r.Header.Get(header))
+				tag = tracer.Tag(ti.key, r.Header.Get(ti.header))
 			}
 			spanOpts = append(spanOpts, tag)
 		}
