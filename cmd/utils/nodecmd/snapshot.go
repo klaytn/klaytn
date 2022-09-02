@@ -21,12 +21,12 @@
 package nodecmd
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"sync"
 	"time"
-	"bytes"
 
 	"github.com/klaytn/klaytn/cmd/utils"
 	"github.com/klaytn/klaytn/common"
@@ -250,7 +250,7 @@ func iterateTrie(ctx *cli.Context) error {
 		return fmt.Errorf("Failed to open newDB trie : %v", err)
 	}
 
-	logger.Info("TrieDB Iterator Start","node count : all node count, nil node count : key or value is nil node count"  )
+	logger.Info("TrieDB Iterator Start", "node count : all node count, nil node count : key or value is nil node count")
 	Cnt, nilCnt := uint64(0), uint64(0)
 	go func() {
 		for {
