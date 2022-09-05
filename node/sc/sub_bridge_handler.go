@@ -198,11 +198,11 @@ func (sbh *SubBridgeHandler) setRemoteChainValues(pcInfo parentChainInfo) {
 		kip71Config := sbh.subbridge.bridgeAccounts.GetParentKIP71Config()
 
 		logger.Info("[SC][Sync] Updated parent chain values", "gasPrice", sbh.subbridge.bridgeAccounts.GetParentGasPrice(),
-		"LowerBoundBaseFee", kip71Config.LowerBoundBaseFee,
-		"UpperBoundBaseFee", kip71Config.UpperBoundBaseFee,
-		"GasTarget", kip71Config.GasTarget,
-		"MaxBlockGasUsedForBaseFee", kip71Config.MaxBlockGasUsedForBaseFee,
-		"BaseFeeDenominator", kip71Config.BaseFeeDenominator)
+			"LowerBoundBaseFee", kip71Config.LowerBoundBaseFee,
+			"UpperBoundBaseFee", kip71Config.UpperBoundBaseFee,
+			"GasTarget", kip71Config.GasTarget,
+			"MaxBlockGasUsedForBaseFee", kip71Config.MaxBlockGasUsedForBaseFee,
+			"BaseFeeDenominator", kip71Config.BaseFeeDenominator)
 	} else {
 		logger.Info("Updated parent chain's gas price", "gasPrice", sbh.subbridge.bridgeAccounts.GetParentGasPrice())
 	}
@@ -394,8 +394,8 @@ func (sbh *SubBridgeHandler) handleParentChainInvalidTxResponseMsg(msg p2p.Msg) 
 	for _, invalidTx := range invalidTxs {
 		if tx := txPool.Get(invalidTx.TxHash); tx != nil {
 			logger.Error("[SC][HandleResponse] A bridge tx was not executed", "err", invalidTx.ErrStr,
-			"txHash", invalidTx.TxHash.String(),
-			"txGasPrice", tx.GasPrice().Uint64())
+				"txHash", invalidTx.TxHash.String(),
+				"txGasPrice", tx.GasPrice().Uint64())
 			if invalidTx.ErrStr == blockchain.ErrGasPriceBelowBaseFee.Error() {
 				logger.Error("[SC][HandleTxDropped] Bridge tx was dropped by lower gas price")
 				logger.Info("[SC][HandleTxDropped] Request gasPrice and Magma values to parent chain")
@@ -628,10 +628,10 @@ func (sbh *SubBridgeHandler) GetReceiptFromParentChain(blockHash common.Hash) *t
 func (sbh *SubBridgeHandler) removeBridgeTx(tx *types.Transaction) {
 	if err := sbh.subbridge.GetBridgeTxPool().RemoveTx(tx); err != nil {
 		logger.Error("[SC][HandleResponse] Failed to remove bridge tx",
-		"txType", tx.Type(), "txNonce", tx.Nonce(), "txHash", tx.Hash().String())
+			"txType", tx.Type(), "txNonce", tx.Nonce(), "txHash", tx.Hash().String())
 	} else {
 		logger.Info("[SC][HandleResponse] Removed bridge tx",
-		"txType", tx.Type(), "txNonce", tx.Nonce(), "txHash", tx.Hash().String())
+			"txType", tx.Type(), "txNonce", tx.Nonce(), "txHash", tx.Hash().String())
 	}
 	sbh.resendCandidatesLock.Lock()
 	defer sbh.resendCandidatesLock.Unlock()
