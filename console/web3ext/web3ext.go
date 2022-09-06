@@ -695,13 +695,13 @@ web3._extend({
 			name: 'traceBlock',
 			call: 'debug_traceBlock',
 			params: 2,
-			inputFormatter: [null, null]
+			inputFormatter: [null, web3._extend.formatters.inputTraceFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'traceBlockFromFile',
 			call: 'debug_traceBlockFromFile',
 			params: 2,
-			inputFormatter: [null, null]
+			inputFormatter: [null, web3._extend.formatters.inputTraceFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'traceBadBlock',
@@ -725,25 +725,25 @@ web3._extend({
 			name: 'traceBlockByNumber',
 			call: 'debug_traceBlockByNumber',
 			params: 2,
-			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter, null]
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter, web3._extend.formatters.inputTraceFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'traceBlockByNumberRange',
 			call: 'debug_traceBlockByNumberRange',
 			params: 3,
-			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter, web3._extend.formatters.inputBlockNumberFormatter, null]
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter, web3._extend.formatters.inputBlockNumberFormatter, web3._extend.formatters.inputTraceFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'traceBlockByHash',
 			call: 'debug_traceBlockByHash',
 			params: 2,
-			inputFormatter: [null, null]
+			inputFormatter: [null, web3._extend.formatters.inputTraceFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'traceTransaction',
 			call: 'debug_traceTransaction',
 			params: 2,
-			inputFormatter: [null, null]
+			inputFormatter: [null, web3._extend.formatters.inputTraceFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'preimage',
