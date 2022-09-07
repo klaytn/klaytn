@@ -101,6 +101,7 @@ type BackendProtocolManager interface {
 // CN implements the Klaytn consensus node service.
 type CN struct {
 	config      *Config
+	nodeConfig  *node.Config
 	chainConfig *params.ChainConfig
 
 	// Handlers
@@ -200,7 +201,7 @@ func setEngineType(chainConfig *params.ChainConfig) {
 
 // New creates a new CN object (including the
 // initialisation of the common CN object)
-func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
+func New(ctx *node.ServiceContext, config *Config, nodeConfig *node.Config) (*CN, error) {
 	if err := checkSyncMode(config); err != nil {
 		return nil, err
 	}
@@ -232,6 +233,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	cn := &CN{
 		config:            config,
+		nodeConfig:        nodeConfig,
 		chainDB:           chainDB,
 		chainConfig:       chainConfig,
 		eventMux:          ctx.EventMux,
@@ -478,7 +480,7 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 // APIs returns the collection of RPC services the ethereum package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
 func (s *CN) APIs() []rpc.API {
-	apis, ethAPI := api.GetAPIs(s.APIBackend)
+	apis, ethAPI := api.GetAPIs(s.APIBackend, s.nodeConfig.InsecureUnlockAllowed, s.nodeConfig.ExtRPCEnabled())
 
 	// Append any APIs exposed explicitly by the consensus engine
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)

@@ -40,17 +40,21 @@ import (
 // It offers methods to create, (un)lock en list accounts. Some methods accept
 // passwords and are therefore considered private by default.
 type PrivateAccountAPI struct {
-	am        accounts.AccountManager
-	nonceLock *AddrLocker
-	b         Backend
+	am                  accounts.AccountManager
+	nonceLock           *AddrLocker
+	b                   Backend
+	insecureUnlockAllow bool
+	extRPCEnabled       bool
 }
 
 // NewPrivateAccountAPI create a new PrivateAccountAPI.
-func NewPrivateAccountAPI(b Backend, nonceLock *AddrLocker) *PrivateAccountAPI {
+func NewPrivateAccountAPI(b Backend, nonceLock *AddrLocker, insecureUnlockAllow, extRPCEnabled bool) *PrivateAccountAPI {
 	return &PrivateAccountAPI{
-		am:        b.AccountManager(),
-		nonceLock: nonceLock,
-		b:         b,
+		am:                  b.AccountManager(),
+		nonceLock:           nonceLock,
+		b:                   b,
+		insecureUnlockAllow: insecureUnlockAllow,
+		extRPCEnabled:       extRPCEnabled,
 	}
 }
 
@@ -189,6 +193,10 @@ func (s *PrivateAccountAPI) ImportRawKey(privkey string, password string) (commo
 // the given password for duration seconds. If duration is nil it will use a
 // default of 300 seconds. It returns an indication if the account was unlocked.
 func (s *PrivateAccountAPI) UnlockAccount(addr common.Address, password string, duration *uint64) (bool, error) {
+	if s.extRPCEnabled && !s.insecureUnlockAllow {
+		return false, accounts.ErrAttemptInsecurelyUnlockAcc
+	}
+
 	const max = uint64(time.Duration(math.MaxInt64) / time.Second)
 	var d time.Duration
 	if duration == nil {

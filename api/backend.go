@@ -95,7 +95,7 @@ type Backend interface {
 	GetTxLookupInfoAndReceiptInCache(Hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64, *types.Receipt)
 }
 
-func GetAPIs(apiBackend Backend) ([]rpc.API, *EthereumAPI) {
+func GetAPIs(apiBackend Backend, insecureUnlockAllow, extRPCEnabled bool) ([]rpc.API, *EthereumAPI) {
 	nonceLock := new(AddrLocker)
 
 	ethAPI := NewEthereumAPI()
@@ -148,7 +148,7 @@ func GetAPIs(apiBackend Backend) ([]rpc.API, *EthereumAPI) {
 		}, {
 			Namespace: "personal",
 			Version:   "1.0",
-			Service:   NewPrivateAccountAPI(apiBackend, nonceLock),
+			Service:   NewPrivateAccountAPI(apiBackend, nonceLock, insecureUnlockAllow, extRPCEnabled),
 			Public:    false,
 		},
 	}, ethAPI

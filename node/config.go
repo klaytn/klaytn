@@ -90,6 +90,9 @@ type Config struct {
 	// scrypt KDF at the expense of security.
 	UseLightweightKDF bool `toml:",omitempty"`
 
+	// InsecureUnlockAllowed allows user to unlock accounts in unsafe http environment.
+	InsecureUnlockAllowed bool `toml:",omitempty"`
+
 	// IPCPath is the requested location to place the IPC endpoint. If the path is
 	// a simple file name, it is placed inside the data directory (or on the root
 	// pipe path on Windows), whereas if it's a resolvable path name (absolute or
@@ -257,6 +260,10 @@ func (c *Config) GRPCEndpoint() string {
 func DefaultGRPCEndpoint() string {
 	config := &Config{GRPCHost: DefaultGRPCHost, GRPCPort: DefaultGRPCPort}
 	return config.GRPCEndpoint()
+}
+
+func (c *Config) ExtRPCEnabled() bool {
+	return c.HTTPHost != "" || c.WSHost != ""
 }
 
 // NodeName returns the devp2p node identifier.

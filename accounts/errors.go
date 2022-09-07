@@ -45,6 +45,8 @@ var ErrWalletAlreadyOpen = errors.New("wallet already open")
 // secodn time.
 var ErrWalletClosed = errors.New("wallet closed")
 
+var ErrAttemptInsecurelyUnlockAcc = errors.New("Account unlock with HTTP or WebSocket access is forbidden")
+
 // AuthNeededError is returned by backends for signing requests where the user
 // is required to provide further authentication before signing can succeed.
 //

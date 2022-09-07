@@ -268,6 +268,7 @@ var FlagGroups = []FlagGroup{
 			MaxRequestContentLengthFlag,
 			APIFilterGetLogsDeadlineFlag,
 			APIFilterGetLogsMaxItemsFlag,
+			InsecureUnlockAllowedFlag,
 		},
 	},
 	{

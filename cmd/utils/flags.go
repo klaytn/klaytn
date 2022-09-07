@@ -484,6 +484,11 @@ var (
 		Value:  "",
 		EnvVar: "KLAYTN_PASSWORD",
 	}
+	InsecureUnlockAllowedFlag = cli.BoolFlag{
+		Name:   "allow-insecure-unlock",
+		Usage:  "Allow insecure account unlocking when account-related RPCs are exposed by http or websocket",
+		EnvVar: "KLAYTN_INSECUREUNLOCK",
+	}
 
 	VMEnableDebugFlag = cli.BoolFlag{
 		Name:   "vmdebug",
@@ -1692,6 +1697,9 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 	if ctx.GlobalIsSet(RPCNonEthCompatibleFlag.Name) {
 		rpc.NonEthCompatible = ctx.GlobalBool(RPCNonEthCompatibleFlag.Name)
 	}
+	if ctx.IsSet(InsecureUnlockAllowedFlag.Name) {
+		cfg.InsecureUnlockAllowed = ctx.Bool(InsecureUnlockAllowedFlag.Name)
+	}
 }
 
 func setTxPool(ctx *cli.Context, cfg *blockchain.TxPoolConfig) {
@@ -1985,7 +1993,7 @@ func RegisterCNService(stack *node.Node, cfg *cn.Config) {
 
 	err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
 		cfg.WsEndpoint = stack.WSEndpoint()
-		fullNode, err := cn.New(ctx, cfg)
+		fullNode, err := cn.New(ctx, cfg, stack.Config())
 		return fullNode, err
 	})
 	if err != nil {
