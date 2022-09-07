@@ -106,7 +106,7 @@ func newTester(t *testing.T, confOverride func(*cn.Config)) *tester {
 	if confOverride != nil {
 		confOverride(cnConf)
 	}
-	if err = stack.Register(func(ctx *node.ServiceContext) (node.Service, error) { return cn.New(ctx, cnConf) }); err != nil {
+	if err = stack.Register(func(ctx *node.ServiceContext) (node.Service, error) { return cn.New(ctx, cnConf, stack.Config()) }); err != nil {
 		t.Fatalf("failed to register Klaytn protocol: %v", err)
 	}
 	// Start the node and assemble the JavaScript console around it
