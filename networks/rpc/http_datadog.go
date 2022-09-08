@@ -25,10 +25,8 @@ type DatadogTracer struct {
 }
 
 func newDatadogTracer() *DatadogTracer {
-	var err error
-	ddTraceEnabled := false
 	if v := os.Getenv("DD_TRACE_ENABLED"); v != "" {
-		ddTraceEnabled, err = strconv.ParseBool(v)
+		ddTraceEnabled, err := strconv.ParseBool(v)
 		if err != nil || ddTraceEnabled == false {
 			return nil
 		}
@@ -48,6 +46,7 @@ func newDatadogTracer() *DatadogTracer {
 
 	klaytnResponse := false
 	if v := os.Getenv("DD_KLAYTN_RPC_RESPONSE"); v != "" {
+		var err error
 		klaytnResponse, err = strconv.ParseBool(v)
 		if err != nil {
 			return nil
@@ -72,7 +71,6 @@ func newDatadogHTTPHandler(ddTracer *DatadogTracer, handler http.Handler) http.H
 
 		// parse RPC requests
 		reqs, isBatch, err := getRPCRequests(r)
-
 		if err != nil || len(reqs) < 1 {
 			// The error will be handled in `handler.ServeHTTP()` and printed with `printRPCErrorLog()`
 			logger.Debug("failed to parse RPC request", "err", err, "len(reqs)", len(reqs))
