@@ -497,6 +497,7 @@ func gen(ctx *cli.Context) error {
 
 	privKeys, nodeKeys, nodeAddrs := istcommon.GenerateKeys(cnNum)
 	testPrivKeys, testKeys, testAddrs := istcommon.GenerateKeys(numTestAccs)
+	testAddrs = append(testAddrs, common.HexToAddress(fundingAddr))
 
 	var (
 		genesisJson      *blockchain.Genesis
