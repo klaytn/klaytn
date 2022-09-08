@@ -22,7 +22,7 @@ type MixedEngine struct {
 	initialConfig *params.ChainConfig
 
 	initialParams *params.GovParamSet // initial ChainConfig
-	defaultParams *params.GovParamSet // constants used as last fallback
+	defaultParams *params.GovParamSet // default constants used as last fallback
 
 	currentParams *params.GovParamSet // latest params to be returned by Params()
 
@@ -48,14 +48,14 @@ func newMixedEngine(config *params.ChainConfig, db database.DBManager, doInit bo
 		logger.Crit("Error parsing initial ChainConfig", "err", err)
 	}
 
-	constMap := map[int]interface{}{
+	defaultMap := map[int]interface{}{
 		params.LowerBoundBaseFee:         params.DefaultLowerBoundBaseFee,
 		params.UpperBoundBaseFee:         params.DefaultUpperBoundBaseFee,
 		params.GasTarget:                 params.DefaultGasTarget,
 		params.MaxBlockGasUsedForBaseFee: params.DefaultMaxBlockGasUsedForBaseFee,
 		params.BaseFeeDenominator:        params.DefaultBaseFeeDenominator,
 	}
-	if p, err := params.NewGovParamSetIntMap(constMap); err == nil {
+	if p, err := params.NewGovParamSetIntMap(defaultMap); err == nil {
 		e.defaultParams = p
 	} else {
 		logger.Crit("Error parsing initial ParamSet", "err", err)
