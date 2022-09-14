@@ -24,9 +24,10 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/klaytn/klaytn/blockchain/state"
 	"sync"
 	"time"
+
+	"github.com/klaytn/klaytn/blockchain/state"
 
 	"github.com/klaytn/klaytn/cmd/utils"
 	"github.com/klaytn/klaytn/common"
