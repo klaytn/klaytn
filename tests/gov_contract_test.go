@@ -89,6 +89,10 @@ func TestGovernance_ContractEngine(t *testing.T) {
 		if addParamBlock != 0 && num >= addParamBlock+2 {
 			break
 		}
+
+		if num >= 60 {
+			t.Fatal("test taking too long; something must be wrong")
+		}
 	}
 
 	// Validate historic params from engine.ParamsAt(n)
