@@ -117,8 +117,6 @@ func deployGovParamTx_constructor(t *testing.T, node *cn.CN, owner *TestAccountT
 		contractBin    = govcontract.GovParamBin
 		ctorArgs, _    = contractAbi.Pack("")
 		code           = contractBin + hex.EncodeToString(ctorArgs)
-		initArgs, _    = contractAbi.Pack("initialize", owner.Addr)
-		initData       = common.ToHex(initArgs)
 	)
 
 	// Deploy contract
@@ -131,12 +129,6 @@ func deployGovParamTx_constructor(t *testing.T, node *cn.CN, owner *TestAccountT
 
 	_, _, num, _ := chain.GetTxAndLookupInfo(tx.Hash())
 	t.Logf("GovParam deployed at block=%2d, addr=%s", num, addr.Hex())
-
-	// Call initialize()
-	tx = deployContractExecutionTx(t, node.TxPool(), chainId, owner, addr, initData)
-	receipt = waitReceipt(chain, tx.Hash())
-	require.NotNil(t, receipt)
-	require.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
 
 	return num, addr, tx
 }

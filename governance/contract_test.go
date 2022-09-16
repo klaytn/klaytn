@@ -35,14 +35,6 @@ func prepareSimulatedContract(t *testing.T) ([]*bind.TransactOpts, *backends.Sim
 	require.Nil(t, err)
 	sim.Commit()
 
-	tx, err := contract.Initialize(owner, owner.From)
-	require.Nil(t, err)
-	sim.Commit()
-
-	receipt, _ := sim.TransactionReceipt(nil, tx.Hash())
-	require.NotNil(t, receipt)
-	require.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
-
 	return accounts, sim, address, contract
 }
 
