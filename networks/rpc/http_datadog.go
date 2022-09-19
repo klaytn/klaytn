@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	httptrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http"
-	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace"
-	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
+
+	httptrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http"
+	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace"
+	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 
 type tagInfo struct {
@@ -117,7 +118,7 @@ func newDatadogHTTPHandler(ddTracer *DatadogTracer, handler http.Handler) http.H
 					}
 				}
 			} else {
-				var span, _ = tracer.SpanFromContext(r.Context())
+				span, _ := tracer.SpanFromContext(r.Context())
 				ddTracer.traceRpcResponse(dupW.body.Bytes(), reqMethod, span)
 			}
 		})
@@ -132,7 +133,7 @@ func newDatadogHTTPHandler(ddTracer *DatadogTracer, handler http.Handler) http.H
 }
 
 func (dt *DatadogTracer) traceBatchRpcResponse(r *http.Request, rpcReturn interface{}, req rpcRequest, offset int) {
-	var span, _ = tracer.StartSpanFromContext(r.Context(), "response.batch")
+	span, _ := tracer.StartSpanFromContext(r.Context(), "response.batch")
 	defer span.Finish()
 	span.SetTag("offset", offset)
 	if data, err := json.Marshal(rpcReturn); err == nil {
