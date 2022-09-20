@@ -75,6 +75,7 @@ func (e *ContractEngine) UpdateParams() error {
 	return nil
 }
 
+// contractGetAllParams sets evmCtx.BlockNumber as num
 func (e *ContractEngine) contractGetAllParams(num uint64) (*params.GovParamSet, error) {
 	if e.chain == nil {
 		logger.Error("Invoked ContractEngine before SetBlockchain")
@@ -91,9 +92,6 @@ func (e *ContractEngine) contractGetAllParams(num uint64) (*params.GovParamSet, 
 		chainConfig:  e.chainConfig,
 		chain:        e.chain,
 		contractAddr: addr,
-	}
-	if num > 0 {
-		num -= 1
 	}
 	return caller.getAllParams(new(big.Int).SetUint64(num))
 }

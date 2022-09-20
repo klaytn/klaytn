@@ -98,10 +98,16 @@ func (c *contractCaller) makeTx(num *big.Int, contractAbi abi.ABI, fn string, ar
 // Execute contract call using state at block `num`.
 func (c *contractCaller) callTx(num *big.Int, tx *types.Transaction) ([]byte, error) {
 	// Load state at given block
-	block := c.chain.GetBlockByNumber(num.Uint64())
+	blocknum := num
+	if blocknum.Cmp(c.chain.CurrentHeader().Number) > 0 {
+		blocknum = c.chain.CurrentHeader().Number
+	}
+
+	block := c.chain.GetBlockByNumber(blocknum.Uint64())
 	if block == nil {
 		return nil, errors.New("No such block")
 	}
+
 	statedb, err := c.chain.StateAt(block.Root())
 	if err != nil {
 		return nil, err
@@ -109,6 +115,12 @@ func (c *contractCaller) callTx(num *big.Int, tx *types.Transaction) ([]byte, er
 
 	// Run EVM at given states
 	evmCtx := blockchain.NewEVMContext(tx, block.Header(), c.chain, nil)
+	// EVM demands the sender to have enough KLAY balance (gasPrice * gasLimit) in buyGas()
+	// After KIP-71, gasPrice is baseFee (=nonzero), regardless of the msg.gasPrice (=zero)
+	// But our sender (0x0) won't have enough balance. Instead we override gasPrice = 0 here
+	evmCtx.GasPrice = big.NewInt(0)
+	// num can be greater than CurrentHeader().Number
+	evmCtx.BlockNumber = num
 	evm := vm.NewEVM(evmCtx, statedb, c.chain.Config(), &vm.Config{})
 
 	res, _, kerr := blockchain.ApplyMessage(evm, tx)

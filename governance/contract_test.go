@@ -140,12 +140,12 @@ func TestContractEngine_Params(t *testing.T) {
 	accounts, sim, addr, contract := prepareSimulatedContractWithParams(t, initialParam)
 	e := prepareContractEngine(t, sim.BlockChain(), addr)
 
-	//     start          setparam       activation         end
+	//     start          setparam       activation-1       end
 	// Block |---------------|---------------|---------------|
 	//               ^               ^               ^
 	//               t0              t1              t2
-	// At num = activation - 1, Params() = prev
-	// At num = activation, Params() = next
+	// At num = activation - 2, Params() = prev
+	// At num = activation - 1, Params() = next
 	var (
 		start      = sim.BlockChain().CurrentHeader().Number.Uint64()
 		setparam   = start + 5
@@ -168,7 +168,7 @@ func TestContractEngine_Params(t *testing.T) {
 
 		var expected *params.GovParamSet
 
-		if num < activation { // t0 & t1
+		if num < activation-1 { // t0 & t1
 			expected = psetPrev
 		} else { // t2
 			expected = psetNext
@@ -193,8 +193,8 @@ func TestContractEngine_ParamsAt(t *testing.T) {
 	// Block |---------------|---------------|---------------|
 	//               ^               ^               ^
 	//               t0              t1              t2
-	// ParamsAt(activation) = prev
-	// ParamsAt(activation + 1) = next
+	// ParamsAt(activation - 1) = prev
+	// ParamsAt(activation) = next
 	var (
 		start      = sim.BlockChain().CurrentHeader().Number.Uint64()
 		setparam   = start + 5
@@ -224,7 +224,7 @@ func TestContractEngine_ParamsAt(t *testing.T) {
 				expected = psetNext
 			}
 
-			result, _ := e.ParamsAt(iter + 1)
+			result, _ := e.ParamsAt(iter)
 			require.Equal(t, expected, result)
 		}
 

@@ -105,7 +105,7 @@ func TestGovernance_ContractEngine(t *testing.T) {
 		t.Logf("ParamsAt(block=%2d): %v", num, value)
 		if num < deployBlock { // not yet deployed
 			assert.Equal(t, nil, value)
-		} else if num <= addParamBlock+1 { // not yet activated
+		} else if num <= addParamBlock { // not yet activated
 			assert.Equal(t, nil, value)
 		} else { // after activation
 			assert.Equal(t, paramValue, value)
