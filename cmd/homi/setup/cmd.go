@@ -32,6 +32,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/accounts/keystore"
 	"github.com/klaytn/klaytn/blockchain"
 	istcommon "github.com/klaytn/klaytn/cmd/homi/common"
@@ -299,9 +300,34 @@ func genValidatorKeystore(privKeys []*ecdsa.PrivateKey) {
 
 	for i, pk := range privKeys {
 		pwdStr := RandStringRunes(params.PasswordLength)
-		ks.ImportECDSA(pk, pwdStr)
+		account, _ := ks.ImportECDSA(pk, pwdStr)
+		genRewardKeystore(account, i)
 		WriteFile([]byte(pwdStr), DirKeys, "passwd"+strconv.Itoa(i+1))
 	}
+}
+
+func genRewardKeystore(account accounts.Account, i int) {
+	file, err := os.Open(account.URL.Path)
+	if err != nil {
+		log.Fatalf("Failed to open file: %s", err)
+	}
+	defer file.Close()
+
+	data, err := ioutil.ReadAll(file)
+	if err != nil {
+		log.Fatalf("Failed to read file: %s", err)
+	}
+
+	v := make(map[string]interface{})
+	if err := json.Unmarshal(data, &v); err != nil {
+		log.Fatalf("Failed to unmarshal keystore file: %s", err)
+	}
+
+	WriteFile([]byte(v["address"].(string)), DirKeys, "reward"+strconv.Itoa(i+1))
+	WriteFile(data, DirKeys, "keystore"+strconv.Itoa(i+1))
+
+	// Remove UTC-XXX file created by keystore package
+	os.Remove(account.URL.Path)
 }
 
 func genCypressCommonGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
