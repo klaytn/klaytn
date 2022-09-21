@@ -42,6 +42,9 @@ var (
 	logger = log.NewModuleLogger(log.StorageDatabase)
 
 	errGovIdxAlreadyExist = errors.New("a governance idx of the more recent or the same block exist")
+
+	backupHashes [128]common.Hash
+	idx          uint8 = 0
 )
 
 type DBManager interface {
@@ -76,9 +79,11 @@ type DBManager interface {
 	WriteHeadHeaderHash(hash common.Hash)
 
 	ReadHeadBlockHash() common.Hash
+	ReadHeadBlockBackupHash() common.Hash
 	WriteHeadBlockHash(hash common.Hash)
 
 	ReadHeadFastBlockHash() common.Hash
+	ReadHeadFastBlockBackupHash() common.Hash
 	WriteHeadFastBlockHash(hash common.Hash)
 
 	ReadFastTrieProgress() uint64
@@ -934,11 +939,30 @@ func (dbm *databaseManager) ReadHeadBlockHash() common.Hash {
 	return common.BytesToHash(data)
 }
 
+// Block Backup Hash operations.
+func (dbm *databaseManager) ReadHeadBlockBackupHash() common.Hash {
+	db := dbm.getDatabase(headerDB)
+	data, _ := db.Get(headBlockBackupKey)
+	if len(data) == 0 {
+		return common.Hash{}
+	}
+	return common.BytesToHash(data)
+}
+
 // WriteHeadBlockHash stores the head block's hash.
 func (dbm *databaseManager) WriteHeadBlockHash(hash common.Hash) {
+	backupHashes[idx%128] = hash
+	idx++
+
 	db := dbm.getDatabase(headerDB)
 	if err := db.Put(headBlockKey, hash.Bytes()); err != nil {
 		logger.Crit("Failed to store last block's hash", "err", err)
+	}
+	if backupHashes[idx%128] == (common.Hash{}) {
+		return
+	}
+	if err := db.Put(headBlockBackupKey, backupHashes[idx%128].Bytes()); err != nil {
+		logger.Crit("Failed to store last block's backup hash", "err", err)
 	}
 }
 
@@ -953,11 +977,31 @@ func (dbm *databaseManager) ReadHeadFastBlockHash() common.Hash {
 	return common.BytesToHash(data)
 }
 
+// Head Fast Block Backup Hash operations.
+// ReadHeadFastBlockBackupHash retrieves the hash of the current fast-sync head block.
+func (dbm *databaseManager) ReadHeadFastBlockBackupHash() common.Hash {
+	db := dbm.getDatabase(headerDB)
+	data, _ := db.Get(headFastBlockBackupKey)
+	if len(data) == 0 {
+		return common.Hash{}
+	}
+	return common.BytesToHash(data)
+}
+
 // WriteHeadFastBlockHash stores the hash of the current fast-sync head block.
 func (dbm *databaseManager) WriteHeadFastBlockHash(hash common.Hash) {
+	backupHashes[idx%128] = hash
+	idx++
+
 	db := dbm.getDatabase(headerDB)
 	if err := db.Put(headFastBlockKey, hash.Bytes()); err != nil {
 		logger.Crit("Failed to store last fast block's hash", "err", err)
+	}
+	if backupHashes[idx%128] == (common.Hash{}) {
+		return
+	}
+	if err := db.Put(headFastBlockBackupKey, backupHashes[idx%128].Bytes()); err != nil {
+		logger.Crit("Failed to store last fast block's backup hash", "err", err)
 	}
 }
 

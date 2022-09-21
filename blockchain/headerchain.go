@@ -59,9 +59,10 @@ type HeaderChain struct {
 }
 
 // NewHeaderChain creates a new HeaderChain structure.
-//  getValidator should return the parent's validator
-//  procInterrupt points to the parent's interrupt semaphore
-//  wg points to the parent's shutdown wait group
+//
+//	getValidator should return the parent's validator
+//	procInterrupt points to the parent's interrupt semaphore
+//	wg points to the parent's shutdown wait group
 func NewHeaderChain(chainDB database.DBManager, config *params.ChainConfig, engine consensus.Engine, procInterrupt func() bool) (*HeaderChain, error) {
 	// Seed a fast but crypto originating random generator
 	seed, err := crand.Int(crand.Reader, big.NewInt(math.MaxInt64))
@@ -84,6 +85,10 @@ func NewHeaderChain(chainDB database.DBManager, config *params.ChainConfig, engi
 
 	hc.currentHeader.Store(hc.genesisHeader)
 	if head := chainDB.ReadHeadBlockHash(); head != (common.Hash{}) {
+		if chead := hc.GetHeaderByHash(head); chead != nil {
+			hc.currentHeader.Store(chead)
+		}
+	} else if head := chainDB.ReadHeadBlockBackupHash(); head != (common.Hash{}) {
 		if chead := hc.GetHeaderByHash(head); chead != nil {
 			hc.currentHeader.Store(chead)
 		}

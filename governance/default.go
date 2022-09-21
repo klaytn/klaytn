@@ -713,6 +713,10 @@ func (g *Governance) initializeCache() error {
 		if num := g.db.ReadHeaderNumber(headBlockHash); num != nil {
 			headBlockNumber = *num
 		}
+	} else if headBlockHash := g.db.ReadHeadBlockBackupHash(); !common.EmptyHash(headBlockHash) {
+		if num := g.db.ReadHeaderNumber(headBlockHash); num != nil {
+			headBlockNumber = *num
+		}
 	}
 	newBlockNumber, newGovernanceSet, err := g.ReadGovernance(headBlockNumber)
 	if err != nil {
