@@ -94,6 +94,8 @@ Args :
 		unitPriceFlag,
 		deriveShaImplFlag,
 		fundingAddrFlag,
+		patchAddressBookFlag,
+		patchAddressBookAddrFlag,
 		outputPathFlag,
 		dockerImageIdFlag,
 		fasthttpFlag,
@@ -477,6 +479,44 @@ func genBaobabTestGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Gen
 	return testGenesis
 }
 
+func allocGenesisFund(ctx *cli.Context, genesisJson *blockchain.Genesis) {
+	fundingAddr := ctx.String(fundingAddrFlag.Name)
+	if len(fundingAddr) == 0 {
+		return
+	}
+
+	if !common.IsHexAddress(fundingAddr) {
+		log.Fatalf("'%s' is not a valid hex address", fundingAddr)
+	}
+	addr := common.HexToAddress(fundingAddr)
+	balance := new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil)
+	genesisJson.Alloc[addr] = blockchain.GenesisAccount{Balance: balance}
+}
+
+func patchGenesisAddressBook(ctx *cli.Context, genesisJson *blockchain.Genesis, nodeAddrs []common.Address) {
+	if patchAddressBook := ctx.Bool(patchAddressBookFlag.Name); !patchAddressBook {
+		return
+	}
+
+	var targetAddr common.Address
+
+	patchAddressBookAddr := ctx.String(patchAddressBookAddrFlag.Name)
+	if len(patchAddressBookAddr) == 0 {
+		if len(nodeAddrs) == 0 {
+			log.Fatalf("Need at least one consensus node (--cn-num 1) to patch AddressBook with the first CN")
+		}
+		targetAddr = nodeAddrs[0]
+	} else {
+		if !common.IsHexAddress(patchAddressBookAddr) {
+			log.Fatalf("'%s' is not a valid hex address", patchAddressBookAddr)
+		}
+		targetAddr = common.HexToAddress(patchAddressBookAddr)
+	}
+
+	allocationFunction := genesis.PatchAddressBook(targetAddr)
+	allocationFunction(genesisJson)
+}
+
 func RandStringRunes(n int) string {
 	letterRunes := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789~!@#$%^&*()_+{}|[]")
 
@@ -549,6 +589,9 @@ func gen(ctx *cli.Context) error {
 	} else {
 		genesisJson = genIstanbulGenesis(ctx, validatorNodeAddrs, testAddrs, chainid)
 	}
+
+	allocGenesisFund(ctx, genesisJson)
+	patchGenesisAddressBook(ctx, genesisJson, validatorNodeAddrs)
 
 	genesisJson.Config.IstanbulCompatibleBlock = big.NewInt(ctx.Int64(istanbulCompatibleBlockNumberFlag.Name))
 	genesisJson.Config.LondonCompatibleBlock = big.NewInt(ctx.Int64(londonCompatibleBlockNumberFlag.Name))
