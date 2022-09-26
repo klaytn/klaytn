@@ -24,10 +24,10 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"reflect"
 	"sort"
 	"sync/atomic"
 	"time"
-	"unsafe"
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
@@ -121,7 +121,12 @@ func (h *Header) HashNoNonce() common.Hash {
 // Size returns the approximate memory used by all internal contents. It is used
 // to approximate and limit the memory consumption of various caches.
 func (h *Header) Size() common.StorageSize {
-	return common.StorageSize(unsafe.Sizeof(*h)) + common.StorageSize(len(h.Extra)+(h.BlockScore.BitLen()+h.Number.BitLen()+h.Time.BitLen())/8)
+	baseFeeBitLen := 0
+	if h.BaseFee != nil {
+		baseFeeBitLen = h.BaseFee.BitLen()
+	}
+	return common.StorageSize(reflect.TypeOf(Header{}).Size()) +
+		common.StorageSize(len(h.Extra)+len(h.Governance)+len(h.Vote)+(h.BlockScore.BitLen()+h.Number.BitLen()+h.Time.BitLen()+baseFeeBitLen)/8)
 }
 
 func (h *Header) Round() byte {
