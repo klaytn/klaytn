@@ -38,7 +38,7 @@ import (
 	"github.com/klaytn/klaytn/storage/database"
 )
 
-//go:generate mockgen -destination=node/cn/filters/mock/backend_mock.go -package=cn github.com/klaytn/klaytn/node/cn/filters Backend
+//go:generate mockgen -destination=mock/backend_mock.go -package=cn github.com/klaytn/klaytn/node/cn/filters Backend
 type Backend interface {
 	ChainDB() database.DBManager
 	EventMux() *event.TypeMux
