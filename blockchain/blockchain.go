@@ -535,10 +535,10 @@ func (bc *BlockChain) loadLastState() error {
 	if head := bc.db.ReadHeadFastBlockHash(); head != (common.Hash{}) {
 		if block := bc.GetBlockByHash(head); block != nil {
 			bc.currentFastBlock.Store(block)
-		}
-	} else if head := bc.db.ReadHeadFastBlockBackupHash(); head != (common.Hash{}) {
-		if block := bc.GetBlockByHash(head); block != nil {
-			bc.currentFastBlock.Store(block)
+		} else if head := bc.db.ReadHeadFastBlockBackupHash(); head != (common.Hash{}) {
+			if block := bc.GetBlockByHash(head); block != nil {
+				bc.currentFastBlock.Store(block)
+			}
 		}
 	}
 

@@ -43,7 +43,7 @@ var (
 
 	errGovIdxAlreadyExist = errors.New("a governance idx of the more recent or the same block exist")
 
-	backupHashes [128]common.Hash
+	backupHashes [backupHashCnt]common.Hash
 	idx          uint8 = 0
 )
 
@@ -305,6 +305,7 @@ const (
 	SnapshotDB
 	// databaseEntryTypeSize should be the last item in this list!!
 	databaseEntryTypeSize
+	backupHashCnt	= 128
 )
 
 func (et DBEntryType) String() string {
@@ -951,17 +952,17 @@ func (dbm *databaseManager) ReadHeadBlockBackupHash() common.Hash {
 
 // WriteHeadBlockHash stores the head block's hash.
 func (dbm *databaseManager) WriteHeadBlockHash(hash common.Hash) {
-	backupHashes[idx%128] = hash
+	backupHashes[idx % backupHashCnt] = hash
 	idx++
 
 	db := dbm.getDatabase(headerDB)
 	if err := db.Put(headBlockKey, hash.Bytes()); err != nil {
 		logger.Crit("Failed to store last block's hash", "err", err)
 	}
-	if backupHashes[idx%128] == (common.Hash{}) {
+	if backupHashes[idx % backupHashCnt] == (common.Hash{}) {
 		return
 	}
-	if err := db.Put(headBlockBackupKey, backupHashes[idx%128].Bytes()); err != nil {
+	if err := db.Put(headBlockBackupKey, backupHashes[idx % backupHashCnt].Bytes()); err != nil {
 		logger.Crit("Failed to store last block's backup hash", "err", err)
 	}
 }
@@ -990,17 +991,17 @@ func (dbm *databaseManager) ReadHeadFastBlockBackupHash() common.Hash {
 
 // WriteHeadFastBlockHash stores the hash of the current fast-sync head block.
 func (dbm *databaseManager) WriteHeadFastBlockHash(hash common.Hash) {
-	backupHashes[idx%128] = hash
+	backupHashes[idx % backupHashCnt] = hash
 	idx++
 
 	db := dbm.getDatabase(headerDB)
 	if err := db.Put(headFastBlockKey, hash.Bytes()); err != nil {
 		logger.Crit("Failed to store last fast block's hash", "err", err)
 	}
-	if backupHashes[idx%128] == (common.Hash{}) {
+	if backupHashes[idx % backupHashCnt] == (common.Hash{}) {
 		return
 	}
-	if err := db.Put(headFastBlockBackupKey, backupHashes[idx%128].Bytes()); err != nil {
+	if err := db.Put(headFastBlockBackupKey, backupHashes[idx % backupHashCnt].Bytes()); err != nil {
 		logger.Crit("Failed to store last fast block's backup hash", "err", err)
 	}
 }

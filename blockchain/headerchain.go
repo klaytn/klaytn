@@ -87,10 +87,10 @@ func NewHeaderChain(chainDB database.DBManager, config *params.ChainConfig, engi
 	if head := chainDB.ReadHeadBlockHash(); head != (common.Hash{}) {
 		if chead := hc.GetHeaderByHash(head); chead != nil {
 			hc.currentHeader.Store(chead)
-		}
-	} else if head := chainDB.ReadHeadBlockBackupHash(); head != (common.Hash{}) {
-		if chead := hc.GetHeaderByHash(head); chead != nil {
-			hc.currentHeader.Store(chead)
+		} else if head := chainDB.ReadHeadBlockBackupHash(); head != (common.Hash{}) {
+			if chead := hc.GetHeaderByHash(head); chead != nil {
+				hc.currentHeader.Store(chead)
+			}
 		}
 	}
 	hc.currentHeaderHash = hc.CurrentHeader().Hash()
