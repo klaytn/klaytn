@@ -64,14 +64,14 @@ var (
 	qosTuningImpact  = 0.25 // Impact that a new tuning target has on the previous value
 
 	maxQueuedHeaders  = 32 * 1024 // [klay/62] Maximum number of headers to queue for import (DOS protection)
-	maxHeadersProcess = 2048      // Number of header download results to import at once into the chain
-	maxResultsProcess = 2048      // Number of content download results to import at once into the chain
+	maxHeadersProcess = 4096      // Number of header download results to import at once into the chain
+	maxResultsProcess = 4096      // Number of content download results to import at once into the chain
 
 	fsHeaderCheckFrequency = 100             // Verification frequency of the downloaded headers during fast sync
-	fsHeaderSafetyNet      = 2048            // Number of headers to discard in case a chain violation is detected
+	fsHeaderSafetyNet      = 4096            // Number of headers to discard in case a chain violation is detected
 	fsHeaderForceVerify    = 24              // Number of headers to verify before and after the pivot to accept it
 	fsHeaderContCheck      = 3 * time.Second // Time interval to check for header continuations during state download
-	fsMinFullBlocks        = 64              // Number of blocks to retrieve fully even in fast sync
+	fsMinFullBlocks        = 1280            // Number of blocks to retrieve fully even in fast sync
 
 	logger = log.NewModuleLogger(log.DatasyncDownloader)
 )
@@ -624,12 +624,20 @@ func (d *Downloader) fetchHead(p *peerConnection) (head *types.Header, pivot *ty
 	mode := d.getMode()
 
 	// Request the advertised remote head block and wait for the response
-	latest, _ := p.peer.Head()
+	hash, number := p.peer.Head()
 	fetch := 1
 	if mode == FastSync || mode == SnapSync {
 		fetch = 2 // head + pivot headers
 	}
-	go p.peer.RequestHeadersByHash(latest, fetch, fsMinFullBlocks-1, true)
+
+	remainder := int((number.Uint64() - 1) % 128)
+	skip := 0
+	if remainder == 0 {
+		skip = 127
+	} else {
+		skip = remainder - 1
+	}
+	go p.peer.RequestHeadersByHash(hash, fetch, skip, true)
 
 	ttl := d.requestTTL()
 	timeout := time.After(ttl)
@@ -663,8 +671,12 @@ func (d *Downloader) fetchHead(p *peerConnection) (head *types.Header, pivot *ty
 			// At this point we have 2 headers in total and the first is the
 			// validated head of the chain. Check the pivot number and return.
 			pivot := headers[1]
-			if pivot.Number.Uint64() != head.Number.Uint64()-uint64(fsMinFullBlocks) {
+			logger.Info("test", "pivot", pivot.Number.Uint64(), "pivot expected", head.Number.Uint64()-uint64(skip)-1, "skip", skip, "head", head.Number.Uint64(), "number", number)
+			if pivot.Number.Uint64() != head.Number.Uint64()-uint64(skip)-1 {
 				return nil, nil, fmt.Errorf("%w: remote pivot %d != requested %d", errInvalidChain, pivot.Number, head.Number.Uint64()-uint64(fsMinFullBlocks))
+			}
+			if pivot.Number.Uint64()%128 != 0 {
+				return nil, nil, fmt.Errorf("pivot block should be a multiple of 128: %v", pivot.Number.Uint64())
 			}
 			return head, pivot, nil
 

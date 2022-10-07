@@ -1058,7 +1058,7 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 			// - head layer is paired with HEAD state
 			// - head-1 layer is paired with HEAD-1 state
 			// - head-127 layer(bottom-most diff layer) is paired with HEAD-127 state
-			if err := s.snaps.Cap(root, 128); err != nil {
+			if err := s.snaps.Cap(root, 128*20); err != nil {
 				logger.Warn("Failed to cap snapshot tree", "root", root, "layers", 128, "err", err)
 			}
 		}

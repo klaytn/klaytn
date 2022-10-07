@@ -111,6 +111,7 @@ func HandleMessage(reader SnapshotReader, downloader SnapshotDownloader, peer *P
 		}
 		// Service the request, potentially returning nothing in case of errors
 		accounts, proofs := ServiceGetAccountRangeQuery(reader, &req)
+		logger.Info("GetAccountRangeMsg", "origin", req.Origin, "limit", req.Limit, "id", req.ID, "root", req.Root, "bytes", req.Bytes, "accounts", len(accounts), "proofs", len(proofs))
 
 		// Send back anything accumulated (or empty in case of errors)
 		return p2p.Send(peer.rw, AccountRangeMsg, &AccountRangePacket{
@@ -236,10 +237,12 @@ func ServiceGetAccountRangeQuery(chain SnapshotReader, req *GetAccountRangePacke
 	// Retrieve the requested state and bail out if non existent
 	tr, err := statedb.NewTrie(req.Root, chain.StateCache().TrieDB())
 	if err != nil {
+		logger.Error("new trie returns an error", "err", err)
 		return nil, nil
 	}
 	it, err := chain.Snapshots().AccountIterator(req.Root, req.Origin)
 	if err != nil {
+		logger.Error("account iterator returns an error", "err", err, "root", req.Root, "origin", req.Origin)
 		return nil, nil
 	}
 	// Iterate over the requested range and pile accounts up

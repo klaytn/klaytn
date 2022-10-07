@@ -970,7 +970,7 @@ func (s *Syncer) assignAccountTasks(success chan *accountResponse, fail chan *ac
 				cap = minRequestSize
 			}
 			if err := peer.RequestAccountRange(reqid, root, req.origin, req.limit, uint64(cap)); err != nil {
-				peer.Log().Debug("Failed to request account range", "err", err)
+				peer.Log().Error("Failed to request account range", "err", err)
 				s.scheduleRevertAccountRequest(req)
 			}
 		}(s.root)
