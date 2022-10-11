@@ -35,7 +35,6 @@ const (
 )
 
 type rewardConfig struct {
-	blockNum      uint64
 	mintingAmount *big.Int
 	cnRatio       *big.Int
 	pocRatio      *big.Int
@@ -86,7 +85,6 @@ func (rewardConfigCache *rewardConfigCache) newRewardConfig(blockNumber uint64) 
 	}
 
 	rewardConfig := &rewardConfig{
-		blockNum:      blockNumber,
 		mintingAmount: pset.MintingAmountBig(),
 		cnRatio:       big.NewInt(int64(cn)),
 		pocRatio:      big.NewInt(int64(poc)),

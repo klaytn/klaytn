@@ -182,7 +182,6 @@ func TestRewardDistributor_distributeBlockReward(t *testing.T) {
 		{
 			totalTxFee: big.NewInt(0),
 			rewardConfig: &rewardConfig{
-				blockNum:      1,
 				mintingAmount: big.NewInt(0).SetUint64(9600000000000000000),
 				cnRatio:       big.NewInt(0).SetInt64(34),
 				pocRatio:      big.NewInt(0).SetInt64(54),
@@ -197,7 +196,6 @@ func TestRewardDistributor_distributeBlockReward(t *testing.T) {
 		{
 			totalTxFee: big.NewInt(1000000),
 			rewardConfig: &rewardConfig{
-				blockNum:      1,
 				mintingAmount: big.NewInt(0).SetUint64(10000000000),
 				cnRatio:       big.NewInt(0).SetInt64(60),
 				pocRatio:      big.NewInt(0).SetInt64(30),

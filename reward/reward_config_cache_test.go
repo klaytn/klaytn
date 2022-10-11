@@ -108,7 +108,6 @@ func TestRewardConfigCache_newRewardConfig(t *testing.T) {
 				params.DeferredTxFee: true,
 			},
 			rewardConfig{
-				blockNum:      0,
 				mintingAmount: big.NewInt(0).SetUint64(9600000000000000000),
 				cnRatio:       big.NewInt(0).SetInt64(34),
 				pocRatio:      big.NewInt(0).SetInt64(54),
@@ -127,7 +126,6 @@ func TestRewardConfigCache_newRewardConfig(t *testing.T) {
 				params.DeferredTxFee: false,
 			},
 			rewardConfig{
-				blockNum:      1,
 				mintingAmount: big.NewInt(0).SetInt64(10000),
 				cnRatio:       big.NewInt(0).SetInt64(50),
 				pocRatio:      big.NewInt(0).SetInt64(30),
@@ -146,7 +144,6 @@ func TestRewardConfigCache_newRewardConfig(t *testing.T) {
 				params.DeferredTxFee: true,
 			},
 			rewardConfig{
-				blockNum:      2,
 				mintingAmount: big.NewInt(0).SetInt64(100000000),
 				cnRatio:       big.NewInt(0).SetInt64(10),
 				pocRatio:      big.NewInt(0).SetInt64(35),
@@ -168,7 +165,6 @@ func TestRewardConfigCache_newRewardConfig(t *testing.T) {
 		}
 
 		expectedResult := &testCases[i].result
-		assert.Equal(t, expectedResult.blockNum, rewardConfig.blockNum)
 		assert.Equal(t, expectedResult.mintingAmount, rewardConfig.mintingAmount)
 		assert.Equal(t, expectedResult.cnRatio, rewardConfig.cnRatio)
 		assert.Equal(t, expectedResult.pocRatio, rewardConfig.pocRatio)
@@ -181,7 +177,6 @@ func TestRewardConfigCache_newRewardConfig(t *testing.T) {
 func TestRewardConfigCache_add(t *testing.T) {
 	testCases := []rewardConfig{
 		{
-			blockNum:      1,
 			mintingAmount: big.NewInt(0).SetUint64(9600000000000000000),
 			cnRatio:       big.NewInt(0).SetInt64(34),
 			pocRatio:      big.NewInt(0).SetInt64(54),
@@ -190,7 +185,6 @@ func TestRewardConfigCache_add(t *testing.T) {
 			unitPrice:     big.NewInt(0).SetInt64(25000000000),
 		},
 		{
-			blockNum:      2,
 			mintingAmount: big.NewInt(0).SetInt64(10000),
 			cnRatio:       big.NewInt(0).SetInt64(50),
 			pocRatio:      big.NewInt(0).SetInt64(30),
@@ -199,7 +193,6 @@ func TestRewardConfigCache_add(t *testing.T) {
 			unitPrice:     big.NewInt(0).SetInt64(50000000000),
 		},
 		{
-			blockNum:      3,
 			mintingAmount: big.NewInt(0).SetInt64(100000000),
 			cnRatio:       big.NewInt(0).SetInt64(10),
 			pocRatio:      big.NewInt(0).SetInt64(35),
@@ -220,7 +213,6 @@ func TestRewardConfigCache_add(t *testing.T) {
 
 func TestRewardConfigCache_add_sameNumber(t *testing.T) {
 	rewardConfig := rewardConfig{
-		blockNum:      1,
 		mintingAmount: big.NewInt(0).SetUint64(9600000000000000000),
 		cnRatio:       big.NewInt(0).SetInt64(34),
 		pocRatio:      big.NewInt(0).SetInt64(54),
@@ -254,7 +246,6 @@ func TestRewardConfigCache_get_exist(t *testing.T) {
 				params.DeferredTxFee: true,
 			},
 			result: rewardConfig{
-				blockNum:      1,
 				mintingAmount: big.NewInt(0).SetUint64(9600000000000000000),
 				cnRatio:       big.NewInt(0).SetInt64(34),
 				pocRatio:      big.NewInt(0).SetInt64(54),
@@ -274,7 +265,6 @@ func TestRewardConfigCache_get_exist(t *testing.T) {
 				params.DeferredTxFee: false,
 			},
 			result: rewardConfig{
-				blockNum:      604805,
 				mintingAmount: big.NewInt(0).SetUint64(9600000000000000),
 				cnRatio:       big.NewInt(0).SetInt64(40),
 				pocRatio:      big.NewInt(0).SetInt64(25),
@@ -294,7 +284,6 @@ func TestRewardConfigCache_get_exist(t *testing.T) {
 				params.DeferredTxFee: true,
 			},
 			result: rewardConfig{
-				blockNum:      1210000,
 				mintingAmount: big.NewInt(0).SetUint64(100000000000000000),
 				cnRatio:       big.NewInt(0).SetInt64(34),
 				pocRatio:      big.NewInt(0).SetInt64(33),
@@ -319,7 +308,6 @@ func TestRewardConfigCache_get_exist(t *testing.T) {
 		if err != nil {
 			t.Errorf("error has occurred. err : %v", err)
 		}
-		assert.Equal(t, testCases[i].result.blockNum, rewardConfig.blockNum)
 		assert.Equal(t, testCases[i].result.mintingAmount, rewardConfig.mintingAmount)
 		assert.Equal(t, testCases[i].result.cnRatio, rewardConfig.cnRatio)
 		assert.Equal(t, testCases[i].result.pocRatio, rewardConfig.pocRatio)
