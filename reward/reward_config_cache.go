@@ -59,21 +59,6 @@ func newRewardConfigCache(governanceHelper governanceHelper) *rewardConfigCache 
 }
 
 func (rewardConfigCache *rewardConfigCache) get(blockNumber uint64) (*rewardConfig, error) {
-	var epoch uint64
-	pset, err := rewardConfigCache.governanceHelper.ParamsAt(blockNumber)
-	if err != nil {
-		logger.Error("Couldn't get epoch from governance", "blockNumber", blockNumber, "err", err)
-		return nil, err
-	}
-	epoch = pset.Epoch()
-
-	remainder := blockNumber % epoch
-	if remainder == 0 {
-		blockNumber -= epoch
-	} else {
-		blockNumber -= remainder
-	}
-
 	config, ok := rewardConfigCache.cache.Get(blockNumber)
 	if ok {
 		return config.(*rewardConfig), nil

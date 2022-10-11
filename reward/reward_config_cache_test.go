@@ -254,7 +254,7 @@ func TestRewardConfigCache_get_exist(t *testing.T) {
 				params.DeferredTxFee: true,
 			},
 			result: rewardConfig{
-				blockNum:      0,
+				blockNum:      1,
 				mintingAmount: big.NewInt(0).SetUint64(9600000000000000000),
 				cnRatio:       big.NewInt(0).SetInt64(34),
 				pocRatio:      big.NewInt(0).SetInt64(54),
@@ -274,7 +274,7 @@ func TestRewardConfigCache_get_exist(t *testing.T) {
 				params.DeferredTxFee: false,
 			},
 			result: rewardConfig{
-				blockNum:      604800,
+				blockNum:      604805,
 				mintingAmount: big.NewInt(0).SetUint64(9600000000000000),
 				cnRatio:       big.NewInt(0).SetInt64(40),
 				pocRatio:      big.NewInt(0).SetInt64(25),
@@ -294,7 +294,7 @@ func TestRewardConfigCache_get_exist(t *testing.T) {
 				params.DeferredTxFee: true,
 			},
 			result: rewardConfig{
-				blockNum:      1209600,
+				blockNum:      1210000,
 				mintingAmount: big.NewInt(0).SetUint64(100000000000000000),
 				cnRatio:       big.NewInt(0).SetInt64(34),
 				pocRatio:      big.NewInt(0).SetInt64(33),
@@ -311,13 +311,6 @@ func TestRewardConfigCache_get_exist(t *testing.T) {
 	for i := 0; i < len(testCases); i++ {
 		blockNumber := testCases[i].blockNumber
 		testGovernance.setTestGovernance(testCases[i].config)
-		epoch := testGovernance.Params().Epoch()
-
-		if blockNumber%epoch == 0 {
-			blockNumber -= epoch
-		} else {
-			blockNumber -= (blockNumber % epoch)
-		}
 		rewardConfig, _ := rewardConfigCache.newRewardConfig(blockNumber)
 		rewardConfigCache.add(blockNumber, rewardConfig)
 	}
