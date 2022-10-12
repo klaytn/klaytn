@@ -53,7 +53,7 @@ type ChainDataFetcherConfig struct {
 	KafkaConfig *kafka.KafkaConfig
 }
 
-var DefaultChainDataFetcherConfig = &ChainDataFetcherConfig{
+var Default = &ChainDataFetcherConfig{
 	EnabledChainDataFetcher: false,
 	Mode:                    ModeKAS,
 	NoDefaultStart:          false,
@@ -64,4 +64,8 @@ var DefaultChainDataFetcherConfig = &ChainDataFetcherConfig{
 
 	KasConfig:   kas.DefaultKASConfig,
 	KafkaConfig: kafka.GetDefaultKafkaConfig(),
+}
+
+func DefaultChainDataFetcherConfig() *ChainDataFetcherConfig {
+	return Default
 }

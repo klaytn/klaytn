@@ -48,6 +48,10 @@ var DefaultConfig = SCConfig{
 	MaxPeer:   1, // Only a single main-bridge and sub-bridge pair is allowed.
 }
 
+func DefaultServiceChainConfig() *SCConfig {
+	return &DefaultConfig
+}
+
 func init() {
 	home := os.Getenv("HOME")
 	if home == "" {

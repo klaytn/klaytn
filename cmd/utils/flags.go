@@ -1824,6 +1824,7 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 		cfg.WorkerDisable = true
 	}
 
+	cfg.NoAccountCreation = !ctx.GlobalBool(ServiceChainNewAccountFlag.Name)
 	cfg.NetworkId, cfg.IsPrivate = getNetworkId(ctx)
 
 	if dbtype := database.DBType(ctx.GlobalString(DbTypeFlag.Name)).ToValid(); len(dbtype) != 0 {
@@ -1966,17 +1967,6 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	*/
 	// Set the Tx resending related configuration variables
 	setTxResendConfig(ctx, cfg)
-}
-
-func MakeGenesis(ctx *cli.Context) *blockchain.Genesis {
-	var genesis *blockchain.Genesis
-	switch {
-	case ctx.GlobalBool(CypressFlag.Name):
-		genesis = blockchain.DefaultGenesisBlock()
-	case ctx.GlobalBool(BaobabFlag.Name):
-		genesis = blockchain.DefaultBaobabGenesisBlock()
-	}
-	return genesis
 }
 
 // RegisterCNService adds a CN client to the stack.

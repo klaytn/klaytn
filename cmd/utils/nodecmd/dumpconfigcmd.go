@@ -63,8 +63,11 @@ var tomlSettings = toml.Config{
 }
 
 type klayConfig struct {
-	CN   cn.Config
-	Node node.Config
+	CN               cn.Config
+	Node             node.Config
+	DB               dbsyncer.DBConfig
+	ChainDataFetcher chaindatafetcher.ChainDataFetcherConfig
+	ServiceChain     sc.SCConfig
 }
 
 // GetDumpConfigCommand returns cli.Command `dumpconfig` whose flags are initialized with nodeFlags and rpcFlags.
@@ -108,8 +111,11 @@ func defaultNodeConfig() node.Config {
 func makeConfigNode(ctx *cli.Context) (*node.Node, klayConfig) {
 	// Load defaults.
 	cfg := klayConfig{
-		CN:   *cn.GetDefaultConfig(),
-		Node: defaultNodeConfig(),
+		CN:               *cn.GetDefaultConfig(),
+		Node:             defaultNodeConfig(),
+		DB:               *dbsyncer.DefaultDBConfig(),
+		ChainDataFetcher: *chaindatafetcher.DefaultChainDataFetcherConfig(),
+		ServiceChain:     *sc.DefaultServiceChainConfig(),
 	}
 
 	// Load config file.
@@ -127,15 +133,18 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, klayConfig) {
 	}
 	utils.SetKlayConfig(ctx, stack, &cfg.CN)
 
+	cfg.setDBSyncerConfig(ctx)
+	cfg.setChainDataFetcherConfig(ctx)
+	cfg.setServiceChainConfig(ctx, &cfg)
+
 	// utils.SetShhConfig(ctx, stack, &cfg.Shh)
 	// utils.SetDashboardConfig(ctx, &cfg.Dashboard)
 
 	return stack, cfg
 }
 
-func makeChainDataFetcherConfig(ctx *cli.Context) chaindatafetcher.ChainDataFetcherConfig {
-	cfg := chaindatafetcher.DefaultChainDataFetcherConfig
-
+func (kCfg *klayConfig) setChainDataFetcherConfig(ctx *cli.Context) {
+	cfg := &kCfg.ChainDataFetcher
 	if ctx.GlobalBool(utils.EnableChainDataFetcherFlag.Name) {
 		cfg.EnabledChainDataFetcher = true
 
@@ -158,7 +167,7 @@ func makeChainDataFetcherConfig(ctx *cli.Context) chaindatafetcher.ChainDataFetc
 		mode := ctx.GlobalString(utils.ChainDataFetcherMode.Name)
 		mode = strings.ToLower(mode)
 		switch mode {
-		case "kas":
+		case "kas": // kas option is not used.
 			cfg.Mode = chaindatafetcher.ModeKAS
 			cfg.KasConfig = makeKASConfig(ctx)
 		case "kafka":
@@ -168,10 +177,10 @@ func makeChainDataFetcherConfig(ctx *cli.Context) chaindatafetcher.ChainDataFetc
 			logger.Crit("unsupported chaindatafetcher mode (\"kas\", \"kafka\")", "mode", cfg.Mode)
 		}
 	}
-
-	return *cfg
 }
 
+// NOTE-klaytn
+// This function is deprecated because KASConfig is not used anymore.
 func checkKASDBConfigs(ctx *cli.Context) {
 	if !ctx.GlobalIsSet(utils.ChainDataFetcherKASDBHostFlag.Name) {
 		logger.Crit("DBHost must be set !", "key", utils.ChainDataFetcherKASDBHostFlag.Name)
@@ -187,6 +196,8 @@ func checkKASDBConfigs(ctx *cli.Context) {
 	}
 }
 
+// NOTE-klaytn
+// This function is deprecated because KASConfig is not used anymore.
 func checkKASCacheInvalidationConfigs(ctx *cli.Context) {
 	if !ctx.GlobalIsSet(utils.ChainDataFetcherKASCacheURLFlag.Name) {
 		logger.Crit("The cache invalidation url is not set")
@@ -199,6 +210,8 @@ func checkKASCacheInvalidationConfigs(ctx *cli.Context) {
 	}
 }
 
+// NOTE-klaytn
+// This function is deprecated because KASConfig is not used anymore.
 func makeKASConfig(ctx *cli.Context) *kas.KASConfig {
 	kasConfig := kas.DefaultKASConfig
 
@@ -242,9 +255,8 @@ func makeKafkaConfig(ctx *cli.Context) *kafka.KafkaConfig {
 	return kafkaConfig
 }
 
-func makeDBSyncerConfig(ctx *cli.Context) dbsyncer.DBConfig {
-	cfg := dbsyncer.DefaultDBConfig
-
+func (kCfg *klayConfig) setDBSyncerConfig(ctx *cli.Context) {
+	cfg := &kCfg.DB
 	if ctx.GlobalBool(utils.EnableDBSyncerFlag.Name) {
 		cfg.EnabledDBSyncer = true
 
@@ -310,12 +322,10 @@ func makeDBSyncerConfig(ctx *cli.Context) dbsyncer.DBConfig {
 			cfg.BlockChannelSize = ctx.GlobalInt(utils.BlockSyncChannelSizeFlag.Name)
 		}
 	}
-
-	return *cfg
 }
 
-func makeServiceChainConfig(ctx *cli.Context) (config sc.SCConfig) {
-	cfg := sc.DefaultConfig
+func (kCfg *klayConfig) setServiceChainConfig(ctx *cli.Context, klayCfg *klayConfig) {
+	cfg := &kCfg.ServiceChain
 
 	// bridge service
 	if ctx.GlobalBool(utils.MainBridgeFlag.Name) {
@@ -374,41 +384,9 @@ func makeServiceChainConfig(ctx *cli.Context) (config sc.SCConfig) {
 
 		cfg.KASAnchorRequestTimeout = ctx.GlobalDuration(utils.KASServiceChainAnchorRequestTimeoutFlag.Name)
 	}
-	return cfg
-}
 
-func MakeFullNode(ctx *cli.Context) *node.Node {
-	stack, cfg := makeConfigNode(ctx)
-	scfg := makeServiceChainConfig(ctx)
-	scfg.DataDir = cfg.Node.DataDir
-	scfg.Name = cfg.Node.Name
-
-	if utils.NetworkTypeFlag.Value == SCNNetworkType && scfg.EnabledSubBridge {
-		cfg.CN.NoAccountCreation = !ctx.GlobalBool(utils.ServiceChainNewAccountFlag.Name)
-		if !cfg.CN.NoAccountCreation {
-			logger.Warn("generated accounts can't be synced with the parent chain since account creation is enabled")
-		}
-
-		switch scfg.ServiceChainConsensus {
-		case "istanbul":
-			utils.RegisterCNService(stack, &cfg.CN)
-		case "clique":
-			logger.Crit("using clique consensus type is not allowed anymore!")
-		default:
-			logger.Crit("unknown consensus type for the service chain", "consensus", scfg.ServiceChainConsensus)
-		}
-	} else {
-		utils.RegisterCNService(stack, &cfg.CN)
-	}
-	utils.RegisterService(stack, &scfg)
-
-	dbfg := makeDBSyncerConfig(ctx)
-	utils.RegisterDBSyncerService(stack, &dbfg)
-
-	chaindataFetcherConfig := makeChainDataFetcherConfig(ctx)
-	utils.RegisterChainDataFetcherService(stack, &chaindataFetcherConfig)
-
-	return stack
+	cfg.DataDir = klayCfg.Node.DataDir
+	cfg.Name = klayCfg.Node.Name
 }
 
 func dumpConfig(ctx *cli.Context) error {

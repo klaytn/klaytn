@@ -51,7 +51,7 @@ type DBConfig struct {
 	MaxBlockDiff uint64 `toml:",omitempty"`
 }
 
-var DefaultDBConfig = &DBConfig{
+var DefaultConfig = &DBConfig{
 	EnabledDBSyncer: false,
 	EnabledLogMode:  false,
 
@@ -71,4 +71,8 @@ var DefaultDBConfig = &DBConfig{
 	EventMode: HEAD_MODE,
 
 	MaxBlockDiff: 0,
+}
+
+func DefaultDBConfig() *DBConfig {
+	return DefaultConfig
 }

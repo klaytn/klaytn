@@ -55,6 +55,30 @@ func RunKlaytnNode(ctx *cli.Context) error {
 	return nil
 }
 
+func MakeFullNode(ctx *cli.Context) *node.Node {
+	stack, cfg := makeConfigNode(ctx)
+
+	if utils.NetworkTypeFlag.Value == SCNNetworkType && cfg.ServiceChain.EnabledSubBridge {
+		if !cfg.CN.NoAccountCreation {
+			logger.Warn("generated accounts can't be synced with the parent chain since account creation is enabled")
+		}
+		switch cfg.ServiceChain.ServiceChainConsensus {
+		case "istanbul":
+			utils.RegisterCNService(stack, &cfg.CN)
+		case "clique":
+			logger.Crit("using clique consensus type is not allowed anymore!")
+		default:
+			logger.Crit("unknown consensus type for the service chain", "consensus", cfg.ServiceChain.ServiceChainConsensus)
+		}
+	} else {
+		utils.RegisterCNService(stack, &cfg.CN)
+	}
+	utils.RegisterService(stack, &cfg.ServiceChain)
+	utils.RegisterDBSyncerService(stack, &cfg.DB)
+	utils.RegisterChainDataFetcherService(stack, &cfg.ChainDataFetcher)
+	return stack
+}
+
 // startNode boots up the system node and all registered protocols, after which
 // it unlocks any requested accounts, and starts the RPC/IPC interfaces and the
 // miner.
@@ -208,9 +232,11 @@ func FlagsFromYaml(ctx *cli.Context) error {
 }
 
 func BeforeRunNode(ctx *cli.Context) error {
-	if err := FlagsFromYaml(ctx); err != nil {
-		return err
-	}
+	// TODO-klaytn - yaml bug: doesn't affact global flag whther the flag is set or not
+	// You can enable this code after the bug fix
+	// if err := FlagsFromYaml(ctx); err != nil {
+	// 	return err
+	// }
 	if err := CheckCommands(ctx); err != nil {
 		return err
 	}
