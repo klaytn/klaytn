@@ -388,4 +388,10 @@ var (
 		Usage: "magmaCompatible blockNumber",
 		Value: 0,
 	}
+
+	koreCompatibleBlockNumberFlag = cli.Int64Flag{
+		Name:  "kore-compatible-blocknumber",
+		Usage: "koreCompatible blockNumber",
+		Value: 0,
+	}
 )
