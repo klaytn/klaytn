@@ -8,6 +8,7 @@ require (
 	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf
 	github.com/aristanetworks/goarista v0.0.0-20191001182449-186a6201b8ef
 	github.com/aws/aws-sdk-go v1.34.0
+	github.com/bt51/ntpclient v0.0.0-20140310165113-3045f71e2530 // indirect
 	github.com/cespare/cp v1.0.0
 	github.com/clevergo/websocket v1.0.0
 	github.com/davecgh/go-spew v1.1.1
