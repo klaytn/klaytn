@@ -8,6 +8,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/log"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGovParamSet_ParseValue(t *testing.T) {
@@ -290,4 +291,102 @@ func TestGovParamSet_GetMap(t *testing.T) {
 	pim, err := NewGovParamSetIntMap(im)
 	assert.Nil(t, err)
 	assert.Equal(t, p.items, pim.items)
+}
+
+func TestGovParamSet_ChainConfig(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlError)
+	testcases := []struct {
+		pset     map[int]interface{}
+		expected *ChainConfig
+	}{
+		// partial chainConfig
+		{
+			pset: map[int]interface{}{
+				UnitPrice:               25e9,
+				Epoch:                   30,
+				GoverningNode:           common.HexToAddress("0x0000000000000000000000000000000000000400"),
+				MintingAmount:           new(big.Int).SetUint64(9.6e18),
+				Ratio:                   "34/54/12",
+				UseGiniCoeff:            true,
+				ProposerRefreshInterval: 3600,
+				LowerBoundBaseFee:       10000,
+			},
+			expected: &ChainConfig{
+				UnitPrice: 25e9,
+				Istanbul: &IstanbulConfig{
+					Epoch: 30,
+				},
+				Governance: &GovernanceConfig{
+					GoverningNode: common.HexToAddress("0x0000000000000000000000000000000000000400"),
+					Reward: &RewardConfig{
+						MintingAmount:          new(big.Int).SetUint64(9.6e18),
+						Ratio:                  "34/54/12",
+						UseGiniCoeff:           true,
+						ProposerUpdateInterval: 3600,
+					},
+					KIP71: &KIP71Config{
+						LowerBoundBaseFee: 10000,
+					},
+				},
+			},
+		},
+		// complete chainConfig
+		{
+			pset: map[int]interface{}{
+				UnitPrice:                 25e9,
+				Epoch:                     30,
+				Policy:                    1,
+				CommitteeSize:             27,
+				GoverningNode:             common.HexToAddress("0x0000000000000000000000000000000000000400"),
+				GovernanceMode:            "single",
+				MintingAmount:             new(big.Int).SetUint64(9.6e18),
+				Ratio:                     "34/54/12",
+				UseGiniCoeff:              true,
+				DeferredTxFee:             true,
+				StakeUpdateInterval:       86400,
+				ProposerRefreshInterval:   3600,
+				MinimumStake:              big.NewInt(5e6),
+				LowerBoundBaseFee:         25000000000,
+				UpperBoundBaseFee:         750000000000,
+				GasTarget:                 30000000,
+				MaxBlockGasUsedForBaseFee: 60000000,
+				BaseFeeDenominator:        20,
+			},
+			expected: &ChainConfig{
+				UnitPrice: 25e9,
+				Istanbul: &IstanbulConfig{
+					Epoch:          30,
+					ProposerPolicy: 1,
+					SubGroupSize:   27,
+				},
+				Governance: &GovernanceConfig{
+					GoverningNode:  common.HexToAddress("0x0000000000000000000000000000000000000400"),
+					GovernanceMode: "single",
+					Reward: &RewardConfig{
+						MintingAmount:          new(big.Int).SetUint64(9.6e18),
+						Ratio:                  "34/54/12",
+						UseGiniCoeff:           true,
+						DeferredTxFee:          true,
+						StakingUpdateInterval:  86400,
+						ProposerUpdateInterval: 3600,
+						MinimumStake:           big.NewInt(5e6),
+					},
+					KIP71: &KIP71Config{
+						LowerBoundBaseFee:         25000000000,
+						UpperBoundBaseFee:         750000000000,
+						GasTarget:                 30000000,
+						MaxBlockGasUsedForBaseFee: 60000000,
+						BaseFeeDenominator:        20,
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testcases {
+		pset, err := NewGovParamSetIntMap(tc.pset)
+		require.Nil(t, err)
+		config := pset.ToChainConfig()
+		assert.Equal(t, tc.expected, config)
+	}
 }
