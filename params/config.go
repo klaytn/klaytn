@@ -45,6 +45,7 @@ var (
 		LondonCompatibleBlock:    big.NewInt(86816005),
 		EthTxTypeCompatibleBlock: big.NewInt(86816005),
 		MagmaCompatibleBlock:     big.NewInt(99841497),
+		KoreCompatibleBlock:      big.NewInt(0xffffffff),
 		DeriveShaImpl:            2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x52d41ca72af615a1ac3301b0a93efa222ecc7541"),
@@ -74,6 +75,7 @@ var (
 		LondonCompatibleBlock:    big.NewInt(80295291),
 		EthTxTypeCompatibleBlock: big.NewInt(86513895),
 		MagmaCompatibleBlock:     big.NewInt(98347376),
+		KoreCompatibleBlock:      big.NewInt(0xffffffff),
 		DeriveShaImpl:            2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x99fb17d324fa0e07f23b49d09028ac0919414db6"),
@@ -172,6 +174,7 @@ type ChainConfig struct {
 	LondonCompatibleBlock    *big.Int `json:"londonCompatibleBlock,omitempty"`    // LondonCompatibleBlock switch block (nil = no fork, 0 = already on london)
 	EthTxTypeCompatibleBlock *big.Int `json:"ethTxTypeCompatibleBlock,omitempty"` // EthTxTypeCompatibleBlock switch block (nil = no fork, 0 = already on ethTxType)
 	MagmaCompatibleBlock     *big.Int `json:"magmaCompatibleBlock,omitempty"`     // MagmaCompatible switch block (nil = no fork, 0 already on Magma)
+	KoreCompatibleBlock      *big.Int `json:"koreCompatibleBlock,omitempty"`      // KoreCompatible switch block (nil = no fork, 0 already on Kore)
 
 	// Various consensus engines
 	Gxhash   *GxhashConfig   `json:"gxhash,omitempty"` // (deprecated) not supported engine
@@ -313,6 +316,11 @@ func (c *ChainConfig) IsMagmaForkEnabled(num *big.Int) bool {
 	return isForked(c.MagmaCompatibleBlock, num)
 }
 
+// IsKoreForkedEnabled returns whether num is either equal to the kore block or greater.
+func (c *ChainConfig) IsKoreForkEnabled(num *big.Int) bool {
+	return isForked(c.KoreCompatibleBlock, num)
+}
+
 // CheckCompatible checks whether scheduled fork transitions have been imported
 // with a mismatching chain configuration.
 func (c *ChainConfig) CheckCompatible(newcfg *ChainConfig, height uint64) *ConfigCompatError {
@@ -345,6 +353,7 @@ func (c *ChainConfig) CheckConfigForkOrder() error {
 		{name: "londonBlock", block: c.LondonCompatibleBlock},
 		{name: "ethTxTypeBlock", block: c.EthTxTypeCompatibleBlock},
 		{name: "magmaBlock", block: c.MagmaCompatibleBlock},
+		{name: "koreBlock", block: c.KoreCompatibleBlock},
 	} {
 		if lastFork.name != "" {
 			// Next one must be higher number
@@ -379,6 +388,9 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *Confi
 	}
 	if isForkIncompatible(c.MagmaCompatibleBlock, newcfg.MagmaCompatibleBlock, head) {
 		return newCompatError("Magma Block", c.MagmaCompatibleBlock, newcfg.MagmaCompatibleBlock)
+	}
+	if isForkIncompatible(c.KoreCompatibleBlock, newcfg.KoreCompatibleBlock, head) {
+		return newCompatError("Kore Block", c.KoreCompatibleBlock, newcfg.KoreCompatibleBlock)
 	}
 	return nil
 }
