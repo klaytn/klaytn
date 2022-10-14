@@ -32,6 +32,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/accounts/keystore"
 	"github.com/klaytn/klaytn/blockchain"
 	istcommon "github.com/klaytn/klaytn/cmd/homi/common"
@@ -93,6 +94,8 @@ Args :
 		unitPriceFlag,
 		deriveShaImplFlag,
 		fundingAddrFlag,
+		patchAddressBookFlag,
+		patchAddressBookAddrFlag,
 		outputPathFlag,
 		dockerImageIdFlag,
 		fasthttpFlag,
@@ -127,6 +130,7 @@ Args :
 		londonCompatibleBlockNumberFlag,
 		ethTxTypeCompatibleBlockNumberFlag,
 		magmaCompatibleBlockNumberFlag,
+		koreCompatibleBlockNumberFlag,
 	},
 	ArgsUsage: "type",
 }
@@ -299,9 +303,34 @@ func genValidatorKeystore(privKeys []*ecdsa.PrivateKey) {
 
 	for i, pk := range privKeys {
 		pwdStr := RandStringRunes(params.PasswordLength)
-		ks.ImportECDSA(pk, pwdStr)
+		account, _ := ks.ImportECDSA(pk, pwdStr)
+		genRewardKeystore(account, i)
 		WriteFile([]byte(pwdStr), DirKeys, "passwd"+strconv.Itoa(i+1))
 	}
+}
+
+func genRewardKeystore(account accounts.Account, i int) {
+	file, err := os.Open(account.URL.Path)
+	if err != nil {
+		log.Fatalf("Failed to open file: %s", err)
+	}
+	defer file.Close()
+
+	data, err := ioutil.ReadAll(file)
+	if err != nil {
+		log.Fatalf("Failed to read file: %s", err)
+	}
+
+	v := make(map[string]interface{})
+	if err := json.Unmarshal(data, &v); err != nil {
+		log.Fatalf("Failed to unmarshal keystore file: %s", err)
+	}
+
+	WriteFile([]byte(v["address"].(string)), DirKeys, "reward"+strconv.Itoa(i+1))
+	WriteFile(data, DirKeys, "keystore"+strconv.Itoa(i+1))
+
+	// Remove UTC-XXX file created by keystore package
+	os.Remove(account.URL.Path)
 }
 
 func genCypressCommonGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
@@ -451,6 +480,44 @@ func genBaobabTestGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Gen
 	return testGenesis
 }
 
+func allocGenesisFund(ctx *cli.Context, genesisJson *blockchain.Genesis) {
+	fundingAddr := ctx.String(fundingAddrFlag.Name)
+	if len(fundingAddr) == 0 {
+		return
+	}
+
+	if !common.IsHexAddress(fundingAddr) {
+		log.Fatalf("'%s' is not a valid hex address", fundingAddr)
+	}
+	addr := common.HexToAddress(fundingAddr)
+	balance := new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil)
+	genesisJson.Alloc[addr] = blockchain.GenesisAccount{Balance: balance}
+}
+
+func patchGenesisAddressBook(ctx *cli.Context, genesisJson *blockchain.Genesis, nodeAddrs []common.Address) {
+	if patchAddressBook := ctx.Bool(patchAddressBookFlag.Name); !patchAddressBook {
+		return
+	}
+
+	var targetAddr common.Address
+
+	patchAddressBookAddr := ctx.String(patchAddressBookAddrFlag.Name)
+	if len(patchAddressBookAddr) == 0 {
+		if len(nodeAddrs) == 0 {
+			log.Fatalf("Need at least one consensus node (--cn-num 1) to patch AddressBook with the first CN")
+		}
+		targetAddr = nodeAddrs[0]
+	} else {
+		if !common.IsHexAddress(patchAddressBookAddr) {
+			log.Fatalf("'%s' is not a valid hex address", patchAddressBookAddr)
+		}
+		targetAddr = common.HexToAddress(patchAddressBookAddr)
+	}
+
+	allocationFunction := genesis.PatchAddressBook(targetAddr)
+	allocationFunction(genesisJson)
+}
+
 func RandStringRunes(n int) string {
 	letterRunes := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789~!@#$%^&*()_+{}|[]")
 
@@ -524,10 +591,14 @@ func gen(ctx *cli.Context) error {
 		genesisJson = genIstanbulGenesis(ctx, validatorNodeAddrs, testAddrs, chainid)
 	}
 
+	allocGenesisFund(ctx, genesisJson)
+	patchGenesisAddressBook(ctx, genesisJson, validatorNodeAddrs)
+
 	genesisJson.Config.IstanbulCompatibleBlock = big.NewInt(ctx.Int64(istanbulCompatibleBlockNumberFlag.Name))
 	genesisJson.Config.LondonCompatibleBlock = big.NewInt(ctx.Int64(londonCompatibleBlockNumberFlag.Name))
 	genesisJson.Config.EthTxTypeCompatibleBlock = big.NewInt(ctx.Int64(ethTxTypeCompatibleBlockNumberFlag.Name))
 	genesisJson.Config.MagmaCompatibleBlock = big.NewInt(ctx.Int64(magmaCompatibleBlockNumberFlag.Name))
+	genesisJson.Config.KoreCompatibleBlock = big.NewInt(ctx.Int64(koreCompatibleBlockNumberFlag.Name))
 
 	genesisJsonBytes, _ = json.MarshalIndent(genesisJson, "", "    ")
 	genValidatorKeystore(privKeys)

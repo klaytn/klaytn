@@ -25,6 +25,7 @@ genesis package provides utility functions to generate new genesis file to init 
 Source Files
 
 Each file contains following contents
+ - bins.go    : Stores contract binaries actually used in genesis of named networks
  - genesis.go : Provides functions to make a new genesis object
  - options.go : Provides utility functions to generate each part in a genesis file such as a list of validators
 */

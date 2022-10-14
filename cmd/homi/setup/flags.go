@@ -23,7 +23,6 @@ import (
 )
 
 var (
-	fundingAddr   string
 	dockerImageId string
 	outputPath    string
 )
@@ -144,10 +143,20 @@ var (
 	}
 
 	fundingAddrFlag = cli.StringFlag{
-		Name:        "fundingAddr",
-		Value:       "75a59b94889a05c03c66c3c84e9d2f8308ca4abd",
-		Usage:       "Give initial fund to the given addr",
-		Destination: &fundingAddr,
+		Name:  "funding-addr",
+		Value: "",
+		Usage: "Give initial fund to the given addr",
+	}
+
+	patchAddressBookFlag = cli.BoolFlag{
+		Name:  "patch-address-book",
+		Usage: "Patch genesis AddressBook's constructContract function",
+	}
+
+	patchAddressBookAddrFlag = cli.StringFlag{
+		Name:  "patch-address-book-addr",
+		Usage: "The address to inject in AddressBook's constructContract function [default: first CN's address]",
+		Value: "",
 	}
 
 	dockerImageIdFlag = cli.StringFlag{
@@ -377,6 +386,12 @@ var (
 	magmaCompatibleBlockNumberFlag = cli.Int64Flag{
 		Name:  "magma-compatible-blocknumber",
 		Usage: "magmaCompatible blockNumber",
+		Value: 0,
+	}
+
+	koreCompatibleBlockNumberFlag = cli.Int64Flag{
+		Name:  "kore-compatible-blocknumber",
+		Usage: "koreCompatible blockNumber",
 		Value: 0,
 	}
 )
