@@ -23,6 +23,7 @@ package nodecmd
 import (
 	"encoding/json"
 	"errors"
+	"math/big"
 	"os"
 	"strings"
 
@@ -159,7 +160,7 @@ func initGenesis(ctx *cli.Context) error {
 		chainDB := stack.OpenDatabase(dbc)
 
 		// Initialize DeriveSha implementation
-		blockchain.InitDeriveSha(genesis.Config.DeriveShaImpl)
+		blockchain.InitDeriveShaWithBlockNum(genesis.Config.DeriveShaImpl, big.NewInt(0))
 
 		_, hash, err := blockchain.SetupGenesisBlock(chainDB, genesis, params.UnusedNetworkId, false, overwriteGenesis)
 		if err != nil {

@@ -19,6 +19,7 @@ package blockchain
 import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/storage/statedb"
+	"math/big"
 )
 
 func InitDeriveSha(deriveShaImpl int) {
@@ -35,5 +36,22 @@ func InitDeriveSha(deriveShaImpl int) {
 	default:
 		logger.Error("Undefined deriveShaImpl!! use DeriveShaOrig!")
 		types.InitDeriveSha(statedb.DeriveShaOrig{})
+	}
+}
+
+func InitDeriveShaWithBlockNum(deriveShaImpl int, blockNumber *big.Int) {
+	switch deriveShaImpl {
+	case types.ImplDeriveShaOriginal:
+		logger.Info("Using DeriveShaOrig!")
+		types.InitDeriveShaWithBlockNum(statedb.DeriveShaOrig{}, blockNumber)
+	case types.ImplDeriveShaSimple:
+		logger.Info("Using DeriveShaSimple!")
+		types.InitDeriveShaWithBlockNum(types.DeriveShaSimple{}, blockNumber)
+	case types.ImplDeriveShaConcat:
+		logger.Info("Using DeriveShaConcat!")
+		types.InitDeriveShaWithBlockNum(types.DeriveShaConcat{}, blockNumber)
+	default:
+		logger.Error("Undefined deriveShaImpl!! use DeriveShaOrig!")
+		types.InitDeriveShaWithBlockNum(statedb.DeriveShaOrig{}, blockNumber)
 	}
 }

@@ -240,7 +240,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 	state.EnabledExpensive = db.GetDBConfig().EnableDBPerfMetrics
 
 	// Initialize DeriveSha implementation
-	InitDeriveSha(chainConfig.DeriveShaImpl)
+	InitDeriveShaWithBlockNum(chainConfig.DeriveShaImpl, big.NewInt(0))
 
 	futureBlocks, _ := lru.New(maxFutureBlocks)
 
