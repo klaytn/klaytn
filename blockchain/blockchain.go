@@ -239,9 +239,6 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 
 	state.EnabledExpensive = db.GetDBConfig().EnableDBPerfMetrics
 
-	// Initialize DeriveSha implementation
-	InitDeriveShaWithBlockNum(chainConfig.DeriveShaImpl, big.NewInt(0))
-
 	futureBlocks, _ := lru.New(maxFutureBlocks)
 
 	bc := &BlockChain{
@@ -265,6 +262,9 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 	if err := fork.SetHardForkBlockNumberConfig(bc.chainConfig); err != nil {
 		return nil, err
 	}
+
+	// Initialize DeriveSha implementation
+	InitDeriveShaWithBlockNum(chainConfig.DeriveShaImpl, big.NewInt(0))
 
 	bc.validator = NewBlockValidator(chainConfig, bc, engine)
 	bc.prefetcher = newStatePrefetcher(chainConfig, bc, engine)

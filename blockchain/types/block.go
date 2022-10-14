@@ -220,6 +220,28 @@ func NewBlock(header *Header, txs []*Transaction, receipts []*Receipt) *Block {
 	return b
 }
 
+func NewTestBlock(header *Header, txs []*Transaction, receipts []*Receipt) *Block {
+	b := &Block{header: CopyHeader(header), td: new(big.Int)}
+
+	// TODO: panic if len(txs) != len(receipts)
+	if len(txs) == 0 {
+		b.header.TxHash = EmptyRootHash
+	} else {
+		b.header.TxHash = DeriveSha(Transactions(txs))
+		b.transactions = make(Transactions, len(txs))
+		copy(b.transactions, txs)
+	}
+
+	if len(receipts) == 0 {
+		b.header.ReceiptHash = EmptyRootHash
+	} else {
+		b.header.ReceiptHash = DeriveSha(Receipts(receipts))
+		b.header.Bloom = CreateBloom(receipts)
+	}
+
+	return b
+}
+
 // NewBlockWithHeader creates a block with the given header data. The
 // header data is copied, changes to header and to the field values
 // will not affect the block.
