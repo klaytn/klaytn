@@ -21,10 +21,11 @@
 package types
 
 import (
+	"math/big"
+
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto/sha3"
 	"github.com/klaytn/klaytn/fork"
-	"math/big"
 )
 
 type DerivableList interface {

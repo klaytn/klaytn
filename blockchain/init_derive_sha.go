@@ -17,9 +17,10 @@
 package blockchain
 
 import (
+	"math/big"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/storage/statedb"
-	"math/big"
 )
 
 func InitDeriveSha(deriveShaImpl int) {
