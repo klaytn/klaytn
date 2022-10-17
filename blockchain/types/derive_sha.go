@@ -56,13 +56,6 @@ func DeriveSha(list DerivableList) common.Hash {
 	return deriveShaObj.DeriveSha(list)
 }
 
-func InitDeriveShaWithBlockNum(i IDeriveSha, blockNumber *big.Int) {
-	deriveShaObj = i
-
-	// reset EmptyRootHash.
-	EmptyRootHash = DeriveShaWithBlockNum(Transactions{}, blockNumber)
-}
-
 func DeriveShaWithBlockNum(list DerivableList, blockNumber *big.Int) common.Hash {
 	if fork.Rules(blockNumber).IsKore {
 		deriveShaObj = DeriveShaSimple{}
