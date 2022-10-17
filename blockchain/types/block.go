@@ -220,6 +220,9 @@ func NewBlock(header *Header, txs []*Transaction, receipts []*Receipt) *Block {
 	return b
 }
 
+// NewTestBlock creates a new block, same as NewBlock.
+// Since new DeriveSha function is defined, existing test functions also need new block generating function.
+// Created so that it can run tests without chainconfig.
 func NewTestBlock(header *Header, txs []*Transaction, receipts []*Receipt) *Block {
 	b := &Block{header: CopyHeader(header), td: new(big.Int)}
 

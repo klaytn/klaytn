@@ -56,6 +56,7 @@ func DeriveSha(list DerivableList) common.Hash {
 	return deriveShaObj.DeriveSha(list)
 }
 
+// DeriveShaWithBlockNum function will be used instead of DeriveSha after Kore hf.
 func DeriveShaWithBlockNum(list DerivableList, blockNumber *big.Int) common.Hash {
 	if fork.Rules(blockNumber).IsKore {
 		deriveShaObj = DeriveShaSimple{}
