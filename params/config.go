@@ -176,7 +176,7 @@ type ChainConfig struct {
 	LondonCompatibleBlock    *big.Int `json:"londonCompatibleBlock,omitempty"`    // LondonCompatibleBlock switch block (nil = no fork, 0 = already on london)
 	EthTxTypeCompatibleBlock *big.Int `json:"ethTxTypeCompatibleBlock,omitempty"` // EthTxTypeCompatibleBlock switch block (nil = no fork, 0 = already on ethTxType)
 	MagmaCompatibleBlock     *big.Int `json:"magmaCompatibleBlock,omitempty"`     // MagmaCompatible switch block (nil = no fork, 0 already on Magma)
-	KoreCompatibleBlock      *big.Int `json:"koreCompatibleBlock,omitempty"`
+	KoreCompatibleBlock      *big.Int `json:"koreCompatibleBlock,omitempty"`      // KoreCompatible switch block (nil = no fork, 0 already on Kore)
 
 	// Various consensus engines
 	Gxhash   *GxhashConfig   `json:"gxhash,omitempty"` // (deprecated) not supported engine
@@ -319,7 +319,7 @@ func (c *ChainConfig) IsMagmaForkEnabled(num *big.Int) bool {
 	return isForked(c.MagmaCompatibleBlock, num)
 }
 
-// IsKoreForkedEnabled returns whether num is either equal to the magma block or greater.
+// IsKoreForkedEnabled returns whether num is either equal to the kore block or greater.
 func (c *ChainConfig) IsKoreForkEnabled(num *big.Int) bool {
 	return isForked(c.KoreCompatibleBlock, num)
 }
