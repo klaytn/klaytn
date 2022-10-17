@@ -369,7 +369,7 @@ func (g *Genesis) MustCommit(db database.DBManager) *types.Block {
 	if config == nil {
 		config = params.AllGxhashProtocolChanges
 	}
-	InitDeriveShaWithBlockNum(config.DeriveShaImpl, big.NewInt(0))
+	InitDeriveSha(config.DeriveShaImpl)
 
 	block, err := g.Commit(common.Hash{}, db)
 	if err != nil {

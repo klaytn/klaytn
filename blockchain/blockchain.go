@@ -264,7 +264,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 	}
 
 	// Initialize DeriveSha implementation
-	InitDeriveShaWithBlockNum(chainConfig.DeriveShaImpl, big.NewInt(0))
+	InitDeriveSha(chainConfig.DeriveShaImpl)
 
 	bc.validator = NewBlockValidator(chainConfig, bc, engine)
 	bc.prefetcher = newStatePrefetcher(chainConfig, bc, engine)
