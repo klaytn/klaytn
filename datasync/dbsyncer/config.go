@@ -51,28 +51,26 @@ type DBConfig struct {
 	MaxBlockDiff uint64 `toml:",omitempty"`
 }
 
-var DefaultConfig = &DBConfig{
-	EnabledDBSyncer: false,
-	EnabledLogMode:  false,
-
-	DBPort: "3306",
-
-	MaxIdleConns:     50,
-	MaxOpenConns:     30,
-	ConnMaxLifetime:  1 * time.Hour,
-	BlockChannelSize: 5,
-
-	GenQueryThread: 100,
-	InsertThread:   30,
-
-	BulkInsertSize: 200,
-
-	Mode:      "multi",
-	EventMode: HEAD_MODE,
-
-	MaxBlockDiff: 0,
-}
-
 func DefaultDBConfig() *DBConfig {
-	return DefaultConfig
+	return &DBConfig{
+		EnabledDBSyncer: false,
+		EnabledLogMode:  false,
+
+		DBPort: "3306",
+
+		MaxIdleConns:     50,
+		MaxOpenConns:     30,
+		ConnMaxLifetime:  1 * time.Hour,
+		BlockChannelSize: 5,
+
+		GenQueryThread: 100,
+		InsertThread:   30,
+
+		BulkInsertSize: 200,
+
+		Mode:      "multi",
+		EventMode: HEAD_MODE,
+
+		MaxBlockDiff: 0,
+	}
 }
