@@ -22,25 +22,45 @@ package nodecmd
 
 import (
 	"bufio"
+	"crypto/ecdsa"
 	"errors"
 	"fmt"
 	"io"
+	"math/big"
 	"os"
 	"reflect"
+	"strconv"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/Shopify/sarama"
+	"github.com/klaytn/klaytn/accounts"
+	"github.com/klaytn/klaytn/accounts/keystore"
+	"github.com/klaytn/klaytn/api/debug"
+	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/cmd/utils"
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/fdlimit"
+	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/datasync/chaindatafetcher"
 	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kafka"
 	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kas"
 	"github.com/klaytn/klaytn/datasync/dbsyncer"
+	"github.com/klaytn/klaytn/datasync/downloader"
 	"github.com/klaytn/klaytn/log"
+	"github.com/klaytn/klaytn/networks/p2p"
+	"github.com/klaytn/klaytn/networks/p2p/discover"
+	"github.com/klaytn/klaytn/networks/p2p/nat"
+	"github.com/klaytn/klaytn/networks/p2p/netutil"
+	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/node/cn"
+	"github.com/klaytn/klaytn/node/cn/filters"
 	"github.com/klaytn/klaytn/node/sc"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/storage/database"
+	"github.com/klaytn/klaytn/storage/statedb"
 	"github.com/naoina/toml"
 	"gopkg.in/urfave/cli.v1"
 )
@@ -126,21 +146,686 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, klayConfig) {
 	}
 
 	// Apply flags.
-	utils.SetNodeConfig(ctx, &cfg.Node)
+	cfg.SetNodeConfig(ctx)
 	stack, err := node.New(&cfg.Node)
 	if err != nil {
 		log.Fatalf("Failed to create the protocol stack: %v", err)
 	}
-	utils.SetKlayConfig(ctx, stack, &cfg.CN)
+	cfg.SetKlayConfig(ctx, stack)
 
 	cfg.setDBSyncerConfig(ctx)
 	cfg.setChainDataFetcherConfig(ctx)
-	cfg.setServiceChainConfig(ctx, &cfg)
+	cfg.setServiceChainConfig(ctx)
 
 	// utils.SetShhConfig(ctx, stack, &cfg.Shh)
 	// utils.SetDashboardConfig(ctx, &cfg.Dashboard)
 
 	return stack, cfg
+}
+
+func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
+	setNodeKey(ctx, cfg)
+	setNAT(ctx, cfg)
+	setListenAddress(ctx, cfg)
+
+	var nodeType string
+	if ctx.GlobalIsSet(utils.NodeTypeFlag.Name) {
+		nodeType = ctx.GlobalString(utils.NodeTypeFlag.Name)
+	} else {
+		nodeType = utils.NodeTypeFlag.Value
+	}
+
+	cfg.ConnectionType = convertNodeType(nodeType)
+	if cfg.ConnectionType == common.UNKNOWNNODE {
+		logger.Crit("Unknown node type", "nodetype", nodeType)
+	}
+	logger.Info("Setting connection type", "nodetype", nodeType, "conntype", cfg.ConnectionType)
+
+	// set bootnodes via this function by check specified parameters
+	setBootstrapNodes(ctx, cfg)
+
+	if ctx.GlobalIsSet(utils.MaxConnectionsFlag.Name) {
+		cfg.MaxPhysicalConnections = ctx.GlobalInt(utils.MaxConnectionsFlag.Name)
+	}
+	logger.Info("Setting MaxPhysicalConnections", "MaxPhysicalConnections", cfg.MaxPhysicalConnections)
+
+	if ctx.GlobalIsSet(utils.MaxPendingPeersFlag.Name) {
+		cfg.MaxPendingPeers = ctx.GlobalInt(utils.MaxPendingPeersFlag.Name)
+	}
+
+	cfg.NoDiscovery = ctx.GlobalIsSet(utils.NoDiscoverFlag.Name)
+
+	cfg.RWTimerConfig = p2p.RWTimerConfig{}
+	cfg.RWTimerConfig.Interval = ctx.GlobalUint64(utils.RWTimerIntervalFlag.Name)
+	cfg.RWTimerConfig.WaitTime = ctx.GlobalDuration(utils.RWTimerWaitTimeFlag.Name)
+
+	if netrestrict := ctx.GlobalString(utils.NetrestrictFlag.Name); netrestrict != "" {
+		list, err := netutil.ParseNetlist(netrestrict)
+		if err != nil {
+			log.Fatalf("Option %q: %v", utils.NetrestrictFlag.Name, err)
+		}
+		cfg.NetRestrict = list
+	}
+
+	common.MaxRequestContentLength = ctx.GlobalInt(utils.MaxRequestContentLengthFlag.Name)
+
+	cfg.NetworkID, _ = getNetworkId(ctx)
+}
+
+// setNodeKey creates a node key from set command line flags, either loading it
+// from a file or as a specified hex value. If neither flags were provided, this
+// method returns nil and an emphemeral key is to be generated.
+func setNodeKey(ctx *cli.Context, cfg *p2p.Config) {
+	var (
+		hex  = ctx.GlobalString(utils.NodeKeyHexFlag.Name)
+		file = ctx.GlobalString(utils.NodeKeyFileFlag.Name)
+		key  *ecdsa.PrivateKey
+		err  error
+	)
+	switch {
+	case file != "" && hex != "":
+		log.Fatalf("Options %q and %q are mutually exclusive", utils.NodeKeyFileFlag.Name, utils.NodeKeyHexFlag.Name)
+	case file != "":
+		if key, err = crypto.LoadECDSA(file); err != nil {
+			log.Fatalf("Option %q: %v", utils.NodeKeyFileFlag.Name, err)
+		}
+		cfg.PrivateKey = key
+	case hex != "":
+		if key, err = crypto.HexToECDSA(hex); err != nil {
+			log.Fatalf("Option %q: %v", utils.NodeKeyHexFlag.Name, err)
+		}
+		cfg.PrivateKey = key
+	}
+}
+
+// setNAT creates a port mapper from command line flags.
+func setNAT(ctx *cli.Context, cfg *p2p.Config) {
+	if ctx.GlobalIsSet(utils.NATFlag.Name) {
+		natif, err := nat.Parse(ctx.GlobalString(utils.NATFlag.Name))
+		if err != nil {
+			log.Fatalf("Option %s: %v", utils.NATFlag.Name, err)
+		}
+		cfg.NAT = natif
+	}
+}
+
+// setListenAddress creates a TCP listening address string from set command
+// line flags.
+func setListenAddress(ctx *cli.Context, cfg *p2p.Config) {
+	if ctx.GlobalIsSet(utils.ListenPortFlag.Name) {
+		cfg.ListenAddr = fmt.Sprintf(":%d", ctx.GlobalInt(utils.ListenPortFlag.Name))
+	}
+
+	if ctx.GlobalBool(utils.MultiChannelUseFlag.Name) {
+		cfg.EnableMultiChannelServer = true
+		SubListenAddr := fmt.Sprintf(":%d", ctx.GlobalInt(utils.SubListenPortFlag.Name))
+		cfg.SubListenAddr = []string{SubListenAddr}
+	}
+}
+
+func convertNodeType(nodetype string) common.ConnType {
+	switch strings.ToLower(nodetype) {
+	case "cn", "scn":
+		return common.CONSENSUSNODE
+	case "pn", "spn":
+		return common.PROXYNODE
+	case "en", "sen":
+		return common.ENDPOINTNODE
+	default:
+		return common.UNKNOWNNODE
+	}
+}
+
+// setBootstrapNodes creates a list of bootstrap nodes from the command line
+// flags, reverting to pre-configured ones if none have been specified.
+func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
+	var urls []string
+	switch {
+	case ctx.GlobalIsSet(utils.BootnodesFlag.Name):
+		logger.Info("Customized bootnodes are set")
+		urls = strings.Split(ctx.GlobalString(utils.BootnodesFlag.Name), ",")
+	case ctx.GlobalIsSet(utils.CypressFlag.Name):
+		logger.Info("Cypress bootnodes are set")
+		urls = params.MainnetBootnodes[cfg.ConnectionType].Addrs
+	case ctx.GlobalIsSet(utils.BaobabFlag.Name):
+		logger.Info("Baobab bootnodes are set")
+		// set pre-configured bootnodes when 'baobab' option was enabled
+		urls = params.BaobabBootnodes[cfg.ConnectionType].Addrs
+	case cfg.BootstrapNodes != nil:
+		return // already set, don't apply defaults.
+	case !ctx.GlobalIsSet(utils.NetworkIdFlag.Name):
+		if utils.NodeTypeFlag.Value != "scn" && utils.NodeTypeFlag.Value != "spn" && utils.NodeTypeFlag.Value != "sen" {
+			logger.Info("Cypress bootnodes are set")
+			urls = params.MainnetBootnodes[cfg.ConnectionType].Addrs
+		}
+	}
+
+	cfg.BootstrapNodes = make([]*discover.Node, 0, len(urls))
+	for _, url := range urls {
+		node, err := discover.ParseNode(url)
+		if err != nil {
+			logger.Error("Bootstrap URL invalid", "kni", url, "err", err)
+			continue
+		}
+		if node.NType == discover.NodeTypeUnknown {
+			logger.Debug("setBootstrapNode: set nodetype as bn from unknown", "nodeid", node.ID)
+			node.NType = discover.NodeTypeBN
+		}
+		logger.Info("Bootnode - Add Seed", "Node", node)
+		cfg.BootstrapNodes = append(cfg.BootstrapNodes, node)
+	}
+}
+
+// SetNodeConfig applies node-related command line flags to the config.
+func (kCfg *klayConfig) SetNodeConfig(ctx *cli.Context) {
+	cfg := &kCfg.Node
+	SetP2PConfig(ctx, &cfg.P2P)
+	setIPC(ctx, cfg)
+
+	// httptype is http or fasthttp
+	if ctx.GlobalIsSet(utils.SrvTypeFlag.Name) {
+		cfg.HTTPServerType = ctx.GlobalString(utils.SrvTypeFlag.Name)
+	}
+
+	setHTTP(ctx, cfg)
+	setWS(ctx, cfg)
+	setgRPC(ctx, cfg)
+	setAPIConfig(ctx)
+	setNodeUserIdent(ctx, cfg)
+
+	if dbtype := database.DBType(ctx.GlobalString(utils.DbTypeFlag.Name)).ToValid(); len(dbtype) != 0 {
+		cfg.DBType = dbtype
+	} else {
+		logger.Crit("invalid dbtype", "dbtype", ctx.GlobalString(utils.DbTypeFlag.Name))
+	}
+	cfg.DataDir = ctx.GlobalString(utils.DataDirFlag.Name)
+
+	if ctx.GlobalIsSet(utils.KeyStoreDirFlag.Name) {
+		cfg.KeyStoreDir = ctx.GlobalString(utils.KeyStoreDirFlag.Name)
+	}
+	if ctx.GlobalIsSet(utils.LightKDFFlag.Name) {
+		cfg.UseLightweightKDF = ctx.GlobalBool(utils.LightKDFFlag.Name)
+	}
+	if ctx.GlobalIsSet(utils.RPCNonEthCompatibleFlag.Name) {
+		rpc.NonEthCompatible = ctx.GlobalBool(utils.RPCNonEthCompatibleFlag.Name)
+	}
+}
+
+// setHTTP creates the HTTP RPC listener interface string from the set
+// command line flags, returning empty if the HTTP endpoint is disabled.
+func setHTTP(ctx *cli.Context, cfg *node.Config) {
+	if ctx.GlobalBool(utils.RPCEnabledFlag.Name) && cfg.HTTPHost == "" {
+		cfg.HTTPHost = "127.0.0.1"
+		if ctx.GlobalIsSet(utils.RPCListenAddrFlag.Name) {
+			cfg.HTTPHost = ctx.GlobalString(utils.RPCListenAddrFlag.Name)
+		}
+	}
+
+	if ctx.GlobalIsSet(utils.RPCPortFlag.Name) {
+		cfg.HTTPPort = ctx.GlobalInt(utils.RPCPortFlag.Name)
+	}
+	if ctx.GlobalIsSet(utils.RPCCORSDomainFlag.Name) {
+		cfg.HTTPCors = utils.SplitAndTrim(ctx.GlobalString(utils.RPCCORSDomainFlag.Name))
+	}
+	if ctx.GlobalIsSet(utils.RPCApiFlag.Name) {
+		cfg.HTTPModules = utils.SplitAndTrim(ctx.GlobalString(utils.RPCApiFlag.Name))
+	}
+	if ctx.GlobalIsSet(utils.RPCVirtualHostsFlag.Name) {
+		cfg.HTTPVirtualHosts = utils.SplitAndTrim(ctx.GlobalString(utils.RPCVirtualHostsFlag.Name))
+	}
+	if ctx.GlobalIsSet(utils.RPCConcurrencyLimit.Name) {
+		rpc.ConcurrencyLimit = ctx.GlobalInt(utils.RPCConcurrencyLimit.Name)
+		logger.Info("Set the concurrency limit of RPC-HTTP server", "limit", rpc.ConcurrencyLimit)
+	}
+	if ctx.GlobalIsSet(utils.RPCReadTimeout.Name) {
+		cfg.HTTPTimeouts.ReadTimeout = time.Duration(ctx.GlobalInt(utils.RPCReadTimeout.Name)) * time.Second
+	}
+	if ctx.GlobalIsSet(utils.RPCWriteTimeoutFlag.Name) {
+		cfg.HTTPTimeouts.WriteTimeout = time.Duration(ctx.GlobalInt(utils.RPCWriteTimeoutFlag.Name)) * time.Second
+	}
+	if ctx.GlobalIsSet(utils.RPCIdleTimeoutFlag.Name) {
+		cfg.HTTPTimeouts.IdleTimeout = time.Duration(ctx.GlobalInt(utils.RPCIdleTimeoutFlag.Name)) * time.Second
+	}
+	if ctx.GlobalIsSet(utils.RPCExecutionTimeoutFlag.Name) {
+		cfg.HTTPTimeouts.ExecutionTimeout = time.Duration(ctx.GlobalInt(utils.RPCExecutionTimeoutFlag.Name)) * time.Second
+	}
+}
+
+// setWS creates the WebSocket RPC listener interface string from the set
+// command line flags, returning empty if the HTTP endpoint is disabled.
+func setWS(ctx *cli.Context, cfg *node.Config) {
+	if ctx.GlobalBool(utils.WSEnabledFlag.Name) && cfg.WSHost == "" {
+		cfg.WSHost = "127.0.0.1"
+		if ctx.GlobalIsSet(utils.WSListenAddrFlag.Name) {
+			cfg.WSHost = ctx.GlobalString(utils.WSListenAddrFlag.Name)
+		}
+	}
+
+	if ctx.GlobalIsSet(utils.WSPortFlag.Name) {
+		cfg.WSPort = ctx.GlobalInt(utils.WSPortFlag.Name)
+	}
+	if ctx.GlobalIsSet(utils.WSAllowedOriginsFlag.Name) {
+		cfg.WSOrigins = utils.SplitAndTrim(ctx.GlobalString(utils.WSAllowedOriginsFlag.Name))
+	}
+	if ctx.GlobalIsSet(utils.WSApiFlag.Name) {
+		cfg.WSModules = utils.SplitAndTrim(ctx.GlobalString(utils.WSApiFlag.Name))
+	}
+	rpc.MaxSubscriptionPerWSConn = int32(ctx.GlobalInt(utils.WSMaxSubscriptionPerConn.Name))
+	rpc.WebsocketReadDeadline = ctx.GlobalInt64(utils.WSReadDeadLine.Name)
+	rpc.WebsocketWriteDeadline = ctx.GlobalInt64(utils.WSWriteDeadLine.Name)
+	rpc.MaxWebsocketConnections = int32(ctx.GlobalInt(utils.WSMaxConnections.Name))
+}
+
+// setIPC creates an IPC path configuration from the set command line flags,
+// returning an empty string if IPC was explicitly disabled, or the set path.
+func setIPC(ctx *cli.Context, cfg *node.Config) {
+	CheckExclusive(ctx, utils.IPCDisabledFlag, utils.IPCPathFlag)
+	switch {
+	case ctx.GlobalBool(utils.IPCDisabledFlag.Name):
+		cfg.IPCPath = ""
+	case ctx.GlobalIsSet(utils.IPCPathFlag.Name):
+		cfg.IPCPath = ctx.GlobalString(utils.IPCPathFlag.Name)
+	}
+}
+
+// setgRPC creates the gRPC listener interface string from the set
+// command line flags, returning empty if the gRPC endpoint is disabled.
+func setgRPC(ctx *cli.Context, cfg *node.Config) {
+	if ctx.GlobalBool(utils.GRPCEnabledFlag.Name) && cfg.GRPCHost == "" {
+		cfg.GRPCHost = "127.0.0.1"
+		if ctx.GlobalIsSet(utils.GRPCListenAddrFlag.Name) {
+			cfg.GRPCHost = ctx.GlobalString(utils.GRPCListenAddrFlag.Name)
+		}
+	}
+
+	if ctx.GlobalIsSet(utils.GRPCPortFlag.Name) {
+		cfg.GRPCPort = ctx.GlobalInt(utils.GRPCPortFlag.Name)
+	}
+}
+
+// setAPIConfig sets configurations for specific APIs.
+func setAPIConfig(ctx *cli.Context) {
+	filters.GetLogsDeadline = ctx.GlobalDuration(utils.APIFilterGetLogsDeadlineFlag.Name)
+	filters.GetLogsMaxItems = ctx.GlobalInt(utils.APIFilterGetLogsMaxItemsFlag.Name)
+}
+
+// setNodeUserIdent creates the user identifier from CLI flags.
+func setNodeUserIdent(ctx *cli.Context, cfg *node.Config) {
+	if identity := ctx.GlobalString(utils.IdentityFlag.Name); len(identity) > 0 {
+		cfg.UserIdent = identity
+	}
+}
+
+// CheckExclusive verifies that only a single instance of the provided flags was
+// set by the user. Each flag might optionally be followed by a string type to
+// specialize it further.
+func CheckExclusive(ctx *cli.Context, args ...interface{}) {
+	set := make([]string, 0, 1)
+	for i := 0; i < len(args); i++ {
+		// Make sure the next argument is a flag and skip if not set
+		flag, ok := args[i].(cli.Flag)
+		if !ok {
+			panic(fmt.Sprintf("invalid argument, not cli.Flag type: %T", args[i]))
+		}
+		// Check if next arg extends current and expand its name if so
+		name := flag.GetName()
+
+		if i+1 < len(args) {
+			switch option := args[i+1].(type) {
+			case string:
+				// Extended flag, expand the name and shift the arguments
+				if ctx.GlobalString(flag.GetName()) == option {
+					name += "=" + option
+				}
+				i++
+
+			case cli.Flag:
+			default:
+				panic(fmt.Sprintf("invalid argument, not cli.Flag or string extension: %T", args[i+1]))
+			}
+		}
+		// Mark the flag if it's set
+		if ctx.GlobalIsSet(flag.GetName()) {
+			set = append(set, "--"+name)
+		}
+	}
+	if len(set) > 1 {
+		log.Fatalf("Flags %v can't be used at the same time", strings.Join(set, ", "))
+	}
+}
+
+// SetKlayConfig applies klay-related command line flags to the config.
+func (kCfg *klayConfig) SetKlayConfig(ctx *cli.Context, stack *node.Node) {
+	// TODO-Klaytn-Bootnode: better have to check conflicts about network flags when we add Klaytn's `mainnet` parameter
+	// checkExclusive(ctx, DeveloperFlag, TestnetFlag, RinkebyFlag)
+	cfg := &kCfg.CN
+	raiseFDLimit()
+
+	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
+	setServiceChainSigner(ctx, ks, cfg)
+	setRewardbase(ctx, ks, cfg)
+	setTxPool(ctx, &cfg.TxPool)
+
+	if ctx.GlobalIsSet(utils.SyncModeFlag.Name) {
+		cfg.SyncMode = *utils.GlobalTextMarshaler(ctx, utils.SyncModeFlag.Name).(*downloader.SyncMode)
+		if cfg.SyncMode != downloader.FullSync && cfg.SyncMode != downloader.SnapSync {
+			log.Fatalf("Full Sync or Snap Sync (prototype) is supported only!")
+		}
+		if cfg.SyncMode == downloader.SnapSync {
+			logger.Info("Snap sync requested, enabling --snapshot")
+			ctx.Set(utils.SnapshotFlag.Name, "true")
+		} else {
+			cfg.SnapshotCacheSize = 0 // Disabled
+		}
+	}
+
+	if ctx.GlobalBool(utils.KESNodeTypeServiceFlag.Name) {
+		cfg.FetcherDisable = true
+		cfg.DownloaderDisable = true
+		cfg.WorkerDisable = true
+	}
+
+	if utils.NetworkTypeFlag.Value == SCNNetworkType && kCfg.ServiceChain.EnabledSubBridge {
+		cfg.NoAccountCreation = !ctx.GlobalBool(utils.ServiceChainNewAccountFlag.Name)
+	}
+
+	cfg.NetworkId, cfg.IsPrivate = getNetworkId(ctx)
+
+	if dbtype := database.DBType(ctx.GlobalString(utils.DbTypeFlag.Name)).ToValid(); len(dbtype) != 0 {
+		cfg.DBType = dbtype
+	} else {
+		logger.Crit("invalid dbtype", "dbtype", ctx.GlobalString(utils.DbTypeFlag.Name))
+	}
+	cfg.SingleDB = ctx.GlobalIsSet(utils.SingleDBFlag.Name)
+	cfg.NumStateTrieShards = ctx.GlobalUint(utils.NumStateTrieShardsFlag.Name)
+	if !database.IsPow2(cfg.NumStateTrieShards) {
+		log.Fatalf("%v should be power of 2 but %v is not!", utils.NumStateTrieShardsFlag.Name, cfg.NumStateTrieShards)
+	}
+
+	cfg.OverwriteGenesis = ctx.GlobalBool(utils.OverwriteGenesisFlag.Name)
+	cfg.StartBlockNumber = ctx.GlobalUint64(utils.StartBlockNumberFlag.Name)
+
+	cfg.LevelDBCompression = database.LevelDBCompressionType(ctx.GlobalInt(utils.LevelDBCompressionTypeFlag.Name))
+	cfg.LevelDBBufferPool = !ctx.GlobalIsSet(utils.LevelDBNoBufferPoolFlag.Name)
+	cfg.EnableDBPerfMetrics = !ctx.GlobalIsSet(utils.DBNoPerformanceMetricsFlag.Name)
+	cfg.LevelDBCacheSize = ctx.GlobalInt(utils.LevelDBCacheSizeFlag.Name)
+
+	cfg.DynamoDBConfig.TableName = ctx.GlobalString(utils.DynamoDBTableNameFlag.Name)
+	cfg.DynamoDBConfig.Region = ctx.GlobalString(utils.DynamoDBRegionFlag.Name)
+	cfg.DynamoDBConfig.IsProvisioned = ctx.GlobalBool(utils.DynamoDBIsProvisionedFlag.Name)
+	cfg.DynamoDBConfig.ReadCapacityUnits = ctx.GlobalInt64(utils.DynamoDBReadCapacityFlag.Name)
+	cfg.DynamoDBConfig.WriteCapacityUnits = ctx.GlobalInt64(utils.DynamoDBWriteCapacityFlag.Name)
+	cfg.DynamoDBConfig.ReadOnly = ctx.GlobalBool(utils.DynamoDBReadOnlyFlag.Name)
+
+	if gcmode := ctx.GlobalString(utils.GCModeFlag.Name); gcmode != "full" && gcmode != "archive" {
+		log.Fatalf("--%s must be either 'full' or 'archive'", utils.GCModeFlag.Name)
+	}
+	cfg.NoPruning = ctx.GlobalString(utils.GCModeFlag.Name) == "archive"
+	logger.Info("Archiving mode of this node", "isArchiveMode", cfg.NoPruning)
+
+	cfg.AnchoringPeriod = ctx.GlobalUint64(utils.AnchoringPeriodFlag.Name)
+	cfg.SentChainTxsLimit = ctx.GlobalUint64(utils.SentChainTxsLimit.Name)
+
+	cfg.TrieCacheSize = ctx.GlobalInt(utils.TrieMemoryCacheSizeFlag.Name)
+	common.DefaultCacheType = common.CacheType(ctx.GlobalInt(utils.CacheTypeFlag.Name))
+	cfg.TrieBlockInterval = ctx.GlobalUint(utils.TrieBlockIntervalFlag.Name)
+	cfg.TriesInMemory = ctx.GlobalUint64(utils.TriesInMemoryFlag.Name)
+
+	if ctx.GlobalIsSet(utils.CacheScaleFlag.Name) {
+		common.CacheScale = ctx.GlobalInt(utils.CacheScaleFlag.Name)
+	}
+	if ctx.GlobalIsSet(utils.CacheUsageLevelFlag.Name) {
+		cacheUsageLevelFlag := ctx.GlobalString(utils.CacheUsageLevelFlag.Name)
+		if scaleByCacheUsageLevel, err := common.GetScaleByCacheUsageLevel(cacheUsageLevelFlag); err != nil {
+			logger.Crit("Incorrect CacheUsageLevelFlag value", "error", err, "CacheUsageLevelFlag", cacheUsageLevelFlag)
+		} else {
+			common.ScaleByCacheUsageLevel = scaleByCacheUsageLevel
+		}
+	}
+	if ctx.GlobalIsSet(utils.MemorySizeFlag.Name) {
+		physicalMemory := common.TotalPhysicalMemGB
+		common.TotalPhysicalMemGB = ctx.GlobalInt(utils.MemorySizeFlag.Name)
+		logger.Info("Physical memory has been replaced by user settings", "PhysicalMemory(GB)", physicalMemory, "UserSetting(GB)", common.TotalPhysicalMemGB)
+	} else {
+		logger.Debug("Memory settings", "PhysicalMemory(GB)", common.TotalPhysicalMemGB)
+	}
+
+	if ctx.GlobalIsSet(utils.DocRootFlag.Name) {
+		cfg.DocRoot = ctx.GlobalString(utils.DocRootFlag.Name)
+	}
+	if ctx.GlobalIsSet(utils.ExtraDataFlag.Name) {
+		cfg.ExtraData = []byte(ctx.GlobalString(utils.ExtraDataFlag.Name))
+	}
+
+	cfg.SenderTxHashIndexing = ctx.GlobalIsSet(utils.SenderTxHashIndexingFlag.Name)
+	cfg.ParallelDBWrite = !ctx.GlobalIsSet(utils.NoParallelDBWriteFlag.Name)
+	cfg.TrieNodeCacheConfig = statedb.TrieNodeCacheConfig{
+		CacheType: statedb.TrieNodeCacheType(ctx.GlobalString(utils.TrieNodeCacheTypeFlag.
+			Name)).ToValid(),
+		NumFetcherPrefetchWorker:  ctx.GlobalInt(utils.NumFetcherPrefetchWorkerFlag.Name),
+		UseSnapshotForPrefetch:    ctx.GlobalBool(utils.UseSnapshotForPrefetchFlag.Name),
+		LocalCacheSizeMiB:         ctx.GlobalInt(utils.TrieNodeCacheLimitFlag.Name),
+		FastCacheFileDir:          ctx.GlobalString(utils.DataDirFlag.Name) + "/fastcache",
+		FastCacheSavePeriod:       ctx.GlobalDuration(utils.TrieNodeCacheSavePeriodFlag.Name),
+		RedisEndpoints:            ctx.GlobalStringSlice(utils.TrieNodeCacheRedisEndpointsFlag.Name),
+		RedisClusterEnable:        ctx.GlobalBool(utils.TrieNodeCacheRedisClusterFlag.Name),
+		RedisPublishBlockEnable:   ctx.GlobalBool(utils.TrieNodeCacheRedisPublishBlockFlag.Name),
+		RedisSubscribeBlockEnable: ctx.GlobalBool(utils.TrieNodeCacheRedisSubscribeBlockFlag.Name),
+	}
+
+	if ctx.GlobalIsSet(utils.VMEnableDebugFlag.Name) {
+		// TODO(fjl): force-enable this in --dev mode
+		cfg.EnablePreimageRecording = ctx.GlobalBool(utils.VMEnableDebugFlag.Name)
+	}
+	if ctx.GlobalIsSet(utils.VMLogTargetFlag.Name) {
+		if _, err := debug.Handler.SetVMLogTarget(ctx.GlobalInt(utils.VMLogTargetFlag.Name)); err != nil {
+			logger.Warn("Incorrect vmlog value", "err", err)
+		}
+	}
+	cfg.EnableInternalTxTracing = ctx.GlobalIsSet(utils.VMTraceInternalTxFlag.Name)
+
+	cfg.AutoRestartFlag = ctx.GlobalBool(utils.AutoRestartFlag.Name)
+	cfg.RestartTimeOutFlag = ctx.GlobalDuration(utils.RestartTimeOutFlag.Name)
+	cfg.DaemonPathFlag = ctx.GlobalString(utils.DaemonPathFlag.Name)
+
+	if ctx.GlobalIsSet(utils.RPCGlobalGasCap.Name) {
+		cfg.RPCGasCap = new(big.Int).SetUint64(ctx.GlobalUint64(utils.RPCGlobalGasCap.Name))
+	}
+
+	if ctx.GlobalIsSet(utils.RPCGlobalEthTxFeeCapFlag.Name) {
+		cfg.RPCTxFeeCap = ctx.GlobalFloat64(utils.RPCGlobalEthTxFeeCapFlag.Name)
+	}
+
+	// Only CNs could set BlockGenerationIntervalFlag and BlockGenerationTimeLimitFlag
+	if ctx.GlobalIsSet(utils.BlockGenerationIntervalFlag.Name) {
+		params.BlockGenerationInterval = ctx.GlobalInt64(utils.BlockGenerationIntervalFlag.Name)
+		if params.BlockGenerationInterval < 1 {
+			logger.Crit("Block generation interval should be equal or larger than 1", "interval", params.BlockGenerationInterval)
+		}
+	}
+	if ctx.GlobalIsSet(utils.BlockGenerationTimeLimitFlag.Name) {
+		params.BlockGenerationTimeLimit = ctx.GlobalDuration(utils.BlockGenerationTimeLimitFlag.Name)
+	}
+
+	params.OpcodeComputationCostLimit = ctx.GlobalUint64(utils.OpcodeComputationCostLimitFlag.Name)
+
+	if ctx.GlobalIsSet(utils.SnapshotFlag.Name) {
+		cfg.SnapshotCacheSize = ctx.GlobalInt(utils.SnapshotCacheSizeFlag.Name)
+		if cfg.StartBlockNumber != 0 {
+			logger.Crit("State snapshot should not be used with --start-block-num", "num", cfg.StartBlockNumber)
+		}
+		logger.Info("State snapshot is enabled", "cache-size (MB)", cfg.SnapshotCacheSize)
+	} else {
+		cfg.SnapshotCacheSize = 0 // snapshot disabled
+	}
+
+	// Override any default configs for hard coded network.
+	// TODO-Klaytn-Bootnode: Discuss and add `baobab` test network's genesis block
+	/*
+		if ctx.GlobalBool(TestnetFlag.Name) {
+			if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
+				cfg.NetworkId = 3
+			}
+			cfg.Genesis = blockchain.DefaultBaobabGenesisBlock()
+		}
+	*/
+	// Set the Tx resending related configuration variables
+	setTxResendConfig(ctx, cfg)
+}
+
+// raiseFDLimit increases the file descriptor limit to process's maximum value
+func raiseFDLimit() {
+	limit, err := fdlimit.Maximum()
+	if err != nil {
+		logger.Error("Failed to read maximum fd. you may suffer fd exhaustion", "err", err)
+		return
+	}
+	raised, err := fdlimit.Raise(uint64(limit))
+	if err != nil {
+		logger.Warn("Failed to increase fd limit. you may suffer fd exhaustion", "err", err)
+		return
+	}
+	logger.Info("Raised fd limit to process's maximum value", "fd", raised)
+}
+
+// setServiceChainSigner retrieves the service chain signer either from the directly specified
+// command line flags or from the keystore if CLI indexed.
+func setServiceChainSigner(ctx *cli.Context, ks *keystore.KeyStore, cfg *cn.Config) {
+	if ctx.GlobalIsSet(utils.ServiceChainSignerFlag.Name) {
+		account, err := makeAddress(ks, ctx.GlobalString(utils.ServiceChainSignerFlag.Name))
+		if err != nil {
+			log.Fatalf("Option %q: %v", utils.ServiceChainSignerFlag.Name, err)
+		}
+		cfg.ServiceChainSigner = account.Address
+	}
+}
+
+// setRewardbase retrieves the rewardbase either from the directly specified
+// command line flags or from the keystore if CLI indexed.
+func setRewardbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *cn.Config) {
+	if ctx.GlobalIsSet(utils.RewardbaseFlag.Name) {
+		account, err := makeAddress(ks, ctx.GlobalString(utils.RewardbaseFlag.Name))
+		if err != nil {
+			log.Fatalf("Option %q: %v", utils.RewardbaseFlag.Name, err)
+		}
+		cfg.Rewardbase = account.Address
+	}
+}
+
+// MakeAddress converts an account specified directly as a hex encoded string or
+// a key index in the key store to an internal account representation.
+func makeAddress(ks *keystore.KeyStore, account string) (accounts.Account, error) {
+	// If the specified account is a valid address, return it
+	if common.IsHexAddress(account) {
+		return accounts.Account{Address: common.HexToAddress(account)}, nil
+	}
+	// Otherwise try to interpret the account as a keystore index
+	index, err := strconv.Atoi(account)
+	if err != nil || index < 0 {
+		return accounts.Account{}, fmt.Errorf("invalid account address or index %q", account)
+	}
+	logger.Warn("Use explicit addresses! Referring to accounts by order in the keystore folder is dangerous and will be deprecated!")
+
+	accs := ks.Accounts()
+	if len(accs) <= index {
+		return accounts.Account{}, fmt.Errorf("index %d higher than number of accounts %d", index, len(accs))
+	}
+	return accs[index], nil
+}
+
+func setTxPool(ctx *cli.Context, cfg *blockchain.TxPoolConfig) {
+	if ctx.GlobalIsSet(utils.TxPoolNoLocalsFlag.Name) {
+		cfg.NoLocals = ctx.GlobalBool(utils.TxPoolNoLocalsFlag.Name)
+	}
+	if ctx.GlobalIsSet(utils.TxPoolAllowLocalAnchorTxFlag.Name) {
+		cfg.AllowLocalAnchorTx = ctx.GlobalBool(utils.TxPoolAllowLocalAnchorTxFlag.Name)
+	}
+	if ctx.GlobalIsSet(utils.TxPoolDenyRemoteTxFlag.Name) {
+		cfg.DenyRemoteTx = ctx.GlobalBool(utils.TxPoolDenyRemoteTxFlag.Name)
+	}
+	if ctx.GlobalIsSet(utils.TxPoolJournalFlag.Name) {
+		cfg.Journal = ctx.GlobalString(utils.TxPoolJournalFlag.Name)
+	}
+	if ctx.GlobalIsSet(utils.TxPoolJournalIntervalFlag.Name) {
+		cfg.JournalInterval = ctx.GlobalDuration(utils.TxPoolJournalIntervalFlag.Name)
+	}
+	if ctx.GlobalIsSet(utils.TxPoolPriceLimitFlag.Name) {
+		cfg.PriceLimit = ctx.GlobalUint64(utils.TxPoolPriceLimitFlag.Name)
+	}
+	if ctx.GlobalIsSet(utils.TxPoolPriceBumpFlag.Name) {
+		cfg.PriceBump = ctx.GlobalUint64(utils.TxPoolPriceBumpFlag.Name)
+	}
+	if ctx.GlobalIsSet(utils.TxPoolExecSlotsAccountFlag.Name) {
+		cfg.ExecSlotsAccount = ctx.GlobalUint64(utils.TxPoolExecSlotsAccountFlag.Name)
+	}
+	if ctx.GlobalIsSet(utils.TxPoolExecSlotsAllFlag.Name) {
+		cfg.ExecSlotsAll = ctx.GlobalUint64(utils.TxPoolExecSlotsAllFlag.Name)
+	}
+	if ctx.GlobalIsSet(utils.TxPoolNonExecSlotsAccountFlag.Name) {
+		cfg.NonExecSlotsAccount = ctx.GlobalUint64(utils.TxPoolNonExecSlotsAccountFlag.Name)
+	}
+	if ctx.GlobalIsSet(utils.TxPoolNonExecSlotsAllFlag.Name) {
+		cfg.NonExecSlotsAll = ctx.GlobalUint64(utils.TxPoolNonExecSlotsAllFlag.Name)
+	}
+
+	cfg.KeepLocals = ctx.GlobalIsSet(utils.TxPoolKeepLocalsFlag.Name)
+
+	if ctx.GlobalIsSet(utils.TxPoolLifetimeFlag.Name) {
+		cfg.Lifetime = ctx.GlobalDuration(utils.TxPoolLifetimeFlag.Name)
+	}
+
+	// PN specific txpool setting
+	if utils.NodeTypeFlag.Value == "pn" {
+		cfg.EnableSpamThrottlerAtRuntime = !ctx.GlobalIsSet(utils.TxPoolSpamThrottlerDisableFlag.Name)
+	}
+}
+
+// getNetworkID returns the associated network ID with whether or not the network is private.
+func getNetworkId(ctx *cli.Context) (uint64, bool) {
+	if ctx.GlobalIsSet(utils.BaobabFlag.Name) && ctx.GlobalIsSet(utils.CypressFlag.Name) {
+		log.Fatalf("--baobab and --cypress must not be set together")
+	}
+	if ctx.GlobalIsSet(utils.BaobabFlag.Name) && ctx.GlobalIsSet(utils.NetworkIdFlag.Name) {
+		log.Fatalf("--baobab and --networkid must not be set together")
+	}
+	if ctx.GlobalIsSet(utils.CypressFlag.Name) && ctx.GlobalIsSet(utils.NetworkIdFlag.Name) {
+		log.Fatalf("--cypress and --networkid must not be set together")
+	}
+
+	switch {
+	case ctx.GlobalIsSet(utils.CypressFlag.Name):
+		logger.Info("Cypress network ID is set", "networkid", params.CypressNetworkId)
+		return params.CypressNetworkId, false
+	case ctx.GlobalIsSet(utils.BaobabFlag.Name):
+		logger.Info("Baobab network ID is set", "networkid", params.BaobabNetworkId)
+		return params.BaobabNetworkId, false
+	case ctx.GlobalIsSet(utils.NetworkIdFlag.Name):
+		networkId := ctx.GlobalUint64(utils.NetworkIdFlag.Name)
+		logger.Info("A private network ID is set", "networkid", networkId)
+		return networkId, true
+	default:
+		if utils.NodeTypeFlag.Value == "scn" || utils.NodeTypeFlag.Value == "spn" || utils.NodeTypeFlag.Value == "sen" {
+			logger.Info("A Service Chain default network ID is set", "networkid", params.ServiceChainDefaultNetworkId)
+			return params.ServiceChainDefaultNetworkId, true
+		}
+		logger.Info("Cypress network ID is set", "networkid", params.CypressNetworkId)
+		return params.CypressNetworkId, false
+	}
+}
+
+func setTxResendConfig(ctx *cli.Context, cfg *cn.Config) {
+	// Set the Tx resending related configuration variables
+	cfg.TxResendInterval = ctx.GlobalUint64(utils.TxResendIntervalFlag.Name)
+	if cfg.TxResendInterval == 0 {
+		cfg.TxResendInterval = cn.DefaultTxResendInterval
+	}
+
+	cfg.TxResendCount = ctx.GlobalInt(utils.TxResendCountFlag.Name)
+	if cfg.TxResendCount < cn.DefaultMaxResendTxCount {
+		cfg.TxResendCount = cn.DefaultMaxResendTxCount
+	}
+	cfg.TxResendUseLegacy = ctx.GlobalBool(utils.TxResendUseLegacyFlag.Name)
+	logger.Debug("TxResend config", "Interval", cfg.TxResendInterval, "TxResendCount", cfg.TxResendCount, "UseLegacy", cfg.TxResendUseLegacy)
 }
 
 func (kCfg *klayConfig) setChainDataFetcherConfig(ctx *cli.Context) {
@@ -180,7 +865,7 @@ func (kCfg *klayConfig) setChainDataFetcherConfig(ctx *cli.Context) {
 }
 
 // NOTE-klaytn
-// This function is deprecated because KASConfig is not used anymore.
+// Deprecated: KASConfig is not used anymore.
 func checkKASDBConfigs(ctx *cli.Context) {
 	if !ctx.GlobalIsSet(utils.ChainDataFetcherKASDBHostFlag.Name) {
 		logger.Crit("DBHost must be set !", "key", utils.ChainDataFetcherKASDBHostFlag.Name)
@@ -197,7 +882,7 @@ func checkKASDBConfigs(ctx *cli.Context) {
 }
 
 // NOTE-klaytn
-// This function is deprecated because KASConfig is not used anymore.
+// Deprecated: KASConfig is not used anymore.
 func checkKASCacheInvalidationConfigs(ctx *cli.Context) {
 	if !ctx.GlobalIsSet(utils.ChainDataFetcherKASCacheURLFlag.Name) {
 		logger.Crit("The cache invalidation url is not set")
@@ -211,7 +896,7 @@ func checkKASCacheInvalidationConfigs(ctx *cli.Context) {
 }
 
 // NOTE-klaytn
-// This function is deprecated because KASConfig is not used anymore.
+// Deprecated: KASConfig is not used anymore.
 func makeKASConfig(ctx *cli.Context) *kas.KASConfig {
 	kasConfig := kas.DefaultKASConfig
 
@@ -324,7 +1009,7 @@ func (kCfg *klayConfig) setDBSyncerConfig(ctx *cli.Context) {
 	}
 }
 
-func (kCfg *klayConfig) setServiceChainConfig(ctx *cli.Context, klayCfg *klayConfig) {
+func (kCfg *klayConfig) setServiceChainConfig(ctx *cli.Context) {
 	cfg := &kCfg.ServiceChain
 
 	// bridge service
@@ -385,8 +1070,8 @@ func (kCfg *klayConfig) setServiceChainConfig(ctx *cli.Context, klayCfg *klayCon
 		cfg.KASAnchorRequestTimeout = ctx.GlobalDuration(utils.KASServiceChainAnchorRequestTimeoutFlag.Name)
 	}
 
-	cfg.DataDir = klayCfg.Node.DataDir
-	cfg.Name = klayCfg.Node.Name
+	cfg.DataDir = kCfg.Node.DataDir
+	cfg.Name = kCfg.Node.Name
 }
 
 func dumpConfig(ctx *cli.Context) error {

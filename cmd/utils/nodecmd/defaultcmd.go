@@ -35,6 +35,7 @@ import (
 	metricutils "github.com/klaytn/klaytn/metrics/utils"
 	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/node/cn"
+	"github.com/klaytn/klaytn/params"
 	"gopkg.in/urfave/cli.v1"
 	"gopkg.in/urfave/cli.v1/altsrc"
 )
@@ -247,8 +248,14 @@ func BeforeRunNode(ctx *cli.Context) error {
 		return err
 	}
 	metricutils.StartMetricCollectionAndExport(ctx)
-	utils.SetupNetwork(ctx)
+	setupNetwork(ctx)
 	return nil
+}
+
+// SetupNetwork configures the system for either the main net or some test network.
+func setupNetwork(ctx *cli.Context) {
+	// TODO(fjl): move target gas limit into config
+	params.TargetGasLimit = ctx.GlobalUint64(utils.TargetGasLimitFlag.Name)
 }
 
 func BeforeRunBootnode(ctx *cli.Context) error {

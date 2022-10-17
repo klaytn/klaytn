@@ -176,7 +176,7 @@ func accountList(ctx *cli.Context) error {
 
 // tries unlocking the specified account a few times.
 func UnlockAccount(ctx *cli.Context, ks *keystore.KeyStore, address string, i int, passwords []string) (accounts.Account, string) {
-	account, err := utils.MakeAddress(ks, address)
+	account, err := makeAddress(ks, address)
 	if err != nil {
 		log.Fatalf("Could not list accounts: %v", err)
 	}
@@ -271,7 +271,7 @@ func accountCreate(ctx *cli.Context) error {
 			log.Fatalf("%v", err)
 		}
 	}
-	utils.SetNodeConfig(ctx, &cfg.Node)
+	cfg.SetNodeConfig(ctx)
 	scryptN, scryptP, keydir, err := cfg.Node.AccountConfig()
 	if err != nil {
 		log.Fatalf("Failed to read configuration: %v", err)
