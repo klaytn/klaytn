@@ -610,7 +610,7 @@ func TestBaoBabGenesisHash(t *testing.T) {
 	baobabHash := params.BaobabGenesisHash
 	genesis := blockchain.DefaultBaobabGenesisBlock()
 	genesis.Governance = blockchain.SetGenesisGovernance(genesis)
-	blockchain.InitDeriveSha(genesis.Config.DeriveShaImpl, big.NewInt(0))
+	blockchain.InitDeriveSha(genesis.Config.DeriveShaImpl)
 
 	db := database.NewMemoryDBManager()
 	block, _ := genesis.Commit(common.Hash{}, db)
@@ -623,7 +623,7 @@ func TestCypressGenesisHash(t *testing.T) {
 	cypressHash := params.CypressGenesisHash
 	genesis := blockchain.DefaultGenesisBlock()
 	genesis.Governance = blockchain.SetGenesisGovernance(genesis)
-	blockchain.InitDeriveSha(genesis.Config.DeriveShaImpl, big.NewInt(0))
+	blockchain.InitDeriveSha(genesis.Config.DeriveShaImpl)
 
 	db := database.NewMemoryDBManager()
 	block, _ := genesis.Commit(common.Hash{}, db)
