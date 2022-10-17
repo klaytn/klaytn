@@ -21,6 +21,7 @@
 package types
 
 import (
+	"github.com/klaytn/klaytn/storage/statedb"
 	"math/big"
 
 	"github.com/klaytn/klaytn/common"
@@ -59,7 +60,7 @@ func DeriveSha(list DerivableList) common.Hash {
 // DeriveShaWithBlockNum function will be used instead of DeriveSha after Kore hf.
 func DeriveShaWithBlockNum(list DerivableList, blockNumber *big.Int) common.Hash {
 	if fork.Rules(blockNumber).IsKore {
-		deriveShaObj = DeriveShaSimple{}
+		deriveShaObj = statedb.DeriveShaOrig{}
 	}
 	return deriveShaObj.DeriveSha(list)
 }
