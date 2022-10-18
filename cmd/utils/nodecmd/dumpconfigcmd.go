@@ -316,7 +316,7 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 	}
 }
 
-// SetNodeConfig applies node-related command line flags to the config.
+// setNodeConfig applies node-related command line flags to the config.
 func (kCfg *klayConfig) setNodeConfig(ctx *cli.Context) {
 	cfg := &kCfg.Node
 	SetP2PConfig(ctx, &cfg.P2P)
