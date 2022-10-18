@@ -742,7 +742,7 @@ func setTxPool(ctx *cli.Context, cfg *blockchain.TxPoolConfig) {
 	}
 }
 
-// getNetworkID returns the associated network ID with whether or not the network is private.
+// getNetworkId returns the associated network ID with whether or not the network is private.
 func getNetworkId(ctx *cli.Context) (uint64, bool) {
 	if ctx.GlobalIsSet(utils.BaobabFlag.Name) && ctx.GlobalIsSet(utils.CypressFlag.Name) {
 		log.Fatalf("--baobab and --cypress must not be set together")
