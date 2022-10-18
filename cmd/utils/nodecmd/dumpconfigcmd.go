@@ -456,7 +456,7 @@ func setNodeUserIdent(ctx *cli.Context, cfg *node.Config) {
 	}
 }
 
-// SetKlayConfig applies klay-related command line flags to the config.
+// setKlayConfig applies klay-related command line flags to the config.
 func (kCfg *klayConfig) setKlayConfig(ctx *cli.Context, stack *node.Node) {
 	// TODO-Klaytn-Bootnode: better have to check conflicts about network flags when we add Klaytn's `mainnet` parameter
 	// checkExclusive(ctx, DeveloperFlag, TestnetFlag, RinkebyFlag)
