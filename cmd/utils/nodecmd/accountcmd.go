@@ -271,7 +271,7 @@ func accountCreate(ctx *cli.Context) error {
 			log.Fatalf("%v", err)
 		}
 	}
-	cfg.SetNodeConfig(ctx)
+	cfg.setNodeConfig(ctx)
 	scryptN, scryptP, keydir, err := cfg.Node.AccountConfig()
 	if err != nil {
 		log.Fatalf("Failed to read configuration: %v", err)

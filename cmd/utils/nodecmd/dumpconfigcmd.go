@@ -146,12 +146,12 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, klayConfig) {
 	}
 
 	// Apply flags.
-	cfg.SetNodeConfig(ctx)
+	cfg.setNodeConfig(ctx)
 	stack, err := node.New(&cfg.Node)
 	if err != nil {
 		log.Fatalf("Failed to create the protocol stack: %v", err)
 	}
-	cfg.SetKlayConfig(ctx, stack)
+	cfg.setKlayConfig(ctx, stack)
 
 	cfg.setDBSyncerConfig(ctx)
 	cfg.setChainDataFetcherConfig(ctx)
@@ -317,7 +317,7 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 }
 
 // SetNodeConfig applies node-related command line flags to the config.
-func (kCfg *klayConfig) SetNodeConfig(ctx *cli.Context) {
+func (kCfg *klayConfig) setNodeConfig(ctx *cli.Context) {
 	cfg := &kCfg.Node
 	SetP2PConfig(ctx, &cfg.P2P)
 	setIPC(ctx, cfg)
@@ -457,7 +457,7 @@ func setNodeUserIdent(ctx *cli.Context, cfg *node.Config) {
 }
 
 // SetKlayConfig applies klay-related command line flags to the config.
-func (kCfg *klayConfig) SetKlayConfig(ctx *cli.Context, stack *node.Node) {
+func (kCfg *klayConfig) setKlayConfig(ctx *cli.Context, stack *node.Node) {
 	// TODO-Klaytn-Bootnode: better have to check conflicts about network flags when we add Klaytn's `mainnet` parameter
 	// checkExclusive(ctx, DeveloperFlag, TestnetFlag, RinkebyFlag)
 	cfg := &kCfg.CN
