@@ -674,7 +674,7 @@ func setRewardbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *cn.Config) {
 	}
 }
 
-// MakeAddress converts an account specified directly as a hex encoded string or
+// makeAddress converts an account specified directly as a hex encoded string or
 // a key index in the key store to an internal account representation.
 func makeAddress(ks *keystore.KeyStore, account string) (accounts.Account, error) {
 	// If the specified account is a valid address, return it
