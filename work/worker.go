@@ -21,6 +21,7 @@
 package work
 
 import (
+	"github.com/klaytn/klaytn/storage/statedb"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -613,6 +614,7 @@ func (self *worker) updateSnapshot() {
 		self.current.header,
 		self.current.txs,
 		self.current.receipts,
+		statedb.NewStackTrie(nil),
 	)
 	self.snapshotState = self.current.state.Copy()
 }

@@ -23,6 +23,7 @@ package gxhash
 import (
 	"errors"
 	"fmt"
+	"github.com/klaytn/klaytn/storage/statedb"
 	"math/big"
 	"runtime"
 	"time"
@@ -396,7 +397,7 @@ func (gxhash *Gxhash) Finalize(chain consensus.ChainReader, header *types.Header
 	header.Root = state.IntermediateRoot(true)
 
 	// Header seems complete, assemble into a block and return
-	return types.NewBlock(header, txs, receipts), nil
+	return types.NewBlock(header, txs, receipts, statedb.NewStackTrie(nil)), nil
 }
 
 // Some weird constants to avoid constant memory allocs for them.

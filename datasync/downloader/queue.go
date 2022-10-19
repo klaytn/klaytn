@@ -23,6 +23,7 @@ package downloader
 import (
 	"errors"
 	"fmt"
+	"github.com/klaytn/klaytn/storage/statedb"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -866,7 +867,7 @@ func (q *queue) DeliverBodies(id string, txLists [][]*types.Transaction) (int, e
 	defer q.lock.Unlock()
 
 	validate := func(index int, header *types.Header) error {
-		if types.DeriveShaWithBlockNum(types.Transactions(txLists[index]), header.Number) != header.TxHash {
+		if types.DeriveShaWithBlockNum(types.Transactions(txLists[index]), header.Number, statedb.NewStackTrie(nil)) != header.TxHash {
 			return errInvalidBody
 		}
 		return nil
@@ -886,7 +887,7 @@ func (q *queue) DeliverReceipts(id string, receiptList [][]*types.Receipt) (int,
 	q.lock.Lock()
 	defer q.lock.Unlock()
 	validate := func(index int, header *types.Header) error {
-		if types.DeriveShaWithBlockNum(types.Receipts(receiptList[index]), header.Number) != header.ReceiptHash {
+		if types.DeriveShaWithBlockNum(types.Receipts(receiptList[index]), header.Number, statedb.NewStackTrie(nil)) != header.ReceiptHash {
 			return errInvalidReceipt
 		}
 		return nil

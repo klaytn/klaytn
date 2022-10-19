@@ -198,14 +198,14 @@ type extblock struct {
 //
 // The values of TxHash, ReceiptHash and Bloom in header
 // are ignored and set to values derived from the given txs and receipts.
-func NewBlock(header *Header, txs []*Transaction, receipts []*Receipt) *Block {
+func NewBlock(header *Header, txs []*Transaction, receipts []*Receipt, hasher TrieHasher) *Block {
 	b := &Block{header: CopyHeader(header), td: new(big.Int)}
 
 	// TODO: panic if len(txs) != len(receipts)
 	if len(txs) == 0 {
 		b.header.TxHash = EmptyRootHash
 	} else {
-		b.header.TxHash = DeriveShaWithBlockNum(Transactions(txs), b.Number())
+		b.header.TxHash = DeriveShaWithBlockNum(Transactions(txs), b.Number(), hasher)
 		b.transactions = make(Transactions, len(txs))
 		copy(b.transactions, txs)
 	}
@@ -213,7 +213,7 @@ func NewBlock(header *Header, txs []*Transaction, receipts []*Receipt) *Block {
 	if len(receipts) == 0 {
 		b.header.ReceiptHash = EmptyRootHash
 	} else {
-		b.header.ReceiptHash = DeriveShaWithBlockNum(Receipts(receipts), b.Number())
+		b.header.ReceiptHash = DeriveShaWithBlockNum(Receipts(receipts), b.Number(), hasher)
 		b.header.Bloom = CreateBloom(receipts)
 	}
 
@@ -230,7 +230,7 @@ func NewTestBlock(header *Header, txs []*Transaction, receipts []*Receipt) *Bloc
 	if len(txs) == 0 {
 		b.header.TxHash = EmptyRootHash
 	} else {
-		b.header.TxHash = DeriveSha(Transactions(txs))
+		b.header.TxHash = DeriveSha(Transactions(txs), nil)
 		b.transactions = make(Transactions, len(txs))
 		copy(b.transactions, txs)
 	}
@@ -238,7 +238,7 @@ func NewTestBlock(header *Header, txs []*Transaction, receipts []*Receipt) *Bloc
 	if len(receipts) == 0 {
 		b.header.ReceiptHash = EmptyRootHash
 	} else {
-		b.header.ReceiptHash = DeriveSha(Receipts(receipts))
+		b.header.ReceiptHash = DeriveSha(Receipts(receipts), nil)
 		b.header.Bloom = CreateBloom(receipts)
 	}
 

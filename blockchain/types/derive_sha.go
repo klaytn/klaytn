@@ -21,7 +21,8 @@
 package types
 
 import (
-	"github.com/klaytn/klaytn/storage/statedb"
+	"bytes"
+	"github.com/klaytn/klaytn/rlp"
 	"math/big"
 
 	"github.com/klaytn/klaytn/common"
@@ -41,35 +42,35 @@ const (
 )
 
 type IDeriveSha interface {
-	DeriveSha(list DerivableList) common.Hash
+	DeriveSha(list DerivableList, hasher TrieHasher) common.Hash
 }
 
 var deriveShaObj IDeriveSha = nil
 
-func InitDeriveSha(i IDeriveSha) {
+func InitDeriveSha(i IDeriveSha, h TrieHasher) {
 	deriveShaObj = i
 
 	// reset EmptyRootHash.
-	EmptyRootHash = DeriveSha(Transactions{})
+	EmptyRootHash = DeriveSha(Transactions{}, h)
 }
 
-func DeriveSha(list DerivableList) common.Hash {
-	return deriveShaObj.DeriveSha(list)
+func DeriveSha(list DerivableList, h TrieHasher) common.Hash {
+	return deriveShaObj.DeriveSha(list, h)
 }
 
 // DeriveShaWithBlockNum function will be used instead of DeriveSha after Kore hf.
-func DeriveShaWithBlockNum(list DerivableList, blockNumber *big.Int) common.Hash {
+func DeriveShaWithBlockNum(list DerivableList, blockNumber *big.Int, hasher TrieHasher) common.Hash {
 	if fork.Rules(blockNumber).IsKore {
-		deriveShaObj = statedb.DeriveShaOrig{}
+		deriveShaObj = DeriveShaOrig{}
 	}
-	return deriveShaObj.DeriveSha(list)
+	return deriveShaObj.DeriveSha(list, hasher)
 }
 
 // An alternative implementation of DeriveSha()
 // This function generates a hash of `DerivableList` by simulating merkle tree generation
 type DeriveShaSimple struct{}
 
-func (d DeriveShaSimple) DeriveSha(list DerivableList) common.Hash {
+func (d DeriveShaSimple) DeriveSha(list DerivableList, h TrieHasher) common.Hash {
 	hasher := sha3.NewKeccak256()
 
 	encoded := make([][]byte, 0, list.Len())
@@ -111,7 +112,7 @@ func (d DeriveShaSimple) DeriveSha(list DerivableList) common.Hash {
 // 2. make a hash of the byte slice.
 type DeriveShaConcat struct{}
 
-func (d DeriveShaConcat) DeriveSha(list DerivableList) (hash common.Hash) {
+func (d DeriveShaConcat) DeriveSha(list DerivableList, h TrieHasher) (hash common.Hash) {
 	hasher := sha3.NewKeccak256()
 
 	for i := 0; i < list.Len(); i++ {
@@ -120,4 +121,40 @@ func (d DeriveShaConcat) DeriveSha(list DerivableList) (hash common.Hash) {
 	hasher.Sum(hash[:0])
 
 	return hash
+}
+
+// TrieHasher is the tool used to calculate the hash of derivable list.
+// This is internal, do not use.
+type TrieHasher interface {
+	Reset()
+	Update([]byte, []byte)
+	Hash() common.Hash
+}
+
+type DeriveShaOrig struct{}
+
+func (d DeriveShaOrig) DeriveSha(list DerivableList, hasher TrieHasher) common.Hash {
+	hasher.Reset()
+	keybuf := new(bytes.Buffer)
+
+	// StackTrie requires values to be inserted in increasing
+	// hash order, which is not the order that `list` provides
+	// hashes in. This insertion sequence ensures that the
+	// order is correct.
+	for i := 1; i < list.Len() && i <= 0x7f; i++ {
+		keybuf.Reset()
+		rlp.Encode(keybuf, uint(i))
+		hasher.Update(keybuf.Bytes(), list.GetRlp(i))
+	}
+	if list.Len() > 0 {
+		keybuf.Reset()
+		rlp.Encode(keybuf, uint(0))
+		hasher.Update(keybuf.Bytes(), list.GetRlp(0))
+	}
+	for i := 0x80; i < list.Len(); i++ {
+		keybuf.Reset()
+		rlp.Encode(keybuf, uint(i))
+		hasher.Update(keybuf.Bytes(), list.GetRlp(i))
+	}
+	return hasher.Hash()
 }

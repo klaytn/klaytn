@@ -25,6 +25,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"github.com/klaytn/klaytn/storage/statedb"
 	"math/big"
 	"time"
 
@@ -512,7 +513,7 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 	header.Root = state.IntermediateRoot(true)
 
 	// Assemble and return the final block for sealing
-	return types.NewBlock(header, txs, receipts), nil
+	return types.NewBlock(header, txs, receipts, statedb.NewStackTrie(nil)), nil
 }
 
 // Seal generates a new block for the given input block with the local miner's
