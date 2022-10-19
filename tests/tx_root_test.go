@@ -23,7 +23,6 @@ import (
 
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common/profile"
-	"github.com/klaytn/klaytn/storage/statedb"
 )
 
 func BenchmarkDeriveSha(b *testing.B) {
@@ -47,7 +46,7 @@ func BenchmarkDeriveSha(b *testing.B) {
 
 func BenchmarkDeriveShaOrig(b *testing.B) {
 	b.Run("1000test-stackTrie", func(b *testing.B) {
-		benchDeriveSha(b, 1000, 4, statedb.DeriveShaOrig{})
+		benchDeriveSha(b, 1000, 4, types.DeriveShaOrig{})
 	})
 }
 
