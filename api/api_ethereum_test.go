@@ -6,10 +6,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/klaytn/klaytn/storage/statedb"
 	"math/big"
 	"reflect"
 	"testing"
+
+	"github.com/klaytn/klaytn/storage/statedb"
 
 	"github.com/stretchr/testify/require"
 
