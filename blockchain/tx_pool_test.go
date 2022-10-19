@@ -87,7 +87,7 @@ func (pool *TxPool) SetBaseFee(baseFee *big.Int) {
 }
 
 func (bc *testBlockChain) CurrentBlock() *types.Block {
-	return types.NewTestBlock(&types.Header{Number: big.NewInt(0)}, nil, nil)
+	return types.NewTestBlock(&types.Header{Number: big.NewInt(0)}, nil, nil, nil)
 }
 
 func (bc *testBlockChain) GetBlock(hash common.Hash, number uint64) *types.Block {

@@ -223,14 +223,14 @@ func NewBlock(header *Header, txs []*Transaction, receipts []*Receipt, hasher Tr
 // NewTestBlock creates a new block, same as NewBlock.
 // Since new DeriveSha function is defined, existing test functions also need new block generating function.
 // Created so that it can run tests without chainconfig.
-func NewTestBlock(header *Header, txs []*Transaction, receipts []*Receipt) *Block {
+func NewTestBlock(header *Header, txs []*Transaction, receipts []*Receipt, hasher TrieHasher) *Block {
 	b := &Block{header: CopyHeader(header), td: new(big.Int)}
 
 	// TODO: panic if len(txs) != len(receipts)
 	if len(txs) == 0 {
 		b.header.TxHash = EmptyRootHash
 	} else {
-		b.header.TxHash = DeriveSha(Transactions(txs), nil)
+		b.header.TxHash = DeriveSha(Transactions(txs), hasher)
 		b.transactions = make(Transactions, len(txs))
 		copy(b.transactions, txs)
 	}
@@ -238,7 +238,7 @@ func NewTestBlock(header *Header, txs []*Transaction, receipts []*Receipt) *Bloc
 	if len(receipts) == 0 {
 		b.header.ReceiptHash = EmptyRootHash
 	} else {
-		b.header.ReceiptHash = DeriveSha(Receipts(receipts), nil)
+		b.header.ReceiptHash = DeriveSha(Receipts(receipts), hasher)
 		b.header.Bloom = CreateBloom(receipts)
 	}
 

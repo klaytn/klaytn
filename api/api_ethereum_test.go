@@ -1180,7 +1180,7 @@ func createTestData(t *testing.T, header *types.Header) (*types.Block, types.Tra
 
 	// Create test data for chainDataAnchoring tx
 	{
-		dummyBlock := types.NewTestBlock(&types.Header{}, nil, nil)
+		dummyBlock := types.NewTestBlock(&types.Header{}, nil, nil, nil)
 		scData, err := types.NewAnchoringDataType0(dummyBlock, 0, uint64(dummyBlock.Transactions().Len()))
 		if err != nil {
 			t.Fatal(err)
@@ -1872,9 +1872,9 @@ func createTestData(t *testing.T, header *types.Header) (*types.Block, types.Tra
 	// Create a block which includes all transaction data.
 	var block *types.Block
 	if header != nil {
-		block = types.NewTestBlock(header, txs, receipts)
+		block = types.NewTestBlock(header, txs, receipts, nil)
 	} else {
-		block = types.NewTestBlock(&types.Header{Number: big.NewInt(1)}, txs, nil)
+		block = types.NewTestBlock(&types.Header{Number: big.NewInt(1)}, txs, nil, nil)
 	}
 
 	return block, txs, txHashMap, receiptMap, receipts
@@ -1960,9 +1960,9 @@ func createEthereumTypedTestData(t *testing.T, header *types.Header) (*types.Blo
 	// Create a block which includes all transaction data.
 	var block *types.Block
 	if header != nil {
-		block = types.NewTestBlock(header, txs, receipts)
+		block = types.NewTestBlock(header, txs, receipts, nil)
 	} else {
-		block = types.NewTestBlock(&types.Header{Number: big.NewInt(1)}, txs, nil)
+		block = types.NewTestBlock(&types.Header{Number: big.NewInt(1)}, txs, nil, nil)
 	}
 
 	return block, txs, txHashMap, receiptMap, receipts
