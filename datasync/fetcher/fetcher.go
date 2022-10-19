@@ -22,9 +22,10 @@ package fetcher
 
 import (
 	"errors"
-	"github.com/klaytn/klaytn/storage/statedb"
 	"math/rand"
 	"time"
+
+	"github.com/klaytn/klaytn/storage/statedb"
 
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"

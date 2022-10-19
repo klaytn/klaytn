@@ -23,10 +23,11 @@ package gxhash
 import (
 	"errors"
 	"fmt"
-	"github.com/klaytn/klaytn/storage/statedb"
 	"math/big"
 	"runtime"
 	"time"
+
+	"github.com/klaytn/klaytn/storage/statedb"
 
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"

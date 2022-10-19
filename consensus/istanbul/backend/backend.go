@@ -22,11 +22,12 @@ package backend
 
 import (
 	"crypto/ecdsa"
-	"github.com/klaytn/klaytn/storage/statedb"
 	"math/big"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/klaytn/klaytn/storage/statedb"
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/blockchain"

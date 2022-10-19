@@ -23,10 +23,11 @@ package downloader
 import (
 	"errors"
 	"fmt"
-	"github.com/klaytn/klaytn/storage/statedb"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/klaytn/klaytn/storage/statedb"
 
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"

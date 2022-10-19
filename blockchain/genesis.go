@@ -26,9 +26,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/klaytn/klaytn/storage/statedb"
 	"math/big"
 	"strings"
+
+	"github.com/klaytn/klaytn/storage/statedb"
 
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"

@@ -21,11 +21,12 @@
 package work
 
 import (
-	"github.com/klaytn/klaytn/storage/statedb"
 	"math/big"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/klaytn/klaytn/storage/statedb"
 
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/state"

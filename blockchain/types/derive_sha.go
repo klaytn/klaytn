@@ -22,8 +22,9 @@ package types
 
 import (
 	"bytes"
-	"github.com/klaytn/klaytn/rlp"
 	"math/big"
+
+	"github.com/klaytn/klaytn/rlp"
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto/sha3"

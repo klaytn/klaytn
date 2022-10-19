@@ -23,11 +23,12 @@ package clique
 import (
 	"bytes"
 	"errors"
-	"github.com/klaytn/klaytn/storage/statedb"
 	"math/big"
 	"math/rand"
 	"sync"
 	"time"
+
+	"github.com/klaytn/klaytn/storage/statedb"
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/accounts"

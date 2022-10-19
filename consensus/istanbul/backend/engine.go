@@ -25,9 +25,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"github.com/klaytn/klaytn/storage/statedb"
 	"math/big"
 	"time"
+
+	"github.com/klaytn/klaytn/storage/statedb"
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/blockchain/state"
