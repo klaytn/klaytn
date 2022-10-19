@@ -40,12 +40,6 @@ import (
 	"gopkg.in/urfave/cli.v1/altsrc"
 )
 
-const (
-	clientIdentifier = "klay" // Client identifier to advertise over the network
-	SCNNetworkType   = "scn"  // Service Chain Network
-	MNNetworkType    = "mn"   // Mainnet Network
-)
-
 // runKlaytnNode is the main entry point into the system if no special subcommand is ran.
 // It creates a default node based on the command line arguments and runs it in
 // blocking mode, waiting for it to be shut down.
@@ -57,9 +51,9 @@ func RunKlaytnNode(ctx *cli.Context) error {
 }
 
 func MakeFullNode(ctx *cli.Context) *node.Node {
-	stack, cfg := makeConfigNode(ctx)
+	stack, cfg := utils.MakeConfigNode(ctx)
 
-	if utils.NetworkTypeFlag.Value == SCNNetworkType && cfg.ServiceChain.EnabledSubBridge {
+	if utils.NetworkTypeFlag.Value == utils.SCNNetworkType && cfg.ServiceChain.EnabledSubBridge {
 		if !cfg.CN.NoAccountCreation {
 			logger.Warn("generated accounts can't be synced with the parent chain since account creation is enabled")
 		}
@@ -131,7 +125,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		}
 	}()
 
-	if utils.NetworkTypeFlag.Value == SCNNetworkType && utils.ServiceChainConsensusFlag.Value == "clique" {
+	if utils.NetworkTypeFlag.Value == utils.SCNNetworkType && utils.ServiceChainConsensusFlag.Value == "clique" {
 		logger.Crit("using clique consensus type is not allowed anymore!")
 	} else {
 		startKlaytnAuxiliaryService(ctx, stack)
