@@ -18,6 +18,7 @@ package tests
 
 import (
 	"fmt"
+	"github.com/klaytn/klaytn/storage/statedb"
 	"testing"
 	"time"
 
@@ -80,7 +81,7 @@ func benchDeriveSha(b *testing.B, numTransactions, numValidators int, sha types.
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		hash := sha.DeriveSha(txs)
+		hash := sha.DeriveSha(txs, statedb.NewStackTrie(nil))
 		if testing.Verbose() {
 			fmt.Printf("[%d] txhash = %s\n", i, hash.Hex())
 		}
