@@ -25,13 +25,12 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/klaytn/klaytn/storage/statedb"
-
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/prque"
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/log"
+	"github.com/klaytn/klaytn/storage/statedb"
 )
 
 const (

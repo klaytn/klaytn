@@ -28,8 +28,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/klaytn/klaytn/storage/statedb"
-
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/blockchain/state"
@@ -45,6 +43,7 @@ import (
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
+	"github.com/klaytn/klaytn/storage/statedb"
 )
 
 const (

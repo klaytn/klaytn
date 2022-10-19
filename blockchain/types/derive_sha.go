@@ -24,11 +24,10 @@ import (
 	"bytes"
 	"math/big"
 
-	"github.com/klaytn/klaytn/rlp"
-
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto/sha3"
 	"github.com/klaytn/klaytn/fork"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 type DerivableList interface {

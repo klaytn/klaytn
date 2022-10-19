@@ -27,13 +27,12 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/klaytn/klaytn/storage/statedb"
-
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/storage/statedb"
 )
 
 var (

@@ -26,6 +26,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/klaytn/klaytn/storage/statedb"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
@@ -163,7 +165,7 @@ func TestVerifyBlockBody(t *testing.T) {
 		// Generate a block with tx
 		tx := types.NewTx(testcase.txData)
 		tx.Sign(signer, privKey)
-		block = types.NewTestBlock(header, append(types.Transactions{}, tx), nil, nil)
+		block = types.NewTestBlock(header, append(types.Transactions{}, tx), nil, statedb.NewStackTrie(nil))
 
 		err := chain.validator.ValidateBody(block)
 		if errExist := err != nil; errExist != testcase.err {
