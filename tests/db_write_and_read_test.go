@@ -23,13 +23,12 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/klaytn/klaytn/storage/statedb"
-
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/storage/database"
+	"github.com/klaytn/klaytn/storage/statedb"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -26,8 +26,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/klaytn/klaytn/storage/statedb"
-
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
@@ -35,6 +33,7 @@ import (
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
+	"github.com/klaytn/klaytn/storage/statedb"
 	"github.com/stretchr/testify/assert"
 )
 

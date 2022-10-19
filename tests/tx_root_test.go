@@ -21,10 +21,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/klaytn/klaytn/storage/statedb"
-
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common/profile"
+	"github.com/klaytn/klaytn/storage/statedb"
 )
 
 func BenchmarkDeriveSha(b *testing.B) {

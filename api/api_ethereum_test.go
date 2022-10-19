@@ -10,8 +10,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/klaytn/klaytn/storage/statedb"
-
 	"github.com/stretchr/testify/require"
 
 	"github.com/klaytn/klaytn/crypto"
@@ -31,6 +29,7 @@ import (
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
+	"github.com/klaytn/klaytn/storage/statedb"
 	"github.com/stretchr/testify/assert"
 )
 

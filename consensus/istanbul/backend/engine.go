@@ -28,8 +28,6 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/klaytn/klaytn/storage/statedb"
-
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -46,6 +44,7 @@ import (
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/rlp"
+	"github.com/klaytn/klaytn/storage/statedb"
 )
 
 const (
