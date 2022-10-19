@@ -28,7 +28,7 @@ import (
 
 func BenchmarkDeriveSha(b *testing.B) {
 	funcs := map[string]types.IDeriveSha{
-		"Orig":   statedb.DeriveShaOrig{},
+		"Orig":   types.DeriveShaOrig{},
 		"Simple": types.DeriveShaSimple{},
 		"Concat": types.DeriveShaConcat{},
 	}

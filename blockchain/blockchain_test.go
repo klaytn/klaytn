@@ -677,7 +677,7 @@ func TestFastVsFullChains(t *testing.T) {
 		} else if types.DeriveShaWithBlockNum(fblock.Transactions(), fblock.Number(), statedb.NewStackTrie(nil)) != types.DeriveShaWithBlockNum(ablock.Transactions(), ablock.Number(), statedb.NewStackTrie(nil)) {
 			t.Errorf("block #%d [%x]: transactions mismatch: have %v, want %v", num, hash, fblock.Transactions(), ablock.Transactions())
 		}
-		if freceipts, areceipts := fastDb.ReadReceipts(hash, *fastDb.ReadHeaderNumber(hash)), archiveDb.ReadReceipts(hash, *archiveDb.ReadHeaderNumber(hash)); types.DeriveShaWithBlockNum(freceipts, blocks[i].Number()) != types.DeriveShaWithBlockNum(areceipts, blocks[i].Number()) {
+		if freceipts, areceipts := fastDb.ReadReceipts(hash, *fastDb.ReadHeaderNumber(hash)), archiveDb.ReadReceipts(hash, *archiveDb.ReadHeaderNumber(hash)); types.DeriveShaWithBlockNum(freceipts, blocks[i].Number(), statedb.NewStackTrie(nil)) != types.DeriveShaWithBlockNum(areceipts, blocks[i].Number(), statedb.NewStackTrie(nil)) {
 			t.Errorf("block #%d [%x]: receipts mismatch: have %v, want %v", num, hash, freceipts, areceipts)
 		}
 	}
