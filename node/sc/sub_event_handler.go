@@ -61,7 +61,7 @@ func (cce *ChildChainEventHandler) HandleChainHeadEvent(block *types.Block) erro
 
 	cBalance, err := cce.handler.getChildOperatorBalance()
 	if err != nil {
-		logger.Trace("[SC][View] Failed to get child operator's balance", "err", err)
+		logger.Error("[SC][View] Failed to get child operator's balance", "err", err)
 	} else {
 		logger.Trace("[SC][View] Got child operator's balance", "childOperator", cce.handler.GetParentOperatorAddr(), "block", block.Number(), "balance", cBalance)
 		childOperatorBalanceGauge.Update(cBalance.Int64())
