@@ -499,6 +499,9 @@ func (self *worker) commitNewWork() {
 	parent := self.chain.CurrentBlock()
 	nextBlockNum := new(big.Int).Add(parent.Number(), common.Big1)
 	var nextBaseFee *big.Int
+	if self.config.IsKoreForkEnabled(nextBlockNum) {
+		types.InitDeriveSha(types.DeriveShaOrig{}, statedb.NewStackTrie(nil))
+	}
 	if self.nodetype == common.CONSENSUSNODE {
 		if self.config.IsMagmaForkEnabled(nextBlockNum) {
 			// NOTE-klaytn NextBlockBaseFee needs the header of parent, self.chain.CurrentBlock
