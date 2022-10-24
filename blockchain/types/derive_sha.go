@@ -22,11 +22,9 @@ package types
 
 import (
 	"bytes"
-	"math/big"
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto/sha3"
-	"github.com/klaytn/klaytn/fork"
 	"github.com/klaytn/klaytn/rlp"
 )
 
@@ -56,14 +54,6 @@ func InitDeriveSha(i IDeriveSha, h TrieHasher) {
 
 func DeriveSha(list DerivableList, h TrieHasher) common.Hash {
 	return deriveShaObj.DeriveSha(list, h)
-}
-
-// DeriveShaWithBlockNum function will be used instead of DeriveSha after Kore hf.
-func DeriveShaWithBlockNum(list DerivableList, blockNumber *big.Int, hasher TrieHasher) common.Hash {
-	if fork.Rules(blockNumber).IsKore {
-		deriveShaObj = DeriveShaOrig{}
-	}
-	return deriveShaObj.DeriveSha(list, hasher)
 }
 
 // An alternative implementation of DeriveSha()

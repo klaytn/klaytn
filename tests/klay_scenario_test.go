@@ -1859,7 +1859,7 @@ func TestValidateSender(t *testing.T) {
 
 	// TxTypeChainDataAnchoring
 	{
-		dummyBlock := types.NewTestBlock(&types.Header{}, nil, nil, nil)
+		dummyBlock := types.NewBlock(&types.Header{}, nil, nil, nil)
 
 		scData, err := types.NewAnchoringDataType0(dummyBlock, 0, uint64(dummyBlock.Transactions().Len()))
 		if err != nil {

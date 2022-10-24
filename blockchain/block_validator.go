@@ -68,7 +68,7 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 	}
 	// Header validity is known at this point, check the transactions
 	header := block.Header()
-	if hash := types.DeriveShaWithBlockNum(block.Transactions(), block.Number(), statedb.NewStackTrie(nil)); hash != header.TxHash {
+	if hash := types.DeriveSha(block.Transactions(), statedb.NewStackTrie(nil)); hash != header.TxHash {
 		return fmt.Errorf("transaction root hash mismatch: have %x, want %x", hash, header.TxHash)
 	}
 	baseFee := block.Header().BaseFee
@@ -98,7 +98,7 @@ func (v *BlockValidator) ValidateState(block, parent *types.Block, stateDB *stat
 		return fmt.Errorf("invalid bloom (remote: %x  local: %x)", header.Bloom, rbloom)
 	}
 	// Tre receipt Trie's root (R = (Tr [[H1, R1], ... [Hn, R1]]))
-	receiptSha := types.DeriveShaWithBlockNum(receipts, block.Number(), statedb.NewStackTrie(nil))
+	receiptSha := types.DeriveSha(receipts, statedb.NewStackTrie(nil))
 	if receiptSha != header.ReceiptHash {
 		return fmt.Errorf("invalid receipt root hash (remote: %x local: %x)", header.ReceiptHash, receiptSha)
 	}

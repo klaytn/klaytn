@@ -332,7 +332,7 @@ func (sb *backend) Verify(proposal istanbul.Proposal) (time.Duration, error) {
 	}
 
 	// check block body
-	txnHash := types.DeriveShaWithBlockNum(block.Transactions(), block.Number(), statedb.NewStackTrie(nil))
+	txnHash := types.DeriveSha(block.Transactions(), statedb.NewStackTrie(nil))
 	if txnHash != block.Header().TxHash {
 		return 0, errMismatchTxhashes
 	}

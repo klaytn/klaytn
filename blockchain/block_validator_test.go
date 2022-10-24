@@ -164,7 +164,7 @@ func TestVerifyBlockBody(t *testing.T) {
 		// Generate a block with tx
 		tx := types.NewTx(testcase.txData)
 		tx.Sign(signer, privKey)
-		block = types.NewTestBlock(header, append(types.Transactions{}, tx), nil, statedb.NewStackTrie(nil))
+		block = types.NewBlock(header, append(types.Transactions{}, tx), nil, statedb.NewStackTrie(nil))
 
 		err := chain.validator.ValidateBody(block)
 		if errExist := err != nil; errExist != testcase.err {
