@@ -499,8 +499,9 @@ func (self *worker) commitNewWork() {
 	parent := self.chain.CurrentBlock()
 	nextBlockNum := new(big.Int).Add(parent.Number(), common.Big1)
 	var nextBaseFee *big.Int
-	if self.config.IsKoreForkEnabled(nextBlockNum) {
-		types.InitDeriveSha(types.DeriveShaOrig{}, statedb.NewStackTrie(nil))
+	if self.config.KoreCompatibleBlock.Cmp(nextBlockNum) == 0 {
+		self.config.DeriveShaImpl = 0
+		blockchain.InitDeriveSha(0)
 	}
 	if self.nodetype == common.CONSENSUSNODE {
 		if self.config.IsMagmaForkEnabled(nextBlockNum) {
