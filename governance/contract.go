@@ -51,7 +51,7 @@ func (e *ContractEngine) ParamsAt(num uint64) (*params.GovParamSet, error) {
 		num = head + 1
 	}
 
-	pset, err := e.contractGetAllParams(num)
+	pset, err := e.contractGetAllParamsAt(num)
 	if err != nil {
 		return nil, err
 	}
@@ -65,8 +65,9 @@ func (e *ContractEngine) UpdateParams() error {
 		return errContractEngineNotReady
 	}
 
+	// request the parameters required for generating the next block
 	head := e.chain.CurrentHeader().Number.Uint64()
-	pset, err := e.contractGetAllParams(head + 1)
+	pset, err := e.contractGetAllParamsAt(head + 1)
 	if err != nil {
 		return err
 	}
@@ -75,8 +76,8 @@ func (e *ContractEngine) UpdateParams() error {
 	return nil
 }
 
-// contractGetAllParams sets evmCtx.BlockNumber as num
-func (e *ContractEngine) contractGetAllParams(num uint64) (*params.GovParamSet, error) {
+// contractGetAllParamsAt sets evmCtx.BlockNumber as num
+func (e *ContractEngine) contractGetAllParamsAt(num uint64) (*params.GovParamSet, error) {
 	if e.chain == nil {
 		logger.Error("Invoked ContractEngine before SetBlockchain")
 		return nil, errContractEngineNotReady
@@ -93,7 +94,7 @@ func (e *ContractEngine) contractGetAllParams(num uint64) (*params.GovParamSet, 
 		chain:        e.chain,
 		contractAddr: addr,
 	}
-	return caller.getAllParams(new(big.Int).SetUint64(num))
+	return caller.getAllParamsAt(new(big.Int).SetUint64(num))
 }
 
 // Return the GovParamContract address effective at given block number

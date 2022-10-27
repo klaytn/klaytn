@@ -22,13 +22,13 @@ type contractCaller struct {
 
 var govParamAbi, _ = abi.JSON(strings.NewReader(govcontract.GovParamABI))
 
-func (c *contractCaller) getAllParams(num *big.Int) (*params.GovParamSet, error) {
-	tx, err := c.makeTx(num, govParamAbi, "getAllParams")
+func (c *contractCaller) getAllParamsAt(num *big.Int) (*params.GovParamSet, error) {
+	tx, err := c.makeTx(govParamAbi, "getAllParamsAt", num)
 	if err != nil {
 		return nil, err
 	}
 
-	res, err := c.callTx(num, tx)
+	res, err := c.callTx(tx)
 	if err != nil {
 		return nil, err
 	}
@@ -67,14 +67,14 @@ func (c *contractCaller) getAllParams(num *big.Int) (*params.GovParamSet, error)
 }
 
 // Make contract execution transaction
-func (c *contractCaller) makeTx(num *big.Int, contractAbi abi.ABI, fn string, args ...interface{},
+func (c *contractCaller) makeTx(contractAbi abi.ABI, fn string, args ...interface{},
 ) (*types.Transaction, error) {
 	calldata, err := contractAbi.Pack(fn, args...)
 	if err != nil {
 		return nil, err
 	}
 
-	rules := c.chainConfig.Rules(num)
+	rules := c.chainConfig.Rules(c.chain.CurrentHeader().Number)
 	intrinsicGas, err := types.IntrinsicGas(calldata, nil, false, rules)
 	if err != nil {
 		return nil, err
@@ -95,17 +95,12 @@ func (c *contractCaller) makeTx(num *big.Int, contractAbi abi.ABI, fn string, ar
 	return tx, nil
 }
 
-// Execute contract call using state at block `num`.
-func (c *contractCaller) callTx(num *big.Int, tx *types.Transaction) ([]byte, error) {
-	// Load state at given block
-	blocknum := num
-	if blocknum.Cmp(c.chain.CurrentHeader().Number) > 0 {
-		blocknum = c.chain.CurrentHeader().Number
-	}
-
-	block := c.chain.GetBlockByNumber(blocknum.Uint64())
+// Execute contract call at the latest block context
+func (c *contractCaller) callTx(tx *types.Transaction) ([]byte, error) {
+	// Load the latest state
+	block := c.chain.GetBlockByNumber(c.chain.CurrentHeader().Number.Uint64())
 	if block == nil {
-		return nil, errors.New("No such block")
+		return nil, errors.New("no such block")
 	}
 
 	statedb, err := c.chain.StateAt(block.Root())
@@ -119,8 +114,6 @@ func (c *contractCaller) callTx(num *big.Int, tx *types.Transaction) ([]byte, er
 	// After KIP-71, gasPrice is baseFee (=nonzero), regardless of the msg.gasPrice (=zero)
 	// But our sender (0x0) won't have enough balance. Instead we override gasPrice = 0 here
 	evmCtx.GasPrice = big.NewInt(0)
-	// num can be greater than CurrentHeader().Number
-	evmCtx.BlockNumber = num
 	evm := vm.NewEVM(evmCtx, statedb, c.chain.Config(), &vm.Config{})
 
 	res, _, kerr := blockchain.ApplyMessage(evm, tx)
