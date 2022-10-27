@@ -39,7 +39,6 @@ import (
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/consensus/istanbul/core"
 	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/rlp"
@@ -1497,14 +1496,14 @@ func TestGovernance_Votes(t *testing.T) {
 		chain, engine := newBlockChain(1, configItems...)
 
 		// test initial governance items
-		assert.Equal(t, uint64(3), engine.governance.Epoch())
-		assert.Equal(t, "single", engine.governance.GovernanceMode())
-		assert.Equal(t, uint64(21), engine.governance.CommitteeSize())
-		assert.Equal(t, uint64(1), engine.governance.UnitPrice())
-		assert.Equal(t, "0", engine.governance.MintingAmount())
-		assert.Equal(t, "100/0/0", engine.governance.Ratio())
-		assert.Equal(t, false, engine.governance.UseGiniCoeff())
-		assert.Equal(t, "2000000", engine.governance.MinimumStake())
+		assert.Equal(t, uint64(3), engine.governance.Params().Epoch())
+		assert.Equal(t, "single", engine.governance.Params().GovernanceModeStr())
+		assert.Equal(t, uint64(21), engine.governance.Params().CommitteeSize())
+		assert.Equal(t, uint64(1), engine.governance.Params().UnitPrice())
+		assert.Equal(t, "0", engine.governance.Params().MintingAmountStr())
+		assert.Equal(t, "100/0/0", engine.governance.Params().Ratio())
+		assert.Equal(t, false, engine.governance.Params().UseGiniCoeff())
+		assert.Equal(t, "2000000", engine.governance.Params().MinimumStakeStr())
 
 		// add votes and insert voted blocks
 		var (
@@ -1789,18 +1788,17 @@ func TestChainConfig_ReadFromDBAfterVotes(t *testing.T) {
 			assert.NoError(t, err)
 		}
 
-		gov := governance.NewGovernanceInitialize(chain.Config(), engine.db)
 		switch tc.expected.key {
 		case "kip71.lowerboundbasefee":
-			assert.Equal(t, tc.expected.value, gov.ChainConfig.Governance.KIP71.LowerBoundBaseFee)
+			assert.Equal(t, tc.expected.value, chain.Config().Governance.KIP71.LowerBoundBaseFee)
 		case "kip71.upperboundbasefee":
-			assert.Equal(t, tc.expected.value, gov.ChainConfig.Governance.KIP71.UpperBoundBaseFee)
+			assert.Equal(t, tc.expected.value, chain.Config().Governance.KIP71.UpperBoundBaseFee)
 		case "kip71.gastarget":
-			assert.Equal(t, tc.expected.value, gov.ChainConfig.Governance.KIP71.GasTarget)
+			assert.Equal(t, tc.expected.value, chain.Config().Governance.KIP71.GasTarget)
 		case "kip71.maxblockgasusedforbasefee":
-			assert.Equal(t, tc.expected.value, gov.ChainConfig.Governance.KIP71.MaxBlockGasUsedForBaseFee)
+			assert.Equal(t, tc.expected.value, chain.Config().Governance.KIP71.MaxBlockGasUsedForBaseFee)
 		case "kip71.basefeedenominator":
-			assert.Equal(t, tc.expected.value, gov.ChainConfig.Governance.KIP71.BaseFeeDenominator)
+			assert.Equal(t, tc.expected.value, chain.Config().Governance.KIP71.BaseFeeDenominator)
 		default:
 			assert.Error(t, nil)
 		}

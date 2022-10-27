@@ -135,13 +135,11 @@ func newStakingInfo(bc blockChain, helper governanceHelper, blockNum uint64, nod
 		stakingAmounts[i] = tempStakingAmount.Uint64()
 	}
 
-	var useGini bool
-	if res, err := helper.GetItemAtNumberByIntKey(blockNum, params.UseGiniCoeff); err != nil {
-		logger.Trace("Failed to get useGiniCoeff from governance", "blockNum", blockNum, "err", err)
+	pset, err := helper.ParamsAt(blockNum)
+	if err != nil {
 		return nil, err
-	} else {
-		useGini = res.(bool)
 	}
+	useGini := pset.UseGiniCoeff()
 	gini := DefaultGiniCoefficient
 
 	stakingInfo := &StakingInfo{

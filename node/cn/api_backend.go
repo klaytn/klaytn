@@ -286,17 +286,17 @@ func (b *CNAPIBackend) SuggestPrice(ctx context.Context) (*big.Int, error) {
 
 func (b *CNAPIBackend) UpperBoundGasPrice(ctx context.Context) *big.Int {
 	if b.cn.chainConfig.IsMagmaForkEnabled(b.CurrentBlock().Number()) {
-		return new(big.Int).SetUint64(b.cn.governance.UpperBoundBaseFee())
+		return new(big.Int).SetUint64(b.cn.governance.Params().UpperBoundBaseFee())
 	} else {
-		return new(big.Int).SetUint64(b.cn.governance.UnitPrice())
+		return new(big.Int).SetUint64(b.cn.governance.Params().UnitPrice())
 	}
 }
 
 func (b *CNAPIBackend) LowerBoundGasPrice(ctx context.Context) *big.Int {
 	if b.cn.chainConfig.IsMagmaForkEnabled(b.CurrentBlock().Number()) {
-		return new(big.Int).SetUint64(b.cn.governance.LowerBoundBaseFee())
+		return new(big.Int).SetUint64(b.cn.governance.Params().LowerBoundBaseFee())
 	} else {
-		return new(big.Int).SetUint64(b.cn.governance.UnitPrice())
+		return new(big.Int).SetUint64(b.cn.governance.Params().UnitPrice())
 	}
 }
 
