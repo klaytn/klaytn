@@ -28,7 +28,9 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
+	"github.com/bt51/ntpclient"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/log"
@@ -211,6 +213,20 @@ func ExportAppendChain(blockchain *blockchain.BlockChain, fn string, first uint6
 		return err
 	}
 	logger.Info("Exported blockchain to", "file", fn)
+	return nil
+}
+
+func NtpCheckWithLocal() error {
+	local := time.Now().UTC().Unix()
+	ntp, err := ntpclient.GetNetworkTime("time.nist.gov", 123)
+	if err != nil {
+		return err
+	}
+	remote := ntp.Unix()
+	if local != remote {
+		return fmt.Errorf("System time is out of sync, local:%x remote:%x", local, remote)
+	}
+	logger.Info("Ntp time check", "local", local, "remote", remote)
 	return nil
 }
 
