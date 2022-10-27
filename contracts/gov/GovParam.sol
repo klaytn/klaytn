@@ -1,58 +1,66 @@
-// Sources flattened with hardhat v2.11.1 https://hardhat.org
+// Sources flattened with hardhat v2.11.2 https://hardhat.org
 
 // File contracts/IGovParam.sol
 
 pragma solidity ^0.8.0;
 
 /**
- *
  * @dev Interface of the GovParam Contract
- *
  */
 interface IGovParam {
-    struct ParamState {
-        bytes value;
-        bool exists;
-    }
-
     struct Param {
-        uint64 activation;
-        bool votable;
-        ParamState prev; // before activation (exclusive)
-        ParamState next; // after activation (inclusive)
+        uint256 activation;
+        bool exists;
+        bytes val;
     }
 
-    event AddParam(string, bytes);
-    event SetParam(string, bytes, uint64);
-    event DeleteParam(string);
-    event SetParamVotable(string, bool);
+    event SetParam(string name, bool exists, bytes value, uint256 activation);
 
-    function getAllStructParams() external view returns (string[] memory, Param[] memory);
+    function paramNames(uint256 idx) external view returns (string memory);
 
-    function getParam(string memory name) external view returns (bytes memory);
+    function getAllParamNames() external view returns (string[] memory);
 
-    function getAllParams() external view returns (string[] memory, bytes[] memory);
+    function checkpoints(string calldata name)
+        external
+        view
+        returns (Param[] memory);
 
-    function addParam(
-        string calldata name,
-        bytes calldata value
-    ) external;
+    function getAllCheckpoints()
+        external
+        view
+        returns (string[] memory, Param[][] memory);
+
+    function getParam(string calldata name)
+        external
+        view
+        returns (bool, bytes memory);
+
+    function getParamAt(string calldata name, uint256 blockNumber)
+        external
+        view
+        returns (bool, bytes memory);
+
+    function getAllParams()
+        external
+        view
+        returns (string[] memory, bytes[] memory);
+
+    function getAllParamsAt(uint256 blockNumber)
+        external
+        view
+        returns (string[] memory, bytes[] memory);
 
     function setParam(
-        string calldata name,
-        bytes calldata value,
-        uint64 activation
-    ) external;
+        string calldata name, bool exists, bytes calldata value,
+        uint256 activation) external;
 
-    function deleteParam(
-        string calldata name
-    ) external;
-
-    function setParamVotable(string memory name, bool votable) external;
+    function setParamIn(
+        string calldata name, bool exists, bytes calldata value,
+        uint256 relativeActivation) external;
 }
 
 
-// File @openzeppelin/contracts/utils/Context.sol@v4.7.3
+// File @openzeppelin/contracts/utils/Context.sol@v4.6.0
 
 // OpenZeppelin Contracts v4.4.1 (utils/Context.sol)
 
@@ -79,9 +87,9 @@ abstract contract Context {
 }
 
 
-// File @openzeppelin/contracts/access/Ownable.sol@v4.7.3
+// File @openzeppelin/contracts/access/Ownable.sol@v4.6.0
 
-// OpenZeppelin Contracts (last updated v4.7.0) (access/Ownable.sol)
+// OpenZeppelin Contracts v4.4.1 (access/Ownable.sol)
 
 pragma solidity ^0.8.0;
 
@@ -110,14 +118,6 @@ abstract contract Ownable is Context {
     }
 
     /**
-     * @dev Throws if called by any account other than the owner.
-     */
-    modifier onlyOwner() {
-        _checkOwner();
-        _;
-    }
-
-    /**
      * @dev Returns the address of the current owner.
      */
     function owner() public view virtual returns (address) {
@@ -125,10 +125,11 @@ abstract contract Ownable is Context {
     }
 
     /**
-     * @dev Throws if the sender is not the owner.
+     * @dev Throws if called by any account other than the owner.
      */
-    function _checkOwner() internal view virtual {
+    modifier onlyOwner() {
         require(owner() == _msgSender(), "Ownable: caller is not the owner");
+        _;
     }
 
     /**
@@ -169,225 +170,224 @@ pragma solidity ^0.8.0;
 
 
 /**
- *
  * @dev Contract to store and update governance parameters
  * This contract can be called by node to read the param values in the current block
  * Also, the governance contract can change the parameter values.
- *
  */
-contract GovParam is Ownable, IGovParam
-{
-    string[] private _paramNames;
-    mapping(string => Param) private _params;
+contract GovParam is Ownable, IGovParam {
+    /// @dev Returns all parameter names that ever existed
+    string[] public override paramNames;
 
-    /**
-     * @dev Returns all parameter names including non-existing ones
-     */
-    function paramNames()
-        public
-        view
-        returns (string[] memory)
-    {
-        return _paramNames;
+    mapping(string => Param[]) private _checkpoints;
+
+    /// @dev Returns all parameter names that ever existed, including those that are currently non-existing
+    function getAllParamNames() external view override returns (string[] memory) {
+        return paramNames;
     }
 
-    /**
-     * @dev Returns all existing parameter names
-     */
-    function paramExistingNames()
-        public
-        view
-        returns (string[] memory)
-    {
-        string[] memory src = paramNames();
-        uint256 cnt;
-        for (uint256 i = 0; i < src.length; i++) {
-            if (_exists(src[i])) {
-                cnt++;
+    /// @dev Returns all checkpoints of the parameter
+    /// @param name The parameter name
+    function checkpoints(string calldata name) public view override returns (Param[] memory) {
+        return _checkpoints[name];
+    }
+
+    /// @dev Returns the last checkpoint whose activation block has passed.
+    ///      WARNING: Before calling this function, you must ensure that
+    ///               _checkpoints[name].length > 0
+    function _param(string memory name) private view returns (Param storage) {
+        Param[] storage ckpts = _checkpoints[name];
+        uint256 len = ckpts.length;
+
+        // there can be up to one checkpoint whose activation block has not passed yet
+        // because setParam() will overwrite if there already exists such a checkpoint
+        // thus, if the last checkpoint's activation is in the future,
+        // it is guaranteed that the next-to-last is activated
+        if (ckpts[len - 1].activation <= block.number) {
+            return ckpts[len - 1];
+        } else {
+            return ckpts[len - 2];
+        }
+    }
+
+    /// @dev Returns the parameter viewed by the current block
+    /// @param name The parameter name
+    /// @return (1) Whether the parameter exists, and if the parameter exists, (2) its value
+    function getParam(string calldata name) external view override returns (bool, bytes memory) {
+        if (_checkpoints[name].length == 0) {
+            return (false, "");
+        }
+
+        Param memory p = _param(name);
+        return (p.exists, p.val);
+    }
+
+    /// @dev Average of two integers without overflow
+    /// https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.7.3/contracts/utils/math/Math.sol#L34
+    function average(uint256 a, uint256 b) internal pure returns (uint256) {
+        // (a + b) / 2 can overflow.
+        return (a & b) + (a ^ b) / 2;
+    }
+
+    /// @dev Returns the parameters used for generating the "blockNumber" block
+    ///      WARNING: for future blocks, the result may change
+    function getParamAt(string memory name, uint256 blockNumber) public view override returns (bool, bytes memory) {
+        uint256 len = _checkpoints[name].length;
+        if (len == 0) {
+            return (false, "");
+        }
+
+        // See https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/extensions/ERC20Votes.sol#L99
+        // We run a binary search to look for the earliest checkpoint taken after `blockNumber`.
+        // During the loop, the index of the wanted checkpoint remains in the range [low-1, high).
+        // With each iteration, either `low` or `high` is moved towards the middle of the range to maintain the invariant.
+        // - If the middle checkpoint is after `blockNumber`, we look in [low, mid)
+        // - If the middle checkpoint is before or equal to `blockNumber`, we look in [mid+1, high)
+        // Once we reach a single value (when low == high), we've found the right checkpoint at the index high-1, if not
+        // out of bounds (in which case we're looking too far in the past and the result is 0).
+        // Note that if the latest checkpoint available is exactly for `blockNumber`, we end up with an index that is
+        // past the end of the array, so we technically don't find a checkpoint after `blockNumber`, but it works out
+        // the same.
+        uint256 low = 0;
+        uint256 high = len;
+
+        Param[] storage ckpts = _checkpoints[name];
+
+        while (low < high) {
+            uint256 mid = average(low, high);
+            if (ckpts[mid].activation > blockNumber) {
+                high = mid;
+            } else {
+                low = mid + 1;
             }
         }
-        string[] memory dst = new string[](cnt);
-        cnt = 0;
-        for (uint256 i = 0; i < src.length; i++) {
-            if (_exists(src[i])) {
-                dst[cnt] = src[i];
-                cnt++;
+
+        // high can't be zero. For high to be zero, The "high = mid" line should be executed when mid is zero.
+        // When mid = 0, ckpts[mid].activation is always 0 due to the sentinel checkpoint.
+        // Therefore, ckpts[mid].activation <= blockNumber,
+        // and the "high = mid" line is never executed.
+        return (ckpts[high - 1].exists, ckpts[high - 1].val);
+    }
+
+    /// @dev Returns existing parameters viewed by the current block
+    function getAllParams() external view override returns (string[] memory, bytes[] memory) {
+        // solidity doesn't allow memory arrays to be resized
+        // so we calculate the size in advance (existCount)
+        // See https://docs.soliditylang.org/en/latest/types.html#allocating-memory-arrays
+        uint256 existCount = 0;
+        for (uint256 i = 0; i < paramNames.length; i++) {
+            Param storage tmp = _param(paramNames[i]);
+            if (tmp.exists) {
+                existCount++;
             }
         }
-        return dst;
-    }
 
-    function params(string memory name)
-        public
-        view
-        returns (Param memory)
-    {
-        return _params[name];
-    }
+        string[] memory names = new string[](existCount);
+        bytes[] memory vals = new bytes[](existCount);
 
-    /**
-     * @dev Returns all parameters as struct, including non-existing ones
-     */
-    function getAllStructParams()
-        external
-        view
-        override
-        returns (string[] memory, Param[] memory)
-    {
-        string[] memory names = paramNames();
-        Param[] memory p = new Param[](names.length);
-        for (uint256 i = 0; i < names.length; i++) {
-            p[i] = params(names[i]);
-        }
-        return (names, p);
-    }
-
-    /**
-     * @dev Returns parameter value viewed by the current block
-     */
-    function getParam(string memory name)
-        public
-        view
-        override
-        returns (bytes memory)
-    {
-        if (!_exists(name)) {
-            return "";
-        }
-        return _state(name).value;
-    }
-
-    /**
-     * @dev Returns all parameters value viewed by the current block
-     */
-    function getAllParams()
-        external
-        view
-        override
-        returns (string[] memory, bytes[] memory)
-    {
-        string[] memory names = paramExistingNames();
-        bytes[] memory vals = new bytes[](names.length);
-        for (uint256 i = 0; i < names.length; i++) {
-            vals[i] = _state(names[i]).value;
+        uint256 idx = 0;
+        for (uint256 i = 0; i < paramNames.length; i++) {
+            Param storage tmp = _param(paramNames[i]);
+            if (tmp.exists) {
+                names[idx] = paramNames[i];
+                vals[idx] = tmp.val;
+                idx++;
+            }
         }
         return (names, vals);
     }
 
-    /**
-     * @dev Adds a new parameter
-     *
-     * @param name The name of the parameter (e.g., gasLimit)
-     * @param value The value of the parameter (e.g., "0xff00")
-     */
-    function addParam(
-        string calldata name,
-        bytes calldata value
-    ) external override onlyOwner {
-        require(bytes(name).length > 0, "GovParam: name cannot be empty");
-        require(!_exists(name), "GovParam: parameter already exists");
+    /// @dev Returns parameters used for generating the "blockNumber" block
+    ///      WARNING: for future blocks, the result may change
+    function getAllParamsAt(uint256 blockNumber) external view override returns (string[] memory, bytes[] memory) {
+        // solidity doesn't allow memory arrays to be resized
+        // so we calculate the size in advance (existCount)
+        // See https://docs.soliditylang.org/en/latest/types.html#allocating-memory-arrays
+        uint256 existCount = 0;
+        for (uint256 i = 0; i < paramNames.length; i++) {
+            (bool exists, ) = getParamAt(paramNames[i], blockNumber);
+            if (exists) {
+                existCount++;
+            }
+        }
 
-        _prepareOperation(name);
+        string[] memory names = new string[](existCount);
+        bytes[] memory vals = new bytes[](existCount);
 
-        ParamState storage next = _params[name].next;
-        next.value  = value;
-        next.exists = true;
-        _params[name].activation = uint64(block.number + 1);
-        _paramNames.push(name);
+        uint256 idx = 0;
+        for (uint256 i = 0; i < paramNames.length; i++) {
+            (bool exists, bytes memory val) = getParamAt(paramNames[i], blockNumber);
+            if (exists) {
+                names[idx] = paramNames[i];
+                vals[idx] = val;
+                idx++;
+            }
+        }
 
-        emit AddParam(name, value);
+        return (names, vals);
     }
 
-    /**
-     * @dev Sets the value of a parameter and the value changes from the activation block
-     *
-     * @param name The name of the parameter (e.g., gasLimit)
-     * @param value The value of the parameter (e.g., "0xff00")
-     * @param activation The activation block number
-     */
-    function setParam(
-        string calldata name,
-        bytes calldata value,
-        uint64 activation
-    ) external override onlyOwner {
+    /// @dev Returns all parameters as stored in the contract
+    function getAllCheckpoints() external view override returns (string[] memory, Param[][] memory) {
+        Param[][] memory ckptsArr = new Param[][](paramNames.length);
+        for (uint256 i = 0; i < paramNames.length; i++) {
+            ckptsArr[i] = _checkpoints[paramNames[i]];
+        }
+        return (paramNames, ckptsArr);
+    }
+
+    /// @dev Returns all parameters as stored in the contract
+    function setParam(string calldata name, bool exists, bytes calldata val, uint256 activation)
+        public
+        override
+        onlyOwner
+    {
         require(bytes(name).length > 0, "GovParam: name cannot be empty");
-        require(_exists(name), "GovParam: parameter does not exist");
         require(
             activation > block.number,
-            "GovParam: activation must be in a future"
+            "GovParam: activation must be in the future"
+        );
+        require(
+            !exists || val.length > 0,
+            "GovParam: val must not be empty if exists=true"
+        );
+        require(
+            exists || val.length == 0,
+            "GovParam: val must be empty if exists=false"
         );
 
-        _prepareOperation(name);
+        Param memory newParam = Param(activation, exists, val);
+        Param[] storage ckpts = _checkpoints[name];
 
-        ParamState storage next = _params[name].next;
-        next.value  = value;
-        next.exists = true;
-        _params[name].activation = activation;
+        // for a new parameter, push occurs twice
+        // (1) sentinel checkpoint
+        // (2) newParam
+        // this ensures that if name is in paramNames, then ckpts.length >= 2
+        if (ckpts.length == 0) {
+            paramNames.push(name);
 
-        emit SetParam(name, value, activation);
-    }
-
-    /**
-     * @dev Delete a parameter
-     *
-     * @param name The name of the parameter (e.g., gasLimit)
-     */
-    function deleteParam(
-        string calldata name
-    ) external override onlyOwner {
-        require(bytes(name).length > 0, "GovParam: name cannot be empty");
-        require(_exists(name), "GovParam: parameter does not exist");
-
-        _prepareOperation(name);
-
-        ParamState storage next = _params[name].next;
-        next.value  = "";
-        next.exists = false;
-        _params[name].activation = uint64(block.number + 1);
-
-        emit DeleteParam(name);
-    }
-
-    /**
-     * @dev Make a parameter votable, so a parameter can be changed by governance contract
-     *
-     * @param name The name of the parameter (e.g., gasLimit)
-     * - Requirements: By default, params(name).votable is false
-     * @param votable True if votable, false otherwise
-     */
-    function setParamVotable(
-        string memory name,
-        bool votable
-    ) external override onlyOwner {
-        require(bytes(name).length > 0, "GovParam: name cannot be empty");
-        require(_exists(name), "GovParam: parameter does not exist");
-
-        _params[name].votable = votable;
-
-        emit SetParamVotable(name, votable);
-    }
-
-    /**
-     * @dev Migrate to initial state so that operations can be done
-     */
-    function _prepareOperation(string memory name) internal {
-        if (block.number >= params(name).activation) {
-            _params[name].prev = _params[name].next;
-        }
-    }
-
-    /**
-     * @dev Returns the current state of param
-     */
-    function _state(string memory name) internal view returns (ParamState memory) {
-        if (block.number >= params(name).activation) {
-            return params(name).next;
+            // insert a sentinel checkpoint
+            ckpts.push(Param(0, false, ""));
         }
 
-        return params(name).prev;
+        uint256 lastPos = ckpts.length - 1;
+        // if the last checkpoint's activation is in the past, push newParam
+        // otherwise, overwrite the last checkpoint with newParam
+        if (ckpts[lastPos].activation <= block.number) {
+            ckpts.push(newParam);
+        } else {
+            ckpts[lastPos] = newParam;
+        }
+
+        emit SetParam(name, exists, val, activation);
     }
 
-    function _exists(string memory name) internal view returns (bool) {
-        return _state(name).exists;
+    /// @dev Updates the parameter to the given state at the relative activation block
+    function setParamIn(string calldata name, bool exists, bytes calldata val, uint256 relativeActivation)
+        external
+        override
+        onlyOwner
+    {
+        uint256 activation = block.number + relativeActivation;
+        setParam(name, exists, val, activation);
     }
 }
