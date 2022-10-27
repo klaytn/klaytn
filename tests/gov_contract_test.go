@@ -40,7 +40,7 @@ func TestGovernance_ContractEngine(t *testing.T) {
 		paramBytes = []byte{22}
 
 		deployBlock   uint64 // Before deploy: 0, After deploy: the deployed block
-		addParamBlock uint64 // Before addParam: 0, After addParam: the addParam'd block
+		setParamBlock uint64 // Before setParam: 0, After setParam: the setParam'd block
 	)
 
 	// Here we are running (tx sender) and (param reader) in parallel.
@@ -52,8 +52,8 @@ func TestGovernance_ContractEngine(t *testing.T) {
 		num, _, _ := deployGovParamTx_constructor(t, node, owner, chainId)
 		deployBlock = num
 
-		num, _ = deployGovParamTx_addParam(t, node, owner, chainId, contractAddr, paramName, paramBytes)
-		addParamBlock = num
+		num, _ = deployGovParamTx_setParamIn(t, node, owner, chainId, contractAddr, paramName, paramBytes)
+		setParamBlock = num
 	}()
 
 	// Run param reader thread
@@ -67,6 +67,7 @@ func TestGovernance_ContractEngine(t *testing.T) {
 	chainEventCh := make(chan blockchain.ChainEvent)
 	subscription := chain.SubscribeChainEvent(chainEventCh)
 	defer subscription.Unsubscribe()
+
 	for {
 		ev := <-chainEventCh
 		time.Sleep(100 * time.Millisecond) // wait for tx sender thread to set deployBlock, etc.
@@ -80,13 +81,13 @@ func TestGovernance_ContractEngine(t *testing.T) {
 
 		if deployBlock == 0 { // not yet deployed
 			assert.Equal(t, nil, value)
-		} else if addParamBlock == 0 { // not yet activated
+		} else if setParamBlock == 0 { // not yet activated
 			assert.Equal(t, nil, value)
-		} else if num > addParamBlock { // after activation (addParamBlock+1)
+		} else if num > setParamBlock { // after activation (setParamBlock+1)
 			assert.Equal(t, paramValue, value)
 		}
 
-		if addParamBlock != 0 && num >= addParamBlock+2 {
+		if setParamBlock != 0 && num >= setParamBlock+2 {
 			break
 		}
 
@@ -96,7 +97,7 @@ func TestGovernance_ContractEngine(t *testing.T) {
 	}
 
 	// Validate historic params from engine.ParamsAt(n)
-	for num := uint64(0); num <= addParamBlock+2; num++ {
+	for num := uint64(0); num <= setParamBlock+2; num++ {
 		pset, err := engine.ParamsAt(num)
 		assert.Nil(t, err)
 		assert.NotNil(t, pset)
@@ -105,7 +106,7 @@ func TestGovernance_ContractEngine(t *testing.T) {
 		t.Logf("ParamsAt(block=%2d): %v", num, value)
 		if num < deployBlock { // not yet deployed
 			assert.Equal(t, nil, value)
-		} else if num <= addParamBlock { // not yet activated
+		} else if num <= setParamBlock { // not yet activated
 			assert.Equal(t, nil, value)
 		} else { // after activation
 			assert.Equal(t, paramValue, value)
@@ -137,13 +138,13 @@ func deployGovParamTx_constructor(t *testing.T, node *cn.CN, owner *TestAccountT
 	return num, addr, tx
 }
 
-func deployGovParamTx_addParam(t *testing.T, node *cn.CN, owner *TestAccountType, chainId *big.Int,
+func deployGovParamTx_setParamIn(t *testing.T, node *cn.CN, owner *TestAccountType, chainId *big.Int,
 	contractAddr common.Address, name string, value []byte,
 ) (uint64, *types.Transaction) {
 	var (
-		// Add parameter: addParam(string name, bytes value)
+		// Add parameter: setParamIn(string name, bytes value)
 		contractAbi, _ = abi.JSON(strings.NewReader(govcontract.GovParamABI))
-		callArgs, _    = contractAbi.Pack("addParam", name, value)
+		callArgs, _    = contractAbi.Pack("setParamIn", name, true, value, big.NewInt(1))
 		data           = common.ToHex(callArgs)
 	)
 
@@ -155,7 +156,7 @@ func deployGovParamTx_addParam(t *testing.T, node *cn.CN, owner *TestAccountType
 	require.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
 
 	_, _, num, _ := chain.GetTxAndLookupInfo(tx.Hash())
-	t.Logf("GovParam.addParam executed at block=%2d", num)
+	t.Logf("GovParam.setParamIn executed at block=%2d", num)
 	return num, tx
 }
 
@@ -169,10 +170,10 @@ func deployGovParamTx_batchAddParam(t *testing.T, node *cn.CN, owner *TestAccoun
 		txs            = []*types.Transaction{}
 	)
 
-	// Send all addParam() calls at once
+	// Send all setParamIn() calls at once
 	for name, value := range bytesMap {
-		// Add parameter: addParam(string name, bytes value)
-		callArgs, _ := contractAbi.Pack("addParam", name, value)
+		// Add parameter: setParamIn(string name, bytes value)
+		callArgs, _ := contractAbi.Pack("setParamIn", name, true, value, big.NewInt(1))
 		data := common.ToHex(callArgs)
 		tx := deployContractExecutionTx(t, node.TxPool(), chainId, owner, contractAddr, data)
 		txs = append(txs, tx)
@@ -185,7 +186,7 @@ func deployGovParamTx_batchAddParam(t *testing.T, node *cn.CN, owner *TestAccoun
 		require.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
 	}
 	num := chain.CurrentHeader().Number.Uint64()
-	t.Logf("GovParam.addParam executed %d times between blocks=%2d,%2d", len(txs), beginBlock, num)
+	t.Logf("GovParam.setParamIn executed %d times between blocks=%2d,%2d", len(txs), beginBlock, num)
 	return txs
 }
 
