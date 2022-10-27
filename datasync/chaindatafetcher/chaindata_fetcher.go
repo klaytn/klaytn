@@ -191,7 +191,7 @@ func (f *ChainDataFetcher) Stop() error {
 }
 
 func (f *ChainDataFetcher) sendRequests(startBlock, endBlock uint64, reqType cfTypes.RequestType, shouldUpdateCheckpoint bool, stopCh chan struct{}) {
-	logger.Info("sending requests is started", "startBlock", startBlock, "endBlock", endBlock)
+	logger.Info("sending requests is started", "startBlock", startBlock, "endBlock", endBlock, "reqType", reqType)
 	for i := startBlock; i <= endBlock; i++ {
 		for { // spin lock if processing data size is larger than max
 			select {
@@ -218,7 +218,7 @@ func (f *ChainDataFetcher) sendRequests(startBlock, endBlock uint64, reqType cfT
 		case f.reqCh <- cfTypes.NewRequest(reqType, shouldUpdateCheckpoint, i):
 		}
 	}
-	logger.Info("sending requests is finished", "startBlock", startBlock, "endBlock", endBlock)
+	logger.Info("sending requests is finished", "startBlock", startBlock, "endBlock", endBlock, "reqType", reqType)
 }
 
 func (f *ChainDataFetcher) startFetching() error {
@@ -274,7 +274,7 @@ func (f *ChainDataFetcher) startRangeFetching(startBlock, endBlock uint64, reqTy
 		f.sendRequests(startBlock, endBlock, reqType, false, f.rangeFetchingStopCh)
 		atomic.StoreUint32(&f.rangeFetchingStarted, stopped)
 	}()
-	logger.Info("range fetching is started", "startBlock", startBlock, "endBlock", endBlock)
+	logger.Info("range fetching is started", "startBlock", startBlock, "endBlock", endBlock, "reqType", reqType)
 	return nil
 }
 
