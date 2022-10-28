@@ -3,12 +3,10 @@ package rpc
 import (
 	"bytes"
 	"encoding/json"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
 
-	"github.com/klaytn/klaytn/common"
 	"github.com/newrelic/go-agent/v3/newrelic"
 )
 
@@ -136,8 +134,7 @@ func getRPCRequests(r *http.Request) ([]*jsonrpcMessage, bool, error) {
 	}
 
 	r.Body = ioutil.NopCloser(bytes.NewReader(reqBody))
-	body := io.LimitReader(r.Body, int64(common.MaxRequestContentLength))
-	conn := &httpServerConn{Reader: body, Writer: bytes.NewBufferString(""), r: r}
+	conn := &httpServerConn{Reader: ioutil.NopCloser(bytes.NewReader(reqBody)), Writer: bytes.NewBufferString(""), r: r}
 
 	codec := NewCodec(conn)
 
