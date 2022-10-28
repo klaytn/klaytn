@@ -112,7 +112,7 @@ type Engine interface {
 	// CreateSnapshot does not return a snapshot but creates a new snapshot at a given point in time.
 	CreateSnapshot(chain ChainReader, number uint64, hash common.Hash, parents []*types.Header) error
 
-	// GetConsensusInfo returns consensus information regarind to the given block number.
+	// GetConsensusInfo returns consensus information regarding the given block number.
 	GetConsensusInfo(block *types.Block) (ConsensusInfo, error)
 }
 

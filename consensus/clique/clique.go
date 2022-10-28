@@ -442,7 +442,7 @@ func (c *Clique) snapshot(chain consensus.ChainReader, number uint64, hash commo
 	return snap, err
 }
 
-// GetConsensusInfo is not used for Cliqueue engine
+// GetConsensusInfo is not used for Clique engine
 func (c *Clique) GetConsensusInfo(block *types.Block) (consensus.ConsensusInfo, error) {
 	return consensus.ConsensusInfo{}, nil
 }

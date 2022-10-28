@@ -706,7 +706,7 @@ func (sb *backend) CreateSnapshot(chain consensus.ChainReader, number uint64, ha
 	return nil
 }
 
-// GetConsensusInfo returns consensus information regarind to the given block number.
+// GetConsensusInfo returns consensus information regarding the given block number.
 func (sb *backend) GetConsensusInfo(block *types.Block) (consensus.ConsensusInfo, error) {
 	blockNumber := block.NumberU64()
 	if blockNumber == 0 {
