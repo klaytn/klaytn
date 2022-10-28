@@ -42,6 +42,7 @@ import (
 type Backend interface {
 	ChainDB() database.DBManager
 	EventMux() *event.TypeMux
+	HeaderByHash(ctx context.Context, blockHash common.Hash) (*types.Header, error)
 	HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Header, error)
 	GetBlockReceipts(ctx context.Context, blockHash common.Hash) types.Receipts
 	GetLogs(ctx context.Context, blockHash common.Hash) ([][]*types.Log, error)
@@ -61,11 +62,21 @@ type Backend interface {
 type Filter struct {
 	backend Backend
 
+	block      common.Hash
 	begin, end int64
 	addresses  []common.Address
 	topics     [][]common.Hash
 
 	matcher *bloombits.Matcher
+}
+
+// NewBlockFilter creates a new filter which directly inspects the contents of
+// a block to figure out whether it is interesting or not.
+func NewBlockFilter(backend Backend, block common.Hash, addresses []common.Address, topics [][]common.Hash) *Filter {
+	// Create a generic filter and convert it into a block filter
+	filter := newFilter(backend, addresses, topics)
+	filter.block = block
+	return filter
 }
 
 // NewRangeFilter creates a new filter which uses a bloom filter on blocks to
