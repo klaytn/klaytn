@@ -124,7 +124,7 @@ type Config struct {
 	ParallelDBWrite      bool
 	TrieNodeCacheConfig  statedb.TrieNodeCacheConfig
 	SnapshotCacheSize    int
-	SnapshotGenAsync     bool
+	SnapshotAsyncGen     bool
 
 	// Mining-related options
 	ServiceChainSigner common.Address `toml:",omitempty"`

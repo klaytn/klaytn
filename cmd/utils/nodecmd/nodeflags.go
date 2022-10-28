@@ -202,7 +202,7 @@ var CommonNodeFlags = []cli.Flag{
 	altsrc.NewUint64Flag(utils.OpcodeComputationCostLimitFlag),
 	altsrc.NewBoolFlag(utils.SnapshotFlag),
 	altsrc.NewIntFlag(utils.SnapshotCacheSizeFlag),
-	altsrc.NewBoolTFlag(utils.SnapshotGenAsync),
+	altsrc.NewBoolTFlag(utils.SnapshotAsyncGen),
 }
 
 // Common RPC flags

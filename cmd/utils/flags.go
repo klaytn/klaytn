@@ -317,8 +317,8 @@ var (
 		Value:  512,
 		EnvVar: "KLAYTN_SNAPSHOT_CACHE_SIZE",
 	}
-	SnapshotGenAsync = cli.BoolTFlag{
-		Name:   "snapshot.gen.async",
+	SnapshotAsyncGen = cli.BoolTFlag{
+		Name:   "snapshot.async-gen",
 		Usage:  "Enables snapshot data generation in background",
 		EnvVar: "KLAYTN_SNAPSHOT_BACKGROUND_GENERATION",
 	}
