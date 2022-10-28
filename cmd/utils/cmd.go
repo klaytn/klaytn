@@ -218,7 +218,7 @@ func ExportAppendChain(blockchain *blockchain.BlockChain, fn string, first uint6
 
 func NtpCheckWithLocal() error {
 	local := time.Now().UTC().Unix()
-	ntp, err := ntpclient.GetNetworkTime("time.nist.gov", 123)
+	ntp, err := ntpclient.GetNetworkTime("pool.ntp.org", 123)
 	if err != nil {
 		return err
 	}
