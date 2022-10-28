@@ -208,8 +208,8 @@ type ClientSubscription struct {
 	in        chan json.RawMessage
 
 	quitOnce sync.Once     // ensures quit is closed once
-	quit     chan struct{} // quit is closed when the subscription exits
 	errOnce  sync.Once     // ensures err is closed once
+	quit     chan struct{} // quit is closed when the subscription exits
 	err      chan error
 }
 

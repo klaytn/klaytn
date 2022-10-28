@@ -35,11 +35,11 @@ import (
 	"sync/atomic"
 	"time"
 
+	fastws "github.com/clevergo/websocket"
 	"github.com/gorilla/websocket"
 	"github.com/klaytn/klaytn/common"
 	"gopkg.in/fatih/set.v0"
 
-	fastws "github.com/clevergo/websocket"
 	"github.com/valyala/fasthttp"
 )
 

@@ -71,11 +71,10 @@ var (
 
 // Server is an RPC server.
 type Server struct {
-	services serviceRegistry
-	idgen    func() ID
-	run      int32
-	codecs   mapset.Set
-
+	services    serviceRegistry
+	idgen       func() ID
+	codecs      mapset.Set
+	run         int32
 	wsConnCount int32
 }
 

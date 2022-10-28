@@ -36,8 +36,8 @@ type callback struct {
 	fn          reflect.Value  // the function
 	rcvr        reflect.Value  // receiver object of method, set if fn is method
 	argTypes    []reflect.Type // input argument types
-	hasCtx      bool           // method's first argument is a context (not included in argTypes)
 	errPos      int            // err return idx, of -1 when method cannot return error
+	hasCtx      bool           // method's first argument is a context (not included in argTypes)
 	isSubscribe bool           // true if this is a subscription callback
 }
 

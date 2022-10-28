@@ -79,11 +79,12 @@ type BatchElem struct {
 
 // Client represents a connection to an RPC server.
 type Client struct {
-	idgen    func() ID // for subscriptions
-	isHTTP   bool
+	idgen func() ID // for subscriptions
+
 	services *serviceRegistry
 
 	idCounter uint32
+	isHTTP    bool
 
 	// This function, if non-nil, is called when the connection is lost.
 	reconnectFunc reconnectFunc
