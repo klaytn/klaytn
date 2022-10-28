@@ -40,7 +40,6 @@ import (
 	"github.com/klaytn/klaytn/consensus/misc"
 	"github.com/klaytn/klaytn/crypto/sha3"
 	"github.com/klaytn/klaytn/networks/rpc"
-	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/rlp"
 )
@@ -202,13 +201,7 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 			return err
 		}
 
-		kip71 := params.GetDefaultKIP71Config()
-		kip71.LowerBoundBaseFee = pset.LowerBoundBaseFee()
-		kip71.UpperBoundBaseFee = pset.UpperBoundBaseFee()
-		kip71.GasTarget = pset.GasTarget()
-		kip71.BaseFeeDenominator = pset.BaseFeeDenominator()
-		kip71.MaxBlockGasUsedForBaseFee = pset.MaxBlockGasUsedForBaseFee()
-
+		kip71 := pset.ToKIP71Config()
 		if err := misc.VerifyMagmaHeader(parents[len(parents)-1], header, kip71); err != nil {
 			return err
 		}
