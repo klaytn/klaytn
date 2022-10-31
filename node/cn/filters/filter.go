@@ -126,6 +126,18 @@ func newFilter(backend Backend, addresses []common.Address, topics [][]common.Ha
 // Logs searches the blockchain for matching log entries, returning all from the
 // first block that contains matches, updating the start of the filter accordingly.
 func (f *Filter) Logs(ctx context.Context) ([]*types.Log, error) {
+	// If we're doing singleton block filtering, execute and return
+	if f.block != (common.Hash{}) {
+		header, err := f.backend.HeaderByHash(ctx, f.block)
+		if err != nil {
+			return nil, err
+		}
+		if header == nil {
+			return nil, errors.New("unknown block")
+		}
+		return f.blockLogs(ctx, header)
+	}
+
 	// Figure out the limits of the filter range
 	header, _ := f.backend.HeaderByNumber(ctx, rpc.LatestBlockNumber)
 	if header == nil {
@@ -159,6 +171,18 @@ func (f *Filter) Logs(ctx context.Context) ([]*types.Log, error) {
 	rest, err := f.unindexedLogs(ctx, end)
 	logs = append(logs, rest...)
 	return logs, err
+}
+
+// blockLogs returns the logs matching the filter criteria within a single block.
+func (f *Filter) blockLogs(ctx context.Context, header *types.Header) (logs []*types.Log, err error) {
+	if bloomFilter(header.Bloom, f.addresses, f.topics) {
+		found, err := f.checkMatches(ctx, header)
+		if err != nil {
+			return logs, err
+		}
+		logs = append(logs, found...)
+	}
+	return logs, nil
 }
 
 // indexedLogs returns the logs matching the filter criteria based on the bloom
