@@ -56,7 +56,7 @@ func (c *contractCaller) getAllParamsAt(num *big.Int) (*params.GovParamSet, erro
 	if len(names) != len(values) {
 		logger.Error("Malformed contract.getAllParams result",
 			"len(names)", len(names), "len(values)", len(values))
-		return params.NewGovParamSet(), nil
+		return nil, errors.New("malformed contract.getAllParams result")
 	}
 
 	bytesMap := make(map[string][]byte)
