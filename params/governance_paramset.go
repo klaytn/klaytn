@@ -363,6 +363,10 @@ func NewGovParamSetChainConfig(config *ChainConfig) (*GovParamSet, error) {
 				items[MintingAmount] = config.Governance.Reward.MintingAmount.String()
 			}
 			items[Ratio] = config.Governance.Reward.Ratio
+			// new parameters can be empty
+			if config.Governance.Reward.Kip82Ratio != "" {
+				items[Kip82Ratio] = config.Governance.Reward.Kip82Ratio
+			}
 			items[UseGiniCoeff] = config.Governance.Reward.UseGiniCoeff
 			items[DeferredTxFee] = config.Governance.Reward.DeferredTxFee
 			items[StakeUpdateInterval] = config.Governance.Reward.StakingUpdateInterval
