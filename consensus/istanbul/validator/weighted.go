@@ -96,6 +96,7 @@ func newWeightedValidator(addr common.Address, reward common.Address, votingpowe
 }
 
 type weightedCouncil struct {
+	chain             consensus.ChainReader
 	subSize           uint64
 	demotedValidators istanbul.Validators // validators staking KLAYs less than minimum, and not in committee/proposers
 	validators        istanbul.Validators // validators staking KLAYs more than and equals to minimum, and in committee/proposers
@@ -213,6 +214,7 @@ func NewWeightedCouncil(addrs []common.Address, demotedAddrs []common.Address, r
 	if valSet.Size() > 0 {
 		valSet.proposer.Store(valSet.GetByIndex(0))
 	}
+	valSet.chain = chain
 	valSet.SetSubGroupSize(committeeSize)
 	valSet.selector = weightedRandomProposer
 
@@ -580,6 +582,7 @@ func (valSet *weightedCouncil) Copy() istanbul.ValidatorSet {
 	defer valSet.validatorMu.RUnlock()
 
 	newWeightedCouncil := weightedCouncil{
+		chain:             valSet.chain,
 		subSize:           valSet.subSize,
 		policy:            valSet.policy,
 		proposer:          valSet.proposer,
@@ -666,7 +669,7 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, config
 	}
 
 	totalStaking, _ := calcTotalAmount(weightedValidators, newStakingInfo, stakingAmounts)
-	calcWeight(weightedValidators, stakingAmounts, totalStaking)
+	calcWeight(weightedValidators, stakingAmounts, totalStaking, chainRules)
 
 	valSet.refreshProposers(seed, blockNum)
 
@@ -823,13 +826,14 @@ func calcTotalAmount(weightedValidators []*weightedValidator, stakingInfo *rewar
 }
 
 // calcWeight updates each validator's weight based on the ratio of its staking amount vs. the total staking amount.
-func calcWeight(weightedValidators []*weightedValidator, stakingAmounts []float64, totalStaking float64) {
+func calcWeight(weightedValidators []*weightedValidator, stakingAmounts []float64, totalStaking float64, rules params.Rules) {
 	localLogger := logger.NewWith()
 	if totalStaking > 0 {
 		for i, weightedVal := range weightedValidators {
 			weight := uint64(math.Round(stakingAmounts[i] * 100 / totalStaking))
-			if weight <= 0 {
-				// A validator, who holds zero or small stake, has minimum weight, 1.
+			if weight <= 0 || rules.IsKore {
+				// A validator, who holds zero or small stake, has minimum weight, 1
+				// And all validators have the same weight after the Kore hard fork
 				weight = 1
 			}
 			atomic.StoreUint64(&weightedVal.weight, weight)
@@ -848,9 +852,13 @@ func (valSet *weightedCouncil) refreshProposers(seed int64, blockNum uint64) {
 	var candidateValsIdx []int // This is a slice which stores index of validator. it is used for shuffling
 
 	for index, val := range valSet.validators {
-		weight := val.Weight()
-		for i := uint64(0); i < weight; i++ {
+		if valSet.chain.Config().Rules(new(big.Int).SetUint64(blockNum)).IsKore {
 			candidateValsIdx = append(candidateValsIdx, index)
+		} else {
+			weight := val.Weight()
+			for i := uint64(0); i < weight; i++ {
+				candidateValsIdx = append(candidateValsIdx, index)
+			}
 		}
 	}
 
