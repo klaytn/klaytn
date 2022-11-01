@@ -1326,6 +1326,7 @@ func TestGovernance_Votes(t *testing.T) {
 				{"reward.ratio", "34/33/33"},              // voted on block 5
 				{"reward.useginicoeff", true},             // voted on block 6
 				{"reward.minimumstake", "5000000"},        // voted on block 7
+				{"reward.kip82ratio", "50/50"},            // voted on block 8
 			},
 			expected: []governanceItem{
 				{vote{"governance.governancemode", "none"}, 6},
@@ -1335,6 +1336,7 @@ func TestGovernance_Votes(t *testing.T) {
 				{vote{"reward.ratio", "34/33/33"}, 9},
 				{vote{"reward.useginicoeff", true}, 12},
 				{vote{"reward.minimumstake", "5000000"}, 12},
+				{vote{"reward.kip82ratio", "50/50"}, 12},
 				// check governance items on current block
 				{vote{"governance.governancemode", "none"}, 0},
 				{vote{"istanbul.committeesize", uint64(4)}, 0},
@@ -1343,6 +1345,7 @@ func TestGovernance_Votes(t *testing.T) {
 				{vote{"reward.ratio", "34/33/33"}, 0},
 				{vote{"reward.useginicoeff", true}, 0},
 				{vote{"reward.minimumstake", "5000000"}, 0},
+				{vote{"reward.kip82ratio", "50/50"}, 0},
 			},
 		},
 		{

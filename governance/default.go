@@ -623,7 +623,7 @@ func (gov *Governance) updateChangeSet(vote GovernanceVote) bool {
 	case params.GoverningNode, params.GovParamContract:
 		gov.changeSet.SetValue(GovernanceKeyMap[vote.Key], vote.Value.(common.Address))
 		return true
-	case params.GovernanceMode, params.Ratio:
+	case params.GovernanceMode, params.Ratio, params.Kip82Ratio:
 		gov.changeSet.SetValue(GovernanceKeyMap[vote.Key], vote.Value.(string))
 		return true
 	case params.Epoch, params.StakeUpdateInterval, params.ProposerRefreshInterval, params.CommitteeSize,
