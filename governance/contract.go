@@ -42,15 +42,6 @@ func (e *ContractEngine) ParamsAt(num uint64) (*params.GovParamSet, error) {
 		return nil, errContractEngineNotReady
 	}
 
-	head := e.chain.CurrentHeader().Number.Uint64()
-	if num > head {
-		// Sometimes future blocks are requested.
-		// ex) reward distributor in istanbul.engine.Finalize() requests ParamsAt(head+1)
-		// ex) governance_itemsAt(num) API requests arbitrary num
-		// In those cases we refer to the head block.
-		num = head + 1
-	}
-
 	pset, err := e.contractGetAllParamsAt(num)
 	if err != nil {
 		return nil, err
