@@ -21,6 +21,7 @@ import (
 	"math/big"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -28,6 +29,8 @@ import (
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
 )
+
+var CalcDeferredRewardTimer time.Duration
 
 var logger = log.NewModuleLogger(log.Reward)
 
@@ -175,6 +178,10 @@ func CalcSimpleReward(header *types.Header, config *params.ChainConfig) (*Reward
 // CalcDeferredReward calculates the deferred rewards,
 // which are determined at the end of block processing.
 func CalcDeferredReward(header *types.Header, config *params.ChainConfig) (*RewardSpec, error) {
+	defer func(start time.Time) {
+		CalcDeferredRewardTimer = time.Since(start)
+	}(time.Now())
+
 	rewardConfig := config.Governance.Reward
 	if rewardConfig == nil {
 		return nil, errors.New("no rewardConfig")
