@@ -21,6 +21,7 @@ import (
 //                     Note that some items are not backed by defaultParams.
 //
 type MixedEngine struct {
+	// The same ChainConfig instance as Blockchain.chainConfig, {cn, worker}.config
 	config *params.ChainConfig
 
 	initialParams *params.GovParamSet // initial ChainConfig
