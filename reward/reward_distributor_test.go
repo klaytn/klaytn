@@ -496,6 +496,9 @@ func TestRewardDistributor_GetActualReward(t *testing.T) {
 		},
 	}
 
+	oldStakingManager := GetStakingManager()
+	defer SetTestStakingManager(oldStakingManager)
+
 	for i, tc := range testcases {
 		if tc.stakingInfo == nil {
 			SetTestStakingManager(nil)
@@ -780,6 +783,9 @@ func TestRewardDistributor_CalcDeferredReward(t *testing.T) {
 		},
 	}
 
+	oldStakingManager := GetStakingManager()
+	defer SetTestStakingManager(oldStakingManager)
+
 	for i, tc := range testcases {
 		if tc.stakingInfo == nil {
 			SetTestStakingManager(nil)
@@ -1017,5 +1023,36 @@ func TestRewardDistributor_calcShares(t *testing.T) {
 			remaining: remaining.Uint64(),
 		}
 		assert.Equal(t, tc.expected, actual, "testcases[%d] failed", i)
+	}
+}
+
+func benchSetup() (*types.Header, *params.ChainConfig) {
+	// in the worst case, distribute stake shares among N
+	amounts := make(map[int]uint64)
+	N := 50
+	for i := 0; i < N; i++ {
+		amounts[i] = minStaking + 1
+	}
+
+	stakingInfo := genStakingInfo(N, nil, amounts)
+	SetTestStakingManagerWithStakingInfoCache(stakingInfo)
+
+	config := getTestConfig()
+
+	header := &types.Header{}
+	header.BaseFee = big.NewInt(30000000000)
+	header.Number = big.NewInt(0)
+	header.Rewardbase = intToAddress(rewardBaseAddr)
+	return header, config
+}
+
+func Benchmark_CalcDeferredReward(b *testing.B) {
+	oldStakingManager := GetStakingManager()
+	defer SetTestStakingManager(oldStakingManager)
+
+	header, config := benchSetup()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		CalcDeferredReward(header, config)
 	}
 }
