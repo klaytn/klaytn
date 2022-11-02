@@ -357,6 +357,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	cn.addComponent(cn.txPool)
 	cn.addComponent(cn.APIs())
 	cn.addComponent(cn.ChainDB())
+	cn.addComponent(cn.engine)
 
 	if config.AutoRestartFlag {
 		daemonPath := config.DaemonPathFlag

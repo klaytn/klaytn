@@ -28,6 +28,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kafka"
 	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kas"
 	cfTypes "github.com/klaytn/klaytn/datasync/chaindatafetcher/types"
@@ -62,6 +63,7 @@ type BlockChain interface {
 type ChainDataFetcher struct {
 	config *ChainDataFetcherConfig
 
+	engine     consensus.Engine
 	blockchain BlockChain
 	debugAPI   *tracers.API
 
@@ -364,6 +366,8 @@ func (f *ChainDataFetcher) setComponent(component interface{}) {
 	switch v := component.(type) {
 	case *blockchain.BlockChain:
 		f.blockchain = v
+	case consensus.Engine:
+		f.engine = v
 	case []rpc.API:
 		f.setDebugAPI(v)
 	}
