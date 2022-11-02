@@ -317,6 +317,11 @@ var (
 		Value:  512,
 		EnvVar: "KLAYTN_SNAPSHOT_CACHE_SIZE",
 	}
+	SnapshotAsyncGen = cli.BoolTFlag{
+		Name:   "snapshot.async-gen",
+		Usage:  "Enables snapshot data generation in background",
+		EnvVar: "KLAYTN_SNAPSHOT_BACKGROUND_GENERATION",
+	}
 	TrieMemoryCacheSizeFlag = cli.IntFlag{
 		Name:   "state.cache-size",
 		Usage:  "Size of in-memory cache of the global state (in MiB) to flush matured singleton trie nodes to disk",

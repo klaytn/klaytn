@@ -609,6 +609,7 @@ func (kCfg *KlayConfig) SetKlayConfig(ctx *cli.Context, stack *node.Node) {
 			logger.Crit("State snapshot should not be used with --start-block-num", "num", cfg.StartBlockNumber)
 		}
 		logger.Info("State snapshot is enabled", "cache-size (MB)", cfg.SnapshotCacheSize)
+		cfg.SnapshotAsyncGen = ctx.GlobalBool(SnapshotAsyncGen.Name)
 	} else {
 		cfg.SnapshotCacheSize = 0 // snapshot disabled
 	}
