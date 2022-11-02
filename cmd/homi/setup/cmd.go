@@ -44,6 +44,7 @@ import (
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/params"
+	"github.com/urfave/cli/altsrc"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -56,6 +57,68 @@ type ValidatorInfo struct {
 type GrafanaFile struct {
 	url  string
 	name string
+}
+
+var HomiFlags = []cli.Flag{
+	homiYamlFlag,
+	altsrc.NewStringFlag(genTypeFlag),
+	altsrc.NewBoolFlag(cypressTestFlag),
+	altsrc.NewBoolFlag(cypressFlag),
+	altsrc.NewBoolFlag(baobabTestFlag),
+	altsrc.NewBoolFlag(baobabFlag),
+	altsrc.NewBoolFlag(serviceChainFlag),
+	altsrc.NewBoolFlag(serviceChainTestFlag),
+	altsrc.NewBoolFlag(cliqueFlag),
+	altsrc.NewIntFlag(numOfCNsFlag),
+	altsrc.NewIntFlag(numOfValidatorsFlag),
+	altsrc.NewIntFlag(numOfPNsFlag),
+	altsrc.NewIntFlag(numOfENsFlag),
+	altsrc.NewIntFlag(numOfSCNsFlag),
+	altsrc.NewIntFlag(numOfSPNsFlag),
+	altsrc.NewIntFlag(numOfSENsFlag),
+	altsrc.NewIntFlag(numOfTestKeyFlag),
+	altsrc.NewUint64Flag(chainIDFlag),
+	altsrc.NewUint64Flag(serviceChainIDFlag),
+	altsrc.NewUint64Flag(unitPriceFlag),
+	altsrc.NewIntFlag(deriveShaImplFlag),
+	altsrc.NewStringFlag(fundingAddrFlag),
+	altsrc.NewBoolFlag(patchAddressBookFlag),
+	altsrc.NewStringFlag(patchAddressBookAddrFlag),
+	altsrc.NewStringFlag(outputPathFlag),
+	altsrc.NewStringFlag(dockerImageIdFlag),
+	altsrc.NewBoolFlag(fasthttpFlag),
+	altsrc.NewIntFlag(networkIdFlag),
+	altsrc.NewBoolFlag(nografanaFlag),
+	altsrc.NewBoolFlag(useTxGenFlag),
+	altsrc.NewIntFlag(txGenRateFlag),
+	altsrc.NewIntFlag(txGenThFlag),
+	altsrc.NewIntFlag(txGenConnFlag),
+	altsrc.NewStringFlag(txGenDurFlag),
+	altsrc.NewIntFlag(rpcPortFlag),
+	altsrc.NewIntFlag(wsPortFlag),
+	altsrc.NewIntFlag(p2pPortFlag),
+	altsrc.NewStringFlag(dataDirFlag),
+	altsrc.NewStringFlag(logDirFlag),
+	altsrc.NewBoolFlag(governanceFlag),
+	altsrc.NewStringFlag(govModeFlag),
+	altsrc.NewStringFlag(governingNodeFlag),
+	altsrc.NewStringFlag(rewardMintAmountFlag),
+	altsrc.NewStringFlag(rewardRatioFlag),
+	altsrc.NewBoolFlag(rewardGiniCoeffFlag),
+	altsrc.NewUint64Flag(rewardStakingFlag),
+	altsrc.NewUint64Flag(rewardProposerFlag),
+	altsrc.NewStringFlag(rewardMinimumStakeFlag),
+	altsrc.NewBoolFlag(rewardDeferredTxFeeFlag),
+	altsrc.NewUint64Flag(istEpochFlag),
+	altsrc.NewUint64Flag(istProposerPolicyFlag),
+	altsrc.NewUint64Flag(istSubGroupFlag),
+	altsrc.NewUint64Flag(cliqueEpochFlag),
+	altsrc.NewUint64Flag(cliquePeriodFlag),
+	altsrc.NewInt64Flag(istanbulCompatibleBlockNumberFlag),
+	altsrc.NewInt64Flag(londonCompatibleBlockNumberFlag),
+	altsrc.NewInt64Flag(ethTxTypeCompatibleBlockNumberFlag),
+	altsrc.NewInt64Flag(magmaCompatibleBlockNumberFlag),
+	altsrc.NewInt64Flag(koreCompatibleBlockNumberFlag),
 }
 
 var SetupCommand = cli.Command{
@@ -72,66 +135,8 @@ var SetupCommand = cli.Command{
 Args :
 		type : [local | remote | deploy | docker (default)]
 `,
-	Action: gen,
-	Flags: []cli.Flag{
-		cypressTestFlag,
-		cypressFlag,
-		baobabTestFlag,
-		baobabFlag,
-		serviceChainFlag,
-		serviceChainTestFlag,
-		cliqueFlag,
-		numOfCNsFlag,
-		numOfValidatorsFlag,
-		numOfPNsFlag,
-		numOfENsFlag,
-		numOfSCNsFlag,
-		numOfSPNsFlag,
-		numOfSENsFlag,
-		numOfTestKeyFlag,
-		chainIDFlag,
-		serviceChainIDFlag,
-		unitPriceFlag,
-		deriveShaImplFlag,
-		fundingAddrFlag,
-		patchAddressBookFlag,
-		patchAddressBookAddrFlag,
-		outputPathFlag,
-		dockerImageIdFlag,
-		fasthttpFlag,
-		networkIdFlag,
-		nografanaFlag,
-		useTxGenFlag,
-		txGenRateFlag,
-		txGenThFlag,
-		txGenConnFlag,
-		txGenDurFlag,
-		rpcPortFlag,
-		wsPortFlag,
-		p2pPortFlag,
-		dataDirFlag,
-		logDirFlag,
-		governanceFlag,
-		govModeFlag,
-		governingNodeFlag,
-		rewardMintAmountFlag,
-		rewardRatioFlag,
-		rewardGiniCoeffFlag,
-		rewardStakingFlag,
-		rewardProposerFlag,
-		rewardMinimumStakeFlag,
-		rewardDeferredTxFeeFlag,
-		istEpochFlag,
-		istProposerPolicyFlag,
-		istSubGroupFlag,
-		cliqueEpochFlag,
-		cliquePeriodFlag,
-		istanbulCompatibleBlockNumberFlag,
-		londonCompatibleBlockNumberFlag,
-		ethTxTypeCompatibleBlockNumberFlag,
-		magmaCompatibleBlockNumberFlag,
-		koreCompatibleBlockNumberFlag,
-	},
+	Action:    Gen,
+	Flags:     HomiFlags,
 	ArgsUsage: "type",
 }
 
@@ -157,6 +162,7 @@ const (
 	PNIpNetwork2          = "10.11.11"
 )
 
+var genesisTypes = [8]string{"cypress-test", "cypress", "baobab-test", "baobab", "servicechain", "servicechain-test", "clique", "istanbul"}
 var Types = [4]string{"docker", "local", "remote", "deploy"}
 
 var GrafanaFiles = [...]GrafanaFile{
@@ -530,10 +536,10 @@ func RandStringRunes(n int) string {
 	return string(b)
 }
 
-func gen(ctx *cli.Context) error {
+func Gen(ctx *cli.Context) error {
 	genType := findGenType(ctx)
+	fmt.Println(genType)
 
-	cliqueFlag := ctx.Bool(cliqueFlag.Name)
 	cnNum := ctx.Int(numOfCNsFlag.Name)
 	numValidators := ctx.Int(numOfValidatorsFlag.Name)
 	pnNum := ctx.Int(numOfPNsFlag.Name)
@@ -546,10 +552,23 @@ func gen(ctx *cli.Context) error {
 	baobabTest := ctx.Bool(baobabTestFlag.Name)
 	cypress := ctx.Bool(cypressFlag.Name)
 	cypressTest := ctx.Bool(cypressTestFlag.Name)
+	clique := ctx.Bool(cliqueFlag.Name)
 	serviceChain := ctx.Bool(serviceChainFlag.Name)
 	serviceChainTest := ctx.Bool(serviceChainTestFlag.Name)
 	chainid := ctx.Uint64(chainIDFlag.Name)
 	serviceChainId := ctx.Uint64(serviceChainIDFlag.Name)
+
+	// Note-klaytn : the following code that seems unnecessary is for the priority to flags, not yaml
+	if !baobab && !baobabTest && !cypress && !cypressTest && !serviceChain && !serviceChainTest && !clique {
+		genesisType := ctx.String(genesisTypeFlag.Name)
+		baobab = genesisType == "baobab"
+		baobabTest = genesisType == "baobab-test"
+		cypress = genesisType == "cypress"
+		cypressTest = genesisType == "cypress-test"
+		serviceChain = genesisType == "servicechain"
+		serviceChainTest = genesisType == "servicechain-test"
+		clique = genesisType == "clique"
+	}
 
 	if cnNum == 0 && scnNum == 0 {
 		return fmt.Errorf("needed at least one consensus node (--cn-num 1) or one service chain consensus node (--scn-num 1) ")
@@ -581,7 +600,7 @@ func gen(ctx *cli.Context) error {
 		genesisJson = genBaobabTestGenesis(validatorNodeAddrs, testAddrs)
 	} else if baobab {
 		genesisJson = genBaobabGenesis(validatorNodeAddrs, testAddrs)
-	} else if cliqueFlag {
+	} else if clique {
 		genesisJson = genCliqueGenesis(ctx, validatorNodeAddrs, testAddrs, chainid)
 	} else if serviceChain {
 		genesisJson = genServiceChainGenesis(validatorNodeAddrs, testAddrs)
@@ -1064,22 +1083,32 @@ func WriteFile(content []byte, parentFolder string, fileName string) {
 	fmt.Println("Created : ", filePath)
 }
 
+func existGenTypeArg(genTypeArg string) bool {
+	for _, t := range Types {
+		if genTypeArg == t {
+			return true
+		}
+	}
+	return false
+}
+
 func findGenType(ctx *cli.Context) int {
+	// Klaytn-Node: genTypeFlag's default value is docker
+	genTypeFlag := ctx.String(genTypeFlag.Name)
+	if ctx.Args().Present() && existGenTypeArg(ctx.Args()[0]) {
+		genTypeFlag = ctx.Args()[0]
+	}
 	genType := TypeNotDefined
-	if len(ctx.Args()) >= 1 {
-		for i, t := range Types {
-			if t == ctx.Args()[0] {
-				genType = i
-				break
-			}
+	for i, t := range Types {
+		if t == genTypeFlag {
+			genType = i
+			break
 		}
-		if genType == TypeNotDefined {
-			fmt.Printf("Wrong Type : %s\nSupported Types : [docker, local, remote, deploy]\n\n", ctx.Args()[0])
-			cli.ShowSubcommandHelp(ctx)
-			os.Exit(1)
-		}
-	} else {
-		genType = TypeDocker
+	}
+	if genType == TypeNotDefined {
+		fmt.Printf("Wrong Type : %s\nSupported Types : [docker, local, remote, deploy]\n\n", genTypeFlag)
+		cli.ShowSubcommandHelp(ctx)
+		os.Exit(1)
 	}
 	return genType
 }
@@ -1090,4 +1119,22 @@ func removeSpacesAndLines(b []byte) string {
 	out = strings.Replace(out, "\t", "", -1)
 	out = strings.Replace(out, "\n", "", -1)
 	return out
+}
+
+func homiFlagsFromYaml(ctx *cli.Context) error {
+	filePath := ctx.String(homiYamlFlag.Name)
+	fmt.Println(filePath)
+	if filePath != "" {
+		if err := altsrc.InitInputSourceWithContext(SetupCommand.Flags, altsrc.NewYamlSourceFromFlagFunc(homiYamlFlag.Name))(ctx); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func BeforeRunHomi(ctx *cli.Context) error {
+	if err := homiFlagsFromYaml(ctx); err != nil {
+		return err
+	}
+	return nil
 }
