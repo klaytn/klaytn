@@ -63,6 +63,10 @@ type Trie struct {
 	db          *Database
 	root        node
 	prefetching bool
+	// Keep track of the number leafs which have been inserted since the last
+	// hashing operation. This number will not directly map to the number of
+	// actually unhashed nodes
+	unhashed int
 }
 
 // newFlag returns the cache flag value for a newly created node.
@@ -264,6 +268,7 @@ func (t *Trie) Update(key, value []byte) {
 //
 // If a node was not found in the database, a MissingNodeError is returned.
 func (t *Trie) TryUpdate(key, value []byte) error {
+	t.unhashed++
 	hexKey := keybytesToHex(key)
 	return t.TryUpdateWithHexKey(hexKey, value)
 }
@@ -366,6 +371,7 @@ func (t *Trie) Delete(key []byte) {
 // TryDelete removes any existing value for key from the trie.
 // If a node was not found in the database, a MissingNodeError is returned.
 func (t *Trie) TryDelete(key []byte) error {
+	t.unhashed++
 	k := keybytesToHex(key)
 	_, n, err := t.delete(t.root, nil, k)
 	if err != nil {
@@ -567,7 +573,8 @@ func (t *Trie) hashRoot(db *Database, onleaf LeafCallback) (node, node, error) {
 	if t.root == nil {
 		return hashNode(emptyRoot.Bytes()), nil, nil
 	}
-	h := newHasher()
+	// If the number of changes is below 100, we let one thread handle it
+	h := newHasher(t.unhashed >= 100)
 	defer returnHasherToPool(h)
 	hashed, cached := h.hash(t.root, true)
 	return hashed, cached, nil
@@ -575,7 +582,7 @@ func (t *Trie) hashRoot(db *Database, onleaf LeafCallback) (node, node, error) {
 
 func GetHashAndHexKey(key []byte) ([]byte, []byte) {
 	var hashKeyBuf [common.HashLength]byte
-	h := newHasher()
+	h := newHasher(false)
 	h.sha.Reset()
 	h.sha.Write(key)
 	hashKey := h.sha.Sum(hashKeyBuf[:0])
