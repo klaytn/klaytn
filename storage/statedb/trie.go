@@ -24,9 +24,10 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"sync"
+
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
-	"sync"
 )
 
 var (

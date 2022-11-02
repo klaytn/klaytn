@@ -21,10 +21,11 @@
 package statedb
 
 import (
-	"github.com/klaytn/klaytn/rlp"
-	"golang.org/x/crypto/sha3"
 	"hash"
 	"sync"
+
+	"github.com/klaytn/klaytn/rlp"
+	"golang.org/x/crypto/sha3"
 )
 
 // keccakState wraps sha3.state. In addition to the usual hash methods, it also supports
@@ -115,7 +116,7 @@ func (h *hasher) hashShortNodeChildren(n *shortNode) (collapsed, cached *shortNo
 	collapsed, cached = n.copy(), n.copy()
 	// Previously, we did copy this one. We don't seem to need to actually
 	// do that, since we don't overwrite/reuse keys
-	//cached.Key = common.CopyBytes(n.Key)
+	// cached.Key = common.CopyBytes(n.Key)
 	collapsed.Key = hexToCompact(n.Key)
 	// Unless the child is a valuenode or hashnode, hash it
 	switch n.Val.(type) {

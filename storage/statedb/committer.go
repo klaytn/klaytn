@@ -19,10 +19,11 @@ package statedb
 import (
 	"errors"
 	"fmt"
+	"sync"
+
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/rlp"
 	"golang.org/x/crypto/sha3"
-	"sync"
 )
 
 // leafChanSize is the size of the leafCh. It's a pretty arbitrary number, to allow
@@ -143,7 +144,7 @@ func (c *committer) commit(n node, db *Database, force bool) (node, error) {
 // commitChildren commits the children of the given fullnode
 func (c *committer) commitChildren(n *fullNode, db *Database, force bool) ([17]node, bool, error) {
 	var children [17]node
-	var hasValueNodeChildren = false
+	hasValueNodeChildren := false
 	for i, child := range n.Children {
 		if child == nil {
 			continue
