@@ -341,6 +341,31 @@ func TestWeightedCouncil_RefreshWithNonZeroWeight(t *testing.T) {
 	}
 }
 
+func TestWeightedCouncil_RefreshWithNonZeroWeight_AfterKoreHardFork(t *testing.T) {
+	validators := makeTestValidators(testNonZeroWeights)
+
+	valSet := makeTestWeightedCouncil(testNonZeroWeights)
+	runRefreshForTest_AfterKoreHardFork(valSet)
+
+	// Run tests
+
+	// 1. number of proposers
+	totalWeights := uint64(len(testNonZeroWeights))
+	assert.Equal(t, totalWeights, uint64(len(valSet.proposers)))
+
+	// 2. weight and appearance frequency
+	for _, v := range validators {
+		weight := uint64(1)
+		appearance := uint64(0)
+		for _, p := range valSet.proposers {
+			if v.Address() == p.Address() {
+				appearance++
+			}
+		}
+		assert.Equal(t, weight, appearance)
+	}
+}
+
 func TestWeightedCouncil_RemoveValidator(t *testing.T) {
 	validators := makeTestValidators(testNonZeroWeights)
 	valSet := makeTestWeightedCouncil(testNonZeroWeights)
@@ -419,7 +444,30 @@ func runRefreshForTest(valSet *weightedCouncil) {
 		hashString = hashString[:15]
 	}
 	seed, _ := strconv.ParseInt(hashString, 16, 64)
-	valSet.refreshProposers(seed, 0)
+	chainRules := params.Rules{
+		ChainID:    new(big.Int).SetUint64(0),
+		IsIstanbul: false,
+		IsLondon:   false,
+		IsMagma:    false,
+		IsKore:     false,
+	}
+	valSet.refreshProposers(seed, 0, chainRules)
+}
+
+func runRefreshForTest_AfterKoreHardFork(valSet *weightedCouncil) {
+	hashString := strings.TrimPrefix(testPrevHash.Hex(), "0x")
+	if len(hashString) > 15 {
+		hashString = hashString[:15]
+	}
+	seed, _ := strconv.ParseInt(hashString, 16, 64)
+	chainRules := params.Rules{
+		ChainID:    new(big.Int).SetUint64(0),
+		IsIstanbul: true,
+		IsLondon:   true,
+		IsMagma:    true,
+		IsKore:     true,
+	}
+	valSet.refreshProposers(seed, 0, chainRules)
 }
 
 func TestWeightedCouncil_SetSubGroupSize(t *testing.T) {

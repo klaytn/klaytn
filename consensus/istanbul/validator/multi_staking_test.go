@@ -196,7 +196,7 @@ func TestCalcWeight(t *testing.T) {
 			[]float64{0, 0, 0},
 			0,
 			[]uint64{0, 0, 0},
-			params.Rules{ChainID: big.NewInt(0), IsIstanbul: true, IsLondon: true, IsMagma: true, IsKore: true},
+			params.Rules{ChainID: big.NewInt(0), IsIstanbul: false, IsLondon: false, IsMagma: false, IsKore: false},
 		},
 		{
 			[]*weightedValidator{
@@ -205,7 +205,7 @@ func TestCalcWeight(t *testing.T) {
 			[]float64{5000000, 5000000, 5000000},
 			15000000,
 			[]uint64{33, 33, 33},
-			params.Rules{ChainID: big.NewInt(0), IsIstanbul: true, IsLondon: true, IsMagma: true, IsKore: true},
+			params.Rules{ChainID: big.NewInt(0), IsIstanbul: false, IsLondon: false, IsMagma: false, IsKore: false},
 		},
 		{
 			[]*weightedValidator{
@@ -214,7 +214,7 @@ func TestCalcWeight(t *testing.T) {
 			[]float64{5000000, 10000000, 5000000, 5000000},
 			25000000,
 			[]uint64{20, 40, 20, 20},
-			params.Rules{ChainID: big.NewInt(0), IsIstanbul: true, IsLondon: true, IsMagma: true, IsKore: true},
+			params.Rules{ChainID: big.NewInt(0), IsIstanbul: false, IsLondon: false, IsMagma: false, IsKore: false},
 		},
 		{
 			[]*weightedValidator{
@@ -223,6 +223,61 @@ func TestCalcWeight(t *testing.T) {
 			[]float64{324946, 560845, 771786, 967997, 1153934},
 			3779508,
 			[]uint64{9, 15, 20, 26, 31},
+			params.Rules{ChainID: big.NewInt(0), IsIstanbul: false, IsLondon: false, IsMagma: false, IsKore: false},
+		},
+	}
+	for _, testCase := range testCases {
+		calcWeight(testCase.weightedValidators, testCase.stakingAmounts, testCase.totalStaking, testCase.rules)
+		for i, weight := range testCase.expectedWeights {
+			assert.Equal(t, weight, testCase.weightedValidators[i].Weight())
+		}
+	}
+}
+
+// TestCalcWeight_AfterKoreHardFork tests calcWeight that calculates weights and saves them to validators after Kore hard fork.
+// weights are 0 or 1 for thg same probability of proposer selection
+func TestCalcWeight_AfterKoreHardFork(t *testing.T) {
+	testCases := []struct {
+		weightedValidators []*weightedValidator
+		stakingAmounts     []float64
+		totalStaking       float64
+		expectedWeights    []uint64
+		rules              params.Rules
+	}{
+		{
+			[]*weightedValidator{
+				{}, {}, {},
+			},
+			[]float64{0, 0, 0},
+			0,
+			[]uint64{0, 0, 0},
+			params.Rules{ChainID: big.NewInt(0), IsIstanbul: true, IsLondon: true, IsMagma: true, IsKore: true},
+		},
+		{
+			[]*weightedValidator{
+				{}, {}, {},
+			},
+			[]float64{5000000, 5000000, 5000000},
+			15000000,
+			[]uint64{1, 1, 1},
+			params.Rules{ChainID: big.NewInt(0), IsIstanbul: true, IsLondon: true, IsMagma: true, IsKore: true},
+		},
+		{
+			[]*weightedValidator{
+				{}, {}, {}, {},
+			},
+			[]float64{5000000, 10000000, 5000000, 5000000},
+			25000000,
+			[]uint64{1, 1, 1, 1},
+			params.Rules{ChainID: big.NewInt(0), IsIstanbul: true, IsLondon: true, IsMagma: true, IsKore: true},
+		},
+		{
+			[]*weightedValidator{
+				{}, {}, {}, {}, {},
+			},
+			[]float64{324946, 560845, 771786, 967997, 1153934},
+			3779508,
+			[]uint64{1, 1, 1, 1, 1},
 			params.Rules{ChainID: big.NewInt(0), IsIstanbul: true, IsLondon: true, IsMagma: true, IsKore: true},
 		},
 	}
@@ -252,7 +307,7 @@ func TestWeightedCouncil_validatorWeightWithStakingInfo(t *testing.T) {
 				CouncilStakingAmounts: []uint64{0, 0, 0},
 			},
 			[]uint64{0, 0, 0},
-			params.Rules{ChainID: big.NewInt(0), IsIstanbul: true, IsLondon: true, IsMagma: true, IsKore: true},
+			params.Rules{ChainID: big.NewInt(0), IsIstanbul: false, IsLondon: false, IsMagma: false, IsKore: false},
 		},
 		{
 			[]common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103"), common.StringToAddress("104")},
@@ -263,7 +318,7 @@ func TestWeightedCouncil_validatorWeightWithStakingInfo(t *testing.T) {
 				CouncilStakingAmounts: []uint64{5000000, 5000000, 5000000, 5000000},
 			},
 			[]uint64{25, 25, 25, 25},
-			params.Rules{ChainID: big.NewInt(0), IsIstanbul: true, IsLondon: true, IsMagma: true, IsKore: true},
+			params.Rules{ChainID: big.NewInt(0), IsIstanbul: false, IsLondon: false, IsMagma: false, IsKore: false},
 		},
 		{
 			[]common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103"), common.StringToAddress("104"), common.StringToAddress("105")},
@@ -274,7 +329,7 @@ func TestWeightedCouncil_validatorWeightWithStakingInfo(t *testing.T) {
 				CouncilStakingAmounts: []uint64{10000000, 20000000, 30000000, 40000000, 50000000},
 			},
 			[]uint64{9, 15, 20, 26, 31},
-			params.Rules{ChainID: big.NewInt(0), IsIstanbul: true, IsLondon: true, IsMagma: true, IsKore: true},
+			params.Rules{ChainID: big.NewInt(0), IsIstanbul: false, IsLondon: false, IsMagma: false, IsKore: false},
 		},
 		{
 			[]common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103"), common.StringToAddress("104")},
@@ -285,7 +340,7 @@ func TestWeightedCouncil_validatorWeightWithStakingInfo(t *testing.T) {
 				CouncilStakingAmounts: []uint64{5000000, 5000000, 5000000, 5000000, 5000000},
 			},
 			[]uint64{40, 20, 20, 20},
-			params.Rules{ChainID: big.NewInt(0), IsIstanbul: true, IsLondon: true, IsMagma: true, IsKore: true},
+			params.Rules{ChainID: big.NewInt(0), IsIstanbul: false, IsLondon: false, IsMagma: false, IsKore: false},
 		},
 		{
 			[]common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103"), common.StringToAddress("104")},
@@ -296,7 +351,7 @@ func TestWeightedCouncil_validatorWeightWithStakingInfo(t *testing.T) {
 				CouncilStakingAmounts: []uint64{5000000, 5000000, 5000000, 5000000, 5000000},
 			},
 			[]uint64{38, 21, 21, 21},
-			params.Rules{ChainID: big.NewInt(0), IsIstanbul: true, IsLondon: true, IsMagma: true, IsKore: true},
+			params.Rules{ChainID: big.NewInt(0), IsIstanbul: false, IsLondon: false, IsMagma: false, IsKore: false},
 		},
 		{
 			[]common.Address{common.StringToAddress("104"), common.StringToAddress("103"), common.StringToAddress("102"), common.StringToAddress("101")},
@@ -307,7 +362,7 @@ func TestWeightedCouncil_validatorWeightWithStakingInfo(t *testing.T) {
 				CouncilStakingAmounts: []uint64{10000000, 5000000, 20000000, 5000000, 5000000, 5000000},
 			},
 			[]uint64{29, 21, 37, 12},
-			params.Rules{ChainID: big.NewInt(0), IsIstanbul: true, IsLondon: true, IsMagma: true, IsKore: true},
+			params.Rules{ChainID: big.NewInt(0), IsIstanbul: false, IsLondon: false, IsMagma: false, IsKore: false},
 		},
 		{
 			[]common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103"), common.StringToAddress("104"), common.StringToAddress("105")},
@@ -318,6 +373,107 @@ func TestWeightedCouncil_validatorWeightWithStakingInfo(t *testing.T) {
 				CouncilStakingAmounts: []uint64{10000000, 5000000, 20000000, 5000000, 5000000, 5000000},
 			},
 			[]uint64{29, 21, 37, 12, 1},
+			params.Rules{ChainID: big.NewInt(0), IsIstanbul: false, IsLondon: false, IsMagma: false, IsKore: false},
+		},
+	}
+	for _, testCase := range testCases {
+		council := newTestWeightedCouncil(testCase.validators)
+		candidates := append(council.validators, council.demotedValidators...)
+		weightedValidators, stakingAmounts, err := getStakingAmountsOfValidators(candidates, testCase.stakingInfo)
+		assert.NoError(t, err)
+		totalStaking, _ := calcTotalAmount(weightedValidators, testCase.stakingInfo, stakingAmounts)
+		calcWeight(weightedValidators, stakingAmounts, totalStaking, testCase.rules)
+
+		for i, weight := range testCase.expectedWeights {
+			assert.Equal(t, weight, weightedValidators[i].Weight())
+		}
+	}
+}
+
+// TestWeightedCouncil_validatorWeightWithStakingInfo_AfterKoreHardFork is union of above tests.
+// Weight should be calculated exactly by a validator list and a stakingInfo given for the same probability of proposer selection
+func TestWeightedCouncil_validatorWeightWithStakingInfo_AfterKoreHardFork(t *testing.T) {
+	testCases := []struct {
+		validators      []common.Address
+		stakingInfo     *reward.StakingInfo
+		expectedWeights []uint64
+		rules           params.Rules
+	}{
+		{
+			[]common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103")},
+			&reward.StakingInfo{
+				CouncilNodeAddrs:      []common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103")},
+				CouncilRewardAddrs:    []common.Address{common.StringToAddress("201"), common.StringToAddress("202"), common.StringToAddress("203")},
+				UseGini:               false,
+				CouncilStakingAmounts: []uint64{0, 0, 0},
+			},
+			[]uint64{0, 0, 0},
+			params.Rules{ChainID: big.NewInt(0), IsIstanbul: true, IsLondon: true, IsMagma: true, IsKore: true},
+		},
+		{
+			[]common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103"), common.StringToAddress("104")},
+			&reward.StakingInfo{
+				CouncilNodeAddrs:      []common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103"), common.StringToAddress("104")},
+				CouncilRewardAddrs:    []common.Address{common.StringToAddress("201"), common.StringToAddress("202"), common.StringToAddress("203"), common.StringToAddress("204")},
+				UseGini:               true,
+				CouncilStakingAmounts: []uint64{5000000, 5000000, 5000000, 5000000},
+			},
+			[]uint64{1, 1, 1, 1},
+			params.Rules{ChainID: big.NewInt(0), IsIstanbul: true, IsLondon: true, IsMagma: true, IsKore: true},
+		},
+		{
+			[]common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103"), common.StringToAddress("104"), common.StringToAddress("105")},
+			&reward.StakingInfo{
+				CouncilNodeAddrs:      []common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103"), common.StringToAddress("104"), common.StringToAddress("105")},
+				CouncilRewardAddrs:    []common.Address{common.StringToAddress("201"), common.StringToAddress("202"), common.StringToAddress("203"), common.StringToAddress("204"), common.StringToAddress("205")},
+				UseGini:               true,
+				CouncilStakingAmounts: []uint64{10000000, 20000000, 30000000, 40000000, 50000000},
+			},
+			[]uint64{1, 1, 1, 1, 1},
+			params.Rules{ChainID: big.NewInt(0), IsIstanbul: true, IsLondon: true, IsMagma: true, IsKore: true},
+		},
+		{
+			[]common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103"), common.StringToAddress("104")},
+			&reward.StakingInfo{
+				CouncilNodeAddrs:      []common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103"), common.StringToAddress("104"), common.StringToAddress("901")},
+				CouncilRewardAddrs:    []common.Address{common.StringToAddress("201"), common.StringToAddress("202"), common.StringToAddress("203"), common.StringToAddress("204"), common.StringToAddress("201")},
+				UseGini:               false,
+				CouncilStakingAmounts: []uint64{5000000, 5000000, 5000000, 5000000, 5000000},
+			},
+			[]uint64{1, 1, 1, 1},
+			params.Rules{ChainID: big.NewInt(0), IsIstanbul: true, IsLondon: true, IsMagma: true, IsKore: true},
+		},
+		{
+			[]common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103"), common.StringToAddress("104")},
+			&reward.StakingInfo{
+				CouncilNodeAddrs:      []common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103"), common.StringToAddress("104"), common.StringToAddress("901")},
+				CouncilRewardAddrs:    []common.Address{common.StringToAddress("201"), common.StringToAddress("202"), common.StringToAddress("203"), common.StringToAddress("204"), common.StringToAddress("201")},
+				UseGini:               true,
+				CouncilStakingAmounts: []uint64{5000000, 5000000, 5000000, 5000000, 5000000},
+			},
+			[]uint64{1, 1, 1, 1},
+			params.Rules{ChainID: big.NewInt(0), IsIstanbul: true, IsLondon: true, IsMagma: true, IsKore: true},
+		},
+		{
+			[]common.Address{common.StringToAddress("104"), common.StringToAddress("103"), common.StringToAddress("102"), common.StringToAddress("101")},
+			&reward.StakingInfo{
+				CouncilNodeAddrs:      []common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103"), common.StringToAddress("104"), common.StringToAddress("901"), common.StringToAddress("902")},
+				CouncilRewardAddrs:    []common.Address{common.StringToAddress("201"), common.StringToAddress("202"), common.StringToAddress("203"), common.StringToAddress("204"), common.StringToAddress("201"), common.StringToAddress("202")},
+				UseGini:               true,
+				CouncilStakingAmounts: []uint64{10000000, 5000000, 20000000, 5000000, 5000000, 5000000},
+			},
+			[]uint64{1, 1, 1, 1},
+			params.Rules{ChainID: big.NewInt(0), IsIstanbul: true, IsLondon: true, IsMagma: true, IsKore: true},
+		},
+		{
+			[]common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103"), common.StringToAddress("104"), common.StringToAddress("105")},
+			&reward.StakingInfo{
+				CouncilNodeAddrs:      []common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103"), common.StringToAddress("104"), common.StringToAddress("901"), common.StringToAddress("902")},
+				CouncilRewardAddrs:    []common.Address{common.StringToAddress("201"), common.StringToAddress("202"), common.StringToAddress("203"), common.StringToAddress("204"), common.StringToAddress("201"), common.StringToAddress("202")},
+				UseGini:               true,
+				CouncilStakingAmounts: []uint64{10000000, 5000000, 20000000, 5000000, 5000000, 5000000},
+			},
+			[]uint64{1, 1, 1, 1, 1},
 			params.Rules{ChainID: big.NewInt(0), IsIstanbul: true, IsLondon: true, IsMagma: true, IsKore: true},
 		},
 	}

@@ -96,7 +96,6 @@ func newWeightedValidator(addr common.Address, reward common.Address, votingpowe
 }
 
 type weightedCouncil struct {
-	chain             consensus.ChainReader
 	subSize           uint64
 	demotedValidators istanbul.Validators // validators staking KLAYs less than minimum, and not in committee/proposers
 	validators        istanbul.Validators // validators staking KLAYs more than and equals to minimum, and in committee/proposers
@@ -214,7 +213,6 @@ func NewWeightedCouncil(addrs []common.Address, demotedAddrs []common.Address, r
 	if valSet.Size() > 0 {
 		valSet.proposer.Store(valSet.GetByIndex(0))
 	}
-	valSet.chain = chain
 	valSet.SetSubGroupSize(committeeSize)
 	valSet.selector = weightedRandomProposer
 
@@ -582,7 +580,6 @@ func (valSet *weightedCouncil) Copy() istanbul.ValidatorSet {
 	defer valSet.validatorMu.RUnlock()
 
 	newWeightedCouncil := weightedCouncil{
-		chain:             valSet.chain,
 		subSize:           valSet.subSize,
 		policy:            valSet.policy,
 		proposer:          valSet.proposer,
@@ -671,7 +668,7 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, config
 	totalStaking, _ := calcTotalAmount(weightedValidators, newStakingInfo, stakingAmounts)
 	calcWeight(weightedValidators, stakingAmounts, totalStaking, chainRules)
 
-	valSet.refreshProposers(seed, blockNum)
+	valSet.refreshProposers(seed, blockNum, chainRules)
 
 	logger.Debug("Refresh done.", "blockNum", blockNum, "hash", hash, "valSet.blockNum", valSet.blockNum, "stakingInfo.BlockNum", valSet.stakingInfo.BlockNum)
 	logger.Debug("New proposers calculated", "new proposers", valSet.proposers)
@@ -848,11 +845,11 @@ func calcWeight(weightedValidators []*weightedValidator, stakingAmounts []float6
 	localLogger.Debug("calculation weight finished")
 }
 
-func (valSet *weightedCouncil) refreshProposers(seed int64, blockNum uint64) {
+func (valSet *weightedCouncil) refreshProposers(seed int64, blockNum uint64, rules params.Rules) {
 	var candidateValsIdx []int // This is a slice which stores index of validator. it is used for shuffling
 
 	for index, val := range valSet.validators {
-		if valSet.chain.Config().Rules(new(big.Int).SetUint64(blockNum)).IsKore {
+		if rules.IsKore {
 			candidateValsIdx = append(candidateValsIdx, index)
 		} else {
 			weight := val.Weight()
