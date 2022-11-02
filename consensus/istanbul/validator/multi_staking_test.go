@@ -35,7 +35,10 @@ NodeAddress of additional staking contract : begin with 9
 package validator
 
 import (
+	"math/big"
 	"testing"
+
+	"github.com/klaytn/klaytn/params"
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
@@ -184,6 +187,7 @@ func TestCalcWeight(t *testing.T) {
 		stakingAmounts     []float64
 		totalStaking       float64
 		expectedWeights    []uint64
+		rules              params.Rules
 	}{
 		{
 			[]*weightedValidator{
@@ -192,6 +196,7 @@ func TestCalcWeight(t *testing.T) {
 			[]float64{0, 0, 0},
 			0,
 			[]uint64{0, 0, 0},
+			params.Rules{ChainID: big.NewInt(0), IsIstanbul: true, IsLondon: true, IsMagma: true, IsKore: true},
 		},
 		{
 			[]*weightedValidator{
@@ -200,6 +205,7 @@ func TestCalcWeight(t *testing.T) {
 			[]float64{5000000, 5000000, 5000000},
 			15000000,
 			[]uint64{33, 33, 33},
+			params.Rules{ChainID: big.NewInt(0), IsIstanbul: true, IsLondon: true, IsMagma: true, IsKore: true},
 		},
 		{
 			[]*weightedValidator{
@@ -208,6 +214,7 @@ func TestCalcWeight(t *testing.T) {
 			[]float64{5000000, 10000000, 5000000, 5000000},
 			25000000,
 			[]uint64{20, 40, 20, 20},
+			params.Rules{ChainID: big.NewInt(0), IsIstanbul: true, IsLondon: true, IsMagma: true, IsKore: true},
 		},
 		{
 			[]*weightedValidator{
@@ -216,10 +223,11 @@ func TestCalcWeight(t *testing.T) {
 			[]float64{324946, 560845, 771786, 967997, 1153934},
 			3779508,
 			[]uint64{9, 15, 20, 26, 31},
+			params.Rules{ChainID: big.NewInt(0), IsIstanbul: true, IsLondon: true, IsMagma: true, IsKore: true},
 		},
 	}
 	for _, testCase := range testCases {
-		calcWeight(testCase.weightedValidators, testCase.stakingAmounts, testCase.totalStaking)
+		calcWeight(testCase.weightedValidators, testCase.stakingAmounts, testCase.totalStaking, testCase.rules)
 		for i, weight := range testCase.expectedWeights {
 			assert.Equal(t, weight, testCase.weightedValidators[i].Weight())
 		}
@@ -233,6 +241,7 @@ func TestWeightedCouncil_validatorWeightWithStakingInfo(t *testing.T) {
 		validators      []common.Address
 		stakingInfo     *reward.StakingInfo
 		expectedWeights []uint64
+		rules           params.Rules
 	}{
 		{
 			[]common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103")},
@@ -243,6 +252,7 @@ func TestWeightedCouncil_validatorWeightWithStakingInfo(t *testing.T) {
 				CouncilStakingAmounts: []uint64{0, 0, 0},
 			},
 			[]uint64{0, 0, 0},
+			params.Rules{ChainID: big.NewInt(0), IsIstanbul: true, IsLondon: true, IsMagma: true, IsKore: true},
 		},
 		{
 			[]common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103"), common.StringToAddress("104")},
@@ -253,6 +263,7 @@ func TestWeightedCouncil_validatorWeightWithStakingInfo(t *testing.T) {
 				CouncilStakingAmounts: []uint64{5000000, 5000000, 5000000, 5000000},
 			},
 			[]uint64{25, 25, 25, 25},
+			params.Rules{ChainID: big.NewInt(0), IsIstanbul: true, IsLondon: true, IsMagma: true, IsKore: true},
 		},
 		{
 			[]common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103"), common.StringToAddress("104"), common.StringToAddress("105")},
@@ -263,6 +274,7 @@ func TestWeightedCouncil_validatorWeightWithStakingInfo(t *testing.T) {
 				CouncilStakingAmounts: []uint64{10000000, 20000000, 30000000, 40000000, 50000000},
 			},
 			[]uint64{9, 15, 20, 26, 31},
+			params.Rules{ChainID: big.NewInt(0), IsIstanbul: true, IsLondon: true, IsMagma: true, IsKore: true},
 		},
 		{
 			[]common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103"), common.StringToAddress("104")},
@@ -273,6 +285,7 @@ func TestWeightedCouncil_validatorWeightWithStakingInfo(t *testing.T) {
 				CouncilStakingAmounts: []uint64{5000000, 5000000, 5000000, 5000000, 5000000},
 			},
 			[]uint64{40, 20, 20, 20},
+			params.Rules{ChainID: big.NewInt(0), IsIstanbul: true, IsLondon: true, IsMagma: true, IsKore: true},
 		},
 		{
 			[]common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103"), common.StringToAddress("104")},
@@ -283,6 +296,7 @@ func TestWeightedCouncil_validatorWeightWithStakingInfo(t *testing.T) {
 				CouncilStakingAmounts: []uint64{5000000, 5000000, 5000000, 5000000, 5000000},
 			},
 			[]uint64{38, 21, 21, 21},
+			params.Rules{ChainID: big.NewInt(0), IsIstanbul: true, IsLondon: true, IsMagma: true, IsKore: true},
 		},
 		{
 			[]common.Address{common.StringToAddress("104"), common.StringToAddress("103"), common.StringToAddress("102"), common.StringToAddress("101")},
@@ -293,6 +307,7 @@ func TestWeightedCouncil_validatorWeightWithStakingInfo(t *testing.T) {
 				CouncilStakingAmounts: []uint64{10000000, 5000000, 20000000, 5000000, 5000000, 5000000},
 			},
 			[]uint64{29, 21, 37, 12},
+			params.Rules{ChainID: big.NewInt(0), IsIstanbul: true, IsLondon: true, IsMagma: true, IsKore: true},
 		},
 		{
 			[]common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103"), common.StringToAddress("104"), common.StringToAddress("105")},
@@ -303,6 +318,7 @@ func TestWeightedCouncil_validatorWeightWithStakingInfo(t *testing.T) {
 				CouncilStakingAmounts: []uint64{10000000, 5000000, 20000000, 5000000, 5000000, 5000000},
 			},
 			[]uint64{29, 21, 37, 12, 1},
+			params.Rules{ChainID: big.NewInt(0), IsIstanbul: true, IsLondon: true, IsMagma: true, IsKore: true},
 		},
 	}
 	for _, testCase := range testCases {
@@ -311,7 +327,7 @@ func TestWeightedCouncil_validatorWeightWithStakingInfo(t *testing.T) {
 		weightedValidators, stakingAmounts, err := getStakingAmountsOfValidators(candidates, testCase.stakingInfo)
 		assert.NoError(t, err)
 		totalStaking, _ := calcTotalAmount(weightedValidators, testCase.stakingInfo, stakingAmounts)
-		calcWeight(weightedValidators, stakingAmounts, totalStaking)
+		calcWeight(weightedValidators, stakingAmounts, totalStaking, testCase.rules)
 
 		for i, weight := range testCase.expectedWeights {
 			assert.Equal(t, weight, weightedValidators[i].Weight())
