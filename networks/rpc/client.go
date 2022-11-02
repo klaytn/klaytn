@@ -17,6 +17,7 @@
 //
 // This file is derived from rpc/client.go (2018/06/04).
 // Modified and improved for the klaytn development.
+
 package rpc
 
 import (
