@@ -160,6 +160,7 @@ func TestContractEngine_contractCaller(t *testing.T) {
 func prepareContractEngine(t *testing.T, bc *blockchain.BlockChain, addr common.Address) *ContractEngine {
 	config := params.CypressChainConfig.Copy()
 	config.Governance.GovParamContract = addr
+	config.KoreCompatibleBlock = big.NewInt(0)
 
 	e := NewContractEngine(config)
 	e.SetBlockchain(bc)
@@ -215,7 +216,7 @@ func TestContractEngine_Params(t *testing.T) {
 			expected = psetNext
 		}
 
-		require.Equal(t, expected, e.Params())
+		require.Equal(t, expected, e.Params(), "Params() on block %d failed", num)
 		sim.Commit()
 		err := e.UpdateParams()
 		require.Nil(t, err)
@@ -269,7 +270,7 @@ func TestContractEngine_ParamsAt(t *testing.T) {
 			}
 
 			result, _ := e.ParamsAt(iter)
-			require.Equal(t, expected, result)
+			require.Equal(t, expected, result, "ParamsAt(%d) on block %d failed", iter, num)
 		}
 
 		sim.Commit()

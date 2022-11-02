@@ -37,11 +37,6 @@ func (e *ContractEngine) Params() *params.GovParamSet {
 
 // Params effective at requested block (num)
 func (e *ContractEngine) ParamsAt(num uint64) (*params.GovParamSet, error) {
-	if e.chain == nil {
-		logger.Error("Invoked ParamsAt() before SetBlockchain", "num", num)
-		return nil, errContractEngineNotReady
-	}
-
 	pset, err := e.contractGetAllParamsAt(num)
 	if err != nil {
 		return nil, err
@@ -52,8 +47,8 @@ func (e *ContractEngine) ParamsAt(num uint64) (*params.GovParamSet, error) {
 // if UpdateParam fails, leave currentParams as-is
 func (e *ContractEngine) UpdateParams() error {
 	if e.chain == nil {
-		logger.Error("Invoked UpdateParams() before SetBlockchain")
-		return errContractEngineNotReady
+		logger.Info("ContractEngine disabled")
+		return nil
 	}
 
 	// request the parameters required for generating the next block
@@ -70,14 +65,23 @@ func (e *ContractEngine) UpdateParams() error {
 // contractGetAllParamsAt sets evmCtx.BlockNumber as num
 func (e *ContractEngine) contractGetAllParamsAt(num uint64) (*params.GovParamSet, error) {
 	if e.chain == nil {
-		logger.Error("Invoked ContractEngine before SetBlockchain")
-		return nil, errContractEngineNotReady
+		logger.Info("ContractEngine disabled")
+		return params.NewGovParamSet(), nil
 	}
 
-	addr := e.contractAddrAt(num)
+	if !e.chainConfig.IsKoreForkEnabled(e.chain.CurrentHeader().Number) {
+		logger.Info("ContractEngine disabled")
+		return params.NewGovParamSet(), nil
+	}
+
+	addr, err := e.contractAddrAt(num)
+	if err != nil {
+		return nil, err
+	}
+
 	if common.EmptyAddress(addr) {
-		logger.Error("Invoked ContractEngine but address is empty", "num", num)
-		return nil, errContractEngineNotReady
+		logger.Info("ContractEngine disabled")
+		return params.NewGovParamSet(), nil
 	}
 
 	caller := &contractCaller{
@@ -89,13 +93,13 @@ func (e *ContractEngine) contractGetAllParamsAt(num uint64) (*params.GovParamSet
 }
 
 // Return the GovParamContract address effective at given block number
-func (e *ContractEngine) contractAddrAt(num uint64) common.Address {
+func (e *ContractEngine) contractAddrAt(num uint64) (common.Address, error) {
 	// TODO: Load from HeaderEngine
 
 	// If database don't have the item, fallback to ChainConfig
 	if e.chainConfig.Governance != nil {
-		return e.chainConfig.Governance.GovParamContract
+		return e.chainConfig.Governance.GovParamContract, nil
 	}
 
-	return common.Address{}
+	return common.Address{}, nil
 }
