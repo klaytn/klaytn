@@ -423,6 +423,94 @@ func (p *GovParamSet) MustGet(key int) interface{} {
 	}
 }
 
+func (p *GovParamSet) ToIstanbulConfig() *IstanbulConfig {
+	var ret IstanbulConfig
+	if _, ok := p.Get(Epoch); ok {
+		ret.Epoch = p.Epoch()
+	}
+	if _, ok := p.Get(Policy); ok {
+		ret.ProposerPolicy = p.Policy()
+	}
+	if _, ok := p.Get(CommitteeSize); ok {
+		ret.SubGroupSize = p.CommitteeSize()
+	}
+
+	return &ret
+}
+
+func (p *GovParamSet) ToRewardConfig() *RewardConfig {
+	var ret RewardConfig
+	if _, ok := p.Get(MintingAmount); ok {
+		ret.MintingAmount = p.MintingAmountBig()
+	}
+	if _, ok := p.Get(Ratio); ok {
+		ret.Ratio = p.Ratio()
+	}
+	if _, ok := p.Get(UseGiniCoeff); ok {
+		ret.UseGiniCoeff = p.UseGiniCoeff()
+	}
+	if _, ok := p.Get(DeferredTxFee); ok {
+		ret.DeferredTxFee = p.DeferredTxFee()
+	}
+	if _, ok := p.Get(StakeUpdateInterval); ok {
+		ret.StakingUpdateInterval = p.StakeUpdateInterval()
+	}
+	if _, ok := p.Get(ProposerRefreshInterval); ok {
+		ret.ProposerUpdateInterval = p.ProposerRefreshInterval()
+	}
+	if _, ok := p.Get(MinimumStake); ok {
+		ret.MinimumStake = p.MinimumStakeBig()
+	}
+
+	return &ret
+}
+
+func (p *GovParamSet) ToKIP71Config() *KIP71Config {
+	var ret KIP71Config
+	if _, ok := p.Get(LowerBoundBaseFee); ok {
+		ret.LowerBoundBaseFee = p.LowerBoundBaseFee()
+	}
+	if _, ok := p.Get(UpperBoundBaseFee); ok {
+		ret.UpperBoundBaseFee = p.UpperBoundBaseFee()
+	}
+	if _, ok := p.Get(GasTarget); ok {
+		ret.GasTarget = p.GasTarget()
+	}
+	if _, ok := p.Get(MaxBlockGasUsedForBaseFee); ok {
+		ret.MaxBlockGasUsedForBaseFee = p.MaxBlockGasUsedForBaseFee()
+	}
+	if _, ok := p.Get(BaseFeeDenominator); ok {
+		ret.BaseFeeDenominator = p.BaseFeeDenominator()
+	}
+
+	return &ret
+}
+
+func (p *GovParamSet) ToGovernanceConfig() *GovernanceConfig {
+	var ret GovernanceConfig
+	if _, ok := p.Get(GoverningNode); ok {
+		ret.GoverningNode = p.GoverningNode()
+	}
+	if _, ok := p.Get(GovernanceMode); ok {
+		ret.GovernanceMode = p.GovernanceModeStr()
+	}
+	ret.Reward = p.ToRewardConfig()
+	ret.KIP71 = p.ToKIP71Config()
+
+	return &ret
+}
+
+func (p *GovParamSet) ToChainConfig() *ChainConfig {
+	var ret ChainConfig
+	if _, ok := p.Get(UnitPrice); ok {
+		ret.UnitPrice = p.UnitPrice()
+	}
+	ret.Istanbul = p.ToIstanbulConfig()
+	ret.Governance = p.ToGovernanceConfig()
+
+	return &ret
+}
+
 // Nominal getters. Shortcut for MustGet() + type assertion.
 
 func (p *GovParamSet) GovernanceModeStr() string {
