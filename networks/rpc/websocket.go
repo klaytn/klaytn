@@ -36,10 +36,9 @@ import (
 	"time"
 
 	fastws "github.com/clevergo/websocket"
+	mapset "github.com/deckarep/golang-set"
 	"github.com/gorilla/websocket"
 	"github.com/klaytn/klaytn/common"
-	"gopkg.in/fatih/set.v0"
-
 	"github.com/valyala/fasthttp"
 )
 
@@ -171,7 +170,7 @@ func NewFastWSServer(allowedOrigins []string, srv *Server) *fasthttp.Server {
 }
 
 func wsFastHandshakeValidator(allowedOrigins []string) func(ctx *fasthttp.RequestCtx) bool {
-	origins := set.New()
+	origins := mapset.NewSet()
 	allowAllOrigins := false
 
 	for _, origin := range allowedOrigins {
@@ -184,14 +183,14 @@ func wsFastHandshakeValidator(allowedOrigins []string) func(ctx *fasthttp.Reques
 	}
 
 	// allow localhost if no allowedOrigins are specified.
-	if len(origins.List()) == 0 {
+	if len(origins.ToSlice()) == 0 {
 		origins.Add("http://localhost")
 		if hostname, err := os.Hostname(); err == nil {
 			origins.Add("http://" + strings.ToLower(hostname))
 		}
 	}
 
-	logger.Debug(fmt.Sprintf("Allowed origin(s) for WS RPC interface %v\n", origins.List()))
+	logger.Debug(fmt.Sprintf("Allowed origin(s) for WS RPC interface %v\n", origins.ToSlice()))
 
 	f := func(ctx *fasthttp.RequestCtx) bool {
 		// Skip origin verification if no Origin header is present. The origin check
@@ -200,7 +199,7 @@ func wsFastHandshakeValidator(allowedOrigins []string) func(ctx *fasthttp.Reques
 		// provide additional security.
 
 		origin := strings.ToLower(string(ctx.Request.Header.Peek("Origin")))
-		if allowAllOrigins || origins.Has(origin) || origin == "" {
+		if allowAllOrigins || origins.Contains(origin) || origin == "" {
 			return true
 		}
 		logger.Warn(fmt.Sprintf("origin '%s' not allowed on WS-RPC interface\n", origin))
@@ -214,7 +213,7 @@ func wsFastHandshakeValidator(allowedOrigins []string) func(ctx *fasthttp.Reques
 // websocket upgrade process. When a '*' is specified as an allowed origins all
 // connections are accepted.
 func wsHandshakeValidator(allowedOrigins []string) func(*http.Request) bool {
-	origins := set.New()
+	origins := mapset.NewSet()
 	allowAllOrigins := false
 
 	for _, origin := range allowedOrigins {
@@ -227,7 +226,7 @@ func wsHandshakeValidator(allowedOrigins []string) func(*http.Request) bool {
 	}
 
 	// allow localhost if no allowedOrigins are specified.
-	if len(origins.List()) == 0 {
+	if len(origins.ToSlice()) == 0 {
 		origins.Add("http://localhost")
 		if hostname, err := os.Hostname(); err == nil {
 			origins.Add("http://" + strings.ToLower(hostname))
@@ -243,7 +242,7 @@ func wsHandshakeValidator(allowedOrigins []string) func(*http.Request) bool {
 		}
 		// Verify origin against whitelist.
 		origin := strings.ToLower(req.Header.Get("Origin"))
-		if allowAllOrigins || origins.Has(origin) {
+		if allowAllOrigins || origins.Contains(origin) {
 			return true
 		}
 
