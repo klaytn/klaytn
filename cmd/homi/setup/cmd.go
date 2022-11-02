@@ -162,7 +162,6 @@ const (
 	PNIpNetwork2          = "10.11.11"
 )
 
-var genesisTypes = [8]string{"cypress-test", "cypress", "baobab-test", "baobab", "servicechain", "servicechain-test", "clique", "istanbul"}
 var Types = [4]string{"docker", "local", "remote", "deploy"}
 
 var GrafanaFiles = [...]GrafanaFile{
