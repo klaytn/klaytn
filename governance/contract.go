@@ -47,7 +47,7 @@ func (e *ContractEngine) ParamsAt(num uint64) (*params.GovParamSet, error) {
 // if UpdateParam fails, leave currentParams as-is
 func (e *ContractEngine) UpdateParams() error {
 	if e.chain == nil {
-		logger.Info("ContractEngine disabled")
+		logger.Info("ContractEngine disabled: chain = nil")
 		return nil
 	}
 
@@ -65,12 +65,12 @@ func (e *ContractEngine) UpdateParams() error {
 // contractGetAllParamsAt sets evmCtx.BlockNumber as num
 func (e *ContractEngine) contractGetAllParamsAt(num uint64) (*params.GovParamSet, error) {
 	if e.chain == nil {
-		logger.Info("ContractEngine disabled")
+		logger.Info("ContractEngine disabled: chain = nil")
 		return params.NewGovParamSet(), nil
 	}
 
 	if !e.chainConfig.IsKoreForkEnabled(e.chain.CurrentHeader().Number) {
-		logger.Info("ContractEngine disabled")
+		logger.Info("ContractEngine disabled: hardfork block not passed")
 		return params.NewGovParamSet(), nil
 	}
 
@@ -80,12 +80,11 @@ func (e *ContractEngine) contractGetAllParamsAt(num uint64) (*params.GovParamSet
 	}
 
 	if common.EmptyAddress(addr) {
-		logger.Info("ContractEngine disabled")
+		logger.Info("ContractEngine disabled: GovParamContract address not set")
 		return params.NewGovParamSet(), nil
 	}
 
 	caller := &contractCaller{
-		chainConfig:  e.chainConfig,
 		chain:        e.chain,
 		contractAddr: addr,
 	}

@@ -15,55 +15,44 @@ import (
 )
 
 type contractCaller struct {
-	chainConfig  *params.ChainConfig
 	chain        blockChain
 	contractAddr common.Address
 }
 
 var govParamAbi, _ = abi.JSON(strings.NewReader(govcontract.GovParamABI))
 
+const govparamfunc = "getAllParamsAt"
+
 func (c *contractCaller) getAllParamsAt(num *big.Int) (*params.GovParamSet, error) {
-	tx, err := c.makeTx(govParamAbi, "getAllParamsAt", num)
+	// respect error; some nodes can succeed without error while others do not
+	tx, evm, err := c.prepareCall(num)
 	if err != nil {
 		return nil, err
 	}
 
-	res, err := c.callTx(tx)
+	// ignore error; if error, all nodes will have the same error
+	res, _ := c.callTx(tx, evm)
+
+	// ignore error; if error, all nodes will have the same error
+	pset, err := c.parse(res)
 	if err != nil {
-		return nil, err
-	}
-
-	// Parse results into GovParamSet
-
-	// Cannot parse empty data
-	if len(res) == 0 {
 		return params.NewGovParamSet(), nil
 	}
+	return pset, nil
+}
 
-	var ( // c.f. contracts/gov/GovParam.go:GetAllParams()
-		pNames  = new([]string)                   // *[]string = nil
-		pValues = new([][]byte)                   // *[][]byte = nil
-		out     = &[]interface{}{pNames, pValues} // array of pointers
-	)
-	if err := govParamAbi.Unpack(out, "getAllParams", res); err != nil {
-		return nil, err
-	}
-	var ( // Retrieve the slices allocated inside Unpack().
-		names  = *pNames
-		values = *pValues
-	)
-
-	if len(names) != len(values) {
-		logger.Error("Malformed contract.getAllParams result",
-			"len(names)", len(names), "len(values)", len(values))
-		return nil, errors.New("malformed contract.getAllParams result")
+func (c *contractCaller) prepareCall(num *big.Int) (*types.Transaction, *vm.EVM, error) {
+	tx, err := c.makeTx(govParamAbi, govparamfunc, num)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	bytesMap := make(map[string][]byte)
-	for i := 0; i < len(names); i++ {
-		bytesMap[names[i]] = values[i]
+	evm, err := c.makeEVM(tx)
+	if err != nil {
+		return nil, nil, err
 	}
-	return params.NewGovParamSetBytesMap(bytesMap)
+
+	return tx, evm, nil
 }
 
 // Make contract execution transaction
@@ -71,12 +60,14 @@ func (c *contractCaller) makeTx(contractAbi abi.ABI, fn string, args ...interfac
 ) (*types.Transaction, error) {
 	calldata, err := contractAbi.Pack(fn, args...)
 	if err != nil {
+		logger.Error("Could not pack ABI", "err", err)
 		return nil, err
 	}
 
-	rules := c.chainConfig.Rules(c.chain.CurrentHeader().Number)
+	rules := c.chain.Config().Rules(c.chain.CurrentHeader().Number)
 	intrinsicGas, err := types.IntrinsicGas(calldata, nil, false, rules)
 	if err != nil {
+		logger.Error("Could not fetch intrinsicGas", "err", err)
 		return nil, err
 	}
 
@@ -95,16 +86,18 @@ func (c *contractCaller) makeTx(contractAbi abi.ABI, fn string, args ...interfac
 	return tx, nil
 }
 
-// Execute contract call at the latest block context
-func (c *contractCaller) callTx(tx *types.Transaction) ([]byte, error) {
+// Make contract execution transaction
+func (c *contractCaller) makeEVM(tx *types.Transaction) (*vm.EVM, error) {
 	// Load the latest state
 	block := c.chain.GetBlockByNumber(c.chain.CurrentHeader().Number.Uint64())
 	if block == nil {
-		return nil, errors.New("no such block")
+		logger.Error("Could not find the latest block", "num", c.chain.CurrentHeader().Number.Uint64())
+		return nil, errors.New("no block")
 	}
 
 	statedb, err := c.chain.StateAt(block.Root())
 	if err != nil {
+		logger.Error("Could not find the state", "err", err, "num", c.chain.CurrentHeader().Number.Uint64())
 		return nil, err
 	}
 
@@ -115,11 +108,48 @@ func (c *contractCaller) callTx(tx *types.Transaction) ([]byte, error) {
 	// But our sender (0x0) won't have enough balance. Instead we override gasPrice = 0 here
 	evmCtx.GasPrice = big.NewInt(0)
 	evm := vm.NewEVM(evmCtx, statedb, c.chain.Config(), &vm.Config{})
+	return evm, nil
+}
 
+// Execute contract call at the latest block context
+func (c *contractCaller) callTx(tx *types.Transaction, evm *vm.EVM) ([]byte, error) {
 	res, _, kerr := blockchain.ApplyMessage(evm, tx)
 	if kerr.ErrTxInvalid != nil {
+		logger.Warn("Invalid tx")
 		return nil, kerr.ErrTxInvalid
 	}
 
 	return res, nil
+}
+
+func (c *contractCaller) parse(b []byte) (*params.GovParamSet, error) {
+	if len(b) == 0 {
+		return params.NewGovParamSet(), nil
+	}
+
+	var ( // c.f. contracts/gov/GovParam.go:GetAllParamsAt()
+		pNames  = new([]string)                   // *[]string = nil
+		pValues = new([][]byte)                   // *[][]byte = nil
+		out     = &[]interface{}{pNames, pValues} // array of pointers
+	)
+	if err := govParamAbi.Unpack(out, govparamfunc, b); err != nil {
+		return nil, err
+	}
+	var ( // Retrieve the slices allocated inside Unpack().
+		names  = *pNames
+		values = *pValues
+	)
+
+	// verification
+	if len(names) != len(values) {
+		logger.Warn("Malformed contract.getAllParams result",
+			"len(names)", len(names), "len(values)", len(values))
+		return nil, errors.New("malformed contract.getAllParams result")
+	}
+
+	bytesMap := make(map[string][]byte)
+	for i := 0; i < len(names); i++ {
+		bytesMap[names[i]] = values[i]
+	}
+	return params.NewGovParamSetBytesMap(bytesMap)
 }

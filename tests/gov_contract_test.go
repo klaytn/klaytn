@@ -58,6 +58,7 @@ func TestGovernance_ContractEngine(t *testing.T) {
 
 	// Run param reader thread
 	config.Governance.GovParamContract = contractAddr
+	config.KoreCompatibleBlock = big.NewInt(0)
 	engine := governance.NewContractEngine(config)
 	engine.SetBlockchain(chain)
 

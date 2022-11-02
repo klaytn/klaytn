@@ -75,7 +75,6 @@ func prepareSimulatedContractWithParams(t *testing.T, params map[string][]byte) 
 
 func newTestContractCaller(chain blockChain, addr common.Address) *contractCaller {
 	return &contractCaller{
-		chainConfig:  chain.Config(),
 		chain:        chain,
 		contractAddr: addr,
 	}
