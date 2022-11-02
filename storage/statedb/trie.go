@@ -572,3 +572,14 @@ func (t *Trie) hashRoot(db *Database, onleaf LeafCallback) (node, node, error) {
 	hashed, cached := h.hash(t.root, true)
 	return hashed, cached, nil
 }
+
+func GetHashAndHexKey(key []byte) ([]byte, []byte) {
+	var hashKeyBuf [common.HashLength]byte
+	h := newHasher()
+	h.sha.Reset()
+	h.sha.Write(key)
+	hashKey := h.sha.Sum(hashKeyBuf[:0])
+	returnHasherToPool(h)
+	hexKey := keybytesToHex(hashKey)
+	return hashKey, hexKey
+}
