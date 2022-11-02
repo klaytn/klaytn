@@ -26,7 +26,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 )
 
-const ProtocolMaxMsgSize = 10 * 1024 * 1024 // Maximum cap on the size of a protocol message
+const ProtocolMaxMsgSize = 12 * 1024 * 1024 // Maximum cap on the size of a protocol message
 
 const (
 	// Protocol messages belonging to servicechain/1
