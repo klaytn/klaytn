@@ -41,6 +41,9 @@ const (
 
 	// OptionSubscriptions is an indication that the codec supports RPC notifications
 	OptionSubscriptions = 1 << iota // support pub sub
+
+	// pendingRequestLimit is a limit for concurrent RPC method calls
+	pendingRequestLimit = 200000
 )
 
 var (

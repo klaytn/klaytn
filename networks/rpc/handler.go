@@ -28,6 +28,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/klaytn/klaytn/log"
@@ -113,6 +114,17 @@ func (h *handler) handleBatch(msgs []*jsonrpcMessage) {
 	if len(calls) == 0 {
 		return
 	}
+
+	if atomic.LoadInt64(&pendingRequestCount) > pendingRequestLimit {
+		rpcErrorResponsesCounter.Inc(int64(len(calls)))
+		err := &invalidRequestError{"server requests exceed the limit"}
+		logger.Debug(fmt.Sprintf("request error %v\n", err))
+		h.startCallProc(func(cp *callProc) {
+			h.conn.writeJSON(cp.ctx, errorMessage(err))
+		})
+		return
+	}
+
 	// Process calls on a goroutine because they may block indefinitely:
 	h.startCallProc(func(cp *callProc) {
 		answers := make([]*jsonrpcMessage, 0, len(msgs))
@@ -137,6 +149,17 @@ func (h *handler) handleMsg(msg *jsonrpcMessage) {
 	if ok := h.handleImmediate(msg); ok {
 		return
 	}
+
+	if atomic.LoadInt64(&pendingRequestCount) > pendingRequestLimit {
+		rpcErrorResponsesCounter.Inc(1)
+		err := &invalidRequestError{"server requests exceed the limit"}
+		logger.Debug(fmt.Sprintf("request error %v\n", err))
+		h.startCallProc(func(cp *callProc) {
+			h.conn.writeJSON(cp.ctx, errorMessage(err))
+		})
+		return
+	}
+
 	h.startCallProc(func(cp *callProc) {
 		answer := h.handleCallMsg(cp, msg)
 		h.addSubscriptions(cp.notifiers)
@@ -220,11 +243,14 @@ func (h *handler) cancelServerSubscriptions(err error) {
 
 // startCallProc runs fn in a new goroutine and starts tracking it in the h.calls wait group.
 func (h *handler) startCallProc(fn func(*callProc)) {
+	atomic.AddInt64(&pendingRequestCount, 1)
+	rpcPendingRequestsCount.Inc(1)
 	h.callWG.Add(1)
 	go func() {
 		ctx, cancel := context.WithCancel(h.rootCtx)
 		defer h.callWG.Done()
 		defer cancel()
+		defer atomic.AddInt64(&pendingRequestCount, -1)
 		fn(&callProc{ctx: ctx})
 	}()
 }
