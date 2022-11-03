@@ -162,6 +162,8 @@ func (e *MixedEngine) handleParamUpdate(old, new *params.GovParamSet) {
 				e.config.Governance.GoverningNode = new.GoverningNode()
 			case params.GovernanceMode:
 				e.config.Governance.GovernanceMode = new.GovernanceModeStr()
+			case params.GovParamContract:
+				e.config.Governance.GovParamContract = new.GovParamContract()
 			// config.Governance.Reward
 			case params.MintingAmount:
 				e.config.Governance.Reward.MintingAmount = new.MintingAmountBig()
