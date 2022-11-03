@@ -1485,6 +1485,19 @@ func TestGovernance_Votes(t *testing.T) {
 				{vote{"kip71.basefeedenominator", uint64(64)}, 9},
 			},
 		},
+		{
+			votes: []vote{
+				{}, // voted on block 1
+				{"governance.govparamcontract", common.HexToAddress("0x0000000000000000000000000000000000000000")}, // voted on block 2
+				{}, // voted on block 3
+				{}, // voted on block 4
+				{"governance.govparamcontract", common.HexToAddress("0x0000000000000000000000000000000000000400")}, // voted on block 5
+			},
+			expected: []governanceItem{
+				{vote{"governance.govparamcontract", common.HexToAddress("0x0000000000000000000000000000000000000000")}, 6},
+				{vote{"governance.govparamcontract", common.HexToAddress("0x0000000000000000000000000000000000000400")}, 9},
+			},
+		},
 	}
 
 	var configItems []interface{}
