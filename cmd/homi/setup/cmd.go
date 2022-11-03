@@ -1121,7 +1121,6 @@ func removeSpacesAndLines(b []byte) string {
 
 func homiFlagsFromYaml(ctx *cli.Context) error {
 	filePath := ctx.String(homiYamlFlag.Name)
-	fmt.Println(filePath)
 	if filePath != "" {
 		if err := altsrc.InitInputSourceWithContext(SetupCommand.Flags, altsrc.NewYamlSourceFromFlagFunc(homiYamlFlag.Name))(ctx); err != nil {
 			return err
