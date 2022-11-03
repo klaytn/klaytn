@@ -28,6 +28,7 @@ import (
 	govcontract "github.com/klaytn/klaytn/contracts/gov"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -43,13 +44,26 @@ func prepareSimulatedContract(t *testing.T) ([]*bind.TransactOpts, *backends.Sim
 		accounts = append(accounts, account)
 		alloc[account.From] = blockchain.GenesisAccount{Balance: big.NewInt(params.KLAY)}
 	}
-	sim := backends.NewSimulatedBackend(alloc)
+	config := &params.ChainConfig{}
+	config.SetDefaults()
+	config.UnitPrice = 25e9
+	config.IstanbulCompatibleBlock = new(big.Int).SetUint64(0)
+	config.LondonCompatibleBlock = new(big.Int).SetUint64(0)
+	config.EthTxTypeCompatibleBlock = new(big.Int).SetUint64(0)
+	config.MagmaCompatibleBlock = new(big.Int).SetUint64(0)
+	config.KoreCompatibleBlock = new(big.Int).SetUint64(0)
+
+	sim := backends.NewSimulatedBackendWithDatabase(database.NewMemoryDBManager(), alloc, config)
 
 	// Deploy contract
 	owner := accounts[0]
-	address, _, contract, err := govcontract.DeployGovParam(owner, sim)
+	address, tx, contract, err := govcontract.DeployGovParam(owner, sim)
 	require.Nil(t, err)
 	sim.Commit()
+
+	receipt, _ := sim.TransactionReceipt(nil, tx.Hash())
+	require.NotNil(t, receipt)
+	require.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
 
 	return accounts, sim, address, contract
 }
@@ -173,13 +187,19 @@ func TestContractEngine_contractCaller(t *testing.T) {
 }
 
 func prepareContractEngine(t *testing.T, bc *blockchain.BlockChain, addr common.Address) *ContractEngine {
-	config := params.CypressChainConfig.Copy()
-	config.Governance.GovParamContract = addr
-	config.KoreCompatibleBlock = big.NewInt(0)
+	dbm := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
+	dbm.WriteGovernance(map[string]interface{}{
+		"governance.govparamcontract": addr,
+	}, 0)
+	gov := NewGovernance(bc.Config(), dbm)
+	pset, err := gov.ParamsAt(0)
+	require.Nil(t, err)
+	require.Equal(t, addr, pset.GovParamContract())
 
-	e := NewContractEngine(config)
-	e.SetBlockchain(bc)
-	err := e.UpdateParams()
+	gov.SetBlockchain(bc)
+
+	e := NewContractEngine(gov)
+	err = e.UpdateParams()
 	require.Nil(t, err)
 
 	return e
@@ -201,6 +221,7 @@ func TestContractEngine_Params(t *testing.T) {
 		"governance.unitprice":   {0xb},
 	}
 	accounts, sim, addr, contract := prepareSimulatedContractWithParams(t, initialParam)
+
 	e := prepareContractEngine(t, sim.BlockChain(), addr)
 
 	var (
@@ -231,10 +252,10 @@ func TestContractEngine_Params(t *testing.T) {
 			expected = psetNext
 		}
 
-		require.Equal(t, expected, e.Params(), "Params() on block %d failed", num)
+		assert.Equal(t, expected, e.Params(), "Params() on block %d failed", num)
 		sim.Commit()
 		err := e.UpdateParams()
-		require.Nil(t, err)
+		assert.Nil(t, err)
 	}
 }
 
@@ -253,6 +274,7 @@ func TestContractEngine_ParamsAt(t *testing.T) {
 		"governance.unitprice":   {0xbb, 0xbb, 0xbb, 0xbb},
 	}
 	accounts, sim, addr, contract := prepareSimulatedContractWithParams(t, initialParam)
+
 	e := prepareContractEngine(t, sim.BlockChain(), addr)
 
 	var (
@@ -285,11 +307,11 @@ func TestContractEngine_ParamsAt(t *testing.T) {
 			}
 
 			result, _ := e.ParamsAt(iter)
-			require.Equal(t, expected, result, "ParamsAt(%d) on block %d failed", iter, num)
+			assert.Equal(t, expected, result, "ParamsAt(%d) on block %d failed", iter, num)
 		}
 
 		sim.Commit()
 		err := e.UpdateParams()
-		require.Nil(t, err)
+		assert.Nil(t, err)
 	}
 }
