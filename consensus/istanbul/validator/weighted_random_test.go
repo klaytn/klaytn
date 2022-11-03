@@ -341,31 +341,6 @@ func TestWeightedCouncil_RefreshWithNonZeroWeight(t *testing.T) {
 	}
 }
 
-func TestWeightedCouncil_RefreshWithNonZeroWeight_AfterKoreHardFork(t *testing.T) {
-	validators := makeTestValidators(testNonZeroWeights)
-
-	valSet := makeTestWeightedCouncil(testNonZeroWeights)
-	runRefreshForTest_AfterKoreHardFork(valSet)
-
-	// Run tests
-
-	// 1. number of proposers
-	totalWeights := uint64(len(testNonZeroWeights))
-	assert.Equal(t, totalWeights, uint64(len(valSet.proposers)))
-
-	// 2. weight and appearance frequency
-	for _, v := range validators {
-		weight := uint64(1)
-		appearance := uint64(0)
-		for _, p := range valSet.proposers {
-			if v.Address() == p.Address() {
-				appearance++
-			}
-		}
-		assert.Equal(t, weight, appearance)
-	}
-}
-
 func TestWeightedCouncil_RemoveValidator(t *testing.T) {
 	validators := makeTestValidators(testNonZeroWeights)
 	valSet := makeTestWeightedCouncil(testNonZeroWeights)

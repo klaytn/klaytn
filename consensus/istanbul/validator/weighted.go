@@ -849,13 +849,9 @@ func (valSet *weightedCouncil) refreshProposers(seed int64, blockNum uint64, rul
 	var candidateValsIdx []int // This is a slice which stores index of validator. it is used for shuffling
 
 	for index, val := range valSet.validators {
-		if rules.IsKore {
+		weight := val.Weight()
+		for i := uint64(0); i < weight; i++ {
 			candidateValsIdx = append(candidateValsIdx, index)
-		} else {
-			weight := val.Weight()
-			for i := uint64(0); i < weight; i++ {
-				candidateValsIdx = append(candidateValsIdx, index)
-			}
 		}
 	}
 
