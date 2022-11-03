@@ -48,8 +48,8 @@ type MixedEngine struct {
 	db database.DBManager
 
 	// Subordinate engines
-	// TODO: Add ContractEngine
-	headerGov *Governance
+	contractGov *ContractEngine
+	headerGov   *Governance
 
 	// for param update
 	txpool     txPool
@@ -77,6 +77,7 @@ func newMixedEngine(config *params.ChainConfig, db database.DBManager, doInit bo
 		params.GasTarget:                 params.DefaultGasTarget,
 		params.MaxBlockGasUsedForBaseFee: params.DefaultMaxBlockGasUsedForBaseFee,
 		params.BaseFeeDenominator:        params.DefaultBaseFeeDenominator,
+		params.GovParamContract:          params.DefaultGovParamContract,
 	}
 	if p, err := params.NewGovParamSetIntMap(defaultMap); err == nil {
 		e.defaultParams = p
@@ -90,6 +91,8 @@ func newMixedEngine(config *params.ChainConfig, db database.DBManager, doInit bo
 	} else {
 		e.headerGov = NewGovernance(config, db)
 	}
+
+	e.contractGov = NewContractEngine(e.headerGov)
 
 	// Load last state
 	e.UpdateParams()
@@ -112,23 +115,25 @@ func (e *MixedEngine) Params() *params.GovParamSet {
 }
 
 func (e *MixedEngine) ParamsAt(num uint64) (*params.GovParamSet, error) {
-	headerParams, err := e.headerGov.ParamsAt(num)
-	if err != nil {
-		return nil, err
-	}
-
-	// TODO-Klaytn-Kore: merge contractParams
-	return e.assembleParams(headerParams), nil
+	contractParams, _ := e.contractGov.ParamsAt(num)
+	headerParams, _ := e.headerGov.ParamsAt(num)
+	return e.assembleParams(headerParams, contractParams), nil
 }
 
 func (e *MixedEngine) UpdateParams() error {
+	if err := e.contractGov.UpdateParams(); err != nil {
+		return err
+	}
+
 	if err := e.headerGov.UpdateParams(); err != nil {
 		return err
 	}
+
+	contractParams := e.contractGov.Params()
 	headerParams := e.headerGov.Params()
 
 	// TODO-Klaytn-Kore: merge contractParams
-	newParams := e.assembleParams(headerParams)
+	newParams := e.assembleParams(headerParams, contractParams)
 	e.handleParamUpdate(e.currentParams, newParams)
 
 	e.currentParams = newParams
@@ -136,12 +141,13 @@ func (e *MixedEngine) UpdateParams() error {
 	return nil
 }
 
-func (e *MixedEngine) assembleParams(headerParams *params.GovParamSet) *params.GovParamSet {
+func (e *MixedEngine) assembleParams(headerParams, contractParams *params.GovParamSet) *params.GovParamSet {
 	// Refer to the comments above `type MixedEngine` for assembly order
 	p := params.NewGovParamSet()
 	p = params.NewGovParamSetMerged(p, e.defaultParams)
 	p = params.NewGovParamSetMerged(p, e.initialParams)
 	p = params.NewGovParamSetMerged(p, headerParams)
+	p = params.NewGovParamSetMerged(p, contractParams)
 	return p
 }
 
