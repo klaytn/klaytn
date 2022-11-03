@@ -537,7 +537,6 @@ func RandStringRunes(n int) string {
 
 func Gen(ctx *cli.Context) error {
 	genType := findGenType(ctx)
-	fmt.Println(genType)
 
 	cnNum := ctx.Int(numOfCNsFlag.Name)
 	numValidators := ctx.Int(numOfValidatorsFlag.Name)
