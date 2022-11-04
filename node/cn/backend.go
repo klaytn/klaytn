@@ -215,21 +215,12 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	setEngineType(chainConfig)
 
 	// load governance state
+	chainConfig.SetDefaults()
+	// latest values will be applied to chainConfig after NewMixedEngine call
 	governance := governance.NewMixedEngine(chainConfig, chainDB)
-
-	// Set latest unitPrice/gasPrice
-	chainConfig.UnitPrice = governance.Params().UnitPrice()
-	config.GasPrice = new(big.Int).SetUint64(chainConfig.UnitPrice)
-
-	chainConfig.Governance.KIP71 = &params.KIP71Config{
-		LowerBoundBaseFee:         governance.Params().LowerBoundBaseFee(),
-		UpperBoundBaseFee:         governance.Params().UpperBoundBaseFee(),
-		GasTarget:                 governance.Params().GasTarget(),
-		MaxBlockGasUsedForBaseFee: governance.Params().MaxBlockGasUsedForBaseFee(),
-		BaseFeeDenominator:        governance.Params().BaseFeeDenominator(),
-	}
-	chainConfig.Governance.GovParamContract = governance.Params().GovParamContract()
 	logger.Info("Initialised chain configuration", "config", chainConfig)
+
+	config.GasPrice = new(big.Int).SetUint64(chainConfig.UnitPrice)
 
 	cn := &CN{
 		config:            config,
