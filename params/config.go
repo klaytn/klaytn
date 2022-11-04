@@ -49,9 +49,8 @@ var (
 		KoreCompatibleBlock:      big.NewInt(0xffffffff),
 		DeriveShaImpl:            2,
 		Governance: &GovernanceConfig{
-			GoverningNode:    common.HexToAddress("0x52d41ca72af615a1ac3301b0a93efa222ecc7541"),
-			GovernanceMode:   "single",
-			GovParamContract: common.HexToAddress("0x0"),
+			GoverningNode:  common.HexToAddress("0x52d41ca72af615a1ac3301b0a93efa222ecc7541"),
+			GovernanceMode: "single",
 			Reward: &RewardConfig{
 				MintingAmount:          mintingAmount,
 				Ratio:                  "34/54/12",
@@ -80,9 +79,8 @@ var (
 		KoreCompatibleBlock:      big.NewInt(0xffffffff),
 		DeriveShaImpl:            2,
 		Governance: &GovernanceConfig{
-			GoverningNode:    common.HexToAddress("0x99fb17d324fa0e07f23b49d09028ac0919414db6"),
-			GovernanceMode:   "single",
-			GovParamContract: common.HexToAddress("0x0"),
+			GoverningNode:  common.HexToAddress("0x99fb17d324fa0e07f23b49d09028ac0919414db6"),
+			GovernanceMode: "single",
 			Reward: &RewardConfig{
 				MintingAmount:          mintingAmount,
 				Ratio:                  "34/54/12",
