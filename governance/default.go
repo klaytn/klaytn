@@ -1208,10 +1208,12 @@ func (gov *Governance) ParamsAt(num uint64) (*params.GovParamSet, error) {
 	// Not using in-memory caches to make it stateless, hence less error-prone.
 	_, strMap, err := gov.db.ReadGovernanceAtNumber(num, epoch)
 	if err != nil {
+		logger.Error("ReadGovernanceAtNumber failed", "num", num, "err", err)
 		return nil, err
 	}
 	pset, err := params.NewGovParamSetStrMap(strMap)
 	if err != nil {
+		logger.Error("NewGovParamSetStrMap failed", "num", num, "err", err)
 		return nil, err
 	}
 	return params.NewGovParamSetMerged(gov.initialParams, pset), nil

@@ -76,7 +76,7 @@ func TestSimpleBlockchain(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	// start full node with previous db
-	fullNode, node, err := newKlaytnNode(t, workspace, validator)
+	fullNode, node, err := newKlaytnNode(t, workspace, validator, nil)
 	assert.NoError(t, err)
 	if err := node.StartMining(false); err != nil {
 		t.Fatal()
@@ -105,7 +105,35 @@ func newBlockchain(t *testing.T) (*node.Node, *cn.CN, *TestAccountType, *big.Int
 	}
 
 	// Create a Klaytn node
-	fullNode, node, err := newKlaytnNode(t, workspace, validator)
+	fullNode, node, err := newKlaytnNode(t, workspace, validator, nil)
+	assert.NoError(t, err)
+	if err := node.StartMining(false); err != nil {
+		t.Fatal()
+	}
+	time.Sleep(2 * time.Second) // wait for initializing mining
+
+	chainId := node.BlockChain().Config().ChainID
+
+	return fullNode, node, validator, chainId, workspace
+}
+
+func newBlockchainWithConfig(t *testing.T, config *params.ChainConfig) (*node.Node, *cn.CN, *TestAccountType, *big.Int, string) {
+	t.Log("Create a new blockchain with config")
+	// Prepare workspace
+	workspace, err := ioutil.TempDir("", "klaytn-test-state")
+	if err != nil {
+		t.Fatalf("failed to create temporary keystore: %v", err)
+	}
+	t.Log("Workspace is ", workspace)
+
+	// Prepare a validator
+	validator, err := createAnonymousAccount(getRandomPrivateKeyString(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a Klaytn node
+	fullNode, node, err := newKlaytnNode(t, workspace, validator, config)
 	assert.NoError(t, err)
 	if err := node.StartMining(false); err != nil {
 		t.Fatal()
@@ -143,7 +171,7 @@ func createAccount(t *testing.T, numAccounts int, validator *TestAccountType) (*
 }
 
 // newKlaytnNode creates a klaytn node
-func newKlaytnNode(t *testing.T, dir string, validator *TestAccountType) (*node.Node, *cn.CN, error) {
+func newKlaytnNode(t *testing.T, dir string, validator *TestAccountType, config *params.ChainConfig) (*node.Node, *cn.CN, error) {
 	var klaytnNode *cn.CN
 
 	fullNode, err := node.New(&node.Config{
@@ -167,10 +195,15 @@ func newKlaytnNode(t *testing.T, dir string, validator *TestAccountType) (*node.
 	genesis := blockchain.DefaultGenesisBlock()
 	genesis.ExtraData = genesis.ExtraData[:types.IstanbulExtraVanity]
 	genesis.ExtraData = append(genesis.ExtraData, istanbulConfData...)
-	genesis.Config = params.CypressChainConfig.Copy()
-	genesis.Config.Istanbul.SubGroupSize = 1
-	genesis.Config.Istanbul.ProposerPolicy = uint64(istanbul.RoundRobin)
-	genesis.Config.Governance.Reward.MintingAmount = new(big.Int).Mul(big.NewInt(9000000000000000000), big.NewInt(params.KLAY))
+
+	if config == nil {
+		genesis.Config = params.CypressChainConfig.Copy()
+		genesis.Config.Istanbul.SubGroupSize = 1
+		genesis.Config.Istanbul.ProposerPolicy = uint64(istanbul.RoundRobin)
+		genesis.Config.Governance.Reward.MintingAmount = new(big.Int).Mul(big.NewInt(9000000000000000000), big.NewInt(params.KLAY))
+	} else {
+		genesis.Config = config
+	}
 
 	// NOTE: Uncomment these lines to enable features
 	// TODO: Receive ChainConfig as optional argument

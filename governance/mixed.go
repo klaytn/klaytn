@@ -209,6 +209,14 @@ func (e *MixedEngine) handleParamUpdate(old, new *params.GovParamSet) {
 	}
 }
 
+func (e *MixedEngine) HeaderGov() HeaderEngine {
+	return e.headerGov
+}
+
+func (e *MixedEngine) ContractGov() ReaderEngine {
+	return e.contractGov
+}
+
 // Pass-through to HeaderEngine
 func (e *MixedEngine) AddVote(key string, val interface{}) bool {
 	return e.headerGov.AddVote(key, val)

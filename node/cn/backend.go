@@ -228,6 +228,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		MaxBlockGasUsedForBaseFee: governance.Params().MaxBlockGasUsedForBaseFee(),
 		BaseFeeDenominator:        governance.Params().BaseFeeDenominator(),
 	}
+	chainConfig.Governance.GovParamContract = governance.Params().GovParamContract()
 	logger.Info("Initialised chain configuration", "config", chainConfig)
 
 	cn := &CN{
@@ -639,6 +640,7 @@ func (s *CN) IsListening() bool                       { return true } // Always 
 func (s *CN) ProtocolVersion() int                    { return s.protocolManager.ProtocolVersion() }
 func (s *CN) NetVersion() uint64                      { return s.networkId }
 func (s *CN) Progress() klaytn.SyncProgress           { return s.protocolManager.Downloader().Progress() }
+func (s *CN) Governance() governance.Engine           { return s.governance }
 
 func (s *CN) ReBroadcastTxs(transactions types.Transactions) {
 	s.protocolManager.ReBroadcastTxs(transactions)
