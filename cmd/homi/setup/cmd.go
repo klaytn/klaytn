@@ -102,6 +102,7 @@ var HomiFlags = []cli.Flag{
 	altsrc.NewBoolFlag(governanceFlag),
 	altsrc.NewStringFlag(govModeFlag),
 	altsrc.NewStringFlag(governingNodeFlag),
+	altsrc.NewStringFlag(govParamFlag),
 	altsrc.NewStringFlag(rewardMintAmountFlag),
 	altsrc.NewStringFlag(rewardRatioFlag),
 	altsrc.NewBoolFlag(rewardGiniCoeffFlag),
@@ -237,13 +238,18 @@ func genGovernanceConfig(ctx *cli.Context) *params.GovernanceConfig {
 	govMode := ctx.String(govModeFlag.Name)
 	governingNode := ctx.String(governingNodeFlag.Name)
 	if !common.IsHexAddress(governingNode) {
-		log.Fatalf("Governing Node is invalid hex address", "value", governingNode)
+		log.Fatalf("Governing Node is not a valid hex address", "value", governingNode)
+	}
+	govParamContract := ctx.String(govParamFlag.Name)
+	if !common.IsHexAddress(govParamContract) {
+		log.Fatalf("Governance Contract is not a valid hex address", "value", govParamContract)
 	}
 	return &params.GovernanceConfig{
-		GoverningNode:  common.HexToAddress(governingNode),
-		GovernanceMode: govMode,
-		Reward:         genRewardConfig(ctx),
-		KIP71:          genKIP71Config(ctx),
+		GoverningNode:    common.HexToAddress(governingNode),
+		GovernanceMode:   govMode,
+		GovParamContract: common.HexToAddress(govParamContract),
+		Reward:           genRewardConfig(ctx),
+		KIP71:            genKIP71Config(ctx),
 	}
 }
 
