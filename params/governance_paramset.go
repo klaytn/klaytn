@@ -473,6 +473,9 @@ func (p *GovParamSet) ToRewardConfig() *RewardConfig {
 	if _, ok := p.Get(Ratio); ok {
 		ret.Ratio = p.Ratio()
 	}
+	if _, ok := p.Get(Kip82Ratio); ok {
+		ret.Kip82Ratio = p.Kip82Ratio()
+	}
 	if _, ok := p.Get(UseGiniCoeff); ok {
 		ret.UseGiniCoeff = p.UseGiniCoeff()
 	}
