@@ -355,6 +355,13 @@ func (fb *filterLocalBackend) EventMux() *event.TypeMux {
 	return fb.subbridge.EventMux()
 }
 
+func (fb *filterLocalBackend) HeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error) {
+	if header := fb.subbridge.blockchain.GetHeaderByHash(hash); header != nil {
+		return header, nil
+	}
+	return nil, fmt.Errorf("the header does not exist (hash: %d)", hash)
+}
+
 func (fb *filterLocalBackend) HeaderByNumber(ctx context.Context, block rpc.BlockNumber) (*types.Header, error) {
 	if err := checkCtx(ctx); err != nil {
 		return nil, err

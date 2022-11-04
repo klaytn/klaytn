@@ -42,6 +42,7 @@ import (
 type Backend interface {
 	ChainDB() database.DBManager
 	EventMux() *event.TypeMux
+	HeaderByHash(ctx context.Context, blockHash common.Hash) (*types.Header, error)
 	HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Header, error)
 	GetBlockReceipts(ctx context.Context, blockHash common.Hash) types.Receipts
 	GetLogs(ctx context.Context, blockHash common.Hash) ([][]*types.Log, error)
@@ -61,11 +62,21 @@ type Backend interface {
 type Filter struct {
 	backend Backend
 
+	block      common.Hash
 	begin, end int64
 	addresses  []common.Address
 	topics     [][]common.Hash
 
 	matcher *bloombits.Matcher
+}
+
+// NewBlockFilter creates a new filter which directly inspects the contents of
+// a block to figure out whether it is interesting or not.
+func NewBlockFilter(backend Backend, block common.Hash, addresses []common.Address, topics [][]common.Hash) *Filter {
+	// Create a generic filter and convert it into a block filter
+	filter := newFilter(backend, addresses, topics)
+	filter.block = block
+	return filter
 }
 
 // NewRangeFilter creates a new filter which uses a bloom filter on blocks to
@@ -115,6 +126,18 @@ func newFilter(backend Backend, addresses []common.Address, topics [][]common.Ha
 // Logs searches the blockchain for matching log entries, returning all from the
 // first block that contains matches, updating the start of the filter accordingly.
 func (f *Filter) Logs(ctx context.Context) ([]*types.Log, error) {
+	// If we're doing singleton block filtering, execute and return
+	if f.block != (common.Hash{}) {
+		header, err := f.backend.HeaderByHash(ctx, f.block)
+		if err != nil {
+			return nil, err
+		}
+		if header == nil {
+			return nil, errors.New("unknown block")
+		}
+		return f.blockLogs(ctx, header)
+	}
+
 	// Figure out the limits of the filter range
 	header, _ := f.backend.HeaderByNumber(ctx, rpc.LatestBlockNumber)
 	if header == nil {
@@ -148,6 +171,18 @@ func (f *Filter) Logs(ctx context.Context) ([]*types.Log, error) {
 	rest, err := f.unindexedLogs(ctx, end)
 	logs = append(logs, rest...)
 	return logs, err
+}
+
+// blockLogs returns the logs matching the filter criteria within a single block.
+func (f *Filter) blockLogs(ctx context.Context, header *types.Header) (logs []*types.Log, err error) {
+	if bloomFilter(header.Bloom, f.addresses, f.topics) {
+		found, err := f.checkMatches(ctx, header)
+		if err != nil {
+			return logs, err
+		}
+		logs = append(logs, found...)
+	}
+	return logs, nil
 }
 
 // indexedLogs returns the logs matching the filter criteria based on the bloom
