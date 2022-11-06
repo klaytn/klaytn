@@ -668,7 +668,7 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, config
 	totalStaking, _ := calcTotalAmount(weightedValidators, newStakingInfo, stakingAmounts)
 	calcWeight(weightedValidators, stakingAmounts, totalStaking, chainRules)
 
-	valSet.refreshProposers(seed, blockNum, chainRules)
+	valSet.refreshProposers(seed, blockNum)
 
 	logger.Debug("Refresh done.", "blockNum", blockNum, "hash", hash, "valSet.blockNum", valSet.blockNum, "stakingInfo.BlockNum", valSet.stakingInfo.BlockNum)
 	logger.Debug("New proposers calculated", "new proposers", valSet.proposers)
@@ -845,7 +845,7 @@ func calcWeight(weightedValidators []*weightedValidator, stakingAmounts []float6
 	localLogger.Debug("calculation weight finished")
 }
 
-func (valSet *weightedCouncil) refreshProposers(seed int64, blockNum uint64, rules params.Rules) {
+func (valSet *weightedCouncil) refreshProposers(seed int64, blockNum uint64) {
 	var candidateValsIdx []int // This is a slice which stores index of validator. it is used for shuffling
 
 	for index, val := range valSet.validators {

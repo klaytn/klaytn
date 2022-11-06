@@ -419,14 +419,7 @@ func runRefreshForTest(valSet *weightedCouncil) {
 		hashString = hashString[:15]
 	}
 	seed, _ := strconv.ParseInt(hashString, 16, 64)
-	chainRules := params.Rules{
-		ChainID:    new(big.Int).SetUint64(0),
-		IsIstanbul: false,
-		IsLondon:   false,
-		IsMagma:    false,
-		IsKore:     false,
-	}
-	valSet.refreshProposers(seed, 0, chainRules)
+	valSet.refreshProposers(seed, 0)
 }
 
 func runRefreshForTest_AfterKoreHardFork(valSet *weightedCouncil) {
@@ -435,14 +428,7 @@ func runRefreshForTest_AfterKoreHardFork(valSet *weightedCouncil) {
 		hashString = hashString[:15]
 	}
 	seed, _ := strconv.ParseInt(hashString, 16, 64)
-	chainRules := params.Rules{
-		ChainID:    new(big.Int).SetUint64(0),
-		IsIstanbul: true,
-		IsLondon:   true,
-		IsMagma:    true,
-		IsKore:     true,
-	}
-	valSet.refreshProposers(seed, 0, chainRules)
+	valSet.refreshProposers(seed, 0)
 }
 
 func TestWeightedCouncil_SetSubGroupSize(t *testing.T) {
