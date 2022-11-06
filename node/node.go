@@ -28,9 +28,12 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
+	"time"
 
+	"github.com/bt51/ntpclient"
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/api/debug"
 	"github.com/klaytn/klaytn/event"
@@ -800,4 +803,32 @@ func (n *Node) apis() []rpc.API {
 			Public:    true,
 		},
 	}
+}
+
+func NtpCheckWithLocal(n *Node) error {
+	// ntp check option disabled
+	if n.config.NtpRemoteServer == "" {
+		return nil
+	}
+
+	url, port, err := net.SplitHostPort(n.config.NtpRemoteServer)
+	if err != nil {
+		return err
+	}
+	portNum, err := strconv.Atoi(port)
+	if err != nil {
+		return err
+	}
+
+	local := time.Now().UTC().Unix()
+	ntp, err := ntpclient.GetNetworkTime(url, portNum)
+	if err != nil {
+		return err
+	}
+	remote := ntp.Unix()
+	if local != remote {
+		return fmt.Errorf("System time is out of sync, local:%x remote:%x", local, remote)
+	}
+	logger.Info("Ntp time check", "local", local, "remote", remote)
+	return nil
 }
