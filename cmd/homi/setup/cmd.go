@@ -558,24 +558,24 @@ func Gen(ctx *cli.Context) error {
 
 	// Note-klaytn : the following code that seems unnecessary is for the priority to flags, not yaml
 	if !baobab && !baobabTest && !cypress && !cypressTest && !serviceChain && !serviceChainTest && !clique {
-	switch genesisType := ctx.String(genesisTypeFlag.Name); genesisType {
-	case "baobab":
-		baobab = true
-	case "baobab-test":
-		baobabTest = true
-	case "cypress":
-		cypress = true	
-	case "cypress-test":
-		cypressTest = true	
-	case "servicechain":
-		servicechain = true	
-	case "servicechain-test":
-		serviceChainTest = true		
-	case "clique":
-		clique = true		
-	default:
-		fmt.Printf("Unknown genesis type is %s.\n", genesisType)
-	}
+		switch genesisType := ctx.String(genesisTypeFlag.Name); genesisType {
+		case "baobab":
+			baobab = true
+		case "baobab-test":
+			baobabTest = true
+		case "cypress":
+			cypress = true
+		case "cypress-test":
+			cypressTest = true
+		case "servicechain":
+			serviceChain = true
+		case "servicechain-test":
+			serviceChainTest = true
+		case "clique":
+			clique = true
+		default:
+			fmt.Printf("Unknown genesis type is %s.\n", genesisType)
+		}
 	}
 
 	if cnNum == 0 && scnNum == 0 {
