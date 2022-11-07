@@ -832,8 +832,7 @@ func calcWeight(weightedValidators []*weightedValidator, stakingAmounts []float6
 		for i, weightedVal := range weightedValidators {
 			weight := uint64(math.Round(stakingAmounts[i] * 100 / totalStaking))
 			if weight <= 0 {
-				// A validator, who holds zero or small stake, has minimum weight, 1
-				// And all validators have the same weight after the Kore hard fork
+				// A validator, who holds zero or small stake, has minimum weight, 1.
 				weight = 1
 			}
 			atomic.StoreUint64(&weightedVal.weight, weight)
