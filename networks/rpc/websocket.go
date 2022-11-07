@@ -64,7 +64,7 @@ func newWebsocketCodec(conn *websocket.Conn) ServerCodec {
 //
 // allowedOrigins should be a comma-separated list of allowed origin URLs.
 // To allow connections with any origin, pass "*".
-func (s *Server) WebsocketHandler(allowedOrigins []string) http.Handler {
+func (srv *Server) WebsocketHandler(allowedOrigins []string) http.Handler {
 	upgrader := websocket.Upgrader{
 		ReadBufferSize:  wsReadBuffer,
 		WriteBufferSize: wsWriteBuffer,
@@ -72,13 +72,13 @@ func (s *Server) WebsocketHandler(allowedOrigins []string) http.Handler {
 		CheckOrigin:     wsHandshakeValidator(allowedOrigins),
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if atomic.LoadInt32(&s.wsConnCount) >= MaxWebsocketConnections {
+		if atomic.LoadInt32(&srv.wsConnCount) >= MaxWebsocketConnections {
 			return
 		}
-		atomic.AddInt32(&s.wsConnCount, 1)
+		atomic.AddInt32(&srv.wsConnCount, 1)
 		wsConnCounter.Inc(1)
 		defer func() {
-			atomic.AddInt32(&s.wsConnCount, -1)
+			atomic.AddInt32(&srv.wsConnCount, -1)
 			wsConnCounter.Dec(1)
 		}()
 		conn, err := upgrader.Upgrade(w, r, nil)
@@ -86,7 +86,7 @@ func (s *Server) WebsocketHandler(allowedOrigins []string) http.Handler {
 			return
 		}
 		codec := newWebsocketCodec(conn)
-		s.ServeCodec(codec, 0)
+		srv.ServeCodec(codec, 0)
 	})
 }
 
