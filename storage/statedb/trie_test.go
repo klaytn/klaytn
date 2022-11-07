@@ -527,6 +527,30 @@ func BenchmarkHash(b *testing.B) {
 	trie.Hash()
 }
 
+// Benchmarks the trie Commit following a Hash. Since the trie caches the result of any operation,
+// we cannot use b.N as the number of hashing rounds, since all rounds apart from
+// the first one will be NOOP. As such, we'll use b.N as the number of account to
+// insert into the trie before measuring the hashing.
+func BenchmarkCommitAfterHash(b *testing.B) {
+	b.Run("no-onleaf", func(b *testing.B) {
+		benchmarkCommitAfterHash(b)
+	})
+}
+
+func benchmarkCommitAfterHash(b *testing.B) {
+	// Make the random benchmark deterministic
+	addresses, accounts := makeAccounts(b.N)
+	trie, _ := NewTrie(common.Hash{}, NewDatabase(database.NewMemoryDBManager()))
+	for i := 0; i < len(addresses); i++ {
+		trie.Update(crypto.Keccak256(addresses[i][:]), accounts[i])
+	}
+	// Insert the accounts into the trie and hash it
+	trie.Hash()
+	b.ResetTimer()
+	b.ReportAllocs()
+	trie.Commit(nil)
+}
+
 func tempDB() (string, *Database) {
 	dir, err := ioutil.TempDir("", "trie-bench")
 	if err != nil {
