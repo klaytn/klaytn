@@ -39,14 +39,8 @@ import (
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
-	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/reward"
 	"github.com/stretchr/testify/assert"
-)
-
-var (
-	magmaRules = params.Rules{ChainID: common.Big0, IsIstanbul: true, IsLondon: true, IsMagma: true, IsKore: false}
-	koreRules  = params.Rules{ChainID: common.Big0, IsIstanbul: true, IsLondon: true, IsMagma: true, IsKore: true}
 )
 
 func newTestWeightedCouncil(nodeAddrs []common.Address) *weightedCouncil {
@@ -225,57 +219,7 @@ func TestCalcWeight(t *testing.T) {
 		},
 	}
 	for _, testCase := range testCases {
-		calcWeight(testCase.weightedValidators, testCase.stakingAmounts, testCase.totalStaking, magmaRules)
-		for i, weight := range testCase.expectedWeights {
-			assert.Equal(t, weight, testCase.weightedValidators[i].Weight())
-		}
-	}
-}
-
-// TestCalcWeight_AfterKoreHardFork tests calcWeight that calculates weights and saves them to validators after Kore hard fork.
-// weights are 0 or 1 for thg same probability of proposer selection
-func TestCalcWeight_AfterKoreHardFork(t *testing.T) {
-	testCases := []struct {
-		weightedValidators []*weightedValidator
-		stakingAmounts     []float64
-		totalStaking       float64
-		expectedWeights    []uint64
-	}{
-		{
-			[]*weightedValidator{
-				{}, {}, {},
-			},
-			[]float64{0, 0, 0},
-			0,
-			[]uint64{0, 0, 0},
-		},
-		{
-			[]*weightedValidator{
-				{}, {}, {},
-			},
-			[]float64{5000000, 5000000, 5000000},
-			15000000,
-			[]uint64{1, 1, 1},
-		},
-		{
-			[]*weightedValidator{
-				{}, {}, {}, {},
-			},
-			[]float64{5000000, 10000000, 5000000, 5000000},
-			25000000,
-			[]uint64{1, 1, 1, 1},
-		},
-		{
-			[]*weightedValidator{
-				{}, {}, {}, {}, {},
-			},
-			[]float64{324946, 560845, 771786, 967997, 1153934},
-			3779508,
-			[]uint64{1, 1, 1, 1, 1},
-		},
-	}
-	for _, testCase := range testCases {
-		calcWeight(testCase.weightedValidators, testCase.stakingAmounts, testCase.totalStaking, koreRules)
+		calcWeight(testCase.weightedValidators, testCase.stakingAmounts, testCase.totalStaking)
 		for i, weight := range testCase.expectedWeights {
 			assert.Equal(t, weight, testCase.weightedValidators[i].Weight())
 		}
@@ -367,100 +311,7 @@ func TestWeightedCouncil_validatorWeightWithStakingInfo(t *testing.T) {
 		weightedValidators, stakingAmounts, err := getStakingAmountsOfValidators(candidates, testCase.stakingInfo)
 		assert.NoError(t, err)
 		totalStaking, _ := calcTotalAmount(weightedValidators, testCase.stakingInfo, stakingAmounts)
-		calcWeight(weightedValidators, stakingAmounts, totalStaking, magmaRules)
-
-		for i, weight := range testCase.expectedWeights {
-			assert.Equal(t, weight, weightedValidators[i].Weight())
-		}
-	}
-}
-
-// TestWeightedCouncil_validatorWeightWithStakingInfo_AfterKoreHardFork is union of above tests.
-// Weight should be calculated exactly by a validator list and a stakingInfo given for the same probability of proposer selection
-func TestWeightedCouncil_validatorWeightWithStakingInfo_AfterKoreHardFork(t *testing.T) {
-	testCases := []struct {
-		validators      []common.Address
-		stakingInfo     *reward.StakingInfo
-		expectedWeights []uint64
-	}{
-		{
-			[]common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103")},
-			&reward.StakingInfo{
-				CouncilNodeAddrs:      []common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103")},
-				CouncilRewardAddrs:    []common.Address{common.StringToAddress("201"), common.StringToAddress("202"), common.StringToAddress("203")},
-				UseGini:               false,
-				CouncilStakingAmounts: []uint64{0, 0, 0},
-			},
-			[]uint64{0, 0, 0},
-		},
-		{
-			[]common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103"), common.StringToAddress("104")},
-			&reward.StakingInfo{
-				CouncilNodeAddrs:      []common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103"), common.StringToAddress("104")},
-				CouncilRewardAddrs:    []common.Address{common.StringToAddress("201"), common.StringToAddress("202"), common.StringToAddress("203"), common.StringToAddress("204")},
-				UseGini:               true,
-				CouncilStakingAmounts: []uint64{5000000, 5000000, 5000000, 5000000},
-			},
-			[]uint64{1, 1, 1, 1},
-		},
-		{
-			[]common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103"), common.StringToAddress("104"), common.StringToAddress("105")},
-			&reward.StakingInfo{
-				CouncilNodeAddrs:      []common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103"), common.StringToAddress("104"), common.StringToAddress("105")},
-				CouncilRewardAddrs:    []common.Address{common.StringToAddress("201"), common.StringToAddress("202"), common.StringToAddress("203"), common.StringToAddress("204"), common.StringToAddress("205")},
-				UseGini:               true,
-				CouncilStakingAmounts: []uint64{10000000, 20000000, 30000000, 40000000, 50000000},
-			},
-			[]uint64{1, 1, 1, 1, 1},
-		},
-		{
-			[]common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103"), common.StringToAddress("104")},
-			&reward.StakingInfo{
-				CouncilNodeAddrs:      []common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103"), common.StringToAddress("104"), common.StringToAddress("901")},
-				CouncilRewardAddrs:    []common.Address{common.StringToAddress("201"), common.StringToAddress("202"), common.StringToAddress("203"), common.StringToAddress("204"), common.StringToAddress("201")},
-				UseGini:               false,
-				CouncilStakingAmounts: []uint64{5000000, 5000000, 5000000, 5000000, 5000000},
-			},
-			[]uint64{1, 1, 1, 1},
-		},
-		{
-			[]common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103"), common.StringToAddress("104")},
-			&reward.StakingInfo{
-				CouncilNodeAddrs:      []common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103"), common.StringToAddress("104"), common.StringToAddress("901")},
-				CouncilRewardAddrs:    []common.Address{common.StringToAddress("201"), common.StringToAddress("202"), common.StringToAddress("203"), common.StringToAddress("204"), common.StringToAddress("201")},
-				UseGini:               true,
-				CouncilStakingAmounts: []uint64{5000000, 5000000, 5000000, 5000000, 5000000},
-			},
-			[]uint64{1, 1, 1, 1},
-		},
-		{
-			[]common.Address{common.StringToAddress("104"), common.StringToAddress("103"), common.StringToAddress("102"), common.StringToAddress("101")},
-			&reward.StakingInfo{
-				CouncilNodeAddrs:      []common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103"), common.StringToAddress("104"), common.StringToAddress("901"), common.StringToAddress("902")},
-				CouncilRewardAddrs:    []common.Address{common.StringToAddress("201"), common.StringToAddress("202"), common.StringToAddress("203"), common.StringToAddress("204"), common.StringToAddress("201"), common.StringToAddress("202")},
-				UseGini:               true,
-				CouncilStakingAmounts: []uint64{10000000, 5000000, 20000000, 5000000, 5000000, 5000000},
-			},
-			[]uint64{1, 1, 1, 1},
-		},
-		{
-			[]common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103"), common.StringToAddress("104"), common.StringToAddress("105")},
-			&reward.StakingInfo{
-				CouncilNodeAddrs:      []common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103"), common.StringToAddress("104"), common.StringToAddress("901"), common.StringToAddress("902")},
-				CouncilRewardAddrs:    []common.Address{common.StringToAddress("201"), common.StringToAddress("202"), common.StringToAddress("203"), common.StringToAddress("204"), common.StringToAddress("201"), common.StringToAddress("202")},
-				UseGini:               true,
-				CouncilStakingAmounts: []uint64{10000000, 5000000, 20000000, 5000000, 5000000, 5000000},
-			},
-			[]uint64{1, 1, 1, 1, 1},
-		},
-	}
-	for _, testCase := range testCases {
-		council := newTestWeightedCouncil(testCase.validators)
-		candidates := append(council.validators, council.demotedValidators...)
-		weightedValidators, stakingAmounts, err := getStakingAmountsOfValidators(candidates, testCase.stakingInfo)
-		assert.NoError(t, err)
-		totalStaking, _ := calcTotalAmount(weightedValidators, testCase.stakingInfo, stakingAmounts)
-		calcWeight(weightedValidators, stakingAmounts, totalStaking, koreRules)
+		calcWeight(weightedValidators, stakingAmounts, totalStaking)
 
 		for i, weight := range testCase.expectedWeights {
 			assert.Equal(t, weight, weightedValidators[i].Weight())

@@ -665,8 +665,11 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, config
 		return nil
 	}
 
-	totalStaking, _ := calcTotalAmount(weightedValidators, newStakingInfo, stakingAmounts)
-	calcWeight(weightedValidators, stakingAmounts, totalStaking, chainRules)
+	// weight and gini were neutralized after Kore hard fork
+	if !chainRules.IsKore {
+		totalStaking, _ := calcTotalAmount(weightedValidators, newStakingInfo, stakingAmounts)
+		calcWeight(weightedValidators, stakingAmounts, totalStaking)
+	}
 
 	valSet.refreshProposers(seed, blockNum)
 
@@ -823,12 +826,12 @@ func calcTotalAmount(weightedValidators []*weightedValidator, stakingInfo *rewar
 }
 
 // calcWeight updates each validator's weight based on the ratio of its staking amount vs. the total staking amount.
-func calcWeight(weightedValidators []*weightedValidator, stakingAmounts []float64, totalStaking float64, rules params.Rules) {
+func calcWeight(weightedValidators []*weightedValidator, stakingAmounts []float64, totalStaking float64) {
 	localLogger := logger.NewWith()
 	if totalStaking > 0 {
 		for i, weightedVal := range weightedValidators {
 			weight := uint64(math.Round(stakingAmounts[i] * 100 / totalStaking))
-			if weight <= 0 || rules.IsKore {
+			if weight <= 0 {
 				// A validator, who holds zero or small stake, has minimum weight, 1
 				// And all validators have the same weight after the Kore hard fork
 				weight = 1

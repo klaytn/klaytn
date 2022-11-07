@@ -422,15 +422,6 @@ func runRefreshForTest(valSet *weightedCouncil) {
 	valSet.refreshProposers(seed, 0)
 }
 
-func runRefreshForTest_AfterKoreHardFork(valSet *weightedCouncil) {
-	hashString := strings.TrimPrefix(testPrevHash.Hex(), "0x")
-	if len(hashString) > 15 {
-		hashString = hashString[:15]
-	}
-	seed, _ := strconv.ParseInt(hashString, 16, 64)
-	valSet.refreshProposers(seed, 0)
-}
-
 func TestWeightedCouncil_SetSubGroupSize(t *testing.T) {
 	validators := makeTestValidators(testNonZeroWeights)
 	valSet := makeTestWeightedCouncil(testNonZeroWeights)
