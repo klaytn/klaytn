@@ -505,7 +505,7 @@ func TestRewardDistributor_GetActualReward(t *testing.T) {
 		} else {
 			SetTestStakingManagerWithStakingInfoCache(tc.stakingInfo)
 		}
-		spec, err := GetActualReward(tc.header, tc.config)
+		spec, err := GetBlockReward(tc.header, tc.config)
 		assert.Nil(t, err, "testcases[%d] failed", i)
 		assert.Equal(t, tc.expected, spec, "testcases[%d] failed", i)
 	}
@@ -553,7 +553,7 @@ func TestRewardDistributor_CalcSimpleReward(t *testing.T) {
 	}
 
 	for i, tc := range testcases {
-		spec, err := CalcSimpleReward(tc.header, tc.config)
+		spec, err := CalcDeferredRewardSimple(tc.header, tc.config)
 		assert.Nil(t, err, "testcases[%d] failed", i)
 		assert.Equal(t, tc.expected, spec, "testcases[%d] failed", i)
 	}

@@ -481,7 +481,7 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 
 		spec, err = reward.CalcDeferredReward(header, chain.Config())
 	} else {
-		spec, err = reward.CalcSimpleReward(header, chain.Config())
+		spec, err = reward.CalcDeferredRewardSimple(header, chain.Config())
 	}
 
 	if err != nil {

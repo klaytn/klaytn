@@ -51,14 +51,14 @@ type RewardDistributor struct {
 }
 
 type RewardSpec struct {
-	Minted   *big.Int
-	Fee      *big.Int
-	Burnt    *big.Int
-	Proposer *big.Int
-	Stakers  *big.Int
-	Kgf      *big.Int
-	Kir      *big.Int
-	Rewards  map[common.Address]*big.Int
+	Minted   *big.Int                    // the amount newly minted
+	Fee      *big.Int                    // total tx fee spent
+	Burnt    *big.Int                    // the amount burnt
+	Proposer *big.Int                    // the amount allocated to the block proposer
+	Stakers  *big.Int                    // total amount allocated to stakers
+	Kgf      *big.Int                    // the amount allocated to KGF
+	Kir      *big.Int                    // the amount allocated to KIR
+	Rewards  map[common.Address]*big.Int // mapping from reward recipient to amounts
 }
 
 func NewRewardDistributor(gh governanceHelper) *RewardDistributor {
@@ -90,17 +90,9 @@ func (rd *RewardDistributor) DistributeBlockReward(b BalanceAdder, rewards map[c
 	}
 }
 
-// Function hierarchy
-// - get_actual_reward
-//   - calc_simple_reward
-//   - calc_deferred_reward
-//     - calc_deferred_fee
-//     - calc_split
-//     - calc_shares
-
-// GetActualReward returns the actual reward amounts paid in this block
-// Used in klay_getReward RPC
-func GetActualReward(header *types.Header, config *params.ChainConfig) (*RewardSpec, error) {
+// GetBlockReward returns the actual reward amounts paid in this block
+// Used in klay_getReward RPC API
+func GetBlockReward(header *types.Header, config *params.ChainConfig) (*RewardSpec, error) {
 	var spec *RewardSpec
 	var err error
 	if config.Istanbul == nil {
@@ -109,7 +101,7 @@ func GetActualReward(header *types.Header, config *params.ChainConfig) (*RewardS
 
 	policy := config.Istanbul.ProposerPolicy
 	if policy == uint64(istanbul.RoundRobin) || policy == uint64(istanbul.Sticky) {
-		spec, err = CalcSimpleReward(header, config)
+		spec, err = CalcDeferredRewardSimple(header, config)
 		if err != nil {
 			return nil, err
 		}
@@ -119,6 +111,9 @@ func GetActualReward(header *types.Header, config *params.ChainConfig) (*RewardS
 			return nil, err
 		}
 
+		// Compensate the difference between CalcDeferredReward() and actual payment.
+		// If not DeferredTxFee, CalcDeferredReward() assumes 0 total_fee, but
+		// some non-zero fee is paid to the proposer.
 		if !config.Governance.Reward.DeferredTxFee {
 			var blockFee *big.Int
 
@@ -140,9 +135,9 @@ func GetActualReward(header *types.Header, config *params.ChainConfig) (*RewardS
 	return spec, nil
 }
 
-// CalcSimpleReward distributes rewards to proposer after optional fee burning
+// CalcDeferredRewardSimple distributes rewards to proposer after optional fee burning
 // this behaves similar to the previous MintKLAY
-func CalcSimpleReward(header *types.Header, config *params.ChainConfig) (*RewardSpec, error) {
+func CalcDeferredRewardSimple(header *types.Header, config *params.ChainConfig) (*RewardSpec, error) {
 	rewardConfig := config.Governance.Reward
 	if rewardConfig == nil {
 		return nil, errors.New("no rewardConfig")

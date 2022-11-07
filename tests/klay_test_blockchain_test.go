@@ -316,7 +316,7 @@ func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockc
 
 	// Apply reward
 	start = time.Now()
-	spec, err := reward.CalcSimpleReward(header, bcdata.bc.Config())
+	spec, err := reward.CalcDeferredRewardSimple(header, bcdata.bc.Config())
 	if err != nil {
 		return err
 	}
@@ -383,7 +383,7 @@ func (bcdata *BCData) GenABlockWithTransactions(accountMap *AccountMap, transact
 
 	// Apply reward
 	start = time.Now()
-	spec, err := reward.CalcSimpleReward(bcdata.bc.CurrentHeader(), bcdata.bc.Config())
+	spec, err := reward.CalcDeferredRewardSimple(bcdata.bc.CurrentHeader(), bcdata.bc.Config())
 	if err != nil {
 		return err
 	}
