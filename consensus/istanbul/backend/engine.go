@@ -488,7 +488,7 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 		return nil, err
 	}
 
-	sb.rewardDistributor.DistributeBlockReward(state, spec.Rewards)
+	reward.DistributeBlockReward(state, spec.Rewards)
 
 	header.Root = state.IntermediateRoot(true)
 

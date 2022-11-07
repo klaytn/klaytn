@@ -28,6 +28,42 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type testGovernance struct {
+	p *params.GovParamSet
+}
+
+func newTestGovernance(intMap map[int]interface{}) *testGovernance {
+	p, _ := params.NewGovParamSetIntMap(intMap)
+	return &testGovernance{p}
+}
+
+func newDefaultTestGovernance() *testGovernance {
+	return newTestGovernance(map[int]interface{}{
+		params.Epoch:               604800,
+		params.Policy:              params.WeightedRandom,
+		params.UnitPrice:           25000000000,
+		params.MintingAmount:       "9600000000000000000",
+		params.Ratio:               "34/54/12",
+		params.UseGiniCoeff:        true,
+		params.DeferredTxFee:       true,
+		params.MinimumStake:        "5000000",
+		params.StakeUpdateInterval: 86400,
+	})
+}
+
+func (governance *testGovernance) Params() *params.GovParamSet {
+	return governance.p
+}
+
+func (governance *testGovernance) ParamsAt(num uint64) (*params.GovParamSet, error) {
+	return governance.p, nil
+}
+
+func (governance *testGovernance) setTestGovernance(intMap map[int]interface{}) {
+	p, _ := params.NewGovParamSetIntMap(intMap)
+	governance.p = p
+}
+
 var (
 	cnBaseAddr     = 500
 	stakeBaseAddr  = 600
@@ -175,74 +211,80 @@ func Test_isEmptyAddress(t *testing.T) {
 	}
 }
 
-func TestRewardDistributor_getTotalTxFee(t *testing.T) {
+func TestRewardDistributor_GetTotalTxFee(t *testing.T) {
 	testCases := []struct {
 		gasUsed            uint64
-		unitPrice          *big.Int
+		unitPrice          uint64
 		baseFee            *big.Int
 		expectedTotalTxFee *big.Int
 	}{
 		// before magma hardfork
-		{0, big.NewInt(25000000000), nil, big.NewInt(0)},
-		{200000, big.NewInt(25000000000), nil, big.NewInt(5000000000000000)},
-		{200000, big.NewInt(25000000000), nil, big.NewInt(5000000000000000)},
-		{129346, big.NewInt(10000000000), nil, big.NewInt(1293460000000000)},
-		{129346, big.NewInt(10000000000), nil, big.NewInt(1293460000000000)},
-		{9236192, big.NewInt(50000), nil, big.NewInt(461809600000)},
-		{9236192, big.NewInt(50000), nil, big.NewInt(461809600000)},
-		{12936418927364923, big.NewInt(0), nil, big.NewInt(0)},
+		{0, 25000000000, nil, big.NewInt(0)},
+		{200000, 25000000000, nil, big.NewInt(5000000000000000)},
+		{200000, 25000000000, nil, big.NewInt(5000000000000000)},
+		{129346, 10000000000, nil, big.NewInt(1293460000000000)},
+		{129346, 10000000000, nil, big.NewInt(1293460000000000)},
+		{9236192, 50000, nil, big.NewInt(461809600000)},
+		{9236192, 50000, nil, big.NewInt(461809600000)},
+		{12936418927364923, 0, nil, big.NewInt(0)},
 		// after magma hardfork, unitprice ignored
-		{0, big.NewInt(25000000000), big.NewInt(25000000000), big.NewInt(0)},
-		{200000, big.NewInt(25000000000), big.NewInt(25000000000), big.NewInt(5000000000000000)},
-		{200000, big.NewInt(25000000000), big.NewInt(25000000000), big.NewInt(5000000000000000)},
-		{129346, big.NewInt(25000000000), big.NewInt(10000000000), big.NewInt(1293460000000000)},
-		{129346, big.NewInt(250), big.NewInt(10000000000), big.NewInt(1293460000000000)},
-		{9236192, big.NewInt(9876), big.NewInt(50000), big.NewInt(461809600000)},
-		{9236192, big.NewInt(25000000000), big.NewInt(50000), big.NewInt(461809600000)},
-		{12936418927364923, big.NewInt(25000000000), big.NewInt(0), big.NewInt(0)},
+		{0, 25000000000, big.NewInt(25000000000), big.NewInt(0)},
+		{200000, 25000000000, big.NewInt(25000000000), big.NewInt(5000000000000000)},
+		{200000, 25000000000, big.NewInt(25000000000), big.NewInt(5000000000000000)},
+		{129346, 25000000000, big.NewInt(10000000000), big.NewInt(1293460000000000)},
+		{129346, 250, big.NewInt(10000000000), big.NewInt(1293460000000000)},
+		{9236192, 9876, big.NewInt(50000), big.NewInt(461809600000)},
+		{9236192, 25000000000, big.NewInt(50000), big.NewInt(461809600000)},
+		{12936418927364923, 25000000000, big.NewInt(0), big.NewInt(0)},
 	}
-	rewardDistributor := NewRewardDistributor(newDefaultTestGovernance())
-	rewardConfig := &rewardConfig{}
 
-	header := &types.Header{}
 	for _, testCase := range testCases {
-		header.GasUsed = testCase.gasUsed
-		header.BaseFee = testCase.baseFee
-		rewardConfig.unitPrice = testCase.unitPrice
+		header := &types.Header{
+			Number:  big.NewInt(0),
+			GasUsed: testCase.gasUsed,
+			BaseFee: testCase.baseFee,
+		}
+		config := &params.ChainConfig{
+			UnitPrice: testCase.unitPrice,
+		}
+		if testCase.baseFee != nil {
+			// enable Magma
+			config.MagmaCompatibleBlock = big.NewInt(0)
+		}
 
-		result := rewardDistributor.getTotalTxFee(header, rewardConfig)
+		result := GetTotalTxFee(header, config)
 		assert.Equal(t, testCase.expectedTotalTxFee.Uint64(), result.Uint64())
 	}
 }
 
-func TestRewardDistributor_TxFeeBurning(t *testing.T) {
+func TestRewardDistributor_getBurnAmountMagma(t *testing.T) {
 	testCases := []struct {
 		gasUsed            uint64
-		unitPrice          *big.Int
 		baseFee            *big.Int
 		expectedTotalTxFee *big.Int
 	}{
-		{0, nil, big.NewInt(25000000000), big.NewInt(0)},
-		{200000, nil, big.NewInt(25000000000), big.NewInt(5000000000000000 / 2)},
-		{200000, nil, big.NewInt(25000000000), big.NewInt(5000000000000000 / 2)},
-		{129346, nil, big.NewInt(10000000000), big.NewInt(1293460000000000 / 2)},
-		{129346, nil, big.NewInt(10000000000), big.NewInt(1293460000000000 / 2)},
-		{9236192, nil, big.NewInt(50000), big.NewInt(461809600000 / 2)},
-		{9236192, nil, big.NewInt(50000), big.NewInt(461809600000 / 2)},
-		{12936418927364923, nil, big.NewInt(0), big.NewInt(0)},
+		{0, big.NewInt(25000000000), big.NewInt(0)},
+		{200000, big.NewInt(25000000000), big.NewInt(5000000000000000 / 2)},
+		{200000, big.NewInt(25000000000), big.NewInt(5000000000000000 / 2)},
+		{129346, big.NewInt(10000000000), big.NewInt(1293460000000000 / 2)},
+		{129346, big.NewInt(10000000000), big.NewInt(1293460000000000 / 2)},
+		{9236192, big.NewInt(50000), big.NewInt(461809600000 / 2)},
+		{9236192, big.NewInt(50000), big.NewInt(461809600000 / 2)},
+		{12936418927364923, big.NewInt(0), big.NewInt(0)},
 	}
-	rewardDistributor := NewRewardDistributor(newDefaultTestGovernance())
-	rewardConfig := &rewardConfig{}
 
-	header := &types.Header{}
+	header := &types.Header{
+		Number: big.NewInt(1),
+	}
+	config := &params.ChainConfig{}
+	config.MagmaCompatibleBlock = big.NewInt(0)
 
 	for _, testCase := range testCases {
 		header.GasUsed = testCase.gasUsed
 		header.BaseFee = testCase.baseFee
-		rewardConfig.unitPrice = testCase.baseFee
 
-		txFee := rewardDistributor.getTotalTxFee(header, rewardConfig)
-		burnedTxFee := rewardDistributor.txFeeBurning(txFee)
+		txFee := GetTotalTxFee(header, config)
+		burnedTxFee := getBurnAmountMagma(txFee)
 		assert.Equal(t, testCase.expectedTotalTxFee.Uint64(), burnedTxFee.Uint64())
 	}
 }
@@ -868,7 +910,10 @@ func TestRewardDistributor_calcDeferredFee(t *testing.T) {
 	}
 
 	for i, tc := range testcases {
-		total, reward, burnt := calcDeferredFee(tc.header, tc.config)
+		rc, err := NewRewardConfig(tc.header, tc.config)
+		assert.Nil(t, err)
+
+		total, reward, burnt := calcDeferredFee(rc)
 		actual := &Result{
 			total:  total.Uint64(),
 			reward: reward.Uint64(),
@@ -882,7 +927,8 @@ func TestRewardDistributor_calcSplit(t *testing.T) {
 	type Result struct{ proposer, stakers, kgf, kir, remaining uint64 }
 
 	header := &types.Header{
-		Number: big.NewInt(1),
+		Number:  big.NewInt(1),
+		BaseFee: big.NewInt(0), // placeholder
 	}
 
 	testcases := []struct {
@@ -942,7 +988,10 @@ func TestRewardDistributor_calcSplit(t *testing.T) {
 	}
 
 	for i, tc := range testcases {
-		proposer, stakers, kgf, kir, remaining := calcSplit(tc.header, tc.config, minted, tc.fee)
+		rc, err := NewRewardConfig(tc.header, tc.config)
+		assert.Nil(t, err)
+
+		proposer, stakers, kgf, kir, remaining := calcSplit(rc, minted, tc.fee)
 		actual := &Result{
 			proposer:  proposer.Uint64(),
 			stakers:   stakers.Uint64(),
@@ -1030,7 +1079,7 @@ func TestRewardDistributor_calcShares(t *testing.T) {
 	}
 
 	for i, tc := range testcases {
-		shares, remaining := calcShares(tc.config.Governance.Reward, tc.stakingInfo, tc.stakeReward)
+		shares, remaining := calcShares(tc.stakingInfo, tc.stakeReward, minStaking)
 		actual := &Result{
 			shares:    shares,
 			remaining: remaining.Uint64(),
@@ -1067,5 +1116,72 @@ func Benchmark_CalcDeferredReward(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		CalcDeferredReward(header, config)
+	}
+}
+
+func TestRewardConfigCache_parseRewardRatio(t *testing.T) {
+	testCases := []struct {
+		s   string
+		cn  int
+		poc int
+		kir int
+		err error
+	}{
+		{"34/54/12", 34, 54, 12, nil},
+		{"3/3/3", 3, 3, 3, nil},
+		{"10/20/30", 10, 20, 30, nil},
+		{"34,54,12", 0, 0, 0, errInvalidFormat},
+		{"/", 0, 0, 0, errInvalidFormat},
+		{"///", 0, 0, 0, errInvalidFormat},
+		{"1//", 0, 0, 0, errParsingRatio},
+		{"/1/", 0, 0, 0, errParsingRatio},
+		{"//1", 0, 0, 0, errParsingRatio},
+		{"1/2/3/4/", 0, 0, 0, errInvalidFormat},
+		{"3.3/3.3/3.3", 0, 0, 0, errParsingRatio},
+		{"a/b/c", 0, 0, 0, errParsingRatio},
+	}
+
+	for i := 0; i < len(testCases); i++ {
+		cn, poc, kir, total, err := parseRewardRatio(testCases[i].s)
+
+		assert.Equal(t, testCases[i].cn, cn)
+		assert.Equal(t, testCases[i].poc, poc)
+		assert.Equal(t, testCases[i].kir, kir)
+		assert.Equal(t, testCases[i].err, err)
+
+		expectedTotal := testCases[i].cn + testCases[i].poc + testCases[i].kir
+		assert.Equal(t, expectedTotal, total)
+	}
+}
+
+func TestRewardConfigCache_parseRewardKip82Ratio(t *testing.T) {
+	testCases := []struct {
+		s        string
+		proposer int
+		staking  int
+		err      error
+	}{
+		{"34/54", 34, 54, nil},
+		{"20/80", 20, 80, nil},
+		{"0/100", 0, 100, nil},
+		{"34,54", 0, 0, errInvalidFormat},
+		{"", 0, 0, errInvalidFormat},
+		{"//", 0, 0, errInvalidFormat},
+		{"1/", 0, 0, errParsingRatio},
+		{"/1", 0, 0, errParsingRatio},
+		{"1/2/", 0, 0, errInvalidFormat},
+		{"3.3/3.3", 0, 0, errParsingRatio},
+		{"a/b", 0, 0, errParsingRatio},
+	}
+
+	for i := 0; i < len(testCases); i++ {
+		proposer, staking, total, err := parseRewardKip82Ratio(testCases[i].s)
+
+		assert.Equal(t, testCases[i].proposer, proposer)
+		assert.Equal(t, testCases[i].staking, staking)
+		assert.Equal(t, testCases[i].err, err, "tc[%d] failed", i)
+
+		expectedTotal := testCases[i].proposer + testCases[i].staking
+		assert.Equal(t, expectedTotal, total)
 	}
 }
