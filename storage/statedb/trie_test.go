@@ -33,6 +33,8 @@ import (
 	"testing/quick"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/klaytn/klaytn/blockchain/types/account"
+	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/rlp"
@@ -533,6 +535,204 @@ func tempDB() (string, *Database) {
 	dbc := &database.DBConfig{Dir: dir, DBType: database.LevelDB, LevelDBCacheSize: 256, OpenFilesLimit: 0}
 	diskDB := database.NewDBManager(dbc)
 	return dir, NewDatabase(diskDB)
+}
+
+func genExternallyOwnedAccount(nonce uint64, balance *big.Int) (account.Account, error) {
+	return account.NewAccountWithMap(account.ExternallyOwnedAccountType, map[account.AccountValueKeyType]interface{}{
+		account.AccountValueKeyNonce:         nonce,
+		account.AccountValueKeyBalance:       balance,
+		account.AccountValueKeyHumanReadable: false,
+		account.AccountValueKeyAccountKey:    accountkey.NewAccountKeyLegacy(),
+	})
+}
+
+func makeAccounts(size int) (addresses [][20]byte, accounts [][]byte) {
+	// Make the random benchmark deterministic
+	random := rand.New(rand.NewSource(0))
+	// Create a realistic account trie to hash
+	addresses = make([][20]byte, size)
+	for i := 0; i < len(addresses); i++ {
+		data := make([]byte, 20)
+		random.Read(data)
+		copy(addresses[i][:], data)
+	}
+	accounts = make([][]byte, len(addresses))
+	for i := 0; i < len(accounts); i++ {
+		// The big.Rand function is not deterministic with regards to 64 vs 32 bit systems,
+		// and will consume different amount of data from the rand source.
+		// balance = new(big.Int).Rand(random, new(big.Int).Exp(common.Big2, common.Big256, nil))
+		// Therefore, we instead just read via byte buffer
+		numBytes := random.Uint32() % 33 // [0, 32] bytes
+		balanceBytes := make([]byte, numBytes)
+		random.Read(balanceBytes)
+		acc, _ := genExternallyOwnedAccount(uint64(i), big.NewInt(int64(i)))
+		serializer := account.NewAccountSerializerWithAccount(acc)
+		data, _ := rlp.EncodeToBytes(serializer)
+		accounts[i] = data
+	}
+	return addresses, accounts
+}
+
+// BenchmarkCommitAfterHashFixedSize benchmarks the Commit (after Hash) of a fixed number of updates to a trie.
+// This benchmark is meant to capture the difference on efficiency of small versus large changes. Typically,
+// storage tries are small (a couple of entries), whereas the full post-block account trie update is large (a couple
+// of thousand entries)
+func BenchmarkHashFixedSize(b *testing.B) {
+	b.Run("10", func(b *testing.B) {
+		b.StopTimer()
+		acc, add := makeAccounts(20)
+		for i := 0; i < b.N; i++ {
+			benchmarkHashFixedSize(b, acc, add)
+		}
+	})
+	b.Run("100", func(b *testing.B) {
+		b.StopTimer()
+		acc, add := makeAccounts(100)
+		for i := 0; i < b.N; i++ {
+			benchmarkHashFixedSize(b, acc, add)
+		}
+	})
+
+	b.Run("1K", func(b *testing.B) {
+		b.StopTimer()
+		acc, add := makeAccounts(1000)
+		for i := 0; i < b.N; i++ {
+			benchmarkHashFixedSize(b, acc, add)
+		}
+	})
+	b.Run("10K", func(b *testing.B) {
+		b.StopTimer()
+		acc, add := makeAccounts(10000)
+		for i := 0; i < b.N; i++ {
+			benchmarkHashFixedSize(b, acc, add)
+		}
+	})
+	b.Run("100K", func(b *testing.B) {
+		b.StopTimer()
+		acc, add := makeAccounts(100000)
+		for i := 0; i < b.N; i++ {
+			benchmarkHashFixedSize(b, acc, add)
+		}
+	})
+}
+
+func benchmarkHashFixedSize(b *testing.B, addresses [][20]byte, accounts [][]byte) {
+	b.ReportAllocs()
+	trie, _ := NewTrie(common.Hash{}, NewDatabase(database.NewMemoryDBManager()))
+	for i := 0; i < len(addresses); i++ {
+		trie.Update(crypto.Keccak256(addresses[i][:]), accounts[i])
+	}
+	// Insert the accounts into the trie and hash it
+	b.StartTimer()
+	trie.Hash()
+	b.StopTimer()
+}
+
+func BenchmarkCommitAfterHashFixedSize(b *testing.B) {
+	b.Run("10", func(b *testing.B) {
+		b.StopTimer()
+		acc, add := makeAccounts(20)
+		for i := 0; i < b.N; i++ {
+			benchmarkCommitAfterHashFixedSize(b, acc, add)
+		}
+	})
+	b.Run("100", func(b *testing.B) {
+		b.StopTimer()
+		acc, add := makeAccounts(100)
+		for i := 0; i < b.N; i++ {
+			benchmarkCommitAfterHashFixedSize(b, acc, add)
+		}
+	})
+
+	b.Run("1K", func(b *testing.B) {
+		b.StopTimer()
+		acc, add := makeAccounts(1000)
+		for i := 0; i < b.N; i++ {
+			benchmarkCommitAfterHashFixedSize(b, acc, add)
+		}
+	})
+	b.Run("10K", func(b *testing.B) {
+		b.StopTimer()
+		acc, add := makeAccounts(10000)
+		for i := 0; i < b.N; i++ {
+			benchmarkCommitAfterHashFixedSize(b, acc, add)
+		}
+	})
+	b.Run("100K", func(b *testing.B) {
+		b.StopTimer()
+		acc, add := makeAccounts(100000)
+		for i := 0; i < b.N; i++ {
+			benchmarkCommitAfterHashFixedSize(b, acc, add)
+		}
+	})
+}
+
+func benchmarkCommitAfterHashFixedSize(b *testing.B, addresses [][20]byte, accounts [][]byte) {
+	b.ReportAllocs()
+	trie, _ := NewTrie(common.Hash{}, NewDatabase(database.NewMemoryDBManager()))
+	for i := 0; i < len(addresses); i++ {
+		trie.Update(crypto.Keccak256(addresses[i][:]), accounts[i])
+	}
+	// Insert the accounts into the trie and hash it
+	trie.Hash()
+	b.StartTimer()
+	trie.Commit(nil)
+	b.StopTimer()
+}
+
+func BenchmarkDerefRootFixedSize(b *testing.B) {
+	b.Run("10", func(b *testing.B) {
+		b.StopTimer()
+		acc, add := makeAccounts(20)
+		for i := 0; i < b.N; i++ {
+			benchmarkDerefRootFixedSize(b, acc, add)
+		}
+	})
+	b.Run("100", func(b *testing.B) {
+		b.StopTimer()
+		acc, add := makeAccounts(100)
+		for i := 0; i < b.N; i++ {
+			benchmarkDerefRootFixedSize(b, acc, add)
+		}
+	})
+
+	b.Run("1K", func(b *testing.B) {
+		b.StopTimer()
+		acc, add := makeAccounts(1000)
+		for i := 0; i < b.N; i++ {
+			benchmarkDerefRootFixedSize(b, acc, add)
+		}
+	})
+	b.Run("10K", func(b *testing.B) {
+		b.StopTimer()
+		acc, add := makeAccounts(10000)
+		for i := 0; i < b.N; i++ {
+			benchmarkDerefRootFixedSize(b, acc, add)
+		}
+	})
+	b.Run("100K", func(b *testing.B) {
+		b.StopTimer()
+		acc, add := makeAccounts(100000)
+		for i := 0; i < b.N; i++ {
+			benchmarkDerefRootFixedSize(b, acc, add)
+		}
+	})
+}
+
+func benchmarkDerefRootFixedSize(b *testing.B, addresses [][20]byte, accounts [][]byte) {
+	b.ReportAllocs()
+	triedb := NewDatabase(database.NewMemoryDBManager())
+	trie, _ := NewTrie(common.Hash{}, triedb)
+	for i := 0; i < len(addresses); i++ {
+		trie.Update(crypto.Keccak256(addresses[i][:]), accounts[i])
+	}
+	h := trie.Hash()
+	trie.Commit(nil)
+	//_, nodes := trie.Commit(nil)
+	//triedb.Update(NewWithNodeSet(nodes))
+	b.StartTimer()
+	triedb.Dereference(h)
+	b.StopTimer()
 }
 
 func getString(trie *Trie, k string) []byte {
