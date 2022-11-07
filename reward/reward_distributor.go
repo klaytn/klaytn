@@ -139,9 +139,6 @@ func GetBlockReward(header *types.Header, config *params.ChainConfig) (*RewardSp
 // this behaves similar to the previous MintKLAY
 func CalcDeferredRewardSimple(header *types.Header, config *params.ChainConfig) (*RewardSpec, error) {
 	rewardConfig := config.Governance.Reward
-	if rewardConfig == nil {
-		return nil, errors.New("no rewardConfig")
-	}
 
 	minted := rewardConfig.MintingAmount
 	var totalFee, rewardFee, burntFee *big.Int
@@ -177,20 +174,22 @@ func CalcDeferredReward(header *types.Header, config *params.ChainConfig) (*Rewa
 		CalcDeferredRewardTimer = time.Since(start)
 	}(time.Now())
 
-	rewardConfig := config.Governance.Reward
-	if rewardConfig == nil {
-		return nil, errors.New("no rewardConfig")
-	}
+	var (
+		rewardConfig = config.Governance.Reward
+		minted       = config.Governance.Reward.MintingAmount
+		stakingInfo  = GetStakingInfo(header.Number.Uint64())
+	)
 
 	totalFee, rewardFee, burntFee := calcDeferredFee(header, config)
-	stakingInfo := GetStakingInfo(header.Number.Uint64())
-
-	proposer, stakers, kgf, kir, splitRem := calcSplit(header, config, rewardFee)
+	proposer, stakers, kgf, kir, splitRem := calcSplit(header, config, minted, rewardFee)
 	shares, shareRem := calcShares(rewardConfig, stakingInfo, stakers)
 
+	// Remainder from (CN, KGF, KIR) split goes to KGF
 	kgf = kgf.Add(kgf, splitRem)
+	// Remainder from staker shares goes to Proposer
 	proposer = proposer.Add(proposer, shareRem)
 
+	// if KGF or KIR is not set, proposer gets the portion
 	if stakingInfo == nil || common.EmptyAddress(stakingInfo.PoCAddr) {
 		logger.Debug("KGF empty, proposer gets its portion", "kgf", kgf)
 		proposer = proposer.Add(proposer, kgf)
@@ -203,7 +202,7 @@ func CalcDeferredReward(header *types.Header, config *params.ChainConfig) (*Rewa
 	}
 
 	spec := &RewardSpec{
-		Minted:   rewardConfig.MintingAmount,
+		Minted:   minted,
 		Fee:      totalFee,
 		Burnt:    burntFee,
 		Proposer: proposer,
@@ -225,7 +224,7 @@ func CalcDeferredReward(header *types.Header, config *params.ChainConfig) (*Rewa
 	for rewardAddr, rewardAmount := range shares {
 		increment(spec.Rewards, rewardAddr, rewardAmount)
 	}
-	logger.Debug("calcDeferredReward returns", "spec", spec)
+	logger.Debug("CalcDeferredReward returns", "spec", spec)
 
 	return spec, nil
 }
@@ -234,111 +233,141 @@ func CalcDeferredReward(header *types.Header, config *params.ChainConfig) (*Rewa
 func calcDeferredFee(header *types.Header, config *params.ChainConfig) (*big.Int, *big.Int, *big.Int) {
 	rewardConfig := config.Governance.Reward
 
+	// If not DeferredTxFee, fees are already added to the proposer during TX execution.
+	// Therefore, there are no fees to distribute here at the end of block processing.
+	// However, the fees must be compensated to calculate actual rewards paid.
 	if !rewardConfig.DeferredTxFee {
 		return big.NewInt(0), big.NewInt(0), big.NewInt(0)
 	}
 
-	var totalFee, rewardFee, burntFee *big.Int
-	totalGasUsed := new(big.Int).SetUint64(header.GasUsed)
+	totalFee := getTotalFee(header, config)
+	rewardFee := new(big.Int).Set(totalFee)
+	burntFee := big.NewInt(0)
 
+	// after magma, burn half of gas
 	if config.IsMagmaForkEnabled(header.Number) {
-		totalFee = new(big.Int).Mul(totalGasUsed, header.BaseFee)
-	} else {
-		unitPrice := new(big.Int).SetUint64(config.UnitPrice)
-		totalFee = new(big.Int).Mul(totalGasUsed, unitPrice)
+		burnt := getBurnAmountMagma(rewardFee)
+		rewardFee = rewardFee.Sub(rewardFee, burnt)
+		burntFee = burntFee.Add(burntFee, burnt)
 	}
 
-	rewardFee = new(big.Int).Add(big.NewInt(0), totalFee)
-	burntFee = big.NewInt(0)
-	if config.IsMagmaForkEnabled(header.Number) {
-		halfFee := new(big.Int).Div(rewardFee, big.NewInt(2))
-		rewardFee = rewardFee.Sub(rewardFee, halfFee)
-		burntFee = burntFee.Add(burntFee, halfFee)
-	}
-
+	// after kore, burn fees up to proposer's minted reward
 	if config.IsKoreForkEnabled(header.Number) {
-		minted := rewardConfig.MintingAmount
-		cnRatio, _, _, totalRatio, _ := parseRewardRatio(rewardConfig.Ratio)
-		cnMinted := new(big.Int).Mul(minted, big.NewInt(int64(cnRatio)))
-		cnMinted = cnMinted.Div(cnMinted, big.NewInt(int64(totalRatio)))
-
-		cnMintedBasicRatio, _, cnMintedTotalRatio, _ := parseRewardKip82Ratio(rewardConfig.Kip82Ratio)
-		basicReward := new(big.Int).Mul(cnMinted, big.NewInt(int64(cnMintedBasicRatio)))
-		basicReward = basicReward.Div(basicReward, big.NewInt(int64(cnMintedTotalRatio)))
-
-		burntKip82 := new(big.Int)
-
-		if rewardFee.Cmp(basicReward) < 0 {
-			burntKip82.Set(rewardFee)
-		} else {
-			burntKip82.Set(basicReward)
-		}
-
-		rewardFee = rewardFee.Sub(rewardFee, burntKip82)
-		burntFee = burntFee.Add(burntFee, burntKip82)
+		burnt := getBurnAmountKore(config, rewardFee)
+		rewardFee = rewardFee.Sub(rewardFee, burnt)
+		burntFee = burntFee.Add(burntFee, burnt)
 	}
 
+	logger.Debug("calcDeferredFee returns",
+		"totalFee", totalFee.Uint64(),
+		"rewardFee", rewardFee.Uint64(),
+		"burntFee", burntFee.Uint64(),
+	)
 	return totalFee, rewardFee, burntFee
 }
 
-// calcSplit splits fee into (proposer, stakers, kgf, kir, reamining)
-func calcSplit(header *types.Header, config *params.ChainConfig, fee *big.Int) (*big.Int, *big.Int, *big.Int, *big.Int, *big.Int) {
-	rewardConfig := config.Governance.Reward
+func getTotalFee(header *types.Header, config *params.ChainConfig) *big.Int {
+	totalGasUsed := big.NewInt(0).SetUint64(header.GasUsed)
+	if config.IsMagmaForkEnabled(header.Number) {
+		return totalGasUsed.Mul(totalGasUsed, header.BaseFee)
+	} else {
+		return totalGasUsed.Mul(totalGasUsed, new(big.Int).SetUint64(config.UnitPrice))
+	}
+}
 
-	var proposer, stakers, kgf, kir, remaining *big.Int
+func getBurnAmountMagma(fee *big.Int) *big.Int {
+	return new(big.Int).Div(fee, big.NewInt(2))
+}
+
+func getBurnAmountKore(config *params.ChainConfig, fee *big.Int) *big.Int {
+	cn, _, _ := splitByRatio(config, config.Governance.Reward.MintingAmount)
+	proposer, _ := splitByKip82Ratio(config, cn)
+
+	logger.Debug("getBurnAmountKore returns",
+		"fee", fee.Uint64(),
+		"proposer", proposer.Uint64(),
+	)
+
+	if fee.Cmp(proposer) >= 0 {
+		return proposer
+	} else {
+		return new(big.Int).Set(fee) // return copy of the parameter
+	}
+}
+
+// calcSplit splits fee into (proposer, stakers, kgf, kir, reamining)
+// the sum of the output must be equal to (minted + fee)
+func calcSplit(header *types.Header, config *params.ChainConfig, minted, fee *big.Int) (*big.Int, *big.Int, *big.Int, *big.Int, *big.Int) {
+	totalResource := big.NewInt(0)
+	totalResource = totalResource.Add(minted, fee)
 
 	if config.IsKoreForkEnabled(header.Number) {
-		resource := new(big.Int)
-		resource.Set(rewardConfig.MintingAmount)
-		cnRatio, kgfRatio, kirRatio, totalRatio, _ := parseRewardRatio(rewardConfig.Ratio)
-		cn := new(big.Int).Mul(resource, big.NewInt(int64(cnRatio)))
-		cn = cn.Div(cn, big.NewInt(int64(totalRatio)))
+		cn, kgf, kir := splitByRatio(config, minted)
+		proposer, stakers := splitByKip82Ratio(config, cn)
 
-		kgf = new(big.Int).Mul(resource, big.NewInt(int64(kgfRatio)))
-		kgf = kgf.Div(kgf, big.NewInt(int64(totalRatio)))
+		proposer = proposer.Add(proposer, fee)
 
-		kir = new(big.Int).Mul(resource, big.NewInt(int64(kirRatio)))
-		kir = kir.Div(kir, big.NewInt(int64(totalRatio)))
-
-		cnMintedBasicRatio, cnMintedStakeRatio, cnMintedTotalRatio, _ := parseRewardKip82Ratio(rewardConfig.Kip82Ratio)
-		cnBasic := new(big.Int).Mul(cn, big.NewInt(int64(cnMintedBasicRatio)))
-		cnBasic = cnBasic.Div(cnBasic, big.NewInt(int64(cnMintedTotalRatio)))
-
-		cnStake := new(big.Int).Mul(cn, big.NewInt(int64(cnMintedStakeRatio)))
-		cnStake = cnStake.Div(cnStake, big.NewInt(int64(cnMintedTotalRatio)))
-
-		remaining = new(big.Int)
-		remaining.Set(resource)
+		remaining := new(big.Int).Set(totalResource)
 		remaining = remaining.Sub(remaining, kgf)
 		remaining = remaining.Sub(remaining, kir)
-		remaining = remaining.Sub(remaining, cnBasic)
-		remaining = remaining.Sub(remaining, cnStake)
+		remaining = remaining.Sub(remaining, proposer)
+		remaining = remaining.Sub(remaining, stakers)
 
-		proposer = new(big.Int).Add(cnBasic, fee)
-		stakers = cnStake
+		logger.Debug("calcSplit after kore returns",
+			"proposer", proposer.Uint64(),
+			"stakers", stakers.Uint64(),
+			"kgf", kgf.Uint64(),
+			"kir", kir.Uint64(),
+			"remaining", remaining.Uint64(),
+		)
+		return proposer, stakers, kgf, kir, remaining
 	} else {
-		resource := new(big.Int).Add(rewardConfig.MintingAmount, fee)
-		cnRatio, kgfRatio, kirRatio, totalRatio, _ := parseRewardRatio(rewardConfig.Ratio)
-		cn := new(big.Int).Mul(resource, big.NewInt(int64(cnRatio)))
-		cn = cn.Div(cn, big.NewInt(int64(totalRatio)))
+		source := big.NewInt(0)
+		source = source.Add(minted, fee)
+		cn, kgf, kir := splitByRatio(config, source)
 
-		kgf = new(big.Int).Mul(resource, big.NewInt(int64(kgfRatio)))
-		kgf = kgf.Div(kgf, big.NewInt(int64(totalRatio)))
-
-		kir = new(big.Int).Mul(resource, big.NewInt(int64(kirRatio)))
-		kir = kir.Div(kir, big.NewInt(int64(totalRatio)))
-
-		remaining = new(big.Int)
-		remaining.Set(resource)
+		remaining := new(big.Int).Set(totalResource)
 		remaining = remaining.Sub(remaining, kgf)
 		remaining = remaining.Sub(remaining, kir)
 		remaining = remaining.Sub(remaining, cn)
 
-		proposer = cn
-		stakers = big.NewInt(0)
+		logger.Debug("calcSplit before kore returns",
+			"cn", cn.Uint64(),
+			"kgf", kgf.Uint64(),
+			"kir", kir.Uint64(),
+			"remaining", remaining.Uint64(),
+		)
+		return cn, big.NewInt(0), kgf, kir, remaining
 	}
+}
 
-	return proposer, stakers, kgf, kir, remaining
+// splitByRatio splits by `ratio`. It ignores any remaining amounts.
+func splitByRatio(config *params.ChainConfig, source *big.Int) (*big.Int, *big.Int, *big.Int) {
+	cnRatio, kgfRatio, kirRatio, totalRatio, _ := parseRewardRatio(config.Governance.Reward.Ratio)
+
+	cn := new(big.Int).Mul(source, big.NewInt(int64(cnRatio)))
+	cn = cn.Div(cn, big.NewInt(int64(totalRatio)))
+
+	kgf := new(big.Int).Mul(source, big.NewInt(int64(kgfRatio)))
+	kgf = kgf.Div(kgf, big.NewInt(int64(totalRatio)))
+
+	kir := new(big.Int).Mul(source, big.NewInt(int64(kirRatio)))
+	kir = kir.Div(kir, big.NewInt(int64(totalRatio)))
+
+	return cn, kgf, kir
+}
+
+// splitByKip82Ratio splits by `kip82ratio`. It ignores any remaining amounts.
+func splitByKip82Ratio(config *params.ChainConfig, source *big.Int) (*big.Int, *big.Int) {
+	proposerRatio, stakersRatio, totalRatio, _ := parseRewardKip82Ratio(config.Governance.Reward.Kip82Ratio)
+
+	proposer := new(big.Int).Mul(source, big.NewInt(int64(proposerRatio)))
+	proposer = proposer.Div(proposer, big.NewInt(int64(totalRatio)))
+
+	stakers := new(big.Int).Mul(source, big.NewInt(int64(stakersRatio)))
+	stakers = stakers.Div(stakers, big.NewInt(int64(totalRatio)))
+
+	return proposer, stakers
 }
 
 // calcShares distributes stake reward among staked CNs
@@ -383,6 +412,7 @@ func calcShares(rewardConfig *params.RewardConfig, stakingInfo *StakingInfo, sta
 	return shares, remaining
 }
 
+// parseRewardRatio parses string `ratio` into ints
 func parseRewardRatio(ratio string) (int, int, int, int, error) {
 	s := strings.Split(ratio, "/")
 	if len(s) != params.RewardSliceCount {
@@ -398,6 +428,7 @@ func parseRewardRatio(ratio string) (int, int, int, int, error) {
 	return cn, poc, kir, cn + poc + kir, nil
 }
 
+// parseRewardKip82Ratio parses string `kip82ratio` into ints
 func parseRewardKip82Ratio(ratio string) (int, int, int, error) {
 	s := strings.Split(ratio, "/")
 	if len(s) != params.RewardKip82SliceCount {

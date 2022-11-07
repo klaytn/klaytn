@@ -23,6 +23,7 @@ import (
 
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
 )
@@ -247,6 +248,7 @@ func TestRewardDistributor_TxFeeBurning(t *testing.T) {
 }
 
 func TestRewardDistributor_GetActualReward(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	header := &types.Header{
 		Number:     big.NewInt(1),
 		GasUsed:    1000,
@@ -940,7 +942,7 @@ func TestRewardDistributor_calcSplit(t *testing.T) {
 	}
 
 	for i, tc := range testcases {
-		proposer, stakers, kgf, kir, remaining := calcSplit(tc.header, tc.config, tc.fee)
+		proposer, stakers, kgf, kir, remaining := calcSplit(tc.header, tc.config, minted, tc.fee)
 		actual := &Result{
 			proposer:  proposer.Uint64(),
 			stakers:   stakers.Uint64(),
@@ -949,6 +951,17 @@ func TestRewardDistributor_calcSplit(t *testing.T) {
 			remaining: remaining.Uint64(),
 		}
 		assert.Equal(t, tc.expected, actual, "testcases[%d] failed", i)
+
+		expectedTotalAmount := big.NewInt(0)
+		expectedTotalAmount = expectedTotalAmount.Add(minted, tc.fee)
+
+		actualTotalAmount := big.NewInt(0)
+		actualTotalAmount = actualTotalAmount.Add(actualTotalAmount, proposer)
+		actualTotalAmount = actualTotalAmount.Add(actualTotalAmount, stakers)
+		actualTotalAmount = actualTotalAmount.Add(actualTotalAmount, kgf)
+		actualTotalAmount = actualTotalAmount.Add(actualTotalAmount, kir)
+		actualTotalAmount = actualTotalAmount.Add(actualTotalAmount, remaining)
+		assert.Equal(t, expectedTotalAmount, actualTotalAmount, "testcases[%d] failed", i)
 	}
 }
 
