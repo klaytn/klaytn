@@ -496,6 +496,7 @@ type Rules struct {
 	IsIstanbul bool
 	IsLondon   bool
 	IsMagma    bool
+	IsKore     bool
 }
 
 // Rules ensures c's ChainID is not nil.
@@ -509,6 +510,7 @@ func (c *ChainConfig) Rules(num *big.Int) Rules {
 		IsIstanbul: c.IsIstanbulForkEnabled(num),
 		IsLondon:   c.IsLondonForkEnabled(num),
 		IsMagma:    c.IsMagmaForkEnabled(num),
+		IsKore:     c.IsKoreForkEnabled(num),
 	}
 }
 
