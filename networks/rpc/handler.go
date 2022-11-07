@@ -96,6 +96,7 @@ func newHandler(connCtx context.Context, conn jsonWriter, idgen func() ID, reg *
 func (h *handler) handleBatch(msgs []*jsonrpcMessage) {
 	// Emit error response for empty batches:
 	if len(msgs) == 0 {
+		rpcErrorResponsesCounter.Inc(1)
 		h.startCallProc(func(cp *callProc) {
 			h.conn.writeJSON(cp.ctx, errorMessage(&invalidRequestError{"empty batch"}))
 		})
@@ -337,8 +338,10 @@ func (h *handler) handleCallMsg(ctx *callProc, msg *jsonrpcMessage) *jsonrpcMess
 		}
 		return resp
 	case msg.hasValidID():
+		rpcErrorResponsesCounter.Inc(1)
 		return msg.errorResponse(&invalidRequestError{"invalid request"})
 	default:
+		rpcErrorResponsesCounter.Inc(1)
 		return errorMessage(&invalidRequestError{"invalid request"})
 	}
 }
@@ -409,7 +412,6 @@ func (h *handler) handleSubscribe(cp *callProc, msg *jsonrpcMessage) *jsonrpcMes
 	cp.notifiers = append(cp.notifiers, n)
 	ctx := context.WithValue(cp.ctx, notifierKey{}, n)
 
-	rpcSuccessResponsesCounter.Inc(1)
 	wsSubscriptionReqCounter.Inc(1)
 
 	return h.runMethod(ctx, msg, callb, args)
