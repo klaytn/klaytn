@@ -1122,9 +1122,9 @@ func Benchmark_CalcDeferredReward(b *testing.B) {
 func TestRewardConfigCache_parseRewardRatio(t *testing.T) {
 	testCases := []struct {
 		s   string
-		cn  int
-		poc int
-		kir int
+		cn  int64
+		poc int64
+		kir int64
 		err error
 	}{
 		{"34/54/12", 34, 54, 12, nil},
@@ -1157,8 +1157,8 @@ func TestRewardConfigCache_parseRewardRatio(t *testing.T) {
 func TestRewardConfigCache_parseRewardKip82Ratio(t *testing.T) {
 	testCases := []struct {
 		s        string
-		proposer int
-		staking  int
+		proposer int64
+		staking  int64
 		err      error
 	}{
 		{"34/54", 34, 54, nil},

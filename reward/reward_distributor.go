@@ -114,9 +114,12 @@ func NewRewardConfig(header *types.Header, config *params.ChainConfig) (*rewardC
 		return nil, err
 	}
 
-	cnProposerRatio, cnStakingRatio, cnTotalRatio, err := parseRewardKip82Ratio(config.Governance.Reward.Kip82Ratio)
-	if err != nil {
-		return nil, err
+	var cnProposerRatio, cnStakingRatio, cnTotalRatio int64
+	if rules.IsKore {
+		cnProposerRatio, cnStakingRatio, cnTotalRatio, err = parseRewardKip82Ratio(config.Governance.Reward.Kip82Ratio)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &rewardConfig{
@@ -132,15 +135,15 @@ func NewRewardConfig(header *types.Header, config *params.ChainConfig) (*rewardC
 		deferredTxFee: config.Governance.Reward.DeferredTxFee,
 
 		// parsed ratio
-		cnRatio:    big.NewInt(int64(cnRatio)),
-		kgfRatio:   big.NewInt(int64(kgfRatio)),
-		kirRatio:   big.NewInt(int64(kirRatio)),
-		totalRatio: big.NewInt(int64(totalRatio)),
+		cnRatio:    big.NewInt(cnRatio),
+		kgfRatio:   big.NewInt(kgfRatio),
+		kirRatio:   big.NewInt(kirRatio),
+		totalRatio: big.NewInt(totalRatio),
 
 		// parsed KIP82 ratio
-		cnProposerRatio: big.NewInt(int64(cnProposerRatio)),
-		cnStakingRatio:  big.NewInt(int64(cnStakingRatio)),
-		cnTotalRatio:    big.NewInt(int64(cnTotalRatio)),
+		cnProposerRatio: big.NewInt(cnProposerRatio),
+		cnStakingRatio:  big.NewInt(cnStakingRatio),
+		cnTotalRatio:    big.NewInt(cnTotalRatio),
 	}, nil
 }
 
@@ -464,31 +467,35 @@ func calcShares(stakingInfo *StakingInfo, stakeReward *big.Int, minStake uint64)
 }
 
 // parseRewardRatio parses string `ratio` into ints
-func parseRewardRatio(ratio string) (int, int, int, int, error) {
+func parseRewardRatio(ratio string) (int64, int64, int64, int64, error) {
 	s := strings.Split(ratio, "/")
 	if len(s) != params.RewardSliceCount {
+		logger.Error("Invalid ratio format", "ratio", ratio)
 		return 0, 0, 0, 0, errInvalidFormat
 	}
-	cn, err1 := strconv.Atoi(s[0])
-	poc, err2 := strconv.Atoi(s[1])
-	kir, err3 := strconv.Atoi(s[2])
+	cn, err1 := strconv.ParseInt(s[0], 10, 64)
+	poc, err2 := strconv.ParseInt(s[1], 10, 64)
+	kir, err3 := strconv.ParseInt(s[2], 10, 64)
 
 	if err1 != nil || err2 != nil || err3 != nil {
+		logger.Error("Could not parse ratio", "ratio", ratio)
 		return 0, 0, 0, 0, errParsingRatio
 	}
 	return cn, poc, kir, cn + poc + kir, nil
 }
 
 // parseRewardKip82Ratio parses string `kip82ratio` into ints
-func parseRewardKip82Ratio(ratio string) (int, int, int, error) {
+func parseRewardKip82Ratio(ratio string) (int64, int64, int64, error) {
 	s := strings.Split(ratio, "/")
 	if len(s) != params.RewardKip82SliceCount {
+		logger.Error("Invalid kip82ratio format", "ratio", ratio)
 		return 0, 0, 0, errInvalidFormat
 	}
-	basic, err1 := strconv.Atoi(s[0])
-	stake, err2 := strconv.Atoi(s[1])
+	basic, err1 := strconv.ParseInt(s[0], 10, 64)
+	stake, err2 := strconv.ParseInt(s[1], 10, 64)
 
 	if err1 != nil || err2 != nil {
+		logger.Error("Could not parse kip82ratio", "ratio", ratio)
 		return 0, 0, 0, errParsingRatio
 	}
 	return basic, stake, basic + stake, nil
