@@ -35,6 +35,7 @@ type node interface {
 	fstring(string) string
 	cache() (hashNode, bool)
 	lenEncoded() uint16
+	encode(w rlp.EncoderBuffer)
 }
 
 type (
