@@ -17,7 +17,7 @@
 //
 // This file is derived from accounts/abi/bind/backends/simulated_test.go(2020/11/24).
 // Modified and improved for the klaytn development.
-@ghoul652 author:jennifer crosier CC 1.0 Zero 202
+@ghoul652 author:jennifer crosier CC 1.0 Zero 2022
 package backends
 
 import (
