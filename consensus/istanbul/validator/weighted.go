@@ -666,7 +666,9 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, config
 	}
 
 	// weight and gini were neutralized after Kore hard fork
-	if !chainRules.IsKore {
+	if chainRules.IsKore {
+		setZeroWeight(weightedValidators)
+	} else {
 		totalStaking, _ := calcTotalAmount(weightedValidators, newStakingInfo, stakingAmounts)
 		calcWeight(weightedValidators, stakingAmounts, totalStaking)
 	}
@@ -823,6 +825,13 @@ func calcTotalAmount(weightedValidators []*weightedValidator, stakingInfo *rewar
 
 	logger.Debug("calculate totalStaking", "UseGini", stakingInfo.UseGini, "Gini", gini, "totalStaking", totalStaking, "stakingAmounts", stakingAmounts)
 	return totalStaking, gini
+}
+
+// setZeroWeight makes each validator's weight to zero
+func setZeroWeight(weightedValidators []*weightedValidator) {
+	for _, weightedVal := range weightedValidators {
+		atomic.StoreUint64(&weightedVal.weight, 0)
+	}
 }
 
 // calcWeight updates each validator's weight based on the ratio of its staking amount vs. the total staking amount.
