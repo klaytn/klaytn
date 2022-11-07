@@ -77,7 +77,7 @@ var (
 		EnvVar: "KLAYTN_NTP",
 	}
 	NtpServerFlag = cli.StringFlag{
-		Name:   "ntp-server",
+		Name:   "ntp.server",
 		Usage:  "Remote ntp server:port to get the time",
 		Value:  "pool.ntp.org:123",
 		EnvVar: "KLAYTN_NTP_SERVER",
