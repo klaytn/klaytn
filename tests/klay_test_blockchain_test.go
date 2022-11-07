@@ -320,7 +320,7 @@ func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockc
 	if err != nil {
 		return err
 	}
-	bcdata.rewardDistributor.DistributeBlockReward(accountMap, spec.Rewards)
+	reward.DistributeBlockReward(accountMap, spec.Rewards)
 	prof.Profile("main_apply_reward", time.Now().Sub(start))
 
 	// Verification with accountMap
@@ -387,7 +387,7 @@ func (bcdata *BCData) GenABlockWithTransactions(accountMap *AccountMap, transact
 	if err != nil {
 		return err
 	}
-	bcdata.rewardDistributor.DistributeBlockReward(accountMap, spec.Rewards)
+	reward.DistributeBlockReward(accountMap, spec.Rewards)
 	prof.Profile("main_apply_reward", time.Now().Sub(start))
 
 	// Verification with accountMap

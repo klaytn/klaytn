@@ -35,7 +35,7 @@ var CalcDeferredRewardTimer time.Duration
 var logger = log.NewModuleLogger(log.Reward)
 
 var (
-	errInvalidFormat = errors.New("invalid format")
+	errInvalidFormat = errors.New("invalid ratio format")
 	errParsingRatio  = errors.New("parsing ratio fail")
 )
 
