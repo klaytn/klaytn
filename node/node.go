@@ -841,8 +841,8 @@ func NtpCheckWithLocal(n *Node) error {
 	}
 	if !timeIsNear(local, *remote) {
 		errFormat := "System time is out of sync, local:%s remote:%s"
-		return fmt.Errorf(errFormat, local.Format(RFC3339Nano), remote.Format(RFC3339Nano))
+		return fmt.Errorf(errFormat, local.UTC().Format(RFC3339Nano), remote.UTC().Format(RFC3339Nano))
 	}
-	logger.Info("Ntp time check", "local", local, "remote", remote)
+	logger.Info("Ntp time check", "local", local.UTC().Format(RFC3339Nano), "remote", remote.UTC().Format(RFC3339Nano))
 	return nil
 }
