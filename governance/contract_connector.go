@@ -45,7 +45,7 @@ func (c *contractCaller) getAllParamsAt(num *big.Int) (*params.GovParamSet, erro
 }
 
 func (c *contractCaller) prepareCall(contractAbi abi.ABI, fn string, args ...interface{}) (*types.Transaction, *vm.EVM, error) {
-	tx, err := c.makeTx(contractAbi, fn, args)
+	tx, err := c.makeTx(contractAbi, fn, args...)
 	if err != nil {
 		return nil, nil, err
 	}
