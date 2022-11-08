@@ -95,7 +95,7 @@ func TestContractEngine_contractCaller(t *testing.T) {
 
 	// Call initial SetParamIn()
 	{
-		// activation: N + 1
+		// activation: Now + 1
 		tx, err := contract.SetParamIn(owner, name, true, valueA, big.NewInt(1))
 		require.Nil(t, err)
 		sim.Commit()
@@ -178,7 +178,7 @@ func prepareContractEngine(t *testing.T, bc *blockchain.BlockChain, addr common.
 //               t0              t1              t2
 // At num = activation - 2, Params() = prev
 // At num = activation - 1, Params() = next
-//    because next is for generating "num" block
+//    because next is for generating "activation" block
 func TestContractEngine_Params(t *testing.T) {
 	initialParam := map[string][]byte{
 		"istanbul.committeesize": {0xa},
@@ -230,7 +230,7 @@ func TestContractEngine_Params(t *testing.T) {
 //               ^               ^               ^
 //               t0              t1              t2
 // ParamsAt(activation - 1) = prev
-// ParamsAt(activation) = next
+// ParamsAt(activation)     = next
 func TestContractEngine_ParamsAt(t *testing.T) {
 	initialParam := map[string][]byte{
 		"istanbul.committeesize": {0xa},
