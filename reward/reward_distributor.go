@@ -294,7 +294,7 @@ func CalcDeferredReward(header *types.Header, config *params.ChainConfig) (*Rewa
 	for rewardAddr, rewardAmount := range shares {
 		increment(spec.Rewards, rewardAddr, rewardAmount)
 	}
-	logger.Debug("CalcDeferredReward returns", "spec", spec)
+	logger.Debug("CalcDeferredReward() returns", "spec", spec)
 
 	return spec, nil
 }
@@ -326,7 +326,7 @@ func calcDeferredFee(rc *rewardConfig) (*big.Int, *big.Int, *big.Int) {
 		burntFee = burntFee.Add(burntFee, burnt)
 	}
 
-	logger.Debug("calcDeferredFee returns",
+	logger.Debug("calcDeferredFee()",
 		"totalFee", totalFee.Uint64(),
 		"rewardFee", rewardFee.Uint64(),
 		"burntFee", burntFee.Uint64(),
@@ -342,7 +342,7 @@ func getBurnAmountKore(rc *rewardConfig, fee *big.Int) *big.Int {
 	cn, _, _ := splitByRatio(rc, rc.mintingAmount)
 	proposer, _ := splitByKip82Ratio(rc, cn)
 
-	logger.Debug("getBurnAmountKore returns",
+	logger.Debug("getBurnAmountKore()",
 		"fee", fee.Uint64(),
 		"proposer", proposer.Uint64(),
 	)
@@ -372,12 +372,14 @@ func calcSplit(rc *rewardConfig, minted, fee *big.Int) (*big.Int, *big.Int, *big
 		remaining = remaining.Sub(remaining, proposer)
 		remaining = remaining.Sub(remaining, stakers)
 
-		logger.Debug("calcSplit after kore returns",
-			"proposer", proposer.Uint64(),
-			"stakers", stakers.Uint64(),
-			"kgf", kgf.Uint64(),
-			"kir", kir.Uint64(),
-			"remaining", remaining.Uint64(),
+		logger.Debug("calcSplit() after kore",
+			"[in] minted", minted.Uint64(),
+			"[in] fee", fee.Uint64(),
+			"[out] proposer", proposer.Uint64(),
+			"[out] stakers", stakers.Uint64(),
+			"[out] kgf", kgf.Uint64(),
+			"[out] kir", kir.Uint64(),
+			"[out] remaining", remaining.Uint64(),
 		)
 		return proposer, stakers, kgf, kir, remaining
 	} else {
@@ -390,11 +392,13 @@ func calcSplit(rc *rewardConfig, minted, fee *big.Int) (*big.Int, *big.Int, *big
 		remaining = remaining.Sub(remaining, kir)
 		remaining = remaining.Sub(remaining, cn)
 
-		logger.Debug("calcSplit before kore returns",
-			"cn", cn.Uint64(),
-			"kgf", kgf.Uint64(),
-			"kir", kir.Uint64(),
-			"remaining", remaining.Uint64(),
+		logger.Debug("calcSplit() before kore",
+			"[in] minted", minted.Uint64(),
+			"[in] fee", fee.Uint64(),
+			"[out] cn", cn.Uint64(),
+			"[out] kgf", kgf.Uint64(),
+			"[out] kir", kir.Uint64(),
+			"[out] remaining", remaining.Uint64(),
 		)
 		return cn, big.NewInt(0), kgf, kir, remaining
 	}
@@ -458,10 +462,11 @@ func calcShares(stakingInfo *StakingInfo, stakeReward *big.Int, minStake uint64)
 			}
 		}
 	}
-	logger.Debug("calcShares returns",
-		"stakeReward", stakeReward.Uint64(),
-		"remaining", remaining.Uint64(),
-		"shares", shares)
+	logger.Debug("calcShares()",
+		"[in] stakeReward", stakeReward.Uint64(),
+		"[out] remaining", remaining.Uint64(),
+		"[out] shares", shares,
+	)
 
 	return shares, remaining
 }
