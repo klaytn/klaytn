@@ -31,7 +31,10 @@ func (c *contractCaller) getAllParamsAt(num *big.Int) (*params.GovParamSet, erro
 	}
 
 	// ignore error; if error, all nodes will have the same error
-	res, _ := c.callTx(tx, evm)
+	res, err := c.callTx(tx, evm)
+	if err != nil {
+		return params.NewGovParamSet(), nil
+	}
 
 	// ignore error; if error, all nodes will have the same error
 	pset, err := c.parse(res)
