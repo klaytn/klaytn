@@ -73,7 +73,7 @@ var (
 	}
 	NtpDisableFlag = cli.BoolFlag{
 		Name:   "ntp.disable",
-		Usage:  "Disable checking if the local time is synchronized with ntp server (default:enable)",
+		Usage:  "Disable checking if the local time is synchronized with ntp server. If this flag is not set, the local time is checked with the time of the server specified by ntp.server.",
 		EnvVar: "KLAYTN_NTP_DISABLE",
 	}
 	NtpServerFlag = cli.StringFlag{
