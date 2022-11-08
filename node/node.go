@@ -806,7 +806,7 @@ func (n *Node) apis() []rpc.API {
 }
 
 func NtpCheckWithLocal(n *Node) error {
-	// ntp check option disabled
+	// Skip check if server is empty (e.g. `ntp.disable` flag)
 	if n.config.NtpRemoteServer == "" {
 		return nil
 	}
