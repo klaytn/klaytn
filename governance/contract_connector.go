@@ -25,7 +25,7 @@ const govparamfunc = "getAllParamsAt"
 
 func (c *contractCaller) getAllParamsAt(num *big.Int) (*params.GovParamSet, error) {
 	// respect error; some nodes can succeed without error while others do not
-	tx, evm, err := c.prepareCall(num)
+	tx, evm, err := c.prepareCall(govParamAbi, govparamfunc, num)
 	if err != nil {
 		return nil, err
 	}
@@ -37,15 +37,15 @@ func (c *contractCaller) getAllParamsAt(num *big.Int) (*params.GovParamSet, erro
 	}
 
 	// ignore error; if error, all nodes will have the same error
-	pset, err := c.parse(res)
+	pset, err := c.parseGetAllParamsAt(res)
 	if err != nil {
 		return params.NewGovParamSet(), nil
 	}
 	return pset, nil
 }
 
-func (c *contractCaller) prepareCall(num *big.Int) (*types.Transaction, *vm.EVM, error) {
-	tx, err := c.makeTx(govParamAbi, govparamfunc, num)
+func (c *contractCaller) prepareCall(contractAbi abi.ABI, fn string, args ...interface{}) (*types.Transaction, *vm.EVM, error) {
+	tx, err := c.makeTx(contractAbi, fn, args)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -125,7 +125,7 @@ func (c *contractCaller) callTx(tx *types.Transaction, evm *vm.EVM) ([]byte, err
 	return res, nil
 }
 
-func (c *contractCaller) parse(b []byte) (*params.GovParamSet, error) {
+func (c *contractCaller) parseGetAllParamsAt(b []byte) (*params.GovParamSet, error) {
 	if len(b) == 0 {
 		return params.NewGovParamSet(), nil
 	}
