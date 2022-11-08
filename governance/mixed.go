@@ -130,7 +130,7 @@ func (e *MixedEngine) assembleParams(headerParams *params.GovParamSet) *params.G
 }
 
 func (e *MixedEngine) handleParamUpdate(old, new *params.GovParamSet) {
-	// TODO: key set must be the same, which is guaranteed at NewMixedEngine
+	// NOTE: key set must be the same, which is guaranteed at NewMixedEngine
 	for k, oldval := range old.IntMap() {
 		if newval := new.MustGet(k); oldval != newval {
 			switch k {
