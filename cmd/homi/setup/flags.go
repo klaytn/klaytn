@@ -31,7 +31,6 @@ var (
 	homiYamlFlag = cli.StringFlag{
 		Name:  "homi-yaml",
 		Usage: "Import homi.yaml to generate the config files to run the nodes",
-		Value: "./homi.yaml",
 	}
 	genTypeFlag = cli.StringFlag{
 		Name:  "gen-type",
