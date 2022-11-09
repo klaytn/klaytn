@@ -27,7 +27,6 @@ import (
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
 )
 
@@ -91,7 +90,7 @@ func (t *Trie) Prove(key []byte, fromLevel uint, proofDB ProofDBWriter) error {
 			if fromLevel > 0 {
 				fromLevel--
 			} else {
-				enc, _ := rlp.EncodeToBytes(n)
+				enc := nodeToBytes(n)
 				if !ok {
 					hash = crypto.Keccak256(enc)
 				}
