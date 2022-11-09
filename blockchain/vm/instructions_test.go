@@ -839,6 +839,11 @@ func BenchmarkOpDifficulty(b *testing.B) {
 	opBenchmark(b, opDifficulty)
 }
 
+func BenchmarkOpRandom(b *testing.B) {
+	num := "00000000000000000000000000000000000000000000000000000000000003E8" // 1000
+	opBenchmark(b, opRandom, num)
+}
+
 func BenchmarkOpGasLimit(b *testing.B) {
 	opBenchmark(b, opGasLimit)
 }
