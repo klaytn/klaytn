@@ -1106,11 +1106,34 @@ func findGenType(ctx *cli.Context) int {
 	} else {
 		genType = TypeDocker
 	}
+func indexGenType(genTypeFlag string, base string) int {
+	if base != "" && genTypeFlag == "" {
+		genTypeFlag = base
+	}
+	for typeIndex, typeString := range Types {
+		if genTypeFlag == typeString {
+			return typeIndex
+		}
+	}
+	return TypeNotDefined
+}
+
+func findGenType(ctx *cli.Context) int {
+	var genType int
+	if ctx.Args().Present() {
+		genType = indexGenType(ctx.Args()[0], "")
+	} else {
+		genType = indexGenType(ctx.String(genTypeFlag.Name), Types[0])
+	}
+
 	if genType == TypeNotDefined {
 		fmt.Printf("Wrong Type : %s\nSupported Types : [docker, local, remote, deploy]\n\n", genTypeFlag)
 		cli.ShowSubcommandHelp(ctx)
 		os.Exit(1)
 	}
+
+	return genType
+}
 	return genType
 }
 
