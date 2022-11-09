@@ -174,7 +174,7 @@ var (
 
 	addressBookMockFlag = cli.BoolFlag{
 		Name:  "address-book-mock",
-		Usage: "Use AddressBookMock instead of AddressBook",
+		Usage: "Allocate an AddressBookMock at the genesis block",
 	}
 
 	dockerImageIdFlag = cli.StringFlag{
