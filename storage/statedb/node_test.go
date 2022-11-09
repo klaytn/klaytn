@@ -2,9 +2,10 @@ package statedb
 
 import (
 	"bytes"
+	"testing"
+
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/rlp"
-	"testing"
 )
 
 func newTestFullNode(v []byte) []interface{} {
