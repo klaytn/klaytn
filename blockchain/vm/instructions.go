@@ -585,15 +585,7 @@ func opDifficulty(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stac
 }
 
 func opRandom(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	num := stack.pop()
-
-	n := evm.interpreter.intPool.get().Sub(evm.BlockNumber, common.Big257)
-	if num.Cmp(n) > 0 && num.Cmp(evm.BlockNumber) < 0 {
-		stack.push(evm.GetHash(num.Uint64()).Big())
-	} else {
-		stack.push(evm.interpreter.intPool.getZero())
-	}
-	evm.interpreter.intPool.put(num, n)
+	stack.push(evm.GetHash(evm.BlockNumber.Uint64() - 1).Big())
 	return nil, nil
 }
 
