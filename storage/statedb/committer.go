@@ -22,7 +22,6 @@ import (
 	"sync"
 
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/rlp"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -45,7 +44,6 @@ type leaf struct {
 // By 'some level' of parallelism, it's still the case that all leaves will be
 // processed sequentially - onleaf will never be called in parallel or out of order.
 type committer struct {
-	tmp sliceBuffer
 	sha KeccakState
 
 	onleaf LeafCallback
@@ -56,7 +54,6 @@ type committer struct {
 var committerPool = sync.Pool{
 	New: func() interface{} {
 		return &committer{
-			tmp: make(sliceBuffer, 0, 550), // cap is as large as a full fullNode.
 			sha: sha3.NewLegacyKeccak256().(KeccakState),
 		}
 	},
@@ -171,26 +168,14 @@ func (c *committer) store(n node, db *Database, force bool, hasVnodeChildren boo
 		size    int
 	)
 	if hash == nil {
-		if vn, ok := n.(valueNode); ok {
-			c.tmp.Reset()
-			if err := rlp.Encode(&c.tmp, vn); err != nil {
-				panic("encode error: " + err.Error())
-			}
-			size = len(c.tmp)
-			if size < 32 && !force {
-				return n // Nodes smaller than 32 bytes are stored inside their parent
-			}
-			hash = c.makeHashNode(c.tmp)
-		} else {
-			// This was not generated - must be a small node stored in the parent
-			// No need to do anything here
-			return n
-		}
-	} else {
-		// We have the hash already, estimate the RLP encoding-size of the node.
-		// The size is used for mem tracking, does not need to be exact
-		size = estimateSize(n)
+		// This was not generated - must be a small node stored in the parent
+		// No need to do anything here
+		return n
 	}
+	// We have the hash already, estimate the RLP encoding-size of the node.
+	// The size is used for mem tracking, does not need to be exact
+	size = estimateSize(n)
+
 	// If we're using channel-based leaf-reporting, send to channel.
 	// The leaf channel will be active only when there an active leaf-callback
 	if c.leafCh != nil {
