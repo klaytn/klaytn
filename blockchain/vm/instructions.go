@@ -585,8 +585,8 @@ func opDifficulty(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stac
 }
 
 func opRandom(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-        // evm.BlockNumber.Uint64() is always greater or equal to 1
-        // since evm will not run on the genesis block
+	// evm.BlockNumber.Uint64() is always greater or equal to 1
+	// since evm will not run on the genesis block
 	stack.push(evm.GetHash(evm.BlockNumber.Uint64() - 1).Big())
 	return nil, nil
 }

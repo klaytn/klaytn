@@ -74,10 +74,10 @@ func newKoreInstructionSet() JumpTable {
 	instructionSet := newLondonInstructionSet()
 	instructionSet[PREVRANDAO] = &operation{
 		execute:         opRandom,
-		constantGas:     GasExtStep,
-		minStack:        minStack(1, 1),
-		maxStack:        maxStack(1, 1),
-		computationCost: params.BlockHashComputationCost,
+		constantGas:     GasQuickStep,
+		minStack:        minStack(0, 1),
+		maxStack:        maxStack(0, 1),
+		computationCost: params.RandomComputationCost,
 	}
 	return instructionSet
 }
