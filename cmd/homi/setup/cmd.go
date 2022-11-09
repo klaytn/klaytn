@@ -1091,22 +1091,8 @@ func WriteFile(content []byte, parentFolder string, fileName string) {
 	fmt.Println("Created : ", filePath)
 }
 
-func findGenType(ctx *cli.Context) int {
-	// Klaytn-Node: genTypeFlag's default value is docker
-	genTypeFlag := ctx.String(genTypeFlag.Name)
-	genType := TypeNotDefined
-	if ctx.Args().Present() {
-		genTypeFlag = ctx.Args()[0]
-		for i, t := range Types {
-			if t == genTypeFlag {
-				genType = i
-				break
-			}
-		}
-	} else {
-		genType = TypeDocker
-	}
 func indexGenType(genTypeFlag string, base string) int {
+	// NOTE-Klaytn: genTypeFlag's default value is docker
 	if base != "" && genTypeFlag == "" {
 		genTypeFlag = base
 	}
@@ -1132,8 +1118,6 @@ func findGenType(ctx *cli.Context) int {
 		os.Exit(1)
 	}
 
-	return genType
-}
 	return genType
 }
 
