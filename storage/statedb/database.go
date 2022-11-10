@@ -146,16 +146,9 @@ func (n rawFullNode) fstring(ind string) string     { panic("this should never e
 func (n rawFullNode) lenEncoded() uint16            { panic("this should never end up in a live trie") }
 
 func (n rawFullNode) EncodeRLP(w io.Writer) error {
-	var nodes [17]node
-
-	for i, child := range n {
-		if child != nil {
-			nodes[i] = child
-		} else {
-			nodes[i] = nilValueNode
-		}
-	}
-	return rlp.Encode(w, nodes)
+	encodeByte := rlp.NewEncoderBuffer(w)
+	n.encode(encodeByte)
+	return encodeByte.Flush()
 }
 
 // rawShortNode represents only the useful data content of a short node, with the
