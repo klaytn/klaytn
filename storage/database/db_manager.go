@@ -43,8 +43,8 @@ var (
 
 	errGovIdxAlreadyExist = errors.New("a governance idx of the more recent or the same block exist")
 
-	backupHashes [backupHashCnt]common.Hash
-	idx          uint8 = 0
+	HeadBlockQ backupHash
+	FastBlockQ backupHash
 )
 
 type DBManager interface {
@@ -294,7 +294,8 @@ type DBManager interface {
 type DBEntryType uint8
 
 const (
-	MiscDB DBEntryType = iota // Do not move MiscDB which has the path of others DB.
+	backupHashCnt             = 128
+	MiscDB        DBEntryType = iota // Do not move MiscDB which has the path of others DB.
 	headerDB
 	BodyDB
 	ReceiptsDB
@@ -305,8 +306,24 @@ const (
 	SnapshotDB
 	// databaseEntryTypeSize should be the last item in this list!!
 	databaseEntryTypeSize
-	backupHashCnt = 128
 )
+
+type backupHash struct {
+	backupHashes [backupHashCnt]common.Hash
+	idx          int
+}
+
+func (b *backupHash) push(h common.Hash) {
+	b.backupHashes[b.idx%backupHashCnt] = h
+	b.idx = (b.idx + 1) % backupHashCnt
+}
+
+func (b *backupHash) pop() common.Hash {
+	if b.backupHashes[b.idx] == (common.Hash{}) {
+		return common.Hash{}
+	}
+	return b.backupHashes[b.idx]
+}
 
 func (et DBEntryType) String() string {
 	return dbBaseDirs[et]
@@ -952,17 +969,18 @@ func (dbm *databaseManager) ReadHeadBlockBackupHash() common.Hash {
 
 // WriteHeadBlockHash stores the head block's hash.
 func (dbm *databaseManager) WriteHeadBlockHash(hash common.Hash) {
-	backupHashes[idx%backupHashCnt] = hash
-	idx++
+	HeadBlockQ.push(hash)
 
 	db := dbm.getDatabase(headerDB)
 	if err := db.Put(headBlockKey, hash.Bytes()); err != nil {
 		logger.Crit("Failed to store last block's hash", "err", err)
 	}
-	if backupHashes[idx%backupHashCnt] == (common.Hash{}) {
+
+	backupHash := HeadBlockQ.pop()
+	if backupHash == (common.Hash{}) {
 		return
 	}
-	if err := db.Put(headBlockBackupKey, backupHashes[idx%backupHashCnt].Bytes()); err != nil {
+	if err := db.Put(headBlockBackupKey, backupHash.Bytes()); err != nil {
 		logger.Crit("Failed to store last block's backup hash", "err", err)
 	}
 }
@@ -991,17 +1009,18 @@ func (dbm *databaseManager) ReadHeadFastBlockBackupHash() common.Hash {
 
 // WriteHeadFastBlockHash stores the hash of the current fast-sync head block.
 func (dbm *databaseManager) WriteHeadFastBlockHash(hash common.Hash) {
-	backupHashes[idx%backupHashCnt] = hash
-	idx++
+	FastBlockQ.push(hash)
 
 	db := dbm.getDatabase(headerDB)
 	if err := db.Put(headFastBlockKey, hash.Bytes()); err != nil {
 		logger.Crit("Failed to store last fast block's hash", "err", err)
 	}
-	if backupHashes[idx%backupHashCnt] == (common.Hash{}) {
+
+	backupHash := FastBlockQ.pop()
+	if backupHash == (common.Hash{}) {
 		return
 	}
-	if err := db.Put(headFastBlockBackupKey, backupHashes[idx%backupHashCnt].Bytes()); err != nil {
+	if err := db.Put(headFastBlockBackupKey, backupHash.Bytes()); err != nil {
 		logger.Crit("Failed to store last fast block's backup hash", "err", err)
 	}
 }
