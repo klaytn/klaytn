@@ -151,7 +151,7 @@ func NewMainBridge(ctx *node.ServiceContext, config *SCConfig) (*MainBridge, err
 	mb.rpcServer = rpc.NewServer()
 	p1, p2 := net.Pipe()
 	mb.rpcConn = p1
-	go mb.rpcServer.ServeCodec(rpc.NewJSONCodec(p2), rpc.OptionMethodInvocation|rpc.OptionSubscriptions)
+	go mb.rpcServer.ServeCodec(rpc.NewCodec(p2), 0)
 
 	go func() {
 		for {

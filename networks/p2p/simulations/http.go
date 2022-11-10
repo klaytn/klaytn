@@ -33,13 +33,13 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/gorilla/websocket"
 	"github.com/julienschmidt/httprouter"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/networks/p2p/simulations/adapters"
 	"github.com/klaytn/klaytn/networks/rpc"
-	"golang.org/x/net/websocket"
 )
 
 // DefaultClient is the default simulation API client which expects the API
@@ -704,16 +704,20 @@ func (s *Server) Options(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+var wsUpgrade = websocket.Upgrader{
+	CheckOrigin: func(*http.Request) bool { return true },
+}
+
 // NodeRPC forwards RPC requests to a node in the network via a WebSocket
 // connection
 func (s *Server) NodeRPC(w http.ResponseWriter, req *http.Request) {
-	node := req.Context().Value("node").(*Node)
-
-	handler := func(conn *websocket.Conn) {
-		node.ServeRPC(conn)
+	conn, err := wsUpgrade.Upgrade(w, req, nil)
+	if err != nil {
+		return
 	}
-
-	websocket.Server{Handler: handler}.ServeHTTP(w, req)
+	defer conn.Close()
+	node := req.Context().Value("node").(*Node)
+	node.ServeRPC(conn)
 }
 
 // ServeHTTP implements the http.Handler interface by delegating to the
