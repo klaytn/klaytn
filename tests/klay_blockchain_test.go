@@ -205,13 +205,6 @@ func newKlaytnNode(t *testing.T, dir string, validator *TestAccountType, config 
 		genesis.Config = config
 	}
 
-	// NOTE: Uncomment these lines to enable features
-	// TODO: Receive ChainConfig as optional argument
-	// genesis.Config.IstanbulCompatibleBlock = big.NewInt(0)
-	// genesis.Config.LondonCompatibleBlock = big.NewInt(0)
-	// genesis.Config.EthTxTypeCompatibleBlock = big.NewInt(0)
-	// genesis.Config.KIP71CompatibleBlock = big.NewInt(0)
-
 	cnConf := cn.GetDefaultConfig()
 	cnConf.Genesis = genesis
 	cnConf.Rewardbase = validator.Addr
