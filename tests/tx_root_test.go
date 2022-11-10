@@ -18,8 +18,11 @@ package tests
 
 import (
 	"fmt"
+	"math/big"
 	"testing"
 	"time"
+
+	"github.com/klaytn/klaytn/crypto"
 
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common/profile"
@@ -42,6 +45,31 @@ func BenchmarkDeriveSha(b *testing.B) {
 				benchDeriveSha(b, nt, 4, f)
 			})
 		}
+	}
+}
+
+func BenchmarkDeriveShaSingleAccount(b *testing.B) {
+	txs, err := genTxs(4000)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	funcs := map[string]types.IDeriveSha{
+		"Orig":   types.DeriveShaOrig{},
+		"Simple": types.DeriveShaSimple{},
+		"Concat": types.DeriveShaConcat{},
+	}
+
+	for k, f := range funcs {
+		b.Run(k, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				if k == "Orig" {
+					f.DeriveSha(txs, statedb.NewStackTrie(nil))
+				} else {
+					f.DeriveSha(txs, nil)
+				}
+			}
+		})
 	}
 }
 
@@ -81,9 +109,29 @@ func benchDeriveSha(b *testing.B, numTransactions, numValidators int, sha types.
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		hash := sha.DeriveSha(txs, statedb.NewStackTrie(nil))
-		if testing.Verbose() {
-			fmt.Printf("[%d] txhash = %s\n", i, hash.Hex())
-		}
+		sha.DeriveSha(txs, statedb.NewStackTrie(nil))
 	}
+}
+
+func genTxs(num uint64) (types.Transactions, error) {
+	key, err := crypto.HexToECDSA("deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
+	if err != nil {
+		return nil, err
+	}
+	addr := crypto.PubkeyToAddress(key.PublicKey)
+	newTx := func(i uint64) (*types.Transaction, error) {
+		signer := types.NewEIP155Signer(big.NewInt(18))
+		utx := types.NewTransaction(i, addr, new(big.Int), 0, new(big.Int).SetUint64(10000000), nil)
+		tx, err := types.SignTx(utx, signer, key)
+		return tx, err
+	}
+	var txs types.Transactions
+	for i := uint64(0); i < num; i++ {
+		tx, err := newTx(i)
+		if err != nil {
+			return nil, err
+		}
+		txs = append(txs, tx)
+	}
+	return txs, nil
 }
