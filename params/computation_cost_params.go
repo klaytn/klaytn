@@ -170,5 +170,5 @@ const (
 	XorComputationCostIstanbul    = 454
 
 	// computation costs for opcode added at koreCompatible Protocol Upgrade
-	RandomComputationCost = 199
+	RandomComputationCost = 1498
 )
