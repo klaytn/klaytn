@@ -74,8 +74,7 @@ func TestGovParamSet_ParseValue(t *testing.T) {
 func TestGovParamSet_ParseBytes(t *testing.T) {
 	zeroAddrHex := "0x0000000000000000000000000000000000000000"
 	zeroAddr := common.HexToAddress(zeroAddrHex)
-	mintingAmount := "9600000000000000000"
-	mintingAmountBig, _ := new(big.Int).SetString(mintingAmount, 10)
+	mintingAmountStr := "9600000000000000000"
 
 	testcases := []struct {
 		ty     *govParamType
@@ -95,8 +94,9 @@ func TestGovParamSet_ParseBytes(t *testing.T) {
 		{govParamTypeUint64, []byte{1, 2, 3, 4, 5, 6, 7, 8}, uint64(0x0102030405060708), true},
 		{govParamTypeUint64, []byte{1, 1, 2, 3, 4, 5, 6, 7, 8}, nil, false},
 
-		{govParamTypeBigInt, mintingAmountBig.Bytes(), mintingAmount, true},
-		{govParamTypeBigInt, []byte{0x12, 0x34}, "4660", true},
+		{govParamTypeBigInt, []byte(mintingAmountStr), mintingAmountStr, true},
+		{govParamTypeBigInt, []byte("abcd"), nil, false},
+		{govParamTypeBigInt, []byte(""), nil, false},
 
 		{govParamTypeRatio, []byte("100/0/0"), "100/0/0", true},
 		{govParamTypeRatio, []byte("10/20/30/40"), nil, false},

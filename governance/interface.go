@@ -17,6 +17,8 @@
 package governance
 
 import (
+	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
@@ -98,4 +100,15 @@ type HeaderEngine interface {
 	SetBlockchain(chain blockChain)
 	SetTxPool(txpool txPool)
 	GetTxPool() txPool
+}
+
+// blockChain is an interface for blockchain.Blockchain used in governance package.
+type blockChain interface {
+	blockchain.ChainContext
+
+	CurrentHeader() *types.Header
+	GetHeaderByNumber(val uint64) *types.Header
+	GetBlockByNumber(num uint64) *types.Block
+	StateAt(root common.Hash) (*state.StateDB, error)
+	Config() *params.ChainConfig
 }

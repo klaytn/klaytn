@@ -26,7 +26,6 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
@@ -169,19 +168,6 @@ type VoteMap struct {
 type txPool interface {
 	SetGasPrice(price *big.Int)
 	GasPrice() *big.Int
-}
-
-// blockChain is an interface for blockchain.Blockchain used in governance package.
-type blockChain interface {
-	CurrentHeader() *types.Header
-	GetHeaderByNumber(val uint64) *types.Header
-	SetProposerPolicy(val uint64)
-	SetUseGiniCoeff(val bool)
-	SetLowerBoundBaseFee(val uint64)
-	SetUpperBoundBaseFee(val uint64)
-	SetGasTarget(val uint64)
-	SetMaxBlockGasUsedForBaseFee(val uint64)
-	SetBaseFeeDenominator(val uint64)
 }
 
 type Governance struct {
