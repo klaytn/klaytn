@@ -294,8 +294,7 @@ type DBManager interface {
 type DBEntryType uint8
 
 const (
-	backupHashCnt             = 128
-	MiscDB        DBEntryType = iota // Do not move MiscDB which has the path of others DB.
+	MiscDB DBEntryType = iota // Do not move MiscDB which has the path of others DB.
 	headerDB
 	BodyDB
 	ReceiptsDB
@@ -332,6 +331,7 @@ func (et DBEntryType) String() string {
 const (
 	notInMigrationFlag = 0
 	inMigrationFlag    = 1
+	backupHashCnt      = 128
 )
 
 var dbBaseDirs = [databaseEntryTypeSize]string{
