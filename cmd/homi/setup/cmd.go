@@ -405,7 +405,7 @@ func genServiceChainCommonGenesis(nodeAddrs, testAddrs []common.Address) *blockc
 func genServiceChainGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
 	genesisJson := genServiceChainCommonGenesis(nodeAddrs, testAddrs)
 	genesisJson.Config.Istanbul.Epoch = 3600
-	allocationFunction := genesis.Alloc(append(nodeAddrs, testAddrs...), new(big.Int).Exp(big.NewInt(10), big.NewInt(10), nil))
+	allocationFunction := genesis.Alloc(append(nodeAddrs, testAddrs...), new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil))
 	allocationFunction(genesisJson)
 	return genesisJson
 }
