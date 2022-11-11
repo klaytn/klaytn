@@ -21,6 +21,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/crypto/sha3"
 	"github.com/klaytn/klaytn/rlp"
@@ -61,15 +62,10 @@ func sigHash(header *types.Header) (hash common.Hash, err error) {
 	return hash, nil
 }
 
-func makeBlockGroupOutput(blockchain *blockchain.BlockChain, block *types.Block, receipts types.Receipts) map[string]interface{} {
+func makeBlockGroupOutput(blockchain *blockchain.BlockChain, block *types.Block, cInfo consensus.ConsensusInfo, receipts types.Receipts) map[string]interface{} {
 	head := block.Header() // copies the header once
 	hash := head.Hash()
 
-	proposer, committee, err := getProposerAndValidatorsFromBlock(block)
-	if err != nil {
-		// skip error handling when getting proposer and committee is failed
-		logger.Error("Getting the proposer and validators failed.", "blockHash", hash, "err", err)
-	}
 	td := blockchain.GetTd(hash, block.NumberU64())
 	r, _ := klaytnApi.RpcOutputBlock(block, td, false, false, blockchain.Config().IsEthTxTypeForkEnabled(block.Header().Number))
 
@@ -81,8 +77,10 @@ func makeBlockGroupOutput(blockchain *blockchain.BlockChain, block *types.Block,
 		rpcTransactions[i] = klaytnApi.RpcOutputReceipt(head, tx, hash, head.Number.Uint64(), uint64(i), receipts[i])
 	}
 
-	r["committee"] = committee
-	r["proposer"] = proposer
+	r["committee"] = cInfo.Committee
+	r["proposer"] = cInfo.Proposer
+	r["round"] = cInfo.Round
+	r["originProposer"] = cInfo.OriginProposer
 	r["transactions"] = rpcTransactions
 	return r
 }

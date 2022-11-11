@@ -160,7 +160,7 @@ func remoteConsole(ctx *cli.Context) error {
 // for "ken attach" and "ken monitor" with no argument.
 func dialRPC(endpoint string) (*rpc.Client, error) {
 	if endpoint == "" {
-		endpoint = node.DefaultIPCEndpoint(clientIdentifier)
+		endpoint = node.DefaultIPCEndpoint(utils.ClientIdentifier)
 	} else if strings.HasPrefix(endpoint, "rpc:") || strings.HasPrefix(endpoint, "ipc:") {
 		// TODO-Klaytn-RemoveLater: The below backward compatibility is not related to Klaytn.
 		// Backwards compatibility with klaytn < 1.5 which required

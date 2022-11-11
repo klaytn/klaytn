@@ -677,6 +677,10 @@ type filterBackend struct {
 func (fb *filterBackend) ChainDB() database.DBManager { return fb.db }
 func (fb *filterBackend) EventMux() *event.TypeMux    { panic("not supported") }
 
+func (fb *filterBackend) HeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error) {
+	return fb.bc.GetHeaderByHash(hash), nil
+}
+
 func (fb *filterBackend) HeaderByNumber(_ context.Context, block rpc.BlockNumber) (*types.Header, error) {
 	if block == rpc.LatestBlockNumber {
 		return fb.bc.CurrentHeader(), nil

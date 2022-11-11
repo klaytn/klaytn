@@ -35,6 +35,7 @@ var (
 	BaobabGenesisHash       = common.HexToHash("0xe33ff05ceec2581ca9496f38a2bf9baad5d4eed629e896ccb33d1dc991bc4b4a") // baobab genesis hash to enforce below configs on
 	AuthorAddressForTesting = common.HexToAddress("0xc0ea08a2d404d3172d2add29a45be56da40e2949")
 	mintingAmount, _        = new(big.Int).SetString("9600000000000000000", 10)
+	logger                  = log.NewModuleLogger(log.Governance)
 )
 
 var (
@@ -190,10 +191,11 @@ type ChainConfig struct {
 
 // GovernanceConfig stores governance information for a network
 type GovernanceConfig struct {
-	GoverningNode  common.Address `json:"governingNode"`
-	GovernanceMode string         `json:"governanceMode"`
-	Reward         *RewardConfig  `json:"reward,omitempty"`
-	KIP71          *KIP71Config   `json:"kip71,omitempty"`
+	GoverningNode    common.Address `json:"governingNode"`
+	GovernanceMode   string         `json:"governanceMode"`
+	GovParamContract common.Address `json:"govParamContract"`
+	Reward           *RewardConfig  `json:"reward,omitempty"`
+	KIP71            *KIP71Config   `json:"kip71,omitempty"`
 }
 
 func (g *GovernanceConfig) DeferredTxFee() bool {
@@ -402,8 +404,6 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *Confi
 
 // SetDefaults fills undefined chain config with default values.
 func (c *ChainConfig) SetDefaults() {
-	logger := log.NewModuleLogger(log.Governance)
-
 	if c.Clique == nil && c.Istanbul == nil {
 		c.Istanbul = GetDefaultIstanbulConfig()
 		logger.Warn("Override the default Istanbul config to the chain config")
@@ -520,10 +520,11 @@ func (c *ChainConfig) Rules(num *big.Int) Rules {
 
 func GetDefaultGovernanceConfig() *GovernanceConfig {
 	gov := &GovernanceConfig{
-		GovernanceMode: DefaultGovernanceMode,
-		GoverningNode:  common.HexToAddress(DefaultGoverningNode),
-		Reward:         GetDefaultRewardConfig(),
-		KIP71:          GetDefaultKIP71Config(),
+		GovernanceMode:   DefaultGovernanceMode,
+		GoverningNode:    common.HexToAddress(DefaultGoverningNode),
+		GovParamContract: common.HexToAddress(DefaultGovParamContract),
+		Reward:           GetDefaultRewardConfig(),
+		KIP71:            GetDefaultKIP71Config(),
 	}
 	return gov
 }

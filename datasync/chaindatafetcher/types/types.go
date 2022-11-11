@@ -20,7 +20,7 @@ package types
 type RequestType uint
 
 const (
-	// RequestTypes for KAS
+	// RequestTypes for KAS (deprecated)
 	RequestTypeTransaction = RequestType(1) << iota
 	RequestTypeTokenTransfer
 	RequestTypeContract
@@ -37,6 +37,23 @@ const (
 	RequestTypeAll      = RequestTypeTransaction | RequestTypeTokenTransfer | RequestTypeContract | RequestTypeTrace
 	RequestTypeGroupAll = RequestTypeBlockGroup | RequestTypeTraceGroup
 )
+
+func (t RequestType) IsValid() bool {
+	return t == RequestTypeBlockGroup || t == RequestTypeTraceGroup || t == RequestTypeGroupAll
+}
+
+func (t RequestType) String() string {
+	switch t {
+	case RequestTypeGroupAll:
+		return "all"
+	case RequestTypeBlockGroup:
+		return "block"
+	case RequestTypeTraceGroup:
+		return "trace"
+	default:
+		return "unknown"
+	}
+}
 
 // Request contains a blockNumber which should be handled and the type of data which should be exported.
 type Request struct {
