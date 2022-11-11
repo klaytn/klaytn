@@ -43,10 +43,7 @@ const (
 )
 
 var (
-	// EmptyRootHash is transaction/receipt root hash when there is no transaction.
-	// This value is initialized in InitDeriveSha.
-	EmptyRootHash = common.Hash{}
-	EngineType    = Engine_IBFT
+	EngineType = Engine_IBFT
 )
 
 //go:generate gencodec -type Header -field-override headerMarshaling -out gen_header_json.go

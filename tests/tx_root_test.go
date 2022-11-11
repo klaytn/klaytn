@@ -29,7 +29,7 @@ import (
 )
 
 func BenchmarkDeriveSha(b *testing.B) {
-	funcs := map[string]types.IDeriveSha{
+	funcs := map[string]derivesha.IDeriveSha{
 		"Orig":   derivesha.DeriveShaOrig{},
 		"Simple": derivesha.DeriveShaSimple{},
 		"Concat": derivesha.DeriveShaConcat{},
@@ -53,7 +53,7 @@ func BenchmarkDeriveShaSingleAccount(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	funcs := map[string]types.IDeriveSha{
+	funcs := map[string]derivesha.IDeriveSha{
 		"Orig":   derivesha.DeriveShaOrig{},
 		"Simple": derivesha.DeriveShaSimple{},
 		"Concat": derivesha.DeriveShaConcat{},
@@ -74,7 +74,7 @@ func BenchmarkDeriveShaOrig(b *testing.B) {
 	})
 }
 
-func benchDeriveSha(b *testing.B, numTransactions, numValidators int, sha types.IDeriveSha) {
+func benchDeriveSha(b *testing.B, numTransactions, numValidators int, sha derivesha.IDeriveSha) {
 	// Initialize blockchain
 	start := time.Now()
 	maxAccounts := numTransactions * 2

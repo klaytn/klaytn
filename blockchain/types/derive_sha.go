@@ -20,9 +20,7 @@
 
 package types
 
-import (
-	"github.com/klaytn/klaytn/common"
-)
+import "github.com/klaytn/klaytn/common"
 
 type DerivableList interface {
 	Len() int
@@ -35,19 +33,9 @@ const (
 	ImplDeriveShaConcat
 )
 
-type IDeriveSha interface {
-	DeriveSha(list DerivableList) common.Hash
-}
-
-var deriveShaObj IDeriveSha = nil
-
-func InitDeriveSha(i IDeriveSha) {
-	deriveShaObj = i
-
-	// reset EmptyRootHash.
-	EmptyRootHash = DeriveSha(Transactions{})
-}
-
-func DeriveSha(list DerivableList) common.Hash {
-	return deriveShaObj.DeriveSha(list)
-}
+var (
+	// EmptyRootHash is a transaction/receipt root hash when there is no transaction.
+	// DeriveSha and EmptyRootHash are populated by derivesha.InitDeriveSha().
+	DeriveSha     func(list DerivableList) common.Hash
+	EmptyRootHash common.Hash
+)
