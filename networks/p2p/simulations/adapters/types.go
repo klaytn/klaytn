@@ -30,6 +30,7 @@ import (
 	"strconv"
 
 	"github.com/docker/docker/pkg/reexec"
+	"github.com/gorilla/websocket"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
@@ -53,7 +54,7 @@ type Node interface {
 	Client() (*rpc.Client, error)
 
 	// ServeRPC serves RPC requests over the given connection
-	ServeRPC(net.Conn) error
+	ServeRPC(*websocket.Conn) error
 
 	// Start starts the node with the given snapshots
 	Start(snapshots map[string][]byte) error

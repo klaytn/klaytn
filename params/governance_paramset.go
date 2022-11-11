@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/log"
 )
 
@@ -141,17 +142,14 @@ var (
 		parseValue: func(v interface{}) (interface{}, bool) {
 			switch v.(type) {
 			case string:
-				_, ok := new(big.Int).SetString(v.(string), 10)
-				return v.(string), ok
+				return v.(string), true
 			case *big.Int:
 				return v.(*big.Int).String(), true
 			default:
 				return nil, false
 			}
 		},
-		parseBytes: func(b []byte) (interface{}, bool) {
-			return new(big.Int).SetBytes(b).String(), true
-		},
+		parseBytes: parseBytesString,
 		validate: func(v interface{}) bool {
 			if n, ok := new(big.Int).SetString(v.(string), 10); ok {
 				return n.Sign() >= 0 // must be non-negative.
@@ -347,6 +345,13 @@ func NewGovParamSetChainConfig(config *ChainConfig) (*GovParamSet, error) {
 				items[MinimumStake] = config.Governance.Reward.MinimumStake.String()
 			}
 		}
+		if config.Governance.KIP71 != nil {
+			items[LowerBoundBaseFee] = config.Governance.KIP71.LowerBoundBaseFee
+			items[UpperBoundBaseFee] = config.Governance.KIP71.UpperBoundBaseFee
+			items[GasTarget] = config.Governance.KIP71.GasTarget
+			items[MaxBlockGasUsedForBaseFee] = config.Governance.KIP71.MaxBlockGasUsedForBaseFee
+			items[BaseFeeDenominator] = config.Governance.KIP71.BaseFeeDenominator
+		}
 	}
 
 	return NewGovParamSetIntMap(items)
@@ -359,6 +364,8 @@ func (p *GovParamSet) set(key int, value interface{}) error {
 	}
 	parsed, ok := ty.ParseValue(value)
 	if !ok {
+		logger.Error("Bad GovParam value",
+			"key", govParamNamesReverse[key], "value", value)
 		return errBadGovParamValue
 	}
 	p.items[key] = parsed
@@ -372,6 +379,8 @@ func (p *GovParamSet) setBytes(key int, bytes []byte) error {
 	}
 	parsed, ok := ty.ParseBytes(bytes)
 	if !ok {
+		logger.Error("Bad GovParam value",
+			"key", govParamNamesReverse[key], "bytes", hexutil.Encode(bytes))
 		return errBadGovParamValue
 	}
 	p.items[key] = parsed
@@ -409,6 +418,94 @@ func (p *GovParamSet) MustGet(key int) interface{} {
 		logger.Crit("Attempted to get missing GovParam item", "key", key, "name", govParamNamesReverse[key])
 		return nil
 	}
+}
+
+func (p *GovParamSet) ToIstanbulConfig() *IstanbulConfig {
+	var ret IstanbulConfig
+	if _, ok := p.Get(Epoch); ok {
+		ret.Epoch = p.Epoch()
+	}
+	if _, ok := p.Get(Policy); ok {
+		ret.ProposerPolicy = p.Policy()
+	}
+	if _, ok := p.Get(CommitteeSize); ok {
+		ret.SubGroupSize = p.CommitteeSize()
+	}
+
+	return &ret
+}
+
+func (p *GovParamSet) ToRewardConfig() *RewardConfig {
+	var ret RewardConfig
+	if _, ok := p.Get(MintingAmount); ok {
+		ret.MintingAmount = p.MintingAmountBig()
+	}
+	if _, ok := p.Get(Ratio); ok {
+		ret.Ratio = p.Ratio()
+	}
+	if _, ok := p.Get(UseGiniCoeff); ok {
+		ret.UseGiniCoeff = p.UseGiniCoeff()
+	}
+	if _, ok := p.Get(DeferredTxFee); ok {
+		ret.DeferredTxFee = p.DeferredTxFee()
+	}
+	if _, ok := p.Get(StakeUpdateInterval); ok {
+		ret.StakingUpdateInterval = p.StakeUpdateInterval()
+	}
+	if _, ok := p.Get(ProposerRefreshInterval); ok {
+		ret.ProposerUpdateInterval = p.ProposerRefreshInterval()
+	}
+	if _, ok := p.Get(MinimumStake); ok {
+		ret.MinimumStake = p.MinimumStakeBig()
+	}
+
+	return &ret
+}
+
+func (p *GovParamSet) ToKIP71Config() *KIP71Config {
+	var ret KIP71Config
+	if _, ok := p.Get(LowerBoundBaseFee); ok {
+		ret.LowerBoundBaseFee = p.LowerBoundBaseFee()
+	}
+	if _, ok := p.Get(UpperBoundBaseFee); ok {
+		ret.UpperBoundBaseFee = p.UpperBoundBaseFee()
+	}
+	if _, ok := p.Get(GasTarget); ok {
+		ret.GasTarget = p.GasTarget()
+	}
+	if _, ok := p.Get(MaxBlockGasUsedForBaseFee); ok {
+		ret.MaxBlockGasUsedForBaseFee = p.MaxBlockGasUsedForBaseFee()
+	}
+	if _, ok := p.Get(BaseFeeDenominator); ok {
+		ret.BaseFeeDenominator = p.BaseFeeDenominator()
+	}
+
+	return &ret
+}
+
+func (p *GovParamSet) ToGovernanceConfig() *GovernanceConfig {
+	var ret GovernanceConfig
+	if _, ok := p.Get(GoverningNode); ok {
+		ret.GoverningNode = p.GoverningNode()
+	}
+	if _, ok := p.Get(GovernanceMode); ok {
+		ret.GovernanceMode = p.GovernanceModeStr()
+	}
+	ret.Reward = p.ToRewardConfig()
+	ret.KIP71 = p.ToKIP71Config()
+
+	return &ret
+}
+
+func (p *GovParamSet) ToChainConfig() *ChainConfig {
+	var ret ChainConfig
+	if _, ok := p.Get(UnitPrice); ok {
+		ret.UnitPrice = p.UnitPrice()
+	}
+	ret.Istanbul = p.ToIstanbulConfig()
+	ret.Governance = p.ToGovernanceConfig()
+
+	return &ret
 }
 
 // Nominal getters. Shortcut for MustGet() + type assertion.
@@ -481,4 +578,24 @@ func (p *GovParamSet) ProposerRefreshInterval() uint64 {
 
 func (p *GovParamSet) Timeout() uint64 {
 	return p.MustGet(Timeout).(uint64)
+}
+
+func (p *GovParamSet) LowerBoundBaseFee() uint64 {
+	return p.MustGet(LowerBoundBaseFee).(uint64)
+}
+
+func (p *GovParamSet) UpperBoundBaseFee() uint64 {
+	return p.MustGet(UpperBoundBaseFee).(uint64)
+}
+
+func (p *GovParamSet) GasTarget() uint64 {
+	return p.MustGet(GasTarget).(uint64)
+}
+
+func (p *GovParamSet) MaxBlockGasUsedForBaseFee() uint64 {
+	return p.MustGet(MaxBlockGasUsedForBaseFee).(uint64)
+}
+
+func (p *GovParamSet) BaseFeeDenominator() uint64 {
+	return p.MustGet(BaseFeeDenominator).(uint64)
 }

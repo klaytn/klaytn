@@ -218,15 +218,15 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	governance := governance.NewMixedEngine(chainConfig, chainDB)
 
 	// Set latest unitPrice/gasPrice
-	chainConfig.UnitPrice = governance.UnitPrice()
+	chainConfig.UnitPrice = governance.Params().UnitPrice()
 	config.GasPrice = new(big.Int).SetUint64(chainConfig.UnitPrice)
 
 	chainConfig.Governance.KIP71 = &params.KIP71Config{
-		LowerBoundBaseFee:         governance.LowerBoundBaseFee(),
-		UpperBoundBaseFee:         governance.UpperBoundBaseFee(),
-		GasTarget:                 governance.GasTarget(),
-		MaxBlockGasUsedForBaseFee: governance.MaxBlockGasUsedForBaseFee(),
-		BaseFeeDenominator:        governance.BaseFeeDenominator(),
+		LowerBoundBaseFee:         governance.Params().LowerBoundBaseFee(),
+		UpperBoundBaseFee:         governance.Params().UpperBoundBaseFee(),
+		GasTarget:                 governance.Params().GasTarget(),
+		MaxBlockGasUsedForBaseFee: governance.Params().MaxBlockGasUsedForBaseFee(),
+		BaseFeeDenominator:        governance.Params().BaseFeeDenominator(),
 	}
 	logger.Info("Initialised chain configuration", "config", chainConfig)
 
@@ -263,7 +263,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		cacheConfig = &blockchain.CacheConfig{
 			ArchiveMode: config.NoPruning, CacheSize: config.TrieCacheSize,
 			BlockInterval: config.TrieBlockInterval, TriesInMemory: config.TriesInMemory,
-			TrieNodeCacheConfig: &config.TrieNodeCacheConfig, SenderTxHashIndexing: config.SenderTxHashIndexing, SnapshotCacheSize: config.SnapshotCacheSize,
+			TrieNodeCacheConfig: &config.TrieNodeCacheConfig, SenderTxHashIndexing: config.SenderTxHashIndexing, SnapshotCacheSize: config.SnapshotCacheSize, SnapshotAsyncGen: config.SnapshotAsyncGen,
 		}
 	)
 
@@ -277,10 +277,10 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	governance.SetBlockchain(cn.blockchain)
 	// Synchronize proposerpolicy & useGiniCoeff
 	if cn.blockchain.Config().Istanbul != nil {
-		cn.blockchain.Config().Istanbul.ProposerPolicy = governance.ProposerPolicy()
+		cn.blockchain.Config().Istanbul.ProposerPolicy = governance.Params().Policy()
 	}
 	if cn.blockchain.Config().Governance.Reward != nil {
-		cn.blockchain.Config().Governance.Reward.UseGiniCoeff = governance.UseGiniCoeff()
+		cn.blockchain.Config().Governance.Reward.UseGiniCoeff = governance.Params().UseGiniCoeff()
 	}
 
 	if config.SenderTxHashIndexing {
@@ -321,7 +321,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		logger.Error("Error happened while setting the reward wallet", "err", err)
 	}
 
-	if governance.ProposerPolicy() == uint64(istanbul.WeightedRandom) {
+	if governance.Params().Policy() == uint64(istanbul.WeightedRandom) {
 		// NewStakingManager is called with proper non-nil parameters
 		reward.NewStakingManager(cn.blockchain, governance, cn.chainDB)
 	}
@@ -357,6 +357,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	cn.addComponent(cn.txPool)
 	cn.addComponent(cn.APIs())
 	cn.addComponent(cn.ChainDB())
+	cn.addComponent(cn.engine)
 
 	if config.AutoRestartFlag {
 		daemonPath := config.DaemonPathFlag

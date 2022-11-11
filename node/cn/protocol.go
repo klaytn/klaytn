@@ -53,7 +53,7 @@ var ProtocolVersions = []uint{klay65, klay64, klay63, klay62}
 // ProtocolLengths are the number of implemented message corresponding to different protocol versions.
 var ProtocolLengths = []uint64{21, 19, 17, 8}
 
-const ProtocolMaxMsgSize = 10 * 1024 * 1024 // Maximum cap on the size of a protocol message
+const ProtocolMaxMsgSize = 12 * 1024 * 1024 // Maximum cap on the size of a protocol message
 
 // Klaytn protocol message codes
 // TODO-Klaytn-Issue751 Protocol message should be refactored. Present code is not used.

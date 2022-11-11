@@ -16,6 +16,8 @@
 
 package contracts
 
+//go:generate abigen --sol ./gov/GovParam.sol --pkg gov --out ./gov/GovParam.go
+
 //go:generate abigen --sol ./bridge/Bridge.sol --pkg bridge --out ./bridge/Bridge.go
 //go:generate abigen --sol ./extbridge/ext_bridge.sol --pkg extbridge --out ./extbridge/ext_bridge.go
 

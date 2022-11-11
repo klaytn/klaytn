@@ -37,7 +37,7 @@ import (
 
 func newTestChainDataFetcher() *ChainDataFetcher {
 	return &ChainDataFetcher{
-		config:                DefaultChainDataFetcherConfig,
+		config:                DefaultChainDataFetcherConfig(),
 		chainCh:               make(chan blockchain.ChainEvent),
 		reqCh:                 make(chan *cfTypes.Request),
 		stopCh:                make(chan struct{}),
