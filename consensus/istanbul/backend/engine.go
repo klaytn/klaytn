@@ -42,6 +42,7 @@ import (
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/rlp"
+	"github.com/klaytn/klaytn/storage/statedb"
 )
 
 const (
@@ -495,7 +496,7 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 	header.Root = state.IntermediateRoot(true)
 
 	// Assemble and return the final block for sealing
-	return types.NewBlock(header, txs, receipts), nil
+	return types.NewBlock(header, txs, receipts, statedb.NewStackTrie(nil)), nil
 }
 
 // Seal generates a new block for the given input block with the local miner's

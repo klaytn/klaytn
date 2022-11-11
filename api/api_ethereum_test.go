@@ -29,6 +29,7 @@ import (
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
+	"github.com/klaytn/klaytn/storage/statedb"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -1180,7 +1181,7 @@ func createTestData(t *testing.T, header *types.Header) (*types.Block, types.Tra
 
 	// Create test data for chainDataAnchoring tx
 	{
-		dummyBlock := types.NewBlock(&types.Header{}, nil, nil)
+		dummyBlock := types.NewBlock(&types.Header{}, nil, nil, statedb.NewStackTrie(nil))
 		scData, err := types.NewAnchoringDataType0(dummyBlock, 0, uint64(dummyBlock.Transactions().Len()))
 		if err != nil {
 			t.Fatal(err)
@@ -1872,9 +1873,9 @@ func createTestData(t *testing.T, header *types.Header) (*types.Block, types.Tra
 	// Create a block which includes all transaction data.
 	var block *types.Block
 	if header != nil {
-		block = types.NewBlock(header, txs, receipts)
+		block = types.NewBlock(header, txs, receipts, statedb.NewStackTrie(nil))
 	} else {
-		block = types.NewBlock(&types.Header{Number: big.NewInt(1)}, txs, nil)
+		block = types.NewBlock(&types.Header{Number: big.NewInt(1)}, txs, nil, statedb.NewStackTrie(nil))
 	}
 
 	return block, txs, txHashMap, receiptMap, receipts
@@ -1960,9 +1961,9 @@ func createEthereumTypedTestData(t *testing.T, header *types.Header) (*types.Blo
 	// Create a block which includes all transaction data.
 	var block *types.Block
 	if header != nil {
-		block = types.NewBlock(header, txs, receipts)
+		block = types.NewBlock(header, txs, receipts, statedb.NewStackTrie(nil))
 	} else {
-		block = types.NewBlock(&types.Header{Number: big.NewInt(1)}, txs, nil)
+		block = types.NewBlock(&types.Header{Number: big.NewInt(1)}, txs, nil, statedb.NewStackTrie(nil))
 	}
 
 	return block, txs, txHashMap, receiptMap, receipts

@@ -37,6 +37,7 @@ import (
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
+	"github.com/klaytn/klaytn/storage/statedb"
 )
 
 //go:generate gencodec -type Genesis -field-override genesisSpecMarshaling -out gen_genesis.go
@@ -334,7 +335,7 @@ func (g *Genesis) ToBlock(baseStateRoot common.Hash, db database.DBManager) *typ
 	stateDB.Commit(false)
 	stateDB.Database().TrieDB().Commit(root, true, g.Number)
 
-	return types.NewBlock(head, nil, nil)
+	return types.NewBlock(head, nil, nil, statedb.NewStackTrie(nil))
 }
 
 // Commit writes the block and state of a genesis specification to the database.

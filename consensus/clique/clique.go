@@ -43,6 +43,7 @@ import (
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
+	"github.com/klaytn/klaytn/storage/statedb"
 )
 
 const (
@@ -575,7 +576,7 @@ func (c *Clique) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	header.Root = state.IntermediateRoot(true)
 
 	// Assemble and return the final block for sealing
-	return types.NewBlock(header, txs, receipts), nil
+	return types.NewBlock(header, txs, receipts, statedb.NewStackTrie(nil)), nil
 }
 
 // Authorize injects a private key into the consensus engine to mint new blocks

@@ -41,6 +41,7 @@ import (
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/storage/database"
+	"github.com/klaytn/klaytn/storage/statedb"
 )
 
 const (
@@ -331,7 +332,7 @@ func (sb *backend) Verify(proposal istanbul.Proposal) (time.Duration, error) {
 	}
 
 	// check block body
-	txnHash := types.DeriveSha(block.Transactions())
+	txnHash := types.DeriveSha(block.Transactions(), statedb.NewStackTrie(nil))
 	if txnHash != block.Header().TxHash {
 		return 0, errMismatchTxhashes
 	}

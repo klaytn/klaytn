@@ -272,6 +272,10 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		return nil, err
 	}
 	bc.SetCanonicalBlock(config.StartBlockNumber)
+	if chainConfig.IsKoreForkEnabled(bc.CurrentBlock().Number()) {
+		chainConfig.DeriveShaImpl = 0
+		blockchain.InitDeriveSha(0)
+	}
 
 	cn.blockchain = bc
 	governance.SetBlockchain(cn.blockchain)

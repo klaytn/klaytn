@@ -25,15 +25,15 @@ func InitDeriveSha(deriveShaImpl int) {
 	switch deriveShaImpl {
 	case types.ImplDeriveShaOriginal:
 		logger.Info("Using DeriveShaOrig!")
-		types.InitDeriveSha(statedb.DeriveShaOrig{})
+		types.InitDeriveSha(types.DeriveShaOrig{}, statedb.NewStackTrie(nil))
 	case types.ImplDeriveShaSimple:
 		logger.Info("Using DeriveShaSimple!")
-		types.InitDeriveSha(types.DeriveShaSimple{})
+		types.InitDeriveSha(types.DeriveShaSimple{}, nil)
 	case types.ImplDeriveShaConcat:
 		logger.Info("Using DeriveShaConcat!")
-		types.InitDeriveSha(types.DeriveShaConcat{})
+		types.InitDeriveSha(types.DeriveShaConcat{}, nil)
 	default:
 		logger.Error("Undefined deriveShaImpl!! use DeriveShaOrig!")
-		types.InitDeriveSha(statedb.DeriveShaOrig{})
+		types.InitDeriveSha(types.DeriveShaOrig{}, statedb.NewStackTrie(nil))
 	}
 }

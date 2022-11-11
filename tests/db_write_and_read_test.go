@@ -28,6 +28,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/storage/database"
+	"github.com/klaytn/klaytn/storage/statedb"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -271,7 +272,7 @@ func testWriteAndReadBlock(t *testing.T, dbManager database.DBManager) {
 	receipts := types.Receipts{generateReceipt(111)}
 
 	blockchain.InitDeriveSha(types.ImplDeriveShaOriginal)
-	block := types.NewBlock(header, body.Transactions, receipts)
+	block := types.NewBlock(header, body.Transactions, receipts, statedb.NewStackTrie(nil))
 
 	// 1. Before write, nil should be returned.
 	assert.Equal(t, (*types.Block)(nil), dbManager.ReadBlock(hash, blockNum))

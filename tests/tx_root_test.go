@@ -22,6 +22,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/klaytn/klaytn/crypto"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common/profile"
 	"github.com/klaytn/klaytn/crypto"
@@ -30,7 +32,7 @@ import (
 
 func BenchmarkDeriveSha(b *testing.B) {
 	funcs := map[string]types.IDeriveSha{
-		"Orig":   statedb.DeriveShaOrig{},
+		"Orig":   types.DeriveShaOrig{},
 		"Simple": types.DeriveShaSimple{},
 		"Concat": types.DeriveShaConcat{},
 	}
@@ -54,7 +56,7 @@ func BenchmarkDeriveShaSingleAccount(b *testing.B) {
 	}
 
 	funcs := map[string]types.IDeriveSha{
-		"Orig":   statedb.DeriveShaOrig{},
+		"Orig":   types.DeriveShaOrig{},
 		"Simple": types.DeriveShaSimple{},
 		"Concat": types.DeriveShaConcat{},
 	}
@@ -62,7 +64,11 @@ func BenchmarkDeriveShaSingleAccount(b *testing.B) {
 	for k, f := range funcs {
 		b.Run(k, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				f.DeriveSha(txs)
+				if k == "Orig" {
+					f.DeriveSha(txs, statedb.NewStackTrie(nil))
+				} else {
+					f.DeriveSha(txs, nil)
+				}
 			}
 		})
 	}
@@ -70,7 +76,7 @@ func BenchmarkDeriveShaSingleAccount(b *testing.B) {
 
 func BenchmarkDeriveShaOrig(b *testing.B) {
 	b.Run("1000test-stackTrie", func(b *testing.B) {
-		benchDeriveSha(b, 1000, 4, statedb.DeriveShaOrig{})
+		benchDeriveSha(b, 1000, 4, types.DeriveShaOrig{})
 	})
 }
 
@@ -104,7 +110,7 @@ func benchDeriveSha(b *testing.B, numTransactions, numValidators int, sha types.
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		sha.DeriveSha(txs)
+		sha.DeriveSha(txs, statedb.NewStackTrie(nil))
 	}
 }
 

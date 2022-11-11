@@ -37,6 +37,7 @@ import (
 	klaytnmetrics "github.com/klaytn/klaytn/metrics"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
+	"github.com/klaytn/klaytn/storage/statedb"
 	"github.com/rcrowley/go-metrics"
 )
 
@@ -498,6 +499,10 @@ func (self *worker) commitNewWork() {
 	parent := self.chain.CurrentBlock()
 	nextBlockNum := new(big.Int).Add(parent.Number(), common.Big1)
 	var nextBaseFee *big.Int
+	if self.config.KoreCompatibleBlock.Cmp(nextBlockNum) == 0 {
+		self.config.DeriveShaImpl = 0
+		blockchain.InitDeriveSha(0)
+	}
 	if self.nodetype == common.CONSENSUSNODE {
 		if self.config.IsMagmaForkEnabled(nextBlockNum) {
 			// NOTE-klaytn NextBlockBaseFee needs the header of parent, self.chain.CurrentBlock
@@ -613,6 +618,7 @@ func (self *worker) updateSnapshot() {
 		self.current.header,
 		self.current.txs,
 		self.current.receipts,
+		statedb.NewStackTrie(nil),
 	)
 	self.snapshotState = self.current.state.Copy()
 }
