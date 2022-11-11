@@ -2,6 +2,8 @@ module github.com/klaytn/klaytn
 
 go 1.15
 
+replace github.com/labstack/echo/v4 v4.2.0 => github.com/labstack/echo/v4 v4.9.0
+
 require (
 	github.com/Shopify/sarama v1.26.4
 	github.com/VictoriaMetrics/fastcache v1.6.0
