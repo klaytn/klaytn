@@ -2,6 +2,10 @@ module github.com/klaytn/klaytn
 
 go 1.15
 
+// TODO: labstack/echo/v4 < v4.9.0 has bug, however DataDog/dd-trace-go uses v4.2.0
+// Since dd-trace-go has not updated labstack/echo/v4 to patched version,
+// we should replace vulnerable version of labstack/echo/v4 to the patched version.
+// Reference: https://github.com/DataDog/dd-trace-go/issues/1458
 replace github.com/labstack/echo/v4 v4.2.0 => github.com/labstack/echo/v4 v4.9.0
 
 require (
