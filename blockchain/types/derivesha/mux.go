@@ -34,8 +34,10 @@ type IDeriveSha interface {
 	DeriveSha(list types.DerivableList) common.Hash
 }
 
-var deriveShaObj IDeriveSha = nil
-var logger = log.NewModuleLogger(log.Blockchain)
+var (
+	deriveShaObj IDeriveSha = nil
+	logger                  = log.NewModuleLogger(log.Blockchain)
+)
 
 func InitDeriveSha(implType int) {
 	switch implType {
