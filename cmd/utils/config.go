@@ -311,6 +311,12 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 // setNodeConfig applies node-related command line flags to the config.
 func (kCfg *KlayConfig) SetNodeConfig(ctx *cli.Context) {
 	cfg := &kCfg.Node
+	// ntp check enable with remote server
+	if ctx.GlobalBool(NtpDisableFlag.Name) {
+		cfg.NtpRemoteServer = ""
+	} else {
+		cfg.NtpRemoteServer = ctx.GlobalString(NtpServerFlag.Name)
+	}
 	SetP2PConfig(ctx, &cfg.P2P)
 	setIPC(ctx, cfg)
 
