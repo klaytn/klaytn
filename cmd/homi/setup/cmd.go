@@ -242,7 +242,7 @@ func genGovernanceConfig(ctx *cli.Context) *params.GovernanceConfig {
 	}
 	govParamContract := ctx.String(govParamFlag.Name)
 	if !common.IsHexAddress(govParamContract) {
-		log.Fatalf("Governance Contract is not a valid hex address", "value", govParamContract)
+		log.Fatalf("GovParam Contract is not a valid hex address", "value", govParamContract)
 	}
 	return &params.GovernanceConfig{
 		GoverningNode:    common.HexToAddress(governingNode),
