@@ -132,7 +132,6 @@ func (e *MixedEngine) UpdateParams() error {
 	contractParams := e.contractGov.Params()
 	headerParams := e.headerGov.Params()
 
-	// TODO-Klaytn-Kore: merge contractParams
 	newParams := e.assembleParams(headerParams, contractParams)
 	e.handleParamUpdate(e.currentParams, newParams)
 
