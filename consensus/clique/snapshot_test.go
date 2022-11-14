@@ -402,16 +402,18 @@ func TestClique(t *testing.T) {
 		for j, signer := range signers {
 			copy(genesis.ExtraData[ExtraVanity+j*common.AddressLength:], signer[:])
 		}
-		// Create a pristine blockchain with the genesis injected
-		db := database.NewMemoryDBManager()
-		genesis.Commit(common.Hash{}, db)
-
 		// Assemble a chain of headers from the cast votes
 		config := params.TestChainConfig.Copy()
 		config.Clique = &params.CliqueConfig{
 			Period: 1,
 			Epoch:  tt.epoch,
 		}
+		blockchain.InitDeriveSha(config)
+
+		// Create a pristine blockchain with the genesis injected
+		db := database.NewMemoryDBManager()
+		genesis.Commit(common.Hash{}, db)
+
 		engine := New(config.Clique, db)
 		engine.fakeBlockScore = true
 
