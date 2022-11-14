@@ -60,9 +60,8 @@ func (e *ContractEngine) ParamsAt(num uint64) (*params.GovParamSet, error) {
 func (e *ContractEngine) UpdateParams() error {
 	chain := e.headerGov.BlockChain()
 	if chain == nil {
-		logger.Info("ContractEngine disabled: headerGov.BlockChain() is nil")
-		e.currentParams = params.NewGovParamSet()
-		return nil
+		logger.Crit("headerGov.BlockChain() is nil")
+		return errContractEngineNotReady
 	}
 
 	// request the parameters required for generating the next block
@@ -80,8 +79,8 @@ func (e *ContractEngine) UpdateParams() error {
 func (e *ContractEngine) contractGetAllParamsAt(num uint64) (*params.GovParamSet, error) {
 	chain := e.headerGov.BlockChain()
 	if chain == nil {
-		logger.Info("ContractEngine disabled: headerGov.BlockChain() is nil")
-		return params.NewGovParamSet(), nil
+		logger.Crit("headerGov.BlockChain() is nil")
+		return nil, errContractEngineNotReady
 	}
 
 	config := chain.Config()
