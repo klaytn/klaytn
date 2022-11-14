@@ -186,6 +186,8 @@ func genRewardConfig(ctx *cli.Context) *params.RewardConfig {
 		log.Fatalf("Minting amount must be a number", "value", mintingAmountString)
 	}
 	ratio := ctx.String(rewardRatioFlag.Name)
+	kip82Ratio := ctx.String(rewardKip82RatioFlag.Name)
+	useKip82 := ctx.Bool(rewardUseKip82Flag.Name)
 	giniCoeff := ctx.Bool(rewardGiniCoeffFlag.Name)
 	deferredTxFee := ctx.Bool(rewardDeferredTxFeeFlag.Name)
 	stakingInterval := ctx.Uint64(rewardStakingFlag.Name)
@@ -199,6 +201,8 @@ func genRewardConfig(ctx *cli.Context) *params.RewardConfig {
 	return &params.RewardConfig{
 		MintingAmount:          mintingAmount,
 		Ratio:                  ratio,
+		Kip82Ratio:             kip82Ratio,
+		UseKip82:               useKip82,
 		UseGiniCoeff:           giniCoeff,
 		DeferredTxFee:          deferredTxFee,
 		StakingUpdateInterval:  stakingInterval,
@@ -360,6 +364,8 @@ func genCypressCommonGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.
 				Reward: &params.RewardConfig{
 					MintingAmount: mintingAmount,
 					Ratio:         "34/54/12",
+					Kip82Ratio:    "20/80",
+					UseKip82:      true,
 					UseGiniCoeff:  true,
 					DeferredTxFee: true,
 				},
@@ -451,6 +457,8 @@ func genBaobabCommonGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.G
 				Reward: &params.RewardConfig{
 					MintingAmount: mintingAmount,
 					Ratio:         "34/54/12",
+					Kip82Ratio:    "20/80",
+					UseKip82:      true,
 					UseGiniCoeff:  false,
 					DeferredTxFee: true,
 				},
