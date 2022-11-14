@@ -93,9 +93,6 @@ func newMixedEngine(config *params.ChainConfig, db database.DBManager, doInit bo
 
 	e.contractGov = NewContractEngine(e.headerGov)
 
-	// Load last state
-	e.UpdateParams()
-
 	return e
 }
 
