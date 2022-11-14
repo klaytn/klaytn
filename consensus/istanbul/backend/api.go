@@ -298,90 +298,8 @@ func (api *APIExtension) GetCommitteeSize(number *rpc.BlockNumber) (int, error) 
 	}
 }
 
-type ConsensusInfo struct {
-	proposer       common.Address
-	originProposer common.Address // the proposal of 0 round at the same block number
-	committee      []common.Address
-	round          byte
-}
-
-func (api *APIExtension) getConsensusInfo(block *types.Block) (ConsensusInfo, error) {
-	blockNumber := block.NumberU64()
-	if blockNumber == 0 {
-		return ConsensusInfo{}, nil
-	}
-
-	round := block.Header().Round()
-	view := &istanbul.View{
-		Sequence: new(big.Int).Set(block.Number()),
-		Round:    new(big.Int).SetInt64(int64(round)),
-	}
-
-	// get the proposer of this block.
-	proposer, err := ecrecover(block.Header())
-	if err != nil {
-		return ConsensusInfo{}, err
-	}
-
-	// get the snapshot of the previous block.
-	parentHash := block.ParentHash()
-	snap, err := api.istanbul.snapshot(api.chain, blockNumber-1, parentHash, nil, false)
-	if err != nil {
-		logger.Error("Failed to get snapshot.", "hash", snap.Hash, "err", err)
-		return ConsensusInfo{}, errInternalError
-	}
-
-	// get origin proposer at 0 round.
-	originProposer := common.Address{}
-	lastProposer := api.istanbul.GetProposer(blockNumber - 1)
-
-	newValSet := snap.ValSet.Copy()
-	newValSet.CalcProposer(lastProposer, 0)
-	originProposer = newValSet.GetProposer().Address()
-
-	// get the committee list of this block at the view (blockNumber, round)
-	committee := snap.ValSet.SubListWithProposer(parentHash, proposer, view)
-	committeeAddrs := make([]common.Address, len(committee))
-	for i, v := range committee {
-		committeeAddrs[i] = v.Address()
-	}
-
-	// verify the committee list of the block using istanbul
-	//proposalSeal := istanbulCore.PrepareCommittedSeal(block.Hash())
-	//extra, err := types.ExtractIstanbulExtra(block.Header())
-	//istanbulAddrs := make([]common.Address, len(committeeAddrs))
-	//for i, seal := range extra.CommittedSeal {
-	//	addr, err := istanbul.GetSignatureAddress(proposalSeal, seal)
-	//	istanbulAddrs[i] = addr
-	//	if err != nil {
-	//		return proposer, []common.Address{}, err
-	//	}
-	//
-	//	var found bool = false
-	//	for _, v := range committeeAddrs {
-	//		if addr == v {
-	//			found = true
-	//			break
-	//		}
-	//	}
-	//	if found == false {
-	//		logger.Trace("validator is different!", "snap", committeeAddrs, "istanbul", istanbulAddrs)
-	//		return proposer, committeeAddrs, errors.New("validator set is different from Istanbul engine!!")
-	//	}
-	//}
-
-	cInfo := ConsensusInfo{
-		proposer:       proposer,
-		originProposer: originProposer,
-		committee:      committeeAddrs,
-		round:          round,
-	}
-
-	return cInfo, nil
-}
-
 func (api *APIExtension) makeRPCBlockOutput(b *types.Block,
-	cInfo ConsensusInfo, transactions types.Transactions, receipts types.Receipts,
+	cInfo consensus.ConsensusInfo, transactions types.Transactions, receipts types.Receipts,
 ) map[string]interface{} {
 	head := b.Header() // copies the header once
 	hash := head.Hash()
@@ -403,10 +321,10 @@ func (api *APIExtension) makeRPCBlockOutput(b *types.Block,
 		rpcTransactions[i] = klaytnApi.RpcOutputReceipt(head, tx, hash, head.Number.Uint64(), uint64(i), receipts[i])
 	}
 
-	r["committee"] = cInfo.committee
-	r["proposer"] = cInfo.proposer
-	r["round"] = cInfo.round
-	r["originProposer"] = cInfo.originProposer
+	r["committee"] = cInfo.Committee
+	r["proposer"] = cInfo.Proposer
+	r["round"] = cInfo.Round
+	r["originProposer"] = cInfo.OriginProposer
 	r["transactions"] = rpcTransactions
 
 	return r
@@ -447,7 +365,7 @@ func (api *APIExtension) GetBlockWithConsensusInfoByNumber(number *rpc.BlockNumb
 	}
 	blockHash := block.Hash()
 
-	cInfo, err := api.getConsensusInfo(block)
+	cInfo, err := api.istanbul.GetConsensusInfo(block)
 	if err != nil {
 		logger.Error("Getting the proposer and validators failed.", "blockHash", blockHash, "err", err)
 		return nil, errInternalError
@@ -523,7 +441,7 @@ func (api *APIExtension) GetBlockWithConsensusInfoByHash(blockHash common.Hash) 
 		return nil, fmt.Errorf("the block does not exist (block hash: %s)", blockHash.String())
 	}
 
-	cInfo, err := api.getConsensusInfo(block)
+	cInfo, err := api.istanbul.GetConsensusInfo(block)
 	if err != nil {
 		logger.Error("Getting the proposer and validators failed.", "blockHash", blockHash, "err", err)
 		return nil, errInternalError

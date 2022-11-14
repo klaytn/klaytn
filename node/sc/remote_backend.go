@@ -44,10 +44,10 @@ type RemoteBackend struct {
 
 func NewRpcClientP2P(sb *SubBridge) *rpc.Client {
 	initctx := context.Background()
-	c, _ := rpc.NewClient(initctx, func(context.Context) (net.Conn, error) {
+	c, _ := rpc.NewClient(initctx, func(ctx context.Context) (rpc.ServerCodec, error) {
 		p1, p2 := net.Pipe()
 		sb.SetRPCConn(p1)
-		return p2, nil
+		return rpc.NewCodec(p2), nil
 	})
 	return c
 }

@@ -17,10 +17,10 @@
 package rpc
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"net"
-	"reflect"
 	"testing"
 	"time"
 )
@@ -83,11 +83,11 @@ func TestServerRegisterName(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 
-	if len(server.services) != 2 {
-		t.Fatalf("Expected 2 service entries, got %d", len(server.services))
+	if len(server.services.services) != 2 {
+		t.Fatalf("Expected 2 service entries, got %d", len(server.services.services))
 	}
 
-	svc, ok := server.services["calc"]
+	svc, ok := server.services.services["calc"]
 	if !ok {
 		t.Fatalf("Expected service calc to be registered")
 	}
@@ -124,7 +124,7 @@ func testServerMethodExecution(t *testing.T, method string) {
 	clientConn, serverConn := net.Pipe()
 	defer clientConn.Close()
 
-	go server.ServeCodec(NewJSONCodec(serverConn), OptionMethodInvocation)
+	go server.ServeCodec(NewCodec(serverConn), 0)
 
 	out := json.NewEncoder(clientConn)
 	in := json.NewDecoder(clientConn)
@@ -133,23 +133,13 @@ func testServerMethodExecution(t *testing.T, method string) {
 		t.Fatal(err)
 	}
 
-	response := jsonSuccessResponse{Result: &Result{}}
-	if err := in.Decode(&response); err != nil {
+	var msg jsonrpcMessage
+	if err := in.Decode(&msg); err != nil {
 		t.Fatal(err)
 	}
 
-	if result, ok := response.Result.(*Result); ok {
-		if result.String != stringArg {
-			t.Errorf("expected %s, got : %s\n", stringArg, result.String)
-		}
-		if result.Int != intArg {
-			t.Errorf("expected %d, got %d\n", intArg, result.Int)
-		}
-		if !reflect.DeepEqual(result.Args, argsArg) {
-			t.Errorf("expected %v, got %v\n", argsArg, result)
-		}
-	} else {
-		t.Fatalf("invalid response: expected *Result - got: %T", response.Result)
+	if !msg.isResponse() {
+		t.Fatal("message is not response")
 	}
 }
 
@@ -159,4 +149,44 @@ func TestServerMethodExecution(t *testing.T) {
 
 func TestServerMethodWithCtx(t *testing.T) {
 	testServerMethodExecution(t, "echoWithCtx")
+}
+
+// This test checks that responses are delivered for very short-lived connections that
+// only carry a single request.
+func TestServerShortLivedConn(t *testing.T) {
+	server := newTestServer("service", new(Service))
+	defer server.Stop()
+
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal("can't listen:", err)
+	}
+	defer listener.Close()
+	go server.ServeListener(listener)
+
+	var (
+		request  = `{"jsonrpc":"2.0","id":1,"method":"rpc_modules"}` + "\n"
+		wantResp = `{"jsonrpc":"2.0","id":1,"result":{"rpc":"1.0","service":"1.0"}}` + "\n"
+		deadline = time.Now().Add(10 * time.Second)
+	)
+	for i := 0; i < 20; i++ {
+		conn, err := net.Dial("tcp", listener.Addr().String())
+		if err != nil {
+			t.Fatal("can't dial:", err)
+		}
+		defer conn.Close()
+		conn.SetDeadline(deadline)
+		// Write the request, then half-close the connection so the server stops reading.
+		conn.Write([]byte(request))
+		conn.(*net.TCPConn).CloseWrite()
+		// Now try to get the response.
+		buf := make([]byte, 2000)
+		n, err := conn.Read(buf)
+		if err != nil {
+			t.Fatal("read error:", err)
+		}
+		if !bytes.Equal(buf[:n], []byte(wantResp)) {
+			t.Fatalf("wrong response: %s", buf[:n])
+		}
+	}
 }

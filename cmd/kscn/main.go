@@ -84,7 +84,7 @@ func init() {
 func main() {
 	// Set NodeTypeFlag to cn
 	utils.NodeTypeFlag.Value = "cn"
-	utils.NetworkTypeFlag.Value = nodecmd.SCNNetworkType
+	utils.NetworkTypeFlag.Value = utils.SCNNetworkType
 
 	if err := app.Run(os.Args); err != nil {
 		fmt.Fprintln(os.Stderr, err)

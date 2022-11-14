@@ -35,7 +35,7 @@ func BenchmarkDeriveSha(b *testing.B) {
 		"Concat": types.DeriveShaConcat{},
 	}
 
-	NTS := []int{200}
+	NTS := []int{1000}
 
 	for k, f := range funcs {
 		for _, nt := range NTS {
@@ -105,9 +105,6 @@ func benchDeriveSha(b *testing.B, numTransactions, numValidators int, sha types.
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		sha.DeriveSha(txs)
-		//if testing.Verbose() {
-		//	fmt.Printf("[%d] txhash = %s\n", i, hash.Hex())
-		//}
 	}
 }
 

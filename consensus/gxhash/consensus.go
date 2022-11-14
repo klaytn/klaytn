@@ -72,6 +72,11 @@ func (gxhash *Gxhash) CreateSnapshot(chain consensus.ChainReader, number uint64,
 	return nil
 }
 
+// GetConsensusInfo is not used for PoW engine.
+func (gxhash *Gxhash) GetConsensusInfo(block *types.Block) (consensus.ConsensusInfo, error) {
+	return consensus.ConsensusInfo{}, nil
+}
+
 // VerifyHeader checks whether a header conforms to the consensus rules of the
 // stock Klaytn gxhash engine.
 func (gxhash *Gxhash) VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool) error {
