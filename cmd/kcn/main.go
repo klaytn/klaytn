@@ -66,6 +66,8 @@ func init() {
 
 		// See utils/nodecmd/db_migration.go:
 		nodecmd.MigrationCommand,
+
+		nodecmd.UtilCommand,
 	}
 	sort.Sort(cli.CommandsByName(app.Commands))
 
