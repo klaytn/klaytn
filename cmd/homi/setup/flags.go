@@ -172,6 +172,11 @@ var (
 		Value: "",
 	}
 
+	addressBookMockFlag = cli.BoolFlag{
+		Name:  "address-book-mock",
+		Usage: "Use AddressBookMock instead of AddressBook",
+	}
+
 	dockerImageIdFlag = cli.StringFlag{
 		Name:        "docker-image-id",
 		Value:       "klaytn/klaytn:latest", // https://hub.docker.com/r/klaytn/klaytn

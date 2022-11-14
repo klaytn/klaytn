@@ -85,6 +85,7 @@ var HomiFlags = []cli.Flag{
 	altsrc.NewBoolFlag(patchAddressBookFlag),
 	altsrc.NewStringFlag(patchAddressBookAddrFlag),
 	altsrc.NewStringFlag(outputPathFlag),
+	altsrc.NewBoolFlag(addressBookMockFlag),
 	altsrc.NewStringFlag(dockerImageIdFlag),
 	altsrc.NewBoolFlag(fasthttpFlag),
 	altsrc.NewIntFlag(networkIdFlag),
@@ -529,6 +530,15 @@ func patchGenesisAddressBook(ctx *cli.Context, genesisJson *blockchain.Genesis, 
 	allocationFunction(genesisJson)
 }
 
+func useAddressBookMock(ctx *cli.Context, genesisJson *blockchain.Genesis) {
+	if useMock := ctx.Bool(addressBookMockFlag.Name); !useMock {
+		return
+	}
+
+	allocationFunction := genesis.AddressBookMock()
+	allocationFunction(genesisJson)
+}
+
 func RandStringRunes(n int) string {
 	letterRunes := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789~!@#$%^&*()_+{}|[]")
 
@@ -626,6 +636,7 @@ func Gen(ctx *cli.Context) error {
 
 	allocGenesisFund(ctx, genesisJson)
 	patchGenesisAddressBook(ctx, genesisJson, validatorNodeAddrs)
+	useAddressBookMock(ctx, genesisJson)
 
 	genesisJson.Config.IstanbulCompatibleBlock = big.NewInt(ctx.Int64(istanbulCompatibleBlockNumberFlag.Name))
 	genesisJson.Config.LondonCompatibleBlock = big.NewInt(ctx.Int64(londonCompatibleBlockNumberFlag.Name))
