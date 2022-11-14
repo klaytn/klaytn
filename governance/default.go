@@ -61,6 +61,8 @@ var (
 		"kip71.upperboundbasefee":         params.UpperBoundBaseFee,
 		"reward.mintingamount":            params.MintingAmount,
 		"reward.ratio":                    params.Ratio,
+		"reward.kip82ratio":               params.Kip82Ratio,
+		"reward.usekip82":                 params.UseKip82,
 		"reward.useginicoeff":             params.UseGiniCoeff,
 		"reward.deferredtxfee":            params.DeferredTxFee,
 		"reward.minimumstake":             params.MinimumStake,
@@ -103,6 +105,8 @@ var (
 		params.RemoveValidator:           "governance.removevalidator",
 		params.ConstTxGasHumanReadable:   "param.txgashumanreadable",
 		params.Timeout:                   "istanbul.timeout",
+		params.Kip82Ratio:                "reward.kip82ratio",
+		params.UseKip82:                  "reward.usekip82",
 	}
 
 	ProposerPolicyMap = map[string]int{
@@ -553,7 +557,7 @@ func (g *Governance) ParseVoteValue(gVote *GovernanceVote) (*GovernanceVote, err
 	}
 
 	switch k {
-	case params.GovernanceMode, params.MintingAmount, params.MinimumStake, params.Ratio:
+	case params.GovernanceMode, params.MintingAmount, params.MinimumStake, params.Ratio, params.Kip82Ratio:
 		v, ok := gVote.Value.([]uint8)
 		if !ok {
 			return nil, ErrValueTypeMismatch
@@ -594,7 +598,7 @@ func (g *Governance) ParseVoteValue(gVote *GovernanceVote) (*GovernanceVote, err
 		}
 		v = append(make([]byte, 8-len(v)), v...)
 		val = binary.BigEndian.Uint64(v)
-	case params.UseGiniCoeff, params.DeferredTxFee:
+	case params.UseGiniCoeff, params.DeferredTxFee, params.UseKip82:
 		v, ok := gVote.Value.([]uint8)
 		if !ok {
 			return nil, ErrValueTypeMismatch
@@ -1086,6 +1090,8 @@ func GetGovernanceItemsFromChainConfig(config *params.ChainConfig) GovernanceSet
 			params.UnitPrice:               config.UnitPrice,
 			params.MintingAmount:           governance.Reward.MintingAmount.String(),
 			params.Ratio:                   governance.Reward.Ratio,
+			params.Kip82Ratio:              governance.Reward.Kip82Ratio,
+			params.UseKip82:                governance.Reward.UseKip82,
 			params.UseGiniCoeff:            governance.Reward.UseGiniCoeff,
 			params.DeferredTxFee:           governance.Reward.DeferredTxFee,
 			params.MinimumStake:            governance.Reward.MinimumStake.String(),
