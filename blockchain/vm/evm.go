@@ -310,7 +310,7 @@ func (evm *EVM) CallCode(caller types.ContractRef, addr common.Address, input []
 	}
 
 	if !isProgramAccount(evm, caller.Address(), addr, evm.StateDB) {
-		logger.Info("Returning since the addr is not a program account", "addr", addr)
+		logger.Debug("Returning since the addr is not a program account", "addr", addr)
 		return nil, gas, nil
 	}
 
@@ -348,7 +348,7 @@ func (evm *EVM) DelegateCall(caller types.ContractRef, addr common.Address, inpu
 	}
 
 	if !isProgramAccount(evm, caller.Address(), addr, evm.StateDB) {
-		logger.Info("Returning since the addr is not a program account", "addr", addr)
+		logger.Debug("Returning since the addr is not a program account", "addr", addr)
 		return nil, gas, nil
 	}
 
@@ -392,7 +392,7 @@ func (evm *EVM) StaticCall(caller types.ContractRef, addr common.Address, input 
 	}
 
 	if !isProgramAccount(evm, caller.Address(), addr, evm.StateDB) {
-		logger.Info("Returning since the addr is not a program account", "addr", addr)
+		logger.Debug("Returning since the addr is not a program account", "addr", addr)
 		return nil, gas, nil
 	}
 

@@ -163,7 +163,7 @@ func accountList(ctx *cli.Context) error {
 	if glogger, err := debug.GetGlogger(); err == nil {
 		log.ChangeGlobalLogLevel(glogger, log.Lvl(log.LvlError))
 	}
-	stack, _ := makeConfigNode(ctx)
+	stack, _ := utils.MakeConfigNode(ctx)
 	var index int
 	for _, wallet := range stack.AccountManager().Wallets() {
 		for _, account := range wallet.Accounts() {
@@ -264,14 +264,14 @@ func accountCreate(ctx *cli.Context) error {
 	if glogger, err := debug.GetGlogger(); err == nil {
 		log.ChangeGlobalLogLevel(glogger, log.Lvl(log.LvlError))
 	}
-	cfg := klayConfig{Node: defaultNodeConfig()}
+	cfg := utils.KlayConfig{Node: utils.DefaultNodeConfig()}
 	// Load config file.
 	if file := ctx.GlobalString(utils.ConfigFileFlag.Name); file != "" {
-		if err := loadConfig(file, &cfg); err != nil {
+		if err := utils.LoadConfig(file, &cfg); err != nil {
 			log.Fatalf("%v", err)
 		}
 	}
-	utils.SetNodeConfig(ctx, &cfg.Node)
+	cfg.SetNodeConfig(ctx)
 	scryptN, scryptP, keydir, err := cfg.Node.AccountConfig()
 	if err != nil {
 		log.Fatalf("Failed to read configuration: %v", err)
@@ -296,7 +296,7 @@ func accountUpdate(ctx *cli.Context) error {
 	if len(ctx.Args()) == 0 {
 		log.Fatalf("No accounts specified to update")
 	}
-	stack, _ := makeConfigNode(ctx)
+	stack, _ := utils.MakeConfigNode(ctx)
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
 
 	for _, addr := range ctx.Args() {
@@ -321,7 +321,7 @@ func accountImport(ctx *cli.Context) error {
 	if err != nil {
 		log.Fatalf("Failed to load the private key: %v", err)
 	}
-	stack, _ := makeConfigNode(ctx)
+	stack, _ := utils.MakeConfigNode(ctx)
 	passphrase := getPassPhrase("Your new account is locked with a password. Please give a password. Do not forget this password.", true, 0, utils.MakePasswordList(ctx))
 
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)

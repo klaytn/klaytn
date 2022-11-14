@@ -28,6 +28,19 @@ var (
 )
 
 var (
+	homiYamlFlag = cli.StringFlag{
+		Name:  "homi-yaml",
+		Usage: "Import homi.yaml to generate the config files to run the nodes",
+	}
+	genTypeFlag = cli.StringFlag{
+		Name:  "gen-type",
+		Usage: "Generate environment files according to the type (docker, local, remote, deploy)",
+		Value: "docker",
+	}
+	genesisTypeFlag = cli.StringFlag{
+		Name:  "genesis-type",
+		Usage: "Set the type of genesis.json to generate (cypress-test, cypress, baobab-test, baobab, clique, servicechain, servicechain-test, istanbul)",
+	}
 	cypressTestFlag = cli.BoolFlag{
 		Name:  "cypress-test",
 		Usage: "Generate genesis.json similar to the one used for Cypress with shorter intervals for testing",
@@ -386,6 +399,12 @@ var (
 	magmaCompatibleBlockNumberFlag = cli.Int64Flag{
 		Name:  "magma-compatible-blocknumber",
 		Usage: "magmaCompatible blockNumber",
+		Value: 0,
+	}
+
+	koreCompatibleBlockNumberFlag = cli.Int64Flag{
+		Name:  "kore-compatible-blocknumber",
+		Usage: "koreCompatible blockNumber",
 		Value: 0,
 	}
 )

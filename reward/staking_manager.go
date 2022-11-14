@@ -227,10 +227,11 @@ func fillMissingGiniCoefficient(stakingInfo *StakingInfo, number uint64) error {
 	// - Gini was calculated but there was no eligible node, so Gini = -1.
 	// For the second case, in theory we won't have to recalculalte Gini,
 	// but there is no way to distinguish both. So we just recalculate.
-	minStaking, err := stakingManager.governanceHelper.GetMinimumStakingAtNumber(number)
+	pset, err := stakingManager.governanceHelper.ParamsAt(number)
 	if err != nil {
 		return err
 	}
+	minStaking := pset.MinimumStakeBig().Uint64()
 
 	c := stakingInfo.GetConsolidatedStakingInfo()
 	if c == nil {
@@ -272,9 +273,10 @@ func handleChainHeadEvent() {
 		select {
 		// Handle ChainHeadEvent
 		case ev := <-stakingManager.chainHeadChan:
-			if stakingManager.governanceHelper.ProposerPolicy() == params.WeightedRandom {
+			pset := stakingManager.governanceHelper.Params()
+			if pset.Policy() == params.WeightedRandom {
 				// check and update if staking info is not valid before for the next update interval blocks
-				stakingInfo := GetStakingInfo(ev.Block.NumberU64() + params.StakingUpdateInterval())
+				stakingInfo := GetStakingInfo(ev.Block.NumberU64() + pset.StakeUpdateInterval())
 				if stakingInfo == nil {
 					logger.Error("unable to fetch staking info", "blockNum", ev.Block.NumberU64())
 				}

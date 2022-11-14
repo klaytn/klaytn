@@ -16,12 +16,12 @@ func newTestMixedEngine(t *testing.T, config *params.ChainConfig) (*MixedEngine,
 	db := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
 
 	e := NewMixedEngine(config, db)
-	defaultGov := e.defaultGov.(*Governance) // to manipulate internal fields
+	headerGov := e.headerGov // to manipulate internal fields
 
 	require.NotNil(t, e)
-	require.NotNil(t, defaultGov)
+	require.NotNil(t, headerGov)
 
-	return e, db, defaultGov
+	return e, db, headerGov
 }
 
 // Without ContractGov, Check that
@@ -51,15 +51,18 @@ func TestMixedEngine_Header_Params(t *testing.T) {
 	valueB := uint64(0x22)
 
 	config := getTestConfig()
-	config.Istanbul.SubGroupSize = valueA
-	e, _, defaultGov := newTestMixedEngine(t, config)
+	config.Governance.KIP71.GasTarget = valueA
+	e, _, headerGov := newTestMixedEngine(t, config)
 
-	defaultGov.currentSet.SetValue(params.CommitteeSize, valueB)
+	headerGov.currentSet.SetValue(params.GasTarget, valueB)
 	err := e.UpdateParams()
 	assert.Nil(t, err)
 
 	pset := e.Params()
-	assert.Equal(t, valueB, pset.CommitteeSize())
+	assert.Equal(t, valueB, pset.GasTarget())
+
+	// check if config is updated as well
+	assert.Equal(t, valueB, config.Governance.KIP71.GasTarget)
 }
 
 // Without ContractGov, Check that
@@ -71,7 +74,7 @@ func TestMixedEngine_Header_ParamsAt(t *testing.T) {
 
 	config := getTestConfig()
 	config.Istanbul.SubGroupSize = valueA
-	e, _, defaultGov := newTestMixedEngine(t, config)
+	e, _, headerGov := newTestMixedEngine(t, config)
 
 	// Write to database. Note that we must use gov.WriteGovernance(), not db.WriteGovernance()
 	// The reason is that gov.ReadGovernance() depends on the caches, and that
@@ -80,7 +83,7 @@ func TestMixedEngine_Header_ParamsAt(t *testing.T) {
 	items["istanbul.committeesize"] = valueB
 	gset := NewGovernanceSet()
 	gset.Import(items)
-	defaultGov.WriteGovernance(30, NewGovernanceSet(), gset)
+	headerGov.WriteGovernance(30, NewGovernanceSet(), gset)
 
 	testcases := []struct {
 		num   uint64
@@ -99,9 +102,8 @@ func TestMixedEngine_Header_ParamsAt(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, tc.value, pset.CommitteeSize())
 
-		// Check that defaultGov.ReadGovernance() == tc
-		// and by extension defaultGov.ReadGovernance() == e.ParamsAt().
-		_, strMap, err := defaultGov.ReadGovernance(tc.num)
+		// Check that headerGov.ReadGovernance() == tc
+		_, strMap, err := headerGov.ReadGovernance(tc.num)
 		assert.Nil(t, err)
 		pset, err = params.NewGovParamSetStrMap(strMap)
 		assert.Nil(t, err)

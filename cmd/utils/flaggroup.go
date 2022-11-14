@@ -312,6 +312,7 @@ var FlagGroups = []FlagGroup{
 			KESNodeTypeServiceFlag,
 			SnapshotFlag,
 			SnapshotCacheSizeFlag,
+			SnapshotAsyncGen,
 		},
 	},
 }
