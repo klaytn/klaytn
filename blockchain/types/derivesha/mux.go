@@ -41,7 +41,7 @@ var (
 	logger = log.NewModuleLogger(log.Blockchain)
 )
 
-func InitDeriveSha(chainConfig *params.ChainConfig) {
+func init() {
 	instances = map[int]IDeriveSha{
 		types.ImplDeriveShaOriginal: DeriveShaOrig{},
 		types.ImplDeriveShaSimple:   DeriveShaSimple{},
@@ -52,7 +52,9 @@ func InitDeriveSha(chainConfig *params.ChainConfig) {
 	for implType, instance := range instances {
 		emptyRoots[implType] = instance.DeriveSha(types.Transactions{})
 	}
+}
 
+func InitDeriveSha(chainConfig *params.ChainConfig) {
 	config = chainConfig
 	types.DeriveSha = DeriveShaMux
 	types.EmptyRootHash = EmptyRootHashMux
