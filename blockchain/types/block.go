@@ -42,9 +42,7 @@ const (
 	Engine_Gxhash
 )
 
-var (
-	EngineType = Engine_IBFT
-)
+var EngineType = Engine_IBFT
 
 //go:generate gencodec -type Header -field-override headerMarshaling -out gen_header_json.go
 
@@ -202,7 +200,7 @@ func NewBlock(header *Header, txs []*Transaction, receipts []*Receipt) *Block {
 	if len(txs) == 0 {
 		b.header.TxHash = EmptyRootHash
 	} else {
-		b.header.TxHash = DeriveSha(Transactions(txs))
+		b.header.TxHash = DeriveSha(Transactions(txs), header.Number)
 		b.transactions = make(Transactions, len(txs))
 		copy(b.transactions, txs)
 	}
@@ -210,7 +208,7 @@ func NewBlock(header *Header, txs []*Transaction, receipts []*Receipt) *Block {
 	if len(receipts) == 0 {
 		b.header.ReceiptHash = EmptyRootHash
 	} else {
-		b.header.ReceiptHash = DeriveSha(Receipts(receipts))
+		b.header.ReceiptHash = DeriveSha(Receipts(receipts), header.Number)
 		b.header.Bloom = CreateBloom(receipts)
 	}
 

@@ -496,7 +496,7 @@ func (f *Fetcher) loop() {
 						announce.time = task.time
 
 						// If the block is empty (header only), short circuit into the final import queue
-						if header.TxHash == types.DeriveSha(types.Transactions{}) {
+						if header.TxHash == types.EmptyRootHash {
 							logger.Trace("Block empty, skipping body retrieval", "peer", announce.origin, "number", header.Number, "hash", header.Hash())
 
 							block := types.NewBlockWithHeader(header)
@@ -567,7 +567,8 @@ func (f *Fetcher) loop() {
 						}
 
 						if common.EmptyHash(txnHash) {
-							txnHash = types.DeriveSha(types.Transactions(task.transactions[i]))
+							txnHash = types.DeriveSha(
+								types.Transactions(task.transactions[i]), announce.header.Number)
 						}
 
 						if txnHash != announce.header.TxHash {
