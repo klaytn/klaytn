@@ -55,11 +55,15 @@ func InitDeriveSha(chainConfig *params.ChainConfig) {
 
 	config = chainConfig
 	types.DeriveSha = DeriveShaMux
-	types.EmptyRootHash = DeriveShaMux(types.Transactions{}, nil)
+	types.EmptyRootHash = EmptyRootHashMux
 }
 
 func DeriveShaMux(list types.DerivableList, num *big.Int) common.Hash {
 	return instances[getType(num)].DeriveSha(list)
+}
+
+func EmptyRootHashMux(num *big.Int) common.Hash {
+	return emptyRoots[getType(num)]
 }
 
 func getType(num *big.Int) int {
