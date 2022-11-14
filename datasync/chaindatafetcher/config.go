@@ -53,15 +53,17 @@ type ChainDataFetcherConfig struct {
 	KafkaConfig *kafka.KafkaConfig
 }
 
-var DefaultChainDataFetcherConfig = &ChainDataFetcherConfig{
-	EnabledChainDataFetcher: false,
-	Mode:                    ModeKAS,
-	NoDefaultStart:          false,
-	NumHandlers:             DefaultNumHandlers,
-	JobChannelSize:          DefaultJobChannelSize,
-	BlockChannelSize:        DefaultBlockChannelSize,
-	MaxProcessingDataSize:   DefaultMaxProcessingDataSize,
+func DefaultChainDataFetcherConfig() *ChainDataFetcherConfig {
+	return &ChainDataFetcherConfig{
+		EnabledChainDataFetcher: false,
+		Mode:                    ModeKAS,
+		NoDefaultStart:          false,
+		NumHandlers:             DefaultNumHandlers,
+		JobChannelSize:          DefaultJobChannelSize,
+		BlockChannelSize:        DefaultBlockChannelSize,
+		MaxProcessingDataSize:   DefaultMaxProcessingDataSize,
 
-	KasConfig:   kas.DefaultKASConfig,
-	KafkaConfig: kafka.GetDefaultKafkaConfig(),
+		KasConfig:   kas.DefaultKASConfig,
+		KafkaConfig: kafka.GetDefaultKafkaConfig(),
+	}
 }

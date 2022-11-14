@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"errors"
 	"math/big"
+	"strings"
 	"testing"
 	"time"
 
@@ -101,20 +102,19 @@ func TestRegressionPanicGetUint(t *testing.T) {
 	}
 }
 
-// TODO-Klaytn-Tracer this test is commentted out since CI is failed due to segmentation fault
-//// TestTracingDeepObject tests if it returns an expected error when the json object has too many recursive children
-//func TestTracingDeepObject(t *testing.T) {
-//	tracer, err := New("{step: function() {}, fault: function() {}, result: function() { var o={}; var x=o; for (var i=0; i<1000; i++){ o.foo={}; o=o.foo; } return x; }}")
-//	if err != nil {
-//		t.Fatal(err)
-//	}
-//
-//	_, err = runTrace(tracer)
-//	expectedErr := `RangeError: json encode recursion limit    in server-side tracer function 'result'`
-//	if !strings.Contains(err.Error(), expectedErr) {
-//		t.Errorf("Expected return error to be %s, got %v", expectedErr, err)
-//	}
-//}
+// TestTracingDeepObject tests if it returns an expected error when the json object has too many recursive children
+func TestTracingDeepObject(t *testing.T) {
+	tracer, err := New("{step: function() {}, fault: function() {}, result: function() { var o={}; var x=o; for (var i=0; i<1000; i++){ o.foo={}; o=o.foo; } return x; }}")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = runTrace(tracer)
+	expectedErr := `RangeError: json encode recursion limit    in server-side tracer function 'result'`
+	if !strings.Contains(err.Error(), expectedErr) {
+		t.Errorf("Expected return error to be %s, got %v", expectedErr, err)
+	}
+}
 
 func TestTracing(t *testing.T) {
 	tracer, err := New("{count: 0, step: function() { this.count += 1; }, fault: function() {}, result: function() { return this.count; }}")

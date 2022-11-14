@@ -839,6 +839,10 @@ func BenchmarkOpDifficulty(b *testing.B) {
 	opBenchmark(b, opDifficulty)
 }
 
+func BenchmarkOpRandom(b *testing.B) {
+	opBenchmark(b, opRandom)
+}
+
 func BenchmarkOpGasLimit(b *testing.B) {
 	opBenchmark(b, opGasLimit)
 }

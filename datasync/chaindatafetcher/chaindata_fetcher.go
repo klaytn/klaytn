@@ -28,6 +28,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kafka"
 	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kas"
 	cfTypes "github.com/klaytn/klaytn/datasync/chaindatafetcher/types"
@@ -62,6 +63,7 @@ type BlockChain interface {
 type ChainDataFetcher struct {
 	config *ChainDataFetcherConfig
 
+	engine     consensus.Engine
 	blockchain BlockChain
 	debugAPI   *tracers.API
 
@@ -191,7 +193,7 @@ func (f *ChainDataFetcher) Stop() error {
 }
 
 func (f *ChainDataFetcher) sendRequests(startBlock, endBlock uint64, reqType cfTypes.RequestType, shouldUpdateCheckpoint bool, stopCh chan struct{}) {
-	logger.Info("sending requests is started", "startBlock", startBlock, "endBlock", endBlock)
+	logger.Info("sending requests is started", "startBlock", startBlock, "endBlock", endBlock, "reqType", reqType)
 	for i := startBlock; i <= endBlock; i++ {
 		for { // spin lock if processing data size is larger than max
 			select {
@@ -218,7 +220,7 @@ func (f *ChainDataFetcher) sendRequests(startBlock, endBlock uint64, reqType cfT
 		case f.reqCh <- cfTypes.NewRequest(reqType, shouldUpdateCheckpoint, i):
 		}
 	}
-	logger.Info("sending requests is finished", "startBlock", startBlock, "endBlock", endBlock)
+	logger.Info("sending requests is finished", "startBlock", startBlock, "endBlock", endBlock, "reqType", reqType)
 }
 
 func (f *ChainDataFetcher) startFetching() error {
@@ -274,7 +276,7 @@ func (f *ChainDataFetcher) startRangeFetching(startBlock, endBlock uint64, reqTy
 		f.sendRequests(startBlock, endBlock, reqType, false, f.rangeFetchingStopCh)
 		atomic.StoreUint32(&f.rangeFetchingStarted, stopped)
 	}()
-	logger.Info("range fetching is started", "startBlock", startBlock, "endBlock", endBlock)
+	logger.Info("range fetching is started", "startBlock", startBlock, "endBlock", endBlock, "reqType", reqType)
 	return nil
 }
 
@@ -364,6 +366,8 @@ func (f *ChainDataFetcher) setComponent(component interface{}) {
 	switch v := component.(type) {
 	case *blockchain.BlockChain:
 		f.blockchain = v
+	case consensus.Engine:
+		f.engine = v
 	case []rpc.API:
 		f.setDebugAPI(v)
 	}

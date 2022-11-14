@@ -1884,6 +1884,7 @@ func (s *Syncer) processStorageResponse(res *storageResponse) {
 	if res.subTask != nil {
 		res.subTask.req = nil
 	}
+	batch := s.db.NewSnapshotDBBatch()
 	var (
 		slots           int
 		oldStorageBytes = s.storageBytes
@@ -2029,7 +2030,7 @@ func (s *Syncer) processStorageResponse(res *storageResponse) {
 		// outdated during the sync, but it can be fixed later during the
 		// snapshot generation.
 		for j := 0; j < len(res.hashes[i]); j++ {
-			s.stateWriter.WriteStorageSnapshot(accountHash, res.hashes[i][j], res.slots[i][j])
+			batch.WriteStorageSnapshot(accountHash, res.hashes[i][j], res.slots[i][j])
 			s.storageBytes += common.StorageSize(len(database.StorageSnapshotKey(accountHash, res.hashes[i][j])) + len(res.slots[i][j]))
 
 			// If we're storing large contracts, generate the trie nodes
@@ -2057,6 +2058,10 @@ func (s *Syncer) processStorageResponse(res *storageResponse) {
 				}
 			}
 		}
+	}
+	// Flush anything written just now and update the stats
+	if err := batch.Write(); err != nil {
+		logger.Crit("Failed to persist storage slots", "err", err)
 	}
 	s.storageSynced += uint64(slots)
 

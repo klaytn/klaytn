@@ -134,7 +134,7 @@ func (sb *backend) GetRewardBase() common.Address {
 }
 
 func (sb *backend) GetSubGroupSize() uint64 {
-	return sb.governance.CommitteeSize()
+	return sb.governance.Params().CommitteeSize()
 }
 
 func (sb *backend) SetCurrentView(view *istanbul.View) {
@@ -220,12 +220,8 @@ func (sb *backend) getTargetReceivers(prevHash common.Hash, valSet istanbul.Vali
 	}
 
 	proposer := valSet.GetProposer()
-	proposerAddr := common.Address{}
-	if proposer != nil {
-		proposerAddr = proposer.Address()
-	}
 	for i := 0; i < 2; i++ {
-		committee := valSet.SubListWithProposer(prevHash, proposerAddr, view)
+		committee := valSet.SubListWithProposer(prevHash, proposer.Address(), view)
 		for _, val := range committee {
 			if val.Address() != sb.Address() {
 				targets[val.Address()] = true
@@ -233,7 +229,6 @@ func (sb *backend) getTargetReceivers(prevHash common.Hash, valSet istanbul.Vali
 		}
 		view.Round = view.Round.Add(view.Round, common.Big1)
 		proposer = valSet.Selector(valSet, common.Address{}, view.Round.Uint64())
-		proposerAddr = proposer.Address()
 	}
 	return targets
 }
@@ -393,7 +388,10 @@ func (sb *backend) ParentValidators(proposal istanbul.Proposal) istanbul.Validat
 	}
 
 	// TODO-Klaytn-Governance The following return case should not be called. Refactor it to error handling.
-	return validator.NewValidatorSet(nil, nil, istanbul.ProposerPolicy(sb.governance.ProposerPolicy()), sb.governance.CommitteeSize(), sb.chain)
+	return validator.NewValidatorSet(nil, nil,
+		istanbul.ProposerPolicy(sb.governance.Params().Policy()),
+		sb.governance.Params().CommitteeSize(),
+		sb.chain)
 }
 
 func (sb *backend) getValidators(number uint64, hash common.Hash) istanbul.ValidatorSet {
@@ -401,7 +399,10 @@ func (sb *backend) getValidators(number uint64, hash common.Hash) istanbul.Valid
 	if err != nil {
 		logger.Error("Snapshot not found.", "err", err)
 		// TODO-Klaytn-Governance The following return case should not be called. Refactor it to error handling.
-		return validator.NewValidatorSet(nil, nil, istanbul.ProposerPolicy(sb.governance.ProposerPolicy()), sb.governance.CommitteeSize(), sb.chain)
+		return validator.NewValidatorSet(nil, nil,
+			istanbul.ProposerPolicy(sb.governance.Params().Policy()),
+			sb.governance.Params().CommitteeSize(),
+			sb.chain)
 	}
 	return snap.ValSet
 }

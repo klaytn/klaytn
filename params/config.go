@@ -35,6 +35,7 @@ var (
 	BaobabGenesisHash       = common.HexToHash("0xe33ff05ceec2581ca9496f38a2bf9baad5d4eed629e896ccb33d1dc991bc4b4a") // baobab genesis hash to enforce below configs on
 	AuthorAddressForTesting = common.HexToAddress("0xc0ea08a2d404d3172d2add29a45be56da40e2949")
 	mintingAmount, _        = new(big.Int).SetString("9600000000000000000", 10)
+	logger                  = log.NewModuleLogger(log.Governance)
 )
 
 var (
@@ -45,6 +46,7 @@ var (
 		LondonCompatibleBlock:    big.NewInt(86816005),
 		EthTxTypeCompatibleBlock: big.NewInt(86816005),
 		MagmaCompatibleBlock:     big.NewInt(99841497),
+		KoreCompatibleBlock:      big.NewInt(0xffffffff),
 		DeriveShaImpl:            2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x52d41ca72af615a1ac3301b0a93efa222ecc7541"),
@@ -74,6 +76,7 @@ var (
 		LondonCompatibleBlock:    big.NewInt(80295291),
 		EthTxTypeCompatibleBlock: big.NewInt(86513895),
 		MagmaCompatibleBlock:     big.NewInt(98347376),
+		KoreCompatibleBlock:      big.NewInt(0xffffffff),
 		DeriveShaImpl:            2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x99fb17d324fa0e07f23b49d09028ac0919414db6"),
@@ -172,6 +175,7 @@ type ChainConfig struct {
 	LondonCompatibleBlock    *big.Int `json:"londonCompatibleBlock,omitempty"`    // LondonCompatibleBlock switch block (nil = no fork, 0 = already on london)
 	EthTxTypeCompatibleBlock *big.Int `json:"ethTxTypeCompatibleBlock,omitempty"` // EthTxTypeCompatibleBlock switch block (nil = no fork, 0 = already on ethTxType)
 	MagmaCompatibleBlock     *big.Int `json:"magmaCompatibleBlock,omitempty"`     // MagmaCompatible switch block (nil = no fork, 0 already on Magma)
+	KoreCompatibleBlock      *big.Int `json:"koreCompatibleBlock,omitempty"`      // KoreCompatible switch block (nil = no fork, 0 already on Kore)
 
 	// Various consensus engines
 	Gxhash   *GxhashConfig   `json:"gxhash,omitempty"` // (deprecated) not supported engine
@@ -185,10 +189,11 @@ type ChainConfig struct {
 
 // GovernanceConfig stores governance information for a network
 type GovernanceConfig struct {
-	GoverningNode  common.Address `json:"governingNode"`
-	GovernanceMode string         `json:"governanceMode"`
-	Reward         *RewardConfig  `json:"reward,omitempty"`
-	KIP71          *KIP71Config   `json:"kip71,omitempty"`
+	GoverningNode    common.Address `json:"governingNode"`
+	GovernanceMode   string         `json:"governanceMode"`
+	GovParamContract common.Address `json:"govParamContract"`
+	Reward           *RewardConfig  `json:"reward,omitempty"`
+	KIP71            *KIP71Config   `json:"kip71,omitempty"`
 }
 
 func (g *GovernanceConfig) DeferredTxFee() bool {
@@ -261,24 +266,26 @@ func (c *ChainConfig) String() string {
 		engine = "unknown"
 	}
 	if c.Istanbul != nil {
-		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d Engine: %v}",
+		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v KoreCompatibleBlock: %v SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d Engine: %v}",
 			c.ChainID,
 			c.IstanbulCompatibleBlock,
 			c.LondonCompatibleBlock,
 			c.EthTxTypeCompatibleBlock,
 			c.MagmaCompatibleBlock,
+			c.KoreCompatibleBlock,
 			c.Istanbul.SubGroupSize,
 			c.UnitPrice,
 			c.DeriveShaImpl,
 			engine,
 		)
 	} else {
-		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v UnitPrice: %d DeriveShaImpl: %d Engine: %v }",
+		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v KoreCompatibleBlock: %v UnitPrice: %d DeriveShaImpl: %d Engine: %v }",
 			c.ChainID,
 			c.IstanbulCompatibleBlock,
 			c.LondonCompatibleBlock,
 			c.EthTxTypeCompatibleBlock,
 			c.MagmaCompatibleBlock,
+			c.KoreCompatibleBlock,
 			c.UnitPrice,
 			c.DeriveShaImpl,
 			engine,
@@ -313,6 +320,11 @@ func (c *ChainConfig) IsMagmaForkEnabled(num *big.Int) bool {
 	return isForked(c.MagmaCompatibleBlock, num)
 }
 
+// IsKoreForkedEnabled returns whether num is either equal to the kore block or greater.
+func (c *ChainConfig) IsKoreForkEnabled(num *big.Int) bool {
+	return isForked(c.KoreCompatibleBlock, num)
+}
+
 // CheckCompatible checks whether scheduled fork transitions have been imported
 // with a mismatching chain configuration.
 func (c *ChainConfig) CheckCompatible(newcfg *ChainConfig, height uint64) *ConfigCompatError {
@@ -345,6 +357,7 @@ func (c *ChainConfig) CheckConfigForkOrder() error {
 		{name: "londonBlock", block: c.LondonCompatibleBlock},
 		{name: "ethTxTypeBlock", block: c.EthTxTypeCompatibleBlock},
 		{name: "magmaBlock", block: c.MagmaCompatibleBlock},
+		{name: "koreBlock", block: c.KoreCompatibleBlock},
 	} {
 		if lastFork.name != "" {
 			// Next one must be higher number
@@ -380,13 +393,14 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *Confi
 	if isForkIncompatible(c.MagmaCompatibleBlock, newcfg.MagmaCompatibleBlock, head) {
 		return newCompatError("Magma Block", c.MagmaCompatibleBlock, newcfg.MagmaCompatibleBlock)
 	}
+	if isForkIncompatible(c.KoreCompatibleBlock, newcfg.KoreCompatibleBlock, head) {
+		return newCompatError("Kore Block", c.KoreCompatibleBlock, newcfg.KoreCompatibleBlock)
+	}
 	return nil
 }
 
 // SetDefaults fills undefined chain config with default values.
 func (c *ChainConfig) SetDefaults() {
-	logger := log.NewModuleLogger(log.Governance)
-
 	if c.Clique == nil && c.Istanbul == nil {
 		c.Istanbul = GetDefaultIstanbulConfig()
 		logger.Warn("Override the default Istanbul config to the chain config")
@@ -483,6 +497,7 @@ type Rules struct {
 	IsIstanbul bool
 	IsLondon   bool
 	IsMagma    bool
+	IsKore     bool
 }
 
 // Rules ensures c's ChainID is not nil.
@@ -496,15 +511,17 @@ func (c *ChainConfig) Rules(num *big.Int) Rules {
 		IsIstanbul: c.IsIstanbulForkEnabled(num),
 		IsLondon:   c.IsLondonForkEnabled(num),
 		IsMagma:    c.IsMagmaForkEnabled(num),
+		IsKore:     c.IsKoreForkEnabled(num),
 	}
 }
 
 func GetDefaultGovernanceConfig() *GovernanceConfig {
 	gov := &GovernanceConfig{
-		GovernanceMode: DefaultGovernanceMode,
-		GoverningNode:  common.HexToAddress(DefaultGoverningNode),
-		Reward:         GetDefaultRewardConfig(),
-		KIP71:          GetDefaultKIP71Config(),
+		GovernanceMode:   DefaultGovernanceMode,
+		GoverningNode:    common.HexToAddress(DefaultGoverningNode),
+		GovParamContract: common.HexToAddress(DefaultGovParamContract),
+		Reward:           GetDefaultRewardConfig(),
+		KIP71:            GetDefaultKIP71Config(),
 	}
 	return gov
 }
