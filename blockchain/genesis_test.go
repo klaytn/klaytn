@@ -351,7 +351,7 @@ func genCypressGenesisBlock() *Genesis {
 	genesis := DefaultGenesisBlock()
 	genesis.Config = params.CypressChainConfig.Copy()
 	genesis.Governance = SetGenesisGovernance(genesis)
-	InitDeriveSha(genesis.Config.DeriveShaImpl)
+	InitDeriveSha(genesis.Config)
 	return genesis
 }
 
@@ -359,7 +359,7 @@ func genBaobabGenesisBlock() *Genesis {
 	genesis := DefaultBaobabGenesisBlock()
 	genesis.Config = params.BaobabChainConfig.Copy()
 	genesis.Governance = SetGenesisGovernance(genesis)
-	InitDeriveSha(genesis.Config.DeriveShaImpl)
+	InitDeriveSha(genesis.Config)
 	return genesis
 }
 
@@ -378,6 +378,6 @@ func genCustomGenesisBlock(customChainId uint64) *Genesis {
 	}
 	genesis.Config.SetDefaults()
 	genesis.Governance = SetGenesisGovernance(genesis)
-	InitDeriveSha(genesis.Config.DeriveShaImpl)
+	InitDeriveSha(genesis.Config)
 	return genesis
 }
