@@ -106,6 +106,7 @@ var HomiFlags = []cli.Flag{
 	altsrc.NewStringFlag(govParamContractFlag),
 	altsrc.NewStringFlag(rewardMintAmountFlag),
 	altsrc.NewStringFlag(rewardRatioFlag),
+	altsrc.NewStringFlag(rewardKip82RatioFlag),
 	altsrc.NewBoolFlag(rewardGiniCoeffFlag),
 	altsrc.NewUint64Flag(rewardStakingFlag),
 	altsrc.NewUint64Flag(rewardProposerFlag),
