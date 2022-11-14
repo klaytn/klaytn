@@ -6,6 +6,7 @@ import (
 
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
+	"github.com/klaytn/klaytn/common"
 	govcontract "github.com/klaytn/klaytn/contracts/gov"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
@@ -14,11 +15,11 @@ import (
 )
 
 func newTestMixedEngine(t *testing.T, config *params.ChainConfig) (*MixedEngine, *bind.TransactOpts, *backends.SimulatedBackend, *govcontract.GovParam) {
-	config.IstanbulCompatibleBlock = new(big.Int).SetUint64(0)
-	config.LondonCompatibleBlock = new(big.Int).SetUint64(0)
-	config.EthTxTypeCompatibleBlock = new(big.Int).SetUint64(0)
-	config.MagmaCompatibleBlock = new(big.Int).SetUint64(0)
-	config.KoreCompatibleBlock = new(big.Int).SetUint64(0)
+	config.IstanbulCompatibleBlock = common.Big0
+	config.LondonCompatibleBlock = common.Big0
+	config.EthTxTypeCompatibleBlock = common.Big0
+	config.MagmaCompatibleBlock = common.Big0
+	config.KoreCompatibleBlock = common.Big0
 
 	accounts, sim, addr, contract := prepareSimulatedContract(t)
 
