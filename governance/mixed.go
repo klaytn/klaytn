@@ -34,8 +34,7 @@ import (
 //  2. headerParams:   Header Governance items
 //  3. initialParams:  initial ChainConfig from genesis.json
 //  4. defaultParams:  Default params such as params.Default*
-//                     Note that some items are not backed by defaultParams.
-//
+//     Note that some items are not backed by defaultParams.
 type MixedEngine struct {
 	// The same ChainConfig instance as Blockchain.chainConfig, {cn, worker}.config
 	config *params.ChainConfig
@@ -115,21 +114,52 @@ func (e *MixedEngine) Params() *params.GovParamSet {
 }
 
 func (e *MixedEngine) ParamsAt(num uint64) (*params.GovParamSet, error) {
-	contractParams, _ := e.contractGov.ParamsAt(num)
-	headerParams, _ := e.headerGov.ParamsAt(num)
+	var contractParams *params.GovParamSet
+	var err error
+
+	if e.config.IsKoreForkEnabled(new(big.Int).SetUint64(num)) {
+		contractParams, err = e.contractGov.ParamsAt(num)
+		if err != nil {
+			logger.Error("contractGov.ParamsAt() failed", "err", err)
+			return nil, err
+		}
+	} else {
+		contractParams = params.NewGovParamSet()
+	}
+
+	headerParams, err := e.headerGov.ParamsAt(num)
+	if err != nil {
+		logger.Error("headerGov.ParamsAt() failed", "err", err)
+		return nil, err
+	}
+
 	return e.assembleParams(headerParams, contractParams), nil
 }
 
 func (e *MixedEngine) UpdateParams() error {
-	if err := e.contractGov.UpdateParams(); err != nil {
-		return err
+	// some functions call UpdateParams() without blockchain, such as initGenesis()
+	// in this case, fall back to num=zero
+	num := big.NewInt(0)
+	if e.blockchain != nil {
+		num = e.blockchain.CurrentHeader().Number
+	}
+
+	var contractParams *params.GovParamSet
+	if e.config.IsKoreForkEnabled(num) {
+		if err := e.contractGov.UpdateParams(); err != nil {
+			logger.Error("contractGov.UpdateParams() failed", "err", err)
+			return err
+		}
+		contractParams = e.contractGov.Params()
+	} else {
+		contractParams = params.NewGovParamSet()
 	}
 
 	if err := e.headerGov.UpdateParams(); err != nil {
+		logger.Error("headerGov.UpdateParams() failed", "err", err)
 		return err
 	}
 
-	contractParams := e.contractGov.Params()
 	headerParams := e.headerGov.Params()
 
 	newParams := e.assembleParams(headerParams, contractParams)
