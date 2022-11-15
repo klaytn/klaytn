@@ -27,7 +27,6 @@ import (
 	"io/ioutil"
 	"math/big"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"testing"
 
@@ -43,56 +42,11 @@ import (
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/tests"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// To generate a new callTracer test, copy paste the makeTest method below into
-// the klaytn console and call it with a transaction hash you which to export.
-
-/*
-// makeTest generates a callTracer test by running a prestate reassembled and a
-// call trace run, assembling all the gathered information into a test case.
-var makeTest = function(tx, rewind) {
-  // Generate the genesis block from the block, transaction and prestate data
-  var block   = klay.getBlock(klay.getTransaction(tx).blockHash);
-  var genesis = klay.getBlock(block.parentHash);
-
-  delete genesis.gasUsed;
-  delete genesis.logsBloom;
-  delete genesis.parentHash;
-  delete genesis.receiptsRoot;
-  delete genesis.size;
-  delete genesis.transactions;
-  delete genesis.transactionsRoot;
-
-  genesis.gasLimit  = genesis.gasLimit.toString();
-  genesis.number    = genesis.number.toString();
-  genesis.timestamp = genesis.timestamp.toString();
-
-  genesis.alloc = debug.traceTransaction(tx, {tracer: "prestateTracer", rewind: rewind});
-  for (var key in genesis.alloc) {
-    genesis.alloc[key].nonce = genesis.alloc[key].nonce.toString();
-  }
-  genesis.config = admin.nodeInfo.protocols.klay.config;
-
-  // Generate the call trace and produce the test input
-  var result = debug.traceTransaction(tx, {tracer: "callTracer", rewind: rewind});
-  delete result.time;
-
-  console.log(JSON.stringify({
-    genesis: genesis,
-    context: {
-      number:     block.number.toString(),
-      blockscore: block.blockscore,
-      timestamp:  block.timestamp.toString(),
-      gasLimit:   block.gasLimit.toString(),
-      miner:      block.miner,
-    },
-    input:  klay.getRawTransaction(tx),
-    result: result,
-  }, null, 2));
-}
-*/
+// To generate a new callTracer test, use the `make_testdata.sh` script.
 
 type reverted struct {
 	Contract *common.Address `json:"contract"`
@@ -288,7 +242,7 @@ func TestCallTracer(t *testing.T) {
 		}
 		file := file // capture range variable
 		t.Run(camel(strings.TrimSuffix(strings.TrimPrefix(file.Name(), "call_tracer_"), ".json")), func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel()
 
 			// Call tracer test found, read if from disk
 			blob, err := ioutil.ReadFile(filepath.Join("testdata", file.Name()))
@@ -352,7 +306,7 @@ func TestCallTracer(t *testing.T) {
 			}
 			evm := vm.NewEVM(context, statedb, test.Genesis.Config, &vm.Config{Debug: true, Tracer: tracer})
 
-			fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+			fork.SetHardForkBlockNumberConfig(test.Genesis.Config)
 			msg, err := tx.AsMessageWithAccountKeyPicker(signer, statedb, context.BlockNumber.Uint64())
 			if err != nil {
 				t.Fatalf("failed to prepare transaction for tracing: %v", err)
@@ -370,29 +324,20 @@ func TestCallTracer(t *testing.T) {
 			if err := json.Unmarshal(res, ret); err != nil {
 				t.Fatalf("failed to unmarshal trace result: %v", err)
 			}
-			if !jsonEqual(ret, test.Result) {
-				t.Fatalf("trace mismatch: \nhave %+v, \nwant %+v", ret, test.Result)
-			}
+			jsonEqual(t, ret, test.Result)
 		})
 	}
 }
 
-// jsonEqual is similar to reflect.DeepEqual, but does a 'bounce' via json prior to
-// comparison
-func jsonEqual(x, y interface{}) bool {
-	xTrace := new(callTrace)
-	yTrace := new(callTrace)
-	if xj, err := json.Marshal(x); err == nil {
-		json.Unmarshal(xj, xTrace)
-	} else {
-		return false
-	}
-	if yj, err := json.Marshal(y); err == nil {
-		json.Unmarshal(yj, yTrace)
-	} else {
-		return false
-	}
-	return reflect.DeepEqual(xTrace, yTrace)
+// Compare JSON representations for human-friendly diffs.
+func jsonEqual(t *testing.T, x, y interface{}) {
+	xj, err := json.MarshalIndent(x, "", "  ")
+	assert.Nil(t, err)
+
+	yj, err := json.MarshalIndent(y, "", "  ")
+	assert.Nil(t, err)
+
+	assert.Equal(t, string(xj), string(yj))
 }
 
 // Iterates over all the input-output datasets in the tracer test harness and
@@ -408,7 +353,7 @@ func TestInternalCallTracer(t *testing.T) {
 		}
 		file := file // capture range variable
 		t.Run(camel(strings.TrimSuffix(strings.TrimPrefix(file.Name(), "call_tracer_"), ".json")), func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel()
 
 			// Call tracer test found, read if from disk
 			blob, err := ioutil.ReadFile(filepath.Join("testdata", file.Name()))
@@ -469,7 +414,7 @@ func TestInternalCallTracer(t *testing.T) {
 			tracer := vm.NewInternalTxTracer()
 			evm := vm.NewEVM(context, statedb, test.Genesis.Config, &vm.Config{Debug: true, Tracer: tracer})
 
-			fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+			fork.SetHardForkBlockNumberConfig(test.Genesis.Config)
 			msg, err := tx.AsMessageWithAccountKeyPicker(signer, statedb, context.BlockNumber.Uint64())
 			if err != nil {
 				t.Fatalf("failed to prepare transaction for tracing: %v", err)
@@ -485,9 +430,7 @@ func TestInternalCallTracer(t *testing.T) {
 			}
 
 			resultFromInternalCallTracer := covertToCallTrace(t, res)
-			if !jsonEqual(test.Result, resultFromInternalCallTracer) {
-				t.Fatalf("trace mismatch: \nhave %+v, \nwant %+v", resultFromInternalCallTracer, test.Result)
-			}
+			jsonEqual(t, test.Result, resultFromInternalCallTracer)
 		})
 	}
 }

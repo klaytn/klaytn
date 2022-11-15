@@ -17,6 +17,8 @@
 package chaindatafetcher
 
 import (
+	"time"
+
 	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kafka"
 	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kas"
 )
@@ -29,10 +31,12 @@ const (
 )
 
 const (
-	DefaultNumHandlers      = 10
-	DefaultJobChannelSize   = 50
-	DefaultBlockChannelSize = 500
-	DefaultDBPort           = "3306"
+	DefaultNumHandlers           = 10
+	DefaultJobChannelSize        = 50
+	DefaultBlockChannelSize      = 500
+	DefaultDBPort                = "3306"
+	DefaultMaxProcessingDataSize = 500 // in MB
+	DefaultThrottlingInterval    = 300 * time.Millisecond
 )
 
 //go:generate gencodec -type ChainDataFetcherConfig -formats toml -out gen_config.go
@@ -43,19 +47,23 @@ type ChainDataFetcherConfig struct {
 	NumHandlers             int
 	JobChannelSize          int
 	BlockChannelSize        int
+	MaxProcessingDataSize   int
 
 	KasConfig   *kas.KASConfig `json:"-"` // Deprecated: This configuration is not used anymore.
 	KafkaConfig *kafka.KafkaConfig
 }
 
-var DefaultChainDataFetcherConfig = &ChainDataFetcherConfig{
-	EnabledChainDataFetcher: false,
-	Mode:                    ModeKAS,
-	NoDefaultStart:          false,
-	NumHandlers:             DefaultNumHandlers,
-	JobChannelSize:          DefaultJobChannelSize,
-	BlockChannelSize:        DefaultBlockChannelSize,
+func DefaultChainDataFetcherConfig() *ChainDataFetcherConfig {
+	return &ChainDataFetcherConfig{
+		EnabledChainDataFetcher: false,
+		Mode:                    ModeKAS,
+		NoDefaultStart:          false,
+		NumHandlers:             DefaultNumHandlers,
+		JobChannelSize:          DefaultJobChannelSize,
+		BlockChannelSize:        DefaultBlockChannelSize,
+		MaxProcessingDataSize:   DefaultMaxProcessingDataSize,
 
-	KasConfig:   kas.DefaultKASConfig,
-	KafkaConfig: kafka.GetDefaultKafkaConfig(),
+		KasConfig:   kas.DefaultKASConfig,
+		KafkaConfig: kafka.GetDefaultKafkaConfig(),
+	}
 }

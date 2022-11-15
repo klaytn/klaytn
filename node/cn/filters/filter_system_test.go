@@ -367,8 +367,6 @@ func TestInvalidLogFilterCreation(t *testing.T) {
 	}
 }
 
-// TODO-Klaytn-FailedTest We don't have BlockHash in FilterCriteria type
-/*
 func TestInvalidGetLogsRequest(t *testing.T) {
 	var (
 		mux        = new(event.TypeMux)
@@ -377,7 +375,7 @@ func TestInvalidGetLogsRequest(t *testing.T) {
 		rmLogsFeed = new(event.Feed)
 		logsFeed   = new(event.Feed)
 		chainFeed  = new(event.Feed)
-		backend    = &testBackend{mux, db, 0, txFeed, rmLogsFeed, logsFeed, chainFeed}
+		backend    = &testBackend{mux, db, 0, txFeed, rmLogsFeed, logsFeed, chainFeed, params.TestChainConfig}
 		api        = NewPublicFilterAPI(backend, false)
 		blockHash  = common.HexToHash("0x1111111111111111111111111111111111111111111111111111111111111111")
 	)
@@ -395,7 +393,6 @@ func TestInvalidGetLogsRequest(t *testing.T) {
 		}
 	}
 }
-*/
 
 // TestLogFilter tests whether log filters match the correct logs that are posted to the event feed.
 func TestLogFilter(t *testing.T) {

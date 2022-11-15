@@ -22,6 +22,7 @@ package rpc
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 	"math/rand"
 	"net"
@@ -94,7 +95,7 @@ func TestClientBatchRequest(t *testing.T) {
 			Method: "no_such_method",
 			Args:   []interface{}{1, 2, 3},
 			Result: new(int),
-			Error:  &jsonError{Code: -32601, Message: "The method no_such_method_ does not exist/is not available"},
+			Error:  &jsonError{Code: -32601, Message: "the method no_such_method does not exist/is not available"},
 		},
 	}
 	if !reflect.DeepEqual(batch, wantResult) {
@@ -102,7 +103,18 @@ func TestClientBatchRequest(t *testing.T) {
 	}
 }
 
-// func TestClientCancelInproc(t *testing.T) { testClientCancel("inproc", t) }
+func TestClientNotify(t *testing.T) {
+	server := newTestServer("service", new(Service))
+	defer server.Stop()
+	client := DialInProc(server)
+	defer client.Close()
+
+	if err := client.Notify(context.Background(), "service_echo", "hello", 10, &Args{"world"}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// func TestClientCancelInproc(t *testing.T)    { testClientCancel("inproc", t) }
 func TestClientCancelWebsocket(t *testing.T) { testClientCancel("ws", t) }
 func TestClientCancelHTTP(t *testing.T)      { testClientCancel("http", t) }
 func TestClientCancelIPC(t *testing.T)       { testClientCancel("ipc", t) }
@@ -149,7 +161,7 @@ func testClientCancel(transport string, t *testing.T) {
 	// These tests take a lot of time, run them all at once.
 	// You probably want to run with -parallel 1 or comment out
 	// the call to t.Parallel if you enable the logging.
-	t.Parallel()
+	// t.Parallel()
 
 	// The actual test starts here.
 	var (
@@ -545,7 +557,6 @@ func TestClientReconnect(t *testing.T) {
 			errcount++
 		}
 	}
-	t.Log("err:", err)
 	if errcount > 1 {
 		t.Errorf("expected one error after disconnect, got %d", errcount)
 	}
@@ -553,10 +564,26 @@ func TestClientReconnect(t *testing.T) {
 
 func newTestServer(serviceName string, service interface{}) *Server {
 	server := NewServer()
+	server.idgen = sequentialIDGenerator()
 	if err := server.RegisterName(serviceName, service); err != nil {
 		panic(err)
 	}
 	return server
+}
+
+func sequentialIDGenerator() func() ID {
+	var (
+		mu      sync.Mutex
+		counter uint64
+	)
+	return func() ID {
+		mu.Lock()
+		defer mu.Unlock()
+		counter++
+		id := make([]byte, 8)
+		binary.BigEndian.PutUint64(id, counter)
+		return encodeID(id)
+	}
 }
 
 func httpTestClient(srv *Server, transport string, fl *flakeyListener) (*Client, *httptest.Server) {
@@ -630,4 +657,28 @@ func (l *flakeyListener) Accept() (net.Conn, error) {
 		})
 	}
 	return c, err
+}
+
+// This test reproduces https://github.com/ethereum/go-ethereum/issues/17837 where the
+// client hangs during shutdown when Unsubscribe races with Client.Close.
+func TestClientCloseUnsubscribeRace(t *testing.T) {
+	service := &NotificationTestService{}
+	server := newTestServer("klay", service)
+	defer server.Stop()
+
+	for i := 0; i < 20; i++ {
+		client := DialInProc(server)
+		nc := make(chan int)
+		sub, err := client.KlaySubscribe(context.Background(), nc, "someSubscription", 3, 1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		go client.Close()
+		go sub.Unsubscribe()
+		select {
+		case <-sub.Err():
+		case <-time.After(5 * time.Second):
+			t.Fatal("subscription not closed within timeout")
+		}
+	}
 }
