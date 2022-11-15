@@ -112,6 +112,8 @@ func KsenAppFlags() []cli.Flag {
 // Common flags that configure the node
 var CommonNodeFlags = []cli.Flag{
 	utils.ConfFlag,
+	altsrc.NewBoolFlag(utils.NtpDisableFlag),
+	altsrc.NewStringFlag(utils.NtpServerFlag),
 	altsrc.NewStringFlag(utils.BootnodesFlag),
 	altsrc.NewStringFlag(utils.IdentityFlag),
 	altsrc.NewStringFlag(utils.UnlockedAccountFlag),
@@ -202,6 +204,7 @@ var CommonNodeFlags = []cli.Flag{
 	altsrc.NewUint64Flag(utils.OpcodeComputationCostLimitFlag),
 	altsrc.NewBoolFlag(utils.SnapshotFlag),
 	altsrc.NewIntFlag(utils.SnapshotCacheSizeFlag),
+	altsrc.NewBoolTFlag(utils.SnapshotAsyncGen),
 }
 
 // Common RPC flags

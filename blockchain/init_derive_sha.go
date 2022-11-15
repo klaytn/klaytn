@@ -17,23 +17,9 @@
 package blockchain
 
 import (
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/storage/statedb"
+	"github.com/klaytn/klaytn/blockchain/types/derivesha"
 )
 
 func InitDeriveSha(deriveShaImpl int) {
-	switch deriveShaImpl {
-	case types.ImplDeriveShaOriginal:
-		logger.Info("Using DeriveShaOrig!")
-		types.InitDeriveSha(statedb.DeriveShaOrig{})
-	case types.ImplDeriveShaSimple:
-		logger.Info("Using DeriveShaSimple!")
-		types.InitDeriveSha(types.DeriveShaSimple{})
-	case types.ImplDeriveShaConcat:
-		logger.Info("Using DeriveShaConcat!")
-		types.InitDeriveSha(types.DeriveShaConcat{})
-	default:
-		logger.Error("Undefined deriveShaImpl!! use DeriveShaOrig!")
-		types.InitDeriveSha(statedb.DeriveShaOrig{})
-	}
+	derivesha.InitDeriveSha(deriveShaImpl)
 }

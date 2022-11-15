@@ -22,6 +22,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/log"
+	"github.com/klaytn/klaytn/params"
 )
 
 var logger = log.NewModuleLogger(log.Reward)
@@ -30,13 +31,11 @@ type BalanceAdder interface {
 	AddBalance(addr common.Address, v *big.Int)
 }
 
+// Cannot use governance.Engine because of cyclic dependency.
+// Instead declare only the methods used by this package.
 type governanceHelper interface {
-	Epoch() uint64
-	GetItemAtNumberByIntKey(num uint64, key int) (interface{}, error)
-	DeferredTxFee() bool
-	ProposerPolicy() uint64
-	StakingUpdateInterval() uint64
-	GetMinimumStakingAtNumber(num uint64) (uint64, error)
+	Params() *params.GovParamSet
+	ParamsAt(num uint64) (*params.GovParamSet, error)
 }
 
 type RewardDistributor struct {
@@ -94,7 +93,7 @@ func (rd *RewardDistributor) DistributeBlockReward(b BalanceAdder, header *types
 
 	// Calculate total tx fee
 	totalTxFee := common.Big0
-	if rd.gh.DeferredTxFee() {
+	if rd.gh.Params().DeferredTxFee() {
 		totalTxFee = rd.getTotalTxFee(header, rewardConfig)
 		// magma hardfork
 		if header.BaseFee != nil {

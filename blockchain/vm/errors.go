@@ -44,4 +44,5 @@ var (
 	ErrExecutionReverted     = errors.New("evm: execution reverted")
 	ErrMaxCodeSizeExceeded   = errors.New("evm: max code size exceeded")
 	ErrInvalidJump           = errors.New("evm: invalid jump destination")
+	ErrInvalidCode           = errors.New("invalid code: must not begin with 0xef")
 )

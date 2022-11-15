@@ -26,7 +26,6 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
@@ -171,19 +170,6 @@ type txPool interface {
 	GasPrice() *big.Int
 }
 
-// blockChain is an interface for blockchain.Blockchain used in governance package.
-type blockChain interface {
-	CurrentHeader() *types.Header
-	GetHeaderByNumber(val uint64) *types.Header
-	SetProposerPolicy(val uint64)
-	SetUseGiniCoeff(val bool)
-	SetLowerBoundBaseFee(val uint64)
-	SetUpperBoundBaseFee(val uint64)
-	SetGasTarget(val uint64)
-	SetMaxBlockGasUsedForBaseFee(val uint64)
-	SetBaseFeeDenominator(val uint64)
-}
-
 type Governance struct {
 	ChainConfig *params.ChainConfig
 
@@ -208,8 +194,10 @@ type Governance struct {
 	// The last block number at governance state was stored (used not to replay old votes)
 	lastGovernanceStateBlock uint64
 
-	currentSet GovernanceSet
-	changeSet  GovernanceSet
+	currentSet    GovernanceSet
+	changeSet     GovernanceSet
+	currentParams *params.GovParamSet // equals to currentSet
+	initialParams *params.GovParamSet // equals to initial ChainConfig
 
 	TxPool txPool
 
@@ -433,6 +421,8 @@ func NewGovernance(chainConfig *params.ChainConfig, dbm database.DBManager) *Gov
 		itemCache:                newGovernanceCache(),
 		currentSet:               NewGovernanceSet(),
 		changeSet:                NewGovernanceSet(),
+		currentParams:            params.NewGovParamSet(),
+		initialParams:            params.NewGovParamSet(),
 		lastGovernanceStateBlock: 0,
 		GovernanceTallies:        NewGovernanceTallies(),
 		GovernanceVotes:          NewGovernanceVotes(),
@@ -463,12 +453,12 @@ func NewGovernanceInitialize(chainConfig *params.ChainConfig, dbm database.DBMan
 }
 
 func (g *Governance) updateGovernanceParams() {
-	params.SetStakingUpdateInterval(g.StakingUpdateInterval())
-	params.SetProposerUpdateInterval(g.ProposerUpdateInterval())
+	params.SetStakingUpdateInterval(g.stakingUpdateInterval())
+	params.SetProposerUpdateInterval(g.proposerUpdateInterval())
 
 	// NOTE: HumanReadable related functions are inactivated now
-	if txGasHumanReadable, ok := g.currentSet.GetValue(params.ConstTxGasHumanReadable); ok {
-		params.TxGasHumanReadable = txGasHumanReadable.(uint64)
+	if v, ok := g.Params().Get(params.ConstTxGasHumanReadable); ok {
+		params.TxGasHumanReadable = v.(uint64)
 	}
 }
 
@@ -725,7 +715,6 @@ func (g *Governance) initializeCache() error {
 	// g.actualGovernanceBlock and currentSet is set
 	g.actualGovernanceBlock.Store(newBlockNumber)
 	g.currentSet.Import(newGovernanceSet)
-	g.updateGovernanceParams()
 
 	// g.lastGovernanceStateBlock contains the last block number when voting data is included.
 	// we check the order between g.actualGovernanceBlock and g.lastGovernanceStateBlock, so make sure that voting is not missed.
@@ -737,8 +726,20 @@ func (g *Governance) initializeCache() error {
 			return errors.New("Currentset initialization failed")
 		}
 		g.currentSet.Import(ret.(map[string]interface{}))
-		g.updateGovernanceParams()
 	}
+
+	// Reflect CurrentSet -> g.initialParams
+	if pset, err := params.NewGovParamSetChainConfig(g.ChainConfig); err == nil {
+		g.initialParams = pset
+	} else {
+		logger.Crit("Error parsing initial ChainConfig", "err", err)
+	}
+	// Reflect g.currentSet -> g.currentParams (for g.Params())
+	// Outside initializeCache, istanbul.CreateSnapshot() will trigger UpdateParams().
+	g.UpdateParams()
+	// Reflect g.currentSet -> global params in params/governance_params.go
+	// Outside initializeCache, GovernanceItems[].trigger will reflect changes to globals.
+	g.updateGovernanceParams()
 
 	return nil
 }
@@ -818,7 +819,7 @@ func (g *Governance) ReadGovernance(num uint64) (uint64, map[string]interface{},
 	if g.ChainConfig.Istanbul == nil {
 		logger.Crit("Failed to read governance. ChainConfig.Istanbul == nil")
 	}
-	blockNum := CalcGovernanceInfoBlock(num, g.Epoch())
+	blockNum := CalcGovernanceInfoBlock(num, g.epochWithFallback())
 	// Check cache first
 	if gBlockNum, ok := g.searchCache(blockNum); ok {
 		if data, okay := g.getGovernanceCache(gBlockNum); okay {
@@ -826,7 +827,7 @@ func (g *Governance) ReadGovernance(num uint64) (uint64, map[string]interface{},
 		}
 	}
 	if g.db != nil {
-		bn, result, err := g.db.ReadGovernanceAtNumber(num, g.Epoch())
+		bn, result, err := g.db.ReadGovernanceAtNumber(num, g.epochWithFallback())
 		result = adjustDecodedSet(result)
 		return bn, result, err
 	} else {
@@ -1125,100 +1126,12 @@ func AddGovernanceCacheForTest(e HeaderEngine, num uint64, config *params.ChainC
 	}
 }
 
-func (gov *Governance) GovernanceMode() string {
-	return gov.GetGovernanceValue(params.GovernanceMode).(string)
-}
-
-func (gov *Governance) GoverningNode() common.Address {
-	return gov.GetGovernanceValue(params.GoverningNode).(common.Address)
-}
-
-func (gov *Governance) UnitPrice() uint64 {
-	return gov.GetGovernanceValue(params.UnitPrice).(uint64)
-}
-
-func (gov *Governance) CommitteeSize() uint64 {
-	return gov.GetGovernanceValue(params.CommitteeSize).(uint64)
-}
-
-func (gov *Governance) Epoch() uint64 {
-	if ret := gov.GetGovernanceValue(params.Epoch); ret == nil {
-		// When a node is initializing, value can be nil
-		return gov.ChainConfig.Istanbul.Epoch
-	}
-	return gov.GetGovernanceValue(params.Epoch).(uint64)
-}
-
-func (gov *Governance) ProposerPolicy() uint64 {
-	return gov.GetGovernanceValue(params.Policy).(uint64)
-}
-
-func (gov *Governance) DeferredTxFee() bool {
-	return gov.GetGovernanceValue(params.DeferredTxFee).(bool)
-}
-
-func (gov *Governance) MinimumStake() string {
-	return gov.GetGovernanceValue(params.MinimumStake).(string)
-}
-
-func (gov *Governance) MintingAmount() string {
-	return gov.GetGovernanceValue(params.MintingAmount).(string)
-}
-
-func (gov *Governance) ProposerUpdateInterval() uint64 {
+func (gov *Governance) proposerUpdateInterval() uint64 {
 	return gov.GetGovernanceValue(params.ProposerRefreshInterval).(uint64)
 }
 
-func (gov *Governance) Ratio() string {
-	return gov.GetGovernanceValue(params.Ratio).(string)
-}
-
-func (gov *Governance) StakingUpdateInterval() uint64 {
+func (gov *Governance) stakingUpdateInterval() uint64 {
 	return gov.GetGovernanceValue(params.StakeUpdateInterval).(uint64)
-}
-
-func (gov *Governance) UseGiniCoeff() bool {
-	return gov.GetGovernanceValue(params.UseGiniCoeff).(bool)
-}
-
-func (gov *Governance) LowerBoundBaseFee() uint64 {
-	ret := gov.GetGovernanceValue(params.LowerBoundBaseFee)
-	if ret != nil {
-		return ret.(uint64)
-	}
-	return params.DefaultLowerBoundBaseFee
-}
-
-func (gov *Governance) UpperBoundBaseFee() uint64 {
-	ret := gov.GetGovernanceValue(params.UpperBoundBaseFee)
-	if ret != nil {
-		return ret.(uint64)
-	}
-	return params.DefaultUpperBoundBaseFee
-}
-
-func (gov *Governance) GasTarget() uint64 {
-	ret := gov.GetGovernanceValue(params.GasTarget)
-	if ret != nil {
-		return ret.(uint64)
-	}
-	return params.DefaultGasTarget
-}
-
-func (gov *Governance) MaxBlockGasUsedForBaseFee() uint64 {
-	ret := gov.GetGovernanceValue(params.MaxBlockGasUsedForBaseFee)
-	if ret != nil {
-		return ret.(uint64)
-	}
-	return params.DefaultMaxBlockGasUsedForBaseFee
-}
-
-func (gov *Governance) BaseFeeDenominator() uint64 {
-	ret := gov.GetGovernanceValue(params.BaseFeeDenominator)
-	if ret != nil {
-		return ret.(uint64)
-	}
-	return params.DefaultBaseFeeDenominator
 }
 
 func (gov *Governance) ChainId() uint64 {
@@ -1261,4 +1174,56 @@ func (gov *Governance) IdxCache() []uint64 {
 func (gov *Governance) IdxCacheFromDb() []uint64 {
 	res, _ := gov.db.ReadRecentGovernanceIdx(0)
 	return res
+}
+
+// Returns the istanbul epoch. This function works even before loading any params
+// from database. We need epoch to load any param from database.
+func (gov *Governance) epochWithFallback() uint64 {
+	// After UpdateParams() is called at least once, Params() should contain the Epoch
+	if v, ok := gov.Params().Get(params.Epoch); ok {
+		return v.(uint64)
+	}
+	// Otherwise after initializeCache() is called, initialParams should contain the Epoch
+	if v, ok := gov.initialParams.Get(params.Epoch); ok {
+		return v.(uint64)
+	}
+	// Otherwise fallback to ChainConfig that is supplied to NewGovernance()
+	if gov.ChainConfig.Istanbul != nil {
+		return gov.ChainConfig.Istanbul.Epoch
+	}
+	// We shouldn't reach here because Governance is only relevant with Istanbul engine.
+	logger.Crit("Failed to read governance. ChainConfig.Istanbul == nil")
+	return params.DefaultEpoch // unreachable. just satisfying compiler.
+}
+
+func (gov *Governance) Params() *params.GovParamSet {
+	return gov.currentParams
+}
+
+func (gov *Governance) ParamsAt(num uint64) (*params.GovParamSet, error) {
+	// TODO-Klaytn: Either handle epoch change, or permanently forbid epoch change.
+	epoch := gov.epochWithFallback()
+
+	// Should be equivalent to Governance.ReadGovernance(), but without in-memory caches.
+	// Not using in-memory caches to make it stateless, hence less error-prone.
+	_, strMap, err := gov.db.ReadGovernanceAtNumber(num, epoch)
+	if err != nil {
+		return nil, err
+	}
+	pset, err := params.NewGovParamSetStrMap(strMap)
+	if err != nil {
+		return nil, err
+	}
+	return params.NewGovParamSetMerged(gov.initialParams, pset), nil
+}
+
+func (gov *Governance) UpdateParams() error {
+	strMap := gov.currentSet.Items()
+	pset, err := params.NewGovParamSetStrMap(strMap)
+	if err != nil {
+		return err
+	}
+
+	gov.currentParams = params.NewGovParamSetMerged(gov.initialParams, pset)
+	return nil
 }

@@ -35,14 +35,9 @@ import (
 	metricutils "github.com/klaytn/klaytn/metrics/utils"
 	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/node/cn"
+	"github.com/klaytn/klaytn/params"
 	"gopkg.in/urfave/cli.v1"
 	"gopkg.in/urfave/cli.v1/altsrc"
-)
-
-const (
-	clientIdentifier = "klay" // Client identifier to advertise over the network
-	SCNNetworkType   = "scn"  // Service Chain Network
-	MNNetworkType    = "mn"   // Mainnet Network
 )
 
 // runKlaytnNode is the main entry point into the system if no special subcommand is ran.
@@ -55,11 +50,40 @@ func RunKlaytnNode(ctx *cli.Context) error {
 	return nil
 }
 
+func MakeFullNode(ctx *cli.Context) *node.Node {
+	stack, cfg := utils.MakeConfigNode(ctx)
+
+	if utils.NetworkTypeFlag.Value == utils.SCNNetworkType && cfg.ServiceChain.EnabledSubBridge {
+		if !cfg.CN.NoAccountCreation {
+			logger.Warn("generated accounts can't be synced with the parent chain since account creation is enabled")
+		}
+		switch cfg.ServiceChain.ServiceChainConsensus {
+		case "istanbul":
+			utils.RegisterCNService(stack, &cfg.CN)
+		case "clique":
+			logger.Crit("using clique consensus type is not allowed anymore!")
+		default:
+			logger.Crit("unknown consensus type for the service chain", "consensus", cfg.ServiceChain.ServiceChainConsensus)
+		}
+	} else {
+		utils.RegisterCNService(stack, &cfg.CN)
+	}
+	utils.RegisterService(stack, &cfg.ServiceChain)
+	utils.RegisterDBSyncerService(stack, &cfg.DB)
+	utils.RegisterChainDataFetcherService(stack, &cfg.ChainDataFetcher)
+	return stack
+}
+
 // startNode boots up the system node and all registered protocols, after which
 // it unlocks any requested accounts, and starts the RPC/IPC interfaces and the
 // miner.
 func startNode(ctx *cli.Context, stack *node.Node) {
 	debug.Memsize.Add("node", stack)
+
+	// Ntp time check
+	if err := node.NtpCheckWithLocal(stack); err != nil {
+		log.Fatalf("System time should be synchronized: %v", err)
+	}
 
 	// Start up the node itself
 	utils.StartNode(stack)
@@ -106,7 +130,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		}
 	}()
 
-	if utils.NetworkTypeFlag.Value == SCNNetworkType && utils.ServiceChainConsensusFlag.Value == "clique" {
+	if utils.NetworkTypeFlag.Value == utils.SCNNetworkType && utils.ServiceChainConsensusFlag.Value == "clique" {
 		logger.Crit("using clique consensus type is not allowed anymore!")
 	} else {
 		startKlaytnAuxiliaryService(ctx, stack)
@@ -208,9 +232,11 @@ func FlagsFromYaml(ctx *cli.Context) error {
 }
 
 func BeforeRunNode(ctx *cli.Context) error {
-	if err := FlagsFromYaml(ctx); err != nil {
-		return err
-	}
+	// TODO-klaytn - yaml bug: doesn't affact global flag whther the flag is set or not
+	// You can enable this code after the bug fix
+	// if err := FlagsFromYaml(ctx); err != nil {
+	// 	return err
+	// }
 	if err := CheckCommands(ctx); err != nil {
 		return err
 	}
@@ -221,8 +247,14 @@ func BeforeRunNode(ctx *cli.Context) error {
 		return err
 	}
 	metricutils.StartMetricCollectionAndExport(ctx)
-	utils.SetupNetwork(ctx)
+	setupNetwork(ctx)
 	return nil
+}
+
+// SetupNetwork configures the system for either the main net or some test network.
+func setupNetwork(ctx *cli.Context) {
+	// TODO(fjl): move target gas limit into config
+	params.TargetGasLimit = ctx.GlobalUint64(utils.TargetGasLimitFlag.Name)
 }
 
 func BeforeRunBootnode(ctx *cli.Context) error {
