@@ -514,7 +514,8 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'setHead',
 			call: 'debug_setHead',
-			params: 1
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'dumpBlock',
