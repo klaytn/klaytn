@@ -43,8 +43,8 @@ var (
 
 	errGovIdxAlreadyExist = errors.New("a governance idx of the more recent or the same block exist")
 
-	HeadBlockQ backupHash
-	FastBlockQ backupHash
+	HeadBlockQ backupHashQueue
+	FastBlockQ backupHashQueue
 )
 
 type DBManager interface {
@@ -307,17 +307,17 @@ const (
 	databaseEntryTypeSize
 )
 
-type backupHash struct {
+type backupHashQueue struct {
 	backupHashes [backupHashCnt]common.Hash
 	idx          int
 }
 
-func (b *backupHash) push(h common.Hash) {
+func (b *backupHashQueue) push(h common.Hash) {
 	b.backupHashes[b.idx%backupHashCnt] = h
 	b.idx = (b.idx + 1) % backupHashCnt
 }
 
-func (b *backupHash) pop() common.Hash {
+func (b *backupHashQueue) pop() common.Hash {
 	if b.backupHashes[b.idx] == (common.Hash{}) {
 		return common.Hash{}
 	}
