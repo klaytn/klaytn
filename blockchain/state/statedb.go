@@ -27,8 +27,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/klaytn/klaytn/snapshot"
-
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/types/account"
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
@@ -37,6 +35,7 @@ import (
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
+	"github.com/klaytn/klaytn/snapshot"
 	"github.com/klaytn/klaytn/storage/statedb"
 )
 
