@@ -24,7 +24,12 @@ import (
 	"github.com/klaytn/klaytn/params"
 )
 
-var errContractEngineNotReady = errors.New("ContractEngine is not ready")
+var (
+	errContractEngineNotReady = errors.New("ContractEngine is not ready")
+	errParamsAtFail           = errors.New("headerGov ParamsAt() failed")
+	errGovParamNotExist       = errors.New("GovParam does not exist")
+	errInvalidGovParam        = errors.New("GovParam conversion failed")
+)
 
 type ContractEngine struct {
 	currentParams *params.GovParamSet
@@ -85,13 +90,16 @@ func (e *ContractEngine) contractGetAllParamsAt(num uint64) (*params.GovParamSet
 
 	config := chain.Config()
 	if !config.IsKoreForkEnabled(new(big.Int).SetUint64(num)) {
-		logger.Info("ContractEngine disabled: hardfork block not passed")
+		logger.Trace("ContractEngine disabled: hardfork block not passed")
 		return params.NewGovParamSet(), nil
 	}
 
-	addr := e.contractAddrAt(num)
+	addr, err := e.contractAddrAt(num)
+	if err != nil {
+		return nil, err
+	}
 	if common.EmptyAddress(addr) {
-		logger.Info("ContractEngine disabled: GovParamContract address not set")
+		logger.Trace("ContractEngine disabled: GovParamContract address not set")
 		return params.NewGovParamSet(), nil
 	}
 
@@ -103,24 +111,24 @@ func (e *ContractEngine) contractGetAllParamsAt(num uint64) (*params.GovParamSet
 }
 
 // Return the GovParamContract address effective at given block number
-func (e *ContractEngine) contractAddrAt(num uint64) common.Address {
+func (e *ContractEngine) contractAddrAt(num uint64) (common.Address, error) {
 	headerParams, err := e.headerGov.ParamsAt(num)
 	if err != nil {
 		logger.Error("headerGov.ParamsAt failed", "err", err, "num", num)
-		return common.Address{}
+		return common.Address{}, errParamsAtFail
 	}
 
 	param, ok := headerParams.Get(params.GovParamContract)
 	if !ok {
 		logger.Error("Could not find GovParam contract address")
-		return common.Address{}
+		return common.Address{}, errGovParamNotExist
 	}
 
 	addr, ok := param.(common.Address)
 	if !ok {
 		logger.Error("Could not convert GovParam contract address into common.Address", "param", param)
-		return common.Address{}
+		return common.Address{}, errInvalidGovParam
 	}
 
-	return addr
+	return addr, nil
 }
