@@ -47,6 +47,16 @@ type MixedEngine struct {
 	db database.DBManager
 
 	// Subordinate engines
+	// contractGov is enabled when all the following conditions are met:
+	//   - Kore hardfork block has passed
+	//   - GovParamContract has been set
+	// contractGov can be ignored even if it is enabled for various reasons. To name a few:
+	//   - GovParam returns invalid parameters
+	//   - Calling GovParam reverted
+	// contractGov can throw critical error:
+	//   - headerGov.BlockChain() is nil -> Fix by calling gov.SetBlockChain(bc)
+	// headerGov cannot be disabled. However, its parameters can be ignored
+	// by the prior contract parameters
 	contractGov *ContractEngine
 	headerGov   *Governance
 
