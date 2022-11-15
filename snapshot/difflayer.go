@@ -123,9 +123,6 @@ func (h destructBloomHasher) Sum64() uint64 {
 	return binary.BigEndian.Uint64(h[bloomDestructHasherOffset : bloomDestructHasherOffset+8])
 }
 
-// accountBloomHasher is a wrapper around a common.Hash to satisfy the interface
-// API requirements of the bloom library used. It's used to convert an account
-// hash into a 64 bit mini hash.
 type accountBloomHasher common.Hash
 
 func (h accountBloomHasher) Write(p []byte) (n int, err error) { panic("not implemented") }
