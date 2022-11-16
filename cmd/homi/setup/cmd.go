@@ -102,7 +102,7 @@ var HomiFlags = []cli.Flag{
 	altsrc.NewBoolFlag(governanceFlag),
 	altsrc.NewStringFlag(govModeFlag),
 	altsrc.NewStringFlag(governingNodeFlag),
-	altsrc.NewStringFlag(govParamFlag),
+	altsrc.NewStringFlag(govParamContractFlag),
 	altsrc.NewStringFlag(rewardMintAmountFlag),
 	altsrc.NewStringFlag(rewardRatioFlag),
 	altsrc.NewBoolFlag(rewardGiniCoeffFlag),
@@ -240,7 +240,7 @@ func genGovernanceConfig(ctx *cli.Context) *params.GovernanceConfig {
 	if !common.IsHexAddress(governingNode) {
 		log.Fatalf("Governing Node is not a valid hex address", "value", governingNode)
 	}
-	govParamContract := ctx.String(govParamFlag.Name)
+	govParamContract := ctx.String(govParamContractFlag.Name)
 	if !common.IsHexAddress(govParamContract) {
 		log.Fatalf("GovParam Contract is not a valid hex address", "value", govParamContract)
 	}

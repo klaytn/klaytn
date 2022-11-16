@@ -278,9 +278,9 @@ var (
 		Value: params.DefaultGoverningNode,
 	}
 
-	govParamFlag = cli.StringFlag{
-		Name:  "govparam-contract",
-		Usage: "the govparam contract [default: 0x0000000000000000000000000000000000000000]",
+	govParamContractFlag = cli.StringFlag{
+		Name:  "gov-param-contract",
+		Usage: "the GovParam contract address [default: 0x0000000000000000000000000000000000000000]",
 		Value: params.DefaultGovParamContract,
 	}
 
