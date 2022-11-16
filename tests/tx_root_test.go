@@ -35,7 +35,7 @@ func BenchmarkDeriveSha(b *testing.B) {
 		"Concat": types.DeriveShaConcat{},
 	}
 
-	NTS := []int{1000}
+	NTS := []int{4000}
 
 	for k, f := range funcs {
 		for _, nt := range NTS {
@@ -70,7 +70,7 @@ func BenchmarkDeriveShaSingleAccount(b *testing.B) {
 
 func BenchmarkDeriveShaOrig(b *testing.B) {
 	b.Run("1000test-stackTrie", func(b *testing.B) {
-		benchDeriveSha(b, 1000, 4, statedb.DeriveShaOrig{})
+		benchDeriveSha(b, 100, 4, statedb.DeriveShaOrig{})
 	})
 }
 

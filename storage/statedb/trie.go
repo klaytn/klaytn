@@ -56,7 +56,7 @@ type LeafCallback func(paths [][]byte, hexpath []byte, leaf []byte, parent commo
 
 // Trie is a Merkle Patricia Trie.
 // The zero value is an empty trie with no database.
-// Use New to create a trie that sits on top of a database.
+// Use NewTrie to create a trie that sits on top of a database.
 //
 // Trie is not safe for concurrent use.
 type Trie struct {
@@ -78,7 +78,7 @@ func (t *Trie) newFlag() nodeFlag {
 // not exist in the database. Accessing the trie loads nodes from db on demand.
 func NewTrie(root common.Hash, db *Database) (*Trie, error) {
 	if db == nil {
-		panic("trie.New called without a database")
+		panic("statedb.NewTrie called without a database")
 	}
 	trie := &Trie{
 		db: db,
@@ -503,7 +503,11 @@ func (t *Trie) resolve(n node, prefix []byte) (node, error) {
 
 func (t *Trie) resolveHash(n hashNode, prefix []byte) (node, error) {
 	hash := common.BytesToHash(n)
-	if node, _ := t.db.node(hash); node != nil {
+	node, fromDB := t.db.node(hash)
+	if t.prefetching && fromDB {
+		memcacheCleanPrefetchMissMeter.Mark(1)
+	}
+	if node != nil {
 		return node, nil
 	}
 	return nil, &MissingNodeError{NodeHash: hash, Path: prefix}
