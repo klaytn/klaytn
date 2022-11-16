@@ -109,7 +109,7 @@ reading all nodes and logging the missing nodes.
 			},
 			Description: `
 klaytn statedb iterate-triedb
-Coount the number of nodes in the state-trie db.
+Count the number of nodes in the state-trie db.
 `,
 		},
 	},
@@ -123,7 +123,6 @@ var (
 	leafStorageCnt = uint64(0)
 	unknownCnt     = uint64(0)
 	mutex          = &sync.Mutex{}
-	once           sync.Once
 )
 
 // getConfig returns a database config with the given context.
@@ -201,6 +200,8 @@ func verifyState(ctx *cli.Context) error {
 }
 
 func traceTrie(ctx *cli.Context) error {
+	var childWait, logWait sync.WaitGroup
+
 	stack := MakeFullNode(ctx)
 	dbm := stack.OpenDatabase(getConfig(ctx))
 	head := dbm.ReadHeadBlockHash()
@@ -232,39 +233,44 @@ func traceTrie(ctx *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("Failed to open newDB trie : %v", err)
 	}
-	tridb := sdb.Database().TrieDB()
+	trieDB := sdb.Database().TrieDB()
 
 	// Get root-node childrens to create goroutine by number of childrens
-	children, err := tridb.NodeChildren(root)
+	children, err := trieDB.NodeChildren(root)
 	if err != nil {
 		return fmt.Errorf("Fail get childrens of root : %v", err)
 	}
 
-	var wait sync.WaitGroup
-	wait.Add(len(children))
+	midAccountCnt, midStorageCnt, codeCnt, leafAccountCnt, leafStorageCnt, unknownCnt = 0, 0, 0, 0, 0, 0
+	endFlag := false
+
+	childWait.Add(len(children))
+	logWait.Add(1)
+	// create logging goroutine
+	go func() {
+		defer logWait.Done()
+		for !endFlag {
+			time.Sleep(time.Second * 5)
+			logger.Info("Trie Tracer", "AccNode", midAccountCnt, "AccLeaf", leafAccountCnt, "StrgNode", midStorageCnt, "StrgLeaf", leafStorageCnt, "Unknown", unknownCnt, "CodeAcc", codeCnt)
+		}
+		logger.Info("Trie Tracer Finished", "AccNode", midAccountCnt, "AccLeaf", leafAccountCnt, "StrgNode", midStorageCnt, "StrgLeaf", leafStorageCnt, "Unknown", unknownCnt, "CodeAcc", codeCnt)
+	}()
+
 	// Create goroutine by number of childrens
 	for _, child := range children {
 		go func(child common.Hash) {
-			defer wait.Done()
+			defer childWait.Done()
 			doTraceTrie(sdb.Database(), child)
 		}(child)
 	}
 
-	wait.Wait()
-	logger.Info("Trie Tracer finished")
+	childWait.Wait()
+	endFlag = true
+	logWait.Wait()
 	return nil
 }
 
 func doTraceTrie(db state.Database, root common.Hash) (resultErr error) {
-	once.Do(func() {
-		go func() {
-			for {
-				time.Sleep(time.Second * 5)
-				logger.Info("Trie Tracer", "AccNode", midAccountCnt, "AccLeaf", leafAccountCnt, "StrgNode", midStorageCnt, "StrgLeaf", leafStorageCnt, "Unknown", unknownCnt, "CodeAcc", codeCnt)
-			}
-		}()
-	})
-
 	logger.Info("Trie Tracer Start", "Hash Root", root)
 	// Create and iterate a state trie rooted in a sub-node
 	oldState, err := state.New(root, db, nil)
@@ -318,13 +324,13 @@ func iterateTrie(ctx *cli.Context) error {
 	}()
 
 	it := sdb.Database().TrieDB().DiskDB().GetStateTrieDB().NewIterator(nil, nil)
+	defer it.Release()
 	for it.Next() {
 		cnt++
 		if it.Key() == nil || it.Value() == nil || bytes.Equal(it.Key(), []byte("")) || bytes.Equal(it.Value(), []byte("")) {
 			nilCnt++
 		}
 	}
-	it.Release()
 	logger.Info("TrieDB Iterator finished", "total node count", cnt, "nil node count", nilCnt)
 	return nil
 }
