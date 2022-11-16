@@ -212,6 +212,8 @@ func (e *MixedEngine) handleParamUpdate(old, new *params.GovParamSet) {
 				e.config.Governance.Reward.MintingAmount = new.MintingAmountBig()
 			case params.Ratio:
 				e.config.Governance.Reward.Ratio = new.Ratio()
+			case params.Kip82Ratio:
+				e.config.Governance.Reward.Kip82Ratio = new.Kip82Ratio()
 			case params.UseGiniCoeff:
 				e.config.Governance.Reward.UseGiniCoeff = new.UseGiniCoeff()
 			case params.DeferredTxFee:
