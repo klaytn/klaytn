@@ -29,6 +29,8 @@ func EnableEIP(eipNum int, jt *JumpTable) error {
 	switch eipNum {
 	case 4399:
 		enable4399(jt)
+	case 3529:
+		enable3529(jt)
 	case 2929:
 		enable2929(jt)
 	case 2200:
@@ -164,6 +166,15 @@ func enable2929(jt *JumpTable) {
 	// factor here
 	jt[SELFDESTRUCT].constantGas = params.SelfdestructGas
 	jt[SELFDESTRUCT].dynamicGas = gasSelfdestructEIP2929
+}
+
+// enable3529 enabled "EIP-3529: Reduction in refunds":
+// - Removes refunds for selfdestructs
+// - Reduces refunds for SSTORE
+// - Reduces max refunds to 20% gas
+func enable3529(jt *JumpTable) {
+	jt[SSTORE].dynamicGas = gasSStoreEIP3529
+	jt[SELFDESTRUCT].dynamicGas = gasSelfdestructEIP3529
 }
 
 // enable4399 applies EIP-4399 (PREVRANDAO Opcode)

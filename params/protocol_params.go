@@ -115,7 +115,6 @@ const (
 	Ripemd160PerWordGas uint64 = 120  // Per-word price for a RIPEMD160 operation
 	IdentityBaseGas     uint64 = 15   // Base price for a data copy operation
 	IdentityPerWordGas  uint64 = 3    // Per-work price for a data copy operation
-	ModExpQuadCoeffDiv  uint64 = 20   // Divisor for the quadratic particle of the big int modular exponentiation
 
 	Bn256AddGasConstantinople             uint64 = 500    // Gas needed for an elliptic curve addition
 	Bn256AddGasIstanbul                   uint64 = 150    // Istanbul version of gas needed for an elliptic curve addition
@@ -129,6 +128,11 @@ const (
 	VMLogPerByteGas                       uint64 = 20     // Per-byte price for a VMLOG operation
 	FeePayerGas                           uint64 = 300    // Gas needed for calculating the fee payer of the transaction in a smart contract.
 	ValidateSenderGas                     uint64 = 5000   // Gas needed for validating the signature of a message.
+
+	// The Refund Quotient is the cap on how much of the used gas can be refunded. Before EIP-3529,
+	// up to half the consumed gas could be refunded. Redefined as 1/5th in EIP-3529
+	RefundQuotient        uint64 = 2
+	RefundQuotientEIP3529 uint64 = 5
 
 	GasLimitBoundDivisor uint64 = 1024    // The bound divisor of the gas limit, used in update calculations.
 	MinGasLimit          uint64 = 5000    // Minimum the gas limit may ever be.

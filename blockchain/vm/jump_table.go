@@ -74,6 +74,7 @@ func newKoreInstructionSet() JumpTable {
 	instructionSet := newLondonInstructionSet()
 
 	enable2929(&instructionSet) // Access lists for trie accesses https://eips.ethereum.org/EIPS/eip-2929
+	enable3529(&instructionSet) // EIP-3529: Reduction in refunds https://eips.ethereum.org/EIPS/eip-3529
 	enable4399(&instructionSet) // Change 0x44 opcode return value (from difficulty value to prev blockhash value)
 	return instructionSet
 }
