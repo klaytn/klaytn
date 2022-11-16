@@ -261,6 +261,10 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 		return nil, 0, kerr
 	}
 
+	rules := st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber)
+	if rules.IsKore {
+		st.state.PrepareAccessList(msg.ValidatedSender(), msg.ValidatedFeePayer(), msg.To(), vm.ActivePrecompiles(rules))
+	}
 	// vm errors do not effect consensus and are therefor
 	// not assigned to err, except for insufficient balance
 	// error and total time limit reached error.

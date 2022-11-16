@@ -72,13 +72,9 @@ type JumpTable [256]*operation
 
 func newKoreInstructionSet() JumpTable {
 	instructionSet := newLondonInstructionSet()
-	instructionSet[PREVRANDAO] = &operation{
-		execute:         opRandom,
-		constantGas:     GasQuickStep,
-		minStack:        minStack(0, 1),
-		maxStack:        maxStack(0, 1),
-		computationCost: params.RandomComputationCost,
-	}
+
+	enable2929(&instructionSet) // Access lists for trie accesses https://eips.ethereum.org/EIPS/eip-2929
+	enable4399(&instructionSet) // Change 0x44 opcode return value (from difficulty value to prev blockhash value)
 	return instructionSet
 }
 

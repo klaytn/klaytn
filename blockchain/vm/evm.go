@@ -444,6 +444,12 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 	// Increasing nonce since a failed tx with one of following error will be loaded on a block.
 	evm.StateDB.IncNonce(caller.Address())
 
+	// We add this to the access list _before_ taking a snapshot. Even if the creation fails,
+	// the access-list change should not be rolled back
+	if evm.chainRules.IsKore {
+		evm.StateDB.AddAddressToAccessList(address)
+	}
+
 	if evm.StateDB.Exist(address) {
 		return nil, common.Address{}, 0, ErrContractAddressCollision // TODO-Klaytn-Issue615
 	}
