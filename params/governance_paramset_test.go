@@ -160,6 +160,7 @@ func TestGovParamSet_Nominal(t *testing.T) {
 	assert.Equal(t, c.Istanbul.ProposerPolicy, p.Policy())
 	assert.Equal(t, c.Istanbul.SubGroupSize, p.CommitteeSize())
 	assert.Equal(t, c.UnitPrice, p.UnitPrice())
+	assert.Equal(t, c.DeriveShaImpl, p.DeriveShaImpl())
 	assert.Equal(t, c.Governance.GovernanceMode, p.GovernanceModeStr())
 	assert.Equal(t, c.Governance.GoverningNode, p.GoverningNode())
 	assert.Equal(t, c.Governance.Reward.MintingAmount.String(), p.MintingAmountStr())
