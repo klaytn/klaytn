@@ -175,8 +175,6 @@ type txPool interface {
 }
 
 type Governance struct {
-	ChainConfig *params.ChainConfig
-
 	// Map used to keep multiple types of votes
 	voteMap VoteMap
 
@@ -417,9 +415,8 @@ func (gs *GovernanceSet) Merge(change map[string]interface{}) {
 }
 
 // NewGovernance creates Governance with the given configuration.
-func NewGovernance(chainConfig *params.ChainConfig, dbm database.DBManager) *Governance {
+func NewGovernance(dbm database.DBManager) *Governance {
 	return &Governance{
-		ChainConfig:              chainConfig,
 		voteMap:                  NewVoteMap(),
 		db:                       dbm,
 		itemCache:                newGovernanceCache(),
@@ -437,18 +434,18 @@ func NewGovernance(chainConfig *params.ChainConfig, dbm database.DBManager) *Gov
 // NewGovernanceInitialize creates Governance with the given configuration and read governance state from DB.
 // If any items are not stored in DB, it stores governance items of the genesis block to DB.
 func NewGovernanceInitialize(chainConfig *params.ChainConfig, dbm database.DBManager) *Governance {
-	ret := NewGovernance(chainConfig, dbm)
+	ret := NewGovernance(dbm)
 	// nil is for testing or simple function usage
 	if dbm != nil {
 		ret.ReadGovernanceState()
-		if err := ret.initializeCache(); err != nil {
+		if err := ret.initializeCache(chainConfig); err != nil {
 			// If this is the first time to run, store governance information for genesis block on database
 			cfg := GetGovernanceItemsFromChainConfig(chainConfig)
 			if err := ret.WriteGovernance(0, cfg, NewGovernanceSet()); err != nil {
 				logger.Crit("Error in writing governance information", "err", err)
 			}
 			// If failed again after writing governance, stop booting up
-			if err = ret.initializeCache(); err != nil {
+			if err = ret.initializeCache(chainConfig); err != nil {
 				logger.Crit("No governance cache index found in a database", "err", err)
 			}
 		}
@@ -677,7 +674,7 @@ func newGovernanceCache() common.Cache {
 
 // initializeCache reads governance item data from database and updates Governance.itemCache.
 // It also initializes currentSet and actualGovernanceBlock according to head block number.
-func (g *Governance) initializeCache() error {
+func (g *Governance) initializeCache(chainConfig *params.ChainConfig) error {
 	// get last n governance change block number
 	indices, err := g.db.ReadRecentGovernanceIdx(params.GovernanceIdxCacheLimit)
 	if err != nil {
@@ -733,7 +730,7 @@ func (g *Governance) initializeCache() error {
 	}
 
 	// Reflect CurrentSet -> g.initialParams
-	if pset, err := params.NewGovParamSetChainConfig(g.ChainConfig); err == nil {
+	if pset, err := params.NewGovParamSetChainConfig(chainConfig); err == nil {
 		g.initialParams = pset
 	} else {
 		logger.Crit("Error parsing initial ChainConfig", "err", err)
@@ -820,9 +817,6 @@ func (g *Governance) searchCache(num uint64) (uint64, bool) {
 }
 
 func (g *Governance) ReadGovernance(num uint64) (uint64, map[string]interface{}, error) {
-	if g.ChainConfig.Istanbul == nil {
-		logger.Crit("Failed to read governance. ChainConfig.Istanbul == nil")
-	}
 	blockNum := CalcGovernanceInfoBlock(num, g.epochWithFallback())
 	// Check cache first
 	if gBlockNum, ok := g.searchCache(blockNum); ok {
@@ -997,7 +991,6 @@ type governanceJSON struct {
 func (gov *Governance) toJSON(num uint64) ([]byte, error) {
 	ret := &governanceJSON{
 		BlockNumber:     num,
-		ChainConfig:     gov.ChainConfig,
 		VoteMap:         gov.voteMap.Copy(),
 		NodeAddress:     gov.nodeAddress.Load().(common.Address),
 		GovernanceVotes: gov.GovernanceVotes.Copy(),
@@ -1014,7 +1007,6 @@ func (gov *Governance) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &j); err != nil {
 		return err
 	}
-	gov.ChainConfig = j.ChainConfig
 	gov.voteMap.Import(j.VoteMap)
 	gov.nodeAddress.Store(j.NodeAddress)
 	gov.GovernanceVotes.Import(j.GovernanceVotes)
@@ -1140,14 +1132,6 @@ func (gov *Governance) stakingUpdateInterval() uint64 {
 	return gov.GetGovernanceValue(params.StakeUpdateInterval).(uint64)
 }
 
-func (gov *Governance) ChainId() uint64 {
-	return gov.ChainConfig.ChainID.Uint64()
-}
-
-func (gov *Governance) InitialChainConfig() *params.ChainConfig {
-	return gov.ChainConfig
-}
-
 func (g *Governance) GetVoteMapCopy() map[string]VoteStatus {
 	return g.voteMap.Copy()
 }
@@ -1192,10 +1176,6 @@ func (gov *Governance) epochWithFallback() uint64 {
 	// Otherwise after initializeCache() is called, initialParams should contain the Epoch
 	if v, ok := gov.initialParams.Get(params.Epoch); ok {
 		return v.(uint64)
-	}
-	// Otherwise fallback to ChainConfig that is supplied to NewGovernance()
-	if gov.ChainConfig.Istanbul != nil {
-		return gov.ChainConfig.Istanbul.Epoch
 	}
 	// We shouldn't reach here because Governance is only relevant with Istanbul engine.
 	logger.Crit("Failed to read governance. ChainConfig.Istanbul == nil")

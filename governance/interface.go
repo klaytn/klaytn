@@ -79,8 +79,6 @@ type HeaderEngine interface {
 		istanbul.ValidatorSet, []GovernanceVote, []GovernanceTallyItem)
 
 	// Get internal fields
-	ChainId() uint64
-	InitialChainConfig() *params.ChainConfig
 	GetVoteMapCopy() map[string]VoteStatus
 	GetGovernanceTalliesCopy() []GovernanceTallyItem
 	CurrentSetCopy() map[string]interface{}

@@ -99,7 +99,7 @@ func newMixedEngine(config *params.ChainConfig, db database.DBManager, doInit bo
 	if doInit {
 		e.headerGov = NewGovernanceInitialize(config, db)
 	} else {
-		e.headerGov = NewGovernance(config, db)
+		e.headerGov = NewGovernance(db)
 	}
 
 	e.contractGov = NewContractEngine(e.headerGov)
@@ -312,14 +312,6 @@ func (e *MixedEngine) HandleGovernanceVote(
 	istanbul.ValidatorSet, []GovernanceVote, []GovernanceTallyItem,
 ) {
 	return e.headerGov.HandleGovernanceVote(valset, votes, tally, header, proposer, self, writable)
-}
-
-func (e *MixedEngine) ChainId() uint64 {
-	return e.headerGov.ChainId()
-}
-
-func (e *MixedEngine) InitialChainConfig() *params.ChainConfig {
-	return e.headerGov.InitialChainConfig()
 }
 
 func (e *MixedEngine) GetVoteMapCopy() map[string]VoteStatus {

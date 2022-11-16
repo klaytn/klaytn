@@ -245,7 +245,7 @@ func (api *PublicGovernanceAPI) MyVotingPower() (float64, error) {
 }
 
 func (api *PublicGovernanceAPI) ChainConfig() *params.ChainConfig {
-	return api.governance.InitialChainConfig()
+	return nil
 }
 
 func (api *PublicGovernanceAPI) NodeAddress() common.Address {
