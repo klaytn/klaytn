@@ -275,6 +275,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	cn.blockchain = bc
 	governance.SetBlockchain(cn.blockchain)
+	blockchain.InitDeriveSha(cn.chainConfig)
 	// Synchronize proposerpolicy & useGiniCoeff
 	if cn.blockchain.Config().Istanbul != nil {
 		cn.blockchain.Config().Istanbul.ProposerPolicy = governance.Params().Policy()
