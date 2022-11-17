@@ -453,7 +453,8 @@ func calcShares(stakingInfo *StakingInfo, stakeReward *big.Int, minStake uint64)
 	for _, node := range cns.GetAllNodes() {
 		if node.StakingAmount > minStake {
 			effectiveStake := new(big.Int).SetUint64(node.StakingAmount - minStake)
-			// effectiveStake, totalStakes are in Klay, but will cancel out
+			// The KLAY unit will cancel out:
+			// rewardAmount (peb) = stakeReward (peb) * effectiveStake (KLAY) / totalStakes (KLAY)
 			rewardAmount := new(big.Int).Mul(stakeReward, effectiveStake)
 			rewardAmount = rewardAmount.Div(rewardAmount, totalStakes)
 			remaining = remaining.Sub(remaining, rewardAmount)
