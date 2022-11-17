@@ -97,7 +97,7 @@ var (
 	DefaultBaseFeeDenominator        = uint64(20)
 	DefaultMintingAmount             = big.NewInt(0)
 	DefaultRatio                     = "100/0/0"
-	DefaultKip82Ratio                = "20/80"
+	DefaultKip82Ratio                = "100/0"
 	DefaultUseGiniCoeff              = false
 	DefaultDefferedTxFee             = false
 	DefaultMinimumStake              = big.NewInt(2000000)
