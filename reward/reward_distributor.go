@@ -197,8 +197,7 @@ func GetBlockReward(header *types.Header, config *params.ChainConfig) (*RewardSp
 
 			spec.Proposer = spec.Proposer.Add(spec.Proposer, spec.TotalFee)
 			spec.TotalFee = spec.TotalFee.Add(spec.TotalFee, blockFee)
-			spec.Rewards[header.Rewardbase] = spec.Rewards[header.Rewardbase].Add(
-				spec.Rewards[header.Rewardbase], blockFee)
+			incrementRewardsMap(spec.Rewards, header.Rewardbase, blockFee)
 		}
 	}
 
