@@ -497,14 +497,14 @@ func parseRewardKip82Ratio(ratio string) (int64, int64, int64, error) {
 		logger.Error("Invalid kip82ratio format", "ratio", ratio)
 		return 0, 0, 0, errInvalidFormat
 	}
-	basic, err1 := strconv.ParseInt(s[0], 10, 64)
-	stake, err2 := strconv.ParseInt(s[1], 10, 64)
+	proposer, err1 := strconv.ParseInt(s[0], 10, 64)
+	stakers, err2 := strconv.ParseInt(s[1], 10, 64)
 
 	if err1 != nil || err2 != nil {
 		logger.Error("Could not parse kip82ratio", "ratio", ratio)
 		return 0, 0, 0, errParsingRatio
 	}
-	return basic, stake, basic + stake, nil
+	return proposer, stakers, proposer + stakers, nil
 }
 
 func incrementRewardsMap(m map[common.Address]*big.Int, addr common.Address, amount *big.Int) {
