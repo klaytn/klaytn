@@ -183,18 +183,7 @@ func GetBlockReward(header *types.Header, config *params.ChainConfig) (*RewardSp
 		// If not DeferredTxFee, CalcDeferredReward() assumes 0 total_fee, but
 		// some non-zero fee is paid to the proposer.
 		if !config.Governance.Reward.DeferredTxFee {
-			var blockFee *big.Int
-
-			if config.IsMagmaForkEnabled(header.Number) {
-				blockFee = new(big.Int).Mul(
-					big.NewInt(0).SetUint64(header.GasUsed),
-					header.BaseFee)
-			} else {
-				blockFee = new(big.Int).Mul(
-					big.NewInt(0).SetUint64(header.GasUsed),
-					big.NewInt(0).SetUint64(config.UnitPrice))
-			}
-
+			blockFee := GetTotalTxFee(header, config)
 			spec.Proposer = spec.Proposer.Add(spec.Proposer, spec.TotalFee)
 			spec.TotalFee = spec.TotalFee.Add(spec.TotalFee, blockFee)
 			incrementRewardsMap(spec.Rewards, header.Rewardbase, blockFee)
