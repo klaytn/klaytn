@@ -42,7 +42,7 @@ func (governance *testGovernance) setTestGovernance(intMap map[int]interface{}) 
 }
 
 var (
-	cnBaseAddr     = 500
+	cnBaseAddr     = 500 // Dummy addresses goes like 0x000..5nn
 	stakeBaseAddr  = 600
 	rewardBaseAddr = 700
 	minStaking     = uint64(2000000) // changing this value will not change the governance's min staking
