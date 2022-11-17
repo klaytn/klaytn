@@ -61,14 +61,15 @@ func InitDeriveSha(chainConfig *params.ChainConfig) {
 }
 
 func DeriveShaMux(list types.DerivableList, num *big.Int) common.Hash {
-	return instances[getType(num)].DeriveSha(list)
+	return instances[getType()].DeriveSha(list)
 }
 
 func EmptyRootHashMux(num *big.Int) common.Hash {
-	return emptyRoots[getType(num)]
+	return emptyRoots[getType()]
 }
 
-func getType(num *big.Int) int {
+// TODO: Choose appropriate DeriveShaImpl from governance based on block number
+func getType() int {
 	implType := config.DeriveShaImpl
 	if _, ok := instances[implType]; ok {
 		return implType
