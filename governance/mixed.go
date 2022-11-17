@@ -87,6 +87,8 @@ func newMixedEngine(config *params.ChainConfig, db database.DBManager, doInit bo
 		params.MaxBlockGasUsedForBaseFee: params.DefaultMaxBlockGasUsedForBaseFee,
 		params.BaseFeeDenominator:        params.DefaultBaseFeeDenominator,
 		params.GovParamContract:          params.DefaultGovParamContract,
+		params.Kip82Ratio:                params.DefaultKip82Ratio,
+		params.UseKip82:                  params.DefaultUseKip82,
 	}
 	if p, err := params.NewGovParamSetIntMap(defaultMap); err == nil {
 		e.defaultParams = p

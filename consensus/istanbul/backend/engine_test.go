@@ -675,6 +675,7 @@ func makeFakeStakingInfo(blockNumber uint64, keys []*ecdsa.PrivateKey, amounts [
 		rewardAddr := crypto.PubkeyToAddress(pk.PublicKey)
 
 		stakingInfo.CouncilNodeAddrs = append(stakingInfo.CouncilNodeAddrs, addr)
+		stakingInfo.CouncilStakingAddrs = append(stakingInfo.CouncilStakingAddrs, addr)
 		stakingInfo.CouncilStakingAmounts = append(stakingInfo.CouncilStakingAmounts, amounts[idx])
 		stakingInfo.CouncilRewardAddrs = append(stakingInfo.CouncilRewardAddrs, rewardAddr)
 	}

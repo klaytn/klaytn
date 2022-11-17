@@ -1090,8 +1090,6 @@ func GetGovernanceItemsFromChainConfig(config *params.ChainConfig) GovernanceSet
 			params.UnitPrice:               config.UnitPrice,
 			params.MintingAmount:           governance.Reward.MintingAmount.String(),
 			params.Ratio:                   governance.Reward.Ratio,
-			params.Kip82Ratio:              governance.Reward.Kip82Ratio,
-			params.UseKip82:                governance.Reward.UseKip82,
 			params.UseGiniCoeff:            governance.Reward.UseGiniCoeff,
 			params.DeferredTxFee:           governance.Reward.DeferredTxFee,
 			params.MinimumStake:            governance.Reward.MinimumStake.String(),

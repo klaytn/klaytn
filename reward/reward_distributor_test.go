@@ -17,6 +17,7 @@
 package reward
 
 import (
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -25,6 +26,56 @@ import (
 	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
 )
+
+var (
+	cnBaseAddr     = 500
+	stakeBaseAddr  = 600
+	rewardBaseAddr = 700
+	minStaking     = uint64(2000000) // changing this value will not change the governance's min staking
+	minted, _      = big.NewInt(0).SetString("9600000000000000000", 10)
+	proposer       = common.StringToAddress("0x1552F52D459B713E0C4558e66C8c773a75615FA8")
+	kir            = intToAddress(1000)
+	kgf            = intToAddress(2000)
+)
+
+func intToAddress(x int) common.Address {
+	return common.HexToAddress(fmt.Sprintf("0x%040d", x))
+}
+
+// rewardOverride[i] = j means rewards[i] = rewards[j]
+// amountOverride[i] = j means amount[i] = j
+func genStakingInfo(cnNum int, rewardOverride map[int]int, amountOverride map[int]uint64) *StakingInfo {
+	cns := make([]common.Address, 0)
+	stakes := make([]common.Address, 0)
+	rewards := make([]common.Address, 0)
+	amounts := make([]uint64, 0)
+
+	for i := 0; i < cnNum; i++ {
+		cns = append(cns, intToAddress(cnBaseAddr+i))
+		stakes = append(stakes, intToAddress(stakeBaseAddr+i))
+		rewards = append(rewards, intToAddress(rewardBaseAddr+i))
+		amounts = append(amounts, minStaking)
+	}
+
+	for i := range rewardOverride {
+		rewards[i] = rewards[rewardOverride[i]]
+	}
+
+	for i := range amountOverride {
+		amounts[i] = amountOverride[i]
+	}
+
+	return &StakingInfo{
+		BlockNum:              0,
+		CouncilNodeAddrs:      cns,
+		CouncilStakingAddrs:   stakes,
+		CouncilRewardAddrs:    rewards,
+		KIRAddr:               kir,
+		PoCAddr:               kgf,
+		UseGini:               false,
+		CouncilStakingAmounts: amounts,
+	}
+}
 
 type testBalanceAdder struct {
 	accounts map[common.Address]*big.Int
@@ -36,6 +87,27 @@ func newTestBalanceAdder() *testBalanceAdder {
 	return balanceAdder
 }
 
+func getTestConfig() *params.ChainConfig {
+	return &params.ChainConfig{
+		MagmaCompatibleBlock: big.NewInt(0),
+		KoreCompatibleBlock:  big.NewInt(0),
+		UnitPrice:            1,
+		Governance: &params.GovernanceConfig{
+			Reward: &params.RewardConfig{
+				MintingAmount: minted,
+				Ratio:         "34/54/12",
+				Kip82Ratio:    "20/80",
+				UseKip82:      true,
+				DeferredTxFee: true,
+				MinimumStake:  big.NewInt(0).SetUint64(minStaking),
+			},
+		},
+		Istanbul: &params.IstanbulConfig{
+			ProposerPolicy: 2,
+		},
+	}
+}
+
 func (balanceAdder *testBalanceAdder) AddBalance(addr common.Address, v *big.Int) {
 	balance, ok := balanceAdder.accounts[addr]
 	if ok {
@@ -43,6 +115,27 @@ func (balanceAdder *testBalanceAdder) AddBalance(addr common.Address, v *big.Int
 	} else {
 		balanceAdder.accounts[addr] = v
 	}
+}
+
+func noMagma(p *params.ChainConfig) *params.ChainConfig {
+	p.MagmaCompatibleBlock = big.NewInt(100000000)
+	p.KoreCompatibleBlock = big.NewInt(100000000)
+	return p
+}
+
+func noKore(p *params.ChainConfig) *params.ChainConfig {
+	p.KoreCompatibleBlock = big.NewInt(100000000)
+	return p
+}
+
+func noDeferred(p *params.ChainConfig) *params.ChainConfig {
+	p.Governance.Reward.DeferredTxFee = false
+	return p
+}
+
+func roundrobin(p *params.ChainConfig) *params.ChainConfig {
+	p.Istanbul.ProposerPolicy = 0
+	return p
 }
 
 func (balanceAdder *testBalanceAdder) GetBalance(addr common.Address) *big.Int {
@@ -153,174 +246,776 @@ func TestRewardDistributor_TxFeeBurning(t *testing.T) {
 	}
 }
 
-func TestRewardDistributor_MintKLAY(t *testing.T) {
-	BalanceAdder := newTestBalanceAdder()
-	header := &types.Header{}
-	header.Number = big.NewInt(0)
-	header.BaseFee = big.NewInt(30000000000)
-	header.Rewardbase = common.StringToAddress("0x1552F52D459B713E0C4558e66C8c773a75615FA8")
-	governance := newDefaultTestGovernance()
-	rewardDistributor := NewRewardDistributor(governance)
-
-	err := rewardDistributor.MintKLAY(BalanceAdder, header)
-	if !assert.NoError(t, err) {
-		t.FailNow()
+func TestRewardDistributor_GetActualReward(t *testing.T) {
+	header := &types.Header{
+		Number:     big.NewInt(1),
+		GasUsed:    1000,
+		BaseFee:    big.NewInt(1),
+		Rewardbase: proposer,
 	}
 
-	assert.NotNil(t, BalanceAdder.GetBalance(header.Rewardbase).Int64())
-	assert.Equal(t, governance.Params().MintingAmountStr(), BalanceAdder.GetBalance(header.Rewardbase).String())
-}
-
-func TestRewardDistributor_distributeBlockReward(t *testing.T) {
-	testCases := []struct {
-		totalTxFee         *big.Int
-		rewardConfig       *rewardConfig
-		expectedCnBalance  *big.Int
-		expectedPocBalance *big.Int
-		expectedKirBalance *big.Int
+	testcases := []struct {
+		header      *types.Header
+		config      *params.ChainConfig
+		stakingInfo *StakingInfo
+		expected    *RewardSpec
 	}{
 		{
-			totalTxFee: big.NewInt(0),
-			rewardConfig: &rewardConfig{
-				blockNum:      1,
-				mintingAmount: big.NewInt(0).SetUint64(9600000000000000000),
-				cnRatio:       big.NewInt(0).SetInt64(34),
-				pocRatio:      big.NewInt(0).SetInt64(54),
-				kirRatio:      big.NewInt(0).SetInt64(12),
-				totalRatio:    big.NewInt(0).SetInt64(100),
-				unitPrice:     big.NewInt(0).SetInt64(25000000000),
+			header: header,
+			config: noMagma(roundrobin(getTestConfig())),
+			expected: &RewardSpec{
+				Minted:   minted,
+				Fee:      big.NewInt(1000),
+				Burnt:    big.NewInt(0),
+				Proposer: big.NewInt(0).SetUint64(9600000000000001000),
+				Rewards: map[common.Address]*big.Int{
+					proposer: big.NewInt(0).SetUint64(9600000000000001000),
+				},
 			},
-			expectedCnBalance:  big.NewInt(0).SetUint64(3264000000000000000),
-			expectedPocBalance: big.NewInt(0).SetUint64(5184000000000000000),
-			expectedKirBalance: big.NewInt(0).SetUint64(1152000000000000000),
 		},
 		{
-			totalTxFee: big.NewInt(1000000),
-			rewardConfig: &rewardConfig{
-				blockNum:      1,
-				mintingAmount: big.NewInt(0).SetUint64(10000000000),
-				cnRatio:       big.NewInt(0).SetInt64(60),
-				pocRatio:      big.NewInt(0).SetInt64(30),
-				kirRatio:      big.NewInt(0).SetInt64(10),
-				totalRatio:    big.NewInt(0).SetInt64(100),
-				unitPrice:     big.NewInt(0).SetInt64(25000000000),
+			header: header,
+			config: roundrobin(getTestConfig()),
+			expected: &RewardSpec{
+				Minted:   minted,
+				Fee:      big.NewInt(1000),
+				Burnt:    big.NewInt(500),
+				Proposer: big.NewInt(0).SetUint64(9600000000000000500),
+				Rewards: map[common.Address]*big.Int{
+					proposer: big.NewInt(0).SetUint64(9600000000000000500),
+				},
 			},
-			expectedCnBalance:  big.NewInt(0).SetUint64(6000600000),
-			expectedPocBalance: big.NewInt(0).SetUint64(3000300000),
-			expectedKirBalance: big.NewInt(0).SetUint64(1000100000),
+		},
+		{ // before magma, default stakings
+			header:      header,
+			config:      noMagma(getTestConfig()),
+			stakingInfo: genStakingInfo(5, nil, nil),
+			expected: &RewardSpec{
+				Minted:   minted,
+				Fee:      big.NewInt(1000),
+				Burnt:    big.NewInt(0),
+				Proposer: big.NewInt(0).SetUint64(3264000000000000340),
+				Stakers:  big.NewInt(0),
+				Kgf:      big.NewInt(5184000000000000540),
+				Kir:      big.NewInt(1152000000000000120),
+				Rewards: map[common.Address]*big.Int{
+					proposer: big.NewInt(3264000000000000340),
+					kir:      big.NewInt(1152000000000000120),
+					kgf:      big.NewInt(5184000000000000540),
+				},
+			},
+		},
+		{ // before magma, more-than-default staking
+			header: header,
+			config: noMagma(getTestConfig()),
+			stakingInfo: genStakingInfo(5, nil, map[int]uint64{
+				0: minStaking + 1,
+				1: minStaking + 1,
+			}),
+			expected: &RewardSpec{
+				Minted:   minted,
+				Fee:      big.NewInt(1000),
+				Burnt:    big.NewInt(0),
+				Proposer: big.NewInt(3264000000000000340),
+				Stakers:  big.NewInt(0),
+				Kgf:      big.NewInt(5184000000000000540),
+				Kir:      big.NewInt(1152000000000000120),
+				Rewards: map[common.Address]*big.Int{
+					proposer: big.NewInt(3264000000000000340),
+					kir:      big.NewInt(1152000000000000120),
+					kgf:      big.NewInt(5184000000000000540),
+				},
+			},
+		},
+		{ // before kore, more-than-default staking
+			header: header,
+			config: noKore(getTestConfig()),
+			stakingInfo: genStakingInfo(5, nil, map[int]uint64{
+				0: minStaking + 2,
+				1: minStaking + 2,
+			}),
+			expected: &RewardSpec{
+				Minted:   minted,
+				Fee:      big.NewInt(1000),
+				Burnt:    big.NewInt(500),
+				Proposer: big.NewInt(3264000000000000170),
+				Stakers:  big.NewInt(0),
+				Kgf:      big.NewInt(5184000000000000270),
+				Kir:      big.NewInt(1152000000000000060),
+				Rewards: map[common.Address]*big.Int{
+					proposer: big.NewInt(3264000000000000170),
+					kir:      big.NewInt(1152000000000000060),
+					kgf:      big.NewInt(5184000000000000270),
+				},
+			},
+		},
+		{ // after kore, more-than-default staking, small fee
+			header: header,
+			config: getTestConfig(),
+			stakingInfo: genStakingInfo(5, nil, map[int]uint64{
+				0: minStaking + 2,
+				1: minStaking + 1,
+			}),
+			expected: &RewardSpec{
+				Minted:   minted,
+				Fee:      big.NewInt(1000),
+				Burnt:    big.NewInt(1000),
+				Proposer: big.NewInt(652800000000000000),
+				Stakers:  big.NewInt(2611200000000000000),
+				Kgf:      big.NewInt(5184000000000000000),
+				Kir:      big.NewInt(1152000000000000000),
+				Rewards: map[common.Address]*big.Int{
+					proposer:                         big.NewInt(652800000000000000),
+					kgf:                              big.NewInt(5184000000000000000),
+					kir:                              big.NewInt(1152000000000000000),
+					intToAddress(rewardBaseAddr):     big.NewInt(1740800000000000000),
+					intToAddress(rewardBaseAddr + 1): big.NewInt(870400000000000000),
+				},
+			},
+		},
+		{ // after kore, more-than-default staking, large fee
+			header: &types.Header{
+				Number:     big.NewInt(1),
+				GasUsed:    3e18,
+				BaseFee:    big.NewInt(1),
+				Rewardbase: proposer,
+			},
+			config: getTestConfig(),
+			stakingInfo: genStakingInfo(7, nil, map[int]uint64{
+				0: minStaking + 2,
+				1: minStaking + 1,
+				2: minStaking + 2,
+				3: minStaking + 1,
+				4: minStaking + 2,
+				5: minStaking + 1,
+				6: minStaking + 2,
+			}),
+			expected: &RewardSpec{
+				Minted:   minted,
+				Fee:      big.NewInt(3e18),
+				Burnt:    big.NewInt(2152800000000000000),
+				Proposer: big.NewInt(1500000000000000005),
+				Stakers:  big.NewInt(2611200000000000000),
+				Kgf:      big.NewInt(5184000000000000000),
+				Kir:      big.NewInt(1152000000000000000),
+				Rewards: map[common.Address]*big.Int{
+					proposer:                         big.NewInt(1500000000000000005),
+					kgf:                              big.NewInt(5184000000000000000),
+					kir:                              big.NewInt(1152000000000000000),
+					intToAddress(rewardBaseAddr):     big.NewInt(474763636363636363),
+					intToAddress(rewardBaseAddr + 1): big.NewInt(237381818181818181),
+					intToAddress(rewardBaseAddr + 2): big.NewInt(474763636363636363),
+					intToAddress(rewardBaseAddr + 3): big.NewInt(237381818181818181),
+					intToAddress(rewardBaseAddr + 4): big.NewInt(474763636363636363),
+					intToAddress(rewardBaseAddr + 5): big.NewInt(237381818181818181),
+					intToAddress(rewardBaseAddr + 6): big.NewInt(474763636363636363),
+				},
+			},
+		},
+		{ // after kore, more-than-default staking, large fee, proposer = rewardbase
+			header: &types.Header{
+				Number:     big.NewInt(1),
+				GasUsed:    3e18,
+				BaseFee:    big.NewInt(1),
+				Rewardbase: intToAddress(rewardBaseAddr),
+			},
+			config: getTestConfig(),
+			stakingInfo: genStakingInfo(7, nil, map[int]uint64{
+				0: minStaking + 2,
+				1: minStaking + 1,
+				2: minStaking + 2,
+				3: minStaking + 1,
+				4: minStaking + 2,
+				5: minStaking + 1,
+				6: minStaking + 2,
+			}),
+			expected: &RewardSpec{
+				Minted:   minted,
+				Fee:      big.NewInt(3e18),
+				Burnt:    big.NewInt(2152800000000000000),
+				Proposer: big.NewInt(1500000000000000005),
+				Stakers:  big.NewInt(2611200000000000000),
+				Kgf:      big.NewInt(5184000000000000000),
+				Kir:      big.NewInt(1152000000000000000),
+				Rewards: map[common.Address]*big.Int{
+					kgf:                              big.NewInt(5184000000000000000),
+					kir:                              big.NewInt(1152000000000000000),
+					intToAddress(rewardBaseAddr):     big.NewInt(1974763636363636368),
+					intToAddress(rewardBaseAddr + 1): big.NewInt(237381818181818181),
+					intToAddress(rewardBaseAddr + 2): big.NewInt(474763636363636363),
+					intToAddress(rewardBaseAddr + 3): big.NewInt(237381818181818181),
+					intToAddress(rewardBaseAddr + 4): big.NewInt(474763636363636363),
+					intToAddress(rewardBaseAddr + 5): big.NewInt(237381818181818181),
+					intToAddress(rewardBaseAddr + 6): big.NewInt(474763636363636363),
+				},
+			},
+		},
+		{ // after kore, more-than-default staking, small fee, kgf = kir = 0
+			header: header,
+			config: getTestConfig(),
+			stakingInfo: &StakingInfo{
+				BlockNum:              0,
+				CouncilNodeAddrs:      []common.Address{intToAddress(cnBaseAddr)},
+				CouncilStakingAddrs:   []common.Address{intToAddress(stakeBaseAddr)},
+				CouncilRewardAddrs:    []common.Address{intToAddress(rewardBaseAddr)},
+				KIRAddr:               common.Address{},
+				PoCAddr:               common.Address{},
+				UseGini:               false,
+				CouncilStakingAmounts: []uint64{minStaking + 1},
+			},
+			expected: &RewardSpec{
+				Minted:   minted,
+				Fee:      big.NewInt(1000),
+				Burnt:    big.NewInt(1000),
+				Proposer: big.NewInt(6988800000000000000),
+				Stakers:  big.NewInt(2611200000000000000),
+				Kgf:      big.NewInt(0),
+				Kir:      big.NewInt(0),
+				Rewards: map[common.Address]*big.Int{
+					proposer:                     big.NewInt(6988800000000000000),
+					intToAddress(rewardBaseAddr): big.NewInt(2611200000000000000),
+				},
+			},
+		},
+		{ // no staking info
+			header:      header,
+			config:      getTestConfig(),
+			stakingInfo: nil,
+			expected: &RewardSpec{
+				Minted:   minted,
+				Fee:      big.NewInt(1000),
+				Burnt:    big.NewInt(1000),
+				Proposer: minted,
+				Stakers:  big.NewInt(2611200000000000000),
+				Kgf:      big.NewInt(0),
+				Kir:      big.NewInt(0),
+				Rewards: map[common.Address]*big.Int{
+					proposer: minted,
+				},
+			},
 		},
 	}
 
-	header := &types.Header{}
-	header.BaseFee = big.NewInt(30000000000)
-	header.Number = big.NewInt(0)
-	header.Rewardbase = common.StringToAddress("0x1552F52D459B713E0C4558e66C8c773a75615FA8")
-	pocAddress := common.StringToAddress("0x4bCDd8E3F9776d16056815E189EcB5A8bF8E4CBb")
-	kirAddress := common.StringToAddress("0xd38A08AD21B44681f5e75D0a3CA4793f3E6c03e7")
-	governance := newDefaultTestGovernance()
-
-	for _, testCase := range testCases {
-		BalanceAdder := newTestBalanceAdder()
-		rewardDistributor := NewRewardDistributor(governance)
-		rewardDistributor.distributeBlockReward(BalanceAdder, header, testCase.totalTxFee, testCase.rewardConfig, pocAddress, kirAddress)
-
-		assert.Equal(t, testCase.expectedCnBalance.Uint64(), BalanceAdder.GetBalance(header.Rewardbase).Uint64())
-		assert.Equal(t, testCase.expectedPocBalance.Uint64(), BalanceAdder.GetBalance(pocAddress).Uint64())
-		assert.Equal(t, testCase.expectedKirBalance.Uint64(), BalanceAdder.GetBalance(kirAddress).Uint64())
-	}
-}
-
-func TestRewardDistributor_DistributeBlockReward(t *testing.T) {
-	testCases := []struct {
-		gasUsed            uint64
-		baseFee            *big.Int
-		config             map[int]interface{}
-		expectedCnBalance  *big.Int
-		expectedPocBalance *big.Int
-		expectedKirBalance *big.Int
-	}{
-		{
-			gasUsed: 100,
-			baseFee: big.NewInt(500),
-			config: map[int]interface{}{
-				params.Epoch:         30,
-				params.MintingAmount: "50000",
-				params.Ratio:         "40/50/10",
-				params.UnitPrice:     25000000000,
-				params.UseGiniCoeff:  true,
-				params.DeferredTxFee: true,
-			},
-			expectedCnBalance:  big.NewInt(0).SetUint64(30000),
-			expectedPocBalance: big.NewInt(0).SetUint64(37500),
-			expectedKirBalance: big.NewInt(0).SetUint64(7500),
-		},
-		{
-			gasUsed: 100,
-			config: map[int]interface{}{
-				params.Epoch:         30,
-				params.MintingAmount: "50000",
-				params.Ratio:         "40/50/10",
-				params.UnitPrice:     25000000000,
-				params.UseGiniCoeff:  true,
-				params.DeferredTxFee: true,
-			},
-			expectedCnBalance:  big.NewInt(0).SetUint64(250000005000 * 4),
-			expectedPocBalance: big.NewInt(0).SetUint64(250000005000 * 5),
-			expectedKirBalance: big.NewInt(0).SetUint64(250000005000),
-		},
-		{
-			gasUsed: 0,
-			baseFee: big.NewInt(25000000000),
-			config: map[int]interface{}{
-				params.Epoch:         604800,
-				params.MintingAmount: "9600000000000000000",
-				params.Ratio:         "34/54/12",
-				params.UnitPrice:     25000000000,
-				params.UseGiniCoeff:  true,
-				params.DeferredTxFee: true,
-			},
-			expectedCnBalance:  big.NewInt(0).SetUint64(3264000000000000000),
-			expectedPocBalance: big.NewInt(0).SetUint64(5184000000000000000),
-			expectedKirBalance: big.NewInt(0).SetUint64(1152000000000000000),
-		},
-		{
-			gasUsed: 0,
-			config: map[int]interface{}{
-				params.Epoch:         3600,
-				params.MintingAmount: "0",
-				params.Ratio:         "100/0/0",
-				params.UnitPrice:     25000000000,
-				params.UseGiniCoeff:  true,
-				params.DeferredTxFee: true,
-			},
-			expectedCnBalance:  big.NewInt(0).SetUint64(0),
-			expectedPocBalance: big.NewInt(0).SetUint64(0),
-			expectedKirBalance: big.NewInt(0).SetUint64(0),
-		},
-	}
-
-	header := &types.Header{}
-	header.Number = big.NewInt(0)
-	header.Rewardbase = common.StringToAddress("0x1552F52D459B713E0C4558e66C8c773a75615FA8")
-	pocAddress := common.StringToAddress("0x4bCDd8E3F9776d16056815E189EcB5A8bF8E4CBb")
-	kirAddress := common.StringToAddress("0xd38A08AD21B44681f5e75D0a3CA4793f3E6c03e7")
-	governance := newDefaultTestGovernance()
-
-	for _, testCase := range testCases {
-		BalanceAdder := newTestBalanceAdder()
-		governance.setTestGovernance(testCase.config)
-		header.GasUsed = testCase.gasUsed
-		header.BaseFee = testCase.baseFee
-		rewardDistributor := NewRewardDistributor(governance)
-
-		err := rewardDistributor.DistributeBlockReward(BalanceAdder, header, pocAddress, kirAddress)
-		if !assert.NoError(t, err) {
-			t.FailNow()
+	for i, tc := range testcases {
+		if tc.stakingInfo == nil {
+			SetTestStakingManager(nil)
+		} else {
+			SetTestStakingManagerWithStakingInfoCache(tc.stakingInfo)
 		}
+		spec, err := GetActualReward(tc.header, tc.config)
+		assert.Nil(t, err, "testcases[%d] failed", i)
+		assert.Equal(t, tc.expected, spec, "testcases[%d] failed", i)
+	}
+}
 
-		assert.NotNil(t, BalanceAdder.GetBalance(header.Rewardbase).Int64())
-		assert.Equal(t, testCase.expectedCnBalance.Uint64(), BalanceAdder.GetBalance(header.Rewardbase).Uint64())
-		assert.Equal(t, testCase.expectedPocBalance.Uint64(), BalanceAdder.GetBalance(pocAddress).Uint64())
-		assert.Equal(t, testCase.expectedKirBalance.Uint64(), BalanceAdder.GetBalance(kirAddress).Uint64())
+func TestRewardDistributor_CalcSimpleReward(t *testing.T) {
+	header := &types.Header{
+		Number:     big.NewInt(1),
+		GasUsed:    1000,
+		BaseFee:    big.NewInt(1),
+		Rewardbase: proposer,
+	}
+
+	testcases := []struct {
+		header   *types.Header
+		config   *params.ChainConfig
+		expected *RewardSpec
+	}{
+		{ // before magma
+			header: header,
+			config: noMagma(roundrobin(getTestConfig())),
+			expected: &RewardSpec{
+				Minted:   minted,
+				Fee:      big.NewInt(1000),
+				Burnt:    big.NewInt(0),
+				Proposer: big.NewInt(0).SetUint64(9600000000000001000),
+				Rewards: map[common.Address]*big.Int{
+					proposer: big.NewInt(0).SetUint64(9600000000000001000),
+				},
+			},
+		},
+		{ // after magma
+			header: header,
+			config: roundrobin(getTestConfig()),
+			expected: &RewardSpec{
+				Minted:   minted,
+				Fee:      big.NewInt(1000),
+				Burnt:    big.NewInt(500), // 50% of tx fee burnt
+				Proposer: big.NewInt(0).SetUint64(9600000000000000500),
+				Rewards: map[common.Address]*big.Int{
+					proposer: big.NewInt(0).SetUint64(9600000000000000500),
+				},
+			},
+		},
+	}
+
+	for i, tc := range testcases {
+		spec, err := CalcSimpleReward(tc.header, tc.config)
+		assert.Nil(t, err, "testcases[%d] failed", i)
+		assert.Equal(t, tc.expected, spec, "testcases[%d] failed", i)
+	}
+}
+
+func TestRewardDistributor_CalcDeferredReward(t *testing.T) {
+	header := &types.Header{
+		Number:     big.NewInt(1),
+		GasUsed:    1000,
+		BaseFee:    big.NewInt(1),
+		Rewardbase: proposer,
+	}
+
+	testcases := []struct {
+		header      *types.Header
+		config      *params.ChainConfig
+		stakingInfo *StakingInfo
+		expected    *RewardSpec
+	}{
+		{ // before magma, default stakings
+			header:      header,
+			config:      noMagma(getTestConfig()),
+			stakingInfo: genStakingInfo(5, nil, nil),
+			expected: &RewardSpec{
+				Minted:   minted,
+				Fee:      big.NewInt(1000),
+				Burnt:    big.NewInt(0),
+				Proposer: big.NewInt(0).SetUint64(3264000000000000340),
+				Stakers:  big.NewInt(0),
+				Kgf:      big.NewInt(5184000000000000540),
+				Kir:      big.NewInt(1152000000000000120),
+				Rewards: map[common.Address]*big.Int{
+					proposer: big.NewInt(3264000000000000340),
+					kir:      big.NewInt(1152000000000000120),
+					kgf:      big.NewInt(5184000000000000540),
+				},
+			},
+		},
+		{ // before magma, more-than-default staking
+			header: header,
+			config: noMagma(getTestConfig()),
+			stakingInfo: genStakingInfo(5, nil, map[int]uint64{
+				0: minStaking + 1,
+				1: minStaking + 1,
+			}),
+			expected: &RewardSpec{
+				Minted:   minted,
+				Fee:      big.NewInt(1000),
+				Burnt:    big.NewInt(0),
+				Proposer: big.NewInt(3264000000000000340),
+				Stakers:  big.NewInt(0),
+				Kgf:      big.NewInt(5184000000000000540),
+				Kir:      big.NewInt(1152000000000000120),
+				Rewards: map[common.Address]*big.Int{
+					proposer: big.NewInt(3264000000000000340),
+					kir:      big.NewInt(1152000000000000120),
+					kgf:      big.NewInt(5184000000000000540),
+				},
+			},
+		},
+		{ // before kore, more-than-default staking
+			header: header,
+			config: noKore(getTestConfig()),
+			stakingInfo: genStakingInfo(5, nil, map[int]uint64{
+				0: minStaking + 2,
+				1: minStaking + 2,
+			}),
+			expected: &RewardSpec{
+				Minted:   minted,
+				Fee:      big.NewInt(1000),
+				Burnt:    big.NewInt(500),
+				Proposer: big.NewInt(3264000000000000170),
+				Stakers:  big.NewInt(0),
+				Kgf:      big.NewInt(5184000000000000270),
+				Kir:      big.NewInt(1152000000000000060),
+				Rewards: map[common.Address]*big.Int{
+					proposer: big.NewInt(3264000000000000170),
+					kir:      big.NewInt(1152000000000000060),
+					kgf:      big.NewInt(5184000000000000270),
+				},
+			},
+		},
+		{ // after kore, more-than-default staking, small fee
+			header: header,
+			config: getTestConfig(),
+			stakingInfo: genStakingInfo(5, nil, map[int]uint64{
+				0: minStaking + 2,
+				1: minStaking + 1,
+			}),
+			expected: &RewardSpec{
+				Minted:   minted,
+				Fee:      big.NewInt(1000),
+				Burnt:    big.NewInt(1000),
+				Proposer: big.NewInt(652800000000000000),
+				Stakers:  big.NewInt(2611200000000000000),
+				Kgf:      big.NewInt(5184000000000000000),
+				Kir:      big.NewInt(1152000000000000000),
+				Rewards: map[common.Address]*big.Int{
+					proposer:                         big.NewInt(652800000000000000),
+					kgf:                              big.NewInt(5184000000000000000),
+					kir:                              big.NewInt(1152000000000000000),
+					intToAddress(rewardBaseAddr):     big.NewInt(1740800000000000000),
+					intToAddress(rewardBaseAddr + 1): big.NewInt(870400000000000000),
+				},
+			},
+		},
+		{ // after kore, more-than-default staking, large fee
+			header: &types.Header{
+				Number:     big.NewInt(1),
+				GasUsed:    3e18,
+				BaseFee:    big.NewInt(1),
+				Rewardbase: proposer,
+			},
+			config: getTestConfig(),
+			stakingInfo: genStakingInfo(7, nil, map[int]uint64{
+				0: minStaking + 2,
+				1: minStaking + 1,
+				2: minStaking + 2,
+				3: minStaking + 1,
+				4: minStaking + 2,
+				5: minStaking + 1,
+				6: minStaking + 2,
+			}),
+			expected: &RewardSpec{
+				Minted:   minted,
+				Fee:      big.NewInt(3e18),
+				Burnt:    big.NewInt(2152800000000000000),
+				Proposer: big.NewInt(1500000000000000005),
+				Stakers:  big.NewInt(2611200000000000000),
+				Kgf:      big.NewInt(5184000000000000000),
+				Kir:      big.NewInt(1152000000000000000),
+				Rewards: map[common.Address]*big.Int{
+					proposer:                         big.NewInt(1500000000000000005),
+					kgf:                              big.NewInt(5184000000000000000),
+					kir:                              big.NewInt(1152000000000000000),
+					intToAddress(rewardBaseAddr):     big.NewInt(474763636363636363),
+					intToAddress(rewardBaseAddr + 1): big.NewInt(237381818181818181),
+					intToAddress(rewardBaseAddr + 2): big.NewInt(474763636363636363),
+					intToAddress(rewardBaseAddr + 3): big.NewInt(237381818181818181),
+					intToAddress(rewardBaseAddr + 4): big.NewInt(474763636363636363),
+					intToAddress(rewardBaseAddr + 5): big.NewInt(237381818181818181),
+					intToAddress(rewardBaseAddr + 6): big.NewInt(474763636363636363),
+				},
+			},
+		},
+		{ // after kore, more-than-default staking, large fee, proposer = rewardbase
+			header: &types.Header{
+				Number:     big.NewInt(1),
+				GasUsed:    3e18,
+				BaseFee:    big.NewInt(1),
+				Rewardbase: intToAddress(rewardBaseAddr),
+			},
+			config: getTestConfig(),
+			stakingInfo: genStakingInfo(7, nil, map[int]uint64{
+				0: minStaking + 2,
+				1: minStaking + 1,
+				2: minStaking + 2,
+				3: minStaking + 1,
+				4: minStaking + 2,
+				5: minStaking + 1,
+				6: minStaking + 2,
+			}),
+			expected: &RewardSpec{
+				Minted:   minted,
+				Fee:      big.NewInt(3e18),
+				Burnt:    big.NewInt(2152800000000000000),
+				Proposer: big.NewInt(1500000000000000005),
+				Stakers:  big.NewInt(2611200000000000000),
+				Kgf:      big.NewInt(5184000000000000000),
+				Kir:      big.NewInt(1152000000000000000),
+				Rewards: map[common.Address]*big.Int{
+					kgf:                              big.NewInt(5184000000000000000),
+					kir:                              big.NewInt(1152000000000000000),
+					intToAddress(rewardBaseAddr):     big.NewInt(1974763636363636368),
+					intToAddress(rewardBaseAddr + 1): big.NewInt(237381818181818181),
+					intToAddress(rewardBaseAddr + 2): big.NewInt(474763636363636363),
+					intToAddress(rewardBaseAddr + 3): big.NewInt(237381818181818181),
+					intToAddress(rewardBaseAddr + 4): big.NewInt(474763636363636363),
+					intToAddress(rewardBaseAddr + 5): big.NewInt(237381818181818181),
+					intToAddress(rewardBaseAddr + 6): big.NewInt(474763636363636363),
+				},
+			},
+		},
+		{ // after kore, more-than-default staking, small fee, kgf = kir = 0
+			header: header,
+			config: getTestConfig(),
+			stakingInfo: &StakingInfo{
+				BlockNum:              0,
+				CouncilNodeAddrs:      []common.Address{intToAddress(cnBaseAddr)},
+				CouncilStakingAddrs:   []common.Address{intToAddress(stakeBaseAddr)},
+				CouncilRewardAddrs:    []common.Address{intToAddress(rewardBaseAddr)},
+				KIRAddr:               common.Address{},
+				PoCAddr:               common.Address{},
+				UseGini:               false,
+				CouncilStakingAmounts: []uint64{minStaking + 1},
+			},
+			expected: &RewardSpec{
+				Minted:   minted,
+				Fee:      big.NewInt(1000),
+				Burnt:    big.NewInt(1000),
+				Proposer: big.NewInt(6988800000000000000),
+				Stakers:  big.NewInt(2611200000000000000),
+				Kgf:      big.NewInt(0),
+				Kir:      big.NewInt(0),
+				Rewards: map[common.Address]*big.Int{
+					proposer:                     big.NewInt(6988800000000000000),
+					intToAddress(rewardBaseAddr): big.NewInt(2611200000000000000),
+				},
+			},
+		},
+		{ // no staking info
+			header:      header,
+			config:      getTestConfig(),
+			stakingInfo: nil,
+			expected: &RewardSpec{
+				Minted:   minted,
+				Fee:      big.NewInt(1000),
+				Burnt:    big.NewInt(1000),
+				Proposer: minted,
+				Stakers:  big.NewInt(2611200000000000000),
+				Kgf:      big.NewInt(0),
+				Kir:      big.NewInt(0),
+				Rewards: map[common.Address]*big.Int{
+					proposer: minted,
+				},
+			},
+		},
+	}
+
+	for i, tc := range testcases {
+		if tc.stakingInfo == nil {
+			SetTestStakingManager(nil)
+		} else {
+			SetTestStakingManagerWithStakingInfoCache(tc.stakingInfo)
+		}
+		spec, err := CalcDeferredReward(tc.header, tc.config)
+		assert.Nil(t, err, "testcases[%d] failed", i)
+		assert.Equal(t, tc.expected, spec, "testcases[%d] failed", i)
+	}
+}
+
+func TestRewardDistributor_calcDeferredFee(t *testing.T) {
+	type Result struct{ total, reward, burnt uint64 }
+
+	header := &types.Header{
+		Number:     big.NewInt(1),
+		GasUsed:    1000,
+		BaseFee:    big.NewInt(1),
+		Rewardbase: proposer,
+	}
+
+	testcases := []struct {
+		header   *types.Header
+		config   *params.ChainConfig
+		expected *Result
+	}{
+		{
+			header: header,
+			config: noDeferred(getTestConfig()),
+			expected: &Result{
+				total:  0,
+				reward: 0,
+				burnt:  0,
+			},
+		},
+		{
+			header: header,
+			config: noMagma(getTestConfig()),
+			expected: &Result{
+				total:  1000,
+				reward: 1000,
+				burnt:  0,
+			},
+		},
+		{
+			header: header,
+			config: noKore(getTestConfig()),
+			expected: &Result{
+				total:  1000,
+				reward: 500,
+				burnt:  500,
+			},
+		},
+		{
+			header: header,
+			config: getTestConfig(),
+			expected: &Result{
+				total:  1000,
+				reward: 0,
+				burnt:  1000,
+			},
+		},
+		{
+			header: &types.Header{
+				Number:     big.NewInt(1),
+				GasUsed:    10e18,
+				BaseFee:    big.NewInt(1),
+				Rewardbase: proposer,
+			},
+			config: getTestConfig(),
+			expected: &Result{
+				total:  10e18,
+				reward: 4347200000000000000, // 5 klay - 9.6*0.34*0.2 klay
+				burnt:  5652800000000000000, // 5 klay + 9.6*0.34*0.2 klay
+			},
+		},
+	}
+
+	for i, tc := range testcases {
+		total, reward, burnt := calcDeferredFee(tc.header, tc.config)
+		actual := &Result{
+			total:  total.Uint64(),
+			reward: reward.Uint64(),
+			burnt:  burnt.Uint64(),
+		}
+		assert.Equal(t, tc.expected, actual, "testcases[%d] failed", i)
+	}
+}
+
+func TestRewardDistributor_calcSplit(t *testing.T) {
+	type Result struct{ proposer, stakers, kgf, kir, remaining uint64 }
+
+	header := &types.Header{
+		Number: big.NewInt(1),
+	}
+
+	testcases := []struct {
+		header   *types.Header
+		config   *params.ChainConfig
+		fee      *big.Int
+		expected *Result
+	}{
+		{
+			header: header,
+			config: noKore(getTestConfig()),
+			fee:    big.NewInt(0),
+			expected: &Result{
+				proposer:  3.264e18, // 9.6e18 * 0.34
+				stakers:   0,
+				kgf:       5.184e18, // 9.6e18 * 0.54
+				kir:       1.152e18, // 9.6e18 * 0.12
+				remaining: 0,
+			},
+		},
+		{
+			header: header,
+			config: noKore(getTestConfig()),
+			fee:    big.NewInt(55555),
+			expected: &Result{
+				proposer:  3264000000000018888, // (9.6e18 + 55555) * 0.34
+				stakers:   0,
+				kgf:       5184000000000029999, // (9.6e18 + 55555) * 0.54
+				kir:       1152000000000006666, // (9.6e18 + 55555) * 0.12
+				remaining: 2,
+			},
+		},
+		{
+			header: header,
+			config: getTestConfig(),
+			fee:    big.NewInt(0),
+			expected: &Result{
+				proposer:  652800000000000000,  // 9.6e18 * 0.34 * 0.2
+				stakers:   2611200000000000000, // 9.6e18 * 0.34 * 0.8
+				kgf:       5184000000000000000, // 9.6e18 * 0.54
+				kir:       1152000000000000000, // 9.6e18 * 0.12
+				remaining: 0,
+			},
+		},
+		{
+			header: header,
+			config: getTestConfig(),
+			fee:    big.NewInt(55555),
+			expected: &Result{
+				proposer:  652800000000055555,  // 9.6e18 * 0.34 * 0.2 + 55555
+				stakers:   2611200000000000000, // 9.6e18 * 0.34 * 0.8
+				kgf:       5184000000000000000, // 9.6e18 * 0.54
+				kir:       1152000000000000000, // 9.6e18 * 0.12
+				remaining: 0,
+			},
+		},
+	}
+
+	for i, tc := range testcases {
+		proposer, stakers, kgf, kir, remaining := calcSplit(tc.header, tc.config, tc.fee)
+		actual := &Result{
+			proposer:  proposer.Uint64(),
+			stakers:   stakers.Uint64(),
+			kgf:       kgf.Uint64(),
+			kir:       kir.Uint64(),
+			remaining: remaining.Uint64(),
+		}
+		assert.Equal(t, tc.expected, actual, "testcases[%d] failed", i)
+	}
+}
+
+func TestRewardDistributor_calcShares(t *testing.T) {
+	type Result struct {
+		shares    map[common.Address]*big.Int
+		remaining uint64
+	}
+
+	testcases := []struct {
+		config      *params.ChainConfig
+		stakingInfo *StakingInfo
+		stakeReward *big.Int
+		expected    *Result
+	}{
+		{
+			config:      getTestConfig(),
+			stakingInfo: genStakingInfo(5, nil, nil),
+			stakeReward: big.NewInt(500),
+			expected: &Result{
+				shares:    map[common.Address]*big.Int{},
+				remaining: 500,
+			},
+		},
+		{
+			config:      getTestConfig(),
+			stakingInfo: genStakingInfo(5, nil, map[int]uint64{0: minStaking * 2}),
+			stakeReward: big.NewInt(500),
+			expected: &Result{
+				shares: map[common.Address]*big.Int{
+					intToAddress(rewardBaseAddr): big.NewInt(500),
+				},
+				remaining: 0,
+			},
+		},
+		{
+			config: getTestConfig(),
+			stakingInfo: genStakingInfo(5, nil, map[int]uint64{
+				0: minStaking * 2,
+				1: minStaking * 2,
+			}),
+			stakeReward: big.NewInt(500),
+			expected: &Result{
+				shares: map[common.Address]*big.Int{
+					intToAddress(rewardBaseAddr):     big.NewInt(250),
+					intToAddress(rewardBaseAddr + 1): big.NewInt(250),
+				},
+				remaining: 0,
+			},
+		},
+		{
+			config: getTestConfig(),
+			stakingInfo: genStakingInfo(5, nil, map[int]uint64{
+				0: minStaking + 2,
+				1: minStaking + 1,
+			}),
+			stakeReward: big.NewInt(500),
+			expected: &Result{
+				shares: map[common.Address]*big.Int{
+					intToAddress(rewardBaseAddr):     big.NewInt(333),
+					intToAddress(rewardBaseAddr + 1): big.NewInt(166),
+				},
+				remaining: 1,
+			},
+		},
+	}
+
+	for i, tc := range testcases {
+		shares, remaining := calcShares(tc.config.Governance.Reward, tc.stakingInfo, tc.stakeReward)
+		actual := &Result{
+			shares:    shares,
+			remaining: remaining.Uint64(),
+		}
+		assert.Equal(t, tc.expected, actual, "testcases[%d] failed", i)
 	}
 }
