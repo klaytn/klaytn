@@ -67,16 +67,24 @@ func InitDeriveSha(chainConfig *params.ChainConfig, govEngine GovernanceEngine) 
 }
 
 func DeriveShaMux(list types.DerivableList, num *big.Int) common.Hash {
-	return instances[getType()].DeriveSha(list)
+	return instances[getType(num)].DeriveSha(list)
 }
 
 func EmptyRootHashMux(num *big.Int) common.Hash {
-	return emptyRoots[getType()]
+	return emptyRoots[getType(num)]
 }
 
-// TODO: Choose appropriate DeriveShaImpl from governance based on block number
-func getType() int {
+func getType(num *big.Int) int {
 	implType := config.DeriveShaImpl
+
+	if config.IsKoreForkEnabled(num) && gov != nil {
+		if pset, err := gov.ParamsAt(num.Uint64()); err != nil {
+			logger.Crit("Cannot determine DeriveShaImpl", "err", err)
+		} else {
+			implType = pset.DeriveShaImpl()
+		}
+	}
+
 	if _, ok := instances[implType]; ok {
 		return implType
 	} else {
