@@ -819,11 +819,7 @@ func (g *Governance) searchCache(num uint64) (uint64, bool) {
 func (g *Governance) ReadGovernance(num uint64) (uint64, map[string]interface{}, error) {
 	// if num is zero, epochWithFallback() will Crit
 	// so epoch should be set to any value greater than zero
-	epoch := uint64(1)
-	if num != 0 {
-		epoch = g.epochWithFallback()
-	}
-
+	epoch := g.epochWithFallback()
 	blockNum := CalcGovernanceInfoBlock(num, epoch)
 
 	// Check cache first
@@ -1186,9 +1182,8 @@ func (gov *Governance) epochWithFallback() uint64 {
 		return v.(uint64)
 	}
 
-	// We shouldn't reach here because Governance is only relevant with Istanbul engine.
-	logger.Crit("Failed to read governance. ChainConfig.Istanbul == nil")
-	return params.DefaultEpoch // unreachable. just satisfying compiler.
+	// now that gov.ChainConfig is gone, we return default instead of gov.ChainConfig.Epoch
+	return params.DefaultEpoch
 }
 
 func (gov *Governance) Params() *params.GovParamSet {
