@@ -28,29 +28,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type testGovernance struct {
-	p *params.GovParamSet
-}
-
-func newTestGovernance(intMap map[int]interface{}) *testGovernance {
-	p, _ := params.NewGovParamSetIntMap(intMap)
-	return &testGovernance{p}
-}
-
-func newDefaultTestGovernance() *testGovernance {
-	return newTestGovernance(map[int]interface{}{
-		params.Epoch:               604800,
-		params.Policy:              params.WeightedRandom,
-		params.UnitPrice:           25000000000,
-		params.MintingAmount:       "9600000000000000000",
-		params.Ratio:               "34/54/12",
-		params.UseGiniCoeff:        true,
-		params.DeferredTxFee:       true,
-		params.MinimumStake:        "5000000",
-		params.StakeUpdateInterval: 86400,
-	})
-}
-
 func (governance *testGovernance) Params() *params.GovParamSet {
 	return governance.p
 }
