@@ -71,6 +71,17 @@ var (
 	ConfFlag = cli.StringFlag{
 		Name: "conf",
 	}
+	NtpDisableFlag = cli.BoolFlag{
+		Name:   "ntp.disable",
+		Usage:  "Disable checking if the local time is synchronized with ntp server. If this flag is not set, the local time is checked with the time of the server specified by ntp.server.",
+		EnvVar: "KLAYTN_NTP_DISABLE",
+	}
+	NtpServerFlag = cli.StringFlag{
+		Name:   "ntp.server",
+		Usage:  "Remote ntp server:port to get the time",
+		Value:  "pool.ntp.org:123",
+		EnvVar: "KLAYTN_NTP_SERVER",
+	}
 	NetworkTypeFlag = cli.StringFlag{
 		Name:   "networktype",
 		Usage:  "Klaytn network type (main-net (mn), service chain-net (scn))",

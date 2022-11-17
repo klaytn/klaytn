@@ -81,7 +81,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	debug.Memsize.Add("node", stack)
 
 	// Ntp time check
-	if err := utils.NtpCheckWithLocal(); err != nil {
+	if err := node.NtpCheckWithLocal(stack); err != nil {
 		log.Fatalf("System time should be synchronized: %v", err)
 	}
 

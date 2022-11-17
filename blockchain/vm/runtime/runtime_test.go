@@ -77,6 +77,7 @@ func TestEVM(t *testing.T) {
 		byte(vm.ORIGIN),
 		byte(vm.BLOCKHASH),
 		byte(vm.COINBASE),
+		byte(vm.PREVRANDAO),
 	}, nil, nil)
 }
 

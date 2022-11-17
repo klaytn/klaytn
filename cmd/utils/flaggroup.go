@@ -37,6 +37,8 @@ var FlagGroups = []FlagGroup{
 	{
 		Name: "KLAY",
 		Flags: []cli.Flag{
+			NtpDisableFlag,
+			NtpServerFlag,
 			DbTypeFlag,
 			DataDirFlag,
 			KeyStoreDirFlag,
