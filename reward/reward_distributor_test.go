@@ -264,6 +264,7 @@ func TestRewardDistributor_getBurnAmountMagma(t *testing.T) {
 
 		txFee := GetTotalTxFee(header, config)
 		burnedTxFee := getBurnAmountMagma(txFee)
+		// expectedTotalTxFee = GetTotalTxFee / 2 = BurnedTxFee
 		assert.Equal(t, testCase.expectedTotalTxFee.Uint64(), burnedTxFee.Uint64())
 	}
 }
