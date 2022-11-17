@@ -452,7 +452,7 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 		return nil, consensus.ErrInvalidBaseFee
 	}
 
-	var spec *reward.RewardSpec
+	var rewardSpec *reward.RewardSpec
 	var err error
 
 	// If sb.chain is nil, it means backend is not initialized yet.
@@ -479,16 +479,16 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 			logger.Trace(logMsg, "header.Number", header.Number.Uint64(), "node address", sb.address, "rewardbase", header.Rewardbase)
 		}
 
-		spec, err = reward.CalcDeferredReward(header, chain.Config())
+		rewardSpec, err = reward.CalcDeferredReward(header, chain.Config())
 	} else {
-		spec, err = reward.CalcDeferredRewardSimple(header, chain.Config())
+		rewardSpec, err = reward.CalcDeferredRewardSimple(header, chain.Config())
 	}
 
 	if err != nil {
 		return nil, err
 	}
 
-	reward.DistributeBlockReward(state, spec.Rewards)
+	reward.DistributeBlockReward(state, rewardSpec.Rewards)
 
 	header.Root = state.IntermediateRoot(true)
 
