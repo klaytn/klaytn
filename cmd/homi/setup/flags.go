@@ -302,7 +302,7 @@ var (
 	}
 
 	rewardKip82RatioFlag = cli.StringFlag{
-		Name:  "reward-kip82ratio",
+		Name:  "reward-kip82-ratio",
 		Usage: "kip82 ratio [default: 20/80]",
 		Value: params.DefaultKip82Ratio,
 	}
