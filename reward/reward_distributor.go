@@ -344,7 +344,7 @@ func getBurnAmountKore(rc *rewardConfig, fee *big.Int) *big.Int {
 	}
 }
 
-// calcSplit splits fee into (proposer, stakers, kgf, kir, reamining)
+// calcSplit splits fee into (proposer, stakers, kgf, kir, remaining)
 // the sum of the output must be equal to (minted + fee)
 func calcSplit(rc *rewardConfig, minted, fee *big.Int) (*big.Int, *big.Int, *big.Int, *big.Int, *big.Int) {
 	totalResource := big.NewInt(0)
