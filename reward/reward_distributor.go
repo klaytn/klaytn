@@ -385,9 +385,7 @@ func calcSplit(rc *rewardConfig, minted, fee *big.Int) (*big.Int, *big.Int, *big
 		)
 		return proposer, stakers, kgf, kir, remaining
 	} else {
-		source := big.NewInt(0)
-		source = source.Add(minted, fee)
-		cn, kgf, kir := splitByRatio(rc, source)
+		cn, kgf, kir := splitByRatio(rc, totalResource)
 
 		remaining := new(big.Int).Set(totalResource)
 		remaining = remaining.Sub(remaining, kgf)
