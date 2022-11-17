@@ -817,7 +817,9 @@ func (g *Governance) searchCache(num uint64) (uint64, bool) {
 }
 
 func (g *Governance) ReadGovernance(num uint64) (uint64, map[string]interface{}, error) {
-	blockNum := CalcGovernanceInfoBlock(num, g.epochWithFallback())
+	epoch := g.epochWithFallback()
+	blockNum := CalcGovernanceInfoBlock(num, epoch)
+
 	// Check cache first
 	if gBlockNum, ok := g.searchCache(blockNum); ok {
 		if data, okay := g.getGovernanceCache(gBlockNum); okay {
@@ -825,7 +827,7 @@ func (g *Governance) ReadGovernance(num uint64) (uint64, map[string]interface{},
 		}
 	}
 	if g.db != nil {
-		bn, result, err := g.db.ReadGovernanceAtNumber(num, g.epochWithFallback())
+		bn, result, err := g.db.ReadGovernanceAtNumber(num, epoch)
 		result = adjustDecodedSet(result)
 		return bn, result, err
 	} else {
@@ -1177,9 +1179,11 @@ func (gov *Governance) epochWithFallback() uint64 {
 	if v, ok := gov.initialParams.Get(params.Epoch); ok {
 		return v.(uint64)
 	}
-	// We shouldn't reach here because Governance is only relevant with Istanbul engine.
-	logger.Crit("Failed to read governance. ChainConfig.Istanbul == nil")
-	return params.DefaultEpoch // unreachable. just satisfying compiler.
+
+	// if epoch does not exist, treat epoch as 1
+	// this could be the case when parameter has not been set
+	// that is, when ReadGovernance() is called from initializeCache()
+	return 1
 }
 
 func (gov *Governance) Params() *params.GovParamSet {
