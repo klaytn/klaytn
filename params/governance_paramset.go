@@ -164,7 +164,28 @@ var (
 		parseBytes:    parseBytesString,
 		validate: func(v interface{}) bool {
 			strs := strings.Split(v.(string), "/")
-			if len(strs) != 3 {
+			if len(strs) != RewardSliceCount {
+				return false
+			}
+			sum := 0
+			for _, s := range strs {
+				n, err := strconv.Atoi(s)
+				if err != nil || n < 0 {
+					return false
+				}
+				sum += n
+			}
+			return sum == 100
+		},
+	}
+
+	govParamTypeKip82Ratio = &govParamType{
+		canonicalType: reflect.TypeOf("20/80"),
+		parseValue:    parseValueString,
+		parseBytes:    parseBytesString,
+		validate: func(v interface{}) bool {
+			strs := strings.Split(v.(string), "/")
+			if len(strs) != RewardKip82SliceCount {
 				return false
 			}
 			sum := 0
@@ -207,6 +228,8 @@ var govParamTypes = map[int]*govParamType{
 	UnitPrice:                 govParamTypeUint64,
 	MintingAmount:             govParamTypeBigInt,
 	Ratio:                     govParamTypeRatio,
+	Kip82Ratio:                govParamTypeKip82Ratio,
+	UseKip82:                  govParamTypeBool,
 	UseGiniCoeff:              govParamTypeBool,
 	DeferredTxFee:             govParamTypeBool,
 	MinimumStake:              govParamTypeBigInt,
@@ -230,6 +253,8 @@ var govParamNames = map[string]int{
 	"governance.unitprice":            UnitPrice,
 	"reward.mintingamount":            MintingAmount,
 	"reward.ratio":                    Ratio,
+	"reward.kip82ratio":               Kip82Ratio,
+	"reward.usekip82":                 UseKip82,
 	"reward.useginicoeff":             UseGiniCoeff,
 	"reward.deferredtxfee":            DeferredTxFee,
 	"reward.minimumstake":             MinimumStake,
@@ -556,6 +581,14 @@ func (p *GovParamSet) MintingAmountBig() *big.Int {
 
 func (p *GovParamSet) Ratio() string {
 	return p.MustGet(Ratio).(string)
+}
+
+func (p *GovParamSet) Kip82Ratio() string {
+	return p.MustGet(Kip82Ratio).(string)
+}
+
+func (p *GovParamSet) UseKip82() bool {
+	return p.MustGet(UseKip82).(bool)
 }
 
 func (p *GovParamSet) UseGiniCoeff() bool {

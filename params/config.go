@@ -144,9 +144,9 @@ var (
 
 // VMLogTarget sets the output target of vmlog.
 // The values below can be OR'ed.
-//  - 0x0: no output (default)
-//  - 0x1: file (DATADIR/logs/vm.log)
-//  - 0x2: stdout (like logger.DEBUG)
+//   - 0x0: no output (default)
+//   - 0x1: file (DATADIR/logs/vm.log)
+//   - 0x2: stdout (like logger.DEBUG)
 var VMLogTarget = 0x0
 
 const (
@@ -204,6 +204,8 @@ func (g *GovernanceConfig) DeferredTxFee() bool {
 type RewardConfig struct {
 	MintingAmount          *big.Int `json:"mintingAmount"`
 	Ratio                  string   `json:"ratio"`                  // Define how much portion of reward be distributed to CN/PoC/KIR
+	Kip82Ratio             string   `json:"kip82ratio"`             // Define how much portion of reward be distributed to basic/stake
+	UseKip82               bool     `json:"usekip82"`               // Define if Kip82 reward distribution is used or not
 	UseGiniCoeff           bool     `json:"useGiniCoeff"`           // Decide if Gini Coefficient will be used or not
 	DeferredTxFee          bool     `json:"deferredTxFee"`          // Decide if TX fee will be handled instantly or handled later at block finalization
 	StakingUpdateInterval  uint64   `json:"stakingUpdateInterval"`  // Interval when staking information is updated
@@ -542,6 +544,8 @@ func GetDefaultRewardConfig() *RewardConfig {
 	return &RewardConfig{
 		MintingAmount:          DefaultMintingAmount,
 		Ratio:                  DefaultRatio,
+		Kip82Ratio:             DefaultKip82Ratio,
+		UseKip82:               DefaultUseKip82,
 		UseGiniCoeff:           DefaultUseGiniCoeff,
 		DeferredTxFee:          DefaultDefferedTxFee,
 		StakingUpdateInterval:  DefaultStakeUpdateInterval,
