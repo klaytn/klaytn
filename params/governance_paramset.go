@@ -229,7 +229,6 @@ var govParamTypes = map[int]*govParamType{
 	MintingAmount:             govParamTypeBigInt,
 	Ratio:                     govParamTypeRatio,
 	Kip82Ratio:                govParamTypeKip82Ratio,
-	UseKip82:                  govParamTypeBool,
 	UseGiniCoeff:              govParamTypeBool,
 	DeferredTxFee:             govParamTypeBool,
 	MinimumStake:              govParamTypeBigInt,
@@ -254,7 +253,6 @@ var govParamNames = map[string]int{
 	"reward.mintingamount":            MintingAmount,
 	"reward.ratio":                    Ratio,
 	"reward.kip82ratio":               Kip82Ratio,
-	"reward.usekip82":                 UseKip82,
 	"reward.useginicoeff":             UseGiniCoeff,
 	"reward.deferredtxfee":            DeferredTxFee,
 	"reward.minimumstake":             MinimumStake,
@@ -585,10 +583,6 @@ func (p *GovParamSet) Ratio() string {
 
 func (p *GovParamSet) Kip82Ratio() string {
 	return p.MustGet(Kip82Ratio).(string)
-}
-
-func (p *GovParamSet) UseKip82() bool {
-	return p.MustGet(UseKip82).(bool)
 }
 
 func (p *GovParamSet) UseGiniCoeff() bool {

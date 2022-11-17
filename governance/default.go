@@ -62,7 +62,6 @@ var (
 		"reward.mintingamount":            params.MintingAmount,
 		"reward.ratio":                    params.Ratio,
 		"reward.kip82ratio":               params.Kip82Ratio,
-		"reward.usekip82":                 params.UseKip82,
 		"reward.useginicoeff":             params.UseGiniCoeff,
 		"reward.deferredtxfee":            params.DeferredTxFee,
 		"reward.minimumstake":             params.MinimumStake,
@@ -106,7 +105,6 @@ var (
 		params.ConstTxGasHumanReadable:   "param.txgashumanreadable",
 		params.Timeout:                   "istanbul.timeout",
 		params.Kip82Ratio:                "reward.kip82ratio",
-		params.UseKip82:                  "reward.usekip82",
 	}
 
 	ProposerPolicyMap = map[string]int{
@@ -598,7 +596,7 @@ func (g *Governance) ParseVoteValue(gVote *GovernanceVote) (*GovernanceVote, err
 		}
 		v = append(make([]byte, 8-len(v)), v...)
 		val = binary.BigEndian.Uint64(v)
-	case params.UseGiniCoeff, params.DeferredTxFee, params.UseKip82:
+	case params.UseGiniCoeff, params.DeferredTxFee:
 		v, ok := gVote.Value.([]uint8)
 		if !ok {
 			return nil, ErrValueTypeMismatch

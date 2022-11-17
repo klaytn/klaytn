@@ -38,6 +38,7 @@ var (
 	kgf            = intToAddress(2000)
 )
 
+// 500 -> 0x00000...0500
 func intToAddress(x int) common.Address {
 	return common.HexToAddress(fmt.Sprintf("0x%040d", x))
 }
@@ -97,7 +98,6 @@ func getTestConfig() *params.ChainConfig {
 				MintingAmount: minted,
 				Ratio:         "34/54/12",
 				Kip82Ratio:    "20/80",
-				UseKip82:      true,
 				DeferredTxFee: true,
 				MinimumStake:  big.NewInt(0).SetUint64(minStaking),
 			},

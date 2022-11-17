@@ -205,7 +205,6 @@ type RewardConfig struct {
 	MintingAmount          *big.Int `json:"mintingAmount"`
 	Ratio                  string   `json:"ratio"`                  // Define how much portion of reward be distributed to CN/PoC/KIR
 	Kip82Ratio             string   `json:"kip82ratio"`             // Define how much portion of reward be distributed to basic/stake
-	UseKip82               bool     `json:"usekip82"`               // Define if Kip82 reward distribution is used or not
 	UseGiniCoeff           bool     `json:"useGiniCoeff"`           // Decide if Gini Coefficient will be used or not
 	DeferredTxFee          bool     `json:"deferredTxFee"`          // Decide if TX fee will be handled instantly or handled later at block finalization
 	StakingUpdateInterval  uint64   `json:"stakingUpdateInterval"`  // Interval when staking information is updated
@@ -545,7 +544,6 @@ func GetDefaultRewardConfig() *RewardConfig {
 		MintingAmount:          DefaultMintingAmount,
 		Ratio:                  DefaultRatio,
 		Kip82Ratio:             DefaultKip82Ratio,
-		UseKip82:               DefaultUseKip82,
 		UseGiniCoeff:           DefaultUseGiniCoeff,
 		DeferredTxFee:          DefaultDefferedTxFee,
 		StakingUpdateInterval:  DefaultStakeUpdateInterval,

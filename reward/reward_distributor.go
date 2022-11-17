@@ -254,7 +254,7 @@ func calcDeferredFee(header *types.Header, config *params.ChainConfig) (*big.Int
 		burntFee = burntFee.Add(burntFee, halfFee)
 	}
 
-	if config.IsKoreForkEnabled(header.Number) && rewardConfig.UseKip82 {
+	if config.IsKoreForkEnabled(header.Number) {
 		minted := rewardConfig.MintingAmount
 		cnRatio, _, _, totalRatio, _ := parseRewardRatio(rewardConfig.Ratio)
 		cnMinted := new(big.Int).Mul(minted, big.NewInt(int64(cnRatio)))
@@ -285,7 +285,7 @@ func calcSplit(header *types.Header, config *params.ChainConfig, fee *big.Int) (
 
 	var proposer, stakers, kgf, kir, remaining *big.Int
 
-	if config.IsKoreForkEnabled(header.Number) && rewardConfig.UseKip82 {
+	if config.IsKoreForkEnabled(header.Number) {
 		resource := new(big.Int)
 		resource.Set(rewardConfig.MintingAmount)
 		cnRatio, kgfRatio, kirRatio, totalRatio, _ := parseRewardRatio(rewardConfig.Ratio)

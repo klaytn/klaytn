@@ -64,7 +64,6 @@ const (
 	BaseFeeDenominator
 	GovParamContract
 	Kip82Ratio
-	UseKip82
 )
 
 const (
@@ -99,7 +98,6 @@ var (
 	DefaultMintingAmount             = big.NewInt(0)
 	DefaultRatio                     = "100/0/0"
 	DefaultKip82Ratio                = "20/80"
-	DefaultUseKip82                  = false
 	DefaultUseGiniCoeff              = false
 	DefaultDefferedTxFee             = false
 	DefaultMinimumStake              = big.NewInt(2000000)

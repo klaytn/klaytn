@@ -307,11 +307,6 @@ var (
 		Value: params.DefaultKip82Ratio,
 	}
 
-	rewardUseKip82Flag = cli.BoolFlag{
-		Name:  "reward-usekip82",
-		Usage: "governance usekip82",
-	}
-
 	rewardGiniCoeffFlag = cli.BoolFlag{
 		Name:  "reward-gini-coeff",
 		Usage: "governance gini-coefficient",
