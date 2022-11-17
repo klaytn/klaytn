@@ -82,6 +82,15 @@ var tstData = []voteValue{
 	{k: "governance.governingnode", v: "address", e: false},
 	{k: "governance.governingnode", v: 0, e: false},
 	{k: "governance.governingnode", v: true, e: false},
+	{k: "governance.govparamcontract", v: "0x00000000000000000000", e: false},
+	{k: "governance.govparamcontract", v: "0x0000000000000000000000000000000000000000", e: true},
+	{k: "governance.govparamcontract", v: "0x000000000000000000000000000abcd000000000", e: true},
+	{k: "governance.govparamcontract", v: "000000000000000000000000000abcd000000000", e: true},
+	{k: "governance.govparamcontract", v: common.HexToAddress("000000000000000000000000000abcd000000000"), e: true},
+	{k: "governance.govparamcontract", v: "0x000000000000000000000000000xxxx000000000", e: false},
+	{k: "governance.govparamcontract", v: "address", e: false},
+	{k: "governance.govparamcontract", v: 0, e: false},
+	{k: "governance.govparamcontract", v: true, e: false},
 	{k: "governance.unitprice", v: float64(0.0), e: true},
 	{k: "governance.unitprice", v: float64(0.1), e: false},
 	{k: "governance.unitprice", v: uint64(25000000000), e: true},
@@ -823,7 +832,7 @@ func TestGovernance_HandleGovernanceVote_None_mode(t *testing.T) {
 	demotedValidators := getTestDemotedValidators()
 	rewards := getTestRewards()
 
-	blockCounter := common.Big0
+	blockCounter := big.NewInt(0)
 	valSet := validator.NewWeightedCouncil(validators, demotedValidators, rewards, getTestVotingPowers(len(validators)), nil, istanbul.WeightedRandom, 21, 0, 0, nil)
 	gov := getGovernance()
 	gov.nodeAddress.Store(validators[len(validators)-1])
@@ -960,7 +969,7 @@ func TestGovernance_HandleGovernanceVote_Ballot_mode(t *testing.T) {
 	demotedValidators := getTestDemotedValidators()
 	rewards := getTestRewards()
 
-	blockCounter := common.Big0
+	blockCounter := big.NewInt(0)
 	var valSet istanbul.ValidatorSet
 	valSet = validator.NewWeightedCouncil(validators, demotedValidators, rewards, getTestVotingPowers(len(validators)), nil, istanbul.WeightedRandom, 21, 0, 0, nil)
 

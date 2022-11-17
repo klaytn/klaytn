@@ -34,8 +34,7 @@ import (
 //  2. headerParams:   Header Governance items
 //  3. initialParams:  initial ChainConfig from genesis.json
 //  4. defaultParams:  Default params such as params.Default*
-//                     Note that some items are not backed by defaultParams.
-//
+//     Note that some items are not backed by defaultParams.
 type MixedEngine struct {
 	// The same ChainConfig instance as Blockchain.chainConfig, {cn, worker}.config
 	config *params.ChainConfig
@@ -48,8 +47,18 @@ type MixedEngine struct {
 	db database.DBManager
 
 	// Subordinate engines
-	// TODO: Add ContractEngine
-	headerGov *Governance
+	// contractGov is enabled when all the following conditions are met:
+	//   - Kore hardfork block has passed
+	//   - GovParamContract has been set
+	// contractGov can be ignored even if it is enabled for various reasons. To name a few:
+	//   - GovParam returns invalid parameters
+	//   - Calling GovParam reverted
+	// contractGov can throw critical error:
+	//   - headerGov.BlockChain() is nil -> Fix by calling gov.SetBlockChain(bc)
+	// headerGov cannot be disabled. However, its parameters can be ignored
+	// by the prior contract parameters
+	contractGov *ContractEngine
+	headerGov   *Governance
 
 	// for param update
 	txpool     txPool
@@ -77,6 +86,7 @@ func newMixedEngine(config *params.ChainConfig, db database.DBManager, doInit bo
 		params.GasTarget:                 params.DefaultGasTarget,
 		params.MaxBlockGasUsedForBaseFee: params.DefaultMaxBlockGasUsedForBaseFee,
 		params.BaseFeeDenominator:        params.DefaultBaseFeeDenominator,
+		params.GovParamContract:          params.DefaultGovParamContract,
 	}
 	if p, err := params.NewGovParamSetIntMap(defaultMap); err == nil {
 		e.defaultParams = p
@@ -91,8 +101,7 @@ func newMixedEngine(config *params.ChainConfig, db database.DBManager, doInit bo
 		e.headerGov = NewGovernance(config, db)
 	}
 
-	// Load last state
-	e.UpdateParams()
+	e.contractGov = NewContractEngine(e.headerGov)
 
 	return e
 }
@@ -112,23 +121,55 @@ func (e *MixedEngine) Params() *params.GovParamSet {
 }
 
 func (e *MixedEngine) ParamsAt(num uint64) (*params.GovParamSet, error) {
+	var contractParams *params.GovParamSet
+	var err error
+
+	if e.config.IsKoreForkEnabled(new(big.Int).SetUint64(num)) {
+		contractParams, err = e.contractGov.ParamsAt(num)
+		if err != nil {
+			logger.Error("contractGov.ParamsAt() failed", "err", err)
+			return nil, err
+		}
+	} else {
+		contractParams = params.NewGovParamSet()
+	}
+
 	headerParams, err := e.headerGov.ParamsAt(num)
 	if err != nil {
+		logger.Error("headerGov.ParamsAt() failed", "err", err)
 		return nil, err
 	}
 
-	// TODO-Klaytn-Kore: merge contractParams
-	return e.assembleParams(headerParams), nil
+	return e.assembleParams(headerParams, contractParams), nil
 }
 
 func (e *MixedEngine) UpdateParams() error {
+	// some functions call UpdateParams() without blockchain, such as initGenesis()
+	// in this case, fall back to num=zero
+	num := big.NewInt(0)
+	if e.blockchain != nil {
+		num = e.blockchain.CurrentHeader().Number
+	}
+
+	var contractParams *params.GovParamSet
+	if e.config.IsKoreForkEnabled(num) {
+		if err := e.contractGov.UpdateParams(); err != nil {
+			logger.Error("contractGov.UpdateParams() failed", "err", err)
+			return err
+		}
+		contractParams = e.contractGov.Params()
+	} else {
+		contractParams = params.NewGovParamSet()
+	}
+
 	if err := e.headerGov.UpdateParams(); err != nil {
+		logger.Error("headerGov.UpdateParams() failed", "err", err)
 		return err
 	}
+
 	headerParams := e.headerGov.Params()
 
-	// TODO-Klaytn-Kore: merge contractParams
-	newParams := e.assembleParams(headerParams)
+	newParams := e.assembleParams(headerParams, contractParams)
 	e.handleParamUpdate(e.currentParams, newParams)
 
 	e.currentParams = newParams
@@ -136,12 +177,13 @@ func (e *MixedEngine) UpdateParams() error {
 	return nil
 }
 
-func (e *MixedEngine) assembleParams(headerParams *params.GovParamSet) *params.GovParamSet {
+func (e *MixedEngine) assembleParams(headerParams, contractParams *params.GovParamSet) *params.GovParamSet {
 	// Refer to the comments above `type MixedEngine` for assembly order
 	p := params.NewGovParamSet()
 	p = params.NewGovParamSetMerged(p, e.defaultParams)
 	p = params.NewGovParamSetMerged(p, e.initialParams)
 	p = params.NewGovParamSetMerged(p, headerParams)
+	p = params.NewGovParamSetMerged(p, contractParams)
 	return p
 }
 
@@ -162,6 +204,8 @@ func (e *MixedEngine) handleParamUpdate(old, new *params.GovParamSet) {
 				e.config.Governance.GoverningNode = new.GoverningNode()
 			case params.GovernanceMode:
 				e.config.Governance.GovernanceMode = new.GovernanceModeStr()
+			case params.GovParamContract:
+				e.config.Governance.GovParamContract = new.GovParamContract()
 			// config.Governance.Reward
 			case params.MintingAmount:
 				e.config.Governance.Reward.MintingAmount = new.MintingAmountBig()
@@ -199,6 +243,14 @@ func (e *MixedEngine) handleParamUpdate(old, new *params.GovParamSet) {
 			}
 		}
 	}
+}
+
+func (e *MixedEngine) HeaderGov() HeaderEngine {
+	return e.headerGov
+}
+
+func (e *MixedEngine) ContractGov() ReaderEngine {
+	return e.contractGov
 }
 
 // Pass-through to HeaderEngine

@@ -1,17 +1,43 @@
 package governance
 
 import (
+	"math/big"
 	"testing"
 
+	"github.com/klaytn/klaytn/accounts/abi/bind"
+	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
+	"github.com/klaytn/klaytn/common"
+	govcontract "github.com/klaytn/klaytn/contracts/gov"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func newTestMixedEngine(t *testing.T, config *params.ChainConfig) (*MixedEngine, database.DBManager, *Governance) {
-	config.Istanbul.Epoch = 30
-	// TODO: if ContractEngine is added, make sure to disable it in this test.
+func newTestMixedEngine(t *testing.T, config *params.ChainConfig) (*MixedEngine, *bind.TransactOpts, *backends.SimulatedBackend, *govcontract.GovParam) {
+	config.IstanbulCompatibleBlock = common.Big0
+	config.LondonCompatibleBlock = common.Big0
+	config.EthTxTypeCompatibleBlock = common.Big0
+	config.MagmaCompatibleBlock = common.Big0
+	config.KoreCompatibleBlock = common.Big0
+
+	accounts, sim, addr, contract := prepareSimulatedContract(t)
+
+	config.Governance.GovParamContract = addr
+
+	db := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
+	e := NewMixedEngine(config, db)
+	require.NotNil(t, e)
+	require.NotNil(t, e.headerGov)
+
+	e.SetBlockchain(sim.BlockChain())
+
+	return e, accounts[0], sim, contract
+}
+
+func newTestMixedEngineNoContractEngine(t *testing.T, config *params.ChainConfig) *MixedEngine {
+	// disable ContractEngine
+	config.KoreCompatibleBlock = new(big.Int).SetUint64(0xffffffff)
 
 	db := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
 
@@ -21,7 +47,7 @@ func newTestMixedEngine(t *testing.T, config *params.ChainConfig) (*MixedEngine,
 	require.NotNil(t, e)
 	require.NotNil(t, headerGov)
 
-	return e, db, headerGov
+	return e
 }
 
 // Without ContractGov, Check that
@@ -32,7 +58,7 @@ func TestMixedEngine_Header_New(t *testing.T) {
 
 	config := getTestConfig()
 	config.Istanbul.SubGroupSize = valueA
-	e, _, _ := newTestMixedEngine(t, config)
+	e := newTestMixedEngineNoContractEngine(t, config)
 
 	// Params() should work even before explicitly calling UpdateParams().
 	// For instance in cn.New().
@@ -52,15 +78,14 @@ func TestMixedEngine_Header_Params(t *testing.T) {
 
 	config := getTestConfig()
 	config.Governance.KIP71.GasTarget = valueA
-	e, _, headerGov := newTestMixedEngine(t, config)
+	e := newTestMixedEngineNoContractEngine(t, config)
+	assert.Equal(t, valueA, e.Params().GasTarget())
 
-	headerGov.currentSet.SetValue(params.GasTarget, valueB)
+	e.headerGov.currentSet.SetValue(params.GasTarget, valueB)
 	err := e.UpdateParams()
 	assert.Nil(t, err)
 
-	pset := e.Params()
-	assert.Equal(t, valueB, pset.GasTarget())
-
+	assert.Equal(t, valueB, e.Params().GasTarget())
 	// check if config is updated as well
 	assert.Equal(t, valueB, config.Governance.KIP71.GasTarget)
 }
@@ -73,8 +98,9 @@ func TestMixedEngine_Header_ParamsAt(t *testing.T) {
 	valueB := uint64(0x22)
 
 	config := getTestConfig()
+	config.Istanbul.Epoch = 30
 	config.Istanbul.SubGroupSize = valueA
-	e, _, headerGov := newTestMixedEngine(t, config)
+	e := newTestMixedEngineNoContractEngine(t, config)
 
 	// Write to database. Note that we must use gov.WriteGovernance(), not db.WriteGovernance()
 	// The reason is that gov.ReadGovernance() depends on the caches, and that
@@ -83,7 +109,7 @@ func TestMixedEngine_Header_ParamsAt(t *testing.T) {
 	items["istanbul.committeesize"] = valueB
 	gset := NewGovernanceSet()
 	gset.Import(items)
-	headerGov.WriteGovernance(30, NewGovernanceSet(), gset)
+	e.headerGov.WriteGovernance(30, NewGovernanceSet(), gset)
 
 	testcases := []struct {
 		num   uint64
@@ -103,10 +129,121 @@ func TestMixedEngine_Header_ParamsAt(t *testing.T) {
 		assert.Equal(t, tc.value, pset.CommitteeSize())
 
 		// Check that headerGov.ReadGovernance() == tc
-		_, strMap, err := headerGov.ReadGovernance(tc.num)
+		_, strMap, err := e.headerGov.ReadGovernance(tc.num)
 		assert.Nil(t, err)
 		pset, err = params.NewGovParamSetStrMap(strMap)
 		assert.Nil(t, err)
 		assert.Equal(t, tc.value, pset.CommitteeSize())
+	}
+}
+
+// TestMixedEngine_Params tests if Params() conforms to the fallback mechanism
+func TestMixedEngine_Params(t *testing.T) {
+	var (
+		valueA      = uint64(0xa)
+		valueB      = uint64(0xbb)
+		valueC      = uint64(0xcccccc)
+		valueCBytes = []byte{0xcc, 0xcc, 0xcc}
+	)
+	config := getTestConfig()
+	config.Governance.KIP71.GasTarget = valueA
+
+	// 1. fallback to ChainConfig because headerGov and contractGov don't have the param
+	e, owner, sim, contract := newTestMixedEngine(t, config)
+	assert.Equal(t, valueA, e.Params().GasTarget(), "fallback to ChainConfig failed")
+
+	// 2. fallback to headerGov because contractGov doesn't have the param
+	e.headerGov.currentSet.SetValue(params.GasTarget, valueB)
+	err := e.UpdateParams()
+	assert.Nil(t, err)
+
+	assert.Equal(t, valueB, e.Params().GasTarget(), "fallback to headerGov failed")
+
+	// 3. use contractGov
+	_, err = contract.SetParamIn(owner, "kip71.gastarget", true, valueCBytes, big.NewInt(1))
+	assert.Nil(t, err)
+
+	sim.Commit() // mine SetParamIn
+
+	err = e.UpdateParams()
+	assert.Nil(t, err)
+	assert.Equal(t, valueC, e.Params().GasTarget(), "fallback to contractGov failed")
+}
+
+// TestMixedEngine_ParamsAt tests if ParamsAt() returns correct values
+// given headerBlock and contractBlock;
+//     at headerBlock, params are inserted to DB via WriteGovernance()
+//     at contractBlock, params are inserted to GovParam via SetParamIn() contract call.
+// valueA is set in ChainConfig
+// valueB is set in DB
+// valueC is set in GovParam contract
+//
+//  chainConfig     headerBlock    contractBlock       now
+// Block |---------------|--------------|---------------|
+//            valueA          valueB         valueC
+func TestMixedEngine_ParamsAt(t *testing.T) {
+	var (
+		name        = "kip71.gastarget"
+		valueA      = uint64(0xa)
+		valueB      = uint64(0xbb)
+		valueC      = uint64(0xcccccc)
+		valueCBytes = []byte{0xcc, 0xcc, 0xcc}
+	)
+
+	config := getTestConfig()
+	config.Istanbul.Epoch = 1
+
+	// set initial value
+	config.Governance.KIP71.GasTarget = valueA
+
+	e, owner, sim, contract := newTestMixedEngine(t, config)
+
+	// write to headerGov
+	headerBlock := sim.BlockChain().CurrentHeader().Number.Uint64()
+	e.headerGov.db.WriteGovernance(map[string]interface{}{
+		name: valueB,
+	}, headerBlock)
+	err := e.UpdateParams()
+	assert.Nil(t, err)
+
+	// forward a few blocks
+	for i := 0; i < 3; i++ {
+		sim.Commit()
+	}
+
+	// write to contractGov
+	_, err = contract.SetParamIn(owner, name, true, valueCBytes, big.NewInt(1))
+	assert.Nil(t, err)
+
+	sim.Commit() // mine SetParamIn
+	contractBlock := sim.BlockChain().CurrentHeader().Number.Uint64()
+
+	// forward a few blocks
+	for i := 0; i < 3; i++ {
+		sim.Commit()
+	}
+
+	now := sim.BlockChain().CurrentHeader().Number.Uint64()
+	for i := uint64(0); i < now; i++ {
+		pset, err := e.ParamsAt(i)
+		assert.Nil(t, err)
+
+		val, ok := pset.Get(params.GasTarget)
+		assert.True(t, ok)
+
+		var expected uint64
+
+		switch {
+		case i <= headerBlock:
+			expected = valueA
+		case i <= contractBlock:
+			expected = valueB
+		default:
+			expected = valueC
+		}
+
+		assert.Equal(t, expected, val,
+			"ParamsAt(%d) failed (headerBlock=%d contractBlock=%d)",
+			i, headerBlock, contractBlock)
 	}
 }

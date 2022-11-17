@@ -61,6 +61,7 @@ const (
 	GasTarget
 	MaxBlockGasUsedForBaseFee
 	BaseFeeDenominator
+	GovParamContract
 )
 
 const (
