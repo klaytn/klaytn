@@ -47,6 +47,7 @@ var (
 var GovernanceItems = map[int]check{
 	params.GovernanceMode:            {stringT, checkGovernanceMode, nil},
 	params.GoverningNode:             {addressT, checkAddress, nil},
+	params.GovParamContract:          {addressT, checkAddress, nil},
 	params.UnitPrice:                 {uint64T, checkUint64andBool, nil},
 	params.LowerBoundBaseFee:         {uint64T, checkUint64andBool, nil},
 	params.UpperBoundBaseFee:         {uint64T, checkUint64andBool, nil},

@@ -49,6 +49,7 @@ var (
 	GovernanceKeyMap = map[string]int{
 		"governance.governancemode":       params.GovernanceMode,
 		"governance.governingnode":        params.GoverningNode,
+		"governance.govparamcontract":     params.GovParamContract,
 		"istanbul.epoch":                  params.Epoch,
 		"istanbul.policy":                 params.Policy,
 		"istanbul.committeesize":          params.CommitteeSize,
@@ -80,6 +81,7 @@ var (
 	GovernanceKeyMapReverse = map[int]string{
 		params.GovernanceMode:            "governance.governancemode",
 		params.GoverningNode:             "governance.governingnode",
+		params.GovParamContract:          "governance.govparamcontract",
 		params.Epoch:                     "istanbul.epoch",
 		params.CliqueEpoch:               "clique.epoch",
 		params.Policy:                    "istanbul.policy",
@@ -557,7 +559,7 @@ func (g *Governance) ParseVoteValue(gVote *GovernanceVote) (*GovernanceVote, err
 			return nil, ErrValueTypeMismatch
 		}
 		val = string(v)
-	case params.GoverningNode:
+	case params.GoverningNode, params.GovParamContract:
 		v, ok := gVote.Value.([]uint8)
 		if !ok {
 			return nil, ErrValueTypeMismatch
@@ -616,7 +618,7 @@ func (gov *Governance) ReflectVotes(vote GovernanceVote) {
 
 func (gov *Governance) updateChangeSet(vote GovernanceVote) bool {
 	switch GovernanceKeyMap[vote.Key] {
-	case params.GoverningNode:
+	case params.GoverningNode, params.GovParamContract:
 		gov.changeSet.SetValue(GovernanceKeyMap[vote.Key], vote.Value.(common.Address))
 		return true
 	case params.GovernanceMode, params.Ratio:
@@ -702,6 +704,10 @@ func (g *Governance) initializeCache() error {
 	if headBlockHash := g.db.ReadHeadBlockHash(); !common.EmptyHash(headBlockHash) {
 		if num := g.db.ReadHeaderNumber(headBlockHash); num != nil {
 			headBlockNumber = *num
+		} else if headBlockHash := g.db.ReadHeadBlockBackupHash(); !common.EmptyHash(headBlockHash) {
+			if num := g.db.ReadHeaderNumber(headBlockHash); num != nil {
+				headBlockNumber = *num
+			}
 		}
 	}
 	newBlockNumber, newGovernanceSet, err := g.ReadGovernance(headBlockNumber)
@@ -922,7 +928,8 @@ func adjustDecodedSet(src map[string]interface{}) map[string]interface{} {
 		if x.Kind() == reflect.Float64 {
 			src[k] = uint64(v.(float64))
 		}
-		if GovernanceKeyMap[k] == params.GoverningNode {
+		if GovernanceKeyMap[k] == params.GoverningNode ||
+			GovernanceKeyMap[k] == params.GovParamContract {
 			if reflect.TypeOf(v) == stringT {
 				src[k] = common.HexToAddress(v.(string))
 			} else {
@@ -958,7 +965,8 @@ func (gov *Governance) VerifyGovernance(received []byte) error {
 	}
 
 	for k, v := range rChangeSet {
-		if GovernanceKeyMap[k] == params.GoverningNode {
+		if GovernanceKeyMap[k] == params.GoverningNode ||
+			GovernanceKeyMap[k] == params.GovParamContract {
 			if reflect.TypeOf(v) == stringT {
 				v = common.HexToAddress(v.(string))
 			}
@@ -1204,10 +1212,12 @@ func (gov *Governance) ParamsAt(num uint64) (*params.GovParamSet, error) {
 	// Not using in-memory caches to make it stateless, hence less error-prone.
 	_, strMap, err := gov.db.ReadGovernanceAtNumber(num, epoch)
 	if err != nil {
+		logger.Error("ReadGovernanceAtNumber failed", "num", num, "err", err)
 		return nil, err
 	}
 	pset, err := params.NewGovParamSetStrMap(strMap)
 	if err != nil {
+		logger.Error("NewGovParamSetStrMap failed", "num", num, "err", err)
 		return nil, err
 	}
 	return params.NewGovParamSetMerged(gov.initialParams, pset), nil

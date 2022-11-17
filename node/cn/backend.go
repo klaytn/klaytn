@@ -68,8 +68,9 @@ type LesServer interface {
 	SetBloomBitsIndexer(bbIndexer *blockchain.ChainIndexer)
 }
 
-//go:generate mockgen -destination=node/cn/mocks/miner_mock.go -package=mocks github.com/klaytn/klaytn/node/cn Miner
 // Miner is an interface of work.Miner used by ServiceChain.
+//
+//go:generate mockgen -destination=node/cn/mocks/miner_mock.go -package=mocks github.com/klaytn/klaytn/node/cn Miner
 type Miner interface {
 	Start()
 	Stop()
@@ -81,8 +82,9 @@ type Miner interface {
 	PendingBlock() *types.Block
 }
 
-//go:generate mockgen -destination=node/cn/protocolmanager_mock_test.go github.com/klaytn/klaytn/node/cn BackendProtocolManager
 // BackendProtocolManager is an interface of cn.ProtocolManager used from cn.CN and cn.ServiceChain.
+//
+//go:generate mockgen -destination=node/cn/protocolmanager_mock_test.go github.com/klaytn/klaytn/node/cn BackendProtocolManager
 type BackendProtocolManager interface {
 	Downloader() ProtocolManagerDownloader
 	SetWsEndPoint(wsep string)
@@ -215,20 +217,12 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	setEngineType(chainConfig)
 
 	// load governance state
+	chainConfig.SetDefaults()
+	// latest values will be applied to chainConfig after NewMixedEngine call
 	governance := governance.NewMixedEngine(chainConfig, chainDB)
-
-	// Set latest unitPrice/gasPrice
-	chainConfig.UnitPrice = governance.Params().UnitPrice()
-	config.GasPrice = new(big.Int).SetUint64(chainConfig.UnitPrice)
-
-	chainConfig.Governance.KIP71 = &params.KIP71Config{
-		LowerBoundBaseFee:         governance.Params().LowerBoundBaseFee(),
-		UpperBoundBaseFee:         governance.Params().UpperBoundBaseFee(),
-		GasTarget:                 governance.Params().GasTarget(),
-		MaxBlockGasUsedForBaseFee: governance.Params().MaxBlockGasUsedForBaseFee(),
-		BaseFeeDenominator:        governance.Params().BaseFeeDenominator(),
-	}
 	logger.Info("Initialised chain configuration", "config", chainConfig)
+
+	config.GasPrice = new(big.Int).SetUint64(chainConfig.UnitPrice)
 
 	cn := &CN{
 		config:            config,
@@ -275,7 +269,11 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	cn.blockchain = bc
 	governance.SetBlockchain(cn.blockchain)
+	if err := governance.UpdateParams(); err != nil {
+		return nil, err
+	}
 	blockchain.InitDeriveSha(cn.chainConfig)
+
 	// Synchronize proposerpolicy & useGiniCoeff
 	if cn.blockchain.Config().Istanbul != nil {
 		cn.blockchain.Config().Istanbul.ProposerPolicy = governance.Params().Policy()
@@ -640,6 +638,7 @@ func (s *CN) IsListening() bool                       { return true } // Always 
 func (s *CN) ProtocolVersion() int                    { return s.protocolManager.ProtocolVersion() }
 func (s *CN) NetVersion() uint64                      { return s.networkId }
 func (s *CN) Progress() klaytn.SyncProgress           { return s.protocolManager.Downloader().Progress() }
+func (s *CN) Governance() governance.Engine           { return s.governance }
 
 func (s *CN) ReBroadcastTxs(transactions types.Transactions) {
 	s.protocolManager.ReBroadcastTxs(transactions)

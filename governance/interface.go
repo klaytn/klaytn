@@ -29,6 +29,8 @@ import (
 type Engine interface {
 	HeaderEngine
 	ReaderEngine
+	HeaderGov() HeaderEngine
+	ContractGov() ReaderEngine
 }
 
 type ReaderEngine interface {

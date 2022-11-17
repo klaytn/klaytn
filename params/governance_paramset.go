@@ -217,11 +217,13 @@ var govParamTypes = map[int]*govParamType{
 	GasTarget:                 govParamTypeUint64,
 	MaxBlockGasUsedForBaseFee: govParamTypeUint64,
 	BaseFeeDenominator:        govParamTypeUint64,
+	GovParamContract:          govParamTypeAddress,
 }
 
 var govParamNames = map[string]int{
 	"governance.governancemode":       GovernanceMode,
 	"governance.governingnode":        GoverningNode,
+	"governance.govparamcontract":     GovParamContract,
 	"istanbul.epoch":                  Epoch,
 	"istanbul.policy":                 Policy,
 	"istanbul.committeesize":          CommitteeSize,
@@ -332,6 +334,7 @@ func NewGovParamSetChainConfig(config *ChainConfig) (*GovParamSet, error) {
 	if config.Governance != nil {
 		items[GoverningNode] = config.Governance.GoverningNode
 		items[GovernanceMode] = config.Governance.GovernanceMode
+		items[GovParamContract] = config.Governance.GovParamContract
 		if config.Governance.Reward != nil {
 			if config.Governance.Reward.MintingAmount != nil {
 				items[MintingAmount] = config.Governance.Reward.MintingAmount.String()
@@ -520,6 +523,10 @@ func (p *GovParamSet) GovernanceModeInt() int {
 
 func (p *GovParamSet) GoverningNode() common.Address {
 	return p.MustGet(GoverningNode).(common.Address)
+}
+
+func (p *GovParamSet) GovParamContract() common.Address {
+	return p.MustGet(GovParamContract).(common.Address)
 }
 
 func (p *GovParamSet) Epoch() uint64 {

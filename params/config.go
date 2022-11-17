@@ -417,6 +417,10 @@ func (c *ChainConfig) SetDefaults() {
 			c.Governance.Reward)
 	}
 
+	if c.Governance.KIP71 == nil {
+		c.Governance.KIP71 = GetDefaultKIP71Config()
+	}
+
 	// StakingUpdateInterval must be nonzero because it is used as denominator
 	if c.Governance.Reward.StakingUpdateInterval == 0 {
 		c.Governance.Reward.StakingUpdateInterval = StakingUpdateInterval()
