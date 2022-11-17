@@ -194,7 +194,9 @@ func GetBlockReward(header *types.Header, config *params.ChainConfig) (*RewardSp
 					big.NewInt(0).SetUint64(header.GasUsed),
 					big.NewInt(0).SetUint64(config.UnitPrice))
 			}
-			spec.Proposer = spec.Proposer.Add(spec.Proposer, blockFee)
+
+			spec.Proposer = spec.Proposer.Add(spec.Proposer, spec.Fee)
+			spec.Fee = spec.Fee.Add(spec.Fee, blockFee)
 			spec.Rewards[header.Rewardbase] = spec.Rewards[header.Rewardbase].Add(
 				spec.Rewards[header.Rewardbase], blockFee)
 		}

@@ -351,13 +351,13 @@ func TestRewardDistributor_GetBlockReward(t *testing.T) {
 			expected: &RewardSpec{
 				Minted:   minted,
 				Fee:      new(big.Int).SetUint64(1000),
-				Burnt:    new(big.Int).SetUint64(1000),
+				Burnt:    new(big.Int).SetUint64(0),
 				Proposer: new(big.Int).SetUint64(0.6528e18 + 1),
 				Stakers:  new(big.Int).SetUint64(2.6112e18),
 				Kgf:      new(big.Int).SetUint64(5.184e18),
 				Kir:      new(big.Int).SetUint64(1.152e18),
 				Rewards: map[common.Address]*big.Int{
-					proposer:                         new(big.Int).SetUint64(0.6528e18 + 1),
+					proposer:                         new(big.Int).SetUint64(0.6528e18 + 1000 + 1),
 					kgf:                              new(big.Int).SetUint64(5.184e18),
 					kir:                              new(big.Int).SetUint64(1.152e18),
 					intToAddress(rewardBaseAddr):     new(big.Int).SetUint64(1492114285714285714),
@@ -371,6 +371,9 @@ func TestRewardDistributor_GetBlockReward(t *testing.T) {
 
 	for i, tc := range testcases {
 		config := getTestConfig()
+		if !tc.deferredTxFee {
+			config = noDeferred(config)
+		}
 		config.Istanbul.ProposerPolicy = uint64(tc.policy)
 		spec, err := GetBlockReward(header, config)
 		assert.Nil(t, err, "testcases[%d] failed", i)
