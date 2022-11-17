@@ -76,8 +76,8 @@ type rewardConfig struct {
 
 type RewardSpec struct {
 	Minted   *big.Int                    // the amount newly minted
-	Fee      *big.Int                    // total tx fee spent
-	Burnt    *big.Int                    // the amount burnt
+	TotalFee *big.Int                    // total tx fee spent
+	BurntFee *big.Int                    // the amount burnt
 	Proposer *big.Int                    // the amount allocated to the block proposer
 	Stakers  *big.Int                    // total amount allocated to stakers
 	Kgf      *big.Int                    // the amount allocated to KGF
@@ -195,8 +195,8 @@ func GetBlockReward(header *types.Header, config *params.ChainConfig) (*RewardSp
 					big.NewInt(0).SetUint64(config.UnitPrice))
 			}
 
-			spec.Proposer = spec.Proposer.Add(spec.Proposer, spec.Fee)
-			spec.Fee = spec.Fee.Add(spec.Fee, blockFee)
+			spec.Proposer = spec.Proposer.Add(spec.Proposer, spec.TotalFee)
+			spec.TotalFee = spec.TotalFee.Add(spec.TotalFee, blockFee)
 			spec.Rewards[header.Rewardbase] = spec.Rewards[header.Rewardbase].Add(
 				spec.Rewards[header.Rewardbase], blockFee)
 		}
@@ -228,8 +228,8 @@ func CalcDeferredRewardSimple(header *types.Header, config *params.ChainConfig) 
 
 	return &RewardSpec{
 		Minted:   minted,
-		Fee:      totalFee,
-		Burnt:    burntFee,
+		TotalFee: totalFee,
+		BurntFee: burntFee,
 		Proposer: proposer,
 		Rewards:  map[common.Address]*big.Int{header.Rewardbase: proposer},
 	}, nil
@@ -275,8 +275,8 @@ func CalcDeferredReward(header *types.Header, config *params.ChainConfig) (*Rewa
 
 	spec := &RewardSpec{
 		Minted:   minted,
-		Fee:      totalFee,
-		Burnt:    burntFee,
+		TotalFee: totalFee,
+		BurntFee: burntFee,
 		Proposer: proposer,
 		Stakers:  stakers,
 		Kgf:      kgf,

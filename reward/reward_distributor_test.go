@@ -317,8 +317,8 @@ func TestRewardDistributor_GetBlockReward(t *testing.T) {
 			deferredTxFee: false,
 			expected: &RewardSpec{
 				Minted:   minted,
-				Fee:      new(big.Int).SetUint64(1000),
-				Burnt:    new(big.Int).SetUint64(500),
+				TotalFee: new(big.Int).SetUint64(1000),
+				BurntFee: new(big.Int).SetUint64(500),
 				Proposer: new(big.Int).SetUint64(9.6e18 + 500),
 				Rewards: map[common.Address]*big.Int{
 					proposer: new(big.Int).SetUint64(9.6e18 + 500),
@@ -330,8 +330,8 @@ func TestRewardDistributor_GetBlockReward(t *testing.T) {
 			deferredTxFee: true,
 			expected: &RewardSpec{
 				Minted:   minted,
-				Fee:      new(big.Int).SetUint64(1000),
-				Burnt:    new(big.Int).SetUint64(1000),
+				TotalFee: new(big.Int).SetUint64(1000),
+				BurntFee: new(big.Int).SetUint64(1000),
 				Proposer: new(big.Int).SetUint64(0.6528e18 + 1),
 				Stakers:  new(big.Int).SetUint64(2.6112e18),
 				Kgf:      new(big.Int).SetUint64(5.184e18),
@@ -350,8 +350,8 @@ func TestRewardDistributor_GetBlockReward(t *testing.T) {
 			deferredTxFee: false,
 			expected: &RewardSpec{
 				Minted:   minted,
-				Fee:      new(big.Int).SetUint64(1000),
-				Burnt:    new(big.Int).SetUint64(0),
+				TotalFee: new(big.Int).SetUint64(1000),
+				BurntFee: new(big.Int).SetUint64(0),
 				Proposer: new(big.Int).SetUint64(0.6528e18 + 1),
 				Stakers:  new(big.Int).SetUint64(2.6112e18),
 				Kgf:      new(big.Int).SetUint64(5.184e18),
@@ -397,8 +397,8 @@ func TestRewardDistributor_CalcDeferredRewardSimple(t *testing.T) {
 			isMagma: false,
 			expected: &RewardSpec{
 				Minted:   minted,
-				Fee:      new(big.Int).SetUint64(1000),
-				Burnt:    new(big.Int).SetUint64(0),
+				TotalFee: new(big.Int).SetUint64(1000),
+				BurntFee: new(big.Int).SetUint64(0),
 				Proposer: new(big.Int).SetUint64(9.6e18 + 1000),
 				Rewards: map[common.Address]*big.Int{
 					proposer: new(big.Int).SetUint64(9.6e18 + 1000),
@@ -409,8 +409,8 @@ func TestRewardDistributor_CalcDeferredRewardSimple(t *testing.T) {
 			isMagma: true,
 			expected: &RewardSpec{
 				Minted:   minted,
-				Fee:      new(big.Int).SetUint64(1000),
-				Burnt:    new(big.Int).SetUint64(500), // 50% of tx fee burnt
+				TotalFee: new(big.Int).SetUint64(1000),
+				BurntFee: new(big.Int).SetUint64(500), // 50% of tx fee burnt
 				Proposer: new(big.Int).SetUint64(9.6e18 + 500),
 				Rewards: map[common.Address]*big.Int{
 					proposer: new(big.Int).SetUint64(9.6e18 + 500),
@@ -454,8 +454,8 @@ func TestRewardDistributor_CalcDeferredReward(t *testing.T) {
 			fee:     1000,
 			expected: &RewardSpec{
 				Minted:   minted,
-				Fee:      big.NewInt(1000),
-				Burnt:    big.NewInt(0),
+				TotalFee: big.NewInt(1000),
+				BurntFee: big.NewInt(0),
 				Proposer: big.NewInt(0).SetUint64(3.264e18 + 340),
 				Stakers:  big.NewInt(0),
 				Kgf:      big.NewInt(5.184e18 + 540),
@@ -474,8 +474,8 @@ func TestRewardDistributor_CalcDeferredReward(t *testing.T) {
 			fee:     10e18,
 			expected: &RewardSpec{
 				Minted:   minted,
-				Fee:      new(big.Int).SetUint64(10e18),
-				Burnt:    new(big.Int).SetUint64(0),
+				TotalFee: new(big.Int).SetUint64(10e18),
+				BurntFee: new(big.Int).SetUint64(0),
 				Proposer: new(big.Int).SetUint64(6.664e18),
 				Stakers:  new(big.Int).SetUint64(0),
 				Kgf:      new(big.Int).SetUint64(10.584e18),
@@ -494,8 +494,8 @@ func TestRewardDistributor_CalcDeferredReward(t *testing.T) {
 			fee:     1000,
 			expected: &RewardSpec{
 				Minted:   minted,
-				Fee:      new(big.Int).SetUint64(1000),
-				Burnt:    new(big.Int).SetUint64(500),
+				TotalFee: new(big.Int).SetUint64(1000),
+				BurntFee: new(big.Int).SetUint64(500),
 				Proposer: new(big.Int).SetUint64(3.264e18 + 170),
 				Stakers:  new(big.Int).SetUint64(0),
 				Kgf:      new(big.Int).SetUint64(5.184e18 + 270),
@@ -514,8 +514,8 @@ func TestRewardDistributor_CalcDeferredReward(t *testing.T) {
 			fee:     10e18,
 			expected: &RewardSpec{
 				Minted:   minted,
-				Fee:      new(big.Int).SetUint64(10e18),
-				Burnt:    new(big.Int).SetUint64(5e18),
+				TotalFee: new(big.Int).SetUint64(10e18),
+				BurntFee: new(big.Int).SetUint64(5e18),
 				Proposer: new(big.Int).SetUint64(4.964e18),
 				Stakers:  new(big.Int).SetUint64(0),
 				Kgf:      new(big.Int).SetUint64(7.884e18),
@@ -534,8 +534,8 @@ func TestRewardDistributor_CalcDeferredReward(t *testing.T) {
 			fee:     1000,
 			expected: &RewardSpec{
 				Minted:   minted,
-				Fee:      new(big.Int).SetUint64(1000),
-				Burnt:    new(big.Int).SetUint64(1000),
+				TotalFee: new(big.Int).SetUint64(1000),
+				BurntFee: new(big.Int).SetUint64(1000),
 				Proposer: new(big.Int).SetUint64(0.6528e18 + 1),
 				Stakers:  new(big.Int).SetUint64(2.6112e18),
 				Kgf:      new(big.Int).SetUint64(5.184e18),
@@ -556,8 +556,8 @@ func TestRewardDistributor_CalcDeferredReward(t *testing.T) {
 			fee:     10e18,
 			expected: &RewardSpec{
 				Minted:   minted,
-				Fee:      new(big.Int).SetUint64(10e18),
-				Burnt:    new(big.Int).SetUint64(5e18 + 0.6528e18),
+				TotalFee: new(big.Int).SetUint64(10e18),
+				BurntFee: new(big.Int).SetUint64(5e18 + 0.6528e18),
 				Proposer: new(big.Int).SetUint64(5e18 + 1),
 				Stakers:  new(big.Int).SetUint64(2.6112e18),
 				Kgf:      new(big.Int).SetUint64(5.184e18),
@@ -621,8 +621,8 @@ func TestRewardDistributor_CalcDeferredReward_StakingInfos(t *testing.T) {
 			stakingInfo: nil,
 			expected: &RewardSpec{
 				Minted:   minted,
-				Fee:      big.NewInt(1000),
-				Burnt:    big.NewInt(1000),
+				TotalFee: big.NewInt(1000),
+				BurntFee: big.NewInt(1000),
 				Proposer: minted,
 				Stakers:  big.NewInt(2.6112e18),
 				Kgf:      big.NewInt(0),
@@ -640,8 +640,8 @@ func TestRewardDistributor_CalcDeferredReward_StakingInfos(t *testing.T) {
 			},
 			expected: &RewardSpec{
 				Minted:   minted,
-				Fee:      big.NewInt(1000),
-				Burnt:    big.NewInt(1000),
+				TotalFee: big.NewInt(1000),
+				BurntFee: big.NewInt(1000),
 				Proposer: big.NewInt(8.448e18),
 				Stakers:  big.NewInt(2.6112e18),
 				Kgf:      big.NewInt(0),
@@ -660,8 +660,8 @@ func TestRewardDistributor_CalcDeferredReward_StakingInfos(t *testing.T) {
 			},
 			expected: &RewardSpec{
 				Minted:   minted,
-				Fee:      big.NewInt(1000),
-				Burnt:    big.NewInt(1000),
+				TotalFee: big.NewInt(1000),
+				BurntFee: big.NewInt(1000),
 				Proposer: big.NewInt(4.416e18),
 				Stakers:  big.NewInt(2.6112e18),
 				Kgf:      big.NewInt(5.184e18), // minted * 0.54
@@ -680,8 +680,8 @@ func TestRewardDistributor_CalcDeferredReward_StakingInfos(t *testing.T) {
 			},
 			expected: &RewardSpec{
 				Minted:   minted,
-				Fee:      big.NewInt(1000),
-				Burnt:    big.NewInt(1000),
+				TotalFee: big.NewInt(1000),
+				BurntFee: big.NewInt(1000),
 				Proposer: big.NewInt(3.264e18),
 				Stakers:  big.NewInt(2.6112e18),
 				Kgf:      big.NewInt(5.184e18),
@@ -736,8 +736,8 @@ func TestRewardDistributor_CalcDeferredReward_Remainings(t *testing.T) {
 			config: splitRemainingConfig,
 			expected: &RewardSpec{
 				Minted:   big.NewInt(333),
-				Fee:      big.NewInt(1000),
-				Burnt:    big.NewInt(522),
+				TotalFee: big.NewInt(1000),
+				BurntFee: big.NewInt(522),
 				Proposer: big.NewInt(501), // proposer=22, rewardFee=478, shareRem=1
 				Stakers:  big.NewInt(90),
 				Kgf:      big.NewInt(182), // splitRem=3
@@ -756,8 +756,8 @@ func TestRewardDistributor_CalcDeferredReward_Remainings(t *testing.T) {
 			config: getTestConfig(),
 			expected: &RewardSpec{
 				Minted:   minted,
-				Fee:      big.NewInt(1000),
-				Burnt:    big.NewInt(1000),
+				TotalFee: big.NewInt(1000),
+				BurntFee: big.NewInt(1000),
 				Proposer: big.NewInt(0.6528e18 + 1),
 				Stakers:  big.NewInt(2.6112e18),
 				Kgf:      big.NewInt(5.184e18),
