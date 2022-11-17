@@ -195,6 +195,9 @@ func GetBlockReward(header *types.Header, config *params.ChainConfig) (*RewardSp
 
 // CalcDeferredRewardSimple distributes rewards to proposer after optional fee burning
 // this behaves similar to the previous MintKLAY
+// MintKLAY has been superseded because we need to split reward distribution
+// logic into (1) calculation, and (2) actual distribution.
+// CalcDeferredRewardSimple does the former and DistributeBlockReward does the latter
 func CalcDeferredRewardSimple(header *types.Header, config *params.ChainConfig) (*RewardSpec, error) {
 	rc, err := NewRewardConfig(header, config)
 	if err != nil {
