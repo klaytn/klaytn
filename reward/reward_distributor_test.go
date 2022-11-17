@@ -47,9 +47,9 @@ var (
 	rewardBaseAddr = 700
 	minStaking     = uint64(2000000) // changing this value will not change the governance's min staking
 	minted, _      = big.NewInt(0).SetString("9600000000000000000", 10)
-	proposer       = common.StringToAddress("0x1552F52D459B713E0C4558e66C8c773a75615FA8")
-	kir            = intToAddress(1000)
-	kgf            = intToAddress(2000)
+	proposerAddr   = common.StringToAddress("0x1552F52D459B713E0C4558e66C8c773a75615FA8")
+	kirAddr        = intToAddress(1000)
+	kgfAddr        = intToAddress(2000)
 )
 
 // 500 -> 0x00000...0500
@@ -85,8 +85,8 @@ func genStakingInfo(cnNum int, rewardOverride map[int]int, amountOverride map[in
 		CouncilNodeAddrs:      cns,
 		CouncilStakingAddrs:   stakes,
 		CouncilRewardAddrs:    rewards,
-		KIRAddr:               kir,
-		PoCAddr:               kgf,
+		KIRAddr:               kirAddr,
+		PoCAddr:               kgfAddr,
 		UseGini:               false,
 		CouncilStakingAmounts: amounts,
 	}
@@ -275,7 +275,7 @@ func TestRewardDistributor_GetBlockReward(t *testing.T) {
 			Number:     big.NewInt(1),
 			GasUsed:    1000,
 			BaseFee:    big.NewInt(1),
-			Rewardbase: proposer,
+			Rewardbase: proposerAddr,
 		}
 
 		stakingInfo = genStakingInfo(5, nil, map[int]uint64{
@@ -298,7 +298,7 @@ func TestRewardDistributor_GetBlockReward(t *testing.T) {
 				BurntFee: new(big.Int).SetUint64(500),
 				Proposer: new(big.Int).SetUint64(9.6e18 + 500),
 				Rewards: map[common.Address]*big.Int{
-					proposer: new(big.Int).SetUint64(9.6e18 + 500),
+					proposerAddr: new(big.Int).SetUint64(9.6e18 + 500),
 				},
 			},
 		},
@@ -314,9 +314,9 @@ func TestRewardDistributor_GetBlockReward(t *testing.T) {
 				Kgf:      new(big.Int).SetUint64(5.184e18),
 				Kir:      new(big.Int).SetUint64(1.152e18),
 				Rewards: map[common.Address]*big.Int{
-					proposer:                         new(big.Int).SetUint64(0.6528e18 + 1),
-					kgf:                              new(big.Int).SetUint64(5.184e18),
-					kir:                              new(big.Int).SetUint64(1.152e18),
+					proposerAddr:                     new(big.Int).SetUint64(0.6528e18 + 1),
+					kgfAddr:                          new(big.Int).SetUint64(5.184e18),
+					kirAddr:                          new(big.Int).SetUint64(1.152e18),
 					intToAddress(rewardBaseAddr):     new(big.Int).SetUint64(1492114285714285714),
 					intToAddress(rewardBaseAddr + 1): new(big.Int).SetUint64(1119085714285714285),
 				},
@@ -334,9 +334,9 @@ func TestRewardDistributor_GetBlockReward(t *testing.T) {
 				Kgf:      new(big.Int).SetUint64(5.184e18),
 				Kir:      new(big.Int).SetUint64(1.152e18),
 				Rewards: map[common.Address]*big.Int{
-					proposer:                         new(big.Int).SetUint64(0.6528e18 + 1000 + 1),
-					kgf:                              new(big.Int).SetUint64(5.184e18),
-					kir:                              new(big.Int).SetUint64(1.152e18),
+					proposerAddr:                     new(big.Int).SetUint64(0.6528e18 + 1000 + 1),
+					kgfAddr:                          new(big.Int).SetUint64(5.184e18),
+					kirAddr:                          new(big.Int).SetUint64(1.152e18),
 					intToAddress(rewardBaseAddr):     new(big.Int).SetUint64(1492114285714285714),
 					intToAddress(rewardBaseAddr + 1): new(big.Int).SetUint64(1119085714285714285),
 				},
@@ -363,7 +363,7 @@ func TestRewardDistributor_CalcDeferredRewardSimple(t *testing.T) {
 		Number:     big.NewInt(1),
 		GasUsed:    1000,
 		BaseFee:    big.NewInt(1),
-		Rewardbase: proposer,
+		Rewardbase: proposerAddr,
 	}
 
 	testcases := []struct {
@@ -378,7 +378,7 @@ func TestRewardDistributor_CalcDeferredRewardSimple(t *testing.T) {
 				BurntFee: new(big.Int).SetUint64(0),
 				Proposer: new(big.Int).SetUint64(9.6e18 + 1000),
 				Rewards: map[common.Address]*big.Int{
-					proposer: new(big.Int).SetUint64(9.6e18 + 1000),
+					proposerAddr: new(big.Int).SetUint64(9.6e18 + 1000),
 				},
 			},
 		},
@@ -390,7 +390,7 @@ func TestRewardDistributor_CalcDeferredRewardSimple(t *testing.T) {
 				BurntFee: new(big.Int).SetUint64(500), // 50% of tx fee burnt
 				Proposer: new(big.Int).SetUint64(9.6e18 + 500),
 				Rewards: map[common.Address]*big.Int{
-					proposer: new(big.Int).SetUint64(9.6e18 + 500),
+					proposerAddr: new(big.Int).SetUint64(9.6e18 + 500),
 				},
 			},
 		},
@@ -438,9 +438,9 @@ func TestRewardDistributor_CalcDeferredReward(t *testing.T) {
 				Kgf:      big.NewInt(5.184e18 + 540),
 				Kir:      big.NewInt(1.152e18 + 120),
 				Rewards: map[common.Address]*big.Int{
-					proposer: big.NewInt(3.264e18 + 340),
-					kgf:      big.NewInt(5.184e18 + 540),
-					kir:      big.NewInt(1.152e18 + 120),
+					proposerAddr: big.NewInt(3.264e18 + 340),
+					kgfAddr:      big.NewInt(5.184e18 + 540),
+					kirAddr:      big.NewInt(1.152e18 + 120),
 				},
 			},
 		},
@@ -458,9 +458,9 @@ func TestRewardDistributor_CalcDeferredReward(t *testing.T) {
 				Kgf:      new(big.Int).SetUint64(10.584e18),
 				Kir:      new(big.Int).SetUint64(2.352e18),
 				Rewards: map[common.Address]*big.Int{
-					proposer: new(big.Int).SetUint64(6.664e18),
-					kgf:      new(big.Int).SetUint64(10.584e18),
-					kir:      new(big.Int).SetUint64(2.352e18),
+					proposerAddr: new(big.Int).SetUint64(6.664e18),
+					kgfAddr:      new(big.Int).SetUint64(10.584e18),
+					kirAddr:      new(big.Int).SetUint64(2.352e18),
 				},
 			},
 		},
@@ -478,9 +478,9 @@ func TestRewardDistributor_CalcDeferredReward(t *testing.T) {
 				Kgf:      new(big.Int).SetUint64(5.184e18 + 270),
 				Kir:      new(big.Int).SetUint64(1.152e18 + 60),
 				Rewards: map[common.Address]*big.Int{
-					proposer: new(big.Int).SetUint64(3.264e18 + 170),
-					kir:      new(big.Int).SetUint64(1.152e18 + 60),
-					kgf:      new(big.Int).SetUint64(5.184e18 + 270),
+					proposerAddr: new(big.Int).SetUint64(3.264e18 + 170),
+					kirAddr:      new(big.Int).SetUint64(1.152e18 + 60),
+					kgfAddr:      new(big.Int).SetUint64(5.184e18 + 270),
 				},
 			},
 		},
@@ -498,9 +498,9 @@ func TestRewardDistributor_CalcDeferredReward(t *testing.T) {
 				Kgf:      new(big.Int).SetUint64(7.884e18),
 				Kir:      new(big.Int).SetUint64(1.752e18),
 				Rewards: map[common.Address]*big.Int{
-					proposer: new(big.Int).SetUint64(4.964e18),
-					kgf:      new(big.Int).SetUint64(7.884e18),
-					kir:      new(big.Int).SetUint64(1.752e18),
+					proposerAddr: new(big.Int).SetUint64(4.964e18),
+					kgfAddr:      new(big.Int).SetUint64(7.884e18),
+					kirAddr:      new(big.Int).SetUint64(1.752e18),
 				},
 			},
 		},
@@ -518,9 +518,9 @@ func TestRewardDistributor_CalcDeferredReward(t *testing.T) {
 				Kgf:      new(big.Int).SetUint64(5.184e18),
 				Kir:      new(big.Int).SetUint64(1.152e18),
 				Rewards: map[common.Address]*big.Int{
-					proposer:                         new(big.Int).SetUint64(0.6528e18 + 1),
-					kgf:                              new(big.Int).SetUint64(5.184e18),
-					kir:                              new(big.Int).SetUint64(1.152e18),
+					proposerAddr:                     new(big.Int).SetUint64(0.6528e18 + 1),
+					kgfAddr:                          new(big.Int).SetUint64(5.184e18),
+					kirAddr:                          new(big.Int).SetUint64(1.152e18),
 					intToAddress(rewardBaseAddr):     new(big.Int).SetUint64(1492114285714285714),
 					intToAddress(rewardBaseAddr + 1): new(big.Int).SetUint64(1119085714285714285),
 				},
@@ -540,9 +540,9 @@ func TestRewardDistributor_CalcDeferredReward(t *testing.T) {
 				Kgf:      new(big.Int).SetUint64(5.184e18),
 				Kir:      new(big.Int).SetUint64(1.152e18),
 				Rewards: map[common.Address]*big.Int{
-					proposer:                         new(big.Int).SetUint64(5e18 + 1),
-					kgf:                              new(big.Int).SetUint64(5.184e18),
-					kir:                              new(big.Int).SetUint64(1.152e18),
+					proposerAddr:                     new(big.Int).SetUint64(5e18 + 1),
+					kgfAddr:                          new(big.Int).SetUint64(5.184e18),
+					kirAddr:                          new(big.Int).SetUint64(1.152e18),
 					intToAddress(rewardBaseAddr):     new(big.Int).SetUint64(1492114285714285714),
 					intToAddress(rewardBaseAddr + 1): new(big.Int).SetUint64(1119085714285714285),
 				},
@@ -557,7 +557,7 @@ func TestRewardDistributor_CalcDeferredReward(t *testing.T) {
 			Number:     big.NewInt(1),
 			GasUsed:    tc.fee,
 			BaseFee:    big.NewInt(1),
-			Rewardbase: proposer,
+			Rewardbase: proposerAddr,
 		}
 
 		config := getTestConfig()
@@ -583,7 +583,7 @@ func TestRewardDistributor_CalcDeferredReward_StakingInfos(t *testing.T) {
 			Number:     big.NewInt(1),
 			GasUsed:    1000,
 			BaseFee:    big.NewInt(1),
-			Rewardbase: proposer,
+			Rewardbase: proposerAddr,
 		}
 		config = getTestConfig()
 	)
@@ -605,14 +605,14 @@ func TestRewardDistributor_CalcDeferredReward_StakingInfos(t *testing.T) {
 				Kgf:      big.NewInt(0),
 				Kir:      big.NewInt(0),
 				Rewards: map[common.Address]*big.Int{
-					proposer: minted,
+					proposerAddr: minted,
 				},
 			},
 		},
 		{
 			desc: "stakingInfo has no poc, its portion goes to proposer",
 			stakingInfo: &StakingInfo{
-				KIRAddr: kir,
+				KIRAddr: kirAddr,
 				PoCAddr: common.Address{},
 			},
 			expected: &RewardSpec{
@@ -624,8 +624,8 @@ func TestRewardDistributor_CalcDeferredReward_StakingInfos(t *testing.T) {
 				Kgf:      big.NewInt(0),
 				Kir:      big.NewInt(1.152e18), // minted * 0.12
 				Rewards: map[common.Address]*big.Int{
-					proposer: big.NewInt(8.448e18),
-					kir:      big.NewInt(1.152e18),
+					proposerAddr: big.NewInt(8.448e18),
+					kirAddr:      big.NewInt(1.152e18),
 				},
 			},
 		},
@@ -633,7 +633,7 @@ func TestRewardDistributor_CalcDeferredReward_StakingInfos(t *testing.T) {
 			desc: "stakingInfo has no kir, its portion goes to proposer",
 			stakingInfo: &StakingInfo{
 				KIRAddr: common.Address{},
-				PoCAddr: kgf,
+				PoCAddr: kgfAddr,
 			},
 			expected: &RewardSpec{
 				Minted:   minted,
@@ -644,16 +644,16 @@ func TestRewardDistributor_CalcDeferredReward_StakingInfos(t *testing.T) {
 				Kgf:      big.NewInt(5.184e18), // minted * 0.54
 				Kir:      big.NewInt(0),
 				Rewards: map[common.Address]*big.Int{
-					proposer: big.NewInt(4.416e18),
-					kgf:      big.NewInt(5.184e18),
+					proposerAddr: big.NewInt(4.416e18),
+					kgfAddr:      big.NewInt(5.184e18),
 				},
 			},
 		},
 		{
 			desc: "stakingInfo has the same poc and kir",
 			stakingInfo: &StakingInfo{
-				KIRAddr: kgf,
-				PoCAddr: kgf,
+				KIRAddr: kgfAddr,
+				PoCAddr: kgfAddr,
 			},
 			expected: &RewardSpec{
 				Minted:   minted,
@@ -664,8 +664,8 @@ func TestRewardDistributor_CalcDeferredReward_StakingInfos(t *testing.T) {
 				Kgf:      big.NewInt(5.184e18),
 				Kir:      big.NewInt(1.152e18),
 				Rewards: map[common.Address]*big.Int{
-					proposer: big.NewInt(3.264e18),
-					kgf:      big.NewInt(6.336e18),
+					proposerAddr: big.NewInt(3.264e18),
+					kgfAddr:      big.NewInt(6.336e18),
 				},
 			},
 		},
@@ -692,7 +692,7 @@ func TestRewardDistributor_CalcDeferredReward_Remainings(t *testing.T) {
 			Number:     big.NewInt(1),
 			GasUsed:    1000,
 			BaseFee:    big.NewInt(1),
-			Rewardbase: proposer,
+			Rewardbase: proposerAddr,
 		}
 
 		stakingInfo = genStakingInfo(5, nil, map[int]uint64{
@@ -720,9 +720,9 @@ func TestRewardDistributor_CalcDeferredReward_Remainings(t *testing.T) {
 				Kgf:      big.NewInt(182), // splitRem=3
 				Kir:      big.NewInt(39),
 				Rewards: map[common.Address]*big.Int{
-					proposer:                         big.NewInt(501),
-					kgf:                              big.NewInt(182),
-					kir:                              big.NewInt(39),
+					proposerAddr:                     big.NewInt(501),
+					kgfAddr:                          big.NewInt(182),
+					kirAddr:                          big.NewInt(39),
 					intToAddress(rewardBaseAddr):     big.NewInt(51), // stakers * 4/7
 					intToAddress(rewardBaseAddr + 1): big.NewInt(38), // stakers * 3/7
 				},
@@ -740,9 +740,9 @@ func TestRewardDistributor_CalcDeferredReward_Remainings(t *testing.T) {
 				Kgf:      big.NewInt(5.184e18),
 				Kir:      big.NewInt(1.152e18),
 				Rewards: map[common.Address]*big.Int{
-					proposer:                         big.NewInt(0.6528e18 + 1),
-					kgf:                              big.NewInt(5.184e18),
-					kir:                              big.NewInt(1.152e18),
+					proposerAddr:                     big.NewInt(0.6528e18 + 1),
+					kgfAddr:                          big.NewInt(5.184e18),
+					kirAddr:                          big.NewInt(1.152e18),
 					intToAddress(rewardBaseAddr):     big.NewInt(1492114285714285714), // stakers * 4/7
 					intToAddress(rewardBaseAddr + 1): big.NewInt(1119085714285714285), // stakers * 3/7
 				},
@@ -842,7 +842,7 @@ func TestRewardDistributor_calcDeferredFee(t *testing.T) {
 			Number:     big.NewInt(1),
 			GasUsed:    tc.fee,
 			BaseFee:    big.NewInt(1),
-			Rewardbase: proposer,
+			Rewardbase: proposerAddr,
 		}
 
 		config := getTestConfig()
@@ -871,7 +871,7 @@ func TestRewardDistributor_calcDeferredFee_nodeferred(t *testing.T) {
 		Number:     big.NewInt(1),
 		GasUsed:    1000,
 		BaseFee:    big.NewInt(1),
-		Rewardbase: proposer,
+		Rewardbase: proposerAddr,
 	}
 
 	rc, err := NewRewardConfig(header, noDeferred(getTestConfig()))
