@@ -284,17 +284,17 @@ func CalcDeferredReward(header *types.Header, config *params.ChainConfig) (*Rewa
 	}
 
 	spec.Rewards = make(map[common.Address]*big.Int)
-	increment(spec.Rewards, header.Rewardbase, proposer)
+	incrementRewardsMap(spec.Rewards, header.Rewardbase, proposer)
 
 	if stakingInfo != nil && !common.EmptyAddress(stakingInfo.PoCAddr) {
-		increment(spec.Rewards, stakingInfo.PoCAddr, kgf)
+		incrementRewardsMap(spec.Rewards, stakingInfo.PoCAddr, kgf)
 	}
 	if stakingInfo != nil && !common.EmptyAddress(stakingInfo.KIRAddr) {
-		increment(spec.Rewards, stakingInfo.KIRAddr, kir)
+		incrementRewardsMap(spec.Rewards, stakingInfo.KIRAddr, kir)
 	}
 
 	for rewardAddr, rewardAmount := range shares {
-		increment(spec.Rewards, rewardAddr, rewardAmount)
+		incrementRewardsMap(spec.Rewards, rewardAddr, rewardAmount)
 	}
 	logger.Debug("CalcDeferredReward() returns", "spec", spec)
 
@@ -508,7 +508,7 @@ func parseRewardKip82Ratio(ratio string) (int64, int64, int64, error) {
 	return basic, stake, basic + stake, nil
 }
 
-func increment(m map[common.Address]*big.Int, addr common.Address, amount *big.Int) {
+func incrementRewardsMap(m map[common.Address]*big.Int, addr common.Address, amount *big.Int) {
 	_, ok := m[addr]
 	if !ok {
 		m[addr] = big.NewInt(0)
