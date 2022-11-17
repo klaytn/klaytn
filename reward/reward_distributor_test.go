@@ -58,7 +58,7 @@ func intToAddress(x int) common.Address {
 }
 
 // rewardOverride[i] = j means rewards[i] = rewards[j]
-// amountOverride[i] = j means amount[i] = j
+// amountOverride[i] = amt means amount[i] = amt
 func genStakingInfo(cnNum int, rewardOverride map[int]int, amountOverride map[int]uint64) *StakingInfo {
 	cns := make([]common.Address, 0)
 	stakes := make([]common.Address, 0)
