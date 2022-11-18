@@ -330,7 +330,7 @@ func (g *Genesis) ToBlock(baseStateRoot common.Hash, db database.DBManager) *typ
 	if g.BlockScore == nil {
 		head.BlockScore = params.GenesisBlockScore
 	}
-	// TODO-klaytn should set genesis block's base fee
+
 	if g.Config.IsMagmaForkEnabled(common.Big0) {
 		if g.Config != nil &&
 			g.Config.Governance != nil &&
