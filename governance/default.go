@@ -1072,9 +1072,21 @@ func (gov *Governance) GetTxPool() txPool {
 	return gov.TxPool
 }
 
+// GetGovernanceItemsFromChainConfig returns governance set
+// that is effective at the genesis block
 func GetGovernanceItemsFromChainConfig(config *params.ChainConfig) GovernanceSet {
 	g := NewGovernanceSet()
 
+	// append to the return value `g`
+	appendToReturn := func(govmap map[int]interface{}) {
+		for k, v := range govmap {
+			if err := g.SetValue(k, v); err != nil {
+				writeFailLog(k, err)
+			}
+		}
+	}
+
+	// original cypress params
 	if config.Governance != nil {
 		governance := config.Governance
 		governanceMap := map[int]interface{}{
@@ -1090,11 +1102,7 @@ func GetGovernanceItemsFromChainConfig(config *params.ChainConfig) GovernanceSet
 			params.ProposerRefreshInterval: governance.Reward.ProposerUpdateInterval,
 		}
 
-		for k, v := range governanceMap {
-			if err := g.SetValue(k, v); err != nil {
-				writeFailLog(k, err)
-			}
-		}
+		appendToReturn(governanceMap)
 	}
 
 	if config.Istanbul != nil {
@@ -1105,12 +1113,35 @@ func GetGovernanceItemsFromChainConfig(config *params.ChainConfig) GovernanceSet
 			params.CommitteeSize: istanbul.SubGroupSize,
 		}
 
-		for k, v := range istanbulMap {
-			if err := g.SetValue(k, v); err != nil {
-				writeFailLog(k, err)
-			}
-		}
+		appendToReturn(istanbulMap)
 	}
+
+	// magma params
+	if config.IsMagmaForkEnabled(common.Big0) &&
+		config.Governance.KIP71 != nil {
+		kip71 := config.Governance.KIP71
+		governanceMap := map[int]interface{}{
+			params.LowerBoundBaseFee:         kip71.LowerBoundBaseFee,
+			params.UpperBoundBaseFee:         kip71.UpperBoundBaseFee,
+			params.GasTarget:                 kip71.GasTarget,
+			params.MaxBlockGasUsedForBaseFee: kip71.MaxBlockGasUsedForBaseFee,
+			params.BaseFeeDenominator:        kip71.BaseFeeDenominator,
+		}
+
+		appendToReturn(governanceMap)
+	}
+
+	// kore params
+	if config.IsKoreForkEnabled(common.Big0) &&
+		config.Governance != nil {
+		governance := config.Governance
+		governanceMap := map[int]interface{}{
+			params.GovParamContract: governance.GovParamContract,
+		}
+
+		appendToReturn(governanceMap)
+	}
+
 	return g
 }
 
