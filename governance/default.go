@@ -1236,7 +1236,7 @@ func (gov *Governance) ParamsAt(num uint64) (*params.GovParamSet, error) {
 		logger.Error("NewGovParamSetStrMap failed", "num", num, "err", err)
 		return nil, err
 	}
-	return params.NewGovParamSetMerged(gov.initialParams, pset), nil
+	return pset, nil
 }
 
 func (gov *Governance) UpdateParams() error {
@@ -1246,6 +1246,6 @@ func (gov *Governance) UpdateParams() error {
 		return err
 	}
 
-	gov.currentParams = params.NewGovParamSetMerged(gov.initialParams, pset)
+	gov.currentParams = pset
 	return nil
 }
