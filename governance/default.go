@@ -817,8 +817,7 @@ func (g *Governance) searchCache(num uint64) (uint64, bool) {
 }
 
 func (g *Governance) ReadGovernance(num uint64) (uint64, map[string]interface{}, error) {
-	// if num is zero, epochWithFallback() will Crit
-	// so epoch should be set to any value greater than zero
+	// epochWithFallback() falls back to Default before initializeCache()
 	epoch := g.epochWithFallback()
 	blockNum := CalcGovernanceInfoBlock(num, epoch)
 
