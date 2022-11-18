@@ -191,7 +191,7 @@ func prepareContractEngine(t *testing.T, bc *blockchain.BlockChain, addr common.
 	dbm.WriteGovernance(map[string]interface{}{
 		"governance.govparamcontract": addr,
 	}, 0)
-	gov := NewGovernance(bc.Config(), dbm)
+	gov := NewGovernance(dbm)
 	pset, err := gov.ParamsAt(0)
 	require.Nil(t, err)
 	require.Equal(t, addr, pset.GovParamContract())
@@ -208,13 +208,17 @@ func prepareContractEngine(t *testing.T, bc *blockchain.BlockChain, addr common.
 // TestContractEngine_Params tests if Params() returns the parameters required
 // for generating the next block. That is,
 //
-//     start          setparam       activation-1       end
+//	start          setparam       activation-1       end
+//
 // Block |---------------|---------------|---------------|
-//               ^               ^               ^
-//               t0              t1              t2
+//
+//	^               ^               ^
+//	t0              t1              t2
+//
 // At num = activation - 2, Params() = prev
 // At num = activation - 1, Params() = next
-//    because next is for generating "activation" block
+//
+//	because next is for generating "activation" block
 func TestContractEngine_Params(t *testing.T) {
 	initialParam := map[string][]byte{
 		"istanbul.committeesize": {0xa},
@@ -262,10 +266,13 @@ func TestContractEngine_Params(t *testing.T) {
 // TestContractEngine_ParamsAt tests if ParamsAt(num) returns the parameters
 // required for generating the "num" block. That is,
 //
-//     start          setparam       activation         end
+//	start          setparam       activation         end
+//
 // Block |---------------|---------------|---------------|
-//               ^               ^               ^
-//               t0              t1              t2
+//
+//	^               ^               ^
+//	t0              t1              t2
+//
 // ParamsAt(activation - 1) = prev
 // ParamsAt(activation)     = next
 func TestContractEngine_ParamsAt(t *testing.T) {

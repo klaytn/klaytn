@@ -697,7 +697,7 @@ func TestGovernance_initializeCache(t *testing.T) {
 		gov.itemCache.Purge()
 
 		// 2. call initializeCache
-		err := gov.initializeCache()
+		err := gov.initializeCache(config)
 
 		// 3. check the affected values with expected results
 		assert.NoError(t, err)
@@ -759,7 +759,6 @@ func TestGovernance_ReadGovernanceState(t *testing.T) {
 	gov.ReadGovernanceState()
 
 	assert.Equal(t, bn, gov.lastGovernanceStateBlock)
-	assert.Equal(t, config, gov.ChainConfig)
 	assert.Equal(t, gjson.VoteMap, gov.voteMap.items)
 	assert.Equal(t, gjson.NodeAddress, gov.nodeAddress.Load())
 	assert.Equal(t, gjson.GovernanceVotes, gov.GovernanceVotes.items)
