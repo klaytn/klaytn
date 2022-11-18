@@ -21,9 +21,11 @@
 package api
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
@@ -83,4 +85,14 @@ func (api *PrivateDebugAPI) SetHead(number rpc.BlockNumber) {
 		return
 	}
 	api.b.SetHead(uint64(number))
+}
+
+// PrintBlock retrieves a block and returns its pretty printed form.
+func (api *PrivateDebugAPI) PrintBlock(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (string, error) {
+	block, _ := api.b.BlockByNumberOrHash(ctx, blockNrOrHash)
+	if block == nil {
+		blockNumberOrHashString, _ := blockNrOrHash.NumberOrHashString()
+		return "", fmt.Errorf("block %v not found", blockNumberOrHashString)
+	}
+	return spew.Sdump(block), nil
 }

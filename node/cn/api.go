@@ -343,25 +343,76 @@ func (api *PublicDebugAPI) DumpStateTrie(ctx context.Context, blockNrOrHash rpc.
 	return result, nil
 }
 
-// StartWarmUp retrieves all state/storage tries of the latest committed state root and caches the tries.
-func (api *PublicDebugAPI) StartWarmUp() error {
-	return api.cn.blockchain.StartWarmUp()
+// GetModifiedAccountsByNumber returns all accounts that have changed between the
+// two blocks specified. A change is defined as a difference in nonce, balance,
+// code hash, or storage hash.
+//
+// With one parameter, returns the list of accounts modified in the specified block.
+func (api *PublicDebugAPI) GetModifiedAccountsByNumber(ctx context.Context, startNum rpc.BlockNumber, endNum *rpc.BlockNumber) ([]common.Address, error) {
+	startBlock, endBlock, err := getStartAndEndBlock(ctx, api.cn.APIBackend, startNum, endNum)
+	if err != nil {
+		return nil, err
+	}
+	return api.getModifiedAccounts(startBlock, endBlock)
 }
 
-// StartContractWarmUp retrieves a storage trie of the latest state root and caches the trie
-// corresponding to the given contract address.
-func (api *PublicDebugAPI) StartContractWarmUp(contractAddr common.Address) error {
-	return api.cn.blockchain.StartContractWarmUp(contractAddr)
+// GetModifiedAccountsByHash returns all accounts that have changed between the
+// two blocks specified. A change is defined as a difference in nonce, balance,
+// code hash, or storage hash.
+//
+// With one parameter, returns the list of accounts modified in the specified block.
+func (api *PublicDebugAPI) GetModifiedAccountsByHash(startHash common.Hash, endHash *common.Hash) ([]common.Address, error) {
+	var startBlock, endBlock *types.Block
+	startBlock = api.cn.blockchain.GetBlockByHash(startHash)
+	if startBlock == nil {
+		return nil, fmt.Errorf("start block %x not found", startHash)
+	}
+
+	if endHash == nil {
+		endBlock = startBlock
+		startBlock = api.cn.blockchain.GetBlockByHash(startBlock.ParentHash())
+		if startBlock == nil {
+			return nil, fmt.Errorf("block %x has no parent", startHash)
+		}
+	} else {
+		endBlock = api.cn.blockchain.GetBlockByHash(*endHash)
+		if endBlock == nil {
+			return nil, fmt.Errorf("end block %x not found", *endHash)
+		}
+	}
+	return api.getModifiedAccounts(startBlock, endBlock)
 }
 
-// StopWarmUp stops the warming up process.
-func (api *PublicDebugAPI) StopWarmUp() error {
-	return api.cn.blockchain.StopWarmUp()
+func (api *PublicDebugAPI) getModifiedAccounts(startBlock, endBlock *types.Block) ([]common.Address, error) {
+	trieDB := api.cn.blockchain.StateCache().TrieDB()
+
+	oldTrie, err := statedb.NewSecureTrie(startBlock.Root(), trieDB)
+	if err != nil {
+		return nil, err
+	}
+	newTrie, err := statedb.NewSecureTrie(endBlock.Root(), trieDB)
+	if err != nil {
+		return nil, err
+	}
+
+	diff, _ := statedb.NewDifferenceIterator(oldTrie.NodeIterator([]byte{}), newTrie.NodeIterator([]byte{}))
+	iter := statedb.NewIterator(diff)
+
+	var dirty []common.Address
+	for iter.Next() {
+		key := newTrie.GetKey(iter.Key)
+		if key == nil {
+			return nil, fmt.Errorf("no preimage found for hash %x", iter.Key)
+		}
+		dirty = append(dirty, common.BytesToAddress(key))
+	}
+	return dirty, nil
 }
 
-// StartCollectingTrieStats  collects state/storage trie statistics and print in the log.
-func (api *PublicDebugAPI) StartCollectingTrieStats(contractAddr common.Address) error {
-	return api.cn.blockchain.StartCollectingTrieStats(contractAddr)
+// GetBadBLocks returns a list of the last 'bad blocks' that the client has seen on the network
+// and returns them as a JSON list of block-hashes
+func (api *PublicDebugAPI) GetBadBlocks(ctx context.Context) ([]blockchain.BadBlockArgs, error) {
+	return api.cn.BlockChain().BadBlocks()
 }
 
 // PrivateDebugAPI is the collection of CN full node APIs exposed over
@@ -383,12 +434,6 @@ func (api *PrivateDebugAPI) Preimage(ctx context.Context, hash common.Hash) (hex
 		return preimage, nil
 	}
 	return nil, errors.New("unknown preimage")
-}
-
-// GetBadBLocks returns a list of the last 'bad blocks' that the client has seen on the network
-// and returns them as a JSON list of block-hashes
-func (api *PrivateDebugAPI) GetBadBlocks(ctx context.Context) ([]blockchain.BadBlockArgs, error) {
-	return api.cn.BlockChain().BadBlocks()
 }
 
 // StorageRangeResult is the result of a debug_storageRangeAt API call.
@@ -445,99 +490,25 @@ func storageRangeAt(st state.Trie, start []byte, maxResult int) (StorageRangeRes
 	return result, nil
 }
 
-// GetModifiedAccountsByNumber returns all accounts that have changed between the
-// two blocks specified. A change is defined as a difference in nonce, balance,
-// code hash, or storage hash.
-//
-// With one parameter, returns the list of accounts modified in the specified block.
-func (api *PrivateDebugAPI) GetModifiedAccountsByNumber(ctx context.Context, startNum rpc.BlockNumber, endNum *rpc.BlockNumber) ([]common.Address, error) {
-	startBlock, endBlock, err := api.getStartAndEndBlock(ctx, startNum, endNum)
-	if err != nil {
-		return nil, err
-	}
-	return api.getModifiedAccounts(startBlock, endBlock)
+// StartWarmUp retrieves all state/storage tries of the latest committed state root and caches the tries.
+func (api *PrivateDebugAPI) StartWarmUp() error {
+	return api.cn.blockchain.StartWarmUp()
 }
 
-// GetModifiedAccountsByHash returns all accounts that have changed between the
-// two blocks specified. A change is defined as a difference in nonce, balance,
-// code hash, or storage hash.
-//
-// With one parameter, returns the list of accounts modified in the specified block.
-func (api *PrivateDebugAPI) GetModifiedAccountsByHash(startHash common.Hash, endHash *common.Hash) ([]common.Address, error) {
-	var startBlock, endBlock *types.Block
-	startBlock = api.cn.blockchain.GetBlockByHash(startHash)
-	if startBlock == nil {
-		return nil, fmt.Errorf("start block %x not found", startHash)
-	}
-
-	if endHash == nil {
-		endBlock = startBlock
-		startBlock = api.cn.blockchain.GetBlockByHash(startBlock.ParentHash())
-		if startBlock == nil {
-			return nil, fmt.Errorf("block %x has no parent", startHash)
-		}
-	} else {
-		endBlock = api.cn.blockchain.GetBlockByHash(*endHash)
-		if endBlock == nil {
-			return nil, fmt.Errorf("end block %x not found", *endHash)
-		}
-	}
-	return api.getModifiedAccounts(startBlock, endBlock)
+// StartContractWarmUp retrieves a storage trie of the latest state root and caches the trie
+// corresponding to the given contract address.
+func (api *PrivateDebugAPI) StartContractWarmUp(contractAddr common.Address) error {
+	return api.cn.blockchain.StartContractWarmUp(contractAddr)
 }
 
-func (api *PrivateDebugAPI) getModifiedAccounts(startBlock, endBlock *types.Block) ([]common.Address, error) {
-	trieDB := api.cn.blockchain.StateCache().TrieDB()
-
-	oldTrie, err := statedb.NewSecureTrie(startBlock.Root(), trieDB)
-	if err != nil {
-		return nil, err
-	}
-	newTrie, err := statedb.NewSecureTrie(endBlock.Root(), trieDB)
-	if err != nil {
-		return nil, err
-	}
-
-	diff, _ := statedb.NewDifferenceIterator(oldTrie.NodeIterator([]byte{}), newTrie.NodeIterator([]byte{}))
-	iter := statedb.NewIterator(diff)
-
-	var dirty []common.Address
-	for iter.Next() {
-		key := newTrie.GetKey(iter.Key)
-		if key == nil {
-			return nil, fmt.Errorf("no preimage found for hash %x", iter.Key)
-		}
-		dirty = append(dirty, common.BytesToAddress(key))
-	}
-	return dirty, nil
+// StopWarmUp stops the warming up process.
+func (api *PrivateDebugAPI) StopWarmUp() error {
+	return api.cn.blockchain.StopWarmUp()
 }
 
-// getStartAndEndBlock returns start and end block based on the given startNum and endNum.
-func (api *PrivateDebugAPI) getStartAndEndBlock(ctx context.Context, startNum rpc.BlockNumber, endNum *rpc.BlockNumber) (*types.Block, *types.Block, error) {
-	var startBlock, endBlock *types.Block
-
-	startBlock, err := api.cn.APIBackend.BlockByNumber(ctx, startNum)
-	if err != nil {
-		return nil, nil, fmt.Errorf("start block number #%d not found", startNum.Uint64())
-	}
-
-	if endNum == nil {
-		endBlock = startBlock
-		startBlock, err = api.cn.APIBackend.BlockByHash(ctx, startBlock.ParentHash())
-		if err != nil {
-			return nil, nil, fmt.Errorf("block number #%d has no parent", startNum.Uint64())
-		}
-	} else {
-		endBlock, err = api.cn.APIBackend.BlockByNumber(ctx, *endNum)
-		if err != nil {
-			return nil, nil, fmt.Errorf("end block number #%d not found", (*endNum).Uint64())
-		}
-	}
-
-	if startBlock.Number().Uint64() >= endBlock.Number().Uint64() {
-		return nil, nil, fmt.Errorf("start block height (%d) must be less than end block height (%d)", startBlock.Number().Uint64(), endBlock.Number().Uint64())
-	}
-
-	return startBlock, endBlock, nil
+// StartCollectingTrieStats  collects state/storage trie statistics and print in the log.
+func (api *PrivateDebugAPI) StartCollectingTrieStats(contractAddr common.Address) error {
+	return api.cn.blockchain.StartCollectingTrieStats(contractAddr)
 }
 
 // GetModifiedStorageNodesByNumber returns the number of storage nodes of a contract account
@@ -545,7 +516,7 @@ func (api *PrivateDebugAPI) getStartAndEndBlock(ctx context.Context, startNum rp
 //
 // With the first two parameters, it returns the number of storage trie nodes modified in the specified block.
 func (api *PrivateDebugAPI) GetModifiedStorageNodesByNumber(ctx context.Context, contractAddr common.Address, startNum rpc.BlockNumber, endNum *rpc.BlockNumber, printDetail *bool) (int, error) {
-	startBlock, endBlock, err := api.getStartAndEndBlock(ctx, startNum, endNum)
+	startBlock, endBlock, err := getStartAndEndBlock(ctx, api.cn.APIBackend, startNum, endNum)
 	if err != nil {
 		return 0, err
 	}
@@ -589,4 +560,33 @@ func (api *PrivateDebugAPI) getModifiedStorageNodes(contractAddr common.Address,
 	logger.Info("Finished collecting the modified storage nodes", "contractAddr", contractAddr.String(),
 		"startBlock", startBlock.NumberU64(), "endBlock", endBlock.NumberU64(), "numModifiedNodes", numModifiedNodes, "elapsed", time.Since(start))
 	return numModifiedNodes, nil
+}
+
+// getStartAndEndBlock returns start and end block based on the given startNum and endNum.
+func getStartAndEndBlock(ctx context.Context, backend *CNAPIBackend, startNum rpc.BlockNumber, endNum *rpc.BlockNumber) (*types.Block, *types.Block, error) {
+	var startBlock, endBlock *types.Block
+
+	startBlock, err := backend.BlockByNumber(ctx, startNum)
+	if err != nil {
+		return nil, nil, fmt.Errorf("start block number #%d not found", startNum.Uint64())
+	}
+
+	if endNum == nil {
+		endBlock = startBlock
+		startBlock, err = backend.BlockByHash(ctx, startBlock.ParentHash())
+		if err != nil {
+			return nil, nil, fmt.Errorf("block number #%d has no parent", startNum.Uint64())
+		}
+	} else {
+		endBlock, err = backend.BlockByNumber(ctx, *endNum)
+		if err != nil {
+			return nil, nil, fmt.Errorf("end block number #%d not found", (*endNum).Uint64())
+		}
+	}
+
+	if startBlock.Number().Uint64() >= endBlock.Number().Uint64() {
+		return nil, nil, fmt.Errorf("start block height (%d) must be less than end block height (%d)", startBlock.Number().Uint64(), endBlock.Number().Uint64())
+	}
+
+	return startBlock, endBlock, nil
 }

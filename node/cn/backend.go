@@ -486,7 +486,8 @@ func (s *CN) APIs() []rpc.API {
 	governanceKlayAPI := governance.NewGovernanceKlayAPI(s.governance, s.blockchain)
 	publicGovernanceAPI := governance.NewGovernanceAPI(s.governance)
 	publicDownloaderAPI := downloader.NewPublicDownloaderAPI(s.protocolManager.Downloader(), s.eventMux)
-	privateTracerAPI := tracers.NewAPI(s.APIBackend)
+	tracerAPI := tracers.NewAPI(s.APIBackend)
+	unsafeTracerAPI := tracers.NewUnsafeAPI(s.APIBackend)
 
 	ethAPI.SetPublicFilterAPI(publicFilterAPI)
 	ethAPI.SetGovernanceKlayAPI(governanceKlayAPI)
@@ -522,15 +523,21 @@ func (s *CN) APIs() []rpc.API {
 			Namespace: "debug",
 			Version:   "1.0",
 			Service:   NewPublicDebugAPI(s),
-			Public:    true,
+			Public:    false,
 		}, {
-			Namespace: "debug",
+			Namespace: "unsafedebug",
 			Version:   "1.0",
 			Service:   NewPrivateDebugAPI(s.chainConfig, s),
+			Public:    false,
 		}, {
 			Namespace: "debug",
 			Version:   "1.0",
-			Service:   privateTracerAPI,
+			Service:   tracerAPI,
+			Public:    false,
+		}, {
+			Namespace: "unsafedebug",
+			Version:   "1.0",
+			Service:   unsafeTracerAPI,
 			Public:    false,
 		}, {
 			Namespace: "net",

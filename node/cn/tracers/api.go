@@ -92,12 +92,20 @@ type Backend interface {
 
 // API is the collection of tracing APIs exposed over the private debugging endpoint.
 type API struct {
-	backend Backend
+	backend       Backend
+	onlySafeTrace bool
 }
 
-// NewAPI creates a new API definition for the tracing methods of the CN service.
+// NewAPI creates a new API definition for the tracing methods of the CN service,
+// only allowing predefined tracers.
 func NewAPI(backend Backend) *API {
-	return &API{backend: backend}
+	return &API{backend: backend, onlySafeTrace: true}
+}
+
+// NewUnsafeAPI creates a new API definition for the tracing methods of the CN service,
+// allowing both predefined tracers and Javascript snippet based tracing.
+func NewUnsafeAPI(backend Backend) *API {
+	return &API{backend: backend, onlySafeTrace: false}
 }
 
 type chainContext struct {
@@ -494,9 +502,21 @@ func (api *API) TraceBlock(ctx context.Context, blob hexutil.Bytes, config *Trac
 func (api *API) TraceBlockFromFile(ctx context.Context, file string, config *TraceConfig) ([]*txTraceResult, error) {
 	blob, err := ioutil.ReadFile(file)
 	if err != nil {
-		return nil, fmt.Errorf("could not read file: %v", err)
+		if api.onlySafeTrace {
+			return nil, errors.New("error handling TraceBlockFromFile, exact reason not provided for security")
+		} else {
+			return nil, fmt.Errorf("could not read file: %v", err)
+		}
 	}
-	return api.TraceBlock(ctx, common.Hex2Bytes(string(blob)), config)
+	res, err := api.TraceBlock(ctx, common.Hex2Bytes(string(blob)), config)
+	if err != nil {
+		if api.onlySafeTrace {
+			return nil, errors.New("error handling TraceBlockFromFile, exact reason not provided for security")
+		} else {
+			return nil, err
+		}
+	}
+	return res, nil
 }
 
 // TraceBadBlock returns the structured logs created during the execution of
@@ -794,7 +814,7 @@ func (api *API) traceTx(ctx context.Context, message blockchain.Message, vmctx v
 			tracer = vm.NewInternalTxTracer()
 		} else {
 			// Constuct the JavaScript tracer to execute with
-			if tracer, err = New(*config.Tracer); err != nil {
+			if tracer, err = New(*config.Tracer, api.onlySafeTrace); err != nil {
 				return nil, err
 			}
 		}
