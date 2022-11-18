@@ -202,7 +202,8 @@ func TestMixedEngine_ParamsAt(t *testing.T) {
 
 	e, owner, sim, contract := newTestMixedEngine(t, config)
 
-	// write to headerGov
+	// write minimal params for test to headerGov
+	// note that mainnet will have all parameters in the headerGov db
 	headerBlock := sim.BlockChain().CurrentHeader().Number.Uint64()
 	e.headerGov.db.WriteGovernance(map[string]interface{}{
 		name:                          valueB,
