@@ -51,8 +51,8 @@ func newTestMixedEngineNoContractEngine(t *testing.T, config *params.ChainConfig
 }
 
 // Without ContractGov, Check that
-// - From a fresh MixedEngine instance, Params() and ParamsAt(0) returns the
-//   initial config value.
+//   - From a fresh MixedEngine instance, Params() and ParamsAt(0) returns the
+//     initial config value.
 func TestMixedEngine_Header_New(t *testing.T) {
 	valueA := uint64(0x11)
 
@@ -172,15 +172,19 @@ func TestMixedEngine_Params(t *testing.T) {
 
 // TestMixedEngine_ParamsAt tests if ParamsAt() returns correct values
 // given headerBlock and contractBlock;
-//     at headerBlock, params are inserted to DB via WriteGovernance()
-//     at contractBlock, params are inserted to GovParam via SetParamIn() contract call.
+//
+//	at headerBlock, params are inserted to DB via WriteGovernance()
+//	at contractBlock, params are inserted to GovParam via SetParamIn() contract call.
+//
 // valueA is set in ChainConfig
 // valueB is set in DB
 // valueC is set in GovParam contract
 //
-//  chainConfig     headerBlock    contractBlock       now
+//	chainConfig     headerBlock    contractBlock       now
+//
 // Block |---------------|--------------|---------------|
-//            valueA          valueB         valueC
+//
+// ............valueA          valueB         valueC
 func TestMixedEngine_ParamsAt(t *testing.T) {
 	var (
 		name        = "kip71.gastarget"
@@ -201,7 +205,8 @@ func TestMixedEngine_ParamsAt(t *testing.T) {
 	// write to headerGov
 	headerBlock := sim.BlockChain().CurrentHeader().Number.Uint64()
 	e.headerGov.db.WriteGovernance(map[string]interface{}{
-		name: valueB,
+		name:                          valueB,
+		"governance.govparamcontract": config.Governance.GovParamContract,
 	}, headerBlock)
 	err := e.UpdateParams()
 	assert.Nil(t, err)
