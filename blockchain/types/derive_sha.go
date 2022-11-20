@@ -20,7 +20,11 @@
 
 package types
 
-import "github.com/klaytn/klaytn/common"
+import (
+	"math/big"
+
+	"github.com/klaytn/klaytn/common"
+)
 
 type DerivableList interface {
 	Len() int
@@ -36,6 +40,16 @@ const (
 var (
 	// EmptyRootHash is a transaction/receipt root hash when there is no transaction.
 	// DeriveSha and EmptyRootHash are populated by derivesha.InitDeriveSha().
-	DeriveSha     func(list DerivableList) common.Hash
-	EmptyRootHash common.Hash
+	DeriveSha     func(list DerivableList, num *big.Int) common.Hash = DeriveShaNone
+	EmptyRootHash func(num *big.Int) common.Hash                     = EmptyRootHashNone
 )
+
+func DeriveShaNone(list DerivableList, num *big.Int) common.Hash {
+	logger.Crit("DeriveSha not initialized")
+	return common.Hash{}
+}
+
+func EmptyRootHashNone(num *big.Int) common.Hash {
+	logger.Crit("DeriveSha not initialized")
+	return common.Hash{}
+}

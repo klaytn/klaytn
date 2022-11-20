@@ -21,41 +21,60 @@
 package derivesha
 
 import (
+	"math/big"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/log"
+	"github.com/klaytn/klaytn/params"
 )
-
-// TODO-Klaytn: Make DeriveShaMux state-less
-// As-is: InitDS(type) + DS(list) + ERH
-// To-be: InitDS() + DS(list, type) + ERH(type)
 
 type IDeriveSha interface {
 	DeriveSha(list types.DerivableList) common.Hash
 }
 
 var (
-	deriveShaObj IDeriveSha = nil
-	logger                  = log.NewModuleLogger(log.Blockchain)
+	config     *params.ChainConfig
+	instances  map[int]IDeriveSha
+	emptyRoots map[int]common.Hash
+
+	logger = log.NewModuleLogger(log.Blockchain)
 )
 
-func InitDeriveSha(implType int) {
-	switch implType {
-	case types.ImplDeriveShaOriginal:
-		deriveShaObj = DeriveShaOrig{}
-	case types.ImplDeriveShaSimple:
-		deriveShaObj = DeriveShaSimple{}
-	case types.ImplDeriveShaConcat:
-		deriveShaObj = DeriveShaConcat{}
-	default:
-		logger.Error("Unrecognized deriveShaImpl, falling back to Orig", "impl", implType)
-		deriveShaObj = DeriveShaOrig{}
+func init() {
+	instances = map[int]IDeriveSha{
+		types.ImplDeriveShaOriginal: DeriveShaOrig{},
+		types.ImplDeriveShaSimple:   DeriveShaSimple{},
+		types.ImplDeriveShaConcat:   DeriveShaConcat{},
 	}
 
-	types.DeriveSha = DeriveShaMux
-	types.EmptyRootHash = DeriveShaMux(types.Transactions{})
+	emptyRoots = make(map[int]common.Hash)
+	for implType, instance := range instances {
+		emptyRoots[implType] = instance.DeriveSha(types.Transactions{})
+	}
 }
 
-func DeriveShaMux(list types.DerivableList) common.Hash {
-	return deriveShaObj.DeriveSha(list)
+func InitDeriveSha(chainConfig *params.ChainConfig) {
+	config = chainConfig
+	types.DeriveSha = DeriveShaMux
+	types.EmptyRootHash = EmptyRootHashMux
+}
+
+func DeriveShaMux(list types.DerivableList, num *big.Int) common.Hash {
+	return instances[getType()].DeriveSha(list)
+}
+
+func EmptyRootHashMux(num *big.Int) common.Hash {
+	return emptyRoots[getType()]
+}
+
+// TODO: Choose appropriate DeriveShaImpl from governance based on block number
+func getType() int {
+	implType := config.DeriveShaImpl
+	if _, ok := instances[implType]; ok {
+		return implType
+	} else {
+		logger.Error("Unrecognized deriveShaImpl, falling back to Orig", "impl", implType)
+		return types.ImplDeriveShaOriginal
+	}
 }

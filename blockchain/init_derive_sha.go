@@ -18,8 +18,9 @@ package blockchain
 
 import (
 	"github.com/klaytn/klaytn/blockchain/types/derivesha"
+	"github.com/klaytn/klaytn/params"
 )
 
-func InitDeriveSha(deriveShaImpl int) {
-	derivesha.InitDeriveSha(deriveShaImpl)
+func InitDeriveSha(config *params.ChainConfig) {
+	derivesha.InitDeriveSha(config)
 }

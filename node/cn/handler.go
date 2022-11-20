@@ -998,7 +998,7 @@ func handleReceiptsRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 		// Retrieve the requested block's receipts, skipping if unknown to us
 		results := pm.blockchain.GetReceiptsByBlockHash(hash)
 		if results == nil {
-			if header := pm.blockchain.GetHeaderByHash(hash); header == nil || header.ReceiptHash != types.EmptyRootHash {
+			if header := pm.blockchain.GetHeaderByHash(hash); header == nil || !header.EmptyReceipts() {
 				continue
 			}
 		}

@@ -207,7 +207,7 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 			logger.Info("Writing custom genesis block")
 		}
 		// Initialize DeriveSha implementation
-		InitDeriveSha(genesis.Config.DeriveShaImpl)
+		InitDeriveSha(genesis.Config)
 		block, err := genesis.Commit(common.Hash{}, db)
 		if err != nil {
 			return genesis.Config, common.Hash{}, err
@@ -372,7 +372,7 @@ func (g *Genesis) MustCommit(db database.DBManager) *types.Block {
 	if config == nil {
 		config = params.AllGxhashProtocolChanges
 	}
-	InitDeriveSha(config.DeriveShaImpl)
+	InitDeriveSha(config)
 
 	block, err := g.Commit(common.Hash{}, db)
 	if err != nil {
