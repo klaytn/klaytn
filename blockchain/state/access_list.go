@@ -77,7 +77,6 @@ func (a *accessList) Copy() *accessList {
 
 // AddAddress adds an address to the access list, and returns 'true' if the operation
 // caused a change (addr was not previously in the list).
-
 func (al *accessList) AddAddress(address common.Address) bool {
 	if _, present := al.addresses[address]; present {
 		return false

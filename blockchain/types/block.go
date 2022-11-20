@@ -32,7 +32,6 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/crypto/sha3"
-
 	"github.com/klaytn/klaytn/rlp"
 )
 
@@ -42,9 +41,7 @@ const (
 	Engine_Gxhash
 )
 
-var (
-	EngineType = Engine_IBFT
-)
+var EngineType = Engine_IBFT
 
 //go:generate gencodec -type Header -field-override headerMarshaling -out gen_header_json.go
 

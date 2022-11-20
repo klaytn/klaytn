@@ -26,16 +26,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/klaytn/klaytn/blockchain/asm"
-
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/consensus"
-
 	"github.com/klaytn/klaytn/accounts/abi"
+	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/blockchain/asm"
 	"github.com/klaytn/klaytn/blockchain/state"
+	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
 )
