@@ -54,6 +54,7 @@ var (
 		"istanbul.policy":                 params.Policy,
 		"istanbul.committeesize":          params.CommitteeSize,
 		"governance.unitprice":            params.UnitPrice,
+		"governance.deriveshaimpl":        params.DeriveShaImpl,
 		"kip71.lowerboundbasefee":         params.LowerBoundBaseFee,
 		"kip71.gastarget":                 params.GasTarget,
 		"kip71.maxblockgasusedforbasefee": params.MaxBlockGasUsedForBaseFee,
@@ -87,6 +88,7 @@ var (
 		params.Policy:                    "istanbul.policy",
 		params.CommitteeSize:             "istanbul.committeesize",
 		params.UnitPrice:                 "governance.unitprice",
+		params.DeriveShaImpl:             "governance.deriveshaimpl",
 		params.LowerBoundBaseFee:         "kip71.lowerboundbasefee",
 		params.UpperBoundBaseFee:         "kip71.upperboundbasefee",
 		params.GasTarget:                 "kip71.gastarget",
@@ -585,7 +587,7 @@ func (g *Governance) ParseVoteValue(gVote *GovernanceVote) (*GovernanceVote, err
 		} else {
 			return nil, ErrValueTypeMismatch
 		}
-	case params.Epoch, params.CommitteeSize, params.UnitPrice, params.StakeUpdateInterval,
+	case params.Epoch, params.CommitteeSize, params.UnitPrice, params.DeriveShaImpl, params.StakeUpdateInterval,
 		params.ProposerRefreshInterval, params.ConstTxGasHumanReadable, params.Policy, params.Timeout,
 		params.LowerBoundBaseFee, params.UpperBoundBaseFee, params.GasTarget, params.MaxBlockGasUsedForBaseFee, params.BaseFeeDenominator:
 		v, ok := gVote.Value.([]uint8)
@@ -625,7 +627,7 @@ func (gov *Governance) updateChangeSet(vote GovernanceVote) bool {
 		gov.changeSet.SetValue(GovernanceKeyMap[vote.Key], vote.Value.(string))
 		return true
 	case params.Epoch, params.StakeUpdateInterval, params.ProposerRefreshInterval, params.CommitteeSize,
-		params.UnitPrice, params.ConstTxGasHumanReadable, params.Policy, params.Timeout,
+		params.UnitPrice, params.DeriveShaImpl, params.ConstTxGasHumanReadable, params.Policy, params.Timeout,
 		params.LowerBoundBaseFee, params.UpperBoundBaseFee, params.GasTarget, params.MaxBlockGasUsedForBaseFee, params.BaseFeeDenominator:
 		gov.changeSet.SetValue(GovernanceKeyMap[vote.Key], vote.Value.(uint64))
 		return true
