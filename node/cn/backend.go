@@ -272,7 +272,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	if err := governance.UpdateParams(); err != nil {
 		return nil, err
 	}
-	blockchain.InitDeriveSha(cn.chainConfig)
+	blockchain.InitDeriveShaWithGov(cn.chainConfig, governance)
 
 	// Synchronize proposerpolicy & useGiniCoeff
 	if cn.blockchain.Config().Istanbul != nil {

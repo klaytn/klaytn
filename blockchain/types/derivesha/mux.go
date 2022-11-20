@@ -33,8 +33,13 @@ type IDeriveSha interface {
 	DeriveSha(list types.DerivableList) common.Hash
 }
 
+type GovernanceEngine interface {
+	ParamsAt(num uint64) (*params.GovParamSet, error)
+}
+
 var (
 	config     *params.ChainConfig
+	gov        GovernanceEngine
 	instances  map[int]IDeriveSha
 	emptyRoots map[int]common.Hash
 
@@ -54,8 +59,9 @@ func init() {
 	}
 }
 
-func InitDeriveSha(chainConfig *params.ChainConfig) {
+func InitDeriveSha(chainConfig *params.ChainConfig, govEngine GovernanceEngine) {
 	config = chainConfig
+	gov = govEngine
 	types.DeriveSha = DeriveShaMux
 	types.EmptyRootHash = EmptyRootHashMux
 }
