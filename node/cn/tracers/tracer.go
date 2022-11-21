@@ -322,12 +322,12 @@ type Tracer struct {
 // returning an object with 'step', 'fault' and 'result' functions.
 // However, if onlyPredefined is true, code should specify predefined tracer name,
 // otherwise error is returned.
-func New(code string, safeTrace bool) (*Tracer, error) {
+func New(code string, unsafeTrace bool) (*Tracer, error) {
 	// Resolve any tracers by name and assemble the tracer object
 	foundTracer, ok := tracer(code)
 	if ok {
 		code = foundTracer
-	} else if safeTrace {
+	} else if !unsafeTrace {
 		return nil, fmt.Errorf("Only predefined tracers are supported")
 	}
 	tracer := &Tracer{
