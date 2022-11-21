@@ -294,7 +294,7 @@ func TestRewardDistributor_GetBlockReward(t *testing.T) {
 	}{
 		{
 			policy:        istanbul.RoundRobin,
-			deferredTxFee: false,
+			deferredTxFee: true,
 			expected: &RewardSpec{
 				Minted:   minted,
 				TotalFee: new(big.Int).SetUint64(1000),
@@ -302,6 +302,19 @@ func TestRewardDistributor_GetBlockReward(t *testing.T) {
 				Proposer: new(big.Int).SetUint64(9.6e18 + 500),
 				Rewards: map[common.Address]*big.Int{
 					proposerAddr: new(big.Int).SetUint64(9.6e18 + 500),
+				},
+			},
+		},
+		{
+			policy:        istanbul.RoundRobin,
+			deferredTxFee: false,
+			expected: &RewardSpec{
+				Minted:   minted,
+				TotalFee: new(big.Int).SetUint64(1000),
+				BurntFee: new(big.Int).SetUint64(0),
+				Proposer: new(big.Int).SetUint64(9.6e18 + 1000),
+				Rewards: map[common.Address]*big.Int{
+					proposerAddr: new(big.Int).SetUint64(9.6e18 + 1000),
 				},
 			},
 		},
@@ -403,6 +416,80 @@ func TestRewardDistributor_CalcDeferredRewardSimple(t *testing.T) {
 		config := roundrobin(getTestConfig())
 		if !tc.isMagma {
 			config = noMagma(config)
+		}
+
+		spec, err := CalcDeferredRewardSimple(header, config)
+		assert.Nil(t, err, "testcases[%d] failed", i)
+		assert.Equal(t, tc.expected, spec, "testcases[%d] failed", i)
+	}
+}
+
+// Before Kore, there was a bug that distributed txFee at the end of
+// block processing regardless of `deferredTxFee` flag.
+// See https://github.com/klaytn/klaytn/issues/1692.
+// To maintain backward compatibility, we only fix the buggy logic after Kore
+// and leave the buggy logic before Kore.
+func TestRewardDistributor_CalcDeferredRewardSimple_nodeferred(t *testing.T) {
+	header := &types.Header{
+		Number:     big.NewInt(1),
+		GasUsed:    1000,
+		BaseFee:    big.NewInt(1),
+		Rewardbase: proposerAddr,
+	}
+
+	testcases := []struct {
+		isMagma  bool
+		isKore   bool
+		expected *RewardSpec
+	}{
+		{ // totalFee should have been 0, but returned due to bug
+			isMagma: false,
+			isKore:  false,
+			expected: &RewardSpec{
+				Minted:   minted,
+				TotalFee: new(big.Int).SetUint64(1000),
+				BurntFee: new(big.Int).SetUint64(0),
+				Proposer: new(big.Int).SetUint64(9.6e18 + 1000),
+				Rewards: map[common.Address]*big.Int{
+					proposerAddr: new(big.Int).SetUint64(9.6e18 + 1000),
+				},
+			},
+		},
+		{ // totalFee should have been 0, but returned due to bug
+			isMagma: true,
+			isKore:  false,
+			expected: &RewardSpec{
+				Minted:   minted,
+				TotalFee: new(big.Int).SetUint64(1000),
+				BurntFee: new(big.Int).SetUint64(500),
+				Proposer: new(big.Int).SetUint64(9.6e18 + 500),
+				Rewards: map[common.Address]*big.Int{
+					proposerAddr: new(big.Int).SetUint64(9.6e18 + 500),
+				},
+			},
+		},
+		{ // totalFee is now 0 because bug is fixed after Kore
+			isMagma: true,
+			isKore:  true,
+			expected: &RewardSpec{
+				Minted:   minted,
+				TotalFee: new(big.Int).SetUint64(0),
+				BurntFee: new(big.Int).SetUint64(0),
+				Proposer: new(big.Int).SetUint64(9.6e18),
+				Rewards: map[common.Address]*big.Int{
+					proposerAddr: new(big.Int).SetUint64(9.6e18),
+				},
+			},
+		},
+	}
+
+	for i, tc := range testcases {
+		config := noDeferred((getTestConfig()))
+		if !tc.isMagma {
+			config = noMagma(config)
+		}
+		if !tc.isKore {
+			config = noKore(config)
 		}
 
 		spec, err := CalcDeferredRewardSimple(header, config)

@@ -157,6 +157,12 @@ func GetTotalTxFee(header *types.Header, config *params.ChainConfig) *big.Int {
 	return totalFee
 }
 
+// config.Istanbul must have been set
+func IsRewardSimple(config *params.ChainConfig) bool {
+	policy := config.Istanbul.ProposerPolicy
+	return policy != uint64(istanbul.WeightedRandom)
+}
+
 // GetBlockReward returns the actual reward amounts paid in this block
 // Used in klay_getReward RPC API
 func GetBlockReward(header *types.Header, config *params.ChainConfig) (*RewardSpec, error) {
@@ -167,8 +173,7 @@ func GetBlockReward(header *types.Header, config *params.ChainConfig) (*RewardSp
 		return nil, errors.New("no IstanbulConfig")
 	}
 
-	policy := config.Istanbul.ProposerPolicy
-	if policy == uint64(istanbul.RoundRobin) || policy == uint64(istanbul.Sticky) {
+	if IsRewardSimple(config) {
 		spec, err = CalcDeferredRewardSimple(header, config)
 		if err != nil {
 			return nil, err
@@ -178,16 +183,16 @@ func GetBlockReward(header *types.Header, config *params.ChainConfig) (*RewardSp
 		if err != nil {
 			return nil, err
 		}
+	}
 
-		// Compensate the difference between CalcDeferredReward() and actual payment.
-		// If not DeferredTxFee, CalcDeferredReward() assumes 0 total_fee, but
-		// some non-zero fee is paid to the proposer.
-		if !config.Governance.Reward.DeferredTxFee {
-			blockFee := GetTotalTxFee(header, config)
-			spec.Proposer = spec.Proposer.Add(spec.Proposer, spec.TotalFee)
-			spec.TotalFee = spec.TotalFee.Add(spec.TotalFee, blockFee)
-			incrementRewardsMap(spec.Rewards, header.Rewardbase, blockFee)
-		}
+	// Compensate the difference between CalcDeferredReward() and actual payment.
+	// If not DeferredTxFee, CalcDeferredReward() assumes 0 total_fee, but
+	// some non-zero fee already has been paid to the proposer.
+	if !config.Governance.Reward.DeferredTxFee {
+		blockFee := GetTotalTxFee(header, config)
+		spec.Proposer = spec.Proposer.Add(spec.Proposer, spec.TotalFee)
+		spec.TotalFee = spec.TotalFee.Add(spec.TotalFee, blockFee)
+		incrementRewardsMap(spec.Rewards, header.Rewardbase, blockFee)
 	}
 
 	return spec, nil
@@ -205,6 +210,29 @@ func CalcDeferredRewardSimple(header *types.Header, config *params.ChainConfig) 
 	}
 
 	minted := rc.mintingAmount
+
+	// If not DeferredTxFee, fees are already added to the proposer during TX execution.
+	// Therefore, there are no fees to distribute here at the end of block processing.
+	// However, before Kore, there was a bug that distributed tx fee regardless
+	// of `deferredTxFee` flag. See https://github.com/klaytn/klaytn/issues/1692.
+	// To maintain backward compatibility, we only fix the buggy logic after Kore
+	// and leave the buggy logic before Kore.
+	// However, the fees must be compensated to calculate actual rewards paid.
+
+	// bug-fixed logic after Kore
+	if !rc.deferredTxFee && rc.rules.IsKore {
+		proposer := new(big.Int).Set(minted)
+		logger.Debug("CalcDeferredRewardSimple after Kore when deferredTxFee=false returns",
+			"proposer", proposer)
+		return &RewardSpec{
+			Minted:   minted,
+			TotalFee: big.NewInt(0),
+			BurntFee: big.NewInt(0),
+			Proposer: proposer,
+			Rewards:  map[common.Address]*big.Int{header.Rewardbase: proposer},
+		}, nil
+	}
+
 	totalFee := rc.totalFee
 	rewardFee := new(big.Int).Set(totalFee)
 	burntFee := big.NewInt(0)
@@ -216,6 +244,12 @@ func CalcDeferredRewardSimple(header *types.Header, config *params.ChainConfig) 
 	}
 
 	proposer := big.NewInt(0).Add(minted, rewardFee)
+
+	logger.Debug("CalcDeferredRewardSimple returns",
+		"proposer", proposer.Uint64(),
+		"totalFee", totalFee.Uint64(),
+		"burntFee", burntFee.Uint64(),
+	)
 
 	return &RewardSpec{
 		Minted:   minted,
