@@ -457,7 +457,7 @@ func storageRangeAt(st state.Trie, start []byte, maxResult int) (StorageRangeRes
 //
 // With one parameter, returns the list of accounts modified in the specified block.
 func (api *PublicDebugAPI) GetModifiedAccountsByNumber(ctx context.Context, startNum rpc.BlockNumber, endNum *rpc.BlockNumber) ([]common.Address, error) {
-	startBlock, endBlock, err := getStartAndEndBlock(ctx, api.cn.APIBackend, startNum, endNum)
+	startBlock, endBlock, err := api.getStartAndEndBlock(ctx, startNum, endNum)
 	if err != nil {
 		return nil, err
 	}
@@ -519,23 +519,24 @@ func (api *PublicDebugAPI) getModifiedAccounts(startBlock, endBlock *types.Block
 	return dirty, nil
 }
 
+// TODO-klaytn: Rearrange PublicDebugAPI and PrivateDebugAPI receivers
 // getStartAndEndBlock returns start and end block based on the given startNum and endNum.
-func getStartAndEndBlock(ctx context.Context, backend *CNAPIBackend, startNum rpc.BlockNumber, endNum *rpc.BlockNumber) (*types.Block, *types.Block, error) {
+func (api *PublicDebugAPI) getStartAndEndBlock(ctx context.Context, startNum rpc.BlockNumber, endNum *rpc.BlockNumber) (*types.Block, *types.Block, error) {
 	var startBlock, endBlock *types.Block
 
-	startBlock, err := backend.BlockByNumber(ctx, startNum)
+	startBlock, err := api.cn.APIBackend.BlockByNumber(ctx, startNum)
 	if err != nil {
 		return nil, nil, fmt.Errorf("start block number #%d not found", startNum.Uint64())
 	}
 
 	if endNum == nil {
 		endBlock = startBlock
-		startBlock, err = backend.BlockByHash(ctx, startBlock.ParentHash())
+		startBlock, err = api.cn.APIBackend.BlockByHash(ctx, startBlock.ParentHash())
 		if err != nil {
 			return nil, nil, fmt.Errorf("block number #%d has no parent", startNum.Uint64())
 		}
 	} else {
-		endBlock, err = backend.BlockByNumber(ctx, *endNum)
+		endBlock, err = api.cn.APIBackend.BlockByNumber(ctx, *endNum)
 		if err != nil {
 			return nil, nil, fmt.Errorf("end block number #%d not found", (*endNum).Uint64())
 		}
@@ -548,19 +549,21 @@ func getStartAndEndBlock(ctx context.Context, backend *CNAPIBackend, startNum rp
 	return startBlock, endBlock, nil
 }
 
+// TODO-klaytn: Rearrange PublicDebugAPI and PrivateDebugAPI receivers
 // GetModifiedStorageNodesByNumber returns the number of storage nodes of a contract account
 // that have been changed between the two blocks specified.
 //
 // With the first two parameters, it returns the number of storage trie nodes modified in the specified block.
-func (api *PrivateDebugAPI) GetModifiedStorageNodesByNumber(ctx context.Context, contractAddr common.Address, startNum rpc.BlockNumber, endNum *rpc.BlockNumber, printDetail *bool) (int, error) {
-	startBlock, endBlock, err := getStartAndEndBlock(ctx, api.cn.APIBackend, startNum, endNum)
+func (api *PublicDebugAPI) GetModifiedStorageNodesByNumber(ctx context.Context, contractAddr common.Address, startNum rpc.BlockNumber, endNum *rpc.BlockNumber, printDetail *bool) (int, error) {
+	startBlock, endBlock, err := api.getStartAndEndBlock(ctx, startNum, endNum)
 	if err != nil {
 		return 0, err
 	}
 	return api.getModifiedStorageNodes(contractAddr, startBlock, endBlock, printDetail)
 }
 
-func (api *PrivateDebugAPI) getModifiedStorageNodes(contractAddr common.Address, startBlock, endBlock *types.Block, printDetail *bool) (int, error) {
+// TODO-klaytn: Rearrange PublicDebugAPI and PrivateDebugAPI receivers
+func (api *PublicDebugAPI) getModifiedStorageNodes(contractAddr common.Address, startBlock, endBlock *types.Block, printDetail *bool) (int, error) {
 	startBlockRoot, err := api.cn.blockchain.GetContractStorageRoot(startBlock, api.cn.blockchain.StateCache(), contractAddr)
 	if err != nil {
 		return 0, err

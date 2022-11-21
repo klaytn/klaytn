@@ -530,6 +530,12 @@ web3._extend({
 			inputFormatter:[null, null],
 		}),
 		new web3._extend.Method({
+			name: 'getModifiedStorageNodesByNumber',
+			call: 'debug_getModifiedStorageNodesByNumber',
+			params: 4,
+			inputFormatter: [null, null, null, null],
+		}),
+		new web3._extend.Method({
 			name: 'getBadBlocks',
 			call: 'debug_getBadBlocks',
 			params: 0,
@@ -819,12 +825,6 @@ web3._extend({
 			name: 'storageRangeAt',
 			call: 'unsafedebug_storageRangeAt',
 			params: 5,
-		}),
-		new web3._extend.Method({
-			name: 'getModifiedStorageNodesByNumber',
-			call: 'unsafedebug_getModifiedStorageNodesByNumber',
-			params: 4,
-			inputFormatter: [null, null, null, null],
 		}),
 		new web3._extend.Method({
 			name: 'setVMLogTarget',
