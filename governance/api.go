@@ -245,7 +245,27 @@ func (api *PublicGovernanceAPI) MyVotingPower() (float64, error) {
 }
 
 func (api *PublicGovernanceAPI) ChainConfig() *params.ChainConfig {
-	return api.governance.InitialChainConfig()
+	num := rpc.LatestBlockNumber
+	return api.chainConfigAt(&num)
+}
+
+func (api *PublicGovernanceAPI) ChainConfigAt(num *rpc.BlockNumber) *params.ChainConfig {
+	return api.chainConfigAt(num)
+}
+
+func (api *PublicGovernanceAPI) chainConfigAt(num *rpc.BlockNumber) *params.ChainConfig {
+	var blocknum uint64
+	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
+		blocknum = api.governance.BlockChain().CurrentHeader().Number.Uint64()
+	} else {
+		blocknum = num.Uint64()
+	}
+
+	pset, err := api.governance.ParamsAt(blocknum)
+	if err != nil {
+		return nil
+	}
+	return pset.ToChainConfig()
 }
 
 func (api *PublicGovernanceAPI) NodeAddress() common.Address {
