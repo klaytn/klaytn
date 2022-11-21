@@ -255,10 +255,8 @@ func (api *PublicGovernanceAPI) ChainConfigAt(num *rpc.BlockNumber) *params.Chai
 
 func (api *PublicGovernanceAPI) chainConfigAt(num *rpc.BlockNumber) *params.ChainConfig {
 	var blocknum uint64
-	if num == nil || *num == rpc.LatestBlockNumber {
+	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
 		blocknum = api.governance.BlockChain().CurrentHeader().Number.Uint64()
-	} else if *num == rpc.PendingBlockNumber {
-		blocknum = api.governance.BlockChain().CurrentHeader().Number.Uint64() + 1
 	} else {
 		blocknum = num.Uint64()
 	}
