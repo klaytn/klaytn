@@ -157,6 +157,12 @@ func GetTotalTxFee(header *types.Header, config *params.ChainConfig) *big.Int {
 	return totalFee
 }
 
+// config.Istanbul must have been set
+func IsRewardSimple(config *params.ChainConfig) bool {
+	policy := config.Istanbul.ProposerPolicy
+	return policy != uint64(istanbul.WeightedRandom)
+}
+
 // GetBlockReward returns the actual reward amounts paid in this block
 // Used in klay_getReward RPC API
 func GetBlockReward(header *types.Header, config *params.ChainConfig) (*RewardSpec, error) {
@@ -167,8 +173,7 @@ func GetBlockReward(header *types.Header, config *params.ChainConfig) (*RewardSp
 		return nil, errors.New("no IstanbulConfig")
 	}
 
-	policy := config.Istanbul.ProposerPolicy
-	if policy == uint64(istanbul.RoundRobin) || policy == uint64(istanbul.Sticky) {
+	if IsRewardSimple(config) {
 		spec, err = CalcDeferredRewardSimple(header, config)
 		if err != nil {
 			return nil, err

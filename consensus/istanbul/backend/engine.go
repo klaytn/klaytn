@@ -456,7 +456,7 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 	var err error
 
 	// If sb.chain is nil, it means backend is not initialized yet.
-	if sb.chain != nil && sb.governance.Params().Policy() == uint64(istanbul.WeightedRandom) {
+	if sb.chain != nil && !reward.IsRewardSimple(chain.Config()) {
 		// TODO-Klaytn Let's redesign below logic and remove dependency between block reward and istanbul consensus.
 
 		lastHeader := chain.CurrentHeader()
