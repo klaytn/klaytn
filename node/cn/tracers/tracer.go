@@ -320,7 +320,7 @@ type Tracer struct {
 // New instantiates a new tracer instance. code specifies either a predefined
 // tracer name or a Javascript snippet, which must evaluate to an expression
 // returning an object with 'step', 'fault' and 'result' functions.
-// However, if onlyPredefined is true, code should specify predefined tracer name,
+// However, if unsafeTrace is false, code should specify predefined tracer name,
 // otherwise error is returned.
 func New(code string, unsafeTrace bool) (*Tracer, error) {
 	// Resolve any tracers by name and assemble the tracer object
