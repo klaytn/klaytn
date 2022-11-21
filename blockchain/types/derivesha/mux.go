@@ -77,7 +77,10 @@ func EmptyRootHashMux(num *big.Int) common.Hash {
 func getType(num *big.Int) int {
 	implType := config.DeriveShaImpl
 
-	if config.IsKoreForkEnabled(num) && gov != nil {
+	// gov == nil if blockchain.InitDeriveSha() is used, in genesis block manipulation
+	// and unit tests. gov != nil if blockchain.InitDeriveShaWithGov is used,
+	// in ordinary blockchain processing.
+	if gov != nil {
 		if pset, err := gov.ParamsAt(num.Uint64()); err != nil {
 			logger.Crit("Cannot determine DeriveShaImpl", "err", err)
 		} else {
