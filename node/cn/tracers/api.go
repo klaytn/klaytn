@@ -92,20 +92,20 @@ type Backend interface {
 
 // API is the collection of tracing APIs exposed over the private debugging endpoint.
 type API struct {
-	backend       Backend
-	onlySafeTrace bool
+	backend   Backend
+	safeTrace bool
 }
 
 // NewAPI creates a new API definition for the tracing methods of the CN service,
 // only allowing predefined tracers.
 func NewAPI(backend Backend) *API {
-	return &API{backend: backend, onlySafeTrace: true}
+	return &API{backend: backend, safeTrace: true}
 }
 
 // NewUnsafeAPI creates a new API definition for the tracing methods of the CN service,
 // allowing both predefined tracers and Javascript snippet based tracing.
 func NewUnsafeAPI(backend Backend) *API {
-	return &API{backend: backend, onlySafeTrace: false}
+	return &API{backend: backend, safeTrace: false}
 }
 
 type chainContext struct {
@@ -500,7 +500,7 @@ func (api *API) TraceBlock(ctx context.Context, blob hexutil.Bytes, config *Trac
 // TraceBlockFromFile returns the structured logs created during the execution of
 // EVM and returns them as a JSON object.
 func (api *API) TraceBlockFromFile(ctx context.Context, file string, config *TraceConfig) ([]*txTraceResult, error) {
-	if api.onlySafeTrace {
+	if api.safeTrace {
 		return nil, errors.New("TraceBlockFromFile is not supported in 'debug' namespace, use 'unsafedebug' namespace instead")
 	}
 	blob, err := ioutil.ReadFile(file)
@@ -805,7 +805,7 @@ func (api *API) traceTx(ctx context.Context, message blockchain.Message, vmctx v
 			tracer = vm.NewInternalTxTracer()
 		} else {
 			// Constuct the JavaScript tracer to execute with
-			if tracer, err = New(*config.Tracer, api.onlySafeTrace); err != nil {
+			if tracer, err = New(*config.Tracer, api.safeTrace); err != nil {
 				return nil, err
 			}
 		}
