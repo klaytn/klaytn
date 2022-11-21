@@ -804,7 +804,7 @@ func (api *API) traceTx(ctx context.Context, message blockchain.Message, vmctx v
 		if *config.Tracer == fastCallTracer {
 			tracer = vm.NewInternalTxTracer()
 		} else {
-			// Constuct the JavaScript tracer to execute with
+			// Construct the JavaScript tracer to execute with
 			if tracer, err = New(*config.Tracer, api.unsafeTrace); err != nil {
 				return nil, err
 			}
