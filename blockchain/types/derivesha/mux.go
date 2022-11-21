@@ -64,6 +64,7 @@ func InitDeriveSha(chainConfig *params.ChainConfig, govEngine GovernanceEngine) 
 	gov = govEngine
 	types.DeriveSha = DeriveShaMux
 	types.EmptyRootHash = EmptyRootHashMux
+	logger.Info("InitDeriveSha", "initial", config.DeriveShaImpl, "withGov", gov != nil)
 }
 
 func DeriveShaMux(list types.DerivableList, num *big.Int) common.Hash {
@@ -82,7 +83,7 @@ func getType(num *big.Int) int {
 	// in ordinary blockchain processing.
 	if gov != nil {
 		if pset, err := gov.ParamsAt(num.Uint64()); err != nil {
-			logger.Crit("Cannot determine DeriveShaImpl", "err", err)
+			logger.Crit("Cannot determine DeriveShaImpl", "num", num.Uint64(), "err", err)
 		} else {
 			implType = pset.DeriveShaImpl()
 		}

@@ -227,6 +227,7 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 			return genesis.Config, newGenesisBlock.Hash(), err
 		}
 		// This is the usual path which does not overwrite genesis block with the new one.
+		InitDeriveSha(genesis.Config)
 		hash := genesis.ToBlock(common.Hash{}, nil).Hash()
 		if hash != stored {
 			return genesis.Config, hash, &GenesisMismatchError{stored, hash}
