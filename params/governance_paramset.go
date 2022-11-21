@@ -164,7 +164,28 @@ var (
 		parseBytes:    parseBytesString,
 		validate: func(v interface{}) bool {
 			strs := strings.Split(v.(string), "/")
-			if len(strs) != 3 {
+			if len(strs) != RewardSliceCount {
+				return false
+			}
+			sum := 0
+			for _, s := range strs {
+				n, err := strconv.Atoi(s)
+				if err != nil || n < 0 {
+					return false
+				}
+				sum += n
+			}
+			return sum == 100
+		},
+	}
+
+	govParamTypeKip82Ratio = &govParamType{
+		canonicalType: reflect.TypeOf("20/80"),
+		parseValue:    parseValueString,
+		parseBytes:    parseBytesString,
+		validate: func(v interface{}) bool {
+			strs := strings.Split(v.(string), "/")
+			if len(strs) != RewardKip82SliceCount {
 				return false
 			}
 			sum := 0
@@ -207,6 +228,7 @@ var govParamTypes = map[int]*govParamType{
 	UnitPrice:                 govParamTypeUint64,
 	MintingAmount:             govParamTypeBigInt,
 	Ratio:                     govParamTypeRatio,
+	Kip82Ratio:                govParamTypeKip82Ratio,
 	UseGiniCoeff:              govParamTypeBool,
 	DeferredTxFee:             govParamTypeBool,
 	MinimumStake:              govParamTypeBigInt,
@@ -230,6 +252,7 @@ var govParamNames = map[string]int{
 	"governance.unitprice":            UnitPrice,
 	"reward.mintingamount":            MintingAmount,
 	"reward.ratio":                    Ratio,
+	"reward.kip82ratio":               Kip82Ratio,
 	"reward.useginicoeff":             UseGiniCoeff,
 	"reward.deferredtxfee":            DeferredTxFee,
 	"reward.minimumstake":             MinimumStake,
@@ -340,6 +363,10 @@ func NewGovParamSetChainConfig(config *ChainConfig) (*GovParamSet, error) {
 				items[MintingAmount] = config.Governance.Reward.MintingAmount.String()
 			}
 			items[Ratio] = config.Governance.Reward.Ratio
+			// new parameters can be empty
+			if config.Governance.Reward.Kip82Ratio != "" {
+				items[Kip82Ratio] = config.Governance.Reward.Kip82Ratio
+			}
 			items[UseGiniCoeff] = config.Governance.Reward.UseGiniCoeff
 			items[DeferredTxFee] = config.Governance.Reward.DeferredTxFee
 			items[StakeUpdateInterval] = config.Governance.Reward.StakingUpdateInterval
@@ -445,6 +472,9 @@ func (p *GovParamSet) ToRewardConfig() *RewardConfig {
 	}
 	if _, ok := p.Get(Ratio); ok {
 		ret.Ratio = p.Ratio()
+	}
+	if _, ok := p.Get(Kip82Ratio); ok {
+		ret.Kip82Ratio = p.Kip82Ratio()
 	}
 	if _, ok := p.Get(UseGiniCoeff); ok {
 		ret.UseGiniCoeff = p.UseGiniCoeff()
@@ -556,6 +586,10 @@ func (p *GovParamSet) MintingAmountBig() *big.Int {
 
 func (p *GovParamSet) Ratio() string {
 	return p.MustGet(Ratio).(string)
+}
+
+func (p *GovParamSet) Kip82Ratio() string {
+	return p.MustGet(Kip82Ratio).(string)
 }
 
 func (p *GovParamSet) UseGiniCoeff() bool {

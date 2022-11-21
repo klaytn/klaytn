@@ -54,6 +54,7 @@ func TestGovernance_Engines(t *testing.T) {
 	config.Istanbul.SubGroupSize = 1
 	config.Istanbul.ProposerPolicy = uint64(istanbul.RoundRobin)
 	config.Governance.Reward.MintingAmount = new(big.Int).Mul(big.NewInt(9000000000000000000), big.NewInt(params.KLAY))
+	config.Governance.Reward.Kip82Ratio = params.DefaultKip82Ratio
 
 	config.Governance.GovParamContract = common.Address{}
 	config.Governance.GovernanceMode = "none"

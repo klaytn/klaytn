@@ -316,9 +316,11 @@ func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockc
 
 	// Apply reward
 	start = time.Now()
-	if err := bcdata.rewardDistributor.MintKLAY(accountMap, header); err != nil {
+	spec, err := reward.CalcDeferredRewardSimple(header, bcdata.bc.Config())
+	if err != nil {
 		return err
 	}
+	reward.DistributeBlockReward(accountMap, spec.Rewards)
 	prof.Profile("main_apply_reward", time.Now().Sub(start))
 
 	// Verification with accountMap
@@ -381,9 +383,11 @@ func (bcdata *BCData) GenABlockWithTransactions(accountMap *AccountMap, transact
 
 	// Apply reward
 	start = time.Now()
-	if err := bcdata.rewardDistributor.MintKLAY(accountMap, b.Header()); err != nil {
+	spec, err := reward.CalcDeferredRewardSimple(bcdata.bc.CurrentHeader(), bcdata.bc.Config())
+	if err != nil {
 		return err
 	}
+	reward.DistributeBlockReward(accountMap, spec.Rewards)
 	prof.Profile("main_apply_reward", time.Now().Sub(start))
 
 	// Verification with accountMap
@@ -400,7 +404,7 @@ func (bcdata *BCData) GenABlockWithTransactions(accountMap *AccountMap, transact
 	return nil
 }
 
-////////////////////////////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////////////////////////////
 func NewDatabase(dir string, dbType database.DBType) database.DBManager {
 	if dir == "" {
 		return database.NewMemoryDBManager()

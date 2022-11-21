@@ -61,6 +61,7 @@ var (
 		"kip71.upperboundbasefee":         params.UpperBoundBaseFee,
 		"reward.mintingamount":            params.MintingAmount,
 		"reward.ratio":                    params.Ratio,
+		"reward.kip82ratio":               params.Kip82Ratio,
 		"reward.useginicoeff":             params.UseGiniCoeff,
 		"reward.deferredtxfee":            params.DeferredTxFee,
 		"reward.minimumstake":             params.MinimumStake,
@@ -103,6 +104,7 @@ var (
 		params.RemoveValidator:           "governance.removevalidator",
 		params.ConstTxGasHumanReadable:   "param.txgashumanreadable",
 		params.Timeout:                   "istanbul.timeout",
+		params.Kip82Ratio:                "reward.kip82ratio",
 	}
 
 	ProposerPolicyMap = map[string]int{
@@ -553,7 +555,7 @@ func (g *Governance) ParseVoteValue(gVote *GovernanceVote) (*GovernanceVote, err
 	}
 
 	switch k {
-	case params.GovernanceMode, params.MintingAmount, params.MinimumStake, params.Ratio:
+	case params.GovernanceMode, params.MintingAmount, params.MinimumStake, params.Ratio, params.Kip82Ratio:
 		v, ok := gVote.Value.([]uint8)
 		if !ok {
 			return nil, ErrValueTypeMismatch
@@ -621,7 +623,7 @@ func (gov *Governance) updateChangeSet(vote GovernanceVote) bool {
 	case params.GoverningNode, params.GovParamContract:
 		gov.changeSet.SetValue(GovernanceKeyMap[vote.Key], vote.Value.(common.Address))
 		return true
-	case params.GovernanceMode, params.Ratio:
+	case params.GovernanceMode, params.Ratio, params.Kip82Ratio:
 		gov.changeSet.SetValue(GovernanceKeyMap[vote.Key], vote.Value.(string))
 		return true
 	case params.Epoch, params.StakeUpdateInterval, params.ProposerRefreshInterval, params.CommitteeSize,
