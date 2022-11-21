@@ -541,12 +541,6 @@ web3._extend({
 			inputFormatter: [null, null]
 		}),
 		new web3._extend.Method({
-			name: 'traceBlockFromFile',
-			call: 'debug_traceBlockFromFile',
-			params: 2,
-			inputFormatter: [null, null]
-		}),
-		new web3._extend.Method({
 			name: 'traceBadBlock',
 			call: 'debug_traceBadBlock',
 			params: 1,

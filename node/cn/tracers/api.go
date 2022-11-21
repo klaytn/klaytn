@@ -500,23 +500,14 @@ func (api *API) TraceBlock(ctx context.Context, blob hexutil.Bytes, config *Trac
 // TraceBlockFromFile returns the structured logs created during the execution of
 // EVM and returns them as a JSON object.
 func (api *API) TraceBlockFromFile(ctx context.Context, file string, config *TraceConfig) ([]*txTraceResult, error) {
+	if api.onlySafeTrace {
+		return nil, errors.New("TraceBlockFromFile is not supported in 'debug' namespace, use 'unsafedebug' namespace instead")
+	}
 	blob, err := ioutil.ReadFile(file)
 	if err != nil {
-		if api.onlySafeTrace {
-			return nil, errors.New("error handling TraceBlockFromFile, exact reason not provided for security")
-		} else {
-			return nil, fmt.Errorf("could not read file: %v", err)
-		}
+		return nil, fmt.Errorf("could not read file: %v", err)
 	}
-	res, err := api.TraceBlock(ctx, common.Hex2Bytes(string(blob)), config)
-	if err != nil {
-		if api.onlySafeTrace {
-			return nil, errors.New("error handling TraceBlockFromFile, exact reason not provided for security")
-		} else {
-			return nil, err
-		}
-	}
-	return res, nil
+	return api.TraceBlock(ctx, common.Hex2Bytes(string(blob)), config)
 }
 
 // TraceBadBlock returns the structured logs created during the execution of
