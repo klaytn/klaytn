@@ -110,6 +110,11 @@ func (api *GovernanceKlayAPI) GetRewards(num *rpc.BlockNumber) (*reward.RewardSp
 		return nil, err
 	}
 	config := pset.ToChainConfig()
+	config.IstanbulCompatibleBlock = api.chain.Config().IstanbulCompatibleBlock
+	config.LondonCompatibleBlock = api.chain.Config().LondonCompatibleBlock
+	config.EthTxTypeCompatibleBlock = api.chain.Config().EthTxTypeCompatibleBlock
+	config.MagmaCompatibleBlock = api.chain.Config().MagmaCompatibleBlock
+	config.KoreCompatibleBlock = api.chain.Config().KoreCompatibleBlock
 	return reward.GetBlockReward(header, config)
 }
 
