@@ -352,6 +352,7 @@ func TestGovParamSet_ChainConfig(t *testing.T) {
 				GasTarget:                 30000000,
 				MaxBlockGasUsedForBaseFee: 60000000,
 				BaseFeeDenominator:        20,
+				Kip82Ratio:                "20/80",
 			},
 			expected: &ChainConfig{
 				UnitPrice: 25e9,
@@ -366,6 +367,7 @@ func TestGovParamSet_ChainConfig(t *testing.T) {
 					Reward: &RewardConfig{
 						MintingAmount:          new(big.Int).SetUint64(9.6e18),
 						Ratio:                  "34/54/12",
+						Kip82Ratio:             "20/80",
 						UseGiniCoeff:           true,
 						DeferredTxFee:          true,
 						StakingUpdateInterval:  86400,
