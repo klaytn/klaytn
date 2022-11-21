@@ -15,7 +15,6 @@ import (
 	"github.com/klaytn/klaytn/fork"
 	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
-	"gotest.tools/assert/cmp"
 )
 
 func TestCore_sendPrepare(t *testing.T) {
@@ -109,13 +108,6 @@ func BenchmarkMsgCmp(b *testing.B) {
 	})
 
 	// Better
-	b.Run("cmp", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			cmp.Equal(&s1, &s2)
-		}
-	})
-
-	// Best
 	b.Run("own", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			s1.Equal(&s2)
