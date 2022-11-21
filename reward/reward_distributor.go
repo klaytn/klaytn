@@ -182,7 +182,7 @@ func GetBlockReward(header *types.Header, config *params.ChainConfig) (*RewardSp
 
 	// Compensate the difference between CalcDeferredReward() and actual payment.
 	// If not DeferredTxFee, CalcDeferredReward() assumes 0 total_fee, but
-	// some non-zero fee is paid to the proposer.
+	// some non-zero fee already has been paid to the proposer.
 	if !config.Governance.Reward.DeferredTxFee {
 		blockFee := GetTotalTxFee(header, config)
 		spec.Proposer = spec.Proposer.Add(spec.Proposer, spec.TotalFee)
