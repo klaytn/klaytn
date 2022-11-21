@@ -415,7 +415,7 @@ func (c *ChainConfig) SetDefaultsForGenesis() {
 	}
 
 	if c.Governance.Reward == nil {
-		c.Governance.Reward = GetDefaultRewardConfig()
+		c.Governance.Reward = GetDefaultRewardConfigForGenesis()
 		logger.Warn("Override the default governance reward config to the chain config", "reward",
 			c.Governance.Reward)
 	}
@@ -533,7 +533,7 @@ func GetDefaultGovernanceConfigForGenesis() *GovernanceConfig {
 	gov := &GovernanceConfig{
 		GovernanceMode: DefaultGovernanceMode,
 		GoverningNode:  common.HexToAddress(DefaultGoverningNode),
-		Reward:         GetDefaultRewardConfig(),
+		Reward:         GetDefaultRewardConfigForGenesis(),
 	}
 	return gov
 }
@@ -554,6 +554,18 @@ func GetDefaultIstanbulConfig() *IstanbulConfig {
 		Epoch:          DefaultEpoch,
 		ProposerPolicy: DefaultProposerPolicy,
 		SubGroupSize:   DefaultSubGroupSize,
+	}
+}
+
+func GetDefaultRewardConfigForGenesis() *RewardConfig {
+	return &RewardConfig{
+		MintingAmount:          DefaultMintingAmount,
+		Ratio:                  DefaultRatio,
+		UseGiniCoeff:           DefaultUseGiniCoeff,
+		DeferredTxFee:          DefaultDefferedTxFee,
+		StakingUpdateInterval:  DefaultStakeUpdateInterval,
+		ProposerUpdateInterval: DefaultProposerRefreshInterval,
+		MinimumStake:           DefaultMinimumStake,
 	}
 }
 

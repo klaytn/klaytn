@@ -1136,6 +1136,7 @@ func GetGovernanceItemsFromChainConfig(config *params.ChainConfig) GovernanceSet
 		config.Governance != nil {
 		governanceMap := map[int]interface{}{
 			params.GovParamContract: config.Governance.GovParamContract,
+			params.Kip82Ratio:       config.Governance.Reward.Kip82Ratio,
 		}
 
 		appendToReturn(governanceMap)
