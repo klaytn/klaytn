@@ -18,6 +18,7 @@ package governance
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 	"strings"
 
@@ -163,10 +164,14 @@ func (api *PublicGovernanceAPI) TotalVotingPower() (float64, error) {
 
 func (api *PublicGovernanceAPI) ItemsAt(num *rpc.BlockNumber) (map[string]interface{}, error) {
 	blockNumber := uint64(0)
+	curHeaderNum := api.governance.BlockChain().CurrentHeader().Number.Uint64()
+	numU64 := uint64(num.Int64())
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
-		blockNumber = api.governance.BlockChain().CurrentHeader().Number.Uint64()
+		blockNumber = curHeaderNum
+	} else if curHeaderNum < numU64 {
+		return nil, fmt.Errorf("Error by future block number (Current block number = %d, Given number = %d)", curHeaderNum, numU64)
 	} else {
-		blockNumber = uint64(num.Int64())
+		blockNumber = numU64
 	}
 
 	pset, err := api.governance.ParamsAt(blockNumber)
