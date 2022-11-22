@@ -72,9 +72,9 @@ var PrecompiledContractsByzantiumCompatible = map[common.Address]PrecompiledCont
 	common.BytesToAddress([]byte{3}):  &ripemd160hash{},
 	common.BytesToAddress([]byte{4}):  &dataCopy{},
 	common.BytesToAddress([]byte{5}):  &bigModExp{eip2565: false},
-	common.BytesToAddress([]byte{6}):  &bn256AddConstantinople{},
-	common.BytesToAddress([]byte{7}):  &bn256ScalarMulConstantinople{},
-	common.BytesToAddress([]byte{8}):  &bn256PairingConstantinople{},
+	common.BytesToAddress([]byte{6}):  &bn256AddByzantium{},
+	common.BytesToAddress([]byte{7}):  &bn256ScalarMulByzantium{},
+	common.BytesToAddress([]byte{8}):  &bn256PairingByzantium{},
 	common.BytesToAddress([]byte{9}):  &vmLog{},
 	common.BytesToAddress([]byte{10}): &feePayer{},
 	common.BytesToAddress([]byte{11}): &validateSender{},
@@ -431,7 +431,7 @@ func newTwistPoint(blob []byte) (*bn256.G2, error) {
 }
 
 // runBn256Add implements the Bn256Add precompile, referenced by both
-// Constantinople and Istanbul operations.
+// Byzantium and Istanbul operations.
 func runBn256Add(input []byte) ([]byte, error) {
 	x, err := newCurvePoint(getData(input, 0, 64))
 	if err != nil {
@@ -460,13 +460,13 @@ func (c *bn256AddIstanbul) Run(input []byte, contract *Contract, evm *EVM) ([]by
 
 // bn256AddByzantium implements a native elliptic curve point addition
 // conforming to Byzantium consensus rules.
-type bn256AddConstantinople struct{}
+type bn256AddByzantium struct{}
 
-func (c *bn256AddConstantinople) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
-	return params.Bn256AddGasConstantinople, params.Bn256AddComputationCost
+func (c *bn256AddByzantium) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
+	return params.Bn256AddGasByzantium, params.Bn256AddComputationCost
 }
 
-func (c *bn256AddConstantinople) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
+func (c *bn256AddByzantium) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	return runBn256Add(input)
 }
 
@@ -496,13 +496,13 @@ func (c *bn256ScalarMulIstanbul) Run(input []byte, contract *Contract, evm *EVM)
 
 // bn256ScalarMulByzantium implements a native elliptic curve scalar
 // multiplication conforming to Byzantium consensus rules.
-type bn256ScalarMulConstantinople struct{}
+type bn256ScalarMulByzantium struct{}
 
-func (c *bn256ScalarMulConstantinople) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
-	return params.Bn256ScalarMulGasConstantinople, params.Bn256ScalarMulComputationCost
+func (c *bn256ScalarMulByzantium) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
+	return params.Bn256ScalarMulGasByzantium, params.Bn256ScalarMulComputationCost
 }
 
-func (c *bn256ScalarMulConstantinople) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
+func (c *bn256ScalarMulByzantium) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	return runBn256ScalarMul(input)
 }
 
@@ -562,17 +562,17 @@ func (c *bn256PairingIstanbul) Run(input []byte, contract *Contract, evm *EVM) (
 	return runBn256Pairing(input)
 }
 
-// bn256PairingConstantinople implements a pairing pre-compile for the bn256 curve
-// conforming to Constantinople consensus rules.
-type bn256PairingConstantinople struct{}
+// bn256PairingByzantium implements a pairing pre-compile for the bn256 curve
+// conforming to Byzantium consensus rules.
+type bn256PairingByzantium struct{}
 
-func (c *bn256PairingConstantinople) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
+func (c *bn256PairingByzantium) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
 	numParings := uint64(len(input) / 192)
-	return params.Bn256PairingBaseGasConstantinople + numParings*params.Bn256PairingPerPointGasConstantinople,
+	return params.Bn256PairingBaseGasByzantium + numParings*params.Bn256PairingPerPointGasByzantium,
 		params.Bn256ParingBaseComputationCost + numParings*params.Bn256ParingPerPointComputationCost
 }
 
-func (c *bn256PairingConstantinople) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
+func (c *bn256PairingByzantium) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	return runBn256Pairing(input)
 }
 
