@@ -172,6 +172,11 @@ var (
 		Value: "",
 	}
 
+	addressBookMockFlag = cli.BoolFlag{
+		Name:  "address-book-mock",
+		Usage: "Allocate an AddressBookMock at the genesis block",
+	}
+
 	dockerImageIdFlag = cli.StringFlag{
 		Name:        "docker-image-id",
 		Value:       "klaytn/klaytn:latest", // https://hub.docker.com/r/klaytn/klaytn
@@ -278,6 +283,12 @@ var (
 		Value: params.DefaultGoverningNode,
 	}
 
+	govParamContractFlag = cli.StringFlag{
+		Name:  "gov-param-contract",
+		Usage: "the GovParam contract address [default: 0x0000000000000000000000000000000000000000]",
+		Value: params.DefaultGovParamContract,
+	}
+
 	rewardMintAmountFlag = cli.StringFlag{
 		Name:  "reward-mint-amount",
 		Usage: "governance minting amount",
@@ -288,6 +299,12 @@ var (
 		Name:  "reward-ratio",
 		Usage: "governance ratio [default: 100/0/0]",
 		Value: params.DefaultRatio,
+	}
+
+	rewardKip82RatioFlag = cli.StringFlag{
+		Name:  "reward-kip82-ratio",
+		Usage: "kip82 ratio [default: 20/80]",
+		Value: params.DefaultKip82Ratio,
 	}
 
 	rewardGiniCoeffFlag = cli.BoolFlag{

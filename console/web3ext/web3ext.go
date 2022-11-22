@@ -313,6 +313,12 @@ web3._extend({
 			call: 'governance_getStakingInfo',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
+			name: 'chainConfigAt',
+			call: 'governance_chainConfigAt',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		})
 	],
 	properties: [
@@ -514,7 +520,8 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'setHead',
 			call: 'debug_setHead',
-			params: 1
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'dumpBlock',
@@ -873,6 +880,12 @@ web3._extend({
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
 			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
+		}),
+		new web3._extend.Method({
+			name: 'getRewards',
+			call: 'klay_getRewards',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
 		}),
 		new web3._extend.Method({
 			name: 'accountCreated',

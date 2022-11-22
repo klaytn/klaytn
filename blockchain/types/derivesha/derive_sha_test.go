@@ -1,4 +1,4 @@
-// Copyright 2018 The klaytn Authors
+// Copyright 2022 The klaytn Authors
 // This file is part of the klaytn library.
 //
 // The klaytn library is free software: you can redistribute it and/or modify
@@ -14,13 +14,23 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-package blockchain
+package derivesha
 
 import (
-	"github.com/klaytn/klaytn/blockchain/types/derivesha"
-	"github.com/klaytn/klaytn/params"
+	"testing"
+
+	"github.com/klaytn/klaytn/blockchain/types"
+	"gotest.tools/assert"
 )
 
-func InitDeriveSha(config *params.ChainConfig) {
-	derivesha.InitDeriveSha(config)
+func TestEmptyRoot(t *testing.T) {
+	assert.Equal(t,
+		DeriveShaOrig{}.DeriveSha(types.Transactions{}).Hex(),
+		"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
+	assert.Equal(t,
+		DeriveShaSimple{}.DeriveSha(types.Transactions{}).Hex(),
+		"0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470")
+	assert.Equal(t,
+		DeriveShaConcat{}.DeriveSha(types.Transactions{}).Hex(),
+		"0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470")
 }

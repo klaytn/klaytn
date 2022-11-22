@@ -65,6 +65,9 @@ func init() {
 		nodecmd.GetDumpConfigCommand(nodecmd.KsenNodeFlags(), nodecmd.CommonRPCFlags),
 
 		nodecmd.UtilCommand,
+
+		// See utils/nodecmd/snapshot.go:
+		nodecmd.SnapshotCommand,
 	}
 	sort.Sort(cli.CommandsByName(app.Commands))
 

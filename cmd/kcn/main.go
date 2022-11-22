@@ -68,6 +68,9 @@ func init() {
 		nodecmd.MigrationCommand,
 
 		nodecmd.UtilCommand,
+
+		// See utils/nodecmd/snapshot.go:
+		nodecmd.SnapshotCommand,
 	}
 	sort.Sort(cli.CommandsByName(app.Commands))
 

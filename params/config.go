@@ -144,9 +144,9 @@ var (
 
 // VMLogTarget sets the output target of vmlog.
 // The values below can be OR'ed.
-//  - 0x0: no output (default)
-//  - 0x1: file (DATADIR/logs/vm.log)
-//  - 0x2: stdout (like logger.DEBUG)
+//   - 0x0: no output (default)
+//   - 0x1: file (DATADIR/logs/vm.log)
+//   - 0x2: stdout (like logger.DEBUG)
 var VMLogTarget = 0x0
 
 const (
@@ -204,6 +204,7 @@ func (g *GovernanceConfig) DeferredTxFee() bool {
 type RewardConfig struct {
 	MintingAmount          *big.Int `json:"mintingAmount"`
 	Ratio                  string   `json:"ratio"`                  // Define how much portion of reward be distributed to CN/PoC/KIR
+	Kip82Ratio             string   `json:"kip82ratio"`             // Define how much portion of reward be distributed to basic/stake
 	UseGiniCoeff           bool     `json:"useGiniCoeff"`           // Decide if Gini Coefficient will be used or not
 	DeferredTxFee          bool     `json:"deferredTxFee"`          // Decide if TX fee will be handled instantly or handled later at block finalization
 	StakingUpdateInterval  uint64   `json:"stakingUpdateInterval"`  // Interval when staking information is updated
@@ -417,6 +418,10 @@ func (c *ChainConfig) SetDefaults() {
 			c.Governance.Reward)
 	}
 
+	if c.Governance.KIP71 == nil {
+		c.Governance.KIP71 = GetDefaultKIP71Config()
+	}
+
 	// StakingUpdateInterval must be nonzero because it is used as denominator
 	if c.Governance.Reward.StakingUpdateInterval == 0 {
 		c.Governance.Reward.StakingUpdateInterval = StakingUpdateInterval()
@@ -538,6 +543,7 @@ func GetDefaultRewardConfig() *RewardConfig {
 	return &RewardConfig{
 		MintingAmount:          DefaultMintingAmount,
 		Ratio:                  DefaultRatio,
+		Kip82Ratio:             DefaultKip82Ratio,
 		UseGiniCoeff:           DefaultUseGiniCoeff,
 		DeferredTxFee:          DefaultDefferedTxFee,
 		StakingUpdateInterval:  DefaultStakeUpdateInterval,

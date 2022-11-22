@@ -85,6 +85,7 @@ var HomiFlags = []cli.Flag{
 	altsrc.NewBoolFlag(patchAddressBookFlag),
 	altsrc.NewStringFlag(patchAddressBookAddrFlag),
 	altsrc.NewStringFlag(outputPathFlag),
+	altsrc.NewBoolFlag(addressBookMockFlag),
 	altsrc.NewStringFlag(dockerImageIdFlag),
 	altsrc.NewBoolFlag(fasthttpFlag),
 	altsrc.NewIntFlag(networkIdFlag),
@@ -102,8 +103,10 @@ var HomiFlags = []cli.Flag{
 	altsrc.NewBoolFlag(governanceFlag),
 	altsrc.NewStringFlag(govModeFlag),
 	altsrc.NewStringFlag(governingNodeFlag),
+	altsrc.NewStringFlag(govParamContractFlag),
 	altsrc.NewStringFlag(rewardMintAmountFlag),
 	altsrc.NewStringFlag(rewardRatioFlag),
+	altsrc.NewStringFlag(rewardKip82RatioFlag),
 	altsrc.NewBoolFlag(rewardGiniCoeffFlag),
 	altsrc.NewUint64Flag(rewardStakingFlag),
 	altsrc.NewUint64Flag(rewardProposerFlag),
@@ -184,6 +187,7 @@ func genRewardConfig(ctx *cli.Context) *params.RewardConfig {
 		log.Fatalf("Minting amount must be a number", "value", mintingAmountString)
 	}
 	ratio := ctx.String(rewardRatioFlag.Name)
+	kip82Ratio := ctx.String(rewardKip82RatioFlag.Name)
 	giniCoeff := ctx.Bool(rewardGiniCoeffFlag.Name)
 	deferredTxFee := ctx.Bool(rewardDeferredTxFeeFlag.Name)
 	stakingInterval := ctx.Uint64(rewardStakingFlag.Name)
@@ -197,6 +201,7 @@ func genRewardConfig(ctx *cli.Context) *params.RewardConfig {
 	return &params.RewardConfig{
 		MintingAmount:          mintingAmount,
 		Ratio:                  ratio,
+		Kip82Ratio:             kip82Ratio,
 		UseGiniCoeff:           giniCoeff,
 		DeferredTxFee:          deferredTxFee,
 		StakingUpdateInterval:  stakingInterval,
@@ -237,13 +242,18 @@ func genGovernanceConfig(ctx *cli.Context) *params.GovernanceConfig {
 	govMode := ctx.String(govModeFlag.Name)
 	governingNode := ctx.String(governingNodeFlag.Name)
 	if !common.IsHexAddress(governingNode) {
-		log.Fatalf("Governing Node is invalid hex address", "value", governingNode)
+		log.Fatalf("Governing Node is not a valid hex address", "value", governingNode)
+	}
+	govParamContract := ctx.String(govParamContractFlag.Name)
+	if !common.IsHexAddress(govParamContract) {
+		log.Fatalf("GovParam Contract is not a valid hex address", "value", govParamContract)
 	}
 	return &params.GovernanceConfig{
-		GoverningNode:  common.HexToAddress(governingNode),
-		GovernanceMode: govMode,
-		Reward:         genRewardConfig(ctx),
-		KIP71:          genKIP71Config(ctx),
+		GoverningNode:    common.HexToAddress(governingNode),
+		GovernanceMode:   govMode,
+		GovParamContract: common.HexToAddress(govParamContract),
+		Reward:           genRewardConfig(ctx),
+		KIP71:            genKIP71Config(ctx),
 	}
 }
 
@@ -353,6 +363,7 @@ func genCypressCommonGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.
 				Reward: &params.RewardConfig{
 					MintingAmount: mintingAmount,
 					Ratio:         "34/54/12",
+					Kip82Ratio:    "20/80",
 					UseGiniCoeff:  true,
 					DeferredTxFee: true,
 				},
@@ -444,6 +455,7 @@ func genBaobabCommonGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.G
 				Reward: &params.RewardConfig{
 					MintingAmount: mintingAmount,
 					Ratio:         "34/54/12",
+					Kip82Ratio:    "20/80",
 					UseGiniCoeff:  false,
 					DeferredTxFee: true,
 				},
@@ -520,6 +532,15 @@ func patchGenesisAddressBook(ctx *cli.Context, genesisJson *blockchain.Genesis, 
 	}
 
 	allocationFunction := genesis.PatchAddressBook(targetAddr)
+	allocationFunction(genesisJson)
+}
+
+func useAddressBookMock(ctx *cli.Context, genesisJson *blockchain.Genesis) {
+	if useMock := ctx.Bool(addressBookMockFlag.Name); !useMock {
+		return
+	}
+
+	allocationFunction := genesis.AddressBookMock()
 	allocationFunction(genesisJson)
 }
 
@@ -620,6 +641,7 @@ func Gen(ctx *cli.Context) error {
 
 	allocGenesisFund(ctx, genesisJson)
 	patchGenesisAddressBook(ctx, genesisJson, validatorNodeAddrs)
+	useAddressBookMock(ctx, genesisJson)
 
 	genesisJson.Config.IstanbulCompatibleBlock = big.NewInt(ctx.Int64(istanbulCompatibleBlockNumberFlag.Name))
 	genesisJson.Config.LondonCompatibleBlock = big.NewInt(ctx.Int64(londonCompatibleBlockNumberFlag.Name))

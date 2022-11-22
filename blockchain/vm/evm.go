@@ -512,6 +512,12 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 	if maxCodeSizeExceeded && err == nil {
 		err = ErrMaxCodeSizeExceeded // TODO-Klaytn-Issue615
 	}
+
+	// Reject code starting with 0xEF if EIP-3541 is enabled.
+	if err == nil && len(ret) >= 1 && ret[0] == 0xEF && evm.chainRules.IsKore {
+		err = ErrInvalidCode
+	}
+
 	if evm.vmConfig.Debug && evm.depth == 0 {
 		evm.vmConfig.Tracer.CaptureEnd(ret, gas-contract.Gas, time.Since(start), err)
 	}

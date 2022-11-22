@@ -240,9 +240,6 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 
 	state.EnabledExpensive = db.GetDBConfig().EnableDBPerfMetrics
 
-	// Initialize DeriveSha implementation
-	InitDeriveSha(chainConfig.DeriveShaImpl)
-
 	futureBlocks, _ := lru.New(maxFutureBlocks)
 
 	bc := &BlockChain{
@@ -453,9 +450,19 @@ func (bc *BlockChain) loadLastState() error {
 	// Make sure the entire head block is available
 	currentBlock := bc.GetBlockByHash(head)
 	if currentBlock == nil {
-		// Corrupt or empty database, init from scratch
-		logger.Error("Head block missing, resetting chain", "hash", head.String())
-		return bc.Reset()
+		head = bc.db.ReadHeadBlockBackupHash()
+		if head == (common.Hash{}) {
+			// Corrupt or empty database, init from scratch
+			logger.Info("Empty database, resetting chain")
+			return bc.Reset()
+		}
+
+		currentBlock = bc.GetBlockByHash(head)
+		if currentBlock == nil {
+			// Corrupt or empty database, init from scratch
+			logger.Error("Head block missing, resetting chain", "hash", head.String())
+			return bc.Reset()
+		}
 	}
 	// Everything seems to be fine, set as the head block
 	bc.currentBlock.Store(currentBlock)
@@ -475,6 +482,10 @@ func (bc *BlockChain) loadLastState() error {
 	if head := bc.db.ReadHeadFastBlockHash(); head != (common.Hash{}) {
 		if block := bc.GetBlockByHash(head); block != nil {
 			bc.currentFastBlock.Store(block)
+		} else if head := bc.db.ReadHeadFastBlockBackupHash(); head != (common.Hash{}) {
+			if block := bc.GetBlockByHash(head); block != nil {
+				bc.currentFastBlock.Store(block)
+			}
 		}
 	}
 
@@ -1077,7 +1088,8 @@ func (bc *BlockChain) procFutureBlocks() {
 type WriteStatus byte
 
 // TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
-//                  Later we may be able to remove SideStatTy.
+//
+//	Later we may be able to remove SideStatTy.
 const (
 	NonStatTy WriteStatus = iota
 	CanonStatTy

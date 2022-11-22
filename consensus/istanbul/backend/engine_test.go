@@ -58,6 +58,7 @@ type (
 	LondonCompatibleBlock    *big.Int
 	EthTxTypeCompatibleBlock *big.Int
 	magmaCompatibleBlock     *big.Int
+	koreCompatibleBlock      *big.Int
 )
 
 type (
@@ -132,6 +133,8 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 			genesis.Config.EthTxTypeCompatibleBlock = v
 		case magmaCompatibleBlock:
 			genesis.Config.MagmaCompatibleBlock = v
+		case koreCompatibleBlock:
+			genesis.Config.KoreCompatibleBlock = v
 		case proposerPolicy:
 			genesis.Config.Istanbul.ProposerPolicy = uint64(v)
 		case epoch:
@@ -177,6 +180,8 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 	if err != nil {
 		panic(err)
 	}
+	b.governance.SetBlockchain(bc)
+
 	if b.Start(bc, bc.CurrentBlock, bc.HasBadBlock) != nil {
 		panic(err)
 	}
@@ -331,6 +336,7 @@ func TestVerifyHeader(t *testing.T) {
 	configItems = append(configItems, LondonCompatibleBlock(new(big.Int).SetUint64(0)))
 	configItems = append(configItems, EthTxTypeCompatibleBlock(new(big.Int).SetUint64(0)))
 	configItems = append(configItems, magmaCompatibleBlock(new(big.Int).SetUint64(0)))
+	configItems = append(configItems, koreCompatibleBlock(new(big.Int).SetUint64(0)))
 	chain, engine := newBlockChain(1, configItems...)
 	defer engine.Stop()
 
@@ -669,6 +675,7 @@ func makeFakeStakingInfo(blockNumber uint64, keys []*ecdsa.PrivateKey, amounts [
 		rewardAddr := crypto.PubkeyToAddress(pk.PublicKey)
 
 		stakingInfo.CouncilNodeAddrs = append(stakingInfo.CouncilNodeAddrs, addr)
+		stakingInfo.CouncilStakingAddrs = append(stakingInfo.CouncilStakingAddrs, addr)
 		stakingInfo.CouncilStakingAmounts = append(stakingInfo.CouncilStakingAmounts, amounts[idx])
 		stakingInfo.CouncilRewardAddrs = append(stakingInfo.CouncilRewardAddrs, rewardAddr)
 	}
@@ -1319,6 +1326,7 @@ func TestGovernance_Votes(t *testing.T) {
 				{"reward.ratio", "34/33/33"},              // voted on block 5
 				{"reward.useginicoeff", true},             // voted on block 6
 				{"reward.minimumstake", "5000000"},        // voted on block 7
+				{"reward.kip82ratio", "50/50"},            // voted on block 8
 			},
 			expected: []governanceItem{
 				{vote{"governance.governancemode", "none"}, 6},
@@ -1328,6 +1336,7 @@ func TestGovernance_Votes(t *testing.T) {
 				{vote{"reward.ratio", "34/33/33"}, 9},
 				{vote{"reward.useginicoeff", true}, 12},
 				{vote{"reward.minimumstake", "5000000"}, 12},
+				{vote{"reward.kip82ratio", "50/50"}, 12},
 				// check governance items on current block
 				{vote{"governance.governancemode", "none"}, 0},
 				{vote{"istanbul.committeesize", uint64(4)}, 0},
@@ -1336,6 +1345,7 @@ func TestGovernance_Votes(t *testing.T) {
 				{vote{"reward.ratio", "34/33/33"}, 0},
 				{vote{"reward.useginicoeff", true}, 0},
 				{vote{"reward.minimumstake", "5000000"}, 0},
+				{vote{"reward.kip82ratio", "50/50"}, 0},
 			},
 		},
 		{
@@ -1483,6 +1493,19 @@ func TestGovernance_Votes(t *testing.T) {
 			expected: []governanceItem{
 				{vote{"kip71.basefeedenominator", uint64(32)}, 6},
 				{vote{"kip71.basefeedenominator", uint64(64)}, 9},
+			},
+		},
+		{
+			votes: []vote{
+				{}, // voted on block 1
+				{"governance.govparamcontract", common.HexToAddress("0x0000000000000000000000000000000000000000")}, // voted on block 2
+				{}, // voted on block 3
+				{}, // voted on block 4
+				{"governance.govparamcontract", common.HexToAddress("0x0000000000000000000000000000000000000400")}, // voted on block 5
+			},
+			expected: []governanceItem{
+				{vote{"governance.govparamcontract", common.HexToAddress("0x0000000000000000000000000000000000000000")}, 6},
+				{vote{"governance.govparamcontract", common.HexToAddress("0x0000000000000000000000000000000000000400")}, 9},
 			},
 		},
 	}

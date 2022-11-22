@@ -1,5 +1,5 @@
 // Modifications Copyright 2018 The klaytn Authors
-// Copyright 2015 The go-ethereum Authors
+// Copyright 2014 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
 // The go-ethereum library is free software: you can redistribute it and/or modify
@@ -18,38 +18,37 @@
 // This file is derived from core/types/derive_sha.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
-package types
+package derivesha
 
 import (
-	"math/big"
-
+	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/rlp"
+	"github.com/klaytn/klaytn/storage/statedb"
 )
 
-type DerivableList interface {
-	Len() int
-	GetRlp(i int) []byte
-}
+type DeriveShaOrig struct{}
 
-const (
-	ImplDeriveShaOriginal int = iota
-	ImplDeriveShaSimple
-	ImplDeriveShaConcat
-)
+func (d DeriveShaOrig) DeriveSha(list types.DerivableList) common.Hash {
+	trie := statedb.NewStackTrie(nil)
+	trie.Reset()
+	var buf []byte
 
-var (
-	// EmptyRootHash is a transaction/receipt root hash when there is no transaction.
-	// DeriveSha and EmptyRootHash are populated by derivesha.InitDeriveSha().
-	DeriveSha     func(list DerivableList, num *big.Int) common.Hash = DeriveShaNone
-	EmptyRootHash func(num *big.Int) common.Hash                     = EmptyRootHashNone
-)
-
-func DeriveShaNone(list DerivableList, num *big.Int) common.Hash {
-	logger.Crit("DeriveSha not initialized")
-	return common.Hash{}
-}
-
-func EmptyRootHashNone(num *big.Int) common.Hash {
-	logger.Crit("DeriveSha not initialized")
-	return common.Hash{}
+	// StackTrie requires values to be inserted in increasing
+	// hash order, which is not the order that `list` provides
+	// hashes in. This insertion sequence ensures that the
+	// order is correct.
+	for i := 1; i < list.Len() && i <= 0x7f; i++ {
+		buf = rlp.AppendUint64(buf[:0], uint64(i))
+		trie.Update(buf, list.GetRlp(i))
+	}
+	if list.Len() > 0 {
+		buf = rlp.AppendUint64(buf[:0], 0)
+		trie.Update(buf, list.GetRlp(0))
+	}
+	for i := 0x80; i < list.Len(); i++ {
+		buf = rlp.AppendUint64(buf[:0], uint64(i))
+		trie.Update(buf, list.GetRlp(i))
+	}
+	return trie.Hash()
 }

@@ -452,12 +452,13 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 		return nil, consensus.ErrInvalidBaseFee
 	}
 
+	var rewardSpec *reward.RewardSpec
+	var err error
+
 	// If sb.chain is nil, it means backend is not initialized yet.
-	if sb.chain != nil && sb.governance.Params().Policy() == uint64(istanbul.WeightedRandom) {
+	if sb.chain != nil && !reward.IsRewardSimple(chain.Config()) {
 		// TODO-Klaytn Let's redesign below logic and remove dependency between block reward and istanbul consensus.
 
-		pocAddr := common.Address{}
-		kirAddr := common.Address{}
 		lastHeader := chain.CurrentHeader()
 		valSet := sb.getValidators(lastHeader.Number.Uint64(), lastHeader.Hash())
 
@@ -478,19 +479,16 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 			logger.Trace(logMsg, "header.Number", header.Number.Uint64(), "node address", sb.address, "rewardbase", header.Rewardbase)
 		}
 
-		if stakingInfo := reward.GetStakingInfo(header.Number.Uint64()); stakingInfo != nil {
-			kirAddr = stakingInfo.KIRAddr
-			pocAddr = stakingInfo.PoCAddr
-		}
-
-		if err := sb.rewardDistributor.DistributeBlockReward(state, header, pocAddr, kirAddr); err != nil {
-			return nil, err
-		}
+		rewardSpec, err = reward.CalcDeferredReward(header, chain.Config())
 	} else {
-		if err := sb.rewardDistributor.MintKLAY(state, header); err != nil {
-			return nil, err
-		}
+		rewardSpec, err = reward.CalcDeferredRewardSimple(header, chain.Config())
 	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	reward.DistributeBlockReward(state, rewardSpec.Rewards)
 
 	header.Root = state.IntermediateRoot(true)
 

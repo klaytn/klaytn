@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/klaytn/klaytn/common/hexutil"
+	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
 )
@@ -77,6 +77,10 @@ func (api *PrivateDebugAPI) ChaindbCompact() error {
 }
 
 // SetHead rewinds the head of the blockchain to a previous block.
-func (api *PrivateDebugAPI) SetHead(number hexutil.Uint64) {
+func (api *PrivateDebugAPI) SetHead(number rpc.BlockNumber) {
+	if number == rpc.PendingBlockNumber || number == rpc.LatestBlockNumber {
+		logger.Error("Cannot rewind to future")
+		return
+	}
 	api.b.SetHead(uint64(number))
 }
