@@ -1135,7 +1135,8 @@ func GetGovernanceItemsFromChainConfig(config *params.ChainConfig) GovernanceSet
 		if !common.EmptyAddress(config.Governance.GovParamContract) {
 			governanceMap[params.GovParamContract] = config.Governance.GovParamContract
 		}
-		if config.Governance.Reward.Kip82Ratio != "" {
+		if config.Governance.Reward != nil &&
+			config.Governance.Reward.Kip82Ratio != "" {
 			governanceMap[params.Kip82Ratio] = config.Governance.Reward.Kip82Ratio
 		}
 		appendGovSet(governanceMap)
