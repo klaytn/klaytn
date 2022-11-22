@@ -443,6 +443,9 @@ func (c *ChainConfig) SetDefaults() {
 	if c.Governance.KIP71 == nil {
 		c.Governance.KIP71 = GetDefaultKIP71Config()
 	}
+	if c.Governance.Reward.Kip82Ratio == "" {
+		c.Governance.Reward.Kip82Ratio = DefaultKip82Ratio
+	}
 }
 
 // isForkIncompatible returns true if a fork scheduled at s1 cannot be rescheduled to
