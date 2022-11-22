@@ -315,8 +315,14 @@ func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockc
 	prof.Profile("main_insert_blockchain", time.Now().Sub(start))
 
 	// Apply reward
+	config := bcdata.bc.Config()
+	rules := config.Rules(bcdata.bc.CurrentHeader().Number)
+	pset, err := params.NewGovParamSetChainConfig(config)
+	if err != nil {
+		return err
+	}
 	start = time.Now()
-	spec, err := reward.CalcDeferredRewardSimple(header, bcdata.bc.Config())
+	spec, err := reward.CalcDeferredRewardSimple(header, rules, pset)
 	if err != nil {
 		return err
 	}
@@ -382,8 +388,14 @@ func (bcdata *BCData) GenABlockWithTransactions(accountMap *AccountMap, transact
 	prof.Profile("main_insert_blockchain", time.Now().Sub(start))
 
 	// Apply reward
+	config := bcdata.bc.Config()
+	rules := config.Rules(bcdata.bc.CurrentHeader().Number)
+	pset, err := params.NewGovParamSetChainConfig(config)
+	if err != nil {
+		return err
+	}
 	start = time.Now()
-	spec, err := reward.CalcDeferredRewardSimple(bcdata.bc.CurrentHeader(), bcdata.bc.Config())
+	spec, err := reward.CalcDeferredRewardSimple(bcdata.bc.CurrentHeader(), rules, pset)
 	if err != nil {
 		return err
 	}

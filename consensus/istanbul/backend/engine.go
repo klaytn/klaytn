@@ -453,10 +453,15 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 	}
 
 	var rewardSpec *reward.RewardSpec
-	var err error
+
+	rules := chain.Config().Rules(header.Number)
+	pset, err := sb.governance.ParamsAt(header.Number.Uint64())
+	if err != nil {
+		return nil, err
+	}
 
 	// If sb.chain is nil, it means backend is not initialized yet.
-	if sb.chain != nil && !reward.IsRewardSimple(chain.Config()) {
+	if sb.chain != nil && !reward.IsRewardSimple(sb.governance.Params()) {
 		// TODO-Klaytn Let's redesign below logic and remove dependency between block reward and istanbul consensus.
 
 		lastHeader := chain.CurrentHeader()
@@ -479,9 +484,9 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 			logger.Trace(logMsg, "header.Number", header.Number.Uint64(), "node address", sb.address, "rewardbase", header.Rewardbase)
 		}
 
-		rewardSpec, err = reward.CalcDeferredReward(header, chain.Config())
+		rewardSpec, err = reward.CalcDeferredReward(header, rules, pset)
 	} else {
-		rewardSpec, err = reward.CalcDeferredRewardSimple(header, chain.Config())
+		rewardSpec, err = reward.CalcDeferredRewardSimple(header, rules, pset)
 	}
 
 	if err != nil {
