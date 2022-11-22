@@ -1133,7 +1133,9 @@ func GetGovernanceItemsFromChainConfig(config *params.ChainConfig) GovernanceSet
 	// kore params
 	if config.IsKoreForkEnabled(common.Big0) &&
 		config.Governance != nil {
-		governanceMap := map[int]interface{}{}
+		governanceMap := map[int]interface{}{
+			params.DeriveShaImpl: uint64(config.DeriveShaImpl), // checkValueType expects uint64
+		}
 		if !common.EmptyAddress(config.Governance.GovParamContract) {
 			governanceMap[params.GovParamContract] = config.Governance.GovParamContract
 		}
