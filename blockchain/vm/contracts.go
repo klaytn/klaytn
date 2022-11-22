@@ -117,7 +117,6 @@ var PrecompiledContractsKore = map[common.Address]PrecompiledContract{
 }
 
 var (
-	PrecompiledAddressesKore                []common.Address
 	PrecompiledAddressesIstanbulCompatible  []common.Address
 	PrecompiledAddressesByzantiumCompatible []common.Address
 )
@@ -127,24 +126,19 @@ func init() {
 		PrecompiledAddressesByzantiumCompatible = append(PrecompiledAddressesByzantiumCompatible, k)
 	}
 
-	// For istanbulCompatible, need to support for vmversion0 contracts, too. VmVersion0 contracts are deployed before istanbulCompatible.
-	// they use byzantiumCompatible precompiled contracts because they were deployed before istanbulCompatible.
+	// After istanbulCompatible hf, need to support for vmversion0 contracts, too.
+	// VmVersion0 contracts are deployed before istanbulCompatible and they use byzantiumCompatible precompiled contracts.
+	// VmVersion0 contracts are the contracts deployed before istanbulCompatible hf.
 	for k := range PrecompiledContractsIstanbulCompatible {
 		PrecompiledAddressesIstanbulCompatible = append(PrecompiledAddressesIstanbulCompatible, k)
 	}
 	PrecompiledAddressesIstanbulCompatible = append(PrecompiledAddressesIstanbulCompatible,
 		[]common.Address{common.BytesToAddress([]byte{10}), common.BytesToAddress([]byte{11})}...)
-
-	for k := range PrecompiledContractsKore {
-		PrecompiledAddressesKore = append(PrecompiledAddressesKore, k)
-	}
 }
 
 // ActivePrecompiles returns the precompiles enabled with the current configuration.
 func ActivePrecompiles(rules params.Rules) []common.Address {
 	switch {
-	case rules.IsKore:
-		return PrecompiledAddressesKore
 	case rules.IsIstanbul:
 		return PrecompiledAddressesIstanbulCompatible
 	default:
