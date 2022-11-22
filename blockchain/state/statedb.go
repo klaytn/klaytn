@@ -1108,6 +1108,7 @@ func (s *StateDB) GetContractStorageRoot(contractAddr common.Address) (common.Ha
 // regards to EIP-2929:
 //
 // - Add sender to access list (2929)
+// - Add feepayer to access list (only for klaytn)
 // - Add destination to access list (2929)
 // - Add precompiles to access list (2929)
 //
