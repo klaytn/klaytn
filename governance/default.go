@@ -1131,8 +1131,9 @@ func GetGovernanceItemsFromChainConfig(config *params.ChainConfig) GovernanceSet
 	// kore params
 	if config.IsKoreForkEnabled(common.Big0) &&
 		config.Governance != nil {
-		governanceMap := map[int]interface{}{
-			params.GovParamContract: config.Governance.GovParamContract,
+		governanceMap := map[int]interface{}{}
+		if !common.EmptyAddress(config.Governance.GovParamContract) {
+			governanceMap[params.GovParamContract] = config.Governance.GovParamContract
 		}
 		if config.Governance.Reward.Kip82Ratio != "" {
 			governanceMap[params.Kip82Ratio] = config.Governance.Reward.Kip82Ratio
