@@ -40,22 +40,22 @@ type GovernanceEngine interface {
 var (
 	config     *params.ChainConfig
 	gov        GovernanceEngine
-	instances  map[int]IDeriveSha
+	impls      map[int]IDeriveSha
 	emptyRoots map[int]common.Hash
 
 	logger = log.NewModuleLogger(log.Blockchain)
 )
 
 func init() {
-	instances = map[int]IDeriveSha{
+	impls = map[int]IDeriveSha{
 		types.ImplDeriveShaOriginal: DeriveShaOrig{},
 		types.ImplDeriveShaSimple:   DeriveShaSimple{},
 		types.ImplDeriveShaConcat:   DeriveShaConcat{},
 	}
 
 	emptyRoots = make(map[int]common.Hash)
-	for implType, instance := range instances {
-		emptyRoots[implType] = instance.DeriveSha(types.Transactions{})
+	for implType, impl := range impls {
+		emptyRoots[implType] = impl.DeriveSha(types.Transactions{})
 	}
 }
 
@@ -68,7 +68,7 @@ func InitDeriveSha(chainConfig *params.ChainConfig, govEngine GovernanceEngine) 
 }
 
 func DeriveShaMux(list types.DerivableList, num *big.Int) common.Hash {
-	return instances[getType(num)].DeriveSha(list)
+	return impls[getType(num)].DeriveSha(list)
 }
 
 func EmptyRootHashMux(num *big.Int) common.Hash {
@@ -89,7 +89,7 @@ func getType(num *big.Int) int {
 		}
 	}
 
-	if _, ok := instances[implType]; ok {
+	if _, ok := impls[implType]; ok {
 		return implType
 	} else {
 		logger.Error("Unrecognized deriveShaImpl, falling back to Orig", "impl", implType)
