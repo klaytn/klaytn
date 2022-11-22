@@ -21,13 +21,15 @@ import (
 	"github.com/klaytn/klaytn/params"
 )
 
-// DeriveSha will depend on ChainConfig.DeriveShaImpl.
-// Use this when you work exclusivly with genesis block (e.g. initGenesis)
+// InitDeriveSha makes DeriveSha() and EmptyRootHash() depend on only ChainConfig.DeriveShaImpl.
+// Call InitDeriveSha when you work exclusivly with genesis block (e.g. initGenesis)
 func InitDeriveSha(config *params.ChainConfig) {
 	derivesha.InitDeriveSha(config, nil)
 }
 
-// DeriveSha will choose correct DeriveShaImpl for any given block number.
+// InitDeriveShaWithGov makes DeriveSha() and EmptyRootHash depend on the
+// governance parameters. For any given block number, correct DeriveShaImpl will be used.
+// Call InitDeriveShaWithGov before processing blocks.
 func InitDeriveShaWithGov(config *params.ChainConfig, gov derivesha.GovernanceEngine) {
 	derivesha.InitDeriveSha(config, gov)
 }
