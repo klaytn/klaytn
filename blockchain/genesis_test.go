@@ -376,7 +376,7 @@ func genCustomGenesisBlock(customChainId uint64) *Genesis {
 			},
 		},
 	}
-	genesis.Config.SetDefaults()
+	genesis.Config.SetDefaultsForGenesis()
 	genesis.Governance = SetGenesisGovernance(genesis)
 	InitDeriveSha(genesis.Config)
 	return genesis

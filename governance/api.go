@@ -98,24 +98,21 @@ func (api *GovernanceKlayAPI) GasPriceAt(num *rpc.BlockNumber) (*hexutil.Big, er
 
 // or returns gas price of txpool if the block is pending block.
 func (api *GovernanceKlayAPI) GetRewards(num *rpc.BlockNumber) (*reward.RewardSpec, error) {
+	blockNumber := uint64(0)
 	if num == nil || *num == rpc.LatestBlockNumber {
-		header := api.chain.CurrentHeader()
-		config := api.chain.Config()
-		return reward.GetBlockReward(header, config)
+		blockNumber = api.governance.BlockChain().CurrentHeader().Number.Uint64()
+	} else {
+		blockNumber = uint64(num.Int64())
 	}
 
-	header := api.chain.GetHeaderByNumber(num.Uint64())
-	pset, err := api.governance.ParamsAt(num.Uint64())
+	header := api.chain.GetHeaderByNumber(blockNumber)
+	rules := api.chain.Config().Rules(new(big.Int).SetUint64(blockNumber))
+	pset, err := api.governance.ParamsAt(blockNumber)
 	if err != nil {
 		return nil, err
 	}
-	config := pset.ToChainConfig()
-	config.IstanbulCompatibleBlock = api.chain.Config().IstanbulCompatibleBlock
-	config.LondonCompatibleBlock = api.chain.Config().LondonCompatibleBlock
-	config.EthTxTypeCompatibleBlock = api.chain.Config().EthTxTypeCompatibleBlock
-	config.MagmaCompatibleBlock = api.chain.Config().MagmaCompatibleBlock
-	config.KoreCompatibleBlock = api.chain.Config().KoreCompatibleBlock
-	return reward.GetBlockReward(header, config)
+
+	return reward.GetBlockReward(header, rules, pset)
 }
 
 // Vote injects a new vote for governance targets such as unitprice and governingnode.

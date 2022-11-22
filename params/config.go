@@ -400,26 +400,24 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *Confi
 	return nil
 }
 
-// SetDefaults fills undefined chain config with default values.
-func (c *ChainConfig) SetDefaults() {
+// SetDefaultsForGenesis fills undefined chain config with default values.
+// Only used for generating genesis.
+// Empty values from genesis.json will be left out from genesis.
+func (c *ChainConfig) SetDefaultsForGenesis() {
 	if c.Clique == nil && c.Istanbul == nil {
 		c.Istanbul = GetDefaultIstanbulConfig()
 		logger.Warn("Override the default Istanbul config to the chain config")
 	}
 
 	if c.Governance == nil {
-		c.Governance = GetDefaultGovernanceConfig()
+		c.Governance = GetDefaultGovernanceConfigForGenesis()
 		logger.Warn("Override the default governance config to the chain config")
 	}
 
 	if c.Governance.Reward == nil {
-		c.Governance.Reward = GetDefaultRewardConfig()
+		c.Governance.Reward = GetDefaultRewardConfigForGenesis()
 		logger.Warn("Override the default governance reward config to the chain config", "reward",
 			c.Governance.Reward)
-	}
-
-	if c.Governance.KIP71 == nil {
-		c.Governance.KIP71 = GetDefaultKIP71Config()
 	}
 
 	// StakingUpdateInterval must be nonzero because it is used as denominator
@@ -434,6 +432,19 @@ func (c *ChainConfig) SetDefaults() {
 		c.Governance.Reward.ProposerUpdateInterval = ProposerUpdateInterval()
 		logger.Warn("Override the default proposer update interval to the chain config", "interval",
 			c.Governance.Reward.ProposerUpdateInterval)
+	}
+}
+
+// SetDefaults fills undefined chain config with default values
+// so that nil pointer does not exist in the chain config
+func (c *ChainConfig) SetDefaults() {
+	c.SetDefaultsForGenesis()
+
+	if c.Governance.KIP71 == nil {
+		c.Governance.KIP71 = GetDefaultKIP71Config()
+	}
+	if c.Governance.Reward.Kip82Ratio == "" {
+		c.Governance.Reward.Kip82Ratio = DefaultKip82Ratio
 	}
 }
 
@@ -520,6 +531,16 @@ func (c *ChainConfig) Rules(num *big.Int) Rules {
 	}
 }
 
+// cypress genesis config
+func GetDefaultGovernanceConfigForGenesis() *GovernanceConfig {
+	gov := &GovernanceConfig{
+		GovernanceMode: DefaultGovernanceMode,
+		GoverningNode:  common.HexToAddress(DefaultGoverningNode),
+		Reward:         GetDefaultRewardConfigForGenesis(),
+	}
+	return gov
+}
+
 func GetDefaultGovernanceConfig() *GovernanceConfig {
 	gov := &GovernanceConfig{
 		GovernanceMode:   DefaultGovernanceMode,
@@ -536,6 +557,18 @@ func GetDefaultIstanbulConfig() *IstanbulConfig {
 		Epoch:          DefaultEpoch,
 		ProposerPolicy: DefaultProposerPolicy,
 		SubGroupSize:   DefaultSubGroupSize,
+	}
+}
+
+func GetDefaultRewardConfigForGenesis() *RewardConfig {
+	return &RewardConfig{
+		MintingAmount:          DefaultMintingAmount,
+		Ratio:                  DefaultRatio,
+		UseGiniCoeff:           DefaultUseGiniCoeff,
+		DeferredTxFee:          DefaultDefferedTxFee,
+		StakingUpdateInterval:  DefaultStakeUpdateInterval,
+		ProposerUpdateInterval: DefaultProposerRefreshInterval,
+		MinimumStake:           DefaultMinimumStake,
 	}
 }
 

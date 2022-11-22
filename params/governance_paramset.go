@@ -524,6 +524,9 @@ func (p *GovParamSet) ToGovernanceConfig() *GovernanceConfig {
 	if _, ok := p.Get(GovernanceMode); ok {
 		ret.GovernanceMode = p.GovernanceModeStr()
 	}
+	if _, ok := p.Get(GovParamContract); ok {
+		ret.GovParamContract = p.GovParamContract()
+	}
 	ret.Reward = p.ToRewardConfig()
 	ret.KIP71 = p.ToKIP71Config()
 

@@ -1072,9 +1072,21 @@ func (gov *Governance) GetTxPool() txPool {
 	return gov.TxPool
 }
 
+// GetGovernanceItemsFromChainConfig returns governance set
+// that is effective at the genesis block
 func GetGovernanceItemsFromChainConfig(config *params.ChainConfig) GovernanceSet {
-	g := NewGovernanceSet()
+	govSet := NewGovernanceSet()
 
+	// append to the return value `govSet`
+	appendGovSet := func(govmap map[int]interface{}) {
+		for k, v := range govmap {
+			if err := govSet.SetValue(k, v); err != nil {
+				writeFailLog(k, err)
+			}
+		}
+	}
+
+	// original cypress params
 	if config.Governance != nil {
 		governance := config.Governance
 		governanceMap := map[int]interface{}{
@@ -1089,12 +1101,7 @@ func GetGovernanceItemsFromChainConfig(config *params.ChainConfig) GovernanceSet
 			params.StakeUpdateInterval:     governance.Reward.StakingUpdateInterval,
 			params.ProposerRefreshInterval: governance.Reward.ProposerUpdateInterval,
 		}
-
-		for k, v := range governanceMap {
-			if err := g.SetValue(k, v); err != nil {
-				writeFailLog(k, err)
-			}
-		}
+		appendGovSet(governanceMap)
 	}
 
 	if config.Istanbul != nil {
@@ -1104,14 +1111,38 @@ func GetGovernanceItemsFromChainConfig(config *params.ChainConfig) GovernanceSet
 			params.Policy:        istanbul.ProposerPolicy,
 			params.CommitteeSize: istanbul.SubGroupSize,
 		}
-
-		for k, v := range istanbulMap {
-			if err := g.SetValue(k, v); err != nil {
-				writeFailLog(k, err)
-			}
-		}
+		appendGovSet(istanbulMap)
 	}
-	return g
+
+	// magma params
+	if config.IsMagmaForkEnabled(common.Big0) &&
+		config.Governance.KIP71 != nil {
+		kip71 := config.Governance.KIP71
+		governanceMap := map[int]interface{}{
+			params.LowerBoundBaseFee:         kip71.LowerBoundBaseFee,
+			params.UpperBoundBaseFee:         kip71.UpperBoundBaseFee,
+			params.GasTarget:                 kip71.GasTarget,
+			params.MaxBlockGasUsedForBaseFee: kip71.MaxBlockGasUsedForBaseFee,
+			params.BaseFeeDenominator:        kip71.BaseFeeDenominator,
+		}
+		appendGovSet(governanceMap)
+	}
+
+	// kore params
+	if config.IsKoreForkEnabled(common.Big0) &&
+		config.Governance != nil {
+		governanceMap := map[int]interface{}{}
+		if !common.EmptyAddress(config.Governance.GovParamContract) {
+			governanceMap[params.GovParamContract] = config.Governance.GovParamContract
+		}
+		if config.Governance.Reward != nil &&
+			config.Governance.Reward.Kip82Ratio != "" {
+			governanceMap[params.Kip82Ratio] = config.Governance.Reward.Kip82Ratio
+		}
+		appendGovSet(governanceMap)
+	}
+
+	return govSet
 }
 
 func writeFailLog(key int, err error) {
@@ -1205,7 +1236,7 @@ func (gov *Governance) ParamsAt(num uint64) (*params.GovParamSet, error) {
 		logger.Error("NewGovParamSetStrMap failed", "num", num, "err", err)
 		return nil, err
 	}
-	return params.NewGovParamSetMerged(gov.initialParams, pset), nil
+	return pset, nil
 }
 
 func (gov *Governance) UpdateParams() error {
@@ -1215,6 +1246,6 @@ func (gov *Governance) UpdateParams() error {
 		return err
 	}
 
-	gov.currentParams = params.NewGovParamSetMerged(gov.initialParams, pset)
+	gov.currentParams = pset
 	return nil
 }
