@@ -1075,12 +1075,12 @@ func (gov *Governance) GetTxPool() txPool {
 // GetGovernanceItemsFromChainConfig returns governance set
 // that is effective at the genesis block
 func GetGovernanceItemsFromChainConfig(config *params.ChainConfig) GovernanceSet {
-	g := NewGovernanceSet()
+	govSet := NewGovernanceSet()
 
-	// append to the return value `g`
-	appendToReturn := func(govmap map[int]interface{}) {
+	// append to the return value `govSet`
+	appendGovSet := func(govmap map[int]interface{}) {
 		for k, v := range govmap {
-			if err := g.SetValue(k, v); err != nil {
+			if err := govSet.SetValue(k, v); err != nil {
 				writeFailLog(k, err)
 			}
 		}
@@ -1102,7 +1102,7 @@ func GetGovernanceItemsFromChainConfig(config *params.ChainConfig) GovernanceSet
 			params.ProposerRefreshInterval: governance.Reward.ProposerUpdateInterval,
 		}
 
-		appendToReturn(governanceMap)
+		appendGovSet(governanceMap)
 	}
 
 	if config.Istanbul != nil {
@@ -1113,7 +1113,7 @@ func GetGovernanceItemsFromChainConfig(config *params.ChainConfig) GovernanceSet
 			params.CommitteeSize: istanbul.SubGroupSize,
 		}
 
-		appendToReturn(istanbulMap)
+		appendGovSet(istanbulMap)
 	}
 
 	// magma params
@@ -1128,7 +1128,7 @@ func GetGovernanceItemsFromChainConfig(config *params.ChainConfig) GovernanceSet
 			params.BaseFeeDenominator:        kip71.BaseFeeDenominator,
 		}
 
-		appendToReturn(governanceMap)
+		appendGovSet(governanceMap)
 	}
 
 	// kore params
@@ -1139,10 +1139,10 @@ func GetGovernanceItemsFromChainConfig(config *params.ChainConfig) GovernanceSet
 			params.Kip82Ratio:       config.Governance.Reward.Kip82Ratio,
 		}
 
-		appendToReturn(governanceMap)
+		appendGovSet(governanceMap)
 	}
 
-	return g
+	return govSet
 }
 
 func writeFailLog(key int, err error) {
