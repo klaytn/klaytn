@@ -317,13 +317,18 @@ type Tracer struct {
 	reason    error  // Textual reason for the interruption
 }
 
-// New instantiates a new tracer instance. code specifies a Javascript snippet,
-// which must evaluate to an expression returning an object with 'step', 'fault'
-// and 'result' functions.
-func New(code string) (*Tracer, error) {
+// New instantiates a new tracer instance. code specifies either a predefined
+// tracer name or a Javascript snippet, which must evaluate to an expression
+// returning an object with 'step', 'fault' and 'result' functions.
+// However, if unsafeTrace is false, code should specify predefined tracer name,
+// otherwise error is returned.
+func New(code string, unsafeTrace bool) (*Tracer, error) {
 	// Resolve any tracers by name and assemble the tracer object
-	if tracer, ok := tracer(code); ok {
-		code = tracer
+	foundTracer, ok := tracer(code)
+	if ok {
+		code = foundTracer
+	} else if !unsafeTrace {
+		return nil, fmt.Errorf("Only predefined tracers are supported")
 	}
 	tracer := &Tracer{
 		vm:              duktape.New(),

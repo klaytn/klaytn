@@ -135,11 +135,12 @@ func GetAPIs(apiBackend Backend) ([]rpc.API, *EthereumAPI) {
 			Namespace: "debug",
 			Version:   "1.0",
 			Service:   NewPublicDebugAPI(apiBackend),
-			Public:    true,
+			Public:    false,
 		}, {
-			Namespace: "debug",
+			Namespace: "unsafedebug",
 			Version:   "1.0",
 			Service:   NewPrivateDebugAPI(apiBackend),
+			Public:    false,
 		}, {
 			Namespace: "klay",
 			Version:   "1.0",

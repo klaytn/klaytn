@@ -23,6 +23,7 @@ package web3ext
 var Modules = map[string]string{
 	"admin":            Admin_JS,
 	"debug":            Debug_JS,
+	"unsafedebug":      UnsafeDebug_JS,
 	"klay":             Klay_JS,
 	"net":              Net_JS,
 	"personal":         Personal_JS,
@@ -341,7 +342,7 @@ web3._extend({
 		new web3._extend.Property({
 			name: 'chainConfig',
 			getter: 'governance_chainConfig',
-		}),	
+		}),
 		new web3._extend.Property({
 			name: 'nodeAddress',
 			getter: 'governance_nodeAddress',
@@ -508,22 +509,6 @@ web3._extend({
 	property: 'debug',
 	methods: [
 		new web3._extend.Method({
-			name: 'printBlock',
-			call: 'debug_printBlock',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'getBlockRlp',
-			call: 'debug_getBlockRlp',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'setHead',
-			call: 'debug_setHead',
-			params: 1,
-			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
-		}),
-		new web3._extend.Method({
 			name: 'dumpBlock',
 			call: 'debug_dumpBlock',
 			params: 1
@@ -534,169 +519,32 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
-			name: 'startWarmUp',
-			call: 'debug_startWarmUp',
-		}),
-		new web3._extend.Method({
-			name: 'startContractWarmUp',
-			call: 'debug_startContractWarmUp',
+			name: 'getBlockRlp',
+			call: 'debug_getBlockRlp',
 			params: 1
 		}),
 		new web3._extend.Method({
-			name: 'stopWarmUp',
-			call: 'debug_stopWarmUp',
-		}),
-		new web3._extend.Method({
-			name: 'startCollectingTrieStats',
-			call: 'debug_startCollectingTrieStats',
-			params: 1,
-		}),
-		new web3._extend.Method({
-			name: 'chaindbProperty',
-			call: 'debug_chaindbProperty',
-			params: 1,
-			outputFormatter: console.log
-		}),
-		new web3._extend.Method({
-			name: 'chaindbCompact',
-			call: 'debug_chaindbCompact',
-		}),
-		new web3._extend.Method({
-			name: 'metrics',
-			call: 'debug_metrics',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'verbosity',
-			call: 'debug_verbosity',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'verbosityByName',
-			call: 'debug_verbosityByName',
-			params: 2
-		}),
-		new web3._extend.Method({
-			name: 'verbosityByID',
-			call: 'debug_verbosityByID',
-			params: 2
-		}),
-		new web3._extend.Method({
-			name: 'vmodule',
-			call: 'debug_vmodule',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'backtraceAt',
-			call: 'debug_backtraceAt',
-			params: 1,
-		}),
-		new web3._extend.Method({
-			name: 'stacks',
-			call: 'debug_stacks',
-			params: 0,
-			outputFormatter: console.log
-		}),
-		new web3._extend.Method({
-			name: 'freeOSMemory',
-			call: 'debug_freeOSMemory',
-			params: 0,
-		}),
-		new web3._extend.Method({
-			name: 'setGCPercent',
-			call: 'debug_setGCPercent',
-			params: 1,
-		}),
-		new web3._extend.Method({
-			name: 'memStats',
-			call: 'debug_memStats',
-			params: 0,
-		}),
-		new web3._extend.Method({
-			name: 'gcStats',
-			call: 'debug_gcStats',
-			params: 0,
-		}),
-		new web3._extend.Method({
-			name: 'startPProf',
-			call: 'debug_startPProf',
+			name: 'getModifiedAccountsByNumber',
+			call: 'debug_getModifiedAccountsByNumber',
 			params: 2,
-			inputFormatter: [null, null]
+			inputFormatter: [null, null],
 		}),
 		new web3._extend.Method({
-			name: 'stopPProf',
-			call: 'debug_stopPProf',
-			params: 0
+			name: 'getModifiedAccountsByHash',
+			call: 'debug_getModifiedAccountsByHash',
+			params: 2,
+			inputFormatter:[null, null],
 		}),
 		new web3._extend.Method({
-			name: 'isPProfRunning',
-			call: 'debug_isPProfRunning',
-			params: 0
+			name: 'getModifiedStorageNodesByNumber',
+			call: 'debug_getModifiedStorageNodesByNumber',
+			params: 4,
+			inputFormatter: [null, null, null, null],
 		}),
 		new web3._extend.Method({
-			name: 'cpuProfile',
-			call: 'debug_cpuProfile',
-			params: 2
-		}),
-		new web3._extend.Method({
-			name: 'startCPUProfile',
-			call: 'debug_startCPUProfile',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'stopCPUProfile',
-			call: 'debug_stopCPUProfile',
-			params: 0
-		}),
-		new web3._extend.Method({
-			name: 'goTrace',
-			call: 'debug_goTrace',
-			params: 2
-		}),
-		new web3._extend.Method({
-			name: 'startGoTrace',
-			call: 'debug_startGoTrace',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'stopGoTrace',
-			call: 'debug_stopGoTrace',
-			params: 0
-		}),
-		new web3._extend.Method({
-			name: 'blockProfile',
-			call: 'debug_blockProfile',
-			params: 2
-		}),
-		new web3._extend.Method({
-			name: 'setBlockProfileRate',
-			call: 'debug_setBlockProfileRate',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'writeBlockProfile',
-			call: 'debug_writeBlockProfile',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'mutexProfile',
-			call: 'debug_mutexProfile',
-			params: 2
-		}),
-		new web3._extend.Method({
-			name: 'setMutexProfileRate',
-			call: 'debug_setMutexProfileRate',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'writeMutexProfile',
-			call: 'debug_writeMutexProfile',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'writeMemProfile',
-			call: 'debug_writeMemProfile',
-			params: 1
+			name: 'getBadBlocks',
+			call: 'debug_getBadBlocks',
+			params: 0,
 		}),
 		new web3._extend.Method({
 			name: 'traceBlock',
@@ -705,28 +553,10 @@ web3._extend({
 			inputFormatter: [null, null]
 		}),
 		new web3._extend.Method({
-			name: 'traceBlockFromFile',
-			call: 'debug_traceBlockFromFile',
-			params: 2,
-			inputFormatter: [null, null]
-		}),
-		new web3._extend.Method({
 			name: 'traceBadBlock',
 			call: 'debug_traceBadBlock',
 			params: 1,
 			inputFormatter: [null]
-		}),
-		new web3._extend.Method({
-			name: 'standardTraceBadBlockToFile',
-			call: 'debug_standardTraceBadBlockToFile',
-			params: 2,
-			inputFormatter: [null, null]
-		}),
-		new web3._extend.Method({
-			name: 'standardTraceBlockToFile',
-			call: 'debug_standardTraceBlockToFile',
-			params: 2,
-			inputFormatter: [null, null]
 		}),
 		new web3._extend.Method({
 			name: 'traceBlockByNumber',
@@ -752,43 +582,259 @@ web3._extend({
 			params: 2,
 			inputFormatter: [null, null]
 		}),
+	],
+	properties: []
+});
+`
+
+const UnsafeDebug_JS = `
+web3._extend({
+	property: 'unsafedebug',
+	methods: [
 		new web3._extend.Method({
-			name: 'preimage',
-			call: 'debug_preimage',
+			name: 'printBlock',
+			call: 'unsafedebug_printBlock',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'setHead',
+			call: 'unsafedebug_setHead',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
+			name: 'startWarmUp',
+			call: 'unsafedebug_startWarmUp',
+		}),
+		new web3._extend.Method({
+			name: 'startContractWarmUp',
+			call: 'unsafedebug_startContractWarmUp',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'stopWarmUp',
+			call: 'unsafedebug_stopWarmUp',
+		}),
+		new web3._extend.Method({
+			name: 'startCollectingTrieStats',
+			call: 'unsafedebug_startCollectingTrieStats',
+			params: 1,
+		}),
+		new web3._extend.Method({
+			name: 'chaindbProperty',
+			call: 'unsafedebug_chaindbProperty',
+			params: 1,
+			outputFormatter: console.log
+		}),
+		new web3._extend.Method({
+			name: 'chaindbCompact',
+			call: 'unsafedebug_chaindbCompact',
+		}),
+		new web3._extend.Method({
+			name: 'metrics',
+			call: 'unsafedebug_metrics',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'verbosity',
+			call: 'unsafedebug_verbosity',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'verbosityByName',
+			call: 'unsafedebug_verbosityByName',
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'verbosityByID',
+			call: 'unsafedebug_verbosityByID',
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'vmodule',
+			call: 'unsafedebug_vmodule',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'backtraceAt',
+			call: 'unsafedebug_backtraceAt',
+			params: 1,
+		}),
+		new web3._extend.Method({
+			name: 'stacks',
+			call: 'unsafedebug_stacks',
+			params: 0,
+			outputFormatter: console.log
+		}),
+		new web3._extend.Method({
+			name: 'freeOSMemory',
+			call: 'unsafedebug_freeOSMemory',
+			params: 0,
+		}),
+		new web3._extend.Method({
+			name: 'setGCPercent',
+			call: 'unsafedebug_setGCPercent',
+			params: 1,
+		}),
+		new web3._extend.Method({
+			name: 'memStats',
+			call: 'unsafedebug_memStats',
+			params: 0,
+		}),
+		new web3._extend.Method({
+			name: 'gcStats',
+			call: 'unsafedebug_gcStats',
+			params: 0,
+		}),
+		new web3._extend.Method({
+			name: 'startPProf',
+			call: 'unsafedebug_startPProf',
+			params: 2,
+			inputFormatter: [null, null]
+		}),
+		new web3._extend.Method({
+			name: 'stopPProf',
+			call: 'unsafedebug_stopPProf',
+			params: 0
+		}),
+		new web3._extend.Method({
+			name: 'isPProfRunning',
+			call: 'unsafedebug_isPProfRunning',
+			params: 0
+		}),
+		new web3._extend.Method({
+			name: 'cpuProfile',
+			call: 'unsafedebug_cpuProfile',
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'startCPUProfile',
+			call: 'unsafedebug_startCPUProfile',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'stopCPUProfile',
+			call: 'unsafedebug_stopCPUProfile',
+			params: 0
+		}),
+		new web3._extend.Method({
+			name: 'goTrace',
+			call: 'unsafedebug_goTrace',
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'startGoTrace',
+			call: 'unsafedebug_startGoTrace',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'stopGoTrace',
+			call: 'unsafedebug_stopGoTrace',
+			params: 0
+		}),
+		new web3._extend.Method({
+			name: 'blockProfile',
+			call: 'unsafedebug_blockProfile',
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'setBlockProfileRate',
+			call: 'unsafedebug_setBlockProfileRate',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'writeBlockProfile',
+			call: 'unsafedebug_writeBlockProfile',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'mutexProfile',
+			call: 'unsafedebug_mutexProfile',
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'setMutexProfileRate',
+			call: 'unsafedebug_setMutexProfileRate',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'writeMutexProfile',
+			call: 'unsafedebug_writeMutexProfile',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'writeMemProfile',
+			call: 'unsafedebug_writeMemProfile',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'traceBlock',
+			call: 'unsafedebug_traceBlock',
+			params: 2,
+			inputFormatter: [null, null]
+		}),
+		new web3._extend.Method({
+			name: 'traceBlockFromFile',
+			call: 'unsafedebug_traceBlockFromFile',
+			params: 2,
+			inputFormatter: [null, null]
+		}),
+		new web3._extend.Method({
+			name: 'traceBadBlock',
+			call: 'unsafedebug_traceBadBlock',
 			params: 1,
 			inputFormatter: [null]
 		}),
 		new web3._extend.Method({
-			name: 'getBadBlocks',
-			call: 'debug_getBadBlocks',
-			params: 0,
+			name: 'standardTraceBadBlockToFile',
+			call: 'unsafedebug_standardTraceBadBlockToFile',
+			params: 2,
+			inputFormatter: [null, null]
+		}),
+		new web3._extend.Method({
+			name: 'standardTraceBlockToFile',
+			call: 'unsafedebug_standardTraceBlockToFile',
+			params: 2,
+			inputFormatter: [null, null]
+		}),
+		new web3._extend.Method({
+			name: 'traceBlockByNumber',
+			call: 'unsafedebug_traceBlockByNumber',
+			params: 2,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter, null]
+		}),
+		new web3._extend.Method({
+			name: 'traceBlockByNumberRange',
+			call: 'unsafedebug_traceBlockByNumberRange',
+			params: 3,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter, web3._extend.formatters.inputBlockNumberFormatter, null]
+		}),
+		new web3._extend.Method({
+			name: 'traceBlockByHash',
+			call: 'unsafedebug_traceBlockByHash',
+			params: 2,
+			inputFormatter: [null, null]
+		}),
+		new web3._extend.Method({
+			name: 'traceTransaction',
+			call: 'unsafedebug_traceTransaction',
+			params: 2,
+			inputFormatter: [null, null]
+		}),
+		new web3._extend.Method({
+			name: 'preimage',
+			call: 'unsafedebug_preimage',
+			params: 1,
+			inputFormatter: [null]
 		}),
 		new web3._extend.Method({
 			name: 'storageRangeAt',
-			call: 'debug_storageRangeAt',
+			call: 'unsafedebug_storageRangeAt',
 			params: 5,
 		}),
 		new web3._extend.Method({
-			name: 'getModifiedAccountsByNumber',
-			call: 'debug_getModifiedAccountsByNumber',
-			params: 2,
-			inputFormatter: [null, null],
-		}),
-		new web3._extend.Method({
-			name: 'getModifiedAccountsByHash',
-			call: 'debug_getModifiedAccountsByHash',
-			params: 2,
-			inputFormatter:[null, null],
-		}),
-		new web3._extend.Method({
-			name: 'getModifiedStorageNodesByNumber',
-			call: 'debug_getModifiedStorageNodesByNumber',
-			params: 4,
-			inputFormatter: [null, null, null, null],
-		}),
-		new web3._extend.Method({
 			name: 'setVMLogTarget',
-			call: 'debug_setVMLogTarget',
+			call: 'unsafedebug_setVMLogTarget',
 			params: 1
 		}),
 	],

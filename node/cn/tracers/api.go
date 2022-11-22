@@ -92,12 +92,20 @@ type Backend interface {
 
 // API is the collection of tracing APIs exposed over the private debugging endpoint.
 type API struct {
-	backend Backend
+	backend     Backend
+	unsafeTrace bool
 }
 
-// NewAPI creates a new API definition for the tracing methods of the CN service.
+// NewAPI creates a new API definition for the tracing methods of the CN service,
+// only allowing predefined tracers.
 func NewAPI(backend Backend) *API {
-	return &API{backend: backend}
+	return &API{backend: backend, unsafeTrace: false}
+}
+
+// NewUnsafeAPI creates a new API definition for the tracing methods of the CN service,
+// allowing both predefined tracers and Javascript snippet based tracing.
+func NewUnsafeAPI(backend Backend) *API {
+	return &API{backend: backend, unsafeTrace: true}
 }
 
 type chainContext struct {
@@ -492,6 +500,9 @@ func (api *API) TraceBlock(ctx context.Context, blob hexutil.Bytes, config *Trac
 // TraceBlockFromFile returns the structured logs created during the execution of
 // EVM and returns them as a JSON object.
 func (api *API) TraceBlockFromFile(ctx context.Context, file string, config *TraceConfig) ([]*txTraceResult, error) {
+	if !api.unsafeTrace {
+		return nil, errors.New("TraceBlockFromFile is not supported in 'debug' namespace, use 'unsafedebug' namespace instead")
+	}
 	blob, err := ioutil.ReadFile(file)
 	if err != nil {
 		return nil, fmt.Errorf("could not read file: %v", err)
@@ -793,8 +804,8 @@ func (api *API) traceTx(ctx context.Context, message blockchain.Message, vmctx v
 		if *config.Tracer == fastCallTracer {
 			tracer = vm.NewInternalTxTracer()
 		} else {
-			// Constuct the JavaScript tracer to execute with
-			if tracer, err = New(*config.Tracer); err != nil {
+			// Construct the JavaScript tracer to execute with
+			if tracer, err = New(*config.Tracer, api.unsafeTrace); err != nil {
 				return nil, err
 			}
 		}
