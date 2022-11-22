@@ -91,6 +91,9 @@ type StateDB struct {
 
 	preimages map[common.Hash][]byte
 
+	// Per-transaction access list
+	accessList *accessList
+
 	// Journal of state modifications. This is the backbone of
 	// Snapshot and RevertToSnapshot.
 	journal        *journal
@@ -129,6 +132,7 @@ func New(root common.Hash, db Database, snaps *snapshot.Tree) (*StateDB, error) 
 		logs:                     make(map[common.Hash][]*types.Log),
 		preimages:                make(map[common.Hash][]byte),
 		journal:                  newJournal(),
+		accessList:               newAccessList(),
 	}
 	if sdb.snaps != nil {
 		if sdb.snap = sdb.snaps.Snapshot(root); sdb.snap != nil {
@@ -206,6 +210,7 @@ func (self *StateDB) Reset(root common.Hash) error {
 	self.logSize = 0
 	self.preimages = make(map[common.Hash][]byte)
 	self.clearJournalAndRefund()
+	self.accessList = newAccessList()
 	return nil
 }
 
@@ -835,6 +840,13 @@ func (self *StateDB) Copy() *StateDB {
 		state.preimages[hash] = preimage
 	}
 
+	// Do we need to copy the access list? In practice: No. At the start of a
+	// transaction, the access list is empty. In practice, we only ever copy state
+	// _between_ transactions/blocks, never in the middle of a transaction.
+	// However, it doesn't cost us much to copy an empty list, so we do it anyway
+	// to not blow up if we ever decide copy it in the middle of a transaction
+	state.accessList = self.accessList.Copy()
+
 	if self.snaps != nil {
 		// In order for the miner to be able to use and make additions
 		// to the snapshot tree, we need to copy that aswell.
@@ -1090,4 +1102,73 @@ func (s *StateDB) GetContractStorageRoot(contractAddr common.Address) (common.Ha
 		return common.Hash{}, errNotContractAddress
 	}
 	return contract.GetStorageRoot(), nil
+}
+
+// PrepareAccessList handles the preparatory steps for executing a state transition with
+// regards to EIP-2929:
+//
+// - Add sender to access list (2929)
+// - Add feepayer to access list (only for klaytn)
+// - Add destination to access list (2929)
+// - Add precompiles to access list (2929)
+//
+// This method should only be called if Yolov3/Berlin/2929+2930 is applicable at the current number.
+func (s *StateDB) PrepareAccessList(sender common.Address, feepayer common.Address, dst *common.Address, precompiles []common.Address) {
+	// Clear out any leftover from previous executions
+	s.accessList = newAccessList()
+
+	s.AddAddressToAccessList(sender)
+	if !common.EmptyAddress(feepayer) && sender != feepayer {
+		s.AddAddressToAccessList(feepayer)
+	}
+	if dst != nil {
+		s.AddAddressToAccessList(*dst)
+		// If it's a create-tx, the destination will be added inside evm.create
+	}
+	for _, addr := range precompiles {
+		s.AddAddressToAccessList(addr)
+	}
+	// Uncommented below code because we do not support optional accessList yet (written at eip-2930).
+	// Optional accessList is the accessList mentioned through tx args.
+	//for _, el := range list {
+	//	s.AddAddressToAccessList(el.Address)
+	//	for _, key := range el.StorageKeys {
+	//		s.AddSlotToAccessList(el.Address, key)
+	//	}
+	//}
+}
+
+// AddAddressToAccessList adds the given address to the access list
+func (s *StateDB) AddAddressToAccessList(addr common.Address) {
+	if s.accessList.AddAddress(addr) {
+		s.journal.append(accessListAddAccountChange{&addr})
+	}
+}
+
+// AddSlotToAccessList adds the given (address, slot)-tuple to the access list
+func (s *StateDB) AddSlotToAccessList(addr common.Address, slot common.Hash) {
+	addrMod, slotMod := s.accessList.AddSlot(addr, slot)
+	if addrMod {
+		// In practice, this should not happen, since there is no way to enter the
+		// scope of 'address' without having the 'address' become already added
+		// to the access list (via call-variant, create, etc).
+		// Better safe than sorry, though
+		s.journal.append(accessListAddAccountChange{&addr})
+	}
+	if slotMod {
+		s.journal.append(accessListAddSlotChange{
+			address: &addr,
+			slot:    &slot,
+		})
+	}
+}
+
+// AddressInAccessList returns true if the given address is in the access list.
+func (s *StateDB) AddressInAccessList(addr common.Address) bool {
+	return s.accessList.ContainsAddress(addr)
+}
+
+// SlotInAccessList returns true if the given (address, slot)-tuple is in the access list.
+func (s *StateDB) SlotInAccessList(addr common.Address, slot common.Hash) (addressPresent bool, slotPresent bool) {
+	return s.accessList.Contains(addr, slot)
 }
