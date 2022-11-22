@@ -243,6 +243,8 @@ func (e *MixedEngine) handleParamUpdate(old, new *params.GovParamSet) {
 				if e.txpool != nil {
 					e.txpool.SetGasPrice(big.NewInt(0).SetUint64(new.UnitPrice()))
 				}
+			case params.DeriveShaImpl:
+				e.config.DeriveShaImpl = new.DeriveShaImpl()
 			}
 		}
 	}

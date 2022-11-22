@@ -33,48 +33,66 @@ type IDeriveSha interface {
 	DeriveSha(list types.DerivableList) common.Hash
 }
 
+type GovernanceEngine interface {
+	ParamsAt(num uint64) (*params.GovParamSet, error)
+}
+
 var (
 	config     *params.ChainConfig
-	instances  map[int]IDeriveSha
+	gov        GovernanceEngine
+	impls      map[int]IDeriveSha
 	emptyRoots map[int]common.Hash
 
 	logger = log.NewModuleLogger(log.Blockchain)
 )
 
 func init() {
-	instances = map[int]IDeriveSha{
+	impls = map[int]IDeriveSha{
 		types.ImplDeriveShaOriginal: DeriveShaOrig{},
 		types.ImplDeriveShaSimple:   DeriveShaSimple{},
 		types.ImplDeriveShaConcat:   DeriveShaConcat{},
 	}
 
 	emptyRoots = make(map[int]common.Hash)
-	for implType, instance := range instances {
-		emptyRoots[implType] = instance.DeriveSha(types.Transactions{})
+	for implType, impl := range impls {
+		emptyRoots[implType] = impl.DeriveSha(types.Transactions{})
 	}
 }
 
-func InitDeriveSha(chainConfig *params.ChainConfig) {
+func InitDeriveSha(chainConfig *params.ChainConfig, govEngine GovernanceEngine) {
 	config = chainConfig
+	gov = govEngine
 	types.DeriveSha = DeriveShaMux
 	types.EmptyRootHash = EmptyRootHashMux
+	logger.Info("InitDeriveSha", "initial", config.DeriveShaImpl, "withGov", gov != nil)
 }
 
 func DeriveShaMux(list types.DerivableList, num *big.Int) common.Hash {
-	return instances[getType()].DeriveSha(list)
+	return impls[getType(num)].DeriveSha(list)
 }
 
 func EmptyRootHashMux(num *big.Int) common.Hash {
-	return emptyRoots[getType()]
+	return emptyRoots[getType(num)]
 }
 
-// TODO: Choose appropriate DeriveShaImpl from governance based on block number
-func getType() int {
+func getType(num *big.Int) int {
 	implType := config.DeriveShaImpl
-	if _, ok := instances[implType]; ok {
+
+	// gov == nil if blockchain.InitDeriveSha() is used, in genesis block manipulation
+	// and unit tests. gov != nil if blockchain.InitDeriveShaWithGov is used,
+	// in ordinary blockchain processing.
+	if gov != nil {
+		if pset, err := gov.ParamsAt(num.Uint64()); err != nil {
+			logger.Crit("Cannot determine DeriveShaImpl", "num", num.Uint64(), "err", err)
+		} else {
+			implType = pset.DeriveShaImpl()
+		}
+	}
+
+	if _, ok := impls[implType]; ok {
 		return implType
 	} else {
-		logger.Error("Unrecognized deriveShaImpl, falling back to Orig", "impl", implType)
-		return types.ImplDeriveShaOriginal
+		logger.Error("Unrecognized deriveShaImpl, falling back to default impl", "impl", implType)
+		return int(params.DefaultDeriveShaImpl)
 	}
 }
