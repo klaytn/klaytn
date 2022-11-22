@@ -1117,7 +1117,7 @@ func (s *StateDB) PrepareAccessList(sender common.Address, feepayer common.Addre
 	s.accessList = newAccessList()
 
 	s.AddAddressToAccessList(sender)
-	if common.EmptyAddress(feepayer) && sender != feepayer {
+	if !common.EmptyAddress(feepayer) && sender != feepayer {
 		s.AddAddressToAccessList(feepayer)
 	}
 	if dst != nil {
