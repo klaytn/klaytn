@@ -1101,7 +1101,6 @@ func GetGovernanceItemsFromChainConfig(config *params.ChainConfig) GovernanceSet
 			params.StakeUpdateInterval:     governance.Reward.StakingUpdateInterval,
 			params.ProposerRefreshInterval: governance.Reward.ProposerUpdateInterval,
 		}
-
 		appendGovSet(governanceMap)
 	}
 
@@ -1112,7 +1111,6 @@ func GetGovernanceItemsFromChainConfig(config *params.ChainConfig) GovernanceSet
 			params.Policy:        istanbul.ProposerPolicy,
 			params.CommitteeSize: istanbul.SubGroupSize,
 		}
-
 		appendGovSet(istanbulMap)
 	}
 
@@ -1127,7 +1125,6 @@ func GetGovernanceItemsFromChainConfig(config *params.ChainConfig) GovernanceSet
 			params.MaxBlockGasUsedForBaseFee: kip71.MaxBlockGasUsedForBaseFee,
 			params.BaseFeeDenominator:        kip71.BaseFeeDenominator,
 		}
-
 		appendGovSet(governanceMap)
 	}
 
@@ -1138,7 +1135,6 @@ func GetGovernanceItemsFromChainConfig(config *params.ChainConfig) GovernanceSet
 			params.GovParamContract: config.Governance.GovParamContract,
 			params.Kip82Ratio:       config.Governance.Reward.Kip82Ratio,
 		}
-
 		appendGovSet(governanceMap)
 	}
 
