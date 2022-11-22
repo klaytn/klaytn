@@ -95,11 +95,11 @@ func parse(ctx *cli.Context) error {
 	default:
 		return printUsage()
 	}
-	pp(m)
+	prettyPrint(m)
 	return nil
 }
 
-func pp(m map[string]interface{}) {
+func prettyPrint(m map[string]interface{}) {
 	if b, err := json.MarshalIndent(m, "", "  "); err == nil {
 		fmt.Println(string(b))
 	} else {
