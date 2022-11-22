@@ -92,7 +92,7 @@ func getType(num *big.Int) int {
 	if _, ok := impls[implType]; ok {
 		return implType
 	} else {
-		logger.Error("Unrecognized deriveShaImpl, falling back to Orig", "impl", implType)
-		return types.ImplDeriveShaOriginal
+		logger.Error("Unrecognized deriveShaImpl, falling back to default impl", "impl", implType)
+		return int(params.DefaultDeriveShaImpl)
 	}
 }
