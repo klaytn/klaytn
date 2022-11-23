@@ -572,8 +572,6 @@ func (evm *EVM) GetPrecompiledContractMap(addr common.Address) map[common.Addres
 	case evm.chainRules.IsIstanbul:
 		return PrecompiledContractsIstanbulCompatible
 	default:
-		// It should not happen.
-		logger.Error("VmVersion is not zero, but it uses PrecompiledContractsByzantiumCompatible")
 		return PrecompiledContractsByzantiumCompatible
 	}
 }
