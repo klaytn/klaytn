@@ -530,6 +530,9 @@ func (api *API) TraceBadBlock(ctx context.Context, hash common.Hash, config *Tra
 // execution of EVM to the local file system and returns a list of files
 // to the caller.
 func (api *API) StandardTraceBlockToFile(ctx context.Context, hash common.Hash, config *StdTraceConfig) ([]string, error) {
+	if !api.unsafeTrace {
+		return nil, errors.New("StandardTraceBlockToFile is not supported in 'debug' namespace, use 'unsafedebug' namespace instead")
+	}
 	block, err := api.blockByHash(ctx, hash)
 	if err != nil {
 		return nil, fmt.Errorf("block %#x not found", hash)
@@ -541,6 +544,9 @@ func (api *API) StandardTraceBlockToFile(ctx context.Context, hash common.Hash, 
 // execution of EVM against a block pulled from the pool of bad ones to the
 // local file system and returns a list of files to the caller.
 func (api *API) StandardTraceBadBlockToFile(ctx context.Context, hash common.Hash, config *StdTraceConfig) ([]string, error) {
+	if !api.unsafeTrace {
+		return nil, errors.New("StandardTraceBadBlockToFile is not supported in 'debug' namespace, use 'unsafedebug' namespace instead")
+	}
 	blocks, err := api.backend.ChainDB().ReadAllBadBlocks()
 	if err != nil {
 		return nil, err
