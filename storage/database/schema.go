@@ -37,10 +37,12 @@ var (
 	headHeaderKey = []byte("LastHeader")
 
 	// headBlockKey tracks the latest know full block's hash.
-	headBlockKey = []byte("LastBlock")
+	headBlockKey       = []byte("LastBlock")
+	headBlockBackupKey = []byte("LastBlockBackup")
 
 	// headFastBlockKey tracks the latest known incomplete block's hash duirng fast sync.
-	headFastBlockKey = []byte("LastFast")
+	headFastBlockKey       = []byte("LastFast")
+	headFastBlockBackupKey = []byte("LastFastBackup")
 
 	// fastTrieProgressKey tracks the number of trie entries imported during fast sync.
 	fastTrieProgressKey = []byte("TrieSync")

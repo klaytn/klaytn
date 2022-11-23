@@ -107,7 +107,7 @@ func initGenesis(ctx *cli.Context) error {
 	}
 
 	// Update undefined config with default values
-	genesis.Config.SetDefaults()
+	genesis.Config.SetDefaultsForGenesis()
 
 	// Validate config values
 	if err := ValidateGenesisConfig(genesis); err != nil {
@@ -159,7 +159,7 @@ func initGenesis(ctx *cli.Context) error {
 		chainDB := stack.OpenDatabase(dbc)
 
 		// Initialize DeriveSha implementation
-		blockchain.InitDeriveSha(genesis.Config.DeriveShaImpl)
+		blockchain.InitDeriveSha(genesis.Config)
 
 		_, hash, err := blockchain.SetupGenesisBlock(chainDB, genesis, params.UnusedNetworkId, false, overwriteGenesis)
 		if err != nil {
@@ -180,7 +180,7 @@ func initGenesis(ctx *cli.Context) error {
 }
 
 func dumpGenesis(ctx *cli.Context) error {
-	genesis := utils.MakeGenesis(ctx)
+	genesis := MakeGenesis(ctx)
 	if genesis == nil {
 		genesis = blockchain.DefaultGenesisBlock()
 	}
@@ -188,6 +188,17 @@ func dumpGenesis(ctx *cli.Context) error {
 		logger.Crit("could not encode genesis")
 	}
 	return nil
+}
+
+func MakeGenesis(ctx *cli.Context) *blockchain.Genesis {
+	var genesis *blockchain.Genesis
+	switch {
+	case ctx.GlobalBool(utils.CypressFlag.Name):
+		genesis = blockchain.DefaultGenesisBlock()
+	case ctx.GlobalBool(utils.BaobabFlag.Name):
+		genesis = blockchain.DefaultBaobabGenesisBlock()
+	}
+	return genesis
 }
 
 func ValidateGenesisConfig(g *blockchain.Genesis) error {

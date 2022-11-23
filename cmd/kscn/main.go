@@ -63,6 +63,9 @@ func init() {
 
 		// See utils/nodecmd/dumpconfigcmd.go:
 		nodecmd.GetDumpConfigCommand(nodecmd.KscnNodeFlags(), nodecmd.CommonRPCFlags),
+
+		// See utils/nodecmd/snapshot.go:
+		nodecmd.SnapshotCommand,
 	}
 	sort.Sort(cli.CommandsByName(app.Commands))
 
@@ -84,7 +87,7 @@ func init() {
 func main() {
 	// Set NodeTypeFlag to cn
 	utils.NodeTypeFlag.Value = "cn"
-	utils.NetworkTypeFlag.Value = nodecmd.SCNNetworkType
+	utils.NetworkTypeFlag.Value = utils.SCNNetworkType
 
 	if err := app.Run(os.Args); err != nil {
 		fmt.Fprintln(os.Stderr, err)

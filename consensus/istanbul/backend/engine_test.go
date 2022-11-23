@@ -39,7 +39,6 @@ import (
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/consensus/istanbul/core"
 	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/rlp"
@@ -59,6 +58,7 @@ type (
 	LondonCompatibleBlock    *big.Int
 	EthTxTypeCompatibleBlock *big.Int
 	magmaCompatibleBlock     *big.Int
+	koreCompatibleBlock      *big.Int
 )
 
 type (
@@ -133,6 +133,8 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 			genesis.Config.EthTxTypeCompatibleBlock = v
 		case magmaCompatibleBlock:
 			genesis.Config.MagmaCompatibleBlock = v
+		case koreCompatibleBlock:
+			genesis.Config.KoreCompatibleBlock = v
 		case proposerPolicy:
 			genesis.Config.Istanbul.ProposerPolicy = uint64(v)
 		case epoch:
@@ -178,6 +180,8 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 	if err != nil {
 		panic(err)
 	}
+	b.governance.SetBlockchain(bc)
+
 	if b.Start(bc, bc.CurrentBlock, bc.HasBadBlock) != nil {
 		panic(err)
 	}
@@ -332,6 +336,7 @@ func TestVerifyHeader(t *testing.T) {
 	configItems = append(configItems, LondonCompatibleBlock(new(big.Int).SetUint64(0)))
 	configItems = append(configItems, EthTxTypeCompatibleBlock(new(big.Int).SetUint64(0)))
 	configItems = append(configItems, magmaCompatibleBlock(new(big.Int).SetUint64(0)))
+	configItems = append(configItems, koreCompatibleBlock(new(big.Int).SetUint64(0)))
 	chain, engine := newBlockChain(1, configItems...)
 	defer engine.Stop()
 
@@ -670,6 +675,7 @@ func makeFakeStakingInfo(blockNumber uint64, keys []*ecdsa.PrivateKey, amounts [
 		rewardAddr := crypto.PubkeyToAddress(pk.PublicKey)
 
 		stakingInfo.CouncilNodeAddrs = append(stakingInfo.CouncilNodeAddrs, addr)
+		stakingInfo.CouncilStakingAddrs = append(stakingInfo.CouncilStakingAddrs, addr)
 		stakingInfo.CouncilStakingAmounts = append(stakingInfo.CouncilStakingAmounts, amounts[idx])
 		stakingInfo.CouncilRewardAddrs = append(stakingInfo.CouncilRewardAddrs, rewardAddr)
 	}
@@ -1320,6 +1326,8 @@ func TestGovernance_Votes(t *testing.T) {
 				{"reward.ratio", "34/33/33"},              // voted on block 5
 				{"reward.useginicoeff", true},             // voted on block 6
 				{"reward.minimumstake", "5000000"},        // voted on block 7
+				{"reward.kip82ratio", "50/50"},            // voted on block 8
+				{"governance.deriveshaimpl", uint64(2)},   // voted on block 9
 			},
 			expected: []governanceItem{
 				{vote{"governance.governancemode", "none"}, 6},
@@ -1329,6 +1337,8 @@ func TestGovernance_Votes(t *testing.T) {
 				{vote{"reward.ratio", "34/33/33"}, 9},
 				{vote{"reward.useginicoeff", true}, 12},
 				{vote{"reward.minimumstake", "5000000"}, 12},
+				{vote{"reward.kip82ratio", "50/50"}, 12},
+				{vote{"governance.deriveshaimpl", uint64(2)}, 15},
 				// check governance items on current block
 				{vote{"governance.governancemode", "none"}, 0},
 				{vote{"istanbul.committeesize", uint64(4)}, 0},
@@ -1337,6 +1347,8 @@ func TestGovernance_Votes(t *testing.T) {
 				{vote{"reward.ratio", "34/33/33"}, 0},
 				{vote{"reward.useginicoeff", true}, 0},
 				{vote{"reward.minimumstake", "5000000"}, 0},
+				{vote{"reward.kip82ratio", "50/50"}, 0},
+				{vote{"governance.deriveshaimpl", uint64(2)}, 0},
 			},
 		},
 		{
@@ -1486,6 +1498,19 @@ func TestGovernance_Votes(t *testing.T) {
 				{vote{"kip71.basefeedenominator", uint64(64)}, 9},
 			},
 		},
+		{
+			votes: []vote{
+				{}, // voted on block 1
+				{"governance.govparamcontract", common.HexToAddress("0x0000000000000000000000000000000000000000")}, // voted on block 2
+				{}, // voted on block 3
+				{}, // voted on block 4
+				{"governance.govparamcontract", common.HexToAddress("0x0000000000000000000000000000000000000400")}, // voted on block 5
+			},
+			expected: []governanceItem{
+				{vote{"governance.govparamcontract", common.HexToAddress("0x0000000000000000000000000000000000000000")}, 6},
+				{vote{"governance.govparamcontract", common.HexToAddress("0x0000000000000000000000000000000000000400")}, 9},
+			},
+		},
 	}
 
 	var configItems []interface{}
@@ -1497,14 +1522,14 @@ func TestGovernance_Votes(t *testing.T) {
 		chain, engine := newBlockChain(1, configItems...)
 
 		// test initial governance items
-		assert.Equal(t, uint64(3), engine.governance.Epoch())
-		assert.Equal(t, "single", engine.governance.GovernanceMode())
-		assert.Equal(t, uint64(21), engine.governance.CommitteeSize())
-		assert.Equal(t, uint64(1), engine.governance.UnitPrice())
-		assert.Equal(t, "0", engine.governance.MintingAmount())
-		assert.Equal(t, "100/0/0", engine.governance.Ratio())
-		assert.Equal(t, false, engine.governance.UseGiniCoeff())
-		assert.Equal(t, "2000000", engine.governance.MinimumStake())
+		assert.Equal(t, uint64(3), engine.governance.Params().Epoch())
+		assert.Equal(t, "single", engine.governance.Params().GovernanceModeStr())
+		assert.Equal(t, uint64(21), engine.governance.Params().CommitteeSize())
+		assert.Equal(t, uint64(1), engine.governance.Params().UnitPrice())
+		assert.Equal(t, "0", engine.governance.Params().MintingAmountStr())
+		assert.Equal(t, "100/0/0", engine.governance.Params().Ratio())
+		assert.Equal(t, false, engine.governance.Params().UseGiniCoeff())
+		assert.Equal(t, "2000000", engine.governance.Params().MinimumStakeStr())
 
 		// add votes and insert voted blocks
 		var (
@@ -1789,18 +1814,17 @@ func TestChainConfig_ReadFromDBAfterVotes(t *testing.T) {
 			assert.NoError(t, err)
 		}
 
-		gov := governance.NewGovernanceInitialize(chain.Config(), engine.db)
 		switch tc.expected.key {
 		case "kip71.lowerboundbasefee":
-			assert.Equal(t, tc.expected.value, gov.ChainConfig.Governance.KIP71.LowerBoundBaseFee)
+			assert.Equal(t, tc.expected.value, chain.Config().Governance.KIP71.LowerBoundBaseFee)
 		case "kip71.upperboundbasefee":
-			assert.Equal(t, tc.expected.value, gov.ChainConfig.Governance.KIP71.UpperBoundBaseFee)
+			assert.Equal(t, tc.expected.value, chain.Config().Governance.KIP71.UpperBoundBaseFee)
 		case "kip71.gastarget":
-			assert.Equal(t, tc.expected.value, gov.ChainConfig.Governance.KIP71.GasTarget)
+			assert.Equal(t, tc.expected.value, chain.Config().Governance.KIP71.GasTarget)
 		case "kip71.maxblockgasusedforbasefee":
-			assert.Equal(t, tc.expected.value, gov.ChainConfig.Governance.KIP71.MaxBlockGasUsedForBaseFee)
+			assert.Equal(t, tc.expected.value, chain.Config().Governance.KIP71.MaxBlockGasUsedForBaseFee)
 		case "kip71.basefeedenominator":
-			assert.Equal(t, tc.expected.value, gov.ChainConfig.Governance.KIP71.BaseFeeDenominator)
+			assert.Equal(t, tc.expected.value, chain.Config().Governance.KIP71.BaseFeeDenominator)
 		default:
 			assert.Error(t, nil)
 		}

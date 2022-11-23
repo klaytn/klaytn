@@ -69,6 +69,7 @@ func KpnAppFlags() []cli.Flag {
 	flags = append(flags, ConsoleFlags...)
 	flags = append(flags, debug.Flags...)
 	flags = append(flags, DBMigrationFlags...)
+	flags = append(flags, ChainDataFetcherFlags...)
 	return flags
 }
 
@@ -78,6 +79,7 @@ func KenAppFlags() []cli.Flag {
 	flags = append(flags, ConsoleFlags...)
 	flags = append(flags, debug.Flags...)
 	flags = append(flags, DBMigrationFlags...)
+	flags = append(flags, ChainDataFetcherFlags...)
 	return flags
 }
 
@@ -94,6 +96,7 @@ func KspnAppFlags() []cli.Flag {
 	flags = append(flags, CommonRPCFlags...)
 	flags = append(flags, ConsoleFlags...)
 	flags = append(flags, debug.Flags...)
+	flags = append(flags, ChainDataFetcherFlags...)
 	return flags
 }
 
@@ -102,12 +105,15 @@ func KsenAppFlags() []cli.Flag {
 	flags = append(flags, CommonRPCFlags...)
 	flags = append(flags, ConsoleFlags...)
 	flags = append(flags, debug.Flags...)
+	flags = append(flags, ChainDataFetcherFlags...)
 	return flags
 }
 
 // Common flags that configure the node
 var CommonNodeFlags = []cli.Flag{
 	utils.ConfFlag,
+	altsrc.NewBoolFlag(utils.NtpDisableFlag),
+	altsrc.NewStringFlag(utils.NtpServerFlag),
 	altsrc.NewStringFlag(utils.BootnodesFlag),
 	altsrc.NewStringFlag(utils.IdentityFlag),
 	altsrc.NewStringFlag(utils.UnlockedAccountFlag),
@@ -198,6 +204,7 @@ var CommonNodeFlags = []cli.Flag{
 	altsrc.NewUint64Flag(utils.OpcodeComputationCostLimitFlag),
 	altsrc.NewBoolFlag(utils.SnapshotFlag),
 	altsrc.NewIntFlag(utils.SnapshotCacheSizeFlag),
+	altsrc.NewBoolTFlag(utils.SnapshotAsyncGen),
 }
 
 // Common RPC flags
@@ -254,33 +261,6 @@ var KENFlags = []cli.Flag{
 	altsrc.NewBoolFlag(utils.MainBridgeFlag),
 	altsrc.NewIntFlag(utils.MainBridgeListenPortFlag),
 	altsrc.NewBoolFlag(utils.KESNodeTypeServiceFlag),
-	// ChainDataFetcher
-	altsrc.NewBoolFlag(utils.EnableChainDataFetcherFlag),
-	altsrc.NewStringFlag(utils.ChainDataFetcherMode),
-	altsrc.NewBoolFlag(utils.ChainDataFetcherNoDefault),
-	altsrc.NewIntFlag(utils.ChainDataFetcherNumHandlers),
-	altsrc.NewIntFlag(utils.ChainDataFetcherJobChannelSize),
-	altsrc.NewIntFlag(utils.ChainDataFetcherChainEventSizeFlag),
-	altsrc.NewIntFlag(utils.ChainDataFetcherMaxProcessingDataSize),
-	altsrc.NewStringFlag(utils.ChainDataFetcherKASDBHostFlag),
-	altsrc.NewStringFlag(utils.ChainDataFetcherKASDBPortFlag),
-	altsrc.NewStringFlag(utils.ChainDataFetcherKASDBNameFlag),
-	altsrc.NewStringFlag(utils.ChainDataFetcherKASDBUserFlag),
-	altsrc.NewStringFlag(utils.ChainDataFetcherKASDBPasswordFlag),
-	altsrc.NewBoolFlag(utils.ChainDataFetcherKASCacheUse),
-	altsrc.NewStringFlag(utils.ChainDataFetcherKASCacheURLFlag),
-	altsrc.NewStringFlag(utils.ChainDataFetcherKASXChainIdFlag),
-	altsrc.NewStringFlag(utils.ChainDataFetcherKASBasicAuthParamFlag),
-	altsrc.NewInt64Flag(utils.ChainDataFetcherKafkaReplicasFlag),
-	altsrc.NewStringSliceFlag(utils.ChainDataFetcherKafkaBrokersFlag),
-	altsrc.NewIntFlag(utils.ChainDataFetcherKafkaPartitionsFlag),
-	altsrc.NewStringFlag(utils.ChainDataFetcherKafkaTopicResourceFlag),
-	altsrc.NewStringFlag(utils.ChainDataFetcherKafkaTopicEnvironmentFlag),
-	altsrc.NewInt64Flag(utils.ChainDataFetcherKafkaMaxMessageBytesFlag),
-	altsrc.NewIntFlag(utils.ChainDataFetcherKafkaSegmentSizeBytesFlag),
-	altsrc.NewIntFlag(utils.ChainDataFetcherKafkaRequiredAcksFlag),
-	altsrc.NewStringFlag(utils.ChainDataFetcherKafkaMessageVersionFlag),
-	altsrc.NewStringFlag(utils.ChainDataFetcherKafkaProducerIdFlag),
 	// DBSyncer
 	altsrc.NewBoolFlag(utils.EnableDBSyncerFlag),
 	altsrc.NewStringFlag(utils.DBHostFlag),
@@ -381,33 +361,6 @@ var KSENFlags = []cli.Flag{
 	altsrc.NewBoolFlag(utils.KESNodeTypeServiceFlag),
 	altsrc.NewUint64Flag(utils.ServiceChainParentOperatorTxGasLimitFlag),
 	altsrc.NewUint64Flag(utils.ServiceChainChildOperatorTxGasLimitFlag),
-	// ChainDataFetcher
-	altsrc.NewBoolFlag(utils.EnableChainDataFetcherFlag),
-	altsrc.NewStringFlag(utils.ChainDataFetcherMode),
-	altsrc.NewBoolFlag(utils.ChainDataFetcherNoDefault),
-	altsrc.NewIntFlag(utils.ChainDataFetcherNumHandlers),
-	altsrc.NewIntFlag(utils.ChainDataFetcherJobChannelSize),
-	altsrc.NewIntFlag(utils.ChainDataFetcherChainEventSizeFlag),
-	altsrc.NewIntFlag(utils.ChainDataFetcherMaxProcessingDataSize),
-	altsrc.NewStringFlag(utils.ChainDataFetcherKASDBHostFlag),
-	altsrc.NewStringFlag(utils.ChainDataFetcherKASDBPortFlag),
-	altsrc.NewStringFlag(utils.ChainDataFetcherKASDBNameFlag),
-	altsrc.NewStringFlag(utils.ChainDataFetcherKASDBUserFlag),
-	altsrc.NewStringFlag(utils.ChainDataFetcherKASDBPasswordFlag),
-	altsrc.NewBoolFlag(utils.ChainDataFetcherKASCacheUse),
-	altsrc.NewStringFlag(utils.ChainDataFetcherKASCacheURLFlag),
-	altsrc.NewStringFlag(utils.ChainDataFetcherKASXChainIdFlag),
-	altsrc.NewStringFlag(utils.ChainDataFetcherKASBasicAuthParamFlag),
-	altsrc.NewInt64Flag(utils.ChainDataFetcherKafkaReplicasFlag),
-	altsrc.NewStringSliceFlag(utils.ChainDataFetcherKafkaBrokersFlag),
-	altsrc.NewIntFlag(utils.ChainDataFetcherKafkaPartitionsFlag),
-	altsrc.NewStringFlag(utils.ChainDataFetcherKafkaTopicResourceFlag),
-	altsrc.NewStringFlag(utils.ChainDataFetcherKafkaTopicEnvironmentFlag),
-	altsrc.NewInt64Flag(utils.ChainDataFetcherKafkaMaxMessageBytesFlag),
-	altsrc.NewIntFlag(utils.ChainDataFetcherKafkaSegmentSizeBytesFlag),
-	altsrc.NewIntFlag(utils.ChainDataFetcherKafkaRequiredAcksFlag),
-	altsrc.NewStringFlag(utils.ChainDataFetcherKafkaMessageVersionFlag),
-	altsrc.NewStringFlag(utils.ChainDataFetcherKafkaProducerIdFlag),
 	// KAS
 	altsrc.NewBoolFlag(utils.KASServiceChainAnchorFlag),
 	altsrc.NewUint64Flag(utils.KASServiceChainAnchorPeriodFlag),
@@ -451,4 +404,33 @@ var DBMigrationFlags = []cli.Flag{
 	altsrc.NewBoolFlag(utils.DstDynamoDBIsProvisionedFlag),
 	altsrc.NewInt64Flag(utils.DstDynamoDBReadCapacityFlag),
 	altsrc.NewInt64Flag(utils.DstDynamoDBWriteCapacityFlag),
+}
+
+var ChainDataFetcherFlags = []cli.Flag{
+	altsrc.NewBoolFlag(utils.EnableChainDataFetcherFlag),
+	altsrc.NewStringFlag(utils.ChainDataFetcherMode),
+	altsrc.NewBoolFlag(utils.ChainDataFetcherNoDefault),
+	altsrc.NewIntFlag(utils.ChainDataFetcherNumHandlers),
+	altsrc.NewIntFlag(utils.ChainDataFetcherJobChannelSize),
+	altsrc.NewIntFlag(utils.ChainDataFetcherChainEventSizeFlag),
+	altsrc.NewIntFlag(utils.ChainDataFetcherMaxProcessingDataSize),
+	altsrc.NewStringFlag(utils.ChainDataFetcherKASDBHostFlag),
+	altsrc.NewStringFlag(utils.ChainDataFetcherKASDBPortFlag),
+	altsrc.NewStringFlag(utils.ChainDataFetcherKASDBNameFlag),
+	altsrc.NewStringFlag(utils.ChainDataFetcherKASDBUserFlag),
+	altsrc.NewStringFlag(utils.ChainDataFetcherKASDBPasswordFlag),
+	altsrc.NewBoolFlag(utils.ChainDataFetcherKASCacheUse),
+	altsrc.NewStringFlag(utils.ChainDataFetcherKASCacheURLFlag),
+	altsrc.NewStringFlag(utils.ChainDataFetcherKASXChainIdFlag),
+	altsrc.NewStringFlag(utils.ChainDataFetcherKASBasicAuthParamFlag),
+	altsrc.NewInt64Flag(utils.ChainDataFetcherKafkaReplicasFlag),
+	altsrc.NewStringSliceFlag(utils.ChainDataFetcherKafkaBrokersFlag),
+	altsrc.NewIntFlag(utils.ChainDataFetcherKafkaPartitionsFlag),
+	altsrc.NewStringFlag(utils.ChainDataFetcherKafkaTopicResourceFlag),
+	altsrc.NewStringFlag(utils.ChainDataFetcherKafkaTopicEnvironmentFlag),
+	altsrc.NewInt64Flag(utils.ChainDataFetcherKafkaMaxMessageBytesFlag),
+	altsrc.NewIntFlag(utils.ChainDataFetcherKafkaSegmentSizeBytesFlag),
+	altsrc.NewIntFlag(utils.ChainDataFetcherKafkaRequiredAcksFlag),
+	altsrc.NewStringFlag(utils.ChainDataFetcherKafkaMessageVersionFlag),
+	altsrc.NewStringFlag(utils.ChainDataFetcherKafkaProducerIdFlag),
 }

@@ -97,7 +97,7 @@ func init() {
 			return err
 		}
 		metricutils.StartMetricCollectionAndExport(ctx)
-		utils.SetupNetwork(ctx)
+		setupNetwork(ctx)
 		return nil
 	}
 

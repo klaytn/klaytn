@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"errors"
 	"math/big"
+	"strings"
 	"testing"
 	"time"
 
@@ -70,7 +71,7 @@ func runTrace(tracer *Tracer) (json.RawMessage, error) {
 
 // TestRegressionPanicSlice tests that we don't panic on bad arguments to memory access
 func TestRegressionPanicSlice(t *testing.T) {
-	tracer, err := New("{depths: [], step: function(log) { this.depths.push(log.memory.slice(-1,-2)); }, fault: function() {}, result: function() { return this.depths; }}")
+	tracer, err := New("{depths: [], step: function(log) { this.depths.push(log.memory.slice(-1,-2)); }, fault: function() {}, result: function() { return this.depths; }}", true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,7 +82,7 @@ func TestRegressionPanicSlice(t *testing.T) {
 
 // TestRegressionPanicSlice tests that we don't panic on bad arguments to stack peeks
 func TestRegressionPanicPeek(t *testing.T) {
-	tracer, err := New("{depths: [], step: function(log) { this.depths.push(log.stack.peek(-1)); }, fault: function() {}, result: function() { return this.depths; }}")
+	tracer, err := New("{depths: [], step: function(log) { this.depths.push(log.stack.peek(-1)); }, fault: function() {}, result: function() { return this.depths; }}", true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,7 +93,7 @@ func TestRegressionPanicPeek(t *testing.T) {
 
 // TestRegressionPanicSlice tests that we don't panic on bad arguments to memory getUint
 func TestRegressionPanicGetUint(t *testing.T) {
-	tracer, err := New("{ depths: [], step: function(log, db) { this.depths.push(log.memory.getUint(-64));}, fault: function() {}, result: function() { return this.depths; }}")
+	tracer, err := New("{ depths: [], step: function(log, db) { this.depths.push(log.memory.getUint(-64));}, fault: function() {}, result: function() { return this.depths; }}", true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,23 +102,22 @@ func TestRegressionPanicGetUint(t *testing.T) {
 	}
 }
 
-// TODO-Klaytn-Tracer this test is commentted out since CI is failed due to segmentation fault
-//// TestTracingDeepObject tests if it returns an expected error when the json object has too many recursive children
-//func TestTracingDeepObject(t *testing.T) {
-//	tracer, err := New("{step: function() {}, fault: function() {}, result: function() { var o={}; var x=o; for (var i=0; i<1000; i++){ o.foo={}; o=o.foo; } return x; }}")
-//	if err != nil {
-//		t.Fatal(err)
-//	}
-//
-//	_, err = runTrace(tracer)
-//	expectedErr := `RangeError: json encode recursion limit    in server-side tracer function 'result'`
-//	if !strings.Contains(err.Error(), expectedErr) {
-//		t.Errorf("Expected return error to be %s, got %v", expectedErr, err)
-//	}
-//}
+// TestTracingDeepObject tests if it returns an expected error when the json object has too many recursive children
+func TestTracingDeepObject(t *testing.T) {
+	tracer, err := New("{step: function() {}, fault: function() {}, result: function() { var o={}; var x=o; for (var i=0; i<1000; i++){ o.foo={}; o=o.foo; } return x; }}", true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = runTrace(tracer)
+	expectedErr := `RangeError: json encode recursion limit    in server-side tracer function 'result'`
+	if !strings.Contains(err.Error(), expectedErr) {
+		t.Errorf("Expected return error to be %s, got %v", expectedErr, err)
+	}
+}
 
 func TestTracing(t *testing.T) {
-	tracer, err := New("{count: 0, step: function() { this.count += 1; }, fault: function() {}, result: function() { return this.count; }}")
+	tracer, err := New("{count: 0, step: function() { this.count += 1; }, fault: function() {}, result: function() { return this.count; }}", true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -131,8 +131,15 @@ func TestTracing(t *testing.T) {
 	}
 }
 
+func TestUnsafeTracingDisabled(t *testing.T) {
+	_, err := New("{count: 0, step: function() { this.count += 1; }, fault: function() {}, result: function() { return this.count; }}", false)
+	if err == nil || err.Error() != "Only predefined tracers are supported" {
+		t.Fatal("Must disable JS code based tracers if unsafe")
+	}
+}
+
 func TestStack(t *testing.T) {
-	tracer, err := New("{depths: [], step: function(log) { this.depths.push(log.stack.length()); }, fault: function() {}, result: function() { return this.depths; }}")
+	tracer, err := New("{depths: [], step: function(log) { this.depths.push(log.stack.length()); }, fault: function() {}, result: function() { return this.depths; }}", true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -147,7 +154,7 @@ func TestStack(t *testing.T) {
 }
 
 func TestOpcodes(t *testing.T) {
-	tracer, err := New("{opcodes: [], step: function(log) { this.opcodes.push(log.op.toString()); }, fault: function() {}, result: function() { return this.opcodes; }}")
+	tracer, err := New("{opcodes: [], step: function(log) { this.opcodes.push(log.op.toString()); }, fault: function() {}, result: function() { return this.opcodes; }}", true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -165,7 +172,7 @@ func TestHalt(t *testing.T) {
 	t.Skip("duktape doesn't support abortion")
 
 	timeout := errors.New("stahp")
-	tracer, err := New("{step: function() { while(1); }, result: function() { return null; }}")
+	tracer, err := New("{step: function() { while(1); }, result: function() { return null; }}", true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -181,7 +188,7 @@ func TestHalt(t *testing.T) {
 }
 
 func TestHaltBetweenSteps(t *testing.T) {
-	tracer, err := New("{step: function() {}, fault: function() {}, result: function() { return null; }}")
+	tracer, err := New("{step: function() {}, fault: function() {}, result: function() { return null; }}", true)
 	if err != nil {
 		t.Fatal(err)
 	}

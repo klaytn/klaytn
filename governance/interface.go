@@ -17,6 +17,8 @@
 package governance
 
 import (
+	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
@@ -27,6 +29,8 @@ import (
 type Engine interface {
 	HeaderEngine
 	ReaderEngine
+	HeaderGov() HeaderEngine
+	ContractGov() ReaderEngine
 }
 
 type ReaderEngine interface {
@@ -75,8 +79,6 @@ type HeaderEngine interface {
 		istanbul.ValidatorSet, []GovernanceVote, []GovernanceTallyItem)
 
 	// Get internal fields
-	ChainId() uint64
-	InitialChainConfig() *params.ChainConfig
 	GetVoteMapCopy() map[string]VoteStatus
 	GetGovernanceTalliesCopy() []GovernanceTallyItem
 	CurrentSetCopy() map[string]interface{}
@@ -98,29 +100,15 @@ type HeaderEngine interface {
 	SetBlockchain(chain blockChain)
 	SetTxPool(txpool txPool)
 	GetTxPool() txPool
+}
 
-	// Get network params
-	GovernanceMode() string
-	GoverningNode() common.Address
-	UnitPrice() uint64
-	CommitteeSize() uint64
-	Epoch() uint64
-	ProposerPolicy() uint64
-	DeferredTxFee() bool
-	MinimumStake() string
-	MintingAmount() string
-	ProposerUpdateInterval() uint64
-	Ratio() string
-	StakingUpdateInterval() uint64
-	UseGiniCoeff() bool
-	LowerBoundBaseFee() uint64
-	UpperBoundBaseFee() uint64
-	GasTarget() uint64
-	MaxBlockGasUsedForBaseFee() uint64
-	BaseFeeDenominator() uint64
-	GetGovernanceValue(key int) interface{}
-	GetGovernanceItemAtNumber(num uint64, key string) (interface{}, error)
-	GetItemAtNumberByIntKey(num uint64, key int) (interface{}, error)
-	GetGoverningInfoAtNumber(num uint64) (bool, common.Address, error)
-	GetMinimumStakingAtNumber(num uint64) (uint64, error)
+// blockChain is an interface for blockchain.Blockchain used in governance package.
+type blockChain interface {
+	blockchain.ChainContext
+
+	CurrentHeader() *types.Header
+	GetHeaderByNumber(val uint64) *types.Header
+	GetBlockByNumber(num uint64) *types.Block
+	StateAt(root common.Hash) (*state.StateDB, error)
+	Config() *params.ChainConfig
 }

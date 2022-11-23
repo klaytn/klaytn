@@ -39,6 +39,7 @@ import (
 	"github.com/klaytn/klaytn/work"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TestSimpleBlockchain
@@ -54,15 +55,16 @@ func TestSimpleBlockchain(t *testing.T) {
 
 	contractDeployCode := "0x608060405234801561001057600080fd5b506000808190555060646001819055506101848061002f6000396000f300608060405260043610610062576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff16806302e5329e14610067578063197e70e41461009457806349b667d2146100c157806367e0badb146100ec575b600080fd5b34801561007357600080fd5b5061009260048036038101908080359060200190929190505050610117565b005b3480156100a057600080fd5b506100bf60048036038101908080359060200190929190505050610121565b005b3480156100cd57600080fd5b506100d6610145565b6040518082815260200191505060405180910390f35b3480156100f857600080fd5b5061010161014f565b6040518082815260200191505060405180910390f35b8060018190555050565b806000540160008190555060015460005481151561013b57fe5b0660008190555050565b6000600154905090565b600080549050905600a165627a7a72305820ef4e7e564c744de3a36cb74000c35687f7de9ecf1d29abdd3c4bcc66db981c160029"
 	for i := 0; i < numAccounts; i++ {
-		contractAccounts[i].Addr = deployContractDeployTx(t, node.TxPool(), chainId, richAccount, contractDeployCode)
+		_, contractAccounts[i].Addr = deployContractDeployTx(t, node.TxPool(), chainId, richAccount, contractDeployCode)
 	}
 	time.Sleep(time.Second) // need to make a block before contract execution
 
 	// deploy
+	calldata := "0x197e70e40000000000000000000000000000000000000000000000000000000000000001"
 	for i := 0; i < numAccounts; i++ {
 		deployRandomTxs(t, node.TxPool(), chainId, richAccount, 10)
 		deployValueTransferTx(t, node.TxPool(), chainId, richAccount, accounts[i%numAccounts])
-		deployContractExecutionTx(t, node.TxPool(), chainId, richAccount, contractAccounts[i%numAccounts].Addr)
+		deployContractExecutionTx(t, node.TxPool(), chainId, richAccount, contractAccounts[i%numAccounts].Addr, calldata)
 
 		// time.Sleep(time.Second) // wait until txpool is flushed if needed
 	}
@@ -74,7 +76,7 @@ func TestSimpleBlockchain(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	// start full node with previous db
-	fullNode, node, err := newKlaytnNode(t, workspace, validator)
+	fullNode, node, err := newKlaytnNode(t, workspace, validator, nil)
 	assert.NoError(t, err)
 	if err := node.StartMining(false); err != nil {
 		t.Fatal()
@@ -103,7 +105,35 @@ func newBlockchain(t *testing.T) (*node.Node, *cn.CN, *TestAccountType, *big.Int
 	}
 
 	// Create a Klaytn node
-	fullNode, node, err := newKlaytnNode(t, workspace, validator)
+	fullNode, node, err := newKlaytnNode(t, workspace, validator, nil)
+	assert.NoError(t, err)
+	if err := node.StartMining(false); err != nil {
+		t.Fatal()
+	}
+	time.Sleep(2 * time.Second) // wait for initializing mining
+
+	chainId := node.BlockChain().Config().ChainID
+
+	return fullNode, node, validator, chainId, workspace
+}
+
+func newBlockchainWithConfig(t *testing.T, config *params.ChainConfig) (*node.Node, *cn.CN, *TestAccountType, *big.Int, string) {
+	t.Log("Create a new blockchain with config")
+	// Prepare workspace
+	workspace, err := ioutil.TempDir("", "klaytn-test-state")
+	if err != nil {
+		t.Fatalf("failed to create temporary keystore: %v", err)
+	}
+	t.Log("Workspace is ", workspace)
+
+	// Prepare a validator
+	validator, err := createAnonymousAccount(getRandomPrivateKeyString(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a Klaytn node
+	fullNode, node, err := newKlaytnNode(t, workspace, validator, config)
 	assert.NoError(t, err)
 	if err := node.StartMining(false); err != nil {
 		t.Fatal()
@@ -141,7 +171,7 @@ func createAccount(t *testing.T, numAccounts int, validator *TestAccountType) (*
 }
 
 // newKlaytnNode creates a klaytn node
-func newKlaytnNode(t *testing.T, dir string, validator *TestAccountType) (*node.Node, *cn.CN, error) {
+func newKlaytnNode(t *testing.T, dir string, validator *TestAccountType, config *params.ChainConfig) (*node.Node, *cn.CN, error) {
 	var klaytnNode *cn.CN
 
 	fullNode, err := node.New(&node.Config{
@@ -165,17 +195,15 @@ func newKlaytnNode(t *testing.T, dir string, validator *TestAccountType) (*node.
 	genesis := blockchain.DefaultGenesisBlock()
 	genesis.ExtraData = genesis.ExtraData[:types.IstanbulExtraVanity]
 	genesis.ExtraData = append(genesis.ExtraData, istanbulConfData...)
-	genesis.Config = params.CypressChainConfig.Copy()
-	genesis.Config.Istanbul.SubGroupSize = 1
-	genesis.Config.Istanbul.ProposerPolicy = uint64(istanbul.RoundRobin)
-	genesis.Config.Governance.Reward.MintingAmount = new(big.Int).Mul(big.NewInt(9000000000000000000), big.NewInt(params.KLAY))
 
-	// NOTE: Uncomment these lines to enable features
-	// TODO: Receive ChainConfig as optional argument
-	// genesis.Config.IstanbulCompatibleBlock = big.NewInt(0)
-	// genesis.Config.LondonCompatibleBlock = big.NewInt(0)
-	// genesis.Config.EthTxTypeCompatibleBlock = big.NewInt(0)
-	// genesis.Config.KIP71CompatibleBlock = big.NewInt(0)
+	if config == nil {
+		genesis.Config = params.CypressChainConfig.Copy()
+		genesis.Config.Istanbul.SubGroupSize = 1
+		genesis.Config.Istanbul.ProposerPolicy = uint64(istanbul.RoundRobin)
+		genesis.Config.Governance.Reward.MintingAmount = new(big.Int).Mul(big.NewInt(9000000000000000000), big.NewInt(params.KLAY))
+	} else {
+		genesis.Config = config
+	}
 
 	cnConf := cn.GetDefaultConfig()
 	cnConf.Genesis = genesis
@@ -202,10 +230,11 @@ func newKlaytnNode(t *testing.T, dir string, validator *TestAccountType) (*node.
 }
 
 // deployRandomTxs creates a random transaction
-func deployRandomTxs(t *testing.T, txpool work.TxPool, chainId *big.Int, sender *TestAccountType, txNum int) {
+func deployRandomTxs(t *testing.T, txpool work.TxPool, chainId *big.Int, sender *TestAccountType, txNum int) []*types.Transaction {
 	var tx *types.Transaction
+	var txs []*types.Transaction
 	signer := types.LatestSignerForChainID(chainId)
-	gasPrice := big.NewInt(25 * params.Ston)
+	gasPrice := txpool.GasPrice()
 
 	txNuminABlock := 100
 	for i := 0; i < txNum; i++ {
@@ -214,88 +243,89 @@ func deployRandomTxs(t *testing.T, txpool work.TxPool, chainId *big.Int, sender 
 		}
 
 		receiver, err := createAnonymousAccount(getRandomPrivateKeyString(t))
-		if err != nil {
-			t.Fatal()
-		}
+		require.Nil(t, err)
 
 		tx, _ = genLegacyTransaction(t, signer, sender, receiver, nil, gasPrice)
-		if err := txpool.AddLocal(tx); err != nil && err != blockchain.ErrAlreadyNonceExistInPool {
-			t.Fatal(err)
-		}
+
+		err = txpool.AddLocal(tx)
+		require.True(t, err == nil || err == blockchain.ErrAlreadyNonceExistInPool)
+
+		txs = append(txs, tx)
 		sender.AddNonce()
 	}
+	return txs
 }
 
 // deployValueTransferTx deploy value transfer transactions
-func deployValueTransferTx(t *testing.T, txpool work.TxPool, chainId *big.Int, sender *TestAccountType, toAcc *TestAccountType) {
+func deployValueTransferTx(t *testing.T, txpool work.TxPool, chainId *big.Int, sender *TestAccountType, toAcc *TestAccountType) *types.Transaction {
 	signer := types.LatestSignerForChainID(chainId)
-	gasPrice := big.NewInt(25 * params.Ston)
+	gasPrice := txpool.GasPrice()
 
 	tx, _ := genLegacyTransaction(t, signer, sender, toAcc, nil, gasPrice)
-	if err := txpool.AddLocal(tx); err != nil && err != blockchain.ErrAlreadyNonceExistInPool {
-		t.Fatal(err)
-	}
+
+	err := txpool.AddLocal(tx)
+	require.True(t, err == nil || err == blockchain.ErrAlreadyNonceExistInPool)
+
 	sender.AddNonce()
+	return tx
 }
 
-// deployContractDeployTx deploy contrac
-func deployContractDeployTx(t *testing.T, txpool work.TxPool, chainId *big.Int, sender *TestAccountType, contractDeployCode string) common.Address {
+// deployContractDeployTx deploys a contract
+func deployContractDeployTx(t *testing.T, txpool work.TxPool, chainId *big.Int, sender *TestAccountType, code string) (*types.Transaction, common.Address) {
 	signer := types.LatestSignerForChainID(chainId)
-	gasPrice := big.NewInt(25 * params.Ston)
+	gasPrice := txpool.GasPrice()
 
 	values := map[types.TxValueKeyType]interface{}{
 		types.TxValueKeyNonce:         sender.GetNonce(),
-		types.TxValueKeyAmount:        new(big.Int).SetUint64(0),
-		types.TxValueKeyGasLimit:      uint64(1000000),
-		types.TxValueKeyGasPrice:      gasPrice,
-		types.TxValueKeyHumanReadable: false,
 		types.TxValueKeyFrom:          sender.GetAddr(),
-		types.TxValueKeyData:          common.FromHex(contractDeployCode),
-		types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
 		types.TxValueKeyTo:            (*common.Address)(nil),
+		types.TxValueKeyAmount:        new(big.Int).SetUint64(0),
+		types.TxValueKeyGasLimit:      uint64(1e8),
+		types.TxValueKeyGasPrice:      gasPrice,
+		types.TxValueKeyData:          common.FromHex(code),
+		types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
+		types.TxValueKeyHumanReadable: false,
 	}
+
 	tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, values)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := tx.SignWithKeys(signer, sender.GetTxKeys()); err != nil {
-		t.Fatal(err)
-	}
-	if err := txpool.AddLocal(tx); err != nil && err != blockchain.ErrAlreadyNonceExistInPool {
-		t.Fatal(err)
-	}
+	require.Nil(t, err)
+
+	err = tx.SignWithKeys(signer, sender.GetTxKeys())
+	require.Nil(t, err)
+
+	err = txpool.AddLocal(tx)
+	require.True(t, err == nil || err == blockchain.ErrAlreadyNonceExistInPool)
+
 	contractAddr := crypto.CreateAddress(sender.Addr, sender.Nonce)
 	sender.AddNonce()
-
-	return contractAddr
+	return tx, contractAddr
 }
 
-func deployContractExecutionTx(t *testing.T, txpool work.TxPool, chainId *big.Int, sender *TestAccountType, contractAddr common.Address) {
+func deployContractExecutionTx(t *testing.T, txpool work.TxPool, chainId *big.Int, sender *TestAccountType, contractAddr common.Address, calldata string) *types.Transaction {
 	signer := types.LatestSignerForChainID(chainId)
-	gasPrice := big.NewInt(25 * params.Ston)
-	contractExecutionPayload := "0x197e70e40000000000000000000000000000000000000000000000000000000000000001"
+	gasPrice := txpool.GasPrice()
 
 	values := map[types.TxValueKeyType]interface{}{
 		types.TxValueKeyNonce:    sender.GetNonce(),
 		types.TxValueKeyFrom:     sender.GetAddr(),
 		types.TxValueKeyTo:       contractAddr,
 		types.TxValueKeyAmount:   new(big.Int).SetUint64(0),
-		types.TxValueKeyGasLimit: uint64(100000),
+		types.TxValueKeyGasLimit: uint64(1e8),
 		types.TxValueKeyGasPrice: gasPrice,
-		types.TxValueKeyData:     common.FromHex(contractExecutionPayload),
-	}
-	tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractExecution, values)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := tx.SignWithKeys(signer, sender.GetTxKeys()); err != nil {
-		t.Fatal(err)
+		types.TxValueKeyData:     common.FromHex(calldata),
 	}
 
-	if err := txpool.AddLocal(tx); err != nil && err != blockchain.ErrAlreadyNonceExistInPool {
-		t.Fatal(err)
-	}
+	tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractExecution, values)
+	require.Nil(t, err)
+
+	err = tx.SignWithKeys(signer, sender.GetTxKeys())
+	require.Nil(t, err)
+
+	err = txpool.AddLocal(tx)
+	require.True(t, err == nil || err == blockchain.ErrAlreadyNonceExistInPool)
+
 	sender.AddNonce()
+	return tx
 }
 
 // Wait until the receipt for `txhash` is ready
@@ -311,12 +341,13 @@ func waitReceipt(chain *blockchain.BlockChain, txhash common.Hash) *types.Receip
 	timeout := time.NewTimer(15 * time.Second)
 	for {
 		select {
-		case <-chainEventCh:
-			if receipt := chain.GetReceiptByTxHash(txhash); receipt != nil {
-				return receipt
-			}
 		case <-timeout.C:
 			return nil
+		case <-chainEventCh:
+			receipt := chain.GetReceiptByTxHash(txhash)
+			if receipt != nil {
+				return receipt
+			}
 		}
 	}
 }
@@ -338,12 +369,13 @@ func waitBlock(chain *blockchain.BlockChain, num uint64) *types.Header {
 	timeout := time.NewTimer(time.Duration(timeoutSec) * time.Second)
 	for {
 		select {
-		case <-chainEventCh:
-			if head := chain.CurrentHeader(); head.Number.Uint64() >= num {
-				return head
-			}
 		case <-timeout.C:
 			return nil
+		case <-chainEventCh:
+			head := chain.CurrentHeader()
+			if head.Number.Uint64() >= num {
+				return head
+			}
 		}
 	}
 }

@@ -39,9 +39,7 @@ import (
 	"github.com/klaytn/klaytn/consensus/istanbul/validator"
 	"github.com/klaytn/klaytn/consensus/misc"
 	"github.com/klaytn/klaytn/crypto/sha3"
-	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/networks/rpc"
-	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/rlp"
 )
@@ -198,29 +196,12 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 		if header.Number.BitLen() != 0 {
 			blockNum = blockNum - 1
 		}
-		_, data, err := sb.governance.ReadGovernance(blockNum)
+		pset, err := sb.governance.ParamsAt(blockNum)
 		if err != nil {
 			return err
 		}
 
-		kip71 := params.GetDefaultKIP71Config()
-		gkmr := governance.GovernanceKeyMapReverse
-		if l := data[gkmr[params.LowerBoundBaseFee]]; l != nil {
-			kip71.LowerBoundBaseFee = l.(uint64)
-		}
-		if u := data[gkmr[params.UpperBoundBaseFee]]; u != nil {
-			kip71.UpperBoundBaseFee = u.(uint64)
-		}
-		if g := data[gkmr[params.GasTarget]]; g != nil {
-			kip71.GasTarget = g.(uint64)
-		}
-		if b := data[gkmr[params.BaseFeeDenominator]]; b != nil {
-			kip71.BaseFeeDenominator = b.(uint64)
-		}
-		if m := data[gkmr[params.MaxBlockGasUsedForBaseFee]]; m != nil {
-			kip71.MaxBlockGasUsedForBaseFee = m.(uint64)
-		}
-
+		kip71 := pset.ToKIP71Config()
 		if err := misc.VerifyMagmaHeader(parents[len(parents)-1], header, kip71); err != nil {
 			return err
 		}
@@ -274,8 +255,10 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 
 	// At every epoch governance data will come in block header. Verify it.
 	pendingBlockNum := new(big.Int).Add(chain.CurrentHeader().Number, common.Big1)
-	if number%sb.governance.Epoch() == 0 && len(header.Governance) > 0 && pendingBlockNum.Cmp(header.Number) == 0 {
-		return sb.governance.VerifyGovernance(header.Governance)
+	if number%sb.governance.Params().Epoch() == 0 && len(header.Governance) > 0 && pendingBlockNum.Cmp(header.Number) == 0 {
+		if err := sb.governance.VerifyGovernance(header.Governance); err != nil {
+			return err
+		}
 	}
 	return sb.verifyCommittedSeals(chain, header, parents)
 }
@@ -417,7 +400,7 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	}
 
 	// If it reaches the Epoch, governance config will be added to block header
-	if number%sb.governance.Epoch() == 0 {
+	if number%sb.governance.Params().Epoch() == 0 {
 		if g := sb.governance.GetGovernanceChange(); g != nil {
 			if data, err := json.Marshal(g); err != nil {
 				logger.Error("Failed to encode governance changes!! Possible configuration mismatch!! ")
@@ -469,12 +452,18 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 		return nil, consensus.ErrInvalidBaseFee
 	}
 
+	var rewardSpec *reward.RewardSpec
+
+	rules := chain.Config().Rules(header.Number)
+	pset, err := sb.governance.ParamsAt(header.Number.Uint64())
+	if err != nil {
+		return nil, err
+	}
+
 	// If sb.chain is nil, it means backend is not initialized yet.
-	if sb.chain != nil && sb.governance.ProposerPolicy() == uint64(istanbul.WeightedRandom) {
+	if sb.chain != nil && !reward.IsRewardSimple(sb.governance.Params()) {
 		// TODO-Klaytn Let's redesign below logic and remove dependency between block reward and istanbul consensus.
 
-		pocAddr := common.Address{}
-		kirAddr := common.Address{}
 		lastHeader := chain.CurrentHeader()
 		valSet := sb.getValidators(lastHeader.Number.Uint64(), lastHeader.Hash())
 
@@ -495,19 +484,16 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 			logger.Trace(logMsg, "header.Number", header.Number.Uint64(), "node address", sb.address, "rewardbase", header.Rewardbase)
 		}
 
-		if stakingInfo := reward.GetStakingInfo(header.Number.Uint64()); stakingInfo != nil {
-			kirAddr = stakingInfo.KIRAddr
-			pocAddr = stakingInfo.PoCAddr
-		}
-
-		if err := sb.rewardDistributor.DistributeBlockReward(state, header, pocAddr, kirAddr); err != nil {
-			return nil, err
-		}
+		rewardSpec, err = reward.CalcDeferredReward(header, rules, pset)
 	} else {
-		if err := sb.rewardDistributor.MintKLAY(state, header); err != nil {
-			return nil, err
-		}
+		rewardSpec, err = reward.CalcDeferredRewardSimple(header, rules, pset)
 	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	reward.DistributeBlockReward(state, rewardSpec.Rewards)
 
 	header.Root = state.IntermediateRoot(true)
 
@@ -675,15 +661,10 @@ func (sb *backend) initSnapshot(chain consensus.ChainReader) (*Snapshot, error) 
 		return nil, err
 	}
 
-	proposerPolicy, ok := sb.governance.GetGovernanceValue(params.Policy).(uint64)
-	if !ok {
-		proposerPolicy = params.DefaultProposerPolicy
-	}
-	committeeSize, ok := sb.governance.GetGovernanceValue(params.CommitteeSize).(uint64)
-	if !ok {
-		committeeSize = params.DefaultSubGroupSize
-	}
-	snap := newSnapshot(sb.governance, 0, genesis.Hash(), validator.NewValidatorSet(istanbulExtra.Validators, nil, istanbul.ProposerPolicy(proposerPolicy), committeeSize, chain), chain.Config())
+	valSet := validator.NewValidatorSet(istanbulExtra.Validators, nil,
+		istanbul.ProposerPolicy(sb.governance.Params().Policy()),
+		sb.governance.Params().CommitteeSize(), chain)
+	snap := newSnapshot(sb.governance, 0, genesis.Hash(), valSet, chain.Config())
 
 	if err := snap.store(sb.db); err != nil {
 		return nil, err
@@ -714,8 +695,89 @@ func getPrevHeaderAndUpdateParents(chain consensus.ChainReader, number uint64, h
 
 // CreateSnapshot does not return a snapshot but creates a new snapshot at a given point in time.
 func (sb *backend) CreateSnapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) error {
-	_, err := sb.snapshot(chain, number, hash, parents, true)
-	return err
+	if _, err := sb.snapshot(chain, number, hash, parents, true); err != nil {
+		return err
+	}
+	if err := sb.governance.UpdateParams(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// GetConsensusInfo returns consensus information regarding the given block number.
+func (sb *backend) GetConsensusInfo(block *types.Block) (consensus.ConsensusInfo, error) {
+	blockNumber := block.NumberU64()
+	if blockNumber == 0 {
+		return consensus.ConsensusInfo{}, nil
+	}
+
+	round := block.Header().Round()
+	view := &istanbul.View{
+		Sequence: new(big.Int).Set(block.Number()),
+		Round:    new(big.Int).SetInt64(int64(round)),
+	}
+
+	// get the proposer of this block.
+	proposer, err := ecrecover(block.Header())
+	if err != nil {
+		return consensus.ConsensusInfo{}, err
+	}
+
+	// get the snapshot of the previous block.
+	parentHash := block.ParentHash()
+	snap, err := sb.snapshot(sb.chain, blockNumber-1, parentHash, nil, false)
+	if err != nil {
+		logger.Error("Failed to get snapshot.", "hash", snap.Hash, "err", err)
+		return consensus.ConsensusInfo{}, errInternalError
+	}
+
+	// get origin proposer at 0 round.
+	originProposer := common.Address{}
+	lastProposer := sb.GetProposer(blockNumber - 1)
+
+	newValSet := snap.ValSet.Copy()
+	newValSet.CalcProposer(lastProposer, 0)
+	originProposer = newValSet.GetProposer().Address()
+
+	// get the committee list of this block at the view (blockNumber, round)
+	committee := snap.ValSet.SubListWithProposer(parentHash, proposer, view)
+	committeeAddrs := make([]common.Address, len(committee))
+	for i, v := range committee {
+		committeeAddrs[i] = v.Address()
+	}
+
+	// verify the committee list of the block using istanbul
+	//proposalSeal := istanbulCore.PrepareCommittedSeal(block.Hash())
+	//extra, err := types.ExtractIstanbulExtra(block.Header())
+	//istanbulAddrs := make([]common.Address, len(committeeAddrs))
+	//for i, seal := range extra.CommittedSeal {
+	//	addr, err := istanbul.GetSignatureAddress(proposalSeal, seal)
+	//	istanbulAddrs[i] = addr
+	//	if err != nil {
+	//		return proposer, []common.Address{}, err
+	//	}
+	//
+	//	var found bool = false
+	//	for _, v := range committeeAddrs {
+	//		if addr == v {
+	//			found = true
+	//			break
+	//		}
+	//	}
+	//	if found == false {
+	//		logger.Trace("validator is different!", "snap", committeeAddrs, "istanbul", istanbulAddrs)
+	//		return proposer, committeeAddrs, errors.New("validator set is different from Istanbul engine!!")
+	//	}
+	//}
+
+	cInfo := consensus.ConsensusInfo{
+		Proposer:       proposer,
+		OriginProposer: originProposer,
+		Committee:      committeeAddrs,
+		Round:          round,
+	}
+
+	return cInfo, nil
 }
 
 // snapshot retrieves the authorization snapshot at a given point in time.
@@ -760,7 +822,7 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 	for i := 0; i < len(headers)/2; i++ {
 		headers[i], headers[len(headers)-1-i] = headers[len(headers)-1-i], headers[i]
 	}
-	snap, err := snap.apply(headers, sb.governance, sb.address, sb.governance.ProposerPolicy(), chain, writable)
+	snap, err := snap.apply(headers, sb.governance, sb.address, sb.governance.Params().Policy(), chain, writable)
 	if err != nil {
 		return nil, err
 	}

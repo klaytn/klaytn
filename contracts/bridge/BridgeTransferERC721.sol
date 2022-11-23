@@ -66,7 +66,7 @@ contract BridgeTransferERC721 is BridgeTokens, IERC721BridgeReceiver, BridgeTran
         if (modeMintBurn) {
             require(ERC721MetadataMintable(_tokenAddress).mintWithTokenURI(_to, _tokenId, _tokenURI), "mint failed");
         } else {
-            IERC721(_tokenAddress).safeTransferFrom(address(this), _to, _tokenId);
+            IERC721(_tokenAddress).transferFrom(address(this), _to, _tokenId);
         }
     }
 
