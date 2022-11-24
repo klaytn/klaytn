@@ -284,7 +284,16 @@ func (api *PublicGovernanceAPI) chainConfigAt(num *rpc.BlockNumber) *params.Chai
 	if err != nil {
 		return nil
 	}
-	return pset.ToChainConfig()
+
+	latestConfig := api.governance.BlockChain().Config()
+	config := pset.ToChainConfig()
+	config.IstanbulCompatibleBlock = latestConfig.IstanbulCompatibleBlock
+	config.LondonCompatibleBlock = latestConfig.LondonCompatibleBlock
+	config.EthTxTypeCompatibleBlock = latestConfig.EthTxTypeCompatibleBlock
+	config.MagmaCompatibleBlock = latestConfig.MagmaCompatibleBlock
+	config.KoreCompatibleBlock = latestConfig.KoreCompatibleBlock
+
+	return config
 }
 
 func (api *PublicGovernanceAPI) NodeAddress() common.Address {
