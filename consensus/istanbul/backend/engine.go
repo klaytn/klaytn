@@ -407,6 +407,8 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 			} else {
 				if header.Governance, err = rlp.EncodeToBytes(data); err != nil {
 					logger.Error("Failed to encode governance data for the header", "num", number)
+				} else {
+					logger.Info("Put governanceData", "num", number, "data", hex.EncodeToString(header.Governance))
 				}
 			}
 		}
@@ -414,6 +416,9 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 
 	// if there is a vote to attach, attach it to the header
 	header.Vote = sb.governance.GetEncodedVote(sb.address, number)
+	if len(header.Vote) > 0 {
+		logger.Info("Put voteData", "num", number, "data", hex.EncodeToString(header.Vote))
+	}
 
 	// add validators (council list) in snapshot to extraData's validators section
 	extra, err := prepareExtra(header, snap.validators())
