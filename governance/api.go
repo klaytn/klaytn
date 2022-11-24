@@ -287,6 +287,7 @@ func (api *PublicGovernanceAPI) chainConfigAt(num *rpc.BlockNumber) *params.Chai
 
 	latestConfig := api.governance.BlockChain().Config()
 	config := pset.ToChainConfig()
+	config.ChainID = latestConfig.ChainID
 	config.IstanbulCompatibleBlock = latestConfig.IstanbulCompatibleBlock
 	config.LondonCompatibleBlock = latestConfig.LondonCompatibleBlock
 	config.EthTxTypeCompatibleBlock = latestConfig.EthTxTypeCompatibleBlock
