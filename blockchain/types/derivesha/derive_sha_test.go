@@ -55,6 +55,9 @@ func (e *testGov) ParamsAt(num uint64) (*params.GovParamSet, error) {
 func TestEmptyRoot(t *testing.T) {
 	assert.Equal(t,
 		DeriveShaOrig{}.DeriveSha(types.Transactions{}).Hex(),
+		types.EmptyRootHashOriginal.Hex())
+	assert.Equal(t,
+		DeriveShaOrig{}.DeriveSha(types.Transactions{}).Hex(),
 		"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
 	assert.Equal(t,
 		DeriveShaSimple{}.DeriveSha(types.Transactions{}).Hex(),
