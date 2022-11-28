@@ -26,11 +26,13 @@ type DatadogTracer struct {
 }
 
 func newDatadogTracer() *DatadogTracer {
-	if v := os.Getenv("DD_TRACE_ENABLED"); v != "" {
-		ddTraceEnabled, err := strconv.ParseBool(v)
-		if err != nil || ddTraceEnabled == false {
-			return nil
-		}
+	v := os.Getenv("DD_TRACE_ENABLED")
+	if v == "" {
+		return nil
+	}
+
+	if ddTraceEnabled, err := strconv.ParseBool(v); ddTraceEnabled == false || err != nil {
+		return nil
 	}
 
 	headers := strings.Split(os.Getenv("DD_TRACE_HEADER_TAGS"), ",")
