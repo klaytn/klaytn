@@ -558,7 +558,7 @@ func (evm *EVM) GetPrecompiledContractMap(addr common.Address) map[common.Addres
 	// VmVersion means that the contract uses the precompiled contract map at the deployment time.
 	// Also, it follows old map's gas price & computation cost.
 
-	// Get vmVersion from addr. If there's no VmVersion, it returns false and use latest precompiled contract map
+	// Get vmVersion from addr only if the addr is a contract address.
 	// If new "VmVersion" is added, add new if clause below
 	if vmVersion, ok := evm.StateDB.GetVmVersion(addr); ok && vmVersion == params.VmVersion0 {
 		// Without VmVersion0, precompiled contract address 0x09-0x0b won't work properly
