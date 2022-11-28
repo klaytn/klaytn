@@ -18,6 +18,7 @@ package governance
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 	"strings"
 
@@ -106,6 +107,10 @@ func (api *GovernanceKlayAPI) GetRewards(num *rpc.BlockNumber) (*reward.RewardSp
 	}
 
 	header := api.chain.GetHeaderByNumber(blockNumber)
+	if header == nil {
+		return nil, fmt.Errorf("the block does not exist (block number: %d)", blockNumber)
+	}
+
 	rules := api.chain.Config().Rules(new(big.Int).SetUint64(blockNumber))
 	pset, err := api.governance.ParamsAt(blockNumber)
 	if err != nil {
