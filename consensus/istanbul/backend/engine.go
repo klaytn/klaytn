@@ -460,6 +460,18 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 		return nil, err
 	}
 
+	// mimic legacy reward config cache.
+	// if blockNum is multiple of epoch, don't use ParamsAt(blockNum), but use ParamsAt(blockNum - epoch) instead
+	// see https://github.com/klaytn/klaytn/blob/eabdabed10f7c57ee8809f93dbc0ff67ae9f26bf/reward/reward_config_cache.go#L72-L77
+	blockNum := header.Number.Uint64()
+	epoch := pset.Epoch()
+	if !rules.IsKore && blockNum%epoch == 0 {
+		pset, err = sb.governance.ParamsAt(blockNum - epoch)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	// If sb.chain is nil, it means backend is not initialized yet.
 	if sb.chain != nil && !reward.IsRewardSimple(sb.governance.Params()) {
 		// TODO-Klaytn Let's redesign below logic and remove dependency between block reward and istanbul consensus.
