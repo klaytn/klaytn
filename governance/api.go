@@ -111,19 +111,13 @@ func (api *GovernanceKlayAPI) GetRewards(num *rpc.BlockNumber) (*reward.RewardSp
 	if err != nil {
 		return nil, err
 	}
-
-	// mimic legacy reward config cache.
-	// if num is multiple of epoch, don't use ParamsAt(num), but use ParamsAt(num - epoch) instead
-	// see https://github.com/klaytn/klaytn/blob/v1.9.1/reward/reward_config_cache.go#L72-L77
-	epoch := pset.Epoch()
-	if !rules.IsKore && blockNumber%epoch == 0 {
-		pset, err = api.governance.ParamsAt(blockNumber - epoch)
-		if err != nil {
-			return nil, err
-		}
+	rewardParamNum := reward.CalcRewardParamBlock(header.Number.Uint64(), pset.Epoch(), rules)
+	rewardParamSet, err := api.governance.ParamsAt(rewardParamNum)
+	if err != nil {
+		return nil, err
 	}
 
-	return reward.GetBlockReward(header, rules, pset)
+	return reward.GetBlockReward(header, rules, rewardParamSet)
 }
 
 // Vote injects a new vote for governance targets such as unitprice and governingnode.
