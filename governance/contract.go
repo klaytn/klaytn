@@ -121,7 +121,7 @@ func (e *ContractEngine) contractAddrAt(num uint64) (common.Address, error) {
 	// this happens when GovParamContract has not been voted
 	param, ok := headerParams.Get(params.GovParamContract)
 	if !ok {
-		logger.Error("Could not find GovParam contract address")
+		logger.Debug("Could not find GovParam contract address")
 		return common.Address{}, nil
 	}
 
