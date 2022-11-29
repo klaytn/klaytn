@@ -934,11 +934,6 @@ web3._extend({
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
 		}),
 		new web3._extend.Method({
-			name: 'chainConfig',
-			call: 'klay_chainConfig',
-			params: 0,
-		}),
-		new web3._extend.Method({
 			name: 'chainConfigAt',
 			call: 'klay_chainConfigAt',
 			params: 1,
@@ -1103,6 +1098,10 @@ web3._extend({
 			name: 'maxPriorityFeePerGas',
 			getter: 'klay_maxPriorityFeePerGas',
 			outputFormatter: web3._extend.utils.toBigNumber
+		}),
+		new web3._extend.Method({
+			name: 'chainConfig',
+			getter: 'klay_chainConfig',
 		}),
 	]
 });
