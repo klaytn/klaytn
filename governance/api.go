@@ -64,6 +64,18 @@ var (
 	errInvalidUpperBound      = errors.New("upperboundbasefee cannot be set lower than lowerboundbasefee")
 )
 
+func (api *GovernanceKlayAPI) GetStakingInfo(num *rpc.BlockNumber) (*reward.StakingInfo, error) {
+	return getStakingInfo(api.governance, num)
+}
+
+func (api *GovernanceKlayAPI) GovParamsAt(num *rpc.BlockNumber) (map[string]interface{}, error) {
+	return itemsAt(api.governance, num)
+}
+
+func (api *GovernanceKlayAPI) NodeAddress() common.Address {
+	return api.governance.NodeAddress()
+}
+
 // GasPriceAt returns the base fee of the given block in peb,
 // or returns unit price by using governance if there is no base fee set in header,
 // or returns gas price of txpool if the block is pending block.
@@ -195,14 +207,18 @@ func (api *PublicGovernanceAPI) TotalVotingPower() (float64, error) {
 }
 
 func (api *PublicGovernanceAPI) ItemsAt(num *rpc.BlockNumber) (map[string]interface{}, error) {
+	return itemsAt(api.governance, num)
+}
+
+func itemsAt(governance Engine, num *rpc.BlockNumber) (map[string]interface{}, error) {
 	blockNumber := uint64(0)
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
-		blockNumber = api.governance.BlockChain().CurrentHeader().Number.Uint64()
+		blockNumber = governance.BlockChain().CurrentHeader().Number.Uint64()
 	} else {
 		blockNumber = uint64(num.Int64())
 	}
 
-	pset, err := api.governance.ParamsAt(blockNumber)
+	pset, err := governance.ParamsAt(blockNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -210,9 +226,13 @@ func (api *PublicGovernanceAPI) ItemsAt(num *rpc.BlockNumber) (map[string]interf
 }
 
 func (api *PublicGovernanceAPI) GetStakingInfo(num *rpc.BlockNumber) (*reward.StakingInfo, error) {
+	return getStakingInfo(api.governance, num)
+}
+
+func getStakingInfo(governance Engine, num *rpc.BlockNumber) (*reward.StakingInfo, error) {
 	blockNumber := uint64(0)
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
-		blockNumber = api.governance.BlockChain().CurrentHeader().Number.Uint64()
+		blockNumber = governance.BlockChain().CurrentHeader().Number.Uint64()
 	} else {
 		blockNumber = uint64(num.Int64())
 	}

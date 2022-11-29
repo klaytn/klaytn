@@ -934,6 +934,18 @@ web3._extend({
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
 		}),
 		new web3._extend.Method({
+			name: 'getStakingInfo',
+			call: 'klay_getStakingInfo',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
+			name: 'govParamsAt',
+			call: 'klay_govParamsAt',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
 			name: 'chainConfigAt',
 			call: 'klay_chainConfigAt',
 			params: 1,
@@ -1074,6 +1086,10 @@ web3._extend({
 				}
 				return formatted;
 			}
+		}),
+		new web3._extend.Property({
+			name: 'nodeAddress',
+			getter: 'klay_nodeAddress',
 		}),
         new web3._extend.Property({
             name : 'rewardbase',
