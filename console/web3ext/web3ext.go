@@ -934,6 +934,17 @@ web3._extend({
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
 		}),
 		new web3._extend.Method({
+			name: 'chainConfig',
+			call: 'klay_chainConfig',
+			params: 0,
+		}),
+		new web3._extend.Method({
+			name: 'chainConfigAt',
+			call: 'klay_chainConfigAt',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
+		}),
+		new web3._extend.Method({
 			name: 'accountCreated',
 			call: 'klay_accountCreated'
 			params: 2,

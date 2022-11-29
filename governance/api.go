@@ -120,6 +120,40 @@ func (api *GovernanceKlayAPI) GetRewards(num *rpc.BlockNumber) (*reward.RewardSp
 	return reward.GetBlockReward(header, rules, pset)
 }
 
+func (api *GovernanceKlayAPI) ChainConfig() *params.ChainConfig {
+	num := rpc.LatestBlockNumber
+	return api.chainConfigAt(&num)
+}
+
+func (api *GovernanceKlayAPI) ChainConfigAt(num *rpc.BlockNumber) *params.ChainConfig {
+	return api.chainConfigAt(num)
+}
+
+func (api *GovernanceKlayAPI) chainConfigAt(num *rpc.BlockNumber) *params.ChainConfig {
+	var blocknum uint64
+	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
+		blocknum = api.governance.BlockChain().CurrentHeader().Number.Uint64()
+	} else {
+		blocknum = num.Uint64()
+	}
+
+	pset, err := api.governance.ParamsAt(blocknum)
+	if err != nil {
+		return nil
+	}
+
+	latestConfig := api.governance.BlockChain().Config()
+	config := pset.ToChainConfig()
+	config.ChainID = latestConfig.ChainID
+	config.IstanbulCompatibleBlock = latestConfig.IstanbulCompatibleBlock
+	config.LondonCompatibleBlock = latestConfig.LondonCompatibleBlock
+	config.EthTxTypeCompatibleBlock = latestConfig.EthTxTypeCompatibleBlock
+	config.MagmaCompatibleBlock = latestConfig.MagmaCompatibleBlock
+	config.KoreCompatibleBlock = latestConfig.KoreCompatibleBlock
+
+	return config
+}
+
 // Vote injects a new vote for governance targets such as unitprice and governingnode.
 func (api *PublicGovernanceAPI) Vote(key string, val interface{}) (string, error) {
 	gMode := api.governance.Params().GovernanceModeInt()
