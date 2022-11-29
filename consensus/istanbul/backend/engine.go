@@ -464,6 +464,11 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 	if err != nil {
 		return nil, err
 	}
+	rewardParamNum := reward.CalcRewardParamBlock(header.Number.Uint64(), pset.Epoch(), rules)
+	rewardParamSet, err := sb.governance.ParamsAt(rewardParamNum)
+	if err != nil {
+		return nil, err
+	}
 
 	// If sb.chain is nil, it means backend is not initialized yet.
 	if sb.chain != nil && !reward.IsRewardSimple(sb.governance.Params()) {
@@ -489,9 +494,9 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 			logger.Trace(logMsg, "header.Number", header.Number.Uint64(), "node address", sb.address, "rewardbase", header.Rewardbase)
 		}
 
-		rewardSpec, err = reward.CalcDeferredReward(header, rules, pset)
+		rewardSpec, err = reward.CalcDeferredReward(header, rules, rewardParamSet)
 	} else {
-		rewardSpec, err = reward.CalcDeferredRewardSimple(header, rules, pset)
+		rewardSpec, err = reward.CalcDeferredRewardSimple(header, rules, rewardParamSet)
 	}
 
 	if err != nil {

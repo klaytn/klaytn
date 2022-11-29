@@ -116,8 +116,13 @@ func (api *GovernanceKlayAPI) GetRewards(num *rpc.BlockNumber) (*reward.RewardSp
 	if err != nil {
 		return nil, err
 	}
+	rewardParamNum := reward.CalcRewardParamBlock(header.Number.Uint64(), pset.Epoch(), rules)
+	rewardParamSet, err := api.governance.ParamsAt(rewardParamNum)
+	if err != nil {
+		return nil, err
+	}
 
-	return reward.GetBlockReward(header, rules, pset)
+	return reward.GetBlockReward(header, rules, rewardParamSet)
 }
 
 // Vote injects a new vote for governance targets such as unitprice and governingnode.

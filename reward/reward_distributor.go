@@ -153,6 +153,15 @@ func IsRewardSimple(pset *params.GovParamSet) bool {
 	return pset.Policy() != uint64(istanbul.WeightedRandom)
 }
 
+// CalcRewardParamBlock returns the block number with which governance parameters must be fetched
+// This mimics the legacy reward config cache before Kore
+func CalcRewardParamBlock(num, epoch uint64, rules params.Rules) uint64 {
+	if !rules.IsKore && num%epoch == 0 {
+		return num - epoch
+	}
+	return num
+}
+
 // GetBlockReward returns the actual reward amounts paid in this block
 // Used in klay_getReward RPC API
 func GetBlockReward(header *types.Header, rules params.Rules, pset *params.GovParamSet) (*RewardSpec, error) {
