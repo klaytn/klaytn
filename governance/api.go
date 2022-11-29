@@ -122,36 +122,11 @@ func (api *GovernanceKlayAPI) GetRewards(num *rpc.BlockNumber) (*reward.RewardSp
 
 func (api *GovernanceKlayAPI) ChainConfig() *params.ChainConfig {
 	num := rpc.LatestBlockNumber
-	return api.chainConfigAt(&num)
+	return chainConfigAt(api.governance, &num)
 }
 
 func (api *GovernanceKlayAPI) ChainConfigAt(num *rpc.BlockNumber) *params.ChainConfig {
-	return api.chainConfigAt(num)
-}
-
-func (api *GovernanceKlayAPI) chainConfigAt(num *rpc.BlockNumber) *params.ChainConfig {
-	var blocknum uint64
-	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
-		blocknum = api.governance.BlockChain().CurrentHeader().Number.Uint64()
-	} else {
-		blocknum = num.Uint64()
-	}
-
-	pset, err := api.governance.ParamsAt(blocknum)
-	if err != nil {
-		return nil
-	}
-
-	latestConfig := api.governance.BlockChain().Config()
-	config := pset.ToChainConfig()
-	config.ChainID = latestConfig.ChainID
-	config.IstanbulCompatibleBlock = latestConfig.IstanbulCompatibleBlock
-	config.LondonCompatibleBlock = latestConfig.LondonCompatibleBlock
-	config.EthTxTypeCompatibleBlock = latestConfig.EthTxTypeCompatibleBlock
-	config.MagmaCompatibleBlock = latestConfig.MagmaCompatibleBlock
-	config.KoreCompatibleBlock = latestConfig.KoreCompatibleBlock
-
-	return config
+	return chainConfigAt(api.governance, num)
 }
 
 // Vote injects a new vote for governance targets such as unitprice and governingnode.
@@ -304,27 +279,27 @@ func (api *PublicGovernanceAPI) MyVotingPower() (float64, error) {
 
 func (api *PublicGovernanceAPI) ChainConfig() *params.ChainConfig {
 	num := rpc.LatestBlockNumber
-	return api.chainConfigAt(&num)
+	return chainConfigAt(api.governance, &num)
 }
 
 func (api *PublicGovernanceAPI) ChainConfigAt(num *rpc.BlockNumber) *params.ChainConfig {
-	return api.chainConfigAt(num)
+	return chainConfigAt(api.governance, num)
 }
 
-func (api *PublicGovernanceAPI) chainConfigAt(num *rpc.BlockNumber) *params.ChainConfig {
+func chainConfigAt(governance Engine, num *rpc.BlockNumber) *params.ChainConfig {
 	var blocknum uint64
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
-		blocknum = api.governance.BlockChain().CurrentHeader().Number.Uint64()
+		blocknum = governance.BlockChain().CurrentHeader().Number.Uint64()
 	} else {
 		blocknum = num.Uint64()
 	}
 
-	pset, err := api.governance.ParamsAt(blocknum)
+	pset, err := governance.ParamsAt(blocknum)
 	if err != nil {
 		return nil
 	}
 
-	latestConfig := api.governance.BlockChain().Config()
+	latestConfig := governance.BlockChain().Config()
 	config := pset.ToChainConfig()
 	config.ChainID = latestConfig.ChainID
 	config.IstanbulCompatibleBlock = latestConfig.IstanbulCompatibleBlock
