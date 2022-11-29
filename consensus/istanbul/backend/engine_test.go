@@ -63,7 +63,7 @@ type (
 
 type (
 	minimumStake           *big.Int
-	mintimgAmount          *big.Int
+	mintingAmount          *big.Int
 	stakingUpdateInterval  uint64
 	proposerUpdateInterval uint64
 	proposerPolicy         uint64
@@ -148,7 +148,7 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 			genesis.Config.Governance.Reward.StakingUpdateInterval = uint64(v)
 		case proposerUpdateInterval:
 			genesis.Config.Governance.Reward.ProposerUpdateInterval = uint64(v)
-		case mintimgAmount:
+		case mintingAmount:
 			genesis.Config.Governance.Reward.MintingAmount = v
 		case governanceMode:
 			genesis.Config.Governance.GovernanceMode = string(v)
@@ -699,7 +699,7 @@ func TestRewardDistribution(t *testing.T) {
 
 	var configItems []interface{}
 	configItems = append(configItems, epoch(testEpoch))
-	configItems = append(configItems, mintimgAmount(new(big.Int).SetUint64(mintAmount)))
+	configItems = append(configItems, mintingAmount(new(big.Int).SetUint64(mintAmount)))
 	configItems = append(configItems, istanbulCompatibleBlock(new(big.Int).SetUint64(0)))
 	configItems = append(configItems, LondonCompatibleBlock(new(big.Int).SetUint64(0)))
 	configItems = append(configItems, EthTxTypeCompatibleBlock(new(big.Int).SetUint64(0)))
