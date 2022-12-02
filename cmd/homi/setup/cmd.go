@@ -18,6 +18,7 @@
 package setup
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
@@ -363,7 +364,6 @@ func genCypressCommonGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.
 				Reward: &params.RewardConfig{
 					MintingAmount: mintingAmount,
 					Ratio:         "34/54/12",
-					Kip82Ratio:    "20/80",
 					UseGiniCoeff:  true,
 					DeferredTxFee: true,
 				},
@@ -455,7 +455,6 @@ func genBaobabCommonGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.G
 				Reward: &params.RewardConfig{
 					MintingAmount: mintingAmount,
 					Ratio:         "34/54/12",
-					Kip82Ratio:    "20/80",
 					UseGiniCoeff:  false,
 					DeferredTxFee: true,
 				},
@@ -650,6 +649,9 @@ func Gen(ctx *cli.Context) error {
 	genesisJson.Config.KoreCompatibleBlock = big.NewInt(ctx.Int64(koreCompatibleBlockNumberFlag.Name))
 
 	genesisJsonBytes, _ = json.MarshalIndent(genesisJson, "", "    ")
+	if cypressTest || cypress || baobabTest || baobab {
+		genesisJsonBytes = removeIfDefaultAddress(genesisJsonBytes, "govParamContract")
+	}
 	genValidatorKeystore(privKeys)
 	lastIssuedPortNum = uint16(ctx.Int(p2pPortFlag.Name))
 
@@ -1149,6 +1151,21 @@ func removeSpacesAndLines(b []byte) string {
 	out = strings.Replace(out, "\t", "", -1)
 	out = strings.Replace(out, "\n", "", -1)
 	return out
+}
+
+func removeIfDefaultAddress(jsonBytes []byte, key string) []byte {
+	defaultAddr := common.Address{}.Hex() // 0x0000..00
+	pat := fmt.Sprintf("\"%s\": \"%s\",\n", key, defaultAddr)
+	start := bytes.Index(jsonBytes, []byte(pat))
+	if start < 0 {
+		return jsonBytes
+	}
+	end := start + len(pat)
+
+	ret := make([]byte, 0, len(jsonBytes))
+	ret = append(ret, bytes.TrimRight(jsonBytes[:start], " ")...)
+	ret = append(ret, jsonBytes[end:]...)
+	return ret
 }
 
 func homiFlagsFromYaml(ctx *cli.Context) error {

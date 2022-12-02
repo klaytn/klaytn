@@ -204,7 +204,7 @@ func (g *GovernanceConfig) DeferredTxFee() bool {
 type RewardConfig struct {
 	MintingAmount          *big.Int `json:"mintingAmount"`
 	Ratio                  string   `json:"ratio"`                  // Define how much portion of reward be distributed to CN/PoC/KIR
-	Kip82Ratio             string   `json:"kip82ratio"`             // Define how much portion of reward be distributed to basic/stake
+	Kip82Ratio             string   `json:"kip82ratio,omitempty"`   // Define how much portion of reward be distributed to basic/stake
 	UseGiniCoeff           bool     `json:"useGiniCoeff"`           // Decide if Gini Coefficient will be used or not
 	DeferredTxFee          bool     `json:"deferredTxFee"`          // Decide if TX fee will be handled instantly or handled later at block finalization
 	StakingUpdateInterval  uint64   `json:"stakingUpdateInterval"`  // Interval when staking information is updated
