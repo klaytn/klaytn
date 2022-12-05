@@ -649,9 +649,7 @@ func Gen(ctx *cli.Context) error {
 	genesisJson.Config.KoreCompatibleBlock = big.NewInt(ctx.Int64(koreCompatibleBlockNumberFlag.Name))
 
 	genesisJsonBytes, _ = json.MarshalIndent(genesisJson, "", "    ")
-	if cypressTest || cypress || baobabTest || baobab {
-		genesisJsonBytes = removeIfDefaultAddress(genesisJsonBytes, "govParamContract")
-	}
+	genesisJsonBytes = removeIfDefaultAddress(genesisJsonBytes, "govParamContract")
 	genValidatorKeystore(privKeys)
 	lastIssuedPortNum = uint16(ctx.Int(p2pPortFlag.Name))
 
