@@ -18,7 +18,6 @@
 package setup
 
 import (
-	"bytes"
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
@@ -29,6 +28,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -1153,17 +1153,19 @@ func removeSpacesAndLines(b []byte) string {
 
 func removeIfDefaultAddress(jsonBytes []byte, key string) []byte {
 	defaultAddr := common.Address{}.Hex() // 0x0000..00
-	pat := fmt.Sprintf("\"%s\": \"%s\",\n", key, defaultAddr)
-	start := bytes.Index(jsonBytes, []byte(pat))
-	if start < 0 {
-		return jsonBytes
-	}
-	end := start + len(pat)
+	re := regexp.MustCompile(
+		fmt.Sprintf(`(?P<previousExists>,?)\s*"%s"\s*:\s*"%s"(?P<nextExists>,?)\n`,
+			key, defaultAddr))
+	return re.ReplaceAllFunc(jsonBytes, func(input []byte) []byte {
+		subexp := re.FindSubmatch(input)
+		previousExists := len(subexp[1]) > 0
+		nextExists := len(subexp[2]) > 0
+		if !nextExists || (nextExists && !previousExists) {
+			return []byte("\n") // remove the previous item's comma
+		}
 
-	ret := make([]byte, 0, len(jsonBytes))
-	ret = append(ret, bytes.TrimRight(jsonBytes[:start], " ")...)
-	ret = append(ret, jsonBytes[end:]...)
-	return ret
+		return []byte(",\n")
+	})
 }
 
 func homiFlagsFromYaml(ctx *cli.Context) error {
