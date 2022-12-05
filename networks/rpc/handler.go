@@ -332,7 +332,7 @@ func (h *handler) handleCallMsg(ctx *callProc, msg *jsonrpcMessage) *jsonrpcMess
 	case msg.isCall():
 		resp := h.handleCall(ctx, msg)
 		if resp.Error != nil {
-			logger.Trace("Served "+msg.Method, "reqid", idForLog{msg.ID}, "duration", time.Since(start), "err", resp.Error.Message)
+			logger.Debug("Served "+msg.Method, "reqid", idForLog{msg.ID}, "duration", time.Since(start), "err", resp.Error.Message)
 		} else {
 			logger.Trace("Served "+msg.Method, "reqid", idForLog{msg.ID}, "duration", time.Since(start))
 		}
