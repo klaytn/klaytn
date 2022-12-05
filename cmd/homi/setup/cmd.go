@@ -28,7 +28,6 @@ import (
 	"net/http"
 	"os"
 	"path"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -649,7 +648,6 @@ func Gen(ctx *cli.Context) error {
 	genesisJson.Config.KoreCompatibleBlock = big.NewInt(ctx.Int64(koreCompatibleBlockNumberFlag.Name))
 
 	genesisJsonBytes, _ = json.MarshalIndent(genesisJson, "", "    ")
-	genesisJsonBytes = removeIfDefaultAddress(genesisJsonBytes, "govParamContract")
 	genValidatorKeystore(privKeys)
 	lastIssuedPortNum = uint16(ctx.Int(p2pPortFlag.Name))
 
@@ -1149,23 +1147,6 @@ func removeSpacesAndLines(b []byte) string {
 	out = strings.Replace(out, "\t", "", -1)
 	out = strings.Replace(out, "\n", "", -1)
 	return out
-}
-
-func removeIfDefaultAddress(jsonBytes []byte, key string) []byte {
-	defaultAddr := common.Address{}.Hex() // 0x0000..00
-	re := regexp.MustCompile(
-		fmt.Sprintf(`(?P<previousExists>,?)\s*"%s"\s*:\s*"%s"(?P<nextExists>,?)\n`,
-			key, defaultAddr))
-	return re.ReplaceAllFunc(jsonBytes, func(input []byte) []byte {
-		subexp := re.FindSubmatch(input)
-		previousExists := len(subexp[1]) > 0
-		nextExists := len(subexp[2]) > 0
-		if !nextExists || (nextExists && !previousExists) {
-			return []byte("\n") // remove the previous item's comma
-		}
-
-		return []byte(",\n")
-	})
 }
 
 func homiFlagsFromYaml(ctx *cli.Context) error {
