@@ -8,15 +8,12 @@ import (
 
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/datasync/downloader"
 	"github.com/klaytn/klaytn/node/cn/gasprice"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/storage/statedb"
 )
-
-var _ = (*configMarshaling)(nil)
 
 // MarshalTOML marshals as TOML.
 func (c Config) MarshalTOML() (interface{}, error) {
@@ -49,8 +46,10 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		SenderTxHashIndexing    bool
 		ParallelDBWrite         bool
 		TrieNodeCacheConfig     statedb.TrieNodeCacheConfig
+		SnapshotCacheSize       int
+		SnapshotAsyncGen        bool
 		ServiceChainSigner      common.Address `toml:",omitempty"`
-		ExtraData               hexutil.Bytes  `toml:",omitempty"`
+		ExtraData               []byte         `toml:",omitempty"`
 		GasPrice                *big.Int
 		Rewardbase              common.Address `toml:",omitempty"`
 		TxPool                  blockchain.TxPoolConfig
@@ -69,6 +68,8 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		RestartTimeOutFlag      time.Duration
 		DaemonPathFlag          string
 		RPCGasCap               *big.Int `toml:",omitempty"`
+		RPCEVMTimeout           time.Duration
+		RPCTxFeeCap             float64
 	}
 	var enc Config
 	enc.Genesis = c.Genesis
@@ -99,6 +100,8 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.SenderTxHashIndexing = c.SenderTxHashIndexing
 	enc.ParallelDBWrite = c.ParallelDBWrite
 	enc.TrieNodeCacheConfig = c.TrieNodeCacheConfig
+	enc.SnapshotCacheSize = c.SnapshotCacheSize
+	enc.SnapshotAsyncGen = c.SnapshotAsyncGen
 	enc.ServiceChainSigner = c.ServiceChainSigner
 	enc.ExtraData = c.ExtraData
 	enc.GasPrice = c.GasPrice
@@ -119,6 +122,8 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.RestartTimeOutFlag = c.RestartTimeOutFlag
 	enc.DaemonPathFlag = c.DaemonPathFlag
 	enc.RPCGasCap = c.RPCGasCap
+	enc.RPCEVMTimeout = c.RPCEVMTimeout
+	enc.RPCTxFeeCap = c.RPCTxFeeCap
 	return &enc, nil
 }
 
@@ -153,8 +158,10 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		SenderTxHashIndexing    *bool
 		ParallelDBWrite         *bool
 		TrieNodeCacheConfig     *statedb.TrieNodeCacheConfig
+		SnapshotCacheSize       *int
+		SnapshotAsyncGen        *bool
 		ServiceChainSigner      *common.Address `toml:",omitempty"`
-		ExtraData               *hexutil.Bytes  `toml:",omitempty"`
+		ExtraData               []byte          `toml:",omitempty"`
 		GasPrice                *big.Int
 		Rewardbase              *common.Address `toml:",omitempty"`
 		TxPool                  *blockchain.TxPoolConfig
@@ -173,6 +180,8 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		RestartTimeOutFlag      *time.Duration
 		DaemonPathFlag          *string
 		RPCGasCap               *big.Int `toml:",omitempty"`
+		RPCEVMTimeout           *time.Duration
+		RPCTxFeeCap             *float64
 	}
 	var dec Config
 	if err := unmarshal(&dec); err != nil {
@@ -262,11 +271,17 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	if dec.TrieNodeCacheConfig != nil {
 		c.TrieNodeCacheConfig = *dec.TrieNodeCacheConfig
 	}
+	if dec.SnapshotCacheSize != nil {
+		c.SnapshotCacheSize = *dec.SnapshotCacheSize
+	}
+	if dec.SnapshotAsyncGen != nil {
+		c.SnapshotAsyncGen = *dec.SnapshotAsyncGen
+	}
 	if dec.ServiceChainSigner != nil {
 		c.ServiceChainSigner = *dec.ServiceChainSigner
 	}
 	if dec.ExtraData != nil {
-		c.ExtraData = *dec.ExtraData
+		c.ExtraData = dec.ExtraData
 	}
 	if dec.GasPrice != nil {
 		c.GasPrice = dec.GasPrice
@@ -321,6 +336,12 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.RPCGasCap != nil {
 		c.RPCGasCap = dec.RPCGasCap
+	}
+	if dec.RPCEVMTimeout != nil {
+		c.RPCEVMTimeout = *dec.RPCEVMTimeout
+	}
+	if dec.RPCTxFeeCap != nil {
+		c.RPCTxFeeCap = *dec.RPCTxFeeCap
 	}
 	return nil
 }
