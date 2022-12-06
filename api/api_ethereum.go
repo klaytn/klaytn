@@ -611,7 +611,7 @@ func (api *EthereumAPI) Call(ctx context.Context, args EthTransactionArgs, block
 	if rpcGasCap := bcAPI.RPCGasCap(); rpcGasCap != nil {
 		gasCap = rpcGasCap.Uint64()
 	}
-	result, _, status, err := EthDoCall(ctx, bcAPI, args, blockNrOrHash, overrides, localTxExecutionTime, gasCap)
+	result, _, status, err := EthDoCall(ctx, bcAPI, args, blockNrOrHash, overrides, bcAPI.RPCEVMTimeout(), gasCap)
 	if err != nil {
 		return nil, err
 	}

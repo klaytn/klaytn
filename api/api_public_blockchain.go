@@ -44,8 +44,7 @@ import (
 )
 
 const (
-	defaultGasPrice      = 25 * params.Ston
-	localTxExecutionTime = 5 * time.Second
+	defaultGasPrice = 25 * params.Ston
 )
 
 var logger = log.NewModuleLogger(log.API)
@@ -364,7 +363,7 @@ func (s *PublicBlockChainAPI) Call(ctx context.Context, args CallArgs, blockNrOr
 	if rpcGasCap := s.b.RPCGasCap(); rpcGasCap != nil {
 		gasCap = rpcGasCap
 	}
-	result, _, _, status, err := DoCall(ctx, s.b, args, blockNrOrHash, vm.Config{}, localTxExecutionTime, gasCap)
+	result, _, _, status, err := DoCall(ctx, s.b, args, blockNrOrHash, vm.Config{}, s.b.RPCEVMTimeout(), gasCap)
 	if err != nil {
 		return nil, err
 	}
@@ -381,7 +380,7 @@ func (s *PublicBlockChainAPI) EstimateComputationCost(ctx context.Context, args 
 	if rpcGasCap := s.b.RPCGasCap(); rpcGasCap != nil {
 		gasCap = rpcGasCap
 	}
-	_, _, computationCost, _, err := DoCall(ctx, s.b, args, blockNrOrHash, vm.Config{UseOpcodeComputationCost: true}, localTxExecutionTime, gasCap)
+	_, _, computationCost, _, err := DoCall(ctx, s.b, args, blockNrOrHash, vm.Config{UseOpcodeComputationCost: true}, s.b.RPCEVMTimeout(), gasCap)
 	return (hexutil.Uint64)(computationCost), err
 }
 
