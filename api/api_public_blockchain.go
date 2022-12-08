@@ -550,7 +550,7 @@ func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool, isEna
 		"logsBloom":        head.Bloom,
 		"stateRoot":        head.Root,
 		"reward":           head.Rewardbase,
-		"blockscore":       (*hexutil.Big)(head.BlockScore),
+		"blockScore":       (*hexutil.Big)(head.BlockScore),
 		"totalBlockScore":  (*hexutil.Big)(td),
 		"extraData":        hexutil.Bytes(head.Extra),
 		"governanceData":   hexutil.Bytes(head.Governance),

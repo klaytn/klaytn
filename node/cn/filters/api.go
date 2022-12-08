@@ -225,11 +225,8 @@ func RPCMarshalHeader(head *types.Header, isEnabledEthTxTypeFork bool) map[strin
 		"timestampFoS":     hexutil.Uint(head.TimeFoS),
 		"extraData":        hexutil.Bytes(head.Extra),
 		"governanceData":   hexutil.Bytes(head.Governance),
+		"voteData":         hexutil.Bytes(head.Vote),
 		"hash":             head.Hash(),
-	}
-
-	if len(head.Vote) != 0 {
-		result["voteData"] = hexutil.Bytes(head.Vote)
 	}
 
 	if isEnabledEthTxTypeFork {
