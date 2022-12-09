@@ -85,6 +85,19 @@ type RewardSpec struct {
 	Rewards  map[common.Address]*big.Int `json:"rewards"`  // mapping from reward recipient to amounts
 }
 
+func NewRewardSpec() *RewardSpec {
+	return &RewardSpec{
+		Minted:   big.NewInt(0),
+		TotalFee: big.NewInt(0),
+		BurntFee: big.NewInt(0),
+		Proposer: big.NewInt(0),
+		Stakers:  big.NewInt(0),
+		Kgf:      big.NewInt(0),
+		Kir:      big.NewInt(0),
+		Rewards:  make(map[common.Address]*big.Int),
+	}
+}
+
 // TODO: this is for legacy, will be removed
 type RewardDistributor struct{}
 
@@ -219,13 +232,13 @@ func CalcDeferredRewardSimple(header *types.Header, rules params.Rules, pset *pa
 		proposer := new(big.Int).Set(minted)
 		logger.Debug("CalcDeferredRewardSimple after Kore when deferredTxFee=false returns",
 			"proposer", proposer)
-		return &RewardSpec{
-			Minted:   minted,
-			TotalFee: big.NewInt(0),
-			BurntFee: big.NewInt(0),
-			Proposer: proposer,
-			Rewards:  map[common.Address]*big.Int{header.Rewardbase: proposer},
-		}, nil
+		spec := NewRewardSpec()
+		spec.Minted = minted
+		spec.TotalFee = big.NewInt(0)
+		spec.BurntFee = big.NewInt(0)
+		spec.Proposer = proposer
+		spec.Rewards[header.Rewardbase] = proposer
+		return spec, nil
 	}
 
 	totalFee := rc.totalFee
@@ -246,13 +259,13 @@ func CalcDeferredRewardSimple(header *types.Header, rules params.Rules, pset *pa
 		"burntFee", burntFee.Uint64(),
 	)
 
-	return &RewardSpec{
-		Minted:   minted,
-		TotalFee: totalFee,
-		BurntFee: burntFee,
-		Proposer: proposer,
-		Rewards:  map[common.Address]*big.Int{header.Rewardbase: proposer},
-	}, nil
+	spec := NewRewardSpec()
+	spec.Minted = minted
+	spec.TotalFee = totalFee
+	spec.BurntFee = burntFee
+	spec.Proposer = proposer
+	spec.Rewards[header.Rewardbase] = proposer
+	return spec, nil
 }
 
 // CalcDeferredReward calculates the deferred rewards,
@@ -293,17 +306,15 @@ func CalcDeferredReward(header *types.Header, rules params.Rules, pset *params.G
 		kir = big.NewInt(0)
 	}
 
-	spec := &RewardSpec{
-		Minted:   minted,
-		TotalFee: totalFee,
-		BurntFee: burntFee,
-		Proposer: proposer,
-		Stakers:  stakers,
-		Kgf:      kgf,
-		Kir:      kir,
-	}
+	spec := NewRewardSpec()
+	spec.Minted = minted
+	spec.TotalFee = totalFee
+	spec.BurntFee = burntFee
+	spec.Proposer = proposer
+	spec.Stakers = stakers
+	spec.Kgf = kgf
+	spec.Kir = kir
 
-	spec.Rewards = make(map[common.Address]*big.Int)
 	incrementRewardsMap(spec.Rewards, header.Rewardbase, proposer)
 
 	if stakingInfo != nil && !common.EmptyAddress(stakingInfo.PoCAddr) {
