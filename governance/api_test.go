@@ -149,6 +149,9 @@ func TestGetRewards(t *testing.T) {
 				TotalFee: common.Big0,
 				BurntFee: common.Big0,
 				Proposer: minted,
+				Stakers:  common.Big0,
+				Kgf:      common.Big0,
+				Kir:      common.Big0,
 				Rewards: map[common.Address]*big.Int{
 					proposer: minted,
 				},
