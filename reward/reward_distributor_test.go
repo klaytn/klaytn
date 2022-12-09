@@ -309,6 +309,9 @@ func TestRewardDistributor_GetBlockReward(t *testing.T) {
 				TotalFee: new(big.Int).SetUint64(1000),
 				BurntFee: new(big.Int).SetUint64(500),
 				Proposer: new(big.Int).SetUint64(9.6e18 + 500),
+				Stakers:  new(big.Int).SetUint64(0),
+				Kgf:      new(big.Int).SetUint64(0),
+				Kir:      new(big.Int).SetUint64(0),
 				Rewards: map[common.Address]*big.Int{
 					proposerAddr: new(big.Int).SetUint64(9.6e18 + 500),
 				},
@@ -322,6 +325,9 @@ func TestRewardDistributor_GetBlockReward(t *testing.T) {
 				TotalFee: new(big.Int).SetUint64(1000),
 				BurntFee: new(big.Int).SetUint64(0),
 				Proposer: new(big.Int).SetUint64(9.6e18 + 1000),
+				Stakers:  new(big.Int).SetUint64(0),
+				Kgf:      new(big.Int).SetUint64(0),
+				Kir:      new(big.Int).SetUint64(0),
 				Rewards: map[common.Address]*big.Int{
 					proposerAddr: new(big.Int).SetUint64(9.6e18 + 1000),
 				},
@@ -406,6 +412,9 @@ func TestRewardDistributor_CalcDeferredRewardSimple(t *testing.T) {
 				TotalFee: new(big.Int).SetUint64(1000),
 				BurntFee: new(big.Int).SetUint64(0),
 				Proposer: new(big.Int).SetUint64(9.6e18 + 1000),
+				Stakers:  new(big.Int).SetUint64(0),
+				Kgf:      new(big.Int).SetUint64(0),
+				Kir:      new(big.Int).SetUint64(0),
 				Rewards: map[common.Address]*big.Int{
 					proposerAddr: new(big.Int).SetUint64(9.6e18 + 1000),
 				},
@@ -418,6 +427,9 @@ func TestRewardDistributor_CalcDeferredRewardSimple(t *testing.T) {
 				TotalFee: new(big.Int).SetUint64(1000),
 				BurntFee: new(big.Int).SetUint64(500), // 50% of tx fee burnt
 				Proposer: new(big.Int).SetUint64(9.6e18 + 500),
+				Stakers:  new(big.Int).SetUint64(0),
+				Kgf:      new(big.Int).SetUint64(0),
+				Kir:      new(big.Int).SetUint64(0),
 				Rewards: map[common.Address]*big.Int{
 					proposerAddr: new(big.Int).SetUint64(9.6e18 + 500),
 				},
@@ -467,6 +479,9 @@ func TestRewardDistributor_CalcDeferredRewardSimple_nodeferred(t *testing.T) {
 				TotalFee: new(big.Int).SetUint64(1000),
 				BurntFee: new(big.Int).SetUint64(0),
 				Proposer: new(big.Int).SetUint64(9.6e18 + 1000),
+				Stakers:  new(big.Int).SetUint64(0),
+				Kgf:      new(big.Int).SetUint64(0),
+				Kir:      new(big.Int).SetUint64(0),
 				Rewards: map[common.Address]*big.Int{
 					proposerAddr: new(big.Int).SetUint64(9.6e18 + 1000),
 				},
@@ -480,6 +495,9 @@ func TestRewardDistributor_CalcDeferredRewardSimple_nodeferred(t *testing.T) {
 				TotalFee: new(big.Int).SetUint64(1000),
 				BurntFee: new(big.Int).SetUint64(500),
 				Proposer: new(big.Int).SetUint64(9.6e18 + 500),
+				Stakers:  new(big.Int).SetUint64(0),
+				Kgf:      new(big.Int).SetUint64(0),
+				Kir:      new(big.Int).SetUint64(0),
 				Rewards: map[common.Address]*big.Int{
 					proposerAddr: new(big.Int).SetUint64(9.6e18 + 500),
 				},
@@ -493,6 +511,9 @@ func TestRewardDistributor_CalcDeferredRewardSimple_nodeferred(t *testing.T) {
 				TotalFee: new(big.Int).SetUint64(0),
 				BurntFee: new(big.Int).SetUint64(0),
 				Proposer: new(big.Int).SetUint64(9.6e18),
+				Stakers:  new(big.Int).SetUint64(0),
+				Kgf:      new(big.Int).SetUint64(0),
+				Kir:      new(big.Int).SetUint64(0),
 				Rewards: map[common.Address]*big.Int{
 					proposerAddr: new(big.Int).SetUint64(9.6e18),
 				},
