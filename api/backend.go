@@ -23,6 +23,7 @@ package api
 import (
 	"context"
 	"math/big"
+	"time"
 
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts"
@@ -51,8 +52,9 @@ type Backend interface {
 	ChainDB() database.DBManager
 	EventMux() *event.TypeMux
 	AccountManager() accounts.AccountManager
-	RPCGasCap() *big.Int  // global gas cap for klay_call over rpc: DoS protection
-	RPCTxFeeCap() float64 // global tx fee cap for all transaction related APIs
+	RPCEVMTimeout() time.Duration // global timeout for klay_call
+	RPCGasCap() *big.Int          // global gas cap for klay_call over rpc: DoS protection
+	RPCTxFeeCap() float64         // global tx fee cap for all transaction related APIs
 	Engine() consensus.Engine
 	FeeHistory(ctx context.Context, blockCount int, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*big.Int, [][]*big.Int, []*big.Int, []float64, error)
 

@@ -64,7 +64,8 @@ func GetDefaultConfig() *Config {
 		},
 		WsEndpoint: "localhost:8546",
 
-		Istanbul: *istanbul.DefaultConfig,
+		Istanbul:      *istanbul.DefaultConfig,
+		RPCEVMTimeout: 5 * time.Second,
 	}
 }
 
@@ -170,6 +171,9 @@ type Config struct {
 
 	// RPCGasCap is the global gas cap for eth-call variants.
 	RPCGasCap *big.Int `toml:",omitempty"`
+
+	// RPCEVMTimeout is the global timeout for klay/eth-call.
+	RPCEVMTimeout time.Duration
 
 	// RPCTxFeeCap is the global transaction fee(price * gaslimit) cap for
 	// send-transction variants. The unit is klay.
