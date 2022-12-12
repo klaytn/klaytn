@@ -144,7 +144,7 @@ func TestCustomGenesis(t *testing.T) {
 		for idx, query := range tt.query {
 			klay := runKlay(t,
 				"klay-test", "--datadir", datadir, "--maxconnections", "0", "--port", "0",
-				"--nodiscover", "--nat", "none", "--ipcdisable",
+				"--nodiscover", "--nat", "none", "--ipcdisable", "--ntp.disable",
 				"--exec", query, "--verbosity", "0", "console")
 			klay.ExpectRegexp(tt.result[idx])
 			klay.ExpectExit()
