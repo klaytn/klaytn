@@ -76,7 +76,7 @@ var (
 		LondonCompatibleBlock:    big.NewInt(80295291),
 		EthTxTypeCompatibleBlock: big.NewInt(86513895),
 		MagmaCompatibleBlock:     big.NewInt(98347376),
-		KoreCompatibleBlock:      big.NewInt(0xffffffff),
+		KoreCompatibleBlock:      big.NewInt(111736800),
 		DeriveShaImpl:            2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x99fb17d324fa0e07f23b49d09028ac0919414db6"),
