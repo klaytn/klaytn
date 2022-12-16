@@ -81,7 +81,7 @@ func (r *testSnapshotReader) Snapshots() *snapshot.Tree {
 	return r.snap
 }
 
-func (r *testSnapshotReader) ContractCode(hash common.Hash) ([]byte, error) {
+func (r *testSnapshotReader) ContractCode(hash common.ExtHash) ([]byte, error) {
 	return r.db.ContractCode(hash)
 }
 

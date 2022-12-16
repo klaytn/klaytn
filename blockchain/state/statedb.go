@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"math/big"
 	"sort"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -53,8 +54,20 @@ var (
 
 	logger = log.NewModuleLogger(log.BlockchainState)
 
+	errNotExistingAddress = fmt.Errorf("there is no account corresponding to the given address")
+	errNotContractAddress = fmt.Errorf("given address is not a contract address")
+
 	// TODO-Klaytn EnabledExpensive and DBConfig.EnableDBPerfMetrics will be merged
 	EnabledExpensive = false
+
+	midAccountCnt  = uint64(0)
+	midStorageCnt  = uint64(0)
+	codeCnt        = uint64(0)
+	leafAccountCnt = uint64(0)
+	leafStorageCnt = uint64(0)
+	unknownCnt     = uint64(0)
+	mutex          = &sync.Mutex{}
+	once           sync.Once
 )
 
 // StateDBs within the Klaytn protocol are used to cache stateObjects from Merkle Patricia Trie
@@ -65,9 +78,9 @@ type StateDB struct {
 
 	snaps         *snapshot.Tree
 	snap          snapshot.Snapshot
-	snapDestructs map[common.Hash]struct{}
-	snapAccounts  map[common.Hash][]byte
-	snapStorage   map[common.Hash]map[common.Hash][]byte
+	snapDestructs map[common.ExtHash]struct{}
+	snapAccounts  map[common.ExtHash][]byte
+	snapStorage   map[common.ExtHash]map[common.ExtHash][]byte
 
 	// This map holds 'live' objects, which will get modified while processing a state transition.
 	stateObjects             map[common.Address]*stateObject
@@ -89,7 +102,7 @@ type StateDB struct {
 	logs         map[common.Hash][]*types.Log
 	logSize      uint
 
-	preimages map[common.Hash][]byte
+	preimages map[common.ExtHash][]byte
 
 	// Per-transaction access list
 	accessList *accessList
@@ -117,7 +130,7 @@ type StateDB struct {
 }
 
 // Create a new state from a given trie.
-func New(root common.Hash, db Database, snaps *snapshot.Tree) (*StateDB, error) {
+func New(root common.ExtHash, db Database, snaps *snapshot.Tree) (*StateDB, error) {
 	tr, err := db.OpenTrie(root)
 	if err != nil {
 		return nil, err
@@ -130,22 +143,22 @@ func New(root common.Hash, db Database, snaps *snapshot.Tree) (*StateDB, error) 
 		stateObjectsDirtyStorage: make(map[common.Address]struct{}),
 		stateObjectsDirty:        make(map[common.Address]struct{}),
 		logs:                     make(map[common.Hash][]*types.Log),
-		preimages:                make(map[common.Hash][]byte),
+		preimages:                make(map[common.ExtHash][]byte),
 		journal:                  newJournal(),
 		accessList:               newAccessList(),
 	}
 	if sdb.snaps != nil {
 		if sdb.snap = sdb.snaps.Snapshot(root); sdb.snap != nil {
-			sdb.snapDestructs = make(map[common.Hash]struct{})
-			sdb.snapAccounts = make(map[common.Hash][]byte)
-			sdb.snapStorage = make(map[common.Hash]map[common.Hash][]byte)
+			sdb.snapDestructs = make(map[common.ExtHash]struct{})
+			sdb.snapAccounts = make(map[common.ExtHash][]byte)
+			sdb.snapStorage = make(map[common.ExtHash]map[common.ExtHash][]byte)
 		}
 	}
 	return sdb, nil
 }
 
 // Create a new state from a given trie with prefetching
-func NewForPrefetching(root common.Hash, db Database, snaps *snapshot.Tree) (*StateDB, error) {
+func NewForPrefetching(root common.ExtHash, db Database, snaps *snapshot.Tree) (*StateDB, error) {
 	tr, err := db.OpenTrieForPrefetching(root)
 	if err != nil {
 		return nil, err
@@ -158,15 +171,15 @@ func NewForPrefetching(root common.Hash, db Database, snaps *snapshot.Tree) (*St
 		stateObjectsDirtyStorage: make(map[common.Address]struct{}),
 		stateObjectsDirty:        make(map[common.Address]struct{}),
 		logs:                     make(map[common.Hash][]*types.Log),
-		preimages:                make(map[common.Hash][]byte),
+		preimages:                make(map[common.ExtHash][]byte),
 		journal:                  newJournal(),
 		prefetching:              true,
 	}
 	if sdb.snaps != nil {
 		if sdb.snap = sdb.snaps.Snapshot(root); sdb.snap != nil {
-			sdb.snapDestructs = make(map[common.Hash]struct{})
-			sdb.snapAccounts = make(map[common.Hash][]byte)
-			sdb.snapStorage = make(map[common.Hash]map[common.Hash][]byte)
+			sdb.snapDestructs = make(map[common.ExtHash]struct{})
+			sdb.snapAccounts = make(map[common.ExtHash][]byte)
+			sdb.snapStorage = make(map[common.ExtHash]map[common.ExtHash][]byte)
 		}
 	}
 	return sdb, nil
@@ -195,7 +208,7 @@ func (self *StateDB) Error() error {
 
 // Reset clears out all ephemeral state objects from the state db, but keeps
 // the underlying state trie to avoid reloading data for the next operations.
-func (self *StateDB) Reset(root common.Hash) error {
+func (self *StateDB) Reset(root common.ExtHash) error {
 	tr, err := self.db.OpenTrie(root)
 	if err != nil {
 		return err
@@ -208,7 +221,7 @@ func (self *StateDB) Reset(root common.Hash) error {
 	self.txIndex = 0
 	self.logs = make(map[common.Hash][]*types.Log)
 	self.logSize = 0
-	self.preimages = make(map[common.Hash][]byte)
+	self.preimages = make(map[common.ExtHash][]byte)
 	self.clearJournalAndRefund()
 	self.accessList = newAccessList()
 	return nil
@@ -238,7 +251,7 @@ func (self *StateDB) Logs() []*types.Log {
 }
 
 // AddPreimage records a SHA3 preimage seen by the VM.
-func (self *StateDB) AddPreimage(hash common.Hash, preimage []byte) {
+func (self *StateDB) AddPreimage(hash common.ExtHash, preimage []byte) {
 	if _, ok := self.preimages[hash]; !ok {
 		self.journal.append(addPreimageChange{hash: hash})
 		pi := make([]byte, len(preimage))
@@ -248,7 +261,7 @@ func (self *StateDB) AddPreimage(hash common.Hash, preimage []byte) {
 }
 
 // Preimages returns a list of SHA3 preimages that have been submitted.
-func (self *StateDB) Preimages() map[common.Hash][]byte {
+func (self *StateDB) Preimages() map[common.ExtHash][]byte {
 	return self.preimages
 }
 
@@ -343,25 +356,25 @@ func (self *StateDB) GetCodeHash(addr common.Address) common.Hash {
 	if stateObject == nil {
 		return common.BytesToHash(emptyCodeHash)
 	}
-	return common.BytesToHash(stateObject.CodeHash())
+	return common.BytesToHash(stateObject.CodeHash()[:common.HashLength])
 }
 
 // GetState retrieves a value from the given account's storage trie.
-func (self *StateDB) GetState(addr common.Address, hash common.Hash) common.Hash {
+func (self *StateDB) GetState(addr common.Address, hash common.ExtHash) common.ExtHash {
 	stateObject := self.getStateObject(addr)
 	if stateObject != nil {
 		return stateObject.GetState(self.db, hash)
 	}
-	return common.Hash{}
+	return common.InitExtHash()
 }
 
 // GetCommittedState retrieves a value from the given account's committed storage trie.
-func (self *StateDB) GetCommittedState(addr common.Address, hash common.Hash) common.Hash {
+func (self *StateDB) GetCommittedState(addr common.Address, hash common.ExtHash) common.ExtHash {
 	stateObject := self.getStateObject(addr)
 	if stateObject != nil {
 		return stateObject.GetCommittedState(self.db, hash)
 	}
-	return common.Hash{}
+	return common.InitExtHash()
 }
 
 // IsContractAvailable returns true if the account corresponding to the given address implements ProgramAccount.
@@ -484,13 +497,13 @@ func (self *StateDB) SetNonce(addr common.Address, nonce uint64) {
 func (self *StateDB) SetCode(addr common.Address, code []byte) error {
 	stateObject := self.GetOrNewSmartContract(addr)
 	if stateObject != nil {
-		return stateObject.SetCode(crypto.Keccak256Hash(code), code)
+		return stateObject.SetCode(crypto.Keccak256Hash(code).ToRootExtHash(), code)
 	}
 
 	return nil
 }
 
-func (self *StateDB) SetState(addr common.Address, key, value common.Hash) {
+func (self *StateDB) SetState(addr common.Address, key, value common.ExtHash) {
 	stateObject := self.GetOrNewSmartContract(addr)
 	if stateObject != nil {
 		stateObject.SetState(self.db, key, value)
@@ -499,7 +512,7 @@ func (self *StateDB) SetState(addr common.Address, key, value common.Hash) {
 
 // SetStorage replaces the entire storage for the specified account with given
 // storage. This function should only be used for debugging.
-func (self *StateDB) SetStorage(addr common.Address, storage map[common.Hash]common.Hash) {
+func (self *StateDB) SetStorage(addr common.Address, storage map[common.ExtHash]common.ExtHash) {
 	stateObject := self.GetOrNewStateObject(addr)
 	if stateObject != nil {
 		stateObject.SetStorage(storage)
@@ -615,7 +628,7 @@ func (self *StateDB) getDeletedStateObject(addr common.Address) *stateObject {
 		if EnabledExpensive {
 			defer func(start time.Time) { self.SnapshotAccountReads += time.Since(start) }(time.Now())
 		}
-		if acc, err = self.snap.Account(crypto.Keccak256Hash(addr.Bytes())); err == nil {
+		if acc, err = self.snap.Account(crypto.Keccak256Hash(addr.Bytes()).ToRootExtHash()); err == nil {
 			if acc == nil {
 				return nil
 			}
@@ -634,12 +647,29 @@ func (self *StateDB) getDeletedStateObject(addr common.Address) *stateObject {
 			self.setError(err)
 			return nil
 		}
+		/* oldHash2ExtHash : ExtHash only version code.
 		serializer := account.NewAccountSerializer()
 		if err := rlp.DecodeBytes(enc, serializer); err != nil {
 			logger.Error("Failed to decode state object", "addr", addr, "err", err)
 			return nil
 		}
 		acc = serializer.GetAccount()
+		*/
+
+		// <-- Code that reads the hash version of the DB and converts it to the ExtHash version for processing
+		serializer := account.NewAccountSerializer()
+		serializerLH := account.NewAccountLHSerializer()
+		if errLH := rlp.DecodeBytes(enc, serializerLH); errLH != nil {
+			err := rlp.DecodeBytes(enc, serializer)
+			if err != nil {
+				logger.Error("Failed to decode state object", "addr", addr, "err", err)
+				return nil
+			}
+		} else {
+			serializer = serializerLH.Copy()
+		}
+		acc = serializer.GetAccount()
+		// -->
 	}
 	// Insert into the live set.
 	obj := newObject(self, addr, acc)
@@ -743,8 +773,8 @@ func (self *StateDB) createObjectWithMap(addr common.Address, accountType accoun
 // CreateAccount is called during the EVM CREATE operation. The situation might arise that
 // a contract does the following:
 //
-//   1. sends funds to sha(account ++ (nonce + 1))
-//   2. tx_create(sha(account ++ nonce)) (note that this gets the address of 1)
+//  1. sends funds to sha(account ++ (nonce + 1))
+//  2. tx_create(sha(account ++ nonce)) (note that this gets the address of 1)
 //
 // Carrying over the balance ensures that Ether doesn't disappear.
 func (self *StateDB) CreateAccount(addr common.Address) {
@@ -782,19 +812,19 @@ func (self *StateDB) CreateSmartContractAccountWithKey(addr common.Address, huma
 	}
 }
 
-func (db *StateDB) ForEachStorage(addr common.Address, cb func(key, value common.Hash) bool) {
+func (db *StateDB) ForEachStorage(addr common.Address, cb func(key, value common.ExtHash) bool) {
 	so := db.getStateObject(addr)
 	if so == nil {
 		return
 	}
 	it := statedb.NewIterator(so.getStorageTrie(db.db).NodeIterator(nil))
 	for it.Next() {
-		key := common.BytesToHash(db.trie.GetKey(it.Key))
+		key := common.BytesToExtHash(db.trie.GetKey(it.Key))
 		if value, dirty := so.dirtyStorage[key]; dirty {
 			cb(key, value)
 			continue
 		}
-		cb(key, common.BytesToHash(it.Value))
+		cb(key, common.BytesToExtHash(it.Value))
 	}
 }
 
@@ -810,7 +840,7 @@ func (self *StateDB) Copy() *StateDB {
 		refund:            self.refund,
 		logs:              make(map[common.Hash][]*types.Log, len(self.logs)),
 		logSize:           self.logSize,
-		preimages:         make(map[common.Hash][]byte),
+		preimages:         make(map[common.ExtHash][]byte),
 		journal:           newJournal(),
 	}
 	// Copy the dirty states, logs, and preimages
@@ -855,17 +885,17 @@ func (self *StateDB) Copy() *StateDB {
 		state.snaps = self.snaps
 		state.snap = self.snap
 		// deep copy needed
-		state.snapDestructs = make(map[common.Hash]struct{})
+		state.snapDestructs = make(map[common.ExtHash]struct{})
 		for k, v := range self.snapDestructs {
 			state.snapDestructs[k] = v
 		}
-		state.snapAccounts = make(map[common.Hash][]byte)
+		state.snapAccounts = make(map[common.ExtHash][]byte)
 		for k, v := range self.snapAccounts {
 			state.snapAccounts[k] = v
 		}
-		state.snapStorage = make(map[common.Hash]map[common.Hash][]byte)
+		state.snapStorage = make(map[common.ExtHash]map[common.ExtHash][]byte)
 		for k, v := range self.snapStorage {
-			temp := make(map[common.Hash][]byte)
+			temp := make(map[common.ExtHash][]byte)
 			for kk, vv := range v {
 				temp[kk] = vv
 			}
@@ -968,13 +998,13 @@ func (stateDB *StateDB) Finalise(deleteEmptyObjects bool, setStorageRoot bool) {
 // IntermediateRoot computes the current root hash of the state statedb.
 // It is called in between transactions to get the root hash that
 // goes into transaction receipts.
-func (s *StateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
+func (s *StateDB) IntermediateRoot(deleteEmptyObjects bool) common.ExtHash {
 	s.Finalise(deleteEmptyObjects, true)
 	// Track the amount of time wasted on hashing the account trie
 	if EnabledExpensive {
 		defer func(start time.Time) { s.AccountHashes += time.Since(start) }(time.Now())
 	}
-	return s.trie.Hash()
+	return s.trie.RootHash()
 }
 
 // Prepare sets the current transaction hash and index and block hash which is
@@ -992,9 +1022,9 @@ func (s *StateDB) clearJournalAndRefund() {
 }
 
 // Commit writes the state to the underlying in-memory trie database.
-func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) {
+func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.ExtHash, err error) {
 	if s.dbErr != nil {
-		return common.Hash{}, fmt.Errorf("commit aborted due to earlier error: %v", s.dbErr)
+		return common.InitExtHash(), fmt.Errorf("commit aborted due to earlier error: %v", s.dbErr)
 	}
 
 	defer s.clearJournalAndRefund()
@@ -1017,12 +1047,12 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 			if stateObject.IsProgramAccount() {
 				// Write any contract code associated with the state object.
 				if stateObject.code != nil && stateObject.dirtyCode {
-					s.db.TrieDB().DiskDB().WriteCode(common.BytesToHash(stateObject.CodeHash()), stateObject.code)
+					s.db.TrieDB().DiskDB().WriteCode(common.BytesToRootExtHash(stateObject.CodeHash()), stateObject.code)
 					stateObject.dirtyCode = false
 				}
 				// Write any storage changes in the state object to its storage trie.
 				if err := stateObject.CommitStorageTrie(s.db); err != nil {
-					return common.Hash{}, err
+					return common.InitExtHash(), err
 				}
 			}
 			// Update the object in the main account trie.
@@ -1040,7 +1070,7 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 	if EnabledExpensive {
 		defer func(start time.Time) { s.AccountCommits += time.Since(start) }(time.Now())
 	}
-	root, err = s.trie.Commit(func(_ [][]byte, _ []byte, leaf []byte, parent common.Hash, parentDepth int) error {
+	root, err = s.trie.Commit(func(_ [][]byte, _ []byte, leaf []byte, parent common.ExtHash, parentDepth int) error {
 		serializer := account.NewAccountSerializer()
 		if err := rlp.DecodeBytes(leaf, serializer); err != nil {
 			logger.Warn("RLP decode failed", "err", err, "leaf", string(leaf))
@@ -1048,12 +1078,16 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 		}
 		acc := serializer.GetAccount()
 		if pa := account.GetProgramAccount(acc); pa != nil {
-			if pa.GetStorageRoot() != emptyState {
+			if pa.GetStorageRoot().ToHash() != emptyState {
 				s.db.TrieDB().Reference(pa.GetStorageRoot(), parent)
+			}
+			code := common.BytesToRootExtHash(pa.GetCodeHash())
+			if code.ToHash() != emptyCode {
+				s.db.TrieDB().Reference(code, parent)
 			}
 		}
 		return nil
-	})
+	}, true)
 
 	// If snapshotting is enabled, update the snapshot tree with this new version
 	if s.snap != nil {
@@ -1084,22 +1118,17 @@ func (s *StateDB) GetTxHash() common.Hash {
 	return s.thash
 }
 
-var (
-	errNotExistingAddress = fmt.Errorf("there is no account corresponding to the given address")
-	errNotContractAddress = fmt.Errorf("given address is not a contract address")
-)
-
-func (s *StateDB) GetContractStorageRoot(contractAddr common.Address) (common.Hash, error) {
+func (s *StateDB) GetContractStorageRoot(contractAddr common.Address) (common.ExtHash, error) {
 	acc := s.GetAccount(contractAddr)
 	if acc == nil {
-		return common.Hash{}, errNotExistingAddress
+		return common.InitExtHash(), errNotExistingAddress
 	}
 	if acc.Type() != account.SmartContractAccountType {
-		return common.Hash{}, errNotContractAddress
+		return common.InitExtHash(), errNotContractAddress
 	}
 	contract, true := acc.(*account.SmartContractAccount)
 	if !true {
-		return common.Hash{}, errNotContractAddress
+		return common.InitExtHash(), errNotContractAddress
 	}
 	return contract.GetStorageRoot(), nil
 }

@@ -110,12 +110,12 @@ type Account interface {
 type ProgramAccount interface {
 	Account
 
-	GetStorageRoot() common.Hash
+	GetStorageRoot() common.ExtHash
 	GetCodeHash() []byte
 	GetCodeFormat() params.CodeFormat
 	GetVmVersion() params.VmVersion
 
-	SetStorageRoot(h common.Hash)
+	SetStorageRoot(h common.ExtHash)
 	SetCodeHash(h []byte)
 	SetCodeInfo(codeInfo params.CodeInfo)
 }

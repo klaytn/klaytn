@@ -71,6 +71,15 @@ func (n *fullNode) EncodeRLP(w io.Writer) error {
 
 func (n *fullNode) copy() *fullNode   { copy := *n; return &copy }
 func (n *shortNode) copy() *shortNode { copy := *n; return &copy }
+func toValueNode(src []byte) valueNode {
+	copy := src
+	return copy
+}
+
+func toHashNode(src []byte) hashNode {
+	copy := src
+	return copy
+}
 
 // nodeFlag contains caching-related metadata about a node.
 type nodeFlag struct {
@@ -94,6 +103,11 @@ func (n *fullNode) String() string  { return n.fstring("") }
 func (n *shortNode) String() string { return n.fstring("") }
 func (n hashNode) String() string   { return n.fstring("") }
 func (n valueNode) String() string  { return n.fstring("") }
+
+// func (n *fullNode) Bytes() []byte  { return n[:] }
+// func (n *shortNode) Bytes() []byte { return n[:] }
+func (n hashNode) Bytes() []byte  { return n[:] }
+func (n valueNode) Bytes() []byte { return n[:] }
 
 func (n *fullNode) fstring(ind string) string {
 	resp := fmt.Sprintf("[\n%s  ", ind)
@@ -189,8 +203,6 @@ func decodeFull(hash, elems []byte) (*fullNode, error) {
 	return n, nil
 }
 
-const hashLen = len(common.Hash{})
-
 func decodeRef(buf []byte) (node, []byte, error) {
 	kind, val, rest, err := rlp.Split(buf)
 	if err != nil {
@@ -200,8 +212,8 @@ func decodeRef(buf []byte) (node, []byte, error) {
 	case kind == rlp.List:
 		// 'embedded' node reference. The encoding must be smaller
 		// than a hash in order to be valid.
-		if size := len(buf) - len(rest); size > hashLen {
-			err := fmt.Errorf("oversized embedded node (size is %d bytes, want size < %d)", size, hashLen)
+		if size := len(buf) - len(rest); size > common.HashLength {
+			err := fmt.Errorf("oversized embedded node (size is %d bytes, want size < %d)", size, common.HashLength)
 			return nil, buf, err
 		}
 		n, err := decodeNode(nil, buf)
@@ -209,10 +221,13 @@ func decodeRef(buf []byte) (node, []byte, error) {
 	case kind == rlp.String && len(val) == 0:
 		// empty node
 		return nil, rest, nil
-	case kind == rlp.String && len(val) == 32:
+	case kind == rlp.String && len(val) == common.ExtHashLength:
 		return append(hashNode{}, val...), rest, nil
+	case kind == rlp.String && len(val) == common.HashLength:
+		legacyKey := common.BytesLegacyToExtHash(val)
+		return append(hashNode{}, legacyKey[:]...), rest, nil
 	default:
-		return nil, nil, fmt.Errorf("invalid RLP string size %d (want 0 or 32)", len(val))
+		return nil, nil, fmt.Errorf("invalid RLP string size %d (want 0 or %d)", len(val), common.ExtHashLength)
 	}
 }
 

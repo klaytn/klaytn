@@ -174,7 +174,7 @@ func verifyState(ctx *cli.Context) error {
 		return fmt.Errorf("head block missing: %v", head.String())
 	}
 
-	snaptree, err := snapshot.New(db, statedb.NewDatabase(db), 256, headBlock.Root(), false, false, false)
+	snaptree, err := snapshot.New(db, statedb.NewDatabase(db), 256, headBlock.Root().ToRootExtHash(), false, false, false)
 	if err != nil {
 		logger.Error("Failed to open snapshot tree", "err", err)
 		return err
@@ -191,7 +191,7 @@ func verifyState(ctx *cli.Context) error {
 			return err
 		}
 	}
-	if err := snaptree.Verify(root); err != nil {
+	if err := snaptree.Verify(root.ToRootExtHash()); err != nil {
 		logger.Error("Failed to verify state", "root", root, "err", err)
 		return err
 	}
@@ -229,14 +229,14 @@ func traceTrie(ctx *cli.Context) error {
 
 	logger.Info("Trace Start", "BlockNum", blockNumber)
 
-	sdb, err := state.New(root, state.NewDatabase(dbm), nil)
+	sdb, err := state.New(root.ToRootExtHash(), state.NewDatabase(dbm), nil)
 	if err != nil {
 		return fmt.Errorf("Failed to open newDB trie : %v", err)
 	}
 	trieDB := sdb.Database().TrieDB()
 
 	// Get root-node childrens to create goroutine by number of childrens
-	children, err := trieDB.NodeChildren(root)
+	children, err := trieDB.NodeChildren(root.ToRootExtHash())
 	if err != nil {
 		return fmt.Errorf("Fail get childrens of root : %v", err)
 	}
@@ -258,7 +258,7 @@ func traceTrie(ctx *cli.Context) error {
 
 	// Create goroutine by number of childrens
 	for _, child := range children {
-		go func(child common.Hash) {
+		go func(child common.ExtHash) {
 			defer childWait.Done()
 			doTraceTrie(sdb.Database(), child)
 		}(child)
@@ -270,7 +270,7 @@ func traceTrie(ctx *cli.Context) error {
 	return nil
 }
 
-func doTraceTrie(db state.Database, root common.Hash) (resultErr error) {
+func doTraceTrie(db state.Database, root common.ExtHash) (resultErr error) {
 	logger.Info("Trie Tracer Start", "Hash Root", root)
 	// Create and iterate a state trie rooted in a sub-node
 	oldState, err := state.New(root, db, nil)
@@ -309,7 +309,7 @@ func doTraceTrie(db state.Database, root common.Hash) (resultErr error) {
 func iterateTrie(ctx *cli.Context) error {
 	stack := MakeFullNode(ctx)
 	dbm := stack.OpenDatabase(getConfig(ctx))
-	sdb, err := state.New(common.Hash{}, state.NewDatabase(dbm), nil)
+	sdb, err := state.New(common.InitExtHash(), state.NewDatabase(dbm), nil)
 	if err != nil {
 		return fmt.Errorf("Failed to open newDB trie : %v", err)
 	}

@@ -21,7 +21,9 @@
 package statedb
 
 import (
+	"fmt"
 	"hash"
+	"reflect"
 	"sync"
 
 	"github.com/klaytn/klaytn/common"
@@ -93,29 +95,55 @@ func (h *hasher) hash(n node, db *Database, force bool) (node, node) {
 	}
 	// Trie not processed yet or needs storage, walk the children
 	collapsed, cached := h.hashChildren(n, db)
-	hashed, lenEncoded := h.store(collapsed, db, force)
+	hashed, lenEncoded, extHashed := h.store(collapsed, db, force, false)
 	// Cache the hash of the node for later reuse and remove
 	// the dirty flag in commit mode. It's fine to assign these values directly
 	// without copying the node first because hashChildren copies it.
-	cachedHash, _ := hashed.(hashNode)
+	extCachedHash := extHashed.Bytes()
+	cachedHash, ok := hashed.(hashNode)
+	if extHashed.ToHash() == (common.Hash{}) && ok {
+		extCachedHash = common.BytesToExtHash(cachedHash.Bytes()).Bytes()
+	}
 	switch cn := cached.(type) {
 	case *shortNode:
-		cn.flags.hash = cachedHash
+		if ok {
+			cn.flags.hash = extCachedHash
+			n.(*shortNode).flags.hash = extCachedHash
+		} else {
+			cn.flags.hash = cachedHash
+			n.(*shortNode).flags.hash = cachedHash
+		}
 		cn.flags.lenEncoded = lenEncoded
 		if db != nil {
 			cn.flags.dirty = false
 		}
 	case *fullNode:
-		cn.flags.hash = cachedHash
+		if ok {
+			cn.flags.hash = extCachedHash
+			n.(*fullNode).flags.hash = extCachedHash
+		} else {
+			cn.flags.hash = cachedHash
+			n.(*fullNode).flags.hash = cachedHash
+		}
 		cn.flags.lenEncoded = lenEncoded
 		if db != nil {
 			cn.flags.dirty = false
 		}
 	}
-	return hashed, cached
+
+	switch hashed.(type) {
+	case *shortNode:
+		return hashed, cached
+	case hashNode:
+		return toHashNode(extCachedHash), cached
+	case valueNode:
+		return valueNode(extCachedHash), cached
+	default:
+		panic(fmt.Sprintf("node process not defind : node type = %v", reflect.TypeOf(hashed)))
+	}
 }
 
-func (h *hasher) hashRoot(n node, db *Database, force bool) (node, node) {
+func (h *hasher) hashRoot(n node, db *Database, force bool, extRootFlag bool) (node, node) {
 	// If we're not storing the node, just hashing, use available cached data
 	if hash, dirty := n.cache(); hash != nil {
 		if db == nil {
@@ -132,26 +160,56 @@ func (h *hasher) hashRoot(n node, db *Database, force bool) (node, node) {
 	}
 	// Trie not processed yet or needs storage, walk the children
 	collapsed, cached := h.hashChildrenFromRoot(n, db)
-	hashed, lenEncoded := h.store(collapsed, db, force)
+	hashed, lenEncoded, extHashed := h.store(collapsed, db, force, extRootFlag)
 	// Cache the hash of the node for later reuse and remove
 	// the dirty flag in commit mode. It's fine to assign these values directly
 	// without copying the node first because hashChildren copies it.
-	cachedHash, _ := hashed.(hashNode)
+	extCachedHash := extHashed.Bytes()
+	cachedHash, ok := hashed.(hashNode)
+	if extHashed.ToHash() == (common.Hash{}) && ok {
+		if extRootFlag {
+			extCachedHash = common.BytesToRootExtHash(cachedHash.Bytes()).Bytes()
+		} else {
+			extCachedHash = common.BytesToExtHash(cachedHash.Bytes()).Bytes()
+		}
+	}
 	switch cn := cached.(type) {
 	case *shortNode:
-		cn.flags.hash = cachedHash
+		if ok {
+			cn.flags.hash = extCachedHash
+			n.(*shortNode).flags.hash = extCachedHash
+		} else {
+			cn.flags.hash = cachedHash
+			n.(*shortNode).flags.hash = cachedHash
+		}
 		cn.flags.lenEncoded = lenEncoded
 		if db != nil {
 			cn.flags.dirty = false
 		}
 	case *fullNode:
-		cn.flags.hash = cachedHash
+		if ok {
+			cn.flags.hash = extCachedHash
+			n.(*fullNode).flags.hash = extCachedHash
+		} else {
+			cn.flags.hash = cachedHash
+			n.(*fullNode).flags.hash = cachedHash
+		}
 		cn.flags.lenEncoded = lenEncoded
 		if db != nil {
 			cn.flags.dirty = false
 		}
 	}
-	return hashed, cached
+
+	switch hashed.(type) {
+	case *shortNode:
+		return hashed, cached
+	case hashNode:
+		return toHashNode(extCachedHash), cached
+	case valueNode:
+		return valueNode(extCachedHash), cached
+	default:
+		panic(fmt.Sprintf("node process not defind : node type = %v", reflect.TypeOf(hashed)))
+	}
 }
 
 // hashChildren replaces the children of a node with their hashes if the encoded
@@ -243,10 +301,12 @@ func (h *hasher) hashChildrenFromRoot(original node, db *Database) (node, node) 
 // store hashes the node n and if we have a storage layer specified, it writes
 // the key/value pair to it and tracks any node->child references as well as any
 // node->external trie references.
-func (h *hasher) store(n node, db *Database, force bool) (node, uint16) {
+func (h *hasher) store(n node, db *Database, force, rootFlag bool) (node, uint16, common.ExtHash) {
+	var tmpHash common.ExtHash
+
 	// Don't store hashes or empty nodes.
 	if _, isHash := n.(hashNode); n == nil || isHash {
-		return n, 0
+		return n, 0, tmpHash
 	}
 	hash, _ := n.cache()
 	lenEncoded := n.lenEncoded()
@@ -260,17 +320,21 @@ func (h *hasher) store(n node, db *Database, force bool) (node, uint16) {
 		lenEncoded = uint16(len(h.tmp))
 	}
 	if lenEncoded < 32 && !force {
-		return n, lenEncoded // Nodes smaller than 32 bytes are stored inside their parent
+		return n, lenEncoded, tmpHash // Nodes smaller than 32 bytes are stored inside their parent
 	}
 	if hash == nil {
 		hash = h.makeHashNode(h.tmp)
 	}
 	if db != nil {
 		// We are pooling the trie nodes into an intermediate memory cache
-		hash := common.BytesToHash(hash)
+		if rootFlag {
+			tmpHash = common.BytesToRootExtHash(hash)
+		} else {
+			tmpHash = common.BytesToExtHash(hash)
+		}
 
 		db.lock.Lock()
-		db.insert(hash, lenEncoded, n)
+		db.insert(tmpHash, lenEncoded, n)
 		db.lock.Unlock()
 
 		// Track external references from account->storage trie
@@ -278,24 +342,33 @@ func (h *hasher) store(n node, db *Database, force bool) (node, uint16) {
 			switch n := n.(type) {
 			case *shortNode:
 				if child, ok := n.Val.(valueNode); ok {
-					h.onleaf(nil, nil, child, hash, 0)
+					h.onleaf(nil, nil, child, tmpHash, 0)
 				}
+				n.flags.hash = toHashNode(tmpHash.Bytes())
 			case *fullNode:
 				for i := 0; i < 16; i++ {
 					if child, ok := n.Children[i].(valueNode); ok {
-						h.onleaf(nil, nil, child, hash, 0)
+						h.onleaf(nil, nil, child, tmpHash, 0)
 					}
 				}
+				n.flags.hash = toHashNode(tmpHash[:])
 			}
 		}
 	}
-	return hash, lenEncoded
+	return hash, lenEncoded, tmpHash
 }
 
 func (h *hasher) makeHashNode(data []byte) hashNode {
 	n := make(hashNode, h.sha.Size())
 	h.sha.Reset()
-	h.sha.Write(data)
+	tmpData, err := common.RlpPaddingFilter(data)
+	if err == nil {
+		h.sha.Write(tmpData)
+	} else {
+		//tmpData = rlp.ExtPaddingFilter(data)
+		tmpData = common.ExtPaddingFilter(data)
+		h.sha.Write(tmpData)
+	}
 	h.sha.Read(n)
 	return n
 }

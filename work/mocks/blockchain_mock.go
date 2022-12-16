@@ -210,7 +210,7 @@ func (mr *MockBlockChainMockRecorder) Config() *gomock.Call {
 }
 
 // ContractCode mocks base method
-func (m *MockBlockChain) ContractCode(arg0 common.Hash) ([]byte, error) {
+func (m *MockBlockChain) ContractCode(arg0 common.ExtHash) ([]byte, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ContractCode", arg0)
 	ret0, _ := ret[0].([]byte)

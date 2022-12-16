@@ -96,9 +96,9 @@ type DatabaseReader interface {
 type Database struct {
 	diskDB database.DBManager // Persistent storage for matured trie nodes
 
-	nodes  map[common.Hash]*cachedNode // Data and references relationships of a trie node
-	oldest common.Hash                 // Oldest tracked node, flush-list head
-	newest common.Hash                 // Newest tracked node, flush-list tail
+	nodes  map[common.ExtHash]*cachedNode // Data and references relationships of a node
+	oldest common.ExtHash                 // Oldest tracked node, flush-list head
+	newest common.ExtHash                 // Newest tracked node, flush-list tail
 
 	preimages map[common.Hash][]byte // Preimages of nodes from the secure trie
 
@@ -180,11 +180,11 @@ type cachedNode struct {
 	// TODO-Klaytn: need to change data type of this if we increase the code size limit
 	size uint16 // Byte size of the useful cached data
 
-	parents  uint64                 // Number of live nodes referencing this one
-	children map[common.Hash]uint64 // External children referenced by this node
+	parents  uint64                    // Number of live nodes referencing this one
+	children map[common.ExtHash]uint64 // External children referenced by this node
 
-	flushPrev common.Hash // Previous node in the flush-list
-	flushNext common.Hash // Next node in the flush-list
+	flushPrev common.ExtHash // Previous node in the flush-list
+	flushNext common.ExtHash // Next node in the flush-list
 }
 
 // rlp returns the raw rlp encoded blob of the cached trie node, either directly
@@ -202,7 +202,7 @@ func (n *cachedNode) rlp() []byte {
 
 // obj returns the decoded and expanded trie node, either directly from the cache,
 // or by regenerating it from the rlp encoded blob.
-func (n *cachedNode) obj(hash common.Hash) node {
+func (n *cachedNode) obj(hash common.ExtHash) node {
 	if node, ok := n.node.(rawNode); ok {
 		return mustDecodeNode(hash[:], node)
 	}
@@ -211,8 +211,8 @@ func (n *cachedNode) obj(hash common.Hash) node {
 
 // childs returns all the tracked children of this node, both the implicit ones
 // from inside the node as well as the explicit ones from outside the node.
-func (n *cachedNode) childs() []common.Hash {
-	children := make([]common.Hash, 0, 16)
+func (n *cachedNode) childs() []common.ExtHash {
+	children := make([]common.ExtHash, 0, 16)
 	for child := range n.children {
 		children = append(children, child)
 	}
@@ -224,7 +224,7 @@ func (n *cachedNode) childs() []common.Hash {
 
 // gatherChildren traverses the node hierarchy of a collapsed database node and
 // retrieves all the hashnode children.
-func gatherChildren(n node, children *[]common.Hash) {
+func gatherChildren(n node, children *[]common.ExtHash) {
 	switch n := n.(type) {
 	case *rawShortNode:
 		gatherChildren(n.Val, children)
@@ -234,7 +234,7 @@ func gatherChildren(n node, children *[]common.Hash) {
 			gatherChildren(n[i], children)
 		}
 	case hashNode:
-		*children = append(*children, common.BytesToHash(n))
+		*children = append(*children, common.BytesToExtHash(n))
 
 	case valueNode, nil, rawNode:
 
@@ -322,7 +322,7 @@ func NewDatabaseWithNewCache(diskDB database.DBManager, cacheConfig *TrieNodeCac
 
 	return &Database{
 		diskDB:              diskDB,
-		nodes:               map[common.Hash]*cachedNode{{}: {}},
+		nodes:               map[common.ExtHash]*cachedNode{common.InitExtHash(): {}},
 		preimages:           make(map[common.Hash][]byte),
 		trieNodeCache:       trieNodeCache,
 		trieNodeCacheConfig: cacheConfig,
@@ -335,7 +335,7 @@ func NewDatabaseWithNewCache(diskDB database.DBManager, cacheConfig *TrieNodeCac
 func NewDatabaseWithExistingCache(diskDB database.DBManager, cache TrieNodeCache) *Database {
 	return &Database{
 		diskDB:        diskDB,
-		nodes:         map[common.Hash]*cachedNode{{}: {}},
+		nodes:         map[common.ExtHash]*cachedNode{common.InitExtHash(): {}},
 		preimages:     make(map[common.Hash][]byte),
 		trieNodeCache: cache,
 	}
@@ -389,10 +389,10 @@ func (db *Database) RUnlockGCCachedNode() {
 }
 
 // NodeChildren retrieves the children of the given hash trie
-func (db *Database) NodeChildren(hash common.Hash) ([]common.Hash, error) {
-	childrenHash := make([]common.Hash, 0, 16)
+func (db *Database) NodeChildren(hash common.ExtHash) ([]common.ExtHash, error) {
+	childrenHash := make([]common.ExtHash, 0, 16)
 
-	if (hash == common.Hash{}) {
+	if (hash.ToHash() == common.Hash{}) {
 		return childrenHash, ErrZeroHashNode
 	}
 
@@ -417,7 +417,7 @@ func (db *Database) NodeChildren(hash common.Hash) ([]common.Hash, error) {
 	for _, child := range children {
 		n, ok := child.(hashNode)
 		if ok {
-			hash := common.BytesToHash(n)
+			hash := common.BytesToExtHash(n)
 			childrenHash = append(childrenHash, hash)
 		}
 	}
@@ -429,7 +429,7 @@ func (db *Database) NodeChildren(hash common.Hash) ([]common.Hash, error) {
 // The blob size must be specified to allow proper size tracking.
 // All nodes inserted by this function will be reference tracked
 // and in theory should only used for **trie nodes** insertion.
-func (db *Database) insert(hash common.Hash, lenEncoded uint16, node node) {
+func (db *Database) insert(hash common.ExtHash, lenEncoded uint16, node node) {
 	// If the node's already cached, skip
 	if _, ok := db.nodes[hash]; ok {
 		return
@@ -448,18 +448,18 @@ func (db *Database) insert(hash common.Hash, lenEncoded uint16, node node) {
 	db.nodes[hash] = entry
 
 	// Update the flush-list endpoints
-	if db.oldest == (common.Hash{}) {
+	if db.oldest.ToHash() == (common.Hash{}) {
 		db.oldest, db.newest = hash, hash
 	} else {
 		if _, ok := db.nodes[db.newest]; !ok {
 			missingNewest := db.newest
 			db.newest = db.getLastNodeHashInFlushList()
-			db.nodes[db.newest].flushNext = common.Hash{}
+			db.nodes[db.newest].flushNext = common.InitExtHash()
 			logger.Error("Found a newest node for missingNewest", "oldNewest", missingNewest, "newNewest", db.newest)
 		}
 		db.nodes[db.newest].flushNext, db.newest = hash, hash
 	}
-	db.nodesSize += common.StorageSize(common.HashLength + entry.size)
+	db.nodesSize += common.StorageSize(common.ExtHashLength + entry.size)
 }
 
 // insertPreimage writes a new trie node pre-image to the memory database if it's
@@ -475,7 +475,7 @@ func (db *Database) insertPreimage(hash common.Hash, preimage []byte) {
 }
 
 // getCachedNode finds an encoded node in the trie node cache if enabled.
-func (db *Database) getCachedNode(hash common.Hash) []byte {
+func (db *Database) getCachedNode(hash common.ExtHash) []byte {
 	if db.trieNodeCache != nil {
 		if enc := db.trieNodeCache.Get(hash[:]); enc != nil {
 			memcacheCleanHitMeter.Mark(1)
@@ -497,7 +497,7 @@ func (db *Database) setCachedNode(hash, enc []byte) {
 
 // node retrieves a cached trie node from memory, or returns nil if node can be
 // found in the memory cache.
-func (db *Database) node(hash common.Hash) (n node, fromDB bool) {
+func (db *Database) node(hash common.ExtHash) (n node, fromDB bool) {
 	// Retrieve the node from the trie node cache if available
 	if enc := db.getCachedNode(hash); enc != nil {
 		if dec, err := decodeNode(hash[:], enc); err == nil {
@@ -526,8 +526,8 @@ func (db *Database) node(hash common.Hash) (n node, fromDB bool) {
 
 // Node retrieves an encoded cached trie node from memory. If it cannot be found
 // cached, the method queries the persistent database for the content.
-func (db *Database) Node(hash common.Hash) ([]byte, error) {
-	if (hash == common.Hash{}) {
+func (db *Database) Node(hash common.ExtHash) ([]byte, error) {
+	if (hash.ToHash() == common.Hash{}) {
 		return nil, ErrZeroHashNode
 	}
 	// Retrieve the node from the trie node cache if available
@@ -553,8 +553,8 @@ func (db *Database) Node(hash common.Hash) ([]byte, error) {
 
 // NodeFromOld retrieves an encoded cached trie node from memory. If it cannot be found
 // cached, the method queries the old persistent database for the content.
-func (db *Database) NodeFromOld(hash common.Hash) ([]byte, error) {
-	if (hash == common.Hash{}) {
+func (db *Database) NodeFromOld(hash common.ExtHash) ([]byte, error) {
+	if (hash.ToHash() == common.Hash{}) {
 		return nil, ErrZeroHashNode
 	}
 	// Retrieve the node from the trie node cache if available
@@ -579,7 +579,7 @@ func (db *Database) NodeFromOld(hash common.Hash) ([]byte, error) {
 }
 
 // DoesExistCachedNode returns if the node exists on cached trie node in memory.
-func (db *Database) DoesExistCachedNode(hash common.Hash) bool {
+func (db *Database) DoesExistCachedNode(hash common.ExtHash) bool {
 	// Retrieve the node from cache if available
 	db.lock.RLock()
 	_, ok := db.nodes[hash]
@@ -588,7 +588,7 @@ func (db *Database) DoesExistCachedNode(hash common.Hash) bool {
 }
 
 // DoesExistNodeInPersistent returns if the node exists on the persistent database or its cache.
-func (db *Database) DoesExistNodeInPersistent(hash common.Hash) bool {
+func (db *Database) DoesExistNodeInPersistent(hash common.ExtHash) bool {
 	// Retrieve the node from DB cache if available
 	if enc := db.getCachedNode(hash); enc != nil {
 		return true
@@ -630,13 +630,13 @@ func secureKey(hash common.Hash) []byte {
 // Nodes retrieves the hashes of all the nodes cached within the memory database.
 // This method is extremely expensive and should only be used to validate internal
 // states in test code.
-func (db *Database) Nodes() []common.Hash {
+func (db *Database) Nodes() []common.ExtHash {
 	db.lock.RLock()
 	defer db.lock.RUnlock()
 
-	hashes := make([]common.Hash, 0, len(db.nodes))
+	var hashes = make([]common.ExtHash, 0, len(db.nodes))
 	for hash := range db.nodes {
-		if hash != (common.Hash{}) { // Special case for "root" references/nodes
+		if hash.ToHash() != (common.Hash{}) { // Special case for "root" references/nodes
 			hashes = append(hashes, hash)
 		}
 	}
@@ -647,7 +647,7 @@ func (db *Database) Nodes() []common.Hash {
 // This function is used to add reference between internal trie node
 // and external node(e.g. storage trie root), all internal trie nodes
 // are referenced together by database itself.
-func (db *Database) Reference(child common.Hash, parent common.Hash) {
+func (db *Database) Reference(child common.ExtHash, parent common.ExtHash) {
 	db.lock.Lock()
 	defer db.lock.Unlock()
 
@@ -655,7 +655,7 @@ func (db *Database) Reference(child common.Hash, parent common.Hash) {
 }
 
 // reference is the private locked version of Reference.
-func (db *Database) reference(child common.Hash, parent common.Hash) {
+func (db *Database) reference(child common.ExtHash, parent common.ExtHash) {
 	// If the node does not exist, it's a node pulled from disk, skip
 	node, ok := db.nodes[child]
 	if !ok {
@@ -663,8 +663,8 @@ func (db *Database) reference(child common.Hash, parent common.Hash) {
 	}
 	// If the reference already exists, only duplicate for roots
 	if db.nodes[parent].children == nil {
-		db.nodes[parent].children = make(map[common.Hash]uint64)
-	} else if _, ok = db.nodes[parent].children[child]; ok && parent != (common.Hash{}) {
+		db.nodes[parent].children = make(map[common.ExtHash]uint64)
+	} else if _, ok = db.nodes[parent].children[child]; ok && parent.ToHash() != (common.Hash{}) {
 		return
 	}
 	node.parents++
@@ -672,9 +672,9 @@ func (db *Database) reference(child common.Hash, parent common.Hash) {
 }
 
 // Dereference removes an existing reference from a root node.
-func (db *Database) Dereference(root common.Hash) {
+func (db *Database) Dereference(root common.ExtHash) {
 	// Sanity check to ensure that the meta-root is not removed
-	if common.EmptyHash(root) {
+	if common.EmptyHash(root.ToHash()) {
 		logger.Error("Attempted to dereference the trie cache meta root")
 		return
 	}
@@ -686,7 +686,7 @@ func (db *Database) Dereference(root common.Hash) {
 	defer db.lock.Unlock()
 
 	nodes, storage, start := len(db.nodes), db.nodesSize, time.Now()
-	db.dereference(root, common.Hash{})
+	db.dereference(root, common.InitExtHash())
 
 	db.gcnodes += uint64(nodes - len(db.nodes))
 	db.gcsize += storage - db.nodesSize
@@ -701,7 +701,7 @@ func (db *Database) Dereference(root common.Hash) {
 }
 
 // dereference is the private locked version of Dereference.
-func (db *Database) dereference(child common.Hash, parent common.Hash) {
+func (db *Database) dereference(child common.ExtHash, parent common.ExtHash) {
 	// Dereference the parent-child
 	node := db.nodes[parent]
 
@@ -732,7 +732,7 @@ func (db *Database) dereference(child common.Hash, parent common.Hash) {
 			db.dereference(hash, child)
 		}
 		delete(db.nodes, child)
-		db.nodesSize -= common.StorageSize(common.HashLength + int(node.size))
+		db.nodesSize -= common.StorageSize(common.ExtHashLength + int(node.size))
 	}
 }
 
@@ -765,7 +765,7 @@ func (db *Database) Cap(limit common.StorageSize) error {
 	// Keep committing nodes from the flush-list until we're below allowance
 	oldest := db.oldest
 	batch := db.diskDB.NewBatch(database.StateTrieDB)
-	for size > limit && oldest != (common.Hash{}) {
+	for size > limit && oldest.ToHash() != (common.Hash{}) {
 		// Fetch the oldest referenced node and push into the batch
 		node := db.nodes[oldest]
 		enc := node.rlp()
@@ -781,7 +781,7 @@ func (db *Database) Cap(limit common.StorageSize) error {
 		// is the total size, including both the useful cached data (hash -> blob), as
 		// well as the flushlist metadata (2*hash). When flushing items from the cache,
 		// we need to reduce both.
-		size -= common.StorageSize(3*common.HashLength + int(node.size))
+		size -= common.StorageSize(3*common.ExtHashLength + int(node.size))
 		oldest = node.flushNext
 	}
 	// Flush out any remainder data from the last batch
@@ -806,12 +806,12 @@ func (db *Database) Cap(limit common.StorageSize) error {
 		delete(db.nodes, db.oldest)
 		db.oldest = node.flushNext
 
-		db.nodesSize -= common.StorageSize(common.HashLength + int(node.size))
+		db.nodesSize -= common.StorageSize(common.ExtHashLength + int(node.size))
 	}
-	if db.oldest != (common.Hash{}) {
-		db.nodes[db.oldest].flushPrev = common.Hash{}
+	if db.oldest.ToHash() != (common.Hash{}) {
+		db.nodes[db.oldest].flushPrev = common.InitExtHash()
 	} else {
-		db.newest = common.Hash{}
+		db.newest = common.InitExtHash()
 	}
 	db.flushnodes += uint64(nodes - len(db.nodes))
 	db.flushsize += nodeSize - db.nodesSize
@@ -867,7 +867,7 @@ type commitResult struct {
 	val []byte
 }
 
-func (db *Database) writeBatchNodes(node common.Hash) error {
+func (db *Database) writeBatchNodes(node common.ExtHash) error {
 	rootNode, ok := db.nodes[node]
 	if !ok {
 		return nil
@@ -919,7 +919,7 @@ func (db *Database) writeBatchNodes(node common.Hash) error {
 	return nil
 }
 
-func (db *Database) concurrentCommit(hash common.Hash, resultCh chan<- commitResult, childIndex int) {
+func (db *Database) concurrentCommit(hash common.ExtHash, resultCh chan<- commitResult, childIndex int) {
 	logger.Trace("concurrentCommit start", "childIndex", childIndex)
 	defer logger.Trace("concurrentCommit end", "childIndex", childIndex)
 	db.commit(hash, resultCh)
@@ -930,7 +930,7 @@ func (db *Database) concurrentCommit(hash common.Hash, resultCh chan<- commitRes
 // to disk, forcefully tearing down all references in both directions.
 //
 // As a side effect, all pre-images accumulated up to this point are also written.
-func (db *Database) Commit(node common.Hash, report bool, blockNum uint64) error {
+func (db *Database) Commit(node common.ExtHash, report bool, blockNum uint64) error {
 	// Create a database batch to flush persistent data out. It is important that
 	// outside code doesn't see an inconsistent state (referenced data removed from
 	// memory cache during commit but not yet in persistent database). This is ensured
@@ -984,7 +984,7 @@ func (db *Database) Commit(node common.Hash, report bool, blockNum uint64) error
 }
 
 // commit iteratively encodes nodes from parents to child nodes.
-func (db *Database) commit(hash common.Hash, resultCh chan<- commitResult) {
+func (db *Database) commit(hash common.ExtHash, resultCh chan<- commitResult) {
 	node, ok := db.nodes[hash]
 	if !ok {
 		return
@@ -1004,7 +1004,7 @@ func (db *Database) commit(hash common.Hash, resultCh chan<- commitResult) {
 // persisted trie is removed from the cache. The reason behind the two-phase
 // commit is to ensure consistent data availability while moving from memory
 // to disk.
-func (db *Database) uncache(hash common.Hash) {
+func (db *Database) uncache(hash common.ExtHash) {
 	// If the node does not exists, we're done on this path
 	node, ok := db.nodes[hash]
 	if !ok {
@@ -1017,7 +1017,7 @@ func (db *Database) uncache(hash common.Hash) {
 		db.uncache(child)
 	}
 	delete(db.nodes, hash)
-	db.nodesSize -= common.StorageSize(common.HashLength + int(node.size))
+	db.nodesSize -= common.StorageSize(common.ExtHashLength + int(node.size))
 }
 
 // Size returns the current database size of the memory cache in front of the
@@ -1041,9 +1041,9 @@ func (db *Database) Size() (common.StorageSize, common.StorageSize, common.Stora
 // This method is extremely CPU and memory intensive, only use when must.
 func (db *Database) verifyIntegrity() {
 	// Iterate over all the cached nodes and accumulate them into a set
-	reachable := map[common.Hash]struct{}{{}: {}}
+	reachable := map[common.ExtHash]struct{}{common.InitExtHash(): {}}
 
-	for child := range db.nodes[common.Hash{}].children {
+	for child := range db.nodes[common.InitExtHash()].children {
 		db.accumulate(child, reachable)
 	}
 	// Find any unreachable but cached nodes
@@ -1061,7 +1061,7 @@ func (db *Database) verifyIntegrity() {
 
 // accumulate iterates over the trie defined by hash and accumulates all the
 // cached children found in memory.
-func (db *Database) accumulate(hash common.Hash, reachable map[common.Hash]struct{}) {
+func (db *Database) accumulate(hash common.ExtHash, reachable map[common.ExtHash]struct{}) {
 	// Mark the node reachable if present in the memory cache
 	node, ok := db.nodes[hash]
 	if !ok {
@@ -1075,29 +1075,29 @@ func (db *Database) accumulate(hash common.Hash, reachable map[common.Hash]struc
 	}
 }
 
-func (db *Database) removeNodeInFlushList(hash common.Hash) {
+func (db *Database) removeNodeInFlushList(hash common.ExtHash) {
 	node, ok := db.nodes[hash]
 	if !ok {
 		return
 	}
 
 	if hash == db.oldest && hash == db.newest {
-		db.oldest = common.Hash{}
-		db.newest = common.Hash{}
+		db.oldest = common.InitExtHash()
+		db.newest = common.InitExtHash()
 	} else if hash == db.oldest {
 		db.oldest = node.flushNext
-		db.nodes[node.flushNext].flushPrev = common.Hash{}
+		db.nodes[node.flushNext].flushPrev = common.InitExtHash()
 	} else if hash == db.newest {
 		db.newest = node.flushPrev
-		db.nodes[node.flushPrev].flushNext = common.Hash{}
+		db.nodes[node.flushPrev].flushNext = common.InitExtHash()
 	} else {
 		db.nodes[node.flushPrev].flushNext = node.flushNext
 		db.nodes[node.flushNext].flushPrev = node.flushPrev
 	}
 }
 
-func (db *Database) getLastNodeHashInFlushList() common.Hash {
-	var lastNodeHash common.Hash
+func (db *Database) getLastNodeHashInFlushList() common.ExtHash {
+	lastNodeHash := common.InitExtHash()
 	nodeHash := db.oldest
 	for {
 		if _, ok := db.nodes[nodeHash]; ok {
@@ -1107,7 +1107,7 @@ func (db *Database) getLastNodeHashInFlushList() common.Hash {
 			break
 		}
 
-		if db.nodes[nodeHash].flushNext != (common.Hash{}) {
+		if db.nodes[nodeHash].flushNext.ToHash() != (common.Hash{}) {
 			nodeHash = db.nodes[nodeHash].flushNext
 		} else {
 			logger.Debug("found last noode in map of flush list")
@@ -1188,7 +1188,7 @@ type NodeInfo struct {
 }
 
 // CollectChildrenStats collects the depth of the trie recursively
-func (db *Database) CollectChildrenStats(node common.Hash, depth int, resultCh chan<- NodeInfo) {
+func (db *Database) CollectChildrenStats(node common.ExtHash, depth int, resultCh chan<- NodeInfo) {
 	n, _ := db.node(node)
 	if n == nil {
 		return

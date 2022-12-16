@@ -53,19 +53,19 @@ type journalGenerator struct {
 
 // journalDestruct is an account deletion entry in a diffLayer's disk journal.
 type journalDestruct struct {
-	Hash common.Hash
+	Hash common.ExtHash
 }
 
 // journalAccount is an account entry in a diffLayer's disk journal.
 type journalAccount struct {
-	Hash common.Hash
+	Hash common.ExtHash
 	Blob []byte
 }
 
 // journalStorage is an account's storage map in a diffLayer's disk journal.
 type journalStorage struct {
-	Hash common.Hash
-	Keys []common.Hash
+	Hash common.ExtHash
+	Keys []common.ExtHash
 	Vals [][]byte
 }
 
@@ -108,7 +108,7 @@ func loadAndParseJournal(db database.DBManager, base *diskLayer) (snapshot, jour
 	// Secondly, resolve the disk layer root, ensure it's continuous
 	// with disk layer. Note now we can ensure it's the snapshot journal
 	// correct version, so we expect everything can be resolved properly.
-	var root common.Hash
+	var root common.ExtHash
 	if err := r.Decode(&root); err != nil {
 		return nil, journalGenerator{}, errors.New("missing disk layer root")
 	}
@@ -129,7 +129,7 @@ func loadAndParseJournal(db database.DBManager, base *diskLayer) (snapshot, jour
 }
 
 // loadSnapshot loads a pre-existing state snapshot backed by a key-value store.
-func loadSnapshot(diskdb database.DBManager, triedb *statedb.Database, cache int, root common.Hash, recovery bool) (snapshot, bool, error) {
+func loadSnapshot(diskdb database.DBManager, triedb *statedb.Database, cache int, root common.ExtHash, recovery bool) (snapshot, bool, error) {
 	// If snapshotting is disabled (initial sync in progress), don't do anything,
 	// wait for the chain to permit us to do something meaningful
 	if diskdb.ReadSnapshotDisabled() {
@@ -138,7 +138,7 @@ func loadSnapshot(diskdb database.DBManager, triedb *statedb.Database, cache int
 	// Retrieve the block number and hash of the snapshot, failing if no snapshot
 	// is present in the database (or crashed mid-update).
 	baseRoot := diskdb.ReadSnapshotRoot()
-	if baseRoot == (common.Hash{}) {
+	if baseRoot.ToHash() == (common.Hash{}) {
 		return nil, false, errors.New("missing or corrupted snapshot")
 	}
 	base := &diskLayer{
@@ -202,7 +202,7 @@ func loadSnapshot(diskdb database.DBManager, triedb *statedb.Database, cache int
 // diff and verifying that it can be linked to the requested parent.
 func loadDiffLayer(parent snapshot, r *rlp.Stream) (snapshot, error) {
 	// Read the next diff journal entry
-	var root common.Hash
+	var root common.ExtHash
 	if err := r.Decode(&root); err != nil {
 		// The first read may fail with EOF, marking the end of the journal
 		if err == io.EOF {
@@ -214,7 +214,7 @@ func loadDiffLayer(parent snapshot, r *rlp.Stream) (snapshot, error) {
 	if err := r.Decode(&destructs); err != nil {
 		return nil, fmt.Errorf("load diff destructs: %v", err)
 	}
-	destructSet := make(map[common.Hash]struct{})
+	destructSet := make(map[common.ExtHash]struct{})
 	for _, entry := range destructs {
 		destructSet[entry.Hash] = struct{}{}
 	}
@@ -222,7 +222,7 @@ func loadDiffLayer(parent snapshot, r *rlp.Stream) (snapshot, error) {
 	if err := r.Decode(&accounts); err != nil {
 		return nil, fmt.Errorf("load diff accounts: %v", err)
 	}
-	accountData := make(map[common.Hash][]byte)
+	accountData := make(map[common.ExtHash][]byte)
 	for _, entry := range accounts {
 		if len(entry.Blob) > 0 { // RLP loses nil-ness, but `[]byte{}` is not a valid item, so reinterpret that
 			accountData[entry.Hash] = entry.Blob
@@ -234,9 +234,9 @@ func loadDiffLayer(parent snapshot, r *rlp.Stream) (snapshot, error) {
 	if err := r.Decode(&storage); err != nil {
 		return nil, fmt.Errorf("load diff storage: %v", err)
 	}
-	storageData := make(map[common.Hash]map[common.Hash][]byte)
+	storageData := make(map[common.ExtHash]map[common.ExtHash][]byte)
 	for _, entry := range storage {
-		slots := make(map[common.Hash][]byte)
+		slots := make(map[common.ExtHash][]byte)
 		for i, key := range entry.Keys {
 			if len(entry.Vals[i]) > 0 { // RLP loses nil-ness, but `[]byte{}` is not a valid item, so reinterpret that
 				slots[key] = entry.Vals[i]
@@ -251,7 +251,7 @@ func loadDiffLayer(parent snapshot, r *rlp.Stream) (snapshot, error) {
 
 // Journal terminates any in-progress snapshot generation, also implicitly pushing
 // the progress into the database.
-func (dl *diskLayer) Journal(buffer *bytes.Buffer) (common.Hash, error) {
+func (dl *diskLayer) Journal(buffer *bytes.Buffer) (common.ExtHash, error) {
 	// If the snapshot is currently being generated, abort it
 	var stats *generatorStats
 	if dl.genAbort != nil {
@@ -267,7 +267,7 @@ func (dl *diskLayer) Journal(buffer *bytes.Buffer) (common.Hash, error) {
 	defer dl.lock.RUnlock()
 
 	if dl.stale {
-		return common.Hash{}, ErrSnapshotStale
+		return common.InitExtHash(), ErrSnapshotStale
 	}
 	// Ensure the generator stats is written even if none was ran this cycle
 	journalProgress(dl.diskdb.GetSnapshotDB(), dl.genMarker, stats)
@@ -278,40 +278,40 @@ func (dl *diskLayer) Journal(buffer *bytes.Buffer) (common.Hash, error) {
 
 // Journal writes the memory layer contents into a buffer to be stored in the
 // database as the snapshot journal.
-func (dl *diffLayer) Journal(buffer *bytes.Buffer) (common.Hash, error) {
+func (dl *diffLayer) Journal(buffer *bytes.Buffer) (common.ExtHash, error) {
 	// Journal the parent first
 	base, err := dl.parent.Journal(buffer)
 	if err != nil {
-		return common.Hash{}, err
+		return common.InitExtHash(), err
 	}
 	// Ensure the layer didn't get stale
 	dl.lock.RLock()
 	defer dl.lock.RUnlock()
 
 	if dl.Stale() {
-		return common.Hash{}, ErrSnapshotStale
+		return common.InitExtHash(), ErrSnapshotStale
 	}
 	// Everything below was journalled, persist this layer too
 	if err := rlp.Encode(buffer, dl.root); err != nil {
-		return common.Hash{}, err
+		return common.InitExtHash(), err
 	}
 	destructs := make([]journalDestruct, 0, len(dl.destructSet))
 	for hash := range dl.destructSet {
 		destructs = append(destructs, journalDestruct{Hash: hash})
 	}
 	if err := rlp.Encode(buffer, destructs); err != nil {
-		return common.Hash{}, err
+		return common.InitExtHash(), err
 	}
 	accounts := make([]journalAccount, 0, len(dl.accountData))
 	for hash, blob := range dl.accountData {
 		accounts = append(accounts, journalAccount{Hash: hash, Blob: blob})
 	}
 	if err := rlp.Encode(buffer, accounts); err != nil {
-		return common.Hash{}, err
+		return common.InitExtHash(), err
 	}
 	storage := make([]journalStorage, 0, len(dl.storageData))
 	for hash, slots := range dl.storageData {
-		keys := make([]common.Hash, 0, len(slots))
+		keys := make([]common.ExtHash, 0, len(slots))
 		vals := make([][]byte, 0, len(slots))
 		for key, val := range slots {
 			keys = append(keys, key)
@@ -320,7 +320,7 @@ func (dl *diffLayer) Journal(buffer *bytes.Buffer) (common.Hash, error) {
 		storage = append(storage, journalStorage{Hash: hash, Keys: keys, Vals: vals})
 	}
 	if err := rlp.Encode(buffer, storage); err != nil {
-		return common.Hash{}, err
+		return common.InitExtHash(), err
 	}
 	logger.Debug("Journalled diff layer", "root", dl.root, "parent", dl.parent.Root())
 	return base, nil

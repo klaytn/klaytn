@@ -52,7 +52,7 @@ type SecureTrie struct {
 // Loaded nodes are kept around until their 'cache generation' expires.
 // A new cache generation is created by each call to Commit.
 // cachelimit sets the number of past cache generations to keep.
-func NewSecureTrie(root common.Hash, db *Database) (*SecureTrie, error) {
+func NewSecureTrie(root common.ExtHash, db *Database) (*SecureTrie, error) {
 	if db == nil {
 		panic("statedb.NewSecureTrie called without a database")
 	}
@@ -63,7 +63,7 @@ func NewSecureTrie(root common.Hash, db *Database) (*SecureTrie, error) {
 	return &SecureTrie{trie: *trie}, nil
 }
 
-func NewSecureTrieForPrefetching(root common.Hash, db *Database) (*SecureTrie, error) {
+func NewSecureTrieForPrefetching(root common.ExtHash, db *Database) (*SecureTrie, error) {
 	if db == nil {
 		panic("statedb.NewSecureTrieForPrefetching called without a database")
 	}
@@ -168,7 +168,7 @@ func (t *SecureTrie) GetKey(shaKey []byte) []byte {
 //
 // Committing flushes nodes from memory. Subsequent Get calls will load nodes
 // from the database.
-func (t *SecureTrie) Commit(onleaf LeafCallback) (root common.Hash, err error) {
+func (t *SecureTrie) Commit(onleaf LeafCallback, extRootFlag bool) (root common.ExtHash, err error) {
 	// Write all the pre-images to the actual disk database
 	if len(t.getSecKeyCache()) > 0 {
 		t.trie.db.lock.Lock()
@@ -180,11 +180,15 @@ func (t *SecureTrie) Commit(onleaf LeafCallback) (root common.Hash, err error) {
 		t.secKeyCache = make(map[string][]byte)
 	}
 	// Commit the trie to its intermediate node database
-	return t.trie.Commit(onleaf)
+	return t.trie.Commit(onleaf, extRootFlag)
 }
 
-func (t *SecureTrie) Hash() common.Hash {
+func (t *SecureTrie) Hash() common.ExtHash {
 	return t.trie.Hash()
+}
+
+func (t *SecureTrie) RootHash() common.ExtHash {
+	return t.trie.RootHash()
 }
 
 func (t *SecureTrie) Copy() *SecureTrie {
@@ -204,7 +208,7 @@ func (t *SecureTrie) NodeIterator(start []byte) NodeIterator {
 func (t *SecureTrie) hashKey(key []byte) []byte {
 	h := newHasher(nil)
 	h.sha.Reset()
-	h.sha.Write(key)
+	h.sha.Write(common.ExtPaddingFilter(key))
 	buf := h.sha.Sum(t.hashKeyBuf[:0])
 	returnHasherToPool(h)
 	return buf

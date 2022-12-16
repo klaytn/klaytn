@@ -457,13 +457,13 @@ func (s *stateSync) fillTasks(n int, req *stateReq) (nodes []common.Hash, paths 
 	if fill := n - (len(s.trieTasks) + len(s.codeTasks)); fill > 0 {
 		nodes, paths, codes := s.sched.Missing(fill)
 		for i, hash := range nodes {
-			s.trieTasks[hash] = &trieTask{
+			s.trieTasks[hash.ToHash()] = &trieTask{
 				path:     paths[i],
 				attempts: make(map[string]struct{}),
 			}
 		}
 		for _, hash := range codes {
-			s.codeTasks[hash] = &codeTask{
+			s.codeTasks[hash.ToHash()] = &codeTask{
 				attempts: make(map[string]struct{}),
 			}
 		}
@@ -592,7 +592,7 @@ func (s *stateSync) processNodeData(blob []byte) (common.Hash, error) {
 	s.keccak.Write(blob)
 	s.keccak.Sum(res.Hash[:0])
 	err := s.sched.Process(res)
-	return res.Hash, err
+	return res.Hash.ToHash(), err
 }
 
 // updateStats bumps the various state sync progress counters and displays a log

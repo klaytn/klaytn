@@ -408,7 +408,7 @@ func (api *EthereumAPI) GetProof(ctx context.Context, address common.Address, st
 
 	// if we have a storageTrie, (which means the account exists), we can update the storagehash
 	if storageTrie != nil {
-		storageHash = storageTrie.Hash()
+		storageHash = storageTrie.Hash().ToHash()
 	} else {
 		// no storageTrie means the account does not exist, so the codeHash is the hash of an empty bytearray.
 		codeHash = crypto.Keccak256Hash(nil)
@@ -465,10 +465,10 @@ func (api *EthereumAPI) GetHeaderByHash(ctx context.Context, hash common.Hash) m
 }
 
 // GetBlockByNumber returns the requested canonical block.
-// * When blockNr is -1 the chain head is returned.
-// * When blockNr is -2 the pending chain head is returned.
-// * When fullTx is true all transactions in the block are returned, otherwise
-//   only the transaction hash is returned.
+//   - When blockNr is -1 the chain head is returned.
+//   - When blockNr is -2 the pending chain head is returned.
+//   - When fullTx is true all transactions in the block are returned, otherwise
+//     only the transaction hash is returned.
 func (api *EthereumAPI) GetBlockByNumber(ctx context.Context, number rpc.BlockNumber, fullTx bool) (map[string]interface{}, error) {
 	// Klaytn backend returns error when there is no matched block but
 	// Ethereum returns it as nil without error, so we should return is as nil when there is no matched block.
@@ -553,11 +553,11 @@ func (api *EthereumAPI) GetStorageAt(ctx context.Context, address common.Address
 // OverrideAccount in go-ethereum has been renamed to EthOverrideAccount.
 // OverrideAccount is defined in go-ethereum's internal package, so OverrideAccount is redefined here as EthOverrideAccount.
 type EthOverrideAccount struct {
-	Nonce     *hexutil.Uint64              `json:"nonce"`
-	Code      *hexutil.Bytes               `json:"code"`
-	Balance   **hexutil.Big                `json:"balance"`
-	State     *map[common.Hash]common.Hash `json:"state"`
-	StateDiff *map[common.Hash]common.Hash `json:"stateDiff"`
+	Nonce     *hexutil.Uint64                    `json:"nonce"`
+	Code      *hexutil.Bytes                     `json:"code"`
+	Balance   **hexutil.Big                      `json:"balance"`
+	State     *map[common.ExtHash]common.ExtHash `json:"state"`
+	StateDiff *map[common.ExtHash]common.ExtHash `json:"stateDiff"`
 }
 
 // EthStateOverride is the collection of overridden accounts.

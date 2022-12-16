@@ -227,7 +227,7 @@ func (dw *dbWrapper) pushObject(vm *duktape.Context) {
 		hash := popSlice(ctx)
 		addr := popSlice(ctx)
 
-		state := dw.db.GetState(common.BytesToAddress(addr), common.BytesToHash(hash))
+		state := dw.db.GetState(common.BytesToAddress(addr), common.BytesToExtHash(hash))
 
 		ptr := ctx.PushFixedBuffer(len(state))
 		copy(makeSlice(ptr, uint(len(state))), state[:])

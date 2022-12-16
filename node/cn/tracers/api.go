@@ -254,8 +254,8 @@ func (api *API) TraceChain(ctx context.Context, start, end rpc.BlockNumber, conf
 // traceChain configures a new tracer according to the provided configuration, and
 // executes all the transactions contained within.
 // The traceChain operates in two modes: subscription mode and rpc mode
-//  - if notifier and sub is not nil, it works as a subscription mode and returns nothing
-//  - if those parameters are nil, it works as a rpc mode and returns the block trace results, so it can pass the result through rpc-call
+//   - if notifier and sub is not nil, it works as a subscription mode and returns nothing
+//   - if those parameters are nil, it works as a rpc mode and returns the block trace results, so it can pass the result through rpc-call
 func (api *API) traceChain(start, end *types.Block, config *TraceConfig, notifier *rpc.Notifier, sub *rpc.Subscription) (map[uint64]*blockTraceResult, error) {
 	// Prepare all the states for tracing. Note this procedure can take very
 	// long time. Timeout mechanism is necessary.
@@ -375,11 +375,11 @@ func (api *API) traceChain(start, end *types.Block, config *TraceConfig, notifie
 			}
 			if trieDb := statedb.Database().TrieDB(); trieDb != nil {
 				// Hold the reference for tracer, will be released at the final stage
-				trieDb.Reference(block.Root(), common.Hash{})
+				trieDb.Reference(block.Root().ToRootExtHash(), common.InitExtHash())
 
 				// Release the parent state because it's already held by the tracer
 				if !common.EmptyHash(parent) {
-					trieDb.Dereference(parent)
+					trieDb.Dereference(parent.ToRootExtHash())
 				}
 				// Prefer disk if the trie db memory grows too much
 				s1, s2, s3 := trieDb.Size()
@@ -427,7 +427,7 @@ func (api *API) traceChain(start, end *types.Block, config *TraceConfig, notifie
 
 			// Dereference any parent tries held in memory by this task
 			if res.statedb.Database().TrieDB() != nil {
-				res.statedb.Database().TrieDB().Dereference(res.rootref)
+				res.statedb.Database().TrieDB().Dereference(res.rootref.ToRootExtHash())
 			}
 			if notifier != nil {
 				// Stream completed traces to the user, aborting on the first error

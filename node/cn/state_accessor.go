@@ -67,7 +67,7 @@ func (cn *CN) stateAtBlock(block *types.Block, reexec uint64, base *state.StateD
 			// Create an ephemeral trie.Database for isolating the live one. Otherwise
 			// the internal junks created by tracing will be persisted into the disk.
 			database = state.NewDatabaseWithExistingCache(cn.ChainDB(), cn.blockchain.StateCache().TrieDB().TrieNodeCache())
-			if statedb, err = state.New(block.Root(), database, nil); err == nil {
+			if statedb, err = state.New(block.Root().ToRootExtHash(), database, nil); err == nil {
 				logger.Info("Found disk backend for state trie", "root", block.Root(), "number", block.Number())
 				return statedb, nil
 			}
@@ -93,7 +93,7 @@ func (cn *CN) stateAtBlock(block *types.Block, reexec uint64, base *state.StateD
 			}
 			current = parent
 
-			statedb, err = state.New(current.Root(), database, nil)
+			statedb, err = state.New(current.Root().ToRootExtHash(), database, nil)
 			if err == nil {
 				break
 			}
@@ -136,11 +136,11 @@ func (cn *CN) stateAtBlock(block *types.Block, reexec uint64, base *state.StateD
 		if err := statedb.Reset(root); err != nil {
 			return nil, fmt.Errorf("state reset after block %d failed: %v", current.NumberU64(), err)
 		}
-		database.TrieDB().Reference(root, common.Hash{})
+		database.TrieDB().Reference(root, common.InitExtHash())
 		if !common.EmptyHash(parent) {
-			database.TrieDB().Dereference(parent)
+			database.TrieDB().Dereference(parent.ToExtHash())
 		}
-		parent = root
+		parent = root.ToHash()
 	}
 	if report {
 		nodes, _, imgs := database.TrieDB().Size()

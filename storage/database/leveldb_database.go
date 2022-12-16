@@ -21,13 +21,16 @@
 package database
 
 import (
+	"bytes"
 	"fmt"
 	"sync"
 	"time"
 
 	klaytnmetrics "github.com/klaytn/klaytn/metrics"
 
+	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/fdlimit"
+	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/log"
 	metricutils "github.com/klaytn/klaytn/metrics/utils"
 	"github.com/rcrowley/go-metrics"
@@ -39,6 +42,8 @@ import (
 )
 
 var OpenFileLimit = 64
+var hexDest1 = hexutil.MustDecode("0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470")
+var hexDest2 = hexutil.MustDecode("0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
 
 type LevelDBCompressionType uint8
 
@@ -297,7 +302,25 @@ func (db *levelDB) Get(key []byte) ([]byte, error) {
 
 func (db *levelDB) get(key []byte) ([]byte, error) {
 	dat, err := db.db.Get(key, nil)
+	keyLen := len(key)
+	// oldHash2ExtHash : ExtHash only version code. not coded
+	// <-- Code that reads the hash version of the DB and converts it to the ExtHash version for processing
+	if err != nil && keyLen >= common.ExtHashLength {
+		dat, err = db.db.Get(key[:keyLen-common.ExtPadLength], nil)
+	}
+	// -->
+
 	if err != nil {
+		if keyLen == common.ExtHashLength || keyLen == common.HashLength {
+			if bytes.Equal(key[:common.HashLength], hexDest1) || bytes.Equal(key[:common.HashLength], hexDest2) {
+				//if bytes.Equal(key[:common.HashLength], hexDest1) {
+				return []byte(""), nil
+			}
+		}
+		if fmt.Sprintf("%x", key[:5]) != "6800000000" {
+			//debug.PrintStack()
+			fmt.Printf("~~~~~ GET = %x, err = %s\n", key, err.Error())
+		}
 		if err == leveldb.ErrNotFound {
 			return nil, dataNotFoundErr
 		}
@@ -389,13 +412,14 @@ func (db *levelDB) Meter(prefix string) {
 // the metrics subsystem.
 //
 // This is how a stats table look like (currently):
-//   Compactions
-//    Level |   Tables   |    Size(MB)   |    Time(sec)  |    Read(MB)   |   Write(MB)
-//   -------+------------+---------------+---------------+---------------+---------------
-//      0   |          0 |       0.00000 |       1.27969 |       0.00000 |      12.31098
-//      1   |         85 |     109.27913 |      28.09293 |     213.92493 |     214.26294
-//      2   |        523 |    1000.37159 |       7.26059 |      66.86342 |      66.77884
-//      3   |        570 |    1113.18458 |       0.00000 |       0.00000 |       0.00000
+//
+//	Compactions
+//	 Level |   Tables   |    Size(MB)   |    Time(sec)  |    Read(MB)   |   Write(MB)
+//	-------+------------+---------------+---------------+---------------+---------------
+//	   0   |          0 |       0.00000 |       1.27969 |       0.00000 |      12.31098
+//	   1   |         85 |     109.27913 |      28.09293 |     213.92493 |     214.26294
+//	   2   |        523 |    1000.37159 |       7.26059 |      66.86342 |      66.77884
+//	   3   |        570 |    1113.18458 |       0.00000 |       0.00000 |       0.00000
 //
 // This is how the iostats look like (currently):
 // Read(MB):3895.04860 Write(MB):3654.64712

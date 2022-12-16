@@ -54,9 +54,9 @@ type StateDB interface {
 	SubRefund(uint64)
 	GetRefund() uint64
 
-	GetCommittedState(common.Address, common.Hash) common.Hash
-	GetState(common.Address, common.Hash) common.Hash
-	SetState(common.Address, common.Hash, common.Hash)
+	GetCommittedState(common.Address, common.ExtHash) common.ExtHash
+	GetState(common.Address, common.ExtHash) common.ExtHash
+	SetState(common.Address, common.ExtHash, common.ExtHash)
 
 	Suicide(common.Address) bool
 	HasSuicided(common.Address) bool
@@ -85,14 +85,14 @@ type StateDB interface {
 	Snapshot() int
 
 	AddLog(*types.Log)
-	AddPreimage(common.Hash, []byte)
+	AddPreimage(common.ExtHash, []byte)
 
 	// IsProgramAccount returns true if the account implements ProgramAccount.
 	IsProgramAccount(address common.Address) bool
 	IsContractAvailable(address common.Address) bool
 	IsValidCodeFormat(addr common.Address) bool
 
-	ForEachStorage(common.Address, func(common.Hash, common.Hash) bool)
+	ForEachStorage(common.Address, func(common.ExtHash, common.ExtHash) bool)
 
 	GetTxHash() common.Hash
 

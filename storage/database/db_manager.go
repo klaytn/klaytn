@@ -20,14 +20,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/json"
-	"math/big"
-	"os"
-	"path/filepath"
-	"sort"
-	"strconv"
-	"strings"
-	"sync"
-
+	"fmt"
 	"github.com/dgraph-io/badger"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -36,15 +29,25 @@ import (
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/pkg/errors"
 	"github.com/syndtr/goleveldb/leveldb"
+	"math/big"
+	"os"
+	"path/filepath"
+	"sort"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
 )
 
 var (
 	logger = log.NewModuleLogger(log.StorageDatabase)
 
 	errGovIdxAlreadyExist = errors.New("a governance idx of the more recent or the same block exist")
-
-	HeadBlockQ backupHashQueue
-	FastBlockQ backupHashQueue
+	ProcBlockNum          = int32(0)
+	dbOnce                sync.Once
+	ethanDbm              DBManager
+	HeadBlockQ            backupHashQueue
+	FastBlockQ            backupHashQueue
 )
 
 type DBManager interface {
@@ -68,6 +71,7 @@ type DBManager interface {
 	GetStateTrieMigrationDB() Database
 	GetMiscDB() Database
 	GetSnapshotDB() Database
+	GetDelqDB() Database
 
 	// from accessors_chain.go
 	ReadCanonicalHash(number uint64) common.Hash
@@ -137,37 +141,37 @@ type DBManager interface {
 	WriteMerkleProof(key, value []byte)
 
 	// Bytecodes related operations
-	ReadCode(hash common.Hash) []byte
-	ReadCodeWithPrefix(hash common.Hash) []byte
-	WriteCode(hash common.Hash, code []byte)
-	DeleteCode(hash common.Hash)
-	HasCode(hash common.Hash) bool
+	ReadCode(hash common.ExtHash) []byte
+	ReadCodeWithPrefix(hash common.ExtHash) []byte
+	WriteCode(hash common.ExtHash, code []byte)
+	DeleteCode(hash common.ExtHash)
+	HasCode(hash common.ExtHash) bool
 
 	// State Trie Database related operations
-	ReadCachedTrieNode(hash common.Hash) ([]byte, error)
+	ReadCachedTrieNode(hash common.ExtHash) ([]byte, error)
 	ReadCachedTrieNodePreimage(secureKey []byte) ([]byte, error)
 	ReadStateTrieNode(key []byte) ([]byte, error)
 	HasStateTrieNode(key []byte) (bool, error)
-	HasCodeWithPrefix(hash common.Hash) bool
+	HasCodeWithPrefix(hash common.ExtHash) bool
 	ReadPreimage(hash common.Hash) []byte
 
 	// Read StateTrie from new DB
-	ReadCachedTrieNodeFromNew(hash common.Hash) ([]byte, error)
+	ReadCachedTrieNodeFromNew(hash common.ExtHash) ([]byte, error)
 	ReadCachedTrieNodePreimageFromNew(secureKey []byte) ([]byte, error)
 	ReadStateTrieNodeFromNew(key []byte) ([]byte, error)
 	HasStateTrieNodeFromNew(key []byte) (bool, error)
-	HasCodeWithPrefixFromNew(hash common.Hash) bool
+	HasCodeWithPrefixFromNew(hash common.ExtHash) bool
 	ReadPreimageFromNew(hash common.Hash) []byte
 
 	// Read StateTrie from old DB
-	ReadCachedTrieNodeFromOld(hash common.Hash) ([]byte, error)
+	ReadCachedTrieNodeFromOld(hash common.ExtHash) ([]byte, error)
 	ReadCachedTrieNodePreimageFromOld(secureKey []byte) ([]byte, error)
 	ReadStateTrieNodeFromOld(key []byte) ([]byte, error)
 	HasStateTrieNodeFromOld(key []byte) (bool, error)
-	HasCodeWithPrefixFromOld(hash common.Hash) bool
+	HasCodeWithPrefixFromOld(hash common.ExtHash) bool
 	ReadPreimageFromOld(hash common.Hash) []byte
 
-	WritePreimages(number uint64, preimages map[common.Hash][]byte)
+	WritePreimages(number uint64, preimages map[common.ExtHash][]byte)
 
 	// from accessors_indexes.go
 	ReadTxLookupEntry(hash common.Hash) (common.Hash, uint64, uint64)
@@ -220,17 +224,17 @@ type DBManager interface {
 	WriteSnapshotSyncStatus(status []byte)
 	DeleteSnapshotSyncStatus()
 
-	ReadSnapshotRoot() common.Hash
-	WriteSnapshotRoot(root common.Hash)
+	ReadSnapshotRoot() common.ExtHash
+	WriteSnapshotRoot(root common.ExtHash)
 	DeleteSnapshotRoot()
 
-	ReadAccountSnapshot(hash common.Hash) []byte
-	WriteAccountSnapshot(hash common.Hash, entry []byte)
-	DeleteAccountSnapshot(hash common.Hash)
+	ReadAccountSnapshot(hash common.ExtHash) []byte
+	WriteAccountSnapshot(hash common.ExtHash, entry []byte)
+	DeleteAccountSnapshot(hash common.ExtHash)
 
-	ReadStorageSnapshot(accountHash, storageHash common.Hash) []byte
-	WriteStorageSnapshot(accountHash, storageHash common.Hash, entry []byte)
-	DeleteStorageSnapshot(accountHash, storageHash common.Hash)
+	ReadStorageSnapshot(accountHash, storageHash common.ExtHash) []byte
+	WriteStorageSnapshot(accountHash, storageHash common.ExtHash, entry []byte)
+	DeleteStorageSnapshot(accountHash, storageHash common.ExtHash)
 
 	NewSnapshotDBIterator(prefix []byte, start []byte) Iterator
 
@@ -303,6 +307,7 @@ const (
 	TxLookUpEntryDB
 	bridgeServiceDB
 	SnapshotDB
+	DelqDB
 	// databaseEntryTypeSize should be the last item in this list!!
 	databaseEntryTypeSize
 )
@@ -344,6 +349,7 @@ var dbBaseDirs = [databaseEntryTypeSize]string{
 	"txlookup",
 	"bridgeservice",
 	"snapshot",
+	"dele_q",
 }
 
 // Sum of dbConfigRatio should be 100.
@@ -357,7 +363,8 @@ var dbConfigRatio = [databaseEntryTypeSize]int{
 	37, // StateTrieMigrationDB
 	2,  // TXLookUpEntryDB
 	1,  // bridgeServiceDB
-	3,  // SnapshotDB
+	2,  // SnapshotDB
+	1,  // dele_q
 }
 
 // checkDBEntryConfigRatio checks if sum of dbConfigRatio is 100.
@@ -843,6 +850,10 @@ func (dbm *databaseManager) GetMemDB() *MemDB {
 	}
 	logger.Error("GetMemDB() call to non memory DBManager object.")
 	return nil
+}
+
+func (dbm *databaseManager) GetDelqDB() Database {
+	return dbm.getDatabase(DelqDB)
 }
 
 // GetDBConfig returns DBConfig of the DB manager.
@@ -1673,13 +1684,14 @@ func (dbm *databaseManager) WriteMerkleProof(key, value []byte) {
 }
 
 // ReadCode retrieves the contract code of the provided code hash.
-func (dbm *databaseManager) ReadCode(hash common.Hash) []byte {
+func (dbm *databaseManager) ReadCode(hash common.ExtHash) []byte {
 	// Try with the legacy code scheme first, if not then try with current
 	// scheme. Since most of the code will be found with legacy scheme.
 	//
 	// TODO-Klaytn-Snapsync change the order when we forcibly upgrade the code scheme with snapshot.
 	db := dbm.getDatabase(StateTrieDB)
-	if data, _ := db.Get(hash[:]); len(data) > 0 {
+	// if data, _ := db.Get(hash[:]); len(data) > 0 { // GetNilData
+	if data, _ := db.Get(hash[:]); data != nil { // GetNilData
 		return data
 	}
 
@@ -1689,7 +1701,7 @@ func (dbm *databaseManager) ReadCode(hash common.Hash) []byte {
 // ReadCodeWithPrefix retrieves the contract code of the provided code hash.
 // The main difference between this function and ReadCode is this function
 // will only check the existence with latest scheme(with prefix).
-func (dbm *databaseManager) ReadCodeWithPrefix(hash common.Hash) []byte {
+func (dbm *databaseManager) ReadCodeWithPrefix(hash common.ExtHash) []byte {
 	db := dbm.getDatabase(StateTrieDB)
 	data, _ := db.Get(CodeKey(hash))
 	return data
@@ -1697,7 +1709,7 @@ func (dbm *databaseManager) ReadCodeWithPrefix(hash common.Hash) []byte {
 
 // HasCode checks if the contract code corresponding to the
 // provided code hash is present in the db.
-func (dbm *databaseManager) HasCode(hash common.Hash) bool {
+func (dbm *databaseManager) HasCode(hash common.ExtHash) bool {
 	// Try with the prefixed code scheme first, if not then try with legacy
 	// scheme.
 	//
@@ -1712,14 +1724,14 @@ func (dbm *databaseManager) HasCode(hash common.Hash) bool {
 // HasCodeWithPrefix checks if the contract code corresponding to the
 // provided code hash is present in the db. This function will only check
 // presence using the prefix-scheme.
-func (dbm *databaseManager) HasCodeWithPrefix(hash common.Hash) bool {
+func (dbm *databaseManager) HasCodeWithPrefix(hash common.ExtHash) bool {
 	db := dbm.getDatabase(StateTrieDB)
 	ok, _ := db.Has(CodeKey(hash))
 	return ok
 }
 
 // WriteCode writes the provided contract code database.
-func (dbm *databaseManager) WriteCode(hash common.Hash, code []byte) {
+func (dbm *databaseManager) WriteCode(hash common.ExtHash, code []byte) {
 	dbm.lockInMigration.RLock()
 	defer dbm.lockInMigration.RUnlock()
 
@@ -1736,7 +1748,7 @@ func (dbm *databaseManager) WriteCode(hash common.Hash, code []byte) {
 }
 
 // DeleteCode deletes the specified contract code from the database.
-func (dbm *databaseManager) DeleteCode(hash common.Hash) {
+func (dbm *databaseManager) DeleteCode(hash common.ExtHash) {
 	db := dbm.getDatabase(StateTrieDB)
 	if err := db.Delete(CodeKey(hash)); err != nil {
 		logger.Crit("Failed to delete contract code", "err", err)
@@ -1744,7 +1756,7 @@ func (dbm *databaseManager) DeleteCode(hash common.Hash) {
 }
 
 // Cached Trie Node operation.
-func (dbm *databaseManager) ReadCachedTrieNode(hash common.Hash) ([]byte, error) {
+func (dbm *databaseManager) ReadCachedTrieNode(hash common.ExtHash) ([]byte, error) {
 	dbm.lockInMigration.RLock()
 	defer dbm.lockInMigration.RUnlock()
 
@@ -1812,7 +1824,7 @@ func (dbm *databaseManager) ReadPreimage(hash common.Hash) []byte {
 }
 
 // Cached Trie Node operation.
-func (dbm *databaseManager) ReadCachedTrieNodeFromNew(hash common.Hash) ([]byte, error) {
+func (dbm *databaseManager) ReadCachedTrieNodeFromNew(hash common.ExtHash) ([]byte, error) {
 	return dbm.GetStateTrieMigrationDB().Get(hash[:])
 }
 
@@ -1834,7 +1846,7 @@ func (dbm *databaseManager) HasStateTrieNodeFromNew(key []byte) (bool, error) {
 	return true, nil
 }
 
-func (dbm *databaseManager) HasCodeWithPrefixFromNew(hash common.Hash) bool {
+func (dbm *databaseManager) HasCodeWithPrefixFromNew(hash common.ExtHash) bool {
 	db := dbm.GetStateTrieMigrationDB()
 	ok, _ := db.Has(CodeKey(hash))
 	return ok
@@ -1846,7 +1858,7 @@ func (dbm *databaseManager) ReadPreimageFromNew(hash common.Hash) []byte {
 	return data
 }
 
-func (dbm *databaseManager) ReadCachedTrieNodeFromOld(hash common.Hash) ([]byte, error) {
+func (dbm *databaseManager) ReadCachedTrieNodeFromOld(hash common.ExtHash) ([]byte, error) {
 	db := dbm.getDatabase(StateTrieDB)
 	return db.Get(hash[:])
 }
@@ -1871,7 +1883,7 @@ func (dbm *databaseManager) HasStateTrieNodeFromOld(key []byte) (bool, error) {
 	return true, nil
 }
 
-func (dbm *databaseManager) HasCodeWithPrefixFromOld(hash common.Hash) bool {
+func (dbm *databaseManager) HasCodeWithPrefixFromOld(hash common.ExtHash) bool {
 	db := dbm.getDatabase(StateTrieDB)
 	ok, _ := db.Has(CodeKey(hash))
 	return ok
@@ -1886,10 +1898,10 @@ func (dbm *databaseManager) ReadPreimageFromOld(hash common.Hash) []byte {
 
 // WritePreimages writes the provided set of preimages to the database. `number` is the
 // current block number, and is used for debug messages only.
-func (dbm *databaseManager) WritePreimages(number uint64, preimages map[common.Hash][]byte) {
+func (dbm *databaseManager) WritePreimages(number uint64, preimages map[common.ExtHash][]byte) {
 	batch := dbm.NewBatch(StateTrieDB)
 	for hash, preimage := range preimages {
-		if err := batch.Put(preimageKey(hash), preimage); err != nil {
+		if err := batch.Put(preimageKey(hash.ToHash()), preimage); err != nil {
 			logger.Crit("Failed to store trie preimage", "err", err)
 		}
 	}
@@ -2266,18 +2278,18 @@ func (dbm *databaseManager) DeleteSnapshotSyncStatus() {
 
 // ReadSnapshotRoot retrieves the root of the block whose state is contained in
 // the persisted snapshot.
-func (dbm *databaseManager) ReadSnapshotRoot() common.Hash {
+func (dbm *databaseManager) ReadSnapshotRoot() common.ExtHash {
 	db := dbm.getDatabase(SnapshotDB)
 	data, _ := db.Get(snapshotRootKey)
-	if len(data) != common.HashLength {
-		return common.Hash{}
+	if len(data) != common.ExtHashLength {
+		return common.InitExtHash()
 	}
-	return common.BytesToHash(data)
+	return common.BytesToExtHash(data)
 }
 
 // WriteSnapshotRoot stores the root of the block whose state is contained in
 // the persisted snapshot.
-func (dbm *databaseManager) WriteSnapshotRoot(root common.Hash) {
+func (dbm *databaseManager) WriteSnapshotRoot(root common.ExtHash) {
 	db := dbm.getDatabase(SnapshotDB)
 	if err := db.Put(snapshotRootKey, root[:]); err != nil {
 		logger.Crit("Failed to store snapshot root", "err", err)
@@ -2296,39 +2308,39 @@ func (dbm *databaseManager) DeleteSnapshotRoot() {
 }
 
 // ReadAccountSnapshot retrieves the snapshot entry of an account trie leaf.
-func (dbm *databaseManager) ReadAccountSnapshot(hash common.Hash) []byte {
+func (dbm *databaseManager) ReadAccountSnapshot(hash common.ExtHash) []byte {
 	db := dbm.getDatabase(SnapshotDB)
 	data, _ := db.Get(AccountSnapshotKey(hash))
 	return data
 }
 
 // WriteAccountSnapshot stores the snapshot entry of an account trie leaf.
-func (dbm *databaseManager) WriteAccountSnapshot(hash common.Hash, entry []byte) {
+func (dbm *databaseManager) WriteAccountSnapshot(hash common.ExtHash, entry []byte) {
 	db := dbm.getDatabase(SnapshotDB)
 	writeAccountSnapshot(db, hash, entry)
 }
 
 // DeleteAccountSnapshot removes the snapshot entry of an account trie leaf.
-func (dbm *databaseManager) DeleteAccountSnapshot(hash common.Hash) {
+func (dbm *databaseManager) DeleteAccountSnapshot(hash common.ExtHash) {
 	db := dbm.getDatabase(SnapshotDB)
 	deleteAccountSnapshot(db, hash)
 }
 
 // ReadStorageSnapshot retrieves the snapshot entry of an storage trie leaf.
-func (dbm *databaseManager) ReadStorageSnapshot(accountHash, storageHash common.Hash) []byte {
+func (dbm *databaseManager) ReadStorageSnapshot(accountHash, storageHash common.ExtHash) []byte {
 	db := dbm.getDatabase(SnapshotDB)
 	data, _ := db.Get(StorageSnapshotKey(accountHash, storageHash))
 	return data
 }
 
 // WriteStorageSnapshot stores the snapshot entry of an storage trie leaf.
-func (dbm *databaseManager) WriteStorageSnapshot(accountHash, storageHash common.Hash, entry []byte) {
+func (dbm *databaseManager) WriteStorageSnapshot(accountHash, storageHash common.ExtHash, entry []byte) {
 	db := dbm.getDatabase(SnapshotDB)
 	writeStorageSnapshot(db, accountHash, storageHash, entry)
 }
 
 // DeleteStorageSnapshot removes the snapshot entry of an storage trie leaf.
-func (dbm *databaseManager) DeleteStorageSnapshot(accountHash, storageHash common.Hash) {
+func (dbm *databaseManager) DeleteStorageSnapshot(accountHash, storageHash common.ExtHash) {
 	db := dbm.getDatabase(SnapshotDB)
 	deleteStorageSnapshot(db, accountHash, storageHash)
 }
@@ -2671,14 +2683,14 @@ func (dbm *databaseManager) NewSnapshotDBBatch() SnapshotDBBatch {
 type SnapshotDBBatch interface {
 	Batch
 
-	WriteSnapshotRoot(root common.Hash)
+	WriteSnapshotRoot(root common.ExtHash)
 	DeleteSnapshotRoot()
 
-	WriteAccountSnapshot(hash common.Hash, entry []byte)
-	DeleteAccountSnapshot(hash common.Hash)
+	WriteAccountSnapshot(hash common.ExtHash, entry []byte)
+	DeleteAccountSnapshot(hash common.ExtHash)
 
-	WriteStorageSnapshot(accountHash, storageHash common.Hash, entry []byte)
-	DeleteStorageSnapshot(accountHash, storageHash common.Hash)
+	WriteStorageSnapshot(accountHash, storageHash common.ExtHash, entry []byte)
+	DeleteStorageSnapshot(accountHash, storageHash common.ExtHash)
 
 	WriteSnapshotJournal(journal []byte)
 	DeleteSnapshotJournal()
@@ -2697,7 +2709,7 @@ type snapshotDBBatch struct {
 	Batch
 }
 
-func (batch *snapshotDBBatch) WriteSnapshotRoot(root common.Hash) {
+func (batch *snapshotDBBatch) WriteSnapshotRoot(root common.ExtHash) {
 	writeSnapshotRoot(batch, root)
 }
 
@@ -2705,19 +2717,19 @@ func (batch *snapshotDBBatch) DeleteSnapshotRoot() {
 	deleteSnapshotRoot(batch)
 }
 
-func (batch *snapshotDBBatch) WriteAccountSnapshot(hash common.Hash, entry []byte) {
+func (batch *snapshotDBBatch) WriteAccountSnapshot(hash common.ExtHash, entry []byte) {
 	writeAccountSnapshot(batch, hash, entry)
 }
 
-func (batch *snapshotDBBatch) DeleteAccountSnapshot(hash common.Hash) {
+func (batch *snapshotDBBatch) DeleteAccountSnapshot(hash common.ExtHash) {
 	deleteAccountSnapshot(batch, hash)
 }
 
-func (batch *snapshotDBBatch) WriteStorageSnapshot(accountHash, storageHash common.Hash, entry []byte) {
+func (batch *snapshotDBBatch) WriteStorageSnapshot(accountHash, storageHash common.ExtHash, entry []byte) {
 	writeStorageSnapshot(batch, accountHash, storageHash, entry)
 }
 
-func (batch *snapshotDBBatch) DeleteStorageSnapshot(accountHash, storageHash common.Hash) {
+func (batch *snapshotDBBatch) DeleteStorageSnapshot(accountHash, storageHash common.ExtHash) {
 	deleteStorageSnapshot(batch, accountHash, storageHash)
 }
 
@@ -2753,7 +2765,7 @@ func (batch *snapshotDBBatch) DeleteSnapshotRecoveryNumber() {
 	deleteSnapshotRecoveryNumber(batch)
 }
 
-func writeSnapshotRoot(db KeyValueWriter, root common.Hash) {
+func writeSnapshotRoot(db KeyValueWriter, root common.ExtHash) {
 	if err := db.Put(snapshotRootKey, root[:]); err != nil {
 		logger.Crit("Failed to store snapshot root", "err", err)
 	}
@@ -2765,25 +2777,25 @@ func deleteSnapshotRoot(db KeyValueWriter) {
 	}
 }
 
-func writeAccountSnapshot(db KeyValueWriter, hash common.Hash, entry []byte) {
+func writeAccountSnapshot(db KeyValueWriter, hash common.ExtHash, entry []byte) {
 	if err := db.Put(AccountSnapshotKey(hash), entry); err != nil {
 		logger.Crit("Failed to store account snapshot", "err", err)
 	}
 }
 
-func deleteAccountSnapshot(db KeyValueWriter, hash common.Hash) {
+func deleteAccountSnapshot(db KeyValueWriter, hash common.ExtHash) {
 	if err := db.Delete(AccountSnapshotKey(hash)); err != nil {
 		logger.Crit("Failed to delete account snapshot", "err", err)
 	}
 }
 
-func writeStorageSnapshot(db KeyValueWriter, accountHash, storageHash common.Hash, entry []byte) {
+func writeStorageSnapshot(db KeyValueWriter, accountHash, storageHash common.ExtHash, entry []byte) {
 	if err := db.Put(StorageSnapshotKey(accountHash, storageHash), entry); err != nil {
 		logger.Crit("Failed to store storage snapshot", "err", err)
 	}
 }
 
-func deleteStorageSnapshot(db KeyValueWriter, accountHash, storageHash common.Hash) {
+func deleteStorageSnapshot(db KeyValueWriter, accountHash, storageHash common.ExtHash) {
 	if err := db.Delete(StorageSnapshotKey(accountHash, storageHash)); err != nil {
 		logger.Crit("Failed to delete storage snapshot", "err", err)
 	}
@@ -2837,4 +2849,144 @@ func deleteSnapshotRecoveryNumber(db KeyValueWriter) {
 	if err := db.Delete(snapshotRecoveryKey); err != nil {
 		logger.Crit("Failed to remove snapshot recovery number", "err", err)
 	}
+}
+
+func DeleteStateDBProcNum(blockNum uint64) {
+	if blockNum > 86400*2+100 { //172800
+		go DeleteBlockByNum(blockNum - (86400*2 + 100))
+	}
+	ProcBlockNum = int32(blockNum)
+}
+
+func DeleteStateDBKey(dbm DBManager, key []byte, pos int) error {
+	//return nil
+	var tmpVal [4]byte
+
+	dbOnce.Do(func() {
+		ethanDbm = dbm
+		go DeleteStateDBProc(dbm)
+	})
+
+	if ProcBlockNum <= 0 {
+		fmt.Printf("deletereq err = %x, delpos = %d, delq_bnum=%d\n", key, pos, ProcBlockNum)
+		return nil
+	}
+	delq := dbm.GetDelqDB()
+	binary.LittleEndian.PutUint32(tmpVal[:], uint32(ProcBlockNum))
+	err := delq.Put(key[:], tmpVal[:])
+	if err != nil {
+		logger.Warn("Failed to delete key put queue", "err", err, "key", key)
+	}
+	return err
+}
+
+func DeleteStateDBProc(dbm DBManager) {
+	delq := dbm.GetDelqDB()
+	statedb := dbm.GetStateTrieDB()
+
+	rootdel := 4
+	//0 : RootExtHash만 지우지 않을때
+	//1 : RootExtHash도 지우고 싶을때
+	//2 : RootExtHash를 86400블럭 +-5 블럭은 나중에 지우고,  ExtHash는 정상 삭제
+	//3 : 86400블럭 +-500 블럭은 나중에 지우고,  나머지는 정상 삭제
+	//4 : 86400블럭 +500 블럭은 이전 데이터만 삭제
+	for {
+		time.Sleep(time.Second * 1)
+
+		iter := delq.NewIterator(nil, nil)
+		for iter.Next() {
+			blockNum := int32(binary.LittleEndian.Uint32(iter.Value()))
+			if rootdel != 4 && blockNum < ProcBlockNum-1000 {
+				//if blockNum < ProcBlockNum - 86500 {
+				if rootdel == 0 && len(iter.Key()) == common.ExtHashLength && fmt.Sprintf("%x", iter.Key()[32:]) == "00000000ffff0000" {
+					err2 := delq.Delete(iter.Key())
+					fmt.Printf("deletekey = %x, delq_bnum=%d, delq_err=%v\n", iter.Key(), ProcBlockNum, err2)
+				} else if rootdel == 2 {
+					//if ProcBlockNum > 4147150 && len(iter.Key()) == common.ExtHashLength && fmt.Sprintf("%x", iter.Key()[32:]) == "00000000ffff0000" {
+					if len(iter.Key()) == common.ExtHashLength && fmt.Sprintf("%x", iter.Key()[32:]) == "00000000ffff0000" {
+						remainNum := blockNum % 86400
+						//if blockNum > ProcBlockNum - 86405 || (remainNum < 5 || remainNum > 86395) {
+						if blockNum > ProcBlockNum-86405 || (remainNum < 2 || remainNum > 86398) {
+							continue
+						}
+					}
+					err1 := statedb.Delete(iter.Key())
+					err2 := delq.Delete(iter.Key())
+					fmt.Printf("deletekey = %x, delq_bnum=%d, state_err=%v, delq_err=%v\n", iter.Key(), ProcBlockNum, err1, err2)
+				} else if rootdel == 3 {
+					if len(iter.Key()) == common.ExtHashLength {
+						remainNum := blockNum % 86400
+						//if blockNum > ProcBlockNum - 86900 || (remainNum < 500 || remainNum > 85900) {
+						//if blockNum < ProcBlockNum - 86400 - 50 {
+						//} else if remainNum < 50 || remainNum > 86350 {
+						if blockNum < ProcBlockNum-86400-500 {
+						} else if remainNum < 5 || remainNum > 86395 {
+							continue
+						}
+					}
+					//err1 := statedb.Delete(iter.Key())
+					//err2 := delq.Delete(iter.Key())
+					statedb.Delete(iter.Key())
+					delq.Delete(iter.Key())
+					//fmt.Printf("deletekey = %x, delq_bnum=%d/%d, state_err=%v, delq_err=%v\n", iter.Key(), blockNum, ProcBlockNum, err1, err2)
+				} else {
+					err1 := statedb.Delete(iter.Key())
+					err2 := delq.Delete(iter.Key())
+					fmt.Printf("deletekey = %x, delq_bnum=%d, state_err=%v, delq_err=%v\n", iter.Key(), ProcBlockNum, err1, err2)
+				}
+			} else if blockNum < ProcBlockNum-86400-500 {
+				//err1 := statedb.Delete(iter.Key())
+				//err2 := delq.Delete(iter.Key())
+				//fmt.Printf("deletekey = %x, delq_bnum=%d, state_err=%v, delq_err=%v\n", iter.Key(), ProcBlockNum, err1, err2)
+				keyLen := len(iter.Key())
+				if !bytes.Equal(iter.Key()[:keyLen-common.ExtPadLength], common.LegacyByte) {
+					statedb.Delete(iter.Key())
+				}
+				delq.Delete(iter.Key())
+			}
+
+		}
+		iter.Release()
+	}
+}
+
+func DeleteBlockByNum(number uint64) {
+	dbm := ethanDbm
+
+	block := dbm.ReadBlockByNumber(number)
+	if block == nil {
+		return
+	}
+	hash := dbm.ReadCanonicalHash(number)
+
+	db := dbm.getDatabase(BodyDB)
+	db.Delete(blockBodyKey(number, hash))
+	//fmt.Printf("deletekey = %x, number = %d, body\n", blockBodyKey(number, hash), number)
+
+	if block != nil {
+		db = dbm.getDatabase(TxLookUpEntryDB)
+		for _, tx := range block.Transactions() {
+			db.Delete(TxLookupKey(tx.Hash()))
+			//fmt.Printf("deletekey = %x, number = %d, txlookup\n", TxLookupKey(tx.Hash()), number)
+		}
+	}
+
+	db = dbm.getDatabase(ReceiptsDB)
+	db.Delete(blockReceiptsKey(number, hash))
+	//fmt.Printf("deletekey = %x, number = %d, receipt\n", blockReceiptsKey(number, hash), number)
+
+	db = dbm.getDatabase(headerDB)
+	db.Delete(headerKey(number, hash))
+	//fmt.Printf("deletekey = %x, number = %d, headerkey\n", headerKey(number, hash), number)
+	db.Delete(headerNumberKey(hash))
+	//fmt.Printf("deletekey = %x, number = %d, headerNumberkey\n", headerNumberKey(hash), number)
+}
+
+func GetData(dbm DBManager, key []byte) ([]byte, error) {
+	db := dbm.GetStateTrieDB()
+	value, err := db.Get(key[:])
+	if err != nil {
+		logger.Warn("Failed to get statetrie by key", "err", err, "key", key)
+	}
+	return value, err
 }

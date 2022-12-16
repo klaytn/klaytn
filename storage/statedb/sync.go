@@ -46,10 +46,10 @@ const maxFetchesPerDepth = 16384
 
 // request represents a scheduled or already in-flight state retrieval request.
 type request struct {
-	path []byte      // Merkle path leading to this node for prioritization
-	hash common.Hash // Hash of the node data content to retrieve
-	data []byte      // Data content of the node, cached until all subtrees complete
-	code bool        // Whether this is a code entry
+	path []byte         // Merkle path leading to this node for prioritization
+	hash common.ExtHash // Hash of the node data content to retrieve
+	data []byte         // Data content of the node, cached until all subtrees complete
+	code bool           // Whether this is a code entry
 
 	parents []*request // Parent state nodes referencing this entry (notify all upon completion)
 	depth   int        // Depth level within the trie the node is located to prioritise DFS
@@ -93,34 +93,34 @@ func newSyncPath(path []byte) SyncPath {
 
 // SyncResult is a response with requested data along with it's hash.
 type SyncResult struct {
-	Hash common.Hash // Hash of the originally unknown trie node
-	Data []byte      // Data content of the retrieved node
+	Hash common.ExtHash // Hash of the originally unknown trie node
+	Data []byte         // Data content of the retrieved node
 	Err  error
 }
 
 // syncMemBatch is an in-memory buffer of successfully downloaded but not yet
 // persisted data items.
 type syncMemBatch struct {
-	nodes map[common.Hash][]byte // In-memory membatch of recently completed nodes
-	codes map[common.Hash][]byte // In-memory membatch of recently completed codes
+	nodes map[common.ExtHash][]byte // In-memory membatch of recently completed nodes
+	codes map[common.ExtHash][]byte // In-memory membatch of recently completed codes
 }
 
 // newSyncMemBatch allocates a new memory-buffer for not-yet persisted trie nodes.
 func newSyncMemBatch() *syncMemBatch {
 	return &syncMemBatch{
-		nodes: make(map[common.Hash][]byte),
-		codes: make(map[common.Hash][]byte),
+		nodes: make(map[common.ExtHash][]byte),
+		codes: make(map[common.ExtHash][]byte),
 	}
 }
 
 // hasNode reports the trie node with specific hash is already cached.
-func (batch *syncMemBatch) hasNode(hash common.Hash) bool {
+func (batch *syncMemBatch) hasNode(hash common.ExtHash) bool {
 	_, ok := batch.nodes[hash]
 	return ok
 }
 
 // hasCode reports the contract code with specific hash is already cached.
-func (batch *syncMemBatch) hasCode(hash common.Hash) bool {
+func (batch *syncMemBatch) hasCode(hash common.ExtHash) bool {
 	_, ok := batch.codes[hash]
 	return ok
 }
@@ -128,33 +128,33 @@ func (batch *syncMemBatch) hasCode(hash common.Hash) bool {
 type StateTrieReadDB interface {
 	ReadStateTrieNode(key []byte) ([]byte, error)
 	HasStateTrieNode(key []byte) (bool, error)
-	HasCodeWithPrefix(hash common.Hash) bool
+	HasCodeWithPrefix(hash common.ExtHash) bool
 }
 
 // TrieSync is the main state trie synchronisation scheduler, which provides yet
 // unknown trie hashes to retrieve, accepts node data associated with said hashes
 // and reconstructs the trie step by step until all is done.
 type TrieSync struct {
-	database         StateTrieReadDB          // Persistent database to check for existing entries
-	membatch         *syncMemBatch            // Memory buffer to avoid frequent database writes
-	nodeReqs         map[common.Hash]*request // Pending requests pertaining to a trie node hash
-	codeReqs         map[common.Hash]*request // Pending requests pertaining to a code hash
-	queue            *prque.Prque             // Priority queue with the pending requests
-	fetches          map[int]int              // Number of active fetches per trie node depth
-	retrievedByDepth map[int]int              // Retrieved trie node number counted by depth
-	committedByDepth map[int]int              // Committed trie nodes number counted by depth
-	bloom            *SyncBloom               // Bloom filter for fast state existence checks
-	exist            *lru.Cache               // exist to check if the trie node is already written or not
+	database         StateTrieReadDB             // Persistent database to check for existing entries
+	membatch         *syncMemBatch               // Memory buffer to avoid frequent database writes
+	nodeReqs         map[common.ExtHash]*request // Pending requests pertaining to a trie node hash
+	codeReqs         map[common.ExtHash]*request // Pending requests pertaining to a code hash
+	queue            *prque.Prque                // Priority queue with the pending requests
+	fetches          map[int]int                 // Number of active fetches per trie node depth
+	retrievedByDepth map[int]int                 // Retrieved trie node number counted by depth
+	committedByDepth map[int]int                 // Committed trie nodes number counted by depth
+	bloom            *SyncBloom                  // Bloom filter for fast state existence checks
+	exist            *lru.Cache                  // exist to check if the trie node is already written or not
 }
 
 // NewTrieSync creates a new trie data download scheduler.
 // If both bloom and cache are set, only cache is used.
-func NewTrieSync(root common.Hash, database StateTrieReadDB, callback LeafCallback, bloom *SyncBloom, lruCache *lru.Cache) *TrieSync {
+func NewTrieSync(root common.ExtHash, database StateTrieReadDB, callback LeafCallback, bloom *SyncBloom, lruCache *lru.Cache) *TrieSync {
 	ts := &TrieSync{
 		database:         database,
 		membatch:         newSyncMemBatch(),
-		nodeReqs:         make(map[common.Hash]*request),
-		codeReqs:         make(map[common.Hash]*request),
+		nodeReqs:         make(map[common.ExtHash]*request),
+		codeReqs:         make(map[common.ExtHash]*request),
 		queue:            prque.New(),
 		fetches:          make(map[int]int),
 		retrievedByDepth: make(map[int]int),
@@ -162,12 +162,12 @@ func NewTrieSync(root common.Hash, database StateTrieReadDB, callback LeafCallba
 		bloom:            bloom,
 		exist:            lruCache,
 	}
-	ts.AddSubTrie(root, nil, 0, common.Hash{}, callback)
+	ts.AddSubTrie(root, nil, 0, common.InitExtHash(), callback)
 	return ts
 }
 
 // AddSubTrie registers a new trie to the sync code, rooted at the designated parent.
-func (s *TrieSync) AddSubTrie(root common.Hash, path []byte, depth int, parent common.Hash, callback LeafCallback) {
+func (s *TrieSync) AddSubTrie(root common.ExtHash, path []byte, depth int, parent common.ExtHash, callback LeafCallback) {
 	// Short circuit if the trie is empty or already known
 	if root == emptyRoot {
 		return
@@ -199,7 +199,7 @@ func (s *TrieSync) AddSubTrie(root common.Hash, path []byte, depth int, parent c
 		callback: callback,
 	}
 	// If this sub-trie has a designated parent, link them together
-	if parent != (common.Hash{}) {
+	if parent.ToHash() != (common.Hash{}) {
 		ancestor := s.nodeReqs[parent]
 		if ancestor == nil {
 			panic(fmt.Sprintf("sub-trie ancestor not found: %x", parent))
@@ -213,9 +213,9 @@ func (s *TrieSync) AddSubTrie(root common.Hash, path []byte, depth int, parent c
 // AddCodeEntry schedules the direct retrieval of a contract code that should not
 // be interpreted as a trie node, but rather accepted and stored into the database
 // as is.
-func (s *TrieSync) AddCodeEntry(hash common.Hash, path []byte, depth int, parent common.Hash) {
+func (s *TrieSync) AddCodeEntry(hash common.ExtHash, path []byte, depth int, parent common.ExtHash) {
 	// Short circuit if the entry is empty or already known
-	if hash == emptyState {
+	if hash.ToHash() == emptyState {
 		return
 	}
 	if s.membatch.hasCode(hash) {
@@ -248,7 +248,7 @@ func (s *TrieSync) AddCodeEntry(hash common.Hash, path []byte, depth int, parent
 		depth: depth,
 	}
 	// If this sub-trie has a designated parent, link them together
-	if parent != (common.Hash{}) {
+	if parent.ToHash() != (common.Hash{}) {
 		ancestor := s.nodeReqs[parent] // the parent of codereq can ONLY be nodereq
 		if ancestor == nil {
 			panic(fmt.Sprintf("raw-entry ancestor not found: %x", parent))
@@ -262,11 +262,11 @@ func (s *TrieSync) AddCodeEntry(hash common.Hash, path []byte, depth int, parent
 // Missing retrieves the known missing nodes from the trie for retrieval. To aid
 // both klay/6x style fast sync and snap/1x style state sync, the paths of trie
 // nodes are returned too, as well as separate hash list for codes.
-func (s *TrieSync) Missing(max int) (nodes []common.Hash, paths []SyncPath, codes []common.Hash) {
+func (s *TrieSync) Missing(max int) (nodes []common.ExtHash, paths []SyncPath, codes []common.ExtHash) {
 	var (
-		nodeHashes []common.Hash
+		nodeHashes []common.ExtHash
 		nodePaths  []SyncPath
-		codeHashes []common.Hash
+		codeHashes []common.ExtHash
 	)
 	for !s.queue.Empty() && (max == 0 || len(nodeHashes)+len(codeHashes) < max) {
 		// Retrieve th enext item in line
@@ -281,7 +281,7 @@ func (s *TrieSync) Missing(max int) (nodes []common.Hash, paths []SyncPath, code
 		s.queue.Pop()
 		s.fetches[depth]++
 
-		hash := item.(common.Hash)
+		hash := item.(common.ExtHash)
 		if req, ok := s.nodeReqs[hash]; ok {
 			nodeHashes = append(nodeHashes, hash)
 			nodePaths = append(nodePaths, newSyncPath(req.path))
@@ -467,7 +467,7 @@ func (s *TrieSync) children(req *request, object node) ([]*request, error) {
 		// If the child references another node, resolve or schedule
 		if node, ok := (child.node).(hashNode); ok {
 			// Try to resolve the node from the local database
-			hash := common.BytesToHash(node)
+			hash := common.BytesToExtHash(node)
 			if s.membatch.hasNode(hash) {
 				continue
 			}

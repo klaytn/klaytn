@@ -47,7 +47,7 @@ func NewNodeSet() *NodeSet {
 	}
 }
 
-func (db *NodeSet) ReadCachedTrieNode(hash common.Hash) ([]byte, error) {
+func (db *NodeSet) ReadCachedTrieNode(hash common.ExtHash) ([]byte, error) {
 	return db.Get(hash.Bytes())
 }
 

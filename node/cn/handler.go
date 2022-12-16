@@ -935,7 +935,7 @@ func handleNodeDataRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	}
 	// Gather state data until the fetch or network limits is reached
 	var (
-		hash  common.Hash
+		hash  common.ExtHash
 		bytes int
 		data  [][]byte
 	)
@@ -948,7 +948,7 @@ func handleNodeDataRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 		}
 		// Retrieve the requested state entry, stopping if enough was found
 		// TODO-Klaytn-Snapsync now the code and trienode is mixed in the protocol level, separate these two types.
-		entry, err := pm.blockchain.TrieNode(hash)
+		entry, err := pm.blockchain.TrieNode(hash.ToHash())
 		if len(entry) == 0 || err != nil {
 			// Read the contract code with prefix only to save unnecessary lookups.
 			entry, err = pm.blockchain.ContractCodeWithPrefix(hash)

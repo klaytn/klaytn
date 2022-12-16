@@ -31,7 +31,7 @@ import (
 type LegacyAccount struct {
 	Nonce    uint64
 	Balance  *big.Int
-	Root     common.Hash // merkle root of the storage trie
+	Root     common.ExtHash // merkle root of the storage trie
 	CodeHash []byte
 }
 
@@ -48,7 +48,7 @@ func newEmptyLegacyAccount() *LegacyAccount {
 func newLegacyAccount() *LegacyAccount {
 	logger.CritWithStack("Legacy account is deprecated.")
 	return &LegacyAccount{
-		0, new(big.Int), common.Hash{}, emptyCodeHash,
+		0, new(big.Int), common.InitExtHash(), emptyCodeHash,
 	}
 }
 
@@ -63,7 +63,7 @@ func newLegacyAccountWithMap(values map[AccountValueKeyType]interface{}) *Legacy
 		acc.Balance.Set(v)
 	}
 
-	if v, ok := values[AccountValueKeyStorageRoot].(common.Hash); ok {
+	if v, ok := values[AccountValueKeyStorageRoot].(common.ExtHash); ok {
 		acc.Root = v
 	}
 
@@ -91,7 +91,7 @@ func (a *LegacyAccount) GetHumanReadable() bool {
 	return false
 }
 
-func (a *LegacyAccount) GetStorageRoot() common.Hash {
+func (a *LegacyAccount) GetStorageRoot() common.ExtHash {
 	return a.Root
 }
 
@@ -113,7 +113,7 @@ func (a *LegacyAccount) SetHumanReadable(b bool) {
 		"callstack", stack.Caller(0).String())
 }
 
-func (a *LegacyAccount) SetStorageRoot(h common.Hash) {
+func (a *LegacyAccount) SetStorageRoot(h common.ExtHash) {
 	a.Root = h
 }
 
