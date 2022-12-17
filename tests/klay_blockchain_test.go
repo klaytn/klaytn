@@ -294,7 +294,9 @@ func deployContractDeployTx(t *testing.T, txpool work.TxPool, chainId *big.Int, 
 	require.Nil(t, err)
 
 	err = txpool.AddLocal(tx)
-	require.True(t, err == nil || err == blockchain.ErrAlreadyNonceExistInPool)
+	if err != nil && err != blockchain.ErrAlreadyNonceExistInPool {
+		t.Fatal(err)
+	}
 
 	contractAddr := crypto.CreateAddress(sender.Addr, sender.Nonce)
 	sender.AddNonce()
@@ -322,7 +324,9 @@ func deployContractExecutionTx(t *testing.T, txpool work.TxPool, chainId *big.In
 	require.Nil(t, err)
 
 	err = txpool.AddLocal(tx)
-	require.True(t, err == nil || err == blockchain.ErrAlreadyNonceExistInPool)
+	if err != nil && err != blockchain.ErrAlreadyNonceExistInPool {
+		t.Fatal(err)
+	}
 
 	sender.AddNonce()
 	return tx
