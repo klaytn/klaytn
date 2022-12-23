@@ -283,6 +283,7 @@ var KENFlags = []cli.Flag{
 	altsrc.NewUint64Flag(utils.TxResendIntervalFlag),
 	altsrc.NewIntFlag(utils.TxResendCountFlag),
 	altsrc.NewBoolFlag(utils.TxResendUseLegacyFlag),
+	altsrc.NewBoolFlag(utils.UnsafeDebugDisableFlag),
 }
 
 var KSCNFlags = []cli.Flag{

@@ -71,6 +71,11 @@ var (
 	ConfFlag = cli.StringFlag{
 		Name: "conf",
 	}
+	UnsafeDebugDisableFlag = cli.BoolFlag{
+		Name:   "unsafe-debug.disable",
+		Usage:  "Disable unsafe debug APIs (traceTransaction, writeXXX, ...).",
+		EnvVar: "KLAYTN_UNSAFE_DEBUG_DISABLE",
+	}
 	NtpDisableFlag = cli.BoolFlag{
 		Name:   "ntp.disable",
 		Usage:  "Disable checking if the local time is synchronized with ntp server. If this flag is not set, the local time is checked with the time of the server specified by ntp.server.",
