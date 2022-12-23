@@ -487,12 +487,25 @@ func (s *CN) APIs() []rpc.API {
 	governanceKlayAPI := governance.NewGovernanceKlayAPI(s.governance, s.blockchain)
 	publicGovernanceAPI := governance.NewGovernanceAPI(s.governance)
 	publicDownloaderAPI := downloader.NewPublicDownloaderAPI(s.protocolManager.Downloader(), s.eventMux)
-	tracerAPI := tracers.NewAPI(s.APIBackend)
-	unsafeTracerAPI := tracers.NewUnsafeAPI(s.APIBackend)
 
 	ethAPI.SetPublicFilterAPI(publicFilterAPI)
 	ethAPI.SetGovernanceKlayAPI(governanceKlayAPI)
 	ethAPI.SetPublicGovernanceAPI(publicGovernanceAPI)
+
+	var tracerAPI *tracers.API
+	if s.config.DisableUnsafeDebug {
+		tracerAPI = tracers.NewAPI(s.APIBackend)
+	} else {
+		tracerAPI = tracers.NewUnsafeAPI(s.APIBackend)
+		apis = append(apis, []rpc.API{
+			{
+				Namespace: "debug",
+				Version:   "1.0",
+				Service:   NewPrivateDebugAPI(s.chainConfig, s),
+				Public:    false,
+			},
+		}...)
+	}
 
 	// Append all the local APIs and return
 	return append(apis, []rpc.API{
@@ -526,19 +539,9 @@ func (s *CN) APIs() []rpc.API {
 			Service:   NewPublicDebugAPI(s),
 			Public:    false,
 		}, {
-			Namespace: "unsafedebug",
-			Version:   "1.0",
-			Service:   NewPrivateDebugAPI(s.chainConfig, s),
-			Public:    false,
-		}, {
 			Namespace: "debug",
 			Version:   "1.0",
 			Service:   tracerAPI,
-			Public:    false,
-		}, {
-			Namespace: "unsafedebug",
-			Version:   "1.0",
-			Service:   unsafeTracerAPI,
 			Public:    false,
 		}, {
 			Namespace: "net",
