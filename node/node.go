@@ -796,11 +796,11 @@ func (n *Node) apis() []rpc.API {
 	}
 	debugRpcApi := []rpc.API{
 		{
-			Namespace: "unsafedebug",
+			Namespace: "debug",
 			Version:   "1.0",
 			Service:   debug.Handler,
 		}, {
-			Namespace: "unsafedebug",
+			Namespace: "debug",
 			Version:   "1.0",
 			Service:   NewPublicDebugAPI(n),
 		},
