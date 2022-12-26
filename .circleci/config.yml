@@ -384,7 +384,7 @@ jobs:
           no_output_timeout: 30m
           command: |
             make test-others
-    resource_class: xlarge
+    resource_class: large
 
   test-rpc:
     executor: test-executor
