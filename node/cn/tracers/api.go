@@ -98,13 +98,13 @@ type API struct {
 
 // NewAPI creates a new API definition for the tracing methods of the CN service,
 // only allowing predefined tracers.
-func NewAPI(backend Backend) *API {
+func NewAPIUnsafeDisabled(backend Backend) *API {
 	return &API{backend: backend, unsafeTrace: false}
 }
 
 // NewUnsafeAPI creates a new API definition for the tracing methods of the CN service,
 // allowing both predefined tracers and Javascript snippet based tracing.
-func NewUnsafeAPI(backend Backend) *API {
+func NewAPI(backend Backend) *API {
 	return &API{backend: backend, unsafeTrace: true}
 }
 

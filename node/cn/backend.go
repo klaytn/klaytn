@@ -494,9 +494,9 @@ func (s *CN) APIs() []rpc.API {
 
 	var tracerAPI *tracers.API
 	if s.config.DisableUnsafeDebug {
-		tracerAPI = tracers.NewAPI(s.APIBackend)
+		tracerAPI = tracers.NewAPIUnsafeDisabled(s.APIBackend)
 	} else {
-		tracerAPI = tracers.NewUnsafeAPI(s.APIBackend)
+		tracerAPI = tracers.NewAPI(s.APIBackend)
 		apis = append(apis, []rpc.API{
 			{
 				Namespace: "debug",
