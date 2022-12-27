@@ -166,6 +166,12 @@ type Config struct {
 	// ephemeral nodes).
 	GRPCPort int `toml:",omitempty"`
 
+	// Ntp server:port to check the synchronization when booting the node
+	NtpRemoteServer string `toml:",omitempty"`
+
+	// Disable option for unsafe debug APIs
+	DisableUnsafeDebug bool `toml:",omitempty"`
+
 	// Logger is a custom logger to use with the p2p.Server.
 	Logger log.Logger `toml:",omitempty"`
 }

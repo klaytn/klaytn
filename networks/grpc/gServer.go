@@ -27,6 +27,7 @@ import (
 	"encoding/json"
 	"io"
 	"net"
+	"time"
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/log"
@@ -48,6 +49,8 @@ type grpcReadWriteNopCloser struct {
 	io.Reader
 	io.Writer
 }
+
+func (t *grpcReadWriteNopCloser) SetWriteDeadline(time.Time) error { return nil }
 
 // Close does nothing and returns always nil.
 func (t *grpcReadWriteNopCloser) Close() error {
@@ -126,7 +129,7 @@ func (kns *klaytnServer) BiCall(stream KlaytnNode_BiCallServer) error {
 		ctx := context.Background()
 
 		reader := bufio.NewReaderSize(preader, common.MaxRequestContentLength)
-		kns.handler.ServeSingleRequest(ctx, rpc.NewCodec(&grpcReadWriteNopCloser{reader, &grpcWriter{stream, nil}}, encoder, decoder), rpc.OptionMethodInvocation|rpc.OptionSubscriptions)
+		kns.handler.ServeSingleRequest(ctx, rpc.NewFuncCodec(&grpcReadWriteNopCloser{reader, &grpcWriter{stream, nil}}, encoder, decoder))
 	}
 }
 
@@ -166,7 +169,7 @@ func (kns *klaytnServer) Subscribe(request *RPCRequest, stream KlaytnNode_Subscr
 	ctx := context.Background()
 
 	reader := bufio.NewReaderSize(preader, common.MaxRequestContentLength)
-	kns.handler.ServeSingleRequest(ctx, rpc.NewCodec(&grpcReadWriteNopCloser{reader, &grpcWriter{stream, writeErr}}, encoder, decoder), rpc.OptionMethodInvocation|rpc.OptionSubscriptions)
+	kns.handler.ServeSingleRequest(ctx, rpc.NewFuncCodec(&grpcReadWriteNopCloser{reader, &grpcWriter{stream, writeErr}}, encoder, decoder))
 
 	var err error
 loop:
@@ -222,8 +225,7 @@ func (kns *klaytnServer) Call(ctx context.Context, request *RPCRequest) (*RPCRes
 	}
 
 	reader := bufio.NewReaderSize(preader, common.MaxRequestContentLength)
-	kns.handler.ServeSingleRequest(ctx, rpc.NewCodec(&grpcReadWriteNopCloser{reader, writer}, encoder, decoder), rpc.OptionMethodInvocation)
-
+	kns.handler.ServeSingleRequest(ctx, rpc.NewFuncCodec(&grpcReadWriteNopCloser{reader, writer}, encoder, decoder))
 loop:
 	for {
 		select {

@@ -18,6 +18,7 @@ package governance
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 	"strings"
 
@@ -63,6 +64,18 @@ var (
 	errInvalidUpperBound      = errors.New("upperboundbasefee cannot be set lower than lowerboundbasefee")
 )
 
+func (api *GovernanceKlayAPI) GetStakingInfo(num *rpc.BlockNumber) (*reward.StakingInfo, error) {
+	return getStakingInfo(api.governance, num)
+}
+
+func (api *GovernanceKlayAPI) GovParamsAt(num *rpc.BlockNumber) (map[string]interface{}, error) {
+	return itemsAt(api.governance, num)
+}
+
+func (api *GovernanceKlayAPI) NodeAddress() common.Address {
+	return api.governance.NodeAddress()
+}
+
 // GasPriceAt returns the base fee of the given block in peb,
 // or returns unit price by using governance if there is no base fee set in header,
 // or returns gas price of txpool if the block is pending block.
@@ -70,7 +83,7 @@ func (api *GovernanceKlayAPI) GasPriceAt(num *rpc.BlockNumber) (*hexutil.Big, er
 	if num == nil || *num == rpc.LatestBlockNumber {
 		header := api.chain.CurrentHeader()
 		if header.BaseFee == nil {
-			return (*hexutil.Big)(new(big.Int).SetUint64(api.governance.UnitPrice())), nil
+			return (*hexutil.Big)(new(big.Int).SetUint64(api.governance.Params().UnitPrice())), nil
 		}
 		return (*hexutil.Big)(header.BaseFee), nil
 	} else if *num == rpc.PendingBlockNumber {
@@ -96,12 +109,49 @@ func (api *GovernanceKlayAPI) GasPriceAt(num *rpc.BlockNumber) (*hexutil.Big, er
 	}
 }
 
+// or returns gas price of txpool if the block is pending block.
+func (api *GovernanceKlayAPI) GetRewards(num *rpc.BlockNumber) (*reward.RewardSpec, error) {
+	blockNumber := uint64(0)
+	if num == nil || *num == rpc.LatestBlockNumber {
+		blockNumber = api.governance.BlockChain().CurrentHeader().Number.Uint64()
+	} else {
+		blockNumber = uint64(num.Int64())
+	}
+
+	header := api.chain.GetHeaderByNumber(blockNumber)
+	if header == nil {
+		return nil, fmt.Errorf("the block does not exist (block number: %d)", blockNumber)
+	}
+
+	rules := api.chain.Config().Rules(new(big.Int).SetUint64(blockNumber))
+	pset, err := api.governance.ParamsAt(blockNumber)
+	if err != nil {
+		return nil, err
+	}
+	rewardParamNum := reward.CalcRewardParamBlock(header.Number.Uint64(), pset.Epoch(), rules)
+	rewardParamSet, err := api.governance.ParamsAt(rewardParamNum)
+	if err != nil {
+		return nil, err
+	}
+
+	return reward.GetBlockReward(header, rules, rewardParamSet)
+}
+
+func (api *GovernanceKlayAPI) ChainConfig() *params.ChainConfig {
+	num := rpc.LatestBlockNumber
+	return chainConfigAt(api.governance, &num)
+}
+
+func (api *GovernanceKlayAPI) ChainConfigAt(num *rpc.BlockNumber) *params.ChainConfig {
+	return chainConfigAt(api.governance, num)
+}
+
 // Vote injects a new vote for governance targets such as unitprice and governingnode.
 func (api *PublicGovernanceAPI) Vote(key string, val interface{}) (string, error) {
-	gMode := api.governance.GovernanceMode()
-	gNode := api.governance.GoverningNode()
+	gMode := api.governance.Params().GovernanceModeInt()
+	gNode := api.governance.Params().GoverningNode()
 
-	if GovernanceModeMap[gMode] == params.GovernanceMode_Single && gNode != api.governance.NodeAddress() {
+	if gMode == params.GovernanceMode_Single && gNode != api.governance.NodeAddress() {
 		return "", errPermissionDenied
 	}
 	vote, ok := api.governance.ValidateVote(&GovernanceVote{Key: strings.ToLower(key), Value: val})
@@ -114,12 +164,12 @@ func (api *PublicGovernanceAPI) Vote(key string, val interface{}) (string, error
 		}
 	}
 	if vote.Key == "kip71.lowerboundbasefee" {
-		if vote.Value.(uint64) > api.governance.UpperBoundBaseFee() {
+		if vote.Value.(uint64) > api.governance.Params().UpperBoundBaseFee() {
 			return "", errInvalidLowerBound
 		}
 	}
 	if vote.Key == "kip71.upperboundbasefee" {
-		if vote.Value.(uint64) < api.governance.LowerBoundBaseFee() {
+		if vote.Value.(uint64) < api.governance.Params().LowerBoundBaseFee() {
 			return "", errInvalidUpperBound
 		}
 	}
@@ -161,48 +211,33 @@ func (api *PublicGovernanceAPI) TotalVotingPower() (float64, error) {
 	return float64(api.governance.TotalVotingPower()) / 1000.0, nil
 }
 
-// added parameters only if there is no key
-func addDefaultKip71config(items map[string]interface{}) (*params.GovParamSet, error) {
-	base, err := params.NewGovParamSetStrMap(map[string]interface{}{
-		"kip71.lowerboundbasefee":         params.DefaultLowerBoundBaseFee,
-		"kip71.upperboundbasefee":         params.DefaultUpperBoundBaseFee,
-		"kip71.gastarget":                 params.DefaultGasTarget,
-		"kip71.basefeedenominator":        params.DefaultBaseFeeDenominator,
-		"kip71.maxblockgasusedforbasefee": params.DefaultMaxBlockGasUsedForBaseFee,
-	})
-	if err != nil {
-		return nil, err
-	}
-	update, err := params.NewGovParamSetStrMap(items)
-	if err != nil {
-		return nil, err
-	}
-	return params.NewGovParamSetMerged(base, update), nil
+func (api *PublicGovernanceAPI) ItemsAt(num *rpc.BlockNumber) (map[string]interface{}, error) {
+	return itemsAt(api.governance, num)
 }
 
-func (api *PublicGovernanceAPI) ItemsAt(num *rpc.BlockNumber) (map[string]interface{}, error) {
+func itemsAt(governance Engine, num *rpc.BlockNumber) (map[string]interface{}, error) {
 	blockNumber := uint64(0)
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
-		blockNumber = api.governance.BlockChain().CurrentHeader().Number.Uint64()
+		blockNumber = governance.BlockChain().CurrentHeader().Number.Uint64()
 	} else {
 		blockNumber = uint64(num.Int64())
 	}
-	_, data, err := api.governance.ReadGovernance(blockNumber)
+
+	pset, err := governance.ParamsAt(blockNumber)
 	if err != nil {
 		return nil, err
 	}
-	mergedData, err := addDefaultKip71config(data)
-	if err == nil {
-		return mergedData.StrMap(), nil
-	} else {
-		return nil, err
-	}
+	return pset.StrMap(), nil
 }
 
 func (api *PublicGovernanceAPI) GetStakingInfo(num *rpc.BlockNumber) (*reward.StakingInfo, error) {
+	return getStakingInfo(api.governance, num)
+}
+
+func getStakingInfo(governance Engine, num *rpc.BlockNumber) (*reward.StakingInfo, error) {
 	blockNumber := uint64(0)
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
-		blockNumber = api.governance.BlockChain().CurrentHeader().Number.Uint64()
+		blockNumber = governance.BlockChain().CurrentHeader().Number.Uint64()
 	} else {
 		blockNumber = uint64(num.Int64())
 	}
@@ -268,7 +303,37 @@ func (api *PublicGovernanceAPI) MyVotingPower() (float64, error) {
 }
 
 func (api *PublicGovernanceAPI) ChainConfig() *params.ChainConfig {
-	return api.governance.InitialChainConfig()
+	num := rpc.LatestBlockNumber
+	return chainConfigAt(api.governance, &num)
+}
+
+func (api *PublicGovernanceAPI) ChainConfigAt(num *rpc.BlockNumber) *params.ChainConfig {
+	return chainConfigAt(api.governance, num)
+}
+
+func chainConfigAt(governance Engine, num *rpc.BlockNumber) *params.ChainConfig {
+	var blocknum uint64
+	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
+		blocknum = governance.BlockChain().CurrentHeader().Number.Uint64()
+	} else {
+		blocknum = num.Uint64()
+	}
+
+	pset, err := governance.ParamsAt(blocknum)
+	if err != nil {
+		return nil
+	}
+
+	latestConfig := governance.BlockChain().Config()
+	config := pset.ToChainConfig()
+	config.ChainID = latestConfig.ChainID
+	config.IstanbulCompatibleBlock = latestConfig.IstanbulCompatibleBlock
+	config.LondonCompatibleBlock = latestConfig.LondonCompatibleBlock
+	config.EthTxTypeCompatibleBlock = latestConfig.EthTxTypeCompatibleBlock
+	config.MagmaCompatibleBlock = latestConfig.MagmaCompatibleBlock
+	config.KoreCompatibleBlock = latestConfig.KoreCompatibleBlock
+
+	return config
 }
 
 func (api *PublicGovernanceAPI) NodeAddress() common.Address {
@@ -276,19 +341,17 @@ func (api *PublicGovernanceAPI) NodeAddress() common.Address {
 }
 
 func (api *PublicGovernanceAPI) isGovernanceModeBallot() bool {
-	if GovernanceModeMap[api.governance.GovernanceMode()] == params.GovernanceMode_Ballot {
-		return true
-	}
-	return false
+	gMode := api.governance.Params().GovernanceModeInt()
+	return gMode == params.GovernanceMode_Ballot
 }
 
 func (api *GovernanceKlayAPI) GasPriceAtNumber(num uint64) (uint64, error) {
-	val, err := api.governance.GetGovernanceItemAtNumber(num, GovernanceKeyMapReverse[params.UnitPrice])
+	pset, err := api.governance.ParamsAt(num)
 	if err != nil {
 		logger.Error("Failed to retrieve unit price", "err", err)
 		return 0, err
 	}
-	return val.(uint64), nil
+	return pset.UnitPrice(), nil
 }
 
 // Disabled APIs

@@ -28,9 +28,12 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
+	"time"
 
+	"github.com/bt51/ntpclient"
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/api/debug"
 	"github.com/klaytn/klaytn/event"
@@ -768,7 +771,7 @@ func (n *Node) ResolvePath(x string) string {
 }
 
 func (n *Node) apis() []rpc.API {
-	return []rpc.API{
+	rpcApi := []rpc.API{
 		{
 			Namespace: "admin",
 			Version:   "1.0",
@@ -781,12 +784,7 @@ func (n *Node) apis() []rpc.API {
 		}, {
 			Namespace: "debug",
 			Version:   "1.0",
-			Service:   debug.Handler,
-		}, {
-			Namespace: "debug",
-			Version:   "1.0",
 			Service:   NewPublicDebugAPI(n),
-			Public:    true,
 		}, {
 			// "web3" namespace will be deprecated soon. The same APIs in "web3" are available in "klay" namespace.
 			Namespace: "web3",
@@ -800,4 +798,57 @@ func (n *Node) apis() []rpc.API {
 			Public:    true,
 		},
 	}
+	debugRpcApi := []rpc.API{
+		{
+			Namespace: "debug",
+			Version:   "1.0",
+			Service:   debug.Handler,
+		},
+	}
+	if !n.config.DisableUnsafeDebug {
+		rpcApi = append(rpcApi, debugRpcApi...)
+	}
+	return rpcApi
+}
+
+const (
+	ntpTolerance = time.Second
+	RFC3339Nano  = "2006-01-02T15:04:05.999999999Z07:00"
+)
+
+func timeIsNear(lhs, rhs time.Time) bool {
+	diff := lhs.Sub(rhs)
+	// TODO: use time.Duration.Abs() after go1.19
+	if diff < 0 {
+		diff = -diff
+	}
+	return diff < ntpTolerance
+}
+
+func NtpCheckWithLocal(n *Node) error {
+	// Skip check if server is empty (e.g. `ntp.disable` flag)
+	if n.config.NtpRemoteServer == "" {
+		return nil
+	}
+
+	url, port, err := net.SplitHostPort(n.config.NtpRemoteServer)
+	if err != nil {
+		return err
+	}
+	portNum, err := strconv.Atoi(port)
+	if err != nil {
+		return err
+	}
+
+	local := time.Now()
+	remote, err := ntpclient.GetNetworkTime(url, portNum)
+	if err != nil {
+		return err
+	}
+	if !timeIsNear(local, *remote) {
+		errFormat := "System time is out of sync, local:%s remote:%s"
+		return fmt.Errorf(errFormat, local.UTC().Format(RFC3339Nano), remote.UTC().Format(RFC3339Nano))
+	}
+	logger.Info("Ntp time check", "local", local.UTC().Format(RFC3339Nano), "remote", remote.UTC().Format(RFC3339Nano))
+	return nil
 }

@@ -382,6 +382,8 @@ func (api *PublicDebugAPI) Metrics(raw bool) (map[string]interface{}, error) {
 					"AvgRate05Min": metric.Rate5(),
 					"AvgRate15Min": metric.Rate15(),
 					"MeanRate":     metric.RateMean(),
+					"Mean":         metric.Mean(),
+					"StdDev":       metric.StdDev(),
 					"Overall":      float64(metric.Count()),
 					"Percentiles": map[string]interface{}{
 						"5":  metric.Percentile(0.05),

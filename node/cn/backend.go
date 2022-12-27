@@ -68,8 +68,9 @@ type LesServer interface {
 	SetBloomBitsIndexer(bbIndexer *blockchain.ChainIndexer)
 }
 
-//go:generate mockgen -destination=node/cn/mocks/miner_mock.go -package=mocks github.com/klaytn/klaytn/node/cn Miner
 // Miner is an interface of work.Miner used by ServiceChain.
+//
+//go:generate mockgen -destination=node/cn/mocks/miner_mock.go -package=mocks github.com/klaytn/klaytn/node/cn Miner
 type Miner interface {
 	Start()
 	Stop()
@@ -81,8 +82,9 @@ type Miner interface {
 	PendingBlock() *types.Block
 }
 
-//go:generate mockgen -destination=node/cn/protocolmanager_mock_test.go github.com/klaytn/klaytn/node/cn BackendProtocolManager
 // BackendProtocolManager is an interface of cn.ProtocolManager used from cn.CN and cn.ServiceChain.
+//
+//go:generate mockgen -destination=node/cn/protocolmanager_mock_test.go github.com/klaytn/klaytn/node/cn BackendProtocolManager
 type BackendProtocolManager interface {
 	Downloader() ProtocolManagerDownloader
 	SetWsEndPoint(wsep string)
@@ -215,20 +217,12 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	setEngineType(chainConfig)
 
 	// load governance state
+	chainConfig.SetDefaults()
+	// latest values will be applied to chainConfig after NewMixedEngine call
 	governance := governance.NewMixedEngine(chainConfig, chainDB)
-
-	// Set latest unitPrice/gasPrice
-	chainConfig.UnitPrice = governance.UnitPrice()
-	config.GasPrice = new(big.Int).SetUint64(chainConfig.UnitPrice)
-
-	chainConfig.Governance.KIP71 = &params.KIP71Config{
-		LowerBoundBaseFee:         governance.LowerBoundBaseFee(),
-		UpperBoundBaseFee:         governance.UpperBoundBaseFee(),
-		GasTarget:                 governance.GasTarget(),
-		MaxBlockGasUsedForBaseFee: governance.MaxBlockGasUsedForBaseFee(),
-		BaseFeeDenominator:        governance.BaseFeeDenominator(),
-	}
 	logger.Info("Initialised chain configuration", "config", chainConfig)
+
+	config.GasPrice = new(big.Int).SetUint64(chainConfig.UnitPrice)
 
 	cn := &CN{
 		config:            config,
@@ -263,7 +257,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		cacheConfig = &blockchain.CacheConfig{
 			ArchiveMode: config.NoPruning, CacheSize: config.TrieCacheSize,
 			BlockInterval: config.TrieBlockInterval, TriesInMemory: config.TriesInMemory,
-			TrieNodeCacheConfig: &config.TrieNodeCacheConfig, SenderTxHashIndexing: config.SenderTxHashIndexing, SnapshotCacheSize: config.SnapshotCacheSize,
+			TrieNodeCacheConfig: &config.TrieNodeCacheConfig, SenderTxHashIndexing: config.SenderTxHashIndexing, SnapshotCacheSize: config.SnapshotCacheSize, SnapshotAsyncGen: config.SnapshotAsyncGen,
 		}
 	)
 
@@ -275,12 +269,17 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	cn.blockchain = bc
 	governance.SetBlockchain(cn.blockchain)
+	if err := governance.UpdateParams(); err != nil {
+		return nil, err
+	}
+	blockchain.InitDeriveShaWithGov(cn.chainConfig, governance)
+
 	// Synchronize proposerpolicy & useGiniCoeff
 	if cn.blockchain.Config().Istanbul != nil {
-		cn.blockchain.Config().Istanbul.ProposerPolicy = governance.ProposerPolicy()
+		cn.blockchain.Config().Istanbul.ProposerPolicy = governance.Params().Policy()
 	}
 	if cn.blockchain.Config().Governance.Reward != nil {
-		cn.blockchain.Config().Governance.Reward.UseGiniCoeff = governance.UseGiniCoeff()
+		cn.blockchain.Config().Governance.Reward.UseGiniCoeff = governance.Params().UseGiniCoeff()
 	}
 
 	if config.SenderTxHashIndexing {
@@ -321,7 +320,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		logger.Error("Error happened while setting the reward wallet", "err", err)
 	}
 
-	if governance.ProposerPolicy() == uint64(istanbul.WeightedRandom) {
+	if governance.Params().Policy() == uint64(istanbul.WeightedRandom) {
 		// NewStakingManager is called with proper non-nil parameters
 		reward.NewStakingManager(cn.blockchain, governance, cn.chainDB)
 	}
@@ -357,6 +356,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	cn.addComponent(cn.txPool)
 	cn.addComponent(cn.APIs())
 	cn.addComponent(cn.ChainDB())
+	cn.addComponent(cn.engine)
 
 	if config.AutoRestartFlag {
 		daemonPath := config.DaemonPathFlag
@@ -478,7 +478,7 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 // APIs returns the collection of RPC services the ethereum package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
 func (s *CN) APIs() []rpc.API {
-	apis, ethAPI := api.GetAPIs(s.APIBackend)
+	apis, ethAPI := api.GetAPIs(s.APIBackend, s.config.DisableUnsafeDebug)
 
 	// Append any APIs exposed explicitly by the consensus engine
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)
@@ -487,11 +487,25 @@ func (s *CN) APIs() []rpc.API {
 	governanceKlayAPI := governance.NewGovernanceKlayAPI(s.governance, s.blockchain)
 	publicGovernanceAPI := governance.NewGovernanceAPI(s.governance)
 	publicDownloaderAPI := downloader.NewPublicDownloaderAPI(s.protocolManager.Downloader(), s.eventMux)
-	privateTracerAPI := tracers.NewAPI(s.APIBackend)
 
 	ethAPI.SetPublicFilterAPI(publicFilterAPI)
 	ethAPI.SetGovernanceKlayAPI(governanceKlayAPI)
 	ethAPI.SetPublicGovernanceAPI(publicGovernanceAPI)
+
+	var tracerAPI *tracers.API
+	if s.config.DisableUnsafeDebug {
+		tracerAPI = tracers.NewAPIUnsafeDisabled(s.APIBackend)
+	} else {
+		tracerAPI = tracers.NewAPI(s.APIBackend)
+		apis = append(apis, []rpc.API{
+			{
+				Namespace: "debug",
+				Version:   "1.0",
+				Service:   NewPrivateDebugAPI(s.chainConfig, s),
+				Public:    false,
+			},
+		}...)
+	}
 
 	// Append all the local APIs and return
 	return append(apis, []rpc.API{
@@ -523,15 +537,11 @@ func (s *CN) APIs() []rpc.API {
 			Namespace: "debug",
 			Version:   "1.0",
 			Service:   NewPublicDebugAPI(s),
-			Public:    true,
+			Public:    false,
 		}, {
 			Namespace: "debug",
 			Version:   "1.0",
-			Service:   NewPrivateDebugAPI(s.chainConfig, s),
-		}, {
-			Namespace: "debug",
-			Version:   "1.0",
-			Service:   privateTracerAPI,
+			Service:   tracerAPI,
 			Public:    false,
 		}, {
 			Namespace: "net",
@@ -638,6 +648,7 @@ func (s *CN) IsListening() bool                       { return true } // Always 
 func (s *CN) ProtocolVersion() int                    { return s.protocolManager.ProtocolVersion() }
 func (s *CN) NetVersion() uint64                      { return s.networkId }
 func (s *CN) Progress() klaytn.SyncProgress           { return s.protocolManager.Downloader().Progress() }
+func (s *CN) Governance() governance.Engine           { return s.governance }
 
 func (s *CN) ReBroadcastTxs(transactions types.Transactions) {
 	s.protocolManager.ReBroadcastTxs(transactions)

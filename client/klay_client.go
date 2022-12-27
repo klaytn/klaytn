@@ -66,6 +66,10 @@ func (ec *Client) Close() {
 	ec.c.Close()
 }
 
+func (ec *Client) SetHeader(key, value string) {
+	ec.c.SetHeader(key, value)
+}
+
 // Blockchain Access
 
 // BlockByHash returns the given full block.
