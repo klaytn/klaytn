@@ -782,6 +782,10 @@ func (n *Node) apis() []rpc.API {
 			Service:   NewPublicAdminAPI(n),
 			Public:    true,
 		}, {
+			Namespace: "debug",
+			Version:   "1.0",
+			Service:   NewPublicDebugAPI(n),
+		}, {
 			// "web3" namespace will be deprecated soon. The same APIs in "web3" are available in "klay" namespace.
 			Namespace: "web3",
 			Version:   "1.0",
@@ -799,10 +803,6 @@ func (n *Node) apis() []rpc.API {
 			Namespace: "debug",
 			Version:   "1.0",
 			Service:   debug.Handler,
-		}, {
-			Namespace: "debug",
-			Version:   "1.0",
-			Service:   NewPublicDebugAPI(n),
 		},
 	}
 	if !n.config.DisableUnsafeDebug {
