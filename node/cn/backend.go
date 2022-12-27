@@ -478,7 +478,7 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 // APIs returns the collection of RPC services the ethereum package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
 func (s *CN) APIs() []rpc.API {
-	apis, ethAPI := api.GetAPIs(s.APIBackend)
+	apis, ethAPI := api.GetAPIs(s.APIBackend, s.config.DisableUnsafeDebug)
 
 	// Append any APIs exposed explicitly by the consensus engine
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)
@@ -487,12 +487,25 @@ func (s *CN) APIs() []rpc.API {
 	governanceKlayAPI := governance.NewGovernanceKlayAPI(s.governance, s.blockchain)
 	publicGovernanceAPI := governance.NewGovernanceAPI(s.governance)
 	publicDownloaderAPI := downloader.NewPublicDownloaderAPI(s.protocolManager.Downloader(), s.eventMux)
-	tracerAPI := tracers.NewAPI(s.APIBackend)
-	unsafeTracerAPI := tracers.NewUnsafeAPI(s.APIBackend)
 
 	ethAPI.SetPublicFilterAPI(publicFilterAPI)
 	ethAPI.SetGovernanceKlayAPI(governanceKlayAPI)
 	ethAPI.SetPublicGovernanceAPI(publicGovernanceAPI)
+
+	var tracerAPI *tracers.API
+	if s.config.DisableUnsafeDebug {
+		tracerAPI = tracers.NewAPIUnsafeDisabled(s.APIBackend)
+	} else {
+		tracerAPI = tracers.NewAPI(s.APIBackend)
+		apis = append(apis, []rpc.API{
+			{
+				Namespace: "debug",
+				Version:   "1.0",
+				Service:   NewPrivateDebugAPI(s.chainConfig, s),
+				Public:    false,
+			},
+		}...)
+	}
 
 	// Append all the local APIs and return
 	return append(apis, []rpc.API{
@@ -526,19 +539,9 @@ func (s *CN) APIs() []rpc.API {
 			Service:   NewPublicDebugAPI(s),
 			Public:    false,
 		}, {
-			Namespace: "unsafedebug",
-			Version:   "1.0",
-			Service:   NewPrivateDebugAPI(s.chainConfig, s),
-			Public:    false,
-		}, {
 			Namespace: "debug",
 			Version:   "1.0",
 			Service:   tracerAPI,
-			Public:    false,
-		}, {
-			Namespace: "unsafedebug",
-			Version:   "1.0",
-			Service:   unsafeTracerAPI,
 			Public:    false,
 		}, {
 			Namespace: "net",

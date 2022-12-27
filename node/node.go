@@ -771,7 +771,7 @@ func (n *Node) ResolvePath(x string) string {
 }
 
 func (n *Node) apis() []rpc.API {
-	return []rpc.API{
+	rpcApi := []rpc.API{
 		{
 			Namespace: "admin",
 			Version:   "1.0",
@@ -782,11 +782,7 @@ func (n *Node) apis() []rpc.API {
 			Service:   NewPublicAdminAPI(n),
 			Public:    true,
 		}, {
-			Namespace: "unsafedebug",
-			Version:   "1.0",
-			Service:   debug.Handler,
-		}, {
-			Namespace: "unsafedebug",
+			Namespace: "debug",
 			Version:   "1.0",
 			Service:   NewPublicDebugAPI(n),
 		}, {
@@ -802,6 +798,17 @@ func (n *Node) apis() []rpc.API {
 			Public:    true,
 		},
 	}
+	debugRpcApi := []rpc.API{
+		{
+			Namespace: "debug",
+			Version:   "1.0",
+			Service:   debug.Handler,
+		},
+	}
+	if !n.config.DisableUnsafeDebug {
+		rpcApi = append(rpcApi, debugRpcApi...)
+	}
+	return rpcApi
 }
 
 const (

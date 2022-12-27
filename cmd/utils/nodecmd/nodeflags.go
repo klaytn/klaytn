@@ -235,6 +235,7 @@ var CommonRPCFlags = []cli.Flag{
 	altsrc.NewIntFlag(utils.RPCWriteTimeoutFlag),
 	altsrc.NewIntFlag(utils.RPCIdleTimeoutFlag),
 	altsrc.NewIntFlag(utils.RPCExecutionTimeoutFlag),
+	altsrc.NewBoolFlag(utils.UnsafeDebugDisableFlag),
 }
 
 var KCNFlags = []cli.Flag{
