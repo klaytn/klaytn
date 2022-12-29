@@ -108,7 +108,7 @@ func TestAccountCreationDisable(t *testing.T) {
 		assert.Equal(t, errUndefinedTxType, err)
 
 		// fail to execute tx
-		receipt, _, err := applyTransaction(t, bcdata, tx)
+		receipt, err := applyTransaction(t, bcdata, tx)
 		assert.Equal(t, errUndefinedTxType, err)
 		assert.Equal(t, (*types.Receipt)(nil), receipt)
 	}
@@ -175,7 +175,7 @@ func TestContractDeployWithDisabledAddress(t *testing.T) {
 			assert.Equal(t, kerrors.ErrHumanReadableNotSupported, err)
 
 			// fail to execute tx
-			receipt, _, err := applyTransaction(t, bcdata, tx)
+			receipt, err := applyTransaction(t, bcdata, tx)
 			assert.Equal(t, kerrors.ErrHumanReadableNotSupported, err)
 			assert.Equal(t, (*types.Receipt)(nil), receipt)
 		}
@@ -200,7 +200,7 @@ func TestContractDeployWithDisabledAddress(t *testing.T) {
 			assert.Equal(t, kerrors.ErrInvalidContractAddress, err)
 
 			// fail to execute tx
-			receipt, _, err := applyTransaction(t, bcdata, tx)
+			receipt, err := applyTransaction(t, bcdata, tx)
 			assert.Equal(t, kerrors.ErrInvalidContractAddress, err)
 			assert.Equal(t, (*types.Receipt)(nil), receipt)
 		}
