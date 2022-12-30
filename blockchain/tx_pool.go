@@ -43,12 +43,23 @@ import (
 const (
 	// chainHeadChanSize is the size of channel listening to ChainHeadEvent.
 	chainHeadChanSize = 10
+
+	// txSlotSize is used to calculate how many data slots a single transaction
+	// takes up based on its size. The slots are used as DoS protection, ensuring
+	// that validating a new transaction remains a constant operation (in reality
+	// O(maxslots), where max slots are 4 currently).
+	txSlotSize = 32 * 1024
+
+	// MaxTxDataSize is the maximum size a single transaction can have. This field has
+	// non-trivial consequences: larger transactions are significantly harder and
+	// more expensive to propagate; larger transactions also take more resources
+	// to validate whether they fit into the pool or not.
+	MaxTxDataSize = 4 * txSlotSize // 128KB
+
 	// demoteUnexecutablesFullValidationTxLimit is the number of txs will be fully validated in demoteUnexecutables.
 	demoteUnexecutablesFullValidationTxLimit = 1000
 	// txMsgCh is the number of list of transactions can be queued.
 	txMsgChSize = 100
-	// MaxTxDataSize is a heuristic limit of tx data size, and txPool rejects transactions over 32KB to prevent DOS attacks.
-	MaxTxDataSize = 32 * 1024
 )
 
 var (
@@ -77,6 +88,7 @@ var (
 	invalidTxCounter     = metrics.NewRegisteredCounter("txpool/invalid", nil)
 	underpricedTxCounter = metrics.NewRegisteredCounter("txpool/underpriced", nil)
 	refusedTxCounter     = metrics.NewRegisteredCounter("txpool/refuse", nil)
+	slotsGauge           = metrics.NewRegisteredGauge("txpool/slots", nil)
 )
 
 // TxStatus is the current status of a transaction as seen by the pool.
@@ -870,7 +882,7 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 	// (2) remove an old Tx with the largest nonce from queue to make a room for a new Tx with missing nonce
 	// (3) discard a new Tx if the new Tx does not have a missing nonce
 	// (4) discard underpriced transactions
-	if uint64(pool.all.Count()) >= pool.config.ExecSlotsAll+pool.config.NonExecSlotsAll {
+	if uint64(pool.all.Slots()+numSlots(tx)) >= pool.config.ExecSlotsAll+pool.config.NonExecSlotsAll {
 		// (1) discard a new Tx if there is no room for the account of the Tx
 		from, _ := types.Sender(pool.signer, tx)
 		if pool.queue[from] == nil {
@@ -899,7 +911,7 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 			return false, ErrUnderpriced
 		}
 		// New transaction is better than our worse ones, make room for it
-		drop := pool.priced.Discard(pool.all.Count()-int(pool.config.ExecSlotsAll+pool.config.NonExecSlotsAll-1), pool.locals)
+		drop := pool.priced.Discard(pool.all.Slots()-int(pool.config.ExecSlotsAll+pool.config.NonExecSlotsAll)+numSlots(tx), pool.locals)
 		for _, tx := range drop {
 			logger.Trace("Discarding freshly underpriced transaction", "hash", tx.Hash(), "price", tx.GasPrice())
 			underpricedTxCounter.Inc(1)
@@ -1717,8 +1729,9 @@ func (as *accountSet) add(addr common.Address) {
 // peeking into the pool in TxPool.Get without having to acquire the widely scoped
 // TxPool.mu mutex.
 type txLookup struct {
-	all  map[common.Hash]*types.Transaction
-	lock sync.RWMutex
+	all   map[common.Hash]*types.Transaction
+	slots int
+	lock  sync.RWMutex
 }
 
 // newTxLookup returns a new txLookup structure.
@@ -1726,6 +1739,14 @@ func newTxLookup() *txLookup {
 	return &txLookup{
 		all: make(map[common.Hash]*types.Transaction),
 	}
+}
+
+// Slots returns the current number of slots used in the lookup.
+func (t *txLookup) Slots() int {
+	t.lock.RLock()
+	defer t.lock.RUnlock()
+
+	return t.slots
 }
 
 // Range calls f on each key and value present in the map.
@@ -1761,6 +1782,9 @@ func (t *txLookup) Add(tx *types.Transaction) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
+	t.slots += numSlots(tx)
+	slotsGauge.Update(int64(t.slots))
+
 	t.all[tx.Hash()] = tx
 }
 
@@ -1769,5 +1793,13 @@ func (t *txLookup) Remove(hash common.Hash) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
+	t.slots -= numSlots(t.all[hash])
+	slotsGauge.Update(int64(t.slots))
+
 	delete(t.all, hash)
+}
+
+// numSlots calculates the number of slots needed for a single transaction.
+func numSlots(tx *types.Transaction) int {
+	return int((tx.Size() + txSlotSize - 1) / txSlotSize)
 }
