@@ -108,7 +108,7 @@ func BenchmarkMsgCmp(b *testing.B) {
 	})
 
 	// Better
-	b.Run("own", func(b *testing.B) {
+	b.Run("EqualImpl", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			s1.Equal(&s2)
 		}
