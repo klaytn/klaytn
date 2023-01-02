@@ -1736,6 +1736,7 @@ type txLookup struct {
 
 // newTxLookup returns a new txLookup structure.
 func newTxLookup() *txLookup {
+	slotsGauge.Update(int64(0))
 	return &txLookup{
 		all: make(map[common.Hash]*types.Transaction),
 	}
