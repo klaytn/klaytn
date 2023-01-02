@@ -445,6 +445,15 @@ func TestEIP1559BlockEncoding(t *testing.T) {
 	}
 }
 
+func TestHeaderSizeCalc(t *testing.T) {
+	h := genMagmaHeader()
+	originSize := h.Size()
+
+	diff := common.StorageSize(len(h.Governance) + len(h.Extra) + len(h.Vote) + h.BaseFee.BitLen())
+	h.BaseFee, h.Governance, h.Extra, h.Vote = nil, nil, nil, nil
+	assert.Equal(t, originSize, h.Size()+diff)
+}
+
 func BenchmarkBlockEncodingHashWithInterface(b *testing.B) {
 	data, err := ioutil.ReadFile("../../tests/b1.rlp")
 	if err != nil {
