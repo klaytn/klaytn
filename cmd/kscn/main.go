@@ -64,6 +64,7 @@ func init() {
 		// See utils/nodecmd/dumpconfigcmd.go:
 		nodecmd.GetDumpConfigCommand(nodecmd.KscnNodeFlags(), nodecmd.CommonRPCFlags),
 
+		// See utils/nodecmd/util.go:
 		nodecmd.UtilCommand,
 
 		// See utils/nodecmd/snapshot.go:
