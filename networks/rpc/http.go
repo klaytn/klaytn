@@ -290,7 +290,6 @@ func NewFastHTTPServer(cors []string, vhosts []string, timeouts HTTPTimeouts, sr
 					IdleTimeout:        timeouts.IdleTimeout,
 					MaxRequestBodySize: common.MaxRequestContentLength,
 					ReduceMemoryUsage:  true,
-					StreamRequestBody:  true,
 				}
 			}
 		}
@@ -323,7 +322,6 @@ func NewFastHTTPServer(cors []string, vhosts []string, timeouts HTTPTimeouts, sr
 		IdleTimeout:        timeouts.IdleTimeout,
 		MaxRequestBodySize: common.MaxRequestContentLength,
 		ReduceMemoryUsage:  true,
-		StreamRequestBody:  true,
 	}
 }
 
