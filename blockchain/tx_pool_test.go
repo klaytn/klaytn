@@ -1338,23 +1338,31 @@ func TestTransactionAllowedTxSize(t *testing.T) {
 	baseSize := uint64(213)
 	dataSize := MaxTxDataSize - baseSize
 
-	// Try adding a transaction with maximal allowed size
-	tx := pricedDataTransaction(0, 100000000, big.NewInt(1), key, dataSize)
-	if err := pool.AddRemote(tx); err != nil {
-		t.Fatalf("failed to add transaction of size %d, close to maximal: %v", int(tx.Size()), err)
+	testcases := []struct {
+		sizeOfTxData uint64 // data size of the transaction to be added
+		nonce        uint64 // nonce of the transaction
+		success      bool   // the expected result whether the addition is succeeded or failed
+		errStr       string
+	}{
+		// Try adding a transaction with maximal allowed size
+		{dataSize, 0, true, "failed to add the transaction which size is close to the maximal"},
+		// Try adding a transaction with random allowed size
+		{uint64(rand.Intn(int(dataSize))), 1, true, "failed to add the transaction of random allowed size"},
+		// Try adding a transaction of minimal not allowed size
+		{MaxTxDataSize, 2, false, "expected rejection on slightly oversize transaction"},
+		// Try adding a transaction of random not allowed size
+		{dataSize + 1 + uint64(rand.Intn(int(10*MaxTxDataSize))), 2, false, "expected rejection on oversize transaction"},
 	}
-	// Try adding a transaction with random allowed size
-	if err := pool.AddRemote(pricedDataTransaction(1, 100000000, big.NewInt(1), key, uint64(rand.Intn(int(dataSize))))); err != nil {
-		t.Fatalf("failed to add transaction of random allowed size: %v", err)
+	for _, tc := range testcases {
+		tx := pricedDataTransaction(tc.nonce, 100000000, big.NewInt(1), key, tc.sizeOfTxData)
+		err := pool.AddRemote(tx)
+
+		// test failed
+		if tc.success && err != nil || !tc.success && err == nil {
+			t.Fatalf("%s. tx Size: %d. error: %v.", tc.errStr, int(tx.Size()), err)
+		}
 	}
-	// Try adding a transaction of minimal not allowed size
-	if err := pool.AddRemote(pricedDataTransaction(2, 100000000, big.NewInt(1), key, MaxTxDataSize)); err == nil {
-		t.Fatalf("expected rejection on slightly oversize transaction")
-	}
-	// Try adding a transaction of random not allowed size
-	if err := pool.AddRemote(pricedDataTransaction(2, 100000000, big.NewInt(1), key, dataSize+1+uint64(rand.Intn(int(10*MaxTxDataSize))))); err == nil {
-		t.Fatalf("expected rejection on oversize transaction")
-	}
+
 	// Run some sanity checks on the pool internals
 	pending, queued := pool.Stats()
 	if pending != 2 {
@@ -2709,15 +2717,19 @@ func TestTransactionSlotCount(t *testing.T) {
 
 	key, _ := crypto.GenerateKey()
 
-	// Check that an empty transaction consumes a single slot
-	smallTx := pricedDataTransaction(0, 0, big.NewInt(0), key, 0)
-	if slots := numSlots(smallTx); slots != 1 {
-		t.Fatalf("small transactions slot count mismatch: have %d want %d", slots, 1)
+	testcases := []struct {
+		sizeOfTxData uint64
+		nonce        uint64
+		sizeOfSlot   int // expected result
+	}{
+		// smallTx: Check that an empty transaction consumes a single slot
+		{0, 0, 1},
+		// bigTx: Check that a large transaction consumes the correct number of slots
+		{uint64(10 * txSlotSize), 0, 11},
 	}
-	// Check that a large transaction consumes the correct number of slots
-	bigTx := pricedDataTransaction(0, 0, big.NewInt(0), key, uint64(10*txSlotSize))
-	if slots := numSlots(bigTx); slots != 11 {
-		t.Fatalf("big transactions slot count mismatch: have %d want %d", slots, 11)
+	for _, tc := range testcases {
+		tx := pricedDataTransaction(tc.nonce, 0, big.NewInt(0), key, tc.sizeOfTxData)
+		assert.Equal(t, tc.sizeOfSlot, numSlots(tx), "transaction slot count mismatch")
 	}
 }
 
