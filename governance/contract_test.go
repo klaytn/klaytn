@@ -191,7 +191,7 @@ func prepareContractEngine(t *testing.T, bc *blockchain.BlockChain, addr common.
 	dbm.WriteGovernance(map[string]interface{}{
 		"governance.govparamcontract": addr,
 	}, 0)
-	gov := NewGovernance(dbm)
+	gov := NewGovernance(bc.Config(), dbm)
 	pset, err := gov.ParamsAt(0)
 	require.Nil(t, err)
 	require.Equal(t, addr, pset.GovParamContract())
@@ -212,8 +212,8 @@ func prepareContractEngine(t *testing.T, bc *blockchain.BlockChain, addr common.
 //
 // Block |---------------|---------------|---------------|
 //
-//	^               ^               ^
-//	t0              t1              t2
+// ..............^               ^               ^
+// ..............t0              t1              t2
 //
 // At num = activation - 2, Params() = prev
 // At num = activation - 1, Params() = next
@@ -270,8 +270,8 @@ func TestContractEngine_Params(t *testing.T) {
 //
 // Block |---------------|---------------|---------------|
 //
-//	^               ^               ^
-//	t0              t1              t2
+// ..............^               ^               ^
+// ..............t0              t1              t2
 //
 // ParamsAt(activation - 1) = prev
 // ParamsAt(activation)     = next
