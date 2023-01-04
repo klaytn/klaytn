@@ -177,7 +177,7 @@ type txPool interface {
 }
 
 type Governance struct {
-	ChainConfig *params.ChainConfig // NOTE: only exists for miscDB, read-only
+	ChainConfig *params.ChainConfig // Only exists to keep DB backward compatibility in WriteGovernanceState()
 	// Map used to keep multiple types of votes
 	voteMap VoteMap
 
