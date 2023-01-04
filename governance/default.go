@@ -177,6 +177,7 @@ type txPool interface {
 }
 
 type Governance struct {
+	ChainConfig *params.ChainConfig // Only exists to keep DB backward compatibility in WriteGovernanceState()
 	// Map used to keep multiple types of votes
 	voteMap VoteMap
 
@@ -417,8 +418,9 @@ func (gs *GovernanceSet) Merge(change map[string]interface{}) {
 }
 
 // NewGovernance creates Governance with the given configuration.
-func NewGovernance(dbm database.DBManager) *Governance {
+func NewGovernance(chainConfig *params.ChainConfig, dbm database.DBManager) *Governance {
 	return &Governance{
+		ChainConfig:              chainConfig,
 		voteMap:                  NewVoteMap(),
 		db:                       dbm,
 		itemCache:                newGovernanceCache(),
@@ -436,7 +438,7 @@ func NewGovernance(dbm database.DBManager) *Governance {
 // NewGovernanceInitialize creates Governance with the given configuration and read governance state from DB.
 // If any items are not stored in DB, it stores governance items of the genesis block to DB.
 func NewGovernanceInitialize(chainConfig *params.ChainConfig, dbm database.DBManager) *Governance {
-	ret := NewGovernance(dbm)
+	ret := NewGovernance(chainConfig, dbm)
 	// nil is for testing or simple function usage
 	if dbm != nil {
 		ret.ReadGovernanceState()
@@ -996,6 +998,7 @@ type governanceJSON struct {
 func (gov *Governance) toJSON(num uint64) ([]byte, error) {
 	ret := &governanceJSON{
 		BlockNumber:     num,
+		ChainConfig:     gov.ChainConfig,
 		VoteMap:         gov.voteMap.Copy(),
 		NodeAddress:     gov.nodeAddress.Load().(common.Address),
 		GovernanceVotes: gov.GovernanceVotes.Copy(),
@@ -1012,6 +1015,7 @@ func (gov *Governance) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &j); err != nil {
 		return err
 	}
+	// gov.ChainConfig is to be updated in MixedEngine. Do not overwrite it here.
 	gov.voteMap.Import(j.VoteMap)
 	gov.nodeAddress.Store(j.NodeAddress)
 	gov.GovernanceVotes.Import(j.GovernanceVotes)
