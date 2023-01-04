@@ -1015,7 +1015,7 @@ func (gov *Governance) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &j); err != nil {
 		return err
 	}
-	// DO NOT overwrite gov.ChainConfig
+	// gov.ChainConfig is to be updated in MixedEngine. Do not overwrite it here.
 	gov.voteMap.Import(j.VoteMap)
 	gov.nodeAddress.Store(j.NodeAddress)
 	gov.GovernanceVotes.Import(j.GovernanceVotes)
