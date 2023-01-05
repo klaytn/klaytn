@@ -112,6 +112,7 @@ type Context struct {
 	Time        *big.Int       // Provides information for TIME
 	BlockScore  *big.Int       // Provides information for DIFFICULTY
 	BaseFee     *big.Int       // Provides information for BASEFEE
+	RandomMix   *big.Int       // Provides information for RANDOM
 }
 
 // EVM is the Ethereum Virtual Machine base object and provides

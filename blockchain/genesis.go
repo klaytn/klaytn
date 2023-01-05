@@ -338,7 +338,9 @@ func (g *Genesis) ToBlock(baseStateRoot common.Hash, db database.DBManager) *typ
 			head.BaseFee = new(big.Int).SetUint64(params.DefaultLowerBoundBaseFee)
 		}
 	}
-
+	if g.Config != nil && g.Config.IsKoreForkEnabled(common.Big0) {
+		head.RandomMix = []byte{}
+	}
 	stateDB.Commit(false)
 	stateDB.Database().TrieDB().Commit(root, true, g.Number)
 

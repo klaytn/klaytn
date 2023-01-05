@@ -49,6 +49,7 @@ type Config struct {
 	Debug       bool
 	EVMConfig   vm.Config
 	BaseFee     *big.Int
+	RandomMix   *big.Int
 
 	State     *state.StateDB
 	GetHashFn func(n uint64) common.Hash
@@ -91,6 +92,9 @@ func setDefaults(cfg *Config) {
 	}
 	if cfg.BaseFee == nil {
 		cfg.BaseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
+	}
+	if cfg.RandomMix == nil {
+		cfg.RandomMix = new(big.Int).SetUint64(0)
 	}
 }
 

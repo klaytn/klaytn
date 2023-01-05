@@ -37,4 +37,7 @@ var (
 
 	// ErrInvalidBaseFee is returned if a block before fork has a base fee field, not nil
 	ErrInvalidBaseFee = errors.New("invalid baseFee before fork")
+
+	// ErrInvalidRandomMix is returned if a block before fork has a randomMix field, not nil
+	ErrInvalidRandomMix = errors.New("invalid randomMix before fork")
 )

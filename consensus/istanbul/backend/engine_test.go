@@ -224,6 +224,9 @@ func makeHeader(parent *types.Block, config *istanbul.Config) *types.Header {
 		// We don't have chainConfig so the BaseFee of the current block is set by parent's for test
 		header.BaseFee = parent.Header().BaseFee
 	}
+	if parent.Header().RandomMix != nil {
+		header.RandomMix = parent.Header().RandomMix
+	}
 	return header
 }
 

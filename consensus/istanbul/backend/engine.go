@@ -22,11 +22,16 @@ package backend
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math/big"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls/blst"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/blockchain/state"
@@ -208,6 +213,36 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 	} else if header.BaseFee != nil {
 		return consensus.ErrInvalidBaseFee
 	}
+
+	if header.Number.Uint64() >= 1 {
+		// todo: random check
+		// todo
+		myPrivateKeyHex := "5f5544736085bc2ccd1202c4c552c61e6bc326605e1d09e447704281b4016eae"
+		myPrivateKeyBin, _ := hex.DecodeString(myPrivateKeyHex)
+
+		tempPrivateKey := bytesutil.ToBytes32(myPrivateKeyBin)
+		realMyPrivateKey, _ := blst.SecretKeyFromBytes(tempPrivateKey[:])
+
+		buffer := &bytes.Buffer{}
+		_ = binary.Write(buffer, binary.BigEndian, header.Number.Uint64())
+		msg := buffer.Bytes()
+
+		myPublicKey := realMyPrivateKey.PublicKey()
+		fmt.Println(len(header.RandomMix))
+		sig, err := blst.SignatureFromBytes(header.RandomMix)
+		if err != nil {
+			fmt.Println("signatureFromBytes error")
+			return err
+		}
+		fmt.Println("signatureFromBytes ok")
+		ok := sig.Verify(myPublicKey, msg)
+		fmt.Println("ok?", ok)
+		if !ok {
+			return errors.New("not ok")
+		}
+	}
+
+	logger.Info("RandomMix", "randommix", header.RandomMix)
 
 	// Don't waste time checking blocks from the future
 	if header.Time.Cmp(big.NewInt(now().Add(allowedFutureBlockTime).Unix())) > 0 {
@@ -419,6 +454,23 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	if len(header.Vote) > 0 {
 		logger.Info("Put voteData", "num", number, "data", hex.EncodeToString(header.Vote))
 	}
+	// todo
+	myPrivateKeyHex := "5f5544736085bc2ccd1202c4c552c61e6bc326605e1d09e447704281b4016eae"
+	myPrivateKeyBin, _ := hex.DecodeString(myPrivateKeyHex)
+
+	tempPrivateKey := bytesutil.ToBytes32(myPrivateKeyBin)
+	realMyPrivateKey, _ := blst.SecretKeyFromBytes(tempPrivateKey[:])
+
+	// myPublicKey := realMyPrivateKey.PublicKey()
+
+	buffer := &bytes.Buffer{}
+	_ = binary.Write(buffer, binary.BigEndian, number)
+	msg := buffer.Bytes()
+
+	mySig := realMyPrivateKey.Sign(msg)
+
+	header.RandomMix = mySig.Marshal()
+	fmt.Printf("12341234___%x___12341234\n", header.RandomMix)
 
 	// add validators (council list) in snapshot to extraData's validators section
 	extra, err := prepareExtra(header, snap.validators())

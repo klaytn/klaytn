@@ -156,7 +156,7 @@ func (s *PublicBlockChainAPI) GetAccount(ctx context.Context, address common.Add
 
 // rpcMarshalHeader converts the given header to the RPC output.
 func (s *PublicBlockChainAPI) rpcMarshalHeader(header *types.Header) map[string]interface{} {
-	fields := filters.RPCMarshalHeader(header, s.b.ChainConfig().IsEthTxTypeForkEnabled(header.Number))
+	fields := filters.RPCMarshalHeader(header, s.b.ChainConfig())
 	return fields
 }
 

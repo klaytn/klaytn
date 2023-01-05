@@ -47,6 +47,7 @@ func NewEVMContext(msg Message, header *types.Header, chain ChainContext, author
 		beneficiary       common.Address
 		baseFee           *big.Int
 		effectiveGasPrice *big.Int
+		randomMix         *big.Int
 	)
 
 	if author == nil {
@@ -75,6 +76,7 @@ func NewEVMContext(msg Message, header *types.Header, chain ChainContext, author
 		BlockScore:  new(big.Int).Set(header.BlockScore),
 		GasPrice:    new(big.Int).Set(effectiveGasPrice),
 		BaseFee:     baseFee,
+		RandomMix:   randomMix,
 	}
 }
 

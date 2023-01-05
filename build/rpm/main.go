@@ -7,8 +7,9 @@ import (
 	"strings"
 	"text/template"
 
+	"gopkg.in/urfave/cli.v1"
+
 	"github.com/klaytn/klaytn/params"
-	"github.com/urfave/cli"
 )
 
 const (

@@ -32,6 +32,9 @@ import (
 	"strings"
 	"time"
 
+	"gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1/altsrc"
+
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/accounts/keystore"
 	"github.com/klaytn/klaytn/blockchain"
@@ -44,8 +47,6 @@ import (
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/params"
-	"github.com/urfave/cli/altsrc"
-	"gopkg.in/urfave/cli.v1"
 )
 
 type ValidatorInfo struct {
