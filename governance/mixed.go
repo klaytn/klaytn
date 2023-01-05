@@ -99,7 +99,7 @@ func newMixedEngine(config *params.ChainConfig, db database.DBManager, doInit bo
 	if doInit {
 		e.headerGov = NewGovernanceInitialize(config, db)
 	} else {
-		e.headerGov = NewGovernance(db)
+		e.headerGov = NewGovernance(config, db)
 	}
 
 	e.contractGov = NewContractEngine(e.headerGov)
