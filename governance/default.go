@@ -674,14 +674,26 @@ func newGovernanceCache() common.Cache {
 	return cache
 }
 
-// initializeCache reads governance item data from database and updates Governance.itemCache.
+// initializeCacheByBlockNumber reads governance item data from database and updates Governance.itemCache
+// based on the given block number.
 // It also initializes currentSet and actualGovernanceBlock according to head block number.
-func (g *Governance) initializeCache(chainConfig *params.ChainConfig) error {
+func (g *Governance) initializeCacheByBlockNumber(num uint64, skip bool, chainConfig *params.ChainConfig) error {
 	// get last n governance change block number
 	indices, err := g.db.ReadRecentGovernanceIdx(params.GovernanceIdxCacheLimit)
 	if err != nil {
 		return ErrNotInitialized
 	}
+
+	if skip {
+		var newIndices []uint64
+		for _, idx := range indices {
+			if idx <= num {
+				newIndices = append(newIndices, idx)
+			}
+		}
+		indices = newIndices
+	}
+
 	g.idxCache = indices
 
 	// Put governance items into the itemCache
@@ -699,19 +711,7 @@ func (g *Governance) initializeCache(chainConfig *params.ChainConfig) error {
 	// Since g.currentSet means the governance data viewed by the head block number of the node
 	// and g.actualGovernanceBlock means the block number at the time the governance data is stored,
 	// So those two variables are initialized by using the return values of the g.ReadGovernance(headBlockNum).
-
-	// head block number is used to get the appropriate g.currentSet and g.actualGovernanceBlock
-	headBlockNumber := uint64(0)
-	if headBlockHash := g.db.ReadHeadBlockHash(); !common.EmptyHash(headBlockHash) {
-		if num := g.db.ReadHeaderNumber(headBlockHash); num != nil {
-			headBlockNumber = *num
-		} else if headBlockHash := g.db.ReadHeadBlockBackupHash(); !common.EmptyHash(headBlockHash) {
-			if num := g.db.ReadHeaderNumber(headBlockHash); num != nil {
-				headBlockNumber = *num
-			}
-		}
-	}
-	newBlockNumber, newGovernanceSet, err := g.ReadGovernance(headBlockNumber)
+	newBlockNumber, newGovernanceSet, err := g.ReadGovernance(num)
 	if err != nil {
 		return err
 	}
@@ -745,6 +745,23 @@ func (g *Governance) initializeCache(chainConfig *params.ChainConfig) error {
 	g.updateGovernanceParams()
 
 	return nil
+}
+
+// initializeCache reads governance item data from database and updates Governance.itemCache.
+// It also initializes currentSet and actualGovernanceBlock according to head block number.
+func (g *Governance) initializeCache(chainConfig *params.ChainConfig) error {
+	// head block number is used to get the appropriate g.currentSet and g.actualGovernanceBlock
+	headBlockNumber := uint64(0)
+	if headBlockHash := g.db.ReadHeadBlockHash(); !common.EmptyHash(headBlockHash) {
+		if num := g.db.ReadHeaderNumber(headBlockHash); num != nil {
+			headBlockNumber = *num
+		} else if headBlockHash := g.db.ReadHeadBlockBackupHash(); !common.EmptyHash(headBlockHash) {
+			if num := g.db.ReadHeaderNumber(headBlockHash); num != nil {
+				headBlockNumber = *num
+			}
+		}
+	}
+	return g.initializeCacheByBlockNumber(headBlockNumber, false, chainConfig)
 }
 
 // getGovernanceCache returns cached governance config as a byte slice
@@ -1251,5 +1268,35 @@ func (gov *Governance) UpdateParams() error {
 	}
 
 	gov.currentParams = pset
+	return nil
+}
+
+// Rollback rollbacks current governance state to the governance state of given number.
+func (gov *Governance) Rollback(num uint64, config *params.ChainConfig) error {
+	pset, err := gov.ParamsAt(num)
+	if err != nil {
+		return err
+	}
+
+	epoch := pset.Epoch()
+
+	// get recent epoch number
+	epochBlock := num
+	if num > epoch {
+		epochBlock = num - num%epoch
+	}
+
+	newGov := NewGovernance(gov.db)
+	newGov.SetNodeAddress(gov.NodeAddress())
+	newGov.totalVotingPower = gov.totalVotingPower
+	newGov.votingPower = gov.votingPower
+	if err := newGov.initializeCacheByBlockNumber(epochBlock, true, config); err != nil {
+		return err
+	}
+	if err := newGov.WriteGovernanceState(epochBlock, true); err != nil {
+		return err
+	}
+	*gov = *newGov
+
 	return nil
 }

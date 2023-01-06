@@ -79,7 +79,17 @@ func (b *CNAPIBackend) CurrentBlock() *types.Block {
 func (b *CNAPIBackend) SetHead(number uint64) {
 	b.cn.protocolManager.Downloader().Cancel()
 	b.cn.protocolManager.SetSyncStop(true)
-	b.cn.blockchain.SetHead(number)
+	if err := b.cn.blockchain.SetHead(number); err == nil {
+		if err := b.cn.governance.Rollback(number, b.cn.chainConfig); err != nil {
+			logger.Error("failed to rollback governance state", "num", number, "err", err)
+		}
+
+		block := b.cn.blockchain.GetBlockByNumber(number)
+		hash := block.Hash()
+		if err := b.cn.engine.ReplayHeadersForGovernance(number, hash); err != nil {
+			logger.Error("failed to replay headers to recalculate governance state", "num", number, "hash", hash, "err", err)
+		}
+	}
 	b.cn.protocolManager.SetSyncStop(false)
 }
 

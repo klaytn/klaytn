@@ -389,3 +389,7 @@ func (e *MixedEngine) SetTxPool(txpool txPool) {
 func (e *MixedEngine) GetTxPool() txPool {
 	return e.headerGov.GetTxPool()
 }
+
+func (e *MixedEngine) Rollback(num uint64, config *params.ChainConfig) error {
+	return e.headerGov.Rollback(num, config)
+}

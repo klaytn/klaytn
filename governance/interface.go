@@ -100,6 +100,8 @@ type HeaderEngine interface {
 	SetBlockchain(chain blockChain)
 	SetTxPool(txpool txPool)
 	GetTxPool() txPool
+
+	Rollback(uint64, *params.ChainConfig) error
 }
 
 // blockChain is an interface for blockchain.Blockchain used in governance package.

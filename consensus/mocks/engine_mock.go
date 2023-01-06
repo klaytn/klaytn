@@ -183,6 +183,20 @@ func (mr *MockEngineMockRecorder) Protocol() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Protocol", reflect.TypeOf((*MockEngine)(nil).Protocol))
 }
 
+// ReplayHeadersForGovernance mocks base method.
+func (m *MockEngine) ReplayHeadersForGovernance(arg0 uint64, arg1 common.Hash) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReplayHeadersForGovernance", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RegenSnapshot indicates an expected call of RegenSnapshot.
+func (mr *MockEngineMockRecorder) RegenSnapshot(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReplayHeadersForGovernance", reflect.TypeOf((*MockEngine)(nil).ReplayHeadersForGovernance), arg0, arg1)
+}
+
 // Seal mocks base method.
 func (m *MockEngine) Seal(arg0 consensus.ChainReader, arg1 *types.Block, arg2 <-chan struct{}) (*types.Block, error) {
 	m.ctrl.T.Helper()

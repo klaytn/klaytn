@@ -72,6 +72,11 @@ func (gxhash *Gxhash) CreateSnapshot(chain consensus.ChainReader, number uint64,
 	return nil
 }
 
+// ReplayHeadersForGovernance applies votes in order to recalculate governance state.
+func (gxhash *Gxhash) ReplayHeadersForGovernance(num uint64, hash common.Hash) error {
+	return nil
+}
+
 // GetConsensusInfo is not used for PoW engine.
 func (gxhash *Gxhash) GetConsensusInfo(block *types.Block) (consensus.ConsensusInfo, error) {
 	return consensus.ConsensusInfo{}, nil

@@ -714,6 +714,11 @@ func (sb *backend) CreateSnapshot(chain consensus.ChainReader, number uint64, ha
 	return nil
 }
 
+// ReplayHeadersForGovernance applies votes in order to recalculate governance state.
+func (sb *backend) ReplayHeadersForGovernance(num uint64, hash common.Hash) error {
+	return sb.replayHeadersForGovernance(sb.chain, num, hash, true)
+}
+
 // GetConsensusInfo returns consensus information regarding the given block number.
 func (sb *backend) GetConsensusInfo(block *types.Block) (consensus.ConsensusInfo, error) {
 	blockNumber := block.NumberU64()
@@ -850,6 +855,40 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 
 	sb.recents.Add(snap.Hash, snap)
 	return snap, err
+}
+
+// replayHeadersForGovernance replays headers from lastGovernanceBlock to given number to update governance state.
+func (sb *backend) replayHeadersForGovernance(chain consensus.ChainReader, number uint64, hash common.Hash, writable bool) error {
+	var (
+		headers []*types.Header
+		snap    *Snapshot
+	)
+
+	for sb.governance.CanWriteGovernanceState(number) {
+		logger.Debug("gathering headers", "number", number, "hash", hash)
+
+		if header := getPrevHeaderAndUpdateParents(chain, number, hash, &[]*types.Header{}); header == nil {
+			return consensus.ErrUnknownAncestor
+		} else {
+			headers = append(headers, header)
+			number, hash = number-1, header.ParentHash
+		}
+	}
+
+	snap, err := sb.snapshot(chain, number, hash, nil, false)
+	if err != nil {
+		return err
+	}
+
+	// Previous snapshot found, apply any pending headers on top of it
+	for i := 0; i < len(headers)/2; i++ {
+		headers[i], headers[len(headers)-1-i] = headers[len(headers)-1-i], headers[i]
+	}
+	snap, err = snap.apply(headers, sb.governance, sb.address, sb.governance.Params().Policy(), chain, writable)
+	if err != nil {
+		return err
+	}
+	return err
 }
 
 // FIXME: Need to update this for Istanbul
