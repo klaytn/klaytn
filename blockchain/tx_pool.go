@@ -883,7 +883,7 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 	// (2) remove an old Tx with the largest nonce from queue to make a room for a new Tx with missing nonce
 	// (3) discard a new Tx if the new Tx does not have a missing nonce
 	// (4) discard underpriced transactions
-	if uint64(pool.all.Slots()+numSlots(tx)) >= pool.config.ExecSlotsAll+pool.config.NonExecSlotsAll {
+	if uint64(pool.all.Slots()+numSlots(tx)) > pool.config.ExecSlotsAll+pool.config.NonExecSlotsAll {
 		// (1) discard a new Tx if there is no room for the account of the Tx
 		from, _ := types.Sender(pool.signer, tx)
 		if pool.queue[from] == nil {
