@@ -54,6 +54,7 @@ const (
 	// non-trivial consequences: larger transactions are significantly harder and
 	// more expensive to propagate; larger transactions also take more resources
 	// to validate whether they fit into the pool or not.
+	// TODO-klaytn: Change the name to clarify what it means. It means the max length of the transaction.
 	MaxTxDataSize = 4 * txSlotSize // 128KB
 
 	// demoteUnexecutablesFullValidationTxLimit is the number of txs will be fully validated in demoteUnexecutables.

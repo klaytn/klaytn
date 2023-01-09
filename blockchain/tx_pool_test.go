@@ -1344,11 +1344,11 @@ func TestTransactionAllowedTxSize(t *testing.T) {
 		success      bool   // the expected result whether the addition is succeeded or failed
 		errStr       string
 	}{
-		// Try adding a transaction with maximal allowed size
+		// Try adding a transaction with close to the maximum allowed size
 		{dataSize, 0, true, "failed to add the transaction which size is close to the maximal"},
 		// Try adding a transaction with random allowed size
 		{uint64(rand.Intn(int(dataSize))), 1, true, "failed to add the transaction of random allowed size"},
-		// Try adding a transaction of minimal not allowed size
+		// Try adding a slightly oversize transaction
 		{MaxTxDataSize, 2, false, "expected rejection on slightly oversize transaction"},
 		// Try adding a transaction of random not allowed size
 		{dataSize + 1 + uint64(rand.Intn(int(10*MaxTxDataSize))), 2, false, "expected rejection on oversize transaction"},
