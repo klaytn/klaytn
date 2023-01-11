@@ -21,6 +21,7 @@
 package work
 
 import (
+	"github.com/klaytn/klaytn/common/hexutil"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -500,12 +501,16 @@ func (self *worker) commitNewWork() {
 	parent := self.chain.CurrentBlock()
 	nextBlockNum := new(big.Int).Add(parent.Number(), common.Big1)
 	var nextBaseFee *big.Int
+	var randomMix hexutil.Bytes
 	if self.nodetype == common.CONSENSUSNODE {
 		if self.config.IsMagmaForkEnabled(nextBlockNum) {
 			// NOTE-klaytn NextBlockBaseFee needs the header of parent, self.chain.CurrentBlock
 			// So above code, TxPool().Pending(), is separated with this and can be refactored later.
 			nextBaseFee = misc.NextMagmaBlockBaseFee(parent.Header(), self.config.Governance.KIP71)
 			pending = types.FilterTransactionWithBaseFee(pending, nextBaseFee)
+		}
+		if self.config.IsKoreForkEnabled(nextBlockNum) {
+			randomMix = parent.Header().RandomMix
 		}
 	}
 
@@ -534,6 +539,9 @@ func (self *worker) commitNewWork() {
 	}
 	if self.config.IsMagmaForkEnabled(nextBlockNum) {
 		header.BaseFee = nextBaseFee
+	}
+	if self.config.IsKoreForkEnabled(nextBlockNum) {
+		header.RandomMix = randomMix
 	}
 	if err := self.engine.Prepare(self.chain, header); err != nil {
 		logger.Error("Failed to prepare header for mining", "err", err)
