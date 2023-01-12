@@ -226,6 +226,15 @@ func (sca *SmartContractAccount) DeepCopy() Account {
 	}
 }
 
+func (sca *SmartContractAccount) TransCopy() AccountLH {
+	return &SmartContractAccountLH{
+		AccountCommon: sca.AccountCommon.DeepCopy(),
+		storageRoot:   sca.storageRoot.ToHash(),
+		codeHash:      common.CopyBytes(sca.codeHash),
+		codeInfo:      sca.codeInfo,
+	}
+}
+
 func (sca *SmartContractAccount) String() string {
 	return fmt.Sprintf(`Common:%s
 	StorageRoot: %s

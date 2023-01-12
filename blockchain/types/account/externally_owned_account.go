@@ -57,6 +57,12 @@ func (e *ExternallyOwnedAccount) DeepCopy() Account {
 	}
 }
 
+func (e *ExternallyOwnedAccount) TransCopy() AccountLH {
+	return &ExternallyOwnedAccountLH{
+		AccountCommon: e.AccountCommon.DeepCopy(),
+	}
+}
+
 func (e *ExternallyOwnedAccount) Equal(a Account) bool {
 	e2, ok := a.(*ExternallyOwnedAccount)
 	if !ok {

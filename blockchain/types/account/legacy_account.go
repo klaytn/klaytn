@@ -138,6 +138,15 @@ func (a *LegacyAccount) DeepCopy() Account {
 	}
 }
 
+func (a *LegacyAccount) TransCopy() AccountLH {
+	return &LegacyAccountLH{
+		a.Nonce,
+		new(big.Int).Set(a.Balance),
+		a.Root.ToHash(),
+		a.CodeHash,
+	}
+}
+
 func (a *LegacyAccount) Dump() {
 	fmt.Println(a.String())
 }

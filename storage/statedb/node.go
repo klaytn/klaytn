@@ -21,12 +21,14 @@
 package statedb
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"strings"
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/rlp"
+	"github.com/klaytn/klaytn/blockchain/types/account"
 )
 
 var indices = []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f", "[17]"}
@@ -109,6 +111,55 @@ func (n valueNode) String() string  { return n.fstring("") }
 func (n hashNode) Bytes() []byte  { return n[:] }
 func (n valueNode) Bytes() []byte { return n[:] }
 
+func (n *fullNode) LegacyRLP() (tmp sliceBuffer) {
+	tmpNode := &fullNode{
+		flags: n.flags,
+	}
+
+	for k, child := range n.Children {
+		if tmpHashNode, ok := child.(hashNode); ok {
+			tmpNode.Children[k] = toHashNode(tmpHashNode[:common.HashLength])
+		} else {
+			tmpNode.Children[k] = child
+		}
+	}
+
+	if err := rlp.Encode(&tmp, tmpNode); err != nil {
+		panic("encode error: " + err.Error())
+	}
+	return tmp
+}
+
+func (n *shortNode) LegacyRLP() (tmp sliceBuffer) {
+	tmpNode := &shortNode{
+		Key: n.Key,
+		flags: n.flags,
+	}
+
+	if tmpValueNode, ok := n.Val.(valueNode); ok && len(tmpValueNode) > common.ExtHashLength {
+		serializer := account.NewAccountSerializer()
+		if err := rlp.Decode(bytes.NewReader(tmpValueNode), serializer); err == nil {
+			serializerLH := serializer.TransCopy()
+			if err := rlp.Encode(&tmp, serializerLH); err == nil {
+				tmpNode.Val = toValueNode(tmp)
+				tmp.Reset()
+			}
+		}
+	} else if tmpHashNode, ok := n.Val.(hashNode); ok {
+		tmpNode.Val = toHashNode(tmpHashNode[:common.HashLength])
+	} else {
+		tmpNode.Val = tmpValueNode
+	}
+
+	if err := rlp.Encode(&tmp, tmpNode); err != nil {
+		panic("encode error: " + err.Error())
+	}
+	return tmp
+}
+//Consider adding legacyRLP to the interface. However, it is determined that this function is not necessary for all nodes.
+//func (n hashNode) LegacyRLP() (tmp sliceBuffer) { return nil }
+//func (n valueNode) LegacyRLP() (tmp sliceBuffer) { return nil }
+
 func (n *fullNode) fstring(ind string) string {
 	resp := fmt.Sprintf("[\n%s  ", ind)
 	for i, node := range &n.Children {
@@ -131,6 +182,10 @@ func (n hashNode) fstring(ind string) string {
 
 func (n valueNode) fstring(ind string) string {
 	return fmt.Sprintf("%x ", []byte(n))
+}
+
+func MustDecodeNode(hash, buf []byte) node {
+	return mustDecodeNode(hash, buf)
 }
 
 func mustDecodeNode(hash, buf []byte) node {

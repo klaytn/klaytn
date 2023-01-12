@@ -21,6 +21,7 @@
 package statedb
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -31,6 +32,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/rlp"
+	"github.com/klaytn/klaytn/blockchain/types/account"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/pbnjay/memory"
 	"github.com/rcrowley/go-metrics"
@@ -1210,4 +1212,85 @@ func (db *Database) CollectChildrenStats(node common.ExtHash, depth int, resultC
 	for _, child := range childrenNodes {
 		db.CollectChildrenStats(child, depth+1, resultCh)
 	}
+}
+
+func NodeTrace(db *Database, hash common.ExtHash, flag int) (reHash common.ExtHash) {
+	var tmp sliceBuffer
+
+	/*if !bytes.Equal(hash.Bytes()[common.HashLength:], common.LegacyByte) {
+		return hash
+	}*/
+
+	data, err := db.NodeFromOld(hash)
+	if err != nil || len(data) == 0 {
+		newHash := hash
+		//copy(newHash[common.HashLength:], common.LegacyByte)
+		copy(newHash[common.HashLength:], common.RootByte)
+		data, err := db.NodeFromOld(newHash)
+		if err != nil && len(data) == 0 {
+			panic("migration db read error : " + err.Error())
+		}
+	}
+	if len(data) == 0 {
+		return hash
+	}
+	node := mustDecodeNode(hash[:common.HashLength], data)
+
+	switch n := node.(type) {
+	case *fullNode:
+		tmpNode := &fullNode{ flags: n.flags, }
+		for idx, child := range n.Children {
+			if idx == 16 {
+				break
+			}
+			if tmpHashNode, ok := child.(hashNode); ok {
+				tmpNode.Children[idx] = toHashNode( NodeTrace(db, common.BytesToExtHash(tmpHashNode.Bytes()), flag).Bytes() )
+			} else {
+				tmpNode.Children[idx] = child
+			}
+		}
+		if err := rlp.Encode(&tmp, tmpNode); err != nil {
+			 panic("encode error: " + err.Error())
+		}
+		fmt.Printf("%d hash : %x\nvalue : %x\n\n", flag, hash, tmp)
+		return hash
+	case *shortNode:
+		tmpNode := &shortNode{ Key: n.Key, flags: n.flags, }
+
+		if tmpValueNode, ok := n.Val.(valueNode); ok && len(tmpValueNode) > common.ExtHashLength {
+			serializerLH := account.NewAccountLHSerializer()
+			if err := rlp.Decode(bytes.NewReader(tmpValueNode), serializerLH); err != nil {
+				tmpNode.Val = tmpValueNode
+			} else {
+				serializer := serializerLH.TransCopy()
+				acc := serializer.GetAccount()
+				if pa := account.GetProgramAccount(acc); pa != nil {
+					if pa.GetStorageRoot().ToHash() != emptyState {
+						// pa.GetStorageRoot()
+						reHash := NodeTrace(db, pa.GetStorageRoot(), flag + 1)
+						fmt.Printf("%d sroot: %x\n\n", flag, reHash)
+					}
+					code := common.BytesToRootExtHash(pa.GetCodeHash())
+					if !bytes.Equal(code.ToHash().Bytes(), account.EmptyCodeHash) {
+						fmt.Printf("%d code : %x\n\n", flag, code)
+					}
+				} else {
+					tmpNode.Val = tmpValueNode
+				}
+
+			}
+		} else if tmpHashNode, ok := n.Val.(hashNode); ok {
+			tmpNode.Val = toHashNode(tmpHashNode[:common.HashLength])
+		} else {
+			tmpNode.Val = tmpValueNode
+		}
+	
+		if err := rlp.Encode(&tmp, tmpNode); err != nil {
+			panic("encode error: " + err.Error())
+		}
+		fmt.Printf("%d hash : %x\nvalue : %x\n\n", flag, hash, tmp)
+		return hash
+	}
+	panic("encode error: " + err.Error())
+	return reHash
 }

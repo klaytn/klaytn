@@ -666,7 +666,7 @@ func (self *StateDB) getDeletedStateObject(addr common.Address) *stateObject {
 				return nil
 			}
 		} else {
-			serializer = serializerLH.Copy()
+			serializer = serializerLH.TransCopy()
 		}
 		acc = serializer.GetAccount()
 		// -->

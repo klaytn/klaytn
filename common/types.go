@@ -34,35 +34,29 @@ import (
 
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/crypto/sha3"
-	"github.com/spaolacci/murmur3"
 )
 
 const (
 	HashLength = 32
 
-	ExtHashLength = 40 // = HashLength + ExtPadLength
-	ExtPadLength  = 8  // = ExtIdxLength + ExtSigLength + ExtCSLength
-	ExtIdxLength  = 4
-	ExtSigLength  = 1
-	ExtCSLength   = 3
+	ExtHashLength = 38 // = HashLength + ExtPadLength
+	ExtPadLength  = 6  // = ExtIdxLength + ExtSigLength + ExtCSLength
 
 	AddressLength   = 20
 	SignatureLength = 65
-	SigIdx          = 0x45
 )
 
 var (
 	hashT    = reflect.TypeOf(Hash{})
 	addressT = reflect.TypeOf(Address{})
 
-	ProcBlockNum uint32 = 0
-	CntIdx       uint32 = uint32(uint64(time.Now().UnixNano()/1000000) % uint64(0xffffffff))
 	hashMu       sync.Mutex
 
 	lastPrecompiledContractAddressHex   = hexutil.MustDecode("0x00000000000000000000000000000000000003FF")
-	rootByte                            = hexutil.MustDecode("0x0000000045000000")
-	zeroByte                            = hexutil.MustDecode("0x0000000000000000")
-	LegacyByte                          = hexutil.MustDecode("0x4545454545454545")
+	CntIdx    	uint64 = uint64(time.Now().UnixNano()) - 500000000
+	RootByte                            = hexutil.MustDecode("0x000000000011")
+	ZeroByte                            = hexutil.MustDecode("0x000000000000")
+	LegacyByte                          = hexutil.MustDecode("0x000000000045")
 	errStringLengthExceedsAddressLength = errors.New("the string length exceeds the address length (20)")
 	errEmptyString                      = errors.New("empty string")
 )
@@ -75,35 +69,21 @@ type ExtHash [ExtHashLength]byte
 //root ExtHash ...32byte...0000000045000000
 
 func InitExtHash() (extH ExtHash) {
-	copy(extH[HashLength:], rootByte)
+	copy(extH[HashLength:], RootByte)
 	return extH
 }
 
-// can remove
-func InitBlocksIndex() {
-	ProcBlockNum = 0
-}
-
-// can remove
-func SetBlockNum(blockNum uint32) {
-	ProcBlockNum = blockNum
-}
-
 func GetExtHashPadBytes(hash []byte) (padding []byte) {
-	hashLen := len(hash)
-
-	if hashLen == HashLength {
-		return getNewExtPadding(hash)
-	} else if hashLen == ExtHashLength {
-		if CheckExtPadding(hash) {
-			return hash[HashLength:]
-		}
+	if len(hash) == ExtHashLength {
+		return hash[HashLength:]
 	}
-	return getNewExtPadding(hash)
+	padding = getNewExtPadding(hash)
+	return padding
+	//return getNewExtPadding(hash)
 }
 
 func ExtPaddingFilter(src []byte) []byte {
-	if len(src) == ExtHashLength && CheckExtPadding(src) {
+	if len(src) == ExtHashLength {
 		return src[:HashLength]
 	}
 	return src
@@ -111,45 +91,16 @@ func ExtPaddingFilter(src []byte) []byte {
 
 // to do : getNewExtPadding, CheckExtPadding tuning
 func getNewExtPadding(hash []byte) (rePadding []byte) {
-	rePadding = make([]byte, ExtPadLength)
+	rePadding = make([]byte, ExtPadLength+8)
 
 	hashMu.Lock()
 	localIdx := CntIdx
-	CntIdx++
+	CntIdx += 0xffff
 	hashMu.Unlock()
 
-	binary.LittleEndian.PutUint32(rePadding[:ExtIdxLength], localIdx)
-	mHash := murmur3.New32()
-	hashLen := len(hash)
-	if hashLen >= HashLength {
-		mHash.Write(hash[:HashLength])
-	} else {
-		mHash.Write(hash[:hashLen])
-		// zero byte write needs
-	}
-	mHash.Write(rePadding[:ExtIdxLength])
-
-	copy(rePadding[ExtIdxLength:], mHash.Sum(nil))
-	rePadding[4] = SigIdx
-	return rePadding
-}
-
-func CheckExtPadding(hash []byte) bool {
-	hashLen := len(hash)
-	if hashLen != ExtHashLength {
-		return false
-	} else if hash[HashLength+ExtIdxLength] != SigIdx {
-		return false
-	} else if bytes.Equal(hash[HashLength:], rootByte) || bytes.Equal(hash[HashLength:], LegacyByte) {
-		return true
-	}
-	tmpBuf := make([]byte, ExtCSLength+1)
-
-	mHash := murmur3.New32()
-	mHash.Write(hash[:HashLength+ExtIdxLength])
-	copy(tmpBuf[:], mHash.Sum(nil))
-
-	return bytes.Equal(tmpBuf[1:ExtCSLength+1], hash[HashLength+ExtIdxLength+1:])
+	binary.BigEndian.PutUint64(rePadding[:], localIdx)
+	//fmt.Printf("hash : %x%x\n", hash, rePadding)
+	return rePadding[:ExtPadLength]
 }
 
 func (h ExtHash) Bytes() []byte {
@@ -158,6 +109,7 @@ func (h ExtHash) Bytes() []byte {
 
 func BytesToExtHash(b []byte) (h ExtHash) {
 	bLen := len(b)
+	//fmt.Printf("bhash : %x\n", b)
 	if bLen == ExtHashLength {
 		copy(h[:ExtHashLength], b)
 	} else {
@@ -166,7 +118,7 @@ func BytesToExtHash(b []byte) (h ExtHash) {
 		}
 		copy(h[HashLength-bLen:], b)
 	}
-	if bytes.Equal(h[HashLength:], zeroByte) {
+	if bytes.Equal(h[HashLength:], ZeroByte) {
 		copy(h[HashLength:], GetExtHashPadBytes(b))
 	}
 	return h
@@ -181,9 +133,9 @@ func BytesToRootExtHash(b []byte) (h ExtHash) {
 			b = b[bLen-HashLength:]
 		}
 		copy(h[HashLength-bLen:], b)
-		copy(h[HashLength:], rootByte) //Ethan Defence code by CodeHash issue
+		copy(h[HashLength:], RootByte) //Ethan Defence code by CodeHash issue
 	}
-	//Ethan Defence code by CodeHash issue	//copy(h[HashLength:], rootByte)
+	//Ethan Defence code by CodeHash issue	//copy(h[HashLength:], RootByte)
 	return h
 }
 
@@ -228,7 +180,7 @@ func (h Hash) ToExtHash() (ExtH ExtHash) {
 
 func (h Hash) ToRootExtHash() (ExtH ExtHash) {
 	copy(ExtH[:HashLength], h[:])
-	copy(ExtH[HashLength:], rootByte)
+	copy(ExtH[HashLength:], RootByte)
 	return ExtH
 }
 

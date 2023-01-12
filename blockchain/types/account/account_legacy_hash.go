@@ -18,6 +18,7 @@ package account
 
 import (
 	"encoding/json"
+	"io"
 	"math/big"
 
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
@@ -31,13 +32,13 @@ import (
 //account.go
 //
 // NewAccountWithType creates an Account object with the given type.
-func NewAccountLHWithType(t AccountType) (Account, error) {
+func NewAccountLHWithType(t AccountType) (AccountLH, error) {
 	switch t {
 	case LegacyAccountType:
 		return newLegacyAccountLH(), nil
 	case ExternallyOwnedAccountType:
-		//return newExternallyOwnedAccountLH(), nil
-		return newExternallyOwnedAccount(), nil
+		return newExternallyOwnedAccountLH(), nil
+		//return newExternallyOwnedAccount(), nil
 		// or panic()?
 	case SmartContractAccountType:
 		return newSmartContractAccountLH(), nil
@@ -71,10 +72,13 @@ type AccountLH interface {
 	Empty() bool
 
 	// Equal returns true if all the attributes are exactly same. Otherwise, returns false.
-	Equal(Account) bool
+	Equal(AccountLH) bool
 
 	// DeepCopy copies all the attributes.
-	DeepCopy() Account
+	DeepCopy() AccountLH
+
+	// TransCopy copies all the attributes between Old/New - Old(hash) to New(ExtHash), New(ExtHash) to Old(Hash)
+	TransCopy() Account
 
 	// String returns all attributes of this object as a string.
 	String() string
@@ -100,6 +104,23 @@ func NewAccountLHSerializer() *AccountLHSerializer {
 	return &AccountLHSerializer{}
 }
 
+func (ser *AccountLHSerializer) GetAccount() AccountLH {
+	return ser.account
+}
+
+func (ser *AccountLHSerializer) EncodeRLP(w io.Writer) error {
+	// If it is a LegacyAccount object, do not encode the account type.
+	if ser.accType == LegacyAccountType {
+		return rlp.Encode(w, ser.account.(*LegacyAccountLH))
+	}
+
+	if err := rlp.Encode(w, ser.accType); err != nil {
+		return err
+	}
+
+	return rlp.Encode(w, ser.account)
+}
+
 func (ser *AccountLHSerializer) DecodeRLP(s *rlp.Stream) error {
 	if err := s.Decode(&ser.accType); err != nil {
 		// fallback to decoding a LegacyAccount object.
@@ -121,20 +142,34 @@ func (ser *AccountLHSerializer) DecodeRLP(s *rlp.Stream) error {
 	return s.Decode(ser.account)
 }
 
-func (ser *AccountLHSerializer) Copy() (eser *AccountSerializer) {
-	return &AccountSerializer{
+func (ser *AccountLHSerializer) Copy() (eser *AccountLHSerializer) {
+	return &AccountLHSerializer{
 		accType: ser.accType,
 		account: ser.account.DeepCopy(),
 	}
 	/*
-		        switch eser.accType {
-		        case LegacyAccountType:
+			switch eser.accType {
+			case LegacyAccountType:
 				eser.account = ser.account.DeepCopy()
-		        case ExternallyOwnedAccountType:
+			case ExternallyOwnedAccountType:
 				eser.account = ser.account.DeepCopy()
-		        case SmartContractAccountType:
+			case SmartContractAccountType:
 				eser.account = ser.account.DeepCopy()
-		        }*/
+			}*/
+}
+
+func (ser *AccountLHSerializer) DeepCopy() (eser *AccountLHSerializer) {
+	return &AccountLHSerializer{
+		accType: ser.accType,
+		account: ser.account.DeepCopy(),
+	}
+}
+
+func (ser *AccountLHSerializer) TransCopy() (eser *AccountSerializer) {
+	return &AccountSerializer{
+		accType: ser.accType,
+		account: ser.account.TransCopy(),
+	}
 }
 
 /*
@@ -142,55 +177,55 @@ func (ser *AccountLHSerializer) Copy() (eser *AccountSerializer) {
 //
 // AccountCommon represents the common data structure of a Klaytn account.
 type AccountLHCommon struct {
-        nonce         uint64
-        balance       *big.Int
-        humanReadable bool
-        key           accountkey.AccountKey
+	nonce	 uint64
+	balance       *big.Int
+	humanReadable bool
+	key	   accountkey.AccountKey
 }
 
 // accountCommonSerializable is an internal data structure for RLP serialization.
 // This object is required due to AccountKey.
 // AccountKey is an interface and it requires to use AccountKeySerializer for serialization.
 type accountLHCommonSerializable struct {
-        Nonce         uint64
-        Balance       *big.Int
-        HumanReadable bool
-        Key           *accountkey.AccountKeySerializer
+	Nonce	 uint64
+	Balance       *big.Int
+	HumanReadable bool
+	Key	   *accountkey.AccountKeySerializer
 }
 
 // newAccountCommon creates an AccountCommon object with default values.
 func newAccountLHCommon() *AccountLHCommon {
-        return &AccountLHCommon{
-                nonce:         0,
-                balance:       new(big.Int),
-                humanReadable: false,
-                key:           accountkey.NewAccountKeyLegacy(),
-        }
+	return &AccountLHCommon{
+		nonce:	 0,
+		balance:       new(big.Int),
+		humanReadable: false,
+		key:	   accountkey.NewAccountKeyLegacy(),
+	}
 }
 
 func (e *AccountLHCommon) DecodeRLP(s *rlp.Stream) error {
-        serialized := newAccountLHCommonSerializable()
+	serialized := newAccountLHCommonSerializable()
 
-        if err := s.Decode(serialized); err != nil {
-                return err
-        }
-        e.fromSerializable(serialized)
-        return nil
+	if err := s.Decode(serialized); err != nil {
+		return err
+	}
+	e.fromSerializable(serialized)
+	return nil
 }
 
 func newAccountLHCommonSerializable() *accountLHCommonSerializable {
-        return &accountLHCommonSerializable{
-                Balance: new(big.Int),
-                Key:     accountkey.NewAccountKeySerializer(),
-        }
+	return &accountLHCommonSerializable{
+		Balance: new(big.Int),
+		Key:     accountkey.NewAccountKeySerializer(),
+	}
 }
 
 // fromSerializable updates its values from the given accountCommonSerializable object.
 func (e *AccountLHCommon) fromSerializable(o *accountLHCommonSerializable) {
-        e.nonce = o.Nonce
-        e.balance = o.Balance
-        e.humanReadable = o.HumanReadable
-        e.key = o.Key.GetKey()
+	e.nonce = o.Nonce
+	e.balance = o.Balance
+	e.humanReadable = o.HumanReadable
+	e.key = o.Key.GetKey()
 }
 */
 
@@ -210,23 +245,23 @@ type LegacyAccountLH struct {
 // This object is used when an account is created.
 // Refer to StateDB.createObject().
 func newLegacyAccountLH() *LegacyAccountLH {
-	logger.CritWithStack("Legacy account is deprecated.")
+	logger.CritWithStack("Legacy accountLH is deprecated.")
 	return &LegacyAccountLH{
 		0, new(big.Int), common.Hash{}, emptyCodeHash,
 	}
 }
 
-func (a *LegacyAccountLH) DeepCopy() Account {
-	return &LegacyAccount{
+func (a *LegacyAccountLH) DeepCopy() AccountLH {
+	return &LegacyAccountLH{
 		Nonce:    a.Nonce,
 		Balance:  a.Balance,
-		Root:     common.BytesLegacyToExtHash(a.Root.Bytes()),
+		Root:     a.Root,
 		CodeHash: a.CodeHash,
 	}
 }
 
 func (a *LegacyAccountLH) Type() AccountType       { return 0 }
-func (a *LegacyAccountLH) GetNonce() uint64        { return 0 }
+func (a *LegacyAccountLH) GetNonce() uint64	{ return 0 }
 func (a *LegacyAccountLH) GetBalance() *big.Int    { return big.NewInt(0) }
 func (a *LegacyAccountLH) GetHumanReadable() bool  { return false }
 func (a *LegacyAccountLH) SetNonce(n uint64)       { return }
@@ -235,25 +270,59 @@ func (a *LegacyAccountLH) SetHumanReadable(b bool) { return }
 func (a *LegacyAccountLH) UpdateKey(newKey accountkey.AccountKey, currentBlockNumber uint64) error {
 	return nil
 }
-func (a *LegacyAccountLH) Empty() bool        { return false }
-func (a *LegacyAccountLH) Equal(Account) bool { return false }
+func (a *LegacyAccountLH) Empty() bool	{ return false }
+func (a *LegacyAccountLH) Equal(AccountLH) bool { return false }
 
-//func (a *LegacyAccountLH) DeepCopy() Account { return nil }
+func (a *LegacyAccountLH) TransCopy() Account { 
+	return &LegacyAccount{
+		Nonce:    a.Nonce,
+		Balance:  a.Balance,
+		Root:     a.Root.ToRootExtHash(),
+		CodeHash: a.CodeHash,
+	}
+}
 func (a *LegacyAccountLH) String() string { return "Not Implemented" }
 
 // externally_owned_account.go
 //
 // ExternallyOwnedAccount represents a Klaytn account used by a user.
-/*type ExternallyOwnedAccountLH struct {
-        *AccountLHCommon
+type ExternallyOwnedAccountLH struct {
+	*AccountCommon
 }
 
 // newExternallyOwnedAccount creates an ExternallyOwnedAccount object with default values.
 func newExternallyOwnedAccountLH() *ExternallyOwnedAccountLH {
-        return &ExternallyOwnedAccountLH{
-                newAccountLHCommon(),
-        }
-}*/
+	return &ExternallyOwnedAccountLH{
+		newAccountCommon(),
+	}
+}
+
+func (a *ExternallyOwnedAccountLH) DeepCopy() AccountLH {
+	return &ExternallyOwnedAccountLH{
+		AccountCommon: a.AccountCommon.DeepCopy(),
+	}
+}
+
+func (a *ExternallyOwnedAccountLH) Type() AccountType       { return 0 }
+func (a *ExternallyOwnedAccountLH) GetNonce() uint64	{ return 0 }
+func (a *ExternallyOwnedAccountLH) GetBalance() *big.Int    { return big.NewInt(0) }
+func (a *ExternallyOwnedAccountLH) GetHumanReadable() bool  { return false }
+func (a *ExternallyOwnedAccountLH) SetNonce(n uint64)       { return }
+func (a *ExternallyOwnedAccountLH) SetBalance(b *big.Int)   { return }
+func (a *ExternallyOwnedAccountLH) SetHumanReadable(b bool) { return }
+func (a *ExternallyOwnedAccountLH) UpdateKey(newKey accountkey.AccountKey, currentBlockNumber uint64) error {
+	return nil
+}
+func (a *ExternallyOwnedAccountLH) Empty() bool	{ return false }
+func (a *ExternallyOwnedAccountLH) Equal(AccountLH) bool { return false }
+
+func (a *ExternallyOwnedAccountLH) TransCopy() Account {
+	return &ExternallyOwnedAccount{
+		AccountCommon: a.AccountCommon.DeepCopy(),
+	}
+}
+func (a *ExternallyOwnedAccountLH) String() string { return "Not Implemented" }
+
 
 // smart_contract_account.go
 //
@@ -272,9 +341,9 @@ type SmartContractAccountLH struct {
 type smartContractAccountLHSerializable struct {
 	//aaa CommonSerializable *accountLHCommonSerializable
 	CommonSerializable *accountCommonSerializable
-	StorageRoot        common.Hash
-	CodeHash           []byte
-	CodeInfo           params.CodeInfo
+	StorageRoot	common.Hash
+	CodeHash	   []byte
+	CodeInfo	   params.CodeInfo
 }
 
 func newSmartContractAccountLH() *SmartContractAccountLH {
@@ -287,12 +356,26 @@ func newSmartContractAccountLH() *SmartContractAccountLH {
 		params.CodeInfo(0),
 	}
 }
+
+func (sca *SmartContractAccountLH) toSerializable() *smartContractAccountLHSerializable {
+	return &smartContractAccountLHSerializable{
+		CommonSerializable: sca.AccountCommon.toSerializable(),
+		StorageRoot:	   sca.storageRoot,
+		CodeHash:	   sca.codeHash,
+		CodeInfo:	   sca.codeInfo,
+	}
+}
+
 func (sca *SmartContractAccountLH) fromSerializable(o *smartContractAccountLHSerializable) {
 	//aaa sca.AccountLHCommon.fromSerializable(o.CommonSerializable)
 	sca.AccountCommon.fromSerializable(o.CommonSerializable)
 	sca.storageRoot = o.StorageRoot
 	sca.codeHash = o.CodeHash
 	sca.codeInfo = o.CodeInfo
+}
+
+func (sca *SmartContractAccountLH) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, sca.toSerializable())
 }
 
 func (sca *SmartContractAccountLH) DecodeRLP(s *rlp.Stream) error {
@@ -314,17 +397,18 @@ func (sca *SmartContractAccountLH) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
-func (a *SmartContractAccountLH) DeepCopy() Account {
-	return &SmartContractAccount{
+func (a *SmartContractAccountLH) DeepCopy() AccountLH {
+	return &SmartContractAccountLH{
 		AccountCommon: a.AccountCommon.DeepCopy(),
-		storageRoot:   common.BytesLegacyToExtHash(a.storageRoot.Bytes()),
+		//storageRoot:   common.BytesLegacyToExtHash(a.storageRoot.Bytes()),
+		storageRoot:   a.storageRoot,
 		codeHash:      a.codeHash,
 		codeInfo:      a.codeInfo,
 	}
 }
 
 func (a *SmartContractAccountLH) Type() AccountType       { return 0 }
-func (a *SmartContractAccountLH) GetNonce() uint64        { return 0 }
+func (a *SmartContractAccountLH) GetNonce() uint64	{ return 0 }
 func (a *SmartContractAccountLH) GetBalance() *big.Int    { return big.NewInt(0) }
 func (a *SmartContractAccountLH) GetHumanReadable() bool  { return false }
 func (a *SmartContractAccountLH) SetNonce(n uint64)       { return }
@@ -333,8 +417,15 @@ func (a *SmartContractAccountLH) SetHumanReadable(b bool) { return }
 func (a *SmartContractAccountLH) UpdateKey(newKey accountkey.AccountKey, currentBlockNumber uint64) error {
 	return nil
 }
-func (a *SmartContractAccountLH) Empty() bool        { return false }
-func (a *SmartContractAccountLH) Equal(Account) bool { return false }
+func (a *SmartContractAccountLH) Empty() bool	{ return false }
+func (a *SmartContractAccountLH) Equal(AccountLH) bool { return false }
 
-//func (a *SmartContractAccountLH) DeepCopy() Account { return nil }
+func (a *SmartContractAccountLH) TransCopy() Account {
+	return &SmartContractAccount{
+		AccountCommon: a.AccountCommon.DeepCopy(),
+		storageRoot:   a.storageRoot.ToRootExtHash(),
+		codeHash:      a.codeHash,
+		codeInfo:      a.codeInfo,
+	}
+}
 func (a *SmartContractAccountLH) String() string { return "Not implemented" }

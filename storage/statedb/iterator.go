@@ -518,6 +518,7 @@ func (h *nodeIteratorHeap) Pop() interface{} {
 	return x
 }
 
+
 type unionIterator struct {
 	items *nodeIteratorHeap // Nodes returned are the union of the ones in these iterators
 	count int               // Number of nodes scanned across all tries

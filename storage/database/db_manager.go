@@ -2939,7 +2939,7 @@ func DeleteStateDBProc(dbm DBManager) {
 				//err2 := delq.Delete(iter.Key())
 				//fmt.Printf("deletekey = %x, delq_bnum=%d, state_err=%v, delq_err=%v\n", iter.Key(), ProcBlockNum, err1, err2)
 				keyLen := len(iter.Key())
-				if !bytes.Equal(iter.Key()[:keyLen-common.ExtPadLength], common.LegacyByte) {
+				if keyLen > 8 && !bytes.Equal(iter.Key()[:keyLen-common.ExtPadLength], common.LegacyByte) {
 					statedb.Delete(iter.Key())
 				}
 				delq.Delete(iter.Key())

@@ -21,6 +21,7 @@
 package statedb
 
 import (
+	//"bytes"
 	"fmt"
 	"hash"
 	"reflect"
@@ -29,6 +30,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto/sha3"
 	"github.com/klaytn/klaytn/rlp"
+	//"github.com/klaytn/klaytn/blockchain/types/account"
 )
 
 type hasher struct {
@@ -298,6 +300,16 @@ func (h *hasher) hashChildrenFromRoot(original node, db *Database) (node, node) 
 	}
 }
 
+func extHashFilter(n node, src_rlp sliceBuffer) (reData sliceBuffer){
+	switch node := n.(type) {
+        case *fullNode:
+		return node.LegacyRLP()
+        case *shortNode:
+		return node.LegacyRLP()
+	}
+	return src_rlp
+}
+
 // store hashes the node n and if we have a storage layer specified, it writes
 // the key/value pair to it and tracks any node->child references as well as any
 // node->external trie references.
@@ -323,7 +335,7 @@ func (h *hasher) store(n node, db *Database, force, rootFlag bool) (node, uint16
 		return n, lenEncoded, tmpHash // Nodes smaller than 32 bytes are stored inside their parent
 	}
 	if hash == nil {
-		hash = h.makeHashNode(h.tmp)
+		hash = h.makeHashNode( extHashFilter(n, h.tmp) )
 	}
 	if db != nil {
 		// We are pooling the trie nodes into an intermediate memory cache
@@ -361,14 +373,7 @@ func (h *hasher) store(n node, db *Database, force, rootFlag bool) (node, uint16
 func (h *hasher) makeHashNode(data []byte) hashNode {
 	n := make(hashNode, h.sha.Size())
 	h.sha.Reset()
-	tmpData, err := common.RlpPaddingFilter(data)
-	if err == nil {
-		h.sha.Write(tmpData)
-	} else {
-		//tmpData = rlp.ExtPaddingFilter(data)
-		tmpData = common.ExtPaddingFilter(data)
-		h.sha.Write(tmpData)
-	}
+	h.sha.Write(data)
 	h.sha.Read(n)
 	return n
 }

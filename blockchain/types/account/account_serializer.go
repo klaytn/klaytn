@@ -84,6 +84,20 @@ func (ser *AccountSerializer) DecodeRLP(s *rlp.Stream) error {
 	return s.Decode(ser.account)
 }
 
+func (ser *AccountSerializer) Copy() (eser *AccountSerializer) {
+        return &AccountSerializer{
+                accType: ser.accType,
+                account: ser.account.DeepCopy(),
+        }
+}
+
+func (ser *AccountSerializer) TransCopy() (eser *AccountLHSerializer) {
+        return &AccountLHSerializer{
+                accType: ser.accType,
+                account: ser.account.TransCopy(),
+        }
+}
+
 func (ser *AccountSerializer) MarshalJSON() ([]byte, error) {
 	// if it is a legacyAccount object, do not marshal the account type.
 	if ser.accType == LegacyAccountType {

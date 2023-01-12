@@ -1935,7 +1935,6 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		// Validate the state using the default validator
 		ethanNum := block.NumberU64()
 		fmt.Printf("blockNum = %d\n", ethanNum)
-		common.SetBlockNum(uint32(ethanNum))
 		database.DeleteStateDBProcNum(ethanNum)
 		err = bc.validator.ValidateState(block, parent, stateDB, receipts, usedGas)
 		if err != nil {

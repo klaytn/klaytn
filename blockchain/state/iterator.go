@@ -159,7 +159,7 @@ func (it *NodeIterator) step() error {
 			return errLH
 		}
 	} else {
-		serializer = serializerLH.Copy()
+		serializer = serializerLH.TransCopy()
 	}
 	obj := serializer.GetAccount()
 

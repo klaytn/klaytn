@@ -235,6 +235,9 @@ func traceTrie(ctx *cli.Context) error {
 	}
 	trieDB := sdb.Database().TrieDB()
 
+			reHash := statedb.NodeTrace(trieDB, root.LegacyToExtHash(), 0)
+			fmt.Printf("reHash = %x\n\n", reHash)
+			return nil
 	// Get root-node childrens to create goroutine by number of childrens
 	children, err := trieDB.NodeChildren(root.ToRootExtHash())
 	if err != nil {
@@ -270,7 +273,7 @@ func traceTrie(ctx *cli.Context) error {
 	return nil
 }
 
-func doTraceTrie(db state.Database, root common.ExtHash) (resultErr error) {
+/*func doTraceTrie(db state.Database, root common.ExtHash) (resultErr error) {
 	logger.Info("Trie Tracer Start", "Hash Root", root)
 	// Create and iterate a state trie rooted in a sub-node
 	oldState, err := state.New(root, db, nil)
@@ -304,7 +307,65 @@ func doTraceTrie(db state.Database, root common.ExtHash) (resultErr error) {
 	}
 	logger.Info("Trie Tracer Finished", "Root Hash", root, "AccNode", midAccountCnt, "AccLeaf", leafAccountCnt, "StrgNode", midStorageCnt, "StrgLeaf", leafStorageCnt, "Unknown", unknownCnt, "CodeAcc", codeCnt)
 	return nil
+}*/
+
+func doTraceTrie(db state.Database, root common.ExtHash) (resultErr error) {
+	logger.Info("Trie Tracer Start", "Hash Root", root)
+	// Create and iterate a state trie rooted in a sub-node
+	oldState, err := state.New(root, db, nil)
+	if err != nil {
+		logger.Error("can not open trie DB", err.Error())
+		panic(err)
+	}
+
+	oldIt := state.NewNodeIterator(oldState)
+
+	for oldIt.Next() {
+		switch oldIt.Type {
+		case "state":
+		case "storage":
+		case "code":
+		case "state_leaf":
+		case "storage_leaf":
+		}
+	}
+	if oldIt.Error != nil {
+		logger.Error("Error Finished", "Root Hash", root, "Message", oldIt.Error)
+	}
+	logger.Info("Trie Tracer Finished", "Root Hash", root, "AccNode", midAccountCnt, "AccLeaf", leafAccountCnt, "StrgNode", midStorageCnt, "StrgLeaf", leafStorageCnt, "Unknown", unknownCnt, "CodeAcc", codeCnt)
+	return nil
 }
+
+/*
+func recursiveLoop(oldIt *state.NodeIterator) (hash common.ExtHash) {
+	var children[17] common.ExtHash
+	childIdx := 0
+
+	nowHash := oldIt.Hash()
+	nowPHash := oldIt.Parent()
+	//blob := GetBlobByHash(nowHash)
+
+	for oldIt.Next() {
+		switch oldIt.Type {
+		case "state", "storage":
+			if oldIt.Parent() == nowHash {
+				children[childIdx] = recursiveLoop(oldIt)	
+				childIdx++
+			} else {
+				break
+			}
+		case "code":
+
+		case "state_leaf", "storage_leaf":
+		}
+	}
+
+}
+		a
+          1 2 3 4 5 6 7 8 9
+     11 12 13 14 15 
+     22
+*/
 
 func iterateTrie(ctx *cli.Context) error {
 	stack := MakeFullNode(ctx)
