@@ -341,7 +341,7 @@ web3._extend({
 		new web3._extend.Property({
 			name: 'chainConfig',
 			getter: 'governance_chainConfig',
-		}),	
+		}),
 		new web3._extend.Property({
 			name: 'nodeAddress',
 			getter: 'governance_nodeAddress',
@@ -508,22 +508,6 @@ web3._extend({
 	property: 'debug',
 	methods: [
 		new web3._extend.Method({
-			name: 'printBlock',
-			call: 'debug_printBlock',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'getBlockRlp',
-			call: 'debug_getBlockRlp',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'setHead',
-			call: 'debug_setHead',
-			params: 1,
-			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
-		}),
-		new web3._extend.Method({
 			name: 'dumpBlock',
 			call: 'debug_dumpBlock',
 			params: 1
@@ -532,6 +516,45 @@ web3._extend({
 			name: 'dumpStateTrie',
 			call: 'debug_dumpStateTrie',
 			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getBlockRlp',
+			call: 'debug_getBlockRlp',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getModifiedAccountsByNumber',
+			call: 'debug_getModifiedAccountsByNumber',
+			params: 2,
+			inputFormatter: [null, null],
+		}),
+		new web3._extend.Method({
+			name: 'getModifiedAccountsByHash',
+			call: 'debug_getModifiedAccountsByHash',
+			params: 2,
+			inputFormatter:[null, null],
+		}),
+		new web3._extend.Method({
+			name: 'getModifiedStorageNodesByNumber',
+			call: 'debug_getModifiedStorageNodesByNumber',
+			params: 4,
+			inputFormatter: [null, null, null, null],
+		}),
+		new web3._extend.Method({
+			name: 'getBadBlocks',
+			call: 'debug_getBadBlocks',
+			params: 0,
+		}),
+		new web3._extend.Method({
+			name: 'printBlock',
+			call: 'debug_printBlock',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'setHead',
+			call: 'debug_setHead',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'startWarmUp',
@@ -759,32 +782,9 @@ web3._extend({
 			inputFormatter: [null]
 		}),
 		new web3._extend.Method({
-			name: 'getBadBlocks',
-			call: 'debug_getBadBlocks',
-			params: 0,
-		}),
-		new web3._extend.Method({
 			name: 'storageRangeAt',
 			call: 'debug_storageRangeAt',
 			params: 5,
-		}),
-		new web3._extend.Method({
-			name: 'getModifiedAccountsByNumber',
-			call: 'debug_getModifiedAccountsByNumber',
-			params: 2,
-			inputFormatter: [null, null],
-		}),
-		new web3._extend.Method({
-			name: 'getModifiedAccountsByHash',
-			call: 'debug_getModifiedAccountsByHash',
-			params: 2,
-			inputFormatter:[null, null],
-		}),
-		new web3._extend.Method({
-			name: 'getModifiedStorageNodesByNumber',
-			call: 'debug_getModifiedStorageNodesByNumber',
-			params: 4,
-			inputFormatter: [null, null, null, null],
 		}),
 		new web3._extend.Method({
 			name: 'setVMLogTarget',
@@ -884,6 +884,24 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'getRewards',
 			call: 'klay_getRewards',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
+		}),
+		new web3._extend.Method({
+			name: 'getStakingInfo',
+			call: 'klay_getStakingInfo',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
+			name: 'govParamsAt',
+			call: 'klay_govParamsAt',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
+			name: 'chainConfigAt',
+			call: 'klay_chainConfigAt',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
 		}),
@@ -1023,6 +1041,10 @@ web3._extend({
 				return formatted;
 			}
 		}),
+		new web3._extend.Property({
+			name: 'nodeAddress',
+			getter: 'klay_nodeAddress',
+		}),
         new web3._extend.Property({
             name : 'rewardbase',
             getter: 'klay_rewardbase'
@@ -1046,6 +1068,10 @@ web3._extend({
 			name: 'maxPriorityFeePerGas',
 			getter: 'klay_maxPriorityFeePerGas',
 			outputFormatter: web3._extend.utils.toBigNumber
+		}),
+		new web3._extend.Property({
+			name: 'chainConfig',
+			getter: 'klay_chainConfig',
 		}),
 	]
 });

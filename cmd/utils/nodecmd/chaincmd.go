@@ -107,7 +107,7 @@ func initGenesis(ctx *cli.Context) error {
 	}
 
 	// Update undefined config with default values
-	genesis.Config.SetDefaults()
+	genesis.Config.SetDefaultsForGenesis()
 
 	// Validate config values
 	if err := ValidateGenesisConfig(genesis); err != nil {

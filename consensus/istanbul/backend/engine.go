@@ -407,6 +407,8 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 			} else {
 				if header.Governance, err = rlp.EncodeToBytes(data); err != nil {
 					logger.Error("Failed to encode governance data for the header", "num", number)
+				} else {
+					logger.Info("Put governanceData", "num", number, "data", hex.EncodeToString(header.Governance))
 				}
 			}
 		}
@@ -414,6 +416,9 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 
 	// if there is a vote to attach, attach it to the header
 	header.Vote = sb.governance.GetEncodedVote(sb.address, number)
+	if len(header.Vote) > 0 {
+		logger.Info("Put voteData", "num", number, "data", hex.EncodeToString(header.Vote))
+	}
 
 	// add validators (council list) in snapshot to extraData's validators section
 	extra, err := prepareExtra(header, snap.validators())
@@ -453,10 +458,20 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 	}
 
 	var rewardSpec *reward.RewardSpec
-	var err error
+
+	rules := chain.Config().Rules(header.Number)
+	pset, err := sb.governance.ParamsAt(header.Number.Uint64())
+	if err != nil {
+		return nil, err
+	}
+	rewardParamNum := reward.CalcRewardParamBlock(header.Number.Uint64(), pset.Epoch(), rules)
+	rewardParamSet, err := sb.governance.ParamsAt(rewardParamNum)
+	if err != nil {
+		return nil, err
+	}
 
 	// If sb.chain is nil, it means backend is not initialized yet.
-	if sb.chain != nil && !reward.IsRewardSimple(chain.Config()) {
+	if sb.chain != nil && !reward.IsRewardSimple(sb.governance.Params()) {
 		// TODO-Klaytn Let's redesign below logic and remove dependency between block reward and istanbul consensus.
 
 		lastHeader := chain.CurrentHeader()
@@ -479,9 +494,9 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 			logger.Trace(logMsg, "header.Number", header.Number.Uint64(), "node address", sb.address, "rewardbase", header.Rewardbase)
 		}
 
-		rewardSpec, err = reward.CalcDeferredReward(header, chain.Config())
+		rewardSpec, err = reward.CalcDeferredReward(header, rules, rewardParamSet)
 	} else {
-		rewardSpec, err = reward.CalcDeferredRewardSimple(header, chain.Config())
+		rewardSpec, err = reward.CalcDeferredRewardSimple(header, rules, rewardParamSet)
 	}
 
 	if err != nil {

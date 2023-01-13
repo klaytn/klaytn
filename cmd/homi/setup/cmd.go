@@ -363,7 +363,6 @@ func genCypressCommonGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.
 				Reward: &params.RewardConfig{
 					MintingAmount: mintingAmount,
 					Ratio:         "34/54/12",
-					Kip82Ratio:    "20/80",
 					UseGiniCoeff:  true,
 					DeferredTxFee: true,
 				},
@@ -455,7 +454,6 @@ func genBaobabCommonGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.G
 				Reward: &params.RewardConfig{
 					MintingAmount: mintingAmount,
 					Ratio:         "34/54/12",
-					Kip82Ratio:    "20/80",
 					UseGiniCoeff:  false,
 					DeferredTxFee: true,
 				},

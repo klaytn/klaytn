@@ -49,6 +49,7 @@ var GovernanceItems = map[int]check{
 	params.GoverningNode:             {addressT, checkAddress, nil},
 	params.GovParamContract:          {addressT, checkAddress, nil},
 	params.UnitPrice:                 {uint64T, checkUint64andBool, nil},
+	params.DeriveShaImpl:             {uint64T, checkUint64andBool, nil},
 	params.LowerBoundBaseFee:         {uint64T, checkUint64andBool, nil},
 	params.UpperBoundBaseFee:         {uint64T, checkUint64andBool, nil},
 	params.GasTarget:                 {uint64T, checkUint64andBool, nil},
@@ -522,6 +523,7 @@ func (gov *Governance) addNewVote(valset istanbul.ValidatorSet, votes []Governan
 				fallthrough
 			default:
 				if writable && blockNum > atomic.LoadUint64(&gov.lastGovernanceStateBlock) {
+					logger.Info("Reflecting parameter vote", "num", blockNum, "key", gVote.Key, "value", gVote.Value)
 					gov.ReflectVotes(*gVote)
 				}
 			}

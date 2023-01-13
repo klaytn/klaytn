@@ -18,6 +18,7 @@ package governance
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 	"strings"
 
@@ -63,6 +64,18 @@ var (
 	errInvalidUpperBound      = errors.New("upperboundbasefee cannot be set lower than lowerboundbasefee")
 )
 
+func (api *GovernanceKlayAPI) GetStakingInfo(num *rpc.BlockNumber) (*reward.StakingInfo, error) {
+	return getStakingInfo(api.governance, num)
+}
+
+func (api *GovernanceKlayAPI) GovParamsAt(num *rpc.BlockNumber) (map[string]interface{}, error) {
+	return itemsAt(api.governance, num)
+}
+
+func (api *GovernanceKlayAPI) NodeAddress() common.Address {
+	return api.governance.NodeAddress()
+}
+
 // GasPriceAt returns the base fee of the given block in peb,
 // or returns unit price by using governance if there is no base fee set in header,
 // or returns gas price of txpool if the block is pending block.
@@ -98,24 +111,39 @@ func (api *GovernanceKlayAPI) GasPriceAt(num *rpc.BlockNumber) (*hexutil.Big, er
 
 // or returns gas price of txpool if the block is pending block.
 func (api *GovernanceKlayAPI) GetRewards(num *rpc.BlockNumber) (*reward.RewardSpec, error) {
+	blockNumber := uint64(0)
 	if num == nil || *num == rpc.LatestBlockNumber {
-		header := api.chain.CurrentHeader()
-		config := api.chain.Config()
-		return reward.GetBlockReward(header, config)
+		blockNumber = api.governance.BlockChain().CurrentHeader().Number.Uint64()
+	} else {
+		blockNumber = uint64(num.Int64())
 	}
 
-	header := api.chain.GetHeaderByNumber(num.Uint64())
-	pset, err := api.governance.ParamsAt(num.Uint64())
+	header := api.chain.GetHeaderByNumber(blockNumber)
+	if header == nil {
+		return nil, fmt.Errorf("the block does not exist (block number: %d)", blockNumber)
+	}
+
+	rules := api.chain.Config().Rules(new(big.Int).SetUint64(blockNumber))
+	pset, err := api.governance.ParamsAt(blockNumber)
 	if err != nil {
 		return nil, err
 	}
-	config := pset.ToChainConfig()
-	config.IstanbulCompatibleBlock = api.chain.Config().IstanbulCompatibleBlock
-	config.LondonCompatibleBlock = api.chain.Config().LondonCompatibleBlock
-	config.EthTxTypeCompatibleBlock = api.chain.Config().EthTxTypeCompatibleBlock
-	config.MagmaCompatibleBlock = api.chain.Config().MagmaCompatibleBlock
-	config.KoreCompatibleBlock = api.chain.Config().KoreCompatibleBlock
-	return reward.GetBlockReward(header, config)
+	rewardParamNum := reward.CalcRewardParamBlock(header.Number.Uint64(), pset.Epoch(), rules)
+	rewardParamSet, err := api.governance.ParamsAt(rewardParamNum)
+	if err != nil {
+		return nil, err
+	}
+
+	return reward.GetBlockReward(header, rules, rewardParamSet)
+}
+
+func (api *GovernanceKlayAPI) ChainConfig() *params.ChainConfig {
+	num := rpc.LatestBlockNumber
+	return chainConfigAt(api.governance, &num)
+}
+
+func (api *GovernanceKlayAPI) ChainConfigAt(num *rpc.BlockNumber) *params.ChainConfig {
+	return chainConfigAt(api.governance, num)
 }
 
 // Vote injects a new vote for governance targets such as unitprice and governingnode.
@@ -184,14 +212,18 @@ func (api *PublicGovernanceAPI) TotalVotingPower() (float64, error) {
 }
 
 func (api *PublicGovernanceAPI) ItemsAt(num *rpc.BlockNumber) (map[string]interface{}, error) {
+	return itemsAt(api.governance, num)
+}
+
+func itemsAt(governance Engine, num *rpc.BlockNumber) (map[string]interface{}, error) {
 	blockNumber := uint64(0)
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
-		blockNumber = api.governance.BlockChain().CurrentHeader().Number.Uint64()
+		blockNumber = governance.BlockChain().CurrentHeader().Number.Uint64()
 	} else {
 		blockNumber = uint64(num.Int64())
 	}
 
-	pset, err := api.governance.ParamsAt(blockNumber)
+	pset, err := governance.ParamsAt(blockNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -199,9 +231,13 @@ func (api *PublicGovernanceAPI) ItemsAt(num *rpc.BlockNumber) (map[string]interf
 }
 
 func (api *PublicGovernanceAPI) GetStakingInfo(num *rpc.BlockNumber) (*reward.StakingInfo, error) {
+	return getStakingInfo(api.governance, num)
+}
+
+func getStakingInfo(governance Engine, num *rpc.BlockNumber) (*reward.StakingInfo, error) {
 	blockNumber := uint64(0)
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
-		blockNumber = api.governance.BlockChain().CurrentHeader().Number.Uint64()
+		blockNumber = governance.BlockChain().CurrentHeader().Number.Uint64()
 	} else {
 		blockNumber = uint64(num.Int64())
 	}
@@ -268,26 +304,36 @@ func (api *PublicGovernanceAPI) MyVotingPower() (float64, error) {
 
 func (api *PublicGovernanceAPI) ChainConfig() *params.ChainConfig {
 	num := rpc.LatestBlockNumber
-	return api.chainConfigAt(&num)
+	return chainConfigAt(api.governance, &num)
 }
 
 func (api *PublicGovernanceAPI) ChainConfigAt(num *rpc.BlockNumber) *params.ChainConfig {
-	return api.chainConfigAt(num)
+	return chainConfigAt(api.governance, num)
 }
 
-func (api *PublicGovernanceAPI) chainConfigAt(num *rpc.BlockNumber) *params.ChainConfig {
+func chainConfigAt(governance Engine, num *rpc.BlockNumber) *params.ChainConfig {
 	var blocknum uint64
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
-		blocknum = api.governance.BlockChain().CurrentHeader().Number.Uint64()
+		blocknum = governance.BlockChain().CurrentHeader().Number.Uint64()
 	} else {
 		blocknum = num.Uint64()
 	}
 
-	pset, err := api.governance.ParamsAt(blocknum)
+	pset, err := governance.ParamsAt(blocknum)
 	if err != nil {
 		return nil
 	}
-	return pset.ToChainConfig()
+
+	latestConfig := governance.BlockChain().Config()
+	config := pset.ToChainConfig()
+	config.ChainID = latestConfig.ChainID
+	config.IstanbulCompatibleBlock = latestConfig.IstanbulCompatibleBlock
+	config.LondonCompatibleBlock = latestConfig.LondonCompatibleBlock
+	config.EthTxTypeCompatibleBlock = latestConfig.EthTxTypeCompatibleBlock
+	config.MagmaCompatibleBlock = latestConfig.MagmaCompatibleBlock
+	config.KoreCompatibleBlock = latestConfig.KoreCompatibleBlock
+
+	return config
 }
 
 func (api *PublicGovernanceAPI) NodeAddress() common.Address {

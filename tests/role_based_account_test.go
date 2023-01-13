@@ -372,7 +372,7 @@ func TestAccountUpdateRoleBasedNil(t *testing.T) {
 		err = tx.SignWithKeys(signer, colin.Keys)
 		assert.Equal(t, nil, err)
 
-		receipt, _, err := applyTransaction(t, bcdata, tx)
+		receipt, err := applyTransaction(t, bcdata, tx)
 		assert.Equal(t, (*types.Receipt)(nil), receipt)
 		assert.Equal(t, kerrors.ErrAccountKeyNilUninitializable, err)
 	}
@@ -399,7 +399,7 @@ func TestAccountUpdateRoleBasedNil(t *testing.T) {
 		err = tx.SignWithKeys(signer, colin.Keys)
 		assert.Equal(t, nil, err)
 
-		receipt, _, err := applyTransaction(t, bcdata, tx)
+		receipt, err := applyTransaction(t, bcdata, tx)
 		assert.Equal(t, (*types.Receipt)(nil), receipt)
 		assert.Equal(t, kerrors.ErrAccountKeyNilUninitializable, err)
 	}
@@ -588,7 +588,7 @@ func TestAccountUpdateRoleBasedLegacy(t *testing.T) {
 		err = tx.SignWithKeys(signer, anon.Keys) // Sign with an invalid key
 		assert.Equal(t, nil, err)
 
-		receipt, _, err := applyTransaction(t, bcdata, tx)
+		receipt, err := applyTransaction(t, bcdata, tx)
 		assert.Equal(t, (*types.Receipt)(nil), receipt)
 		assert.Equal(t, types.ErrInvalidSigSender, err)
 	}
@@ -613,7 +613,7 @@ func TestAccountUpdateRoleBasedLegacy(t *testing.T) {
 		// invalid number of signatures
 		tx.SetSignature(types.TxSignatures{tx.RawSignatureValues()[0], tx.RawSignatureValues()[0]})
 
-		receipt, _, err := applyTransaction(t, bcdata, tx)
+		receipt, err := applyTransaction(t, bcdata, tx)
 		assert.Equal(t, (*types.Receipt)(nil), receipt)
 		assert.Equal(t, types.ErrInvalidSigSender, err)
 	}
@@ -713,7 +713,7 @@ func TestAccountUpdateRoleBasedWrongLength(t *testing.T) {
 		err = tx.SignWithKeys(signer, colin.Keys)
 		assert.Equal(t, nil, err)
 
-		receipt, _, err := applyTransaction(t, bcdata, tx)
+		receipt, err := applyTransaction(t, bcdata, tx)
 		assert.Equal(t, (*types.Receipt)(nil), receipt)
 		assert.Equal(t, kerrors.ErrLengthTooLong, err)
 	}
@@ -735,7 +735,7 @@ func TestAccountUpdateRoleBasedWrongLength(t *testing.T) {
 		err = tx.SignWithKeys(signer, colin.Keys)
 		assert.Equal(t, nil, err)
 
-		receipt, _, err := applyTransaction(t, bcdata, tx)
+		receipt, err := applyTransaction(t, bcdata, tx)
 		assert.Equal(t, (*types.Receipt)(nil), receipt)
 		assert.Equal(t, kerrors.ErrZeroLength, err)
 	}

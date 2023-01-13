@@ -62,7 +62,7 @@ func init() {
 		nodecmd.VersionCommand,
 
 		// See utils/nodecmd/dumpconfigcmd.go:
-		nodecmd.GetConsoleCommand(nodecmd.KcnNodeFlags(), nodecmd.CommonRPCFlags),
+		nodecmd.GetDumpConfigCommand(nodecmd.KcnNodeFlags(), nodecmd.CommonRPCFlags),
 
 		// See utils/nodecmd/db_migration.go:
 		nodecmd.MigrationCommand,

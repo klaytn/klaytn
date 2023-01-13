@@ -57,7 +57,7 @@ type rewardConfig struct {
 	// values calculated from block header
 	totalFee *big.Int
 
-	// values from ChainConfig
+	// values from GovParamSet
 	mintingAmount *big.Int
 	minimumStake  *big.Int
 	deferredTxFee bool
@@ -85,6 +85,19 @@ type RewardSpec struct {
 	Rewards  map[common.Address]*big.Int `json:"rewards"`  // mapping from reward recipient to amounts
 }
 
+func NewRewardSpec() *RewardSpec {
+	return &RewardSpec{
+		Minted:   big.NewInt(0),
+		TotalFee: big.NewInt(0),
+		BurntFee: big.NewInt(0),
+		Proposer: big.NewInt(0),
+		Stakers:  big.NewInt(0),
+		Kgf:      big.NewInt(0),
+		Kir:      big.NewInt(0),
+		Rewards:  make(map[common.Address]*big.Int),
+	}
+}
+
 // TODO: this is for legacy, will be removed
 type RewardDistributor struct{}
 
@@ -99,24 +112,15 @@ func DistributeBlockReward(b BalanceAdder, rewards map[common.Address]*big.Int) 
 	}
 }
 
-func NewRewardConfig(header *types.Header, config *params.ChainConfig) (*rewardConfig, error) {
-	if config.Governance == nil {
-		return nil, errors.New("no config.Governance")
-	}
-	if config.Governance.Reward == nil {
-		return nil, errors.New("no config.Governance.Reward")
-	}
-
-	rules := config.Rules(header.Number)
-
-	cnRatio, kgfRatio, kirRatio, totalRatio, err := parseRewardRatio(config.Governance.Reward.Ratio)
+func NewRewardConfig(header *types.Header, rules params.Rules, pset *params.GovParamSet) (*rewardConfig, error) {
+	cnRatio, kgfRatio, kirRatio, totalRatio, err := parseRewardRatio(pset.Ratio())
 	if err != nil {
 		return nil, err
 	}
 
 	var cnProposerRatio, cnStakingRatio, cnTotalRatio int64
 	if rules.IsKore {
-		cnProposerRatio, cnStakingRatio, cnTotalRatio, err = parseRewardKip82Ratio(config.Governance.Reward.Kip82Ratio)
+		cnProposerRatio, cnStakingRatio, cnTotalRatio, err = parseRewardKip82Ratio(pset.Kip82Ratio())
 		if err != nil {
 			return nil, err
 		}
@@ -127,12 +131,12 @@ func NewRewardConfig(header *types.Header, config *params.ChainConfig) (*rewardC
 		rules: rules,
 
 		// values calculated from block header
-		totalFee: GetTotalTxFee(header, config),
+		totalFee: GetTotalTxFee(header, rules, pset),
 
-		// values from ChainConfig
-		mintingAmount: new(big.Int).Set(config.Governance.Reward.MintingAmount),
-		minimumStake:  new(big.Int).Set(config.Governance.Reward.MinimumStake),
-		deferredTxFee: config.Governance.Reward.DeferredTxFee,
+		// values from GovParamSet
+		mintingAmount: new(big.Int).Set(pset.MintingAmountBig()),
+		minimumStake:  new(big.Int).Set(pset.MinimumStakeBig()),
+		deferredTxFee: pset.DeferredTxFee(),
 
 		// parsed ratio
 		cnRatio:    big.NewInt(cnRatio),
@@ -147,39 +151,43 @@ func NewRewardConfig(header *types.Header, config *params.ChainConfig) (*rewardC
 	}, nil
 }
 
-func GetTotalTxFee(header *types.Header, config *params.ChainConfig) *big.Int {
+func GetTotalTxFee(header *types.Header, rules params.Rules, pset *params.GovParamSet) *big.Int {
 	totalFee := new(big.Int).SetUint64(header.GasUsed)
-	if config.IsMagmaForkEnabled(header.Number) {
+	if rules.IsMagma {
 		totalFee = totalFee.Mul(totalFee, header.BaseFee)
 	} else {
-		totalFee = totalFee.Mul(totalFee, new(big.Int).SetUint64(config.UnitPrice))
+		totalFee = totalFee.Mul(totalFee, new(big.Int).SetUint64(pset.UnitPrice()))
 	}
 	return totalFee
 }
 
 // config.Istanbul must have been set
-func IsRewardSimple(config *params.ChainConfig) bool {
-	policy := config.Istanbul.ProposerPolicy
-	return policy != uint64(istanbul.WeightedRandom)
+func IsRewardSimple(pset *params.GovParamSet) bool {
+	return pset.Policy() != uint64(istanbul.WeightedRandom)
+}
+
+// CalcRewardParamBlock returns the block number with which governance parameters must be fetched
+// This mimics the legacy reward config cache before Kore
+func CalcRewardParamBlock(num, epoch uint64, rules params.Rules) uint64 {
+	if !rules.IsKore && num%epoch == 0 {
+		return num - epoch
+	}
+	return num
 }
 
 // GetBlockReward returns the actual reward amounts paid in this block
 // Used in klay_getReward RPC API
-func GetBlockReward(header *types.Header, config *params.ChainConfig) (*RewardSpec, error) {
+func GetBlockReward(header *types.Header, rules params.Rules, pset *params.GovParamSet) (*RewardSpec, error) {
 	var spec *RewardSpec
 	var err error
 
-	if config.Istanbul == nil {
-		return nil, errors.New("no IstanbulConfig")
-	}
-
-	if IsRewardSimple(config) {
-		spec, err = CalcDeferredRewardSimple(header, config)
+	if IsRewardSimple(pset) {
+		spec, err = CalcDeferredRewardSimple(header, rules, pset)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		spec, err = CalcDeferredReward(header, config)
+		spec, err = CalcDeferredReward(header, rules, pset)
 		if err != nil {
 			return nil, err
 		}
@@ -188,8 +196,8 @@ func GetBlockReward(header *types.Header, config *params.ChainConfig) (*RewardSp
 	// Compensate the difference between CalcDeferredReward() and actual payment.
 	// If not DeferredTxFee, CalcDeferredReward() assumes 0 total_fee, but
 	// some non-zero fee already has been paid to the proposer.
-	if !config.Governance.Reward.DeferredTxFee {
-		blockFee := GetTotalTxFee(header, config)
+	if !pset.DeferredTxFee() {
+		blockFee := GetTotalTxFee(header, rules, pset)
 		spec.Proposer = spec.Proposer.Add(spec.Proposer, spec.TotalFee)
 		spec.TotalFee = spec.TotalFee.Add(spec.TotalFee, blockFee)
 		incrementRewardsMap(spec.Rewards, header.Rewardbase, blockFee)
@@ -203,8 +211,8 @@ func GetBlockReward(header *types.Header, config *params.ChainConfig) (*RewardSp
 // MintKLAY has been superseded because we need to split reward distribution
 // logic into (1) calculation, and (2) actual distribution.
 // CalcDeferredRewardSimple does the former and DistributeBlockReward does the latter
-func CalcDeferredRewardSimple(header *types.Header, config *params.ChainConfig) (*RewardSpec, error) {
-	rc, err := NewRewardConfig(header, config)
+func CalcDeferredRewardSimple(header *types.Header, rules params.Rules, pset *params.GovParamSet) (*RewardSpec, error) {
+	rc, err := NewRewardConfig(header, rules, pset)
 	if err != nil {
 		return nil, err
 	}
@@ -224,13 +232,13 @@ func CalcDeferredRewardSimple(header *types.Header, config *params.ChainConfig) 
 		proposer := new(big.Int).Set(minted)
 		logger.Debug("CalcDeferredRewardSimple after Kore when deferredTxFee=false returns",
 			"proposer", proposer)
-		return &RewardSpec{
-			Minted:   minted,
-			TotalFee: big.NewInt(0),
-			BurntFee: big.NewInt(0),
-			Proposer: proposer,
-			Rewards:  map[common.Address]*big.Int{header.Rewardbase: proposer},
-		}, nil
+		spec := NewRewardSpec()
+		spec.Minted = minted
+		spec.TotalFee = big.NewInt(0)
+		spec.BurntFee = big.NewInt(0)
+		spec.Proposer = proposer
+		spec.Rewards[header.Rewardbase] = proposer
+		return spec, nil
 	}
 
 	totalFee := rc.totalFee
@@ -251,23 +259,23 @@ func CalcDeferredRewardSimple(header *types.Header, config *params.ChainConfig) 
 		"burntFee", burntFee.Uint64(),
 	)
 
-	return &RewardSpec{
-		Minted:   minted,
-		TotalFee: totalFee,
-		BurntFee: burntFee,
-		Proposer: proposer,
-		Rewards:  map[common.Address]*big.Int{header.Rewardbase: proposer},
-	}, nil
+	spec := NewRewardSpec()
+	spec.Minted = minted
+	spec.TotalFee = totalFee
+	spec.BurntFee = burntFee
+	spec.Proposer = proposer
+	spec.Rewards[header.Rewardbase] = proposer
+	return spec, nil
 }
 
 // CalcDeferredReward calculates the deferred rewards,
 // which are determined at the end of block processing.
-func CalcDeferredReward(header *types.Header, config *params.ChainConfig) (*RewardSpec, error) {
+func CalcDeferredReward(header *types.Header, rules params.Rules, pset *params.GovParamSet) (*RewardSpec, error) {
 	defer func(start time.Time) {
 		CalcDeferredRewardTimer = time.Since(start)
 	}(time.Now())
 
-	rc, err := NewRewardConfig(header, config)
+	rc, err := NewRewardConfig(header, rules, pset)
 	if err != nil {
 		return nil, err
 	}
@@ -298,17 +306,15 @@ func CalcDeferredReward(header *types.Header, config *params.ChainConfig) (*Rewa
 		kir = big.NewInt(0)
 	}
 
-	spec := &RewardSpec{
-		Minted:   minted,
-		TotalFee: totalFee,
-		BurntFee: burntFee,
-		Proposer: proposer,
-		Stakers:  stakers,
-		Kgf:      kgf,
-		Kir:      kir,
-	}
+	spec := NewRewardSpec()
+	spec.Minted = minted
+	spec.TotalFee = totalFee
+	spec.BurntFee = burntFee
+	spec.Proposer = proposer
+	spec.Stakers = stakers
+	spec.Kgf = kgf
+	spec.Kir = kir
 
-	spec.Rewards = make(map[common.Address]*big.Int)
 	incrementRewardsMap(spec.Rewards, header.Rewardbase, proposer)
 
 	if stakingInfo != nil && !common.EmptyAddress(stakingInfo.PoCAddr) {

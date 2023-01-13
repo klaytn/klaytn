@@ -24,6 +24,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts"
@@ -333,6 +334,10 @@ func (b *CNAPIBackend) IsSenderTxHashIndexingEnabled() bool {
 
 func (b *CNAPIBackend) RPCGasCap() *big.Int {
 	return b.cn.config.RPCGasCap
+}
+
+func (b *CNAPIBackend) RPCEVMTimeout() time.Duration {
+	return b.cn.config.RPCEVMTimeout
 }
 
 func (b *CNAPIBackend) RPCTxFeeCap() float64 {

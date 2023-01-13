@@ -54,6 +54,7 @@ var (
 		"istanbul.policy":                 params.Policy,
 		"istanbul.committeesize":          params.CommitteeSize,
 		"governance.unitprice":            params.UnitPrice,
+		"governance.deriveshaimpl":        params.DeriveShaImpl,
 		"kip71.lowerboundbasefee":         params.LowerBoundBaseFee,
 		"kip71.gastarget":                 params.GasTarget,
 		"kip71.maxblockgasusedforbasefee": params.MaxBlockGasUsedForBaseFee,
@@ -88,6 +89,7 @@ var (
 		params.Policy:                    "istanbul.policy",
 		params.CommitteeSize:             "istanbul.committeesize",
 		params.UnitPrice:                 "governance.unitprice",
+		params.DeriveShaImpl:             "governance.deriveshaimpl",
 		params.LowerBoundBaseFee:         "kip71.lowerboundbasefee",
 		params.UpperBoundBaseFee:         "kip71.upperboundbasefee",
 		params.GasTarget:                 "kip71.gastarget",
@@ -175,6 +177,7 @@ type txPool interface {
 }
 
 type Governance struct {
+	ChainConfig *params.ChainConfig // Only exists to keep DB backward compatibility in WriteGovernanceState()
 	// Map used to keep multiple types of votes
 	voteMap VoteMap
 
@@ -415,8 +418,9 @@ func (gs *GovernanceSet) Merge(change map[string]interface{}) {
 }
 
 // NewGovernance creates Governance with the given configuration.
-func NewGovernance(dbm database.DBManager) *Governance {
+func NewGovernance(chainConfig *params.ChainConfig, dbm database.DBManager) *Governance {
 	return &Governance{
+		ChainConfig:              chainConfig,
 		voteMap:                  NewVoteMap(),
 		db:                       dbm,
 		itemCache:                newGovernanceCache(),
@@ -434,7 +438,7 @@ func NewGovernance(dbm database.DBManager) *Governance {
 // NewGovernanceInitialize creates Governance with the given configuration and read governance state from DB.
 // If any items are not stored in DB, it stores governance items of the genesis block to DB.
 func NewGovernanceInitialize(chainConfig *params.ChainConfig, dbm database.DBManager) *Governance {
-	ret := NewGovernance(dbm)
+	ret := NewGovernance(chainConfig, dbm)
 	// nil is for testing or simple function usage
 	if dbm != nil {
 		ret.ReadGovernanceState()
@@ -584,7 +588,7 @@ func (g *Governance) ParseVoteValue(gVote *GovernanceVote) (*GovernanceVote, err
 		} else {
 			return nil, ErrValueTypeMismatch
 		}
-	case params.Epoch, params.CommitteeSize, params.UnitPrice, params.StakeUpdateInterval,
+	case params.Epoch, params.CommitteeSize, params.UnitPrice, params.DeriveShaImpl, params.StakeUpdateInterval,
 		params.ProposerRefreshInterval, params.ConstTxGasHumanReadable, params.Policy, params.Timeout,
 		params.LowerBoundBaseFee, params.UpperBoundBaseFee, params.GasTarget, params.MaxBlockGasUsedForBaseFee, params.BaseFeeDenominator:
 		v, ok := gVote.Value.([]uint8)
@@ -624,7 +628,7 @@ func (gov *Governance) updateChangeSet(vote GovernanceVote) bool {
 		gov.changeSet.SetValue(GovernanceKeyMap[vote.Key], vote.Value.(string))
 		return true
 	case params.Epoch, params.StakeUpdateInterval, params.ProposerRefreshInterval, params.CommitteeSize,
-		params.UnitPrice, params.ConstTxGasHumanReadable, params.Policy, params.Timeout,
+		params.UnitPrice, params.DeriveShaImpl, params.ConstTxGasHumanReadable, params.Policy, params.Timeout,
 		params.LowerBoundBaseFee, params.UpperBoundBaseFee, params.GasTarget, params.MaxBlockGasUsedForBaseFee, params.BaseFeeDenominator:
 		gov.changeSet.SetValue(GovernanceKeyMap[vote.Key], vote.Value.(uint64))
 		return true
@@ -994,6 +998,7 @@ type governanceJSON struct {
 func (gov *Governance) toJSON(num uint64) ([]byte, error) {
 	ret := &governanceJSON{
 		BlockNumber:     num,
+		ChainConfig:     gov.ChainConfig,
 		VoteMap:         gov.voteMap.Copy(),
 		NodeAddress:     gov.nodeAddress.Load().(common.Address),
 		GovernanceVotes: gov.GovernanceVotes.Copy(),
@@ -1010,6 +1015,7 @@ func (gov *Governance) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &j); err != nil {
 		return err
 	}
+	// gov.ChainConfig is to be updated in MixedEngine. Do not overwrite it here.
 	gov.voteMap.Import(j.VoteMap)
 	gov.nodeAddress.Store(j.NodeAddress)
 	gov.GovernanceVotes.Import(j.GovernanceVotes)
@@ -1072,9 +1078,21 @@ func (gov *Governance) GetTxPool() txPool {
 	return gov.TxPool
 }
 
+// GetGovernanceItemsFromChainConfig returns governance set
+// that is effective at the genesis block
 func GetGovernanceItemsFromChainConfig(config *params.ChainConfig) GovernanceSet {
-	g := NewGovernanceSet()
+	govSet := NewGovernanceSet()
 
+	// append to the return value `govSet`
+	appendGovSet := func(govmap map[int]interface{}) {
+		for k, v := range govmap {
+			if err := govSet.SetValue(k, v); err != nil {
+				writeFailLog(k, err)
+			}
+		}
+	}
+
+	// original cypress params
 	if config.Governance != nil {
 		governance := config.Governance
 		governanceMap := map[int]interface{}{
@@ -1089,12 +1107,7 @@ func GetGovernanceItemsFromChainConfig(config *params.ChainConfig) GovernanceSet
 			params.StakeUpdateInterval:     governance.Reward.StakingUpdateInterval,
 			params.ProposerRefreshInterval: governance.Reward.ProposerUpdateInterval,
 		}
-
-		for k, v := range governanceMap {
-			if err := g.SetValue(k, v); err != nil {
-				writeFailLog(k, err)
-			}
-		}
+		appendGovSet(governanceMap)
 	}
 
 	if config.Istanbul != nil {
@@ -1104,14 +1117,40 @@ func GetGovernanceItemsFromChainConfig(config *params.ChainConfig) GovernanceSet
 			params.Policy:        istanbul.ProposerPolicy,
 			params.CommitteeSize: istanbul.SubGroupSize,
 		}
-
-		for k, v := range istanbulMap {
-			if err := g.SetValue(k, v); err != nil {
-				writeFailLog(k, err)
-			}
-		}
+		appendGovSet(istanbulMap)
 	}
-	return g
+
+	// magma params
+	if config.IsMagmaForkEnabled(common.Big0) &&
+		config.Governance.KIP71 != nil {
+		kip71 := config.Governance.KIP71
+		governanceMap := map[int]interface{}{
+			params.LowerBoundBaseFee:         kip71.LowerBoundBaseFee,
+			params.UpperBoundBaseFee:         kip71.UpperBoundBaseFee,
+			params.GasTarget:                 kip71.GasTarget,
+			params.MaxBlockGasUsedForBaseFee: kip71.MaxBlockGasUsedForBaseFee,
+			params.BaseFeeDenominator:        kip71.BaseFeeDenominator,
+		}
+		appendGovSet(governanceMap)
+	}
+
+	// kore params
+	if config.IsKoreForkEnabled(common.Big0) &&
+		config.Governance != nil {
+		governanceMap := map[int]interface{}{
+			params.DeriveShaImpl: uint64(config.DeriveShaImpl), // checkValueType expects uint64
+		}
+		if !common.EmptyAddress(config.Governance.GovParamContract) {
+			governanceMap[params.GovParamContract] = config.Governance.GovParamContract
+		}
+		if config.Governance.Reward != nil &&
+			config.Governance.Reward.Kip82Ratio != "" {
+			governanceMap[params.Kip82Ratio] = config.Governance.Reward.Kip82Ratio
+		}
+		appendGovSet(governanceMap)
+	}
+
+	return govSet
 }
 
 func writeFailLog(key int, err error) {
@@ -1205,7 +1244,7 @@ func (gov *Governance) ParamsAt(num uint64) (*params.GovParamSet, error) {
 		logger.Error("NewGovParamSetStrMap failed", "num", num, "err", err)
 		return nil, err
 	}
-	return params.NewGovParamSetMerged(gov.initialParams, pset), nil
+	return pset, nil
 }
 
 func (gov *Governance) UpdateParams() error {
@@ -1215,6 +1254,6 @@ func (gov *Governance) UpdateParams() error {
 		return err
 	}
 
-	gov.currentParams = params.NewGovParamSetMerged(gov.initialParams, pset)
+	gov.currentParams = pset
 	return nil
 }

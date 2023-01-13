@@ -86,6 +86,10 @@ func TestGovernance_Engines(t *testing.T) {
 	go func() {
 		deployGovParamTx_constructor(t, node, owner, chainId)
 
+		// Give some time for txpool to recognize the contract, because otherwise
+		// the txpool may reject the setParam tx with 'not a program account'
+		time.Sleep(2 * time.Second)
+
 		deployGovParamTx_setParamIn(t, node, owner, chainId, contractAddr, paramName, paramBytes)
 
 		node.Governance().AddVote("governance.govparamcontract", contractAddr)

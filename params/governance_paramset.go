@@ -240,6 +240,7 @@ var govParamTypes = map[int]*govParamType{
 	MaxBlockGasUsedForBaseFee: govParamTypeUint64,
 	BaseFeeDenominator:        govParamTypeUint64,
 	GovParamContract:          govParamTypeAddress,
+	DeriveShaImpl:             govParamTypeUint64,
 }
 
 var govParamNames = map[string]int{
@@ -263,6 +264,7 @@ var govParamNames = map[string]int{
 	"kip71.gastarget":                 GasTarget,
 	"kip71.maxblockgasusedforbasefee": MaxBlockGasUsedForBaseFee,
 	"kip71.basefeedenominator":        BaseFeeDenominator,
+	"governance.deriveshaimpl":        DeriveShaImpl,
 }
 
 var govParamNamesReverse = map[int]string{}
@@ -354,6 +356,7 @@ func NewGovParamSetChainConfig(config *ChainConfig) (*GovParamSet, error) {
 		items[CommitteeSize] = config.Istanbul.SubGroupSize
 	}
 	items[UnitPrice] = config.UnitPrice
+	items[DeriveShaImpl] = config.DeriveShaImpl
 	if config.Governance != nil {
 		items[GoverningNode] = config.Governance.GoverningNode
 		items[GovernanceMode] = config.Governance.GovernanceMode
@@ -524,6 +527,9 @@ func (p *GovParamSet) ToGovernanceConfig() *GovernanceConfig {
 	if _, ok := p.Get(GovernanceMode); ok {
 		ret.GovernanceMode = p.GovernanceModeStr()
 	}
+	if _, ok := p.Get(GovParamContract); ok {
+		ret.GovParamContract = p.GovParamContract()
+	}
 	ret.Reward = p.ToRewardConfig()
 	ret.KIP71 = p.ToKIP71Config()
 
@@ -534,6 +540,9 @@ func (p *GovParamSet) ToChainConfig() *ChainConfig {
 	var ret ChainConfig
 	if _, ok := p.Get(UnitPrice); ok {
 		ret.UnitPrice = p.UnitPrice()
+	}
+	if _, ok := p.Get(DeriveShaImpl); ok {
+		ret.DeriveShaImpl = p.DeriveShaImpl()
 	}
 	ret.Istanbul = p.ToIstanbulConfig()
 	ret.Governance = p.ToGovernanceConfig()
@@ -639,4 +648,8 @@ func (p *GovParamSet) MaxBlockGasUsedForBaseFee() uint64 {
 
 func (p *GovParamSet) BaseFeeDenominator() uint64 {
 	return p.MustGet(BaseFeeDenominator).(uint64)
+}
+
+func (p *GovParamSet) DeriveShaImpl() int {
+	return int(p.MustGet(DeriveShaImpl).(uint64))
 }

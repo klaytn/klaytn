@@ -63,6 +63,7 @@ type (
 
 type (
 	minimumStake           *big.Int
+	mintingAmount          *big.Int
 	stakingUpdateInterval  uint64
 	proposerUpdateInterval uint64
 	proposerPolicy         uint64
@@ -147,6 +148,8 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 			genesis.Config.Governance.Reward.StakingUpdateInterval = uint64(v)
 		case proposerUpdateInterval:
 			genesis.Config.Governance.Reward.ProposerUpdateInterval = uint64(v)
+		case mintingAmount:
+			genesis.Config.Governance.Reward.MintingAmount = v
 		case governanceMode:
 			genesis.Config.Governance.GovernanceMode = string(v)
 		case *ecdsa.PrivateKey:
@@ -653,6 +656,86 @@ func TestWriteCommittedSeals(t *testing.T) {
 	err = writeCommittedSeals(h, [][]byte{unexpectedCommittedSeal})
 	if err != errInvalidCommittedSeals {
 		t.Errorf("error mismatch: have %v, want %v", err, errInvalidCommittedSeals)
+	}
+}
+
+func TestRewardDistribution(t *testing.T) {
+	type vote = map[string]interface{}
+	type expected = map[int]uint64
+	type testcase struct {
+		length   int // total number of blocks to simulate
+		votes    map[int]vote
+		expected expected
+	}
+
+	mintAmount := uint64(1)
+	koreBlock := uint64(9)
+	testEpoch := 3
+
+	testcases := []testcase{
+		{
+			12,
+			map[int]vote{
+				1: {"reward.mintingamount": "2"}, // activated at block 7 (activation is before-Kore)
+				4: {"reward.mintingamount": "3"}, // activated at block 9 (activation is after-Kore)
+			},
+			map[int]uint64{
+				1:  1,
+				2:  2,
+				3:  3,
+				4:  4,
+				5:  5,
+				6:  6,
+				7:  8, // 2 is minted from now
+				8:  10,
+				9:  13, // 3 is minted from now
+				10: 16,
+				11: 19,
+				12: 22,
+				13: 25,
+			},
+		},
+	}
+
+	var configItems []interface{}
+	configItems = append(configItems, epoch(testEpoch))
+	configItems = append(configItems, mintingAmount(new(big.Int).SetUint64(mintAmount)))
+	configItems = append(configItems, istanbulCompatibleBlock(new(big.Int).SetUint64(0)))
+	configItems = append(configItems, LondonCompatibleBlock(new(big.Int).SetUint64(0)))
+	configItems = append(configItems, EthTxTypeCompatibleBlock(new(big.Int).SetUint64(0)))
+	configItems = append(configItems, magmaCompatibleBlock(new(big.Int).SetUint64(0)))
+	configItems = append(configItems, koreCompatibleBlock(new(big.Int).SetUint64(koreBlock)))
+	configItems = append(configItems, blockPeriod(0)) // set block period to 0 to prevent creating future block
+
+	chain, engine := newBlockChain(1, configItems...)
+	assert.Equal(t, uint64(testEpoch), engine.governance.Params().Epoch())
+	assert.Equal(t, mintAmount, engine.governance.Params().MintingAmountBig().Uint64())
+
+	var previousBlock, currentBlock *types.Block = nil, chain.Genesis()
+
+	for _, tc := range testcases {
+		// Place a vote if a vote is scheduled in upcoming block
+		// Note that we're building (head+1)'th block here.
+		for num := 0; num <= tc.length; num++ {
+			for k, v := range tc.votes[num+1] {
+				ok := engine.governance.AddVote(k, v)
+				assert.True(t, ok)
+			}
+
+			// Create a block
+			previousBlock = currentBlock
+			currentBlock = makeBlockWithSeal(chain, engine, previousBlock)
+			_, err := chain.InsertChain(types.Blocks{currentBlock})
+			assert.NoError(t, err)
+
+			// check balance
+			addr := currentBlock.Rewardbase()
+			state, err := chain.State()
+			assert.NoError(t, err)
+			bal := state.GetBalance(addr)
+
+			assert.Equal(t, tc.expected[num+1], bal.Uint64(), "wrong at block %d", num+1)
+		}
 	}
 }
 
@@ -1327,6 +1410,7 @@ func TestGovernance_Votes(t *testing.T) {
 				{"reward.useginicoeff", true},             // voted on block 6
 				{"reward.minimumstake", "5000000"},        // voted on block 7
 				{"reward.kip82ratio", "50/50"},            // voted on block 8
+				{"governance.deriveshaimpl", uint64(2)},   // voted on block 9
 			},
 			expected: []governanceItem{
 				{vote{"governance.governancemode", "none"}, 6},
@@ -1337,6 +1421,7 @@ func TestGovernance_Votes(t *testing.T) {
 				{vote{"reward.useginicoeff", true}, 12},
 				{vote{"reward.minimumstake", "5000000"}, 12},
 				{vote{"reward.kip82ratio", "50/50"}, 12},
+				{vote{"governance.deriveshaimpl", uint64(2)}, 15},
 				// check governance items on current block
 				{vote{"governance.governancemode", "none"}, 0},
 				{vote{"istanbul.committeesize", uint64(4)}, 0},
@@ -1346,6 +1431,7 @@ func TestGovernance_Votes(t *testing.T) {
 				{vote{"reward.useginicoeff", true}, 0},
 				{vote{"reward.minimumstake", "5000000"}, 0},
 				{vote{"reward.kip82ratio", "50/50"}, 0},
+				{vote{"governance.deriveshaimpl", uint64(2)}, 0},
 			},
 		},
 		{

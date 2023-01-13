@@ -64,6 +64,7 @@ const (
 	BaseFeeDenominator
 	GovParamContract
 	Kip82Ratio
+	DeriveShaImpl
 )
 
 const (
@@ -104,6 +105,7 @@ var (
 	DefaultStakeUpdateInterval       = uint64(86400) // 1 day
 	DefaultProposerRefreshInterval   = uint64(3600)  // 1 hour
 	DefaultPeriod                    = uint64(1)
+	DefaultDeriveShaImpl             = uint64(0) // Orig
 )
 
 func IsStakingUpdateInterval(blockNum uint64) bool {

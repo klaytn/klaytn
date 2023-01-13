@@ -38,8 +38,13 @@ const (
 )
 
 var (
-	// EmptyRootHash is a transaction/receipt root hash when there is no transaction.
+	// EmptyRootHashOriginal is the empty root hash of a state trie,
+	// which is equal to EmptyRootHash with ImplDeriveShaOriginal.
+	EmptyRootHashOriginal = common.HexToHash("0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
+
 	// DeriveSha and EmptyRootHash are populated by derivesha.InitDeriveSha().
+	// DeriveSha is used to calculate TransactionsRoot and ReceiptsRoot.
+	// EmptyRootHash is a transaction/receipt root hash when there is no transaction.
 	DeriveSha     func(list DerivableList, num *big.Int) common.Hash = DeriveShaNone
 	EmptyRootHash func(num *big.Int) common.Hash                     = EmptyRootHashNone
 )

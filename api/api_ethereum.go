@@ -397,12 +397,12 @@ type EthStorageResult struct {
 // GetProof returns the Merkle-proof for a given account and optionally some storage keys.
 // This feature is not supported in Klaytn yet. It just returns account information from state trie.
 func (api *EthereumAPI) GetProof(ctx context.Context, address common.Address, storageKeys []string, blockNrOrHash rpc.BlockNumberOrHash) (*EthAccountResult, error) {
-	state, header, err := api.publicKlayAPI.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
+	state, _, err := api.publicKlayAPI.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if state == nil || err != nil {
 		return nil, err
 	}
 	storageTrie := state.StorageTrie(address)
-	storageHash := types.EmptyRootHash(header.Number)
+	storageHash := types.EmptyRootHashOriginal
 	codeHash := state.GetCodeHash(address)
 	storageProof := make([]EthStorageResult, len(storageKeys))
 
@@ -611,7 +611,7 @@ func (api *EthereumAPI) Call(ctx context.Context, args EthTransactionArgs, block
 	if rpcGasCap := bcAPI.RPCGasCap(); rpcGasCap != nil {
 		gasCap = rpcGasCap.Uint64()
 	}
-	result, _, status, err := EthDoCall(ctx, bcAPI, args, blockNrOrHash, overrides, localTxExecutionTime, gasCap)
+	result, _, status, err := EthDoCall(ctx, bcAPI, args, blockNrOrHash, overrides, bcAPI.RPCEVMTimeout(), gasCap)
 	if err != nil {
 		return nil, err
 	}
