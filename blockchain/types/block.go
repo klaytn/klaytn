@@ -121,13 +121,13 @@ func (h *Header) HashNoNonce() common.Hash {
 // Size returns the approximate memory used by all internal contents. It is used
 // to approximate and limit the memory consumption of various caches.
 func (h *Header) Size() common.StorageSize {
-	fixedSize := common.StorageSize(reflect.TypeOf(Header{}).Size())
+	constantSize := common.StorageSize(reflect.TypeOf(Header{}).Size())
 	byteSize := common.StorageSize(len(h.Extra) + len(h.Governance) + len(h.Vote))
 	bigIntBits := common.StorageSize((h.BlockScore.BitLen() + h.Number.BitLen() + h.Time.BitLen()) / 8)
 	if h.BaseFee != nil {
-		return fixedSize + byteSize + bigIntBits + common.StorageSize(h.BaseFee.BitLen())
+		return constantSize + byteSize + bigIntBits + common.StorageSize(h.BaseFee.BitLen())
 	} else {
-		return fixedSize + byteSize + bigIntBits
+		return constantSize + byteSize + bigIntBits
 	}
 }
 
