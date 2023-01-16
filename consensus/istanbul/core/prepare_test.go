@@ -167,5 +167,6 @@ func TestSubjectCmp(t *testing.T) {
 		} else {
 			assert.Equal(t, e, false)
 		}
+		assert.Equal(t, e, reflect.DeepEqual(s1, s2))
 	}
 }

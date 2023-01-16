@@ -155,8 +155,7 @@ func (b *Subject) DecodeRLP(s *rlp.Stream) error {
 func (a *Subject) Equal(b *Subject) bool {
 	return a.Digest == b.Digest &&
 		a.PrevHash == b.PrevHash &&
-		a.View.Round.Cmp(b.View.Round) == 0 &&
-		a.View.Sequence.Cmp(b.View.Sequence) == 0
+		a.View.Cmp(b.View) == 0
 }
 
 func (b *Subject) String() string {
