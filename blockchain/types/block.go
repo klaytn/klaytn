@@ -125,7 +125,7 @@ func (h *Header) Size() common.StorageSize {
 	byteSize := common.StorageSize(len(h.Extra) + len(h.Governance) + len(h.Vote))
 	bigIntBits := common.StorageSize((h.BlockScore.BitLen() + h.Number.BitLen() + h.Time.BitLen()) / 8)
 	if h.BaseFee != nil {
-		return constantSize + byteSize + bigIntBits + common.StorageSize(h.BaseFee.BitLen())
+		return constantSize + byteSize + bigIntBits + common.StorageSize(h.BaseFee.BitLen()/8)
 	} else {
 		return constantSize + byteSize + bigIntBits
 	}
