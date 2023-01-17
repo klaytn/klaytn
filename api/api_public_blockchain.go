@@ -517,7 +517,7 @@ func FormatLogs(timeout time.Duration, logs []vm.StructLog) ([]StructLogRes, err
 	formatted := make([]StructLogRes, len(logs))
 	for index, trace := range logs {
 		if logTimeout {
-			return nil, fmt.Errorf("[Trace logger] Log truncated by timeout")
+			return nil, fmt.Errorf("trace logger timeout")
 		}
 		formatted[index] = StructLogRes{
 			Pc:      trace.Pc,
