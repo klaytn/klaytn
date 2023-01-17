@@ -186,7 +186,7 @@ func (cn *CN) stateAtTransaction(block *types.Block, txIndex int, reexec uint64)
 		}
 		// Not yet the searched for transaction, execute on top of the current state
 		vmenv := vm.NewEVM(context, statedb, cn.blockchain.Config(), &vm.Config{UseOpcodeComputationCost: true})
-		if _, _, kerr := blockchain.ApplyMessage(vmenv, msg); kerr.ErrTxInvalid != nil {
+		if _, err := blockchain.ApplyMessage(vmenv, msg); err != nil {
 			return nil, vm.Context{}, nil, fmt.Errorf("transaction %#x failed: %v", tx.Hash(), err)
 		}
 		// Ensure any modifications are committed to the state

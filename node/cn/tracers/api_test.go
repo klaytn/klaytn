@@ -171,8 +171,8 @@ func (b *testBackend) StateAtTransaction(ctx context.Context, block *types.Block
 			return msg, context, statedb, nil
 		}
 		vmenv := vm.NewEVM(context, statedb, b.chainConfig, &vm.Config{Debug: true, EnableInternalTxTracing: true})
-		if _, _, kerr := blockchain.ApplyMessage(vmenv, msg); kerr.ErrTxInvalid != nil {
-			return nil, vm.Context{}, nil, fmt.Errorf("transaction %#x failed: %v", tx.Hash(), kerr.ErrTxInvalid)
+		if _, err := blockchain.ApplyMessage(vmenv, msg); err != nil {
+			return nil, vm.Context{}, nil, fmt.Errorf("transaction %#x failed: %v", tx.Hash(), err)
 		}
 		statedb.Finalise(true, true)
 	}

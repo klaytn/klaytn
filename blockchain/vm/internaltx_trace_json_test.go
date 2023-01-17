@@ -26,6 +26,7 @@ package vm
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"reflect"
 	"testing"
 	"time"
@@ -79,7 +80,7 @@ func TestInternalTxTrace_MarshalJSON(t *testing.T) {
 				Gas:     2971112,
 				GasUsed: 195,
 				Input:   "0x73b40a5c000000000000000000000000400de2e016bda6577407dfc379faba9899bc73ef0000000000000000000000002cc31912b2b0f3075a87b3640923d45a26cef3ee000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000064d79d8e6c7265636f76657279416464726573730000000000000000000000000000000000000000000000000000000000383e3ec32dc0f66d8fe60dbdc2f6815bdf73a988383e3ec32dc0f66d8fe60dbdc2f6815bdf73a98800000000000000000000000000000000000000000000000000000000000000000000000000000000",
-				Error:   errExecutionReverted,
+				Error:   errors.New("execution reverted"),
 				Reverted: &RevertedInfo{
 					Contract: genAddressPtr("0xabbcd5b340c80b5f1c0545c04c987b87310296ae"),
 				},
@@ -261,7 +262,7 @@ func TestInternalTxTrace_MarshalJSON(t *testing.T) {
 
 func TestInternalTxTracer_result_invalidOutput(t *testing.T) {
 	tracer := NewInternalTxTracer()
-	tracer.ctx["error"] = errEvmExecutionReverted
+	tracer.ctx["error"] = errors.New("evm: execution reverted")
 	// An 8 bytes value that might cause a string version error or out-of-range error.
 	tracer.ctx["output"] = "0x08c379a0000000000000000000000000000000000000000000000000ffffffffffffffff000000000000000000000000000000000000000000000000ffffffffffffffff"
 
