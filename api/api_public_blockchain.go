@@ -509,7 +509,7 @@ func FormatLogs(timeout time.Duration, logs []vm.StructLog) ([]StructLogRes, err
 	deadlineCtx, cancel := context.WithTimeout(context.Background(), timeout)
 	go func() {
 		<-deadlineCtx.Done()
-		logger.Error("[Trace logger] Timeout reached", "timeout", timeout, "err", deadlineCtx.Err())
+		logger.Debug("trace logger timeout", "timeout", timeout, "err", deadlineCtx.Err())
 		logTimeout = true
 	}()
 	defer cancel()
