@@ -814,7 +814,7 @@ func (n *Node) apis() []rpc.API {
 const (
 	ntpTolerance = time.Second
 	RFC3339Nano  = "2006-01-02T15:04:05.999999999Z07:00"
-	retry        = 10
+	ntpMaxRetry  = 10
 )
 
 func timeIsNear(lhs, rhs time.Time) bool {
