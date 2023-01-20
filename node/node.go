@@ -843,23 +843,19 @@ func NtpCheckWithLocal(n *Node) error {
 
 	ntpRetryTime := time.Duration(1)
 	var remote *time.Time
-	for i := 0; ; i++ {
+	for i := 0; i < ntpMaxRetry; i++ {
 		time.Sleep(ntpRetryTime)
 		remote, err = ntpclient.GetNetworkTime(url, portNum)
 		if remote != nil {
 			break
 		}
-		// remote == nil && err != nil && i >= retry
-		if i >= retry {
-			return err
-		}
 		ntpRetryTime = ntpRetryTime * 2
 	}
-	local := time.Now()
-
 	if err != nil {
 		return err
 	}
+
+	local := time.Now()
 	if !timeIsNear(local, *remote) {
 		errFormat := "System time is out of sync, local:%s remote:%s"
 		usage := "You can use \"--ntp.disable\" option to disable ntp time checking"
