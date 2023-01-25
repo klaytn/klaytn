@@ -175,7 +175,7 @@ func (bc *testBlockChain) Config() *params.ChainConfig {
 }
 
 func (bc *testBlockChain) CurrentBlock() *types.Block {
-	return types.NewBlock(bc.CurrentHeader(), nil, nil)
+	return types.NewBlockWithHeader(bc.CurrentHeader())
 }
 
 func (bc *testBlockChain) CurrentHeader() *types.Header {
