@@ -70,7 +70,7 @@ func (e *ContractEngine) UpdateParams() error {
 	}
 
 	// request the parameters required for generating the next block
-	head := chain.CurrentHeader().Number.Uint64()
+	head := chain.CurrentBlock().NumberU64()
 	pset, err := e.contractGetAllParamsAt(head + 1)
 	if err != nil {
 		return err

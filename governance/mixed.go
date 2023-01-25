@@ -149,7 +149,7 @@ func (e *MixedEngine) UpdateParams() error {
 	// in this case, fall back to num=zero
 	num := big.NewInt(0)
 	if e.blockchain != nil {
-		num = e.blockchain.CurrentHeader().Number
+		num = e.blockchain.CurrentBlock().Number()
 	}
 
 	var contractParams *params.GovParamSet

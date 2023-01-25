@@ -108,7 +108,7 @@ func (c *contractCaller) makeTx(contractAbi abi.ABI, fn string, args ...interfac
 // Make contract execution transaction
 func (c *contractCaller) makeEVM(tx *types.Transaction) (*vm.EVM, error) {
 	// Load the latest state
-	block := c.chain.GetBlockByNumber(c.chain.CurrentHeader().Number.Uint64())
+	block := c.chain.GetBlockByNumber(c.chain.CurrentBlock().NumberU64())
 	if block == nil {
 		logger.Error("Could not find the latest block", "num", c.chain.CurrentHeader().Number.Uint64())
 		return nil, errors.New("no block")

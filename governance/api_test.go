@@ -174,6 +174,10 @@ func (bc *testBlockChain) Config() *params.ChainConfig {
 	return bc.config
 }
 
+func (bc *testBlockChain) CurrentBlock() *types.Block {
+	return types.NewBlock(bc.CurrentHeader(), nil, nil)
+}
+
 func (bc *testBlockChain) CurrentHeader() *types.Header {
 	return &types.Header{
 		Number: new(big.Int).SetUint64(bc.num),
