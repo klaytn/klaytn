@@ -82,7 +82,7 @@ func TestMixedEngine_Header_Params(t *testing.T) {
 	assert.Equal(t, valueA, e.Params().GasTarget())
 
 	e.headerGov.currentSet.SetValue(params.GasTarget, valueB)
-	err := e.UpdateParams(e.headerGov.blockChain.CurrentBlock().NumberU64())
+	err := e.UpdateParams(0)
 	assert.Nil(t, err)
 
 	assert.Equal(t, valueB, e.Params().GasTarget())

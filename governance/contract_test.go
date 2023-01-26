@@ -258,7 +258,7 @@ func TestContractEngine_Params(t *testing.T) {
 
 		assert.Equal(t, expected, e.Params(), "Params() on block %d failed", num)
 		sim.Commit()
-		err := e.UpdateParams(num)
+		err := e.UpdateParams(sim.BlockChain().CurrentBlock().NumberU64())
 		assert.Nil(t, err)
 	}
 }
@@ -318,7 +318,7 @@ func TestContractEngine_ParamsAt(t *testing.T) {
 		}
 
 		sim.Commit()
-		err := e.UpdateParams(num)
+		err := e.UpdateParams(sim.BlockChain().CurrentBlock().NumberU64())
 		assert.Nil(t, err)
 	}
 }

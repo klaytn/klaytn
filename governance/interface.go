@@ -47,7 +47,7 @@ type ReaderEngine interface {
 	// Update the current params (the ones returned by Params()).
 	// by reading the latest blockchain states.
 	// This function must be called after every block is mined to
-	// guarantee that Params(num) works correctly.
+	// guarantee that Params() works correctly.
 	UpdateParams(num uint64) error
 }
 
