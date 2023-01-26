@@ -356,7 +356,7 @@ func NewGovParamSetBytesMapTolerant(items map[string][]byte) *GovParamSet {
 		if !ok {
 			continue
 		}
-		p.setBytes(key, value)
+		p.setBytes(key, value) // this may fail but do not care
 	}
 	return p
 }
