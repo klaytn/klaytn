@@ -130,20 +130,20 @@ var (
 
 var logger = log.NewModuleLogger(log.Governance)
 
-// Governance item set
+// GovernanceSet contains an item set for governance
 type GovernanceSet struct {
 	items map[string]interface{}
 	mu    *sync.RWMutex
 }
 
-// Governance represents vote information given from istanbul.vote()
+// GovernanceVote represents vote information given from istanbul.vote()
 type GovernanceVote struct {
 	Validator common.Address `json:"validator"`
 	Key       string         `json:"key"`
 	Value     interface{}    `json:"value"`
 }
 
-// GovernanceTallies represents a tally for each governance item
+// GovernanceTallyItem represents a tally for each governance item
 type GovernanceTallyItem struct {
 	Key   string      `json:"key"`
 	Value interface{} `json:"value"`
@@ -521,7 +521,7 @@ func (g *Governance) getKey(k string) string {
 	return strings.Trim(strings.ToLower(k), " ")
 }
 
-// RemoveVote remove a vote from the voteMap to prevent repetitive addition of same vote
+// RemoveVote removes a vote from the voteMap to prevent repetitive addition of same vote
 func (g *Governance) RemoveVote(key string, value interface{}, number uint64) {
 	k := GovernanceKeyMap[key]
 	if isEqualValue(k, g.voteMap.GetValue(key).Value, value) {
@@ -544,7 +544,7 @@ func (g *Governance) ClearVotes(num uint64) {
 	logger.Info("Governance votes are cleared", "num", num)
 }
 
-// parseVoteValue parse vote.Value from []uint8, [][]uint8 to appropriate type
+// ParseVoteValue parses vote.Value from []uint8, [][]uint8 to appropriate type
 func (g *Governance) ParseVoteValue(gVote *GovernanceVote) (*GovernanceVote, error) {
 	var val interface{}
 	k, ok := GovernanceKeyMap[gVote.Key]
@@ -1204,7 +1204,7 @@ func (gov *Governance) IdxCacheFromDb() []uint64 {
 	return res
 }
 
-// Returns the istanbul epoch. This function works even before loading any params
+// epochWithFallback returns the istanbul epoch. This function works even before loading any params
 // from database. We need epoch to load any param from database.
 func (gov *Governance) epochWithFallback() uint64 {
 	// After UpdateParams() is called at least once, Params() should contain the Epoch

@@ -26,7 +26,7 @@ import (
 	"github.com/klaytn/klaytn/storage/database"
 )
 
-// Mixed engine consists of multiple governance engines
+// MixedEngine consists of multiple governance engines
 //
 // Each parameter is added to a parameter set from one of the following sources:
 // The highest priority is 1, and falls back to lower ones if non-existent
@@ -107,12 +107,13 @@ func newMixedEngine(config *params.ChainConfig, db database.DBManager, doInit bo
 	return e
 }
 
+// NewMixedEngine creates a governance engine using both contract-based and haeder-based gov.
 // Developers are encouraged to call this constructor in most cases.
 func NewMixedEngine(config *params.ChainConfig, db database.DBManager) *MixedEngine {
 	return newMixedEngine(config, db, true)
 }
 
-// Does not load initial data for test purposes
+// NewMixedEngineNoInit creates a MixedEngine without initializing governance.
 func NewMixedEngineNoInit(config *params.ChainConfig, db database.DBManager) *MixedEngine {
 	return newMixedEngine(config, db, false)
 }

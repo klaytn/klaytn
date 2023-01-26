@@ -109,7 +109,7 @@ func (api *GovernanceKlayAPI) GasPriceAt(num *rpc.BlockNumber) (*hexutil.Big, er
 	}
 }
 
-// or returns gas price of txpool if the block is pending block.
+// GetRewards returns detailed information of the block reward at a given block number.
 func (api *GovernanceKlayAPI) GetRewards(num *rpc.BlockNumber) (*reward.RewardSpec, error) {
 	blockNumber := uint64(0)
 	if num == nil || *num == rpc.LatestBlockNumber {

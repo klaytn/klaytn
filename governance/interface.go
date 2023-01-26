@@ -34,17 +34,17 @@ type Engine interface {
 }
 
 type ReaderEngine interface {
-	// Returns the params at the current block. The returned params shall be
+	// Params returns the params at the current block. The returned params shall be
 	// used to build the upcoming (head+1) block. Block processing codes
 	// should use this method.
 	Params() *params.GovParamSet
 
-	// Returns the params at given block number. The returned params
+	// ParamsAt returns the params at given block number. The returned params
 	// were used to build the block at given number.
 	// The number must be equal or less than current block height (head).
 	ParamsAt(num uint64) (*params.GovParamSet, error)
 
-	// Update the current params (the ones returned by Params()).
+	// UpdateParams updates the current params (the ones returned by Params()).
 	// by reading the latest blockchain states.
 	// This function must be called after every block is mined to
 	// guarantee that Params() works correctly.
@@ -52,7 +52,7 @@ type ReaderEngine interface {
 }
 
 type HeaderEngine interface {
-	// Cast votes from API
+	// AddVote casts votes from API
 	AddVote(key string, val interface{}) bool
 	ValidateVote(vote *GovernanceVote) (*GovernanceVote, bool)
 
