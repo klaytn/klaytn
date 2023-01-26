@@ -122,7 +122,7 @@ func TestGetRewards(t *testing.T) {
 
 		e := NewMixedEngine(config, dbm)
 		e.SetBlockchain(bc)
-		e.UpdateParams()
+		e.UpdateParams(bc.CurrentBlock().NumberU64())
 
 		// write initial gov items and overrides to database
 		pset, _ := params.NewGovParamSetChainConfig(config)

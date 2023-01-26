@@ -62,16 +62,9 @@ func (e *ContractEngine) ParamsAt(num uint64) (*params.GovParamSet, error) {
 }
 
 // if UpdateParam fails, leave currentParams as-is
-func (e *ContractEngine) UpdateParams() error {
-	chain := e.headerGov.BlockChain()
-	if chain == nil {
-		logger.Crit("headerGov.BlockChain() is nil")
-		return errContractEngineNotReady
-	}
-
+func (e *ContractEngine) UpdateParams(num uint64) error {
 	// request the parameters required for generating the next block
-	head := chain.CurrentBlock().NumberU64()
-	pset, err := e.contractGetAllParamsAt(head + 1)
+	pset, err := e.contractGetAllParamsAt(num + 1)
 	if err != nil {
 		return err
 	}

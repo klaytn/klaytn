@@ -741,7 +741,7 @@ func (g *Governance) initializeCache(chainConfig *params.ChainConfig) error {
 	}
 	// Reflect g.currentSet -> g.currentParams (for g.Params())
 	// Outside initializeCache, istanbul.CreateSnapshot() will trigger UpdateParams().
-	g.UpdateParams()
+	g.UpdateParams(headBlockNumber)
 	// Reflect g.currentSet -> global params in params/governance_params.go
 	// Outside initializeCache, GovernanceItems[].trigger will reflect changes to globals.
 	g.updateGovernanceParams()
@@ -1247,7 +1247,7 @@ func (gov *Governance) ParamsAt(num uint64) (*params.GovParamSet, error) {
 	return pset, nil
 }
 
-func (gov *Governance) UpdateParams() error {
+func (gov *Governance) UpdateParams(num uint64) error {
 	strMap := gov.currentSet.Items()
 	pset, err := params.NewGovParamSetStrMap(strMap)
 	if err != nil {

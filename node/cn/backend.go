@@ -269,7 +269,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	cn.blockchain = bc
 	governance.SetBlockchain(cn.blockchain)
-	if err := governance.UpdateParams(); err != nil {
+	if err := governance.UpdateParams(cn.blockchain.CurrentBlock().NumberU64()); err != nil {
 		return nil, err
 	}
 	blockchain.InitDeriveShaWithGov(cn.chainConfig, governance)

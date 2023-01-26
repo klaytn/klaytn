@@ -113,7 +113,7 @@ func TestGovernance_Engines(t *testing.T) {
 		time.Sleep(100 * time.Millisecond) // wait for tx sender thread to set deployBlock, etc.
 
 		num := ev.Block.Number().Uint64()
-		mixedEngine.UpdateParams()
+		mixedEngine.UpdateParams(num)
 
 		mixedVal, _ := mixedEngine.Params().Get(params.CommitteeSize)
 		contractVal, _ := contractEngine.Params().Get(params.CommitteeSize)
