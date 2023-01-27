@@ -19,7 +19,7 @@ ENV KLAYTN_DISABLE_SYMBOL=$KLAYTN_DISABLE_SYMBOL
 
 WORKDIR $SRC_DIR
 # Cache default $GOMODCACHE
-COPY go.mod go.sum .
+COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod go mod download -x
 
 # Cache default $GOCACHE
