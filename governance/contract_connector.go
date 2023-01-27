@@ -74,7 +74,7 @@ func (c *contractCaller) prepareCall(contractAbi abi.ABI, fn string, args ...int
 	return tx, evm, nil
 }
 
-// Make contract execution transaction
+// makeTx makes a contract execution transaction
 func (c *contractCaller) makeTx(contractAbi abi.ABI, fn string, args ...interface{},
 ) (*types.Transaction, error) {
 	calldata, err := contractAbi.Pack(fn, args...)
@@ -105,7 +105,7 @@ func (c *contractCaller) makeTx(contractAbi abi.ABI, fn string, args ...interfac
 	return tx, nil
 }
 
-// Make contract execution transaction
+// makeEVM makes an EVM for the tx execution
 func (c *contractCaller) makeEVM(tx *types.Transaction) (*vm.EVM, error) {
 	// Load the latest state
 	block := c.chain.GetBlockByNumber(c.chain.CurrentHeader().Number.Uint64())
@@ -130,7 +130,7 @@ func (c *contractCaller) makeEVM(tx *types.Transaction) (*vm.EVM, error) {
 	return evm, nil
 }
 
-// Execute contract call at the latest block context
+// callTx executes contract call at the latest block context
 func (c *contractCaller) callTx(tx *types.Transaction, evm *vm.EVM) ([]byte, error) {
 	res, _, kerr := blockchain.ApplyMessage(evm, tx)
 	if kerr.ErrTxInvalid != nil {
