@@ -170,5 +170,5 @@ func (c *contractCaller) parseGetAllParamsAt(b []byte) (*params.GovParamSet, err
 	for i := 0; i < len(names); i++ {
 		bytesMap[names[i]] = values[i]
 	}
-	return params.NewGovParamSetBytesMap(bytesMap)
+	return params.NewGovParamSetBytesMapTolerant(bytesMap), nil
 }
