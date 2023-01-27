@@ -504,9 +504,21 @@ type StructLogRes struct {
 }
 
 // formatLogs formats EVM returned structured logs for json output
-func FormatLogs(logs []vm.StructLog) []StructLogRes {
+func FormatLogs(timeout time.Duration, logs []vm.StructLog) ([]StructLogRes, error) {
+	logTimeout := false
+	deadlineCtx, cancel := context.WithTimeout(context.Background(), timeout)
+	go func() {
+		<-deadlineCtx.Done()
+		logger.Debug("trace logger timeout", "timeout", timeout, "err", deadlineCtx.Err())
+		logTimeout = true
+	}()
+	defer cancel()
+
 	formatted := make([]StructLogRes, len(logs))
 	for index, trace := range logs {
+		if logTimeout {
+			return nil, fmt.Errorf("trace logger timeout")
+		}
 		formatted[index] = StructLogRes{
 			Pc:      trace.Pc,
 			Op:      trace.Op.String(),
@@ -537,7 +549,7 @@ func FormatLogs(logs []vm.StructLog) []StructLogRes {
 			formatted[index].Storage = &storage
 		}
 	}
-	return formatted
+	return formatted, nil
 }
 
 func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool, isEnabledEthTxTypeFork bool) (map[string]interface{}, error) {
