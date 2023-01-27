@@ -122,7 +122,7 @@ func TestGetRewards(t *testing.T) {
 
 		e := NewMixedEngine(config, dbm)
 		e.SetBlockchain(bc)
-		e.UpdateParams()
+		e.UpdateParams(bc.CurrentBlock().NumberU64())
 
 		// write initial gov items and overrides to database
 		pset, _ := params.NewGovParamSetChainConfig(config)
@@ -172,6 +172,10 @@ func (bc *testBlockChain) GetBlockByNumber(num uint64) *types.Block         { re
 func (bc *testBlockChain) StateAt(root common.Hash) (*state.StateDB, error) { return nil, nil }
 func (bc *testBlockChain) Config() *params.ChainConfig {
 	return bc.config
+}
+
+func (bc *testBlockChain) CurrentBlock() *types.Block {
+	return types.NewBlockWithHeader(bc.CurrentHeader())
 }
 
 func (bc *testBlockChain) CurrentHeader() *types.Header {

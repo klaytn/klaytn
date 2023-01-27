@@ -81,7 +81,7 @@ func (api *GovernanceKlayAPI) NodeAddress() common.Address {
 // or returns gas price of txpool if the block is pending block.
 func (api *GovernanceKlayAPI) GasPriceAt(num *rpc.BlockNumber) (*hexutil.Big, error) {
 	if num == nil || *num == rpc.LatestBlockNumber {
-		header := api.chain.CurrentHeader()
+		header := api.chain.CurrentBlock().Header()
 		if header.BaseFee == nil {
 			return (*hexutil.Big)(new(big.Int).SetUint64(api.governance.Params().UnitPrice())), nil
 		}
@@ -94,7 +94,7 @@ func (api *GovernanceKlayAPI) GasPriceAt(num *rpc.BlockNumber) (*hexutil.Big, er
 
 		// Return the BaseFee in header at the block number
 		header := api.chain.GetHeaderByNumber(blockNum)
-		if blockNum > api.chain.CurrentHeader().Number.Uint64() || header == nil {
+		if blockNum > api.chain.CurrentBlock().NumberU64() || header == nil {
 			return nil, errUnknownBlock
 		} else if header.BaseFee != nil {
 			return (*hexutil.Big)(header.BaseFee), nil
@@ -113,7 +113,7 @@ func (api *GovernanceKlayAPI) GasPriceAt(num *rpc.BlockNumber) (*hexutil.Big, er
 func (api *GovernanceKlayAPI) GetRewards(num *rpc.BlockNumber) (*reward.RewardSpec, error) {
 	blockNumber := uint64(0)
 	if num == nil || *num == rpc.LatestBlockNumber {
-		blockNumber = api.governance.BlockChain().CurrentHeader().Number.Uint64()
+		blockNumber = api.chain.CurrentBlock().NumberU64()
 	} else {
 		blockNumber = uint64(num.Int64())
 	}
@@ -218,7 +218,7 @@ func (api *PublicGovernanceAPI) ItemsAt(num *rpc.BlockNumber) (map[string]interf
 func itemsAt(governance Engine, num *rpc.BlockNumber) (map[string]interface{}, error) {
 	blockNumber := uint64(0)
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
-		blockNumber = governance.BlockChain().CurrentHeader().Number.Uint64()
+		blockNumber = governance.BlockChain().CurrentBlock().NumberU64()
 	} else {
 		blockNumber = uint64(num.Int64())
 	}
@@ -237,7 +237,7 @@ func (api *PublicGovernanceAPI) GetStakingInfo(num *rpc.BlockNumber) (*reward.St
 func getStakingInfo(governance Engine, num *rpc.BlockNumber) (*reward.StakingInfo, error) {
 	blockNumber := uint64(0)
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
-		blockNumber = governance.BlockChain().CurrentHeader().Number.Uint64()
+		blockNumber = governance.BlockChain().CurrentBlock().NumberU64()
 	} else {
 		blockNumber = uint64(num.Int64())
 	}
@@ -264,7 +264,7 @@ func (api *PublicGovernanceAPI) IdxCacheFromDb() []uint64 {
 func (api *PublicGovernanceAPI) ItemCacheFromDb(num *rpc.BlockNumber) map[string]interface{} {
 	blockNumber := uint64(0)
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
-		blockNumber = api.governance.BlockChain().CurrentHeader().Number.Uint64()
+		blockNumber = api.governance.BlockChain().CurrentBlock().NumberU64()
 	} else {
 		blockNumber = uint64(num.Int64())
 	}
@@ -314,7 +314,7 @@ func (api *PublicGovernanceAPI) ChainConfigAt(num *rpc.BlockNumber) *params.Chai
 func chainConfigAt(governance Engine, num *rpc.BlockNumber) *params.ChainConfig {
 	var blocknum uint64
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
-		blocknum = governance.BlockChain().CurrentHeader().Number.Uint64()
+		blocknum = governance.BlockChain().CurrentBlock().NumberU64()
 	} else {
 		blocknum = num.Uint64()
 	}
@@ -366,7 +366,7 @@ func (api *GovernanceKlayAPI) GasPriceAtNumber(num uint64) (uint64, error) {
 // 	} else {
 // 		blockNum := num.Int64()
 //
-// 		if blockNum > api.chain.CurrentHeader().Number.Int64() {
+// 		if blockNum > api.chain.CurrentBlock().NumberU64() {
 // 			return 0, errUnknownBlock
 // 		}
 //

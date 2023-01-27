@@ -1721,7 +1721,7 @@ func TestGovernance_ReaderEngine(t *testing.T) {
 			assert.NoError(t, err)
 
 			// Load parameters for the next block
-			err = engine.governance.UpdateParams()
+			err = engine.governance.UpdateParams(currentBlock.NumberU64())
 			assert.NoError(t, err)
 		}
 

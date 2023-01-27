@@ -145,18 +145,13 @@ func (e *MixedEngine) ParamsAt(num uint64) (*params.GovParamSet, error) {
 	return e.assembleParams(headerParams, contractParams), nil
 }
 
-func (e *MixedEngine) UpdateParams() error {
-	// some functions call UpdateParams() without blockchain, such as initGenesis()
-	// in this case, fall back to num=zero
-	num := big.NewInt(0)
-	if e.blockchain != nil {
-		num = e.blockchain.CurrentHeader().Number
-	}
-
+func (e *MixedEngine) UpdateParams(num uint64) error {
 	var contractParams *params.GovParamSet
-	if e.config.IsKoreForkEnabled(num) {
-		if err := e.contractGov.UpdateParams(); err != nil {
-			logger.Error("contractGov.UpdateParams() failed", "err", err)
+	numBigInt := big.NewInt(int64(num))
+
+	if e.config.IsKoreForkEnabled(numBigInt) {
+		if err := e.contractGov.UpdateParams(num); err != nil {
+			logger.Error("contractGov.UpdateParams(num) failed", "num", num, "err", err)
 			return err
 		}
 		contractParams = e.contractGov.Params()
@@ -164,8 +159,8 @@ func (e *MixedEngine) UpdateParams() error {
 		contractParams = params.NewGovParamSet()
 	}
 
-	if err := e.headerGov.UpdateParams(); err != nil {
-		logger.Error("headerGov.UpdateParams() failed", "err", err)
+	if err := e.headerGov.UpdateParams(num); err != nil {
+		logger.Error("headerGov.UpdateParams(num) failed", "num", num, "err", err)
 		return err
 	}
 

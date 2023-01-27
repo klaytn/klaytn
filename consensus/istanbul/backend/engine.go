@@ -708,7 +708,7 @@ func (sb *backend) CreateSnapshot(chain consensus.ChainReader, number uint64, ha
 	if _, err := sb.snapshot(chain, number, hash, parents, true); err != nil {
 		return err
 	}
-	if err := sb.governance.UpdateParams(); err != nil {
+	if err := sb.governance.UpdateParams(number); err != nil {
 		return err
 	}
 	return nil

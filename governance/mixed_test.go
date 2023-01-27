@@ -82,7 +82,7 @@ func TestMixedEngine_Header_Params(t *testing.T) {
 	assert.Equal(t, valueA, e.Params().GasTarget())
 
 	e.headerGov.currentSet.SetValue(params.GasTarget, valueB)
-	err := e.UpdateParams()
+	err := e.UpdateParams(0)
 	assert.Nil(t, err)
 
 	assert.Equal(t, valueB, e.Params().GasTarget())
@@ -154,7 +154,7 @@ func TestMixedEngine_Params(t *testing.T) {
 
 	// 2. fallback to headerGov because contractGov doesn't have the param
 	e.headerGov.currentSet.SetValue(params.GasTarget, valueB)
-	err := e.UpdateParams()
+	err := e.UpdateParams(e.headerGov.blockChain.CurrentBlock().NumberU64())
 	assert.Nil(t, err)
 
 	assert.Equal(t, valueB, e.Params().GasTarget(), "fallback to headerGov failed")
@@ -165,7 +165,7 @@ func TestMixedEngine_Params(t *testing.T) {
 
 	sim.Commit() // mine SetParamIn
 
-	err = e.UpdateParams()
+	err = e.UpdateParams(e.headerGov.blockChain.CurrentBlock().NumberU64())
 	assert.Nil(t, err)
 	assert.Equal(t, valueC, e.Params().GasTarget(), "fallback to contractGov failed")
 }
@@ -204,12 +204,12 @@ func TestMixedEngine_ParamsAt(t *testing.T) {
 
 	// write minimal params for test to headerGov
 	// note that mainnet will have all parameters in the headerGov db
-	headerBlock := sim.BlockChain().CurrentHeader().Number.Uint64()
+	headerBlock := sim.BlockChain().CurrentBlock().NumberU64()
 	e.headerGov.db.WriteGovernance(map[string]interface{}{
 		name:                          valueB,
 		"governance.govparamcontract": config.Governance.GovParamContract,
 	}, headerBlock)
-	err := e.UpdateParams()
+	err := e.UpdateParams(headerBlock)
 	assert.Nil(t, err)
 
 	// forward a few blocks
