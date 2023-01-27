@@ -106,10 +106,8 @@ type HeaderEngine interface {
 type blockChain interface {
 	blockchain.ChainContext
 
-	CurrentHeader() *types.Header
 	CurrentBlock() *types.Block
 	GetHeaderByNumber(val uint64) *types.Header
-	GetBlockByNumber(num uint64) *types.Block
 	StateAt(root common.Hash) (*state.StateDB, error)
 	Config() *params.ChainConfig
 }
