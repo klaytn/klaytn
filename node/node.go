@@ -814,6 +814,7 @@ func (n *Node) apis() []rpc.API {
 const (
 	ntpTolerance = time.Second
 	RFC3339Nano  = "2006-01-02T15:04:05.999999999Z07:00"
+	ntpMaxRetry  = 10
 )
 
 func timeIsNear(lhs, rhs time.Time) bool {
@@ -840,14 +841,25 @@ func NtpCheckWithLocal(n *Node) error {
 		return err
 	}
 
-	local := time.Now()
-	remote, err := ntpclient.GetNetworkTime(url, portNum)
+	ntpRetryTime := time.Duration(1)
+	var remote *time.Time
+	for i := 0; i < ntpMaxRetry; i++ {
+		time.Sleep(ntpRetryTime)
+		remote, err = ntpclient.GetNetworkTime(url, portNum)
+		if remote != nil {
+			break
+		}
+		ntpRetryTime = ntpRetryTime * 2
+	}
 	if err != nil {
 		return err
 	}
+
+	local := time.Now()
 	if !timeIsNear(local, *remote) {
 		errFormat := "System time is out of sync, local:%s remote:%s"
-		return fmt.Errorf(errFormat, local.UTC().Format(RFC3339Nano), remote.UTC().Format(RFC3339Nano))
+		usage := "You can use \"--ntp.disable\" option to disable ntp time checking"
+		return fmt.Errorf(errFormat+"\n"+usage, local.UTC().Format(RFC3339Nano), remote.UTC().Format(RFC3339Nano))
 	}
 	logger.Info("Ntp time check", "local", local.UTC().Format(RFC3339Nano), "remote", remote.UTC().Format(RFC3339Nano))
 	return nil
