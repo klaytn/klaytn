@@ -198,7 +198,7 @@ func GetBlockReward(header *types.Header, rules params.Rules, pset *params.GovPa
 	// some non-zero fee already has been paid to the proposer.
 	if !pset.DeferredTxFee() {
 		blockFee := GetTotalTxFee(header, rules, pset)
-		spec.Proposer = spec.Proposer.Add(spec.Proposer, spec.TotalFee)
+		spec.Proposer = spec.Proposer.Add(spec.Proposer, blockFee)
 		spec.TotalFee = spec.TotalFee.Add(spec.TotalFee, blockFee)
 		incrementRewardsMap(spec.Rewards, header.Rewardbase, blockFee)
 	}
@@ -237,7 +237,7 @@ func CalcDeferredRewardSimple(header *types.Header, rules params.Rules, pset *pa
 		spec.TotalFee = big.NewInt(0)
 		spec.BurntFee = big.NewInt(0)
 		spec.Proposer = proposer
-		spec.Rewards[header.Rewardbase] = proposer
+		incrementRewardsMap(spec.Rewards, header.Rewardbase, proposer)
 		return spec, nil
 	}
 
@@ -264,7 +264,7 @@ func CalcDeferredRewardSimple(header *types.Header, rules params.Rules, pset *pa
 	spec.TotalFee = totalFee
 	spec.BurntFee = burntFee
 	spec.Proposer = proposer
-	spec.Rewards[header.Rewardbase] = proposer
+	incrementRewardsMap(spec.Rewards, header.Rewardbase, proposer)
 	return spec, nil
 }
 
