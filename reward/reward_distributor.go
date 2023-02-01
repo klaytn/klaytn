@@ -292,7 +292,9 @@ func CalcDeferredReward(header *types.Header, rules params.Rules, pset *params.G
 	// Remainder from (CN, KGF, KIR) split goes to KGF
 	kgf = kgf.Add(kgf, splitRem)
 	// Remainder from staker shares goes to Proposer
+	// Then, deduct it from stakers so that `minted + totalFee - burntFee = proposer + stakers + kgf + kir`
 	proposer = proposer.Add(proposer, shareRem)
+	stakers = stakers.Sub(stakers, shareRem)
 
 	// if KGF or KIR is not set, proposer gets the portion
 	if stakingInfo == nil || common.EmptyAddress(stakingInfo.PoCAddr) {
