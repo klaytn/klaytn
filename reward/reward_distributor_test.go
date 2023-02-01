@@ -17,6 +17,7 @@
 package reward
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"testing"
@@ -40,6 +41,23 @@ func (governance *testGovernance) ParamsAt(num uint64) (*params.GovParamSet, err
 func (governance *testGovernance) setTestGovernance(intMap map[int]interface{}) {
 	p, _ := params.NewGovParamSetIntMap(intMap)
 	governance.p = p
+}
+
+func assertEqualRewardSpecs(t *testing.T, expected, actual *RewardSpec, msgAndArgs ...interface{}) {
+	expectedJson, err := json.MarshalIndent(expected, "", "  ")
+	require.Nil(t, err)
+
+	actualJson, err := json.MarshalIndent(actual, "", "  ")
+	require.Nil(t, err)
+
+	assert.Equal(t, string(expectedJson), string(actualJson), msgAndArgs...)
+
+	lhs := new(big.Int).Add(actual.Minted, actual.TotalFee)
+	lhs = lhs.Sub(lhs, actual.BurntFee)
+	rhs := new(big.Int).Add(actual.Proposer, actual.Stakers)
+	rhs = rhs.Add(rhs, actual.Kgf)
+	rhs = rhs.Add(rhs, actual.Kir)
+	assert.True(t, lhs.Cmp(rhs) == 0, msgAndArgs...)
 }
 
 var (
@@ -341,7 +359,7 @@ func TestRewardDistributor_GetBlockReward(t *testing.T) {
 				TotalFee: new(big.Int).SetUint64(1000),
 				BurntFee: new(big.Int).SetUint64(1000),
 				Proposer: new(big.Int).SetUint64(0.6528e18 + 1),
-				Stakers:  new(big.Int).SetUint64(2.6112e18),
+				Stakers:  new(big.Int).SetUint64(2.6112e18 - 1),
 				Kgf:      new(big.Int).SetUint64(5.184e18),
 				Kir:      new(big.Int).SetUint64(1.152e18),
 				Rewards: map[common.Address]*big.Int{
@@ -360,8 +378,8 @@ func TestRewardDistributor_GetBlockReward(t *testing.T) {
 				Minted:   minted,
 				TotalFee: new(big.Int).SetUint64(1000),
 				BurntFee: new(big.Int).SetUint64(0),
-				Proposer: new(big.Int).SetUint64(0.6528e18 + 1),
-				Stakers:  new(big.Int).SetUint64(2.6112e18),
+				Proposer: new(big.Int).SetUint64(0.6528e18 + 1000 + 1),
+				Stakers:  new(big.Int).SetUint64(2.6112e18 - 1),
 				Kgf:      new(big.Int).SetUint64(5.184e18),
 				Kir:      new(big.Int).SetUint64(1.152e18),
 				Rewards: map[common.Address]*big.Int{
@@ -389,7 +407,7 @@ func TestRewardDistributor_GetBlockReward(t *testing.T) {
 
 		spec, err := GetBlockReward(header, rules, pset)
 		require.Nil(t, err, "testcases[%d] failed", i)
-		assert.Equal(t, tc.expected, spec, "testcases[%d] failed", i)
+		assertEqualRewardSpecs(t, tc.expected, spec, "testcases[%d] failed", i)
 	}
 }
 
@@ -449,7 +467,7 @@ func TestRewardDistributor_CalcDeferredRewardSimple(t *testing.T) {
 
 		spec, err := CalcDeferredRewardSimple(header, rules, pset)
 		require.Nil(t, err, "testcases[%d] failed", i)
-		assert.Equal(t, tc.expected, spec, "testcases[%d] failed", i)
+		assertEqualRewardSpecs(t, tc.expected, spec, "testcases[%d] failed", i)
 	}
 }
 
@@ -536,7 +554,7 @@ func TestRewardDistributor_CalcDeferredRewardSimple_nodeferred(t *testing.T) {
 
 		spec, err := CalcDeferredRewardSimple(header, rules, pset)
 		require.Nil(t, err, "testcases[%d] failed", i)
-		assert.Equal(t, tc.expected, spec, "testcases[%d] failed", i)
+		assertEqualRewardSpecs(t, tc.expected, spec, "testcases[%d] failed", i)
 	}
 }
 
@@ -646,7 +664,7 @@ func TestRewardDistributor_CalcDeferredReward(t *testing.T) {
 				TotalFee: new(big.Int).SetUint64(1000),
 				BurntFee: new(big.Int).SetUint64(1000),
 				Proposer: new(big.Int).SetUint64(0.6528e18 + 1),
-				Stakers:  new(big.Int).SetUint64(2.6112e18),
+				Stakers:  new(big.Int).SetUint64(2.6112e18 - 1),
 				Kgf:      new(big.Int).SetUint64(5.184e18),
 				Kir:      new(big.Int).SetUint64(1.152e18),
 				Rewards: map[common.Address]*big.Int{
@@ -668,7 +686,7 @@ func TestRewardDistributor_CalcDeferredReward(t *testing.T) {
 				TotalFee: new(big.Int).SetUint64(10e18),
 				BurntFee: new(big.Int).SetUint64(5e18 + 0.6528e18),
 				Proposer: new(big.Int).SetUint64(5e18 + 1),
-				Stakers:  new(big.Int).SetUint64(2.6112e18),
+				Stakers:  new(big.Int).SetUint64(2.6112e18 - 1),
 				Kgf:      new(big.Int).SetUint64(5.184e18),
 				Kir:      new(big.Int).SetUint64(1.152e18),
 				Rewards: map[common.Address]*big.Int{
@@ -706,7 +724,7 @@ func TestRewardDistributor_CalcDeferredReward(t *testing.T) {
 
 		spec, err := CalcDeferredReward(header, rules, pset)
 		require.Nil(t, err, "failed tc: %s", tc.desc)
-		assert.Equal(t, tc.expected, spec, "failed tc: %s", tc.desc)
+		assertEqualRewardSpecs(t, tc.expected, spec, "failed tc: %s", tc.desc)
 	}
 }
 
@@ -739,7 +757,7 @@ func TestRewardDistributor_CalcDeferredReward_StakingInfos(t *testing.T) {
 				TotalFee: big.NewInt(1000),
 				BurntFee: big.NewInt(1000),
 				Proposer: minted,
-				Stakers:  big.NewInt(2.6112e18),
+				Stakers:  big.NewInt(0),
 				Kgf:      big.NewInt(0),
 				Kir:      big.NewInt(0),
 				Rewards: map[common.Address]*big.Int{
@@ -758,7 +776,7 @@ func TestRewardDistributor_CalcDeferredReward_StakingInfos(t *testing.T) {
 				TotalFee: big.NewInt(1000),
 				BurntFee: big.NewInt(1000),
 				Proposer: big.NewInt(8.448e18),
-				Stakers:  big.NewInt(2.6112e18),
+				Stakers:  big.NewInt(0),
 				Kgf:      big.NewInt(0),
 				Kir:      big.NewInt(1.152e18), // minted * 0.12
 				Rewards: map[common.Address]*big.Int{
@@ -778,7 +796,7 @@ func TestRewardDistributor_CalcDeferredReward_StakingInfos(t *testing.T) {
 				TotalFee: big.NewInt(1000),
 				BurntFee: big.NewInt(1000),
 				Proposer: big.NewInt(4.416e18),
-				Stakers:  big.NewInt(2.6112e18),
+				Stakers:  big.NewInt(0),
 				Kgf:      big.NewInt(5.184e18), // minted * 0.54
 				Kir:      big.NewInt(0),
 				Rewards: map[common.Address]*big.Int{
@@ -798,7 +816,7 @@ func TestRewardDistributor_CalcDeferredReward_StakingInfos(t *testing.T) {
 				TotalFee: big.NewInt(1000),
 				BurntFee: big.NewInt(1000),
 				Proposer: big.NewInt(3.264e18),
-				Stakers:  big.NewInt(2.6112e18),
+				Stakers:  big.NewInt(0),
 				Kgf:      big.NewInt(5.184e18),
 				Kir:      big.NewInt(1.152e18),
 				Rewards: map[common.Address]*big.Int{
@@ -817,7 +835,7 @@ func TestRewardDistributor_CalcDeferredReward_StakingInfos(t *testing.T) {
 		}
 		spec, err := CalcDeferredReward(header, rules, pset)
 		require.Nil(t, err, "testcases[%d] failed", i)
-		assert.Equal(t, tc.expected, spec, "testcases[%d] failed: %s", i, tc.desc)
+		assertEqualRewardSpecs(t, tc.expected, spec, "testcases[%d] failed: %s", i, tc.desc)
 	}
 }
 
@@ -854,7 +872,7 @@ func TestRewardDistributor_CalcDeferredReward_Remainings(t *testing.T) {
 				TotalFee: big.NewInt(1000),
 				BurntFee: big.NewInt(522),
 				Proposer: big.NewInt(501), // proposer=22, rewardFee=478, shareRem=1
-				Stakers:  big.NewInt(90),
+				Stakers:  big.NewInt(89),
 				Kgf:      big.NewInt(182), // splitRem=3
 				Kir:      big.NewInt(39),
 				Rewards: map[common.Address]*big.Int{
@@ -874,7 +892,7 @@ func TestRewardDistributor_CalcDeferredReward_Remainings(t *testing.T) {
 				TotalFee: big.NewInt(1000),
 				BurntFee: big.NewInt(1000),
 				Proposer: big.NewInt(0.6528e18 + 1),
-				Stakers:  big.NewInt(2.6112e18),
+				Stakers:  big.NewInt(2.6112e18 - 1),
 				Kgf:      big.NewInt(5.184e18),
 				Kir:      big.NewInt(1.152e18),
 				Rewards: map[common.Address]*big.Int{
@@ -897,7 +915,7 @@ func TestRewardDistributor_CalcDeferredReward_Remainings(t *testing.T) {
 
 		spec, err := CalcDeferredReward(header, rules, pset)
 		require.Nil(t, err, "failed tc: %s", tc.desc)
-		assert.Equal(t, tc.expected, spec, "failed tc: %s", tc.desc)
+		assertEqualRewardSpecs(t, tc.expected, spec, "failed tc: %s", tc.desc)
 	}
 }
 
