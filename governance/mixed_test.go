@@ -147,17 +147,22 @@ func TestMixedEngine_Params(t *testing.T) {
 	)
 	config := getTestConfig()
 	config.Governance.KIP71.GasTarget = valueA
+	config.Istanbul.Epoch = 4
 
 	// 1. fallback to ChainConfig because headerGov and contractGov don't have the param
 	e, owner, sim, contract := newTestMixedEngine(t, config)
-	assert.Equal(t, valueA, e.Params().GasTarget(), "fallback to ChainConfig failed")
+	require.Equal(t, valueA, e.Params().GasTarget(), "fallback to ChainConfig failed")
 
 	// 2. fallback to headerGov because contractGov doesn't have the param
-	e.headerGov.currentSet.SetValue(params.GasTarget, valueB)
+	delta := NewGovernanceSet()
+	delta.SetValue(params.GasTarget, valueB)
+	e.headerGov.WriteGovernance(4, e.headerGov.currentSet, delta)
+	for e.headerGov.blockChain.CurrentBlock().NumberU64() < 7 {
+		sim.Commit()
+	}
 	err := e.UpdateParams(e.headerGov.blockChain.CurrentBlock().NumberU64())
 	assert.Nil(t, err)
-
-	assert.Equal(t, valueB, e.Params().GasTarget(), "fallback to headerGov failed")
+	require.Equal(t, valueB, e.Params().GasTarget(), "fallback to headerGov failed")
 
 	// 3. use contractGov
 	_, err = contract.SetParamIn(owner, "kip71.gastarget", true, valueCBytes, big.NewInt(1))
@@ -167,7 +172,7 @@ func TestMixedEngine_Params(t *testing.T) {
 
 	err = e.UpdateParams(e.headerGov.blockChain.CurrentBlock().NumberU64())
 	assert.Nil(t, err)
-	assert.Equal(t, valueC, e.Params().GasTarget(), "fallback to contractGov failed")
+	require.Equal(t, valueC, e.Params().GasTarget(), "fallback to contractGov failed")
 }
 
 // TestMixedEngine_ParamsAt tests if ParamsAt() returns correct values
