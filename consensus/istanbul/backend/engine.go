@@ -193,6 +193,9 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 	if chain.Config().IsMagmaForkEnabled(header.Number) {
 		// the kip71Config used when creating the block number is a previous block config.
 		blockNum := header.Number.Uint64()
+		if !chain.Config().IsKoreForkEnabled(header.Number) && header.Number.BitLen() != 0 {
+			blockNum = blockNum - 1
+		}
 		pset, err := sb.governance.ParamsAt(blockNum)
 		if err != nil {
 			return err
