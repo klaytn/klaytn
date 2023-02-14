@@ -459,17 +459,13 @@ func NewGovernanceInitialize(chainConfig *params.ChainConfig, dbm database.DBMan
 
 // updateGovernanceParams takes the current block number
 // and sets the parameterss to be used for generating the next block
-func (g *Governance) updateGovernanceParams(num uint64) {
+func (g *Governance) updateGovernanceParams() {
 	params.SetStakingUpdateInterval(g.stakingUpdateInterval())
 	params.SetProposerUpdateInterval(g.proposerUpdateInterval())
 
 	// NOTE: HumanReadable related functions are inactivated now
-	pset, err := g.ParamsAt(num + 1)
-	if err != nil {
-		return
-	}
-	if v, ok := pset.Get(params.ConstTxGasHumanReadable); ok {
-		params.TxGasHumanReadable = v.(uint64)
+	if txGasHumanReadable, ok := g.currentSet.GetValue(params.ConstTxGasHumanReadable); ok {
+		params.TxGasHumanReadable = txGasHumanReadable.(uint64)
 	}
 }
 
@@ -750,7 +746,7 @@ func (g *Governance) initializeCache(chainConfig *params.ChainConfig) error {
 	g.UpdateParams(headBlockNumber)
 	// Reflect g.currentSet -> global params in params/governance_params.go
 	// Outside initializeCache, GovernanceItems[].trigger will reflect changes to globals.
-	g.updateGovernanceParams(headBlockNumber)
+	g.updateGovernanceParams()
 
 	return nil
 }
@@ -1067,7 +1063,7 @@ func (gov *Governance) ReadGovernanceState() {
 		return
 	}
 	gov.UnmarshalJSON(b)
-	gov.updateGovernanceParams(gov.blockChain.CurrentBlock().NumberU64())
+	gov.updateGovernanceParams()
 
 	logger.Info("Successfully loaded governance state from database", "blockNumber", atomic.LoadUint64(&gov.lastGovernanceStateBlock))
 }
