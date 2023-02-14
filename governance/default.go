@@ -457,8 +457,6 @@ func NewGovernanceInitialize(chainConfig *params.ChainConfig, dbm database.DBMan
 	return ret
 }
 
-// updateGovernanceParams takes the current block number
-// and sets the parameterss to be used for generating the next block
 func (g *Governance) updateGovernanceParams() {
 	params.SetStakingUpdateInterval(g.stakingUpdateInterval())
 	params.SetProposerUpdateInterval(g.proposerUpdateInterval())
