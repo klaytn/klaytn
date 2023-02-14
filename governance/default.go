@@ -1226,8 +1226,13 @@ func (gov *Governance) epochWithFallback() uint64 {
 		return v.(uint64)
 	}
 
-	// now that gov.ChainConfig is gone, we return default instead of gov.ChainConfig.Epoch
-	return params.DefaultEpoch
+	// Otherwise fallback to ChainConfig that is supplied to NewGovernance()
+	if gov.ChainConfig.Istanbul != nil {
+		return gov.ChainConfig.Istanbul.Epoch
+	}
+	// We shouldn't reach here because Governance is only relevant with Istanbul engine.
+	logger.Crit("Failed to read governance. ChainConfig.Istanbul == nil")
+	return params.DefaultEpoch // unreachable. just satisfying compiler.
 }
 
 func (gov *Governance) Params() *params.GovParamSet {
