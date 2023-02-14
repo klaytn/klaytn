@@ -81,8 +81,13 @@ func TestMixedEngine_Header_Params(t *testing.T) {
 	e := newTestMixedEngineNoContractEngine(t, config)
 	assert.Equal(t, valueA, e.Params().GasTarget())
 
-	e.headerGov.currentSet.SetValue(params.GasTarget, valueB)
-	err := e.UpdateParams(0)
+	items := e.Params().StrMap()
+	items["kip71.gastarget"] = valueB
+	gset := NewGovernanceSet()
+	gset.Import(items)
+	err := e.headerGov.WriteGovernance(e.Params().Epoch(), NewGovernanceSet(), gset)
+	assert.Nil(t, err)
+	err = e.UpdateParams(e.Params().Epoch() * 2)
 	assert.Nil(t, err)
 
 	assert.Equal(t, valueB, e.Params().GasTarget())

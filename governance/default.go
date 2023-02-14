@@ -1262,23 +1262,10 @@ func (gov *Governance) ParamsAt(num uint64) (*params.GovParamSet, error) {
 }
 
 func (gov *Governance) UpdateParams(num uint64) error {
-	bignum := new(big.Int).SetUint64(num)
-
-	// pre-Kore's activation : epoch block + 1 at which currentSet is updated
-	// post-Kore's activation: epoch block (fetch params for num + 1)
-	if !gov.ChainConfig.IsKoreForkEnabled(bignum) {
-		strMap := gov.currentSet.Items()
-		pset, err := params.NewGovParamSetStrMap(strMap)
-		if err != nil {
-			return err
-		}
-		gov.currentParams = pset
-	} else {
-		pset, err := gov.ParamsAt(num + 1)
-		if err != nil {
-			return err
-		}
-		gov.currentParams = pset
+	pset, err := gov.ParamsAt(num + 1)
+	if err != nil {
+		return err
 	}
+	gov.currentParams = pset
 	return nil
 }
