@@ -83,7 +83,11 @@ func (api *GovernanceKlayAPI) GasPriceAt(num *rpc.BlockNumber) (*hexutil.Big, er
 	if num == nil || *num == rpc.LatestBlockNumber {
 		header := api.chain.CurrentBlock().Header()
 		if header.BaseFee == nil {
-			return (*hexutil.Big)(new(big.Int).SetUint64(api.governance.Params().UnitPrice())), nil
+			pset, err := api.governance.ParamsAt(header.Number.Uint64())
+			if err != nil {
+				return nil, err
+			}
+			return (*hexutil.Big)(new(big.Int).SetUint64(pset.UnitPrice())), nil
 		}
 		return (*hexutil.Big)(header.BaseFee), nil
 	} else if *num == rpc.PendingBlockNumber {
@@ -148,8 +152,13 @@ func (api *GovernanceKlayAPI) ChainConfigAt(num *rpc.BlockNumber) *params.ChainC
 
 // Vote injects a new vote for governance targets such as unitprice and governingnode.
 func (api *PublicGovernanceAPI) Vote(key string, val interface{}) (string, error) {
-	gMode := api.governance.Params().GovernanceModeInt()
-	gNode := api.governance.Params().GoverningNode()
+	blockNumber := api.governance.BlockChain().CurrentBlock().NumberU64()
+	pset, err := api.governance.ParamsAt(blockNumber)
+	if err != nil {
+		return "", err
+	}
+	gMode := pset.GovernanceModeInt()
+	gNode := pset.GoverningNode()
 
 	if gMode == params.GovernanceMode_Single && gNode != api.governance.NodeAddress() {
 		return "", errPermissionDenied
@@ -164,12 +173,12 @@ func (api *PublicGovernanceAPI) Vote(key string, val interface{}) (string, error
 		}
 	}
 	if vote.Key == "kip71.lowerboundbasefee" {
-		if vote.Value.(uint64) > api.governance.Params().UpperBoundBaseFee() {
+		if vote.Value.(uint64) > pset.UpperBoundBaseFee() {
 			return "", errInvalidLowerBound
 		}
 	}
 	if vote.Key == "kip71.upperboundbasefee" {
-		if vote.Value.(uint64) < api.governance.Params().LowerBoundBaseFee() {
+		if vote.Value.(uint64) < pset.LowerBoundBaseFee() {
 			return "", errInvalidUpperBound
 		}
 	}
@@ -341,7 +350,11 @@ func (api *PublicGovernanceAPI) NodeAddress() common.Address {
 }
 
 func (api *PublicGovernanceAPI) isGovernanceModeBallot() bool {
-	gMode := api.governance.Params().GovernanceModeInt()
+	blockNumber := api.governance.BlockChain().CurrentBlock().NumberU64()
+	pset, err := api.governance.ParamsAt(blockNumber)
+	if err != nil {
+	}
+	gMode := pset.GovernanceModeInt()
 	return gMode == params.GovernanceMode_Ballot
 }
 
