@@ -90,9 +90,9 @@ func TestMixedEngine_Header_Params(t *testing.T) {
 	assert.Equal(t, valueB, config.Governance.KIP71.GasTarget)
 }
 
-// Without ContractGov, Check that
-// - after DB is written at [n - epoch], ParamsAt(n) returns the new value
-// - ParamsAt(n) == ReadGovernance(n)
+// Before Kore hardfork (i.e., without ContractGov), check that
+// - after DB is written at [n - epoch], ParamsAt(n+1) returns the new value
+// - ParamsAt(n+1) == ReadGovernance(n)
 func TestMixedEngine_Header_ParamsAt(t *testing.T) {
 	valueA := uint64(0x11)
 	valueB := uint64(0x22)
@@ -124,7 +124,7 @@ func TestMixedEngine_Header_ParamsAt(t *testing.T) {
 	}
 	for _, tc := range testcases {
 		// Check that e.ParamsAt() == tc
-		pset, err := e.ParamsAt(tc.num)
+		pset, err := e.ParamsAt(tc.num + 1)
 		assert.Nil(t, err)
 		assert.Equal(t, tc.value, pset.CommitteeSize())
 
