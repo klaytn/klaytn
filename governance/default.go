@@ -1235,11 +1235,14 @@ func (gov *Governance) Params() *params.GovParamSet {
 	return gov.currentParams
 }
 
+// ParamsAt returns the parameter set used for generating the block `num`
 func (gov *Governance) ParamsAt(num uint64) (*params.GovParamSet, error) {
 	// TODO-Klaytn: Either handle epoch change, or permanently forbid epoch change.
 	epoch := gov.epochWithFallback()
 
 	bignum := new(big.Int).SetUint64(num)
+
+	// Before Kore, ReadGovernance(num - 1) is used to generate block num
 	if !gov.ChainConfig.IsKoreForkEnabled(bignum) && num != 0 {
 		num -= 1
 	}
