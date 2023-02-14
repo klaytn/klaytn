@@ -1232,6 +1232,10 @@ func (gov *Governance) ParamsAt(num uint64) (*params.GovParamSet, error) {
 	// TODO-Klaytn: Either handle epoch change, or permanently forbid epoch change.
 	epoch := gov.epochWithFallback()
 
+	bignum := new(big.Int).SetUint64(num)
+	if !gov.ChainConfig.IsKoreForkEnabled(bignum) && num != 0 {
+		num -= 1
+	}
 	// Should be equivalent to Governance.ReadGovernance(), but without in-memory caches.
 	// Not using in-memory caches to make it stateless, hence less error-prone.
 	_, strMap, err := gov.db.ReadGovernanceAtNumber(num, epoch)
