@@ -193,7 +193,9 @@ func (s *Snapshot) apply(headers []*types.Header, gov governance.Engine, addr co
 			//
 			// Proposers for Block N+1 can be calculated from the nearest previous proposersUpdateInterval block.
 			// Refresh proposers in Snapshot_N using previous proposersUpdateInterval block for N+1, if not updated yet.
-			pset, err := gov.ParamsAt(number)
+
+			// because snapshot(num)'s ValSet = validators for num+1
+			pset, err := gov.ParamsAt(number + 1)
 			if err != nil {
 				return nil, err
 			}

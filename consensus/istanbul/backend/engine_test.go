@@ -1728,7 +1728,8 @@ func TestGovernance_ReaderEngine(t *testing.T) {
 		// Validate historic parameters with ParamsAt() and ReadGovernance().
 		// Check that both returns the expected result.
 		for num := 0; num <= tc.length; num++ {
-			pset, err := engine.governance.ParamsAt(uint64(num))
+			// Before Kore, query num+1
+			pset, err := engine.governance.ParamsAt(uint64(num) + 1)
 			assert.NoError(t, err)
 			assertMapSubset(t, tc.expected[num], pset.StrMap())
 
