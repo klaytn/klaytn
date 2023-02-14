@@ -117,9 +117,9 @@ func GetStakingInfo(blockNum uint64) *StakingInfo {
 // Fixup for Gini coefficients:
 // Klaytn core stores Gini: -1 in its database.
 // We ensure GetStakingInfoOnStakingBlock() to always return meaningful Gini.
-//   If cache hit                               -> fillMissingGini -> modifies cached in-memory object
-//   If db hit                                  -> fillMissingGini -> write to cache
-//   If read contract -> write to db (gini: -1) -> fillMissingGini -> write to cache
+// - If cache hit                               -> fillMissingGini -> modifies cached in-memory object
+// - If db hit                                  -> fillMissingGini -> write to cache
+// - If read contract -> write to db (gini: -1) -> fillMissingGini -> write to cache
 func GetStakingInfoOnStakingBlock(stakingBlockNumber uint64) *StakingInfo {
 	if stakingManager == nil {
 		logger.Error("unable to GetStakingInfo", "err", ErrStakingManagerNotSet)
@@ -273,7 +273,11 @@ func handleChainHeadEvent() {
 		select {
 		// Handle ChainHeadEvent
 		case ev := <-stakingManager.chainHeadChan:
-			pset := stakingManager.governanceHelper.Params()
+			pset, err := stakingManager.governanceHelper.ParamsAt(ev.Block.NumberU64() + 1)
+			if err != nil {
+				logger.Error("unable to fetch parameters at", "blockNum", ev.Block.NumberU64()+1)
+				continue
+			}
 			if pset.Policy() == params.WeightedRandom {
 				// check and update if staking info is not valid before for the next update interval blocks
 				stakingInfo := GetStakingInfo(ev.Block.NumberU64() + pset.StakeUpdateInterval())
