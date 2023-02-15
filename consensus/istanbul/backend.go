@@ -28,8 +28,9 @@ import (
 	"github.com/klaytn/klaytn/event"
 )
 
-//go:generate mockgen -destination=consensus/istanbul/mocks/backend_mock.go github.com/klaytn/klaytn/consensus/istanbul Backend
 // Backend provides application specific functions for Istanbul core
+//
+//go:generate mockgen -destination=consensus/istanbul/mocks/backend_mock.go github.com/klaytn/klaytn/consensus/istanbul Backend
 type Backend interface {
 	// Address returns the owner's address
 	Address() common.Address
@@ -79,8 +80,6 @@ type Backend interface {
 	HasBadProposal(hash common.Hash) bool
 
 	GetRewardBase() common.Address
-
-	GetSubGroupSize() uint64
 
 	SetCurrentView(view *View)
 
