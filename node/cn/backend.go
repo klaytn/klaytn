@@ -487,6 +487,7 @@ func (s *CN) APIs() []rpc.API {
 	governanceKlayAPI := governance.NewGovernanceKlayAPI(s.governance, s.blockchain)
 	publicGovernanceAPI := governance.NewGovernanceAPI(s.governance)
 	publicDownloaderAPI := downloader.NewPublicDownloaderAPI(s.protocolManager.Downloader(), s.eventMux)
+	privateDownloaderAPI := downloader.NewPrivateDownloaderAPI(s.protocolManager.Downloader())
 
 	ethAPI.SetPublicFilterAPI(publicFilterAPI)
 	ethAPI.SetGovernanceKlayAPI(governanceKlayAPI)
@@ -529,6 +530,10 @@ func (s *CN) APIs() []rpc.API {
 			Version:   "1.0",
 			Service:   publicDownloaderAPI,
 			Public:    true,
+		}, {
+			Namespace: "admin",
+			Version:   "1.0",
+			Service:   privateDownloaderAPI,
 		}, {
 			Namespace: "admin",
 			Version:   "1.0",

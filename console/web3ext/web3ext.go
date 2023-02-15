@@ -477,6 +477,15 @@ web3._extend({
 			name: 'getSpamThrottlerCandidateList',
 			call: 'admin_getSpamThrottlerCandidateList',
 		}),
+		new web3._extend.Method({
+			name: 'syncStakingInfo',
+			call: 'admin_syncStakingInfo',
+			params: 3,
+		}),
+		new web3._extend.Method({
+			name: 'syncStakingInfoStatus',
+			call: 'admin_syncStakingInfoStatus',
+		}),
 	],
 	properties: [
 		new web3._extend.Property({

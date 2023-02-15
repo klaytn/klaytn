@@ -32,21 +32,23 @@ import (
 // PublicDownloaderAPI provides an API which gives information about the current synchronisation status.
 // It offers only methods that operates on data that can be available to anyone without security risks.
 type PublicDownloaderAPI struct {
-	d                         downloadProgress
+	d                         downloader
 	mux                       *event.TypeMux
 	installSyncSubscription   chan chan interface{}
 	uninstallSyncSubscription chan *uninstallSyncSubscriptionRequest
 }
 
-type downloadProgress interface {
+type downloader interface {
 	Progress() klaytn.SyncProgress
+	SyncStakingInfo(id string, from, to uint64) error
+	SyncStakingInfoStatus() *SyncingStatus
 }
 
 // NewPublicDownloaderAPI creates a new PublicDownloaderAPI. The API has an internal event loop that
 // listens for events from the downloader through the global event mux. In case it receives one of
 // these events it broadcasts it to all syncing subscriptions that are installed through the
 // installSyncSubscription channel.
-func NewPublicDownloaderAPI(d downloadProgress, m *event.TypeMux) *PublicDownloaderAPI {
+func NewPublicDownloaderAPI(d downloader, m *event.TypeMux) *PublicDownloaderAPI {
 	api := &PublicDownloaderAPI{
 		d:                         d,
 		mux:                       m,
@@ -171,4 +173,25 @@ func (s *SyncStatusSubscription) Unsubscribe() {
 func (api *PublicDownloaderAPI) SubscribeSyncStatus(status chan interface{}) *SyncStatusSubscription {
 	api.installSyncSubscription <- status
 	return &SyncStatusSubscription{api: api, c: status}
+}
+
+// PrivateDownloaderAPI provides an API which gives syncing staking information.
+type PrivateDownloaderAPI struct {
+	d downloader
+}
+
+func NewPrivateDownloaderAPI(d downloader) *PrivateDownloaderAPI {
+	api := &PrivateDownloaderAPI{
+		d: d,
+	}
+
+	return api
+}
+
+func (api *PrivateDownloaderAPI) SyncStakingInfo(id string, from, to uint64) error {
+	return api.d.SyncStakingInfo(id, from, to)
+}
+
+func (api *PrivateDownloaderAPI) SyncStakingInfoStatus() *SyncingStatus {
+	return api.d.SyncStakingInfoStatus()
 }
