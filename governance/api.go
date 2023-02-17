@@ -353,6 +353,7 @@ func (api *PublicGovernanceAPI) isGovernanceModeBallot() bool {
 	blockNumber := api.governance.BlockChain().CurrentBlock().NumberU64()
 	pset, err := api.governance.ParamsAt(blockNumber)
 	if err != nil {
+		return false
 	}
 	gMode := pset.GovernanceModeInt()
 	return gMode == params.GovernanceMode_Ballot
