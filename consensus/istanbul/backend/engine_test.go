@@ -1673,7 +1673,7 @@ func TestGovernance_ReaderEngine(t *testing.T) {
 				3: {"governance.unitprice": uint64(1)},
 				4: {"governance.unitprice": uint64(1)},
 				5: {"governance.unitprice": uint64(1)},
-				6: {"governance.unitprice": uint64(17)},
+				6: {"governance.unitprice": uint64(1)},
 				7: {"governance.unitprice": uint64(17)},
 				8: {"governance.unitprice": uint64(17)},
 			},
@@ -1704,8 +1704,8 @@ func TestGovernance_ReaderEngine(t *testing.T) {
 		for num := 0; num <= tc.length; num++ {
 			// Validate current params with Params() and CurrentSetCopy().
 			// Check that both returns the expected result.
-			assertMapSubset(t, tc.expected[num], engine.governance.Params().StrMap())
-			assertMapSubset(t, tc.expected[num], engine.governance.CurrentSetCopy())
+			assertMapSubset(t, tc.expected[num+1], engine.governance.Params().StrMap())
+			assertMapSubset(t, tc.expected[num+1], engine.governance.CurrentSetCopy())
 
 			// Place a vote if a vote is scheduled in upcoming block
 			// Note that we're building (head+1)'th block here.
@@ -1728,14 +1728,13 @@ func TestGovernance_ReaderEngine(t *testing.T) {
 		// Validate historic parameters with ParamsAt() and ReadGovernance().
 		// Check that both returns the expected result.
 		for num := 0; num <= tc.length; num++ {
-			// Before Kore, query num+1
-			pset, err := engine.governance.ParamsAt(uint64(num) + 1)
+			pset, err := engine.governance.ParamsAt(uint64(num))
 			assert.NoError(t, err)
 			assertMapSubset(t, tc.expected[num], pset.StrMap())
 
 			_, items, err := engine.governance.ReadGovernance(uint64(num))
 			assert.NoError(t, err)
-			assertMapSubset(t, tc.expected[num], items)
+			assertMapSubset(t, tc.expected[num+1], items)
 		}
 
 		reward.SetTestStakingManager(oldStakingManager)
