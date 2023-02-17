@@ -83,7 +83,7 @@ func (api *GovernanceKlayAPI) GasPriceAt(num *rpc.BlockNumber) (*hexutil.Big, er
 	if num == nil || *num == rpc.LatestBlockNumber {
 		header := api.chain.CurrentBlock().Header()
 		if header.BaseFee == nil {
-			pset, err := api.governance.ParamsAt(header.Number.Uint64())
+			pset, err := api.governance.ParamsAt(header.Number.Uint64() + 1)
 			if err != nil {
 				return nil, err
 			}
@@ -153,7 +153,7 @@ func (api *GovernanceKlayAPI) ChainConfigAt(num *rpc.BlockNumber) *params.ChainC
 // Vote injects a new vote for governance targets such as unitprice and governingnode.
 func (api *PublicGovernanceAPI) Vote(key string, val interface{}) (string, error) {
 	blockNumber := api.governance.BlockChain().CurrentBlock().NumberU64()
-	pset, err := api.governance.ParamsAt(blockNumber)
+	pset, err := api.governance.ParamsAt(blockNumber + 1)
 	if err != nil {
 		return "", err
 	}
@@ -351,7 +351,7 @@ func (api *PublicGovernanceAPI) NodeAddress() common.Address {
 
 func (api *PublicGovernanceAPI) isGovernanceModeBallot() bool {
 	blockNumber := api.governance.BlockChain().CurrentBlock().NumberU64()
-	pset, err := api.governance.ParamsAt(blockNumber)
+	pset, err := api.governance.ParamsAt(blockNumber + 1)
 	if err != nil {
 		return false
 	}
