@@ -122,6 +122,7 @@ func (e *MixedEngine) Params() *params.GovParamSet {
 	return e.currentParams
 }
 
+// ParamsAt returns the parameter set used for generating the block `num`
 func (e *MixedEngine) ParamsAt(num uint64) (*params.GovParamSet, error) {
 	var contractParams *params.GovParamSet
 	var err error

@@ -462,8 +462,8 @@ func (g *Governance) updateGovernanceParams() {
 	params.SetProposerUpdateInterval(g.proposerUpdateInterval())
 
 	// NOTE: HumanReadable related functions are inactivated now
-	if v, ok := g.Params().Get(params.ConstTxGasHumanReadable); ok {
-		params.TxGasHumanReadable = v.(uint64)
+	if txGasHumanReadable, ok := g.currentSet.GetValue(params.ConstTxGasHumanReadable); ok {
+		params.TxGasHumanReadable = txGasHumanReadable.(uint64)
 	}
 }
 
@@ -1220,18 +1220,30 @@ func (gov *Governance) epochWithFallback() uint64 {
 		return v.(uint64)
 	}
 
-	// now that gov.ChainConfig is gone, we return default instead of gov.ChainConfig.Epoch
-	return params.DefaultEpoch
+	// Otherwise fallback to ChainConfig that is supplied to NewGovernance()
+	if gov.ChainConfig.Istanbul != nil {
+		return gov.ChainConfig.Istanbul.Epoch
+	}
+	// We shouldn't reach here because Governance is only relevant with Istanbul engine.
+	logger.Crit("Failed to read governance. ChainConfig.Istanbul == nil")
+	return params.DefaultEpoch // unreachable. just satisfying compiler.
 }
 
 func (gov *Governance) Params() *params.GovParamSet {
 	return gov.currentParams
 }
 
+// ParamsAt returns the parameter set used for generating the block `num`
 func (gov *Governance) ParamsAt(num uint64) (*params.GovParamSet, error) {
 	// TODO-Klaytn: Either handle epoch change, or permanently forbid epoch change.
 	epoch := gov.epochWithFallback()
 
+	bignum := new(big.Int).SetUint64(num)
+
+	// Before Kore, ReadGovernance(num - 1) is used to generate block num
+	if !gov.ChainConfig.IsKoreForkEnabled(bignum) && num != 0 {
+		num -= 1
+	}
 	// Should be equivalent to Governance.ReadGovernance(), but without in-memory caches.
 	// Not using in-memory caches to make it stateless, hence less error-prone.
 	_, strMap, err := gov.db.ReadGovernanceAtNumber(num, epoch)
@@ -1248,12 +1260,10 @@ func (gov *Governance) ParamsAt(num uint64) (*params.GovParamSet, error) {
 }
 
 func (gov *Governance) UpdateParams(num uint64) error {
-	strMap := gov.currentSet.Items()
-	pset, err := params.NewGovParamSetStrMap(strMap)
+	pset, err := gov.ParamsAt(num + 1)
 	if err != nil {
 		return err
 	}
-
 	gov.currentParams = pset
 	return nil
 }
