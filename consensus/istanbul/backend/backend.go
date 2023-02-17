@@ -379,7 +379,15 @@ func (sb *backend) GetProposer(number uint64) common.Address {
 
 // ParentValidators implements istanbul.Backend.GetParentValidators
 func (sb *backend) ParentValidators(proposal istanbul.Proposal) istanbul.ValidatorSet {
-	return sb.getValidators(proposal.Number().Uint64()-1, proposal.ParentHash())
+	if block, ok := proposal.(*types.Block); ok {
+		return sb.getValidators(block.Number().Uint64()-1, block.ParentHash())
+	}
+
+	// TODO-Klaytn-Governance The following return case should not be called. Refactor it to error handling.
+	return validator.NewValidatorSet(nil, nil,
+		istanbul.ProposerPolicy(sb.chain.Config().Istanbul.ProposerPolicy),
+		sb.chain.Config().Istanbul.SubGroupSize,
+		sb.chain)
 }
 
 func (sb *backend) getValidators(number uint64, hash common.Hash) istanbul.ValidatorSet {
