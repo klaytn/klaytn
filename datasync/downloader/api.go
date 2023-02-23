@@ -184,7 +184,6 @@ func NewPrivateDownloaderAPI(d downloader) *PrivateDownloaderAPI {
 	api := &PrivateDownloaderAPI{
 		d: d,
 	}
-
 	return api
 }
 

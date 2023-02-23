@@ -19,8 +19,6 @@ package reward
 import (
 	"encoding/json"
 	"errors"
-
-	"github.com/klaytn/klaytn/common"
 )
 
 var ErrStakingDBNotSet = errors.New("stakingInfoDB is not set")
@@ -29,21 +27,14 @@ type stakingInfoDB interface {
 	HasStakingInfo(blockNum uint64) (bool, error)
 	ReadStakingInfo(blockNum uint64) ([]byte, error)
 	WriteStakingInfo(blockNum uint64, stakingInfo []byte) error
-
-	ReadCanonicalHash(number uint64) common.Hash
 }
 
-// HasStakingInfoFromDB returns existence of staking information from miscdb with blockhash.
-// Note that blockhash is also returned in order to check the validity of the block.
-func HasStakingInfoFromDB(blockNumber uint64) (common.Hash, bool, error) {
+// HasStakingInfoFromDB returns existence of staking information from miscdb.
+func HasStakingInfoFromDB(blockNumber uint64) (bool, error) {
 	if stakingManager.stakingInfoDB == nil {
-		return common.Hash{}, false, ErrStakingDBNotSet
+		return false, ErrStakingDBNotSet
 	}
-
-	hash := stakingManager.stakingInfoDB.ReadCanonicalHash(blockNumber)
-	has, err := stakingManager.stakingInfoDB.HasStakingInfo(blockNumber)
-
-	return hash, has, err
+	return stakingManager.stakingInfoDB.HasStakingInfo(blockNumber)
 }
 
 func getStakingInfoFromDB(blockNum uint64) (*StakingInfo, error) {

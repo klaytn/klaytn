@@ -585,26 +585,35 @@ func (d *Downloader) spawnSync(fetchers []func() error, peerID string) error {
 }
 
 func (d *Downloader) SyncStakingInfo(id string, from, to uint64) error {
-	if d.isStakingInfoRecovery == true {
+	if d.isStakingInfoRecovery {
 		return errors.New("already syncing")
 	}
 	logger.Info("start syncing staking infos", "from", from, "to", to)
 	d.isStakingInfoRecovery = true
 
-	var hashes []common.Hash
+	var (
+		blockNums   []uint64
+		blockHashes []common.Hash
+	)
 	from = params.CalcStakingBlockNumber(from)
 	for i := from; i <= to; i += params.StakingUpdateInterval() {
-		if hash, has, err := reward.HasStakingInfoFromDB(i); err == nil && !has {
-			if hash == (common.Hash{}) {
-				d.isStakingInfoRecovery = false
-				return fmt.Errorf("failed to retrieve block hash by number (blockNumber: %v)", i)
-			}
-			d.stakingInfoRecoveryBlocks = append(d.stakingInfoRecoveryBlocks, i)
-			hashes = append(hashes, hash)
+		blockHash := d.stateDB.ReadCanonicalHash(i)
+		if blockHash == (common.Hash{}) {
+			d.isStakingInfoRecovery = false
+			return fmt.Errorf("failed to retrieve block hash by number (blockNumber: %v)", i)
+		}
+		has, err := reward.HasStakingInfoFromDB(i)
+		if err != nil {
+			d.isStakingInfoRecovery = false
+			return err
+		}
+		if !has {
+			blockNums = append(blockNums, i)
+			blockHashes = append(blockHashes, blockHash)
 		}
 	}
 
-	if len(d.stakingInfoRecoveryBlocks) == 0 && len(hashes) == 0 {
+	if len(blockNums) == 0 && len(blockHashes) == 0 {
 		d.isStakingInfoRecovery = false
 		return fmt.Errorf("there is no staking info to be synced")
 	}
@@ -615,7 +624,9 @@ func (d *Downloader) SyncStakingInfo(id string, from, to uint64) error {
 		return errors.New("the given peer is not registered")
 	}
 
-	d.stakingInfoRecoveryTotal = len(d.stakingInfoRecoveryBlocks)
+	d.stakingInfoRecoveryBlocks = blockNums
+	d.stakingInfoRecoveryTotal = len(blockNums)
+	d.stakingInfoRecoveryCh = make(chan []*reward.StakingInfo, 1)
 
 	go func() {
 		defer func() {
@@ -623,19 +634,18 @@ func (d *Downloader) SyncStakingInfo(id string, from, to uint64) error {
 			d.stakingInfoRecoveryBlocks = []uint64{}
 			d.stakingInfoRecoveryTotal = 0
 		}()
-		d.stakingInfoRecoveryCh = make(chan []*reward.StakingInfo, 1)
 
 		fixed := 0
 		for {
 			timer := time.NewTimer(30 * time.Second)
-			if len(hashes) > MaxStakingInfoFetch {
-				go conn.peer.RequestStakingInfo(hashes[:MaxStakingInfoFetch])
+			if len(blockHashes) > MaxStakingInfoFetch {
+				go conn.peer.RequestStakingInfo(blockHashes[:MaxStakingInfoFetch])
 				logger.Info("requested staking infos", "num", MaxStakingInfoFetch)
-				hashes = hashes[MaxStakingInfoFetch:]
-			} else if len(hashes) > 0 {
-				go conn.peer.RequestStakingInfo(hashes)
-				logger.Info("requested staking infos", "num", len(hashes))
-				hashes = []common.Hash{}
+				blockHashes = blockHashes[MaxStakingInfoFetch:]
+			} else if len(blockHashes) > 0 {
+				go conn.peer.RequestStakingInfo(blockHashes)
+				logger.Info("requested staking infos", "num", len(blockHashes))
+				blockHashes = []common.Hash{}
 			} else {
 				logger.Error("no more requests, but not completed", "not completed", len(d.stakingInfoRecoveryBlocks))
 				return
@@ -646,6 +656,7 @@ func (d *Downloader) SyncStakingInfo(id string, from, to uint64) error {
 				logger.Error("timeout")
 				return
 			case stakingInfos := <-d.stakingInfoRecoveryCh:
+				logger.Info("received stakinginfos", "len", len(stakingInfos))
 				for _, stakingInfo := range stakingInfos {
 					if d.stakingInfoRecoveryBlocks[0] != stakingInfo.BlockNum {
 						logger.Error("failed to receive expected block", "expected", d.stakingInfoRecoveryBlocks[0], "actual", stakingInfo.BlockNum)
@@ -1921,7 +1932,6 @@ func (d *Downloader) DeliverReceipts(id string, receipts [][]*types.Receipt) (er
 // DeliverStakingInfos injects a new batch of staking information received from a remote node.
 func (d *Downloader) DeliverStakingInfos(id string, stakingInfos []*reward.StakingInfo) error {
 	if d.isStakingInfoRecovery {
-		logger.Info("received stakinginfos", "len", len(stakingInfos))
 		d.stakingInfoRecoveryCh <- stakingInfos
 	}
 	return d.deliver(id, d.stakingInfoCh, &stakingInfoPack{id, stakingInfos}, stakingInfoInMeter, stakingInfoDropMeter)
