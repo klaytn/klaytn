@@ -133,10 +133,6 @@ func (sb *backend) GetRewardBase() common.Address {
 	return sb.rewardbase
 }
 
-func (sb *backend) GetSubGroupSize() uint64 {
-	return sb.governance.Params().CommitteeSize()
-}
-
 func (sb *backend) SetCurrentView(view *istanbul.View) {
 	sb.currentView.Store(view)
 }
@@ -389,8 +385,8 @@ func (sb *backend) ParentValidators(proposal istanbul.Proposal) istanbul.Validat
 
 	// TODO-Klaytn-Governance The following return case should not be called. Refactor it to error handling.
 	return validator.NewValidatorSet(nil, nil,
-		istanbul.ProposerPolicy(sb.governance.Params().Policy()),
-		sb.governance.Params().CommitteeSize(),
+		istanbul.ProposerPolicy(sb.chain.Config().Istanbul.ProposerPolicy),
+		sb.chain.Config().Istanbul.SubGroupSize,
 		sb.chain)
 }
 
@@ -400,8 +396,8 @@ func (sb *backend) getValidators(number uint64, hash common.Hash) istanbul.Valid
 		logger.Error("Snapshot not found.", "err", err)
 		// TODO-Klaytn-Governance The following return case should not be called. Refactor it to error handling.
 		return validator.NewValidatorSet(nil, nil,
-			istanbul.ProposerPolicy(sb.governance.Params().Policy()),
-			sb.governance.Params().CommitteeSize(),
+			istanbul.ProposerPolicy(sb.chain.Config().Istanbul.ProposerPolicy),
+			sb.chain.Config().Istanbul.SubGroupSize,
 			sb.chain)
 	}
 	return snap.ValSet

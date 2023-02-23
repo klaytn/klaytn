@@ -31,6 +31,8 @@ func newTestGovernanceApi() *PublicGovernanceAPI {
 	config.Governance.KIP71 = params.GetDefaultKIP71Config()
 	govApi := NewGovernanceAPI(NewMixedEngine(config, database.NewMemoryDBManager()))
 	govApi.governance.SetNodeAddress(common.HexToAddress("0x52d41ca72af615a1ac3301b0a93efa222ecc7541"))
+	bc := newTestBlockchain(config)
+	govApi.governance.SetBlockchain(bc)
 	return govApi
 }
 
