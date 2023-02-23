@@ -47,7 +47,7 @@ type BalanceAdder interface {
 // Instead declare only the methods used by this package.
 type governanceHelper interface {
 	CurrentParams() *params.GovParamSet
-	ParamsAt(num uint64) (*params.GovParamSet, error)
+	EffectiveParams(num uint64) (*params.GovParamSet, error)
 }
 
 type rewardConfig struct {

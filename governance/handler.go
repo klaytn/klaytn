@@ -383,9 +383,9 @@ func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, votes 
 		number := header.Number.Uint64()
 		// Check vote's validity
 		if gVote, ok := gov.ValidateVote(gVote); ok {
-			pset, err := gov.ParamsAt(number)
+			pset, err := gov.EffectiveParams(number)
 			if err != nil {
-				logger.Error("ParamsAt failed", "number", number)
+				logger.Error("EffectiveParams failed", "number", number)
 				return valset, votes, tally
 			}
 			governanceMode := pset.GovernanceModeInt()

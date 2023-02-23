@@ -1302,8 +1302,8 @@ func TestGovernance_ParamsAt(t *testing.T) {
 		{151, valueC},
 	}
 	for _, tc := range testcases {
-		// Check that e.ParamsAt() == tc
-		pset, err := gov.ParamsAt(tc.num)
+		// Check that e.EffectiveParams() == tc
+		pset, err := gov.EffectiveParams(tc.num)
 		assert.Nil(t, err)
 		assert.Equal(t, tc.value, pset.CommitteeSize(), "Wrong at %d", tc.num)
 	}

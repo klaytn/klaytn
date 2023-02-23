@@ -227,7 +227,7 @@ func fillMissingGiniCoefficient(stakingInfo *StakingInfo, number uint64) error {
 	// - Gini was calculated but there was no eligible node, so Gini = -1.
 	// For the second case, in theory we won't have to recalculalte Gini,
 	// but there is no way to distinguish both. So we just recalculate.
-	pset, err := stakingManager.governanceHelper.ParamsAt(number)
+	pset, err := stakingManager.governanceHelper.EffectiveParams(number)
 	if err != nil {
 		return err
 	}
@@ -273,7 +273,7 @@ func handleChainHeadEvent() {
 		select {
 		// Handle ChainHeadEvent
 		case ev := <-stakingManager.chainHeadChan:
-			pset, err := stakingManager.governanceHelper.ParamsAt(ev.Block.NumberU64() + 1)
+			pset, err := stakingManager.governanceHelper.EffectiveParams(ev.Block.NumberU64() + 1)
 			if err != nil {
 				logger.Error("unable to fetch parameters at", "blockNum", ev.Block.NumberU64()+1)
 				continue

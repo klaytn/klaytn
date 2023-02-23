@@ -122,24 +122,24 @@ func (e *MixedEngine) CurrentParams() *params.GovParamSet {
 	return e.currentParams
 }
 
-// ParamsAt returns the parameter set used for generating the block `num`
-func (e *MixedEngine) ParamsAt(num uint64) (*params.GovParamSet, error) {
+// EffectiveParams returns the parameter set used for generating the block `num`
+func (e *MixedEngine) EffectiveParams(num uint64) (*params.GovParamSet, error) {
 	var contractParams *params.GovParamSet
 	var err error
 
 	if e.config.IsKoreForkEnabled(new(big.Int).SetUint64(num)) {
-		contractParams, err = e.contractGov.ParamsAt(num)
+		contractParams, err = e.contractGov.EffectiveParams(num)
 		if err != nil {
-			logger.Error("contractGov.ParamsAt() failed", "err", err)
+			logger.Error("contractGov.EffectiveParams() failed", "err", err)
 			return nil, err
 		}
 	} else {
 		contractParams = params.NewGovParamSet()
 	}
 
-	headerParams, err := e.headerGov.ParamsAt(num)
+	headerParams, err := e.headerGov.EffectiveParams(num)
 	if err != nil {
-		logger.Error("headerGov.ParamsAt() failed", "err", err)
+		logger.Error("headerGov.EffectiveParams() failed", "err", err)
 		return nil, err
 	}
 

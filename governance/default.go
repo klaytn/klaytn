@@ -1233,8 +1233,8 @@ func (gov *Governance) CurrentParams() *params.GovParamSet {
 	return gov.currentParams
 }
 
-// ParamsAt returns the parameter set used for generating the block `num`
-func (gov *Governance) ParamsAt(num uint64) (*params.GovParamSet, error) {
+// EffectiveParams returns the parameter set used for generating the block `num`
+func (gov *Governance) EffectiveParams(num uint64) (*params.GovParamSet, error) {
 	// TODO-Klaytn: Either handle epoch change, or permanently forbid epoch change.
 	epoch := gov.epochWithFallback()
 
@@ -1260,7 +1260,7 @@ func (gov *Governance) ParamsAt(num uint64) (*params.GovParamSet, error) {
 }
 
 func (gov *Governance) UpdateParams(num uint64) error {
-	pset, err := gov.ParamsAt(num + 1)
+	pset, err := gov.EffectiveParams(num + 1)
 	if err != nil {
 		return err
 	}

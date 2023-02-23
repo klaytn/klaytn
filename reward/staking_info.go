@@ -66,14 +66,16 @@ type StakingInfo struct {
 // We treat those entries with common RewardAddr as one node.
 //
 // For example,
-//     NodeAddrs      = [N1, N2, N3]
-//     StakingAddrs   = [S1, S2, S3]
-//     RewardAddrs    = [R1, R1, R3]
-//     StakingAmounts = [A1, A2, A3]
-// can be consolidated into
-//     CN1 = {[N1,N2], [S1,S2], R1, A1+A2}
-//     CN3 = {[N3],    [S3],    R3, A3}
 //
+//	NodeAddrs      = [N1, N2, N3]
+//	StakingAddrs   = [S1, S2, S3]
+//	RewardAddrs    = [R1, R1, R3]
+//	StakingAmounts = [A1, A2, A3]
+//
+// can be consolidated into
+//
+//	CN1 = {[N1,N2], [S1,S2], R1, A1+A2}
+//	CN3 = {[N3],    [S3],    R3, A3}
 type consolidatedNode struct {
 	NodeAddrs     []common.Address
 	StakingAddrs  []common.Address
@@ -135,7 +137,7 @@ func newStakingInfo(bc blockChain, helper governanceHelper, blockNum uint64, nod
 		stakingAmounts[i] = tempStakingAmount.Uint64()
 	}
 
-	pset, err := helper.ParamsAt(blockNum)
+	pset, err := helper.EffectiveParams(blockNum)
 	if err != nil {
 		return nil, err
 	}

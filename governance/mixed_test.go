@@ -51,7 +51,7 @@ func newTestMixedEngineNoContractEngine(t *testing.T, config *params.ChainConfig
 }
 
 // Without ContractGov, Check that
-//   - From a fresh MixedEngine instance, CurrentParams() and ParamsAt(0) returns the
+//   - From a fresh MixedEngine instance, CurrentParams() and EffectiveParams(0) returns the
 //     initial config value.
 func TestMixedEngine_Header_New(t *testing.T) {
 	valueA := uint64(0x11)
@@ -65,7 +65,7 @@ func TestMixedEngine_Header_New(t *testing.T) {
 	pset := e.CurrentParams()
 	assert.Equal(t, valueA, pset.CommitteeSize())
 
-	pset, err := e.ParamsAt(0)
+	pset, err := e.EffectiveParams(0)
 	assert.Nil(t, err)
 	assert.Equal(t, valueA, pset.CommitteeSize())
 }
@@ -96,8 +96,8 @@ func TestMixedEngine_Header_Params(t *testing.T) {
 }
 
 // Before Kore hardfork (i.e., without ContractGov), check that
-// - after DB is written at [n - epoch], ParamsAt(n+1) returns the new value
-// - ParamsAt(n+1) == ReadGovernance(n)
+// - after DB is written at [n - epoch], EffectiveParams(n+1) returns the new value
+// - EffectiveParams(n+1) == ReadGovernance(n)
 func TestMixedEngine_Header_ParamsAt(t *testing.T) {
 	valueA := uint64(0x11)
 	valueB := uint64(0x22)
@@ -128,8 +128,8 @@ func TestMixedEngine_Header_ParamsAt(t *testing.T) {
 		{61, valueB},
 	}
 	for _, tc := range testcases {
-		// Check that e.ParamsAt() == tc
-		pset, err := e.ParamsAt(tc.num + 1)
+		// Check that e.EffectiveParams() == tc
+		pset, err := e.EffectiveParams(tc.num + 1)
 		assert.Nil(t, err)
 		assert.Equal(t, tc.value, pset.CommitteeSize())
 
@@ -180,7 +180,7 @@ func TestMixedEngine_Params(t *testing.T) {
 	require.Equal(t, valueC, e.CurrentParams().GasTarget(), "fallback to contractGov failed")
 }
 
-// TestMixedEngine_ParamsAt tests if ParamsAt() returns correct values
+// TestMixedEngine_ParamsAt tests if EffectiveParams() returns correct values
 // given headerBlock and contractBlock;
 //
 //	at headerBlock, params are inserted to DB via WriteGovernance()
@@ -241,7 +241,7 @@ func TestMixedEngine_ParamsAt(t *testing.T) {
 
 	now := sim.BlockChain().CurrentHeader().Number.Uint64()
 	for i := uint64(0); i < now; i++ {
-		pset, err := e.ParamsAt(i)
+		pset, err := e.EffectiveParams(i)
 		assert.Nil(t, err)
 
 		val, ok := pset.Get(params.GasTarget)
@@ -259,7 +259,7 @@ func TestMixedEngine_ParamsAt(t *testing.T) {
 		}
 
 		assert.Equal(t, expected, val,
-			"ParamsAt(%d) failed (headerBlock=%d contractBlock=%d)",
+			"EffectiveParams(%d) failed (headerBlock=%d contractBlock=%d)",
 			i, headerBlock, contractBlock)
 	}
 }

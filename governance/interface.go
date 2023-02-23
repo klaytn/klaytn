@@ -39,10 +39,10 @@ type ReaderEngine interface {
 	// should use this method.
 	CurrentParams() *params.GovParamSet
 
-	// ParamsAt returns the params at given block number. The returned params
+	// EffectiveParams returns the params at given block number. The returned params
 	// were used to build the block at given number.
 	// The number must be equal or less than current block height (head).
-	ParamsAt(num uint64) (*params.GovParamSet, error)
+	EffectiveParams(num uint64) (*params.GovParamSet, error)
 
 	// UpdateParams updates the current params (the ones returned by CurrentParams()).
 	// by reading the latest blockchain states.

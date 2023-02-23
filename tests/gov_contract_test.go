@@ -39,7 +39,7 @@ import (
 )
 
 // TestGovernance_Engines tests MixedEngine, ContractEngine, and their
-// (1) CurrentParams() and (2) ParamsAt() results.
+// (1) CurrentParams() and (2) EffectiveParams() results.
 func TestGovernance_Engines(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlDebug)
 
@@ -121,7 +121,7 @@ func TestGovernance_Engines(t *testing.T) {
 		if len(ev.Block.Header().Governance) > 0 {
 			govBlock = num
 			// stopBlock is the epoch block, so we stop when receiving it
-			// otherwise, ParamsAt(stopBlock) may fail
+			// otherwise, EffectiveParams(stopBlock) may fail
 			stopBlock = govBlock + 5
 			stopBlock = stopBlock - (stopBlock % config.Istanbul.Epoch)
 			t.Logf("Governance at block=%2d, stopBlock=%2d", num, stopBlock)
@@ -144,13 +144,13 @@ func TestGovernance_Engines(t *testing.T) {
 		}
 	}
 
-	// 2. test ParamsAt():  Validate historic params from both Engines
+	// 2. test EffectiveParams():  Validate historic params from both Engines
 	for num := uint64(0); num < stopBlock; num++ {
-		mixedpset, err := mixedEngine.ParamsAt(num)
+		mixedpset, err := mixedEngine.EffectiveParams(num)
 		assert.Nil(t, err)
 		mixedVal, _ := mixedpset.Get(params.CommitteeSize)
 
-		contractpset, err := contractEngine.ParamsAt(num)
+		contractpset, err := contractEngine.EffectiveParams(num)
 		assert.Nil(t, err)
 
 		if num <= govBlock+1 { // ContractEngine disabled

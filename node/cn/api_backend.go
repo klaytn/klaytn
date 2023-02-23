@@ -287,7 +287,7 @@ func (b *CNAPIBackend) SuggestPrice(ctx context.Context) (*big.Int, error) {
 
 func (b *CNAPIBackend) UpperBoundGasPrice(ctx context.Context) *big.Int {
 	bignum := b.CurrentBlock().Number()
-	pset, err := b.cn.governance.ParamsAt(bignum.Uint64() + 1)
+	pset, err := b.cn.governance.EffectiveParams(bignum.Uint64() + 1)
 	if err != nil {
 		return nil
 	}
@@ -300,7 +300,7 @@ func (b *CNAPIBackend) UpperBoundGasPrice(ctx context.Context) *big.Int {
 
 func (b *CNAPIBackend) LowerBoundGasPrice(ctx context.Context) *big.Int {
 	bignum := b.CurrentBlock().Number()
-	pset, err := b.cn.governance.ParamsAt(bignum.Uint64() + 1)
+	pset, err := b.cn.governance.EffectiveParams(bignum.Uint64() + 1)
 	if err != nil {
 		return nil
 	}

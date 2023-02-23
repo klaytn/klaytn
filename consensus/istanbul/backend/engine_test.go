@@ -1651,7 +1651,7 @@ func TestGovernance_Votes(t *testing.T) {
 }
 
 func TestGovernance_ReaderEngine(t *testing.T) {
-	// Test that ReaderEngine (CurrentParams(), ParamsAt(), UpdateParams()) works.
+	// Test that ReaderEngine (CurrentParams(), EffectiveParams(), UpdateParams()) works.
 	type vote = map[string]interface{}
 	type expected = map[string]interface{} // expected (subset of) governance items
 	type testcase struct {
@@ -1725,10 +1725,10 @@ func TestGovernance_ReaderEngine(t *testing.T) {
 			assert.NoError(t, err)
 		}
 
-		// Validate historic parameters with ParamsAt() and ReadGovernance().
+		// Validate historic parameters with EffectiveParams() and ReadGovernance().
 		// Check that both returns the expected result.
 		for num := 0; num <= tc.length; num++ {
-			pset, err := engine.governance.ParamsAt(uint64(num))
+			pset, err := engine.governance.EffectiveParams(uint64(num))
 			assert.NoError(t, err)
 			assertMapSubset(t, tc.expected[num], pset.StrMap())
 
