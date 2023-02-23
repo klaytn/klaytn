@@ -83,7 +83,7 @@ func (api *GovernanceKlayAPI) GasPriceAt(num *rpc.BlockNumber) (*hexutil.Big, er
 	if num == nil || *num == rpc.LatestBlockNumber {
 		header := api.chain.CurrentBlock().Header()
 		if header.BaseFee == nil {
-			pset, err := api.governance.ParamsAt(header.Number.Uint64() + 1)
+			pset, err := api.governance.EffectiveParams(header.Number.Uint64() + 1)
 			if err != nil {
 				return nil, err
 			}
@@ -128,12 +128,12 @@ func (api *GovernanceKlayAPI) GetRewards(num *rpc.BlockNumber) (*reward.RewardSp
 	}
 
 	rules := api.chain.Config().Rules(new(big.Int).SetUint64(blockNumber))
-	pset, err := api.governance.ParamsAt(blockNumber)
+	pset, err := api.governance.EffectiveParams(blockNumber)
 	if err != nil {
 		return nil, err
 	}
 	rewardParamNum := reward.CalcRewardParamBlock(header.Number.Uint64(), pset.Epoch(), rules)
-	rewardParamSet, err := api.governance.ParamsAt(rewardParamNum)
+	rewardParamSet, err := api.governance.EffectiveParams(rewardParamNum)
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +153,7 @@ func (api *GovernanceKlayAPI) ChainConfigAt(num *rpc.BlockNumber) *params.ChainC
 // Vote injects a new vote for governance targets such as unitprice and governingnode.
 func (api *PublicGovernanceAPI) Vote(key string, val interface{}) (string, error) {
 	blockNumber := api.governance.BlockChain().CurrentBlock().NumberU64()
-	pset, err := api.governance.ParamsAt(blockNumber + 1)
+	pset, err := api.governance.EffectiveParams(blockNumber + 1)
 	if err != nil {
 		return "", err
 	}
@@ -232,7 +232,7 @@ func itemsAt(governance Engine, num *rpc.BlockNumber) (map[string]interface{}, e
 		blockNumber = uint64(num.Int64())
 	}
 
-	pset, err := governance.ParamsAt(blockNumber)
+	pset, err := governance.EffectiveParams(blockNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -328,7 +328,7 @@ func chainConfigAt(governance Engine, num *rpc.BlockNumber) *params.ChainConfig 
 		blocknum = num.Uint64()
 	}
 
-	pset, err := governance.ParamsAt(blocknum)
+	pset, err := governance.EffectiveParams(blocknum)
 	if err != nil {
 		return nil
 	}
@@ -351,7 +351,7 @@ func (api *PublicGovernanceAPI) NodeAddress() common.Address {
 
 func (api *PublicGovernanceAPI) isGovernanceModeBallot() bool {
 	blockNumber := api.governance.BlockChain().CurrentBlock().NumberU64()
-	pset, err := api.governance.ParamsAt(blockNumber + 1)
+	pset, err := api.governance.EffectiveParams(blockNumber + 1)
 	if err != nil {
 		return false
 	}
@@ -360,7 +360,7 @@ func (api *PublicGovernanceAPI) isGovernanceModeBallot() bool {
 }
 
 func (api *GovernanceKlayAPI) GasPriceAtNumber(num uint64) (uint64, error) {
-	pset, err := api.governance.ParamsAt(num)
+	pset, err := api.governance.EffectiveParams(num)
 	if err != nil {
 		logger.Error("Failed to retrieve unit price", "err", err)
 		return 0, err

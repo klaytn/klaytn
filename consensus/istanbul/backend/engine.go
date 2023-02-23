@@ -193,7 +193,7 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 	if chain.Config().IsMagmaForkEnabled(header.Number) {
 		// the kip71Config used when creating the block number is a previous block config.
 		blockNum := header.Number.Uint64()
-		pset, err := sb.governance.ParamsAt(blockNum)
+		pset, err := sb.governance.EffectiveParams(blockNum)
 		if err != nil {
 			return err
 		}
@@ -251,7 +251,7 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 	}
 
 	// At every epoch governance data will come in block header. Verify it.
-	pset, err := sb.governance.ParamsAt(number)
+	pset, err := sb.governance.EffectiveParams(number)
 	if err != nil {
 		return err
 	}
@@ -401,7 +401,7 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	}
 
 	// If it reaches the Epoch, governance config will be added to block header
-	pset, err := sb.governance.ParamsAt(number)
+	pset, err := sb.governance.EffectiveParams(number)
 	if err != nil {
 		return err
 	}
@@ -465,7 +465,7 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 	var rewardSpec *reward.RewardSpec
 
 	rules := chain.Config().Rules(header.Number)
-	pset, err := sb.governance.ParamsAt(header.Number.Uint64())
+	pset, err := sb.governance.EffectiveParams(header.Number.Uint64())
 	if err != nil {
 		return nil, err
 	}
@@ -671,7 +671,7 @@ func (sb *backend) initSnapshot(chain consensus.ChainReader) (*Snapshot, error) 
 		return nil, err
 	}
 
-	pset, err := sb.governance.ParamsAt(0)
+	pset, err := sb.governance.EffectiveParams(0)
 	if err != nil {
 		return nil, err
 	}
@@ -836,7 +836,7 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 	for i := 0; i < len(headers)/2; i++ {
 		headers[i], headers[len(headers)-1-i] = headers[len(headers)-1-i], headers[i]
 	}
-	pset, err := sb.governance.ParamsAt(number)
+	pset, err := sb.governance.EffectiveParams(number)
 	if err != nil {
 		return nil, err
 	}

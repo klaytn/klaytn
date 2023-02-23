@@ -52,7 +52,7 @@ type Snapshot struct {
 }
 
 func getGovernanceValue(gov governance.Engine, number uint64) (epoch uint64, policy uint64, committeeSize uint64) {
-	pset, err := gov.ParamsAt(number)
+	pset, err := gov.EffectiveParams(number)
 	if err != nil {
 		// TODO-Klaytn-Kore: remove err condition
 		logger.Error("Couldn't get governance value. Resorting to defaults", "err", err)
@@ -195,7 +195,7 @@ func (s *Snapshot) apply(headers []*types.Header, gov governance.Engine, addr co
 			// Refresh proposers in Snapshot_N using previous proposersUpdateInterval block for N+1, if not updated yet.
 
 			// because snapshot(num)'s ValSet = validators for num+1
-			pset, err := gov.ParamsAt(number + 1)
+			pset, err := gov.EffectiveParams(number + 1)
 			if err != nil {
 				return nil, err
 			}

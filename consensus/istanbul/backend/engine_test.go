@@ -708,8 +708,8 @@ func TestRewardDistribution(t *testing.T) {
 	configItems = append(configItems, blockPeriod(0)) // set block period to 0 to prevent creating future block
 
 	chain, engine := newBlockChain(1, configItems...)
-	assert.Equal(t, uint64(testEpoch), engine.governance.Params().Epoch())
-	assert.Equal(t, mintAmount, engine.governance.Params().MintingAmountBig().Uint64())
+	assert.Equal(t, uint64(testEpoch), engine.governance.CurrentParams().Epoch())
+	assert.Equal(t, mintAmount, engine.governance.CurrentParams().MintingAmountBig().Uint64())
 
 	var previousBlock, currentBlock *types.Block = nil, chain.Genesis()
 
@@ -1605,14 +1605,14 @@ func TestGovernance_Votes(t *testing.T) {
 		chain, engine := newBlockChain(1, configItems...)
 
 		// test initial governance items
-		assert.Equal(t, uint64(3), engine.governance.Params().Epoch())
-		assert.Equal(t, "single", engine.governance.Params().GovernanceModeStr())
-		assert.Equal(t, uint64(21), engine.governance.Params().CommitteeSize())
-		assert.Equal(t, uint64(1), engine.governance.Params().UnitPrice())
-		assert.Equal(t, "0", engine.governance.Params().MintingAmountStr())
-		assert.Equal(t, "100/0/0", engine.governance.Params().Ratio())
-		assert.Equal(t, false, engine.governance.Params().UseGiniCoeff())
-		assert.Equal(t, "2000000", engine.governance.Params().MinimumStakeStr())
+		assert.Equal(t, uint64(3), engine.governance.CurrentParams().Epoch())
+		assert.Equal(t, "single", engine.governance.CurrentParams().GovernanceModeStr())
+		assert.Equal(t, uint64(21), engine.governance.CurrentParams().CommitteeSize())
+		assert.Equal(t, uint64(1), engine.governance.CurrentParams().UnitPrice())
+		assert.Equal(t, "0", engine.governance.CurrentParams().MintingAmountStr())
+		assert.Equal(t, "100/0/0", engine.governance.CurrentParams().Ratio())
+		assert.Equal(t, false, engine.governance.CurrentParams().UseGiniCoeff())
+		assert.Equal(t, "2000000", engine.governance.CurrentParams().MinimumStakeStr())
 
 		// add votes and insert voted blocks
 		var (
@@ -1651,7 +1651,7 @@ func TestGovernance_Votes(t *testing.T) {
 }
 
 func TestGovernance_ReaderEngine(t *testing.T) {
-	// Test that ReaderEngine (Params(), ParamsAt(), UpdateParams()) works.
+	// Test that ReaderEngine (CurrentParams(), EffectiveParams(), UpdateParams()) works.
 	type vote = map[string]interface{}
 	type expected = map[string]interface{} // expected (subset of) governance items
 	type testcase struct {
@@ -1702,9 +1702,9 @@ func TestGovernance_ReaderEngine(t *testing.T) {
 
 		// Create blocks with votes
 		for num := 0; num <= tc.length; num++ {
-			// Validate current params with Params() and CurrentSetCopy().
+			// Validate current params with CurrentParams() and CurrentSetCopy().
 			// Check that both returns the expected result.
-			assertMapSubset(t, tc.expected[num+1], engine.governance.Params().StrMap())
+			assertMapSubset(t, tc.expected[num+1], engine.governance.CurrentParams().StrMap())
 			assertMapSubset(t, tc.expected[num+1], engine.governance.CurrentSetCopy())
 
 			// Place a vote if a vote is scheduled in upcoming block
@@ -1725,10 +1725,10 @@ func TestGovernance_ReaderEngine(t *testing.T) {
 			assert.NoError(t, err)
 		}
 
-		// Validate historic parameters with ParamsAt() and ReadGovernance().
+		// Validate historic parameters with EffectiveParams() and ReadGovernance().
 		// Check that both returns the expected result.
 		for num := 0; num <= tc.length; num++ {
-			pset, err := engine.governance.ParamsAt(uint64(num))
+			pset, err := engine.governance.EffectiveParams(uint64(num))
 			assert.NoError(t, err)
 			assertMapSubset(t, tc.expected[num], pset.StrMap())
 

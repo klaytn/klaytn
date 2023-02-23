@@ -39,7 +39,7 @@ func newTestGovernanceApi() *PublicGovernanceAPI {
 func TestUpperBoundBaseFeeSet(t *testing.T) {
 	govApi := newTestGovernanceApi()
 
-	curLowerBoundBaseFee := govApi.governance.Params().LowerBoundBaseFee()
+	curLowerBoundBaseFee := govApi.governance.CurrentParams().LowerBoundBaseFee()
 	// unexpected case : upperboundbasefee < lowerboundbasefee
 	invalidUpperBoundBaseFee := curLowerBoundBaseFee - 100
 	_, err := govApi.Vote("kip71.upperboundbasefee", invalidUpperBoundBaseFee)
@@ -49,7 +49,7 @@ func TestUpperBoundBaseFeeSet(t *testing.T) {
 func TestLowerBoundFeeSet(t *testing.T) {
 	govApi := newTestGovernanceApi()
 
-	curUpperBoundBaseFee := govApi.governance.Params().UpperBoundBaseFee()
+	curUpperBoundBaseFee := govApi.governance.CurrentParams().UpperBoundBaseFee()
 	// unexpected case : upperboundbasefee < lowerboundbasefee
 	invalidLowerBoundBaseFee := curUpperBoundBaseFee + 100
 	_, err := govApi.Vote("kip71.lowerboundbasefee", invalidLowerBoundBaseFee)

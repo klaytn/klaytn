@@ -275,7 +275,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	blockchain.InitDeriveShaWithGov(cn.chainConfig, governance)
 
 	// Synchronize proposerpolicy & useGiniCoeff
-	pset, err := governance.ParamsAt(bc.CurrentBlock().NumberU64() + 1)
+	pset, err := governance.EffectiveParams(bc.CurrentBlock().NumberU64() + 1)
 	if err != nil {
 		return nil, err
 	}
