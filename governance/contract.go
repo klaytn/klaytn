@@ -47,12 +47,12 @@ func NewContractEngine(headerGov *Governance) *ContractEngine {
 	return e
 }
 
-// Params effective at upcoming block (head+1)
-func (e *ContractEngine) Params() *params.GovParamSet {
+// CurrentParams effective at upcoming block (head+1)
+func (e *ContractEngine) CurrentParams() *params.GovParamSet {
 	return e.currentParams
 }
 
-// Params effective at requested block (num)
+// Parameters effective at requested block (num)
 func (e *ContractEngine) ParamsAt(num uint64) (*params.GovParamSet, error) {
 	pset, err := e.contractGetAllParamsAt(num)
 	if err != nil {

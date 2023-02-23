@@ -42,7 +42,7 @@ type MixedEngine struct {
 	initialParams *params.GovParamSet // initial ChainConfig
 	defaultParams *params.GovParamSet // default constants used as last fallback
 
-	currentParams *params.GovParamSet // latest params to be returned by Params()
+	currentParams *params.GovParamSet // latest params to be returned by CurrentParams()
 
 	db database.DBManager
 
@@ -118,7 +118,7 @@ func NewMixedEngineNoInit(config *params.ChainConfig, db database.DBManager) *Mi
 	return newMixedEngine(config, db, false)
 }
 
-func (e *MixedEngine) Params() *params.GovParamSet {
+func (e *MixedEngine) CurrentParams() *params.GovParamSet {
 	return e.currentParams
 }
 
@@ -155,7 +155,7 @@ func (e *MixedEngine) UpdateParams(num uint64) error {
 			logger.Error("contractGov.UpdateParams(num) failed", "num", num, "err", err)
 			return err
 		}
-		contractParams = e.contractGov.Params()
+		contractParams = e.contractGov.CurrentParams()
 	} else {
 		contractParams = params.NewGovParamSet()
 	}
@@ -165,7 +165,7 @@ func (e *MixedEngine) UpdateParams(num uint64) error {
 		return err
 	}
 
-	headerParams := e.headerGov.Params()
+	headerParams := e.headerGov.CurrentParams()
 
 	newParams := e.assembleParams(headerParams, contractParams)
 	e.handleParamUpdate(e.currentParams, newParams)

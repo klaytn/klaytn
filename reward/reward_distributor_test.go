@@ -30,7 +30,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func (governance *testGovernance) Params() *params.GovParamSet {
+func (governance *testGovernance) CurrentParams() *params.GovParamSet {
 	return governance.p
 }
 

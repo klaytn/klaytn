@@ -34,20 +34,20 @@ type Engine interface {
 }
 
 type ReaderEngine interface {
-	// Params returns the params at the current block. The returned params shall be
+	// CurrentParams returns the params at the current block. The returned params shall be
 	// used to build the upcoming (head+1) block. Block processing codes
 	// should use this method.
-	Params() *params.GovParamSet
+	CurrentParams() *params.GovParamSet
 
 	// ParamsAt returns the params at given block number. The returned params
 	// were used to build the block at given number.
 	// The number must be equal or less than current block height (head).
 	ParamsAt(num uint64) (*params.GovParamSet, error)
 
-	// UpdateParams updates the current params (the ones returned by Params()).
+	// UpdateParams updates the current params (the ones returned by CurrentParams()).
 	// by reading the latest blockchain states.
 	// This function must be called after every block is mined to
-	// guarantee that Params() works correctly.
+	// guarantee that CurrentParams() works correctly.
 	UpdateParams(num uint64) error
 }
 

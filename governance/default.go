@@ -739,7 +739,7 @@ func (g *Governance) initializeCache(chainConfig *params.ChainConfig) error {
 	} else {
 		logger.Crit("Error parsing initial ChainConfig", "err", err)
 	}
-	// Reflect g.currentSet -> g.currentParams (for g.Params())
+	// Reflect g.currentSet -> g.currentParams (for g.CurrentParams())
 	// Outside initializeCache, istanbul.CreateSnapshot() will trigger UpdateParams().
 	g.UpdateParams(headBlockNumber)
 	// Reflect g.currentSet -> global params in params/governance_params.go
@@ -1211,8 +1211,8 @@ func (gov *Governance) IdxCacheFromDb() []uint64 {
 // epochWithFallback returns the istanbul epoch. This function works even before loading any params
 // from database. We need epoch to load any param from database.
 func (gov *Governance) epochWithFallback() uint64 {
-	// After UpdateParams() is called at least once, Params() should contain the Epoch
-	if v, ok := gov.Params().Get(params.Epoch); ok {
+	// After UpdateParams() is called at least once, CurrentParams() should contain the Epoch
+	if v, ok := gov.CurrentParams().Get(params.Epoch); ok {
 		return v.(uint64)
 	}
 	// Otherwise after initializeCache() is called, initialParams should contain the Epoch
@@ -1229,7 +1229,7 @@ func (gov *Governance) epochWithFallback() uint64 {
 	return params.DefaultEpoch // unreachable. just satisfying compiler.
 }
 
-func (gov *Governance) Params() *params.GovParamSet {
+func (gov *Governance) CurrentParams() *params.GovParamSet {
 	return gov.currentParams
 }
 

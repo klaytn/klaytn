@@ -46,7 +46,7 @@ type BalanceAdder interface {
 // Cannot use governance.Engine because of cyclic dependency.
 // Instead declare only the methods used by this package.
 type governanceHelper interface {
-	Params() *params.GovParamSet
+	CurrentParams() *params.GovParamSet
 	ParamsAt(num uint64) (*params.GovParamSet, error)
 }
 

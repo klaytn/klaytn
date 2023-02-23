@@ -1279,7 +1279,7 @@ func TestGovernance_ParamsAt(t *testing.T) {
 	// Write to database. Note that we must use gov.WriteGovernance(), not db.WriteGovernance()
 	// The reason is that gov.ReadGovernance() depends on the caches, and that
 	// gov.WriteGovernance() sets idxCache accordingly, whereas db.WriteGovernance don't
-	items := gov.Params().StrMap()
+	items := gov.CurrentParams().StrMap()
 	gset := NewGovernanceSet()
 
 	items["istanbul.committeesize"] = valueB
