@@ -290,6 +290,9 @@ func NewHTTPServer(cors []string, vhosts []string, timeouts HTTPTimeouts, srv ht
 	}
 }
 
+// NewFastHTTPServer creates a new HTTP RPC server around an API provider based on fasthttp library.
+//
+// Deprecated: fasthttp server type endpoint is no longer supported
 func NewFastHTTPServer(cors []string, vhosts []string, timeouts HTTPTimeouts, srv *Server) *fasthttp.Server {
 	timeouts = sanitizeTimeouts(timeouts)
 	if len(cors) == 0 {

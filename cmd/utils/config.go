@@ -324,7 +324,8 @@ func (kCfg *KlayConfig) SetNodeConfig(ctx *cli.Context) {
 	SetP2PConfig(ctx, &cfg.P2P)
 	setIPC(ctx, cfg)
 
-	// httptype is http or fasthttp
+	// httptype is http
+	// fasthttp type is deprecated
 	if ctx.GlobalIsSet(SrvTypeFlag.Name) {
 		cfg.HTTPServerType = ctx.GlobalString(SrvTypeFlag.Name)
 	}
