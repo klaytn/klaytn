@@ -269,6 +269,19 @@ func NewHTTPServer(cors []string, vhosts []string, timeouts HTTPTimeouts, srv ht
 	// Wrap the CORS-handler within a host-handler
 	handler := newCorsHandler(srv, cors)
 	handler = newVHostHandler(vhosts, handler)
+
+	// If os environment variables for NewRelic exist, register the NewRelicHTTPHandler
+	nrApp := newNewRelicApp()
+	if nrApp != nil {
+		handler = newNewRelicHTTPHandler(nrApp, handler)
+	}
+
+	// If os environment variables for Datadog exist, register the NewDatadogHTTPHandler
+	ddTracer := newDatadogTracer()
+	if ddTracer != nil {
+		handler = newDatadogHTTPHandler(ddTracer, handler)
+	}
+
 	return &http.Server{
 		Handler:      handler,
 		ReadTimeout:  timeouts.ReadTimeout,
