@@ -345,31 +345,19 @@ func (n *Node) startRPC(services map[reflect.Type]Service) error {
 		n.stopInProc()
 		return err
 	}
-	if n.config.IsFastHTTP() {
-		if err := n.startFastHTTP(n.httpEndpoint, apis, n.config.HTTPModules, n.config.HTTPCors, n.config.HTTPVirtualHosts, n.config.HTTPTimeouts); err != nil {
-			n.stopIPC()
-			n.stopInProc()
-			return err
-		}
-		if err := n.startFastWS(n.wsEndpoint, apis, n.config.WSModules, n.config.WSOrigins, n.config.WSExposeAll); err != nil {
-			n.stopHTTP()
-			n.stopIPC()
-			n.stopInProc()
-			return err
-		}
-	} else {
-		if err := n.startHTTP(n.httpEndpoint, apis, n.config.HTTPModules, n.config.HTTPCors, n.config.HTTPVirtualHosts, n.config.HTTPTimeouts); err != nil {
-			n.stopIPC()
-			n.stopInProc()
-			return err
-		}
-		if err := n.startWS(n.wsEndpoint, apis, n.config.WSModules, n.config.WSOrigins, n.config.WSExposeAll); err != nil {
-			n.stopHTTP()
-			n.stopIPC()
-			n.stopInProc()
-			return err
-		}
+
+	if err := n.startHTTP(n.httpEndpoint, apis, n.config.HTTPModules, n.config.HTTPCors, n.config.HTTPVirtualHosts, n.config.HTTPTimeouts); err != nil {
+		n.stopIPC()
+		n.stopInProc()
+		return err
 	}
+	if err := n.startWS(n.wsEndpoint, apis, n.config.WSModules, n.config.WSOrigins, n.config.WSExposeAll); err != nil {
+		n.stopHTTP()
+		n.stopIPC()
+		n.stopInProc()
+		return err
+	}
+
 	// start gRPC server
 	if err := n.startgRPC(apis); err != nil {
 		n.stopHTTP()
