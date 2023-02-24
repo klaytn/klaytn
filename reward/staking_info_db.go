@@ -24,8 +24,17 @@ import (
 var ErrStakingDBNotSet = errors.New("stakingInfoDB is not set")
 
 type stakingInfoDB interface {
+	HasStakingInfo(blockNum uint64) (bool, error)
 	ReadStakingInfo(blockNum uint64) ([]byte, error)
 	WriteStakingInfo(blockNum uint64, stakingInfo []byte) error
+}
+
+// HasStakingInfoFromDB returns existence of staking information from miscdb.
+func HasStakingInfoFromDB(blockNumber uint64) (bool, error) {
+	if stakingManager.stakingInfoDB == nil {
+		return false, ErrStakingDBNotSet
+	}
+	return stakingManager.stakingInfoDB.HasStakingInfo(blockNumber)
 }
 
 func getStakingInfoFromDB(blockNum uint64) (*StakingInfo, error) {
