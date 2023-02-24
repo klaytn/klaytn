@@ -52,8 +52,8 @@ func generateStakingInfoTestCases() []stakingInfoTestCase {
 		r3 = common.HexToAddress("0x62E47d858bf8513fc401886B94E33e7DCec2Bfb7")
 		r4 = common.HexToAddress("0xf275f9f4c0d375F9E3E50370f93b504A1e45dB09")
 
-		kir = common.HexToAddress("0x136807B12327a8AfF9831F09617dA1B9D398cda2")
-		poc = common.HexToAddress("0x46bA8F7538CD0749e572b2631F9FB4Ce3653AFB8")
+		kcf = common.HexToAddress("0x136807B12327a8AfF9831F09617dA1B9D398cda2")
+		kff = common.HexToAddress("0x46bA8F7538CD0749e572b2631F9FB4Ce3653AFB8")
 
 		a0 uint64 = 0
 		aL uint64 = 1000000  // less than minstaking
@@ -85,8 +85,8 @@ func generateStakingInfoTestCases() []stakingInfoTestCase {
 				CouncilNodeAddrs:      []common.Address{n1},
 				CouncilStakingAddrs:   []common.Address{s1},
 				CouncilRewardAddrs:    []common.Address{r1},
-				KIRAddr:               kir,
-				PoCAddr:               poc,
+				KIRAddr:               kcf,
+				PoCAddr:               kff,
 				UseGini:               true,
 				Gini:                  0.00,
 				CouncilStakingAmounts: []uint64{a1},
@@ -107,8 +107,8 @@ func generateStakingInfoTestCases() []stakingInfoTestCase {
 				CouncilNodeAddrs:      []common.Address{n1, n2, n3, n4},
 				CouncilStakingAddrs:   []common.Address{s1, s2, s3, s4},
 				CouncilRewardAddrs:    []common.Address{r1, r2, r3, r4},
-				KIRAddr:               kir,
-				PoCAddr:               poc,
+				KIRAddr:               kcf,
+				PoCAddr:               kff,
 				UseGini:               true,
 				Gini:                  0.38, // Gini(10, 20, 40, 80)
 				CouncilStakingAmounts: []uint64{a1, a2, a3, a4},
@@ -132,8 +132,8 @@ func generateStakingInfoTestCases() []stakingInfoTestCase {
 				CouncilNodeAddrs:      []common.Address{n1, n2, n3, n4},
 				CouncilStakingAddrs:   []common.Address{s1, s2, s3, s4},
 				CouncilRewardAddrs:    []common.Address{r1, r2, r1, r2}, // r1 and r2 used twice each
-				KIRAddr:               kir,
-				PoCAddr:               poc,
+				KIRAddr:               kcf,
+				PoCAddr:               kff,
 				UseGini:               true,
 				Gini:                  0.17, // Gini(50, 100)
 				CouncilStakingAmounts: []uint64{a1, a2, a3, a4},
@@ -155,8 +155,8 @@ func generateStakingInfoTestCases() []stakingInfoTestCase {
 				CouncilNodeAddrs:      []common.Address{n1, n2, n3, n4},
 				CouncilStakingAddrs:   []common.Address{s1, s2, s3, s4},
 				CouncilRewardAddrs:    []common.Address{r1, r2, r3, r4},
-				KIRAddr:               kir,
-				PoCAddr:               poc,
+				KIRAddr:               kcf,
+				PoCAddr:               kff,
 				UseGini:               true,
 				Gini:                  0.41,                     // Gini(20, 2)
 				CouncilStakingAmounts: []uint64{a2, aM, aL, a0}, // aL and a0 should be ignored in Gini calculation

@@ -50,8 +50,9 @@ type StakingInfo struct {
 	CouncilNodeAddrs    []common.Address // NodeIds of Council
 	CouncilStakingAddrs []common.Address // Address of Staking account which holds staking balance
 	CouncilRewardAddrs  []common.Address // Address of Council account which will get block reward
-	KIRAddr             common.Address   // Address of KIR contract
-	PoCAddr             common.Address   // Address of PoC contract
+	// TODO-klaytn-fund: Provide backward-compatibility to read/write marshalled stakingInfo, and then change KIR/PoC to KCF/KFF
+	KIRAddr common.Address // Address of KIR contract
+	PoCAddr common.Address // Address of PoC contract
 
 	UseGini bool
 	Gini    float64 // gini coefficient
@@ -93,8 +94,8 @@ type stakingInfoRLP struct {
 	CouncilNodeAddrs      []common.Address
 	CouncilStakingAddrs   []common.Address
 	CouncilRewardAddrs    []common.Address
-	KIRAddr               common.Address
-	PoCAddr               common.Address
+	KCFAddr               common.Address
+	KFFAddr               common.Address
 	UseGini               bool
 	Gini                  uint64
 	CouncilStakingAmounts []uint64
@@ -115,7 +116,7 @@ func newEmptyStakingInfo(blockNum uint64) *StakingInfo {
 	return stakingInfo
 }
 
-func newStakingInfo(bc blockChain, helper governanceHelper, blockNum uint64, nodeAddrs []common.Address, stakingAddrs []common.Address, rewardAddrs []common.Address, KIRAddr common.Address, PoCAddr common.Address) (*StakingInfo, error) {
+func newStakingInfo(bc blockChain, helper governanceHelper, blockNum uint64, nodeAddrs []common.Address, stakingAddrs []common.Address, rewardAddrs []common.Address, KCFAddr common.Address, KFFAddr common.Address) (*StakingInfo, error) {
 	intervalBlock := bc.GetBlockByNumber(blockNum)
 	if intervalBlock == nil {
 		logger.Trace("Failed to get the block by the given number", "blockNum", blockNum)
@@ -149,8 +150,8 @@ func newStakingInfo(bc blockChain, helper governanceHelper, blockNum uint64, nod
 		CouncilNodeAddrs:      nodeAddrs,
 		CouncilStakingAddrs:   stakingAddrs,
 		CouncilRewardAddrs:    rewardAddrs,
-		KIRAddr:               KIRAddr,
-		PoCAddr:               PoCAddr,
+		KIRAddr:               KCFAddr,
+		PoCAddr:               KFFAddr,
 		CouncilStakingAmounts: stakingAmounts,
 		Gini:                  gini,
 		UseGini:               useGini,
@@ -195,7 +196,7 @@ func (s *StakingInfo) DecodeRLP(st *rlp.Stream) error {
 	}
 	s.BlockNum = dec.BlockNum
 	s.CouncilNodeAddrs, s.CouncilStakingAddrs, s.CouncilRewardAddrs = dec.CouncilNodeAddrs, dec.CouncilStakingAddrs, dec.CouncilRewardAddrs
-	s.KIRAddr, s.PoCAddr, s.UseGini, s.Gini = dec.KIRAddr, dec.PoCAddr, dec.UseGini, math.Float64frombits(dec.Gini)
+	s.KIRAddr, s.PoCAddr, s.UseGini, s.Gini = dec.KCFAddr, dec.KFFAddr, dec.UseGini, math.Float64frombits(dec.Gini)
 	s.CouncilStakingAmounts = dec.CouncilStakingAmounts
 	return nil
 }
