@@ -80,10 +80,10 @@ type RewardSpec struct {
 	BurntFee *big.Int `json:"burntFee"` // the amount burnt
 	Proposer *big.Int `json:"proposer"` // the amount allocated to the block proposer
 	Stakers  *big.Int `json:"stakers"`  // total amount allocated to stakers
-	// TODO-klaytn-fund: change kff json tag to kff
+	// TODO-klaytn-fund: change kgf json tag to kff
 	KFF *big.Int `json:"kgf"` // the amount allocated to KGF
-	// TODO-klaytn-fund: change kcf json tag to kcf
-	KCF     *big.Int                    `json:"kcf"`     // the amount allocated to KIR
+	// TODO-klaytn-fund: change kir json tag to kcf
+	KCF     *big.Int                    `json:"kir"`     // the amount allocated to KIR
 	Rewards map[common.Address]*big.Int `json:"rewards"` // mapping from reward recipient to amounts
 }
 
