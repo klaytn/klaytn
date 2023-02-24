@@ -75,16 +75,14 @@ type rewardConfig struct {
 }
 
 type RewardSpec struct {
-	Minted   *big.Int `json:"minted"`   // the amount newly minted
-	TotalFee *big.Int `json:"totalFee"` // total tx fee spent
-	BurntFee *big.Int `json:"burntFee"` // the amount burnt
-	Proposer *big.Int `json:"proposer"` // the amount allocated to the block proposer
-	Stakers  *big.Int `json:"stakers"`  // total amount allocated to stakers
-	// TODO-klaytn-fund: change kgf json tag to kff
-	KFF *big.Int `json:"kgf"` // the amount allocated to KGF
-	// TODO-klaytn-fund: change kir json tag to kcf
-	KCF     *big.Int                    `json:"kir"`     // the amount allocated to KIR
-	Rewards map[common.Address]*big.Int `json:"rewards"` // mapping from reward recipient to amounts
+	Minted   *big.Int                    `json:"minted"`   // the amount newly minted
+	TotalFee *big.Int                    `json:"totalFee"` // total tx fee spent
+	BurntFee *big.Int                    `json:"burntFee"` // the amount burnt
+	Proposer *big.Int                    `json:"proposer"` // the amount allocated to the block proposer
+	Stakers  *big.Int                    `json:"stakers"`  // total amount allocated to stakers
+	KFF      *big.Int                    `json:"kff"`      // the amount allocated to KFF
+	KCF      *big.Int                    `json:"kcf"`      // the amount allocated to KCF
+	Rewards  map[common.Address]*big.Int `json:"rewards"`  // mapping from reward recipient to amounts
 }
 
 func NewRewardSpec() *RewardSpec {
