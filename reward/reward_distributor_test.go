@@ -104,8 +104,8 @@ func genStakingInfo(cnNum int, rewardOverride map[int]int, amountOverride map[in
 		CouncilNodeAddrs:      cns,
 		CouncilStakingAddrs:   stakes,
 		CouncilRewardAddrs:    rewards,
-		KIRAddr:               kcfAddr,
-		PoCAddr:               kffAddr,
+		KCFAddr:               kcfAddr,
+		KFFAddr:               kffAddr,
 		UseGini:               false,
 		CouncilStakingAmounts: amounts,
 	}
@@ -768,8 +768,8 @@ func TestRewardDistributor_CalcDeferredReward_StakingInfos(t *testing.T) {
 		{
 			desc: "stakingInfo has no kff, its portion goes to proposer",
 			stakingInfo: &StakingInfo{
-				KIRAddr: kcfAddr,
-				PoCAddr: common.Address{},
+				KCFAddr: kcfAddr,
+				KFFAddr: common.Address{},
 			},
 			expected: &RewardSpec{
 				Minted:   minted,
@@ -788,8 +788,8 @@ func TestRewardDistributor_CalcDeferredReward_StakingInfos(t *testing.T) {
 		{
 			desc: "stakingInfo has no kcf, its portion goes to proposer",
 			stakingInfo: &StakingInfo{
-				KIRAddr: common.Address{},
-				PoCAddr: kffAddr,
+				KCFAddr: common.Address{},
+				KFFAddr: kffAddr,
 			},
 			expected: &RewardSpec{
 				Minted:   minted,
@@ -808,8 +808,8 @@ func TestRewardDistributor_CalcDeferredReward_StakingInfos(t *testing.T) {
 		{
 			desc: "stakingInfo has the same kff and kcf",
 			stakingInfo: &StakingInfo{
-				KIRAddr: kffAddr,
-				PoCAddr: kffAddr,
+				KCFAddr: kffAddr,
+				KFFAddr: kffAddr,
 			},
 			expected: &RewardSpec{
 				Minted:   minted,

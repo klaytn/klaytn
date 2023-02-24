@@ -297,12 +297,12 @@ func CalcDeferredReward(header *types.Header, rules params.Rules, pset *params.G
 	stakers = stakers.Sub(stakers, shareRem)
 
 	// if KFF or KCF is not set, proposer gets the portion
-	if stakingInfo == nil || common.EmptyAddress(stakingInfo.PoCAddr) {
+	if stakingInfo == nil || common.EmptyAddress(stakingInfo.KFFAddr) {
 		logger.Debug("KFF empty, proposer gets its portion", "kff", kff)
 		proposer = proposer.Add(proposer, kff)
 		kff = big.NewInt(0)
 	}
-	if stakingInfo == nil || common.EmptyAddress(stakingInfo.KIRAddr) {
+	if stakingInfo == nil || common.EmptyAddress(stakingInfo.KCFAddr) {
 		logger.Debug("KCF empty, proposer gets its portion", "kcf", kcf)
 		proposer = proposer.Add(proposer, kcf)
 		kcf = big.NewInt(0)
@@ -319,11 +319,11 @@ func CalcDeferredReward(header *types.Header, rules params.Rules, pset *params.G
 
 	incrementRewardsMap(spec.Rewards, header.Rewardbase, proposer)
 
-	if stakingInfo != nil && !common.EmptyAddress(stakingInfo.PoCAddr) {
-		incrementRewardsMap(spec.Rewards, stakingInfo.PoCAddr, kff)
+	if stakingInfo != nil && !common.EmptyAddress(stakingInfo.KFFAddr) {
+		incrementRewardsMap(spec.Rewards, stakingInfo.KFFAddr, kff)
 	}
-	if stakingInfo != nil && !common.EmptyAddress(stakingInfo.KIRAddr) {
-		incrementRewardsMap(spec.Rewards, stakingInfo.KIRAddr, kcf)
+	if stakingInfo != nil && !common.EmptyAddress(stakingInfo.KCFAddr) {
+		incrementRewardsMap(spec.Rewards, stakingInfo.KCFAddr, kcf)
 	}
 
 	for rewardAddr, rewardAmount := range shares {

@@ -19,10 +19,12 @@ package reward
 import (
 	"encoding/json"
 	"math"
+	"reflect"
 	"testing"
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -85,8 +87,8 @@ func generateStakingInfoTestCases() []stakingInfoTestCase {
 				CouncilNodeAddrs:      []common.Address{n1},
 				CouncilStakingAddrs:   []common.Address{s1},
 				CouncilRewardAddrs:    []common.Address{r1},
-				KIRAddr:               kcf,
-				PoCAddr:               kff,
+				KCFAddr:               kcf,
+				KFFAddr:               kff,
 				UseGini:               true,
 				Gini:                  0.00,
 				CouncilStakingAmounts: []uint64{a1},
@@ -107,8 +109,8 @@ func generateStakingInfoTestCases() []stakingInfoTestCase {
 				CouncilNodeAddrs:      []common.Address{n1, n2, n3, n4},
 				CouncilStakingAddrs:   []common.Address{s1, s2, s3, s4},
 				CouncilRewardAddrs:    []common.Address{r1, r2, r3, r4},
-				KIRAddr:               kcf,
-				PoCAddr:               kff,
+				KCFAddr:               kcf,
+				KFFAddr:               kff,
 				UseGini:               true,
 				Gini:                  0.38, // Gini(10, 20, 40, 80)
 				CouncilStakingAmounts: []uint64{a1, a2, a3, a4},
@@ -132,8 +134,8 @@ func generateStakingInfoTestCases() []stakingInfoTestCase {
 				CouncilNodeAddrs:      []common.Address{n1, n2, n3, n4},
 				CouncilStakingAddrs:   []common.Address{s1, s2, s3, s4},
 				CouncilRewardAddrs:    []common.Address{r1, r2, r1, r2}, // r1 and r2 used twice each
-				KIRAddr:               kcf,
-				PoCAddr:               kff,
+				KCFAddr:               kcf,
+				KFFAddr:               kff,
 				UseGini:               true,
 				Gini:                  0.17, // Gini(50, 100)
 				CouncilStakingAmounts: []uint64{a1, a2, a3, a4},
@@ -155,8 +157,8 @@ func generateStakingInfoTestCases() []stakingInfoTestCase {
 				CouncilNodeAddrs:      []common.Address{n1, n2, n3, n4},
 				CouncilStakingAddrs:   []common.Address{s1, s2, s3, s4},
 				CouncilRewardAddrs:    []common.Address{r1, r2, r3, r4},
-				KIRAddr:               kcf,
-				PoCAddr:               kff,
+				KCFAddr:               kcf,
+				KFFAddr:               kff,
 				UseGini:               true,
 				Gini:                  0.41,                     // Gini(20, 2)
 				CouncilStakingAmounts: []uint64{a2, aM, aL, a0}, // aL and a0 should be ignored in Gini calculation
@@ -387,6 +389,105 @@ func TestConsolidatedStakingInfo(t *testing.T) {
 			node := c.GetConsolidatedNode(addr)
 			require.NotNil(t, node)
 			assert.Equal(t, expectedAmount, node.StakingAmount)
+		}
+	}
+}
+
+// TestGetStakingInfoFromDB tests whether the node can read oldStakingInfo and StakingInfo data or not.
+func TestGetStakingInfoFromDB(t *testing.T) {
+	// oldStakingInfo is a legacy of StakingInfo providing backward-compatibility.
+	// Since json tags of StakingInfo were changed, a node may fail to unmarshal stored data without this.
+	// oldStakingInfo's field names are the same with StakingInfo's names, but json tag is different.
+	type oldStakingInfo struct {
+		BlockNum              uint64           `json:"BlockNum"`
+		CouncilNodeAddrs      []common.Address `json:"CouncilNodeAddrs"`
+		CouncilStakingAddrs   []common.Address `json:"CouncilStakingAddrs"`
+		CouncilRewardAddrs    []common.Address `json:"CouncilRewardAddrs"`
+		KCFAddr               common.Address   `json:"KIRAddr"` // KIRAddr -> KCFAddr from v1.10.2
+		KFFAddr               common.Address   `json:"PoCAddr"` // PoCAddr -> KFFAddr from v1.10.2
+		UseGini               bool             `json:"UseGini"`
+		Gini                  float64          `json:"Gini"`
+		CouncilStakingAmounts []uint64         `json:"CouncilStakingAmounts"`
+	}
+
+	oldInfo := oldStakingInfo{
+		2880,
+		[]common.Address{
+			common.HexToAddress("0x159ae5ccda31b77475c64d88d4499c86f77b7ecc"),
+			common.HexToAddress("0x181deb121304b0430d99328ff1a9122df9f09d7f"),
+			common.HexToAddress("0x324ec8f2681cd73642cc55057970540a1f4393e0"),
+			common.HexToAddress("0x11191029025d3fcd21001746f949b25c6e8435cc"),
+		},
+		[]common.Address{
+			common.HexToAddress("0x70e051c46ea76b9af9977407bb32192319907f9e"),
+			common.HexToAddress("0xe4a0c3821a2711758306ed57c2f4900aa9ddbb3d"),
+			common.HexToAddress("0xf3ba3a33b3bf7cf2085890315b41cc788770feb3"),
+			common.HexToAddress("0x9285a85777d0ae7e12bee3ffd7842908b2295f45"),
+		},
+		[]common.Address{
+			common.HexToAddress("0xd155d4277c99fa837c54a37a40a383f71a3d082a"),
+			common.HexToAddress("0x2b8cc0ca62537fa5e49dce197acc8a15d3c5d4a8"),
+			common.HexToAddress("0x7d892f470ecde693f52588dd0cfe46c3d26b6219"),
+			common.HexToAddress("0xa0f7354a0cef878246820b6caa19d2bdef74a0cc"),
+		},
+		common.HexToAddress("0x673003e5f9a852d3dc85b83d16ef62d45497fb96"),
+		common.HexToAddress("0x576dc0c2afeb1661da3cf53a60e76dd4e32c7ab1"),
+		false,
+		-1,
+		[]uint64{5000000, 5000000, 5000000, 5000000},
+	}
+
+	newInfo := StakingInfo{
+		oldInfo.BlockNum,
+		[]common.Address{
+			common.HexToAddress("0x159ae5ccda31b77475c64d88d4499c86f77b7ecc"),
+			common.HexToAddress("0x181deb121304b0430d99328ff1a9122df9f09d7f"),
+			common.HexToAddress("0x324ec8f2681cd73642cc55057970540a1f4393e0"),
+			common.HexToAddress("0x11191029025d3fcd21001746f949b25c6e8435cc"),
+		},
+		[]common.Address{
+			common.HexToAddress("0x70e051c46ea76b9af9977407bb32192319907f9e"),
+			common.HexToAddress("0xe4a0c3821a2711758306ed57c2f4900aa9ddbb3d"),
+			common.HexToAddress("0xf3ba3a33b3bf7cf2085890315b41cc788770feb3"),
+			common.HexToAddress("0x9285a85777d0ae7e12bee3ffd7842908b2295f45"),
+		},
+		[]common.Address{
+			common.HexToAddress("0xd155d4277c99fa837c54a37a40a383f71a3d082a"),
+			common.HexToAddress("0x2b8cc0ca62537fa5e49dce197acc8a15d3c5d4a8"),
+			common.HexToAddress("0x7d892f470ecde693f52588dd0cfe46c3d26b6219"),
+			common.HexToAddress("0xa0f7354a0cef878246820b6caa19d2bdef74a0cc"),
+		},
+		common.HexToAddress("0x673003e5f9a852d3dc85b83d16ef62d45497fb96"),
+		common.HexToAddress("0x576dc0c2afeb1661da3cf53a60e76dd4e32c7ab1"),
+		false,
+		-1,
+		[]uint64{5000000, 5000000, 5000000, 5000000},
+	}
+
+	// initialize StakingManager
+	_ = NewStakingManager(newTestBlockChain(), newDefaultTestGovernance(), nil)
+
+	for _, info := range []interface{}{oldInfo, newInfo} {
+		// reset database
+		stakingManager.stakingInfoDB = database.NewMemoryDBManager()
+
+		infoBytes, err := json.Marshal(info)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		stakingManager.stakingInfoDB.WriteStakingInfo(oldInfo.BlockNum, infoBytes)
+		retrievedInfo, err := getStakingInfoFromDB(oldInfo.BlockNum)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		vInfo := reflect.ValueOf(info)
+		vRetriedInfo := reflect.ValueOf(*retrievedInfo)
+
+		assert.Equal(t, vInfo.NumField(), vRetriedInfo.NumField())
+		for i := 0; i < vInfo.NumField(); i++ {
+			assert.Equal(t, vInfo.Field(i).Interface(), vRetriedInfo.Field(i).Interface())
 		}
 	}
 }

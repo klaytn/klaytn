@@ -39,11 +39,9 @@ func getStakingInfoFromDB(blockNum uint64) (*StakingInfo, error) {
 	}
 
 	stakingInfo := new(StakingInfo)
-	err = json.Unmarshal(jsonByte, stakingInfo)
-	if err != nil {
+	if err = json.Unmarshal(jsonByte, stakingInfo); err != nil {
 		return nil, err
 	}
-
 	return stakingInfo, nil
 }
 
