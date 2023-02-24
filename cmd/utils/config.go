@@ -328,6 +328,11 @@ func (kCfg *KlayConfig) SetNodeConfig(ctx *cli.Context) {
 	// fasthttp type is deprecated
 	if ctx.GlobalIsSet(SrvTypeFlag.Name) {
 		cfg.HTTPServerType = ctx.GlobalString(SrvTypeFlag.Name)
+
+		if cfg.HTTPServerType == "fasthttp" {
+			logger.Warn("The fasthttp option is deprecated. Instead, the server will start with the http type")
+			cfg.HTTPServerType = "http"
+		}
 	}
 
 	setHTTP(ctx, cfg)
