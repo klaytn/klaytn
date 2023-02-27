@@ -60,8 +60,8 @@ require (
 	github.com/valyala/fasthttp v1.34.0
 	go.uber.org/zap v1.13.0
 	golang.org/x/crypto v0.1.0
-	golang.org/x/net v0.7.0
-	golang.org/x/sys v0.5.0
+	golang.org/x/net v0.1.0
+	golang.org/x/sys v0.1.0
 	golang.org/x/tools v0.1.12
 	google.golang.org/grpc v1.32.0
 	gopkg.in/DataDog/dd-trace-go.v1 v1.40.1
