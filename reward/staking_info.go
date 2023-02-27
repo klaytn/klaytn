@@ -61,6 +61,43 @@ type StakingInfo struct {
 	CouncilStakingAmounts []uint64 `json:"councilStakingAmounts"` // Staking amounts of Council
 }
 
+// MarshalJSON supports json marshalling for both oldStakingInfo and StakingInfo
+// TODO-klaytn-Mantle: remove this marshal function when backward-compatibility for KIR/PoC is not needed
+func (st StakingInfo) MarshalJSON() ([]byte, error) {
+	type extendedSt struct {
+		BlockNum              uint64           `json:"blockNum"`
+		CouncilNodeAddrs      []common.Address `json:"councilNodeAddrs"`
+		CouncilStakingAddrs   []common.Address `json:"councilStakingAddrs"`
+		CouncilRewardAddrs    []common.Address `json:"councilRewardAddrs"`
+		KCFAddr               common.Address   `json:"kcfAddr"`
+		KFFAddr               common.Address   `json:"kffAddr"`
+		UseGini               bool             `json:"useGini"`
+		Gini                  float64          `json:"gini"`
+		CouncilStakingAmounts []uint64         `json:"councilStakingAmounts"`
+
+		// legacy fields of StakingInfo
+		KIRAddr common.Address `json:"KIRAddr"` // KIRAddr -> KCFAddr from v1.10.2
+		PoCAddr common.Address `json:"PoCAddr"` // PoCAddr -> KFFAddr from v1.10.2
+	}
+
+	var ext extendedSt
+	ext.BlockNum = st.BlockNum
+	ext.CouncilNodeAddrs = st.CouncilNodeAddrs
+	ext.CouncilStakingAddrs = st.CouncilStakingAddrs
+	ext.CouncilRewardAddrs = st.CouncilRewardAddrs
+	ext.KCFAddr = st.KCFAddr
+	ext.KFFAddr = st.KFFAddr
+	ext.UseGini = st.UseGini
+	ext.Gini = st.Gini
+	ext.CouncilStakingAmounts = st.CouncilStakingAmounts
+
+	// KIRAddr and PoCAddr are for backward-compatibility of database
+	ext.KIRAddr = st.KCFAddr
+	ext.PoCAddr = st.KFFAddr
+
+	return json.Marshal(&ext)
+}
+
 // UnmarshalJSON supports json unmarshalling for both oldStakingInfo and StakingInfo
 func (st *StakingInfo) UnmarshalJSON(input []byte) error {
 	type extendedSt struct {
