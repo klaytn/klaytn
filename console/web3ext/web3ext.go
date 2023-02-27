@@ -303,6 +303,12 @@ web3._extend({
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
+			name: 'getParams',
+			call: 'governance_getParams',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
 			name: 'itemCacheFromDb',
 			call: 'governance_itemCacheFromDb',
 			params: 1,
@@ -317,6 +323,12 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'chainConfigAt',
 			call: 'governance_chainConfigAt',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
+			name: 'getChainConfig',
+			call: 'governance_getChainConfig',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		})
@@ -337,10 +349,6 @@ web3._extend({
 		new web3._extend.Property({
 			name: 'myVotingPower',
 			getter: 'governance_myVotingPower',
-		}),
-		new web3._extend.Property({
-			name: 'chainConfig',
-			getter: 'governance_chainConfig',
 		}),
 		new web3._extend.Property({
 			name: 'nodeAddress',
@@ -909,8 +917,20 @@ web3._extend({
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
+			name: 'getParams',
+			call: 'klay_getParams',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
 			name: 'chainConfigAt',
 			call: 'klay_chainConfigAt',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
+		}),
+		new web3._extend.Method({
+			name: 'getChainConfig',
+			call: 'klay_getChainConfig',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
 		}),
@@ -1077,10 +1097,6 @@ web3._extend({
 			name: 'maxPriorityFeePerGas',
 			getter: 'klay_maxPriorityFeePerGas',
 			outputFormatter: web3._extend.utils.toBigNumber
-		}),
-		new web3._extend.Property({
-			name: 'chainConfig',
-			getter: 'klay_chainConfig',
 		}),
 	]
 });

@@ -68,8 +68,13 @@ func (api *GovernanceKlayAPI) GetStakingInfo(num *rpc.BlockNumber) (*reward.Stak
 	return getStakingInfo(api.governance, num)
 }
 
+// TODO-Klaytn-Mantle: deprecate this
 func (api *GovernanceKlayAPI) GovParamsAt(num *rpc.BlockNumber) (map[string]interface{}, error) {
-	return itemsAt(api.governance, num)
+	return getParams(api.governance, num)
+}
+
+func (api *GovernanceKlayAPI) GetParams(num *rpc.BlockNumber) (map[string]interface{}, error) {
+	return getParams(api.governance, num)
 }
 
 func (api *GovernanceKlayAPI) NodeAddress() common.Address {
@@ -143,11 +148,16 @@ func (api *GovernanceKlayAPI) GetRewards(num *rpc.BlockNumber) (*reward.RewardSp
 
 func (api *GovernanceKlayAPI) ChainConfig() *params.ChainConfig {
 	num := rpc.LatestBlockNumber
-	return chainConfigAt(api.governance, &num)
+	return getChainConfig(api.governance, &num)
 }
 
+// TODO-Klaytn-Mantle: deprecate this
 func (api *GovernanceKlayAPI) ChainConfigAt(num *rpc.BlockNumber) *params.ChainConfig {
-	return chainConfigAt(api.governance, num)
+	return getChainConfig(api.governance, num)
+}
+
+func (api *GovernanceKlayAPI) GetChainConfig(num *rpc.BlockNumber) *params.ChainConfig {
+	return getChainConfig(api.governance, num)
 }
 
 // Vote injects a new vote for governance targets such as unitprice and governingnode.
@@ -220,11 +230,16 @@ func (api *PublicGovernanceAPI) TotalVotingPower() (float64, error) {
 	return float64(api.governance.TotalVotingPower()) / 1000.0, nil
 }
 
+// TODO-Klaytn-Mantle: deprecate this
 func (api *PublicGovernanceAPI) ItemsAt(num *rpc.BlockNumber) (map[string]interface{}, error) {
-	return itemsAt(api.governance, num)
+	return getParams(api.governance, num)
 }
 
-func itemsAt(governance Engine, num *rpc.BlockNumber) (map[string]interface{}, error) {
+func (api *PublicGovernanceAPI) GetParams(num *rpc.BlockNumber) (map[string]interface{}, error) {
+	return getParams(api.governance, num)
+}
+
+func getParams(governance Engine, num *rpc.BlockNumber) (map[string]interface{}, error) {
 	blockNumber := uint64(0)
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
 		blockNumber = governance.BlockChain().CurrentBlock().NumberU64()
@@ -313,14 +328,19 @@ func (api *PublicGovernanceAPI) MyVotingPower() (float64, error) {
 
 func (api *PublicGovernanceAPI) ChainConfig() *params.ChainConfig {
 	num := rpc.LatestBlockNumber
-	return chainConfigAt(api.governance, &num)
+	return getChainConfig(api.governance, &num)
 }
 
+// TODO-Klaytn-Mantle: deprecate this
 func (api *PublicGovernanceAPI) ChainConfigAt(num *rpc.BlockNumber) *params.ChainConfig {
-	return chainConfigAt(api.governance, num)
+	return getChainConfig(api.governance, num)
 }
 
-func chainConfigAt(governance Engine, num *rpc.BlockNumber) *params.ChainConfig {
+func (api *PublicGovernanceAPI) GetChainConfig(num *rpc.BlockNumber) *params.ChainConfig {
+	return getChainConfig(api.governance, num)
+}
+
+func getChainConfig(governance Engine, num *rpc.BlockNumber) *params.ChainConfig {
 	var blocknum uint64
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
 		blocknum = governance.BlockChain().CurrentBlock().NumberU64()
