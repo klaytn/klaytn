@@ -154,6 +154,7 @@ type GovernanceTallyList struct {
 	items []GovernanceTallyItem
 	mu    *sync.RWMutex
 }
+
 type GovernanceVotes struct {
 	items []GovernanceVote
 	mu    *sync.RWMutex
@@ -821,32 +822,14 @@ func (g *Governance) searchCache(num uint64) (uint64, bool) {
 }
 
 func (g *Governance) ReadGovernance(num uint64) (uint64, map[string]interface{}, error) {
-	// epochWithFallback() falls back to Default before initializeCache()
-	epoch := g.epochWithFallback()
-	blockNum := CalcGovernanceInfoBlock(num, epoch)
-
-	// Check cache first
-	if gBlockNum, ok := g.searchCache(blockNum); ok {
-		if data, okay := g.getGovernanceCache(gBlockNum); okay {
-			return gBlockNum, data, nil
-		}
-	}
 	if g.db != nil {
-		bn, result, err := g.db.ReadGovernanceAtNumber(num, epoch)
+		bn, result, err := g.db.ReadGovernanceAtNumber(num)
 		result = adjustDecodedSet(result)
 		return bn, result, err
 	} else {
 		// For CI tests which don't have a database
 		return 0, nil, nil
 	}
-}
-
-func CalcGovernanceInfoBlock(num uint64, epoch uint64) uint64 {
-	governanceInfoBlock := num - (num % epoch)
-	if governanceInfoBlock >= epoch {
-		governanceInfoBlock -= epoch
-	}
-	return governanceInfoBlock
 }
 
 func (g *Governance) GetGovernanceChange() map[string]interface{} {
@@ -1235,9 +1218,6 @@ func (gov *Governance) CurrentParams() *params.GovParamSet {
 
 // EffectiveParams returns the parameter set used for generating the block `num`
 func (gov *Governance) EffectiveParams(num uint64) (*params.GovParamSet, error) {
-	// TODO-Klaytn: Either handle epoch change, or permanently forbid epoch change.
-	epoch := gov.epochWithFallback()
-
 	bignum := new(big.Int).SetUint64(num)
 
 	// Before Kore, ReadGovernance(num - 1) is used to generate block num
@@ -1246,7 +1226,7 @@ func (gov *Governance) EffectiveParams(num uint64) (*params.GovParamSet, error) 
 	}
 	// Should be equivalent to Governance.ReadGovernance(), but without in-memory caches.
 	// Not using in-memory caches to make it stateless, hence less error-prone.
-	_, strMap, err := gov.db.ReadGovernanceAtNumber(num, epoch)
+	_, strMap, err := gov.db.ReadGovernanceAtNumber(num)
 	if err != nil {
 		logger.Error("ReadGovernanceAtNumber failed", "num", num, "err", err)
 		return nil, err

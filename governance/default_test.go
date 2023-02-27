@@ -388,7 +388,7 @@ var testGovernanceMap = map[string]interface{}{
 	"reward.ratio":              "30/40/30",
 	"reward.useginicoeff":       true,
 	"reward.deferredtxfee":      true,
-	"reward.minimumstake":       2000000,
+	"istanbul.epoch":            604800,
 }
 
 func copyMap(src map[string]interface{}) map[string]interface{} {
@@ -443,7 +443,7 @@ func TestGovernancePersistence(t *testing.T) {
 
 	for i := 0; i < MAXITEMS; i++ {
 		num := params.DefaultEpoch*uint64(i) + 123
-		idx, _, err := gov.db.ReadGovernanceAtNumber(num, params.DefaultEpoch)
+		idx, _, err := gov.db.ReadGovernanceAtNumber(num)
 		if err != nil {
 			t.Errorf("Failed to get the governance information for block %d", num)
 		}
@@ -472,7 +472,6 @@ var tstGovernanceInfo = []governanceData{
 
 var tstGovernanceData = []governanceData{
 	{n: 123, e: 1}, // 1 is set at params.TestChainConfig
-	{n: 604923, e: 1},
 	{n: 1209723, e: 25000000000},
 	{n: 1814523, e: 25001209600},
 	{n: 2419323, e: 25001209600},
@@ -486,7 +485,7 @@ var tstGovernanceData = []governanceData{
 func TestSaveGovernance(t *testing.T) {
 	gov := getGovernance()
 
-	MAXITEMS := int(10)
+	MAXITEMS := int(9)
 
 	// Set Data
 	for i := 0; i < len(tstGovernanceInfo); i++ {
@@ -535,15 +534,6 @@ var epochTestData = []epochTest{
 	{300, 270},
 	{330, 300},
 	{360, 330},
-}
-
-func TestCalcGovernanceInfoBlock(t *testing.T) {
-	for _, v := range epochTestData {
-		res := CalcGovernanceInfoBlock(v.v, 30)
-		if res != v.e {
-			t.Errorf("Governance Block Number Mismatch: want %v, have %v", v.e, res)
-		}
-	}
 }
 
 func TestVoteValueNilInterface(t *testing.T) {

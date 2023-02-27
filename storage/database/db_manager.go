@@ -274,7 +274,7 @@ type DBManager interface {
 	WriteGovernanceIdx(num uint64) error
 	ReadGovernance(num uint64) (map[string]interface{}, error)
 	ReadRecentGovernanceIdx(count int) ([]uint64, error)
-	ReadGovernanceAtNumber(num uint64, epoch uint64) (uint64, map[string]interface{}, error)
+	ReadGovernanceAtNumber(num uint64) (uint64, map[string]interface{}, error)
 	WriteGovernanceState(b []byte) error
 	ReadGovernanceState() ([]byte, error)
 	// TODO-Klaytn implement governance DB deletion methods.
@@ -2615,17 +2615,24 @@ func (dbm *databaseManager) ReadRecentGovernanceIdx(count int) ([]uint64, error)
 	}
 }
 
-// ReadGovernanceAtNumber returns the block number and governance information which to be used for the block `num`
-func (dbm *databaseManager) ReadGovernanceAtNumber(num uint64, epoch uint64) (uint64, map[string]interface{}, error) {
-	minimum := num - (num % epoch)
-	if minimum >= epoch {
-		minimum -= epoch
-	}
+func (dbm *databaseManager) ReadGovernanceAtNumber(num uint64) (uint64, map[string]interface{}, error) {
 	totalIdx, _ := dbm.ReadRecentGovernanceIdx(0)
 	for i := len(totalIdx) - 1; i >= 0; i-- {
-		if totalIdx[i] <= minimum {
-			result, err := dbm.ReadGovernance(totalIdx[i])
-			return totalIdx[i], result, err
+		if i > 0 {
+			if result, err := dbm.ReadGovernance(totalIdx[i-1]); err == nil {
+				if pset, err := params.NewGovParamSetStrMap(result); err == nil {
+					prevEpoch := pset.Epoch()
+					updateBoundary := totalIdx[i] + prevEpoch
+					updateBoundary = updateBoundary - (updateBoundary % prevEpoch)
+					if updateBoundary <= num {
+						result, err := dbm.ReadGovernance(totalIdx[i])
+						return totalIdx[i], result, err
+					}
+				}
+			}
+		} else {
+			result, err := dbm.ReadGovernance(totalIdx[0])
+			return totalIdx[0], result, err
 		}
 	}
 	return 0, nil, errors.New("No governance data found")
