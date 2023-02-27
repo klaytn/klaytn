@@ -37,8 +37,8 @@ StakingInfo is made every 86400 blocks (stakingInterval) and used in a next inte
 		CouncilNodeAddrs      []common.Address // Address of Council
 		CouncilStakingAddrs   []common.Address // Address of Staking contract which holds staking balance
 		CouncilRewardAddrs    []common.Address // Address of Council account which will get a block reward
-		KIRAddr               common.Address   // Address of KCF contract
-		PoCAddr               common.Address   // Address of KFF contract
+		KCFAddr               common.Address   // Address of KCF contract
+		KFFAddr               common.Address   // Address of KFF contract
 		UseGini               bool             // configure whether Gini is used or not
 		Gini                  float64          // Gini coefficient
 		CouncilStakingAmounts []uint64         // StakingAmounts of Council. They are derived from Staking addresses of council

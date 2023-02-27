@@ -75,16 +75,14 @@ type rewardConfig struct {
 }
 
 type RewardSpec struct {
-	Minted   *big.Int `json:"minted"`   // the amount newly minted
-	TotalFee *big.Int `json:"totalFee"` // total tx fee spent
-	BurntFee *big.Int `json:"burntFee"` // the amount burnt
-	Proposer *big.Int `json:"proposer"` // the amount allocated to the block proposer
-	Stakers  *big.Int `json:"stakers"`  // total amount allocated to stakers
-	// TODO-klaytn-fund: change kgf json tag to kff
-	KFF *big.Int `json:"kgf"` // the amount allocated to KGF
-	// TODO-klaytn-fund: change kir json tag to kcf
-	KCF     *big.Int                    `json:"kir"`     // the amount allocated to KIR
-	Rewards map[common.Address]*big.Int `json:"rewards"` // mapping from reward recipient to amounts
+	Minted   *big.Int                    `json:"minted"`   // the amount newly minted
+	TotalFee *big.Int                    `json:"totalFee"` // total tx fee spent
+	BurntFee *big.Int                    `json:"burntFee"` // the amount burnt
+	Proposer *big.Int                    `json:"proposer"` // the amount allocated to the block proposer
+	Stakers  *big.Int                    `json:"stakers"`  // total amount allocated to stakers
+	KFF      *big.Int                    `json:"kff"`      // the amount allocated to KFF
+	KCF      *big.Int                    `json:"kcf"`      // the amount allocated to KCF
+	Rewards  map[common.Address]*big.Int `json:"rewards"`  // mapping from reward recipient to amounts
 }
 
 func NewRewardSpec() *RewardSpec {
@@ -299,12 +297,12 @@ func CalcDeferredReward(header *types.Header, rules params.Rules, pset *params.G
 	stakers = stakers.Sub(stakers, shareRem)
 
 	// if KFF or KCF is not set, proposer gets the portion
-	if stakingInfo == nil || common.EmptyAddress(stakingInfo.PoCAddr) {
+	if stakingInfo == nil || common.EmptyAddress(stakingInfo.KFFAddr) {
 		logger.Debug("KFF empty, proposer gets its portion", "kff", kff)
 		proposer = proposer.Add(proposer, kff)
 		kff = big.NewInt(0)
 	}
-	if stakingInfo == nil || common.EmptyAddress(stakingInfo.KIRAddr) {
+	if stakingInfo == nil || common.EmptyAddress(stakingInfo.KCFAddr) {
 		logger.Debug("KCF empty, proposer gets its portion", "kcf", kcf)
 		proposer = proposer.Add(proposer, kcf)
 		kcf = big.NewInt(0)
@@ -321,11 +319,11 @@ func CalcDeferredReward(header *types.Header, rules params.Rules, pset *params.G
 
 	incrementRewardsMap(spec.Rewards, header.Rewardbase, proposer)
 
-	if stakingInfo != nil && !common.EmptyAddress(stakingInfo.PoCAddr) {
-		incrementRewardsMap(spec.Rewards, stakingInfo.PoCAddr, kff)
+	if stakingInfo != nil && !common.EmptyAddress(stakingInfo.KFFAddr) {
+		incrementRewardsMap(spec.Rewards, stakingInfo.KFFAddr, kff)
 	}
-	if stakingInfo != nil && !common.EmptyAddress(stakingInfo.KIRAddr) {
-		incrementRewardsMap(spec.Rewards, stakingInfo.KIRAddr, kcf)
+	if stakingInfo != nil && !common.EmptyAddress(stakingInfo.KCFAddr) {
+		incrementRewardsMap(spec.Rewards, stakingInfo.KCFAddr, kcf)
 	}
 
 	for rewardAddr, rewardAmount := range shares {

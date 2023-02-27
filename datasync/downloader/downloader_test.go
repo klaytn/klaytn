@@ -161,7 +161,7 @@ func (dl *downloadTester) makeStakingInfoData(blockNumber uint64) (*reward.Staki
 	addr := crypto.PubkeyToAddress(k.PublicKey)
 	si := &reward.StakingInfo{
 		BlockNum: blockNumber,
-		KIRAddr:  addr, // assign KIR in order to put unique staking information
+		KCFAddr:  addr, // assign KCF in order to put unique staking information
 	}
 	siBytes, _ := json.Marshal(si)
 	return si, siBytes
