@@ -5,7 +5,7 @@ go 1.15
 require (
 	github.com/Shopify/sarama v1.26.4
 	github.com/VictoriaMetrics/fastcache v1.6.0
-	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf
+	github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d
 	github.com/aristanetworks/goarista v0.0.0-20191001182449-186a6201b8ef
 	github.com/aws/aws-sdk-go v1.34.28
 	github.com/bt51/ntpclient v0.0.0-20140310165113-3045f71e2530
@@ -18,7 +18,6 @@ require (
 	github.com/edsrzf/mmap-go v1.0.0
 	github.com/fatih/color v1.9.0
 	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5
-	github.com/go-kit/kit v0.9.0 // indirect
 	github.com/go-redis/redis/v7 v7.4.0
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/go-stack/stack v1.8.0
@@ -32,7 +31,7 @@ require (
 	github.com/influxdata/influxdb v1.8.3
 	github.com/jackpal/go-nat-pmp v1.0.2
 	github.com/jinzhu/gorm v1.9.15
-	github.com/julienschmidt/httprouter v1.2.0
+	github.com/julienschmidt/httprouter v1.3.0
 	github.com/mattn/go-colorable v0.1.11
 	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/naoina/go-stringutil v0.1.0 // indirect
@@ -44,7 +43,7 @@ require (
 	github.com/pborman/uuid v0.0.0-20170612153648-e790cca94e6c
 	github.com/peterh/liner v1.1.1-0.20190123174540-a2c9a5303de7
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus/client_golang v1.1.0
+	github.com/prometheus/client_golang v1.11.1
 	github.com/prometheus/prometheus v2.1.0+incompatible
 	github.com/prometheus/tsdb v0.10.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20190826022208-cac0b30c2563
