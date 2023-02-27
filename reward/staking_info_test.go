@@ -464,12 +464,12 @@ func TestGetStakingInfoFromDB(t *testing.T) {
 		[]uint64{5000000, 5000000, 5000000, 5000000},
 	}
 
-	// initialize StakingManager
-	_ = NewStakingManager(newTestBlockChain(), newDefaultTestGovernance(), nil)
+	oldStakingManager := GetStakingManager()
+	defer SetTestStakingManager(oldStakingManager)
 
 	for _, info := range []interface{}{oldInfo, newInfo} {
 		// reset database
-		stakingManager.stakingInfoDB = database.NewMemoryDBManager()
+		SetTestStakingManagerWithDB(database.NewMemoryDBManager())
 
 		infoBytes, err := json.Marshal(info)
 		if err != nil {
