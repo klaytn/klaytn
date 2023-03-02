@@ -60,7 +60,7 @@ contract TreasuryRebalance is Ownable {
     event RemoveReceiver(address receiver, uint256 receiverCount);
     event GetState(bool success, bytes result);
     event Approve(address sender, address approver, uint256 approversCount);
-    event SetStatus(Status currentStatus, Status upcomingStatus);
+    event SetStatus(Status status);
     event Finalized(string memo, Status status);
 
     /**
@@ -251,32 +251,30 @@ contract TreasuryRebalance is Ownable {
     }
 
     /**
-     * @dev Sets the status of the contract. Functions will be restricted
-     * based on the current status
-     * @param _status is the status of the contract to be set
+     * @dev finalizeRegistration sets the status to Registered,
+     *      After this stage, registrations will be restricted.
      */
-    function setStatus(Status _status) public onlyOwner {
-        Status currentStatus = status;
+    function finalizeRegistration()
+        public
+        onlyOwner
+        atStatus(Status.Initialized)
+    {
+        status = Status.Registered;
+        emit SetStatus(status);
+    }
 
-        if (
-            (currentStatus == Status.Initialized) &&
-            (_status == Status.Registered)
-        ) {
-            status = _status;
-        } else if (
-            (currentStatus == Status.Registered) && (_status == Status.Approved)
-        ) {
-            _isSendersApproved();
-            uint256 treasuryAmount = getTreasuryAmount();
-            require(
-                treasuryAmount < sumOfSenderBalance(),
-                "treasury amount should be less than the sum of all sender address balances"
-            );
-            status = _status;
-        } else {
-            revert("Invalid input status");
-        }
-        emit SetStatus(currentStatus, _status);
+    /**
+     * @dev finalizeApproval sets the status to Approved,
+     *      After this stage, approvals will be restricted.
+     */
+    function finalizeApproval() public onlyOwner atStatus(Status.Registered) {
+        require(
+            getTreasuryAmount() < sumOfSenderBalance(),
+            "treasury amount should be less than the sum of all sender address balances"
+        );
+        _isSendersApproved();
+        status = Status.Approved;
+        emit SetStatus(status);
     }
 
     /**
