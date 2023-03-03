@@ -22,26 +22,26 @@ contract TreasuryRebalance is Ownable {
     }
 
     /**
-     * Sender struct to store the details of sender and approver addresses
+     * Retired struct to store the details of retired and approver addresses
      */
-    struct Sender {
-        address sender;
+    struct Retired {
+        address retired;
         address[] approvers;
     }
 
     /**
-     * Receiver struct to store reciever and amount
+     * Newbie struct to store reciever and amount
      */
-    struct Receiver {
-        address receiver;
+    struct Newbie {
+        address newbie;
         uint256 amount;
     }
 
     /**
      * Storage
      */
-    Sender[] public senders; //array of sender structs
-    Receiver[] public receivers; //array of receiver structs
+    Retired[] public retirees; //array of retired structs
+    Newbie[] public newbies; //array of newbie structs
     Status public status; //current status of the contract
     uint256 public rebalanceBlockNumber; //Block number of the execution of rebalancing
     string public memo; //result of the treasury fund rebalance
@@ -54,12 +54,12 @@ contract TreasuryRebalance is Ownable {
         uint256 rebalanceBlockNumber,
         uint256 deployedBlockNumber
     );
-    event RegisterSender(address sender, address[] approvers);
-    event RemoveSender(address sender, uint256 senderCount);
-    event RegisterReceiver(address receiver, uint256 fundAllocation);
-    event RemoveReceiver(address receiver, uint256 receiverCount);
+    event RegisterRetired(address retired, address[] approvers);
+    event RemoveRetired(address retired, uint256 retiredCount);
+    event RegisterNewbie(address newbie, uint256 fundAllocation);
+    event RemoveNewbie(address newbie, uint256 newbieCount);
     event GetState(bool success, bytes result);
-    event Approve(address sender, address approver, uint256 approversCount);
+    event Approve(address retired, address approver, uint256 approversCount);
     event SetStatus(Status status);
     event Finalized(string memo, Status status);
 
@@ -83,120 +83,123 @@ contract TreasuryRebalance is Ownable {
 
     //State changing Functions
     /**
-     * @dev registers sender details
-     * @param _senderAddress is the address of the sender
+     * @dev registers retired details
+     * @param _retiredAddress is the address of the retired
      */
-    function registerSender(address _senderAddress)
-        public
-        onlyOwner
-        atStatus(Status.Initialized)
-    {
-        require(!senderExists(_senderAddress), "Sender is already registered");
-        Sender storage sender = senders.push();
-        sender.sender = _senderAddress;
-        emit RegisterSender(sender.sender, sender.approvers);
-    }
-
-    /**
-     * @dev remove the sender details from the array
-     * @param _senderAddress is the address of the sender
-     */
-    function removeSender(address _senderAddress)
-        public
-        onlyOwner
-        atStatus(Status.Initialized)
-    {
-        uint256 senderIndex = getSenderIndex(_senderAddress);
-        senders[senderIndex] = senders[senders.length - 1];
-        senders.pop();
-
-        emit RemoveSender(_senderAddress, senders.length);
-    }
-
-    /**
-     * @dev registers receiver address and its fund distribution
-     * @param _receiverAddress is the address of the receiver
-     * @param _amount is the fund to be allocated to the receiver
-     */
-    function registerReceiver(address _receiverAddress, uint256 _amount)
+    function registerRetired(address _retiredAddress)
         public
         onlyOwner
         atStatus(Status.Initialized)
     {
         require(
-            !receiverExists(_receiverAddress),
-            "Receiver is already registered"
+            !retiredExists(_retiredAddress),
+            "Retired address is already registered"
         );
-        require(_amount != 0, "Amount cannot be set to 0");
-
-        Receiver memory receiver = Receiver(_receiverAddress, _amount);
-        receivers.push(receiver);
-
-        emit RegisterReceiver(_receiverAddress, _amount);
+        Retired storage retired = retirees.push();
+        retired.retired = _retiredAddress;
+        emit RegisterRetired(retired.retired, retired.approvers);
     }
 
     /**
-     * @dev remove the receiver details from the array
-     * @param _receiverAddress is the address of the receiver
+     * @dev remove the retired details from the array
+     * @param _retiredAddress is the address of the retired
      */
-    function removeReceiver(address _receiverAddress)
+    function removeRetired(address _retiredAddress)
         public
         onlyOwner
         atStatus(Status.Initialized)
     {
-        uint256 receiverIndex = getReceiverIndex(_receiverAddress);
-        receivers[receiverIndex] = receivers[receivers.length - 1];
-        receivers.pop();
+        uint256 retiredIndex = getRetiredIndex(_retiredAddress);
+        retirees[retiredIndex] = retirees[retirees.length - 1];
+        retirees.pop();
 
-        emit RemoveReceiver(_receiverAddress, receivers.length);
+        emit RemoveRetired(_retiredAddress, retirees.length);
     }
 
     /**
-     * @dev senderAddress can be a EOA or a contract address. To approve:
-     *      If the senderAddress is a EOA, the msg.sender should be the EOA address
-     *      If the senderAddress is a Contract, the msg.sender should be one of the contract `admin`.
-     *      It uses the getState() function in the senderAddress contract to get the admin details.
-     * @param _senderAddress is the address of the sender
+     * @dev registers newbie address and its fund distribution
+     * @param _newbieAddress is the address of the newbie
+     * @param _amount is the fund to be allocated to the newbie
      */
-    function approve(address _senderAddress)
+    function registerNewbie(address _newbieAddress, uint256 _amount)
+        public
+        onlyOwner
+        atStatus(Status.Initialized)
+    {
+        require(
+            !newbieExists(_newbieAddress),
+            "Newbie address is already registered"
+        );
+        require(_amount != 0, "Amount cannot be set to 0");
+
+        Newbie memory newbie = Newbie(_newbieAddress, _amount);
+        newbies.push(newbie);
+
+        emit RegisterNewbie(_newbieAddress, _amount);
+    }
+
+    /**
+     * @dev remove the newbie details from the array
+     * @param _newbieAddress is the address of the newbie
+     */
+    function removeNewbie(address _newbieAddress)
+        public
+        onlyOwner
+        atStatus(Status.Initialized)
+    {
+        uint256 newbieIndex = getNewbieIndex(_newbieAddress);
+        newbies[newbieIndex] = newbies[newbies.length - 1];
+        newbies.pop();
+
+        emit RemoveNewbie(_newbieAddress, newbies.length);
+    }
+
+    /**
+     * @dev retiredAddress can be a EOA or a contract address. To approve:
+     *      If the retiredAddress is a EOA, the msg.sender should be the EOA address
+     *      If the retiredAddress is a Contract, the msg.sender should be one of the contract `admin`.
+     *      It uses the getState() function in the retiredAddress contract to get the admin details.
+     * @param _retiredAddress is the address of the retired
+     */
+    function approve(address _retiredAddress)
         public
         atStatus(Status.Registered)
     {
         require(
-            senderExists(_senderAddress),
-            "sender needs to be registered before approval"
+            retiredExists(_retiredAddress),
+            "retired needs to be registered before approval"
         );
 
-        //Check whether the sender address is EOA or contract address
-        bool isContract = isContractAddr(_senderAddress);
+        //Check whether the retired address is EOA or contract address
+        bool isContract = isContractAddr(_retiredAddress);
         if (!isContract) {
-            //check whether the msg.sender is the sender if its a EOA
+            //check whether the msg.sender is the retired if its a EOA
             require(
-                msg.sender == _senderAddress,
-                "senderAddress is not the msg.sender"
+                msg.sender == _retiredAddress,
+                "retiredAddress is not the msg.sender"
             );
-            _updateApprover(_senderAddress, msg.sender);
+            _updateApprover(_retiredAddress, msg.sender);
         } else {
-            //check if the msg.sender is one of the admin of the senderAddress contract
+            //check if the msg.sender is one of the admin of the retiredAddress contract
             require(
-                _validateAdmin(_senderAddress, msg.sender),
+                _validateAdmin(_retiredAddress, msg.sender),
                 "msg.sender is not the admin"
             );
-            _updateApprover(_senderAddress, msg.sender);
+            _updateApprover(_retiredAddress, msg.sender);
         }
     }
 
     /**
-     * @dev validate if the msg.sender is admin if the senderAddress is a contract
-     * @param _senderAddress is the address of the contract
+     * @dev validate if the msg.sender is admin if the retiredAddress is a contract
+     * @param _retiredAddress is the address of the contract
      * @param _approver is the msg.sender
      * @return isAdmin is true if the msg.sender is one of the admin
      */
-    function _validateAdmin(address _senderAddress, address _approver)
+    function _validateAdmin(address _retiredAddress, address _approver)
         private
         returns (bool isAdmin)
     {
-        (address[] memory adminList, ) = _getState(_senderAddress);
+        (address[] memory adminList, ) = _getState(_retiredAddress);
         require(adminList.length != 0, "admin list cannot be empty");
         for (uint8 i = 0; i < adminList.length; i++) {
             if (_approver == adminList[i]) {
@@ -206,18 +209,18 @@ contract TreasuryRebalance is Ownable {
     }
 
     /**
-     * @dev gets the adminList and quorom by calling `getState()` method in senderAddress contract
-     * @param _senderAddress is the address of the contract
-     * @return adminList list of the senderAddress contract admins
+     * @dev gets the adminList and quorom by calling `getState()` method in retiredAddress contract
+     * @param _retiredAddress is the address of the contract
+     * @return adminList list of the retiredAddress contract admins
      * @return req min required number of approvals
      */
-    function _getState(address _senderAddress)
+    function _getState(address _retiredAddress)
         private
         returns (address[] memory adminList, uint256 req)
     {
-        //call getState() function in senderAddress contract to get the adminList
+        //call getState() function in retiredAddress contract to get the adminList
         bytes memory payload = abi.encodeWithSignature("getState()");
-        (bool success, bytes memory result) = _senderAddress.staticcall(
+        (bool success, bytes memory result) = _retiredAddress.staticcall(
             payload
         );
         emit GetState(success, result);
@@ -227,26 +230,26 @@ contract TreasuryRebalance is Ownable {
     }
 
     /**
-     * @dev Internal function to update the approver details of a sender
-     * _senderAddress is the address of the sender
-     * _approver is the admin of the senderAddress
+     * @dev Internal function to update the approver details of a retired
+     * _retiredAddress is the address of the retired
+     * _approver is the admin of the retiredAddress
      */
-    function _updateApprover(address _senderAddress, address _approver)
+    function _updateApprover(address _retiredAddress, address _approver)
         private
     {
-        uint256 index = getSenderIndex(_senderAddress);
-        address[] memory approvers = senders[index].approvers;
+        uint256 index = getRetiredIndex(_retiredAddress);
+        address[] memory approvers = retirees[index].approvers;
         for (uint256 i = 0; i < approvers.length; i++) {
             require(
                 approvers[i] != _approver,
                 "Duplicate approvers cannot be allowed"
             );
         }
-        senders[index].approvers.push(_approver);
+        retirees[index].approvers.push(_approver);
         emit Approve(
-            _senderAddress,
+            _retiredAddress,
             _approver,
-            senders[index].approvers.length
+            retirees[index].approvers.length
         );
     }
 
@@ -269,27 +272,27 @@ contract TreasuryRebalance is Ownable {
      */
     function finalizeApproval() public onlyOwner atStatus(Status.Registered) {
         require(
-            getTreasuryAmount() < sumOfSenderBalance(),
-            "treasury amount should be less than the sum of all sender address balances"
+            getTreasuryAmount() < sumOfRetiredBalance(),
+            "treasury amount should be less than the sum of all retired address balances"
         );
-        _isSendersApproved();
+        _isRetiredsApproved();
         status = Status.Approved;
         emit SetStatus(status);
     }
 
     /**
-     * @dev verify if quorom reached for the sender approvals
+     * @dev verify if quorom reached for the retired approvals
      */
-    function _isSendersApproved() private {
-        for (uint256 i = 0; i < senders.length; i++) {
-            Sender memory sender = senders[i];
-            (, uint256 req) = _getState(sender.sender);
-            if (sender.approvers.length >= req) {
+    function _isRetiredsApproved() private {
+        for (uint256 i = 0; i < retirees.length; i++) {
+            Retired memory retired = retirees[i];
+            (, uint256 req) = _getState(retired.retired);
+            if (retired.approvers.length >= req) {
                 //if min quorom reached, make sure all approvers are still valid
-                address[] memory approvers = sender.approvers;
+                address[] memory approvers = retired.approvers;
                 uint256 minApprovals = 0;
                 for (uint256 j = 0; j < approvers.length; j++) {
-                    _validateAdmin(senders[i].sender, approvers[j]);
+                    _validateAdmin(retirees[i].retired, approvers[j]);
                     minApprovals++;
                 }
                 require(
@@ -329,145 +332,145 @@ contract TreasuryRebalance is Ownable {
         );
 
         //`delete` keyword is used to set a storage variable or a dynamic array to its default value.
-        delete senders;
-        delete receivers;
+        delete retirees;
+        delete newbies;
         delete memo;
         status = Status.Initialized;
     }
 
     //Getters
     /**
-     * @dev to get sender details by senderAddress
-     * @param _senderAddress is the address of the sender
+     * @dev to get retired details by retiredAddress
+     * @param _retiredAddress is the address of the retired
      */
-    function getSender(address _senderAddress)
+    function getRetired(address _retiredAddress)
         public
         view
         returns (address, address[] memory)
     {
-        require(senderExists(_senderAddress), "Sender does not exist");
-        uint256 index = getSenderIndex(_senderAddress);
-        Sender memory sender = senders[index];
-        return (sender.sender, sender.approvers);
+        require(retiredExists(_retiredAddress), "Retired does not exist");
+        uint256 index = getRetiredIndex(_retiredAddress);
+        Retired memory retired = retirees[index];
+        return (retired.retired, retired.approvers);
     }
 
     /**
-     * @dev check whether senderAddress is registered
-     * @param _senderAddress is the address of the sender
+     * @dev check whether retiredAddress is registered
+     * @param _retiredAddress is the address of the retired
      */
-    function senderExists(address _senderAddress) public view returns (bool) {
-        require(_senderAddress != address(0), "Invalid address");
-        for (uint8 i = 0; i < senders.length; i++) {
-            if (senders[i].sender == _senderAddress) {
+    function retiredExists(address _retiredAddress) public view returns (bool) {
+        require(_retiredAddress != address(0), "Invalid address");
+        for (uint8 i = 0; i < retirees.length; i++) {
+            if (retirees[i].retired == _retiredAddress) {
                 return true;
             }
         }
     }
 
     /**
-     * @dev get index of the sender in the senders array
-     * @param _senderAddress is the address of the sender
+     * @dev get index of the retired in the retirees array
+     * @param _retiredAddress is the address of the retired
      */
-    function getSenderIndex(address _senderAddress)
+    function getRetiredIndex(address _retiredAddress)
         public
         view
         returns (uint256)
     {
-        for (uint256 i = 0; i < senders.length; i++) {
-            if (senders[i].sender == _senderAddress) {
+        for (uint256 i = 0; i < retirees.length; i++) {
+            if (retirees[i].retired == _retiredAddress) {
                 return i;
             }
         }
-        revert("Sender does not exist");
+        revert("Retired does not exist");
     }
 
     /**
-     * @dev to calculate the sum of senders balances
-     * @return sendersBalance the sum of balances of senders
+     * @dev to calculate the sum of retirees balances
+     * @return retireesBalance the sum of balances of retireds
      */
-    function sumOfSenderBalance() public view returns (uint256 sendersBalance) {
-        for (uint8 i = 0; i < senders.length; i++) {
-            address senderAddress = senders[i].sender;
-            sendersBalance += senderAddress.balance;
+    function sumOfRetiredBalance()
+        public
+        view
+        returns (uint256 retireesBalance)
+    {
+        for (uint8 i = 0; i < retirees.length; i++) {
+            address retiredAddress = retirees[i].retired;
+            retireesBalance += retiredAddress.balance;
         }
-        return sendersBalance;
+        return retireesBalance;
     }
 
     /**
-     * @dev to get receiver details by receiverAddress
-     * @param _receiverAddress is the address of the receiver
-     * @return receiver is the address of the receiver
-     * @return amount is the fund allocated to the receiver
+     * @dev to get newbie details by newbieAddress
+     * @param _newbieAddress is the address of the newbie
+     * @return newbie is the address of the newbie
+     * @return amount is the fund allocated to the newbie
      
      */
-    function getReceiver(address _receiverAddress)
+    function getNewbie(address _newbieAddress)
         public
         view
         returns (address, uint256)
     {
-        require(receiverExists(_receiverAddress), "Receiver does not exist");
-        uint256 index = getReceiverIndex(_receiverAddress);
-        Receiver memory receiver = receivers[index];
-        return (receiver.receiver, receiver.amount);
+        require(newbieExists(_newbieAddress), "Newbie does not exist");
+        uint256 index = getNewbieIndex(_newbieAddress);
+        Newbie memory newbie = newbies[index];
+        return (newbie.newbie, newbie.amount);
     }
 
     /**
-     * @dev check whether _receiverAddress is registered
-     * @param _receiverAddress is the address of the receiver
+     * @dev check whether _newbieAddress is registered
+     * @param _newbieAddress is the address of the newbie
      */
-    function receiverExists(address _receiverAddress)
-        public
-        view
-        returns (bool)
-    {
-        require(_receiverAddress != address(0), "Invalid address");
-        for (uint8 i = 0; i < receivers.length; i++) {
-            if (receivers[i].receiver == _receiverAddress) {
+    function newbieExists(address _newbieAddress) public view returns (bool) {
+        require(_newbieAddress != address(0), "Invalid address");
+        for (uint8 i = 0; i < newbies.length; i++) {
+            if (newbies[i].newbie == _newbieAddress) {
                 return true;
             }
         }
     }
 
     /**
-     * @dev get index of the receiver in the receivers array
-     * @param _receiverAddress is the address of the receiver
+     * @dev get index of the newbie in the newbies array
+     * @param _newbieAddress is the address of the newbie
      */
-    function getReceiverIndex(address _receiverAddress)
+    function getNewbieIndex(address _newbieAddress)
         public
         view
         returns (uint256)
     {
-        for (uint256 i = 0; i < receivers.length; i++) {
-            if (receivers[i].receiver == _receiverAddress) {
+        for (uint256 i = 0; i < newbies.length; i++) {
+            if (newbies[i].newbie == _newbieAddress) {
                 return i;
             }
         }
-        revert("Receiver does not exist");
+        revert("Newbie does not exist");
     }
 
     /**
-     * @dev to calculate the sum of receiver funds
-     * @return treasuryAmount the sum of funds allocated to receivers
+     * @dev to calculate the sum of newbie funds
+     * @return treasuryAmount the sum of funds allocated to newbies
      */
     function getTreasuryAmount() public view returns (uint256 treasuryAmount) {
-        for (uint8 i = 0; i < receivers.length; i++) {
-            treasuryAmount += receivers[i].amount;
+        for (uint8 i = 0; i < newbies.length; i++) {
+            treasuryAmount += newbies[i].amount;
         }
         return treasuryAmount;
     }
 
     /**
-     * @dev gets the length of senders list
+     * @dev gets the length of retirees list
      */
-    function getSenderCount() public view returns (uint256) {
-        return senders.length;
+    function getRetiredCount() public view returns (uint256) {
+        return retirees.length;
     }
 
     /**
-     * @dev gets the length of receivers list
+     * @dev gets the length of newbies list
      */
-    function getReceiverCount() public view returns (uint256) {
-        return receivers.length;
+    function getNewbieCount() public view returns (uint256) {
+        return newbies.length;
     }
 
     /**
