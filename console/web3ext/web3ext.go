@@ -1098,6 +1098,10 @@ web3._extend({
 			getter: 'klay_maxPriorityFeePerGas',
 			outputFormatter: web3._extend.utils.toBigNumber
 		}),
+		new web3._extend.Property({
+			name: 'forkStatus',
+			getter: 'klay_forkStatus',
+		}),
 	]
 });
 `
