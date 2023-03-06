@@ -26,7 +26,7 @@ import (
 	"github.com/klaytn/klaytn/storage/database"
 )
 
-// Mixed engine consists of multiple governance engines
+// MixedEngine consists of multiple governance engines
 //
 // Each parameter is added to a parameter set from one of the following sources:
 // The highest priority is 1, and falls back to lower ones if non-existent
@@ -42,7 +42,7 @@ type MixedEngine struct {
 	initialParams *params.GovParamSet // initial ChainConfig
 	defaultParams *params.GovParamSet // default constants used as last fallback
 
-	currentParams *params.GovParamSet // latest params to be returned by Params()
+	currentParams *params.GovParamSet // latest params to be returned by CurrentParams()
 
 	db database.DBManager
 
@@ -107,68 +107,65 @@ func newMixedEngine(config *params.ChainConfig, db database.DBManager, doInit bo
 	return e
 }
 
+// NewMixedEngine creates a governance engine using both contract-based and haeder-based gov.
 // Developers are encouraged to call this constructor in most cases.
 func NewMixedEngine(config *params.ChainConfig, db database.DBManager) *MixedEngine {
 	return newMixedEngine(config, db, true)
 }
 
-// Does not load initial data for test purposes
+// NewMixedEngineNoInit creates a MixedEngine without initializing governance.
 func NewMixedEngineNoInit(config *params.ChainConfig, db database.DBManager) *MixedEngine {
 	return newMixedEngine(config, db, false)
 }
 
-func (e *MixedEngine) Params() *params.GovParamSet {
+func (e *MixedEngine) CurrentParams() *params.GovParamSet {
 	return e.currentParams
 }
 
-func (e *MixedEngine) ParamsAt(num uint64) (*params.GovParamSet, error) {
+// EffectiveParams returns the parameter set used for generating the block `num`
+func (e *MixedEngine) EffectiveParams(num uint64) (*params.GovParamSet, error) {
 	var contractParams *params.GovParamSet
 	var err error
 
 	if e.config.IsKoreForkEnabled(new(big.Int).SetUint64(num)) {
-		contractParams, err = e.contractGov.ParamsAt(num)
+		contractParams, err = e.contractGov.EffectiveParams(num)
 		if err != nil {
-			logger.Error("contractGov.ParamsAt() failed", "err", err)
+			logger.Error("contractGov.EffectiveParams() failed", "err", err)
 			return nil, err
 		}
 	} else {
 		contractParams = params.NewGovParamSet()
 	}
 
-	headerParams, err := e.headerGov.ParamsAt(num)
+	headerParams, err := e.headerGov.EffectiveParams(num)
 	if err != nil {
-		logger.Error("headerGov.ParamsAt() failed", "err", err)
+		logger.Error("headerGov.EffectiveParams() failed", "err", err)
 		return nil, err
 	}
 
 	return e.assembleParams(headerParams, contractParams), nil
 }
 
-func (e *MixedEngine) UpdateParams() error {
-	// some functions call UpdateParams() without blockchain, such as initGenesis()
-	// in this case, fall back to num=zero
-	num := big.NewInt(0)
-	if e.blockchain != nil {
-		num = e.blockchain.CurrentHeader().Number
-	}
-
+func (e *MixedEngine) UpdateParams(num uint64) error {
 	var contractParams *params.GovParamSet
-	if e.config.IsKoreForkEnabled(num) {
-		if err := e.contractGov.UpdateParams(); err != nil {
-			logger.Error("contractGov.UpdateParams() failed", "err", err)
+	numBigInt := big.NewInt(int64(num))
+
+	if e.config.IsKoreForkEnabled(numBigInt) {
+		if err := e.contractGov.UpdateParams(num); err != nil {
+			logger.Error("contractGov.UpdateParams(num) failed", "num", num, "err", err)
 			return err
 		}
-		contractParams = e.contractGov.Params()
+		contractParams = e.contractGov.CurrentParams()
 	} else {
 		contractParams = params.NewGovParamSet()
 	}
 
-	if err := e.headerGov.UpdateParams(); err != nil {
-		logger.Error("headerGov.UpdateParams() failed", "err", err)
+	if err := e.headerGov.UpdateParams(num); err != nil {
+		logger.Error("headerGov.UpdateParams(num) failed", "num", num, "err", err)
 		return err
 	}
 
-	headerParams := e.headerGov.Params()
+	headerParams := e.headerGov.CurrentParams()
 
 	newParams := e.assembleParams(headerParams, contractParams)
 	e.handleParamUpdate(e.currentParams, newParams)

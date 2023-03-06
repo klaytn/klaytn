@@ -269,17 +269,21 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	cn.blockchain = bc
 	governance.SetBlockchain(cn.blockchain)
-	if err := governance.UpdateParams(); err != nil {
+	if err := governance.UpdateParams(cn.blockchain.CurrentBlock().NumberU64()); err != nil {
 		return nil, err
 	}
 	blockchain.InitDeriveShaWithGov(cn.chainConfig, governance)
 
 	// Synchronize proposerpolicy & useGiniCoeff
+	pset, err := governance.EffectiveParams(bc.CurrentBlock().NumberU64() + 1)
+	if err != nil {
+		return nil, err
+	}
 	if cn.blockchain.Config().Istanbul != nil {
-		cn.blockchain.Config().Istanbul.ProposerPolicy = governance.Params().Policy()
+		cn.blockchain.Config().Istanbul.ProposerPolicy = pset.Policy()
 	}
 	if cn.blockchain.Config().Governance.Reward != nil {
-		cn.blockchain.Config().Governance.Reward.UseGiniCoeff = governance.Params().UseGiniCoeff()
+		cn.blockchain.Config().Governance.Reward.UseGiniCoeff = pset.UseGiniCoeff()
 	}
 
 	if config.SenderTxHashIndexing {
@@ -320,7 +324,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		logger.Error("Error happened while setting the reward wallet", "err", err)
 	}
 
-	if governance.Params().Policy() == uint64(istanbul.WeightedRandom) {
+	if pset.Policy() == uint64(istanbul.WeightedRandom) {
 		// NewStakingManager is called with proper non-nil parameters
 		reward.NewStakingManager(cn.blockchain, governance, cn.chainDB)
 	}
@@ -487,6 +491,7 @@ func (s *CN) APIs() []rpc.API {
 	governanceKlayAPI := governance.NewGovernanceKlayAPI(s.governance, s.blockchain)
 	publicGovernanceAPI := governance.NewGovernanceAPI(s.governance)
 	publicDownloaderAPI := downloader.NewPublicDownloaderAPI(s.protocolManager.Downloader(), s.eventMux)
+	privateDownloaderAPI := downloader.NewPrivateDownloaderAPI(s.protocolManager.Downloader())
 
 	ethAPI.SetPublicFilterAPI(publicFilterAPI)
 	ethAPI.SetGovernanceKlayAPI(governanceKlayAPI)
@@ -529,6 +534,10 @@ func (s *CN) APIs() []rpc.API {
 			Version:   "1.0",
 			Service:   publicDownloaderAPI,
 			Public:    true,
+		}, {
+			Namespace: "admin",
+			Version:   "1.0",
+			Service:   privateDownloaderAPI,
 		}, {
 			Namespace: "admin",
 			Version:   "1.0",

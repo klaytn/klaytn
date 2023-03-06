@@ -92,9 +92,9 @@ func (a *AccountMap) Initialize(bcdata *BCData) error {
 	// NOTE-Klaytn-Issue973 Developing Klaytn token economy
 	// Add predefined accounts related to reward mechanism
 	rewardContractAddr := common.HexToAddress(contract.RewardContractAddress)
-	kirContractAddr := common.HexToAddress(contract.KIRContractAddress)
-	pocContractAddr := common.HexToAddress(contract.PoCContractAddress)
-	addrs := append(bcdata.addrs, &rewardContractAddr, &kirContractAddr, &pocContractAddr)
+	kcfContractAddr := common.HexToAddress(contract.KCFContractAddress)
+	kffContractAddr := common.HexToAddress(contract.KFFContractAddress)
+	addrs := append(bcdata.addrs, &rewardContractAddr, &kcfContractAddr, &kffContractAddr)
 
 	for _, addr := range addrs {
 		a.Set(*addr, statedb.GetBalance(*addr), statedb.GetNonce(*addr))
