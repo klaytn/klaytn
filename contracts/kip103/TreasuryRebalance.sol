@@ -294,23 +294,28 @@ contract TreasuryRebalance is Ownable {
     function _isRetiredsApproved() private view {
         for (uint256 i = 0; i < retirees.length; i++) {
             Retired memory retired = retirees[i];
-            (address[] memory adminList, uint256 req) = _getState(
-                retired.retired
-            );
-            if (retired.approvers.length >= req) {
-                //if min quorom reached, make sure all approvers are still valid
-                address[] memory approvers = retired.approvers;
-                uint256 minApprovals = 0;
-                for (uint256 j = 0; j < approvers.length; j++) {
-                    _validateAdmin(approvers[j], adminList);
-                    minApprovals++;
-                }
-                require(
-                    minApprovals >= req,
-                    "min required admins should approve"
+            bool isContract = isContractAddr(retired.retired);
+            if (isContract) {
+                (address[] memory adminList, uint256 req) = _getState(
+                    retired.retired
                 );
+                if (retired.approvers.length >= req) {
+                    //if min quorom reached, make sure all approvers are still valid
+                    address[] memory approvers = retired.approvers;
+                    uint256 minApprovals = 0;
+                    for (uint256 j = 0; j < approvers.length; j++) {
+                        _validateAdmin(approvers[j], adminList);
+                        minApprovals++;
+                    }
+                    require(
+                        minApprovals >= req,
+                        "min required admins should approve"
+                    );
+                } else {
+                    revert("min required admins should approve");
+                }
             } else {
-                revert("min required admins should approve");
+                require(retired.approvers.length == 1, "EOA should approve");
             }
         }
     }
