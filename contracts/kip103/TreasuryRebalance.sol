@@ -64,7 +64,7 @@ contract TreasuryRebalance is Ownable {
         uint256 rebalanceBlockNumber,
         uint256 deployedBlockNumber
     );
-    event RetiredRegistered(address retired, address[] approvers);
+    event RetiredRegistered(address retired);
     event RetiredRemoved(address retired, uint256 retiredCount);
     event NewbieRegistered(address newbie, uint256 fundAllocation);
     event NewbieRemoved(address newbie, uint256 newbieCount);
@@ -106,7 +106,7 @@ contract TreasuryRebalance is Ownable {
         );
         Retired storage retired = retirees.push();
         retired.retired = _retiredAddress;
-        emit RetiredRegistered(retired.retired, retired.approvers);
+        emit RetiredRegistered(retired.retired);
     }
 
     /**
