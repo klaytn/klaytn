@@ -32,7 +32,7 @@ contract TreasuryRebalance is Ownable {
     }
 
     /**
-     * Retired struct to store retired addresses and their approver addresses
+     * Retired struct to store retired address and their approver addresses
      */
     struct Retired {
         address retired;
