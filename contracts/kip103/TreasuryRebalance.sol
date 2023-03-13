@@ -283,7 +283,7 @@ contract TreasuryRebalance is Ownable {
             getTreasuryAmount() < sumOfRetiredBalance(),
             "treasury amount should be less than the sum of all retired address balances"
         );
-        _isRetiredsApproved();
+        isRetiredsApproved();
         status = Status.Approved;
         emit StatusChanged(status);
     }
@@ -291,7 +291,7 @@ contract TreasuryRebalance is Ownable {
     /**
      * @dev verify if quorom reached for the retired approvals
      */
-    function _isRetiredsApproved() private view {
+    function isRetiredsApproved() public view {
         for (uint256 i = 0; i < retirees.length; i++) {
             Retired memory retired = retirees[i];
             bool isContract = isContractAddr(retired.retired);
