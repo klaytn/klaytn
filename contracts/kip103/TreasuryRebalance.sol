@@ -299,21 +299,18 @@ contract TreasuryRebalance is Ownable {
                 (address[] memory adminList, uint256 req) = _getState(
                     retired.retired
                 );
-                if (retired.approvers.length >= req) {
-                    //if min quorom reached, make sure all approvers are still valid
-                    address[] memory approvers = retired.approvers;
-                    uint256 minApprovals = 0;
-                    for (uint256 j = 0; j < approvers.length; j++) {
-                        _validateAdmin(approvers[j], adminList);
-                        minApprovals++;
-                    }
-                    require(
-                        minApprovals >= req,
-                        "min required admins should approve"
-                    );
-                } else {
-                    revert("min required admins should approve");
+                require(retired.approvers.length >= req, "min required admins should approve");
+                //if min quorom reached, make sure all approvers are still valid
+                address[] memory approvers = retired.approvers;
+                uint256 minApprovals = 0;
+                for (uint256 j = 0; j < approvers.length; j++) {
+                    _validateAdmin(approvers[j], adminList);
+                    minApprovals++;
                 }
+                require(
+                    minApprovals >= req,
+                    "min required admins should approve"
+                );    
             } else {
                 require(retired.approvers.length == 1, "EOA should approve");
             }
@@ -345,6 +342,7 @@ contract TreasuryRebalance is Ownable {
         emit Finalized(memo, status);
         totalRetireesBalance = sumOfRetiredBalance();
         totalNewbiesFund = getTreasuryAmount();
+        require(block.number > rebalanceBlockNumber, "Contract can only finalize after executing rebalancing");
         return (retirees, totalRetireesBalance, newbies, totalNewbiesFund);
     }
 
