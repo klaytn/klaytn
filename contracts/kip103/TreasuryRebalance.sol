@@ -202,10 +202,10 @@ contract TreasuryRebalance is Ownable {
      */
     function _validateAdmin(
         address _approver,
-        address[] memory adminList
+        address[] memory _adminList
     ) private pure returns (bool isAdmin) {
-        for (uint256 i = 0; i < adminList.length; i++) {
-            if (_approver == adminList[i]) {
+        for (uint256 i = 0; i < _adminList.length; i++) {
+            if (_approver == _adminList[i]) {
                 isAdmin = true;
             }
         }
