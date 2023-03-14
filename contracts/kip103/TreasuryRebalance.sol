@@ -95,11 +95,9 @@ contract TreasuryRebalance is Ownable {
      * @dev registers retired details
      * @param _retiredAddress is the address of the retired
      */
-    function registerRetired(address _retiredAddress)
-        public
-        onlyOwner
-        onlyAtStatus(Status.Initialized)
-    {
+    function registerRetired(
+        address _retiredAddress
+    ) public onlyOwner onlyAtStatus(Status.Initialized) {
         require(
             !retiredExists(_retiredAddress),
             "Retired address is already registered"
@@ -113,11 +111,9 @@ contract TreasuryRebalance is Ownable {
      * @dev remove the retired details from the array
      * @param _retiredAddress is the address of the retired
      */
-    function removeRetired(address _retiredAddress)
-        public
-        onlyOwner
-        onlyAtStatus(Status.Initialized)
-    {
+    function removeRetired(
+        address _retiredAddress
+    ) public onlyOwner onlyAtStatus(Status.Initialized) {
         uint256 retiredIndex = getRetiredIndex(_retiredAddress);
         require(retiredIndex != type(uint256).max, "Retired not registered");
         retirees[retiredIndex] = retirees[retirees.length - 1];
@@ -131,11 +127,10 @@ contract TreasuryRebalance is Ownable {
      * @param _newbieAddress is the address of the newbie
      * @param _amount is the fund to be allocated to the newbie
      */
-    function registerNewbie(address _newbieAddress, uint256 _amount)
-        public
-        onlyOwner
-        onlyAtStatus(Status.Initialized)
-    {
+    function registerNewbie(
+        address _newbieAddress,
+        uint256 _amount
+    ) public onlyOwner onlyAtStatus(Status.Initialized) {
         require(
             !newbieExists(_newbieAddress),
             "Newbie address is already registered"
@@ -152,11 +147,9 @@ contract TreasuryRebalance is Ownable {
      * @dev remove the newbie details from the array
      * @param _newbieAddress is the address of the newbie
      */
-    function removeNewbie(address _newbieAddress)
-        public
-        onlyOwner
-        onlyAtStatus(Status.Initialized)
-    {
+    function removeNewbie(
+        address _newbieAddress
+    ) public onlyOwner onlyAtStatus(Status.Initialized) {
         uint256 newbieIndex = getNewbieIndex(_newbieAddress);
         require(newbieIndex != type(uint256).max, "Newbie not registered");
         newbies[newbieIndex] = newbies[newbies.length - 1];
@@ -172,10 +165,9 @@ contract TreasuryRebalance is Ownable {
      *      It uses the getState() function in the retiredAddress contract to get the admin details.
      * @param _retiredAddress is the address of the retired
      */
-    function approve(address _retiredAddress)
-        public
-        onlyAtStatus(Status.Registered)
-    {
+    function approve(
+        address _retiredAddress
+    ) public onlyAtStatus(Status.Registered) {
         require(
             retiredExists(_retiredAddress),
             "retired needs to be registered before approval"
@@ -208,11 +200,10 @@ contract TreasuryRebalance is Ownable {
      * @param _approver is the msg.sender
      * @return isAdmin is true if the msg.sender is one of the admin
      */
-    function _validateAdmin(address _approver, address[] memory adminList)
-        private
-        pure
-        returns (bool isAdmin)
-    {
+    function _validateAdmin(
+        address _approver,
+        address[] memory adminList
+    ) private pure returns (bool isAdmin) {
         for (uint256 i = 0; i < adminList.length; i++) {
             if (_approver == adminList[i]) {
                 isAdmin = true;
@@ -226,11 +217,9 @@ contract TreasuryRebalance is Ownable {
      * @return adminList list of the retiredAddress contract admins
      * @return req min required number of approvals
      */
-    function _getState(address _retiredAddress)
-        private
-        view
-        returns (address[] memory adminList, uint256 req)
-    {
+    function _getState(
+        address _retiredAddress
+    ) private view returns (address[] memory adminList, uint256 req) {
         IRetiredContract retiredContract = IRetiredContract(_retiredAddress);
         (adminList, req) = retiredContract.getState();
     }
@@ -240,9 +229,10 @@ contract TreasuryRebalance is Ownable {
      * _retiredAddress is the address of the retired
      * _approver is the admin of the retiredAddress
      */
-    function _updateApprover(address _retiredAddress, address _approver)
-        private
-    {
+    function _updateApprover(
+        address _retiredAddress,
+        address _approver
+    ) private {
         uint256 index = getRetiredIndex(_retiredAddress);
         require(index != type(uint256).max, "Retired not registered");
         address[] memory approvers = retirees[index].approvers;
@@ -299,7 +289,10 @@ contract TreasuryRebalance is Ownable {
                 (address[] memory adminList, uint256 req) = _getState(
                     retired.retired
                 );
-                require(retired.approvers.length >= req, "min required admins should approve");
+                require(
+                    retired.approvers.length >= req,
+                    "min required admins should approve"
+                );
                 //if min quorom reached, make sure all approvers are still valid
                 address[] memory approvers = retired.approvers;
                 uint256 minApprovals = 0;
@@ -310,7 +303,7 @@ contract TreasuryRebalance is Ownable {
                 require(
                     minApprovals >= req,
                     "min required admins should approve"
-                );    
+                );
             } else {
                 require(retired.approvers.length == 1, "EOA should approve");
             }
@@ -326,7 +319,9 @@ contract TreasuryRebalance is Ownable {
      * @return newbies is an array of newbie address
      * @return totalNewbiesFund is the sum of funds allocated to
      */
-    function finalizeContract(string memory _memo)
+    function finalizeContract(
+        string memory _memo
+    )
         public
         onlyOwner
         onlyAtStatus(Status.Approved)
@@ -342,7 +337,10 @@ contract TreasuryRebalance is Ownable {
         emit Finalized(memo, status);
         totalRetireesBalance = sumOfRetiredBalance();
         totalNewbiesFund = getTreasuryAmount();
-        require(block.number > rebalanceBlockNumber, "Contract can only finalize after executing rebalancing");
+        require(
+            block.number > rebalanceBlockNumber,
+            "Contract can only finalize after executing rebalancing"
+        );
         return (retirees, totalRetireesBalance, newbies, totalNewbiesFund);
     }
 
@@ -369,11 +367,9 @@ contract TreasuryRebalance is Ownable {
      * @dev to get retired details by retiredAddress
      * @param _retiredAddress is the address of the retired
      */
-    function getRetired(address _retiredAddress)
-        public
-        view
-        returns (address, address[] memory)
-    {
+    function getRetired(
+        address _retiredAddress
+    ) public view returns (address, address[] memory) {
         uint256 index = getRetiredIndex(_retiredAddress);
         require(index != type(uint256).max, "Retired not registered");
         Retired memory retired = retirees[index];
@@ -397,11 +393,9 @@ contract TreasuryRebalance is Ownable {
      * @dev get index of the retired in the retirees array
      * @param _retiredAddress is the address of the retired
      */
-    function getRetiredIndex(address _retiredAddress)
-        public
-        view
-        returns (uint256)
-    {
+    function getRetiredIndex(
+        address _retiredAddress
+    ) public view returns (uint256) {
         for (uint256 i = 0; i < retirees.length; i++) {
             if (retirees[i].retired == _retiredAddress) {
                 return i;
@@ -431,11 +425,9 @@ contract TreasuryRebalance is Ownable {
      * @return newbie is the address of the newbie
      * @return amount is the fund allocated to the newbie
      */
-    function getNewbie(address _newbieAddress)
-        public
-        view
-        returns (address, uint256)
-    {
+    function getNewbie(
+        address _newbieAddress
+    ) public view returns (address, uint256) {
         uint256 index = getNewbieIndex(_newbieAddress);
         require(index != type(uint256).max, "Newbie not registered");
         Newbie memory newbie = newbies[index];
@@ -459,11 +451,9 @@ contract TreasuryRebalance is Ownable {
      * @dev get index of the newbie in the newbies array
      * @param _newbieAddress is the address of the newbie
      */
-    function getNewbieIndex(address _newbieAddress)
-        public
-        view
-        returns (uint256)
-    {
+    function getNewbieIndex(
+        address _newbieAddress
+    ) public view returns (uint256) {
         for (uint256 i = 0; i < newbies.length; i++) {
             if (newbies[i].newbie == _newbieAddress) {
                 return i;
