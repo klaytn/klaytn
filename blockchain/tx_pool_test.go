@@ -112,6 +112,15 @@ func pricedTransaction(nonce uint64, gaslimit uint64, gasprice *big.Int, key *ec
 	return tx
 }
 
+func pricedDataTransaction(nonce uint64, gaslimit uint64, gasprice *big.Int, key *ecdsa.PrivateKey, bytes uint64) *types.Transaction {
+	data := make([]byte, bytes)
+	rand.Read(data)
+
+	tx, _ := types.SignTx(types.NewTransaction(nonce, common.HexToAddress("0xAAAA"), big.NewInt(0), gaslimit, gasprice, data),
+		types.LatestSignerForChainID(params.TestChainConfig.ChainID), key)
+	return tx
+}
+
 func dynamicFeeTx(nonce uint64, gaslimit uint64, gasFee *big.Int, tip *big.Int, key *ecdsa.PrivateKey) *types.Transaction {
 	dynamicTx := types.NewTx(&types.TxInternalDataEthereumDynamicFee{
 		ChainID:      params.TestChainConfig.ChainID,
@@ -1297,6 +1306,70 @@ func TestTransactionPendingGlobalLimiting(t *testing.T) {
 	}
 	if pending > int(config.ExecSlotsAll) {
 		t.Fatalf("total pending transactions overflow allowance: %d > %d", pending, config.ExecSlotsAll)
+	}
+	if err := validateTxPoolInternals(pool); err != nil {
+		t.Fatalf("pool internal state corrupted: %v", err)
+	}
+}
+
+// Test the limit on transaction size is enforced correctly.
+// This test verifies every transaction having allowed size
+// is added to the pool, and longer transactions are rejected.
+func TestTransactionAllowedTxSize(t *testing.T) {
+	t.Parallel()
+
+	// Create a test account and fund it
+	pool, key := setupTxPool()
+	defer pool.Stop()
+
+	account := crypto.PubkeyToAddress(key.PublicKey)
+	pool.currentState.AddBalance(account, big.NewInt(1000000000))
+
+	// Compute maximal data size for transactions (lower bound).
+	//
+	// It is assumed the fields in the transaction (except of the data) are:
+	//   - nonce     <= 32 bytes
+	//   - gasPrice  <= 32 bytes
+	//   - gasLimit  <= 32 bytes
+	//   - recipient == 20 bytes
+	//   - value     <= 32 bytes
+	//   - signature == 65 bytes
+	// All those fields are summed up to at most 213 bytes.
+	baseSize := uint64(213)
+	dataSize := MaxTxDataSize - baseSize
+
+	testcases := []struct {
+		sizeOfTxData uint64 // data size of the transaction to be added
+		nonce        uint64 // nonce of the transaction
+		success      bool   // the expected result whether the addition is succeeded or failed
+		errStr       string
+	}{
+		// Try adding a transaction with close to the maximum allowed size
+		{dataSize, 0, true, "failed to add the transaction which size is close to the maximal"},
+		// Try adding a transaction with random allowed size
+		{uint64(rand.Intn(int(dataSize))), 1, true, "failed to add the transaction of random allowed size"},
+		// Try adding a slightly oversize transaction
+		{MaxTxDataSize, 2, false, "expected rejection on slightly oversize transaction"},
+		// Try adding a transaction of random not allowed size
+		{dataSize + 1 + uint64(rand.Intn(int(10*MaxTxDataSize))), 2, false, "expected rejection on oversize transaction"},
+	}
+	for _, tc := range testcases {
+		tx := pricedDataTransaction(tc.nonce, 100000000, big.NewInt(1), key, tc.sizeOfTxData)
+		err := pool.AddRemote(tx)
+
+		// test failed
+		if tc.success && err != nil || !tc.success && err == nil {
+			t.Fatalf("%s. tx Size: %d. error: %v.", tc.errStr, int(tx.Size()), err)
+		}
+	}
+
+	// Run some sanity checks on the pool internals
+	pending, queued := pool.Stats()
+	if pending != 2 {
+		t.Fatalf("pending transactions mismatched: have %d, want %d", pending, 2)
+	}
+	if queued != 0 {
+		t.Fatalf("queued transactions mismatched: have %d, want %d", queued, 0)
 	}
 	if err := validateTxPoolInternals(pool); err != nil {
 		t.Fatalf("pool internal state corrupted: %v", err)
@@ -2635,6 +2708,28 @@ func TestTransactionJournalingSortedByTime(t *testing.T) {
 	for i, tx := range txsFromFile {
 		assert.Equal(t, txs[i].Hash(), tx.Hash())
 		assert.False(t, txs[i].Time().Equal(tx.Time()))
+	}
+}
+
+// Test the transaction slots consumption is computed correctly
+func TestTransactionSlotCount(t *testing.T) {
+	t.Parallel()
+
+	key, _ := crypto.GenerateKey()
+
+	testcases := []struct {
+		sizeOfTxData uint64
+		nonce        uint64
+		sizeOfSlot   int // expected result
+	}{
+		// smallTx: Check that an empty transaction consumes a single slot
+		{0, 0, 1},
+		// bigTx: Check that a large transaction consumes the correct number of slots
+		{uint64(10 * txSlotSize), 0, 11},
+	}
+	for _, tc := range testcases {
+		tx := pricedDataTransaction(tc.nonce, 0, big.NewInt(0), key, tc.sizeOfTxData)
+		assert.Equal(t, tc.sizeOfSlot, numSlots(tx), "transaction slot count mismatch")
 	}
 }
 
