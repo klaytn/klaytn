@@ -24,11 +24,9 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"os"
 
 	"github.com/klaytn/klaytn/accounts/keystore"
 	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/cmd/utils"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/consensus/istanbul"
@@ -47,21 +45,74 @@ const (
 	DECRYPT_KEY  = "decrypt-keystore"
 )
 
-var pgmInput = fmt.Sprintf(`
-  %17s  <header file (json format)>
-  %17s  <bytes>
-  %17s  <bytes>
-  %17s  <keystore path> <password>
-`, DECODE_EXTRA, DECODE_VOTE, DECODE_GOV, DECRYPT_KEY)
-
-var ErrInvalidParam = errors.New("Invalid length of parameter")
+var ErrInvalidCmd = errors.New("Invalid command. Check usage through --help command")
 
 var UtilCommand = cli.Command{
-	Action:    utils.MigrateFlags(decode),
-	Name:      "util",
-	Usage:     "offline utility" + pgmInput,
-	ArgsUsage: " ",
-	Category:  "MISCELLANEOUS COMMANDS",
+	Name:     "util",
+	Usage:    "offline utility",
+	Category: "MISCELLANEOUS COMMANDS",
+	Subcommands: []cli.Command{
+		{
+			Name:        DECODE_EXTRA,
+			Usage:       "<header file (json format)>",
+			Action:      action,
+			Description: "Decode header extra field",
+		},
+		{
+			Name:        DECODE_VOTE,
+			Usage:       "<hex bytes>",
+			Action:      action,
+			Description: "Decode header vote field",
+		},
+		{
+			Name:        DECODE_GOV,
+			Usage:       "<hex bytes>",
+			Action:      action,
+			Description: "Decode header governance field",
+		},
+		{
+			Name:        DECRYPT_KEY,
+			Usage:       "<keystore path> <password>",
+			Action:      action,
+			Description: "Decrypt keystore",
+		},
+	},
+}
+
+func action(ctx *cli.Context) error {
+	var (
+		m   map[string]interface{}
+		err error
+	)
+	switch ctx.Command.Name {
+	case DECODE_EXTRA:
+		if len(ctx.Args()) != 1 {
+			return ErrInvalidCmd
+		}
+		m, err = decodeExtra(ctx.Args().Get(0))
+	case DECODE_VOTE:
+		if len(ctx.Args()) != 1 {
+			return ErrInvalidCmd
+		}
+		m, err = decodeVote(hex2Bytes(ctx.Args().Get(0)))
+	case DECODE_GOV:
+		if len(ctx.Args()) != 1 {
+			return ErrInvalidCmd
+		}
+		m, err = decodeGov(hex2Bytes(ctx.Args().Get(0)))
+	case DECRYPT_KEY:
+		if len(ctx.Args()) != 2 {
+			return ErrInvalidCmd
+		}
+		keystorePath, passwd := ctx.Args().Get(0), ctx.Args().Get(1)
+		m, err = extractKeypair(keystorePath, passwd)
+	default:
+		return ErrInvalidCmd
+	}
+	if err == nil {
+		prettyPrint(m)
+	}
+	return err
 }
 
 func hex2Bytes(s string) []byte {
@@ -70,67 +121,6 @@ func hex2Bytes(s string) []byte {
 	} else {
 		panic(err)
 	}
-}
-
-func printUsage() error {
-	fmt.Printf("Usage: %s util <command> <args>", os.Args[0])
-	fmt.Println(pgmInput)
-	return ErrInvalidParam
-}
-
-func validateInput(ctx *cli.Context, decodeTyp string) error {
-	switch decodeTyp {
-	case DECODE_EXTRA, DECODE_VOTE, DECODE_GOV:
-		if len(ctx.Args()) != 2 {
-			return printUsage()
-		}
-	case "key":
-		if len(ctx.Args()) != 3 {
-			return printUsage()
-		}
-	}
-	return nil
-}
-
-func decode(ctx *cli.Context) error {
-	decodeTyp := ctx.Args().Get(0)
-	if err := validateInput(ctx, decodeTyp); err != nil {
-		return err
-	}
-	var (
-		m   map[string]interface{}
-		err error
-	)
-	switch decodeTyp {
-	case DECODE_VOTE:
-		data := ctx.Args().Get(1)
-		m, err = decodeVote(hex2Bytes(data))
-		if err != nil {
-			return err
-		}
-	case DECODE_EXTRA:
-		headerFile := ctx.Args().Get(1)
-		m, err = decodeExtra(headerFile)
-		if err != nil {
-			return err
-		}
-	case DECODE_GOV:
-		data := ctx.Args().Get(1)
-		m, err = decodeGov(hex2Bytes(data))
-		if err != nil {
-			return err
-		}
-	case DECRYPT_KEY:
-		keystorePath, passwd := ctx.Args().Get(1), ctx.Args().Get(2)
-		m, err = extractKeypair(keystorePath, passwd)
-		if err != nil {
-			return err
-		}
-	default:
-		return printUsage()
-	}
-	prettyPrint(m)
-	return nil
 }
 
 func prettyPrint(m map[string]interface{}) {
