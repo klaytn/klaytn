@@ -505,6 +505,25 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 
 	reward.DistributeBlockReward(state, rewardSpec.Rewards)
 
+	// TODO-aidan: hardfork handling
+	kgp6BlockNum := big.NewInt(1234)
+	kgp6Contract := common.Address{0x0}
+
+	// Only on the KIP-103 hardfork block, the following logic should be executed
+	if header.Number.Cmp(kgp6BlockNum) == 0 {
+		// rebalanceTreasury can modify the global state (state),
+		// so the existing state db should be used to apply the rebalancing result.
+		receipt, err := rebalanceTreasury(state, chain, header, kgp6Contract)
+		if err != nil {
+			logger.Error("failed to execute treasury rebalancing (KIP-103). State not changed", "err", err)
+		} else {
+			memo, err := json.Marshal(receipt)
+			if err != nil {
+				logger.Warn("failed to marshal KIP-103 receipt", "err", err, "receipt", receipt)
+			}
+			logger.Info("successfully executed treasury rebalancing (KIP-103)", "memo", string(memo))
+		}
+	}
 	header.Root = state.IntermediateRoot(true)
 
 	// Assemble and return the final block for sealing
