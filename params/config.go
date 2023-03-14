@@ -47,7 +47,11 @@ var (
 		EthTxTypeCompatibleBlock: big.NewInt(86816005),
 		MagmaCompatibleBlock:     big.NewInt(99841497),
 		KoreCompatibleBlock:      big.NewInt(0xffffffff),
-		DeriveShaImpl:            2,
+		KIP103: &KIP103Config{
+			Kip103CompatibleBlock: big.NewInt(0xffffffff),
+			Kip103ContractAddress: common.HexToAddress("0x0"),
+		},
+		DeriveShaImpl: 2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x52d41ca72af615a1ac3301b0a93efa222ecc7541"),
 			GovernanceMode: "single",
@@ -77,7 +81,11 @@ var (
 		EthTxTypeCompatibleBlock: big.NewInt(86513895),
 		MagmaCompatibleBlock:     big.NewInt(98347376),
 		KoreCompatibleBlock:      big.NewInt(111736800),
-		DeriveShaImpl:            2,
+		KIP103: &KIP103Config{
+			Kip103CompatibleBlock: big.NewInt(0xffffffff),
+			Kip103ContractAddress: common.HexToAddress("0x0"),
+		},
+		DeriveShaImpl: 2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x99fb17d324fa0e07f23b49d09028ac0919414db6"),
 			GovernanceMode: "single",
@@ -177,6 +185,10 @@ type ChainConfig struct {
 	MagmaCompatibleBlock     *big.Int `json:"magmaCompatibleBlock,omitempty"`     // MagmaCompatible switch block (nil = no fork, 0 already on Magma)
 	KoreCompatibleBlock      *big.Int `json:"koreCompatibleBlock,omitempty"`      // KoreCompatible switch block (nil = no fork, 0 already on Kore)
 
+	// KIP103 is a special purpose hardfork feature that can be executed only once
+	// Both Kip103CompatibleBlock and Kip103ContractAddress should be specified to enable KIP103
+	KIP103 *KIP103Config `json:"kip103,omitempty"`
+
 	// Various consensus engines
 	Gxhash   *GxhashConfig   `json:"gxhash,omitempty"` // (deprecated) not supported engine
 	Clique   *CliqueConfig   `json:"clique,omitempty"`
@@ -185,6 +197,11 @@ type ChainConfig struct {
 	UnitPrice     uint64            `json:"unitPrice"`
 	DeriveShaImpl int               `json:"deriveShaImpl"`
 	Governance    *GovernanceConfig `json:"governance"`
+}
+
+type KIP103Config struct {
+	Kip103CompatibleBlock *big.Int       `json:"kip103CompatibleBlock,omitempty"` // Kip103Compatible switch block (nil = no fork)
+	Kip103ContractAddress common.Address `json:"kip103ContractAddress,omitempty"` // Kip103 contract address already deployed on the network
 }
 
 // GovernanceConfig stores governance information for a network
@@ -266,27 +283,35 @@ func (c *ChainConfig) String() string {
 	default:
 		engine = "unknown"
 	}
+
+	kip103 := ""
+	if c.KIP103 != nil {
+		kip103 = fmt.Sprintf("KIP103CompatibleBlock: %v KIP103ContractAddress %s", c.KIP103.Kip103CompatibleBlock, c.KIP103.Kip103ContractAddress.String())
+	}
+
 	if c.Istanbul != nil {
-		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v KoreCompatibleBlock: %v SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d Engine: %v}",
+		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v KoreCompatibleBlock: %v %s SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d Engine: %v}",
 			c.ChainID,
 			c.IstanbulCompatibleBlock,
 			c.LondonCompatibleBlock,
 			c.EthTxTypeCompatibleBlock,
 			c.MagmaCompatibleBlock,
 			c.KoreCompatibleBlock,
+			kip103,
 			c.Istanbul.SubGroupSize,
 			c.UnitPrice,
 			c.DeriveShaImpl,
 			engine,
 		)
 	} else {
-		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v KoreCompatibleBlock: %v UnitPrice: %d DeriveShaImpl: %d Engine: %v }",
+		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v KoreCompatibleBlock: %v %s UnitPrice: %d DeriveShaImpl: %d Engine: %v }",
 			c.ChainID,
 			c.IstanbulCompatibleBlock,
 			c.LondonCompatibleBlock,
 			c.EthTxTypeCompatibleBlock,
 			c.MagmaCompatibleBlock,
 			c.KoreCompatibleBlock,
+			kip103,
 			c.UnitPrice,
 			c.DeriveShaImpl,
 			engine,
@@ -324,6 +349,14 @@ func (c *ChainConfig) IsMagmaForkEnabled(num *big.Int) bool {
 // IsKoreForkedEnabled returns whether num is either equal to the kore block or greater.
 func (c *ChainConfig) IsKoreForkEnabled(num *big.Int) bool {
 	return isForked(c.KoreCompatibleBlock, num)
+}
+
+// IsKIP103ForkBlock returns whether num is equal to the kore block.
+func (c *ChainConfig) IsKIP103ForkBlock(num *big.Int) bool {
+	if c.KIP103 == nil || c.KIP103.Kip103CompatibleBlock == nil || num == nil {
+		return false
+	}
+	return c.KIP103.Kip103CompatibleBlock.Cmp(num) == 0
 }
 
 // CheckCompatible checks whether scheduled fork transitions have been imported

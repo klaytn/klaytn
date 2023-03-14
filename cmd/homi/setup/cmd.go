@@ -647,6 +647,15 @@ func Gen(ctx *cli.Context) error {
 	genesisJson.Config.MagmaCompatibleBlock = big.NewInt(ctx.Int64(magmaCompatibleBlockNumberFlag.Name))
 	genesisJson.Config.KoreCompatibleBlock = big.NewInt(ctx.Int64(koreCompatibleBlockNumberFlag.Name))
 
+	kip103Block := ctx.Int64(kip103CompatibleBlockNumberFlag.Name)
+	kip103Contract := ctx.String(kip103ContractAddressFlag.Name)
+	if kip103Block != 0 && kip103Contract != "" {
+		genesisJson.Config.KIP103 = &params.KIP103Config{
+			Kip103CompatibleBlock: big.NewInt(kip103Block),
+			Kip103ContractAddress: common.HexToAddress(kip103Contract),
+		}
+	}
+
 	genesisJsonBytes, _ = json.MarshalIndent(genesisJson, "", "    ")
 	genValidatorKeystore(privKeys)
 	lastIssuedPortNum = uint16(ctx.Int(p2pPortFlag.Name))

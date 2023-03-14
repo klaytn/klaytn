@@ -116,11 +116,16 @@ func (receipt *kip103Receipt) totalNewbieBalance() *big.Int {
 // rebalanceTreasury reads data from a contract, validates stored values, and executes treasury rebalancing (KIP-103).
 // It can change the global state by removing old treasury balances and allocating new treasury balances.
 // The new allocation can be larger than the removed amount, and the difference between two amounts will be burnt.
-func rebalanceTreasury(state *state.StateDB, chain consensus.ChainReader, header *types.Header, contractAddr common.Address) (*kip103Receipt, error) {
+func rebalanceTreasury(state *state.StateDB, chain consensus.ChainReader, header *types.Header) (*kip103Receipt, error) {
 	receipt := newKip103Receipt()
 	c := &kip103ContractCaller{state, chain, header}
 
-	caller, err := kip103.NewTreasuryRebalanceCaller(contractAddr, c)
+	// Inside check to avoid a panic case
+	if chain.Config().KIP103 == nil {
+		return receipt, errors.New("cannot find KIP103 configuration")
+	}
+
+	caller, err := kip103.NewTreasuryRebalanceCaller(chain.Config().KIP103.Kip103ContractAddress, c)
 	if err != nil {
 		return receipt, err
 	}
