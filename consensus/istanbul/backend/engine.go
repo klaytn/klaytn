@@ -509,13 +509,13 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 	if chain.Config().IsKIP103ForkBlock(header.Number) {
 		// rebalanceTreasury can modify the global state (state),
 		// so the existing state db should be used to apply the rebalancing result.
-		receipt, err := rebalanceTreasury(state, chain, header)
+		result, err := rebalanceTreasury(state, chain, header)
 		if err != nil {
 			logger.Error("failed to execute treasury rebalancing (KIP-103). State not changed", "err", err)
 		} else {
-			memo, err := json.Marshal(receipt)
+			memo, err := json.Marshal(result)
 			if err != nil {
-				logger.Warn("failed to marshal KIP-103 receipt", "err", err, "receipt", receipt)
+				logger.Warn("failed to marshal KIP-103 result", "err", err, "result", result)
 			}
 			logger.Info("successfully executed treasury rebalancing (KIP-103)", "memo", string(memo))
 		}

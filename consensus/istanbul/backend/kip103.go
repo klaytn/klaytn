@@ -45,15 +45,15 @@ func (caller *kip103ContractCaller) CallContract(ctx context.Context, call klayt
 	return res, kerr.ErrTxInvalid
 }
 
-type kip103Receipt struct {
+type kip103result struct {
 	Retired map[common.Address]*big.Int `json:"retired"`
 	Newbie  map[common.Address]*big.Int `json:"newbie"`
 	Burnt   *big.Int                    `json:"burnt"`
 	Success bool                        `json:"success"`
 }
 
-func newKip103Receipt() *kip103Receipt {
-	return &kip103Receipt{
+func newKip103Receipt() *kip103result {
+	return &kip103result{
 		Retired: make(map[common.Address]*big.Int),
 		Newbie:  make(map[common.Address]*big.Int),
 		Burnt:   big.NewInt(0),
@@ -61,7 +61,7 @@ func newKip103Receipt() *kip103Receipt {
 	}
 }
 
-func (receipt *kip103Receipt) fillRetired(contract *kip103.TreasuryRebalanceCaller, state *state.StateDB) error {
+func (result *kip103result) fillRetired(contract *kip103.TreasuryRebalanceCaller, state *state.StateDB) error {
 	numRetiredBigInt, err := contract.GetRetiredCount(nil)
 	if err != nil {
 		logger.Error("Failed to get RetiredCount from TreasuryRebalance contract", "err", err)
@@ -74,12 +74,12 @@ func (receipt *kip103Receipt) fillRetired(contract *kip103.TreasuryRebalanceCall
 			logger.Error("Failed to get Retirees from TreasuryRebalance contract", "err", err)
 			return err
 		}
-		receipt.Retired[ret] = state.GetBalance(ret)
+		result.Retired[ret] = state.GetBalance(ret)
 	}
 	return nil
 }
 
-func (receipt *kip103Receipt) fillNewbie(contract *kip103.TreasuryRebalanceCaller) error {
+func (result *kip103result) fillNewbie(contract *kip103.TreasuryRebalanceCaller) error {
 	numNewbieBigInt, err := contract.GetNewbieCount(nil)
 	if err != nil {
 		logger.Error("Failed to get NewbieCount from TreasuryRebalance contract", "err", err)
@@ -92,22 +92,22 @@ func (receipt *kip103Receipt) fillNewbie(contract *kip103.TreasuryRebalanceCalle
 			logger.Error("Failed to get Newbies from TreasuryRebalance contract", "err", err)
 			return err
 		}
-		receipt.Newbie[ret.Newbie] = ret.Amount
+		result.Newbie[ret.Newbie] = ret.Amount
 	}
 	return nil
 }
 
-func (receipt *kip103Receipt) totalRetriedBalance() *big.Int {
+func (result *kip103result) totalRetriedBalance() *big.Int {
 	total := big.NewInt(0)
-	for _, bal := range receipt.Retired {
+	for _, bal := range result.Retired {
 		total.Add(total, bal)
 	}
 	return total
 }
 
-func (receipt *kip103Receipt) totalNewbieBalance() *big.Int {
+func (result *kip103result) totalNewbieBalance() *big.Int {
 	total := big.NewInt(0)
-	for _, bal := range receipt.Newbie {
+	for _, bal := range result.Newbie {
 		total.Add(total, bal)
 	}
 	return total
@@ -116,64 +116,64 @@ func (receipt *kip103Receipt) totalNewbieBalance() *big.Int {
 // rebalanceTreasury reads data from a contract, validates stored values, and executes treasury rebalancing (KIP-103).
 // It can change the global state by removing old treasury balances and allocating new treasury balances.
 // The new allocation can be larger than the removed amount, and the difference between two amounts will be burnt.
-func rebalanceTreasury(state *state.StateDB, chain consensus.ChainReader, header *types.Header) (*kip103Receipt, error) {
-	receipt := newKip103Receipt()
+func rebalanceTreasury(state *state.StateDB, chain consensus.ChainReader, header *types.Header) (*kip103result, error) {
+	result := newKip103Receipt()
 	c := &kip103ContractCaller{state, chain, header}
 
 	// Inside check to avoid a panic case
 	if chain.Config().KIP103 == nil {
-		return receipt, errors.New("cannot find KIP103 configuration")
+		return result, errors.New("cannot find KIP103 configuration")
 	}
 
 	caller, err := kip103.NewTreasuryRebalanceCaller(chain.Config().KIP103.Kip103ContractAddress, c)
 	if err != nil {
-		return receipt, err
+		return result, err
 	}
 
 	// Retrieve 1) Get Retired
-	if err := receipt.fillRetired(caller, state); err != nil {
-		return receipt, err
+	if err := result.fillRetired(caller, state); err != nil {
+		return result, err
 	}
 
 	// Retrieve 2) Get Newbie
-	if err := receipt.fillNewbie(caller); err != nil {
-		return receipt, err
+	if err := result.fillNewbie(caller); err != nil {
+		return result, err
 	}
 
 	// Validation 1) Check the target block number
 	if blockNum, err := caller.RebalanceBlockNumber(nil); err != nil || blockNum.Cmp(header.Number) != 0 {
-		return receipt, errors.New("cannot find a proper target block number")
+		return result, errors.New("cannot find a proper target block number")
 	}
 
 	// Validation 2) Check whether status is approved. It should be 3 meaning approved
 	if status, err := caller.Status(nil); err != nil || status != 3 {
-		return receipt, errors.New("cannot read a proper status value")
+		return result, errors.New("cannot read a proper status value")
 	}
 
 	// Validation 3) Check approvals from retirees
 	if err := caller.CheckRetiredsApproved(nil); err != nil {
-		return receipt, err
+		return result, err
 	}
 
 	// Validation 4) Check the total balance of retirees are bigger than the distributing amount
-	totalRetiredAmount := receipt.totalRetriedBalance()
-	totalNewbieAmount := receipt.totalNewbieBalance()
+	totalRetiredAmount := result.totalRetriedBalance()
+	totalNewbieAmount := result.totalNewbieBalance()
 	if totalRetiredAmount.Cmp(totalNewbieAmount) < 0 {
-		return receipt, errors.New("the sum of retired accounts' balance is smaller than the distributing amount")
+		return result, errors.New("the sum of retired accounts' balance is smaller than the distributing amount")
 	}
 
 	// Execution 1) Clear all balances of retirees
-	for addr := range receipt.Retired {
+	for addr := range result.Retired {
 		state.SetBalance(addr, big.NewInt(0))
 	}
 	// Execution 2) Distribute KLAY to all newbies
-	for addr, balance := range receipt.Newbie {
+	for addr, balance := range result.Newbie {
 		state.SetBalance(addr, balance)
 	}
 
-	// Fill the remaining fields of the receipt
-	receipt.Burnt.Sub(totalRetiredAmount, totalNewbieAmount)
-	receipt.Success = true
+	// Fill the remaining fields of the result
+	result.Burnt.Sub(totalRetiredAmount, totalNewbieAmount)
+	result.Success = true
 
-	return receipt, nil
+	return result, nil
 }
