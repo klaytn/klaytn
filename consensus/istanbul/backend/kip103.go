@@ -145,8 +145,8 @@ func rebalanceTreasury(state *state.StateDB, chain consensus.ChainReader, header
 		return result, errors.New("cannot find a proper target block number")
 	}
 
-	// Validation 2) Check whether status is approved. It should be 3 meaning approved
-	if status, err := caller.Status(nil); err != nil || status != 3 {
+	// Validation 2) Check whether status is approved. It should be 2 meaning approved
+	if status, err := caller.Status(nil); err != nil || status != 2 {
 		return result, errors.New("cannot read a proper status value")
 	}
 
