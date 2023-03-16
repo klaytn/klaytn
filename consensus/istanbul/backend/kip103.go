@@ -15,19 +15,19 @@ import (
 	"github.com/klaytn/klaytn/contracts/kip103"
 )
 
-// kip103ContractCaller is an implementation of contractCaller only for KIP-103.
+// Kip103ContractCaller is an implementation of contractCaller only for KIP-103.
 // The caller interacts with a KIP-103 contract on a read only basis.
-type kip103ContractCaller struct {
+type Kip103ContractCaller struct {
 	state  *state.StateDB        // the state that is under process
 	chain  consensus.ChainReader // chain containing the blockchain information
 	header *types.Header         // the header of a new block that is under process
 }
 
-func (caller *kip103ContractCaller) CodeAt(ctx context.Context, contract common.Address, blockNumber *big.Int) ([]byte, error) {
+func (caller *Kip103ContractCaller) CodeAt(ctx context.Context, contract common.Address, blockNumber *big.Int) ([]byte, error) {
 	return caller.state.GetCode(contract), nil
 }
 
-func (caller *kip103ContractCaller) CallContract(ctx context.Context, call klaytn.CallMsg, blockNumber *big.Int) ([]byte, error) {
+func (caller *Kip103ContractCaller) CallContract(ctx context.Context, call klaytn.CallMsg, blockNumber *big.Int) ([]byte, error) {
 	gasLimit := uint64(1e8)   // enough gas limit to execute kip103 contract functions
 	intrinsicGas := uint64(0) // read operation doesn't require intrinsicGas
 
@@ -113,12 +113,12 @@ func (result *kip103result) totalNewbieBalance() *big.Int {
 	return total
 }
 
-// rebalanceTreasury reads data from a contract, validates stored values, and executes treasury rebalancing (KIP-103).
+// RebalanceTreasury reads data from a contract, validates stored values, and executes treasury rebalancing (KIP-103).
 // It can change the global state by removing old treasury balances and allocating new treasury balances.
 // The new allocation can be larger than the removed amount, and the difference between two amounts will be burnt.
-func rebalanceTreasury(state *state.StateDB, chain consensus.ChainReader, header *types.Header) (*kip103result, error) {
+func RebalanceTreasury(state *state.StateDB, chain consensus.ChainReader, header *types.Header) (*kip103result, error) {
 	result := newKip103Receipt()
-	c := &kip103ContractCaller{state, chain, header}
+	c := &Kip103ContractCaller{state, chain, header}
 
 	// Inside check to avoid a panic case
 	if chain.Config().KIP103 == nil {
