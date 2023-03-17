@@ -46,9 +46,9 @@ var (
 		LondonCompatibleBlock:    big.NewInt(86816005),
 		EthTxTypeCompatibleBlock: big.NewInt(86816005),
 		MagmaCompatibleBlock:     big.NewInt(99841497),
-		KoreCompatibleBlock:      big.NewInt(0xffffffff),
-		Kip103CompatibleBlock:    big.NewInt(0xffffffff),
-		Kip103ContractAddress:    common.HexToAddress("0x0"),
+		KoreCompatibleBlock:      big.NewInt(119750400),
+		Kip103CompatibleBlock:    big.NewInt(119750400),
+		Kip103ContractAddress:    common.HexToAddress("0xD5ad6D61Dd87EdabE2332607C328f5cc96aeCB95"),
 		DeriveShaImpl:            2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x52d41ca72af615a1ac3301b0a93efa222ecc7541"),
@@ -79,8 +79,8 @@ var (
 		EthTxTypeCompatibleBlock: big.NewInt(86513895),
 		MagmaCompatibleBlock:     big.NewInt(98347376),
 		KoreCompatibleBlock:      big.NewInt(111736800),
-		Kip103CompatibleBlock:    big.NewInt(0xffffffff),
-		Kip103ContractAddress:    common.HexToAddress("0x0"),
+		Kip103CompatibleBlock:    big.NewInt(119145600),
+		Kip103ContractAddress:    common.HexToAddress("0xD5ad6D61Dd87EdabE2332607C328f5cc96aeCB95"),
 		DeriveShaImpl:            2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x99fb17d324fa0e07f23b49d09028ac0919414db6"),
