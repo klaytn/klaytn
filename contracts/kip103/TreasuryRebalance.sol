@@ -256,8 +256,9 @@ contract TreasuryRebalance is Ownable, ITreasuryRebalance {
                 address[] memory approvers = retired.approvers;
                 uint256 validApprovals = 0;
                 for (uint256 j = 0; j < approvers.length; j++) {
-                    _validateAdmin(approvers[j], adminList);
-                    validApprovals++;
+                    if (_validateAdmin(approvers[j], adminList)) {
+                        validApprovals++;
+                    }
                 }
                 require(
                     validApprovals >= req,
