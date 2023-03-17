@@ -193,10 +193,7 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 	if chain.Config().IsMagmaForkEnabled(header.Number) {
 		// the kip71Config used when creating the block number is a previous block config.
 		blockNum := header.Number.Uint64()
-		if header.Number.BitLen() != 0 {
-			blockNum = blockNum - 1
-		}
-		pset, err := sb.governance.ParamsAt(blockNum)
+		pset, err := sb.governance.EffectiveParams(blockNum)
 		if err != nil {
 			return err
 		}
@@ -254,8 +251,12 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 	}
 
 	// At every epoch governance data will come in block header. Verify it.
+	pset, err := sb.governance.EffectiveParams(number)
+	if err != nil {
+		return err
+	}
 	pendingBlockNum := new(big.Int).Add(chain.CurrentHeader().Number, common.Big1)
-	if number%sb.governance.Params().Epoch() == 0 && len(header.Governance) > 0 && pendingBlockNum.Cmp(header.Number) == 0 {
+	if number%pset.Epoch() == 0 && len(header.Governance) > 0 && pendingBlockNum.Cmp(header.Number) == 0 {
 		if err := sb.governance.VerifyGovernance(header.Governance); err != nil {
 			return err
 		}
@@ -400,7 +401,11 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	}
 
 	// If it reaches the Epoch, governance config will be added to block header
-	if number%sb.governance.Params().Epoch() == 0 {
+	pset, err := sb.governance.EffectiveParams(number)
+	if err != nil {
+		return err
+	}
+	if number%pset.Epoch() == 0 {
 		if g := sb.governance.GetGovernanceChange(); g != nil {
 			if data, err := json.Marshal(g); err != nil {
 				logger.Error("Failed to encode governance changes!! Possible configuration mismatch!! ")
@@ -460,18 +465,13 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 	var rewardSpec *reward.RewardSpec
 
 	rules := chain.Config().Rules(header.Number)
-	pset, err := sb.governance.ParamsAt(header.Number.Uint64())
-	if err != nil {
-		return nil, err
-	}
-	rewardParamNum := reward.CalcRewardParamBlock(header.Number.Uint64(), pset.Epoch(), rules)
-	rewardParamSet, err := sb.governance.ParamsAt(rewardParamNum)
+	pset, err := sb.governance.EffectiveParams(header.Number.Uint64())
 	if err != nil {
 		return nil, err
 	}
 
 	// If sb.chain is nil, it means backend is not initialized yet.
-	if sb.chain != nil && !reward.IsRewardSimple(sb.governance.Params()) {
+	if sb.chain != nil && !reward.IsRewardSimple(pset) {
 		// TODO-Klaytn Let's redesign below logic and remove dependency between block reward and istanbul consensus.
 
 		lastHeader := chain.CurrentHeader()
@@ -494,9 +494,9 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 			logger.Trace(logMsg, "header.Number", header.Number.Uint64(), "node address", sb.address, "rewardbase", header.Rewardbase)
 		}
 
-		rewardSpec, err = reward.CalcDeferredReward(header, rules, rewardParamSet)
+		rewardSpec, err = reward.CalcDeferredReward(header, rules, pset)
 	} else {
-		rewardSpec, err = reward.CalcDeferredRewardSimple(header, rules, rewardParamSet)
+		rewardSpec, err = reward.CalcDeferredRewardSimple(header, rules, pset)
 	}
 
 	if err != nil {
@@ -505,6 +505,22 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 
 	reward.DistributeBlockReward(state, rewardSpec.Rewards)
 
+	// Only on the KIP-103 hardfork block, the following logic should be executed
+	if chain.Config().IsKIP103ForkBlock(header.Number) {
+		// RebalanceTreasury can modify the global state (state),
+		// so the existing state db should be used to apply the rebalancing result.
+		c := &Kip103ContractCaller{state, chain, header}
+		result, err := RebalanceTreasury(state, chain, header, c)
+		if err != nil {
+			logger.Error("failed to execute treasury rebalancing (KIP-103). State not changed", "err", err)
+		} else {
+			memo, err := json.Marshal(result)
+			if err != nil {
+				logger.Warn("failed to marshal KIP-103 result", "err", err, "result", result)
+			}
+			logger.Info("successfully executed treasury rebalancing (KIP-103)", "memo", string(memo))
+		}
+	}
 	header.Root = state.IntermediateRoot(true)
 
 	// Assemble and return the final block for sealing
@@ -671,9 +687,13 @@ func (sb *backend) initSnapshot(chain consensus.ChainReader) (*Snapshot, error) 
 		return nil, err
 	}
 
+	pset, err := sb.governance.EffectiveParams(0)
+	if err != nil {
+		return nil, err
+	}
 	valSet := validator.NewValidatorSet(istanbulExtra.Validators, nil,
-		istanbul.ProposerPolicy(sb.governance.Params().Policy()),
-		sb.governance.Params().CommitteeSize(), chain)
+		istanbul.ProposerPolicy(pset.Policy()),
+		pset.CommitteeSize(), chain)
 	snap := newSnapshot(sb.governance, 0, genesis.Hash(), valSet, chain.Config())
 
 	if err := snap.store(sb.db); err != nil {
@@ -708,7 +728,7 @@ func (sb *backend) CreateSnapshot(chain consensus.ChainReader, number uint64, ha
 	if _, err := sb.snapshot(chain, number, hash, parents, true); err != nil {
 		return err
 	}
-	if err := sb.governance.UpdateParams(); err != nil {
+	if err := sb.governance.UpdateParams(number); err != nil {
 		return err
 	}
 	return nil
@@ -832,7 +852,11 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 	for i := 0; i < len(headers)/2; i++ {
 		headers[i], headers[len(headers)-1-i] = headers[len(headers)-1-i], headers[i]
 	}
-	snap, err := snap.apply(headers, sb.governance, sb.address, sb.governance.Params().Policy(), chain, writable)
+	pset, err := sb.governance.EffectiveParams(number)
+	if err != nil {
+		return nil, err
+	}
+	snap, err = snap.apply(headers, sb.governance, sb.address, pset.Policy(), chain, writable)
 	if err != nil {
 		return nil, err
 	}

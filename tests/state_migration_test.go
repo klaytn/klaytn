@@ -185,7 +185,7 @@ func TestMigration_StartMigrationByMiscDBOnRestart(t *testing.T) {
 
 func newSimpleBlockchain(t *testing.T, numAccounts int) (*node.Node, *cn.CN, *TestAccountType, *big.Int, string, *TestAccountType, []*TestAccountType, []*TestAccountType) {
 	t.Log("=========== create blockchain ==============")
-	fullNode, node, validator, chainID, workspace := newBlockchain(t)
+	fullNode, node, validator, chainID, workspace := newBlockchain(t, nil)
 	richAccount, accounts, contractAccounts := createAccount(t, numAccounts, validator)
 	time.Sleep(5 * time.Second)
 

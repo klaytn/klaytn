@@ -279,12 +279,12 @@ func TestGasCalculation(t *testing.T) {
 }
 
 func testGasValidation(t *testing.T, bcdata *BCData, tx *types.Transaction, validationGas uint64) {
-	receipt, gas, err := applyTransaction(t, bcdata, tx)
+	receipt, err := applyTransaction(t, bcdata, tx)
 	assert.Equal(t, nil, err)
 
 	assert.Equal(t, receipt.Status, types.ReceiptStatusSuccessful)
 
-	assert.Equal(t, validationGas, gas)
+	assert.Equal(t, validationGas, receipt.GasUsed)
 }
 
 func genLegacyTransaction(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {

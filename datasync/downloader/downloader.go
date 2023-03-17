@@ -100,6 +100,11 @@ type Downloader struct {
 	mode uint32         // Synchronisation mode defining the strategy used (per sync cycle), use d.getMode() to get the SyncMode
 	mux  *event.TypeMux // Event multiplexer to announce sync operation events
 
+	isStakingInfoRecovery     bool
+	stakingInfoRecoveryTotal  int
+	stakingInfoRecoveryCh     chan []*reward.StakingInfo
+	stakingInfoRecoveryBlocks []uint64
+
 	queue *queue   // Scheduler for selecting the hashes to download
 	peers *peerSet // Set of active peers from which download can proceed
 
@@ -223,29 +228,31 @@ func New(mode SyncMode, stateDB database.DBManager, stateBloom *statedb.SyncBloo
 	}
 
 	dl := &Downloader{
-		mode:              uint32(mode),
-		stateDB:           stateDB,
-		stateBloom:        stateBloom,
-		mux:               mux,
-		queue:             newQueue(blockCacheMaxItems, blockCacheInitialItems, proposerPolicy),
-		peers:             newPeerSet(),
-		rttEstimate:       uint64(rttMaxEstimate),
-		rttConfidence:     uint64(1000000),
-		blockchain:        chain,
-		lightchain:        lightchain,
-		dropPeer:          dropPeer,
-		headerCh:          make(chan dataPack, 1),
-		bodyCh:            make(chan dataPack, 1),
-		receiptCh:         make(chan dataPack, 1),
-		stakingInfoCh:     make(chan dataPack, 1),
-		bodyWakeCh:        make(chan bool, 1),
-		receiptWakeCh:     make(chan bool, 1),
-		stakingInfoWakeCh: make(chan bool, 1),
-		headerProcCh:      make(chan []*types.Header, 1),
-		quitCh:            make(chan struct{}),
-		stateCh:           make(chan dataPack),
-		SnapSyncer:        snap.NewSyncer(stateDB),
-		stateSyncStart:    make(chan *stateSync),
+		mode:                      uint32(mode),
+		stateDB:                   stateDB,
+		stateBloom:                stateBloom,
+		mux:                       mux,
+		isStakingInfoRecovery:     false,
+		stakingInfoRecoveryBlocks: []uint64{},
+		queue:                     newQueue(blockCacheMaxItems, blockCacheInitialItems, proposerPolicy),
+		peers:                     newPeerSet(),
+		rttEstimate:               uint64(rttMaxEstimate),
+		rttConfidence:             uint64(1000000),
+		blockchain:                chain,
+		lightchain:                lightchain,
+		dropPeer:                  dropPeer,
+		headerCh:                  make(chan dataPack, 1),
+		bodyCh:                    make(chan dataPack, 1),
+		receiptCh:                 make(chan dataPack, 1),
+		stakingInfoCh:             make(chan dataPack, 1),
+		bodyWakeCh:                make(chan bool, 1),
+		receiptWakeCh:             make(chan bool, 1),
+		stakingInfoWakeCh:         make(chan bool, 1),
+		headerProcCh:              make(chan []*types.Header, 1),
+		quitCh:                    make(chan struct{}),
+		stateCh:                   make(chan dataPack),
+		SnapSyncer:                snap.NewSyncer(stateDB),
+		stateSyncStart:            make(chan *stateSync),
 		syncStatsState: stateSyncStats{
 			processed: stateDB.ReadFastTrieProgress(),
 		},
@@ -575,6 +582,119 @@ func (d *Downloader) spawnSync(fetchers []func() error, peerID string) error {
 	logger.Debug("spawnSync terminated", "peerID", peerID)
 
 	return err
+}
+
+func (d *Downloader) SyncStakingInfo(id string, from, to uint64) error {
+	if d.isStakingInfoRecovery {
+		return errors.New("already syncing")
+	}
+	logger.Info("start syncing staking infos", "from", from, "to", to)
+	d.isStakingInfoRecovery = true
+
+	var (
+		blockNums   []uint64
+		blockHashes []common.Hash
+	)
+	from = params.CalcStakingBlockNumber(from)
+	for i := from; i <= to; i += params.StakingUpdateInterval() {
+		blockHash := d.stateDB.ReadCanonicalHash(i)
+		if blockHash == (common.Hash{}) {
+			d.isStakingInfoRecovery = false
+			return fmt.Errorf("failed to retrieve block hash by number (blockNumber: %v)", i)
+		}
+		has, err := reward.HasStakingInfoFromDB(i)
+		if err != nil {
+			d.isStakingInfoRecovery = false
+			return err
+		}
+		if !has {
+			blockNums = append(blockNums, i)
+			blockHashes = append(blockHashes, blockHash)
+		}
+	}
+
+	if len(blockNums) == 0 && len(blockHashes) == 0 {
+		d.isStakingInfoRecovery = false
+		return fmt.Errorf("there is no staking info to be synced")
+	}
+
+	conn := d.peers.Peer(id)
+	if conn == nil {
+		d.isStakingInfoRecovery = false
+		return errors.New("the given peer is not registered")
+	}
+
+	d.stakingInfoRecoveryBlocks = blockNums
+	d.stakingInfoRecoveryTotal = len(blockNums)
+	d.stakingInfoRecoveryCh = make(chan []*reward.StakingInfo, 1)
+
+	go func() {
+		defer func() {
+			d.isStakingInfoRecovery = false
+			d.stakingInfoRecoveryBlocks = []uint64{}
+			d.stakingInfoRecoveryTotal = 0
+		}()
+
+		fixed := 0
+		for {
+			timer := time.NewTimer(30 * time.Second)
+			if len(blockHashes) > MaxStakingInfoFetch {
+				go conn.peer.RequestStakingInfo(blockHashes[:MaxStakingInfoFetch])
+				logger.Info("requested staking infos", "num", MaxStakingInfoFetch)
+				blockHashes = blockHashes[MaxStakingInfoFetch:]
+			} else if len(blockHashes) > 0 {
+				go conn.peer.RequestStakingInfo(blockHashes)
+				logger.Info("requested staking infos", "num", len(blockHashes))
+				blockHashes = []common.Hash{}
+			} else {
+				logger.Error("no more requests, but not completed", "not completed", len(d.stakingInfoRecoveryBlocks))
+				return
+			}
+
+			select {
+			case <-timer.C:
+				logger.Error("timeout")
+				return
+			case stakingInfos := <-d.stakingInfoRecoveryCh:
+				logger.Info("received stakinginfos", "len", len(stakingInfos))
+				for _, stakingInfo := range stakingInfos {
+					if d.stakingInfoRecoveryBlocks[0] != stakingInfo.BlockNum {
+						logger.Error("failed to receive expected block", "expected", d.stakingInfoRecoveryBlocks[0], "actual", stakingInfo.BlockNum)
+						return
+					}
+
+					if err := reward.AddStakingInfoToDB(stakingInfo); err != nil {
+						logger.Error("failed to add staking info", "fixed", fixed, "stakingInfo", stakingInfo, "err", err)
+						return
+					}
+					fixed++
+					d.stakingInfoRecoveryBlocks = d.stakingInfoRecoveryBlocks[1:]
+				}
+
+				if len(d.stakingInfoRecoveryBlocks) == 0 {
+					logger.Info("syncing staking info is finished", "fixed", fixed)
+					return
+				}
+			}
+		}
+	}()
+	return nil
+}
+
+type SyncingStatus struct {
+	Syncing   bool     `json:"syncing"`
+	Pending   []uint64 `json:"pending"`
+	Total     int      `json:"total"`
+	Completed int      `json:"completed"`
+}
+
+func (d *Downloader) SyncStakingInfoStatus() *SyncingStatus {
+	return &SyncingStatus{
+		Syncing:   d.isStakingInfoRecovery,
+		Pending:   d.stakingInfoRecoveryBlocks,
+		Total:     d.stakingInfoRecoveryTotal,
+		Completed: d.stakingInfoRecoveryTotal - len(d.stakingInfoRecoveryBlocks),
+	}
 }
 
 // cancel aborts all of the operations and resets the queue. However, cancel does
@@ -1811,6 +1931,9 @@ func (d *Downloader) DeliverReceipts(id string, receipts [][]*types.Receipt) (er
 
 // DeliverStakingInfos injects a new batch of staking information received from a remote node.
 func (d *Downloader) DeliverStakingInfos(id string, stakingInfos []*reward.StakingInfo) error {
+	if d.isStakingInfoRecovery {
+		d.stakingInfoRecoveryCh <- stakingInfos
+	}
 	return d.deliver(id, d.stakingInfoCh, &stakingInfoPack{id, stakingInfos}, stakingInfoInMeter, stakingInfoDropMeter)
 }
 

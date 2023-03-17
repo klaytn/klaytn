@@ -18,8 +18,17 @@ ARG KLAYTN_DISABLE_SYMBOL=0
 ENV KLAYTN_DISABLE_SYMBOL=$KLAYTN_DISABLE_SYMBOL
 
 WORKDIR $SRC_DIR
-ADD . .
-RUN make all
+# Cache default $GOMODCACHE
+COPY go.mod go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod go mod download -x
+
+# Cache default $GOCACHE
+# First 'make kcn' to populate build cache and then 'make all' in parallel
+COPY . .
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg/mod \
+    make kcn && \
+    make all -j
 
 FROM --platform=linux/amd64 ubuntu:20.04
 ARG SRC_DIR

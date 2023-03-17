@@ -424,4 +424,14 @@ var (
 		Usage: "koreCompatible blockNumber",
 		Value: 0,
 	}
+
+	kip103CompatibleBlockNumberFlag = cli.Int64Flag{
+		Name:  "kip103-compatible-blocknumber",
+		Usage: "kip103Compatible blockNumber",
+	}
+
+	kip103ContractAddressFlag = cli.StringFlag{
+		Name:  "kip103-contract-address",
+		Usage: "kip103 contract address",
+	}
 )

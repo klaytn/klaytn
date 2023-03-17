@@ -37,7 +37,7 @@ import (
 func TestAddressBookConnector(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
 
-	fullNode, node, validator, chainId, workspace := newBlockchain(t)
+	fullNode, node, validator, chainId, workspace := newBlockchain(t, nil)
 	defer os.RemoveAll(workspace)
 	defer fullNode.Stop()
 

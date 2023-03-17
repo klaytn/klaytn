@@ -31,13 +31,15 @@ func newTestGovernanceApi() *PublicGovernanceAPI {
 	config.Governance.KIP71 = params.GetDefaultKIP71Config()
 	govApi := NewGovernanceAPI(NewMixedEngine(config, database.NewMemoryDBManager()))
 	govApi.governance.SetNodeAddress(common.HexToAddress("0x52d41ca72af615a1ac3301b0a93efa222ecc7541"))
+	bc := newTestBlockchain(config)
+	govApi.governance.SetBlockchain(bc)
 	return govApi
 }
 
 func TestUpperBoundBaseFeeSet(t *testing.T) {
 	govApi := newTestGovernanceApi()
 
-	curLowerBoundBaseFee := govApi.governance.Params().LowerBoundBaseFee()
+	curLowerBoundBaseFee := govApi.governance.CurrentParams().LowerBoundBaseFee()
 	// unexpected case : upperboundbasefee < lowerboundbasefee
 	invalidUpperBoundBaseFee := curLowerBoundBaseFee - 100
 	_, err := govApi.Vote("kip71.upperboundbasefee", invalidUpperBoundBaseFee)
@@ -47,7 +49,7 @@ func TestUpperBoundBaseFeeSet(t *testing.T) {
 func TestLowerBoundFeeSet(t *testing.T) {
 	govApi := newTestGovernanceApi()
 
-	curUpperBoundBaseFee := govApi.governance.Params().UpperBoundBaseFee()
+	curUpperBoundBaseFee := govApi.governance.CurrentParams().UpperBoundBaseFee()
 	// unexpected case : upperboundbasefee < lowerboundbasefee
 	invalidLowerBoundBaseFee := curUpperBoundBaseFee + 100
 	_, err := govApi.Vote("kip71.lowerboundbasefee", invalidLowerBoundBaseFee)
@@ -122,7 +124,7 @@ func TestGetRewards(t *testing.T) {
 
 		e := NewMixedEngine(config, dbm)
 		e.SetBlockchain(bc)
-		e.UpdateParams()
+		e.UpdateParams(bc.CurrentBlock().NumberU64())
 
 		// write initial gov items and overrides to database
 		pset, _ := params.NewGovParamSetChainConfig(config)
@@ -150,8 +152,8 @@ func TestGetRewards(t *testing.T) {
 				BurntFee: common.Big0,
 				Proposer: minted,
 				Stakers:  common.Big0,
-				Kgf:      common.Big0,
-				Kir:      common.Big0,
+				KFF:      common.Big0,
+				KCF:      common.Big0,
 				Rewards: map[common.Address]*big.Int{
 					proposer: minted,
 				},
@@ -172,6 +174,10 @@ func (bc *testBlockChain) GetBlockByNumber(num uint64) *types.Block         { re
 func (bc *testBlockChain) StateAt(root common.Hash) (*state.StateDB, error) { return nil, nil }
 func (bc *testBlockChain) Config() *params.ChainConfig {
 	return bc.config
+}
+
+func (bc *testBlockChain) CurrentBlock() *types.Block {
+	return types.NewBlockWithHeader(bc.CurrentHeader())
 }
 
 func (bc *testBlockChain) CurrentHeader() *types.Header {

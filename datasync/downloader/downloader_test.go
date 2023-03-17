@@ -21,10 +21,12 @@
 package downloader
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -37,6 +39,7 @@ import (
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/event"
+	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/snapshot"
@@ -65,7 +68,7 @@ type govSetter struct {
 }
 
 // setTestGovernance sets staking manager with memory db and staking update interval to 4.
-func setTestGovernance() {
+func setTestGovernance(db database.DBManager) {
 	lock.Lock()
 	defer lock.Unlock()
 	if setter == nil {
@@ -75,7 +78,7 @@ func setTestGovernance() {
 			origStakingManager:  reward.GetStakingManager(),
 		}
 
-		reward.SetTestStakingManagerWithDB(database.NewMemoryDBManager())
+		reward.SetTestStakingManagerWithDB(db)
 		params.SetStakingUpdateInterval(testStakingUpdateInterval)
 	}
 	setter.numTesting += 1
@@ -123,13 +126,14 @@ type downloadTester struct {
 
 // newTester creates a new downloader test mocker.
 func newTester() *downloadTester {
-	testdb := database.NewMemoryDBManager()
-	genesis := blockchain.GenesisBlockForTesting(testdb, testAddress, big.NewInt(1000000000))
-	setTestGovernance()
+	remotedb := database.NewMemoryDBManager()
+	localdb := database.NewMemoryDBManager()
+	genesis := blockchain.GenesisBlockForTesting(remotedb, testAddress, big.NewInt(1000000000))
+	setTestGovernance(localdb)
 
 	tester := &downloadTester{
 		genesis:           genesis,
-		peerDb:            testdb,
+		peerDb:            remotedb,
 		ownHashes:         []common.Hash{genesis.Hash()},
 		ownHeaders:        map[common.Hash]*types.Header{genesis.Hash(): genesis.Header()},
 		ownBlocks:         map[common.Hash]*types.Block{genesis.Hash(): genesis},
@@ -144,7 +148,7 @@ func newTester() *downloadTester {
 		peerChainTds:      make(map[string]map[common.Hash]*big.Int),
 		peerMissingStates: make(map[string]map[common.Hash]bool),
 	}
-	tester.stateDb = database.NewMemoryDBManager()
+	tester.stateDb = localdb
 	tester.stateDb.GetMemDB().Put(genesis.Root().Bytes(), []byte{0x00})
 
 	tester.downloader = New(FullSync, tester.stateDb, statedb.NewSyncBloom(1, tester.stateDb.GetMemDB()), new(event.TypeMux), tester, nil, tester.dropPeer, uint64(istanbul.WeightedRandom))
@@ -157,7 +161,7 @@ func (dl *downloadTester) makeStakingInfoData(blockNumber uint64) (*reward.Staki
 	addr := crypto.PubkeyToAddress(k.PublicKey)
 	si := &reward.StakingInfo{
 		BlockNum: blockNumber,
-		KIRAddr:  addr, // assign KIR in order to put unique staking information
+		KCFAddr:  addr, // assign KCF in order to put unique staking information
 	}
 	siBytes, _ := json.Marshal(si)
 	return si, siBytes
@@ -292,6 +296,10 @@ func (dl *downloadTester) sync(id string, td *big.Int, mode SyncMode) error {
 		panic("downloader active post sync cycle") // panic will be caught by tester
 	}
 	return err
+}
+
+func (dl *downloadTester) syncStakingInfos(id string, from, to uint64) error {
+	return dl.downloader.SyncStakingInfo(id, from, to)
 }
 
 // HasHeader checks if a header is present in the testers canonical chain.
@@ -1892,5 +1900,51 @@ func testDeliverHeadersHang(t *testing.T, protocol int, mode SyncMode) {
 
 		// Flush all goroutines to prevent messing with subsequent tests
 		tester.downloader.peers.peers["peer"].peer.(*floodingTestPeer).pend.Wait()
+	}
+}
+
+func TestStakingInfoSync(t *testing.T) { testStakingInfoSync(t, 65) }
+
+func testStakingInfoSync(t *testing.T, protocol int) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlInfo)
+
+	tester := newTester()
+	defer tester.terminate()
+
+	// Create a small enough block chain to download
+	targetBlocks := blockCacheMaxItems - 15
+	hashes, headers, blocks, receipts, stakingInfos := tester.makeChain(targetBlocks, 0, tester.genesis, nil, false)
+
+	tester.newPeer("peer", protocol, hashes, headers, blocks, receipts, stakingInfos)
+
+	stakedBlocks := make([]uint64, len(stakingInfos))
+	for blockHash, stakingInfo := range stakingInfos {
+		stakedBlocks = append(stakedBlocks, stakingInfo.BlockNum)
+		tester.stateDb.WriteCanonicalHash(blockHash, stakingInfo.BlockNum)
+	}
+
+	// check staking information is not stored in database
+	for _, block := range stakedBlocks {
+		si, err := tester.stateDb.ReadStakingInfo(block)
+		if len(si) != 0 && !strings.Contains(err.Error(), "data is not found with the given key") {
+			t.Errorf("already staking info exists")
+		}
+	}
+
+	if err := tester.downloader.SyncStakingInfo("peer", 0, uint64(targetBlocks)); err != nil {
+		t.Errorf("sync staking info failed: %v", err)
+	}
+
+	time.Sleep(3 * time.Second)
+
+	for _, stakingInfo := range stakingInfos {
+		expected, _ := json.Marshal(stakingInfo)
+		actual, err := tester.stateDb.ReadStakingInfo(stakingInfo.BlockNum)
+		if err != nil {
+			t.Errorf("failed to read stakingInfo: %v", err)
+		}
+		if bytes.Compare(expected, actual) != 0 {
+			t.Errorf("staking infos are different (expected: %v, actual: %v)", string(expected), string(actual))
+		}
 	}
 }

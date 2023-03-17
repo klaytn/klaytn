@@ -54,6 +54,9 @@ const (
 	// by default before being forcefully aborted.
 	defaultTraceTimeout = 5 * time.Second
 
+	// defaultLoggerTimeout is the amount of time a logger can aggregate trace logs
+	defaultLoggerTimeout = 1 * time.Second
+
 	// defaultTraceReexec is the number of blocks the tracer is willing to go back
 	// and reexecute to produce missing historical state necessary to run a specific
 	// trace.
@@ -166,9 +169,10 @@ func (api *API) blockByNumberAndHash(ctx context.Context, number rpc.BlockNumber
 // TraceConfig holds extra parameters to trace functions.
 type TraceConfig struct {
 	*vm.LogConfig
-	Tracer  *string
-	Timeout *string
-	Reexec  *uint64
+	Tracer        *string
+	Timeout       *string
+	LoggerTimeout *string
+	Reexec        *uint64
 }
 
 // StdTraceConfig holds extra parameters to standard-json trace functions.
@@ -848,12 +852,22 @@ func (api *API) traceTx(ctx context.Context, message blockchain.Message, vmctx v
 	// Depending on the tracer type, format and return the output
 	switch tracer := tracer.(type) {
 	case *vm.StructLogger:
-		return &klaytnapi.ExecutionResult{
-			Gas:         gas,
-			Failed:      kerr.Status != types.ReceiptStatusSuccessful,
-			ReturnValue: fmt.Sprintf("%x", ret),
-			StructLogs:  klaytnapi.FormatLogs(tracer.StructLogs()),
-		}, nil
+		loggerTimeout := defaultLoggerTimeout
+		if config != nil && config.LoggerTimeout != nil {
+			if loggerTimeout, err = time.ParseDuration(*config.LoggerTimeout); err != nil {
+				return nil, err
+			}
+		}
+		if logs, err := klaytnapi.FormatLogs(loggerTimeout, tracer.StructLogs()); err == nil {
+			return &klaytnapi.ExecutionResult{
+				Gas:         gas,
+				Failed:      kerr.Status != types.ReceiptStatusSuccessful,
+				ReturnValue: fmt.Sprintf("%x", ret),
+				StructLogs:  logs,
+			}, nil
+		} else {
+			return nil, err
+		}
 
 	case *Tracer:
 		return tracer.GetResult()
