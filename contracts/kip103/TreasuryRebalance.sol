@@ -3,6 +3,7 @@
 pragma solidity ^0.8.0;
 
 import "./Ownable.sol";
+import "./ITreasuryRebalance.sol";
 
 /**
  * @title Interface to get adminlist and quorom
@@ -20,33 +21,7 @@ interface IRetiredContract {
  * before and after rebalancing. It facilates approval and redistributing to new addresses.
  * Core will execute the re-distribution by reading this contract.
  */
-contract TreasuryRebalance is Ownable {
-    /**
-     *  Enums to track the status of the contract
-     */
-    enum Status {
-        Initialized,
-        Registered,
-        Approved,
-        Finalized
-    }
-
-    /**
-     * Retired struct to store retired address and their approver addresses
-     */
-    struct Retired {
-        address retired;
-        address[] approvers;
-    }
-
-    /**
-     * Newbie struct to newbie receiver address and their fund allocation
-     */
-    struct Newbie {
-        address newbie;
-        uint256 amount;
-    }
-
+contract TreasuryRebalance is Ownable, ITreasuryRebalance {
     /**
      * Storage
      */
@@ -54,23 +29,7 @@ contract TreasuryRebalance is Ownable {
     Newbie[] public newbies; // array of Newbie struct
     Status public status; // current status of the contract
     uint256 public rebalanceBlockNumber; // the target block number of the execution of rebalancing.
-    string public memo; // result of the treasury fund rebalance. eg : `Treasury Rebalanced Successfully`
-
-    /**
-     * Events logs
-     */
-    event ContractDeployed(
-        Status status,
-        uint256 rebalanceBlockNumber,
-        uint256 deployedBlockNumber
-    );
-    event RetiredRegistered(address retired);
-    event RetiredRemoved(address retired, uint256 retiredCount);
-    event NewbieRegistered(address newbie, uint256 fundAllocation);
-    event NewbieRemoved(address newbie, uint256 newbieCount);
-    event Approved(address retired, address approver, uint256 approversCount);
-    event StatusChanged(Status status);
-    event Finalized(string memo, Status status);
+    string public memo; // result of the treasury fund rebalance.
 
     /**
      * Modifiers
@@ -119,7 +78,7 @@ contract TreasuryRebalance is Ownable {
         retirees[retiredIndex] = retirees[retirees.length - 1];
         retirees.pop();
 
-        emit RetiredRemoved(_retiredAddress, retirees.length);
+        emit RetiredRemoved(_retiredAddress);
     }
 
     /**
@@ -155,7 +114,7 @@ contract TreasuryRebalance is Ownable {
         newbies[newbieIndex] = newbies[newbies.length - 1];
         newbies.pop();
 
-        emit NewbieRemoved(_newbieAddress, newbies.length);
+        emit NewbieRemoved(_newbieAddress);
     }
 
     /**
@@ -295,13 +254,14 @@ contract TreasuryRebalance is Ownable {
                 );
                 //if min quorom reached, make sure all approvers are still valid
                 address[] memory approvers = retired.approvers;
-                uint256 minApprovals = 0;
+                uint256 validApprovals = 0;
                 for (uint256 j = 0; j < approvers.length; j++) {
-                    _validateAdmin(approvers[j], adminList);
-                    minApprovals++;
+                    if (_validateAdmin(approvers[j], adminList)) {
+                        validApprovals++;
+                    }
                 }
                 require(
-                    minApprovals >= req,
+                    validApprovals >= req,
                     "min required admins should approve"
                 );
             } else {
@@ -314,34 +274,17 @@ contract TreasuryRebalance is Ownable {
      * @dev sets the status of the contract to Finalize. Once finalized the storage data
      * of the contract cannot be modified
      * @param _memo is the result of the rebalance after executing successfully in the core.
-     * @return retirees is an array of retired address
-     * @return totalRetireesBalance is the sum of all retired balances
-     * @return newbies is an array of newbie address
-     * @return totalNewbiesFund is the sum of funds allocated to
      */
     function finalizeContract(
         string memory _memo
-    )
-        public
-        onlyOwner
-        onlyAtStatus(Status.Approved)
-        returns (
-            address[] memory retirees,
-            uint256 totalRetireesBalance,
-            address[] memory newbies,
-            uint256 totalNewbiesFund
-        )
-    {
+    ) public onlyOwner onlyAtStatus(Status.Approved) {
         memo = _memo;
         status = Status.Finalized;
         emit Finalized(memo, status);
-        totalRetireesBalance = sumOfRetiredBalance();
-        totalNewbiesFund = getTreasuryAmount();
         require(
             block.number > rebalanceBlockNumber,
             "Contract can only finalize after executing rebalancing"
         );
-        return (retirees, totalRetireesBalance, newbies, totalNewbiesFund);
     }
 
     /**
@@ -488,7 +431,7 @@ contract TreasuryRebalance is Ownable {
     }
 
     /**
-     * @dev allback function to revert any payments
+     * @dev fallback function to revert any payments
      */
     fallback() external payable {
         revert("This contract does not accept any payments");
