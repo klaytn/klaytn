@@ -122,6 +122,8 @@ var HomiFlags = []cli.Flag{
 	altsrc.NewInt64Flag(ethTxTypeCompatibleBlockNumberFlag),
 	altsrc.NewInt64Flag(magmaCompatibleBlockNumberFlag),
 	altsrc.NewInt64Flag(koreCompatibleBlockNumberFlag),
+	altsrc.NewInt64Flag(kip103CompatibleBlockNumberFlag),
+	altsrc.NewStringFlag(kip103ContractAddressFlag),
 }
 
 var SetupCommand = cli.Command{
