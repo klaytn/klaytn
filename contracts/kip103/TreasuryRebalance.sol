@@ -29,7 +29,7 @@ contract TreasuryRebalance is Ownable, ITreasuryRebalance {
     Newbie[] public newbies; // array of Newbie struct
     Status public status; // current status of the contract
     uint256 public rebalanceBlockNumber; // the target block number of the execution of rebalancing.
-    string public memo; // result of the treasury fund rebalance. eg : `Treasury Rebalanced Successfully`
+    string public memo; // result of the treasury fund rebalance.
 
     /**
      * Modifiers
@@ -427,38 +427,6 @@ contract TreasuryRebalance is Ownable, ITreasuryRebalance {
      */
     function getNewbieCount() public view returns (uint256) {
         return newbies.length;
-    }
-
-    /**
-     * @dev get the current value of the state variables
-     */
-    function getSnapshot()
-        public
-        view
-        returns (
-            Retired[] memory _retirees,
-            Newbie[] memory _newbies,
-            uint256 _totalRetireesBalance,
-            uint256 _totalNewbiesAllocation,
-            Status _status,
-            string memory _memo
-        )
-    {
-        _retirees = retirees;
-        _newbies = newbies;
-        _status = status;
-        _memo = memo;
-        _totalRetireesBalance = sumOfRetiredBalance();
-        _totalNewbiesAllocation = getTreasuryAmount();
-
-        return (
-            _retirees,
-            _newbies,
-            _totalRetireesBalance,
-            _totalNewbiesAllocation,
-            _status,
-            _memo
-        );
     }
 
     /**

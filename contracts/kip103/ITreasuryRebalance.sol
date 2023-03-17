@@ -126,21 +126,6 @@ interface ITreasuryRebalance {
      */
     function checkRetiredsApproved() external view;
 
-    /**
-     * @dev get the current value of the state variables
-     */
-    function getSnapshot()
-        external
-        view
-        returns (
-            Retired[] memory retirees,
-            Newbie[] memory newbies,
-            uint256 totalRetireesBalance,
-            uint256 totalNewbiesAllocation,
-            Status status,
-            string memory memo
-    );
-
     // State changing functions
     /**
      * @dev registers retired details
@@ -190,8 +175,11 @@ interface ITreasuryRebalance {
      * @dev sets the status of the contract to Finalize. Once finalized the storage data
      * of the contract cannot be modified
      * Can only be called by the current owner at Approved state after the execution of rebalance in the core
-     *  - memo format: {"success": true/false, "retried":[{"0xaddr": "0xamount"}, ...],
-     *     "newbie": [{"0xaddr":"0xamount"}, ...], "bunt": "0xamount"}
+     *  - memo format: { "retirees": [ { "retired": "0xaddr", "balance": 0xamount },
+     *                 { "retired": "0xaddr", "balance": 0xamount }, ... ],
+     *                 "newbies": [ { "newbie": "0xaddr", "fundAllocated": 0xamount },
+     *                 { "newbie": "0xaddr", "fundAllocated": 0xamount }, ... ],
+     *                 "burnt": 0xamount, "success": true/false }
      */
     function finalizeContract(string memory memo) external;
 
