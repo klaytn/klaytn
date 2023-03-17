@@ -28,6 +28,7 @@ func (caller *Kip103ContractCaller) CodeAt(ctx context.Context, contract common.
 }
 
 func (caller *Kip103ContractCaller) CallContract(ctx context.Context, call klaytn.CallMsg, blockNumber *big.Int) ([]byte, error) {
+	gasPrice := big.NewInt(0) // execute call regardless of the balance of the sender
 	gasLimit := uint64(1e8)   // enough gas limit to execute kip103 contract functions
 	intrinsicGas := uint64(0) // read operation doesn't require intrinsicGas
 
@@ -36,9 +37,10 @@ func (caller *Kip103ContractCaller) CallContract(ctx context.Context, call klayt
 	// call.Value: nil value is acceptable for `types.NewMessage`
 	// call.Data: a proper value will be assigned by `BoundContract`
 	msg := types.NewMessage(call.From, call.To, caller.state.GetNonce(call.From),
-		call.Value, gasLimit, caller.header.BaseFee, call.Data, false, intrinsicGas)
+		call.Value, gasLimit, gasPrice, call.Data, false, intrinsicGas)
 
 	context := blockchain.NewEVMContext(msg, caller.header, caller.chain, nil)
+	context.GasPrice = gasPrice                                                  // set gasPrice again if baseFee is assigned
 	evm := vm.NewEVM(context, caller.state, caller.chain.Config(), &vm.Config{}) // no additional vm config required
 
 	res, _, kerr := blockchain.ApplyMessage(evm, msg)

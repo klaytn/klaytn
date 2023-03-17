@@ -47,7 +47,7 @@ func TestSimpleBlockchain(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 
 	numAccounts := 12
-	fullNode, node, validator, chainId, workspace := newBlockchain(t)
+	fullNode, node, validator, chainId, workspace := newBlockchain(t, nil)
 	defer os.RemoveAll(workspace)
 
 	// create account
@@ -89,7 +89,7 @@ func TestSimpleBlockchain(t *testing.T) {
 	}
 }
 
-func newBlockchain(t *testing.T) (*node.Node, *cn.CN, *TestAccountType, *big.Int, string) {
+func newBlockchain(t *testing.T, config *params.ChainConfig) (*node.Node, *cn.CN, *TestAccountType, *big.Int, string) {
 	t.Log("Create a new blockchain")
 	// Prepare workspace
 	workspace, err := ioutil.TempDir("", "klaytn-test-state")
@@ -105,7 +105,7 @@ func newBlockchain(t *testing.T) (*node.Node, *cn.CN, *TestAccountType, *big.Int
 	}
 
 	// Create a Klaytn node
-	fullNode, node, err := newKlaytnNode(t, workspace, validator, nil)
+	fullNode, node, err := newKlaytnNode(t, workspace, validator, config)
 	assert.NoError(t, err)
 	if err := node.StartMining(false); err != nil {
 		t.Fatal()

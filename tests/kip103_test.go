@@ -84,7 +84,7 @@ func (t *testKip103TxTransactor) CallContract(ctx context.Context, call klaytn.C
 		value = hexutil.Big(*call.Value)
 	}
 
-	arg := api.CallArgs{call.From, call.To, hexutil.Uint64(1e8), &price, nil, nil, value, call.Data, nil}
+	arg := api.CallArgs{From: call.From, To: call.To, Gas: hexutil.Uint64(1e8), GasPrice: &price, Value: value, Data: call.Data}
 	bn := rpc.BlockNumber(blockNumber.Int64())
 
 	apiBackend := api.NewPublicBlockChainAPI(t.node.APIBackend)
@@ -94,7 +94,7 @@ func (t *testKip103TxTransactor) CallContract(ctx context.Context, call klaytn.C
 func TestRebalanceTreasury_EOA(t *testing.T) {
 	log.EnableLogForTest(log.LvlError, log.LvlInfo)
 
-	fullNode, node, validator, _, workspace := newBlockchain(t)
+	fullNode, node, validator, _, workspace := newBlockchain(t, nil)
 	defer func() {
 		fullNode.Stop()
 		os.RemoveAll(workspace)
