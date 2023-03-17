@@ -168,11 +168,16 @@ func RebalanceTreasury(state *state.StateDB, chain consensus.ChainReader, header
 	}
 	// Execution 2) Distribute KLAY to all newbies
 	for addr, balance := range result.Newbie {
+		// if newbie has KLAY before the allocation, it will be burnt
+		currentBalance := state.GetBalance(addr)
+		result.Burnt.Add(result.Burnt, currentBalance)
+
 		state.SetBalance(addr, balance)
 	}
 
 	// Fill the remaining fields of the result
-	result.Burnt.Sub(totalRetiredAmount, totalNewbieAmount)
+	remainder := new(big.Int).Sub(totalRetiredAmount, totalNewbieAmount)
+	result.Burnt.Add(result.Burnt, remainder)
 	result.Success = true
 
 	return result, nil
