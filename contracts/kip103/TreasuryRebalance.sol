@@ -254,13 +254,13 @@ contract TreasuryRebalance is Ownable, ITreasuryRebalance {
                 );
                 //if min quorom reached, make sure all approvers are still valid
                 address[] memory approvers = retired.approvers;
-                uint256 minApprovals = 0;
+                uint256 validApprovals = 0;
                 for (uint256 j = 0; j < approvers.length; j++) {
                     _validateAdmin(approvers[j], adminList);
-                    minApprovals++;
+                    validApprovals++;
                 }
                 require(
-                    minApprovals >= req,
+                    validApprovals >= req,
                     "min required admins should approve"
                 );
             } else {
