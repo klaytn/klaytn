@@ -115,7 +115,7 @@ func TestRebalanceTreasury_EOA(t *testing.T) {
 
 	optsOwner := bind.NewKeyedTransactor(validator.Keys[0])
 	transactor := &testKip103TxTransactor{node: node}
-	targetBlockNum := new(big.Int).Add(node.BlockChain().CurrentBlock().Number(), big.NewInt(10))
+	targetBlockNum := new(big.Int).Add(node.BlockChain().CurrentBlock().Number(), big.NewInt(5))
 
 	contractAddr, _, contract, err := kip103.DeployTreasuryRebalance(optsOwner, transactor, targetBlockNum)
 	if err != nil {
@@ -183,38 +183,21 @@ func TestRebalanceTreasury_EOA(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// naive waiting for tx processing
-	time.Sleep(2 * time.Second)
+	header := waitBlock(node.BlockChain(), targetBlockNum.Uint64())
+	if header == nil {
+		t.Fatal("timeout")
+	}
 
-	// naive kip103 execution check
-	for i := 0; i < 10; i++ {
-		block := node.BlockChain().CurrentBlock()
+	curState, err := node.BlockChain().StateAt(header.Root)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-		curState, err := node.BlockChain().StateAt(block.Root())
-		if err != nil {
-			t.Fatal(err)
-		}
+	balRetired := curState.GetBalance(validator.GetAddr())
+	assert.Equal(t, balRetired, big.NewInt(0))
 
-		balRetired := curState.GetBalance(validator.GetAddr())
-		t.Log("Retired:", balRetired)
-
-		for j, newbie := range newbieAccs {
-			balNewbie := curState.GetBalance(newbie.GetAddr())
-			t.Log("Newbie", j, ":", balNewbie)
-		}
-
-		if block.Number().Cmp(targetBlockNum) == 0 {
-			assert.Equal(t, balRetired, big.NewInt(0))
-
-			for j, newbie := range newbieAccs {
-				balNewbie := curState.GetBalance(newbie.GetAddr())
-				assert.Equal(t, newbieAllocs[j], balNewbie)
-			}
-			t.Log("Rebalancing Done")
-
-			// TODO: check burt amount
-			// memo="{\"retired\":{\"0x38138d89c321b3b5f421e9452b69cf29e4380bae\":117000000000000000000000000000000000000},\"newbie\":{\"0x0a33a1b99bd67a7189573dd74de80293afdf969a\":22500000000000000000000000000000000000,\"0xd9de2697000c3665e9c5a71e1bf52aaa44507cc0\":22500000000000000000000000000000000000},\"burnt\":72000000000000000000000000000000000000,\"success\":true}"
-		}
-		time.Sleep(time.Second)
+	for j, newbie := range newbieAccs {
+		balNewbie := curState.GetBalance(newbie.GetAddr())
+		assert.Equal(t, newbieAllocs[j], balNewbie)
 	}
 }

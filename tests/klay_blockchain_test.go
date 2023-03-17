@@ -331,7 +331,7 @@ func waitReceipt(chain *blockchain.BlockChain, txhash common.Hash) *types.Receip
 // Wait until `num` block is mined
 // Returns the header with the number larger or equal to `num`
 // Returns nil after a reasonable timeout
-func waitBlock(chain *blockchain.BlockChain, num uint64) *types.Header {
+func waitBlock(chain work.BlockChain, num uint64) *types.Header {
 	head := chain.CurrentHeader()
 	if head.Number.Uint64() >= num {
 		return head
