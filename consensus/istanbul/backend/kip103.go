@@ -127,12 +127,7 @@ func (result *kip103result) totalNewbieBalance() *big.Int {
 func RebalanceTreasury(state *state.StateDB, chain consensus.ChainReader, header *types.Header, c bind.ContractCaller) (*kip103result, error) {
 	result := newKip103Receipt()
 
-	// Inside check to avoid a panic case
-	if chain.Config().KIP103 == nil {
-		return result, errors.New("cannot find KIP103 configuration")
-	}
-
-	caller, err := kip103.NewTreasuryRebalanceCaller(chain.Config().KIP103.Kip103ContractAddress, c)
+	caller, err := kip103.NewTreasuryRebalanceCaller(chain.Config().Kip103ContractAddress, c)
 	if err != nil {
 		return result, err
 	}

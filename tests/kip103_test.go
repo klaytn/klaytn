@@ -123,10 +123,8 @@ func TestRebalanceTreasury_EOA(t *testing.T) {
 	}
 
 	// set kip103 hardfork config
-	node.BlockChain().Config().KIP103 = &params.KIP103Config{
-		Kip103CompatibleBlock: targetBlockNum,
-		Kip103ContractAddress: contractAddr,
-	}
+	node.BlockChain().Config().Kip103CompatibleBlock = targetBlockNum
+	node.BlockChain().Config().Kip103ContractAddress = contractAddr
 
 	t.Log("ContractOwner Addr:", validator.GetAddr().String())
 	t.Log("Contract Addr:", contractAddr.String())

@@ -59,10 +59,8 @@ func TestRebalanceTreasury(t *testing.T) {
 
 	block := bc.CurrentBlock()
 
-	bc.Config().KIP103 = &params.KIP103Config{
-		Kip103CompatibleBlock: block.Number(),
-		Kip103ContractAddress: common.Address{},
-	}
+	bc.Config().Kip103CompatibleBlock = block.Number()
+	bc.Config().Kip103ContractAddress = common.Address{}
 
 	retireds := []struct {
 		addr    common.Address
