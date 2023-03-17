@@ -6,6 +6,7 @@ import (
 	"math/big"
 
 	"github.com/klaytn/klaytn"
+	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -13,6 +14,11 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/contracts/kip103"
+)
+
+var (
+	errNotEnoughRetiredBal = errors.New("the sum of retired accounts' balance is smaller than the distributing amount")
+	errNotProperStatus     = errors.New("cannot read a proper status value")
 )
 
 // Kip103ContractCaller is an implementation of contractCaller only for KIP-103.
@@ -118,9 +124,8 @@ func (result *kip103result) totalNewbieBalance() *big.Int {
 // RebalanceTreasury reads data from a contract, validates stored values, and executes treasury rebalancing (KIP-103).
 // It can change the global state by removing old treasury balances and allocating new treasury balances.
 // The new allocation can be larger than the removed amount, and the difference between two amounts will be burnt.
-func RebalanceTreasury(state *state.StateDB, chain consensus.ChainReader, header *types.Header) (*kip103result, error) {
+func RebalanceTreasury(state *state.StateDB, chain consensus.ChainReader, header *types.Header, c bind.ContractCaller) (*kip103result, error) {
 	result := newKip103Receipt()
-	c := &Kip103ContractCaller{state, chain, header}
 
 	// Inside check to avoid a panic case
 	if chain.Config().KIP103 == nil {
@@ -149,7 +154,7 @@ func RebalanceTreasury(state *state.StateDB, chain consensus.ChainReader, header
 
 	// Validation 2) Check whether status is approved. It should be 2 meaning approved
 	if status, err := caller.Status(nil); err != nil || status != 2 {
-		return result, errors.New("cannot read a proper status value")
+		return result, errNotProperStatus
 	}
 
 	// Validation 3) Check approvals from retirees
@@ -161,7 +166,7 @@ func RebalanceTreasury(state *state.StateDB, chain consensus.ChainReader, header
 	totalRetiredAmount := result.totalRetriedBalance()
 	totalNewbieAmount := result.totalNewbieBalance()
 	if totalRetiredAmount.Cmp(totalNewbieAmount) < 0 {
-		return result, errors.New("the sum of retired accounts' balance is smaller than the distributing amount")
+		return result, errNotEnoughRetiredBal
 	}
 
 	// Execution 1) Clear all balances of retirees

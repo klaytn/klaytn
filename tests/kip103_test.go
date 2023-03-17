@@ -13,6 +13,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
+	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/contracts/kip103"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/rpc"
@@ -94,7 +95,19 @@ func (t *testKip103TxTransactor) CallContract(ctx context.Context, call klaytn.C
 func TestRebalanceTreasury_EOA(t *testing.T) {
 	log.EnableLogForTest(log.LvlError, log.LvlInfo)
 
-	fullNode, node, validator, _, workspace := newBlockchain(t, nil)
+	// prepare chain configuration
+	config := params.CypressChainConfig.Copy()
+	config.LondonCompatibleBlock = big.NewInt(0)
+	config.IstanbulCompatibleBlock = big.NewInt(0)
+	config.EthTxTypeCompatibleBlock = big.NewInt(0)
+	config.MagmaCompatibleBlock = big.NewInt(0)
+	config.KoreCompatibleBlock = big.NewInt(0)
+	config.Istanbul.SubGroupSize = 1
+	config.Istanbul.ProposerPolicy = uint64(istanbul.RoundRobin)
+	config.Governance.Reward.MintingAmount = new(big.Int).Mul(big.NewInt(9000000000000000000), big.NewInt(params.KLAY))
+
+	// make a blockchain node
+	fullNode, node, validator, _, workspace := newBlockchain(t, config)
 	defer func() {
 		fullNode.Stop()
 		os.RemoveAll(workspace)
