@@ -56,6 +56,7 @@ require (
 	github.com/steakknife/hamming v0.0.0-20180906055917-c99c65617cd3 // indirect
 	github.com/stretchr/testify v1.7.0
 	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
+	github.com/tyler-smith/go-bip32 v1.0.0
 	github.com/urfave/cli v1.20.0
 	github.com/valyala/fasthttp v1.34.0
 	go.uber.org/zap v1.13.0

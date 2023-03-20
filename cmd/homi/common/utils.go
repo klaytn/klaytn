@@ -19,12 +19,16 @@ package common
 import (
 	"crypto/ecdsa"
 	"crypto/rand"
+	"crypto/sha512"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
+	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/log"
+	"github.com/tyler-smith/go-bip32"
+	"golang.org/x/crypto/pbkdf2"
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
@@ -57,6 +61,35 @@ func GenerateRandomDir() (string, error) {
 func GenerateKeys(num int) (keys []*ecdsa.PrivateKey, nodekeys []string, addrs []common.Address) {
 	for i := 0; i < num; i++ {
 		nodekey := RandomHex()[2:]
+		nodekeys = append(nodekeys, nodekey)
+
+		key, err := crypto.HexToECDSA(nodekey)
+		if err != nil {
+			logger.Error("Failed to generate key", "err", err)
+			return nil, nil, nil
+		}
+		keys = append(keys, key)
+
+		addr := crypto.PubkeyToAddress(key.PublicKey)
+		addrs = append(addrs, addr)
+	}
+
+	return keys, nodekeys, addrs
+}
+
+func GenerateKeysFromMnemonic(num int, mnemonic string) (keys []*ecdsa.PrivateKey, nodekeys []string, addrs []common.Address) {
+	// Ethereum key derivation path: m/44'/60'/0'/0/
+	seed := pbkdf2.Key([]byte(mnemonic), []byte("mnemonic"), 2048, 64, sha512.New)
+	mk, _ := bip32.NewMasterKey(seed)
+	m44h, _ := mk.NewChildKey(0x80000000 + 44)
+	m44h_60h, _ := m44h.NewChildKey(0x80000000 + 60)
+	m44h_60h_0h, _ := m44h_60h.NewChildKey(0x80000000)
+	m44h_60h_0h_0, _ := m44h_60h_0h.NewChildKey(0)
+
+	for i := 0; i < num; i++ {
+		derived, _ := m44h_60h_0h_0.NewChildKey(uint32(i))
+		nodekey := hexutil.Encode(derived.Key)[2:]
+
 		nodekeys = append(nodekeys, nodekey)
 
 		key, err := crypto.HexToECDSA(nodekey)
