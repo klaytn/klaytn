@@ -25,14 +25,13 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
+	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/log"
+	uuid "github.com/satori/go.uuid"
 	"github.com/tyler-smith/go-bip32"
 	"golang.org/x/crypto/pbkdf2"
-
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/crypto"
-	uuid "github.com/satori/go.uuid"
 )
 
 const (
