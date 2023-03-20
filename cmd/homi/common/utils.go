@@ -89,7 +89,6 @@ func GenerateKeysFromMnemonic(num int, mnemonic string) (keys []*ecdsa.PrivateKe
 	for i := 0; i < num; i++ {
 		derived, _ := m44h_60h_0h_0.NewChildKey(uint32(i))
 		nodekey := hexutil.Encode(derived.Key)[2:]
-
 		nodekeys = append(nodekeys, nodekey)
 
 		key, err := crypto.HexToECDSA(nodekey)
