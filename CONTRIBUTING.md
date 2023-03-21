@@ -9,9 +9,10 @@ Thank you for your interest in contributing to Klaytn. As an open source project
 3. Submit an issue with proper [labeling](#usage-of-labels).
 4. Please wait until the label changes to `contribution welcome` - otherwise, it is not ready to be worked on.
 5. After the label changed to `contribution welcome`, you can start working on the implementation. To avoid any duplicate efforts, it is recommended to update the issue so that other developers see someone working on the issue.
-6. Before making a PR, please make sure you fully tested the code. It is highly recommended to provide the test code as well. After submitting the PR, wait for code review and approval. The reviewer may ask you for additional commits or changes.
-7. Once the change has been approved, the PR is merged by the project moderator.
-8. After merging the PR, we close the pull request. You can then delete the now obsolete branch.
+6. Before making a PR, you should format your change. Klaytn uses a stricter go format [gofumpt](https://github.com/mvdan/gofumpt). Please take a look [how to lint your change](HOW-TO-LINT-YOUR-CHANGE.md).
+7. Before making a PR, please make sure you fully tested the code. It is highly recommended to provide the test code as well. After submitting the PR, wait for code review and approval. The reviewer may ask you for additional commits or changes.
+8. Once the change has been approved, the PR is merged by the project moderator.
+9. After merging the PR, we close the pull request. You can then delete the now obsolete branch.
 
 ## Types of Contribution
 There are various ways to contribute and participate. Please read the guidelines below regarding the process of each type of contribution.

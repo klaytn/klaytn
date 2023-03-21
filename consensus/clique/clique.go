@@ -442,6 +442,11 @@ func (c *Clique) snapshot(chain consensus.ChainReader, number uint64, hash commo
 	return snap, err
 }
 
+// GetConsensusInfo is not used for Clique engine
+func (c *Clique) GetConsensusInfo(block *types.Block) (consensus.ConsensusInfo, error) {
+	return consensus.ConsensusInfo{}, nil
+}
+
 // VerifySeal implements consensus.Engine, checking whether the signature contained
 // in the header satisfies the consensus protocol requirements.
 func (c *Clique) VerifySeal(chain consensus.ChainReader, header *types.Header) error {

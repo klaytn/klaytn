@@ -28,6 +28,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/kerrors"
+	"github.com/klaytn/klaytn/params"
 )
 
 var (
@@ -261,6 +262,10 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 		return nil, 0, kerr
 	}
 
+	rules := st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber)
+	if rules.IsKore {
+		st.state.PrepareAccessList(msg.ValidatedSender(), msg.ValidatedFeePayer(), msg.To(), vm.ActivePrecompiles(rules))
+	}
 	// vm errors do not effect consensus and are therefor
 	// not assigned to err, except for insufficient balance
 	// error and total time limit reached error.
@@ -283,7 +288,14 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 			return nil, 0, kerr
 		}
 	}
-	st.refundGas()
+
+	if rules.IsKore {
+		// After EIP-3529: refunds are capped to gasUsed / 5
+		st.refundGas(params.RefundQuotientEIP3529)
+	} else {
+		// Before EIP-3529: refunds were capped to gasUsed / 2
+		st.refundGas(params.RefundQuotient)
+	}
 
 	// Defer transferring Tx fee when DeferredTxFee is true
 	if st.evm.ChainConfig().Governance == nil || !st.evm.ChainConfig().Governance.DeferredTxFee() {
@@ -383,9 +395,9 @@ func GetVMerrFromReceiptStatus(status uint) (errTxFailed error) {
 	return
 }
 
-func (st *StateTransition) refundGas() {
-	// Apply refund counter, capped to half of the used gas.
-	refund := st.gasUsed() / 2
+func (st *StateTransition) refundGas(refundQuotient uint64) {
+	// Apply refund counter, capped a refund quotient
+	refund := st.gasUsed() / refundQuotient
 	if refund > st.state.GetRefund() {
 		refund = st.state.GetRefund()
 	}
@@ -393,13 +405,6 @@ func (st *StateTransition) refundGas() {
 
 	// Return KLAY for remaining gas, exchanged at the original rate.
 	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.gas), st.gasPrice)
-
-	// remaining := new(big.Int)
-	// if st.evm.ChainConfig().IsMagmaForkEnabled(st.evm.BlockNumber) {
-	// 	remaining = remaining.Mul(new(big.Int).SetUint64(st.gas), st.evm.BaseFee)
-	// } else {
-	// 	remaining = remaining.Mul(new(big.Int).SetUint64(st.gas), st.gasPrice)
-	// }
 
 	validatedFeePayer := st.msg.ValidatedFeePayer()
 	validatedSender := st.msg.ValidatedSender()

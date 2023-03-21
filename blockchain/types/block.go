@@ -32,7 +32,6 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/crypto/sha3"
-
 	"github.com/klaytn/klaytn/rlp"
 )
 
@@ -42,12 +41,7 @@ const (
 	Engine_Gxhash
 )
 
-var (
-	// EmptyRootHash is transaction/receipt root hash when there is no transaction.
-	// This value is initialized in InitDeriveSha.
-	EmptyRootHash = common.Hash{}
-	EngineType    = Engine_IBFT
-)
+var EngineType = Engine_IBFT
 
 //go:generate gencodec -type Header -field-override headerMarshaling -out gen_header_json.go
 
@@ -149,12 +143,12 @@ func prefixedRlpHash(prefix byte, x interface{}) (h common.Hash) {
 // EmptyBody returns true if there is no additional 'body' to complete the header
 // that is: no transactions.
 func (h *Header) EmptyBody() bool {
-	return h.TxHash == EmptyRootHash
+	return h.TxHash == EmptyRootHash(h.Number)
 }
 
 // EmptyReceipts returns true if there are no receipts for this header/block.
 func (h *Header) EmptyReceipts() bool {
-	return h.ReceiptHash == EmptyRootHash
+	return h.ReceiptHash == EmptyRootHash(h.Number)
 }
 
 // Body is a simple (mutable, non-safe) data container for storing and moving
@@ -203,17 +197,17 @@ func NewBlock(header *Header, txs []*Transaction, receipts []*Receipt) *Block {
 
 	// TODO: panic if len(txs) != len(receipts)
 	if len(txs) == 0 {
-		b.header.TxHash = EmptyRootHash
+		b.header.TxHash = EmptyRootHash(header.Number)
 	} else {
-		b.header.TxHash = DeriveSha(Transactions(txs))
+		b.header.TxHash = DeriveSha(Transactions(txs), header.Number)
 		b.transactions = make(Transactions, len(txs))
 		copy(b.transactions, txs)
 	}
 
 	if len(receipts) == 0 {
-		b.header.ReceiptHash = EmptyRootHash
+		b.header.ReceiptHash = EmptyRootHash(header.Number)
 	} else {
-		b.header.ReceiptHash = DeriveSha(Receipts(receipts))
+		b.header.ReceiptHash = DeriveSha(Receipts(receipts), header.Number)
 		b.header.Bloom = CreateBloom(receipts)
 	}
 
@@ -377,23 +371,35 @@ Transactions:
 }
 
 func (h *Header) String() string {
-	return fmt.Sprintf(`Header(%x):
-[
-	ParentHash:       %x
-	Rewardbase:       %x
-	Root:             %x
-	TxSha:            %x
-	ReceiptSha:       %x
-	Bloom:            %x
-	BlockScore:       %v
-	Number:           %v
-	GasUsed:          %v
-	Time:             %v
-	TimeFoS:          %v
-	Extra:            %s
-	Governance:       %x
-	Vote:             %x
-]`, h.Hash(), h.ParentHash, h.Rewardbase, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.BlockScore, h.Number, h.GasUsed, h.Time, h.TimeFoS, h.Extra, h.Governance, h.Vote)
+	prefix := `Header(%x):
+	[`
+	strBaseHeader := `
+		ParentHash:       %x
+		Rewardbase:       %x
+		Root:             %x
+		TxSha:            %x
+		ReceiptSha:       %x
+		Bloom:            %x
+		BlockScore:       %v
+		Number:           %v
+		GasUsed:          %v
+		Time:             %v
+		TimeFoS:          %v
+		Extra:            %s
+		Governance:       %x
+		Vote:             %x
+	`
+	suffix := `
+	]`
+	strHeader := ""
+	if h.BaseFee != nil {
+		strBaseHeader = strBaseHeader + `	BaseFee:          %x
+		`
+		strHeader = fmt.Sprintf(prefix+strBaseHeader+suffix, h.Hash(), h.ParentHash, h.Rewardbase, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.BlockScore, h.Number, h.GasUsed, h.Time, h.TimeFoS, h.Extra, h.Governance, h.Vote, h.BaseFee)
+	} else {
+		strHeader = fmt.Sprintf(prefix+strBaseHeader+suffix, h.Hash(), h.ParentHash, h.Rewardbase, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.BlockScore, h.Number, h.GasUsed, h.Time, h.TimeFoS, h.Extra, h.Governance, h.Vote)
+	}
+	return strHeader
 }
 
 type Blocks []*Block

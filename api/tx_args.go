@@ -157,14 +157,10 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 	// For the transaction that do not use the gasPrice field, the default value of gasPrice is not set.
 	if args.Price == nil && *args.TypeInt != types.TxTypeEthereumDynamicFee {
 		// b.SuggestPrice = unitPrice, for before Magma
-		//                = baseFee,   for after Magma
+		//                = baseFee * 2,   for after Magma
 		price, err := b.SuggestPrice(ctx)
 		if err != nil {
 			return err
-		}
-		if isMagma {
-			// we need to set baseFee * 2 after Magma hard fork
-			price = new(big.Int).Mul(price, common.Big2)
 		}
 		args.Price = (*hexutil.Big)(price)
 	}
@@ -185,12 +181,12 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 			)
 			if isMagma {
 				// After Magma hard fork, `gasFeeCap` was set to `baseFee*2` by default.
-				gasFeeCap = new(big.Int).Mul(gasPrice, big.NewInt(2))
+				gasFeeCap = gasPrice
 			}
 			args.MaxFeePerGas = (*hexutil.Big)(gasFeeCap)
 		}
 		if isMagma {
-			if args.MaxFeePerGas.ToInt().Cmp(gasPrice) < 0 {
+			if args.MaxFeePerGas.ToInt().Cmp(new(big.Int).Div(gasPrice, common.Big2)) < 0 {
 				return fmt.Errorf("maxFeePerGas (%v) < BaseFee (%v)", args.MaxFeePerGas, gasPrice)
 			}
 		} else if args.MaxPriorityFeePerGas.ToInt().Cmp(gasPrice) != 0 || args.MaxFeePerGas.ToInt().Cmp(gasPrice) != 0 {

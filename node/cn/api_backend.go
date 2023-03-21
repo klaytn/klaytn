@@ -24,6 +24,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts"
@@ -278,23 +279,35 @@ func (b *CNAPIBackend) ProtocolVersion() int {
 	return b.cn.ProtocolVersion()
 }
 
+// SuggestPrice returns the baseFee * 2 if the current block is magma hard forked.
+// Other cases, it returns the unitPrice.
 func (b *CNAPIBackend) SuggestPrice(ctx context.Context) (*big.Int, error) {
 	return b.gpo.SuggestPrice(ctx)
 }
 
 func (b *CNAPIBackend) UpperBoundGasPrice(ctx context.Context) *big.Int {
-	if b.cn.chainConfig.IsMagmaForkEnabled(b.CurrentBlock().Number()) {
-		return new(big.Int).SetUint64(b.cn.governance.UpperBoundBaseFee())
+	bignum := b.CurrentBlock().Number()
+	pset, err := b.cn.governance.EffectiveParams(bignum.Uint64() + 1)
+	if err != nil {
+		return nil
+	}
+	if b.cn.chainConfig.IsMagmaForkEnabled(bignum) {
+		return new(big.Int).SetUint64(pset.UpperBoundBaseFee())
 	} else {
-		return new(big.Int).SetUint64(b.cn.governance.UnitPrice())
+		return new(big.Int).SetUint64(pset.UnitPrice())
 	}
 }
 
 func (b *CNAPIBackend) LowerBoundGasPrice(ctx context.Context) *big.Int {
-	if b.cn.chainConfig.IsMagmaForkEnabled(b.CurrentBlock().Number()) {
-		return new(big.Int).SetUint64(b.cn.governance.LowerBoundBaseFee())
+	bignum := b.CurrentBlock().Number()
+	pset, err := b.cn.governance.EffectiveParams(bignum.Uint64() + 1)
+	if err != nil {
+		return nil
+	}
+	if b.cn.chainConfig.IsMagmaForkEnabled(bignum) {
+		return new(big.Int).SetUint64(pset.LowerBoundBaseFee())
 	} else {
-		return new(big.Int).SetUint64(b.cn.governance.UnitPrice())
+		return new(big.Int).SetUint64(pset.UnitPrice())
 	}
 }
 
@@ -333,12 +346,24 @@ func (b *CNAPIBackend) RPCGasCap() *big.Int {
 	return b.cn.config.RPCGasCap
 }
 
+func (b *CNAPIBackend) RPCEVMTimeout() time.Duration {
+	return b.cn.config.RPCEVMTimeout
+}
+
 func (b *CNAPIBackend) RPCTxFeeCap() float64 {
 	return b.cn.config.RPCTxFeeCap
 }
 
 func (b *CNAPIBackend) Engine() consensus.Engine {
 	return b.cn.engine
+}
+
+func (b *CNAPIBackend) StateAtBlock(ctx context.Context, block *types.Block, reexec uint64, base *state.StateDB, checkLive bool, preferDisk bool) (*state.StateDB, error) {
+	return b.cn.stateAtBlock(block, reexec, base, checkLive, preferDisk)
+}
+
+func (b *CNAPIBackend) StateAtTransaction(ctx context.Context, block *types.Block, txIndex int, reexec uint64) (blockchain.Message, vm.Context, *state.StateDB, error) {
+	return b.cn.stateAtTransaction(block, txIndex, reexec)
 }
 
 func (b *CNAPIBackend) FeeHistory(ctx context.Context, blockCount int, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*big.Int, [][]*big.Int, []*big.Int, []float64, error) {

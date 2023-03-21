@@ -64,10 +64,20 @@ var (
 	ConstantinopleInstructionSet = newConstantinopleInstructionSet()
 	IstanbulInstructionSet       = newIstanbulInstructionSet()
 	LondonInstructionSet         = newLondonInstructionSet()
+	KoreInstructionSet           = newKoreInstructionSet()
 )
 
 // JumpTable contains the EVM opcodes supported at a given fork.
 type JumpTable [256]*operation
+
+func newKoreInstructionSet() JumpTable {
+	instructionSet := newLondonInstructionSet()
+
+	enable2929(&instructionSet) // Access lists for trie accesses https://eips.ethereum.org/EIPS/eip-2929
+	enable3529(&instructionSet) // EIP-3529: Reduction in refunds https://eips.ethereum.org/EIPS/eip-3529
+	enable4399(&instructionSet) // Change 0x44 opcode return value (from difficulty value to prev blockhash value)
+	return instructionSet
+}
 
 // newLondonInstructionSet returns the frontier, homestead, byzantium,
 // constantinople, istanbul, petersburg, berlin and london instructions.

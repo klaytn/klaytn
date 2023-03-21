@@ -343,24 +343,28 @@ func (api *PublicDebugAPI) DumpStateTrie(ctx context.Context, blockNrOrHash rpc.
 	return result, nil
 }
 
+// TODO-klaytn: Rearrange PublicDebugAPI and PrivateDebugAPI receivers
 // StartWarmUp retrieves all state/storage tries of the latest committed state root and caches the tries.
-func (api *PublicDebugAPI) StartWarmUp() error {
+func (api *PrivateDebugAPI) StartWarmUp() error {
 	return api.cn.blockchain.StartWarmUp()
 }
 
+// TODO-klaytn: Rearrange PublicDebugAPI and PrivateDebugAPI receivers
 // StartContractWarmUp retrieves a storage trie of the latest state root and caches the trie
 // corresponding to the given contract address.
-func (api *PublicDebugAPI) StartContractWarmUp(contractAddr common.Address) error {
+func (api *PrivateDebugAPI) StartContractWarmUp(contractAddr common.Address) error {
 	return api.cn.blockchain.StartContractWarmUp(contractAddr)
 }
 
+// TODO-klaytn: Rearrange PublicDebugAPI and PrivateDebugAPI receivers
 // StopWarmUp stops the warming up process.
-func (api *PublicDebugAPI) StopWarmUp() error {
+func (api *PrivateDebugAPI) StopWarmUp() error {
 	return api.cn.blockchain.StopWarmUp()
 }
 
+// TODO-klaytn: Rearrange PublicDebugAPI and PrivateDebugAPI receivers
 // StartCollectingTrieStats  collects state/storage trie statistics and print in the log.
-func (api *PublicDebugAPI) StartCollectingTrieStats(contractAddr common.Address) error {
+func (api *PrivateDebugAPI) StartCollectingTrieStats(contractAddr common.Address) error {
 	return api.cn.blockchain.StartCollectingTrieStats(contractAddr)
 }
 
@@ -385,9 +389,10 @@ func (api *PrivateDebugAPI) Preimage(ctx context.Context, hash common.Hash) (hex
 	return nil, errors.New("unknown preimage")
 }
 
+// TODO-klaytn: Rearrange PublicDebugAPI and PrivateDebugAPI receivers
 // GetBadBLocks returns a list of the last 'bad blocks' that the client has seen on the network
 // and returns them as a JSON list of block-hashes
-func (api *PrivateDebugAPI) GetBadBlocks(ctx context.Context) ([]blockchain.BadBlockArgs, error) {
+func (api *PublicDebugAPI) GetBadBlocks(ctx context.Context) ([]blockchain.BadBlockArgs, error) {
 	return api.cn.BlockChain().BadBlocks()
 }
 
@@ -406,7 +411,12 @@ type storageEntry struct {
 
 // StorageRangeAt returns the storage at the given block height and transaction index.
 func (api *PrivateDebugAPI) StorageRangeAt(ctx context.Context, blockHash common.Hash, txIndex int, contractAddress common.Address, keyStart hexutil.Bytes, maxResult int) (StorageRangeResult, error) {
-	_, _, statedb, err := api.computeTxEnv(blockHash, txIndex, 0)
+	// Retrieve the block
+	block := api.cn.blockchain.GetBlockByHash(blockHash)
+	if block == nil {
+		return StorageRangeResult{}, fmt.Errorf("block %#x not found", blockHash)
+	}
+	_, _, statedb, err := api.cn.stateAtTransaction(block, txIndex, 0)
 	if err != nil {
 		return StorageRangeResult{}, err
 	}
@@ -440,12 +450,13 @@ func storageRangeAt(st state.Trie, start []byte, maxResult int) (StorageRangeRes
 	return result, nil
 }
 
+// TODO-klaytn: Rearrange PublicDebugAPI and PrivateDebugAPI receivers
 // GetModifiedAccountsByNumber returns all accounts that have changed between the
 // two blocks specified. A change is defined as a difference in nonce, balance,
 // code hash, or storage hash.
 //
 // With one parameter, returns the list of accounts modified in the specified block.
-func (api *PrivateDebugAPI) GetModifiedAccountsByNumber(ctx context.Context, startNum rpc.BlockNumber, endNum *rpc.BlockNumber) ([]common.Address, error) {
+func (api *PublicDebugAPI) GetModifiedAccountsByNumber(ctx context.Context, startNum rpc.BlockNumber, endNum *rpc.BlockNumber) ([]common.Address, error) {
 	startBlock, endBlock, err := api.getStartAndEndBlock(ctx, startNum, endNum)
 	if err != nil {
 		return nil, err
@@ -453,12 +464,13 @@ func (api *PrivateDebugAPI) GetModifiedAccountsByNumber(ctx context.Context, sta
 	return api.getModifiedAccounts(startBlock, endBlock)
 }
 
+// TODO-klaytn: Rearrange PublicDebugAPI and PrivateDebugAPI receivers
 // GetModifiedAccountsByHash returns all accounts that have changed between the
 // two blocks specified. A change is defined as a difference in nonce, balance,
 // code hash, or storage hash.
 //
 // With one parameter, returns the list of accounts modified in the specified block.
-func (api *PrivateDebugAPI) GetModifiedAccountsByHash(startHash common.Hash, endHash *common.Hash) ([]common.Address, error) {
+func (api *PublicDebugAPI) GetModifiedAccountsByHash(startHash common.Hash, endHash *common.Hash) ([]common.Address, error) {
 	var startBlock, endBlock *types.Block
 	startBlock = api.cn.blockchain.GetBlockByHash(startHash)
 	if startBlock == nil {
@@ -480,7 +492,8 @@ func (api *PrivateDebugAPI) GetModifiedAccountsByHash(startHash common.Hash, end
 	return api.getModifiedAccounts(startBlock, endBlock)
 }
 
-func (api *PrivateDebugAPI) getModifiedAccounts(startBlock, endBlock *types.Block) ([]common.Address, error) {
+// TODO-klaytn: Rearrange PublicDebugAPI and PrivateDebugAPI receivers
+func (api *PublicDebugAPI) getModifiedAccounts(startBlock, endBlock *types.Block) ([]common.Address, error) {
 	trieDB := api.cn.blockchain.StateCache().TrieDB()
 
 	oldTrie, err := statedb.NewSecureTrie(startBlock.Root(), trieDB)
@@ -506,8 +519,9 @@ func (api *PrivateDebugAPI) getModifiedAccounts(startBlock, endBlock *types.Bloc
 	return dirty, nil
 }
 
+// TODO-klaytn: Rearrange PublicDebugAPI and PrivateDebugAPI receivers
 // getStartAndEndBlock returns start and end block based on the given startNum and endNum.
-func (api *PrivateDebugAPI) getStartAndEndBlock(ctx context.Context, startNum rpc.BlockNumber, endNum *rpc.BlockNumber) (*types.Block, *types.Block, error) {
+func (api *PublicDebugAPI) getStartAndEndBlock(ctx context.Context, startNum rpc.BlockNumber, endNum *rpc.BlockNumber) (*types.Block, *types.Block, error) {
 	var startBlock, endBlock *types.Block
 
 	startBlock, err := api.cn.APIBackend.BlockByNumber(ctx, startNum)
@@ -535,11 +549,12 @@ func (api *PrivateDebugAPI) getStartAndEndBlock(ctx context.Context, startNum rp
 	return startBlock, endBlock, nil
 }
 
+// TODO-klaytn: Rearrange PublicDebugAPI and PrivateDebugAPI receivers
 // GetModifiedStorageNodesByNumber returns the number of storage nodes of a contract account
 // that have been changed between the two blocks specified.
 //
 // With the first two parameters, it returns the number of storage trie nodes modified in the specified block.
-func (api *PrivateDebugAPI) GetModifiedStorageNodesByNumber(ctx context.Context, contractAddr common.Address, startNum rpc.BlockNumber, endNum *rpc.BlockNumber, printDetail *bool) (int, error) {
+func (api *PublicDebugAPI) GetModifiedStorageNodesByNumber(ctx context.Context, contractAddr common.Address, startNum rpc.BlockNumber, endNum *rpc.BlockNumber, printDetail *bool) (int, error) {
 	startBlock, endBlock, err := api.getStartAndEndBlock(ctx, startNum, endNum)
 	if err != nil {
 		return 0, err
@@ -547,7 +562,8 @@ func (api *PrivateDebugAPI) GetModifiedStorageNodesByNumber(ctx context.Context,
 	return api.getModifiedStorageNodes(contractAddr, startBlock, endBlock, printDetail)
 }
 
-func (api *PrivateDebugAPI) getModifiedStorageNodes(contractAddr common.Address, startBlock, endBlock *types.Block, printDetail *bool) (int, error) {
+// TODO-klaytn: Rearrange PublicDebugAPI and PrivateDebugAPI receivers
+func (api *PublicDebugAPI) getModifiedStorageNodes(contractAddr common.Address, startBlock, endBlock *types.Block, printDetail *bool) (int, error) {
 	startBlockRoot, err := api.cn.blockchain.GetContractStorageRoot(startBlock, api.cn.blockchain.StateCache(), contractAddr)
 	if err != nil {
 		return 0, err

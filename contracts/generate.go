@@ -16,6 +16,8 @@
 
 package contracts
 
+//go:generate abigen --sol ./gov/GovParam.sol --pkg gov --out ./gov/GovParam.go
+
 //go:generate abigen --sol ./bridge/Bridge.sol --pkg bridge --out ./bridge/Bridge.go
 //go:generate abigen --sol ./extbridge/ext_bridge.sol --pkg extbridge --out ./extbridge/ext_bridge.go
 
@@ -25,6 +27,8 @@ package contracts
 //go:generate abigen --sol ./sc_erc20/sc_token.sol --pkg sctoken --out ./sc_erc20/sc_token.go
 
 //go:generate abigen --sol ./kip13/InterfaceIdentifier.sol --pkg kip13 --out ./kip13/InterfaceIdentifier.go
+
+//go:generate abigen --sol ./kip103/TreasuryRebalance.sol --pkg kip103 --out ./kip103/TreasuryRebalance.go
 
 //`credit.sol` was compiled by solidity@0.4.24.
 // This code data was included in cypress genesis file.

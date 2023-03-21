@@ -17,18 +17,27 @@ ENV KLAYTN_STATIC_LINK=$KLAYTN_STATIC_LINK
 ARG KLAYTN_DISABLE_SYMBOL=0
 ENV KLAYTN_DISABLE_SYMBOL=$KLAYTN_DISABLE_SYMBOL
 
-RUN git init
-ADD . $SRC_DIR
-RUN git init
-RUN cd $SRC_DIR && make all
+WORKDIR $SRC_DIR
+# Cache default $GOMODCACHE
+COPY go.mod go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod go mod download -x
+
+# Cache default $GOCACHE
+# First 'make kcn' to populate build cache and then 'make all' in parallel
+COPY . .
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg/mod \
+    make kcn && \
+    make all -j
 
 FROM --platform=linux/amd64 ubuntu:20.04
 ARG SRC_DIR
 ARG PKG_DIR
 
-RUN apt update
-RUN apt install -yq musl-dev
-RUN mkdir -p $PKG_DIR/conf $PKG_DIR/bin
+RUN apt update && \
+            apt install -yq musl-dev ca-certificates && \
+            update-ca-certificates && \
+            mkdir -p $PKG_DIR/conf $PKG_DIR/bin
 
 # Startup scripts and binaries must be in the same location
 COPY --from=builder $SRC_DIR/build/bin/* $PKG_DIR/bin/

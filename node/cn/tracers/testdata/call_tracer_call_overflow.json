@@ -1,0 +1,88 @@
+{
+  "context": {
+    "blockscore": "0x1",
+    "number": "3913",
+    "timestamp": "1659432049"
+  },
+  "genesis": {
+    "alloc": {
+      "0x4cefb5df9a128512c8c5cdfab717ff1dcd10dc7d": {
+        "balance": "0x446c3b15f9926687d2c40534fdb5e1dc73ea5ac900",
+        "code": "0x",
+        "nonce": "13",
+        "storage": {}
+      },
+      "0xa3e50f7b8f8df9f8a2044929b4c85dbe05331574": {
+        "balance": "0x0",
+        "code": "0x6080604052348015600f57600080fd5b506004361060285760003560e01c80634d536fe314602d575b600080fd5b60336035565b005b5a33600067ffffffffffffffe0600067fffffffffffffff060008587f15050507f9f9fb434574749b74458e0ddc3cf5fd5bdb1b009c8615e825606b53724576f3560405160405180910390a156fea2646970667358221220dab98f1cf135b26456b5cd0d5c8fbb888a2403ab2d1ab131f3f73ae6ae4578d464736f6c634300080f0033",
+        "nonce": "1",
+        "storage": {}
+      }
+    },
+    "baseFeePerGas": "0x5d21dba00",
+    "blockscore": "0x1",
+    "config": {
+      "chainId": 1000,
+      "deriveShaImpl": 0,
+      "ethTxTypeCompatibleBlock": 0,
+      "governance": {
+        "governanceMode": "none",
+        "governingNode": "0x0000000000000000000000000000000000000000",
+        "kip71": {
+          "basefeedenominator": 20,
+          "gastarget": 30000000,
+          "lowerboundbasefee": 25000000000,
+          "maxblockgasusedforbasefee": 60000000,
+          "upperboundbasefee": 750000000000
+        },
+        "reward": {
+          "deferredTxFee": false,
+          "minimumStake": 2000000,
+          "mintingAmount": 0,
+          "proposerUpdateInterval": 3600,
+          "ratio": "100/0/0",
+          "stakingUpdateInterval": 86400,
+          "useGiniCoeff": false
+        }
+      },
+      "istanbul": {
+        "epoch": 604800,
+        "policy": 0,
+        "sub": 21
+      },
+      "istanbulCompatibleBlock": 0,
+      "londonCompatibleBlock": 0,
+      "magmaCompatibleBlock": 0,
+      "unitPrice": 0
+    },
+    "extraData": "0xd683010900846b6c617986676f312e3138856c696e7578000000000000000000f89ed5944cefb5df9a128512c8c5cdfab717ff1dcd10dc7db8418cfa643013ca673b223c3d9a35ba07cebf612213028a30b9c0ccd96fbe7c1fa31371f983ae990082656dc03d7b5e25c249a93ddd1199c1b260617c06130add7800f843b841461d4c1b138b8cc6e9d5b6e070806fa8ea2a82e98a3ac13def0d0eec7f04a8e95f16ea4af88b744831c6122d2bcbd1b53a7113fc13ca0afe437c62f0f7fc2b5700",
+    "hash": "0x357589a2ea4f044cc2ffd99a924de6e69d9dea578d086b033f9ea3b5fcc9f68c",
+    "number": "3912",
+    "reward": "0x4cefb5df9a128512c8c5cdfab717ff1dcd10dc7d",
+    "stateRoot": "0x9763fb62c71c0c2b0abf30c64ad8c25500b7791cded830e09dcf386caf7beb2e",
+    "timestamp": "1659432048",
+    "timestampFoS": 29,
+    "totalBlockScore": "0xf49"
+  },
+  "input": "0xf86a0d850ba43b74008259f694a3e50f7b8f8df9f8a2044929b4c85dbe0533157480844d536fe38207f4a0c918375568fec81db5396587237954e1c8331c8b426257ac880607efc1e7bdd4a039d7c870e8acae1720c7534230542bc292d188fca7fa1b0b056a56c2f11f4a09",
+  "result": {
+    "calls": [
+      {
+        "from": "0xa3e50f7b8f8df9f8a2044929b4c85dbe05331574",
+        "input": "0x",
+        "output": "0x",
+        "to": "0x4cefb5df9a128512c8c5cdfab717ff1dcd10dc7d",
+        "type": "CALL",
+        "value": "0x0"
+      }
+    ],
+    "from": "0x4cefb5df9a128512c8c5cdfab717ff1dcd10dc7d",
+    "gas": "0x65e",
+    "gasUsed": "0x65e",
+    "input": "0x4d536fe3",
+    "output": "0x",
+    "to": "0xa3e50f7b8f8df9f8a2044929b4c85dbe05331574",
+    "type": "CALL",
+    "value": "0x0"
+  }
+}

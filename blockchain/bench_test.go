@@ -288,12 +288,13 @@ func BenchmarkChainWrite_full_100k_badgerDB(b *testing.B) {
 func makeChainForBench(db database.DBManager, full bool, count uint64) {
 	var hash common.Hash
 	for n := uint64(0); n < count; n++ {
+		num := new(big.Int).SetUint64(n)
 		header := &types.Header{
-			Number:      big.NewInt(int64(n)),
+			Number:      num,
 			ParentHash:  hash,
 			BlockScore:  big.NewInt(1),
-			TxHash:      types.EmptyRootHash,
-			ReceiptHash: types.EmptyRootHash,
+			TxHash:      types.EmptyRootHash(num),
+			ReceiptHash: types.EmptyRootHash(num),
 		}
 		hash = header.Hash()
 

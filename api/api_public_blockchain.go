@@ -44,8 +44,7 @@ import (
 )
 
 const (
-	defaultGasPrice      = 25 * params.Ston
-	localTxExecutionTime = 5 * time.Second
+	defaultGasPrice = 25 * params.Ston
 )
 
 var logger = log.NewModuleLogger(log.API)
@@ -313,9 +312,14 @@ func DoCall(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.Blo
 	if err != nil {
 		return nil, 0, 0, 0, err
 	}
-
+	var balanceBaseFee *big.Int
+	if header.BaseFee != nil {
+		balanceBaseFee = new(big.Int).Mul(baseFee, common.Big2)
+	} else {
+		balanceBaseFee = msg.GasPrice()
+	}
 	// Add gas fee to sender for estimating gasLimit/computing cost or calling a function by insufficient balance sender.
-	state.AddBalance(msg.ValidatedSender(), new(big.Int).Mul(new(big.Int).SetUint64(msg.Gas()), msg.GasPrice()))
+	state.AddBalance(msg.ValidatedSender(), new(big.Int).Mul(new(big.Int).SetUint64(msg.Gas()), balanceBaseFee))
 
 	// The intrinsicGas is checked again later in the blockchain.ApplyMessage function,
 	// but we check in advance here in order to keep StateTransition.TransactionDb method as unchanged as possible
@@ -359,7 +363,7 @@ func (s *PublicBlockChainAPI) Call(ctx context.Context, args CallArgs, blockNrOr
 	if rpcGasCap := s.b.RPCGasCap(); rpcGasCap != nil {
 		gasCap = rpcGasCap
 	}
-	result, _, _, status, err := DoCall(ctx, s.b, args, blockNrOrHash, vm.Config{}, localTxExecutionTime, gasCap)
+	result, _, _, status, err := DoCall(ctx, s.b, args, blockNrOrHash, vm.Config{}, s.b.RPCEVMTimeout(), gasCap)
 	if err != nil {
 		return nil, err
 	}
@@ -376,7 +380,7 @@ func (s *PublicBlockChainAPI) EstimateComputationCost(ctx context.Context, args 
 	if rpcGasCap := s.b.RPCGasCap(); rpcGasCap != nil {
 		gasCap = rpcGasCap
 	}
-	_, _, computationCost, _, err := DoCall(ctx, s.b, args, blockNrOrHash, vm.Config{UseOpcodeComputationCost: true}, localTxExecutionTime, gasCap)
+	_, _, computationCost, _, err := DoCall(ctx, s.b, args, blockNrOrHash, vm.Config{UseOpcodeComputationCost: true}, s.b.RPCEVMTimeout(), gasCap)
 	return (hexutil.Uint64)(computationCost), err
 }
 
@@ -500,9 +504,21 @@ type StructLogRes struct {
 }
 
 // formatLogs formats EVM returned structured logs for json output
-func FormatLogs(logs []vm.StructLog) []StructLogRes {
+func FormatLogs(timeout time.Duration, logs []vm.StructLog) ([]StructLogRes, error) {
+	logTimeout := false
+	deadlineCtx, cancel := context.WithTimeout(context.Background(), timeout)
+	go func() {
+		<-deadlineCtx.Done()
+		logger.Debug("trace logger timeout", "timeout", timeout, "err", deadlineCtx.Err())
+		logTimeout = true
+	}()
+	defer cancel()
+
 	formatted := make([]StructLogRes, len(logs))
 	for index, trace := range logs {
+		if logTimeout {
+			return nil, fmt.Errorf("trace logger timeout")
+		}
 		formatted[index] = StructLogRes{
 			Pc:      trace.Pc,
 			Op:      trace.Op.String(),
@@ -533,7 +549,7 @@ func FormatLogs(logs []vm.StructLog) []StructLogRes {
 			formatted[index].Storage = &storage
 		}
 	}
-	return formatted
+	return formatted, nil
 }
 
 func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool, isEnabledEthTxTypeFork bool) (map[string]interface{}, error) {
@@ -545,7 +561,7 @@ func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool, isEna
 		"logsBloom":        head.Bloom,
 		"stateRoot":        head.Root,
 		"reward":           head.Rewardbase,
-		"blockscore":       (*hexutil.Big)(head.BlockScore),
+		"blockScore":       (*hexutil.Big)(head.BlockScore),
 		"totalBlockScore":  (*hexutil.Big)(td),
 		"extraData":        hexutil.Bytes(head.Extra),
 		"governanceData":   hexutil.Bytes(head.Governance),
@@ -690,6 +706,7 @@ func (args *CallArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsic
 		gas = globalGasCap
 	}
 
+	// Do not update gasPrice unless any of args.GasPrice and args.MaxFeePerGas is specified.
 	gasPrice := new(big.Int)
 	if baseFee.Cmp(new(big.Int).SetUint64(params.ZeroBaseFee)) == 0 {
 		// If baseFee is zero, then it must be a magma hardfork

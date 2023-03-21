@@ -171,19 +171,12 @@ func (api *PrivateAdminAPI) StartHTTP(host *string, port *int, cors *string, api
 		}
 	}
 
-	if api.node.config.IsFastHTTP() {
-		if err := api.node.startFastHTTP(
-			fmt.Sprintf("%s:%d", *host, *port),
-			api.node.rpcAPIs, modules, allowedOrigins, allowedVHosts, api.node.config.HTTPTimeouts); err != nil {
-			return false, err
-		}
-	} else {
-		if err := api.node.startHTTP(
-			fmt.Sprintf("%s:%d", *host, *port),
-			api.node.rpcAPIs, modules, allowedOrigins, allowedVHosts, api.node.config.HTTPTimeouts); err != nil {
-			return false, err
-		}
+	if err := api.node.startHTTP(
+		fmt.Sprintf("%s:%d", *host, *port),
+		api.node.rpcAPIs, modules, allowedOrigins, allowedVHosts, api.node.config.HTTPTimeouts); err != nil {
+		return false, err
 	}
+
 	return true, nil
 }
 
@@ -249,19 +242,12 @@ func (api *PrivateAdminAPI) StartWS(host *string, port *int, allowedOrigins *str
 		}
 	}
 
-	if api.node.config.IsFastHTTP() {
-		if err := api.node.startFastWS(
-			fmt.Sprintf("%s:%d", *host, *port),
-			api.node.rpcAPIs, modules, origins, api.node.config.WSExposeAll); err != nil {
-			return false, err
-		}
-	} else {
-		if err := api.node.startWS(
-			fmt.Sprintf("%s:%d", *host, *port),
-			api.node.rpcAPIs, modules, origins, api.node.config.WSExposeAll); err != nil {
-			return false, err
-		}
+	if err := api.node.startWS(
+		fmt.Sprintf("%s:%d", *host, *port),
+		api.node.rpcAPIs, modules, origins, api.node.config.WSExposeAll); err != nil {
+		return false, err
 	}
+
 	return true, nil
 }
 
@@ -382,6 +368,8 @@ func (api *PublicDebugAPI) Metrics(raw bool) (map[string]interface{}, error) {
 					"AvgRate05Min": metric.Rate5(),
 					"AvgRate15Min": metric.Rate15(),
 					"MeanRate":     metric.RateMean(),
+					"Mean":         metric.Mean(),
+					"StdDev":       metric.StdDev(),
 					"Overall":      float64(metric.Count()),
 					"Percentiles": map[string]interface{}{
 						"5":  metric.Percentile(0.05),

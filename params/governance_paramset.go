@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/log"
 )
 
@@ -141,17 +142,14 @@ var (
 		parseValue: func(v interface{}) (interface{}, bool) {
 			switch v.(type) {
 			case string:
-				_, ok := new(big.Int).SetString(v.(string), 10)
-				return v.(string), ok
+				return v.(string), true
 			case *big.Int:
 				return v.(*big.Int).String(), true
 			default:
 				return nil, false
 			}
 		},
-		parseBytes: func(b []byte) (interface{}, bool) {
-			return new(big.Int).SetBytes(b).String(), true
-		},
+		parseBytes: parseBytesString,
 		validate: func(v interface{}) bool {
 			if n, ok := new(big.Int).SetString(v.(string), 10); ok {
 				return n.Sign() >= 0 // must be non-negative.
@@ -166,7 +164,28 @@ var (
 		parseBytes:    parseBytesString,
 		validate: func(v interface{}) bool {
 			strs := strings.Split(v.(string), "/")
-			if len(strs) != 3 {
+			if len(strs) != RewardSliceCount {
+				return false
+			}
+			sum := 0
+			for _, s := range strs {
+				n, err := strconv.Atoi(s)
+				if err != nil || n < 0 {
+					return false
+				}
+				sum += n
+			}
+			return sum == 100
+		},
+	}
+
+	govParamTypeKip82Ratio = &govParamType{
+		canonicalType: reflect.TypeOf("20/80"),
+		parseValue:    parseValueString,
+		parseBytes:    parseBytesString,
+		validate: func(v interface{}) bool {
+			strs := strings.Split(v.(string), "/")
+			if len(strs) != RewardKip82SliceCount {
 				return false
 			}
 			sum := 0
@@ -209,6 +228,7 @@ var govParamTypes = map[int]*govParamType{
 	UnitPrice:                 govParamTypeUint64,
 	MintingAmount:             govParamTypeBigInt,
 	Ratio:                     govParamTypeRatio,
+	Kip82Ratio:                govParamTypeKip82Ratio,
 	UseGiniCoeff:              govParamTypeBool,
 	DeferredTxFee:             govParamTypeBool,
 	MinimumStake:              govParamTypeBigInt,
@@ -219,17 +239,21 @@ var govParamTypes = map[int]*govParamType{
 	GasTarget:                 govParamTypeUint64,
 	MaxBlockGasUsedForBaseFee: govParamTypeUint64,
 	BaseFeeDenominator:        govParamTypeUint64,
+	GovParamContract:          govParamTypeAddress,
+	DeriveShaImpl:             govParamTypeUint64,
 }
 
 var govParamNames = map[string]int{
 	"governance.governancemode":       GovernanceMode,
 	"governance.governingnode":        GoverningNode,
+	"governance.govparamcontract":     GovParamContract,
 	"istanbul.epoch":                  Epoch,
 	"istanbul.policy":                 Policy,
 	"istanbul.committeesize":          CommitteeSize,
 	"governance.unitprice":            UnitPrice,
 	"reward.mintingamount":            MintingAmount,
 	"reward.ratio":                    Ratio,
+	"reward.kip82ratio":               Kip82Ratio,
 	"reward.useginicoeff":             UseGiniCoeff,
 	"reward.deferredtxfee":            DeferredTxFee,
 	"reward.minimumstake":             MinimumStake,
@@ -240,6 +264,7 @@ var govParamNames = map[string]int{
 	"kip71.gastarget":                 GasTarget,
 	"kip71.maxblockgasusedforbasefee": MaxBlockGasUsedForBaseFee,
 	"kip71.basefeedenominator":        BaseFeeDenominator,
+	"governance.deriveshaimpl":        DeriveShaImpl,
 }
 
 var govParamNamesReverse = map[int]string{}
@@ -323,6 +348,19 @@ func NewGovParamSetBytesMap(items map[string][]byte) (*GovParamSet, error) {
 	return p, nil
 }
 
+func NewGovParamSetBytesMapTolerant(items map[string][]byte) *GovParamSet {
+	p := NewGovParamSet()
+
+	for name, value := range items {
+		key, ok := govParamNames[name]
+		if !ok {
+			continue
+		}
+		p.setBytes(key, value) // this may fail but do not care
+	}
+	return p
+}
+
 func NewGovParamSetChainConfig(config *ChainConfig) (*GovParamSet, error) {
 	items := make(map[int]interface{})
 	if config.Istanbul != nil {
@@ -331,14 +369,20 @@ func NewGovParamSetChainConfig(config *ChainConfig) (*GovParamSet, error) {
 		items[CommitteeSize] = config.Istanbul.SubGroupSize
 	}
 	items[UnitPrice] = config.UnitPrice
+	items[DeriveShaImpl] = config.DeriveShaImpl
 	if config.Governance != nil {
 		items[GoverningNode] = config.Governance.GoverningNode
 		items[GovernanceMode] = config.Governance.GovernanceMode
+		items[GovParamContract] = config.Governance.GovParamContract
 		if config.Governance.Reward != nil {
 			if config.Governance.Reward.MintingAmount != nil {
 				items[MintingAmount] = config.Governance.Reward.MintingAmount.String()
 			}
 			items[Ratio] = config.Governance.Reward.Ratio
+			// new parameters can be empty
+			if config.Governance.Reward.Kip82Ratio != "" {
+				items[Kip82Ratio] = config.Governance.Reward.Kip82Ratio
+			}
 			items[UseGiniCoeff] = config.Governance.Reward.UseGiniCoeff
 			items[DeferredTxFee] = config.Governance.Reward.DeferredTxFee
 			items[StakeUpdateInterval] = config.Governance.Reward.StakingUpdateInterval
@@ -346,6 +390,13 @@ func NewGovParamSetChainConfig(config *ChainConfig) (*GovParamSet, error) {
 			if config.Governance.Reward.MinimumStake != nil {
 				items[MinimumStake] = config.Governance.Reward.MinimumStake.String()
 			}
+		}
+		if config.Governance.KIP71 != nil {
+			items[LowerBoundBaseFee] = config.Governance.KIP71.LowerBoundBaseFee
+			items[UpperBoundBaseFee] = config.Governance.KIP71.UpperBoundBaseFee
+			items[GasTarget] = config.Governance.KIP71.GasTarget
+			items[MaxBlockGasUsedForBaseFee] = config.Governance.KIP71.MaxBlockGasUsedForBaseFee
+			items[BaseFeeDenominator] = config.Governance.KIP71.BaseFeeDenominator
 		}
 	}
 
@@ -359,6 +410,8 @@ func (p *GovParamSet) set(key int, value interface{}) error {
 	}
 	parsed, ok := ty.ParseValue(value)
 	if !ok {
+		logger.Error("Bad GovParam value",
+			"key", govParamNamesReverse[key], "value", value)
 		return errBadGovParamValue
 	}
 	p.items[key] = parsed
@@ -372,6 +425,8 @@ func (p *GovParamSet) setBytes(key int, bytes []byte) error {
 	}
 	parsed, ok := ty.ParseBytes(bytes)
 	if !ok {
+		logger.Error("Bad GovParam value",
+			"key", govParamNamesReverse[key], "bytes", hexutil.Encode(bytes))
 		return errBadGovParamValue
 	}
 	p.items[key] = parsed
@@ -411,6 +466,103 @@ func (p *GovParamSet) MustGet(key int) interface{} {
 	}
 }
 
+func (p *GovParamSet) ToIstanbulConfig() *IstanbulConfig {
+	var ret IstanbulConfig
+	if _, ok := p.Get(Epoch); ok {
+		ret.Epoch = p.Epoch()
+	}
+	if _, ok := p.Get(Policy); ok {
+		ret.ProposerPolicy = p.Policy()
+	}
+	if _, ok := p.Get(CommitteeSize); ok {
+		ret.SubGroupSize = p.CommitteeSize()
+	}
+
+	return &ret
+}
+
+func (p *GovParamSet) ToRewardConfig() *RewardConfig {
+	var ret RewardConfig
+	if _, ok := p.Get(MintingAmount); ok {
+		ret.MintingAmount = p.MintingAmountBig()
+	}
+	if _, ok := p.Get(Ratio); ok {
+		ret.Ratio = p.Ratio()
+	}
+	if _, ok := p.Get(Kip82Ratio); ok {
+		ret.Kip82Ratio = p.Kip82Ratio()
+	}
+	if _, ok := p.Get(UseGiniCoeff); ok {
+		ret.UseGiniCoeff = p.UseGiniCoeff()
+	}
+	if _, ok := p.Get(DeferredTxFee); ok {
+		ret.DeferredTxFee = p.DeferredTxFee()
+	}
+	if _, ok := p.Get(StakeUpdateInterval); ok {
+		ret.StakingUpdateInterval = p.StakeUpdateInterval()
+	}
+	if _, ok := p.Get(ProposerRefreshInterval); ok {
+		ret.ProposerUpdateInterval = p.ProposerRefreshInterval()
+	}
+	if _, ok := p.Get(MinimumStake); ok {
+		ret.MinimumStake = p.MinimumStakeBig()
+	}
+
+	return &ret
+}
+
+func (p *GovParamSet) ToKIP71Config() *KIP71Config {
+	var ret KIP71Config
+	if _, ok := p.Get(LowerBoundBaseFee); ok {
+		ret.LowerBoundBaseFee = p.LowerBoundBaseFee()
+	}
+	if _, ok := p.Get(UpperBoundBaseFee); ok {
+		ret.UpperBoundBaseFee = p.UpperBoundBaseFee()
+	}
+	if _, ok := p.Get(GasTarget); ok {
+		ret.GasTarget = p.GasTarget()
+	}
+	if _, ok := p.Get(MaxBlockGasUsedForBaseFee); ok {
+		ret.MaxBlockGasUsedForBaseFee = p.MaxBlockGasUsedForBaseFee()
+	}
+	if _, ok := p.Get(BaseFeeDenominator); ok {
+		ret.BaseFeeDenominator = p.BaseFeeDenominator()
+	}
+
+	return &ret
+}
+
+func (p *GovParamSet) ToGovernanceConfig() *GovernanceConfig {
+	var ret GovernanceConfig
+	if _, ok := p.Get(GoverningNode); ok {
+		ret.GoverningNode = p.GoverningNode()
+	}
+	if _, ok := p.Get(GovernanceMode); ok {
+		ret.GovernanceMode = p.GovernanceModeStr()
+	}
+	if _, ok := p.Get(GovParamContract); ok {
+		ret.GovParamContract = p.GovParamContract()
+	}
+	ret.Reward = p.ToRewardConfig()
+	ret.KIP71 = p.ToKIP71Config()
+
+	return &ret
+}
+
+func (p *GovParamSet) ToChainConfig() *ChainConfig {
+	var ret ChainConfig
+	if _, ok := p.Get(UnitPrice); ok {
+		ret.UnitPrice = p.UnitPrice()
+	}
+	if _, ok := p.Get(DeriveShaImpl); ok {
+		ret.DeriveShaImpl = p.DeriveShaImpl()
+	}
+	ret.Istanbul = p.ToIstanbulConfig()
+	ret.Governance = p.ToGovernanceConfig()
+
+	return &ret
+}
+
 // Nominal getters. Shortcut for MustGet() + type assertion.
 
 func (p *GovParamSet) GovernanceModeStr() string {
@@ -423,6 +575,10 @@ func (p *GovParamSet) GovernanceModeInt() int {
 
 func (p *GovParamSet) GoverningNode() common.Address {
 	return p.MustGet(GoverningNode).(common.Address)
+}
+
+func (p *GovParamSet) GovParamContract() common.Address {
+	return p.MustGet(GovParamContract).(common.Address)
 }
 
 func (p *GovParamSet) Epoch() uint64 {
@@ -454,6 +610,10 @@ func (p *GovParamSet) Ratio() string {
 	return p.MustGet(Ratio).(string)
 }
 
+func (p *GovParamSet) Kip82Ratio() string {
+	return p.MustGet(Kip82Ratio).(string)
+}
+
 func (p *GovParamSet) UseGiniCoeff() bool {
 	return p.MustGet(UseGiniCoeff).(bool)
 }
@@ -481,4 +641,28 @@ func (p *GovParamSet) ProposerRefreshInterval() uint64 {
 
 func (p *GovParamSet) Timeout() uint64 {
 	return p.MustGet(Timeout).(uint64)
+}
+
+func (p *GovParamSet) LowerBoundBaseFee() uint64 {
+	return p.MustGet(LowerBoundBaseFee).(uint64)
+}
+
+func (p *GovParamSet) UpperBoundBaseFee() uint64 {
+	return p.MustGet(UpperBoundBaseFee).(uint64)
+}
+
+func (p *GovParamSet) GasTarget() uint64 {
+	return p.MustGet(GasTarget).(uint64)
+}
+
+func (p *GovParamSet) MaxBlockGasUsedForBaseFee() uint64 {
+	return p.MustGet(MaxBlockGasUsedForBaseFee).(uint64)
+}
+
+func (p *GovParamSet) BaseFeeDenominator() uint64 {
+	return p.MustGet(BaseFeeDenominator).(uint64)
+}
+
+func (p *GovParamSet) DeriveShaImpl() int {
+	return int(p.MustGet(DeriveShaImpl).(uint64))
 }

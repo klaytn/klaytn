@@ -593,7 +593,7 @@ workflows:
             - tagger-verify
           filters: *filter-version-not-release
 
-      - docker/publish:
+      - docker/publish: # for dev branch
           filters:
             branches:
               only: dev
@@ -605,6 +605,23 @@ workflows:
           executor: docker/docker
           use-remote-docker: true
           remote-docker-version: 20.10.14
+          use-buildkit: true
+
+      - docker/publish: # for release versions
+          filters:
+            tags:
+              only: /^v[0-9]+\.[0-9]+\.[0-9]+/
+            branches:
+              ignore: /.*/
+          requires:
+            - pass-tests
+          extra_build_args: '--platform=linux/amd64'
+          image: klaytn/klaytn
+          tag: latest,$CIRCLE_TAG
+          executor: docker/docker
+          use-remote-docker: true
+          remote-docker-version: 20.10.14
+          use-buildkit: true
 
       - tag-verify:
           filters: *filter-only-version-tag
@@ -617,7 +634,11 @@ workflows:
             - packaging-linux-baobab
             - packaging-darwin
             - packaging-darwin-baobab
-          filters: *filter-only-version-tag
+          filters:
+            tags:
+              only: /^v[0-9]+\.[0-9]+\.[0-9]/
+            branches:
+              ignore: /.*/
 
       - release-PR:
           requires:
@@ -657,21 +678,6 @@ workflows:
           filters: *filter-only-version-tag
           requires:
             - pass-tests
-
-      - docker/publish:
-          filters:
-            tags:
-              only: /^v[0-9]+\.[0-9]+\.[0-9]+/
-            branches:
-              ignore: /.*/
-          requires:
-            - pass-tests
-          extra_build_args: '--platform=linux/amd64'
-          image: klaytn/klaytn
-          tag: latest,$CIRCLE_TAG
-          executor: docker/docker
-          use-remote-docker: true
-          remote-docker-version: 20.10.14
 
       - major-tagging:
           filters:

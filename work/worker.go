@@ -36,6 +36,7 @@ import (
 	"github.com/klaytn/klaytn/event"
 	klaytnmetrics "github.com/klaytn/klaytn/metrics"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/rcrowley/go-metrics"
 )
@@ -69,6 +70,7 @@ var (
 	gasLimitReachedTxsGauge = metrics.NewRegisteredGauge("miner/limitreached/gas/txs", nil)
 	strangeErrorTxsCounter  = metrics.NewRegisteredCounter("miner/strangeerror/txs", nil)
 
+	blockBaseFee              = metrics.NewRegisteredGauge("miner/block/mining/basefee", nil)
 	blockMiningTimer          = klaytnmetrics.NewRegisteredHybridTimer("miner/block/mining/time", nil)
 	blockMiningExecuteTxTimer = klaytnmetrics.NewRegisteredHybridTimer("miner/block/execute/time", nil)
 	blockMiningCommitTxTimer  = klaytnmetrics.NewRegisteredHybridTimer("miner/block/commit/time", nil)
@@ -87,6 +89,7 @@ var (
 	snapshotAccountReadTimer = metrics.NewRegisteredTimer("miner/snapshot/account/reads", nil)
 	snapshotStorageReadTimer = metrics.NewRegisteredTimer("miner/snapshot/storage/reads", nil)
 	snapshotCommitTimer      = metrics.NewRegisteredTimer("miner/snapshot/commits", nil)
+	calcDeferredRewardTimer  = metrics.NewRegisteredTimer("reward/distribute/calcdeferredreward", nil)
 )
 
 // Agent can register themself with the worker
@@ -501,7 +504,7 @@ func (self *worker) commitNewWork() {
 		if self.config.IsMagmaForkEnabled(nextBlockNum) {
 			// NOTE-klaytn NextBlockBaseFee needs the header of parent, self.chain.CurrentBlock
 			// So above code, TxPool().Pending(), is separated with this and can be refactored later.
-			nextBaseFee = misc.NextBlockBaseFee(parent.Header(), self.config)
+			nextBaseFee = misc.NextMagmaBlockBaseFee(parent.Header(), self.config.Governance.KIP71)
 			pending = types.FilterTransactionWithBaseFee(pending, nextBaseFee)
 		}
 	}
@@ -578,6 +581,8 @@ func (self *worker) commitNewWork() {
 			snapshotStorageReadTimer.Update(work.state.SnapshotStorageReads)
 			snapshotCommitTimer.Update(work.state.SnapshotCommits)
 
+			calcDeferredRewardTimer.Update(reward.CalcDeferredRewardTimer)
+
 			trieAccess := work.state.AccountReads + work.state.AccountHashes + work.state.AccountUpdates + work.state.AccountCommits
 			trieAccess += work.state.StorageReads + work.state.StorageHashes + work.state.StorageUpdates + work.state.StorageCommits
 
@@ -586,6 +591,9 @@ func (self *worker) commitNewWork() {
 			commitTxTime := finishedCommitTx.Sub(tstart)
 			finalizeTime := finishedFinalize.Sub(finishedCommitTx)
 
+			if header.BaseFee != nil {
+				blockBaseFee.Update(header.BaseFee.Int64() / int64(params.Ston))
+			}
 			blockMiningTimer.Update(blockMiningTime)
 			blockMiningCommitTxTimer.Update(commitTxTime)
 			blockMiningExecuteTxTimer.Update(commitTxTime - trieAccess)
@@ -782,7 +790,7 @@ CommitTransactionLoop:
 func (env *Task) commitTransaction(tx *types.Transaction, bc BlockChain, rewardbase common.Address, vmConfig *vm.Config) (error, []*types.Log) {
 	snap := env.state.Snapshot()
 
-	receipt, _, _, err := bc.ApplyTransaction(env.config, &rewardbase, env.state, env.header, tx, &env.header.GasUsed, vmConfig)
+	receipt, _, err := bc.ApplyTransaction(env.config, &rewardbase, env.state, env.header, tx, &env.header.GasUsed, vmConfig)
 	if err != nil {
 		if err != vm.ErrInsufficientBalance && err != vm.ErrTotalTimeLimitReached {
 			tx.MarkUnexecutable(true)

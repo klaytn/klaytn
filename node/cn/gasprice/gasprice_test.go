@@ -71,6 +71,10 @@ func (b *testBackend) ChainConfig() *params.ChainConfig {
 	return b.chain.Config()
 }
 
+func (b *testBackend) CurrentBlock() *types.Block {
+	return b.chain.CurrentBlock()
+}
+
 func newTestBackend(t *testing.T) *testBackend {
 	var (
 		key, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
@@ -163,6 +167,10 @@ func TestGasPrice_SuggestPrice(t *testing.T) {
 	chainConfig.UnitPrice = 0
 	txPoolWith0 := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, chainConfig, testBackend.chain)
 	oracle := NewOracle(mockBackend, params, txPoolWith0)
+
+	currentBlock := testBackend.CurrentBlock()
+	mockBackend.EXPECT().ChainConfig().Return(chainConfig).Times(2)
+	mockBackend.EXPECT().CurrentBlock().Return(currentBlock).Times(2)
 
 	price, err := oracle.SuggestPrice(nil)
 	assert.Equal(t, price, common.Big0)

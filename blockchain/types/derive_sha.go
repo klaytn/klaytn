@@ -21,8 +21,9 @@
 package types
 
 import (
+	"math/big"
+
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/crypto/sha3"
 )
 
 type DerivableList interface {
@@ -36,76 +37,24 @@ const (
 	ImplDeriveShaConcat
 )
 
-type IDeriveSha interface {
-	DeriveSha(list DerivableList) common.Hash
+var (
+	// EmptyRootHashOriginal is the empty root hash of a state trie,
+	// which is equal to EmptyRootHash with ImplDeriveShaOriginal.
+	EmptyRootHashOriginal = common.HexToHash("0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
+
+	// DeriveSha and EmptyRootHash are populated by derivesha.InitDeriveSha().
+	// DeriveSha is used to calculate TransactionsRoot and ReceiptsRoot.
+	// EmptyRootHash is a transaction/receipt root hash when there is no transaction.
+	DeriveSha     func(list DerivableList, num *big.Int) common.Hash = DeriveShaNone
+	EmptyRootHash func(num *big.Int) common.Hash                     = EmptyRootHashNone
+)
+
+func DeriveShaNone(list DerivableList, num *big.Int) common.Hash {
+	logger.Crit("DeriveSha not initialized")
+	return common.Hash{}
 }
 
-var deriveShaObj IDeriveSha = nil
-
-func InitDeriveSha(i IDeriveSha) {
-	deriveShaObj = i
-
-	// reset EmptyRootHash.
-	EmptyRootHash = DeriveSha(Transactions{})
-}
-
-func DeriveSha(list DerivableList) common.Hash {
-	return deriveShaObj.DeriveSha(list)
-}
-
-// An alternative implementation of DeriveSha()
-// This function generates a hash of `DerivableList` by simulating merkle tree generation
-type DeriveShaSimple struct{}
-
-func (d DeriveShaSimple) DeriveSha(list DerivableList) common.Hash {
-	hasher := sha3.NewKeccak256()
-
-	encoded := make([][]byte, 0, list.Len())
-	for i := 0; i < list.Len(); i++ {
-		hasher.Reset()
-		hasher.Write(list.GetRlp((i)))
-		encoded = append(encoded, hasher.Sum(nil))
-	}
-
-	for len(encoded) > 1 {
-		// make even numbers
-		if len(encoded)%2 == 1 {
-			encoded = append(encoded, encoded[len(encoded)-1])
-		}
-
-		for i := 0; i < len(encoded)/2; i++ {
-			hasher.Reset()
-			hasher.Write(encoded[2*i])
-			hasher.Write(encoded[2*i+1])
-
-			encoded[i] = hasher.Sum(nil)
-		}
-
-		encoded = encoded[0 : len(encoded)/2]
-	}
-
-	if len(encoded) == 0 {
-		hasher.Reset()
-		hasher.Write(nil)
-		return common.BytesToHash(hasher.Sum(nil))
-	}
-
-	return common.BytesToHash(encoded[0])
-}
-
-// An alternative implementation of DeriveSha()
-// This function generates a hash of `DerivableList` as below:
-// 1. make a byte slice by concatenating RLP-encoded items
-// 2. make a hash of the byte slice.
-type DeriveShaConcat struct{}
-
-func (d DeriveShaConcat) DeriveSha(list DerivableList) (hash common.Hash) {
-	hasher := sha3.NewKeccak256()
-
-	for i := 0; i < list.Len(); i++ {
-		hasher.Write(list.GetRlp(i))
-	}
-	hasher.Sum(hash[:0])
-
-	return hash
+func EmptyRootHashNone(num *big.Int) common.Hash {
+	logger.Crit("DeriveSha not initialized")
+	return common.Hash{}
 }

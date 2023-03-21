@@ -21,9 +21,33 @@ import (
 	"testing"
 
 	"github.com/klaytn/klaytn/log"
+	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
 )
+
+type testGovernance struct {
+	p *params.GovParamSet
+}
+
+func newTestGovernance(intMap map[int]interface{}) *testGovernance {
+	p, _ := params.NewGovParamSetIntMap(intMap)
+	return &testGovernance{p}
+}
+
+func newDefaultTestGovernance() *testGovernance {
+	return newTestGovernance(map[int]interface{}{
+		params.Epoch:               604800,
+		params.Policy:              params.WeightedRandom,
+		params.UnitPrice:           25000000000,
+		params.MintingAmount:       "9600000000000000000",
+		params.Ratio:               "34/54/12",
+		params.UseGiniCoeff:        true,
+		params.DeferredTxFee:       true,
+		params.MinimumStake:        "5000000",
+		params.StakeUpdateInterval: 86400,
+	})
+}
 
 type stakingManagerTestCase struct {
 	blockNum    uint64       // Requested num in GetStakingInfo(num)
@@ -63,12 +87,7 @@ func generateStakingManagerTestCases() []stakingManagerTestCase {
 	}
 }
 
-func resetStakingManagerForTest() {
-	GetStakingManager().stakingInfoCache = newStakingInfoCache()
-	GetStakingManager().stakingInfoDB = database.NewMemoryDBManager()
-}
-
-func TestStakingManager_NewStakingManager(t *testing.T) {
+func newStakingManagerForTest(t *testing.T) {
 	// test if nil
 	assert.Nil(t, GetStakingManager())
 	assert.Nil(t, GetStakingInfo(123))
@@ -86,6 +105,21 @@ func TestStakingManager_NewStakingManager(t *testing.T) {
 	assert.Equal(t, stGet, stNew)
 }
 
+func resetStakingManagerForTest(t *testing.T) {
+	sm := GetStakingManager()
+	if sm == nil {
+		newStakingManagerForTest(t)
+		sm = GetStakingManager()
+	}
+
+	sm.stakingInfoCache = newStakingInfoCache()
+	sm.stakingInfoDB = database.NewMemoryDBManager()
+}
+
+func TestStakingManager_NewStakingManager(t *testing.T) {
+	newStakingManagerForTest(t)
+}
+
 // Check that appropriate StakingInfo is returned given various blockNum argument.
 func checkGetStakingInfo(t *testing.T) {
 	for _, testcase := range stakingManagerTestCases {
@@ -100,7 +134,7 @@ func checkGetStakingInfo(t *testing.T) {
 // Check that StakinInfo are loaded from cache
 func TestStakingManager_GetFromCache(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlDebug)
-	resetStakingManagerForTest()
+	resetStakingManagerForTest(t)
 
 	for _, testdata := range stakingManagerTestData {
 		GetStakingManager().stakingInfoCache.add(testdata)
@@ -112,7 +146,7 @@ func TestStakingManager_GetFromCache(t *testing.T) {
 // Check that StakinInfo are loaded from database
 func TestStakingManager_GetFromDB(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlDebug)
-	resetStakingManagerForTest()
+	resetStakingManagerForTest(t)
 
 	for _, testdata := range stakingManagerTestData {
 		AddStakingInfoToDB(testdata)
@@ -124,7 +158,7 @@ func TestStakingManager_GetFromDB(t *testing.T) {
 // Even if Gini was -1 in the cache, GetStakingInfo returns valid Gini
 func TestStakingManager_FillGiniFromCache(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlDebug)
-	resetStakingManagerForTest()
+	resetStakingManagerForTest(t)
 
 	for _, testdata := range stakingManagerTestData {
 		// Insert a modified copy of testdata to cache
@@ -140,7 +174,7 @@ func TestStakingManager_FillGiniFromCache(t *testing.T) {
 // Even if Gini was -1 in the DB, GetStakingInfo returns valid Gini
 func TestStakingManager_FillGiniFromDB(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlDebug)
-	resetStakingManagerForTest()
+	resetStakingManagerForTest(t)
 
 	for _, testdata := range stakingManagerTestData {
 		// Insert a modified copy of testdata to cache

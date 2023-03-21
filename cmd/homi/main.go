@@ -30,6 +30,7 @@ import (
 
 func main() {
 	app := cli.NewApp()
+	app.Action = setup.Gen
 	app.Name = filepath.Base(os.Args[0])
 	app.Author = ""
 	app.Email = ""
@@ -42,8 +43,10 @@ func main() {
 		extra.ExtraCommand,
 	}
 
+	app.Flags = append(app.Flags, setup.HomiFlags...)
 	app.CommandNotFound = nodecmd.CommandNotExist
 	app.OnUsageError = nodecmd.OnUsageError
+	app.Before = setup.BeforeRunHomi
 
 	if err := app.Run(os.Args); err != nil {
 		fmt.Fprintln(os.Stderr, err)

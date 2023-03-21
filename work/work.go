@@ -268,15 +268,6 @@ type BlockChain interface {
 	IsParallelDBWrite() bool
 	IsSenderTxHashIndexingEnabled() bool
 
-	// Used in governance pkg
-	SetProposerPolicy(val uint64)
-	SetUseGiniCoeff(val bool)
-	SetLowerBoundBaseFee(val uint64)
-	SetUpperBoundBaseFee(val uint64)
-	SetGasTarget(val uint64)
-	SetMaxBlockGasUsedForBaseFee(val uint64)
-	SetBaseFeeDenominator(val uint64)
-
 	Processor() blockchain.Processor
 	BadBlocks() ([]blockchain.BadBlockArgs, error)
 	StateAt(root common.Hash) (*state.StateDB, error)
@@ -295,7 +286,7 @@ type BlockChain interface {
 	HasBadBlock(hash common.Hash) bool
 	WriteBlockWithState(block *types.Block, receipts []*types.Receipt, stateDB *state.StateDB) (blockchain.WriteResult, error)
 	PostChainEvents(events []interface{}, logs []*types.Log)
-	ApplyTransaction(config *params.ChainConfig, author *common.Address, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *uint64, cfg *vm.Config) (*types.Receipt, uint64, *vm.InternalTxTrace, error)
+	ApplyTransaction(config *params.ChainConfig, author *common.Address, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *uint64, cfg *vm.Config) (*types.Receipt, *vm.InternalTxTrace, error)
 
 	// State Migration
 	PrepareStateMigration() error

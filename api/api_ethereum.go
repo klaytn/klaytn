@@ -402,7 +402,7 @@ func (api *EthereumAPI) GetProof(ctx context.Context, address common.Address, st
 		return nil, err
 	}
 	storageTrie := state.StorageTrie(address)
-	storageHash := types.EmptyRootHash
+	storageHash := types.EmptyRootHashOriginal
 	codeHash := state.GetCodeHash(address)
 	storageProof := make([]EthStorageResult, len(storageKeys))
 
@@ -611,7 +611,7 @@ func (api *EthereumAPI) Call(ctx context.Context, args EthTransactionArgs, block
 	if rpcGasCap := bcAPI.RPCGasCap(); rpcGasCap != nil {
 		gasCap = rpcGasCap.Uint64()
 	}
-	result, _, status, err := EthDoCall(ctx, bcAPI, args, blockNrOrHash, overrides, localTxExecutionTime, gasCap)
+	result, _, status, err := EthDoCall(ctx, bcAPI, args, blockNrOrHash, overrides, bcAPI.RPCEVMTimeout(), gasCap)
 	if err != nil {
 		return nil, err
 	}
@@ -1109,18 +1109,16 @@ func (args *EthTransactionArgs) setDefaults(ctx context.Context, b Backend) erro
 				)
 				if isMagma {
 					// After Magma hard fork, `gasFeeCap` was set to `baseFee*2` by default.
-					gasFeeCap = new(big.Int).Mul(gasPrice, big.NewInt(2))
+					gasFeeCap = gasPrice
 				}
 				args.MaxFeePerGas = (*hexutil.Big)(gasFeeCap)
 			}
 			if isMagma {
-				if args.MaxFeePerGas.ToInt().Cmp(gasPrice) < 0 {
+				if args.MaxFeePerGas.ToInt().Cmp(new(big.Int).Div(gasPrice, common.Big2)) < 0 {
 					return fmt.Errorf("maxFeePerGas (%v) < BaseFee (%v)", args.MaxFeePerGas, gasPrice)
 				}
-			} else {
-				if args.MaxPriorityFeePerGas.ToInt().Cmp(gasPrice) != 0 || args.MaxFeePerGas.ToInt().Cmp(gasPrice) != 0 {
-					return fmt.Errorf("only %s is allowed to be used as maxFeePerGas and maxPriorityPerGas", gasPrice.Text(16))
-				}
+			} else if args.MaxPriorityFeePerGas.ToInt().Cmp(gasPrice) != 0 || args.MaxFeePerGas.ToInt().Cmp(gasPrice) != 0 {
+				return fmt.Errorf("only %s is allowed to be used as maxFeePerGas and maxPriorityPerGas", gasPrice.Text(16))
 			}
 			if args.MaxFeePerGas.ToInt().Cmp(args.MaxPriorityFeePerGas.ToInt()) < 0 {
 				return fmt.Errorf("maxFeePerGas (%v) < maxPriorityFeePerGas (%v)", args.MaxFeePerGas, args.MaxPriorityFeePerGas)
@@ -1144,7 +1142,7 @@ func (args *EthTransactionArgs) setDefaults(ctx context.Context, b Backend) erro
 	} else {
 		// Both maxPriorityFee and maxFee set by caller. Sanity-check their internal relation
 		if isMagma {
-			if args.MaxFeePerGas.ToInt().Cmp(gasPrice) < 0 {
+			if args.MaxFeePerGas.ToInt().Cmp(new(big.Int).Div(gasPrice, common.Big2)) < 0 {
 				return fmt.Errorf("maxFeePerGas (%v) < BaseFee (%v)", args.MaxFeePerGas, gasPrice)
 			}
 		} else {
@@ -1226,6 +1224,7 @@ func (args *EthTransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int,
 		gas = globalGasCap
 	}
 
+	// Do not update gasPrice unless any of args.GasPrice and args.MaxFeePerGas is specified.
 	gasPrice := new(big.Int)
 	if baseFee.Cmp(new(big.Int).SetUint64(params.ZeroBaseFee)) == 0 {
 		// If there's no basefee, then it must be a non-1559 execution
@@ -1580,11 +1579,19 @@ func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrO
 	if err != nil {
 		return nil, 0, 0, err
 	}
+	var balanceBaseFee *big.Int
+	if header.BaseFee != nil {
+		balanceBaseFee = new(big.Int).Mul(baseFee, common.Big2)
+	} else {
+		balanceBaseFee = msg.GasPrice()
+	}
+	// Add gas fee to sender for estimating gasLimit/computing cost or calling a function by insufficient balance sender.
+	st.AddBalance(msg.ValidatedSender(), new(big.Int).Mul(new(big.Int).SetUint64(msg.Gas()), balanceBaseFee))
+
 	// The intrinsicGas is checked again later in the blockchain.ApplyMessage function,
 	// but we check in advance here in order to keep StateTransition.TransactionDb method as unchanged as possible
 	// and to clarify error reason correctly to serve eth namespace APIs.
 	// This case is handled by EthDoEstimateGas function.
-
 	if msg.Gas() < intrinsicGas {
 		return nil, 0, 0, fmt.Errorf("%w: msg.gas %d, want %d", blockchain.ErrIntrinsicGas, msg.Gas(), intrinsicGas)
 	}

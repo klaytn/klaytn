@@ -119,13 +119,13 @@ func TestBn256GasCost(t *testing.T) {
 	runPrecompiledContractTestWithHFCondition(t, config, []TestData{
 		// Test whether appropriate gas cost is returned
 		// Condition 1. Caller Contract Deploy - before IstanbulCompatible, Call - before istanbulCompatible
-		{"0x006", bn256AddInput, false, Block4, params.Bn256AddGasConstantinople, bn256AddOutput, nil},
-		{"0x007", bn256ScalarMulInput, false, Block4, params.Bn256ScalarMulGasConstantinople, bn256ScalarMulOutput, nil},
-		{"0x008", bn256PairingInput, false, Block4, params.Bn256PairingBaseGasConstantinople + params.Bn256PairingPerPointGasConstantinople*uint64(len(bn256PairingInput)/192), bn256PairingOutput, nil},
+		{"0x006", bn256AddInput, false, Block4, params.Bn256AddGasByzantium, bn256AddOutput, nil},
+		{"0x007", bn256ScalarMulInput, false, Block4, params.Bn256ScalarMulGasByzantium, bn256ScalarMulOutput, nil},
+		{"0x008", bn256PairingInput, false, Block4, params.Bn256PairingBaseGasByzantium + params.Bn256PairingPerPointGasByzantium*uint64(len(bn256PairingInput)/192), bn256PairingOutput, nil},
 		// Condition 2. Caller Contract Deploy - before IstanbulCompatible, Call - after istanbulCompatible
-		{"0x006", bn256AddInput, false, Block5, params.Bn256AddGasConstantinople, bn256AddOutput, nil},
-		{"0x007", bn256ScalarMulInput, false, Block5, params.Bn256ScalarMulGasConstantinople, bn256ScalarMulOutput, nil},
-		{"0x008", bn256PairingInput, false, Block5, params.Bn256PairingBaseGasConstantinople + params.Bn256PairingPerPointGasConstantinople*uint64(len(bn256PairingInput)/192), bn256PairingOutput, nil},
+		{"0x006", bn256AddInput, false, Block5, params.Bn256AddGasByzantium, bn256AddOutput, nil},
+		{"0x007", bn256ScalarMulInput, false, Block5, params.Bn256ScalarMulGasByzantium, bn256ScalarMulOutput, nil},
+		{"0x008", bn256PairingInput, false, Block5, params.Bn256PairingBaseGasByzantium + params.Bn256PairingPerPointGasByzantium*uint64(len(bn256PairingInput)/192), bn256PairingOutput, nil},
 		// Condition 3. Caller Contract Deploy - after IstanbulCompatible, Call - after istanbulCompatible
 		{"0x006", bn256AddInput, true, Block5, params.Bn256AddGasIstanbul, bn256AddOutput, nil},
 		{"0x007", bn256ScalarMulInput, true, Block5, params.Bn256ScalarMulGasIstanbul, bn256ScalarMulOutput, nil},

@@ -167,7 +167,7 @@ func (bcdata *BCData) prepareHeader() (*types.Header, error) {
 		Vote:       common.Hex2Bytes("e194e733cb4d279da696f30d470f8c04decb54fcb0d28565706f6368853330303030"),
 	}
 	if bcdata.bc.Config().IsMagmaForkEnabled(num) {
-		header.BaseFee = misc.NextBlockBaseFee(parent.Header(), bcdata.bc.Config())
+		header.BaseFee = misc.NextMagmaBlockBaseFee(parent.Header(), bcdata.bc.Config().Governance.KIP71)
 	}
 
 	if err := bcdata.engine.Prepare(bcdata.bc, header); err != nil {
@@ -315,10 +315,18 @@ func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockc
 	prof.Profile("main_insert_blockchain", time.Now().Sub(start))
 
 	// Apply reward
-	start = time.Now()
-	if err := bcdata.rewardDistributor.MintKLAY(accountMap, header); err != nil {
+	config := bcdata.bc.Config()
+	rules := config.Rules(bcdata.bc.CurrentHeader().Number)
+	pset, err := params.NewGovParamSetChainConfig(config)
+	if err != nil {
 		return err
 	}
+	start = time.Now()
+	spec, err := reward.CalcDeferredRewardSimple(header, rules, pset)
+	if err != nil {
+		return err
+	}
+	reward.DistributeBlockReward(accountMap, spec.Rewards)
 	prof.Profile("main_apply_reward", time.Now().Sub(start))
 
 	// Verification with accountMap
@@ -380,10 +388,18 @@ func (bcdata *BCData) GenABlockWithTransactions(accountMap *AccountMap, transact
 	prof.Profile("main_insert_blockchain", time.Now().Sub(start))
 
 	// Apply reward
-	start = time.Now()
-	if err := bcdata.rewardDistributor.MintKLAY(accountMap, b.Header()); err != nil {
+	config := bcdata.bc.Config()
+	rules := config.Rules(bcdata.bc.CurrentHeader().Number)
+	pset, err := params.NewGovParamSetChainConfig(config)
+	if err != nil {
 		return err
 	}
+	start = time.Now()
+	spec, err := reward.CalcDeferredRewardSimple(bcdata.bc.CurrentHeader(), rules, pset)
+	if err != nil {
+		return err
+	}
+	reward.DistributeBlockReward(accountMap, spec.Rewards)
 	prof.Profile("main_apply_reward", time.Now().Sub(start))
 
 	// Verification with accountMap
@@ -400,7 +416,7 @@ func (bcdata *BCData) GenABlockWithTransactions(accountMap *AccountMap, transact
 	return nil
 }
 
-////////////////////////////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////////////////////////////
 func NewDatabase(dir string, dbType database.DBType) database.DBManager {
 	if dir == "" {
 		return database.NewMemoryDBManager()

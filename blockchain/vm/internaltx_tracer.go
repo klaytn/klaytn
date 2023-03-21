@@ -24,14 +24,13 @@
 package vm
 
 import (
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
-	"strconv"
 	"sync/atomic"
 	"time"
 
+	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 )
@@ -283,7 +282,7 @@ func (this *InternalTxTracer) step(log *tracerLog) error {
 
 		// Skip any pre-compile invocations, those are just fancy opcodes
 		toAddr := common.HexToAddress(log.stack.Back(1).Text(16))
-		if _, ok := PrecompiledContractsConstantinople[toAddr]; ok {
+		if _, ok := PrecompiledContractsByzantiumCompatible[toAddr]; ok {
 			return nil
 		}
 
@@ -425,10 +424,7 @@ func (this *InternalTxTracer) CaptureEnd(output []byte, gasUsed uint64, t time.D
 }
 
 func (this *InternalTxTracer) GetResult() (*InternalTxTrace, error) {
-	result, err := this.result()
-	if err != nil {
-		this.err = wrapError("result", err)
-	}
+	result := this.result()
 	// Clean up the JavaScript environment
 	this.reset()
 	return result, this.err
@@ -448,7 +444,7 @@ func (this *InternalTxTracer) reset() {
 
 // result is invoked when all the opcodes have been iterated over and returns
 // the final result of the tracing.
-func (this *InternalTxTracer) result() (*InternalTxTrace, error) {
+func (this *InternalTxTracer) result() *InternalTxTrace {
 	if _, exist := this.ctx["type"]; !exist {
 		this.ctx["type"] = ""
 	}
@@ -515,36 +511,18 @@ func (this *InternalTxTracer) result() (*InternalTxTrace, error) {
 	}
 	if err := this.ctx["error"]; err != nil && err.(error).Error() == errEvmExecutionReverted.Error() {
 		outputHex := this.ctx["output"].(string) // it is already a hex string
-		if len(outputHex) >= 11 && outputHex[2:10] == "08c379a0" {
-			defaultOffset := 10
 
-			stringOffset, err := strconv.ParseInt(outputHex[defaultOffset:defaultOffset+32*2], 16, 64)
-			if err != nil {
-				logger.Error("failed to parse hex string to get stringOffset",
-					"err", err, "outputHex", outputHex)
-				return nil, err
-			}
-			stringLength, err := strconv.ParseInt(outputHex[defaultOffset+32*2:defaultOffset+32*2+32*2], 16, 64)
-			if err != nil {
-				logger.Error("failed to parse hex string to get stringLength",
-					"err", err, "outputHex", outputHex)
-				return nil, err
-			}
-			start := defaultOffset + 32*2 + int(stringOffset*2)
-			end := start + int(stringLength*2)
-			asciiInBytes, err := hex.DecodeString(outputHex[start:end])
-			if err != nil {
-				logger.Error("failed to parse hex string to get ASCII representation",
-					"err", err, "outputHex", outputHex)
-				return nil, err
-			}
-			this.revertString = string(asciiInBytes)
+		if s, err := abi.UnpackRevert(common.FromHex(outputHex)); err == nil {
+			this.revertString = s
+		} else {
+			this.revertString = ""
 		}
+
 		contract := this.revertedContract
 		message := this.revertString
 		result.Reverted = &RevertedInfo{Contract: &contract, Message: message}
 	}
-	return result, nil
+	return result
 }
 
 // InternalTxLogs returns the captured tracerLog entries.

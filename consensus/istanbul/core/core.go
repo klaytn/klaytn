@@ -425,7 +425,12 @@ func PrepareCommittedSeal(hash common.Hash) []byte {
 
 // Minimum required number of consensus messages to proceed
 func requiredMessageCount(valSet istanbul.ValidatorSet) int {
-	size := valSet.Size()
+	var size uint64
+	if valSet.IsSubSet() {
+		size = valSet.SubGroupSize()
+	} else {
+		size = valSet.Size()
+	}
 	switch size {
 	// in the certain cases we must receive the messages from all consensus nodes to ensure finality...
 	case 1, 2, 3:

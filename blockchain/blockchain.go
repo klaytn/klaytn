@@ -76,6 +76,7 @@ var (
 	snapshotStorageReadTimer = metrics.NewRegisteredTimer("state/snapshot/storage/reads", nil)
 	snapshotCommitTimer      = metrics.NewRegisteredTimer("state/snapshot/commits", nil)
 
+	blockBaseFee        = metrics.NewRegisteredGauge("chain/basefee", nil)
 	blockInsertTimer    = klaytnmetrics.NewRegisteredHybridTimer("chain/inserts", nil)
 	blockProcessTimer   = klaytnmetrics.NewRegisteredHybridTimer("chain/process", nil)
 	blockExecutionTimer = klaytnmetrics.NewRegisteredHybridTimer("chain/execution", nil)
@@ -129,6 +130,7 @@ type CacheConfig struct {
 	SenderTxHashIndexing bool                         // Enables saving senderTxHash to txHash mapping information to database and cache
 	TrieNodeCacheConfig  *statedb.TrieNodeCacheConfig // Configures trie node cache
 	SnapshotCacheSize    int                          // Memory allowance (MB) to use for caching snapshot entries in memory
+	SnapshotAsyncGen     bool                         // Enables snapshot data generation asynchronously
 }
 
 // gcBlock is used for priority queue for GC.
@@ -152,9 +154,8 @@ type gcBlock struct {
 // included in the canonical one where as GetBlockByNumber always represents the
 // canonical chain.
 type BlockChain struct {
-	chainConfig   *params.ChainConfig // Chain & network configuration
-	chainConfigMu *sync.RWMutex
-	cacheConfig   *CacheConfig // stateDB caching and trie caching/pruning configuration
+	chainConfig *params.ChainConfig // Chain & network configuration
+	cacheConfig *CacheConfig        // stateDB caching and trie caching/pruning configuration
 
 	db      database.DBManager // Low level persistent database to store final content in
 	snaps   *snapshot.Tree     // Snapshot tree for fast trie leaf access
@@ -229,6 +230,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 			TriesInMemory:       DefaultTriesInMemory,
 			TrieNodeCacheConfig: statedb.GetEmptyTrieNodeCacheConfig(),
 			SnapshotCacheSize:   512,
+			SnapshotAsyncGen:    true,
 		}
 	}
 
@@ -238,14 +240,10 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 
 	state.EnabledExpensive = db.GetDBConfig().EnableDBPerfMetrics
 
-	// Initialize DeriveSha implementation
-	InitDeriveSha(chainConfig.DeriveShaImpl)
-
 	futureBlocks, _ := lru.New(maxFutureBlocks)
 
 	bc := &BlockChain{
 		chainConfig:        chainConfig,
-		chainConfigMu:      new(sync.RWMutex),
 		cacheConfig:        cacheConfig,
 		db:                 db,
 		triegc:             prque.New(),
@@ -343,7 +341,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 			logger.Warn("Enabling snapshot recovery", "chainhead", head.NumberU64(), "diskbase", *layer)
 			recover = true
 		}
-		bc.snaps, _ = snapshot.New(bc.db, bc.stateCache.TrieDB(), bc.cacheConfig.SnapshotCacheSize, head.Root(), false, true, recover)
+		bc.snaps, _ = snapshot.New(bc.db, bc.stateCache.TrieDB(), bc.cacheConfig.SnapshotCacheSize, head.Root(), bc.cacheConfig.SnapshotAsyncGen, true, recover)
 	}
 
 	for i := 1; i <= bc.cacheConfig.TrieNodeCacheConfig.NumFetcherPrefetchWorker; i++ {
@@ -428,61 +426,11 @@ func (bc *BlockChain) SetCanonicalBlock(blockNum uint64) {
 }
 
 func (bc *BlockChain) UseGiniCoeff() bool {
-	bc.chainConfigMu.RLock()
-	defer bc.chainConfigMu.RUnlock()
-
 	return bc.chainConfig.Governance.Reward.UseGiniCoeff
 }
 
-func (bc *BlockChain) SetUseGiniCoeff(val bool) {
-	bc.chainConfigMu.Lock()
-	defer bc.chainConfigMu.Unlock()
-
-	bc.chainConfig.Governance.Reward.UseGiniCoeff = val
-}
-
 func (bc *BlockChain) ProposerPolicy() uint64 {
-	bc.chainConfigMu.RLock()
-	defer bc.chainConfigMu.RUnlock()
-
 	return bc.chainConfig.Istanbul.ProposerPolicy
-}
-
-func (bc *BlockChain) SetProposerPolicy(val uint64) {
-	bc.chainConfigMu.Lock()
-	defer bc.chainConfigMu.Unlock()
-
-	bc.chainConfig.Istanbul.ProposerPolicy = val
-}
-
-func (bc *BlockChain) SetLowerBoundBaseFee(val uint64) {
-	bc.chainConfigMu.Lock()
-	defer bc.chainConfigMu.Unlock()
-	bc.chainConfig.Governance.KIP71.LowerBoundBaseFee = val
-}
-
-func (bc *BlockChain) SetUpperBoundBaseFee(val uint64) {
-	bc.chainConfigMu.Lock()
-	defer bc.chainConfigMu.Unlock()
-	bc.chainConfig.Governance.KIP71.UpperBoundBaseFee = val
-}
-
-func (bc *BlockChain) SetGasTarget(val uint64) {
-	bc.chainConfigMu.Lock()
-	defer bc.chainConfigMu.Unlock()
-	bc.chainConfig.Governance.KIP71.GasTarget = val
-}
-
-func (bc *BlockChain) SetMaxBlockGasUsedForBaseFee(val uint64) {
-	bc.chainConfigMu.Lock()
-	defer bc.chainConfigMu.Unlock()
-	bc.chainConfig.Governance.KIP71.MaxBlockGasUsedForBaseFee = val
-}
-
-func (bc *BlockChain) SetBaseFeeDenominator(val uint64) {
-	bc.chainConfigMu.Lock()
-	defer bc.chainConfigMu.Unlock()
-	bc.chainConfig.Governance.KIP71.BaseFeeDenominator = val
 }
 
 func (bc *BlockChain) getProcInterrupt() bool {
@@ -502,9 +450,19 @@ func (bc *BlockChain) loadLastState() error {
 	// Make sure the entire head block is available
 	currentBlock := bc.GetBlockByHash(head)
 	if currentBlock == nil {
-		// Corrupt or empty database, init from scratch
-		logger.Error("Head block missing, resetting chain", "hash", head.String())
-		return bc.Reset()
+		head = bc.db.ReadHeadBlockBackupHash()
+		if head == (common.Hash{}) {
+			// Corrupt or empty database, init from scratch
+			logger.Info("Empty database, resetting chain")
+			return bc.Reset()
+		}
+
+		currentBlock = bc.GetBlockByHash(head)
+		if currentBlock == nil {
+			// Corrupt or empty database, init from scratch
+			logger.Error("Head block missing, resetting chain", "hash", head.String())
+			return bc.Reset()
+		}
 	}
 	// Everything seems to be fine, set as the head block
 	bc.currentBlock.Store(currentBlock)
@@ -524,6 +482,10 @@ func (bc *BlockChain) loadLastState() error {
 	if head := bc.db.ReadHeadFastBlockHash(); head != (common.Hash{}) {
 		if block := bc.GetBlockByHash(head); block != nil {
 			bc.currentFastBlock.Store(block)
+		} else if head := bc.db.ReadHeadFastBlockBackupHash(); head != (common.Hash{}) {
+			if block := bc.GetBlockByHash(head); block != nil {
+				bc.currentFastBlock.Store(block)
+			}
 		}
 	}
 
@@ -1126,7 +1088,8 @@ func (bc *BlockChain) procFutureBlocks() {
 type WriteStatus byte
 
 // TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
-//                  Later we may be able to remove SideStatTy.
+//
+//	Later we may be able to remove SideStatTy.
 const (
 	NonStatTy WriteStatus = iota
 	CanonStatTy
@@ -2023,6 +1986,9 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 				"processTxs", processTxsTime, "finalize", processFinalizeTime, "validateState", validateTime,
 				"totalWrite", writeResult.TotalWriteTime, "trieWrite", writeResult.TrieWriteTime)
 
+			if block.Header().BaseFee != nil {
+				blockBaseFee.Update(block.Header().BaseFee.Int64() / int64(params.Ston))
+			}
 			blockProcessTimer.Update(time.Duration(processTxsTime))
 			blockExecutionTimer.Update(time.Duration(processTxsTime) - trieAccess)
 			blockFinalizeTimer.Update(time.Duration(processFinalizeTime))
@@ -2592,7 +2558,7 @@ func (bc *BlockChain) SaveTrieNodeCacheToDisk() error {
 // and uses the input parameters for its environment. It returns the receipt
 // for the transaction, gas used and an error if the transaction failed,
 // indicating the block was invalid.
-func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *common.Address, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *uint64, vmConfig *vm.Config) (*types.Receipt, uint64, *vm.InternalTxTrace, error) {
+func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *common.Address, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *uint64, vmConfig *vm.Config) (*types.Receipt, *vm.InternalTxTrace, error) {
 	// TODO-Klaytn We reject transactions with unexpected gasPrice and do not put the transaction into TxPool.
 	//         And we run transactions regardless of gasPrice if we push transactions in the TxPool.
 	/*
@@ -2606,12 +2572,12 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 
 	// validation for each transaction before execution
 	if err := tx.Validate(statedb, blockNumber); err != nil {
-		return nil, 0, nil, err
+		return nil, nil, err
 	}
 
 	msg, err := tx.AsMessageWithAccountKeyPicker(types.MakeSigner(chainConfig, header.Number), statedb, blockNumber)
 	if err != nil {
-		return nil, 0, nil, err
+		return nil, nil, err
 	}
 	// Create a new context to be used in the EVM environment
 	context := NewEVMContext(msg, header, bc, author)
@@ -2622,7 +2588,7 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 	_, gas, kerr := ApplyMessage(vmenv, msg)
 	err = kerr.ErrTxInvalid
 	if err != nil {
-		return nil, 0, nil, err
+		return nil, nil, err
 	}
 
 	var internalTrace *vm.InternalTxTrace
@@ -2630,7 +2596,6 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 		internalTrace, err = GetInternalTxTrace(vmConfig.Tracer)
 		if err != nil {
 			logger.Error("failed to get tracing result from a transaction", "txHash", tx.Hash().String(), "err", err)
-			return nil, 0, nil, err
 		}
 	}
 	// Update the state with pending changes
@@ -2644,7 +2609,7 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 	receipt.Logs = statedb.GetLogs(tx.Hash())
 	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
 
-	return receipt, gas, internalTrace, err
+	return receipt, internalTrace, err
 }
 
 func GetInternalTxTrace(tracer vm.Tracer) (*vm.InternalTxTrace, error) {
