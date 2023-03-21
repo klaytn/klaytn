@@ -628,11 +628,13 @@ func Gen(ctx *cli.Context) error {
 			mnemonic = "test test test test test test test test test test test junk"
 		}
 		path := ctx.String(mnemonicPath.Name)
-		switch path {
-		case "klay":
-			path = "m/44'/8217'/0'/0/"
-		default:
-			path = "m/44'/60'/0'/0/"
+		if !strings.HasPrefix(path, "m") {
+			switch path {
+			case "klay":
+				path = "m/44'/8217'/0'/0/"
+			default:
+				path = "m/44'/60'/0'/0/"
+			}
 		}
 		privKeys, nodeKeys, nodeAddrs = istcommon.GenerateKeysFromMnemonic(cnNum, mnemonic, path)
 	}
