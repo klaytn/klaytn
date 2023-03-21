@@ -96,10 +96,10 @@ func GenerateKeysFromMnemonic(num int, mnemonic, path string) (keys []*ecdsa.Pri
 			num := uint64(0)
 			var err error
 			if strings.HasSuffix(level, "'") {
-				num, err = strconv.ParseUint(level[:len(level)-1], 10, 64)
+				num, err = strconv.ParseUint(level[:len(level)-1], 10, 32)
 				num += 0x80000000
 			} else {
-				num, err = strconv.ParseUint(level, 10, 64)
+				num, err = strconv.ParseUint(level, 10, 32)
 			}
 			if err != nil {
 				logger.Error("Failed to parse path", "err", err)
