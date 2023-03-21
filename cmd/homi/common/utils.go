@@ -24,6 +24,8 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
@@ -76,17 +78,39 @@ func GenerateKeys(num int) (keys []*ecdsa.PrivateKey, nodekeys []string, addrs [
 	return keys, nodekeys, addrs
 }
 
-func GenerateKeysFromMnemonic(num int, mnemonic string) (keys []*ecdsa.PrivateKey, nodekeys []string, addrs []common.Address) {
+func GenerateKeysFromMnemonic(num int, mnemonic, path string) (keys []*ecdsa.PrivateKey, nodekeys []string, addrs []common.Address) {
 	// Ethereum key derivation path: m/44'/60'/0'/0/
-	seed := pbkdf2.Key([]byte(mnemonic), []byte("mnemonic"), 2048, 64, sha512.New)
-	mk, _ := bip32.NewMasterKey(seed)
-	m44h, _ := mk.NewChildKey(0x80000000 + 44)
-	m44h_60h, _ := m44h.NewChildKey(0x80000000 + 60)
-	m44h_60h_0h, _ := m44h_60h.NewChildKey(0x80000000)
-	m44h_60h_0h_0, _ := m44h_60h_0h.NewChildKey(0)
+	var (
+		key *bip32.Key
+	)
+
+	for _, level := range strings.Split(path, "/") {
+		if len(level) == 0 {
+			continue
+		}
+
+		if level == "m" {
+			seed := pbkdf2.Key([]byte(mnemonic), []byte("mnemonic"), 2048, 64, sha512.New)
+			key, _ = bip32.NewMasterKey(seed)
+		} else {
+			num := uint64(0)
+			var err error
+			if strings.HasSuffix(level, "'") {
+				num, err = strconv.ParseUint(level[:len(level)-1], 10, 64)
+				num += 0x80000000
+			} else {
+				num, err = strconv.ParseUint(level, 10, 64)
+			}
+			if err != nil {
+				logger.Error("Failed to parse path", "err", err)
+				return nil, nil, nil
+			}
+			key, _ = key.NewChildKey(uint32(num))
+		}
+	}
 
 	for i := 0; i < num; i++ {
-		derived, _ := m44h_60h_0h_0.NewChildKey(uint32(i))
+		derived, _ := key.NewChildKey(uint32(i))
 		nodekey := hexutil.Encode(derived.Key)[2:]
 		nodekeys = append(nodekeys, nodekey)
 

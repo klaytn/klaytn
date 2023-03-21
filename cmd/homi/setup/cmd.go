@@ -78,6 +78,7 @@ var HomiFlags = []cli.Flag{
 	altsrc.NewIntFlag(numOfSENsFlag),
 	altsrc.NewIntFlag(numOfTestKeyFlag),
 	altsrc.NewStringFlag(mnemonic),
+	altsrc.NewStringFlag(mnemonicPath),
 	altsrc.NewUint64Flag(chainIDFlag),
 	altsrc.NewUint64Flag(serviceChainIDFlag),
 	altsrc.NewUint64Flag(unitPriceFlag),
@@ -626,7 +627,14 @@ func Gen(ctx *cli.Context) error {
 		if mnemonic == "test junk" {
 			mnemonic = "test test test test test test test test test test test junk"
 		}
-		privKeys, nodeKeys, nodeAddrs = istcommon.GenerateKeysFromMnemonic(cnNum, mnemonic)
+		path := ctx.String(mnemonicPath.Name)
+		switch path {
+		case "klay":
+			path = "m/44'/8217'/0'/0/"
+		default:
+			path = "m/44'/60'/0'/0/"
+		}
+		privKeys, nodeKeys, nodeAddrs = istcommon.GenerateKeysFromMnemonic(cnNum, mnemonic, path)
 	}
 
 	testPrivKeys, testKeys, testAddrs := istcommon.GenerateKeys(numTestAccs)
