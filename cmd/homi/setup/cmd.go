@@ -627,7 +627,7 @@ func Gen(ctx *cli.Context) error {
 		if mnemonic == "test junk" {
 			mnemonic = "test test test test test test test test test test test junk"
 		}
-		path := ctx.String(mnemonicPath.Name)
+		path := strings.ToLower(ctx.String(mnemonicPath.Name))
 		if !strings.HasPrefix(path, "m") {
 			switch path {
 			case "klay":
