@@ -79,10 +79,7 @@ func GenerateKeys(num int) (keys []*ecdsa.PrivateKey, nodekeys []string, addrs [
 }
 
 func GenerateKeysFromMnemonic(num int, mnemonic, path string) (keys []*ecdsa.PrivateKey, nodekeys []string, addrs []common.Address) {
-	// Ethereum key derivation path: m/44'/60'/0'/0/
-	var (
-		key *bip32.Key
-	)
+	var key *bip32.Key
 
 	for _, level := range strings.Split(path, "/") {
 		if len(level) == 0 {

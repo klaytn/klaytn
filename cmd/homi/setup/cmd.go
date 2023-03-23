@@ -632,8 +632,10 @@ func Gen(ctx *cli.Context) error {
 			switch path {
 			case "klay":
 				path = "m/44'/8217'/0'/0/"
-			default:
+			case "eth":
 				path = "m/44'/60'/0'/0/"
+			default:
+				return fmt.Errorf("invalid mnemonic path (format: m/44'/60'/0'/0/)")
 			}
 		}
 		privKeys, nodeKeys, nodeAddrs = istcommon.GenerateKeysFromMnemonic(cnNum, mnemonic, path)
