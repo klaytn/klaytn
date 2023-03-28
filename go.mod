@@ -48,7 +48,7 @@ require (
 	github.com/prometheus/prometheus v2.1.0+incompatible
 	github.com/prometheus/tsdb v0.10.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20190826022208-cac0b30c2563
-	github.com/rjeczalik/notify v0.9.1
+	github.com/rjeczalik/notify v0.9.3
 	github.com/robertkrimen/otto v0.0.0-20180506084358-03d472dc43ab
 	github.com/rs/cors v1.7.0
 	github.com/satori/go.uuid v1.2.0
