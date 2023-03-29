@@ -139,8 +139,10 @@ func (n *Node) String() string {
 }
 
 // TODO-Klaytn-NodeDiscovery: Deprecate supporting "enode"
-var incompleteNodeURL = regexp.MustCompile("(?i)^(?:kni://|enode://)?([0-9a-f]+)$")
-var lookupIPFunc = net.LookupIP
+var (
+	incompleteNodeURL = regexp.MustCompile("(?i)^(?:kni://|enode://)?([0-9a-f]+)$")
+	lookupIPFunc      = net.LookupIP
+)
 
 // ParseNode parses a node designator.
 //

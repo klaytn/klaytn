@@ -38,7 +38,7 @@ func NewAccountLHWithType(t AccountType) (AccountLH, error) {
 		return newLegacyAccountLH(), nil
 	case ExternallyOwnedAccountType:
 		return newExternallyOwnedAccountLH(), nil
-		//return newExternallyOwnedAccount(), nil
+		// return newExternallyOwnedAccount(), nil
 		// or panic()?
 	case SmartContractAccountType:
 		return newSmartContractAccountLH(), nil
@@ -328,7 +328,7 @@ func (a *ExternallyOwnedAccountLH) String() string { return "Not Implemented" }
 // SmartContractAccount represents a smart contract account containing
 // storage root and code hash.
 type SmartContractAccountLH struct {
-	//aaa *AccountLHCommon
+	// aaa *AccountLHCommon
 	*AccountCommon
 	storageRoot common.Hash // merkle root of the storage trie
 	codeHash    []byte
@@ -338,7 +338,7 @@ type SmartContractAccountLH struct {
 // smartContractAccountSerializable is an internal data structure for RLP serialization.
 // This structure inherits accountCommonSerializable.
 type smartContractAccountLHSerializable struct {
-	//aaa CommonSerializable *accountLHCommonSerializable
+	// aaa CommonSerializable *accountLHCommonSerializable
 	CommonSerializable *accountCommonSerializable
 	StorageRoot        common.Hash
 	CodeHash           []byte
@@ -347,9 +347,9 @@ type smartContractAccountLHSerializable struct {
 
 func newSmartContractAccountLH() *SmartContractAccountLH {
 	return &SmartContractAccountLH{
-		//aaa newAccountLHCommon(),
+		// aaa newAccountLHCommon(),
 		newAccountCommon(),
-		//common.InitExtHash(),
+		// common.InitExtHash(),
 		common.Hash{},
 		emptyCodeHash,
 		params.CodeInfo(0),
@@ -366,7 +366,7 @@ func (sca *SmartContractAccountLH) toSerializable() *smartContractAccountLHSeria
 }
 
 func (sca *SmartContractAccountLH) fromSerializable(o *smartContractAccountLHSerializable) {
-	//aaa sca.AccountLHCommon.fromSerializable(o.CommonSerializable)
+	// aaa sca.AccountLHCommon.fromSerializable(o.CommonSerializable)
 	sca.AccountCommon.fromSerializable(o.CommonSerializable)
 	sca.storageRoot = o.StorageRoot
 	sca.codeHash = o.CodeHash
@@ -379,9 +379,9 @@ func (sca *SmartContractAccountLH) EncodeRLP(w io.Writer) error {
 
 func (sca *SmartContractAccountLH) DecodeRLP(s *rlp.Stream) error {
 	serialized := &smartContractAccountLHSerializable{
-		//aaa newAccountLHCommonSerializable(),
+		// aaa newAccountLHCommonSerializable(),
 		newAccountCommonSerializable(),
-		//common.InitExtHash(),
+		// common.InitExtHash(),
 		common.Hash{},
 		[]byte{},
 		params.CodeInfo(0),
@@ -399,7 +399,7 @@ func (sca *SmartContractAccountLH) DecodeRLP(s *rlp.Stream) error {
 func (a *SmartContractAccountLH) DeepCopy() AccountLH {
 	return &SmartContractAccountLH{
 		AccountCommon: a.AccountCommon.DeepCopy(),
-		//storageRoot:   common.BytesLegacyToExtHash(a.storageRoot.Bytes()),
+		// storageRoot:   common.BytesLegacyToExtHash(a.storageRoot.Bytes()),
 		storageRoot: a.storageRoot,
 		codeHash:    a.codeHash,
 		codeInfo:    a.codeInfo,

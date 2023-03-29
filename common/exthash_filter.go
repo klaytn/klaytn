@@ -23,7 +23,7 @@ func RlpPaddingFilter(src []byte) (reRlp []byte, err error) {
 	for _, v := range obj {
 		reRlp = append(reRlp, v.data...)
 	}
-	//fmt.Printf("\n")
+	// fmt.Printf("\n")
 
 	return reRlp, err
 }
@@ -103,7 +103,6 @@ func rule1parse(src []byte) (reStr []byte, reLen, totalLen int, err error) {
 }
 
 func rule2parse(src []byte) (reStr []byte, reLen int, totalLen int, err error) {
-
 	dataIdx, _, totalLen, err := parseHeader(src, 2)
 	if err != nil {
 		return reStr, reLen, totalLen, err
@@ -115,10 +114,9 @@ func rule2parse(src []byte) (reStr []byte, reLen int, totalLen int, err error) {
 	return reStr, reLen, totalLen, err
 }
 
-//reLen : padding 제거된후 전체 길이
-//totalLen : 원래 전체 길이
+// reLen : padding 제거된후 전체 길이
+// totalLen : 원래 전체 길이
 func rule3parse(src []byte) (reStr []byte, reLen, totalLen int, err error) {
-
 	dataIdx, _, totalLen, err := parseHeader(src, 3)
 	if err != nil {
 		return reStr, reLen, totalLen, err
@@ -172,7 +170,7 @@ func rule4parse(src []byte) (reStr []byte, reLen, totalLen int, err error) {
 
 func rule5parse(src []byte) (reStr []byte, reLen, totalLen int, err error) {
 	var tmpPacket, tmpReStr []byte
-	//var packetList [][]byte
+	// var packetList [][]byte
 	var tmpPacketLen int
 
 	dataIdx, _, totalLen, err := parseHeader(src, 5)
@@ -270,7 +268,7 @@ func makepacket(data []byte, flag int) (packet []byte, packetLen int) {
 	if dataLen <= 55 {
 		if flag == 2 {
 			tmpByte = uint8(0x80 + dataLen)
-		} else { //4
+		} else { // 4
 			tmpByte = uint8(0xc0 + dataLen)
 		}
 		packet = append(packet, tmpByte)
@@ -292,7 +290,7 @@ func makepacket(data []byte, flag int) (packet []byte, packetLen int) {
 		tmpHeaderLen := len(tmpHeader)
 		if flag == 3 {
 			tmpByte = uint8(0xb7 + tmpHeaderLen)
-		} else { //5
+		} else { // 5
 			tmpByte = uint8(0xf7 + tmpHeaderLen)
 		}
 		packet = append(packet, tmpByte)

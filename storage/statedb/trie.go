@@ -625,6 +625,6 @@ func GetHashAndHexKey(key []byte) ([]byte, []byte) {
 	hashKey := h.sha.Sum(hashKeyBuf[:0])
 	returnHasherToPool(h)
 	hexKey := keybytesToHex(hashKey)
-	//hexKey := keybytesToHexMax32(hashKey) // Ethan TC Debug
+	// hexKey := keybytesToHexMax32(hashKey) // Ethan TC Debug
 	return hashKey, hexKey
 }

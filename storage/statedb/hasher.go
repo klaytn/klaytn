@@ -30,7 +30,6 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto/sha3"
 	"github.com/klaytn/klaytn/rlp"
-	//"github.com/klaytn/klaytn/blockchain/types/account"
 )
 
 type hasher struct {
@@ -134,7 +133,7 @@ func (h *hasher) hash(n node, db *Database, force bool) (node, node) {
 	}
 
 	switch hashed.(type) {
-	//case *shortNode:
+	// case *shortNode:
 	case *shortNode, *fullNode:
 		return hashed, cached
 	case hashNode:
@@ -204,7 +203,7 @@ func (h *hasher) hashRoot(n node, db *Database, force bool, extRootFlag bool) (n
 	}
 
 	switch hashed.(type) {
-	//case *shortNode:
+	// case *shortNode:
 	case *shortNode, *fullNode:
 		return hashed, cached
 	case hashNode:

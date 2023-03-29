@@ -636,7 +636,7 @@ func (db *Database) Nodes() []common.ExtHash {
 	db.lock.RLock()
 	defer db.lock.RUnlock()
 
-	var hashes = make([]common.ExtHash, 0, len(db.nodes))
+	hashes := make([]common.ExtHash, 0, len(db.nodes))
 	for hash := range db.nodes {
 		if hash.ToHash() != (common.Hash{}) { // Special case for "root" references/nodes
 			hashes = append(hashes, hash)
@@ -1224,7 +1224,7 @@ func NodeTrace(db *Database, hash common.ExtHash, flag int) (reHash common.ExtHa
 	data, err := db.NodeFromOld(hash)
 	if err != nil || len(data) == 0 {
 		newHash := hash
-		//copy(newHash[common.HashLength:], common.LegacyByte)
+		// copy(newHash[common.HashLength:], common.LegacyByte)
 		copy(newHash[common.HashLength:], common.RootByte)
 		data, err := db.NodeFromOld(newHash)
 		if err != nil && len(data) == 0 {
@@ -1292,5 +1292,5 @@ func NodeTrace(db *Database, hash common.ExtHash, flag int) (reHash common.ExtHa
 		return hash
 	}
 	panic("encode error: " + err.Error())
-	//return reHash
+	// return reHash
 }

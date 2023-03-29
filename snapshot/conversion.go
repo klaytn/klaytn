@@ -323,8 +323,8 @@ func trieGenerate(in chan trieKV, out chan common.ExtHash) {
 	}
 	var root common.ExtHash
 	if db == nil {
-		root = t.Hash() //2.3M_BAD_BLOCK_CODE
-		//root = t.RootHash()
+		root = t.Hash() // 2.3M_BAD_BLOCK_CODE
+		// root = t.RootHash()
 	} else {
 		root, _ = t.Commit(nil, true)
 	}

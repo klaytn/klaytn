@@ -115,7 +115,7 @@ func keybytesToHex(str []byte) []byte {
 }
 
 func keybytesToHexMax32(str []byte) []byte {
-	//if len(str) > 34 {	//2.3M_BAD_BLOCK_CODE
+	// if len(str) > 34 {	//2.3M_BAD_BLOCK_CODE
 	if len(str) > 32 {
 		return keybytesToHex(str[:common.HashLength])
 	} else {

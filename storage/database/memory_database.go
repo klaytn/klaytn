@@ -119,7 +119,6 @@ func (db *MemDB) Get(key []byte) ([]byte, error) {
 
 // Put inserts the given value into the key-value store.
 func (db *MemDB) Put(key []byte, value []byte) error {
-
 	db.lock.Lock()
 	defer db.lock.Unlock()
 	if LogFlag {
@@ -241,7 +240,6 @@ type memBatch struct {
 
 // Put inserts the given value into the batch for later committing.
 func (b *memBatch) Put(key, value []byte) error {
-
 	if LogFlag {
 		fmt.Printf("~mBPUT %x, err\n", key)
 		keyLen := len(key)

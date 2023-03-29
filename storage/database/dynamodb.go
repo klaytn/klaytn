@@ -69,8 +69,10 @@ const (
 )
 
 // batch write
-const WorkerNum = 10
-const itemChanSize = WorkerNum * 2
+const (
+	WorkerNum    = 10
+	itemChanSize = WorkerNum * 2
+)
 
 var (
 	dynamoDBClient    *dynamodb.DynamoDB          // handles dynamoDB connections

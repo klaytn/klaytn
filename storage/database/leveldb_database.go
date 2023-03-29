@@ -41,9 +41,11 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/util"
 )
 
-var OpenFileLimit = 64
-var hexDest1 = hexutil.MustDecode("0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470")
-var hexDest2 = hexutil.MustDecode("0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
+var (
+	OpenFileLimit = 64
+	hexDest1      = hexutil.MustDecode("0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470")
+	hexDest2      = hexutil.MustDecode("0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
+)
 
 type LevelDBCompressionType uint8
 
@@ -313,12 +315,12 @@ func (db *levelDB) get(key []byte) ([]byte, error) {
 	if err != nil {
 		if keyLen == common.ExtHashLength || keyLen == common.HashLength {
 			if bytes.Equal(key[:common.HashLength], hexDest1) || bytes.Equal(key[:common.HashLength], hexDest2) {
-				//if bytes.Equal(key[:common.HashLength], hexDest1) {
+				// if bytes.Equal(key[:common.HashLength], hexDest1) {
 				return []byte(""), nil
 			}
 		}
 		if fmt.Sprintf("%x", key[:5]) != "6800000000" {
-			//debug.PrintStack()
+			// debug.PrintStack()
 			fmt.Printf("~~~~~ GET = %x, err = %s\n", key, err.Error())
 		}
 		if err == leveldb.ErrNotFound {

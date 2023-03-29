@@ -200,7 +200,7 @@ func (db *cachingDB) ContractCode(codeHash common.ExtHash) ([]byte, error) {
 		return code, nil
 	}
 	code := db.db.DiskDB().ReadCode(codeHash)
-	//if len(code) > 0 { // GetNilData
+	// if len(code) > 0 { // GetNilData
 	if code != nil { // GetNilData
 		db.codeCache.Set(codeHash.ToHash().Bytes(), code)
 		db.codeSizeCache.Add(codeHash.ToHash(), len(code))
@@ -223,7 +223,7 @@ func (db *cachingDB) ContractCodeWithPrefix(codeHash common.ExtHash) ([]byte, er
 		return code, nil
 	}
 	code := db.db.DiskDB().ReadCodeWithPrefix(codeHash)
-	//if len(code) > 0 { // GetNilData
+	// if len(code) > 0 { // GetNilData
 	if code != nil { // GetNilData
 		db.codeCache.Set(codeHash.ToHash().Bytes(), code)
 		db.codeSizeCache.Add(codeHash.ToHash(), len(code))

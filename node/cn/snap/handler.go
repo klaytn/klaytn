@@ -324,8 +324,8 @@ func ServiceGetStorageRangesQuery(chain SnapshotReader, req *GetStorageRangesPac
 			limit, req.Limit = common.BytesToHash(req.Limit), nil
 		}
 		// Retrieve the requested state and bail out if non existent
-		it, err := chain.Snapshots().StorageIterator(req.Root.ToRootExtHash(), accountHash.ToRootExtHash(), origin.ToRootExtHash()) //2.3M_BAD_BLOCK_CODE
-		//it, err := chain.Snapshots().StorageIterator(req.Root.ToRootExtHash(), accountHash.LegacyToExtHash(), origin.ToRootExtHash())
+		it, err := chain.Snapshots().StorageIterator(req.Root.ToRootExtHash(), accountHash.ToRootExtHash(), origin.ToRootExtHash()) // 2.3M_BAD_BLOCK_CODE
+		// it, err := chain.Snapshots().StorageIterator(req.Root.ToRootExtHash(), accountHash.LegacyToExtHash(), origin.ToRootExtHash())
 		if err != nil {
 			return nil, nil
 		}

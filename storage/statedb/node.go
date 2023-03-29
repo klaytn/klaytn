@@ -149,8 +149,8 @@ func (n *shortNode) LegacyRLP() (tmp sliceBuffer) {
 	} else if tmpHashNode, ok := n.Val.(hashNode); ok {
 		tmpNode.Val = toHashNode(tmpHashNode[:common.HashLength])
 	} else {
-		tmpNode.Val = tmpValueNode //2.3M_BAD_BLOCK_CODE
-		//tmpNode.Val = n.Val
+		tmpNode.Val = tmpValueNode // 2.3M_BAD_BLOCK_CODE
+		// tmpNode.Val = n.Val
 	}
 
 	if err := rlp.Encode(&tmp, tmpNode); err != nil {
@@ -159,9 +159,9 @@ func (n *shortNode) LegacyRLP() (tmp sliceBuffer) {
 	return tmp
 }
 
-//Consider adding legacyRLP to the interface. However, it is determined that this function is not necessary for all nodes.
-//func (n hashNode) LegacyRLP() (tmp sliceBuffer) { return nil }
-//func (n valueNode) LegacyRLP() (tmp sliceBuffer) { return nil }
+// Consider adding legacyRLP to the interface. However, it is determined that this function is not necessary for all nodes.
+// func (n hashNode) LegacyRLP() (tmp sliceBuffer) { return nil }
+// func (n valueNode) LegacyRLP() (tmp sliceBuffer) { return nil }
 
 func (n *fullNode) fstring(ind string) string {
 	resp := fmt.Sprintf("[\n%s  ", ind)

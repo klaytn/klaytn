@@ -235,9 +235,9 @@ func traceTrie(ctx *cli.Context) error {
 	}
 	trieDB := sdb.Database().TrieDB()
 
-	//reHash := statedb.NodeTrace(trieDB, root.LegacyToExtHash(), 0)
-	//fmt.Printf("reHash = %x\n\n", reHash)
-	//return nil
+	// reHash := statedb.NodeTrace(trieDB, root.LegacyToExtHash(), 0)
+	// fmt.Printf("reHash = %x\n\n", reHash)
+	// return nil
 	// Get root-node childrens to create goroutine by number of childrens
 	children, err := trieDB.NodeChildren(root.ToRootExtHash())
 	if err != nil {

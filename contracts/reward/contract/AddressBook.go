@@ -183,9 +183,7 @@ func (_AddressBook *AddressBookTransactorRaw) Transact(opts *bind.TransactOpts, 
 //
 // Solidity: function CN_NODE_ID_TYPE() constant returns(uint8)
 func (_AddressBook *AddressBookCaller) CNNODEIDTYPE(opts *bind.CallOpts) (uint8, error) {
-	var (
-		ret0 = new(uint8)
-	)
+	ret0 := new(uint8)
 	out := ret0
 	err := _AddressBook.contract.Call(opts, out, "CN_NODE_ID_TYPE")
 	return *ret0, err
@@ -209,9 +207,7 @@ func (_AddressBook *AddressBookCallerSession) CNNODEIDTYPE() (uint8, error) {
 //
 // Solidity: function CN_REWARD_ADDRESS_TYPE() constant returns(uint8)
 func (_AddressBook *AddressBookCaller) CNREWARDADDRESSTYPE(opts *bind.CallOpts) (uint8, error) {
-	var (
-		ret0 = new(uint8)
-	)
+	ret0 := new(uint8)
 	out := ret0
 	err := _AddressBook.contract.Call(opts, out, "CN_REWARD_ADDRESS_TYPE")
 	return *ret0, err
@@ -235,9 +231,7 @@ func (_AddressBook *AddressBookCallerSession) CNREWARDADDRESSTYPE() (uint8, erro
 //
 // Solidity: function CN_STAKING_ADDRESS_TYPE() constant returns(uint8)
 func (_AddressBook *AddressBookCaller) CNSTAKINGADDRESSTYPE(opts *bind.CallOpts) (uint8, error) {
-	var (
-		ret0 = new(uint8)
-	)
+	ret0 := new(uint8)
 	out := ret0
 	err := _AddressBook.contract.Call(opts, out, "CN_STAKING_ADDRESS_TYPE")
 	return *ret0, err
@@ -261,9 +255,7 @@ func (_AddressBook *AddressBookCallerSession) CNSTAKINGADDRESSTYPE() (uint8, err
 //
 // Solidity: function CONTRACT_TYPE() constant returns(string)
 func (_AddressBook *AddressBookCaller) CONTRACTTYPE(opts *bind.CallOpts) (string, error) {
-	var (
-		ret0 = new(string)
-	)
+	ret0 := new(string)
 	out := ret0
 	err := _AddressBook.contract.Call(opts, out, "CONTRACT_TYPE")
 	return *ret0, err
@@ -287,9 +279,7 @@ func (_AddressBook *AddressBookCallerSession) CONTRACTTYPE() (string, error) {
 //
 // Solidity: function KIR_CONTRACT_TYPE() constant returns(uint8)
 func (_AddressBook *AddressBookCaller) KIRCONTRACTTYPE(opts *bind.CallOpts) (uint8, error) {
-	var (
-		ret0 = new(uint8)
-	)
+	ret0 := new(uint8)
 	out := ret0
 	err := _AddressBook.contract.Call(opts, out, "KIR_CONTRACT_TYPE")
 	return *ret0, err
@@ -313,9 +303,7 @@ func (_AddressBook *AddressBookCallerSession) KIRCONTRACTTYPE() (uint8, error) {
 //
 // Solidity: function MAX_ADMIN() constant returns(uint256)
 func (_AddressBook *AddressBookCaller) MAXADMIN(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _AddressBook.contract.Call(opts, out, "MAX_ADMIN")
 	return *ret0, err
@@ -339,9 +327,7 @@ func (_AddressBook *AddressBookCallerSession) MAXADMIN() (*big.Int, error) {
 //
 // Solidity: function MAX_PENDING_REQUEST() constant returns(uint256)
 func (_AddressBook *AddressBookCaller) MAXPENDINGREQUEST(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _AddressBook.contract.Call(opts, out, "MAX_PENDING_REQUEST")
 	return *ret0, err
@@ -365,9 +351,7 @@ func (_AddressBook *AddressBookCallerSession) MAXPENDINGREQUEST() (*big.Int, err
 //
 // Solidity: function ONE_WEEK() constant returns(uint256)
 func (_AddressBook *AddressBookCaller) ONEWEEK(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _AddressBook.contract.Call(opts, out, "ONE_WEEK")
 	return *ret0, err
@@ -391,9 +375,7 @@ func (_AddressBook *AddressBookCallerSession) ONEWEEK() (*big.Int, error) {
 //
 // Solidity: function POC_CONTRACT_TYPE() constant returns(uint8)
 func (_AddressBook *AddressBookCaller) POCCONTRACTTYPE(opts *bind.CallOpts) (uint8, error) {
-	var (
-		ret0 = new(uint8)
-	)
+	ret0 := new(uint8)
 	out := ret0
 	err := _AddressBook.contract.Call(opts, out, "POC_CONTRACT_TYPE")
 	return *ret0, err
@@ -417,9 +399,7 @@ func (_AddressBook *AddressBookCallerSession) POCCONTRACTTYPE() (uint8, error) {
 //
 // Solidity: function TWO_WEEKS() constant returns(uint256)
 func (_AddressBook *AddressBookCaller) TWOWEEKS(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _AddressBook.contract.Call(opts, out, "TWO_WEEKS")
 	return *ret0, err
@@ -443,9 +423,7 @@ func (_AddressBook *AddressBookCallerSession) TWOWEEKS() (*big.Int, error) {
 //
 // Solidity: function VERSION() constant returns(uint256)
 func (_AddressBook *AddressBookCaller) VERSION(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _AddressBook.contract.Call(opts, out, "VERSION")
 	return *ret0, err
@@ -567,9 +545,7 @@ func (_AddressBook *AddressBookCallerSession) GetCnInfo(_cnNodeId common.Address
 //
 // Solidity: function getPendingRequestList() constant returns(bytes32[])
 func (_AddressBook *AddressBookCaller) GetPendingRequestList(opts *bind.CallOpts) ([][32]byte, error) {
-	var (
-		ret0 = new([][32]byte)
-	)
+	ret0 := new([][32]byte)
 	out := ret0
 	err := _AddressBook.contract.Call(opts, out, "getPendingRequestList")
 	return *ret0, err
@@ -697,9 +673,7 @@ func (_AddressBook *AddressBookCallerSession) GetState() ([]common.Address, *big
 //
 // Solidity: function isActivated() constant returns(bool)
 func (_AddressBook *AddressBookCaller) IsActivated(opts *bind.CallOpts) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _AddressBook.contract.Call(opts, out, "isActivated")
 	return *ret0, err
@@ -723,9 +697,7 @@ func (_AddressBook *AddressBookCallerSession) IsActivated() (bool, error) {
 //
 // Solidity: function isConstructed() constant returns(bool)
 func (_AddressBook *AddressBookCaller) IsConstructed(opts *bind.CallOpts) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _AddressBook.contract.Call(opts, out, "isConstructed")
 	return *ret0, err
@@ -749,9 +721,7 @@ func (_AddressBook *AddressBookCallerSession) IsConstructed() (bool, error) {
 //
 // Solidity: function kirContractAddress() constant returns(address)
 func (_AddressBook *AddressBookCaller) KirContractAddress(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _AddressBook.contract.Call(opts, out, "kirContractAddress")
 	return *ret0, err
@@ -775,9 +745,7 @@ func (_AddressBook *AddressBookCallerSession) KirContractAddress() (common.Addre
 //
 // Solidity: function pocContractAddress() constant returns(address)
 func (_AddressBook *AddressBookCaller) PocContractAddress(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _AddressBook.contract.Call(opts, out, "pocContractAddress")
 	return *ret0, err
@@ -801,9 +769,7 @@ func (_AddressBook *AddressBookCallerSession) PocContractAddress() (common.Addre
 //
 // Solidity: function requirement() constant returns(uint256)
 func (_AddressBook *AddressBookCaller) Requirement(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _AddressBook.contract.Call(opts, out, "requirement")
 	return *ret0, err
@@ -827,9 +793,7 @@ func (_AddressBook *AddressBookCallerSession) Requirement() (*big.Int, error) {
 //
 // Solidity: function spareContractAddress() constant returns(address)
 func (_AddressBook *AddressBookCaller) SpareContractAddress(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _AddressBook.contract.Call(opts, out, "spareContractAddress")
 	return *ret0, err
@@ -1408,7 +1372,6 @@ type AddressBookActivateAddressBook struct {
 //
 // Solidity: e ActivateAddressBook()
 func (_AddressBook *AddressBookFilterer) FilterActivateAddressBook(opts *bind.FilterOpts) (*AddressBookActivateAddressBookIterator, error) {
-
 	logs, sub, err := _AddressBook.contract.FilterLogs(opts, "ActivateAddressBook")
 	if err != nil {
 		return nil, err
@@ -1420,7 +1383,6 @@ func (_AddressBook *AddressBookFilterer) FilterActivateAddressBook(opts *bind.Fi
 //
 // Solidity: e ActivateAddressBook()
 func (_AddressBook *AddressBookFilterer) WatchActivateAddressBook(opts *bind.WatchOpts, sink chan<- *AddressBookActivateAddressBook) (event.Subscription, error) {
-
 	logs, sub, err := _AddressBook.contract.WatchLogs(opts, "ActivateAddressBook")
 	if err != nil {
 		return nil, err
@@ -1530,7 +1492,6 @@ type AddressBookAddAdmin struct {
 //
 // Solidity: e AddAdmin(admin indexed address)
 func (_AddressBook *AddressBookFilterer) FilterAddAdmin(opts *bind.FilterOpts, admin []common.Address) (*AddressBookAddAdminIterator, error) {
-
 	var adminRule []interface{}
 	for _, adminItem := range admin {
 		adminRule = append(adminRule, adminItem)
@@ -1547,7 +1508,6 @@ func (_AddressBook *AddressBookFilterer) FilterAddAdmin(opts *bind.FilterOpts, a
 //
 // Solidity: e AddAdmin(admin indexed address)
 func (_AddressBook *AddressBookFilterer) WatchAddAdmin(opts *bind.WatchOpts, sink chan<- *AddressBookAddAdmin, admin []common.Address) (event.Subscription, error) {
-
 	var adminRule []interface{}
 	for _, adminItem := range admin {
 		adminRule = append(adminRule, adminItem)
@@ -1667,7 +1627,6 @@ type AddressBookCancelRequest struct {
 //
 // Solidity: e CancelRequest(id indexed bytes32, from indexed address, functionId uint8, firstArg bytes32, secondArg bytes32, thirdArg bytes32)
 func (_AddressBook *AddressBookFilterer) FilterCancelRequest(opts *bind.FilterOpts, id [][32]byte, from []common.Address) (*AddressBookCancelRequestIterator, error) {
-
 	var idRule []interface{}
 	for _, idItem := range id {
 		idRule = append(idRule, idItem)
@@ -1688,7 +1647,6 @@ func (_AddressBook *AddressBookFilterer) FilterCancelRequest(opts *bind.FilterOp
 //
 // Solidity: e CancelRequest(id indexed bytes32, from indexed address, functionId uint8, firstArg bytes32, secondArg bytes32, thirdArg bytes32)
 func (_AddressBook *AddressBookFilterer) WatchCancelRequest(opts *bind.WatchOpts, sink chan<- *AddressBookCancelRequest, id [][32]byte, from []common.Address) (event.Subscription, error) {
-
 	var idRule []interface{}
 	for _, idItem := range id {
 		idRule = append(idRule, idItem)
@@ -1806,7 +1764,6 @@ type AddressBookClearRequest struct {
 //
 // Solidity: e ClearRequest()
 func (_AddressBook *AddressBookFilterer) FilterClearRequest(opts *bind.FilterOpts) (*AddressBookClearRequestIterator, error) {
-
 	logs, sub, err := _AddressBook.contract.FilterLogs(opts, "ClearRequest")
 	if err != nil {
 		return nil, err
@@ -1818,7 +1775,6 @@ func (_AddressBook *AddressBookFilterer) FilterClearRequest(opts *bind.FilterOpt
 //
 // Solidity: e ClearRequest()
 func (_AddressBook *AddressBookFilterer) WatchClearRequest(opts *bind.WatchOpts, sink chan<- *AddressBookClearRequest) (event.Subscription, error) {
-
 	logs, sub, err := _AddressBook.contract.WatchLogs(opts, "ClearRequest")
 	if err != nil {
 		return nil, err
@@ -1928,7 +1884,6 @@ type AddressBookDeleteAdmin struct {
 //
 // Solidity: e DeleteAdmin(admin indexed address)
 func (_AddressBook *AddressBookFilterer) FilterDeleteAdmin(opts *bind.FilterOpts, admin []common.Address) (*AddressBookDeleteAdminIterator, error) {
-
 	var adminRule []interface{}
 	for _, adminItem := range admin {
 		adminRule = append(adminRule, adminItem)
@@ -1945,7 +1900,6 @@ func (_AddressBook *AddressBookFilterer) FilterDeleteAdmin(opts *bind.FilterOpts
 //
 // Solidity: e DeleteAdmin(admin indexed address)
 func (_AddressBook *AddressBookFilterer) WatchDeleteAdmin(opts *bind.WatchOpts, sink chan<- *AddressBookDeleteAdmin, admin []common.Address) (event.Subscription, error) {
-
 	var adminRule []interface{}
 	for _, adminItem := range admin {
 		adminRule = append(adminRule, adminItem)
@@ -2062,7 +2016,6 @@ type AddressBookDeployContract struct {
 //
 // Solidity: e DeployContract(contractType string, adminList address[], requirement uint256)
 func (_AddressBook *AddressBookFilterer) FilterDeployContract(opts *bind.FilterOpts) (*AddressBookDeployContractIterator, error) {
-
 	logs, sub, err := _AddressBook.contract.FilterLogs(opts, "DeployContract")
 	if err != nil {
 		return nil, err
@@ -2074,7 +2027,6 @@ func (_AddressBook *AddressBookFilterer) FilterDeployContract(opts *bind.FilterO
 //
 // Solidity: e DeployContract(contractType string, adminList address[], requirement uint256)
 func (_AddressBook *AddressBookFilterer) WatchDeployContract(opts *bind.WatchOpts, sink chan<- *AddressBookDeployContract) (event.Subscription, error) {
-
 	logs, sub, err := _AddressBook.contract.WatchLogs(opts, "DeployContract")
 	if err != nil {
 		return nil, err
@@ -2189,7 +2141,6 @@ type AddressBookExecuteRequestFailure struct {
 //
 // Solidity: e ExecuteRequestFailure(id indexed bytes32, from indexed address, functionId uint8, firstArg bytes32, secondArg bytes32, thirdArg bytes32)
 func (_AddressBook *AddressBookFilterer) FilterExecuteRequestFailure(opts *bind.FilterOpts, id [][32]byte, from []common.Address) (*AddressBookExecuteRequestFailureIterator, error) {
-
 	var idRule []interface{}
 	for _, idItem := range id {
 		idRule = append(idRule, idItem)
@@ -2210,7 +2161,6 @@ func (_AddressBook *AddressBookFilterer) FilterExecuteRequestFailure(opts *bind.
 //
 // Solidity: e ExecuteRequestFailure(id indexed bytes32, from indexed address, functionId uint8, firstArg bytes32, secondArg bytes32, thirdArg bytes32)
 func (_AddressBook *AddressBookFilterer) WatchExecuteRequestFailure(opts *bind.WatchOpts, sink chan<- *AddressBookExecuteRequestFailure, id [][32]byte, from []common.Address) (event.Subscription, error) {
-
 	var idRule []interface{}
 	for _, idItem := range id {
 		idRule = append(idRule, idItem)
@@ -2334,7 +2284,6 @@ type AddressBookExecuteRequestSuccess struct {
 //
 // Solidity: e ExecuteRequestSuccess(id indexed bytes32, from indexed address, functionId uint8, firstArg bytes32, secondArg bytes32, thirdArg bytes32)
 func (_AddressBook *AddressBookFilterer) FilterExecuteRequestSuccess(opts *bind.FilterOpts, id [][32]byte, from []common.Address) (*AddressBookExecuteRequestSuccessIterator, error) {
-
 	var idRule []interface{}
 	for _, idItem := range id {
 		idRule = append(idRule, idItem)
@@ -2355,7 +2304,6 @@ func (_AddressBook *AddressBookFilterer) FilterExecuteRequestSuccess(opts *bind.
 //
 // Solidity: e ExecuteRequestSuccess(id indexed bytes32, from indexed address, functionId uint8, firstArg bytes32, secondArg bytes32, thirdArg bytes32)
 func (_AddressBook *AddressBookFilterer) WatchExecuteRequestSuccess(opts *bind.WatchOpts, sink chan<- *AddressBookExecuteRequestSuccess, id [][32]byte, from []common.Address) (event.Subscription, error) {
-
 	var idRule []interface{}
 	for _, idItem := range id {
 		idRule = append(idRule, idItem)
@@ -2480,7 +2428,6 @@ type AddressBookExpiredRequest struct {
 //
 // Solidity: e ExpiredRequest(id indexed bytes32, from indexed address, functionId uint8, firstArg bytes32, secondArg bytes32, thirdArg bytes32, confirmers address[])
 func (_AddressBook *AddressBookFilterer) FilterExpiredRequest(opts *bind.FilterOpts, id [][32]byte, from []common.Address) (*AddressBookExpiredRequestIterator, error) {
-
 	var idRule []interface{}
 	for _, idItem := range id {
 		idRule = append(idRule, idItem)
@@ -2501,7 +2448,6 @@ func (_AddressBook *AddressBookFilterer) FilterExpiredRequest(opts *bind.FilterO
 //
 // Solidity: e ExpiredRequest(id indexed bytes32, from indexed address, functionId uint8, firstArg bytes32, secondArg bytes32, thirdArg bytes32, confirmers address[])
 func (_AddressBook *AddressBookFilterer) WatchExpiredRequest(opts *bind.WatchOpts, sink chan<- *AddressBookExpiredRequest, id [][32]byte, from []common.Address) (event.Subscription, error) {
-
 	var idRule []interface{}
 	for _, idItem := range id {
 		idRule = append(idRule, idItem)
@@ -2622,7 +2568,6 @@ type AddressBookRegisterCnStakingContract struct {
 //
 // Solidity: e RegisterCnStakingContract(cnNodeId address, cnStakingContractAddress address, cnRewardAddress address)
 func (_AddressBook *AddressBookFilterer) FilterRegisterCnStakingContract(opts *bind.FilterOpts) (*AddressBookRegisterCnStakingContractIterator, error) {
-
 	logs, sub, err := _AddressBook.contract.FilterLogs(opts, "RegisterCnStakingContract")
 	if err != nil {
 		return nil, err
@@ -2634,7 +2579,6 @@ func (_AddressBook *AddressBookFilterer) FilterRegisterCnStakingContract(opts *b
 //
 // Solidity: e RegisterCnStakingContract(cnNodeId address, cnStakingContractAddress address, cnRewardAddress address)
 func (_AddressBook *AddressBookFilterer) WatchRegisterCnStakingContract(opts *bind.WatchOpts, sink chan<- *AddressBookRegisterCnStakingContract) (event.Subscription, error) {
-
 	logs, sub, err := _AddressBook.contract.WatchLogs(opts, "RegisterCnStakingContract")
 	if err != nil {
 		return nil, err
@@ -2746,7 +2690,6 @@ type AddressBookReviseRewardAddress struct {
 //
 // Solidity: e ReviseRewardAddress(cnNodeId address, prevRewardAddress address, curRewardAddress address)
 func (_AddressBook *AddressBookFilterer) FilterReviseRewardAddress(opts *bind.FilterOpts) (*AddressBookReviseRewardAddressIterator, error) {
-
 	logs, sub, err := _AddressBook.contract.FilterLogs(opts, "ReviseRewardAddress")
 	if err != nil {
 		return nil, err
@@ -2758,7 +2701,6 @@ func (_AddressBook *AddressBookFilterer) FilterReviseRewardAddress(opts *bind.Fi
 //
 // Solidity: e ReviseRewardAddress(cnNodeId address, prevRewardAddress address, curRewardAddress address)
 func (_AddressBook *AddressBookFilterer) WatchReviseRewardAddress(opts *bind.WatchOpts, sink chan<- *AddressBookReviseRewardAddress) (event.Subscription, error) {
-
 	logs, sub, err := _AddressBook.contract.WatchLogs(opts, "ReviseRewardAddress")
 	if err != nil {
 		return nil, err
@@ -2874,7 +2816,6 @@ type AddressBookRevokeRequest struct {
 //
 // Solidity: e RevokeRequest(id indexed bytes32, from indexed address, functionId uint8, firstArg bytes32, secondArg bytes32, thirdArg bytes32, confirmers address[])
 func (_AddressBook *AddressBookFilterer) FilterRevokeRequest(opts *bind.FilterOpts, id [][32]byte, from []common.Address) (*AddressBookRevokeRequestIterator, error) {
-
 	var idRule []interface{}
 	for _, idItem := range id {
 		idRule = append(idRule, idItem)
@@ -2895,7 +2836,6 @@ func (_AddressBook *AddressBookFilterer) FilterRevokeRequest(opts *bind.FilterOp
 //
 // Solidity: e RevokeRequest(id indexed bytes32, from indexed address, functionId uint8, firstArg bytes32, secondArg bytes32, thirdArg bytes32, confirmers address[])
 func (_AddressBook *AddressBookFilterer) WatchRevokeRequest(opts *bind.WatchOpts, sink chan<- *AddressBookRevokeRequest, id [][32]byte, from []common.Address) (event.Subscription, error) {
-
 	var idRule []interface{}
 	for _, idItem := range id {
 		idRule = append(idRule, idItem)
@@ -3020,7 +2960,6 @@ type AddressBookSubmitRequest struct {
 //
 // Solidity: e SubmitRequest(id indexed bytes32, from indexed address, functionId uint8, firstArg bytes32, secondArg bytes32, thirdArg bytes32, confirmers address[])
 func (_AddressBook *AddressBookFilterer) FilterSubmitRequest(opts *bind.FilterOpts, id [][32]byte, from []common.Address) (*AddressBookSubmitRequestIterator, error) {
-
 	var idRule []interface{}
 	for _, idItem := range id {
 		idRule = append(idRule, idItem)
@@ -3041,7 +2980,6 @@ func (_AddressBook *AddressBookFilterer) FilterSubmitRequest(opts *bind.FilterOp
 //
 // Solidity: e SubmitRequest(id indexed bytes32, from indexed address, functionId uint8, firstArg bytes32, secondArg bytes32, thirdArg bytes32, confirmers address[])
 func (_AddressBook *AddressBookFilterer) WatchSubmitRequest(opts *bind.WatchOpts, sink chan<- *AddressBookSubmitRequest, id [][32]byte, from []common.Address) (event.Subscription, error) {
-
 	var idRule []interface{}
 	for _, idItem := range id {
 		idRule = append(idRule, idItem)
@@ -3160,7 +3098,6 @@ type AddressBookUnregisterCnStakingContract struct {
 //
 // Solidity: e UnregisterCnStakingContract(cnNodeId address)
 func (_AddressBook *AddressBookFilterer) FilterUnregisterCnStakingContract(opts *bind.FilterOpts) (*AddressBookUnregisterCnStakingContractIterator, error) {
-
 	logs, sub, err := _AddressBook.contract.FilterLogs(opts, "UnregisterCnStakingContract")
 	if err != nil {
 		return nil, err
@@ -3172,7 +3109,6 @@ func (_AddressBook *AddressBookFilterer) FilterUnregisterCnStakingContract(opts 
 //
 // Solidity: e UnregisterCnStakingContract(cnNodeId address)
 func (_AddressBook *AddressBookFilterer) WatchUnregisterCnStakingContract(opts *bind.WatchOpts, sink chan<- *AddressBookUnregisterCnStakingContract) (event.Subscription, error) {
-
 	logs, sub, err := _AddressBook.contract.WatchLogs(opts, "UnregisterCnStakingContract")
 	if err != nil {
 		return nil, err
@@ -3285,7 +3221,6 @@ type AddressBookUpdateKirContract struct {
 //
 // Solidity: e UpdateKirContract(prevKirContractAddress address, prevVersion uint256, curKirContractAddress address, curVersion uint256)
 func (_AddressBook *AddressBookFilterer) FilterUpdateKirContract(opts *bind.FilterOpts) (*AddressBookUpdateKirContractIterator, error) {
-
 	logs, sub, err := _AddressBook.contract.FilterLogs(opts, "UpdateKirContract")
 	if err != nil {
 		return nil, err
@@ -3297,7 +3232,6 @@ func (_AddressBook *AddressBookFilterer) FilterUpdateKirContract(opts *bind.Filt
 //
 // Solidity: e UpdateKirContract(prevKirContractAddress address, prevVersion uint256, curKirContractAddress address, curVersion uint256)
 func (_AddressBook *AddressBookFilterer) WatchUpdateKirContract(opts *bind.WatchOpts, sink chan<- *AddressBookUpdateKirContract) (event.Subscription, error) {
-
 	logs, sub, err := _AddressBook.contract.WatchLogs(opts, "UpdateKirContract")
 	if err != nil {
 		return nil, err
@@ -3410,7 +3344,6 @@ type AddressBookUpdatePocContract struct {
 //
 // Solidity: e UpdatePocContract(prevPocContractAddress address, prevVersion uint256, curPocContractAddress address, curVersion uint256)
 func (_AddressBook *AddressBookFilterer) FilterUpdatePocContract(opts *bind.FilterOpts) (*AddressBookUpdatePocContractIterator, error) {
-
 	logs, sub, err := _AddressBook.contract.FilterLogs(opts, "UpdatePocContract")
 	if err != nil {
 		return nil, err
@@ -3422,7 +3355,6 @@ func (_AddressBook *AddressBookFilterer) FilterUpdatePocContract(opts *bind.Filt
 //
 // Solidity: e UpdatePocContract(prevPocContractAddress address, prevVersion uint256, curPocContractAddress address, curVersion uint256)
 func (_AddressBook *AddressBookFilterer) WatchUpdatePocContract(opts *bind.WatchOpts, sink chan<- *AddressBookUpdatePocContract) (event.Subscription, error) {
-
 	logs, sub, err := _AddressBook.contract.WatchLogs(opts, "UpdatePocContract")
 	if err != nil {
 		return nil, err
@@ -3532,7 +3464,6 @@ type AddressBookUpdateRequirement struct {
 //
 // Solidity: e UpdateRequirement(requirement uint256)
 func (_AddressBook *AddressBookFilterer) FilterUpdateRequirement(opts *bind.FilterOpts) (*AddressBookUpdateRequirementIterator, error) {
-
 	logs, sub, err := _AddressBook.contract.FilterLogs(opts, "UpdateRequirement")
 	if err != nil {
 		return nil, err
@@ -3544,7 +3475,6 @@ func (_AddressBook *AddressBookFilterer) FilterUpdateRequirement(opts *bind.Filt
 //
 // Solidity: e UpdateRequirement(requirement uint256)
 func (_AddressBook *AddressBookFilterer) WatchUpdateRequirement(opts *bind.WatchOpts, sink chan<- *AddressBookUpdateRequirement) (event.Subscription, error) {
-
 	logs, sub, err := _AddressBook.contract.WatchLogs(opts, "UpdateRequirement")
 	if err != nil {
 		return nil, err
@@ -3654,7 +3584,6 @@ type AddressBookUpdateSpareContract struct {
 //
 // Solidity: e UpdateSpareContract(spareContractAddress address)
 func (_AddressBook *AddressBookFilterer) FilterUpdateSpareContract(opts *bind.FilterOpts) (*AddressBookUpdateSpareContractIterator, error) {
-
 	logs, sub, err := _AddressBook.contract.FilterLogs(opts, "UpdateSpareContract")
 	if err != nil {
 		return nil, err
@@ -3666,7 +3595,6 @@ func (_AddressBook *AddressBookFilterer) FilterUpdateSpareContract(opts *bind.Fi
 //
 // Solidity: e UpdateSpareContract(spareContractAddress address)
 func (_AddressBook *AddressBookFilterer) WatchUpdateSpareContract(opts *bind.WatchOpts, sink chan<- *AddressBookUpdateSpareContract) (event.Subscription, error) {
-
 	logs, sub, err := _AddressBook.contract.WatchLogs(opts, "UpdateSpareContract")
 	if err != nil {
 		return nil, err
@@ -3867,9 +3795,7 @@ func (_CnStakingContractInterface *CnStakingContractInterfaceTransactorRaw) Tran
 //
 // Solidity: function isInitialized() constant returns(bool)
 func (_CnStakingContractInterface *CnStakingContractInterfaceCaller) IsInitialized(opts *bind.CallOpts) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _CnStakingContractInterface.contract.Call(opts, out, "isInitialized")
 	return *ret0, err
@@ -3893,9 +3819,7 @@ func (_CnStakingContractInterface *CnStakingContractInterfaceCallerSession) IsIn
 //
 // Solidity: function nodeId() constant returns(address)
 func (_CnStakingContractInterface *CnStakingContractInterfaceCaller) NodeId(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _CnStakingContractInterface.contract.Call(opts, out, "nodeId")
 	return *ret0, err
@@ -3919,9 +3843,7 @@ func (_CnStakingContractInterface *CnStakingContractInterfaceCallerSession) Node
 //
 // Solidity: function rewardAddress() constant returns(address)
 func (_CnStakingContractInterface *CnStakingContractInterfaceCaller) RewardAddress(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _CnStakingContractInterface.contract.Call(opts, out, "rewardAddress")
 	return *ret0, err
@@ -4109,9 +4031,7 @@ func (_KirContractInterface *KirContractInterfaceTransactorRaw) Transact(opts *b
 //
 // Solidity: function getKirVersion() constant returns(uint256)
 func (_KirContractInterface *KirContractInterfaceCaller) GetKirVersion(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _KirContractInterface.contract.Call(opts, out, "getKirVersion")
 	return *ret0, err
@@ -4299,9 +4219,7 @@ func (_PocContractInterface *PocContractInterfaceTransactorRaw) Transact(opts *b
 //
 // Solidity: function getPocVersion() constant returns(uint256)
 func (_PocContractInterface *PocContractInterfaceCaller) GetPocVersion(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _PocContractInterface.contract.Call(opts, out, "getPocVersion")
 	return *ret0, err

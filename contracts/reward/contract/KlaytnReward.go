@@ -181,9 +181,7 @@ func (_KlaytnReward *KlaytnRewardTransactorRaw) Transact(opts *bind.TransactOpts
 //
 // Solidity: function balanceOf( address) constant returns(uint256)
 func (_KlaytnReward *KlaytnRewardCaller) BalanceOf(opts *bind.CallOpts, arg0 common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _KlaytnReward.contract.Call(opts, out, "balanceOf", arg0)
 	return *ret0, err
@@ -207,9 +205,7 @@ func (_KlaytnReward *KlaytnRewardCallerSession) BalanceOf(arg0 common.Address) (
 //
 // Solidity: function totalAmount() constant returns(uint256)
 func (_KlaytnReward *KlaytnRewardCaller) TotalAmount(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _KlaytnReward.contract.Call(opts, out, "totalAmount")
 	return *ret0, err

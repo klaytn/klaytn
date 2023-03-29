@@ -2030,10 +2030,10 @@ func (s *Syncer) processStorageResponse(res *storageResponse) {
 		// outdated during the sync, but it can be fixed later during the
 		// snapshot generation.
 		for j := 0; j < len(res.hashes[i]); j++ {
-			batch.WriteStorageSnapshot(accountHash.ToRootExtHash(), res.hashes[i][j].ToRootExtHash(), res.slots[i][j]) //2.3M_BAD_BLOCK_CODE
-			//batch.WriteStorageSnapshot(accountHash.LegacyToExtHash(), res.hashes[i][j].ToRootExtHash(), res.slots[i][j])
-			s.storageBytes += common.StorageSize(len(database.StorageSnapshotKey(accountHash.ToRootExtHash(), res.hashes[i][j].ToRootExtHash())) + len(res.slots[i][j])) //2.3M_BAD_BLOCK_CODE
-			//s.storageBytes += common.StorageSize(len(database.StorageSnapshotKey(accountHash.LegacyToExtHash(), res.hashes[i][j].ToRootExtHash())) + len(res.slots[i][j]))
+			batch.WriteStorageSnapshot(accountHash.ToRootExtHash(), res.hashes[i][j].ToRootExtHash(), res.slots[i][j]) // 2.3M_BAD_BLOCK_CODE
+			// batch.WriteStorageSnapshot(accountHash.LegacyToExtHash(), res.hashes[i][j].ToRootExtHash(), res.slots[i][j])
+			s.storageBytes += common.StorageSize(len(database.StorageSnapshotKey(accountHash.ToRootExtHash(), res.hashes[i][j].ToRootExtHash())) + len(res.slots[i][j])) // 2.3M_BAD_BLOCK_CODE
+			// s.storageBytes += common.StorageSize(len(database.StorageSnapshotKey(accountHash.LegacyToExtHash(), res.hashes[i][j].ToRootExtHash())) + len(res.slots[i][j]))
 
 			// If we're storing large contracts, generate the trie nodes
 			// on the fly to not trash the gluing points

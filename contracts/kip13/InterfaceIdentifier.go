@@ -183,9 +183,7 @@ func (_InterfaceIdentifier *InterfaceIdentifierTransactorRaw) Transact(opts *bin
 //
 // Solidity: function supportsInterface(bytes4 interfaceID) view returns(bool)
 func (_InterfaceIdentifier *InterfaceIdentifierCaller) SupportsInterface(opts *bind.CallOpts, interfaceID [4]byte) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _InterfaceIdentifier.contract.Call(opts, out, "supportsInterface", interfaceID)
 	return *ret0, err

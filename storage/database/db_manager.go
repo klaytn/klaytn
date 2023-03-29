@@ -21,14 +21,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"github.com/dgraph-io/badger"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/rlp"
-	"github.com/pkg/errors"
-	"github.com/syndtr/goleveldb/leveldb"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -37,6 +29,15 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/dgraph-io/badger"
+	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/log"
+	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/rlp"
+	"github.com/pkg/errors"
+	"github.com/syndtr/goleveldb/leveldb"
 )
 
 var (
@@ -2311,45 +2312,45 @@ func (dbm *databaseManager) DeleteSnapshotRoot() {
 // ReadAccountSnapshot retrieves the snapshot entry of an account trie leaf.
 func (dbm *databaseManager) ReadAccountSnapshot(hash common.ExtHash) []byte {
 	db := dbm.getDatabase(SnapshotDB)
-	data, _ := db.Get(AccountSnapshotKey(hash)) //2.3M_BAD_BLOCK_CODE
-	//data, _ := db.Get(AccountSnapshotKey(hash.ToLegacy()))
+	data, _ := db.Get(AccountSnapshotKey(hash)) // 2.3M_BAD_BLOCK_CODE
+	// data, _ := db.Get(AccountSnapshotKey(hash.ToLegacy()))
 	return data
 }
 
 // WriteAccountSnapshot stores the snapshot entry of an account trie leaf.
 func (dbm *databaseManager) WriteAccountSnapshot(hash common.ExtHash, entry []byte) {
 	db := dbm.getDatabase(SnapshotDB)
-	writeAccountSnapshot(db, hash, entry) //2.3M_BAD_BLOCK_CODE
-	//writeAccountSnapshot(db, hash.ToLegacy(), entry)
+	writeAccountSnapshot(db, hash, entry) // 2.3M_BAD_BLOCK_CODE
+	// writeAccountSnapshot(db, hash.ToLegacy(), entry)
 }
 
 // DeleteAccountSnapshot removes the snapshot entry of an account trie leaf.
 func (dbm *databaseManager) DeleteAccountSnapshot(hash common.ExtHash) {
 	db := dbm.getDatabase(SnapshotDB)
-	deleteAccountSnapshot(db, hash) //2.3M_BAD_BLOCK_CODE
-	//deleteAccountSnapshot(db, hash.ToLegacy())
+	deleteAccountSnapshot(db, hash) // 2.3M_BAD_BLOCK_CODE
+	// deleteAccountSnapshot(db, hash.ToLegacy())
 }
 
 // ReadStorageSnapshot retrieves the snapshot entry of an storage trie leaf.
 func (dbm *databaseManager) ReadStorageSnapshot(accountHash, storageHash common.ExtHash) []byte {
 	db := dbm.getDatabase(SnapshotDB)
-	data, _ := db.Get(StorageSnapshotKey(accountHash, storageHash)) //2.3M_BAD_BLOCK_CODE
-	//data, _ := db.Get(StorageSnapshotKey(accountHash.ToLegacy(), storageHash))
+	data, _ := db.Get(StorageSnapshotKey(accountHash, storageHash)) // 2.3M_BAD_BLOCK_CODE
+	// data, _ := db.Get(StorageSnapshotKey(accountHash.ToLegacy(), storageHash))
 	return data
 }
 
 // WriteStorageSnapshot stores the snapshot entry of an storage trie leaf.
 func (dbm *databaseManager) WriteStorageSnapshot(accountHash, storageHash common.ExtHash, entry []byte) {
 	db := dbm.getDatabase(SnapshotDB)
-	writeStorageSnapshot(db, accountHash, storageHash, entry) //2.3M_BAD_BLOCK_CODE
-	//writeStorageSnapshot(db, accountHash.ToLegacy(), storageHash, entry)
+	writeStorageSnapshot(db, accountHash, storageHash, entry) // 2.3M_BAD_BLOCK_CODE
+	// writeStorageSnapshot(db, accountHash.ToLegacy(), storageHash, entry)
 }
 
 // DeleteStorageSnapshot removes the snapshot entry of an storage trie leaf.
 func (dbm *databaseManager) DeleteStorageSnapshot(accountHash, storageHash common.ExtHash) {
 	db := dbm.getDatabase(SnapshotDB)
-	deleteStorageSnapshot(db, accountHash, storageHash) //2.3M_BAD_BLOCK_CODE
-	//deleteStorageSnapshot(db, accountHash.ToLegacy(), storageHash)
+	deleteStorageSnapshot(db, accountHash, storageHash) // 2.3M_BAD_BLOCK_CODE
+	// deleteStorageSnapshot(db, accountHash.ToLegacy(), storageHash)
 }
 
 func (dbm *databaseManager) NewSnapshotDBIterator(prefix []byte, start []byte) Iterator {
@@ -2859,7 +2860,7 @@ func deleteSnapshotRecoveryNumber(db KeyValueWriter) {
 }
 
 func DeleteStateDBProcNum(blockNum uint64) {
-	if blockNum > 86400*2+100 { //172800
+	if blockNum > 86400*2+100 { // 172800
 		go DeleteBlockByNum(blockNum - (86400*2 + 100))
 	}
 	ProcBlockNum = int32(blockNum)
@@ -2898,11 +2899,11 @@ func DeleteStateDBProc(dbm DBManager) {
 	statedb := dbm.GetStateTrieDB()
 
 	rootdel := 4
-	//0 : RootExtHash만 지우지 않을때
-	//1 : RootExtHash도 지우고 싶을때
-	//2 : RootExtHash를 86400블럭 +-5 블럭은 나중에 지우고,  ExtHash는 정상 삭제
-	//3 : 86400블럭 +-500 블럭은 나중에 지우고,  나머지는 정상 삭제
-	//4 : 86400블럭 +500 블럭은 이전 데이터만 삭제
+	// 0 : RootExtHash만 지우지 않을때
+	// 1 : RootExtHash도 지우고 싶을때
+	// 2 : RootExtHash를 86400블럭 +-5 블럭은 나중에 지우고,  ExtHash는 정상 삭제
+	// 3 : 86400블럭 +-500 블럭은 나중에 지우고,  나머지는 정상 삭제
+	// 4 : 86400블럭 +500 블럭은 이전 데이터만 삭제
 	for {
 		time.Sleep(time.Second * 1)
 
@@ -2910,15 +2911,15 @@ func DeleteStateDBProc(dbm DBManager) {
 		for iter.Next() {
 			blockNum := int32(binary.LittleEndian.Uint32(iter.Value()))
 			if rootdel != 4 && blockNum < ProcBlockNum-1000 {
-				//if blockNum < ProcBlockNum - 86500 {
+				// if blockNum < ProcBlockNum - 86500 {
 				if rootdel == 0 && len(iter.Key()) == common.ExtHashLength && fmt.Sprintf("%x", iter.Key()[32:]) == "00000000ffff0000" {
 					err2 := delq.Delete(iter.Key())
 					fmt.Printf("deletekey = %x, delq_bnum=%d, delq_err=%v\n", iter.Key(), ProcBlockNum, err2)
 				} else if rootdel == 2 {
-					//if ProcBlockNum > 4147150 && len(iter.Key()) == common.ExtHashLength && fmt.Sprintf("%x", iter.Key()[32:]) == "00000000ffff0000" {
+					// if ProcBlockNum > 4147150 && len(iter.Key()) == common.ExtHashLength && fmt.Sprintf("%x", iter.Key()[32:]) == "00000000ffff0000" {
 					if len(iter.Key()) == common.ExtHashLength && fmt.Sprintf("%x", iter.Key()[32:]) == "00000000ffff0000" {
 						remainNum := blockNum % 86400
-						//if blockNum > ProcBlockNum - 86405 || (remainNum < 5 || remainNum > 86395) {
+						// if blockNum > ProcBlockNum - 86405 || (remainNum < 5 || remainNum > 86395) {
 						if blockNum > ProcBlockNum-86405 || (remainNum < 2 || remainNum > 86398) {
 							continue
 						}
@@ -2937,20 +2938,20 @@ func DeleteStateDBProc(dbm DBManager) {
 							continue
 						}
 					}
-					//err1 := statedb.Delete(iter.Key())
-					//err2 := delq.Delete(iter.Key())
+					// err1 := statedb.Delete(iter.Key())
+					// err2 := delq.Delete(iter.Key())
 					statedb.Delete(iter.Key())
 					delq.Delete(iter.Key())
-					//fmt.Printf("deletekey = %x, delq_bnum=%d/%d, state_err=%v, delq_err=%v\n", iter.Key(), blockNum, ProcBlockNum, err1, err2)
+					// fmt.Printf("deletekey = %x, delq_bnum=%d/%d, state_err=%v, delq_err=%v\n", iter.Key(), blockNum, ProcBlockNum, err1, err2)
 				} else {
 					err1 := statedb.Delete(iter.Key())
 					err2 := delq.Delete(iter.Key())
 					fmt.Printf("deletekey = %x, delq_bnum=%d, state_err=%v, delq_err=%v\n", iter.Key(), ProcBlockNum, err1, err2)
 				}
 			} else if blockNum < ProcBlockNum-86400-500 {
-				//err1 := statedb.Delete(iter.Key())
-				//err2 := delq.Delete(iter.Key())
-				//fmt.Printf("deletekey = %x, delq_bnum=%d, state_err=%v, delq_err=%v\n", iter.Key(), ProcBlockNum, err1, err2)
+				// err1 := statedb.Delete(iter.Key())
+				// err2 := delq.Delete(iter.Key())
+				// fmt.Printf("deletekey = %x, delq_bnum=%d, state_err=%v, delq_err=%v\n", iter.Key(), ProcBlockNum, err1, err2)
 				keyLen := len(iter.Key())
 				if keyLen > 8 && !bytes.Equal(iter.Key()[keyLen-common.ExtPadLength:], common.LegacyByte) {
 					statedb.Delete(iter.Key())
@@ -2975,25 +2976,25 @@ func DeleteBlockByNum(number uint64) {
 
 	db := dbm.getDatabase(BodyDB)
 	db.Delete(blockBodyKey(number, hash))
-	//fmt.Printf("deletekey = %x, number = %d, body\n", blockBodyKey(number, hash), number)
+	// fmt.Printf("deletekey = %x, number = %d, body\n", blockBodyKey(number, hash), number)
 
 	if block != nil {
 		db = dbm.getDatabase(TxLookUpEntryDB)
 		for _, tx := range block.Transactions() {
 			db.Delete(TxLookupKey(tx.Hash()))
-			//fmt.Printf("deletekey = %x, number = %d, txlookup\n", TxLookupKey(tx.Hash()), number)
+			// fmt.Printf("deletekey = %x, number = %d, txlookup\n", TxLookupKey(tx.Hash()), number)
 		}
 	}
 
 	db = dbm.getDatabase(ReceiptsDB)
 	db.Delete(blockReceiptsKey(number, hash))
-	//fmt.Printf("deletekey = %x, number = %d, receipt\n", blockReceiptsKey(number, hash), number)
+	// fmt.Printf("deletekey = %x, number = %d, receipt\n", blockReceiptsKey(number, hash), number)
 
 	db = dbm.getDatabase(headerDB)
 	db.Delete(headerKey(number, hash))
-	//fmt.Printf("deletekey = %x, number = %d, headerkey\n", headerKey(number, hash), number)
+	// fmt.Printf("deletekey = %x, number = %d, headerkey\n", headerKey(number, hash), number)
 	db.Delete(headerNumberKey(hash))
-	//fmt.Printf("deletekey = %x, number = %d, headerNumberkey\n", headerNumberKey(hash), number)
+	// fmt.Printf("deletekey = %x, number = %d, headerNumberkey\n", headerNumberKey(hash), number)
 }
 
 func GetData(dbm DBManager, key []byte) ([]byte, error) {

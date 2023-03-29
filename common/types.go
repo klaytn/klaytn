@@ -31,7 +31,6 @@ import (
 	"reflect"
 	"sync"
 	"time"
-	//"runtime/debug"
 
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/crypto/sha3"
@@ -65,11 +64,13 @@ var (
 )
 
 // Hash represents the 32 byte Keccak256 hash of arbitrary data.
-type Hash [HashLength]byte
-type ExtHash [ExtHashLength]byte
+type (
+	Hash    [HashLength]byte
+	ExtHash [ExtHashLength]byte
+)
 
 // ---- hash - 32 byte ----, ---- idx (4 byte) ----, ---- signature (1 byte) ----, ---- checkSum (3byte) ----
-//root ExtHash ...32byte...0000000045000000
+// root ExtHash ...32byte...0000000045000000
 
 func InitExtHash() (extH ExtHash) {
 	copy(extH[HashLength:], RootByte)
@@ -85,7 +86,7 @@ func GetExtHashPadBytes(hash []byte) (padding []byte) {
 	}
 	padding = getNewExtPadding(hash)
 	return padding
-	//return getNewExtPadding(hash)
+	// return getNewExtPadding(hash)
 }
 
 func ExtPaddingFilter(src []byte) []byte {
@@ -109,8 +110,8 @@ func getNewExtPadding(hash []byte) (rePadding []byte) {
 	hashMu.Unlock()
 
 	binary.BigEndian.PutUint64(rePadding[:], localIdx)
-	//debug.PrintStack()
-	//fmt.Printf("~~~~~~~~~~~~~~~~~~ hash : %x%x\n\n\n\n\n\n", hash, rePadding[:ExtPadLength])
+	// debug.PrintStack()
+	// fmt.Printf("~~~~~~~~~~~~~~~~~~ hash : %x%x\n\n\n\n\n\n", hash, rePadding[:ExtPadLength])
 	return rePadding[:ExtPadLength]
 }
 
@@ -120,7 +121,7 @@ func (h ExtHash) Bytes() []byte {
 
 func BytesToExtHash(b []byte) (h ExtHash) {
 	bLen := len(b)
-	//fmt.Printf("bhash : %x\n", b)
+	// fmt.Printf("bhash : %x\n", b)
 	if bLen == ExtHashLength {
 		copy(h[:ExtHashLength], b)
 	} else if bLen == HashLength {
@@ -146,18 +147,18 @@ func BytesToRootExtHash(b []byte) (h ExtHash) {
 		copy(h[:ExtHashLength], b[1:])
 	} else if bLen == HashLength {
 		copy(h[:HashLength], b)
-		copy(h[HashLength:], RootByte) //Ethan Defence code by CodeHash issue
+		copy(h[HashLength:], RootByte) // Ethan Defence code by CodeHash issue
 	} else if bLen == HashLength+1 {
 		copy(h[:HashLength], b[1:])
-		copy(h[HashLength:], RootByte) //Ethan Defence code by CodeHash issue
+		copy(h[HashLength:], RootByte) // Ethan Defence code by CodeHash issue
 	} else {
 		if bLen > HashLength {
 			b = b[bLen-HashLength:]
 		}
 		copy(h[HashLength-bLen:], b)
-		copy(h[HashLength:], RootByte) //Ethan Defence code by CodeHash issue
+		copy(h[HashLength:], RootByte) // Ethan Defence code by CodeHash issue
 	}
-	//Ethan Defence code by CodeHash issue	//copy(h[HashLength:], RootByte)
+	// Ethan Defence code by CodeHash issue	//copy(h[HashLength:], RootByte)
 	return h
 }
 
@@ -199,7 +200,7 @@ func BytesLegacyToExtHash(b []byte) (h ExtHash) {
 
 func (h ExtHash) String() string {
 	return fmt.Sprintf("%s", h.Bytes())
-	//return h.Hex()
+	// return h.Hex()
 }
 
 func (h ExtHash) ToHash() (reH Hash) {

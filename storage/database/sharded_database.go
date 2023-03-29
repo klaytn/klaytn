@@ -163,8 +163,10 @@ func (db *shardedDB) Close() {
 }
 
 // Not enough size of channel slows down the iterator
-const shardedDBCombineChanSize = 1024 // Size of resultCh
-const shardedDBSubChannelSize = 128   // Size of each sub-channel of resultChs
+const (
+	shardedDBCombineChanSize = 1024 // Size of resultCh
+	shardedDBSubChannelSize  = 128  // Size of each sub-channel of resultChs
+)
 
 // shardedDBIterator iterates all items of each shardDB.
 // This is useful when you want to get items in serial in binary-alphabetigcal order.

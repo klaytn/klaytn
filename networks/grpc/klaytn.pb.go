@@ -13,9 +13,11 @@ import (
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
-var _ = proto.Marshal
-var _ = fmt.Errorf
-var _ = math.Inf
+var (
+	_ = proto.Marshal
+	_ = fmt.Errorf
+	_ = math.Inf
+)
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the proto package it is being compiled against.
@@ -39,15 +41,19 @@ func (*Empty) Descriptor() ([]byte, []int) {
 func (m *Empty) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Empty.Unmarshal(m, b)
 }
+
 func (m *Empty) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Empty.Marshal(b, m, deterministic)
 }
+
 func (m *Empty) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_Empty.Merge(m, src)
 }
+
 func (m *Empty) XXX_Size() int {
 	return xxx_messageInfo_Empty.Size(m)
 }
+
 func (m *Empty) XXX_DiscardUnknown() {
 	xxx_messageInfo_Empty.DiscardUnknown(m)
 }
@@ -73,15 +79,19 @@ func (*RPCRequest) Descriptor() ([]byte, []int) {
 func (m *RPCRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_RPCRequest.Unmarshal(m, b)
 }
+
 func (m *RPCRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_RPCRequest.Marshal(b, m, deterministic)
 }
+
 func (m *RPCRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_RPCRequest.Merge(m, src)
 }
+
 func (m *RPCRequest) XXX_Size() int {
 	return xxx_messageInfo_RPCRequest.Size(m)
 }
+
 func (m *RPCRequest) XXX_DiscardUnknown() {
 	xxx_messageInfo_RPCRequest.DiscardUnknown(m)
 }
@@ -126,15 +136,19 @@ func (*RPCResponse) Descriptor() ([]byte, []int) {
 func (m *RPCResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_RPCResponse.Unmarshal(m, b)
 }
+
 func (m *RPCResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_RPCResponse.Marshal(b, m, deterministic)
 }
+
 func (m *RPCResponse) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_RPCResponse.Merge(m, src)
 }
+
 func (m *RPCResponse) XXX_Size() int {
 	return xxx_messageInfo_RPCResponse.Size(m)
 }
+
 func (m *RPCResponse) XXX_DiscardUnknown() {
 	xxx_messageInfo_RPCResponse.DiscardUnknown(m)
 }
@@ -177,8 +191,10 @@ var fileDescriptor_c6d8429895d2d55b = []byte{
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
-var _ context.Context
-var _ grpc.ClientConn
+var (
+	_ context.Context
+	_ grpc.ClientConn
+)
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.

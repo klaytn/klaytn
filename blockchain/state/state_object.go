@@ -120,8 +120,8 @@ func newObject(db *StateDB, address common.Address, data account.Account) *state
 	return &stateObject{
 		db:       db,
 		address:  address,
-		addrHash: crypto.Keccak256Hash(address[:]).ToRootExtHash(), //2.3M_BAD_BLOCK_CODE
-		//addrHash:      crypto.Keccak256Hash(address[:]).LegacyToExtHash(),
+		addrHash: crypto.Keccak256Hash(address[:]).ToRootExtHash(), // 2.3M_BAD_BLOCK_CODE
+		// addrHash:      crypto.Keccak256Hash(address[:]).LegacyToExtHash(),
 		account:       data,
 		originStorage: make(Storage),
 		dirtyStorage:  make(Storage),
@@ -380,7 +380,7 @@ func (self *stateObject) updateStorageRoot(db Database) {
 			defer func(start time.Time) { self.db.StorageHashes += time.Since(start) }(time.Now())
 		}
 		acc.SetStorageRoot(self.storageTrie.Hash()) // Ethan at TC debug
-		//acc.SetStorageRoot(self.storageTrie.RootHash())
+		// acc.SetStorageRoot(self.storageTrie.RootHash())
 	}
 }
 
@@ -394,7 +394,7 @@ func (self *stateObject) setStorageRoot(updateStorageRoot bool, objectsToUpdate 
 				defer func(start time.Time) { self.db.StorageHashes += time.Since(start) }(time.Now())
 			}
 			acc.SetStorageRoot(self.storageTrie.Hash()) // Ethan at TC debug
-			//acc.SetStorageRoot(self.storageTrie.RootHash())
+			// acc.SetStorageRoot(self.storageTrie.RootHash())
 			return
 		}
 		// If updateStorageRoot == false, it just marks the object and updates its storage root later.

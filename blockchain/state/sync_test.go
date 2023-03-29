@@ -137,7 +137,7 @@ func checkStateAccounts(t *testing.T, newDB database.DBManager, root common.Hash
 			t.Errorf("account %d: stroage trie number mismatch: have %x, want %x", i, len(storageMapWithHashedKey), len(acc.storageMap))
 		}
 		for key, value := range acc.storageMap {
-			//hk := crypto.Keccak256Hash(key[:]).ToRootExtHash() //Ethan at TC debug - fix it !!!!!!!!!!!!!!!
+			// hk := crypto.Keccak256Hash(key[:]).ToRootExtHash() //Ethan at TC debug - fix it !!!!!!!!!!!!!!!
 			hk := crypto.Keccak256Hash(key[:common.HashLength]).ToRootExtHash()
 			if storageMapWithHashedKey[hk] != value {
 				t.Errorf("account %d: stroage trie (%v) mismatch: have %x, want %x", i, key.String(), acc.storageMap[key], value)
@@ -291,7 +291,7 @@ func testIterativeStateSync(t *testing.T, count int, commit bool, bypath bool) {
 				if err != nil {
 					t.Fatalf("failed to retrieve node data for path %x: %v", path, err)
 				}
-				//results[len(hashQueue)+i] = statedb.SyncResult{Hash: crypto.Keccak256Hash(data).ToRootExtHash(), Data: data}
+				// results[len(hashQueue)+i] = statedb.SyncResult{Hash: crypto.Keccak256Hash(data).ToRootExtHash(), Data: data}
 				tmpData, _ := common.RlpPaddingFilter(data)
 				results[len(hashQueue)+i] = statedb.SyncResult{Hash: crypto.Keccak256Hash(tmpData).ToRootExtHash(), Data: data}
 			} else {
@@ -312,7 +312,7 @@ func testIterativeStateSync(t *testing.T, count int, commit bool, bypath bool) {
 				if err != nil {
 					t.Fatalf("failed to retrieve node data for path %x: %v", path, err)
 				}
-				//results[len(hashQueue)+i] = statedb.SyncResult{Hash: crypto.Keccak256Hash(data).ToRootExtHash(), Data: data}
+				// results[len(hashQueue)+i] = statedb.SyncResult{Hash: crypto.Keccak256Hash(data).ToRootExtHash(), Data: data}
 				tmpData, _ := common.RlpPaddingFilter(data)
 				results[len(hashQueue)+i] = statedb.SyncResult{Hash: crypto.Keccak256Hash(tmpData).ToRootExtHash(), Data: data}
 			}

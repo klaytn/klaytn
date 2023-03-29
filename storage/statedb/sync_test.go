@@ -144,7 +144,7 @@ func trieSyncLoop(t *testing.T, count int, srcTrie *SecureTrie, sched *TrieSync,
 			if err != nil {
 				t.Fatalf("failed to retrieve node data for path %x: %v", path, err)
 			}
-			//results[len(hashQueue)+i] = SyncResult{crypto.Keccak256Hash(data).ToRootExtHash(), data, nil}
+			// results[len(hashQueue)+i] = SyncResult{crypto.Keccak256Hash(data).ToRootExtHash(), data, nil}
 			tmpData, _ := common.RlpPaddingFilter(data)
 			results[len(hashQueue)+i] = SyncResult{crypto.Keccak256Hash(tmpData).ToRootExtHash(), data, nil}
 		}
@@ -230,8 +230,8 @@ func testIterativeTrieSync(t *testing.T, count int, bypath bool) {
 // Tests that the trie scheduler can correctly reconstruct the state even if only
 // partial results are returned, and the others sent only later.
 func TestIterativeDelayedTrieSync(t *testing.T) {
-	//common.ExtHashDisableFlag = true
-	//defer func() { common.ExtHashDisableFlag = false } ()
+	// common.ExtHashDisableFlag = true
+	// defer func() { common.ExtHashDisableFlag = false } ()
 	// Create a random trie to copy
 	srcDb, srcTrie, srcData := makeTestTrie()
 
