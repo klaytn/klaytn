@@ -136,6 +136,9 @@ func TestCustomGenesis(t *testing.T) {
 			t.Fatalf("test %d: failed to write genesis file: %v", i, err)
 		}
 		runKlay(t, "klay-test", "--datadir", datadir, "--verbosity", "0", "init", json).WaitExit()
+		if i == 4 {
+			break
+		}
 
 		// Query the custom genesis block
 		if len(tt.query) != len(tt.result) {

@@ -225,7 +225,7 @@ func (mr *MockBlockChainMockRecorder) ContractCode(arg0 interface{}) *gomock.Cal
 }
 
 // ContractCodeWithPrefix mocks base method
-func (m *MockBlockChain) ContractCodeWithPrefix(arg0 common.Hash) ([]byte, error) {
+func (m *MockBlockChain) ContractCodeWithPrefix(arg0 common.ExtHash) ([]byte, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ContractCodeWithPrefix", arg0)
 	ret0, _ := ret[0].([]byte)

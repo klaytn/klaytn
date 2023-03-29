@@ -39,21 +39,21 @@ func TestNodeIteratorCoverage(t *testing.T) {
 	// Gather all the node hashes found by the iterator
 	hashes := make(map[common.Hash]struct{})
 	for it := NewNodeIterator(state); it.Next(); {
-		if it.Hash != (common.Hash{}) {
-			hashes[it.Hash] = struct{}{}
+		if it.Hash.ToHash() != (common.Hash{}) {
+			hashes[it.Hash.ToHash()] = struct{}{}
 		}
 	}
 	// Cross check the iterated hashes and the database/nodepool content
 	for hash := range hashes {
-		if _, err = db.TrieDB().Node(hash); err != nil {
-			_, err = db.ContractCode(hash)
+		if _, err = db.TrieDB().Node(hash.ToRootExtHash()); err != nil {
+			_, err = db.ContractCode(hash.ToRootExtHash())
 		}
 		if err != nil {
 			t.Errorf("failed to retrieve reported node %x", hash)
 		}
 	}
 	for _, hash := range db.TrieDB().Nodes() {
-		if _, ok := hashes[hash]; !ok && hash != emptyCode {
+		if _, ok := hashes[hash.ToHash()]; !ok && hash.ToHash() != emptyCode {
 			t.Errorf("state entry not reported %x", hash)
 		}
 	}

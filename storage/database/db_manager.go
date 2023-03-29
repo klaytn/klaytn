@@ -48,6 +48,7 @@ var (
 	ethanDbm              DBManager
 	HeadBlockQ            backupHashQueue
 	FastBlockQ            backupHashQueue
+	LogFlag               bool = true
 )
 
 type DBManager interface {
@@ -2310,39 +2311,45 @@ func (dbm *databaseManager) DeleteSnapshotRoot() {
 // ReadAccountSnapshot retrieves the snapshot entry of an account trie leaf.
 func (dbm *databaseManager) ReadAccountSnapshot(hash common.ExtHash) []byte {
 	db := dbm.getDatabase(SnapshotDB)
-	data, _ := db.Get(AccountSnapshotKey(hash))
+	data, _ := db.Get(AccountSnapshotKey(hash)) //2.3M_BAD_BLOCK_CODE
+	//data, _ := db.Get(AccountSnapshotKey(hash.ToLegacy()))
 	return data
 }
 
 // WriteAccountSnapshot stores the snapshot entry of an account trie leaf.
 func (dbm *databaseManager) WriteAccountSnapshot(hash common.ExtHash, entry []byte) {
 	db := dbm.getDatabase(SnapshotDB)
-	writeAccountSnapshot(db, hash, entry)
+	writeAccountSnapshot(db, hash, entry) //2.3M_BAD_BLOCK_CODE
+	//writeAccountSnapshot(db, hash.ToLegacy(), entry)
 }
 
 // DeleteAccountSnapshot removes the snapshot entry of an account trie leaf.
 func (dbm *databaseManager) DeleteAccountSnapshot(hash common.ExtHash) {
 	db := dbm.getDatabase(SnapshotDB)
-	deleteAccountSnapshot(db, hash)
+	deleteAccountSnapshot(db, hash) //2.3M_BAD_BLOCK_CODE
+	//deleteAccountSnapshot(db, hash.ToLegacy())
 }
 
 // ReadStorageSnapshot retrieves the snapshot entry of an storage trie leaf.
 func (dbm *databaseManager) ReadStorageSnapshot(accountHash, storageHash common.ExtHash) []byte {
 	db := dbm.getDatabase(SnapshotDB)
-	data, _ := db.Get(StorageSnapshotKey(accountHash, storageHash))
+	data, _ := db.Get(StorageSnapshotKey(accountHash, storageHash)) //2.3M_BAD_BLOCK_CODE
+	//data, _ := db.Get(StorageSnapshotKey(accountHash.ToLegacy(), storageHash))
 	return data
 }
 
 // WriteStorageSnapshot stores the snapshot entry of an storage trie leaf.
 func (dbm *databaseManager) WriteStorageSnapshot(accountHash, storageHash common.ExtHash, entry []byte) {
 	db := dbm.getDatabase(SnapshotDB)
-	writeStorageSnapshot(db, accountHash, storageHash, entry)
+	writeStorageSnapshot(db, accountHash, storageHash, entry) //2.3M_BAD_BLOCK_CODE
+	//writeStorageSnapshot(db, accountHash.ToLegacy(), storageHash, entry)
 }
 
 // DeleteStorageSnapshot removes the snapshot entry of an storage trie leaf.
 func (dbm *databaseManager) DeleteStorageSnapshot(accountHash, storageHash common.ExtHash) {
 	db := dbm.getDatabase(SnapshotDB)
-	deleteStorageSnapshot(db, accountHash, storageHash)
+	deleteStorageSnapshot(db, accountHash, storageHash) //2.3M_BAD_BLOCK_CODE
+	//deleteStorageSnapshot(db, accountHash.ToLegacy(), storageHash)
 }
 
 func (dbm *databaseManager) NewSnapshotDBIterator(prefix []byte, start []byte) Iterator {
@@ -2859,25 +2866,31 @@ func DeleteStateDBProcNum(blockNum uint64) {
 }
 
 func DeleteStateDBKey(dbm DBManager, key []byte, pos int) error {
-	//return nil
-	var tmpVal [4]byte
-
-	dbOnce.Do(func() {
-		ethanDbm = dbm
-		go DeleteStateDBProc(dbm)
-	})
-
-	if ProcBlockNum <= 0 {
-		fmt.Printf("deletereq err = %x, delpos = %d, delq_bnum=%d\n", key, pos, ProcBlockNum)
+	if dbm == nil {
 		return nil
 	}
-	delq := dbm.GetDelqDB()
-	binary.LittleEndian.PutUint32(tmpVal[:], uint32(ProcBlockNum))
-	err := delq.Put(key[:], tmpVal[:])
-	if err != nil {
-		logger.Warn("Failed to delete key put queue", "err", err, "key", key)
+	if !common.DelHashFlag {
+		return nil
+	} else {
+		var tmpVal [4]byte
+
+		dbOnce.Do(func() {
+			ethanDbm = dbm
+			go DeleteStateDBProc(dbm)
+		})
+
+		if ProcBlockNum <= 0 {
+			fmt.Printf("deletereq err = %x, delpos = %d, delq_bnum=%d\n", key, pos, ProcBlockNum)
+			return nil
+		}
+		delq := dbm.GetDelqDB()
+		binary.LittleEndian.PutUint32(tmpVal[:], uint32(ProcBlockNum))
+		err := delq.Put(key[:], tmpVal[:])
+		if err != nil {
+			logger.Warn("Failed to delete key put queue", "err", err, "key", key)
+		}
+		return err
 	}
-	return err
 }
 
 func DeleteStateDBProc(dbm DBManager) {
@@ -2939,8 +2952,9 @@ func DeleteStateDBProc(dbm DBManager) {
 				//err2 := delq.Delete(iter.Key())
 				//fmt.Printf("deletekey = %x, delq_bnum=%d, state_err=%v, delq_err=%v\n", iter.Key(), ProcBlockNum, err1, err2)
 				keyLen := len(iter.Key())
-				if keyLen > 8 && !bytes.Equal(iter.Key()[:keyLen-common.ExtPadLength], common.LegacyByte) {
+				if keyLen > 8 && !bytes.Equal(iter.Key()[keyLen-common.ExtPadLength:], common.LegacyByte) {
 					statedb.Delete(iter.Key())
+					fmt.Printf("deletekey = %x, delq_bnum=%d\n", iter.Key(), ProcBlockNum)
 				}
 				delq.Delete(iter.Key())
 			}

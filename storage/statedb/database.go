@@ -29,10 +29,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/klaytn/klaytn/blockchain/types/account"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/rlp"
-	"github.com/klaytn/klaytn/blockchain/types/account"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/pbnjay/memory"
 	"github.com/rcrowley/go-metrics"
@@ -1238,24 +1238,24 @@ func NodeTrace(db *Database, hash common.ExtHash, flag int) (reHash common.ExtHa
 
 	switch n := node.(type) {
 	case *fullNode:
-		tmpNode := &fullNode{ flags: n.flags, }
+		tmpNode := &fullNode{flags: n.flags}
 		for idx, child := range n.Children {
 			if idx == 16 {
 				break
 			}
 			if tmpHashNode, ok := child.(hashNode); ok {
-				tmpNode.Children[idx] = toHashNode( NodeTrace(db, common.BytesToExtHash(tmpHashNode.Bytes()), flag).Bytes() )
+				tmpNode.Children[idx] = toHashNode(NodeTrace(db, common.BytesToExtHash(tmpHashNode.Bytes()), flag).Bytes())
 			} else {
 				tmpNode.Children[idx] = child
 			}
 		}
 		if err := rlp.Encode(&tmp, tmpNode); err != nil {
-			 panic("encode error: " + err.Error())
+			panic("encode error: " + err.Error())
 		}
 		fmt.Printf("%d hash : %x\nvalue : %x\n\n", flag, hash, tmp)
 		return hash
 	case *shortNode:
-		tmpNode := &shortNode{ Key: n.Key, flags: n.flags, }
+		tmpNode := &shortNode{Key: n.Key, flags: n.flags}
 
 		if tmpValueNode, ok := n.Val.(valueNode); ok && len(tmpValueNode) > common.ExtHashLength {
 			serializerLH := account.NewAccountLHSerializer()
@@ -1267,7 +1267,7 @@ func NodeTrace(db *Database, hash common.ExtHash, flag int) (reHash common.ExtHa
 				if pa := account.GetProgramAccount(acc); pa != nil {
 					if pa.GetStorageRoot().ToHash() != emptyState {
 						// pa.GetStorageRoot()
-						reHash := NodeTrace(db, pa.GetStorageRoot(), flag + 1)
+						reHash := NodeTrace(db, pa.GetStorageRoot(), flag+1)
 						fmt.Printf("%d sroot: %x\n\n", flag, reHash)
 					}
 					code := common.BytesToRootExtHash(pa.GetCodeHash())
@@ -1284,7 +1284,7 @@ func NodeTrace(db *Database, hash common.ExtHash, flag int) (reHash common.ExtHa
 		} else {
 			tmpNode.Val = tmpValueNode
 		}
-	
+
 		if err := rlp.Encode(&tmp, tmpNode); err != nil {
 			panic("encode error: " + err.Error())
 		}
@@ -1292,5 +1292,5 @@ func NodeTrace(db *Database, hash common.ExtHash, flag int) (reHash common.ExtHa
 		return hash
 	}
 	panic("encode error: " + err.Error())
-	return reHash
+	//return reHash
 }

@@ -628,7 +628,8 @@ func (self *StateDB) getDeletedStateObject(addr common.Address) *stateObject {
 		if EnabledExpensive {
 			defer func(start time.Time) { self.SnapshotAccountReads += time.Since(start) }(time.Now())
 		}
-		if acc, err = self.snap.Account(crypto.Keccak256Hash(addr.Bytes()).ToRootExtHash()); err == nil {
+		if acc, err = self.snap.Account(crypto.Keccak256Hash(addr.Bytes()).ToRootExtHash()); err == nil { //2.3M_BAD_BLOCK_CODE
+			//if acc, err = self.snap.Account(crypto.Keccak256Hash(addr.Bytes()).LegacyToExtHash()); err == nil {
 			if acc == nil {
 				return nil
 			}

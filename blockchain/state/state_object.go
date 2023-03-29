@@ -118,9 +118,10 @@ func (s *stateObject) empty() bool {
 // newObject creates a state object.
 func newObject(db *StateDB, address common.Address, data account.Account) *stateObject {
 	return &stateObject{
-		db:            db,
-		address:       address,
-		addrHash:      crypto.Keccak256Hash(address[:]).ToRootExtHash(),
+		db:       db,
+		address:  address,
+		addrHash: crypto.Keccak256Hash(address[:]).ToRootExtHash(), //2.3M_BAD_BLOCK_CODE
+		//addrHash:      crypto.Keccak256Hash(address[:]).LegacyToExtHash(),
 		account:       data,
 		originStorage: make(Storage),
 		dirtyStorage:  make(Storage),
@@ -365,7 +366,7 @@ func (self *stateObject) updateStorageTrie(db Database) Trie {
 					self.db.snapStorage[self.addrHash] = storage
 				}
 			}
-			storage[crypto.Keccak256Hash(key[:]).ToExtHash()] = v // v will be nil if it's deleted
+			storage[crypto.Keccak256Hash(key[:]).ToExtHash()] = v // v will be nil if it's deleted // Ethan TC debug ??????? 의심스러운데..
 		}
 	}
 	return tr
@@ -378,7 +379,8 @@ func (self *stateObject) updateStorageRoot(db Database) {
 		if EnabledExpensive {
 			defer func(start time.Time) { self.db.StorageHashes += time.Since(start) }(time.Now())
 		}
-		acc.SetStorageRoot(self.storageTrie.Hash())
+		acc.SetStorageRoot(self.storageTrie.Hash()) // Ethan at TC debug
+		//acc.SetStorageRoot(self.storageTrie.RootHash())
 	}
 }
 
@@ -391,7 +393,8 @@ func (self *stateObject) setStorageRoot(updateStorageRoot bool, objectsToUpdate 
 			if EnabledExpensive {
 				defer func(start time.Time) { self.db.StorageHashes += time.Since(start) }(time.Now())
 			}
-			acc.SetStorageRoot(self.storageTrie.Hash())
+			acc.SetStorageRoot(self.storageTrie.Hash()) // Ethan at TC debug
+			//acc.SetStorageRoot(self.storageTrie.RootHash())
 			return
 		}
 		// If updateStorageRoot == false, it just marks the object and updates its storage root later.

@@ -317,7 +317,8 @@ func concurrentIterator(oldDB Database, newDB Database, root common.ExtHash, qui
 				oldIt.Hash.String(), oldIt.Parent.String(), newIt.Error)
 		}
 
-		if oldIt.Hash != newIt.Hash {
+		if oldIt.Hash != newIt.Hash { // Ethan at TC debug
+			//if oldIt.Hash.ToHash() != newIt.Hash.ToHash() {
 			return fmt.Errorf("mismatched hash oldIt.Hash : oldIt.Hash(%v) newIt.Hash(%v)", oldIt.Hash.String(), newIt.Hash.String())
 		}
 

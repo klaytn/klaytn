@@ -26,9 +26,9 @@ import (
 	"io"
 	"strings"
 
+	"github.com/klaytn/klaytn/blockchain/types/account"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/rlp"
-	"github.com/klaytn/klaytn/blockchain/types/account"
 )
 
 var indices = []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f", "[17]"}
@@ -132,11 +132,12 @@ func (n *fullNode) LegacyRLP() (tmp sliceBuffer) {
 
 func (n *shortNode) LegacyRLP() (tmp sliceBuffer) {
 	tmpNode := &shortNode{
-		Key: n.Key,
+		Key:   n.Key,
 		flags: n.flags,
 	}
 
 	if tmpValueNode, ok := n.Val.(valueNode); ok && len(tmpValueNode) > common.ExtHashLength {
+		tmpNode.Val = n.Val.(valueNode)
 		serializer := account.NewAccountSerializer()
 		if err := rlp.Decode(bytes.NewReader(tmpValueNode), serializer); err == nil {
 			serializerLH := serializer.TransCopy()
@@ -148,7 +149,8 @@ func (n *shortNode) LegacyRLP() (tmp sliceBuffer) {
 	} else if tmpHashNode, ok := n.Val.(hashNode); ok {
 		tmpNode.Val = toHashNode(tmpHashNode[:common.HashLength])
 	} else {
-		tmpNode.Val = tmpValueNode
+		tmpNode.Val = tmpValueNode //2.3M_BAD_BLOCK_CODE
+		//tmpNode.Val = n.Val
 	}
 
 	if err := rlp.Encode(&tmp, tmpNode); err != nil {
@@ -156,6 +158,7 @@ func (n *shortNode) LegacyRLP() (tmp sliceBuffer) {
 	}
 	return tmp
 }
+
 //Consider adding legacyRLP to the interface. However, it is determined that this function is not necessary for all nodes.
 //func (n hashNode) LegacyRLP() (tmp sliceBuffer) { return nil }
 //func (n valueNode) LegacyRLP() (tmp sliceBuffer) { return nil }

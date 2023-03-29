@@ -36,7 +36,7 @@ import (
 func makeTestTrie() (*Database, *SecureTrie, map[string][]byte) {
 	// Create an empty trie
 	triedb := NewDatabase(database.NewMemoryDBManager())
-	trie, _ := NewSecureTrie(common.Hash{}, triedb)
+	trie, _ := NewSecureTrie(common.InitExtHash(), triedb)
 
 	// Fill it with some arbitrary data
 	content := make(map[string][]byte)
@@ -57,7 +57,7 @@ func makeTestTrie() (*Database, *SecureTrie, map[string][]byte) {
 			trie.Update(key, val)
 		}
 	}
-	trie.Commit(nil)
+	trie.Commit(nil, true)
 
 	// Return the generated trie
 	return triedb, trie, content
@@ -67,7 +67,7 @@ func makeTestTrie() (*Database, *SecureTrie, map[string][]byte) {
 // content map.
 func checkTrieContents(t *testing.T, db *Database, root []byte, content map[string][]byte) {
 	// Check root availability and trie contents
-	trie, err := NewSecureTrie(common.BytesToHash(root), db)
+	trie, err := NewSecureTrie(common.BytesToHash(root).ToRootExtHash(), db)
 	if err != nil {
 		t.Fatalf("failed to create trie at %x: %v", root, err)
 	}
@@ -84,7 +84,7 @@ func checkTrieContents(t *testing.T, db *Database, root []byte, content map[stri
 // checkTrieConsistency checks that all nodes in a trie are indeed present.
 func checkTrieConsistency(db *Database, root common.Hash) error {
 	// Create and iterate a trie rooted in a subnode
-	trie, err := NewSecureTrie(root, db)
+	trie, err := NewSecureTrie(root.ToRootExtHash(), db)
 	if err != nil {
 		return nil // Consider a non existent state consistent
 	}
@@ -100,7 +100,7 @@ func TestEmptyTrieSync(t *testing.T) {
 	memDBManagerB := database.NewMemoryDBManager()
 	dbA := NewDatabase(memDBManagerA)
 	dbB := NewDatabase(memDBManagerB)
-	emptyA, _ := NewTrie(common.Hash{}, dbA)
+	emptyA, _ := NewTrie(common.InitExtHash(), dbA)
 	emptyB, _ := NewTrie(emptyRoot, dbB)
 
 	for i, trie := range []*Trie{emptyA, emptyB} {
@@ -121,7 +121,7 @@ func TestIterativeSyncBatchedByPath(t *testing.T)    { testIterativeTrieSync(t, 
 func trieSyncLoop(t *testing.T, count int, srcTrie *SecureTrie, sched *TrieSync, srcDB *Database, diskDB database.Database, bypath bool) {
 	nodes, paths, codes := sched.Missing(count)
 	var (
-		hashQueue []common.Hash
+		hashQueue []common.ExtHash
 		pathQueue []SyncPath
 	)
 	if !bypath {
@@ -144,7 +144,9 @@ func trieSyncLoop(t *testing.T, count int, srcTrie *SecureTrie, sched *TrieSync,
 			if err != nil {
 				t.Fatalf("failed to retrieve node data for path %x: %v", path, err)
 			}
-			results[len(hashQueue)+i] = SyncResult{crypto.Keccak256Hash(data), data, nil}
+			//results[len(hashQueue)+i] = SyncResult{crypto.Keccak256Hash(data).ToRootExtHash(), data, nil}
+			tmpData, _ := common.RlpPaddingFilter(data)
+			results[len(hashQueue)+i] = SyncResult{crypto.Keccak256Hash(tmpData).ToRootExtHash(), data, nil}
 		}
 		for index, result := range results {
 			if err := sched.Process(result); err != nil {
@@ -168,6 +170,8 @@ func trieSyncLoop(t *testing.T, count int, srcTrie *SecureTrie, sched *TrieSync,
 }
 
 func testIterativeTrieSync(t *testing.T, count int, bypath bool) {
+	common.ExtHashDisableFlag = true
+	defer func() { common.ExtHashDisableFlag = false }()
 	// Create a random trie to copy
 	srcDb, srcTrie, srcData := makeTestTrie()
 
@@ -226,6 +230,8 @@ func testIterativeTrieSync(t *testing.T, count int, bypath bool) {
 // Tests that the trie scheduler can correctly reconstruct the state even if only
 // partial results are returned, and the others sent only later.
 func TestIterativeDelayedTrieSync(t *testing.T) {
+	//common.ExtHashDisableFlag = true
+	//defer func() { common.ExtHashDisableFlag = false } ()
 	// Create a random trie to copy
 	srcDb, srcTrie, srcData := makeTestTrie()
 
@@ -236,7 +242,7 @@ func TestIterativeDelayedTrieSync(t *testing.T) {
 	sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil, NewSyncBloom(1, diskdb), nil)
 
 	nodes, _, codes := sched.Missing(10000)
-	queue := append(append([]common.Hash{}, nodes...), codes...)
+	queue := append(append([]common.ExtHash{}, nodes...), codes...)
 	for len(queue) > 0 {
 		// Sync only half of the scheduled nodes
 		results := make([]SyncResult, len(queue)/2+1)
@@ -280,7 +286,7 @@ func testIterativeRandomTrieSync(t *testing.T, count int) {
 	triedb := NewDatabase(memDBManager)
 	sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil, NewSyncBloom(1, diskdb), nil)
 
-	queue := make(map[common.Hash]struct{})
+	queue := make(map[common.ExtHash]struct{})
 	nodes, _, codes := sched.Missing(count)
 	for _, hash := range append(nodes, codes...) {
 		queue[hash] = struct{}{}
@@ -306,7 +312,7 @@ func testIterativeRandomTrieSync(t *testing.T, count int) {
 			t.Fatalf("failed to commit data #%d: %v", index, err)
 		}
 		batch.Write()
-		queue = make(map[common.Hash]struct{})
+		queue = make(map[common.ExtHash]struct{})
 		nodes, _, codes = sched.Missing(count)
 		for _, hash := range append(nodes, codes...) {
 			queue[hash] = struct{}{}
@@ -328,7 +334,7 @@ func TestIterativeRandomDelayedTrieSync(t *testing.T) {
 	triedb := NewDatabase(memDBManager)
 	sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil, NewSyncBloom(1, diskdb), nil)
 
-	queue := make(map[common.Hash]struct{})
+	queue := make(map[common.ExtHash]struct{})
 	nodes, _, codes := sched.Missing(10000)
 	for _, hash := range append(nodes, codes...) {
 		queue[hash] = struct{}{}
@@ -383,8 +389,8 @@ func TestDuplicateAvoidanceTrieSync(t *testing.T) {
 	sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil, NewSyncBloom(1, diskdb), nil)
 
 	nodes, _, codes := sched.Missing(0)
-	queue := append(append([]common.Hash{}, nodes...), codes...)
-	requested := make(map[common.Hash]struct{})
+	queue := append(append([]common.ExtHash{}, nodes...), codes...)
+	requested := make(map[common.ExtHash]struct{})
 
 	for len(queue) > 0 {
 		results := make([]SyncResult, len(queue))
@@ -429,9 +435,9 @@ func TestIncompleteTrieSync(t *testing.T) {
 	triedb := NewDatabase(memDBManager)
 	sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil, NewSyncBloom(1, diskdb), nil)
 
-	var added []common.Hash
+	var added []common.ExtHash
 	nodes, _, codes := sched.Missing(1)
-	queue := append(append([]common.Hash{}, nodes...), codes...)
+	queue := append(append([]common.ExtHash{}, nodes...), codes...)
 	for len(queue) > 0 {
 		// Fetch a batch of trie nodes
 		results := make([]SyncResult, len(queue))
@@ -458,7 +464,7 @@ func TestIncompleteTrieSync(t *testing.T) {
 		}
 		// Check that all known sub-tries in the synced trie are complete
 		for _, root := range added {
-			if err := checkTrieConsistency(triedb, root); err != nil {
+			if err := checkTrieConsistency(triedb, root.ToHash()); err != nil {
 				t.Fatalf("trie inconsistent: %v", err)
 			}
 		}
@@ -472,7 +478,7 @@ func TestIncompleteTrieSync(t *testing.T) {
 		value, _ := diskdb.Get(key)
 
 		diskdb.Delete(key)
-		if err := checkTrieConsistency(triedb, added[0]); err == nil {
+		if err := checkTrieConsistency(triedb, added[0].ToHash()); err == nil {
 			t.Fatalf("trie inconsistency not caught, missing: %x", key)
 		}
 		diskdb.Put(key, value)
@@ -491,7 +497,7 @@ func TestSyncOrdering(t *testing.T) {
 	sched := NewTrieSync(srcTrie.Hash(), diskdb, nil, NewSyncBloom(1, diskdb.GetMemDB()), nil)
 
 	nodes, paths, _ := sched.Missing(1)
-	queue := append([]common.Hash{}, nodes...)
+	queue := append([]common.ExtHash{}, nodes...)
 	reqs := append([]SyncPath{}, paths...)
 
 	for len(queue) > 0 {

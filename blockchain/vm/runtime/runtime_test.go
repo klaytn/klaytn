@@ -102,7 +102,7 @@ func TestExecute(t *testing.T) {
 }
 
 func TestCall(t *testing.T) {
-	state, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil)
+	state, _ := state.New(common.InitExtHash(), state.NewDatabase(database.NewMemoryDBManager()), nil)
 	address := common.HexToAddress("0x0a00")
 	state.SetCode(address, []byte{
 		byte(vm.PUSH1), 10,
@@ -159,7 +159,7 @@ func BenchmarkCall(b *testing.B) {
 
 func benchmarkEVM_Create(bench *testing.B, code string) {
 	var (
-		statedb, _ = state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil)
+		statedb, _ = state.New(common.InitExtHash(), state.NewDatabase(database.NewMemoryDBManager()), nil)
 		sender     = common.BytesToAddress([]byte("sender"))
 		receiver   = common.BytesToAddress([]byte("receiver"))
 	)

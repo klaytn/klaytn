@@ -30,26 +30,26 @@ import (
 	"github.com/klaytn/klaytn/storage/database"
 )
 
-func copyDestructs(destructs map[common.Hash]struct{}) map[common.Hash]struct{} {
-	copy := make(map[common.Hash]struct{})
+func copyDestructs(destructs map[common.ExtHash]struct{}) map[common.ExtHash]struct{} {
+	copy := make(map[common.ExtHash]struct{})
 	for hash := range destructs {
 		copy[hash] = struct{}{}
 	}
 	return copy
 }
 
-func copyAccounts(accounts map[common.Hash][]byte) map[common.Hash][]byte {
-	copy := make(map[common.Hash][]byte)
+func copyAccounts(accounts map[common.ExtHash][]byte) map[common.ExtHash][]byte {
+	copy := make(map[common.ExtHash][]byte)
 	for hash, blob := range accounts {
 		copy[hash] = blob
 	}
 	return copy
 }
 
-func copyStorage(storage map[common.Hash]map[common.Hash][]byte) map[common.Hash]map[common.Hash][]byte {
-	copy := make(map[common.Hash]map[common.Hash][]byte)
+func copyStorage(storage map[common.ExtHash]map[common.ExtHash][]byte) map[common.ExtHash]map[common.ExtHash][]byte {
+	copy := make(map[common.ExtHash]map[common.ExtHash][]byte)
 	for accHash, slots := range storage {
-		copy[accHash] = make(map[common.Hash][]byte)
+		copy[accHash] = make(map[common.ExtHash][]byte)
 		for slotHash, blob := range slots {
 			copy[accHash][slotHash] = blob
 		}
@@ -60,9 +60,9 @@ func copyStorage(storage map[common.Hash]map[common.Hash][]byte) map[common.Hash
 // TestMergeBasics tests some simple merges
 func TestMergeBasics(t *testing.T) {
 	var (
-		destructs = make(map[common.Hash]struct{})
-		accounts  = make(map[common.Hash][]byte)
-		storage   = make(map[common.Hash]map[common.Hash][]byte)
+		destructs = make(map[common.ExtHash]struct{})
+		accounts  = make(map[common.ExtHash][]byte)
+		storage   = make(map[common.ExtHash]map[common.ExtHash][]byte)
 	)
 	// Fill up a parent
 	for i := 0; i < 100; i++ {
@@ -74,7 +74,7 @@ func TestMergeBasics(t *testing.T) {
 			destructs[h] = struct{}{}
 		}
 		if rand.Intn(2) == 0 {
-			accStorage := make(map[common.Hash][]byte)
+			accStorage := make(map[common.ExtHash][]byte)
 			value := make([]byte, 32)
 			rand.Read(value)
 			accStorage[randomHash()] = value
@@ -82,11 +82,11 @@ func TestMergeBasics(t *testing.T) {
 		}
 	}
 	// Add some (identical) layers on top
-	parent := newDiffLayer(emptyLayer(), common.Hash{}, copyDestructs(destructs), copyAccounts(accounts), copyStorage(storage))
-	child := newDiffLayer(parent, common.Hash{}, copyDestructs(destructs), copyAccounts(accounts), copyStorage(storage))
-	child = newDiffLayer(child, common.Hash{}, copyDestructs(destructs), copyAccounts(accounts), copyStorage(storage))
-	child = newDiffLayer(child, common.Hash{}, copyDestructs(destructs), copyAccounts(accounts), copyStorage(storage))
-	child = newDiffLayer(child, common.Hash{}, copyDestructs(destructs), copyAccounts(accounts), copyStorage(storage))
+	parent := newDiffLayer(emptyLayer(), common.InitExtHash(), copyDestructs(destructs), copyAccounts(accounts), copyStorage(storage))
+	child := newDiffLayer(parent, common.InitExtHash(), copyDestructs(destructs), copyAccounts(accounts), copyStorage(storage))
+	child = newDiffLayer(child, common.InitExtHash(), copyDestructs(destructs), copyAccounts(accounts), copyStorage(storage))
+	child = newDiffLayer(child, common.InitExtHash(), copyDestructs(destructs), copyAccounts(accounts), copyStorage(storage))
+	child = newDiffLayer(child, common.InitExtHash(), copyDestructs(destructs), copyAccounts(accounts), copyStorage(storage))
 	// And flatten
 	merged := (child.flatten()).(*diffLayer)
 
@@ -126,39 +126,39 @@ func TestMergeBasics(t *testing.T) {
 
 // TestMergeDelete tests some deletion
 func TestMergeDelete(t *testing.T) {
-	storage := make(map[common.Hash]map[common.Hash][]byte)
+	storage := make(map[common.ExtHash]map[common.ExtHash][]byte)
 	// Fill up a parent
-	h1 := common.HexToHash("0x01")
-	h2 := common.HexToHash("0x02")
+	h1 := common.HexToHash("0x01").ToRootExtHash()
+	h2 := common.HexToHash("0x02").ToRootExtHash()
 
-	flipDrops := func() map[common.Hash]struct{} {
-		return map[common.Hash]struct{}{
+	flipDrops := func() map[common.ExtHash]struct{} {
+		return map[common.ExtHash]struct{}{
 			h2: {},
 		}
 	}
-	flipAccs := func() map[common.Hash][]byte {
-		return map[common.Hash][]byte{
+	flipAccs := func() map[common.ExtHash][]byte {
+		return map[common.ExtHash][]byte{
 			h1: randomAccount(),
 		}
 	}
-	flopDrops := func() map[common.Hash]struct{} {
-		return map[common.Hash]struct{}{
+	flopDrops := func() map[common.ExtHash]struct{} {
+		return map[common.ExtHash]struct{}{
 			h1: {},
 		}
 	}
-	flopAccs := func() map[common.Hash][]byte {
-		return map[common.Hash][]byte{
+	flopAccs := func() map[common.ExtHash][]byte {
+		return map[common.ExtHash][]byte{
 			h2: randomAccount(),
 		}
 	}
 	// Add some flipAccs-flopping layers on top
-	parent := newDiffLayer(emptyLayer(), common.Hash{}, flipDrops(), flipAccs(), storage)
-	child := parent.Update(common.Hash{}, flopDrops(), flopAccs(), storage)
-	child = child.Update(common.Hash{}, flipDrops(), flipAccs(), storage)
-	child = child.Update(common.Hash{}, flopDrops(), flopAccs(), storage)
-	child = child.Update(common.Hash{}, flipDrops(), flipAccs(), storage)
-	child = child.Update(common.Hash{}, flopDrops(), flopAccs(), storage)
-	child = child.Update(common.Hash{}, flipDrops(), flipAccs(), storage)
+	parent := newDiffLayer(emptyLayer(), common.InitExtHash(), flipDrops(), flipAccs(), storage)
+	child := parent.Update(common.InitExtHash(), flopDrops(), flopAccs(), storage)
+	child = child.Update(common.InitExtHash(), flipDrops(), flipAccs(), storage)
+	child = child.Update(common.InitExtHash(), flopDrops(), flopAccs(), storage)
+	child = child.Update(common.InitExtHash(), flipDrops(), flipAccs(), storage)
+	child = child.Update(common.InitExtHash(), flopDrops(), flopAccs(), storage)
+	child = child.Update(common.InitExtHash(), flipDrops(), flipAccs(), storage)
 
 	if data, _ := child.Account(h1); data == nil {
 		t.Errorf("last diff layer: expected %x account to be non-nil", h1)
@@ -199,29 +199,29 @@ func TestMergeDelete(t *testing.T) {
 func TestInsertAndMerge(t *testing.T) {
 	// Fill up a parent
 	var (
-		acc    = common.HexToHash("0x01")
-		slot   = common.HexToHash("0x02")
+		acc    = common.HexToHash("0x01").ToRootExtHash()
+		slot   = common.HexToHash("0x02").ToRootExtHash()
 		parent *diffLayer
 		child  *diffLayer
 	)
 	{
 		var (
-			destructs = make(map[common.Hash]struct{})
-			accounts  = make(map[common.Hash][]byte)
-			storage   = make(map[common.Hash]map[common.Hash][]byte)
+			destructs = make(map[common.ExtHash]struct{})
+			accounts  = make(map[common.ExtHash][]byte)
+			storage   = make(map[common.ExtHash]map[common.ExtHash][]byte)
 		)
-		parent = newDiffLayer(emptyLayer(), common.Hash{}, destructs, accounts, storage)
+		parent = newDiffLayer(emptyLayer(), common.InitExtHash(), destructs, accounts, storage)
 	}
 	{
 		var (
-			destructs = make(map[common.Hash]struct{})
-			accounts  = make(map[common.Hash][]byte)
-			storage   = make(map[common.Hash]map[common.Hash][]byte)
+			destructs = make(map[common.ExtHash]struct{})
+			accounts  = make(map[common.ExtHash][]byte)
+			storage   = make(map[common.ExtHash]map[common.ExtHash][]byte)
 		)
 		accounts[acc] = randomAccount()
-		storage[acc] = make(map[common.Hash][]byte)
+		storage[acc] = make(map[common.ExtHash][]byte)
 		storage[acc][slot] = []byte{0x01}
-		child = newDiffLayer(parent, common.Hash{}, destructs, accounts, storage)
+		child = newDiffLayer(parent, common.InitExtHash(), destructs, accounts, storage)
 	}
 	// And flatten
 	merged := (child.flatten()).(*diffLayer)

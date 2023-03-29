@@ -135,7 +135,7 @@ func (b *SimulatedBackend) rollback() {
 	stateDB, _ := b.blockchain.State()
 
 	b.pendingBlock = blocks[0]
-	b.pendingState, _ = state.New(b.pendingBlock.Root(), stateDB.Database(), nil)
+	b.pendingState, _ = state.New(b.pendingBlock.Root().ToRootExtHash(), stateDB.Database(), nil)
 }
 
 // stateByBlockNumber retrieves a state by a given blocknumber.
@@ -199,7 +199,7 @@ func (b *SimulatedBackend) StorageAt(ctx context.Context, contract common.Addres
 		return nil, err
 	}
 
-	val := stateDB.GetState(contract, key)
+	val := stateDB.GetState(contract, key.ToRootExtHash())
 	return val[:], nil
 }
 
@@ -533,7 +533,7 @@ func (b *SimulatedBackend) SendTransaction(_ context.Context, tx *types.Transact
 	stateDB, _ := b.blockchain.State()
 
 	b.pendingBlock = blocks[0]
-	b.pendingState, _ = state.New(b.pendingBlock.Root(), stateDB.Database(), nil)
+	b.pendingState, _ = state.New(b.pendingBlock.Root().ToRootExtHash(), stateDB.Database(), nil)
 	return nil
 }
 
@@ -653,7 +653,7 @@ func (b *SimulatedBackend) AdjustTime(adjustment time.Duration) error {
 	stateDB, _ := b.blockchain.State()
 
 	b.pendingBlock = blocks[0]
-	b.pendingState, _ = state.New(b.pendingBlock.Root(), stateDB.Database(), nil)
+	b.pendingState, _ = state.New(b.pendingBlock.Root().ToRootExtHash(), stateDB.Database(), nil)
 
 	return nil
 }

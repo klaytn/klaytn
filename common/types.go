@@ -31,6 +31,7 @@ import (
 	"reflect"
 	"sync"
 	"time"
+	//"runtime/debug"
 
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/crypto/sha3"
@@ -50,15 +51,17 @@ var (
 	hashT    = reflect.TypeOf(Hash{})
 	addressT = reflect.TypeOf(Address{})
 
-	hashMu       sync.Mutex
+	hashMu sync.Mutex
 
-	lastPrecompiledContractAddressHex   = hexutil.MustDecode("0x00000000000000000000000000000000000003FF")
-	CntIdx    	uint64 = uint64(time.Now().UnixNano()) - 500000000
-	RootByte                            = hexutil.MustDecode("0x000000000011")
-	ZeroByte                            = hexutil.MustDecode("0x000000000000")
-	LegacyByte                          = hexutil.MustDecode("0x000000000045")
-	errStringLengthExceedsAddressLength = errors.New("the string length exceeds the address length (20)")
-	errEmptyString                      = errors.New("empty string")
+	lastPrecompiledContractAddressHex          = hexutil.MustDecode("0x00000000000000000000000000000000000003FF")
+	CntIdx                              uint64 = uint64(time.Now().UnixNano()) - 500000000
+	RootByte                                   = hexutil.MustDecode("0x000000000011")
+	ZeroByte                                   = hexutil.MustDecode("0x000000000000")
+	LegacyByte                                 = hexutil.MustDecode("0x000000000045")
+	errStringLengthExceedsAddressLength        = errors.New("the string length exceeds the address length (20)")
+	errEmptyString                             = errors.New("empty string")
+	ExtHashDisableFlag                  bool   = true
+	DelHashFlag                         bool   = false
 )
 
 // Hash represents the 32 byte Keccak256 hash of arbitrary data.
@@ -74,6 +77,9 @@ func InitExtHash() (extH ExtHash) {
 }
 
 func GetExtHashPadBytes(hash []byte) (padding []byte) {
+	if ExtHashDisableFlag {
+		return RootByte
+	}
 	if len(hash) == ExtHashLength {
 		return hash[HashLength:]
 	}
@@ -91,6 +97,10 @@ func ExtPaddingFilter(src []byte) []byte {
 
 // to do : getNewExtPadding, CheckExtPadding tuning
 func getNewExtPadding(hash []byte) (rePadding []byte) {
+	/*if len(hash) > 10 &&  fmt.Sprintf("%x",hash)[:10] == "00bf49f440" {
+		debug.PrintStack()
+		panic("finded")
+	}*/
 	rePadding = make([]byte, ExtPadLength+8)
 
 	hashMu.Lock()
@@ -99,7 +109,8 @@ func getNewExtPadding(hash []byte) (rePadding []byte) {
 	hashMu.Unlock()
 
 	binary.BigEndian.PutUint64(rePadding[:], localIdx)
-	//fmt.Printf("hash : %x%x\n", hash, rePadding)
+	//debug.PrintStack()
+	//fmt.Printf("~~~~~~~~~~~~~~~~~~ hash : %x%x\n\n\n\n\n\n", hash, rePadding[:ExtPadLength])
 	return rePadding[:ExtPadLength]
 }
 
@@ -112,9 +123,12 @@ func BytesToExtHash(b []byte) (h ExtHash) {
 	//fmt.Printf("bhash : %x\n", b)
 	if bLen == ExtHashLength {
 		copy(h[:ExtHashLength], b)
+	} else if bLen == HashLength {
+		copy(h[:HashLength], b)
 	} else {
 		if bLen > HashLength {
 			b = b[bLen-HashLength:]
+			bLen = len(b)
 		}
 		copy(h[HashLength-bLen:], b)
 	}
@@ -128,6 +142,14 @@ func BytesToRootExtHash(b []byte) (h ExtHash) {
 	bLen := len(b)
 	if bLen == ExtHashLength {
 		copy(h[:ExtHashLength], b)
+	} else if bLen == ExtHashLength+1 {
+		copy(h[:ExtHashLength], b[1:])
+	} else if bLen == HashLength {
+		copy(h[:HashLength], b)
+		copy(h[HashLength:], RootByte) //Ethan Defence code by CodeHash issue
+	} else if bLen == HashLength+1 {
+		copy(h[:HashLength], b[1:])
+		copy(h[HashLength:], RootByte) //Ethan Defence code by CodeHash issue
 	} else {
 		if bLen > HashLength {
 			b = b[bLen-HashLength:]
@@ -139,10 +161,32 @@ func BytesToRootExtHash(b []byte) (h ExtHash) {
 	return h
 }
 
+/*
+func BytesToRootExtHash(b []byte) (h ExtHash) {
+	bLen := len(b)
+	if bLen == ExtHashLength {
+		copy(h[:ExtHashLength], b)
+	} else if bLen == HashLength {
+		copy(h[:HashLength], b)
+		copy(h[HashLength:], RootByte) //Ethan Defence code by CodeHash issue
+	} else {
+		if bLen > HashLength {
+			b = b[bLen-HashLength:]
+		}
+		copy(h[HashLength-bLen:], b)
+		copy(h[HashLength:], RootByte) //Ethan Defence code by CodeHash issue
+	}
+	//Ethan Defence code by CodeHash issue	//copy(h[HashLength:], RootByte)
+	return h
+}
+*/
+
 func BytesLegacyToExtHash(b []byte) (h ExtHash) {
 	bLen := len(b)
 	if bLen == ExtHashLength {
 		copy(h[:ExtHashLength], b)
+	} else if bLen == HashLength {
+		copy(h[:HashLength], b)
 	} else {
 		if bLen > HashLength {
 			b = b[bLen-HashLength:]
@@ -155,10 +199,23 @@ func BytesLegacyToExtHash(b []byte) (h ExtHash) {
 
 func (h ExtHash) String() string {
 	return fmt.Sprintf("%s", h.Bytes())
+	//return h.Hex()
 }
 
 func (h ExtHash) ToHash() (reH Hash) {
 	copy(reH[:HashLength], h[:HashLength])
+	return reH
+}
+
+func (h ExtHash) ToRoot() (reH ExtHash) {
+	copy(reH[:HashLength], h[:HashLength])
+	copy(reH[HashLength:], RootByte)
+	return reH
+}
+
+func (h ExtHash) ToLegacy() (reH ExtHash) {
+	copy(reH[:HashLength], h[:HashLength])
+	copy(reH[HashLength:], LegacyByte)
 	return reH
 }
 
@@ -167,6 +224,8 @@ func (h ExtHash) getShardIndex(shardMask int) int {
 	data2 := int(h[HashLength-2]) + int(h[1])
 	return ((data2 << 8) + data1) & shardMask
 }
+
+func (h ExtHash) Hex() string { return hexutil.Encode(h[:]) }
 
 func BigToExtHash(b *big.Int) ExtHash     { return BytesToExtHash(b.Bytes()) }
 func BigToRootExtHash(b *big.Int) ExtHash { return BytesToRootExtHash(b.Bytes()) }
@@ -179,6 +238,11 @@ func (h Hash) ToExtHash() (ExtH ExtHash) {
 }
 
 func (h Hash) ToRootExtHash() (ExtH ExtHash) {
+	//if fmt.Sprintf("%x",h)[:10] == "c68a68f286" {
+	/*if fmt.Sprintf("%x",h)[:10] ==  "139778e574" {
+		debug.PrintStack()
+		panic("finded")
+	} */
 	copy(ExtH[:HashLength], h[:])
 	copy(ExtH[HashLength:], RootByte)
 	return ExtH

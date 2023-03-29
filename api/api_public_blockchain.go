@@ -223,7 +223,9 @@ func (s *PublicBlockChainAPI) GetStorageAt(ctx context.Context, address common.A
 	if err != nil {
 		return nil, err
 	}
-	res := state.GetState(address, common.HexToExtHash(key))
+	res := state.GetState(address, common.HexToExtHash(key)) //2.3M_BAD_BLOCK_CODE
+	fmt.Printf("\n\n\n\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~GetStorageAt = %x\n\n\n\n", key)
+	//res := state.GetState(address, common.HexToHash(key).ToRootExtHash())
 	return res[:], state.Error()
 }
 

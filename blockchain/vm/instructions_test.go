@@ -268,13 +268,13 @@ func TestJsonTestcases(t *testing.T) {
 
 func initStateDB(db database.DBManager) *state.StateDB {
 	sdb := state.NewDatabase(db)
-	statedb, _ := state.New(common.Hash{}, sdb, nil)
+	statedb, _ := state.New(common.InitExtHash(), sdb, nil)
 
 	contractAddress := common.HexToAddress("0x18f30de96ce789fe778b9a5f420f6fdbbd9b34d8")
 	code := "60ca60205260005b612710811015630000004557602051506020515060205150602051506020515060205150602051506020515060205150602051506001016300000007565b00"
 	statedb.CreateSmartContractAccount(contractAddress, params.CodeFormatEVM, params.Rules{})
 	statedb.SetCode(contractAddress, common.Hex2Bytes(code))
-	stateHash := common.HexToHash("7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe")
+	stateHash := common.HexToHash("7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe").ToRootExtHash()
 	statedb.SetState(contractAddress, stateHash, stateHash)
 	statedb.SetBalance(contractAddress, big.NewInt(1000))
 	statedb.SetNonce(contractAddress, uint64(1))

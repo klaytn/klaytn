@@ -192,7 +192,7 @@ func TestStackTrieInsertAndHash(t *testing.T) {
 
 func TestSizeBug(t *testing.T) {
 	st := NewStackTrie(nil)
-	nt, _ := NewTrie(common.Hash{}, NewDatabase(database.NewMemoryDBManager()))
+	nt, _ := NewTrie(common.InitExtHash(), NewDatabase(database.NewMemoryDBManager()))
 
 	leaf := common.FromHex("290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e563")
 	value := common.FromHex("94cf40d0d2b44f2b66e07cace1372ca42b73cf21a3")
@@ -200,14 +200,14 @@ func TestSizeBug(t *testing.T) {
 	nt.TryUpdate(leaf, value)
 	st.TryUpdate(leaf, value)
 
-	if nt.Hash() != st.Hash() {
+	if nt.Hash().ToHash() != st.Hash() {
 		t.Fatalf("error %x != %x", st.Hash(), nt.Hash())
 	}
 }
 
 func TestEmptyBug(t *testing.T) {
 	st := NewStackTrie(nil)
-	nt, _ := NewTrie(common.Hash{}, NewDatabase(database.NewMemoryDBManager()))
+	nt, _ := NewTrie(common.InitExtHash(), NewDatabase(database.NewMemoryDBManager()))
 
 	// leaf := common.FromHex("290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e563")
 	// value := common.FromHex("94cf40d0d2b44f2b66e07cace1372ca42b73cf21a3")
@@ -226,14 +226,14 @@ func TestEmptyBug(t *testing.T) {
 		st.TryUpdate(common.FromHex(kv.K), common.FromHex(kv.V))
 	}
 
-	if nt.Hash() != st.Hash() {
+	if nt.Hash().ToHash() != st.Hash() {
 		t.Fatalf("error %x != %x", st.Hash(), nt.Hash())
 	}
 }
 
 func TestValLength56(t *testing.T) {
 	st := NewStackTrie(nil)
-	nt, _ := NewTrie(common.Hash{}, NewDatabase(database.NewMemoryDBManager()))
+	nt, _ := NewTrie(common.InitExtHash(), NewDatabase(database.NewMemoryDBManager()))
 
 	// leaf := common.FromHex("290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e563")
 	// value := common.FromHex("94cf40d0d2b44f2b66e07cace1372ca42b73cf21a3")
@@ -249,7 +249,7 @@ func TestValLength56(t *testing.T) {
 		st.TryUpdate(common.FromHex(kv.K), common.FromHex(kv.V))
 	}
 
-	if nt.Hash() != st.Hash() {
+	if nt.Hash().ToHash() != st.Hash() {
 		t.Fatalf("error %x != %x", st.Hash(), nt.Hash())
 	}
 }
@@ -257,8 +257,10 @@ func TestValLength56(t *testing.T) {
 // TestUpdateSmallNodes tests a case where the leaves are small (both key and value),
 // which causes a lot of node-within-node. This case was found via fuzzing.
 func TestUpdateSmallNodes(t *testing.T) {
+	database.LogFlag = true
+	defer func() { database.LogFlag = false }()
 	st := NewStackTrie(nil)
-	nt, _ := NewTrie(common.Hash{}, NewDatabase(database.NewMemoryDBManager()))
+	nt, _ := NewTrie(common.InitExtHash(), NewDatabase(database.NewMemoryDBManager()))
 	kvs := []struct {
 		K string
 		V string
@@ -270,7 +272,7 @@ func TestUpdateSmallNodes(t *testing.T) {
 		nt.TryUpdate(common.FromHex(kv.K), common.FromHex(kv.V))
 		st.TryUpdate(common.FromHex(kv.K), common.FromHex(kv.V))
 	}
-	if nt.Hash() != st.Hash() {
+	if nt.Hash().ToHash() != st.Hash() {
 		t.Fatalf("error %x != %x", st.Hash(), nt.Hash())
 	}
 }
@@ -286,7 +288,7 @@ func TestUpdateSmallNodes(t *testing.T) {
 func TestUpdateVariableKeys(t *testing.T) {
 	t.SkipNow()
 	st := NewStackTrie(nil)
-	nt, _ := NewTrie(common.Hash{}, NewDatabase(database.NewMemoryDBManager()))
+	nt, _ := NewTrie(common.InitExtHash(), NewDatabase(database.NewMemoryDBManager()))
 	kvs := []struct {
 		K string
 		V string
@@ -298,7 +300,7 @@ func TestUpdateVariableKeys(t *testing.T) {
 		nt.TryUpdate(common.FromHex(kv.K), common.FromHex(kv.V))
 		st.TryUpdate(common.FromHex(kv.K), common.FromHex(kv.V))
 	}
-	if nt.Hash() != st.Hash() {
+	if nt.Hash().ToHash() != st.Hash() {
 		t.Fatalf("error %x != %x", st.Hash(), nt.Hash())
 	}
 }
@@ -356,7 +358,7 @@ func TestStacktrieNotModifyValues(t *testing.T) {
 func TestStacktrieSerialization(t *testing.T) {
 	var (
 		st       = NewStackTrie(nil)
-		nt, _    = NewTrie(common.Hash{}, NewDatabase(database.NewMemoryDBManager()))
+		nt, _    = NewTrie(common.InitExtHash(), NewDatabase(database.NewMemoryDBManager()))
 		keyB     = big.NewInt(1)
 		keyDelta = big.NewInt(1)
 		vals     [][]byte
@@ -391,7 +393,7 @@ func TestStacktrieSerialization(t *testing.T) {
 		st = newSt
 		st.TryUpdate(k, common.CopyBytes(vals[i]))
 	}
-	if have, want := st.Hash(), nt.Hash(); have != want {
+	if have, want := st.Hash(), nt.Hash(); have != want.ToHash() {
 		t.Fatalf("have %#x want %#x", have, want)
 	}
 }

@@ -454,7 +454,7 @@ func TestDBManager_IstanbulSnapshot(t *testing.T) {
 func TestDBManager_TrieNode(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	for _, dbm := range dbManagers {
-		cachedNode, _ := dbm.ReadCachedTrieNode(hash1)
+		cachedNode, _ := dbm.ReadCachedTrieNode(hash1.ToRootExtHash())
 		assert.Nil(t, cachedNode)
 		hasStateTrieNode, _ := dbm.HasStateTrieNode(hash1[:])
 		assert.False(t, hasStateTrieNode)
@@ -467,7 +467,7 @@ func TestDBManager_TrieNode(t *testing.T) {
 			t.Fatal("Failed writing batch", "err", err)
 		}
 
-		cachedNode, _ = dbm.ReadCachedTrieNode(hash1)
+		cachedNode, _ = dbm.ReadCachedTrieNode(hash1.ToRootExtHash())
 		assert.Equal(t, hash2[:], cachedNode)
 
 		if err := batch.Put(hash1[:], hash1[:]); err != nil {
@@ -477,7 +477,7 @@ func TestDBManager_TrieNode(t *testing.T) {
 			t.Fatal("Failed writing batch", "err", err)
 		}
 
-		cachedNode, _ = dbm.ReadCachedTrieNode(hash1)
+		cachedNode, _ = dbm.ReadCachedTrieNode(hash1.ToRootExtHash())
 		assert.Equal(t, hash1[:], cachedNode)
 
 		stateTrieNode, _ := dbm.ReadStateTrieNode(hash1[:])
@@ -492,8 +492,8 @@ func TestDBManager_TrieNode(t *testing.T) {
 		err := dbm.CreateMigrationDBAndSetStatus(123)
 		assert.NoError(t, err)
 
-		cachedNode, _ = dbm.ReadCachedTrieNode(hash1)
-		oldCachedNode, _ := dbm.ReadCachedTrieNodeFromOld(hash1)
+		cachedNode, _ = dbm.ReadCachedTrieNode(hash1.ToRootExtHash())
+		oldCachedNode, _ := dbm.ReadCachedTrieNodeFromOld(hash1.ToRootExtHash())
 		assert.Equal(t, hash1[:], cachedNode)
 		assert.Equal(t, hash1[:], oldCachedNode)
 
@@ -515,8 +515,8 @@ func TestDBManager_TrieNode(t *testing.T) {
 			t.Fatal("Failed writing batch", "err", err)
 		}
 
-		cachedNode, _ = dbm.ReadCachedTrieNode(hash2)
-		oldCachedNode, _ = dbm.ReadCachedTrieNodeFromOld(hash2)
+		cachedNode, _ = dbm.ReadCachedTrieNode(hash2.ToRootExtHash())
+		oldCachedNode, _ = dbm.ReadCachedTrieNodeFromOld(hash2.ToRootExtHash())
 		assert.Equal(t, hash2[:], cachedNode)
 		assert.Equal(t, hash2[:], oldCachedNode)
 
@@ -688,13 +688,13 @@ func TestDBManager_Preimage(t *testing.T) {
 	for _, dbm := range dbManagers {
 		assert.Nil(t, nil, dbm.ReadPreimage(hash1))
 
-		preimages1 := map[common.Hash][]byte{hash1: hash2[:], hash2: hash1[:]}
+		preimages1 := map[common.ExtHash][]byte{hash1.ToRootExtHash(): hash2[:], hash2.ToRootExtHash(): hash1[:]}
 		dbm.WritePreimages(num1, preimages1)
 
 		assert.Equal(t, hash2[:], dbm.ReadPreimage(hash1))
 		assert.Equal(t, hash1[:], dbm.ReadPreimage(hash2))
 
-		preimages2 := map[common.Hash][]byte{hash1: hash1[:], hash2: hash2[:]}
+		preimages2 := map[common.ExtHash][]byte{hash1.ToRootExtHash(): hash1[:], hash2.ToRootExtHash(): hash2[:]}
 		dbm.WritePreimages(num1, preimages2)
 
 		assert.Equal(t, hash1[:], dbm.ReadPreimage(hash1))
@@ -1127,7 +1127,7 @@ func getFilesInDir(t *testing.T, dirPath string, substr string) []string {
 func TestDBManager_WriteAndReadAccountSnapshot(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	var (
-		hash     common.Hash
+		hash     common.ExtHash
 		expected []byte
 		actual   []byte
 	)
@@ -1140,8 +1140,8 @@ func TestDBManager_WriteAndReadAccountSnapshot(t *testing.T) {
 
 		// write and read with empty hash
 		_, expected = genRandomData()
-		dbm.WriteAccountSnapshot(common.Hash{}, expected)
-		actual = dbm.ReadAccountSnapshot(common.Hash{})
+		dbm.WriteAccountSnapshot(common.InitExtHash(), expected)
+		actual = dbm.ReadAccountSnapshot(common.InitExtHash())
 		assert.Equal(t, expected, actual)
 
 		// write and read with empty data
@@ -1161,7 +1161,7 @@ func TestDBManager_WriteAndReadAccountSnapshot(t *testing.T) {
 func TestDBManager_DeleteAccountSnapshot(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	var (
-		hash     common.Hash
+		hash     common.ExtHash
 		expected []byte
 		actual   []byte
 	)
@@ -1175,8 +1175,8 @@ func TestDBManager_DeleteAccountSnapshot(t *testing.T) {
 
 		// delete empty hash
 		_, expected = genRandomData()
-		dbm.WriteAccountSnapshot(common.Hash{}, expected)
-		dbm.DeleteAccountSnapshot(common.Hash{})
+		dbm.WriteAccountSnapshot(common.InitExtHash(), expected)
+		dbm.DeleteAccountSnapshot(common.InitExtHash())
 		actual = dbm.ReadAccountSnapshot(hash)
 		assert.Nil(t, actual)
 
@@ -1243,9 +1243,9 @@ func TestDBManager_WriteCode(t *testing.T) {
 	}
 }
 
-func genRandomData() (common.Hash, []byte) {
+func genRandomData() (common.ExtHash, []byte) {
 	rb := common.MakeRandomBytes(common.HashLength)
 	hash := common.BytesToHash(rb)
 	data := common.MakeRandomBytes(100)
-	return hash, data
+	return hash.ToRootExtHash(), data
 }

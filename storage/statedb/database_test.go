@@ -25,8 +25,8 @@ import (
 )
 
 var (
-	childHash  = common.HexToHash("1341655") // 20190805 in hexadecimal
-	parentHash = common.HexToHash("1343A3F") // 20199999 in hexadecimal
+	childHash  = common.HexToHash("1341655").ToRootExtHash() // 20190805 in hexadecimal
+	parentHash = common.HexToHash("1343A3F").ToRootExtHash() // 20199999 in hexadecimal
 )
 
 func TestDatabase_Reference(t *testing.T) {
@@ -67,8 +67,8 @@ func TestDatabase_DeReference(t *testing.T) {
 	assert.Equal(t, uint64(0), db.gcnodes)
 	assert.Equal(t, common.StorageSize(0), db.gcsize)
 
-	child := &cachedNode{}
-	parent := &cachedNode{}
+	child := &cachedNode{flushPrev: common.InitExtHash(), flushNext: common.InitExtHash()}
+	parent := &cachedNode{flushPrev: common.InitExtHash(), flushNext: common.InitExtHash()}
 	db.nodes[childHash] = child
 	db.nodes[parentHash] = parent
 
@@ -84,7 +84,7 @@ func TestDatabase_DeReference(t *testing.T) {
 	assert.Equal(t, uint64(0), child.parents)
 	assert.Equal(t, uint64(0), parent.children[childHash])
 	assert.Equal(t, uint64(2), db.gcnodes)
-	assert.Equal(t, common.StorageSize(64), db.gcsize)
+	assert.Equal(t, common.StorageSize(common.ExtHashLength*db.gcnodes), db.gcsize)
 }
 
 func TestDatabase_Size(t *testing.T) {
@@ -113,11 +113,11 @@ func TestDatabase_Size(t *testing.T) {
 }
 
 func TestDatabase_SecureKey(t *testing.T) {
-	secKey1 := secureKey(childHash)
+	secKey1 := secureKey(childHash.ToHash())
 	copiedSecKey := make([]byte, len(secKey1))
 	copy(copiedSecKey, secKey1)
 
-	secKey2 := secureKey(parentHash)
+	secKey2 := secureKey(parentHash.ToHash())
 
 	assert.Equal(t, secKey1, copiedSecKey) // after the next call of secureKey, secKey1 became different from the copied
 	assert.NotEqual(t, secKey1, secKey2)   // secKey1 has changed into secKey2 as they are created from the different buffer

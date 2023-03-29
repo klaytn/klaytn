@@ -235,9 +235,9 @@ func traceTrie(ctx *cli.Context) error {
 	}
 	trieDB := sdb.Database().TrieDB()
 
-			reHash := statedb.NodeTrace(trieDB, root.LegacyToExtHash(), 0)
-			fmt.Printf("reHash = %x\n\n", reHash)
-			return nil
+	//reHash := statedb.NodeTrace(trieDB, root.LegacyToExtHash(), 0)
+	//fmt.Printf("reHash = %x\n\n", reHash)
+	//return nil
 	// Get root-node childrens to create goroutine by number of childrens
 	children, err := trieDB.NodeChildren(root.ToRootExtHash())
 	if err != nil {
@@ -349,7 +349,7 @@ func recursiveLoop(oldIt *state.NodeIterator) (hash common.ExtHash) {
 		switch oldIt.Type {
 		case "state", "storage":
 			if oldIt.Parent() == nowHash {
-				children[childIdx] = recursiveLoop(oldIt)	
+				children[childIdx] = recursiveLoop(oldIt)
 				childIdx++
 			} else {
 				break
@@ -363,7 +363,7 @@ func recursiveLoop(oldIt *state.NodeIterator) (hash common.ExtHash) {
 }
 		a
           1 2 3 4 5 6 7 8 9
-     11 12 13 14 15 
+     11 12 13 14 15
      22
 */
 

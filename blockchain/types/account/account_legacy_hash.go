@@ -148,14 +148,14 @@ func (ser *AccountLHSerializer) Copy() (eser *AccountLHSerializer) {
 		account: ser.account.DeepCopy(),
 	}
 	/*
-			switch eser.accType {
-			case LegacyAccountType:
-				eser.account = ser.account.DeepCopy()
-			case ExternallyOwnedAccountType:
-				eser.account = ser.account.DeepCopy()
-			case SmartContractAccountType:
-				eser.account = ser.account.DeepCopy()
-			}*/
+		switch eser.accType {
+		case LegacyAccountType:
+			eser.account = ser.account.DeepCopy()
+		case ExternallyOwnedAccountType:
+			eser.account = ser.account.DeepCopy()
+		case SmartContractAccountType:
+			eser.account = ser.account.DeepCopy()
+		}*/
 }
 
 func (ser *AccountLHSerializer) DeepCopy() (eser *AccountLHSerializer) {
@@ -261,7 +261,7 @@ func (a *LegacyAccountLH) DeepCopy() AccountLH {
 }
 
 func (a *LegacyAccountLH) Type() AccountType       { return 0 }
-func (a *LegacyAccountLH) GetNonce() uint64	{ return 0 }
+func (a *LegacyAccountLH) GetNonce() uint64        { return 0 }
 func (a *LegacyAccountLH) GetBalance() *big.Int    { return big.NewInt(0) }
 func (a *LegacyAccountLH) GetHumanReadable() bool  { return false }
 func (a *LegacyAccountLH) SetNonce(n uint64)       { return }
@@ -270,10 +270,10 @@ func (a *LegacyAccountLH) SetHumanReadable(b bool) { return }
 func (a *LegacyAccountLH) UpdateKey(newKey accountkey.AccountKey, currentBlockNumber uint64) error {
 	return nil
 }
-func (a *LegacyAccountLH) Empty() bool	{ return false }
+func (a *LegacyAccountLH) Empty() bool          { return false }
 func (a *LegacyAccountLH) Equal(AccountLH) bool { return false }
 
-func (a *LegacyAccountLH) TransCopy() Account { 
+func (a *LegacyAccountLH) TransCopy() Account {
 	return &LegacyAccount{
 		Nonce:    a.Nonce,
 		Balance:  a.Balance,
@@ -304,7 +304,7 @@ func (a *ExternallyOwnedAccountLH) DeepCopy() AccountLH {
 }
 
 func (a *ExternallyOwnedAccountLH) Type() AccountType       { return 0 }
-func (a *ExternallyOwnedAccountLH) GetNonce() uint64	{ return 0 }
+func (a *ExternallyOwnedAccountLH) GetNonce() uint64        { return 0 }
 func (a *ExternallyOwnedAccountLH) GetBalance() *big.Int    { return big.NewInt(0) }
 func (a *ExternallyOwnedAccountLH) GetHumanReadable() bool  { return false }
 func (a *ExternallyOwnedAccountLH) SetNonce(n uint64)       { return }
@@ -313,7 +313,7 @@ func (a *ExternallyOwnedAccountLH) SetHumanReadable(b bool) { return }
 func (a *ExternallyOwnedAccountLH) UpdateKey(newKey accountkey.AccountKey, currentBlockNumber uint64) error {
 	return nil
 }
-func (a *ExternallyOwnedAccountLH) Empty() bool	{ return false }
+func (a *ExternallyOwnedAccountLH) Empty() bool          { return false }
 func (a *ExternallyOwnedAccountLH) Equal(AccountLH) bool { return false }
 
 func (a *ExternallyOwnedAccountLH) TransCopy() Account {
@@ -322,7 +322,6 @@ func (a *ExternallyOwnedAccountLH) TransCopy() Account {
 	}
 }
 func (a *ExternallyOwnedAccountLH) String() string { return "Not Implemented" }
-
 
 // smart_contract_account.go
 //
@@ -341,9 +340,9 @@ type SmartContractAccountLH struct {
 type smartContractAccountLHSerializable struct {
 	//aaa CommonSerializable *accountLHCommonSerializable
 	CommonSerializable *accountCommonSerializable
-	StorageRoot	common.Hash
-	CodeHash	   []byte
-	CodeInfo	   params.CodeInfo
+	StorageRoot        common.Hash
+	CodeHash           []byte
+	CodeInfo           params.CodeInfo
 }
 
 func newSmartContractAccountLH() *SmartContractAccountLH {
@@ -360,9 +359,9 @@ func newSmartContractAccountLH() *SmartContractAccountLH {
 func (sca *SmartContractAccountLH) toSerializable() *smartContractAccountLHSerializable {
 	return &smartContractAccountLHSerializable{
 		CommonSerializable: sca.AccountCommon.toSerializable(),
-		StorageRoot:	   sca.storageRoot,
-		CodeHash:	   sca.codeHash,
-		CodeInfo:	   sca.codeInfo,
+		StorageRoot:        sca.storageRoot,
+		CodeHash:           sca.codeHash,
+		CodeInfo:           sca.codeInfo,
 	}
 }
 
@@ -401,14 +400,14 @@ func (a *SmartContractAccountLH) DeepCopy() AccountLH {
 	return &SmartContractAccountLH{
 		AccountCommon: a.AccountCommon.DeepCopy(),
 		//storageRoot:   common.BytesLegacyToExtHash(a.storageRoot.Bytes()),
-		storageRoot:   a.storageRoot,
-		codeHash:      a.codeHash,
-		codeInfo:      a.codeInfo,
+		storageRoot: a.storageRoot,
+		codeHash:    a.codeHash,
+		codeInfo:    a.codeInfo,
 	}
 }
 
 func (a *SmartContractAccountLH) Type() AccountType       { return 0 }
-func (a *SmartContractAccountLH) GetNonce() uint64	{ return 0 }
+func (a *SmartContractAccountLH) GetNonce() uint64        { return 0 }
 func (a *SmartContractAccountLH) GetBalance() *big.Int    { return big.NewInt(0) }
 func (a *SmartContractAccountLH) GetHumanReadable() bool  { return false }
 func (a *SmartContractAccountLH) SetNonce(n uint64)       { return }
@@ -417,7 +416,7 @@ func (a *SmartContractAccountLH) SetHumanReadable(b bool) { return }
 func (a *SmartContractAccountLH) UpdateKey(newKey accountkey.AccountKey, currentBlockNumber uint64) error {
 	return nil
 }
-func (a *SmartContractAccountLH) Empty() bool	{ return false }
+func (a *SmartContractAccountLH) Empty() bool          { return false }
 func (a *SmartContractAccountLH) Equal(AccountLH) bool { return false }
 
 func (a *SmartContractAccountLH) TransCopy() Account {

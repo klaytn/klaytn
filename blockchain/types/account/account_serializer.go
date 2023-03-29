@@ -85,17 +85,17 @@ func (ser *AccountSerializer) DecodeRLP(s *rlp.Stream) error {
 }
 
 func (ser *AccountSerializer) Copy() (eser *AccountSerializer) {
-        return &AccountSerializer{
-                accType: ser.accType,
-                account: ser.account.DeepCopy(),
-        }
+	return &AccountSerializer{
+		accType: ser.accType,
+		account: ser.account.DeepCopy(),
+	}
 }
 
 func (ser *AccountSerializer) TransCopy() (eser *AccountLHSerializer) {
-        return &AccountLHSerializer{
-                accType: ser.accType,
-                account: ser.account.TransCopy(),
-        }
+	return &AccountLHSerializer{
+		accType: ser.accType,
+		account: ser.account.TransCopy(),
+	}
 }
 
 func (ser *AccountSerializer) MarshalJSON() ([]byte, error) {

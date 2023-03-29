@@ -41,6 +41,10 @@ import (
 	"github.com/klaytn/klaytn/storage/database"
 )
 
+func common_HexToHash(s string) common.ExtHash {
+	return common.HexToHash(s).ToRootExtHash()
+}
+
 func init() {
 	spew.Config.Indent = "    "
 	spew.Config.DisableMethods = false
@@ -48,7 +52,7 @@ func init() {
 
 // Used for testing
 func newEmptyTrie() *Trie {
-	trie, _ := NewTrie(common.Hash{}, NewDatabase(database.NewMemoryDBManager()))
+	trie, _ := NewTrie(common.InitExtHash(), NewDatabase(database.NewMemoryDBManager()))
 	return trie
 }
 
@@ -56,7 +60,7 @@ func TestEmptyTrie(t *testing.T) {
 	var trie Trie
 	res := trie.Hash()
 	exp := emptyRoot
-	if res != common.Hash(exp) {
+	if res.ToHash() != common.Hash(exp.ToHash()) {
 		t.Errorf("expected %x got %x", exp, res)
 	}
 }
@@ -72,7 +76,7 @@ func TestNull(t *testing.T) {
 }
 
 func TestMissingRoot(t *testing.T) {
-	trie, err := NewTrie(common.HexToHash("0beec7b5ea3f0fdbc95d0dd47f3c5bc275da8a33"), NewDatabase(database.NewMemoryDBManager()))
+	trie, err := NewTrie(common_HexToHash("0beec7b5ea3f0fdbc95d0dd47f3c5bc275da8a33"), NewDatabase(database.NewMemoryDBManager()))
 	if trie != nil {
 		t.Error("NewTrie returned non-nil trie for invalid root")
 	}
@@ -85,14 +89,16 @@ func TestMissingNodeDisk(t *testing.T)    { testMissingNode(t, false) }
 func TestMissingNodeMemonly(t *testing.T) { testMissingNode(t, true) }
 
 func testMissingNode(t *testing.T, memonly bool) {
+	common.ExtHashDisableFlag = true
+	defer func() { common.ExtHashDisableFlag = false }()
 	memDBManager := database.NewMemoryDBManager()
 	diskdb := memDBManager.GetMemDB()
 	triedb := NewDatabase(memDBManager)
 
-	trie, _ := NewTrie(common.Hash{}, triedb)
+	trie, _ := NewTrie(common.InitExtHash(), triedb)
 	updateString(trie, "120000", "qwerqwerqwerqwerqwerqwerqwerqwer")
 	updateString(trie, "123456", "asdfasdfasdfasdfasdfasdfasdfasdf")
-	root, _ := trie.Commit(nil)
+	root, _ := trie.Commit(nil, true)
 	if !memonly {
 		triedb.Commit(root, true, 0)
 	}
@@ -123,7 +129,7 @@ func testMissingNode(t *testing.T, memonly bool) {
 		t.Errorf("Unexpected error: %v", err)
 	}
 
-	hash := common.HexToHash("0xe1d943cc8f061a0c0b98162830b970395ac9315654824bf21b73b891365262f9")
+	hash := common_HexToHash("0xe1d943cc8f061a0c0b98162830b970395ac9315654824bf21b73b891365262f9")
 	if memonly {
 		delete(triedb.nodes, hash)
 	} else {
@@ -164,7 +170,7 @@ func TestInsert(t *testing.T) {
 	updateString(trie, "dog", "puppy")
 	updateString(trie, "dogglesworth", "cat")
 
-	exp := common.HexToHash("8aad789dff2f538bca5d8ea56e8abe10f4c7ba3a5dea95fea4cd6e7c3a1168d3")
+	exp := common_HexToHash("8aad789dff2f538bca5d8ea56e8abe10f4c7ba3a5dea95fea4cd6e7c3a1168d3")
 	root := trie.Hash()
 	if root != exp {
 		t.Errorf("exp %x got %x", exp, root)
@@ -173,8 +179,8 @@ func TestInsert(t *testing.T) {
 	trie = newEmptyTrie()
 	updateString(trie, "A", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
 
-	exp = common.HexToHash("d23786fb4a010da3ce639d66d5e904a11dbc02746d1ce25029e53290cabf28ab")
-	root, err := trie.Commit(nil)
+	exp = common_HexToHash("d23786fb4a010da3ce639d66d5e904a11dbc02746d1ce25029e53290cabf28ab")
+	root, err := trie.Commit(nil, true)
 	if err != nil {
 		t.Fatalf("commit error: %v", err)
 	}
@@ -203,7 +209,7 @@ func TestGet(t *testing.T) {
 		if i == 1 {
 			return
 		}
-		trie.Commit(nil)
+		trie.Commit(nil, true)
 	}
 }
 
@@ -228,7 +234,7 @@ func TestDelete(t *testing.T) {
 	}
 
 	hash := trie.Hash()
-	exp := common.HexToHash("5991bb8c6514148a29db676a14ac506cd2cd5775ace63c30a4fe457715e9ac84")
+	exp := common_HexToHash("5991bb8c6514148a29db676a14ac506cd2cd5775ace63c30a4fe457715e9ac84")
 	if hash != exp {
 		t.Errorf("expected %x got %x", exp, hash)
 	}
@@ -252,7 +258,7 @@ func TestEmptyValues(t *testing.T) {
 	}
 
 	hash := trie.Hash()
-	exp := common.HexToHash("5991bb8c6514148a29db676a14ac506cd2cd5775ace63c30a4fe457715e9ac84")
+	exp := common_HexToHash("5991bb8c6514148a29db676a14ac506cd2cd5775ace63c30a4fe457715e9ac84")
 	if hash != exp {
 		t.Errorf("expected %x got %x", exp, hash)
 	}
@@ -272,7 +278,7 @@ func TestReplication(t *testing.T) {
 	for _, val := range vals {
 		updateString(trie, val.k, val.v)
 	}
-	exp, err := trie.Commit(nil)
+	exp, err := trie.Commit(nil, true)
 	if err != nil {
 		t.Fatalf("commit error: %v", err)
 	}
@@ -287,7 +293,7 @@ func TestReplication(t *testing.T) {
 			t.Errorf("trie2 doesn't have %q => %q", kv.k, kv.v)
 		}
 	}
-	hash, err := trie2.Commit(nil)
+	hash, err := trie2.Commit(nil, true)
 	if err != nil {
 		t.Fatalf("commit error: %v", err)
 	}
@@ -387,7 +393,7 @@ func (randTest) Generate(r *rand.Rand, size int) reflect.Value {
 func runRandTest(rt randTest) bool {
 	triedb := NewDatabase(database.NewMemoryDBManager())
 
-	tr, _ := NewTrie(common.Hash{}, triedb)
+	tr, _ := NewTrie(common.InitExtHash(), triedb)
 	values := make(map[string]string) // tracks content of the trie
 
 	for i, step := range rt {
@@ -405,11 +411,11 @@ func runRandTest(rt randTest) bool {
 				rt[i].err = fmt.Errorf("mismatch for key 0x%x, got 0x%x want 0x%x", step.key, v, want)
 			}
 		case opCommit:
-			_, rt[i].err = tr.Commit(nil)
+			_, rt[i].err = tr.Commit(nil, true)
 		case opHash:
 			tr.Hash()
 		case opReset:
-			hash, err := tr.Commit(nil)
+			hash, err := tr.Commit(nil, true)
 			if err != nil {
 				rt[i].err = err
 				return false
@@ -421,7 +427,7 @@ func runRandTest(rt randTest) bool {
 			}
 			tr = newtr
 		case opItercheckhash:
-			checktr, _ := NewTrie(common.Hash{}, triedb)
+			checktr, _ := NewTrie(common.InitExtHash(), triedb)
 			it := NewIterator(tr.NodeIterator(nil))
 			for it.Next() {
 				checktr.Update(it.Key, it.Value)
@@ -439,6 +445,8 @@ func runRandTest(rt randTest) bool {
 }
 
 func TestRandom(t *testing.T) {
+	common.ExtHashDisableFlag = true
+	defer func() { common.ExtHashDisableFlag = false }()
 	if err := quick.Check(runRandTest, nil); err != nil {
 		if cerr, ok := err.(*quick.CheckError); ok {
 			t.Fatalf("random test iteration %d failed: %s", cerr.Count, spew.Sdump(cerr.In))
@@ -459,7 +467,7 @@ func benchGet(b *testing.B, commit bool) {
 
 	if commit {
 		dbDir, tmpdb := tempDB()
-		trie, _ = NewTrie(common.Hash{}, tmpdb)
+		trie, _ = NewTrie(common.InitExtHash(), tmpdb)
 
 		defer os.RemoveAll(dbDir)
 		defer tmpdb.diskDB.Close()
@@ -472,7 +480,7 @@ func benchGet(b *testing.B, commit bool) {
 	}
 	binary.LittleEndian.PutUint64(k, benchElemCount/2)
 	if commit {
-		trie.Commit(nil)
+		trie.Commit(nil, true)
 	}
 
 	b.ResetTimer()
@@ -540,7 +548,7 @@ func BenchmarkCommitAfterHash(b *testing.B) {
 func benchmarkCommitAfterHash(b *testing.B) {
 	// Make the random benchmark deterministic
 	addresses, accounts := makeAccounts(b.N)
-	trie, _ := NewTrie(common.Hash{}, NewDatabase(database.NewMemoryDBManager()))
+	trie, _ := NewTrie(common.InitExtHash(), NewDatabase(database.NewMemoryDBManager()))
 	for i := 0; i < len(addresses); i++ {
 		trie.Update(crypto.Keccak256(addresses[i][:]), accounts[i])
 	}
@@ -548,7 +556,7 @@ func benchmarkCommitAfterHash(b *testing.B) {
 	trie.Hash()
 	b.ResetTimer()
 	b.ReportAllocs()
-	trie.Commit(nil)
+	trie.Commit(nil, true)
 }
 
 func tempDB() (string, *Database) {
@@ -642,7 +650,7 @@ func BenchmarkHashFixedSize(b *testing.B) {
 
 func benchmarkHashFixedSize(b *testing.B, addresses [][20]byte, accounts [][]byte) {
 	b.ReportAllocs()
-	trie, _ := NewTrie(common.Hash{}, NewDatabase(database.NewMemoryDBManager()))
+	trie, _ := NewTrie(common.InitExtHash(), NewDatabase(database.NewMemoryDBManager()))
 	for i := 0; i < len(addresses); i++ {
 		trie.Update(crypto.Keccak256(addresses[i][:]), accounts[i])
 	}
@@ -693,14 +701,14 @@ func BenchmarkCommitAfterHashFixedSize(b *testing.B) {
 
 func benchmarkCommitAfterHashFixedSize(b *testing.B, addresses [][20]byte, accounts [][]byte) {
 	b.ReportAllocs()
-	trie, _ := NewTrie(common.Hash{}, NewDatabase(database.NewMemoryDBManager()))
+	trie, _ := NewTrie(common.InitExtHash(), NewDatabase(database.NewMemoryDBManager()))
 	for i := 0; i < len(addresses); i++ {
 		trie.Update(crypto.Keccak256(addresses[i][:]), accounts[i])
 	}
 	// Insert the accounts into the trie and hash it
 	trie.Hash()
 	b.StartTimer()
-	trie.Commit(nil)
+	trie.Commit(nil, true)
 	b.StopTimer()
 }
 
@@ -746,13 +754,13 @@ func BenchmarkDerefRootFixedSize(b *testing.B) {
 func benchmarkDerefRootFixedSize(b *testing.B, addresses [][20]byte, accounts [][]byte) {
 	b.ReportAllocs()
 	triedb := NewDatabase(database.NewMemoryDBManager())
-	trie, _ := NewTrie(common.Hash{}, triedb)
+	trie, _ := NewTrie(common.InitExtHash(), triedb)
 	for i := 0; i < len(addresses); i++ {
 		trie.Update(crypto.Keccak256(addresses[i][:]), accounts[i])
 	}
 	h := trie.Hash()
-	trie.Commit(nil)
-	//_, nodes := trie.Commit(nil)
+	trie.Commit(nil, true)
+	//_, nodes := trie.Commit(nil, true)
 	//triedb.Update(NewWithNodeSet(nodes))
 	b.StartTimer()
 	triedb.Dereference(h)

@@ -46,7 +46,7 @@ func TestIterator(t *testing.T) {
 		all[val.k] = val.v
 		trie.Update([]byte(val.k), []byte(val.v))
 	}
-	trie.Commit(nil)
+	trie.Commit(nil, true)
 
 	found := make(map[string]string)
 	it := NewIterator(trie.NodeIterator(nil))
@@ -107,19 +107,19 @@ func TestNodeIteratorCoverage(t *testing.T) {
 	// Gather all the node hashes found by the iterator
 	hashes := make(map[common.Hash]struct{})
 	for it := trie.NodeIterator(nil); it.Next(true); {
-		if it.Hash() != (common.Hash{}) {
-			hashes[it.Hash()] = struct{}{}
+		if it.Hash().ToHash() != (common.Hash{}) {
+			hashes[it.Hash().ToHash()] = struct{}{}
 		}
 	}
 	// Cross check the hashes and the database itself
 	for hash := range hashes {
-		if _, err := db.Node(hash); err != nil {
+		if _, err := db.Node(hash.ToRootExtHash()); err != nil {
 			t.Errorf("failed to retrieve reported node %x: %v", hash, err)
 		}
 	}
 	for hash, obj := range db.nodes {
-		if obj != nil && hash != (common.Hash{}) {
-			if _, ok := hashes[hash]; !ok {
+		if obj != nil && hash.ToHash() != (common.Hash{}) {
+			if _, ok := hashes[hash.ToHash()]; !ok {
 				t.Errorf("state entry not reported %x", hash)
 			}
 		}
@@ -202,13 +202,13 @@ func TestDifferenceIterator(t *testing.T) {
 	for _, val := range testdata1 {
 		triea.Update([]byte(val.k), []byte(val.v))
 	}
-	triea.Commit(nil)
+	triea.Commit(nil, true)
 
 	trieb := newEmptyTrie()
 	for _, val := range testdata2 {
 		trieb.Update([]byte(val.k), []byte(val.v))
 	}
-	trieb.Commit(nil)
+	trieb.Commit(nil, true)
 
 	found := make(map[string]string)
 	di, _ := NewDifferenceIterator(triea.NodeIterator(nil), trieb.NodeIterator(nil))
@@ -238,13 +238,13 @@ func TestUnionIterator(t *testing.T) {
 	for _, val := range testdata1 {
 		triea.Update([]byte(val.k), []byte(val.v))
 	}
-	triea.Commit(nil)
+	triea.Commit(nil, true)
 
 	trieb := newEmptyTrie()
 	for _, val := range testdata2 {
 		trieb.Update([]byte(val.k), []byte(val.v))
 	}
-	trieb.Commit(nil)
+	trieb.Commit(nil, true)
 
 	di, _ := NewUnionIterator([]NodeIterator{triea.NodeIterator(nil), trieb.NodeIterator(nil)})
 	it := NewIterator(di)
@@ -297,11 +297,11 @@ func testIteratorContinueAfterError(t *testing.T, memonly bool) {
 	diskdb := memDBManager.GetMemDB()
 	triedb := NewDatabase(memDBManager)
 
-	tr, _ := NewTrie(common.Hash{}, triedb)
+	tr, _ := NewTrie(common.InitExtHash(), triedb)
 	for _, val := range testdata1 {
 		tr.Update([]byte(val.k), []byte(val.v))
 	}
-	tr.Commit(nil)
+	tr.Commit(nil, true)
 	if !memonly {
 		triedb.Commit(tr.Hash(), true, 0)
 	}
@@ -309,7 +309,7 @@ func testIteratorContinueAfterError(t *testing.T, memonly bool) {
 
 	var (
 		diskKeys [][]byte
-		memKeys  []common.Hash
+		memKeys  []common.ExtHash
 	)
 	if memonly {
 		memKeys = triedb.Nodes()
@@ -323,7 +323,7 @@ func testIteratorContinueAfterError(t *testing.T, memonly bool) {
 		// Remove a random node from the database. It can't be the root node
 		// because that one is already loaded.
 		var (
-			rkey common.Hash
+			rkey common.ExtHash
 			rval []byte
 			robj *cachedNode
 		)
@@ -381,20 +381,22 @@ func TestIteratorContinueAfterSeekErrorMemonly(t *testing.T) {
 }
 
 func testIteratorContinueAfterSeekError(t *testing.T, memonly bool) {
+	common.ExtHashDisableFlag = true
+	defer func() { common.ExtHashDisableFlag = false }()
 	// Commit test trie to db, then remove the node containing "bars".
 	memDBManager := database.NewMemoryDBManager()
 	diskdb := memDBManager.GetMemDB()
 	triedb := NewDatabase(memDBManager)
 
-	ctr, _ := NewTrie(common.Hash{}, triedb)
+	ctr, _ := NewTrie(common.InitExtHash(), triedb)
 	for _, val := range testdata1 {
 		ctr.Update([]byte(val.k), []byte(val.v))
 	}
-	root, _ := ctr.Commit(nil)
+	root, _ := ctr.Commit(nil, true)
 	if !memonly {
 		triedb.Commit(root, true, 0)
 	}
-	barNodeHash := common.HexToHash("05041990364eb72fcb1127652ce40d8bab765f2bfe53225b1170d276cc101c2e")
+	barNodeHash := common.HexToHash("05041990364eb72fcb1127652ce40d8bab765f2bfe53225b1170d276cc101c2e").ToRootExtHash()
 	var (
 		barNodeBlob []byte
 		barNodeObj  *cachedNode

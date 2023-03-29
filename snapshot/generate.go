@@ -602,7 +602,9 @@ func (dl *diskLayer) generate(stats *generatorStats) {
 	onAccount := func(key []byte, val []byte, write bool, delete bool) error {
 		var (
 			start       = time.Now()
-			accountHash = common.BytesToExtHash(key)
+			accountHash = common.BytesToExtHash(key) // Ethan TC debug, CallFrom issue	//2.3M_BAD_BLOCK_CODE err
+			//accountHash = common.BytesLegacyToExtHash(key)
+			//accountHash = common.BytesToRootExtHash(key)
 		)
 		if delete {
 			batch.DeleteAccountSnapshot(accountHash)
@@ -685,12 +687,14 @@ func (dl *diskLayer) generate(stats *generatorStats) {
 				}(time.Now())
 
 				if delete {
-					batch.DeleteStorageSnapshot(accountHash, common.BytesToExtHash(key))
+					batch.DeleteStorageSnapshot(accountHash, common.BytesToExtHash(key)) // Ethan TC debug, CallFrom issue
+					//batch.DeleteStorageSnapshot(accountHash, common.BytesToRootExtHash(key))
 					snapWipedStorageMeter.Mark(1)
 					return nil
 				}
 				if write {
-					batch.WriteStorageSnapshot(accountHash, common.BytesToExtHash(key), val)
+					batch.WriteStorageSnapshot(accountHash, common.BytesToExtHash(key), val) // Ethan TC debug, CallFrom issue
+					//batch.WriteStorageSnapshot(accountHash, common.BytesToRootExtHash(key), val)
 					snapGeneratedStorageMeter.Mark(1)
 				} else {
 					snapRecoveredStorageMeter.Mark(1)

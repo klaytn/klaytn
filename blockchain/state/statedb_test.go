@@ -46,13 +46,13 @@ func TestUpdateLeaks(t *testing.T) {
 	// Create an empty state database
 	memDBManager := database.NewMemoryDBManager()
 	db := memDBManager.GetMemDB()
-	state, _ := New(common.Hash{}, NewDatabase(memDBManager), nil)
+	state, _ := New(common.InitExtHash(), NewDatabase(memDBManager), nil)
 
 	// Update it with some accounts
 	for i := byte(0); i < 255; i++ {
 		addr := common.BytesToAddress([]byte{i})
 		if i%2 == 0 {
-			state.SetState(addr, common.BytesToHash([]byte{i, i, i}), common.BytesToHash([]byte{i, i, i, i}))
+			state.SetState(addr, common.BytesToHash([]byte{i, i, i}).ToRootExtHash(), common.BytesToHash([]byte{i, i, i, i}).ToRootExtHash())
 		}
 		if i%3 == 0 {
 			state.SetCode(addr, []byte{i, i, i, i, i})
@@ -79,13 +79,13 @@ func TestIntermediateLeaks(t *testing.T) {
 	transDb := transDBManager.GetMemDB()
 	finalDb := finalDBManager.GetMemDB()
 
-	transState, _ := New(common.Hash{}, NewDatabase(transDBManager), nil)
-	finalState, _ := New(common.Hash{}, NewDatabase(finalDBManager), nil)
+	transState, _ := New(common.InitExtHash(), NewDatabase(transDBManager), nil)
+	finalState, _ := New(common.InitExtHash(), NewDatabase(finalDBManager), nil)
 
 	modify := func(state *StateDB, addr common.Address, i, tweak byte) {
 		if i%2 == 0 {
-			state.SetState(addr, common.Hash{i, i, i, 0}, common.Hash{})
-			state.SetState(addr, common.Hash{i, i, i, tweak}, common.Hash{i, i, i, i, tweak})
+			state.SetState(addr, common.Hash{i, i, i, 0}.ToRootExtHash(), common.InitExtHash())
+			state.SetState(addr, common.Hash{i, i, i, tweak}.ToRootExtHash(), common.Hash{i, i, i, i, tweak}.ToRootExtHash())
 		}
 		if i%3 == 0 {
 			state.SetCode(addr, []byte{i, i, i, i, i, tweak})
@@ -133,7 +133,7 @@ func TestIntermediateLeaks(t *testing.T) {
 // https://github.com/ethereum/go-ethereum/pull/15549.
 func TestCopy(t *testing.T) {
 	// Create a random state test to copy and modify "independently"
-	orig, _ := New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil)
+	orig, _ := New(common.InitExtHash(), NewDatabase(database.NewMemoryDBManager()), nil)
 
 	for i := byte(0); i < 255; i++ {
 		obj := orig.GetOrNewStateObject(common.BytesToAddress([]byte{i}))
@@ -195,7 +195,7 @@ func TestSnapshotRandom(t *testing.T) {
 // TestStateObjects tests basic functional operations of StateObjects.
 // It will be updated by StateDB.Commit() with state objects in StateDB.stateObjects.
 func TestStateObjects(t *testing.T) {
-	stateDB, _ := New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil)
+	stateDB, _ := New(common.InitExtHash(), NewDatabase(database.NewMemoryDBManager()), nil)
 
 	// Update each account, it will update StateDB.stateObjects.
 	for i := byte(0); i < 128; i++ {
@@ -261,7 +261,7 @@ func newTestAction(addr common.Address, r *rand.Rand) testAction {
 		{
 			name: "SetState",
 			fn: func(a testAction, s *StateDB) {
-				var key, val common.Hash
+				var key, val common.ExtHash = common.InitExtHash(), common.InitExtHash()
 				binary.BigEndian.PutUint16(key[:], uint16(a.args[0]))
 				binary.BigEndian.PutUint16(val[:], uint16(a.args[1]))
 				s.SetState(addr, key, val)
@@ -311,7 +311,7 @@ func newTestAction(addr common.Address, r *rand.Rand) testAction {
 			name: "AddPreimage",
 			fn: func(a testAction, s *StateDB) {
 				preimage := []byte{1}
-				hash := common.BytesToHash(preimage)
+				hash := common.BytesToHash(preimage).ToRootExtHash()
 				s.AddPreimage(hash, preimage)
 			},
 			args: make([]int64, 1),
@@ -387,7 +387,7 @@ func (test *snapshotTest) String() string {
 func (test *snapshotTest) run() bool {
 	// Run all actions and create snapshots.
 	var (
-		state, _     = New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil)
+		state, _     = New(common.InitExtHash(), NewDatabase(database.NewMemoryDBManager()), nil)
 		snapshotRevs = make([]int, len(test.snapshots))
 		sindex       = 0
 	)
@@ -401,7 +401,7 @@ func (test *snapshotTest) run() bool {
 	// Revert all snapshots in reverse order. Each revert must yield a state
 	// that is equivalent to fresh state with all actions up the snapshot applied.
 	for sindex--; sindex >= 0; sindex-- {
-		checkstate, _ := New(common.Hash{}, state.Database(), nil)
+		checkstate, _ := New(common.InitExtHash(), state.Database(), nil)
 		for _, action := range test.actions[:test.snapshots[sindex]] {
 			action.fn(action, checkstate)
 		}
@@ -435,10 +435,10 @@ func (test *snapshotTest) checkEqual(state, checkstate *StateDB) error {
 		checkeq("GetCodeSize", state.GetCodeSize(addr), checkstate.GetCodeSize(addr))
 		// Check storage.
 		if obj := state.getStateObject(addr); obj != nil {
-			state.ForEachStorage(addr, func(key, value common.Hash) bool {
+			state.ForEachStorage(addr, func(key, value common.ExtHash) bool {
 				return checkeq("GetState("+key.Hex()+")", checkstate.GetState(addr, key), value)
 			})
-			checkstate.ForEachStorage(addr, func(key, value common.Hash) bool {
+			checkstate.ForEachStorage(addr, func(key, value common.ExtHash) bool {
 				return checkeq("GetState("+key.Hex()+")", checkstate.GetState(addr, key), value)
 			})
 		}
@@ -480,7 +480,7 @@ func (s *StateSuite) TestSnapshotWithJournalDirties(c *check.C) {
 // TestCopyOfCopy tests that modified objects are carried over to the copy, and the copy of the copy.
 // See https://github.com/ethereum/go-ethereum/pull/15225#issuecomment-380191512
 func TestCopyOfCopy(t *testing.T) {
-	sdb, _ := New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil)
+	sdb, _ := New(common.InitExtHash(), NewDatabase(database.NewMemoryDBManager()), nil)
 	addr := common.HexToAddress("aaaa")
 	sdb.SetBalance(addr, big.NewInt(42))
 
@@ -495,7 +495,7 @@ func TestCopyOfCopy(t *testing.T) {
 // TestZeroHashNode checks returning values of `(db *Database) Node` function.
 // The function should return (nil, ErrZeroHashNode) for default common.Hash{} value.
 func TestZeroHashNode(t *testing.T) {
-	zeroHash := common.Hash{}
+	zeroHash := common.InitExtHash()
 
 	db := database.NewMemoryDBManager()
 	sdb := NewDatabase(db)
@@ -515,8 +515,8 @@ func TestMissingTrieNodes(t *testing.T) {
 	// Create an initial state with a few accounts
 	memDb := database.NewMemoryDBManager()
 	db := NewDatabase(memDb)
-	var root common.Hash
-	state, _ := New(common.Hash{}, db, nil)
+	var root common.ExtHash
+	state, _ := New(common.InitExtHash(), db, nil)
 	addr := toAddr([]byte("so"))
 	{
 		state.SetBalance(addr, big.NewInt(1))
@@ -565,7 +565,7 @@ func TestStateDBAccessList(t *testing.T) {
 
 	memDb := database.NewMemoryDBManager()
 	db := NewDatabase(memDb)
-	state, _ := New(common.Hash{}, db, nil)
+	state, _ := New(common.InitExtHash(), db, nil)
 	state.accessList = newAccessList()
 
 	verifyAddrs := func(astrings ...string) {

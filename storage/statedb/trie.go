@@ -130,7 +130,7 @@ func (t *Trie) Get(key []byte) []byte {
 // The value bytes must not be modified by the caller.
 // If a node was not found in the database, a MissingNodeError is returned.
 func (t *Trie) TryGet(key []byte) ([]byte, error) {
-	tkey := keybytesToHex(key[:32])
+	tkey := keybytesToHexMax32(key)
 	value, newroot, didResolve, err := t.tryGet(t.root, tkey, 0)
 	if err == nil && didResolve {
 		if _, ok := newroot.(hashNode); ok {
@@ -278,7 +278,7 @@ func (t *Trie) Update(key, value []byte) {
 //
 // If a node was not found in the database, a MissingNodeError is returned.
 func (t *Trie) TryUpdate(key, value []byte) error {
-	hexKey := keybytesToHex(key[:common.HashLength])
+	hexKey := keybytesToHexMax32(key)
 	return t.TryUpdateWithHexKey(hexKey, value)
 }
 
@@ -402,7 +402,7 @@ func (t *Trie) Delete(key []byte) {
 // TryDelete removes any existing value for key from the trie.
 // If a node was not found in the database, a MissingNodeError is returned.
 func (t *Trie) TryDelete(key []byte) error {
-	k := keybytesToHex(key)
+	k := keybytesToHexMax32(key)
 	_, n, err := t.delete(t.root, nil, k)
 	if err != nil {
 		return err
@@ -625,5 +625,6 @@ func GetHashAndHexKey(key []byte) ([]byte, []byte) {
 	hashKey := h.sha.Sum(hashKeyBuf[:0])
 	returnHasherToPool(h)
 	hexKey := keybytesToHex(hashKey)
+	//hexKey := keybytesToHexMax32(hashKey) // Ethan TC Debug
 	return hashKey, hexKey
 }

@@ -134,7 +134,8 @@ func (h *hasher) hash(n node, db *Database, force bool) (node, node) {
 	}
 
 	switch hashed.(type) {
-	case *shortNode:
+	//case *shortNode:
+	case *shortNode, *fullNode:
 		return hashed, cached
 	case hashNode:
 		return toHashNode(extCachedHash), cached
@@ -203,7 +204,8 @@ func (h *hasher) hashRoot(n node, db *Database, force bool, extRootFlag bool) (n
 	}
 
 	switch hashed.(type) {
-	case *shortNode:
+	//case *shortNode:
+	case *shortNode, *fullNode:
 		return hashed, cached
 	case hashNode:
 		return toHashNode(extCachedHash), cached
@@ -300,11 +302,11 @@ func (h *hasher) hashChildrenFromRoot(original node, db *Database) (node, node) 
 	}
 }
 
-func extHashFilter(n node, src_rlp sliceBuffer) (reData sliceBuffer){
+func extHashFilter(n node, src_rlp sliceBuffer) (reData sliceBuffer) {
 	switch node := n.(type) {
-        case *fullNode:
+	case *fullNode:
 		return node.LegacyRLP()
-        case *shortNode:
+	case *shortNode:
 		return node.LegacyRLP()
 	}
 	return src_rlp
@@ -335,7 +337,7 @@ func (h *hasher) store(n node, db *Database, force, rootFlag bool) (node, uint16
 		return n, lenEncoded, tmpHash // Nodes smaller than 32 bytes are stored inside their parent
 	}
 	if hash == nil {
-		hash = h.makeHashNode( extHashFilter(n, h.tmp) )
+		hash = h.makeHashNode(extHashFilter(n, h.tmp))
 	}
 	if db != nil {
 		// We are pooling the trie nodes into an intermediate memory cache

@@ -386,7 +386,7 @@ func TestCNAPIBackend_StateAndHeaderByNumber(t *testing.T) {
 	blockNum := uint64(123)
 	block := newBlock(int(blockNum))
 
-	stateDB, err := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil)
+	stateDB, err := state.New(common.InitExtHash(), state.NewDatabase(database.NewMemoryDBManager()), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
