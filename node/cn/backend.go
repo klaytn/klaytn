@@ -416,8 +416,7 @@ func (s *CN) setAcceptTxs() error {
 // setRewardWallet sets reward base and reward base wallet if the node is CN.
 func (s *CN) setRewardWallet() error {
 	if s.protocolManager.NodeType() == common.CONSENSUSNODE {
-		_, err := s.RewardbaseWallet()
-		if err != nil {
+		if _, err := s.Rewardbase(); err != nil {
 			return err
 		}
 	}
@@ -599,29 +598,10 @@ func (s *CN) Rewardbase() (eb common.Address, err error) {
 	return common.Address{}, fmt.Errorf("rewardbase must be explicitly specified")
 }
 
-func (s *CN) RewardbaseWallet() (accounts.Wallet, error) {
-	rewardBase, err := s.Rewardbase()
-	if err != nil {
-		return nil, err
-	}
-
-	account := accounts.Account{Address: rewardBase}
-	wallet, err := s.AccountManager().Find(account)
-	if err != nil {
-		logger.Error("find err", "err", err)
-		return nil, err
-	}
-	return wallet, nil
-}
-
 func (s *CN) SetRewardbase(rewardbase common.Address) {
 	s.lock.Lock()
 	s.rewardbase = rewardbase
 	s.lock.Unlock()
-	_, err := s.RewardbaseWallet()
-	if err != nil {
-		logger.Error("find err", "err", err)
-	}
 }
 
 func (s *CN) StartMining(local bool) error {
