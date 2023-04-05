@@ -33,7 +33,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -128,8 +127,7 @@ type ProtocolManager struct {
 	// istanbul BFT
 	engine consensus.Engine
 
-	rewardbase   common.Address
-	rewardwallet accounts.Wallet
+	rewardbase common.Address
 
 	wsendpoint string
 
@@ -355,10 +353,6 @@ func (pm *ProtocolManager) getWSEndPoint() string {
 
 func (pm *ProtocolManager) SetRewardbase(addr common.Address) {
 	pm.rewardbase = addr
-}
-
-func (pm *ProtocolManager) SetRewardbaseWallet(wallet accounts.Wallet) {
-	pm.rewardwallet = wallet
 }
 
 func (pm *ProtocolManager) removePeer(id string) {

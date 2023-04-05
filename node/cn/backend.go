@@ -93,7 +93,6 @@ type BackendProtocolManager interface {
 	ReBroadcastTxs(transactions types.Transactions)
 	SetAcceptTxs()
 	SetRewardbase(addr common.Address)
-	SetRewardbaseWallet(wallet accounts.Wallet)
 	NodeType() common.ConnType
 	Start(maxPeers int)
 	Stop()
@@ -418,11 +417,9 @@ func (s *CN) setAcceptTxs() error {
 // setRewardWallet sets reward base and reward base wallet if the node is CN.
 func (s *CN) setRewardWallet() error {
 	if s.protocolManager.NodeType() == common.CONSENSUSNODE {
-		wallet, err := s.RewardbaseWallet()
+		_, err := s.RewardbaseWallet()
 		if err != nil {
 			return err
-		} else {
-			s.protocolManager.SetRewardbaseWallet(wallet)
 		}
 		s.protocolManager.SetRewardbase(s.rewardbase)
 	}
@@ -623,12 +620,11 @@ func (s *CN) SetRewardbase(rewardbase common.Address) {
 	s.lock.Lock()
 	s.rewardbase = rewardbase
 	s.lock.Unlock()
-	wallet, err := s.RewardbaseWallet()
+	_, err := s.RewardbaseWallet()
 	if err != nil {
 		logger.Error("find err", "err", err)
 	}
 	s.protocolManager.SetRewardbase(rewardbase)
-	s.protocolManager.SetRewardbaseWallet(wallet)
 }
 
 func (s *CN) StartMining(local bool) error {
