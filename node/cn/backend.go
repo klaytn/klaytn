@@ -92,7 +92,6 @@ type BackendProtocolManager interface {
 	ProtocolVersion() int
 	ReBroadcastTxs(transactions types.Transactions)
 	SetAcceptTxs()
-	SetRewardbase(addr common.Address)
 	NodeType() common.ConnType
 	Start(maxPeers int)
 	Stop()
@@ -421,7 +420,6 @@ func (s *CN) setRewardWallet() error {
 		if err != nil {
 			return err
 		}
-		s.protocolManager.SetRewardbase(s.rewardbase)
 	}
 	return nil
 }
@@ -624,7 +622,6 @@ func (s *CN) SetRewardbase(rewardbase common.Address) {
 	if err != nil {
 		logger.Error("find err", "err", err)
 	}
-	s.protocolManager.SetRewardbase(rewardbase)
 }
 
 func (s *CN) StartMining(local bool) error {

@@ -127,8 +127,6 @@ type ProtocolManager struct {
 	// istanbul BFT
 	engine consensus.Engine
 
-	rewardbase common.Address
-
 	wsendpoint string
 
 	nodetype          common.ConnType
@@ -349,10 +347,6 @@ func (pm *ProtocolManager) RegisterValidator(connType common.ConnType, validator
 
 func (pm *ProtocolManager) getWSEndPoint() string {
 	return pm.wsendpoint
-}
-
-func (pm *ProtocolManager) SetRewardbase(addr common.Address) {
-	pm.rewardbase = addr
 }
 
 func (pm *ProtocolManager) removePeer(id string) {
