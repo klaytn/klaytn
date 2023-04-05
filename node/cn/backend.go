@@ -598,12 +598,6 @@ func (s *CN) Rewardbase() (eb common.Address, err error) {
 	return common.Address{}, fmt.Errorf("rewardbase must be explicitly specified")
 }
 
-func (s *CN) SetRewardbase(rewardbase common.Address) {
-	s.lock.Lock()
-	s.rewardbase = rewardbase
-	s.lock.Unlock()
-}
-
 func (s *CN) StartMining(local bool) error {
 	if local {
 		// If local (CPU) mining is started, we can disable the transaction rejection
