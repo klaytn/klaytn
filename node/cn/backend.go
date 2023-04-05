@@ -318,8 +318,10 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	cn.protocolManager.SetWsEndPoint(config.WsEndpoint)
 
-	if err := cn.setRewardWallet(); err != nil {
-		logger.Error("Error happened while setting the reward wallet", "err", err)
+	if ctx.NodeType() == common.CONSENSUSNODE {
+		if _, err := cn.Rewardbase(); err != nil {
+			logger.Error("Cannot determine the rewardbase address", "err", err)
+		}
 	}
 
 	if pset.Policy() == uint64(istanbul.WeightedRandom) {
@@ -408,16 +410,6 @@ func (s *CN) setAcceptTxs() error {
 			if len(istanbulExtra.Validators) == 1 {
 				s.protocolManager.SetAcceptTxs()
 			}
-		}
-	}
-	return nil
-}
-
-// setRewardWallet sets reward base and reward base wallet if the node is CN.
-func (s *CN) setRewardWallet() error {
-	if s.protocolManager.NodeType() == common.CONSENSUSNODE {
-		if _, err := s.Rewardbase(); err != nil {
-			return err
 		}
 	}
 	return nil
