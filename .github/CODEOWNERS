@@ -6,7 +6,7 @@
 # @global-owner1 and @global-owner2 will be requested for
 # review when someone opens a pull request.
 #*       @global-owner1 @global-owner2
-*       @kjhman21 @KimKyungup @aidan-kwon @jeongkyun-oh
+*       @aidan-kwon @kjhman21 @blukat29 @kjeom
 
 # Order is important; the last matching pattern takes the most
 # precedence. When someone opens a pull request that only
@@ -36,31 +36,23 @@
 # In this example, @doctocat owns any file in the `/docs`
 # directory in the root of your repository.
 #/docs/ @doctocat
-/accounts/
-/api/           @aidan-kwon @jimni1222 @sirano11 @aeharvlee @JayChoi1736
-/blockchain/    @KimKyungup @aidan-kwon @jeongkyun-oh @ehnuje
-/build/         @aidan-kwon @henry-will @nohkwak @2dvorak
-/client/        @aidan-kwon @aeharvlee @henry-will @nohkwak @hyunsooda
-/cmd/           @aidan-kwon @henry-will @nohkwak @2dvorak
-/common/
-/consensus/     @aidan-kwon @jiseongnoh @yoomee1313 @mckim19
-/console/       @aidan-kwon @jimni1222 @sirano11 @aeharvlee @JayChoi1736
-/contracts/     @kjhman21 @KimKyungup @aidan-kwon @blukat29 @ian0371 @henry-will @hyunsooda @hqjang-pepper
-/crypto/
-/datasync/      @KimKyungup @ethan-kr @jeongkyun-oh @ehnuje
-/db_migration/  @KimKyungup @ethan-kr @jeongkyun-oh @ehnuje
-/event/
-/fork/          @KimKyungup @aidan-kwon @yoomee1313
-/governance/    @aidan-kwon @blukat29 @ian0371 @yoomee1313 @mckim19
-/kerrors/
-/log/
-/metrics/
-/networks/      @KimKyungup @aidan-kwon @jiseongnoh @mckim19 @ehnuje
-/node/          @KimKyungup @aidan-kwon @ehnuje @henry-will @hyunsooda @hqjang-pepper
-/params/
-/reward/        @KimKyungup @aidan-kwon @blukat29 @ian0371
-/ser/
-/storage/       @KimKyungup @ethan-kr @jeongkyun-oh @ehnuje
-/tests/
-/utils/
-/work/          @KimKyungup @aidan-kwon @jiseongnoh @yoomee1313 @mckim19
+/api/           @kjeom @jimni1222 @henry-will @nohkwak
+/blockchain/    @blukat29 @kjeom @ian0371 @yoomee1313
+/build/	        @blukat29 @hyunsooda @2dvorak
+/client/        @kjeom @jimni1222 @henry-will @nohkwak
+/cmd/           @kjeom @aidan-kwon @kjhman21 @ian0371
+/consensus/     @aidan-kwon @kjhman21 @jiseongnoh @mckim19
+/console/       @kjeom @jimni1222 @henry-will @nohkwak
+/contracts/     @blukat29 @hyunsooda @2dvorak @ian0371
+/crypto/        @blukat29 @jiseongnoh @mckim19
+/datasync/      @ethan-kr @jeongkyun-oh
+/db_migration/  @ethan-kr @jeongkyun-oh
+/event/	        @kjeom @JayChoi1736
+/governance/    @blukat29 @aidan-kwon @kjhman21 @ian0371
+/networks/      @kjeom @JayChoi1736 @yoomee1313
+/node/	        @blukat29 @hyunsooda @2dvorak
+/reward/        @blukat29 @ian0371
+/rlp/	        @kjeom @JayChoi1736
+/snapshot/      @ethan-kr @jeongkyun-oh
+/storage/       @ethan-kr @jeongkyun-oh
+/work/	        @blukat29 @aidan-kwon @kjhman21 @yoomee1313

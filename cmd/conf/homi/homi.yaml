@@ -25,7 +25,7 @@ validators-num: 0
 
 # Only for docker gen-type
 docker-image-id: klaytn/klaytn:latest
-fasthttp: true
+fasthttp: false
 network-id: 2018
 no-grafana: false
 txgen: false

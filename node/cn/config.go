@@ -179,6 +179,9 @@ type Config struct {
 	// send-transction variants. The unit is klay.
 	// This is used by eth namespace RPC APIs
 	RPCTxFeeCap float64
+
+	// Disable option for unsafe debug APIs
+	DisableUnsafeDebug bool `toml:",omitempty"`
 }
 
 type configMarshaling struct {

@@ -286,18 +286,28 @@ func (b *CNAPIBackend) SuggestPrice(ctx context.Context) (*big.Int, error) {
 }
 
 func (b *CNAPIBackend) UpperBoundGasPrice(ctx context.Context) *big.Int {
-	if b.cn.chainConfig.IsMagmaForkEnabled(b.CurrentBlock().Number()) {
-		return new(big.Int).SetUint64(b.cn.governance.Params().UpperBoundBaseFee())
+	bignum := b.CurrentBlock().Number()
+	pset, err := b.cn.governance.EffectiveParams(bignum.Uint64() + 1)
+	if err != nil {
+		return nil
+	}
+	if b.cn.chainConfig.IsMagmaForkEnabled(bignum) {
+		return new(big.Int).SetUint64(pset.UpperBoundBaseFee())
 	} else {
-		return new(big.Int).SetUint64(b.cn.governance.Params().UnitPrice())
+		return new(big.Int).SetUint64(pset.UnitPrice())
 	}
 }
 
 func (b *CNAPIBackend) LowerBoundGasPrice(ctx context.Context) *big.Int {
-	if b.cn.chainConfig.IsMagmaForkEnabled(b.CurrentBlock().Number()) {
-		return new(big.Int).SetUint64(b.cn.governance.Params().LowerBoundBaseFee())
+	bignum := b.CurrentBlock().Number()
+	pset, err := b.cn.governance.EffectiveParams(bignum.Uint64() + 1)
+	if err != nil {
+		return nil
+	}
+	if b.cn.chainConfig.IsMagmaForkEnabled(bignum) {
+		return new(big.Int).SetUint64(pset.LowerBoundBaseFee())
 	} else {
-		return new(big.Int).SetUint64(b.cn.governance.Params().UnitPrice())
+		return new(big.Int).SetUint64(pset.UnitPrice())
 	}
 }
 

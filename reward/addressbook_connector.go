@@ -36,8 +36,8 @@ const (
 	addressTypeNodeID = iota
 	addressTypeStakingAddr
 	addressTypeRewardAddr
-	addressTypePoCAddr
-	addressTypeKIRAddr
+	addressTypePoCAddr // TODO-klaytn: PoC should be changed to KFF after changing AddressBook contract
+	addressTypeKIRAddr // TODO-klaytn: KIR should be changed to KCF after changing AddressBook contract
 )
 
 var errAddressBookIncomplete = errors.New("incomplete node information from AddressBook")

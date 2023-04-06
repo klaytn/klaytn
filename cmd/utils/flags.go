@@ -710,6 +710,11 @@ var (
 		Value:  int(rpc.DefaultHTTPTimeouts.ExecutionTimeout / time.Second),
 		EnvVar: "KLAYTN_RPCEXECUTIONTIMEOUT",
 	}
+	UnsafeDebugDisableFlag = cli.BoolFlag{
+		Name:   "rpc.unsafe-debug.disable",
+		Usage:  "Disable unsafe debug APIs (traceTransaction, writeXXX, ...).",
+		EnvVar: "KLAYTN_RPC_UNSAFE_DEBUG_DISABLE",
+	}
 
 	// Network Settings
 	NodeTypeFlag = cli.StringFlag{

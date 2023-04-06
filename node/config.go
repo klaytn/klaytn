@@ -169,6 +169,9 @@ type Config struct {
 	// Ntp server:port to check the synchronization when booting the node
 	NtpRemoteServer string `toml:",omitempty"`
 
+	// Disable option for unsafe debug APIs
+	DisableUnsafeDebug bool `toml:",omitempty"`
+
 	// Logger is a custom logger to use with the p2p.Server.
 	Logger log.Logger `toml:",omitempty"`
 }
@@ -332,10 +335,6 @@ func (c *Config) HttpServerType() string {
 		return "http"
 	}
 	return c.HTTPServerType
-}
-
-func (c *Config) IsFastHTTP() bool {
-	return c.HttpServerType() == "fasthttp"
 }
 
 // NodeKey retrieves the currently configured private key of the node, checking

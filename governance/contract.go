@@ -26,7 +26,7 @@ import (
 
 var (
 	errContractEngineNotReady = errors.New("ContractEngine is not ready")
-	errParamsAtFail           = errors.New("headerGov ParamsAt() failed")
+	errParamsAtFail           = errors.New("headerGov EffectiveParams() failed")
 	errGovParamNotExist       = errors.New("GovParam does not exist")
 	errInvalidGovParam        = errors.New("GovParam conversion failed")
 )
@@ -34,7 +34,7 @@ var (
 type ContractEngine struct {
 	currentParams *params.GovParamSet
 
-	// for headerGov.ParamsAt() and BlockChain()
+	// for headerGov.EffectiveParams() and BlockChain()
 	headerGov *Governance
 }
 
@@ -47,13 +47,13 @@ func NewContractEngine(headerGov *Governance) *ContractEngine {
 	return e
 }
 
-// Params effective at upcoming block (head+1)
-func (e *ContractEngine) Params() *params.GovParamSet {
+// CurrentParams effective at upcoming block (head+1)
+func (e *ContractEngine) CurrentParams() *params.GovParamSet {
 	return e.currentParams
 }
 
-// Params effective at requested block (num)
-func (e *ContractEngine) ParamsAt(num uint64) (*params.GovParamSet, error) {
+// Parameters effective at requested block (num)
+func (e *ContractEngine) EffectiveParams(num uint64) (*params.GovParamSet, error) {
 	pset, err := e.contractGetAllParamsAt(num)
 	if err != nil {
 		return nil, err
@@ -62,16 +62,9 @@ func (e *ContractEngine) ParamsAt(num uint64) (*params.GovParamSet, error) {
 }
 
 // if UpdateParam fails, leave currentParams as-is
-func (e *ContractEngine) UpdateParams() error {
-	chain := e.headerGov.BlockChain()
-	if chain == nil {
-		logger.Crit("headerGov.BlockChain() is nil")
-		return errContractEngineNotReady
-	}
-
+func (e *ContractEngine) UpdateParams(num uint64) error {
 	// request the parameters required for generating the next block
-	head := chain.CurrentHeader().Number.Uint64()
-	pset, err := e.contractGetAllParamsAt(head + 1)
+	pset, err := e.contractGetAllParamsAt(num + 1)
 	if err != nil {
 		return err
 	}
@@ -110,11 +103,11 @@ func (e *ContractEngine) contractGetAllParamsAt(num uint64) (*params.GovParamSet
 	return caller.getAllParamsAt(new(big.Int).SetUint64(num))
 }
 
-// Return the GovParamContract address effective at given block number
+// contractAddrAt returns the GovParamContract address effective at given block number
 func (e *ContractEngine) contractAddrAt(num uint64) (common.Address, error) {
-	headerParams, err := e.headerGov.ParamsAt(num)
+	headerParams, err := e.headerGov.EffectiveParams(num)
 	if err != nil {
-		logger.Error("headerGov.ParamsAt failed", "err", err, "num", num)
+		logger.Error("headerGov.EffectiveParams failed", "err", err, "num", num)
 		return common.Address{}, errParamsAtFail
 	}
 

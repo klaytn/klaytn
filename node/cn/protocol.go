@@ -147,6 +147,8 @@ type ProtocolManagerDownloader interface {
 	Cancel()
 
 	GetSnapSyncer() *snap.Syncer
+	SyncStakingInfo(id string, from, to uint64) error
+	SyncStakingInfoStatus() *downloader.SyncingStatus
 }
 
 //go:generate mockgen -destination=node/cn/mocks/fetcher_mock.go -package=mocks github.com/klaytn/klaytn/node/cn ProtocolManagerFetcher
