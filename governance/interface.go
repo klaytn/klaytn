@@ -44,6 +44,9 @@ type ReaderEngine interface {
 	// The number must be equal or less than current block height (head).
 	EffectiveParams(num uint64) (*params.GovParamSet, error)
 
+	// ContractAddrAt returns `GovParam` contract address through lookup the header-governance database
+	ContractAddrAt(num uint64) (common.Address, error)
+
 	// UpdateParams updates the current params (the ones returned by CurrentParams()).
 	// by reading the latest blockchain states.
 	// This function must be called after every block is mined to

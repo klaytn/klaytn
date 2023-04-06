@@ -122,6 +122,10 @@ func (e *MixedEngine) CurrentParams() *params.GovParamSet {
 	return e.currentParams
 }
 
+func (e *MixedEngine) ContractAddrAt(num uint64) (common.Address, error) {
+	return e.contractGov.ContractAddrAt(num)
+}
+
 // EffectiveParams returns the parameter set used for generating the block `num`
 func (e *MixedEngine) EffectiveParams(num uint64) (*params.GovParamSet, error) {
 	var contractParams *params.GovParamSet

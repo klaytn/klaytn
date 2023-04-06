@@ -87,7 +87,7 @@ func (e *ContractEngine) contractGetAllParamsAt(num uint64) (*params.GovParamSet
 		return params.NewGovParamSet(), nil
 	}
 
-	addr, err := e.contractAddrAt(num)
+	addr, err := e.ContractAddrAt(num)
 	if err != nil {
 		return nil, err
 	}
@@ -103,8 +103,8 @@ func (e *ContractEngine) contractGetAllParamsAt(num uint64) (*params.GovParamSet
 	return caller.getAllParamsAt(new(big.Int).SetUint64(num))
 }
 
-// contractAddrAt returns the GovParamContract address effective at given block number
-func (e *ContractEngine) contractAddrAt(num uint64) (common.Address, error) {
+// ContractAddrAt returns the GovParamContract address effective at given block number
+func (e *ContractEngine) ContractAddrAt(num uint64) (common.Address, error) {
 	headerParams, err := e.headerGov.EffectiveParams(num)
 	if err != nil {
 		logger.Error("headerGov.EffectiveParams failed", "err", err, "num", num)

@@ -154,6 +154,7 @@ type GovernanceTallyList struct {
 	items []GovernanceTallyItem
 	mu    *sync.RWMutex
 }
+
 type GovernanceVotes struct {
 	items []GovernanceVote
 	mu    *sync.RWMutex
@@ -1266,4 +1267,8 @@ func (gov *Governance) UpdateParams(num uint64) error {
 	}
 	gov.currentParams = pset
 	return nil
+}
+
+func (gov *Governance) ContractAddrAt(num uint64) (common.Address, error) {
+	panic("`ContractAddrAt` is not callable from header governancce.")
 }

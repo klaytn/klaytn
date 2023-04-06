@@ -309,6 +309,13 @@ web3._extend({
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
+			name: 'getGovParamAddr',
+			call: 'governance_getGovParamAddr',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+
+		new web3._extend.Method({
 			name: 'itemCacheFromDb',
 			call: 'governance_itemCacheFromDb',
 			params: 1,

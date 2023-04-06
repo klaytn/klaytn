@@ -77,6 +77,10 @@ func (api *GovernanceKlayAPI) GetParams(num *rpc.BlockNumber) (map[string]interf
 	return getParams(api.governance, num)
 }
 
+func (api *GovernanceKlayAPI) GetGovParamAddr(num *rpc.BlockNumber) (common.Address, error) {
+	return getGovParamAddr(api.governance, num)
+}
+
 func (api *GovernanceKlayAPI) NodeAddress() common.Address {
 	return api.governance.NodeAddress()
 }
@@ -239,6 +243,10 @@ func (api *PublicGovernanceAPI) GetParams(num *rpc.BlockNumber) (map[string]inte
 	return getParams(api.governance, num)
 }
 
+func (api *PublicGovernanceAPI) GetGovParamAddr(num *rpc.BlockNumber) (common.Address, error) {
+	return getGovParamAddr(api.governance, num)
+}
+
 func getParams(governance Engine, num *rpc.BlockNumber) (map[string]interface{}, error) {
 	blockNumber := uint64(0)
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
@@ -252,6 +260,16 @@ func getParams(governance Engine, num *rpc.BlockNumber) (map[string]interface{},
 		return nil, err
 	}
 	return pset.StrMap(), nil
+}
+
+func getGovParamAddr(governance Engine, num *rpc.BlockNumber) (common.Address, error) {
+	blockNumber := uint64(0)
+	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
+		blockNumber = governance.BlockChain().CurrentBlock().NumberU64()
+	} else {
+		blockNumber = uint64(num.Int64())
+	}
+	return governance.ContractAddrAt(blockNumber)
 }
 
 func (api *PublicGovernanceAPI) GetStakingInfo(num *rpc.BlockNumber) (*reward.StakingInfo, error) {
