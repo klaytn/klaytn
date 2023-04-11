@@ -21,9 +21,11 @@ import (
 	"github.com/klaytn/klaytn/crypto/bls/types"
 )
 
-type SecretKey = types.SecretKey
-type PublicKey = types.PublicKey
-type Signature = types.Signature
+type (
+	SecretKey = types.SecretKey
+	PublicKey = types.PublicKey
+	Signature = types.Signature
+)
 
 // RandKey generates a random BLS secret key.
 func RandKey() (SecretKey, error) {

@@ -23,8 +23,10 @@ import blst "github.com/supranational/blst/bindings/go"
 // Klaytn uses the "minimal-signature-size" variant as per
 // draft-irtf-cfrg-bls-signature-05#2.1
 // where public keys are points in G2, signatures are points in G1.
-type blstSecretKey = blst.SecretKey
-type blstPublicKey = blst.P2Affine
-type blstSignature = blst.P1Affine
-type blstAggregatePublicKey = blst.P2Aggregate
-type blstAggregateSignature = blst.P1Aggregate
+type (
+	blstSecretKey          = blst.SecretKey
+	blstPublicKey          = blst.P2Affine
+	blstSignature          = blst.P1Affine
+	blstAggregatePublicKey = blst.P2Aggregate
+	blstAggregateSignature = blst.P1Aggregate
+)

@@ -136,5 +136,4 @@ func TestSignVerify(t *testing.T) {
 	assert.False(t, Verify(Sign(sk, msg2), msg, pk))
 	assert.False(t, Verify(Sign(sk, msg), msg2, pk))
 	assert.False(t, Verify(Sign(sk, msg), msg, pk2))
-
 }
