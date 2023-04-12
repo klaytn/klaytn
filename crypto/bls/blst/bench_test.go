@@ -214,7 +214,9 @@ func generateBenchmarkMaterial(L int) *benchmarkTestCase {
 func runUncached(b *testing.B, name string, fn func()) {
 	b.Run(name, func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
+			b.StopTimer()
 			resetCache()
+			b.StartTimer()
 			fn()
 		}
 	})
