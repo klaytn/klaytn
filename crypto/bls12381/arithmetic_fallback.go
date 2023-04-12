@@ -345,7 +345,6 @@ func mul(z, x, y *fe) {
 }
 
 func square(z, x *fe) {
-
 	var p [6]uint64
 
 	var u, v uint64

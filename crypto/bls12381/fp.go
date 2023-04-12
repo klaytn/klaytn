@@ -103,7 +103,7 @@ func inverse(inv, e *fe) {
 	r := &fe{0}
 	var k int
 	var z uint64
-	var found = false
+	found := false
 	// Phase 1
 	for i := 0; i < 768; i++ {
 		if v.isZero() {
