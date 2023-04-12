@@ -26,12 +26,16 @@ import (
 
 var (
 	// https://github.com/ethereum/bls12-381-tests
-	// deserialization_G1/deserialization_succeeds_correct_point.json
-	testSignatureBytes = common.FromHex("a491d1b0ecd9bb917989f0e74f0dea0422eac4a873e5e2644f368dffb9a6e20fd6e10c1b77654d067c0618f6e5a7f79a")
-	// deserialization_G1/deserialization_fails_not_in_curve.json
-	testBadSignatureBytes = common.FromHex("8123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcde0")
-	// sign/sign_case_142f678a8d05fcd1.json
-	testMessage = common.FromHex("0x5656565656565656565656565656565656565656565656565656565656565656")
+	// verify/verify_valid_case_195246ee3bd3b6ec.json
+	testSignatureBytes = common.FromHex("0xae82747ddeefe4fd64cf9cedb9b04ae3e8a43420cd255e3c7cd06a8d88b7c7f8638543719981c5d16fa3527c468c25f0026704a6951bde891360c7e8d12ddee0559004ccdbe6046b55bae1b257ee97f7cdb955773d7cf29adf3ccbb9975e4eb9")
+	// deserialization_G2/deserialization_fails_not_in_curve.json
+	testBadSignatureBytes = common.FromHex("0x8123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcde0")
+	// fast_aggregate_verify/fast_aggregate_verify_valid_3d7576f3c0e3570a.json
+	testAggPublicKeyBytes1 = common.FromHex("0xa491d1b0ecd9bb917989f0e74f0dea0422eac4a873e5e2644f368dffb9a6e20fd6e10c1b77654d067c0618f6e5a7f79a")
+	testAggPublicKeyBytes2 = common.FromHex("0xb301803f8b5ac4a1133581fc676dfedc60d891dd5fa99028805e5ea5b08d3491af75d0707adab3b70c6a6a580217bf81")
+	testAggPublicKeyBytes3 = common.FromHex("0xb53d21a4cfd562c469cc81514d4ce5a6b577d8403d32a394dc265dd190b47fa9f829fdd7963afdf972e5e77854051f6f")
+	testMessage            = common.FromHex("0xabababababababababababababababababababababababababababababababab")
+	testAggSignatureBytes  = common.FromHex("0x9712c3edd73a209c742b8250759db12549b3eaf43b5ca61376d9f30e2747dbcf842d8b2ac0901d2a093713e20284a7670fcf6954e9ab93de991bb9b313e664785a075fc285806fa5224c82bde146561b446ccfc706a64b8579513cfc4ff1d930")
 )
 
 func TestSignatureFromBytes(t *testing.T) {
@@ -136,4 +140,16 @@ func TestSignVerify(t *testing.T) {
 	assert.False(t, Verify(Sign(sk, msg2), msg, pk))
 	assert.False(t, Verify(Sign(sk, msg), msg2, pk))
 	assert.False(t, Verify(Sign(sk, msg), msg, pk2))
+}
+
+func TestAggregateVerify(t *testing.T) {
+	apk, _ := AggregatePublicKeysFromBytes([][]byte{
+		testAggPublicKeyBytes1,
+		testAggPublicKeyBytes2,
+		testAggPublicKeyBytes3,
+	})
+	msg := testMessage
+	sig, _ := SignatureFromBytes(testAggSignatureBytes)
+
+	assert.True(t, Verify(sig, msg, apk))
 }

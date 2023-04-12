@@ -24,11 +24,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var (
-	// https://github.com/Wind4Greg/BBS-Draft-Checks/blob/main/JavaScript/BBSPubKey.js
-	testSecretKeyBytes = common.FromHex("4a39afffd624d69e81808b2e84385cc80bf86adadf764e030caa46c231f2a8d7")
-	testPublicKeyBytes = common.FromHex("aaff983278257afc45fa9d44d156c454d716fb1a250dfed132d65b2009331f618c623c14efa16245f50cc92e60334051087f1ae92669b89690f5feb92e91568f95a8e286d110b011e9ac9923fd871238f57d1295395771331ff6edee43e4ccc6")
-)
+// https://github.com/ethereum/bls12-381-tests
+// sign/sign_case_142f678a8d05fcd1.json
+var testSecretKeyBytes = common.FromHex("0x47b8192d77bf871b62e87859d653922725724a5c031afeabc60bcef5ff665138")
 
 func TestRandKey(t *testing.T) {
 	sk, err := RandKey()
@@ -60,6 +58,7 @@ func TestSecretKeyPublicKey(t *testing.T) {
 	sk, err := SecretKeyFromBytes(testSecretKeyBytes)
 	assert.Nil(t, err)
 
+	// Correctness check is done in Sign() and Verify() tests
 	pk := sk.PublicKey()
-	assert.Equal(t, testPublicKeyBytes, pk.Marshal())
+	assert.NotNil(t, pk)
 }

@@ -20,13 +20,13 @@ import blst "github.com/supranational/blst/bindings/go"
 
 // Aliases to underlying blst go binding symbols
 //
-// Klaytn uses the "minimal-signature-size" variant as per
-// draft-irtf-cfrg-bls-signature-05#2.1
-// where public keys are points in G2, signatures are points in G1.
+// Klaytn uses the "minimal-pubkey-size" variant as defined in
+// draft-irtf-cfrg-bls-signature-05#2.1.
+// Public keys are points in G1 and signatures are points in G2.
 type (
 	blstSecretKey          = blst.SecretKey
-	blstPublicKey          = blst.P2Affine
-	blstSignature          = blst.P1Affine
-	blstAggregatePublicKey = blst.P2Aggregate
-	blstAggregateSignature = blst.P1Aggregate
+	blstPublicKey          = blst.P1Affine
+	blstSignature          = blst.P2Affine
+	blstAggregatePublicKey = blst.P1Aggregate
+	blstAggregateSignature = blst.P2Aggregate
 )

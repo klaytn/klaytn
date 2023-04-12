@@ -26,13 +26,10 @@ import (
 
 var (
 	// https://github.com/ethereum/bls12-381-tests
-	// deserialization_G2/deserialization_fails_not_in_G2.json
-	testBadPublicKeyBytes = common.FromHex("8123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef")
-	// aggregate/aggregate_0xabababababababababababababababababababababababababababababababab.json
-	testAggPublicKeyBytes1 = common.FromHex("b6ed936746e01f8ecf281f020953fbf1f01debd5657c4a383940b020b26507f6076334f91e2366c96e9ab279fb5158090352ea1c5b0c9274504f4f0e7053af24802e51e4568d164fe986834f41e55c8e850ce1f98458c0cfc9ab380b55285a55")
-	testAggPublicKeyBytes2 = common.FromHex("b23c46be3a001c63ca711f87a005c200cc550b9429d5f4eb38d74322144f1b63926da3388979e5321012fb1a0526bcd100b5ef5fe72628ce4cd5e904aeaa3279527843fae5ca9ca675f4f51ed8f83bbf7155da9ecc9663100a885d5dc6df96d9")
-	testAggPublicKeyBytes3 = common.FromHex("948a7cb99f76d616c2c564ce9bf4a519f1bea6b0a624a02276443c245854219fabb8d4ce061d255af5330b078d5380681751aa7053da2c98bae898edc218c75f07e24d8802a17cd1f6833b71e58f5eb5b94208b4d0bb3848cecb075ea21be115")
-	testAggPublicKeyBytes  = common.FromHex("9683b3e6701f9a4b706709577963110043af78a5b41991b998475a3d3fd62abf35ce03b33908418efc95a058494a8ae504354b9f626231f6b3f3c849dfdeaf5017c4780e2aee1850ceaf4b4d9ce70971a3d2cfcd97b7e5ecf6759f8da5f76d31")
+	// verify/verify_valid_case_195246ee3bd3b6ec.json
+	testPublicKeyBytes = common.FromHex("0xb53d21a4cfd562c469cc81514d4ce5a6b577d8403d32a394dc265dd190b47fa9f829fdd7963afdf972e5e77854051f6f")
+	// deserialization_G1/deserialization_fails_not_in_G1.json
+	testBadPublicKeyBytes = common.FromHex("0x8123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef")
 )
 
 func TestPublicKeyFromBytes(t *testing.T) {
@@ -85,25 +82,25 @@ func TestMultiplePublicKeysFromBytes(t *testing.T) {
 }
 
 func TestAggregatePublicKeys(t *testing.T) {
-	pk1, _ := PublicKeyFromBytes(testAggPublicKeyBytes1)
-	pk2, _ := PublicKeyFromBytes(testAggPublicKeyBytes2)
-	pk3, _ := PublicKeyFromBytes(testAggPublicKeyBytes3)
-	pks := []types.PublicKey{pk1, pk2, pk3}
+	L := benchAggregateLen
+	tc := generateBenchmarkMaterial(L)
 
-	apk, err := AggregatePublicKeys(pks)
+	// Correctness check is done in Sign() and Verify() tests
+	_, err := AggregatePublicKeys(tc.pks)
 	assert.Nil(t, err)
-	assert.Equal(t, testAggPublicKeyBytes, apk.Marshal())
 
 	_, err = AggregatePublicKeys(nil) // empty
 	assert.Equal(t, types.ErrEmptyArray, err)
 }
 
 func TestAggregatePublicKeysFromBytes(t *testing.T) {
-	bs := [][]byte{testAggPublicKeyBytes1, testAggPublicKeyBytes2, testAggPublicKeyBytes3}
+	L := benchAggregateLen
+	tc := generateBenchmarkMaterial(L)
+	bs := tc.pkbs
 
-	apk, err := AggregatePublicKeysFromBytes(bs)
+	// Correctness check is done in Sign() and Verify() tests
+	_, err := AggregatePublicKeysFromBytes(bs)
 	assert.Nil(t, err)
-	assert.Equal(t, testAggPublicKeyBytes, apk.Marshal())
 
 	_, err = AggregatePublicKeysFromBytes(nil) // empty
 	assert.Equal(t, types.ErrEmptyArray, err)

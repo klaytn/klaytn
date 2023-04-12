@@ -20,9 +20,6 @@ import (
 	"github.com/klaytn/klaytn/crypto/bls/types"
 )
 
-// domain separation tag as per draft-irtf-cfrg-bls-signature-05#4.2.3
-var dst = []byte("BLS_SIG_BLS12381G1_XMD:SHA-256_SSWU_RO_POP_")
-
 type signature struct {
 	// Pointer to underlying blst struct, hence the name 'p'
 	p *blstSignature
@@ -38,7 +35,7 @@ func SignatureFromBytes(b []byte) (types.Signature, error) {
 	}
 
 	p := new(blstSignature).Uncompress(b)
-	if p == nil || !p.SigValidate(true) {
+	if p == nil || !p.SigValidate(false) {
 		return nil, types.ErrSignatureUnmarshal
 	}
 
@@ -81,7 +78,7 @@ func MultipleSignaturesFromBytes(bs [][]byte) ([]types.Signature, error) {
 		p := batchPs[i]
 		b := batchBytes[i]
 
-		if p == nil || !p.SigValidate(true) {
+		if p == nil || !p.SigValidate(false) {
 			return nil, types.ErrSignatureUnmarshal
 		}
 
@@ -124,14 +121,16 @@ func (s *signature) Marshal() []byte {
 }
 
 func Sign(sk types.SecretKey, msg []byte) types.Signature {
-	sig := new(blstSignature).Sign(sk.(*secretKey).p, msg, dst)
+	sig := new(blstSignature).Sign(
+		sk.(*secretKey).p, msg, types.DomainSeparationTag)
 	return &signature{p: sig}
 }
 
 func Verify(sig types.Signature, msg []byte, pk types.PublicKey) bool {
 	sigGroupCheck := false // alreaay checked in *SignatureFromBytes()
 	pkValidate := false    // alreaay checked in *PublicKeyFromBytes()
-	return sig.(*signature).p.Verify(sigGroupCheck, pk.(*publicKey).p, pkValidate, msg, dst)
+	return sig.(*signature).p.Verify(
+		sigGroupCheck, pk.(*publicKey).p, pkValidate, msg, types.DomainSeparationTag)
 }
 
 func FastAggregateVerify(sig types.Signature, msg []byte, pks []types.PublicKey) bool {
@@ -141,5 +140,6 @@ func FastAggregateVerify(sig types.Signature, msg []byte, pks []types.PublicKey)
 	}
 
 	sigGroupCheck := false // alreaay checked in *SignatureFromBytes()
-	return sig.(*signature).p.FastAggregateVerify(sigGroupCheck, pubPs, msg, dst)
+	return sig.(*signature).p.FastAggregateVerify(
+		sigGroupCheck, pubPs, msg, types.DomainSeparationTag)
 }
