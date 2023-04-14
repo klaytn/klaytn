@@ -90,6 +90,12 @@ func MultipleSignaturesFromBytes(bs [][]byte) ([]types.Signature, error) {
 	return sigs, nil
 }
 
+// AggregateSignatures assumes that given signatures has passed the SigValidate() check
+// i.e. they are on the right subgroup.
+//
+// Signature objects are expected to be returned by Sign(), SignatureFromBytes()
+// and AggregateSignaturesFromBytes(), and they all should be valid.
+// Therefore AggregateSignatures skips the validatity check.
 func AggregateSignatures(sigs []types.Signature) (types.Signature, error) {
 	if len(sigs) == 0 {
 		return nil, types.ErrEmptyArray

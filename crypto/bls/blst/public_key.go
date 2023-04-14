@@ -90,6 +90,12 @@ func MultiplePublicKeysFromBytes(bs [][]byte) ([]types.PublicKey, error) {
 	return pks, nil
 }
 
+// AggregatePublicKeys assumes that given public keys has passed the KeyValidate() check
+// i.e. they are not infinite and are on the right subgroup.
+//
+// PublicKey objects are expected to be returned by SecretKey.PublicKey(), PublicKeyFromBytes()
+// and AggregatePublicKeysFromBytes(), and they all should be valid.
+// Therefore AggregatePublicKeys skips the validatity check.
 func AggregatePublicKeys(pks []types.PublicKey) (types.PublicKey, error) {
 	if len(pks) == 0 {
 		return nil, types.ErrEmptyArray
