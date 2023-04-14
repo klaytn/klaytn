@@ -472,7 +472,7 @@ var flagsWithValues = []struct {
 	{
 		flag:        "--exec",
 		flagType:    FlagTypeArgument,
-		values:      []string{"klay.blockNumber", "klat.getBlock(0)", "governance.chainConfigAt().governance.reward.proposerUpdateInterval"},
+		values:      []string{"klay.blockNumber", "klat.getBlock(0)", "governance.getChainConfig().governance.reward.proposerUpdateInterval"},
 		wrongValues: commonThreeErrors,
 		errors:      []int{NonError, NonError, NonError},
 	},
