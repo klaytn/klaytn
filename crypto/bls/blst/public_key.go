@@ -30,7 +30,7 @@ func PublicKeyFromBytes(b []byte) (types.PublicKey, error) {
 		return nil, types.ErrPublicKeyLength(len(b))
 	}
 
-	if pk, ok := publicKeyCache().Get(cacheKey(b)); ok {
+	if pk, ok := publicKeyCache.Get(cacheKey(b)); ok {
 		return pk.(*publicKey), nil
 	}
 
@@ -40,7 +40,7 @@ func PublicKeyFromBytes(b []byte) (types.PublicKey, error) {
 	}
 
 	pk := &publicKey{p: p}
-	publicKeyCache().Add(cacheKey(b), pk)
+	publicKeyCache.Add(cacheKey(b), pk)
 	return pk, nil
 }
 
@@ -59,7 +59,7 @@ func MultiplePublicKeysFromBytes(bs [][]byte) ([]types.PublicKey, error) {
 	var batchIndices []int
 	var batchBytes [][]byte
 	for i, b := range bs {
-		if pk, ok := publicKeyCache().Get(cacheKey(b)); ok {
+		if pk, ok := publicKeyCache.Get(cacheKey(b)); ok {
 			pks[i] = pk.(*publicKey)
 		} else {
 			batchIndices = append(batchIndices, i)
@@ -83,7 +83,7 @@ func MultiplePublicKeysFromBytes(bs [][]byte) ([]types.PublicKey, error) {
 		}
 
 		pk := &publicKey{p: p}
-		publicKeyCache().Add(cacheKey(b), pk)
+		publicKeyCache.Add(cacheKey(b), pk)
 		pks[outIdx] = pk
 	}
 

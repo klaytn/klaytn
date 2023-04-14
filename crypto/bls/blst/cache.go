@@ -17,44 +17,19 @@
 package blst
 
 import (
-	"sync"
-
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
 )
 
-type blstComputeCache struct {
-	mu             sync.Mutex
-	init           bool
-	publicKeyCache common.Cache // PublicKey Uncompress
-	signatureCache common.Cache // Signature Uncompress
-}
-
-var computeCache = &blstComputeCache{}
+var publicKeyCache common.Cache // PublicKey Uncompress
+var signatureCache common.Cache // Signature Uncompress
 
 func cacheKey(b []byte) common.CacheKey {
 	return crypto.Keccak256Hash(b)
 }
 
-func initCacheLocked() {
-	computeCache.mu.Lock()
-	defer computeCache.mu.Unlock()
-	if !computeCache.init {
-		cacheConfig := common.LRUConfig{CacheSize: 200}
-
-		computeCache.publicKeyCache = common.NewCache(cacheConfig)
-		computeCache.signatureCache = common.NewCache(cacheConfig)
-
-		computeCache.init = true
-	}
-}
-
-func publicKeyCache() common.Cache {
-	initCacheLocked()
-	return computeCache.publicKeyCache
-}
-
-func signatureCache() common.Cache {
-	initCacheLocked()
-	return computeCache.signatureCache
+func init() {
+	cacheConfig := common.LRUConfig{CacheSize: 200}
+	publicKeyCache = common.NewCache(cacheConfig)
+	signatureCache = common.NewCache(cacheConfig)
 }

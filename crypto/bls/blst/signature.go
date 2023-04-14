@@ -30,7 +30,7 @@ func SignatureFromBytes(b []byte) (types.Signature, error) {
 		return nil, types.ErrSignatureLength(len(b))
 	}
 
-	if s, ok := signatureCache().Get(cacheKey(b)); ok {
+	if s, ok := signatureCache.Get(cacheKey(b)); ok {
 		return s.(*signature), nil
 	}
 
@@ -40,7 +40,7 @@ func SignatureFromBytes(b []byte) (types.Signature, error) {
 	}
 
 	s := &signature{p: p}
-	signatureCache().Add(cacheKey(b), s)
+	signatureCache.Add(cacheKey(b), s)
 	return s, nil
 }
 
@@ -59,7 +59,7 @@ func MultipleSignaturesFromBytes(bs [][]byte) ([]types.Signature, error) {
 	var batchIndices []int
 	var batchBytes [][]byte
 	for i, b := range bs {
-		if sig, ok := signatureCache().Get(cacheKey(b)); ok {
+		if sig, ok := signatureCache.Get(cacheKey(b)); ok {
 			sigs[i] = sig.(*signature)
 		} else {
 			batchIndices = append(batchIndices, i)
@@ -83,7 +83,7 @@ func MultipleSignaturesFromBytes(bs [][]byte) ([]types.Signature, error) {
 		}
 
 		sig := &signature{p: p}
-		signatureCache().Add(cacheKey(b), sig)
+		signatureCache.Add(cacheKey(b), sig)
 		sigs[outIdx] = sig
 	}
 

@@ -234,6 +234,6 @@ func runCached(b *testing.B, name string, fn func()) {
 }
 
 func resetCache() {
-	publicKeyCache().Purge()
-	signatureCache().Purge()
+	publicKeyCache.Purge()
+	signatureCache.Purge()
 }
