@@ -55,10 +55,17 @@ func TestSecretKeyFromBytes(t *testing.T) {
 }
 
 func TestSecretKeyPublicKey(t *testing.T) {
-	sk, err := SecretKeyFromBytes(testSecretKeyBytes)
+	var (
+		// https://github.com/ethereum/bls12-381-tests
+		// sign/sign_case_84d45c9c7cca6b92.json
+		// verify/verify_valid_case_195246ee3bd3b6ec.json
+		skb = common.FromHex("0x328388aff0d4a5b7dc9205abd374e7e98f3cd9f3418edb4eafda5fb16473d216")
+		pkb = common.FromHex("0xb53d21a4cfd562c469cc81514d4ce5a6b577d8403d32a394dc265dd190b47fa9f829fdd7963afdf972e5e77854051f6f")
+	)
+
+	sk, err := SecretKeyFromBytes(skb)
 	assert.Nil(t, err)
 
-	// Correctness check is done in Sign() and Verify() tests
 	pk := sk.PublicKey()
-	assert.NotNil(t, pk)
+	assert.Equal(t, pkb, pk.Marshal())
 }

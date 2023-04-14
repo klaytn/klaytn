@@ -126,7 +126,7 @@ func BenchmarkAggregateSignaturesFromBytes(b *testing.B) {
 
 func BenchmarkSign(b *testing.B) {
 	sk, _ := RandKey()
-	msg := testMessage
+	msg := []byte("test message")
 
 	for i := 0; i < b.N; i++ {
 		Sign(sk, msg)
@@ -136,7 +136,7 @@ func BenchmarkSign(b *testing.B) {
 func BenchmarkVerify(b *testing.B) {
 	sk, _ := RandKey()
 	pk := sk.PublicKey()
-	msg := testMessage
+	msg := []byte("test message")
 	sig := Sign(sk, msg)
 
 	for i := 0; i < b.N; i++ {
