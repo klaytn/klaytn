@@ -21,8 +21,10 @@ import (
 	"github.com/klaytn/klaytn/crypto"
 )
 
-var publicKeyCache common.Cache // PublicKey Uncompress
-var signatureCache common.Cache // Signature Uncompress
+var (
+	publicKeyCache common.Cache // PublicKey Uncompress
+	signatureCache common.Cache // Signature Uncompress
+)
 
 func cacheKey(b []byte) common.CacheKey {
 	return crypto.Keccak256Hash(b)
