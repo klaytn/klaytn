@@ -23,31 +23,23 @@ import (
 
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGetVMerrFromReceiptStatus(t *testing.T) {
-	err := GetVMerrFromReceiptStatus(types.ReceiptStatusFailed)
-	expectedErr := ErrInvalidReceiptStatus
-	if err.Error() != expectedErr.Error() {
-		t.Fatalf("Invalid err, want %s, got %s", expectedErr, err)
+	testData := []struct {
+		status           uint
+		expectMatchError error
+	}{
+		{types.ReceiptStatusFailed, ErrInvalidReceiptStatus},
+		{types.ReceiptStatusLast, ErrInvalidReceiptStatus},
+		{types.ReceiptStatusSuccessful, nil},
+		{types.ReceiptStatusErrDefault, ErrVMDefault},
 	}
 
-	// Invalid ReceiptStatus
-	err = GetVMerrFromReceiptStatus(types.ReceiptStatusLast)
-	expectedErr = ErrInvalidReceiptStatus
-	if err.Error() != expectedErr.Error() {
-		t.Fatalf("Invalid err, want %s, got %s", expectedErr, err)
-	}
-
-	err = GetVMerrFromReceiptStatus(types.ReceiptStatusSuccessful)
-	if err != nil {
-		t.Fatalf("Invalid err, want nil, got %s", err)
-	}
-
-	err = GetVMerrFromReceiptStatus(types.ReceiptStatusErrDefault)
-	expectedErr = ErrVMDefault
-	if err.Error() != expectedErr.Error() {
-		t.Fatalf("Invalid err, want %s, got %s", expectedErr, err)
+	for _, tc := range testData {
+		result := ExecutionResult{VmExecutionStatus: tc.status}
+		assert.Equal(t, tc.expectMatchError, result.Unwrap())
 	}
 }
 

@@ -2585,8 +2585,7 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 	// about the transaction and calling mechanisms.
 	vmenv := vm.NewEVM(context, statedb, chainConfig, vmConfig)
 	// Apply the transaction to the current state (included in the env)
-	_, gas, kerr := ApplyMessage(vmenv, msg)
-	err = kerr.ErrTxInvalid
+	result, err := ApplyMessage(vmenv, msg)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -2600,9 +2599,9 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 	}
 	// Update the state with pending changes
 	statedb.Finalise(true, false)
-	*usedGas += gas
+	*usedGas += result.UsedGas
 
-	receipt := types.NewReceipt(kerr.Status, tx.Hash(), gas)
+	receipt := types.NewReceipt(result.VmExecutionStatus, tx.Hash(), result.UsedGas)
 	// if the transaction created a contract, store the creation address in the receipt.
 	msg.FillContractAddress(vmenv.Context.Origin, receipt)
 	// Set the receipt logs and create a bloom for filtering
