@@ -50,7 +50,7 @@ type (
 // []b96 -> Sig:   AggregateCompressedSignatures
 //
 // Sign(SK, msg) -> Sig
-// VerifySignature(Sig, msg, PK) -> ok
+// VerifySignature(b96, msg, PK) -> ok, err
 
 // RandKey generates a random BLS secret key.
 func RandKey() (SecretKey, error) {
@@ -117,6 +117,6 @@ func Sign(sk SecretKey, msg []byte) Signature {
 
 // VerifySignature checks a signature. To perform aggregate verify, supply the
 // aggregate signature and aggregate public key.
-func VerifySignature(sig Signature, msg []byte, pk PublicKey) bool {
-	return blst.Verify(sig, msg, pk)
+func VerifySignature(sig []byte, msg [32]byte, pk PublicKey) (bool, error) {
+	return blst.VerifySignature(sig, msg, pk)
 }

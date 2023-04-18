@@ -149,3 +149,15 @@ func FastAggregateVerify(sig types.Signature, msg []byte, pks []types.PublicKey)
 	return sig.(*signature).p.FastAggregateVerify(
 		sigGroupCheck, pubPs, msg, types.DomainSeparationTag)
 }
+
+func VerifySignature(sigb []byte, msg [32]byte, pk types.PublicKey) (bool, error) {
+	sig, err := SignatureFromBytes(sigb)
+	if err != nil {
+		return false, err
+	}
+	sigGroupCheck := false // alreaay checked in SignatureFromBytes()
+	pkValidate := false    // alreaay checked in *PublicKeyFromBytes()
+	ok := sig.(*signature).p.Verify(
+		sigGroupCheck, pk.(*publicKey).p, pkValidate, msg[:], types.DomainSeparationTag)
+	return ok, nil
+}

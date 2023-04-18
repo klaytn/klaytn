@@ -28,10 +28,12 @@ func TestVerify(t *testing.T) {
 	sk, _ := RandKey()
 	pk := sk.PublicKey()
 
-	msg := make([]byte, 32)
-	sig := Sign(sk, msg)
+	var msg [32]byte
+	sigb := Sign(sk, msg[:]).Marshal()
 
-	assert.True(t, VerifySignature(sig, msg, pk))
+	ok, err := VerifySignature(sigb, msg, pk)
+	assert.Nil(t, err)
+	assert.True(t, ok)
 }
 
 // Test aggregated signature verification for the same message.
@@ -43,11 +45,15 @@ func TestAggregateVerify(t *testing.T) {
 	pkb1 := sk1.PublicKey().Marshal()
 	pkb2 := sk2.PublicKey().Marshal()
 
-	msg := make([]byte, 32)
-	sigb1 := Sign(sk1, msg).Marshal()
-	sigb2 := Sign(sk2, msg).Marshal()
+	var msg [32]byte
+	sigb1 := Sign(sk1, msg[:]).Marshal()
+	sigb2 := Sign(sk2, msg[:]).Marshal()
 
 	apk, _ := AggregatePublicKeys([][]byte{pkb1, pkb2})
 	asig, _ := AggregateCompressedSignatures([][]byte{sigb1, sigb2})
-	assert.True(t, VerifySignature(asig, msg, apk))
+
+	asigb := asig.Marshal()
+	ok, err := VerifySignature(asigb, msg, apk)
+	assert.Nil(t, err)
+	assert.True(t, ok)
 }
