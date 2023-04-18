@@ -22,6 +22,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// Test single signature verification.
+// Usage example: validating one IBFT Commit message in handleCommit()
 func TestVerify(t *testing.T) {
 	sk, _ := RandKey()
 	pk := sk.PublicKey()
@@ -29,9 +31,11 @@ func TestVerify(t *testing.T) {
 	msg := make([]byte, 32)
 	sig := Sign(sk, msg)
 
-	assert.True(t, Verify(sig, msg, pk))
+	assert.True(t, VerifySignature(sig, msg, pk))
 }
 
+// Test aggregated signature verification for the same message.
+// Usage example: validating aggregated block signature in VerifyHeader()
 func TestAggregateVerify(t *testing.T) {
 	sk1, _ := RandKey()
 	sk2, _ := RandKey()
@@ -43,7 +47,7 @@ func TestAggregateVerify(t *testing.T) {
 	sigb1 := Sign(sk1, msg).Marshal()
 	sigb2 := Sign(sk2, msg).Marshal()
 
-	apk, _ := AggregatePublicKeysFromBytes([][]byte{pkb1, pkb2})
-	asig, _ := AggregateSignaturesFromBytes([][]byte{sigb1, sigb2})
-	assert.True(t, Verify(asig, msg, apk))
+	apk, _ := AggregatePublicKeys([][]byte{pkb1, pkb2})
+	asig, _ := AggregateCompressedSignatures([][]byte{sigb1, sigb2})
+	assert.True(t, VerifySignature(asig, msg, apk))
 }

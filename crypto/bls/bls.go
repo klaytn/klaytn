@@ -27,6 +27,31 @@ type (
 	Signature = types.Signature
 )
 
+// Applications are expected to use below top-level functions,
+// Do not directly use 'blst' or other underlying implementations.
+//
+// Some functions are named after the equivalent functions in prysm Ethereum CL.
+// (https://github.com/prysmaticlabs/prysm/blob/v4.0.2/crypto/bls/bls.go)
+// Such naming should provide compatiblity with prysm code snippets,
+// in case prysm code snippets are integrated to klaytn.
+//
+// ()  -> SK:  RandKey
+// b32 -> SK:  SecretKeyFromBytes
+// b48 -> PK:  PublicKeyFromBytes
+// b96 -> Sig: SignatureFromBytes
+//
+// []b48 -> []PK:  MultiplePublicKeysFromBytes
+// []b96 -> []Sig: MultipleSignaturesFromBytes
+//
+// []PK  -> PK:    AggregateMultiplePubkeys
+// []Sig -> Sig:   AggregateSignatures
+//
+// []b48 -> PK:    AggregatePublicKeys
+// []b96 -> Sig:   AggregateCompressedSignatures
+//
+// Sign(SK, msg) -> Sig
+// VerifySignature(Sig, msg, PK) -> ok
+
 // RandKey generates a random BLS secret key.
 func RandKey() (SecretKey, error) {
 	return blst.RandKey()
@@ -47,17 +72,23 @@ func SignatureFromBytes(b []byte) (Signature, error) {
 	return blst.SignatureFromBytes(b)
 }
 
-// AggregatePublicKeys aggregates multiple BLS public keys.
-// Assumes that all given public keys are previously validated.
-// Returns error if an empty slice is given.
-func AggregatePublicKeys(pks []PublicKey) (PublicKey, error) {
-	return blst.AggregatePublicKeys(pks)
+// MultiplePublicKeysFromBytes unmarshals and validates multiple BLS public keys
+// from bytes. Returns an empty slice if an empty slice is given.
+func MultiplePublicKeysFromBytes(bs [][]byte) ([]PublicKey, error) {
+	return blst.MultiplePublicKeysFromBytes(bs)
 }
 
-// AggregatePublicKeysFromBytes unmarshals and validates multiple BLS public key from bytes
-// and then aggregates them. Returns error if an empty slice is given.
-func AggregatePublicKeysFromBytes(bs [][]byte) (PublicKey, error) {
-	return blst.AggregatePublicKeysFromBytes(bs)
+// MultipleSignaturesFromBytes unmarshals multiple BLS signatures from bytes.
+// Returns an empty slice if an empty slice is given.
+func MultipleSignaturesFromBytes(bs [][]byte) ([]Signature, error) {
+	return blst.MultipleSignaturesFromBytes(bs)
+}
+
+// AggregateMultiplePubkeys aggregates multiple BLS public keys.
+// Assumes that all given public keys are previously validated.
+// Returns error if an empty slice is given.
+func AggregateMultiplePubkeys(pks []PublicKey) (PublicKey, error) {
+	return blst.AggregatePublicKeys(pks)
 }
 
 // AggregatePublicKeys aggregates multiple BLS signatures.
@@ -67,9 +98,15 @@ func AggregateSignatures(sigs []Signature) (Signature, error) {
 	return blst.AggregateSignatures(sigs)
 }
 
-// AggregateSignaturesFromBytes unmarshals and validates multiple BLS signatures from bytes
+// AggregatePublicKeys unmarshals and validates multiple BLS public key from bytes
 // and then aggregates them. Returns error if an empty slice is given.
-func AggregateSignaturesFromBytes(bs [][]byte) (Signature, error) {
+func AggregatePublicKeys(bs [][]byte) (PublicKey, error) {
+	return blst.AggregatePublicKeysFromBytes(bs)
+}
+
+// AggregateCompressedSignatures unmarshals and validates multiple BLS signatures from bytes
+// and then aggregates them. Returns error if an empty slice is given.
+func AggregateCompressedSignatures(bs [][]byte) (Signature, error) {
 	return blst.AggregateSignaturesFromBytes(bs)
 }
 
@@ -78,8 +115,8 @@ func Sign(sk SecretKey, msg []byte) Signature {
 	return blst.Sign(sk, msg)
 }
 
-// Verify checks a signature. To perform aggregate verify, supply the
+// VerifySignature checks a signature. To perform aggregate verify, supply the
 // aggregate signature and aggregate public key.
-func Verify(sig Signature, msg []byte, pk PublicKey) bool {
+func VerifySignature(sig Signature, msg []byte, pk PublicKey) bool {
 	return blst.Verify(sig, msg, pk)
 }
