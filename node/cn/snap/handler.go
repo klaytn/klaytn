@@ -238,7 +238,7 @@ func ServiceGetAccountRangeQuery(chain SnapshotReader, req *GetAccountRangePacke
 	if err != nil {
 		return nil, nil
 	}
-	it, err := chain.Snapshots().AccountIterator(req.Root.ToRootExtHash(), req.Origin.ToRootExtHash())
+	it, err := chain.Snapshots().AccountIterator(req.Root, req.Origin)
 	if err != nil {
 		return nil, nil
 	}
@@ -246,7 +246,7 @@ func ServiceGetAccountRangeQuery(chain SnapshotReader, req *GetAccountRangePacke
 	var (
 		accounts []*AccountData
 		size     uint64
-		last     common.ExtHash
+		last     common.Hash
 	)
 	for it.Next() {
 		hash, account := it.Hash(), common.CopyBytes(it.Account())
@@ -257,7 +257,7 @@ func ServiceGetAccountRangeQuery(chain SnapshotReader, req *GetAccountRangePacke
 		// Assemble the reply item
 		size += uint64(common.HashLength + len(account))
 		accounts = append(accounts, &AccountData{
-			Hash: hash.ToHash(),
+			Hash: hash,
 			Body: account,
 		})
 		// If we've exceeded the request threshold, abort
@@ -277,7 +277,7 @@ func ServiceGetAccountRangeQuery(chain SnapshotReader, req *GetAccountRangePacke
 		logger.Warn("Failed to prove account range", "origin", req.Origin, "err", err)
 		return nil, nil
 	}
-	if last.ToHash() != (common.Hash{}) {
+	if last != (common.Hash{}) {
 		if err := tr.Prove(last[:], 0, proof); err != nil {
 			logger.Warn("Failed to prove account range", "last", last, "err", err)
 			return nil, nil
@@ -324,15 +324,14 @@ func ServiceGetStorageRangesQuery(chain SnapshotReader, req *GetStorageRangesPac
 			limit, req.Limit = common.BytesToHash(req.Limit), nil
 		}
 		// Retrieve the requested state and bail out if non existent
-		it, err := chain.Snapshots().StorageIterator(req.Root.ToRootExtHash(), accountHash.ToRootExtHash(), origin.ToRootExtHash()) // 2.3M_BAD_BLOCK_CODE
-		// it, err := chain.Snapshots().StorageIterator(req.Root.ToRootExtHash(), accountHash.LegacyToExtHash(), origin.ToRootExtHash())
+		it, err := chain.Snapshots().StorageIterator(req.Root, accountHash, origin)
 		if err != nil {
 			return nil, nil
 		}
 		// Iterate over the requested range and pile slots up
 		var (
 			storage []*StorageData
-			last    common.ExtHash
+			last    common.Hash
 			abort   bool
 		)
 		for it.Next() {
@@ -348,7 +347,7 @@ func ServiceGetStorageRangesQuery(chain SnapshotReader, req *GetStorageRangesPac
 			// Assemble the reply item
 			size += uint64(common.HashLength + len(slot))
 			storage = append(storage, &StorageData{
-				Hash: hash.ToHash(),
+				Hash: hash,
 				Body: slot,
 			})
 			// If we've exceeded the request threshold, abort
@@ -388,7 +387,7 @@ func ServiceGetStorageRangesQuery(chain SnapshotReader, req *GetStorageRangesPac
 				logger.Warn("Failed to prove storage range", "origin", req.Origin, "err", err)
 				return nil, nil
 			}
-			if last.ToHash() != (common.Hash{}) {
+			if last != (common.Hash{}) {
 				if err := stTrie.Prove(last[:], 0, proof); err != nil {
 					logger.Warn("Failed to prove storage range", "last", last, "err", err)
 					return nil, nil
@@ -425,7 +424,7 @@ func ServiceGetByteCodesQuery(chain SnapshotReader, req *GetByteCodesPacket) [][
 			// Peers should not request the empty code, but if they do, at
 			// least sent them back a correct response without db lookups
 			codes = append(codes, []byte{})
-		} else if blob, err := chain.ContractCode(hash.ToExtHash()); err == nil {
+		} else if blob, err := chain.ContractCode(hash.ToRootExtHash()); err == nil {
 			codes = append(codes, blob)
 			bytes += uint64(len(blob))
 		}
@@ -450,7 +449,7 @@ func ServiceGetTrieNodesQuery(chain SnapshotReader, req *GetTrieNodesPacket, sta
 		// We don't have the requested state available, bail out
 		return nil, nil
 	}
-	snap := chain.Snapshots().Snapshot(req.Root.ToRootExtHash())
+	snap := chain.Snapshots().Snapshot(req.Root)
 	if snap == nil {
 		// We don't have the requested state snapshotted yet, bail out.
 		// In reality we could still serve using the account and storage
@@ -482,7 +481,7 @@ func ServiceGetTrieNodesQuery(chain SnapshotReader, req *GetTrieNodesPacket, sta
 
 		default:
 			// Storage slots requested, open the storage trie and retrieve from there
-			acc, err := snap.Account(common.BytesToExtHash(pathset[0]))
+			acc, err := snap.Account(common.BytesToHash(pathset[0]))
 			loads++ // always account database reads, even for failures
 			if err != nil || acc == nil {
 				break

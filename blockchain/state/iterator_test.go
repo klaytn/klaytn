@@ -37,23 +37,23 @@ func TestNodeIteratorCoverage(t *testing.T) {
 		t.Fatalf("failed to create state trie at %x: %v", root, err)
 	}
 	// Gather all the node hashes found by the iterator
-	hashes := make(map[common.Hash]struct{})
+	hashes := make(map[common.ExtHash]struct{})
 	for it := NewNodeIterator(state); it.Next(); {
 		if it.Hash.ToHash() != (common.Hash{}) {
-			hashes[it.Hash.ToHash()] = struct{}{}
+			hashes[it.Hash] = struct{}{}
 		}
 	}
 	// Cross check the iterated hashes and the database/nodepool content
 	for hash := range hashes {
-		if _, err = db.TrieDB().Node(hash.ToRootExtHash()); err != nil {
-			_, err = db.ContractCode(hash.ToRootExtHash())
+		if _, err = db.TrieDB().Node(hash); err != nil {
+			_, err = db.ContractCode(hash)
 		}
 		if err != nil {
 			t.Errorf("failed to retrieve reported node %x", hash)
 		}
 	}
 	for _, hash := range db.TrieDB().Nodes() {
-		if _, ok := hashes[hash.ToHash()]; !ok && hash.ToHash() != emptyCode {
+		if _, ok := hashes[hash]; !ok && hash.ToHash() != emptyCode {
 			t.Errorf("state entry not reported %x", hash)
 		}
 	}
@@ -63,10 +63,10 @@ func TestNodeIteratorCoverage(t *testing.T) {
 		if bytes.HasPrefix(key, []byte("secure-key-")) {
 			continue
 		}
-		if bytes.Compare(emptyCode[:], common.BytesToHash(key).Bytes()) == 0 {
+		if bytes.Compare(emptyCode[:], common.BytesToRootExtHash(key).ToHash().Bytes()) == 0 {
 			continue
 		}
-		if _, ok := hashes[common.BytesToHash(key)]; !ok {
+		if _, ok := hashes[common.BytesToRootExtHash(key)]; !ok {
 			t.Errorf("state entry not reported %x", key)
 		}
 	}

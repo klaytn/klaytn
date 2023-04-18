@@ -456,11 +456,11 @@ func TestDBManager_TrieNode(t *testing.T) {
 	for _, dbm := range dbManagers {
 		cachedNode, _ := dbm.ReadCachedTrieNode(hash1.ToRootExtHash())
 		assert.Nil(t, cachedNode)
-		hasStateTrieNode, _ := dbm.HasStateTrieNode(hash1[:])
+		hasStateTrieNode, _ := dbm.HasStateTrieNode(hash1.ToRootExtHash().Bytes())
 		assert.False(t, hasStateTrieNode)
 
 		batch := dbm.NewBatch(StateTrieDB)
-		if err := batch.Put(hash1[:], hash2[:]); err != nil {
+		if err := batch.Put(hash1.ToRootExtHash().Bytes(), hash2[:]); err != nil {
 			t.Fatal("Failed putting a row into the batch", "err", err)
 		}
 		if _, err := WriteBatches(batch); err != nil {
@@ -470,7 +470,7 @@ func TestDBManager_TrieNode(t *testing.T) {
 		cachedNode, _ = dbm.ReadCachedTrieNode(hash1.ToRootExtHash())
 		assert.Equal(t, hash2[:], cachedNode)
 
-		if err := batch.Put(hash1[:], hash1[:]); err != nil {
+		if err := batch.Put(hash1.ToRootExtHash().Bytes(), hash1[:]); err != nil {
 			t.Fatal("Failed putting a row into the batch", "err", err)
 		}
 		if _, err := WriteBatches(batch); err != nil {
@@ -480,10 +480,10 @@ func TestDBManager_TrieNode(t *testing.T) {
 		cachedNode, _ = dbm.ReadCachedTrieNode(hash1.ToRootExtHash())
 		assert.Equal(t, hash1[:], cachedNode)
 
-		stateTrieNode, _ := dbm.ReadStateTrieNode(hash1[:])
+		stateTrieNode, _ := dbm.ReadStateTrieNode(hash1.ToRootExtHash().Bytes())
 		assert.Equal(t, hash1[:], stateTrieNode)
 
-		hasStateTrieNode, _ = dbm.HasStateTrieNode(hash1[:])
+		hasStateTrieNode, _ = dbm.HasStateTrieNode(hash1.ToRootExtHash().Bytes())
 		assert.True(t, hasStateTrieNode)
 
 		if dbm.IsSingle() {
@@ -497,18 +497,18 @@ func TestDBManager_TrieNode(t *testing.T) {
 		assert.Equal(t, hash1[:], cachedNode)
 		assert.Equal(t, hash1[:], oldCachedNode)
 
-		stateTrieNode, _ = dbm.ReadStateTrieNode(hash1[:])
-		oldStateTrieNode, _ := dbm.ReadStateTrieNodeFromOld(hash1[:])
+		stateTrieNode, _ = dbm.ReadStateTrieNode(hash1.ToRootExtHash().Bytes())
+		oldStateTrieNode, _ := dbm.ReadStateTrieNodeFromOld(hash1.ToRootExtHash().Bytes())
 		assert.Equal(t, hash1[:], stateTrieNode)
 		assert.Equal(t, hash1[:], oldStateTrieNode)
 
-		hasStateTrieNode, _ = dbm.HasStateTrieNode(hash1[:])
-		hasOldStateTrieNode, _ := dbm.HasStateTrieNodeFromOld(hash1[:])
+		hasStateTrieNode, _ = dbm.HasStateTrieNode(hash1.ToRootExtHash().Bytes())
+		hasOldStateTrieNode, _ := dbm.HasStateTrieNodeFromOld(hash1.ToRootExtHash().Bytes())
 		assert.True(t, hasStateTrieNode)
 		assert.True(t, hasOldStateTrieNode)
 
 		batch = dbm.NewBatch(StateTrieDB)
-		if err := batch.Put(hash2[:], hash2[:]); err != nil {
+		if err := batch.Put(hash2.ToRootExtHash().Bytes(), hash2[:]); err != nil {
 			t.Fatal("Failed putting a row into the batch", "err", err)
 		}
 		if _, err := WriteBatches(batch); err != nil {
@@ -520,13 +520,13 @@ func TestDBManager_TrieNode(t *testing.T) {
 		assert.Equal(t, hash2[:], cachedNode)
 		assert.Equal(t, hash2[:], oldCachedNode)
 
-		stateTrieNode, _ = dbm.ReadStateTrieNode(hash2[:])
-		oldStateTrieNode, _ = dbm.ReadStateTrieNodeFromOld(hash2[:])
+		stateTrieNode, _ = dbm.ReadStateTrieNode(hash2.ToRootExtHash().Bytes())
+		oldStateTrieNode, _ = dbm.ReadStateTrieNodeFromOld(hash2.ToRootExtHash().Bytes())
 		assert.Equal(t, hash2[:], stateTrieNode)
 		assert.Equal(t, hash2[:], oldStateTrieNode)
 
-		hasStateTrieNode, _ = dbm.HasStateTrieNode(hash2[:])
-		hasOldStateTrieNode, _ = dbm.HasStateTrieNodeFromOld(hash2[:])
+		hasStateTrieNode, _ = dbm.HasStateTrieNode(hash2.ToRootExtHash().Bytes())
+		hasOldStateTrieNode, _ = dbm.HasStateTrieNodeFromOld(hash2.ToRootExtHash().Bytes())
 		assert.True(t, hasStateTrieNode)
 		assert.True(t, hasOldStateTrieNode)
 
@@ -1127,31 +1127,34 @@ func getFilesInDir(t *testing.T, dirPath string, substr string) []string {
 func TestDBManager_WriteAndReadAccountSnapshot(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	var (
-		hash     common.ExtHash
+		hash     common.Hash
 		expected []byte
 		actual   []byte
 	)
 
 	for _, dbm := range dbManagers {
 		// read unknown key
-		hash, _ = genRandomData()
+		tmpHash, _ := genRandomData()
+		hash = tmpHash.ToHash()
 		actual = dbm.ReadAccountSnapshot(hash)
 		assert.Nil(t, actual)
 
 		// write and read with empty hash
 		_, expected = genRandomData()
-		dbm.WriteAccountSnapshot(common.InitExtHash(), expected)
-		actual = dbm.ReadAccountSnapshot(common.InitExtHash())
+		dbm.WriteAccountSnapshot(common.Hash{}, expected)
+		actual = dbm.ReadAccountSnapshot(common.Hash{})
 		assert.Equal(t, expected, actual)
 
 		// write and read with empty data
-		hash, _ = genRandomData()
+		tmpHash, _ = genRandomData()
+		hash := tmpHash.ToHash()
 		dbm.WriteAccountSnapshot(hash, []byte{})
 		actual = dbm.ReadAccountSnapshot(hash)
 		assert.Equal(t, []byte{}, actual)
 
 		// write and read with random hash and data
-		hash, expected = genRandomData()
+		tmpHash, expected = genRandomData()
+		hash = tmpHash.ToHash()
 		dbm.WriteAccountSnapshot(hash, expected)
 		actual = dbm.ReadAccountSnapshot(hash)
 		assert.Equal(t, expected, actual)
@@ -1161,34 +1164,37 @@ func TestDBManager_WriteAndReadAccountSnapshot(t *testing.T) {
 func TestDBManager_DeleteAccountSnapshot(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	var (
-		hash     common.ExtHash
+		hash     common.Hash
 		expected []byte
 		actual   []byte
 	)
 
 	for _, dbm := range dbManagers {
 		// delete unknown key
-		hash, _ = genRandomData()
+		tmpHash, _ := genRandomData()
+		hash = tmpHash.ToHash()
 		dbm.DeleteAccountSnapshot(hash)
 		actual = dbm.ReadAccountSnapshot(hash)
 		assert.Nil(t, actual)
 
 		// delete empty hash
 		_, expected = genRandomData()
-		dbm.WriteAccountSnapshot(common.InitExtHash(), expected)
-		dbm.DeleteAccountSnapshot(common.InitExtHash())
+		dbm.WriteAccountSnapshot(common.Hash{}, expected)
+		dbm.DeleteAccountSnapshot(common.Hash{})
 		actual = dbm.ReadAccountSnapshot(hash)
 		assert.Nil(t, actual)
 
 		// write and read with empty data
-		hash, _ = genRandomData()
+		tmpHash, _ = genRandomData()
+		hash = tmpHash.ToHash()
 		dbm.WriteAccountSnapshot(hash, []byte{})
 		dbm.DeleteAccountSnapshot(hash)
 		actual = dbm.ReadAccountSnapshot(hash)
 		assert.Nil(t, actual)
 
 		// write and read with random hash and data
-		hash, expected = genRandomData()
+		tmpHash, expected = genRandomData()
+		hash = tmpHash.ToHash()
 		dbm.WriteAccountSnapshot(hash, expected)
 		dbm.DeleteAccountSnapshot(hash)
 		actual = dbm.ReadAccountSnapshot(hash)

@@ -78,9 +78,9 @@ type StateDB struct {
 
 	snaps         *snapshot.Tree
 	snap          snapshot.Snapshot
-	snapDestructs map[common.ExtHash]struct{}
-	snapAccounts  map[common.ExtHash][]byte
-	snapStorage   map[common.ExtHash]map[common.ExtHash][]byte
+	snapDestructs map[common.Hash]struct{}
+	snapAccounts  map[common.Hash][]byte
+	snapStorage   map[common.Hash]map[common.Hash][]byte
 
 	// This map holds 'live' objects, which will get modified while processing a state transition.
 	stateObjects             map[common.Address]*stateObject
@@ -148,10 +148,10 @@ func New(root common.ExtHash, db Database, snaps *snapshot.Tree) (*StateDB, erro
 		accessList:               newAccessList(),
 	}
 	if sdb.snaps != nil {
-		if sdb.snap = sdb.snaps.Snapshot(root); sdb.snap != nil {
-			sdb.snapDestructs = make(map[common.ExtHash]struct{})
-			sdb.snapAccounts = make(map[common.ExtHash][]byte)
-			sdb.snapStorage = make(map[common.ExtHash]map[common.ExtHash][]byte)
+		if sdb.snap = sdb.snaps.Snapshot(root.ToHash()); sdb.snap != nil {
+			sdb.snapDestructs = make(map[common.Hash]struct{})
+			sdb.snapAccounts = make(map[common.Hash][]byte)
+			sdb.snapStorage = make(map[common.Hash]map[common.Hash][]byte)
 		}
 	}
 	return sdb, nil
@@ -176,10 +176,10 @@ func NewForPrefetching(root common.ExtHash, db Database, snaps *snapshot.Tree) (
 		prefetching:              true,
 	}
 	if sdb.snaps != nil {
-		if sdb.snap = sdb.snaps.Snapshot(root); sdb.snap != nil {
-			sdb.snapDestructs = make(map[common.ExtHash]struct{})
-			sdb.snapAccounts = make(map[common.ExtHash][]byte)
-			sdb.snapStorage = make(map[common.ExtHash]map[common.ExtHash][]byte)
+		if sdb.snap = sdb.snaps.Snapshot(root.ToHash()); sdb.snap != nil {
+			sdb.snapDestructs = make(map[common.Hash]struct{})
+			sdb.snapAccounts = make(map[common.Hash][]byte)
+			sdb.snapStorage = make(map[common.Hash]map[common.Hash][]byte)
 		}
 	}
 	return sdb, nil
@@ -356,7 +356,7 @@ func (self *StateDB) GetCodeHash(addr common.Address) common.Hash {
 	if stateObject == nil {
 		return common.BytesToHash(emptyCodeHash)
 	}
-	return common.BytesToHash(stateObject.CodeHash()[:common.HashLength])
+	return common.BytesToHash(stateObject.CodeHash().ToHash().Bytes())
 }
 
 // GetState retrieves a value from the given account's storage trie.
@@ -628,8 +628,7 @@ func (self *StateDB) getDeletedStateObject(addr common.Address) *stateObject {
 		if EnabledExpensive {
 			defer func(start time.Time) { self.SnapshotAccountReads += time.Since(start) }(time.Now())
 		}
-		if acc, err = self.snap.Account(crypto.Keccak256Hash(addr.Bytes()).ToRootExtHash()); err == nil { // 2.3M_BAD_BLOCK_CODE
-			// if acc, err = self.snap.Account(crypto.Keccak256Hash(addr.Bytes()).LegacyToExtHash()); err == nil {
+		if acc, err = self.snap.Account(crypto.Keccak256Hash(addr.Bytes())); err == nil {
 			if acc == nil {
 				return nil
 			}
@@ -820,12 +819,12 @@ func (db *StateDB) ForEachStorage(addr common.Address, cb func(key, value common
 	}
 	it := statedb.NewIterator(so.getStorageTrie(db.db).NodeIterator(nil))
 	for it.Next() {
-		key := common.BytesToExtHash(db.trie.GetKey(it.Key))
+		key := common.BytesToRootExtHash(db.trie.GetKey(it.Key))
 		if value, dirty := so.dirtyStorage[key]; dirty {
 			cb(key, value)
 			continue
 		}
-		cb(key, common.BytesToExtHash(it.Value))
+		cb(key, common.BytesToRootExtHash(it.Value))
 	}
 }
 
@@ -886,17 +885,17 @@ func (self *StateDB) Copy() *StateDB {
 		state.snaps = self.snaps
 		state.snap = self.snap
 		// deep copy needed
-		state.snapDestructs = make(map[common.ExtHash]struct{})
+		state.snapDestructs = make(map[common.Hash]struct{})
 		for k, v := range self.snapDestructs {
 			state.snapDestructs[k] = v
 		}
-		state.snapAccounts = make(map[common.ExtHash][]byte)
+		state.snapAccounts = make(map[common.Hash][]byte)
 		for k, v := range self.snapAccounts {
 			state.snapAccounts[k] = v
 		}
-		state.snapStorage = make(map[common.ExtHash]map[common.ExtHash][]byte)
+		state.snapStorage = make(map[common.Hash]map[common.Hash][]byte)
 		for k, v := range self.snapStorage {
-			temp := make(map[common.ExtHash][]byte)
+			temp := make(map[common.Hash][]byte)
 			for kk, vv := range v {
 				temp[kk] = vv
 			}
@@ -1005,7 +1004,7 @@ func (s *StateDB) IntermediateRoot(deleteEmptyObjects bool) common.ExtHash {
 	if EnabledExpensive {
 		defer func(start time.Time) { s.AccountHashes += time.Since(start) }(time.Now())
 	}
-	return s.trie.RootHash()
+	return s.trie.Hash()
 }
 
 // Prepare sets the current transaction hash and index and block hash which is
@@ -1048,7 +1047,7 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.ExtHash, err erro
 			if stateObject.IsProgramAccount() {
 				// Write any contract code associated with the state object.
 				if stateObject.code != nil && stateObject.dirtyCode {
-					s.db.TrieDB().DiskDB().WriteCode(common.BytesToRootExtHash(stateObject.CodeHash()), stateObject.code)
+					s.db.TrieDB().DiskDB().WriteCode(stateObject.CodeHash(), stateObject.code)
 					stateObject.dirtyCode = false
 				}
 				// Write any storage changes in the state object to its storage trie.
@@ -1073,22 +1072,26 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.ExtHash, err erro
 	}
 	root, err = s.trie.Commit(func(_ [][]byte, _ []byte, leaf []byte, parent common.ExtHash, parentDepth int) error {
 		serializer := account.NewAccountSerializer()
+		serializerLH := account.NewAccountLHSerializer()
 		if err := rlp.DecodeBytes(leaf, serializer); err != nil {
-			logger.Warn("RLP decode failed", "err", err, "leaf", string(leaf))
-			return nil
+			if err := rlp.DecodeBytes(leaf, serializerLH); err != nil {
+				logger.Warn("RLP decode failed", "err", err, "leaf", string(leaf))
+				return nil
+			}
+			serializer = serializerLH.TransCopy()
 		}
 		acc := serializer.GetAccount()
 		if pa := account.GetProgramAccount(acc); pa != nil {
 			if pa.GetStorageRoot().ToHash() != emptyState {
 				s.db.TrieDB().Reference(pa.GetStorageRoot(), parent)
 			}
-			code := common.BytesToRootExtHash(pa.GetCodeHash())
+			code := pa.GetCodeHash()
 			if code.ToHash() != emptyCode {
 				s.db.TrieDB().Reference(code, parent)
 			}
 		}
 		return nil
-	}, true)
+	})
 
 	// If snapshotting is enabled, update the snapshot tree with this new version
 	if s.snap != nil {
@@ -1096,15 +1099,15 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.ExtHash, err erro
 			defer func(start time.Time) { s.SnapshotCommits += time.Since(start) }(time.Now())
 		}
 		// Only update if there's a state transition (skip empty Clique blocks)
-		if parent := s.snap.Root(); parent != root {
-			if err := s.snaps.Update(root, parent, s.snapDestructs, s.snapAccounts, s.snapStorage); err != nil {
+		if parent := s.snap.Root(); parent != root.ToHash() {
+			if err := s.snaps.Update(root.ToHash(), parent, s.snapDestructs, s.snapAccounts, s.snapStorage); err != nil {
 				logger.Warn("Failed to update snapshot tree", "from", parent, "to", root, "err", err)
 			}
 			// Keep 128 diff layers in the memory, persistent layer is 129th.
 			// - head layer is paired with HEAD state
 			// - head-1 layer is paired with HEAD-1 state
 			// - head-127 layer(bottom-most diff layer) is paired with HEAD-127 state
-			if err := s.snaps.Cap(root, 128); err != nil {
+			if err := s.snaps.Cap(root.ToHash(), 128); err != nil {
 				logger.Warn("Failed to cap snapshot tree", "root", root, "layers", 128, "err", err)
 			}
 		}

@@ -62,10 +62,10 @@ func NewTestSnapshotReader(items []*testKV) (*testSnapshotReader, common.Hash) {
 	for _, kv := range items {
 		trie.Update(kv.k, kv.v)
 	}
-	root, _ := trie.Commit(nil, true)
+	root, _ := trie.Commit(nil)
 	db.TrieDB().Commit(root, false, 0)
 
-	snap, _ := snapshot.New(memdb, db.TrieDB(), 256, root, false, true, false)
+	snap, _ := snapshot.New(memdb, db.TrieDB(), 256, root.ToHash(), false, true, false)
 
 	return &testSnapshotReader{
 		db,

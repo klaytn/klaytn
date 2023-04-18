@@ -303,6 +303,17 @@ func (db *levelDB) Get(key []byte) ([]byte, error) {
 }
 
 func (db *levelDB) get(key []byte) ([]byte, error) {
+        dat, err := db.db.Get(key, nil)
+        if err != nil {
+                if err == leveldb.ErrNotFound {
+                        return nil, dataNotFoundErr
+                }
+                return nil, err
+        }
+        return dat, nil
+}
+
+func (db *levelDB) getbak(key []byte) ([]byte, error) {
 	dat, err := db.db.Get(key, nil)
 	keyLen := len(key)
 	// oldHash2ExtHash : ExtHash only version code. not coded
@@ -320,10 +331,10 @@ func (db *levelDB) get(key []byte) ([]byte, error) {
 			}
 		}
 		if fmt.Sprintf("%x", key[:5]) != "6800000000" {
-			// debug.PrintStack()
 			fmt.Printf("~~~~~ GET = %x, err = %s\n", key, err.Error())
 		}
 		if err == leveldb.ErrNotFound {
+			//debug.PrintStack()
 			return nil, dataNotFoundErr
 		}
 		return nil, err

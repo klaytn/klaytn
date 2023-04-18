@@ -168,7 +168,7 @@ func (t *SecureTrie) GetKey(shaKey []byte) []byte {
 //
 // Committing flushes nodes from memory. Subsequent Get calls will load nodes
 // from the database.
-func (t *SecureTrie) Commit(onleaf LeafCallback, extRootFlag bool) (root common.ExtHash, err error) {
+func (t *SecureTrie) Commit(onleaf LeafCallback) (root common.ExtHash, err error) {
 	// Write all the pre-images to the actual disk database
 	if len(t.getSecKeyCache()) > 0 {
 		t.trie.db.lock.Lock()
@@ -180,15 +180,11 @@ func (t *SecureTrie) Commit(onleaf LeafCallback, extRootFlag bool) (root common.
 		t.secKeyCache = make(map[string][]byte)
 	}
 	// Commit the trie to its intermediate node database
-	return t.trie.Commit(onleaf, extRootFlag)
+	return t.trie.Commit(onleaf)
 }
 
 func (t *SecureTrie) Hash() common.ExtHash {
 	return t.trie.Hash()
-}
-
-func (t *SecureTrie) RootHash() common.ExtHash {
-	return t.trie.RootHash()
 }
 
 func (t *SecureTrie) Copy() *SecureTrie {

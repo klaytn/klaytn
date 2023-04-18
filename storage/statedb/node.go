@@ -149,8 +149,7 @@ func (n *shortNode) LegacyRLP() (tmp sliceBuffer) {
 	} else if tmpHashNode, ok := n.Val.(hashNode); ok {
 		tmpNode.Val = toHashNode(tmpHashNode[:common.HashLength])
 	} else {
-		tmpNode.Val = tmpValueNode // 2.3M_BAD_BLOCK_CODE
-		// tmpNode.Val = n.Val
+		tmpNode.Val = tmpValueNode
 	}
 
 	if err := rlp.Encode(&tmp, tmpNode); err != nil {
@@ -282,7 +281,7 @@ func decodeRef(buf []byte) (node, []byte, error) {
 	case kind == rlp.String && len(val) == common.ExtHashLength:
 		return append(hashNode{}, val...), rest, nil
 	case kind == rlp.String && len(val) == common.HashLength:
-		legacyKey := common.BytesLegacyToExtHash(val)
+		legacyKey := common.BytesToRootExtHash(val)
 		return append(hashNode{}, legacyKey[:]...), rest, nil
 	default:
 		return nil, nil, fmt.Errorf("invalid RLP string size %d (want 0 or %d)", len(val), common.ExtHashLength)

@@ -74,7 +74,7 @@ func (self Storage) Copy() Storage {
 // Finally, call CommitStorageTrie to write the modified storage trie into a database.
 type stateObject struct {
 	address  common.Address
-	addrHash common.ExtHash // hash of the address of the account
+	addrHash common.Hash // hash of the address of the account
 	account  account.Account
 	db       *StateDB
 
@@ -120,8 +120,7 @@ func newObject(db *StateDB, address common.Address, data account.Account) *state
 	return &stateObject{
 		db:       db,
 		address:  address,
-		addrHash: crypto.Keccak256Hash(address[:]).ToRootExtHash(), // 2.3M_BAD_BLOCK_CODE
-		// addrHash:      crypto.Keccak256Hash(address[:]).LegacyToExtHash(),
+		addrHash: crypto.Keccak256Hash(address[:]),
 		account:       data,
 		originStorage: make(Storage),
 		dirtyStorage:  make(Storage),
@@ -228,7 +227,7 @@ func (self *stateObject) GetCommittedState(db Database, key common.ExtHash) comm
 		if _, destructed := self.db.snapDestructs[self.addrHash]; destructed {
 			return common.InitExtHash()
 		}
-		enc, err = self.db.snap.Storage(self.addrHash, crypto.Keccak256Hash(key.Bytes()).ToExtHash())
+		enc, err = self.db.snap.Storage(self.addrHash, crypto.Keccak256Hash(key.Bytes()))
 	}
 	// If the snapshot is unavailable or reading from it fails, load from the database.
 	if self.db.snap == nil || err != nil {
@@ -252,7 +251,7 @@ func (self *stateObject) GetCommittedState(db Database, key common.ExtHash) comm
 		if err != nil {
 			self.setError(err)
 		}
-		value = common.BytesToExtHash(content)
+		value = common.BytesToRootExtHash(content)
 	}
 	self.originStorage[key] = value
 	return value
@@ -295,7 +294,7 @@ func (self *stateObject) SetStorage(storage map[common.ExtHash]common.ExtHash) {
 // IsContractAccount returns true is the account has a non-empty codeHash.
 func (self *stateObject) IsContractAccount() bool {
 	acc := account.GetProgramAccount(self.account)
-	if acc != nil && !bytes.Equal(acc.GetCodeHash()[:common.HashLength], emptyCodeHash) {
+	if acc != nil && !bytes.Equal(acc.GetCodeHash().ToHash().Bytes(), emptyCodeHash) {
 		return true
 	}
 	return false
@@ -304,7 +303,7 @@ func (self *stateObject) IsContractAccount() bool {
 // IsContractAvailable returns true if the account has a smart contract code hash and didn't self-destruct
 func (self *stateObject) IsContractAvailable() bool {
 	acc := account.GetProgramAccount(self.account)
-	if acc != nil && !bytes.Equal(acc.GetCodeHash()[:common.HashLength], emptyCodeHash) && self.suicided == false {
+	if acc != nil && !bytes.Equal(acc.GetCodeHash().ToHash().Bytes(), emptyCodeHash) && self.suicided == false {
 		return true
 	}
 	return false
@@ -337,7 +336,7 @@ func (self *stateObject) updateStorageTrie(db Database) Trie {
 		defer func(start time.Time) { self.db.StorageUpdates += time.Since(start) }(time.Now())
 	}
 	// The snapshot storage map for the object
-	var storage map[common.ExtHash][]byte
+	var storage map[common.Hash][]byte
 	// Insert all the pending updates into the trie
 	tr := self.getStorageTrie(db)
 	for key, value := range self.dirtyStorage {
@@ -362,11 +361,11 @@ func (self *stateObject) updateStorageTrie(db Database) Trie {
 			if storage == nil {
 				// Retrieve the old storage map, if available, create a new one otherwise
 				if storage = self.db.snapStorage[self.addrHash]; storage == nil {
-					storage = make(map[common.ExtHash][]byte)
+					storage = make(map[common.Hash][]byte)
 					self.db.snapStorage[self.addrHash] = storage
 				}
 			}
-			storage[crypto.Keccak256Hash(key[:]).ToExtHash()] = v // v will be nil if it's deleted // Ethan TC debug ??????? 의심스러운데..
+			storage[crypto.Keccak256Hash(key[:])] = v // v will be nil if it's deleted
 		}
 	}
 	return tr
@@ -379,8 +378,7 @@ func (self *stateObject) updateStorageRoot(db Database) {
 		if EnabledExpensive {
 			defer func(start time.Time) { self.db.StorageHashes += time.Since(start) }(time.Now())
 		}
-		acc.SetStorageRoot(self.storageTrie.Hash()) // Ethan at TC debug
-		// acc.SetStorageRoot(self.storageTrie.RootHash())
+		acc.SetStorageRoot(self.storageTrie.Hash())
 	}
 }
 
@@ -393,8 +391,7 @@ func (self *stateObject) setStorageRoot(updateStorageRoot bool, objectsToUpdate 
 			if EnabledExpensive {
 				defer func(start time.Time) { self.db.StorageHashes += time.Since(start) }(time.Now())
 			}
-			acc.SetStorageRoot(self.storageTrie.Hash()) // Ethan at TC debug
-			// acc.SetStorageRoot(self.storageTrie.RootHash())
+			acc.SetStorageRoot(self.storageTrie.Hash())
 			return
 		}
 		// If updateStorageRoot == false, it just marks the object and updates its storage root later.
@@ -414,7 +411,7 @@ func (self *stateObject) CommitStorageTrie(db Database) error {
 		defer func(start time.Time) { self.db.StorageCommits += time.Since(start) }(time.Now())
 	}
 	if acc := account.GetProgramAccount(self.account); acc != nil {
-		root, err := self.storageTrie.Commit(nil, false)
+		root, err := self.storageTrie.Commit(nil)
 		if err != nil {
 			return err
 		}
@@ -490,10 +487,10 @@ func (self *stateObject) Code(db Database) []byte {
 	if self.code != nil {
 		return self.code
 	}
-	if bytes.Equal(self.CodeHash(), emptyCodeHash) {
+	if bytes.Equal(self.CodeHash().ToHash().Bytes(), emptyCodeHash) {
 		return nil
 	}
-	code, err := db.ContractCode(common.BytesToRootExtHash(self.CodeHash()))
+	code, err := db.ContractCode(self.CodeHash())
 	if err != nil {
 		self.setError(fmt.Errorf("can't load code hash %x: %v", self.CodeHash(), err))
 	}
@@ -508,10 +505,10 @@ func (self *stateObject) CodeSize(db Database) int {
 	if self.code != nil {
 		return len(self.code)
 	}
-	if bytes.Equal(self.CodeHash(), emptyCodeHash) {
+	if bytes.Equal(self.CodeHash().ToHash().Bytes(), emptyCodeHash) {
 		return 0
 	}
-	size, err := db.ContractCodeSize(common.BytesToRootExtHash(self.CodeHash()))
+	size, err := db.ContractCodeSize(self.CodeHash())
 	if err != nil {
 		self.setError(fmt.Errorf("can't load code size %x: %v", self.CodeHash(), err))
 	}
@@ -522,7 +519,7 @@ func (self *stateObject) SetCode(codeHash common.ExtHash, code []byte) error {
 	prevcode := self.Code(self.db.db)
 	self.db.journal.append(codeChange{
 		account:  &self.address,
-		prevhash: self.CodeHash(),
+		prevhash: self.CodeHash().Bytes(),
 		prevcode: prevcode,
 	})
 	return self.setCode(codeHash, code)
@@ -535,7 +532,7 @@ func (self *stateObject) setCode(codeHash common.ExtHash, code []byte) error {
 		return kerrors.ErrNotProgramAccount
 	}
 	self.code = code
-	acc.SetCodeHash(codeHash[:common.HashLength])
+	acc.SetCodeHash(codeHash)
 	self.dirtyCode = true
 	return nil
 }
@@ -562,11 +559,11 @@ func (self *stateObject) setNonce(nonce uint64) {
 	self.account.SetNonce(nonce)
 }
 
-func (self *stateObject) CodeHash() []byte {
+func (self *stateObject) CodeHash() common.ExtHash {
 	if acc := account.GetProgramAccount(self.account); acc != nil {
 		return acc.GetCodeHash()
 	}
-	return emptyCodeHash
+	return common.BytesToRootExtHash(emptyCodeHash)
 }
 
 func (self *stateObject) Balance() *big.Int {

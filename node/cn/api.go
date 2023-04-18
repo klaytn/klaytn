@@ -325,7 +325,7 @@ func (api *PublicDebugAPI) DumpStateTrie(ctx context.Context, blockNrOrHash rpc.
 	}
 
 	db := state.NewDatabaseWithExistingCache(api.cn.chainDB, api.cn.blockchain.StateCache().TrieDB().TrieNodeCache())
-	stateDB, err := state.New(block.Root().ToExtHash(), db, nil)
+	stateDB, err := state.New(block.Root().ToRootExtHash(), db, nil)
 	if err != nil {
 		return DumpStateTrieResult{}, err
 	}
@@ -437,7 +437,7 @@ func storageRangeAt(st state.Trie, start []byte, maxResult int) (StorageRangeRes
 		}
 		e := storageEntry{Value: common.BytesToHash(content)}
 		if preimage := st.GetKey(it.Key); preimage != nil {
-			preimage := common.BytesToHash(preimage)
+			preimage := common.BytesToRootExtHash(preimage).ToHash()
 			e.Key = &preimage
 		}
 		result.Storage[common.BytesToHash(it.Key)] = e
@@ -496,11 +496,11 @@ func (api *PublicDebugAPI) GetModifiedAccountsByHash(startHash common.Hash, endH
 func (api *PublicDebugAPI) getModifiedAccounts(startBlock, endBlock *types.Block) ([]common.Address, error) {
 	trieDB := api.cn.blockchain.StateCache().TrieDB()
 
-	oldTrie, err := statedb.NewSecureTrie(startBlock.Root().ToExtHash(), trieDB)
+	oldTrie, err := statedb.NewSecureTrie(startBlock.Root().ToRootExtHash(), trieDB)
 	if err != nil {
 		return nil, err
 	}
-	newTrie, err := statedb.NewSecureTrie(endBlock.Root().ToExtHash(), trieDB)
+	newTrie, err := statedb.NewSecureTrie(endBlock.Root().ToRootExtHash(), trieDB)
 	if err != nil {
 		return nil, err
 	}
@@ -574,11 +574,11 @@ func (api *PublicDebugAPI) getModifiedStorageNodes(contractAddr common.Address, 
 	}
 
 	trieDB := api.cn.blockchain.StateCache().TrieDB()
-	oldTrie, err := statedb.NewSecureTrie(startBlockRoot.ToExtHash(), trieDB)
+	oldTrie, err := statedb.NewSecureTrie(startBlockRoot.ToRootExtHash(), trieDB)
 	if err != nil {
 		return 0, err
 	}
-	newTrie, err := statedb.NewSecureTrie(endBlockRoot.ToExtHash(), trieDB)
+	newTrie, err := statedb.NewSecureTrie(endBlockRoot.ToRootExtHash(), trieDB)
 	if err != nil {
 		return 0, err
 	}

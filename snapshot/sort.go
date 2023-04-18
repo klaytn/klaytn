@@ -27,7 +27,7 @@ import (
 )
 
 // hashes is a helper to implement sort.Interface.
-type hashes []common.ExtHash
+type hashes []common.Hash
 
 // Len is the number of elements in the collection.
 func (hs hashes) Len() int { return len(hs) }

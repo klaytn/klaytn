@@ -472,11 +472,11 @@ func (st *StackTrie) hash() {
 // Hash returns the hash of the current node
 func (st *StackTrie) Hash() (h common.Hash) {
 	st.hash()
-	if len(st.val) != 32 {
+	if len(st.val) != common.ExtHashLength && len(st.val) != common.HashLength {
 		// If the node's RLP isn't 32 bytes long, the node will not
 		// be hashed, and instead contain the  rlp-encoding of the
 		// node. For the top level node, we need to force the hashing.
-		ret := make([]byte, 32)
+		ret := make([]byte, common.HashLength)
 		h := newHasher(nil)
 		defer returnHasherToPool(h)
 		h.sha.Reset()
@@ -484,7 +484,7 @@ func (st *StackTrie) Hash() (h common.Hash) {
 		h.sha.Read(ret)
 		return common.BytesToHash(ret)
 	}
-	return common.BytesToHash(st.val)
+	return common.BytesToRootExtHash(st.val).ToHash()
 }
 
 // Commit will firstly hash the entrie trie if it's still not hashed
@@ -499,11 +499,11 @@ func (st *StackTrie) Commit() (common.Hash, error) {
 		return common.Hash{}, ErrCommitDisabled
 	}
 	st.hash()
-	if len(st.val) != 32 {
+	if len(st.val) != common.ExtHashLength && len(st.val) != common.HashLength {
 		// If the node's RLP isn't 32 bytes long, the node will not
 		// be hashed (and committed), and instead contain the  rlp-encoding of the
 		// node. For the top level node, we need to force the hashing+commit.
-		ret := make([]byte, 32)
+		ret := make([]byte, common.HashLength)
 		h := newHasher(nil)
 		defer returnHasherToPool(h)
 		h.sha.Reset()
@@ -512,5 +512,5 @@ func (st *StackTrie) Commit() (common.Hash, error) {
 		st.db.GetStateTrieDB().Put(ret, st.val)
 		return common.BytesToHash(ret), nil
 	}
-	return common.BytesToHash(st.val), nil
+	return common.BytesToRootExtHash(st.val).ToHash(), nil
 }

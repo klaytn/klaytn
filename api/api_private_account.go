@@ -411,6 +411,7 @@ func (s *PrivateAccountAPI) SignTransactionAsFeePayer(ctx context.Context, args 
 // This gives context to the signed message and prevents signing of transactions.
 func signHash(data []byte) []byte {
 	msg := fmt.Sprintf("\x19Klaytn Signed Message:\n%d%s", len(data), data)
+	fmt.Printf("\n\n\n\n\n\n\n\n~~~~~~~~~~~~~ msg %x\n\n\n\n\n", data)
 	return crypto.Keccak256([]byte(msg))
 }
 

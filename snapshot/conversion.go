@@ -37,18 +37,18 @@ import (
 
 // trieKV represents a trie key-value pair
 type trieKV struct {
-	key   common.ExtHash
+	key   common.Hash
 	value []byte
 }
 
 type (
 	// trieGeneratorFn is the interface of trie generation which can
 	// be implemented by different trie algorithm.
-	trieGeneratorFn func(in chan (trieKV), out chan (common.ExtHash))
+	trieGeneratorFn func(in chan (trieKV), out chan (common.Hash))
 
 	// leafCallbackFn is the callback invoked at the leaves of the trie,
 	// returns the subtrie root with the specified subtrie identifier.
-	leafCallbackFn func(accountHash, codeHash common.ExtHash, stat *generateStats) (common.ExtHash, error)
+	leafCallbackFn func(accountHash, codeHash common.Hash, stat *generateStats) (common.Hash, error)
 )
 
 // TODO-Klaytn-Snapshot port GenerateAccountTrieRoot/GenerateStorageTrieRoot/GenerateTrie
@@ -56,14 +56,14 @@ type (
 // generateStats is a collection of statistics gathered by the trie generator
 // for logging purposes.
 type generateStats struct {
-	head  common.ExtHash
+	head  common.Hash
 	start time.Time
 
 	accounts uint64 // Number of accounts done (including those being crawled)
 	slots    uint64 // Number of storage slots done (including those being crawled)
 
-	slotsStart map[common.ExtHash]time.Time      // Start time for account slot crawling
-	slotsHead  map[common.ExtHash]common.ExtHash // Slot head for accounts being crawled
+	slotsStart map[common.Hash]time.Time   // Start time for account slot crawling
+	slotsHead  map[common.Hash]common.Hash // Slot head for accounts being crawled
 
 	lock sync.RWMutex
 }
@@ -71,14 +71,14 @@ type generateStats struct {
 // newGenerateStats creates a new generator stats.
 func newGenerateStats() *generateStats {
 	return &generateStats{
-		slotsStart: make(map[common.ExtHash]time.Time),
-		slotsHead:  make(map[common.ExtHash]common.ExtHash),
+		slotsStart: make(map[common.Hash]time.Time),
+		slotsHead:  make(map[common.Hash]common.Hash),
 		start:      time.Now(),
 	}
 }
 
 // progressAccounts updates the generator stats for the account range.
-func (stat *generateStats) progressAccounts(account common.ExtHash, done uint64) {
+func (stat *generateStats) progressAccounts(account common.Hash, done uint64) {
 	stat.lock.Lock()
 	defer stat.lock.Unlock()
 
@@ -95,7 +95,7 @@ func (stat *generateStats) finishAccounts(done uint64) {
 }
 
 // progressContract updates the generator stats for a specific in-progress contract.
-func (stat *generateStats) progressContract(account common.ExtHash, slot common.ExtHash, done uint64) {
+func (stat *generateStats) progressContract(account common.Hash, slot common.Hash, done uint64) {
 	stat.lock.Lock()
 	defer stat.lock.Unlock()
 
@@ -107,7 +107,7 @@ func (stat *generateStats) progressContract(account common.ExtHash, slot common.
 }
 
 // finishContract updates the generator stats for a specific just-finished contract.
-func (stat *generateStats) finishContract(account common.ExtHash, done uint64) {
+func (stat *generateStats) finishContract(account common.Hash, done uint64) {
 	stat.lock.Lock()
 	defer stat.lock.Unlock()
 
@@ -192,11 +192,11 @@ func runReport(stats *generateStats, stop chan bool) {
 // generateTrieRoot generates the trie hash based on the snapshot iterator.
 // It can be used for generating account trie, storage trie or even the
 // whole state which connects the accounts and the corresponding storages.
-func generateTrieRoot(it Iterator, accountHash common.ExtHash, generatorFn trieGeneratorFn, leafCallback leafCallbackFn, stats *generateStats, report bool) (common.ExtHash, error) {
+func generateTrieRoot(it Iterator, accountHash common.Hash, generatorFn trieGeneratorFn, leafCallback leafCallbackFn, stats *generateStats, report bool) (common.Hash, error) {
 	var (
-		in      = make(chan trieKV)            // chan to pass leaves
-		out     = make(chan common.ExtHash, 1) // chan to collect result
-		stoplog = make(chan bool, 1)           // 1-size buffer, works when logging is not enabled
+		in      = make(chan trieKV)         // chan to pass leaves
+		out     = make(chan common.Hash, 1) // chan to collect result
+		stoplog = make(chan bool, 1)        // 1-size buffer, works when logging is not enabled
 		wg      sync.WaitGroup
 	)
 	// Spin up a go-routine for trie hash re-generation
@@ -223,7 +223,7 @@ func generateTrieRoot(it Iterator, accountHash common.ExtHash, generatorFn trieG
 	}
 	// stop is a helper function to shutdown the background threads
 	// and return the re-generated trie hash.
-	stop := func(fail error) (common.ExtHash, error) {
+	stop := func(fail error) (common.Hash, error) {
 		close(in)
 		result := <-out
 		for i := 0; i < threads; i++ {
@@ -243,7 +243,7 @@ func generateTrieRoot(it Iterator, accountHash common.ExtHash, generatorFn trieG
 	)
 	// Start to feed leaves
 	for it.Next() {
-		if accountHash.ToHash() == (common.Hash{}) {
+		if accountHash == (common.Hash{}) {
 			var (
 				err      error
 				fullData []byte
@@ -264,18 +264,18 @@ func generateTrieRoot(it Iterator, accountHash common.ExtHash, generatorFn trieG
 					return stop(err)
 				}
 				acc := serializer.GetAccount()
-				go func(hash common.ExtHash) {
+				go func(hash common.Hash) {
 					contract, ok := acc.(*account.SmartContractAccount)
 					if !ok {
 						results <- nil
 						return
 					}
-					subroot, err := leafCallback(hash, common.BytesToRootExtHash(contract.GetCodeHash()), stats)
+					subroot, err := leafCallback(hash, contract.GetCodeHash().ToHash(), stats)
 					if err != nil {
 						results <- err
 						return
 					}
-					rootHash := contract.GetStorageRoot()
+					rootHash := contract.GetStorageRoot().ToHash()
 					if rootHash != subroot {
 						results <- fmt.Errorf("invalid subroot(path %x), want %x, have %x", hash, rootHash, subroot)
 						return
@@ -296,7 +296,7 @@ func generateTrieRoot(it Iterator, accountHash common.ExtHash, generatorFn trieG
 		// Accumulate the generation statistic if it's required.
 		processed++
 		if time.Since(logged) > 3*time.Second && stats != nil {
-			if accountHash.ToHash() == (common.Hash{}) {
+			if accountHash == (common.Hash{}) {
 				stats.progressAccounts(it.Hash(), processed)
 			} else {
 				stats.progressContract(accountHash, it.Hash(), processed)
@@ -306,7 +306,7 @@ func generateTrieRoot(it Iterator, accountHash common.ExtHash, generatorFn trieG
 	}
 	// Commit the last part statistic.
 	if processed > 0 && stats != nil {
-		if accountHash.ToHash() == (common.Hash{}) {
+		if accountHash == (common.Hash{}) {
 			stats.finishAccounts(processed)
 		} else {
 			stats.finishContract(accountHash, processed)
@@ -315,18 +315,18 @@ func generateTrieRoot(it Iterator, accountHash common.ExtHash, generatorFn trieG
 	return stop(nil)
 }
 
-func trieGenerate(in chan trieKV, out chan common.ExtHash) {
+func trieGenerate(in chan trieKV, out chan common.Hash) {
 	db := statedb.NewDatabase(database.NewMemoryDBManager())
 	t, _ := statedb.NewTrie(common.InitExtHash(), db)
 	for leaf := range in {
 		t.TryUpdate(leaf.key[:], leaf.value)
 	}
-	var root common.ExtHash
+	var root common.Hash
 	if db == nil {
-		root = t.Hash() // 2.3M_BAD_BLOCK_CODE
-		// root = t.RootHash()
+		root = t.Hash().ToHash()
 	} else {
-		root, _ = t.Commit(nil, true)
+		tmpRoot, _ := t.Commit(nil)
+		root = tmpRoot.ToHash()
 	}
 	out <- root
 }

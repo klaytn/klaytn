@@ -88,8 +88,8 @@ type diffLayer struct {
 	parent snapshot   // Parent snapshot modified by this one, never nil
 	memory uint64     // Approximate guess as to how much memory we use
 
-	root  common.ExtHash // Root hash to which this snapshot diff belongs to
-	stale uint32         // Signals that the layer became stale (state progressed)
+	root  common.Hash // Root hash to which this snapshot diff belongs to
+	stale uint32      // Signals that the layer became stale (state progressed)
 
 	// destructSet is a very special helper marker. If an account is marked as
 	// deleted, then it's recorded in this set. However it's allowed that an account
@@ -98,11 +98,11 @@ type diffLayer struct {
 	// happen that in the tx_1, account A is self-destructed while in the tx_2
 	// it's recreated. But we still need this marker to indicate the "old" A is
 	// deleted, all data in other set belongs to the "new" A.
-	destructSet map[common.ExtHash]struct{}                  // Keyed markers for deleted (and potentially) recreated accounts
-	accountList []common.ExtHash                             // List of account for iteration. If it exists, it's sorted, otherwise it's nil
-	accountData map[common.ExtHash][]byte                    // Keyed accounts for direct retrieval (nil means deleted)
-	storageList map[common.ExtHash][]common.ExtHash          // List of storage slots for iterated retrievals, one per account. Any existing lists are sorted if non-nil
-	storageData map[common.ExtHash]map[common.ExtHash][]byte // Keyed storage slots for direct retrieval. one per account (nil means deleted)
+	destructSet map[common.Hash]struct{}               // Keyed markers for deleted (and potentially) recreated accounts
+	accountList []common.Hash                          // List of account for iteration. If it exists, it's sorted, otherwise it's nil
+	accountData map[common.Hash][]byte                 // Keyed accounts for direct retrieval (nil means deleted)
+	storageList map[common.Hash][]common.Hash          // List of storage slots for iterated retrievals, one per account. Any existing lists are sorted if non-nil
+	storageData map[common.Hash]map[common.Hash][]byte // Keyed storage slots for direct retrieval. one per account (nil means deleted)
 
 	diffed *bloomfilter.Filter // Bloom filter tracking all the diffed items up to the disk layer
 
@@ -112,7 +112,7 @@ type diffLayer struct {
 // destructBloomHasher is a wrapper around a common.Hash to satisfy the interface
 // API requirements of the bloom library used. It's used to convert a destruct
 // event into a 64 bit mini hash.
-type destructBloomHasher common.ExtHash
+type destructBloomHasher common.Hash
 
 func (h destructBloomHasher) Write(p []byte) (n int, err error) { panic("not implemented") }
 func (h destructBloomHasher) Sum(b []byte) []byte               { panic("not implemented") }
@@ -126,7 +126,7 @@ func (h destructBloomHasher) Sum64() uint64 {
 // accountBloomHasher is a wrapper around a common.Hash to satisfy the interface
 // API requirements of the bloom library used. It's used to convert an account
 // hash into a 64 bit mini hash.
-type accountBloomHasher common.ExtHash
+type accountBloomHasher common.Hash
 
 func (h accountBloomHasher) Write(p []byte) (n int, err error) { panic("not implemented") }
 func (h accountBloomHasher) Sum(b []byte) []byte               { panic("not implemented") }
@@ -140,7 +140,7 @@ func (h accountBloomHasher) Sum64() uint64 {
 // storageBloomHasher is a wrapper around a [2]common.Hash to satisfy the interface
 // API requirements of the bloom library used. It's used to convert an account
 // hash into a 64 bit mini hash.
-type storageBloomHasher [2]common.ExtHash
+type storageBloomHasher [2]common.Hash
 
 func (h storageBloomHasher) Write(p []byte) (n int, err error) { panic("not implemented") }
 func (h storageBloomHasher) Sum(b []byte) []byte               { panic("not implemented") }
@@ -154,7 +154,7 @@ func (h storageBloomHasher) Sum64() uint64 {
 
 // newDiffLayer creates a new diff on top of an existing snapshot, whether that's a low
 // level persistent database or a hierarchical diff already.
-func newDiffLayer(parent snapshot, root common.ExtHash, destructs map[common.ExtHash]struct{}, accounts map[common.ExtHash][]byte, storage map[common.ExtHash]map[common.ExtHash][]byte) *diffLayer {
+func newDiffLayer(parent snapshot, root common.Hash, destructs map[common.Hash]struct{}, accounts map[common.Hash][]byte, storage map[common.Hash]map[common.Hash][]byte) *diffLayer {
 	// Create the new layer with some pre-allocated data segments
 	dl := &diffLayer{
 		parent:      parent,
@@ -162,7 +162,7 @@ func newDiffLayer(parent snapshot, root common.ExtHash, destructs map[common.Ext
 		destructSet: destructs,
 		accountData: accounts,
 		storageData: storage,
-		storageList: make(map[common.ExtHash][]common.ExtHash),
+		storageList: make(map[common.Hash][]common.Hash),
 	}
 	switch parent := parent.(type) {
 	case *diskLayer:
@@ -239,7 +239,7 @@ func (dl *diffLayer) rebloom(origin *diskLayer) {
 }
 
 // Root returns the root hash for which this snapshot was made.
-func (dl *diffLayer) Root() common.ExtHash {
+func (dl *diffLayer) Root() common.Hash {
 	return dl.root
 }
 
@@ -256,7 +256,7 @@ func (dl *diffLayer) Stale() bool {
 
 // Account directly retrieves the account associated with a particular hash in
 // the snapshot slim data format.
-func (dl *diffLayer) Account(hash common.ExtHash) (account.Account, error) {
+func (dl *diffLayer) Account(hash common.Hash) (account.Account, error) {
 	data, err := dl.AccountRLP(hash)
 	if err != nil {
 		return nil, err
@@ -268,6 +268,7 @@ func (dl *diffLayer) Account(hash common.ExtHash) (account.Account, error) {
 	if err := rlp.DecodeBytes(data, serializer); err != nil {
 		panic(err)
 	}
+	//serializer := tmpSerializer.TransCopy()
 	return serializer.GetAccount(), nil
 }
 
@@ -275,7 +276,7 @@ func (dl *diffLayer) Account(hash common.ExtHash) (account.Account, error) {
 // hash in the snapshot slim data format.
 //
 // Note the returned account is not a copy, please don't modify it.
-func (dl *diffLayer) AccountRLP(hash common.ExtHash) ([]byte, error) {
+func (dl *diffLayer) AccountRLP(hash common.Hash) ([]byte, error) {
 	// Check the bloom filter first whether there's even a point in reaching into
 	// all the maps in all the layers below
 	dl.lock.RLock()
@@ -302,7 +303,7 @@ func (dl *diffLayer) AccountRLP(hash common.ExtHash) ([]byte, error) {
 // accountRLP is an internal version of AccountRLP that skips the bloom filter
 // checks and uses the internal maps to try and retrieve the data. It's meant
 // to be used if a higher layer's bloom filter hit already.
-func (dl *diffLayer) accountRLP(hash common.ExtHash, depth int) ([]byte, error) {
+func (dl *diffLayer) accountRLP(hash common.Hash, depth int) ([]byte, error) {
 	dl.lock.RLock()
 	defer dl.lock.RUnlock()
 
@@ -341,7 +342,7 @@ func (dl *diffLayer) accountRLP(hash common.ExtHash, depth int) ([]byte, error) 
 // is consulted.
 //
 // Note the returned slot is not a copy, please don't modify it.
-func (dl *diffLayer) Storage(accountHash, storageHash common.ExtHash) ([]byte, error) {
+func (dl *diffLayer) Storage(accountHash, storageHash common.Hash) ([]byte, error) {
 	// Check the bloom filter first whether there's even a point in reaching into
 	// all the maps in all the layers below
 	dl.lock.RLock()
@@ -368,7 +369,7 @@ func (dl *diffLayer) Storage(accountHash, storageHash common.ExtHash) ([]byte, e
 // storage is an internal version of Storage that skips the bloom filter checks
 // and uses the internal maps to try and retrieve the data. It's meant  to be
 // used if a higher layer's bloom filter hit already.
-func (dl *diffLayer) storage(accountHash, storageHash common.ExtHash, depth int) ([]byte, error) {
+func (dl *diffLayer) storage(accountHash, storageHash common.Hash, depth int) ([]byte, error) {
 	dl.lock.RLock()
 	defer dl.lock.RUnlock()
 
@@ -410,7 +411,7 @@ func (dl *diffLayer) storage(accountHash, storageHash common.ExtHash, depth int)
 
 // Update creates a new layer on top of the existing snapshot diff tree with
 // the specified data items.
-func (dl *diffLayer) Update(blockRoot common.ExtHash, destructs map[common.ExtHash]struct{}, accounts map[common.ExtHash][]byte, storage map[common.ExtHash]map[common.ExtHash][]byte) *diffLayer {
+func (dl *diffLayer) Update(blockRoot common.Hash, destructs map[common.Hash]struct{}, accounts map[common.Hash][]byte, storage map[common.Hash]map[common.Hash][]byte) *diffLayer {
 	return newDiffLayer(dl, blockRoot, destructs, accounts, storage)
 }
 
@@ -467,7 +468,7 @@ func (dl *diffLayer) flatten() snapshot {
 		destructSet: parent.destructSet,
 		accountData: parent.accountData,
 		storageData: parent.storageData,
-		storageList: make(map[common.ExtHash][]common.ExtHash),
+		storageList: make(map[common.Hash][]common.Hash),
 		diffed:      dl.diffed,
 		memory:      parent.memory + dl.memory,
 	}
@@ -477,7 +478,7 @@ func (dl *diffLayer) flatten() snapshot {
 // the deleted ones.
 //
 // Note, the returned slice is not a copy, so do not modify it.
-func (dl *diffLayer) AccountList() []common.ExtHash {
+func (dl *diffLayer) AccountList() []common.Hash {
 	// If an old list already exists, return it
 	dl.lock.RLock()
 	list := dl.accountList
@@ -490,7 +491,7 @@ func (dl *diffLayer) AccountList() []common.ExtHash {
 	dl.lock.Lock()
 	defer dl.lock.Unlock()
 
-	dl.accountList = make([]common.ExtHash, 0, len(dl.destructSet)+len(dl.accountData))
+	dl.accountList = make([]common.Hash, 0, len(dl.destructSet)+len(dl.accountData))
 	for hash := range dl.accountData {
 		dl.accountList = append(dl.accountList, hash)
 	}
@@ -513,7 +514,7 @@ func (dl *diffLayer) AccountList() []common.ExtHash {
 // not empty but the flag is true.
 //
 // Note, the returned slice is not a copy, so do not modify it.
-func (dl *diffLayer) StorageList(accountHash common.ExtHash) ([]common.ExtHash, bool) {
+func (dl *diffLayer) StorageList(accountHash common.Hash) ([]common.Hash, bool) {
 	dl.lock.RLock()
 	_, destructed := dl.destructSet[accountHash]
 	if _, ok := dl.storageData[accountHash]; !ok {
@@ -533,7 +534,7 @@ func (dl *diffLayer) StorageList(accountHash common.ExtHash) ([]common.ExtHash, 
 	defer dl.lock.Unlock()
 
 	storageMap := dl.storageData[accountHash]
-	storageList := make([]common.ExtHash, 0, len(storageMap))
+	storageList := make([]common.Hash, 0, len(storageMap))
 	for k := range storageMap {
 		storageList = append(storageList, k)
 	}

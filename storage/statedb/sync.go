@@ -467,7 +467,7 @@ func (s *TrieSync) children(req *request, object node) ([]*request, error) {
 		// If the child references another node, resolve or schedule
 		if node, ok := (child.node).(hashNode); ok {
 			// Try to resolve the node from the local database
-			hash := common.BytesToExtHash(node)
+			hash := common.BytesToRootExtHash(node)
 			if s.membatch.hasNode(hash) {
 				continue
 			}

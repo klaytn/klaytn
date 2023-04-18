@@ -174,15 +174,8 @@ func (it *NodeIterator) step() error {
 		}
 
 		if codeHash := pa.GetCodeHash(); !bytes.Equal(codeHash[:common.HashLength], emptyCodeHash) {
-			codeHashLen := len(codeHash)
-			if codeHashLen == common.HashLength {
-				it.codeHash = common.BytesLegacyToExtHash(codeHash)
-			} else if codeHashLen == common.ExtHashLength {
-				it.codeHash = common.BytesToRootExtHash(codeHash)
-			} else {
-				panic(fmt.Sprintf("code hash len error : %x", codeHash))
-			}
-			it.Code, err = it.state.db.ContractCode(common.BytesToRootExtHash(it.codeHash.Bytes()))
+			it.codeHash = codeHash
+			it.Code, err = it.state.db.ContractCode(it.codeHash)
 			if err != nil {
 				return fmt.Errorf("code %x/%x: %v", codeHash, it.codeHash, err)
 			}
@@ -317,8 +310,7 @@ func concurrentIterator(oldDB Database, newDB Database, root common.ExtHash, qui
 				oldIt.Hash.String(), oldIt.Parent.String(), newIt.Error)
 		}
 
-		if oldIt.Hash != newIt.Hash { // Ethan at TC debug
-			// if oldIt.Hash.ToHash() != newIt.Hash.ToHash() {
+		if oldIt.Hash != newIt.Hash {
 			return fmt.Errorf("mismatched hash oldIt.Hash : oldIt.Hash(%v) newIt.Hash(%v)", oldIt.Hash.String(), newIt.Hash.String())
 		}
 

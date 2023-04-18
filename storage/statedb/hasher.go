@@ -96,14 +96,14 @@ func (h *hasher) hash(n node, db *Database, force bool) (node, node) {
 	}
 	// Trie not processed yet or needs storage, walk the children
 	collapsed, cached := h.hashChildren(n, db)
-	hashed, lenEncoded, extHashed := h.store(collapsed, db, force, false)
+	hashed, lenEncoded, extHashed := h.store(collapsed, db, force)
 	// Cache the hash of the node for later reuse and remove
 	// the dirty flag in commit mode. It's fine to assign these values directly
 	// without copying the node first because hashChildren copies it.
 	extCachedHash := extHashed.Bytes()
 	cachedHash, ok := hashed.(hashNode)
 	if extHashed.ToHash() == (common.Hash{}) && ok {
-		extCachedHash = common.BytesToExtHash(cachedHash.Bytes()).Bytes()
+		extCachedHash = common.BytesToRootExtHash(cachedHash.Bytes()).Bytes()
 	}
 	switch cn := cached.(type) {
 	case *shortNode:
@@ -145,7 +145,7 @@ func (h *hasher) hash(n node, db *Database, force bool) (node, node) {
 	}
 }
 
-func (h *hasher) hashRoot(n node, db *Database, force bool, extRootFlag bool) (node, node) {
+func (h *hasher) hashRoot(n node, db *Database, force bool) (node, node) {
 	// If we're not storing the node, just hashing, use available cached data
 	if hash, dirty := n.cache(); hash != nil {
 		if db == nil {
@@ -162,18 +162,14 @@ func (h *hasher) hashRoot(n node, db *Database, force bool, extRootFlag bool) (n
 	}
 	// Trie not processed yet or needs storage, walk the children
 	collapsed, cached := h.hashChildrenFromRoot(n, db)
-	hashed, lenEncoded, extHashed := h.store(collapsed, db, force, extRootFlag)
+	hashed, lenEncoded, extHashed := h.store(collapsed, db, force)
 	// Cache the hash of the node for later reuse and remove
 	// the dirty flag in commit mode. It's fine to assign these values directly
 	// without copying the node first because hashChildren copies it.
 	extCachedHash := extHashed.Bytes()
 	cachedHash, ok := hashed.(hashNode)
 	if extHashed.ToHash() == (common.Hash{}) && ok {
-		if extRootFlag {
-			extCachedHash = common.BytesToRootExtHash(cachedHash.Bytes()).Bytes()
-		} else {
-			extCachedHash = common.BytesToExtHash(cachedHash.Bytes()).Bytes()
-		}
+		extCachedHash = common.BytesToRootExtHash(cachedHash.Bytes()).Bytes()
 	}
 	switch cn := cached.(type) {
 	case *shortNode:
@@ -301,7 +297,7 @@ func (h *hasher) hashChildrenFromRoot(original node, db *Database) (node, node) 
 	}
 }
 
-func extHashFilter(n node, src_rlp sliceBuffer) (reData sliceBuffer) {
+func ExtHashFilter(n node, src_rlp sliceBuffer) (reData sliceBuffer) {
 	switch node := n.(type) {
 	case *fullNode:
 		return node.LegacyRLP()
@@ -314,7 +310,7 @@ func extHashFilter(n node, src_rlp sliceBuffer) (reData sliceBuffer) {
 // store hashes the node n and if we have a storage layer specified, it writes
 // the key/value pair to it and tracks any node->child references as well as any
 // node->external trie references.
-func (h *hasher) store(n node, db *Database, force, rootFlag bool) (node, uint16, common.ExtHash) {
+func (h *hasher) store(n node, db *Database, force bool) (node, uint16, common.ExtHash) {
 	var tmpHash common.ExtHash
 
 	// Don't store hashes or empty nodes.
@@ -329,6 +325,7 @@ func (h *hasher) store(n node, db *Database, force, rootFlag bool) (node, uint16
 		if err := rlp.Encode(&h.tmp, n); err != nil {
 			panic("encode error: " + err.Error())
 		}
+		h.tmp = ExtHashFilter(n, h.tmp)
 
 		lenEncoded = uint16(len(h.tmp))
 	}
@@ -336,15 +333,11 @@ func (h *hasher) store(n node, db *Database, force, rootFlag bool) (node, uint16
 		return n, lenEncoded, tmpHash // Nodes smaller than 32 bytes are stored inside their parent
 	}
 	if hash == nil {
-		hash = h.makeHashNode(extHashFilter(n, h.tmp))
+		hash = h.makeHashNode(h.tmp)
 	}
 	if db != nil {
 		// We are pooling the trie nodes into an intermediate memory cache
-		if rootFlag {
-			tmpHash = common.BytesToRootExtHash(hash)
-		} else {
-			tmpHash = common.BytesToExtHash(hash)
-		}
+		tmpHash = common.BytesToRootExtHash(hash)
 
 		db.lock.Lock()
 		db.insert(tmpHash, lenEncoded, n)
@@ -376,5 +369,6 @@ func (h *hasher) makeHashNode(data []byte) hashNode {
 	h.sha.Reset()
 	h.sha.Write(data)
 	h.sha.Read(n)
+	//fmt.Printf("hash=%v, data=%x\n", n, data)
 	return n
 }

@@ -17,7 +17,9 @@
 package account
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"math/big"
 
@@ -31,7 +33,7 @@ import (
 
 //account.go
 //
-// NewAccountWithType creates an Account object with the given type.
+// NewAccountLHWithType creates an Account object with the given type.
 func NewAccountLHWithType(t AccountType) (AccountLH, error) {
 	switch t {
 	case LegacyAccountType:
@@ -42,6 +44,20 @@ func NewAccountLHWithType(t AccountType) (AccountLH, error) {
 		// or panic()?
 	case SmartContractAccountType:
 		return newSmartContractAccountLH(), nil
+	}
+
+	return nil, ErrUndefinedAccountType
+}
+
+// NewAccountLHWithType creates an Account object initialized with the given map.
+func NewAccountLHWithMap(t AccountType, values map[AccountValueKeyType]interface{}) (AccountLH, error) {
+	switch t {
+	case LegacyAccountType:
+		return newLegacyAccountLHWithMap(values), nil
+	case ExternallyOwnedAccountType:
+		return newExternallyOwnedAccountLHWithMap(values), nil
+	case SmartContractAccountType:
+		return newSmartContractAccountLHWithMap(values), nil
 	}
 
 	return nil, ErrUndefinedAccountType
@@ -98,10 +114,15 @@ type accountLHJSON struct {
 	Account json.RawMessage `json:"account"`
 }
 
-// NewAccountSerializer creates a new AccountSerializer object with default values.
+// NewAccountLHSerializer creates a new AccountSerializer object with default values.
 // This returned object will be used for decoding.
 func NewAccountLHSerializer() *AccountLHSerializer {
 	return &AccountLHSerializer{}
+}
+
+// NewAccountLHSerializerWithAccount creates a new AccountSerializer object with the given account.
+func NewAccountLHSerializerWithAccount(a AccountLH) *AccountLHSerializer {
+	return &AccountLHSerializer{a.Type(), a}
 }
 
 func (ser *AccountLHSerializer) GetAccount() AccountLH {
@@ -260,25 +281,69 @@ func (a *LegacyAccountLH) DeepCopy() AccountLH {
 	}
 }
 
-func (a *LegacyAccountLH) Type() AccountType       { return 0 }
-func (a *LegacyAccountLH) GetNonce() uint64        { return 0 }
-func (a *LegacyAccountLH) GetBalance() *big.Int    { return big.NewInt(0) }
-func (a *LegacyAccountLH) GetHumanReadable() bool  { return false }
-func (a *LegacyAccountLH) SetNonce(n uint64)       { return }
-func (a *LegacyAccountLH) SetBalance(b *big.Int)   { return }
-func (a *LegacyAccountLH) SetHumanReadable(b bool) { return }
-func (a *LegacyAccountLH) UpdateKey(newKey accountkey.AccountKey, currentBlockNumber uint64) error {
-	return nil
+func newLegacyAccountLHWithMap(values map[AccountValueKeyType]interface{}) *LegacyAccountLH {
+	acc := newLegacyAccountLH()
+
+	if v, ok := values[AccountValueKeyNonce].(uint64); ok {
+		acc.Nonce = v
+	}
+
+	if v, ok := values[AccountValueKeyBalance].(*big.Int); ok {
+		acc.Balance.Set(v)
+	}
+
+	if v, ok := values[AccountValueKeyStorageRoot].(common.Hash); ok {
+		acc.Root = v
+	}
+
+	if v, ok := values[AccountValueKeyCodeHash].([]byte); ok {
+		acc.CodeHash = v
+	}
+
+	return acc
 }
-func (a *LegacyAccountLH) Empty() bool          { return false }
-func (a *LegacyAccountLH) Equal(AccountLH) bool { return false }
+
+func (a *LegacyAccountLH) Type() AccountType       { return LegacyAccountType }
+func (a *LegacyAccountLH) GetNonce() uint64        { return a.Nonce }
+func (a *LegacyAccountLH) GetBalance() *big.Int    { return new(big.Int).Set(a.Balance) }
+func (a *LegacyAccountLH) GetHumanReadable() bool  { return false }
+func (a *LegacyAccountLH) GetStorageRoot() common.Hash  { return a.Root }
+func (a *LegacyAccountLH) GetCodeHash() []byte	   { return a.CodeHash }
+func (a *LegacyAccountLH) SetNonce(n uint64)       { a.Nonce = n }
+func (a *LegacyAccountLH) SetBalance(b *big.Int)   { a.Balance.Set(b) }
+func (a *LegacyAccountLH) SetStorageRoot(h common.Hash) { a.Root = h }
+func (a *LegacyAccountLH) SetCodeHash(h []byte)    { a.CodeHash = h }
+
+func (a *LegacyAccountLH) SetHumanReadable(b bool) { 
+	logger.Warn("LegacyAccount.SetHumanReadable() should not be called. Please check the call stack.")
+}
+
+func (a *LegacyAccountLH) UpdateKey(newKey accountkey.AccountKey, currentBlockNumber uint64) error {
+	return ErrAccountKeyNotModifiable
+}
+
+func (a *LegacyAccountLH) Empty() bool { 
+	return a.GetNonce() == 0 && a.GetBalance().Sign() == 0 && bytes.Equal(a.GetCodeHash(), emptyCodeHash)
+}
+
+func (a *LegacyAccountLH) Equal(b AccountLH) bool { 
+	tb, ok := b.(*LegacyAccountLH)
+	if !ok {
+		return false
+	}
+
+	return a.Nonce == tb.Nonce &&
+		a.Balance.Cmp(tb.Balance) == 0 &&
+		bytes.Equal(a.Root.Bytes(), tb.Root.Bytes()) &&
+		bytes.Equal(a.CodeHash, tb.CodeHash)
+}
 
 func (a *LegacyAccountLH) TransCopy() Account {
 	return &LegacyAccount{
 		Nonce:    a.Nonce,
 		Balance:  a.Balance,
 		Root:     a.Root.ToRootExtHash(),
-		CodeHash: a.CodeHash,
+		CodeHash: common.BytesToRootExtHash(a.CodeHash),
 	}
 }
 func (a *LegacyAccountLH) String() string { return "Not Implemented" }
@@ -303,25 +368,41 @@ func (a *ExternallyOwnedAccountLH) DeepCopy() AccountLH {
 	}
 }
 
-func (a *ExternallyOwnedAccountLH) Type() AccountType       { return 0 }
+// newExternallyOwnedAccountWithMap creates an ExternallyOwnedAccount object initialized with the given values.
+func newExternallyOwnedAccountLHWithMap(values map[AccountValueKeyType]interface{}) *ExternallyOwnedAccountLH {
+	return &ExternallyOwnedAccountLH{
+		newAccountCommonWithMap(values),
+	}
+}
+
+func (a *ExternallyOwnedAccountLH) Type() AccountType       { return ExternallyOwnedAccountType }
 func (a *ExternallyOwnedAccountLH) GetNonce() uint64        { return 0 }
 func (a *ExternallyOwnedAccountLH) GetBalance() *big.Int    { return big.NewInt(0) }
 func (a *ExternallyOwnedAccountLH) GetHumanReadable() bool  { return false }
 func (a *ExternallyOwnedAccountLH) SetNonce(n uint64)       { return }
 func (a *ExternallyOwnedAccountLH) SetBalance(b *big.Int)   { return }
 func (a *ExternallyOwnedAccountLH) SetHumanReadable(b bool) { return }
-func (a *ExternallyOwnedAccountLH) UpdateKey(newKey accountkey.AccountKey, currentBlockNumber uint64) error {
-	return nil
-}
 func (a *ExternallyOwnedAccountLH) Empty() bool          { return false }
-func (a *ExternallyOwnedAccountLH) Equal(AccountLH) bool { return false }
+func (a *ExternallyOwnedAccountLH) String() string { return "Not Implemented" }
+
+func (a *ExternallyOwnedAccountLH) UpdateKey(newKey accountkey.AccountKey, currentBlockNumber uint64) error {
+	return fmt.Errorf("Not Implemented")
+}
+
+func (a *ExternallyOwnedAccountLH) Equal(a2 AccountLH) bool {
+	e2, ok := a2.(*ExternallyOwnedAccountLH)
+	if !ok {
+		return false
+	}
+
+	return a.AccountCommon.Equal(e2.AccountCommon)
+}
 
 func (a *ExternallyOwnedAccountLH) TransCopy() Account {
 	return &ExternallyOwnedAccount{
 		AccountCommon: a.AccountCommon.DeepCopy(),
 	}
 }
-func (a *ExternallyOwnedAccountLH) String() string { return "Not Implemented" }
 
 // smart_contract_account.go
 //
@@ -406,25 +487,59 @@ func (a *SmartContractAccountLH) DeepCopy() AccountLH {
 	}
 }
 
-func (a *SmartContractAccountLH) Type() AccountType       { return 0 }
+func newSmartContractAccountLHWithMap(values map[AccountValueKeyType]interface{}) *SmartContractAccountLH {
+	sca := &SmartContractAccountLH{
+		newAccountCommonWithMap(values),
+		common.Hash{},
+		emptyCodeHash,
+		params.CodeInfo(0),
+	}
+
+	if v, ok := values[AccountValueKeyStorageRoot].(common.Hash); ok {
+		sca.storageRoot = v
+	}
+
+	if v, ok := values[AccountValueKeyCodeHash].([]byte); ok {
+		sca.codeHash = v
+	}
+
+	if v, ok := values[AccountValueKeyCodeInfo].(params.CodeInfo); ok {
+		sca.codeInfo = v
+	}
+
+        return sca
+}
+
+func (a *SmartContractAccountLH) Type() AccountType       { return SmartContractAccountType }
+func (a *SmartContractAccountLH) GetStorageRoot() common.Hash { return a.storageRoot }
+func (a *SmartContractAccountLH) GetCodeHash() []byte     { return a.codeHash }
+func (a *SmartContractAccountLH) GetCodeFormat() params.CodeFormat { return a.codeInfo.GetCodeFormat() }
+func (a *SmartContractAccountLH) GetVmVersion() params.VmVersion { return a.codeInfo.GetVmVersion() }
+func (a *SmartContractAccountLH) SetStorageRoot(h common.Hash) { a.storageRoot = h }
+func (a *SmartContractAccountLH) SetCodeHash(h []byte) { a.codeHash = h }
+func (a *SmartContractAccountLH) SetCodeInfo(ci params.CodeInfo) { a.codeInfo = ci }
 func (a *SmartContractAccountLH) GetNonce() uint64        { return 0 }
 func (a *SmartContractAccountLH) GetBalance() *big.Int    { return big.NewInt(0) }
 func (a *SmartContractAccountLH) GetHumanReadable() bool  { return false }
 func (a *SmartContractAccountLH) SetNonce(n uint64)       { return }
 func (a *SmartContractAccountLH) SetBalance(b *big.Int)   { return }
 func (a *SmartContractAccountLH) SetHumanReadable(b bool) { return }
-func (a *SmartContractAccountLH) UpdateKey(newKey accountkey.AccountKey, currentBlockNumber uint64) error {
-	return nil
-}
-func (a *SmartContractAccountLH) Empty() bool          { return false }
 func (a *SmartContractAccountLH) Equal(AccountLH) bool { return false }
+func (a *SmartContractAccountLH) String() string { return "Not implemented" }
+
+func (a *SmartContractAccountLH) Empty() bool {
+        return a.nonce == 0 && a.balance.Sign() == 0 && bytes.Equal(a.codeHash, emptyCodeHash)
+}
+
+func (a *SmartContractAccountLH) UpdateKey(newKey accountkey.AccountKey, currentBlockNumber uint64) error {
+	return ErrAccountKeyNotModifiable
+}
 
 func (a *SmartContractAccountLH) TransCopy() Account {
 	return &SmartContractAccount{
 		AccountCommon: a.AccountCommon.DeepCopy(),
 		storageRoot:   a.storageRoot.ToRootExtHash(),
-		codeHash:      a.codeHash,
+		codeHash:      common.BytesToRootExtHash(a.codeHash),
 		codeInfo:      a.codeInfo,
 	}
 }
-func (a *SmartContractAccountLH) String() string { return "Not implemented" }

@@ -236,7 +236,7 @@ func gatherChildren(n node, children *[]common.ExtHash) {
 			gatherChildren(n[i], children)
 		}
 	case hashNode:
-		*children = append(*children, common.BytesToExtHash(n))
+		*children = append(*children, common.BytesToRootExtHash(n))
 
 	case valueNode, nil, rawNode:
 
@@ -362,6 +362,9 @@ func getTrieNodeCacheSizeMiB() int {
 
 // DiskDB retrieves the persistent database backing the trie database.
 func (db *Database) DiskDB() database.DBManager {
+	if db == nil {
+		return nil
+	}
 	return db.diskDB
 }
 
@@ -419,7 +422,7 @@ func (db *Database) NodeChildren(hash common.ExtHash) ([]common.ExtHash, error) 
 	for _, child := range children {
 		n, ok := child.(hashNode)
 		if ok {
-			hash := common.BytesToExtHash(n)
+			hash := common.BytesToRootExtHash(n)
 			childrenHash = append(childrenHash, hash)
 		}
 	}
@@ -907,7 +910,8 @@ func (db *Database) writeBatchNodes(node common.ExtHash) error {
 	}
 
 	enc := rootNode.rlp()
-	if err := batch.Put(node[:], enc); err != nil {
+	enc, _ = common.RlpPaddingFilter(enc)
+	if err := batch.Put(node.ToHash().Bytes(), enc); err != nil {
 		return err
 	}
 	if err := batch.Write(); err != nil {
@@ -995,7 +999,8 @@ func (db *Database) commit(hash common.ExtHash, resultCh chan<- commitResult) {
 		db.commit(child, resultCh)
 	}
 	enc := node.rlp()
-	resultCh <- commitResult{hash[:], enc}
+	enc, _ = common.RlpPaddingFilter(enc)
+	resultCh <- commitResult{hash.ToHash().Bytes(), enc}
 
 	if db.trieNodeCache != nil {
 		db.trieNodeCache.Set(hash[:], enc)
@@ -1244,7 +1249,7 @@ func NodeTrace(db *Database, hash common.ExtHash, flag int) (reHash common.ExtHa
 				break
 			}
 			if tmpHashNode, ok := child.(hashNode); ok {
-				tmpNode.Children[idx] = toHashNode(NodeTrace(db, common.BytesToExtHash(tmpHashNode.Bytes()), flag).Bytes())
+				tmpNode.Children[idx] = toHashNode(NodeTrace(db, common.BytesToRootExtHash(tmpHashNode.Bytes()), flag).Bytes())
 			} else {
 				tmpNode.Children[idx] = child
 			}
@@ -1266,11 +1271,10 @@ func NodeTrace(db *Database, hash common.ExtHash, flag int) (reHash common.ExtHa
 				acc := serializer.GetAccount()
 				if pa := account.GetProgramAccount(acc); pa != nil {
 					if pa.GetStorageRoot().ToHash() != emptyState {
-						// pa.GetStorageRoot()
 						reHash := NodeTrace(db, pa.GetStorageRoot(), flag+1)
 						fmt.Printf("%d sroot: %x\n\n", flag, reHash)
 					}
-					code := common.BytesToRootExtHash(pa.GetCodeHash())
+					code := pa.GetCodeHash()
 					if !bytes.Equal(code.ToHash().Bytes(), account.EmptyCodeHash) {
 						fmt.Printf("%d code : %x\n\n", flag, code)
 					}

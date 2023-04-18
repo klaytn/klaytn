@@ -21,7 +21,7 @@
 package database
 
 import (
-	"bytes"
+	//"bytes"
 	"errors"
 	"fmt"
 	"runtime/debug"
@@ -35,6 +35,7 @@ import (
 // errMemorydbClosed is returned if a memory database was already closed at the
 // invocation of a data access operation.
 var errMemorydbClosed = errors.New("database closed")
+var logCnt int = 0
 
 /*
  * This is a test memory database. Do not use for any production it does not get persisted
@@ -93,10 +94,38 @@ func (db *MemDB) Get(key []byte) ([]byte, error) {
 		if entry == nil {
 			entry = []byte{}
 		}
+		return common.CopyBytes(entry), nil
+	}
+	return nil, dataNotFoundErr
+}
+
+// Get retrieves the given key if it's present in the key-value store.
+func (db *MemDB) Getbak(key []byte) ([]byte, error) {
+	db.lock.RLock()
+	defer db.lock.RUnlock()
+
+	if db.db == nil {
+		return nil, errMemorydbClosed
+	}
+	if entry, ok := db.db[string(key)]; ok {
+		if entry == nil {
+			entry = []byte{}
+		}
 		if LogFlag {
 			fmt.Printf("~m GET %x, len=%d\n", key, len(entry))
+			if fmt.Sprintf("%x",key)[:10] == "fff1044302" {
+				debug.PrintStack()
+			}
 		}
 		return common.CopyBytes(entry), nil
+	/*} else {
+		keyLen := len(key)
+		if keyLen == common.ExtHashLength || keyLen == common.HashLength {
+			if bytes.Equal(key[:common.HashLength], hexDest1) || bytes.Equal(key[:common.HashLength], hexDest2) {
+				// if bytes.Equal(key[:common.HashLength], hexDest1) {
+				return []byte(""), nil
+			}
+		}*/
 	}
 	/*//if entry, ok := db.db[string(key[1:])]; ok {
 	if entry, ok := db.db[string(key[:len(key)-6])]; ok {
@@ -110,9 +139,12 @@ func (db *MemDB) Get(key []byte) ([]byte, error) {
 	}*/
 	if LogFlag {
 		fmt.Printf("~m GET %x, err\n", key)
-		if len(key) >= 32 && fmt.Sprintf("%x", key[:5]) != "6800000000" {
+		//if fmt.Sprintf("%x",key)[:10] ==   "14b292c367" {
 			debug.PrintStack()
-		}
+		//}
+		/*if len(key) >= 32 && fmt.Sprintf("%x", key[:5]) != "6800000000" {
+			debug.PrintStack()
+		}*/
 	}
 	return nil, dataNotFoundErr
 }
@@ -241,11 +273,17 @@ type memBatch struct {
 // Put inserts the given value into the batch for later committing.
 func (b *memBatch) Put(key, value []byte) error {
 	if LogFlag {
-		fmt.Printf("~mBPUT %x, err\n", key)
-		keyLen := len(key)
+		fmt.Printf("~mBPUT %x\n", key)
+		if logCnt < 1000 {
+			debug.PrintStack()
+		} else {
+			panic("test end")
+		}
+		logCnt += 1
+		/*keyLen := len(key)
 		if key[0] == 0x61 && keyLen > 8 && !bytes.Equal(key[common.HashLength+1:], common.RootByte) && !bytes.Equal(key[common.HashLength+1:], common.LegacyByte) {
 			debug.PrintStack()
-		}
+		}*/
 	}
 	b.writes = append(b.writes, keyvalue{common.CopyBytes(key), common.CopyBytes(value), false})
 	b.size += len(value)
@@ -256,6 +294,7 @@ func (b *memBatch) Put(key, value []byte) error {
 func (b *memBatch) Delete(key []byte) error {
 	if LogFlag {
 		fmt.Printf("~mBDEL %x\n", key)
+		debug.PrintStack()
 	}
 	b.writes = append(b.writes, keyvalue{common.CopyBytes(key), nil, true})
 	b.size += 1

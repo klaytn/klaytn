@@ -115,12 +115,12 @@ type ProgramAccount interface {
 	Account
 
 	GetStorageRoot() common.ExtHash
-	GetCodeHash() []byte
+	GetCodeHash() common.ExtHash
 	GetCodeFormat() params.CodeFormat
 	GetVmVersion() params.VmVersion
 
 	SetStorageRoot(h common.ExtHash)
-	SetCodeHash(h []byte)
+	SetCodeHash(h common.ExtHash)
 	SetCodeInfo(codeInfo params.CodeInfo)
 }
 

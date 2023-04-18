@@ -1782,9 +1782,9 @@ func (s *Syncer) processAccountResponse(res *accountResponse) {
 	for i, acc := range res.accounts {
 		pacc := account.GetProgramAccount(acc)
 		// Check if the account is a contract with an unknown code
-		if pacc != nil && !bytes.Equal(pacc.GetCodeHash(), emptyCode[:]) {
-			if !s.db.HasCodeWithPrefix(common.BytesToRootExtHash(pacc.GetCodeHash())) {
-				res.task.codeTasks[common.BytesToHash(pacc.GetCodeHash())] = struct{}{}
+		if pacc != nil && !bytes.Equal(pacc.GetCodeHash().ToHash().Bytes(), emptyCode[:]) {
+			if !s.db.HasCodeWithPrefix(pacc.GetCodeHash()) {
+				res.task.codeTasks[pacc.GetCodeHash().ToHash()] = struct{}{}
 				res.task.needCode[i] = true
 				res.task.pend++
 			}
@@ -1847,14 +1847,14 @@ func (s *Syncer) processBytecodeResponse(res *bytecodeResponse) {
 		// Code was delivered, mark it not needed any more
 		for j, acc := range res.task.res.accounts {
 			pacc := account.GetProgramAccount(acc)
-			if pacc != nil && res.task.needCode[j] && hash == common.BytesToHash(pacc.GetCodeHash()) {
+			if pacc != nil && res.task.needCode[j] && hash == pacc.GetCodeHash().ToHash() {
 				res.task.needCode[j] = false
 				res.task.pend--
 			}
 		}
 		// Push the bytecode into a database batch
 		codes++
-		if err := batch.Put(database.CodeKey(hash.ToExtHash()), code); err != nil {
+		if err := batch.Put(database.CodeKey(hash.ToRootExtHash()), code); err != nil {
 			logger.Crit("Failed to store contract code", "err", err)
 		}
 	}
@@ -2018,7 +2018,7 @@ func (s *Syncer) processStorageResponse(res *storageResponse) {
 			for j := 0; j < len(res.hashes[i]); j++ {
 				tr.Update(res.hashes[i][j][:], res.slots[i][j])
 			}
-			root, _ := tr.Commit(nil, true)
+			root, _ := tr.Commit(nil)
 			_, nodeSize, _ := db.Size()
 			if err := db.Commit(root, false, 0); err != nil {
 				logger.Error("Failed to persist storage slots", "err", err)
@@ -2030,10 +2030,8 @@ func (s *Syncer) processStorageResponse(res *storageResponse) {
 		// outdated during the sync, but it can be fixed later during the
 		// snapshot generation.
 		for j := 0; j < len(res.hashes[i]); j++ {
-			batch.WriteStorageSnapshot(accountHash.ToRootExtHash(), res.hashes[i][j].ToRootExtHash(), res.slots[i][j]) // 2.3M_BAD_BLOCK_CODE
-			// batch.WriteStorageSnapshot(accountHash.LegacyToExtHash(), res.hashes[i][j].ToRootExtHash(), res.slots[i][j])
-			s.storageBytes += common.StorageSize(len(database.StorageSnapshotKey(accountHash.ToRootExtHash(), res.hashes[i][j].ToRootExtHash())) + len(res.slots[i][j])) // 2.3M_BAD_BLOCK_CODE
-			// s.storageBytes += common.StorageSize(len(database.StorageSnapshotKey(accountHash.LegacyToExtHash(), res.hashes[i][j].ToRootExtHash())) + len(res.slots[i][j]))
+			batch.WriteStorageSnapshot(accountHash, res.hashes[i][j], res.slots[i][j])
+			s.storageBytes += common.StorageSize(len(database.StorageSnapshotKey(accountHash, res.hashes[i][j])) + len(res.slots[i][j]))
 
 			// If we're storing large contracts, generate the trie nodes
 			// on the fly to not trash the gluing points
@@ -2045,7 +2043,7 @@ func (s *Syncer) processStorageResponse(res *storageResponse) {
 	// Large contracts could have generated new trie nodes, flush them to disk
 	if res.subTask != nil {
 		if res.subTask.done {
-			root, _ := res.subTask.genTrie.Commit(nil, true)
+			root, _ := res.subTask.genTrie.Commit(nil)
 			_, nodeSize, _ := res.subTask.trieDb.Size()
 
 			if err := res.subTask.trieDb.Commit(root, false, 0); err != nil {
@@ -2094,7 +2092,7 @@ func (s *Syncer) processTrienodeHealResponse(res *trienodeHealResponse) {
 		s.trienodeHealSynced++
 		s.trienodeHealBytes += common.StorageSize(len(node))
 
-		err := s.healer.scheduler.Process(statedb.SyncResult{Hash: hash.ToExtHash(), Data: node})
+		err := s.healer.scheduler.Process(statedb.SyncResult{Hash: hash.ToRootExtHash(), Data: node})
 		switch err {
 		case nil:
 		case statedb.ErrAlreadyProcessed:
@@ -2130,7 +2128,7 @@ func (s *Syncer) processBytecodeHealResponse(res *bytecodeHealResponse) {
 		s.bytecodeHealSynced++
 		s.bytecodeHealBytes += common.StorageSize(len(node))
 
-		err := s.healer.scheduler.Process(statedb.SyncResult{Hash: hash.ToExtHash(), Data: node})
+		err := s.healer.scheduler.Process(statedb.SyncResult{Hash: hash.ToRootExtHash(), Data: node})
 		switch err {
 		case nil:
 		case statedb.ErrAlreadyProcessed:
@@ -2177,9 +2175,8 @@ func (s *Syncer) forwardAccountTask(task *accountTask) {
 		if err != nil {
 			logger.Error("Failed to encode account")
 		}
-		tmpHash := hash.ToExtHash()
-		batch.WriteAccountSnapshot(tmpHash, bytes)
-		s.accountBytes += common.StorageSize(len(database.AccountSnapshotKey(tmpHash)) + len(bytes))
+		batch.WriteAccountSnapshot(hash, bytes)
+		s.accountBytes += common.StorageSize(len(database.AccountSnapshotKey(hash)) + len(bytes))
 
 		// If the task is complete, drop it into the trie to generate
 		// account trie nodes for it
@@ -2208,7 +2205,7 @@ func (s *Syncer) forwardAccountTask(task *accountTask) {
 	// flush after finalizing task.done. It's fine even if we crash and lose this
 	// write as it will only cause more data to be downloaded during heal.
 	if task.done {
-		root, _ := task.genTrie.Commit(nil, true)
+		root, _ := task.genTrie.Commit(nil)
 		_, nodeSize, _ := task.trieDb.Size()
 
 		if err := task.trieDb.Commit(root, false, 0); err != nil {
@@ -2634,7 +2631,8 @@ func (s *Syncer) OnTrieNodes(peer SyncPeer, id uint64, trienodes [][]byte) error
 	for i, j := 0, 0; i < len(trienodes); i++ {
 		// Find the next hash that we've been served, leaving misses with nils
 		hasher.Reset()
-		hasher.Write(trienodes[i])
+		tmpData, _ := common.RlpPaddingFilter(trienodes[i])
+		hasher.Write(tmpData)
 		hasher.Read(hash)
 
 		for j < len(req.hashes) && !bytes.Equal(hash, req.hashes[j][:]) {
@@ -2766,12 +2764,12 @@ func (s *Syncer) onHealByteCodes(peer SyncPeer, id uint64, bytecodes [][]byte) e
 // Note it's not concurrent safe, please handle the concurrent issue outside.
 func (s *Syncer) onHealState(paths [][]byte, value []byte) error {
 	if len(paths) == 1 {
-		s.stateWriter.WriteAccountSnapshot(common.BytesToExtHash(paths[0]), value)
+		s.stateWriter.WriteAccountSnapshot(common.BytesToHash(paths[0]), value)
 		s.accountHealed += 1
 		s.accountHealedBytes += common.StorageSize(1 + common.HashLength + len(value))
 	}
 	if len(paths) == 2 {
-		s.stateWriter.WriteStorageSnapshot(common.BytesToExtHash(paths[0]), common.BytesToExtHash(paths[1]), value)
+		s.stateWriter.WriteStorageSnapshot(common.BytesToHash(paths[0]), common.BytesToHash(paths[1]), value)
 		s.storageHealed += 1
 		s.storageHealedBytes += common.StorageSize(1 + 2*common.HashLength + len(value))
 	}

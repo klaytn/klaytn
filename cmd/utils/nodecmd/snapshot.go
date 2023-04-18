@@ -174,7 +174,7 @@ func verifyState(ctx *cli.Context) error {
 		return fmt.Errorf("head block missing: %v", head.String())
 	}
 
-	snaptree, err := snapshot.New(db, statedb.NewDatabase(db), 256, headBlock.Root().ToRootExtHash(), false, false, false)
+	snaptree, err := snapshot.New(db, statedb.NewDatabase(db), 256, headBlock.Root(), false, false, false)
 	if err != nil {
 		logger.Error("Failed to open snapshot tree", "err", err)
 		return err
@@ -191,7 +191,7 @@ func verifyState(ctx *cli.Context) error {
 			return err
 		}
 	}
-	if err := snaptree.Verify(root.ToRootExtHash()); err != nil {
+	if err := snaptree.Verify(root); err != nil {
 		logger.Error("Failed to verify state", "root", root, "err", err)
 		return err
 	}

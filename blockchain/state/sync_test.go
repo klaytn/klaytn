@@ -22,6 +22,7 @@ package state
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -96,7 +97,7 @@ func makeTestState(t *testing.T) (Database, common.ExtHash, []*testAccount) {
 	}
 	root, _ := statedb.Commit(false)
 
-	if err := checkStateConsistency(db.TrieDB().DiskDB(), root.ToHash()); err != nil {
+	if err := checkStateConsistency(db.TrieDB().DiskDB(), root); err != nil {
 		t.Fatalf("inconsistent state trie at %x: %v", root, err)
 	}
 
@@ -106,9 +107,9 @@ func makeTestState(t *testing.T) (Database, common.ExtHash, []*testAccount) {
 
 // checkStateAccounts cross references a reconstructed state with an expected
 // account array.
-func checkStateAccounts(t *testing.T, newDB database.DBManager, root common.Hash, accounts []*testAccount) {
+func checkStateAccounts(t *testing.T, newDB database.DBManager, root common.ExtHash, accounts []*testAccount) {
 	// Check root availability and state contents
-	state, err := New(root.ToRootExtHash(), NewDatabase(newDB), nil)
+	state, err := New(root, NewDatabase(newDB), nil)
 	if err != nil {
 		t.Fatalf("failed to create state trie at %x: %v", root, err)
 	}
@@ -137,7 +138,6 @@ func checkStateAccounts(t *testing.T, newDB database.DBManager, root common.Hash
 			t.Errorf("account %d: stroage trie number mismatch: have %x, want %x", i, len(storageMapWithHashedKey), len(acc.storageMap))
 		}
 		for key, value := range acc.storageMap {
-			// hk := crypto.Keccak256Hash(key[:]).ToRootExtHash() //Ethan at TC debug - fix it !!!!!!!!!!!!!!!
 			hk := crypto.Keccak256Hash(key[:common.HashLength]).ToRootExtHash()
 			if storageMapWithHashedKey[hk] != value {
 				t.Errorf("account %d: stroage trie (%v) mismatch: have %x, want %x", i, key.String(), acc.storageMap[key], value)
@@ -162,12 +162,12 @@ func checkTrieConsistency(db database.DBManager, root common.Hash) error {
 }
 
 // checkStateConsistency checks that all data of a state root is present.
-func checkStateConsistency(db database.DBManager, root common.Hash) error {
+func checkStateConsistency(db database.DBManager, root common.ExtHash) error {
 	// Create and iterate a state trie rooted in a sub-node
 	if _, err := db.ReadStateTrieNode(root.Bytes()); err != nil {
 		return nil // Consider a non existent state consistent.
 	}
-	state, err := New(root.ToRootExtHash(), NewDatabase(db), nil)
+	state, err := New(root, NewDatabase(db), nil)
 	if err != nil {
 		return err
 	}
@@ -248,8 +248,6 @@ func TestIterativeStateSyncBatchedByPath(t *testing.T) {
 }
 
 func testIterativeStateSync(t *testing.T, count int, commit bool, bypath bool) {
-	common.ExtHashDisableFlag = true
-	defer func() { common.ExtHashDisableFlag = false }()
 	// Create a random state to copy
 	srcState, srcRoot, srcAccounts := makeTestState(t)
 	if commit {
@@ -337,7 +335,7 @@ func testIterativeStateSync(t *testing.T, count int, commit bool, bypath bool) {
 		}
 	}
 	// Cross check that the two states are in sync
-	checkStateAccounts(t, dstDiskDb, srcRoot.ToHash(), srcAccounts)
+	checkStateAccounts(t, dstDiskDb, srcRoot, srcAccounts)
 
 	err := CheckStateConsistency(srcState, dstState, srcRoot, 100, nil)
 	assert.NoError(t, err)
@@ -356,8 +354,6 @@ func testIterativeStateSync(t *testing.T, count int, commit bool, bypath bool) {
 }
 
 func TestCheckStateConsistencyMissNode(t *testing.T) {
-	common.ExtHashDisableFlag = true
-	defer func() { common.ExtHashDisableFlag = false }()
 	// Create a random state to copy
 	srcState, srcRoot, srcAccounts := makeTestState(t)
 	newState, newRoot, _ := makeTestState(t)
@@ -403,13 +399,19 @@ func TestCheckStateConsistencyMissNode(t *testing.T) {
 			// Check consistency : errIterator
 			err = CheckStateConsistency(srcState, newState, srcRoot, 100, nil)
 			if !errors.Is(err, errIterator) {
+				fmt.Printf("iter=%x, err1=%v, err2=%v\n", it.Hash, err, errIterator)
 				t.Log("mismatched err", "err", err, "expErr", errIterator)
 				t.FailNow()
 			}
 
 			// Recover nodes
-			srcDiskDB.GetMemDB().Put(hash[:], data)
-			newDiskDB.GetMemDB().Put(hash[:], data)
+			if code {
+				srcDiskDB.GetMemDB().Put(hash[:], data)
+				newDiskDB.GetMemDB().Put(hash[:], data)
+			} else {
+				srcDiskDB.GetMemDB().Put(it.Hash[:], data)
+				newDiskDB.GetMemDB().Put(it.Hash[:], data)
+			}
 		}
 	}
 
@@ -424,8 +426,6 @@ func TestCheckStateConsistencyMissNode(t *testing.T) {
 // Tests that the trie scheduler can correctly reconstruct the state even if only
 // partial results are returned, and the others sent only later.
 func TestIterativeDelayedStateSync(t *testing.T) {
-	common.ExtHashDisableFlag = true
-	defer func() { common.ExtHashDisableFlag = false }()
 	// Create a random state to copy
 	srcState, srcRoot, srcAccounts := makeTestState(t)
 	srcState.TrieDB().Commit(srcRoot, false, 0)
@@ -465,7 +465,7 @@ func TestIterativeDelayedStateSync(t *testing.T) {
 		queue = append(append(queue[len(results):], nodes...), codes...)
 	}
 	// Cross check that the two states are in sync
-	checkStateAccounts(t, dstDiskDB, srcRoot.ToHash(), srcAccounts)
+	checkStateAccounts(t, dstDiskDB, srcRoot, srcAccounts)
 
 	err := CheckStateConsistency(srcState, dstState, srcRoot, 100, nil)
 	assert.NoError(t, err)
@@ -481,8 +481,6 @@ func TestIterativeRandomStateSyncIndividual(t *testing.T) { testIterativeRandomS
 func TestIterativeRandomStateSyncBatched(t *testing.T)    { testIterativeRandomStateSync(t, 100) }
 
 func testIterativeRandomStateSync(t *testing.T, count int) {
-	common.ExtHashDisableFlag = true
-	defer func() { common.ExtHashDisableFlag = false }()
 	// Create a random state to copy
 	srcState, srcRoot, srcAccounts := makeTestState(t)
 	srcState.TrieDB().Commit(srcRoot, false, 0)
@@ -528,7 +526,7 @@ func testIterativeRandomStateSync(t *testing.T, count int) {
 		}
 	}
 	// Cross check that the two states are in sync
-	checkStateAccounts(t, dstDb, srcRoot.ToHash(), srcAccounts)
+	checkStateAccounts(t, dstDb, srcRoot, srcAccounts)
 
 	err := CheckStateConsistency(srcState, dstState, srcRoot, 100, nil)
 	assert.NoError(t, err)
@@ -540,8 +538,6 @@ func testIterativeRandomStateSync(t *testing.T, count int) {
 // Tests that the trie scheduler can correctly reconstruct the state even if only
 // partial results are returned (Even those randomly), others sent only later.
 func TestIterativeRandomDelayedStateSync(t *testing.T) {
-	common.ExtHashDisableFlag = true
-	defer func() { common.ExtHashDisableFlag = false }()
 	// Create a random state to copy
 	srcState, srcRoot, srcAccounts := makeTestState(t)
 	srcState.TrieDB().Commit(srcRoot, false, 0)
@@ -595,7 +591,7 @@ func TestIterativeRandomDelayedStateSync(t *testing.T) {
 		}
 	}
 	// Cross check that the two states are in sync
-	checkStateAccounts(t, dstDb, srcRoot.ToHash(), srcAccounts)
+	checkStateAccounts(t, dstDb, srcRoot, srcAccounts)
 
 	err := CheckStateConsistency(srcState, dstState, srcRoot, 100, nil)
 	assert.NoError(t, err)
@@ -607,8 +603,6 @@ func TestIterativeRandomDelayedStateSync(t *testing.T) {
 // Tests that at any point in time during a sync, only complete sub-tries are in
 // the database.
 func TestIncompleteStateSync(t *testing.T) {
-	common.ExtHashDisableFlag = true
-	defer func() { common.ExtHashDisableFlag = false }()
 	// Create a random state to copy
 	srcState, srcRoot, srcAccounts := makeTestState(t)
 	srcState.TrieDB().Commit(srcRoot, false, 0)
@@ -691,7 +685,7 @@ func TestIncompleteStateSync(t *testing.T) {
 			dstDb.GetMemDB().Delete(node[:])
 		}
 
-		if err := checkStateConsistency(dstDb, added[0].ToHash()); err == nil {
+		if err := checkStateConsistency(dstDb, added[0]); err == nil {
 			t.Fatalf("trie inconsistency not caught, missing: %x", key)
 		}
 

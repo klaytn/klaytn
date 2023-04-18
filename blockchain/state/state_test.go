@@ -133,12 +133,12 @@ func (s *StateSuite) TestSnapshot(c *checker.C) {
 	s.state.RevertToSnapshot(snapshot)
 
 	c.Assert(s.state.GetState(stateobjaddr, storageaddr), checker.DeepEquals, data1)
-	c.Assert(s.state.GetCommittedState(stateobjaddr, storageaddr), checker.DeepEquals, common.Hash{})
+	c.Assert(s.state.GetCommittedState(stateobjaddr, storageaddr), checker.DeepEquals, common.ExtHash{})
 
 	// revert up to the genesis state and ensure correct content
 	s.state.RevertToSnapshot(genesis)
-	c.Assert(s.state.GetState(stateobjaddr, storageaddr), checker.DeepEquals, common.Hash{})
-	c.Assert(s.state.GetCommittedState(stateobjaddr, storageaddr), checker.DeepEquals, common.Hash{})
+	c.Assert(s.state.GetState(stateobjaddr, storageaddr), checker.DeepEquals, common.InitExtHash())
+	c.Assert(s.state.GetCommittedState(stateobjaddr, storageaddr), checker.DeepEquals, common.InitExtHash())
 }
 
 // This test is to check reverting to the empty snapshot.
@@ -228,7 +228,7 @@ func compareStateObjects(so0, so1 *stateObject, t *testing.T) {
 		// check the equivalence of storage root only if both are smart contract accounts.
 		t.Errorf("Root mismatch: have %x, want %x", so0ac.GetStorageRoot().Bytes(), so1ac.GetStorageRoot().Bytes())
 	}
-	if !bytes.Equal(so0.CodeHash(), so1.CodeHash()) {
+	if so0.CodeHash().ToHash() != so1.CodeHash().ToHash() {
 		t.Fatalf("CodeHash mismatch: have %v, want %v", so0.CodeHash(), so1.CodeHash())
 	}
 	if !bytes.Equal(so0.code, so1.code) {

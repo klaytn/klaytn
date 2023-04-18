@@ -181,17 +181,17 @@ func TxLookupKey(hash common.Hash) []byte {
 }
 
 // AccountSnapshotKey = SnapshotAccountPrefix + hash
-func AccountSnapshotKey(hash common.ExtHash) []byte {
+func AccountSnapshotKey(hash common.Hash) []byte {
 	return append(SnapshotAccountPrefix, hash.Bytes()...)
 }
 
 // StorageSnapshotKey = SnapshotStoragePrefix + account hash + storage hash
-func StorageSnapshotKey(accountHash, storageHash common.ExtHash) []byte {
+func StorageSnapshotKey(accountHash, storageHash common.Hash) []byte {
 	return append(append(SnapshotStoragePrefix, accountHash.Bytes()...), storageHash.Bytes()...)
 }
 
 // StorageSnapshotsKey = SnapshotStoragePrefix + account hash + storage hash
-func StorageSnapshotsKey(accountHash common.ExtHash) []byte {
+func StorageSnapshotsKey(accountHash common.Hash) []byte {
 	return append(SnapshotStoragePrefix, accountHash.Bytes()...)
 }
 
@@ -206,7 +206,7 @@ func preimageKey(hash common.Hash) []byte {
 
 // CodeKey = codePrefix + hash
 func CodeKey(hash common.ExtHash) []byte {
-	return append(codePrefix, hash.Bytes()...)
+	return append(codePrefix, hash.ToHash().Bytes()...)
 }
 
 // IsCodeKey reports whether the given byte slice is the key of contract code,

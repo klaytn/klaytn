@@ -203,7 +203,7 @@ func (it *nodeIterator) LeafProof() [][]byte {
 			for i, item := range it.stack[:len(it.stack)-1] {
 				// Gather nodes that end up as hash nodes (or the root)
 				node, _ := hasher.hashChildren(item.node, nil)
-				hashed, _, _ := hasher.store(node, nil, false, false)
+				hashed, _, _ := hasher.store(node, nil, false)
 				if _, ok := hashed.(hashNode); ok || i == 0 {
 					enc, _ := rlp.EncodeToBytes(node)
 					proofs = append(proofs, enc)
@@ -313,7 +313,7 @@ func (it *nodeIterator) peek(descend bool) (*nodeIteratorState, *int, []byte, er
 
 func (it *nodeIterator) resolveHash(hash hashNode, path []byte) (node, error) {
 	if it.resolver != nil {
-		hash := common.BytesToExtHash(hash)
+		hash := common.BytesToRootExtHash(hash)
 		enc, _ := it.resolver.ReadCachedTrieNode(hash)
 		if enc != nil {
 			if resolved, err := decodeNode(hash[:], enc); err == nil {
@@ -331,7 +331,7 @@ func (st *nodeIteratorState) resolve(it *nodeIterator, path []byte) error {
 			return err
 		}
 		st.node = resolved
-		st.hash = common.BytesToExtHash(hash)
+		st.hash = common.BytesToRootExtHash(hash)
 	}
 	return nil
 }
@@ -345,7 +345,7 @@ func (it *nodeIterator) nextChild(parent *nodeIteratorState, ancestor common.Ext
 			if child != nil {
 				hash, _ := child.cache()
 				state := &nodeIteratorState{
-					hash:    common.BytesToExtHash(hash),
+					hash:    common.BytesToRootExtHash(hash),
 					node:    child,
 					parent:  ancestor,
 					index:   -1,
@@ -361,7 +361,7 @@ func (it *nodeIterator) nextChild(parent *nodeIteratorState, ancestor common.Ext
 		if parent.index < 0 {
 			hash, _ := node.Val.cache()
 			state := &nodeIteratorState{
-				hash:    common.BytesToExtHash(hash),
+				hash:    common.BytesToRootExtHash(hash),
 				node:    node.Val,
 				parent:  ancestor,
 				index:   -1,

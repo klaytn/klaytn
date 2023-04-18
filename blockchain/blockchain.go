@@ -291,7 +291,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		// rewound point is lower than disk layer.
 		var diskRoot common.Hash
 		if bc.cacheConfig.SnapshotCacheSize > 0 {
-			diskRoot = bc.db.ReadSnapshotRoot().ToHash()
+			diskRoot = bc.db.ReadSnapshotRoot()
 		}
 		if diskRoot != (common.Hash{}) {
 			logger.Warn("Head state missing, repairing", "number", head.Number(), "hash", head.Hash(), "snaproot", diskRoot)
@@ -341,7 +341,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 			logger.Warn("Enabling snapshot recovery", "chainhead", head.NumberU64(), "diskbase", *layer)
 			recover = true
 		}
-		bc.snaps, _ = snapshot.New(bc.db, bc.stateCache.TrieDB(), bc.cacheConfig.SnapshotCacheSize, head.Root().ToRootExtHash(), bc.cacheConfig.SnapshotAsyncGen, true, recover)
+		bc.snaps, _ = snapshot.New(bc.db, bc.stateCache.TrieDB(), bc.cacheConfig.SnapshotCacheSize, head.Root(), bc.cacheConfig.SnapshotAsyncGen, true, recover)
 	}
 
 	for i := 1; i <= bc.cacheConfig.TrieNodeCacheConfig.NumFetcherPrefetchWorker; i++ {
@@ -648,7 +648,7 @@ func (bc *BlockChain) FastSyncCommitHead(hash common.Hash) error {
 	// Destroy any existing state snapshot and regenerate it in the background,
 	// also resuming the normal maintenance of any previously paused snapshot.
 	if bc.snaps != nil {
-		bc.snaps.Rebuild(block.Root().ToRootExtHash())
+		bc.snaps.Rebuild(block.Root())
 	}
 	logger.Info("Committed new head block", "number", block.Number(), "hash", hash)
 	return nil
@@ -1003,7 +1003,6 @@ func (bc *BlockChain) ContractCodeWithPrefix(hash common.ExtHash) ([]byte, error
 // Stop stops the blockchain service. If any imports are currently in progress
 // it will abort them using the procInterrupt.
 func (bc *BlockChain) Stop() {
-	var tmpSnapBase common.ExtHash
 	if !atomic.CompareAndSwapInt32(&bc.running, 0, 1) {
 		return
 	}
@@ -1023,10 +1022,9 @@ func (bc *BlockChain) Stop() {
 	var snapBase common.Hash
 	if bc.snaps != nil {
 		var err error
-		if tmpSnapBase, err = bc.snaps.Journal(bc.CurrentBlock().Root().ToRootExtHash()); err != nil {
+		if snapBase, err = bc.snaps.Journal(bc.CurrentBlock().Root()); err != nil {
 			logger.Error("Failed to journal state snapshot", "err", err)
 		}
-		snapBase = tmpSnapBase.ToHash()
 	}
 
 	triedb := bc.stateCache.TrieDB()
@@ -1043,8 +1041,8 @@ func (bc *BlockChain) Stop() {
 			logger.Error("Failed to commit recent state trie", "err", err)
 		}
 		if snapBase != (common.Hash{}) {
-			logger.Info("Writing snapshot state to disk", "root", tmpSnapBase)
-			if err := triedb.Commit(tmpSnapBase, true, number); err != nil {
+			logger.Info("Writing snapshot state to disk", "root", snapBase)
+			if err := triedb.Commit(snapBase.ToRootExtHash(), true, number); err != nil {
 				logger.Error("Failed to commit recent state trie", "err", err)
 			}
 		}
@@ -1933,9 +1931,6 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		}
 
 		// Validate the state using the default validator
-		ethanNum := block.NumberU64()
-		// fmt.Printf("blockNum = %d\n", ethanNum)
-		database.DeleteStateDBProcNum(ethanNum)
 		err = bc.validator.ValidateState(block, parent, stateDB, receipts, usedGas)
 		if err != nil {
 			bc.reportBlock(block, receipts, err)

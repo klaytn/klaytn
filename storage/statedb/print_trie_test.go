@@ -174,7 +174,7 @@ func TestPrintTrie(t *testing.T) {
 		all[val.k] = val.v
 		trie.Update([]byte(val.k), []byte(val.v))
 	}
-	trie.Commit(nil, true)
+	trie.Commit(nil)
 
 	nodeIntMap := NewHashIntMap()
 	var visNodes []VisNode

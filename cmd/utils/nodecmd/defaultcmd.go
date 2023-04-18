@@ -31,7 +31,6 @@ import (
 	"github.com/klaytn/klaytn/api/debug"
 	"github.com/klaytn/klaytn/client"
 	"github.com/klaytn/klaytn/cmd/utils"
-	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/log"
 	metricutils "github.com/klaytn/klaytn/metrics/utils"
 	"github.com/klaytn/klaytn/node"
@@ -45,8 +44,6 @@ import (
 // It creates a default node based on the command line arguments and runs it in
 // blocking mode, waiting for it to be shut down.
 func RunKlaytnNode(ctx *cli.Context) error {
-	common.ExtHashDisableFlag = false
-	common.DelHashFlag = true
 	fullNode := MakeFullNode(ctx)
 	startNode(ctx, fullNode)
 	fullNode.Wait()

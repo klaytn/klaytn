@@ -84,7 +84,7 @@ func (t *Trie) Prove(key []byte, fromLevel uint, proofDB ProofDBWriter) error {
 		// Don't bother checking for errors here since hasher panics
 		// if encoding doesn't work and we're not writing to any database.
 		n, _ = hasher.hashChildren(n, nil)
-		hn, _, _ := hasher.store(n, nil, false, false)
+		hn, _, _ := hasher.store(n, nil, false)
 		if hash, ok := hn.(hashNode); ok || i == 0 {
 			// If the node's database encoding is a hash (or is the
 			// root node), it becomes a proof element.
@@ -92,10 +92,11 @@ func (t *Trie) Prove(key []byte, fromLevel uint, proofDB ProofDBWriter) error {
 				fromLevel--
 			} else {
 				enc, _ := rlp.EncodeToBytes(n)
+				reEnc := ExtHashFilter(n, enc)
 				if !ok {
-					hash = crypto.Keccak256(enc)
+					hash = crypto.Keccak256(reEnc)
 				}
-				proofDB.WriteMerkleProof(hash, enc)
+				proofDB.WriteMerkleProof(hash, reEnc)
 			}
 		}
 	}
@@ -136,7 +137,7 @@ func VerifyProof(rootHash common.ExtHash, key []byte, proofDB database.DBManager
 			return nil, nil, i
 		case hashNode:
 			key = keyrest
-			wantHash = common.BytesToExtHash(cld)
+			wantHash = common.BytesToRootExtHash(cld)
 		case valueNode:
 			return cld, nil, i + 1
 		}
@@ -196,7 +197,7 @@ func proofToPath(rootHash common.ExtHash, root node, key []byte, proofDb ProofDB
 			key, parent = keyrest, child // Already resolved
 			continue
 		case hashNode:
-			child, err = resolveNode(common.BytesToExtHash(cld))
+			child, err = resolveNode(common.BytesToRootExtHash(cld))
 			if err != nil {
 				return nil, nil, err
 			}

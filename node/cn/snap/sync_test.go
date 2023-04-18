@@ -52,7 +52,7 @@ func genExternallyOwnedAccount(nonce uint64, balance *big.Int) (account.Account,
 	})
 }
 
-func genSmartContractAccount(nonce uint64, balance *big.Int, storageRoot common.Hash, codeHash []byte) (account.Account, error) {
+func genSmartContractAccount(nonce uint64, balance *big.Int, storageRoot common.ExtHash, codeHash []byte) (account.Account, error) {
 	return account.NewAccountWithMap(account.SmartContractAccountType, map[account.AccountValueKeyType]interface{}{
 		account.AccountValueKeyNonce:         nonce,
 		account.AccountValueKeyBalance:       balance,
@@ -1381,7 +1381,7 @@ func makeAccountTrieNoStorage(n int) (*statedb.Trie, entrySlice) {
 		entries = append(entries, elem)
 	}
 	sort.Sort(entries)
-	accTrie.Commit(nil, true)
+	accTrie.Commit(nil)
 	return accTrie, entries
 }
 
@@ -1414,7 +1414,7 @@ func makeBoundaryAccountTrie(n int) (*statedb.Trie, entrySlice) {
 	}
 	// Fill boundary accounts
 	for i := 0; i < len(boundaries); i++ {
-		acc, _ := genSmartContractAccount(uint64(0), big.NewInt(int64(i)), emptyRoot, getCodeHash(uint64(i)))
+		acc, _ := genSmartContractAccount(uint64(0), big.NewInt(int64(i)), emptyRoot.ToRootExtHash(), getCodeHash(uint64(i)))
 		serializer := account.NewAccountSerializerWithAccount(acc)
 		value, _ := rlp.EncodeToBytes(serializer)
 		elem := &kv{boundaries[i].Bytes(), value}
@@ -1423,7 +1423,7 @@ func makeBoundaryAccountTrie(n int) (*statedb.Trie, entrySlice) {
 	}
 	// Fill other accounts if required
 	for i := uint64(1); i <= uint64(n); i++ {
-		acc, _ := genSmartContractAccount(i, big.NewInt(int64(i)), emptyRoot, getCodeHash(i))
+		acc, _ := genSmartContractAccount(i, big.NewInt(int64(i)), emptyRoot.ToRootExtHash(), getCodeHash(i))
 		serializer := account.NewAccountSerializerWithAccount(acc)
 		value, _ := rlp.EncodeToBytes(serializer)
 		elem := &kv{key32(i), value}
@@ -1431,7 +1431,7 @@ func makeBoundaryAccountTrie(n int) (*statedb.Trie, entrySlice) {
 		entries = append(entries, elem)
 	}
 	sort.Sort(entries)
-	trie.Commit(nil, true)
+	trie.Commit(nil)
 	return trie, entries
 }
 
@@ -1454,8 +1454,8 @@ func makeAccountTrieWithStorageWithUniqueStorage(accounts, slots int, code bool)
 		}
 		// Create a storage trie
 		stTrie, stEntries := makeStorageTrieWithSeed(uint64(slots), i, db)
-		stRoot := stTrie.Hash().ToHash()
-		stTrie.Commit(nil, true)
+		stRoot := stTrie.Hash()
+		stTrie.Commit(nil)
 		acc, _ := genSmartContractAccount(i, big.NewInt(int64(i)), stRoot, codehash)
 		serializer := account.NewAccountSerializerWithAccount(acc)
 		value, _ := rlp.EncodeToBytes(serializer)
@@ -1468,7 +1468,7 @@ func makeAccountTrieWithStorageWithUniqueStorage(accounts, slots int, code bool)
 	}
 	sort.Sort(entries)
 
-	accTrie.Commit(nil, true)
+	accTrie.Commit(nil)
 	return accTrie, entries, storageTries, storageEntries
 }
 
@@ -1491,7 +1491,7 @@ func makeAccountTrieWithStorage(accounts, slots int, code, boundary bool) (*stat
 	} else {
 		stTrie, stEntries = makeStorageTrieWithSeed(uint64(slots), 0, db)
 	}
-	stRoot := stTrie.Hash().ToHash()
+	stRoot := stTrie.Hash()
 
 	// Create n accounts in the trie
 	for i := uint64(1); i <= uint64(accounts); i++ {
@@ -1511,8 +1511,8 @@ func makeAccountTrieWithStorage(accounts, slots int, code, boundary bool) (*stat
 		storageEntries[common.BytesToHash(key)] = stEntries
 	}
 	sort.Sort(entries)
-	stTrie.Commit(nil, true)
-	accTrie.Commit(nil, true)
+	stTrie.Commit(nil)
+	accTrie.Commit(nil)
 	return accTrie, entries, storageTries, storageEntries
 }
 
@@ -1535,7 +1535,7 @@ func makeStorageTrieWithSeed(n, seed uint64, db *statedb.Database) (*statedb.Tri
 		entries = append(entries, elem)
 	}
 	sort.Sort(entries)
-	trie.Commit(nil, true)
+	trie.Commit(nil)
 	return trie, entries
 }
 
@@ -1586,7 +1586,7 @@ func makeBoundaryStorageTrie(n int, db *statedb.Database) (*statedb.Trie, entryS
 		entries = append(entries, elem)
 	}
 	sort.Sort(entries)
-	trie.Commit(nil, true)
+	trie.Commit(nil)
 	return trie, entries
 }
 

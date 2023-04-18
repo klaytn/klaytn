@@ -58,8 +58,6 @@ var waitDeployedTests = map[string]struct {
 }
 
 func TestWaitDeployed(t *testing.T) {
-	common.ExtHashDisableFlag = true
-	defer func() { common.ExtHashDisableFlag = false }()
 	for name, test := range waitDeployedTests {
 		backend := backends.NewSimulatedBackend(
 			blockchain.GenesisAlloc{
@@ -103,8 +101,6 @@ func TestWaitDeployed(t *testing.T) {
 }
 
 func TestWaitDeployedCornerCases(t *testing.T) {
-	common.ExtHashDisableFlag = true
-	defer func() { common.ExtHashDisableFlag = false }()
 	backend := backends.NewSimulatedBackend(
 		blockchain.GenesisAlloc{
 			crypto.PubkeyToAddress(testKey.PublicKey): {Balance: big.NewInt(10000000000)},

@@ -234,7 +234,7 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) (returnErr error) {
 		"totalElapsed", elapsed, "committed per second", speed)
 
 	startCheck := time.Now()
-	if err := state.CheckStateConsistencyParallel(srcState, dstState, rootHash.ToExtHash(), bc.quit); err != nil {
+	if err := state.CheckStateConsistencyParallel(srcState, dstState, rootHash.ToRootExtHash(), bc.quit); err != nil {
 		logger.Error("State migration : copied stateDB is invalid", "err", err)
 		return err
 	}
@@ -283,12 +283,12 @@ func (st *migrationStats) stateMigrationReport(force bool, pending int, progress
 }
 
 func (bc *BlockChain) checkTrieContents(oldDB, newDB *statedb.Database, root common.Hash) ([]common.Address, error) {
-	oldTrie, err := statedb.NewSecureTrie(root.ToExtHash(), oldDB)
+	oldTrie, err := statedb.NewSecureTrie(root.ToRootExtHash(), oldDB)
 	if err != nil {
 		return nil, err
 	}
 
-	newTrie, err := statedb.NewSecureTrie(root.ToExtHash(), newDB)
+	newTrie, err := statedb.NewSecureTrie(root.ToRootExtHash(), newDB)
 	if err != nil {
 		return nil, err
 	}
@@ -416,7 +416,7 @@ func (bc *BlockChain) StateMigrationStatus() (bool, uint64, int, int, int, float
 func (bc *BlockChain) iterateStateTrie(root common.Hash, db state.Database, resultCh chan struct{}, errCh chan error) (resultErr error) {
 	defer func() { errCh <- resultErr }()
 
-	stateDB, err := state.New(root.ToExtHash(), db, nil)
+	stateDB, err := state.New(root.ToRootExtHash(), db, nil)
 	if err != nil {
 		return err
 	}
@@ -512,7 +512,7 @@ func (bc *BlockChain) StartWarmUp() error {
 		return err
 	}
 	// retrieve children nodes of state trie root node
-	children, err := db.TrieDB().NodeChildren(block.Root().ToExtHash())
+	children, err := db.TrieDB().NodeChildren(block.Root().ToRootExtHash())
 	if err != nil {
 		return err
 	}
@@ -568,7 +568,7 @@ func (bc *BlockChain) StartCollectingTrieStats(contractAddr common.Address) erro
 		}
 	}
 
-	children, err := db.TrieDB().NodeChildren(startNode.ToExtHash())
+	children, err := db.TrieDB().NodeChildren(startNode.ToRootExtHash())
 	if err != nil {
 		logger.Error("Failed to retrieve the children of start node", "err", err)
 		return err
@@ -583,14 +583,14 @@ func (bc *BlockChain) StartCollectingTrieStats(contractAddr common.Address) erro
 
 // collectChildrenStats wraps CollectChildrenStats, in order to send finish signal to resultCh.
 func collectChildrenStats(db state.Database, child common.Hash, resultCh chan<- statedb.NodeInfo) {
-	db.TrieDB().CollectChildrenStats(child.ToExtHash(), 2, resultCh)
+	db.TrieDB().CollectChildrenStats(child.ToRootExtHash(), 2, resultCh)
 	resultCh <- statedb.NodeInfo{Finished: true}
 }
 
 // collectTrieStats is the main function of collecting trie statistics.
 // It spawns goroutines for the upper-most children and iterates each sub-trie.
 func collectTrieStats(db state.Database, startNode common.Hash) {
-	children, err := db.TrieDB().NodeChildren(startNode.ToExtHash())
+	children, err := db.TrieDB().NodeChildren(startNode.ToRootExtHash())
 	if err != nil {
 		logger.Error("Failed to retrieve the children of start node", "err", err)
 	}
@@ -652,7 +652,7 @@ func printDepthStats(depthCounter map[int]int) {
 
 // GetContractStorageRoot returns the storage root of a contract based on the given block.
 func (bc *BlockChain) GetContractStorageRoot(block *types.Block, db state.Database, contractAddr common.Address) (common.Hash, error) {
-	stateDB, err := state.New(block.Root().ToExtHash(), db, nil)
+	stateDB, err := state.New(block.Root().ToRootExtHash(), db, nil)
 	if err != nil {
 		return common.Hash{}, fmt.Errorf("failed to get StateDB - %w", err)
 	}
@@ -702,7 +702,7 @@ func (bc *BlockChain) iterateStorageTrie(child common.Hash, storageTrie state.Tr
 }
 
 func prepareContractWarmUp(block *types.Block, db state.Database, contractAddr common.Address) (common.Hash, state.Trie, error) {
-	stateDB, err := state.New(block.Root().ToExtHash(), db, nil)
+	stateDB, err := state.New(block.Root().ToRootExtHash(), db, nil)
 	if err != nil {
 		return common.Hash{}, nil, fmt.Errorf("failed to get StateDB, err: %w", err)
 	}
@@ -730,7 +730,7 @@ func (bc *BlockChain) StartContractWarmUp(contractAddr common.Address) error {
 		return fmt.Errorf("failed to prepare contract warm-up, err: %w", err)
 	}
 	// retrieve children nodes of contract storage trie root node
-	children, err := db.TrieDB().NodeChildren(storageTrieRoot.ToExtHash())
+	children, err := db.TrieDB().NodeChildren(storageTrieRoot.ToRootExtHash())
 	if err != nil {
 		return err
 	}

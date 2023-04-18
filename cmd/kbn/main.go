@@ -187,8 +187,6 @@ func startNode(node *Node) error {
 }
 
 func main() {
-	common.ExtHashDisableFlag = false
-	common.DelHashFlag = true
 	cliFlags := []cli.Flag{
 		utils.SrvTypeFlag,
 		utils.DataDirFlag,

@@ -57,7 +57,7 @@ func makeTestTrie() (*Database, *SecureTrie, map[string][]byte) {
 			trie.Update(key, val)
 		}
 	}
-	trie.Commit(nil, true)
+	trie.Commit(nil)
 
 	// Return the generated trie
 	return triedb, trie, content
@@ -67,7 +67,7 @@ func makeTestTrie() (*Database, *SecureTrie, map[string][]byte) {
 // content map.
 func checkTrieContents(t *testing.T, db *Database, root []byte, content map[string][]byte) {
 	// Check root availability and trie contents
-	trie, err := NewSecureTrie(common.BytesToHash(root).ToRootExtHash(), db)
+	trie, err := NewSecureTrie(common.BytesToRootExtHash(root), db)
 	if err != nil {
 		t.Fatalf("failed to create trie at %x: %v", root, err)
 	}
@@ -170,8 +170,6 @@ func trieSyncLoop(t *testing.T, count int, srcTrie *SecureTrie, sched *TrieSync,
 }
 
 func testIterativeTrieSync(t *testing.T, count int, bypath bool) {
-	common.ExtHashDisableFlag = true
-	defer func() { common.ExtHashDisableFlag = false }()
 	// Create a random trie to copy
 	srcDb, srcTrie, srcData := makeTestTrie()
 
@@ -230,8 +228,6 @@ func testIterativeTrieSync(t *testing.T, count int, bypath bool) {
 // Tests that the trie scheduler can correctly reconstruct the state even if only
 // partial results are returned, and the others sent only later.
 func TestIterativeDelayedTrieSync(t *testing.T) {
-	// common.ExtHashDisableFlag = true
-	// defer func() { common.ExtHashDisableFlag = false } ()
 	// Create a random trie to copy
 	srcDb, srcTrie, srcData := makeTestTrie()
 
