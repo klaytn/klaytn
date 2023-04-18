@@ -18,6 +18,7 @@ package blst
 
 import (
 	"github.com/klaytn/klaytn/crypto/bls/types"
+	"github.com/pkg/errors"
 )
 
 type signature struct {
@@ -160,4 +161,22 @@ func VerifySignature(sigb []byte, msg [32]byte, pk types.PublicKey) (bool, error
 	ok := sig.(*signature).p.Verify(
 		sigGroupCheck, pk.(*publicKey).p, pkValidate, msg[:], types.DomainSeparationTag)
 	return ok, nil
+}
+
+func VerifyMultipleSignatures(sigbs [][]byte, msgs [][32]byte, pks []types.PublicKey) (bool, error) {
+	if len(sigbs) == 0 {
+		return false, nil
+	}
+	if len(sigbs) != len(msgs) || len(msgs) != len(pks) {
+		return false, errors.Errorf("Unmatched sigs, msgs, pubkeys lengths: %d, %d, %d", len(sigbs), len(msgs), len(pks))
+	}
+
+	// Benefit from cache
+	sigs, err := MultipleSignaturesFromBytes(sigbs)
+	if err != nil {
+		return false, err
+	}
+	_ = sigs
+
+	return false, nil
 }
