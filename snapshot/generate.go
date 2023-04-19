@@ -310,11 +310,11 @@ func (dl *diskLayer) proveRange(stats *generatorStats, root common.Hash, prefix 
 			dbm    = database.NewMemoryDBManager()
 			triedb = statedb.NewDatabase(dbm)
 		)
-		tr, _ := statedb.NewTrie(common.Hash{}, triedb)
+		tr, _ := statedb.NewTrie(common.InitExtHash(), triedb)
 		for i, key := range keys {
 			tr.TryUpdate(key, vals[i])
 		}
-		if gotRoot := tr.Hash(); gotRoot != root {
+		if gotRoot := tr.Hash().ToHash(); gotRoot != root {
 			return &proofResult{
 				keys:     keys,
 				vals:     vals,
@@ -324,7 +324,7 @@ func (dl *diskLayer) proveRange(stats *generatorStats, root common.Hash, prefix 
 		return &proofResult{keys: keys, vals: vals}, nil
 	}
 	// Snap state is chunked, generate edge proofs for verification.
-	tr, err := statedb.NewTrie(root, dl.triedb)
+	tr, err := statedb.NewTrie(root.ToRootExtHash(), dl.triedb)
 	if err != nil {
 		stats.Log("Trie missing, state snapshotting paused", dl.root, dl.genMarker)
 		return nil, errMissingTrie
@@ -362,7 +362,7 @@ func (dl *diskLayer) proveRange(stats *generatorStats, root common.Hash, prefix 
 	}
 	// Verify the snapshot segment with range prover, ensure that all flat states
 	// in this range correspond to merkle trie.
-	cont, err := statedb.VerifyRangeProof(root, origin, last, keys, vals, proof)
+	cont, err := statedb.VerifyRangeProof(root.ToRootExtHash(), origin, last, keys, vals, proof)
 	return &proofResult{
 			keys:     keys,
 			vals:     vals,
@@ -437,7 +437,7 @@ func (dl *diskLayer) generateRange(root common.Hash, prefix []byte, kind string,
 	if len(result.keys) > 0 {
 		snapNodeCache = database.NewMemoryDBManager()
 		snapTrieDb := statedb.NewDatabase(snapNodeCache)
-		snapTrie, _ := statedb.NewTrie(common.Hash{}, snapTrieDb)
+		snapTrie, _ := statedb.NewTrie(common.InitExtHash(), snapTrieDb)
 		for i, key := range result.keys {
 			snapTrie.Update(key, result.vals[i])
 		}
@@ -447,7 +447,7 @@ func (dl *diskLayer) generateRange(root common.Hash, prefix []byte, kind string,
 	}
 	tr := result.tr
 	if tr == nil {
-		tr, err = statedb.NewTrie(root, dl.triedb)
+		tr, err = statedb.NewTrie(root.ToRootExtHash(), dl.triedb)
 		if err != nil {
 			stats.Log("Trie missing, state snapshotting paused", dl.root, dl.genMarker)
 			return false, nil, errMissingTrie
@@ -617,7 +617,7 @@ func (dl *diskLayer) generate(stats *generatorStats) {
 			snapAccountWriteCounter.Inc(time.Since(start).Nanoseconds())
 			return nil
 		}
-		serializer := account.NewAccountSerializer()
+		serializer := account.NewAccountLHSerializer()
 		if err := rlp.DecodeBytes(val, serializer); err != nil {
 			logger.Crit("Invalid account encountered during snapshot creation", "err", err)
 		}
@@ -646,7 +646,7 @@ func (dl *diskLayer) generate(stats *generatorStats) {
 		}
 		// If the iterated account is the contract, create a further loop to
 		// verify or regenerate the contract storage.
-		contractAcc, ok := acc.(*account.SmartContractAccount)
+		contractAcc, ok := acc.(*account.SmartContractAccountLH)
 		if !ok {
 			// If the root is empty, we still need to ensure that any previous snapshot
 			// storage values are cleared

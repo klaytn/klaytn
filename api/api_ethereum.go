@@ -408,7 +408,7 @@ func (api *EthereumAPI) GetProof(ctx context.Context, address common.Address, st
 
 	// if we have a storageTrie, (which means the account exists), we can update the storagehash
 	if storageTrie != nil {
-		storageHash = storageTrie.Hash()
+		storageHash = storageTrie.Hash().ToHash()
 	} else {
 		// no storageTrie means the account does not exist, so the codeHash is the hash of an empty bytearray.
 		codeHash = crypto.Keccak256Hash(nil)
@@ -553,11 +553,11 @@ func (api *EthereumAPI) GetStorageAt(ctx context.Context, address common.Address
 // OverrideAccount in go-ethereum has been renamed to EthOverrideAccount.
 // OverrideAccount is defined in go-ethereum's internal package, so OverrideAccount is redefined here as EthOverrideAccount.
 type EthOverrideAccount struct {
-	Nonce     *hexutil.Uint64              `json:"nonce"`
-	Code      *hexutil.Bytes               `json:"code"`
-	Balance   **hexutil.Big                `json:"balance"`
-	State     *map[common.Hash]common.Hash `json:"state"`
-	StateDiff *map[common.Hash]common.Hash `json:"stateDiff"`
+	Nonce     *hexutil.Uint64                    `json:"nonce"`
+	Code      *hexutil.Bytes                     `json:"code"`
+	Balance   **hexutil.Big                      `json:"balance"`
+	State     *map[common.ExtHash]common.ExtHash `json:"state"`
+	StateDiff *map[common.ExtHash]common.ExtHash `json:"stateDiff"`
 }
 
 // EthStateOverride is the collection of overridden accounts.

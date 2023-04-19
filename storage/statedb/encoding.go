@@ -114,6 +114,14 @@ func keybytesToHex(str []byte) []byte {
 	return nibbles
 }
 
+func keybytesToHexMax32(str []byte) []byte {
+	if len(str) > 32 {
+		return keybytesToHex(str[:common.HashLength])
+	} else {
+		return keybytesToHex(str)
+	}
+}
+
 // hexToKeybytes turns hex nibbles into key bytes.
 // This can only be used for keys of even length.
 func hexToKeybytes(hex []byte) []byte {

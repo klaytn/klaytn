@@ -372,9 +372,7 @@ func (_ERC20 *ERC20TransactorRaw) Transact(opts *bind.TransactOpts, method strin
 //
 // Solidity: function allowance(address owner, address spender) view returns(uint256)
 func (_ERC20 *ERC20Caller) Allowance(opts *bind.CallOpts, owner common.Address, spender common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _ERC20.contract.Call(opts, out, "allowance", owner, spender)
 	return *ret0, err
@@ -398,9 +396,7 @@ func (_ERC20 *ERC20CallerSession) Allowance(owner common.Address, spender common
 //
 // Solidity: function balanceOf(address account) view returns(uint256)
 func (_ERC20 *ERC20Caller) BalanceOf(opts *bind.CallOpts, account common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _ERC20.contract.Call(opts, out, "balanceOf", account)
 	return *ret0, err
@@ -424,9 +420,7 @@ func (_ERC20 *ERC20CallerSession) BalanceOf(account common.Address) (*big.Int, e
 //
 // Solidity: function totalSupply() view returns(uint256)
 func (_ERC20 *ERC20Caller) TotalSupply(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _ERC20.contract.Call(opts, out, "totalSupply")
 	return *ret0, err
@@ -630,7 +624,6 @@ type ERC20Approval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
 func (_ERC20 *ERC20Filterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, spender []common.Address) (*ERC20ApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -651,7 +644,6 @@ func (_ERC20 *ERC20Filterer) FilterApproval(opts *bind.FilterOpts, owner []commo
 //
 // Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
 func (_ERC20 *ERC20Filterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *ERC20Approval, owner []common.Address, spender []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -783,7 +775,6 @@ type ERC20Transfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
 func (_ERC20 *ERC20Filterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address) (*ERC20TransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -804,7 +795,6 @@ func (_ERC20 *ERC20Filterer) FilterTransfer(opts *bind.FilterOpts, from []common
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
 func (_ERC20 *ERC20Filterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *ERC20Transfer, from []common.Address, to []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -1040,9 +1030,7 @@ func (_ERC20Burnable *ERC20BurnableTransactorRaw) Transact(opts *bind.TransactOp
 //
 // Solidity: function allowance(address owner, address spender) view returns(uint256)
 func (_ERC20Burnable *ERC20BurnableCaller) Allowance(opts *bind.CallOpts, owner common.Address, spender common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _ERC20Burnable.contract.Call(opts, out, "allowance", owner, spender)
 	return *ret0, err
@@ -1066,9 +1054,7 @@ func (_ERC20Burnable *ERC20BurnableCallerSession) Allowance(owner common.Address
 //
 // Solidity: function balanceOf(address account) view returns(uint256)
 func (_ERC20Burnable *ERC20BurnableCaller) BalanceOf(opts *bind.CallOpts, account common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _ERC20Burnable.contract.Call(opts, out, "balanceOf", account)
 	return *ret0, err
@@ -1092,9 +1078,7 @@ func (_ERC20Burnable *ERC20BurnableCallerSession) BalanceOf(account common.Addre
 //
 // Solidity: function totalSupply() view returns(uint256)
 func (_ERC20Burnable *ERC20BurnableCaller) TotalSupply(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _ERC20Burnable.contract.Call(opts, out, "totalSupply")
 	return *ret0, err
@@ -1340,7 +1324,6 @@ type ERC20BurnableApproval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
 func (_ERC20Burnable *ERC20BurnableFilterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, spender []common.Address) (*ERC20BurnableApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -1361,7 +1344,6 @@ func (_ERC20Burnable *ERC20BurnableFilterer) FilterApproval(opts *bind.FilterOpt
 //
 // Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
 func (_ERC20Burnable *ERC20BurnableFilterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *ERC20BurnableApproval, owner []common.Address, spender []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -1493,7 +1475,6 @@ type ERC20BurnableTransfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
 func (_ERC20Burnable *ERC20BurnableFilterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address) (*ERC20BurnableTransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -1514,7 +1495,6 @@ func (_ERC20Burnable *ERC20BurnableFilterer) FilterTransfer(opts *bind.FilterOpt
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
 func (_ERC20Burnable *ERC20BurnableFilterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *ERC20BurnableTransfer, from []common.Address, to []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -1752,9 +1732,7 @@ func (_ERC20Mintable *ERC20MintableTransactorRaw) Transact(opts *bind.TransactOp
 //
 // Solidity: function allowance(address owner, address spender) view returns(uint256)
 func (_ERC20Mintable *ERC20MintableCaller) Allowance(opts *bind.CallOpts, owner common.Address, spender common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _ERC20Mintable.contract.Call(opts, out, "allowance", owner, spender)
 	return *ret0, err
@@ -1778,9 +1756,7 @@ func (_ERC20Mintable *ERC20MintableCallerSession) Allowance(owner common.Address
 //
 // Solidity: function balanceOf(address account) view returns(uint256)
 func (_ERC20Mintable *ERC20MintableCaller) BalanceOf(opts *bind.CallOpts, account common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _ERC20Mintable.contract.Call(opts, out, "balanceOf", account)
 	return *ret0, err
@@ -1804,9 +1780,7 @@ func (_ERC20Mintable *ERC20MintableCallerSession) BalanceOf(account common.Addre
 //
 // Solidity: function isMinter(address account) view returns(bool)
 func (_ERC20Mintable *ERC20MintableCaller) IsMinter(opts *bind.CallOpts, account common.Address) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _ERC20Mintable.contract.Call(opts, out, "isMinter", account)
 	return *ret0, err
@@ -1830,9 +1804,7 @@ func (_ERC20Mintable *ERC20MintableCallerSession) IsMinter(account common.Addres
 //
 // Solidity: function totalSupply() view returns(uint256)
 func (_ERC20Mintable *ERC20MintableCaller) TotalSupply(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _ERC20Mintable.contract.Call(opts, out, "totalSupply")
 	return *ret0, err
@@ -2099,7 +2071,6 @@ type ERC20MintableApproval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
 func (_ERC20Mintable *ERC20MintableFilterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, spender []common.Address) (*ERC20MintableApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -2120,7 +2091,6 @@ func (_ERC20Mintable *ERC20MintableFilterer) FilterApproval(opts *bind.FilterOpt
 //
 // Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
 func (_ERC20Mintable *ERC20MintableFilterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *ERC20MintableApproval, owner []common.Address, spender []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -2250,7 +2220,6 @@ type ERC20MintableMinterAdded struct {
 //
 // Solidity: event MinterAdded(address indexed account)
 func (_ERC20Mintable *ERC20MintableFilterer) FilterMinterAdded(opts *bind.FilterOpts, account []common.Address) (*ERC20MintableMinterAddedIterator, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -2267,7 +2236,6 @@ func (_ERC20Mintable *ERC20MintableFilterer) FilterMinterAdded(opts *bind.Filter
 //
 // Solidity: event MinterAdded(address indexed account)
 func (_ERC20Mintable *ERC20MintableFilterer) WatchMinterAdded(opts *bind.WatchOpts, sink chan<- *ERC20MintableMinterAdded, account []common.Address) (event.Subscription, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -2393,7 +2361,6 @@ type ERC20MintableMinterRemoved struct {
 //
 // Solidity: event MinterRemoved(address indexed account)
 func (_ERC20Mintable *ERC20MintableFilterer) FilterMinterRemoved(opts *bind.FilterOpts, account []common.Address) (*ERC20MintableMinterRemovedIterator, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -2410,7 +2377,6 @@ func (_ERC20Mintable *ERC20MintableFilterer) FilterMinterRemoved(opts *bind.Filt
 //
 // Solidity: event MinterRemoved(address indexed account)
 func (_ERC20Mintable *ERC20MintableFilterer) WatchMinterRemoved(opts *bind.WatchOpts, sink chan<- *ERC20MintableMinterRemoved, account []common.Address) (event.Subscription, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -2538,7 +2504,6 @@ type ERC20MintableTransfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
 func (_ERC20Mintable *ERC20MintableFilterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address) (*ERC20MintableTransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -2559,7 +2524,6 @@ func (_ERC20Mintable *ERC20MintableFilterer) FilterTransfer(opts *bind.FilterOpt
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
 func (_ERC20Mintable *ERC20MintableFilterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *ERC20MintableTransfer, from []common.Address, to []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -2783,9 +2747,7 @@ func (_ERC20ServiceChain *ERC20ServiceChainTransactorRaw) Transact(opts *bind.Tr
 //
 // Solidity: function allowance(address owner, address spender) view returns(uint256)
 func (_ERC20ServiceChain *ERC20ServiceChainCaller) Allowance(opts *bind.CallOpts, owner common.Address, spender common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _ERC20ServiceChain.contract.Call(opts, out, "allowance", owner, spender)
 	return *ret0, err
@@ -2809,9 +2771,7 @@ func (_ERC20ServiceChain *ERC20ServiceChainCallerSession) Allowance(owner common
 //
 // Solidity: function balanceOf(address account) view returns(uint256)
 func (_ERC20ServiceChain *ERC20ServiceChainCaller) BalanceOf(opts *bind.CallOpts, account common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _ERC20ServiceChain.contract.Call(opts, out, "balanceOf", account)
 	return *ret0, err
@@ -2835,9 +2795,7 @@ func (_ERC20ServiceChain *ERC20ServiceChainCallerSession) BalanceOf(account comm
 //
 // Solidity: function bridge() view returns(address)
 func (_ERC20ServiceChain *ERC20ServiceChainCaller) Bridge(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _ERC20ServiceChain.contract.Call(opts, out, "bridge")
 	return *ret0, err
@@ -2861,9 +2819,7 @@ func (_ERC20ServiceChain *ERC20ServiceChainCallerSession) Bridge() (common.Addre
 //
 // Solidity: function isOwner() view returns(bool)
 func (_ERC20ServiceChain *ERC20ServiceChainCaller) IsOwner(opts *bind.CallOpts) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _ERC20ServiceChain.contract.Call(opts, out, "isOwner")
 	return *ret0, err
@@ -2887,9 +2843,7 @@ func (_ERC20ServiceChain *ERC20ServiceChainCallerSession) IsOwner() (bool, error
 //
 // Solidity: function owner() view returns(address)
 func (_ERC20ServiceChain *ERC20ServiceChainCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _ERC20ServiceChain.contract.Call(opts, out, "owner")
 	return *ret0, err
@@ -2913,9 +2867,7 @@ func (_ERC20ServiceChain *ERC20ServiceChainCallerSession) Owner() (common.Addres
 //
 // Solidity: function totalSupply() view returns(uint256)
 func (_ERC20ServiceChain *ERC20ServiceChainCaller) TotalSupply(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _ERC20ServiceChain.contract.Call(opts, out, "totalSupply")
 	return *ret0, err
@@ -3203,7 +3155,6 @@ type ERC20ServiceChainApproval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
 func (_ERC20ServiceChain *ERC20ServiceChainFilterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, spender []common.Address) (*ERC20ServiceChainApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -3224,7 +3175,6 @@ func (_ERC20ServiceChain *ERC20ServiceChainFilterer) FilterApproval(opts *bind.F
 //
 // Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
 func (_ERC20ServiceChain *ERC20ServiceChainFilterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *ERC20ServiceChainApproval, owner []common.Address, spender []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -3355,7 +3305,6 @@ type ERC20ServiceChainOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_ERC20ServiceChain *ERC20ServiceChainFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*ERC20ServiceChainOwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -3376,7 +3325,6 @@ func (_ERC20ServiceChain *ERC20ServiceChainFilterer) FilterOwnershipTransferred(
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_ERC20ServiceChain *ERC20ServiceChainFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *ERC20ServiceChainOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -3508,7 +3456,6 @@ type ERC20ServiceChainTransfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
 func (_ERC20ServiceChain *ERC20ServiceChainFilterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address) (*ERC20ServiceChainTransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -3529,7 +3476,6 @@ func (_ERC20ServiceChain *ERC20ServiceChainFilterer) FilterTransfer(opts *bind.F
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
 func (_ERC20ServiceChain *ERC20ServiceChainFilterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *ERC20ServiceChainTransfer, from []common.Address, to []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -3744,9 +3690,7 @@ func (_IERC20 *IERC20TransactorRaw) Transact(opts *bind.TransactOpts, method str
 //
 // Solidity: function allowance(address owner, address spender) view returns(uint256)
 func (_IERC20 *IERC20Caller) Allowance(opts *bind.CallOpts, owner common.Address, spender common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _IERC20.contract.Call(opts, out, "allowance", owner, spender)
 	return *ret0, err
@@ -3770,9 +3714,7 @@ func (_IERC20 *IERC20CallerSession) Allowance(owner common.Address, spender comm
 //
 // Solidity: function balanceOf(address account) view returns(uint256)
 func (_IERC20 *IERC20Caller) BalanceOf(opts *bind.CallOpts, account common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _IERC20.contract.Call(opts, out, "balanceOf", account)
 	return *ret0, err
@@ -3796,9 +3738,7 @@ func (_IERC20 *IERC20CallerSession) BalanceOf(account common.Address) (*big.Int,
 //
 // Solidity: function totalSupply() view returns(uint256)
 func (_IERC20 *IERC20Caller) TotalSupply(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _IERC20.contract.Call(opts, out, "totalSupply")
 	return *ret0, err
@@ -3960,7 +3900,6 @@ type IERC20Approval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
 func (_IERC20 *IERC20Filterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, spender []common.Address) (*IERC20ApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -3981,7 +3920,6 @@ func (_IERC20 *IERC20Filterer) FilterApproval(opts *bind.FilterOpts, owner []com
 //
 // Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
 func (_IERC20 *IERC20Filterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *IERC20Approval, owner []common.Address, spender []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -4113,7 +4051,6 @@ type IERC20Transfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
 func (_IERC20 *IERC20Filterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address) (*IERC20TransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -4134,7 +4071,6 @@ func (_IERC20 *IERC20Filterer) FilterTransfer(opts *bind.FilterOpts, from []comm
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
 func (_IERC20 *IERC20Filterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *IERC20Transfer, from []common.Address, to []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -4520,9 +4456,7 @@ func (_MinterRole *MinterRoleTransactorRaw) Transact(opts *bind.TransactOpts, me
 //
 // Solidity: function isMinter(address account) view returns(bool)
 func (_MinterRole *MinterRoleCaller) IsMinter(opts *bind.CallOpts, account common.Address) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _MinterRole.contract.Call(opts, out, "isMinter", account)
 	return *ret0, err
@@ -4661,7 +4595,6 @@ type MinterRoleMinterAdded struct {
 //
 // Solidity: event MinterAdded(address indexed account)
 func (_MinterRole *MinterRoleFilterer) FilterMinterAdded(opts *bind.FilterOpts, account []common.Address) (*MinterRoleMinterAddedIterator, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -4678,7 +4611,6 @@ func (_MinterRole *MinterRoleFilterer) FilterMinterAdded(opts *bind.FilterOpts, 
 //
 // Solidity: event MinterAdded(address indexed account)
 func (_MinterRole *MinterRoleFilterer) WatchMinterAdded(opts *bind.WatchOpts, sink chan<- *MinterRoleMinterAdded, account []common.Address) (event.Subscription, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -4804,7 +4736,6 @@ type MinterRoleMinterRemoved struct {
 //
 // Solidity: event MinterRemoved(address indexed account)
 func (_MinterRole *MinterRoleFilterer) FilterMinterRemoved(opts *bind.FilterOpts, account []common.Address) (*MinterRoleMinterRemovedIterator, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -4821,7 +4752,6 @@ func (_MinterRole *MinterRoleFilterer) FilterMinterRemoved(opts *bind.FilterOpts
 //
 // Solidity: event MinterRemoved(address indexed account)
 func (_MinterRole *MinterRoleFilterer) WatchMinterRemoved(opts *bind.WatchOpts, sink chan<- *MinterRoleMinterRemoved, account []common.Address) (event.Subscription, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -5030,9 +4960,7 @@ func (_Ownable *OwnableTransactorRaw) Transact(opts *bind.TransactOpts, method s
 //
 // Solidity: function isOwner() view returns(bool)
 func (_Ownable *OwnableCaller) IsOwner(opts *bind.CallOpts) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _Ownable.contract.Call(opts, out, "isOwner")
 	return *ret0, err
@@ -5056,9 +4984,7 @@ func (_Ownable *OwnableCallerSession) IsOwner() (bool, error) {
 //
 // Solidity: function owner() view returns(address)
 func (_Ownable *OwnableCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _Ownable.contract.Call(opts, out, "owner")
 	return *ret0, err
@@ -5198,7 +5124,6 @@ type OwnableOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_Ownable *OwnableFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*OwnableOwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -5219,7 +5144,6 @@ func (_Ownable *OwnableFilterer) FilterOwnershipTransferred(opts *bind.FilterOpt
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_Ownable *OwnableFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *OwnableOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -5800,9 +5724,7 @@ func (_ServiceChainToken *ServiceChainTokenTransactorRaw) Transact(opts *bind.Tr
 //
 // Solidity: function DECIMALS() view returns(uint8)
 func (_ServiceChainToken *ServiceChainTokenCaller) DECIMALS(opts *bind.CallOpts) (uint8, error) {
-	var (
-		ret0 = new(uint8)
-	)
+	ret0 := new(uint8)
 	out := ret0
 	err := _ServiceChainToken.contract.Call(opts, out, "DECIMALS")
 	return *ret0, err
@@ -5826,9 +5748,7 @@ func (_ServiceChainToken *ServiceChainTokenCallerSession) DECIMALS() (uint8, err
 //
 // Solidity: function INITIAL_SUPPLY() view returns(uint256)
 func (_ServiceChainToken *ServiceChainTokenCaller) INITIALSUPPLY(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _ServiceChainToken.contract.Call(opts, out, "INITIAL_SUPPLY")
 	return *ret0, err
@@ -5852,9 +5772,7 @@ func (_ServiceChainToken *ServiceChainTokenCallerSession) INITIALSUPPLY() (*big.
 //
 // Solidity: function NAME() view returns(string)
 func (_ServiceChainToken *ServiceChainTokenCaller) NAME(opts *bind.CallOpts) (string, error) {
-	var (
-		ret0 = new(string)
-	)
+	ret0 := new(string)
 	out := ret0
 	err := _ServiceChainToken.contract.Call(opts, out, "NAME")
 	return *ret0, err
@@ -5878,9 +5796,7 @@ func (_ServiceChainToken *ServiceChainTokenCallerSession) NAME() (string, error)
 //
 // Solidity: function SYMBOL() view returns(string)
 func (_ServiceChainToken *ServiceChainTokenCaller) SYMBOL(opts *bind.CallOpts) (string, error) {
-	var (
-		ret0 = new(string)
-	)
+	ret0 := new(string)
 	out := ret0
 	err := _ServiceChainToken.contract.Call(opts, out, "SYMBOL")
 	return *ret0, err
@@ -5904,9 +5820,7 @@ func (_ServiceChainToken *ServiceChainTokenCallerSession) SYMBOL() (string, erro
 //
 // Solidity: function allowance(address owner, address spender) view returns(uint256)
 func (_ServiceChainToken *ServiceChainTokenCaller) Allowance(opts *bind.CallOpts, owner common.Address, spender common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _ServiceChainToken.contract.Call(opts, out, "allowance", owner, spender)
 	return *ret0, err
@@ -5930,9 +5844,7 @@ func (_ServiceChainToken *ServiceChainTokenCallerSession) Allowance(owner common
 //
 // Solidity: function balanceOf(address account) view returns(uint256)
 func (_ServiceChainToken *ServiceChainTokenCaller) BalanceOf(opts *bind.CallOpts, account common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _ServiceChainToken.contract.Call(opts, out, "balanceOf", account)
 	return *ret0, err
@@ -5956,9 +5868,7 @@ func (_ServiceChainToken *ServiceChainTokenCallerSession) BalanceOf(account comm
 //
 // Solidity: function bridge() view returns(address)
 func (_ServiceChainToken *ServiceChainTokenCaller) Bridge(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _ServiceChainToken.contract.Call(opts, out, "bridge")
 	return *ret0, err
@@ -5982,9 +5892,7 @@ func (_ServiceChainToken *ServiceChainTokenCallerSession) Bridge() (common.Addre
 //
 // Solidity: function isMinter(address account) view returns(bool)
 func (_ServiceChainToken *ServiceChainTokenCaller) IsMinter(opts *bind.CallOpts, account common.Address) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _ServiceChainToken.contract.Call(opts, out, "isMinter", account)
 	return *ret0, err
@@ -6008,9 +5916,7 @@ func (_ServiceChainToken *ServiceChainTokenCallerSession) IsMinter(account commo
 //
 // Solidity: function isOwner() view returns(bool)
 func (_ServiceChainToken *ServiceChainTokenCaller) IsOwner(opts *bind.CallOpts) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _ServiceChainToken.contract.Call(opts, out, "isOwner")
 	return *ret0, err
@@ -6034,9 +5940,7 @@ func (_ServiceChainToken *ServiceChainTokenCallerSession) IsOwner() (bool, error
 //
 // Solidity: function owner() view returns(address)
 func (_ServiceChainToken *ServiceChainTokenCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _ServiceChainToken.contract.Call(opts, out, "owner")
 	return *ret0, err
@@ -6060,9 +5964,7 @@ func (_ServiceChainToken *ServiceChainTokenCallerSession) Owner() (common.Addres
 //
 // Solidity: function totalSupply() view returns(uint256)
 func (_ServiceChainToken *ServiceChainTokenCaller) TotalSupply(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _ServiceChainToken.contract.Call(opts, out, "totalSupply")
 	return *ret0, err
@@ -6455,7 +6357,6 @@ type ServiceChainTokenApproval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
 func (_ServiceChainToken *ServiceChainTokenFilterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, spender []common.Address) (*ServiceChainTokenApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -6476,7 +6377,6 @@ func (_ServiceChainToken *ServiceChainTokenFilterer) FilterApproval(opts *bind.F
 //
 // Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
 func (_ServiceChainToken *ServiceChainTokenFilterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *ServiceChainTokenApproval, owner []common.Address, spender []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -6606,7 +6506,6 @@ type ServiceChainTokenMinterAdded struct {
 //
 // Solidity: event MinterAdded(address indexed account)
 func (_ServiceChainToken *ServiceChainTokenFilterer) FilterMinterAdded(opts *bind.FilterOpts, account []common.Address) (*ServiceChainTokenMinterAddedIterator, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -6623,7 +6522,6 @@ func (_ServiceChainToken *ServiceChainTokenFilterer) FilterMinterAdded(opts *bin
 //
 // Solidity: event MinterAdded(address indexed account)
 func (_ServiceChainToken *ServiceChainTokenFilterer) WatchMinterAdded(opts *bind.WatchOpts, sink chan<- *ServiceChainTokenMinterAdded, account []common.Address) (event.Subscription, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -6749,7 +6647,6 @@ type ServiceChainTokenMinterRemoved struct {
 //
 // Solidity: event MinterRemoved(address indexed account)
 func (_ServiceChainToken *ServiceChainTokenFilterer) FilterMinterRemoved(opts *bind.FilterOpts, account []common.Address) (*ServiceChainTokenMinterRemovedIterator, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -6766,7 +6663,6 @@ func (_ServiceChainToken *ServiceChainTokenFilterer) FilterMinterRemoved(opts *b
 //
 // Solidity: event MinterRemoved(address indexed account)
 func (_ServiceChainToken *ServiceChainTokenFilterer) WatchMinterRemoved(opts *bind.WatchOpts, sink chan<- *ServiceChainTokenMinterRemoved, account []common.Address) (event.Subscription, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -6893,7 +6789,6 @@ type ServiceChainTokenOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_ServiceChainToken *ServiceChainTokenFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*ServiceChainTokenOwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -6914,7 +6809,6 @@ func (_ServiceChainToken *ServiceChainTokenFilterer) FilterOwnershipTransferred(
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_ServiceChainToken *ServiceChainTokenFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *ServiceChainTokenOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -7046,7 +6940,6 @@ type ServiceChainTokenTransfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
 func (_ServiceChainToken *ServiceChainTokenFilterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address) (*ServiceChainTokenTransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -7067,7 +6960,6 @@ func (_ServiceChainToken *ServiceChainTokenFilterer) FilterTransfer(opts *bind.F
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
 func (_ServiceChainToken *ServiceChainTokenFilterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *ServiceChainTokenTransfer, from []common.Address, to []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)

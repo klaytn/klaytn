@@ -285,7 +285,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 	}
 	// Make sure the state associated with the block is available
 	head := bc.CurrentBlock()
-	if _, err := state.New(head.Root(), bc.stateCache, bc.snaps); err != nil {
+	if _, err := state.New(head.Root().ToRootExtHash(), bc.stateCache, bc.snaps); err != nil {
 		// Head state is missing, before the state recovery, find out the
 		// disk layer point of snapshot(if it's enabled). Make sure the
 		// rewound point is lower than disk layer.
@@ -381,7 +381,7 @@ func (bc *BlockChain) prefetchTxWorker(index int) {
 		snaps = bc.snaps
 	}
 	for followup := range bc.prefetchTxCh {
-		stateDB, err := state.NewForPrefetching(bc.CurrentBlock().Root(), bc.stateCache, snaps)
+		stateDB, err := state.NewForPrefetching(bc.CurrentBlock().Root().ToRootExtHash(), bc.stateCache, snaps)
 		if err != nil {
 			logger.Debug("failed to retrieve stateDB for prefetchTxWorker", "err", err)
 			continue
@@ -413,7 +413,7 @@ func (bc *BlockChain) SetCanonicalBlock(blockNum uint64) {
 	}
 	// Make sure the state associated with the block is available
 	head := bc.CurrentBlock()
-	if _, err := state.New(head.Root(), bc.stateCache, bc.snaps); err != nil {
+	if _, err := state.New(head.Root().ToRootExtHash(), bc.stateCache, bc.snaps); err != nil {
 		// Dangling block without a state associated, init from scratch
 		logger.Warn("Head state missing, repairing chain",
 			"number", head.NumberU64(), "hash", head.Hash().String())
@@ -544,7 +544,7 @@ func (bc *BlockChain) setHeadBeyondRoot(head uint64, root common.Hash, repair bo
 					if root != (common.Hash{}) && !beyondRoot && newHeadBlock.Root() == root {
 						beyondRoot, rootNumber = true, newHeadBlock.NumberU64()
 					}
-					if _, err := state.New(newHeadBlock.Root(), bc.stateCache, bc.snaps); err != nil {
+					if _, err := state.New(newHeadBlock.Root().ToRootExtHash(), bc.stateCache, bc.snaps); err != nil {
 						// Rewound state missing, rolled back to the parent block, reset to genesis
 						logger.Trace("Block state missing, rewinding further", "number", newHeadBlock.NumberU64(), "hash", newHeadBlock.Hash())
 						parent := bc.GetBlock(newHeadBlock.ParentHash(), newHeadBlock.NumberU64()-1)
@@ -636,7 +636,7 @@ func (bc *BlockChain) FastSyncCommitHead(hash common.Hash) error {
 	if block == nil {
 		return fmt.Errorf("non existent block [%x…]", hash[:4])
 	}
-	if _, err := statedb.NewSecureTrie(block.Root(), bc.stateCache.TrieDB()); err != nil {
+	if _, err := statedb.NewSecureTrie(block.Root().ToRootExtHash(), bc.stateCache.TrieDB()); err != nil {
 		return err
 	}
 	// If all checks out, manually set the head block
@@ -683,29 +683,31 @@ func (bc *BlockChain) State() (*state.StateDB, error) {
 
 // StateAt returns a new mutable state based on a particular point in time.
 func (bc *BlockChain) StateAt(root common.Hash) (*state.StateDB, error) {
-	return state.New(root, bc.stateCache, bc.snaps)
+	return state.New(root.ToRootExtHash(), bc.stateCache, bc.snaps)
 }
 
 // StateAtWithPersistent returns a new mutable state based on a particular point in time with persistent trie nodes.
 func (bc *BlockChain) StateAtWithPersistent(root common.Hash) (*state.StateDB, error) {
-	exist := bc.stateCache.TrieDB().DoesExistNodeInPersistent(root)
+	tmpRoot := root.ToRootExtHash()
+	exist := bc.stateCache.TrieDB().DoesExistNodeInPersistent(tmpRoot)
 	if !exist {
 		return nil, ErrNotExistNode
 	}
-	return state.New(root, bc.stateCache, bc.snaps)
+	return state.New(tmpRoot, bc.stateCache, bc.snaps)
 }
 
 // StateAtWithGCLock returns a new mutable state based on a particular point in time with read lock of the state nodes.
 func (bc *BlockChain) StateAtWithGCLock(root common.Hash) (*state.StateDB, error) {
 	bc.RLockGCCachedNode()
 
-	exist := bc.stateCache.TrieDB().DoesExistCachedNode(root)
+	tmpRoot := root.ToRootExtHash()
+	exist := bc.stateCache.TrieDB().DoesExistCachedNode(tmpRoot)
 	if !exist {
 		bc.RUnlockGCCachedNode()
 		return nil, ErrNotExistNode
 	}
 
-	stateDB, err := state.New(root, bc.stateCache, bc.snaps)
+	stateDB, err := state.New(tmpRoot, bc.stateCache, bc.snaps)
 	if err != nil {
 		bc.RUnlockGCCachedNode()
 		return nil, err
@@ -758,7 +760,7 @@ func (bc *BlockChain) ResetWithGenesisBlock(genesis *types.Block) error {
 func (bc *BlockChain) repair(head **types.Block) error {
 	for {
 		// Abort if we've rewound to a head block that does have associated state
-		if _, err := state.New((*head).Root(), bc.stateCache, bc.snaps); err == nil {
+		if _, err := state.New((*head).Root().ToRootExtHash(), bc.stateCache, bc.snaps); err == nil {
 			logger.Info("Rewound blockchain to past state", "number", (*head).Number(), "hash", (*head).Hash())
 			return nil
 		} else {
@@ -853,7 +855,7 @@ func (bc *BlockChain) HasBlock(hash common.Hash, number uint64) bool {
 
 // HasState checks if state trie is fully present in the database or not.
 func (bc *BlockChain) HasState(hash common.Hash) bool {
-	_, err := bc.stateCache.OpenTrie(hash)
+	_, err := bc.stateCache.OpenTrie(hash.ToRootExtHash())
 	return err == nil
 }
 
@@ -977,12 +979,12 @@ func (bc *BlockChain) GetLogsByHash(hash common.Hash) [][]*types.Log {
 // TrieNode retrieves a blob of data associated with a trie node
 // either from ephemeral in-memory cache, or from persistent storage.
 func (bc *BlockChain) TrieNode(hash common.Hash) ([]byte, error) {
-	return bc.stateCache.TrieDB().Node(hash)
+	return bc.stateCache.TrieDB().Node(hash.ToRootExtHash())
 }
 
 // ContractCode retrieves a blob of data associated with a contract hash
 // either from ephemeral in-memory cache, or from persistent storage.
-func (bc *BlockChain) ContractCode(hash common.Hash) ([]byte, error) {
+func (bc *BlockChain) ContractCode(hash common.ExtHash) ([]byte, error) {
 	return bc.stateCache.ContractCode(hash)
 }
 
@@ -991,9 +993,9 @@ func (bc *BlockChain) ContractCode(hash common.Hash) ([]byte, error) {
 //
 // If the code doesn't exist in the in-memory cache, check the storage with
 // new code scheme.
-func (bc *BlockChain) ContractCodeWithPrefix(hash common.Hash) ([]byte, error) {
+func (bc *BlockChain) ContractCodeWithPrefix(hash common.ExtHash) ([]byte, error) {
 	type codeReader interface {
-		ContractCodeWithPrefix(codeHash common.Hash) ([]byte, error)
+		ContractCodeWithPrefix(codeHash common.ExtHash) ([]byte, error)
 	}
 	return bc.stateCache.(codeReader).ContractCodeWithPrefix(hash)
 }
@@ -1035,17 +1037,17 @@ func (bc *BlockChain) Stop() {
 		}
 
 		logger.Info("Writing cached state to disk", "block", recent.Number(), "hash", recent.Hash(), "root", recent.Root())
-		if err := triedb.Commit(recent.Root(), true, number); err != nil {
+		if err := triedb.Commit(recent.Root().ToRootExtHash(), true, number); err != nil {
 			logger.Error("Failed to commit recent state trie", "err", err)
 		}
 		if snapBase != (common.Hash{}) {
 			logger.Info("Writing snapshot state to disk", "root", snapBase)
-			if err := triedb.Commit(snapBase, true, number); err != nil {
+			if err := triedb.Commit(snapBase.ToRootExtHash(), true, number); err != nil {
 				logger.Error("Failed to commit recent state trie", "err", err)
 			}
 		}
 		for !bc.triegc.Empty() {
-			triedb.Dereference(bc.triegc.PopItem().(common.Hash))
+			triedb.Dereference(bc.triegc.PopItem().(common.Hash).ToRootExtHash())
 		}
 		if size, _, _ := triedb.Size(); size != 0 {
 			logger.Error("Dangling trie nodes after full cleanup")
@@ -1298,11 +1300,11 @@ func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) e
 			return err
 		}
 
-		bc.checkStartStateMigration(block.NumberU64(), root)
+		bc.checkStartStateMigration(block.NumberU64(), root.ToHash())
 		bc.lastCommittedBlock = block.NumberU64()
 	} else {
 		// Full but not archive node, do proper garbage collection
-		trieDB.Reference(root, common.Hash{}) // metadata reference to keep trie alive
+		trieDB.Reference(root, common.InitExtHash()) // metadata reference to keep trie alive
 
 		// If we exceeded our memory allowance, flush matured singleton nodes to disk
 		var (
@@ -1323,11 +1325,11 @@ func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) e
 
 		if isCommitTrieRequired(bc, block.NumberU64()) {
 			logger.Trace("Commit the state trie into the disk", "blocknum", block.NumberU64())
-			if err := trieDB.Commit(block.Header().Root, true, block.NumberU64()); err != nil {
+			if err := trieDB.Commit(block.Header().Root.ToRootExtHash(), true, block.NumberU64()); err != nil {
 				return err
 			}
 
-			if bc.checkStartStateMigration(block.NumberU64(), root) {
+			if bc.checkStartStateMigration(block.NumberU64(), root.ToHash()) {
 				// flush referenced trie nodes out to new stateTrieDB
 				if err := trieDB.Cap(0); err != nil {
 					logger.Error("Error from trieDB.Cap by state migration", "err", err)
@@ -1337,7 +1339,7 @@ func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) e
 			bc.lastCommittedBlock = block.NumberU64()
 		}
 
-		bc.chBlock <- gcBlock{root, block.NumberU64()}
+		bc.chBlock <- gcBlock{root.ToHash(), block.NumberU64()}
 	}
 	return nil
 }
@@ -1384,7 +1386,7 @@ func (bc *BlockChain) gcCachedNodeLoop() {
 						bc.triegc.Push(root, number)
 						break
 					}
-					trieDB.Dereference(root.(common.Hash))
+					trieDB.Dereference(root.(common.Hash).ToRootExtHash())
 					cnt++
 				}
 				logger.Debug("GC cached node", "currentBlk", blkNum, "chosenBlk", chosen, "deferenceCnt", cnt)
@@ -1818,7 +1820,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 						}
 					}()
 
-					throwaway, err := state.NewForPrefetching(parent.Root(), bc.stateCache, snaps)
+					throwaway, err := state.NewForPrefetching(parent.Root().ToRootExtHash(), bc.stateCache, snaps)
 					if throwaway == nil || err != nil {
 						logger.Warn("failed to get StateDB for prefetcher", "err", err,
 							"parentBlockNum", parent.NumberU64(), "currBlockNum", bc.CurrentBlock().NumberU64())

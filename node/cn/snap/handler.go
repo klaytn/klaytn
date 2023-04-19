@@ -65,8 +65,8 @@ type Handler func(peer *Peer) error
 type SnapshotReader interface {
 	StateCache() state.Database
 	Snapshots() *snapshot.Tree
-	ContractCode(hash common.Hash) ([]byte, error)
-	ContractCodeWithPrefix(hash common.Hash) ([]byte, error)
+	ContractCode(hash common.ExtHash) ([]byte, error)
+	ContractCodeWithPrefix(hash common.ExtHash) ([]byte, error)
 }
 
 type SnapshotDownloader interface {
@@ -234,7 +234,7 @@ func ServiceGetAccountRangeQuery(chain SnapshotReader, req *GetAccountRangePacke
 	}
 	// TODO-Klaytn-SnapSync investigate the cache pollution
 	// Retrieve the requested state and bail out if non existent
-	tr, err := statedb.NewTrie(req.Root, chain.StateCache().TrieDB())
+	tr, err := statedb.NewTrie(req.Root.ToRootExtHash(), chain.StateCache().TrieDB())
 	if err != nil {
 		return nil, nil
 	}
@@ -364,7 +364,7 @@ func ServiceGetStorageRangesQuery(chain SnapshotReader, req *GetStorageRangesPac
 		if origin != (common.Hash{}) || abort {
 			// Request started at a non-zero hash or was capped prematurely, add
 			// the endpoint Merkle proofs
-			accTrie, err := statedb.NewTrie(req.Root, chain.StateCache().TrieDB())
+			accTrie, err := statedb.NewTrie(req.Root.ToRootExtHash(), chain.StateCache().TrieDB())
 			if err != nil {
 				return nil, nil
 			}
@@ -424,7 +424,7 @@ func ServiceGetByteCodesQuery(chain SnapshotReader, req *GetByteCodesPacket) [][
 			// Peers should not request the empty code, but if they do, at
 			// least sent them back a correct response without db lookups
 			codes = append(codes, []byte{})
-		} else if blob, err := chain.ContractCode(hash); err == nil {
+		} else if blob, err := chain.ContractCode(hash.ToRootExtHash()); err == nil {
 			codes = append(codes, blob)
 			bytes += uint64(len(blob))
 		}
@@ -444,7 +444,7 @@ func ServiceGetTrieNodesQuery(chain SnapshotReader, req *GetTrieNodesPacket, sta
 	// Make sure we have the state associated with the request
 	triedb := chain.StateCache().TrieDB()
 
-	accTrie, err := statedb.NewSecureTrie(req.Root, triedb)
+	accTrie, err := statedb.NewSecureTrie(req.Root.ToRootExtHash(), triedb)
 	if err != nil {
 		// We don't have the requested state available, bail out
 		return nil, nil

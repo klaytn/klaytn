@@ -205,8 +205,8 @@ func preimageKey(hash common.Hash) []byte {
 }
 
 // CodeKey = codePrefix + hash
-func CodeKey(hash common.Hash) []byte {
-	return append(codePrefix, hash.Bytes()...)
+func CodeKey(hash common.ExtHash) []byte {
+	return append(codePrefix, hash.ToHash().Bytes()...)
 }
 
 // IsCodeKey reports whether the given byte slice is the key of contract code,

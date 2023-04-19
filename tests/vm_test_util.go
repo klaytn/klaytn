@@ -105,7 +105,7 @@ func (t *VMTest) Run(vmconfig vm.Config) error {
 	}
 	for addr, account := range t.json.Post {
 		for k, wantV := range account.Storage {
-			if haveV := statedb.GetState(addr, k); haveV != wantV {
+			if haveV := statedb.GetState(addr, k.ToRootExtHash()); haveV.ToHash() != wantV {
 				return fmt.Errorf("wrong storage value at %x:\n  got  %x\n  want %x", k, haveV, wantV)
 			}
 		}

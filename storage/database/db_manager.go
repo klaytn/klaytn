@@ -42,9 +42,8 @@ var (
 	logger = log.NewModuleLogger(log.StorageDatabase)
 
 	errGovIdxAlreadyExist = errors.New("a governance idx of the more recent or the same block exist")
-
-	HeadBlockQ backupHashQueue
-	FastBlockQ backupHashQueue
+	HeadBlockQ            backupHashQueue
+	FastBlockQ            backupHashQueue
 )
 
 type DBManager interface {
@@ -137,37 +136,37 @@ type DBManager interface {
 	WriteMerkleProof(key, value []byte)
 
 	// Bytecodes related operations
-	ReadCode(hash common.Hash) []byte
-	ReadCodeWithPrefix(hash common.Hash) []byte
-	WriteCode(hash common.Hash, code []byte)
-	DeleteCode(hash common.Hash)
-	HasCode(hash common.Hash) bool
+	ReadCode(hash common.ExtHash) []byte
+	ReadCodeWithPrefix(hash common.ExtHash) []byte
+	WriteCode(hash common.ExtHash, code []byte)
+	DeleteCode(hash common.ExtHash)
+	HasCode(hash common.ExtHash) bool
 
 	// State Trie Database related operations
-	ReadCachedTrieNode(hash common.Hash) ([]byte, error)
+	ReadCachedTrieNode(hash common.ExtHash) ([]byte, error)
 	ReadCachedTrieNodePreimage(secureKey []byte) ([]byte, error)
 	ReadStateTrieNode(key []byte) ([]byte, error)
 	HasStateTrieNode(key []byte) (bool, error)
-	HasCodeWithPrefix(hash common.Hash) bool
+	HasCodeWithPrefix(hash common.ExtHash) bool
 	ReadPreimage(hash common.Hash) []byte
 
 	// Read StateTrie from new DB
-	ReadCachedTrieNodeFromNew(hash common.Hash) ([]byte, error)
+	ReadCachedTrieNodeFromNew(hash common.ExtHash) ([]byte, error)
 	ReadCachedTrieNodePreimageFromNew(secureKey []byte) ([]byte, error)
 	ReadStateTrieNodeFromNew(key []byte) ([]byte, error)
 	HasStateTrieNodeFromNew(key []byte) (bool, error)
-	HasCodeWithPrefixFromNew(hash common.Hash) bool
+	HasCodeWithPrefixFromNew(hash common.ExtHash) bool
 	ReadPreimageFromNew(hash common.Hash) []byte
 
 	// Read StateTrie from old DB
-	ReadCachedTrieNodeFromOld(hash common.Hash) ([]byte, error)
+	ReadCachedTrieNodeFromOld(hash common.ExtHash) ([]byte, error)
 	ReadCachedTrieNodePreimageFromOld(secureKey []byte) ([]byte, error)
 	ReadStateTrieNodeFromOld(key []byte) ([]byte, error)
 	HasStateTrieNodeFromOld(key []byte) (bool, error)
-	HasCodeWithPrefixFromOld(hash common.Hash) bool
+	HasCodeWithPrefixFromOld(hash common.ExtHash) bool
 	ReadPreimageFromOld(hash common.Hash) []byte
 
-	WritePreimages(number uint64, preimages map[common.Hash][]byte)
+	WritePreimages(number uint64, preimages map[common.ExtHash][]byte)
 
 	// from accessors_indexes.go
 	ReadTxLookupEntry(hash common.Hash) (common.Hash, uint64, uint64)
@@ -1674,13 +1673,13 @@ func (dbm *databaseManager) WriteMerkleProof(key, value []byte) {
 }
 
 // ReadCode retrieves the contract code of the provided code hash.
-func (dbm *databaseManager) ReadCode(hash common.Hash) []byte {
+func (dbm *databaseManager) ReadCode(hash common.ExtHash) []byte {
 	// Try with the legacy code scheme first, if not then try with current
 	// scheme. Since most of the code will be found with legacy scheme.
 	//
 	// TODO-Klaytn-Snapsync change the order when we forcibly upgrade the code scheme with snapshot.
 	db := dbm.getDatabase(StateTrieDB)
-	if data, _ := db.Get(hash[:]); len(data) > 0 {
+	if data, _ := db.Get(hash.ToHash().Bytes()); len(data) > 0 { // GetNilData
 		return data
 	}
 
@@ -1690,7 +1689,7 @@ func (dbm *databaseManager) ReadCode(hash common.Hash) []byte {
 // ReadCodeWithPrefix retrieves the contract code of the provided code hash.
 // The main difference between this function and ReadCode is this function
 // will only check the existence with latest scheme(with prefix).
-func (dbm *databaseManager) ReadCodeWithPrefix(hash common.Hash) []byte {
+func (dbm *databaseManager) ReadCodeWithPrefix(hash common.ExtHash) []byte {
 	db := dbm.getDatabase(StateTrieDB)
 	data, _ := db.Get(CodeKey(hash))
 	return data
@@ -1698,13 +1697,13 @@ func (dbm *databaseManager) ReadCodeWithPrefix(hash common.Hash) []byte {
 
 // HasCode checks if the contract code corresponding to the
 // provided code hash is present in the db.
-func (dbm *databaseManager) HasCode(hash common.Hash) bool {
+func (dbm *databaseManager) HasCode(hash common.ExtHash) bool {
 	// Try with the prefixed code scheme first, if not then try with legacy
 	// scheme.
 	//
 	// TODO-Klaytn-Snapsync change the order when we forcibly upgrade the code scheme with snapshot.
 	db := dbm.getDatabase(StateTrieDB)
-	if ok, _ := db.Has(hash.Bytes()); ok {
+	if ok, _ := db.Has(hash.ToHash().Bytes()); ok {
 		return true
 	}
 	return dbm.HasCodeWithPrefix(hash)
@@ -1713,14 +1712,14 @@ func (dbm *databaseManager) HasCode(hash common.Hash) bool {
 // HasCodeWithPrefix checks if the contract code corresponding to the
 // provided code hash is present in the db. This function will only check
 // presence using the prefix-scheme.
-func (dbm *databaseManager) HasCodeWithPrefix(hash common.Hash) bool {
+func (dbm *databaseManager) HasCodeWithPrefix(hash common.ExtHash) bool {
 	db := dbm.getDatabase(StateTrieDB)
 	ok, _ := db.Has(CodeKey(hash))
 	return ok
 }
 
 // WriteCode writes the provided contract code database.
-func (dbm *databaseManager) WriteCode(hash common.Hash, code []byte) {
+func (dbm *databaseManager) WriteCode(hash common.ExtHash, code []byte) {
 	dbm.lockInMigration.RLock()
 	defer dbm.lockInMigration.RUnlock()
 
@@ -1737,7 +1736,7 @@ func (dbm *databaseManager) WriteCode(hash common.Hash, code []byte) {
 }
 
 // DeleteCode deletes the specified contract code from the database.
-func (dbm *databaseManager) DeleteCode(hash common.Hash) {
+func (dbm *databaseManager) DeleteCode(hash common.ExtHash) {
 	db := dbm.getDatabase(StateTrieDB)
 	if err := db.Delete(CodeKey(hash)); err != nil {
 		logger.Crit("Failed to delete contract code", "err", err)
@@ -1745,12 +1744,12 @@ func (dbm *databaseManager) DeleteCode(hash common.Hash) {
 }
 
 // Cached Trie Node operation.
-func (dbm *databaseManager) ReadCachedTrieNode(hash common.Hash) ([]byte, error) {
+func (dbm *databaseManager) ReadCachedTrieNode(hash common.ExtHash) ([]byte, error) {
 	dbm.lockInMigration.RLock()
 	defer dbm.lockInMigration.RUnlock()
 
 	if dbm.inMigration {
-		if val, err := dbm.GetStateTrieMigrationDB().Get(hash[:]); err == nil {
+		if val, err := dbm.GetStateTrieMigrationDB().Get(hash.ToHash().Bytes()); err == nil {
 			return val, nil
 		} else if err != dataNotFoundErr {
 			// TODO-Klaytn-Database Need to be properly handled
@@ -1813,8 +1812,8 @@ func (dbm *databaseManager) ReadPreimage(hash common.Hash) []byte {
 }
 
 // Cached Trie Node operation.
-func (dbm *databaseManager) ReadCachedTrieNodeFromNew(hash common.Hash) ([]byte, error) {
-	return dbm.GetStateTrieMigrationDB().Get(hash[:])
+func (dbm *databaseManager) ReadCachedTrieNodeFromNew(hash common.ExtHash) ([]byte, error) {
+	return dbm.GetStateTrieMigrationDB().Get(hash.ToHash().Bytes())
 }
 
 // Cached Trie Node Preimage operation.
@@ -1835,7 +1834,7 @@ func (dbm *databaseManager) HasStateTrieNodeFromNew(key []byte) (bool, error) {
 	return true, nil
 }
 
-func (dbm *databaseManager) HasCodeWithPrefixFromNew(hash common.Hash) bool {
+func (dbm *databaseManager) HasCodeWithPrefixFromNew(hash common.ExtHash) bool {
 	db := dbm.GetStateTrieMigrationDB()
 	ok, _ := db.Has(CodeKey(hash))
 	return ok
@@ -1847,9 +1846,9 @@ func (dbm *databaseManager) ReadPreimageFromNew(hash common.Hash) []byte {
 	return data
 }
 
-func (dbm *databaseManager) ReadCachedTrieNodeFromOld(hash common.Hash) ([]byte, error) {
+func (dbm *databaseManager) ReadCachedTrieNodeFromOld(hash common.ExtHash) ([]byte, error) {
 	db := dbm.getDatabase(StateTrieDB)
-	return db.Get(hash[:])
+	return db.Get(hash.ToHash().Bytes())
 }
 
 // Cached Trie Node Preimage operation.
@@ -1872,7 +1871,7 @@ func (dbm *databaseManager) HasStateTrieNodeFromOld(key []byte) (bool, error) {
 	return true, nil
 }
 
-func (dbm *databaseManager) HasCodeWithPrefixFromOld(hash common.Hash) bool {
+func (dbm *databaseManager) HasCodeWithPrefixFromOld(hash common.ExtHash) bool {
 	db := dbm.getDatabase(StateTrieDB)
 	ok, _ := db.Has(CodeKey(hash))
 	return ok
@@ -1887,10 +1886,10 @@ func (dbm *databaseManager) ReadPreimageFromOld(hash common.Hash) []byte {
 
 // WritePreimages writes the provided set of preimages to the database. `number` is the
 // current block number, and is used for debug messages only.
-func (dbm *databaseManager) WritePreimages(number uint64, preimages map[common.Hash][]byte) {
+func (dbm *databaseManager) WritePreimages(number uint64, preimages map[common.ExtHash][]byte) {
 	batch := dbm.NewBatch(StateTrieDB)
 	for hash, preimage := range preimages {
-		if err := batch.Put(preimageKey(hash), preimage); err != nil {
+		if err := batch.Put(preimageKey(hash.ToHash()), preimage); err != nil {
 			logger.Crit("Failed to store trie preimage", "err", err)
 		}
 	}

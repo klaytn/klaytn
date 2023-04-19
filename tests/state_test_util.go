@@ -185,7 +185,7 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config) (*state.StateD
 	// And _now_ get the state root
 	root = statedb.IntermediateRoot(true)
 
-	if root != common.Hash(post.Root) {
+	if root.ToHash() != common.Hash(post.Root) {
 		return statedb, fmt.Errorf("post state root mismatch: got %x, want %x", root, post.Root)
 	}
 	return statedb, nil
@@ -197,13 +197,13 @@ func (t *StateTest) gasLimit(subtest StateSubtest) uint64 {
 
 func MakePreState(db database.DBManager, accounts blockchain.GenesisAlloc) *state.StateDB {
 	sdb := state.NewDatabase(db)
-	statedb, _ := state.New(common.Hash{}, sdb, nil)
+	statedb, _ := state.New(common.InitExtHash(), sdb, nil)
 	for addr, a := range accounts {
 		if len(a.Code) != 0 {
 			statedb.SetCode(addr, a.Code)
 		}
 		for k, v := range a.Storage {
-			statedb.SetState(addr, k, v)
+			statedb.SetState(addr, k.ToRootExtHash(), v.ToRootExtHash())
 		}
 		statedb.SetNonce(addr, a.Nonce)
 		statedb.SetBalance(addr, a.Balance)

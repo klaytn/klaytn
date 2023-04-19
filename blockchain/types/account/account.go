@@ -67,6 +67,7 @@ var (
 var (
 	// TODO-Klaytn-Accounts: make one single instance emptyCodeHash. It is placed in several locations for now.
 	emptyCodeHash = crypto.Keccak256(nil)
+	EmptyCodeHash = crypto.Keccak256(nil)
 
 	logger = log.NewModuleLogger(log.BlockchainState)
 )
@@ -101,6 +102,9 @@ type Account interface {
 	// DeepCopy copies all the attributes.
 	DeepCopy() Account
 
+	// TransCopy copies all the attributes between Old/New - Old(hash) to New(ExtHash), New(ExtHash) to Old(Hash)
+	TransCopy() AccountLH
+
 	// String returns all attributes of this object as a string.
 	String() string
 }
@@ -110,13 +114,13 @@ type Account interface {
 type ProgramAccount interface {
 	Account
 
-	GetStorageRoot() common.Hash
-	GetCodeHash() []byte
+	GetStorageRoot() common.ExtHash
+	GetCodeHash() common.ExtHash
 	GetCodeFormat() params.CodeFormat
 	GetVmVersion() params.VmVersion
 
-	SetStorageRoot(h common.Hash)
-	SetCodeHash(h []byte)
+	SetStorageRoot(h common.ExtHash)
+	SetCodeHash(h common.ExtHash)
 	SetCodeInfo(codeInfo params.CodeInfo)
 }
 

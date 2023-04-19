@@ -34,32 +34,35 @@ import (
 // LRU cache is mendatory when state syncing and block processing are executed simultaneously
 func NewStateSync(root common.Hash, database statedb.StateTrieReadDB, bloom *statedb.SyncBloom, lruCache *lru.Cache, onLeaf func(paths [][]byte, leaf []byte) error) *statedb.TrieSync {
 	// Register the storage slot callback if the external callback is specified.
-	var onSlot func(paths [][]byte, hexpath []byte, leaf []byte, parent common.Hash, parentDepth int) error
+	var onSlot func(paths [][]byte, hexpath []byte, leaf []byte, parent common.ExtHash, parentDepth int) error
 	if onLeaf != nil {
-		onSlot = func(paths [][]byte, hexpath []byte, leaf []byte, parent common.Hash, parentDepth int) error {
+		onSlot = func(paths [][]byte, hexpath []byte, leaf []byte, parent common.ExtHash, parentDepth int) error {
 			return onLeaf(paths, leaf)
 		}
 	}
 	// Register the account callback to connect the state trie and the storage
 	// trie belongs to the contract.
 	var syncer *statedb.TrieSync
-	onAccount := func(paths [][]byte, hexpath []byte, leaf []byte, parent common.Hash, parentDepth int) error {
+	onAccount := func(paths [][]byte, hexpath []byte, leaf []byte, parent common.ExtHash, parentDepth int) error {
 		if onLeaf != nil {
 			if err := onLeaf(paths, leaf); err != nil {
 				return err
 			}
 		}
 		serializer := account.NewAccountSerializer()
-		if err := rlp.Decode(bytes.NewReader(leaf), serializer); err != nil {
+		serializerLH := account.NewAccountLHSerializer()
+		if err := rlp.Decode(bytes.NewReader(leaf), serializerLH); err == nil {
+			serializer = serializerLH.TransCopy()
+		} else if err := rlp.Decode(bytes.NewReader(leaf), serializer); err != nil {
 			return err
 		}
 		obj := serializer.GetAccount()
 		if pa := account.GetProgramAccount(obj); pa != nil {
 			syncer.AddSubTrie(pa.GetStorageRoot(), hexpath, parentDepth+1, parent, onSlot)
-			syncer.AddCodeEntry(common.BytesToHash(pa.GetCodeHash()), hexpath, parentDepth+1, parent)
+			syncer.AddCodeEntry(pa.GetCodeHash(), hexpath, parentDepth+1, parent)
 		}
 		return nil
 	}
-	syncer = statedb.NewTrieSync(root, database, onAccount, bloom, lruCache)
+	syncer = statedb.NewTrieSync(root.ToRootExtHash(), database, onAccount, bloom, lruCache)
 	return syncer
 }

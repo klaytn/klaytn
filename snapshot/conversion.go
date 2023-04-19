@@ -270,12 +270,12 @@ func generateTrieRoot(it Iterator, accountHash common.Hash, generatorFn trieGene
 						results <- nil
 						return
 					}
-					subroot, err := leafCallback(hash, common.BytesToHash(contract.GetCodeHash()), stats)
+					subroot, err := leafCallback(hash, contract.GetCodeHash().ToHash(), stats)
 					if err != nil {
 						results <- err
 						return
 					}
-					rootHash := contract.GetStorageRoot()
+					rootHash := contract.GetStorageRoot().ToHash()
 					if rootHash != subroot {
 						results <- fmt.Errorf("invalid subroot(path %x), want %x, have %x", hash, rootHash, subroot)
 						return
@@ -317,15 +317,16 @@ func generateTrieRoot(it Iterator, accountHash common.Hash, generatorFn trieGene
 
 func trieGenerate(in chan trieKV, out chan common.Hash) {
 	db := statedb.NewDatabase(database.NewMemoryDBManager())
-	t, _ := statedb.NewTrie(common.Hash{}, db)
+	t, _ := statedb.NewTrie(common.InitExtHash(), db)
 	for leaf := range in {
 		t.TryUpdate(leaf.key[:], leaf.value)
 	}
 	var root common.Hash
 	if db == nil {
-		root = t.Hash()
+		root = t.Hash().ToHash()
 	} else {
-		root, _ = t.Commit(nil)
+		tmpRoot, _ := t.Commit(nil)
+		root = tmpRoot.ToHash()
 	}
 	out <- root
 }

@@ -28,13 +28,19 @@ import (
 	"math/big"
 	"math/rand"
 	"reflect"
+	"sync"
+	"time"
 
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/crypto/sha3"
 )
 
 const (
-	HashLength      = 32
+	HashLength = 32
+
+	ExtHashLength = 38 // = HashLength + ExtPadLength
+	ExtPadLength  = 6  // = ExtIdxLength + ExtSigLength + ExtCSLength
+
 	AddressLength   = 20
 	SignatureLength = 65
 )
@@ -42,22 +48,107 @@ const (
 var (
 	hashT    = reflect.TypeOf(Hash{})
 	addressT = reflect.TypeOf(Address{})
-)
 
-var lastPrecompiledContractAddressHex = hexutil.MustDecode("0x00000000000000000000000000000000000003FF")
+	hashMu sync.Mutex
 
-var (
-	errStringLengthExceedsAddressLength = errors.New("the string length exceeds the address length (20)")
-	errEmptyString                      = errors.New("empty string")
+	lastPrecompiledContractAddressHex          = hexutil.MustDecode("0x00000000000000000000000000000000000003FF")
+	CntIdx                              uint64 = uint64(time.Now().UnixNano()) - 500000000
+	RootByte                                   = hexutil.MustDecode("0x000000000011")
+	errStringLengthExceedsAddressLength        = errors.New("the string length exceeds the address length (20)")
+	errEmptyString                             = errors.New("empty string")
 )
 
 // Hash represents the 32 byte Keccak256 hash of arbitrary data.
-type Hash [HashLength]byte
+type (
+	Hash    [HashLength]byte
+	ExtHash [ExtHashLength]byte
+)
+
+func InitExtHash() (extH ExtHash) {
+	copy(extH[HashLength:], RootByte)
+	return extH
+}
+
+func GetExtHashPadBytes(hash []byte) (padding []byte) {
+	if len(hash) == ExtHashLength {
+		return hash[HashLength:]
+	} else {
+		return nil
+	}
+}
+
+func ExtPaddingFilter(src []byte) []byte {
+	if len(src) == ExtHashLength {
+		return src[:HashLength]
+	}
+	return src
+}
+
+func (h ExtHash) Bytes() []byte {
+	return h[:]
+}
+
+func BytesToRootExtHash(b []byte) (h ExtHash) {
+	bLen := len(b)
+	if bLen == ExtHashLength {
+		copy(h[:ExtHashLength], b)
+	} else if bLen == ExtHashLength+1 {
+		copy(h[:ExtHashLength], b[1:])
+	} else if bLen == HashLength {
+		copy(h[:HashLength], b)
+		copy(h[HashLength:], RootByte) // Ethan Defence code by CodeHash issue
+	} else if bLen == HashLength+1 {
+		copy(h[:HashLength], b[1:])
+		copy(h[HashLength:], RootByte) // Ethan Defence code by CodeHash issue
+	} else {
+		if bLen > HashLength {
+			b = b[bLen-HashLength:]
+		}
+		copy(h[HashLength-bLen:], b)
+		copy(h[HashLength:], RootByte) // Ethan Defence code by CodeHash issue
+	}
+	// Ethan Defence code by CodeHash issue	//copy(h[HashLength:], RootByte)
+	return h
+}
+
+func (h ExtHash) String() string {
+	return fmt.Sprintf("%s", h.Bytes())
+}
+
+func (h ExtHash) ToHash() (reH Hash) {
+	copy(reH[:HashLength], h[:HashLength])
+	return reH
+}
+
+func (h ExtHash) ToRoot() (reH ExtHash) {
+	copy(reH[:HashLength], h[:HashLength])
+	copy(reH[HashLength:], RootByte)
+	return reH
+}
+
+func (h ExtHash) getShardIndex(shardMask int) int {
+	data1 := int(h[HashLength-1]) + int(h[0])
+	data2 := int(h[HashLength-2]) + int(h[1])
+	return ((data2 << 8) + data1) & shardMask
+}
+
+func (h ExtHash) Hex() string { return hexutil.Encode(h[:]) }
+
+func BigToRootExtHash(b *big.Int) ExtHash { return BytesToRootExtHash(b.Bytes()) }
+
+func (h Hash) ToRootExtHash() (ExtH ExtHash) {
+	copy(ExtH[:HashLength], h[:])
+	copy(ExtH[HashLength:], RootByte)
+	return ExtH
+}
+
+func (h Hash) InitExtHash() (ExtH ExtHash) {
+	return h.ToRootExtHash()
+}
 
 // BytesToHash sets b to hash.
 // If b is larger than len(h), b will be cropped from the left.
-func BytesToHash(b []byte) Hash {
-	var h Hash
+func BytesToHash(b []byte) (h Hash) {
 	h.SetBytes(b)
 	return h
 }

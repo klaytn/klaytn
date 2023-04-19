@@ -398,7 +398,7 @@ func (gxhash *Gxhash) Prepare(chain consensus.ChainReader, header *types.Header)
 func (gxhash *Gxhash) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) (*types.Block, error) {
 	// Accumulate any block rewards and commit the final state root
 	accumulateRewards(chain.Config(), state, header)
-	header.Root = state.IntermediateRoot(true)
+	header.Root = state.IntermediateRoot(true).ToHash()
 
 	// Header seems complete, assemble into a block and return
 	return types.NewBlock(header, txs, receipts), nil

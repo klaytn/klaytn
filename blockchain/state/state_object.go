@@ -47,7 +47,7 @@ func (self Code) String() string {
 	return string(self) // strings.Join(Disassemble(self), " ")
 }
 
-type Storage map[common.Hash]common.Hash
+type Storage map[common.ExtHash]common.ExtHash
 
 func (self Storage) String() (str string) {
 	for key, value := range self {
@@ -155,7 +155,7 @@ func (c *stateObject) touch() {
 	}
 }
 
-func (c *stateObject) openStorageTrie(hash common.Hash, db Database) (Trie, error) {
+func (c *stateObject) openStorageTrie(hash common.ExtHash, db Database) (Trie, error) {
 	if c.db.prefetching {
 		return db.OpenStorageTrieForPrefetching(hash)
 	}
@@ -168,19 +168,19 @@ func (c *stateObject) getStorageTrie(db Database) Trie {
 			var err error
 			c.storageTrie, err = c.openStorageTrie(acc.GetStorageRoot(), db)
 			if err != nil {
-				c.storageTrie, _ = c.openStorageTrie(common.Hash{}, db)
+				c.storageTrie, _ = c.openStorageTrie(common.InitExtHash(), db)
 				c.setError(fmt.Errorf("can't create storage trie: %v", err))
 			}
 		} else {
 			// not a contract account, just returns the empty trie.
-			c.storageTrie, _ = c.openStorageTrie(common.Hash{}, db)
+			c.storageTrie, _ = c.openStorageTrie(common.InitExtHash(), db)
 		}
 	}
 	return c.storageTrie
 }
 
 // GetState retrieves a value from the account storage trie.
-func (self *stateObject) GetState(db Database, key common.Hash) common.Hash {
+func (self *stateObject) GetState(db Database, key common.ExtHash) common.ExtHash {
 	// If we have a dirty value for this state entry, return it
 	value, dirty := self.dirtyStorage[key]
 	if dirty {
@@ -191,7 +191,7 @@ func (self *stateObject) GetState(db Database, key common.Hash) common.Hash {
 }
 
 // GetCommittedState retrieves a value from the committed account storage trie.
-func (self *stateObject) GetCommittedState(db Database, key common.Hash) common.Hash {
+func (self *stateObject) GetCommittedState(db Database, key common.ExtHash) common.ExtHash {
 	// If we have the original value cached, return that
 	value, cached := self.originStorage[key]
 	if cached {
@@ -225,7 +225,7 @@ func (self *stateObject) GetCommittedState(db Database, key common.Hash) common.
 		//      have been handles via pendingStorage above.
 		//   2) we don't have new values, and can deliver empty response back
 		if _, destructed := self.db.snapDestructs[self.addrHash]; destructed {
-			return common.Hash{}
+			return common.InitExtHash()
 		}
 		enc, err = self.db.snap.Storage(self.addrHash, crypto.Keccak256Hash(key.Bytes()))
 	}
@@ -243,7 +243,7 @@ func (self *stateObject) GetCommittedState(db Database, key common.Hash) common.
 		// Load from DB in case it is missing.
 		if enc, err = self.getStorageTrie(db).TryGet(key[:]); err != nil {
 			self.setError(err)
-			return common.Hash{}
+			return common.InitExtHash()
 		}
 	}
 	if len(enc) > 0 {
@@ -251,14 +251,14 @@ func (self *stateObject) GetCommittedState(db Database, key common.Hash) common.
 		if err != nil {
 			self.setError(err)
 		}
-		value.SetBytes(content)
+		value = common.BytesToRootExtHash(content)
 	}
 	self.originStorage[key] = value
 	return value
 }
 
 // SetState updates a value in account trie.
-func (self *stateObject) SetState(db Database, key, value common.Hash) {
+func (self *stateObject) SetState(db Database, key, value common.ExtHash) {
 	// If the new value is the same as old, don't set
 	prev := self.GetState(db, key)
 	if prev == value {
@@ -279,7 +279,7 @@ func (self *stateObject) SetState(db Database, key, value common.Hash) {
 // lookup only happens in the fake state storage.
 //
 // Note this function should only be used for debugging purpose.
-func (self *stateObject) SetStorage(storage map[common.Hash]common.Hash) {
+func (self *stateObject) SetStorage(storage map[common.ExtHash]common.ExtHash) {
 	// Allocate fake storage if it's nil.
 	if self.fakeStorage == nil {
 		self.fakeStorage = make(Storage)
@@ -294,7 +294,7 @@ func (self *stateObject) SetStorage(storage map[common.Hash]common.Hash) {
 // IsContractAccount returns true is the account has a non-empty codeHash.
 func (self *stateObject) IsContractAccount() bool {
 	acc := account.GetProgramAccount(self.account)
-	if acc != nil && !bytes.Equal(acc.GetCodeHash(), emptyCodeHash) {
+	if acc != nil && !bytes.Equal(acc.GetCodeHash().ToHash().Bytes(), emptyCodeHash) {
 		return true
 	}
 	return false
@@ -303,7 +303,7 @@ func (self *stateObject) IsContractAccount() bool {
 // IsContractAvailable returns true if the account has a smart contract code hash and didn't self-destruct
 func (self *stateObject) IsContractAvailable() bool {
 	acc := account.GetProgramAccount(self.account)
-	if acc != nil && !bytes.Equal(acc.GetCodeHash(), emptyCodeHash) && self.suicided == false {
+	if acc != nil && !bytes.Equal(acc.GetCodeHash().ToHash().Bytes(), emptyCodeHash) && self.suicided == false {
 		return true
 	}
 	return false
@@ -321,7 +321,7 @@ func (self *stateObject) GetKey() accountkey.AccountKey {
 	return accountkey.NewAccountKeyLegacy()
 }
 
-func (self *stateObject) setState(key, value common.Hash) {
+func (self *stateObject) setState(key, value common.ExtHash) {
 	self.dirtyStorage[key] = value
 }
 
@@ -349,11 +349,11 @@ func (self *stateObject) updateStorageTrie(db Database) Trie {
 		self.originStorage[key] = value
 
 		var v []byte
-		if (value == common.Hash{}) {
+		if (value.ToHash() == common.Hash{}) {
 			self.setError(tr.TryDelete(key[:]))
 		} else {
 			// Encoding []byte cannot fail, ok to ignore the error.
-			v, _ = rlp.EncodeToBytes(bytes.TrimLeft(value[:], "\x00"))
+			v, _ = rlp.EncodeToBytes(bytes.TrimLeft(value.ToHash().Bytes(), "\x00"))
 			self.setError(tr.TryUpdate(key[:], v))
 		}
 		// If state snapshotting is active, cache the data til commit
@@ -487,10 +487,10 @@ func (self *stateObject) Code(db Database) []byte {
 	if self.code != nil {
 		return self.code
 	}
-	if bytes.Equal(self.CodeHash(), emptyCodeHash) {
+	if bytes.Equal(self.CodeHash().ToHash().Bytes(), emptyCodeHash) {
 		return nil
 	}
-	code, err := db.ContractCode(common.BytesToHash(self.CodeHash()))
+	code, err := db.ContractCode(self.CodeHash())
 	if err != nil {
 		self.setError(fmt.Errorf("can't load code hash %x: %v", self.CodeHash(), err))
 	}
@@ -505,34 +505,34 @@ func (self *stateObject) CodeSize(db Database) int {
 	if self.code != nil {
 		return len(self.code)
 	}
-	if bytes.Equal(self.CodeHash(), emptyCodeHash) {
+	if bytes.Equal(self.CodeHash().ToHash().Bytes(), emptyCodeHash) {
 		return 0
 	}
-	size, err := db.ContractCodeSize(common.BytesToHash(self.CodeHash()))
+	size, err := db.ContractCodeSize(self.CodeHash())
 	if err != nil {
 		self.setError(fmt.Errorf("can't load code size %x: %v", self.CodeHash(), err))
 	}
 	return size
 }
 
-func (self *stateObject) SetCode(codeHash common.Hash, code []byte) error {
+func (self *stateObject) SetCode(codeHash common.ExtHash, code []byte) error {
 	prevcode := self.Code(self.db.db)
 	self.db.journal.append(codeChange{
 		account:  &self.address,
-		prevhash: self.CodeHash(),
+		prevhash: self.CodeHash().Bytes(),
 		prevcode: prevcode,
 	})
 	return self.setCode(codeHash, code)
 }
 
-func (self *stateObject) setCode(codeHash common.Hash, code []byte) error {
+func (self *stateObject) setCode(codeHash common.ExtHash, code []byte) error {
 	acc := account.GetProgramAccount(self.account)
 	if acc == nil {
 		logger.Error("setCode() should be called only to a ProgramAccount!", "account address", self.address)
 		return kerrors.ErrNotProgramAccount
 	}
 	self.code = code
-	acc.SetCodeHash(codeHash[:])
+	acc.SetCodeHash(codeHash)
 	self.dirtyCode = true
 	return nil
 }
@@ -559,11 +559,11 @@ func (self *stateObject) setNonce(nonce uint64) {
 	self.account.SetNonce(nonce)
 }
 
-func (self *stateObject) CodeHash() []byte {
+func (self *stateObject) CodeHash() common.ExtHash {
 	if acc := account.GetProgramAccount(self.account); acc != nil {
 		return acc.GetCodeHash()
 	}
-	return emptyCodeHash
+	return common.BytesToRootExtHash(emptyCodeHash)
 }
 
 func (self *stateObject) Balance() *big.Int {

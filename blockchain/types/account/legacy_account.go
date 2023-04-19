@@ -31,8 +31,8 @@ import (
 type LegacyAccount struct {
 	Nonce    uint64
 	Balance  *big.Int
-	Root     common.Hash // merkle root of the storage trie
-	CodeHash []byte
+	Root     common.ExtHash // merkle root of the storage trie
+	CodeHash common.ExtHash
 }
 
 // newEmptyLegacyAccount returns an empty legacy account.
@@ -48,7 +48,7 @@ func newEmptyLegacyAccount() *LegacyAccount {
 func newLegacyAccount() *LegacyAccount {
 	logger.CritWithStack("Legacy account is deprecated.")
 	return &LegacyAccount{
-		0, new(big.Int), common.Hash{}, emptyCodeHash,
+		0, new(big.Int), common.InitExtHash(), common.BytesToRootExtHash(emptyCodeHash),
 	}
 }
 
@@ -63,12 +63,12 @@ func newLegacyAccountWithMap(values map[AccountValueKeyType]interface{}) *Legacy
 		acc.Balance.Set(v)
 	}
 
-	if v, ok := values[AccountValueKeyStorageRoot].(common.Hash); ok {
+	if v, ok := values[AccountValueKeyStorageRoot].(common.ExtHash); ok {
 		acc.Root = v
 	}
 
 	if v, ok := values[AccountValueKeyCodeHash].([]byte); ok {
-		acc.CodeHash = v
+		acc.CodeHash = common.BytesToRootExtHash(v)
 	}
 
 	return acc
@@ -91,11 +91,11 @@ func (a *LegacyAccount) GetHumanReadable() bool {
 	return false
 }
 
-func (a *LegacyAccount) GetStorageRoot() common.Hash {
+func (a *LegacyAccount) GetStorageRoot() common.ExtHash {
 	return a.Root
 }
 
-func (a *LegacyAccount) GetCodeHash() []byte {
+func (a *LegacyAccount) GetCodeHash() common.ExtHash {
 	return a.CodeHash
 }
 
@@ -113,16 +113,16 @@ func (a *LegacyAccount) SetHumanReadable(b bool) {
 		"callstack", stack.Caller(0).String())
 }
 
-func (a *LegacyAccount) SetStorageRoot(h common.Hash) {
+func (a *LegacyAccount) SetStorageRoot(h common.ExtHash) {
 	a.Root = h
 }
 
-func (a *LegacyAccount) SetCodeHash(h []byte) {
+func (a *LegacyAccount) SetCodeHash(h common.ExtHash) {
 	a.CodeHash = h
 }
 
 func (a *LegacyAccount) Empty() bool {
-	return a.GetNonce() == 0 && a.GetBalance().Sign() == 0 && bytes.Equal(a.GetCodeHash(), emptyCodeHash)
+	return a.GetNonce() == 0 && a.GetBalance().Sign() == 0 && bytes.Equal(a.GetCodeHash().ToHash().Bytes(), emptyCodeHash)
 }
 
 func (a *LegacyAccount) UpdateKey(newKey accountkey.AccountKey, currentBlockNumber uint64) error {
@@ -135,6 +135,15 @@ func (a *LegacyAccount) DeepCopy() Account {
 		new(big.Int).Set(a.Balance),
 		a.Root,
 		a.CodeHash,
+	}
+}
+
+func (a *LegacyAccount) TransCopy() AccountLH {
+	return &LegacyAccountLH{
+		a.Nonce,
+		new(big.Int).Set(a.Balance),
+		a.Root.ToHash(),
+		a.CodeHash.ToHash().Bytes(),
 	}
 }
 
@@ -151,7 +160,7 @@ func (a *LegacyAccount) String() string {
 		a.Nonce,
 		a.Balance,
 		a.Root.String(),
-		string(a.CodeHash))
+		a.CodeHash.String())
 }
 
 func (a *LegacyAccount) Equal(b Account) bool {
@@ -163,5 +172,5 @@ func (a *LegacyAccount) Equal(b Account) bool {
 	return a.Nonce == tb.Nonce &&
 		a.Balance.Cmp(tb.Balance) == 0 &&
 		bytes.Equal(a.Root.Bytes(), tb.Root.Bytes()) &&
-		bytes.Equal(a.CodeHash, tb.CodeHash)
+		a.CodeHash == tb.CodeHash
 }

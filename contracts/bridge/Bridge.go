@@ -417,9 +417,7 @@ func (_Bridge *BridgeTransactorRaw) Transact(opts *bind.TransactOpts, method str
 //
 // Solidity: function MAX_OPERATOR() view returns(uint64)
 func (_Bridge *BridgeCaller) MAXOPERATOR(opts *bind.CallOpts) (uint64, error) {
-	var (
-		ret0 = new(uint64)
-	)
+	ret0 := new(uint64)
 	out := ret0
 	err := _Bridge.contract.Call(opts, out, "MAX_OPERATOR")
 	return *ret0, err
@@ -443,9 +441,7 @@ func (_Bridge *BridgeCallerSession) MAXOPERATOR() (uint64, error) {
 //
 // Solidity: function VERSION() view returns(uint64)
 func (_Bridge *BridgeCaller) VERSION(opts *bind.CallOpts) (uint64, error) {
-	var (
-		ret0 = new(uint64)
-	)
+	ret0 := new(uint64)
 	out := ret0
 	err := _Bridge.contract.Call(opts, out, "VERSION")
 	return *ret0, err
@@ -469,9 +465,7 @@ func (_Bridge *BridgeCallerSession) VERSION() (uint64, error) {
 //
 // Solidity: function closedValueTransferVotes(uint64 ) view returns(bool)
 func (_Bridge *BridgeCaller) ClosedValueTransferVotes(opts *bind.CallOpts, arg0 uint64) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _Bridge.contract.Call(opts, out, "closedValueTransferVotes", arg0)
 	return *ret0, err
@@ -495,9 +489,7 @@ func (_Bridge *BridgeCallerSession) ClosedValueTransferVotes(arg0 uint64) (bool,
 //
 // Solidity: function configurationNonce() view returns(uint64)
 func (_Bridge *BridgeCaller) ConfigurationNonce(opts *bind.CallOpts) (uint64, error) {
-	var (
-		ret0 = new(uint64)
-	)
+	ret0 := new(uint64)
 	out := ret0
 	err := _Bridge.contract.Call(opts, out, "configurationNonce")
 	return *ret0, err
@@ -521,9 +513,7 @@ func (_Bridge *BridgeCallerSession) ConfigurationNonce() (uint64, error) {
 //
 // Solidity: function counterpartBridge() view returns(address)
 func (_Bridge *BridgeCaller) CounterpartBridge(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _Bridge.contract.Call(opts, out, "counterpartBridge")
 	return *ret0, err
@@ -547,9 +537,7 @@ func (_Bridge *BridgeCallerSession) CounterpartBridge() (common.Address, error) 
 //
 // Solidity: function feeOfERC20(address ) view returns(uint256)
 func (_Bridge *BridgeCaller) FeeOfERC20(opts *bind.CallOpts, arg0 common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _Bridge.contract.Call(opts, out, "feeOfERC20", arg0)
 	return *ret0, err
@@ -573,9 +561,7 @@ func (_Bridge *BridgeCallerSession) FeeOfERC20(arg0 common.Address) (*big.Int, e
 //
 // Solidity: function feeOfKLAY() view returns(uint256)
 func (_Bridge *BridgeCaller) FeeOfKLAY(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _Bridge.contract.Call(opts, out, "feeOfKLAY")
 	return *ret0, err
@@ -599,9 +585,7 @@ func (_Bridge *BridgeCallerSession) FeeOfKLAY() (*big.Int, error) {
 //
 // Solidity: function feeReceiver() view returns(address)
 func (_Bridge *BridgeCaller) FeeReceiver(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _Bridge.contract.Call(opts, out, "feeReceiver")
 	return *ret0, err
@@ -625,9 +609,7 @@ func (_Bridge *BridgeCallerSession) FeeReceiver() (common.Address, error) {
 //
 // Solidity: function getOperatorList() view returns(address[])
 func (_Bridge *BridgeCaller) GetOperatorList(opts *bind.CallOpts) ([]common.Address, error) {
-	var (
-		ret0 = new([]common.Address)
-	)
+	ret0 := new([]common.Address)
 	out := ret0
 	err := _Bridge.contract.Call(opts, out, "getOperatorList")
 	return *ret0, err
@@ -651,9 +633,7 @@ func (_Bridge *BridgeCallerSession) GetOperatorList() ([]common.Address, error) 
 //
 // Solidity: function getRegisteredTokenList() view returns(address[])
 func (_Bridge *BridgeCaller) GetRegisteredTokenList(opts *bind.CallOpts) ([]common.Address, error) {
-	var (
-		ret0 = new([]common.Address)
-	)
+	ret0 := new([]common.Address)
 	out := ret0
 	err := _Bridge.contract.Call(opts, out, "getRegisteredTokenList")
 	return *ret0, err
@@ -677,9 +657,7 @@ func (_Bridge *BridgeCallerSession) GetRegisteredTokenList() ([]common.Address, 
 //
 // Solidity: function handleNoncesToBlockNums(uint64 ) view returns(uint64)
 func (_Bridge *BridgeCaller) HandleNoncesToBlockNums(opts *bind.CallOpts, arg0 uint64) (uint64, error) {
-	var (
-		ret0 = new(uint64)
-	)
+	ret0 := new(uint64)
 	out := ret0
 	err := _Bridge.contract.Call(opts, out, "handleNoncesToBlockNums", arg0)
 	return *ret0, err
@@ -703,9 +681,7 @@ func (_Bridge *BridgeCallerSession) HandleNoncesToBlockNums(arg0 uint64) (uint64
 //
 // Solidity: function handledRequestTx(bytes32 ) view returns(bool)
 func (_Bridge *BridgeCaller) HandledRequestTx(opts *bind.CallOpts, arg0 [32]byte) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _Bridge.contract.Call(opts, out, "handledRequestTx", arg0)
 	return *ret0, err
@@ -729,9 +705,7 @@ func (_Bridge *BridgeCallerSession) HandledRequestTx(arg0 [32]byte) (bool, error
 //
 // Solidity: function indexOfTokens(address ) view returns(uint256)
 func (_Bridge *BridgeCaller) IndexOfTokens(opts *bind.CallOpts, arg0 common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _Bridge.contract.Call(opts, out, "indexOfTokens", arg0)
 	return *ret0, err
@@ -755,9 +729,7 @@ func (_Bridge *BridgeCallerSession) IndexOfTokens(arg0 common.Address) (*big.Int
 //
 // Solidity: function isLockedKLAY() view returns(bool)
 func (_Bridge *BridgeCaller) IsLockedKLAY(opts *bind.CallOpts) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _Bridge.contract.Call(opts, out, "isLockedKLAY")
 	return *ret0, err
@@ -781,9 +753,7 @@ func (_Bridge *BridgeCallerSession) IsLockedKLAY() (bool, error) {
 //
 // Solidity: function isOwner() view returns(bool)
 func (_Bridge *BridgeCaller) IsOwner(opts *bind.CallOpts) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _Bridge.contract.Call(opts, out, "isOwner")
 	return *ret0, err
@@ -807,9 +777,7 @@ func (_Bridge *BridgeCallerSession) IsOwner() (bool, error) {
 //
 // Solidity: function isRunning() view returns(bool)
 func (_Bridge *BridgeCaller) IsRunning(opts *bind.CallOpts) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _Bridge.contract.Call(opts, out, "isRunning")
 	return *ret0, err
@@ -833,9 +801,7 @@ func (_Bridge *BridgeCallerSession) IsRunning() (bool, error) {
 //
 // Solidity: function lockedTokens(address ) view returns(bool)
 func (_Bridge *BridgeCaller) LockedTokens(opts *bind.CallOpts, arg0 common.Address) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _Bridge.contract.Call(opts, out, "lockedTokens", arg0)
 	return *ret0, err
@@ -859,9 +825,7 @@ func (_Bridge *BridgeCallerSession) LockedTokens(arg0 common.Address) (bool, err
 //
 // Solidity: function lowerHandleNonce() view returns(uint64)
 func (_Bridge *BridgeCaller) LowerHandleNonce(opts *bind.CallOpts) (uint64, error) {
-	var (
-		ret0 = new(uint64)
-	)
+	ret0 := new(uint64)
 	out := ret0
 	err := _Bridge.contract.Call(opts, out, "lowerHandleNonce")
 	return *ret0, err
@@ -885,9 +849,7 @@ func (_Bridge *BridgeCallerSession) LowerHandleNonce() (uint64, error) {
 //
 // Solidity: function modeMintBurn() view returns(bool)
 func (_Bridge *BridgeCaller) ModeMintBurn(opts *bind.CallOpts) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _Bridge.contract.Call(opts, out, "modeMintBurn")
 	return *ret0, err
@@ -911,9 +873,7 @@ func (_Bridge *BridgeCallerSession) ModeMintBurn() (bool, error) {
 //
 // Solidity: function operatorList(uint256 ) view returns(address)
 func (_Bridge *BridgeCaller) OperatorList(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _Bridge.contract.Call(opts, out, "operatorList", arg0)
 	return *ret0, err
@@ -937,9 +897,7 @@ func (_Bridge *BridgeCallerSession) OperatorList(arg0 *big.Int) (common.Address,
 //
 // Solidity: function operatorThresholds(uint8 ) view returns(uint8)
 func (_Bridge *BridgeCaller) OperatorThresholds(opts *bind.CallOpts, arg0 uint8) (uint8, error) {
-	var (
-		ret0 = new(uint8)
-	)
+	ret0 := new(uint8)
 	out := ret0
 	err := _Bridge.contract.Call(opts, out, "operatorThresholds", arg0)
 	return *ret0, err
@@ -963,9 +921,7 @@ func (_Bridge *BridgeCallerSession) OperatorThresholds(arg0 uint8) (uint8, error
 //
 // Solidity: function operators(address ) view returns(bool)
 func (_Bridge *BridgeCaller) Operators(opts *bind.CallOpts, arg0 common.Address) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _Bridge.contract.Call(opts, out, "operators", arg0)
 	return *ret0, err
@@ -989,9 +945,7 @@ func (_Bridge *BridgeCallerSession) Operators(arg0 common.Address) (bool, error)
 //
 // Solidity: function owner() view returns(address)
 func (_Bridge *BridgeCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _Bridge.contract.Call(opts, out, "owner")
 	return *ret0, err
@@ -1015,9 +969,7 @@ func (_Bridge *BridgeCallerSession) Owner() (common.Address, error) {
 //
 // Solidity: function recoveryBlockNumber() view returns(uint64)
 func (_Bridge *BridgeCaller) RecoveryBlockNumber(opts *bind.CallOpts) (uint64, error) {
-	var (
-		ret0 = new(uint64)
-	)
+	ret0 := new(uint64)
 	out := ret0
 	err := _Bridge.contract.Call(opts, out, "recoveryBlockNumber")
 	return *ret0, err
@@ -1041,9 +993,7 @@ func (_Bridge *BridgeCallerSession) RecoveryBlockNumber() (uint64, error) {
 //
 // Solidity: function registeredTokenList(uint256 ) view returns(address)
 func (_Bridge *BridgeCaller) RegisteredTokenList(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _Bridge.contract.Call(opts, out, "registeredTokenList", arg0)
 	return *ret0, err
@@ -1067,9 +1017,7 @@ func (_Bridge *BridgeCallerSession) RegisteredTokenList(arg0 *big.Int) (common.A
 //
 // Solidity: function registeredTokens(address ) view returns(address)
 func (_Bridge *BridgeCaller) RegisteredTokens(opts *bind.CallOpts, arg0 common.Address) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _Bridge.contract.Call(opts, out, "registeredTokens", arg0)
 	return *ret0, err
@@ -1093,9 +1041,7 @@ func (_Bridge *BridgeCallerSession) RegisteredTokens(arg0 common.Address) (commo
 //
 // Solidity: function requestNonce() view returns(uint64)
 func (_Bridge *BridgeCaller) RequestNonce(opts *bind.CallOpts) (uint64, error) {
-	var (
-		ret0 = new(uint64)
-	)
+	ret0 := new(uint64)
 	out := ret0
 	err := _Bridge.contract.Call(opts, out, "requestNonce")
 	return *ret0, err
@@ -1119,9 +1065,7 @@ func (_Bridge *BridgeCallerSession) RequestNonce() (uint64, error) {
 //
 // Solidity: function upperHandleNonce() view returns(uint64)
 func (_Bridge *BridgeCaller) UpperHandleNonce(opts *bind.CallOpts) (uint64, error) {
-	var (
-		ret0 = new(uint64)
-	)
+	ret0 := new(uint64)
 	out := ret0
 	err := _Bridge.contract.Call(opts, out, "upperHandleNonce")
 	return *ret0, err
@@ -1765,7 +1709,6 @@ type BridgeERC20FeeChanged struct {
 //
 // Solidity: event ERC20FeeChanged(address indexed token, uint256 indexed fee)
 func (_Bridge *BridgeFilterer) FilterERC20FeeChanged(opts *bind.FilterOpts, token []common.Address, fee []*big.Int) (*BridgeERC20FeeChangedIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -1786,7 +1729,6 @@ func (_Bridge *BridgeFilterer) FilterERC20FeeChanged(opts *bind.FilterOpts, toke
 //
 // Solidity: event ERC20FeeChanged(address indexed token, uint256 indexed fee)
 func (_Bridge *BridgeFilterer) WatchERC20FeeChanged(opts *bind.WatchOpts, sink chan<- *BridgeERC20FeeChanged, token []common.Address, fee []*big.Int) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -1916,7 +1858,6 @@ type BridgeFeeReceiverChanged struct {
 //
 // Solidity: event FeeReceiverChanged(address indexed feeReceiver)
 func (_Bridge *BridgeFilterer) FilterFeeReceiverChanged(opts *bind.FilterOpts, feeReceiver []common.Address) (*BridgeFeeReceiverChangedIterator, error) {
-
 	var feeReceiverRule []interface{}
 	for _, feeReceiverItem := range feeReceiver {
 		feeReceiverRule = append(feeReceiverRule, feeReceiverItem)
@@ -1933,7 +1874,6 @@ func (_Bridge *BridgeFilterer) FilterFeeReceiverChanged(opts *bind.FilterOpts, f
 //
 // Solidity: event FeeReceiverChanged(address indexed feeReceiver)
 func (_Bridge *BridgeFilterer) WatchFeeReceiverChanged(opts *bind.WatchOpts, sink chan<- *BridgeFeeReceiverChanged, feeReceiver []common.Address) (event.Subscription, error) {
-
 	var feeReceiverRule []interface{}
 	for _, feeReceiverItem := range feeReceiver {
 		feeReceiverRule = append(feeReceiverRule, feeReceiverItem)
@@ -2067,7 +2007,6 @@ type BridgeHandleValueTransfer struct {
 //
 // Solidity: event HandleValueTransfer(bytes32 requestTxHash, uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 handleNonce, uint64 lowerHandleNonce, bytes extraData)
 func (_Bridge *BridgeFilterer) FilterHandleValueTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenAddress []common.Address) (*BridgeHandleValueTransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -2092,7 +2031,6 @@ func (_Bridge *BridgeFilterer) FilterHandleValueTransfer(opts *bind.FilterOpts, 
 //
 // Solidity: event HandleValueTransfer(bytes32 requestTxHash, uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 handleNonce, uint64 lowerHandleNonce, bytes extraData)
 func (_Bridge *BridgeFilterer) WatchHandleValueTransfer(opts *bind.WatchOpts, sink chan<- *BridgeHandleValueTransfer, from []common.Address, to []common.Address, tokenAddress []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -2226,7 +2164,6 @@ type BridgeKLAYFeeChanged struct {
 //
 // Solidity: event KLAYFeeChanged(uint256 indexed fee)
 func (_Bridge *BridgeFilterer) FilterKLAYFeeChanged(opts *bind.FilterOpts, fee []*big.Int) (*BridgeKLAYFeeChangedIterator, error) {
-
 	var feeRule []interface{}
 	for _, feeItem := range fee {
 		feeRule = append(feeRule, feeItem)
@@ -2243,7 +2180,6 @@ func (_Bridge *BridgeFilterer) FilterKLAYFeeChanged(opts *bind.FilterOpts, fee [
 //
 // Solidity: event KLAYFeeChanged(uint256 indexed fee)
 func (_Bridge *BridgeFilterer) WatchKLAYFeeChanged(opts *bind.WatchOpts, sink chan<- *BridgeKLAYFeeChanged, fee []*big.Int) (event.Subscription, error) {
-
 	var feeRule []interface{}
 	for _, feeItem := range fee {
 		feeRule = append(feeRule, feeItem)
@@ -2368,7 +2304,6 @@ type BridgeKLAYLocked struct {
 //
 // Solidity: event KLAYLocked()
 func (_Bridge *BridgeFilterer) FilterKLAYLocked(opts *bind.FilterOpts) (*BridgeKLAYLockedIterator, error) {
-
 	logs, sub, err := _Bridge.contract.FilterLogs(opts, "KLAYLocked")
 	if err != nil {
 		return nil, err
@@ -2380,7 +2315,6 @@ func (_Bridge *BridgeFilterer) FilterKLAYLocked(opts *bind.FilterOpts) (*BridgeK
 //
 // Solidity: event KLAYLocked()
 func (_Bridge *BridgeFilterer) WatchKLAYLocked(opts *bind.WatchOpts, sink chan<- *BridgeKLAYLocked) (event.Subscription, error) {
-
 	logs, sub, err := _Bridge.contract.WatchLogs(opts, "KLAYLocked")
 	if err != nil {
 		return nil, err
@@ -2500,7 +2434,6 @@ type BridgeKLAYUnlocked struct {
 //
 // Solidity: event KLAYUnlocked()
 func (_Bridge *BridgeFilterer) FilterKLAYUnlocked(opts *bind.FilterOpts) (*BridgeKLAYUnlockedIterator, error) {
-
 	logs, sub, err := _Bridge.contract.FilterLogs(opts, "KLAYUnlocked")
 	if err != nil {
 		return nil, err
@@ -2512,7 +2445,6 @@ func (_Bridge *BridgeFilterer) FilterKLAYUnlocked(opts *bind.FilterOpts) (*Bridg
 //
 // Solidity: event KLAYUnlocked()
 func (_Bridge *BridgeFilterer) WatchKLAYUnlocked(opts *bind.WatchOpts, sink chan<- *BridgeKLAYUnlocked) (event.Subscription, error) {
-
 	logs, sub, err := _Bridge.contract.WatchLogs(opts, "KLAYUnlocked")
 	if err != nil {
 		return nil, err
@@ -2634,7 +2566,6 @@ type BridgeOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_Bridge *BridgeFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*BridgeOwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -2655,7 +2586,6 @@ func (_Bridge *BridgeFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts,
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_Bridge *BridgeFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *BridgeOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -2792,7 +2722,6 @@ type BridgeRequestValueTransfer struct {
 //
 // Solidity: event RequestValueTransfer(uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 requestNonce, uint256 fee, bytes extraData)
 func (_Bridge *BridgeFilterer) FilterRequestValueTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenAddress []common.Address) (*BridgeRequestValueTransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -2817,7 +2746,6 @@ func (_Bridge *BridgeFilterer) FilterRequestValueTransfer(opts *bind.FilterOpts,
 //
 // Solidity: event RequestValueTransfer(uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 requestNonce, uint256 fee, bytes extraData)
 func (_Bridge *BridgeFilterer) WatchRequestValueTransfer(opts *bind.WatchOpts, sink chan<- *BridgeRequestValueTransfer, from []common.Address, to []common.Address, tokenAddress []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -2960,7 +2888,6 @@ type BridgeRequestValueTransferEncoded struct {
 //
 // Solidity: event RequestValueTransferEncoded(uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 requestNonce, uint256 fee, bytes extraData, uint8 encodingVer, bytes encodedData)
 func (_Bridge *BridgeFilterer) FilterRequestValueTransferEncoded(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenAddress []common.Address) (*BridgeRequestValueTransferEncodedIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -2985,7 +2912,6 @@ func (_Bridge *BridgeFilterer) FilterRequestValueTransferEncoded(opts *bind.Filt
 //
 // Solidity: event RequestValueTransferEncoded(uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 requestNonce, uint256 fee, bytes extraData, uint8 encodingVer, bytes encodedData)
 func (_Bridge *BridgeFilterer) WatchRequestValueTransferEncoded(opts *bind.WatchOpts, sink chan<- *BridgeRequestValueTransferEncoded, from []common.Address, to []common.Address, tokenAddress []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -3119,7 +3045,6 @@ type BridgeTokenDeregistered struct {
 //
 // Solidity: event TokenDeregistered(address indexed token)
 func (_Bridge *BridgeFilterer) FilterTokenDeregistered(opts *bind.FilterOpts, token []common.Address) (*BridgeTokenDeregisteredIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -3136,7 +3061,6 @@ func (_Bridge *BridgeFilterer) FilterTokenDeregistered(opts *bind.FilterOpts, to
 //
 // Solidity: event TokenDeregistered(address indexed token)
 func (_Bridge *BridgeFilterer) WatchTokenDeregistered(opts *bind.WatchOpts, sink chan<- *BridgeTokenDeregistered, token []common.Address) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -3262,7 +3186,6 @@ type BridgeTokenLocked struct {
 //
 // Solidity: event TokenLocked(address indexed token)
 func (_Bridge *BridgeFilterer) FilterTokenLocked(opts *bind.FilterOpts, token []common.Address) (*BridgeTokenLockedIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -3279,7 +3202,6 @@ func (_Bridge *BridgeFilterer) FilterTokenLocked(opts *bind.FilterOpts, token []
 //
 // Solidity: event TokenLocked(address indexed token)
 func (_Bridge *BridgeFilterer) WatchTokenLocked(opts *bind.WatchOpts, sink chan<- *BridgeTokenLocked, token []common.Address) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -3405,7 +3327,6 @@ type BridgeTokenRegistered struct {
 //
 // Solidity: event TokenRegistered(address indexed token)
 func (_Bridge *BridgeFilterer) FilterTokenRegistered(opts *bind.FilterOpts, token []common.Address) (*BridgeTokenRegisteredIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -3422,7 +3343,6 @@ func (_Bridge *BridgeFilterer) FilterTokenRegistered(opts *bind.FilterOpts, toke
 //
 // Solidity: event TokenRegistered(address indexed token)
 func (_Bridge *BridgeFilterer) WatchTokenRegistered(opts *bind.WatchOpts, sink chan<- *BridgeTokenRegistered, token []common.Address) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -3548,7 +3468,6 @@ type BridgeTokenUnlocked struct {
 //
 // Solidity: event TokenUnlocked(address indexed token)
 func (_Bridge *BridgeFilterer) FilterTokenUnlocked(opts *bind.FilterOpts, token []common.Address) (*BridgeTokenUnlockedIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -3565,7 +3484,6 @@ func (_Bridge *BridgeFilterer) FilterTokenUnlocked(opts *bind.FilterOpts, token 
 //
 // Solidity: event TokenUnlocked(address indexed token)
 func (_Bridge *BridgeFilterer) WatchTokenUnlocked(opts *bind.WatchOpts, sink chan<- *BridgeTokenUnlocked, token []common.Address) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -3793,9 +3711,7 @@ func (_BridgeCounterPart *BridgeCounterPartTransactorRaw) Transact(opts *bind.Tr
 //
 // Solidity: function counterpartBridge() view returns(address)
 func (_BridgeCounterPart *BridgeCounterPartCaller) CounterpartBridge(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _BridgeCounterPart.contract.Call(opts, out, "counterpartBridge")
 	return *ret0, err
@@ -3819,9 +3735,7 @@ func (_BridgeCounterPart *BridgeCounterPartCallerSession) CounterpartBridge() (c
 //
 // Solidity: function isOwner() view returns(bool)
 func (_BridgeCounterPart *BridgeCounterPartCaller) IsOwner(opts *bind.CallOpts) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _BridgeCounterPart.contract.Call(opts, out, "isOwner")
 	return *ret0, err
@@ -3845,9 +3759,7 @@ func (_BridgeCounterPart *BridgeCounterPartCallerSession) IsOwner() (bool, error
 //
 // Solidity: function owner() view returns(address)
 func (_BridgeCounterPart *BridgeCounterPartCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _BridgeCounterPart.contract.Call(opts, out, "owner")
 	return *ret0, err
@@ -4008,7 +3920,6 @@ type BridgeCounterPartOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_BridgeCounterPart *BridgeCounterPartFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*BridgeCounterPartOwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -4029,7 +3940,6 @@ func (_BridgeCounterPart *BridgeCounterPartFilterer) FilterOwnershipTransferred(
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_BridgeCounterPart *BridgeCounterPartFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *BridgeCounterPartOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -4241,9 +4151,7 @@ func (_BridgeFee *BridgeFeeTransactorRaw) Transact(opts *bind.TransactOpts, meth
 //
 // Solidity: function feeOfERC20(address ) view returns(uint256)
 func (_BridgeFee *BridgeFeeCaller) FeeOfERC20(opts *bind.CallOpts, arg0 common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _BridgeFee.contract.Call(opts, out, "feeOfERC20", arg0)
 	return *ret0, err
@@ -4267,9 +4175,7 @@ func (_BridgeFee *BridgeFeeCallerSession) FeeOfERC20(arg0 common.Address) (*big.
 //
 // Solidity: function feeOfKLAY() view returns(uint256)
 func (_BridgeFee *BridgeFeeCaller) FeeOfKLAY(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _BridgeFee.contract.Call(opts, out, "feeOfKLAY")
 	return *ret0, err
@@ -4293,9 +4199,7 @@ func (_BridgeFee *BridgeFeeCallerSession) FeeOfKLAY() (*big.Int, error) {
 //
 // Solidity: function feeReceiver() view returns(address)
 func (_BridgeFee *BridgeFeeCaller) FeeReceiver(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _BridgeFee.contract.Call(opts, out, "feeReceiver")
 	return *ret0, err
@@ -4393,7 +4297,6 @@ type BridgeFeeERC20FeeChanged struct {
 //
 // Solidity: event ERC20FeeChanged(address indexed token, uint256 indexed fee)
 func (_BridgeFee *BridgeFeeFilterer) FilterERC20FeeChanged(opts *bind.FilterOpts, token []common.Address, fee []*big.Int) (*BridgeFeeERC20FeeChangedIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -4414,7 +4317,6 @@ func (_BridgeFee *BridgeFeeFilterer) FilterERC20FeeChanged(opts *bind.FilterOpts
 //
 // Solidity: event ERC20FeeChanged(address indexed token, uint256 indexed fee)
 func (_BridgeFee *BridgeFeeFilterer) WatchERC20FeeChanged(opts *bind.WatchOpts, sink chan<- *BridgeFeeERC20FeeChanged, token []common.Address, fee []*big.Int) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -4544,7 +4446,6 @@ type BridgeFeeFeeReceiverChanged struct {
 //
 // Solidity: event FeeReceiverChanged(address indexed feeReceiver)
 func (_BridgeFee *BridgeFeeFilterer) FilterFeeReceiverChanged(opts *bind.FilterOpts, feeReceiver []common.Address) (*BridgeFeeFeeReceiverChangedIterator, error) {
-
 	var feeReceiverRule []interface{}
 	for _, feeReceiverItem := range feeReceiver {
 		feeReceiverRule = append(feeReceiverRule, feeReceiverItem)
@@ -4561,7 +4462,6 @@ func (_BridgeFee *BridgeFeeFilterer) FilterFeeReceiverChanged(opts *bind.FilterO
 //
 // Solidity: event FeeReceiverChanged(address indexed feeReceiver)
 func (_BridgeFee *BridgeFeeFilterer) WatchFeeReceiverChanged(opts *bind.WatchOpts, sink chan<- *BridgeFeeFeeReceiverChanged, feeReceiver []common.Address) (event.Subscription, error) {
-
 	var feeReceiverRule []interface{}
 	for _, feeReceiverItem := range feeReceiver {
 		feeReceiverRule = append(feeReceiverRule, feeReceiverItem)
@@ -4687,7 +4587,6 @@ type BridgeFeeKLAYFeeChanged struct {
 //
 // Solidity: event KLAYFeeChanged(uint256 indexed fee)
 func (_BridgeFee *BridgeFeeFilterer) FilterKLAYFeeChanged(opts *bind.FilterOpts, fee []*big.Int) (*BridgeFeeKLAYFeeChangedIterator, error) {
-
 	var feeRule []interface{}
 	for _, feeItem := range fee {
 		feeRule = append(feeRule, feeItem)
@@ -4704,7 +4603,6 @@ func (_BridgeFee *BridgeFeeFilterer) FilterKLAYFeeChanged(opts *bind.FilterOpts,
 //
 // Solidity: event KLAYFeeChanged(uint256 indexed fee)
 func (_BridgeFee *BridgeFeeFilterer) WatchKLAYFeeChanged(opts *bind.WatchOpts, sink chan<- *BridgeFeeKLAYFeeChanged, fee []*big.Int) (event.Subscription, error) {
-
 	var feeRule []interface{}
 	for _, feeItem := range fee {
 		feeRule = append(feeRule, feeItem)
@@ -4927,9 +4825,7 @@ func (_BridgeHandledRequests *BridgeHandledRequestsTransactorRaw) Transact(opts 
 //
 // Solidity: function handledRequestTx(bytes32 ) view returns(bool)
 func (_BridgeHandledRequests *BridgeHandledRequestsCaller) HandledRequestTx(opts *bind.CallOpts, arg0 [32]byte) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _BridgeHandledRequests.contract.Call(opts, out, "handledRequestTx", arg0)
 	return *ret0, err
@@ -5119,9 +5015,7 @@ func (_BridgeOperator *BridgeOperatorTransactorRaw) Transact(opts *bind.Transact
 //
 // Solidity: function MAX_OPERATOR() view returns(uint64)
 func (_BridgeOperator *BridgeOperatorCaller) MAXOPERATOR(opts *bind.CallOpts) (uint64, error) {
-	var (
-		ret0 = new(uint64)
-	)
+	ret0 := new(uint64)
 	out := ret0
 	err := _BridgeOperator.contract.Call(opts, out, "MAX_OPERATOR")
 	return *ret0, err
@@ -5145,9 +5039,7 @@ func (_BridgeOperator *BridgeOperatorCallerSession) MAXOPERATOR() (uint64, error
 //
 // Solidity: function closedValueTransferVotes(uint64 ) view returns(bool)
 func (_BridgeOperator *BridgeOperatorCaller) ClosedValueTransferVotes(opts *bind.CallOpts, arg0 uint64) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _BridgeOperator.contract.Call(opts, out, "closedValueTransferVotes", arg0)
 	return *ret0, err
@@ -5171,9 +5063,7 @@ func (_BridgeOperator *BridgeOperatorCallerSession) ClosedValueTransferVotes(arg
 //
 // Solidity: function configurationNonce() view returns(uint64)
 func (_BridgeOperator *BridgeOperatorCaller) ConfigurationNonce(opts *bind.CallOpts) (uint64, error) {
-	var (
-		ret0 = new(uint64)
-	)
+	ret0 := new(uint64)
 	out := ret0
 	err := _BridgeOperator.contract.Call(opts, out, "configurationNonce")
 	return *ret0, err
@@ -5197,9 +5087,7 @@ func (_BridgeOperator *BridgeOperatorCallerSession) ConfigurationNonce() (uint64
 //
 // Solidity: function getOperatorList() view returns(address[])
 func (_BridgeOperator *BridgeOperatorCaller) GetOperatorList(opts *bind.CallOpts) ([]common.Address, error) {
-	var (
-		ret0 = new([]common.Address)
-	)
+	ret0 := new([]common.Address)
 	out := ret0
 	err := _BridgeOperator.contract.Call(opts, out, "getOperatorList")
 	return *ret0, err
@@ -5223,9 +5111,7 @@ func (_BridgeOperator *BridgeOperatorCallerSession) GetOperatorList() ([]common.
 //
 // Solidity: function isOwner() view returns(bool)
 func (_BridgeOperator *BridgeOperatorCaller) IsOwner(opts *bind.CallOpts) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _BridgeOperator.contract.Call(opts, out, "isOwner")
 	return *ret0, err
@@ -5249,9 +5135,7 @@ func (_BridgeOperator *BridgeOperatorCallerSession) IsOwner() (bool, error) {
 //
 // Solidity: function operatorList(uint256 ) view returns(address)
 func (_BridgeOperator *BridgeOperatorCaller) OperatorList(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _BridgeOperator.contract.Call(opts, out, "operatorList", arg0)
 	return *ret0, err
@@ -5275,9 +5159,7 @@ func (_BridgeOperator *BridgeOperatorCallerSession) OperatorList(arg0 *big.Int) 
 //
 // Solidity: function operatorThresholds(uint8 ) view returns(uint8)
 func (_BridgeOperator *BridgeOperatorCaller) OperatorThresholds(opts *bind.CallOpts, arg0 uint8) (uint8, error) {
-	var (
-		ret0 = new(uint8)
-	)
+	ret0 := new(uint8)
 	out := ret0
 	err := _BridgeOperator.contract.Call(opts, out, "operatorThresholds", arg0)
 	return *ret0, err
@@ -5301,9 +5183,7 @@ func (_BridgeOperator *BridgeOperatorCallerSession) OperatorThresholds(arg0 uint
 //
 // Solidity: function operators(address ) view returns(bool)
 func (_BridgeOperator *BridgeOperatorCaller) Operators(opts *bind.CallOpts, arg0 common.Address) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _BridgeOperator.contract.Call(opts, out, "operators", arg0)
 	return *ret0, err
@@ -5327,9 +5207,7 @@ func (_BridgeOperator *BridgeOperatorCallerSession) Operators(arg0 common.Addres
 //
 // Solidity: function owner() view returns(address)
 func (_BridgeOperator *BridgeOperatorCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _BridgeOperator.contract.Call(opts, out, "owner")
 	return *ret0, err
@@ -5532,7 +5410,6 @@ type BridgeOperatorOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_BridgeOperator *BridgeOperatorFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*BridgeOperatorOwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -5553,7 +5430,6 @@ func (_BridgeOperator *BridgeOperatorFilterer) FilterOwnershipTransferred(opts *
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_BridgeOperator *BridgeOperatorFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *BridgeOperatorOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -5792,9 +5668,7 @@ func (_BridgeTokens *BridgeTokensTransactorRaw) Transact(opts *bind.TransactOpts
 //
 // Solidity: function getRegisteredTokenList() view returns(address[])
 func (_BridgeTokens *BridgeTokensCaller) GetRegisteredTokenList(opts *bind.CallOpts) ([]common.Address, error) {
-	var (
-		ret0 = new([]common.Address)
-	)
+	ret0 := new([]common.Address)
 	out := ret0
 	err := _BridgeTokens.contract.Call(opts, out, "getRegisteredTokenList")
 	return *ret0, err
@@ -5818,9 +5692,7 @@ func (_BridgeTokens *BridgeTokensCallerSession) GetRegisteredTokenList() ([]comm
 //
 // Solidity: function indexOfTokens(address ) view returns(uint256)
 func (_BridgeTokens *BridgeTokensCaller) IndexOfTokens(opts *bind.CallOpts, arg0 common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _BridgeTokens.contract.Call(opts, out, "indexOfTokens", arg0)
 	return *ret0, err
@@ -5844,9 +5716,7 @@ func (_BridgeTokens *BridgeTokensCallerSession) IndexOfTokens(arg0 common.Addres
 //
 // Solidity: function isOwner() view returns(bool)
 func (_BridgeTokens *BridgeTokensCaller) IsOwner(opts *bind.CallOpts) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _BridgeTokens.contract.Call(opts, out, "isOwner")
 	return *ret0, err
@@ -5870,9 +5740,7 @@ func (_BridgeTokens *BridgeTokensCallerSession) IsOwner() (bool, error) {
 //
 // Solidity: function lockedTokens(address ) view returns(bool)
 func (_BridgeTokens *BridgeTokensCaller) LockedTokens(opts *bind.CallOpts, arg0 common.Address) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _BridgeTokens.contract.Call(opts, out, "lockedTokens", arg0)
 	return *ret0, err
@@ -5896,9 +5764,7 @@ func (_BridgeTokens *BridgeTokensCallerSession) LockedTokens(arg0 common.Address
 //
 // Solidity: function owner() view returns(address)
 func (_BridgeTokens *BridgeTokensCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _BridgeTokens.contract.Call(opts, out, "owner")
 	return *ret0, err
@@ -5922,9 +5788,7 @@ func (_BridgeTokens *BridgeTokensCallerSession) Owner() (common.Address, error) 
 //
 // Solidity: function registeredTokenList(uint256 ) view returns(address)
 func (_BridgeTokens *BridgeTokensCaller) RegisteredTokenList(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _BridgeTokens.contract.Call(opts, out, "registeredTokenList", arg0)
 	return *ret0, err
@@ -5948,9 +5812,7 @@ func (_BridgeTokens *BridgeTokensCallerSession) RegisteredTokenList(arg0 *big.In
 //
 // Solidity: function registeredTokens(address ) view returns(address)
 func (_BridgeTokens *BridgeTokensCaller) RegisteredTokens(opts *bind.CallOpts, arg0 common.Address) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _BridgeTokens.contract.Call(opts, out, "registeredTokens", arg0)
 	return *ret0, err
@@ -6174,7 +6036,6 @@ type BridgeTokensOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_BridgeTokens *BridgeTokensFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*BridgeTokensOwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -6195,7 +6056,6 @@ func (_BridgeTokens *BridgeTokensFilterer) FilterOwnershipTransferred(opts *bind
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_BridgeTokens *BridgeTokensFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *BridgeTokensOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -6325,7 +6185,6 @@ type BridgeTokensTokenDeregistered struct {
 //
 // Solidity: event TokenDeregistered(address indexed token)
 func (_BridgeTokens *BridgeTokensFilterer) FilterTokenDeregistered(opts *bind.FilterOpts, token []common.Address) (*BridgeTokensTokenDeregisteredIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -6342,7 +6201,6 @@ func (_BridgeTokens *BridgeTokensFilterer) FilterTokenDeregistered(opts *bind.Fi
 //
 // Solidity: event TokenDeregistered(address indexed token)
 func (_BridgeTokens *BridgeTokensFilterer) WatchTokenDeregistered(opts *bind.WatchOpts, sink chan<- *BridgeTokensTokenDeregistered, token []common.Address) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -6468,7 +6326,6 @@ type BridgeTokensTokenLocked struct {
 //
 // Solidity: event TokenLocked(address indexed token)
 func (_BridgeTokens *BridgeTokensFilterer) FilterTokenLocked(opts *bind.FilterOpts, token []common.Address) (*BridgeTokensTokenLockedIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -6485,7 +6342,6 @@ func (_BridgeTokens *BridgeTokensFilterer) FilterTokenLocked(opts *bind.FilterOp
 //
 // Solidity: event TokenLocked(address indexed token)
 func (_BridgeTokens *BridgeTokensFilterer) WatchTokenLocked(opts *bind.WatchOpts, sink chan<- *BridgeTokensTokenLocked, token []common.Address) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -6611,7 +6467,6 @@ type BridgeTokensTokenRegistered struct {
 //
 // Solidity: event TokenRegistered(address indexed token)
 func (_BridgeTokens *BridgeTokensFilterer) FilterTokenRegistered(opts *bind.FilterOpts, token []common.Address) (*BridgeTokensTokenRegisteredIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -6628,7 +6483,6 @@ func (_BridgeTokens *BridgeTokensFilterer) FilterTokenRegistered(opts *bind.Filt
 //
 // Solidity: event TokenRegistered(address indexed token)
 func (_BridgeTokens *BridgeTokensFilterer) WatchTokenRegistered(opts *bind.WatchOpts, sink chan<- *BridgeTokensTokenRegistered, token []common.Address) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -6754,7 +6608,6 @@ type BridgeTokensTokenUnlocked struct {
 //
 // Solidity: event TokenUnlocked(address indexed token)
 func (_BridgeTokens *BridgeTokensFilterer) FilterTokenUnlocked(opts *bind.FilterOpts, token []common.Address) (*BridgeTokensTokenUnlockedIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -6771,7 +6624,6 @@ func (_BridgeTokens *BridgeTokensFilterer) FilterTokenUnlocked(opts *bind.Filter
 //
 // Solidity: event TokenUnlocked(address indexed token)
 func (_BridgeTokens *BridgeTokensFilterer) WatchTokenUnlocked(opts *bind.WatchOpts, sink chan<- *BridgeTokensTokenUnlocked, token []common.Address) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -7003,9 +6855,7 @@ func (_BridgeTransfer *BridgeTransferTransactorRaw) Transact(opts *bind.Transact
 //
 // Solidity: function MAX_OPERATOR() view returns(uint64)
 func (_BridgeTransfer *BridgeTransferCaller) MAXOPERATOR(opts *bind.CallOpts) (uint64, error) {
-	var (
-		ret0 = new(uint64)
-	)
+	ret0 := new(uint64)
 	out := ret0
 	err := _BridgeTransfer.contract.Call(opts, out, "MAX_OPERATOR")
 	return *ret0, err
@@ -7029,9 +6879,7 @@ func (_BridgeTransfer *BridgeTransferCallerSession) MAXOPERATOR() (uint64, error
 //
 // Solidity: function closedValueTransferVotes(uint64 ) view returns(bool)
 func (_BridgeTransfer *BridgeTransferCaller) ClosedValueTransferVotes(opts *bind.CallOpts, arg0 uint64) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _BridgeTransfer.contract.Call(opts, out, "closedValueTransferVotes", arg0)
 	return *ret0, err
@@ -7055,9 +6903,7 @@ func (_BridgeTransfer *BridgeTransferCallerSession) ClosedValueTransferVotes(arg
 //
 // Solidity: function configurationNonce() view returns(uint64)
 func (_BridgeTransfer *BridgeTransferCaller) ConfigurationNonce(opts *bind.CallOpts) (uint64, error) {
-	var (
-		ret0 = new(uint64)
-	)
+	ret0 := new(uint64)
 	out := ret0
 	err := _BridgeTransfer.contract.Call(opts, out, "configurationNonce")
 	return *ret0, err
@@ -7081,9 +6927,7 @@ func (_BridgeTransfer *BridgeTransferCallerSession) ConfigurationNonce() (uint64
 //
 // Solidity: function feeOfERC20(address ) view returns(uint256)
 func (_BridgeTransfer *BridgeTransferCaller) FeeOfERC20(opts *bind.CallOpts, arg0 common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _BridgeTransfer.contract.Call(opts, out, "feeOfERC20", arg0)
 	return *ret0, err
@@ -7107,9 +6951,7 @@ func (_BridgeTransfer *BridgeTransferCallerSession) FeeOfERC20(arg0 common.Addre
 //
 // Solidity: function feeOfKLAY() view returns(uint256)
 func (_BridgeTransfer *BridgeTransferCaller) FeeOfKLAY(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _BridgeTransfer.contract.Call(opts, out, "feeOfKLAY")
 	return *ret0, err
@@ -7133,9 +6975,7 @@ func (_BridgeTransfer *BridgeTransferCallerSession) FeeOfKLAY() (*big.Int, error
 //
 // Solidity: function feeReceiver() view returns(address)
 func (_BridgeTransfer *BridgeTransferCaller) FeeReceiver(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _BridgeTransfer.contract.Call(opts, out, "feeReceiver")
 	return *ret0, err
@@ -7159,9 +6999,7 @@ func (_BridgeTransfer *BridgeTransferCallerSession) FeeReceiver() (common.Addres
 //
 // Solidity: function getOperatorList() view returns(address[])
 func (_BridgeTransfer *BridgeTransferCaller) GetOperatorList(opts *bind.CallOpts) ([]common.Address, error) {
-	var (
-		ret0 = new([]common.Address)
-	)
+	ret0 := new([]common.Address)
 	out := ret0
 	err := _BridgeTransfer.contract.Call(opts, out, "getOperatorList")
 	return *ret0, err
@@ -7185,9 +7023,7 @@ func (_BridgeTransfer *BridgeTransferCallerSession) GetOperatorList() ([]common.
 //
 // Solidity: function handleNoncesToBlockNums(uint64 ) view returns(uint64)
 func (_BridgeTransfer *BridgeTransferCaller) HandleNoncesToBlockNums(opts *bind.CallOpts, arg0 uint64) (uint64, error) {
-	var (
-		ret0 = new(uint64)
-	)
+	ret0 := new(uint64)
 	out := ret0
 	err := _BridgeTransfer.contract.Call(opts, out, "handleNoncesToBlockNums", arg0)
 	return *ret0, err
@@ -7211,9 +7047,7 @@ func (_BridgeTransfer *BridgeTransferCallerSession) HandleNoncesToBlockNums(arg0
 //
 // Solidity: function handledRequestTx(bytes32 ) view returns(bool)
 func (_BridgeTransfer *BridgeTransferCaller) HandledRequestTx(opts *bind.CallOpts, arg0 [32]byte) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _BridgeTransfer.contract.Call(opts, out, "handledRequestTx", arg0)
 	return *ret0, err
@@ -7237,9 +7071,7 @@ func (_BridgeTransfer *BridgeTransferCallerSession) HandledRequestTx(arg0 [32]by
 //
 // Solidity: function isOwner() view returns(bool)
 func (_BridgeTransfer *BridgeTransferCaller) IsOwner(opts *bind.CallOpts) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _BridgeTransfer.contract.Call(opts, out, "isOwner")
 	return *ret0, err
@@ -7263,9 +7095,7 @@ func (_BridgeTransfer *BridgeTransferCallerSession) IsOwner() (bool, error) {
 //
 // Solidity: function isRunning() view returns(bool)
 func (_BridgeTransfer *BridgeTransferCaller) IsRunning(opts *bind.CallOpts) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _BridgeTransfer.contract.Call(opts, out, "isRunning")
 	return *ret0, err
@@ -7289,9 +7119,7 @@ func (_BridgeTransfer *BridgeTransferCallerSession) IsRunning() (bool, error) {
 //
 // Solidity: function lowerHandleNonce() view returns(uint64)
 func (_BridgeTransfer *BridgeTransferCaller) LowerHandleNonce(opts *bind.CallOpts) (uint64, error) {
-	var (
-		ret0 = new(uint64)
-	)
+	ret0 := new(uint64)
 	out := ret0
 	err := _BridgeTransfer.contract.Call(opts, out, "lowerHandleNonce")
 	return *ret0, err
@@ -7315,9 +7143,7 @@ func (_BridgeTransfer *BridgeTransferCallerSession) LowerHandleNonce() (uint64, 
 //
 // Solidity: function modeMintBurn() view returns(bool)
 func (_BridgeTransfer *BridgeTransferCaller) ModeMintBurn(opts *bind.CallOpts) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _BridgeTransfer.contract.Call(opts, out, "modeMintBurn")
 	return *ret0, err
@@ -7341,9 +7167,7 @@ func (_BridgeTransfer *BridgeTransferCallerSession) ModeMintBurn() (bool, error)
 //
 // Solidity: function operatorList(uint256 ) view returns(address)
 func (_BridgeTransfer *BridgeTransferCaller) OperatorList(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _BridgeTransfer.contract.Call(opts, out, "operatorList", arg0)
 	return *ret0, err
@@ -7367,9 +7191,7 @@ func (_BridgeTransfer *BridgeTransferCallerSession) OperatorList(arg0 *big.Int) 
 //
 // Solidity: function operatorThresholds(uint8 ) view returns(uint8)
 func (_BridgeTransfer *BridgeTransferCaller) OperatorThresholds(opts *bind.CallOpts, arg0 uint8) (uint8, error) {
-	var (
-		ret0 = new(uint8)
-	)
+	ret0 := new(uint8)
 	out := ret0
 	err := _BridgeTransfer.contract.Call(opts, out, "operatorThresholds", arg0)
 	return *ret0, err
@@ -7393,9 +7215,7 @@ func (_BridgeTransfer *BridgeTransferCallerSession) OperatorThresholds(arg0 uint
 //
 // Solidity: function operators(address ) view returns(bool)
 func (_BridgeTransfer *BridgeTransferCaller) Operators(opts *bind.CallOpts, arg0 common.Address) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _BridgeTransfer.contract.Call(opts, out, "operators", arg0)
 	return *ret0, err
@@ -7419,9 +7239,7 @@ func (_BridgeTransfer *BridgeTransferCallerSession) Operators(arg0 common.Addres
 //
 // Solidity: function owner() view returns(address)
 func (_BridgeTransfer *BridgeTransferCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _BridgeTransfer.contract.Call(opts, out, "owner")
 	return *ret0, err
@@ -7445,9 +7263,7 @@ func (_BridgeTransfer *BridgeTransferCallerSession) Owner() (common.Address, err
 //
 // Solidity: function recoveryBlockNumber() view returns(uint64)
 func (_BridgeTransfer *BridgeTransferCaller) RecoveryBlockNumber(opts *bind.CallOpts) (uint64, error) {
-	var (
-		ret0 = new(uint64)
-	)
+	ret0 := new(uint64)
 	out := ret0
 	err := _BridgeTransfer.contract.Call(opts, out, "recoveryBlockNumber")
 	return *ret0, err
@@ -7471,9 +7287,7 @@ func (_BridgeTransfer *BridgeTransferCallerSession) RecoveryBlockNumber() (uint6
 //
 // Solidity: function requestNonce() view returns(uint64)
 func (_BridgeTransfer *BridgeTransferCaller) RequestNonce(opts *bind.CallOpts) (uint64, error) {
-	var (
-		ret0 = new(uint64)
-	)
+	ret0 := new(uint64)
 	out := ret0
 	err := _BridgeTransfer.contract.Call(opts, out, "requestNonce")
 	return *ret0, err
@@ -7497,9 +7311,7 @@ func (_BridgeTransfer *BridgeTransferCallerSession) RequestNonce() (uint64, erro
 //
 // Solidity: function upperHandleNonce() view returns(uint64)
 func (_BridgeTransfer *BridgeTransferCaller) UpperHandleNonce(opts *bind.CallOpts) (uint64, error) {
-	var (
-		ret0 = new(uint64)
-	)
+	ret0 := new(uint64)
 	out := ret0
 	err := _BridgeTransfer.contract.Call(opts, out, "upperHandleNonce")
 	return *ret0, err
@@ -7744,7 +7556,6 @@ type BridgeTransferERC20FeeChanged struct {
 //
 // Solidity: event ERC20FeeChanged(address indexed token, uint256 indexed fee)
 func (_BridgeTransfer *BridgeTransferFilterer) FilterERC20FeeChanged(opts *bind.FilterOpts, token []common.Address, fee []*big.Int) (*BridgeTransferERC20FeeChangedIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -7765,7 +7576,6 @@ func (_BridgeTransfer *BridgeTransferFilterer) FilterERC20FeeChanged(opts *bind.
 //
 // Solidity: event ERC20FeeChanged(address indexed token, uint256 indexed fee)
 func (_BridgeTransfer *BridgeTransferFilterer) WatchERC20FeeChanged(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC20FeeChanged, token []common.Address, fee []*big.Int) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -7895,7 +7705,6 @@ type BridgeTransferFeeReceiverChanged struct {
 //
 // Solidity: event FeeReceiverChanged(address indexed feeReceiver)
 func (_BridgeTransfer *BridgeTransferFilterer) FilterFeeReceiverChanged(opts *bind.FilterOpts, feeReceiver []common.Address) (*BridgeTransferFeeReceiverChangedIterator, error) {
-
 	var feeReceiverRule []interface{}
 	for _, feeReceiverItem := range feeReceiver {
 		feeReceiverRule = append(feeReceiverRule, feeReceiverItem)
@@ -7912,7 +7721,6 @@ func (_BridgeTransfer *BridgeTransferFilterer) FilterFeeReceiverChanged(opts *bi
 //
 // Solidity: event FeeReceiverChanged(address indexed feeReceiver)
 func (_BridgeTransfer *BridgeTransferFilterer) WatchFeeReceiverChanged(opts *bind.WatchOpts, sink chan<- *BridgeTransferFeeReceiverChanged, feeReceiver []common.Address) (event.Subscription, error) {
-
 	var feeReceiverRule []interface{}
 	for _, feeReceiverItem := range feeReceiver {
 		feeReceiverRule = append(feeReceiverRule, feeReceiverItem)
@@ -8046,7 +7854,6 @@ type BridgeTransferHandleValueTransfer struct {
 //
 // Solidity: event HandleValueTransfer(bytes32 requestTxHash, uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 handleNonce, uint64 lowerHandleNonce, bytes extraData)
 func (_BridgeTransfer *BridgeTransferFilterer) FilterHandleValueTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenAddress []common.Address) (*BridgeTransferHandleValueTransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -8071,7 +7878,6 @@ func (_BridgeTransfer *BridgeTransferFilterer) FilterHandleValueTransfer(opts *b
 //
 // Solidity: event HandleValueTransfer(bytes32 requestTxHash, uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 handleNonce, uint64 lowerHandleNonce, bytes extraData)
 func (_BridgeTransfer *BridgeTransferFilterer) WatchHandleValueTransfer(opts *bind.WatchOpts, sink chan<- *BridgeTransferHandleValueTransfer, from []common.Address, to []common.Address, tokenAddress []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -8205,7 +8011,6 @@ type BridgeTransferKLAYFeeChanged struct {
 //
 // Solidity: event KLAYFeeChanged(uint256 indexed fee)
 func (_BridgeTransfer *BridgeTransferFilterer) FilterKLAYFeeChanged(opts *bind.FilterOpts, fee []*big.Int) (*BridgeTransferKLAYFeeChangedIterator, error) {
-
 	var feeRule []interface{}
 	for _, feeItem := range fee {
 		feeRule = append(feeRule, feeItem)
@@ -8222,7 +8027,6 @@ func (_BridgeTransfer *BridgeTransferFilterer) FilterKLAYFeeChanged(opts *bind.F
 //
 // Solidity: event KLAYFeeChanged(uint256 indexed fee)
 func (_BridgeTransfer *BridgeTransferFilterer) WatchKLAYFeeChanged(opts *bind.WatchOpts, sink chan<- *BridgeTransferKLAYFeeChanged, fee []*big.Int) (event.Subscription, error) {
-
 	var feeRule []interface{}
 	for _, feeItem := range fee {
 		feeRule = append(feeRule, feeItem)
@@ -8349,7 +8153,6 @@ type BridgeTransferOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_BridgeTransfer *BridgeTransferFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*BridgeTransferOwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -8370,7 +8173,6 @@ func (_BridgeTransfer *BridgeTransferFilterer) FilterOwnershipTransferred(opts *
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_BridgeTransfer *BridgeTransferFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *BridgeTransferOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -8507,7 +8309,6 @@ type BridgeTransferRequestValueTransfer struct {
 //
 // Solidity: event RequestValueTransfer(uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 requestNonce, uint256 fee, bytes extraData)
 func (_BridgeTransfer *BridgeTransferFilterer) FilterRequestValueTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenAddress []common.Address) (*BridgeTransferRequestValueTransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -8532,7 +8333,6 @@ func (_BridgeTransfer *BridgeTransferFilterer) FilterRequestValueTransfer(opts *
 //
 // Solidity: event RequestValueTransfer(uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 requestNonce, uint256 fee, bytes extraData)
 func (_BridgeTransfer *BridgeTransferFilterer) WatchRequestValueTransfer(opts *bind.WatchOpts, sink chan<- *BridgeTransferRequestValueTransfer, from []common.Address, to []common.Address, tokenAddress []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -8675,7 +8475,6 @@ type BridgeTransferRequestValueTransferEncoded struct {
 //
 // Solidity: event RequestValueTransferEncoded(uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 requestNonce, uint256 fee, bytes extraData, uint8 encodingVer, bytes encodedData)
 func (_BridgeTransfer *BridgeTransferFilterer) FilterRequestValueTransferEncoded(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenAddress []common.Address) (*BridgeTransferRequestValueTransferEncodedIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -8700,7 +8499,6 @@ func (_BridgeTransfer *BridgeTransferFilterer) FilterRequestValueTransferEncoded
 //
 // Solidity: event RequestValueTransferEncoded(uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 requestNonce, uint256 fee, bytes extraData, uint8 encodingVer, bytes encodedData)
 func (_BridgeTransfer *BridgeTransferFilterer) WatchRequestValueTransferEncoded(opts *bind.WatchOpts, sink chan<- *BridgeTransferRequestValueTransferEncoded, from []common.Address, to []common.Address, tokenAddress []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -8953,9 +8751,7 @@ func (_BridgeTransferERC20 *BridgeTransferERC20TransactorRaw) Transact(opts *bin
 //
 // Solidity: function MAX_OPERATOR() view returns(uint64)
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) MAXOPERATOR(opts *bind.CallOpts) (uint64, error) {
-	var (
-		ret0 = new(uint64)
-	)
+	ret0 := new(uint64)
 	out := ret0
 	err := _BridgeTransferERC20.contract.Call(opts, out, "MAX_OPERATOR")
 	return *ret0, err
@@ -8979,9 +8775,7 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) MAXOPERATOR() (uin
 //
 // Solidity: function closedValueTransferVotes(uint64 ) view returns(bool)
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) ClosedValueTransferVotes(opts *bind.CallOpts, arg0 uint64) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _BridgeTransferERC20.contract.Call(opts, out, "closedValueTransferVotes", arg0)
 	return *ret0, err
@@ -9005,9 +8799,7 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) ClosedValueTransfe
 //
 // Solidity: function configurationNonce() view returns(uint64)
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) ConfigurationNonce(opts *bind.CallOpts) (uint64, error) {
-	var (
-		ret0 = new(uint64)
-	)
+	ret0 := new(uint64)
 	out := ret0
 	err := _BridgeTransferERC20.contract.Call(opts, out, "configurationNonce")
 	return *ret0, err
@@ -9031,9 +8823,7 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) ConfigurationNonce
 //
 // Solidity: function feeOfERC20(address ) view returns(uint256)
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) FeeOfERC20(opts *bind.CallOpts, arg0 common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _BridgeTransferERC20.contract.Call(opts, out, "feeOfERC20", arg0)
 	return *ret0, err
@@ -9057,9 +8847,7 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) FeeOfERC20(arg0 co
 //
 // Solidity: function feeOfKLAY() view returns(uint256)
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) FeeOfKLAY(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _BridgeTransferERC20.contract.Call(opts, out, "feeOfKLAY")
 	return *ret0, err
@@ -9083,9 +8871,7 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) FeeOfKLAY() (*big.
 //
 // Solidity: function feeReceiver() view returns(address)
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) FeeReceiver(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _BridgeTransferERC20.contract.Call(opts, out, "feeReceiver")
 	return *ret0, err
@@ -9109,9 +8895,7 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) FeeReceiver() (com
 //
 // Solidity: function getOperatorList() view returns(address[])
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) GetOperatorList(opts *bind.CallOpts) ([]common.Address, error) {
-	var (
-		ret0 = new([]common.Address)
-	)
+	ret0 := new([]common.Address)
 	out := ret0
 	err := _BridgeTransferERC20.contract.Call(opts, out, "getOperatorList")
 	return *ret0, err
@@ -9135,9 +8919,7 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) GetOperatorList() 
 //
 // Solidity: function getRegisteredTokenList() view returns(address[])
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) GetRegisteredTokenList(opts *bind.CallOpts) ([]common.Address, error) {
-	var (
-		ret0 = new([]common.Address)
-	)
+	ret0 := new([]common.Address)
 	out := ret0
 	err := _BridgeTransferERC20.contract.Call(opts, out, "getRegisteredTokenList")
 	return *ret0, err
@@ -9161,9 +8943,7 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) GetRegisteredToken
 //
 // Solidity: function handleNoncesToBlockNums(uint64 ) view returns(uint64)
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) HandleNoncesToBlockNums(opts *bind.CallOpts, arg0 uint64) (uint64, error) {
-	var (
-		ret0 = new(uint64)
-	)
+	ret0 := new(uint64)
 	out := ret0
 	err := _BridgeTransferERC20.contract.Call(opts, out, "handleNoncesToBlockNums", arg0)
 	return *ret0, err
@@ -9187,9 +8967,7 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) HandleNoncesToBloc
 //
 // Solidity: function handledRequestTx(bytes32 ) view returns(bool)
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) HandledRequestTx(opts *bind.CallOpts, arg0 [32]byte) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _BridgeTransferERC20.contract.Call(opts, out, "handledRequestTx", arg0)
 	return *ret0, err
@@ -9213,9 +8991,7 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) HandledRequestTx(a
 //
 // Solidity: function indexOfTokens(address ) view returns(uint256)
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) IndexOfTokens(opts *bind.CallOpts, arg0 common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _BridgeTransferERC20.contract.Call(opts, out, "indexOfTokens", arg0)
 	return *ret0, err
@@ -9239,9 +9015,7 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) IndexOfTokens(arg0
 //
 // Solidity: function isOwner() view returns(bool)
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) IsOwner(opts *bind.CallOpts) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _BridgeTransferERC20.contract.Call(opts, out, "isOwner")
 	return *ret0, err
@@ -9265,9 +9039,7 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) IsOwner() (bool, e
 //
 // Solidity: function isRunning() view returns(bool)
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) IsRunning(opts *bind.CallOpts) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _BridgeTransferERC20.contract.Call(opts, out, "isRunning")
 	return *ret0, err
@@ -9291,9 +9063,7 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) IsRunning() (bool,
 //
 // Solidity: function lockedTokens(address ) view returns(bool)
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) LockedTokens(opts *bind.CallOpts, arg0 common.Address) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _BridgeTransferERC20.contract.Call(opts, out, "lockedTokens", arg0)
 	return *ret0, err
@@ -9317,9 +9087,7 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) LockedTokens(arg0 
 //
 // Solidity: function lowerHandleNonce() view returns(uint64)
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) LowerHandleNonce(opts *bind.CallOpts) (uint64, error) {
-	var (
-		ret0 = new(uint64)
-	)
+	ret0 := new(uint64)
 	out := ret0
 	err := _BridgeTransferERC20.contract.Call(opts, out, "lowerHandleNonce")
 	return *ret0, err
@@ -9343,9 +9111,7 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) LowerHandleNonce()
 //
 // Solidity: function modeMintBurn() view returns(bool)
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) ModeMintBurn(opts *bind.CallOpts) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _BridgeTransferERC20.contract.Call(opts, out, "modeMintBurn")
 	return *ret0, err
@@ -9369,9 +9135,7 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) ModeMintBurn() (bo
 //
 // Solidity: function operatorList(uint256 ) view returns(address)
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) OperatorList(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _BridgeTransferERC20.contract.Call(opts, out, "operatorList", arg0)
 	return *ret0, err
@@ -9395,9 +9159,7 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) OperatorList(arg0 
 //
 // Solidity: function operatorThresholds(uint8 ) view returns(uint8)
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) OperatorThresholds(opts *bind.CallOpts, arg0 uint8) (uint8, error) {
-	var (
-		ret0 = new(uint8)
-	)
+	ret0 := new(uint8)
 	out := ret0
 	err := _BridgeTransferERC20.contract.Call(opts, out, "operatorThresholds", arg0)
 	return *ret0, err
@@ -9421,9 +9183,7 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) OperatorThresholds
 //
 // Solidity: function operators(address ) view returns(bool)
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) Operators(opts *bind.CallOpts, arg0 common.Address) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _BridgeTransferERC20.contract.Call(opts, out, "operators", arg0)
 	return *ret0, err
@@ -9447,9 +9207,7 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) Operators(arg0 com
 //
 // Solidity: function owner() view returns(address)
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) Owner(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _BridgeTransferERC20.contract.Call(opts, out, "owner")
 	return *ret0, err
@@ -9473,9 +9231,7 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) Owner() (common.Ad
 //
 // Solidity: function recoveryBlockNumber() view returns(uint64)
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) RecoveryBlockNumber(opts *bind.CallOpts) (uint64, error) {
-	var (
-		ret0 = new(uint64)
-	)
+	ret0 := new(uint64)
 	out := ret0
 	err := _BridgeTransferERC20.contract.Call(opts, out, "recoveryBlockNumber")
 	return *ret0, err
@@ -9499,9 +9255,7 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) RecoveryBlockNumbe
 //
 // Solidity: function registeredTokenList(uint256 ) view returns(address)
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) RegisteredTokenList(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _BridgeTransferERC20.contract.Call(opts, out, "registeredTokenList", arg0)
 	return *ret0, err
@@ -9525,9 +9279,7 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) RegisteredTokenLis
 //
 // Solidity: function registeredTokens(address ) view returns(address)
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) RegisteredTokens(opts *bind.CallOpts, arg0 common.Address) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _BridgeTransferERC20.contract.Call(opts, out, "registeredTokens", arg0)
 	return *ret0, err
@@ -9551,9 +9303,7 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) RegisteredTokens(a
 //
 // Solidity: function requestNonce() view returns(uint64)
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) RequestNonce(opts *bind.CallOpts) (uint64, error) {
-	var (
-		ret0 = new(uint64)
-	)
+	ret0 := new(uint64)
 	out := ret0
 	err := _BridgeTransferERC20.contract.Call(opts, out, "requestNonce")
 	return *ret0, err
@@ -9577,9 +9327,7 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) RequestNonce() (ui
 //
 // Solidity: function upperHandleNonce() view returns(uint64)
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) UpperHandleNonce(opts *bind.CallOpts) (uint64, error) {
-	var (
-		ret0 = new(uint64)
-	)
+	ret0 := new(uint64)
 	out := ret0
 	err := _BridgeTransferERC20.contract.Call(opts, out, "upperHandleNonce")
 	return *ret0, err
@@ -9992,7 +9740,6 @@ type BridgeTransferERC20ERC20FeeChanged struct {
 //
 // Solidity: event ERC20FeeChanged(address indexed token, uint256 indexed fee)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterERC20FeeChanged(opts *bind.FilterOpts, token []common.Address, fee []*big.Int) (*BridgeTransferERC20ERC20FeeChangedIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -10013,7 +9760,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterERC20FeeChanged(o
 //
 // Solidity: event ERC20FeeChanged(address indexed token, uint256 indexed fee)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) WatchERC20FeeChanged(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC20ERC20FeeChanged, token []common.Address, fee []*big.Int) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -10143,7 +9889,6 @@ type BridgeTransferERC20FeeReceiverChanged struct {
 //
 // Solidity: event FeeReceiverChanged(address indexed feeReceiver)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterFeeReceiverChanged(opts *bind.FilterOpts, feeReceiver []common.Address) (*BridgeTransferERC20FeeReceiverChangedIterator, error) {
-
 	var feeReceiverRule []interface{}
 	for _, feeReceiverItem := range feeReceiver {
 		feeReceiverRule = append(feeReceiverRule, feeReceiverItem)
@@ -10160,7 +9905,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterFeeReceiverChange
 //
 // Solidity: event FeeReceiverChanged(address indexed feeReceiver)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) WatchFeeReceiverChanged(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC20FeeReceiverChanged, feeReceiver []common.Address) (event.Subscription, error) {
-
 	var feeReceiverRule []interface{}
 	for _, feeReceiverItem := range feeReceiver {
 		feeReceiverRule = append(feeReceiverRule, feeReceiverItem)
@@ -10294,7 +10038,6 @@ type BridgeTransferERC20HandleValueTransfer struct {
 //
 // Solidity: event HandleValueTransfer(bytes32 requestTxHash, uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 handleNonce, uint64 lowerHandleNonce, bytes extraData)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterHandleValueTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenAddress []common.Address) (*BridgeTransferERC20HandleValueTransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -10319,7 +10062,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterHandleValueTransf
 //
 // Solidity: event HandleValueTransfer(bytes32 requestTxHash, uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 handleNonce, uint64 lowerHandleNonce, bytes extraData)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) WatchHandleValueTransfer(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC20HandleValueTransfer, from []common.Address, to []common.Address, tokenAddress []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -10453,7 +10195,6 @@ type BridgeTransferERC20KLAYFeeChanged struct {
 //
 // Solidity: event KLAYFeeChanged(uint256 indexed fee)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterKLAYFeeChanged(opts *bind.FilterOpts, fee []*big.Int) (*BridgeTransferERC20KLAYFeeChangedIterator, error) {
-
 	var feeRule []interface{}
 	for _, feeItem := range fee {
 		feeRule = append(feeRule, feeItem)
@@ -10470,7 +10211,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterKLAYFeeChanged(op
 //
 // Solidity: event KLAYFeeChanged(uint256 indexed fee)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) WatchKLAYFeeChanged(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC20KLAYFeeChanged, fee []*big.Int) (event.Subscription, error) {
-
 	var feeRule []interface{}
 	for _, feeItem := range fee {
 		feeRule = append(feeRule, feeItem)
@@ -10597,7 +10337,6 @@ type BridgeTransferERC20OwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*BridgeTransferERC20OwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -10618,7 +10357,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterOwnershipTransfer
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC20OwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -10755,7 +10493,6 @@ type BridgeTransferERC20RequestValueTransfer struct {
 //
 // Solidity: event RequestValueTransfer(uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 requestNonce, uint256 fee, bytes extraData)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterRequestValueTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenAddress []common.Address) (*BridgeTransferERC20RequestValueTransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -10780,7 +10517,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterRequestValueTrans
 //
 // Solidity: event RequestValueTransfer(uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 requestNonce, uint256 fee, bytes extraData)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) WatchRequestValueTransfer(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC20RequestValueTransfer, from []common.Address, to []common.Address, tokenAddress []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -10923,7 +10659,6 @@ type BridgeTransferERC20RequestValueTransferEncoded struct {
 //
 // Solidity: event RequestValueTransferEncoded(uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 requestNonce, uint256 fee, bytes extraData, uint8 encodingVer, bytes encodedData)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterRequestValueTransferEncoded(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenAddress []common.Address) (*BridgeTransferERC20RequestValueTransferEncodedIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -10948,7 +10683,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterRequestValueTrans
 //
 // Solidity: event RequestValueTransferEncoded(uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 requestNonce, uint256 fee, bytes extraData, uint8 encodingVer, bytes encodedData)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) WatchRequestValueTransferEncoded(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC20RequestValueTransferEncoded, from []common.Address, to []common.Address, tokenAddress []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -11082,7 +10816,6 @@ type BridgeTransferERC20TokenDeregistered struct {
 //
 // Solidity: event TokenDeregistered(address indexed token)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterTokenDeregistered(opts *bind.FilterOpts, token []common.Address) (*BridgeTransferERC20TokenDeregisteredIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -11099,7 +10832,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterTokenDeregistered
 //
 // Solidity: event TokenDeregistered(address indexed token)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) WatchTokenDeregistered(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC20TokenDeregistered, token []common.Address) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -11225,7 +10957,6 @@ type BridgeTransferERC20TokenLocked struct {
 //
 // Solidity: event TokenLocked(address indexed token)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterTokenLocked(opts *bind.FilterOpts, token []common.Address) (*BridgeTransferERC20TokenLockedIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -11242,7 +10973,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterTokenLocked(opts 
 //
 // Solidity: event TokenLocked(address indexed token)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) WatchTokenLocked(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC20TokenLocked, token []common.Address) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -11368,7 +11098,6 @@ type BridgeTransferERC20TokenRegistered struct {
 //
 // Solidity: event TokenRegistered(address indexed token)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterTokenRegistered(opts *bind.FilterOpts, token []common.Address) (*BridgeTransferERC20TokenRegisteredIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -11385,7 +11114,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterTokenRegistered(o
 //
 // Solidity: event TokenRegistered(address indexed token)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) WatchTokenRegistered(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC20TokenRegistered, token []common.Address) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -11511,7 +11239,6 @@ type BridgeTransferERC20TokenUnlocked struct {
 //
 // Solidity: event TokenUnlocked(address indexed token)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterTokenUnlocked(opts *bind.FilterOpts, token []common.Address) (*BridgeTransferERC20TokenUnlockedIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -11528,7 +11255,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterTokenUnlocked(opt
 //
 // Solidity: event TokenUnlocked(address indexed token)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) WatchTokenUnlocked(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC20TokenUnlocked, token []common.Address) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -11772,9 +11498,7 @@ func (_BridgeTransferERC721 *BridgeTransferERC721TransactorRaw) Transact(opts *b
 //
 // Solidity: function MAX_OPERATOR() view returns(uint64)
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) MAXOPERATOR(opts *bind.CallOpts) (uint64, error) {
-	var (
-		ret0 = new(uint64)
-	)
+	ret0 := new(uint64)
 	out := ret0
 	err := _BridgeTransferERC721.contract.Call(opts, out, "MAX_OPERATOR")
 	return *ret0, err
@@ -11798,9 +11522,7 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) MAXOPERATOR() (u
 //
 // Solidity: function closedValueTransferVotes(uint64 ) view returns(bool)
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) ClosedValueTransferVotes(opts *bind.CallOpts, arg0 uint64) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _BridgeTransferERC721.contract.Call(opts, out, "closedValueTransferVotes", arg0)
 	return *ret0, err
@@ -11824,9 +11546,7 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) ClosedValueTrans
 //
 // Solidity: function configurationNonce() view returns(uint64)
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) ConfigurationNonce(opts *bind.CallOpts) (uint64, error) {
-	var (
-		ret0 = new(uint64)
-	)
+	ret0 := new(uint64)
 	out := ret0
 	err := _BridgeTransferERC721.contract.Call(opts, out, "configurationNonce")
 	return *ret0, err
@@ -11850,9 +11570,7 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) ConfigurationNon
 //
 // Solidity: function feeOfERC20(address ) view returns(uint256)
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) FeeOfERC20(opts *bind.CallOpts, arg0 common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _BridgeTransferERC721.contract.Call(opts, out, "feeOfERC20", arg0)
 	return *ret0, err
@@ -11876,9 +11594,7 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) FeeOfERC20(arg0 
 //
 // Solidity: function feeOfKLAY() view returns(uint256)
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) FeeOfKLAY(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _BridgeTransferERC721.contract.Call(opts, out, "feeOfKLAY")
 	return *ret0, err
@@ -11902,9 +11618,7 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) FeeOfKLAY() (*bi
 //
 // Solidity: function feeReceiver() view returns(address)
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) FeeReceiver(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _BridgeTransferERC721.contract.Call(opts, out, "feeReceiver")
 	return *ret0, err
@@ -11928,9 +11642,7 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) FeeReceiver() (c
 //
 // Solidity: function getOperatorList() view returns(address[])
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) GetOperatorList(opts *bind.CallOpts) ([]common.Address, error) {
-	var (
-		ret0 = new([]common.Address)
-	)
+	ret0 := new([]common.Address)
 	out := ret0
 	err := _BridgeTransferERC721.contract.Call(opts, out, "getOperatorList")
 	return *ret0, err
@@ -11954,9 +11666,7 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) GetOperatorList(
 //
 // Solidity: function getRegisteredTokenList() view returns(address[])
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) GetRegisteredTokenList(opts *bind.CallOpts) ([]common.Address, error) {
-	var (
-		ret0 = new([]common.Address)
-	)
+	ret0 := new([]common.Address)
 	out := ret0
 	err := _BridgeTransferERC721.contract.Call(opts, out, "getRegisteredTokenList")
 	return *ret0, err
@@ -11980,9 +11690,7 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) GetRegisteredTok
 //
 // Solidity: function handleNoncesToBlockNums(uint64 ) view returns(uint64)
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) HandleNoncesToBlockNums(opts *bind.CallOpts, arg0 uint64) (uint64, error) {
-	var (
-		ret0 = new(uint64)
-	)
+	ret0 := new(uint64)
 	out := ret0
 	err := _BridgeTransferERC721.contract.Call(opts, out, "handleNoncesToBlockNums", arg0)
 	return *ret0, err
@@ -12006,9 +11714,7 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) HandleNoncesToBl
 //
 // Solidity: function handledRequestTx(bytes32 ) view returns(bool)
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) HandledRequestTx(opts *bind.CallOpts, arg0 [32]byte) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _BridgeTransferERC721.contract.Call(opts, out, "handledRequestTx", arg0)
 	return *ret0, err
@@ -12032,9 +11738,7 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) HandledRequestTx
 //
 // Solidity: function indexOfTokens(address ) view returns(uint256)
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) IndexOfTokens(opts *bind.CallOpts, arg0 common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _BridgeTransferERC721.contract.Call(opts, out, "indexOfTokens", arg0)
 	return *ret0, err
@@ -12058,9 +11762,7 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) IndexOfTokens(ar
 //
 // Solidity: function isOwner() view returns(bool)
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) IsOwner(opts *bind.CallOpts) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _BridgeTransferERC721.contract.Call(opts, out, "isOwner")
 	return *ret0, err
@@ -12084,9 +11786,7 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) IsOwner() (bool,
 //
 // Solidity: function isRunning() view returns(bool)
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) IsRunning(opts *bind.CallOpts) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _BridgeTransferERC721.contract.Call(opts, out, "isRunning")
 	return *ret0, err
@@ -12110,9 +11810,7 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) IsRunning() (boo
 //
 // Solidity: function lockedTokens(address ) view returns(bool)
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) LockedTokens(opts *bind.CallOpts, arg0 common.Address) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _BridgeTransferERC721.contract.Call(opts, out, "lockedTokens", arg0)
 	return *ret0, err
@@ -12136,9 +11834,7 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) LockedTokens(arg
 //
 // Solidity: function lowerHandleNonce() view returns(uint64)
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) LowerHandleNonce(opts *bind.CallOpts) (uint64, error) {
-	var (
-		ret0 = new(uint64)
-	)
+	ret0 := new(uint64)
 	out := ret0
 	err := _BridgeTransferERC721.contract.Call(opts, out, "lowerHandleNonce")
 	return *ret0, err
@@ -12162,9 +11858,7 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) LowerHandleNonce
 //
 // Solidity: function modeMintBurn() view returns(bool)
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) ModeMintBurn(opts *bind.CallOpts) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _BridgeTransferERC721.contract.Call(opts, out, "modeMintBurn")
 	return *ret0, err
@@ -12188,9 +11882,7 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) ModeMintBurn() (
 //
 // Solidity: function operatorList(uint256 ) view returns(address)
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) OperatorList(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _BridgeTransferERC721.contract.Call(opts, out, "operatorList", arg0)
 	return *ret0, err
@@ -12214,9 +11906,7 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) OperatorList(arg
 //
 // Solidity: function operatorThresholds(uint8 ) view returns(uint8)
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) OperatorThresholds(opts *bind.CallOpts, arg0 uint8) (uint8, error) {
-	var (
-		ret0 = new(uint8)
-	)
+	ret0 := new(uint8)
 	out := ret0
 	err := _BridgeTransferERC721.contract.Call(opts, out, "operatorThresholds", arg0)
 	return *ret0, err
@@ -12240,9 +11930,7 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) OperatorThreshol
 //
 // Solidity: function operators(address ) view returns(bool)
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) Operators(opts *bind.CallOpts, arg0 common.Address) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _BridgeTransferERC721.contract.Call(opts, out, "operators", arg0)
 	return *ret0, err
@@ -12266,9 +11954,7 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) Operators(arg0 c
 //
 // Solidity: function owner() view returns(address)
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) Owner(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _BridgeTransferERC721.contract.Call(opts, out, "owner")
 	return *ret0, err
@@ -12292,9 +11978,7 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) Owner() (common.
 //
 // Solidity: function recoveryBlockNumber() view returns(uint64)
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) RecoveryBlockNumber(opts *bind.CallOpts) (uint64, error) {
-	var (
-		ret0 = new(uint64)
-	)
+	ret0 := new(uint64)
 	out := ret0
 	err := _BridgeTransferERC721.contract.Call(opts, out, "recoveryBlockNumber")
 	return *ret0, err
@@ -12318,9 +12002,7 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) RecoveryBlockNum
 //
 // Solidity: function registeredTokenList(uint256 ) view returns(address)
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) RegisteredTokenList(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _BridgeTransferERC721.contract.Call(opts, out, "registeredTokenList", arg0)
 	return *ret0, err
@@ -12344,9 +12026,7 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) RegisteredTokenL
 //
 // Solidity: function registeredTokens(address ) view returns(address)
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) RegisteredTokens(opts *bind.CallOpts, arg0 common.Address) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _BridgeTransferERC721.contract.Call(opts, out, "registeredTokens", arg0)
 	return *ret0, err
@@ -12370,9 +12050,7 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) RegisteredTokens
 //
 // Solidity: function requestNonce() view returns(uint64)
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) RequestNonce(opts *bind.CallOpts) (uint64, error) {
-	var (
-		ret0 = new(uint64)
-	)
+	ret0 := new(uint64)
 	out := ret0
 	err := _BridgeTransferERC721.contract.Call(opts, out, "requestNonce")
 	return *ret0, err
@@ -12396,9 +12074,7 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) RequestNonce() (
 //
 // Solidity: function upperHandleNonce() view returns(uint64)
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) UpperHandleNonce(opts *bind.CallOpts) (uint64, error) {
-	var (
-		ret0 = new(uint64)
-	)
+	ret0 := new(uint64)
 	out := ret0
 	err := _BridgeTransferERC721.contract.Call(opts, out, "upperHandleNonce")
 	return *ret0, err
@@ -12790,7 +12466,6 @@ type BridgeTransferERC721ERC20FeeChanged struct {
 //
 // Solidity: event ERC20FeeChanged(address indexed token, uint256 indexed fee)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterERC20FeeChanged(opts *bind.FilterOpts, token []common.Address, fee []*big.Int) (*BridgeTransferERC721ERC20FeeChangedIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -12811,7 +12486,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterERC20FeeChanged
 //
 // Solidity: event ERC20FeeChanged(address indexed token, uint256 indexed fee)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) WatchERC20FeeChanged(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC721ERC20FeeChanged, token []common.Address, fee []*big.Int) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -12941,7 +12615,6 @@ type BridgeTransferERC721FeeReceiverChanged struct {
 //
 // Solidity: event FeeReceiverChanged(address indexed feeReceiver)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterFeeReceiverChanged(opts *bind.FilterOpts, feeReceiver []common.Address) (*BridgeTransferERC721FeeReceiverChangedIterator, error) {
-
 	var feeReceiverRule []interface{}
 	for _, feeReceiverItem := range feeReceiver {
 		feeReceiverRule = append(feeReceiverRule, feeReceiverItem)
@@ -12958,7 +12631,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterFeeReceiverChan
 //
 // Solidity: event FeeReceiverChanged(address indexed feeReceiver)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) WatchFeeReceiverChanged(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC721FeeReceiverChanged, feeReceiver []common.Address) (event.Subscription, error) {
-
 	var feeReceiverRule []interface{}
 	for _, feeReceiverItem := range feeReceiver {
 		feeReceiverRule = append(feeReceiverRule, feeReceiverItem)
@@ -13092,7 +12764,6 @@ type BridgeTransferERC721HandleValueTransfer struct {
 //
 // Solidity: event HandleValueTransfer(bytes32 requestTxHash, uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 handleNonce, uint64 lowerHandleNonce, bytes extraData)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterHandleValueTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenAddress []common.Address) (*BridgeTransferERC721HandleValueTransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -13117,7 +12788,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterHandleValueTran
 //
 // Solidity: event HandleValueTransfer(bytes32 requestTxHash, uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 handleNonce, uint64 lowerHandleNonce, bytes extraData)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) WatchHandleValueTransfer(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC721HandleValueTransfer, from []common.Address, to []common.Address, tokenAddress []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -13251,7 +12921,6 @@ type BridgeTransferERC721KLAYFeeChanged struct {
 //
 // Solidity: event KLAYFeeChanged(uint256 indexed fee)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterKLAYFeeChanged(opts *bind.FilterOpts, fee []*big.Int) (*BridgeTransferERC721KLAYFeeChangedIterator, error) {
-
 	var feeRule []interface{}
 	for _, feeItem := range fee {
 		feeRule = append(feeRule, feeItem)
@@ -13268,7 +12937,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterKLAYFeeChanged(
 //
 // Solidity: event KLAYFeeChanged(uint256 indexed fee)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) WatchKLAYFeeChanged(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC721KLAYFeeChanged, fee []*big.Int) (event.Subscription, error) {
-
 	var feeRule []interface{}
 	for _, feeItem := range fee {
 		feeRule = append(feeRule, feeItem)
@@ -13395,7 +13063,6 @@ type BridgeTransferERC721OwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*BridgeTransferERC721OwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -13416,7 +13083,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterOwnershipTransf
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC721OwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -13553,7 +13219,6 @@ type BridgeTransferERC721RequestValueTransfer struct {
 //
 // Solidity: event RequestValueTransfer(uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 requestNonce, uint256 fee, bytes extraData)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterRequestValueTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenAddress []common.Address) (*BridgeTransferERC721RequestValueTransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -13578,7 +13243,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterRequestValueTra
 //
 // Solidity: event RequestValueTransfer(uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 requestNonce, uint256 fee, bytes extraData)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) WatchRequestValueTransfer(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC721RequestValueTransfer, from []common.Address, to []common.Address, tokenAddress []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -13721,7 +13385,6 @@ type BridgeTransferERC721RequestValueTransferEncoded struct {
 //
 // Solidity: event RequestValueTransferEncoded(uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 requestNonce, uint256 fee, bytes extraData, uint8 encodingVer, bytes encodedData)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterRequestValueTransferEncoded(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenAddress []common.Address) (*BridgeTransferERC721RequestValueTransferEncodedIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -13746,7 +13409,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterRequestValueTra
 //
 // Solidity: event RequestValueTransferEncoded(uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 requestNonce, uint256 fee, bytes extraData, uint8 encodingVer, bytes encodedData)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) WatchRequestValueTransferEncoded(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC721RequestValueTransferEncoded, from []common.Address, to []common.Address, tokenAddress []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -13880,7 +13542,6 @@ type BridgeTransferERC721TokenDeregistered struct {
 //
 // Solidity: event TokenDeregistered(address indexed token)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterTokenDeregistered(opts *bind.FilterOpts, token []common.Address) (*BridgeTransferERC721TokenDeregisteredIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -13897,7 +13558,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterTokenDeregister
 //
 // Solidity: event TokenDeregistered(address indexed token)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) WatchTokenDeregistered(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC721TokenDeregistered, token []common.Address) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -14023,7 +13683,6 @@ type BridgeTransferERC721TokenLocked struct {
 //
 // Solidity: event TokenLocked(address indexed token)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterTokenLocked(opts *bind.FilterOpts, token []common.Address) (*BridgeTransferERC721TokenLockedIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -14040,7 +13699,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterTokenLocked(opt
 //
 // Solidity: event TokenLocked(address indexed token)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) WatchTokenLocked(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC721TokenLocked, token []common.Address) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -14166,7 +13824,6 @@ type BridgeTransferERC721TokenRegistered struct {
 //
 // Solidity: event TokenRegistered(address indexed token)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterTokenRegistered(opts *bind.FilterOpts, token []common.Address) (*BridgeTransferERC721TokenRegisteredIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -14183,7 +13840,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterTokenRegistered
 //
 // Solidity: event TokenRegistered(address indexed token)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) WatchTokenRegistered(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC721TokenRegistered, token []common.Address) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -14309,7 +13965,6 @@ type BridgeTransferERC721TokenUnlocked struct {
 //
 // Solidity: event TokenUnlocked(address indexed token)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterTokenUnlocked(opts *bind.FilterOpts, token []common.Address) (*BridgeTransferERC721TokenUnlockedIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -14326,7 +13981,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterTokenUnlocked(o
 //
 // Solidity: event TokenUnlocked(address indexed token)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) WatchTokenUnlocked(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC721TokenUnlocked, token []common.Address) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -14565,9 +14219,7 @@ func (_BridgeTransferKLAY *BridgeTransferKLAYTransactorRaw) Transact(opts *bind.
 //
 // Solidity: function MAX_OPERATOR() view returns(uint64)
 func (_BridgeTransferKLAY *BridgeTransferKLAYCaller) MAXOPERATOR(opts *bind.CallOpts) (uint64, error) {
-	var (
-		ret0 = new(uint64)
-	)
+	ret0 := new(uint64)
 	out := ret0
 	err := _BridgeTransferKLAY.contract.Call(opts, out, "MAX_OPERATOR")
 	return *ret0, err
@@ -14591,9 +14243,7 @@ func (_BridgeTransferKLAY *BridgeTransferKLAYCallerSession) MAXOPERATOR() (uint6
 //
 // Solidity: function closedValueTransferVotes(uint64 ) view returns(bool)
 func (_BridgeTransferKLAY *BridgeTransferKLAYCaller) ClosedValueTransferVotes(opts *bind.CallOpts, arg0 uint64) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _BridgeTransferKLAY.contract.Call(opts, out, "closedValueTransferVotes", arg0)
 	return *ret0, err
@@ -14617,9 +14267,7 @@ func (_BridgeTransferKLAY *BridgeTransferKLAYCallerSession) ClosedValueTransferV
 //
 // Solidity: function configurationNonce() view returns(uint64)
 func (_BridgeTransferKLAY *BridgeTransferKLAYCaller) ConfigurationNonce(opts *bind.CallOpts) (uint64, error) {
-	var (
-		ret0 = new(uint64)
-	)
+	ret0 := new(uint64)
 	out := ret0
 	err := _BridgeTransferKLAY.contract.Call(opts, out, "configurationNonce")
 	return *ret0, err
@@ -14643,9 +14291,7 @@ func (_BridgeTransferKLAY *BridgeTransferKLAYCallerSession) ConfigurationNonce()
 //
 // Solidity: function feeOfERC20(address ) view returns(uint256)
 func (_BridgeTransferKLAY *BridgeTransferKLAYCaller) FeeOfERC20(opts *bind.CallOpts, arg0 common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _BridgeTransferKLAY.contract.Call(opts, out, "feeOfERC20", arg0)
 	return *ret0, err
@@ -14669,9 +14315,7 @@ func (_BridgeTransferKLAY *BridgeTransferKLAYCallerSession) FeeOfERC20(arg0 comm
 //
 // Solidity: function feeOfKLAY() view returns(uint256)
 func (_BridgeTransferKLAY *BridgeTransferKLAYCaller) FeeOfKLAY(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _BridgeTransferKLAY.contract.Call(opts, out, "feeOfKLAY")
 	return *ret0, err
@@ -14695,9 +14339,7 @@ func (_BridgeTransferKLAY *BridgeTransferKLAYCallerSession) FeeOfKLAY() (*big.In
 //
 // Solidity: function feeReceiver() view returns(address)
 func (_BridgeTransferKLAY *BridgeTransferKLAYCaller) FeeReceiver(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _BridgeTransferKLAY.contract.Call(opts, out, "feeReceiver")
 	return *ret0, err
@@ -14721,9 +14363,7 @@ func (_BridgeTransferKLAY *BridgeTransferKLAYCallerSession) FeeReceiver() (commo
 //
 // Solidity: function getOperatorList() view returns(address[])
 func (_BridgeTransferKLAY *BridgeTransferKLAYCaller) GetOperatorList(opts *bind.CallOpts) ([]common.Address, error) {
-	var (
-		ret0 = new([]common.Address)
-	)
+	ret0 := new([]common.Address)
 	out := ret0
 	err := _BridgeTransferKLAY.contract.Call(opts, out, "getOperatorList")
 	return *ret0, err
@@ -14747,9 +14387,7 @@ func (_BridgeTransferKLAY *BridgeTransferKLAYCallerSession) GetOperatorList() ([
 //
 // Solidity: function handleNoncesToBlockNums(uint64 ) view returns(uint64)
 func (_BridgeTransferKLAY *BridgeTransferKLAYCaller) HandleNoncesToBlockNums(opts *bind.CallOpts, arg0 uint64) (uint64, error) {
-	var (
-		ret0 = new(uint64)
-	)
+	ret0 := new(uint64)
 	out := ret0
 	err := _BridgeTransferKLAY.contract.Call(opts, out, "handleNoncesToBlockNums", arg0)
 	return *ret0, err
@@ -14773,9 +14411,7 @@ func (_BridgeTransferKLAY *BridgeTransferKLAYCallerSession) HandleNoncesToBlockN
 //
 // Solidity: function handledRequestTx(bytes32 ) view returns(bool)
 func (_BridgeTransferKLAY *BridgeTransferKLAYCaller) HandledRequestTx(opts *bind.CallOpts, arg0 [32]byte) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _BridgeTransferKLAY.contract.Call(opts, out, "handledRequestTx", arg0)
 	return *ret0, err
@@ -14799,9 +14435,7 @@ func (_BridgeTransferKLAY *BridgeTransferKLAYCallerSession) HandledRequestTx(arg
 //
 // Solidity: function isLockedKLAY() view returns(bool)
 func (_BridgeTransferKLAY *BridgeTransferKLAYCaller) IsLockedKLAY(opts *bind.CallOpts) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _BridgeTransferKLAY.contract.Call(opts, out, "isLockedKLAY")
 	return *ret0, err
@@ -14825,9 +14459,7 @@ func (_BridgeTransferKLAY *BridgeTransferKLAYCallerSession) IsLockedKLAY() (bool
 //
 // Solidity: function isOwner() view returns(bool)
 func (_BridgeTransferKLAY *BridgeTransferKLAYCaller) IsOwner(opts *bind.CallOpts) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _BridgeTransferKLAY.contract.Call(opts, out, "isOwner")
 	return *ret0, err
@@ -14851,9 +14483,7 @@ func (_BridgeTransferKLAY *BridgeTransferKLAYCallerSession) IsOwner() (bool, err
 //
 // Solidity: function isRunning() view returns(bool)
 func (_BridgeTransferKLAY *BridgeTransferKLAYCaller) IsRunning(opts *bind.CallOpts) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _BridgeTransferKLAY.contract.Call(opts, out, "isRunning")
 	return *ret0, err
@@ -14877,9 +14507,7 @@ func (_BridgeTransferKLAY *BridgeTransferKLAYCallerSession) IsRunning() (bool, e
 //
 // Solidity: function lowerHandleNonce() view returns(uint64)
 func (_BridgeTransferKLAY *BridgeTransferKLAYCaller) LowerHandleNonce(opts *bind.CallOpts) (uint64, error) {
-	var (
-		ret0 = new(uint64)
-	)
+	ret0 := new(uint64)
 	out := ret0
 	err := _BridgeTransferKLAY.contract.Call(opts, out, "lowerHandleNonce")
 	return *ret0, err
@@ -14903,9 +14531,7 @@ func (_BridgeTransferKLAY *BridgeTransferKLAYCallerSession) LowerHandleNonce() (
 //
 // Solidity: function modeMintBurn() view returns(bool)
 func (_BridgeTransferKLAY *BridgeTransferKLAYCaller) ModeMintBurn(opts *bind.CallOpts) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _BridgeTransferKLAY.contract.Call(opts, out, "modeMintBurn")
 	return *ret0, err
@@ -14929,9 +14555,7 @@ func (_BridgeTransferKLAY *BridgeTransferKLAYCallerSession) ModeMintBurn() (bool
 //
 // Solidity: function operatorList(uint256 ) view returns(address)
 func (_BridgeTransferKLAY *BridgeTransferKLAYCaller) OperatorList(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _BridgeTransferKLAY.contract.Call(opts, out, "operatorList", arg0)
 	return *ret0, err
@@ -14955,9 +14579,7 @@ func (_BridgeTransferKLAY *BridgeTransferKLAYCallerSession) OperatorList(arg0 *b
 //
 // Solidity: function operatorThresholds(uint8 ) view returns(uint8)
 func (_BridgeTransferKLAY *BridgeTransferKLAYCaller) OperatorThresholds(opts *bind.CallOpts, arg0 uint8) (uint8, error) {
-	var (
-		ret0 = new(uint8)
-	)
+	ret0 := new(uint8)
 	out := ret0
 	err := _BridgeTransferKLAY.contract.Call(opts, out, "operatorThresholds", arg0)
 	return *ret0, err
@@ -14981,9 +14603,7 @@ func (_BridgeTransferKLAY *BridgeTransferKLAYCallerSession) OperatorThresholds(a
 //
 // Solidity: function operators(address ) view returns(bool)
 func (_BridgeTransferKLAY *BridgeTransferKLAYCaller) Operators(opts *bind.CallOpts, arg0 common.Address) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _BridgeTransferKLAY.contract.Call(opts, out, "operators", arg0)
 	return *ret0, err
@@ -15007,9 +14627,7 @@ func (_BridgeTransferKLAY *BridgeTransferKLAYCallerSession) Operators(arg0 commo
 //
 // Solidity: function owner() view returns(address)
 func (_BridgeTransferKLAY *BridgeTransferKLAYCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _BridgeTransferKLAY.contract.Call(opts, out, "owner")
 	return *ret0, err
@@ -15033,9 +14651,7 @@ func (_BridgeTransferKLAY *BridgeTransferKLAYCallerSession) Owner() (common.Addr
 //
 // Solidity: function recoveryBlockNumber() view returns(uint64)
 func (_BridgeTransferKLAY *BridgeTransferKLAYCaller) RecoveryBlockNumber(opts *bind.CallOpts) (uint64, error) {
-	var (
-		ret0 = new(uint64)
-	)
+	ret0 := new(uint64)
 	out := ret0
 	err := _BridgeTransferKLAY.contract.Call(opts, out, "recoveryBlockNumber")
 	return *ret0, err
@@ -15059,9 +14675,7 @@ func (_BridgeTransferKLAY *BridgeTransferKLAYCallerSession) RecoveryBlockNumber(
 //
 // Solidity: function requestNonce() view returns(uint64)
 func (_BridgeTransferKLAY *BridgeTransferKLAYCaller) RequestNonce(opts *bind.CallOpts) (uint64, error) {
-	var (
-		ret0 = new(uint64)
-	)
+	ret0 := new(uint64)
 	out := ret0
 	err := _BridgeTransferKLAY.contract.Call(opts, out, "requestNonce")
 	return *ret0, err
@@ -15085,9 +14699,7 @@ func (_BridgeTransferKLAY *BridgeTransferKLAYCallerSession) RequestNonce() (uint
 //
 // Solidity: function upperHandleNonce() view returns(uint64)
 func (_BridgeTransferKLAY *BridgeTransferKLAYCaller) UpperHandleNonce(opts *bind.CallOpts) (uint64, error) {
-	var (
-		ret0 = new(uint64)
-	)
+	ret0 := new(uint64)
 	out := ret0
 	err := _BridgeTransferKLAY.contract.Call(opts, out, "upperHandleNonce")
 	return *ret0, err
@@ -15479,7 +15091,6 @@ type BridgeTransferKLAYERC20FeeChanged struct {
 //
 // Solidity: event ERC20FeeChanged(address indexed token, uint256 indexed fee)
 func (_BridgeTransferKLAY *BridgeTransferKLAYFilterer) FilterERC20FeeChanged(opts *bind.FilterOpts, token []common.Address, fee []*big.Int) (*BridgeTransferKLAYERC20FeeChangedIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -15500,7 +15111,6 @@ func (_BridgeTransferKLAY *BridgeTransferKLAYFilterer) FilterERC20FeeChanged(opt
 //
 // Solidity: event ERC20FeeChanged(address indexed token, uint256 indexed fee)
 func (_BridgeTransferKLAY *BridgeTransferKLAYFilterer) WatchERC20FeeChanged(opts *bind.WatchOpts, sink chan<- *BridgeTransferKLAYERC20FeeChanged, token []common.Address, fee []*big.Int) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -15630,7 +15240,6 @@ type BridgeTransferKLAYFeeReceiverChanged struct {
 //
 // Solidity: event FeeReceiverChanged(address indexed feeReceiver)
 func (_BridgeTransferKLAY *BridgeTransferKLAYFilterer) FilterFeeReceiverChanged(opts *bind.FilterOpts, feeReceiver []common.Address) (*BridgeTransferKLAYFeeReceiverChangedIterator, error) {
-
 	var feeReceiverRule []interface{}
 	for _, feeReceiverItem := range feeReceiver {
 		feeReceiverRule = append(feeReceiverRule, feeReceiverItem)
@@ -15647,7 +15256,6 @@ func (_BridgeTransferKLAY *BridgeTransferKLAYFilterer) FilterFeeReceiverChanged(
 //
 // Solidity: event FeeReceiverChanged(address indexed feeReceiver)
 func (_BridgeTransferKLAY *BridgeTransferKLAYFilterer) WatchFeeReceiverChanged(opts *bind.WatchOpts, sink chan<- *BridgeTransferKLAYFeeReceiverChanged, feeReceiver []common.Address) (event.Subscription, error) {
-
 	var feeReceiverRule []interface{}
 	for _, feeReceiverItem := range feeReceiver {
 		feeReceiverRule = append(feeReceiverRule, feeReceiverItem)
@@ -15781,7 +15389,6 @@ type BridgeTransferKLAYHandleValueTransfer struct {
 //
 // Solidity: event HandleValueTransfer(bytes32 requestTxHash, uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 handleNonce, uint64 lowerHandleNonce, bytes extraData)
 func (_BridgeTransferKLAY *BridgeTransferKLAYFilterer) FilterHandleValueTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenAddress []common.Address) (*BridgeTransferKLAYHandleValueTransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -15806,7 +15413,6 @@ func (_BridgeTransferKLAY *BridgeTransferKLAYFilterer) FilterHandleValueTransfer
 //
 // Solidity: event HandleValueTransfer(bytes32 requestTxHash, uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 handleNonce, uint64 lowerHandleNonce, bytes extraData)
 func (_BridgeTransferKLAY *BridgeTransferKLAYFilterer) WatchHandleValueTransfer(opts *bind.WatchOpts, sink chan<- *BridgeTransferKLAYHandleValueTransfer, from []common.Address, to []common.Address, tokenAddress []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -15940,7 +15546,6 @@ type BridgeTransferKLAYKLAYFeeChanged struct {
 //
 // Solidity: event KLAYFeeChanged(uint256 indexed fee)
 func (_BridgeTransferKLAY *BridgeTransferKLAYFilterer) FilterKLAYFeeChanged(opts *bind.FilterOpts, fee []*big.Int) (*BridgeTransferKLAYKLAYFeeChangedIterator, error) {
-
 	var feeRule []interface{}
 	for _, feeItem := range fee {
 		feeRule = append(feeRule, feeItem)
@@ -15957,7 +15562,6 @@ func (_BridgeTransferKLAY *BridgeTransferKLAYFilterer) FilterKLAYFeeChanged(opts
 //
 // Solidity: event KLAYFeeChanged(uint256 indexed fee)
 func (_BridgeTransferKLAY *BridgeTransferKLAYFilterer) WatchKLAYFeeChanged(opts *bind.WatchOpts, sink chan<- *BridgeTransferKLAYKLAYFeeChanged, fee []*big.Int) (event.Subscription, error) {
-
 	var feeRule []interface{}
 	for _, feeItem := range fee {
 		feeRule = append(feeRule, feeItem)
@@ -16082,7 +15686,6 @@ type BridgeTransferKLAYKLAYLocked struct {
 //
 // Solidity: event KLAYLocked()
 func (_BridgeTransferKLAY *BridgeTransferKLAYFilterer) FilterKLAYLocked(opts *bind.FilterOpts) (*BridgeTransferKLAYKLAYLockedIterator, error) {
-
 	logs, sub, err := _BridgeTransferKLAY.contract.FilterLogs(opts, "KLAYLocked")
 	if err != nil {
 		return nil, err
@@ -16094,7 +15697,6 @@ func (_BridgeTransferKLAY *BridgeTransferKLAYFilterer) FilterKLAYLocked(opts *bi
 //
 // Solidity: event KLAYLocked()
 func (_BridgeTransferKLAY *BridgeTransferKLAYFilterer) WatchKLAYLocked(opts *bind.WatchOpts, sink chan<- *BridgeTransferKLAYKLAYLocked) (event.Subscription, error) {
-
 	logs, sub, err := _BridgeTransferKLAY.contract.WatchLogs(opts, "KLAYLocked")
 	if err != nil {
 		return nil, err
@@ -16214,7 +15816,6 @@ type BridgeTransferKLAYKLAYUnlocked struct {
 //
 // Solidity: event KLAYUnlocked()
 func (_BridgeTransferKLAY *BridgeTransferKLAYFilterer) FilterKLAYUnlocked(opts *bind.FilterOpts) (*BridgeTransferKLAYKLAYUnlockedIterator, error) {
-
 	logs, sub, err := _BridgeTransferKLAY.contract.FilterLogs(opts, "KLAYUnlocked")
 	if err != nil {
 		return nil, err
@@ -16226,7 +15827,6 @@ func (_BridgeTransferKLAY *BridgeTransferKLAYFilterer) FilterKLAYUnlocked(opts *
 //
 // Solidity: event KLAYUnlocked()
 func (_BridgeTransferKLAY *BridgeTransferKLAYFilterer) WatchKLAYUnlocked(opts *bind.WatchOpts, sink chan<- *BridgeTransferKLAYKLAYUnlocked) (event.Subscription, error) {
-
 	logs, sub, err := _BridgeTransferKLAY.contract.WatchLogs(opts, "KLAYUnlocked")
 	if err != nil {
 		return nil, err
@@ -16348,7 +15948,6 @@ type BridgeTransferKLAYOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_BridgeTransferKLAY *BridgeTransferKLAYFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*BridgeTransferKLAYOwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -16369,7 +15968,6 @@ func (_BridgeTransferKLAY *BridgeTransferKLAYFilterer) FilterOwnershipTransferre
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_BridgeTransferKLAY *BridgeTransferKLAYFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *BridgeTransferKLAYOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -16506,7 +16104,6 @@ type BridgeTransferKLAYRequestValueTransfer struct {
 //
 // Solidity: event RequestValueTransfer(uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 requestNonce, uint256 fee, bytes extraData)
 func (_BridgeTransferKLAY *BridgeTransferKLAYFilterer) FilterRequestValueTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenAddress []common.Address) (*BridgeTransferKLAYRequestValueTransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -16531,7 +16128,6 @@ func (_BridgeTransferKLAY *BridgeTransferKLAYFilterer) FilterRequestValueTransfe
 //
 // Solidity: event RequestValueTransfer(uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 requestNonce, uint256 fee, bytes extraData)
 func (_BridgeTransferKLAY *BridgeTransferKLAYFilterer) WatchRequestValueTransfer(opts *bind.WatchOpts, sink chan<- *BridgeTransferKLAYRequestValueTransfer, from []common.Address, to []common.Address, tokenAddress []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -16674,7 +16270,6 @@ type BridgeTransferKLAYRequestValueTransferEncoded struct {
 //
 // Solidity: event RequestValueTransferEncoded(uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 requestNonce, uint256 fee, bytes extraData, uint8 encodingVer, bytes encodedData)
 func (_BridgeTransferKLAY *BridgeTransferKLAYFilterer) FilterRequestValueTransferEncoded(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenAddress []common.Address) (*BridgeTransferKLAYRequestValueTransferEncodedIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -16699,7 +16294,6 @@ func (_BridgeTransferKLAY *BridgeTransferKLAYFilterer) FilterRequestValueTransfe
 //
 // Solidity: event RequestValueTransferEncoded(uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 requestNonce, uint256 fee, bytes extraData, uint8 encodingVer, bytes encodedData)
 func (_BridgeTransferKLAY *BridgeTransferKLAYFilterer) WatchRequestValueTransferEncoded(opts *bind.WatchOpts, sink chan<- *BridgeTransferKLAYRequestValueTransferEncoded, from []common.Address, to []common.Address, tokenAddress []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -17078,9 +16672,7 @@ func (_ERC165 *ERC165TransactorRaw) Transact(opts *bind.TransactOpts, method str
 //
 // Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
 func (_ERC165 *ERC165Caller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _ERC165.contract.Call(opts, out, "supportsInterface", interfaceId)
 	return *ret0, err
@@ -17281,9 +16873,7 @@ func (_ERC20 *ERC20TransactorRaw) Transact(opts *bind.TransactOpts, method strin
 //
 // Solidity: function allowance(address owner, address spender) view returns(uint256)
 func (_ERC20 *ERC20Caller) Allowance(opts *bind.CallOpts, owner common.Address, spender common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _ERC20.contract.Call(opts, out, "allowance", owner, spender)
 	return *ret0, err
@@ -17307,9 +16897,7 @@ func (_ERC20 *ERC20CallerSession) Allowance(owner common.Address, spender common
 //
 // Solidity: function balanceOf(address account) view returns(uint256)
 func (_ERC20 *ERC20Caller) BalanceOf(opts *bind.CallOpts, account common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _ERC20.contract.Call(opts, out, "balanceOf", account)
 	return *ret0, err
@@ -17333,9 +16921,7 @@ func (_ERC20 *ERC20CallerSession) BalanceOf(account common.Address) (*big.Int, e
 //
 // Solidity: function totalSupply() view returns(uint256)
 func (_ERC20 *ERC20Caller) TotalSupply(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _ERC20.contract.Call(opts, out, "totalSupply")
 	return *ret0, err
@@ -17539,7 +17125,6 @@ type ERC20Approval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
 func (_ERC20 *ERC20Filterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, spender []common.Address) (*ERC20ApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -17560,7 +17145,6 @@ func (_ERC20 *ERC20Filterer) FilterApproval(opts *bind.FilterOpts, owner []commo
 //
 // Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
 func (_ERC20 *ERC20Filterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *ERC20Approval, owner []common.Address, spender []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -17692,7 +17276,6 @@ type ERC20Transfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
 func (_ERC20 *ERC20Filterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address) (*ERC20TransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -17713,7 +17296,6 @@ func (_ERC20 *ERC20Filterer) FilterTransfer(opts *bind.FilterOpts, from []common
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
 func (_ERC20 *ERC20Filterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *ERC20Transfer, from []common.Address, to []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -17949,9 +17531,7 @@ func (_ERC20Burnable *ERC20BurnableTransactorRaw) Transact(opts *bind.TransactOp
 //
 // Solidity: function allowance(address owner, address spender) view returns(uint256)
 func (_ERC20Burnable *ERC20BurnableCaller) Allowance(opts *bind.CallOpts, owner common.Address, spender common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _ERC20Burnable.contract.Call(opts, out, "allowance", owner, spender)
 	return *ret0, err
@@ -17975,9 +17555,7 @@ func (_ERC20Burnable *ERC20BurnableCallerSession) Allowance(owner common.Address
 //
 // Solidity: function balanceOf(address account) view returns(uint256)
 func (_ERC20Burnable *ERC20BurnableCaller) BalanceOf(opts *bind.CallOpts, account common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _ERC20Burnable.contract.Call(opts, out, "balanceOf", account)
 	return *ret0, err
@@ -18001,9 +17579,7 @@ func (_ERC20Burnable *ERC20BurnableCallerSession) BalanceOf(account common.Addre
 //
 // Solidity: function totalSupply() view returns(uint256)
 func (_ERC20Burnable *ERC20BurnableCaller) TotalSupply(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _ERC20Burnable.contract.Call(opts, out, "totalSupply")
 	return *ret0, err
@@ -18249,7 +17825,6 @@ type ERC20BurnableApproval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
 func (_ERC20Burnable *ERC20BurnableFilterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, spender []common.Address) (*ERC20BurnableApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -18270,7 +17845,6 @@ func (_ERC20Burnable *ERC20BurnableFilterer) FilterApproval(opts *bind.FilterOpt
 //
 // Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
 func (_ERC20Burnable *ERC20BurnableFilterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *ERC20BurnableApproval, owner []common.Address, spender []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -18402,7 +17976,6 @@ type ERC20BurnableTransfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
 func (_ERC20Burnable *ERC20BurnableFilterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address) (*ERC20BurnableTransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -18423,7 +17996,6 @@ func (_ERC20Burnable *ERC20BurnableFilterer) FilterTransfer(opts *bind.FilterOpt
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
 func (_ERC20Burnable *ERC20BurnableFilterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *ERC20BurnableTransfer, from []common.Address, to []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -18661,9 +18233,7 @@ func (_ERC20Mintable *ERC20MintableTransactorRaw) Transact(opts *bind.TransactOp
 //
 // Solidity: function allowance(address owner, address spender) view returns(uint256)
 func (_ERC20Mintable *ERC20MintableCaller) Allowance(opts *bind.CallOpts, owner common.Address, spender common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _ERC20Mintable.contract.Call(opts, out, "allowance", owner, spender)
 	return *ret0, err
@@ -18687,9 +18257,7 @@ func (_ERC20Mintable *ERC20MintableCallerSession) Allowance(owner common.Address
 //
 // Solidity: function balanceOf(address account) view returns(uint256)
 func (_ERC20Mintable *ERC20MintableCaller) BalanceOf(opts *bind.CallOpts, account common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _ERC20Mintable.contract.Call(opts, out, "balanceOf", account)
 	return *ret0, err
@@ -18713,9 +18281,7 @@ func (_ERC20Mintable *ERC20MintableCallerSession) BalanceOf(account common.Addre
 //
 // Solidity: function isMinter(address account) view returns(bool)
 func (_ERC20Mintable *ERC20MintableCaller) IsMinter(opts *bind.CallOpts, account common.Address) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _ERC20Mintable.contract.Call(opts, out, "isMinter", account)
 	return *ret0, err
@@ -18739,9 +18305,7 @@ func (_ERC20Mintable *ERC20MintableCallerSession) IsMinter(account common.Addres
 //
 // Solidity: function totalSupply() view returns(uint256)
 func (_ERC20Mintable *ERC20MintableCaller) TotalSupply(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _ERC20Mintable.contract.Call(opts, out, "totalSupply")
 	return *ret0, err
@@ -19008,7 +18572,6 @@ type ERC20MintableApproval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
 func (_ERC20Mintable *ERC20MintableFilterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, spender []common.Address) (*ERC20MintableApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -19029,7 +18592,6 @@ func (_ERC20Mintable *ERC20MintableFilterer) FilterApproval(opts *bind.FilterOpt
 //
 // Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
 func (_ERC20Mintable *ERC20MintableFilterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *ERC20MintableApproval, owner []common.Address, spender []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -19159,7 +18721,6 @@ type ERC20MintableMinterAdded struct {
 //
 // Solidity: event MinterAdded(address indexed account)
 func (_ERC20Mintable *ERC20MintableFilterer) FilterMinterAdded(opts *bind.FilterOpts, account []common.Address) (*ERC20MintableMinterAddedIterator, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -19176,7 +18737,6 @@ func (_ERC20Mintable *ERC20MintableFilterer) FilterMinterAdded(opts *bind.Filter
 //
 // Solidity: event MinterAdded(address indexed account)
 func (_ERC20Mintable *ERC20MintableFilterer) WatchMinterAdded(opts *bind.WatchOpts, sink chan<- *ERC20MintableMinterAdded, account []common.Address) (event.Subscription, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -19302,7 +18862,6 @@ type ERC20MintableMinterRemoved struct {
 //
 // Solidity: event MinterRemoved(address indexed account)
 func (_ERC20Mintable *ERC20MintableFilterer) FilterMinterRemoved(opts *bind.FilterOpts, account []common.Address) (*ERC20MintableMinterRemovedIterator, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -19319,7 +18878,6 @@ func (_ERC20Mintable *ERC20MintableFilterer) FilterMinterRemoved(opts *bind.Filt
 //
 // Solidity: event MinterRemoved(address indexed account)
 func (_ERC20Mintable *ERC20MintableFilterer) WatchMinterRemoved(opts *bind.WatchOpts, sink chan<- *ERC20MintableMinterRemoved, account []common.Address) (event.Subscription, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -19447,7 +19005,6 @@ type ERC20MintableTransfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
 func (_ERC20Mintable *ERC20MintableFilterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address) (*ERC20MintableTransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -19468,7 +19025,6 @@ func (_ERC20Mintable *ERC20MintableFilterer) FilterTransfer(opts *bind.FilterOpt
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
 func (_ERC20Mintable *ERC20MintableFilterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *ERC20MintableTransfer, from []common.Address, to []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -19704,9 +19260,7 @@ func (_ERC721 *ERC721TransactorRaw) Transact(opts *bind.TransactOpts, method str
 //
 // Solidity: function balanceOf(address owner) view returns(uint256)
 func (_ERC721 *ERC721Caller) BalanceOf(opts *bind.CallOpts, owner common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _ERC721.contract.Call(opts, out, "balanceOf", owner)
 	return *ret0, err
@@ -19730,9 +19284,7 @@ func (_ERC721 *ERC721CallerSession) BalanceOf(owner common.Address) (*big.Int, e
 //
 // Solidity: function getApproved(uint256 tokenId) view returns(address)
 func (_ERC721 *ERC721Caller) GetApproved(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _ERC721.contract.Call(opts, out, "getApproved", tokenId)
 	return *ret0, err
@@ -19756,9 +19308,7 @@ func (_ERC721 *ERC721CallerSession) GetApproved(tokenId *big.Int) (common.Addres
 //
 // Solidity: function isApprovedForAll(address owner, address operator) view returns(bool)
 func (_ERC721 *ERC721Caller) IsApprovedForAll(opts *bind.CallOpts, owner common.Address, operator common.Address) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _ERC721.contract.Call(opts, out, "isApprovedForAll", owner, operator)
 	return *ret0, err
@@ -19782,9 +19332,7 @@ func (_ERC721 *ERC721CallerSession) IsApprovedForAll(owner common.Address, opera
 //
 // Solidity: function ownerOf(uint256 tokenId) view returns(address)
 func (_ERC721 *ERC721Caller) OwnerOf(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _ERC721.contract.Call(opts, out, "ownerOf", tokenId)
 	return *ret0, err
@@ -19808,9 +19356,7 @@ func (_ERC721 *ERC721CallerSession) OwnerOf(tokenId *big.Int) (common.Address, e
 //
 // Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
 func (_ERC721 *ERC721Caller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _ERC721.contract.Call(opts, out, "supportsInterface", interfaceId)
 	return *ret0, err
@@ -20014,7 +19560,6 @@ type ERC721Approval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_ERC721 *ERC721Filterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, approved []common.Address, tokenId []*big.Int) (*ERC721ApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -20039,7 +19584,6 @@ func (_ERC721 *ERC721Filterer) FilterApproval(opts *bind.FilterOpts, owner []com
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_ERC721 *ERC721Filterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *ERC721Approval, owner []common.Address, approved []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -20175,7 +19719,6 @@ type ERC721ApprovalForAll struct {
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_ERC721 *ERC721Filterer) FilterApprovalForAll(opts *bind.FilterOpts, owner []common.Address, operator []common.Address) (*ERC721ApprovalForAllIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -20196,7 +19739,6 @@ func (_ERC721 *ERC721Filterer) FilterApprovalForAll(opts *bind.FilterOpts, owner
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_ERC721 *ERC721Filterer) WatchApprovalForAll(opts *bind.WatchOpts, sink chan<- *ERC721ApprovalForAll, owner []common.Address, operator []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -20328,7 +19870,6 @@ type ERC721Transfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_ERC721 *ERC721Filterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenId []*big.Int) (*ERC721TransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -20353,7 +19894,6 @@ func (_ERC721 *ERC721Filterer) FilterTransfer(opts *bind.FilterOpts, from []comm
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_ERC721 *ERC721Filterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *ERC721Transfer, from []common.Address, to []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -20594,9 +20134,7 @@ func (_ERC721Burnable *ERC721BurnableTransactorRaw) Transact(opts *bind.Transact
 //
 // Solidity: function balanceOf(address owner) view returns(uint256)
 func (_ERC721Burnable *ERC721BurnableCaller) BalanceOf(opts *bind.CallOpts, owner common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _ERC721Burnable.contract.Call(opts, out, "balanceOf", owner)
 	return *ret0, err
@@ -20620,9 +20158,7 @@ func (_ERC721Burnable *ERC721BurnableCallerSession) BalanceOf(owner common.Addre
 //
 // Solidity: function getApproved(uint256 tokenId) view returns(address)
 func (_ERC721Burnable *ERC721BurnableCaller) GetApproved(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _ERC721Burnable.contract.Call(opts, out, "getApproved", tokenId)
 	return *ret0, err
@@ -20646,9 +20182,7 @@ func (_ERC721Burnable *ERC721BurnableCallerSession) GetApproved(tokenId *big.Int
 //
 // Solidity: function isApprovedForAll(address owner, address operator) view returns(bool)
 func (_ERC721Burnable *ERC721BurnableCaller) IsApprovedForAll(opts *bind.CallOpts, owner common.Address, operator common.Address) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _ERC721Burnable.contract.Call(opts, out, "isApprovedForAll", owner, operator)
 	return *ret0, err
@@ -20672,9 +20206,7 @@ func (_ERC721Burnable *ERC721BurnableCallerSession) IsApprovedForAll(owner commo
 //
 // Solidity: function ownerOf(uint256 tokenId) view returns(address)
 func (_ERC721Burnable *ERC721BurnableCaller) OwnerOf(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _ERC721Burnable.contract.Call(opts, out, "ownerOf", tokenId)
 	return *ret0, err
@@ -20698,9 +20230,7 @@ func (_ERC721Burnable *ERC721BurnableCallerSession) OwnerOf(tokenId *big.Int) (c
 //
 // Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
 func (_ERC721Burnable *ERC721BurnableCaller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _ERC721Burnable.contract.Call(opts, out, "supportsInterface", interfaceId)
 	return *ret0, err
@@ -20925,7 +20455,6 @@ type ERC721BurnableApproval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_ERC721Burnable *ERC721BurnableFilterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, approved []common.Address, tokenId []*big.Int) (*ERC721BurnableApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -20950,7 +20479,6 @@ func (_ERC721Burnable *ERC721BurnableFilterer) FilterApproval(opts *bind.FilterO
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_ERC721Burnable *ERC721BurnableFilterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *ERC721BurnableApproval, owner []common.Address, approved []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -21086,7 +20614,6 @@ type ERC721BurnableApprovalForAll struct {
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_ERC721Burnable *ERC721BurnableFilterer) FilterApprovalForAll(opts *bind.FilterOpts, owner []common.Address, operator []common.Address) (*ERC721BurnableApprovalForAllIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -21107,7 +20634,6 @@ func (_ERC721Burnable *ERC721BurnableFilterer) FilterApprovalForAll(opts *bind.F
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_ERC721Burnable *ERC721BurnableFilterer) WatchApprovalForAll(opts *bind.WatchOpts, sink chan<- *ERC721BurnableApprovalForAll, owner []common.Address, operator []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -21239,7 +20765,6 @@ type ERC721BurnableTransfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_ERC721Burnable *ERC721BurnableFilterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenId []*big.Int) (*ERC721BurnableTransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -21264,7 +20789,6 @@ func (_ERC721Burnable *ERC721BurnableFilterer) FilterTransfer(opts *bind.FilterO
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_ERC721Burnable *ERC721BurnableFilterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *ERC721BurnableTransfer, from []common.Address, to []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -21507,9 +21031,7 @@ func (_ERC721Metadata *ERC721MetadataTransactorRaw) Transact(opts *bind.Transact
 //
 // Solidity: function balanceOf(address owner) view returns(uint256)
 func (_ERC721Metadata *ERC721MetadataCaller) BalanceOf(opts *bind.CallOpts, owner common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _ERC721Metadata.contract.Call(opts, out, "balanceOf", owner)
 	return *ret0, err
@@ -21533,9 +21055,7 @@ func (_ERC721Metadata *ERC721MetadataCallerSession) BalanceOf(owner common.Addre
 //
 // Solidity: function getApproved(uint256 tokenId) view returns(address)
 func (_ERC721Metadata *ERC721MetadataCaller) GetApproved(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _ERC721Metadata.contract.Call(opts, out, "getApproved", tokenId)
 	return *ret0, err
@@ -21559,9 +21079,7 @@ func (_ERC721Metadata *ERC721MetadataCallerSession) GetApproved(tokenId *big.Int
 //
 // Solidity: function isApprovedForAll(address owner, address operator) view returns(bool)
 func (_ERC721Metadata *ERC721MetadataCaller) IsApprovedForAll(opts *bind.CallOpts, owner common.Address, operator common.Address) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _ERC721Metadata.contract.Call(opts, out, "isApprovedForAll", owner, operator)
 	return *ret0, err
@@ -21585,9 +21103,7 @@ func (_ERC721Metadata *ERC721MetadataCallerSession) IsApprovedForAll(owner commo
 //
 // Solidity: function name() view returns(string)
 func (_ERC721Metadata *ERC721MetadataCaller) Name(opts *bind.CallOpts) (string, error) {
-	var (
-		ret0 = new(string)
-	)
+	ret0 := new(string)
 	out := ret0
 	err := _ERC721Metadata.contract.Call(opts, out, "name")
 	return *ret0, err
@@ -21611,9 +21127,7 @@ func (_ERC721Metadata *ERC721MetadataCallerSession) Name() (string, error) {
 //
 // Solidity: function ownerOf(uint256 tokenId) view returns(address)
 func (_ERC721Metadata *ERC721MetadataCaller) OwnerOf(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _ERC721Metadata.contract.Call(opts, out, "ownerOf", tokenId)
 	return *ret0, err
@@ -21637,9 +21151,7 @@ func (_ERC721Metadata *ERC721MetadataCallerSession) OwnerOf(tokenId *big.Int) (c
 //
 // Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
 func (_ERC721Metadata *ERC721MetadataCaller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _ERC721Metadata.contract.Call(opts, out, "supportsInterface", interfaceId)
 	return *ret0, err
@@ -21663,9 +21175,7 @@ func (_ERC721Metadata *ERC721MetadataCallerSession) SupportsInterface(interfaceI
 //
 // Solidity: function symbol() view returns(string)
 func (_ERC721Metadata *ERC721MetadataCaller) Symbol(opts *bind.CallOpts) (string, error) {
-	var (
-		ret0 = new(string)
-	)
+	ret0 := new(string)
 	out := ret0
 	err := _ERC721Metadata.contract.Call(opts, out, "symbol")
 	return *ret0, err
@@ -21689,9 +21199,7 @@ func (_ERC721Metadata *ERC721MetadataCallerSession) Symbol() (string, error) {
 //
 // Solidity: function tokenURI(uint256 tokenId) view returns(string)
 func (_ERC721Metadata *ERC721MetadataCaller) TokenURI(opts *bind.CallOpts, tokenId *big.Int) (string, error) {
-	var (
-		ret0 = new(string)
-	)
+	ret0 := new(string)
 	out := ret0
 	err := _ERC721Metadata.contract.Call(opts, out, "tokenURI", tokenId)
 	return *ret0, err
@@ -21895,7 +21403,6 @@ type ERC721MetadataApproval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_ERC721Metadata *ERC721MetadataFilterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, approved []common.Address, tokenId []*big.Int) (*ERC721MetadataApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -21920,7 +21427,6 @@ func (_ERC721Metadata *ERC721MetadataFilterer) FilterApproval(opts *bind.FilterO
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_ERC721Metadata *ERC721MetadataFilterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *ERC721MetadataApproval, owner []common.Address, approved []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -22056,7 +21562,6 @@ type ERC721MetadataApprovalForAll struct {
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_ERC721Metadata *ERC721MetadataFilterer) FilterApprovalForAll(opts *bind.FilterOpts, owner []common.Address, operator []common.Address) (*ERC721MetadataApprovalForAllIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -22077,7 +21582,6 @@ func (_ERC721Metadata *ERC721MetadataFilterer) FilterApprovalForAll(opts *bind.F
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_ERC721Metadata *ERC721MetadataFilterer) WatchApprovalForAll(opts *bind.WatchOpts, sink chan<- *ERC721MetadataApprovalForAll, owner []common.Address, operator []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -22209,7 +21713,6 @@ type ERC721MetadataTransfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_ERC721Metadata *ERC721MetadataFilterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenId []*big.Int) (*ERC721MetadataTransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -22234,7 +21737,6 @@ func (_ERC721Metadata *ERC721MetadataFilterer) FilterTransfer(opts *bind.FilterO
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_ERC721Metadata *ERC721MetadataFilterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *ERC721MetadataTransfer, from []common.Address, to []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -22464,9 +21966,7 @@ func (_ERC721MetadataMintable *ERC721MetadataMintableTransactorRaw) Transact(opt
 //
 // Solidity: function balanceOf(address owner) view returns(uint256)
 func (_ERC721MetadataMintable *ERC721MetadataMintableCaller) BalanceOf(opts *bind.CallOpts, owner common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _ERC721MetadataMintable.contract.Call(opts, out, "balanceOf", owner)
 	return *ret0, err
@@ -22490,9 +21990,7 @@ func (_ERC721MetadataMintable *ERC721MetadataMintableCallerSession) BalanceOf(ow
 //
 // Solidity: function getApproved(uint256 tokenId) view returns(address)
 func (_ERC721MetadataMintable *ERC721MetadataMintableCaller) GetApproved(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _ERC721MetadataMintable.contract.Call(opts, out, "getApproved", tokenId)
 	return *ret0, err
@@ -22516,9 +22014,7 @@ func (_ERC721MetadataMintable *ERC721MetadataMintableCallerSession) GetApproved(
 //
 // Solidity: function isApprovedForAll(address owner, address operator) view returns(bool)
 func (_ERC721MetadataMintable *ERC721MetadataMintableCaller) IsApprovedForAll(opts *bind.CallOpts, owner common.Address, operator common.Address) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _ERC721MetadataMintable.contract.Call(opts, out, "isApprovedForAll", owner, operator)
 	return *ret0, err
@@ -22542,9 +22038,7 @@ func (_ERC721MetadataMintable *ERC721MetadataMintableCallerSession) IsApprovedFo
 //
 // Solidity: function isMinter(address account) view returns(bool)
 func (_ERC721MetadataMintable *ERC721MetadataMintableCaller) IsMinter(opts *bind.CallOpts, account common.Address) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _ERC721MetadataMintable.contract.Call(opts, out, "isMinter", account)
 	return *ret0, err
@@ -22568,9 +22062,7 @@ func (_ERC721MetadataMintable *ERC721MetadataMintableCallerSession) IsMinter(acc
 //
 // Solidity: function name() view returns(string)
 func (_ERC721MetadataMintable *ERC721MetadataMintableCaller) Name(opts *bind.CallOpts) (string, error) {
-	var (
-		ret0 = new(string)
-	)
+	ret0 := new(string)
 	out := ret0
 	err := _ERC721MetadataMintable.contract.Call(opts, out, "name")
 	return *ret0, err
@@ -22594,9 +22086,7 @@ func (_ERC721MetadataMintable *ERC721MetadataMintableCallerSession) Name() (stri
 //
 // Solidity: function ownerOf(uint256 tokenId) view returns(address)
 func (_ERC721MetadataMintable *ERC721MetadataMintableCaller) OwnerOf(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _ERC721MetadataMintable.contract.Call(opts, out, "ownerOf", tokenId)
 	return *ret0, err
@@ -22620,9 +22110,7 @@ func (_ERC721MetadataMintable *ERC721MetadataMintableCallerSession) OwnerOf(toke
 //
 // Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
 func (_ERC721MetadataMintable *ERC721MetadataMintableCaller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _ERC721MetadataMintable.contract.Call(opts, out, "supportsInterface", interfaceId)
 	return *ret0, err
@@ -22646,9 +22134,7 @@ func (_ERC721MetadataMintable *ERC721MetadataMintableCallerSession) SupportsInte
 //
 // Solidity: function symbol() view returns(string)
 func (_ERC721MetadataMintable *ERC721MetadataMintableCaller) Symbol(opts *bind.CallOpts) (string, error) {
-	var (
-		ret0 = new(string)
-	)
+	ret0 := new(string)
 	out := ret0
 	err := _ERC721MetadataMintable.contract.Call(opts, out, "symbol")
 	return *ret0, err
@@ -22672,9 +22158,7 @@ func (_ERC721MetadataMintable *ERC721MetadataMintableCallerSession) Symbol() (st
 //
 // Solidity: function tokenURI(uint256 tokenId) view returns(string)
 func (_ERC721MetadataMintable *ERC721MetadataMintableCaller) TokenURI(opts *bind.CallOpts, tokenId *big.Int) (string, error) {
-	var (
-		ret0 = new(string)
-	)
+	ret0 := new(string)
 	out := ret0
 	err := _ERC721MetadataMintable.contract.Call(opts, out, "tokenURI", tokenId)
 	return *ret0, err
@@ -22941,7 +22425,6 @@ type ERC721MetadataMintableApproval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, approved []common.Address, tokenId []*big.Int) (*ERC721MetadataMintableApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -22966,7 +22449,6 @@ func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) FilterApproval(op
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *ERC721MetadataMintableApproval, owner []common.Address, approved []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -23102,7 +22584,6 @@ type ERC721MetadataMintableApprovalForAll struct {
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) FilterApprovalForAll(opts *bind.FilterOpts, owner []common.Address, operator []common.Address) (*ERC721MetadataMintableApprovalForAllIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -23123,7 +22604,6 @@ func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) FilterApprovalFor
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) WatchApprovalForAll(opts *bind.WatchOpts, sink chan<- *ERC721MetadataMintableApprovalForAll, owner []common.Address, operator []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -23253,7 +22733,6 @@ type ERC721MetadataMintableMinterAdded struct {
 //
 // Solidity: event MinterAdded(address indexed account)
 func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) FilterMinterAdded(opts *bind.FilterOpts, account []common.Address) (*ERC721MetadataMintableMinterAddedIterator, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -23270,7 +22749,6 @@ func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) FilterMinterAdded
 //
 // Solidity: event MinterAdded(address indexed account)
 func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) WatchMinterAdded(opts *bind.WatchOpts, sink chan<- *ERC721MetadataMintableMinterAdded, account []common.Address) (event.Subscription, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -23396,7 +22874,6 @@ type ERC721MetadataMintableMinterRemoved struct {
 //
 // Solidity: event MinterRemoved(address indexed account)
 func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) FilterMinterRemoved(opts *bind.FilterOpts, account []common.Address) (*ERC721MetadataMintableMinterRemovedIterator, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -23413,7 +22890,6 @@ func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) FilterMinterRemov
 //
 // Solidity: event MinterRemoved(address indexed account)
 func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) WatchMinterRemoved(opts *bind.WatchOpts, sink chan<- *ERC721MetadataMintableMinterRemoved, account []common.Address) (event.Subscription, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -23541,7 +23017,6 @@ type ERC721MetadataMintableTransfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenId []*big.Int) (*ERC721MetadataMintableTransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -23566,7 +23041,6 @@ func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) FilterTransfer(op
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *ERC721MetadataMintableTransfer, from []common.Address, to []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -23780,9 +23254,7 @@ func (_IERC165 *IERC165TransactorRaw) Transact(opts *bind.TransactOpts, method s
 //
 // Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
 func (_IERC165 *IERC165Caller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _IERC165.contract.Call(opts, out, "supportsInterface", interfaceId)
 	return *ret0, err
@@ -23964,9 +23436,7 @@ func (_IERC20 *IERC20TransactorRaw) Transact(opts *bind.TransactOpts, method str
 //
 // Solidity: function allowance(address owner, address spender) view returns(uint256)
 func (_IERC20 *IERC20Caller) Allowance(opts *bind.CallOpts, owner common.Address, spender common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _IERC20.contract.Call(opts, out, "allowance", owner, spender)
 	return *ret0, err
@@ -23990,9 +23460,7 @@ func (_IERC20 *IERC20CallerSession) Allowance(owner common.Address, spender comm
 //
 // Solidity: function balanceOf(address account) view returns(uint256)
 func (_IERC20 *IERC20Caller) BalanceOf(opts *bind.CallOpts, account common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _IERC20.contract.Call(opts, out, "balanceOf", account)
 	return *ret0, err
@@ -24016,9 +23484,7 @@ func (_IERC20 *IERC20CallerSession) BalanceOf(account common.Address) (*big.Int,
 //
 // Solidity: function totalSupply() view returns(uint256)
 func (_IERC20 *IERC20Caller) TotalSupply(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _IERC20.contract.Call(opts, out, "totalSupply")
 	return *ret0, err
@@ -24180,7 +23646,6 @@ type IERC20Approval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
 func (_IERC20 *IERC20Filterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, spender []common.Address) (*IERC20ApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -24201,7 +23666,6 @@ func (_IERC20 *IERC20Filterer) FilterApproval(opts *bind.FilterOpts, owner []com
 //
 // Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
 func (_IERC20 *IERC20Filterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *IERC20Approval, owner []common.Address, spender []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -24333,7 +23797,6 @@ type IERC20Transfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
 func (_IERC20 *IERC20Filterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address) (*IERC20TransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -24354,7 +23817,6 @@ func (_IERC20 *IERC20Filterer) FilterTransfer(opts *bind.FilterOpts, from []comm
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
 func (_IERC20 *IERC20Filterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *IERC20Transfer, from []common.Address, to []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -24747,9 +24209,7 @@ func (_IERC721 *IERC721TransactorRaw) Transact(opts *bind.TransactOpts, method s
 //
 // Solidity: function balanceOf(address owner) view returns(uint256 balance)
 func (_IERC721 *IERC721Caller) BalanceOf(opts *bind.CallOpts, owner common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _IERC721.contract.Call(opts, out, "balanceOf", owner)
 	return *ret0, err
@@ -24773,9 +24233,7 @@ func (_IERC721 *IERC721CallerSession) BalanceOf(owner common.Address) (*big.Int,
 //
 // Solidity: function getApproved(uint256 tokenId) view returns(address operator)
 func (_IERC721 *IERC721Caller) GetApproved(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _IERC721.contract.Call(opts, out, "getApproved", tokenId)
 	return *ret0, err
@@ -24799,9 +24257,7 @@ func (_IERC721 *IERC721CallerSession) GetApproved(tokenId *big.Int) (common.Addr
 //
 // Solidity: function isApprovedForAll(address owner, address operator) view returns(bool)
 func (_IERC721 *IERC721Caller) IsApprovedForAll(opts *bind.CallOpts, owner common.Address, operator common.Address) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _IERC721.contract.Call(opts, out, "isApprovedForAll", owner, operator)
 	return *ret0, err
@@ -24825,9 +24281,7 @@ func (_IERC721 *IERC721CallerSession) IsApprovedForAll(owner common.Address, ope
 //
 // Solidity: function ownerOf(uint256 tokenId) view returns(address owner)
 func (_IERC721 *IERC721Caller) OwnerOf(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _IERC721.contract.Call(opts, out, "ownerOf", tokenId)
 	return *ret0, err
@@ -24851,9 +24305,7 @@ func (_IERC721 *IERC721CallerSession) OwnerOf(tokenId *big.Int) (common.Address,
 //
 // Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
 func (_IERC721 *IERC721Caller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _IERC721.contract.Call(opts, out, "supportsInterface", interfaceId)
 	return *ret0, err
@@ -25057,7 +24509,6 @@ type IERC721Approval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_IERC721 *IERC721Filterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, approved []common.Address, tokenId []*big.Int) (*IERC721ApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -25082,7 +24533,6 @@ func (_IERC721 *IERC721Filterer) FilterApproval(opts *bind.FilterOpts, owner []c
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_IERC721 *IERC721Filterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *IERC721Approval, owner []common.Address, approved []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -25218,7 +24668,6 @@ type IERC721ApprovalForAll struct {
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_IERC721 *IERC721Filterer) FilterApprovalForAll(opts *bind.FilterOpts, owner []common.Address, operator []common.Address) (*IERC721ApprovalForAllIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -25239,7 +24688,6 @@ func (_IERC721 *IERC721Filterer) FilterApprovalForAll(opts *bind.FilterOpts, own
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_IERC721 *IERC721Filterer) WatchApprovalForAll(opts *bind.WatchOpts, sink chan<- *IERC721ApprovalForAll, owner []common.Address, operator []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -25371,7 +24819,6 @@ type IERC721Transfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_IERC721 *IERC721Filterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenId []*big.Int) (*IERC721TransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -25396,7 +24843,6 @@ func (_IERC721 *IERC721Filterer) FilterTransfer(opts *bind.FilterOpts, from []co
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_IERC721 *IERC721Filterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *IERC721Transfer, from []common.Address, to []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -25796,9 +25242,7 @@ func (_IERC721Metadata *IERC721MetadataTransactorRaw) Transact(opts *bind.Transa
 //
 // Solidity: function balanceOf(address owner) view returns(uint256 balance)
 func (_IERC721Metadata *IERC721MetadataCaller) BalanceOf(opts *bind.CallOpts, owner common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
 	out := ret0
 	err := _IERC721Metadata.contract.Call(opts, out, "balanceOf", owner)
 	return *ret0, err
@@ -25822,9 +25266,7 @@ func (_IERC721Metadata *IERC721MetadataCallerSession) BalanceOf(owner common.Add
 //
 // Solidity: function getApproved(uint256 tokenId) view returns(address operator)
 func (_IERC721Metadata *IERC721MetadataCaller) GetApproved(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _IERC721Metadata.contract.Call(opts, out, "getApproved", tokenId)
 	return *ret0, err
@@ -25848,9 +25290,7 @@ func (_IERC721Metadata *IERC721MetadataCallerSession) GetApproved(tokenId *big.I
 //
 // Solidity: function isApprovedForAll(address owner, address operator) view returns(bool)
 func (_IERC721Metadata *IERC721MetadataCaller) IsApprovedForAll(opts *bind.CallOpts, owner common.Address, operator common.Address) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _IERC721Metadata.contract.Call(opts, out, "isApprovedForAll", owner, operator)
 	return *ret0, err
@@ -25874,9 +25314,7 @@ func (_IERC721Metadata *IERC721MetadataCallerSession) IsApprovedForAll(owner com
 //
 // Solidity: function name() view returns(string)
 func (_IERC721Metadata *IERC721MetadataCaller) Name(opts *bind.CallOpts) (string, error) {
-	var (
-		ret0 = new(string)
-	)
+	ret0 := new(string)
 	out := ret0
 	err := _IERC721Metadata.contract.Call(opts, out, "name")
 	return *ret0, err
@@ -25900,9 +25338,7 @@ func (_IERC721Metadata *IERC721MetadataCallerSession) Name() (string, error) {
 //
 // Solidity: function ownerOf(uint256 tokenId) view returns(address owner)
 func (_IERC721Metadata *IERC721MetadataCaller) OwnerOf(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _IERC721Metadata.contract.Call(opts, out, "ownerOf", tokenId)
 	return *ret0, err
@@ -25926,9 +25362,7 @@ func (_IERC721Metadata *IERC721MetadataCallerSession) OwnerOf(tokenId *big.Int) 
 //
 // Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
 func (_IERC721Metadata *IERC721MetadataCaller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _IERC721Metadata.contract.Call(opts, out, "supportsInterface", interfaceId)
 	return *ret0, err
@@ -25952,9 +25386,7 @@ func (_IERC721Metadata *IERC721MetadataCallerSession) SupportsInterface(interfac
 //
 // Solidity: function symbol() view returns(string)
 func (_IERC721Metadata *IERC721MetadataCaller) Symbol(opts *bind.CallOpts) (string, error) {
-	var (
-		ret0 = new(string)
-	)
+	ret0 := new(string)
 	out := ret0
 	err := _IERC721Metadata.contract.Call(opts, out, "symbol")
 	return *ret0, err
@@ -25978,9 +25410,7 @@ func (_IERC721Metadata *IERC721MetadataCallerSession) Symbol() (string, error) {
 //
 // Solidity: function tokenURI(uint256 tokenId) view returns(string)
 func (_IERC721Metadata *IERC721MetadataCaller) TokenURI(opts *bind.CallOpts, tokenId *big.Int) (string, error) {
-	var (
-		ret0 = new(string)
-	)
+	ret0 := new(string)
 	out := ret0
 	err := _IERC721Metadata.contract.Call(opts, out, "tokenURI", tokenId)
 	return *ret0, err
@@ -26184,7 +25614,6 @@ type IERC721MetadataApproval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_IERC721Metadata *IERC721MetadataFilterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, approved []common.Address, tokenId []*big.Int) (*IERC721MetadataApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -26209,7 +25638,6 @@ func (_IERC721Metadata *IERC721MetadataFilterer) FilterApproval(opts *bind.Filte
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_IERC721Metadata *IERC721MetadataFilterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *IERC721MetadataApproval, owner []common.Address, approved []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -26345,7 +25773,6 @@ type IERC721MetadataApprovalForAll struct {
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_IERC721Metadata *IERC721MetadataFilterer) FilterApprovalForAll(opts *bind.FilterOpts, owner []common.Address, operator []common.Address) (*IERC721MetadataApprovalForAllIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -26366,7 +25793,6 @@ func (_IERC721Metadata *IERC721MetadataFilterer) FilterApprovalForAll(opts *bind
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_IERC721Metadata *IERC721MetadataFilterer) WatchApprovalForAll(opts *bind.WatchOpts, sink chan<- *IERC721MetadataApprovalForAll, owner []common.Address, operator []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -26498,7 +25924,6 @@ type IERC721MetadataTransfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_IERC721Metadata *IERC721MetadataFilterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenId []*big.Int) (*IERC721MetadataTransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -26523,7 +25948,6 @@ func (_IERC721Metadata *IERC721MetadataFilterer) FilterTransfer(opts *bind.Filte
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_IERC721Metadata *IERC721MetadataFilterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *IERC721MetadataTransfer, from []common.Address, to []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -26913,9 +26337,7 @@ func (_MinterRole *MinterRoleTransactorRaw) Transact(opts *bind.TransactOpts, me
 //
 // Solidity: function isMinter(address account) view returns(bool)
 func (_MinterRole *MinterRoleCaller) IsMinter(opts *bind.CallOpts, account common.Address) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _MinterRole.contract.Call(opts, out, "isMinter", account)
 	return *ret0, err
@@ -27054,7 +26476,6 @@ type MinterRoleMinterAdded struct {
 //
 // Solidity: event MinterAdded(address indexed account)
 func (_MinterRole *MinterRoleFilterer) FilterMinterAdded(opts *bind.FilterOpts, account []common.Address) (*MinterRoleMinterAddedIterator, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -27071,7 +26492,6 @@ func (_MinterRole *MinterRoleFilterer) FilterMinterAdded(opts *bind.FilterOpts, 
 //
 // Solidity: event MinterAdded(address indexed account)
 func (_MinterRole *MinterRoleFilterer) WatchMinterAdded(opts *bind.WatchOpts, sink chan<- *MinterRoleMinterAdded, account []common.Address) (event.Subscription, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -27197,7 +26617,6 @@ type MinterRoleMinterRemoved struct {
 //
 // Solidity: event MinterRemoved(address indexed account)
 func (_MinterRole *MinterRoleFilterer) FilterMinterRemoved(opts *bind.FilterOpts, account []common.Address) (*MinterRoleMinterRemovedIterator, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -27214,7 +26633,6 @@ func (_MinterRole *MinterRoleFilterer) FilterMinterRemoved(opts *bind.FilterOpts
 //
 // Solidity: event MinterRemoved(address indexed account)
 func (_MinterRole *MinterRoleFilterer) WatchMinterRemoved(opts *bind.WatchOpts, sink chan<- *MinterRoleMinterRemoved, account []common.Address) (event.Subscription, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -27423,9 +26841,7 @@ func (_Ownable *OwnableTransactorRaw) Transact(opts *bind.TransactOpts, method s
 //
 // Solidity: function isOwner() view returns(bool)
 func (_Ownable *OwnableCaller) IsOwner(opts *bind.CallOpts) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
 	out := ret0
 	err := _Ownable.contract.Call(opts, out, "isOwner")
 	return *ret0, err
@@ -27449,9 +26865,7 @@ func (_Ownable *OwnableCallerSession) IsOwner() (bool, error) {
 //
 // Solidity: function owner() view returns(address)
 func (_Ownable *OwnableCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
 	out := ret0
 	err := _Ownable.contract.Call(opts, out, "owner")
 	return *ret0, err
@@ -27591,7 +27005,6 @@ type OwnableOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_Ownable *OwnableFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*OwnableOwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -27612,7 +27025,6 @@ func (_Ownable *OwnableFilterer) FilterOwnershipTransferred(opts *bind.FilterOpt
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_Ownable *OwnableFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *OwnableOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)

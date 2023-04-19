@@ -34,8 +34,8 @@ import (
 // storage root and code hash.
 type SmartContractAccount struct {
 	*AccountCommon
-	storageRoot common.Hash // merkle root of the storage trie
-	codeHash    []byte
+	storageRoot common.ExtHash // merkle root of the storage trie
+	codeHash    common.ExtHash
 	codeInfo    params.CodeInfo // consists of two information, vmVersion and codeFormat
 }
 
@@ -43,8 +43,8 @@ type SmartContractAccount struct {
 // This structure inherits accountCommonSerializable.
 type smartContractAccountSerializable struct {
 	CommonSerializable *accountCommonSerializable
-	StorageRoot        common.Hash
-	CodeHash           []byte
+	StorageRoot        common.ExtHash
+	CodeHash           common.ExtHash
 	CodeInfo           params.CodeInfo
 }
 
@@ -53,8 +53,8 @@ type smartContractAccountSerializableJSON struct {
 	Balance       *hexutil.Big                     `json:"balance"`
 	HumanReadable bool                             `json:"humanReadable"`
 	Key           *accountkey.AccountKeySerializer `json:"key"`
-	StorageRoot   common.Hash                      `json:"storageRoot"`
-	CodeHash      []byte                           `json:"codeHash"`
+	StorageRoot   common.ExtHash                   `json:"storageRoot"`
+	CodeHash      common.ExtHash                   `json:"codeHash"`
 	CodeFormat    params.CodeFormat                `json:"codeFormat"`
 	VmVersion     params.VmVersion                 `json:"vmVersion"`
 }
@@ -62,8 +62,8 @@ type smartContractAccountSerializableJSON struct {
 func newSmartContractAccount() *SmartContractAccount {
 	return &SmartContractAccount{
 		newAccountCommon(),
-		common.Hash{},
-		emptyCodeHash,
+		common.InitExtHash(),
+		common.BytesToRootExtHash(emptyCodeHash),
 		params.CodeInfo(0),
 	}
 }
@@ -71,17 +71,17 @@ func newSmartContractAccount() *SmartContractAccount {
 func newSmartContractAccountWithMap(values map[AccountValueKeyType]interface{}) *SmartContractAccount {
 	sca := &SmartContractAccount{
 		newAccountCommonWithMap(values),
-		common.Hash{},
-		emptyCodeHash,
+		common.InitExtHash(),
+		common.BytesToRootExtHash(emptyCodeHash),
 		params.CodeInfo(0),
 	}
 
-	if v, ok := values[AccountValueKeyStorageRoot].(common.Hash); ok {
+	if v, ok := values[AccountValueKeyStorageRoot].(common.ExtHash); ok {
 		sca.storageRoot = v
 	}
 
 	if v, ok := values[AccountValueKeyCodeHash].([]byte); ok {
-		sca.codeHash = v
+		sca.codeHash = common.BytesToRootExtHash(v)
 	}
 
 	if v, ok := values[AccountValueKeyCodeInfo].(params.CodeInfo); ok {
@@ -120,8 +120,8 @@ func (sca *SmartContractAccount) EncodeRLP(w io.Writer) error {
 func (sca *SmartContractAccount) DecodeRLP(s *rlp.Stream) error {
 	serialized := &smartContractAccountSerializable{
 		newAccountCommonSerializable(),
-		common.Hash{},
-		[]byte{},
+		common.InitExtHash(),
+		common.InitExtHash(),
 		params.CodeInfo(0),
 	}
 
@@ -169,11 +169,11 @@ func (sca *SmartContractAccount) Type() AccountType {
 	return SmartContractAccountType
 }
 
-func (sca *SmartContractAccount) GetStorageRoot() common.Hash {
+func (sca *SmartContractAccount) GetStorageRoot() common.ExtHash {
 	return sca.storageRoot
 }
 
-func (sca *SmartContractAccount) GetCodeHash() []byte {
+func (sca *SmartContractAccount) GetCodeHash() common.ExtHash {
 	return sca.codeHash
 }
 
@@ -185,11 +185,11 @@ func (sca *SmartContractAccount) GetVmVersion() params.VmVersion {
 	return sca.codeInfo.GetVmVersion()
 }
 
-func (sca *SmartContractAccount) SetStorageRoot(h common.Hash) {
+func (sca *SmartContractAccount) SetStorageRoot(h common.ExtHash) {
 	sca.storageRoot = h
 }
 
-func (sca *SmartContractAccount) SetCodeHash(h []byte) {
+func (sca *SmartContractAccount) SetCodeHash(h common.ExtHash) {
 	sca.codeHash = h
 }
 
@@ -198,7 +198,7 @@ func (sca *SmartContractAccount) SetCodeInfo(ci params.CodeInfo) {
 }
 
 func (sca *SmartContractAccount) Empty() bool {
-	return sca.nonce == 0 && sca.balance.Sign() == 0 && bytes.Equal(sca.codeHash, emptyCodeHash)
+	return sca.nonce == 0 && sca.balance.Sign() == 0 && bytes.Equal(sca.codeHash.ToHash().Bytes(), emptyCodeHash)
 }
 
 func (sca *SmartContractAccount) UpdateKey(newKey accountkey.AccountKey, currentBlockNumber uint64) error {
@@ -213,7 +213,7 @@ func (sca *SmartContractAccount) Equal(a Account) bool {
 
 	return sca.AccountCommon.Equal(sca2.AccountCommon) &&
 		sca.storageRoot == sca2.storageRoot &&
-		bytes.Equal(sca.codeHash, sca2.codeHash) &&
+		bytes.Equal(sca.codeHash.ToHash().Bytes(), sca2.codeHash.ToHash().Bytes()) &&
 		sca.codeInfo == sca2.codeInfo
 }
 
@@ -221,7 +221,16 @@ func (sca *SmartContractAccount) DeepCopy() Account {
 	return &SmartContractAccount{
 		AccountCommon: sca.AccountCommon.DeepCopy(),
 		storageRoot:   sca.storageRoot,
-		codeHash:      common.CopyBytes(sca.codeHash),
+		codeHash:      sca.codeHash,
+		codeInfo:      sca.codeInfo,
+	}
+}
+
+func (sca *SmartContractAccount) TransCopy() AccountLH {
+	return &SmartContractAccountLH{
+		AccountCommon: sca.AccountCommon.DeepCopy(),
+		storageRoot:   sca.storageRoot.ToHash(),
+		codeHash:      sca.codeHash.ToHash().Bytes(),
 		codeInfo:      sca.codeInfo,
 	}
 }
@@ -233,6 +242,6 @@ func (sca *SmartContractAccount) String() string {
 	CodeInfo: %s`,
 		sca.AccountCommon.String(),
 		sca.storageRoot.String(),
-		common.Bytes2Hex(sca.codeHash),
+		sca.codeHash.String(),
 		sca.codeInfo.String())
 }

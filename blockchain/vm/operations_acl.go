@@ -34,15 +34,15 @@ func makeGasSStoreFunc(clearingRefund uint64) gasFunc {
 		// Gas sentry honoured, do the actual gas calculation based on the stored value
 		var (
 			y, x    = stack.Back(1), stack.Peek()
-			slot    = common.BigToHash(x)
-			current = evm.StateDB.GetState(contract.Address(), slot)
+			slot    = common.BigToRootExtHash(x)
+			current = evm.StateDB.GetState(contract.Address(), slot).ToHash()
 			cost    = uint64(0)
 		)
 		// Check slot presence in the access list
-		if addrPresent, slotPresent := evm.StateDB.SlotInAccessList(contract.Address(), slot); !slotPresent {
+		if addrPresent, slotPresent := evm.StateDB.SlotInAccessList(contract.Address(), slot.ToHash()); !slotPresent {
 			cost = params.ColdSloadCostEIP2929
 			// If the caller cannot afford the cost, this change will be rolled back
-			evm.StateDB.AddSlotToAccessList(contract.Address(), slot)
+			evm.StateDB.AddSlotToAccessList(contract.Address(), slot.ToHash())
 			if !addrPresent {
 				// Once we're done with YOLOv2 and schedule this for mainnet, might
 				// be good to remove this panic here, which is just really a
@@ -50,14 +50,14 @@ func makeGasSStoreFunc(clearingRefund uint64) gasFunc {
 				panic("impossible case: address was not present in access list during sstore op")
 			}
 		}
-		value := common.BigToHash(y)
+		value := common.BigToRootExtHash(y).ToHash()
 
 		if current == value { // noop (1)
 			// EIP 2200 original clause:
 			//		return params.SloadGasEIP2200, nil
 			return cost + params.WarmStorageReadCostEIP2929, nil // SLOAD_GAS
 		}
-		original := evm.StateDB.GetCommittedState(contract.Address(), common.BigToHash(x))
+		original := evm.StateDB.GetCommittedState(contract.Address(), common.BigToRootExtHash(x)).ToHash()
 		if original == current {
 			if original == (common.Hash{}) { // create slot (2.1.1)
 				return cost + params.SstoreSetGasEIP2200, nil

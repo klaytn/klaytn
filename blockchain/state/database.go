@@ -44,24 +44,24 @@ const (
 // Database wraps access to tries and contract code.
 type Database interface {
 	// OpenTrie opens the main account trie.
-	OpenTrie(root common.Hash) (Trie, error)
-	OpenTrieForPrefetching(root common.Hash) (Trie, error)
+	OpenTrie(root common.ExtHash) (Trie, error)
+	OpenTrieForPrefetching(root common.ExtHash) (Trie, error)
 
 	// OpenStorageTrie opens the storage trie of an account.
-	OpenStorageTrie(root common.Hash) (Trie, error)
-	OpenStorageTrieForPrefetching(root common.Hash) (Trie, error)
+	OpenStorageTrie(root common.ExtHash) (Trie, error)
+	OpenStorageTrieForPrefetching(root common.ExtHash) (Trie, error)
 
 	// CopyTrie returns an independent copy of the given trie.
 	CopyTrie(Trie) Trie
 
 	// ContractCode retrieves a particular contract's code.
-	ContractCode(codeHash common.Hash) ([]byte, error)
+	ContractCode(codeHash common.ExtHash) ([]byte, error)
 
 	// DeleteCode deletes a particular contract's code.
-	DeleteCode(codeHash common.Hash)
+	DeleteCode(codeHash common.ExtHash)
 
 	// ContractCodeSize retrieves a particular contracts code's size.
-	ContractCodeSize(codeHash common.Hash) (int, error)
+	ContractCodeSize(codeHash common.ExtHash) (int, error)
 
 	// TrieDB retrieves the low level trie database used for data storage.
 	TrieDB() *statedb.Database
@@ -95,10 +95,10 @@ type Trie interface {
 	TryDelete(key []byte) error
 	// Hash returns the root hash of the trie. It does not write to the database and
 	// can be used even if the trie doesn't have one.
-	Hash() common.Hash
+	Hash() common.ExtHash
 	// Commit writes all nodes to the trie's memory database, tracking the internal
 	// and external (for account tries) references.
-	Commit(onleaf statedb.LeafCallback) (common.Hash, error)
+	Commit(onleaf statedb.LeafCallback) (common.ExtHash, error)
 	// NodeIterator returns an iterator that returns nodes of the trie. Iteration
 	// starts at the key after the given start key.
 	NodeIterator(startKey []byte) statedb.NodeIterator
@@ -164,22 +164,22 @@ type cachingDB struct {
 }
 
 // OpenTrie opens the main account trie at a specific root hash.
-func (db *cachingDB) OpenTrie(root common.Hash) (Trie, error) {
+func (db *cachingDB) OpenTrie(root common.ExtHash) (Trie, error) {
 	return statedb.NewSecureTrie(root, db.db)
 }
 
 // OpenTrieForPrefetching opens the main account trie at a specific root hash.
-func (db *cachingDB) OpenTrieForPrefetching(root common.Hash) (Trie, error) {
+func (db *cachingDB) OpenTrieForPrefetching(root common.ExtHash) (Trie, error) {
 	return statedb.NewSecureTrieForPrefetching(root, db.db)
 }
 
 // OpenStorageTrie opens the storage trie of an account.
-func (db *cachingDB) OpenStorageTrie(root common.Hash) (Trie, error) {
+func (db *cachingDB) OpenStorageTrie(root common.ExtHash) (Trie, error) {
 	return statedb.NewSecureTrie(root, db.db)
 }
 
 // OpenStorageTrieForPrefetching opens the storage trie of an account.
-func (db *cachingDB) OpenStorageTrieForPrefetching(root common.Hash) (Trie, error) {
+func (db *cachingDB) OpenStorageTrieForPrefetching(root common.ExtHash) (Trie, error) {
 	return statedb.NewSecureTrieForPrefetching(root, db.db)
 }
 
@@ -194,12 +194,12 @@ func (db *cachingDB) CopyTrie(t Trie) Trie {
 }
 
 // ContractCode retrieves a particular contract's code.
-func (db *cachingDB) ContractCode(codeHash common.Hash) ([]byte, error) {
-	if code := db.codeCache.Get(nil, codeHash.Bytes()); len(code) > 0 {
+func (db *cachingDB) ContractCode(codeHash common.ExtHash) ([]byte, error) {
+	if code := db.codeCache.Get(nil, codeHash.ToHash().Bytes()); len(code) > 0 {
 		return code, nil
 	}
 	code := db.db.DiskDB().ReadCode(codeHash)
-	if len(code) > 0 {
+	if len(code) > 0 { // GetNilData
 		db.codeCache.Set(codeHash.Bytes(), code)
 		db.codeSizeCache.Add(codeHash, len(code))
 		return code, nil
@@ -208,7 +208,7 @@ func (db *cachingDB) ContractCode(codeHash common.Hash) ([]byte, error) {
 }
 
 // DeleteCode deletes a particular contract's code.
-func (db *cachingDB) DeleteCode(codeHash common.Hash) {
+func (db *cachingDB) DeleteCode(codeHash common.ExtHash) {
 	db.codeCache.Del(codeHash.Bytes())
 	db.db.DiskDB().DeleteCode(codeHash)
 }
@@ -216,12 +216,12 @@ func (db *cachingDB) DeleteCode(codeHash common.Hash) {
 // ContractCodeWithPrefix retrieves a particular contract's code. If the
 // code can't be found in the cache, then check the existence with **new**
 // db scheme.
-func (db *cachingDB) ContractCodeWithPrefix(codeHash common.Hash) ([]byte, error) {
-	if code := db.codeCache.Get(nil, codeHash.Bytes()); len(code) > 0 {
+func (db *cachingDB) ContractCodeWithPrefix(codeHash common.ExtHash) ([]byte, error) {
+	if code := db.codeCache.Get(nil, codeHash.ToHash().Bytes()); len(code) > 0 {
 		return code, nil
 	}
 	code := db.db.DiskDB().ReadCodeWithPrefix(codeHash)
-	if len(code) > 0 {
+	if len(code) > 0 { // GetNilData
 		db.codeCache.Set(codeHash.Bytes(), code)
 		db.codeSizeCache.Add(codeHash, len(code))
 		return code, nil
@@ -230,8 +230,8 @@ func (db *cachingDB) ContractCodeWithPrefix(codeHash common.Hash) ([]byte, error
 }
 
 // ContractCodeSize retrieves a particular contracts code's size.
-func (db *cachingDB) ContractCodeSize(codeHash common.Hash) (int, error) {
-	if cached, ok := db.codeSizeCache.Get(codeHash); ok {
+func (db *cachingDB) ContractCodeSize(codeHash common.ExtHash) (int, error) {
+	if cached, ok := db.codeSizeCache.Get(codeHash.ToHash()); ok {
 		return cached.(int), nil
 	}
 	code, err := db.ContractCode(codeHash)

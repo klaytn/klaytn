@@ -49,7 +49,7 @@ type Dump struct {
 
 func (self *StateDB) RawDump() Dump {
 	dump := Dump{
-		Root:     fmt.Sprintf("%x", self.trie.Hash()),
+		Root:     fmt.Sprintf("%x", self.trie.Hash().ToHash()),
 		Accounts: make(map[string]DumpAccount),
 	}
 
@@ -72,8 +72,8 @@ func (self *StateDB) RawDump() Dump {
 			Storage:  make(map[string]string),
 		}
 		if pa := account.GetProgramAccount(data); pa != nil {
-			acc.Root = common.Bytes2Hex(pa.GetStorageRoot().Bytes())
-			acc.CodeHash = common.Bytes2Hex(pa.GetCodeHash())
+			acc.Root = common.Bytes2Hex(pa.GetStorageRoot().ToHash().Bytes())
+			acc.CodeHash = common.Bytes2Hex(pa.GetCodeHash().ToHash().Bytes())
 			acc.Code = common.Bytes2Hex(obj.Code(self.db))
 		} else {
 			acc.Root = common.Bytes2Hex(emptyRoot.Bytes())

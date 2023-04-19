@@ -209,7 +209,7 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, engine conse
 		return nil, nil
 	}
 	for i := 0; i < n; i++ {
-		statedb, err := state.New(parent.Root(), state.NewDatabase(db), nil)
+		statedb, err := state.New(parent.Root().ToRootExtHash(), state.NewDatabase(db), nil)
 		if err != nil {
 			panic(err)
 		}
@@ -230,7 +230,7 @@ func makeHeader(chain consensus.ChainReader, parent *types.Block, state *state.S
 	}
 
 	header := &types.Header{
-		Root:       state.IntermediateRoot(true),
+		Root:       state.IntermediateRoot(true).ToHash(),
 		ParentHash: parent.Hash(),
 		BlockScore: engine.CalcBlockScore(chain, time.Uint64(), &types.Header{
 			Number:     parent.Number(),
