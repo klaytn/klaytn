@@ -20,7 +20,6 @@ import (
 type testVectorChecker func(t *testing.T, name string, vectorJson []byte)
 
 func TestVectors(t *testing.T) {
-
 	checkers := map[string]testVectorChecker{
 		"aggregate/":             checkAggregate,
 		"batch_verify/":          checkBatchVerify,
