@@ -131,7 +131,7 @@ func testMissingNode(t *testing.T, memonly bool) {
 	if memonly {
 		delete(triedb.nodes, hash)
 	} else {
-		diskdb.Delete(hash[:])
+		diskdb.Delete(hash.ToHash().Bytes())
 	}
 
 	trie, _ = NewTrie(root, triedb)

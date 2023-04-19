@@ -617,11 +617,10 @@ func (dl *diskLayer) generate(stats *generatorStats) {
 			snapAccountWriteCounter.Inc(time.Since(start).Nanoseconds())
 			return nil
 		}
-		tmpSerializer := account.NewAccountSerializer()
-		if err := rlp.DecodeBytes(val, tmpSerializer); err != nil {
+		serializer := account.NewAccountLHSerializer()
+		if err := rlp.DecodeBytes(val, serializer); err != nil {
 			logger.Crit("Invalid account encountered during snapshot creation", "err", err)
 		}
-		serializer := tmpSerializer.TransCopy()
 		acc := serializer.GetAccount()
 		// If the account is not yet in-progress, write it out
 		if accMarker == nil || !bytes.Equal(accountHash[:], accMarker) {

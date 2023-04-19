@@ -2648,7 +2648,7 @@ func (dbm *databaseManager) WriteGovernanceState(b []byte) error {
 
 func (dbm *databaseManager) ReadGovernanceState() ([]byte, error) {
 	db := dbm.getDatabase(MiscDB)
-        return db.Get(governanceStateKey)
+	return db.Get(governanceStateKey)
 }
 
 func (dbm *databaseManager) WriteChainDataFetcherCheckpoint(checkpoint uint64) error {

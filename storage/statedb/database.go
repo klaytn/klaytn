@@ -774,7 +774,7 @@ func (db *Database) Cap(limit common.StorageSize) error {
 		// Fetch the oldest referenced node and push into the batch
 		node := db.nodes[oldest]
 		enc := node.rlp()
-		if err := database.PutAndWriteBatchesOverThreshold(batch, oldest[:], enc); err != nil {
+		if err := database.PutAndWriteBatchesOverThreshold(batch, oldest.ToHash().Bytes(), enc); err != nil {
 			db.lock.RUnlock()
 			return err
 		}

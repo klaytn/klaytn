@@ -118,9 +118,9 @@ func (s *stateObject) empty() bool {
 // newObject creates a state object.
 func newObject(db *StateDB, address common.Address, data account.Account) *stateObject {
 	return &stateObject{
-		db:       db,
-		address:  address,
-		addrHash: crypto.Keccak256Hash(address[:]),
+		db:            db,
+		address:       address,
+		addrHash:      crypto.Keccak256Hash(address[:]),
 		account:       data,
 		originStorage: make(Storage),
 		dirtyStorage:  make(Storage),

@@ -303,18 +303,18 @@ func newLegacyAccountLHWithMap(values map[AccountValueKeyType]interface{}) *Lega
 	return acc
 }
 
-func (a *LegacyAccountLH) Type() AccountType       { return LegacyAccountType }
-func (a *LegacyAccountLH) GetNonce() uint64        { return a.Nonce }
-func (a *LegacyAccountLH) GetBalance() *big.Int    { return new(big.Int).Set(a.Balance) }
-func (a *LegacyAccountLH) GetHumanReadable() bool  { return false }
+func (a *LegacyAccountLH) Type() AccountType            { return LegacyAccountType }
+func (a *LegacyAccountLH) GetNonce() uint64             { return a.Nonce }
+func (a *LegacyAccountLH) GetBalance() *big.Int         { return new(big.Int).Set(a.Balance) }
+func (a *LegacyAccountLH) GetHumanReadable() bool       { return false }
 func (a *LegacyAccountLH) GetStorageRoot() common.Hash  { return a.Root }
-func (a *LegacyAccountLH) GetCodeHash() []byte	   { return a.CodeHash }
-func (a *LegacyAccountLH) SetNonce(n uint64)       { a.Nonce = n }
-func (a *LegacyAccountLH) SetBalance(b *big.Int)   { a.Balance.Set(b) }
+func (a *LegacyAccountLH) GetCodeHash() []byte          { return a.CodeHash }
+func (a *LegacyAccountLH) SetNonce(n uint64)            { a.Nonce = n }
+func (a *LegacyAccountLH) SetBalance(b *big.Int)        { a.Balance.Set(b) }
 func (a *LegacyAccountLH) SetStorageRoot(h common.Hash) { a.Root = h }
-func (a *LegacyAccountLH) SetCodeHash(h []byte)    { a.CodeHash = h }
+func (a *LegacyAccountLH) SetCodeHash(h []byte)         { a.CodeHash = h }
 
-func (a *LegacyAccountLH) SetHumanReadable(b bool) { 
+func (a *LegacyAccountLH) SetHumanReadable(b bool) {
 	logger.Warn("LegacyAccount.SetHumanReadable() should not be called. Please check the call stack.")
 }
 
@@ -322,11 +322,11 @@ func (a *LegacyAccountLH) UpdateKey(newKey accountkey.AccountKey, currentBlockNu
 	return ErrAccountKeyNotModifiable
 }
 
-func (a *LegacyAccountLH) Empty() bool { 
+func (a *LegacyAccountLH) Empty() bool {
 	return a.GetNonce() == 0 && a.GetBalance().Sign() == 0 && bytes.Equal(a.GetCodeHash(), emptyCodeHash)
 }
 
-func (a *LegacyAccountLH) Equal(b AccountLH) bool { 
+func (a *LegacyAccountLH) Equal(b AccountLH) bool {
 	tb, ok := b.(*LegacyAccountLH)
 	if !ok {
 		return false
@@ -382,8 +382,8 @@ func (a *ExternallyOwnedAccountLH) GetHumanReadable() bool  { return false }
 func (a *ExternallyOwnedAccountLH) SetNonce(n uint64)       { return }
 func (a *ExternallyOwnedAccountLH) SetBalance(b *big.Int)   { return }
 func (a *ExternallyOwnedAccountLH) SetHumanReadable(b bool) { return }
-func (a *ExternallyOwnedAccountLH) Empty() bool          { return false }
-func (a *ExternallyOwnedAccountLH) String() string { return "Not Implemented" }
+func (a *ExternallyOwnedAccountLH) Empty() bool             { return false }
+func (a *ExternallyOwnedAccountLH) String() string          { return "Not Implemented" }
 
 func (a *ExternallyOwnedAccountLH) UpdateKey(newKey accountkey.AccountKey, currentBlockNumber uint64) error {
 	return fmt.Errorf("Not Implemented")
@@ -507,28 +507,28 @@ func newSmartContractAccountLHWithMap(values map[AccountValueKeyType]interface{}
 		sca.codeInfo = v
 	}
 
-        return sca
+	return sca
 }
 
-func (a *SmartContractAccountLH) Type() AccountType       { return SmartContractAccountType }
-func (a *SmartContractAccountLH) GetStorageRoot() common.Hash { return a.storageRoot }
-func (a *SmartContractAccountLH) GetCodeHash() []byte     { return a.codeHash }
+func (a *SmartContractAccountLH) Type() AccountType                { return SmartContractAccountType }
+func (a *SmartContractAccountLH) GetStorageRoot() common.Hash      { return a.storageRoot }
+func (a *SmartContractAccountLH) GetCodeHash() []byte              { return a.codeHash }
 func (a *SmartContractAccountLH) GetCodeFormat() params.CodeFormat { return a.codeInfo.GetCodeFormat() }
-func (a *SmartContractAccountLH) GetVmVersion() params.VmVersion { return a.codeInfo.GetVmVersion() }
-func (a *SmartContractAccountLH) SetStorageRoot(h common.Hash) { a.storageRoot = h }
-func (a *SmartContractAccountLH) SetCodeHash(h []byte) { a.codeHash = h }
-func (a *SmartContractAccountLH) SetCodeInfo(ci params.CodeInfo) { a.codeInfo = ci }
-func (a *SmartContractAccountLH) GetNonce() uint64        { return 0 }
-func (a *SmartContractAccountLH) GetBalance() *big.Int    { return big.NewInt(0) }
-func (a *SmartContractAccountLH) GetHumanReadable() bool  { return false }
-func (a *SmartContractAccountLH) SetNonce(n uint64)       { return }
-func (a *SmartContractAccountLH) SetBalance(b *big.Int)   { return }
-func (a *SmartContractAccountLH) SetHumanReadable(b bool) { return }
-func (a *SmartContractAccountLH) Equal(AccountLH) bool { return false }
-func (a *SmartContractAccountLH) String() string { return "Not implemented" }
+func (a *SmartContractAccountLH) GetVmVersion() params.VmVersion   { return a.codeInfo.GetVmVersion() }
+func (a *SmartContractAccountLH) SetStorageRoot(h common.Hash)     { a.storageRoot = h }
+func (a *SmartContractAccountLH) SetCodeHash(h []byte)             { a.codeHash = h }
+func (a *SmartContractAccountLH) SetCodeInfo(ci params.CodeInfo)   { a.codeInfo = ci }
+func (a *SmartContractAccountLH) GetNonce() uint64                 { return 0 }
+func (a *SmartContractAccountLH) GetBalance() *big.Int             { return big.NewInt(0) }
+func (a *SmartContractAccountLH) GetHumanReadable() bool           { return false }
+func (a *SmartContractAccountLH) SetNonce(n uint64)                { return }
+func (a *SmartContractAccountLH) SetBalance(b *big.Int)            { return }
+func (a *SmartContractAccountLH) SetHumanReadable(b bool)          { return }
+func (a *SmartContractAccountLH) Equal(AccountLH) bool             { return false }
+func (a *SmartContractAccountLH) String() string                   { return "Not implemented" }
 
 func (a *SmartContractAccountLH) Empty() bool {
-        return a.nonce == 0 && a.balance.Sign() == 0 && bytes.Equal(a.codeHash, emptyCodeHash)
+	return a.nonce == 0 && a.balance.Sign() == 0 && bytes.Equal(a.codeHash, emptyCodeHash)
 }
 
 func (a *SmartContractAccountLH) UpdateKey(newKey accountkey.AccountKey, currentBlockNumber uint64) error {

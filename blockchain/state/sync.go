@@ -50,7 +50,10 @@ func NewStateSync(root common.Hash, database statedb.StateTrieReadDB, bloom *sta
 			}
 		}
 		serializer := account.NewAccountSerializer()
-		if err := rlp.Decode(bytes.NewReader(leaf), serializer); err != nil {
+		serializerLH := account.NewAccountLHSerializer()
+		if err := rlp.Decode(bytes.NewReader(leaf), serializerLH); err == nil {
+			serializer = serializerLH.TransCopy()
+		} else if err := rlp.Decode(bytes.NewReader(leaf), serializer); err != nil {
 			return err
 		}
 		obj := serializer.GetAccount()

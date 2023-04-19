@@ -149,7 +149,7 @@ func (n *shortNode) LegacyRLP() (tmp sliceBuffer) {
 	} else if tmpHashNode, ok := n.Val.(hashNode); ok {
 		tmpNode.Val = toHashNode(tmpHashNode[:common.HashLength])
 	} else {
-		tmpNode.Val = tmpValueNode
+		tmpNode.Val = n.Val
 	}
 
 	if err := rlp.Encode(&tmp, tmpNode); err != nil {

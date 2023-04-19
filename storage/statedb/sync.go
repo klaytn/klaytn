@@ -184,7 +184,7 @@ func (s *TrieSync) AddSubTrie(root common.ExtHash, path []byte, depth int, paren
 		// Bloom filter says this might be a duplicate, double check.
 		// If database says yes, then at least the trie node is present
 		// and we hold the assumption that it's NOT legacy contract code.
-		if ok, _ := s.database.HasStateTrieNode(root[:]); ok {
+		if ok, _ := s.database.HasStateTrieNode(root.ToHash().Bytes()); ok {
 			logger.Debug("skip write sub-trie", "root", root.String())
 			return
 		}
@@ -346,7 +346,7 @@ func (s *TrieSync) Commit(dbw database.Batch) (int, error) {
 	written := 0
 	// Dump the membatch into a database dbw
 	for key, value := range s.membatch.nodes {
-		if err := dbw.Put(key[:], value); err != nil {
+		if err := dbw.Put(key.ToHash().Bytes(), value); err != nil {
 			return written, err
 		}
 		if s.bloom != nil {
@@ -480,7 +480,7 @@ func (s *TrieSync) children(req *request, object node) ([]*request, error) {
 				// Bloom filter says this might be a duplicate, double check.
 				// If database says yes, then at least the trie node is present
 				// and we hold the assumption that it's NOT legacy contract code.
-				if ok, _ := s.database.HasStateTrieNode(node); ok {
+				if ok, _ := s.database.HasStateTrieNode(hash.ToHash().Bytes()); ok {
 					continue
 				}
 				// False positive, bump fault meter

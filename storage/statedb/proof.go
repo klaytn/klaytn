@@ -95,6 +95,8 @@ func (t *Trie) Prove(key []byte, fromLevel uint, proofDB ProofDBWriter) error {
 				reEnc := ExtHashFilter(n, enc)
 				if !ok {
 					hash = crypto.Keccak256(reEnc)
+				} else {
+					hash = common.BytesToRootExtHash(hash).ToHash().Bytes()
 				}
 				proofDB.WriteMerkleProof(hash, reEnc)
 			}

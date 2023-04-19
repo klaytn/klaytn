@@ -1601,7 +1601,10 @@ func verifyTrie(db database.DBManager, root common.Hash, t *testing.T) {
 	accIt := statedb.NewIterator(accTrie.NodeIterator(nil))
 	for accIt.Next() {
 		serializer := account.NewAccountSerializer()
-		if err := rlp.DecodeBytes(accIt.Value, serializer); err != nil {
+		serializerLH := account.NewAccountLHSerializer()
+		if err := rlp.DecodeBytes(accIt.Value, serializerLH); err == nil {
+			serializer = serializerLH.TransCopy()
+		} else if err := rlp.DecodeBytes(accIt.Value, serializer); err != nil {
 			logger.Crit("Invalid account encountered during snapshot creation", "err", err)
 		}
 		acc := serializer.GetAccount()

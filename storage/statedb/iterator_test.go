@@ -331,7 +331,7 @@ func testIteratorContinueAfterError(t *testing.T, memonly bool) {
 			if memonly {
 				rkey = memKeys[rand.Intn(len(memKeys))]
 			} else {
-				copy(rkey[:], diskKeys[rand.Intn(len(diskKeys))])
+				copy(rkey[:], common.BytesToRootExtHash(diskKeys[rand.Intn(len(diskKeys))]).Bytes())
 			}
 			if rkey != tr.Hash() {
 				break
@@ -341,8 +341,8 @@ func testIteratorContinueAfterError(t *testing.T, memonly bool) {
 			robj = triedb.nodes[rkey]
 			delete(triedb.nodes, rkey)
 		} else {
-			rval, _ = diskdb.Get(rkey[:])
-			diskdb.Delete(rkey[:])
+			rval, _ = diskdb.Get(rkey.ToHash().Bytes())
+			diskdb.Delete(rkey.ToHash().Bytes())
 		}
 		// Iterate until the error is hit.
 		seen := make(map[string]bool)
@@ -357,7 +357,7 @@ func testIteratorContinueAfterError(t *testing.T, memonly bool) {
 		if memonly {
 			triedb.nodes[rkey] = robj
 		} else {
-			diskdb.Put(rkey[:], rval)
+			diskdb.Put(rkey.ToHash().Bytes(), rval)
 		}
 		checkIteratorNoDups(t, it, seen)
 		if it.Error() != nil {
@@ -403,8 +403,8 @@ func testIteratorContinueAfterSeekError(t *testing.T, memonly bool) {
 		barNodeObj = triedb.nodes[barNodeHash]
 		delete(triedb.nodes, barNodeHash)
 	} else {
-		barNodeBlob, _ = diskdb.Get(barNodeHash[:])
-		diskdb.Delete(barNodeHash[:])
+		barNodeBlob, _ = diskdb.Get(barNodeHash.ToHash().Bytes())
+		diskdb.Delete(barNodeHash.ToHash().Bytes())
 	}
 	// Create a new iterator that seeks to "bars". Seeking can't proceed because
 	// the node is missing.
@@ -420,7 +420,7 @@ func testIteratorContinueAfterSeekError(t *testing.T, memonly bool) {
 	if memonly {
 		triedb.nodes[barNodeHash] = barNodeObj
 	} else {
-		diskdb.Put(barNodeHash[:], barNodeBlob)
+		diskdb.Put(barNodeHash.ToHash().Bytes(), barNodeBlob)
 	}
 	// Check that iteration produces the right set of values.
 	if err := checkIteratorOrder(testdata1[2:], NewIterator(it)); err != nil {

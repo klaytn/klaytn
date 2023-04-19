@@ -303,14 +303,14 @@ func (db *levelDB) Get(key []byte) ([]byte, error) {
 }
 
 func (db *levelDB) get(key []byte) ([]byte, error) {
-        dat, err := db.db.Get(key, nil)
-        if err != nil {
-                if err == leveldb.ErrNotFound {
-                        return nil, dataNotFoundErr
-                }
-                return nil, err
-        }
-        return dat, nil
+	dat, err := db.db.Get(key, nil)
+	if err != nil {
+		if err == leveldb.ErrNotFound {
+			return nil, dataNotFoundErr
+		}
+		return nil, err
+	}
+	return dat, nil
 }
 
 func (db *levelDB) getbak(key []byte) ([]byte, error) {

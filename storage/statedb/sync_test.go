@@ -470,7 +470,7 @@ func TestIncompleteTrieSync(t *testing.T) {
 	}
 	// Sanity check that removing any node from the database is detected
 	for _, node := range added[1:] {
-		key := node.Bytes()
+		key := node.ToHash().Bytes()
 		value, _ := diskdb.Get(key)
 
 		diskdb.Delete(key)

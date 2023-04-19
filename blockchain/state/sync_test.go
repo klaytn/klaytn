@@ -164,7 +164,7 @@ func checkTrieConsistency(db database.DBManager, root common.Hash) error {
 // checkStateConsistency checks that all data of a state root is present.
 func checkStateConsistency(db database.DBManager, root common.ExtHash) error {
 	// Create and iterate a state trie rooted in a sub-node
-	if _, err := db.ReadStateTrieNode(root.Bytes()); err != nil {
+	if _, err := db.ReadStateTrieNode(root.ToHash().Bytes()); err != nil {
 		return nil // Consider a non existent state consistent.
 	}
 	state, err := New(root, NewDatabase(db), nil)
@@ -393,8 +393,8 @@ func TestCheckStateConsistencyMissNode(t *testing.T) {
 				newState.DeleteCode(hash)
 			} else {
 				data, _ = srcDiskDB.ReadCachedTrieNode(hash)
-				srcDiskDB.GetMemDB().Delete(hash[:])
-				newDiskDB.GetMemDB().Delete(hash[:])
+				srcDiskDB.GetMemDB().Delete(hash.ToHash().Bytes())
+				newDiskDB.GetMemDB().Delete(hash.ToHash().Bytes())
 			}
 			// Check consistency : errIterator
 			err = CheckStateConsistency(srcState, newState, srcRoot, 100, nil)
@@ -406,11 +406,11 @@ func TestCheckStateConsistencyMissNode(t *testing.T) {
 
 			// Recover nodes
 			if code {
-				srcDiskDB.GetMemDB().Put(hash[:], data)
-				newDiskDB.GetMemDB().Put(hash[:], data)
+				srcDiskDB.GetMemDB().Put(hash.ToHash().Bytes(), data)
+				newDiskDB.GetMemDB().Put(hash.ToHash().Bytes(), data)
 			} else {
-				srcDiskDB.GetMemDB().Put(it.Hash[:], data)
-				newDiskDB.GetMemDB().Put(it.Hash[:], data)
+				srcDiskDB.GetMemDB().Put(it.Hash.ToHash().Bytes(), data)
+				newDiskDB.GetMemDB().Put(it.Hash.ToHash().Bytes(), data)
 			}
 		}
 	}
@@ -682,7 +682,7 @@ func TestIncompleteStateSync(t *testing.T) {
 			dstState.DeleteCode(node)
 		} else {
 			val, _ = dstDb.ReadCachedTrieNode(node)
-			dstDb.GetMemDB().Delete(node[:])
+			dstDb.GetMemDB().Delete(node.ToHash().Bytes())
 		}
 
 		if err := checkStateConsistency(dstDb, added[0]); err == nil {
@@ -698,7 +698,7 @@ func TestIncompleteStateSync(t *testing.T) {
 			dstDb.WriteCode(node, val)
 		} else {
 			// insert a trie node to memory database
-			dstDb.GetMemDB().Put(node[:], val)
+			dstDb.GetMemDB().Put(node.ToHash().Bytes(), val)
 		}
 	}
 
