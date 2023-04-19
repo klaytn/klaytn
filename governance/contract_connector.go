@@ -74,7 +74,7 @@ func (c *contractCaller) prepareCall(contractAbi abi.ABI, fn string, args ...int
 	return tx, evm, nil
 }
 
-// Make contract execution transaction
+// makeTx makes a contract execution transaction
 func (c *contractCaller) makeTx(contractAbi abi.ABI, fn string, args ...interface{},
 ) (*types.Transaction, error) {
 	calldata, err := contractAbi.Pack(fn, args...)
@@ -83,7 +83,7 @@ func (c *contractCaller) makeTx(contractAbi abi.ABI, fn string, args ...interfac
 		return nil, err
 	}
 
-	rules := c.chain.Config().Rules(c.chain.CurrentHeader().Number)
+	rules := c.chain.Config().Rules(c.chain.CurrentBlock().Number())
 	intrinsicGas, err := types.IntrinsicGas(calldata, nil, false, rules)
 	if err != nil {
 		logger.Error("Could not fetch intrinsicGas", "err", err)
@@ -105,18 +105,18 @@ func (c *contractCaller) makeTx(contractAbi abi.ABI, fn string, args ...interfac
 	return tx, nil
 }
 
-// Make contract execution transaction
+// makeEVM makes an EVM for the tx execution
 func (c *contractCaller) makeEVM(tx *types.Transaction) (*vm.EVM, error) {
 	// Load the latest state
-	block := c.chain.GetBlockByNumber(c.chain.CurrentHeader().Number.Uint64())
+	block := c.chain.CurrentBlock()
 	if block == nil {
-		logger.Error("Could not find the latest block", "num", c.chain.CurrentHeader().Number.Uint64())
+		logger.Error("Could not find the latest block", "num", c.chain.CurrentBlock().NumberU64())
 		return nil, errors.New("no block")
 	}
 
 	statedb, err := c.chain.StateAt(block.Root())
 	if err != nil {
-		logger.Error("Could not find the state", "err", err, "num", c.chain.CurrentHeader().Number.Uint64())
+		logger.Error("Could not find the state", "err", err, "num", c.chain.CurrentBlock().NumberU64())
 		return nil, err
 	}
 
@@ -130,15 +130,15 @@ func (c *contractCaller) makeEVM(tx *types.Transaction) (*vm.EVM, error) {
 	return evm, nil
 }
 
-// Execute contract call at the latest block context
+// callTx executes contract call at the latest block context
 func (c *contractCaller) callTx(tx *types.Transaction, evm *vm.EVM) ([]byte, error) {
-	res, _, kerr := blockchain.ApplyMessage(evm, tx)
-	if kerr.ErrTxInvalid != nil {
+	result, err := blockchain.ApplyMessage(evm, tx)
+	if err != nil {
 		logger.Warn("Invalid tx")
-		return nil, kerr.ErrTxInvalid
+		return nil, err
 	}
 
-	return res, nil
+	return result.Return(), nil
 }
 
 func (c *contractCaller) parseGetAllParamsAt(b []byte) (*params.GovParamSet, error) {
@@ -170,5 +170,5 @@ func (c *contractCaller) parseGetAllParamsAt(b []byte) (*params.GovParamSet, err
 	for i := 0; i < len(names); i++ {
 		bytesMap[names[i]] = values[i]
 	}
-	return params.NewGovParamSetBytesMap(bytesMap)
+	return params.NewGovParamSetBytesMapTolerant(bytesMap), nil
 }

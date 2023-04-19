@@ -211,6 +211,15 @@ func TestGovParamSet_New(t *testing.T) {
 	assert.Equal(t, c.Istanbul.Epoch, v)
 	assert.True(t, ok)
 
+	p = NewGovParamSetBytesMapTolerant(map[string][]byte{
+		"nonexistent-param1": {1},
+		"nonexistent-param2": {2},
+		"istanbul.epoch":     {0x12, 0x34},
+	})
+	v, ok = p.Get(Epoch)
+	assert.Equal(t, uint64(0x1234), v)
+	assert.True(t, ok)
+
 	// Error cases
 	_, err = NewGovParamSetStrMap(map[string]interface{}{
 		"istanbul.epoch": "asdf",
@@ -224,6 +233,13 @@ func TestGovParamSet_New(t *testing.T) {
 
 	_, err = NewGovParamSetBytesMap(map[string][]byte{
 		"istanbul.epoch": {1, 1, 2, 3, 4, 5, 6, 7, 8},
+	})
+	assert.NotNil(t, err)
+
+	_, err = NewGovParamSetBytesMap(map[string][]byte{
+		"nonexistent-param1": {1},
+		"nonexistent-param2": {2},
+		"istanbul.epoch":     {3},
 	})
 	assert.NotNil(t, err)
 }

@@ -77,6 +77,8 @@ var HomiFlags = []cli.Flag{
 	altsrc.NewIntFlag(numOfSPNsFlag),
 	altsrc.NewIntFlag(numOfSENsFlag),
 	altsrc.NewIntFlag(numOfTestKeyFlag),
+	altsrc.NewStringFlag(mnemonic),
+	altsrc.NewStringFlag(mnemonicPath),
 	altsrc.NewUint64Flag(chainIDFlag),
 	altsrc.NewUint64Flag(serviceChainIDFlag),
 	altsrc.NewUint64Flag(unitPriceFlag),
@@ -122,6 +124,8 @@ var HomiFlags = []cli.Flag{
 	altsrc.NewInt64Flag(ethTxTypeCompatibleBlockNumberFlag),
 	altsrc.NewInt64Flag(magmaCompatibleBlockNumberFlag),
 	altsrc.NewInt64Flag(koreCompatibleBlockNumberFlag),
+	altsrc.NewInt64Flag(kip103CompatibleBlockNumberFlag),
+	altsrc.NewStringFlag(kip103ContractAddressFlag),
 }
 
 var SetupCommand = cli.Command{
@@ -608,7 +612,35 @@ func Gen(ctx *cli.Context) error {
 		return fmt.Errorf("validators-num(%d) cannot be greater than num(%d)", numValidators, cnNum)
 	}
 
-	privKeys, nodeKeys, nodeAddrs := istcommon.GenerateKeys(cnNum)
+	var (
+		privKeys  []*ecdsa.PrivateKey
+		nodeKeys  []string
+		nodeAddrs []common.Address
+	)
+
+	if len(ctx.String(mnemonic.Name)) == 0 {
+		privKeys, nodeKeys, nodeAddrs = istcommon.GenerateKeys(cnNum)
+	} else {
+		mnemonic := ctx.String(mnemonic.Name)
+		mnemonic = strings.ReplaceAll(mnemonic, ",", " ")
+		// common keys used by web3 tools such as hardhat, foundry, etc.
+		if mnemonic == "test junk" {
+			mnemonic = "test test test test test test test test test test test junk"
+		}
+		path := strings.ToLower(ctx.String(mnemonicPath.Name))
+		if !strings.HasPrefix(path, "m") {
+			switch path {
+			case "klay":
+				path = "m/44'/8217'/0'/0/"
+			case "eth":
+				path = "m/44'/60'/0'/0/"
+			default:
+				return fmt.Errorf("invalid mnemonic path (format: m/44'/60'/0'/0/)")
+			}
+		}
+		privKeys, nodeKeys, nodeAddrs = istcommon.GenerateKeysFromMnemonic(cnNum, mnemonic, path)
+	}
+
 	testPrivKeys, testKeys, testAddrs := istcommon.GenerateKeys(numTestAccs)
 
 	var (
@@ -646,6 +678,8 @@ func Gen(ctx *cli.Context) error {
 	genesisJson.Config.EthTxTypeCompatibleBlock = big.NewInt(ctx.Int64(ethTxTypeCompatibleBlockNumberFlag.Name))
 	genesisJson.Config.MagmaCompatibleBlock = big.NewInt(ctx.Int64(magmaCompatibleBlockNumberFlag.Name))
 	genesisJson.Config.KoreCompatibleBlock = big.NewInt(ctx.Int64(koreCompatibleBlockNumberFlag.Name))
+	genesisJson.Config.Kip103CompatibleBlock = big.NewInt(ctx.Int64(kip103CompatibleBlockNumberFlag.Name))
+	genesisJson.Config.Kip103ContractAddress = common.HexToAddress(ctx.String(kip103ContractAddressFlag.Name))
 
 	genesisJsonBytes, _ = json.MarshalIndent(genesisJson, "", "    ")
 	genValidatorKeystore(privKeys)

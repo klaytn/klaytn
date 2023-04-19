@@ -269,17 +269,21 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	cn.blockchain = bc
 	governance.SetBlockchain(cn.blockchain)
-	if err := governance.UpdateParams(); err != nil {
+	if err := governance.UpdateParams(cn.blockchain.CurrentBlock().NumberU64()); err != nil {
 		return nil, err
 	}
 	blockchain.InitDeriveShaWithGov(cn.chainConfig, governance)
 
 	// Synchronize proposerpolicy & useGiniCoeff
+	pset, err := governance.EffectiveParams(bc.CurrentBlock().NumberU64() + 1)
+	if err != nil {
+		return nil, err
+	}
 	if cn.blockchain.Config().Istanbul != nil {
-		cn.blockchain.Config().Istanbul.ProposerPolicy = governance.Params().Policy()
+		cn.blockchain.Config().Istanbul.ProposerPolicy = pset.Policy()
 	}
 	if cn.blockchain.Config().Governance.Reward != nil {
-		cn.blockchain.Config().Governance.Reward.UseGiniCoeff = governance.Params().UseGiniCoeff()
+		cn.blockchain.Config().Governance.Reward.UseGiniCoeff = pset.UseGiniCoeff()
 	}
 
 	if config.SenderTxHashIndexing {
@@ -320,7 +324,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		logger.Error("Error happened while setting the reward wallet", "err", err)
 	}
 
-	if governance.Params().Policy() == uint64(istanbul.WeightedRandom) {
+	if pset.Policy() == uint64(istanbul.WeightedRandom) {
 		// NewStakingManager is called with proper non-nil parameters
 		reward.NewStakingManager(cn.blockchain, governance, cn.chainDB)
 	}
@@ -478,7 +482,7 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 // APIs returns the collection of RPC services the ethereum package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
 func (s *CN) APIs() []rpc.API {
-	apis, ethAPI := api.GetAPIs(s.APIBackend)
+	apis, ethAPI := api.GetAPIs(s.APIBackend, s.config.DisableUnsafeDebug)
 
 	// Append any APIs exposed explicitly by the consensus engine
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)
@@ -487,12 +491,26 @@ func (s *CN) APIs() []rpc.API {
 	governanceKlayAPI := governance.NewGovernanceKlayAPI(s.governance, s.blockchain)
 	publicGovernanceAPI := governance.NewGovernanceAPI(s.governance)
 	publicDownloaderAPI := downloader.NewPublicDownloaderAPI(s.protocolManager.Downloader(), s.eventMux)
-	tracerAPI := tracers.NewAPI(s.APIBackend)
-	unsafeTracerAPI := tracers.NewUnsafeAPI(s.APIBackend)
+	privateDownloaderAPI := downloader.NewPrivateDownloaderAPI(s.protocolManager.Downloader())
 
 	ethAPI.SetPublicFilterAPI(publicFilterAPI)
 	ethAPI.SetGovernanceKlayAPI(governanceKlayAPI)
 	ethAPI.SetPublicGovernanceAPI(publicGovernanceAPI)
+
+	var tracerAPI *tracers.API
+	if s.config.DisableUnsafeDebug {
+		tracerAPI = tracers.NewAPIUnsafeDisabled(s.APIBackend)
+	} else {
+		tracerAPI = tracers.NewAPI(s.APIBackend)
+		apis = append(apis, []rpc.API{
+			{
+				Namespace: "debug",
+				Version:   "1.0",
+				Service:   NewPrivateDebugAPI(s.chainConfig, s),
+				Public:    false,
+			},
+		}...)
+	}
 
 	// Append all the local APIs and return
 	return append(apis, []rpc.API{
@@ -519,6 +537,10 @@ func (s *CN) APIs() []rpc.API {
 		}, {
 			Namespace: "admin",
 			Version:   "1.0",
+			Service:   privateDownloaderAPI,
+		}, {
+			Namespace: "admin",
+			Version:   "1.0",
 			Service:   NewPrivateAdminAPI(s),
 		}, {
 			Namespace: "debug",
@@ -526,19 +548,9 @@ func (s *CN) APIs() []rpc.API {
 			Service:   NewPublicDebugAPI(s),
 			Public:    false,
 		}, {
-			Namespace: "unsafedebug",
-			Version:   "1.0",
-			Service:   NewPrivateDebugAPI(s.chainConfig, s),
-			Public:    false,
-		}, {
 			Namespace: "debug",
 			Version:   "1.0",
 			Service:   tracerAPI,
-			Public:    false,
-		}, {
-			Namespace: "unsafedebug",
-			Version:   "1.0",
-			Service:   unsafeTracerAPI,
 			Public:    false,
 		}, {
 			Namespace: "net",

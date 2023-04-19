@@ -191,32 +191,32 @@ func prepareContractEngine(t *testing.T, bc *blockchain.BlockChain, addr common.
 	dbm.WriteGovernance(map[string]interface{}{
 		"governance.govparamcontract": addr,
 	}, 0)
-	gov := NewGovernance(dbm)
-	pset, err := gov.ParamsAt(0)
+	gov := NewGovernance(bc.Config(), dbm)
+	pset, err := gov.EffectiveParams(0)
 	require.Nil(t, err)
 	require.Equal(t, addr, pset.GovParamContract())
 
 	gov.SetBlockchain(bc)
 
 	e := NewContractEngine(gov)
-	err = e.UpdateParams()
+	err = e.UpdateParams(bc.CurrentBlock().NumberU64())
 	require.Nil(t, err)
 
 	return e
 }
 
-// TestContractEngine_Params tests if Params() returns the parameters required
+// TestContractEngine_Params tests if CurrentParams() returns the parameters required
 // for generating the next block. That is,
 //
 //	start          setparam       activation-1       end
 //
 // Block |---------------|---------------|---------------|
 //
-//	^               ^               ^
-//	t0              t1              t2
+// ..............^               ^               ^
+// ..............t0              t1              t2
 //
-// At num = activation - 2, Params() = prev
-// At num = activation - 1, Params() = next
+// At num = activation - 2, CurrentParams() = prev
+// At num = activation - 1, CurrentParams() = next
 //
 //	because next is for generating "activation" block
 func TestContractEngine_Params(t *testing.T) {
@@ -229,7 +229,7 @@ func TestContractEngine_Params(t *testing.T) {
 	e := prepareContractEngine(t, sim.BlockChain(), addr)
 
 	var (
-		start      = sim.BlockChain().CurrentHeader().Number.Uint64()
+		start      = sim.BlockChain().CurrentBlock().NumberU64()
 		setparam   = start + 5
 		activation = setparam + 5
 		end        = activation + 5
@@ -256,25 +256,25 @@ func TestContractEngine_Params(t *testing.T) {
 			expected = psetNext
 		}
 
-		assert.Equal(t, expected, e.Params(), "Params() on block %d failed", num)
+		assert.Equal(t, expected, e.CurrentParams(), "CurrentParams() on block %d failed", num)
 		sim.Commit()
-		err := e.UpdateParams()
+		err := e.UpdateParams(sim.BlockChain().CurrentBlock().NumberU64())
 		assert.Nil(t, err)
 	}
 }
 
-// TestContractEngine_ParamsAt tests if ParamsAt(num) returns the parameters
+// TestContractEngine_ParamsAt tests if EffectiveParams(num) returns the parameters
 // required for generating the "num" block. That is,
 //
 //	start          setparam       activation         end
 //
 // Block |---------------|---------------|---------------|
 //
-//	^               ^               ^
-//	t0              t1              t2
+// ..............^               ^               ^
+// ..............t0              t1              t2
 //
-// ParamsAt(activation - 1) = prev
-// ParamsAt(activation)     = next
+// EffectiveParams(activation - 1) = prev
+// EffectiveParams(activation)     = next
 func TestContractEngine_ParamsAt(t *testing.T) {
 	initialParam := map[string][]byte{
 		"istanbul.committeesize": {0xa},
@@ -285,7 +285,7 @@ func TestContractEngine_ParamsAt(t *testing.T) {
 	e := prepareContractEngine(t, sim.BlockChain(), addr)
 
 	var (
-		start      = sim.BlockChain().CurrentHeader().Number.Uint64()
+		start      = sim.BlockChain().CurrentBlock().NumberU64()
 		setparam   = start + 5
 		activation = setparam + 5
 		end        = activation + 5
@@ -313,12 +313,12 @@ func TestContractEngine_ParamsAt(t *testing.T) {
 				expected = psetNext
 			}
 
-			result, _ := e.ParamsAt(iter)
-			assert.Equal(t, expected, result, "ParamsAt(%d) on block %d failed", iter, num)
+			result, _ := e.EffectiveParams(iter)
+			assert.Equal(t, expected, result, "EffectiveParams(%d) on block %d failed", iter, num)
 		}
 
 		sim.Commit()
-		err := e.UpdateParams()
+		err := e.UpdateParams(sim.BlockChain().CurrentBlock().NumberU64())
 		assert.Nil(t, err)
 	}
 }

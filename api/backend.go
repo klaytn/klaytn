@@ -97,7 +97,7 @@ type Backend interface {
 	GetTxLookupInfoAndReceiptInCache(Hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64, *types.Receipt)
 }
 
-func GetAPIs(apiBackend Backend) ([]rpc.API, *EthereumAPI) {
+func GetAPIs(apiBackend Backend, disableUnsafeDebug bool) ([]rpc.API, *EthereumAPI) {
 	nonceLock := new(AddrLocker)
 
 	ethAPI := NewEthereumAPI()
@@ -112,7 +112,7 @@ func GetAPIs(apiBackend Backend) ([]rpc.API, *EthereumAPI) {
 	ethAPI.SetPublicTransactionPoolAPI(publicTransactionPoolAPI)
 	ethAPI.SetPublicAccountAPI(publicAccountAPI)
 
-	return []rpc.API{
+	rpcApi := []rpc.API{
 		{
 			Namespace: "klay",
 			Version:   "1.0",
@@ -139,11 +139,6 @@ func GetAPIs(apiBackend Backend) ([]rpc.API, *EthereumAPI) {
 			Service:   NewPublicDebugAPI(apiBackend),
 			Public:    false,
 		}, {
-			Namespace: "unsafedebug",
-			Version:   "1.0",
-			Service:   NewPrivateDebugAPI(apiBackend),
-			Public:    false,
-		}, {
 			Namespace: "klay",
 			Version:   "1.0",
 			Service:   publicAccountAPI,
@@ -154,5 +149,18 @@ func GetAPIs(apiBackend Backend) ([]rpc.API, *EthereumAPI) {
 			Service:   NewPrivateAccountAPI(apiBackend, nonceLock),
 			Public:    false,
 		},
-	}, ethAPI
+	}
+	privateDebugApi := []rpc.API{
+		{
+			Namespace: "debug",
+			Version:   "1.0",
+			Service:   NewPrivateDebugAPI(apiBackend),
+			Public:    false,
+		},
+	}
+	if !disableUnsafeDebug {
+		rpcApi = append(rpcApi, privateDebugApi...)
+	}
+
+	return rpcApi, ethAPI
 }

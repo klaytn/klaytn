@@ -29,6 +29,7 @@ import (
 	"reflect"
 
 	"github.com/klaytn/klaytn/accounts/abi"
+	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/blockchain/vm"
@@ -470,15 +471,15 @@ func isReverted(err error) bool {
 
 // newRevertError wraps data returned when EVM execution was reverted.
 // Make sure that data is returned when execution reverted situation.
-func newRevertError(data []byte) *revertError {
-	reason, errUnpack := abi.UnpackRevert(data)
+func newRevertError(result *blockchain.ExecutionResult) *revertError {
+	reason, errUnpack := abi.UnpackRevert(result.Revert())
 	err := errors.New("execution reverted")
 	if errUnpack == nil {
 		err = fmt.Errorf("execution reverted: %v", reason)
 	}
 	return &revertError{
 		error:  err,
-		reason: hexutil.Encode(data),
+		reason: hexutil.Encode(result.Revert()),
 	}
 }
 

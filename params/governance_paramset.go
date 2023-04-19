@@ -348,6 +348,19 @@ func NewGovParamSetBytesMap(items map[string][]byte) (*GovParamSet, error) {
 	return p, nil
 }
 
+func NewGovParamSetBytesMapTolerant(items map[string][]byte) *GovParamSet {
+	p := NewGovParamSet()
+
+	for name, value := range items {
+		key, ok := govParamNames[name]
+		if !ok {
+			continue
+		}
+		p.setBytes(key, value) // this may fail but do not care
+	}
+	return p
+}
+
 func NewGovParamSetChainConfig(config *ChainConfig) (*GovParamSet, error) {
 	items := make(map[int]interface{})
 	if config.Istanbul != nil {

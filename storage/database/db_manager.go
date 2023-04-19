@@ -286,6 +286,7 @@ type DBManager interface {
 	// StakingInfo related functions
 	ReadStakingInfo(blockNum uint64) ([]byte, error)
 	WriteStakingInfo(blockNum uint64, stakingInfo []byte) error
+	HasStakingInfo(blockNum uint64) (bool, error)
 
 	// DB migration related function
 	StartDBMigration(DBManager) error
