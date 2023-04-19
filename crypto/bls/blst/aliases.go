@@ -24,9 +24,16 @@ import blst "github.com/supranational/blst/bindings/go"
 // draft-irtf-cfrg-bls-signature-05#2.1.
 // Public keys are points in G1 and signatures are points in G2.
 type (
+	blstScalar             = blst.Scalar
+	blstMessage            = blst.Message
 	blstSecretKey          = blst.SecretKey
 	blstPublicKey          = blst.P1Affine
 	blstSignature          = blst.P2Affine
 	blstAggregatePublicKey = blst.P1Aggregate
 	blstAggregateSignature = blst.P2Aggregate
+)
+
+const (
+	blstScalarBytes = blst.BLST_SCALAR_BYTES
+	blstRandBits    = 64
 )

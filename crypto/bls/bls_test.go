@@ -39,21 +39,51 @@ func TestVerify(t *testing.T) {
 // Test aggregated signature verification for the same message.
 // Usage example: validating aggregated block signature in VerifyHeader()
 func TestAggregateVerify(t *testing.T) {
-	sk1, _ := RandKey()
-	sk2, _ := RandKey()
+	var (
+		sk1, _ = RandKey()
+		sk2, _ = RandKey()
 
-	pkb1 := sk1.PublicKey().Marshal()
-	pkb2 := sk2.PublicKey().Marshal()
+		pkb1 = sk1.PublicKey().Marshal()
+		pkb2 = sk2.PublicKey().Marshal()
+		pkbs = [][]byte{pkb1, pkb2}
 
-	var msg [32]byte
-	sigb1 := Sign(sk1, msg[:]).Marshal()
-	sigb2 := Sign(sk2, msg[:]).Marshal()
+		msg = [32]byte{'a', 'b', 'c'}
 
-	apk, _ := AggregatePublicKeys([][]byte{pkb1, pkb2})
-	asig, _ := AggregateCompressedSignatures([][]byte{sigb1, sigb2})
+		sigb1 = Sign(sk1, msg[:]).Marshal()
+		sigb2 = Sign(sk2, msg[:]).Marshal()
+		sigbs = [][]byte{sigb1, sigb2}
+	)
 
+	apk, _ := AggregatePublicKeys(pkbs)
+	asig, _ := AggregateCompressedSignatures(sigbs)
 	asigb := asig.Marshal()
 	ok, err := VerifySignature(asigb, msg, apk)
+	assert.Nil(t, err)
+	assert.True(t, ok)
+}
+
+// Test aggregated signatrue verification for distinct messages.
+// Usage example: validating BLS registry contract
+func TestMultipleVerify(t *testing.T) {
+	var (
+		sk1, _ = RandKey()
+		sk2, _ = RandKey()
+
+		pkb1 = sk1.PublicKey().Marshal()
+		pkb2 = sk2.PublicKey().Marshal()
+		pkbs = [][]byte{pkb1, pkb2}
+
+		msg1 = [32]byte{'1', '2', '3'}
+		msg2 = [32]byte{'4', '5', '6'}
+		msgs = [][32]byte{msg1, msg2}
+
+		sigb1 = Sign(sk1, msg1[:]).Marshal()
+		sigb2 = Sign(sk2, msg2[:]).Marshal()
+		sigbs = [][]byte{sigb1, sigb2}
+	)
+
+	pks, _ := MultiplePublicKeysFromBytes(pkbs)
+	ok, err := VerifyMultipleSignatures(sigbs, msgs, pks)
 	assert.Nil(t, err)
 	assert.True(t, ok)
 }

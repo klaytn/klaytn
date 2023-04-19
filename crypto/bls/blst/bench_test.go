@@ -177,6 +177,33 @@ func BenchmarkFasAggregateVerify(b *testing.B) {
 	runCached(b, "Cached", fn)
 }
 
+func BenchmarkVerifyMultipleSignatures(b *testing.B) {
+	L := benchAggregateLen
+	tc := generateBenchmarkMaterialMulti(L)
+
+	fn := func() {
+		pks, _ := MultiplePublicKeysFromBytes(tc.pkbs)
+		VerifyMultipleSignatures(tc.sigbs, tc.msgs, pks)
+	}
+	runUncached(b, "Uncached", fn)
+	runCached(b, "Cached", fn)
+}
+
+// For comparison with VerifyMultipleSignatures
+func BenchmarkVerifyMultipleNaive(b *testing.B) {
+	L := benchAggregateLen
+	tc := generateBenchmarkMaterialMulti(L)
+
+	fn := func() {
+		pks, _ := MultiplePublicKeysFromBytes(tc.pkbs)
+		for i := 0; i < L; i++ {
+			VerifySignature(tc.sigbs[i], tc.msgs[i], pks[i])
+		}
+	}
+	runUncached(b, "Uncached", fn)
+	runCached(b, "Cached", fn)
+}
+
 type benchmarkTestCase struct {
 	sks   []types.SecretKey
 	pks   []types.PublicKey
@@ -202,6 +229,39 @@ func generateBenchmarkMaterial(L int) *benchmarkTestCase {
 		sk, _ := RandKey()
 		pk := sk.PublicKey()
 		sig := Sign(sk, tc.msg)
+		tc.sks[i] = sk
+		tc.pks[i] = pk
+		tc.pkbs[i] = pk.Marshal()
+		tc.sigs[i] = sig
+		tc.sigbs[i] = sig.Marshal()
+	}
+	return tc
+}
+
+type benchmarkTestCaseMulti struct {
+	sks   []types.SecretKey
+	pks   []types.PublicKey
+	pkbs  [][]byte
+	msgs  [][32]byte
+	sigs  []types.Signature
+	sigbs [][]byte
+	asig  types.Signature
+}
+
+func generateBenchmarkMaterialMulti(L int) *benchmarkTestCaseMulti {
+	tc := &benchmarkTestCaseMulti{}
+	tc.sks = make([]types.SecretKey, L)
+	tc.pks = make([]types.PublicKey, L)
+	tc.pkbs = make([][]byte, L)
+	tc.msgs = make([][32]byte, L)
+	tc.sigs = make([]types.Signature, L)
+	tc.sigbs = make([][]byte, L)
+
+	for i := 0; i < L; i++ {
+		sk, _ := RandKey()
+		pk := sk.PublicKey()
+		rand.Read(tc.msgs[i][:])
+		sig := Sign(sk, tc.msgs[i][:])
 		tc.sks[i] = sk
 		tc.pks[i] = pk
 		tc.pkbs[i] = pk.Marshal()

@@ -120,3 +120,8 @@ func Sign(sk SecretKey, msg []byte) Signature {
 func VerifySignature(sig []byte, msg [32]byte, pk PublicKey) (bool, error) {
 	return blst.VerifySignature(sig, msg, pk)
 }
+
+// VerifyMultipleSignatures verifies multiple signatures for distinct messages securely.
+func VerifyMultipleSignatures(sigs [][]byte, msgs [][32]byte, pubKeys []PublicKey) (bool, error) {
+	return blst.VerifyMultipleSignatures(sigs, msgs, pubKeys)
+}

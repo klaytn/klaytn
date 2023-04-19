@@ -197,12 +197,18 @@ func TestVerifyMultiple(t *testing.T) {
 		sigb2 = common.FromHex("0xaf1390c3c47acdb37131a51216da683c509fce0e954328a59f93aebda7e4ff974ba208d9a4a2a2389f892a9d418d618418dd7f7a6bc7aa0da999a9d3a5b815bc085e14fd001f6a1948768a3f4afefc8b8240dda329f984cb345c6363272ba4fe")
 		sigb3 = common.FromHex("0xae82747ddeefe4fd64cf9cedb9b04ae3e8a43420cd255e3c7cd06a8d88b7c7f8638543719981c5d16fa3527c468c25f0026704a6951bde891360c7e8d12ddee0559004ccdbe6046b55bae1b257ee97f7cdb955773d7cf29adf3ccbb9975e4eb9")
 
-		sigs   = [][]byte{sigb1, sigb2, sigb3}
-		msgs   = [][32]byte{msg1, msg2, msg3}
-		pks, _ = MultiplePublicKeysFromBytes([][]byte{pkb1, pkb2, pkb3})
+		sigbs   = [][]byte{sigb1, sigb2, sigb3}
+		msgs    = [][32]byte{msg1, msg2, msg3}
+		pks, _  = MultiplePublicKeysFromBytes([][]byte{pkb1, pkb2, pkb3})
+		sigs, _ = MultipleSignaturesFromBytes(sigbs)
 	)
 
-	ok, err := VerifyMultipleSignatures(sigs, msgs, pks)
+	ok, err := VerifyMultipleSignatures(sigbs, msgs, pks)
 	assert.Nil(t, err)
 	assert.True(t, ok)
+
+	// Verify individually
+	assert.True(t, Verify(sigs[0], msgs[0][:], pks[0]))
+	assert.True(t, Verify(sigs[1], msgs[1][:], pks[1]))
+	assert.True(t, Verify(sigs[2], msgs[2][:], pks[2]))
 }

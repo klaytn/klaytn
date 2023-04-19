@@ -17,6 +17,10 @@
 package blst
 
 import (
+	"crypto/rand"
+	"fmt"
+	"sync"
+
 	"github.com/klaytn/klaytn/crypto/bls/types"
 	"github.com/pkg/errors"
 )
@@ -163,6 +167,7 @@ func VerifySignature(sigb []byte, msg [32]byte, pk types.PublicKey) (bool, error
 	return ok, nil
 }
 
+// https://ethresear.ch/t/fast-verification-of-multiple-bls-signatures/5407
 func VerifyMultipleSignatures(sigbs [][]byte, msgs [][32]byte, pks []types.PublicKey) (bool, error) {
 	if len(sigbs) == 0 {
 		return false, nil
@@ -170,13 +175,50 @@ func VerifyMultipleSignatures(sigbs [][]byte, msgs [][32]byte, pks []types.Publi
 	if len(sigbs) != len(msgs) || len(msgs) != len(pks) {
 		return false, errors.Errorf("Unmatched sigs, msgs, pubkeys lengths: %d, %d, %d", len(sigbs), len(msgs), len(pks))
 	}
+	count := len(sigbs)
 
 	// Benefit from cache
 	sigs, err := MultipleSignaturesFromBytes(sigbs)
 	if err != nil {
 		return false, err
 	}
-	_ = sigs
 
-	return false, nil
+	// Convert to blst pointers
+	var (
+		sigPs = make([]*blstSignature, count)
+		pkPs  = make([]*blstPublicKey, count)
+		msgPs = make([]blstMessage, count)
+	)
+	for i := 0; i < len(sigs); i++ {
+		sigPs[i] = sigs[i].(*signature).p
+		pkPs[i] = pks[i].(*publicKey).p
+		msgPs[i] = msgs[i][:]
+	}
+
+	// Supply random source
+	var randErr error
+	randLock := new(sync.Mutex)
+	randFunc := func(outScalar *blstScalar) {
+		var r [blstScalarBytes]byte
+		randLock.Lock()
+		_, err := rand.Read(r[:])
+		randLock.Unlock()
+
+		if err != nil {
+			randErr = err
+		}
+		outScalar.FromBEndian(r[:])
+	}
+
+	dummy := new(blstSignature)
+	sigGroupCheck := false // alreaay checked in MultipleSignaturesFromBytes()
+	pkValidate := false    // alreaay checked in *PublicKeyFromBytes()
+	ok := dummy.MultipleAggregateVerify(
+		sigPs, sigGroupCheck, pkPs, pkValidate, msgPs, types.DomainSeparationTag, randFunc, blstRandBits)
+
+	if randErr != nil {
+		return false, fmt.Errorf("verify aborted: %s", randErr.Error())
+	} else {
+		return ok, nil
+	}
 }
