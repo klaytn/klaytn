@@ -51,7 +51,7 @@ func randomAccount() []byte {
 	rand.Seed(time.Now().UTC().UnixNano())
 
 	var (
-		acc  account.Account
+		acc  account.AccountLH
 		root = randomHash()
 	)
 
@@ -61,7 +61,7 @@ func randomAccount() []byte {
 		acc, _ = genSmartContractAccount(rand.Uint64(), big.NewInt(rand.Int63()), root, emptyCode[:])
 	}
 
-	serializer := account.NewAccountSerializerWithAccount(acc)
+	serializer := account.NewAccountLHSerializerWithAccount(acc)
 	data, _ := rlp.EncodeToBytes(serializer)
 	return data
 }

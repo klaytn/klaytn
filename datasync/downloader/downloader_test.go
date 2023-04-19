@@ -149,7 +149,7 @@ func newTester() *downloadTester {
 		peerMissingStates: make(map[string]map[common.Hash]bool),
 	}
 	tester.stateDb = localdb
-	tester.stateDb.GetMemDB().Put(genesis.Root().Bytes(), []byte{0x00})
+	tester.stateDb.GetMemDB().Put(genesis.Root().ToRootExtHash().Bytes(), []byte{0x00})
 
 	tester.downloader = New(FullSync, tester.stateDb, statedb.NewSyncBloom(1, tester.stateDb.GetMemDB()), new(event.TypeMux), tester, nil, tester.dropPeer, uint64(istanbul.WeightedRandom))
 
@@ -348,7 +348,7 @@ func (dl *downloadTester) CurrentBlock() *types.Block {
 
 	for i := len(dl.ownHashes) - 1; i >= 0; i-- {
 		if block := dl.ownBlocks[dl.ownHashes[i]]; block != nil {
-			if _, err := dl.stateDb.GetMemDB().Get(block.Root().Bytes()); err == nil {
+			if _, err := dl.stateDb.GetMemDB().Get(block.Root().ToRootExtHash().Bytes()); err == nil {
 				return block
 			}
 		}
@@ -373,7 +373,7 @@ func (dl *downloadTester) CurrentFastBlock() *types.Block {
 func (dl *downloadTester) FastSyncCommitHead(hash common.Hash) error {
 	// For now only check that the state trie is correct
 	if block := dl.GetBlockByHash(hash); block != nil {
-		_, err := statedb.NewSecureTrie(block.Root(), statedb.NewDatabase(dl.stateDb))
+		_, err := statedb.NewSecureTrie(block.Root().ToRootExtHash(), statedb.NewDatabase(dl.stateDb))
 		return err
 	}
 	return fmt.Errorf("non existent block: %x", hash[:4])
@@ -430,15 +430,15 @@ func (dl *downloadTester) InsertChain(blocks types.Blocks) (int, error) {
 	for i, block := range blocks {
 		if parent, ok := dl.ownBlocks[block.ParentHash()]; !ok {
 			return i, fmt.Errorf("InsertChain: unknown parent at position %d / %d", i, len(blocks))
-		} else if _, err := dl.stateDb.GetMemDB().Get(parent.Root().Bytes()); err != nil {
-			return i, fmt.Errorf("InsertChain: unknown parent state %x: %v", parent.Root(), err)
+		} else if _, err := dl.stateDb.GetMemDB().Get(parent.Root().ToRootExtHash().Bytes()); err != nil {
+			return i, fmt.Errorf("InsertChain: unknown parent state %x: %v", parent.Root().ToRootExtHash(), err)
 		}
 		if _, ok := dl.ownHeaders[block.Hash()]; !ok {
 			dl.ownHashes = append(dl.ownHashes, block.Hash())
 			dl.ownHeaders[block.Hash()] = block.Header()
 		}
 		dl.ownBlocks[block.Hash()] = block
-		dl.stateDb.GetMemDB().Put(block.Root().Bytes(), []byte{0x00})
+		dl.stateDb.GetMemDB().Put(block.Root().ToRootExtHash().Bytes(), []byte{0x00})
 		dl.ownChainTd[block.Hash()] = new(big.Int).Add(dl.ownChainTd[block.ParentHash()], block.BlockScore())
 	}
 	return len(blocks), nil
@@ -735,8 +735,13 @@ func (dlp *downloadTesterPeer) RequestNodeData(hashes []common.Hash) error {
 	results := make([][]byte, 0, len(hashes))
 	for _, hash := range hashes {
 		if data, err := dlp.dl.peerDb.GetMemDB().Get(hash.Bytes()); err == nil {
+			var tmpData []byte
+
+			tmpNode := statedb.MustDecodeNode(hash.ToRootExtHash().Bytes(), data)
+			tmpData = statedb.ExtHashFilter(tmpNode, data)
+
 			if !dlp.dl.peerMissingStates[dlp.id][hash] {
-				results = append(results, data)
+				results = append(results, tmpData)
 			}
 		}
 	}

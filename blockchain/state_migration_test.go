@@ -75,7 +75,7 @@ func TestBlockChain_migrateState(t *testing.T) {
 
 	// write code while statedb migration
 	expectedCode := []byte{0x60, 0x80, 0x60, 0x40}
-	codeHash := common.BytesToHash(expectedCode)
+	codeHash := common.BytesToHash(expectedCode).ToRootExtHash()
 	chain.stateCache.TrieDB().DiskDB().WriteCode(codeHash, expectedCode)
 
 	for chain.db.InMigration() {

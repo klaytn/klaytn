@@ -32,7 +32,7 @@ import (
 )
 
 func newEmptySecureTrie() *SecureTrie {
-	trie, _ := NewSecureTrie(common.Hash{}, NewDatabase(database.NewMemoryDBManager()))
+	trie, _ := NewSecureTrie(common.InitExtHash(), NewDatabase(database.NewMemoryDBManager()))
 	return trie
 }
 
@@ -41,7 +41,7 @@ func makeTestSecureTrie() (*Database, *SecureTrie, map[string][]byte) {
 	// Create an empty trie
 	triedb := NewDatabase(database.NewMemoryDBManager())
 
-	trie, _ := NewSecureTrie(common.Hash{}, triedb)
+	trie, _ := NewSecureTrie(common.InitExtHash(), triedb)
 
 	// Fill it with some arbitrary data
 	content := make(map[string][]byte)
@@ -89,7 +89,7 @@ func TestSecureDelete(t *testing.T) {
 	}
 	hash := trie.Hash()
 	exp := common.HexToHash("29b235a58c3c25ab83010c327d5932bcf05324b7d6b1185e650798034783ca9d")
-	if hash != exp {
+	if hash.ToHash() != exp {
 		t.Errorf("expected %x got %x", exp, hash)
 	}
 }

@@ -34,7 +34,7 @@ var dumper = spew.ConfigState{Indent: "    "}
 func TestStorageRangeAt(t *testing.T) {
 	// Create a state where account 0x010000... has a few storage entries.
 	var (
-		state, _ = state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil)
+		state, _ = state.New(common.InitExtHash(), state.NewDatabase(database.NewMemoryDBManager()), nil)
 		addr     = common.Address{0x01}
 		keys     = []common.Hash{ // hashes of Keys of storage
 			common.HexToHash("340dd630ad21bf010b4e676dbfa9ba9a02175262d1fa356232cfde6cb5b47ef2"),
@@ -50,7 +50,7 @@ func TestStorageRangeAt(t *testing.T) {
 		}
 	)
 	for _, entry := range storage {
-		state.SetState(addr, *entry.Key, entry.Value)
+		state.SetState(addr, (*entry.Key).ToRootExtHash(), entry.Value.ToRootExtHash())
 	}
 
 	// Check a few combinations of limit and start/end.

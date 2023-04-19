@@ -47,7 +47,7 @@ func (s *StateSuite) TestDump(c *checker.C) {
 	obj1 := s.state.GetOrNewStateObject(toAddr([]byte{0x01}))
 	obj1.AddBalance(big.NewInt(22))
 	obj2 := s.state.GetOrNewSmartContract(toAddr([]byte{0x01, 0x02}))
-	obj2.SetCode(crypto.Keccak256Hash([]byte{3, 3, 3, 3, 3, 3, 3}), []byte{3, 3, 3, 3, 3, 3, 3})
+	obj2.SetCode(crypto.Keccak256Hash([]byte{3, 3, 3, 3, 3, 3, 3}).ToRootExtHash(), []byte{3, 3, 3, 3, 3, 3, 3})
 	obj3 := s.state.GetOrNewStateObject(toAddr([]byte{0x02}))
 	obj3.SetBalance(big.NewInt(44))
 
@@ -94,21 +94,21 @@ func (s *StateSuite) TestDump(c *checker.C) {
 
 func (s *StateSuite) SetUpTest(c *checker.C) {
 	s.db = database.NewMemoryDBManager()
-	s.state, _ = New(common.Hash{}, NewDatabase(s.db), nil)
+	s.state, _ = New(common.InitExtHash(), NewDatabase(s.db), nil)
 }
 
 func (s *StateSuite) TestNull(c *checker.C) {
 	address := common.HexToAddress("0x823140710bf13990e4500136726d8b55")
 	s.state.CreateSmartContractAccount(address, params.CodeFormatEVM, params.Rules{IsIstanbul: true})
 	// value := common.FromHex("0x823140710bf13990e4500136726d8b55")
-	var value common.Hash
+	var value common.ExtHash = common.InitExtHash()
 
-	s.state.SetState(address, common.Hash{}, value)
+	s.state.SetState(address, common.InitExtHash(), value)
 	s.state.Commit(false)
-	if value := s.state.GetState(address, common.Hash{}); value != (common.Hash{}) {
+	if value := s.state.GetState(address, common.InitExtHash()); value.ToHash() != (common.Hash{}) {
 		c.Errorf("expected empty current value, got %x", value)
 	}
-	if value := s.state.GetCommittedState(address, common.Hash{}); value != (common.Hash{}) {
+	if value := s.state.GetCommittedState(address, common.InitExtHash()); value.ToHash() != (common.Hash{}) {
 		c.Errorf("expected empty committed value, got %x", value)
 	}
 }
@@ -117,9 +117,9 @@ func (s *StateSuite) TestNull(c *checker.C) {
 // one after reverting to the state snapshot.
 func (s *StateSuite) TestSnapshot(c *checker.C) {
 	stateobjaddr := toAddr([]byte("aa"))
-	var storageaddr common.Hash
-	data1 := common.BytesToHash([]byte{42})
-	data2 := common.BytesToHash([]byte{43})
+	var storageaddr common.ExtHash = common.InitExtHash()
+	data1 := common.BytesToHash([]byte{42}).ToRootExtHash()
+	data2 := common.BytesToHash([]byte{43}).ToRootExtHash()
 
 	// snapshot the genesis state
 	genesis := s.state.Snapshot()
@@ -133,12 +133,12 @@ func (s *StateSuite) TestSnapshot(c *checker.C) {
 	s.state.RevertToSnapshot(snapshot)
 
 	c.Assert(s.state.GetState(stateobjaddr, storageaddr), checker.DeepEquals, data1)
-	c.Assert(s.state.GetCommittedState(stateobjaddr, storageaddr), checker.DeepEquals, common.Hash{})
+	c.Assert(s.state.GetCommittedState(stateobjaddr, storageaddr), checker.DeepEquals, common.ExtHash{})
 
 	// revert up to the genesis state and ensure correct content
 	s.state.RevertToSnapshot(genesis)
-	c.Assert(s.state.GetState(stateobjaddr, storageaddr), checker.DeepEquals, common.Hash{})
-	c.Assert(s.state.GetCommittedState(stateobjaddr, storageaddr), checker.DeepEquals, common.Hash{})
+	c.Assert(s.state.GetState(stateobjaddr, storageaddr), checker.DeepEquals, common.InitExtHash())
+	c.Assert(s.state.GetCommittedState(stateobjaddr, storageaddr), checker.DeepEquals, common.InitExtHash())
 }
 
 // This test is to check reverting to the empty snapshot.
@@ -151,14 +151,14 @@ func (s *StateSuite) TestSnapshotEmpty(c *checker.C) {
 // This test is to compare deleted/non-deleted stateObject after restoring.
 func TestSnapshotForDeletedObject(t *testing.T) {
 	memDB := database.NewMemoryDBManager()
-	state, _ := New(common.Hash{}, NewDatabase(memDB), nil)
+	state, _ := New(common.InitExtHash(), NewDatabase(memDB), nil)
 
 	stateObjAddr0 := toAddr([]byte("so0"))
 	stateObjAddr1 := toAddr([]byte("so1"))
-	var storageAddr common.Hash
+	var storageAddr common.ExtHash = common.InitExtHash()
 
-	data0 := common.BytesToHash([]byte{17})
-	data1 := common.BytesToHash([]byte{18})
+	data0 := common.BytesToHash([]byte{17}).ToRootExtHash()
+	data1 := common.BytesToHash([]byte{18}).ToRootExtHash()
 
 	state.SetState(stateObjAddr0, storageAddr, data0)
 	state.SetState(stateObjAddr1, storageAddr, data1)
@@ -167,7 +167,7 @@ func TestSnapshotForDeletedObject(t *testing.T) {
 	so0 := state.getStateObject(stateObjAddr0)
 	so0.SetBalance(big.NewInt(42))
 	so0.SetNonce(43)
-	so0.SetCode(crypto.Keccak256Hash([]byte{'c', 'a', 'f', 'e'}), []byte{'c', 'a', 'f', 'e'})
+	so0.SetCode(crypto.Keccak256Hash([]byte{'c', 'a', 'f', 'e'}).ToRootExtHash(), []byte{'c', 'a', 'f', 'e'})
 	so0.suicided = false
 	so0.deleted = false
 	state.setStateObject(so0)
@@ -179,7 +179,7 @@ func TestSnapshotForDeletedObject(t *testing.T) {
 	so1 := state.getStateObject(stateObjAddr1)
 	so1.SetBalance(big.NewInt(52))
 	so1.SetNonce(53)
-	so1.SetCode(crypto.Keccak256Hash([]byte{'c', 'a', 'f', 'e', '2'}), []byte{'c', 'a', 'f', 'e', '2'})
+	so1.SetCode(crypto.Keccak256Hash([]byte{'c', 'a', 'f', 'e', '2'}).ToRootExtHash(), []byte{'c', 'a', 'f', 'e', '2'})
 	so1.suicided = true
 	so1.deleted = true
 	state.setStateObject(so1)
@@ -228,7 +228,7 @@ func compareStateObjects(so0, so1 *stateObject, t *testing.T) {
 		// check the equivalence of storage root only if both are smart contract accounts.
 		t.Errorf("Root mismatch: have %x, want %x", so0ac.GetStorageRoot().Bytes(), so1ac.GetStorageRoot().Bytes())
 	}
-	if !bytes.Equal(so0.CodeHash(), so1.CodeHash()) {
+	if so0.CodeHash().ToHash() != so1.CodeHash().ToHash() {
 		t.Fatalf("CodeHash mismatch: have %v, want %v", so0.CodeHash(), so1.CodeHash())
 	}
 	if !bytes.Equal(so0.code, so1.code) {

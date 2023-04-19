@@ -39,8 +39,8 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
-func genExternallyOwnedAccount(nonce uint64, balance *big.Int) (account.Account, error) {
-	return account.NewAccountWithMap(account.ExternallyOwnedAccountType, map[account.AccountValueKeyType]interface{}{
+func genExternallyOwnedAccount(nonce uint64, balance *big.Int) (account.AccountLH, error) {
+	return account.NewAccountLHWithMap(account.ExternallyOwnedAccountType, map[account.AccountValueKeyType]interface{}{
 		account.AccountValueKeyNonce:         nonce,
 		account.AccountValueKeyBalance:       balance,
 		account.AccountValueKeyHumanReadable: false,
@@ -48,8 +48,8 @@ func genExternallyOwnedAccount(nonce uint64, balance *big.Int) (account.Account,
 	})
 }
 
-func genSmartContractAccount(nonce uint64, balance *big.Int, storageRoot common.Hash, codeHash []byte) (account.Account, error) {
-	return account.NewAccountWithMap(account.SmartContractAccountType, map[account.AccountValueKeyType]interface{}{
+func genSmartContractAccount(nonce uint64, balance *big.Int, storageRoot common.Hash, codeHash []byte) (account.AccountLH, error) {
+	return account.NewAccountLHWithMap(account.SmartContractAccountType, map[account.AccountValueKeyType]interface{}{
 		account.AccountValueKeyNonce:         nonce,
 		account.AccountValueKeyBalance:       balance,
 		account.AccountValueKeyHumanReadable: false,
@@ -68,26 +68,26 @@ func TestGeneration(t *testing.T) {
 		dbm    = database.NewMemoryDBManager()
 		triedb = statedb.NewDatabase(dbm)
 	)
-	stTrie, _ := statedb.NewSecureTrie(common.Hash{}, triedb)
+	stTrie, _ := statedb.NewSecureTrie(common.InitExtHash(), triedb)
 	stTrie.Update([]byte("key-1"), []byte("val-1")) // 0x1314700b81afc49f94db3623ef1df38f3ed18b73a1b7ea2f6c095118cf6118a0
 	stTrie.Update([]byte("key-2"), []byte("val-2")) // 0x18a0f4d79cff4459642dd7604f303886ad9d77c30cf3d7d7cedb3a693ab6d371
 	stTrie.Update([]byte("key-3"), []byte("val-3")) // 0x51c71a47af0695957647fb68766d0becee77e953df17c29b3c2f25436f055c78
 	stTrie.Commit(nil)                              // Root: 0xddefcd9376dd029653ef384bd2f0a126bb755fe84fdcc9e7cf421ba454f2bc67
 
-	accTrie, _ := statedb.NewSecureTrie(common.Hash{}, triedb)
+	accTrie, _ := statedb.NewSecureTrie(common.InitExtHash(), triedb)
 
-	acc1, _ := genSmartContractAccount(0, big.NewInt(1), stTrie.Hash(), emptyCode.Bytes())
-	serializer := account.NewAccountSerializerWithAccount(acc1)
+	acc1, _ := genSmartContractAccount(0, big.NewInt(1), stTrie.Hash().ToHash(), emptyCode.Bytes())
+	serializer := account.NewAccountLHSerializerWithAccount(acc1)
 	val, _ := rlp.EncodeToBytes(serializer)
 	accTrie.Update([]byte("acc-1"), val) // 0x30301e37c9af8ee5f609f1d60a3307d3e113bea03bef203e39aadc46bd5ad5ee
 
 	acc2, _ := genExternallyOwnedAccount(0, big.NewInt(2))
-	serializer2 := account.NewAccountSerializerWithAccount(acc2)
+	serializer2 := account.NewAccountLHSerializerWithAccount(acc2)
 	val, _ = rlp.EncodeToBytes(serializer2)
 	accTrie.Update([]byte("acc-2"), val) // 0x11944b79b322f047379973e18ba21657b8ad4b50ecd94217177bc56f89905228
 
-	acc3, _ := genSmartContractAccount(0, big.NewInt(3), stTrie.Hash(), emptyCode.Bytes())
-	serializer3 := account.NewAccountSerializerWithAccount(acc3)
+	acc3, _ := genSmartContractAccount(0, big.NewInt(3), stTrie.Hash().ToHash(), emptyCode.Bytes())
+	serializer3 := account.NewAccountLHSerializerWithAccount(acc3)
 	val, _ = rlp.EncodeToBytes(serializer3) // 0x8c2477df4801bbf88c6636445a2a9feff54c098cc218df403dc3f1007add780c
 	accTrie.Update([]byte("acc-3"), val)
 
@@ -96,10 +96,10 @@ func TestGeneration(t *testing.T) {
 	// TODO-Klaytn-Snapshot update proper block number
 	triedb.Commit(root, false, 0)
 
-	if have, want := root, common.HexToHash("0x4a651234bc4b8c7462b5ad4eb95bbb724eb636fed72bb5278d886f9ea4c345f8"); have != want {
+	if have, want := root.ToHash(), common.HexToHash("0x4a651234bc4b8c7462b5ad4eb95bbb724eb636fed72bb5278d886f9ea4c345f8"); have != want {
 		t.Fatalf("have %#x want %#x", have, want)
 	}
-	snap := generateSnapshot(dbm, triedb, 16, root)
+	snap := generateSnapshot(dbm, triedb, 16, root.ToHash())
 
 	select {
 	case <-snap.genPending:
@@ -109,7 +109,7 @@ func TestGeneration(t *testing.T) {
 		t.Errorf("Snapshot generation failed")
 	}
 
-	checkSnapRoot(t, snap, root)
+	checkSnapRoot(t, snap, root.ToHash())
 	// Signal abortion to the generator and wait for it to tear down
 	stop := make(chan *generatorStats)
 	snap.genAbort <- stop
@@ -136,15 +136,15 @@ func TestGenerateExistentState(t *testing.T) {
 		diskdb = database.NewMemoryDBManager()
 		triedb = statedb.NewDatabase(diskdb)
 	)
-	stTrie, _ := statedb.NewSecureTrie(common.Hash{}, triedb)
+	stTrie, _ := statedb.NewSecureTrie(common.InitExtHash(), triedb)
 	stTrie.Update([]byte("key-1"), []byte("val-1")) // 0x1314700b81afc49f94db3623ef1df38f3ed18b73a1b7ea2f6c095118cf6118a0
 	stTrie.Update([]byte("key-2"), []byte("val-2")) // 0x18a0f4d79cff4459642dd7604f303886ad9d77c30cf3d7d7cedb3a693ab6d371
 	stTrie.Update([]byte("key-3"), []byte("val-3")) // 0x51c71a47af0695957647fb68766d0becee77e953df17c29b3c2f25436f055c78
 	stTrie.Commit(nil)                              // Root: 0xddefcd9376dd029653ef384bd2f0a126bb755fe84fdcc9e7cf421ba454f2bc67
 
-	accTrie, _ := statedb.NewSecureTrie(common.Hash{}, triedb)
-	acc, _ := genSmartContractAccount(uint64(0), big.NewInt(1), stTrie.Hash(), emptyCode.Bytes())
-	serializer := account.NewAccountSerializerWithAccount(acc)
+	accTrie, _ := statedb.NewSecureTrie(common.InitExtHash(), triedb)
+	acc, _ := genSmartContractAccount(uint64(0), big.NewInt(1), stTrie.Hash().ToHash(), emptyCode.Bytes())
+	serializer := account.NewAccountLHSerializerWithAccount(acc)
 	val, _ := rlp.EncodeToBytes(serializer)
 	accTrie.Update([]byte("acc-1"), val) // 0x9250573b9c18c664139f3b6a7a8081b7d8f8916a8fcc5d94feec6c29f5fd4e9e
 	diskdb.WriteAccountSnapshot(hashData([]byte("acc-1")), val)
@@ -152,15 +152,15 @@ func TestGenerateExistentState(t *testing.T) {
 	diskdb.WriteStorageSnapshot(hashData([]byte("acc-1")), hashData([]byte("key-2")), []byte("val-2"))
 	diskdb.WriteStorageSnapshot(hashData([]byte("acc-1")), hashData([]byte("key-3")), []byte("val-3"))
 
-	acc, _ = genSmartContractAccount(uint64(0), big.NewInt(2), stTrie.Hash(), emptyCode.Bytes())
-	serializer = account.NewAccountSerializerWithAccount(acc)
+	acc, _ = genSmartContractAccount(uint64(0), big.NewInt(2), stTrie.Hash().ToHash(), emptyCode.Bytes())
+	serializer = account.NewAccountLHSerializerWithAccount(acc)
 	val, _ = rlp.EncodeToBytes(serializer)
 	accTrie.Update([]byte("acc-2"), val) // 0x65145f923027566669a1ae5ccac66f945b55ff6eaeb17d2ea8e048b7d381f2d7
 	// diskdb.Put(hashData([]byte("acc-2")).Bytes(), val)
 	diskdb.WriteAccountSnapshot(hashData([]byte("acc-2")), val)
 
-	acc, _ = genSmartContractAccount(uint64(0), big.NewInt(3), stTrie.Hash(), emptyCode.Bytes())
-	serializer = account.NewAccountSerializerWithAccount(acc)
+	acc, _ = genSmartContractAccount(uint64(0), big.NewInt(3), stTrie.Hash().ToHash(), emptyCode.Bytes())
+	serializer = account.NewAccountLHSerializerWithAccount(acc)
 	val, _ = rlp.EncodeToBytes(serializer)
 	accTrie.Update([]byte("acc-3"), val) // 0x50815097425d000edfc8b3a4a13e175fc2bdcfee8bdfbf2d1ff61041d3c235b2
 	diskdb.WriteAccountSnapshot(hashData([]byte("acc-3")), val)
@@ -172,7 +172,7 @@ func TestGenerateExistentState(t *testing.T) {
 	// TODO-Klaytn-Snapshot put proper block number
 	triedb.Commit(root, false, 0)
 
-	snap := generateSnapshot(diskdb, triedb, 16, root)
+	snap := generateSnapshot(diskdb, triedb, 16, root.ToHash())
 	select {
 	case <-snap.genPending:
 		// Snapshot generation succeeded
@@ -180,7 +180,7 @@ func TestGenerateExistentState(t *testing.T) {
 	case <-time.After(3 * time.Second):
 		t.Errorf("Snapshot generation failed")
 	}
-	checkSnapRoot(t, snap, root)
+	checkSnapRoot(t, snap, root.ToHash())
 	// Signal abortion to the generator and wait for it to tear down
 	stop := make(chan *generatorStats)
 	snap.genAbort <- stop
@@ -219,7 +219,7 @@ type testHelper struct {
 func newHelper() *testHelper {
 	diskdb := database.NewMemoryDBManager()
 	triedb := statedb.NewDatabase(diskdb)
-	accTrie, _ := statedb.NewSecureTrie(common.Hash{}, triedb)
+	accTrie, _ := statedb.NewSecureTrie(common.InitExtHash(), triedb)
 	return &testHelper{
 		diskdb:  diskdb,
 		triedb:  triedb,
@@ -227,18 +227,18 @@ func newHelper() *testHelper {
 	}
 }
 
-func (t *testHelper) addTrieAccount(acckey string, acc account.Account) {
-	val, _ := rlp.EncodeToBytes(account.NewAccountSerializerWithAccount(acc))
+func (t *testHelper) addTrieAccount(acckey string, acc account.AccountLH) {
+	val, _ := rlp.EncodeToBytes(account.NewAccountLHSerializerWithAccount(acc))
 	t.accTrie.Update([]byte(acckey), val)
 }
 
-func (t *testHelper) addSnapAccount(acckey string, acc account.Account) {
-	val, _ := rlp.EncodeToBytes(account.NewAccountSerializerWithAccount(acc))
+func (t *testHelper) addSnapAccount(acckey string, acc account.AccountLH) {
+	val, _ := rlp.EncodeToBytes(account.NewAccountLHSerializerWithAccount(acc))
 	key := hashData([]byte(acckey))
 	t.diskdb.WriteAccountSnapshot(key, val)
 }
 
-func (t *testHelper) addAccount(acckey string, acc account.Account) {
+func (t *testHelper) addAccount(acckey string, acc account.AccountLH) {
 	t.addTrieAccount(acckey, acc)
 	t.addSnapAccount(acckey, acc)
 }
@@ -251,20 +251,20 @@ func (t *testHelper) addSnapStorage(accKey string, keys []string, vals []string)
 }
 
 func (t *testHelper) makeStorageTrie(keys []string, vals []string) common.Hash {
-	stTrie, _ := statedb.NewSecureTrie(common.Hash{}, t.triedb)
+	stTrie, _ := statedb.NewSecureTrie(common.InitExtHash(), t.triedb)
 	for i, k := range keys {
 		stTrie.Update([]byte(k), []byte(vals[i]))
 	}
 	root, _ := stTrie.Commit(nil)
-	return root
+	return root.ToHash()
 }
 
 func (t *testHelper) Generate() (common.Hash, *diskLayer) {
 	root, _ := t.accTrie.Commit(nil)
 	// TODO-Klaytn-Snapshot input proper block number
 	t.triedb.Commit(root, false, 0)
-	snap := generateSnapshot(t.diskdb, t.triedb, 16, root)
-	return root, snap
+	snap := generateSnapshot(t.diskdb, t.triedb, 16, root.ToHash())
+	return root.ToHash(), snap
 }
 
 // Tests that snapshot generation with existent flat state, where the flat state
@@ -447,26 +447,26 @@ func TestGenerateCorruptAccountTrie(t *testing.T) {
 		diskdb = database.NewMemoryDBManager()
 		triedb = statedb.NewDatabase(diskdb)
 	)
-	tr, _ := statedb.NewSecureTrie(common.Hash{}, triedb)
+	tr, _ := statedb.NewSecureTrie(common.InitExtHash(), triedb)
 	acc1, _ := genExternallyOwnedAccount(0, big.NewInt(1))
-	serializer1 := account.NewAccountSerializerWithAccount(acc1)
+	serializer1 := account.NewAccountLHSerializerWithAccount(acc1)
 	val, _ := rlp.EncodeToBytes(serializer1)
 	tr.Update([]byte("acc-1"), val) // 0xc7a30f39aff471c95d8a837497ad0e49b65be475cc0953540f80cfcdbdcd9074
 
 	acc2, _ := genExternallyOwnedAccount(0, big.NewInt(2))
-	serializer2 := account.NewAccountSerializerWithAccount(acc2)
+	serializer2 := account.NewAccountLHSerializerWithAccount(acc2)
 	val, _ = rlp.EncodeToBytes(serializer2)
 	tr.Update([]byte("acc-2"), val) // 0x65145f923027566669a1ae5ccac66f945b55ff6eaeb17d2ea8e048b7d381f2d7
 
 	acc3, _ := genExternallyOwnedAccount(0, big.NewInt(3))
-	serializer3 := account.NewAccountSerializerWithAccount(acc3)
+	serializer3 := account.NewAccountLHSerializerWithAccount(acc3)
 	val, _ = rlp.EncodeToBytes(serializer3)
 	tr.Update([]byte("acc-3"), val) // 0x19ead688e907b0fab07176120dceec244a72aff2f0aa51e8b827584e378772f4
 	tr.Commit(nil)                  // Root: 0xa04693ea110a31037fb5ee814308a6f1d76bdab0b11676bdf4541d2de55ba978
 
 	// Delete an account trie leaf and ensure the generator chokes
 	// TODO-Klaytn-Snapshot put propoer block number
-	triedb.Commit(common.HexToHash("0xa04693ea110a31037fb5ee814308a6f1d76bdab0b11676bdf4541d2de55ba978"), false, 0)
+	triedb.Commit(common.HexToHash("0xa04693ea110a31037fb5ee814308a6f1d76bdab0b11676bdf4541d2de55ba978").ToRootExtHash(), false, 0)
 	diskdb.GetMemDB().Delete(common.HexToHash("0x65145f923027566669a1ae5ccac66f945b55ff6eaeb17d2ea8e048b7d381f2d7").Bytes())
 
 	snap := generateSnapshot(diskdb, triedb, 16, common.HexToHash("0xa04693ea110a31037fb5ee814308a6f1d76bdab0b11676bdf4541d2de55ba978"))
@@ -497,38 +497,38 @@ func TestGenerateMissingStorageTrie(t *testing.T) {
 		diskdb = database.NewMemoryDBManager()
 		triedb = statedb.NewDatabase(diskdb)
 	)
-	stTrie, _ := statedb.NewSecureTrie(common.Hash{}, triedb)
+	stTrie, _ := statedb.NewSecureTrie(common.InitExtHash(), triedb)
 	stTrie.Update([]byte("key-1"), []byte("val-1")) // 0x1314700b81afc49f94db3623ef1df38f3ed18b73a1b7ea2f6c095118cf6118a0
 	stTrie.Update([]byte("key-2"), []byte("val-2")) // 0x18a0f4d79cff4459642dd7604f303886ad9d77c30cf3d7d7cedb3a693ab6d371
 	stTrie.Update([]byte("key-3"), []byte("val-3")) // 0x51c71a47af0695957647fb68766d0becee77e953df17c29b3c2f25436f055c78
 	stTrie.Commit(nil)                              // Root: 0xddefcd9376dd029653ef384bd2f0a126bb755fe84fdcc9e7cf421ba454f2bc67
 
-	accTrie, _ := statedb.NewSecureTrie(common.Hash{}, triedb)
-	acc, _ := genSmartContractAccount(0, big.NewInt(1), stTrie.Hash(), emptyCode.Bytes())
-	val, _ := rlp.EncodeToBytes(account.NewAccountSerializerWithAccount(acc))
+	accTrie, _ := statedb.NewSecureTrie(common.InitExtHash(), triedb)
+	acc, _ := genSmartContractAccount(0, big.NewInt(1), stTrie.Hash().ToHash(), emptyCode.Bytes())
+	val, _ := rlp.EncodeToBytes(account.NewAccountLHSerializerWithAccount(acc))
 	accTrie.Update([]byte("acc-1"), val) // 0x30301e37c9af8ee5f609f1d60a3307d3e113bea03bef203e39aadc46bd5ad5ee
 
-	acc, _ = genSmartContractAccount(0, big.NewInt(2), stTrie.Hash(), emptyCode.Bytes())
-	val, _ = rlp.EncodeToBytes(account.NewAccountSerializerWithAccount(acc))
+	acc, _ = genSmartContractAccount(0, big.NewInt(2), stTrie.Hash().ToHash(), emptyCode.Bytes())
+	val, _ = rlp.EncodeToBytes(account.NewAccountLHSerializerWithAccount(acc))
 	accTrie.Update([]byte("acc-2"), val) // 0xff964e27aca3ef5766a7709de6beff44863d539c9af88ab1719865b80a55b6b2
 	t.Log(accTrie.Hash().String())
 
-	acc, _ = genSmartContractAccount(0, big.NewInt(3), stTrie.Hash(), emptyCode.Bytes())
-	val, _ = rlp.EncodeToBytes(account.NewAccountSerializerWithAccount(acc))
+	acc, _ = genSmartContractAccount(0, big.NewInt(3), stTrie.Hash().ToHash(), emptyCode.Bytes())
+	val, _ = rlp.EncodeToBytes(account.NewAccountLHSerializerWithAccount(acc))
 	accTrie.Update([]byte("acc-3"), val) // 0x8c2477df4801bbf88c6636445a2a9feff54c098cc218df403dc3f1007add780c
 	accTrie.Commit(nil)                  // Root: 0xa2282b99de1fc11e32d26bee37707ef49a6978b2d375796a1b026a497193a2ef
 
 	// We can only corrupt the disk database, so flush the tries out
 	triedb.Reference(
-		common.HexToHash("0xddefcd9376dd029653ef384bd2f0a126bb755fe84fdcc9e7cf421ba454f2bc67"),
-		common.HexToHash("0x30301e37c9af8ee5f609f1d60a3307d3e113bea03bef203e39aadc46bd5ad5ee"),
+		common.HexToHash("0xddefcd9376dd029653ef384bd2f0a126bb755fe84fdcc9e7cf421ba454f2bc67").ToRootExtHash(),
+		common.HexToHash("0x30301e37c9af8ee5f609f1d60a3307d3e113bea03bef203e39aadc46bd5ad5ee").ToRootExtHash(),
 	)
 	triedb.Reference(
-		common.HexToHash("0xddefcd9376dd029653ef384bd2f0a126bb755fe84fdcc9e7cf421ba454f2bc67"),
-		common.HexToHash("0x8c2477df4801bbf88c6636445a2a9feff54c098cc218df403dc3f1007add780c"),
+		common.HexToHash("0xddefcd9376dd029653ef384bd2f0a126bb755fe84fdcc9e7cf421ba454f2bc67").ToRootExtHash(),
+		common.HexToHash("0x8c2477df4801bbf88c6636445a2a9feff54c098cc218df403dc3f1007add780c").ToRootExtHash(),
 	)
 	// TODO-Klaytn-Snapshot put proper block number
-	triedb.Commit(common.HexToHash("0xa2282b99de1fc11e32d26bee37707ef49a6978b2d375796a1b026a497193a2ef"), false, 0)
+	triedb.Commit(common.HexToHash("0xa2282b99de1fc11e32d26bee37707ef49a6978b2d375796a1b026a497193a2ef").ToRootExtHash(), false, 0)
 
 	// Delete a storage trie root and ensure the generator chokes
 	diskdb.GetMemDB().Delete(common.HexToHash("0xddefcd9376dd029653ef384bd2f0a126bb755fe84fdcc9e7cf421ba454f2bc67").Bytes())
@@ -558,40 +558,40 @@ func TestGenerateCorruptStorageTrie(t *testing.T) {
 		diskdb = database.NewMemoryDBManager()
 		triedb = statedb.NewDatabase(diskdb)
 	)
-	stTrie, _ := statedb.NewSecureTrie(common.Hash{}, triedb)
+	stTrie, _ := statedb.NewSecureTrie(common.InitExtHash(), triedb)
 	stTrie.Update([]byte("key-1"), []byte("val-1")) // 0x1314700b81afc49f94db3623ef1df38f3ed18b73a1b7ea2f6c095118cf6118a0
 	stTrie.Update([]byte("key-2"), []byte("val-2")) // 0x18a0f4d79cff4459642dd7604f303886ad9d77c30cf3d7d7cedb3a693ab6d371
 	stTrie.Update([]byte("key-3"), []byte("val-3")) // 0x51c71a47af0695957647fb68766d0becee77e953df17c29b3c2f25436f055c78
 	stTrie.Commit(nil)                              // Root: 0xddefcd9376dd029653ef384bd2f0a126bb755fe84fdcc9e7cf421ba454f2bc67
 
-	accTrie, _ := statedb.NewSecureTrie(common.Hash{}, triedb)
-	acc, _ := genSmartContractAccount(0, big.NewInt(1), stTrie.Hash(), emptyCode.Bytes())
-	serializer := account.NewAccountSerializerWithAccount(acc)
+	accTrie, _ := statedb.NewSecureTrie(common.InitExtHash(), triedb)
+	acc, _ := genSmartContractAccount(0, big.NewInt(1), stTrie.Hash().ToHash(), emptyCode.Bytes())
+	serializer := account.NewAccountLHSerializerWithAccount(acc)
 	val, _ := rlp.EncodeToBytes(serializer)
 	accTrie.Update([]byte("acc-1"), val) // 0x30301e37c9af8ee5f609f1d60a3307d3e113bea03bef203e39aadc46bd5ad5ee
 
 	acc, _ = genExternallyOwnedAccount(0, big.NewInt(2))
-	serializer = account.NewAccountSerializerWithAccount(acc)
+	serializer = account.NewAccountLHSerializerWithAccount(acc)
 	val, _ = rlp.EncodeToBytes(serializer)
 	accTrie.Update([]byte("acc-2"), val) // 0x11944b79b322f047379973e18ba21657b8ad4b50ecd94217177bc56f89905228
 
-	acc, _ = genSmartContractAccount(0, big.NewInt(3), stTrie.Hash(), emptyCode.Bytes())
-	serializer = account.NewAccountSerializerWithAccount(acc)
+	acc, _ = genSmartContractAccount(0, big.NewInt(3), stTrie.Hash().ToHash(), emptyCode.Bytes())
+	serializer = account.NewAccountLHSerializerWithAccount(acc)
 	val, _ = rlp.EncodeToBytes(serializer)
 	accTrie.Update([]byte("acc-3"), val) // 0x8c2477df4801bbf88c6636445a2a9feff54c098cc218df403dc3f1007add780c
 	accTrie.Commit(nil)                  // Root: 0x4a651234bc4b8c7462b5ad4eb95bbb724eb636fed72bb5278d886f9ea4c345f8
 
 	// We can only corrupt the disk database, so flush the tries out
 	triedb.Reference(
-		common.HexToHash("0xddefcd9376dd029653ef384bd2f0a126bb755fe84fdcc9e7cf421ba454f2bc67"),
-		common.HexToHash("0x30301e37c9af8ee5f609f1d60a3307d3e113bea03bef203e39aadc46bd5ad5ee"),
+		common.HexToHash("0xddefcd9376dd029653ef384bd2f0a126bb755fe84fdcc9e7cf421ba454f2bc67").ToRootExtHash(),
+		common.HexToHash("0x30301e37c9af8ee5f609f1d60a3307d3e113bea03bef203e39aadc46bd5ad5ee").ToRootExtHash(),
 	)
 	triedb.Reference(
-		common.HexToHash("0xddefcd9376dd029653ef384bd2f0a126bb755fe84fdcc9e7cf421ba454f2bc67"),
-		common.HexToHash("0x8c2477df4801bbf88c6636445a2a9feff54c098cc218df403dc3f1007add780c"),
+		common.HexToHash("0xddefcd9376dd029653ef384bd2f0a126bb755fe84fdcc9e7cf421ba454f2bc67").ToRootExtHash(),
+		common.HexToHash("0x8c2477df4801bbf88c6636445a2a9feff54c098cc218df403dc3f1007add780c").ToRootExtHash(),
 	)
 	// TODO-Klaytn-Snapshot put proper block number
-	triedb.Commit(common.HexToHash("0x4a651234bc4b8c7462b5ad4eb95bbb724eb636fed72bb5278d886f9ea4c345f8"), false, 0)
+	triedb.Commit(common.HexToHash("0x4a651234bc4b8c7462b5ad4eb95bbb724eb636fed72bb5278d886f9ea4c345f8").ToRootExtHash(), false, 0)
 
 	// Delete a storage trie leaf and ensure the generator chokes
 	diskdb.GetMemDB().Delete(common.HexToHash("0x18a0f4d79cff4459642dd7604f303886ad9d77c30cf3d7d7cedb3a693ab6d371").Bytes())
@@ -612,7 +612,7 @@ func TestGenerateCorruptStorageTrie(t *testing.T) {
 }
 
 func getStorageTrie(n int, triedb *statedb.Database) *statedb.SecureTrie {
-	stTrie, _ := statedb.NewSecureTrie(common.Hash{}, triedb)
+	stTrie, _ := statedb.NewSecureTrie(common.InitExtHash(), triedb)
 	for i := 0; i < n; i++ {
 		k := fmt.Sprintf("key-%d", i)
 		v := fmt.Sprintf("val-%d", i)
@@ -629,10 +629,10 @@ func TestGenerateWithExtraAccounts(t *testing.T) {
 		triedb = statedb.NewDatabase(diskdb)
 		stTrie = getStorageTrie(5, triedb)
 	)
-	accTrie, _ := statedb.NewSecureTrie(common.Hash{}, triedb)
+	accTrie, _ := statedb.NewSecureTrie(common.InitExtHash(), triedb)
 	{ // Account one in the trie
-		acc, _ := genSmartContractAccount(0, big.NewInt(1), stTrie.Hash(), emptyCode.Bytes())
-		val, _ := rlp.EncodeToBytes(account.NewAccountSerializerWithAccount(acc))
+		acc, _ := genSmartContractAccount(0, big.NewInt(1), stTrie.Hash().ToHash(), emptyCode.Bytes())
+		val, _ := rlp.EncodeToBytes(account.NewAccountLHSerializerWithAccount(acc))
 		accTrie.Update([]byte("acc-1"), val) // 0xfa43eb0210d32b0013ae744d26ded52489ee3cab4a5bd9128a599135aba7c088
 		// Identical in the snap
 		key := hashData([]byte("acc-1"))
@@ -644,8 +644,8 @@ func TestGenerateWithExtraAccounts(t *testing.T) {
 		diskdb.WriteStorageSnapshot(key, hashData([]byte("key-5")), []byte("val-5"))
 	}
 	{ // Account two exists only in the snapshot
-		acc, _ := genSmartContractAccount(0, big.NewInt(1), stTrie.Hash(), emptyCode.Bytes())
-		val, _ := rlp.EncodeToBytes(account.NewAccountSerializerWithAccount(acc))
+		acc, _ := genSmartContractAccount(0, big.NewInt(1), stTrie.Hash().ToHash(), emptyCode.Bytes())
+		val, _ := rlp.EncodeToBytes(account.NewAccountLHSerializerWithAccount(acc))
 		key := hashData([]byte("acc-2"))
 		diskdb.WriteAccountSnapshot(key, val)
 		diskdb.WriteStorageSnapshot(key, hashData([]byte("b-key-1")), []byte("b-val-1"))
@@ -661,7 +661,7 @@ func TestGenerateWithExtraAccounts(t *testing.T) {
 		t.Fatalf("expected snap storage to exist")
 	}
 
-	snap := generateSnapshot(diskdb, triedb, 16, root)
+	snap := generateSnapshot(diskdb, triedb, 16, root.ToHash())
 	select {
 	case <-snap.genPending:
 		// Snapshot generation succeeded
@@ -669,7 +669,7 @@ func TestGenerateWithExtraAccounts(t *testing.T) {
 	case <-time.After(3 * time.Second):
 		t.Errorf("Snapshot generation failed")
 	}
-	checkSnapRoot(t, snap, root)
+	checkSnapRoot(t, snap, root.ToHash())
 	// Signal abortion to the generator and wait for it to tear down
 	stop := make(chan *generatorStats)
 	snap.genAbort <- stop
@@ -689,10 +689,10 @@ func TestGenerateWithManyExtraAccounts(t *testing.T) {
 		triedb = statedb.NewDatabase(diskdb)
 		stTrie = getStorageTrie(3, triedb)
 	)
-	accTrie, _ := statedb.NewSecureTrie(common.Hash{}, triedb)
+	accTrie, _ := statedb.NewSecureTrie(common.InitExtHash(), triedb)
 	{ // Account one in the trie
-		acc, _ := genSmartContractAccount(0, big.NewInt(1), stTrie.Hash(), emptyCode.Bytes())
-		val, _ := rlp.EncodeToBytes(account.NewAccountSerializerWithAccount(acc))
+		acc, _ := genSmartContractAccount(0, big.NewInt(1), stTrie.Hash().ToHash(), emptyCode.Bytes())
+		val, _ := rlp.EncodeToBytes(account.NewAccountLHSerializerWithAccount(acc))
 		accTrie.Update([]byte("acc-1"), val) // 0xe9ddf05eaf05dbd7c6fb1137e90b4f3b1ed43383aaaa88312de297e304599966
 		// Identical in the snap
 		key := hashData([]byte("acc-1"))
@@ -714,7 +714,7 @@ func TestGenerateWithManyExtraAccounts(t *testing.T) {
 	// TODO-Klaytn-Snapshot put proper block number
 	triedb.Commit(root, false, 0)
 
-	snap := generateSnapshot(diskdb, triedb, 16, root)
+	snap := generateSnapshot(diskdb, triedb, 16, root.ToHash())
 	select {
 	case <-snap.genPending:
 		// Snapshot generation succeeded
@@ -722,7 +722,7 @@ func TestGenerateWithManyExtraAccounts(t *testing.T) {
 	case <-time.After(3 * time.Second):
 		t.Errorf("Snapshot generation failed")
 	}
-	checkSnapRoot(t, snap, root)
+	checkSnapRoot(t, snap, root.ToHash())
 	// Signal abortion to the generator and wait for it to tear down
 	stop := make(chan *generatorStats)
 	snap.genAbort <- stop
@@ -745,10 +745,10 @@ func TestGenerateWithExtraBeforeAndAfter(t *testing.T) {
 		diskdb = database.NewMemoryDBManager()
 		triedb = statedb.NewDatabase(diskdb)
 	)
-	accTrie, _ := statedb.NewTrie(common.Hash{}, triedb)
+	accTrie, _ := statedb.NewTrie(common.InitExtHash(), triedb)
 	{
 		acc, _ := genExternallyOwnedAccount(0, big.NewInt(1))
-		val, _ := rlp.EncodeToBytes(account.NewAccountSerializerWithAccount(acc))
+		val, _ := rlp.EncodeToBytes(account.NewAccountLHSerializerWithAccount(acc))
 		accTrie.Update(common.HexToHash("0x03").Bytes(), val)
 		accTrie.Update(common.HexToHash("0x07").Bytes(), val)
 
@@ -766,7 +766,7 @@ func TestGenerateWithExtraBeforeAndAfter(t *testing.T) {
 	// TODO-Klaytn-Snapshot put proper block number
 	triedb.Commit(root, false, 0)
 
-	snap := generateSnapshot(diskdb, triedb, 16, root)
+	snap := generateSnapshot(diskdb, triedb, 16, root.ToHash())
 	select {
 	case <-snap.genPending:
 		// Snapshot generation succeeded
@@ -774,7 +774,7 @@ func TestGenerateWithExtraBeforeAndAfter(t *testing.T) {
 	case <-time.After(3 * time.Second):
 		t.Errorf("Snapshot generation failed")
 	}
-	checkSnapRoot(t, snap, root)
+	checkSnapRoot(t, snap, root.ToHash())
 	// Signal abortion to the generator and wait for it to tear down
 	stop := make(chan *generatorStats)
 	snap.genAbort <- stop
@@ -790,10 +790,10 @@ func TestGenerateWithMalformedSnapdata(t *testing.T) {
 		diskdb = database.NewMemoryDBManager()
 		triedb = statedb.NewDatabase(diskdb)
 	)
-	accTrie, _ := statedb.NewTrie(common.Hash{}, triedb)
+	accTrie, _ := statedb.NewTrie(common.InitExtHash(), triedb)
 	{
 		acc, _ := genExternallyOwnedAccount(0, big.NewInt(1))
-		val, _ := rlp.EncodeToBytes(account.NewAccountSerializerWithAccount(acc))
+		val, _ := rlp.EncodeToBytes(account.NewAccountLHSerializerWithAccount(acc))
 		accTrie.Update(common.HexToHash("0x03").Bytes(), val)
 
 		junk := make([]byte, 100)
@@ -809,7 +809,7 @@ func TestGenerateWithMalformedSnapdata(t *testing.T) {
 	// TODO-Klaytn-Snapshot put proper block number
 	triedb.Commit(root, false, 0)
 
-	snap := generateSnapshot(diskdb, triedb, 16, root)
+	snap := generateSnapshot(diskdb, triedb, 16, root.ToHash())
 	select {
 	case <-snap.genPending:
 		// Snapshot generation succeeded
@@ -817,7 +817,7 @@ func TestGenerateWithMalformedSnapdata(t *testing.T) {
 	case <-time.After(3 * time.Second):
 		t.Errorf("Snapshot generation failed")
 	}
-	checkSnapRoot(t, snap, root)
+	checkSnapRoot(t, snap, root.ToHash())
 	// Signal abortion to the generator and wait for it to tear down
 	stop := make(chan *generatorStats)
 	snap.genAbort <- stop

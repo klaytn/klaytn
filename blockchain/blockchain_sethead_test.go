@@ -139,17 +139,17 @@ func testSetHead(t *testing.T, tt *rewindTest) {
 		t.Fatalf("Failed to import canonical chain start: %v", err)
 	}
 	if tt.commitBlock > 0 {
-		chain.stateCache.TrieDB().Commit(canonblocks[tt.commitBlock-1].Root(), true, tt.commitBlock)
+		chain.stateCache.TrieDB().Commit(canonblocks[tt.commitBlock-1].Root().ToRootExtHash(), true, tt.commitBlock)
 	}
 	if _, err := chain.InsertChain(canonblocks[tt.commitBlock:]); err != nil {
 		t.Fatalf("Failed to import canonical chain tail: %v", err)
 	}
 	// Manually dereference anything not committed to not have to work with 128+ tries
 	for _, block := range sideblocks {
-		chain.stateCache.TrieDB().Dereference(block.Root())
+		chain.stateCache.TrieDB().Dereference(block.Root().ToRootExtHash())
 	}
 	for _, block := range canonblocks {
-		chain.stateCache.TrieDB().Dereference(block.Root())
+		chain.stateCache.TrieDB().Dereference(block.Root().ToRootExtHash())
 	}
 
 	// Set the head of the chain back to the requested number

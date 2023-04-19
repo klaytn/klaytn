@@ -521,7 +521,7 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 			logger.Info("successfully executed treasury rebalancing (KIP-103)", "memo", string(memo))
 		}
 	}
-  header.Root = state.IntermediateRoot(true).ToHash()
+	header.Root = state.IntermediateRoot(true).ToHash()
 
 	// Assemble and return the final block for sealing
 	return types.NewBlock(header, txs, receipts), nil

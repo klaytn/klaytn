@@ -52,7 +52,7 @@ func genExternallyOwnedAccount(nonce uint64, balance *big.Int) (account.Account,
 	})
 }
 
-func genSmartContractAccount(nonce uint64, balance *big.Int, storageRoot common.Hash, codeHash []byte) (account.Account, error) {
+func genSmartContractAccount(nonce uint64, balance *big.Int, storageRoot common.ExtHash, codeHash []byte) (account.Account, error) {
 	return account.NewAccountWithMap(account.SmartContractAccountType, map[account.AccountValueKeyType]interface{}{
 		account.AccountValueKeyNonce:         nonce,
 		account.AccountValueKeyBalance:       balance,
@@ -635,7 +635,7 @@ func TestSyncBloatedProof(t *testing.T) {
 		return nil
 	}
 	syncer := setupSyncer(source)
-	if err := syncer.Sync(sourceAccountTrie.Hash(), cancel); err == nil {
+	if err := syncer.Sync(sourceAccountTrie.Hash().ToHash(), cancel); err == nil {
 		t.Fatal("No error returned from incomplete/cancelled sync")
 	}
 }
@@ -672,10 +672,10 @@ func TestSync(t *testing.T) {
 		return source
 	}
 	syncer := setupSyncer(mkSource("source"))
-	if err := syncer.Sync(sourceAccountTrie.Hash(), cancel); err != nil {
+	if err := syncer.Sync(sourceAccountTrie.Hash().ToHash(), cancel); err != nil {
 		t.Fatalf("sync failed: %v", err)
 	}
-	verifyTrie(syncer.db, sourceAccountTrie.Hash(), t)
+	verifyTrie(syncer.db, sourceAccountTrie.Hash().ToHash(), t)
 }
 
 // TestSyncTinyTriePanic tests a basic sync with one peer, and a tiny trie. This caused a
@@ -702,11 +702,11 @@ func TestSyncTinyTriePanic(t *testing.T) {
 	}
 	syncer := setupSyncer(mkSource("source"))
 	done := checkStall(t, term)
-	if err := syncer.Sync(sourceAccountTrie.Hash(), cancel); err != nil {
+	if err := syncer.Sync(sourceAccountTrie.Hash().ToHash(), cancel); err != nil {
 		t.Fatalf("sync failed: %v", err)
 	}
 	close(done)
-	verifyTrie(syncer.db, sourceAccountTrie.Hash(), t)
+	verifyTrie(syncer.db, sourceAccountTrie.Hash().ToHash(), t)
 }
 
 // TestMultiSync tests a basic sync with multiple peers
@@ -732,11 +732,11 @@ func TestMultiSync(t *testing.T) {
 	}
 	syncer := setupSyncer(mkSource("sourceA"), mkSource("sourceB"))
 	done := checkStall(t, term)
-	if err := syncer.Sync(sourceAccountTrie.Hash(), cancel); err != nil {
+	if err := syncer.Sync(sourceAccountTrie.Hash().ToHash(), cancel); err != nil {
 		t.Fatalf("sync failed: %v", err)
 	}
 	close(done)
-	verifyTrie(syncer.db, sourceAccountTrie.Hash(), t)
+	verifyTrie(syncer.db, sourceAccountTrie.Hash().ToHash(), t)
 }
 
 // TestSyncWithStorage tests  basic sync using accounts + storage + code
@@ -764,11 +764,11 @@ func TestSyncWithStorage(t *testing.T) {
 	}
 	syncer := setupSyncer(mkSource("sourceA"))
 	done := checkStall(t, term)
-	if err := syncer.Sync(sourceAccountTrie.Hash(), cancel); err != nil {
+	if err := syncer.Sync(sourceAccountTrie.Hash().ToHash(), cancel); err != nil {
 		t.Fatalf("sync failed: %v", err)
 	}
 	close(done)
-	verifyTrie(syncer.db, sourceAccountTrie.Hash(), t)
+	verifyTrie(syncer.db, sourceAccountTrie.Hash().ToHash(), t)
 }
 
 // TestMultiSyncManyUseless contains one good peer, and many which doesn't return anything valuable at all
@@ -812,11 +812,11 @@ func TestMultiSyncManyUseless(t *testing.T) {
 		mkSource("noTrie", true, true, false),
 	)
 	done := checkStall(t, term)
-	if err := syncer.Sync(sourceAccountTrie.Hash(), cancel); err != nil {
+	if err := syncer.Sync(sourceAccountTrie.Hash().ToHash(), cancel); err != nil {
 		t.Fatalf("sync failed: %v", err)
 	}
 	close(done)
-	verifyTrie(syncer.db, sourceAccountTrie.Hash(), t)
+	verifyTrie(syncer.db, sourceAccountTrie.Hash().ToHash(), t)
 }
 
 // TestMultiSyncManyUseless contains one good peer, and many which doesn't return anything valuable at all
@@ -863,11 +863,11 @@ func TestMultiSyncManyUselessWithLowTimeout(t *testing.T) {
 	syncer.rates.OverrideTTLLimit = time.Millisecond
 
 	done := checkStall(t, term)
-	if err := syncer.Sync(sourceAccountTrie.Hash(), cancel); err != nil {
+	if err := syncer.Sync(sourceAccountTrie.Hash().ToHash(), cancel); err != nil {
 		t.Fatalf("sync failed: %v", err)
 	}
 	close(done)
-	verifyTrie(syncer.db, sourceAccountTrie.Hash(), t)
+	verifyTrie(syncer.db, sourceAccountTrie.Hash().ToHash(), t)
 }
 
 // TestMultiSyncManyUnresponsive contains one good peer, and many which doesn't respond at all
@@ -912,11 +912,11 @@ func TestMultiSyncManyUnresponsive(t *testing.T) {
 	syncer.rates.OverrideTTLLimit = time.Millisecond
 
 	done := checkStall(t, term)
-	if err := syncer.Sync(sourceAccountTrie.Hash(), cancel); err != nil {
+	if err := syncer.Sync(sourceAccountTrie.Hash().ToHash(), cancel); err != nil {
 		t.Fatalf("sync failed: %v", err)
 	}
 	close(done)
-	verifyTrie(syncer.db, sourceAccountTrie.Hash(), t)
+	verifyTrie(syncer.db, sourceAccountTrie.Hash().ToHash(), t)
 }
 
 func checkStall(t *testing.T, term func()) chan struct{} {
@@ -960,11 +960,11 @@ func TestSyncBoundaryAccountTrie(t *testing.T) {
 		mkSource("peer-b"),
 	)
 	done := checkStall(t, term)
-	if err := syncer.Sync(sourceAccountTrie.Hash(), cancel); err != nil {
+	if err := syncer.Sync(sourceAccountTrie.Hash().ToHash(), cancel); err != nil {
 		t.Fatalf("sync failed: %v", err)
 	}
 	close(done)
-	verifyTrie(syncer.db, sourceAccountTrie.Hash(), t)
+	verifyTrie(syncer.db, sourceAccountTrie.Hash().ToHash(), t)
 }
 
 // TestSyncNoStorageAndOneCappedPeer tests sync using accounts and no storage, where one peer is
@@ -1001,11 +1001,11 @@ func TestSyncNoStorageAndOneCappedPeer(t *testing.T) {
 		mkSource("capped", true),
 	)
 	done := checkStall(t, term)
-	if err := syncer.Sync(sourceAccountTrie.Hash(), cancel); err != nil {
+	if err := syncer.Sync(sourceAccountTrie.Hash().ToHash(), cancel); err != nil {
 		t.Fatalf("sync failed: %v", err)
 	}
 	close(done)
-	verifyTrie(syncer.db, sourceAccountTrie.Hash(), t)
+	verifyTrie(syncer.db, sourceAccountTrie.Hash().ToHash(), t)
 }
 
 // TestSyncNoStorageAndOneCodeCorruptPeer has one peer which doesn't deliver
@@ -1040,11 +1040,11 @@ func TestSyncNoStorageAndOneCodeCorruptPeer(t *testing.T) {
 		mkSource("corrupt", corruptCodeRequestHandler),
 	)
 	done := checkStall(t, term)
-	if err := syncer.Sync(sourceAccountTrie.Hash(), cancel); err != nil {
+	if err := syncer.Sync(sourceAccountTrie.Hash().ToHash(), cancel); err != nil {
 		t.Fatalf("sync failed: %v", err)
 	}
 	close(done)
-	verifyTrie(syncer.db, sourceAccountTrie.Hash(), t)
+	verifyTrie(syncer.db, sourceAccountTrie.Hash().ToHash(), t)
 }
 
 func TestSyncNoStorageAndOneAccountCorruptPeer(t *testing.T) {
@@ -1077,11 +1077,11 @@ func TestSyncNoStorageAndOneAccountCorruptPeer(t *testing.T) {
 		mkSource("corrupt", corruptAccountRequestHandler),
 	)
 	done := checkStall(t, term)
-	if err := syncer.Sync(sourceAccountTrie.Hash(), cancel); err != nil {
+	if err := syncer.Sync(sourceAccountTrie.Hash().ToHash(), cancel); err != nil {
 		t.Fatalf("sync failed: %v", err)
 	}
 	close(done)
-	verifyTrie(syncer.db, sourceAccountTrie.Hash(), t)
+	verifyTrie(syncer.db, sourceAccountTrie.Hash().ToHash(), t)
 }
 
 // TestSyncNoStorageAndOneCodeCappedPeer has one peer which delivers code hashes
@@ -1117,7 +1117,7 @@ func TestSyncNoStorageAndOneCodeCappedPeer(t *testing.T) {
 		}),
 	)
 	done := checkStall(t, term)
-	if err := syncer.Sync(sourceAccountTrie.Hash(), cancel); err != nil {
+	if err := syncer.Sync(sourceAccountTrie.Hash().ToHash(), cancel); err != nil {
 		t.Fatalf("sync failed: %v", err)
 	}
 	close(done)
@@ -1129,7 +1129,7 @@ func TestSyncNoStorageAndOneCodeCappedPeer(t *testing.T) {
 	if threshold := 100; counter > threshold {
 		t.Fatalf("Error, expected < %d invocations, got %d", threshold, counter)
 	}
-	verifyTrie(syncer.db, sourceAccountTrie.Hash(), t)
+	verifyTrie(syncer.db, sourceAccountTrie.Hash().ToHash(), t)
 }
 
 // TestSyncBoundaryStorageTrie tests sync against a few normal peers, but the
@@ -1161,11 +1161,11 @@ func TestSyncBoundaryStorageTrie(t *testing.T) {
 		mkSource("peer-b"),
 	)
 	done := checkStall(t, term)
-	if err := syncer.Sync(sourceAccountTrie.Hash(), cancel); err != nil {
+	if err := syncer.Sync(sourceAccountTrie.Hash().ToHash(), cancel); err != nil {
 		t.Fatalf("sync failed: %v", err)
 	}
 	close(done)
-	verifyTrie(syncer.db, sourceAccountTrie.Hash(), t)
+	verifyTrie(syncer.db, sourceAccountTrie.Hash().ToHash(), t)
 }
 
 // TestSyncWithStorageAndOneCappedPeer tests sync using accounts + storage, where one peer is
@@ -1202,11 +1202,11 @@ func TestSyncWithStorageAndOneCappedPeer(t *testing.T) {
 		mkSource("slow", true),
 	)
 	done := checkStall(t, term)
-	if err := syncer.Sync(sourceAccountTrie.Hash(), cancel); err != nil {
+	if err := syncer.Sync(sourceAccountTrie.Hash().ToHash(), cancel); err != nil {
 		t.Fatalf("sync failed: %v", err)
 	}
 	close(done)
-	verifyTrie(syncer.db, sourceAccountTrie.Hash(), t)
+	verifyTrie(syncer.db, sourceAccountTrie.Hash().ToHash(), t)
 }
 
 // TestSyncWithStorageAndCorruptPeer tests sync using accounts + storage, where one peer is
@@ -1242,11 +1242,11 @@ func TestSyncWithStorageAndCorruptPeer(t *testing.T) {
 		mkSource("corrupt", corruptStorageRequestHandler),
 	)
 	done := checkStall(t, term)
-	if err := syncer.Sync(sourceAccountTrie.Hash(), cancel); err != nil {
+	if err := syncer.Sync(sourceAccountTrie.Hash().ToHash(), cancel); err != nil {
 		t.Fatalf("sync failed: %v", err)
 	}
 	close(done)
-	verifyTrie(syncer.db, sourceAccountTrie.Hash(), t)
+	verifyTrie(syncer.db, sourceAccountTrie.Hash().ToHash(), t)
 }
 
 func TestSyncWithStorageAndNonProvingPeer(t *testing.T) {
@@ -1279,11 +1279,11 @@ func TestSyncWithStorageAndNonProvingPeer(t *testing.T) {
 		mkSource("corrupt", noProofStorageRequestHandler),
 	)
 	done := checkStall(t, term)
-	if err := syncer.Sync(sourceAccountTrie.Hash(), cancel); err != nil {
+	if err := syncer.Sync(sourceAccountTrie.Hash().ToHash(), cancel); err != nil {
 		t.Fatalf("sync failed: %v", err)
 	}
 	close(done)
-	verifyTrie(syncer.db, sourceAccountTrie.Hash(), t)
+	verifyTrie(syncer.db, sourceAccountTrie.Hash().ToHash(), t)
 }
 
 // TestSyncWithStorageMisbehavingProve tests basic sync using accounts + storage + code, against
@@ -1313,10 +1313,10 @@ func TestSyncWithStorageMisbehavingProve(t *testing.T) {
 		return source
 	}
 	syncer := setupSyncer(mkSource("sourceA"))
-	if err := syncer.Sync(sourceAccountTrie.Hash(), cancel); err != nil {
+	if err := syncer.Sync(sourceAccountTrie.Hash().ToHash(), cancel); err != nil {
 		t.Fatalf("sync failed: %v", err)
 	}
-	verifyTrie(syncer.db, sourceAccountTrie.Hash(), t)
+	verifyTrie(syncer.db, sourceAccountTrie.Hash().ToHash(), t)
 }
 
 type kv struct {
@@ -1369,7 +1369,7 @@ func getCodeByHash(hash common.Hash) []byte {
 // makeAccountTrieNoStorage spits out a trie, along with the leafs
 func makeAccountTrieNoStorage(n int) (*statedb.Trie, entrySlice) {
 	db := statedb.NewDatabase(database.NewMemoryDBManager())
-	accTrie, _ := statedb.NewTrie(common.Hash{}, db)
+	accTrie, _ := statedb.NewTrie(common.InitExtHash(), db)
 	var entries entrySlice
 	for i := uint64(1); i <= uint64(n); i++ {
 		acc, _ := genExternallyOwnedAccount(i, big.NewInt(int64(i)))
@@ -1394,7 +1394,7 @@ func makeBoundaryAccountTrie(n int) (*statedb.Trie, entrySlice) {
 		boundaries []common.Hash
 
 		db      = statedb.NewDatabase(database.NewMemoryDBManager())
-		trie, _ = statedb.NewTrie(common.Hash{}, db)
+		trie, _ = statedb.NewTrie(common.InitExtHash(), db)
 	)
 	// Initialize boundaries
 	var next common.Hash
@@ -1414,7 +1414,7 @@ func makeBoundaryAccountTrie(n int) (*statedb.Trie, entrySlice) {
 	}
 	// Fill boundary accounts
 	for i := 0; i < len(boundaries); i++ {
-		acc, _ := genSmartContractAccount(uint64(0), big.NewInt(int64(i)), emptyRoot, getCodeHash(uint64(i)))
+		acc, _ := genSmartContractAccount(uint64(0), big.NewInt(int64(i)), emptyRoot.ToRootExtHash(), getCodeHash(uint64(i)))
 		serializer := account.NewAccountSerializerWithAccount(acc)
 		value, _ := rlp.EncodeToBytes(serializer)
 		elem := &kv{boundaries[i].Bytes(), value}
@@ -1423,7 +1423,7 @@ func makeBoundaryAccountTrie(n int) (*statedb.Trie, entrySlice) {
 	}
 	// Fill other accounts if required
 	for i := uint64(1); i <= uint64(n); i++ {
-		acc, _ := genSmartContractAccount(i, big.NewInt(int64(i)), emptyRoot, getCodeHash(i))
+		acc, _ := genSmartContractAccount(i, big.NewInt(int64(i)), emptyRoot.ToRootExtHash(), getCodeHash(i))
 		serializer := account.NewAccountSerializerWithAccount(acc)
 		value, _ := rlp.EncodeToBytes(serializer)
 		elem := &kv{key32(i), value}
@@ -1440,7 +1440,7 @@ func makeBoundaryAccountTrie(n int) (*statedb.Trie, entrySlice) {
 func makeAccountTrieWithStorageWithUniqueStorage(accounts, slots int, code bool) (*statedb.Trie, entrySlice, map[common.Hash]*statedb.Trie, map[common.Hash]entrySlice) {
 	var (
 		db             = statedb.NewDatabase(database.NewMemoryDBManager())
-		accTrie, _     = statedb.NewTrie(common.Hash{}, db)
+		accTrie, _     = statedb.NewTrie(common.InitExtHash(), db)
 		entries        entrySlice
 		storageTries   = make(map[common.Hash]*statedb.Trie)
 		storageEntries = make(map[common.Hash]entrySlice)
@@ -1476,7 +1476,7 @@ func makeAccountTrieWithStorageWithUniqueStorage(accounts, slots int, code bool)
 func makeAccountTrieWithStorage(accounts, slots int, code, boundary bool) (*statedb.Trie, entrySlice, map[common.Hash]*statedb.Trie, map[common.Hash]entrySlice) {
 	var (
 		db             = statedb.NewDatabase(database.NewMemoryDBManager())
-		accTrie, _     = statedb.NewTrie(common.Hash{}, db)
+		accTrie, _     = statedb.NewTrie(common.InitExtHash(), db)
 		entries        entrySlice
 		storageTries   = make(map[common.Hash]*statedb.Trie)
 		storageEntries = make(map[common.Hash]entrySlice)
@@ -1520,7 +1520,7 @@ func makeAccountTrieWithStorage(accounts, slots int, code, boundary bool) (*stat
 // not-yet-committed trie and the sorted entries. The seeds can be used to ensure
 // that tries are unique.
 func makeStorageTrieWithSeed(n, seed uint64, db *statedb.Database) (*statedb.Trie, entrySlice) {
-	trie, _ := statedb.NewTrie(common.Hash{}, db)
+	trie, _ := statedb.NewTrie(common.InitExtHash(), db)
 	var entries entrySlice
 	for i := uint64(1); i <= n; i++ {
 		// store 'x' at slot 'x'
@@ -1546,7 +1546,7 @@ func makeBoundaryStorageTrie(n int, db *statedb.Database) (*statedb.Trie, entryS
 	var (
 		entries    entrySlice
 		boundaries []common.Hash
-		trie, _    = statedb.NewTrie(common.Hash{}, db)
+		trie, _    = statedb.NewTrie(common.InitExtHash(), db)
 	)
 	// Initialize boundaries
 	var next common.Hash
@@ -1593,7 +1593,7 @@ func makeBoundaryStorageTrie(n int, db *statedb.Database) (*statedb.Trie, entryS
 func verifyTrie(db database.DBManager, root common.Hash, t *testing.T) {
 	t.Helper()
 	triedb := statedb.NewDatabase(db)
-	accTrie, err := statedb.NewTrie(root, triedb)
+	accTrie, err := statedb.NewTrie(root.ToRootExtHash(), triedb)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1601,13 +1601,16 @@ func verifyTrie(db database.DBManager, root common.Hash, t *testing.T) {
 	accIt := statedb.NewIterator(accTrie.NodeIterator(nil))
 	for accIt.Next() {
 		serializer := account.NewAccountSerializer()
-		if err := rlp.DecodeBytes(accIt.Value, serializer); err != nil {
+		serializerLH := account.NewAccountLHSerializer()
+		if err := rlp.DecodeBytes(accIt.Value, serializerLH); err == nil {
+			serializer = serializerLH.TransCopy()
+		} else if err := rlp.DecodeBytes(accIt.Value, serializer); err != nil {
 			logger.Crit("Invalid account encountered during snapshot creation", "err", err)
 		}
 		acc := serializer.GetAccount()
 		pacc := account.GetProgramAccount(acc)
 		accounts++
-		if pacc != nil && pacc.GetStorageRoot() != emptyRoot {
+		if pacc != nil && pacc.GetStorageRoot().ToHash() != emptyRoot {
 			storeTrie, err := statedb.NewSecureTrie(pacc.GetStorageRoot(), triedb)
 			if err != nil {
 				t.Fatal(err)
@@ -1654,10 +1657,10 @@ func TestSyncAccountPerformance(t *testing.T) {
 	}
 	src := mkSource("source")
 	syncer := setupSyncer(src)
-	if err := syncer.Sync(sourceAccountTrie.Hash(), cancel); err != nil {
+	if err := syncer.Sync(sourceAccountTrie.Hash().ToHash(), cancel); err != nil {
 		t.Fatalf("sync failed: %v", err)
 	}
-	verifyTrie(syncer.db, sourceAccountTrie.Hash(), t)
+	verifyTrie(syncer.db, sourceAccountTrie.Hash().ToHash(), t)
 	// The trie root will always be requested, since it is added when the snap
 	// sync cycle starts. When popping the queue, we do not look it up again.
 	// Doing so would bring this number down to zero in this artificial testcase,

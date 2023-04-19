@@ -166,7 +166,7 @@ func TestNodeDataRequestMsg(t *testing.T) {
 		mockCtrl.Finish()
 	}
 	{
-		requestedHashes := []common.Hash{hashes[0], hashes[1]}
+		requestedHashes := []common.ExtHash{hashes[0].ToRootExtHash(), hashes[1].ToRootExtHash()}
 		returnedData := [][]byte{hashes[1][:], hashes[0][:]}
 
 		mockCtrl, mockBlockChain, mockPeer, pm := prepareBlockChain(t)

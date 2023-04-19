@@ -42,14 +42,14 @@ type testAccount struct {
 	balance    *big.Int
 	nonce      uint64
 	code       []byte
-	storageMap map[common.Hash]common.Hash
+	storageMap map[common.ExtHash]common.ExtHash
 }
 
 // makeTestState create a sample test state to test node-wise reconstruction.
-func makeTestState(t *testing.T) (Database, common.Hash, []*testAccount) {
+func makeTestState(t *testing.T) (Database, common.ExtHash, []*testAccount) {
 	// Create an empty state
 	db := NewDatabase(database.NewMemoryDBManager())
-	statedb, err := New(common.Hash{}, db, nil)
+	statedb, err := New(common.InitExtHash(), db, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -60,7 +60,7 @@ func makeTestState(t *testing.T) (Database, common.Hash, []*testAccount) {
 		var obj *stateObject
 		acc := &testAccount{
 			address:    common.BytesToAddress([]byte{i}),
-			storageMap: make(map[common.Hash]common.Hash),
+			storageMap: make(map[common.ExtHash]common.ExtHash),
 		}
 
 		if i%3 > 0 {
@@ -68,17 +68,17 @@ func makeTestState(t *testing.T) (Database, common.Hash, []*testAccount) {
 		} else {
 			obj = statedb.GetOrNewSmartContract(common.BytesToAddress([]byte{i}))
 
-			obj.SetCode(crypto.Keccak256Hash([]byte{i, i, i, i, i}), []byte{i, i, i, i, i})
+			obj.SetCode(crypto.Keccak256Hash([]byte{i, i, i, i, i}).ToRootExtHash(), []byte{i, i, i, i, i})
 			acc.code = []byte{i, i, i, i, i}
 			if i == 0 {
 				// to test emptyCodeHash
-				obj.SetCode(crypto.Keccak256Hash([]byte{}), []byte{})
+				obj.SetCode(crypto.Keccak256Hash([]byte{}).ToRootExtHash(), []byte{})
 				acc.code = []byte{}
 			}
 
 			for j := 0; j < int(i)%10; j++ {
-				key := common.Hash{i + byte(j)}
-				value := common.Hash{i*2 + 1}
+				key := common.Hash{i + byte(j)}.ToRootExtHash()
+				value := common.Hash{i*2 + 1}.ToRootExtHash()
 				acc.storageMap[key] = value
 
 				obj.SetState(db, key, value)
@@ -106,7 +106,7 @@ func makeTestState(t *testing.T) (Database, common.Hash, []*testAccount) {
 
 // checkStateAccounts cross references a reconstructed state with an expected
 // account array.
-func checkStateAccounts(t *testing.T, newDB database.DBManager, root common.Hash, accounts []*testAccount) {
+func checkStateAccounts(t *testing.T, newDB database.DBManager, root common.ExtHash, accounts []*testAccount) {
 	// Check root availability and state contents
 	state, err := New(root, NewDatabase(newDB), nil)
 	if err != nil {
@@ -129,15 +129,15 @@ func checkStateAccounts(t *testing.T, newDB database.DBManager, root common.Hash
 		// check storage trie
 		st := state.StorageTrie(acc.address)
 		it := statedb.NewIterator(st.NodeIterator(nil))
-		storageMapWithHashedKey := make(map[common.Hash]common.Hash)
+		storageMapWithHashedKey := make(map[common.ExtHash]common.ExtHash)
 		for it.Next() {
-			storageMapWithHashedKey[common.BytesToHash(it.Key)] = common.BytesToHash(it.Value)
+			storageMapWithHashedKey[common.BytesToHash(it.Key).ToRootExtHash()] = common.BytesToHash(it.Value).ToRootExtHash()
 		}
 		if len(storageMapWithHashedKey) != len(acc.storageMap) {
 			t.Errorf("account %d: stroage trie number mismatch: have %x, want %x", i, len(storageMapWithHashedKey), len(acc.storageMap))
 		}
 		for key, value := range acc.storageMap {
-			hk := crypto.Keccak256Hash(key[:])
+			hk := crypto.Keccak256Hash(key[:common.HashLength]).ToRootExtHash()
 			if storageMapWithHashedKey[hk] != value {
 				t.Errorf("account %d: stroage trie (%v) mismatch: have %x, want %x", i, key.String(), acc.storageMap[key], value)
 			}
@@ -150,7 +150,7 @@ func checkTrieConsistency(db database.DBManager, root common.Hash) error {
 	if v, _ := db.ReadStateTrieNode(root[:]); v == nil {
 		return nil // Consider a non existent state consistent.
 	}
-	trie, err := statedb.NewTrie(root, statedb.NewDatabase(db))
+	trie, err := statedb.NewTrie(root.ToRootExtHash(), statedb.NewDatabase(db))
 	if err != nil {
 		return err
 	}
@@ -161,9 +161,9 @@ func checkTrieConsistency(db database.DBManager, root common.Hash) error {
 }
 
 // checkStateConsistency checks that all data of a state root is present.
-func checkStateConsistency(db database.DBManager, root common.Hash) error {
+func checkStateConsistency(db database.DBManager, root common.ExtHash) error {
 	// Create and iterate a state trie rooted in a sub-node
-	if _, err := db.ReadStateTrieNode(root.Bytes()); err != nil {
+	if _, err := db.ReadStateTrieNode(root.ToHash().Bytes()); err != nil {
 		return nil // Consider a non existent state consistent.
 	}
 	state, err := New(root, NewDatabase(db), nil)
@@ -257,11 +257,11 @@ func testIterativeStateSync(t *testing.T, count int, commit bool, bypath bool) {
 	// Create a destination state and sync with the scheduler
 	dstDiskDb := database.NewMemoryDBManager()
 	dstState := NewDatabase(dstDiskDb)
-	sched := NewStateSync(srcRoot, dstDiskDb, statedb.NewSyncBloom(1, dstDiskDb.GetMemDB()), nil, nil)
+	sched := NewStateSync(srcRoot.ToHash(), dstDiskDb, statedb.NewSyncBloom(1, dstDiskDb.GetMemDB()), nil, nil)
 
 	nodes, paths, codes := sched.Missing(count)
 	var (
-		hashQueue []common.Hash
+		hashQueue []common.ExtHash
 		pathQueue []statedb.SyncPath
 	)
 	if !bypath {
@@ -288,7 +288,8 @@ func testIterativeStateSync(t *testing.T, count int, commit bool, bypath bool) {
 				if err != nil {
 					t.Fatalf("failed to retrieve node data for path %x: %v", path, err)
 				}
-				results[len(hashQueue)+i] = statedb.SyncResult{Hash: crypto.Keccak256Hash(data), Data: data}
+				tmpData, _ := common.RlpPaddingFilter(data)
+				results[len(hashQueue)+i] = statedb.SyncResult{Hash: crypto.Keccak256Hash(tmpData).ToRootExtHash(), Data: data}
 			} else {
 				serializer := account.NewAccountSerializer()
 				if err := rlp.DecodeBytes(srcTrie.Get(path[0]), serializer); err != nil {
@@ -307,7 +308,8 @@ func testIterativeStateSync(t *testing.T, count int, commit bool, bypath bool) {
 				if err != nil {
 					t.Fatalf("failed to retrieve node data for path %x: %v", path, err)
 				}
-				results[len(hashQueue)+i] = statedb.SyncResult{Hash: crypto.Keccak256Hash(data), Data: data}
+				tmpData, _ := common.RlpPaddingFilter(data)
+				results[len(hashQueue)+i] = statedb.SyncResult{Hash: crypto.Keccak256Hash(tmpData).ToRootExtHash(), Data: data}
 			}
 		}
 		for index, result := range results {
@@ -372,11 +374,11 @@ func TestCheckStateConsistencyMissNode(t *testing.T) {
 	it.Next() // skip trie root node
 
 	for it.Next() {
-		if !common.EmptyHash(it.Hash) {
+		if !common.EmptyHash(it.Hash.ToHash()) {
 			hash := it.Hash
 			var (
 				data []byte
-				code = isCode(hash)
+				code = isCode(hash.ToHash())
 				err  error
 			)
 			srcDiskDB := srcState.TrieDB().DiskDB()
@@ -388,8 +390,8 @@ func TestCheckStateConsistencyMissNode(t *testing.T) {
 				newState.DeleteCode(hash)
 			} else {
 				data, _ = srcDiskDB.ReadCachedTrieNode(hash)
-				srcDiskDB.GetMemDB().Delete(hash[:])
-				newDiskDB.GetMemDB().Delete(hash[:])
+				srcDiskDB.GetMemDB().Delete(hash.ToHash().Bytes())
+				newDiskDB.GetMemDB().Delete(hash.ToHash().Bytes())
 			}
 			// Check consistency : errIterator
 			err = CheckStateConsistency(srcState, newState, srcRoot, 100, nil)
@@ -399,8 +401,8 @@ func TestCheckStateConsistencyMissNode(t *testing.T) {
 			}
 
 			// Recover nodes
-			srcDiskDB.GetMemDB().Put(hash[:], data)
-			newDiskDB.GetMemDB().Put(hash[:], data)
+			srcDiskDB.GetMemDB().Put(hash.ToHash().Bytes(), data)
+			newDiskDB.GetMemDB().Put(hash.ToHash().Bytes(), data)
 		}
 	}
 
@@ -422,10 +424,10 @@ func TestIterativeDelayedStateSync(t *testing.T) {
 	// Create a destination state and sync with the scheduler
 	dstDiskDB := database.NewMemoryDBManager()
 	dstState := NewDatabase(dstDiskDB)
-	sched := NewStateSync(srcRoot, dstDiskDB, statedb.NewSyncBloom(1, dstDiskDB.GetMemDB()), nil, nil)
+	sched := NewStateSync(srcRoot.ToHash(), dstDiskDB, statedb.NewSyncBloom(1, dstDiskDB.GetMemDB()), nil, nil)
 
 	nodes, _, codes := sched.Missing(0)
-	queue := append(append([]common.Hash{}, nodes...), codes...)
+	queue := append(append([]common.ExtHash{}, nodes...), codes...)
 
 	for len(queue) > 0 {
 		// Sync only half of the scheduled nodes
@@ -477,9 +479,9 @@ func testIterativeRandomStateSync(t *testing.T, count int) {
 	// Create a destination state and sync with the scheduler
 	dstDb := database.NewMemoryDBManager()
 	dstState := NewDatabase(dstDb)
-	sched := NewStateSync(srcRoot, dstDb, statedb.NewSyncBloom(1, dstDb.GetMemDB()), nil, nil)
+	sched := NewStateSync(srcRoot.ToHash(), dstDb, statedb.NewSyncBloom(1, dstDb.GetMemDB()), nil, nil)
 
-	queue := make(map[common.Hash]struct{})
+	queue := make(map[common.ExtHash]struct{})
 	nodes, _, codes := sched.Missing(count)
 	for _, hash := range append(nodes, codes...) {
 		queue[hash] = struct{}{}
@@ -508,7 +510,7 @@ func testIterativeRandomStateSync(t *testing.T, count int) {
 			t.Fatalf("failed to commit data: %v", err)
 		}
 		batch.Write()
-		queue = make(map[common.Hash]struct{})
+		queue = make(map[common.ExtHash]struct{})
 		nodes, _, codes := sched.Missing(0)
 		for _, hash := range append(nodes, codes...) {
 			queue[hash] = struct{}{}
@@ -534,9 +536,9 @@ func TestIterativeRandomDelayedStateSync(t *testing.T) {
 	// Create a destination state and sync with the scheduler
 	dstDb := database.NewMemoryDBManager()
 	dstState := NewDatabase(dstDb)
-	sched := NewStateSync(srcRoot, dstDb, statedb.NewSyncBloom(1, dstDb.GetMemDB()), nil, nil)
+	sched := NewStateSync(srcRoot.ToHash(), dstDb, statedb.NewSyncBloom(1, dstDb.GetMemDB()), nil, nil)
 
-	queue := make(map[common.Hash]struct{})
+	queue := make(map[common.ExtHash]struct{})
 	nodes, _, codes := sched.Missing(0)
 	for _, hash := range append(nodes, codes...) {
 		queue[hash] = struct{}{}
@@ -605,17 +607,17 @@ func TestIncompleteStateSync(t *testing.T) {
 		}
 		return false
 	}
-	checkTrieConsistency(srcState.TrieDB().DiskDB().(database.DBManager), srcRoot)
+	checkTrieConsistency(srcState.TrieDB().DiskDB().(database.DBManager), srcRoot.ToHash())
 
 	// Create a destination state and sync with the scheduler
 	dstDb := database.NewMemoryDBManager()
 	dstState := NewDatabase(dstDb)
-	sched := NewStateSync(srcRoot, dstDb, statedb.NewSyncBloom(1, dstDb.GetMemDB()), nil, nil)
+	sched := NewStateSync(srcRoot.ToHash(), dstDb, statedb.NewSyncBloom(1, dstDb.GetMemDB()), nil, nil)
 
-	var added []common.Hash
+	var added []common.ExtHash
 
 	nodes, _, codes := sched.Missing(1)
-	queue := append(append([]common.Hash{}, nodes...), codes...)
+	queue := append(append([]common.ExtHash{}, nodes...), codes...)
 
 	for len(queue) > 0 {
 		// Fetch a batch of state nodes
@@ -646,12 +648,12 @@ func TestIncompleteStateSync(t *testing.T) {
 		}
 		// Check that all known sub-tries added so far are complete or missing entirely.
 		for _, hash := range added {
-			if isCode(hash) {
+			if isCode(hash.ToHash()) {
 				continue
 			}
 			// Can't use checkStateConsistency here because subtrie keys may have odd
 			// length and crash in LeafKey.
-			if err := checkTrieConsistency(dstDb, hash); err != nil {
+			if err := checkTrieConsistency(dstDb, hash.ToHash()); err != nil {
 				t.Fatalf("state inconsistent: %v", err)
 			}
 		}
@@ -663,7 +665,7 @@ func TestIncompleteStateSync(t *testing.T) {
 	for _, node := range added[1:] {
 		var (
 			key  = node.Bytes()
-			code = isCode(node)
+			code = isCode(node.ToHash())
 			val  []byte
 		)
 		if code {
@@ -671,7 +673,7 @@ func TestIncompleteStateSync(t *testing.T) {
 			dstState.DeleteCode(node)
 		} else {
 			val, _ = dstDb.ReadCachedTrieNode(node)
-			dstDb.GetMemDB().Delete(node[:])
+			dstDb.GetMemDB().Delete(node.ToHash().Bytes())
 		}
 
 		if err := checkStateConsistency(dstDb, added[0]); err == nil {
@@ -687,7 +689,7 @@ func TestIncompleteStateSync(t *testing.T) {
 			dstDb.WriteCode(node, val)
 		} else {
 			// insert a trie node to memory database
-			dstDb.GetMemDB().Put(node[:], val)
+			dstDb.GetMemDB().Put(node.ToHash().Bytes(), val)
 		}
 	}
 
