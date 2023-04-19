@@ -161,8 +161,9 @@ func BenchmarkAggregateAndVerify(b *testing.B) {
 	runCached(b, "Cached", fn)
 }
 
+// End-to-end benchmark where all inputs are []byte
 // FastAggregateVerify
-func BenchmarkFasAggregateVerify(b *testing.B) {
+func BenchmarkFastAggregateVerify(b *testing.B) {
 	L := benchAggregateLen
 	tc := generateBenchmarkMaterial(L)
 	asig, _ := AggregateSignatures(tc.sigs)
@@ -177,6 +178,8 @@ func BenchmarkFasAggregateVerify(b *testing.B) {
 	runCached(b, "Cached", fn)
 }
 
+// End-to-end benchmark where all inputs are []byte
+// Distinct messages, VerifyMultipleSignatures
 func BenchmarkVerifyMultipleSignatures(b *testing.B) {
 	L := benchAggregateLen
 	tc := generateBenchmarkMaterialMulti(L)
@@ -189,7 +192,8 @@ func BenchmarkVerifyMultipleSignatures(b *testing.B) {
 	runCached(b, "Cached", fn)
 }
 
-// For comparison with VerifyMultipleSignatures
+// End-to-end benchmark where all inputs are []byte
+// Distinct messages, verify each signature one by one
 func BenchmarkVerifyMultipleNaive(b *testing.B) {
 	L := benchAggregateLen
 	tc := generateBenchmarkMaterialMulti(L)

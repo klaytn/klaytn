@@ -91,7 +91,7 @@ func AggregateMultiplePubkeys(pks []PublicKey) (PublicKey, error) {
 	return blst.AggregatePublicKeys(pks)
 }
 
-// AggregatePublicKeys aggregates multiple BLS signatures.
+// AggregateSignatures aggregates multiple BLS signatures.
 // Assumes that all given signatures are previously validated.
 // Returns error if an empty slice is given.
 func AggregateSignatures(sigs []Signature) (Signature, error) {
