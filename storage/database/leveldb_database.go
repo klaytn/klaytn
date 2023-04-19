@@ -313,35 +313,6 @@ func (db *levelDB) get(key []byte) ([]byte, error) {
 	return dat, nil
 }
 
-func (db *levelDB) getbak(key []byte) ([]byte, error) {
-	dat, err := db.db.Get(key, nil)
-	keyLen := len(key)
-	// oldHash2ExtHash : ExtHash only version code. not coded
-	// <-- Code that reads the hash version of the DB and converts it to the ExtHash version for processing
-	if err != nil && keyLen >= common.ExtHashLength {
-		dat, err = db.db.Get(key[:keyLen-common.ExtPadLength], nil)
-	}
-	// -->
-
-	if err != nil {
-		if keyLen == common.ExtHashLength || keyLen == common.HashLength {
-			if bytes.Equal(key[:common.HashLength], hexDest1) || bytes.Equal(key[:common.HashLength], hexDest2) {
-				// if bytes.Equal(key[:common.HashLength], hexDest1) {
-				return []byte(""), nil
-			}
-		}
-		if fmt.Sprintf("%x", key[:5]) != "6800000000" {
-			fmt.Printf("~~~~~ GET = %x, err = %s\n", key, err.Error())
-		}
-		if err == leveldb.ErrNotFound {
-			//debug.PrintStack()
-			return nil, dataNotFoundErr
-		}
-		return nil, err
-	}
-	return dat, nil
-}
-
 // Delete deletes the key from the queue and database
 func (db *levelDB) Delete(key []byte) error {
 	// Execute the actual operation

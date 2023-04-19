@@ -265,10 +265,12 @@ func (dl *diffLayer) Account(hash common.Hash) (account.Account, error) {
 		return nil, nil
 	}
 	serializer := account.NewAccountSerializer()
-	if err := rlp.DecodeBytes(data, serializer); err != nil {
+	serializerLH := account.NewAccountLHSerializer()
+	if err := rlp.DecodeBytes(data, serializerLH); err == nil {
+		serializer = serializerLH.TransCopy()
+	} else if err := rlp.DecodeBytes(data, serializer); err != nil {
 		panic(err)
 	}
-	//serializer := tmpSerializer.TransCopy()
 	return serializer.GetAccount(), nil
 }
 

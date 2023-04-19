@@ -456,11 +456,11 @@ func TestDBManager_TrieNode(t *testing.T) {
 	for _, dbm := range dbManagers {
 		cachedNode, _ := dbm.ReadCachedTrieNode(hash1.ToRootExtHash())
 		assert.Nil(t, cachedNode)
-		hasStateTrieNode, _ := dbm.HasStateTrieNode(hash1.ToRootExtHash().Bytes())
+		hasStateTrieNode, _ := dbm.HasStateTrieNode(hash1.Bytes())
 		assert.False(t, hasStateTrieNode)
 
 		batch := dbm.NewBatch(StateTrieDB)
-		if err := batch.Put(hash1.ToRootExtHash().Bytes(), hash2[:]); err != nil {
+		if err := batch.Put(hash1.ToRootExtHash().ToHash().Bytes(), hash2[:]); err != nil {
 			t.Fatal("Failed putting a row into the batch", "err", err)
 		}
 		if _, err := WriteBatches(batch); err != nil {
@@ -470,7 +470,7 @@ func TestDBManager_TrieNode(t *testing.T) {
 		cachedNode, _ = dbm.ReadCachedTrieNode(hash1.ToRootExtHash())
 		assert.Equal(t, hash2[:], cachedNode)
 
-		if err := batch.Put(hash1.ToRootExtHash().Bytes(), hash1[:]); err != nil {
+		if err := batch.Put(hash1.ToRootExtHash().ToHash().Bytes(), hash1[:]); err != nil {
 			t.Fatal("Failed putting a row into the batch", "err", err)
 		}
 		if _, err := WriteBatches(batch); err != nil {
@@ -480,10 +480,10 @@ func TestDBManager_TrieNode(t *testing.T) {
 		cachedNode, _ = dbm.ReadCachedTrieNode(hash1.ToRootExtHash())
 		assert.Equal(t, hash1[:], cachedNode)
 
-		stateTrieNode, _ := dbm.ReadStateTrieNode(hash1.ToRootExtHash().Bytes())
+		stateTrieNode, _ := dbm.ReadStateTrieNode(hash1.Bytes())
 		assert.Equal(t, hash1[:], stateTrieNode)
 
-		hasStateTrieNode, _ = dbm.HasStateTrieNode(hash1.ToRootExtHash().Bytes())
+		hasStateTrieNode, _ = dbm.HasStateTrieNode(hash1.Bytes())
 		assert.True(t, hasStateTrieNode)
 
 		if dbm.IsSingle() {
@@ -497,18 +497,18 @@ func TestDBManager_TrieNode(t *testing.T) {
 		assert.Equal(t, hash1[:], cachedNode)
 		assert.Equal(t, hash1[:], oldCachedNode)
 
-		stateTrieNode, _ = dbm.ReadStateTrieNode(hash1.ToRootExtHash().Bytes())
-		oldStateTrieNode, _ := dbm.ReadStateTrieNodeFromOld(hash1.ToRootExtHash().Bytes())
+		stateTrieNode, _ = dbm.ReadStateTrieNode(hash1.Bytes())
+		oldStateTrieNode, _ := dbm.ReadStateTrieNodeFromOld(hash1.Bytes())
 		assert.Equal(t, hash1[:], stateTrieNode)
 		assert.Equal(t, hash1[:], oldStateTrieNode)
 
-		hasStateTrieNode, _ = dbm.HasStateTrieNode(hash1.ToRootExtHash().Bytes())
-		hasOldStateTrieNode, _ := dbm.HasStateTrieNodeFromOld(hash1.ToRootExtHash().Bytes())
+		hasStateTrieNode, _ = dbm.HasStateTrieNode(hash1.Bytes())
+		hasOldStateTrieNode, _ := dbm.HasStateTrieNodeFromOld(hash1.Bytes())
 		assert.True(t, hasStateTrieNode)
 		assert.True(t, hasOldStateTrieNode)
 
 		batch = dbm.NewBatch(StateTrieDB)
-		if err := batch.Put(hash2.ToRootExtHash().Bytes(), hash2[:]); err != nil {
+		if err := batch.Put(hash2.Bytes(), hash2[:]); err != nil {
 			t.Fatal("Failed putting a row into the batch", "err", err)
 		}
 		if _, err := WriteBatches(batch); err != nil {
@@ -520,13 +520,13 @@ func TestDBManager_TrieNode(t *testing.T) {
 		assert.Equal(t, hash2[:], cachedNode)
 		assert.Equal(t, hash2[:], oldCachedNode)
 
-		stateTrieNode, _ = dbm.ReadStateTrieNode(hash2.ToRootExtHash().Bytes())
-		oldStateTrieNode, _ = dbm.ReadStateTrieNodeFromOld(hash2.ToRootExtHash().Bytes())
+		stateTrieNode, _ = dbm.ReadStateTrieNode(hash2.Bytes())
+		oldStateTrieNode, _ = dbm.ReadStateTrieNodeFromOld(hash2.Bytes())
 		assert.Equal(t, hash2[:], stateTrieNode)
 		assert.Equal(t, hash2[:], oldStateTrieNode)
 
-		hasStateTrieNode, _ = dbm.HasStateTrieNode(hash2.ToRootExtHash().Bytes())
-		hasOldStateTrieNode, _ = dbm.HasStateTrieNodeFromOld(hash2.ToRootExtHash().Bytes())
+		hasStateTrieNode, _ = dbm.HasStateTrieNode(hash2.Bytes())
+		hasOldStateTrieNode, _ = dbm.HasStateTrieNodeFromOld(hash2.Bytes())
 		assert.True(t, hasStateTrieNode)
 		assert.True(t, hasOldStateTrieNode)
 

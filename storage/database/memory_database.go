@@ -21,10 +21,7 @@
 package database
 
 import (
-	//"bytes"
 	"errors"
-	"fmt"
-	"runtime/debug"
 	"sort"
 	"strings"
 	"sync"
@@ -82,23 +79,6 @@ func (db *MemDB) Has(key []byte) (bool, error) {
 }
 
 // Get retrieves the given key if it's present in the key-value store.
-func (db *MemDB) Getorg(key []byte) ([]byte, error) {
-	db.lock.RLock()
-	defer db.lock.RUnlock()
-
-	if db.db == nil {
-		return nil, errMemorydbClosed
-	}
-	if entry, ok := db.db[string(key)]; ok {
-		if entry == nil {
-			entry = []byte{}
-		}
-		return common.CopyBytes(entry), nil
-	}
-	return nil, dataNotFoundErr
-}
-
-// Get retrieves the given key if it's present in the key-value store.
 func (db *MemDB) Get(key []byte) ([]byte, error) {
 	db.lock.RLock()
 	defer db.lock.RUnlock()
@@ -110,40 +90,7 @@ func (db *MemDB) Get(key []byte) ([]byte, error) {
 		if entry == nil {
 			entry = []byte{}
 		}
-		if LogFlag {
-			fmt.Printf("~m GET %x, len=%d\n", key, len(entry))
-			if fmt.Sprintf("%x", key)[:10] == "fff1044302" || len(key) > common.ExtHashLength {
-				debug.PrintStack()
-			}
-		}
 		return common.CopyBytes(entry), nil
-		/*} else {
-		keyLen := len(key)
-		if keyLen == common.ExtHashLength || keyLen == common.HashLength {
-			if bytes.Equal(key[:common.HashLength], hexDest1) || bytes.Equal(key[:common.HashLength], hexDest2) {
-				// if bytes.Equal(key[:common.HashLength], hexDest1) {
-				return []byte(""), nil
-			}
-		}*/
-	}
-	/*//if entry, ok := db.db[string(key[1:])]; ok {
-	if entry, ok := db.db[string(key[:len(key)-6])]; ok {
-		if entry == nil {
-			entry = []byte{}
-		}
-		if LogFlag {
-			fmt.Printf("~m GET %x, len=%d\n", key, len(entry))
-		}
-		return common.CopyBytes(entry), nil
-	}*/
-	if LogFlag {
-		fmt.Printf("~m GET %x, err\n", key)
-		//if fmt.Sprintf("%x",key)[:10] ==   "14b292c367" {
-		debug.PrintStack()
-		//}
-		/*if len(key) >= 32 && fmt.Sprintf("%x", key[:5]) != "6800000000" {
-			debug.PrintStack()
-		}*/
 	}
 	return nil, dataNotFoundErr
 }
@@ -152,12 +99,6 @@ func (db *MemDB) Get(key []byte) ([]byte, error) {
 func (db *MemDB) Put(key []byte, value []byte) error {
 	db.lock.Lock()
 	defer db.lock.Unlock()
-	if LogFlag {
-		fmt.Printf("~m PUT %x, len=%d\n", key, len(value))
-		if len(key) == common.ExtHashLength {
-			debug.PrintStack()
-		}
-	}
 
 	if db.db == nil {
 		return errMemorydbClosed
@@ -170,12 +111,6 @@ func (db *MemDB) Put(key []byte, value []byte) error {
 func (db *MemDB) Delete(key []byte) error {
 	db.lock.Lock()
 	defer db.lock.Unlock()
-	if LogFlag {
-		fmt.Printf("~m DEL %x\n", key)
-		if len(key) == common.ExtHashLength {
-			debug.PrintStack()
-		}
-	}
 
 	if db.db == nil {
 		return errMemorydbClosed
@@ -277,13 +212,6 @@ type memBatch struct {
 
 // Put inserts the given value into the batch for later committing.
 func (b *memBatch) Put(key, value []byte) error {
-	if LogFlag {
-		fmt.Printf("~mBPUT %x\n", key)
-		keyLen := len(key)
-		if keyLen == common.ExtHashLength {
-			debug.PrintStack()
-		}
-	}
 	b.writes = append(b.writes, keyvalue{common.CopyBytes(key), common.CopyBytes(value), false})
 	b.size += len(value)
 	return nil
@@ -291,10 +219,6 @@ func (b *memBatch) Put(key, value []byte) error {
 
 // Delete inserts the a key removal into the batch for later committing.
 func (b *memBatch) Delete(key []byte) error {
-	if LogFlag {
-		fmt.Printf("~mBDEL %x\n", key)
-		debug.PrintStack()
-	}
 	b.writes = append(b.writes, keyvalue{common.CopyBytes(key), nil, true})
 	b.size += 1
 	return nil

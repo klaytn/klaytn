@@ -734,7 +734,7 @@ func (dlp *downloadTesterPeer) RequestNodeData(hashes []common.Hash) error {
 
 	results := make([][]byte, 0, len(hashes))
 	for _, hash := range hashes {
-		if data, err := dlp.dl.peerDb.GetMemDB().Get(hash.ToRootExtHash().Bytes()); err == nil {
+		if data, err := dlp.dl.peerDb.GetMemDB().Get(hash.Bytes()); err == nil {
 			var tmpData []byte
 
 			tmpNode := statedb.MustDecodeNode(hash.ToRootExtHash().Bytes(), data)

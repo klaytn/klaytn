@@ -47,7 +47,7 @@ var (
 	ethanDbm              DBManager
 	HeadBlockQ            backupHashQueue
 	FastBlockQ            backupHashQueue
-	LogFlag               bool = false
+	LogFlag               bool = true
 )
 
 type DBManager interface {
