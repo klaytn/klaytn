@@ -32,6 +32,11 @@ var (
 	testBadPublicKeyBytes = common.FromHex("0x8123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef")
 )
 
+func TestPublicKeyCopy(t *testing.T) {
+	pk, _ := PublicKeyFromBytes(testPublicKeyBytes)
+	assert.Equal(t, pk.Marshal(), pk.Copy().Marshal())
+}
+
 func TestPublicKeyFromBytes(t *testing.T) {
 	b := testPublicKeyBytes
 	pk, err := PublicKeyFromBytes(b)

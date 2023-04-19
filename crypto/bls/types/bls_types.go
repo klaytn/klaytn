@@ -61,8 +61,10 @@ type SecretKey interface {
 
 type PublicKey interface {
 	Marshal() []byte
+	Copy() PublicKey
 }
 
 type Signature interface {
 	Marshal() []byte
+	Copy() Signature
 }

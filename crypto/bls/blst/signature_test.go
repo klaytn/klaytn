@@ -32,6 +32,11 @@ var (
 	testBadSignatureBytes = common.FromHex("0x8123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcde0")
 )
 
+func TestSignatureCopy(t *testing.T) {
+	sig, _ := SignatureFromBytes(testSignatureBytes)
+	assert.Equal(t, sig.Marshal(), sig.Copy().Marshal())
+}
+
 func TestSignatureFromBytes(t *testing.T) {
 	b := testSignatureBytes
 	s, err := SignatureFromBytes(b)

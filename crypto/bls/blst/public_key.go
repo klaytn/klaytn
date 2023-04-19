@@ -31,7 +31,7 @@ func PublicKeyFromBytes(b []byte) (types.PublicKey, error) {
 	}
 
 	if pk, ok := publicKeyCache.Get(cacheKey(b)); ok {
-		return pk.(*publicKey), nil
+		return pk.(*publicKey).Copy(), nil
 	}
 
 	p := new(blstPublicKey).Uncompress(b)
@@ -40,7 +40,7 @@ func PublicKeyFromBytes(b []byte) (types.PublicKey, error) {
 	}
 
 	pk := &publicKey{p: p}
-	publicKeyCache.Add(cacheKey(b), pk)
+	publicKeyCache.Add(cacheKey(b), pk.Copy())
 	return pk, nil
 }
 
@@ -60,7 +60,7 @@ func MultiplePublicKeysFromBytes(bs [][]byte) ([]types.PublicKey, error) {
 	var batchBytes [][]byte
 	for i, b := range bs {
 		if pk, ok := publicKeyCache.Get(cacheKey(b)); ok {
-			pks[i] = pk.(*publicKey)
+			pks[i] = pk.(*publicKey).Copy()
 		} else {
 			batchIndices = append(batchIndices, i)
 			batchBytes = append(batchBytes, b)
@@ -83,7 +83,7 @@ func MultiplePublicKeysFromBytes(bs [][]byte) ([]types.PublicKey, error) {
 		}
 
 		pk := &publicKey{p: p}
-		publicKeyCache.Add(cacheKey(b), pk)
+		publicKeyCache.Add(cacheKey(b), pk.Copy())
 		pks[outIdx] = pk
 	}
 
@@ -124,4 +124,9 @@ func AggregatePublicKeysFromBytes(bs [][]byte) (types.PublicKey, error) {
 
 func (pk *publicKey) Marshal() []byte {
 	return pk.p.Compress()
+}
+
+func (pk *publicKey) Copy() types.PublicKey {
+	np := *pk.p
+	return &publicKey{p: &np}
 }

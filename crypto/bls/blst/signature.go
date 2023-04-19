@@ -36,7 +36,7 @@ func SignatureFromBytes(b []byte) (types.Signature, error) {
 	}
 
 	if s, ok := signatureCache.Get(cacheKey(b)); ok {
-		return s.(*signature), nil
+		return s.(*signature).Copy(), nil
 	}
 
 	p := new(blstSignature).Uncompress(b)
@@ -45,7 +45,7 @@ func SignatureFromBytes(b []byte) (types.Signature, error) {
 	}
 
 	s := &signature{p: p}
-	signatureCache.Add(cacheKey(b), s)
+	signatureCache.Add(cacheKey(b), s.Copy())
 	return s, nil
 }
 
@@ -65,7 +65,7 @@ func MultipleSignaturesFromBytes(bs [][]byte) ([]types.Signature, error) {
 	var batchBytes [][]byte
 	for i, b := range bs {
 		if sig, ok := signatureCache.Get(cacheKey(b)); ok {
-			sigs[i] = sig.(*signature)
+			sigs[i] = sig.(*signature).Copy()
 		} else {
 			batchIndices = append(batchIndices, i)
 			batchBytes = append(batchBytes, b)
@@ -88,7 +88,7 @@ func MultipleSignaturesFromBytes(bs [][]byte) ([]types.Signature, error) {
 		}
 
 		sig := &signature{p: p}
-		signatureCache.Add(cacheKey(b), sig)
+		signatureCache.Add(cacheKey(b), sig.Copy())
 		sigs[outIdx] = sig
 	}
 
@@ -129,6 +129,11 @@ func AggregateSignaturesFromBytes(bs [][]byte) (types.Signature, error) {
 
 func (s *signature) Marshal() []byte {
 	return s.p.Compress()
+}
+
+func (s *signature) Copy() types.Signature {
+	np := *s.p
+	return &signature{p: &np}
 }
 
 func Sign(sk types.SecretKey, msg []byte) types.Signature {
