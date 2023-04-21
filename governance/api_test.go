@@ -291,6 +291,7 @@ func (bc *testBlockChain) GetHeaderByNumber(val uint64) *types.Header {
 }
 func (bc *testBlockChain) GetBlockByNumber(num uint64) *types.Block         { return nil }
 func (bc *testBlockChain) StateAt(root common.Hash) (*state.StateDB, error) { return nil, nil }
+func (bc *testBlockChain) State() (*state.StateDB, error)                   { return nil, nil }
 func (bc *testBlockChain) Config() *params.ChainConfig {
 	return bc.config
 }
@@ -307,4 +308,8 @@ func (bc *testBlockChain) CurrentHeader() *types.Header {
 
 func (bc *testBlockChain) SetBlockNum(num uint64) {
 	bc.num = num
+}
+
+func (bc *testBlockChain) GetBlock(hash common.Hash, num uint64) *types.Block {
+	return bc.GetBlockByNumber(num)
 }

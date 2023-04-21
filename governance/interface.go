@@ -107,8 +107,13 @@ type HeaderEngine interface {
 type blockChain interface {
 	blockchain.ChainContext
 
-	CurrentBlock() *types.Block
-	GetHeaderByNumber(val uint64) *types.Header
-	StateAt(root common.Hash) (*state.StateDB, error)
+	// Subset of consensus.ChainReader
 	Config() *params.ChainConfig
+	CurrentHeader() *types.Header
+	GetHeaderByNumber(val uint64) *types.Header
+	GetBlock(hash common.Hash, number uint64) *types.Block
+	State() (*state.StateDB, error)
+
+	CurrentBlock() *types.Block
+	StateAt(root common.Hash) (*state.StateDB, error) // TODO: unused. deleteme
 }
