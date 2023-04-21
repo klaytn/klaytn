@@ -1,16 +1,12 @@
 package backend
 
 import (
-	"context"
 	"errors"
 	"math/big"
 
-	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
-	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/contracts/kip103"
@@ -20,38 +16,6 @@ var (
 	errNotEnoughRetiredBal = errors.New("the sum of retired accounts' balance is smaller than the distributing amount")
 	errNotProperStatus     = errors.New("cannot read a proper status value")
 )
-
-// Kip103ContractCaller is an implementation of contractCaller only for KIP-103.
-// The caller interacts with a KIP-103 contract on a read only basis.
-type Kip103ContractCaller struct {
-	state  *state.StateDB        // the state that is under process
-	chain  consensus.ChainReader // chain containing the blockchain information
-	header *types.Header         // the header of a new block that is under process
-}
-
-func (caller *Kip103ContractCaller) CodeAt(ctx context.Context, contract common.Address, blockNumber *big.Int) ([]byte, error) {
-	return caller.state.GetCode(contract), nil
-}
-
-func (caller *Kip103ContractCaller) CallContract(ctx context.Context, call klaytn.CallMsg, blockNumber *big.Int) ([]byte, error) {
-	gasPrice := big.NewInt(0) // execute call regardless of the balance of the sender
-	gasLimit := uint64(1e8)   // enough gas limit to execute kip103 contract functions
-	intrinsicGas := uint64(0) // read operation doesn't require intrinsicGas
-
-	// call.From: zero address will be assigned if nothing is specified
-	// call.To: the target contract address will be assigned by `BoundContract`
-	// call.Value: nil value is acceptable for `types.NewMessage`
-	// call.Data: a proper value will be assigned by `BoundContract`
-	msg := types.NewMessage(call.From, call.To, caller.state.GetNonce(call.From),
-		call.Value, gasLimit, gasPrice, call.Data, false, intrinsicGas)
-
-	context := blockchain.NewEVMContext(msg, caller.header, caller.chain, nil)
-	context.GasPrice = gasPrice                                                  // set gasPrice again if baseFee is assigned
-	evm := vm.NewEVM(context, caller.state, caller.chain.Config(), &vm.Config{}) // no additional vm config required
-
-	result, err := blockchain.ApplyMessage(evm, msg)
-	return result.Return(), err
-}
 
 type kip103result struct {
 	Retired map[common.Address]*big.Int `json:"retired"`

@@ -29,6 +29,7 @@ import (
 	"time"
 
 	lru "github.com/hashicorp/golang-lru"
+	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -509,7 +510,7 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 	if chain.Config().IsKIP103ForkBlock(header.Number) {
 		// RebalanceTreasury can modify the global state (state),
 		// so the existing state db should be used to apply the rebalancing result.
-		c := &Kip103ContractCaller{state, chain, header}
+		c := backends.NewBlockchainContractCaller(chain)
 		result, err := RebalanceTreasury(state, chain, header, c)
 		if err != nil {
 			logger.Error("failed to execute treasury rebalancing (KIP-103). State not changed", "err", err)
