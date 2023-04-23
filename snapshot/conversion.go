@@ -259,7 +259,10 @@ func generateTrieRoot(it Iterator, accountHash common.Hash, generatorFn trieGene
 				}
 				// Fetch the next account and process it concurrently
 				serializer := account.NewAccountSerializer()
-				if err := rlp.DecodeBytes(it.(AccountIterator).Account(), serializer); err != nil {
+				serializerLH := account.NewAccountLHSerializer()
+				if err := rlp.DecodeBytes(it.(AccountIterator).Account(), serializerLH); err == nil {
+					serializer = serializerLH.TransCopy()
+				} else if err := rlp.DecodeBytes(it.(AccountIterator).Account(), serializer); err != nil {
 					logger.Error("Failed to decode an account from iterator", "err", err)
 					return stop(err)
 				}
@@ -284,6 +287,7 @@ func generateTrieRoot(it Iterator, accountHash common.Hash, generatorFn trieGene
 				}(it.Hash())
 				fullData, err = rlp.EncodeToBytes(serializer)
 				if err != nil {
+					// results <- err 		//@jk.oh
 					return stop(err)
 				}
 			}
