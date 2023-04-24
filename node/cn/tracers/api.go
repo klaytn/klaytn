@@ -637,8 +637,8 @@ func (api *API) traceBlock(ctx context.Context, block *types.Block, config *Trac
 
 		vmctx := blockchain.NewEVMContext(msg, block.Header(), newChainContext(ctx, api.backend), nil)
 		vmenv := vm.NewEVM(vmctx, statedb, api.backend.ChainConfig(), &vm.Config{UseOpcodeComputationCost: true})
-		if _, _, kerr := blockchain.ApplyMessage(vmenv, msg); kerr.ErrTxInvalid != nil {
-			failed = kerr.ErrTxInvalid
+		if _, err = blockchain.ApplyMessage(vmenv, msg); err != nil {
+			failed = err
 			break
 		}
 		// Finalize the state so any modifications are written to the trie
@@ -733,14 +733,14 @@ func (api *API) standardTraceBlockToFile(ctx context.Context, block *types.Block
 		}
 		// Execute the transaction and flush any traces to disk
 		vmenv := vm.NewEVM(vmctx, statedb, api.backend.ChainConfig(), &vmConf)
-		_, _, kerr := blockchain.ApplyMessage(vmenv, msg)
+		_, err = blockchain.ApplyMessage(vmenv, msg)
 
 		if dump != nil {
 			dump.Close()
 			logger.Info("Wrote standard trace", "file", dump.Name())
 		}
-		if kerr.ErrTxInvalid != nil {
-			return dumps, kerr.ErrTxInvalid
+		if err != nil {
+			return dumps, err
 		}
 		// Finalize the state so any modifications are written to the trie
 		statedb.Finalise(true, true)
@@ -845,9 +845,9 @@ func (api *API) traceTx(ctx context.Context, message blockchain.Message, vmctx v
 	// Run the transaction with tracing enabled.
 	vmenv := vm.NewEVM(vmctx, statedb, api.backend.ChainConfig(), &vm.Config{Debug: true, Tracer: tracer, UseOpcodeComputationCost: true})
 
-	ret, gas, kerr := blockchain.ApplyMessage(vmenv, message)
-	if kerr.ErrTxInvalid != nil {
-		return nil, fmt.Errorf("tracing failed: %v", kerr.ErrTxInvalid)
+	ret, err := blockchain.ApplyMessage(vmenv, message)
+	if err != nil {
+		return nil, fmt.Errorf("tracing failed: %v", err)
 	}
 	// Depending on the tracer type, format and return the output
 	switch tracer := tracer.(type) {
@@ -860,9 +860,9 @@ func (api *API) traceTx(ctx context.Context, message blockchain.Message, vmctx v
 		}
 		if logs, err := klaytnapi.FormatLogs(loggerTimeout, tracer.StructLogs()); err == nil {
 			return &klaytnapi.ExecutionResult{
-				Gas:         gas,
-				Failed:      kerr.Status != types.ReceiptStatusSuccessful,
-				ReturnValue: fmt.Sprintf("%x", ret),
+				Gas:         ret.UsedGas,
+				Failed:      ret.Failed(),
+				ReturnValue: fmt.Sprintf("%x", ret.Return()),
 				StructLogs:  logs,
 			}, nil
 		} else {

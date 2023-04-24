@@ -19,16 +19,21 @@ package common
 import (
 	"crypto/ecdsa"
 	"crypto/rand"
+	"crypto/sha512"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-
-	"github.com/klaytn/klaytn/log"
+	"strconv"
+	"strings"
 
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/log"
 	uuid "github.com/satori/go.uuid"
+	"github.com/tyler-smith/go-bip32"
+	"golang.org/x/crypto/pbkdf2"
 )
 
 const (
@@ -57,6 +62,53 @@ func GenerateRandomDir() (string, error) {
 func GenerateKeys(num int) (keys []*ecdsa.PrivateKey, nodekeys []string, addrs []common.Address) {
 	for i := 0; i < num; i++ {
 		nodekey := RandomHex()[2:]
+		nodekeys = append(nodekeys, nodekey)
+
+		key, err := crypto.HexToECDSA(nodekey)
+		if err != nil {
+			logger.Error("Failed to generate key", "err", err)
+			return nil, nil, nil
+		}
+		keys = append(keys, key)
+
+		addr := crypto.PubkeyToAddress(key.PublicKey)
+		addrs = append(addrs, addr)
+	}
+
+	return keys, nodekeys, addrs
+}
+
+func GenerateKeysFromMnemonic(num int, mnemonic, path string) (keys []*ecdsa.PrivateKey, nodekeys []string, addrs []common.Address) {
+	var key *bip32.Key
+
+	for _, level := range strings.Split(path, "/") {
+		if len(level) == 0 {
+			continue
+		}
+
+		if level == "m" {
+			seed := pbkdf2.Key([]byte(mnemonic), []byte("mnemonic"), 2048, 64, sha512.New)
+			key, _ = bip32.NewMasterKey(seed)
+		} else {
+			num := uint64(0)
+			var err error
+			if strings.HasSuffix(level, "'") {
+				num, err = strconv.ParseUint(level[:len(level)-1], 10, 32)
+				num += 0x80000000
+			} else {
+				num, err = strconv.ParseUint(level, 10, 32)
+			}
+			if err != nil {
+				logger.Error("Failed to parse path", "err", err)
+				return nil, nil, nil
+			}
+			key, _ = key.NewChildKey(uint32(num))
+		}
+	}
+
+	for i := 0; i < num; i++ {
+		derived, _ := key.NewChildKey(uint32(i))
+		nodekey := hexutil.Encode(derived.Key)[2:]
 		nodekeys = append(nodekeys, nodekey)
 
 		key, err := crypto.HexToECDSA(nodekey)

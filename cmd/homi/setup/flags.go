@@ -124,6 +124,18 @@ var (
 		Value: 0,
 	}
 
+	mnemonic = cli.StringFlag{
+		Name:  "mnemonic",
+		Usage: "Use given mnemonic to derive node keys",
+		Value: "",
+	}
+
+	mnemonicPath = cli.StringFlag{
+		Name:  "mnemonic-path",
+		Usage: "Use given path/coin to derive node keys (format: m/44'/60'/0'/0/). Effective only if --mnemonic is given",
+		Value: "eth",
+	}
+
 	chainIDFlag = cli.Uint64Flag{
 		Name:  "chainID",
 		Usage: "ChainID",

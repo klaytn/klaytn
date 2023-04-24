@@ -73,10 +73,10 @@ func CheckWaitMined(b DeployBackend, tx *types.Transaction) error {
 		return errors.New("receipt not found")
 	}
 
-	if receipt.Status != types.ReceiptStatusSuccessful {
-		return blockchain.GetVMerrFromReceiptStatus(receipt.Status)
+	result := blockchain.ExecutionResult{
+		VmExecutionStatus: receipt.Status,
 	}
-	return nil
+	return result.Unwrap()
 }
 
 // WaitDeployed waits for a contract deployment transaction and returns the on-chain
