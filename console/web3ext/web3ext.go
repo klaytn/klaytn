@@ -260,12 +260,12 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'lookup',
 			call: 'bootnode_lookup',
-			params: 1
+			params: 2
 		}),
 		new web3._extend.Method({
 			name: 'readRandomNodes',
 			call: 'bootnode_readRandomNodes',
-			params: 0
+			params: 1
 		}),
         new web3._extend.Method({
 			name: 'getAuthorizedNodes',
