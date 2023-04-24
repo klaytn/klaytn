@@ -275,7 +275,9 @@ func (tab *Table) findNewNode(seeds *nodesByDistance, targetID NodeID, targetNT 
 				for _, n := range <-reply {
 					if n != nil && !seen[n.ID] {
 						seen[n.ID] = true
-						seeds.push(n, max)
+						if len(seeds.entries) < max {
+							seeds.entries = append(seeds.entries, n)
+						}
 					}
 				}
 			}
