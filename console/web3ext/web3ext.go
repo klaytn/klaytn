@@ -255,7 +255,7 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'resolve',
 			call: 'bootnode_resolve',
-			params: 1
+			params: 2
 		}),
 		new web3._extend.Method({
 			name: 'lookup',
