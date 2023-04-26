@@ -588,9 +588,11 @@ func (s *stateSync) process(req *stateReq) (int, error) {
 // error occurred.
 func (s *stateSync) processNodeData(blob []byte) (common.Hash, error) {
 	res := statedb.SyncResult{Data: blob}
+	var hash common.Hash
 	s.keccak.Reset()
 	s.keccak.Write(blob)
-	s.keccak.Sum(res.Hash[:0])
+	s.keccak.Sum(hash[:0])
+	res.Hash = hash.ToRootExtHash()
 	err := s.sched.Process(res)
 	return res.Hash.ToHash(), err
 }
