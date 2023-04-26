@@ -6,7 +6,7 @@
 # @global-owner1 and @global-owner2 will be requested for
 # review when someone opens a pull request.
 #*       @global-owner1 @global-owner2
-*       @aidan-kwon @kjhman21 @blukat29 @kjeom
+*       @aidan-kwon @blukat29 @kjeom
 
 # Order is important; the last matching pattern takes the most
 # precedence. When someone opens a pull request that only
@@ -36,23 +36,23 @@
 # In this example, @doctocat owns any file in the `/docs`
 # directory in the root of your repository.
 #/docs/ @doctocat
-/api/           @kjeom @jimni1222 @henry-will @nohkwak
-/blockchain/    @blukat29 @kjeom @ian0371 @yoomee1313
+/api/           @kjeom @nohkwak @toniya-klaytn
+/blockchain/    @blukat29 @kjeom @ian0371
 /build/	        @blukat29 @hyunsooda @2dvorak
-/client/        @kjeom @jimni1222 @henry-will @nohkwak
-/cmd/           @kjeom @aidan-kwon @kjhman21 @ian0371
-/consensus/     @aidan-kwon @kjhman21 @jiseongnoh @mckim19
-/console/       @kjeom @jimni1222 @henry-will @nohkwak
-/contracts/     @blukat29 @hyunsooda @2dvorak @ian0371
-/crypto/        @blukat29 @jiseongnoh @mckim19
-/datasync/      @ethan-kr @jeongkyun-oh
-/db_migration/  @ethan-kr @jeongkyun-oh
-/event/	        @kjeom @JayChoi1736
-/governance/    @blukat29 @aidan-kwon @kjhman21 @ian0371
+/client/        @hyunsooda @kjeom @nohkwak
+/cmd/           @kjeom @ian0371
+/consensus/     @aidan-kwon @jiseongnoh @yoomee1313
+/console/       @kjeom @nohkwak @JayChoi1736
+/contracts/     @ian0371 @hyunsooda @2dvorak
+/crypto/        @blukat29 @aidan-kwon @jiseongnoh
+/datasync/      @aidan-kwon @ethan-kr @jeongkyun-oh
+/db_migration/  @ethan-kr @jeongkyun-oh @yoomee1313
+/event/	        @kjeom @JayChoi1736 @nohkwak
+/governance/    @blukat29 @ian0371 @yoomee1313
 /networks/      @kjeom @JayChoi1736 @yoomee1313
 /node/	        @blukat29 @hyunsooda @2dvorak
 /reward/        @blukat29 @ian0371
-/rlp/	        @kjeom @JayChoi1736
-/snapshot/      @ethan-kr @jeongkyun-oh
-/storage/       @ethan-kr @jeongkyun-oh
-/work/	        @blukat29 @aidan-kwon @kjhman21 @yoomee1313
+/rlp/	        @kjeom @JayChoi1736 @nohkwak
+/snapshot/      @ethan-kr @jeongkyun-oh @yoomee1313
+/storage/       @aidan-kwon @ethan-kr @jeongkyun-oh
+/work/	        @blukat29 @yoomee1313
