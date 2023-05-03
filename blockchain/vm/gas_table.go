@@ -100,13 +100,13 @@ var (
 func gasSStore(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 	var (
 		y, x    = stack.Back(1), stack.Back(0)
-		current = evm.StateDB.GetState(contract.Address(), common.BigToRootExtHash(x))
+		current = evm.StateDB.GetState(contract.Address(), common.BigToHash(x))
 	)
 	// This checks for 3 scenario's and calculates gas accordingly
 	// 1. From a zero-value address to a non-zero value         (NEW VALUE)
 	// 2. From a non-zero value address to a zero-value address (DELETE)
 	// 3. From a non-zero to a non-zero                         (CHANGE)
-	isOldEmpty := common.EmptyHash(current.ToHash())
+	isOldEmpty := common.EmptyHash(current)
 	isNewEmpty := common.EmptyHash(common.BigToHash(y))
 	if isOldEmpty && !isNewEmpty {
 		// 0 => non 0
@@ -142,14 +142,14 @@ func gasSStoreEIP2200(evm *EVM, contract *Contract, stack *Stack, mem *Memory, m
 	// Gas sentry honoured, do the actual gas calculation based on the stored value
 	var (
 		y, x    = stack.Back(1), stack.Back(0)
-		current = evm.StateDB.GetState(contract.Address(), common.BigToRootExtHash(x)).ToHash()
+		current = evm.StateDB.GetState(contract.Address(), common.BigToHash(x))
 	)
-	value := common.BigToRootExtHash(y).ToHash()
+	value := common.BigToHash(y)
 
 	if current == value { // noop (1)
 		return params.SloadGasEIP2200, nil
 	}
-	original := evm.StateDB.GetCommittedState(contract.Address(), common.BigToRootExtHash(x)).ToHash()
+	original := evm.StateDB.GetCommittedState(contract.Address(), common.BigToHash(x))
 	if original == current {
 		if original == (common.Hash{}) { // create slot (2.1.1)
 			return params.SstoreSetGasEIP2200, nil

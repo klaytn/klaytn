@@ -52,7 +52,7 @@ func TestUpdateLeaks(t *testing.T) {
 	for i := byte(0); i < 255; i++ {
 		addr := common.BytesToAddress([]byte{i})
 		if i%2 == 0 {
-			state.SetState(addr, common.BytesToHash([]byte{i, i, i}).ToRootExtHash(), common.BytesToHash([]byte{i, i, i, i}).ToRootExtHash())
+			state.SetState(addr, common.BytesToHash([]byte{i, i, i}), common.BytesToHash([]byte{i, i, i, i}))
 		}
 		if i%3 == 0 {
 			state.SetCode(addr, []byte{i, i, i, i, i})
@@ -84,8 +84,8 @@ func TestIntermediateLeaks(t *testing.T) {
 
 	modify := func(state *StateDB, addr common.Address, i, tweak byte) {
 		if i%2 == 0 {
-			state.SetState(addr, common.Hash{i, i, i, 0}.ToRootExtHash(), common.InitExtHash())
-			state.SetState(addr, common.Hash{i, i, i, tweak}.ToRootExtHash(), common.Hash{i, i, i, i, tweak}.ToRootExtHash())
+			state.SetState(addr, common.Hash{i, i, i, 0}, common.Hash{})
+			state.SetState(addr, common.Hash{i, i, i, tweak}, common.Hash{i, i, i, i, tweak})
 		}
 		if i%3 == 0 {
 			state.SetCode(addr, []byte{i, i, i, i, i, tweak})
@@ -261,7 +261,7 @@ func newTestAction(addr common.Address, r *rand.Rand) testAction {
 		{
 			name: "SetState",
 			fn: func(a testAction, s *StateDB) {
-				var key, val common.ExtHash = common.InitExtHash(), common.InitExtHash()
+				var key, val common.Hash
 				binary.BigEndian.PutUint16(key[:], uint16(a.args[0]))
 				binary.BigEndian.PutUint16(val[:], uint16(a.args[1]))
 				s.SetState(addr, key, val)
@@ -311,7 +311,7 @@ func newTestAction(addr common.Address, r *rand.Rand) testAction {
 			name: "AddPreimage",
 			fn: func(a testAction, s *StateDB) {
 				preimage := []byte{1}
-				hash := common.BytesToHash(preimage).ToRootExtHash()
+				hash := common.BytesToHash(preimage)
 				s.AddPreimage(hash, preimage)
 			},
 			args: make([]int64, 1),
@@ -435,10 +435,10 @@ func (test *snapshotTest) checkEqual(state, checkstate *StateDB) error {
 		checkeq("GetCodeSize", state.GetCodeSize(addr), checkstate.GetCodeSize(addr))
 		// Check storage.
 		if obj := state.getStateObject(addr); obj != nil {
-			state.ForEachStorage(addr, func(key, value common.ExtHash) bool {
+			state.ForEachStorage(addr, func(key, value common.Hash) bool {
 				return checkeq("GetState("+key.Hex()+")", checkstate.GetState(addr, key), value)
 			})
-			checkstate.ForEachStorage(addr, func(key, value common.ExtHash) bool {
+			checkstate.ForEachStorage(addr, func(key, value common.Hash) bool {
 				return checkeq("GetState("+key.Hex()+")", checkstate.GetState(addr, key), value)
 			})
 		}

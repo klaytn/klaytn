@@ -274,7 +274,7 @@ func initStateDB(db database.DBManager) *state.StateDB {
 	code := "60ca60205260005b612710811015630000004557602051506020515060205150602051506020515060205150602051506020515060205150602051506001016300000007565b00"
 	statedb.CreateSmartContractAccount(contractAddress, params.CodeFormatEVM, params.Rules{})
 	statedb.SetCode(contractAddress, common.Hex2Bytes(code))
-	stateHash := common.HexToHash("7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe").ToRootExtHash()
+	stateHash := common.HexToHash("7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe")
 	statedb.SetState(contractAddress, stateHash, stateHash)
 	statedb.SetBalance(contractAddress, big.NewInt(1000))
 	statedb.SetNonce(contractAddress, uint64(1))

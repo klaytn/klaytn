@@ -200,8 +200,8 @@ func (db *cachingDB) ContractCode(codeHash common.ExtHash) ([]byte, error) {
 	}
 	code := db.db.DiskDB().ReadCode(codeHash)
 	if len(code) > 0 { // GetNilData
-		db.codeCache.Set(codeHash.Bytes(), code)
-		db.codeSizeCache.Add(codeHash, len(code))
+		db.codeCache.Set(codeHash.ToHash().Bytes(), code)
+		db.codeSizeCache.Add(codeHash.ToHash(), len(code))
 		return code, nil
 	}
 	return nil, errors.New("not found")
@@ -209,7 +209,7 @@ func (db *cachingDB) ContractCode(codeHash common.ExtHash) ([]byte, error) {
 
 // DeleteCode deletes a particular contract's code.
 func (db *cachingDB) DeleteCode(codeHash common.ExtHash) {
-	db.codeCache.Del(codeHash.Bytes())
+	db.codeCache.Del(codeHash.ToHash().Bytes())
 	db.db.DiskDB().DeleteCode(codeHash)
 }
 
@@ -222,8 +222,8 @@ func (db *cachingDB) ContractCodeWithPrefix(codeHash common.ExtHash) ([]byte, er
 	}
 	code := db.db.DiskDB().ReadCodeWithPrefix(codeHash)
 	if len(code) > 0 { // GetNilData
-		db.codeCache.Set(codeHash.Bytes(), code)
-		db.codeSizeCache.Add(codeHash, len(code))
+		db.codeCache.Set(codeHash.ToHash().Bytes(), code)
+		db.codeSizeCache.Add(codeHash.ToHash(), len(code))
 		return code, nil
 	}
 	return nil, errors.New("not found")

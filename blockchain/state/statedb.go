@@ -102,7 +102,7 @@ type StateDB struct {
 	logs         map[common.Hash][]*types.Log
 	logSize      uint
 
-	preimages map[common.ExtHash][]byte
+	preimages map[common.Hash][]byte
 
 	// Per-transaction access list
 	accessList *accessList
@@ -143,7 +143,7 @@ func New(root common.ExtHash, db Database, snaps *snapshot.Tree) (*StateDB, erro
 		stateObjectsDirtyStorage: make(map[common.Address]struct{}),
 		stateObjectsDirty:        make(map[common.Address]struct{}),
 		logs:                     make(map[common.Hash][]*types.Log),
-		preimages:                make(map[common.ExtHash][]byte),
+		preimages:                make(map[common.Hash][]byte),
 		journal:                  newJournal(),
 		accessList:               newAccessList(),
 	}
@@ -171,7 +171,7 @@ func NewForPrefetching(root common.ExtHash, db Database, snaps *snapshot.Tree) (
 		stateObjectsDirtyStorage: make(map[common.Address]struct{}),
 		stateObjectsDirty:        make(map[common.Address]struct{}),
 		logs:                     make(map[common.Hash][]*types.Log),
-		preimages:                make(map[common.ExtHash][]byte),
+		preimages:                make(map[common.Hash][]byte),
 		journal:                  newJournal(),
 		prefetching:              true,
 	}
@@ -221,7 +221,7 @@ func (self *StateDB) Reset(root common.ExtHash) error {
 	self.txIndex = 0
 	self.logs = make(map[common.Hash][]*types.Log)
 	self.logSize = 0
-	self.preimages = make(map[common.ExtHash][]byte)
+	self.preimages = make(map[common.Hash][]byte)
 	self.clearJournalAndRefund()
 	self.accessList = newAccessList()
 	return nil
@@ -251,7 +251,7 @@ func (self *StateDB) Logs() []*types.Log {
 }
 
 // AddPreimage records a SHA3 preimage seen by the VM.
-func (self *StateDB) AddPreimage(hash common.ExtHash, preimage []byte) {
+func (self *StateDB) AddPreimage(hash common.Hash, preimage []byte) {
 	if _, ok := self.preimages[hash]; !ok {
 		self.journal.append(addPreimageChange{hash: hash})
 		pi := make([]byte, len(preimage))
@@ -261,7 +261,7 @@ func (self *StateDB) AddPreimage(hash common.ExtHash, preimage []byte) {
 }
 
 // Preimages returns a list of SHA3 preimages that have been submitted.
-func (self *StateDB) Preimages() map[common.ExtHash][]byte {
+func (self *StateDB) Preimages() map[common.Hash][]byte {
 	return self.preimages
 }
 
@@ -360,21 +360,21 @@ func (self *StateDB) GetCodeHash(addr common.Address) common.Hash {
 }
 
 // GetState retrieves a value from the given account's storage trie.
-func (self *StateDB) GetState(addr common.Address, hash common.ExtHash) common.ExtHash {
+func (self *StateDB) GetState(addr common.Address, hash common.Hash) common.Hash {
 	stateObject := self.getStateObject(addr)
 	if stateObject != nil {
 		return stateObject.GetState(self.db, hash)
 	}
-	return common.InitExtHash()
+	return common.Hash{}
 }
 
 // GetCommittedState retrieves a value from the given account's committed storage trie.
-func (self *StateDB) GetCommittedState(addr common.Address, hash common.ExtHash) common.ExtHash {
+func (self *StateDB) GetCommittedState(addr common.Address, hash common.Hash) common.Hash {
 	stateObject := self.getStateObject(addr)
 	if stateObject != nil {
 		return stateObject.GetCommittedState(self.db, hash)
 	}
-	return common.InitExtHash()
+	return common.Hash{}
 }
 
 // IsContractAvailable returns true if the account corresponding to the given address implements ProgramAccount.
@@ -503,7 +503,7 @@ func (self *StateDB) SetCode(addr common.Address, code []byte) error {
 	return nil
 }
 
-func (self *StateDB) SetState(addr common.Address, key, value common.ExtHash) {
+func (self *StateDB) SetState(addr common.Address, key, value common.Hash) {
 	stateObject := self.GetOrNewSmartContract(addr)
 	if stateObject != nil {
 		stateObject.SetState(self.db, key, value)
@@ -512,7 +512,7 @@ func (self *StateDB) SetState(addr common.Address, key, value common.ExtHash) {
 
 // SetStorage replaces the entire storage for the specified account with given
 // storage. This function should only be used for debugging.
-func (self *StateDB) SetStorage(addr common.Address, storage map[common.ExtHash]common.ExtHash) {
+func (self *StateDB) SetStorage(addr common.Address, storage map[common.Hash]common.Hash) {
 	stateObject := self.GetOrNewStateObject(addr)
 	if stateObject != nil {
 		stateObject.SetStorage(storage)
@@ -812,19 +812,19 @@ func (self *StateDB) CreateSmartContractAccountWithKey(addr common.Address, huma
 	}
 }
 
-func (db *StateDB) ForEachStorage(addr common.Address, cb func(key, value common.ExtHash) bool) {
+func (db *StateDB) ForEachStorage(addr common.Address, cb func(key, value common.Hash) bool) {
 	so := db.getStateObject(addr)
 	if so == nil {
 		return
 	}
 	it := statedb.NewIterator(so.getStorageTrie(db.db).NodeIterator(nil))
 	for it.Next() {
-		key := common.BytesToRootExtHash(db.trie.GetKey(it.Key))
+		key := common.BytesToHash(db.trie.GetKey(it.Key))
 		if value, dirty := so.dirtyStorage[key]; dirty {
 			cb(key, value)
 			continue
 		}
-		cb(key, common.BytesToRootExtHash(it.Value))
+		cb(key, common.BytesToHash(it.Value))
 	}
 }
 
@@ -840,7 +840,7 @@ func (self *StateDB) Copy() *StateDB {
 		refund:            self.refund,
 		logs:              make(map[common.Hash][]*types.Log, len(self.logs)),
 		logSize:           self.logSize,
-		preimages:         make(map[common.ExtHash][]byte),
+		preimages:         make(map[common.Hash][]byte),
 		journal:           newJournal(),
 	}
 	// Copy the dirty states, logs, and preimages

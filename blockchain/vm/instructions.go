@@ -394,7 +394,7 @@ func opSha3(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Sta
 	evm.interpreter.hasher.Read(evm.interpreter.hasherBuf[:])
 
 	if evm.vmConfig.EnablePreimageRecording {
-		evm.StateDB.AddPreimage(evm.interpreter.hasherBuf.ToRootExtHash(), data)
+		evm.StateDB.AddPreimage(evm.interpreter.hasherBuf, data)
 	}
 	stack.push(evm.interpreter.intPool.get().SetBytes(evm.interpreter.hasherBuf[:]))
 
@@ -634,15 +634,15 @@ func opMstore8(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *
 
 func opSload(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 	loc := stack.Peek()
-	val := evm.StateDB.GetState(contract.Address(), common.BigToRootExtHash(loc))
-	loc.SetBytes(val.Bytes()[:common.HashLength]) // how about this : loc.SetBytes(val.Bytes().ToHash())
+	val := evm.StateDB.GetState(contract.Address(), common.BigToHash(loc))
+	loc.SetBytes(val.Bytes())
 	return nil, nil
 }
 
 func opSstore(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	loc := common.BigToRootExtHash(stack.pop())
+	loc := common.BigToHash(stack.pop())
 	val := stack.pop()
-	evm.StateDB.SetState(contract.Address(), loc, common.BigToRootExtHash(val))
+	evm.StateDB.SetState(contract.Address(), loc, common.BigToHash(val))
 
 	evm.interpreter.intPool.put(val)
 	return nil, nil

@@ -114,7 +114,7 @@ type (
 	}
 	storageChange struct {
 		account       *common.Address
-		key, prevalue common.ExtHash
+		key, prevalue common.Hash
 	}
 	codeChange struct {
 		account            *common.Address
@@ -129,7 +129,7 @@ type (
 		txhash common.Hash
 	}
 	addPreimageChange struct {
-		hash common.ExtHash
+		hash common.Hash
 	}
 	touchChange struct {
 		account   *common.Address

@@ -203,7 +203,7 @@ func MakePreState(db database.DBManager, accounts blockchain.GenesisAlloc) *stat
 			statedb.SetCode(addr, a.Code)
 		}
 		for k, v := range a.Storage {
-			statedb.SetState(addr, k.ToRootExtHash(), v.ToRootExtHash())
+			statedb.SetState(addr, k, v)
 		}
 		statedb.SetNonce(addr, a.Nonce)
 		statedb.SetBalance(addr, a.Balance)

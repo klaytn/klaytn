@@ -101,14 +101,14 @@ func (s *StateSuite) TestNull(c *checker.C) {
 	address := common.HexToAddress("0x823140710bf13990e4500136726d8b55")
 	s.state.CreateSmartContractAccount(address, params.CodeFormatEVM, params.Rules{IsIstanbul: true})
 	// value := common.FromHex("0x823140710bf13990e4500136726d8b55")
-	var value common.ExtHash = common.InitExtHash()
+	var value common.Hash = common.Hash{}
 
-	s.state.SetState(address, common.InitExtHash(), value)
+	s.state.SetState(address, common.Hash{}, value)
 	s.state.Commit(false)
-	if value := s.state.GetState(address, common.InitExtHash()); value.ToHash() != (common.Hash{}) {
+	if value := s.state.GetState(address, common.Hash{}); value != (common.Hash{}) {
 		c.Errorf("expected empty current value, got %x", value)
 	}
-	if value := s.state.GetCommittedState(address, common.InitExtHash()); value.ToHash() != (common.Hash{}) {
+	if value := s.state.GetCommittedState(address, common.Hash{}); value != (common.Hash{}) {
 		c.Errorf("expected empty committed value, got %x", value)
 	}
 }
@@ -117,9 +117,9 @@ func (s *StateSuite) TestNull(c *checker.C) {
 // one after reverting to the state snapshot.
 func (s *StateSuite) TestSnapshot(c *checker.C) {
 	stateobjaddr := toAddr([]byte("aa"))
-	var storageaddr common.ExtHash = common.InitExtHash()
-	data1 := common.BytesToHash([]byte{42}).ToRootExtHash()
-	data2 := common.BytesToHash([]byte{43}).ToRootExtHash()
+	var storageaddr common.Hash = common.Hash{}
+	data1 := common.BytesToHash([]byte{42})
+	data2 := common.BytesToHash([]byte{43})
 
 	// snapshot the genesis state
 	genesis := s.state.Snapshot()
@@ -133,12 +133,12 @@ func (s *StateSuite) TestSnapshot(c *checker.C) {
 	s.state.RevertToSnapshot(snapshot)
 
 	c.Assert(s.state.GetState(stateobjaddr, storageaddr), checker.DeepEquals, data1)
-	c.Assert(s.state.GetCommittedState(stateobjaddr, storageaddr), checker.DeepEquals, common.ExtHash{})
+	c.Assert(s.state.GetCommittedState(stateobjaddr, storageaddr), checker.DeepEquals, common.Hash{})
 
 	// revert up to the genesis state and ensure correct content
 	s.state.RevertToSnapshot(genesis)
-	c.Assert(s.state.GetState(stateobjaddr, storageaddr), checker.DeepEquals, common.InitExtHash())
-	c.Assert(s.state.GetCommittedState(stateobjaddr, storageaddr), checker.DeepEquals, common.InitExtHash())
+	c.Assert(s.state.GetState(stateobjaddr, storageaddr), checker.DeepEquals, common.Hash{})
+	c.Assert(s.state.GetCommittedState(stateobjaddr, storageaddr), checker.DeepEquals, common.Hash{})
 }
 
 // This test is to check reverting to the empty snapshot.
@@ -155,10 +155,10 @@ func TestSnapshotForDeletedObject(t *testing.T) {
 
 	stateObjAddr0 := toAddr([]byte("so0"))
 	stateObjAddr1 := toAddr([]byte("so1"))
-	var storageAddr common.ExtHash = common.InitExtHash()
+	var storageAddr common.Hash = common.Hash{}
 
-	data0 := common.BytesToHash([]byte{17}).ToRootExtHash()
-	data1 := common.BytesToHash([]byte{18}).ToRootExtHash()
+	data0 := common.BytesToHash([]byte{17})
+	data1 := common.BytesToHash([]byte{18})
 
 	state.SetState(stateObjAddr0, storageAddr, data0)
 	state.SetState(stateObjAddr1, storageAddr, data1)

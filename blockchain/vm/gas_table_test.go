@@ -110,7 +110,7 @@ func TestEIP2200(t *testing.T) {
 		statedb, _ := state.New(common.InitExtHash(), state.NewDatabase(database.NewMemoryDBManager()), nil)
 		statedb.CreateSmartContractAccount(address, params.CodeFormatEVM, params.Rules{IsIstanbul: true})
 		statedb.SetCode(address, hexutil.MustDecode(tt.input))
-		statedb.SetState(address, common.InitExtHash(), common.BytesToHash([]byte{tt.original}).ToRootExtHash())
+		statedb.SetState(address, common.Hash{}, common.BytesToHash([]byte{tt.original}))
 		statedb.Finalise(true, false) // Push the state into the "original" slot
 
 		vmctx := Context{

@@ -688,13 +688,13 @@ func TestDBManager_Preimage(t *testing.T) {
 	for _, dbm := range dbManagers {
 		assert.Nil(t, nil, dbm.ReadPreimage(hash1))
 
-		preimages1 := map[common.ExtHash][]byte{hash1.ToRootExtHash(): hash2[:], hash2.ToRootExtHash(): hash1[:]}
+		preimages1 := map[common.Hash][]byte{hash1: hash2[:], hash2: hash1[:]}
 		dbm.WritePreimages(num1, preimages1)
 
 		assert.Equal(t, hash2[:], dbm.ReadPreimage(hash1))
 		assert.Equal(t, hash1[:], dbm.ReadPreimage(hash2))
 
-		preimages2 := map[common.ExtHash][]byte{hash1.ToRootExtHash(): hash1[:], hash2.ToRootExtHash(): hash2[:]}
+		preimages2 := map[common.Hash][]byte{hash1: hash1[:], hash2: hash2[:]}
 		dbm.WritePreimages(num1, preimages2)
 
 		assert.Equal(t, hash1[:], dbm.ReadPreimage(hash1))

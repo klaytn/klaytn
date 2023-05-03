@@ -311,7 +311,7 @@ func (g *Genesis) ToBlock(baseStateRoot common.Hash, db database.DBManager) *typ
 			}
 		}
 		for key, value := range account.Storage {
-			stateDB.SetState(addr, key.ToRootExtHash(), value.ToRootExtHash())
+			stateDB.SetState(addr, key, value)
 		}
 		stateDB.AddBalance(addr, account.Balance)
 		stateDB.SetNonce(addr, account.Nonce)

@@ -553,11 +553,11 @@ func (api *EthereumAPI) GetStorageAt(ctx context.Context, address common.Address
 // OverrideAccount in go-ethereum has been renamed to EthOverrideAccount.
 // OverrideAccount is defined in go-ethereum's internal package, so OverrideAccount is redefined here as EthOverrideAccount.
 type EthOverrideAccount struct {
-	Nonce     *hexutil.Uint64                    `json:"nonce"`
-	Code      *hexutil.Bytes                     `json:"code"`
-	Balance   **hexutil.Big                      `json:"balance"`
-	State     *map[common.ExtHash]common.ExtHash `json:"state"`
-	StateDiff *map[common.ExtHash]common.ExtHash `json:"stateDiff"`
+	Nonce     *hexutil.Uint64              `json:"nonce"`
+	Code      *hexutil.Bytes               `json:"code"`
+	Balance   **hexutil.Big                `json:"balance"`
+	State     *map[common.Hash]common.Hash `json:"state"`
+	StateDiff *map[common.Hash]common.Hash `json:"stateDiff"`
 }
 
 // EthStateOverride is the collection of overridden accounts.

@@ -42,7 +42,7 @@ type testAccount struct {
 	balance    *big.Int
 	nonce      uint64
 	code       []byte
-	storageMap map[common.ExtHash]common.ExtHash
+	storageMap map[common.Hash]common.Hash
 }
 
 // makeTestState create a sample test state to test node-wise reconstruction.
@@ -60,7 +60,7 @@ func makeTestState(t *testing.T) (Database, common.ExtHash, []*testAccount) {
 		var obj *stateObject
 		acc := &testAccount{
 			address:    common.BytesToAddress([]byte{i}),
-			storageMap: make(map[common.ExtHash]common.ExtHash),
+			storageMap: make(map[common.Hash]common.Hash),
 		}
 
 		if i%3 > 0 {
@@ -77,8 +77,8 @@ func makeTestState(t *testing.T) (Database, common.ExtHash, []*testAccount) {
 			}
 
 			for j := 0; j < int(i)%10; j++ {
-				key := common.Hash{i + byte(j)}.ToRootExtHash()
-				value := common.Hash{i*2 + 1}.ToRootExtHash()
+				key := common.Hash{i + byte(j)}
+				value := common.Hash{i*2 + 1}
 				acc.storageMap[key] = value
 
 				obj.SetState(db, key, value)
@@ -129,15 +129,15 @@ func checkStateAccounts(t *testing.T, newDB database.DBManager, root common.ExtH
 		// check storage trie
 		st := state.StorageTrie(acc.address)
 		it := statedb.NewIterator(st.NodeIterator(nil))
-		storageMapWithHashedKey := make(map[common.ExtHash]common.ExtHash)
+		storageMapWithHashedKey := make(map[common.Hash]common.Hash)
 		for it.Next() {
-			storageMapWithHashedKey[common.BytesToHash(it.Key).ToRootExtHash()] = common.BytesToHash(it.Value).ToRootExtHash()
+			storageMapWithHashedKey[common.BytesToHash(it.Key)] = common.BytesToHash(it.Value)
 		}
 		if len(storageMapWithHashedKey) != len(acc.storageMap) {
 			t.Errorf("account %d: stroage trie number mismatch: have %x, want %x", i, len(storageMapWithHashedKey), len(acc.storageMap))
 		}
 		for key, value := range acc.storageMap {
-			hk := crypto.Keccak256Hash(key[:common.HashLength]).ToRootExtHash()
+			hk := crypto.Keccak256Hash(key[:])
 			if storageMapWithHashedKey[hk] != value {
 				t.Errorf("account %d: stroage trie (%v) mismatch: have %x, want %x", i, key.String(), acc.storageMap[key], value)
 			}
@@ -146,11 +146,11 @@ func checkStateAccounts(t *testing.T, newDB database.DBManager, root common.ExtH
 }
 
 // checkTrieConsistency checks that all nodes in a (sub-)trie are indeed present.
-func checkTrieConsistency(db database.DBManager, root common.Hash) error {
-	if v, _ := db.ReadStateTrieNode(root[:]); v == nil {
+func checkTrieConsistency(db database.DBManager, root common.ExtHash) error {
+	if v, _ := db.ReadStateTrieNode(root.ToHash().Bytes()); v == nil {
 		return nil // Consider a non existent state consistent.
 	}
-	trie, err := statedb.NewTrie(root.ToRootExtHash(), statedb.NewDatabase(db))
+	trie, err := statedb.NewTrie(root, statedb.NewDatabase(db))
 	if err != nil {
 		return err
 	}
@@ -607,7 +607,7 @@ func TestIncompleteStateSync(t *testing.T) {
 		}
 		return false
 	}
-	checkTrieConsistency(srcState.TrieDB().DiskDB().(database.DBManager), srcRoot.ToHash())
+	checkTrieConsistency(srcState.TrieDB().DiskDB().(database.DBManager), srcRoot)
 
 	// Create a destination state and sync with the scheduler
 	dstDb := database.NewMemoryDBManager()
@@ -653,7 +653,7 @@ func TestIncompleteStateSync(t *testing.T) {
 			}
 			// Can't use checkStateConsistency here because subtrie keys may have odd
 			// length and crash in LeafKey.
-			if err := checkTrieConsistency(dstDb, hash.ToHash()); err != nil {
+			if err := checkTrieConsistency(dstDb, hash); err != nil {
 				t.Fatalf("state inconsistent: %v", err)
 			}
 		}

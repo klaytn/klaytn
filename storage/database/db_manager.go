@@ -166,7 +166,7 @@ type DBManager interface {
 	HasCodeWithPrefixFromOld(hash common.ExtHash) bool
 	ReadPreimageFromOld(hash common.Hash) []byte
 
-	WritePreimages(number uint64, preimages map[common.ExtHash][]byte)
+	WritePreimages(number uint64, preimages map[common.Hash][]byte)
 
 	// from accessors_indexes.go
 	ReadTxLookupEntry(hash common.Hash) (common.Hash, uint64, uint64)
@@ -1886,10 +1886,10 @@ func (dbm *databaseManager) ReadPreimageFromOld(hash common.Hash) []byte {
 
 // WritePreimages writes the provided set of preimages to the database. `number` is the
 // current block number, and is used for debug messages only.
-func (dbm *databaseManager) WritePreimages(number uint64, preimages map[common.ExtHash][]byte) {
+func (dbm *databaseManager) WritePreimages(number uint64, preimages map[common.Hash][]byte) {
 	batch := dbm.NewBatch(StateTrieDB)
 	for hash, preimage := range preimages {
-		if err := batch.Put(preimageKey(hash.ToHash()), preimage); err != nil {
+		if err := batch.Put(preimageKey(hash), preimage); err != nil {
 			logger.Crit("Failed to store trie preimage", "err", err)
 		}
 	}
