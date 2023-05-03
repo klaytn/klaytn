@@ -29,6 +29,7 @@ type DBType string
 
 const (
 	LevelDB   DBType = "LevelDB"
+	RocksDB          = "RocksDB"
 	BadgerDB         = "BadgerDB"
 	MemoryDB         = "MemoryDB"
 	DynamoDB         = "DynamoDBS3"
@@ -38,7 +39,7 @@ const (
 // ToValid converts DBType to a valid one.
 // If it is unable to convert, "" is returned.
 func (db DBType) ToValid() DBType {
-	validDBType := []DBType{LevelDB, BadgerDB, MemoryDB, DynamoDB}
+	validDBType := []DBType{LevelDB, RocksDB, BadgerDB, MemoryDB, DynamoDB}
 
 	for _, vdb := range validDBType {
 		if strings.ToLower(string(vdb)) == strings.ToLower(string(db)) {

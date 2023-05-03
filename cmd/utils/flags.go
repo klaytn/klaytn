@@ -106,6 +106,12 @@ var (
 		Usage:  "Data directory for the databases and keystore. This value is only used in local DB.",
 		EnvVar: "KLAYTN_DATADIR",
 	}
+	ChainDataDirFlag = DirectoryFlag{
+		Name:   "chaindatadir",
+		Value:  DirectoryString{""},
+		Usage:  "Data directory for chaindata. If this is not specified, chaindata is stored in datadir",
+		EnvVar: "KLAYTN_CHAINDATADIR",
+	}
 	KeyStoreDirFlag = DirectoryFlag{
 		Name:   "keystore",
 		Usage:  "Directory for the keystore (default = inside the datadir)",
@@ -273,6 +279,17 @@ var (
 		Name:   "db.leveldb.no-buffer-pool",
 		Usage:  "Disables using buffer pool for LevelDB's block allocation",
 		EnvVar: "KLAYTN_DB_LEVELDB_NO_BUFFER_POOL",
+	}
+	RocksDBSecondaryFlag = cli.BoolFlag{
+		Name:   "db.rocksdb.secondary",
+		Usage:  "Enable rocksdb secondary mode (read-only and catch-up with primary node dynamically)",
+		EnvVar: "KLAYTN_DB_ROCKSDB_SECONDARY",
+	}
+	RocksDBCacheSizeFlag = cli.Uint64Flag{
+		Name:   "db.rocksdb.cache-size",
+		Usage:  "Size of in-memory cache in RocksDB (MiB)",
+		Value:  768,
+		EnvVar: "KLAYTN_DB_ROCKSDB_CACHE_SIZE",
 	}
 	DynamoDBTableNameFlag = cli.StringFlag{
 		Name:   "db.dynamo.tablename",

@@ -250,6 +250,10 @@ func (b *memBatch) Reset() {
 	b.size = 0
 }
 
+func (b *memBatch) Release() {
+	// nothing to do with memBatch
+}
+
 // Replay replays the batch contents.
 func (b *memBatch) Replay(w KeyValueWriter) error {
 	for _, keyvalue := range b.writes {

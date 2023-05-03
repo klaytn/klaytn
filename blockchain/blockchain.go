@@ -658,6 +658,9 @@ func (bc *BlockChain) FastSyncCommitHead(hash common.Hash) error {
 // CurrentBlock retrieves the current head block of the canonical chain. The
 // block is retrieved from the blockchain's internal cache.
 func (bc *BlockChain) CurrentBlock() *types.Block {
+	if bc.db.GetDBConfig().DBType == database.RocksDB && bc.db.GetDBConfig().RocksDBConfig.Secondary {
+		bc.loadLastState()
+	}
 	return bc.currentBlock.Load().(*types.Block)
 }
 
@@ -1189,6 +1192,11 @@ func (bc *BlockChain) InsertReceiptChain(blockChain types.Blocks, receiptChain [
 		receiptsBatch        = bc.db.NewBatch(database.ReceiptsDB)
 		txLookupEntriesBatch = bc.db.NewBatch(database.TxLookUpEntryDB)
 	)
+
+	defer bodyBatch.Release()
+	defer receiptsBatch.Release()
+	defer txLookupEntriesBatch.Release()
+
 	for i, block := range blockChain {
 		receipts := receiptChain[i]
 		// Short circuit insertion if shutting down or processing failed

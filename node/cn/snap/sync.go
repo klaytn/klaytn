@@ -587,6 +587,7 @@ func (s *Syncer) Sync(root common.Hash, cancel chan struct{}) error {
 			s.stateWriter.Write()
 			s.stateWriter.Reset()
 		}
+		s.stateWriter.Release()
 	}()
 	defer s.report(true)
 
@@ -1834,6 +1835,7 @@ func (s *Syncer) processAccountResponse(res *accountResponse) {
 // into the account tasks.
 func (s *Syncer) processBytecodeResponse(res *bytecodeResponse) {
 	batch := s.db.NewBatch(database.StateTrieDB)
+	defer batch.Release()
 
 	var codes uint64
 	for i, hash := range res.hashes {
@@ -1883,6 +1885,7 @@ func (s *Syncer) processStorageResponse(res *storageResponse) {
 		res.subTask.req = nil
 	}
 	batch := s.db.NewSnapshotDBBatch()
+	defer batch.Release()
 	var (
 		slots           int
 		oldStorageBytes = s.storageBytes
@@ -2102,6 +2105,7 @@ func (s *Syncer) processTrienodeHealResponse(res *trienodeHealResponse) {
 		}
 	}
 	batch := s.db.NewBatch(database.StateTrieDB)
+	defer batch.Release()
 	if _, err := s.healer.scheduler.Commit(batch); err != nil {
 		logger.Error("Failed to commit healing data", "err", err)
 	}
@@ -2138,6 +2142,7 @@ func (s *Syncer) processBytecodeHealResponse(res *bytecodeHealResponse) {
 		}
 	}
 	batch := s.db.NewBatch(database.StateTrieDB)
+	defer batch.Release()
 	if _, err := s.healer.scheduler.Commit(batch); err != nil {
 		logger.Error("Failed to commit healing data", "err", err)
 	}
@@ -2164,6 +2169,7 @@ func (s *Syncer) forwardAccountTask(task *accountTask) {
 	oldAccountBytes := s.accountBytes
 
 	batch := s.db.NewSnapshotDBBatch()
+	defer batch.Release()
 	for i, hash := range res.hashes {
 		if task.needCode[i] || task.needState[i] {
 			break

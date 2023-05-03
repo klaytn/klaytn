@@ -489,6 +489,12 @@ func (sdbBatch *shardedDBBatch) Reset() {
 	}
 }
 
+func (sdbBatch *shardedDBBatch) Release() {
+	for _, batch := range sdbBatch.batches {
+		batch.Release()
+	}
+}
+
 func (sdbBatch *shardedDBBatch) Replay(w KeyValueWriter) error {
 	for _, batch := range sdbBatch.batches {
 		if err := batch.Replay(w); err != nil {

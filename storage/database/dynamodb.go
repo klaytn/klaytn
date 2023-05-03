@@ -613,6 +613,10 @@ func (batch *dynamoBatch) Reset() {
 	batch.size = 0
 }
 
+func (batch *dynamoBatch) Release() {
+	// nothing to do with dynamoBatch
+}
+
 func (batch *dynamoBatch) Replay(w KeyValueWriter) error {
 	logger.CritWithStack("Replay should not be called when using dynamodb batch")
 	return nil

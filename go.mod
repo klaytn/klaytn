@@ -32,6 +32,7 @@ require (
 	github.com/jackpal/go-nat-pmp v1.0.2
 	github.com/jinzhu/gorm v1.9.15
 	github.com/julienschmidt/httprouter v1.3.0
+	github.com/linxGnu/grocksdb v1.7.17-0.20230425035833-f16fdbe0eb3c
 	github.com/mattn/go-colorable v0.1.11
 	github.com/mattn/go-isatty v0.0.14
 	github.com/naoina/toml v0.1.2-0.20170918210437-9fafd6967416
@@ -49,7 +50,8 @@ require (
 	github.com/rs/cors v1.7.0
 	github.com/satori/go.uuid v1.2.0
 	github.com/steakknife/bloomfilter v0.0.0-20180922174646-6819c0d2a570
-	github.com/stretchr/testify v1.7.0
+	github.com/steakknife/hamming v0.0.0-20180906055917-c99c65617cd3 // indirect
+	github.com/stretchr/testify v1.8.2
 	github.com/supranational/blst v0.3.10
 	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 	github.com/tyler-smith/go-bip32 v1.0.0

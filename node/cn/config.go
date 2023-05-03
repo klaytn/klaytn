@@ -117,6 +117,7 @@ type Config struct {
 	LevelDBBufferPool    bool
 	LevelDBCacheSize     int
 	DynamoDBConfig       database.DynamoDBConfig
+	RocksDBConfig        database.RocksDBConfig
 	TrieCacheSize        int
 	TrieTimeout          time.Duration
 	TrieBlockInterval    uint

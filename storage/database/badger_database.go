@@ -237,6 +237,10 @@ func (b *badgerBatch) Reset() {
 	b.size = 0
 }
 
+func (b *badgerBatch) Release() {
+	// nothing to do with badgerBatch
+}
+
 // Replay replays the batch contents.
 func (b *badgerBatch) Replay(w KeyValueWriter) error {
 	logger.CritWithStack("Replay is not implemented in badgerBatch!")

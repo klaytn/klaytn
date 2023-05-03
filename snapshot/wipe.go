@@ -40,6 +40,7 @@ func wipeKeyRange(db database.DBManager, kind string, prefix []byte, origin []by
 		batch = db.NewSnapshotDBBatch()
 		items int
 	)
+	defer batch.Release()
 	// Iterate over the key-range and delete all of them
 	start, logged := time.Now(), time.Now()
 
