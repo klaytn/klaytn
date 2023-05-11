@@ -76,7 +76,7 @@ func returnHasherToPool(h *hasher) {
 
 // hash collapses a node down into a hash node, also returning a copy of the
 // original node initialized with the computed hash to replace the original one.
-func (h *hasher) hash(n node, db *Database, force bool) (node, node) {
+func (h *hasher) hash(n node, db *Database, force bool, onRoot bool) (node, node) {
 	// If we're not storing the node, just hashing, use available cached data
 	if hash, dirty := n.cache(); hash != nil {
 		if db == nil {
@@ -92,46 +92,7 @@ func (h *hasher) hash(n node, db *Database, force bool) (node, node) {
 		}
 	}
 	// Trie not processed yet or needs storage, walk the children
-	collapsed, cached := h.hashChildren(n, db)
-	hashed, lenEncoded := h.store(collapsed, db, force)
-	// Cache the hash of the node for later reuse and remove
-	// the dirty flag in commit mode. It's fine to assign these values directly
-	// without copying the node first because hashChildren copies it.
-	cachedHash, _ := hashed.(hashNode)
-	switch cn := cached.(type) {
-	case *shortNode:
-		cn.flags.hash = cachedHash
-		cn.flags.lenEncoded = lenEncoded
-		if db != nil {
-			cn.flags.dirty = false
-		}
-	case *fullNode:
-		cn.flags.hash = cachedHash
-		cn.flags.lenEncoded = lenEncoded
-		if db != nil {
-			cn.flags.dirty = false
-		}
-	}
-	return hashed, cached
-}
-
-func (h *hasher) hashRoot(n node, db *Database, force bool) (node, node) {
-	// If we're not storing the node, just hashing, use available cached data
-	if hash, dirty := n.cache(); hash != nil {
-		if db == nil {
-			return hash, n
-		}
-		if !dirty {
-			switch n.(type) {
-			case *fullNode, *shortNode:
-				return hash, hash
-			default:
-				return hash, n
-			}
-		}
-	}
-	// Trie not processed yet or needs storage, walk the children
-	collapsed, cached := h.hashChildrenFromRoot(n, db)
+	collapsed, cached := h.hashChildren(n, db, onRoot)
 	hashed, lenEncoded := h.store(collapsed, db, force)
 	// Cache the hash of the node for later reuse and remove
 	// the dirty flag in commit mode. It's fine to assign these values directly
@@ -157,7 +118,7 @@ func (h *hasher) hashRoot(n node, db *Database, force bool) (node, node) {
 // hashChildren replaces the children of a node with their hashes if the encoded
 // size of the child is larger than a hash, returning the collapsed node as well
 // as a replacement for the original node with the child hashes cached in.
-func (h *hasher) hashChildren(original node, db *Database) (node, node) {
+func (h *hasher) hashChildren(original node, db *Database, onRoot bool) (node, node) {
 	switch n := original.(type) {
 	case *shortNode:
 		// Hash the short node's child, caching the newly hashed subtree
@@ -166,7 +127,7 @@ func (h *hasher) hashChildren(original node, db *Database) (node, node) {
 		cached.Key = common.CopyBytes(n.Key)
 
 		if _, ok := n.Val.(valueNode); !ok {
-			collapsed.Val, cached.Val = h.hash(n.Val, db, false)
+			collapsed.Val, cached.Val = h.hash(n.Val, db, false, false)
 		}
 		return collapsed, cached
 
@@ -174,63 +135,29 @@ func (h *hasher) hashChildren(original node, db *Database) (node, node) {
 		// Hash the full node's children, caching the newly hashed subtrees
 		collapsed, cached := n.copy(), n.copy()
 
-		for i := 0; i < 16; i++ {
-			if n.Children[i] != nil {
-				collapsed.Children[i], cached.Children[i] = h.hash(n.Children[i], db, false)
+		if onRoot {
+			var wg sync.WaitGroup
+			wg.Add(16)
+			for i := 0; i < 16; i++ {
+				if n.Children[i] != nil {
+					go func(i int) {
+						childHasher := newHasher(h.onleaf)
+						collapsed.Children[i], cached.Children[i] = childHasher.hash(n.Children[i], db, false, false)
+						returnHasherToPool(childHasher)
+						wg.Done()
+					}(i)
+				} else {
+					wg.Done()
+				}
+			}
+			wg.Wait()
+		} else {
+			for i := 0; i < 16; i++ {
+				if n.Children[i] != nil {
+					collapsed.Children[i], cached.Children[i] = h.hash(n.Children[i], db, false, false)
+				}
 			}
 		}
-		cached.Children[16] = n.Children[16]
-		return collapsed, cached
-
-	default:
-		// Value and hash nodes don't have children so they're left as were
-		return n, original
-	}
-}
-
-type hashResult struct {
-	index     int
-	collapsed node
-	cached    node
-}
-
-func (h *hasher) hashChildrenFromRoot(original node, db *Database) (node, node) {
-	switch n := original.(type) {
-	case *shortNode:
-		// Hash the short node's child, caching the newly hashed subtree
-		collapsed, cached := n.copy(), n.copy()
-		collapsed.Key = hexToCompact(n.Key)
-		cached.Key = common.CopyBytes(n.Key)
-
-		if _, ok := n.Val.(valueNode); !ok {
-			collapsed.Val, cached.Val = h.hash(n.Val, db, false)
-		}
-		return collapsed, cached
-
-	case *fullNode:
-		// Hash the full node's children, caching the newly hashed subtrees
-		collapsed, cached := n.copy(), n.copy()
-
-		hashResultCh := make(chan hashResult, 16)
-		numRootChildren := 0
-		for i := 0; i < 16; i++ {
-			if n.Children[i] != nil {
-				numRootChildren++
-				go func(i int, n node) {
-					childHasher := newHasher(h.onleaf)
-					defer returnHasherToPool(childHasher)
-					collapsedFromChild, cachedFromChild := childHasher.hash(n, db, false)
-					hashResultCh <- hashResult{i, collapsedFromChild, cachedFromChild}
-				}(i, n.Children[i])
-			}
-		}
-
-		for i := 0; i < numRootChildren; i++ {
-			hashResult := <-hashResultCh
-			idx := hashResult.index
-			collapsed.Children[idx], cached.Children[idx] = hashResult.collapsed, hashResult.cached
-		}
-
 		cached.Children[16] = n.Children[16]
 		return collapsed, cached
 
