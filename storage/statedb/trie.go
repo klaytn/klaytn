@@ -539,7 +539,7 @@ func (t *Trie) hashRoot(db *Database, onleaf LeafCallback) (node, node) {
 	}
 	h := newHasher(onleaf)
 	defer returnHasherToPool(h)
-	return h.hash(t.root, db, true, true)
+	return h.hashRoot(t.root, db, true)
 }
 
 func GetHashAndHexKey(key []byte) ([]byte, []byte) {

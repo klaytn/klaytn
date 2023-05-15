@@ -74,6 +74,11 @@ func returnHasherToPool(h *hasher) {
 	hasherPool.Put(h)
 }
 
+// hashRoot is similar to hash() but adds special treatment for the root node
+func (h *hasher) hashRoot(n node, db *Database, force bool) (node, node) {
+	return h.hash(n, db, force, true)
+}
+
 // hash collapses a node down into a hash node, also returning a copy of the
 // original node initialized with the computed hash to replace the original one.
 func (h *hasher) hash(n node, db *Database, force bool, onRoot bool) (node, node) {
