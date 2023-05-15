@@ -905,6 +905,12 @@ web3._extend({
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
 		}),
 		new web3._extend.Method({
+			name: 'getRewardsAccumulated',
+			call: 'klay_getRewardsAccumulated',
+			params: 3,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter, web3._extend.formatters.inputBlockNumberFormatter, null],
+		}),
+		new web3._extend.Method({
 			name: 'getStakingInfo',
 			call: 'klay_getStakingInfo',
 			params: 1,

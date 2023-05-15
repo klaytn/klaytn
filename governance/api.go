@@ -21,10 +21,11 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
-
-	"github.com/klaytn/klaytn/common/hexutil"
+	"sync"
+	"time"
 
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/reward"
@@ -144,6 +145,140 @@ func (api *GovernanceKlayAPI) GetRewards(num *rpc.BlockNumber) (*reward.RewardSp
 	}
 
 	return reward.GetBlockReward(header, rules, rewardParamSet)
+}
+
+// GetRewardsAccumulated returns accumulated rewards data in the range of [start, end).
+// The given block range is divided into many accumulation periods with a given period parameter.
+func (api *GovernanceKlayAPI) GetRewardsAccumulated(start rpc.BlockNumber, end rpc.BlockNumber, period uint64) ([]accumulatedRewards, error) {
+	currentBlock := api.chain.CurrentBlock().NumberU64()
+
+	startBlock := currentBlock
+	if start >= rpc.EarliestBlockNumber {
+		startBlock = uint64(start.Int64())
+	}
+
+	endBlock := currentBlock
+	if end >= rpc.EarliestBlockNumber {
+		endBlock = uint64(end.Int64())
+	}
+
+	if period <= 0 {
+		period = 86400 // one day
+	}
+
+	// TODO: add limitation to prevent EN resource exhaustion
+	blockCount := endBlock - startBlock
+	if blockCount > 604800 { // 7 days
+		return nil, errors.New("block range should be equal or less than 604800")
+	}
+
+	// calculate the number of accumulating periods
+	numPeriods := blockCount / period
+	if blockCount%period != 0 {
+		numPeriods++
+	}
+
+	rewardArray := make([]*reward.RewardSpec, numPeriods)
+	accArray := make([]accumulatedRewards, numPeriods)
+
+	numWorkers := 2
+	reqCh := make(chan uint64, numPeriods) // the size should be equal or larger than the number of request not to block the request loop
+	errCh := make(chan error, 1)
+	wg := sync.WaitGroup{}
+
+	// introduce the worker pattern to prevent resource exhaustion
+	for i := 0; i < numWorkers; i++ {
+		go func() {
+			// the minimum digit of request is period to avoid current access to an accArray item
+			for idx := range reqCh {
+				periodStart := startBlock + idx*period
+				periodEnd := periodStart + period
+				if periodEnd > endBlock {
+					periodEnd = endBlock
+				}
+
+				// write the information of the period starting block
+				header := api.chain.GetHeaderByNumber(periodStart)
+				if header == nil {
+					errCh <- fmt.Errorf("the block does not exist (block number: %d)", periodStart)
+					return
+				}
+
+				accArray[idx].StartBlock = header.Number
+				accArray[idx].StartBlockTime = time.Unix(header.Time.Int64(), 0).String()
+
+				for blockNum := periodStart; blockNum < periodEnd; blockNum++ {
+					bn := rpc.BlockNumber(blockNum)
+					blockReward, err := api.GetRewards(&bn)
+					if err != nil {
+						errCh <- err
+						return
+					}
+					rewardArray[idx].Add(blockReward)
+				}
+
+				// write the information of the period ending block
+				header = api.chain.GetHeaderByNumber(periodEnd - 1) // the periodEnd block is not included
+				if header == nil {
+					errCh <- fmt.Errorf("the block does not exist (block number: %d)", periodEnd-1)
+					return
+				}
+
+				accArray[idx].EndBlock = header.Number
+				accArray[idx].EndBlockTime = time.Unix(header.Time.Int64(), 0).String()
+				accArray[idx].Rewards = rewardArray[idx].Rewards
+				accArray[idx].TotalMinted = rewardArray[idx].Minted
+				accArray[idx].TotalTxFee = rewardArray[idx].TotalFee
+				accArray[idx].TotalBurntTxFee = rewardArray[idx].BurntFee
+				accArray[idx].TotalProposerRewards = rewardArray[idx].Proposer
+				accArray[idx].TotalStakingRewards = rewardArray[idx].Stakers
+				accArray[idx].TotalKFFRewards = rewardArray[idx].KFF
+				accArray[idx].TotalKCFRewards = rewardArray[idx].KCF
+
+				wg.Done()
+			}
+		}()
+	}
+
+	// request jobs with a period number
+	for i := uint64(0); i < numPeriods; i++ {
+		// initialize structures before request a job
+		rewardArray[i] = reward.NewRewardSpec()
+		accArray[i] = accumulatedRewards{Period: uint(i)}
+
+		wg.Add(1)
+		reqCh <- i
+	}
+	close(reqCh)
+
+	// generate a goroutine to return error early
+	go func() {
+		wg.Wait()
+		errCh <- nil
+	}()
+
+	if err := <-errCh; err != nil {
+		return nil, err
+	}
+	return accArray, nil
+}
+
+type accumulatedRewards struct {
+	Period         uint     `json:"period"`
+	StartBlockTime string   `json:"startBlockTime"`
+	EndBlockTime   string   `json:"endBlockTime"`
+	StartBlock     *big.Int `json:"startBlock"`
+	EndBlock       *big.Int `json:"endBlock"`
+
+	// TotalMinted + TotalTxFee - TotalBurntTxFee = TotalProposerRewards + TotalStakingRewards + TotalKFFRewards + TotalKCFRewards
+	TotalMinted          *big.Int                    `json:"totalMinted"`
+	TotalTxFee           *big.Int                    `json:"totalTxFee"`
+	TotalBurntTxFee      *big.Int                    `json:"totalBurntTxFee"`
+	TotalProposerRewards *big.Int                    `json:"totalProposerRewards"`
+	TotalStakingRewards  *big.Int                    `json:"totalStakingRewards"`
+	TotalKFFRewards      *big.Int                    `json:"totalKFFRewards"`
+	TotalKCFRewards      *big.Int                    `json:"totalKCFRewards"`
+	Rewards              map[common.Address]*big.Int `json:"rewards"`
 }
 
 func (api *GovernanceKlayAPI) ChainConfig() *params.ChainConfig {

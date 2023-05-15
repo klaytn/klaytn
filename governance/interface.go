@@ -26,6 +26,7 @@ import (
 	"github.com/klaytn/klaytn/storage/database"
 )
 
+//go:generate mockgen -package governance -destination=governance/interface_mock_test.go github.com/klaytn/klaytn/governance Engine
 type Engine interface {
 	HeaderEngine
 	ReaderEngine
