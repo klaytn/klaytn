@@ -167,7 +167,7 @@ func TestGetRewards(t *testing.T) {
 	}
 }
 
-func TestGetRewardsAcc2(t *testing.T) {
+func TestGetRewardsAccumulated(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -269,10 +269,10 @@ func TestGetRewardsAcc2(t *testing.T) {
 
 		// startBlockNum
 		assert.Equal(t, uint(i), accumulated.Period)
-		assert.Equal(t, time.Unix(blocks[periodStart].Time().Int64(), 0).String(), accumulated.StartBlockTime)
-		assert.Equal(t, time.Unix(blocks[periodEnd-1].Time().Int64(), 0).String(), accumulated.EndBlockTime)
-		assert.Equal(t, periodStart, accumulated.StartBlock.Uint64())
-		assert.Equal(t, periodEnd-1, accumulated.EndBlock.Uint64())
+		assert.Equal(t, time.Unix(blocks[periodStart].Time().Int64(), 0).String(), accumulated.FirstBlockTime)
+		assert.Equal(t, time.Unix(blocks[periodEnd-1].Time().Int64(), 0).String(), accumulated.LastBlockTime)
+		assert.Equal(t, periodStart, accumulated.FirstBlock.Uint64())
+		assert.Equal(t, periodEnd-1, accumulated.LastBlock.Uint64())
 
 		assert.Equal(t, new(big.Int).Mul(blockMinted, periodBig), accumulated.TotalMinted)
 		assert.Equal(t, new(big.Int).Mul(blockTxFee, periodBig), accumulated.TotalTxFee)
