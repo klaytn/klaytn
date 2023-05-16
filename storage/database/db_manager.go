@@ -1792,7 +1792,7 @@ func (dbm *databaseManager) ReadPreimage(hash common.Hash) []byte {
 }
 
 func (dbm *databaseManager) ReadTrieNodeFromNew(hash common.Hash) ([]byte, error) {
-	return dbm.GetStateTrieMigrationDB().Get(hash[:])
+	return dbm.GetStateTrieMigrationDB().Get(TrieNodeKey(hash))
 }
 
 func (dbm *databaseManager) HasTrieNodeFromNew(hash common.Hash) (bool, error) {
@@ -1818,7 +1818,7 @@ func (dbm *databaseManager) ReadPreimageFromNew(hash common.Hash) []byte {
 
 func (dbm *databaseManager) ReadTrieNodeFromOld(hash common.Hash) ([]byte, error) {
 	db := dbm.getDatabase(StateTrieDB)
-	return db.Get(hash[:])
+	return db.Get(TrieNodeKey(hash))
 }
 
 func (dbm *databaseManager) HasTrieNodeFromOld(hash common.Hash) (bool, error) {
@@ -1848,15 +1848,15 @@ func (dbm *databaseManager) WriteTrieNode(hash common.Hash, node []byte) error {
 	defer dbm.lockInMigration.RUnlock()
 
 	if dbm.inMigration {
-		if err := dbm.getDatabase(StateTrieMigrationDB).Put(hash[:], node); err != nil {
+		if err := dbm.getDatabase(StateTrieMigrationDB).Put(TrieNodeKey(hash), node); err != nil {
 			return err
 		}
 	}
-	return dbm.getDatabase(StateTrieDB).Put(hash[:], node)
+	return dbm.getDatabase(StateTrieDB).Put(TrieNodeKey(hash), node)
 }
 
 func (dbm *databaseManager) PutTrieNodeToBatch(batch Batch, hash common.Hash, node []byte) error {
-	return batch.Put(hash[:], node)
+	return batch.Put(TrieNodeKey(hash), node)
 }
 
 // WritePreimages writes the provided set of preimages to the database. `number` is the
@@ -1880,7 +1880,7 @@ func (dbm *databaseManager) WritePreimages(number uint64, preimages map[common.H
 }
 
 func (dbm *databaseManager) DeleteTrieNode(hash common.Hash) error {
-	return dbm.getDatabase(StateTrieDB).Delete(hash[:])
+	return dbm.getDatabase(StateTrieDB).Delete(TrieNodeKey(hash))
 }
 
 // ReadTxLookupEntry retrieves the positional metadata associated with a transaction
