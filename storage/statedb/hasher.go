@@ -74,14 +74,22 @@ func returnHasherToPool(h *hasher) {
 	hasherPool.Put(h)
 }
 
-// hashRoot is similar to hash() but adds special treatment for the root node
+// hashRoot is similar to hashNode() but adds special treatment for the root node.
 func (h *hasher) hashRoot(n node, db *Database, force bool) (node, node) {
-	return h.hash(n, db, force, true)
+	return h.hashNode(n, db, force, true)
 }
 
-// hash collapses a node down into a hash node, also returning a copy of the
+// hash is similar to hashNode() but assumes that the node is not a root node.
+func (h *hasher) hash(n node, db *Database, force bool) (node, node) {
+	return h.hashNode(n, db, force, false)
+}
+
+// hashNode collapses a node down into a hash node, also returning a copy of the
 // original node initialized with the computed hash to replace the original one.
-func (h *hasher) hash(n node, db *Database, force bool, onRoot bool) (node, node) {
+//
+// hashNode is for hasher's internal use only.
+// Please use hashRoot() or hash() for readability.
+func (h *hasher) hashNode(n node, db *Database, force bool, onRoot bool) (node, node) {
 	// If we're not storing the node, just hashing, use available cached data
 	if hash, dirty := n.cache(); hash != nil {
 		if db == nil {
@@ -132,7 +140,7 @@ func (h *hasher) hashChildren(original node, db *Database, onRoot bool) (node, n
 		cached.Key = common.CopyBytes(n.Key)
 
 		if _, ok := n.Val.(valueNode); !ok {
-			collapsed.Val, cached.Val = h.hash(n.Val, db, false, false)
+			collapsed.Val, cached.Val = h.hash(n.Val, db, false)
 		}
 		return collapsed, cached
 
@@ -147,7 +155,7 @@ func (h *hasher) hashChildren(original node, db *Database, onRoot bool) (node, n
 				if n.Children[i] != nil {
 					go func(i int) {
 						childHasher := newHasher(h.onleaf)
-						collapsed.Children[i], cached.Children[i] = childHasher.hash(n.Children[i], db, false, false)
+						collapsed.Children[i], cached.Children[i] = childHasher.hash(n.Children[i], db, false)
 						returnHasherToPool(childHasher)
 						wg.Done()
 					}(i)
@@ -159,7 +167,7 @@ func (h *hasher) hashChildren(original node, db *Database, onRoot bool) (node, n
 		} else {
 			for i := 0; i < 16; i++ {
 				if n.Children[i] != nil {
-					collapsed.Children[i], cached.Children[i] = h.hash(n.Children[i], db, false, false)
+					collapsed.Children[i], cached.Children[i] = h.hash(n.Children[i], db, false)
 				}
 			}
 		}
