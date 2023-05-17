@@ -471,7 +471,9 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 	}
 	work := NewTask(self.config, types.MakeSigner(self.config, header.Number), stateDB, header)
 	if self.nodetype != common.CONSENSUSNODE {
+		// set the current block and header as pending block and header to support APIs requesting a pending block.
 		work.Block = parent
+		work.header = parent.Header()
 	}
 
 	// Keep track of transactions which return errors so they can be removed
