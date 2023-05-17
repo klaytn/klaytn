@@ -60,11 +60,11 @@ func deriveSigner(V *big.Int) Signer {
 }
 
 func ErrSender(err error) error {
-	return fmt.Errorf("sender: %s", err)
+	return fmt.Errorf("invalid sender: %s", err)
 }
 
 func ErrFeePayer(err error) error {
-	return fmt.Errorf("fee payer: %s", err)
+	return fmt.Errorf("invalid fee payer: %s", err)
 }
 
 type Transaction struct {

@@ -662,9 +662,7 @@ func TestValidationInvalidSig(t *testing.T) {
 				assert.Equal(t, expectedErr, err)
 
 				// For block tx validation test
-				if expectedErr == blockchain.ErrInvalidFeePayer {
-					expectedErr = types.ErrFeePayer(types.ErrInvalidSigFeePayer)
-				}
+				expectedErr = types.ErrFeePayer(types.ErrInvalidSigFeePayer)
 				receipt, err := applyTransaction(t, bcdata, tx)
 				assert.Equal(t, expectedErr, err)
 				assert.Equal(t, (*types.Receipt)(nil), receipt)
