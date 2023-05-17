@@ -721,7 +721,9 @@ func testInvalidFeePayerSig(t *testing.T, txType types.TxType, reservoir *TestAc
 		tx.SignFeePayerWithKeys(signer, newAcc.Keys)
 		assert.Equal(t, nil, err)
 
-		return tx, blockchain.ErrInvalidFeePayer
+		// Look at the blockchain/types/transaction.go/ValidateFeePayer
+		// Testcases using this function should return invalid signature error
+		return tx, types.ErrInvalidSigFeePayer
 	}
 	return nil, nil
 }
