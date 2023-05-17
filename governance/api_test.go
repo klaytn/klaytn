@@ -237,12 +237,14 @@ func TestGetRewardsAccumulated(t *testing.T) {
 		mockBlockchain.EXPECT().GetHeaderByNumber(uint64(i)).Return(blocks[i].Header()).AnyTimes()
 	}
 
+	latestBlock := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(int64(endBlockNum))})
 	mockBlockchain.EXPECT().Config().Return(chainConfig).AnyTimes()
+	mockBlockchain.EXPECT().CurrentBlock().Return(latestBlock).AnyTimes()
 	mockGovEngine.EXPECT().EffectiveParams(gomock.Any()).Return(govParamSet, nil).AnyTimes()
-	mockBlockchain.EXPECT().CurrentBlock().Return(blocks[endBlockNum-1]).AnyTimes() // the return is not used in the target function
+	mockGovEngine.EXPECT().BlockChain().Return(mockBlockchain).AnyTimes()
 
 	// execute a target function
-	govAPI := NewGovernanceKlayAPI(mockGovEngine, mockBlockchain)
+	govAPI := NewGovernanceAPI(mockGovEngine)
 	ret, err := govAPI.GetRewardsAccumulated(rpc.BlockNumber(startBlockNum), rpc.BlockNumber(endBlockNum), period)
 	if err != nil {
 		t.Fatal(err)
