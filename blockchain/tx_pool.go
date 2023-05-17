@@ -753,7 +753,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	// Make sure the transaction is signed properly
 	gasFrom, err := tx.ValidateSender(pool.signer, pool.currentState, pool.currentBlockNumber)
 	if err != nil {
-		return err
+		return types.ErrSender(err)
 	}
 	from := tx.ValidatedSender()
 
@@ -769,7 +769,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 		// balance check for fee-delegated tx
 		gasFeePayer, err = tx.ValidateFeePayer(pool.signer, pool.currentState, pool.currentBlockNumber)
 		if err != nil {
-			return err
+			return types.ErrFeePayer(err)
 		}
 		feePayer := tx.ValidatedFeePayer()
 		feePayerBalance := pool.getBalance(feePayer)
