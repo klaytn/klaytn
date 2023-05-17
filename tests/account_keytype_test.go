@@ -2189,13 +2189,13 @@ func TestRoleBasedKeyFeeDelegation(t *testing.T) {
 				// For tx pool validation test
 				{
 					err = txpool.AddRemote(tx)
-					assert.Equal(t, types.ErrInvalidSigFeePayer, err)
+					assert.Equal(t, types.ErrFeePayer(types.ErrInvalidSigFeePayer), err)
 				}
 
 				// For block tx validation test
 				{
 					receipt, err := applyTransaction(t, bcdata, tx)
-					assert.Equal(t, types.ErrInvalidSigFeePayer, err)
+					assert.Equal(t, types.ErrFeePayer(types.ErrInvalidSigFeePayer), err)
 					assert.Equal(t, (*types.Receipt)(nil), receipt)
 				}
 			}
