@@ -2189,7 +2189,7 @@ func TestRoleBasedKeyFeeDelegation(t *testing.T) {
 				// For tx pool validation test
 				{
 					err = txpool.AddRemote(tx)
-					assert.Equal(t, blockchain.ErrInvalidFeePayer, err)
+					assert.Equal(t, types.ErrInvalidSigFeePayer, err)
 				}
 
 				// For block tx validation test
