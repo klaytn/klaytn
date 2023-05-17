@@ -331,7 +331,13 @@ web3._extend({
 			call: 'governance_getChainConfig',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
-		})
+		}),
+		new web3._extend.Method({
+			name: 'getRewardsAccumulated',
+			call: 'governance_getRewardsAccumulated',
+			params: 3,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter, web3._extend.formatters.inputBlockNumberFormatter, null],
+		}),
 	],
 	properties: [
 		new web3._extend.Property({
@@ -903,12 +909,6 @@ web3._extend({
 			call: 'klay_getRewards',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
-		}),
-		new web3._extend.Method({
-			name: 'getRewardsAccumulated',
-			call: 'klay_getRewardsAccumulated',
-			params: 3,
-			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter, web3._extend.formatters.inputBlockNumberFormatter, null],
 		}),
 		new web3._extend.Method({
 			name: 'getStakingInfo',

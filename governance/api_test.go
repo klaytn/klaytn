@@ -30,7 +30,7 @@ func newTestBlockchain(config *params.ChainConfig) *testBlockChain {
 	}
 }
 
-func newTestGovernanceApi() *PublicGovernanceAPI {
+func newTestGovernanceApi() *GovernanceAPI {
 	config := params.CypressChainConfig
 	config.Governance.KIP71 = params.GetDefaultKIP71Config()
 	govApi := NewGovernanceAPI(NewMixedEngine(config, database.NewMemoryDBManager()))
