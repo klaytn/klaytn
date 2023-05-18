@@ -112,17 +112,6 @@ func TestDatabase_Size(t *testing.T) {
 	assert.Equal(t, common.StorageSize(100), preimagesSize)
 }
 
-func TestDatabase_SecureKey(t *testing.T) {
-	secKey1 := secureKey(childHash)
-	copiedSecKey := make([]byte, len(secKey1))
-	copy(copiedSecKey, secKey1)
-
-	secKey2 := secureKey(parentHash)
-
-	assert.Equal(t, secKey1, copiedSecKey) // after the next call of secureKey, secKey1 became different from the copied
-	assert.NotEqual(t, secKey1, secKey2)   // secKey1 has changed into secKey2 as they are created from the different buffer
-}
-
 func TestCache(t *testing.T) {
 	memDB := database.NewMemoryDBManager()
 	db := NewDatabaseWithNewCache(memDB, &TrieNodeCacheConfig{CacheType: CacheTypeLocal, LocalCacheSizeMiB: 10})

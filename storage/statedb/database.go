@@ -66,15 +66,6 @@ var (
 	memcacheNodesGauge = metrics.NewRegisteredGauge("trie/memcache/nodes", nil)
 )
 
-// secureKeyPrefix is the database key prefix used to store trie node preimages.
-var secureKeyPrefix = []byte("secure-key-")
-
-// secureKeyPrefixLength is the length of the above prefix
-const secureKeyPrefixLength = 11
-
-// secureKeyLength is the length of the above prefix + 32byte hash.
-const secureKeyLength = secureKeyPrefixLength + 32
-
 // commitResultChSizeLimit limits the size of channel used for commitResult.
 const commitResultChSizeLimit = 100 * 10000
 
@@ -618,15 +609,6 @@ func (db *Database) preimage(hash common.Hash) []byte {
 	return db.diskDB.ReadPreimage(hash)
 }
 
-// secureKey returns the database key for the preimage of key (as a newly
-// allocated byte-slice)
-func secureKey(hash common.Hash) []byte {
-	buf := make([]byte, secureKeyLength)
-	copy(buf, secureKeyPrefix)
-	copy(buf[secureKeyPrefixLength:], hash[:])
-	return buf
-}
-
 // Nodes retrieves the hashes of all the nodes cached within the memory database.
 // This method is extremely expensive and should only be used to validate internal
 // states in test code.
@@ -833,34 +815,7 @@ func (db *Database) Cap(limit common.StorageSize) error {
 }
 
 func (db *Database) writeBatchPreimages() error {
-	// TODO-Klaytn What kind of batch should be used below?
-	preimagesBatch := db.diskDB.NewBatch(database.StateTrieDB)
-
-	// We reuse an ephemeral buffer for the keys. The batch Put operation
-	// copies it internally, so we can reuse it.
-	var keyBuf [secureKeyLength]byte
-	copy(keyBuf[:], secureKeyPrefix)
-
-	// Move all of the accumulated preimages into a write batch
-	for hash, preimage := range db.preimages {
-		copy(keyBuf[secureKeyPrefixLength:], hash[:])
-		if err := preimagesBatch.Put(keyBuf[:], preimage); err != nil {
-			logger.Error("Failed to commit preimages from trie database", "err", err)
-			return err
-		}
-
-		if _, err := database.WriteBatchesOverThreshold(preimagesBatch); err != nil {
-			return err
-		}
-	}
-
-	// Write batch ready, unlock for readers during persistence
-	if _, err := database.WriteBatches(preimagesBatch); err != nil {
-		logger.Error("Failed to write preimages to disk", "err", err)
-		return err
-	}
-
-	return nil
+	return db.diskDB.WritePreimages(0, db.preimages)
 }
 
 // commitResult contains the result from concurrent commit calls.

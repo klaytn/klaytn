@@ -163,7 +163,7 @@ type DBManager interface {
 	ReadPreimageFromOld(hash common.Hash) []byte
 
 	PutTrieNodeToBatch(batch Batch, hash common.Hash, node []byte) error
-	WritePreimages(number uint64, preimages map[common.Hash][]byte)
+	WritePreimages(number uint64, preimages map[common.Hash][]byte) error
 
 	// from accessors_indexes.go
 	ReadTxLookupEntry(hash common.Hash) (common.Hash, uint64, uint64)
@@ -1846,18 +1846,22 @@ func (dbm *databaseManager) PutTrieNodeToBatch(batch Batch, hash common.Hash, no
 
 // WritePreimages writes the provided set of preimages to the database. `number` is the
 // current block number, and is used for debug messages only.
-func (dbm *databaseManager) WritePreimages(number uint64, preimages map[common.Hash][]byte) {
+func (dbm *databaseManager) WritePreimages(number uint64, preimages map[common.Hash][]byte) error {
 	batch := dbm.NewBatch(StateTrieDB)
 	for hash, preimage := range preimages {
 		if err := batch.Put(preimageKey(hash), preimage); err != nil {
-			logger.Crit("Failed to store trie preimage", "err", err)
+			return err
+		}
+		if _, err := WriteBatchesOverThreshold(batch); err != nil {
+			return err
 		}
 	}
 	if err := batch.Write(); err != nil {
-		logger.Crit("Failed to batch write trie preimage", "err", err, "blockNumber", number)
+		return err
 	}
 	preimageCounter.Inc(int64(len(preimages)))
 	preimageHitCounter.Inc(int64(len(preimages)))
+	return nil
 }
 
 // ReadTxLookupEntry retrieves the positional metadata associated with a transaction

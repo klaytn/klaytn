@@ -1553,7 +1553,9 @@ func (bc *BlockChain) writeBlockWithStateSerial(block *types.Block, receipts []*
 		if err := bc.writeTxLookupEntries(block); err != nil {
 			return WriteResult{Status: NonStatTy}, err
 		}
-		bc.db.WritePreimages(block.NumberU64(), state.Preimages())
+		if err := bc.db.WritePreimages(block.NumberU64(), state.Preimages()); err != nil {
+			return WriteResult{Status: NonStatTy}, err
+		}
 		status = CanonStatTy
 	} else {
 		status = SideStatTy
@@ -1652,7 +1654,9 @@ func (bc *BlockChain) writeBlockWithStateParallel(block *types.Block, receipts [
 
 		go func() {
 			defer parallelDBWriteWG.Done()
-			bc.db.WritePreimages(block.NumberU64(), state.Preimages())
+			if err := bc.db.WritePreimages(block.NumberU64(), state.Preimages()); err != nil {
+				parallelDBWriteErrCh <- err
+			}
 		}()
 
 		// Wait until all writing goroutines are terminated.
