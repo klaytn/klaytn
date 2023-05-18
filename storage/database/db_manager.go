@@ -162,7 +162,10 @@ type DBManager interface {
 	HasCodeWithPrefixFromOld(hash common.Hash) bool
 	ReadPreimageFromOld(hash common.Hash) []byte
 
+	// Write StateTrie
+	WriteTrieNode(hash common.Hash, node []byte) error
 	PutTrieNodeToBatch(batch Batch, hash common.Hash, node []byte) error
+	DeleteTrieNode(hash common.Hash) error
 	WritePreimages(number uint64, preimages map[common.Hash][]byte) error
 
 	// from accessors_indexes.go
@@ -1840,6 +1843,18 @@ func (dbm *databaseManager) ReadPreimageFromOld(hash common.Hash) []byte {
 	return data
 }
 
+func (dbm *databaseManager) WriteTrieNode(hash common.Hash, node []byte) error {
+	dbm.lockInMigration.RLock()
+	defer dbm.lockInMigration.RUnlock()
+
+	if dbm.inMigration {
+		if err := dbm.getDatabase(StateTrieMigrationDB).Put(hash[:], node); err != nil {
+			return err
+		}
+	}
+	return dbm.getDatabase(StateTrieDB).Put(hash[:], node)
+}
+
 func (dbm *databaseManager) PutTrieNodeToBatch(batch Batch, hash common.Hash, node []byte) error {
 	return batch.Put(hash[:], node)
 }
@@ -1862,6 +1877,10 @@ func (dbm *databaseManager) WritePreimages(number uint64, preimages map[common.H
 	preimageCounter.Inc(int64(len(preimages)))
 	preimageHitCounter.Inc(int64(len(preimages)))
 	return nil
+}
+
+func (dbm *databaseManager) DeleteTrieNode(hash common.Hash) error {
+	return dbm.getDatabase(StateTrieDB).Delete(hash[:])
 }
 
 // ReadTxLookupEntry retrieves the positional metadata associated with a transaction

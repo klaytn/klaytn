@@ -508,7 +508,7 @@ func TestSyncOrdering(t *testing.T) {
 				t.Fatalf("failed to process result %v", err)
 			}
 		}
-		batch := diskdb.GetMemDB().NewBatch()
+		batch := diskdb.NewBatch(database.StateTrieDB)
 		if _, err := sched.Commit(batch); err != nil {
 			t.Fatalf("failed to commit data: %v", err)
 		}
