@@ -147,7 +147,6 @@ type DBManager interface {
 	ReadTrieNode(hash common.Hash) ([]byte, error)
 	HasTrieNode(hash common.Hash) (bool, error)
 	ReadCachedTrieNodePreimage(secureKey []byte) ([]byte, error)
-	HasStateTrieNode(key []byte) (bool, error)
 	HasCodeWithPrefix(hash common.Hash) bool
 	ReadPreimage(hash common.Hash) []byte
 
@@ -155,7 +154,6 @@ type DBManager interface {
 	ReadTrieNodeFromNew(hash common.Hash) ([]byte, error)
 	HasTrieNodeFromNew(hash common.Hash) (bool, error)
 	ReadCachedTrieNodePreimageFromNew(secureKey []byte) ([]byte, error)
-	HasStateTrieNodeFromNew(key []byte) (bool, error)
 	HasCodeWithPrefixFromNew(hash common.Hash) bool
 	ReadPreimageFromNew(hash common.Hash) []byte
 
@@ -163,7 +161,6 @@ type DBManager interface {
 	ReadTrieNodeFromOld(hash common.Hash) ([]byte, error)
 	HasTrieNodeFromOld(hash common.Hash) (bool, error)
 	ReadCachedTrieNodePreimageFromOld(secureKey []byte) ([]byte, error)
-	HasStateTrieNodeFromOld(key []byte) (bool, error)
 	HasCodeWithPrefixFromOld(hash common.Hash) bool
 	ReadPreimageFromOld(hash common.Hash) []byte
 
@@ -1786,27 +1783,6 @@ func (dbm *databaseManager) ReadCachedTrieNodePreimage(secureKey []byte) ([]byte
 	return dbm.ReadCachedTrieNodePreimageFromOld(secureKey)
 }
 
-// State Trie Related operations.
-func (dbm *databaseManager) ReadStateTrieNode(key []byte) ([]byte, error) {
-	dbm.lockInMigration.RLock()
-	defer dbm.lockInMigration.RUnlock()
-
-	if dbm.inMigration {
-		if val, err := dbm.GetStateTrieMigrationDB().Get(key); err == nil {
-			return val, nil
-		}
-	}
-	return dbm.ReadStateTrieNodeFromOld(key)
-}
-
-func (dbm *databaseManager) HasStateTrieNode(key []byte) (bool, error) {
-	val, err := dbm.ReadStateTrieNode(key)
-	if val == nil || err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
 // ReadPreimage retrieves a single preimage of the provided hash.
 func (dbm *databaseManager) ReadPreimage(hash common.Hash) []byte {
 	dbm.lockInMigration.RLock()
@@ -1836,19 +1812,6 @@ func (dbm *databaseManager) HasTrieNodeFromNew(hash common.Hash) (bool, error) {
 // Cached Trie Node Preimage operation.
 func (dbm *databaseManager) ReadCachedTrieNodePreimageFromNew(secureKey []byte) ([]byte, error) {
 	return dbm.GetStateTrieMigrationDB().Get(secureKey)
-}
-
-// State Trie Related operations.
-func (dbm *databaseManager) ReadStateTrieNodeFromNew(key []byte) ([]byte, error) {
-	return dbm.GetStateTrieMigrationDB().Get(key)
-}
-
-func (dbm *databaseManager) HasStateTrieNodeFromNew(key []byte) (bool, error) {
-	val, err := dbm.GetStateTrieMigrationDB().Get(key)
-	if val == nil || err != nil {
-		return false, err
-	}
-	return true, nil
 }
 
 func (dbm *databaseManager) HasCodeWithPrefixFromNew(hash common.Hash) bool {
@@ -1881,20 +1844,6 @@ func (dbm *databaseManager) HasTrieNodeFromOld(hash common.Hash) (bool, error) {
 func (dbm *databaseManager) ReadCachedTrieNodePreimageFromOld(secureKey []byte) ([]byte, error) {
 	db := dbm.getDatabase(StateTrieDB)
 	return db.Get(secureKey)
-}
-
-// State Trie Related operations.
-func (dbm *databaseManager) ReadStateTrieNodeFromOld(key []byte) ([]byte, error) {
-	db := dbm.getDatabase(StateTrieDB)
-	return db.Get(key)
-}
-
-func (dbm *databaseManager) HasStateTrieNodeFromOld(key []byte) (bool, error) {
-	val, err := dbm.ReadStateTrieNodeFromOld(key)
-	if val == nil || err != nil {
-		return false, err
-	}
-	return true, nil
 }
 
 func (dbm *databaseManager) HasCodeWithPrefixFromOld(hash common.Hash) bool {

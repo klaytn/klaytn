@@ -456,7 +456,7 @@ func TestDBManager_TrieNode(t *testing.T) {
 	for _, dbm := range dbManagers {
 		cachedNode, _ := dbm.ReadTrieNode(hash1)
 		assert.Nil(t, cachedNode)
-		hasStateTrieNode, _ := dbm.HasStateTrieNode(hash1[:])
+		hasStateTrieNode, _ := dbm.HasTrieNode(hash1)
 		assert.False(t, hasStateTrieNode)
 
 		batch := dbm.NewBatch(StateTrieDB)
@@ -480,7 +480,7 @@ func TestDBManager_TrieNode(t *testing.T) {
 		cachedNode, _ = dbm.ReadTrieNode(hash1)
 		assert.Equal(t, hash1[:], cachedNode)
 
-		hasStateTrieNode, _ = dbm.HasStateTrieNode(hash1[:])
+		hasStateTrieNode, _ = dbm.HasTrieNode(hash1)
 		assert.True(t, hasStateTrieNode)
 
 		if dbm.IsSingle() {
@@ -494,8 +494,8 @@ func TestDBManager_TrieNode(t *testing.T) {
 		assert.Equal(t, hash1[:], cachedNode)
 		assert.Equal(t, hash1[:], oldCachedNode)
 
-		hasStateTrieNode, _ = dbm.HasStateTrieNode(hash1[:])
-		hasOldStateTrieNode, _ := dbm.HasStateTrieNodeFromOld(hash1[:])
+		hasStateTrieNode, _ = dbm.HasTrieNode(hash1)
+		hasOldStateTrieNode, _ := dbm.HasTrieNodeFromOld(hash1)
 		assert.True(t, hasStateTrieNode)
 		assert.True(t, hasOldStateTrieNode)
 
@@ -512,8 +512,8 @@ func TestDBManager_TrieNode(t *testing.T) {
 		assert.Equal(t, hash2[:], cachedNode)
 		assert.Equal(t, hash2[:], oldCachedNode)
 
-		hasStateTrieNode, _ = dbm.HasStateTrieNode(hash2[:])
-		hasOldStateTrieNode, _ = dbm.HasStateTrieNodeFromOld(hash2[:])
+		hasStateTrieNode, _ = dbm.HasTrieNode(hash2)
+		hasOldStateTrieNode, _ = dbm.HasTrieNodeFromOld(hash2)
 		assert.True(t, hasStateTrieNode)
 		assert.True(t, hasOldStateTrieNode)
 

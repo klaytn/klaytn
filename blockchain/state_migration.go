@@ -54,8 +54,8 @@ func (td *stateTrieMigrationDB) ReadCachedTrieNodePreimage(secureKey []byte) ([]
 	return td.ReadCachedTrieNodePreimageFromNew(secureKey)
 }
 
-func (td *stateTrieMigrationDB) HasStateTrieNode(key []byte) (bool, error) {
-	return td.HasStateTrieNodeFromNew(key)
+func (td *stateTrieMigrationDB) HasTrieNode(hash common.Hash) (bool, error) {
+	return td.HasTrieNodeFromNew(hash)
 }
 
 func (td *stateTrieMigrationDB) HasCodeWithPrefix(hash common.Hash) bool {

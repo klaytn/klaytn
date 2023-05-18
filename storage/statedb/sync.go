@@ -127,7 +127,7 @@ func (batch *syncMemBatch) hasCode(hash common.Hash) bool {
 
 type StateTrieReadDB interface {
 	ReadTrieNode(hash common.Hash) ([]byte, error)
-	HasStateTrieNode(key []byte) (bool, error)
+	HasTrieNode(hash common.Hash) (bool, error)
 	HasCodeWithPrefix(hash common.Hash) bool
 }
 
@@ -184,7 +184,7 @@ func (s *TrieSync) AddSubTrie(root common.Hash, path []byte, depth int, parent c
 		// Bloom filter says this might be a duplicate, double check.
 		// If database says yes, then at least the trie node is present
 		// and we hold the assumption that it's NOT legacy contract code.
-		if ok, _ := s.database.HasStateTrieNode(root[:]); ok {
+		if ok, _ := s.database.HasTrieNode(root); ok {
 			logger.Debug("skip write sub-trie", "root", root.String())
 			return
 		}
@@ -480,7 +480,7 @@ func (s *TrieSync) children(req *request, object node) ([]*request, error) {
 				// Bloom filter says this might be a duplicate, double check.
 				// If database says yes, then at least the trie node is present
 				// and we hold the assumption that it's NOT legacy contract code.
-				if ok, _ := s.database.HasStateTrieNode(node); ok {
+				if ok, _ := s.database.HasTrieNode(hash); ok {
 					continue
 				}
 				// False positive, bump fault meter
