@@ -387,7 +387,7 @@ func TestCheckStateConsistencyMissNode(t *testing.T) {
 				srcState.DeleteCode(hash)
 				newState.DeleteCode(hash)
 			} else {
-				data, _ = srcDiskDB.ReadCachedTrieNode(hash)
+				data, _ = srcDiskDB.ReadTrieNode(hash)
 				srcDiskDB.GetMemDB().Delete(hash[:])
 				newDiskDB.GetMemDB().Delete(hash[:])
 			}
@@ -670,7 +670,7 @@ func TestIncompleteStateSync(t *testing.T) {
 			val = dstDb.ReadCode(node)
 			dstState.DeleteCode(node)
 		} else {
-			val, _ = dstDb.ReadCachedTrieNode(node)
+			val, _ = dstDb.ReadTrieNode(node)
 			dstDb.GetMemDB().Delete(node[:])
 		}
 

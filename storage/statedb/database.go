@@ -516,7 +516,7 @@ func (db *Database) node(hash common.Hash) (n node, fromDB bool) {
 	}
 
 	// Content unavailable in memory, attempt to retrieve from disk
-	enc, err := db.diskDB.ReadCachedTrieNode(hash)
+	enc, err := db.diskDB.ReadTrieNode(hash)
 	if err != nil || enc == nil {
 		return nil, true
 	}
@@ -544,7 +544,7 @@ func (db *Database) Node(hash common.Hash) ([]byte, error) {
 		return node.rlp(), nil
 	}
 	// Content unavailable in memory, attempt to retrieve from disk
-	enc, err := db.diskDB.ReadCachedTrieNode(hash)
+	enc, err := db.diskDB.ReadTrieNode(hash)
 	if err == nil && enc != nil {
 		db.setCachedNode(hash[:], enc)
 	}
@@ -571,7 +571,7 @@ func (db *Database) NodeFromOld(hash common.Hash) ([]byte, error) {
 		return node.rlp(), nil
 	}
 	// Content unavailable in memory, attempt to retrieve from disk
-	enc, err := db.diskDB.ReadCachedTrieNodeFromOld(hash)
+	enc, err := db.diskDB.ReadTrieNodeFromOld(hash)
 	if err == nil && enc != nil {
 		db.setCachedNode(hash[:], enc)
 	}
@@ -595,7 +595,7 @@ func (db *Database) DoesExistNodeInPersistent(hash common.Hash) bool {
 	}
 
 	// Content unavailable in DB cache, attempt to retrieve from disk
-	enc, err := db.diskDB.ReadCachedTrieNode(hash)
+	enc, err := db.diskDB.ReadTrieNode(hash)
 	if err == nil && enc != nil {
 		return true
 	}

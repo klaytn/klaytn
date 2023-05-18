@@ -46,8 +46,8 @@ type stateTrieMigrationDB struct {
 	database.DBManager
 }
 
-func (td *stateTrieMigrationDB) ReadCachedTrieNode(hash common.Hash) ([]byte, error) {
-	return td.ReadCachedTrieNodeFromNew(hash)
+func (td *stateTrieMigrationDB) ReadTrieNode(hash common.Hash) ([]byte, error) {
+	return td.ReadTrieNodeFromNew(hash)
 }
 
 func (td *stateTrieMigrationDB) ReadCachedTrieNodePreimage(secureKey []byte) ([]byte, error) {

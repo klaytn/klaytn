@@ -146,7 +146,6 @@ type DBManager interface {
 	// State Trie Database related operations
 	ReadTrieNode(hash common.Hash) ([]byte, error)
 	HasTrieNode(hash common.Hash) (bool, error)
-	ReadCachedTrieNode(hash common.Hash) ([]byte, error)
 	ReadCachedTrieNodePreimage(secureKey []byte) ([]byte, error)
 	ReadStateTrieNode(key []byte) ([]byte, error)
 	HasStateTrieNode(key []byte) (bool, error)
@@ -156,7 +155,6 @@ type DBManager interface {
 	// Read StateTrie from new DB
 	ReadTrieNodeFromNew(hash common.Hash) ([]byte, error)
 	HasTrieNodeFromNew(hash common.Hash) (bool, error)
-	ReadCachedTrieNodeFromNew(hash common.Hash) ([]byte, error)
 	ReadCachedTrieNodePreimageFromNew(secureKey []byte) ([]byte, error)
 	ReadStateTrieNodeFromNew(key []byte) ([]byte, error)
 	HasStateTrieNodeFromNew(key []byte) (bool, error)
@@ -166,7 +164,6 @@ type DBManager interface {
 	// Read StateTrie from old DB
 	ReadTrieNodeFromOld(hash common.Hash) ([]byte, error)
 	HasTrieNodeFromOld(hash common.Hash) (bool, error)
-	ReadCachedTrieNodeFromOld(hash common.Hash) ([]byte, error)
 	ReadCachedTrieNodePreimageFromOld(secureKey []byte) ([]byte, error)
 	ReadStateTrieNodeFromOld(key []byte) ([]byte, error)
 	HasStateTrieNodeFromOld(key []byte) (bool, error)
@@ -1762,7 +1759,7 @@ func (dbm *databaseManager) ReadTrieNode(hash common.Hash) ([]byte, error) {
 			logger.Error("Unexpected error while reading cached trie node from state migration database", "err", err)
 		}
 	}
-	val, err := dbm.ReadCachedTrieNodeFromOld(hash)
+	val, err := dbm.ReadTrieNodeFromOld(hash)
 	if err != nil && err != dataNotFoundErr {
 		// TODO-Klaytn-Database Need to be properly handled
 		logger.Error("Unexpected error while reading cached trie node", "err", err)
@@ -1777,27 +1774,6 @@ func (dbm *databaseManager) HasTrieNode(hash common.Hash) (bool, error) {
 	} else {
 		return true, nil
 	}
-}
-
-// Cached Trie Node operation.
-func (dbm *databaseManager) ReadCachedTrieNode(hash common.Hash) ([]byte, error) {
-	dbm.lockInMigration.RLock()
-	defer dbm.lockInMigration.RUnlock()
-
-	if dbm.inMigration {
-		if val, err := dbm.GetStateTrieMigrationDB().Get(hash[:]); err == nil {
-			return val, nil
-		} else if err != dataNotFoundErr {
-			// TODO-Klaytn-Database Need to be properly handled
-			logger.Error("Unexpected error while reading cached trie node from state migration database", "err", err)
-		}
-	}
-	val, err := dbm.ReadCachedTrieNodeFromOld(hash)
-	if err != nil && err != dataNotFoundErr {
-		// TODO-Klaytn-Database Need to be properly handled
-		logger.Error("Unexpected error while reading cached trie node", "err", err)
-	}
-	return val, err
 }
 
 // Cached Trie Node Preimage operation.
@@ -1860,11 +1836,6 @@ func (dbm *databaseManager) HasTrieNodeFromNew(hash common.Hash) (bool, error) {
 	}
 }
 
-// Cached Trie Node operation.
-func (dbm *databaseManager) ReadCachedTrieNodeFromNew(hash common.Hash) ([]byte, error) {
-	return dbm.GetStateTrieMigrationDB().Get(hash[:])
-}
-
 // Cached Trie Node Preimage operation.
 func (dbm *databaseManager) ReadCachedTrieNodePreimageFromNew(secureKey []byte) ([]byte, error) {
 	return dbm.GetStateTrieMigrationDB().Get(secureKey)
@@ -1907,11 +1878,6 @@ func (dbm *databaseManager) HasTrieNodeFromOld(hash common.Hash) (bool, error) {
 	} else {
 		return true, nil
 	}
-}
-
-func (dbm *databaseManager) ReadCachedTrieNodeFromOld(hash common.Hash) ([]byte, error) {
-	db := dbm.getDatabase(StateTrieDB)
-	return db.Get(hash[:])
 }
 
 // Cached Trie Node Preimage operation.
