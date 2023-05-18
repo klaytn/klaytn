@@ -1854,9 +1854,7 @@ func (s *Syncer) processBytecodeResponse(res *bytecodeResponse) {
 		}
 		// Push the bytecode into a database batch
 		codes++
-		if err := batch.Put(database.CodeKey(hash), code); err != nil {
-			logger.Crit("Failed to store contract code", "err", err)
-		}
+		s.db.PutCodeToBatch(batch, hash, code)
 	}
 	bytes := common.StorageSize(batch.ValueSize())
 	if err := batch.Write(); err != nil {

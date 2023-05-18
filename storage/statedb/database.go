@@ -769,7 +769,11 @@ func (db *Database) Cap(limit common.StorageSize) error {
 		// Fetch the oldest referenced node and push into the batch
 		node := db.nodes[oldest]
 		enc := node.rlp()
-		if err := database.PutAndWriteBatchesOverThreshold(batch, oldest[:], enc); err != nil {
+		if err := db.diskDB.PutTrieNodeToBatch(batch, oldest, enc); err != nil {
+			db.lock.RUnlock()
+			return err
+		}
+		if _, err := database.WriteBatchesOverThreshold(batch); err != nil {
 			db.lock.RUnlock()
 			return err
 		}
@@ -863,8 +867,8 @@ func (db *Database) writeBatchPreimages() error {
 // key and val are nil if the commitResult indicates the end of
 // concurrentCommit goroutine.
 type commitResult struct {
-	key []byte
-	val []byte
+	hash common.Hash
+	val  []byte
 }
 
 func (db *Database) writeBatchNodes(node common.Hash) error {
@@ -888,24 +892,21 @@ func (db *Database) writeBatchNodes(node common.Hash) error {
 	batch := db.diskDB.NewBatch(database.StateTrieDB)
 	for numGoRoutines > 0 {
 		result := <-resultCh
-		if result.key == nil && result.val == nil {
+		if (result.hash == common.Hash{}) && result.val == nil {
 			numGoRoutines--
 			continue
 		}
 
-		if err := batch.Put(result.key, result.val); err != nil {
+		if err := db.diskDB.PutTrieNodeToBatch(batch, result.hash, result.val); err != nil {
 			return err
 		}
-		if batch.ValueSize() > database.IdealBatchSize {
-			if err := batch.Write(); err != nil {
-				return err
-			}
-			batch.Reset()
+		if _, err := database.WriteBatchesOverThreshold(batch); err != nil {
+			return err
 		}
 	}
 
 	enc := rootNode.rlp()
-	if err := batch.Put(node[:], enc); err != nil {
+	if err := db.diskDB.PutTrieNodeToBatch(batch, node, enc); err != nil {
 		return err
 	}
 	if err := batch.Write(); err != nil {
@@ -923,7 +924,7 @@ func (db *Database) concurrentCommit(hash common.Hash, resultCh chan<- commitRes
 	logger.Trace("concurrentCommit start", "childIndex", childIndex)
 	defer logger.Trace("concurrentCommit end", "childIndex", childIndex)
 	db.commit(hash, resultCh)
-	resultCh <- commitResult{nil, nil}
+	resultCh <- commitResult{common.Hash{}, nil}
 }
 
 // Commit iterates over all the children of a particular node, writes them out
@@ -993,7 +994,7 @@ func (db *Database) commit(hash common.Hash, resultCh chan<- commitResult) {
 		db.commit(child, resultCh)
 	}
 	enc := node.rlp()
-	resultCh <- commitResult{hash[:], enc}
+	resultCh <- commitResult{hash, enc}
 
 	if db.trieNodeCache != nil {
 		db.trieNodeCache.Set(hash[:], enc)

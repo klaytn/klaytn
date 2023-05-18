@@ -140,6 +140,7 @@ type DBManager interface {
 	ReadCode(hash common.Hash) []byte
 	ReadCodeWithPrefix(hash common.Hash) []byte
 	WriteCode(hash common.Hash, code []byte)
+	PutCodeToBatch(batch Batch, hash common.Hash, code []byte)
 	DeleteCode(hash common.Hash)
 	HasCode(hash common.Hash) bool
 
@@ -161,6 +162,7 @@ type DBManager interface {
 	HasCodeWithPrefixFromOld(hash common.Hash) bool
 	ReadPreimageFromOld(hash common.Hash) []byte
 
+	PutTrieNodeToBatch(batch Batch, hash common.Hash, node []byte) error
 	WritePreimages(number uint64, preimages map[common.Hash][]byte)
 
 	// from accessors_indexes.go
@@ -1730,6 +1732,12 @@ func (dbm *databaseManager) WriteCode(hash common.Hash, code []byte) {
 	}
 }
 
+func (dbm *databaseManager) PutCodeToBatch(batch Batch, hash common.Hash, code []byte) {
+	if err := batch.Put(CodeKey(hash), code); err != nil {
+		logger.Crit("Failed to store contract code", "err", err)
+	}
+}
+
 // DeleteCode deletes the specified contract code from the database.
 func (dbm *databaseManager) DeleteCode(hash common.Hash) {
 	db := dbm.getDatabase(StateTrieDB)
@@ -1830,6 +1838,10 @@ func (dbm *databaseManager) ReadPreimageFromOld(hash common.Hash) []byte {
 	db := dbm.getDatabase(StateTrieDB)
 	data, _ := db.Get(preimageKey(hash))
 	return data
+}
+
+func (dbm *databaseManager) PutTrieNodeToBatch(batch Batch, hash common.Hash, node []byte) error {
+	return batch.Put(hash[:], node)
 }
 
 // WritePreimages writes the provided set of preimages to the database. `number` is the
