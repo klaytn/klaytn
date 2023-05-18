@@ -346,7 +346,7 @@ func (s *TrieSync) Commit(dbw database.Batch) (int, error) {
 	written := 0
 	// Dump the membatch into a database dbw
 	for key, value := range s.membatch.nodes {
-		if err := dbw.Put(key[:], value); err != nil {
+		if err := dbw.Put(database.TrieNodeKey(key), value); err != nil {
 			return written, err
 		}
 		if s.bloom != nil {
