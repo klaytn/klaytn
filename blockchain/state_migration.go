@@ -54,10 +54,6 @@ func (td *stateTrieMigrationDB) ReadCachedTrieNodePreimage(secureKey []byte) ([]
 	return td.ReadCachedTrieNodePreimageFromNew(secureKey)
 }
 
-func (td *stateTrieMigrationDB) ReadStateTrieNode(key []byte) ([]byte, error) {
-	return td.ReadStateTrieNodeFromNew(key)
-}
-
 func (td *stateTrieMigrationDB) HasStateTrieNode(key []byte) (bool, error) {
 	return td.HasStateTrieNodeFromNew(key)
 }

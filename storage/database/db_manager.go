@@ -147,7 +147,6 @@ type DBManager interface {
 	ReadTrieNode(hash common.Hash) ([]byte, error)
 	HasTrieNode(hash common.Hash) (bool, error)
 	ReadCachedTrieNodePreimage(secureKey []byte) ([]byte, error)
-	ReadStateTrieNode(key []byte) ([]byte, error)
 	HasStateTrieNode(key []byte) (bool, error)
 	HasCodeWithPrefix(hash common.Hash) bool
 	ReadPreimage(hash common.Hash) []byte
@@ -156,7 +155,6 @@ type DBManager interface {
 	ReadTrieNodeFromNew(hash common.Hash) ([]byte, error)
 	HasTrieNodeFromNew(hash common.Hash) (bool, error)
 	ReadCachedTrieNodePreimageFromNew(secureKey []byte) ([]byte, error)
-	ReadStateTrieNodeFromNew(key []byte) ([]byte, error)
 	HasStateTrieNodeFromNew(key []byte) (bool, error)
 	HasCodeWithPrefixFromNew(hash common.Hash) bool
 	ReadPreimageFromNew(hash common.Hash) []byte
@@ -165,7 +163,6 @@ type DBManager interface {
 	ReadTrieNodeFromOld(hash common.Hash) ([]byte, error)
 	HasTrieNodeFromOld(hash common.Hash) (bool, error)
 	ReadCachedTrieNodePreimageFromOld(secureKey []byte) ([]byte, error)
-	ReadStateTrieNodeFromOld(key []byte) ([]byte, error)
 	HasStateTrieNodeFromOld(key []byte) (bool, error)
 	HasCodeWithPrefixFromOld(hash common.Hash) bool
 	ReadPreimageFromOld(hash common.Hash) []byte

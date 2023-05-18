@@ -126,7 +126,7 @@ func (batch *syncMemBatch) hasCode(hash common.Hash) bool {
 }
 
 type StateTrieReadDB interface {
-	ReadStateTrieNode(key []byte) ([]byte, error)
+	ReadTrieNode(hash common.Hash) ([]byte, error)
 	HasStateTrieNode(key []byte) (bool, error)
 	HasCodeWithPrefix(hash common.Hash) bool
 }

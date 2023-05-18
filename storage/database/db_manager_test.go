@@ -480,9 +480,6 @@ func TestDBManager_TrieNode(t *testing.T) {
 		cachedNode, _ = dbm.ReadTrieNode(hash1)
 		assert.Equal(t, hash1[:], cachedNode)
 
-		stateTrieNode, _ := dbm.ReadStateTrieNode(hash1[:])
-		assert.Equal(t, hash1[:], stateTrieNode)
-
 		hasStateTrieNode, _ = dbm.HasStateTrieNode(hash1[:])
 		assert.True(t, hasStateTrieNode)
 
@@ -496,11 +493,6 @@ func TestDBManager_TrieNode(t *testing.T) {
 		oldCachedNode, _ := dbm.ReadTrieNodeFromOld(hash1)
 		assert.Equal(t, hash1[:], cachedNode)
 		assert.Equal(t, hash1[:], oldCachedNode)
-
-		stateTrieNode, _ = dbm.ReadStateTrieNode(hash1[:])
-		oldStateTrieNode, _ := dbm.ReadStateTrieNodeFromOld(hash1[:])
-		assert.Equal(t, hash1[:], stateTrieNode)
-		assert.Equal(t, hash1[:], oldStateTrieNode)
 
 		hasStateTrieNode, _ = dbm.HasStateTrieNode(hash1[:])
 		hasOldStateTrieNode, _ := dbm.HasStateTrieNodeFromOld(hash1[:])
@@ -519,11 +511,6 @@ func TestDBManager_TrieNode(t *testing.T) {
 		oldCachedNode, _ = dbm.ReadTrieNodeFromOld(hash2)
 		assert.Equal(t, hash2[:], cachedNode)
 		assert.Equal(t, hash2[:], oldCachedNode)
-
-		stateTrieNode, _ = dbm.ReadStateTrieNode(hash2[:])
-		oldStateTrieNode, _ = dbm.ReadStateTrieNodeFromOld(hash2[:])
-		assert.Equal(t, hash2[:], stateTrieNode)
-		assert.Equal(t, hash2[:], oldStateTrieNode)
 
 		hasStateTrieNode, _ = dbm.HasStateTrieNode(hash2[:])
 		hasOldStateTrieNode, _ = dbm.HasStateTrieNodeFromOld(hash2[:])
