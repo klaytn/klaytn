@@ -605,17 +605,17 @@ func (db *Database) DoesExistNodeInPersistent(hash common.Hash) bool {
 
 // preimage retrieves a cached trie node pre-image from memory. If it cannot be
 // found cached, the method queries the persistent database for the content.
-func (db *Database) preimage(hash common.Hash) ([]byte, error) {
+func (db *Database) preimage(hash common.Hash) []byte {
 	// Retrieve the node from cache if available
 	db.lock.RLock()
 	preimage := db.preimages[hash]
 	db.lock.RUnlock()
 
 	if preimage != nil {
-		return preimage, nil
+		return preimage
 	}
 	// Content unavailable in memory, attempt to retrieve from disk
-	return db.diskDB.ReadCachedTrieNodePreimage(secureKey(hash))
+	return db.diskDB.ReadPreimage(hash)
 }
 
 // secureKey returns the database key for the preimage of key (as a newly
