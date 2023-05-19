@@ -46,7 +46,6 @@ func checkHasherHashFunc(t *testing.T, idx int, tc *testNodeEncodingTC, hashFunc
 }
 
 func checkHasherHash(t *testing.T, idx int, tc *testNodeEncodingTC) {
-
 	checkHasherHashFunc(t, idx, tc, func(db *Database) (node, node) {
 		h := newHasher(nil)
 		defer returnHasherToPool(h)
