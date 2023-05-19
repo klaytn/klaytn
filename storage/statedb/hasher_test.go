@@ -8,15 +8,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func checkHasherHash(t *testing.T, idx int, tc *testNodeEncodingTC) {
+func checkHasherHashFunc(t *testing.T, idx int, tc *testNodeEncodingTC, hashFunc func(*Database) (node, node)) {
 	hash := common.BytesToHash(tc.hash)
 
 	memDB := database.NewMemoryDBManager()
 	db := NewDatabase(memDB)
-	h := newHasher(nil)
-	defer returnHasherToPool(h)
 
-	hashed, cached := h.hash(tc.expanded, db, false)
+	hashed, cached := hashFunc(db)
 	t.Logf("tc[%02d] %s", idx, hashed)
 	assert.Equal(t, hashNode(tc.hash), hashed, idx)
 
@@ -29,6 +27,21 @@ func checkHasherHash(t *testing.T, idx int, tc *testNodeEncodingTC) {
 	db.Cap(0)
 	encoded, _ := memDB.ReadCachedTrieNode(hash)
 	assert.Equal(t, tc.encoded, encoded, idx)
+}
+
+func checkHasherHash(t *testing.T, idx int, tc *testNodeEncodingTC) {
+
+	checkHasherHashFunc(t, idx, tc, func(db *Database) (node, node) {
+		h := newHasher(nil)
+		defer returnHasherToPool(h)
+		return h.hash(tc.expanded, db, false)
+	})
+
+	checkHasherHashFunc(t, idx, tc, func(db *Database) (node, node) {
+		h := newHasher(nil)
+		defer returnHasherToPool(h)
+		return h.hashRoot(tc.expanded, db, false)
+	})
 }
 
 func TestHasherHashTC(t *testing.T) {
