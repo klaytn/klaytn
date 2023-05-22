@@ -1099,9 +1099,7 @@ func TestEIP155Transition(t *testing.T) {
 		}
 	})
 	_, err := blockchain.InsertChain(blocks)
-	if err != types.ErrInvalidChainId {
-		t.Error("expected error:", types.ErrInvalidChainId)
-	}
+	assert.Equal(t, types.ErrSender(types.ErrInvalidChainId), err)
 }
 
 // TODO-Klaytn-FailedTest Failed test. Enable this later.
