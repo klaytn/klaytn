@@ -85,9 +85,8 @@ func TestMissingNodeDisk(t *testing.T)    { testMissingNode(t, false) }
 func TestMissingNodeMemonly(t *testing.T) { testMissingNode(t, true) }
 
 func testMissingNode(t *testing.T, memonly bool) {
-	memDBManager := database.NewMemoryDBManager()
-	diskdb := memDBManager.GetMemDB()
-	triedb := NewDatabase(memDBManager)
+	dbm := database.NewMemoryDBManager()
+	triedb := NewDatabase(dbm)
 
 	trie, _ := NewTrie(common.Hash{}, triedb)
 	updateString(trie, "120000", "qwerqwerqwerqwerqwerqwerqwerqwer")
@@ -127,7 +126,7 @@ func testMissingNode(t *testing.T, memonly bool) {
 	if memonly {
 		delete(triedb.nodes, hash)
 	} else {
-		diskdb.Delete(hash[:])
+		dbm.DeleteTrieNode(hash)
 	}
 
 	trie, _ = NewTrie(root, triedb)

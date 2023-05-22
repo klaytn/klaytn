@@ -293,9 +293,9 @@ func TestIteratorContinueAfterErrorDisk(t *testing.T)    { testIteratorContinueA
 func TestIteratorContinueAfterErrorMemonly(t *testing.T) { testIteratorContinueAfterError(t, true) }
 
 func testIteratorContinueAfterError(t *testing.T, memonly bool) {
-	memDBManager := database.NewMemoryDBManager()
-	diskdb := memDBManager.GetMemDB()
-	triedb := NewDatabase(memDBManager)
+	dbm := database.NewMemoryDBManager()
+	diskdb := dbm.GetMemDB()
+	triedb := NewDatabase(dbm)
 
 	tr, _ := NewTrie(common.Hash{}, triedb)
 	for _, val := range testdata1 {
@@ -341,8 +341,8 @@ func testIteratorContinueAfterError(t *testing.T, memonly bool) {
 			robj = triedb.nodes[rkey]
 			delete(triedb.nodes, rkey)
 		} else {
-			rval, _ = diskdb.Get(rkey[:])
-			diskdb.Delete(rkey[:])
+			rval, _ = dbm.ReadTrieNode(rkey)
+			dbm.DeleteTrieNode(rkey)
 		}
 		// Iterate until the error is hit.
 		seen := make(map[string]bool)
@@ -357,7 +357,7 @@ func testIteratorContinueAfterError(t *testing.T, memonly bool) {
 		if memonly {
 			triedb.nodes[rkey] = robj
 		} else {
-			diskdb.Put(rkey[:], rval)
+			dbm.WriteTrieNode(rkey, rval)
 		}
 		checkIteratorNoDups(t, it, seen)
 		if it.Error() != nil {
@@ -382,9 +382,8 @@ func TestIteratorContinueAfterSeekErrorMemonly(t *testing.T) {
 
 func testIteratorContinueAfterSeekError(t *testing.T, memonly bool) {
 	// Commit test trie to db, then remove the node containing "bars".
-	memDBManager := database.NewMemoryDBManager()
-	diskdb := memDBManager.GetMemDB()
-	triedb := NewDatabase(memDBManager)
+	dbm := database.NewMemoryDBManager()
+	triedb := NewDatabase(dbm)
 
 	ctr, _ := NewTrie(common.Hash{}, triedb)
 	for _, val := range testdata1 {
@@ -403,8 +402,8 @@ func testIteratorContinueAfterSeekError(t *testing.T, memonly bool) {
 		barNodeObj = triedb.nodes[barNodeHash]
 		delete(triedb.nodes, barNodeHash)
 	} else {
-		barNodeBlob, _ = diskdb.Get(barNodeHash[:])
-		diskdb.Delete(barNodeHash[:])
+		barNodeBlob, _ = dbm.ReadTrieNode(barNodeHash)
+		dbm.DeleteTrieNode(barNodeHash)
 	}
 	// Create a new iterator that seeks to "bars". Seeking can't proceed because
 	// the node is missing.
@@ -420,7 +419,7 @@ func testIteratorContinueAfterSeekError(t *testing.T, memonly bool) {
 	if memonly {
 		triedb.nodes[barNodeHash] = barNodeObj
 	} else {
-		diskdb.Put(barNodeHash[:], barNodeBlob)
+		dbm.WriteTrieNode(barNodeHash, barNodeBlob)
 	}
 	// Check that iteration produces the right set of values.
 	if err := checkIteratorOrder(testdata1[2:], NewIterator(it)); err != nil {
