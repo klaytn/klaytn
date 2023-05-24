@@ -41,7 +41,7 @@ import (
 )
 
 var (
-	deadline = 5 * time.Minute // consider a filter inactive if it has not been polled for within deadline
+	defaultFilterDeadline = 5 * time.Minute // consider a filter inactive if it has not been polled for within deadline
 
 	getLogsCxtKeyMaxItems = "maxItems"       // the value of the context key should have the type of GetLogsMaxItems
 	GetLogsDeadline       = 10 * time.Second // execution deadlines for getLogs and getFilterLogs APIs
@@ -82,7 +82,7 @@ func NewPublicFilterAPI(backend Backend, lightMode bool) *PublicFilterAPI {
 		chainDB: backend.ChainDB(),
 		events:  NewEventSystem(backend.EventMux(), backend, lightMode),
 		filters: make(map[rpc.ID]*filter),
-		timeout: deadline,
+		timeout: defaultFilterDeadline,
 	}
 	go api.timeoutLoop()
 
