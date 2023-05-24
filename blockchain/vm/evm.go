@@ -304,8 +304,10 @@ func (evm *EVM) CallCode(caller types.ContractRef, addr common.Address, input []
 	if evm.depth > int(params.CallCreateDepth) {
 		return nil, gas, ErrDepth // TODO-Klaytn-Issue615
 	}
-	// Fail if we're trying to transfer more than the available balance
-	if !evm.CanTransfer(evm.StateDB, caller.Address(), value) {
+	// Note although it's noop to transfer X ether to caller itself. But
+	// if caller doesn't have enough balance, it would be an error to allow
+	// over-charging itself. So the check here is necessary.
+	if !evm.Context.CanTransfer(evm.StateDB, caller.Address(), value) {
 		return nil, gas, ErrInsufficientBalance // TODO-Klaytn-Issue615
 	}
 
@@ -437,12 +439,18 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 	if evm.depth > int(params.CallCreateDepth) {
 		return nil, common.Address{}, gas, ErrDepth // TODO-Klaytn-Issue615
 	}
-	if !evm.CanTransfer(evm.StateDB, caller.Address(), value) {
+	if !evm.Context.CanTransfer(evm.StateDB, caller.Address(), value) {
 		return nil, common.Address{}, gas, ErrInsufficientBalance // TODO-Klaytn-Issue615
 	}
 
 	// Increasing nonce since a failed tx with one of following error will be loaded on a block.
 	evm.StateDB.IncNonce(caller.Address())
+
+	// We add this to the access list _before_ taking a snapshot. Even if the creation fails,
+	// the access-list change should not be rolled back
+	if evm.chainRules.IsKore {
+		evm.StateDB.AddAddressToAccessList(address)
+	}
 
 	if evm.StateDB.Exist(address) {
 		return nil, common.Address{}, 0, ErrContractAddressCollision // TODO-Klaytn-Issue615
@@ -549,35 +557,24 @@ func (evm *EVM) CreateWithAddress(caller types.ContractRef, code []byte, gas uin
 }
 
 func (evm *EVM) GetPrecompiledContractMap(addr common.Address) map[common.Address]PrecompiledContract {
-	getPrecompiledContractMapWithVmVersion := func() (bool, map[common.Address]PrecompiledContract) {
-		// Get vmVersion from addr. If there's no vmVersion, it returns false and use latest precompiled contract map
-		vmVersion, ok := evm.StateDB.GetVmVersion(addr)
-		if !ok {
-			return false, nil
-		}
+	// VmVersion means that the contract uses the precompiled contract map at the deployment time.
+	// Also, it follows old map's gas price & computation cost.
 
-		// Return precompiled contract map according to the VmVersion (use the map at deployment time of addr contract)
-		//      (gas price policy also follows old map's rule)
-		// If new "VmVersion" is added, add new if clause below
-		if vmVersion == params.VmVersion0 {
-			// Without this version, 0x09-0x0b won't work properly with contracts deployed before istanbulHF
-			return true, PrecompiledContractsConstantinople
-		}
-		return false, nil
+	// Get vmVersion from addr only if the addr is a contract address.
+	// If new "VmVersion" is added, add new if clause below
+	if vmVersion, ok := evm.StateDB.GetVmVersion(addr); ok && vmVersion == params.VmVersion0 {
+		// Without VmVersion0, precompiled contract address 0x09-0x0b won't work properly
+		// with the contracts deployed before istanbulHF
+		return PrecompiledContractsByzantiumCompatible
 	}
 
-	// There are contracts which uses latest precompiled contract map (regardless of deployment time)
-	// If new HF is added, please add new case below
 	switch {
-	case evm.chainRules.IsLondon:
-		fallthrough
+	case evm.chainRules.IsKore:
+		return PrecompiledContractsKore
 	case evm.chainRules.IsIstanbul:
-		if ok, mapWithVmVersion := getPrecompiledContractMapWithVmVersion(); ok {
-			return mapWithVmVersion
-		}
-		return PrecompiledContractsIstanbul
+		return PrecompiledContractsIstanbulCompatible
 	default:
-		return PrecompiledContractsConstantinople
+		return PrecompiledContractsByzantiumCompatible
 	}
 }
 

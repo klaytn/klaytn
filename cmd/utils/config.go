@@ -317,12 +317,22 @@ func (kCfg *KlayConfig) SetNodeConfig(ctx *cli.Context) {
 	} else {
 		cfg.NtpRemoteServer = ctx.GlobalString(NtpServerFlag.Name)
 	}
+
+	// disable unsafe debug APIs
+	cfg.DisableUnsafeDebug = ctx.GlobalBool(UnsafeDebugDisableFlag.Name)
+
 	SetP2PConfig(ctx, &cfg.P2P)
 	setIPC(ctx, cfg)
 
-	// httptype is http or fasthttp
+	// httptype is http
+	// fasthttp type is deprecated
 	if ctx.GlobalIsSet(SrvTypeFlag.Name) {
 		cfg.HTTPServerType = ctx.GlobalString(SrvTypeFlag.Name)
+
+		if cfg.HTTPServerType == "fasthttp" {
+			logger.Warn("The fasthttp option is deprecated. Instead, the server will start with the http type")
+			cfg.HTTPServerType = "http"
+		}
 	}
 
 	setHTTP(ctx, cfg)
@@ -591,7 +601,9 @@ func (kCfg *KlayConfig) SetKlayConfig(ctx *cli.Context, stack *node.Node) {
 	if ctx.GlobalIsSet(RPCGlobalGasCap.Name) {
 		cfg.RPCGasCap = new(big.Int).SetUint64(ctx.GlobalUint64(RPCGlobalGasCap.Name))
 	}
-
+	if ctx.GlobalIsSet(RPCGlobalEVMTimeoutFlag.Name) {
+		cfg.RPCEVMTimeout = ctx.GlobalDuration(RPCGlobalEVMTimeoutFlag.Name)
+	}
 	if ctx.GlobalIsSet(RPCGlobalEthTxFeeCapFlag.Name) {
 		cfg.RPCTxFeeCap = ctx.GlobalFloat64(RPCGlobalEthTxFeeCapFlag.Name)
 	}
@@ -619,6 +631,9 @@ func (kCfg *KlayConfig) SetKlayConfig(ctx *cli.Context, stack *node.Node) {
 	} else {
 		cfg.SnapshotCacheSize = 0 // snapshot disabled
 	}
+
+	// disable unsafe debug APIs
+	cfg.DisableUnsafeDebug = ctx.GlobalBool(UnsafeDebugDisableFlag.Name)
 
 	// Override any default configs for hard coded network.
 	// TODO-Klaytn-Bootnode: Discuss and add `baobab` test network's genesis block

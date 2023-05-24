@@ -36,8 +36,8 @@ const (
 	addressTypeNodeID = iota
 	addressTypeStakingAddr
 	addressTypeRewardAddr
-	addressTypePoCAddr
-	addressTypeKIRAddr
+	addressTypePoCAddr // TODO-klaytn: PoC should be changed to KFF after changing AddressBook contract
+	addressTypeKIRAddr // TODO-klaytn: KIR should be changed to KCF after changing AddressBook contract
 )
 
 var errAddressBookIncomplete = errors.New("incomplete node information from AddressBook")
@@ -195,14 +195,12 @@ func (ac *addressBookConnector) getStakingInfoFromAddressBook(blockNum uint64) (
 	context.GasPrice = big.NewInt(0)
 	evm := vm.NewEVM(context, statedb, ac.bc.Config(), &vm.Config{})
 
-	res, gas, kerr := blockchain.ApplyMessage(evm, msg)
-	logger.Trace("Call AddressBook contract", "used gas", gas, "kerr", kerr)
-	err = kerr.ErrTxInvalid
+	res, err := blockchain.ApplyMessage(evm, msg)
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("failed to call AddressBook contract. root err: %s", err))
 	}
-
-	nodeAddrs, stakingAddrs, rewardAddrs, PoCAddr, KIRAddr, err := ac.parseAllAddresses(res)
+	logger.Trace("AddressBook contract call", "used gas", res.UsedGas, "vmerr", res.Unwrap())
+	nodeAddrs, stakingAddrs, rewardAddrs, PoCAddr, KIRAddr, err := ac.parseAllAddresses(res.Return())
 	if err != nil {
 		if err == errAddressBookIncomplete {
 			// This is an expected behavior when the addressBook contract is not activated yet.
@@ -216,7 +214,7 @@ func (ac *addressBookConnector) getStakingInfoFromAddressBook(blockNum uint64) (
 	return newStakingInfo(ac.bc, ac.gh, blockNum, nodeAddrs, stakingAddrs, rewardAddrs, KIRAddr, PoCAddr)
 }
 
-// Only for testing purpose.
+// SetTestAddressBookAddress is only for testing purpose.
 func SetTestAddressBookAddress(addr common.Address) {
 	addressBookContractAddress = addr.Hex()
 }

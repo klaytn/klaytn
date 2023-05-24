@@ -168,7 +168,7 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config) (*state.StateD
 	evm := vm.NewEVM(context, statedb, config, &vmconfig)
 
 	snapshot := statedb.Snapshot()
-	if _, _, kerr := blockchain.ApplyMessage(evm, msg); kerr.ErrTxInvalid != nil {
+	if _, err = blockchain.ApplyMessage(evm, msg); err != nil {
 		statedb.RevertToSnapshot(snapshot)
 	}
 	if logs := rlpHash(statedb.Logs()); logs != common.Hash(post.Logs) {

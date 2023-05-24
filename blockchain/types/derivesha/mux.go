@@ -21,41 +21,78 @@
 package derivesha
 
 import (
+	"math/big"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/log"
+	"github.com/klaytn/klaytn/params"
 )
-
-// TODO-Klaytn: Make DeriveShaMux state-less
-// As-is: InitDS(type) + DS(list) + ERH
-// To-be: InitDS() + DS(list, type) + ERH(type)
 
 type IDeriveSha interface {
 	DeriveSha(list types.DerivableList) common.Hash
 }
 
-var (
-	deriveShaObj IDeriveSha = nil
-	logger                  = log.NewModuleLogger(log.Blockchain)
-)
-
-func InitDeriveSha(implType int) {
-	switch implType {
-	case types.ImplDeriveShaOriginal:
-		deriveShaObj = DeriveShaOrig{}
-	case types.ImplDeriveShaSimple:
-		deriveShaObj = DeriveShaSimple{}
-	case types.ImplDeriveShaConcat:
-		deriveShaObj = DeriveShaConcat{}
-	default:
-		logger.Error("Unrecognized deriveShaImpl, falling back to Orig", "impl", implType)
-		deriveShaObj = DeriveShaOrig{}
-	}
-
-	types.DeriveSha = DeriveShaMux
-	types.EmptyRootHash = DeriveShaMux(types.Transactions{})
+type GovernanceEngine interface {
+	EffectiveParams(num uint64) (*params.GovParamSet, error)
 }
 
-func DeriveShaMux(list types.DerivableList) common.Hash {
-	return deriveShaObj.DeriveSha(list)
+var (
+	config     *params.ChainConfig
+	gov        GovernanceEngine
+	impls      map[int]IDeriveSha
+	emptyRoots map[int]common.Hash
+
+	logger = log.NewModuleLogger(log.Blockchain)
+)
+
+func init() {
+	impls = map[int]IDeriveSha{
+		types.ImplDeriveShaOriginal: DeriveShaOrig{},
+		types.ImplDeriveShaSimple:   DeriveShaSimple{},
+		types.ImplDeriveShaConcat:   DeriveShaConcat{},
+	}
+
+	emptyRoots = make(map[int]common.Hash)
+	for implType, impl := range impls {
+		emptyRoots[implType] = impl.DeriveSha(types.Transactions{})
+	}
+}
+
+func InitDeriveSha(chainConfig *params.ChainConfig, govEngine GovernanceEngine) {
+	config = chainConfig
+	gov = govEngine
+	types.DeriveSha = DeriveShaMux
+	types.EmptyRootHash = EmptyRootHashMux
+	logger.Info("InitDeriveSha", "initial", config.DeriveShaImpl, "withGov", gov != nil)
+}
+
+func DeriveShaMux(list types.DerivableList, num *big.Int) common.Hash {
+	return impls[getType(num)].DeriveSha(list)
+}
+
+func EmptyRootHashMux(num *big.Int) common.Hash {
+	return emptyRoots[getType(num)]
+}
+
+func getType(num *big.Int) int {
+	implType := config.DeriveShaImpl
+
+	// gov == nil if blockchain.InitDeriveSha() is used, in genesis block manipulation
+	// and unit tests. gov != nil if blockchain.InitDeriveShaWithGov is used,
+	// in ordinary blockchain processing.
+	if gov != nil {
+		if pset, err := gov.EffectiveParams(num.Uint64()); err != nil {
+			logger.Crit("Cannot determine DeriveShaImpl", "num", num.Uint64(), "err", err)
+		} else {
+			implType = pset.DeriveShaImpl()
+		}
+	}
+
+	if _, ok := impls[implType]; ok {
+		return implType
+	} else {
+		logger.Error("Unrecognized deriveShaImpl, falling back to default impl", "impl", implType)
+		return int(params.DefaultDeriveShaImpl)
+	}
 }

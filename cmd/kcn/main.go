@@ -45,7 +45,7 @@ func init() {
 	// Initialize the CLI app and start kcn
 	app.Action = nodecmd.RunKlaytnNode
 	app.HideVersion = true // we have a command to print the version
-	app.Copyright = "Copyright 2018-2019 The klaytn Authors"
+	app.Copyright = "Copyright 2018-2023 The klaytn Authors"
 	app.Commands = []cli.Command{
 		// See utils/nodecmd/chaincmd.go:
 		nodecmd.InitCommand,
@@ -62,10 +62,13 @@ func init() {
 		nodecmd.VersionCommand,
 
 		// See utils/nodecmd/dumpconfigcmd.go:
-		nodecmd.GetConsoleCommand(nodecmd.KcnNodeFlags(), nodecmd.CommonRPCFlags),
+		nodecmd.GetDumpConfigCommand(nodecmd.KcnNodeFlags(), nodecmd.CommonRPCFlags),
 
 		// See utils/nodecmd/db_migration.go:
 		nodecmd.MigrationCommand,
+
+		// See utils/nodecmd/snapshot.go:
+		nodecmd.SnapshotCommand,
 	}
 	sort.Sort(cli.CommandsByName(app.Commands))
 

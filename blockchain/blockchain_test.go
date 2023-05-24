@@ -664,7 +664,7 @@ func TestFastVsFullChains(t *testing.T) {
 	}
 	// Iterate over all chain data components, and cross reference
 	for i := 0; i < len(blocks); i++ {
-		num, hash := blocks[i].NumberU64(), blocks[i].Hash()
+		bnum, num, hash := blocks[i].Number(), blocks[i].NumberU64(), blocks[i].Hash()
 
 		if ftd, atd := fast.GetTdByHash(hash), archive.GetTdByHash(hash); ftd.Cmp(atd) != 0 {
 			t.Errorf("block #%d [%x]: td mismatch: have %v, want %v", num, hash, ftd, atd)
@@ -674,10 +674,12 @@ func TestFastVsFullChains(t *testing.T) {
 		}
 		if fblock, ablock := fast.GetBlockByHash(hash), archive.GetBlockByHash(hash); fblock.Hash() != ablock.Hash() {
 			t.Errorf("block #%d [%x]: block mismatch: have %v, want %v", num, hash, fblock, ablock)
-		} else if types.DeriveSha(fblock.Transactions()) != types.DeriveSha(ablock.Transactions()) {
+		} else if types.DeriveSha(fblock.Transactions(), bnum) != types.DeriveSha(ablock.Transactions(), bnum) {
 			t.Errorf("block #%d [%x]: transactions mismatch: have %v, want %v", num, hash, fblock.Transactions(), ablock.Transactions())
 		}
-		if freceipts, areceipts := fastDb.ReadReceipts(hash, *fastDb.ReadHeaderNumber(hash)), archiveDb.ReadReceipts(hash, *archiveDb.ReadHeaderNumber(hash)); types.DeriveSha(freceipts) != types.DeriveSha(areceipts) {
+		freceipts := fastDb.ReadReceipts(hash, *fastDb.ReadHeaderNumber(hash))
+		areceipts := archiveDb.ReadReceipts(hash, *archiveDb.ReadHeaderNumber(hash))
+		if types.DeriveSha(freceipts, bnum) != types.DeriveSha(areceipts, bnum) {
 			t.Errorf("block #%d [%x]: receipts mismatch: have %v, want %v", num, hash, freceipts, areceipts)
 		}
 	}
@@ -1097,9 +1099,7 @@ func TestEIP155Transition(t *testing.T) {
 		}
 	})
 	_, err := blockchain.InsertChain(blocks)
-	if err != types.ErrInvalidChainId {
-		t.Error("expected error:", types.ErrInvalidChainId)
-	}
+	assert.Equal(t, types.ErrSender(types.ErrInvalidChainId), err)
 }
 
 // TODO-Klaytn-FailedTest Failed test. Enable this later.

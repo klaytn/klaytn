@@ -467,7 +467,7 @@ func TestValidationBlockTx(t *testing.T) {
 				assert.Equal(t, nil, err)
 			}
 
-			receipt, _, err := applyTransaction(t, bcdata, tx)
+			receipt, err := applyTransaction(t, bcdata, tx)
 			assert.Equal(t, expectedErr, err)
 			if expectedErr == nil {
 				assert.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
@@ -663,9 +663,9 @@ func TestValidationInvalidSig(t *testing.T) {
 
 				// For block tx validation test
 				if expectedErr == blockchain.ErrInvalidFeePayer {
-					expectedErr = types.ErrInvalidSigFeePayer
+					expectedErr = types.ErrFeePayer(types.ErrInvalidSigFeePayer)
 				}
-				receipt, _, err := applyTransaction(t, bcdata, tx)
+				receipt, err := applyTransaction(t, bcdata, tx)
 				assert.Equal(t, expectedErr, err)
 				assert.Equal(t, (*types.Receipt)(nil), receipt)
 			}
@@ -695,7 +695,7 @@ func testInvalidSenderSig(t *testing.T, txType types.TxType, reservoir *TestAcco
 			tx.SignFeePayerWithKeys(signer, reservoir.Keys)
 			assert.Equal(t, nil, err)
 		}
-		return tx, types.ErrInvalidSigSender
+		return tx, types.ErrSender(types.ErrInvalidSigSender)
 	}
 	return nil, nil
 }
@@ -721,7 +721,9 @@ func testInvalidFeePayerSig(t *testing.T, txType types.TxType, reservoir *TestAc
 		tx.SignFeePayerWithKeys(signer, newAcc.Keys)
 		assert.Equal(t, nil, err)
 
-		return tx, blockchain.ErrInvalidFeePayer
+		// Look at the blockchain/types/transaction.go/ValidateFeePayer
+		// Testcases using this function should return invalid signature error
+		return tx, types.ErrFeePayer(types.ErrInvalidSigFeePayer)
 	}
 	return nil, nil
 }
@@ -782,7 +784,7 @@ func TestLegacyTxFromNonLegacyAcc(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	err = txpool.AddRemote(tx)
-	assert.Equal(t, kerrors.ErrLegacyTransactionMustBeWithLegacyKey, err)
+	assert.Equal(t, types.ErrSender(kerrors.ErrLegacyTransactionMustBeWithLegacyKey), err)
 }
 
 // TestInvalidBalance generates invalid txs which don't have enough KLAY, and will be invalidated during txPool insert process.
@@ -1321,7 +1323,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 				err = tx.SignWithKeys(signer, testAcc.Keys)
 				assert.Equal(t, nil, err)
 
-				receipt, _, err := applyTransaction(t, bcdata, tx)
+				receipt, err := applyTransaction(t, bcdata, tx)
 				assert.Equal(t, expectedErr, err)
 				assert.Equal(t, (*types.Receipt)(nil), receipt)
 			}
@@ -1345,7 +1347,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 				err = tx.SignWithKeys(signer, testAcc.Keys)
 				assert.Equal(t, nil, err)
 
-				receipt, _, err := applyTransaction(t, bcdata, tx)
+				receipt, err := applyTransaction(t, bcdata, tx)
 				assert.Equal(t, nil, err)
 				// contract deploy tx with non-zero value will be failed in vm because test functions do not support it.
 				if txType.IsContractDeploy() {
@@ -1376,7 +1378,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 					tx.SignFeePayerWithKeys(signer, reservoir.Keys)
 					assert.Equal(t, nil, err)
 
-					receipt, _, err := applyTransaction(t, bcdata, tx)
+					receipt, err := applyTransaction(t, bcdata, tx)
 					assert.Equal(t, vm.ErrInsufficientBalance, err)
 					assert.Equal(t, (*types.Receipt)(nil), receipt)
 				}
@@ -1400,7 +1402,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 				tx.SignFeePayerWithKeys(signer, testAcc.Keys)
 				assert.Equal(t, nil, err)
 
-				receipt, _, err := applyTransaction(t, bcdata, tx)
+				receipt, err := applyTransaction(t, bcdata, tx)
 				assert.Equal(t, errInsufficientBalanceForGasFeePayer, err)
 				assert.Equal(t, (*types.Receipt)(nil), receipt)
 			}
@@ -1424,7 +1426,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 					tx.SignFeePayerWithKeys(signer, reservoir.Keys)
 					assert.Equal(t, nil, err)
 
-					receipt, _, err := applyTransaction(t, bcdata, tx)
+					receipt, err := applyTransaction(t, bcdata, tx)
 					assert.Equal(t, nil, err)
 					// contract deploy tx with non-zero value will be failed in vm because test functions do not support it.
 					if txType.IsContractDeploy() {
@@ -1453,7 +1455,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 				tx.SignFeePayerWithKeys(signer, testAcc.Keys)
 				assert.Equal(t, nil, err)
 
-				receipt, _, err := applyTransaction(t, bcdata, tx)
+				receipt, err := applyTransaction(t, bcdata, tx)
 				assert.Equal(t, nil, err)
 				assert.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
 			}
@@ -1493,7 +1495,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 				tx.SignFeePayerWithKeys(signer, reservoir.Keys)
 				assert.Equal(t, nil, err)
 
-				receipt, _, err := applyTransaction(t, bcdata, tx)
+				receipt, err := applyTransaction(t, bcdata, tx)
 				assert.Equal(t, expectedErr, err)
 				assert.Equal(t, (*types.Receipt)(nil), receipt)
 			}
@@ -1519,7 +1521,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 				tx.SignFeePayerWithKeys(signer, testAcc.Keys)
 				assert.Equal(t, nil, err)
 
-				receipt, _, err := applyTransaction(t, bcdata, tx)
+				receipt, err := applyTransaction(t, bcdata, tx)
 				assert.Equal(t, errInsufficientBalanceForGasFeePayer, err)
 				assert.Equal(t, (*types.Receipt)(nil), receipt)
 			}
@@ -1552,7 +1554,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 				tx.SignFeePayerWithKeys(signer, reservoir.Keys)
 				assert.Equal(t, nil, err)
 
-				receipt, _, err := applyTransaction(t, bcdata, tx)
+				receipt, err := applyTransaction(t, bcdata, tx)
 				assert.Equal(t, nil, err)
 				// contract deploy tx with non-zero value will be failed in vm because test functions do not support it.
 				if txType.IsContractDeploy() {
@@ -1583,7 +1585,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 				tx.SignFeePayerWithKeys(signer, testAcc.Keys)
 				assert.Equal(t, nil, err)
 
-				receipt, _, err := applyTransaction(t, bcdata, tx)
+				receipt, err := applyTransaction(t, bcdata, tx)
 				assert.Equal(t, nil, err)
 				assert.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
 			}

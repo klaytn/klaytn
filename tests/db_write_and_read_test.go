@@ -27,6 +27,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
 )
@@ -270,7 +271,9 @@ func testWriteAndReadBlock(t *testing.T, dbManager database.DBManager) {
 	body := generateBody(t)
 	receipts := types.Receipts{generateReceipt(111)}
 
-	blockchain.InitDeriveSha(types.ImplDeriveShaOriginal)
+	blockchain.InitDeriveSha(&params.ChainConfig{
+		DeriveShaImpl: types.ImplDeriveShaOriginal,
+	})
 	block := types.NewBlock(header, body.Transactions, receipts)
 
 	// 1. Before write, nil should be returned.

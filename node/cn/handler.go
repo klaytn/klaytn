@@ -33,7 +33,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -127,9 +126,6 @@ type ProtocolManager struct {
 	peerWg sync.WaitGroup
 	// istanbul BFT
 	engine consensus.Engine
-
-	rewardbase   common.Address
-	rewardwallet accounts.Wallet
 
 	wsendpoint string
 
@@ -351,14 +347,6 @@ func (pm *ProtocolManager) RegisterValidator(connType common.ConnType, validator
 
 func (pm *ProtocolManager) getWSEndPoint() string {
 	return pm.wsendpoint
-}
-
-func (pm *ProtocolManager) SetRewardbase(addr common.Address) {
-	pm.rewardbase = addr
-}
-
-func (pm *ProtocolManager) SetRewardbaseWallet(wallet accounts.Wallet) {
-	pm.rewardwallet = wallet
 }
 
 func (pm *ProtocolManager) removePeer(id string) {
@@ -998,7 +986,7 @@ func handleReceiptsRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 		// Retrieve the requested block's receipts, skipping if unknown to us
 		results := pm.blockchain.GetReceiptsByBlockHash(hash)
 		if results == nil {
-			if header := pm.blockchain.GetHeaderByHash(hash); header == nil || header.ReceiptHash != types.EmptyRootHash {
+			if header := pm.blockchain.GetHeaderByHash(hash); header == nil || !header.EmptyReceipts() {
 				continue
 			}
 		}

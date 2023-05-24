@@ -47,7 +47,9 @@ var (
 var GovernanceItems = map[int]check{
 	params.GovernanceMode:            {stringT, checkGovernanceMode, nil},
 	params.GoverningNode:             {addressT, checkAddress, nil},
+	params.GovParamContract:          {addressT, checkAddress, nil},
 	params.UnitPrice:                 {uint64T, checkUint64andBool, nil},
+	params.DeriveShaImpl:             {uint64T, checkUint64andBool, nil},
 	params.LowerBoundBaseFee:         {uint64T, checkUint64andBool, nil},
 	params.UpperBoundBaseFee:         {uint64T, checkUint64andBool, nil},
 	params.GasTarget:                 {uint64T, checkUint64andBool, nil},
@@ -58,6 +60,7 @@ var GovernanceItems = map[int]check{
 	params.MintingAmount:             {stringT, checkBigInt, nil},
 	params.Ratio:                     {stringT, checkRatio, nil},
 	params.UseGiniCoeff:              {boolT, checkUint64andBool, nil},
+	params.Kip82Ratio:                {stringT, checkKip82Ratio, nil},
 	params.DeferredTxFee:             {boolT, checkUint64andBool, nil},
 	params.MinimumStake:              {stringT, checkRewardMinimumStake, nil},
 	params.StakeUpdateInterval:       {uint64T, checkUint64andBool, nil},
@@ -188,6 +191,26 @@ func (gov *Governance) ValidateVote(vote *GovernanceVote) (*GovernanceVote, bool
 func checkRatio(k string, v interface{}) bool {
 	x := strings.Split(v.(string), "/")
 	if len(x) != params.RewardSliceCount {
+		return false
+	}
+	var sum uint64
+	for _, item := range x {
+		v, err := strconv.ParseUint(item, 10, 64)
+		if err != nil {
+			return false
+		}
+		sum += v
+	}
+	if sum == 100 {
+		return true
+	} else {
+		return false
+	}
+}
+
+func checkKip82Ratio(k string, v interface{}) bool {
+	x := strings.Split(v.(string), "/")
+	if len(x) != params.RewardKip82SliceCount {
 		return false
 	}
 	var sum uint64
@@ -360,8 +383,13 @@ func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, votes 
 		number := header.Number.Uint64()
 		// Check vote's validity
 		if gVote, ok := gov.ValidateVote(gVote); ok {
-			governanceMode := gov.Params().GovernanceModeInt()
-			governingNode := gov.Params().GoverningNode()
+			pset, err := gov.EffectiveParams(number)
+			if err != nil {
+				logger.Error("EffectiveParams failed", "number", number)
+				return valset, votes, tally
+			}
+			governanceMode := pset.GovernanceModeInt()
+			governingNode := pset.GoverningNode()
 
 			// Remove old vote with same validator and key
 			votes, tally = gov.removePreviousVote(valset, votes, tally, proposer, gVote, governanceMode, governingNode, writable)
@@ -500,6 +528,7 @@ func (gov *Governance) addNewVote(valset istanbul.ValidatorSet, votes []Governan
 				fallthrough
 			default:
 				if writable && blockNum > atomic.LoadUint64(&gov.lastGovernanceStateBlock) {
+					logger.Info("Reflecting parameter vote", "num", blockNum, "key", gVote.Key, "value", gVote.Value)
 					gov.ReflectVotes(*gVote)
 				}
 			}

@@ -51,8 +51,8 @@ type Snapshot struct {
 	Tally         []governance.GovernanceTallyItem // Current vote tally to avoid recalculating
 }
 
-func getGovernanceValue(gov governance.Engine, number uint64) (epoch uint64, policy uint64, committeeSize uint64) {
-	pset, err := gov.ParamsAt(number)
+func effectiveParams(gov governance.Engine, number uint64) (epoch uint64, policy uint64, committeeSize uint64) {
+	pset, err := gov.EffectiveParams(number)
 	if err != nil {
 		// TODO-Klaytn-Kore: remove err condition
 		logger.Error("Couldn't get governance value. Resorting to defaults", "err", err)
@@ -72,7 +72,7 @@ func getGovernanceValue(gov governance.Engine, number uint64) (epoch uint64, pol
 // method does not initialize the set of recent validators, so only ever use if for
 // the genesis block.
 func newSnapshot(gov governance.Engine, number uint64, hash common.Hash, valSet istanbul.ValidatorSet, chainConfig *params.ChainConfig) *Snapshot {
-	epoch, policy, committeeSize := getGovernanceValue(gov, number)
+	epoch, policy, committeeSize := effectiveParams(gov, number+1)
 
 	snap := &Snapshot{
 		Epoch:         epoch,
@@ -156,7 +156,7 @@ func (s *Snapshot) apply(headers []*types.Header, gov governance.Engine, addr co
 	snap := s.copy()
 
 	// Copy values which might be changed by governance vote
-	snap.Epoch, snap.Policy, snap.CommitteeSize = getGovernanceValue(gov, snap.Number)
+	snap.Epoch, snap.Policy, snap.CommitteeSize = effectiveParams(gov, snap.Number+1)
 
 	for _, header := range headers {
 		// Remove any votes on checkpoint blocks
@@ -179,11 +179,12 @@ func (s *Snapshot) apply(headers []*types.Header, gov governance.Engine, addr co
 				}
 				gov.ClearVotes(number)
 			}
-			// Reload governance values because epoch changed
-			snap.Epoch, snap.Policy, snap.CommitteeSize = getGovernanceValue(gov, number)
 			snap.Votes = make([]governance.GovernanceVote, 0)
 			snap.Tally = make([]governance.GovernanceTallyItem, 0)
 		}
+
+		// Reload governance values
+		snap.Epoch, snap.Policy, snap.CommitteeSize = effectiveParams(gov, number+1)
 
 		snap.ValSet, snap.Votes, snap.Tally = gov.HandleGovernanceVote(snap.ValSet, snap.Votes, snap.Tally, header, validator, addr, writable)
 		if policy == uint64(params.WeightedRandom) {
@@ -193,7 +194,9 @@ func (s *Snapshot) apply(headers []*types.Header, gov governance.Engine, addr co
 			//
 			// Proposers for Block N+1 can be calculated from the nearest previous proposersUpdateInterval block.
 			// Refresh proposers in Snapshot_N using previous proposersUpdateInterval block for N+1, if not updated yet.
-			pset, err := gov.ParamsAt(number)
+
+			// because snapshot(num)'s ValSet = validators for num+1
+			pset, err := gov.EffectiveParams(number + 1)
 			if err != nil {
 				return nil, err
 			}

@@ -225,11 +225,8 @@ func RPCMarshalHeader(head *types.Header, isEnabledEthTxTypeFork bool) map[strin
 		"timestampFoS":     hexutil.Uint(head.TimeFoS),
 		"extraData":        hexutil.Bytes(head.Extra),
 		"governanceData":   hexutil.Bytes(head.Governance),
+		"voteData":         hexutil.Bytes(head.Vote),
 		"hash":             head.Hash(),
-	}
-
-	if len(head.Vote) != 0 {
-		result["voteData"] = hexutil.Bytes(head.Vote)
 	}
 
 	if isEnabledEthTxTypeFork {
@@ -370,15 +367,13 @@ func (api *PublicFilterAPI) GetLogs(ctx context.Context, crit FilterCriteria) ([
 		filter = NewBlockFilter(api.backend, *crit.BlockHash, crit.Addresses, crit.Topics)
 	} else {
 		// Convert the RPC block numbers into internal representations
-		var (
-			begin int64
-			end   int64
-		)
-		if crit.FromBlock == nil {
-			begin = int64(rpc.LatestBlockNumber)
+		begin := rpc.LatestBlockNumber.Int64()
+		if crit.FromBlock != nil {
+			begin = crit.FromBlock.Int64()
 		}
-		if crit.ToBlock == nil {
-			end = int64(rpc.LatestBlockNumber)
+		end := rpc.LatestBlockNumber.Int64()
+		if crit.ToBlock != nil {
+			end = crit.ToBlock.Int64()
 		}
 		// Construct the range filter
 		filter = NewRangeFilter(api.backend, begin, end, crit.Addresses, crit.Topics)

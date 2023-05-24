@@ -214,6 +214,7 @@ var CommonRPCFlags = []cli.Flag{
 	altsrc.NewIntFlag(utils.RPCPortFlag),
 	altsrc.NewStringFlag(utils.RPCApiFlag),
 	altsrc.NewUint64Flag(utils.RPCGlobalGasCap),
+	altsrc.NewDurationFlag(utils.RPCGlobalEVMTimeoutFlag),
 	altsrc.NewFloat64Flag(utils.RPCGlobalEthTxFeeCapFlag),
 	altsrc.NewBoolFlag(utils.WSEnabledFlag),
 	altsrc.NewStringFlag(utils.WSListenAddrFlag),
@@ -234,6 +235,7 @@ var CommonRPCFlags = []cli.Flag{
 	altsrc.NewIntFlag(utils.RPCWriteTimeoutFlag),
 	altsrc.NewIntFlag(utils.RPCIdleTimeoutFlag),
 	altsrc.NewIntFlag(utils.RPCExecutionTimeoutFlag),
+	altsrc.NewBoolFlag(utils.UnsafeDebugDisableFlag),
 }
 
 var KCNFlags = []cli.Flag{

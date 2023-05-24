@@ -47,7 +47,7 @@ func TestSimpleBlockchain(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 
 	numAccounts := 12
-	fullNode, node, validator, chainId, workspace := newBlockchain(t)
+	fullNode, node, validator, chainId, workspace := newBlockchain(t, nil)
 	defer os.RemoveAll(workspace)
 
 	// create account
@@ -76,7 +76,7 @@ func TestSimpleBlockchain(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	// start full node with previous db
-	fullNode, node, err := newKlaytnNode(t, workspace, validator)
+	fullNode, node, err := newKlaytnNode(t, workspace, validator, nil)
 	assert.NoError(t, err)
 	if err := node.StartMining(false); err != nil {
 		t.Fatal()
@@ -89,7 +89,7 @@ func TestSimpleBlockchain(t *testing.T) {
 	}
 }
 
-func newBlockchain(t *testing.T) (*node.Node, *cn.CN, *TestAccountType, *big.Int, string) {
+func newBlockchain(t *testing.T, config *params.ChainConfig) (*node.Node, *cn.CN, *TestAccountType, *big.Int, string) {
 	t.Log("Create a new blockchain")
 	// Prepare workspace
 	workspace, err := ioutil.TempDir("", "klaytn-test-state")
@@ -105,7 +105,7 @@ func newBlockchain(t *testing.T) (*node.Node, *cn.CN, *TestAccountType, *big.Int
 	}
 
 	// Create a Klaytn node
-	fullNode, node, err := newKlaytnNode(t, workspace, validator)
+	fullNode, node, err := newKlaytnNode(t, workspace, validator, config)
 	assert.NoError(t, err)
 	if err := node.StartMining(false); err != nil {
 		t.Fatal()
@@ -143,7 +143,7 @@ func createAccount(t *testing.T, numAccounts int, validator *TestAccountType) (*
 }
 
 // newKlaytnNode creates a klaytn node
-func newKlaytnNode(t *testing.T, dir string, validator *TestAccountType) (*node.Node, *cn.CN, error) {
+func newKlaytnNode(t *testing.T, dir string, validator *TestAccountType, config *params.ChainConfig) (*node.Node, *cn.CN, error) {
 	var klaytnNode *cn.CN
 
 	fullNode, err := node.New(&node.Config{
@@ -167,17 +167,15 @@ func newKlaytnNode(t *testing.T, dir string, validator *TestAccountType) (*node.
 	genesis := blockchain.DefaultGenesisBlock()
 	genesis.ExtraData = genesis.ExtraData[:types.IstanbulExtraVanity]
 	genesis.ExtraData = append(genesis.ExtraData, istanbulConfData...)
-	genesis.Config = params.CypressChainConfig.Copy()
-	genesis.Config.Istanbul.SubGroupSize = 1
-	genesis.Config.Istanbul.ProposerPolicy = uint64(istanbul.RoundRobin)
-	genesis.Config.Governance.Reward.MintingAmount = new(big.Int).Mul(big.NewInt(9000000000000000000), big.NewInt(params.KLAY))
 
-	// NOTE: Uncomment these lines to enable features
-	// TODO: Receive ChainConfig as optional argument
-	// genesis.Config.IstanbulCompatibleBlock = big.NewInt(0)
-	// genesis.Config.LondonCompatibleBlock = big.NewInt(0)
-	// genesis.Config.EthTxTypeCompatibleBlock = big.NewInt(0)
-	// genesis.Config.KIP71CompatibleBlock = big.NewInt(0)
+	if config == nil {
+		genesis.Config = params.CypressChainConfig.Copy()
+		genesis.Config.Istanbul.SubGroupSize = 1
+		genesis.Config.Istanbul.ProposerPolicy = uint64(istanbul.RoundRobin)
+		genesis.Config.Governance.Reward.MintingAmount = new(big.Int).Mul(big.NewInt(9000000000000000000), big.NewInt(params.KLAY))
+	} else {
+		genesis.Config = config
+	}
 
 	cnConf := cn.GetDefaultConfig()
 	cnConf.Genesis = genesis
@@ -268,7 +266,9 @@ func deployContractDeployTx(t *testing.T, txpool work.TxPool, chainId *big.Int, 
 	require.Nil(t, err)
 
 	err = txpool.AddLocal(tx)
-	require.True(t, err == nil || err == blockchain.ErrAlreadyNonceExistInPool)
+	if err != nil && err != blockchain.ErrAlreadyNonceExistInPool {
+		t.Fatal(err)
+	}
 
 	contractAddr := crypto.CreateAddress(sender.Addr, sender.Nonce)
 	sender.AddNonce()
@@ -296,7 +296,9 @@ func deployContractExecutionTx(t *testing.T, txpool work.TxPool, chainId *big.In
 	require.Nil(t, err)
 
 	err = txpool.AddLocal(tx)
-	require.True(t, err == nil || err == blockchain.ErrAlreadyNonceExistInPool)
+	if err != nil && err != blockchain.ErrAlreadyNonceExistInPool {
+		t.Fatal(err)
+	}
 
 	sender.AddNonce()
 	return tx
@@ -329,7 +331,7 @@ func waitReceipt(chain *blockchain.BlockChain, txhash common.Hash) *types.Receip
 // Wait until `num` block is mined
 // Returns the header with the number larger or equal to `num`
 // Returns nil after a reasonable timeout
-func waitBlock(chain *blockchain.BlockChain, num uint64) *types.Header {
+func waitBlock(chain work.BlockChain, num uint64) *types.Header {
 	head := chain.CurrentHeader()
 	if head.Number.Uint64() >= num {
 		return head

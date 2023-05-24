@@ -160,6 +160,7 @@ func TestGovParamSet_Nominal(t *testing.T) {
 	assert.Equal(t, c.Istanbul.ProposerPolicy, p.Policy())
 	assert.Equal(t, c.Istanbul.SubGroupSize, p.CommitteeSize())
 	assert.Equal(t, c.UnitPrice, p.UnitPrice())
+	assert.Equal(t, c.DeriveShaImpl, p.DeriveShaImpl())
 	assert.Equal(t, c.Governance.GovernanceMode, p.GovernanceModeStr())
 	assert.Equal(t, c.Governance.GoverningNode, p.GoverningNode())
 	assert.Equal(t, c.Governance.Reward.MintingAmount.String(), p.MintingAmountStr())
@@ -210,6 +211,15 @@ func TestGovParamSet_New(t *testing.T) {
 	assert.Equal(t, c.Istanbul.Epoch, v)
 	assert.True(t, ok)
 
+	p = NewGovParamSetBytesMapTolerant(map[string][]byte{
+		"nonexistent-param1": {1},
+		"nonexistent-param2": {2},
+		"istanbul.epoch":     {0x12, 0x34},
+	})
+	v, ok = p.Get(Epoch)
+	assert.Equal(t, uint64(0x1234), v)
+	assert.True(t, ok)
+
 	// Error cases
 	_, err = NewGovParamSetStrMap(map[string]interface{}{
 		"istanbul.epoch": "asdf",
@@ -223,6 +233,13 @@ func TestGovParamSet_New(t *testing.T) {
 
 	_, err = NewGovParamSetBytesMap(map[string][]byte{
 		"istanbul.epoch": {1, 1, 2, 3, 4, 5, 6, 7, 8},
+	})
+	assert.NotNil(t, err)
+
+	_, err = NewGovParamSetBytesMap(map[string][]byte{
+		"nonexistent-param1": {1},
+		"nonexistent-param2": {2},
+		"istanbul.epoch":     {3},
 	})
 	assert.NotNil(t, err)
 }
@@ -351,6 +368,7 @@ func TestGovParamSet_ChainConfig(t *testing.T) {
 				GasTarget:                 30000000,
 				MaxBlockGasUsedForBaseFee: 60000000,
 				BaseFeeDenominator:        20,
+				Kip82Ratio:                "20/80",
 			},
 			expected: &ChainConfig{
 				UnitPrice: 25e9,
@@ -365,6 +383,7 @@ func TestGovParamSet_ChainConfig(t *testing.T) {
 					Reward: &RewardConfig{
 						MintingAmount:          new(big.Int).SetUint64(9.6e18),
 						Ratio:                  "34/54/12",
+						Kip82Ratio:             "20/80",
 						UseGiniCoeff:           true,
 						DeferredTxFee:          true,
 						StakingUpdateInterval:  86400,
