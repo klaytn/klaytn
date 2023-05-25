@@ -83,7 +83,7 @@ func (t *Trie) Prove(key []byte, fromLevel uint, proofDB ProofDBWriter) error {
 	for i, n := range nodes {
 		// Don't bother checking for errors here since hasher panics
 		// if encoding doesn't work and we're not writing to any database.
-		n, _ = hasher.hashChildren(n, nil)
+		n, _ = hasher.hashChildren(n, nil, false)
 		hn, _ := hasher.store(n, nil, false)
 		if hash, ok := hn.(hashNode); ok || i == 0 {
 			// If the node's database encoding is a hash (or is the
