@@ -64,31 +64,32 @@ type PrecompiledContract interface {
 	Run(input []byte, contract *Contract, evm *EVM) ([]byte, error)
 }
 
-// PrecompiledContractsConstantinople contains the default set of pre-compiled Klaytn
-// contracts based on Ethereum Constantinople.
-var PrecompiledContractsConstantinople = map[common.Address]PrecompiledContract{
+// PrecompiledContractsByzantiumCompatible contains the default set of pre-compiled Klaytn
+// contracts based on Ethereum Byzantium.
+var PrecompiledContractsByzantiumCompatible = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{1}):  &ecrecover{},
 	common.BytesToAddress([]byte{2}):  &sha256hash{},
 	common.BytesToAddress([]byte{3}):  &ripemd160hash{},
 	common.BytesToAddress([]byte{4}):  &dataCopy{},
-	common.BytesToAddress([]byte{5}):  &bigModExp{},
-	common.BytesToAddress([]byte{6}):  &bn256AddConstantinople{},
-	common.BytesToAddress([]byte{7}):  &bn256ScalarMulConstantinople{},
-	common.BytesToAddress([]byte{8}):  &bn256PairingConstantinople{},
+	common.BytesToAddress([]byte{5}):  &bigModExp{eip2565: false},
+	common.BytesToAddress([]byte{6}):  &bn256AddByzantium{},
+	common.BytesToAddress([]byte{7}):  &bn256ScalarMulByzantium{},
+	common.BytesToAddress([]byte{8}):  &bn256PairingByzantium{},
 	common.BytesToAddress([]byte{9}):  &vmLog{},
 	common.BytesToAddress([]byte{10}): &feePayer{},
 	common.BytesToAddress([]byte{11}): &validateSender{},
 }
 
 // DO NOT USE 0x3FD, 0x3FE, 0x3FF ADDRESSES BEFORE ISTANBUL CHANGE ACTIVATED.
-// PrecompiledContractsIstanbul contains the default set of pre-compiled Klaytn
+
+// PrecompiledContractsIstanbulCompatible contains the default set of pre-compiled Klaytn
 // contracts based on Ethereum Istanbul.
-var PrecompiledContractsIstanbul = map[common.Address]PrecompiledContract{
+var PrecompiledContractsIstanbulCompatible = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{1}):      &ecrecover{},
 	common.BytesToAddress([]byte{2}):      &sha256hash{},
 	common.BytesToAddress([]byte{3}):      &ripemd160hash{},
 	common.BytesToAddress([]byte{4}):      &dataCopy{},
-	common.BytesToAddress([]byte{5}):      &bigModExp{},
+	common.BytesToAddress([]byte{5}):      &bigModExp{eip2565: false},
 	common.BytesToAddress([]byte{6}):      &bn256AddIstanbul{},
 	common.BytesToAddress([]byte{7}):      &bn256ScalarMulIstanbul{},
 	common.BytesToAddress([]byte{8}):      &bn256PairingIstanbul{},
@@ -96,6 +97,53 @@ var PrecompiledContractsIstanbul = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{3, 253}): &vmLog{},
 	common.BytesToAddress([]byte{3, 254}): &feePayer{},
 	common.BytesToAddress([]byte{3, 255}): &validateSender{},
+}
+
+// PrecompiledContractsKore contains the default set of pre-compiled Klaytn
+// contracts based on Ethereum Berlin.
+var PrecompiledContractsKore = map[common.Address]PrecompiledContract{
+	common.BytesToAddress([]byte{1}):      &ecrecover{},
+	common.BytesToAddress([]byte{2}):      &sha256hash{},
+	common.BytesToAddress([]byte{3}):      &ripemd160hash{},
+	common.BytesToAddress([]byte{4}):      &dataCopy{},
+	common.BytesToAddress([]byte{5}):      &bigModExp{eip2565: true},
+	common.BytesToAddress([]byte{6}):      &bn256AddIstanbul{},
+	common.BytesToAddress([]byte{7}):      &bn256ScalarMulIstanbul{},
+	common.BytesToAddress([]byte{8}):      &bn256PairingIstanbul{},
+	common.BytesToAddress([]byte{9}):      &blake2F{},
+	common.BytesToAddress([]byte{3, 253}): &vmLog{},
+	common.BytesToAddress([]byte{3, 254}): &feePayer{},
+	common.BytesToAddress([]byte{3, 255}): &validateSender{},
+}
+
+var (
+	PrecompiledAddressesIstanbulCompatible  []common.Address
+	PrecompiledAddressesByzantiumCompatible []common.Address
+)
+
+func init() {
+	for k := range PrecompiledContractsByzantiumCompatible {
+		PrecompiledAddressesByzantiumCompatible = append(PrecompiledAddressesByzantiumCompatible, k)
+	}
+
+	// After istanbulCompatible hf, need to support for vmversion0 contracts, too.
+	// VmVersion0 contracts are deployed before istanbulCompatible and they use byzantiumCompatible precompiled contracts.
+	// VmVersion0 contracts are the contracts deployed before istanbulCompatible hf.
+	for k := range PrecompiledContractsIstanbulCompatible {
+		PrecompiledAddressesIstanbulCompatible = append(PrecompiledAddressesIstanbulCompatible, k)
+	}
+	PrecompiledAddressesIstanbulCompatible = append(PrecompiledAddressesIstanbulCompatible,
+		[]common.Address{common.BytesToAddress([]byte{10}), common.BytesToAddress([]byte{11})}...)
+}
+
+// ActivePrecompiles returns the precompiles enabled with the current configuration.
+func ActivePrecompiles(rules params.Rules) []common.Address {
+	switch {
+	case rules.IsIstanbul:
+		return PrecompiledAddressesIstanbulCompatible
+	default:
+		return PrecompiledAddressesByzantiumCompatible
+	}
 }
 
 // RunPrecompiledContract runs and evaluates the output of a precompiled contract.
@@ -206,13 +254,18 @@ func (c *dataCopy) Run(in []byte, contract *Contract, evm *EVM) ([]byte, error) 
 }
 
 // bigModExp implements a native big integer exponential modular operation.
-type bigModExp struct{}
+type bigModExp struct {
+	eip2565 bool
+}
 
 var (
 	big1      = big.NewInt(1)
+	big3      = big.NewInt(3)
 	big4      = big.NewInt(4)
+	big7      = big.NewInt(7)
 	big8      = big.NewInt(8)
 	big16     = big.NewInt(16)
+	big20     = big.NewInt(20)
 	big32     = big.NewInt(32)
 	big64     = big.NewInt(64)
 	big96     = big.NewInt(96)
@@ -221,6 +274,34 @@ var (
 	big3072   = big.NewInt(3072)
 	big199680 = big.NewInt(199680)
 )
+
+// modexpMultComplexity implements bigModexp multComplexity formula, as defined in EIP-198
+//
+// def mult_complexity(x):
+//    if x <= 64: return x ** 2
+//    elif x <= 1024: return x ** 2 // 4 + 96 * x - 3072
+//    else: return x ** 2 // 16 + 480 * x - 199680
+//
+// where is x is max(length_of_MODULUS, length_of_BASE)
+func modexpMultComplexity(x *big.Int) *big.Int {
+	switch {
+	case x.Cmp(big64) <= 0:
+		x.Mul(x, x) // x ** 2
+	case x.Cmp(big1024) <= 0:
+		// (x ** 2 // 4 ) + ( 96 * x - 3072)
+		x = new(big.Int).Add(
+			new(big.Int).Div(new(big.Int).Mul(x, x), big4),
+			new(big.Int).Sub(new(big.Int).Mul(big96, x), big3072),
+		)
+	default:
+		// (x ** 2 // 16) + (480 * x - 199680)
+		x = new(big.Int).Add(
+			new(big.Int).Div(new(big.Int).Mul(x, x), big16),
+			new(big.Int).Sub(new(big.Int).Mul(big480, x), big199680),
+		)
+	}
+	return x
+}
 
 // GetRequiredGasAndComputationCost returns the gas required to execute the pre-compiled contract
 // and the computation cost of the precompiled contract.
@@ -260,22 +341,34 @@ func (c *bigModExp) GetRequiredGasAndComputationCost(input []byte) (uint64, uint
 
 	// Calculate the gas cost of the operation
 	gas := new(big.Int).Set(math.BigMax(modLen, baseLen))
-	switch {
-	case gas.Cmp(big64) <= 0:
+	if c.eip2565 {
+		// EIP-2565 has three changes
+		// 1. Different multComplexity (inlined here)
+		// in EIP-2565 (https://eips.ethereum.org/EIPS/eip-2565):
+		//
+		// def mult_complexity(x):
+		//    ceiling(x/8)^2
+		//
+		//where is x is max(length_of_MODULUS, length_of_BASE)
+		gas = gas.Add(gas, big7)
+		gas = gas.Div(gas, big8)
 		gas.Mul(gas, gas)
-	case gas.Cmp(big1024) <= 0:
-		gas = new(big.Int).Add(
-			new(big.Int).Div(new(big.Int).Mul(gas, gas), big4),
-			new(big.Int).Sub(new(big.Int).Mul(big96, gas), big3072),
-		)
-	default:
-		gas = new(big.Int).Add(
-			new(big.Int).Div(new(big.Int).Mul(gas, gas), big16),
-			new(big.Int).Sub(new(big.Int).Mul(big480, gas), big199680),
-		)
+
+		gas.Mul(gas, math.BigMax(adjExpLen, big1))
+		// 2. Different divisor (`GQUADDIVISOR`) (3)
+		gas.Div(gas, big3)
+		if gas.BitLen() > 64 {
+			return math.MaxUint64, math.MaxUint64
+		}
+		// 3. Minimum price of 200 gas
+		if gas.Uint64() < 200 {
+			return 200, (200 / 100) + params.BigModExpBaseComputationCost
+		}
+		return gas.Uint64(), (gas.Uint64() / 100) + params.BigModExpBaseComputationCost
 	}
+	gas = modexpMultComplexity(gas)
 	gas.Mul(gas, math.BigMax(adjExpLen, big1))
-	gas.Div(gas, new(big.Int).SetUint64(params.ModExpQuadCoeffDiv))
+	gas.Div(gas, big20)
 
 	if gas.BitLen() > 64 {
 		return math.MaxUint64, math.MaxUint64
@@ -332,7 +425,7 @@ func newTwistPoint(blob []byte) (*bn256.G2, error) {
 }
 
 // runBn256Add implements the Bn256Add precompile, referenced by both
-// Constantinople and Istanbul operations.
+// Byzantium and Istanbul operations.
 func runBn256Add(input []byte) ([]byte, error) {
 	x, err := newCurvePoint(getData(input, 0, 64))
 	if err != nil {
@@ -361,13 +454,13 @@ func (c *bn256AddIstanbul) Run(input []byte, contract *Contract, evm *EVM) ([]by
 
 // bn256AddByzantium implements a native elliptic curve point addition
 // conforming to Byzantium consensus rules.
-type bn256AddConstantinople struct{}
+type bn256AddByzantium struct{}
 
-func (c *bn256AddConstantinople) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
-	return params.Bn256AddGasConstantinople, params.Bn256AddComputationCost
+func (c *bn256AddByzantium) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
+	return params.Bn256AddGasByzantium, params.Bn256AddComputationCost
 }
 
-func (c *bn256AddConstantinople) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
+func (c *bn256AddByzantium) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	return runBn256Add(input)
 }
 
@@ -397,13 +490,13 @@ func (c *bn256ScalarMulIstanbul) Run(input []byte, contract *Contract, evm *EVM)
 
 // bn256ScalarMulByzantium implements a native elliptic curve scalar
 // multiplication conforming to Byzantium consensus rules.
-type bn256ScalarMulConstantinople struct{}
+type bn256ScalarMulByzantium struct{}
 
-func (c *bn256ScalarMulConstantinople) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
-	return params.Bn256ScalarMulGasConstantinople, params.Bn256ScalarMulComputationCost
+func (c *bn256ScalarMulByzantium) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
+	return params.Bn256ScalarMulGasByzantium, params.Bn256ScalarMulComputationCost
 }
 
-func (c *bn256ScalarMulConstantinople) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
+func (c *bn256ScalarMulByzantium) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	return runBn256ScalarMul(input)
 }
 
@@ -463,17 +556,17 @@ func (c *bn256PairingIstanbul) Run(input []byte, contract *Contract, evm *EVM) (
 	return runBn256Pairing(input)
 }
 
-// bn256PairingConstantinople implements a pairing pre-compile for the bn256 curve
-// conforming to Constantinople consensus rules.
-type bn256PairingConstantinople struct{}
+// bn256PairingByzantium implements a pairing pre-compile for the bn256 curve
+// conforming to Byzantium consensus rules.
+type bn256PairingByzantium struct{}
 
-func (c *bn256PairingConstantinople) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
+func (c *bn256PairingByzantium) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
 	numParings := uint64(len(input) / 192)
-	return params.Bn256PairingBaseGasConstantinople + numParings*params.Bn256PairingPerPointGasConstantinople,
+	return params.Bn256PairingBaseGasByzantium + numParings*params.Bn256PairingPerPointGasByzantium,
 		params.Bn256ParingBaseComputationCost + numParings*params.Bn256ParingPerPointComputationCost
 }
 
-func (c *bn256PairingConstantinople) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
+func (c *bn256PairingByzantium) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	return runBn256Pairing(input)
 }
 

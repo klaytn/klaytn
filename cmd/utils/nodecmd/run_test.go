@@ -67,7 +67,7 @@ func init() {
 	// Initialize the CLI app and start Klay
 	app.Action = RunKlaytnNode
 	app.HideVersion = true // we have a command to print the version
-	app.Copyright = "Copyright 2018-2019 The klaytn Authors"
+	app.Copyright = "Copyright 2018-2023 The klaytn Authors"
 	app.Commands = []cli.Command{
 		// See chaincmd.go:
 		InitCommand,
@@ -97,7 +97,7 @@ func init() {
 			return err
 		}
 		metricutils.StartMetricCollectionAndExport(ctx)
-		utils.SetupNetwork(ctx)
+		setupNetwork(ctx)
 		return nil
 	}
 

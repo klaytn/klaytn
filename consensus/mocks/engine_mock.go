@@ -125,6 +125,21 @@ func (mr *MockEngineMockRecorder) Finalize(arg0, arg1, arg2, arg3, arg4 interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Finalize", reflect.TypeOf((*MockEngine)(nil).Finalize), arg0, arg1, arg2, arg3, arg4)
 }
 
+// GetConsensusInfo mocks base method.
+func (m *MockEngine) GetConsensusInfo(arg0 *types.Block) (consensus.ConsensusInfo, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetConsensusInfo", arg0)
+	ret0, _ := ret[0].(consensus.ConsensusInfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetConsensusInfo indicates an expected call of GetConsensusInfo.
+func (mr *MockEngineMockRecorder) GetConsensusInfo(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConsensusInfo", reflect.TypeOf((*MockEngine)(nil).GetConsensusInfo), arg0)
+}
+
 // Prepare mocks base method.
 func (m *MockEngine) Prepare(arg0 consensus.ChainReader, arg1 *types.Header) error {
 	m.ctrl.T.Helper()

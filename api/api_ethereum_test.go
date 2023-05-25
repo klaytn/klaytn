@@ -993,7 +993,7 @@ func testInitForEthApi(t *testing.T) (*gomock.Controller, *mock_api.MockBackend,
 	mockCtrl := gomock.NewController(t)
 	mockBackend := mock_api.NewMockBackend(mockCtrl)
 
-	blockchain.InitDeriveSha(types.ImplDeriveShaOriginal)
+	blockchain.InitDeriveSha(dummyChainConfigForEthereumAPITest)
 
 	api := EthereumAPI{
 		publicTransactionPoolAPI: NewPublicTransactionPoolAPI(mockBackend, new(AddrLocker)),

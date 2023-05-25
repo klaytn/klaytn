@@ -30,20 +30,23 @@ import (
 
 func main() {
 	app := cli.NewApp()
+	app.Action = setup.Gen
 	app.Name = filepath.Base(os.Args[0])
 	app.Author = ""
 	app.Email = ""
 	app.Usage = "the klaytn-tools command line interface"
 
 	app.Version = "v0.3.3"
-	app.Copyright = "Copyright 2018-2019 The klaytn Authors"
+	app.Copyright = "Copyright 2018-2023 The klaytn Authors"
 	app.Commands = []cli.Command{
 		setup.SetupCommand,
 		extra.ExtraCommand,
 	}
 
+	app.Flags = append(app.Flags, setup.HomiFlags...)
 	app.CommandNotFound = nodecmd.CommandNotExist
 	app.OnUsageError = nodecmd.OnUsageError
+	app.Before = setup.BeforeRunHomi
 
 	if err := app.Run(os.Args); err != nil {
 		fmt.Fprintln(os.Stderr, err)

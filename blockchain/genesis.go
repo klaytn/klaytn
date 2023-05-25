@@ -141,7 +141,10 @@ func (e *GenesisMismatchError) Error() string {
 func findBlockWithState(db database.DBManager) *types.Block {
 	headBlock := db.ReadBlockByHash(db.ReadHeadBlockHash())
 	if headBlock == nil {
-		logger.Crit("failed to read head block by head block hash")
+		headBlock = db.ReadBlockByHash(db.ReadHeadBlockBackupHash())
+		if headBlock == nil {
+			logger.Crit("failed to read head block by head block hash")
+		}
 	}
 
 	startBlock := headBlock
@@ -165,10 +168,10 @@ func findBlockWithState(db database.DBManager) *types.Block {
 // SetupGenesisBlock writes or updates the genesis block in db.
 // The block that will be used is:
 //
-//                          genesis == nil                            genesis != nil
-//                       +-------------------------------------------------------------------
-//     db has no genesis |  main-net default, baobab if specified  |  genesis
-//     db has genesis    |  from DB                                |  genesis (if compatible)
+//	                     genesis == nil                            genesis != nil
+//	                  +-------------------------------------------------------------------
+//	db has no genesis |  main-net default, baobab if specified  |  genesis
+//	db has genesis    |  from DB                                |  genesis (if compatible)
 //
 // The stored chain configuration will be updated if it is compatible (i.e. does not
 // specify a fork block below the local head block). In case of a conflict, the
@@ -204,7 +207,7 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 			logger.Info("Writing custom genesis block")
 		}
 		// Initialize DeriveSha implementation
-		InitDeriveSha(genesis.Config.DeriveShaImpl)
+		InitDeriveSha(genesis.Config)
 		block, err := genesis.Commit(common.Hash{}, db)
 		if err != nil {
 			return genesis.Config, common.Hash{}, err
@@ -224,6 +227,7 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 			return genesis.Config, newGenesisBlock.Hash(), err
 		}
 		// This is the usual path which does not overwrite genesis block with the new one.
+		InitDeriveSha(genesis.Config)
 		hash := genesis.ToBlock(common.Hash{}, nil).Hash()
 		if hash != stored {
 			return genesis.Config, hash, &GenesisMismatchError{stored, hash}
@@ -327,10 +331,14 @@ func (g *Genesis) ToBlock(baseStateRoot common.Hash, db database.DBManager) *typ
 	if g.BlockScore == nil {
 		head.BlockScore = params.GenesisBlockScore
 	}
-	// TODO-klaytn should set genesis block's base fee
 	if g.Config != nil && g.Config.IsMagmaForkEnabled(common.Big0) {
-		head.BaseFee = new(big.Int).SetUint64(params.DefaultLowerBoundBaseFee)
+		if g.Config.Governance != nil && g.Config.Governance.KIP71 != nil {
+			head.BaseFee = new(big.Int).SetUint64(g.Config.Governance.KIP71.LowerBoundBaseFee)
+		} else {
+			head.BaseFee = new(big.Int).SetUint64(params.DefaultLowerBoundBaseFee)
+		}
 	}
+
 	stateDB.Commit(false)
 	stateDB.Database().TrieDB().Commit(root, true, g.Number)
 
@@ -369,7 +377,7 @@ func (g *Genesis) MustCommit(db database.DBManager) *types.Block {
 	if config == nil {
 		config = params.AllGxhashProtocolChanges
 	}
-	InitDeriveSha(config.DeriveShaImpl)
+	InitDeriveSha(config)
 
 	block, err := g.Commit(common.Hash{}, db)
 	if err != nil {

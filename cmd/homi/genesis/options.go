@@ -154,6 +154,22 @@ func PatchAddressBook(addr common.Address) Option {
 	}
 }
 
+func AddressBookMock() Option {
+	return func(genesis *blockchain.Genesis) {
+		contractAddr := common.HexToAddress(contract.AddressBookContractAddress)
+		contractAccount, ok := genesis.Alloc[contractAddr]
+		if !ok {
+			log.Fatalf("No AddressBook to patch")
+		}
+
+		code := contract.AddressBookMockBinRuntime
+		genesis.Alloc[contractAddr] = blockchain.GenesisAccount{
+			Code:    common.FromHex(code),
+			Balance: contractAccount.Balance,
+		}
+	}
+}
+
 func ChainID(chainID *big.Int) Option {
 	return func(genesis *blockchain.Genesis) {
 		genesis.Config.ChainID = chainID

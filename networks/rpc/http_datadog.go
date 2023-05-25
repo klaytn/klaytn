@@ -26,11 +26,13 @@ type DatadogTracer struct {
 }
 
 func newDatadogTracer() *DatadogTracer {
-	if v := os.Getenv("DD_TRACE_ENABLED"); v != "" {
-		ddTraceEnabled, err := strconv.ParseBool(v)
-		if err != nil || ddTraceEnabled == false {
-			return nil
-		}
+	v := os.Getenv("DD_TRACE_ENABLED")
+	if v == "" {
+		return nil
+	}
+
+	if ddTraceEnabled, err := strconv.ParseBool(v); ddTraceEnabled == false || err != nil {
+		return nil
 	}
 
 	headers := strings.Split(os.Getenv("DD_TRACE_HEADER_TAGS"), ",")
@@ -76,11 +78,11 @@ func newDatadogHTTPHandler(ddTracer *DatadogTracer, handler http.Handler) http.H
 			// The error will be handled in `handler.ServeHTTP()` and printed with `printRPCErrorLog()`
 			logger.Debug("failed to parse RPC request", "err", err, "len(reqs)", len(reqs))
 		} else {
-			reqMethod = reqs[0].method
+			reqMethod = reqs[0].Method
 			if isBatch {
 				reqMethod += "_batch"
 			}
-			encoded, _ := json.Marshal(reqs[0].params)
+			encoded, _ := json.Marshal(reqs[0].Params)
 			reqParam = string(encoded)
 		}
 
@@ -132,12 +134,12 @@ func newDatadogHTTPHandler(ddTracer *DatadogTracer, handler http.Handler) http.H
 	})
 }
 
-func (dt *DatadogTracer) traceBatchRpcResponse(r *http.Request, rpcReturn interface{}, req rpcRequest, offset int) {
+func (dt *DatadogTracer) traceBatchRpcResponse(r *http.Request, rpcReturn interface{}, req *jsonrpcMessage, offset int) {
 	span, _ := tracer.StartSpanFromContext(r.Context(), "response.batch")
 	defer span.Finish()
 	span.SetTag("offset", offset)
 	if data, err := json.Marshal(rpcReturn); err == nil {
-		dt.traceRpcResponse(data, req.method, span)
+		dt.traceRpcResponse(data, req.Method, span)
 	}
 }
 

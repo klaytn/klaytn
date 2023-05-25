@@ -20,9 +20,9 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/klaytn/klaytn/blockchain/vm"
-
 	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/blockchain/vm"
+	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/datasync/chaindatafetcher/types"
 )
 
@@ -46,6 +46,7 @@ func (r *blockGroupResult) Key() string {
 
 type repository struct {
 	blockchain *blockchain.BlockChain
+	engine     consensus.Engine
 	kafka      *Kafka
 }
 
@@ -64,15 +65,21 @@ func (r *repository) SetComponent(component interface{}) {
 	switch c := component.(type) {
 	case *blockchain.BlockChain:
 		r.blockchain = c
+	case consensus.Engine:
+		r.engine = c
 	}
 }
 
 func (r *repository) HandleChainEvent(event blockchain.ChainEvent, dataType types.RequestType) error {
 	switch dataType {
 	case types.RequestTypeBlockGroup:
+		cInfo, err := r.engine.GetConsensusInfo(event.Block)
+		if err != nil {
+			return fmt.Errorf("failed to retrieve consensusinfo with the given block number: %v", event.Block.Number())
+		}
 		result := &blockGroupResult{
 			BlockNumber: event.Block.Number(),
-			Result:      makeBlockGroupOutput(r.blockchain, event.Block, event.Receipts),
+			Result:      makeBlockGroupOutput(r.blockchain, event.Block, cInfo, event.Receipts),
 		}
 		return r.kafka.Publish(r.kafka.getTopicName(EventBlockGroup), result)
 	case types.RequestTypeTraceGroup:

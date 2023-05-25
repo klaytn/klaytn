@@ -39,8 +39,28 @@ func (api *PublicChainDataFetcherAPI) StopFetching() error {
 	return api.f.stopFetching()
 }
 
-func (api *PublicChainDataFetcherAPI) StartRangeFetching(start, end uint64, reqType uint) error {
-	return api.f.startRangeFetching(start, end, types.RequestType(reqType))
+func (api *PublicChainDataFetcherAPI) StartRangeFetching(start, end uint64, reqType interface{}) error {
+	var t types.RequestType
+	switch reqType {
+	case "all":
+		t = types.RequestTypeGroupAll
+	case "block":
+		t = types.RequestTypeBlockGroup
+	case "trace":
+		t = types.RequestTypeTraceGroup
+	default:
+		ut, ok := reqType.(float64)
+		if !ok {
+			return errors.New("the request type should be 'all', 'block', 'trace', or uint type")
+		}
+		t = types.RequestType(ut)
+	}
+
+	if !t.IsValid() {
+		return errors.New("the request type is not valid")
+	}
+
+	return api.f.startRangeFetching(start, end, t)
 }
 
 func (api *PublicChainDataFetcherAPI) StopRangeFetching() error {

@@ -44,6 +44,7 @@ import (
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/params"
+	"github.com/urfave/cli/altsrc"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -56,6 +57,75 @@ type ValidatorInfo struct {
 type GrafanaFile struct {
 	url  string
 	name string
+}
+
+var HomiFlags = []cli.Flag{
+	homiYamlFlag,
+	altsrc.NewStringFlag(genTypeFlag),
+	altsrc.NewBoolFlag(cypressTestFlag),
+	altsrc.NewBoolFlag(cypressFlag),
+	altsrc.NewBoolFlag(baobabTestFlag),
+	altsrc.NewBoolFlag(baobabFlag),
+	altsrc.NewBoolFlag(serviceChainFlag),
+	altsrc.NewBoolFlag(serviceChainTestFlag),
+	altsrc.NewBoolFlag(cliqueFlag),
+	altsrc.NewIntFlag(numOfCNsFlag),
+	altsrc.NewIntFlag(numOfValidatorsFlag),
+	altsrc.NewIntFlag(numOfPNsFlag),
+	altsrc.NewIntFlag(numOfENsFlag),
+	altsrc.NewIntFlag(numOfSCNsFlag),
+	altsrc.NewIntFlag(numOfSPNsFlag),
+	altsrc.NewIntFlag(numOfSENsFlag),
+	altsrc.NewIntFlag(numOfTestKeyFlag),
+	altsrc.NewStringFlag(mnemonic),
+	altsrc.NewStringFlag(mnemonicPath),
+	altsrc.NewUint64Flag(chainIDFlag),
+	altsrc.NewUint64Flag(serviceChainIDFlag),
+	altsrc.NewUint64Flag(unitPriceFlag),
+	altsrc.NewIntFlag(deriveShaImplFlag),
+	altsrc.NewStringFlag(fundingAddrFlag),
+	altsrc.NewBoolFlag(patchAddressBookFlag),
+	altsrc.NewStringFlag(patchAddressBookAddrFlag),
+	altsrc.NewStringFlag(outputPathFlag),
+	altsrc.NewBoolFlag(addressBookMockFlag),
+	altsrc.NewStringFlag(dockerImageIdFlag),
+	altsrc.NewBoolFlag(fasthttpFlag),
+	altsrc.NewIntFlag(networkIdFlag),
+	altsrc.NewBoolFlag(nografanaFlag),
+	altsrc.NewBoolFlag(useTxGenFlag),
+	altsrc.NewIntFlag(txGenRateFlag),
+	altsrc.NewIntFlag(txGenThFlag),
+	altsrc.NewIntFlag(txGenConnFlag),
+	altsrc.NewStringFlag(txGenDurFlag),
+	altsrc.NewIntFlag(rpcPortFlag),
+	altsrc.NewIntFlag(wsPortFlag),
+	altsrc.NewIntFlag(p2pPortFlag),
+	altsrc.NewStringFlag(dataDirFlag),
+	altsrc.NewStringFlag(logDirFlag),
+	altsrc.NewBoolFlag(governanceFlag),
+	altsrc.NewStringFlag(govModeFlag),
+	altsrc.NewStringFlag(governingNodeFlag),
+	altsrc.NewStringFlag(govParamContractFlag),
+	altsrc.NewStringFlag(rewardMintAmountFlag),
+	altsrc.NewStringFlag(rewardRatioFlag),
+	altsrc.NewStringFlag(rewardKip82RatioFlag),
+	altsrc.NewBoolFlag(rewardGiniCoeffFlag),
+	altsrc.NewUint64Flag(rewardStakingFlag),
+	altsrc.NewUint64Flag(rewardProposerFlag),
+	altsrc.NewStringFlag(rewardMinimumStakeFlag),
+	altsrc.NewBoolFlag(rewardDeferredTxFeeFlag),
+	altsrc.NewUint64Flag(istEpochFlag),
+	altsrc.NewUint64Flag(istProposerPolicyFlag),
+	altsrc.NewUint64Flag(istSubGroupFlag),
+	altsrc.NewUint64Flag(cliqueEpochFlag),
+	altsrc.NewUint64Flag(cliquePeriodFlag),
+	altsrc.NewInt64Flag(istanbulCompatibleBlockNumberFlag),
+	altsrc.NewInt64Flag(londonCompatibleBlockNumberFlag),
+	altsrc.NewInt64Flag(ethTxTypeCompatibleBlockNumberFlag),
+	altsrc.NewInt64Flag(magmaCompatibleBlockNumberFlag),
+	altsrc.NewInt64Flag(koreCompatibleBlockNumberFlag),
+	altsrc.NewInt64Flag(kip103CompatibleBlockNumberFlag),
+	altsrc.NewStringFlag(kip103ContractAddressFlag),
 }
 
 var SetupCommand = cli.Command{
@@ -72,65 +142,8 @@ var SetupCommand = cli.Command{
 Args :
 		type : [local | remote | deploy | docker (default)]
 `,
-	Action: gen,
-	Flags: []cli.Flag{
-		cypressTestFlag,
-		cypressFlag,
-		baobabTestFlag,
-		baobabFlag,
-		serviceChainFlag,
-		serviceChainTestFlag,
-		cliqueFlag,
-		numOfCNsFlag,
-		numOfValidatorsFlag,
-		numOfPNsFlag,
-		numOfENsFlag,
-		numOfSCNsFlag,
-		numOfSPNsFlag,
-		numOfSENsFlag,
-		numOfTestKeyFlag,
-		chainIDFlag,
-		serviceChainIDFlag,
-		unitPriceFlag,
-		deriveShaImplFlag,
-		fundingAddrFlag,
-		patchAddressBookFlag,
-		patchAddressBookAddrFlag,
-		outputPathFlag,
-		dockerImageIdFlag,
-		fasthttpFlag,
-		networkIdFlag,
-		nografanaFlag,
-		useTxGenFlag,
-		txGenRateFlag,
-		txGenThFlag,
-		txGenConnFlag,
-		txGenDurFlag,
-		rpcPortFlag,
-		wsPortFlag,
-		p2pPortFlag,
-		dataDirFlag,
-		logDirFlag,
-		governanceFlag,
-		govModeFlag,
-		governingNodeFlag,
-		rewardMintAmountFlag,
-		rewardRatioFlag,
-		rewardGiniCoeffFlag,
-		rewardStakingFlag,
-		rewardProposerFlag,
-		rewardMinimumStakeFlag,
-		rewardDeferredTxFeeFlag,
-		istEpochFlag,
-		istProposerPolicyFlag,
-		istSubGroupFlag,
-		cliqueEpochFlag,
-		cliquePeriodFlag,
-		istanbulCompatibleBlockNumberFlag,
-		londonCompatibleBlockNumberFlag,
-		ethTxTypeCompatibleBlockNumberFlag,
-		magmaCompatibleBlockNumberFlag,
-	},
+	Action:    Gen,
+	Flags:     HomiFlags,
 	ArgsUsage: "type",
 }
 
@@ -178,6 +191,7 @@ func genRewardConfig(ctx *cli.Context) *params.RewardConfig {
 		log.Fatalf("Minting amount must be a number", "value", mintingAmountString)
 	}
 	ratio := ctx.String(rewardRatioFlag.Name)
+	kip82Ratio := ctx.String(rewardKip82RatioFlag.Name)
 	giniCoeff := ctx.Bool(rewardGiniCoeffFlag.Name)
 	deferredTxFee := ctx.Bool(rewardDeferredTxFeeFlag.Name)
 	stakingInterval := ctx.Uint64(rewardStakingFlag.Name)
@@ -191,6 +205,7 @@ func genRewardConfig(ctx *cli.Context) *params.RewardConfig {
 	return &params.RewardConfig{
 		MintingAmount:          mintingAmount,
 		Ratio:                  ratio,
+		Kip82Ratio:             kip82Ratio,
 		UseGiniCoeff:           giniCoeff,
 		DeferredTxFee:          deferredTxFee,
 		StakingUpdateInterval:  stakingInterval,
@@ -231,13 +246,18 @@ func genGovernanceConfig(ctx *cli.Context) *params.GovernanceConfig {
 	govMode := ctx.String(govModeFlag.Name)
 	governingNode := ctx.String(governingNodeFlag.Name)
 	if !common.IsHexAddress(governingNode) {
-		log.Fatalf("Governing Node is invalid hex address", "value", governingNode)
+		log.Fatalf("Governing Node is not a valid hex address", "value", governingNode)
+	}
+	govParamContract := ctx.String(govParamContractFlag.Name)
+	if !common.IsHexAddress(govParamContract) {
+		log.Fatalf("GovParam Contract is not a valid hex address", "value", govParamContract)
 	}
 	return &params.GovernanceConfig{
-		GoverningNode:  common.HexToAddress(governingNode),
-		GovernanceMode: govMode,
-		Reward:         genRewardConfig(ctx),
-		KIP71:          genKIP71Config(ctx),
+		GoverningNode:    common.HexToAddress(governingNode),
+		GovernanceMode:   govMode,
+		GovParamContract: common.HexToAddress(govParamContract),
+		Reward:           genRewardConfig(ctx),
+		KIP71:            genKIP71Config(ctx),
 	}
 }
 
@@ -399,7 +419,7 @@ func genServiceChainCommonGenesis(nodeAddrs, testAddrs []common.Address) *blockc
 func genServiceChainGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
 	genesisJson := genServiceChainCommonGenesis(nodeAddrs, testAddrs)
 	genesisJson.Config.Istanbul.Epoch = 3600
-	allocationFunction := genesis.Alloc(append(nodeAddrs, testAddrs...), new(big.Int).Exp(big.NewInt(10), big.NewInt(10), nil))
+	allocationFunction := genesis.Alloc(append(nodeAddrs, testAddrs...), new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil))
 	allocationFunction(genesisJson)
 	return genesisJson
 }
@@ -517,6 +537,15 @@ func patchGenesisAddressBook(ctx *cli.Context, genesisJson *blockchain.Genesis, 
 	allocationFunction(genesisJson)
 }
 
+func useAddressBookMock(ctx *cli.Context, genesisJson *blockchain.Genesis) {
+	if useMock := ctx.Bool(addressBookMockFlag.Name); !useMock {
+		return
+	}
+
+	allocationFunction := genesis.AddressBookMock()
+	allocationFunction(genesisJson)
+}
+
 func RandStringRunes(n int) string {
 	letterRunes := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789~!@#$%^&*()_+{}|[]")
 
@@ -529,10 +558,9 @@ func RandStringRunes(n int) string {
 	return string(b)
 }
 
-func gen(ctx *cli.Context) error {
+func Gen(ctx *cli.Context) error {
 	genType := findGenType(ctx)
 
-	cliqueFlag := ctx.Bool(cliqueFlag.Name)
 	cnNum := ctx.Int(numOfCNsFlag.Name)
 	numValidators := ctx.Int(numOfValidatorsFlag.Name)
 	pnNum := ctx.Int(numOfPNsFlag.Name)
@@ -545,10 +573,33 @@ func gen(ctx *cli.Context) error {
 	baobabTest := ctx.Bool(baobabTestFlag.Name)
 	cypress := ctx.Bool(cypressFlag.Name)
 	cypressTest := ctx.Bool(cypressTestFlag.Name)
+	clique := ctx.Bool(cliqueFlag.Name)
 	serviceChain := ctx.Bool(serviceChainFlag.Name)
 	serviceChainTest := ctx.Bool(serviceChainTestFlag.Name)
 	chainid := ctx.Uint64(chainIDFlag.Name)
 	serviceChainId := ctx.Uint64(serviceChainIDFlag.Name)
+
+	// Note-klaytn : the following code that seems unnecessary is for the priority to flags, not yaml
+	if !baobab && !baobabTest && !cypress && !cypressTest && !serviceChain && !serviceChainTest && !clique {
+		switch genesisType := ctx.String(genesisTypeFlag.Name); genesisType {
+		case "baobab":
+			baobab = true
+		case "baobab-test":
+			baobabTest = true
+		case "cypress":
+			cypress = true
+		case "cypress-test":
+			cypressTest = true
+		case "servicechain":
+			serviceChain = true
+		case "servicechain-test":
+			serviceChainTest = true
+		case "clique":
+			clique = true
+		default:
+			fmt.Printf("Unknown genesis type is %s.\n", genesisType)
+		}
+	}
 
 	if cnNum == 0 && scnNum == 0 {
 		return fmt.Errorf("needed at least one consensus node (--cn-num 1) or one service chain consensus node (--scn-num 1) ")
@@ -561,7 +612,35 @@ func gen(ctx *cli.Context) error {
 		return fmt.Errorf("validators-num(%d) cannot be greater than num(%d)", numValidators, cnNum)
 	}
 
-	privKeys, nodeKeys, nodeAddrs := istcommon.GenerateKeys(cnNum)
+	var (
+		privKeys  []*ecdsa.PrivateKey
+		nodeKeys  []string
+		nodeAddrs []common.Address
+	)
+
+	if len(ctx.String(mnemonic.Name)) == 0 {
+		privKeys, nodeKeys, nodeAddrs = istcommon.GenerateKeys(cnNum)
+	} else {
+		mnemonic := ctx.String(mnemonic.Name)
+		mnemonic = strings.ReplaceAll(mnemonic, ",", " ")
+		// common keys used by web3 tools such as hardhat, foundry, etc.
+		if mnemonic == "test junk" {
+			mnemonic = "test test test test test test test test test test test junk"
+		}
+		path := strings.ToLower(ctx.String(mnemonicPath.Name))
+		if !strings.HasPrefix(path, "m") {
+			switch path {
+			case "klay":
+				path = "m/44'/8217'/0'/0/"
+			case "eth":
+				path = "m/44'/60'/0'/0/"
+			default:
+				return fmt.Errorf("invalid mnemonic path (format: m/44'/60'/0'/0/)")
+			}
+		}
+		privKeys, nodeKeys, nodeAddrs = istcommon.GenerateKeysFromMnemonic(cnNum, mnemonic, path)
+	}
+
 	testPrivKeys, testKeys, testAddrs := istcommon.GenerateKeys(numTestAccs)
 
 	var (
@@ -580,7 +659,7 @@ func gen(ctx *cli.Context) error {
 		genesisJson = genBaobabTestGenesis(validatorNodeAddrs, testAddrs)
 	} else if baobab {
 		genesisJson = genBaobabGenesis(validatorNodeAddrs, testAddrs)
-	} else if cliqueFlag {
+	} else if clique {
 		genesisJson = genCliqueGenesis(ctx, validatorNodeAddrs, testAddrs, chainid)
 	} else if serviceChain {
 		genesisJson = genServiceChainGenesis(validatorNodeAddrs, testAddrs)
@@ -592,11 +671,15 @@ func gen(ctx *cli.Context) error {
 
 	allocGenesisFund(ctx, genesisJson)
 	patchGenesisAddressBook(ctx, genesisJson, validatorNodeAddrs)
+	useAddressBookMock(ctx, genesisJson)
 
 	genesisJson.Config.IstanbulCompatibleBlock = big.NewInt(ctx.Int64(istanbulCompatibleBlockNumberFlag.Name))
 	genesisJson.Config.LondonCompatibleBlock = big.NewInt(ctx.Int64(londonCompatibleBlockNumberFlag.Name))
 	genesisJson.Config.EthTxTypeCompatibleBlock = big.NewInt(ctx.Int64(ethTxTypeCompatibleBlockNumberFlag.Name))
 	genesisJson.Config.MagmaCompatibleBlock = big.NewInt(ctx.Int64(magmaCompatibleBlockNumberFlag.Name))
+	genesisJson.Config.KoreCompatibleBlock = big.NewInt(ctx.Int64(koreCompatibleBlockNumberFlag.Name))
+	genesisJson.Config.Kip103CompatibleBlock = big.NewInt(ctx.Int64(kip103CompatibleBlockNumberFlag.Name))
+	genesisJson.Config.Kip103ContractAddress = common.HexToAddress(ctx.String(kip103ContractAddressFlag.Name))
 
 	genesisJsonBytes, _ = json.MarshalIndent(genesisJson, "", "    ")
 	genValidatorKeystore(privKeys)
@@ -1062,23 +1145,33 @@ func WriteFile(content []byte, parentFolder string, fileName string) {
 	fmt.Println("Created : ", filePath)
 }
 
-func findGenType(ctx *cli.Context) int {
-	genType := TypeNotDefined
-	if len(ctx.Args()) >= 1 {
-		for i, t := range Types {
-			if t == ctx.Args()[0] {
-				genType = i
-				break
-			}
-		}
-		if genType == TypeNotDefined {
-			fmt.Printf("Wrong Type : %s\nSupported Types : [docker, local, remote, deploy]\n\n", ctx.Args()[0])
-			cli.ShowSubcommandHelp(ctx)
-			os.Exit(1)
-		}
-	} else {
-		genType = TypeDocker
+func indexGenType(genTypeFlag string, base string) int {
+	// NOTE-Klaytn: genTypeFlag's default value is docker
+	if base != "" && genTypeFlag == "" {
+		genTypeFlag = base
 	}
+	for typeIndex, typeString := range Types {
+		if genTypeFlag == typeString {
+			return typeIndex
+		}
+	}
+	return TypeNotDefined
+}
+
+func findGenType(ctx *cli.Context) int {
+	var genType int
+	if ctx.Args().Present() {
+		genType = indexGenType(ctx.Args()[0], "")
+	} else {
+		genType = indexGenType(ctx.String(genTypeFlag.Name), Types[0])
+	}
+
+	if genType == TypeNotDefined {
+		fmt.Printf("Wrong Type : %s\nSupported Types : [docker, local, remote, deploy]\n\n", genTypeFlag)
+		cli.ShowSubcommandHelp(ctx)
+		os.Exit(1)
+	}
+
 	return genType
 }
 
@@ -1088,4 +1181,21 @@ func removeSpacesAndLines(b []byte) string {
 	out = strings.Replace(out, "\t", "", -1)
 	out = strings.Replace(out, "\n", "", -1)
 	return out
+}
+
+func homiFlagsFromYaml(ctx *cli.Context) error {
+	filePath := ctx.String(homiYamlFlag.Name)
+	if filePath != "" {
+		if err := altsrc.InitInputSourceWithContext(SetupCommand.Flags, altsrc.NewYamlSourceFromFlagFunc(homiYamlFlag.Name))(ctx); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func BeforeRunHomi(ctx *cli.Context) error {
+	if err := homiFlagsFromYaml(ctx); err != nil {
+		return err
+	}
+	return nil
 }

@@ -28,7 +28,8 @@ var (
 
 const (
 	// Block reward will be separated by three pieces and distributed
-	RewardSliceCount = 3
+	RewardSliceCount      = 3
+	RewardKip82SliceCount = 2
 	// GovernanceConfig is stored in a cache which has below capacity
 	GovernanceCacheLimit    = 512
 	GovernanceIdxCacheLimit = 1000
@@ -61,6 +62,9 @@ const (
 	GasTarget
 	MaxBlockGasUsedForBaseFee
 	BaseFeeDenominator
+	GovParamContract
+	Kip82Ratio
+	DeriveShaImpl
 )
 
 const (
@@ -82,6 +86,7 @@ var (
 	// Default Values: Constants used for getting default values for configuration
 	DefaultGovernanceMode            = "none"
 	DefaultGoverningNode             = "0x0000000000000000000000000000000000000000"
+	DefaultGovParamContract          = "0x0000000000000000000000000000000000000000"
 	DefaultEpoch                     = uint64(604800)
 	DefaultProposerPolicy            = uint64(RoundRobin)
 	DefaultSubGroupSize              = uint64(21)
@@ -93,12 +98,14 @@ var (
 	DefaultBaseFeeDenominator        = uint64(20)
 	DefaultMintingAmount             = big.NewInt(0)
 	DefaultRatio                     = "100/0/0"
+	DefaultKip82Ratio                = "20/80"
 	DefaultUseGiniCoeff              = false
 	DefaultDefferedTxFee             = false
 	DefaultMinimumStake              = big.NewInt(2000000)
 	DefaultStakeUpdateInterval       = uint64(86400) // 1 day
 	DefaultProposerRefreshInterval   = uint64(3600)  // 1 hour
 	DefaultPeriod                    = uint64(1)
+	DefaultDeriveShaImpl             = uint64(0) // Orig
 )
 
 func IsStakingUpdateInterval(blockNum uint64) bool {

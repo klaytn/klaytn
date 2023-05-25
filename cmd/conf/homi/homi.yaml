@@ -1,0 +1,91 @@
+
+# generation type : docker, local, remote, deploy
+gen-type: docker
+
+# The output path for files (keys, genesis.json. conf, etc...)
+output: "homi-output"
+
+######################################################################
+#               For each node, test, validator keys                  #
+######################################################################
+
+# Network topology
+cn-num: 1
+pn-num: 0
+en-num: 0
+scn-num: 0
+spn-num: 0
+sen-num: 0
+test-num: 0
+validators-num: 0
+
+######################################################################
+#                       For deploy environment                       #
+######################################################################
+
+# Only for docker gen-type
+docker-image-id: klaytn/klaytn:latest
+fasthttp: false
+network-id: 2018
+no-grafana: false
+txgen: false
+txgen-rate: 2000
+txgen-conn: 100
+txgen-dur: "1m"
+txgen-th: 2
+
+rpc-port: 8551
+ws-port: 8552
+p2p-port: 32323
+data-dir: /var/klay/data
+log-dir: /var/klay/log
+
+######################################################################
+#                       For genesis.json                             #
+######################################################################
+
+# cypress-test, cypress, baobab-test, baobab, servicechain, servicechain-test, clique, default
+genesis-type: default
+chainID: 1000
+serviceChainID: 1001 
+funding-addr: ""
+
+# governance, reward and dynamic fee flags, 
+# This flags are only activated by default genesis-type
+governance: false
+gov-mode: "none"
+governing-node: "0x0000000000000000000000000000000000000000"
+unitPrice: 0
+deriveShaImpl: 0
+reward-mint-amount: "9600000000000000000"
+reward-ratio: "100/0/0"
+reward-gini-coeff: false
+reward-deferred-tx: false
+reward-staking-interval: 86400
+reward-proposer-interval: 3600
+reward-minimum-stake: "2000000"
+lower-bound-base-fee: 25000000000
+upper-bound-base-fee: 750000000000
+gas-target: 30000000
+block-gas-limit: 60000000
+base-fee-denominator: 20
+
+# Istanbul consensus engine options (default engine)
+ist-epoch: 604800
+ist-proposer-policy: 0
+ist-subgroup: 21
+
+# To enable clique consensus engine
+clique-epoch: 604800
+clique-period: 1
+
+# Hard fork numbers, these should be ordered by ascending
+istanbul-compatible-blocknumber: 0
+london-compatible-blocknumber: 0
+eth-tx-type-compatible-blocknumber: 0
+magma-compatible-blocknumber: 0
+kore-compatible-blocknumber: 0
+
+# For using the patched addressbook contract
+patch-address-book: false
+patch-address-book-addr: ""

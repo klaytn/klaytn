@@ -40,6 +40,9 @@ type ChainReader interface {
 	// CurrentHeader retrieves the current header from the local chain.
 	CurrentHeader() *types.Header
 
+	// Engine retrieves the header chain's consensus engine.
+	Engine() Engine
+
 	// GetHeader retrieves a block header from the database by hash and number.
 	GetHeader(hash common.Hash, number uint64) *types.Header
 
@@ -111,6 +114,9 @@ type Engine interface {
 
 	// CreateSnapshot does not return a snapshot but creates a new snapshot at a given point in time.
 	CreateSnapshot(chain ChainReader, number uint64, hash common.Hash, parents []*types.Header) error
+
+	// GetConsensusInfo returns consensus information regarding the given block number.
+	GetConsensusInfo(block *types.Block) (ConsensusInfo, error)
 }
 
 // PoW is a consensus engine based on proof-of-work.
@@ -148,4 +154,11 @@ type Istanbul interface {
 
 	// SetChain sets chain of the Istanbul backend
 	SetChain(chain ChainReader)
+}
+
+type ConsensusInfo struct {
+	Proposer       common.Address
+	OriginProposer common.Address // the proposal of 0 round at the same block number
+	Committee      []common.Address
+	Round          byte
 }

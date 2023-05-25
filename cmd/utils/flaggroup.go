@@ -37,6 +37,8 @@ var FlagGroups = []FlagGroup{
 	{
 		Name: "KLAY",
 		Flags: []cli.Flag{
+			NtpDisableFlag,
+			NtpServerFlag,
 			DbTypeFlag,
 			DataDirFlag,
 			KeyStoreDirFlag,
@@ -249,9 +251,11 @@ var FlagGroups = []FlagGroup{
 			RPCVirtualHostsFlag,
 			RPCApiFlag,
 			RPCGlobalGasCap,
+			RPCGlobalEVMTimeoutFlag,
 			RPCGlobalEthTxFeeCapFlag,
 			RPCConcurrencyLimit,
 			RPCNonEthCompatibleFlag,
+			UnsafeDebugDisableFlag,
 			IPCDisabledFlag,
 			IPCPathFlag,
 			WSEnabledFlag,
@@ -312,6 +316,7 @@ var FlagGroups = []FlagGroup{
 			KESNodeTypeServiceFlag,
 			SnapshotFlag,
 			SnapshotCacheSizeFlag,
+			SnapshotAsyncGen,
 		},
 	},
 }

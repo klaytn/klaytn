@@ -17,6 +17,8 @@
 package governance
 
 import (
+	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
@@ -27,28 +29,30 @@ import (
 type Engine interface {
 	HeaderEngine
 	ReaderEngine
+	HeaderGov() HeaderEngine
+	ContractGov() ReaderEngine
 }
 
 type ReaderEngine interface {
-	// Returns the params at the current block. The returned params shall be
+	// CurrentParams returns the params at the current block. The returned params shall be
 	// used to build the upcoming (head+1) block. Block processing codes
 	// should use this method.
-	Params() *params.GovParamSet
+	CurrentParams() *params.GovParamSet
 
-	// Returns the params at given block number. The returned params
+	// EffectiveParams returns the params at given block number. The returned params
 	// were used to build the block at given number.
 	// The number must be equal or less than current block height (head).
-	ParamsAt(num uint64) (*params.GovParamSet, error)
+	EffectiveParams(num uint64) (*params.GovParamSet, error)
 
-	// Update the current params (the ones returned by Params()).
+	// UpdateParams updates the current params (the ones returned by CurrentParams()).
 	// by reading the latest blockchain states.
 	// This function must be called after every block is mined to
-	// guarantee that Params() works correctly.
-	UpdateParams() error
+	// guarantee that CurrentParams() works correctly.
+	UpdateParams(num uint64) error
 }
 
 type HeaderEngine interface {
-	// Cast votes from API
+	// AddVote casts votes from API
 	AddVote(key string, val interface{}) bool
 	ValidateVote(vote *GovernanceVote) (*GovernanceVote, bool)
 
@@ -75,8 +79,6 @@ type HeaderEngine interface {
 		istanbul.ValidatorSet, []GovernanceVote, []GovernanceTallyItem)
 
 	// Get internal fields
-	ChainId() uint64
-	InitialChainConfig() *params.ChainConfig
 	GetVoteMapCopy() map[string]VoteStatus
 	GetGovernanceTalliesCopy() []GovernanceTallyItem
 	CurrentSetCopy() map[string]interface{}
@@ -98,29 +100,14 @@ type HeaderEngine interface {
 	SetBlockchain(chain blockChain)
 	SetTxPool(txpool txPool)
 	GetTxPool() txPool
+}
 
-	// Get network params
-	GovernanceMode() string
-	GoverningNode() common.Address
-	UnitPrice() uint64
-	CommitteeSize() uint64
-	Epoch() uint64
-	ProposerPolicy() uint64
-	DeferredTxFee() bool
-	MinimumStake() string
-	MintingAmount() string
-	ProposerUpdateInterval() uint64
-	Ratio() string
-	StakingUpdateInterval() uint64
-	UseGiniCoeff() bool
-	LowerBoundBaseFee() uint64
-	UpperBoundBaseFee() uint64
-	GasTarget() uint64
-	MaxBlockGasUsedForBaseFee() uint64
-	BaseFeeDenominator() uint64
-	GetGovernanceValue(key int) interface{}
-	GetGovernanceItemAtNumber(num uint64, key string) (interface{}, error)
-	GetItemAtNumberByIntKey(num uint64, key int) (interface{}, error)
-	GetGoverningInfoAtNumber(num uint64) (bool, common.Address, error)
-	GetMinimumStakingAtNumber(num uint64) (uint64, error)
+// blockChain is an interface for blockchain.Blockchain used in governance package.
+type blockChain interface {
+	blockchain.ChainContext
+
+	CurrentBlock() *types.Block
+	GetHeaderByNumber(val uint64) *types.Header
+	StateAt(root common.Hash) (*state.StateDB, error)
+	Config() *params.ChainConfig
 }

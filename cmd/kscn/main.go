@@ -45,7 +45,7 @@ func init() {
 	// Initialize the CLI app and start kcn
 	app.Action = nodecmd.RunKlaytnNode
 	app.HideVersion = true // we have a command to print the version
-	app.Copyright = "Copyright 2018-2019 The klaytn Authors"
+	app.Copyright = "Copyright 2018-2023 The klaytn Authors"
 	app.Commands = []cli.Command{
 		// See utils/nodecmd/chaincmd.go:
 		nodecmd.InitCommand,
@@ -63,6 +63,9 @@ func init() {
 
 		// See utils/nodecmd/dumpconfigcmd.go:
 		nodecmd.GetDumpConfigCommand(nodecmd.KscnNodeFlags(), nodecmd.CommonRPCFlags),
+
+		// See utils/nodecmd/snapshot.go:
+		nodecmd.SnapshotCommand,
 	}
 	sort.Sort(cli.CommandsByName(app.Commands))
 
@@ -84,7 +87,7 @@ func init() {
 func main() {
 	// Set NodeTypeFlag to cn
 	utils.NodeTypeFlag.Value = "cn"
-	utils.NetworkTypeFlag.Value = nodecmd.SCNNetworkType
+	utils.NetworkTypeFlag.Value = utils.SCNNetworkType
 
 	if err := app.Run(os.Args); err != nil {
 		fmt.Fprintln(os.Stderr, err)

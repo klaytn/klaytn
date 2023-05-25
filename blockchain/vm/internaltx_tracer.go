@@ -36,10 +36,9 @@ import (
 )
 
 var (
-	errEvmExecutionReverted = errors.New("evm: execution reverted")
-	errExecutionReverted    = errors.New("execution reverted")
-	errInternalFailure      = errors.New("internal failure")
-	emptyAddr               = common.Address{}
+	errExecutionReverted = errors.New("execution reverted")
+	errInternalFailure   = errors.New("internal failure")
+	emptyAddr            = common.Address{}
 )
 
 // InternalTxTracer is a full blown transaction tracer that extracts and reports all
@@ -282,7 +281,7 @@ func (this *InternalTxTracer) step(log *tracerLog) error {
 
 		// Skip any pre-compile invocations, those are just fancy opcodes
 		toAddr := common.HexToAddress(log.stack.Back(1).Text(16))
-		if _, ok := PrecompiledContractsConstantinople[toAddr]; ok {
+		if _, ok := PrecompiledContractsByzantiumCompatible[toAddr]; ok {
 			return nil
 		}
 
@@ -509,7 +508,7 @@ func (this *InternalTxTracer) result() *InternalTxTrace {
 	if result.Error != nil && (result.Error.Error() != errExecutionReverted.Error() || result.Output == "0x") {
 		result.Output = "" // delete result.output;
 	}
-	if err := this.ctx["error"]; err != nil && err.(error).Error() == errEvmExecutionReverted.Error() {
+	if err := this.ctx["error"]; err != nil && err.(error).Error() == ErrExecutionReverted.Error() {
 		outputHex := this.ctx["output"].(string) // it is already a hex string
 
 		if s, err := abi.UnpackRevert(common.FromHex(outputHex)); err == nil {

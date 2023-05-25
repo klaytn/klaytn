@@ -28,6 +28,19 @@ var (
 )
 
 var (
+	homiYamlFlag = cli.StringFlag{
+		Name:  "homi-yaml",
+		Usage: "Import homi.yaml to generate the config files to run the nodes",
+	}
+	genTypeFlag = cli.StringFlag{
+		Name:  "gen-type",
+		Usage: "Generate environment files according to the type (docker, local, remote, deploy)",
+		Value: "docker",
+	}
+	genesisTypeFlag = cli.StringFlag{
+		Name:  "genesis-type",
+		Usage: "Set the type of genesis.json to generate (cypress-test, cypress, baobab-test, baobab, clique, servicechain, servicechain-test, istanbul)",
+	}
 	cypressTestFlag = cli.BoolFlag{
 		Name:  "cypress-test",
 		Usage: "Generate genesis.json similar to the one used for Cypress with shorter intervals for testing",
@@ -111,6 +124,18 @@ var (
 		Value: 0,
 	}
 
+	mnemonic = cli.StringFlag{
+		Name:  "mnemonic",
+		Usage: "Use given mnemonic to derive node keys",
+		Value: "",
+	}
+
+	mnemonicPath = cli.StringFlag{
+		Name:  "mnemonic-path",
+		Usage: "Use given path/coin to derive node keys (format: m/44'/60'/0'/0/). Effective only if --mnemonic is given",
+		Value: "eth",
+	}
+
 	chainIDFlag = cli.Uint64Flag{
 		Name:  "chainID",
 		Usage: "ChainID",
@@ -157,6 +182,11 @@ var (
 		Name:  "patch-address-book-addr",
 		Usage: "The address to inject in AddressBook's constructContract function [default: first CN's address]",
 		Value: "",
+	}
+
+	addressBookMockFlag = cli.BoolFlag{
+		Name:  "address-book-mock",
+		Usage: "Allocate an AddressBookMock at the genesis block",
 	}
 
 	dockerImageIdFlag = cli.StringFlag{
@@ -265,6 +295,12 @@ var (
 		Value: params.DefaultGoverningNode,
 	}
 
+	govParamContractFlag = cli.StringFlag{
+		Name:  "gov-param-contract",
+		Usage: "the GovParam contract address [default: 0x0000000000000000000000000000000000000000]",
+		Value: params.DefaultGovParamContract,
+	}
+
 	rewardMintAmountFlag = cli.StringFlag{
 		Name:  "reward-mint-amount",
 		Usage: "governance minting amount",
@@ -275,6 +311,12 @@ var (
 		Name:  "reward-ratio",
 		Usage: "governance ratio [default: 100/0/0]",
 		Value: params.DefaultRatio,
+	}
+
+	rewardKip82RatioFlag = cli.StringFlag{
+		Name:  "reward-kip82-ratio",
+		Usage: "kip82 ratio [default: 20/80]",
+		Value: params.DefaultKip82Ratio,
 	}
 
 	rewardGiniCoeffFlag = cli.BoolFlag{
@@ -387,5 +429,21 @@ var (
 		Name:  "magma-compatible-blocknumber",
 		Usage: "magmaCompatible blockNumber",
 		Value: 0,
+	}
+
+	koreCompatibleBlockNumberFlag = cli.Int64Flag{
+		Name:  "kore-compatible-blocknumber",
+		Usage: "koreCompatible blockNumber",
+		Value: 0,
+	}
+
+	kip103CompatibleBlockNumberFlag = cli.Int64Flag{
+		Name:  "kip103-compatible-blocknumber",
+		Usage: "kip103Compatible blockNumber",
+	}
+
+	kip103ContractAddressFlag = cli.StringFlag{
+		Name:  "kip103-contract-address",
+		Usage: "kip103 contract address",
 	}
 )

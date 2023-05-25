@@ -112,6 +112,8 @@ func KsenAppFlags() []cli.Flag {
 // Common flags that configure the node
 var CommonNodeFlags = []cli.Flag{
 	utils.ConfFlag,
+	altsrc.NewBoolFlag(utils.NtpDisableFlag),
+	altsrc.NewStringFlag(utils.NtpServerFlag),
 	altsrc.NewStringFlag(utils.BootnodesFlag),
 	altsrc.NewStringFlag(utils.IdentityFlag),
 	altsrc.NewStringFlag(utils.UnlockedAccountFlag),
@@ -202,6 +204,7 @@ var CommonNodeFlags = []cli.Flag{
 	altsrc.NewUint64Flag(utils.OpcodeComputationCostLimitFlag),
 	altsrc.NewBoolFlag(utils.SnapshotFlag),
 	altsrc.NewIntFlag(utils.SnapshotCacheSizeFlag),
+	altsrc.NewBoolTFlag(utils.SnapshotAsyncGen),
 }
 
 // Common RPC flags
@@ -211,6 +214,7 @@ var CommonRPCFlags = []cli.Flag{
 	altsrc.NewIntFlag(utils.RPCPortFlag),
 	altsrc.NewStringFlag(utils.RPCApiFlag),
 	altsrc.NewUint64Flag(utils.RPCGlobalGasCap),
+	altsrc.NewDurationFlag(utils.RPCGlobalEVMTimeoutFlag),
 	altsrc.NewFloat64Flag(utils.RPCGlobalEthTxFeeCapFlag),
 	altsrc.NewBoolFlag(utils.WSEnabledFlag),
 	altsrc.NewStringFlag(utils.WSListenAddrFlag),
@@ -231,6 +235,7 @@ var CommonRPCFlags = []cli.Flag{
 	altsrc.NewIntFlag(utils.RPCWriteTimeoutFlag),
 	altsrc.NewIntFlag(utils.RPCIdleTimeoutFlag),
 	altsrc.NewIntFlag(utils.RPCExecutionTimeoutFlag),
+	altsrc.NewBoolFlag(utils.UnsafeDebugDisableFlag),
 }
 
 var KCNFlags = []cli.Flag{
