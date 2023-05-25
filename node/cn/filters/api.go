@@ -224,7 +224,6 @@ func RPCMarshalHeader(head *types.Header, isEnabledEthTxTypeFork bool) map[strin
 		"timestamp":        (*hexutil.Big)(head.Time),
 		"timestampFoS":     hexutil.Uint(head.TimeFoS),
 		"extraData":        hexutil.Bytes(head.Extra),
-		"size":             hexutil.Uint64(head.Size()),
 		"governanceData":   hexutil.Bytes(head.Governance),
 		"hash":             head.Hash(),
 	}

@@ -123,11 +123,11 @@ func (h *Header) HashNoNonce() common.Hash {
 func (h *Header) Size() common.StorageSize {
 	constantSize := common.StorageSize(reflect.TypeOf(Header{}).Size())
 	byteSize := common.StorageSize(len(h.Extra) + len(h.Governance) + len(h.Vote))
-	bigIntBits := common.StorageSize((h.BlockScore.BitLen() + h.Number.BitLen() + h.Time.BitLen()) / 8)
+	bigIntSize := common.StorageSize((h.BlockScore.BitLen() + h.Number.BitLen() + h.Time.BitLen()) / 8)
 	if h.BaseFee != nil {
-		return constantSize + byteSize + bigIntBits + common.StorageSize(h.BaseFee.BitLen()/8)
+		return constantSize + byteSize + bigIntSize + common.StorageSize(h.BaseFee.BitLen()/8)
 	} else {
-		return constantSize + byteSize + bigIntBits
+		return constantSize + byteSize + bigIntSize
 	}
 }
 
