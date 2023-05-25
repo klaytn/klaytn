@@ -449,7 +449,7 @@ func TestHeaderSizeCalc(t *testing.T) {
 	h := genMagmaHeader()
 	originSize := h.Size()
 
-	diff := common.StorageSize(len(h.Governance) + len(h.Extra) + len(h.Vote) + h.BaseFee.BitLen())
+	diff := common.StorageSize(len(h.Governance) + len(h.Extra) + len(h.Vote) + (h.BaseFee.BitLen() / 8))
 	h.BaseFee, h.Governance, h.Extra, h.Vote = nil, nil, nil, nil
 	assert.Equal(t, originSize, h.Size()+diff)
 }
