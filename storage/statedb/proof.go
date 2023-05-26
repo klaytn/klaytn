@@ -495,7 +495,7 @@ func VerifyRangeProof(rootHash common.Hash, firstKey []byte, lastKey []byte, key
 	// Special case, there is no edge proof at all. The given range is expected
 	// to be the whole leaf-set in the trie.
 	if proof == nil {
-		tr, _ := NewTrie(common.Hash{}, NewDatabase(database.NewMemoryDBManager()))
+		tr, _ := NewTrie(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil)
 		for index, key := range keys {
 			tr.TryUpdate(key, values[index])
 		}

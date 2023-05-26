@@ -44,12 +44,10 @@ const (
 // Database wraps access to tries and contract code.
 type Database interface {
 	// OpenTrie opens the main account trie.
-	OpenTrie(root common.Hash) (Trie, error)
-	OpenTrieWithOpts(root common.Hash, opts *statedb.TrieOpts) (Trie, error)
+	OpenTrie(root common.Hash, opts *statedb.TrieOpts) (Trie, error)
 
 	// OpenStorageTrie opens the storage trie of an account.
-	OpenStorageTrie(root common.Hash) (Trie, error)
-	OpenStorageTrieWithOpts(root common.Hash, opts *statedb.TrieOpts) (Trie, error)
+	OpenStorageTrie(root common.Hash, opts *statedb.TrieOpts) (Trie, error)
 
 	// CopyTrie returns an independent copy of the given trie.
 	CopyTrie(Trie) Trie
@@ -164,23 +162,13 @@ type cachingDB struct {
 }
 
 // OpenTrie opens the main account trie at a specific root hash.
-func (db *cachingDB) OpenTrie(root common.Hash) (Trie, error) {
-	return statedb.NewSecureTrie(root, db.db)
-}
-
-// OpenTrieWithOpts opens the main account trie at a specific root hash.
-func (db *cachingDB) OpenTrieWithOpts(root common.Hash, opts *statedb.TrieOpts) (Trie, error) {
-	return statedb.NewSecureTrieWithOpts(root, db.db, opts)
+func (db *cachingDB) OpenTrie(root common.Hash, opts *statedb.TrieOpts) (Trie, error) {
+	return statedb.NewSecureTrie(root, db.db, opts)
 }
 
 // OpenStorageTrie opens the storage trie of an account.
-func (db *cachingDB) OpenStorageTrie(root common.Hash) (Trie, error) {
-	return statedb.NewSecureTrie(root, db.db)
-}
-
-// OpenStorageTrieWithOpts opens the storage trie of an account.
-func (db *cachingDB) OpenStorageTrieWithOpts(root common.Hash, opts *statedb.TrieOpts) (Trie, error) {
-	return statedb.NewSecureTrieWithOpts(root, db.db, opts)
+func (db *cachingDB) OpenStorageTrie(root common.Hash, opts *statedb.TrieOpts) (Trie, error) {
+	return statedb.NewSecureTrie(root, db.db, opts)
 }
 
 // CopyTrie returns an independent copy of the given trie.

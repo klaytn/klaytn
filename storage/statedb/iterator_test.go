@@ -297,7 +297,7 @@ func testIteratorContinueAfterError(t *testing.T, memonly bool) {
 	diskdb := memDBManager.GetMemDB()
 	triedb := NewDatabase(memDBManager)
 
-	tr, _ := NewTrie(common.Hash{}, triedb)
+	tr, _ := NewTrie(common.Hash{}, triedb, nil)
 	for _, val := range testdata1 {
 		tr.Update([]byte(val.k), []byte(val.v))
 	}
@@ -318,7 +318,7 @@ func testIteratorContinueAfterError(t *testing.T, memonly bool) {
 	}
 	for i := 0; i < 20; i++ {
 		// Create trie that will load all nodes from DB.
-		tr, _ := NewTrie(tr.Hash(), triedb)
+		tr, _ := NewTrie(tr.Hash(), triedb, nil)
 
 		// Remove a random node from the database. It can't be the root node
 		// because that one is already loaded.
@@ -386,7 +386,7 @@ func testIteratorContinueAfterSeekError(t *testing.T, memonly bool) {
 	diskdb := memDBManager.GetMemDB()
 	triedb := NewDatabase(memDBManager)
 
-	ctr, _ := NewTrie(common.Hash{}, triedb)
+	ctr, _ := NewTrie(common.Hash{}, triedb, nil)
 	for _, val := range testdata1 {
 		ctr.Update([]byte(val.k), []byte(val.v))
 	}
@@ -408,7 +408,7 @@ func testIteratorContinueAfterSeekError(t *testing.T, memonly bool) {
 	}
 	// Create a new iterator that seeks to "bars". Seeking can't proceed because
 	// the node is missing.
-	tr, _ := NewTrie(root, triedb)
+	tr, _ := NewTrie(root, triedb, nil)
 	it := tr.NodeIterator([]byte("bars"))
 	missing, ok := it.Error().(*MissingNodeError)
 	if !ok {

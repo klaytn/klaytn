@@ -81,11 +81,7 @@ func (t *Trie) newFlag() nodeFlag {
 // trie is initially empty and does not require a database. Otherwise,
 // NewTrie will panic if db is nil and returns a MissingNodeError if root does
 // not exist in the database. Accessing the trie loads nodes from db on demand.
-func NewTrie(root common.Hash, db *Database) (*Trie, error) {
-	return NewTrieWithOpts(root, db, nil)
-}
-
-func NewTrieWithOpts(root common.Hash, db *Database, opts *TrieOpts) (*Trie, error) {
+func NewTrie(root common.Hash, db *Database, opts *TrieOpts) (*Trie, error) {
 	if db == nil {
 		panic("statedb.NewTrie called without a database")
 	}

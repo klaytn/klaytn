@@ -52,12 +52,8 @@ type SecureTrie struct {
 // Loaded nodes are kept around until their 'cache generation' expires.
 // A new cache generation is created by each call to Commit.
 // cachelimit sets the number of past cache generations to keep.
-func NewSecureTrie(root common.Hash, db *Database) (*SecureTrie, error) {
-	return NewSecureTrieWithOpts(root, db, nil)
-}
-
-func NewSecureTrieWithOpts(root common.Hash, db *Database, opts *TrieOpts) (*SecureTrie, error) {
-	trie, err := NewTrieWithOpts(root, db, opts)
+func NewSecureTrie(root common.Hash, db *Database, opts *TrieOpts) (*SecureTrie, error) {
+	trie, err := NewTrie(root, db, opts)
 	if err != nil {
 		return nil, err
 	}

@@ -36,7 +36,7 @@ import (
 func makeTestTrie() (*Database, *SecureTrie, map[string][]byte) {
 	// Create an empty trie
 	triedb := NewDatabase(database.NewMemoryDBManager())
-	trie, _ := NewSecureTrie(common.Hash{}, triedb)
+	trie, _ := NewSecureTrie(common.Hash{}, triedb, nil)
 
 	// Fill it with some arbitrary data
 	content := make(map[string][]byte)
@@ -67,7 +67,7 @@ func makeTestTrie() (*Database, *SecureTrie, map[string][]byte) {
 // content map.
 func checkTrieContents(t *testing.T, db *Database, root []byte, content map[string][]byte) {
 	// Check root availability and trie contents
-	trie, err := NewSecureTrie(common.BytesToHash(root), db)
+	trie, err := NewSecureTrie(common.BytesToHash(root), db, nil)
 	if err != nil {
 		t.Fatalf("failed to create trie at %x: %v", root, err)
 	}
@@ -84,7 +84,7 @@ func checkTrieContents(t *testing.T, db *Database, root []byte, content map[stri
 // checkTrieConsistency checks that all nodes in a trie are indeed present.
 func checkTrieConsistency(db *Database, root common.Hash) error {
 	// Create and iterate a trie rooted in a subnode
-	trie, err := NewSecureTrie(root, db)
+	trie, err := NewSecureTrie(root, db, nil)
 	if err != nil {
 		return nil // Consider a non existent state consistent
 	}
@@ -100,8 +100,8 @@ func TestEmptyTrieSync(t *testing.T) {
 	memDBManagerB := database.NewMemoryDBManager()
 	dbA := NewDatabase(memDBManagerA)
 	dbB := NewDatabase(memDBManagerB)
-	emptyA, _ := NewTrie(common.Hash{}, dbA)
-	emptyB, _ := NewTrie(emptyRoot, dbB)
+	emptyA, _ := NewTrie(common.Hash{}, dbA, nil)
+	emptyB, _ := NewTrie(emptyRoot, dbB, nil)
 
 	for i, trie := range []*Trie{emptyA, emptyB} {
 		sync := NewTrieSync(trie.Hash(), database.NewMemoryDBManager(), nil, NewSyncBloom(1, database.NewMemDB()), nil)

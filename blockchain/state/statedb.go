@@ -117,12 +117,8 @@ type StateDB struct {
 }
 
 // Create a new state from a given trie.
-func New(root common.Hash, db Database, snaps *snapshot.Tree) (*StateDB, error) {
-	return NewWithOpts(root, db, snaps, nil)
-}
-
-func NewWithOpts(root common.Hash, db Database, snaps *snapshot.Tree, opts *statedb.TrieOpts) (*StateDB, error) {
-	tr, err := db.OpenTrieWithOpts(root, opts)
+func New(root common.Hash, db Database, snaps *snapshot.Tree, opts *statedb.TrieOpts) (*StateDB, error) {
+	tr, err := db.OpenTrie(root, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -175,7 +171,7 @@ func (self *StateDB) Error() error {
 // Reset clears out all ephemeral state objects from the state db, but keeps
 // the underlying state trie to avoid reloading data for the next operations.
 func (self *StateDB) Reset(root common.Hash) error {
-	tr, err := self.db.OpenTrie(root)
+	tr, err := self.db.OpenTrie(root, nil)
 	if err != nil {
 		return err
 	}

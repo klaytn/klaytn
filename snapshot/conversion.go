@@ -317,7 +317,7 @@ func generateTrieRoot(it Iterator, accountHash common.Hash, generatorFn trieGene
 
 func trieGenerate(in chan trieKV, out chan common.Hash) {
 	db := statedb.NewDatabase(database.NewMemoryDBManager())
-	t, _ := statedb.NewTrie(common.Hash{}, db)
+	t, _ := statedb.NewTrie(common.Hash{}, db, nil)
 	for leaf := range in {
 		t.TryUpdate(leaf.key[:], leaf.value)
 	}

@@ -157,7 +157,7 @@ func (c *stateObject) touch() {
 }
 
 func (c *stateObject) openStorageTrie(hash common.Hash, db Database) (Trie, error) {
-	return db.OpenStorageTrieWithOpts(hash, &statedb.TrieOpts{Prefetching: c.db.prefetching})
+	return db.OpenStorageTrie(hash, &statedb.TrieOpts{Prefetching: c.db.prefetching})
 }
 
 func (c *stateObject) getStorageTrie(db Database) Trie {
