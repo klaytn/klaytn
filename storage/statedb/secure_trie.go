@@ -53,21 +53,15 @@ type SecureTrie struct {
 // A new cache generation is created by each call to Commit.
 // cachelimit sets the number of past cache generations to keep.
 func NewSecureTrie(root common.Hash, db *Database) (*SecureTrie, error) {
-	if db == nil {
-		panic("statedb.NewSecureTrie called without a database")
-	}
-	trie, err := NewTrie(root, db)
-	if err != nil {
-		return nil, err
-	}
-	return &SecureTrie{trie: *trie}, nil
+	return NewSecureTrieWithOpts(root, db, nil)
 }
 
 func NewSecureTrieForPrefetching(root common.Hash, db *Database) (*SecureTrie, error) {
-	if db == nil {
-		panic("statedb.NewSecureTrieForPrefetching called without a database")
-	}
-	trie, err := NewTrieForPrefetching(root, db)
+	return NewSecureTrieWithOpts(root, db, &TrieOpts{Prefetching: true})
+}
+
+func NewSecureTrieWithOpts(root common.Hash, db *Database, opts *TrieOpts) (*SecureTrie, error) {
+	trie, err := NewTrieWithOpts(root, db, opts)
 	if err != nil {
 		return nil, err
 	}

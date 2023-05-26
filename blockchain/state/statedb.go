@@ -118,35 +118,16 @@ type StateDB struct {
 
 // Create a new state from a given trie.
 func New(root common.Hash, db Database, snaps *snapshot.Tree) (*StateDB, error) {
-	tr, err := db.OpenTrie(root)
-	if err != nil {
-		return nil, err
-	}
-	sdb := &StateDB{
-		db:                       db,
-		trie:                     tr,
-		snaps:                    snaps,
-		stateObjects:             make(map[common.Address]*stateObject),
-		stateObjectsDirtyStorage: make(map[common.Address]struct{}),
-		stateObjectsDirty:        make(map[common.Address]struct{}),
-		logs:                     make(map[common.Hash][]*types.Log),
-		preimages:                make(map[common.Hash][]byte),
-		journal:                  newJournal(),
-		accessList:               newAccessList(),
-	}
-	if sdb.snaps != nil {
-		if sdb.snap = sdb.snaps.Snapshot(root); sdb.snap != nil {
-			sdb.snapDestructs = make(map[common.Hash]struct{})
-			sdb.snapAccounts = make(map[common.Hash][]byte)
-			sdb.snapStorage = make(map[common.Hash]map[common.Hash][]byte)
-		}
-	}
-	return sdb, nil
+	return NewWithOpts(root, db, snaps, nil)
 }
 
 // Create a new state from a given trie with prefetching
 func NewForPrefetching(root common.Hash, db Database, snaps *snapshot.Tree) (*StateDB, error) {
-	tr, err := db.OpenTrieForPrefetching(root)
+	return NewWithOpts(root, db, snaps, &statedb.TrieOpts{Prefetching: true})
+}
+
+func NewWithOpts(root common.Hash, db Database, snaps *snapshot.Tree, opts *statedb.TrieOpts) (*StateDB, error) {
+	tr, err := db.OpenTrieWithOpts(root, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -159,8 +140,8 @@ func NewForPrefetching(root common.Hash, db Database, snaps *snapshot.Tree) (*St
 		stateObjectsDirty:        make(map[common.Address]struct{}),
 		logs:                     make(map[common.Hash][]*types.Log),
 		preimages:                make(map[common.Hash][]byte),
+		accessList:               newAccessList(),
 		journal:                  newJournal(),
-		prefetching:              true,
 	}
 	if sdb.snaps != nil {
 		if sdb.snap = sdb.snaps.Snapshot(root); sdb.snap != nil {
@@ -168,6 +149,9 @@ func NewForPrefetching(root common.Hash, db Database, snaps *snapshot.Tree) (*St
 			sdb.snapAccounts = make(map[common.Hash][]byte)
 			sdb.snapStorage = make(map[common.Hash]map[common.Hash][]byte)
 		}
+	}
+	if opts != nil && opts.Prefetching {
+		sdb.prefetching = true
 	}
 	return sdb, nil
 }
