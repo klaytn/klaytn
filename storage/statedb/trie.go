@@ -85,11 +85,6 @@ func NewTrie(root common.Hash, db *Database) (*Trie, error) {
 	return NewTrieWithOpts(root, db, nil)
 }
 
-// Deprecated: Prefer NewTrieWithOpts
-func NewTrieForPrefetching(root common.Hash, db *Database) (*Trie, error) {
-	return NewTrieWithOpts(root, db, &TrieOpts{Prefetching: true})
-}
-
 func NewTrieWithOpts(root common.Hash, db *Database, opts *TrieOpts) (*Trie, error) {
 	if db == nil {
 		panic("statedb.NewTrie called without a database")

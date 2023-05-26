@@ -56,10 +56,6 @@ func NewSecureTrie(root common.Hash, db *Database) (*SecureTrie, error) {
 	return NewSecureTrieWithOpts(root, db, nil)
 }
 
-func NewSecureTrieForPrefetching(root common.Hash, db *Database) (*SecureTrie, error) {
-	return NewSecureTrieWithOpts(root, db, &TrieOpts{Prefetching: true})
-}
-
 func NewSecureTrieWithOpts(root common.Hash, db *Database, opts *TrieOpts) (*SecureTrie, error) {
 	trie, err := NewTrieWithOpts(root, db, opts)
 	if err != nil {

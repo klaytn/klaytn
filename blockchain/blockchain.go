@@ -381,7 +381,8 @@ func (bc *BlockChain) prefetchTxWorker(index int) {
 		snaps = bc.snaps
 	}
 	for followup := range bc.prefetchTxCh {
-		stateDB, err := state.NewForPrefetching(bc.CurrentBlock().Root(), bc.stateCache, snaps)
+		stateDB, err := state.NewWithOpts(bc.CurrentBlock().Root(), bc.stateCache, snaps,
+			&statedb.TrieOpts{Prefetching: true})
 		if err != nil {
 			logger.Debug("failed to retrieve stateDB for prefetchTxWorker", "err", err)
 			continue
@@ -1818,7 +1819,8 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 						}
 					}()
 
-					throwaway, err := state.NewForPrefetching(parent.Root(), bc.stateCache, snaps)
+					throwaway, err := state.NewWithOpts(parent.Root(), bc.stateCache, snaps,
+						&statedb.TrieOpts{Prefetching: true})
 					if throwaway == nil || err != nil {
 						logger.Warn("failed to get StateDB for prefetcher", "err", err,
 							"parentBlockNum", parent.NumberU64(), "currBlockNum", bc.CurrentBlock().NumberU64())

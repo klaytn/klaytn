@@ -121,11 +121,6 @@ func New(root common.Hash, db Database, snaps *snapshot.Tree) (*StateDB, error) 
 	return NewWithOpts(root, db, snaps, nil)
 }
 
-// Create a new state from a given trie with prefetching
-func NewForPrefetching(root common.Hash, db Database, snaps *snapshot.Tree) (*StateDB, error) {
-	return NewWithOpts(root, db, snaps, &statedb.TrieOpts{Prefetching: true})
-}
-
 func NewWithOpts(root common.Hash, db Database, snaps *snapshot.Tree, opts *statedb.TrieOpts) (*StateDB, error) {
 	tr, err := db.OpenTrieWithOpts(root, opts)
 	if err != nil {

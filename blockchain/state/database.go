@@ -45,12 +45,10 @@ const (
 type Database interface {
 	// OpenTrie opens the main account trie.
 	OpenTrie(root common.Hash) (Trie, error)
-	OpenTrieForPrefetching(root common.Hash) (Trie, error)
 	OpenTrieWithOpts(root common.Hash, opts *statedb.TrieOpts) (Trie, error)
 
 	// OpenStorageTrie opens the storage trie of an account.
 	OpenStorageTrie(root common.Hash) (Trie, error)
-	OpenStorageTrieForPrefetching(root common.Hash) (Trie, error)
 	OpenStorageTrieWithOpts(root common.Hash, opts *statedb.TrieOpts) (Trie, error)
 
 	// CopyTrie returns an independent copy of the given trie.
@@ -170,11 +168,6 @@ func (db *cachingDB) OpenTrie(root common.Hash) (Trie, error) {
 	return statedb.NewSecureTrie(root, db.db)
 }
 
-// OpenTrieForPrefetching opens the main account trie at a specific root hash.
-func (db *cachingDB) OpenTrieForPrefetching(root common.Hash) (Trie, error) {
-	return statedb.NewSecureTrieForPrefetching(root, db.db)
-}
-
 // OpenTrieWithOpts opens the main account trie at a specific root hash.
 func (db *cachingDB) OpenTrieWithOpts(root common.Hash, opts *statedb.TrieOpts) (Trie, error) {
 	return statedb.NewSecureTrieWithOpts(root, db.db, opts)
@@ -183,11 +176,6 @@ func (db *cachingDB) OpenTrieWithOpts(root common.Hash, opts *statedb.TrieOpts) 
 // OpenStorageTrie opens the storage trie of an account.
 func (db *cachingDB) OpenStorageTrie(root common.Hash) (Trie, error) {
 	return statedb.NewSecureTrie(root, db.db)
-}
-
-// OpenStorageTrieForPrefetching opens the storage trie of an account.
-func (db *cachingDB) OpenStorageTrieForPrefetching(root common.Hash) (Trie, error) {
-	return statedb.NewSecureTrieForPrefetching(root, db.db)
 }
 
 // OpenStorageTrieWithOpts opens the storage trie of an account.
