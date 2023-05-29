@@ -108,10 +108,7 @@ func (spec *RewardSpec) Add(delta *RewardSpec) {
 	spec.KCF.Add(spec.KCF, delta.KCF)
 
 	for addr, amount := range delta.Rewards {
-		if spec.Rewards[addr] == nil {
-			spec.Rewards[addr] = big.NewInt(0)
-		}
-		spec.Rewards[addr].Add(spec.Rewards[addr], amount)
+		incrementRewardsMap(spec.Rewards, addr, amount)
 	}
 }
 

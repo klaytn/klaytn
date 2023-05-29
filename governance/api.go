@@ -162,8 +162,7 @@ func (api *GovernanceKlayAPI) GetRewards(num *rpc.BlockNumber) (*reward.RewardSp
 	return reward.GetBlockReward(header, rules, rewardParamSet)
 }
 
-type accumulatedRewards struct {
-	Period         uint     `json:"period"`
+type AccumulatedRewards struct {
 	FirstBlockTime string   `json:"firstBlockTime"`
 	LastBlockTime  string   `json:"lastBlockTime"`
 	FirstBlock     *big.Int `json:"firstBlock"`
@@ -180,120 +179,88 @@ type accumulatedRewards struct {
 	Rewards              map[common.Address]*big.Int `json:"rewards"`
 }
 
-// GetRewardsAccumulated returns accumulated rewards data in the range of [start, end).
-// The given block range is divided into many accumulation periods with a given period parameter.
-func (api *GovernanceAPI) GetRewardsAccumulated(start rpc.BlockNumber, end rpc.BlockNumber, period uint64) ([]accumulatedRewards, error) {
-	type request struct {
-		period   uint64
-		blockNum uint64
-	}
-
+// GetRewardsAccumulated returns accumulated rewards data in the block range of [first, last].
+func (api *GovernanceAPI) GetRewardsAccumulated(first rpc.BlockNumber, last rpc.BlockNumber) (*AccumulatedRewards, error) {
 	blockchain := api.governance.BlockChain()
 	govKlayAPI := NewGovernanceKlayAPI(api.governance, blockchain)
 
 	currentBlock := blockchain.CurrentBlock().NumberU64()
 
-	startBlock := currentBlock
-	if start >= rpc.EarliestBlockNumber {
-		startBlock = uint64(start.Int64())
+	firstBlock := currentBlock
+	if first >= rpc.EarliestBlockNumber {
+		firstBlock = uint64(first.Int64())
 	}
 
-	endBlock := currentBlock
-	if end >= rpc.EarliestBlockNumber {
-		endBlock = uint64(end.Int64())
+	lastBlock := currentBlock
+	if last >= rpc.EarliestBlockNumber {
+		lastBlock = uint64(last.Int64())
 	}
 
-	if period <= 0 {
-		period = 86400 // one day
+	if firstBlock > lastBlock {
+		return nil, errors.New("the last block number should be equal or larger the first block number")
 	}
 
-	if startBlock >= endBlock {
-		return nil, errors.New("the end block number should be larger the start block number")
+	if lastBlock > currentBlock {
+		return nil, errors.New("the last block number should be equal or less than the current block number")
 	}
 
-	if endBlock > currentBlock {
-		return nil, errors.New("the end block number should be equal or less than the current block number")
-	}
-
-	blockCount := endBlock - startBlock
+	blockCount := lastBlock - firstBlock + 1
 	if blockCount > 604800 { // 7 days. naive resource protection
 		return nil, errors.New("block range should be equal or less than 604800")
 	}
 
-	// calculate the number of accumulating periods
-	numPeriods := blockCount / period
-	if blockCount%period != 0 {
-		numPeriods++
-	}
-
-	accArray := make([]accumulatedRewards, numPeriods)
-	accLocks := make([]sync.Mutex, numPeriods)
-	rewardArray := make([]*reward.RewardSpec, numPeriods)
+	// initialize structures before request a job
+	accumRewards := &AccumulatedRewards{}
+	blockRewards := reward.NewRewardSpec()
+	mu := sync.Mutex{} // protect blockRewards
 
 	numWorkers := runtime.NumCPU()
-	reqCh := make(chan request, numPeriods) // the size should be equal or larger than the number of request not to block the request loop
-	errCh := make(chan error, 1)
+	reqCh := make(chan uint64, numWorkers)
+	errCh := make(chan error, numWorkers+1)
 	wg := sync.WaitGroup{}
 
 	// introduce the worker pattern to prevent resource exhaustion
 	for i := 0; i < numWorkers; i++ {
 		go func() {
 			// the minimum digit of request is period to avoid current access to an accArray item
-			for req := range reqCh {
-				bn := rpc.BlockNumber(req.blockNum)
+			for num := range reqCh {
+				bn := rpc.BlockNumber(num)
 				blockReward, err := govKlayAPI.GetRewards(&bn)
 				if err != nil {
 					errCh <- err
+					wg.Done()
 					return
 				}
 
-				accLocks[req.period].Lock()
-				rewardArray[req.period].Add(blockReward)
-				accLocks[req.period].Unlock()
+				mu.Lock()
+				blockRewards.Add(blockReward)
+				mu.Unlock()
 
 				wg.Done()
 			}
 		}()
 	}
 
-	// request jobs with a period number
-	for periodIdx := uint64(0); periodIdx < numPeriods; periodIdx++ {
-		// initialize structures before request a job
-		rewardArray[periodIdx] = reward.NewRewardSpec()
-		accArray[periodIdx] = accumulatedRewards{Period: uint(periodIdx)}
-		accLocks[periodIdx] = sync.Mutex{}
-
-		periodStart := startBlock + periodIdx*period
-		periodEnd := periodStart + period
-		if periodEnd > endBlock {
-			periodEnd = endBlock
-		}
-
-		// write the information of the period starting block
-		header := blockchain.GetHeaderByNumber(periodStart)
-		if header == nil {
-			return nil, fmt.Errorf("the block does not exist (block number: %d)", periodStart)
-		}
-		accArray[periodIdx].FirstBlock = header.Number
-		accArray[periodIdx].FirstBlockTime = time.Unix(header.Time.Int64(), 0).String()
-
-		// write the information of the period ending block
-		header = blockchain.GetHeaderByNumber(periodEnd - 1) // the periodEnd block is not included
-		if header == nil {
-			return nil, fmt.Errorf("the block does not exist (block number: %d)", periodEnd-1)
-		}
-		accArray[periodIdx].LastBlock = header.Number
-		accArray[periodIdx].LastBlockTime = time.Unix(header.Time.Int64(), 0).String()
-
-		for num := periodStart; num < periodEnd; num++ {
-			wg.Add(1)
-			reqCh <- request{
-				period:   periodIdx,
-				blockNum: num,
-			}
-		}
+	// write the information of the first block
+	header := blockchain.GetHeaderByNumber(firstBlock)
+	if header == nil {
+		return nil, fmt.Errorf("the block does not exist (block number: %d)", firstBlock)
 	}
-	close(reqCh)
+	accumRewards.FirstBlock = header.Number
+	accumRewards.FirstBlockTime = time.Unix(header.Time.Int64(), 0).String()
+
+	// write the information of the last block
+	header = blockchain.GetHeaderByNumber(lastBlock)
+	if header == nil {
+		return nil, fmt.Errorf("the block does not exist (block number: %d)", lastBlock)
+	}
+	accumRewards.LastBlock = header.Number
+	accumRewards.LastBlockTime = time.Unix(header.Time.Int64(), 0).String()
+
+	for num := firstBlock; num <= lastBlock; num++ {
+		wg.Add(1)
+		reqCh <- num
+	}
 
 	// generate a goroutine to return error early
 	go func() {
@@ -306,18 +273,16 @@ func (api *GovernanceAPI) GetRewardsAccumulated(start rpc.BlockNumber, end rpc.B
 	}
 
 	// collect the accumulated rewards information
-	for i, accumulated := range rewardArray {
-		accArray[i].Rewards = accumulated.Rewards
-		accArray[i].TotalMinted = accumulated.Minted
-		accArray[i].TotalTxFee = accumulated.TotalFee
-		accArray[i].TotalBurntTxFee = accumulated.BurntFee
-		accArray[i].TotalProposerRewards = accumulated.Proposer
-		accArray[i].TotalStakingRewards = accumulated.Stakers
-		accArray[i].TotalKFFRewards = accumulated.KFF
-		accArray[i].TotalKCFRewards = accumulated.KCF
-	}
+	accumRewards.Rewards = blockRewards.Rewards
+	accumRewards.TotalMinted = blockRewards.Minted
+	accumRewards.TotalTxFee = blockRewards.TotalFee
+	accumRewards.TotalBurntTxFee = blockRewards.BurntFee
+	accumRewards.TotalProposerRewards = blockRewards.Proposer
+	accumRewards.TotalStakingRewards = blockRewards.Stakers
+	accumRewards.TotalKFFRewards = blockRewards.KFF
+	accumRewards.TotalKCFRewards = blockRewards.KCF
 
-	return accArray, nil
+	return accumRewards, nil
 }
 
 // Vote injects a new vote for governance targets such as unitprice and governingnode.

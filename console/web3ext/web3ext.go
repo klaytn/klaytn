@@ -335,9 +335,9 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'getRewardsAccumulated',
 			call: 'governance_getRewardsAccumulated',
-			params: 3,
-			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter, web3._extend.formatters.inputBlockNumberFormatter, null],
-		}),
+			params: 2,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter, web3._extend.formatters.inputBlockNumberFormatter]
+		})
 	],
 	properties: [
 		new web3._extend.Property({

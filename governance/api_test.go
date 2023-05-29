@@ -221,11 +221,10 @@ func TestGetRewardsAccumulated(t *testing.T) {
 
 	startBlockNum := 0
 	endBlockNum := 10
-	period := uint64(2)
-	blocks := make([]*types.Block, endBlockNum)
+	blocks := make([]*types.Block, endBlockNum-startBlockNum+1)
 
 	// set testing data for mock instances
-	for i := startBlockNum; i < endBlockNum; i++ {
+	for i := startBlockNum; i <= endBlockNum; i++ {
 		blocks[i] = types.NewBlockWithHeader(&types.Header{
 			Number:     big.NewInt(int64(i)),
 			Rewardbase: stInfo.CouncilRewardAddrs[i%4], // round-robin way
@@ -237,15 +236,14 @@ func TestGetRewardsAccumulated(t *testing.T) {
 		mockBlockchain.EXPECT().GetHeaderByNumber(uint64(i)).Return(blocks[i].Header()).AnyTimes()
 	}
 
-	latestBlock := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(int64(endBlockNum))})
 	mockBlockchain.EXPECT().Config().Return(chainConfig).AnyTimes()
-	mockBlockchain.EXPECT().CurrentBlock().Return(latestBlock).AnyTimes()
+	mockBlockchain.EXPECT().CurrentBlock().Return(blocks[endBlockNum]).AnyTimes()
 	mockGovEngine.EXPECT().EffectiveParams(gomock.Any()).Return(govParamSet, nil).AnyTimes()
 	mockGovEngine.EXPECT().BlockChain().Return(mockBlockchain).AnyTimes()
 
 	// execute a target function
 	govAPI := NewGovernanceAPI(mockGovEngine)
-	ret, err := govAPI.GetRewardsAccumulated(rpc.BlockNumber(startBlockNum), rpc.BlockNumber(endBlockNum), period)
+	ret, err := govAPI.GetRewardsAccumulated(rpc.BlockNumber(startBlockNum), rpc.BlockNumber(endBlockNum))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -261,37 +259,27 @@ func TestGetRewardsAccumulated(t *testing.T) {
 	blockKCF, _ := new(big.Int).SetString("2880000000000000000", 10) //  2.88 KLAY = 9.6 KLAY * 0.3
 
 	// check the execution result
-	for i, accumulated := range ret {
-		periodBig := big.NewInt(int64(period))
-		periodStart := uint64(i) * period
-		periodEnd := uint64(i+1) * period
-		if periodEnd > uint64(endBlockNum) {
-			periodEnd = uint64(endBlockNum)
+	assert.Equal(t, time.Unix(blocks[startBlockNum].Time().Int64(), 0).String(), ret.FirstBlockTime)
+	assert.Equal(t, time.Unix(blocks[endBlockNum].Time().Int64(), 0).String(), ret.LastBlockTime)
+	assert.Equal(t, uint64(startBlockNum), ret.FirstBlock.Uint64())
+	assert.Equal(t, uint64(endBlockNum), ret.LastBlock.Uint64())
+
+	blockCount := big.NewInt(int64(endBlockNum - startBlockNum + 1))
+	assert.Equal(t, new(big.Int).Mul(blockMinted, blockCount), ret.TotalMinted)
+	assert.Equal(t, new(big.Int).Mul(blockTxFee, blockCount), ret.TotalTxFee)
+	assert.Equal(t, new(big.Int).Mul(blockTxBurnt, blockCount), ret.TotalBurntTxFee)
+	assert.Equal(t, new(big.Int).Mul(blockProposer, blockCount), ret.TotalProposerRewards)
+	assert.Equal(t, new(big.Int).Mul(blockStaking, blockCount), ret.TotalStakingRewards)
+	assert.Equal(t, new(big.Int).Mul(blockKFF, blockCount), ret.TotalKFFRewards)
+	assert.Equal(t, new(big.Int).Mul(blockKCF, blockCount), ret.TotalKCFRewards)
+
+	gcReward := big.NewInt(0)
+	for acc, bal := range ret.Rewards {
+		if acc != stInfo.KFFAddr && acc != stInfo.KCFAddr {
+			gcReward.Add(gcReward, bal)
 		}
-
-		// startBlockNum
-		assert.Equal(t, uint(i), accumulated.Period)
-		assert.Equal(t, time.Unix(blocks[periodStart].Time().Int64(), 0).String(), accumulated.FirstBlockTime)
-		assert.Equal(t, time.Unix(blocks[periodEnd-1].Time().Int64(), 0).String(), accumulated.LastBlockTime)
-		assert.Equal(t, periodStart, accumulated.FirstBlock.Uint64())
-		assert.Equal(t, periodEnd-1, accumulated.LastBlock.Uint64())
-
-		assert.Equal(t, new(big.Int).Mul(blockMinted, periodBig), accumulated.TotalMinted)
-		assert.Equal(t, new(big.Int).Mul(blockTxFee, periodBig), accumulated.TotalTxFee)
-		assert.Equal(t, new(big.Int).Mul(blockTxBurnt, periodBig), accumulated.TotalBurntTxFee)
-		assert.Equal(t, new(big.Int).Mul(blockProposer, periodBig), accumulated.TotalProposerRewards)
-		assert.Equal(t, new(big.Int).Mul(blockStaking, periodBig), accumulated.TotalStakingRewards)
-		assert.Equal(t, new(big.Int).Mul(blockKFF, periodBig), accumulated.TotalKFFRewards)
-		assert.Equal(t, new(big.Int).Mul(blockKCF, periodBig), accumulated.TotalKCFRewards)
-
-		gcReward := big.NewInt(0)
-		for acc, bal := range accumulated.Rewards {
-			if acc != stInfo.KFFAddr && acc != stInfo.KCFAddr {
-				gcReward.Add(gcReward, bal)
-			}
-		}
-		assert.Equal(t, gcReward, new(big.Int).Add(accumulated.TotalStakingRewards, accumulated.TotalProposerRewards))
 	}
+	assert.Equal(t, gcReward, new(big.Int).Add(ret.TotalStakingRewards, ret.TotalProposerRewards))
 }
 
 func (bc *testBlockChain) Engine() consensus.Engine                    { return nil }
