@@ -71,7 +71,7 @@ type EthereumAPI struct {
 	publicBlockChainAPI      *PublicBlockChainAPI
 	publicTransactionPoolAPI *PublicTransactionPoolAPI
 	publicAccountAPI         *PublicAccountAPI
-	publicGovernanceAPI      *governance.PublicGovernanceAPI
+	governanceAPI            *governance.GovernanceAPI
 }
 
 // NewEthereumAPI creates a new ethereum API.
@@ -112,15 +112,15 @@ func (api *EthereumAPI) SetPublicAccountAPI(publicAccountAPI *PublicAccountAPI) 
 	api.publicAccountAPI = publicAccountAPI
 }
 
-// SetPublicGovernanceAPI sets publicGovernanceAPI
-func (api *EthereumAPI) SetPublicGovernanceAPI(publicGovernanceAPI *governance.PublicGovernanceAPI) {
-	api.publicGovernanceAPI = publicGovernanceAPI
+// SetGovernanceAPI sets governanceAPI
+func (api *EthereumAPI) SetGovernanceAPI(governanceAPI *governance.GovernanceAPI) {
+	api.governanceAPI = governanceAPI
 }
 
 // Etherbase is the address of operating node.
 // Unlike Ethereum, it only returns the node address because Klaytn does not have a POW mechanism.
 func (api *EthereumAPI) Etherbase() (common.Address, error) {
-	return api.publicGovernanceAPI.NodeAddress(), nil
+	return api.governanceAPI.NodeAddress(), nil
 }
 
 // Coinbase is the address of operating node (alias for Etherbase).
