@@ -117,11 +117,11 @@ func (mbh *MainBridgeHandler) handleServiceChainTxDataMsg(p BridgePeer, msg p2p.
 			invalidTxs = append(invalidTxs, InvalidParentChainTx{tx.Hash(), errResp(ErrDecode, "tx is nil").Error()})
 			continue
 		}
-		if err := mbh.mainbridge.txPool.AddRemote(tx); err != nil {
+		if errs := mbh.mainbridge.txPool.AddRemotes(types.Transactions{tx}); errs[0] != nil {
 			txHash := tx.Hash()
 			logger.Trace("Invalid tx found",
-				"txType", tx.Type(), "txNonce", tx.Nonce(), "txHash", txHash.String(), "err", err)
-			invalidTxs = append(invalidTxs, InvalidParentChainTx{txHash, err.Error()})
+				"txType", tx.Type(), "txNonce", tx.Nonce(), "txHash", txHash.String(), "err", errs[0])
+			invalidTxs = append(invalidTxs, InvalidParentChainTx{txHash, errs[0].Error()})
 		}
 	}
 	if len(invalidTxs) > 0 {

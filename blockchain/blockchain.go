@@ -2063,7 +2063,7 @@ func (bc *BlockChain) BlockSubscriptionLoop(pool *TxPool) {
 
 		oldHead := bc.CurrentHeader()
 		bc.replaceCurrentBlock(block)
-		pool.lockedReset(oldHead, bc.CurrentHeader())
+		pool.requestReset(oldHead, bc.CurrentHeader())
 
 		// just in case the block number jumps up more than one, iterates all missed blocks
 		for blockNum := oldHead.Number.Uint64() + 1; blockNum < block.Number().Uint64(); blockNum++ {
