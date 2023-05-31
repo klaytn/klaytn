@@ -475,13 +475,13 @@ func (s *CN) APIs() []rpc.API {
 
 	publicFilterAPI := filters.NewPublicFilterAPI(s.APIBackend, false)
 	governanceKlayAPI := governance.NewGovernanceKlayAPI(s.governance, s.blockchain)
-	publicGovernanceAPI := governance.NewGovernanceAPI(s.governance)
+	governanceAPI := governance.NewGovernanceAPI(s.governance)
 	publicDownloaderAPI := downloader.NewPublicDownloaderAPI(s.protocolManager.Downloader(), s.eventMux)
 	privateDownloaderAPI := downloader.NewPrivateDownloaderAPI(s.protocolManager.Downloader())
 
 	ethAPI.SetPublicFilterAPI(publicFilterAPI)
 	ethAPI.SetGovernanceKlayAPI(governanceKlayAPI)
-	ethAPI.SetPublicGovernanceAPI(publicGovernanceAPI)
+	ethAPI.SetGovernanceAPI(governanceAPI)
 
 	var tracerAPI *tracers.API
 	if s.config.DisableUnsafeDebug {
@@ -546,7 +546,7 @@ func (s *CN) APIs() []rpc.API {
 		}, {
 			Namespace: "governance",
 			Version:   "1.0",
-			Service:   governance.NewGovernanceAPI(s.governance),
+			Service:   governanceAPI,
 			Public:    true,
 		}, {
 			Namespace: "klay",
