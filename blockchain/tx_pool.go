@@ -1181,16 +1181,20 @@ func (pool *TxPool) AddRemote(tx *types.Transaction) error {
 	return errs[0]
 }
 
-// AddLocals enqueues a batch of transactions into the pool if they are valid,
-// marking the senders as a local ones in the mean time, ensuring they go around
-// the local pricing constraints.
+// AddLocals enqueues a batch of transactions into the pool if they are valid, marking the
+// senders as a local ones, ensuring they go around the local pricing constraints.
+//
+// This method is used to add transactions from the RPC API and performs synchronous pool
+// reorganization and event propagation.
 func (pool *TxPool) AddLocals(txs []*types.Transaction) []error {
 	return pool.checkAndAddTxs(txs, !pool.config.NoLocals, true)
 }
 
-// AddRemotes enqueues a batch of transactions into the pool if they are valid.
-// If the senders are not among the locally tracked ones, full pricing constraints
-// will apply.
+// AddRemotes enqueues a batch of transactions into the pool if they are valid. If the
+// senders are not among the locally tracked ones, full pricing constraints will apply.
+//
+// This method is used to add transactions from the p2p network and does not wait for pool
+// reorganization and internal event propagation.
 func (pool *TxPool) AddRemotes(txs []*types.Transaction) []error {
 	return pool.checkAndAddTxs(txs, false, false)
 }
