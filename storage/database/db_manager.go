@@ -163,9 +163,9 @@ type DBManager interface {
 	ReadPreimageFromOld(hash common.Hash) []byte
 
 	// Write StateTrie
-	WriteTrieNode(hash common.Hash, node []byte) error
-	PutTrieNodeToBatch(batch Batch, hash common.Hash, node []byte) error
-	DeleteTrieNode(hash common.Hash) error
+	WriteTrieNode(hash common.Hash, node []byte)
+	PutTrieNodeToBatch(batch Batch, hash common.Hash, node []byte)
+	DeleteTrieNode(hash common.Hash)
 	WritePreimages(number uint64, preimages map[common.Hash][]byte)
 
 	// from accessors_indexes.go
@@ -1843,20 +1843,24 @@ func (dbm *databaseManager) ReadPreimageFromOld(hash common.Hash) []byte {
 	return data
 }
 
-func (dbm *databaseManager) WriteTrieNode(hash common.Hash, node []byte) error {
+func (dbm *databaseManager) WriteTrieNode(hash common.Hash, node []byte) {
 	dbm.lockInMigration.RLock()
 	defer dbm.lockInMigration.RUnlock()
 
 	if dbm.inMigration {
 		if err := dbm.getDatabase(StateTrieMigrationDB).Put(TrieNodeKey(hash), node); err != nil {
-			return err
+			logger.Crit("Failed to store trie node", "err", err)
 		}
 	}
-	return dbm.getDatabase(StateTrieDB).Put(TrieNodeKey(hash), node)
+	if err := dbm.getDatabase(StateTrieDB).Put(TrieNodeKey(hash), node); err != nil {
+		logger.Crit("Failed to store trie node", "err", err)
+	}
 }
 
-func (dbm *databaseManager) PutTrieNodeToBatch(batch Batch, hash common.Hash, node []byte) error {
-	return batch.Put(TrieNodeKey(hash), node)
+func (dbm *databaseManager) PutTrieNodeToBatch(batch Batch, hash common.Hash, node []byte) {
+	if err := batch.Put(TrieNodeKey(hash), node); err != nil {
+		logger.Crit("Failed to store trie node", "err", err)
+	}
 }
 
 // WritePreimages writes the provided set of preimages to the database. `number` is the
@@ -1878,8 +1882,10 @@ func (dbm *databaseManager) WritePreimages(number uint64, preimages map[common.H
 	preimageHitCounter.Inc(int64(len(preimages)))
 }
 
-func (dbm *databaseManager) DeleteTrieNode(hash common.Hash) error {
-	return dbm.getDatabase(StateTrieDB).Delete(TrieNodeKey(hash))
+func (dbm *databaseManager) DeleteTrieNode(hash common.Hash) {
+	if err := dbm.getDatabase(StateTrieDB).Delete(TrieNodeKey(hash)); err != nil {
+		logger.Crit("Failed to delete trie node", "err", err)
+	}
 }
 
 // ReadTxLookupEntry retrieves the positional metadata associated with a transaction
