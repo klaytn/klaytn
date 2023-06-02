@@ -815,7 +815,8 @@ func (db *Database) Cap(limit common.StorageSize) error {
 }
 
 func (db *Database) writeBatchPreimages() error {
-	return db.diskDB.WritePreimages(0, db.preimages)
+	db.diskDB.WritePreimages(0, db.preimages)
+	return nil
 }
 
 // commitResult contains the result from concurrent commit calls.

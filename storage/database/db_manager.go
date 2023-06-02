@@ -166,7 +166,7 @@ type DBManager interface {
 	WriteTrieNode(hash common.Hash, node []byte) error
 	PutTrieNodeToBatch(batch Batch, hash common.Hash, node []byte) error
 	DeleteTrieNode(hash common.Hash) error
-	WritePreimages(number uint64, preimages map[common.Hash][]byte) error
+	WritePreimages(number uint64, preimages map[common.Hash][]byte)
 
 	// from accessors_indexes.go
 	ReadTxLookupEntry(hash common.Hash) (common.Hash, uint64, uint64)
@@ -1861,22 +1861,21 @@ func (dbm *databaseManager) PutTrieNodeToBatch(batch Batch, hash common.Hash, no
 
 // WritePreimages writes the provided set of preimages to the database. `number` is the
 // current block number, and is used for debug messages only.
-func (dbm *databaseManager) WritePreimages(number uint64, preimages map[common.Hash][]byte) error {
+func (dbm *databaseManager) WritePreimages(number uint64, preimages map[common.Hash][]byte) {
 	batch := dbm.NewBatch(StateTrieDB)
 	for hash, preimage := range preimages {
 		if err := batch.Put(preimageKey(hash), preimage); err != nil {
-			return err
+			logger.Crit("Failed to store trie preimage", "err", err)
 		}
 		if _, err := WriteBatchesOverThreshold(batch); err != nil {
-			return err
+			logger.Crit("Failed to store trie preimage", "err", err)
 		}
 	}
 	if err := batch.Write(); err != nil {
-		return err
+		logger.Crit("Failed to batch write trie preimage", "err", err, "blockNumber", number)
 	}
 	preimageCounter.Inc(int64(len(preimages)))
 	preimageHitCounter.Inc(int64(len(preimages)))
-	return nil
 }
 
 func (dbm *databaseManager) DeleteTrieNode(hash common.Hash) error {
