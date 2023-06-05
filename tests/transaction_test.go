@@ -104,7 +104,7 @@ func TestAccountCreationDisable(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		// fail to add tx in txPool
-		err = txpool.AddRemote(tx)
+		err = txpool.AddRemoteSync(tx)
 		assert.Equal(t, errUndefinedTxType, err)
 
 		// fail to execute tx
@@ -171,7 +171,7 @@ func TestContractDeployWithDisabledAddress(t *testing.T) {
 				assert.Equal(t, nil, err)
 			}
 			// fail to add tx in txPool
-			err = txpool.AddRemote(tx)
+			err = txpool.AddRemoteSync(tx)
 			assert.Equal(t, kerrors.ErrHumanReadableNotSupported, err)
 
 			// fail to execute tx
@@ -196,7 +196,7 @@ func TestContractDeployWithDisabledAddress(t *testing.T) {
 				assert.Equal(t, nil, err)
 			}
 			// fail to add tx in txPool
-			err = txpool.AddRemote(tx)
+			err = txpool.AddRemoteSync(tx)
 			assert.Equal(t, kerrors.ErrInvalidContractAddress, err)
 
 			// fail to execute tx

@@ -304,7 +304,7 @@ func dataGenerationTest(b *testing.B, tc *preGeneratedTC) {
 			pprof.StartCPUProfile(profileFile)
 		}
 
-		txPool.AddRemotes(txs)
+		txPool.AddRemotesSync(txs)
 
 		for {
 			if err := bcData.GenABlockWithTxPoolWithoutAccountMap(txPool); err != nil {

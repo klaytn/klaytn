@@ -281,7 +281,7 @@ func TestFeeDelegatedWithSmallBalance(t *testing.T) {
 
 		p := makeTxPool(bcdata, 10)
 
-		p.AddRemote(tx)
+		p.AddRemoteSync(tx)
 
 		if err := bcdata.GenABlockWithTxpool(accountMap, p, prof); err != nil {
 			t.Fatal(err)

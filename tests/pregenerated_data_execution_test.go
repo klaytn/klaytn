@@ -227,7 +227,7 @@ func executeTxs(bcData *BCData, txPool *blockchain.TxPool, txs types.Transaction
 		if end > len(txs) {
 			end = len(txs)
 		}
-		txPool.AddRemotes(txs[i:end])
+		txPool.AddRemotesSync(txs[i:end])
 		for {
 			if err := bcData.GenABlockWithTxPoolWithoutAccountMap(txPool); err != nil {
 				if err == errEmptyPending {

@@ -218,7 +218,7 @@ func TestValidationPoolInsert(t *testing.T) {
 				assert.Equal(t, nil, err)
 			}
 
-			err = txpool.AddRemote(tx)
+			err = txpool.AddRemoteSync(tx)
 			assert.Equal(t, expectedErr, err)
 			if expectedErr == nil {
 				reservoir.Nonce += 1
@@ -343,7 +343,7 @@ func TestValidationPoolInsertMagma(t *testing.T) {
 				assert.Equal(t, nil, err)
 			}
 
-			err = txpool.AddRemote(tx)
+			err = txpool.AddRemoteSync(tx)
 			assert.Equal(t, expectedErr, err)
 			if expectedErr == nil {
 				reservoir.Nonce += 1
@@ -658,7 +658,7 @@ func TestValidationInvalidSig(t *testing.T) {
 
 			if tx != nil {
 				// For tx pool validation test
-				err = txpool.AddRemote(tx)
+				err = txpool.AddRemoteSync(tx)
 				assert.Equal(t, expectedErr, err)
 
 				// For block tx validation test
@@ -783,7 +783,7 @@ func TestLegacyTxFromNonLegacyAcc(t *testing.T) {
 	err = tx.SignWithKeys(signer, reservoir.Keys)
 	assert.Equal(t, nil, err)
 
-	err = txpool.AddRemote(tx)
+	err = txpool.AddRemoteSync(tx)
 	assert.Equal(t, types.ErrSender(kerrors.ErrLegacyTransactionMustBeWithLegacyKey), err)
 }
 
@@ -923,7 +923,7 @@ func TestInvalidBalance(t *testing.T) {
 				err = tx.SignWithKeys(signer, testAcc.Keys)
 				assert.Equal(t, nil, err)
 
-				err = txpool.AddRemote(tx)
+				err = txpool.AddRemoteSync(tx)
 				assert.Equal(t, blockchain.ErrInsufficientFundsFrom, err)
 			}
 
@@ -948,7 +948,7 @@ func TestInvalidBalance(t *testing.T) {
 
 				// Since `txpool.AddRemote` does not make a block,
 				// the sender can send txs to txpool in multiple times (by the for loop) with limited KLAY.
-				err = txpool.AddRemote(tx)
+				err = txpool.AddRemoteSync(tx)
 				assert.Equal(t, nil, err)
 				testAcc.AddNonce()
 			}
@@ -974,7 +974,7 @@ func TestInvalidBalance(t *testing.T) {
 					tx.SignFeePayerWithKeys(signer, reservoir.Keys)
 					assert.Equal(t, nil, err)
 
-					err = txpool.AddRemote(tx)
+					err = txpool.AddRemoteSync(tx)
 					assert.Equal(t, blockchain.ErrInsufficientFundsFrom, err)
 				}
 			}
@@ -997,7 +997,7 @@ func TestInvalidBalance(t *testing.T) {
 				tx.SignFeePayerWithKeys(signer, testAcc.Keys)
 				assert.Equal(t, nil, err)
 
-				err = txpool.AddRemote(tx)
+				err = txpool.AddRemoteSync(tx)
 				assert.Equal(t, blockchain.ErrInsufficientFundsFeePayer, err)
 			}
 
@@ -1022,7 +1022,7 @@ func TestInvalidBalance(t *testing.T) {
 
 					// Since `txpool.AddRemote` does not make a block,
 					// the sender can send txs to txpool in multiple times (by the for loop) with limited KLAY.
-					err = txpool.AddRemote(tx)
+					err = txpool.AddRemoteSync(tx)
 					assert.Equal(t, nil, err)
 					testAcc.AddNonce()
 				}
@@ -1048,7 +1048,7 @@ func TestInvalidBalance(t *testing.T) {
 
 				// Since `txpool.AddRemote` does not make a block,
 				// the sender can send txs to txpool in multiple times (by the for loop) with limited KLAY.
-				err = txpool.AddRemote(tx)
+				err = txpool.AddRemoteSync(tx)
 				assert.Equal(t, nil, err)
 				reservoir.AddNonce()
 			}
@@ -1083,7 +1083,7 @@ func TestInvalidBalance(t *testing.T) {
 				tx.SignFeePayerWithKeys(signer, reservoir.Keys)
 				assert.Equal(t, nil, err)
 
-				err = txpool.AddRemote(tx)
+				err = txpool.AddRemoteSync(tx)
 				assert.Equal(t, blockchain.ErrInsufficientFundsFrom, err)
 			}
 
@@ -1108,7 +1108,7 @@ func TestInvalidBalance(t *testing.T) {
 				tx.SignFeePayerWithKeys(signer, testAcc.Keys)
 				assert.Equal(t, nil, err)
 
-				err = txpool.AddRemote(tx)
+				err = txpool.AddRemoteSync(tx)
 				assert.Equal(t, blockchain.ErrInsufficientFundsFeePayer, err)
 			}
 
@@ -1142,7 +1142,7 @@ func TestInvalidBalance(t *testing.T) {
 
 				// Since `txpool.AddRemote` does not make a block,
 				// the sender can send txs to txpool in multiple times (by the for loop) with limited KLAY.
-				err = txpool.AddRemote(tx)
+				err = txpool.AddRemoteSync(tx)
 				assert.Equal(t, nil, err)
 				testAcc.AddNonce()
 			}
@@ -1170,7 +1170,7 @@ func TestInvalidBalance(t *testing.T) {
 
 				// Since `txpool.AddRemote` does not make a block,
 				// the sender can send txs to txpool in multiple times (by the for loop) with limited KLAY.
-				err = txpool.AddRemote(tx)
+				err = txpool.AddRemoteSync(tx)
 				assert.Equal(t, nil, err)
 				reservoir.AddNonce()
 			}
@@ -1708,7 +1708,7 @@ func TestValidationTxSizeAfterRLP(t *testing.T) {
 			err = rlp.DecodeBytes(encodedTx, newTx)
 
 			// test for tx pool insert validation
-			err = txpool.AddRemote(newTx)
+			err = txpool.AddRemoteSync(newTx)
 			assert.Equal(t, blockchain.ErrOversizedData, err)
 		}
 
@@ -1752,7 +1752,7 @@ func TestValidationTxSizeAfterRLP(t *testing.T) {
 			err = rlp.DecodeBytes(encodedTx, newTx)
 
 			// test for tx pool insert validation
-			err = txpool.AddRemote(newTx)
+			err = txpool.AddRemoteSync(newTx)
 			assert.Equal(t, nil, err)
 			reservoir.AddNonce()
 		}
@@ -1854,7 +1854,7 @@ func TestValidationPoolResetAfterSenderKeyChange(t *testing.T) {
 
 		txs = append(txs, tx)
 
-		err = txpool.AddRemote(tx)
+		err = txpool.AddRemoteSync(tx)
 		assert.Equal(t, nil, err)
 		reservoir.AddNonce()
 	}
@@ -1877,7 +1877,7 @@ func TestValidationPoolResetAfterSenderKeyChange(t *testing.T) {
 			assert.Equal(t, nil, err)
 		}
 
-		err = txpool.AddRemote(tx)
+		err = txpool.AddRemoteSync(tx)
 		if err != nil {
 			fmt.Println(tx)
 			statedb, _ := bcdata.bc.State()
@@ -2030,7 +2030,7 @@ func TestValidationPoolResetAfterFeePayerKeyChange(t *testing.T) {
 
 		txs = append(txs, tx)
 
-		err = txpool.AddRemote(tx)
+		err = txpool.AddRemoteSync(tx)
 		assert.Equal(t, nil, err)
 		feePayer.AddNonce()
 	}
@@ -2054,7 +2054,7 @@ func TestValidationPoolResetAfterFeePayerKeyChange(t *testing.T) {
 		tx.SignFeePayerWithKeys(signer, feePayer.Keys)
 		assert.Equal(t, nil, err)
 
-		err = txpool.AddRemote(tx)
+		err = txpool.AddRemoteSync(tx)
 		assert.Equal(t, nil, err)
 		reservoir.AddNonce()
 	}

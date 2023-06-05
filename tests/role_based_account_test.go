@@ -838,7 +838,7 @@ func TestAccountUpdateRoleBasedTransition(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		txpool := makeTxPool(bcdata, 10)
-		err = txpool.AddRemote(tx)
+		err = txpool.AddRemoteSync(tx)
 		assert.Equal(t, nil, err)
 	}
 
@@ -858,7 +858,7 @@ func TestAccountUpdateRoleBasedTransition(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		txpool := makeTxPool(bcdata, 10)
-		err = txpool.AddRemote(tx)
+		err = txpool.AddRemoteSync(tx)
 		assert.Equal(t, types.ErrSender(types.ErrInvalidSigSender), err)
 	}
 
@@ -903,7 +903,7 @@ func TestAccountUpdateRoleBasedTransition(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		txpool := makeTxPool(bcdata, 10)
-		err = txpool.AddRemote(tx)
+		err = txpool.AddRemoteSync(tx)
 		assert.Equal(t, types.ErrSender(types.ErrInvalidSigSender), err)
 	}
 
@@ -923,7 +923,7 @@ func TestAccountUpdateRoleBasedTransition(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		txpool := makeTxPool(bcdata, 10)
-		err = txpool.AddRemote(tx)
+		err = txpool.AddRemoteSync(tx)
 		assert.Equal(t, nil, err)
 	}
 }

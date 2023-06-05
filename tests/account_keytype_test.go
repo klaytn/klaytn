@@ -721,7 +721,7 @@ func TestAccountUpdateMultiSigKeyMaxKey(t *testing.T) {
 
 		// For tx pool validation test
 		{
-			err = txpool.AddRemote(tx)
+			err = txpool.AddRemoteSync(tx)
 			assert.Equal(t, kerrors.ErrMaxKeysExceed, err)
 		}
 
@@ -835,7 +835,7 @@ func TestAccountUpdateMultiSigKeyBigThreshold(t *testing.T) {
 
 		// For tx pool validation test
 		{
-			err = txpool.AddRemote(tx)
+			err = txpool.AddRemoteSync(tx)
 			assert.Equal(t, kerrors.ErrUnsatisfiableThreshold, err)
 		}
 
@@ -946,7 +946,7 @@ func TestAccountUpdateMultiSigKeyDupPrvKeys(t *testing.T) {
 
 		// For tx pool validation test
 		{
-			err = txpool.AddRemote(tx)
+			err = txpool.AddRemoteSync(tx)
 			assert.Equal(t, kerrors.ErrDuplicatedKey, err)
 		}
 
@@ -1062,7 +1062,7 @@ func TestAccountUpdateMultiSigKeyWeightOverflow(t *testing.T) {
 
 		// For tx pool validation test
 		{
-			err = txpool.AddRemote(tx)
+			err = txpool.AddRemoteSync(tx)
 			assert.Equal(t, kerrors.ErrWeightedSumOverflow, err)
 		}
 
@@ -1170,7 +1170,7 @@ func TestAccountUpdateRoleBasedKeyInvalidNumKey(t *testing.T) {
 
 		// For tx pool validation test
 		{
-			err = txpool.AddRemote(tx)
+			err = txpool.AddRemoteSync(tx)
 			assert.Equal(t, kerrors.ErrLengthTooLong, err)
 		}
 
@@ -1202,7 +1202,7 @@ func TestAccountUpdateRoleBasedKeyInvalidNumKey(t *testing.T) {
 
 		// For tx pool validation test
 		{
-			err = txpool.AddRemote(tx)
+			err = txpool.AddRemoteSync(tx)
 			assert.Equal(t, kerrors.ErrZeroLength, err)
 		}
 
@@ -1313,7 +1313,7 @@ func TestAccountUpdateRoleBasedKeyInvalidTypeKey(t *testing.T) {
 
 		// For tx pool validation test
 		{
-			err = txpool.AddRemote(tx)
+			err = txpool.AddRemoteSync(tx)
 			assert.Equal(t, kerrors.ErrAccountKeyNilUninitializable, err)
 		}
 
@@ -1349,7 +1349,7 @@ func TestAccountUpdateRoleBasedKeyInvalidTypeKey(t *testing.T) {
 
 		// For tx pool validation test
 		{
-			err = txpool.AddRemote(tx)
+			err = txpool.AddRemoteSync(tx)
 			assert.Equal(t, kerrors.ErrAccountKeyNilUninitializable, err)
 		}
 
@@ -1385,7 +1385,7 @@ func TestAccountUpdateRoleBasedKeyInvalidTypeKey(t *testing.T) {
 
 		// For tx pool validation test
 		{
-			err = txpool.AddRemote(tx)
+			err = txpool.AddRemoteSync(tx)
 			assert.Equal(t, kerrors.ErrAccountKeyNilUninitializable, err)
 		}
 
@@ -1602,7 +1602,7 @@ func TestAccountUpdateRoleBasedKey(t *testing.T) {
 
 		// For tx pool validation test
 		{
-			err = txpool.AddRemote(tx)
+			err = txpool.AddRemoteSync(tx)
 			assert.Equal(t, types.ErrSender(types.ErrInvalidSigSender), err)
 		}
 
@@ -1631,7 +1631,7 @@ func TestAccountUpdateRoleBasedKey(t *testing.T) {
 
 		// For tx pool validation test
 		{
-			err = txpool.AddRemote(tx)
+			err = txpool.AddRemoteSync(tx)
 			assert.Equal(t, types.ErrSender(types.ErrInvalidSigSender), err)
 		}
 
@@ -1789,7 +1789,7 @@ func TestAccountUpdateRoleBasedKeyNested(t *testing.T) {
 
 		// For tx pool validation test
 		{
-			err = txpool.AddRemote(tx)
+			err = txpool.AddRemoteSync(tx)
 			assert.Equal(t, kerrors.ErrNestedCompositeType, err)
 		}
 
@@ -1991,7 +1991,7 @@ func TestRoleBasedKeySendTx(t *testing.T) {
 			} else {
 				// For tx pool validation test
 				{
-					err = txpool.AddRemote(tx)
+					err = txpool.AddRemoteSync(tx)
 					assert.Equal(t, types.ErrSender(types.ErrInvalidSigSender), err)
 				}
 
@@ -2188,7 +2188,7 @@ func TestRoleBasedKeyFeeDelegation(t *testing.T) {
 			} else {
 				// For tx pool validation test
 				{
-					err = txpool.AddRemote(tx)
+					err = txpool.AddRemoteSync(tx)
 					assert.Equal(t, types.ErrFeePayer(types.ErrInvalidSigFeePayer), err)
 				}
 

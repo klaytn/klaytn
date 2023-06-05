@@ -163,7 +163,7 @@ func testTxFeeRatioRange(t *testing.T, feeRatio types.FeeRatio, expected error) 
 		err = tx.SignFeePayerWithKeys(signer, reservoir2.Keys)
 		assert.Equal(t, nil, err)
 
-		err = txpool.AddRemote(tx)
+		err = txpool.AddRemoteSync(tx)
 		assert.Equal(t, expected, err)
 
 		reservoir.Nonce += 1
@@ -192,7 +192,7 @@ func testTxFeeRatioRange(t *testing.T, feeRatio types.FeeRatio, expected error) 
 		err = tx.SignFeePayerWithKeys(signer, reservoir2.Keys)
 		assert.Equal(t, nil, err)
 
-		err = txpool.AddRemote(tx)
+		err = txpool.AddRemoteSync(tx)
 		assert.Equal(t, expected, err)
 
 		reservoir.Nonce += 1
@@ -218,7 +218,7 @@ func testTxFeeRatioRange(t *testing.T, feeRatio types.FeeRatio, expected error) 
 		err = tx.SignFeePayerWithKeys(signer, reservoir2.Keys)
 		assert.Equal(t, nil, err)
 
-		err = txpool.AddRemote(tx)
+		err = txpool.AddRemoteSync(tx)
 		assert.Equal(t, expected, err)
 
 		reservoir.Nonce += 1
@@ -249,7 +249,7 @@ func testTxFeeRatioRange(t *testing.T, feeRatio types.FeeRatio, expected error) 
 		err = tx.SignFeePayerWithKeys(signer, reservoir2.Keys)
 		assert.Equal(t, nil, err)
 
-		err = txpool.AddRemote(tx)
+		err = txpool.AddRemoteSync(tx)
 		assert.Equal(t, expected, err)
 
 		reservoir.Nonce += 1
@@ -278,7 +278,7 @@ func testTxFeeRatioRange(t *testing.T, feeRatio types.FeeRatio, expected error) 
 		err = tx.SignFeePayerWithKeys(signer, reservoir2.Keys)
 		assert.Equal(t, nil, err)
 
-		err = txpool.AddRemote(tx)
+		err = txpool.AddRemoteSync(tx)
 		assert.Equal(t, expected, err)
 
 		reservoir.Nonce += 1
@@ -303,7 +303,7 @@ func testTxFeeRatioRange(t *testing.T, feeRatio types.FeeRatio, expected error) 
 		err = tx.SignFeePayerWithKeys(signer, reservoir2.Keys)
 		assert.Equal(t, nil, err)
 
-		err = txpool.AddRemote(tx)
+		err = txpool.AddRemoteSync(tx)
 		assert.Equal(t, expected, err)
 
 		reservoir.Nonce += 1

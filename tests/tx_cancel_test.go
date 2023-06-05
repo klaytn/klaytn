@@ -83,7 +83,7 @@ func TestTxCancel(t *testing.T) {
 
 		txs = append(txs, tx)
 
-		txpool.AddRemotes(txs)
+		txpool.AddRemotesSync(txs)
 
 		pending, queued := txpool.Content()
 		assert.Equal(t, 0, len(queued))
@@ -115,7 +115,7 @@ func TestTxCancel(t *testing.T) {
 
 		txs = append(txs, tx)
 
-		txpool.AddRemotes(txs)
+		txpool.AddRemotesSync(txs)
 
 		pending, queued = txpool.Content()
 		assert.Equal(t, 0, len(queued))
@@ -141,7 +141,7 @@ func TestTxCancel(t *testing.T) {
 
 		txs = append(txs, tx)
 
-		txpool.AddRemotes(txs)
+		txpool.AddRemotesSync(txs)
 
 		pending, queued := txpool.Content()
 		assert.Equal(t, 0, len(queued))
@@ -167,7 +167,7 @@ func TestTxCancel(t *testing.T) {
 
 		txs = append(txs, tx)
 
-		txpool.AddRemotes(txs)
+		txpool.AddRemotesSync(txs)
 
 		pending, queued := txpool.Content()
 		assert.Equal(t, 0, len(queued))
@@ -234,7 +234,7 @@ func TestTxFeeDelegatedCancel(t *testing.T) {
 
 		txs = append(txs, tx)
 
-		txpool.AddRemotes(txs)
+		txpool.AddRemotesSync(txs)
 
 		pending, queued := txpool.Content()
 		assert.Equal(t, 0, len(queued))
@@ -266,7 +266,7 @@ func TestTxFeeDelegatedCancel(t *testing.T) {
 
 		txs = append(txs, tx)
 
-		txpool.AddRemotes(txs)
+		txpool.AddRemotesSync(txs)
 
 		pending, queued = txpool.Content()
 		assert.Equal(t, 0, len(queued))
@@ -296,7 +296,7 @@ func TestTxFeeDelegatedCancel(t *testing.T) {
 
 		txs = append(txs, tx)
 
-		txpool.AddRemotes(txs)
+		txpool.AddRemotesSync(txs)
 
 		pending, queued := txpool.Content()
 		assert.Equal(t, 0, len(queued))
@@ -326,7 +326,7 @@ func TestTxFeeDelegatedCancel(t *testing.T) {
 
 		txs = append(txs, tx)
 
-		txpool.AddRemotes(txs)
+		txpool.AddRemotesSync(txs)
 
 		pending, queued := txpool.Content()
 		assert.Equal(t, 0, len(queued))
@@ -393,7 +393,7 @@ func TestTxFeeDelegatedCancelWithRatio(t *testing.T) {
 
 		txs = append(txs, tx)
 
-		txpool.AddRemotes(txs)
+		txpool.AddRemotesSync(txs)
 
 		pending, queued := txpool.Content()
 		assert.Equal(t, 0, len(queued))
@@ -425,7 +425,7 @@ func TestTxFeeDelegatedCancelWithRatio(t *testing.T) {
 
 		txs = append(txs, tx)
 
-		txpool.AddRemotes(txs)
+		txpool.AddRemotesSync(txs)
 
 		pending, queued = txpool.Content()
 		assert.Equal(t, 0, len(queued))
@@ -456,7 +456,7 @@ func TestTxFeeDelegatedCancelWithRatio(t *testing.T) {
 
 		txs = append(txs, tx)
 
-		txpool.AddRemotes(txs)
+		txpool.AddRemotesSync(txs)
 
 		pending, queued := txpool.Content()
 		assert.Equal(t, 0, len(queued))
@@ -487,7 +487,7 @@ func TestTxFeeDelegatedCancelWithRatio(t *testing.T) {
 
 		txs = append(txs, tx)
 
-		txpool.AddRemotes(txs)
+		txpool.AddRemotesSync(txs)
 
 		pending, queued := txpool.Content()
 		assert.Equal(t, 0, len(queued))

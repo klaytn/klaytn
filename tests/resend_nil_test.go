@@ -109,7 +109,7 @@ func BenchmarkResendNilDereference(t *testing.B) {
 				fmt.Println("sign err", err)
 			}
 			time.Sleep(1 * time.Nanosecond)
-			txpool.AddRemotes(types.Transactions{signedTx})
+			txpool.AddRemotesSync(types.Transactions{signedTx})
 
 			reservoir.Nonce++
 		}

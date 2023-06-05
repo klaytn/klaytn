@@ -1199,6 +1199,17 @@ func (pool *TxPool) AddRemotes(txs []*types.Transaction) []error {
 	return pool.checkAndAddTxs(txs, false, false)
 }
 
+// AddRemotesSync is like AddRemotes, but waits for pool reorganization. Tests use this method.
+func (pool *TxPool) AddRemotesSync(txs []*types.Transaction) []error {
+	return pool.checkAndAddTxs(txs, false, true)
+}
+
+// AddRemoteSync is like AddRemote, but waits for pool reorganization. Tests use this method.
+func (pool *TxPool) AddRemoteSync(tx *types.Transaction) error {
+	errs := pool.AddRemotesSync([]*types.Transaction{tx})
+	return errs[0]
+}
+
 // checkAndAddTxs compares the size of given transactions and the capacity of TxPool.
 // If given transactions exceed the capacity of TxPool, it slices the given transactions
 // so it can fit into TxPool's capacity.

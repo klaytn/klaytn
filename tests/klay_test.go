@@ -414,7 +414,7 @@ func TestValueTransferRing(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	txpool.AddRemotes(txs)
+	txpool.AddRemotesSync(txs)
 
 	for {
 		if err := bcdata.GenABlockWithTxpool(accountMap, txpool, prof); err != nil {
@@ -679,7 +679,7 @@ func BenchmarkValueTransfer(t *testing.B) {
 
 	t.ResetTimer()
 
-	txpool.AddRemotes(txs)
+	txpool.AddRemotesSync(txs)
 
 	for {
 		if err := bcdata.GenABlockWithTxpool(accountMap, txpool, prof); err != nil {
@@ -730,7 +730,7 @@ func BenchmarkNewValueTransfer(t *testing.B) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	txpool.AddRemotes(txs)
+	txpool.AddRemotesSync(txs)
 
 	t.ResetTimer()
 	for {

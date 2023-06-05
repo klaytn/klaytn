@@ -153,7 +153,7 @@ func TestValidatingUnavailableContractExecution(t *testing.T) {
 	{
 		tx, _ := genSmartContractExecution(t, signer, reservoir, contract, nil, gasPrice)
 
-		err = txpool.AddRemote(tx)
+		err = txpool.AddRemoteSync(tx)
 		assert.Equal(t, nil, err)
 	}
 
@@ -161,7 +161,7 @@ func TestValidatingUnavailableContractExecution(t *testing.T) {
 	{
 		tx, _ := genSmartContractExecution(t, signer, reservoir, invalidContract, nil, gasPrice)
 
-		err = txpool.AddRemote(tx)
+		err = txpool.AddRemoteSync(tx)
 		assert.Equal(t, kerrors.ErrNotProgramAccount, err)
 	}
 
@@ -169,7 +169,7 @@ func TestValidatingUnavailableContractExecution(t *testing.T) {
 	{
 		tx, _ := genSmartContractExecution(t, signer, reservoir, EOA, nil, gasPrice)
 
-		err = txpool.AddRemote(tx)
+		err = txpool.AddRemoteSync(tx)
 		assert.Equal(t, kerrors.ErrNotProgramAccount, err)
 	}
 
