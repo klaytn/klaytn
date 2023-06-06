@@ -443,6 +443,13 @@ func (self *worker) wait(TxResendUseLegacy bool) {
 				logger.Error("Failed to call snapshot", "err", err)
 			}
 
+			// update governance parameters
+			if istanbul, ok := self.engine.(consensus.Istanbul); ok {
+				if err := istanbul.UpdateParam(block.NumberU64()); err != nil {
+					logger.Error("Failed to update governance parameters", "err", err)
+				}
+			}
+
 			logger.Info("Successfully wrote mined block", "num", block.NumberU64(),
 				"hash", block.Hash(), "txs", len(block.Transactions()), "elapsed", blockWriteTime)
 			self.chain.PostChainEvents(events, logs)
