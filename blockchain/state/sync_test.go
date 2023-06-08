@@ -49,7 +49,7 @@ type testAccount struct {
 func makeTestState(t *testing.T) (Database, common.Hash, []*testAccount) {
 	// Create an empty state
 	db := NewDatabase(database.NewMemoryDBManager())
-	statedb, err := New(common.Hash{}, db, nil)
+	statedb, err := New(common.Hash{}, db, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,7 +108,7 @@ func makeTestState(t *testing.T) (Database, common.Hash, []*testAccount) {
 // account array.
 func checkStateAccounts(t *testing.T, newDB database.DBManager, root common.Hash, accounts []*testAccount) {
 	// Check root availability and state contents
-	state, err := New(root, NewDatabase(newDB), nil)
+	state, err := New(root, NewDatabase(newDB), nil, nil)
 	if err != nil {
 		t.Fatalf("failed to create state trie at %x: %v", root, err)
 	}
@@ -150,7 +150,7 @@ func checkTrieConsistency(db database.DBManager, root common.Hash) error {
 	if v, _ := db.ReadStateTrieNode(root[:]); v == nil {
 		return nil // Consider a non existent state consistent.
 	}
-	trie, err := statedb.NewTrie(root, statedb.NewDatabase(db))
+	trie, err := statedb.NewTrie(root, statedb.NewDatabase(db), nil)
 	if err != nil {
 		return err
 	}
@@ -166,7 +166,7 @@ func checkStateConsistency(db database.DBManager, root common.Hash) error {
 	if _, err := db.ReadStateTrieNode(root.Bytes()); err != nil {
 		return nil // Consider a non existent state consistent.
 	}
-	state, err := New(root, NewDatabase(db), nil)
+	state, err := New(root, NewDatabase(db), nil, nil)
 	if err != nil {
 		return err
 	}
@@ -252,7 +252,7 @@ func testIterativeStateSync(t *testing.T, count int, commit bool, bypath bool) {
 	if commit {
 		srcState.TrieDB().Commit(srcRoot, false, 0)
 	}
-	srcTrie, _ := statedb.NewTrie(srcRoot, srcState.TrieDB())
+	srcTrie, _ := statedb.NewTrie(srcRoot, srcState.TrieDB(), nil)
 
 	// Create a destination state and sync with the scheduler
 	dstDiskDb := database.NewMemoryDBManager()
@@ -299,7 +299,7 @@ func testIterativeStateSync(t *testing.T, count int, commit bool, bypath bool) {
 				if pacc == nil {
 					t.Errorf("failed to get contract")
 				}
-				stTrie, err := statedb.NewTrie(pacc.GetStorageRoot(), srcState.TrieDB())
+				stTrie, err := statedb.NewTrie(pacc.GetStorageRoot(), srcState.TrieDB(), nil)
 				if err != nil {
 					t.Fatalf("failed to retriev storage trie for path %x: %v", path, err)
 				}
@@ -365,7 +365,7 @@ func TestCheckStateConsistencyMissNode(t *testing.T) {
 		return false
 	}
 
-	srcStateDB, err := New(srcRoot, srcState, nil)
+	srcStateDB, err := New(srcRoot, srcState, nil, nil)
 	assert.NoError(t, err)
 
 	it := NewNodeIterator(srcStateDB)

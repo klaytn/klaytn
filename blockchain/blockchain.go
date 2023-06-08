@@ -285,7 +285,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 	}
 	// Make sure the state associated with the block is available
 	head := bc.CurrentBlock()
-	if _, err := state.New(head.Root(), bc.stateCache, bc.snaps); err != nil {
+	if _, err := state.New(head.Root(), bc.stateCache, bc.snaps, nil); err != nil {
 		// Head state is missing, before the state recovery, find out the
 		// disk layer point of snapshot(if it's enabled). Make sure the
 		// rewound point is lower than disk layer.
@@ -381,7 +381,8 @@ func (bc *BlockChain) prefetchTxWorker(index int) {
 		snaps = bc.snaps
 	}
 	for followup := range bc.prefetchTxCh {
-		stateDB, err := state.NewForPrefetching(bc.CurrentBlock().Root(), bc.stateCache, snaps)
+		stateDB, err := state.New(bc.CurrentBlock().Root(), bc.stateCache, snaps,
+			&statedb.TrieOpts{Prefetching: true})
 		if err != nil {
 			logger.Debug("failed to retrieve stateDB for prefetchTxWorker", "err", err)
 			continue
@@ -413,7 +414,7 @@ func (bc *BlockChain) SetCanonicalBlock(blockNum uint64) {
 	}
 	// Make sure the state associated with the block is available
 	head := bc.CurrentBlock()
-	if _, err := state.New(head.Root(), bc.stateCache, bc.snaps); err != nil {
+	if _, err := state.New(head.Root(), bc.stateCache, bc.snaps, nil); err != nil {
 		// Dangling block without a state associated, init from scratch
 		logger.Warn("Head state missing, repairing chain",
 			"number", head.NumberU64(), "hash", head.Hash().String())
@@ -544,7 +545,7 @@ func (bc *BlockChain) setHeadBeyondRoot(head uint64, root common.Hash, repair bo
 					if root != (common.Hash{}) && !beyondRoot && newHeadBlock.Root() == root {
 						beyondRoot, rootNumber = true, newHeadBlock.NumberU64()
 					}
-					if _, err := state.New(newHeadBlock.Root(), bc.stateCache, bc.snaps); err != nil {
+					if _, err := state.New(newHeadBlock.Root(), bc.stateCache, bc.snaps, nil); err != nil {
 						// Rewound state missing, rolled back to the parent block, reset to genesis
 						logger.Trace("Block state missing, rewinding further", "number", newHeadBlock.NumberU64(), "hash", newHeadBlock.Hash())
 						parent := bc.GetBlock(newHeadBlock.ParentHash(), newHeadBlock.NumberU64()-1)
@@ -636,7 +637,7 @@ func (bc *BlockChain) FastSyncCommitHead(hash common.Hash) error {
 	if block == nil {
 		return fmt.Errorf("non existent block [%x…]", hash[:4])
 	}
-	if _, err := statedb.NewSecureTrie(block.Root(), bc.stateCache.TrieDB()); err != nil {
+	if _, err := statedb.NewSecureTrie(block.Root(), bc.stateCache.TrieDB(), nil); err != nil {
 		return err
 	}
 	// If all checks out, manually set the head block
@@ -683,7 +684,7 @@ func (bc *BlockChain) State() (*state.StateDB, error) {
 
 // StateAt returns a new mutable state based on a particular point in time.
 func (bc *BlockChain) StateAt(root common.Hash) (*state.StateDB, error) {
-	return state.New(root, bc.stateCache, bc.snaps)
+	return state.New(root, bc.stateCache, bc.snaps, nil)
 }
 
 // StateAtWithPersistent returns a new mutable state based on a particular point in time with persistent trie nodes.
@@ -692,7 +693,7 @@ func (bc *BlockChain) StateAtWithPersistent(root common.Hash) (*state.StateDB, e
 	if !exist {
 		return nil, ErrNotExistNode
 	}
-	return state.New(root, bc.stateCache, bc.snaps)
+	return state.New(root, bc.stateCache, bc.snaps, nil)
 }
 
 // StateAtWithGCLock returns a new mutable state based on a particular point in time with read lock of the state nodes.
@@ -705,7 +706,7 @@ func (bc *BlockChain) StateAtWithGCLock(root common.Hash) (*state.StateDB, error
 		return nil, ErrNotExistNode
 	}
 
-	stateDB, err := state.New(root, bc.stateCache, bc.snaps)
+	stateDB, err := state.New(root, bc.stateCache, bc.snaps, nil)
 	if err != nil {
 		bc.RUnlockGCCachedNode()
 		return nil, err
@@ -758,7 +759,7 @@ func (bc *BlockChain) ResetWithGenesisBlock(genesis *types.Block) error {
 func (bc *BlockChain) repair(head **types.Block) error {
 	for {
 		// Abort if we've rewound to a head block that does have associated state
-		if _, err := state.New((*head).Root(), bc.stateCache, bc.snaps); err == nil {
+		if _, err := state.New((*head).Root(), bc.stateCache, bc.snaps, nil); err == nil {
 			logger.Info("Rewound blockchain to past state", "number", (*head).Number(), "hash", (*head).Hash())
 			return nil
 		} else {
@@ -853,7 +854,7 @@ func (bc *BlockChain) HasBlock(hash common.Hash, number uint64) bool {
 
 // HasState checks if state trie is fully present in the database or not.
 func (bc *BlockChain) HasState(hash common.Hash) bool {
-	_, err := bc.stateCache.OpenTrie(hash)
+	_, err := bc.stateCache.OpenTrie(hash, nil)
 	return err == nil
 }
 
@@ -1818,7 +1819,8 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 						}
 					}()
 
-					throwaway, err := state.NewForPrefetching(parent.Root(), bc.stateCache, snaps)
+					throwaway, err := state.New(parent.Root(), bc.stateCache, snaps,
+						&statedb.TrieOpts{Prefetching: true})
 					if throwaway == nil || err != nil {
 						logger.Warn("failed to get StateDB for prefetcher", "err", err,
 							"parentBlockNum", parent.NumberU64(), "currBlockNum", bc.CurrentBlock().NumberU64())

@@ -126,7 +126,7 @@ func (it *NodeIterator) step() error {
 	obj := serializer.GetAccount()
 
 	if pa := account.GetProgramAccount(obj); pa != nil {
-		dataTrie, err := it.state.db.OpenStorageTrie(pa.GetStorageRoot())
+		dataTrie, err := it.state.db.OpenStorageTrie(pa.GetStorageRoot(), nil)
 		if err != nil {
 			return err
 		}
@@ -189,11 +189,11 @@ func (it *NodeIterator) retrieve() bool {
 // CheckStateConsistencyParallel checks the consistency of all state/storage trie of given two state databases in parallel.
 func CheckStateConsistencyParallel(oldDB Database, newDB Database, root common.Hash, quitCh chan struct{}) error {
 	// Check if the tries can be called
-	_, err := oldDB.OpenTrie(root)
+	_, err := oldDB.OpenTrie(root, nil)
 	if err != nil {
 		return errors.WithMessage(err, "can not open oldDB trie")
 	}
-	_, err = newDB.OpenTrie(root)
+	_, err = newDB.OpenTrie(root, nil)
 	if err != nil {
 		return errors.WithMessage(err, "can not open newDB trie")
 	}
@@ -253,12 +253,12 @@ func concurrentIterator(oldDB Database, newDB Database, root common.Hash, quit c
 	}()
 
 	// Create and iterate a state trie rooted in a sub-node
-	oldState, err := New(root, oldDB, nil)
+	oldState, err := New(root, oldDB, nil, nil)
 	if err != nil {
 		return errors.WithMessage(err, "can not open oldDB trie")
 	}
 
-	newState, err := New(root, newDB, nil)
+	newState, err := New(root, newDB, nil, nil)
 	if err != nil {
 		return errors.WithMessage(err, "can not open newDB trie")
 	}
@@ -326,12 +326,12 @@ func concurrentIterator(oldDB Database, newDB Database, root common.Hash, quit c
 // CheckStateConsistency checks the consistency of all state/storage trie of given two state database.
 func CheckStateConsistency(oldDB Database, newDB Database, root common.Hash, mapSize int, quit chan struct{}) error {
 	// Create and iterate a state trie rooted in a sub-node
-	oldState, err := New(root, oldDB, nil)
+	oldState, err := New(root, oldDB, nil, nil)
 	if err != nil {
 		return err
 	}
 
-	newState, err := New(root, newDB, nil)
+	newState, err := New(root, newDB, nil, nil)
 	if err != nil {
 		return err
 	}

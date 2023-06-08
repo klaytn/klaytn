@@ -48,7 +48,7 @@ func init() {
 
 // Used for testing
 func newEmptyTrie() *Trie {
-	trie, _ := NewTrie(common.Hash{}, NewDatabase(database.NewMemoryDBManager()))
+	trie, _ := NewTrie(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil)
 	return trie
 }
 
@@ -72,7 +72,7 @@ func TestNull(t *testing.T) {
 }
 
 func TestMissingRoot(t *testing.T) {
-	trie, err := NewTrie(common.HexToHash("0beec7b5ea3f0fdbc95d0dd47f3c5bc275da8a33"), NewDatabase(database.NewMemoryDBManager()))
+	trie, err := NewTrie(common.HexToHash("0beec7b5ea3f0fdbc95d0dd47f3c5bc275da8a33"), NewDatabase(database.NewMemoryDBManager()), nil)
 	if trie != nil {
 		t.Error("NewTrie returned non-nil trie for invalid root")
 	}
@@ -89,7 +89,7 @@ func testMissingNode(t *testing.T, memonly bool) {
 	diskdb := memDBManager.GetMemDB()
 	triedb := NewDatabase(memDBManager)
 
-	trie, _ := NewTrie(common.Hash{}, triedb)
+	trie, _ := NewTrie(common.Hash{}, triedb, nil)
 	updateString(trie, "120000", "qwerqwerqwerqwerqwerqwerqwerqwer")
 	updateString(trie, "123456", "asdfasdfasdfasdfasdfasdfasdfasdf")
 	root, _ := trie.Commit(nil)
@@ -97,27 +97,27 @@ func testMissingNode(t *testing.T, memonly bool) {
 		triedb.Commit(root, true, 0)
 	}
 
-	trie, _ = NewTrie(root, triedb)
+	trie, _ = NewTrie(root, triedb, nil)
 	_, err := trie.TryGet([]byte("120000"))
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
-	trie, _ = NewTrie(root, triedb)
+	trie, _ = NewTrie(root, triedb, nil)
 	_, err = trie.TryGet([]byte("120099"))
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
-	trie, _ = NewTrie(root, triedb)
+	trie, _ = NewTrie(root, triedb, nil)
 	_, err = trie.TryGet([]byte("123456"))
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
-	trie, _ = NewTrie(root, triedb)
+	trie, _ = NewTrie(root, triedb, nil)
 	err = trie.TryUpdate([]byte("120099"), []byte("zxcvzxcvzxcvzxcvzxcvzxcvzxcvzxcv"))
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
-	trie, _ = NewTrie(root, triedb)
+	trie, _ = NewTrie(root, triedb, nil)
 	err = trie.TryDelete([]byte("123456"))
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -130,27 +130,27 @@ func testMissingNode(t *testing.T, memonly bool) {
 		diskdb.Delete(hash[:])
 	}
 
-	trie, _ = NewTrie(root, triedb)
+	trie, _ = NewTrie(root, triedb, nil)
 	_, err = trie.TryGet([]byte("120000"))
 	if _, ok := err.(*MissingNodeError); !ok {
 		t.Errorf("Wrong error: %v", err)
 	}
-	trie, _ = NewTrie(root, triedb)
+	trie, _ = NewTrie(root, triedb, nil)
 	_, err = trie.TryGet([]byte("120099"))
 	if _, ok := err.(*MissingNodeError); !ok {
 		t.Errorf("Wrong error: %v", err)
 	}
-	trie, _ = NewTrie(root, triedb)
+	trie, _ = NewTrie(root, triedb, nil)
 	_, err = trie.TryGet([]byte("123456"))
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
-	trie, _ = NewTrie(root, triedb)
+	trie, _ = NewTrie(root, triedb, nil)
 	err = trie.TryUpdate([]byte("120099"), []byte("zxcv"))
 	if _, ok := err.(*MissingNodeError); !ok {
 		t.Errorf("Wrong error: %v", err)
 	}
-	trie, _ = NewTrie(root, triedb)
+	trie, _ = NewTrie(root, triedb, nil)
 	err = trie.TryDelete([]byte("123456"))
 	if _, ok := err.(*MissingNodeError); !ok {
 		t.Errorf("Wrong error: %v", err)
@@ -278,7 +278,7 @@ func TestReplication(t *testing.T) {
 	}
 
 	// create a new trie on top of the database and check that lookups work.
-	trie2, err := NewTrie(exp, trie.db)
+	trie2, err := NewTrie(exp, trie.db, nil)
 	if err != nil {
 		t.Fatalf("can't recreate trie at %x: %v", exp, err)
 	}
@@ -387,7 +387,7 @@ func (randTest) Generate(r *rand.Rand, size int) reflect.Value {
 func runRandTest(rt randTest) bool {
 	triedb := NewDatabase(database.NewMemoryDBManager())
 
-	tr, _ := NewTrie(common.Hash{}, triedb)
+	tr, _ := NewTrie(common.Hash{}, triedb, nil)
 	values := make(map[string]string) // tracks content of the trie
 
 	for i, step := range rt {
@@ -414,14 +414,14 @@ func runRandTest(rt randTest) bool {
 				rt[i].err = err
 				return false
 			}
-			newtr, err := NewTrie(hash, triedb)
+			newtr, err := NewTrie(hash, triedb, nil)
 			if err != nil {
 				rt[i].err = err
 				return false
 			}
 			tr = newtr
 		case opItercheckhash:
-			checktr, _ := NewTrie(common.Hash{}, triedb)
+			checktr, _ := NewTrie(common.Hash{}, triedb, nil)
 			it := NewIterator(tr.NodeIterator(nil))
 			for it.Next() {
 				checktr.Update(it.Key, it.Value)
@@ -459,7 +459,7 @@ func benchGet(b *testing.B, commit bool) {
 
 	if commit {
 		dbDir, tmpdb := tempDB()
-		trie, _ = NewTrie(common.Hash{}, tmpdb)
+		trie, _ = NewTrie(common.Hash{}, tmpdb, nil)
 
 		defer os.RemoveAll(dbDir)
 		defer tmpdb.diskDB.Close()
@@ -540,7 +540,7 @@ func BenchmarkCommitAfterHash(b *testing.B) {
 func benchmarkCommitAfterHash(b *testing.B) {
 	// Make the random benchmark deterministic
 	addresses, accounts := makeAccounts(b.N)
-	trie, _ := NewTrie(common.Hash{}, NewDatabase(database.NewMemoryDBManager()))
+	trie, _ := NewTrie(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil)
 	for i := 0; i < len(addresses); i++ {
 		trie.Update(crypto.Keccak256(addresses[i][:]), accounts[i])
 	}
@@ -642,7 +642,7 @@ func BenchmarkHashFixedSize(b *testing.B) {
 
 func benchmarkHashFixedSize(b *testing.B, addresses [][20]byte, accounts [][]byte) {
 	b.ReportAllocs()
-	trie, _ := NewTrie(common.Hash{}, NewDatabase(database.NewMemoryDBManager()))
+	trie, _ := NewTrie(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil)
 	for i := 0; i < len(addresses); i++ {
 		trie.Update(crypto.Keccak256(addresses[i][:]), accounts[i])
 	}
@@ -693,7 +693,7 @@ func BenchmarkCommitAfterHashFixedSize(b *testing.B) {
 
 func benchmarkCommitAfterHashFixedSize(b *testing.B, addresses [][20]byte, accounts [][]byte) {
 	b.ReportAllocs()
-	trie, _ := NewTrie(common.Hash{}, NewDatabase(database.NewMemoryDBManager()))
+	trie, _ := NewTrie(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil)
 	for i := 0; i < len(addresses); i++ {
 		trie.Update(crypto.Keccak256(addresses[i][:]), accounts[i])
 	}
@@ -746,7 +746,7 @@ func BenchmarkDerefRootFixedSize(b *testing.B) {
 func benchmarkDerefRootFixedSize(b *testing.B, addresses [][20]byte, accounts [][]byte) {
 	b.ReportAllocs()
 	triedb := NewDatabase(database.NewMemoryDBManager())
-	trie, _ := NewTrie(common.Hash{}, triedb)
+	trie, _ := NewTrie(common.Hash{}, triedb, nil)
 	for i := 0; i < len(addresses); i++ {
 		trie.Update(crypto.Keccak256(addresses[i][:]), accounts[i])
 	}
