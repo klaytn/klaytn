@@ -66,27 +66,12 @@ var (
 	errInvalidUpperBound      = errors.New("upperboundbasefee cannot be set lower than lowerboundbasefee")
 )
 
-func (api *GovernanceKlayAPI) ChainConfig() *params.ChainConfig {
-	num := rpc.LatestBlockNumber
-	return getChainConfig(api.governance, &num)
-}
-
-// TODO-Klaytn-Mantle: deprecate this
-func (api *GovernanceKlayAPI) ChainConfigAt(num *rpc.BlockNumber) *params.ChainConfig {
-	return getChainConfig(api.governance, num)
-}
-
 func (api *GovernanceKlayAPI) GetChainConfig(num *rpc.BlockNumber) *params.ChainConfig {
 	return getChainConfig(api.governance, num)
 }
 
 func (api *GovernanceKlayAPI) GetStakingInfo(num *rpc.BlockNumber) (*reward.StakingInfo, error) {
 	return getStakingInfo(api.governance, num)
-}
-
-// TODO-Klaytn-Mantle: deprecate this
-func (api *GovernanceKlayAPI) GovParamsAt(num *rpc.BlockNumber) (map[string]interface{}, error) {
-	return getParams(api.governance, num)
 }
 
 func (api *GovernanceKlayAPI) GetParams(num *rpc.BlockNumber) (map[string]interface{}, error) {
@@ -355,11 +340,6 @@ func (api *GovernanceAPI) TotalVotingPower() (float64, error) {
 	return float64(api.governance.TotalVotingPower()) / 1000.0, nil
 }
 
-// TODO-Klaytn-Mantle: deprecate this
-func (api *GovernanceAPI) ItemsAt(num *rpc.BlockNumber) (map[string]interface{}, error) {
-	return getParams(api.governance, num)
-}
-
 func (api *GovernanceAPI) GetParams(num *rpc.BlockNumber) (map[string]interface{}, error) {
 	return getParams(api.governance, num)
 }
@@ -449,16 +429,6 @@ func (api *GovernanceAPI) MyVotingPower() (float64, error) {
 		return 0, errNotAvailableInThisMode
 	}
 	return float64(api.governance.MyVotingPower()) / 1000.0, nil
-}
-
-func (api *GovernanceAPI) ChainConfig() *params.ChainConfig {
-	num := rpc.LatestBlockNumber
-	return getChainConfig(api.governance, &num)
-}
-
-// TODO-Klaytn-Mantle: deprecate this
-func (api *GovernanceAPI) ChainConfigAt(num *rpc.BlockNumber) *params.ChainConfig {
-	return getChainConfig(api.governance, num)
 }
 
 func (api *GovernanceAPI) GetChainConfig(num *rpc.BlockNumber) *params.ChainConfig {

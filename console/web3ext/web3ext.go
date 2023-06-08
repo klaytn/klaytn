@@ -297,12 +297,6 @@ web3._extend({
 			params: 2
 		}),
 		new web3._extend.Method({
-			name: 'itemsAt',
-			call: 'governance_itemsAt',
-			params: 1,
-			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
-		}),
-		new web3._extend.Method({
 			name: 'getParams',
 			call: 'governance_getParams',
 			params: 1,
@@ -317,12 +311,6 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'getStakingInfo',
 			call: 'governance_getStakingInfo',
-			params: 1,
-			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
-		}),
-		new web3._extend.Method({
-			name: 'chainConfigAt',
-			call: 'governance_chainConfigAt',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
@@ -917,22 +905,10 @@ web3._extend({
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
-			name: 'govParamsAt',
-			call: 'klay_govParamsAt',
-			params: 1,
-			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
-		}),
-		new web3._extend.Method({
 			name: 'getParams',
 			call: 'klay_getParams',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
-		}),
-		new web3._extend.Method({
-			name: 'chainConfigAt',
-			call: 'klay_chainConfigAt',
-			params: 1,
-			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
 		}),
 		new web3._extend.Method({
 			name: 'getChainConfig',
