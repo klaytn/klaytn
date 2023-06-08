@@ -424,10 +424,9 @@ func TestIncompleteTrieSync(t *testing.T) {
 	srcDb, srcTrie, _ := makeTestTrie()
 
 	// Create a destination trie and sync with the scheduler
-	memDBManager := database.NewMemoryDBManager()
-	diskdb := memDBManager.GetMemDB()
-	triedb := NewDatabase(memDBManager)
-	sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil, NewSyncBloom(1, diskdb), nil)
+	dbm := database.NewMemoryDBManager()
+	triedb := NewDatabase(dbm)
+	sched := NewTrieSync(srcTrie.Hash(), dbm, nil, NewSyncBloom(1, dbm.GetMemDB()), nil)
 
 	var added []common.Hash
 	nodes, _, codes := sched.Missing(1)
@@ -448,7 +447,7 @@ func TestIncompleteTrieSync(t *testing.T) {
 				t.Fatalf("failed to process result #%d: %v", index, err)
 			}
 		}
-		batch := diskdb.NewBatch()
+		batch := dbm.NewBatch(database.StateTrieDB)
 		if index, err := sched.Commit(batch); err != nil {
 			t.Fatalf("failed to commit data #%d: %v", index, err)
 		}
@@ -467,15 +466,14 @@ func TestIncompleteTrieSync(t *testing.T) {
 		queue = append(append(queue[:0], nodes...), codes...)
 	}
 	// Sanity check that removing any node from the database is detected
-	for _, node := range added[1:] {
-		key := node.Bytes()
-		value, _ := diskdb.Get(key)
+	for _, hash := range added[1:] {
+		value, _ := dbm.ReadTrieNode(hash)
 
-		diskdb.Delete(key)
+		dbm.DeleteTrieNode(hash)
 		if err := checkTrieConsistency(triedb, added[0]); err == nil {
-			t.Fatalf("trie inconsistency not caught, missing: %x", key)
+			t.Fatalf("trie inconsistency not caught, missing: %x", hash)
 		}
-		diskdb.Put(key, value)
+		dbm.WriteTrieNode(hash, value)
 	}
 }
 
@@ -508,7 +506,7 @@ func TestSyncOrdering(t *testing.T) {
 				t.Fatalf("failed to process result %v", err)
 			}
 		}
-		batch := diskdb.GetMemDB().NewBatch()
+		batch := diskdb.NewBatch(database.StateTrieDB)
 		if _, err := sched.Commit(batch); err != nil {
 			t.Fatalf("failed to commit data: %v", err)
 		}

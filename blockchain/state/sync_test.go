@@ -147,7 +147,7 @@ func checkStateAccounts(t *testing.T, newDB database.DBManager, root common.Hash
 
 // checkTrieConsistency checks that all nodes in a (sub-)trie are indeed present.
 func checkTrieConsistency(db database.DBManager, root common.Hash) error {
-	if v, _ := db.ReadStateTrieNode(root[:]); v == nil {
+	if v, _ := db.ReadTrieNode(root); v == nil {
 		return nil // Consider a non existent state consistent.
 	}
 	trie, err := statedb.NewTrie(root, statedb.NewDatabase(db), nil)
@@ -163,7 +163,7 @@ func checkTrieConsistency(db database.DBManager, root common.Hash) error {
 // checkStateConsistency checks that all data of a state root is present.
 func checkStateConsistency(db database.DBManager, root common.Hash) error {
 	// Create and iterate a state trie rooted in a sub-node
-	if _, err := db.ReadStateTrieNode(root.Bytes()); err != nil {
+	if _, err := db.ReadTrieNode(root); err != nil {
 		return nil // Consider a non existent state consistent.
 	}
 	state, err := New(root, NewDatabase(db), nil, nil)
@@ -387,9 +387,9 @@ func TestCheckStateConsistencyMissNode(t *testing.T) {
 				srcState.DeleteCode(hash)
 				newState.DeleteCode(hash)
 			} else {
-				data, _ = srcDiskDB.ReadCachedTrieNode(hash)
-				srcDiskDB.GetMemDB().Delete(hash[:])
-				newDiskDB.GetMemDB().Delete(hash[:])
+				data, _ = srcDiskDB.ReadTrieNode(hash)
+				srcDiskDB.DeleteTrieNode(hash)
+				newDiskDB.DeleteTrieNode(hash)
 			}
 			// Check consistency : errIterator
 			err = CheckStateConsistency(srcState, newState, srcRoot, 100, nil)
@@ -399,8 +399,13 @@ func TestCheckStateConsistencyMissNode(t *testing.T) {
 			}
 
 			// Recover nodes
-			srcDiskDB.GetMemDB().Put(hash[:], data)
-			newDiskDB.GetMemDB().Put(hash[:], data)
+			if code {
+				srcDiskDB.WriteCode(hash, data)
+				newDiskDB.WriteCode(hash, data)
+			} else {
+				srcDiskDB.WriteTrieNode(hash, data)
+				newDiskDB.WriteTrieNode(hash, data)
+			}
 		}
 	}
 
@@ -605,7 +610,7 @@ func TestIncompleteStateSync(t *testing.T) {
 		}
 		return false
 	}
-	checkTrieConsistency(srcState.TrieDB().DiskDB().(database.DBManager), srcRoot)
+	checkTrieConsistency(srcState.TrieDB().DiskDB(), srcRoot)
 
 	// Create a destination state and sync with the scheduler
 	dstDb := database.NewMemoryDBManager()
@@ -670,8 +675,8 @@ func TestIncompleteStateSync(t *testing.T) {
 			val = dstDb.ReadCode(node)
 			dstState.DeleteCode(node)
 		} else {
-			val, _ = dstDb.ReadCachedTrieNode(node)
-			dstDb.GetMemDB().Delete(node[:])
+			val, _ = dstDb.ReadTrieNode(node)
+			dstDb.DeleteTrieNode(node)
 		}
 
 		if err := checkStateConsistency(dstDb, added[0]); err == nil {
@@ -683,11 +688,11 @@ func TestIncompleteStateSync(t *testing.T) {
 
 		err = CheckStateConsistencyParallel(srcState, dstState, srcRoot, nil)
 		assert.Error(t, err)
+
 		if code {
 			dstDb.WriteCode(node, val)
 		} else {
-			// insert a trie node to memory database
-			dstDb.GetMemDB().Put(node[:], val)
+			dstDb.WriteTrieNode(node, val)
 		}
 	}
 

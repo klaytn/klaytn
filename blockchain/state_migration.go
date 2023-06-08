@@ -46,20 +46,12 @@ type stateTrieMigrationDB struct {
 	database.DBManager
 }
 
-func (td *stateTrieMigrationDB) ReadCachedTrieNode(hash common.Hash) ([]byte, error) {
-	return td.ReadCachedTrieNodeFromNew(hash)
+func (td *stateTrieMigrationDB) ReadTrieNode(hash common.Hash) ([]byte, error) {
+	return td.ReadTrieNodeFromNew(hash)
 }
 
-func (td *stateTrieMigrationDB) ReadCachedTrieNodePreimage(secureKey []byte) ([]byte, error) {
-	return td.ReadCachedTrieNodePreimageFromNew(secureKey)
-}
-
-func (td *stateTrieMigrationDB) ReadStateTrieNode(key []byte) ([]byte, error) {
-	return td.ReadStateTrieNodeFromNew(key)
-}
-
-func (td *stateTrieMigrationDB) HasStateTrieNode(key []byte) (bool, error) {
-	return td.HasStateTrieNodeFromNew(key)
+func (td *stateTrieMigrationDB) HasTrieNode(hash common.Hash) (bool, error) {
+	return td.HasTrieNodeFromNew(hash)
 }
 
 func (td *stateTrieMigrationDB) HasCodeWithPrefix(hash common.Hash) bool {

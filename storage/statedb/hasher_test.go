@@ -41,7 +41,7 @@ func checkHasherHashFunc(t *testing.T, idx int, tc *testNodeEncodingTC, hashFunc
 	assert.Equal(t, tc.inserted, inserted, idx)
 
 	db.Cap(0)
-	encoded, _ := memDB.ReadCachedTrieNode(hash)
+	encoded, _ := memDB.ReadTrieNode(hash)
 	assert.Equal(t, tc.encoded, encoded, idx)
 }
 

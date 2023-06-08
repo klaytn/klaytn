@@ -85,7 +85,7 @@ func TestMigration_StartMigrationByMiscDB(t *testing.T) {
 		assert.Len(t, key, 0)
 
 		// write values in stateDB and check if the values are stored in DB
-		entries := writeRandomValueToStateTrieDB(t, cn.ChainDB().NewBatch(database.StateTrieDB))
+		entries := writeRandomValueToStateTrieDB(t, cn.ChainDB())
 		stopNode(t, fullNode) // stop node to release DB lock
 		checkIfStoredInDB(t, cn.ChainDB().GetDBConfig().NumStateTrieShards, filepath.Join(cn.ChainDB().GetDBConfig().Dir, "statetrie"), entries)
 		fullNode, cn = startNode(t, workspace, validator)
@@ -105,13 +105,13 @@ func TestMigration_StartMigrationByMiscDB(t *testing.T) {
 	}
 }
 
-func writeRandomValueToStateTrieDB(t *testing.T, batch database.Batch) map[string]string {
+func writeRandomValueToStateTrieDB(t *testing.T, dbm database.DBManager) map[string]string {
+	batch := dbm.NewBatch(database.StateTrieDB)
 	entries := make(map[string]string, 10)
 
 	for i := 0; i < 10; i++ {
 		key, value := common.MakeRandomBytes(common.HashLength), common.MakeRandomBytes(400)
-		err := batch.Put(key, value)
-		assert.NoError(t, err)
+		dbm.PutTrieNodeToBatch(batch, common.BytesToHash(key), value)
 		entries[string(key)] = string(value)
 	}
 	assert.NoError(t, batch.Write())

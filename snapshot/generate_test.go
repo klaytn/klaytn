@@ -467,7 +467,7 @@ func TestGenerateCorruptAccountTrie(t *testing.T) {
 	// Delete an account trie leaf and ensure the generator chokes
 	// TODO-Klaytn-Snapshot put propoer block number
 	triedb.Commit(common.HexToHash("0xa04693ea110a31037fb5ee814308a6f1d76bdab0b11676bdf4541d2de55ba978"), false, 0)
-	diskdb.GetMemDB().Delete(common.HexToHash("0x65145f923027566669a1ae5ccac66f945b55ff6eaeb17d2ea8e048b7d381f2d7").Bytes())
+	diskdb.DeleteTrieNode(common.HexToHash("0x65145f923027566669a1ae5ccac66f945b55ff6eaeb17d2ea8e048b7d381f2d7"))
 
 	snap := generateSnapshot(diskdb, triedb, 16, common.HexToHash("0xa04693ea110a31037fb5ee814308a6f1d76bdab0b11676bdf4541d2de55ba978"))
 	select {
@@ -531,7 +531,7 @@ func TestGenerateMissingStorageTrie(t *testing.T) {
 	triedb.Commit(common.HexToHash("0xa2282b99de1fc11e32d26bee37707ef49a6978b2d375796a1b026a497193a2ef"), false, 0)
 
 	// Delete a storage trie root and ensure the generator chokes
-	diskdb.GetMemDB().Delete(common.HexToHash("0xddefcd9376dd029653ef384bd2f0a126bb755fe84fdcc9e7cf421ba454f2bc67").Bytes())
+	diskdb.DeleteTrieNode(common.HexToHash("0xddefcd9376dd029653ef384bd2f0a126bb755fe84fdcc9e7cf421ba454f2bc67"))
 
 	snap := generateSnapshot(diskdb, triedb, 16, common.HexToHash("0xa2282b99de1fc11e32d26bee37707ef49a6978b2d375796a1b026a497193a2ef"))
 	select {
@@ -594,7 +594,7 @@ func TestGenerateCorruptStorageTrie(t *testing.T) {
 	triedb.Commit(common.HexToHash("0x4a651234bc4b8c7462b5ad4eb95bbb724eb636fed72bb5278d886f9ea4c345f8"), false, 0)
 
 	// Delete a storage trie leaf and ensure the generator chokes
-	diskdb.GetMemDB().Delete(common.HexToHash("0x18a0f4d79cff4459642dd7604f303886ad9d77c30cf3d7d7cedb3a693ab6d371").Bytes())
+	diskdb.DeleteTrieNode(common.HexToHash("0x18a0f4d79cff4459642dd7604f303886ad9d77c30cf3d7d7cedb3a693ab6d371"))
 
 	snap := generateSnapshot(diskdb, triedb, 16, common.HexToHash("0x4a651234bc4b8c7462b5ad4eb95bbb724eb636fed72bb5278d886f9ea4c345f8"))
 	select {
