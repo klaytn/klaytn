@@ -36,7 +36,7 @@ type ProofDBWriter interface {
 }
 
 type ProofDBReader interface {
-	ReadTrieNode(hash common.Hash) ([]byte, error)
+	ReadTrieNode(hash common.ExtHash) ([]byte, error)
 }
 
 // Prove constructs a merkle proof for key. The result contains all encoded nodes
@@ -121,7 +121,7 @@ func VerifyProof(rootHash common.Hash, key []byte, proofDB database.DBManager) (
 	key = keybytesToHex(key)
 	wantHash := rootHash
 	for i := 0; ; i++ {
-		buf, _ := proofDB.ReadTrieNode(wantHash)
+		buf, _ := proofDB.ReadTrieNode(wantHash.ExtendLegacy()) // only works with hash32
 		if buf == nil {
 			return nil, fmt.Errorf("proof node %d (hash %064x) missing", i, wantHash), i
 		}
@@ -151,7 +151,7 @@ func VerifyProof(rootHash common.Hash, key []byte, proofDB database.DBManager) (
 func proofToPath(rootHash common.Hash, root node, key []byte, proofDb ProofDBReader, allowNonExistent bool) (node, []byte, error) {
 	// resolveNode retrieves and resolves trie node from merkle proof stream
 	resolveNode := func(hash common.Hash) (node, error) {
-		buf, _ := proofDb.ReadTrieNode(hash)
+		buf, _ := proofDb.ReadTrieNode(hash.ExtendLegacy()) // only works with hash32
 		if buf == nil {
 			return nil, fmt.Errorf("proof node (hash %064x) missing", hash)
 		}

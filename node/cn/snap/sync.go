@@ -1791,7 +1791,8 @@ func (s *Syncer) processAccountResponse(res *accountResponse) {
 		}
 		// Check if the account is a contract with an unknown storage trie
 		if pacc != nil && pacc.GetStorageRoot() != emptyRoot {
-			if ok, err := s.db.HasTrieNode(pacc.GetStorageRoot()); err != nil || !ok {
+			// TODO-Klaytn-Pruning: StorageRoot is ExtHash
+			if ok, err := s.db.HasTrieNode(pacc.GetStorageRoot().ExtendLegacy()); err != nil || !ok {
 				// If there was a previous large state retrieval in progress,
 				// don't restart it from scratch. This happens if a sync cycle
 				// is interrupted and resumed later. However, *do* update the

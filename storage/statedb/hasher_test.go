@@ -25,8 +25,6 @@ import (
 )
 
 func checkHasherHashFunc(t *testing.T, idx int, tc *testNodeEncodingTC, hashFunc func(*Database) (node, node)) {
-	hash := common.BytesToHash(tc.hash)
-
 	memDB := database.NewMemoryDBManager()
 	db := NewDatabase(memDB)
 
@@ -37,7 +35,8 @@ func checkHasherHashFunc(t *testing.T, idx int, tc *testNodeEncodingTC, hashFunc
 	cachedHash, _ := cached.cache()
 	assert.Equal(t, hashNode(tc.hash), cachedHash, idx)
 
-	inserted := db.nodes[hash].node
+	hash := common.BytesToExtHash(tc.hash)
+	inserted := db.nodes[hash.Unextend()].node
 	assert.Equal(t, tc.inserted, inserted, idx)
 
 	db.Cap(0)

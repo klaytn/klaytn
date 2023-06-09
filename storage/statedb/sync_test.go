@@ -467,13 +467,14 @@ func TestIncompleteTrieSync(t *testing.T) {
 	}
 	// Sanity check that removing any node from the database is detected
 	for _, hash := range added[1:] {
-		value, _ := dbm.ReadTrieNode(hash)
+		nodehash := hash.ExtendLegacy()
+		value, _ := dbm.ReadTrieNode(nodehash)
 
-		dbm.DeleteTrieNode(hash)
+		dbm.DeleteTrieNode(nodehash)
 		if err := checkTrieConsistency(triedb, added[0]); err == nil {
 			t.Fatalf("trie inconsistency not caught, missing: %x", hash)
 		}
-		dbm.WriteTrieNode(hash, value)
+		dbm.WriteTrieNode(nodehash, value)
 	}
 }
 

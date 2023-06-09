@@ -463,7 +463,7 @@ func (st *StackTrie) hash() {
 	h.sha.Write(h.tmp)
 	h.sha.Read(st.val)
 	if st.db != nil {
-		st.db.WriteTrieNode(common.BytesToHash(st.val), h.tmp)
+		st.db.WriteTrieNode(common.BytesToExtHash(st.val), h.tmp)
 	}
 }
 
@@ -507,7 +507,7 @@ func (st *StackTrie) Commit() (common.Hash, error) {
 		h.sha.Reset()
 		h.sha.Write(st.val)
 		h.sha.Read(ret)
-		st.db.WriteTrieNode(common.BytesToHash(ret), st.val)
+		st.db.WriteTrieNode(common.BytesToExtHash(ret), st.val)
 		return common.BytesToHash(ret), nil
 	}
 	return common.BytesToHash(st.val), nil

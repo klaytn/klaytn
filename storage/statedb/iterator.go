@@ -314,7 +314,7 @@ func (it *nodeIterator) peek(descend bool) (*nodeIteratorState, *int, []byte, er
 func (it *nodeIterator) resolveHash(hash hashNode, path []byte) (node, error) {
 	if it.resolver != nil {
 		hash := common.BytesToHash(hash)
-		enc, _ := it.resolver.ReadTrieNode(hash)
+		enc, _ := it.resolver.ReadTrieNode(hash.ExtendLegacy())
 		if enc != nil {
 			if resolved, err := decodeNode(hash[:], enc); err == nil {
 				return resolved, nil

@@ -42,26 +42,6 @@ var (
 	blockChainStopWarmUpErr = errors.New("warm-up terminate as blockchain stopped")
 )
 
-type stateTrieMigrationDB struct {
-	database.DBManager
-}
-
-func (td *stateTrieMigrationDB) ReadTrieNode(hash common.Hash) ([]byte, error) {
-	return td.ReadTrieNodeFromNew(hash)
-}
-
-func (td *stateTrieMigrationDB) HasTrieNode(hash common.Hash) (bool, error) {
-	return td.HasTrieNodeFromNew(hash)
-}
-
-func (td *stateTrieMigrationDB) HasCodeWithPrefix(hash common.Hash) bool {
-	return td.HasCodeWithPrefixFromNew(hash)
-}
-
-func (td *stateTrieMigrationDB) ReadPreimage(hash common.Hash) []byte {
-	return td.ReadPreimageFromNew(hash)
-}
-
 func (bc *BlockChain) stateMigrationCommit(s *statedb.TrieSync, batch database.Batch) (int, error) {
 	written, err := s.Commit(batch)
 	if written == 0 || err != nil {
@@ -119,7 +99,7 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) (returnErr error) {
 	start := time.Now()
 
 	srcState := bc.StateCache()
-	dstState := state.NewDatabase(&stateTrieMigrationDB{bc.db})
+	dstState := state.NewDatabase(bc.db)
 
 	// NOTE: lruCache is mandatory when state migration and block processing are executed simultaneously
 	lruCache, _ := lru.New(int(2 * units.Giga / common.HashLength)) // 2GB for 62,500,000 common.Hash key values

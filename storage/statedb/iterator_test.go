@@ -337,12 +337,14 @@ func testIteratorContinueAfterError(t *testing.T, memonly bool) {
 				break
 			}
 		}
+		nodehash := rkey.ExtendLegacy()
+
 		if memonly {
 			robj = triedb.nodes[rkey]
 			delete(triedb.nodes, rkey)
 		} else {
-			rval, _ = dbm.ReadTrieNode(rkey)
-			dbm.DeleteTrieNode(rkey)
+			rval, _ = dbm.ReadTrieNode(nodehash)
+			dbm.DeleteTrieNode(nodehash)
 		}
 		// Iterate until the error is hit.
 		seen := make(map[string]bool)
@@ -357,7 +359,7 @@ func testIteratorContinueAfterError(t *testing.T, memonly bool) {
 		if memonly {
 			triedb.nodes[rkey] = robj
 		} else {
-			dbm.WriteTrieNode(rkey, rval)
+			dbm.WriteTrieNode(nodehash, rval)
 		}
 		checkIteratorNoDups(t, it, seen)
 		if it.Error() != nil {
@@ -394,6 +396,7 @@ func testIteratorContinueAfterSeekError(t *testing.T, memonly bool) {
 		triedb.Commit(root, true, 0)
 	}
 	barNodeHash := common.HexToHash("05041990364eb72fcb1127652ce40d8bab765f2bfe53225b1170d276cc101c2e")
+	nodehash := barNodeHash.ExtendLegacy()
 	var (
 		barNodeBlob []byte
 		barNodeObj  *cachedNode
@@ -402,8 +405,8 @@ func testIteratorContinueAfterSeekError(t *testing.T, memonly bool) {
 		barNodeObj = triedb.nodes[barNodeHash]
 		delete(triedb.nodes, barNodeHash)
 	} else {
-		barNodeBlob, _ = dbm.ReadTrieNode(barNodeHash)
-		dbm.DeleteTrieNode(barNodeHash)
+		barNodeBlob, _ = dbm.ReadTrieNode(nodehash)
+		dbm.DeleteTrieNode(nodehash)
 	}
 	// Create a new iterator that seeks to "bars". Seeking can't proceed because
 	// the node is missing.
@@ -419,7 +422,7 @@ func testIteratorContinueAfterSeekError(t *testing.T, memonly bool) {
 	if memonly {
 		triedb.nodes[barNodeHash] = barNodeObj
 	} else {
-		dbm.WriteTrieNode(barNodeHash, barNodeBlob)
+		dbm.WriteTrieNode(nodehash, barNodeBlob)
 	}
 	// Check that iteration produces the right set of values.
 	if err := checkIteratorOrder(testdata1[2:], NewIterator(it)); err != nil {
