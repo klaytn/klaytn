@@ -478,9 +478,9 @@ func (db *Database) getCachedNode(hash common.Hash) []byte {
 }
 
 // setCachedNode stores an encoded node to the trie node cache if enabled.
-func (db *Database) setCachedNode(hash, enc []byte) {
+func (db *Database) setCachedNode(hash common.Hash, enc []byte) {
 	if db.trieNodeCache != nil {
-		db.trieNodeCache.Set(hash, enc)
+		db.trieNodeCache.Set(hash[:], enc)
 		memcacheCleanMissMeter.Mark(1)
 		memcacheCleanWriteMeter.Mark(int64(len(enc)))
 	}
@@ -512,7 +512,7 @@ func (db *Database) node(hash common.Hash) (n node, fromDB bool) {
 	if err != nil || enc == nil {
 		return nil, true
 	}
-	db.setCachedNode(hash[:], enc)
+	db.setCachedNode(hash, enc)
 	return mustDecodeNode(hash[:], enc), true
 }
 
@@ -539,7 +539,7 @@ func (db *Database) Node(hash common.Hash) ([]byte, error) {
 	// TODO-Klaytn-Pruning: Node() takes ExtHash
 	enc, err := db.diskDB.ReadTrieNode(hash.ExtendLegacy())
 	if err == nil && enc != nil {
-		db.setCachedNode(hash[:], enc)
+		db.setCachedNode(hash, enc)
 	}
 	return enc, err
 }
@@ -567,7 +567,7 @@ func (db *Database) NodeFromOld(hash common.Hash) ([]byte, error) {
 	// TODO-Klaytn-Pruning: NodeFromOld() takes ExtHash
 	enc, err := db.diskDB.ReadTrieNodeFromOld(hash.ExtendLegacy())
 	if err == nil && enc != nil {
-		db.setCachedNode(hash[:], enc)
+		db.setCachedNode(hash, enc)
 	}
 	return enc, err
 }
@@ -761,9 +761,7 @@ func (db *Database) Cap(limit common.StorageSize) error {
 			return err
 		}
 
-		if db.trieNodeCache != nil {
-			db.trieNodeCache.Set(oldest[:], enc)
-		}
+		db.setCachedNode(oldest, enc)
 		// Iterate to the next flush item, or abort if the size cap was achieved. Size
 		// is the total size, including both the useful cached data (hash -> blob), as
 		// well as the flushlist metadata (2*hash). When flushing items from the cache,
@@ -866,9 +864,7 @@ func (db *Database) writeBatchNodes(node common.Hash) error {
 		logger.Error("Failed to write trie to disk", "err", err)
 		return err
 	}
-	if db.trieNodeCache != nil {
-		db.trieNodeCache.Set(node[:], enc)
-	}
+	db.setCachedNode(node, enc)
 
 	return nil
 }
@@ -949,9 +945,7 @@ func (db *Database) commit(hash common.Hash, resultCh chan<- commitResult) {
 	enc := node.rlp()
 	resultCh <- commitResult{hash, enc}
 
-	if db.trieNodeCache != nil {
-		db.trieNodeCache.Set(hash[:], enc)
-	}
+	db.setCachedNode(hash, enc)
 }
 
 // uncache is the post-processing step of a commit operation where the already
