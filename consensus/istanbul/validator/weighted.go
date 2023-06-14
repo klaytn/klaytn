@@ -764,8 +764,10 @@ func getStakingAmountsOfValidators(validators istanbul.Validators, stakingInfo *
 		weightedVals[vIdx] = weightedVal
 
 		if cIdx, err := stakingInfo.GetIndexByNodeAddress(weightedVal.address); err == nil {
+			valRewardAddr := stakingInfo.CouncilRewardAddrs[cIdx]
+			weightedVal.SetRewardAddress(valRewardAddr)
 			for rIdx, rewardAddr := range stakingInfo.CouncilRewardAddrs {
-				if rewardAddr == stakingInfo.CouncilRewardAddrs[cIdx] {
+				if rewardAddr == valRewardAddr {
 					stakingAmounts[vIdx] += float64(stakingInfo.CouncilStakingAmounts[rIdx])
 				}
 			}
