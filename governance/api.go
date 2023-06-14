@@ -26,7 +26,6 @@ import (
 	"time"
 
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/reward"
@@ -66,16 +65,6 @@ var (
 	errInvalidUpperBound      = errors.New("upperboundbasefee cannot be set lower than lowerboundbasefee")
 )
 
-func (api *GovernanceKlayAPI) ChainConfig() *params.ChainConfig {
-	num := rpc.LatestBlockNumber
-	return getChainConfig(api.governance, &num)
-}
-
-// TODO-Klaytn-Mantle: deprecate this
-func (api *GovernanceKlayAPI) ChainConfigAt(num *rpc.BlockNumber) *params.ChainConfig {
-	return getChainConfig(api.governance, num)
-}
-
 func (api *GovernanceKlayAPI) GetChainConfig(num *rpc.BlockNumber) *params.ChainConfig {
 	return getChainConfig(api.governance, num)
 }
@@ -84,54 +73,12 @@ func (api *GovernanceKlayAPI) GetStakingInfo(num *rpc.BlockNumber) (*reward.Stak
 	return getStakingInfo(api.governance, num)
 }
 
-// TODO-Klaytn-Mantle: deprecate this
-func (api *GovernanceKlayAPI) GovParamsAt(num *rpc.BlockNumber) (map[string]interface{}, error) {
-	return getParams(api.governance, num)
-}
-
 func (api *GovernanceKlayAPI) GetParams(num *rpc.BlockNumber) (map[string]interface{}, error) {
 	return getParams(api.governance, num)
 }
 
 func (api *GovernanceKlayAPI) NodeAddress() common.Address {
 	return api.governance.NodeAddress()
-}
-
-// GasPriceAt returns the base fee of the given block in peb,
-// or returns unit price by using governance if there is no base fee set in header,
-// or returns gas price of txpool if the block is pending block.
-func (api *GovernanceKlayAPI) GasPriceAt(num *rpc.BlockNumber) (*hexutil.Big, error) {
-	if num == nil || *num == rpc.LatestBlockNumber {
-		header := api.chain.CurrentBlock().Header()
-		if header.BaseFee == nil {
-			pset, err := api.governance.EffectiveParams(header.Number.Uint64() + 1)
-			if err != nil {
-				return nil, err
-			}
-			return (*hexutil.Big)(new(big.Int).SetUint64(pset.UnitPrice())), nil
-		}
-		return (*hexutil.Big)(header.BaseFee), nil
-	} else if *num == rpc.PendingBlockNumber {
-		txpool := api.governance.GetTxPool()
-		return (*hexutil.Big)(txpool.GasPrice()), nil
-	} else {
-		blockNum := num.Uint64()
-
-		// Return the BaseFee in header at the block number
-		header := api.chain.GetHeaderByNumber(blockNum)
-		if blockNum > api.chain.CurrentBlock().NumberU64() || header == nil {
-			return nil, errUnknownBlock
-		} else if header.BaseFee != nil {
-			return (*hexutil.Big)(header.BaseFee), nil
-		}
-
-		// Return the UnitPrice in governance data at the block number
-		if ret, err := api.GasPriceAtNumber(blockNum); err != nil {
-			return nil, err
-		} else {
-			return (*hexutil.Big)(new(big.Int).SetUint64(ret)), nil
-		}
-	}
 }
 
 // GetRewards returns detailed information of the block reward at a given block number.
@@ -355,11 +302,6 @@ func (api *GovernanceAPI) TotalVotingPower() (float64, error) {
 	return float64(api.governance.TotalVotingPower()) / 1000.0, nil
 }
 
-// TODO-Klaytn-Mantle: deprecate this
-func (api *GovernanceAPI) ItemsAt(num *rpc.BlockNumber) (map[string]interface{}, error) {
-	return getParams(api.governance, num)
-}
-
 func (api *GovernanceAPI) GetParams(num *rpc.BlockNumber) (map[string]interface{}, error) {
 	return getParams(api.governance, num)
 }
@@ -451,16 +393,6 @@ func (api *GovernanceAPI) MyVotingPower() (float64, error) {
 	return float64(api.governance.MyVotingPower()) / 1000.0, nil
 }
 
-func (api *GovernanceAPI) ChainConfig() *params.ChainConfig {
-	num := rpc.LatestBlockNumber
-	return getChainConfig(api.governance, &num)
-}
-
-// TODO-Klaytn-Mantle: deprecate this
-func (api *GovernanceAPI) ChainConfigAt(num *rpc.BlockNumber) *params.ChainConfig {
-	return getChainConfig(api.governance, num)
-}
-
 func (api *GovernanceAPI) GetChainConfig(num *rpc.BlockNumber) *params.ChainConfig {
 	return getChainConfig(api.governance, num)
 }
@@ -504,15 +436,6 @@ func (api *GovernanceAPI) isGovernanceModeBallot() bool {
 	}
 	gMode := pset.GovernanceModeInt()
 	return gMode == params.GovernanceMode_Ballot
-}
-
-func (api *GovernanceKlayAPI) GasPriceAtNumber(num uint64) (uint64, error) {
-	pset, err := api.governance.EffectiveParams(num)
-	if err != nil {
-		logger.Error("Failed to retrieve unit price", "err", err)
-		return 0, err
-	}
-	return pset.UnitPrice(), nil
 }
 
 // Disabled APIs
