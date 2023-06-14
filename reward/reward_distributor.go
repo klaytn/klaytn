@@ -237,7 +237,7 @@ func CalcDeferredRewardSimple(header *types.Header, rules params.Rules, pset *pa
 	// Therefore, there are no fees to distribute here at the end of block processing.
 	// However, the fees must be compensated to calculate actual rewards paid.
 
-	if !rc.deferredTxFee {
+	if !rc.deferredTxFee && rc.rules.IsIstanbul {
 		proposer := new(big.Int).Set(minted)
 		logger.Debug("CalcDeferredRewardSimple after Kore when deferredTxFee=false returns",
 			"proposer", proposer)
