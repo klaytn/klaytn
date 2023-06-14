@@ -162,7 +162,7 @@ func testBlockChainImport(chain types.Blocks, blockchain *BlockChain) error {
 			}
 			return err
 		}
-		statedb, err := state.New(blockchain.GetBlockByHash(block.ParentHash()).Root(), blockchain.stateCache, nil)
+		statedb, err := state.New(blockchain.GetBlockByHash(block.ParentHash()).Root(), blockchain.stateCache, nil, nil)
 		if err != nil {
 			return err
 		}
@@ -1099,9 +1099,7 @@ func TestEIP155Transition(t *testing.T) {
 		}
 	})
 	_, err := blockchain.InsertChain(blocks)
-	if err != types.ErrInvalidChainId {
-		t.Error("expected error:", types.ErrInvalidChainId)
-	}
+	assert.Equal(t, types.ErrSender(types.ErrInvalidChainId), err)
 }
 
 // TODO-Klaytn-FailedTest Failed test. Enable this later.

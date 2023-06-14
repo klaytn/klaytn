@@ -35,6 +35,7 @@ import (
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/rlp"
+	"github.com/klaytn/klaytn/storage/statedb"
 )
 
 var emptyCodeHash = crypto.Keccak256(nil)
@@ -156,10 +157,7 @@ func (c *stateObject) touch() {
 }
 
 func (c *stateObject) openStorageTrie(hash common.Hash, db Database) (Trie, error) {
-	if c.db.prefetching {
-		return db.OpenStorageTrieForPrefetching(hash)
-	}
-	return db.OpenStorageTrie(hash)
+	return db.OpenStorageTrie(hash, &statedb.TrieOpts{Prefetching: c.db.prefetching})
 }
 
 func (c *stateObject) getStorageTrie(db Database) Trie {

@@ -675,7 +675,7 @@ func TestSmartContractSign(t *testing.T) {
 
 		receipt, err := applyTransaction(t, bcdata, tx)
 		assert.Equal(t, (*types.Receipt)(nil), receipt)
-		assert.Equal(t, types.ErrInvalidSigSender, err)
+		assert.Equal(t, types.ErrSender(types.ErrInvalidSigSender), err)
 	}
 
 	// 4. Try fee delegation. It should be failed.
@@ -701,7 +701,7 @@ func TestSmartContractSign(t *testing.T) {
 
 		receipt, err := applyTransaction(t, bcdata, tx)
 		assert.Equal(t, (*types.Receipt)(nil), receipt)
-		assert.Equal(t, types.ErrInvalidSigFeePayer, err)
+		assert.Equal(t, types.ErrFeePayer(types.ErrInvalidSigFeePayer), err)
 	}
 }
 
@@ -1721,7 +1721,7 @@ func TestMultisigScenario(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		receipt, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, types.ErrInvalidSigSender, err)
+		assert.Equal(t, types.ErrSender(types.ErrInvalidSigSender), err)
 		assert.Equal(t, (*types.Receipt)(nil), receipt)
 	}
 
@@ -1743,7 +1743,7 @@ func TestValidateSender(t *testing.T) {
 
 	initialBalance := big.NewInt(1000000)
 
-	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil)
+	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
 	statedb.CreateEOA(anon.Addr, false, anon.AccKey)
 	statedb.SetNonce(anon.Addr, nonce)
 	statedb.SetBalance(anon.Addr, initialBalance)

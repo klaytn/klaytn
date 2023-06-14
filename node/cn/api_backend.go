@@ -87,6 +87,9 @@ func (b *CNAPIBackend) HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumb
 	// Pending block is only known by the miner
 	if blockNr == rpc.PendingBlockNumber {
 		block := b.cn.miner.PendingBlock()
+		if block == nil {
+			return nil, fmt.Errorf("pending block is not prepared yet")
+		}
 		return block.Header(), nil
 	}
 	// Otherwise resolve and return the block
@@ -125,6 +128,9 @@ func (b *CNAPIBackend) BlockByNumber(ctx context.Context, blockNr rpc.BlockNumbe
 	// Pending block is only known by the miner
 	if blockNr == rpc.PendingBlockNumber {
 		block := b.cn.miner.PendingBlock()
+		if block == nil {
+			return nil, fmt.Errorf("pending block is not prepared yet")
+		}
 		return block, nil
 	}
 	// Otherwise resolve and return the block
@@ -156,6 +162,9 @@ func (b *CNAPIBackend) StateAndHeaderByNumber(ctx context.Context, blockNr rpc.B
 	// Pending state is only known by the miner
 	if blockNr == rpc.PendingBlockNumber {
 		block, state := b.cn.miner.Pending()
+		if block == nil || state == nil {
+			return nil, nil, fmt.Errorf("pending block is not prepared yet")
+		}
 		return state, block.Header(), nil
 	}
 	// Otherwise resolve the block number and return its state

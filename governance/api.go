@@ -20,9 +20,10 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"runtime"
 	"strings"
-
-	"github.com/klaytn/klaytn/common/hexutil"
+	"sync"
+	"time"
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/networks/rpc"
@@ -30,7 +31,7 @@ import (
 	"github.com/klaytn/klaytn/reward"
 )
 
-type PublicGovernanceAPI struct {
+type GovernanceAPI struct {
 	governance Engine // Node interfaced by this API
 }
 
@@ -40,8 +41,8 @@ type returnTally struct {
 	ApprovalPercentage float64
 }
 
-func NewGovernanceAPI(gov Engine) *PublicGovernanceAPI {
-	return &PublicGovernanceAPI{governance: gov}
+func NewGovernanceAPI(gov Engine) *GovernanceAPI {
+	return &GovernanceAPI{governance: gov}
 }
 
 type GovernanceKlayAPI struct {
@@ -64,13 +65,12 @@ var (
 	errInvalidUpperBound      = errors.New("upperboundbasefee cannot be set lower than lowerboundbasefee")
 )
 
-func (api *GovernanceKlayAPI) GetStakingInfo(num *rpc.BlockNumber) (*reward.StakingInfo, error) {
-	return getStakingInfo(api.governance, num)
+func (api *GovernanceKlayAPI) GetChainConfig(num *rpc.BlockNumber) *params.ChainConfig {
+	return getChainConfig(api.governance, num)
 }
 
-// TODO-Klaytn-Mantle: deprecate this
-func (api *GovernanceKlayAPI) GovParamsAt(num *rpc.BlockNumber) (map[string]interface{}, error) {
-	return getParams(api.governance, num)
+func (api *GovernanceKlayAPI) GetStakingInfo(num *rpc.BlockNumber) (*reward.StakingInfo, error) {
+	return getStakingInfo(api.governance, num)
 }
 
 func (api *GovernanceKlayAPI) GetParams(num *rpc.BlockNumber) (map[string]interface{}, error) {
@@ -79,43 +79,6 @@ func (api *GovernanceKlayAPI) GetParams(num *rpc.BlockNumber) (map[string]interf
 
 func (api *GovernanceKlayAPI) NodeAddress() common.Address {
 	return api.governance.NodeAddress()
-}
-
-// GasPriceAt returns the base fee of the given block in peb,
-// or returns unit price by using governance if there is no base fee set in header,
-// or returns gas price of txpool if the block is pending block.
-func (api *GovernanceKlayAPI) GasPriceAt(num *rpc.BlockNumber) (*hexutil.Big, error) {
-	if num == nil || *num == rpc.LatestBlockNumber {
-		header := api.chain.CurrentBlock().Header()
-		if header.BaseFee == nil {
-			pset, err := api.governance.EffectiveParams(header.Number.Uint64() + 1)
-			if err != nil {
-				return nil, err
-			}
-			return (*hexutil.Big)(new(big.Int).SetUint64(pset.UnitPrice())), nil
-		}
-		return (*hexutil.Big)(header.BaseFee), nil
-	} else if *num == rpc.PendingBlockNumber {
-		txpool := api.governance.GetTxPool()
-		return (*hexutil.Big)(txpool.GasPrice()), nil
-	} else {
-		blockNum := num.Uint64()
-
-		// Return the BaseFee in header at the block number
-		header := api.chain.GetHeaderByNumber(blockNum)
-		if blockNum > api.chain.CurrentBlock().NumberU64() || header == nil {
-			return nil, errUnknownBlock
-		} else if header.BaseFee != nil {
-			return (*hexutil.Big)(header.BaseFee), nil
-		}
-
-		// Return the UnitPrice in governance data at the block number
-		if ret, err := api.GasPriceAtNumber(blockNum); err != nil {
-			return nil, err
-		} else {
-			return (*hexutil.Big)(new(big.Int).SetUint64(ret)), nil
-		}
-	}
 }
 
 // GetRewards returns detailed information of the block reward at a given block number.
@@ -146,22 +109,131 @@ func (api *GovernanceKlayAPI) GetRewards(num *rpc.BlockNumber) (*reward.RewardSp
 	return reward.GetBlockReward(header, rules, rewardParamSet)
 }
 
-func (api *GovernanceKlayAPI) ChainConfig() *params.ChainConfig {
-	num := rpc.LatestBlockNumber
-	return getChainConfig(api.governance, &num)
+type AccumulatedRewards struct {
+	FirstBlockTime string   `json:"firstBlockTime"`
+	LastBlockTime  string   `json:"lastBlockTime"`
+	FirstBlock     *big.Int `json:"firstBlock"`
+	LastBlock      *big.Int `json:"lastBlock"`
+
+	// TotalMinted + TotalTxFee - TotalBurntTxFee = TotalProposerRewards + TotalStakingRewards + TotalKFFRewards + TotalKCFRewards
+	TotalMinted          *big.Int                    `json:"totalMinted"`
+	TotalTxFee           *big.Int                    `json:"totalTxFee"`
+	TotalBurntTxFee      *big.Int                    `json:"totalBurntTxFee"`
+	TotalProposerRewards *big.Int                    `json:"totalProposerRewards"`
+	TotalStakingRewards  *big.Int                    `json:"totalStakingRewards"`
+	TotalKFFRewards      *big.Int                    `json:"totalKFFRewards"`
+	TotalKCFRewards      *big.Int                    `json:"totalKCFRewards"`
+	Rewards              map[common.Address]*big.Int `json:"rewards"`
 }
 
-// TODO-Klaytn-Mantle: deprecate this
-func (api *GovernanceKlayAPI) ChainConfigAt(num *rpc.BlockNumber) *params.ChainConfig {
-	return getChainConfig(api.governance, num)
-}
+// GetRewardsAccumulated returns accumulated rewards data in the block range of [first, last].
+func (api *GovernanceAPI) GetRewardsAccumulated(first rpc.BlockNumber, last rpc.BlockNumber) (*AccumulatedRewards, error) {
+	blockchain := api.governance.BlockChain()
+	govKlayAPI := NewGovernanceKlayAPI(api.governance, blockchain)
 
-func (api *GovernanceKlayAPI) GetChainConfig(num *rpc.BlockNumber) *params.ChainConfig {
-	return getChainConfig(api.governance, num)
+	currentBlock := blockchain.CurrentBlock().NumberU64()
+
+	firstBlock := currentBlock
+	if first >= rpc.EarliestBlockNumber {
+		firstBlock = uint64(first.Int64())
+	}
+
+	lastBlock := currentBlock
+	if last >= rpc.EarliestBlockNumber {
+		lastBlock = uint64(last.Int64())
+	}
+
+	if firstBlock > lastBlock {
+		return nil, errors.New("the last block number should be equal or larger the first block number")
+	}
+
+	if lastBlock > currentBlock {
+		return nil, errors.New("the last block number should be equal or less than the current block number")
+	}
+
+	blockCount := lastBlock - firstBlock + 1
+	if blockCount > 604800 { // 7 days. naive resource protection
+		return nil, errors.New("block range should be equal or less than 604800")
+	}
+
+	// initialize structures before request a job
+	accumRewards := &AccumulatedRewards{}
+	blockRewards := reward.NewRewardSpec()
+	mu := sync.Mutex{} // protect blockRewards
+
+	numWorkers := runtime.NumCPU()
+	reqCh := make(chan uint64, numWorkers)
+	errCh := make(chan error, numWorkers+1)
+	wg := sync.WaitGroup{}
+
+	// introduce the worker pattern to prevent resource exhaustion
+	for i := 0; i < numWorkers; i++ {
+		go func() {
+			// the minimum digit of request is period to avoid current access to an accArray item
+			for num := range reqCh {
+				bn := rpc.BlockNumber(num)
+				blockReward, err := govKlayAPI.GetRewards(&bn)
+				if err != nil {
+					errCh <- err
+					wg.Done()
+					return
+				}
+
+				mu.Lock()
+				blockRewards.Add(blockReward)
+				mu.Unlock()
+
+				wg.Done()
+			}
+		}()
+	}
+
+	// write the information of the first block
+	header := blockchain.GetHeaderByNumber(firstBlock)
+	if header == nil {
+		return nil, fmt.Errorf("the block does not exist (block number: %d)", firstBlock)
+	}
+	accumRewards.FirstBlock = header.Number
+	accumRewards.FirstBlockTime = time.Unix(header.Time.Int64(), 0).String()
+
+	// write the information of the last block
+	header = blockchain.GetHeaderByNumber(lastBlock)
+	if header == nil {
+		return nil, fmt.Errorf("the block does not exist (block number: %d)", lastBlock)
+	}
+	accumRewards.LastBlock = header.Number
+	accumRewards.LastBlockTime = time.Unix(header.Time.Int64(), 0).String()
+
+	for num := firstBlock; num <= lastBlock; num++ {
+		wg.Add(1)
+		reqCh <- num
+	}
+
+	// generate a goroutine to return error early
+	go func() {
+		wg.Wait()
+		errCh <- nil
+	}()
+
+	if err := <-errCh; err != nil {
+		return nil, err
+	}
+
+	// collect the accumulated rewards information
+	accumRewards.Rewards = blockRewards.Rewards
+	accumRewards.TotalMinted = blockRewards.Minted
+	accumRewards.TotalTxFee = blockRewards.TotalFee
+	accumRewards.TotalBurntTxFee = blockRewards.BurntFee
+	accumRewards.TotalProposerRewards = blockRewards.Proposer
+	accumRewards.TotalStakingRewards = blockRewards.Stakers
+	accumRewards.TotalKFFRewards = blockRewards.KFF
+	accumRewards.TotalKCFRewards = blockRewards.KCF
+
+	return accumRewards, nil
 }
 
 // Vote injects a new vote for governance targets such as unitprice and governingnode.
-func (api *PublicGovernanceAPI) Vote(key string, val interface{}) (string, error) {
+func (api *GovernanceAPI) Vote(key string, val interface{}) (string, error) {
 	blockNumber := api.governance.BlockChain().CurrentBlock().NumberU64()
 	pset, err := api.governance.EffectiveParams(blockNumber + 1)
 	if err != nil {
@@ -198,7 +270,7 @@ func (api *PublicGovernanceAPI) Vote(key string, val interface{}) (string, error
 	return "", errInvalidKeyValue
 }
 
-func (api *PublicGovernanceAPI) isRemovingSelf(val string) bool {
+func (api *GovernanceAPI) isRemovingSelf(val string) bool {
 	for _, str := range strings.Split(val, ",") {
 		str = strings.Trim(str, " ")
 		if common.HexToAddress(str) == api.governance.NodeAddress() {
@@ -208,7 +280,7 @@ func (api *PublicGovernanceAPI) isRemovingSelf(val string) bool {
 	return false
 }
 
-func (api *PublicGovernanceAPI) ShowTally() []*returnTally {
+func (api *GovernanceAPI) ShowTally() []*returnTally {
 	ret := []*returnTally{}
 
 	for _, val := range api.governance.GetGovernanceTalliesCopy() {
@@ -223,19 +295,14 @@ func (api *PublicGovernanceAPI) ShowTally() []*returnTally {
 	return ret
 }
 
-func (api *PublicGovernanceAPI) TotalVotingPower() (float64, error) {
+func (api *GovernanceAPI) TotalVotingPower() (float64, error) {
 	if !api.isGovernanceModeBallot() {
 		return 0, errNotAvailableInThisMode
 	}
 	return float64(api.governance.TotalVotingPower()) / 1000.0, nil
 }
 
-// TODO-Klaytn-Mantle: deprecate this
-func (api *PublicGovernanceAPI) ItemsAt(num *rpc.BlockNumber) (map[string]interface{}, error) {
-	return getParams(api.governance, num)
-}
-
-func (api *PublicGovernanceAPI) GetParams(num *rpc.BlockNumber) (map[string]interface{}, error) {
+func (api *GovernanceAPI) GetParams(num *rpc.BlockNumber) (map[string]interface{}, error) {
 	return getParams(api.governance, num)
 }
 
@@ -254,7 +321,7 @@ func getParams(governance Engine, num *rpc.BlockNumber) (map[string]interface{},
 	return pset.StrMap(), nil
 }
 
-func (api *PublicGovernanceAPI) GetStakingInfo(num *rpc.BlockNumber) (*reward.StakingInfo, error) {
+func (api *GovernanceAPI) GetStakingInfo(num *rpc.BlockNumber) (*reward.StakingInfo, error) {
 	return getStakingInfo(api.governance, num)
 }
 
@@ -268,24 +335,24 @@ func getStakingInfo(governance Engine, num *rpc.BlockNumber) (*reward.StakingInf
 	return reward.GetStakingInfo(blockNumber), nil
 }
 
-func (api *PublicGovernanceAPI) PendingChanges() map[string]interface{} {
+func (api *GovernanceAPI) PendingChanges() map[string]interface{} {
 	return api.governance.PendingChanges()
 }
 
-func (api *PublicGovernanceAPI) Votes() []GovernanceVote {
+func (api *GovernanceAPI) Votes() []GovernanceVote {
 	return api.governance.Votes()
 }
 
-func (api *PublicGovernanceAPI) IdxCache() []uint64 {
+func (api *GovernanceAPI) IdxCache() []uint64 {
 	return api.governance.IdxCache()
 }
 
-func (api *PublicGovernanceAPI) IdxCacheFromDb() []uint64 {
+func (api *GovernanceAPI) IdxCacheFromDb() []uint64 {
 	return api.governance.IdxCacheFromDb()
 }
 
 // TODO-Klaytn: Return error if invalid input is given such as pending or a too big number
-func (api *PublicGovernanceAPI) ItemCacheFromDb(num *rpc.BlockNumber) map[string]interface{} {
+func (api *GovernanceAPI) ItemCacheFromDb(num *rpc.BlockNumber) map[string]interface{} {
 	blockNumber := uint64(0)
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
 		blockNumber = api.governance.BlockChain().CurrentBlock().NumberU64()
@@ -303,7 +370,7 @@ type VoteList struct {
 	BlockNum uint64
 }
 
-func (api *PublicGovernanceAPI) MyVotes() []*VoteList {
+func (api *GovernanceAPI) MyVotes() []*VoteList {
 	ret := []*VoteList{}
 
 	for k, v := range api.governance.GetVoteMapCopy() {
@@ -319,24 +386,14 @@ func (api *PublicGovernanceAPI) MyVotes() []*VoteList {
 	return ret
 }
 
-func (api *PublicGovernanceAPI) MyVotingPower() (float64, error) {
+func (api *GovernanceAPI) MyVotingPower() (float64, error) {
 	if !api.isGovernanceModeBallot() {
 		return 0, errNotAvailableInThisMode
 	}
 	return float64(api.governance.MyVotingPower()) / 1000.0, nil
 }
 
-func (api *PublicGovernanceAPI) ChainConfig() *params.ChainConfig {
-	num := rpc.LatestBlockNumber
-	return getChainConfig(api.governance, &num)
-}
-
-// TODO-Klaytn-Mantle: deprecate this
-func (api *PublicGovernanceAPI) ChainConfigAt(num *rpc.BlockNumber) *params.ChainConfig {
-	return getChainConfig(api.governance, num)
-}
-
-func (api *PublicGovernanceAPI) GetChainConfig(num *rpc.BlockNumber) *params.ChainConfig {
+func (api *GovernanceAPI) GetChainConfig(num *rpc.BlockNumber) *params.ChainConfig {
 	return getChainConfig(api.governance, num)
 }
 
@@ -367,11 +424,11 @@ func getChainConfig(governance Engine, num *rpc.BlockNumber) *params.ChainConfig
 	return config
 }
 
-func (api *PublicGovernanceAPI) NodeAddress() common.Address {
+func (api *GovernanceAPI) NodeAddress() common.Address {
 	return api.governance.NodeAddress()
 }
 
-func (api *PublicGovernanceAPI) isGovernanceModeBallot() bool {
+func (api *GovernanceAPI) isGovernanceModeBallot() bool {
 	blockNumber := api.governance.BlockChain().CurrentBlock().NumberU64()
 	pset, err := api.governance.EffectiveParams(blockNumber + 1)
 	if err != nil {
@@ -379,15 +436,6 @@ func (api *PublicGovernanceAPI) isGovernanceModeBallot() bool {
 	}
 	gMode := pset.GovernanceModeInt()
 	return gMode == params.GovernanceMode_Ballot
-}
-
-func (api *GovernanceKlayAPI) GasPriceAtNumber(num uint64) (uint64, error) {
-	pset, err := api.governance.EffectiveParams(num)
-	if err != nil {
-		logger.Error("Failed to retrieve unit price", "err", err)
-		return 0, err
-	}
-	return pset.UnitPrice(), nil
 }
 
 // Disabled APIs

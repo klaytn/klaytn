@@ -52,22 +52,8 @@ type SecureTrie struct {
 // Loaded nodes are kept around until their 'cache generation' expires.
 // A new cache generation is created by each call to Commit.
 // cachelimit sets the number of past cache generations to keep.
-func NewSecureTrie(root common.Hash, db *Database) (*SecureTrie, error) {
-	if db == nil {
-		panic("statedb.NewSecureTrie called without a database")
-	}
-	trie, err := NewTrie(root, db)
-	if err != nil {
-		return nil, err
-	}
-	return &SecureTrie{trie: *trie}, nil
-}
-
-func NewSecureTrieForPrefetching(root common.Hash, db *Database) (*SecureTrie, error) {
-	if db == nil {
-		panic("statedb.NewSecureTrieForPrefetching called without a database")
-	}
-	trie, err := NewTrieForPrefetching(root, db)
+func NewSecureTrie(root common.Hash, db *Database, opts *TrieOpts) (*SecureTrie, error) {
+	trie, err := NewTrie(root, db, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +145,7 @@ func (t *SecureTrie) GetKey(shaKey []byte) []byte {
 	if key, ok := t.getSecKeyCache()[string(shaKey)]; ok {
 		return key
 	}
-	key, _ := t.trie.db.preimage(common.BytesToHash(shaKey))
+	key := t.trie.db.preimage(common.BytesToHash(shaKey))
 	return key
 }
 

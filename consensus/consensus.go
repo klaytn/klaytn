@@ -112,7 +112,7 @@ type Engine interface {
 	// Protocol returns the protocol for this consensus
 	Protocol() Protocol
 
-	// CreateSnapshot does not return a snapshot but creates a new snapshot at a given point in time.
+	// CreateSnapshot does not return a snapshot but creates a new snapshot if not exists at a given point in time.
 	CreateSnapshot(chain ChainReader, number uint64, hash common.Hash, parents []*types.Header) error
 
 	// GetConsensusInfo returns consensus information regarding the given block number.
@@ -154,6 +154,9 @@ type Istanbul interface {
 
 	// SetChain sets chain of the Istanbul backend
 	SetChain(chain ChainReader)
+
+	// UpdateParam updates the governance parameter
+	UpdateParam(num uint64) error
 }
 
 type ConsensusInfo struct {

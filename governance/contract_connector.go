@@ -132,13 +132,13 @@ func (c *contractCaller) makeEVM(tx *types.Transaction) (*vm.EVM, error) {
 
 // callTx executes contract call at the latest block context
 func (c *contractCaller) callTx(tx *types.Transaction, evm *vm.EVM) ([]byte, error) {
-	res, _, kerr := blockchain.ApplyMessage(evm, tx)
-	if kerr.ErrTxInvalid != nil {
+	result, err := blockchain.ApplyMessage(evm, tx)
+	if err != nil {
 		logger.Warn("Invalid tx")
-		return nil, kerr.ErrTxInvalid
+		return nil, err
 	}
 
-	return res, nil
+	return result.Return(), nil
 }
 
 func (c *contractCaller) parseGetAllParamsAt(b []byte) (*params.GovParamSet, error) {

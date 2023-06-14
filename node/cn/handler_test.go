@@ -209,14 +209,6 @@ func TestProtocolManager_getWSEndPoint(t *testing.T) {
 	assert.Equal(t, ws2, pm.getWSEndPoint())
 }
 
-func TestProtocolManager_SetRewardbase(t *testing.T) {
-	pm := &ProtocolManager{rewardbase: addrs[0]}
-	assert.Equal(t, addrs[0], pm.rewardbase)
-
-	pm.SetRewardbase(addrs[1])
-	assert.Equal(t, addrs[1], pm.rewardbase)
-}
-
 func TestProtocolManager_removePeer(t *testing.T) {
 	peerID := nodeids[0].String()
 

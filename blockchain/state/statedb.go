@@ -117,8 +117,8 @@ type StateDB struct {
 }
 
 // Create a new state from a given trie.
-func New(root common.Hash, db Database, snaps *snapshot.Tree) (*StateDB, error) {
-	tr, err := db.OpenTrie(root)
+func New(root common.Hash, db Database, snaps *snapshot.Tree, opts *statedb.TrieOpts) (*StateDB, error) {
+	tr, err := db.OpenTrie(root, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -131,36 +131,8 @@ func New(root common.Hash, db Database, snaps *snapshot.Tree) (*StateDB, error) 
 		stateObjectsDirty:        make(map[common.Address]struct{}),
 		logs:                     make(map[common.Hash][]*types.Log),
 		preimages:                make(map[common.Hash][]byte),
-		journal:                  newJournal(),
 		accessList:               newAccessList(),
-	}
-	if sdb.snaps != nil {
-		if sdb.snap = sdb.snaps.Snapshot(root); sdb.snap != nil {
-			sdb.snapDestructs = make(map[common.Hash]struct{})
-			sdb.snapAccounts = make(map[common.Hash][]byte)
-			sdb.snapStorage = make(map[common.Hash]map[common.Hash][]byte)
-		}
-	}
-	return sdb, nil
-}
-
-// Create a new state from a given trie with prefetching
-func NewForPrefetching(root common.Hash, db Database, snaps *snapshot.Tree) (*StateDB, error) {
-	tr, err := db.OpenTrieForPrefetching(root)
-	if err != nil {
-		return nil, err
-	}
-	sdb := &StateDB{
-		db:                       db,
-		trie:                     tr,
-		snaps:                    snaps,
-		stateObjects:             make(map[common.Address]*stateObject),
-		stateObjectsDirtyStorage: make(map[common.Address]struct{}),
-		stateObjectsDirty:        make(map[common.Address]struct{}),
-		logs:                     make(map[common.Hash][]*types.Log),
-		preimages:                make(map[common.Hash][]byte),
 		journal:                  newJournal(),
-		prefetching:              true,
 	}
 	if sdb.snaps != nil {
 		if sdb.snap = sdb.snaps.Snapshot(root); sdb.snap != nil {
@@ -168,6 +140,9 @@ func NewForPrefetching(root common.Hash, db Database, snaps *snapshot.Tree) (*St
 			sdb.snapAccounts = make(map[common.Hash][]byte)
 			sdb.snapStorage = make(map[common.Hash]map[common.Hash][]byte)
 		}
+	}
+	if opts != nil && opts.Prefetching {
+		sdb.prefetching = true
 	}
 	return sdb, nil
 }
@@ -196,7 +171,7 @@ func (self *StateDB) Error() error {
 // Reset clears out all ephemeral state objects from the state db, but keeps
 // the underlying state trie to avoid reloading data for the next operations.
 func (self *StateDB) Reset(root common.Hash) error {
-	tr, err := self.db.OpenTrie(root)
+	tr, err := self.db.OpenTrie(root, nil)
 	if err != nil {
 		return err
 	}

@@ -107,7 +107,7 @@ func prepare(reqGas uint64) (*Contract, *EVM, error) {
 		nil, new(big.Int), reqGas)
 
 	// Generate EVM
-	stateDb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil)
+	stateDb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
 	txhash := common.HexToHash("0xc6a37e155d3fa480faea012a68ad35fd53c8cc3cd8263a434c697755985a6577")
 	stateDb.Prepare(txhash, common.Hash{}, 0)
 	evm := NewEVM(Context{BlockNumber: big.NewInt(0)}, stateDb, &params.ChainConfig{IstanbulCompatibleBlock: big.NewInt(0)}, &Config{})
@@ -392,7 +392,7 @@ func TestEVM_CVE_2021_39137(t *testing.T) {
 		CanTransfer: func(StateDB, common.Address, *big.Int) bool { return true },
 		Transfer:    func(StateDB, common.Address, common.Address, *big.Int) {},
 	}
-	stateDb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil)
+	stateDb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
 
 	for _, tc := range testCases {
 		stateDb.SetCode(contractAddr, tc.testCode)

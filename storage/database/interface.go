@@ -136,18 +136,3 @@ func WriteBatchesOverThreshold(batches ...Batch) (int, error) {
 	}
 	return bytes, nil
 }
-
-func PutAndWriteBatchesOverThreshold(batch Batch, key, val []byte) error {
-	if err := batch.Put(key, val); err != nil {
-		return err
-	}
-
-	if batch.ValueSize() >= IdealBatchSize {
-		if err := batch.Write(); err != nil {
-			return err
-		}
-		batch.Reset()
-	}
-
-	return nil
-}

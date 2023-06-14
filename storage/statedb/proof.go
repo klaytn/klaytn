@@ -36,7 +36,7 @@ type ProofDBWriter interface {
 }
 
 type ProofDBReader interface {
-	ReadCachedTrieNode(hash common.Hash) ([]byte, error)
+	ReadTrieNode(hash common.Hash) ([]byte, error)
 }
 
 // Prove constructs a merkle proof for key. The result contains all encoded nodes
@@ -83,7 +83,7 @@ func (t *Trie) Prove(key []byte, fromLevel uint, proofDB ProofDBWriter) error {
 	for i, n := range nodes {
 		// Don't bother checking for errors here since hasher panics
 		// if encoding doesn't work and we're not writing to any database.
-		n, _ = hasher.hashChildren(n, nil)
+		n, _ = hasher.hashChildren(n, nil, false)
 		hn, _ := hasher.store(n, nil, false)
 		if hash, ok := hn.(hashNode); ok || i == 0 {
 			// If the node's database encoding is a hash (or is the
@@ -121,7 +121,7 @@ func VerifyProof(rootHash common.Hash, key []byte, proofDB database.DBManager) (
 	key = keybytesToHex(key)
 	wantHash := rootHash
 	for i := 0; ; i++ {
-		buf, _ := proofDB.ReadCachedTrieNode(wantHash)
+		buf, _ := proofDB.ReadTrieNode(wantHash)
 		if buf == nil {
 			return nil, fmt.Errorf("proof node %d (hash %064x) missing", i, wantHash), i
 		}
@@ -151,7 +151,7 @@ func VerifyProof(rootHash common.Hash, key []byte, proofDB database.DBManager) (
 func proofToPath(rootHash common.Hash, root node, key []byte, proofDb ProofDBReader, allowNonExistent bool) (node, []byte, error) {
 	// resolveNode retrieves and resolves trie node from merkle proof stream
 	resolveNode := func(hash common.Hash) (node, error) {
-		buf, _ := proofDb.ReadCachedTrieNode(hash)
+		buf, _ := proofDb.ReadTrieNode(hash)
 		if buf == nil {
 			return nil, fmt.Errorf("proof node (hash %064x) missing", hash)
 		}
@@ -495,7 +495,7 @@ func VerifyRangeProof(rootHash common.Hash, firstKey []byte, lastKey []byte, key
 	// Special case, there is no edge proof at all. The given range is expected
 	// to be the whole leaf-set in the trie.
 	if proof == nil {
-		tr, _ := NewTrie(common.Hash{}, NewDatabase(database.NewMemoryDBManager()))
+		tr, _ := NewTrie(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil)
 		for index, key := range keys {
 			tr.TryUpdate(key, values[index])
 		}

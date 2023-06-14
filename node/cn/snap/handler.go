@@ -234,7 +234,7 @@ func ServiceGetAccountRangeQuery(chain SnapshotReader, req *GetAccountRangePacke
 	}
 	// TODO-Klaytn-SnapSync investigate the cache pollution
 	// Retrieve the requested state and bail out if non existent
-	tr, err := statedb.NewTrie(req.Root, chain.StateCache().TrieDB())
+	tr, err := statedb.NewTrie(req.Root, chain.StateCache().TrieDB(), nil)
 	if err != nil {
 		return nil, nil
 	}
@@ -364,7 +364,7 @@ func ServiceGetStorageRangesQuery(chain SnapshotReader, req *GetStorageRangesPac
 		if origin != (common.Hash{}) || abort {
 			// Request started at a non-zero hash or was capped prematurely, add
 			// the endpoint Merkle proofs
-			accTrie, err := statedb.NewTrie(req.Root, chain.StateCache().TrieDB())
+			accTrie, err := statedb.NewTrie(req.Root, chain.StateCache().TrieDB(), nil)
 			if err != nil {
 				return nil, nil
 			}
@@ -378,7 +378,7 @@ func ServiceGetStorageRangesQuery(chain SnapshotReader, req *GetStorageRangesPac
 				// TODO-Klaytn-SnapSync it would be better to continue rather than return. Do not waste the completed job until now.
 				return nil, nil
 			}
-			stTrie, err := statedb.NewTrie(pacc.GetStorageRoot(), chain.StateCache().TrieDB())
+			stTrie, err := statedb.NewTrie(pacc.GetStorageRoot(), chain.StateCache().TrieDB(), nil)
 			if err != nil {
 				return nil, nil
 			}
@@ -444,7 +444,7 @@ func ServiceGetTrieNodesQuery(chain SnapshotReader, req *GetTrieNodesPacket, sta
 	// Make sure we have the state associated with the request
 	triedb := chain.StateCache().TrieDB()
 
-	accTrie, err := statedb.NewSecureTrie(req.Root, triedb)
+	accTrie, err := statedb.NewSecureTrie(req.Root, triedb, nil)
 	if err != nil {
 		// We don't have the requested state available, bail out
 		return nil, nil
@@ -490,7 +490,7 @@ func ServiceGetTrieNodesQuery(chain SnapshotReader, req *GetTrieNodesPacket, sta
 			if pacc == nil {
 				break
 			}
-			stTrie, err := statedb.NewSecureTrie(pacc.GetStorageRoot(), triedb)
+			stTrie, err := statedb.NewSecureTrie(pacc.GetStorageRoot(), triedb, nil)
 			loads++ // always account database reads, even for failures
 			if err != nil {
 				break

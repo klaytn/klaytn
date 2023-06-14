@@ -26,6 +26,7 @@ import (
 	"math/big"
 	"math/rand"
 	"reflect"
+	"runtime"
 	"testing"
 	"time"
 
@@ -628,5 +629,86 @@ func TestPendingLogsSubscription(t *testing.T) {
 		if err := mux.Post(l); err != nil {
 			t.Fatal(err)
 		}
+	}
+}
+
+// TestPendingTxFilterDeadlock tests if the event loop hangs when pending
+// txs arrive at the same time that one of multiple filters is timing out.
+func TestPendingTxFilterDeadlock(t *testing.T) {
+	t.Parallel()
+	timeout := 100 * time.Millisecond
+
+	var (
+		mux        = new(event.TypeMux)
+		db         = database.NewMemoryDBManager()
+		txFeed     = new(event.Feed)
+		rmLogsFeed = new(event.Feed)
+		logsFeed   = new(event.Feed)
+		chainFeed  = new(event.Feed)
+		backend    = &testBackend{mux, db, 0, txFeed, rmLogsFeed, logsFeed, chainFeed, params.TestChainConfig}
+		done       = make(chan struct{})
+	)
+
+	// instead of using NewPublicFilterAPI, define it directly
+	// It is for faster test (timeout: 5minute -> 100millisecond)
+	api := &PublicFilterAPI{
+		backend: backend,
+		mux:     backend.EventMux(),
+		chainDB: backend.ChainDB(),
+		events:  NewEventSystem(backend.EventMux(), backend, false),
+		filters: make(map[rpc.ID]*filter),
+		timeout: timeout,
+	}
+	go api.timeoutLoop()
+
+	go func() {
+		// Bombard feed with txs until signal was received to stop
+		i := uint64(0)
+		for {
+			select {
+			case <-done:
+				return
+			default:
+			}
+
+			tx := types.NewTransaction(i, common.HexToAddress("0xb794f5ea0ba39494ce83a213fffba74279579268"), new(big.Int), 0, new(big.Int), nil)
+			backend.txFeed.Send(blockchain.NewTxsEvent{Txs: []*types.Transaction{tx}})
+			i++
+		}
+	}()
+
+	// Create a bunch of filters
+	fids := make([]rpc.ID, 20)
+	for i := 0; i < len(fids); i++ {
+		fid := api.NewPendingTransactionFilter()
+		fids[i] = fid
+		// Wait for at least one tx to arrive in filter
+		for {
+			hashes, err := api.GetFilterChanges(fid)
+			if err != nil {
+				t.Fatalf("Filter should exist: %v\n", err)
+			}
+			if len(hashes.([]common.Hash)) > 0 {
+				break
+			}
+			runtime.Gosched()
+		}
+	}
+
+	// Wait until filters have timed out
+	time.Sleep(3 * timeout)
+
+	// If tx loop doesn't consume `done` after a second
+	// it's hanging.
+	select {
+	case done <- struct{}{}:
+		// Check that all filters have been uninstalled
+		for _, fid := range fids {
+			if _, err := api.GetFilterChanges(fid); err == nil {
+				t.Errorf("Filter %s should have been uninstalled\n", fid)
+			}
+		}
+	case <-time.After(1 * time.Second):
+		t.Error("Tx sending loop hangs")
 	}
 }
