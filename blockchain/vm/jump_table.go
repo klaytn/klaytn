@@ -65,10 +65,18 @@ var (
 	IstanbulInstructionSet       = newIstanbulInstructionSet()
 	LondonInstructionSet         = newLondonInstructionSet()
 	KoreInstructionSet           = newKoreInstructionSet()
+	MantleInstructionSet         = newMantleInstructionSet()
 )
 
 // JumpTable contains the EVM opcodes supported at a given fork.
 type JumpTable [256]*operation
+
+func newMantleInstructionSet() JumpTable {
+	instructionSet := newKoreInstructionSet()
+
+	enable3855(&instructionSet) // PUSH0 opcode
+	return instructionSet
+}
 
 func newKoreInstructionSet() JumpTable {
 	instructionSet := newLondonInstructionSet()
