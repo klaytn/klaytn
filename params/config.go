@@ -391,7 +391,6 @@ func (c *ChainConfig) CheckConfigForkOrder() error {
 		{name: "ethTxTypeBlock", block: c.EthTxTypeCompatibleBlock},
 		{name: "magmaBlock", block: c.MagmaCompatibleBlock},
 		{name: "koreBlock", block: c.KoreCompatibleBlock},
-		{name: "kip103Block", block: c.Kip103CompatibleBlock},
 		{name: "mantleBlock", block: c.MantleCompatibleBlock},
 	} {
 		if lastFork.name != "" {
@@ -430,9 +429,6 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *Confi
 	}
 	if isForkIncompatible(c.KoreCompatibleBlock, newcfg.KoreCompatibleBlock, head) {
 		return newCompatError("Kore Block", c.KoreCompatibleBlock, newcfg.KoreCompatibleBlock)
-	}
-	if isForkIncompatible(c.Kip103CompatibleBlock, newcfg.Kip103CompatibleBlock, head) {
-		return newCompatError("Kip103 Block", c.Kip103CompatibleBlock, newcfg.Kip103CompatibleBlock)
 	}
 	if isForkIncompatible(c.MantleCompatibleBlock, newcfg.MantleCompatibleBlock, head) {
 		return newCompatError("Mantle Block", c.MantleCompatibleBlock, newcfg.MantleCompatibleBlock)
