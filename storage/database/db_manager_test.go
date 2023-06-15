@@ -86,10 +86,14 @@ func init() {
 		badgerConfig.DBType = BadgerDB
 		memoryConfig := *bc
 		memoryConfig.DBType = MemoryDB
+		rocksdbConfig := *bc
+		rocksdbConfig.DBType = RocksDB
+		rocksdbConfig.RocksDBConfig = GetDefaultRocksDBConfig()
 
 		dbConfigs = append(dbConfigs, bc)
 		dbConfigs = append(dbConfigs, &badgerConfig)
 		dbConfigs = append(dbConfigs, &memoryConfig)
+		dbConfigs = append(dbConfigs, &rocksdbConfig)
 	}
 
 	dbManagers = createDBManagers(dbConfigs)

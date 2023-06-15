@@ -23,6 +23,8 @@ import (
 	"github.com/linxGnu/grocksdb"
 )
 
+const defaultRocksDBCacheSize = 2 // 2MB
+
 type rocksDB struct {
 	config *RocksDBConfig
 	db     *grocksdb.DB // rocksDB instance
@@ -34,6 +36,14 @@ type rocksDB struct {
 type RocksDBConfig struct {
 	Secondary bool
 	CacheSize uint64
+}
+
+func GetDefaultRocksDBConfig() *RocksDBConfig {
+	return &RocksDBConfig{
+		Secondary:      false,
+		CacheSize:      defaultRocksDBCacheSize,
+		DumpMallocStat: false,
+	}
 }
 
 // openFile checks if the path is valid directory or not. If not exists, the path directory is created.
