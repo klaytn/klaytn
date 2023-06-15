@@ -124,7 +124,9 @@ func newTestBalanceAdder() *testBalanceAdder {
 func getTestConfig() *params.ChainConfig {
 	config := &params.ChainConfig{}
 	config.SetDefaults() // To use GovParamSet without having parse errors
-
+	config.IstanbulCompatibleBlock = big.NewInt(0)
+	config.LondonCompatibleBlock = big.NewInt(0)
+	config.EthTxTypeCompatibleBlock = big.NewInt(0)
 	config.MagmaCompatibleBlock = big.NewInt(0)
 	config.KoreCompatibleBlock = big.NewInt(0)
 	config.UnitPrice = 1
@@ -309,8 +311,10 @@ func TestRewardDistributor_GetBlockReward(t *testing.T) {
 			1: minStaking + 3,
 		})
 		rules = params.Rules{
-			IsMagma: true,
-			IsKore:  true,
+			IsIstanbul: true,
+			IsLondon:   true,
+			IsMagma:    true,
+			IsKore:     true,
 		}
 	)
 
@@ -489,39 +493,39 @@ func TestRewardDistributor_CalcDeferredRewardSimple_nodeferred(t *testing.T) {
 		isKore   bool
 		expected *RewardSpec
 	}{
-		{ // totalFee should have been 0, but returned due to bug
+		{
 			isMagma: false,
 			isKore:  false,
 			expected: &RewardSpec{
 				Minted:   minted,
-				TotalFee: new(big.Int).SetUint64(1000),
+				TotalFee: new(big.Int).SetUint64(0),
 				BurntFee: new(big.Int).SetUint64(0),
-				Proposer: new(big.Int).SetUint64(9.6e18 + 1000),
+				Proposer: new(big.Int).SetUint64(9.6e18),
 				Stakers:  new(big.Int).SetUint64(0),
 				KFF:      new(big.Int).SetUint64(0),
 				KCF:      new(big.Int).SetUint64(0),
 				Rewards: map[common.Address]*big.Int{
-					proposerAddr: new(big.Int).SetUint64(9.6e18 + 1000),
+					proposerAddr: new(big.Int).SetUint64(9.6e18),
 				},
 			},
 		},
-		{ // totalFee should have been 0, but returned due to bug
+		{
 			isMagma: true,
 			isKore:  false,
 			expected: &RewardSpec{
 				Minted:   minted,
-				TotalFee: new(big.Int).SetUint64(1000),
-				BurntFee: new(big.Int).SetUint64(500),
-				Proposer: new(big.Int).SetUint64(9.6e18 + 500),
+				TotalFee: new(big.Int).SetUint64(0),
+				BurntFee: new(big.Int).SetUint64(0),
+				Proposer: new(big.Int).SetUint64(9.6e18),
 				Stakers:  new(big.Int).SetUint64(0),
 				KFF:      new(big.Int).SetUint64(0),
 				KCF:      new(big.Int).SetUint64(0),
 				Rewards: map[common.Address]*big.Int{
-					proposerAddr: new(big.Int).SetUint64(9.6e18 + 500),
+					proposerAddr: new(big.Int).SetUint64(9.6e18),
 				},
 			},
 		},
-		{ // totalFee is now 0 because bug is fixed after Kore
+		{
 			isMagma: true,
 			isKore:  true,
 			expected: &RewardSpec{
