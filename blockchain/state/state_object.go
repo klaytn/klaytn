@@ -418,7 +418,7 @@ func (self *stateObject) CommitStorageTrie(db Database) error {
 	return nil
 }
 
-// AddBalance removes amount from c's balance.
+// AddBalance adds amount to c's balance.
 // It is used to add funds to the destination account of a transfer.
 func (c *stateObject) AddBalance(amount *big.Int) {
 	// EIP158: We must check emptiness for the objects such that the account
