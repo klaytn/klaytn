@@ -18,6 +18,8 @@ package blst
 
 import (
 	"crypto/rand"
+	"runtime"
+	"sync"
 	"testing"
 
 	"github.com/klaytn/klaytn/crypto/bls/types"
@@ -141,6 +143,37 @@ func BenchmarkVerify(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		Verify(sig, msg, pk)
+	}
+}
+
+func BenchmarkParallelVerify(b *testing.B) {
+	L := benchAggregateLen
+	tc := generateBenchmarkMaterialMulti(L)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		threads := runtime.NumCPU()
+		var wg sync.WaitGroup
+		wg.Add(threads)
+
+		jobs := make(chan int, len(tc.sigbs))
+		for i := 0; i < L; i++ {
+			jobs <- i
+		}
+
+		for i := 0; i < threads; i++ {
+			go func() {
+				for i := range jobs {
+					sig, _ := SignatureFromBytes(tc.sigbs[i])
+					pk, _ := PublicKeyFromBytes(tc.pkbs[i])
+					Verify(sig, tc.msgs[i][:], pk)
+				}
+				wg.Done()
+			}()
+		}
+
+		close(jobs)
+		wg.Wait()
 	}
 }
 
