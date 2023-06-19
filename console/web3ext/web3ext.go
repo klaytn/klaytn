@@ -519,6 +519,11 @@ web3._extend({
 	property: 'debug',
 	methods: [
 		new web3._extend.Method({
+			name: 'getRocksDBProperty',
+			call: 'debug_getRocksDBProperty',
+			params: 2
+		}),
+		new web3._extend.Method({
 			name: 'dumpBlock',
 			call: 'debug_dumpBlock',
 			params: 1
