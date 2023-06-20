@@ -203,7 +203,7 @@ func (t *Trie) tryGetNode(origNode node, path []byte, pos int) (item []byte, new
 		if hash == nil {
 			return nil, origNode, 0, errors.New("non-consensus node")
 		}
-		blob, err := t.db.Node(common.BytesToHash(hash))
+		blob, err := t.db.Node(common.BytesToExtHash(hash).Unextend())
 		return blob, origNode, 1, err
 	}
 	// Path still needs to be traversed, descend into children
@@ -504,15 +504,15 @@ func (t *Trie) resolve(n node, prefix []byte) (node, error) {
 }
 
 func (t *Trie) resolveHash(n hashNode, prefix []byte) (node, error) {
-	hash := common.BytesToHash(n)
-	node, fromDB := t.db.node(hash)
+	hash := common.BytesToExtHash(n)
+	node, fromDB := t.db.node(hash.Unextend())
 	if t.prefetching && fromDB {
 		memcacheCleanPrefetchMissMeter.Mark(1)
 	}
 	if node != nil {
 		return node, nil
 	}
-	return nil, &MissingNodeError{NodeHash: hash, Path: prefix}
+	return nil, &MissingNodeError{NodeHash: hash.Unextend(), Path: prefix}
 }
 
 // Hash returns the root hash of the trie. It does not write to the
@@ -520,7 +520,7 @@ func (t *Trie) resolveHash(n hashNode, prefix []byte) (node, error) {
 func (t *Trie) Hash() common.Hash {
 	hash, cached := t.hashRoot(nil, nil)
 	t.root = cached
-	return common.BytesToHash(hash.(hashNode))
+	return hash.Unextend()
 }
 
 // Commit writes all nodes to the trie's memory database, tracking the internal
@@ -531,16 +531,20 @@ func (t *Trie) Commit(onleaf LeafCallback) (root common.Hash, err error) {
 	}
 	hash, cached := t.hashRoot(t.db, onleaf)
 	t.root = cached
-	return common.BytesToHash(hash.(hashNode)), nil
+	return hash.Unextend(), nil
 }
 
-func (t *Trie) hashRoot(db *Database, onleaf LeafCallback) (node, node) {
+func (t *Trie) hashRoot(db *Database, onleaf LeafCallback) (common.ExtHash, node) {
 	if t.root == nil {
-		return hashNode(emptyRoot.Bytes()), nil
+		return emptyRoot.ExtendLegacy(), nil
 	}
-	h := newHasher(onleaf)
+	h := newHasher(&hasherOpts{
+		onleaf: onleaf,
+	})
 	defer returnHasherToPool(h)
-	return h.hashRoot(t.root, db, true)
+	hashed, cached := h.hashRoot(t.root, db, true)
+	hash := common.BytesToExtHash(hashed.(hashNode))
+	return hash, cached
 }
 
 func GetHashAndHexKey(key []byte) ([]byte, []byte) {

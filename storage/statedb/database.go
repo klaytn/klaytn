@@ -225,7 +225,7 @@ func gatherChildren(n node, children *[]common.Hash) {
 			gatherChildren(n[i], children)
 		}
 	case hashNode:
-		*children = append(*children, common.BytesToHash(n))
+		*children = append(*children, common.BytesToExtHash(n).Unextend())
 
 	case valueNode, nil, rawNode:
 
@@ -408,7 +408,7 @@ func (db *Database) NodeChildren(hash common.Hash) ([]common.Hash, error) {
 	for _, child := range children {
 		n, ok := child.(hashNode)
 		if ok {
-			hash := common.BytesToHash(n)
+			hash := common.BytesToExtHash(n).Unextend()
 			childrenHash = append(childrenHash, hash)
 		}
 	}
