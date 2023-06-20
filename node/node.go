@@ -837,10 +837,14 @@ func NtpCheckWithLocal(n *Node) error {
 		if remote != nil {
 			break
 		}
+
+		logger.Warn("Cannot connect to remote ntp server", "url", url, "err", err)
 		ntpRetryTime = ntpRetryTime * 2
 	}
+
 	if err != nil {
-		return err
+		logger.Warn("Failed to remote ntp server. Use --ntp.disable or --ntp.server option to change ntp config", "url", url)
+		return nil
 	}
 
 	local := time.Now()
