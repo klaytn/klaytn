@@ -29,10 +29,16 @@ import (
 	"github.com/klaytn/klaytn/rlp"
 )
 
+type hasherOpts struct {
+	onleaf      LeafCallback
+	pruning     bool // If pruning is true, non-root nodes are attached a fresh nonce.
+	storageRoot bool // If both pruning and storageRoot are true, the root node is attached a fresh nonce.
+}
+
 type hasher struct {
-	tmp    sliceBuffer
-	sha    KeccakState
-	onleaf LeafCallback
+	hasherOpts
+	tmp sliceBuffer
+	sha KeccakState
 }
 
 // KeccakState wraps sha3.state. In addition to the usual hash methods, it also supports
@@ -64,9 +70,12 @@ var hasherPool = sync.Pool{
 	},
 }
 
-func newHasher(onleaf LeafCallback) *hasher {
+func newHasher(opts *hasherOpts) *hasher {
 	h := hasherPool.Get().(*hasher)
-	h.onleaf = onleaf
+	if opts == nil {
+		opts = &hasherOpts{}
+	}
+	h.hasherOpts = *opts
 	return h
 }
 
@@ -106,7 +115,7 @@ func (h *hasher) hashNode(n node, db *Database, force bool, onRoot bool) (node, 
 	}
 	// Trie not processed yet or needs storage, walk the children
 	collapsed, cached := h.hashChildren(n, db, onRoot)
-	hashed, lenEncoded := h.store(collapsed, db, force)
+	hashed, lenEncoded := h.store(collapsed, db, force, onRoot)
 	// Cache the hash of the node for later reuse and remove
 	// the dirty flag in commit mode. It's fine to assign these values directly
 	// without copying the node first because hashChildren copies it.
@@ -154,7 +163,7 @@ func (h *hasher) hashChildren(original node, db *Database, onRoot bool) (node, n
 			for i := 0; i < 16; i++ {
 				if n.Children[i] != nil {
 					go func(i int) {
-						childHasher := newHasher(h.onleaf)
+						childHasher := newHasher(&h.hasherOpts)
 						collapsed.Children[i], cached.Children[i] = childHasher.hash(n.Children[i], db, false)
 						returnHasherToPool(childHasher)
 						wg.Done()
@@ -183,34 +192,43 @@ func (h *hasher) hashChildren(original node, db *Database, onRoot bool) (node, n
 // store hashes the node n and if we have a storage layer specified, it writes
 // the key/value pair to it and tracks any node->child references as well as any
 // node->external trie references.
-func (h *hasher) store(n node, db *Database, force bool) (node, uint16) {
+func (h *hasher) store(n node, db *Database, force bool, onRoot bool) (node, uint16) {
 	// Don't store hashes or empty nodes.
 	if _, isHash := n.(hashNode); n == nil || isHash {
 		return n, 0
 	}
+	// hash is for the merkle proof. hash = Keccak(rlp.Encode(nodeForHashing(n)))
+	// lenEncoded is for Database size accounting. lenEncoded = len(rlp.Encode(nodeForStoring(n)))
 	hash, _ := n.cache()
 	lenEncoded := n.lenEncoded()
-	if hash == nil || lenEncoded == 0 {
-		// Generate the RLP encoding of the node
+
+	// Calculate lenEncoded if not set
+	if lenEncoded == 0 {
 		h.tmp.Reset()
-		if err := rlp.Encode(&h.tmp, n); err != nil {
+		if err := rlp.Encode(&h.tmp, h.nodeForStoring(n)); err != nil {
 			panic("encode error: " + err.Error())
 		}
-
 		lenEncoded = uint16(len(h.tmp))
 	}
 	if lenEncoded < 32 && !force {
 		return n, lenEncoded // Nodes smaller than 32 bytes are stored inside their parent
 	}
+
+	// Calculate hash if not set
 	if hash == nil {
-		hash = h.makeHashNode(h.tmp)
+		h.tmp.Reset()
+		if err := rlp.Encode(&h.tmp, h.nodeForHashing(n)); err != nil {
+			panic("encode error: " + err.Error())
+		}
+		hash = h.makeHashNode(h.tmp, onRoot)
 	}
+
 	if db != nil {
 		// We are pooling the trie nodes into an intermediate memory cache
-		hash := common.BytesToHash(hash)
+		hash := common.BytesToExtHash(hash)
 
 		db.lock.Lock()
-		db.insert(hash, lenEncoded, n)
+		db.insert(hash.Unextend(), lenEncoded, h.nodeForStoring(n))
 		db.lock.Unlock()
 
 		// Track external references from account->storage trie
@@ -218,12 +236,12 @@ func (h *hasher) store(n node, db *Database, force bool) (node, uint16) {
 			switch n := n.(type) {
 			case *shortNode:
 				if child, ok := n.Val.(valueNode); ok {
-					h.onleaf(nil, nil, child, hash, 0)
+					h.onleaf(nil, nil, child, hash.Unextend(), 0)
 				}
 			case *fullNode:
 				for i := 0; i < 16; i++ {
 					if child, ok := n.Children[i].(valueNode); ok {
-						h.onleaf(nil, nil, child, hash, 0)
+						h.onleaf(nil, nil, child, hash.Unextend(), 0)
 					}
 				}
 			}
@@ -232,10 +250,51 @@ func (h *hasher) store(n node, db *Database, force bool) (node, uint16) {
 	return hash, lenEncoded
 }
 
-func (h *hasher) makeHashNode(data []byte) hashNode {
-	n := make(hashNode, h.sha.Size())
+func (h *hasher) makeHashNode(data []byte, onRoot bool) hashNode {
+	var hash common.Hash
 	h.sha.Reset()
 	h.sha.Write(data)
-	h.sha.Read(n)
-	return n
+	h.sha.Read(hash[:])
+	if h.pruning && (h.storageRoot || !onRoot) {
+		return hash.Extend().Bytes()
+	} else {
+		return hash.ExtendLegacy().Bytes()
+	}
+}
+
+func (h *hasher) nodeForHashing(original node) node {
+	return unextendNode(original, false)
+}
+
+func (h *hasher) nodeForStoring(original node) node {
+	return unextendNode(original, true)
+}
+
+func unextendNode(original node, preserveExtHash bool) node {
+	switch n := original.(type) {
+	case *shortNode:
+		stored := n.copy()
+		stored.Val = unextendNode(n.Val, preserveExtHash)
+		return stored
+	case *fullNode:
+		stored := n.copy()
+		for i, child := range stored.Children {
+			stored.Children[i] = unextendNode(child, preserveExtHash)
+		}
+		return stored
+	case hashNode:
+		exthash := common.BytesToExtHash(n)
+		if exthash.IsLegacy() { // Always unextend ExtHashLegacy
+			return hashNode(exthash.Unextend().Bytes())
+		} else if !preserveExtHash { // It's ExtHash and not preserving ExtHash (for merkle hash)
+			return hashNode(exthash.Unextend().Bytes())
+		} else { // It's ExtHash and preserving ExtHash (for storing)
+			return n
+		}
+	case valueNode:
+		// TODO-Klaytn-Pruning: Unextend ExtHash in account blob
+		return n
+	default:
+		return n
+	}
 }
