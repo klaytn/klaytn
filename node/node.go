@@ -842,15 +842,15 @@ func NtpCheckWithLocal(n *Node) error {
 		ntpRetryTime = ntpRetryTime * 2
 	}
 
+	usage := "You can use \"--ntp.disable\" or \"--ntp.server\" option to change ntp time checking config"
 	if err != nil {
-		logger.Warn("Failed to remote ntp server. Use --ntp.disable or --ntp.server option to change ntp config", "url", url)
+		logger.Warn("Failed to remote ntp server."+"\n"+usage, "url", url)
 		return nil
 	}
 
 	local := time.Now()
 	if !timeIsNear(local, *remote) {
 		errFormat := "System time is out of sync, local:%s remote:%s"
-		usage := "You can use \"--ntp.disable\" option to disable ntp time checking"
 		return fmt.Errorf(errFormat+"\n"+usage, local.UTC().Format(RFC3339Nano), remote.UTC().Format(RFC3339Nano))
 	}
 	logger.Info("Ntp time check", "local", local.UTC().Format(RFC3339Nano), "remote", remote.UTC().Format(RFC3339Nano))
