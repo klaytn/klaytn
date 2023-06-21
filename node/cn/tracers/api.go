@@ -379,7 +379,7 @@ func (api *API) traceChain(start, end *types.Block, config *TraceConfig, notifie
 			}
 			if trieDb := statedb.Database().TrieDB(); trieDb != nil {
 				// Hold the reference for tracer, will be released at the final stage
-				trieDb.Reference(block.Root(), common.Hash{})
+				trieDb.ReferenceRoot(block.Root())
 
 				// Release the parent state because it's already held by the tracer
 				if !common.EmptyHash(parent) {

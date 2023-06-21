@@ -495,7 +495,7 @@ func TestCopyOfCopy(t *testing.T) {
 // TestZeroHashNode checks returning values of `(db *Database) Node` function.
 // The function should return (nil, ErrZeroHashNode) for default common.Hash{} value.
 func TestZeroHashNode(t *testing.T) {
-	zeroHash := common.Hash{}
+	zeroHash := common.ExtHash{}
 
 	db := database.NewMemoryDBManager()
 	sdb := NewDatabase(db)

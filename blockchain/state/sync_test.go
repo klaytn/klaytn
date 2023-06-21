@@ -273,7 +273,7 @@ func testIterativeStateSync(t *testing.T, count int, commit bool, bypath bool) {
 	for len(hashQueue)+len(pathQueue) > 0 {
 		results := make([]statedb.SyncResult, len(hashQueue)+len(pathQueue))
 		for i, hash := range hashQueue {
-			data, err := srcState.TrieDB().Node(hash)
+			data, err := srcState.TrieDB().Node(hash.ExtendLegacy())
 			if err != nil {
 				data, err = srcState.ContractCode(hash)
 			}
@@ -437,7 +437,7 @@ func TestIterativeDelayedStateSync(t *testing.T) {
 		// Sync only half of the scheduled nodes
 		results := make([]statedb.SyncResult, len(queue)/2+1)
 		for i, hash := range queue[:len(results)] {
-			data, err := srcState.TrieDB().Node(hash)
+			data, err := srcState.TrieDB().Node(hash.ExtendLegacy())
 			if err != nil {
 				data, err = srcState.ContractCode(hash)
 			}
@@ -494,7 +494,7 @@ func testIterativeRandomStateSync(t *testing.T, count int) {
 		// Fetch all the queued nodes in a random order
 		results := make([]statedb.SyncResult, 0, len(queue))
 		for hash := range queue {
-			data, err := srcState.TrieDB().Node(hash)
+			data, err := srcState.TrieDB().Node(hash.ExtendLegacy())
 			if err != nil {
 				data, err = srcState.ContractCode(hash)
 			}
@@ -553,7 +553,7 @@ func TestIterativeRandomDelayedStateSync(t *testing.T) {
 		for hash := range queue {
 			delete(queue, hash)
 
-			data, err := srcState.TrieDB().Node(hash)
+			data, err := srcState.TrieDB().Node(hash.ExtendLegacy())
 			if err != nil {
 				data, err = srcState.ContractCode(hash)
 			}
@@ -627,7 +627,7 @@ func TestIncompleteStateSync(t *testing.T) {
 		// Fetch a batch of state nodes
 		results := make([]statedb.SyncResult, len(queue))
 		for i, hash := range queue {
-			data, err := srcState.TrieDB().Node(hash)
+			data, err := srcState.TrieDB().Node(hash.ExtendLegacy())
 			if err != nil {
 				data, err = srcState.ContractCode(hash)
 			}

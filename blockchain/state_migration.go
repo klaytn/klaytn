@@ -64,7 +64,7 @@ func (bc *BlockChain) concurrentRead(db state.Database, quitCh chan struct{}, ha
 		case <-quitCh:
 			return
 		case hash := <-hashCh:
-			data, err := db.TrieDB().NodeFromOld(hash)
+			data, err := db.TrieDB().NodeFromOld(hash.ExtendLegacy())
 			if err != nil {
 				data, err = db.ContractCode(hash)
 			}
@@ -385,10 +385,10 @@ func (bc *BlockChain) StateMigrationStatus() (bool, uint64, int, int, int, float
 // iterateStateTrie runs state.Iterator, generated from the given state trie node hash,
 // until it reaches end. If it reaches end, it will send a nil error to errCh to indicate that
 // it has been finished.
-func (bc *BlockChain) iterateStateTrie(root common.Hash, db state.Database, resultCh chan struct{}, errCh chan error) (resultErr error) {
+func (bc *BlockChain) iterateStateTrie(root common.ExtHash, db state.Database, resultCh chan struct{}, errCh chan error) (resultErr error) {
 	defer func() { errCh <- resultErr }()
 
-	stateDB, err := state.New(root, db, nil, nil)
+	stateDB, err := state.New(root.Unextend(), db, nil, nil)
 	if err != nil {
 		return err
 	}
@@ -484,7 +484,7 @@ func (bc *BlockChain) StartWarmUp() error {
 		return err
 	}
 	// retrieve children nodes of state trie root node
-	children, err := db.TrieDB().NodeChildren(block.Root())
+	children, err := db.TrieDB().NodeChildren(block.Root().ExtendLegacy())
 	if err != nil {
 		return err
 	}
@@ -527,11 +527,13 @@ func (bc *BlockChain) StartCollectingTrieStats(contractAddr common.Address) erro
 	}
 	db := state.NewDatabaseWithExistingCache(bc.db, cache)
 
-	startNode := block.Root()
+	startNode := block.Root().ExtendLegacy()
 	// If the contractAddr is given, start collecting stats from the root of storage trie
 	if !common.EmptyAddress(contractAddr) {
 		var err error
-		startNode, err = bc.GetContractStorageRoot(block, db, contractAddr)
+		// TODO-Klaytn-Pruning: bc.GetContractStorageRoot returns ExtHash
+		storageRoot, err := bc.GetContractStorageRoot(block, db, contractAddr)
+		startNode = storageRoot.ExtendLegacy()
 		if err != nil {
 			logger.Error("Failed to get the contract storage root",
 				"contractAddr", contractAddr.String(), "rootHash", block.Root().String(),
@@ -554,14 +556,14 @@ func (bc *BlockChain) StartCollectingTrieStats(contractAddr common.Address) erro
 }
 
 // collectChildrenStats wraps CollectChildrenStats, in order to send finish signal to resultCh.
-func collectChildrenStats(db state.Database, child common.Hash, resultCh chan<- statedb.NodeInfo) {
+func collectChildrenStats(db state.Database, child common.ExtHash, resultCh chan<- statedb.NodeInfo) {
 	db.TrieDB().CollectChildrenStats(child, 2, resultCh)
 	resultCh <- statedb.NodeInfo{Finished: true}
 }
 
 // collectTrieStats is the main function of collecting trie statistics.
 // It spawns goroutines for the upper-most children and iterates each sub-trie.
-func collectTrieStats(db state.Database, startNode common.Hash) {
+func collectTrieStats(db state.Database, startNode common.ExtHash) {
 	children, err := db.TrieDB().NodeChildren(startNode)
 	if err != nil {
 		logger.Error("Failed to retrieve the children of start node", "err", err)
@@ -655,7 +657,7 @@ func (bc *BlockChain) prepareWarmUp() (*types.Block, state.Database, *statedb.Da
 // iterateStorageTrie runs statedb.Iterator, generated from the given storage trie node hash,
 // until it reaches end. If it reaches end, it will send a nil error to errCh to indicate that
 // it has been finished.
-func (bc *BlockChain) iterateStorageTrie(child common.Hash, storageTrie state.Trie, resultCh chan struct{}, errCh chan error) (resultErr error) {
+func (bc *BlockChain) iterateStorageTrie(child common.ExtHash, storageTrie state.Trie, resultCh chan struct{}, errCh chan error) (resultErr error) {
 	defer func() { errCh <- resultErr }()
 
 	itr := statedb.NewIterator(storageTrie.NodeIterator(child[:]))
@@ -701,7 +703,8 @@ func (bc *BlockChain) StartContractWarmUp(contractAddr common.Address) error {
 		return fmt.Errorf("failed to prepare contract warm-up, err: %w", err)
 	}
 	// retrieve children nodes of contract storage trie root node
-	children, err := db.TrieDB().NodeChildren(storageTrieRoot)
+	// TODO-Klaytn-Pruning: StorageTrieRoot is ExtHash
+	children, err := db.TrieDB().NodeChildren(storageTrieRoot.ExtendLegacy())
 	if err != nil {
 		return err
 	}

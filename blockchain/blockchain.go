@@ -689,7 +689,7 @@ func (bc *BlockChain) StateAt(root common.Hash) (*state.StateDB, error) {
 
 // StateAtWithPersistent returns a new mutable state based on a particular point in time with persistent trie nodes.
 func (bc *BlockChain) StateAtWithPersistent(root common.Hash) (*state.StateDB, error) {
-	exist := bc.stateCache.TrieDB().DoesExistNodeInPersistent(root)
+	exist := bc.stateCache.TrieDB().DoesExistNodeInPersistent(root.ExtendLegacy())
 	if !exist {
 		return nil, ErrNotExistNode
 	}
@@ -700,7 +700,7 @@ func (bc *BlockChain) StateAtWithPersistent(root common.Hash) (*state.StateDB, e
 func (bc *BlockChain) StateAtWithGCLock(root common.Hash) (*state.StateDB, error) {
 	bc.RLockGCCachedNode()
 
-	exist := bc.stateCache.TrieDB().DoesExistCachedNode(root)
+	exist := bc.stateCache.TrieDB().DoesExistCachedNode(root.ExtendLegacy())
 	if !exist {
 		bc.RUnlockGCCachedNode()
 		return nil, ErrNotExistNode
@@ -977,8 +977,9 @@ func (bc *BlockChain) GetLogsByHash(hash common.Hash) [][]*types.Log {
 
 // TrieNode retrieves a blob of data associated with a trie node
 // either from ephemeral in-memory cache, or from persistent storage.
+// Cannot retrieve nodes keyed with ExtHash
 func (bc *BlockChain) TrieNode(hash common.Hash) ([]byte, error) {
-	return bc.stateCache.TrieDB().Node(hash)
+	return bc.stateCache.TrieDB().Node(hash.ExtendLegacy())
 }
 
 // ContractCode retrieves a blob of data associated with a contract hash
@@ -1303,7 +1304,7 @@ func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) e
 		bc.lastCommittedBlock = block.NumberU64()
 	} else {
 		// Full but not archive node, do proper garbage collection
-		trieDB.Reference(root, common.Hash{}) // metadata reference to keep trie alive
+		trieDB.ReferenceRoot(root) // metadata reference to keep trie alive
 
 		// If we exceeded our memory allowance, flush matured singleton nodes to disk
 		var (

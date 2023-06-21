@@ -136,7 +136,7 @@ func (cn *CN) stateAtBlock(block *types.Block, reexec uint64, base *state.StateD
 		if err := statedb.Reset(root); err != nil {
 			return nil, fmt.Errorf("state reset after block %d failed: %v", current.NumberU64(), err)
 		}
-		database.TrieDB().Reference(root, common.Hash{})
+		database.TrieDB().ReferenceRoot(root)
 		if !common.EmptyHash(parent) {
 			database.TrieDB().Dereference(parent)
 		}
