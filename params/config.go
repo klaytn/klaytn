@@ -430,6 +430,8 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *Confi
 	if isForkIncompatible(c.KoreCompatibleBlock, newcfg.KoreCompatibleBlock, head) {
 		return newCompatError("Kore Block", c.KoreCompatibleBlock, newcfg.KoreCompatibleBlock)
 	}
+	// We have intentionally skipped kip103Block in the fork ordering check since kip103 is designed
+	// as an optional hardfork and there are no dependency with other forks.
 	if isForkIncompatible(c.MantleCompatibleBlock, newcfg.MantleCompatibleBlock, head) {
 		return newCompatError("Mantle Block", c.MantleCompatibleBlock, newcfg.MantleCompatibleBlock)
 	}
