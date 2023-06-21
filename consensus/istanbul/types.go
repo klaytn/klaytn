@@ -153,6 +153,12 @@ func (b *Subject) DecodeRLP(s *rlp.Stream) error {
 }
 
 func (a *Subject) Equal(b *Subject) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
 	return a.Digest == b.Digest &&
 		a.PrevHash == b.PrevHash &&
 		a.View.Cmp(b.View) == 0

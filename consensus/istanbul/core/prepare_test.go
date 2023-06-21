@@ -170,3 +170,21 @@ func TestSubjectCmp(t *testing.T) {
 		assert.Equal(t, e, reflect.DeepEqual(s1, s2))
 	}
 }
+
+func TestNilSubjectCmp(t *testing.T) {
+	sbj := istanbul.Subject{
+		View: &istanbul.View{
+			Round:    big.NewInt(0),
+			Sequence: big.NewInt(0),
+		},
+		Digest:   common.HexToHash("1"),
+		PrevHash: common.HexToHash("2"),
+	}
+	var nilSbj *istanbul.Subject = nil
+
+	assert.Equal(t, sbj.Equal(nil), false)
+	assert.Equal(t, sbj.Equal(nilSbj), false)
+	assert.Equal(t, nilSbj.Equal(&sbj), false)
+	assert.Equal(t, nilSbj.Equal(nilSbj), true)
+	assert.Equal(t, nilSbj.Equal(nil), true)
+}
