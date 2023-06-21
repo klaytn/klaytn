@@ -95,6 +95,7 @@ var FlagGroups = []FlagGroup{
 			LevelDBNoBufferPoolFlag,
 			RocksDBSecondaryFlag,
 			RocksDBCacheSizeFlag,
+			RocksDBDumpMallocStatFlag,
 			DynamoDBTableNameFlag,
 			DynamoDBRegionFlag,
 			DynamoDBIsProvisionedFlag,

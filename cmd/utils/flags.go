@@ -291,6 +291,11 @@ var (
 		Value:  768,
 		EnvVar: "KLAYTN_DB_ROCKSDB_CACHE_SIZE",
 	}
+	RocksDBDumpMallocStatFlag = cli.BoolFlag{
+		Name:   "db.rocksdb.dump-memory-stat",
+		Usage:  "Enable to print memory stat together with rocksdb.stat",
+		EnvVar: "KLAYTN_DB_ROCKSDB_DUMP_MALLOC_STAT",
+	}
 	DynamoDBTableNameFlag = cli.StringFlag{
 		Name:   "db.dynamo.tablename",
 		Usage:  "Specifies DynamoDB table name. This is mandatory to use dynamoDB. (Set dbtype to use DynamoDBS3)",

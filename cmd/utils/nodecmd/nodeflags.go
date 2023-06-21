@@ -146,6 +146,7 @@ var CommonNodeFlags = []cli.Flag{
 	altsrc.NewBoolFlag(utils.LevelDBNoBufferPoolFlag),
 	altsrc.NewBoolFlag(utils.RocksDBSecondaryFlag),
 	altsrc.NewUint64Flag(utils.RocksDBCacheSizeFlag),
+	altsrc.NewBoolFlag(utils.RocksDBDumpMallocStatFlag),
 	altsrc.NewBoolFlag(utils.DBNoPerformanceMetricsFlag),
 	altsrc.NewStringFlag(utils.DynamoDBTableNameFlag),
 	altsrc.NewStringFlag(utils.DynamoDBRegionFlag),

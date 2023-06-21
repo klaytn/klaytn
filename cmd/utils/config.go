@@ -523,6 +523,7 @@ func (kCfg *KlayConfig) SetKlayConfig(ctx *cli.Context, stack *node.Node) {
 
 	cfg.RocksDBConfig.Secondary = ctx.GlobalIsSet(RocksDBSecondaryFlag.Name)
 	cfg.RocksDBConfig.CacheSize = ctx.GlobalUint64(RocksDBCacheSizeFlag.Name)
+	cfg.RocksDBConfig.DumpMallocStat = ctx.GlobalIsSet(RocksDBDumpMallocStatFlag.Name)
 
 	cfg.DynamoDBConfig.TableName = ctx.GlobalString(DynamoDBTableNameFlag.Name)
 	cfg.DynamoDBConfig.Region = ctx.GlobalString(DynamoDBRegionFlag.Name)

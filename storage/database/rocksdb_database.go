@@ -34,8 +34,9 @@ type rocksDB struct {
 }
 
 type RocksDBConfig struct {
-	Secondary bool
-	CacheSize uint64
+	Secondary      bool
+	CacheSize      uint64
+	DumpMallocStat bool
 }
 
 func GetDefaultRocksDBConfig() *RocksDBConfig {
@@ -78,6 +79,7 @@ func NewRocksDB(path string, config *RocksDBConfig) (*rocksDB, error) {
 	opts.SetBlockBasedTableFactory(bbto)
 	opts.SetCreateIfMissing(true)
 	opts.SetWriteBufferSize(bufferSize)
+	opts.SetDumpMallocStats(config.DumpMallocStat)
 
 	logger.Info("RocksDB configuration", "blockCacheSize", blockCacheSize, "bufferSize", bufferSize)
 
