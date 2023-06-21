@@ -203,7 +203,7 @@ func (t *Trie) tryGetNode(origNode node, path []byte, pos int) (item []byte, new
 		if hash == nil {
 			return nil, origNode, 0, errors.New("non-consensus node")
 		}
-		blob, err := t.db.Node(common.BytesToExtHash(hash).Unextend())
+		blob, err := t.db.Node(common.BytesToExtHash(hash))
 		return blob, origNode, 1, err
 	}
 	// Path still needs to be traversed, descend into children
@@ -505,7 +505,7 @@ func (t *Trie) resolve(n node, prefix []byte) (node, error) {
 
 func (t *Trie) resolveHash(n hashNode, prefix []byte) (node, error) {
 	hash := common.BytesToExtHash(n)
-	node, fromDB := t.db.node(hash.Unextend())
+	node, fromDB := t.db.node(hash)
 	if t.prefetching && fromDB {
 		memcacheCleanPrefetchMissMeter.Mark(1)
 	}

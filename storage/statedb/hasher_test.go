@@ -41,13 +41,12 @@ func checkHasherHash(t *testing.T, name string, tc testNodeEncodingTC, opts *has
 	assert.Equal(t, hashNode(tc.hash), cachedHash, name)
 
 	hash := common.BytesToExtHash(tc.hash)
-	inserted := db.nodes[hash.Unextend()]
+	inserted := db.nodes[hash]
 	require.NotNil(t, inserted)
 	assert.Equal(t, tc.inserted, inserted.node, name)
 
 	db.Cap(0)
-	// TODO-Klaytn-Pruning: Revert back to ReadTrieNode(hash)
-	encoded, _ := memDB.ReadTrieNode(hash.Unextend().ExtendLegacy())
+	encoded, _ := memDB.ReadTrieNode(hash)
 	assert.Equal(t, tc.encoded, encoded, name)
 }
 

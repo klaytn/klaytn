@@ -122,12 +122,11 @@ func testMissingNode(t *testing.T, memonly bool) {
 		t.Errorf("Unexpected error: %v", err)
 	}
 
-	hash := common.HexToHash("0xe1d943cc8f061a0c0b98162830b970395ac9315654824bf21b73b891365262f9")
-	nodehash := hash.ExtendLegacy()
+	hash := common.HexToHash("0xe1d943cc8f061a0c0b98162830b970395ac9315654824bf21b73b891365262f9").ExtendLegacy()
 	if memonly {
 		delete(triedb.nodes, hash)
 	} else {
-		dbm.DeleteTrieNode(nodehash)
+		dbm.DeleteTrieNode(hash)
 	}
 
 	trie, _ = NewTrie(root, triedb, nil)
