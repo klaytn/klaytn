@@ -345,7 +345,8 @@ start_node() {
     CURRENTFILE=`basename "$0"`
     OPTIONS="$OPTIONS --autorestart.daemon.path $BASEDIR/$CURRENTFILE"
 
-    $BIN/kspn $OPTIONS >> ${LOG_DIR}/kspnd.out 2>&1 &
+    OPTIONS="$OPTIONS --log.file ${LOG_DIR}/kspnd.out"
+    TERM="dumb" $BIN/kspn $OPTIONS >> ${LOG_DIR}/kspnd.out 2>&1 &
     RETVAL=$?
     PIDNUM=$!
     set +f

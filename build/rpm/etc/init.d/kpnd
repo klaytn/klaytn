@@ -261,7 +261,8 @@ start_node() {
     [ -n "$pid" ] && echo && return
 
     set -f
-    $kpn $OPTIONS >> ${LOG_DIR}/kpnd.out 2>&1 &
+    OPTIONS="$OPTIONS --log.file ${LOG_DIR}/kpnd.out"
+    TERM="dumb" $kpn $OPTIONS >> ${LOG_DIR}/kpnd.out 2>&1 &
     RETVAL=$?
     PIDNUM=$!
     set +f

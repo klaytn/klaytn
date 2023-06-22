@@ -364,7 +364,8 @@ start_node() {
     CURRENTFILE=`basename "$0"`
     OPTIONS="$OPTIONS --autorestart.daemon.path $BASEDIR/$CURRENTFILE"
 
-    $BIN/ksen $OPTIONS >> ${LOG_DIR}/ksend.out 2>&1 &
+    OPTIONS="$OPTIONS --log.file ${LOG_DIR}/ksend.out"
+    TERM="dumb" $BIN/ksen $OPTIONS >> ${LOG_DIR}/ksend.out 2>&1 &
     RETVAL=$?
     PIDNUM=$!
     set +f

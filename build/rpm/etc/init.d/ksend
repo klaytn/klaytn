@@ -303,7 +303,7 @@ if [[ ! -z $SC_SUB_BRIDGE ]] && [[ $SC_SUB_BRIDGE -eq 1 ]]; then
             exit 1
         fi
         OPTIONS="$OPTIONS --kas.x-chain-id $SC_KAS_ANCHOR_X_CHAIN_ID"
-        
+
         if [ ! -z $SC_KAS_ANCHOR_REQUEST_TIMEOUT ]; then
             OPTIONS="$OPTIONS --kas.sc.anchor.request.timeout $SC_KAS_ANCHOR_REQUEST_TIMEOUT"
         fi
@@ -348,7 +348,8 @@ start_node() {
     [ -n "$pid" ] && echo && return
 
     set -f
-    $ksen $OPTIONS >> ${LOG_DIR}/ksend.out 2>&1 &
+    OPTIONS="$OPTIONS --log.file ${LOG_DIR}/ksend.out"
+    TERM="dumb" $ksen $OPTIONS >> ${LOG_DIR}/ksend.out 2>&1 &
     RETVAL=$?
     PIDNUM=$!
     set +f

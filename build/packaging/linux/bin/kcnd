@@ -284,7 +284,8 @@ start_node() {
     CURRENTFILE=`basename "$0"`
     OPTIONS="$OPTIONS --autorestart.daemon.path $BASEDIR/$CURRENTFILE"
 
-    $BIN/kcn $OPTIONS >> ${LOG_DIR}/kcnd.out 2>&1 &
+    OPTIONS="$OPTIONS --log.file ${LOG_DIR}/kcnd.out"
+    TERM="dumb" $BIN/kcn $OPTIONS >> ${LOG_DIR}/kcnd.out 2>&1 &
     RETVAL=$?
     PIDNUM=$!
 

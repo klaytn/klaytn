@@ -158,7 +158,8 @@ start_node() {
 
     __check_option
 
-    $BIN/kbn ${OPTIONS} >> ${LOG_DIR}/kbnd.out 2>&1 &
+    OPTIONS="$OPTIONS --log.file ${LOG_DIR}/kbnd.out"
+    TERM="dumb" $BIN/kbn ${OPTIONS} >> ${LOG_DIR}/kbnd.out 2>&1 &
     RETVAL=$?
     PIDNUM=$!
     set +f
