@@ -24,6 +24,7 @@ import (
 	"hash"
 	"sync"
 
+	"github.com/klaytn/klaytn/blockchain/types/account"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto/sha3"
 	"github.com/klaytn/klaytn/rlp"
@@ -292,8 +293,13 @@ func unextendNode(original node, preserveExtHash bool) node {
 			return n
 		}
 	case valueNode:
-		// TODO-Klaytn-Pruning: Unextend ExtHash in account blob
-		return n
+		if !preserveExtHash {
+			return valueNode(account.UnextendRLP(n))
+		} else {
+			// ExtHashLegacy should have been always unextended by AccountSerializer,
+			// hence no need to check IsLegacy() here.
+			return n
+		}
 	default:
 		return n
 	}

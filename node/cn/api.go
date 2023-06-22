@@ -577,11 +577,11 @@ func (api *PublicDebugAPI) getModifiedStorageNodes(contractAddr common.Address, 
 	}
 
 	trieDB := api.cn.blockchain.StateCache().TrieDB()
-	oldTrie, err := statedb.NewSecureTrie(startBlockRoot, trieDB, nil)
+	oldTrie, err := statedb.NewSecureStorageTrie(startBlockRoot, trieDB, nil)
 	if err != nil {
 		return 0, err
 	}
-	newTrie, err := statedb.NewSecureTrie(endBlockRoot, trieDB, nil)
+	newTrie, err := statedb.NewSecureStorageTrie(endBlockRoot, trieDB, nil)
 	if err != nil {
 		return 0, err
 	}

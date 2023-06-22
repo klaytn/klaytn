@@ -327,10 +327,10 @@ func (mr *MockBlockChainMockRecorder) GetBodyRLP(arg0 interface{}) *gomock.Call 
 }
 
 // GetContractStorageRoot mocks base method.
-func (m *MockBlockChain) GetContractStorageRoot(arg0 *types.Block, arg1 state.Database, arg2 common.Address) (common.Hash, error) {
+func (m *MockBlockChain) GetContractStorageRoot(arg0 *types.Block, arg1 state.Database, arg2 common.Address) (common.ExtHash, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetContractStorageRoot", arg0, arg1, arg2)
-	ret0, _ := ret[0].(common.Hash)
+	ret0, _ := ret[0].(common.ExtHash)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

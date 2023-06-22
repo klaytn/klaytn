@@ -531,9 +531,7 @@ func (bc *BlockChain) StartCollectingTrieStats(contractAddr common.Address) erro
 	// If the contractAddr is given, start collecting stats from the root of storage trie
 	if !common.EmptyAddress(contractAddr) {
 		var err error
-		// TODO-Klaytn-Pruning: bc.GetContractStorageRoot returns ExtHash
-		storageRoot, err := bc.GetContractStorageRoot(block, db, contractAddr)
-		startNode = storageRoot.ExtendLegacy()
+		startNode, err = bc.GetContractStorageRoot(block, db, contractAddr)
 		if err != nil {
 			logger.Error("Failed to get the contract storage root",
 				"contractAddr", contractAddr.String(), "rootHash", block.Root().String(),
@@ -625,10 +623,10 @@ func printDepthStats(depthCounter map[int]int) {
 }
 
 // GetContractStorageRoot returns the storage root of a contract based on the given block.
-func (bc *BlockChain) GetContractStorageRoot(block *types.Block, db state.Database, contractAddr common.Address) (common.Hash, error) {
+func (bc *BlockChain) GetContractStorageRoot(block *types.Block, db state.Database, contractAddr common.Address) (common.ExtHash, error) {
 	stateDB, err := state.New(block.Root(), db, nil, nil)
 	if err != nil {
-		return common.Hash{}, fmt.Errorf("failed to get StateDB - %w", err)
+		return common.ExtHash{}, fmt.Errorf("failed to get StateDB - %w", err)
 	}
 	return stateDB.GetContractStorageRoot(contractAddr)
 }
@@ -674,19 +672,18 @@ func (bc *BlockChain) iterateStorageTrie(child common.ExtHash, storageTrie state
 	return nil
 }
 
-func prepareContractWarmUp(block *types.Block, db state.Database, contractAddr common.Address) (common.Hash, state.Trie, error) {
+func prepareContractWarmUp(block *types.Block, db state.Database, contractAddr common.Address) (common.ExtHash, state.Trie, error) {
 	stateDB, err := state.New(block.Root(), db, nil, nil)
 	if err != nil {
-		return common.Hash{}, nil, fmt.Errorf("failed to get StateDB, err: %w", err)
+		return common.ExtHash{}, nil, fmt.Errorf("failed to get StateDB, err: %w", err)
 	}
 	storageTrieRoot, err := stateDB.GetContractStorageRoot(contractAddr)
 	if err != nil {
-		return common.Hash{}, nil, err
+		return common.ExtHash{}, nil, err
 	}
-	// TODO-Klaytn-Pruning: GetContractStorageRoot returns ExtHash
-	storageTrie, err := db.OpenStorageTrie(storageTrieRoot.ExtendLegacy(), nil)
+	storageTrie, err := db.OpenStorageTrie(storageTrieRoot, nil)
 	if err != nil {
-		return common.Hash{}, nil, err
+		return common.ExtHash{}, nil, err
 	}
 	return storageTrieRoot, storageTrie, nil
 }
@@ -704,8 +701,7 @@ func (bc *BlockChain) StartContractWarmUp(contractAddr common.Address) error {
 		return fmt.Errorf("failed to prepare contract warm-up, err: %w", err)
 	}
 	// retrieve children nodes of contract storage trie root node
-	// TODO-Klaytn-Pruning: StorageTrieRoot is ExtHash
-	children, err := db.TrieDB().NodeChildren(storageTrieRoot.ExtendLegacy())
+	children, err := db.TrieDB().NodeChildren(storageTrieRoot)
 	if err != nil {
 		return err
 	}

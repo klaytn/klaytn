@@ -275,7 +275,7 @@ func generateTrieRoot(it Iterator, accountHash common.Hash, generatorFn trieGene
 						results <- err
 						return
 					}
-					rootHash := contract.GetStorageRoot()
+					rootHash := contract.GetStorageRoot().Unextend()
 					if rootHash != subroot {
 						results <- fmt.Errorf("invalid subroot(path %x), want %x, have %x", hash, rootHash, subroot)
 						return

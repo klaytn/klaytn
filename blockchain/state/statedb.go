@@ -1023,9 +1023,8 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 		}
 		acc := serializer.GetAccount()
 		if pa := account.GetProgramAccount(acc); pa != nil {
-			if pa.GetStorageRoot() != emptyState {
-				// TODO-Klaytn-Pruning: pa.GetStorageRoot returns ExtHash
-				s.db.TrieDB().Reference(pa.GetStorageRoot().ExtendLegacy(), parent)
+			if pa.GetStorageRoot().Unextend() != emptyState {
+				s.db.TrieDB().Reference(pa.GetStorageRoot(), parent)
 			}
 		}
 		return nil
@@ -1065,17 +1064,17 @@ var (
 	errNotContractAddress = fmt.Errorf("given address is not a contract address")
 )
 
-func (s *StateDB) GetContractStorageRoot(contractAddr common.Address) (common.Hash, error) {
+func (s *StateDB) GetContractStorageRoot(contractAddr common.Address) (common.ExtHash, error) {
 	acc := s.GetAccount(contractAddr)
 	if acc == nil {
-		return common.Hash{}, errNotExistingAddress
+		return common.ExtHash{}, errNotExistingAddress
 	}
 	if acc.Type() != account.SmartContractAccountType {
-		return common.Hash{}, errNotContractAddress
+		return common.ExtHash{}, errNotContractAddress
 	}
 	contract, true := acc.(*account.SmartContractAccount)
 	if !true {
-		return common.Hash{}, errNotContractAddress
+		return common.ExtHash{}, errNotContractAddress
 	}
 	return contract.GetStorageRoot(), nil
 }

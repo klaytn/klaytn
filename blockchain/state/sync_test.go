@@ -299,7 +299,7 @@ func testIterativeStateSync(t *testing.T, count int, commit bool, bypath bool) {
 				if pacc == nil {
 					t.Errorf("failed to get contract")
 				}
-				stTrie, err := statedb.NewTrie(pacc.GetStorageRoot(), srcState.TrieDB(), nil)
+				stTrie, err := statedb.NewStorageTrie(pacc.GetStorageRoot(), srcState.TrieDB(), nil)
 				if err != nil {
 					t.Fatalf("failed to retriev storage trie for path %x: %v", path, err)
 				}

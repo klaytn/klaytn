@@ -126,8 +126,7 @@ func (it *NodeIterator) step() error {
 	obj := serializer.GetAccount()
 
 	if pa := account.GetProgramAccount(obj); pa != nil {
-		// TODO-Klaytn-Pruning: pa.GetStorageRoot returns ExtHash
-		dataTrie, err := it.state.db.OpenStorageTrie(pa.GetStorageRoot().ExtendLegacy(), nil)
+		dataTrie, err := it.state.db.OpenStorageTrie(pa.GetStorageRoot(), nil)
 		if err != nil {
 			return err
 		}

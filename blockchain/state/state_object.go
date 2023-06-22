@@ -164,8 +164,7 @@ func (c *stateObject) getStorageTrie(db Database) Trie {
 	if c.storageTrie == nil {
 		if acc := account.GetProgramAccount(c.account); acc != nil {
 			var err error
-			// TODO-Klaytn-Pruning: pa.GetStorageRoot returns ExtHash
-			c.storageTrie, err = c.openStorageTrie(acc.GetStorageRoot().ExtendLegacy(), db)
+			c.storageTrie, err = c.openStorageTrie(acc.GetStorageRoot(), db)
 			if err != nil {
 				c.storageTrie, _ = c.openStorageTrie(common.ExtHash{}, db)
 				c.setError(fmt.Errorf("can't create storage trie: %v", err))
@@ -377,8 +376,7 @@ func (self *stateObject) updateStorageRoot(db Database) {
 		if EnabledExpensive {
 			defer func(start time.Time) { self.db.StorageHashes += time.Since(start) }(time.Now())
 		}
-		// TODO-Klaytn-Pruning: pa.SetStorageRoot takes ExtHash
-		acc.SetStorageRoot(self.storageTrie.HashExt().Unextend())
+		acc.SetStorageRoot(self.storageTrie.HashExt())
 	}
 }
 
@@ -391,8 +389,7 @@ func (self *stateObject) setStorageRoot(updateStorageRoot bool, objectsToUpdate 
 			if EnabledExpensive {
 				defer func(start time.Time) { self.db.StorageHashes += time.Since(start) }(time.Now())
 			}
-			// TODO-Klaytn-Pruning: pa.SetStorageRoot takes ExtHash
-			acc.SetStorageRoot(self.storageTrie.HashExt().Unextend())
+			acc.SetStorageRoot(self.storageTrie.HashExt())
 			return
 		}
 		// If updateStorageRoot == false, it just marks the object and updates its storage root later.
@@ -416,8 +413,7 @@ func (self *stateObject) CommitStorageTrie(db Database) error {
 		if err != nil {
 			return err
 		}
-		// TODO-Klaytn-Pruning: pa.SetStorageRoot takes ExtHash
-		acc.SetStorageRoot(root.Unextend())
+		acc.SetStorageRoot(root)
 	}
 	return nil
 }
