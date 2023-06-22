@@ -25,10 +25,24 @@ import (
 
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/crypto/sha3"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
+	"github.com/stretchr/testify/assert"
+)
+
+// Compile time interface checks
+var (
+	_ Account = (*LegacyAccount)(nil)
+	_ Account = (*ExternallyOwnedAccount)(nil)
+	_ Account = (*SmartContractAccount)(nil)
+
+	_ ProgramAccount = (*SmartContractAccount)(nil)
+
+	_ AccountWithKey = (*ExternallyOwnedAccount)(nil)
+	_ AccountWithKey = (*SmartContractAccount)(nil)
 )
 
 // TestAccountSerialization tests serialization of various account types.
@@ -167,4 +181,119 @@ func genSCAWithPublicKey() *SmartContractAccount {
 		AccountValueKeyCodeHash:      genRandomHash().Bytes(),
 		AccountValueKeyCodeInfo:      params.CodeInfo(0),
 	})
+}
+
+// Tests RLP encoding against manually generated strings.
+func TestSmartContractAccountExt(t *testing.T) {
+	// To create testcases,
+	// - Install https://github.com/ethereumjs/rlp
+	//     npm install -g rlp
+	// - In bash, run
+	//     maketc(){ echo $(rlp encode "$1")$(rlp encode "$2" | cut -b3-); }
+	//     maketc 2 '["0x1234","0x5678"]'
+	var (
+		commonFields = &AccountCommon{
+			nonce:         0x1234,
+			balance:       big.NewInt(0x5678),
+			humanReadable: false,
+			key:           accountkey.NewAccountKeyLegacy(),
+		}
+		hash     = common.HexToHash("00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff")
+		exthash  = common.HexToExtHash("00112233445566778899aabbccddeeff00112233445566778899aabbccddeeffccccddddeeee01")
+		codehash = common.HexToHash("aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd").Bytes()
+		codeinfo = params.CodeInfo(0x10)
+
+		// StorageRoot is hash32:  maketc 2 '[["0x1234","0x5678","","0x01",[]],"0x00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff","0xaaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd","0x10"]'
+		scaLegacyRLP = "0x02f84dc98212348256788001c0a000112233445566778899aabbccddeeff00112233445566778899aabbccddeeffa0aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd10"
+		scaLegacy    = &SmartContractAccount{
+			AccountCommon: commonFields,
+			storageRoot:   hash.ExtendLegacy(),
+			codeHash:      codehash,
+			codeInfo:      codeinfo,
+		}
+		// StorageRoot is exthash: maketc 2 '[["0x1234","0x5678","","0x01",[]],"0x00112233445566778899aabbccddeeff00112233445566778899aabbccddeeffccccddddeeee01","0xaaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd","0x10"]'
+		scaExtRLP = "0x02f854c98212348256788001c0a700112233445566778899aabbccddeeff00112233445566778899aabbccddeeffccccddddeeee01a0aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd10"
+		scaExt    = &SmartContractAccount{
+			AccountCommon: commonFields,
+			storageRoot:   exthash,
+			codeHash:      codehash,
+			codeInfo:      codeinfo,
+		}
+	)
+	checkEncode := func(account Account, encoded string) {
+		enc := NewAccountSerializerWithAccount(account)
+		b, err := rlp.EncodeToBytes(enc)
+		assert.Nil(t, err)
+		assert.Equal(t, encoded, hexutil.Encode(b))
+	}
+	checkEncodeExt := func(account Account, encoded string) {
+		enc := NewAccountSerializerExtWithAccount(account)
+		b, err := rlp.EncodeToBytes(enc)
+		assert.Nil(t, err)
+		assert.Equal(t, encoded, hexutil.Encode(b))
+	}
+	checkEncode(scaLegacy, scaLegacyRLP)
+	checkEncodeExt(scaLegacy, scaLegacyRLP) // LegacyExt are always unextended
+
+	checkEncode(scaExt, scaLegacyRLP) // Regular encoding still results in hash32. Use it for merkle hash.
+	checkEncodeExt(scaExt, scaExtRLP) // Must use SerializeExt to preserve exthash. Use it for disk storage.
+
+	checkDecode := func(encoded string, account Account) {
+		b := common.FromHex(encoded)
+		dec := NewAccountSerializer()
+		err := rlp.DecodeBytes(b, &dec)
+		assert.Nil(t, err)
+		assert.True(t, dec.GetAccount().Equal(account))
+	}
+	checkDecodeExt := func(encoded string, account Account) {
+		b := common.FromHex(encoded)
+		dec := NewAccountSerializerExt()
+		err := rlp.DecodeBytes(b, &dec)
+		assert.Nil(t, err)
+		assert.True(t, dec.GetAccount().Equal(account))
+	}
+
+	checkDecode(scaLegacyRLP, scaLegacy)
+	checkDecodeExt(scaLegacyRLP, scaLegacy)
+
+	checkDecode(scaExtRLP, scaExt)
+	checkDecodeExt(scaExtRLP, scaExt)
+}
+
+func TestUnextendRLP(t *testing.T) {
+	// storage slot
+	testcases := []struct {
+		extended   string
+		unextended string
+	}{
+		{ // storage slot (33B) kept as-is
+			"0xa06700000000000000000000000000000000000000000000000000000000000000",
+			"0xa06700000000000000000000000000000000000000000000000000000000000000",
+		},
+		{ // Short EOA (<=ExtHashLength) kept as-is
+			"0x01c98212348256788001c0",
+			"0x01c98212348256788001c0",
+		},
+		{ // Long EOA (>ExtHashLength) kept as-is
+			"0x01ea8212348256788002a1030bc77753515dd61c66df6445ffffbedfc16b6b46c73eb09f01a970cb3bf0a8de",
+			"0x01ea8212348256788002a1030bc77753515dd61c66df6445ffffbedfc16b6b46c73eb09f01a970cb3bf0a8de",
+		},
+		{ // SCA with Hash keps as-is
+			"0x02f84dc98212348256788001c0a000112233445566778899aabbccddeeff00112233445566778899aabbccddeeffa0aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd10",
+			"0x02f84dc98212348256788001c0a000112233445566778899aabbccddeeff00112233445566778899aabbccddeeffa0aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd10",
+		},
+		{ // SCA with ExtHash unextended
+			"0x02f854c98212348256788001c0a700112233445566778899aabbccddeeff00112233445566778899aabbccddeeffccccddddeeee01a0aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd10",
+			"0x02f84dc98212348256788001c0a000112233445566778899aabbccddeeff00112233445566778899aabbccddeeffa0aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd10",
+		},
+		{ // Random malformed data kept as-is
+			"0xdead0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+			"0xdead0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+		},
+	}
+
+	for _, tc := range testcases {
+		unextended := UnextendRLP(common.FromHex(tc.extended))
+		assert.Equal(t, tc.unextended, hexutil.Encode(unextended))
+	}
 }

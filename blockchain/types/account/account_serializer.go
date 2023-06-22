@@ -18,8 +18,11 @@ package account
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/rlp"
 )
 
@@ -27,6 +30,8 @@ import (
 type AccountSerializer struct {
 	accType AccountType
 	account Account
+	// If true, ExtHash fields are preserved in RLP encoding. Otherwise, ExtHash fields are unextended.
+	preserveExtHash bool
 }
 
 // accountJSON is an internal data structure for JSON serialization.
@@ -38,12 +43,23 @@ type accountJSON struct {
 // NewAccountSerializer creates a new AccountSerializer object with default values.
 // This returned object will be used for decoding.
 func NewAccountSerializer() *AccountSerializer {
-	return &AccountSerializer{}
+	return &AccountSerializer{preserveExtHash: false}
 }
 
 // NewAccountSerializerWithAccount creates a new AccountSerializer object with the given account.
 func NewAccountSerializerWithAccount(a Account) *AccountSerializer {
-	return &AccountSerializer{a.Type(), a}
+	return &AccountSerializer{a.Type(), a, false}
+}
+
+// NewAccountSerializer creates a new AccountSerializer object with default values.
+// This returned object will be used for decoding.
+func NewAccountSerializerExt() *AccountSerializer {
+	return &AccountSerializer{preserveExtHash: true}
+}
+
+// NewAccountSerializerWithAccount creates a new AccountSerializer object with the given account.
+func NewAccountSerializerExtWithAccount(a Account) *AccountSerializer {
+	return &AccountSerializer{a.Type(), a, true}
 }
 
 func (ser *AccountSerializer) EncodeRLP(w io.Writer) error {
@@ -56,6 +72,11 @@ func (ser *AccountSerializer) EncodeRLP(w io.Writer) error {
 		return err
 	}
 
+	if ser.preserveExtHash {
+		if pa, ok := ser.account.(ProgramAccount); ok {
+			return pa.EncodeRLPExt(w)
+		}
+	}
 	return rlp.Encode(w, ser.account)
 }
 
@@ -65,14 +86,7 @@ func (ser *AccountSerializer) GetAccount() Account {
 
 func (ser *AccountSerializer) DecodeRLP(s *rlp.Stream) error {
 	if err := s.Decode(&ser.accType); err != nil {
-		// fallback to decoding a LegacyAccount object.
-		acc := newLegacyAccount()
-		if err := s.Decode(acc); err != nil {
-			return err
-		}
-		ser.accType = LegacyAccountType
-		ser.account = acc
-		return nil
+		return errors.New("legacy account deprecated")
 	}
 
 	var err error
@@ -126,4 +140,30 @@ func (ser *AccountSerializer) UnmarshalJSON(b []byte) error {
 	}
 
 	return json.Unmarshal(dec.Account, ser.account)
+}
+
+// Unextend ExtHash fields within an RLP-encoded account.
+// If the supplied bytes is not an RLP-encoded account, or does not contain any ExtHash,
+// then return the supplied bytes unchanged.
+func UnextendRLP(b []byte) []byte {
+	if len(b) <= common.ExtHashLength {
+		return b // Definitely not a contract account
+	}
+
+	dec := NewAccountSerializer()
+	if err := rlp.DecodeBytes(b, dec); err != nil {
+		return b // not an account
+	}
+
+	pa := GetProgramAccount(dec.GetAccount())
+	if pa == nil {
+		return b // not a ProgramAccount
+	}
+
+	enc := NewAccountSerializerWithAccount(pa)
+	result, err := rlp.EncodeToBytes(enc)
+	if err != nil {
+		logger.Crit("failed to unextend account blob", "bytes", hexutil.Encode(b), "err", err)
+	}
+	return result
 }
