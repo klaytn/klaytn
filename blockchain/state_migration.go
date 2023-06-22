@@ -683,7 +683,8 @@ func prepareContractWarmUp(block *types.Block, db state.Database, contractAddr c
 	if err != nil {
 		return common.Hash{}, nil, err
 	}
-	storageTrie, err := db.OpenStorageTrie(storageTrieRoot, nil)
+	// TODO-Klaytn-Pruning: GetContractStorageRoot returns ExtHash
+	storageTrie, err := db.OpenStorageTrie(storageTrieRoot.ExtendLegacy(), nil)
 	if err != nil {
 		return common.Hash{}, nil, err
 	}

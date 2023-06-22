@@ -139,6 +139,34 @@ func TestNodeIteratorCoverage(t *testing.T) {
 	}
 }
 
+// NodeIterator yields exact same result for Trie and StroageTrie
+func TestNodeIteratorStorageTrie(t *testing.T) {
+	triedb := NewDatabase(database.NewMemoryDBManager())
+
+	trie1, _ := NewTrie(common.Hash{}, triedb, &TrieOpts{Pruning: true})
+	hashes1 := make(map[common.Hash]struct{})
+	for it := trie1.NodeIterator(nil); it.Next(true); {
+		hashes1[it.Hash()] = struct{}{}
+	}
+
+	trie2, _ := NewStorageTrie(common.ExtHash{}, triedb, &TrieOpts{Pruning: true})
+	hashes2 := make(map[common.Hash]struct{})
+	for it := trie2.NodeIterator(nil); it.Next(true); {
+		hashes2[it.Hash()] = struct{}{}
+	}
+
+	for hash := range hashes1 {
+		if _, ok := hashes2[hash]; !ok {
+			t.Errorf("state entry not reported %x", hash)
+		}
+	}
+	for hash := range hashes2 {
+		if _, ok := hashes1[hash]; !ok {
+			t.Errorf("state entry not reported %x", hash)
+		}
+	}
+}
+
 type kvs struct{ k, v string }
 
 var testdata1 = []kvs{

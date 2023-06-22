@@ -47,7 +47,7 @@ type Database interface {
 	OpenTrie(root common.Hash, opts *statedb.TrieOpts) (Trie, error)
 
 	// OpenStorageTrie opens the storage trie of an account.
-	OpenStorageTrie(root common.Hash, opts *statedb.TrieOpts) (Trie, error)
+	OpenStorageTrie(root common.ExtHash, opts *statedb.TrieOpts) (Trie, error)
 
 	// CopyTrie returns an independent copy of the given trie.
 	CopyTrie(Trie) Trie
@@ -94,9 +94,11 @@ type Trie interface {
 	// Hash returns the root hash of the trie. It does not write to the database and
 	// can be used even if the trie doesn't have one.
 	Hash() common.Hash
+	HashExt() common.ExtHash
 	// Commit writes all nodes to the trie's memory database, tracking the internal
 	// and external (for account tries) references.
 	Commit(onleaf statedb.LeafCallback) (common.Hash, error)
+	CommitExt(onleaf statedb.LeafCallback) (common.ExtHash, error)
 	// NodeIterator returns an iterator that returns nodes of the trie. Iteration
 	// starts at the key after the given start key.
 	NodeIterator(startKey []byte) statedb.NodeIterator
@@ -167,8 +169,8 @@ func (db *cachingDB) OpenTrie(root common.Hash, opts *statedb.TrieOpts) (Trie, e
 }
 
 // OpenStorageTrie opens the storage trie of an account.
-func (db *cachingDB) OpenStorageTrie(root common.Hash, opts *statedb.TrieOpts) (Trie, error) {
-	return statedb.NewSecureTrie(root, db.db, opts)
+func (db *cachingDB) OpenStorageTrie(root common.ExtHash, opts *statedb.TrieOpts) (Trie, error) {
+	return statedb.NewSecureStorageTrie(root, db.db, opts)
 }
 
 // CopyTrie returns an independent copy of the given trie.

@@ -459,7 +459,7 @@ func (s *TrieSync) children(req *request, object node) ([]*request, error) {
 					paths = append(paths, hexToKeybytes(child.path[:2*common.HashLength]))
 					paths = append(paths, hexToKeybytes(child.path[2*common.HashLength:]))
 				}
-				if err := req.callback(paths, child.path, node, req.hash, child.depth); err != nil {
+				if err := req.callback(paths, child.path, node, req.hash.ExtendLegacy(), child.depth); err != nil {
 					return nil, err
 				}
 			}

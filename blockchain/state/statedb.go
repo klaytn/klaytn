@@ -1015,7 +1015,7 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 	if EnabledExpensive {
 		defer func(start time.Time) { s.AccountCommits += time.Since(start) }(time.Now())
 	}
-	root, err = s.trie.Commit(func(_ [][]byte, _ []byte, leaf []byte, parent common.Hash, parentDepth int) error {
+	root, err = s.trie.Commit(func(_ [][]byte, _ []byte, leaf []byte, parent common.ExtHash, parentDepth int) error {
 		serializer := account.NewAccountSerializer()
 		if err := rlp.DecodeBytes(leaf, serializer); err != nil {
 			logger.Warn("RLP decode failed", "err", err, "leaf", string(leaf))
@@ -1025,8 +1025,7 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 		if pa := account.GetProgramAccount(acc); pa != nil {
 			if pa.GetStorageRoot() != emptyState {
 				// TODO-Klaytn-Pruning: pa.GetStorageRoot returns ExtHash
-				// TODO-Klaytn-Pruning: onleaf passes ExtHash
-				s.db.TrieDB().Reference(pa.GetStorageRoot().ExtendLegacy(), parent.ExtendLegacy())
+				s.db.TrieDB().Reference(pa.GetStorageRoot().ExtendLegacy(), parent)
 			}
 		}
 		return nil
