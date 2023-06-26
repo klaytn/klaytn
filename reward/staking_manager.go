@@ -37,8 +37,16 @@ const (
 	chainHeadChanSize = 100
 )
 
-// TODO: Rename this variable when addressBookConnector is removed.
-var addressBookContractAddress2 = common.HexToAddress(contract.AddressBookContractAddress)
+// addressType defined in AddressBook
+const (
+	addressTypeNodeID = iota
+	addressTypeStakingAddr
+	addressTypeRewardAddr
+	addressTypePoCAddr // TODO-klaytn: PoC should be changed to KFF after changing AddressBook contract
+	addressTypeKIRAddr // TODO-klaytn: KIR should be changed to KCF after changing AddressBook contract
+)
+
+var addressBookContractAddress = common.HexToAddress(contract.AddressBookContractAddress)
 
 // blockChain is an interface for blockchain.Blockchain used in reward package.
 type blockChain interface {
@@ -55,13 +63,12 @@ type blockChain interface {
 }
 
 type StakingManager struct {
-	addressBookConnector *addressBookConnector
-	stakingInfoCache     *stakingInfoCache
-	stakingInfoDB        stakingInfoDB
-	governanceHelper     governanceHelper
-	blockchain           blockChain
-	chainHeadChan        chan blockchain.ChainHeadEvent
-	chainHeadSub         event.Subscription
+	stakingInfoCache *stakingInfoCache
+	stakingInfoDB    stakingInfoDB
+	governanceHelper governanceHelper
+	blockchain       blockChain
+	chainHeadChan    chan blockchain.ChainHeadEvent
+	chainHeadSub     event.Subscription
 }
 
 var (
@@ -84,12 +91,11 @@ func NewStakingManager(bc blockChain, gh governanceHelper, db stakingInfoDB) *St
 		// this is only called once
 		once.Do(func() {
 			stakingManager = &StakingManager{
-				addressBookConnector: newAddressBookConnector(bc, gh),
-				stakingInfoCache:     newStakingInfoCache(),
-				stakingInfoDB:        db,
-				governanceHelper:     gh,
-				blockchain:           bc,
-				chainHeadChan:        make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
+				stakingInfoCache: newStakingInfoCache(),
+				stakingInfoDB:    db,
+				governanceHelper: gh,
+				blockchain:       bc,
+				chainHeadChan:    make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
 			}
 
 			// Before migration, staking information of current and before should be stored in DB.
@@ -214,7 +220,7 @@ func updateStakingInfo(blockNum uint64) (*StakingInfo, error) {
 // 3. If AddressBook is activated, it returns fetched stakingInfo
 func getStakingInfoFromAddressBook(blockNum uint64) (*StakingInfo, error) {
 	caller := backends.NewBlockchainContractCaller(stakingManager.blockchain)
-	contract, _ := contract.NewAddressBookCaller(addressBookContractAddress2, caller)
+	contract, _ := contract.NewAddressBookCaller(addressBookContractAddress, caller)
 
 	types, addrs, err := contract.GetAllAddress(&bind.CallOpts{BlockNumber: new(big.Int).SetUint64(blockNum)})
 	if err != nil {
@@ -389,12 +395,11 @@ func StakingManagerUnsubscribe() {
 // Note that this method is used only for testing purpose.
 func SetTestStakingManagerWithChain(bc blockChain, gh governanceHelper, db stakingInfoDB) {
 	SetTestStakingManager(&StakingManager{
-		addressBookConnector: newAddressBookConnector(bc, gh),
-		stakingInfoCache:     newStakingInfoCache(),
-		stakingInfoDB:        db,
-		governanceHelper:     gh,
-		blockchain:           bc,
-		chainHeadChan:        make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
+		stakingInfoCache: newStakingInfoCache(),
+		stakingInfoDB:    db,
+		governanceHelper: gh,
+		blockchain:       bc,
+		chainHeadChan:    make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
 	})
 }
 
@@ -420,4 +425,9 @@ func SetTestStakingManagerWithStakingInfoCache(testInfo *StakingInfo) {
 // Note that this method is used only for testing purpose.
 func SetTestStakingManager(sm *StakingManager) {
 	stakingManager = sm
+}
+
+// SetTestAddressBookAddress is only for testing purpose.
+func SetTestAddressBookAddress(addr common.Address) {
+	addressBookContractAddress = common.HexToAddress(addr.Hex())
 }

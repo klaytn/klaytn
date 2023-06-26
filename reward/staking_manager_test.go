@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
@@ -99,7 +100,7 @@ func newStakingManagerForTest(t *testing.T) {
 	assert.EqualError(t, CheckStakingInfoStored(789), ErrStakingManagerNotSet.Error())
 
 	// test if get same
-	stNew := NewStakingManager(newTestBlockChain(), newDefaultTestGovernance(), nil)
+	stNew := NewStakingManager(&blockchain.BlockChain{}, newDefaultTestGovernance(), nil)
 	stGet := GetStakingManager()
 	assert.NotNil(t, stNew)
 	assert.Equal(t, stGet, stNew)
