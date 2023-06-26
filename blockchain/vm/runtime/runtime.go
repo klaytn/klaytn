@@ -63,6 +63,7 @@ func setDefaults(cfg *Config) {
 			LondonCompatibleBlock:    new(big.Int),
 			EthTxTypeCompatibleBlock: new(big.Int),
 			KoreCompatibleBlock:      new(big.Int),
+			MantleCompatibleBlock:    new(big.Int),
 		}
 	}
 

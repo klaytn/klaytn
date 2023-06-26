@@ -442,6 +442,12 @@ var (
 		Usage: "kip103Compatible blockNumber",
 	}
 
+	// TODO-klaytn: use mantleCompatibleBlockNumberFlag
+	mantleCompatibleBlockNumberFlag = cli.Int64Flag{
+		Name:  "mantle-compatible-blocknumber",
+		Usage: "mantleCompatible blockNumber",
+	}
+
 	kip103ContractAddressFlag = cli.StringFlag{
 		Name:  "kip103-contract-address",
 		Usage: "kip103 contract address",
