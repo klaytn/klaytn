@@ -113,7 +113,7 @@ type blockChain interface {
 	GetHeaderByNumber(val uint64) *types.Header
 	GetBlock(hash common.Hash, number uint64) *types.Block
 	State() (*state.StateDB, error)
+	StateAt(root common.Hash) (*state.StateDB, error)
 
 	CurrentBlock() *types.Block
-	StateAt(root common.Hash) (*state.StateDB, error) // TODO: unused. deleteme
 }

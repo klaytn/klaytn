@@ -57,6 +57,9 @@ type ChainReader interface {
 
 	// State() retrieves statedb
 	State() (*state.StateDB, error)
+
+	// StateAt() retrieves statedb on a particular point in time
+	StateAt(root common.Hash) (*state.StateDB, error)
 }
 
 //go:generate mockgen -destination=consensus/mocks/engine_mock.go -package=mocks github.com/klaytn/klaytn/consensus Engine

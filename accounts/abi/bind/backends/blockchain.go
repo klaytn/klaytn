@@ -45,6 +45,7 @@ type blockChainForCaller interface {
 	GetHeaderByNumber(number uint64) *types.Header
 	GetBlock(hash common.Hash, number uint64) *types.Block
 	State() (*state.StateDB, error)
+	StateAt(root common.Hash) (*state.StateDB, error)
 }
 
 // BlockchainContractCaller implements bind.ContractCaller, based on
@@ -57,6 +58,7 @@ type BlockchainContractCaller struct {
 	bc blockChainForCaller
 }
 
+// This nil assignment ensures at compile time that BlockchainContractCaller implements bind.ContractCaller.
 var _ bind.ContractCaller = (*BlockchainContractCaller)(nil)
 
 func NewBlockchainContractCaller(bc blockChainForCaller) *BlockchainContractCaller {
@@ -123,15 +125,18 @@ func (b *BlockchainContractCaller) callContract(call klaytn.CallMsg, block *type
 
 // Only current block and state are served.
 func (b *BlockchainContractCaller) getBlockAndState(num *big.Int) (*types.Block, *state.StateDB, error) {
-	header := b.bc.CurrentHeader()
+	var header *types.Header
+	if num == nil {
+		header = b.bc.CurrentHeader()
+	} else {
+		header = b.bc.GetHeaderByNumber(num.Uint64())
+	}
+
 	if header == nil {
 		return nil, nil, errBlockDoesNotExist
 	}
-	if num != nil && num.Cmp(header.Number) != 0 {
-		return nil, nil, errBlockNumberUnsupported
-	}
 
 	block := b.bc.GetBlock(header.Hash(), header.Number.Uint64())
-	state, err := b.bc.State()
+	state, err := b.bc.StateAt(block.Root())
 	return block, state, err
 }
