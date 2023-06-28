@@ -59,6 +59,12 @@ func newTestBlockchain() *blockchain.BlockChain {
 	genesis.MustCommit(db)
 
 	bc, _ := blockchain.NewBlockChain(db, nil, genesis.Config, gxhash.NewFaker(), vm.Config{})
+
+	// Append 10 blocks to test with block numbers other than 0
+	block := bc.CurrentBlock()
+	blocks, _ := blockchain.GenerateChain(config, block, gxhash.NewFaker(), db, 10, func(i int, b *blockchain.BlockGen) {})
+	bc.InsertChain(blocks)
+
 	return bc
 }
 
@@ -79,12 +85,20 @@ func TestBlockchainCodeAt(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, code1Bytes, code)
 
+	code, err = c.CodeAt(context.Background(), code1Addr, common.Big1)
+	assert.Nil(t, err)
+	assert.Equal(t, code1Bytes, code)
+
+	code, err = c.CodeAt(context.Background(), code1Addr, big.NewInt(10))
+	assert.Nil(t, err)
+	assert.Equal(t, code1Bytes, code)
+
 	// Non-code address
 	code, err = c.CodeAt(context.Background(), testAddr, nil)
 	assert.True(t, code == nil || err != nil)
 
 	// Invalid block number
-	code, err = c.CodeAt(context.Background(), code1Addr, common.Big1)
+	code, err = c.CodeAt(context.Background(), code1Addr, big.NewInt(11))
 	assert.True(t, code == nil || err != nil)
 }
 
