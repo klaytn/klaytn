@@ -75,12 +75,11 @@ func (b *BlockchainContractCaller) CodeAt(ctx context.Context, account common.Ad
 	}
 }
 
-// Executes a read-only function call with respect to the latest state.
+// Executes a read-only function call with respect to the specified block's state, or latest state if not specified.
 //
 // Returns call result in []byte.
 // Returns error when:
-// - a past (i.e. not latest) blockNumber is given
-// - cannot find the lateset block or stateDB
+// - cannot find the corresponding block or stateDB
 // - VM revert error
 // - VM other errors (e.g. NotProgramAccount, OutOfGas)
 // - Error outside VM
@@ -123,7 +122,6 @@ func (b *BlockchainContractCaller) callContract(call klaytn.CallMsg, block *type
 	return blockchain.ApplyMessage(evm, msg)
 }
 
-// Only current block and state are served.
 func (b *BlockchainContractCaller) getBlockAndState(num *big.Int) (*types.Block, *state.StateDB, error) {
 	var header *types.Header
 	if num == nil {
