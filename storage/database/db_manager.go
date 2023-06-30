@@ -168,6 +168,16 @@ type DBManager interface {
 	DeleteTrieNode(hash common.ExtHash)
 	WritePreimages(number uint64, preimages map[common.Hash][]byte)
 
+	// Trie pruning
+	ReadPruningEnabled() bool
+	WritePruningEnabled()
+	DeletePruningEnabled()
+
+	WritePruningMarks(marks []PruningMark)
+	ReadPruningMarks(startNumber, endNumber uint64) []PruningMark
+	DeletePruningMarks(marks []PruningMark)
+	PruneTrieNodes(marks []PruningMark)
+
 	// from accessors_indexes.go
 	ReadTxLookupEntry(hash common.Hash) (common.Hash, uint64, uint64)
 	WriteTxLookupEntries(block *types.Block)
@@ -1863,6 +1873,12 @@ func (dbm *databaseManager) PutTrieNodeToBatch(batch Batch, hash common.ExtHash,
 	}
 }
 
+func (dbm *databaseManager) DeleteTrieNode(hash common.ExtHash) {
+	if err := dbm.getDatabase(StateTrieDB).Delete(TrieNodeKey(hash)); err != nil {
+		logger.Crit("Failed to delete trie node", "err", err)
+	}
+}
+
 // WritePreimages writes the provided set of preimages to the database. `number` is the
 // current block number, and is used for debug messages only.
 func (dbm *databaseManager) WritePreimages(number uint64, preimages map[common.Hash][]byte) {
@@ -1882,9 +1898,87 @@ func (dbm *databaseManager) WritePreimages(number uint64, preimages map[common.H
 	preimageHitCounter.Inc(int64(len(preimages)))
 }
 
-func (dbm *databaseManager) DeleteTrieNode(hash common.ExtHash) {
-	if err := dbm.getDatabase(StateTrieDB).Delete(TrieNodeKey(hash)); err != nil {
-		logger.Crit("Failed to delete trie node", "err", err)
+func (dbm *databaseManager) ReadPruningEnabled() bool {
+	ok, _ := dbm.getDatabase(MiscDB).Has(pruningEnabledKey)
+	return ok
+}
+
+func (dbm *databaseManager) WritePruningEnabled() {
+	if err := dbm.getDatabase(MiscDB).Put(pruningEnabledKey, []byte("42")); err != nil {
+		logger.Crit("Failed to store pruning enabled flag", "err", err)
+	}
+}
+
+func (dbm *databaseManager) DeletePruningEnabled() {
+	if err := dbm.getDatabase(MiscDB).Delete(pruningEnabledKey); err != nil {
+		logger.Crit("Failed to remove pruning enabled flag", "err", err)
+	}
+}
+
+// WritePruningMarks writes the provided set of pruning marks to the database.
+func (dbm *databaseManager) WritePruningMarks(marks []PruningMark) {
+	batch := dbm.NewBatch(MiscDB)
+	for _, mark := range marks {
+		if err := batch.Put(pruningMarkKey(mark), pruningMarkValue); err != nil {
+			logger.Crit("Failed to store trie pruning mark", "err", err)
+		}
+		if _, err := WriteBatchesOverThreshold(batch); err != nil {
+			logger.Crit("Failed to store trie pruning mark", "err", err)
+		}
+	}
+	if err := batch.Write(); err != nil {
+		logger.Crit("Failed to batch write pruning mark", "err", err)
+	}
+}
+
+// ReadPruningMarks reads the pruning marks in the block number range [startNumber, endNumber).
+func (dbm *databaseManager) ReadPruningMarks(startNumber, endNumber uint64) []PruningMark {
+	prefix := pruningMarkPrefix
+	startKey := pruningMarkKey(PruningMark{startNumber, common.ExtHash{}})
+	it := dbm.getDatabase(MiscDB).NewIterator(prefix, startKey[len(prefix):])
+
+	var marks []PruningMark
+	for it.Next() {
+		mark := parsePruningMarkKey(it.Key())
+		if endNumber != 0 && mark.Number >= endNumber {
+			break
+		}
+		marks = append(marks, mark)
+	}
+	return marks
+}
+
+// DeletePruningMarks deletes the provided set of pruning marks from the database.
+// Note that trie nodes are not deleted by this function. To prune trie nodes, use
+// the PruneTrieNodes or DeleteTrieNode functions.
+func (dbm *databaseManager) DeletePruningMarks(marks []PruningMark) {
+	batch := dbm.NewBatch(MiscDB)
+	for _, mark := range marks {
+		if err := batch.Delete(pruningMarkKey(mark)); err != nil {
+			logger.Crit("Failed to delete trie pruning mark", "err", err)
+		}
+		if _, err := WriteBatchesOverThreshold(batch); err != nil {
+			logger.Crit("Failed to delete trie pruning mark", "err", err)
+		}
+	}
+	if err := batch.Write(); err != nil {
+		logger.Crit("Failed to batch delete pruning mark", "err", err)
+	}
+}
+
+// PruneTrieNodes deletes the trie nodes according to the provided set of pruning marks.
+func (dbm *databaseManager) PruneTrieNodes(marks []PruningMark) {
+	batch := dbm.NewBatch(StateTrieDB)
+	for _, mark := range marks {
+		if err := batch.Delete(TrieNodeKey(mark.Hash)); err != nil {
+			logger.Crit("Failed to prune trie node", "err", err)
+		}
+		if _, err := WriteBatchesOverThreshold(batch); err != nil {
+			logger.Crit("Failed to prune trie node", "err", err)
+		}
+	}
+	if err := batch.Write(); err != nil {
+		logger.Crit("Failed to batch prune trie node", "err", err)
 	}
 }
 

@@ -521,6 +521,53 @@ func TestDBManager_TrieNode(t *testing.T) {
 	}
 }
 
+func TestDBManager_PruningMarks(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
+	for _, dbm := range dbManagers {
+		if dbm.GetMiscDB().Type() == BadgerDB {
+			continue // badgerDB doesn't support NewIterator, so cannot test ReadPruningMarks.
+		}
+
+		assert.False(t, dbm.ReadPruningEnabled())
+		dbm.WritePruningEnabled()
+		assert.True(t, dbm.ReadPruningEnabled())
+		dbm.DeletePruningEnabled()
+		assert.False(t, dbm.ReadPruningEnabled())
+
+		var (
+			node1 = hash1.Extend()
+			node2 = hash2.Extend()
+			node3 = hash3.Extend()
+			node4 = hash4.Extend()
+			value = []byte("value")
+		)
+
+		dbm.WriteTrieNode(node1, value)
+		dbm.WriteTrieNode(node2, value)
+		dbm.WriteTrieNode(node3, value)
+		dbm.WriteTrieNode(node4, value)
+		dbm.WritePruningMarks([]PruningMark{
+			{100, node1}, {200, node2}, {300, node3}, {400, node4},
+		})
+
+		marks := dbm.ReadPruningMarks(300, 0)
+		assert.Equal(t, []PruningMark{{300, node3}, {400, node4}}, marks)
+		marks = dbm.ReadPruningMarks(0, 300)
+		assert.Equal(t, []PruningMark{{100, node1}, {200, node2}}, marks)
+
+		dbm.PruneTrieNodes(marks) // delete node1, node2
+		has := func(hash common.ExtHash) bool { ok, _ := dbm.HasTrieNode(hash); return ok }
+		assert.False(t, has(node1))
+		assert.False(t, has(node2))
+		assert.True(t, has(node3))
+		assert.True(t, has(node4))
+
+		dbm.DeletePruningMarks(marks)
+		marks = dbm.ReadPruningMarks(0, 0)
+		assert.Equal(t, []PruningMark{{300, node3}, {400, node4}}, marks)
+	}
+}
+
 // TestDBManager_TxLookupEntry tests read, write and delete operations of TxLookupEntries.
 func TestDBManager_TxLookupEntry(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
