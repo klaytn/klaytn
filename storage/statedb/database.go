@@ -91,7 +91,8 @@ type Database struct {
 	oldest common.ExtHash                 // Oldest tracked node, flush-list head
 	newest common.ExtHash                 // Newest tracked node, flush-list tail
 
-	preimages map[common.Hash][]byte // Preimages of nodes from the secure trie
+	preimages    map[common.Hash][]byte // Preimages of nodes from the secure trie
+	pruningMarks []database.PruningMark // Trie node pruning marks from the pruning trie
 
 	gctime  time.Duration      // Time spent on garbage collection since last commit
 	gcnodes uint64             // Nodes garbage collected since last commit
@@ -465,6 +466,10 @@ func (db *Database) insertPreimage(hash common.Hash, preimage []byte) {
 	db.preimagesSize += common.StorageSize(common.HashLength + len(preimage))
 }
 
+func (db *Database) insertPruningMark(mark database.PruningMark) {
+	db.pruningMarks = append(db.pruningMarks, mark)
+}
+
 // getCachedNode finds an encoded node in the trie node cache if enabled.
 func (db *Database) getCachedNode(hash common.ExtHash) []byte {
 	if db.trieNodeCache != nil {
@@ -752,11 +757,10 @@ func (db *Database) Cap(limit common.StorageSize) error {
 	// leave for later to deduplicate writes.
 	flushPreimages := db.preimagesSize > 4*1024*1024
 	if flushPreimages {
-		if err := db.writeBatchPreimages(); err != nil {
-			db.lock.RUnlock()
-			return err
-		}
+		db.diskDB.WritePreimages(0, db.preimages)
 	}
+	db.diskDB.WritePruningMarks(db.pruningMarks)
+
 	// Keep committing nodes from the flush-list until we're below allowance
 	oldest := db.oldest
 	batch := db.diskDB.NewBatch(database.StateTrieDB)
@@ -795,6 +799,8 @@ func (db *Database) Cap(limit common.StorageSize) error {
 		db.preimages = make(map[common.Hash][]byte)
 		db.preimagesSize = 0
 	}
+	db.pruningMarks = []database.PruningMark{}
+
 	for db.oldest != oldest {
 		node := db.nodes[db.oldest]
 		delete(db.nodes, db.oldest)
@@ -819,11 +825,6 @@ func (db *Database) Cap(limit common.StorageSize) error {
 		"size", nodeSize-db.nodesSize, "preimagesSize", preimagesSize-db.preimagesSize, "time", time.Since(start),
 		"flushnodes", db.flushnodes, "flushsize", db.flushsize, "flushtime", db.flushtime, "livenodes", len(db.nodes),
 		"livesize", db.nodesSize)
-	return nil
-}
-
-func (db *Database) writeBatchPreimages() error {
-	db.diskDB.WritePreimages(0, db.preimages)
 	return nil
 }
 
@@ -899,10 +900,8 @@ func (db *Database) Commit(root common.Hash, report bool, blockNum uint64) error
 	db.lock.RLock()
 
 	commitStart := time.Now()
-	if err := db.writeBatchPreimages(); err != nil {
-		db.lock.RUnlock()
-		return err
-	}
+	db.diskDB.WritePreimages(0, db.preimages)
+	db.diskDB.WritePruningMarks(db.pruningMarks)
 
 	// Move the trie itself into the batch, flushing if enough data is accumulated
 	numNodes, nodesSize := len(db.nodes), db.nodesSize
@@ -919,6 +918,7 @@ func (db *Database) Commit(root common.Hash, report bool, blockNum uint64) error
 
 	db.preimages = make(map[common.Hash][]byte)
 	db.preimagesSize = 0
+	db.pruningMarks = []database.PruningMark{}
 
 	uncacheStart := time.Now()
 	db.uncache(hash)
