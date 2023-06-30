@@ -27,6 +27,7 @@ import (
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/storage/database"
 )
 
 var (
@@ -41,10 +42,10 @@ var (
 type TrieOpts struct {
 	Prefetching bool // If true, certain metric is enabled
 
-	// If true, enable live pruning. i.e. node hashes are ExtHash with fresh nonces
-	// and obsolete nodes are enqueued in the pruning queue.
-	// TODO-Klaytn-Pruning: Prune obsolete nodes
-	Pruning bool
+	// If PruningBlockNumber is nonzero, trie update and delete operations
+	// will schedule obsolete nodes to be pruned when the given block number becomes obsolete.
+	// This option is only viable when the pruning is enabled on database.
+	PruningBlockNumber uint64
 }
 
 // LeafCallback is a callback type invoked when a trie operation reaches a leaf
@@ -73,6 +74,7 @@ type Trie struct {
 	db           *Database
 	root         node
 	originalRoot common.ExtHash
+	pruning      bool // True if the underlying database has pruning enabled.
 	storage      bool // If storage and Pruning are both true, root hash is attached a fresh nonce.
 }
 
@@ -115,8 +117,12 @@ func newTrie(root common.ExtHash, db *Database, opts *TrieOpts, storage bool) (*
 	trie := &Trie{
 		TrieOpts:     *opts,
 		db:           db,
+		pruning:      db.diskDB.ReadPruningEnabled(),
 		originalRoot: root,
 		storage:      storage,
+	}
+	if !trie.pruning && trie.PruningBlockNumber != 0 {
+		return nil, ErrPruningDisabled
 	}
 	if !common.EmptyExtHash(root) && root.Unextend() != emptyRoot {
 		rootnode, err := trie.resolveHash(root[:], nil)
@@ -330,6 +336,7 @@ func (t *Trie) insert(n node, prefix, key []byte, value node) (bool, node, error
 			if !dirty || err != nil {
 				return false, n, err
 			}
+			t.markPrunableNode(n) // dirty; something's changed in the child
 			return true, &shortNode{n.Key, nn, t.newFlag()}, nil
 		}
 		// Otherwise branch out at the index where they differ.
@@ -343,6 +350,7 @@ func (t *Trie) insert(n node, prefix, key []byte, value node) (bool, node, error
 		if err != nil {
 			return false, nil, err
 		}
+		t.markPrunableNode(n) // this node has changed
 		// Replace this shortNode with the branch if it occurs at index 0.
 		if matchlen == 0 {
 			return true, branch, nil
@@ -355,6 +363,7 @@ func (t *Trie) insert(n node, prefix, key []byte, value node) (bool, node, error
 		if !dirty || err != nil {
 			return false, n, err
 		}
+		t.markPrunableNode(n) // dirty; something's changed in the child
 		n = n.copy()
 		n.flags = t.newFlag()
 		n.Children[key[0]] = nn
@@ -412,6 +421,7 @@ func (t *Trie) delete(n node, prefix, key []byte) (bool, node, error) {
 			return false, n, nil // don't replace n on mismatch
 		}
 		if matchlen == len(key) {
+			t.markPrunableNode(n) // it's the target leaf
 			return true, nil, nil // remove n entirely for whole matches
 		}
 		// The key is longer than n.Key. Remove the remaining suffix
@@ -422,6 +432,7 @@ func (t *Trie) delete(n node, prefix, key []byte) (bool, node, error) {
 		if !dirty || err != nil {
 			return false, n, err
 		}
+		t.markPrunableNode(n) // dirty; something's changed in the child
 		switch child := child.(type) {
 		case *shortNode:
 			// Deleting from the subtrie reduced it to another
@@ -440,6 +451,7 @@ func (t *Trie) delete(n node, prefix, key []byte) (bool, node, error) {
 		if !dirty || err != nil {
 			return false, n, err
 		}
+		t.markPrunableNode(n) // dirty; something's changed in the child
 		n = n.copy()
 		n.flags = t.newFlag()
 		n.Children[key[0]] = nn
@@ -577,13 +589,41 @@ func (t *Trie) hashRoot(db *Database, onleaf LeafCallback) (common.ExtHash, node
 	}
 	h := newHasher(&hasherOpts{
 		onleaf:      onleaf,
-		pruning:     t.Pruning,
+		pruning:     t.pruning, // If database has pruning enabled, nodes must be stored with ExtHash.
 		storageRoot: t.storage,
 	})
 	defer returnHasherToPool(h)
 	hashed, cached := h.hashRoot(t.root, db, true)
 	hash := common.BytesToExtHash(hashed.(hashNode))
 	return hash, cached
+}
+
+// Mark the node for later pruning by writing PruningMark to database.
+func (t *Trie) markPrunableNode(n node) {
+	// Mark nodes only if both conditions are met:
+	// - t.pruning: database has pruning enabled, i.e. nodes are stored with ExtHash
+	// - t.PruningBlockNumber: requested pruning through state.New -> OpenTrie -> NewTrie.
+	if !t.pruning || t.PruningBlockNumber == 0 {
+		return
+	}
+
+	if hn, ok := n.(hashNode); ok {
+		// If a node exists as a hashNode, it means the node is either:
+		// (1) lives in database but yet to be resolved - subject to pruning,
+		// (2) collapsed by Hash or Commit - may or may not be in database, add the mark anyway.
+		t.db.insertPruningMark(database.PruningMark{
+			Number: t.PruningBlockNumber,
+			Hash:   common.BytesToExtHash(hn),
+		})
+	} else if hn, _ := n.cache(); hn != nil {
+		// If node.flags.hash is nonempty, it means the node is either:
+		// (1) loaded from databas - subject to pruning,
+		// (2) went through hasher by Hash or Commit - may or may not be in database, add the mark anyway.
+		t.db.insertPruningMark(database.PruningMark{
+			Number: t.PruningBlockNumber,
+			Hash:   common.BytesToExtHash(hn),
+		})
+	}
 }
 
 func GetHashAndHexKey(key []byte) ([]byte, []byte) {
