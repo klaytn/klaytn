@@ -130,7 +130,8 @@ func newObject(db *StateDB, address common.Address, data account.Account) *state
 
 // EncodeRLP implements rlp.Encoder.
 func (c *stateObject) EncodeRLP(w io.Writer) error {
-	serializer := account.NewAccountSerializerWithAccount(c.account)
+	// State objects are RLP encoded with ExtHash preserved.
+	serializer := account.NewAccountSerializerExtWithAccount(c.account)
 	return rlp.Encode(w, serializer)
 }
 
