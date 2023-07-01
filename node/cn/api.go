@@ -71,12 +71,24 @@ func NewPrivateAdminAPI(cn *CN) *PrivateAdminAPI {
 	return &PrivateAdminAPI{cn: cn}
 }
 
-// ExportChain exports the current blockchain into a local file.
-func (api *PrivateAdminAPI) ExportChain(file string) (bool, error) {
+// ExportChain exports the current blockchain into a local file,
+// or a range of blocks if first and last are non-nil.
+func (api *PrivateAdminAPI) ExportChain(file string, first, last *rpc.BlockNumber) (bool, error) {
 	if _, err := os.Stat(file); err == nil {
 		// File already exists. Allowing overwrite could be a DoS vecotor,
 		// since the 'file' may point to arbitrary paths on the drive
 		return false, errors.New("location would overwrite an existing file")
+	}
+	if first == nil && last != nil {
+		return false, errors.New("last cannot be specified without first")
+	}
+	if first == nil {
+		zero := rpc.EarliestBlockNumber
+		first = &zero
+	}
+	if last == nil || *last == rpc.LatestBlockNumber {
+		head := rpc.BlockNumber(api.cn.BlockChain().CurrentBlock().NumberU64())
+		last = &head
 	}
 
 	// Make sure we can create the file to export into
@@ -93,7 +105,7 @@ func (api *PrivateAdminAPI) ExportChain(file string) (bool, error) {
 	}
 
 	// Export the blockchain
-	if err := api.cn.BlockChain().Export(writer); err != nil {
+	if err := api.cn.BlockChain().ExportN(writer, first.Uint64(), last.Uint64()); err != nil {
 		return false, err
 	}
 	return true, nil

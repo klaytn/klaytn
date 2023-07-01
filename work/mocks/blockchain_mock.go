@@ -214,6 +214,20 @@ func (mr *MockBlockChainMockRecorder) Export(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Export", reflect.TypeOf((*MockBlockChain)(nil).Export), arg0)
 }
 
+// ExportN mocks base method.
+func (m *MockBlockChain) ExportN(arg0 io.Writer, arg1, arg2 uint64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExportN", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ExportN indicates an expected call of ExportN.
+func (mr *MockBlockChainMockRecorder) ExportN(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExportN", reflect.TypeOf((*MockBlockChain)(nil).ExportN), arg0, arg1, arg2)
+}
+
 // FastSyncCommitHead mocks base method.
 func (m *MockBlockChain) FastSyncCommitHead(arg0 common.Hash) error {
 	m.ctrl.T.Helper()
