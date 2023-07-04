@@ -148,12 +148,12 @@ func (ser *AccountSerializer) UnmarshalJSON(b []byte) error {
 	return json.Unmarshal(dec.Account, ser.account)
 }
 
-// Unextend ExtHash fields within an RLP-encoded account.
+// UnextendRLP unextends ExtHash fields within an RLP-encoded account.
 // If the supplied bytes is not an RLP-encoded account, or does not contain any ExtHash,
 // then return the supplied bytes unchanged.
 func UnextendRLP(b []byte) []byte {
-	if len(b) <= common.ExtHashLength {
-		return b // Definitely not a contract account
+	if len(b) < common.ExtHashLength {
+		return b // definitely does not contain an ExtHash
 	}
 
 	dec := NewAccountSerializer()
