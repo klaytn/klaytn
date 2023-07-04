@@ -132,6 +132,9 @@ func (bg *badgerDB) Has(key []byte) (bool, error) {
 	defer txn.Discard()
 	item, err := txn.Get(key)
 	if err != nil {
+		if err == badger.ErrKeyNotFound {
+			return false, nil
+		}
 		return false, err
 	}
 	err = item.Value(nil)
