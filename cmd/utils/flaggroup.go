@@ -176,6 +176,8 @@ var FlagGroups = []FlagGroup{
 			TrieMemoryCacheSizeFlag,
 			TrieBlockIntervalFlag,
 			TriesInMemoryFlag,
+			LivePruningFlag,
+			LivePruningRetentionFlag,
 		},
 	},
 	{
