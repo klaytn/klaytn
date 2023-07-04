@@ -329,6 +329,14 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		reward.NewStakingManager(cn.blockchain, governance, cn.chainDB)
 	}
 
+	// Governance states which are not yet applied to the db remains at in-memory storage
+	// It disappears during the node restart, so restoration is needed before the sync starts
+	// By calling CreateSnapshot, it restores the gov state snapshots and apply the votes in it
+	// Particularly, the gov.changeSet is also restored here.
+	if err := cn.Engine().CreateSnapshot(cn.blockchain, cn.blockchain.CurrentBlock().NumberU64(), cn.blockchain.CurrentBlock().Hash(), nil); err != nil {
+		logger.Error("CreateSnapshot failed", "err", err)
+	}
+
 	// set worker
 	if config.WorkerDisable {
 		cn.miner = work.NewFakeWorker()
@@ -475,13 +483,13 @@ func (s *CN) APIs() []rpc.API {
 
 	publicFilterAPI := filters.NewPublicFilterAPI(s.APIBackend, false)
 	governanceKlayAPI := governance.NewGovernanceKlayAPI(s.governance, s.blockchain)
-	publicGovernanceAPI := governance.NewGovernanceAPI(s.governance)
+	governanceAPI := governance.NewGovernanceAPI(s.governance)
 	publicDownloaderAPI := downloader.NewPublicDownloaderAPI(s.protocolManager.Downloader(), s.eventMux)
 	privateDownloaderAPI := downloader.NewPrivateDownloaderAPI(s.protocolManager.Downloader())
 
 	ethAPI.SetPublicFilterAPI(publicFilterAPI)
 	ethAPI.SetGovernanceKlayAPI(governanceKlayAPI)
-	ethAPI.SetPublicGovernanceAPI(publicGovernanceAPI)
+	ethAPI.SetGovernanceAPI(governanceAPI)
 
 	var tracerAPI *tracers.API
 	if s.config.DisableUnsafeDebug {
@@ -546,7 +554,7 @@ func (s *CN) APIs() []rpc.API {
 		}, {
 			Namespace: "governance",
 			Version:   "1.0",
-			Service:   governance.NewGovernanceAPI(s.governance),
+			Service:   governanceAPI,
 			Public:    true,
 		}, {
 			Namespace: "klay",

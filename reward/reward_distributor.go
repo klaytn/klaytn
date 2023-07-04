@@ -98,6 +98,20 @@ func NewRewardSpec() *RewardSpec {
 	}
 }
 
+func (spec *RewardSpec) Add(delta *RewardSpec) {
+	spec.Minted.Add(spec.Minted, delta.Minted)
+	spec.TotalFee.Add(spec.TotalFee, delta.TotalFee)
+	spec.BurntFee.Add(spec.BurntFee, delta.BurntFee)
+	spec.Proposer.Add(spec.Proposer, delta.Proposer)
+	spec.Stakers.Add(spec.Stakers, delta.Stakers)
+	spec.KFF.Add(spec.KFF, delta.KFF)
+	spec.KCF.Add(spec.KCF, delta.KCF)
+
+	for addr, amount := range delta.Rewards {
+		incrementRewardsMap(spec.Rewards, addr, amount)
+	}
+}
+
 // TODO: this is for legacy, will be removed
 type RewardDistributor struct{}
 

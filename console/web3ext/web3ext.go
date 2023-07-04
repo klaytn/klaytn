@@ -297,12 +297,6 @@ web3._extend({
 			params: 2
 		}),
 		new web3._extend.Method({
-			name: 'itemsAt',
-			call: 'governance_itemsAt',
-			params: 1,
-			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
-		}),
-		new web3._extend.Method({
 			name: 'getParams',
 			call: 'governance_getParams',
 			params: 1,
@@ -321,16 +315,16 @@ web3._extend({
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
-			name: 'chainConfigAt',
-			call: 'governance_chainConfigAt',
-			params: 1,
-			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
-		}),
-		new web3._extend.Method({
 			name: 'getChainConfig',
 			call: 'governance_getChainConfig',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
+			name: 'getRewardsAccumulated',
+			call: 'governance_getRewardsAccumulated',
+			params: 2,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter, web3._extend.formatters.inputBlockNumberFormatter]
 		})
 	],
 	properties: [
@@ -892,13 +886,6 @@ web3._extend({
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
-			name: 'gasPriceAt',
-			call: 'klay_gasPriceAt',
-			params: 1,
-			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
-			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
-		}),
-		new web3._extend.Method({
 			name: 'getRewards',
 			call: 'klay_getRewards',
 			params: 1,
@@ -911,22 +898,10 @@ web3._extend({
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
-			name: 'govParamsAt',
-			call: 'klay_govParamsAt',
-			params: 1,
-			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
-		}),
-		new web3._extend.Method({
 			name: 'getParams',
 			call: 'klay_getParams',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
-		}),
-		new web3._extend.Method({
-			name: 'chainConfigAt',
-			call: 'klay_chainConfigAt',
-			params: 1,
-			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
 		}),
 		new web3._extend.Method({
 			name: 'getChainConfig',

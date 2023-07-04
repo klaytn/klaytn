@@ -66,15 +66,6 @@ var (
 	memcacheNodesGauge = metrics.NewRegisteredGauge("trie/memcache/nodes", nil)
 )
 
-// secureKeyPrefix is the database key prefix used to store trie node preimages.
-var secureKeyPrefix = []byte("secure-key-")
-
-// secureKeyPrefixLength is the length of the above prefix
-const secureKeyPrefixLength = 11
-
-// secureKeyLength is the length of the above prefix + 32byte hash.
-const secureKeyLength = secureKeyPrefixLength + 32
-
 // commitResultChSizeLimit limits the size of channel used for commitResult.
 const commitResultChSizeLimit = 100 * 10000
 
@@ -516,7 +507,7 @@ func (db *Database) node(hash common.Hash) (n node, fromDB bool) {
 	}
 
 	// Content unavailable in memory, attempt to retrieve from disk
-	enc, err := db.diskDB.ReadCachedTrieNode(hash)
+	enc, err := db.diskDB.ReadTrieNode(hash)
 	if err != nil || enc == nil {
 		return nil, true
 	}
@@ -544,7 +535,7 @@ func (db *Database) Node(hash common.Hash) ([]byte, error) {
 		return node.rlp(), nil
 	}
 	// Content unavailable in memory, attempt to retrieve from disk
-	enc, err := db.diskDB.ReadCachedTrieNode(hash)
+	enc, err := db.diskDB.ReadTrieNode(hash)
 	if err == nil && enc != nil {
 		db.setCachedNode(hash[:], enc)
 	}
@@ -571,7 +562,7 @@ func (db *Database) NodeFromOld(hash common.Hash) ([]byte, error) {
 		return node.rlp(), nil
 	}
 	// Content unavailable in memory, attempt to retrieve from disk
-	enc, err := db.diskDB.ReadCachedTrieNodeFromOld(hash)
+	enc, err := db.diskDB.ReadTrieNodeFromOld(hash)
 	if err == nil && enc != nil {
 		db.setCachedNode(hash[:], enc)
 	}
@@ -595,7 +586,7 @@ func (db *Database) DoesExistNodeInPersistent(hash common.Hash) bool {
 	}
 
 	// Content unavailable in DB cache, attempt to retrieve from disk
-	enc, err := db.diskDB.ReadCachedTrieNode(hash)
+	enc, err := db.diskDB.ReadTrieNode(hash)
 	if err == nil && enc != nil {
 		return true
 	}
@@ -605,26 +596,17 @@ func (db *Database) DoesExistNodeInPersistent(hash common.Hash) bool {
 
 // preimage retrieves a cached trie node pre-image from memory. If it cannot be
 // found cached, the method queries the persistent database for the content.
-func (db *Database) preimage(hash common.Hash) ([]byte, error) {
+func (db *Database) preimage(hash common.Hash) []byte {
 	// Retrieve the node from cache if available
 	db.lock.RLock()
 	preimage := db.preimages[hash]
 	db.lock.RUnlock()
 
 	if preimage != nil {
-		return preimage, nil
+		return preimage
 	}
 	// Content unavailable in memory, attempt to retrieve from disk
-	return db.diskDB.ReadCachedTrieNodePreimage(secureKey(hash))
-}
-
-// secureKey returns the database key for the preimage of key (as a newly
-// allocated byte-slice)
-func secureKey(hash common.Hash) []byte {
-	buf := make([]byte, secureKeyLength)
-	copy(buf, secureKeyPrefix)
-	copy(buf[secureKeyPrefixLength:], hash[:])
-	return buf
+	return db.diskDB.ReadPreimage(hash)
 }
 
 // Nodes retrieves the hashes of all the nodes cached within the memory database.
@@ -769,7 +751,8 @@ func (db *Database) Cap(limit common.StorageSize) error {
 		// Fetch the oldest referenced node and push into the batch
 		node := db.nodes[oldest]
 		enc := node.rlp()
-		if err := database.PutAndWriteBatchesOverThreshold(batch, oldest[:], enc); err != nil {
+		db.diskDB.PutTrieNodeToBatch(batch, oldest, enc)
+		if _, err := database.WriteBatchesOverThreshold(batch); err != nil {
 			db.lock.RUnlock()
 			return err
 		}
@@ -829,33 +812,7 @@ func (db *Database) Cap(limit common.StorageSize) error {
 }
 
 func (db *Database) writeBatchPreimages() error {
-	// TODO-Klaytn What kind of batch should be used below?
-	preimagesBatch := db.diskDB.NewBatch(database.StateTrieDB)
-
-	// We reuse an ephemeral buffer for the keys. The batch Put operation
-	// copies it internally, so we can reuse it.
-	var keyBuf [secureKeyLength]byte
-	copy(keyBuf[:], secureKeyPrefix)
-
-	// Move all of the accumulated preimages into a write batch
-	for hash, preimage := range db.preimages {
-		copy(keyBuf[secureKeyPrefixLength:], hash[:])
-		if err := preimagesBatch.Put(keyBuf[:], preimage); err != nil {
-			logger.Error("Failed to commit preimages from trie database", "err", err)
-			return err
-		}
-
-		if _, err := database.WriteBatchesOverThreshold(preimagesBatch); err != nil {
-			return err
-		}
-	}
-
-	// Write batch ready, unlock for readers during persistence
-	if _, err := database.WriteBatches(preimagesBatch); err != nil {
-		logger.Error("Failed to write preimages to disk", "err", err)
-		return err
-	}
-
+	db.diskDB.WritePreimages(0, db.preimages)
 	return nil
 }
 
@@ -863,8 +820,8 @@ func (db *Database) writeBatchPreimages() error {
 // key and val are nil if the commitResult indicates the end of
 // concurrentCommit goroutine.
 type commitResult struct {
-	key []byte
-	val []byte
+	hash common.Hash
+	val  []byte
 }
 
 func (db *Database) writeBatchNodes(node common.Hash) error {
@@ -888,26 +845,19 @@ func (db *Database) writeBatchNodes(node common.Hash) error {
 	batch := db.diskDB.NewBatch(database.StateTrieDB)
 	for numGoRoutines > 0 {
 		result := <-resultCh
-		if result.key == nil && result.val == nil {
+		if (result.hash == common.Hash{}) && result.val == nil {
 			numGoRoutines--
 			continue
 		}
 
-		if err := batch.Put(result.key, result.val); err != nil {
+		db.diskDB.PutTrieNodeToBatch(batch, result.hash, result.val)
+		if _, err := database.WriteBatchesOverThreshold(batch); err != nil {
 			return err
-		}
-		if batch.ValueSize() > database.IdealBatchSize {
-			if err := batch.Write(); err != nil {
-				return err
-			}
-			batch.Reset()
 		}
 	}
 
 	enc := rootNode.rlp()
-	if err := batch.Put(node[:], enc); err != nil {
-		return err
-	}
+	db.diskDB.PutTrieNodeToBatch(batch, node, enc)
 	if err := batch.Write(); err != nil {
 		logger.Error("Failed to write trie to disk", "err", err)
 		return err
@@ -923,7 +873,7 @@ func (db *Database) concurrentCommit(hash common.Hash, resultCh chan<- commitRes
 	logger.Trace("concurrentCommit start", "childIndex", childIndex)
 	defer logger.Trace("concurrentCommit end", "childIndex", childIndex)
 	db.commit(hash, resultCh)
-	resultCh <- commitResult{nil, nil}
+	resultCh <- commitResult{common.Hash{}, nil}
 }
 
 // Commit iterates over all the children of a particular node, writes them out
@@ -993,7 +943,7 @@ func (db *Database) commit(hash common.Hash, resultCh chan<- commitResult) {
 		db.commit(child, resultCh)
 	}
 	enc := node.rlp()
-	resultCh <- commitResult{hash[:], enc}
+	resultCh <- commitResult{hash, enc}
 
 	if db.trieNodeCache != nil {
 		db.trieNodeCache.Set(hash[:], enc)

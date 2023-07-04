@@ -37,6 +37,11 @@ var (
 	emptyState = crypto.Keccak256Hash(nil)
 )
 
+// TrieOpts consists of trie operation options
+type TrieOpts struct {
+	Prefetching bool // If true, certain metric is enabled
+}
+
 // LeafCallback is a callback type invoked when a trie operation reaches a leaf
 // node.
 //
@@ -76,10 +81,14 @@ func (t *Trie) newFlag() nodeFlag {
 // trie is initially empty and does not require a database. Otherwise,
 // NewTrie will panic if db is nil and returns a MissingNodeError if root does
 // not exist in the database. Accessing the trie loads nodes from db on demand.
-func NewTrie(root common.Hash, db *Database) (*Trie, error) {
+func NewTrie(root common.Hash, db *Database, opts *TrieOpts) (*Trie, error) {
 	if db == nil {
 		panic("statedb.NewTrie called without a database")
 	}
+	if opts == nil {
+		opts = &TrieOpts{}
+	}
+
 	trie := &Trie{
 		db:           db,
 		originalRoot: root,
@@ -91,16 +100,8 @@ func NewTrie(root common.Hash, db *Database) (*Trie, error) {
 		}
 		trie.root = rootnode
 	}
+	trie.prefetching = opts.Prefetching
 	return trie, nil
-}
-
-func NewTrieForPrefetching(root common.Hash, db *Database) (*Trie, error) {
-	trie, err := NewTrie(root, db)
-	if err != nil {
-		return nil, err
-	}
-	trie.prefetching = true
-	return trie, err
 }
 
 // NodeIterator returns an iterator that returns nodes of the trie. Iteration starts at

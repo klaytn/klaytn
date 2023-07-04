@@ -261,3 +261,8 @@ func makeKey(prefix []byte, num uint64) []byte {
 func databaseDirKey(dbEntryType uint64) []byte {
 	return append(databaseDirPrefix, common.Int64ToByteBigEndian(dbEntryType)...)
 }
+
+// TrieNodeKey = hash
+func TrieNodeKey(hash common.Hash) []byte {
+	return hash.Bytes()
+}
