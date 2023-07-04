@@ -756,10 +756,13 @@ func (db *Database) Cap(limit common.StorageSize) error {
 	// If the preimage cache got large enough, push to disk. If it's still small
 	// leave for later to deduplicate writes.
 	flushPreimages := db.preimagesSize > 4*1024*1024
+	numPreimages := 0
 	if flushPreimages {
 		db.diskDB.WritePreimages(0, db.preimages)
+		numPreimages = len(db.preimages)
 	}
 	db.diskDB.WritePruningMarks(db.pruningMarks)
+	numPruningMarks := len(db.pruningMarks)
 
 	// Keep committing nodes from the flush-list until we're below allowance
 	oldest := db.oldest
@@ -824,7 +827,7 @@ func (db *Database) Cap(limit common.StorageSize) error {
 	logger.Info("Persisted nodes from memory database by Cap", "nodes", nodes-len(db.nodes),
 		"size", nodeSize-db.nodesSize, "preimagesSize", preimagesSize-db.preimagesSize, "time", time.Since(start),
 		"flushnodes", db.flushnodes, "flushsize", db.flushsize, "flushtime", db.flushtime, "livenodes", len(db.nodes),
-		"livesize", db.nodesSize)
+		"livesize", db.nodesSize, "preimages", numPreimages, "pruningMarks", numPruningMarks)
 	return nil
 }
 
@@ -902,6 +905,8 @@ func (db *Database) Commit(root common.Hash, report bool, blockNum uint64) error
 	commitStart := time.Now()
 	db.diskDB.WritePreimages(0, db.preimages)
 	db.diskDB.WritePruningMarks(db.pruningMarks)
+	numPreimages := len(db.preimages)
+	numPruningMarks := len(db.pruningMarks)
 
 	// Move the trie itself into the batch, flushing if enough data is accumulated
 	numNodes, nodesSize := len(db.nodes), db.nodesSize
@@ -936,7 +941,7 @@ func (db *Database) Commit(root common.Hash, report bool, blockNum uint64) error
 	localLogger("Persisted trie from memory database", "blockNum", blockNum,
 		"updated nodes", numNodes-len(db.nodes), "updated nodes size", nodesSize-db.nodesSize,
 		"time", commitEnd.Sub(commitStart), "gcnodes", db.gcnodes, "gcsize", db.gcsize, "gctime", db.gctime,
-		"livenodes", len(db.nodes), "livesize", db.nodesSize)
+		"livenodes", len(db.nodes), "livesize", db.nodesSize, "preimages", numPreimages, "pruningMarks", numPruningMarks)
 
 	// Reset the garbage collection statistics
 	db.gcnodes, db.gcsize, db.gctime = 0, 0, 0

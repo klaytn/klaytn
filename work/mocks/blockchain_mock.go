@@ -678,6 +678,21 @@ func (mr *MockBlockChainMockRecorder) Processor() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Processor", reflect.TypeOf((*MockBlockChain)(nil).Processor))
 }
 
+// PrunableStateAt mocks base method.
+func (m *MockBlockChain) PrunableStateAt(arg0 common.Hash, arg1 uint64) (*state.StateDB, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PrunableStateAt", arg0, arg1)
+	ret0, _ := ret[0].(*state.StateDB)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PrunableStateAt indicates an expected call of PrunableStateAt.
+func (mr *MockBlockChainMockRecorder) PrunableStateAt(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrunableStateAt", reflect.TypeOf((*MockBlockChain)(nil).PrunableStateAt), arg0, arg1)
+}
+
 // ResetWithGenesisBlock mocks base method.
 func (m *MockBlockChain) ResetWithGenesisBlock(arg0 *types.Block) error {
 	m.ctrl.T.Helper()
