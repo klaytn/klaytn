@@ -95,11 +95,11 @@ func TestBlockchainCodeAt(t *testing.T) {
 
 	// Non-code address
 	code, err = c.CodeAt(context.Background(), testAddr, nil)
-	assert.True(t, code == nil || err != nil)
+	assert.True(t, code == nil && err == nil)
 
 	// Invalid block number
 	code, err = c.CodeAt(context.Background(), code1Addr, big.NewInt(11))
-	assert.True(t, code == nil || err != nil)
+	assert.True(t, code == nil && err == errBlockDoesNotExist)
 }
 
 func TestBlockchainCallContract(t *testing.T) {
