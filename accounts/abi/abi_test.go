@@ -789,13 +789,13 @@ func TestUnpackEventOffsetBound(t *testing.T) {
 	assert.Nil(t, err, err)
 
 	type evObj struct {
-		Elem1  *big.Int
+		Elem1 *big.Int
 		Elem2 [3]string
 	}
 
 	var params evObj
 	err = abi.Unpack(&params, "eventInDynamicType", data)
-	// Must return error 
+	// Must return error
 	assert.NotNil(t, err, err)
 }
 
