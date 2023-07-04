@@ -542,9 +542,7 @@ func (t *Trie) resolveHash(n hashNode, prefix []byte) (node, error) {
 // Hash returns the root hash of the trie. It does not write to the
 // database and can be used even if the trie doesn't have one.
 func (t *Trie) Hash() common.Hash {
-	hash, cached := t.hashRoot(nil, nil)
-	t.root = cached
-	return hash.Unextend()
+	return t.HashExt().Unextend()
 }
 
 // HashExt returns the root hash of the trie in ExtHash type. It does not write to the
@@ -558,12 +556,8 @@ func (t *Trie) HashExt() common.ExtHash {
 // Commit writes all nodes to the trie's memory database, tracking the internal
 // and external (for account tries) references. Returns the root hash.
 func (t *Trie) Commit(onleaf LeafCallback) (root common.Hash, err error) {
-	if t.db == nil {
-		panic("commit called on trie with nil database")
-	}
-	hash, cached := t.hashRoot(t.db, onleaf)
-	t.root = cached
-	return hash.Unextend(), nil
+	extroot, err := t.CommitExt(onleaf)
+	return extroot.Unextend(), err
 }
 
 // CommitExt writes all nodes to the trie's memory database, tracking the internal
