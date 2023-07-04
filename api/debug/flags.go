@@ -236,8 +236,8 @@ func Setup(ctx *cli.Context) error {
 	}
 	if len(logFile) > 0 {
 		context = append(context, "format", logFmtFlag, "location", logFile)
-		if err := validateLogLocation(filepath.Dir(logFile)); err != nil {
-			return fmt.Errorf("failed to initiatilize file logger: %v", err)
+		if err := validateLogLocation(logFile); err != nil {
+			return fmt.Errorf("tried to create a temporary file to verify that the log path is writable, but it failed: %v", err)
 		}
 		if rotation {
 			ostream = log.StreamHandler(&lumberjack.Logger{
@@ -315,11 +315,11 @@ func Exit() {
 }
 
 func validateLogLocation(path string) error {
-	if err := os.MkdirAll(path, os.ModePerm); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), os.ModePerm); err != nil {
 		return fmt.Errorf("error creating the directory: %w", err)
 	}
 	// Check if the path is writable by trying to create a temporary file
-	tmp := filepath.Join(path, "tmp")
+	tmp := filepath.Join(path, ".temp")
 	if f, err := os.Create(tmp); err != nil {
 		return err
 	} else {
