@@ -93,7 +93,7 @@ func (s *PublicTransactionPoolAPI) GetRawTransactionByBlockNumberAndIndex(ctx co
 	}
 	tx := newRPCRawTransactionFromBlockIndex(block, uint64(index))
 	if tx == nil {
-		return nil, fmt.Errorf("the transaction does not exist (BlockNum: %s, Index:%s)", blockNr, index)
+		return nil, fmt.Errorf("the transaction does not exist (BlockNum: %d, Index:%d)", blockNr, index)
 	}
 	return tx, nil
 }
