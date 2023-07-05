@@ -192,7 +192,7 @@ func (s *PublicTransactionPoolAPI) GetRawTransactionByHash(ctx context.Context, 
 	if tx, _, _, _ = s.b.ChainDB().ReadTxAndLookupInfo(hash); tx == nil {
 		if tx = s.b.GetPoolTransaction(hash); tx == nil {
 			// Transaction not found anywhere, abort
-			return nil, nil
+			return nil, fmt.Errorf("the transaction does not exist (tx hash: %s)", hash.String())
 		}
 	}
 
