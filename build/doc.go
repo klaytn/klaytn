@@ -38,7 +38,6 @@ Available commands are:
    nsis                                                                                        -- creates a Windows NSIS installer
    aar        [ -local ] [ -sign key-id ] [-deploy repo] [ -upload dest ]                      -- creates an Android archive
    xcode      [ -local ] [ -sign key-id ] [-deploy repo] [ -upload dest ]                      -- creates an iOS XCode framework
-   xgo        [ -alltools ] [ options ]                                                        -- cross builds according to options
    purge      [ -store blobstore ] [ -days threshold ]                                         -- purges old archives from the blobstore
 
 For all commands, -n prevents execution of external programs (dry run mode).

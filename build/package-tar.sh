@@ -106,7 +106,7 @@ fi
 
 # Copy the target binary
 mkdir -p ${PACK_NAME}/bin
-cp build/bin/${PACK_NAME} ${PACK_NAME}/bin/${TARGET}
+cp build/bin/${TARGET} ${PACK_NAME}/bin/${TARGET}
 
 # Copy the configuration file and the daemon file.
 if [ ! -z "$DAEMON" ]; then

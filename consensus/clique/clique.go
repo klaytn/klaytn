@@ -359,7 +359,7 @@ func (c *Clique) verifyCascadingFields(chain consensus.ChainReader, header *type
 	return c.verifySeal(chain, header, parents)
 }
 
-// CreateSnapshot does not return a snapshot but creates a new snapshot at a given point in time.
+// CreateSnapshot does not return a snapshot but creates a new snapshot if not exists at a given point in time
 func (c *Clique) CreateSnapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) error {
 	_, err := c.snapshot(chain, number, hash, parents)
 	return err

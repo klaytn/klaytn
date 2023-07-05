@@ -676,6 +676,14 @@ func (sb *backend) Stop() error {
 	return nil
 }
 
+// UpdateParam implements consensus.Istanbul.UpdateParam and it updates the governance parameters
+func (sb *backend) UpdateParam(number uint64) error {
+	if err := sb.governance.UpdateParams(number); err != nil {
+		return err
+	}
+	return nil
+}
+
 // initSnapshot initializes and stores a new Snapshot.
 func (sb *backend) initSnapshot(chain consensus.ChainReader) (*Snapshot, error) {
 	genesis := chain.GetHeaderByNumber(0)
@@ -723,12 +731,9 @@ func getPrevHeaderAndUpdateParents(chain consensus.ChainReader, number uint64, h
 	return header
 }
 
-// CreateSnapshot does not return a snapshot but creates a new snapshot at a given point in time.
+// CreateSnapshot does not return a snapshot but creates a new snapshot if not exists at a given point in time
 func (sb *backend) CreateSnapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) error {
 	if _, err := sb.snapshot(chain, number, hash, parents, true); err != nil {
-		return err
-	}
-	if err := sb.governance.UpdateParams(number); err != nil {
 		return err
 	}
 	return nil
@@ -810,7 +815,9 @@ func (sb *backend) GetConsensusInfo(block *types.Block) (consensus.ConsensusInfo
 	return cInfo, nil
 }
 
-// snapshot retrieves the authorization snapshot at a given point in time.
+// snapshot retrieves the state of the authorization voting at a given point in time.
+// There's in-memory snapshot and on-disk snapshot. On-disk snapshot is stored every checkpointInterval blocks.
+// Moreover, if the block has no in-memory or on-disk snapshot, before generating snapshot, it gathers the header and apply the vote in it.
 func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header, writable bool) (*Snapshot, error) {
 	// Search for a snapshot in memory or on disk for checkpoints
 	var (

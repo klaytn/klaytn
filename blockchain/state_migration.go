@@ -46,20 +46,12 @@ type stateTrieMigrationDB struct {
 	database.DBManager
 }
 
-func (td *stateTrieMigrationDB) ReadCachedTrieNode(hash common.Hash) ([]byte, error) {
-	return td.ReadCachedTrieNodeFromNew(hash)
+func (td *stateTrieMigrationDB) ReadTrieNode(hash common.Hash) ([]byte, error) {
+	return td.ReadTrieNodeFromNew(hash)
 }
 
-func (td *stateTrieMigrationDB) ReadCachedTrieNodePreimage(secureKey []byte) ([]byte, error) {
-	return td.ReadCachedTrieNodePreimageFromNew(secureKey)
-}
-
-func (td *stateTrieMigrationDB) ReadStateTrieNode(key []byte) ([]byte, error) {
-	return td.ReadStateTrieNodeFromNew(key)
-}
-
-func (td *stateTrieMigrationDB) HasStateTrieNode(key []byte) (bool, error) {
-	return td.HasStateTrieNodeFromNew(key)
+func (td *stateTrieMigrationDB) HasTrieNode(hash common.Hash) (bool, error) {
+	return td.HasTrieNodeFromNew(hash)
 }
 
 func (td *stateTrieMigrationDB) HasCodeWithPrefix(hash common.Hash) bool {
@@ -283,12 +275,12 @@ func (st *migrationStats) stateMigrationReport(force bool, pending int, progress
 }
 
 func (bc *BlockChain) checkTrieContents(oldDB, newDB *statedb.Database, root common.Hash) ([]common.Address, error) {
-	oldTrie, err := statedb.NewSecureTrie(root, oldDB)
+	oldTrie, err := statedb.NewSecureTrie(root, oldDB, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	newTrie, err := statedb.NewSecureTrie(root, newDB)
+	newTrie, err := statedb.NewSecureTrie(root, newDB, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -416,7 +408,7 @@ func (bc *BlockChain) StateMigrationStatus() (bool, uint64, int, int, int, float
 func (bc *BlockChain) iterateStateTrie(root common.Hash, db state.Database, resultCh chan struct{}, errCh chan error) (resultErr error) {
 	defer func() { errCh <- resultErr }()
 
-	stateDB, err := state.New(root, db, nil)
+	stateDB, err := state.New(root, db, nil, nil)
 	if err != nil {
 		return err
 	}
@@ -652,7 +644,7 @@ func printDepthStats(depthCounter map[int]int) {
 
 // GetContractStorageRoot returns the storage root of a contract based on the given block.
 func (bc *BlockChain) GetContractStorageRoot(block *types.Block, db state.Database, contractAddr common.Address) (common.Hash, error) {
-	stateDB, err := state.New(block.Root(), db, nil)
+	stateDB, err := state.New(block.Root(), db, nil, nil)
 	if err != nil {
 		return common.Hash{}, fmt.Errorf("failed to get StateDB - %w", err)
 	}
@@ -701,7 +693,7 @@ func (bc *BlockChain) iterateStorageTrie(child common.Hash, storageTrie state.Tr
 }
 
 func prepareContractWarmUp(block *types.Block, db state.Database, contractAddr common.Address) (common.Hash, state.Trie, error) {
-	stateDB, err := state.New(block.Root(), db, nil)
+	stateDB, err := state.New(block.Root(), db, nil, nil)
 	if err != nil {
 		return common.Hash{}, nil, fmt.Errorf("failed to get StateDB, err: %w", err)
 	}
@@ -709,7 +701,7 @@ func prepareContractWarmUp(block *types.Block, db state.Database, contractAddr c
 	if err != nil {
 		return common.Hash{}, nil, err
 	}
-	storageTrie, err := db.OpenStorageTrie(storageTrieRoot)
+	storageTrie, err := db.OpenStorageTrie(storageTrieRoot, nil)
 	if err != nil {
 		return common.Hash{}, nil, err
 	}

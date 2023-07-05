@@ -10,65 +10,13 @@ BIN = $(shell pwd)/build/bin
 BUILD_PARAM?=install
 
 OBJECTS=kcn kpn ken kscn kspn ksen kbn kgen homi
-RPM_OBJECTS=$(foreach wrd,$(OBJECTS),rpm-$(wrd))
-RPM_BAOBAB_OBJECTS=$(foreach wrd,$(OBJECTS),rpm-baobab-$(wrd))
-TAR_LINUX_386_OBJECTS=$(foreach wrd,$(OBJECTS),tar-linux-386-$(wrd))
-TAR_LINUX_amd64_OBJECTS=$(foreach wrd,$(OBJECTS),tar-linux-amd64-$(wrd))
-TAR_DARWIN_amd64_OBJECTS=$(foreach wrd,$(OBJECTS),tar-darwin-amd64-$(wrd))
-TAR_BAOBAB_LINUX_386_OBJECTS=$(foreach wrd,$(OBJECTS),tar-baobab-linux-386-$(wrd))
-TAR_BAOBAB_LINUX_amd64_OBJECTS=$(foreach wrd,$(OBJECTS),tar-baobab-linux-amd64-$(wrd))
-TAR_BAOBAB_DARWIN_amd64_OBJECTS=$(foreach wrd,$(OBJECTS),tar-baobab-darwin-amd64-$(wrd))
 
-.PHONY: all test clean ${OBJECTS} ${RPM_OBJECTS} ${TAR_LINUX_386_OBJECTS} ${TAR_DARWIN_amd64_OBJECTS} ${TAR_LINUX_amd64_OBJECTS}
+.PHONY: all test clean ${OBJECTS}
 
 all: ${OBJECTS}
-rpm-all: ${RPM_OBJECTS}
-rpm-baobab-all: ${RPM_BAOBAB_OBJECTS}
-tar-linux-386-all: ${TAR_LINUX_386_OBJECTS}
-tar-linux-amd64-all: ${TAR_LINUX_amd64_OBJECTS}
-tar-darwin-amd64-all: ${TAR_DARWIN_amd64_OBJECTS}
-tar-baobab-linux-386-all: ${TAR_BAOBAB_LINUX_386_OBJECTS}
-tar-baobab-linux-amd64-all: ${TAR_BAOBAB_LINUX_amd64_OBJECTS}
-tar-baobab-darwin-amd64-all: ${TAR_BAOBAB_DARWIN_amd64_OBJECTS}
 
 ${OBJECTS}:
 	$(GORUN) build/ci.go ${BUILD_PARAM} ./cmd/$@
-
-${RPM_OBJECTS}:
-	./build/package-rpm.sh ${@:rpm-%=%}
-
-${RPM_BAOBAB_OBJECTS}:
-	./build/package-rpm.sh -b ${@:rpm-baobab-%=%}
-
-${TAR_LINUX_386_OBJECTS}:
-	$(eval BIN := ${@:tar-linux-386-%=%})
-	./build/cross-compile.sh linux-386 ${BIN}
-	./build/package-tar.sh linux-386 ${BIN}
-
-${TAR_LINUX_amd64_OBJECTS}:
-	$(eval BIN := ${@:tar-linux-amd64-%=%})
-	./build/cross-compile.sh linux-amd64 ${BIN}
-	./build/package-tar.sh linux-amd64 ${BIN}
-
-${TAR_DARWIN_amd64_OBJECTS}:
-	$(eval BIN := ${@:tar-darwin-amd64-%=%})
-	./build/cross-compile.sh darwin-amd64 ${BIN}
-	./build/package-tar.sh darwin-amd64 ${BIN}
-
-${TAR_BAOBAB_LINUX_386_OBJECTS}:
-	$(eval BIN := ${@:tar-baobab-linux-386-%=%})
-	./build/cross-compile.sh linux-386 ${BIN}
-	./build/package-tar.sh -b linux-386 ${BIN}
-
-${TAR_BAOBAB_LINUX_amd64_OBJECTS}:
-	$(eval BIN := ${@:tar-baobab-linux-amd64-%=%})
-	./build/cross-compile.sh linux-amd64 ${BIN}
-	./build/package-tar.sh -b linux-amd64 ${BIN}
-
-${TAR_BAOBAB_DARWIN_amd64_OBJECTS}:
-	$(eval BIN := ${@:tar-baobab-darwin-amd64-%=%})
-	./build/cross-compile.sh darwin-amd64 ${BIN}
-	./build/package-tar.sh -b darwin-amd64 ${BIN}
 
 abigen:
 	$(GORUN) build/ci.go ${BUILD_PARAM} ./cmd/abigen

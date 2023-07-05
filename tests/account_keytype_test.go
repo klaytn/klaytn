@@ -378,7 +378,7 @@ func expectedTestResultForDefaultTx(accountKeyType accountkey.AccountKeyType, tx
 		if txType.IsAccountUpdate() {
 			return kerrors.ErrAccountKeyFailNotUpdatable
 		}
-		return types.ErrInvalidSigSender
+		return types.ErrSender(types.ErrInvalidSigSender)
 	}
 	return nil
 }
@@ -1603,14 +1603,14 @@ func TestAccountUpdateRoleBasedKey(t *testing.T) {
 		// For tx pool validation test
 		{
 			err = txpool.AddRemote(tx)
-			assert.Equal(t, types.ErrInvalidSigSender, err)
+			assert.Equal(t, types.ErrSender(types.ErrInvalidSigSender), err)
 		}
 
 		// For block tx validation test
 		{
 			receipt, err := applyTransaction(t, bcdata, tx)
 			assert.Equal(t, (*types.Receipt)(nil), receipt)
-			assert.Equal(t, types.ErrInvalidSigSender, err)
+			assert.Equal(t, types.ErrSender(types.ErrInvalidSigSender), err)
 		}
 	}
 
@@ -1632,14 +1632,14 @@ func TestAccountUpdateRoleBasedKey(t *testing.T) {
 		// For tx pool validation test
 		{
 			err = txpool.AddRemote(tx)
-			assert.Equal(t, types.ErrInvalidSigSender, err)
+			assert.Equal(t, types.ErrSender(types.ErrInvalidSigSender), err)
 		}
 
 		// For block tx validation test
 		{
 			receipt, err := applyTransaction(t, bcdata, tx)
 			assert.Equal(t, (*types.Receipt)(nil), receipt)
-			assert.Equal(t, types.ErrInvalidSigSender, err)
+			assert.Equal(t, types.ErrSender(types.ErrInvalidSigSender), err)
 		}
 	}
 
@@ -1992,13 +1992,13 @@ func TestRoleBasedKeySendTx(t *testing.T) {
 				// For tx pool validation test
 				{
 					err = txpool.AddRemote(tx)
-					assert.Equal(t, types.ErrInvalidSigSender, err)
+					assert.Equal(t, types.ErrSender(types.ErrInvalidSigSender), err)
 				}
 
 				// For block tx validation test
 				{
 					receipt, err := applyTransaction(t, bcdata, tx)
-					assert.Equal(t, types.ErrInvalidSigSender, err)
+					assert.Equal(t, types.ErrSender(types.ErrInvalidSigSender), err)
 					assert.Equal(t, (*types.Receipt)(nil), receipt)
 				}
 			}
@@ -2189,13 +2189,13 @@ func TestRoleBasedKeyFeeDelegation(t *testing.T) {
 				// For tx pool validation test
 				{
 					err = txpool.AddRemote(tx)
-					assert.Equal(t, blockchain.ErrInvalidFeePayer, err)
+					assert.Equal(t, types.ErrFeePayer(types.ErrInvalidSigFeePayer), err)
 				}
 
 				// For block tx validation test
 				{
 					receipt, err := applyTransaction(t, bcdata, tx)
-					assert.Equal(t, types.ErrInvalidSigFeePayer, err)
+					assert.Equal(t, types.ErrFeePayer(types.ErrInvalidSigFeePayer), err)
 					assert.Equal(t, (*types.Receipt)(nil), receipt)
 				}
 			}
