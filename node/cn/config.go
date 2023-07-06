@@ -122,6 +122,7 @@ type Config struct {
 	TrieTimeout          time.Duration
 	TrieBlockInterval    uint
 	TriesInMemory        uint64
+	LivePruning          bool
 	LivePruningRetention uint64
 	SenderTxHashIndexing bool
 	ParallelDBWrite      bool

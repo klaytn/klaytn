@@ -540,6 +540,7 @@ func (kCfg *KlayConfig) SetKlayConfig(ctx *cli.Context, stack *node.Node) {
 	common.DefaultCacheType = common.CacheType(ctx.GlobalInt(CacheTypeFlag.Name))
 	cfg.TrieBlockInterval = ctx.GlobalUint(TrieBlockIntervalFlag.Name)
 	cfg.TriesInMemory = ctx.GlobalUint64(TriesInMemoryFlag.Name)
+	cfg.LivePruning = ctx.GlobalBool(LivePruningFlag.Name)
 	cfg.LivePruningRetention = ctx.GlobalUint64(LivePruningRetentionFlag.Name)
 
 	if ctx.GlobalIsSet(CacheScaleFlag.Name) {

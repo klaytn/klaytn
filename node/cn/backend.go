@@ -271,6 +271,20 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	}
 	bc.SetCanonicalBlock(config.StartBlockNumber)
 
+	// Write the live pruning flag to database if the node is started for the first time
+	if config.LivePruning && !chainDB.ReadPruningEnabled() {
+		if bc.CurrentBlock().NumberU64() > 0 {
+			return nil, errors.New("cannot enable live pruning after chain has advanced")
+		}
+		chainDB.WritePruningEnabled()
+		logger.Info("Enabling live pruning")
+	}
+	// Live pruning is enabled according to the flag in database
+	// regardless of the command line flag --state.live-pruning
+	if chainDB.ReadPruningEnabled() {
+		logger.Info("Live pruning is enabled")
+	}
+
 	cn.blockchain = bc
 	governance.SetBlockchain(cn.blockchain)
 	if err := governance.UpdateParams(cn.blockchain.CurrentBlock().NumberU64()); err != nil {

@@ -133,6 +133,7 @@ func initGenesis(ctx *cli.Context) error {
 	singleDB := ctx.GlobalIsSet(utils.SingleDBFlag.Name)
 	numStateTrieShards := ctx.GlobalUint(utils.NumStateTrieShardsFlag.Name)
 	overwriteGenesis := ctx.GlobalBool(utils.OverwriteGenesisFlag.Name)
+	livePruning := ctx.GlobalBool(utils.LivePruningFlag.Name)
 
 	dbtype := database.DBType(ctx.GlobalString(utils.DbTypeFlag.Name)).ToValid()
 	if len(dbtype) == 0 {
@@ -175,9 +176,9 @@ func initGenesis(ctx *cli.Context) error {
 		}
 
 		// Write the live pruning flag to database
-		if ctx.Bool(utils.LivePruningFlag.Name) {
+		if livePruning {
 			chainDB.WritePruningEnabled()
-			logger.Info("Live pruning enabled")
+			logger.Info("Enabling live pruning")
 		}
 
 		logger.Info("Successfully wrote genesis state", "database", name, "hash", hash.String())
