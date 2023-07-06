@@ -294,7 +294,7 @@ func unextendNode(original node, preserveExtHash bool) node {
 		}
 	case valueNode:
 		if !preserveExtHash {
-			return valueNode(account.UnextendRLP(n))
+			return valueNode(account.UnextendSerializedAccount(n))
 		} else {
 			// ExtHashLegacy should have been always unextended by AccountSerializer,
 			// hence no need to check IsLegacy() here.

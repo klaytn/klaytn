@@ -289,7 +289,7 @@ func TestUnextendRLP(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		unextended := UnextendRLP(common.FromHex(tc.extended))
+		unextended := UnextendSerializedAccount(common.FromHex(tc.extended))
 		assert.Equal(t, tc.unextended, hexutil.Encode(unextended))
 	}
 }
