@@ -1365,7 +1365,7 @@ func (api *EthereumAPI) FillTransaction(ctx context.Context, args EthTransaction
 // The sender is responsible for signing the transaction and using the correct nonce.
 func (api *EthereumAPI) SendRawTransaction(ctx context.Context, input hexutil.Bytes) (common.Hash, error) {
 	if len(input) == 0 {
-		return common.Hash{}, fmt.Errorf("EOF")
+		return common.Hash{}, fmt.Errorf("Empty input")
 	}
 	if 0 < input[0] && input[0] < 0x7f {
 		inputBytes := []byte{byte(types.EthereumTxTypeEnvelope)}
