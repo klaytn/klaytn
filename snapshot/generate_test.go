@@ -796,7 +796,7 @@ func TestGenerateWithMalformedSnapdata(t *testing.T) {
 		val, _ := rlp.EncodeToBytes(account.NewAccountSerializerWithAccount(acc))
 		accTrie.Update(common.HexToHash("0x03").Bytes(), val)
 
-		junk := make([]byte, 30) // Too long junk crashes in UnextendRLP
+		junk := make([]byte, 100)
 		copy(junk, []byte{0xde, 0xad})
 		diskdb.WriteAccountSnapshot(common.HexToHash("0x02"), junk)
 		diskdb.WriteAccountSnapshot(common.HexToHash("0x03"), junk)

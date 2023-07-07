@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"io"
 
-	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/rlp"
 )
@@ -151,17 +150,13 @@ func (ser *AccountSerializer) UnmarshalJSON(b []byte) error {
 // UnextendSerializedAccount unextends ExtHash fields within an RLP-encoded account.
 // If the supplied bytes is not an RLP-encoded account, or does not contain any ExtHash,
 // then return the supplied bytes unchanged.
-func UnextendSerializedAccount(b []byte) []byte {
-	if len(b) < common.ExtHashLength {
-		return b // definitely does not contain an ExtHash
-	}
-
-	dec := NewAccountSerializer()
-	if err := rlp.DecodeBytes(b, dec); err != nil {
+func UnextendSerializedAccount(b []byte) (result []byte) {
+	acc := safeDecodeRLP(b)
+	if acc == nil {
 		return b // not an account
 	}
 
-	pa := GetProgramAccount(dec.GetAccount())
+	pa := GetProgramAccount(acc)
 	if pa == nil {
 		return b // not a ProgramAccount
 	}
@@ -172,4 +167,26 @@ func UnextendSerializedAccount(b []byte) []byte {
 		logger.Crit("failed to unextend account blob", "bytes", hexutil.Encode(b), "err", err)
 	}
 	return result
+}
+
+// Account RLP decoder that does not panic
+func safeDecodeRLP(b []byte) Account {
+	if len(b) == 0 {
+		return nil // No type byte
+	}
+
+	var accType AccountType
+	if err := rlp.DecodeBytes(b[0:1], &accType); err != nil {
+		return nil // Invalid type byte
+	}
+	if accType == LegacyAccountType {
+		return nil // Legacy type unsupported
+	}
+
+	dec := NewAccountSerializer()
+	if err := rlp.DecodeBytes(b, dec); err != nil {
+		return nil // Cannot decode specific type
+	}
+
+	return dec.GetAccount()
 }
