@@ -204,7 +204,8 @@ func (h *hasher) store(n node, db *Database, force bool, onRoot bool) (node, uin
 	lenEncoded := n.lenEncoded()
 
 	// Calculate lenEncoded if not set
-	if lenEncoded == 0 {
+	if hash == nil || lenEncoded == 0 {
+		// Generate the RLP encoding of the node for database storing
 		h.tmp.Reset()
 		if err := rlp.Encode(&h.tmp, h.nodeForStoring(n)); err != nil {
 			panic("encode error: " + err.Error())
@@ -217,6 +218,7 @@ func (h *hasher) store(n node, db *Database, force bool, onRoot bool) (node, uin
 
 	// Calculate hash if not set
 	if hash == nil {
+		// Generate the RLP encoding of the node for Merkle hashing
 		h.tmp.Reset()
 		if err := rlp.Encode(&h.tmp, h.nodeForHashing(n)); err != nil {
 			panic("encode error: " + err.Error())
