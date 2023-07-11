@@ -29,7 +29,10 @@ import (
 	"github.com/rcrowley/go-metrics"
 )
 
-const defaultRocksDBCacheSize = 2 // 2MB
+const (
+	defaultRocksDBCacheSize = 2 // 2MB
+	defaultBitsPerKey       = 10
+)
 
 var properties = []string{
 	"rocksdb.num-immutable-mem-table",         // returns number of immutable memtables that have not yet been flushed.
@@ -91,16 +94,54 @@ type rocksDB struct {
 }
 
 type RocksDBConfig struct {
-	Secondary      bool
-	CacheSize      uint64
-	DumpMallocStat bool
+	Secondary                 bool
+	CacheSize                 uint64
+	DumpMallocStat            bool
+	CompressionType           string
+	BottommostCompressionType string
+	FilterPolicy              string
+}
+
+func filterPolicyStrToNative(t string) *grocksdb.NativeFilterPolicy {
+	switch t {
+	case "bloom":
+		return grocksdb.NewBloomFilter(defaultBitsPerKey)
+	case "ribbon":
+		return grocksdb.NewRibbonFilterPolicy(defaultBitsPerKey)
+	default:
+		return nil
+	}
+}
+
+func compressionStrToType(t string) grocksdb.CompressionType {
+	switch t {
+	case "snappy":
+		return grocksdb.SnappyCompression
+	case "zlib":
+		return grocksdb.ZLibCompression
+	case "bz2":
+		return grocksdb.Bz2Compression
+	case "lz4":
+		return grocksdb.LZ4Compression
+	case "lz4hc":
+		return grocksdb.LZ4HCCompression
+	case "xpress":
+		return grocksdb.XpressCompression
+	case "zstd":
+		return grocksdb.ZSTDCompression
+	default:
+		return grocksdb.NoCompression
+	}
 }
 
 func GetDefaultRocksDBConfig() *RocksDBConfig {
 	return &RocksDBConfig{
-		Secondary:      false,
-		CacheSize:      defaultRocksDBCacheSize,
-		DumpMallocStat: false,
+		Secondary:                 false,
+		CacheSize:                 defaultRocksDBCacheSize,
+		DumpMallocStat:            false,
+		CompressionType:           "lz4",
+		BottommostCompressionType: "zstd",
+		FilterPolicy:              "ribbon",
 	}
 }
 
@@ -133,14 +174,21 @@ func NewRocksDB(path string, config *RocksDBConfig) (*rocksDB, error) {
 
 	bbto := grocksdb.NewDefaultBlockBasedTableOptions()
 	bbto.SetBlockCache(grocksdb.NewLRUCache(blockCacheSize))
+	policy := filterPolicyStrToNative(config.FilterPolicy)
+	if policy != nil {
+		bbto.SetFilterPolicy(policy)
+		bbto.SetOptimizeFiltersForMemory(true)
+	}
 
 	opts := grocksdb.NewDefaultOptions()
 	opts.SetBlockBasedTableFactory(bbto)
 	opts.SetCreateIfMissing(true)
 	opts.SetWriteBufferSize(bufferSize)
 	opts.SetDumpMallocStats(config.DumpMallocStat)
+	opts.SetCompression(compressionStrToType(config.CompressionType))
+	opts.SetBottommostCompression(compressionStrToType(config.BottommostCompressionType))
 
-	logger.Info("RocksDB configuration", "blockCacheSize", blockCacheSize, "bufferSize", bufferSize, "enableDumpMallocStat", config.DumpMallocStat)
+	logger.Info("RocksDB configuration", "blockCacheSize", blockCacheSize, "bufferSize", bufferSize, "enableDumpMallocStat", config.DumpMallocStat, "compressionType", config.CompressionType, "bottommostCompressionType", config.BottommostCompressionType, "filterPolicy", config.FilterPolicy)
 
 	var (
 		db  *grocksdb.DB

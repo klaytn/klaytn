@@ -296,6 +296,24 @@ var (
 		Usage:  "Enable to print memory stat together with rocksdb.stat",
 		EnvVar: "KLAYTN_DB_ROCKSDB_DUMP_MALLOC_STAT",
 	}
+	RocksDBCompressionTypeFlag = cli.StringFlag{
+		Name:   "db.rocksdb.compression-type",
+		Usage:  "",
+		Value:  database.GetDefaultRocksDBConfig().CompressionType,
+		EnvVar: "KLAYTN_DB_ROCKSDB_COMPRESSION_TYPE",
+	}
+	RocksDBBottommostCompressionTypeFlag = cli.StringFlag{
+		Name:   "db.rocksdb.bottommost-compression-type",
+		Usage:  "",
+		Value:  database.GetDefaultRocksDBConfig().BottommostCompressionType,
+		EnvVar: "KLAYTN_DB_ROCKSDB_BOTTOMMOST_COMPRESSION_TYPE",
+	}
+	RocksDBFilterPolicyFlag = cli.StringFlag{
+		Name:   "db.rocksdb.filter-policy",
+		Usage:  "",
+		Value:  database.GetDefaultRocksDBConfig().FilterPolicy,
+		EnvVar: "KLAYTN_DB_ROCKSDB_FILTER_POLICY",
+	}
 	DynamoDBTableNameFlag = cli.StringFlag{
 		Name:   "db.dynamo.tablename",
 		Usage:  "Specifies DynamoDB table name. This is mandatory to use dynamoDB. (Set dbtype to use DynamoDBS3)",
