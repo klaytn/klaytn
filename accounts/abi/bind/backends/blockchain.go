@@ -94,7 +94,7 @@ func (b *BlockchainContractCaller) CallContract(ctx context.Context, call klaytn
 		return nil, err
 	}
 	if len(res.Revert()) > 0 {
-		return nil, newRevertError(res)
+		return nil, blockchain.NewRevertError(res)
 	}
 	return res.Return(), res.Unwrap()
 }

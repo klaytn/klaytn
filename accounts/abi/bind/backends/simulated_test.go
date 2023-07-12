@@ -502,7 +502,7 @@ func TestSimulatedBackend_EstimateGas(t *testing.T) {
 				t.Fatalf("Expect error, want %v, got %v", c.expectError, err)
 			}
 			if c.expectData != nil {
-				if err, ok := err.(*revertError); !ok {
+				if err, ok := err.(*blockchain.RevertError); !ok {
 					t.Fatalf("Expect revert error, got %T", err)
 				} else if !reflect.DeepEqual(err.ErrorData(), c.expectData) {
 					t.Fatalf("Error data mismatch, want %v, got %v", c.expectData, err.ErrorData())
@@ -1023,7 +1023,7 @@ func TestSimulatedBackend_CallContractRevert(t *testing.T) {
 				t.Errorf("result from %v was not nil: %v", key, res)
 			}
 			if val != nil {
-				rerr, ok := err.(*revertError)
+				rerr, ok := err.(*blockchain.RevertError)
 				if !ok {
 					t.Errorf("expect revert error")
 				}

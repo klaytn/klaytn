@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/governance"
 
@@ -20,10 +21,13 @@ import (
 	mock_accounts "github.com/klaytn/klaytn/accounts/mocks"
 	mock_api "github.com/klaytn/klaytn/api/mocks"
 	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
+	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
+	"github.com/klaytn/klaytn/consensus/gxhash"
 	"github.com/klaytn/klaytn/consensus/mocks"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
@@ -2430,4 +2434,161 @@ func TestEthereumAPI_GetRawTransactionByBlockNumberAndIndex(t *testing.T) {
 	}
 
 	mockCtrl.Finish()
+}
+
+type testChainContext struct {
+	header *types.Header
+}
+
+func (mc *testChainContext) Engine() consensus.Engine {
+	return gxhash.NewFaker()
+}
+
+func (mc *testChainContext) GetHeader(common.Hash, uint64) *types.Header {
+	return mc.header
+}
+
+// revert("hello")
+//   PUSH1 73; PUSH1 12; PUSH1 0; CODECOPY // mem[0:0+73] = code[12:12+73]
+//   PUSH1 73; PUSH1 0; REVERT // revert mem[0:0+73]
+var codeRevertHello = "0x6049600c60003960496000fd08c379a00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000568656c6c6f"
+
+func testEstimateGas(t *testing.T, mockBackend *mock_api.MockBackend, fnEstimateGas func(EthTransactionArgs) (hexutil.Uint64, error)) {
+	var (
+		// genesis
+		account1    = common.HexToAddress("0xaaaa")
+		account2    = common.HexToAddress("0xbbbb")
+		account3    = common.HexToAddress("0xcccc")
+		chainConfig = params.TestChainConfig
+		gspec       = &blockchain.Genesis{Alloc: blockchain.GenesisAlloc{
+			account1: {Balance: big.NewInt(params.KLAY * 2)},
+			account2: {Balance: big.NewInt(0)},
+			account3: {Balance: common.Big0, Code: hexutil.MustDecode(codeRevertHello)},
+		}}
+
+		// blockchain
+		dbm    = database.NewMemoryDBManager()
+		db     = state.NewDatabase(dbm)
+		block  = gspec.MustCommit(dbm)
+		header = block.Header()
+		chain  = &testChainContext{header: header}
+
+		// tx arguments
+		KLAY     = hexutil.Big(*big.NewInt(params.KLAY))
+		mKLAY    = hexutil.Big(*big.NewInt(params.KLAY / 1000))
+		gas1000  = hexutil.Uint64(1000)
+		gas40000 = hexutil.Uint64(40000)
+		baddata  = hexutil.Bytes(hexutil.MustDecode("0xdeadbeef"))
+	)
+
+	any := gomock.Any()
+	getStateAndHeader := func(...interface{}) (*state.StateDB, *types.Header, error) {
+		// Return a new state for each call because the state is modified by EstimateGas.
+		state, err := state.New(block.Root(), db, nil, nil)
+		return state, header, err
+	}
+	getEVM := func(_ context.Context, msg blockchain.Message, state *state.StateDB, header *types.Header, vmConfig vm.Config) (*vm.EVM, func() error, error) {
+		// Taken from node/cn/api_backend.go
+		vmError := func() error { return nil }
+		context := blockchain.NewEVMContext(msg, header, chain, nil)
+		return vm.NewEVM(context, state, chainConfig, &vmConfig), vmError, nil
+	}
+	mockBackend.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
+	mockBackend.EXPECT().RPCGasCap().Return(common.Big0).AnyTimes()
+	mockBackend.EXPECT().StateAndHeaderByNumber(any, any).DoAndReturn(getStateAndHeader).AnyTimes()
+	mockBackend.EXPECT().StateAndHeaderByNumberOrHash(any, any).DoAndReturn(getStateAndHeader).AnyTimes()
+	mockBackend.EXPECT().GetEVM(any, any, any, any, any).DoAndReturn(getEVM).AnyTimes()
+
+	testcases := []struct {
+		args      EthTransactionArgs
+		expectErr string
+		expectGas uint64
+	}{
+		{ // simple transfer
+			args: EthTransactionArgs{
+				From:  &account1,
+				To:    &account2,
+				Value: &KLAY,
+			},
+			expectGas: 21000,
+		},
+		{ // simple transfer with insufficient funds
+			args: EthTransactionArgs{
+				From:  &account2, // sender has 0 KLAY
+				To:    &account1,
+				Value: &KLAY, // transfer 1 KLAY
+			},
+			expectErr: "insufficient balance for transfer",
+		},
+		{ // simple transfer with insufficient funds with nonzero gasPrice
+			args: EthTransactionArgs{
+				From:     &account2, // sender has 0 KLAY
+				To:       &account1,
+				Value:    &KLAY, // transfer 1 KLAY
+				GasPrice: &mKLAY,
+			},
+			expectErr: "insufficient funds for transfer",
+		},
+		{ // simple transfer too high gasPrice
+			args: EthTransactionArgs{
+				From:     &account1, // sender has 2 KLAY
+				To:       &account2,
+				Value:    &KLAY,  // transfer 1 KLAY
+				GasPrice: &mKLAY, // allowance = (2 - 1) / 0.001 = 1000 gas
+			},
+			expectErr: "gas required exceeds allowance",
+		},
+		{ // empty create
+			args:      EthTransactionArgs{},
+			expectGas: 53000,
+		},
+		{ // ignore too small gasLimit
+			args: EthTransactionArgs{
+				Gas: &gas1000,
+			},
+			expectGas: 53000,
+		},
+		{ // capped by gasLimit
+			args: EthTransactionArgs{
+				Gas: &gas40000,
+			},
+			expectErr: "gas required exceeds allowance",
+		},
+		{ // fails with VM error
+			args: EthTransactionArgs{
+				From: &account1,
+				Data: &baddata,
+			},
+			expectErr: "VM error occurs while running smart contract",
+		},
+		{ // fails with contract revert
+			args: EthTransactionArgs{
+				From: &account1,
+				To:   &account3,
+				Data: &baddata,
+			},
+			expectErr: "execution reverted: hello",
+		},
+	}
+
+	for i, tc := range testcases {
+		gas, err := fnEstimateGas(tc.args)
+		t.Logf("tc[%02d] = %d %v", i, gas, err)
+		if len(tc.expectErr) > 0 {
+			require.NotNil(t, err)
+			assert.Contains(t, err.Error(), tc.expectErr, i)
+		} else {
+			assert.Nil(t, err)
+			assert.Equal(t, tc.expectGas, uint64(gas), i)
+		}
+	}
+}
+
+func TestEthereumAPI_EstimateGas(t *testing.T) {
+	mockCtrl, mockBackend, api := testInitForEthApi(t)
+	defer mockCtrl.Finish()
+
+	testEstimateGas(t, mockBackend, func(args EthTransactionArgs) (hexutil.Uint64, error) {
+		return api.EstimateGas(context.Background(), args, nil)
+	})
 }

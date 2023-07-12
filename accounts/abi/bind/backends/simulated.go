@@ -29,7 +29,6 @@ import (
 	"time"
 
 	"github.com/klaytn/klaytn"
-	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/bloombits"
@@ -37,7 +36,6 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/consensus/gxhash"
 	"github.com/klaytn/klaytn/event"
@@ -355,36 +353,6 @@ func (b *SimulatedBackend) PendingCodeAt(_ context.Context, contract common.Addr
 	return b.pendingState.GetCode(contract), nil
 }
 
-func newRevertError(result *blockchain.ExecutionResult) *revertError {
-	reason, errUnpack := abi.UnpackRevert(result.Revert())
-	err := errors.New("execution reverted")
-	if errUnpack == nil {
-		err = fmt.Errorf("execution reverted: %v", reason)
-	}
-	return &revertError{
-		error:  err,
-		reason: hexutil.Encode(result.Revert()),
-	}
-}
-
-// revertError is an API error that encompassas an EVM revertal with JSON error
-// code and a binary data blob.
-type revertError struct {
-	error
-	reason string // revert reason hex encoded
-}
-
-// ErrorCode returns the JSON error code for a revertal.
-// See: https://github.com/ethereum/wiki/wiki/JSON-RPC-Error-Codes-Improvement-Proposal
-func (e *revertError) ErrorCode() int {
-	return 3
-}
-
-// ErrorData returns the hex encoded revert reason.
-func (e *revertError) ErrorData() interface{} {
-	return e.reason
-}
-
 // CallContract executes a contract call.
 func (b *SimulatedBackend) CallContract(ctx context.Context, call klaytn.CallMsg, blockNumber *big.Int) ([]byte, error) {
 	b.mu.Lock()
@@ -403,7 +371,7 @@ func (b *SimulatedBackend) CallContract(ctx context.Context, call klaytn.CallMsg
 	}
 	// If the result contains a revert reason, try to unpack and return it.
 	if len(res.Revert()) > 0 {
-		return nil, newRevertError(res)
+		return nil, blockchain.NewRevertError(res)
 	}
 	return res.Return(), res.Unwrap()
 }
@@ -420,7 +388,7 @@ func (b *SimulatedBackend) PendingCallContract(ctx context.Context, call klaytn.
 	}
 	// If the result contains a revert reason, try to unpack and return it.
 	if len(res.Revert()) > 0 {
-		return nil, newRevertError(res)
+		return nil, blockchain.NewRevertError(res)
 	}
 	return res.Return(), res.Unwrap()
 }
@@ -446,40 +414,7 @@ func (b *SimulatedBackend) EstimateGas(ctx context.Context, call klaytn.CallMsg)
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	// Determine the lowest and highest possible gas limits to binary search in between
-	var (
-		lo  uint64 = params.TxGas - 1
-		hi  uint64
-		cap uint64
-	)
-	if call.Gas >= params.TxGas {
-		hi = call.Gas
-	} else {
-		hi = params.UpperGasLimit
-	}
-
-	// Recap the highest gas allowance with account's balance.
-	if call.GasPrice != nil && call.GasPrice.BitLen() != 0 {
-		balance := b.pendingState.GetBalance(call.From) // from can't be nil
-		available := new(big.Int).Set(balance)
-		if call.Value != nil {
-			if call.Value.Cmp(available) >= 0 {
-				return 0, errors.New("insufficient funds for transfer")
-			}
-			available.Sub(available, call.Value)
-		}
-		allowance := new(big.Int).Div(available, call.GasPrice)
-		if allowance.IsUint64() && hi > allowance.Uint64() {
-			transfer := call.Value
-			if transfer == nil {
-				transfer = new(big.Int)
-			}
-			bind.Logger.Warn("Gas estimation capped by limited funds", "original", hi, "balance", balance,
-				"sent", transfer, "gasprice", call.GasPrice, "fundable", allowance)
-			hi = allowance.Uint64()
-		}
-	}
-	cap = hi
+	balance := b.pendingState.GetBalance(call.From) // from can't be nil
 
 	// Create a helper to check if a gas allowance results in an executable transaction
 	executable := func(gas uint64) (bool, *blockchain.ExecutionResult, error) {
@@ -498,40 +433,13 @@ func (b *SimulatedBackend) EstimateGas(ctx context.Context, call klaytn.CallMsg)
 		}
 		return res.Failed(), res, nil
 	}
-	// Execute the binary search and hone in on an executable gas limit
-	for lo+1 < hi {
-		mid := (hi + lo) / 2
-		failed, _, err := executable(mid)
-		// If the error is not nil(when not a vm error), it means the provided message
-		// call or transaction will never be accepted no matter how much gas it is
-		// assigned. Return the error directly, don't struggle any more
-		if err != nil {
-			return 0, err
-		}
-		if failed {
-			lo = mid
-		} else {
-			hi = mid
-		}
+
+	estimated, err := blockchain.DoEstimateGas(ctx, call.Gas, 0, call.Value, call.GasPrice, balance, executable)
+	if err != nil {
+		return 0, err
+	} else {
+		return uint64(estimated), nil
 	}
-	// Reject the transaction as invalid if it still fails at the highest allowance
-	if hi == cap {
-		failed, result, err := executable(hi)
-		if err != nil {
-			return 0, err
-		}
-		if failed {
-			if result != nil && result.VmExecutionStatus != types.ReceiptStatusErrOutOfGas {
-				if len(result.Revert()) > 0 {
-					return 0, newRevertError(result)
-				}
-				return 0, result.Unwrap()
-			}
-			// Otherwise, the specified gas cap is too low
-			return 0, fmt.Errorf("gas required exceeds allowance (%d)", cap)
-		}
-	}
-	return hi, nil
 }
 
 // callContract implements common code between normal and pending contract calls.

@@ -21,11 +21,16 @@
 package blockchain
 
 import (
+	"context"
+	"errors"
+	"fmt"
 	"math/big"
 
+	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/params"
 )
@@ -123,4 +128,114 @@ func CanTransfer(db vm.StateDB, addr common.Address, amount *big.Int) bool {
 func Transfer(db vm.StateDB, sender, recipient common.Address, amount *big.Int) {
 	db.SubBalance(sender, amount)
 	db.AddBalance(recipient, amount)
+}
+
+func DoEstimateGas(ctx context.Context, gasLimit, rpcGasCap uint64, txValue, gasPrice, balance *big.Int, test func(gas uint64) (bool, *ExecutionResult, error)) (hexutil.Uint64, error) {
+	// Binary search the gas requirement, as it may be higher than the amount used
+	var (
+		lo  uint64 = params.TxGas - 1
+		hi  uint64 = params.UpperGasLimit
+		cap uint64
+	)
+
+	// Initialize nil params
+	if txValue == nil {
+		txValue = big.NewInt(0)
+	}
+	if gasPrice == nil {
+		gasPrice = big.NewInt(0)
+	}
+	if balance == nil {
+		balance = big.NewInt(0)
+	}
+
+	if gasLimit >= params.TxGas {
+		hi = gasLimit
+	}
+
+	// recap the highest gas limit with account's available balance.
+	if gasPrice.BitLen() != 0 {
+		available := new(big.Int).Set(balance)
+		if txValue.Cmp(available) >= 0 {
+			return 0, errors.New("insufficient funds for transfer")
+		}
+		available.Sub(available, txValue)
+		allowance := new(big.Int).Div(available, gasPrice)
+
+		// If the allowance is larger than maximum uint64, skip checking
+		if allowance.IsUint64() && hi > allowance.Uint64() {
+			logger.Warn("Gas estimation capped by limited funds", "original", hi, "balance", balance,
+				"sent", txValue, "maxFeePerGas", gasPrice, "fundable", allowance)
+			hi = allowance.Uint64()
+		}
+	}
+	// Recap the highest gas allowance with specified gascap.
+	if rpcGasCap != 0 && hi > rpcGasCap {
+		logger.Warn("Caller gas above allowance, capping", "requested", hi, "cap", rpcGasCap)
+		hi = rpcGasCap
+	}
+	cap = hi
+
+	// Execute the binary search and hone in on an executable gas limit
+	for lo+1 < hi {
+		mid := (hi + lo) / 2
+		failed, _, err := test(mid)
+		if err != nil {
+			return 0, err
+		}
+
+		if failed {
+			lo = mid
+		} else {
+			hi = mid
+		}
+	}
+	// Reject the transaction as invalid if it still fails at the highest allowance
+	if hi == cap {
+		failed, result, err := test(hi)
+		if err != nil {
+			return 0, err
+		}
+		if failed {
+			if result != nil && result.VmExecutionStatus != types.ReceiptStatusErrOutOfGas {
+				if len(result.Revert()) > 0 {
+					return 0, NewRevertError(result)
+				}
+				return 0, result.Unwrap()
+			}
+			// Otherwise, the specified gas cap is too low
+			return 0, fmt.Errorf("gas required exceeds allowance (%d)", cap)
+		}
+	}
+	return hexutil.Uint64(hi), nil
+}
+
+func NewRevertError(result *ExecutionResult) *RevertError {
+	reason, errUnpack := abi.UnpackRevert(result.Revert())
+	err := errors.New("execution reverted")
+	if errUnpack == nil {
+		err = fmt.Errorf("execution reverted: %v", reason)
+	}
+	return &RevertError{
+		error:  err,
+		reason: hexutil.Encode(result.Revert()),
+	}
+}
+
+// RevertError is an API error that encompassas an EVM revertal with JSON error
+// code and a binary data blob.
+type RevertError struct {
+	error
+	reason string // revert reason hex encoded
+}
+
+// ErrorCode returns the JSON error code for a revertal.
+// See: https://github.com/ethereum/wiki/wiki/JSON-RPC-Error-Codes-Improvement-Proposal
+func (e *RevertError) ErrorCode() int {
+	return 3
+}
+
+// ErrorData returns the hex encoded revert reason.
+func (e *RevertError) ErrorData() interface{} {
+	return e.reason
 }
