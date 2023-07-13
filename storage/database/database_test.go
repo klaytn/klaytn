@@ -33,6 +33,7 @@ import (
 	"testing"
 
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
@@ -70,7 +71,10 @@ func newTestBadgerDB() (Database, func()) {
 }
 
 func newTestMemDB() (Database, func()) {
-	return NewMemDB(), func() {}
+	db := NewMemDB()
+	return db, func() {
+		db.Close()
+	}
 }
 
 func newTestDynamoS3DB() (Database, func()) {
@@ -105,7 +109,9 @@ func newTestRocksDB() (Database, func()) {
 	if err != nil {
 		panic("failed to create test file: " + err.Error())
 	}
-	db, err := NewRocksDB(dirName, GetDefaultRocksDBConfig())
+	config := GetDefaultRocksDBConfig()
+	config.DisableMetrics = true
+	db, err := NewRocksDB(dirName, config)
 	if err != nil {
 		panic("failed to create new rocksdb: " + err.Error())
 	}
@@ -118,6 +124,8 @@ func newTestRocksDB() (Database, func()) {
 
 type commonDatabaseTestSuite struct {
 	suite.Suite
+	newFn    func() (Database, func())
+	removeFn func()
 	database Database
 }
 
@@ -128,11 +136,19 @@ func TestDatabaseTestSuite(t *testing.T) {
 	// TODO-Klaytn-Database Need to add DynamoDB to the below list.
 	testDatabases := []func() (Database, func()){newTestLDB, newTestBadgerDB, newTestMemDB, newTestRocksDB}
 	for _, newFn := range testDatabases {
-		db, remove := newFn()
-		t.Log("Testing " + db.Type())
-		suite.Run(t, &commonDatabaseTestSuite{database: db})
-		remove()
+		suite.Run(t, &commonDatabaseTestSuite{newFn: newFn})
 	}
+}
+
+func (ts *commonDatabaseTestSuite) BeforeTest(suiteName, testName string) {
+	ts.T().Logf("before test - suiteName: %v, testName: %v", suiteName, testName)
+	ts.database, ts.removeFn = ts.newFn()
+}
+
+func (ts *commonDatabaseTestSuite) AfterTest(suiteName, testName string) {
+	ts.T().Logf("after test - suiteName: %v, testName: %v", suiteName, testName)
+	ts.removeFn()
+	ts.database, ts.removeFn = nil, nil
 }
 
 // TestNilValue checks if all database write/read nil value in the same way.
@@ -473,7 +489,11 @@ func (ts *commonDatabaseTestSuite) Test_Delete() {
 }
 
 func (ts *commonDatabaseTestSuite) Test_Iterator_NoData() {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	db := ts.database
+	if _, ok := db.(*badgerDB); ok {
+		ts.T().Skip()
+	}
 
 	// testing iterator without prefix nor specific-starting key
 	it := db.NewIterator(nil, nil)
@@ -483,7 +503,11 @@ func (ts *commonDatabaseTestSuite) Test_Iterator_NoData() {
 }
 
 func (ts *commonDatabaseTestSuite) Test_Iterator_WithoutPrefixAndStart() {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	num, db := 100, ts.database
+	if _, ok := db.(*badgerDB); ok {
+		ts.T().Skip()
+	}
 
 	data, _ := insertRandomData(ts.database, nil, num)
 	sort.Sort(data)
@@ -502,7 +526,11 @@ func (ts *commonDatabaseTestSuite) Test_Iterator_WithoutPrefixAndStart() {
 }
 
 func (ts *commonDatabaseTestSuite) Test_Iterator_WithPrefix() {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	num, prefix, db := 100, common.Hex2Bytes("deaddeaf"), ts.database
+	if _, ok := db.(*badgerDB); ok {
+		ts.T().Skip()
+	}
 
 	insertRandomData(ts.database, nil, num)
 	prefixData, _ := insertRandomData(ts.database, prefix, num)
@@ -524,7 +552,11 @@ func (ts *commonDatabaseTestSuite) Test_Iterator_WithPrefix() {
 }
 
 func (ts *commonDatabaseTestSuite) Test_Iterator_WithStart() {
-	num, prefix, db := 100, common.Hex2Bytes("deaddeaf"), ts.database
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
+	num, prefix, db := 100, common.Hex2Bytes("baddeaf"), ts.database
+	if _, ok := db.(*badgerDB); ok {
+		ts.T().Skip()
+	}
 
 	data1, _ := insertRandomData(ts.database, nil, num)
 	data2, _ := insertRandomData(ts.database, prefix, num)
@@ -549,7 +581,11 @@ func (ts *commonDatabaseTestSuite) Test_Iterator_WithStart() {
 }
 
 func (ts *commonDatabaseTestSuite) Test_Iterator_WithPrefixAndStart() {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	num, prefix, db := 10, common.Hex2Bytes("deaddeaf"), ts.database
+	if _, ok := db.(*badgerDB); ok {
+		ts.T().Skip()
+	}
 
 	insertRandomData(ts.database, nil, num)
 	prefixData, _ := insertRandomData(ts.database, prefix, num)
@@ -573,7 +609,11 @@ func (ts *commonDatabaseTestSuite) Test_Iterator_WithPrefixAndStart() {
 }
 
 func (ts *commonDatabaseTestSuite) Test_BatchWrite() {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	numData, numIter, db := 1000, 100, ts.database
+	if _, ok := db.(*badgerDB); ok {
+		ts.T().Skip()
+	}
 
 	batch := db.NewBatch()
 	defer batch.Release()

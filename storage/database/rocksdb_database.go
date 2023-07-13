@@ -309,7 +309,7 @@ func (i *rdbIter) Error() error {
 // change on the next call to Next.
 func (i *rdbIter) Key() []byte {
 	if !i.initialized {
-		return []byte{}
+		return nil
 	}
 	return i.iter.Key().Data()
 }
@@ -319,7 +319,7 @@ func (i *rdbIter) Key() []byte {
 // may change on the next call to Next.
 func (i *rdbIter) Value() []byte {
 	if !i.initialized {
-		return []byte{}
+		return nil
 	}
 	return i.iter.Value().Data()
 }

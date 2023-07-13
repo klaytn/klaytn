@@ -305,6 +305,9 @@ func (it *iterator) Error() error {
 // should not modify the contents of the returned slice, and its contents may
 // change on the next call to Next.
 func (it *iterator) Key() []byte {
+	if !it.inited {
+		return nil
+	}
 	if len(it.keys) > 0 {
 		return []byte(it.keys[0])
 	}
@@ -315,6 +318,9 @@ func (it *iterator) Key() []byte {
 // caller should not modify the contents of the returned slice, and its contents
 // may change on the next call to Next.
 func (it *iterator) Value() []byte {
+	if !it.inited {
+		return nil
+	}
 	if len(it.values) > 0 {
 		return it.values[0]
 	}
