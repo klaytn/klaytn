@@ -33,7 +33,7 @@ import (
 // Maintain separate minimal interfaces of blockchain.BlockChain because ContractBackend are used
 // in various situations. BlockChain instances are often passed down as different interfaces such as
 // consensus.ChainReader, governance.blockChain, work.BlockChain.
-type blockChainForCaller interface {
+type BlockChainForCaller interface {
 	// Required by NewEVMContext
 	blockchain.ChainContext
 
@@ -55,13 +55,13 @@ type blockChainForCaller interface {
 // Note that SimulatedBackend creates a new temporary BlockChain for testing,
 // whereas BlockchainContractCaller uses an existing BlockChain with existing database.
 type BlockchainContractCaller struct {
-	bc blockChainForCaller
+	bc BlockChainForCaller
 }
 
 // This nil assignment ensures at compile time that BlockchainContractCaller implements bind.ContractCaller.
 var _ bind.ContractCaller = (*BlockchainContractCaller)(nil)
 
-func NewBlockchainContractCaller(bc blockChainForCaller) *BlockchainContractCaller {
+func NewBlockchainContractCaller(bc BlockChainForCaller) *BlockchainContractCaller {
 	return &BlockchainContractCaller{
 		bc: bc,
 	}
