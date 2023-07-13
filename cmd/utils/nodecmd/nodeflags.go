@@ -150,6 +150,7 @@ var CommonNodeFlags = []cli.Flag{
 	altsrc.NewStringFlag(utils.RocksDBCompressionTypeFlag),
 	altsrc.NewStringFlag(utils.RocksDBBottommostCompressionTypeFlag),
 	altsrc.NewStringFlag(utils.RocksDBFilterPolicyFlag),
+	altsrc.NewBoolFlag(utils.RocksDBDisableMetricsFlag),
 	altsrc.NewBoolFlag(utils.DBNoPerformanceMetricsFlag),
 	altsrc.NewStringFlag(utils.DynamoDBTableNameFlag),
 	altsrc.NewStringFlag(utils.DynamoDBRegionFlag),

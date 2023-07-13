@@ -314,6 +314,11 @@ var (
 		Value:  database.GetDefaultRocksDBConfig().FilterPolicy,
 		EnvVar: "KLAYTN_DB_ROCKSDB_FILTER_POLICY",
 	}
+	RocksDBDisableMetricsFlag = cli.BoolFlag{
+		Name:   "db.rocksdb.disable-metrics",
+		Usage:  "",
+		EnvVar: "KLAYTN_DB_ROCKSDB_DISABLE_METRICS",
+	}
 	DynamoDBTableNameFlag = cli.StringFlag{
 		Name:   "db.dynamo.tablename",
 		Usage:  "Specifies DynamoDB table name. This is mandatory to use dynamoDB. (Set dbtype to use DynamoDBS3)",

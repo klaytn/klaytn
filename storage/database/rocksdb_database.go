@@ -100,6 +100,7 @@ type RocksDBConfig struct {
 	CompressionType           string
 	BottommostCompressionType string
 	FilterPolicy              string
+	DisableMetrics            bool
 }
 
 func filterPolicyStrToNative(t string) *grocksdb.NativeFilterPolicy {
@@ -142,6 +143,7 @@ func GetDefaultRocksDBConfig() *RocksDBConfig {
 		CompressionType:           "lz4",
 		BottommostCompressionType: "zstd",
 		FilterPolicy:              "ribbon",
+		DisableMetrics:            false,
 	}
 }
 
@@ -188,7 +190,7 @@ func NewRocksDB(path string, config *RocksDBConfig) (*rocksDB, error) {
 	opts.SetCompression(compressionStrToType(config.CompressionType))
 	opts.SetBottommostCompression(compressionStrToType(config.BottommostCompressionType))
 
-	logger.Info("RocksDB configuration", "blockCacheSize", blockCacheSize, "bufferSize", bufferSize, "enableDumpMallocStat", config.DumpMallocStat, "compressionType", config.CompressionType, "bottommostCompressionType", config.BottommostCompressionType, "filterPolicy", config.FilterPolicy)
+	logger.Info("RocksDB configuration", "blockCacheSize", blockCacheSize, "bufferSize", bufferSize, "enableDumpMallocStat", config.DumpMallocStat, "compressionType", config.CompressionType, "bottommostCompressionType", config.BottommostCompressionType, "filterPolicy", config.FilterPolicy, "disableMetrics", config.DisableMetrics)
 
 	var (
 		db  *grocksdb.DB
@@ -221,8 +223,10 @@ func (db *rocksDB) Put(key []byte, value []byte) error {
 	if db.config.Secondary {
 		return nil
 	}
-	start := time.Now()
-	defer db.putTimer.Update(time.Since(start))
+	if !db.config.DisableMetrics {
+		start := time.Now()
+		defer db.putTimer.Update(time.Since(start))
+	}
 	return db.db.Put(db.wo, key, value)
 }
 
@@ -243,8 +247,10 @@ func (db *rocksDB) Get(key []byte) ([]byte, error) {
 	if db.config.Secondary {
 		db.db.TryCatchUpWithPrimary()
 	}
-	start := time.Now()
-	defer db.getTimer.Update(time.Since(start))
+	if !db.config.DisableMetrics {
+		start := time.Now()
+		defer db.getTimer.Update(time.Since(start))
+	}
 	return db.get(key)
 }
 
@@ -366,7 +372,7 @@ func (db *rocksDB) Meter(prefix string) {
 
 	// Short circuit metering if the metrics system is disabled
 	// Above meters are initialized by NilMeter if metricutils.Enabled == false
-	if !metricutils.Enabled {
+	if !metricutils.Enabled || db.config.DisableMetrics {
 		return
 	}
 
@@ -426,8 +432,10 @@ func (b *rdbBatch) Write() error {
 	if b.db.config.Secondary {
 		return nil
 	}
-	start := time.Now()
-	defer b.db.batchWriteTimer.Update(time.Since(start))
+	if !b.db.config.DisableMetrics {
+		start := time.Now()
+		defer b.db.batchWriteTimer.Update(time.Since(start))
+	}
 	return b.write()
 }
 

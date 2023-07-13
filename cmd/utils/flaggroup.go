@@ -99,6 +99,7 @@ var FlagGroups = []FlagGroup{
 			RocksDBCompressionTypeFlag,
 			RocksDBBottommostCompressionTypeFlag,
 			RocksDBFilterPolicyFlag,
+			RocksDBDisableMetricsFlag,
 			DynamoDBTableNameFlag,
 			DynamoDBRegionFlag,
 			DynamoDBIsProvisionedFlag,
