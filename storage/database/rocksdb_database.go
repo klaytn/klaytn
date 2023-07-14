@@ -278,27 +278,27 @@ func (db *rocksDB) GetProperty(name string) string {
 }
 
 type rdbIter struct {
-	initialized bool
-	iter        *grocksdb.Iterator
-	prefix      []byte
-	db          *rocksDB
+	first  bool
+	iter   *grocksdb.Iterator
+	prefix []byte
+	db     *rocksDB
 }
 
 // Next moves the iterator to the next key/value pair. It returns whether the
 // iterator is exhausted.
 func (i *rdbIter) Next() bool {
-	if !i.initialized {
-		i.initialized = i.iter.ValidForPrefix(i.prefix)
-		return i.initialized
+	if i.first {
+		i.first = false
+	} else {
+		i.iter.Next()
 	}
-	i.iter.Next()
 	return i.iter.ValidForPrefix(i.prefix)
 }
 
 // Error returns any accumulated error. Exhausting all the key/value pairs
 // is not considered to be an error.
 func (i *rdbIter) Error() error {
-	if !i.initialized {
+	if i.first {
 		return nil
 	}
 	return i.iter.Err()
@@ -308,7 +308,7 @@ func (i *rdbIter) Error() error {
 // should not modify the contents of the returned slice, and its contents may
 // change on the next call to Next.
 func (i *rdbIter) Key() []byte {
-	if !i.initialized {
+	if i.first {
 		return nil
 	}
 	return i.iter.Key().Data()
@@ -318,7 +318,7 @@ func (i *rdbIter) Key() []byte {
 // caller should not modify the contents of the returned slice, and its contents
 // may change on the next call to Next.
 func (i *rdbIter) Value() []byte {
-	if !i.initialized {
+	if i.first {
 		return nil
 	}
 	return i.iter.Value().Data()
@@ -335,10 +335,9 @@ func (i *rdbIter) Release() {
 // initial key (or after, if it does not exist).
 func (db *rocksDB) NewIterator(prefix []byte, start []byte) Iterator {
 	iter := db.db.NewIterator(db.ro)
-	if len(start) > 0 {
-		iter.Seek(start)
-	}
-	return &rdbIter{initialized: false, iter: iter, prefix: prefix, db: db}
+	firstKey := append(prefix, start...)
+	iter.Seek(firstKey)
+	return &rdbIter{first: true, iter: iter, prefix: prefix, db: db}
 }
 
 func (db *rocksDB) Close() {
