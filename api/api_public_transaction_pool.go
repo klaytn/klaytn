@@ -88,27 +88,19 @@ func (s *PublicTransactionPoolAPI) GetTransactionByBlockHashAndIndex(ctx context
 // GetRawTransactionByBlockNumberAndIndex returns the bytes of the transaction for the given block number and index.
 func (s *PublicTransactionPoolAPI) GetRawTransactionByBlockNumberAndIndex(ctx context.Context, blockNr rpc.BlockNumber, index hexutil.Uint) (hexutil.Bytes, error) {
 	block, err := s.b.BlockByNumber(ctx, blockNr)
-	if err != nil {
-		return nil, err
+	if block != nil && err == nil {
+		return newRPCRawTransactionFromBlockIndex(block, uint64(index)), nil
 	}
-	tx := newRPCRawTransactionFromBlockIndex(block, uint64(index))
-	if tx == nil {
-		return nil, fmt.Errorf("the transaction does not exist (BlockNum: %d, Index:%d)", blockNr, index)
-	}
-	return tx, nil
+	return nil, err
 }
 
 // GetRawTransactionByBlockHashAndIndex returns the bytes of the transaction for the given block hash and index.
 func (s *PublicTransactionPoolAPI) GetRawTransactionByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint) (hexutil.Bytes, error) {
 	block, err := s.b.BlockByHash(ctx, blockHash)
-	if err != nil {
-		return nil, err
+	if block != nil && err == nil {
+		return newRPCRawTransactionFromBlockIndex(block, uint64(index)), nil
 	}
-	tx := newRPCRawTransactionFromBlockIndex(block, uint64(index))
-	if tx == nil {
-		return nil, fmt.Errorf("the transaction does not exist (BlockHash: %s, Index:%s)", blockHash.String(), index)
-	}
-	return tx, nil
+	return nil, err
 }
 
 // GetTransactionCount returns the number of transactions the given address has sent for the given block number or hash
@@ -200,7 +192,7 @@ func (s *PublicTransactionPoolAPI) GetRawTransactionByHash(ctx context.Context, 
 	if tx, _, _, _ = s.b.ChainDB().ReadTxAndLookupInfo(hash); tx == nil {
 		if tx = s.b.GetPoolTransaction(hash); tx == nil {
 			// Transaction not found anywhere, abort
-			return nil, fmt.Errorf("the transaction does not exist (tx hash: %s)", hash.String())
+			return nil, nil
 		}
 	}
 
