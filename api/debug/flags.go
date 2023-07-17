@@ -25,12 +25,14 @@ import (
 	"io"
 	_ "net/http/pprof"
 	"os"
+	"path/filepath"
 	"runtime"
 
 	"github.com/fjl/memsize/memsizeui"
 	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/log/term"
-	colorable "github.com/mattn/go-colorable"
+	"github.com/mattn/go-colorable"
+	"github.com/mattn/go-isatty"
+	"gopkg.in/natefinch/lumberjack.v2"
 	"gopkg.in/urfave/cli.v1"
 	"gopkg.in/urfave/cli.v1/altsrc"
 )
@@ -60,6 +62,45 @@ var (
 		Name:   "debug",
 		Usage:  "Prepends log messages with call-site location (file and line number)",
 		EnvVar: "KLAYTN_DEBUG",
+	}
+	logFormatFlag = cli.StringFlag{
+		Name:   "log.format",
+		Usage:  "Log format to use (json|logfmt|terminal)",
+		Value:  "terminal",
+		EnvVar: "KLAYTN_LOGFORMAT",
+	}
+	logFileFlag = cli.StringFlag{
+		Name:   "log.file",
+		Usage:  "Write logs to a file",
+		EnvVar: "KLAYTN_LOGFILE",
+	}
+	logRotateFlag = cli.BoolFlag{
+		Name:   "log.rotate",
+		Usage:  "Enables log file rotation",
+		EnvVar: "KLAYTN_LOGROTATE",
+	}
+	logMaxSizeMBsFlag = cli.IntFlag{
+		Name:   "log.maxsize",
+		Usage:  "Maximum size in MBs of a single log file (use with --log.rotate flag)",
+		Value:  100,
+		EnvVar: "KLAYTN_LOGMAXSIZE",
+	}
+	logMaxBackupsFlag = cli.IntFlag{
+		Name:   "log.maxbackups",
+		Usage:  "Maximum number of log files to retain (use with --log.rotate flag)",
+		Value:  10,
+		EnvVar: "KLAYTN_LOGMAXBACKUPS",
+	}
+	logMaxAgeFlag = cli.IntFlag{
+		Name:   "log.maxage",
+		Usage:  "Maximum number of days to retain a log file (use with --log.rotate flag)",
+		Value:  30,
+		EnvVar: "KLAYTN_LOGMAXAGE",
+	}
+	logCompressFlag = cli.BoolFlag{
+		Name:   "log.compress",
+		Usage:  "Compress the log files (use with --log.rotate flag)",
+		EnvVar: "KLAYTN_LOGCOMPRESS",
 	}
 	pprofFlag = cli.BoolFlag{
 		Name:   "pprof",
@@ -112,6 +153,13 @@ var Flags = []cli.Flag{
 	altsrc.NewStringFlag(vmoduleFlag),
 	altsrc.NewStringFlag(backtraceAtFlag),
 	altsrc.NewBoolFlag(debugFlag),
+	altsrc.NewStringFlag(logFormatFlag),
+	altsrc.NewStringFlag(logFileFlag),
+	altsrc.NewBoolFlag(logRotateFlag),
+	altsrc.NewIntFlag(logMaxSizeMBsFlag),
+	altsrc.NewIntFlag(logMaxBackupsFlag),
+	altsrc.NewIntFlag(logMaxAgeFlag),
+	altsrc.NewBoolFlag(logCompressFlag),
 	altsrc.NewBoolFlag(pprofFlag),
 	altsrc.NewStringFlag(pprofAddrFlag),
 	altsrc.NewIntFlag(pprofPortFlag),
@@ -125,12 +173,9 @@ var Flags = []cli.Flag{
 var glogger *log.GlogHandler
 
 func init() {
-	usecolor := term.IsTty(os.Stderr.Fd()) && os.Getenv("TERM") != "dumb"
-	output := io.Writer(os.Stderr)
-	if usecolor {
-		output = colorable.NewColorableStderr()
-	}
-	glogger = log.NewGlogHandler(log.StreamHandler(output, log.TerminalFormat(usecolor)))
+	glogger = log.NewGlogHandler(log.StreamHandler(os.Stdout, log.TerminalFormat(false)))
+	glogger.Verbosity(log.LvlInfo)
+	log.Root().SetHandler(glogger)
 }
 
 func GetGlogger() (*log.GlogHandler, error) {
@@ -156,6 +201,62 @@ func CreateLogDir(logDir string) {
 // Setup initializes profiling and logging based on the CLI flags.
 // It should be called as early as possible in the program.
 func Setup(ctx *cli.Context) error {
+	var (
+		output     = io.Writer(os.Stderr)
+		logFmtFlag = ctx.String(logFormatFlag.Name)
+		logfmt     log.Format
+	)
+
+	switch logFmtFlag {
+	case "json":
+		logfmt = log.JsonFormat()
+	case "logfmt":
+		logfmt = log.LogfmtFormat()
+	case "terminal":
+		useColor := (isatty.IsTerminal(os.Stderr.Fd()) || isatty.IsCygwinTerminal(os.Stderr.Fd())) && os.Getenv("TERM") != "dumb"
+		if useColor {
+			output = colorable.NewColorableStdout()
+		}
+		logfmt = log.TerminalFormat(useColor)
+	default:
+		// Unknown log format specified
+		return fmt.Errorf("unknown log format: %v", ctx.String(logFormatFlag.Name))
+	}
+
+	var (
+		ostream  = log.StreamHandler(output, logfmt)
+		logFile  = ctx.String(logFileFlag.Name)
+		rotation = ctx.Bool(logRotateFlag.Name)
+		context  = []interface{}{"rotate", rotation}
+	)
+
+	// if logFile is not set when rotation, set default log name
+	if rotation && len(logFile) == 0 {
+		logFile = filepath.Join(os.TempDir(), "klaytn-lumberjack.log")
+	}
+	if len(logFile) > 0 {
+		context = append(context, "format", logFmtFlag, "location", logFile)
+		if err := validateLogLocation(logFile); err != nil {
+			return fmt.Errorf("tried to create a temporary file to verify that the log path is writable, but it failed: %v", err)
+		}
+		if rotation {
+			ostream = log.StreamHandler(&lumberjack.Logger{
+				Filename:   logFile,
+				MaxSize:    ctx.Int(logMaxSizeMBsFlag.Name),
+				MaxBackups: ctx.Int(logMaxBackupsFlag.Name),
+				MaxAge:     ctx.Int(logMaxAgeFlag.Name),
+				Compress:   ctx.Bool(logCompressFlag.Name),
+			}, logfmt)
+		} else {
+			logOutputStream, err := log.FileHandler(logFile, logfmt)
+			if err != nil {
+				return err
+			}
+			ostream = logOutputStream
+		}
+	}
+	glogger = log.NewGlogHandler(ostream)
+
 	// logging
 	log.PrintOrigins(ctx.GlobalBool(debugFlag.Name))
 	if err := log.ChangeGlobalLogLevel(glogger, log.Lvl(ctx.GlobalInt(verbosityFlag.Name))); err != nil {
@@ -192,6 +293,9 @@ func Setup(ctx *cli.Context) error {
 		port := ctx.GlobalInt(pprofPortFlag.Name)
 		Handler.StartPProf(&addr, &port)
 	}
+	if len(logFile) > 0 {
+		logger.Info("Logging configured", context...)
+	}
 	return nil
 }
 
@@ -208,4 +312,18 @@ func Exit() {
 	Handler.StopCPUProfile()
 	Handler.StopGoTrace()
 	Handler.StopPProf()
+}
+
+func validateLogLocation(path string) error {
+	if err := os.MkdirAll(filepath.Dir(path), os.ModePerm); err != nil {
+		return fmt.Errorf("error creating the directory: %w", err)
+	}
+	// Check if the path is writable by trying to create a temporary file
+	tmp := filepath.Join(path, ".temp")
+	if f, err := os.Create(tmp); err != nil {
+		return err
+	} else {
+		f.Close()
+	}
+	return os.Remove(tmp)
 }
