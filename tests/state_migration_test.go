@@ -111,7 +111,7 @@ func writeRandomValueToStateTrieDB(t *testing.T, dbm database.DBManager) map[str
 
 	for i := 0; i < 10; i++ {
 		key, value := common.MakeRandomBytes(common.HashLength), common.MakeRandomBytes(400)
-		dbm.PutTrieNodeToBatch(batch, common.BytesToHash(key), value)
+		dbm.PutTrieNodeToBatch(batch, common.BytesToExtHash(key), value)
 		entries[string(key)] = string(value)
 	}
 	assert.NoError(t, batch.Write())

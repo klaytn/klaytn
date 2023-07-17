@@ -664,7 +664,7 @@ func (dl *diskLayer) generate(stats *generatorStats) {
 			return nil
 		}
 
-		rootHash := contractAcc.GetStorageRoot()
+		rootHash := contractAcc.GetStorageRoot().Unextend()
 		if rootHash == emptyRoot {
 			prefix := append(database.SnapshotStoragePrefix, accountHash.Bytes()...)
 			keyLen := len(database.SnapshotStoragePrefix) + 2*common.HashLength

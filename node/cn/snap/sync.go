@@ -1790,7 +1790,7 @@ func (s *Syncer) processAccountResponse(res *accountResponse) {
 			}
 		}
 		// Check if the account is a contract with an unknown storage trie
-		if pacc != nil && pacc.GetStorageRoot() != emptyRoot {
+		if pacc != nil && pacc.GetStorageRoot().Unextend() != emptyRoot {
 			if ok, err := s.db.HasTrieNode(pacc.GetStorageRoot()); err != nil || !ok {
 				// If there was a previous large state retrieval in progress,
 				// don't restart it from scratch. This happens if a sync cycle
@@ -1799,12 +1799,12 @@ func (s *Syncer) processAccountResponse(res *accountResponse) {
 				if subtasks, ok := res.task.SubTasks[res.hashes[i]]; ok {
 					logger.Debug("Resuming large storage retrieval", "account", res.hashes[i], "root", pacc.GetStorageRoot())
 					for _, subtask := range subtasks {
-						subtask.root = pacc.GetStorageRoot()
+						subtask.root = pacc.GetStorageRoot().Unextend()
 					}
 					res.task.needHeal[i] = true
 					resumed[res.hashes[i]] = struct{}{}
 				} else {
-					res.task.stateTasks[res.hashes[i]] = pacc.GetStorageRoot()
+					res.task.stateTasks[res.hashes[i]] = pacc.GetStorageRoot().Unextend()
 				}
 				res.task.needState[i] = true
 				res.task.pend++
@@ -1954,7 +1954,7 @@ func (s *Syncer) processStorageResponse(res *storageResponse) {
 					tasks = append(tasks, &storageTask{
 						Next:    common.Hash{},
 						Last:    r.End(),
-						root:    pacc.GetStorageRoot(),
+						root:    pacc.GetStorageRoot().Unextend(),
 						genTrie: trie,
 						trieDb:  db,
 					})
@@ -1964,7 +1964,7 @@ func (s *Syncer) processStorageResponse(res *storageResponse) {
 						tasks = append(tasks, &storageTask{
 							Next:    r.Start(),
 							Last:    r.End(),
-							root:    pacc.GetStorageRoot(),
+							root:    pacc.GetStorageRoot().Unextend(),
 							genTrie: trie,
 							trieDb:  db,
 						})

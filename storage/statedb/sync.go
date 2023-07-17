@@ -126,8 +126,8 @@ func (batch *syncMemBatch) hasCode(hash common.Hash) bool {
 }
 
 type StateTrieReadDB interface {
-	ReadTrieNode(hash common.Hash) ([]byte, error)
-	HasTrieNode(hash common.Hash) (bool, error)
+	ReadTrieNode(hash common.ExtHash) ([]byte, error)
+	HasTrieNode(hash common.ExtHash) (bool, error)
 	HasCodeWithPrefix(hash common.Hash) bool
 }
 
@@ -184,7 +184,7 @@ func (s *TrieSync) AddSubTrie(root common.Hash, path []byte, depth int, parent c
 		// Bloom filter says this might be a duplicate, double check.
 		// If database says yes, then at least the trie node is present
 		// and we hold the assumption that it's NOT legacy contract code.
-		if ok, _ := s.database.HasTrieNode(root); ok {
+		if ok, _ := s.database.HasTrieNode(root.ExtendLegacy()); ok {
 			logger.Debug("skip write sub-trie", "root", root.String())
 			return
 		}
@@ -346,7 +346,7 @@ func (s *TrieSync) Commit(dbw database.Batch) (int, error) {
 	written := 0
 	// Dump the membatch into a database dbw
 	for key, value := range s.membatch.nodes {
-		if err := dbw.Put(database.TrieNodeKey(key), value); err != nil {
+		if err := dbw.Put(database.TrieNodeKey(key.ExtendLegacy()), value); err != nil { // only works with hash32
 			return written, err
 		}
 		if s.bloom != nil {
@@ -459,7 +459,7 @@ func (s *TrieSync) children(req *request, object node) ([]*request, error) {
 					paths = append(paths, hexToKeybytes(child.path[:2*common.HashLength]))
 					paths = append(paths, hexToKeybytes(child.path[2*common.HashLength:]))
 				}
-				if err := req.callback(paths, child.path, node, req.hash, child.depth); err != nil {
+				if err := req.callback(paths, child.path, node, req.hash.ExtendLegacy(), child.depth); err != nil {
 					return nil, err
 				}
 			}
@@ -467,7 +467,7 @@ func (s *TrieSync) children(req *request, object node) ([]*request, error) {
 		// If the child references another node, resolve or schedule
 		if node, ok := (child.node).(hashNode); ok {
 			// Try to resolve the node from the local database
-			hash := common.BytesToHash(node)
+			hash := common.BytesToExtHash(node).Unextend()
 			if s.membatch.hasNode(hash) {
 				continue
 			}
@@ -480,7 +480,7 @@ func (s *TrieSync) children(req *request, object node) ([]*request, error) {
 				// Bloom filter says this might be a duplicate, double check.
 				// If database says yes, then at least the trie node is present
 				// and we hold the assumption that it's NOT legacy contract code.
-				if ok, _ := s.database.HasTrieNode(hash); ok {
+				if ok, _ := s.database.HasTrieNode(hash.ExtendLegacy()); ok {
 					continue
 				}
 				// False positive, bump fault meter

@@ -147,7 +147,7 @@ func checkStateAccounts(t *testing.T, newDB database.DBManager, root common.Hash
 
 // checkTrieConsistency checks that all nodes in a (sub-)trie are indeed present.
 func checkTrieConsistency(db database.DBManager, root common.Hash) error {
-	if v, _ := db.ReadTrieNode(root); v == nil {
+	if v, _ := db.ReadTrieNode(root.ExtendLegacy()); v == nil { // only works with hash32
 		return nil // Consider a non existent state consistent.
 	}
 	trie, err := statedb.NewTrie(root, statedb.NewDatabase(db), nil)
@@ -163,7 +163,7 @@ func checkTrieConsistency(db database.DBManager, root common.Hash) error {
 // checkStateConsistency checks that all data of a state root is present.
 func checkStateConsistency(db database.DBManager, root common.Hash) error {
 	// Create and iterate a state trie rooted in a sub-node
-	if _, err := db.ReadTrieNode(root); err != nil {
+	if _, err := db.ReadTrieNode(root.ExtendLegacy()); err != nil { // only works with hash32
 		return nil // Consider a non existent state consistent.
 	}
 	state, err := New(root, NewDatabase(db), nil, nil)
@@ -273,7 +273,7 @@ func testIterativeStateSync(t *testing.T, count int, commit bool, bypath bool) {
 	for len(hashQueue)+len(pathQueue) > 0 {
 		results := make([]statedb.SyncResult, len(hashQueue)+len(pathQueue))
 		for i, hash := range hashQueue {
-			data, err := srcState.TrieDB().Node(hash)
+			data, err := srcState.TrieDB().Node(hash.ExtendLegacy())
 			if err != nil {
 				data, err = srcState.ContractCode(hash)
 			}
@@ -299,7 +299,7 @@ func testIterativeStateSync(t *testing.T, count int, commit bool, bypath bool) {
 				if pacc == nil {
 					t.Errorf("failed to get contract")
 				}
-				stTrie, err := statedb.NewTrie(pacc.GetStorageRoot(), srcState.TrieDB(), nil)
+				stTrie, err := statedb.NewStorageTrie(pacc.GetStorageRoot(), srcState.TrieDB(), nil)
 				if err != nil {
 					t.Fatalf("failed to retriev storage trie for path %x: %v", path, err)
 				}
@@ -373,23 +373,24 @@ func TestCheckStateConsistencyMissNode(t *testing.T) {
 
 	for it.Next() {
 		if !common.EmptyHash(it.Hash) {
-			hash := it.Hash
 			var (
-				data []byte
-				code = isCode(hash)
-				err  error
+				codehash = it.Hash
+				nodehash = it.Hash.ExtendLegacy()
+				data     []byte
+				code     = isCode(it.Hash)
+				err      error
 			)
 			srcDiskDB := srcState.TrieDB().DiskDB()
 			newDiskDB := newState.TrieDB().DiskDB()
 			// Delete trie nodes or codes
 			if code {
-				data = srcDiskDB.ReadCode(hash)
-				srcState.DeleteCode(hash)
-				newState.DeleteCode(hash)
+				data = srcDiskDB.ReadCode(codehash)
+				srcState.DeleteCode(codehash)
+				newState.DeleteCode(codehash)
 			} else {
-				data, _ = srcDiskDB.ReadTrieNode(hash)
-				srcDiskDB.DeleteTrieNode(hash)
-				newDiskDB.DeleteTrieNode(hash)
+				data, _ = srcDiskDB.ReadTrieNode(nodehash)
+				srcDiskDB.DeleteTrieNode(nodehash)
+				newDiskDB.DeleteTrieNode(nodehash)
 			}
 			// Check consistency : errIterator
 			err = CheckStateConsistency(srcState, newState, srcRoot, 100, nil)
@@ -400,11 +401,11 @@ func TestCheckStateConsistencyMissNode(t *testing.T) {
 
 			// Recover nodes
 			if code {
-				srcDiskDB.WriteCode(hash, data)
-				newDiskDB.WriteCode(hash, data)
+				srcDiskDB.WriteCode(codehash, data)
+				newDiskDB.WriteCode(codehash, data)
 			} else {
-				srcDiskDB.WriteTrieNode(hash, data)
-				newDiskDB.WriteTrieNode(hash, data)
+				srcDiskDB.WriteTrieNode(nodehash, data)
+				newDiskDB.WriteTrieNode(nodehash, data)
 			}
 		}
 	}
@@ -436,7 +437,7 @@ func TestIterativeDelayedStateSync(t *testing.T) {
 		// Sync only half of the scheduled nodes
 		results := make([]statedb.SyncResult, len(queue)/2+1)
 		for i, hash := range queue[:len(results)] {
-			data, err := srcState.TrieDB().Node(hash)
+			data, err := srcState.TrieDB().Node(hash.ExtendLegacy())
 			if err != nil {
 				data, err = srcState.ContractCode(hash)
 			}
@@ -493,7 +494,7 @@ func testIterativeRandomStateSync(t *testing.T, count int) {
 		// Fetch all the queued nodes in a random order
 		results := make([]statedb.SyncResult, 0, len(queue))
 		for hash := range queue {
-			data, err := srcState.TrieDB().Node(hash)
+			data, err := srcState.TrieDB().Node(hash.ExtendLegacy())
 			if err != nil {
 				data, err = srcState.ContractCode(hash)
 			}
@@ -552,7 +553,7 @@ func TestIterativeRandomDelayedStateSync(t *testing.T) {
 		for hash := range queue {
 			delete(queue, hash)
 
-			data, err := srcState.TrieDB().Node(hash)
+			data, err := srcState.TrieDB().Node(hash.ExtendLegacy())
 			if err != nil {
 				data, err = srcState.ContractCode(hash)
 			}
@@ -626,7 +627,7 @@ func TestIncompleteStateSync(t *testing.T) {
 		// Fetch a batch of state nodes
 		results := make([]statedb.SyncResult, len(queue))
 		for i, hash := range queue {
-			data, err := srcState.TrieDB().Node(hash)
+			data, err := srcState.TrieDB().Node(hash.ExtendLegacy())
 			if err != nil {
 				data, err = srcState.ContractCode(hash)
 			}
@@ -665,18 +666,20 @@ func TestIncompleteStateSync(t *testing.T) {
 		queue = append(append(queue[:0], nodes...), codes...)
 	}
 	// Sanity check that removing any node from the database is detected
-	for _, node := range added[1:] {
+	for _, hash := range added[1:] {
 		var (
-			key  = node.Bytes()
-			code = isCode(node)
-			val  []byte
+			key      = hash.Bytes()
+			code     = isCode(hash)
+			val      []byte
+			codehash = hash
+			nodehash = hash.ExtendLegacy()
 		)
 		if code {
-			val = dstDb.ReadCode(node)
-			dstState.DeleteCode(node)
+			val = dstDb.ReadCode(codehash)
+			dstState.DeleteCode(codehash)
 		} else {
-			val, _ = dstDb.ReadTrieNode(node)
-			dstDb.DeleteTrieNode(node)
+			val, _ = dstDb.ReadTrieNode(nodehash)
+			dstDb.DeleteTrieNode(nodehash)
 		}
 
 		if err := checkStateConsistency(dstDb, added[0]); err == nil {
@@ -690,9 +693,9 @@ func TestIncompleteStateSync(t *testing.T) {
 		assert.Error(t, err)
 
 		if code {
-			dstDb.WriteCode(node, val)
+			dstDb.WriteCode(codehash, val)
 		} else {
-			dstDb.WriteTrieNode(node, val)
+			dstDb.WriteTrieNode(nodehash, val)
 		}
 	}
 

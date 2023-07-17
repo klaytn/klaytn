@@ -454,33 +454,35 @@ func TestDBManager_IstanbulSnapshot(t *testing.T) {
 func TestDBManager_TrieNode(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	var (
+		key1  = hash1.ExtendLegacy()
+		key2  = hash2.Extend()
 		node1 = hash1[:]
 		node2 = hash2[:]
 	)
 	for _, dbm := range dbManagers {
-		cachedNode, _ := dbm.ReadTrieNode(hash1)
+		cachedNode, _ := dbm.ReadTrieNode(key1)
 		assert.Nil(t, cachedNode)
-		hasStateTrieNode, _ := dbm.HasTrieNode(hash1)
+		hasStateTrieNode, _ := dbm.HasTrieNode(key1)
 		assert.False(t, hasStateTrieNode)
 
 		batch := dbm.NewBatch(StateTrieDB)
-		dbm.PutTrieNodeToBatch(batch, hash1, node2)
+		dbm.PutTrieNodeToBatch(batch, key1, node2)
 		if _, err := WriteBatches(batch); err != nil {
 			t.Fatal("Failed writing batch", "err", err)
 		}
 
-		cachedNode, _ = dbm.ReadTrieNode(hash1)
+		cachedNode, _ = dbm.ReadTrieNode(key1)
 		assert.Equal(t, node2, cachedNode)
 
-		dbm.PutTrieNodeToBatch(batch, hash1, node1)
+		dbm.PutTrieNodeToBatch(batch, key1, node1)
 		if _, err := WriteBatches(batch); err != nil {
 			t.Fatal("Failed writing batch", "err", err)
 		}
 
-		cachedNode, _ = dbm.ReadTrieNode(hash1)
+		cachedNode, _ = dbm.ReadTrieNode(key1)
 		assert.Equal(t, node1, cachedNode)
 
-		hasStateTrieNode, _ = dbm.HasTrieNode(hash1)
+		hasStateTrieNode, _ = dbm.HasTrieNode(key1)
 		assert.True(t, hasStateTrieNode)
 
 		if dbm.IsSingle() {
@@ -489,29 +491,29 @@ func TestDBManager_TrieNode(t *testing.T) {
 		err := dbm.CreateMigrationDBAndSetStatus(123)
 		assert.NoError(t, err)
 
-		cachedNode, _ = dbm.ReadTrieNode(hash1)
-		oldCachedNode, _ := dbm.ReadTrieNodeFromOld(hash1)
+		cachedNode, _ = dbm.ReadTrieNode(key1)
+		oldCachedNode, _ := dbm.ReadTrieNodeFromOld(key1)
 		assert.Equal(t, node1, cachedNode)
 		assert.Equal(t, node1, oldCachedNode)
 
-		hasStateTrieNode, _ = dbm.HasTrieNode(hash1)
-		hasOldStateTrieNode, _ := dbm.HasTrieNodeFromOld(hash1)
+		hasStateTrieNode, _ = dbm.HasTrieNode(key1)
+		hasOldStateTrieNode, _ := dbm.HasTrieNodeFromOld(key1)
 		assert.True(t, hasStateTrieNode)
 		assert.True(t, hasOldStateTrieNode)
 
 		batch = dbm.NewBatch(StateTrieDB)
-		dbm.PutTrieNodeToBatch(batch, hash2, node2)
+		dbm.PutTrieNodeToBatch(batch, key2, node2)
 		if _, err := WriteBatches(batch); err != nil {
 			t.Fatal("Failed writing batch", "err", err)
 		}
 
-		cachedNode, _ = dbm.ReadTrieNode(hash2)
-		oldCachedNode, _ = dbm.ReadTrieNodeFromOld(hash2)
+		cachedNode, _ = dbm.ReadTrieNode(key2)
+		oldCachedNode, _ = dbm.ReadTrieNodeFromOld(key2)
 		assert.Equal(t, node2, cachedNode)
 		assert.Equal(t, node2, oldCachedNode)
 
-		hasStateTrieNode, _ = dbm.HasTrieNode(hash2)
-		hasOldStateTrieNode, _ = dbm.HasTrieNodeFromOld(hash2)
+		hasStateTrieNode, _ = dbm.HasTrieNode(key2)
+		hasOldStateTrieNode, _ = dbm.HasTrieNodeFromOld(key2)
 		assert.True(t, hasStateTrieNode)
 		assert.True(t, hasOldStateTrieNode)
 

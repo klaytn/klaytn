@@ -1015,7 +1015,7 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 	if EnabledExpensive {
 		defer func(start time.Time) { s.AccountCommits += time.Since(start) }(time.Now())
 	}
-	root, err = s.trie.Commit(func(_ [][]byte, _ []byte, leaf []byte, parent common.Hash, parentDepth int) error {
+	root, err = s.trie.Commit(func(_ [][]byte, _ []byte, leaf []byte, parent common.ExtHash, parentDepth int) error {
 		serializer := account.NewAccountSerializer()
 		if err := rlp.DecodeBytes(leaf, serializer); err != nil {
 			logger.Warn("RLP decode failed", "err", err, "leaf", string(leaf))
@@ -1023,7 +1023,7 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 		}
 		acc := serializer.GetAccount()
 		if pa := account.GetProgramAccount(acc); pa != nil {
-			if pa.GetStorageRoot() != emptyState {
+			if pa.GetStorageRoot().Unextend() != emptyState {
 				s.db.TrieDB().Reference(pa.GetStorageRoot(), parent)
 			}
 		}
@@ -1064,17 +1064,17 @@ var (
 	errNotContractAddress = fmt.Errorf("given address is not a contract address")
 )
 
-func (s *StateDB) GetContractStorageRoot(contractAddr common.Address) (common.Hash, error) {
+func (s *StateDB) GetContractStorageRoot(contractAddr common.Address) (common.ExtHash, error) {
 	acc := s.GetAccount(contractAddr)
 	if acc == nil {
-		return common.Hash{}, errNotExistingAddress
+		return common.ExtHash{}, errNotExistingAddress
 	}
 	if acc.Type() != account.SmartContractAccountType {
-		return common.Hash{}, errNotContractAddress
+		return common.ExtHash{}, errNotContractAddress
 	}
 	contract, true := acc.(*account.SmartContractAccount)
 	if !true {
-		return common.Hash{}, errNotContractAddress
+		return common.ExtHash{}, errNotContractAddress
 	}
 	return contract.GetStorageRoot(), nil
 }

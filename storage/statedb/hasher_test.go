@@ -22,48 +22,63 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func checkHasherHashFunc(t *testing.T, idx int, tc *testNodeEncodingTC, hashFunc func(*Database) (node, node)) {
-	hash := common.BytesToHash(tc.hash)
-
+func checkHasherHash(t *testing.T, name string, tc testNodeEncodingTC, opts *hasherOpts, onRoot bool) {
+	common.ResetExtHashCounterForTest(0xccccddddeeee00)
 	memDB := database.NewMemoryDBManager()
 	db := NewDatabase(memDB)
 
-	hashed, cached := hashFunc(db)
-	t.Logf("tc[%02d] %s", idx, hashed)
-	assert.Equal(t, hashNode(tc.hash), hashed, idx)
+	h := newHasher(opts)
+	defer returnHasherToPool(h)
+
+	hashed, cached := h.hashNode(tc.expanded, db, false, onRoot)
+	t.Logf("tc[%s] %s", name, hashed)
+	assert.Equal(t, hashNode(tc.hash), hashed, name)
 
 	cachedHash, _ := cached.cache()
-	assert.Equal(t, hashNode(tc.hash), cachedHash, idx)
+	assert.Equal(t, hashNode(tc.hash), cachedHash, name)
 
-	inserted := db.nodes[hash].node
-	assert.Equal(t, tc.inserted, inserted, idx)
+	hash := common.BytesToExtHash(tc.hash)
+	inserted := db.nodes[hash]
+	require.NotNil(t, inserted)
+	assert.Equal(t, tc.inserted, inserted.node, name)
 
 	db.Cap(0)
 	encoded, _ := memDB.ReadTrieNode(hash)
-	assert.Equal(t, tc.encoded, encoded, idx)
-}
-
-func checkHasherHash(t *testing.T, idx int, tc *testNodeEncodingTC) {
-	checkHasherHashFunc(t, idx, tc, func(db *Database) (node, node) {
-		h := newHasher(nil)
-		defer returnHasherToPool(h)
-		return h.hash(tc.expanded, db, false)
-	})
-
-	checkHasherHashFunc(t, idx, tc, func(db *Database) (node, node) {
-		h := newHasher(nil)
-		defer returnHasherToPool(h)
-		return h.hashRoot(tc.expanded, db, false)
-	})
+	assert.Equal(t, tc.encoded, encoded, name)
 }
 
 func TestHasherHashTC(t *testing.T) {
-	for idx, tc := range collapsedNodeTCs() {
-		checkHasherHash(t, idx, tc)
+	optsLegacy := &hasherOpts{}
+	optsState := &hasherOpts{pruning: true}
+	optsStorage := &hasherOpts{pruning: true, storageRoot: true}
+
+	for name, tc := range collapsedNodeTCs_legacy() {
+		checkHasherHash(t, name, tc, optsLegacy, true)
+		checkHasherHash(t, name, tc, optsLegacy, false)
 	}
-	for idx, tc := range resolvedNodeTCs() {
-		checkHasherHash(t, idx, tc)
+	for name, tc := range resolvedNodeTCs_legacy() {
+		checkHasherHash(t, name, tc, optsLegacy, true)
+		checkHasherHash(t, name, tc, optsLegacy, false)
+	}
+
+	for name, tc := range collapsedNodeTCs_extroot() {
+		checkHasherHash(t, name, tc, optsState, true)
+	}
+	for name, tc := range resolvedNodeTCs_extroot() {
+		checkHasherHash(t, name, tc, optsState, true)
+	}
+
+	for name, tc := range collapsedNodeTCs_exthash() {
+		checkHasherHash(t, name, tc, optsState, false)
+		checkHasherHash(t, name, tc, optsStorage, true)
+		checkHasherHash(t, name, tc, optsStorage, false)
+	}
+	for name, tc := range resolvedNodeTCs_exthash() {
+		checkHasherHash(t, name, tc, optsState, false)
+		checkHasherHash(t, name, tc, optsStorage, true)
+		checkHasherHash(t, name, tc, optsStorage, false)
 	}
 }

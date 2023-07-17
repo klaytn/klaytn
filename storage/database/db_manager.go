@@ -145,27 +145,27 @@ type DBManager interface {
 	HasCode(hash common.Hash) bool
 
 	// State Trie Database related operations
-	ReadTrieNode(hash common.Hash) ([]byte, error)
-	HasTrieNode(hash common.Hash) (bool, error)
+	ReadTrieNode(hash common.ExtHash) ([]byte, error)
+	HasTrieNode(hash common.ExtHash) (bool, error)
 	HasCodeWithPrefix(hash common.Hash) bool
 	ReadPreimage(hash common.Hash) []byte
 
 	// Read StateTrie from new DB
-	ReadTrieNodeFromNew(hash common.Hash) ([]byte, error)
-	HasTrieNodeFromNew(hash common.Hash) (bool, error)
+	ReadTrieNodeFromNew(hash common.ExtHash) ([]byte, error)
+	HasTrieNodeFromNew(hash common.ExtHash) (bool, error)
 	HasCodeWithPrefixFromNew(hash common.Hash) bool
 	ReadPreimageFromNew(hash common.Hash) []byte
 
 	// Read StateTrie from old DB
-	ReadTrieNodeFromOld(hash common.Hash) ([]byte, error)
-	HasTrieNodeFromOld(hash common.Hash) (bool, error)
+	ReadTrieNodeFromOld(hash common.ExtHash) ([]byte, error)
+	HasTrieNodeFromOld(hash common.ExtHash) (bool, error)
 	HasCodeWithPrefixFromOld(hash common.Hash) bool
 	ReadPreimageFromOld(hash common.Hash) []byte
 
 	// Write StateTrie
-	WriteTrieNode(hash common.Hash, node []byte)
-	PutTrieNodeToBatch(batch Batch, hash common.Hash, node []byte)
-	DeleteTrieNode(hash common.Hash)
+	WriteTrieNode(hash common.ExtHash, node []byte)
+	PutTrieNodeToBatch(batch Batch, hash common.ExtHash, node []byte)
+	DeleteTrieNode(hash common.ExtHash)
 	WritePreimages(number uint64, preimages map[common.Hash][]byte)
 
 	// from accessors_indexes.go
@@ -1749,7 +1749,7 @@ func (dbm *databaseManager) DeleteCode(hash common.Hash) {
 	}
 }
 
-func (dbm *databaseManager) ReadTrieNode(hash common.Hash) ([]byte, error) {
+func (dbm *databaseManager) ReadTrieNode(hash common.ExtHash) ([]byte, error) {
 	dbm.lockInMigration.RLock()
 	defer dbm.lockInMigration.RUnlock()
 
@@ -1769,7 +1769,7 @@ func (dbm *databaseManager) ReadTrieNode(hash common.Hash) ([]byte, error) {
 	return val, err
 }
 
-func (dbm *databaseManager) HasTrieNode(hash common.Hash) (bool, error) {
+func (dbm *databaseManager) HasTrieNode(hash common.ExtHash) (bool, error) {
 	val, err := dbm.ReadTrieNode(hash)
 	if val == nil || err != nil {
 		return false, err
@@ -1791,11 +1791,11 @@ func (dbm *databaseManager) ReadPreimage(hash common.Hash) []byte {
 	return dbm.ReadPreimageFromOld(hash)
 }
 
-func (dbm *databaseManager) ReadTrieNodeFromNew(hash common.Hash) ([]byte, error) {
+func (dbm *databaseManager) ReadTrieNodeFromNew(hash common.ExtHash) ([]byte, error) {
 	return dbm.GetStateTrieMigrationDB().Get(TrieNodeKey(hash))
 }
 
-func (dbm *databaseManager) HasTrieNodeFromNew(hash common.Hash) (bool, error) {
+func (dbm *databaseManager) HasTrieNodeFromNew(hash common.ExtHash) (bool, error) {
 	val, err := dbm.ReadTrieNodeFromNew(hash)
 	if val == nil || err != nil {
 		return false, err
@@ -1816,12 +1816,12 @@ func (dbm *databaseManager) ReadPreimageFromNew(hash common.Hash) []byte {
 	return data
 }
 
-func (dbm *databaseManager) ReadTrieNodeFromOld(hash common.Hash) ([]byte, error) {
+func (dbm *databaseManager) ReadTrieNodeFromOld(hash common.ExtHash) ([]byte, error) {
 	db := dbm.getDatabase(StateTrieDB)
 	return db.Get(TrieNodeKey(hash))
 }
 
-func (dbm *databaseManager) HasTrieNodeFromOld(hash common.Hash) (bool, error) {
+func (dbm *databaseManager) HasTrieNodeFromOld(hash common.ExtHash) (bool, error) {
 	val, err := dbm.ReadTrieNodeFromOld(hash)
 	if val == nil || err != nil {
 		return false, err
@@ -1843,7 +1843,7 @@ func (dbm *databaseManager) ReadPreimageFromOld(hash common.Hash) []byte {
 	return data
 }
 
-func (dbm *databaseManager) WriteTrieNode(hash common.Hash, node []byte) {
+func (dbm *databaseManager) WriteTrieNode(hash common.ExtHash, node []byte) {
 	dbm.lockInMigration.RLock()
 	defer dbm.lockInMigration.RUnlock()
 
@@ -1857,7 +1857,7 @@ func (dbm *databaseManager) WriteTrieNode(hash common.Hash, node []byte) {
 	}
 }
 
-func (dbm *databaseManager) PutTrieNodeToBatch(batch Batch, hash common.Hash, node []byte) {
+func (dbm *databaseManager) PutTrieNodeToBatch(batch Batch, hash common.ExtHash, node []byte) {
 	if err := batch.Put(TrieNodeKey(hash), node); err != nil {
 		logger.Crit("Failed to store trie node", "err", err)
 	}
@@ -1882,7 +1882,7 @@ func (dbm *databaseManager) WritePreimages(number uint64, preimages map[common.H
 	preimageHitCounter.Inc(int64(len(preimages)))
 }
 
-func (dbm *databaseManager) DeleteTrieNode(hash common.Hash) {
+func (dbm *databaseManager) DeleteTrieNode(hash common.ExtHash) {
 	if err := dbm.getDatabase(StateTrieDB).Delete(TrieNodeKey(hash)); err != nil {
 		logger.Crit("Failed to delete trie node", "err", err)
 	}

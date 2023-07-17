@@ -40,6 +40,11 @@ var (
 // TrieOpts consists of trie operation options
 type TrieOpts struct {
 	Prefetching bool // If true, certain metric is enabled
+
+	// If true, enable live pruning. i.e. node hashes are ExtHash with fresh nonces
+	// and obsolete nodes are enqueued in the pruning queue.
+	// TODO-Klaytn-Pruning: Prune obsolete nodes
+	Pruning bool
 }
 
 // LeafCallback is a callback type invoked when a trie operation reaches a leaf
@@ -56,7 +61,7 @@ type TrieOpts struct {
 // It's used by state sync and commit to allow handling external references
 // between account and storage tries. And also it's used in the state healing
 // for extracting the raw states(leaf nodes) with corresponding paths.
-type LeafCallback func(paths [][]byte, hexpath []byte, leaf []byte, parent common.Hash, parentDepth int) error
+type LeafCallback func(paths [][]byte, hexpath []byte, leaf []byte, parent common.ExtHash, parentDepth int) error
 
 // Trie is a Merkle Patricia Trie.
 // The zero value is an empty trie with no database.
@@ -64,10 +69,11 @@ type LeafCallback func(paths [][]byte, hexpath []byte, leaf []byte, parent commo
 //
 // Trie is not safe for concurrent use.
 type Trie struct {
+	TrieOpts
 	db           *Database
 	root         node
-	originalRoot common.Hash
-	prefetching  bool
+	originalRoot common.ExtHash
+	storage      bool // If storage and Pruning are both true, root hash is attached a fresh nonce.
 }
 
 // newFlag returns the cache flag value for a newly created node.
@@ -82,6 +88,23 @@ func (t *Trie) newFlag() nodeFlag {
 // NewTrie will panic if db is nil and returns a MissingNodeError if root does
 // not exist in the database. Accessing the trie loads nodes from db on demand.
 func NewTrie(root common.Hash, db *Database, opts *TrieOpts) (*Trie, error) {
+	return newTrie(root.ExtendLegacy(), db, opts, false)
+}
+
+// NewStorageTrie creates a storage trie with an existing root node from db.
+//
+// If root is the zero hash or the sha3 hash of an empty string, the
+// trie is initially empty and does not require a database. Otherwise,
+// NewTrie will panic if db is nil and returns a MissingNodeError if root does
+// not exist in the database. Accessing the trie loads nodes from db on demand.
+//
+// A storage trie is identified with an ExtHash root node. With Live Pruning enabled,
+// its root hash will be extended with a non-legacy nonce.
+func NewStorageTrie(root common.ExtHash, db *Database, opts *TrieOpts) (*Trie, error) {
+	return newTrie(root, db, opts, true)
+}
+
+func newTrie(root common.ExtHash, db *Database, opts *TrieOpts, storage bool) (*Trie, error) {
 	if db == nil {
 		panic("statedb.NewTrie called without a database")
 	}
@@ -90,17 +113,18 @@ func NewTrie(root common.Hash, db *Database, opts *TrieOpts) (*Trie, error) {
 	}
 
 	trie := &Trie{
+		TrieOpts:     *opts,
 		db:           db,
 		originalRoot: root,
+		storage:      storage,
 	}
-	if (root != common.Hash{}) && root != emptyRoot {
+	if !common.EmptyExtHash(root) && root.Unextend() != emptyRoot {
 		rootnode, err := trie.resolveHash(root[:], nil)
 		if err != nil {
 			return nil, err
 		}
 		trie.root = rootnode
 	}
-	trie.prefetching = opts.Prefetching
 	return trie, nil
 }
 
@@ -203,7 +227,7 @@ func (t *Trie) tryGetNode(origNode node, path []byte, pos int) (item []byte, new
 		if hash == nil {
 			return nil, origNode, 0, errors.New("non-consensus node")
 		}
-		blob, err := t.db.Node(common.BytesToHash(hash))
+		blob, err := t.db.Node(common.BytesToExtHash(hash))
 		return blob, origNode, 1, err
 	}
 	// Path still needs to be traversed, descend into children
@@ -504,43 +528,62 @@ func (t *Trie) resolve(n node, prefix []byte) (node, error) {
 }
 
 func (t *Trie) resolveHash(n hashNode, prefix []byte) (node, error) {
-	hash := common.BytesToHash(n)
+	hash := common.BytesToExtHash(n)
 	node, fromDB := t.db.node(hash)
-	if t.prefetching && fromDB {
+	if t.Prefetching && fromDB {
 		memcacheCleanPrefetchMissMeter.Mark(1)
 	}
 	if node != nil {
 		return node, nil
 	}
-	return nil, &MissingNodeError{NodeHash: hash, Path: prefix}
+	return nil, &MissingNodeError{NodeHash: hash.Unextend(), Path: prefix}
 }
 
 // Hash returns the root hash of the trie. It does not write to the
 // database and can be used even if the trie doesn't have one.
 func (t *Trie) Hash() common.Hash {
+	return t.HashExt().Unextend()
+}
+
+// HashExt returns the root hash of the trie in ExtHash type. It does not write to the
+// database and can be used even if the trie doesn't have one.
+func (t *Trie) HashExt() common.ExtHash {
 	hash, cached := t.hashRoot(nil, nil)
 	t.root = cached
-	return common.BytesToHash(hash.(hashNode))
+	return hash
 }
 
 // Commit writes all nodes to the trie's memory database, tracking the internal
-// and external (for account tries) references.
+// and external (for account tries) references. Returns the root hash.
 func (t *Trie) Commit(onleaf LeafCallback) (root common.Hash, err error) {
+	extroot, err := t.CommitExt(onleaf)
+	return extroot.Unextend(), err
+}
+
+// CommitExt writes all nodes to the trie's memory database, tracking the internal
+// and external (for account tries) references. Returns the root hash in ExtHash type.
+func (t *Trie) CommitExt(onleaf LeafCallback) (root common.ExtHash, err error) {
 	if t.db == nil {
 		panic("commit called on trie with nil database")
 	}
 	hash, cached := t.hashRoot(t.db, onleaf)
 	t.root = cached
-	return common.BytesToHash(hash.(hashNode)), nil
+	return hash, nil
 }
 
-func (t *Trie) hashRoot(db *Database, onleaf LeafCallback) (node, node) {
+func (t *Trie) hashRoot(db *Database, onleaf LeafCallback) (common.ExtHash, node) {
 	if t.root == nil {
-		return hashNode(emptyRoot.Bytes()), nil
+		return emptyRoot.ExtendLegacy(), nil
 	}
-	h := newHasher(onleaf)
+	h := newHasher(&hasherOpts{
+		onleaf:      onleaf,
+		pruning:     t.Pruning,
+		storageRoot: t.storage,
+	})
 	defer returnHasherToPool(h)
-	return h.hashRoot(t.root, db, true)
+	hashed, cached := h.hashRoot(t.root, db, true)
+	hash := common.BytesToExtHash(hashed.(hashNode))
+	return hash, cached
 }
 
 func GetHashAndHexKey(key []byte) ([]byte, []byte) {

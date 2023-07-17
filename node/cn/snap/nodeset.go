@@ -47,8 +47,8 @@ func NewNodeSet() *NodeSet {
 	}
 }
 
-func (db *NodeSet) ReadTrieNode(hash common.Hash) ([]byte, error) {
-	return db.Get(hash.Bytes())
+func (db *NodeSet) ReadTrieNode(hash common.ExtHash) ([]byte, error) {
+	return db.Get(database.TrieNodeKey(hash))
 }
 
 func (db *NodeSet) WriteMerkleProof(key, value []byte) {

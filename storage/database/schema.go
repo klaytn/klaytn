@@ -262,7 +262,11 @@ func databaseDirKey(dbEntryType uint64) []byte {
 	return append(databaseDirPrefix, common.Int64ToByteBigEndian(dbEntryType)...)
 }
 
-// TrieNodeKey = hash
-func TrieNodeKey(hash common.Hash) []byte {
-	return hash.Bytes()
+// TrieNodeKey = if Legacy, hash32. Otherwise, exthash
+func TrieNodeKey(hash common.ExtHash) []byte {
+	if hash.IsLegacy() {
+		return hash.Unextend().Bytes()
+	} else {
+		return hash.Bytes()
+	}
 }

@@ -1607,8 +1607,8 @@ func verifyTrie(db database.DBManager, root common.Hash, t *testing.T) {
 		acc := serializer.GetAccount()
 		pacc := account.GetProgramAccount(acc)
 		accounts++
-		if pacc != nil && pacc.GetStorageRoot() != emptyRoot {
-			storeTrie, err := statedb.NewSecureTrie(pacc.GetStorageRoot(), triedb, nil)
+		if pacc != nil && pacc.GetStorageRoot().Unextend() != emptyRoot {
+			storeTrie, err := statedb.NewSecureStorageTrie(pacc.GetStorageRoot(), triedb, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

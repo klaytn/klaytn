@@ -39,6 +39,7 @@ import (
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
+	"github.com/stretchr/testify/assert"
 )
 
 func init() {
@@ -122,7 +123,7 @@ func testMissingNode(t *testing.T, memonly bool) {
 		t.Errorf("Unexpected error: %v", err)
 	}
 
-	hash := common.HexToHash("0xe1d943cc8f061a0c0b98162830b970395ac9315654824bf21b73b891365262f9")
+	hash := common.HexToHash("0xe1d943cc8f061a0c0b98162830b970395ac9315654824bf21b73b891365262f9").ExtendLegacy()
 	if memonly {
 		delete(triedb.nodes, hash)
 	} else {
@@ -319,6 +320,33 @@ func TestLargeValue(t *testing.T) {
 	trie.Update([]byte("key1"), []byte{99, 99, 99, 99})
 	trie.Update([]byte("key2"), bytes.Repeat([]byte{1}, 32))
 	trie.Hash()
+}
+
+func TestStorageTrie(t *testing.T) {
+	newStorageTrie := func(pruning bool) *Trie {
+		db := NewDatabase(database.NewMemoryDBManager())
+		trie, _ := NewStorageTrie(common.ExtHash{}, db, &TrieOpts{Pruning: pruning})
+		updateString(trie, "doe", "reindeer")
+		return trie
+	}
+
+	// non-pruning storage trie returns Legacy ExtHash for root
+	trie := newStorageTrie(false)
+	root := trie.HashExt()
+	assert.True(t, root.IsLegacy())
+
+	trie = newStorageTrie(false)
+	root, _ = trie.CommitExt(nil)
+	assert.True(t, root.IsLegacy())
+
+	// pruning storage trie returns non-Legacy ExtHash for root
+	trie = newStorageTrie(true)
+	root = trie.HashExt()
+	assert.False(t, root.IsLegacy())
+
+	trie = newStorageTrie(true)
+	root, _ = trie.CommitExt(nil)
+	assert.False(t, root.IsLegacy())
 }
 
 type countingDB struct {

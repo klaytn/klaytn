@@ -156,7 +156,7 @@ func (c *stateObject) touch() {
 	}
 }
 
-func (c *stateObject) openStorageTrie(hash common.Hash, db Database) (Trie, error) {
+func (c *stateObject) openStorageTrie(hash common.ExtHash, db Database) (Trie, error) {
 	return db.OpenStorageTrie(hash, &statedb.TrieOpts{Prefetching: c.db.prefetching})
 }
 
@@ -166,12 +166,12 @@ func (c *stateObject) getStorageTrie(db Database) Trie {
 			var err error
 			c.storageTrie, err = c.openStorageTrie(acc.GetStorageRoot(), db)
 			if err != nil {
-				c.storageTrie, _ = c.openStorageTrie(common.Hash{}, db)
+				c.storageTrie, _ = c.openStorageTrie(common.ExtHash{}, db)
 				c.setError(fmt.Errorf("can't create storage trie: %v", err))
 			}
 		} else {
 			// not a contract account, just returns the empty trie.
-			c.storageTrie, _ = c.openStorageTrie(common.Hash{}, db)
+			c.storageTrie, _ = c.openStorageTrie(common.ExtHash{}, db)
 		}
 	}
 	return c.storageTrie
@@ -376,7 +376,7 @@ func (self *stateObject) updateStorageRoot(db Database) {
 		if EnabledExpensive {
 			defer func(start time.Time) { self.db.StorageHashes += time.Since(start) }(time.Now())
 		}
-		acc.SetStorageRoot(self.storageTrie.Hash())
+		acc.SetStorageRoot(self.storageTrie.HashExt())
 	}
 }
 
@@ -389,7 +389,7 @@ func (self *stateObject) setStorageRoot(updateStorageRoot bool, objectsToUpdate 
 			if EnabledExpensive {
 				defer func(start time.Time) { self.db.StorageHashes += time.Since(start) }(time.Now())
 			}
-			acc.SetStorageRoot(self.storageTrie.Hash())
+			acc.SetStorageRoot(self.storageTrie.HashExt())
 			return
 		}
 		// If updateStorageRoot == false, it just marks the object and updates its storage root later.
@@ -409,7 +409,7 @@ func (self *stateObject) CommitStorageTrie(db Database) error {
 		defer func(start time.Time) { self.db.StorageCommits += time.Since(start) }(time.Now())
 	}
 	if acc := account.GetProgramAccount(self.account); acc != nil {
-		root, err := self.storageTrie.Commit(nil)
+		root, err := self.storageTrie.CommitExt(nil)
 		if err != nil {
 			return err
 		}

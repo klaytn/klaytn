@@ -133,7 +133,7 @@ func trieSyncLoop(t *testing.T, count int, srcTrie *SecureTrie, sched *TrieSync,
 	for len(hashQueue)+len(pathQueue) > 0 {
 		results := make([]SyncResult, len(hashQueue)+len(pathQueue))
 		for i, hash := range hashQueue {
-			data, err := srcDB.Node(hash)
+			data, err := srcDB.Node(hash.ExtendLegacy())
 			if err != nil {
 				t.Fatalf("failed to retrieve node data for hash %x: %v", hash, err)
 			}
@@ -241,7 +241,7 @@ func TestIterativeDelayedTrieSync(t *testing.T) {
 		// Sync only half of the scheduled nodes
 		results := make([]SyncResult, len(queue)/2+1)
 		for i, hash := range queue[:len(results)] {
-			data, err := srcDb.Node(hash)
+			data, err := srcDb.Node(hash.ExtendLegacy())
 			if err != nil {
 				t.Fatalf("failed to retrieve node data for %x: %v", hash, err)
 			}
@@ -289,7 +289,7 @@ func testIterativeRandomTrieSync(t *testing.T, count int) {
 		// Fetch all the queued nodes in a random order
 		results := make([]SyncResult, 0, len(queue))
 		for hash := range queue {
-			data, err := srcDb.Node(hash)
+			data, err := srcDb.Node(hash.ExtendLegacy())
 			if err != nil {
 				t.Fatalf("failed to retrieve node data for %x: %v", hash, err)
 			}
@@ -337,7 +337,7 @@ func TestIterativeRandomDelayedTrieSync(t *testing.T) {
 		// Sync only half of the scheduled nodes, even those in random order
 		results := make([]SyncResult, 0, len(queue)/2+1)
 		for hash := range queue {
-			data, err := srcDb.Node(hash)
+			data, err := srcDb.Node(hash.ExtendLegacy())
 			if err != nil {
 				t.Fatalf("failed to retrieve node data for %x: %v", hash, err)
 			}
@@ -389,7 +389,7 @@ func TestDuplicateAvoidanceTrieSync(t *testing.T) {
 	for len(queue) > 0 {
 		results := make([]SyncResult, len(queue))
 		for i, hash := range queue {
-			data, err := srcDb.Node(hash)
+			data, err := srcDb.Node(hash.ExtendLegacy())
 			if err != nil {
 				t.Fatalf("failed to retrieve node data for %x: %v", hash, err)
 			}
@@ -435,7 +435,7 @@ func TestIncompleteTrieSync(t *testing.T) {
 		// Fetch a batch of trie nodes
 		results := make([]SyncResult, len(queue))
 		for i, hash := range queue {
-			data, err := srcDb.Node(hash)
+			data, err := srcDb.Node(hash.ExtendLegacy())
 			if err != nil {
 				t.Fatalf("failed to retrieve node data for %x: %v", hash, err)
 			}
@@ -467,13 +467,14 @@ func TestIncompleteTrieSync(t *testing.T) {
 	}
 	// Sanity check that removing any node from the database is detected
 	for _, hash := range added[1:] {
-		value, _ := dbm.ReadTrieNode(hash)
+		nodehash := hash.ExtendLegacy()
+		value, _ := dbm.ReadTrieNode(nodehash)
 
-		dbm.DeleteTrieNode(hash)
+		dbm.DeleteTrieNode(nodehash)
 		if err := checkTrieConsistency(triedb, added[0]); err == nil {
 			t.Fatalf("trie inconsistency not caught, missing: %x", hash)
 		}
-		dbm.WriteTrieNode(hash, value)
+		dbm.WriteTrieNode(nodehash, value)
 	}
 }
 
@@ -495,7 +496,7 @@ func TestSyncOrdering(t *testing.T) {
 	for len(queue) > 0 {
 		results := make([]SyncResult, len(queue))
 		for i, hash := range queue {
-			data, err := srcDb.Node(hash)
+			data, err := srcDb.Node(hash.ExtendLegacy())
 			if err != nil {
 				t.Fatalf("failed to retrieve node data for %x: %v", hash, err)
 			}

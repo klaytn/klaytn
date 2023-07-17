@@ -25,8 +25,10 @@ import (
 )
 
 var (
-	childHash  = common.HexToHash("1341655") // 20190805 in hexadecimal
-	parentHash = common.HexToHash("1343A3F") // 20199999 in hexadecimal
+	childHash     = common.HexToHash("1341655") // 20190805 in hexadecimal
+	parentHash    = common.HexToHash("1343A3F") // 20199999 in hexadecimal
+	childExtHash  = childHash.ExtendLegacy()
+	parentExtHash = parentHash.ExtendLegacy()
 )
 
 func TestDatabase_Reference(t *testing.T) {
@@ -36,25 +38,25 @@ func TestDatabase_Reference(t *testing.T) {
 	assert.Equal(t, memDB, db.DiskDB())
 	assert.Equal(t, 1, len(db.nodes)) // {} : {}
 
-	db.Reference(childHash, parentHash)
+	db.Reference(childExtHash, parentExtHash)
 	assert.Equal(t, 1, len(db.nodes)) // {} : {}
 
 	child := &cachedNode{}
 	parent := &cachedNode{}
-	db.nodes[childHash] = child
-	db.nodes[parentHash] = parent
+	db.nodes[childExtHash] = child
+	db.nodes[parentExtHash] = parent
 
 	// Call Reference after updating db.nodes
-	db.Reference(childHash, parentHash)
+	db.Reference(childExtHash, parentExtHash)
 	assert.Equal(t, 3, len(db.nodes))
 	assert.Equal(t, uint64(1), child.parents)
-	assert.Equal(t, uint64(1), parent.children[childHash])
+	assert.Equal(t, uint64(1), parent.children[childExtHash])
 
 	// Just calling Reference does not have effect
-	db.Reference(childHash, parentHash)
+	db.Reference(childExtHash, parentExtHash)
 	assert.Equal(t, 3, len(db.nodes))
 	assert.Equal(t, uint64(1), child.parents)
-	assert.Equal(t, uint64(1), parent.children[childHash])
+	assert.Equal(t, uint64(1), parent.children[childExtHash])
 }
 
 func TestDatabase_DeReference(t *testing.T) {
@@ -69,20 +71,20 @@ func TestDatabase_DeReference(t *testing.T) {
 
 	child := &cachedNode{}
 	parent := &cachedNode{}
-	db.nodes[childHash] = child
-	db.nodes[parentHash] = parent
+	db.nodes[childExtHash] = child
+	db.nodes[parentExtHash] = parent
 
-	db.Reference(childHash, parentHash)
+	db.Reference(childExtHash, parentExtHash)
 	assert.Equal(t, 3, len(db.nodes))
 	assert.Equal(t, uint64(1), child.parents)
-	assert.Equal(t, uint64(1), parent.children[childHash])
+	assert.Equal(t, uint64(1), parent.children[childExtHash])
 	assert.Equal(t, uint64(0), db.gcnodes)
 	assert.Equal(t, common.StorageSize(0), db.gcsize)
 
 	db.Dereference(parentHash)
 	assert.Equal(t, 1, len(db.nodes))
 	assert.Equal(t, uint64(0), child.parents)
-	assert.Equal(t, uint64(0), parent.children[childHash])
+	assert.Equal(t, uint64(0), parent.children[childExtHash])
 	assert.Equal(t, uint64(2), db.gcnodes)
 	assert.Equal(t, common.StorageSize(64), db.gcsize)
 }
@@ -97,10 +99,10 @@ func TestDatabase_Size(t *testing.T) {
 
 	child := &cachedNode{}
 	parent := &cachedNode{}
-	db.nodes[childHash] = child
-	db.nodes[parentHash] = parent
+	db.nodes[childExtHash] = child
+	db.nodes[parentExtHash] = parent
 
-	db.Reference(childHash, parentHash)
+	db.Reference(childExtHash, parentExtHash)
 
 	totalMemorySize, _, preimagesSize = db.Size()
 	assert.Equal(t, common.StorageSize(128), totalMemorySize)

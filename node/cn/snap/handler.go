@@ -378,7 +378,7 @@ func ServiceGetStorageRangesQuery(chain SnapshotReader, req *GetStorageRangesPac
 				// TODO-Klaytn-SnapSync it would be better to continue rather than return. Do not waste the completed job until now.
 				return nil, nil
 			}
-			stTrie, err := statedb.NewTrie(pacc.GetStorageRoot(), chain.StateCache().TrieDB(), nil)
+			stTrie, err := statedb.NewStorageTrie(pacc.GetStorageRoot(), chain.StateCache().TrieDB(), nil)
 			if err != nil {
 				return nil, nil
 			}
@@ -490,7 +490,7 @@ func ServiceGetTrieNodesQuery(chain SnapshotReader, req *GetTrieNodesPacket, sta
 			if pacc == nil {
 				break
 			}
-			stTrie, err := statedb.NewSecureTrie(pacc.GetStorageRoot(), triedb, nil)
+			stTrie, err := statedb.NewSecureStorageTrie(pacc.GetStorageRoot(), triedb, nil)
 			loads++ // always account database reads, even for failures
 			if err != nil {
 				break
