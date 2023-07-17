@@ -74,6 +74,8 @@ var (
 	signer types.Signer
 )
 
+var addRocksdb = false
+
 func init() {
 	GetOpenFilesLimit()
 
@@ -86,14 +88,15 @@ func init() {
 		badgerConfig.DBType = BadgerDB
 		memoryConfig := *bc
 		memoryConfig.DBType = MemoryDB
-		rocksdbConfig := *bc
-		rocksdbConfig.DBType = RocksDB
-		rocksdbConfig.RocksDBConfig = GetDefaultRocksDBConfig()
+		rockdbConfig := *bc
+		rockdbConfig.DBType = RocksDB
 
 		dbConfigs = append(dbConfigs, bc)
 		dbConfigs = append(dbConfigs, &badgerConfig)
 		dbConfigs = append(dbConfigs, &memoryConfig)
-		dbConfigs = append(dbConfigs, &rocksdbConfig)
+		if addRocksdb {
+			dbConfigs = append(dbConfigs, &rockdbConfig)
+		}
 	}
 
 	dbManagers = createDBManagers(dbConfigs)

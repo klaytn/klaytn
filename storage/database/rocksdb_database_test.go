@@ -26,6 +26,7 @@ import (
 
 func init() {
 	testDatabases = append(testDatabases, newTestRocksDB)
+	addRocksdb = true
 }
 
 func newTestRocksDB() (Database, func(), string) {
