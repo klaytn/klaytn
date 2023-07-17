@@ -65,12 +65,12 @@ var properties = []string{
 
 type RocksDBConfig struct {
 	Secondary                 bool
-	CacheSize                 uint64
 	DumpMallocStat            bool
+	DisableMetrics            bool
+	CacheSize                 uint64
 	CompressionType           string
 	BottommostCompressionType string
 	FilterPolicy              string
-	DisableMetrics            bool
 }
 
 func GetDefaultRocksDBConfig() *RocksDBConfig {
