@@ -1,4 +1,4 @@
-// Copyright 2019 The klaytn Authors
+// Copyright 2023 The klaytn Authors
 // This file is part of the klaytn library.
 //
 // The klaytn library is free software: you can redistribute it and/or modify
@@ -14,26 +14,24 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-package reward
+package blst
 
 import (
-	"testing"
-
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/params"
-	"github.com/stretchr/testify/assert"
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/crypto"
 )
 
-func newTestBlockChain() *blockchain.BlockChain {
-	return &blockchain.BlockChain{}
+var (
+	publicKeyCache common.Cache // PublicKey Uncompress
+	signatureCache common.Cache // Signature Uncompress
+)
+
+func cacheKey(b []byte) common.CacheKey {
+	return crypto.Keccak256Hash(b)
 }
 
-func TestAddressBookManager_makeMsgToAddressBook(t *testing.T) {
-	targetAddress := "0x0000000000000000000000000000000000000400" // address of addressBook which the message has to be sent to
-	ac := newAddressBookConnector(newTestBlockChain(), nil)
-	msg, err := ac.makeMsgToAddressBook(params.Rules{IsIstanbul: true})
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
-	assert.Equal(t, targetAddress, msg.To().String())
+func init() {
+	cacheConfig := common.LRUConfig{CacheSize: 200}
+	publicKeyCache = common.NewCache(cacheConfig)
+	signatureCache = common.NewCache(cacheConfig)
 }

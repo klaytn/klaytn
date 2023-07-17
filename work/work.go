@@ -274,6 +274,7 @@ type BlockChain interface {
 	StateAtWithPersistent(root common.Hash) (*state.StateDB, error)
 	StateAtWithGCLock(root common.Hash) (*state.StateDB, error)
 	Export(w io.Writer) error
+	ExportN(w io.Writer, first, last uint64) error
 	Engine() consensus.Engine
 	GetTxLookupInfoAndReceipt(txHash common.Hash) (*types.Transaction, common.Hash, uint64, uint64, *types.Receipt)
 	GetTxAndLookupInfoInCache(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
@@ -301,7 +302,7 @@ type BlockChain interface {
 
 	// Collect state/storage trie statistics
 	StartCollectingTrieStats(contractAddr common.Address) error
-	GetContractStorageRoot(block *types.Block, db state.Database, contractAddr common.Address) (common.Hash, error)
+	GetContractStorageRoot(block *types.Block, db state.Database, contractAddr common.Address) (common.ExtHash, error)
 
 	// Save trie node cache to this
 	SaveTrieNodeCacheToDisk() error

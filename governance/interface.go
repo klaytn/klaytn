@@ -26,6 +26,7 @@ import (
 	"github.com/klaytn/klaytn/storage/database"
 )
 
+//go:generate mockgen -package governance -destination=interface_mock_test.go github.com/klaytn/klaytn/governance Engine
 type Engine interface {
 	HeaderEngine
 	ReaderEngine
@@ -106,8 +107,13 @@ type HeaderEngine interface {
 type blockChain interface {
 	blockchain.ChainContext
 
-	CurrentBlock() *types.Block
-	GetHeaderByNumber(val uint64) *types.Header
-	StateAt(root common.Hash) (*state.StateDB, error)
+	// Subset of consensus.ChainReader
 	Config() *params.ChainConfig
+	CurrentHeader() *types.Header
+	GetHeaderByNumber(val uint64) *types.Header
+	GetBlock(hash common.Hash, number uint64) *types.Block
+	State() (*state.StateDB, error)
+	StateAt(root common.Hash) (*state.StateDB, error)
+
+	CurrentBlock() *types.Block
 }

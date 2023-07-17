@@ -63,6 +63,7 @@ func setDefaults(cfg *Config) {
 			LondonCompatibleBlock:    new(big.Int),
 			EthTxTypeCompatibleBlock: new(big.Int),
 			KoreCompatibleBlock:      new(big.Int),
+			MantleCompatibleBlock:    new(big.Int),
 		}
 	}
 
@@ -107,7 +108,7 @@ func Execute(code, input []byte, cfg *Config) ([]byte, *state.StateDB, error) {
 
 	if cfg.State == nil {
 		memDBManager := database.NewMemoryDBManager()
-		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(memDBManager), nil)
+		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(memDBManager), nil, nil)
 	}
 	var (
 		address = common.BytesToAddress([]byte("contract"))
@@ -142,7 +143,7 @@ func Create(input []byte, cfg *Config) ([]byte, common.Address, uint64, error) {
 
 	if cfg.State == nil {
 		memDBManager := database.NewMemoryDBManager()
-		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(memDBManager), nil)
+		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(memDBManager), nil, nil)
 	}
 	var (
 		vmenv  = NewEnv(cfg)

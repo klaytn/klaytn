@@ -26,7 +26,6 @@ import (
 	"fmt"
 
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
 )
@@ -36,7 +35,7 @@ type ProofDBWriter interface {
 }
 
 type ProofDBReader interface {
-	ReadCachedTrieNode(hash common.Hash) ([]byte, error)
+	ReadTrieNode(hash common.ExtHash) ([]byte, error)
 }
 
 // Prove constructs a merkle proof for key. The result contains all encoded nodes
@@ -83,19 +82,21 @@ func (t *Trie) Prove(key []byte, fromLevel uint, proofDB ProofDBWriter) error {
 	for i, n := range nodes {
 		// Don't bother checking for errors here since hasher panics
 		// if encoding doesn't work and we're not writing to any database.
-		n, _ = hasher.hashChildren(n, nil)
-		hn, _ := hasher.store(n, nil, false)
+		n, _ = hasher.hashChildren(n, nil, false)
+		hn, _ := hasher.store(n, nil, false, false)
 		if hash, ok := hn.(hashNode); ok || i == 0 {
 			// If the node's database encoding is a hash (or is the
 			// root node), it becomes a proof element.
 			if fromLevel > 0 {
 				fromLevel--
 			} else {
-				enc, _ := rlp.EncodeToBytes(n)
+				// hash is for the merkle proof. hash = Keccak(rlp.Encode(nodeForHashing(n)))
+				enc, _ := rlp.EncodeToBytes(hasher.nodeForHashing(n))
 				if !ok {
-					hash = crypto.Keccak256(enc)
+					hash = hasher.makeHashNode(enc, false)
 				}
-				proofDB.WriteMerkleProof(hash, enc)
+				dbKey := database.TrieNodeKey(common.BytesToExtHash(hash))
+				proofDB.WriteMerkleProof(dbKey, enc)
 			}
 		}
 	}
@@ -121,7 +122,7 @@ func VerifyProof(rootHash common.Hash, key []byte, proofDB database.DBManager) (
 	key = keybytesToHex(key)
 	wantHash := rootHash
 	for i := 0; ; i++ {
-		buf, _ := proofDB.ReadCachedTrieNode(wantHash)
+		buf, _ := proofDB.ReadTrieNode(wantHash.ExtendLegacy()) // only works with hash32
 		if buf == nil {
 			return nil, fmt.Errorf("proof node %d (hash %064x) missing", i, wantHash), i
 		}
@@ -150,8 +151,8 @@ func VerifyProof(rootHash common.Hash, key []byte, proofDB database.DBManager) (
 // The given edge proof is allowed to be an existent or non-existent proof.
 func proofToPath(rootHash common.Hash, root node, key []byte, proofDb ProofDBReader, allowNonExistent bool) (node, []byte, error) {
 	// resolveNode retrieves and resolves trie node from merkle proof stream
-	resolveNode := func(hash common.Hash) (node, error) {
-		buf, _ := proofDb.ReadCachedTrieNode(hash)
+	resolveNode := func(hash common.ExtHash) (node, error) {
+		buf, _ := proofDb.ReadTrieNode(hash) // only works with hash32
 		if buf == nil {
 			return nil, fmt.Errorf("proof node (hash %064x) missing", hash)
 		}
@@ -164,7 +165,7 @@ func proofToPath(rootHash common.Hash, root node, key []byte, proofDb ProofDBRea
 	// If the root node is empty, resolve it first.
 	// Root node must be included in the proof.
 	if root == nil {
-		n, err := resolveNode(rootHash)
+		n, err := resolveNode(rootHash.ExtendLegacy())
 		if err != nil {
 			return nil, nil, err
 		}
@@ -196,7 +197,7 @@ func proofToPath(rootHash common.Hash, root node, key []byte, proofDb ProofDBRea
 			key, parent = keyrest, child // Already resolved
 			continue
 		case hashNode:
-			child, err = resolveNode(common.BytesToHash(cld))
+			child, err = resolveNode(common.BytesToExtHash(cld))
 			if err != nil {
 				return nil, nil, err
 			}
@@ -495,7 +496,7 @@ func VerifyRangeProof(rootHash common.Hash, firstKey []byte, lastKey []byte, key
 	// Special case, there is no edge proof at all. The given range is expected
 	// to be the whole leaf-set in the trie.
 	if proof == nil {
-		tr, _ := NewTrie(common.Hash{}, NewDatabase(database.NewMemoryDBManager()))
+		tr, _ := NewTrie(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil)
 		for index, key := range keys {
 			tr.TryUpdate(key, values[index])
 		}

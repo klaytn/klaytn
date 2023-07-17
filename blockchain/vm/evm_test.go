@@ -36,7 +36,7 @@ func runPrecompiledContractTestWithHFCondition(t *testing.T, config *params.Chai
 	for _, tc := range testData {
 		// Make StateDB
 		callerAddr := common.BytesToAddress([]byte("contract"))
-		statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil)
+		statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
 		statedb.CreateSmartContractAccount(callerAddr, params.CodeFormatEVM, params.Rules{IsIstanbul: tc.isDeployedAfterIstanbulHF})
 
 		// Make EVM environment

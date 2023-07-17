@@ -34,6 +34,7 @@ require (
 	github.com/jinzhu/gorm v1.9.15
 	github.com/julienschmidt/httprouter v1.2.0
 	github.com/mattn/go-colorable v0.1.11
+	github.com/mattn/go-isatty v0.0.14
 	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/naoina/go-stringutil v0.1.0 // indirect
 	github.com/naoina/toml v0.1.2-0.20170918210437-9fafd6967416
@@ -48,25 +49,28 @@ require (
 	github.com/prometheus/prometheus v2.1.0+incompatible
 	github.com/prometheus/tsdb v0.10.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20190826022208-cac0b30c2563
-	github.com/rjeczalik/notify v0.9.1
+	github.com/rjeczalik/notify v0.9.3
 	github.com/robertkrimen/otto v0.0.0-20180506084358-03d472dc43ab
 	github.com/rs/cors v1.7.0
 	github.com/satori/go.uuid v1.2.0
 	github.com/steakknife/bloomfilter v0.0.0-20180922174646-6819c0d2a570
 	github.com/steakknife/hamming v0.0.0-20180906055917-c99c65617cd3 // indirect
 	github.com/stretchr/testify v1.7.0
+	github.com/supranational/blst v0.3.10 // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
+	github.com/tyler-smith/go-bip32 v1.0.0
 	github.com/urfave/cli v1.20.0
 	github.com/valyala/fasthttp v1.34.0
 	go.uber.org/zap v1.13.0
-	golang.org/x/crypto v0.0.0-20220214200702-86341886e292
-	golang.org/x/net v0.0.0-20220225172249-27dd8689420f
-	golang.org/x/sys v0.0.0-20220227234510-4e6760a101f9
-	golang.org/x/tools v0.1.0
+	golang.org/x/crypto v0.1.0
+	golang.org/x/net v0.7.0
+	golang.org/x/sys v0.5.0
+	golang.org/x/tools v0.1.12
 	google.golang.org/grpc v1.32.0
 	gopkg.in/DataDog/dd-trace-go.v1 v1.40.1
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
 	gopkg.in/fatih/set.v0 v0.1.0
+	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce
 	gopkg.in/olebedev/go-duktape.v3 v3.0.0-20200619000410-60c24ae608a6
 	gopkg.in/sourcemap.v1 v1.0.5 // indirect

@@ -142,6 +142,22 @@ __check_option() {
     if [ ! -z $DATA_DIR ]; then
         OPTIONS="$OPTIONS --datadir $DATA_DIR"
     fi
+
+    if [[ ! -z $LOG_ROTATE ]] && [[ $LOG_ROTATE -eq 1 ]]; then
+        OPTIONS="$OPTIONS --log.rotate"
+        if [[ ! -z $LOG_MAXSIZE ]]; then
+          OPTIONS="$OPTIONS --log.maxsize $LOG_MAXSIZE"
+        fi
+        if [[ ! -z $LOG_MAXBACKUP ]]; then
+          OPTIONS="$OPTIONS --log.maxbackups $LOG_MAXBACKUP"
+        fi
+        if [[ ! -z $LOG_MAXAGE ]]; then
+          OPTIONS="$OPTIONS --log.maxage $LOG_MAXAGE"
+        fi
+        if [[ ! -z $LOG_COMPRESS ]] && [[ $LOG_COMPRESS -eq 1 ]]; then
+          OPTIONS="$OPTIONS --log.compress"
+        fi
+    fi
 }
 
 start_node() {
@@ -158,7 +174,8 @@ start_node() {
 
     __check_option
 
-    $BIN/kbn ${OPTIONS} >> ${LOG_DIR}/kbnd.out 2>&1 &
+    OPTIONS="$OPTIONS --log.file ${LOG_DIR}/kbnd.out"
+    TERM="dumb" $BIN/kbn ${OPTIONS} >> ${LOG_DIR}/kbnd.out 2>&1 &
     RETVAL=$?
     PIDNUM=$!
     set +f

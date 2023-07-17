@@ -22,34 +22,54 @@ package common
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"math/big"
 	"math/rand"
 	"reflect"
+	"sync/atomic"
+	"time"
 
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/crypto/sha3"
 )
 
 const (
-	HashLength      = 32
-	AddressLength   = 20
-	SignatureLength = 65
+	HashLength         = 32
+	ExtHashNonceLength = 7
+	ExtHashLength      = HashLength + ExtHashNonceLength
+	AddressLength      = 20
+	SignatureLength    = 65
 )
 
 var (
 	hashT    = reflect.TypeOf(Hash{})
+	extHashT = reflect.TypeOf(ExtHash{})
 	addressT = reflect.TypeOf(Address{})
 )
 
-var lastPrecompiledContractAddressHex = hexutil.MustDecode("0x00000000000000000000000000000000000003FF")
-
 var (
-	errStringLengthExceedsAddressLength = errors.New("the string length exceeds the address length (20)")
-	errEmptyString                      = errors.New("empty string")
+	lastPrecompiledContractAddressHex = hexutil.MustDecode("0x00000000000000000000000000000000000003FF")
+
+	// extHashCounter is the counter used to generate the nonce for the ExtHash.
+	// It starts off the most significant 7 bytes of the timestamp in nanoseconds at program startup.
+	// It increments every time a new ExtHash nonce is generated.
+	//                  [b1 b2 b3 b4 b5 b6 b7 b8] = UnixNano()
+	// extHashCounter = [00 b1 b2 b3 b4 b5 b6 b7]
+	// nextNonce      =    [b1 b2 b3 b4 b5 b6 b7]
+	extHashCounter = uint64(0)
+	// extHashLegacyNonce signifies the trie node referred by the ExtHash is actually
+	// identified by the regular 32-byte Hash.
+	extHashLegacyNonce = ExtHashNonce{0, 0, 0, 0, 0, 0, 0}
 )
+
+func init() {
+	extHashCounter = uint64(time.Now().UnixNano() >> 8)
+	if extHashCounter == 0 {
+		panic("Failed to retrieve current timestamp for ExtHashCounter")
+	}
+}
 
 // Hash represents the 32 byte Keccak256 hash of arbitrary data.
 type Hash [HashLength]byte
@@ -156,6 +176,147 @@ func (h *UnprefixedHash) UnmarshalText(input []byte) error {
 // MarshalText encodes the hash as hex.
 func (h UnprefixedHash) MarshalText() ([]byte, error) {
 	return []byte(hex.EncodeToString(h[:])), nil
+}
+
+/////////// ExtHash
+
+type (
+	// ExtHash is an extended hash composed of a 32 byte Hash and a 7 byte Nonce.
+	// ExtHash is used as the reference of Merkle Patricia Trie nodes to enable
+	// the KIP-111 online state database pruning. The Hash component shall represent
+	// the merkle hash of the node and the Nonce component shall differentiate
+	// nodes with the same merkle hash.
+	ExtHash      [ExtHashLength]byte
+	ExtHashNonce [ExtHashNonceLength]byte
+)
+
+// BytesToExtHash converts the byte array b to ExtHash.
+// If len(b) is 0 or 32, then b is interpreted as a Hash and extended with LegacyNonce.
+// If len(b) is 39, then b is interpreted as an ExtHash.
+// Otherwise, this function panics.
+func BytesToExtHash(b []byte) (eh ExtHash) {
+	if len(b) == 0 || len(b) == HashLength {
+		return BytesToHash(b).ExtendLegacy()
+	} else if len(b) == ExtHashLength {
+		eh.SetBytes(b)
+		return eh
+	} else {
+		logger.Crit("Invalid ExtHash bytes", "data", hexutil.Encode(b))
+		return ExtHash{}
+	}
+}
+
+func BytesToExtHashNonce(b []byte) (nonce ExtHashNonce) {
+	if len(b) == ExtHashNonceLength {
+		copy(nonce[:], b)
+		return nonce
+	} else {
+		logger.Crit("Invalid ExtHashNonce bytes", "data", hexutil.Encode(b))
+		return ExtHashNonce{}
+	}
+}
+
+func HexToExtHash(s string) ExtHash { return BytesToExtHash(FromHex(s)) }
+
+func HexToExtHashNonce(s string) ExtHashNonce { return BytesToExtHashNonce(FromHex(s)) }
+
+func (n ExtHashNonce) Bytes() []byte { return n[:] }
+
+func (n ExtHashNonce) Hex() string { return hexutil.Encode(n[:]) }
+
+func (eh ExtHash) Bytes() []byte { return eh[:] }
+
+func (eh ExtHash) Hex() string { return hexutil.Encode(eh[:]) }
+
+func (eh ExtHash) String() string { return eh.Hex() }
+
+func (eh ExtHash) TerminalString() string {
+	return fmt.Sprintf("%x…%x", eh[:3], eh[29:])
+}
+
+func (eh ExtHash) Format(s fmt.State, c rune) {
+	fmt.Fprintf(s, "%"+string(c), eh[:])
+}
+
+func (eh *ExtHash) UnmarshalText(input []byte) error {
+	return hexutil.UnmarshalFixedText("ExtHash", input, eh[:])
+}
+
+func (eh *ExtHash) UnmarshalJSON(input []byte) error {
+	return hexutil.UnmarshalFixedJSON(extHashT, input, eh[:])
+}
+
+func (eh ExtHash) MarshalText() ([]byte, error) {
+	return hexutil.Bytes(eh[:]).MarshalText()
+}
+
+// SetBytes sets the ExtHash to the value of b.
+// If b is larger than ExtHashLength, b will be cropped from the left.
+// If b is smaller than ExtHashLength, b will be right aligned.
+func (eh *ExtHash) SetBytes(b []byte) {
+	if len(b) > ExtHashLength {
+		b = b[len(b)-ExtHashLength:]
+	}
+
+	copy(eh[ExtHashLength-len(b):], b)
+}
+
+func (eh ExtHash) getShardIndex(shardMask int) int {
+	return eh.Unextend().getShardIndex(shardMask)
+}
+
+func EmptyExtHash(eh ExtHash) bool {
+	return EmptyHash(eh.Unextend())
+}
+
+// Unextend returns the 32 byte Hash component of an ExtHash
+func (eh ExtHash) Unextend() (h Hash) {
+	copy(h[:], eh[:HashLength])
+	return h
+}
+
+// Nonce returns the 7 byte nonce component of an ExtHash
+func (eh ExtHash) Nonce() (nonce ExtHashNonce) {
+	copy(nonce[:], eh[HashLength:])
+	return nonce
+}
+
+func (eh ExtHash) IsLegacy() bool {
+	return bytes.Equal(eh.Nonce().Bytes(), extHashLegacyNonce[:])
+}
+
+// ResetExtHashCounterForTest sets the extHashCounter for deterministic testing
+func ResetExtHashCounterForTest(counter uint64) {
+	atomic.StoreUint64(&extHashCounter, counter)
+}
+
+func nextExtHashNonce() ExtHashNonce {
+	num := atomic.AddUint64(&extHashCounter, 1)
+	bin := make([]byte, 8)
+	binary.BigEndian.PutUint64(bin, num)
+	return BytesToExtHashNonce(bin[1:8])
+}
+
+// extend converts Hash to ExtHash by attaching a given nonce
+func (h Hash) extend(nonce ExtHashNonce) (eh ExtHash) {
+	copy(eh[:HashLength], h[:HashLength])
+	copy(eh[HashLength:], nonce[:])
+	return eh
+}
+
+// Extend converts Hash to ExtHash by attaching an auto-generated nonce
+// Auto-generated nonces must be different every time
+func (h Hash) Extend() ExtHash {
+	nonce := nextExtHashNonce()
+	eh := h.extend(nonce)
+	// logger.Trace("extend hash", "exthash", eh.Hex())
+	return eh
+}
+
+// ExtendLegacy converts Hash to ExtHash by attaching the fixed legacy nonce "0x00000000000045"
+// Legacy nonce are attached to hashes of Trie nodes in the legacy trie database
+func (h Hash) ExtendLegacy() ExtHash {
+	return h.extend(extHashLegacyNonce)
 }
 
 /////////// Address

@@ -20,7 +20,9 @@ import (
 	"errors"
 	"math/big"
 
+	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 	"github.com/klaytn/klaytn/common"
+	govcontract "github.com/klaytn/klaytn/contracts/gov"
 	"github.com/klaytn/klaytn/params"
 )
 
@@ -96,11 +98,25 @@ func (e *ContractEngine) contractGetAllParamsAt(num uint64) (*params.GovParamSet
 		return params.NewGovParamSet(), nil
 	}
 
-	caller := &contractCaller{
-		chain:        chain,
-		contractAddr: addr,
+	caller := backends.NewBlockchainContractCaller(chain)
+	contract, _ := govcontract.NewGovParamCaller(addr, caller)
+
+	names, values, err := contract.GetAllParamsAt(nil, new(big.Int).SetUint64(num))
+	if err != nil {
+		logger.Warn("ContractEngine disabled: getAllParams call failed", "err", err)
+		return params.NewGovParamSet(), nil
 	}
-	return caller.getAllParamsAt(new(big.Int).SetUint64(num))
+
+	if len(names) != len(values) {
+		logger.Warn("ContractEngine disabled: getAllParams result invalid", "len(names)", len(names), "len(values)", len(values))
+		return params.NewGovParamSet(), nil
+	}
+
+	bytesMap := make(map[string][]byte)
+	for i := 0; i < len(names); i++ {
+		bytesMap[names[i]] = values[i]
+	}
+	return params.NewGovParamSetBytesMapTolerant(bytesMap), nil
 }
 
 // contractAddrAt returns the GovParamContract address effective at given block number

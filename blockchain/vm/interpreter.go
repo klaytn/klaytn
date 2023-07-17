@@ -89,6 +89,8 @@ func NewEVMInterpreter(evm *EVM, cfg *Config) *Interpreter {
 	if cfg.JumpTable[STOP] == nil {
 		var jt JumpTable
 		switch {
+		case evm.chainRules.IsMantle:
+			jt = MantleInstructionSet
 		case evm.chainRules.IsKore:
 			jt = KoreInstructionSet
 		case evm.chainRules.IsLondon:
