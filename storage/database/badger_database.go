@@ -202,6 +202,10 @@ func (bg *badgerDB) Meter(prefix string) {
 	logger.Warn("badgerDB does not support metrics!")
 }
 
+func (bg *badgerDB) GetProperty(name string) string {
+	return ""
+}
+
 type badgerBatch struct {
 	db   *badger.DB
 	txn  *badger.Txn

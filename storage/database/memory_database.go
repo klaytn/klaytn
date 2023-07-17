@@ -194,6 +194,10 @@ func (db *MemDB) Meter(prefix string) {
 	logger.Warn("MemDB does not support metrics!")
 }
 
+func (db *MemDB) GetProperty(name string) string {
+	return ""
+}
+
 // keyvalue is a key-value tuple tagged with a deletion field to allow creating
 // memory-database write batches.
 type keyvalue struct {

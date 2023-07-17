@@ -845,25 +845,7 @@ func (dbm *databaseManager) GetSnapshotDB() Database {
 }
 
 func (dbm *databaseManager) GetProperty(dt DBEntryType, name string) string {
-	ret := ""
-	db := dbm.getDatabase(dt)
-	if sdb, ok := db.(*shardedDB); ok {
-		for i := uint(0); i < sdb.numShards; i++ {
-			if rdb, ok := sdb.shards[i].(*rocksDB); !ok {
-				return "one of shards is not rocksdb instance"
-			} else {
-				ret += rdb.GetProperty(name)
-				ret += "\n"
-			}
-		}
-		return ret
-	}
-
-	if rdb, ok := db.(*rocksDB); !ok {
-		return "not rocksdb instance"
-	} else {
-		return rdb.GetProperty(name)
-	}
+	return dbm.getDatabase(dt).GetProperty(name)
 }
 
 func (dbm *databaseManager) GetMemDB() *MemDB {

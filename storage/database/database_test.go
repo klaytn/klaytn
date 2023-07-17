@@ -104,24 +104,6 @@ func newTestDynamoS3DB() (Database, func(), string) {
 	}, "dynamos3db"
 }
 
-func newTestRocksDB() (Database, func(), string) {
-	dirName, err := ioutil.TempDir(os.TempDir(), "klay_rocksdb_test_")
-	if err != nil {
-		panic("failed to create test file: " + err.Error())
-	}
-	config := GetDefaultRocksDBConfig()
-	config.DisableMetrics = true
-	db, err := NewRocksDB(dirName, config)
-	if err != nil {
-		panic("failed to create new rocksdb: " + err.Error())
-	}
-
-	return db, func() {
-		db.Close()
-		os.RemoveAll(dirName)
-	}, "rdb"
-}
-
 type commonDatabaseTestSuite struct {
 	suite.Suite
 	newFn    func() (Database, func(), string)
@@ -129,12 +111,14 @@ type commonDatabaseTestSuite struct {
 	database Database
 }
 
+var testDatabases []func() (Database, func(), string)
+
 func TestDatabaseTestSuite(t *testing.T) {
 	// If you want to include dynamo test, use below line
 	// var testDatabases = []func() (Database, func()){newTestLDB, newTestBadgerDB, newTestMemDB, newTestDynamoS3DB}
 
 	// TODO-Klaytn-Database Need to add DynamoDB to the below list.
-	testDatabases := []func() (Database, func(), string){newTestLDB, newTestBadgerDB, newTestMemDB, newTestRocksDB}
+	testDatabases = append(testDatabases, newTestLDB, newTestBadgerDB, newTestMemDB)
 	for _, newFn := range testDatabases {
 		suite.Run(t, &commonDatabaseTestSuite{newFn: newFn})
 	}

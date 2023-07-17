@@ -504,6 +504,10 @@ func (db *levelDB) updateLevelStats(s *leveldb.DBStats, lv int) {
 	db.levelDurationsGauge[lv].Update(int64(s.LevelDurations[lv]))
 }
 
+func (db *levelDB) GetProperty(name string) string {
+	return ""
+}
+
 func (db *levelDB) NewBatch() Batch {
 	return &ldbBatch{b: new(leveldb.Batch), ldb: db}
 }

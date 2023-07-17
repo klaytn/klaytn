@@ -78,6 +78,8 @@ type Database interface {
 	Type() DBType
 	Meter(prefix string)
 	Iteratee
+
+	GetProperty(name string) string
 }
 
 func WriteBatches(batches ...Batch) (int, error) {
