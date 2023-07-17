@@ -273,7 +273,7 @@ var (
 
 	// bind{{.Type}} binds a generic wrapper to an already deployed contract.
 	func bind{{.Type}}(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
-	  parsed, err := abi.JSON(strings.NewReader({{.Type}}ABI))
+	  parsed, err := {{.Type}}MetaData.GetAbi()
 	  if err != nil {
 	    return nil, err
 	  }
