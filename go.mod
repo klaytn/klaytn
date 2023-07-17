@@ -56,7 +56,7 @@ require (
 	github.com/steakknife/bloomfilter v0.0.0-20180922174646-6819c0d2a570
 	github.com/steakknife/hamming v0.0.0-20180906055917-c99c65617cd3 // indirect
 	github.com/stretchr/testify v1.7.0
-	github.com/supranational/blst v0.3.10 // indirect
+	github.com/supranational/blst v0.3.10
 	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 	github.com/tyler-smith/go-bip32 v1.0.0
 	github.com/urfave/cli v1.20.0
@@ -67,7 +67,7 @@ require (
 	golang.org/x/sys v0.5.0
 	golang.org/x/tools v0.1.12
 	google.golang.org/grpc v1.32.0
-	gopkg.in/DataDog/dd-trace-go.v1 v1.40.1
+	gopkg.in/DataDog/dd-trace-go.v1 v1.42.0
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
 	gopkg.in/fatih/set.v0 v0.1.0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
