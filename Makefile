@@ -16,7 +16,11 @@ OBJECTS=kcn kpn ken kscn kspn ksen kbn kgen homi
 all: ${OBJECTS}
 
 ${OBJECTS}:
+ifeq ($(USE_ROCKSDB), 1)
+	$(GORUN) build/ci.go ${BUILD_PARAM} -tags rocksdb ./cmd/$@
+else
 	$(GORUN) build/ci.go ${BUILD_PARAM} ./cmd/$@
+endif
 
 abigen:
 	$(GORUN) build/ci.go ${BUILD_PARAM} ./cmd/abigen
