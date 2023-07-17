@@ -144,6 +144,9 @@ var (
 	// Deprecated: Use {{.Type}}MetaData.ABI instead.
 	var {{.Type}}ABI = {{.Type}}MetaData.ABI
 
+	// {{.Type}}BinRuntime is the compiled bytecode used for adding genesis block without deploying code.
+    const {{.Type}}BinRuntime = ` + "`" + `{{.InputBinRuntime}}` + "`" + `
+
 	{{if $contract.FuncSigs}}
 		// Deprecated: Use {{.Type}}MetaData.Sigs instead.
 		// {{.Type}}FuncSigs maps the 4-byte function signature to its string representation.
