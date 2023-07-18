@@ -1088,7 +1088,7 @@ func (s *StateDB) GetContractStorageRoot(contractAddr common.Address) (common.Ex
 // - Add precompiles to access list (2929)
 //
 // This method should only be called if Yolov3/Berlin/2929+2930 is applicable at the current number.
-func (s *StateDB) PrepareAccessList(sender common.Address, feepayer common.Address, dst *common.Address, precompiles []common.Address) {
+func (s *StateDB) PrepareAccessList(rules params.Rules, sender, feepayer, coinbase common.Address, dst *common.Address, precompiles []common.Address) {
 	// Clear out any leftover from previous executions
 	s.accessList = newAccessList()
 
@@ -1111,6 +1111,9 @@ func (s *StateDB) PrepareAccessList(sender common.Address, feepayer common.Addre
 	//		s.AddSlotToAccessList(el.Address, key)
 	//	}
 	//}
+	if rules.IsMantle {
+		s.AddAddressToAccessList(coinbase)
+	}
 }
 
 // AddAddressToAccessList adds the given address to the access list

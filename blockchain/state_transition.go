@@ -332,7 +332,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 
 	rules := st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber)
 	if rules.IsKore {
-		st.state.PrepareAccessList(msg.ValidatedSender(), msg.ValidatedFeePayer(), msg.To(), vm.ActivePrecompiles(rules))
+		st.state.PrepareAccessList(rules, msg.ValidatedSender(), msg.ValidatedFeePayer(), st.evm.Coinbase, msg.To(), vm.ActivePrecompiles(rules))
 	}
 
 	var (
