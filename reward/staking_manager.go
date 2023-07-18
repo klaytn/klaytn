@@ -219,8 +219,15 @@ func updateStakingInfo(blockNum uint64) (*StakingInfo, error) {
 // 2. If AddressBook is not activated, emptyStakingInfo is returned without error
 // 3. If AddressBook is activated, it returns fetched stakingInfo
 func getStakingInfoFromAddressBook(blockNum uint64) (*StakingInfo, error) {
+	if !params.IsStakingUpdateInterval(blockNum) {
+		return nil, fmt.Errorf("not staking block number. blockNum: %d", blockNum)
+	}
+
 	caller := backends.NewBlockchainContractCaller(stakingManager.blockchain)
-	contract, _ := contract.NewAddressBookCaller(addressBookContractAddress, caller)
+	contract, err := contract.NewAddressBookCaller(addressBookContractAddress, caller)
+	if err != nil {
+		return nil, fmt.Errorf("failed to call AddressBook contract. root err: %s", err)
+	}
 
 	types, addrs, err := contract.GetAllAddress(&bind.CallOpts{BlockNumber: new(big.Int).SetUint64(blockNum)})
 	if err != nil {
@@ -229,13 +236,12 @@ func getStakingInfoFromAddressBook(blockNum uint64) (*StakingInfo, error) {
 
 	if len(types) == 0 && len(addrs) == 0 {
 		// This is an expected behavior when the addressBook contract is not activated yet.
-		logger.Info("The addressBook is not yet activated. Use empty stakingInfo", "reason", err)
+		logger.Info("The addressBook is not yet activated. Use empty stakingInfo")
 		return newEmptyStakingInfo(blockNum), nil
 	}
 
 	if len(types) != len(addrs) {
-		logger.Error("Fail while parsing a result from the addressBook. Use empty staking info", "err", fmt.Errorf("length of type list and address list differ. len(type)=%d, len(addrs)=%d", len(types), len(addrs)))
-		return newEmptyStakingInfo(blockNum), nil
+		return nil, fmt.Errorf("length of type list and address list differ. len(type)=%d, len(addrs)=%d", len(types), len(addrs))
 	}
 
 	var (
@@ -260,8 +266,7 @@ func getStakingInfoFromAddressBook(blockNum uint64) (*StakingInfo, error) {
 		case addressTypeKIRAddr:
 			kirAddr = addrs[i]
 		default:
-			logger.Error("Fail while parsing a result from the addressBook. Use empty staking info", "err", fmt.Errorf("invalid type from AddressBook: %d", addrType))
-			return newEmptyStakingInfo(blockNum), nil
+			return nil, fmt.Errorf("invalid type from AddressBook: %d", addrType)
 		}
 	}
 
@@ -271,7 +276,7 @@ func getStakingInfoFromAddressBook(blockNum uint64) (*StakingInfo, error) {
 		common.EmptyAddress(pocAddr) ||
 		common.EmptyAddress(kirAddr) {
 		// This is an expected behavior when the addressBook contract is not activated yet.
-		logger.Info("The addressBook is not yet activated. Use empty stakingInfo", "reason", err)
+		logger.Info("The addressBook is not yet activated. Use empty stakingInfo")
 		return newEmptyStakingInfo(blockNum), nil
 	}
 
