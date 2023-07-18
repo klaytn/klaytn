@@ -66,25 +66,6 @@ func (s *PublicKlayAPI) MaxPriorityFeePerGas(ctx context.Context) (*hexutil.Big,
 	return s.GasPrice(ctx)
 }
 
-func (s *PublicKlayAPI) ForkStatus(ctx context.Context) string {
-	blockNumber := s.b.CurrentBlock().Number()
-	rules := s.b.ChainConfig().Rules(blockNumber)
-
-	if rules.IsKore {
-		return "Kore"
-	}
-	if rules.IsMagma {
-		return "Magma"
-	}
-	if rules.IsLondon {
-		return "London"
-	}
-	if rules.IsIstanbul {
-		return "Istanbul"
-	}
-	return ""
-}
-
 type FeeHistoryResult struct {
 	OldestBlock  *hexutil.Big     `json:"oldestBlock"`
 	Reward       [][]*hexutil.Big `json:"reward,omitempty"`
