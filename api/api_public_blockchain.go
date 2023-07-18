@@ -161,24 +161,38 @@ func (s *PublicKlayAPI) ForkStatus(ctx context.Context, number rpc.BlockNumber) 
 
 	if cfg.IsIstanbulForkEnabled(blockNumber) {
 		activated["Istanbul"] = true
+	} else {
+		activated["Istanbul"] = false
 	}
 	if cfg.IsLondonForkEnabled(blockNumber) {
 		activated["London"] = true
+	} else {
+		activated["London"] = false
 	}
 	if cfg.IsEthTxTypeForkEnabled(blockNumber) {
 		activated["EthTxType"] = true
+	} else {
+		activated["EthTxType"] = false
 	}
 	if cfg.IsMagmaForkEnabled(blockNumber) {
 		activated["Magma"] = true
+	} else {
+		activated["Magma"] = false
 	}
 	if cfg.IsKoreForkEnabled(blockNumber) {
 		activated["Kore"] = true
+	} else {
+		activated["Kore"] = false
 	}
 	if cfg.IsKIP103ForkBlock(blockNumber) {
 		activated["KIP103"] = true
+	} else {
+		activated["KIP103"] = false
 	}
 	if cfg.IsMantleForkEnabled(blockNumber) {
 		activated["Mantle"] = true
+	} else {
+		activated["Mantle"] = false
 	}
 	return activated, nil
 }
