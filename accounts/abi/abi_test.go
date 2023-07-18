@@ -786,7 +786,7 @@ func TestUnpackEventOffsetBound(t *testing.T) {
 	modifiedRawData := rawData[:124] + "ffff" + rawData[128:]
 
 	data, err := hex.DecodeString(modifiedRawData)
-	assert.Nil(t, err, err)
+	assert.Nil(t, err)
 
 	type evObj struct {
 		Elem1 *big.Int
