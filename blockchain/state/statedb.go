@@ -1087,13 +1087,14 @@ func (s *StateDB) GetContractStorageRoot(contractAddr common.Address) (common.Ex
 // - Add destination to access list (2929)
 // - Add precompiles to access list (2929)
 //
-// This method should only be called if Yolov3/Berlin/2929+2930 is applicable at the current number.
+// regards to EIP-3651:
+// - Add coinbase to access list (EIP-3651)
 func (s *StateDB) PrepareAccessList(rules params.Rules, sender, feepayer, coinbase common.Address, dst *common.Address, precompiles []common.Address) {
 	// Clear out any leftover from previous executions
 	s.accessList = newAccessList()
 
 	s.AddAddressToAccessList(sender)
-	if !common.EmptyAddress(feepayer) && sender != feepayer {
+	if !common.EmptyAddress(feepayer) {
 		s.AddAddressToAccessList(feepayer)
 	}
 	if dst != nil {
