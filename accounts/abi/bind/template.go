@@ -55,7 +55,8 @@ type tmplMethod struct {
 	Structured bool       // Whether the returns should be accumulated into a struct
 }
 
-// tmplEvent is a wrapper around an a
+// tmplEvent is a wrapper around an abi.Event that contains a few preprocessed
+// and cached data fields.
 type tmplEvent struct {
 	Original   abi.Event // Original event as parsed by the abi package
 	Normalized abi.Event // Normalized version of the parsed fields
@@ -69,7 +70,7 @@ type tmplField struct {
 	SolKind abi.Type // Raw abi type information
 }
 
-// tmplStruct is a wrapper around an abi.tuple contains an auto-generated
+// tmplStruct is a wrapper around an abi.tuple and contains an auto-generated
 // struct name.
 type tmplStruct struct {
 	Name   string       // Auto-generated struct name(before solidity v0.5.11) or raw name.
@@ -83,8 +84,8 @@ var tmplSource = map[Lang]string{
 	LangJava: tmplSourceJava,
 }
 
-// tmplSourceGo is the Go source template use to generate the contract binding
-// based on.
+// tmplSourceGo is the Go source template that the generated Go contract binding
+// is based on.
 const tmplSourceGo = `
 // Code generated - DO NOT EDIT.
 // This file is a generated binding and any manual changes will be lost.
@@ -94,10 +95,10 @@ package {{.Package}}
 import (
 	"math/big"
 	"strings"
+	"errors"
 
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
-	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/event"
@@ -105,6 +106,7 @@ import (
 
 // Reference imports to suppress errors if they are not otherwise used.
 var (
+	_ = errors.New
 	_ = big.NewInt
 	_ = strings.NewReader
 	_ = klaytn.NotFound
@@ -124,35 +126,51 @@ var (
 {{end}}
 
 {{range $contract := .Contracts}}
+	// {{.Type}}MetaData contains all meta data concerning the {{.Type}} contract.
+	var {{.Type}}MetaData = &bind.MetaData{
+		ABI: "{{.InputABI}}",
+		{{if $contract.FuncSigs -}}
+		Sigs: map[string]string{
+			{{range $strsig, $binsig := .FuncSigs}}"{{$binsig}}": "{{$strsig}}",
+			{{end}}
+		},
+		{{end -}}
+		{{if .InputBin -}}
+		Bin: "0x{{.InputBin}}",
+		{{end}}
+	}
 	// {{.Type}}ABI is the input ABI used to generate the binding from.
-	const {{.Type}}ABI = "{{.InputABI}}"
+	// Deprecated: Use {{.Type}}MetaData.ABI instead.
+	var {{.Type}}ABI = {{.Type}}MetaData.ABI
 
     // {{.Type}}BinRuntime is the compiled bytecode used for adding genesis block without deploying code.
     const {{.Type}}BinRuntime = ` + "`" + `{{.InputBinRuntime}}` + "`" + `
 
 	{{if $contract.FuncSigs}}
 		// {{.Type}}FuncSigs maps the 4-byte function signature to its string representation.
-		var {{.Type}}FuncSigs = map[string]string{
-			{{range $strsig, $binsig := .FuncSigs}}"{{$binsig}}": "{{$strsig}}",
-			{{end}}
-		}
+		// Deprecated: Use {{.Type}}MetaData.Sigs instead.
+		var {{.Type}}FuncSigs = {{.Type}}MetaData.Sigs
 	{{end}}
 
 	{{if .InputBin}}
 		// {{.Type}}Bin is the compiled bytecode used for deploying new contracts.
-		var {{.Type}}Bin = "0x{{.InputBin}}"
+		// Deprecated: Use {{.Type}}MetaData.Bin instead.
+		var {{.Type}}Bin = {{.Type}}MetaData.Bin
 
 		// Deploy{{.Type}} deploys a new Klaytn contract, binding an instance of {{.Type}} to it.
 		func Deploy{{.Type}}(auth *bind.TransactOpts, backend bind.ContractBackend {{range .Constructor.Inputs}}, {{.Name}} {{bindtype .Type $structs}}{{end}}) (common.Address, *types.Transaction, *{{.Type}}, error) {
-		  parsed, err := abi.JSON(strings.NewReader({{.Type}}ABI))
+		  parsed, err := {{.Type}}MetaData.GetAbi()
 		  if err != nil {
 		    return common.Address{}, nil, nil, err
+		  }
+		  if parsed == nil {
+			return common.Address{}, nil, nil, errors.New("GetABI returned nil")
 		  }
 		  {{range $pattern, $name := .Libraries}}
 			{{decapitalise $name}}Addr, _, _, _ := Deploy{{capitalise $name}}(auth, backend)
 			{{$contract.Type}}Bin = strings.Replace({{$contract.Type}}Bin, "__${{$pattern}}$__", {{decapitalise $name}}Addr.String()[2:], -1)
 		  {{end}}
-		  address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex({{.Type}}Bin), backend {{range .Constructor.Inputs}}, {{.Name}}{{end}})
+		  address, tx, contract, err := bind.DeployContract(auth, *parsed, common.FromHex({{.Type}}Bin), backend {{range .Constructor.Inputs}}, {{.Name}}{{end}})
 		  if err != nil {
 		    return common.Address{}, nil, nil, err
 		  }
@@ -257,11 +275,11 @@ var (
 
 	// bind{{.Type}} binds a generic wrapper to an already deployed contract.
 	func bind{{.Type}}(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
-	  parsed, err := abi.JSON(strings.NewReader({{.Type}}ABI))
+	  parsed, err := {{.Type}}MetaData.GetAbi()
 	  if err != nil {
 	    return nil, err
 	  }
-	  return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+	  return bind.NewBoundContract(address, *parsed, caller, transactor, filterer), nil
 	}
 
 	// Call invokes the (constant) contract method with params as input values and
@@ -551,8 +569,8 @@ var (
 {{end}}
 `
 
-// tmplSourceJava is the Java source template use to generate the contract binding
-// based on.
+// tmplSourceJava is the Java source template that the generated Java contract binding
+// is based on.
 const tmplSourceJava = `
 // This file is an automatically generated Java binding. Do not modify as any
 // change will likely be lost upon the next re-generation!
