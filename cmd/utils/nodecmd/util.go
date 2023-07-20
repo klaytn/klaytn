@@ -204,6 +204,7 @@ func decodeExtra(headerFile string) (map[string]interface{}, error) {
 		return nil, err
 	}
 	m := make(map[string]interface{})
+	m["hash"] = hash
 	m["validators"] = validators
 	m["seal"] = hexutil.Encode(istanbulExtra.Seal)
 	m["committedSeal"] = cSeals
