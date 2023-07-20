@@ -45,6 +45,7 @@ func NewEVMContext(msg Message, header *types.Header, chain ChainContext, author
 	// If we don't have an explicit author (i.e. not mining), extract from the header
 	var (
 		beneficiary       common.Address
+		rewardBase        common.Address
 		baseFee           *big.Int
 		effectiveGasPrice *big.Int
 	)
@@ -54,6 +55,8 @@ func NewEVMContext(msg Message, header *types.Header, chain ChainContext, author
 	} else {
 		beneficiary = *author
 	}
+
+	rewardBase = header.Rewardbase
 
 	if header.BaseFee != nil {
 		baseFee = header.BaseFee
@@ -70,6 +73,7 @@ func NewEVMContext(msg Message, header *types.Header, chain ChainContext, author
 		GetHash:     GetHashFn(header, chain),
 		Origin:      msg.ValidatedSender(),
 		Coinbase:    beneficiary,
+		Rewardbase:  rewardBase,
 		BlockNumber: new(big.Int).Set(header.Number),
 		Time:        new(big.Int).Set(header.Time),
 		BlockScore:  new(big.Int).Set(header.BlockScore),

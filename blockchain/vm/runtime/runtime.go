@@ -41,6 +41,7 @@ type Config struct {
 	BlockScore  *big.Int
 	Origin      common.Address
 	Coinbase    common.Address
+	Rewardbase  common.Address
 	BlockNumber *big.Int
 	Time        *big.Int
 	GasLimit    uint64
