@@ -168,7 +168,7 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config) (*state.StateD
 	evm := vm.NewEVM(context, statedb, config, &vmconfig)
 
 	snapshot := statedb.Snapshot()
-	if _, _, kerr := blockchain.ApplyMessage(evm, msg); kerr.ErrTxInvalid != nil {
+	if _, err = blockchain.ApplyMessage(evm, msg); err != nil {
 		statedb.RevertToSnapshot(snapshot)
 	}
 	if logs := rlpHash(statedb.Logs()); logs != common.Hash(post.Logs) {
@@ -197,7 +197,7 @@ func (t *StateTest) gasLimit(subtest StateSubtest) uint64 {
 
 func MakePreState(db database.DBManager, accounts blockchain.GenesisAlloc) *state.StateDB {
 	sdb := state.NewDatabase(db)
-	statedb, _ := state.New(common.Hash{}, sdb, nil)
+	statedb, _ := state.New(common.Hash{}, sdb, nil, nil)
 	for addr, a := range accounts {
 		if len(a.Code) != 0 {
 			statedb.SetCode(addr, a.Code)
@@ -210,7 +210,7 @@ func MakePreState(db database.DBManager, accounts blockchain.GenesisAlloc) *stat
 	}
 	// Commit and re-open to start with a clean state.
 	root, _ := statedb.Commit(false)
-	statedb, _ = state.New(root, sdb, nil)
+	statedb, _ = state.New(root, sdb, nil, nil)
 	return statedb
 }
 

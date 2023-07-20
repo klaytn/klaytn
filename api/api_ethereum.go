@@ -71,7 +71,7 @@ type EthereumAPI struct {
 	publicBlockChainAPI      *PublicBlockChainAPI
 	publicTransactionPoolAPI *PublicTransactionPoolAPI
 	publicAccountAPI         *PublicAccountAPI
-	publicGovernanceAPI      *governance.PublicGovernanceAPI
+	governanceAPI            *governance.GovernanceAPI
 }
 
 // NewEthereumAPI creates a new ethereum API.
@@ -112,15 +112,15 @@ func (api *EthereumAPI) SetPublicAccountAPI(publicAccountAPI *PublicAccountAPI) 
 	api.publicAccountAPI = publicAccountAPI
 }
 
-// SetPublicGovernanceAPI sets publicGovernanceAPI
-func (api *EthereumAPI) SetPublicGovernanceAPI(publicGovernanceAPI *governance.PublicGovernanceAPI) {
-	api.publicGovernanceAPI = publicGovernanceAPI
+// SetGovernanceAPI sets governanceAPI
+func (api *EthereumAPI) SetGovernanceAPI(governanceAPI *governance.GovernanceAPI) {
+	api.governanceAPI = governanceAPI
 }
 
 // Etherbase is the address of operating node.
 // Unlike Ethereum, it only returns the node address because Klaytn does not have a POW mechanism.
 func (api *EthereumAPI) Etherbase() (common.Address, error) {
-	return api.publicGovernanceAPI.NodeAddress(), nil
+	return api.governanceAPI.NodeAddress(), nil
 }
 
 // Coinbase is the address of operating node (alias for Etherbase).
@@ -611,16 +611,15 @@ func (api *EthereumAPI) Call(ctx context.Context, args EthTransactionArgs, block
 	if rpcGasCap := bcAPI.RPCGasCap(); rpcGasCap != nil {
 		gasCap = rpcGasCap.Uint64()
 	}
-	result, _, status, err := EthDoCall(ctx, bcAPI, args, blockNrOrHash, overrides, bcAPI.RPCEVMTimeout(), gasCap)
+	result, err := EthDoCall(ctx, bcAPI, args, blockNrOrHash, overrides, bcAPI.RPCEVMTimeout(), gasCap)
 	if err != nil {
 		return nil, err
 	}
 
-	err = blockchain.GetVMerrFromReceiptStatus(status)
-	if err != nil && isReverted(err) && len(result) > 0 {
+	if len(result.Revert()) > 0 {
 		return nil, newRevertError(result)
 	}
-	return common.CopyBytes(result), err
+	return result.Return(), result.Unwrap()
 }
 
 // EstimateGas returns an estimate of the amount of gas needed to execute the
@@ -890,7 +889,7 @@ func (api *EthereumAPI) GetTransactionByBlockHashAndIndex(ctx context.Context, b
 // GetRawTransactionByBlockNumberAndIndex returns the bytes of the transaction for the given block number and index.
 func (api *EthereumAPI) GetRawTransactionByBlockNumberAndIndex(ctx context.Context, blockNr rpc.BlockNumber, index hexutil.Uint) hexutil.Bytes {
 	rawTx, err := api.publicTransactionPoolAPI.GetRawTransactionByBlockNumberAndIndex(ctx, blockNr, index)
-	if err != nil {
+	if rawTx == nil || err != nil {
 		return nil
 	}
 	if rawTx[0] == byte(types.EthereumTxTypeEnvelope) {
@@ -902,7 +901,7 @@ func (api *EthereumAPI) GetRawTransactionByBlockNumberAndIndex(ctx context.Conte
 // GetRawTransactionByBlockHashAndIndex returns the bytes of the transaction for the given block hash and index.
 func (api *EthereumAPI) GetRawTransactionByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint) hexutil.Bytes {
 	rawTx, err := api.publicTransactionPoolAPI.GetRawTransactionByBlockHashAndIndex(ctx, blockHash, index)
-	if err != nil {
+	if rawTx == nil || err != nil {
 		return nil
 	}
 	if rawTx[0] == byte(types.EthereumTxTypeEnvelope) {
@@ -942,7 +941,7 @@ func (api *EthereumAPI) GetTransactionByHash(ctx context.Context, hash common.Ha
 // GetRawTransactionByHash returns the bytes of the transaction for the given hash.
 func (api *EthereumAPI) GetRawTransactionByHash(ctx context.Context, hash common.Hash) (hexutil.Bytes, error) {
 	rawTx, err := api.publicTransactionPoolAPI.GetRawTransactionByHash(ctx, hash)
-	if err != nil {
+	if rawTx == nil || err != nil {
 		return nil, err
 	}
 	if rawTx[0] == byte(types.EthereumTxTypeEnvelope) {
@@ -1365,6 +1364,9 @@ func (api *EthereumAPI) FillTransaction(ctx context.Context, args EthTransaction
 // SendRawTransaction will add the signed transaction to the transaction pool.
 // The sender is responsible for signing the transaction and using the correct nonce.
 func (api *EthereumAPI) SendRawTransaction(ctx context.Context, input hexutil.Bytes) (common.Hash, error) {
+	if len(input) == 0 {
+		return common.Hash{}, fmt.Errorf("Empty input")
+	}
 	if 0 < input[0] && input[0] < 0x7f {
 		inputBytes := []byte{byte(types.EthereumTxTypeEnvelope)}
 		inputBytes = append(inputBytes, input...)
@@ -1541,17 +1543,16 @@ func (api *EthereumAPI) rpcMarshalBlock(block *types.Block, inclTx, fullTx bool)
 	return fields, nil
 }
 
-func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrOrHash rpc.BlockNumberOrHash, overrides *EthStateOverride, timeout time.Duration, globalGasCap uint64) ([]byte, uint64, uint, error) {
+func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrOrHash rpc.BlockNumberOrHash, overrides *EthStateOverride, timeout time.Duration, globalGasCap uint64) (*blockchain.ExecutionResult, error) {
 	defer func(start time.Time) { logger.Debug("Executing EVM call finished", "runtime", time.Since(start)) }(time.Now())
 
-	st, header, err := b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
-	if st == nil || err != nil {
-		return nil, 0, 0, err
+	state, header, err := b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
+	if state == nil || err != nil {
+		return nil, err
 	}
-	if err := overrides.Apply(st); err != nil {
-		return nil, 0, 0, err
+	if err := overrides.Apply(state); err != nil {
+		return nil, err
 	}
-
 	// Setup context so it may be cancelled the call has completed
 	// or, in case of unmetered gas, setup a context with a timeout.
 	var cancel context.CancelFunc
@@ -1573,11 +1574,11 @@ func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrO
 	}
 	intrinsicGas, err := types.IntrinsicGas(args.data(), nil, args.To == nil, b.ChainConfig().Rules(header.Number))
 	if err != nil {
-		return nil, 0, 0, err
+		return nil, err
 	}
 	msg, err := args.ToMessage(globalGasCap, baseFee, intrinsicGas)
 	if err != nil {
-		return nil, 0, 0, err
+		return nil, err
 	}
 	var balanceBaseFee *big.Int
 	if header.BaseFee != nil {
@@ -1586,18 +1587,18 @@ func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrO
 		balanceBaseFee = msg.GasPrice()
 	}
 	// Add gas fee to sender for estimating gasLimit/computing cost or calling a function by insufficient balance sender.
-	st.AddBalance(msg.ValidatedSender(), new(big.Int).Mul(new(big.Int).SetUint64(msg.Gas()), balanceBaseFee))
+	state.AddBalance(msg.ValidatedSender(), new(big.Int).Mul(new(big.Int).SetUint64(msg.Gas()), balanceBaseFee))
 
 	// The intrinsicGas is checked again later in the blockchain.ApplyMessage function,
 	// but we check in advance here in order to keep StateTransition.TransactionDb method as unchanged as possible
 	// and to clarify error reason correctly to serve eth namespace APIs.
 	// This case is handled by EthDoEstimateGas function.
 	if msg.Gas() < intrinsicGas {
-		return nil, 0, 0, fmt.Errorf("%w: msg.gas %d, want %d", blockchain.ErrIntrinsicGas, msg.Gas(), intrinsicGas)
+		return nil, fmt.Errorf("%w: msg.gas %d, want %d", blockchain.ErrIntrinsicGas, msg.Gas(), intrinsicGas)
 	}
-	evm, vmError, err := b.GetEVM(ctx, msg, st, header, vm.Config{})
+	evm, vmError, err := b.GetEVM(ctx, msg, state, header, vm.Config{})
 	if err != nil {
-		return nil, 0, 0, err
+		return nil, err
 	}
 	// Wait for the context to be done and cancel the evm. Even if the
 	// EVM has finished, cancelling may be done (repeatedly)
@@ -1607,20 +1608,18 @@ func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrO
 	}()
 
 	// Execute the message.
-	res, gas, kerr := blockchain.ApplyMessage(evm, msg)
-	err = kerr.ErrTxInvalid
+	result, err := blockchain.ApplyMessage(evm, msg)
 	if err := vmError(); err != nil {
-		return nil, 0, 0, err
+		return nil, err
 	}
 	// If the timer caused an abort, return an appropriate error message
 	if evm.Cancelled() {
-		return nil, 0, 0, fmt.Errorf("execution aborted (timeout = %v)", timeout)
+		return nil, fmt.Errorf("execution aborted (timeout = %v)", timeout)
 	}
 	if err != nil {
-		return res, 0, 0, fmt.Errorf("err: %w (supplied gas %d)", err, msg.Gas())
+		return result, fmt.Errorf("err: %w (supplied gas %d)", err, msg.Gas())
 	}
-	// TODO-Klaytn-Interface: Introduce ExecutionResult struct from geth to return more detail information
-	return res, gas, kerr.Status, nil
+	return result, nil
 }
 
 func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, blockNrOrHash rpc.BlockNumberOrHash, gasCap uint64) (hexutil.Uint64, error) {
@@ -1687,40 +1686,29 @@ func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, b
 	}
 	cap = hi
 
-	// Create a helper to check if a gas allowance results in an executable transaction.
-	// executable returns
-	// - bool: true when a call with given args and gas is executable.
-	// - []byte: EVM execution result.
-	// - error: error occurred during EVM execution.
-	// - error: consensus error which is not EVM related error (less balance of caller, wrong nonce, etc...).
-	executable := func(gas uint64) (bool, []byte, error, error) {
+	executable := func(gas uint64) (bool, *blockchain.ExecutionResult, error) {
 		args.Gas = (*hexutil.Uint64)(&gas)
-		ret, _, status, err := EthDoCall(ctx, b, args, rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber), nil, 0, gasCap)
+		result, err := EthDoCall(ctx, b, args, rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber), nil, 0, gasCap)
 		if err != nil {
 			if errors.Is(err, blockchain.ErrIntrinsicGas) {
-				// Special case, raise gas limit
-				return false, ret, nil, nil
+				return true, nil, nil // Special case, raise gas limit
 			}
 			// Returns error when it is not VM error (less balance or wrong nonce, etc...).
-			return false, nil, nil, err
+			return true, nil, err // Bail out
 		}
 		// If err is vmError, return vmError with returned data
-		vmErr := blockchain.GetVMerrFromReceiptStatus(status)
-		if vmErr != nil {
-			return false, ret, vmErr, nil
-		}
-		return true, ret, vmErr, nil
+		return result.Failed(), result, nil
 	}
 
 	// Execute the binary search and hone in on an executable gas limit
 	for lo+1 < hi {
 		mid := (hi + lo) / 2
-		isExecutable, _, _, err := executable(mid)
+		failed, _, err := executable(mid)
 		if err != nil {
 			return 0, err
 		}
 
-		if !isExecutable {
+		if failed {
 			lo = mid
 		} else {
 			hi = mid
@@ -1728,17 +1716,16 @@ func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, b
 	}
 	// Reject the transaction as invalid if it still fails at the highest allowance
 	if hi == cap {
-		isExecutable, ret, vmErr, err := executable(hi)
+		failed, result, err := executable(hi)
 		if err != nil {
 			return 0, err
 		}
-		if !isExecutable {
-			if vmErr != nil {
-				// Treat vmErr as RevertError only when there was returned data from call.
-				if isReverted(vmErr) && len(ret) > 0 {
-					return 0, newRevertError(ret)
+		if failed {
+			if result != nil {
+				if len(result.Revert()) > 0 && result.VmExecutionStatus != types.ReceiptStatusErrOutOfGas {
+					return 0, newRevertError(result)
 				}
-				return 0, vmErr
+				return 0, result.Unwrap()
 			}
 			// Otherwise, the specified gas cap is too low
 			return 0, fmt.Errorf("gas required exceeds allowance (%d)", cap)

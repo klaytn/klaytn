@@ -207,6 +207,9 @@ func (self *worker) pending() (*types.Block, *state.StateDB) {
 		// return a snapshot to avoid contention on currentMu mutex
 		self.snapshotMu.RLock()
 		defer self.snapshotMu.RUnlock()
+		if self.snapshotState == nil {
+			return nil, nil
+		}
 		return self.snapshotBlock, self.snapshotState.Copy()
 	}
 
@@ -227,6 +230,9 @@ func (self *worker) pendingBlock() *types.Block {
 
 	self.currentMu.Lock()
 	defer self.currentMu.Unlock()
+	if self.current == nil {
+		return nil
+	}
 	return self.current.Block
 }
 
@@ -437,6 +443,13 @@ func (self *worker) wait(TxResendUseLegacy bool) {
 				logger.Error("Failed to call snapshot", "err", err)
 			}
 
+			// update governance parameters
+			if istanbul, ok := self.engine.(consensus.Istanbul); ok {
+				if err := istanbul.UpdateParam(block.NumberU64()); err != nil {
+					logger.Error("Failed to update governance parameters", "err", err)
+				}
+			}
+
 			logger.Info("Successfully wrote mined block", "num", block.NumberU64(),
 				"hash", block.Hash(), "txs", len(block.Transactions()), "elapsed", blockWriteTime)
 			self.chain.PostChainEvents(events, logs)
@@ -471,7 +484,9 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 	}
 	work := NewTask(self.config, types.MakeSigner(self.config, header.Number), stateDB, header)
 	if self.nodetype != common.CONSENSUSNODE {
+		// set the current block and header as pending block and header to support APIs requesting a pending block.
 		work.Block = parent
+		work.header = parent.Header()
 	}
 
 	// Keep track of transactions which return errors so they can be removed

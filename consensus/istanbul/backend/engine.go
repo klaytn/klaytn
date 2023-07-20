@@ -29,6 +29,7 @@ import (
 	"time"
 
 	lru "github.com/hashicorp/golang-lru"
+	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -505,6 +506,22 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 
 	reward.DistributeBlockReward(state, rewardSpec.Rewards)
 
+	// Only on the KIP-103 hardfork block, the following logic should be executed
+	if chain.Config().IsKIP103ForkBlock(header.Number) {
+		// RebalanceTreasury can modify the global state (state),
+		// so the existing state db should be used to apply the rebalancing result.
+		c := backends.NewBlockchainContractCaller(chain)
+		result, err := RebalanceTreasury(state, chain, header, c)
+		if err != nil {
+			logger.Error("failed to execute treasury rebalancing (KIP-103). State not changed", "err", err)
+		} else {
+			memo, err := json.Marshal(result)
+			if err != nil {
+				logger.Warn("failed to marshal KIP-103 result", "err", err, "result", result)
+			}
+			logger.Info("successfully executed treasury rebalancing (KIP-103)", "memo", string(memo))
+		}
+	}
 	header.Root = state.IntermediateRoot(true)
 
 	// Assemble and return the final block for sealing
@@ -660,6 +677,14 @@ func (sb *backend) Stop() error {
 	return nil
 }
 
+// UpdateParam implements consensus.Istanbul.UpdateParam and it updates the governance parameters
+func (sb *backend) UpdateParam(number uint64) error {
+	if err := sb.governance.UpdateParams(number); err != nil {
+		return err
+	}
+	return nil
+}
+
 // initSnapshot initializes and stores a new Snapshot.
 func (sb *backend) initSnapshot(chain consensus.ChainReader) (*Snapshot, error) {
 	genesis := chain.GetHeaderByNumber(0)
@@ -707,12 +732,9 @@ func getPrevHeaderAndUpdateParents(chain consensus.ChainReader, number uint64, h
 	return header
 }
 
-// CreateSnapshot does not return a snapshot but creates a new snapshot at a given point in time.
+// CreateSnapshot does not return a snapshot but creates a new snapshot if not exists at a given point in time
 func (sb *backend) CreateSnapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) error {
 	if _, err := sb.snapshot(chain, number, hash, parents, true); err != nil {
-		return err
-	}
-	if err := sb.governance.UpdateParams(number); err != nil {
 		return err
 	}
 	return nil
@@ -794,7 +816,9 @@ func (sb *backend) GetConsensusInfo(block *types.Block) (consensus.ConsensusInfo
 	return cInfo, nil
 }
 
-// snapshot retrieves the authorization snapshot at a given point in time.
+// snapshot retrieves the state of the authorization voting at a given point in time.
+// There's in-memory snapshot and on-disk snapshot. On-disk snapshot is stored every checkpointInterval blocks.
+// Moreover, if the block has no in-memory or on-disk snapshot, before generating snapshot, it gathers the header and apply the vote in it.
 func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header, writable bool) (*Snapshot, error) {
 	// Search for a snapshot in memory or on disk for checkpoints
 	var (

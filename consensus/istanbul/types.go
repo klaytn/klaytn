@@ -152,6 +152,18 @@ func (b *Subject) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
+func (a *Subject) Equal(b *Subject) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	return a.Digest == b.Digest &&
+		a.PrevHash == b.PrevHash &&
+		a.View.Cmp(b.View) == 0
+}
+
 func (b *Subject) String() string {
 	return fmt.Sprintf("{View: %v, Digest: %v, ParentHash: %v}", b.View, b.Digest.String(), b.PrevHash.Hex())
 }

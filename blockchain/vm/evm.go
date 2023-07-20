@@ -304,8 +304,10 @@ func (evm *EVM) CallCode(caller types.ContractRef, addr common.Address, input []
 	if evm.depth > int(params.CallCreateDepth) {
 		return nil, gas, ErrDepth // TODO-Klaytn-Issue615
 	}
-	// Fail if we're trying to transfer more than the available balance
-	if !evm.CanTransfer(evm.StateDB, caller.Address(), value) {
+	// Note although it's noop to transfer X ether to caller itself. But
+	// if caller doesn't have enough balance, it would be an error to allow
+	// over-charging itself. So the check here is necessary.
+	if !evm.Context.CanTransfer(evm.StateDB, caller.Address(), value) {
 		return nil, gas, ErrInsufficientBalance // TODO-Klaytn-Issue615
 	}
 
@@ -437,7 +439,7 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 	if evm.depth > int(params.CallCreateDepth) {
 		return nil, common.Address{}, gas, ErrDepth // TODO-Klaytn-Issue615
 	}
-	if !evm.CanTransfer(evm.StateDB, caller.Address(), value) {
+	if !evm.Context.CanTransfer(evm.StateDB, caller.Address(), value) {
 		return nil, common.Address{}, gas, ErrInsufficientBalance // TODO-Klaytn-Issue615
 	}
 
@@ -481,7 +483,7 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 	}
 	start := time.Now()
 
-	ret, err = run(evm, contract, nil)
+	ret, err = evm.interpreter.Run(contract, nil)
 
 	// check whether the max code size has been exceeded
 	maxCodeSizeExceeded := len(ret) > params.MaxCodeSize

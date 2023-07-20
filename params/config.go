@@ -46,7 +46,10 @@ var (
 		LondonCompatibleBlock:    big.NewInt(86816005),
 		EthTxTypeCompatibleBlock: big.NewInt(86816005),
 		MagmaCompatibleBlock:     big.NewInt(99841497),
-		KoreCompatibleBlock:      big.NewInt(0xffffffff),
+		KoreCompatibleBlock:      big.NewInt(119750400),
+		Kip103CompatibleBlock:    big.NewInt(119750400),
+		MantleCompatibleBlock:    nil,
+		Kip103ContractAddress:    common.HexToAddress("0xD5ad6D61Dd87EdabE2332607C328f5cc96aeCB95"),
 		DeriveShaImpl:            2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x52d41ca72af615a1ac3301b0a93efa222ecc7541"),
@@ -77,6 +80,9 @@ var (
 		EthTxTypeCompatibleBlock: big.NewInt(86513895),
 		MagmaCompatibleBlock:     big.NewInt(98347376),
 		KoreCompatibleBlock:      big.NewInt(111736800),
+		Kip103CompatibleBlock:    big.NewInt(119145600),
+		Kip103ContractAddress:    common.HexToAddress("0xD5ad6D61Dd87EdabE2332607C328f5cc96aeCB95"),
+		MantleCompatibleBlock:    nil,
 		DeriveShaImpl:            2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x99fb17d324fa0e07f23b49d09028ac0919414db6"),
@@ -176,6 +182,12 @@ type ChainConfig struct {
 	EthTxTypeCompatibleBlock *big.Int `json:"ethTxTypeCompatibleBlock,omitempty"` // EthTxTypeCompatibleBlock switch block (nil = no fork, 0 = already on ethTxType)
 	MagmaCompatibleBlock     *big.Int `json:"magmaCompatibleBlock,omitempty"`     // MagmaCompatible switch block (nil = no fork, 0 already on Magma)
 	KoreCompatibleBlock      *big.Int `json:"koreCompatibleBlock,omitempty"`      // KoreCompatible switch block (nil = no fork, 0 already on Kore)
+	MantleCompatibleBlock    *big.Int `json:"mantleCompatibleBlock,omitempty"`    // MantleCompatible switch block (nil = no fork, 0 already on Mantle)
+
+	// KIP103 is a special purpose hardfork feature that can be executed only once
+	// Both Kip103CompatibleBlock and Kip103ContractAddress should be specified to enable KIP103
+	Kip103CompatibleBlock *big.Int       `json:"kip103CompatibleBlock,omitempty"` // Kip103Compatible activate block (nil = no fork)
+	Kip103ContractAddress common.Address `json:"kip103ContractAddress,omitempty"` // Kip103 contract address already deployed on the network
 
 	// Various consensus engines
 	Gxhash   *GxhashConfig   `json:"gxhash,omitempty"` // (deprecated) not supported engine
@@ -266,27 +278,34 @@ func (c *ChainConfig) String() string {
 	default:
 		engine = "unknown"
 	}
+
+	kip103 := fmt.Sprintf("KIP103CompatibleBlock: %v KIP103ContractAddress %s", c.Kip103CompatibleBlock, c.Kip103ContractAddress.String())
+
 	if c.Istanbul != nil {
-		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v KoreCompatibleBlock: %v SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d Engine: %v}",
+		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v KoreCompatibleBlock: %v MantleCompatibleBlock: %v %s SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d Engine: %v}",
 			c.ChainID,
 			c.IstanbulCompatibleBlock,
 			c.LondonCompatibleBlock,
 			c.EthTxTypeCompatibleBlock,
 			c.MagmaCompatibleBlock,
 			c.KoreCompatibleBlock,
+			c.MantleCompatibleBlock,
+			kip103,
 			c.Istanbul.SubGroupSize,
 			c.UnitPrice,
 			c.DeriveShaImpl,
 			engine,
 		)
 	} else {
-		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v KoreCompatibleBlock: %v UnitPrice: %d DeriveShaImpl: %d Engine: %v }",
+		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v KoreCompatibleBlock: %v MantleCompatibleBlock: %v %s UnitPrice: %d DeriveShaImpl: %d Engine: %v }",
 			c.ChainID,
 			c.IstanbulCompatibleBlock,
 			c.LondonCompatibleBlock,
 			c.EthTxTypeCompatibleBlock,
 			c.MagmaCompatibleBlock,
 			c.KoreCompatibleBlock,
+			c.MantleCompatibleBlock,
+			kip103,
 			c.UnitPrice,
 			c.DeriveShaImpl,
 			engine,
@@ -316,14 +335,27 @@ func (c *ChainConfig) IsEthTxTypeForkEnabled(num *big.Int) bool {
 	return isForked(c.EthTxTypeCompatibleBlock, num)
 }
 
-// IsMagmaForkedEnabled returns whether num is either equal to the magma block or greater.
+// IsMagmaForkEnabled returns whether num is either equal to the magma block or greater.
 func (c *ChainConfig) IsMagmaForkEnabled(num *big.Int) bool {
 	return isForked(c.MagmaCompatibleBlock, num)
 }
 
-// IsKoreForkedEnabled returns whether num is either equal to the kore block or greater.
+// IsKoreForkEnabled returns whether num is either equal to the kore block or greater.
 func (c *ChainConfig) IsKoreForkEnabled(num *big.Int) bool {
 	return isForked(c.KoreCompatibleBlock, num)
+}
+
+// IsMantleForkEnabled returns whether num is either equal to the mantle block or greater.
+func (c *ChainConfig) IsMantleForkEnabled(num *big.Int) bool {
+	return isForked(c.MantleCompatibleBlock, num)
+}
+
+// IsKIP103ForkBlock returns whether num is equal to the kip103 block.
+func (c *ChainConfig) IsKIP103ForkBlock(num *big.Int) bool {
+	if c.Kip103CompatibleBlock == nil || num == nil {
+		return false
+	}
+	return c.Kip103CompatibleBlock.Cmp(num) == 0
 }
 
 // CheckCompatible checks whether scheduled fork transitions have been imported
@@ -359,6 +391,7 @@ func (c *ChainConfig) CheckConfigForkOrder() error {
 		{name: "ethTxTypeBlock", block: c.EthTxTypeCompatibleBlock},
 		{name: "magmaBlock", block: c.MagmaCompatibleBlock},
 		{name: "koreBlock", block: c.KoreCompatibleBlock},
+		{name: "mantleBlock", block: c.MantleCompatibleBlock},
 	} {
 		if lastFork.name != "" {
 			// Next one must be higher number
@@ -396,6 +429,11 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *Confi
 	}
 	if isForkIncompatible(c.KoreCompatibleBlock, newcfg.KoreCompatibleBlock, head) {
 		return newCompatError("Kore Block", c.KoreCompatibleBlock, newcfg.KoreCompatibleBlock)
+	}
+	// We have intentionally skipped kip103Block in the fork ordering check since kip103 is designed
+	// as an optional hardfork and there are no dependency with other forks.
+	if isForkIncompatible(c.MantleCompatibleBlock, newcfg.MantleCompatibleBlock, head) {
+		return newCompatError("Mantle Block", c.MantleCompatibleBlock, newcfg.MantleCompatibleBlock)
 	}
 	return nil
 }
@@ -514,6 +552,7 @@ type Rules struct {
 	IsLondon   bool
 	IsMagma    bool
 	IsKore     bool
+	IsMantle   bool
 }
 
 // Rules ensures c's ChainID is not nil.
@@ -528,6 +567,7 @@ func (c *ChainConfig) Rules(num *big.Int) Rules {
 		IsLondon:   c.IsLondonForkEnabled(num),
 		IsMagma:    c.IsMagmaForkEnabled(num),
 		IsKore:     c.IsKoreForkEnabled(num),
+		IsMantle:   c.IsMantleForkEnabled(num),
 	}
 }
 

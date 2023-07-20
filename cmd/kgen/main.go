@@ -72,7 +72,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "kgen"
 	app.Usage = "The command line interface to generate nodekey information for Klaytn"
-	app.Copyright = "Copyright 2018-2019 The klaytn Authors"
+	app.Copyright = "Copyright 2018-2023 The klaytn Authors"
 	app.Action = genNodeKey
 	app.Flags = []cli.Flag{
 		fileFlag,

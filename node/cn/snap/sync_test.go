@@ -1369,7 +1369,7 @@ func getCodeByHash(hash common.Hash) []byte {
 // makeAccountTrieNoStorage spits out a trie, along with the leafs
 func makeAccountTrieNoStorage(n int) (*statedb.Trie, entrySlice) {
 	db := statedb.NewDatabase(database.NewMemoryDBManager())
-	accTrie, _ := statedb.NewTrie(common.Hash{}, db)
+	accTrie, _ := statedb.NewTrie(common.Hash{}, db, nil)
 	var entries entrySlice
 	for i := uint64(1); i <= uint64(n); i++ {
 		acc, _ := genExternallyOwnedAccount(i, big.NewInt(int64(i)))
@@ -1394,7 +1394,7 @@ func makeBoundaryAccountTrie(n int) (*statedb.Trie, entrySlice) {
 		boundaries []common.Hash
 
 		db      = statedb.NewDatabase(database.NewMemoryDBManager())
-		trie, _ = statedb.NewTrie(common.Hash{}, db)
+		trie, _ = statedb.NewTrie(common.Hash{}, db, nil)
 	)
 	// Initialize boundaries
 	var next common.Hash
@@ -1440,7 +1440,7 @@ func makeBoundaryAccountTrie(n int) (*statedb.Trie, entrySlice) {
 func makeAccountTrieWithStorageWithUniqueStorage(accounts, slots int, code bool) (*statedb.Trie, entrySlice, map[common.Hash]*statedb.Trie, map[common.Hash]entrySlice) {
 	var (
 		db             = statedb.NewDatabase(database.NewMemoryDBManager())
-		accTrie, _     = statedb.NewTrie(common.Hash{}, db)
+		accTrie, _     = statedb.NewTrie(common.Hash{}, db, nil)
 		entries        entrySlice
 		storageTries   = make(map[common.Hash]*statedb.Trie)
 		storageEntries = make(map[common.Hash]entrySlice)
@@ -1476,7 +1476,7 @@ func makeAccountTrieWithStorageWithUniqueStorage(accounts, slots int, code bool)
 func makeAccountTrieWithStorage(accounts, slots int, code, boundary bool) (*statedb.Trie, entrySlice, map[common.Hash]*statedb.Trie, map[common.Hash]entrySlice) {
 	var (
 		db             = statedb.NewDatabase(database.NewMemoryDBManager())
-		accTrie, _     = statedb.NewTrie(common.Hash{}, db)
+		accTrie, _     = statedb.NewTrie(common.Hash{}, db, nil)
 		entries        entrySlice
 		storageTries   = make(map[common.Hash]*statedb.Trie)
 		storageEntries = make(map[common.Hash]entrySlice)
@@ -1520,7 +1520,7 @@ func makeAccountTrieWithStorage(accounts, slots int, code, boundary bool) (*stat
 // not-yet-committed trie and the sorted entries. The seeds can be used to ensure
 // that tries are unique.
 func makeStorageTrieWithSeed(n, seed uint64, db *statedb.Database) (*statedb.Trie, entrySlice) {
-	trie, _ := statedb.NewTrie(common.Hash{}, db)
+	trie, _ := statedb.NewTrie(common.Hash{}, db, nil)
 	var entries entrySlice
 	for i := uint64(1); i <= n; i++ {
 		// store 'x' at slot 'x'
@@ -1546,7 +1546,7 @@ func makeBoundaryStorageTrie(n int, db *statedb.Database) (*statedb.Trie, entryS
 	var (
 		entries    entrySlice
 		boundaries []common.Hash
-		trie, _    = statedb.NewTrie(common.Hash{}, db)
+		trie, _    = statedb.NewTrie(common.Hash{}, db, nil)
 	)
 	// Initialize boundaries
 	var next common.Hash
@@ -1593,7 +1593,7 @@ func makeBoundaryStorageTrie(n int, db *statedb.Database) (*statedb.Trie, entryS
 func verifyTrie(db database.DBManager, root common.Hash, t *testing.T) {
 	t.Helper()
 	triedb := statedb.NewDatabase(db)
-	accTrie, err := statedb.NewTrie(root, triedb)
+	accTrie, err := statedb.NewTrie(root, triedb, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1607,8 +1607,8 @@ func verifyTrie(db database.DBManager, root common.Hash, t *testing.T) {
 		acc := serializer.GetAccount()
 		pacc := account.GetProgramAccount(acc)
 		accounts++
-		if pacc != nil && pacc.GetStorageRoot() != emptyRoot {
-			storeTrie, err := statedb.NewSecureTrie(pacc.GetStorageRoot(), triedb)
+		if pacc != nil && pacc.GetStorageRoot().Unextend() != emptyRoot {
+			storeTrie, err := statedb.NewSecureStorageTrie(pacc.GetStorageRoot(), triedb, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -463,9 +463,7 @@ func (st *StackTrie) hash() {
 	h.sha.Write(h.tmp)
 	h.sha.Read(st.val)
 	if st.db != nil {
-		// TODO! Is it safe to Put the slice here?
-		// Do all db implementations copy the value provided?
-		st.db.GetStateTrieDB().Put(st.val, h.tmp)
+		st.db.WriteTrieNode(common.BytesToExtHash(st.val), h.tmp)
 	}
 }
 
@@ -509,7 +507,7 @@ func (st *StackTrie) Commit() (common.Hash, error) {
 		h.sha.Reset()
 		h.sha.Write(st.val)
 		h.sha.Read(ret)
-		st.db.GetStateTrieDB().Put(ret, st.val)
+		st.db.WriteTrieNode(common.BytesToExtHash(ret), st.val)
 		return common.BytesToHash(ret), nil
 	}
 	return common.BytesToHash(st.val), nil

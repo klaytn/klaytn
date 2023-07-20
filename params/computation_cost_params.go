@@ -80,6 +80,7 @@ const (
 	MsizeComputationCost          = 137
 	GasComputationCost            = 230
 	JumpDestComputationCost       = 10
+	Push0ComputationCost          = 80
 	PushComputationCost           = 120
 	Dup1ComputationCost           = 190
 	Dup2ComputationCost           = 190

@@ -117,8 +117,8 @@ type StateDB struct {
 }
 
 // Create a new state from a given trie.
-func New(root common.Hash, db Database, snaps *snapshot.Tree) (*StateDB, error) {
-	tr, err := db.OpenTrie(root)
+func New(root common.Hash, db Database, snaps *snapshot.Tree, opts *statedb.TrieOpts) (*StateDB, error) {
+	tr, err := db.OpenTrie(root, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -131,36 +131,8 @@ func New(root common.Hash, db Database, snaps *snapshot.Tree) (*StateDB, error) 
 		stateObjectsDirty:        make(map[common.Address]struct{}),
 		logs:                     make(map[common.Hash][]*types.Log),
 		preimages:                make(map[common.Hash][]byte),
-		journal:                  newJournal(),
 		accessList:               newAccessList(),
-	}
-	if sdb.snaps != nil {
-		if sdb.snap = sdb.snaps.Snapshot(root); sdb.snap != nil {
-			sdb.snapDestructs = make(map[common.Hash]struct{})
-			sdb.snapAccounts = make(map[common.Hash][]byte)
-			sdb.snapStorage = make(map[common.Hash]map[common.Hash][]byte)
-		}
-	}
-	return sdb, nil
-}
-
-// Create a new state from a given trie with prefetching
-func NewForPrefetching(root common.Hash, db Database, snaps *snapshot.Tree) (*StateDB, error) {
-	tr, err := db.OpenTrieForPrefetching(root)
-	if err != nil {
-		return nil, err
-	}
-	sdb := &StateDB{
-		db:                       db,
-		trie:                     tr,
-		snaps:                    snaps,
-		stateObjects:             make(map[common.Address]*stateObject),
-		stateObjectsDirtyStorage: make(map[common.Address]struct{}),
-		stateObjectsDirty:        make(map[common.Address]struct{}),
-		logs:                     make(map[common.Hash][]*types.Log),
-		preimages:                make(map[common.Hash][]byte),
 		journal:                  newJournal(),
-		prefetching:              true,
 	}
 	if sdb.snaps != nil {
 		if sdb.snap = sdb.snaps.Snapshot(root); sdb.snap != nil {
@@ -168,6 +140,9 @@ func NewForPrefetching(root common.Hash, db Database, snaps *snapshot.Tree) (*St
 			sdb.snapAccounts = make(map[common.Hash][]byte)
 			sdb.snapStorage = make(map[common.Hash]map[common.Hash][]byte)
 		}
+	}
+	if opts != nil && opts.Prefetching {
+		sdb.prefetching = true
 	}
 	return sdb, nil
 }
@@ -196,7 +171,7 @@ func (self *StateDB) Error() error {
 // Reset clears out all ephemeral state objects from the state db, but keeps
 // the underlying state trie to avoid reloading data for the next operations.
 func (self *StateDB) Reset(root common.Hash) error {
-	tr, err := self.db.OpenTrie(root)
+	tr, err := self.db.OpenTrie(root, nil)
 	if err != nil {
 		return err
 	}
@@ -1040,7 +1015,7 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 	if EnabledExpensive {
 		defer func(start time.Time) { s.AccountCommits += time.Since(start) }(time.Now())
 	}
-	root, err = s.trie.Commit(func(_ [][]byte, _ []byte, leaf []byte, parent common.Hash, parentDepth int) error {
+	root, err = s.trie.Commit(func(_ [][]byte, _ []byte, leaf []byte, parent common.ExtHash, parentDepth int) error {
 		serializer := account.NewAccountSerializer()
 		if err := rlp.DecodeBytes(leaf, serializer); err != nil {
 			logger.Warn("RLP decode failed", "err", err, "leaf", string(leaf))
@@ -1048,7 +1023,7 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 		}
 		acc := serializer.GetAccount()
 		if pa := account.GetProgramAccount(acc); pa != nil {
-			if pa.GetStorageRoot() != emptyState {
+			if pa.GetStorageRoot().Unextend() != emptyState {
 				s.db.TrieDB().Reference(pa.GetStorageRoot(), parent)
 			}
 		}
@@ -1089,17 +1064,17 @@ var (
 	errNotContractAddress = fmt.Errorf("given address is not a contract address")
 )
 
-func (s *StateDB) GetContractStorageRoot(contractAddr common.Address) (common.Hash, error) {
+func (s *StateDB) GetContractStorageRoot(contractAddr common.Address) (common.ExtHash, error) {
 	acc := s.GetAccount(contractAddr)
 	if acc == nil {
-		return common.Hash{}, errNotExistingAddress
+		return common.ExtHash{}, errNotExistingAddress
 	}
 	if acc.Type() != account.SmartContractAccountType {
-		return common.Hash{}, errNotContractAddress
+		return common.ExtHash{}, errNotContractAddress
 	}
 	contract, true := acc.(*account.SmartContractAccount)
 	if !true {
-		return common.Hash{}, errNotContractAddress
+		return common.ExtHash{}, errNotContractAddress
 	}
 	return contract.GetStorageRoot(), nil
 }
@@ -1112,13 +1087,14 @@ func (s *StateDB) GetContractStorageRoot(contractAddr common.Address) (common.Ha
 // - Add destination to access list (2929)
 // - Add precompiles to access list (2929)
 //
-// This method should only be called if Yolov3/Berlin/2929+2930 is applicable at the current number.
-func (s *StateDB) PrepareAccessList(sender common.Address, feepayer common.Address, dst *common.Address, precompiles []common.Address) {
+// regards to EIP-3651:
+// - Add coinbase to access list (EIP-3651)
+func (s *StateDB) PrepareAccessList(rules params.Rules, sender, feepayer, coinbase common.Address, dst *common.Address, precompiles []common.Address) {
 	// Clear out any leftover from previous executions
 	s.accessList = newAccessList()
 
 	s.AddAddressToAccessList(sender)
-	if !common.EmptyAddress(feepayer) && sender != feepayer {
+	if !common.EmptyAddress(feepayer) {
 		s.AddAddressToAccessList(feepayer)
 	}
 	if dst != nil {
@@ -1136,6 +1112,9 @@ func (s *StateDB) PrepareAccessList(sender common.Address, feepayer common.Addre
 	//		s.AddSlotToAccessList(el.Address, key)
 	//	}
 	//}
+	if rules.IsMantle {
+		s.AddAddressToAccessList(coinbase)
+	}
 }
 
 // AddAddressToAccessList adds the given address to the access list

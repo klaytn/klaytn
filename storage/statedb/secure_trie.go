@@ -52,22 +52,16 @@ type SecureTrie struct {
 // Loaded nodes are kept around until their 'cache generation' expires.
 // A new cache generation is created by each call to Commit.
 // cachelimit sets the number of past cache generations to keep.
-func NewSecureTrie(root common.Hash, db *Database) (*SecureTrie, error) {
-	if db == nil {
-		panic("statedb.NewSecureTrie called without a database")
-	}
-	trie, err := NewTrie(root, db)
+func NewSecureTrie(root common.Hash, db *Database, opts *TrieOpts) (*SecureTrie, error) {
+	trie, err := NewTrie(root, db, opts)
 	if err != nil {
 		return nil, err
 	}
 	return &SecureTrie{trie: *trie}, nil
 }
 
-func NewSecureTrieForPrefetching(root common.Hash, db *Database) (*SecureTrie, error) {
-	if db == nil {
-		panic("statedb.NewSecureTrieForPrefetching called without a database")
-	}
-	trie, err := NewTrieForPrefetching(root, db)
+func NewSecureStorageTrie(root common.ExtHash, db *Database, opts *TrieOpts) (*SecureTrie, error) {
+	trie, err := NewStorageTrie(root, db, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +153,7 @@ func (t *SecureTrie) GetKey(shaKey []byte) []byte {
 	if key, ok := t.getSecKeyCache()[string(shaKey)]; ok {
 		return key
 	}
-	key, _ := t.trie.db.preimage(common.BytesToHash(shaKey))
+	key := t.trie.db.preimage(common.BytesToHash(shaKey))
 	return key
 }
 
@@ -169,7 +163,24 @@ func (t *SecureTrie) GetKey(shaKey []byte) []byte {
 // Committing flushes nodes from memory. Subsequent Get calls will load nodes
 // from the database.
 func (t *SecureTrie) Commit(onleaf LeafCallback) (root common.Hash, err error) {
-	// Write all the pre-images to the actual disk database
+	// Commit the trie to its intermediate node database
+	t.commitPreimages()
+	return t.trie.Commit(onleaf)
+}
+
+// Commit writes all nodes and the secure hash pre-images to the trie's database.
+// Nodes are stored with their sha3 hash as the key.
+//
+// Committing flushes nodes from memory. Subsequent Get calls will load nodes
+// from the database.
+func (t *SecureTrie) CommitExt(onleaf LeafCallback) (root common.ExtHash, err error) {
+	// Commit the trie to its intermediate node database
+	t.commitPreimages()
+	return t.trie.CommitExt(onleaf)
+}
+
+// commitPreimages writes all the pre-images to the actual disk database
+func (t *SecureTrie) commitPreimages() {
 	if len(t.getSecKeyCache()) > 0 {
 		t.trie.db.lock.Lock()
 		for hk, key := range t.secKeyCache {
@@ -179,12 +190,14 @@ func (t *SecureTrie) Commit(onleaf LeafCallback) (root common.Hash, err error) {
 
 		t.secKeyCache = make(map[string][]byte)
 	}
-	// Commit the trie to its intermediate node database
-	return t.trie.Commit(onleaf)
 }
 
 func (t *SecureTrie) Hash() common.Hash {
 	return t.trie.Hash()
+}
+
+func (t *SecureTrie) HashExt() common.ExtHash {
+	return t.trie.HashExt()
 }
 
 func (t *SecureTrie) Copy() *SecureTrie {
