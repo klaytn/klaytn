@@ -367,7 +367,6 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 			effectiveGasPrice := msg.EffectiveGasPrice(nil)
 			st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), effectiveGasPrice))
 		}
-
 	}
 
 	return &ExecutionResult{

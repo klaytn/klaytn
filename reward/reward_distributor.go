@@ -213,7 +213,6 @@ func GetBlockReward(header *types.Header, rules params.Rules, pset *params.GovPa
 	// If not DeferredTxFee, CalcDeferredReward() assumes 0 total_fee, but
 	// some non-zero fee already has been paid to the proposer.
 	if !pset.DeferredTxFee() {
-
 		if rules.IsMagma {
 			txFee := GetTotalTxFee(header, rules, pset)
 			txFeeBurn := getBurnAmountMagma(txFee)
