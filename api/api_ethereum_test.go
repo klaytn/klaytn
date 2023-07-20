@@ -2448,10 +2448,8 @@ func (mc *testChainContext) GetHeader(common.Hash, uint64) *types.Header {
 	return mc.header
 }
 
-// revert("hello")
-//   PUSH1 73; PUSH1 12; PUSH1 0; CODECOPY // mem[0:0+73] = code[12:12+73]
-//   PUSH1 73; PUSH1 0; REVERT // revert mem[0:0+73]
-var codeRevertHello = "0x6049600c60003960496000fd08c379a00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000568656c6c6f"
+// Contract C { constructor() { revert("hello"); } }
+var codeRevertHello = "0x6080604052348015600f57600080fd5b5060405162461bcd60e51b815260206004820152600560248201526468656c6c6f60d81b604482015260640160405180910390fdfe"
 
 func testEstimateGas(t *testing.T, mockBackend *mock_api.MockBackend, fnEstimateGas func(EthTransactionArgs) (hexutil.Uint64, error)) {
 	var (
@@ -2462,7 +2460,7 @@ func testEstimateGas(t *testing.T, mockBackend *mock_api.MockBackend, fnEstimate
 		chainConfig = params.TestChainConfig
 		gspec       = &blockchain.Genesis{Alloc: blockchain.GenesisAlloc{
 			account1: {Balance: big.NewInt(params.KLAY * 2)},
-			account2: {Balance: big.NewInt(0)},
+			account2: {Balance: common.Big0},
 			account3: {Balance: common.Big0, Code: hexutil.MustDecode(codeRevertHello)},
 		}}
 
@@ -2512,7 +2510,7 @@ func testEstimateGas(t *testing.T, mockBackend *mock_api.MockBackend, fnEstimate
 			},
 			expectGas: 21000,
 		},
-		{ // simple transfer with insufficient funds
+		{ // simple transfer with insufficient funds with zero gasPrice
 			args: EthTransactionArgs{
 				From:  &account2, // sender has 0 KLAY
 				To:    &account1,
@@ -2565,7 +2563,6 @@ func testEstimateGas(t *testing.T, mockBackend *mock_api.MockBackend, fnEstimate
 			args: EthTransactionArgs{
 				From: &account1,
 				To:   &account3,
-				Data: &baddata,
 			},
 			expectErr: "execution reverted: hello",
 		},

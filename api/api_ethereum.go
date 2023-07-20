@@ -1625,24 +1625,21 @@ func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, b
 		args.From = new(common.Address)
 	}
 
-	var gasLimit uint64
+	var gasLimit uint64 = 0
 	if args.Gas != nil {
 		gasLimit = uint64(*args.Gas)
-	} else {
-		gasLimit = 0
 	}
 
 	// Normalize the max fee per gas the call is willing to spend.
-	var feeCap *big.Int
+	var feeCap *big.Int = common.Big0
 	if args.GasPrice != nil && (args.MaxFeePerGas != nil || args.MaxPriorityFeePerGas != nil) {
 		return 0, errors.New("both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified")
 	} else if args.GasPrice != nil {
 		feeCap = args.GasPrice.ToInt()
 	} else if args.MaxFeePerGas != nil {
 		feeCap = args.MaxFeePerGas.ToInt()
-	} else {
-		feeCap = common.Big0
 	}
+
 	state, _, err := b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if err != nil {
 		return 0, err
