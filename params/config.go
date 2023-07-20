@@ -547,12 +547,13 @@ func (err *ConfigCompatError) Error() string {
 // Rules is a one time interface meaning that it shouldn't be used in between transition
 // phases.
 type Rules struct {
-	ChainID    *big.Int
-	IsIstanbul bool
-	IsLondon   bool
-	IsMagma    bool
-	IsKore     bool
-	IsMantle   bool
+	ChainID     *big.Int
+	IsIstanbul  bool
+	IsLondon    bool
+	IsEthTxType bool
+	IsMagma     bool
+	IsKore      bool
+	IsMantle    bool
 }
 
 // Rules ensures c's ChainID is not nil.
@@ -562,12 +563,13 @@ func (c *ChainConfig) Rules(num *big.Int) Rules {
 		chainID = new(big.Int)
 	}
 	return Rules{
-		ChainID:    new(big.Int).Set(chainID),
-		IsIstanbul: c.IsIstanbulForkEnabled(num),
-		IsLondon:   c.IsLondonForkEnabled(num),
-		IsMagma:    c.IsMagmaForkEnabled(num),
-		IsKore:     c.IsKoreForkEnabled(num),
-		IsMantle:   c.IsMantleForkEnabled(num),
+		ChainID:     new(big.Int).Set(chainID),
+		IsIstanbul:  c.IsIstanbulForkEnabled(num),
+		IsLondon:    c.IsLondonForkEnabled(num),
+		IsEthTxType: c.IsEthTxTypeForkEnabled(num),
+		IsMagma:     c.IsMagmaForkEnabled(num),
+		IsKore:      c.IsKoreForkEnabled(num),
+		IsMantle:    c.IsMantleForkEnabled(num),
 	}
 }
 
