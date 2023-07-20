@@ -293,30 +293,30 @@ var (
 	}
 	RocksDBDumpMallocStatFlag = cli.BoolFlag{
 		Name:   "db.rocksdb.dump-memory-stat",
-		Usage:  "Enable to print memory stat together with rocksdb.stat",
+		Usage:  "Enable to print memory stat together with rocksdb.stat. Works with Jemalloc only.",
 		EnvVar: "KLAYTN_DB_ROCKSDB_DUMP_MALLOC_STAT",
 	}
 	RocksDBCompressionTypeFlag = cli.StringFlag{
 		Name:   "db.rocksdb.compression-type",
-		Usage:  "",
+		Usage:  "RocksDB block compression type. Supported values are 'no', 'snappy', 'zlib', 'bz', 'lz4', 'lz4hc', 'xpress', 'zstd'",
 		Value:  database.GetDefaultRocksDBConfig().CompressionType,
 		EnvVar: "KLAYTN_DB_ROCKSDB_COMPRESSION_TYPE",
 	}
 	RocksDBBottommostCompressionTypeFlag = cli.StringFlag{
 		Name:   "db.rocksdb.bottommost-compression-type",
-		Usage:  "",
+		Usage:  "RocksDB bottommost block compression type. Supported values are 'no', 'snappy', 'zlib', 'bz2', 'lz4', 'lz4hc', 'xpress', 'zstd'",
 		Value:  database.GetDefaultRocksDBConfig().BottommostCompressionType,
 		EnvVar: "KLAYTN_DB_ROCKSDB_BOTTOMMOST_COMPRESSION_TYPE",
 	}
 	RocksDBFilterPolicyFlag = cli.StringFlag{
 		Name:   "db.rocksdb.filter-policy",
-		Usage:  "",
+		Usage:  "RocksDB filter policy. Supported values are 'no', 'bloom', 'ribbon'",
 		Value:  database.GetDefaultRocksDBConfig().FilterPolicy,
 		EnvVar: "KLAYTN_DB_ROCKSDB_FILTER_POLICY",
 	}
 	RocksDBDisableMetricsFlag = cli.BoolFlag{
 		Name:   "db.rocksdb.disable-metrics",
-		Usage:  "",
+		Usage:  "Disable RocksDB metrics",
 		EnvVar: "KLAYTN_DB_ROCKSDB_DISABLE_METRICS",
 	}
 	DynamoDBTableNameFlag = cli.StringFlag{

@@ -522,6 +522,11 @@ func (kCfg *KlayConfig) SetKlayConfig(ctx *cli.Context, stack *node.Node) {
 	cfg.LevelDBCacheSize = ctx.GlobalInt(LevelDBCacheSizeFlag.Name)
 
 	cfg.RocksDBConfig.Secondary = ctx.GlobalIsSet(RocksDBSecondaryFlag.Name)
+	if cfg.RocksDBConfig.Secondary {
+		cfg.FetcherDisable = true
+		cfg.DownloaderDisable = true
+		cfg.WorkerDisable = true
+	}
 	cfg.RocksDBConfig.CacheSize = ctx.GlobalUint64(RocksDBCacheSizeFlag.Name)
 	cfg.RocksDBConfig.DumpMallocStat = ctx.GlobalIsSet(RocksDBDumpMallocStatFlag.Name)
 	cfg.RocksDBConfig.CompressionType = ctx.GlobalString(RocksDBCompressionTypeFlag.Name)
