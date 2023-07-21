@@ -63,23 +63,18 @@ func TestVrankAssessBatch(t *testing.T) {
 
 func TestVrankSerialize(t *testing.T) {
 	var (
-		addrs = []common.Address{
-			common.HexToAddress("0x6666666666666666666666666666666666666666"),
-			common.HexToAddress("0x5555555555555555555555555555555555555555"),
-			common.HexToAddress("0x4444444444444444444444444444444444444444"),
-			common.HexToAddress("0x3333333333333333333333333333333333333333"),
-			common.HexToAddress("0x2222222222222222222222222222222222222222"),
-			common.HexToAddress("0x1111111111111111111111111111111111111111"),
-		}
+		N         = 6
+		addrs, _  = genValidators(N)
 		committee = genCommitteeFromAddrs(addrs)
 		timeMap   = make(map[common.Address]time.Duration)
 		expected  = make([]time.Duration, len(addrs))
 	)
 
-	for i, addr := range addrs {
+	sort.Sort(committee)
+	for i, val := range committee {
 		t := time.Duration((i * 100) * int(time.Millisecond))
-		timeMap[addr] = t
-		expected[len(expected)-1-i] = t
+		timeMap[val.Address()] = t
+		expected[i] = t
 	}
 
 	assert.Equal(t, expected, serialize(committee, timeMap))
