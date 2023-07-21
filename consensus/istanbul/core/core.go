@@ -194,8 +194,8 @@ func (c *core) commit() {
 			return
 		}
 
-		if Vrank != nil {
-			Vrank.HandleCommitted(proposal.Number())
+		if vrank != nil {
+			vrank.HandleCommitted(proposal.Number())
 		}
 	} else {
 		// TODO-Klaytn never happen, but if proposal is nil, mining is not working.

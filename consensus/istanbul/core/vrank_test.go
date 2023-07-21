@@ -1,6 +1,9 @@
 package core
 
 import (
+	"encoding/hex"
+	"math/big"
+	"sort"
 	"testing"
 	"time"
 
@@ -9,6 +12,45 @@ import (
 	"github.com/klaytn/klaytn/consensus/istanbul/validator"
 	"github.com/stretchr/testify/assert"
 )
+
+func genCommitteeFromAddrs(addrs []common.Address) istanbul.Validators {
+	committee := []istanbul.Validator{}
+	for _, addr := range addrs {
+		committee = append(committee, validator.New(addr))
+	}
+	return committee
+}
+
+func TestVrank(t *testing.T) {
+	var (
+		N         = 6
+		quorum    = 3
+		addrs, _  = genValidators(N)
+		committee = genCommitteeFromAddrs(addrs)
+		view      = istanbul.View{Sequence: big.NewInt(0), Round: big.NewInt(0)}
+		msg       = &istanbul.Subject{View: &view}
+		vrank     = NewVrank(view, committee)
+
+		expectedAssessList  []int
+		expectedLateCommits []time.Duration
+	)
+
+	sort.Sort(committee)
+	for i := 0; i < quorum; i++ {
+		vrank.AddCommit(msg, committee[i])
+		expectedAssessList = append(expectedAssessList, vrankArrivedEarly)
+	}
+	vrank.HandleCommitted(view.Sequence)
+	for i := quorum; i < N; i++ {
+		t := vrank.AddCommit(msg, committee[i])
+		expectedAssessList = append(expectedAssessList, vrankArrivedLate)
+		expectedLateCommits = append(expectedLateCommits, t)
+	}
+
+	bitmap, late := vrank.Log()
+	assert.Equal(t, hex.EncodeToString(compress(expectedAssessList)), bitmap)
+	assert.Equal(t, encodeDurationBatch(expectedLateCommits), late)
+}
 
 func TestVrankAssessBatch(t *testing.T) {
 	arr := []time.Duration{0, 4, 1, vrankNotArrivedPlaceholder, 2}
@@ -29,13 +71,12 @@ func TestVrankSerialize(t *testing.T) {
 			common.HexToAddress("0x2222222222222222222222222222222222222222"),
 			common.HexToAddress("0x1111111111111111111111111111111111111111"),
 		}
-		committee = istanbul.Validators{}
+		committee = genCommitteeFromAddrs(addrs)
 		timeMap   = make(map[common.Address]time.Duration)
 		expected  = make([]time.Duration, len(addrs))
 	)
 
 	for i, addr := range addrs {
-		committee = append(committee, validator.New(addr))
 		t := time.Duration((i * 100) * int(time.Millisecond))
 		timeMap[addr] = t
 		expected[len(expected)-1-i] = t

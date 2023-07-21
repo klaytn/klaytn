@@ -78,8 +78,8 @@ func (c *core) handleCommit(msg *message, src istanbul.Validator) error {
 		return errInvalidMessage
 	}
 
-	if Vrank != nil {
-		Vrank.AddCommit(commit, src)
+	if vrank != nil {
+		vrank.AddCommit(commit, src)
 	}
 
 	// logger.Error("receive handle commit","num", commit.View.Sequence)
@@ -154,7 +154,7 @@ func (c *core) acceptCommit(msg *message, src istanbul.Validator) error {
 	}
 
 	if c.current.Commits.Size() == 1 {
-		vrankFirstCommitArrivalTimeGauge.Update(int64(Vrank.TimeSinceStart()))
+		vrankFirstCommitArrivalTimeGauge.Update(int64(vrank.TimeSinceStart()))
 	}
 
 	return nil

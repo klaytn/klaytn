@@ -12,7 +12,7 @@ import (
 	"github.com/rcrowley/go-metrics"
 )
 
-type vrank struct {
+type Vrank struct {
 	startTime            time.Time
 	view                 istanbul.View
 	committee            istanbul.Validators
@@ -29,7 +29,7 @@ var (
 
 	vrankDefaultThreshold = "300ms"
 
-	Vrank *vrank
+	vrank *Vrank
 )
 
 const (
@@ -42,9 +42,9 @@ const (
 	vrankNotArrivedPlaceholder = -1
 )
 
-func NewVrank(view istanbul.View, committee istanbul.Validators) *vrank {
+func NewVrank(view istanbul.View, committee istanbul.Validators) *Vrank {
 	threshold, _ := time.ParseDuration(vrankDefaultThreshold)
-	return &vrank{
+	return &Vrank{
 		startTime:            time.Now(),
 		view:                 view,
 		committee:            committee,
@@ -53,17 +53,20 @@ func NewVrank(view istanbul.View, committee istanbul.Validators) *vrank {
 	}
 }
 
-func (v *vrank) TimeSinceStart() time.Duration {
+func (v *Vrank) TimeSinceStart() time.Duration {
 	return time.Now().Sub(v.startTime)
 }
 
-func (v *vrank) AddCommit(msg *istanbul.Subject, src istanbul.Validator) {
+func (v *Vrank) AddCommit(msg *istanbul.Subject, src istanbul.Validator) time.Duration {
 	if v.isTargetCommit(msg, src) {
-		v.commitArrivalTimeMap[src.Address()] = v.TimeSinceStart()
+		t := v.TimeSinceStart()
+		v.commitArrivalTimeMap[src.Address()] = t
+		return t
 	}
+	return -1
 }
 
-func (v *vrank) HandleCommitted(blockNum *big.Int) {
+func (v *Vrank) HandleCommitted(blockNum *big.Int) {
 	if v.view.Sequence.Cmp(blockNum) != 0 {
 		return
 	}
@@ -82,16 +85,16 @@ func (v *vrank) HandleCommitted(blockNum *big.Int) {
 	vrankAvgCommitArrivalTimeWithinQuorumGauge.Update(avg)
 }
 
-// Stop logs accumulated data in a compressed form
-func (v *vrank) Stop() {
+// Log logs accumulated data in a compressed form
+func (v *Vrank) Log() (string, []string) {
 	var (
 		serialized = serialize(v.committee, v.commitArrivalTimeMap)
+		assessed   = assessBatch(serialized, v.threshold)
+		compressed = compress(assessed)
+		bitmap     = hex.EncodeToString(compressed)
 
-		assessBitmap = hex.EncodeToString(compress(assessBatch(serialized, v.threshold)))
-
-		lateCommits        = make([]time.Duration, 0)
-		encodedLateCommits = make([]string, 0)
-		lastCommit         = time.Duration(0)
+		lateCommits = make([]time.Duration, 0)
+		lastCommit  = time.Duration(0)
 	)
 
 	for _, t := range serialized {
@@ -100,6 +103,7 @@ func (v *vrank) Stop() {
 		}
 	}
 
+	// lastCommit = max(lateCommits)
 	for _, t := range lateCommits {
 		if lastCommit < t {
 			lastCommit = t
@@ -109,25 +113,13 @@ func (v *vrank) Stop() {
 		vrankLastCommitArrivalTimeGauge.Update(int64(lastCommit))
 	}
 
-	// encode late commits
-	// if t >
-	for _, t := range lateCommits {
-		var s string
-		if t > time.Second {
-			s = fmt.Sprintf("%.1fs", t.Seconds())
-		} else {
-			s = fmt.Sprintf("%d", t.Milliseconds())
-		}
-		encodedLateCommits = append(encodedLateCommits, s)
-	}
+	lateCommitsStrArr := encodeDurationBatch(lateCommits)
 
-	logger.Info("VRank",
-		"bitmap", assessBitmap,
-		"late", encodedLateCommits,
-	)
+	logger.Info("VRank", "bitmap", bitmap, "late", lateCommitsStrArr)
+	return bitmap, lateCommitsStrArr
 }
 
-func (v *vrank) isTargetCommit(msg *istanbul.Subject, src istanbul.Validator) bool {
+func (v *Vrank) isTargetCommit(msg *istanbul.Subject, src istanbul.Validator) bool {
 	if msg.View.Cmp(&v.view) != 0 {
 		return false
 	}
@@ -138,6 +130,7 @@ func (v *vrank) isTargetCommit(msg *istanbul.Subject, src istanbul.Validator) bo
 	return true
 }
 
+// assess determines if given time is early, late, or not arrived
 func assess(t, threshold time.Duration) int {
 	if t == vrankNotArrivedPlaceholder {
 		return vrankNotArrived
@@ -158,6 +151,8 @@ func assessBatch(t []time.Duration, threshold time.Duration) []int {
 	return ret
 }
 
+// serialize serializes arrivalTime hashmap into array.
+// It needs to be deterministic, so the order of array is equal to that of sorted committee.
 func serialize(committee istanbul.Validators, arrivalTimeMap map[common.Address]time.Duration) []time.Duration {
 	sortedCommittee := make(istanbul.Validators, len(committee))
 	copy(sortedCommittee[:], committee[:])
@@ -202,6 +197,26 @@ func compress(arr []int) []byte {
 	for i := 0; i < len(arr)/4; i++ {
 		chunk := arr[4*i : 4*(i+1)]
 		ret = append(ret, zip(chunk[0], chunk[1], chunk[2], chunk[3]))
+	}
+	return ret
+}
+
+// encodeDuration encodes given duration into string
+// The returned string is at most 3 bytes
+func encodeDuration(d time.Duration) string {
+	if d > 10*time.Second {
+		return fmt.Sprintf("%.0fs", d.Seconds())
+	} else if d > time.Second {
+		return fmt.Sprintf("%.1fs", d.Seconds())
+	} else {
+		return fmt.Sprintf("%d", d.Milliseconds())
+	}
+}
+
+func encodeDurationBatch(ds []time.Duration) []string {
+	ret := make([]string, len(ds))
+	for i, d := range ds {
+		ret[i] = encodeDuration(d)
 	}
 	return ret
 }
