@@ -658,9 +658,6 @@ func (bc *BlockChain) FastSyncCommitHead(hash common.Hash) error {
 // CurrentBlock retrieves the current head block of the canonical chain. The
 // block is retrieved from the blockchain's internal cache.
 func (bc *BlockChain) CurrentBlock() *types.Block {
-	if bc.db.GetDBConfig().DBType == database.RocksDB && bc.db.GetDBConfig().RocksDBConfig.Secondary {
-		bc.loadLastState()
-	}
 	return bc.currentBlock.Load().(*types.Block)
 }
 
@@ -2155,6 +2152,50 @@ func (bc *BlockChain) CloseBlockSubscriptionLoop() {
 		if err := pubSub.UnsubscribeBlock(); err != nil {
 			logger.Error("failed to unsubscribe blocks", "err", err, "trieNodeCacheConfig",
 				bc.stateCache.TrieDB().GetTrieNodeCacheConfig())
+		}
+	}
+}
+
+// CurrentBlockUpdateLoop updates the current block in the chain for updating read-only node.
+func (bc *BlockChain) CurrentBlockUpdateLoop(pool *TxPool) {
+	bc.wg.Add(1)
+	defer bc.wg.Done()
+
+	refresher := time.NewTicker(1 * time.Second)
+	defer refresher.Stop()
+
+	for {
+		select {
+		case <-refresher.C:
+			// Restore the last known head block
+			head := bc.db.ReadHeadBlockHash()
+			if head == (common.Hash{}) {
+				logger.Warn("Failed to read head block hash")
+			}
+
+			block := bc.db.ReadBlockByHash(head)
+			if block == nil {
+				head = bc.db.ReadHeadBlockBackupHash()
+				if head == (common.Hash{}) {
+					logger.Error("Empty database, resetting chain")
+					continue
+				}
+
+				block = bc.GetBlockByHash(head)
+				if block == nil {
+					logger.Error("Failed to read head block from database", "hash", head.String())
+					continue
+				}
+			}
+
+			oldHead := bc.CurrentHeader()
+			bc.replaceCurrentBlock(block)
+			pool.lockedReset(oldHead, bc.CurrentHeader())
+
+			// TODO-Klaytn-RocksDB: update logic for subscription API. check BlockSubscriptionLoop method.
+		case <-bc.quit:
+			logger.Info("Closed current block update loop")
+			return
 		}
 	}
 }

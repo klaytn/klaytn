@@ -406,6 +406,10 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		go cn.blockchain.BlockSubscriptionLoop(cn.txPool.(*blockchain.TxPool))
 	}
 
+	if config.DBType == database.RocksDB && config.RocksDBConfig.Secondary {
+		go cn.blockchain.CurrentBlockUpdateLoop(cn.txPool.(*blockchain.TxPool))
+	}
+
 	return cn, nil
 }
 
