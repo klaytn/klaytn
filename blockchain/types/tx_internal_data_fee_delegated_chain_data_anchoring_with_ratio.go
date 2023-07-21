@@ -27,6 +27,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/crypto/sha3"
+	"github.com/klaytn/klaytn/fork"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 )
@@ -319,7 +320,7 @@ func (t *TxInternalDataFeeDelegatedChainDataAnchoringWithRatio) RecoverFeePayerP
 func (t *TxInternalDataFeeDelegatedChainDataAnchoringWithRatio) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
 	gas := params.TxChainDataAnchoringGas + params.TxGasFeeDelegatedWithRatio
 
-	gasPayloadWithGas, err := IntrinsicGasPayload(gas, t.Payload)
+	gasPayloadWithGas, err := IntrinsicGasPayload(gas, t.Payload, t.GetRecipient() == nil, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
 	if err != nil {
 		return 0, err
 	}

@@ -42,6 +42,7 @@ const (
 	CallStipend           uint64 = 2300  // Free gas given at beginning of call.                                // G_callstipend
 	Sha3Gas               uint64 = 30    // Once per SHA3 operation.                                                 // G_sha3
 	Sha3WordGas           uint64 = 6     // Once per word of the SHA3 operation's data.                              // G_sha3word
+	InitCodeWordGas       uint64 = 2     // Once per word of the init code when creating a contract.				 // G_InitCodeWord
 	SstoreResetGas        uint64 = 5000  // Once per SSTORE operation if the zeroness changes from zero.             // G_sreset
 	SstoreClearGas        uint64 = 5000  // Once per SSTORE operation if the zeroness doesn't change.                // G_sreset
 	SstoreRefundGas       uint64 = 15000 // Once per SSTORE operation if the zeroness changes to zero.               // R_sclear
@@ -144,7 +145,9 @@ const (
 	CallCreateDepth uint64 = 1024  // Maximum depth of call/create stack.
 	StackLimit      uint64 = 1024  // Maximum size of VM stack allowed.
 
-	MaxCodeSize = 24576 // Maximum bytecode to permit for a contract
+	// eip-3860: limit and meter initcode (Shanghai)
+	MaxCodeSize     = 24576           // Maximum bytecode to permit for a contract
+	MaxInitCodeSize = 2 * MaxCodeSize // Maximum initcode to permit in a creation transaction and create instructions
 
 	// istanbul BFT
 	BFTMaximumExtraDataSize uint64 = 65 // Maximum size extra data may be after Genesis.

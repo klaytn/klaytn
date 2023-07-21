@@ -539,7 +539,16 @@ func NewTxInternalDataWithMap(t TxType, values map[TxValueKeyType]interface{}) (
 	return nil, errUndefinedTxType
 }
 
-func IntrinsicGasPayload(gas uint64, data []byte) (uint64, error) {
+// toWordSize returns the ceiled word size required for init code payment calculation.
+func toWordSize(size uint64) uint64 {
+	if size > math.MaxUint64-31 {
+		return math.MaxUint64/32 + 1
+	}
+
+	return (size + 31) / 32
+}
+
+func IntrinsicGasPayload(gas uint64, data []byte, isContractCreation bool, rules params.Rules) (uint64, error) {
 	// Bump the required gas by the amount of transactional data
 	length := uint64(len(data))
 	if length > 0 {
@@ -547,12 +556,20 @@ func IntrinsicGasPayload(gas uint64, data []byte) (uint64, error) {
 		if (math.MaxUint64-gas)/params.TxDataGas < length {
 			return 0, kerrors.ErrOutOfGas
 		}
+		if isContractCreation && rules.IsMantle {
+			lenWords := toWordSize(uint64(len(data)))
+			if (math.MaxUint64-gas)/params.InitCodeWordGas < lenWords {
+				return 0, kerrors.ErrOutOfGas
+			}
+			gas += lenWords * params.InitCodeWordGas
+		}
 	}
 	return gas + length*params.TxDataGas, nil
 }
 
 func IntrinsicGasPayloadLegacy(gas uint64, data []byte) (uint64, error) {
-	if len(data) > 0 {
+	length := uint64(len(data))
+	if length > 0 {
 		// Zero and non-zero bytes are priced differently
 		var nz uint64
 		for _, byt := range data {
@@ -589,7 +606,7 @@ func IntrinsicGas(data []byte, accessList AccessList, contractCreation bool, r p
 	var gasPayloadWithGas uint64
 	var err error
 	if r.IsIstanbul {
-		gasPayloadWithGas, err = IntrinsicGasPayload(gas, data)
+		gasPayloadWithGas, err = IntrinsicGasPayload(gas, data, contractCreation, r)
 	} else {
 		gasPayloadWithGas, err = IntrinsicGasPayloadLegacy(gas, data)
 	}
