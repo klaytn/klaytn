@@ -408,9 +408,9 @@ func (bcdata *BCData) GenABlockWithTransactions(accountMap *AccountMap, transact
 	if err != nil {
 		return err
 	}
-	// if err := accountMap.Verify(statedb); err != nil {
-	// 	return err
-	// }
+	if err := accountMap.Verify(statedb); err != nil {
+		return err
+	}
 	prof.Profile("main_verification", time.Now().Sub(start))
 
 	return nil

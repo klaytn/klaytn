@@ -231,7 +231,6 @@ func GetBlockReward(header *types.Header, rules params.Rules, pset *params.GovPa
 			if err != nil {
 				return nil, err
 			}
-			incrementRewardsMap(spec.Rewards, header.Rewardbase, txFee)
 			incrementRewardsMap(spec.Rewards, proposer, txFee)
 
 		}
@@ -588,7 +587,7 @@ func ecrecover(header *types.Header) (common.Address, error) {
 	// Retrieve the signature from the header extra-data
 	istanbulExtra, err := types.ExtractIstanbulExtra(header)
 	if err != nil {
-		return common.Address{}, err
+		return common.Address{}, nil
 	}
 
 	sigHash, err := sigHash(header)
