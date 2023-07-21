@@ -143,10 +143,10 @@ func assess(t, threshold time.Duration) int {
 	}
 }
 
-func assessBatch(t []time.Duration, threshold time.Duration) []int {
+func assessBatch(ts []time.Duration, threshold time.Duration) []int {
 	ret := make([]int, 0)
-	for _, v := range t {
-		ret = append(ret, assess(v, threshold))
+	for _, t := range ts {
+		ret = append(ret, assess(t, threshold))
 	}
 	return ret
 }
@@ -183,13 +183,8 @@ func compress(arr []int) []byte {
 	}
 
 	// pad zero to make len(arr)%4 == 0
-	switch len(arr) % 4 {
-	case 1:
-		arr = append(arr, []int{0, 0, 0}...)
-	case 2:
-		arr = append(arr, []int{0, 0}...)
-	case 3:
-		arr = append(arr, []int{0}...)
+	for i := 0; i < 4-len(arr)%4; i++ {
+		arr = append(arr, 0)
 	}
 
 	ret := make([]byte, 0)
