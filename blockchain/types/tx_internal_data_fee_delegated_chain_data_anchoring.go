@@ -296,7 +296,9 @@ func (t *TxInternalDataFeeDelegatedChainDataAnchoring) RecoverFeePayerPubkey(txh
 func (t *TxInternalDataFeeDelegatedChainDataAnchoring) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
 	gas := params.TxChainDataAnchoringGas + params.TxGasFeeDelegated
 
-	gasPayloadWithGas, err := IntrinsicGasPayload(gas, t.Payload, t.GetRecipient() == nil, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
+	// ChainDataAnchoring does not have Recipient, but it is not contract deployment transaction type.
+	// So, isContractCreation is explicitly set as false.
+	gasPayloadWithGas, err := IntrinsicGasPayload(gas, t.Payload, false, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
 	if err != nil {
 		return 0, err
 	}
