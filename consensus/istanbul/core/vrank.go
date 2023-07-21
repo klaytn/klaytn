@@ -162,7 +162,6 @@ func serialize(committee istanbul.Validators, arrivalTimeMap map[common.Address]
 	sortedCommittee := make(istanbul.Validators, len(committee))
 	copy(sortedCommittee[:], committee[:])
 	sort.Sort(sortedCommittee)
-	logger.Info("serialize", "sortedCommittee", sortedCommittee, "committee", committee)
 
 	serialized := make([]time.Duration, len(sortedCommittee))
 	for i, v := range sortedCommittee {
