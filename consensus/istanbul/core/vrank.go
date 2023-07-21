@@ -87,7 +87,7 @@ func (v *vrank) Stop() {
 	var (
 		serialized = serialize(v.committee, v.commitArrivalTimeMap)
 
-		assessBitmap = hex.EncodeToString(compress(assessAll(serialized, v.threshold)))
+		assessBitmap = hex.EncodeToString(compress(assessBatch(serialized, v.threshold)))
 
 		lateCommits        = make([]time.Duration, 0)
 		encodedLateCommits = make([]string, 0)
@@ -150,7 +150,7 @@ func assess(t, threshold time.Duration) int {
 	}
 }
 
-func assessAll(t []time.Duration, threshold time.Duration) []int {
+func assessBatch(t []time.Duration, threshold time.Duration) []int {
 	ret := make([]int, 0)
 	for _, v := range t {
 		ret = append(ret, assess(v, threshold))
