@@ -78,6 +78,10 @@ func (c *core) handleCommit(msg *message, src istanbul.Validator) error {
 		return errInvalidMessage
 	}
 
+	if Vrank != nil {
+		Vrank.AddCommit(commit, src)
+	}
+
 	// logger.Error("receive handle commit","num", commit.View.Sequence)
 	if err := c.checkMessage(msgCommit, commit.View); err != nil {
 		// logger.Error("### istanbul/commit.go checkMessage","num",commit.View.Sequence,"err",err)
@@ -147,6 +151,10 @@ func (c *core) acceptCommit(msg *message, src istanbul.Validator) error {
 	if err := c.current.Commits.Add(msg); err != nil {
 		logger.Error("Failed to record commit message", "msg", msg, "err", err)
 		return err
+	}
+
+	if c.current.Commits.Size() == 1 {
+		vrankFirstCommitArrivalTimeGauge.Update(int64(Vrank.TimeSinceStart()))
 	}
 
 	return nil

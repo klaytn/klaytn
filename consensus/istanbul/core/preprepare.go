@@ -122,6 +122,11 @@ func (c *core) handlePreprepare(msg *message, src istanbul.Validator) error {
 				c.acceptPreprepare(preprepare)
 				c.setState(StatePrepared)
 				c.sendCommit()
+
+				if Vrank != nil {
+					Vrank.Stop()
+				}
+				Vrank = NewVrank(*c.currentView(), c.valSet.SubList(preprepare.Proposal.ParentHash(), c.currentView()))
 			} else {
 				// Send round change
 				c.sendNextRoundChange("handlePreprepare. HashLocked, but received hash is different from locked hash")
@@ -133,6 +138,11 @@ func (c *core) handlePreprepare(msg *message, src istanbul.Validator) error {
 			c.acceptPreprepare(preprepare)
 			c.setState(StatePreprepared)
 			c.sendPrepare()
+
+			if Vrank != nil {
+				Vrank.Stop()
+			}
+			Vrank = NewVrank(*c.currentView(), c.valSet.SubList(preprepare.Proposal.ParentHash(), c.currentView()))
 		}
 	}
 

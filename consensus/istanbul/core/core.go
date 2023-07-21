@@ -193,6 +193,10 @@ func (c *core) commit() {
 			c.sendNextRoundChange("commit failure")
 			return
 		}
+
+		if Vrank != nil {
+			Vrank.HandleCommitted(proposal.Number())
+		}
 	} else {
 		// TODO-Klaytn never happen, but if proposal is nil, mining is not working.
 		logger.Error("istanbul.core current.Proposal is NULL")
