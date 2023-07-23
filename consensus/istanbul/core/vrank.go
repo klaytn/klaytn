@@ -152,7 +152,8 @@ func assessBatch(ts []time.Duration, threshold time.Duration) []int {
 }
 
 // serialize serializes arrivalTime hashmap into array.
-// It needs to be deterministic, so the order of array is equal to that of sorted committee.
+// If committee is sorted, we can simply figure out the validator position in the output array
+// by sorting the output of `klay.getCommittee()`
 func serialize(committee istanbul.Validators, arrivalTimeMap map[common.Address]time.Duration) []time.Duration {
 	sortedCommittee := make(istanbul.Validators, len(committee))
 	copy(sortedCommittee[:], committee[:])
