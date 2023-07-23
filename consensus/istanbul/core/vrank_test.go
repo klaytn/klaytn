@@ -123,6 +123,6 @@ func TestVrankCompress(t *testing.T) {
 		},
 	}
 	for i, tc := range tcs {
-		assert.Equal(t, compress(tc.input), tc.expected, "tc %d failed", i)
+		assert.Equal(t, tc.expected, compress(tc.input), "tc %d failed", i)
 	}
 }
