@@ -24,7 +24,7 @@ func genCommitteeFromAddrs(addrs []common.Address) istanbul.Validators {
 func TestVrank(t *testing.T) {
 	var (
 		N         = 6
-		quorum    = 3
+		quorum    = 4
 		addrs, _  = genValidators(N)
 		committee = genCommitteeFromAddrs(addrs)
 		view      = istanbul.View{Sequence: big.NewInt(0), Round: big.NewInt(0)}
