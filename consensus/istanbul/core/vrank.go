@@ -183,7 +183,7 @@ func compress(arr []int) []byte {
 	}
 
 	// pad zero to make len(arr)%4 == 0
-	for i := 0; i < 4-len(arr)%4; i++ {
+	for len(arr)%4 != 0 {
 		arr = append(arr, 0)
 	}
 
