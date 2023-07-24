@@ -30,7 +30,7 @@ import (
 	"github.com/klaytn/klaytn/cmd/utils/nodecmd"
 	"github.com/klaytn/klaytn/console"
 	"github.com/klaytn/klaytn/log"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 var (
@@ -46,27 +46,27 @@ func init() {
 	app.Action = nodecmd.RunKlaytnNode
 	app.HideVersion = true // we have a command to print the version
 	app.Copyright = "Copyright 2018-2019 The klaytn Authors"
-	app.Commands = []cli.Command{
+	app.Commands = []*cli.Command{
 		// See utils/nodecmd/chaincmd.go:
-		nodecmd.InitCommand,
-		nodecmd.DumpGenesisCommand,
+		&nodecmd.InitCommand,
+		&nodecmd.DumpGenesisCommand,
 
 		// See utils/nodecmd/accountcmd.go
-		nodecmd.AccountCommand,
+		&nodecmd.AccountCommand,
 
 		// See utils/nodecmd/consolecmd.go:
-		nodecmd.GetConsoleCommand(nodecmd.KspnNodeFlags(), nodecmd.CommonRPCFlags),
-		nodecmd.AttachCommand,
+		nodecmd.GetConsoleCommand(utils.KspnNodeFlags(), utils.CommonRPCFlags),
+		&nodecmd.AttachCommand,
 
 		// See utils/nodecmd/versioncmd.go:
-		nodecmd.VersionCommand,
+		&nodecmd.VersionCommand,
 
 		// See utils/nodecmd/dumpconfigcmd.go:
-		nodecmd.GetDumpConfigCommand(nodecmd.KspnNodeFlags(), nodecmd.CommonRPCFlags),
+		nodecmd.GetDumpConfigCommand(utils.KspnNodeFlags(), utils.CommonRPCFlags),
 	}
 	sort.Sort(cli.CommandsByName(app.Commands))
 
-	app.Flags = nodecmd.KspnAppFlags()
+	app.Flags = utils.KspnAppFlags()
 
 	cli.AppHelpTemplate = utils.GlobalAppHelpTemplate
 	cli.HelpPrinter = utils.NewHelpPrinter(utils.CategorizeFlags(app.Flags))

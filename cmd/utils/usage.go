@@ -26,7 +26,7 @@ import (
 	"io"
 	"strings"
 
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 func NewHelpPrinter(fg []FlagGroup) func(w io.Writer, tmp string, data interface{}) {
@@ -48,7 +48,7 @@ func NewHelpPrinter(fg []FlagGroup) func(w io.Writer, tmp string, data interface
 			var uncategorized []cli.Flag
 			for _, flag := range data.(*cli.App).Flags {
 				if _, ok := categorized[flag.String()]; !ok {
-					if strings.HasPrefix(flag.GetName(), "dashboard") {
+					if strings.HasPrefix(flag.Names()[0], "dashboard") {
 						continue
 					}
 					uncategorized = append(uncategorized, flag)

@@ -30,14 +30,15 @@ import (
 	"github.com/klaytn/klaytn/accounts/keystore"
 	"github.com/klaytn/klaytn/api/debug"
 	"github.com/klaytn/klaytn/client"
+	"github.com/klaytn/klaytn/cmd/homi/setup"
 	"github.com/klaytn/klaytn/cmd/utils"
 	"github.com/klaytn/klaytn/log"
 	metricutils "github.com/klaytn/klaytn/metrics/utils"
 	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/node/cn"
 	"github.com/klaytn/klaytn/params"
-	"gopkg.in/urfave/cli.v1"
-	"gopkg.in/urfave/cli.v1/altsrc"
+	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v2/altsrc"
 )
 
 // runKlaytnNode is the main entry point into the system if no special subcommand is ran.
@@ -81,7 +82,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	debug.Memsize.Add("node", stack)
 
 	// Ntp time check
-	if err := utils.NtpCheckWithLocal(); err != nil {
+	if err := node.NtpCheckWithLocal(stack); err != nil {
 		log.Fatalf("System time should be synchronized: %v", err)
 	}
 
@@ -140,7 +141,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
 
 	passwords := utils.MakePasswordList(ctx)
-	unlocks := strings.Split(ctx.GlobalString(utils.UnlockedAccountFlag.Name), ",")
+	unlocks := strings.Split(ctx.String(utils.UnlockedAccountFlag.Name), ",")
 	for i, account := range unlocks {
 		if trimmed := strings.TrimSpace(account); trimmed != "" {
 			UnlockAccount(ctx, ks, trimmed, i, passwords)
@@ -187,44 +188,11 @@ func CheckCommands(ctx *cli.Context) error {
 	return nil
 }
 
-func contains(list []cli.Flag, item cli.Flag) bool {
-	for _, flag := range list {
-		if flag.GetName() == item.GetName() {
-			return true
-		}
-	}
-	return false
-}
-
-func union(list1, list2 []cli.Flag) []cli.Flag {
-	for _, item := range list2 {
-		if !contains(list1, item) {
-			list1 = append(list1, item)
-		}
-	}
-	return list1
-}
-
-func allNodeFlags() []cli.Flag {
-	nodeFlags := []cli.Flag{}
-	nodeFlags = append(nodeFlags, CommonNodeFlags...)
-	nodeFlags = append(nodeFlags, CommonRPCFlags...)
-	nodeFlags = append(nodeFlags, ConsoleFlags...)
-	nodeFlags = append(nodeFlags, debug.Flags...)
-	nodeFlags = union(nodeFlags, KCNFlags)
-	nodeFlags = union(nodeFlags, KPNFlags)
-	nodeFlags = union(nodeFlags, KENFlags)
-	nodeFlags = union(nodeFlags, KSCNFlags)
-	nodeFlags = union(nodeFlags, KSPNFlags)
-	nodeFlags = union(nodeFlags, KSENFlags)
-	return nodeFlags
-}
-
 var confFile = "conf" // flag option for yaml file name
 
 func FlagsFromYaml(ctx *cli.Context) error {
 	if ctx.String(confFile) != "" {
-		if err := altsrc.InitInputSourceWithContext(allNodeFlags(), altsrc.NewYamlSourceFromFlagFunc(confFile))(ctx); err != nil {
+		if err := altsrc.InitInputSourceWithContext(utils.AllNodeFlags(), altsrc.NewYamlSourceFromFlagFunc(confFile))(ctx); err != nil {
 			return err
 		}
 	}
@@ -232,11 +200,12 @@ func FlagsFromYaml(ctx *cli.Context) error {
 }
 
 func BeforeRunNode(ctx *cli.Context) error {
-	// TODO-klaytn - yaml bug: doesn't affact global flag whther the flag is set or not
-	// You can enable this code after the bug fix
-	// if err := FlagsFromYaml(ctx); err != nil {
-	// 	return err
-	// }
+	if err := setup.CheckArgs(ctx); err != nil {
+		return err
+	}
+	if err := FlagsFromYaml(ctx); err != nil {
+		return err
+	}
 	if err := CheckCommands(ctx); err != nil {
 		return err
 	}
@@ -254,7 +223,7 @@ func BeforeRunNode(ctx *cli.Context) error {
 // SetupNetwork configures the system for either the main net or some test network.
 func setupNetwork(ctx *cli.Context) {
 	// TODO(fjl): move target gas limit into config
-	params.TargetGasLimit = ctx.GlobalUint64(utils.TargetGasLimitFlag.Name)
+	params.TargetGasLimit = ctx.Uint64(utils.TargetGasLimitFlag.Name)
 }
 
 func BeforeRunBootnode(ctx *cli.Context) error {

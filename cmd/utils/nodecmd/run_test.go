@@ -34,7 +34,7 @@ import (
 	"github.com/klaytn/klaytn/console"
 	metricutils "github.com/klaytn/klaytn/metrics/utils"
 	"github.com/klaytn/klaytn/node"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 func tmpdir(t *testing.T) string {
@@ -58,9 +58,9 @@ var (
 	app = utils.NewApp(GetGitCommit(), "the Klaytn command line interface")
 
 	// flags that configure the node
-	nodeFlags = CommonNodeFlags
+	nodeFlags = utils.CommonNodeFlags
 
-	rpcFlags = CommonRPCFlags
+	rpcFlags = utils.CommonRPCFlags
 )
 
 func init() {
@@ -68,26 +68,26 @@ func init() {
 	app.Action = RunKlaytnNode
 	app.HideVersion = true // we have a command to print the version
 	app.Copyright = "Copyright 2018-2019 The klaytn Authors"
-	app.Commands = []cli.Command{
+	app.Commands = []*cli.Command{
 		// See chaincmd.go:
-		InitCommand,
+		&InitCommand,
 
 		// See accountcmd.go
-		AccountCommand,
+		&AccountCommand,
 
 		// See consolecmd.go:
 		GetConsoleCommand(nodeFlags, rpcFlags),
-		AttachCommand,
+		&AttachCommand,
 
 		// See versioncmd.go:
-		VersionCommand,
+		&VersionCommand,
 
 		// See dumpconfigcmd.go:
 		GetDumpConfigCommand(nodeFlags, rpcFlags),
 	}
 	sort.Sort(cli.CommandsByName(app.Commands))
 
-	app.Flags = allNodeFlags()
+	app.Flags = utils.AllNodeFlags()
 
 	app.Before = func(ctx *cli.Context) error {
 		runtime.GOMAXPROCS(runtime.NumCPU())

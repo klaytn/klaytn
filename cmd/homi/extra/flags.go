@@ -20,7 +20,7 @@ package extra
 import (
 	"strings"
 
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 var (

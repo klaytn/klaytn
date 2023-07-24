@@ -32,7 +32,7 @@ import (
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 type validatorInfo struct {
@@ -75,12 +75,12 @@ func main() {
 	app.Copyright = "Copyright 2018-2019 The klaytn Authors"
 	app.Action = genNodeKey
 	app.Flags = []cli.Flag{
-		fileFlag,
-		ipFlag,
-		portFlag,
+		&fileFlag,
+		&ipFlag,
+		&portFlag,
 	}
-	app.Commands = []cli.Command{
-		nodecmd.VersionCommand,
+	app.Commands = []*cli.Command{
+		&nodecmd.VersionCommand,
 	}
 	app.HideVersion = true
 	// app.CustomAppHelpTemplate = kgenHelper

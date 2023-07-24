@@ -44,8 +44,8 @@ import (
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/params"
-	"github.com/urfave/cli/altsrc"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v2/altsrc"
 )
 
 type ValidatorInfo struct {
@@ -60,65 +60,65 @@ type GrafanaFile struct {
 }
 
 var HomiFlags = []cli.Flag{
-	homiYamlFlag,
-	altsrc.NewStringFlag(genTypeFlag),
-	altsrc.NewBoolFlag(cypressTestFlag),
-	altsrc.NewBoolFlag(cypressFlag),
-	altsrc.NewBoolFlag(baobabTestFlag),
-	altsrc.NewBoolFlag(baobabFlag),
-	altsrc.NewBoolFlag(serviceChainFlag),
-	altsrc.NewBoolFlag(serviceChainTestFlag),
-	altsrc.NewBoolFlag(cliqueFlag),
-	altsrc.NewIntFlag(numOfCNsFlag),
-	altsrc.NewIntFlag(numOfValidatorsFlag),
-	altsrc.NewIntFlag(numOfPNsFlag),
-	altsrc.NewIntFlag(numOfENsFlag),
-	altsrc.NewIntFlag(numOfSCNsFlag),
-	altsrc.NewIntFlag(numOfSPNsFlag),
-	altsrc.NewIntFlag(numOfSENsFlag),
-	altsrc.NewIntFlag(numOfTestKeyFlag),
-	altsrc.NewUint64Flag(chainIDFlag),
-	altsrc.NewUint64Flag(serviceChainIDFlag),
-	altsrc.NewUint64Flag(unitPriceFlag),
-	altsrc.NewIntFlag(deriveShaImplFlag),
-	altsrc.NewStringFlag(fundingAddrFlag),
-	altsrc.NewBoolFlag(patchAddressBookFlag),
-	altsrc.NewStringFlag(patchAddressBookAddrFlag),
-	altsrc.NewStringFlag(outputPathFlag),
-	altsrc.NewStringFlag(dockerImageIdFlag),
-	altsrc.NewBoolFlag(fasthttpFlag),
-	altsrc.NewIntFlag(networkIdFlag),
-	altsrc.NewBoolFlag(nografanaFlag),
-	altsrc.NewBoolFlag(useTxGenFlag),
-	altsrc.NewIntFlag(txGenRateFlag),
-	altsrc.NewIntFlag(txGenThFlag),
-	altsrc.NewIntFlag(txGenConnFlag),
-	altsrc.NewStringFlag(txGenDurFlag),
-	altsrc.NewIntFlag(rpcPortFlag),
-	altsrc.NewIntFlag(wsPortFlag),
-	altsrc.NewIntFlag(p2pPortFlag),
-	altsrc.NewStringFlag(dataDirFlag),
-	altsrc.NewStringFlag(logDirFlag),
-	altsrc.NewBoolFlag(governanceFlag),
-	altsrc.NewStringFlag(govModeFlag),
-	altsrc.NewStringFlag(governingNodeFlag),
-	altsrc.NewStringFlag(rewardMintAmountFlag),
-	altsrc.NewStringFlag(rewardRatioFlag),
-	altsrc.NewBoolFlag(rewardGiniCoeffFlag),
-	altsrc.NewUint64Flag(rewardStakingFlag),
-	altsrc.NewUint64Flag(rewardProposerFlag),
-	altsrc.NewStringFlag(rewardMinimumStakeFlag),
-	altsrc.NewBoolFlag(rewardDeferredTxFeeFlag),
-	altsrc.NewUint64Flag(istEpochFlag),
-	altsrc.NewUint64Flag(istProposerPolicyFlag),
-	altsrc.NewUint64Flag(istSubGroupFlag),
-	altsrc.NewUint64Flag(cliqueEpochFlag),
-	altsrc.NewUint64Flag(cliquePeriodFlag),
-	altsrc.NewInt64Flag(istanbulCompatibleBlockNumberFlag),
-	altsrc.NewInt64Flag(londonCompatibleBlockNumberFlag),
-	altsrc.NewInt64Flag(ethTxTypeCompatibleBlockNumberFlag),
-	altsrc.NewInt64Flag(magmaCompatibleBlockNumberFlag),
-	altsrc.NewInt64Flag(koreCompatibleBlockNumberFlag),
+	&homiYamlFlag,
+	altsrc.NewStringFlag(&genTypeFlag),
+	altsrc.NewBoolFlag(&cypressTestFlag),
+	altsrc.NewBoolFlag(&cypressFlag),
+	altsrc.NewBoolFlag(&baobabTestFlag),
+	altsrc.NewBoolFlag(&baobabFlag),
+	altsrc.NewBoolFlag(&serviceChainFlag),
+	altsrc.NewBoolFlag(&serviceChainTestFlag),
+	altsrc.NewBoolFlag(&cliqueFlag),
+	altsrc.NewIntFlag(&numOfCNsFlag),
+	altsrc.NewIntFlag(&numOfValidatorsFlag),
+	altsrc.NewIntFlag(&numOfPNsFlag),
+	altsrc.NewIntFlag(&numOfENsFlag),
+	altsrc.NewIntFlag(&numOfSCNsFlag),
+	altsrc.NewIntFlag(&numOfSPNsFlag),
+	altsrc.NewIntFlag(&numOfSENsFlag),
+	altsrc.NewIntFlag(&numOfTestKeyFlag),
+	altsrc.NewUint64Flag(&chainIDFlag),
+	altsrc.NewUint64Flag(&serviceChainIDFlag),
+	altsrc.NewUint64Flag(&unitPriceFlag),
+	altsrc.NewIntFlag(&deriveShaImplFlag),
+	altsrc.NewStringFlag(&fundingAddrFlag),
+	altsrc.NewBoolFlag(&patchAddressBookFlag),
+	altsrc.NewStringFlag(&patchAddressBookAddrFlag),
+	altsrc.NewStringFlag(&outputPathFlag),
+	altsrc.NewStringFlag(&dockerImageIdFlag),
+	altsrc.NewBoolFlag(&fasthttpFlag),
+	altsrc.NewIntFlag(&networkIdFlag),
+	altsrc.NewBoolFlag(&nografanaFlag),
+	altsrc.NewBoolFlag(&useTxGenFlag),
+	altsrc.NewIntFlag(&txGenRateFlag),
+	altsrc.NewIntFlag(&txGenThFlag),
+	altsrc.NewIntFlag(&txGenConnFlag),
+	altsrc.NewStringFlag(&txGenDurFlag),
+	altsrc.NewIntFlag(&rpcPortFlag),
+	altsrc.NewIntFlag(&wsPortFlag),
+	altsrc.NewIntFlag(&p2pPortFlag),
+	altsrc.NewStringFlag(&dataDirFlag),
+	altsrc.NewStringFlag(&logDirFlag),
+	altsrc.NewBoolFlag(&governanceFlag),
+	altsrc.NewStringFlag(&govModeFlag),
+	altsrc.NewStringFlag(&governingNodeFlag),
+	altsrc.NewStringFlag(&rewardMintAmountFlag),
+	altsrc.NewStringFlag(&rewardRatioFlag),
+	altsrc.NewBoolFlag(&rewardGiniCoeffFlag),
+	altsrc.NewUint64Flag(&rewardStakingFlag),
+	altsrc.NewUint64Flag(&rewardProposerFlag),
+	altsrc.NewStringFlag(&rewardMinimumStakeFlag),
+	altsrc.NewBoolFlag(&rewardDeferredTxFeeFlag),
+	altsrc.NewUint64Flag(&istEpochFlag),
+	altsrc.NewUint64Flag(&istProposerPolicyFlag),
+	altsrc.NewUint64Flag(&istSubGroupFlag),
+	altsrc.NewUint64Flag(&cliqueEpochFlag),
+	altsrc.NewUint64Flag(&cliquePeriodFlag),
+	altsrc.NewInt64Flag(&istanbulCompatibleBlockNumberFlag),
+	altsrc.NewInt64Flag(&londonCompatibleBlockNumberFlag),
+	altsrc.NewInt64Flag(&ethTxTypeCompatibleBlockNumberFlag),
+	altsrc.NewInt64Flag(&magmaCompatibleBlockNumberFlag),
+	altsrc.NewInt64Flag(&koreCompatibleBlockNumberFlag),
 }
 
 var SetupCommand = cli.Command{
@@ -405,7 +405,7 @@ func genServiceChainCommonGenesis(nodeAddrs, testAddrs []common.Address) *blockc
 func genServiceChainGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
 	genesisJson := genServiceChainCommonGenesis(nodeAddrs, testAddrs)
 	genesisJson.Config.Istanbul.Epoch = 3600
-	allocationFunction := genesis.Alloc(append(nodeAddrs, testAddrs...), new(big.Int).Exp(big.NewInt(10), big.NewInt(10), nil))
+	allocationFunction := genesis.Alloc(append(nodeAddrs, testAddrs...), new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil))
 	allocationFunction(genesisJson)
 	return genesisJson
 }
@@ -573,8 +573,6 @@ func Gen(ctx *cli.Context) error {
 			serviceChainTest = true
 		case "clique":
 			clique = true
-		default:
-			fmt.Printf("Unknown genesis type is %s.\n", genesisType)
 		}
 	}
 
@@ -684,7 +682,7 @@ func Gen(ctx *cli.Context) error {
 			ctx.Bool(fasthttpFlag.Name),
 			ctx.Int(networkIdFlag.Name),
 			int(chainid),
-			!ctx.BoolT(nografanaFlag.Name),
+			!ctx.Bool(nografanaFlag.Name),
 			proxyNodeKeys,
 			enKeys,
 			scnKeys,
@@ -1107,13 +1105,17 @@ func indexGenType(genTypeFlag string, base string) int {
 func findGenType(ctx *cli.Context) int {
 	var genType int
 	if ctx.Args().Present() {
-		genType = indexGenType(ctx.Args()[0], "")
+		genType = indexGenType(ctx.Args().First(), "")
 	} else {
 		genType = indexGenType(ctx.String(genTypeFlag.Name), Types[0])
 	}
 
 	if genType == TypeNotDefined {
-		fmt.Printf("Wrong Type : %s\nSupported Types : [docker, local, remote, deploy]\n\n", genTypeFlag)
+		if ctx.Args().Present() {
+			fmt.Printf("Wrong Type : %s\nSupported Types : [docker, local, remote, deploy]\n\n", ctx.Args().First())
+		} else {
+			fmt.Printf("Wrong Type : %s\nSupported Types : [docker, local, remote, deploy]\n\n", ctx.String(genTypeFlag.Name))
+		}
 		cli.ShowSubcommandHelp(ctx)
 		os.Exit(1)
 	}
@@ -1132,14 +1134,31 @@ func removeSpacesAndLines(b []byte) string {
 func homiFlagsFromYaml(ctx *cli.Context) error {
 	filePath := ctx.String(homiYamlFlag.Name)
 	if filePath != "" {
-		if err := altsrc.InitInputSourceWithContext(SetupCommand.Flags, altsrc.NewYamlSourceFromFlagFunc(homiYamlFlag.Name))(ctx); err != nil {
+		if err := altsrc.InitInputSourceWithContext(HomiFlags, altsrc.NewYamlSourceFromFlagFunc(homiYamlFlag.Name))(ctx); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
+// In urfave/cli/v2 flags must come before args
+func CheckArgs(ctx *cli.Context) error {
+	args := ctx.Args().Slice()
+	for i, arg := range args {
+		if strings.HasPrefix(arg, "--") {
+			if i > 1 {
+				return fmt.Errorf("flag %s must come before arguments", arg)
+			}
+			break
+		}
+	}
+	return nil
+}
+
 func BeforeRunHomi(ctx *cli.Context) error {
+	if err := CheckArgs(ctx); err != nil {
+		return err
+	}
 	if err := homiFlagsFromYaml(ctx); err != nil {
 		return err
 	}

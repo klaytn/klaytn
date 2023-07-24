@@ -31,95 +31,107 @@ import (
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/log/term"
 	colorable "github.com/mattn/go-colorable"
-	"gopkg.in/urfave/cli.v1"
-	"gopkg.in/urfave/cli.v1/altsrc"
+	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v2/altsrc"
 )
 
 var Memsize memsizeui.Handler
 
 var (
 	verbosityFlag = cli.IntFlag{
-		Name:   "verbosity",
-		Usage:  "Logging verbosity: 0=silent, 1=error, 2=warn, 3=info, 4=debug, 5=detail",
-		Value:  3,
-		EnvVar: "KLAYTN_VERBOSITY",
+		Name:    "verbosity",
+		Usage:   "Logging verbosity: 0=silent, 1=error, 2=warn, 3=info, 4=debug, 5=detail",
+		Value:   3,
+		Aliases: []string{"debug-profile.verbosity"},
+		EnvVars: []string{"KLAYTN_VERBOSITY"},
 	}
 	vmoduleFlag = cli.StringFlag{
-		Name:   "vmodule",
-		Usage:  "Per-module verbosity: comma-separated list of <pattern>=<level> (e.g. klay/*=5,p2p=4)",
-		Value:  "",
-		EnvVar: "KLAYTN_VMODULE",
+		Name:    "vmodule",
+		Usage:   "Per-module verbosity: comma-separated list of <pattern>=<level> (e.g. klay/*=5,p2p=4)",
+		Value:   "",
+		Aliases: []string{"debug-profile.vmodule"},
+		EnvVars: []string{"KLAYTN_VMODULE"},
 	}
 	backtraceAtFlag = cli.StringFlag{
-		Name:   "backtrace",
-		Usage:  "Request a stack trace at a specific logging statement (e.g. \"block.go:271\")",
-		Value:  "",
-		EnvVar: "KLAYTN_BACKTRACE",
+		Name:    "backtrace",
+		Usage:   "Request a stack trace at a specific logging statement (e.g. \"block.go:271\")",
+		Value:   "",
+		Aliases: []string{"debug-profile.backtrace"},
+		EnvVars: []string{"KLAYTN_BACKTRACE"},
 	}
 	debugFlag = cli.BoolFlag{
-		Name:   "debug",
-		Usage:  "Prepends log messages with call-site location (file and line number)",
-		EnvVar: "KLAYTN_DEBUG",
+		Name:    "debug",
+		Usage:   "Prepends log messages with call-site location (file and line number)",
+		Aliases: []string{"debug-profile.print-site"},
+		EnvVars: []string{"KLAYTN_DEBUG"},
 	}
 	pprofFlag = cli.BoolFlag{
-		Name:   "pprof",
-		Usage:  "Enable the pprof HTTP server",
-		EnvVar: "KLAYTN_PPROF",
+		Name:    "pprof",
+		Usage:   "Enable the pprof HTTP server",
+		Aliases: []string{"debug-profile.pprof.enable"},
+		EnvVars: []string{"KLAYTN_PPROF"},
 	}
 	pprofPortFlag = cli.IntFlag{
-		Name:   "pprofport",
-		Usage:  "pprof HTTP server listening port",
-		Value:  6060,
-		EnvVar: "KLAYTN_PPROFPORT",
+		Name:    "pprofport",
+		Usage:   "pprof HTTP server listening port",
+		Value:   6060,
+		Aliases: []string{"debug-profile.pprof.port"},
+		EnvVars: []string{"KLAYTN_PPROFPORT"},
 	}
 	pprofAddrFlag = cli.StringFlag{
-		Name:   "pprofaddr",
-		Usage:  "pprof HTTP server listening interface",
-		Value:  "127.0.0.1",
-		EnvVar: "KLAYTN_PPROFADDR",
+		Name:    "pprofaddr",
+		Usage:   "pprof HTTP server listening interface",
+		Value:   "127.0.0.1",
+		Aliases: []string{"debug-profile.pprof.addr"},
+		EnvVars: []string{"KLAYTN_PPROFADDR"},
 	}
 	memprofileFlag = cli.StringFlag{
-		Name:   "memprofile",
-		Usage:  "Write memory profile to the given file",
-		EnvVar: "KLAYTN_MEMPROFILE",
+		Name:    "memprofile",
+		Usage:   "Write memory profile to the given file",
+		Aliases: []string{"debug-profile.mem-profile.file-name"},
+		EnvVars: []string{"KLAYTN_MEMPROFILE"},
 	}
 	memprofilerateFlag = cli.IntFlag{
-		Name:   "memprofilerate",
-		Usage:  "Turn on memory profiling with the given rate",
-		Value:  runtime.MemProfileRate,
-		EnvVar: "KLAYTN_MEMPROFILERATE",
+		Name:    "memprofilerate",
+		Usage:   "Turn on memory profiling with the given rate",
+		Value:   runtime.MemProfileRate,
+		Aliases: []string{"debug-profile.mem-profile.rate"},
+		EnvVars: []string{"KLAYTN_MEMPROFILERATE"},
 	}
 	blockprofilerateFlag = cli.IntFlag{
-		Name:   "blockprofilerate",
-		Usage:  "Turn on block profiling with the given rate",
-		EnvVar: "KLAYTN_BLOCKPROFILERATE",
+		Name:    "blockprofilerate",
+		Usage:   "Turn on block profiling with the given rate",
+		Aliases: []string{"debug-profile.block-profile.rate"},
+		EnvVars: []string{"KLAYTN_BLOCKPROFILERATE"},
 	}
 	cpuprofileFlag = cli.StringFlag{
-		Name:   "cpuprofile",
-		Usage:  "Write CPU profile to the given file",
-		EnvVar: "KLAYTN_CPUPROFILE",
+		Name:    "cpuprofile",
+		Usage:   "Write CPU profile to the given file",
+		Aliases: []string{"debug-profile.cpu-profile.file-name"},
+		EnvVars: []string{"KLAYTN_CPUPROFILE"},
 	}
 	traceFlag = cli.StringFlag{
-		Name:   "trace",
-		Usage:  "Write execution trace to the given file",
-		EnvVar: "KLAYTN_TRACE",
+		Name:    "trace",
+		Usage:   "Write execution trace to the given file",
+		Aliases: []string{"debug-profile.trace.file-name"},
+		EnvVars: []string{"KLAYTN_TRACE"},
 	}
 )
 
 // Flags holds all command-line flags required for debugging.
 var Flags = []cli.Flag{
-	altsrc.NewIntFlag(verbosityFlag),
-	altsrc.NewStringFlag(vmoduleFlag),
-	altsrc.NewStringFlag(backtraceAtFlag),
-	altsrc.NewBoolFlag(debugFlag),
-	altsrc.NewBoolFlag(pprofFlag),
-	altsrc.NewStringFlag(pprofAddrFlag),
-	altsrc.NewIntFlag(pprofPortFlag),
-	altsrc.NewStringFlag(memprofileFlag),
-	altsrc.NewIntFlag(memprofilerateFlag),
-	altsrc.NewIntFlag(blockprofilerateFlag),
-	altsrc.NewStringFlag(cpuprofileFlag),
-	altsrc.NewStringFlag(traceFlag),
+	altsrc.NewIntFlag(&verbosityFlag),
+	altsrc.NewStringFlag(&vmoduleFlag),
+	altsrc.NewStringFlag(&backtraceAtFlag),
+	altsrc.NewBoolFlag(&debugFlag),
+	altsrc.NewBoolFlag(&pprofFlag),
+	altsrc.NewStringFlag(&pprofAddrFlag),
+	altsrc.NewIntFlag(&pprofPortFlag),
+	altsrc.NewStringFlag(&memprofileFlag),
+	altsrc.NewIntFlag(&memprofilerateFlag),
+	altsrc.NewIntFlag(&blockprofilerateFlag),
+	altsrc.NewStringFlag(&cpuprofileFlag),
+	altsrc.NewStringFlag(&traceFlag),
 }
 
 var glogger *log.GlogHandler
@@ -157,39 +169,39 @@ func CreateLogDir(logDir string) {
 // It should be called as early as possible in the program.
 func Setup(ctx *cli.Context) error {
 	// logging
-	log.PrintOrigins(ctx.GlobalBool(debugFlag.Name))
-	if err := log.ChangeGlobalLogLevel(glogger, log.Lvl(ctx.GlobalInt(verbosityFlag.Name))); err != nil {
+	log.PrintOrigins(ctx.Bool(debugFlag.Name))
+	if err := log.ChangeGlobalLogLevel(glogger, log.Lvl(ctx.Int(verbosityFlag.Name))); err != nil {
 		return err
 	}
-	if err := glogger.Vmodule(ctx.GlobalString(vmoduleFlag.Name)); err != nil {
+	if err := glogger.Vmodule(ctx.String(vmoduleFlag.Name)); err != nil {
 		return err
 	}
-	if len(ctx.GlobalString(backtraceAtFlag.Name)) != 0 {
-		if err := glogger.BacktraceAt(ctx.GlobalString(backtraceAtFlag.Name)); err != nil {
+	if len(ctx.String(backtraceAtFlag.Name)) != 0 {
+		if err := glogger.BacktraceAt(ctx.String(backtraceAtFlag.Name)); err != nil {
 			return err
 		}
 	}
 	log.Root().SetHandler(glogger)
 
 	// profiling, tracing
-	runtime.MemProfileRate = ctx.GlobalInt(memprofilerateFlag.Name)
-	Handler.SetBlockProfileRate(ctx.GlobalInt(blockprofilerateFlag.Name))
-	if traceFile := ctx.GlobalString(traceFlag.Name); traceFile != "" {
+	runtime.MemProfileRate = ctx.Int(memprofilerateFlag.Name)
+	Handler.SetBlockProfileRate(ctx.Int(blockprofilerateFlag.Name))
+	if traceFile := ctx.String(traceFlag.Name); traceFile != "" {
 		if err := Handler.StartGoTrace(traceFile); err != nil {
 			return err
 		}
 	}
-	if cpuFile := ctx.GlobalString(cpuprofileFlag.Name); cpuFile != "" {
+	if cpuFile := ctx.String(cpuprofileFlag.Name); cpuFile != "" {
 		if err := Handler.StartCPUProfile(cpuFile); err != nil {
 			return err
 		}
 	}
-	Handler.memFile = ctx.GlobalString(memprofileFlag.Name)
+	Handler.memFile = ctx.String(memprofileFlag.Name)
 
 	// pprof server
-	if ctx.GlobalBool(pprofFlag.Name) {
-		addr := ctx.GlobalString(pprofAddrFlag.Name)
-		port := ctx.GlobalInt(pprofPortFlag.Name)
+	if ctx.Bool(pprofFlag.Name) {
+		addr := ctx.String(pprofAddrFlag.Name)
+		port := ctx.Int(pprofPortFlag.Name)
 		Handler.StartPProf(&addr, &port)
 	}
 	return nil

@@ -30,7 +30,7 @@ import (
 	"github.com/klaytn/klaytn/console"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/log"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 var AccountCommand = cli.Command{
@@ -57,14 +57,14 @@ It is safe to transfer the entire directory or the individual keys therein
 between klay nodes by simply copying.
 
 Make sure you backup your keys regularly.`,
-	Subcommands: []cli.Command{
+	Subcommands: []*cli.Command{
 		{
 			Name:   "list",
 			Usage:  "Print summary of existing accounts",
-			Action: utils.MigrateFlags(accountList),
+			Action: accountList,
 			Flags: []cli.Flag{
-				utils.DataDirFlag,
-				utils.KeyStoreDirFlag,
+				&utils.DataDirFlag,
+				&utils.KeyStoreDirFlag,
 			},
 			Description: `
 Print a short summary of all accounts`,
@@ -72,12 +72,12 @@ Print a short summary of all accounts`,
 		{
 			Name:   "new",
 			Usage:  "Create a new account",
-			Action: utils.MigrateFlags(accountCreate),
+			Action: accountCreate,
 			Flags: []cli.Flag{
-				utils.DataDirFlag,
-				utils.KeyStoreDirFlag,
-				utils.PasswordFileFlag,
-				utils.LightKDFFlag,
+				&utils.DataDirFlag,
+				&utils.KeyStoreDirFlag,
+				&utils.PasswordFileFlag,
+				&utils.LightKDFFlag,
 			},
 			Description: `
     klay account new
@@ -97,12 +97,12 @@ password to file or expose in any other way.
 		{
 			Name:      "update",
 			Usage:     "Update an existing account",
-			Action:    utils.MigrateFlags(accountUpdate),
+			Action:    accountUpdate,
 			ArgsUsage: "<address>",
 			Flags: []cli.Flag{
-				utils.DataDirFlag,
-				utils.KeyStoreDirFlag,
-				utils.LightKDFFlag,
+				&utils.DataDirFlag,
+				&utils.KeyStoreDirFlag,
+				&utils.LightKDFFlag,
 			},
 			Description: `
     klay account update <address>
@@ -126,12 +126,12 @@ changing your password is only possible interactively.
 		{
 			Name:   "import",
 			Usage:  "Import a private key into a new account",
-			Action: utils.MigrateFlags(accountImport),
+			Action: accountImport,
 			Flags: []cli.Flag{
-				utils.DataDirFlag,
-				utils.KeyStoreDirFlag,
-				utils.PasswordFileFlag,
-				utils.LightKDFFlag,
+				&utils.DataDirFlag,
+				&utils.KeyStoreDirFlag,
+				&utils.PasswordFileFlag,
+				&utils.LightKDFFlag,
 			},
 			ArgsUsage: "<keyFile>",
 			Description: `
@@ -266,7 +266,7 @@ func accountCreate(ctx *cli.Context) error {
 	}
 	cfg := utils.KlayConfig{Node: utils.DefaultNodeConfig()}
 	// Load config file.
-	if file := ctx.GlobalString(utils.ConfigFileFlag.Name); file != "" {
+	if file := ctx.String(utils.ConfigFileFlag.Name); file != "" {
 		if err := utils.LoadConfig(file, &cfg); err != nil {
 			log.Fatalf("%v", err)
 		}
@@ -293,13 +293,13 @@ func accountUpdate(ctx *cli.Context) error {
 	if glogger, err := debug.GetGlogger(); err == nil {
 		log.ChangeGlobalLogLevel(glogger, log.Lvl(log.LvlError))
 	}
-	if len(ctx.Args()) == 0 {
+	if ctx.Args().Len() == 0 {
 		log.Fatalf("No accounts specified to update")
 	}
 	stack, _ := utils.MakeConfigNode(ctx)
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
 
-	for _, addr := range ctx.Args() {
+	for _, addr := range ctx.Args().Slice() {
 		account, oldPassword := UnlockAccount(ctx, ks, addr, 0, nil)
 		newPassword := getPassPhrase("Please give a new password. Do not forget this password.", true, 0, nil)
 		if err := ks.Update(account, oldPassword, newPassword); err != nil {

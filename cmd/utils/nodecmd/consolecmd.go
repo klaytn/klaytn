@@ -30,23 +30,16 @@ import (
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node"
-	"gopkg.in/urfave/cli.v1"
-	"gopkg.in/urfave/cli.v1/altsrc"
+	"github.com/urfave/cli/v2"
 )
 
 var (
-	ConsoleFlags = []cli.Flag{
-		altsrc.NewStringFlag(utils.JSpathFlag),
-		altsrc.NewStringFlag(utils.ExecFlag),
-		altsrc.NewStringFlag(utils.PreloadJSFlag),
-	}
-
 	AttachCommand = cli.Command{
-		Action:    utils.MigrateFlags(remoteConsole),
+		Action:    remoteConsole,
 		Name:      "attach",
 		Usage:     "Start an interactive JavaScript environment (connect to node)",
 		ArgsUsage: "[endpoint]",
-		Flags:     append(ConsoleFlags, utils.DataDirFlag),
+		Flags:     append(utils.ConsoleFlags, &utils.DataDirFlag),
 		Category:  "CONSOLE COMMANDS",
 		Description: `
 The Klaytn console is an interactive shell for the JavaScript runtime environment
@@ -57,12 +50,12 @@ This command allows to open a console on a running Klaytn node.`,
 )
 
 // GetConsoleCommand returns cli.Command `console` whose flags are initialized with nodeFlags, rpcFlags, and ConsoleFlags.
-func GetConsoleCommand(nodeFlags, rpcFlags []cli.Flag) cli.Command {
-	return cli.Command{
-		Action:   utils.MigrateFlags(localConsole),
+func GetConsoleCommand(nodeFlags, rpcFlags []cli.Flag) *cli.Command {
+	return &cli.Command{
+		Action:   localConsole,
 		Name:     "console",
 		Usage:    "Start an interactive JavaScript environment",
-		Flags:    append(append(nodeFlags, rpcFlags...), ConsoleFlags...),
+		Flags:    append(append(nodeFlags, rpcFlags...), utils.ConsoleFlags...),
 		Category: "CONSOLE COMMANDS",
 		Description: `
 The Klaytn console is an interactive shell for the JavaScript runtime environment
@@ -86,7 +79,7 @@ func localConsole(ctx *cli.Context) error {
 	}
 	config := console.Config{
 		DataDir: utils.MakeDataDir(ctx),
-		DocRoot: ctx.GlobalString(utils.JSpathFlag.Name),
+		DocRoot: ctx.String(utils.JSpathFlag.Name),
 		Client:  client,
 		Preload: utils.MakeConsolePreloads(ctx),
 	}
@@ -98,7 +91,7 @@ func localConsole(ctx *cli.Context) error {
 	defer console.Stop(false)
 
 	// If only a short execution was requested, evaluate and return
-	if script := ctx.GlobalString(utils.ExecFlag.Name); script != "" {
+	if script := ctx.String(utils.ExecFlag.Name); script != "" {
 		console.Evaluate(script)
 		return nil
 	}
@@ -116,11 +109,11 @@ func remoteConsole(ctx *cli.Context) error {
 	endpoint := ctx.Args().First()
 	if endpoint == "" {
 		path := node.DefaultDataDir()
-		if ctx.GlobalIsSet(utils.DataDirFlag.Name) {
-			path = ctx.GlobalString(utils.DataDirFlag.Name)
+		if ctx.IsSet(utils.DataDirFlag.Name) {
+			path = ctx.String(utils.DataDirFlag.Name)
 		}
 		if path != "" {
-			if ctx.GlobalBool(utils.BaobabFlag.Name) {
+			if ctx.Bool(utils.BaobabFlag.Name) {
 				path = filepath.Join(path, "baobab")
 			}
 		}
@@ -132,7 +125,7 @@ func remoteConsole(ctx *cli.Context) error {
 	}
 	config := console.Config{
 		DataDir: utils.MakeDataDir(ctx),
-		DocRoot: ctx.GlobalString(utils.JSpathFlag.Name),
+		DocRoot: ctx.String(utils.JSpathFlag.Name),
 		Client:  client,
 		Preload: utils.MakeConsolePreloads(ctx),
 	}
@@ -143,7 +136,7 @@ func remoteConsole(ctx *cli.Context) error {
 	}
 	defer console.Stop(false)
 
-	if script := ctx.GlobalString(utils.ExecFlag.Name); script != "" {
+	if script := ctx.String(utils.ExecFlag.Name); script != "" {
 		console.Evaluate(script)
 		return nil
 	}
