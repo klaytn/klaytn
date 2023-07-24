@@ -19,10 +19,12 @@ package reward
 import (
 	"encoding/json"
 	"math"
+	"reflect"
 	"testing"
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -52,8 +54,8 @@ func generateStakingInfoTestCases() []stakingInfoTestCase {
 		r3 = common.HexToAddress("0x62E47d858bf8513fc401886B94E33e7DCec2Bfb7")
 		r4 = common.HexToAddress("0xf275f9f4c0d375F9E3E50370f93b504A1e45dB09")
 
-		kir = common.HexToAddress("0x136807B12327a8AfF9831F09617dA1B9D398cda2")
-		poc = common.HexToAddress("0x46bA8F7538CD0749e572b2631F9FB4Ce3653AFB8")
+		kcf = common.HexToAddress("0x136807B12327a8AfF9831F09617dA1B9D398cda2")
+		kff = common.HexToAddress("0x46bA8F7538CD0749e572b2631F9FB4Ce3653AFB8")
 
 		a0 uint64 = 0
 		aL uint64 = 1000000  // less than minstaking
@@ -85,8 +87,8 @@ func generateStakingInfoTestCases() []stakingInfoTestCase {
 				CouncilNodeAddrs:      []common.Address{n1},
 				CouncilStakingAddrs:   []common.Address{s1},
 				CouncilRewardAddrs:    []common.Address{r1},
-				KIRAddr:               kir,
-				PoCAddr:               poc,
+				KCFAddr:               kcf,
+				KFFAddr:               kff,
 				UseGini:               true,
 				Gini:                  0.00,
 				CouncilStakingAmounts: []uint64{a1},
@@ -107,8 +109,8 @@ func generateStakingInfoTestCases() []stakingInfoTestCase {
 				CouncilNodeAddrs:      []common.Address{n1, n2, n3, n4},
 				CouncilStakingAddrs:   []common.Address{s1, s2, s3, s4},
 				CouncilRewardAddrs:    []common.Address{r1, r2, r3, r4},
-				KIRAddr:               kir,
-				PoCAddr:               poc,
+				KCFAddr:               kcf,
+				KFFAddr:               kff,
 				UseGini:               true,
 				Gini:                  0.38, // Gini(10, 20, 40, 80)
 				CouncilStakingAmounts: []uint64{a1, a2, a3, a4},
@@ -132,8 +134,8 @@ func generateStakingInfoTestCases() []stakingInfoTestCase {
 				CouncilNodeAddrs:      []common.Address{n1, n2, n3, n4},
 				CouncilStakingAddrs:   []common.Address{s1, s2, s3, s4},
 				CouncilRewardAddrs:    []common.Address{r1, r2, r1, r2}, // r1 and r2 used twice each
-				KIRAddr:               kir,
-				PoCAddr:               poc,
+				KCFAddr:               kcf,
+				KFFAddr:               kff,
 				UseGini:               true,
 				Gini:                  0.17, // Gini(50, 100)
 				CouncilStakingAmounts: []uint64{a1, a2, a3, a4},
@@ -155,8 +157,8 @@ func generateStakingInfoTestCases() []stakingInfoTestCase {
 				CouncilNodeAddrs:      []common.Address{n1, n2, n3, n4},
 				CouncilStakingAddrs:   []common.Address{s1, s2, s3, s4},
 				CouncilRewardAddrs:    []common.Address{r1, r2, r3, r4},
-				KIRAddr:               kir,
-				PoCAddr:               poc,
+				KCFAddr:               kcf,
+				KFFAddr:               kff,
 				UseGini:               true,
 				Gini:                  0.41,                     // Gini(20, 2)
 				CouncilStakingAmounts: []uint64{a2, aM, aL, a0}, // aL and a0 should be ignored in Gini calculation
@@ -388,5 +390,160 @@ func TestConsolidatedStakingInfo(t *testing.T) {
 			require.NotNil(t, node)
 			assert.Equal(t, expectedAmount, node.StakingAmount)
 		}
+	}
+}
+
+// oldStakingInfo is a legacy of StakingInfo providing backward-compatibility.
+// Since json tags of StakingInfo were changed, a node may fail to unmarshal stored data without this.
+// oldStakingInfo's field names are the same with StakingInfo's names, but json tag is different.
+type oldStakingInfo struct {
+	BlockNum              uint64           `json:"BlockNum"`
+	CouncilNodeAddrs      []common.Address `json:"CouncilNodeAddrs"`
+	CouncilStakingAddrs   []common.Address `json:"CouncilStakingAddrs"`
+	CouncilRewardAddrs    []common.Address `json:"CouncilRewardAddrs"`
+	KCFAddr               common.Address   `json:"KIRAddr"` // KIRAddr -> KCFAddr from v1.10.2
+	KFFAddr               common.Address   `json:"PoCAddr"` // PoCAddr -> KFFAddr from v1.10.2
+	UseGini               bool             `json:"UseGini"`
+	Gini                  float64          `json:"Gini"`
+	CouncilStakingAmounts []uint64         `json:"CouncilStakingAmounts"`
+}
+
+var oldInfo = oldStakingInfo{
+	2880,
+	[]common.Address{
+		common.HexToAddress("0x159ae5ccda31b77475c64d88d4499c86f77b7ecc"),
+		common.HexToAddress("0x181deb121304b0430d99328ff1a9122df9f09d7f"),
+		common.HexToAddress("0x324ec8f2681cd73642cc55057970540a1f4393e0"),
+		common.HexToAddress("0x11191029025d3fcd21001746f949b25c6e8435cc"),
+	},
+	[]common.Address{
+		common.HexToAddress("0x70e051c46ea76b9af9977407bb32192319907f9e"),
+		common.HexToAddress("0xe4a0c3821a2711758306ed57c2f4900aa9ddbb3d"),
+		common.HexToAddress("0xf3ba3a33b3bf7cf2085890315b41cc788770feb3"),
+		common.HexToAddress("0x9285a85777d0ae7e12bee3ffd7842908b2295f45"),
+	},
+	[]common.Address{
+		common.HexToAddress("0xd155d4277c99fa837c54a37a40a383f71a3d082a"),
+		common.HexToAddress("0x2b8cc0ca62537fa5e49dce197acc8a15d3c5d4a8"),
+		common.HexToAddress("0x7d892f470ecde693f52588dd0cfe46c3d26b6219"),
+		common.HexToAddress("0xa0f7354a0cef878246820b6caa19d2bdef74a0cc"),
+	},
+	common.HexToAddress("0x673003e5f9a852d3dc85b83d16ef62d45497fb96"),
+	common.HexToAddress("0x576dc0c2afeb1661da3cf53a60e76dd4e32c7ab1"),
+	false,
+	-1,
+	[]uint64{5000000, 5000000, 5000000, 5000000},
+}
+
+var newInfo = StakingInfo{
+	oldInfo.BlockNum,
+	[]common.Address{
+		common.HexToAddress("0x70e051c46ea76b9af9977407bb32192319907f9e"),
+		common.HexToAddress("0xe4a0c3821a2711758306ed57c2f4900aa9ddbb3d"),
+		common.HexToAddress("0xf3ba3a33b3bf7cf2085890315b41cc788770feb3"),
+		common.HexToAddress("0x11191029025d3fcd21001746f949b25c6e8435cc"),
+	},
+	[]common.Address{
+		common.HexToAddress("0x7d892f470ecde693f52588dd0cfe46c3d26b6219"),
+		common.HexToAddress("0x2b8cc0ca62537fa5e49dce197acc8a15d3c5d4a8"),
+		common.HexToAddress("0xa0f7354a0cef878246820b6caa19d2bdef74a0cc"),
+		common.HexToAddress("0x576dc0c2afeb1661da3cf53a60e76dd4e32c7ab1"),
+	},
+	[]common.Address{
+		common.HexToAddress("0xd155d4277c99fa837c54a37a40a383f71a3d082a"),
+		common.HexToAddress("0x159ae5ccda31b77475c64d88d4499c86f77b7ecc"),
+		common.HexToAddress("0x181deb121304b0430d99328ff1a9122df9f09d7f"),
+		common.HexToAddress("0x673003e5f9a852d3dc85b83d16ef62d45497fb96"),
+	},
+	common.HexToAddress("0x324ec8f2681cd73642cc55057970540a1f4393e0"),
+	common.HexToAddress("0x9285a85777d0ae7e12bee3ffd7842908b2295f45"),
+	false,
+	0.3,
+	[]uint64{15000000, 4000000, 25000000, 35000000},
+}
+
+// TestGetStakingInfoFromDB tests whether the node can read oldStakingInfo and StakingInfo data or not.
+func TestGetStakingInfoFromDB(t *testing.T) {
+	oldStakingManager := GetStakingManager()
+	defer SetTestStakingManager(oldStakingManager)
+
+	for _, info := range []interface{}{oldInfo, newInfo} {
+		// reset database
+		SetTestStakingManagerWithDB(database.NewMemoryDBManager())
+
+		infoBytes, err := json.Marshal(info)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		stakingManager.stakingInfoDB.WriteStakingInfo(oldInfo.BlockNum, infoBytes)
+		retrievedInfo, err := getStakingInfoFromDB(oldInfo.BlockNum)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		vInfo := reflect.ValueOf(info)
+		vRetriedInfo := reflect.ValueOf(*retrievedInfo)
+
+		assert.Equal(t, vInfo.NumField(), vRetriedInfo.NumField())
+		for i := 0; i < vInfo.NumField(); i++ {
+			assert.Equal(t, vInfo.Field(i).Interface(), vRetriedInfo.Field(i).Interface())
+		}
+	}
+}
+
+// TestStakingInfo_MarshalJSON tests marshal/unmarshal staking info data.
+func TestStakingInfo_MarshalJSON(t *testing.T) {
+	// old marshalled data, new unmarshal method
+	{
+		oldInfoByte, err := json.Marshal(oldInfo)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		var unmarshalled StakingInfo
+		if err := json.Unmarshal(oldInfoByte, &unmarshalled); err != nil {
+			t.Fatal(err)
+		}
+		checkStakingInfoValues(t, oldInfo, unmarshalled)
+	}
+
+	// new marshalled data, old unmarshal method
+	{
+		newInfoByte, err := json.Marshal(newInfo)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		var unmarshalled oldStakingInfo
+		if err := json.Unmarshal(newInfoByte, &unmarshalled); err != nil {
+			t.Fatal(err)
+		}
+		checkStakingInfoValues(t, newInfo, unmarshalled)
+	}
+
+	// new marshalled data, new unmarshal method
+	{
+		newInfoByte, err := json.Marshal(newInfo)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		var unmarshalled StakingInfo
+		if err := json.Unmarshal(newInfoByte, &unmarshalled); err != nil {
+			t.Fatal(err)
+		}
+		checkStakingInfoValues(t, newInfo, unmarshalled)
+	}
+}
+
+func checkStakingInfoValues(t *testing.T, info interface{}, stakingInfo interface{}) {
+	vOld := reflect.ValueOf(info)
+	vNew := reflect.ValueOf(stakingInfo)
+	assert.Equal(t, vOld.NumField(), vNew.NumField())
+
+	for i := 0; i < vOld.NumField(); i++ {
+		field := reflect.TypeOf(info).Field(i).Name
+		assert.Equal(t, vOld.FieldByName(field).Interface(), vNew.FieldByName(field).Interface())
 	}
 }

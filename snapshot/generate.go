@@ -310,7 +310,7 @@ func (dl *diskLayer) proveRange(stats *generatorStats, root common.Hash, prefix 
 			dbm    = database.NewMemoryDBManager()
 			triedb = statedb.NewDatabase(dbm)
 		)
-		tr, _ := statedb.NewTrie(common.Hash{}, triedb)
+		tr, _ := statedb.NewTrie(common.Hash{}, triedb, nil)
 		for i, key := range keys {
 			tr.TryUpdate(key, vals[i])
 		}
@@ -324,7 +324,7 @@ func (dl *diskLayer) proveRange(stats *generatorStats, root common.Hash, prefix 
 		return &proofResult{keys: keys, vals: vals}, nil
 	}
 	// Snap state is chunked, generate edge proofs for verification.
-	tr, err := statedb.NewTrie(root, dl.triedb)
+	tr, err := statedb.NewTrie(root, dl.triedb, nil)
 	if err != nil {
 		stats.Log("Trie missing, state snapshotting paused", dl.root, dl.genMarker)
 		return nil, errMissingTrie
@@ -437,7 +437,7 @@ func (dl *diskLayer) generateRange(root common.Hash, prefix []byte, kind string,
 	if len(result.keys) > 0 {
 		snapNodeCache = database.NewMemoryDBManager()
 		snapTrieDb := statedb.NewDatabase(snapNodeCache)
-		snapTrie, _ := statedb.NewTrie(common.Hash{}, snapTrieDb)
+		snapTrie, _ := statedb.NewTrie(common.Hash{}, snapTrieDb, nil)
 		for i, key := range result.keys {
 			snapTrie.Update(key, result.vals[i])
 		}
@@ -447,7 +447,7 @@ func (dl *diskLayer) generateRange(root common.Hash, prefix []byte, kind string,
 	}
 	tr := result.tr
 	if tr == nil {
-		tr, err = statedb.NewTrie(root, dl.triedb)
+		tr, err = statedb.NewTrie(root, dl.triedb, nil)
 		if err != nil {
 			stats.Log("Trie missing, state snapshotting paused", dl.root, dl.genMarker)
 			return false, nil, errMissingTrie
@@ -664,7 +664,7 @@ func (dl *diskLayer) generate(stats *generatorStats) {
 			return nil
 		}
 
-		rootHash := contractAcc.GetStorageRoot()
+		rootHash := contractAcc.GetStorageRoot().Unextend()
 		if rootHash == emptyRoot {
 			prefix := append(database.SnapshotStoragePrefix, accountHash.Bytes()...)
 			keyLen := len(database.SnapshotStoragePrefix) + 2*common.HashLength

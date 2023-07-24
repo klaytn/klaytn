@@ -107,7 +107,7 @@ func initGenesis(ctx *cli.Context) error {
 	}
 
 	// Update undefined config with default values
-	genesis.Config.SetDefaults()
+	genesis.Config.SetDefaultsForGenesis()
 
 	// Validate config values
 	if err := ValidateGenesisConfig(genesis); err != nil {
@@ -159,7 +159,7 @@ func initGenesis(ctx *cli.Context) error {
 		chainDB := stack.OpenDatabase(dbc)
 
 		// Initialize DeriveSha implementation
-		blockchain.InitDeriveSha(genesis.Config.DeriveShaImpl)
+		blockchain.InitDeriveSha(genesis.Config)
 
 		_, hash, err := blockchain.SetupGenesisBlock(chainDB, genesis, params.UnusedNetworkId, false, overwriteGenesis)
 		if err != nil {

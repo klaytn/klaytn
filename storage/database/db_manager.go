@@ -42,6 +42,9 @@ var (
 	logger = log.NewModuleLogger(log.StorageDatabase)
 
 	errGovIdxAlreadyExist = errors.New("a governance idx of the more recent or the same block exist")
+
+	HeadBlockQ backupHashQueue
+	FastBlockQ backupHashQueue
 )
 
 type DBManager interface {
@@ -76,9 +79,11 @@ type DBManager interface {
 	WriteHeadHeaderHash(hash common.Hash)
 
 	ReadHeadBlockHash() common.Hash
+	ReadHeadBlockBackupHash() common.Hash
 	WriteHeadBlockHash(hash common.Hash)
 
 	ReadHeadFastBlockHash() common.Hash
+	ReadHeadFastBlockBackupHash() common.Hash
 	WriteHeadFastBlockHash(hash common.Hash)
 
 	ReadFastTrieProgress() uint64
@@ -135,33 +140,32 @@ type DBManager interface {
 	ReadCode(hash common.Hash) []byte
 	ReadCodeWithPrefix(hash common.Hash) []byte
 	WriteCode(hash common.Hash, code []byte)
+	PutCodeToBatch(batch Batch, hash common.Hash, code []byte)
 	DeleteCode(hash common.Hash)
 	HasCode(hash common.Hash) bool
 
 	// State Trie Database related operations
-	ReadCachedTrieNode(hash common.Hash) ([]byte, error)
-	ReadCachedTrieNodePreimage(secureKey []byte) ([]byte, error)
-	ReadStateTrieNode(key []byte) ([]byte, error)
-	HasStateTrieNode(key []byte) (bool, error)
+	ReadTrieNode(hash common.ExtHash) ([]byte, error)
+	HasTrieNode(hash common.ExtHash) (bool, error)
 	HasCodeWithPrefix(hash common.Hash) bool
 	ReadPreimage(hash common.Hash) []byte
 
 	// Read StateTrie from new DB
-	ReadCachedTrieNodeFromNew(hash common.Hash) ([]byte, error)
-	ReadCachedTrieNodePreimageFromNew(secureKey []byte) ([]byte, error)
-	ReadStateTrieNodeFromNew(key []byte) ([]byte, error)
-	HasStateTrieNodeFromNew(key []byte) (bool, error)
+	ReadTrieNodeFromNew(hash common.ExtHash) ([]byte, error)
+	HasTrieNodeFromNew(hash common.ExtHash) (bool, error)
 	HasCodeWithPrefixFromNew(hash common.Hash) bool
 	ReadPreimageFromNew(hash common.Hash) []byte
 
 	// Read StateTrie from old DB
-	ReadCachedTrieNodeFromOld(hash common.Hash) ([]byte, error)
-	ReadCachedTrieNodePreimageFromOld(secureKey []byte) ([]byte, error)
-	ReadStateTrieNodeFromOld(key []byte) ([]byte, error)
-	HasStateTrieNodeFromOld(key []byte) (bool, error)
+	ReadTrieNodeFromOld(hash common.ExtHash) ([]byte, error)
+	HasTrieNodeFromOld(hash common.ExtHash) (bool, error)
 	HasCodeWithPrefixFromOld(hash common.Hash) bool
 	ReadPreimageFromOld(hash common.Hash) []byte
 
+	// Write StateTrie
+	WriteTrieNode(hash common.ExtHash, node []byte)
+	PutTrieNodeToBatch(batch Batch, hash common.ExtHash, node []byte)
+	DeleteTrieNode(hash common.ExtHash)
 	WritePreimages(number uint64, preimages map[common.Hash][]byte)
 
 	// from accessors_indexes.go
@@ -277,6 +281,7 @@ type DBManager interface {
 	// StakingInfo related functions
 	ReadStakingInfo(blockNum uint64) ([]byte, error)
 	WriteStakingInfo(blockNum uint64, stakingInfo []byte) error
+	HasStakingInfo(blockNum uint64) (bool, error)
 
 	// DB migration related function
 	StartDBMigration(DBManager) error
@@ -302,6 +307,23 @@ const (
 	databaseEntryTypeSize
 )
 
+type backupHashQueue struct {
+	backupHashes [backupHashCnt]common.Hash
+	idx          int
+}
+
+func (b *backupHashQueue) push(h common.Hash) {
+	b.backupHashes[b.idx%backupHashCnt] = h
+	b.idx = (b.idx + 1) % backupHashCnt
+}
+
+func (b *backupHashQueue) pop() common.Hash {
+	if b.backupHashes[b.idx] == (common.Hash{}) {
+		return common.Hash{}
+	}
+	return b.backupHashes[b.idx]
+}
+
 func (et DBEntryType) String() string {
 	return dbBaseDirs[et]
 }
@@ -309,6 +331,7 @@ func (et DBEntryType) String() string {
 const (
 	notInMigrationFlag = 0
 	inMigrationFlag    = 1
+	backupHashCnt      = 128
 )
 
 var dbBaseDirs = [databaseEntryTypeSize]string{
@@ -934,11 +957,31 @@ func (dbm *databaseManager) ReadHeadBlockHash() common.Hash {
 	return common.BytesToHash(data)
 }
 
+// Block Backup Hash operations.
+func (dbm *databaseManager) ReadHeadBlockBackupHash() common.Hash {
+	db := dbm.getDatabase(headerDB)
+	data, _ := db.Get(headBlockBackupKey)
+	if len(data) == 0 {
+		return common.Hash{}
+	}
+	return common.BytesToHash(data)
+}
+
 // WriteHeadBlockHash stores the head block's hash.
 func (dbm *databaseManager) WriteHeadBlockHash(hash common.Hash) {
+	HeadBlockQ.push(hash)
+
 	db := dbm.getDatabase(headerDB)
 	if err := db.Put(headBlockKey, hash.Bytes()); err != nil {
 		logger.Crit("Failed to store last block's hash", "err", err)
+	}
+
+	backupHash := HeadBlockQ.pop()
+	if backupHash == (common.Hash{}) {
+		return
+	}
+	if err := db.Put(headBlockBackupKey, backupHash.Bytes()); err != nil {
+		logger.Crit("Failed to store last block's backup hash", "err", err)
 	}
 }
 
@@ -953,11 +996,32 @@ func (dbm *databaseManager) ReadHeadFastBlockHash() common.Hash {
 	return common.BytesToHash(data)
 }
 
+// Head Fast Block Backup Hash operations.
+// ReadHeadFastBlockBackupHash retrieves the hash of the current fast-sync head block.
+func (dbm *databaseManager) ReadHeadFastBlockBackupHash() common.Hash {
+	db := dbm.getDatabase(headerDB)
+	data, _ := db.Get(headFastBlockBackupKey)
+	if len(data) == 0 {
+		return common.Hash{}
+	}
+	return common.BytesToHash(data)
+}
+
 // WriteHeadFastBlockHash stores the hash of the current fast-sync head block.
 func (dbm *databaseManager) WriteHeadFastBlockHash(hash common.Hash) {
+	FastBlockQ.push(hash)
+
 	db := dbm.getDatabase(headerDB)
 	if err := db.Put(headFastBlockKey, hash.Bytes()); err != nil {
 		logger.Crit("Failed to store last fast block's hash", "err", err)
+	}
+
+	backupHash := FastBlockQ.pop()
+	if backupHash == (common.Hash{}) {
+		return
+	}
+	if err := db.Put(headFastBlockBackupKey, backupHash.Bytes()); err != nil {
+		logger.Crit("Failed to store last fast block's backup hash", "err", err)
 	}
 }
 
@@ -1671,6 +1735,12 @@ func (dbm *databaseManager) WriteCode(hash common.Hash, code []byte) {
 	}
 }
 
+func (dbm *databaseManager) PutCodeToBatch(batch Batch, hash common.Hash, code []byte) {
+	if err := batch.Put(CodeKey(hash), code); err != nil {
+		logger.Crit("Failed to store contract code", "err", err)
+	}
+}
+
 // DeleteCode deletes the specified contract code from the database.
 func (dbm *databaseManager) DeleteCode(hash common.Hash) {
 	db := dbm.getDatabase(StateTrieDB)
@@ -1679,20 +1749,19 @@ func (dbm *databaseManager) DeleteCode(hash common.Hash) {
 	}
 }
 
-// Cached Trie Node operation.
-func (dbm *databaseManager) ReadCachedTrieNode(hash common.Hash) ([]byte, error) {
+func (dbm *databaseManager) ReadTrieNode(hash common.ExtHash) ([]byte, error) {
 	dbm.lockInMigration.RLock()
 	defer dbm.lockInMigration.RUnlock()
 
 	if dbm.inMigration {
-		if val, err := dbm.GetStateTrieMigrationDB().Get(hash[:]); err == nil {
+		if val, err := dbm.ReadTrieNodeFromNew(hash); err == nil {
 			return val, nil
 		} else if err != dataNotFoundErr {
 			// TODO-Klaytn-Database Need to be properly handled
 			logger.Error("Unexpected error while reading cached trie node from state migration database", "err", err)
 		}
 	}
-	val, err := dbm.ReadCachedTrieNodeFromOld(hash)
+	val, err := dbm.ReadTrieNodeFromOld(hash)
 	if err != nil && err != dataNotFoundErr {
 		// TODO-Klaytn-Database Need to be properly handled
 		logger.Error("Unexpected error while reading cached trie node", "err", err)
@@ -1700,38 +1769,13 @@ func (dbm *databaseManager) ReadCachedTrieNode(hash common.Hash) ([]byte, error)
 	return val, err
 }
 
-// Cached Trie Node Preimage operation.
-func (dbm *databaseManager) ReadCachedTrieNodePreimage(secureKey []byte) ([]byte, error) {
-	dbm.lockInMigration.RLock()
-	defer dbm.lockInMigration.RUnlock()
-
-	if dbm.inMigration {
-		if val, err := dbm.GetStateTrieMigrationDB().Get(secureKey); err == nil {
-			return val, nil
-		}
-	}
-	return dbm.ReadCachedTrieNodePreimageFromOld(secureKey)
-}
-
-// State Trie Related operations.
-func (dbm *databaseManager) ReadStateTrieNode(key []byte) ([]byte, error) {
-	dbm.lockInMigration.RLock()
-	defer dbm.lockInMigration.RUnlock()
-
-	if dbm.inMigration {
-		if val, err := dbm.GetStateTrieMigrationDB().Get(key); err == nil {
-			return val, nil
-		}
-	}
-	return dbm.ReadStateTrieNodeFromOld(key)
-}
-
-func (dbm *databaseManager) HasStateTrieNode(key []byte) (bool, error) {
-	val, err := dbm.ReadStateTrieNode(key)
+func (dbm *databaseManager) HasTrieNode(hash common.ExtHash) (bool, error) {
+	val, err := dbm.ReadTrieNode(hash)
 	if val == nil || err != nil {
 		return false, err
+	} else {
+		return true, nil
 	}
-	return true, nil
 }
 
 // ReadPreimage retrieves a single preimage of the provided hash.
@@ -1747,27 +1791,17 @@ func (dbm *databaseManager) ReadPreimage(hash common.Hash) []byte {
 	return dbm.ReadPreimageFromOld(hash)
 }
 
-// Cached Trie Node operation.
-func (dbm *databaseManager) ReadCachedTrieNodeFromNew(hash common.Hash) ([]byte, error) {
-	return dbm.GetStateTrieMigrationDB().Get(hash[:])
+func (dbm *databaseManager) ReadTrieNodeFromNew(hash common.ExtHash) ([]byte, error) {
+	return dbm.GetStateTrieMigrationDB().Get(TrieNodeKey(hash))
 }
 
-// Cached Trie Node Preimage operation.
-func (dbm *databaseManager) ReadCachedTrieNodePreimageFromNew(secureKey []byte) ([]byte, error) {
-	return dbm.GetStateTrieMigrationDB().Get(secureKey)
-}
-
-// State Trie Related operations.
-func (dbm *databaseManager) ReadStateTrieNodeFromNew(key []byte) ([]byte, error) {
-	return dbm.GetStateTrieMigrationDB().Get(key)
-}
-
-func (dbm *databaseManager) HasStateTrieNodeFromNew(key []byte) (bool, error) {
-	val, err := dbm.GetStateTrieMigrationDB().Get(key)
+func (dbm *databaseManager) HasTrieNodeFromNew(hash common.ExtHash) (bool, error) {
+	val, err := dbm.ReadTrieNodeFromNew(hash)
 	if val == nil || err != nil {
 		return false, err
+	} else {
+		return true, nil
 	}
-	return true, nil
 }
 
 func (dbm *databaseManager) HasCodeWithPrefixFromNew(hash common.Hash) bool {
@@ -1782,29 +1816,18 @@ func (dbm *databaseManager) ReadPreimageFromNew(hash common.Hash) []byte {
 	return data
 }
 
-func (dbm *databaseManager) ReadCachedTrieNodeFromOld(hash common.Hash) ([]byte, error) {
+func (dbm *databaseManager) ReadTrieNodeFromOld(hash common.ExtHash) ([]byte, error) {
 	db := dbm.getDatabase(StateTrieDB)
-	return db.Get(hash[:])
+	return db.Get(TrieNodeKey(hash))
 }
 
-// Cached Trie Node Preimage operation.
-func (dbm *databaseManager) ReadCachedTrieNodePreimageFromOld(secureKey []byte) ([]byte, error) {
-	db := dbm.getDatabase(StateTrieDB)
-	return db.Get(secureKey)
-}
-
-// State Trie Related operations.
-func (dbm *databaseManager) ReadStateTrieNodeFromOld(key []byte) ([]byte, error) {
-	db := dbm.getDatabase(StateTrieDB)
-	return db.Get(key)
-}
-
-func (dbm *databaseManager) HasStateTrieNodeFromOld(key []byte) (bool, error) {
-	val, err := dbm.ReadStateTrieNodeFromOld(key)
+func (dbm *databaseManager) HasTrieNodeFromOld(hash common.ExtHash) (bool, error) {
+	val, err := dbm.ReadTrieNodeFromOld(hash)
 	if val == nil || err != nil {
 		return false, err
+	} else {
+		return true, nil
 	}
-	return true, nil
 }
 
 func (dbm *databaseManager) HasCodeWithPrefixFromOld(hash common.Hash) bool {
@@ -1820,6 +1843,26 @@ func (dbm *databaseManager) ReadPreimageFromOld(hash common.Hash) []byte {
 	return data
 }
 
+func (dbm *databaseManager) WriteTrieNode(hash common.ExtHash, node []byte) {
+	dbm.lockInMigration.RLock()
+	defer dbm.lockInMigration.RUnlock()
+
+	if dbm.inMigration {
+		if err := dbm.getDatabase(StateTrieMigrationDB).Put(TrieNodeKey(hash), node); err != nil {
+			logger.Crit("Failed to store trie node", "err", err)
+		}
+	}
+	if err := dbm.getDatabase(StateTrieDB).Put(TrieNodeKey(hash), node); err != nil {
+		logger.Crit("Failed to store trie node", "err", err)
+	}
+}
+
+func (dbm *databaseManager) PutTrieNodeToBatch(batch Batch, hash common.ExtHash, node []byte) {
+	if err := batch.Put(TrieNodeKey(hash), node); err != nil {
+		logger.Crit("Failed to store trie node", "err", err)
+	}
+}
+
 // WritePreimages writes the provided set of preimages to the database. `number` is the
 // current block number, and is used for debug messages only.
 func (dbm *databaseManager) WritePreimages(number uint64, preimages map[common.Hash][]byte) {
@@ -1828,12 +1871,21 @@ func (dbm *databaseManager) WritePreimages(number uint64, preimages map[common.H
 		if err := batch.Put(preimageKey(hash), preimage); err != nil {
 			logger.Crit("Failed to store trie preimage", "err", err)
 		}
+		if _, err := WriteBatchesOverThreshold(batch); err != nil {
+			logger.Crit("Failed to store trie preimage", "err", err)
+		}
 	}
 	if err := batch.Write(); err != nil {
 		logger.Crit("Failed to batch write trie preimage", "err", err, "blockNumber", number)
 	}
 	preimageCounter.Inc(int64(len(preimages)))
 	preimageHitCounter.Inc(int64(len(preimages)))
+}
+
+func (dbm *databaseManager) DeleteTrieNode(hash common.ExtHash) {
+	if err := dbm.getDatabase(StateTrieDB).Delete(TrieNodeKey(hash)); err != nil {
+		logger.Crit("Failed to delete trie node", "err", err)
+	}
 }
 
 // ReadTxLookupEntry retrieves the positional metadata associated with a transaction

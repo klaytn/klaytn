@@ -60,7 +60,7 @@ func testNodeAddress(t *testing.T, testAPIName string) {
 	nodeAddress := crypto.PubkeyToAddress(key.PublicKey)
 	gov.SetNodeAddress(nodeAddress)
 
-	api := EthereumAPI{publicGovernanceAPI: governance.NewGovernanceAPI(gov)}
+	api := EthereumAPI{governanceAPI: governance.NewGovernanceAPI(gov)}
 	results := reflect.ValueOf(&api).MethodByName(testAPIName).Call([]reflect.Value{})
 	result, ok := results[0].Interface().(common.Address)
 	assert.True(t, ok)
@@ -993,7 +993,7 @@ func testInitForEthApi(t *testing.T) (*gomock.Controller, *mock_api.MockBackend,
 	mockCtrl := gomock.NewController(t)
 	mockBackend := mock_api.NewMockBackend(mockCtrl)
 
-	blockchain.InitDeriveSha(types.ImplDeriveShaOriginal)
+	blockchain.InitDeriveSha(dummyChainConfigForEthereumAPITest)
 
 	api := EthereumAPI{
 		publicTransactionPoolAPI: NewPublicTransactionPoolAPI(mockBackend, new(AddrLocker)),

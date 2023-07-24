@@ -274,6 +274,7 @@ type BlockChain interface {
 	StateAtWithPersistent(root common.Hash) (*state.StateDB, error)
 	StateAtWithGCLock(root common.Hash) (*state.StateDB, error)
 	Export(w io.Writer) error
+	ExportN(w io.Writer, first, last uint64) error
 	Engine() consensus.Engine
 	GetTxLookupInfoAndReceipt(txHash common.Hash) (*types.Transaction, common.Hash, uint64, uint64, *types.Receipt)
 	GetTxAndLookupInfoInCache(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
@@ -286,7 +287,7 @@ type BlockChain interface {
 	HasBadBlock(hash common.Hash) bool
 	WriteBlockWithState(block *types.Block, receipts []*types.Receipt, stateDB *state.StateDB) (blockchain.WriteResult, error)
 	PostChainEvents(events []interface{}, logs []*types.Log)
-	ApplyTransaction(config *params.ChainConfig, author *common.Address, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *uint64, cfg *vm.Config) (*types.Receipt, uint64, *vm.InternalTxTrace, error)
+	ApplyTransaction(config *params.ChainConfig, author *common.Address, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *uint64, cfg *vm.Config) (*types.Receipt, *vm.InternalTxTrace, error)
 
 	// State Migration
 	PrepareStateMigration() error
@@ -301,7 +302,7 @@ type BlockChain interface {
 
 	// Collect state/storage trie statistics
 	StartCollectingTrieStats(contractAddr common.Address) error
-	GetContractStorageRoot(block *types.Block, db state.Database, contractAddr common.Address) (common.Hash, error)
+	GetContractStorageRoot(block *types.Block, db state.Database, contractAddr common.Address) (common.ExtHash, error)
 
 	// Save trie node cache to this
 	SaveTrieNodeCacheToDisk() error

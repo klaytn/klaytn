@@ -240,9 +240,6 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 
 	state.EnabledExpensive = db.GetDBConfig().EnableDBPerfMetrics
 
-	// Initialize DeriveSha implementation
-	InitDeriveSha(chainConfig.DeriveShaImpl)
-
 	futureBlocks, _ := lru.New(maxFutureBlocks)
 
 	bc := &BlockChain{
@@ -288,7 +285,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 	}
 	// Make sure the state associated with the block is available
 	head := bc.CurrentBlock()
-	if _, err := state.New(head.Root(), bc.stateCache, bc.snaps); err != nil {
+	if _, err := state.New(head.Root(), bc.stateCache, bc.snaps, nil); err != nil {
 		// Head state is missing, before the state recovery, find out the
 		// disk layer point of snapshot(if it's enabled). Make sure the
 		// rewound point is lower than disk layer.
@@ -384,7 +381,8 @@ func (bc *BlockChain) prefetchTxWorker(index int) {
 		snaps = bc.snaps
 	}
 	for followup := range bc.prefetchTxCh {
-		stateDB, err := state.NewForPrefetching(bc.CurrentBlock().Root(), bc.stateCache, snaps)
+		stateDB, err := state.New(bc.CurrentBlock().Root(), bc.stateCache, snaps,
+			&statedb.TrieOpts{Prefetching: true})
 		if err != nil {
 			logger.Debug("failed to retrieve stateDB for prefetchTxWorker", "err", err)
 			continue
@@ -416,7 +414,7 @@ func (bc *BlockChain) SetCanonicalBlock(blockNum uint64) {
 	}
 	// Make sure the state associated with the block is available
 	head := bc.CurrentBlock()
-	if _, err := state.New(head.Root(), bc.stateCache, bc.snaps); err != nil {
+	if _, err := state.New(head.Root(), bc.stateCache, bc.snaps, nil); err != nil {
 		// Dangling block without a state associated, init from scratch
 		logger.Warn("Head state missing, repairing chain",
 			"number", head.NumberU64(), "hash", head.Hash().String())
@@ -453,9 +451,19 @@ func (bc *BlockChain) loadLastState() error {
 	// Make sure the entire head block is available
 	currentBlock := bc.GetBlockByHash(head)
 	if currentBlock == nil {
-		// Corrupt or empty database, init from scratch
-		logger.Error("Head block missing, resetting chain", "hash", head.String())
-		return bc.Reset()
+		head = bc.db.ReadHeadBlockBackupHash()
+		if head == (common.Hash{}) {
+			// Corrupt or empty database, init from scratch
+			logger.Info("Empty database, resetting chain")
+			return bc.Reset()
+		}
+
+		currentBlock = bc.GetBlockByHash(head)
+		if currentBlock == nil {
+			// Corrupt or empty database, init from scratch
+			logger.Error("Head block missing, resetting chain", "hash", head.String())
+			return bc.Reset()
+		}
 	}
 	// Everything seems to be fine, set as the head block
 	bc.currentBlock.Store(currentBlock)
@@ -475,6 +483,10 @@ func (bc *BlockChain) loadLastState() error {
 	if head := bc.db.ReadHeadFastBlockHash(); head != (common.Hash{}) {
 		if block := bc.GetBlockByHash(head); block != nil {
 			bc.currentFastBlock.Store(block)
+		} else if head := bc.db.ReadHeadFastBlockBackupHash(); head != (common.Hash{}) {
+			if block := bc.GetBlockByHash(head); block != nil {
+				bc.currentFastBlock.Store(block)
+			}
 		}
 	}
 
@@ -533,7 +545,7 @@ func (bc *BlockChain) setHeadBeyondRoot(head uint64, root common.Hash, repair bo
 					if root != (common.Hash{}) && !beyondRoot && newHeadBlock.Root() == root {
 						beyondRoot, rootNumber = true, newHeadBlock.NumberU64()
 					}
-					if _, err := state.New(newHeadBlock.Root(), bc.stateCache, bc.snaps); err != nil {
+					if _, err := state.New(newHeadBlock.Root(), bc.stateCache, bc.snaps, nil); err != nil {
 						// Rewound state missing, rolled back to the parent block, reset to genesis
 						logger.Trace("Block state missing, rewinding further", "number", newHeadBlock.NumberU64(), "hash", newHeadBlock.Hash())
 						parent := bc.GetBlock(newHeadBlock.ParentHash(), newHeadBlock.NumberU64()-1)
@@ -625,7 +637,7 @@ func (bc *BlockChain) FastSyncCommitHead(hash common.Hash) error {
 	if block == nil {
 		return fmt.Errorf("non existent block [%x…]", hash[:4])
 	}
-	if _, err := statedb.NewSecureTrie(block.Root(), bc.stateCache.TrieDB()); err != nil {
+	if _, err := statedb.NewSecureTrie(block.Root(), bc.stateCache.TrieDB(), nil); err != nil {
 		return err
 	}
 	// If all checks out, manually set the head block
@@ -672,29 +684,29 @@ func (bc *BlockChain) State() (*state.StateDB, error) {
 
 // StateAt returns a new mutable state based on a particular point in time.
 func (bc *BlockChain) StateAt(root common.Hash) (*state.StateDB, error) {
-	return state.New(root, bc.stateCache, bc.snaps)
+	return state.New(root, bc.stateCache, bc.snaps, nil)
 }
 
 // StateAtWithPersistent returns a new mutable state based on a particular point in time with persistent trie nodes.
 func (bc *BlockChain) StateAtWithPersistent(root common.Hash) (*state.StateDB, error) {
-	exist := bc.stateCache.TrieDB().DoesExistNodeInPersistent(root)
+	exist := bc.stateCache.TrieDB().DoesExistNodeInPersistent(root.ExtendLegacy())
 	if !exist {
 		return nil, ErrNotExistNode
 	}
-	return state.New(root, bc.stateCache, bc.snaps)
+	return state.New(root, bc.stateCache, bc.snaps, nil)
 }
 
 // StateAtWithGCLock returns a new mutable state based on a particular point in time with read lock of the state nodes.
 func (bc *BlockChain) StateAtWithGCLock(root common.Hash) (*state.StateDB, error) {
 	bc.RLockGCCachedNode()
 
-	exist := bc.stateCache.TrieDB().DoesExistCachedNode(root)
+	exist := bc.stateCache.TrieDB().DoesExistCachedNode(root.ExtendLegacy())
 	if !exist {
 		bc.RUnlockGCCachedNode()
 		return nil, ErrNotExistNode
 	}
 
-	stateDB, err := state.New(root, bc.stateCache, bc.snaps)
+	stateDB, err := state.New(root, bc.stateCache, bc.snaps, nil)
 	if err != nil {
 		bc.RUnlockGCCachedNode()
 		return nil, err
@@ -747,7 +759,7 @@ func (bc *BlockChain) ResetWithGenesisBlock(genesis *types.Block) error {
 func (bc *BlockChain) repair(head **types.Block) error {
 	for {
 		// Abort if we've rewound to a head block that does have associated state
-		if _, err := state.New((*head).Root(), bc.stateCache, bc.snaps); err == nil {
+		if _, err := state.New((*head).Root(), bc.stateCache, bc.snaps, nil); err == nil {
 			logger.Info("Rewound blockchain to past state", "number", (*head).Number(), "hash", (*head).Hash())
 			return nil
 		} else {
@@ -842,7 +854,7 @@ func (bc *BlockChain) HasBlock(hash common.Hash, number uint64) bool {
 
 // HasState checks if state trie is fully present in the database or not.
 func (bc *BlockChain) HasState(hash common.Hash) bool {
-	_, err := bc.stateCache.OpenTrie(hash)
+	_, err := bc.stateCache.OpenTrie(hash, nil)
 	return err == nil
 }
 
@@ -965,8 +977,9 @@ func (bc *BlockChain) GetLogsByHash(hash common.Hash) [][]*types.Log {
 
 // TrieNode retrieves a blob of data associated with a trie node
 // either from ephemeral in-memory cache, or from persistent storage.
+// Cannot retrieve nodes keyed with ExtHash
 func (bc *BlockChain) TrieNode(hash common.Hash) ([]byte, error) {
-	return bc.stateCache.TrieDB().Node(hash)
+	return bc.stateCache.TrieDB().Node(hash.ExtendLegacy())
 }
 
 // ContractCode retrieves a blob of data associated with a contract hash
@@ -1077,7 +1090,8 @@ func (bc *BlockChain) procFutureBlocks() {
 type WriteStatus byte
 
 // TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
-//                  Later we may be able to remove SideStatTy.
+//
+//	Later we may be able to remove SideStatTy.
 const (
 	NonStatTy WriteStatus = iota
 	CanonStatTy
@@ -1290,7 +1304,7 @@ func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) e
 		bc.lastCommittedBlock = block.NumberU64()
 	} else {
 		// Full but not archive node, do proper garbage collection
-		trieDB.Reference(root, common.Hash{}) // metadata reference to keep trie alive
+		trieDB.ReferenceRoot(root) // metadata reference to keep trie alive
 
 		// If we exceeded our memory allowance, flush matured singleton nodes to disk
 		var (
@@ -1806,7 +1820,8 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 						}
 					}()
 
-					throwaway, err := state.NewForPrefetching(parent.Root(), bc.stateCache, snaps)
+					throwaway, err := state.New(parent.Root(), bc.stateCache, snaps,
+						&statedb.TrieOpts{Prefetching: true})
 					if throwaway == nil || err != nil {
 						logger.Warn("failed to get StateDB for prefetcher", "err", err,
 							"parentBlockNum", parent.NumberU64(), "currBlockNum", bc.CurrentBlock().NumberU64())
@@ -2008,6 +2023,13 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		// update governance CurrentSet if it is at an epoch block
 		if bc.engine.CreateSnapshot(bc, block.NumberU64(), block.Hash(), nil) != nil {
 			return i, events, coalescedLogs, err
+		}
+
+		// update governance parameters
+		if istanbul, ok := bc.engine.(consensus.Istanbul); ok {
+			if err = istanbul.UpdateParam(block.NumberU64()); err != nil {
+				return i, events, coalescedLogs, err
+			}
 		}
 	}
 	// Append a single chain head event if we've progressed the chain
@@ -2546,7 +2568,7 @@ func (bc *BlockChain) SaveTrieNodeCacheToDisk() error {
 // and uses the input parameters for its environment. It returns the receipt
 // for the transaction, gas used and an error if the transaction failed,
 // indicating the block was invalid.
-func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *common.Address, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *uint64, vmConfig *vm.Config) (*types.Receipt, uint64, *vm.InternalTxTrace, error) {
+func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *common.Address, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *uint64, vmConfig *vm.Config) (*types.Receipt, *vm.InternalTxTrace, error) {
 	// TODO-Klaytn We reject transactions with unexpected gasPrice and do not put the transaction into TxPool.
 	//         And we run transactions regardless of gasPrice if we push transactions in the TxPool.
 	/*
@@ -2560,12 +2582,12 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 
 	// validation for each transaction before execution
 	if err := tx.Validate(statedb, blockNumber); err != nil {
-		return nil, 0, nil, err
+		return nil, nil, err
 	}
 
 	msg, err := tx.AsMessageWithAccountKeyPicker(types.MakeSigner(chainConfig, header.Number), statedb, blockNumber)
 	if err != nil {
-		return nil, 0, nil, err
+		return nil, nil, err
 	}
 	// Create a new context to be used in the EVM environment
 	context := NewEVMContext(msg, header, bc, author)
@@ -2573,10 +2595,9 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 	// about the transaction and calling mechanisms.
 	vmenv := vm.NewEVM(context, statedb, chainConfig, vmConfig)
 	// Apply the transaction to the current state (included in the env)
-	_, gas, kerr := ApplyMessage(vmenv, msg)
-	err = kerr.ErrTxInvalid
+	result, err := ApplyMessage(vmenv, msg)
 	if err != nil {
-		return nil, 0, nil, err
+		return nil, nil, err
 	}
 
 	var internalTrace *vm.InternalTxTrace
@@ -2588,16 +2609,16 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 	}
 	// Update the state with pending changes
 	statedb.Finalise(true, false)
-	*usedGas += gas
+	*usedGas += result.UsedGas
 
-	receipt := types.NewReceipt(kerr.Status, tx.Hash(), gas)
+	receipt := types.NewReceipt(result.VmExecutionStatus, tx.Hash(), result.UsedGas)
 	// if the transaction created a contract, store the creation address in the receipt.
 	msg.FillContractAddress(vmenv.Context.Origin, receipt)
 	// Set the receipt logs and create a bloom for filtering
 	receipt.Logs = statedb.GetLogs(tx.Hash())
 	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
 
-	return receipt, gas, internalTrace, err
+	return receipt, internalTrace, err
 }
 
 func GetInternalTxTrace(tracer vm.Tracer) (*vm.InternalTxTrace, error) {

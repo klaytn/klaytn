@@ -28,9 +28,9 @@ import (
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/consensus/istanbul"
 	govcontract "github.com/klaytn/klaytn/contracts/gov"
 	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/node/cn"
 	"github.com/klaytn/klaytn/params"
@@ -38,73 +38,104 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGovernance_ContractEngine(t *testing.T) {
-	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
+// TestGovernance_Engines tests MixedEngine, ContractEngine, and their
+// (1) CurrentParams() and (2) EffectiveParams() results.
+func TestGovernance_Engines(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlDebug)
 
-	fullNode, node, validator, chainId, workspace := newBlockchain(t)
+	config := params.CypressChainConfig.Copy()
+	config.IstanbulCompatibleBlock = new(big.Int).SetUint64(0)
+	config.LondonCompatibleBlock = new(big.Int).SetUint64(0)
+	config.EthTxTypeCompatibleBlock = new(big.Int).SetUint64(0)
+	config.MagmaCompatibleBlock = new(big.Int).SetUint64(0)
+	config.KoreCompatibleBlock = new(big.Int).SetUint64(0)
+
+	config.Istanbul.Epoch = 2
+	config.Istanbul.SubGroupSize = 1
+	config.Istanbul.ProposerPolicy = uint64(istanbul.RoundRobin)
+	config.Governance.Reward.MintingAmount = new(big.Int).Mul(big.NewInt(9000000000000000000), big.NewInt(params.KLAY))
+	config.Governance.Reward.Kip82Ratio = params.DefaultKip82Ratio
+
+	config.Governance.GovParamContract = common.Address{}
+	config.Governance.GovernanceMode = "none"
+
+	fullNode, node, validator, chainId, workspace := newBlockchain(t, config)
 	defer os.RemoveAll(workspace)
 	defer fullNode.Stop()
 
 	var (
 		chain        = node.BlockChain().(*blockchain.BlockChain)
-		config       = chain.Config()
 		owner        = validator
 		contractAddr = crypto.CreateAddress(owner.Addr, owner.Nonce)
 
 		paramName  = "istanbul.committeesize"
-		paramValue = uint64(22)
+		oldVal     = config.Istanbul.SubGroupSize
+		newVal     = uint64(22)
 		paramBytes = []byte{22}
 
-		deployBlock   uint64 // Before deploy: 0, After deploy: the deployed block
-		setParamBlock uint64 // Before setParam: 0, After setParam: the setParam'd block
+		govBlock  uint64 // Before vote: 0, After vote: the governance block
+		stopBlock uint64 // Before govBlock is set: 0, After: the block to stop receiving new blocks
 	)
 
 	// Here we are running (tx sender) and (param reader) in parallel.
-	// This is to check that param reader works under various situations such as
-	// (a) contract is not yet deployed (b) parameter is not yet set (c) parameter is set.
+	// This is to check that param reader (mixed engine) works in such situations:
+	// (a) contract engine disabled
+	// (b) contract engine enabled (via vote)
 
 	// Run tx sender thread
 	go func() {
-		num, _, _ := deployGovParamTx_constructor(t, node, owner, chainId)
-		deployBlock = num
+		deployGovParamTx_constructor(t, node, owner, chainId)
 
-		num, _ = deployGovParamTx_setParamIn(t, node, owner, chainId, contractAddr, paramName, paramBytes)
-		setParamBlock = num
+		// Give some time for txpool to recognize the contract, because otherwise
+		// the txpool may reject the setParam tx with 'not a program account'
+		time.Sleep(2 * time.Second)
+
+		deployGovParamTx_setParamIn(t, node, owner, chainId, contractAddr, paramName, paramBytes)
+
+		node.Governance().AddVote("governance.govparamcontract", contractAddr)
 	}()
 
 	// Run param reader thread
-	config.Governance.GovParamContract = contractAddr
-	config.KoreCompatibleBlock = big.NewInt(0)
-	engine := governance.NewContractEngine(config)
-	engine.SetBlockchain(chain)
+	mixedEngine := node.Governance()
+	contractEngine := node.Governance().ContractGov()
 
-	// Validate current params from engine.Params(), alongside block processing.
-	// At block #N, Params() returns the parameters to be used when building
+	// Validate current params from mixedEngine.CurrentParams() & contractEngine.CurrentParams(),
+	// alongside block processing.
+	// At block #N, CurrentParams() returns the parameters to be used when building
 	// block #N+1 (i.e. pending block).
 	chainEventCh := make(chan blockchain.ChainEvent)
 	subscription := chain.SubscribeChainEvent(chainEventCh)
 	defer subscription.Unsubscribe()
 
+	// 1. test CurrentParams() while subscribing new blocks
 	for {
 		ev := <-chainEventCh
 		time.Sleep(100 * time.Millisecond) // wait for tx sender thread to set deployBlock, etc.
 
 		num := ev.Block.Number().Uint64()
-		err := engine.UpdateParams()
-		assert.Nil(t, err)
+		mixedEngine.UpdateParams(num)
 
-		value, _ := engine.Params().Get(params.CommitteeSize)
-		t.Logf("Params() at block=%2d: %v", num, value)
+		mixedVal, _ := mixedEngine.CurrentParams().Get(params.CommitteeSize)
+		contractVal, _ := contractEngine.CurrentParams().Get(params.CommitteeSize)
 
-		if deployBlock == 0 { // not yet deployed
-			assert.Equal(t, nil, value)
-		} else if setParamBlock == 0 { // not yet activated
-			assert.Equal(t, nil, value)
-		} else if num > setParamBlock { // after activation (setParamBlock+1)
-			assert.Equal(t, paramValue, value)
+		if len(ev.Block.Header().Governance) > 0 {
+			govBlock = num
+			// stopBlock is the epoch block, so we stop when receiving it
+			// otherwise, EffectiveParams(stopBlock) may fail
+			stopBlock = govBlock + 5
+			stopBlock = stopBlock - (stopBlock % config.Istanbul.Epoch)
+			t.Logf("Governance at block=%2d, stopBlock=%2d", num, stopBlock)
 		}
 
-		if setParamBlock != 0 && num >= setParamBlock+2 {
+		if govBlock == 0 || num <= govBlock { // ContractEngine disabled
+			assert.Equal(t, oldVal, mixedVal)
+			assert.Equal(t, nil, contractVal)
+		} else { // ContractEngine enabled
+			assert.Equal(t, newVal, mixedVal)
+			assert.Equal(t, newVal, contractVal)
+		}
+
+		if stopBlock != 0 && num >= stopBlock {
 			break
 		}
 
@@ -113,20 +144,22 @@ func TestGovernance_ContractEngine(t *testing.T) {
 		}
 	}
 
-	// Validate historic params from engine.ParamsAt(n)
-	for num := uint64(0); num <= setParamBlock+2; num++ {
-		pset, err := engine.ParamsAt(num)
+	// 2. test EffectiveParams():  Validate historic params from both Engines
+	for num := uint64(0); num < stopBlock; num++ {
+		mixedpset, err := mixedEngine.EffectiveParams(num)
 		assert.Nil(t, err)
-		assert.NotNil(t, pset)
+		mixedVal, _ := mixedpset.Get(params.CommitteeSize)
 
-		value, _ := pset.Get(params.CommitteeSize)
-		t.Logf("ParamsAt(block=%2d): %v", num, value)
-		if num < deployBlock { // not yet deployed
-			assert.Equal(t, nil, value)
-		} else if num <= setParamBlock { // not yet activated
-			assert.Equal(t, nil, value)
-		} else { // after activation
-			assert.Equal(t, paramValue, value)
+		contractpset, err := contractEngine.EffectiveParams(num)
+		assert.Nil(t, err)
+
+		if num <= govBlock+1 { // ContractEngine disabled
+			assert.Equal(t, oldVal, mixedVal)
+			assert.Equal(t, params.NewGovParamSet(), contractpset)
+		} else { // ContractEngine enabled
+			assert.Equal(t, newVal, mixedVal)
+			contractVal, _ := contractpset.Get(params.CommitteeSize)
+			assert.Equal(t, newVal, contractVal)
 		}
 	}
 }
@@ -159,7 +192,6 @@ func deployGovParamTx_setParamIn(t *testing.T, node *cn.CN, owner *TestAccountTy
 	contractAddr common.Address, name string, value []byte,
 ) (uint64, *types.Transaction) {
 	var (
-		// Add parameter: setParamIn(string name, bytes value)
 		contractAbi, _ = abi.JSON(strings.NewReader(govcontract.GovParamABI))
 		callArgs, _    = contractAbi.Pack("setParamIn", name, true, value, big.NewInt(1))
 		data           = common.ToHex(callArgs)
@@ -170,14 +202,14 @@ func deployGovParamTx_setParamIn(t *testing.T, node *cn.CN, owner *TestAccountTy
 	chain := node.BlockChain().(*blockchain.BlockChain)
 	receipt := waitReceipt(chain, tx.Hash())
 	require.NotNil(t, receipt)
-	require.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
+	require.Equal(t, types.ReceiptStatusSuccessful, receipt.Status, "setParamIn failed")
 
 	_, _, num, _ := chain.GetTxAndLookupInfo(tx.Hash())
 	t.Logf("GovParam.setParamIn executed at block=%2d", num)
 	return num, tx
 }
 
-func deployGovParamTx_batchAddParam(t *testing.T, node *cn.CN, owner *TestAccountType, chainId *big.Int,
+func deployGovParamTx_batchSetParamIn(t *testing.T, node *cn.CN, owner *TestAccountType, chainId *big.Int,
 	contractAddr common.Address, bytesMap map[string][]byte,
 ) []*types.Transaction {
 	var (
@@ -189,7 +221,6 @@ func deployGovParamTx_batchAddParam(t *testing.T, node *cn.CN, owner *TestAccoun
 
 	// Send all setParamIn() calls at once
 	for name, value := range bytesMap {
-		// Add parameter: setParamIn(string name, bytes value)
 		callArgs, _ := contractAbi.Pack("setParamIn", name, true, value, big.NewInt(1))
 		data := common.ToHex(callArgs)
 		tx := deployContractExecutionTx(t, node.TxPool(), chainId, owner, contractAddr, data)
@@ -200,7 +231,7 @@ func deployGovParamTx_batchAddParam(t *testing.T, node *cn.CN, owner *TestAccoun
 	for _, tx := range txs {
 		receipt := waitReceipt(chain, tx.Hash())
 		require.NotNil(t, receipt)
-		require.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
+		require.Equal(t, types.ReceiptStatusSuccessful, receipt.Status, "batchSetParamIn failed")
 	}
 	num := chain.CurrentHeader().Number.Uint64()
 	t.Logf("GovParam.setParamIn executed %d times between blocks=%2d,%2d", len(txs), beginBlock, num)

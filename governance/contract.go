@@ -20,39 +20,42 @@ import (
 	"errors"
 	"math/big"
 
+	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 	"github.com/klaytn/klaytn/common"
+	govcontract "github.com/klaytn/klaytn/contracts/gov"
 	"github.com/klaytn/klaytn/params"
 )
 
-var errContractEngineNotReady = errors.New("ContractEngine is not ready")
+var (
+	errContractEngineNotReady = errors.New("ContractEngine is not ready")
+	errParamsAtFail           = errors.New("headerGov EffectiveParams() failed")
+	errGovParamNotExist       = errors.New("GovParam does not exist")
+	errInvalidGovParam        = errors.New("GovParam conversion failed")
+)
 
 type ContractEngine struct {
-	chainConfig   *params.ChainConfig
 	currentParams *params.GovParamSet
 
-	chain blockChain // To access the contract state DB
+	// for headerGov.EffectiveParams() and BlockChain()
+	headerGov *Governance
 }
 
-func NewContractEngine(config *params.ChainConfig) *ContractEngine {
+func NewContractEngine(headerGov *Governance) *ContractEngine {
 	e := &ContractEngine{
-		chainConfig:   config,
 		currentParams: params.NewGovParamSet(),
+		headerGov:     headerGov,
 	}
 
 	return e
 }
 
-func (e *ContractEngine) SetBlockchain(chain blockChain) {
-	e.chain = chain
-}
-
-// Params effective at upcoming block (head+1)
-func (e *ContractEngine) Params() *params.GovParamSet {
+// CurrentParams effective at upcoming block (head+1)
+func (e *ContractEngine) CurrentParams() *params.GovParamSet {
 	return e.currentParams
 }
 
-// Params effective at requested block (num)
-func (e *ContractEngine) ParamsAt(num uint64) (*params.GovParamSet, error) {
+// Parameters effective at requested block (num)
+func (e *ContractEngine) EffectiveParams(num uint64) (*params.GovParamSet, error) {
 	pset, err := e.contractGetAllParamsAt(num)
 	if err != nil {
 		return nil, err
@@ -61,15 +64,9 @@ func (e *ContractEngine) ParamsAt(num uint64) (*params.GovParamSet, error) {
 }
 
 // if UpdateParam fails, leave currentParams as-is
-func (e *ContractEngine) UpdateParams() error {
-	if e.chain == nil {
-		logger.Info("ContractEngine disabled: chain = nil")
-		return nil
-	}
-
+func (e *ContractEngine) UpdateParams(num uint64) error {
 	// request the parameters required for generating the next block
-	head := e.chain.CurrentHeader().Number.Uint64()
-	pset, err := e.contractGetAllParamsAt(head + 1)
+	pset, err := e.contractGetAllParamsAt(num + 1)
 	if err != nil {
 		return err
 	}
@@ -80,13 +77,15 @@ func (e *ContractEngine) UpdateParams() error {
 
 // contractGetAllParamsAt sets evmCtx.BlockNumber as num
 func (e *ContractEngine) contractGetAllParamsAt(num uint64) (*params.GovParamSet, error) {
-	if e.chain == nil {
-		logger.Info("ContractEngine disabled: chain = nil")
-		return params.NewGovParamSet(), nil
+	chain := e.headerGov.BlockChain()
+	if chain == nil {
+		logger.Crit("headerGov.BlockChain() is nil")
+		return nil, errContractEngineNotReady
 	}
 
-	if !e.chainConfig.IsKoreForkEnabled(e.chain.CurrentHeader().Number) {
-		logger.Info("ContractEngine disabled: hardfork block not passed")
+	config := chain.Config()
+	if !config.IsKoreForkEnabled(new(big.Int).SetUint64(num)) {
+		logger.Trace("ContractEngine disabled: hardfork block not passed")
 		return params.NewGovParamSet(), nil
 	}
 
@@ -94,27 +93,52 @@ func (e *ContractEngine) contractGetAllParamsAt(num uint64) (*params.GovParamSet
 	if err != nil {
 		return nil, err
 	}
-
 	if common.EmptyAddress(addr) {
-		logger.Info("ContractEngine disabled: GovParamContract address not set")
+		logger.Trace("ContractEngine disabled: GovParamContract address not set")
 		return params.NewGovParamSet(), nil
 	}
 
-	caller := &contractCaller{
-		chain:        e.chain,
-		contractAddr: addr,
+	caller := backends.NewBlockchainContractCaller(chain)
+	contract, _ := govcontract.NewGovParamCaller(addr, caller)
+
+	names, values, err := contract.GetAllParamsAt(nil, new(big.Int).SetUint64(num))
+	if err != nil {
+		logger.Warn("ContractEngine disabled: getAllParams call failed", "err", err)
+		return params.NewGovParamSet(), nil
 	}
-	return caller.getAllParamsAt(new(big.Int).SetUint64(num))
+
+	if len(names) != len(values) {
+		logger.Warn("ContractEngine disabled: getAllParams result invalid", "len(names)", len(names), "len(values)", len(values))
+		return params.NewGovParamSet(), nil
+	}
+
+	bytesMap := make(map[string][]byte)
+	for i := 0; i < len(names); i++ {
+		bytesMap[names[i]] = values[i]
+	}
+	return params.NewGovParamSetBytesMapTolerant(bytesMap), nil
 }
 
-// Return the GovParamContract address effective at given block number
+// contractAddrAt returns the GovParamContract address effective at given block number
 func (e *ContractEngine) contractAddrAt(num uint64) (common.Address, error) {
-	// TODO: Load from HeaderEngine
-
-	// If database don't have the item, fallback to ChainConfig
-	if e.chainConfig.Governance != nil {
-		return e.chainConfig.Governance.GovParamContract, nil
+	headerParams, err := e.headerGov.EffectiveParams(num)
+	if err != nil {
+		logger.Error("headerGov.EffectiveParams failed", "err", err, "num", num)
+		return common.Address{}, errParamsAtFail
 	}
 
-	return common.Address{}, nil
+	// this happens when GovParamContract has not been voted
+	param, ok := headerParams.Get(params.GovParamContract)
+	if !ok {
+		logger.Debug("Could not find GovParam contract address")
+		return common.Address{}, nil
+	}
+
+	addr, ok := param.(common.Address)
+	if !ok {
+		logger.Error("Could not convert GovParam contract address into common.Address", "param", param)
+		return common.Address{}, errInvalidGovParam
+	}
+
+	return addr, nil
 }

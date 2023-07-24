@@ -130,6 +130,18 @@ var (
 		Usage:   "Set the type of genesis.json to generate (cypress-test, cypress, baobab-test, baobab, clique, servicechain, servicechain-test, istanbul)",
 		Aliases: []string{"genesis.type"},
 	}
+	mnemonic = cli.StringFlag{
+		Name:  "mnemonic",
+		Usage: "Use given mnemonic to derive node keys",
+		Value: "",
+	}
+
+	mnemonicPath = cli.StringFlag{
+		Name:  "mnemonic-path",
+		Usage: "Use given path/coin to derive node keys (format: m/44'/60'/0'/0/). Effective only if --mnemonic is given",
+		Value: "eth",
+	}
+
 	chainIDFlag = cli.Uint64Flag{
 		Name:    "chainID",
 		Usage:   "ChainID",
@@ -191,6 +203,11 @@ var (
 		Usage:   "CN's Subgroup size",
 		Aliases: []string{},
 		Value:   21,
+	}
+
+	addressBookMockFlag = cli.BoolFlag{
+		Name:  "address-book-mock",
+		Usage: "Allocate an AddressBookMock at the genesis block",
 	}
 
 	dockerImageIdFlag = cli.StringFlag{
@@ -302,6 +319,12 @@ var (
 		Value:   params.DefaultGoverningNode,
 	}
 
+	govParamContractFlag = cli.StringFlag{
+		Name:  "gov-param-contract",
+		Usage: "the GovParam contract address [default: 0x0000000000000000000000000000000000000000]",
+		Value: params.DefaultGovParamContract,
+	}
+
 	rewardMintAmountFlag = cli.StringFlag{
 		Name:    "reward-mint-amount",
 		Usage:   "governance minting amount",
@@ -314,6 +337,13 @@ var (
 		Aliases: []string{"genesis.reward.ratio"},
 		Value:   params.DefaultRatio,
 	}
+
+	rewardKip82RatioFlag = cli.StringFlag{
+		Name:  "reward-kip82-ratio",
+		Usage: "kip82 ratio [default: 20/80]",
+		Value: params.DefaultKip82Ratio,
+	}
+
 	rewardGiniCoeffFlag = cli.BoolFlag{
 		Name:    "reward-gini-coeff",
 		Usage:   "governance gini-coefficient",
@@ -446,5 +476,21 @@ var (
 		Usage:   "koreCompatible blockNumber",
 		Aliases: []string{"genesis.hardfork.kore-compatible-blocknumber"},
 		Value:   0,
+	}
+
+	kip103CompatibleBlockNumberFlag = cli.Int64Flag{
+		Name:  "kip103-compatible-blocknumber",
+		Usage: "kip103Compatible blockNumber",
+	}
+
+	// TODO-klaytn: use mantleCompatibleBlockNumberFlag
+	mantleCompatibleBlockNumberFlag = cli.Int64Flag{
+		Name:  "mantle-compatible-blocknumber",
+		Usage: "mantleCompatible blockNumber",
+	}
+
+	kip103ContractAddressFlag = cli.StringFlag{
+		Name:  "kip103-contract-address",
+		Usage: "kip103 contract address",
 	}
 )

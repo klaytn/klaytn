@@ -68,8 +68,9 @@ type LesServer interface {
 	SetBloomBitsIndexer(bbIndexer *blockchain.ChainIndexer)
 }
 
-//go:generate mockgen -destination=node/cn/mocks/miner_mock.go -package=mocks github.com/klaytn/klaytn/node/cn Miner
 // Miner is an interface of work.Miner used by ServiceChain.
+//
+//go:generate mockgen -destination=node/cn/mocks/miner_mock.go -package=mocks github.com/klaytn/klaytn/node/cn Miner
 type Miner interface {
 	Start()
 	Stop()
@@ -81,8 +82,9 @@ type Miner interface {
 	PendingBlock() *types.Block
 }
 
-//go:generate mockgen -destination=node/cn/protocolmanager_mock_test.go github.com/klaytn/klaytn/node/cn BackendProtocolManager
 // BackendProtocolManager is an interface of cn.ProtocolManager used from cn.CN and cn.ServiceChain.
+//
+//go:generate mockgen -destination=node/cn/protocolmanager_mock_test.go github.com/klaytn/klaytn/node/cn BackendProtocolManager
 type BackendProtocolManager interface {
 	Downloader() ProtocolManagerDownloader
 	SetWsEndPoint(wsep string)
@@ -90,8 +92,6 @@ type BackendProtocolManager interface {
 	ProtocolVersion() int
 	ReBroadcastTxs(transactions types.Transactions)
 	SetAcceptTxs()
-	SetRewardbase(addr common.Address)
-	SetRewardbaseWallet(wallet accounts.Wallet)
 	NodeType() common.ConnType
 	Start(maxPeers int)
 	Stop()
@@ -215,20 +215,12 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	setEngineType(chainConfig)
 
 	// load governance state
+	chainConfig.SetDefaults()
+	// latest values will be applied to chainConfig after NewMixedEngine call
 	governance := governance.NewMixedEngine(chainConfig, chainDB)
-
-	// Set latest unitPrice/gasPrice
-	chainConfig.UnitPrice = governance.Params().UnitPrice()
-	config.GasPrice = new(big.Int).SetUint64(chainConfig.UnitPrice)
-
-	chainConfig.Governance.KIP71 = &params.KIP71Config{
-		LowerBoundBaseFee:         governance.Params().LowerBoundBaseFee(),
-		UpperBoundBaseFee:         governance.Params().UpperBoundBaseFee(),
-		GasTarget:                 governance.Params().GasTarget(),
-		MaxBlockGasUsedForBaseFee: governance.Params().MaxBlockGasUsedForBaseFee(),
-		BaseFeeDenominator:        governance.Params().BaseFeeDenominator(),
-	}
 	logger.Info("Initialised chain configuration", "config", chainConfig)
+
+	config.GasPrice = new(big.Int).SetUint64(chainConfig.UnitPrice)
 
 	cn := &CN{
 		config:            config,
@@ -275,12 +267,21 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	cn.blockchain = bc
 	governance.SetBlockchain(cn.blockchain)
+	if err := governance.UpdateParams(cn.blockchain.CurrentBlock().NumberU64()); err != nil {
+		return nil, err
+	}
+	blockchain.InitDeriveShaWithGov(cn.chainConfig, governance)
+
 	// Synchronize proposerpolicy & useGiniCoeff
+	pset, err := governance.EffectiveParams(bc.CurrentBlock().NumberU64() + 1)
+	if err != nil {
+		return nil, err
+	}
 	if cn.blockchain.Config().Istanbul != nil {
-		cn.blockchain.Config().Istanbul.ProposerPolicy = governance.Params().Policy()
+		cn.blockchain.Config().Istanbul.ProposerPolicy = pset.Policy()
 	}
 	if cn.blockchain.Config().Governance.Reward != nil {
-		cn.blockchain.Config().Governance.Reward.UseGiniCoeff = governance.Params().UseGiniCoeff()
+		cn.blockchain.Config().Governance.Reward.UseGiniCoeff = pset.UseGiniCoeff()
 	}
 
 	if config.SenderTxHashIndexing {
@@ -317,13 +318,23 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	cn.protocolManager.SetWsEndPoint(config.WsEndpoint)
 
-	if err := cn.setRewardWallet(); err != nil {
-		logger.Error("Error happened while setting the reward wallet", "err", err)
+	if ctx.NodeType() == common.CONSENSUSNODE {
+		if _, err := cn.Rewardbase(); err != nil {
+			logger.Error("Cannot determine the rewardbase address", "err", err)
+		}
 	}
 
-	if governance.Params().Policy() == uint64(istanbul.WeightedRandom) {
+	if pset.Policy() == uint64(istanbul.WeightedRandom) {
 		// NewStakingManager is called with proper non-nil parameters
 		reward.NewStakingManager(cn.blockchain, governance, cn.chainDB)
+	}
+
+	// Governance states which are not yet applied to the db remains at in-memory storage
+	// It disappears during the node restart, so restoration is needed before the sync starts
+	// By calling CreateSnapshot, it restores the gov state snapshots and apply the votes in it
+	// Particularly, the gov.changeSet is also restored here.
+	if err := cn.Engine().CreateSnapshot(cn.blockchain, cn.blockchain.CurrentBlock().NumberU64(), cn.blockchain.CurrentBlock().Hash(), nil); err != nil {
+		logger.Error("CreateSnapshot failed", "err", err)
 	}
 
 	// set worker
@@ -412,20 +423,6 @@ func (s *CN) setAcceptTxs() error {
 	return nil
 }
 
-// setRewardWallet sets reward base and reward base wallet if the node is CN.
-func (s *CN) setRewardWallet() error {
-	if s.protocolManager.NodeType() == common.CONSENSUSNODE {
-		wallet, err := s.RewardbaseWallet()
-		if err != nil {
-			return err
-		} else {
-			s.protocolManager.SetRewardbaseWallet(wallet)
-		}
-		s.protocolManager.SetRewardbase(s.rewardbase)
-	}
-	return nil
-}
-
 // add component which may be used in another service component
 func (s *CN) addComponent(component interface{}) {
 	s.components = append(s.components, component)
@@ -479,20 +476,35 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 // APIs returns the collection of RPC services the ethereum package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
 func (s *CN) APIs() []rpc.API {
-	apis, ethAPI := api.GetAPIs(s.APIBackend)
+	apis, ethAPI := api.GetAPIs(s.APIBackend, s.config.DisableUnsafeDebug)
 
 	// Append any APIs exposed explicitly by the consensus engine
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)
 
 	publicFilterAPI := filters.NewPublicFilterAPI(s.APIBackend, false)
 	governanceKlayAPI := governance.NewGovernanceKlayAPI(s.governance, s.blockchain)
-	publicGovernanceAPI := governance.NewGovernanceAPI(s.governance)
+	governanceAPI := governance.NewGovernanceAPI(s.governance)
 	publicDownloaderAPI := downloader.NewPublicDownloaderAPI(s.protocolManager.Downloader(), s.eventMux)
-	privateTracerAPI := tracers.NewAPI(s.APIBackend)
+	privateDownloaderAPI := downloader.NewPrivateDownloaderAPI(s.protocolManager.Downloader())
 
 	ethAPI.SetPublicFilterAPI(publicFilterAPI)
 	ethAPI.SetGovernanceKlayAPI(governanceKlayAPI)
-	ethAPI.SetPublicGovernanceAPI(publicGovernanceAPI)
+	ethAPI.SetGovernanceAPI(governanceAPI)
+
+	var tracerAPI *tracers.API
+	if s.config.DisableUnsafeDebug {
+		tracerAPI = tracers.NewAPIUnsafeDisabled(s.APIBackend)
+	} else {
+		tracerAPI = tracers.NewAPI(s.APIBackend)
+		apis = append(apis, []rpc.API{
+			{
+				Namespace: "debug",
+				Version:   "1.0",
+				Service:   NewPrivateDebugAPI(s.chainConfig, s),
+				Public:    false,
+			},
+		}...)
+	}
 
 	// Append all the local APIs and return
 	return append(apis, []rpc.API{
@@ -519,20 +531,20 @@ func (s *CN) APIs() []rpc.API {
 		}, {
 			Namespace: "admin",
 			Version:   "1.0",
+			Service:   privateDownloaderAPI,
+		}, {
+			Namespace: "admin",
+			Version:   "1.0",
 			Service:   NewPrivateAdminAPI(s),
 		}, {
 			Namespace: "debug",
 			Version:   "1.0",
 			Service:   NewPublicDebugAPI(s),
-			Public:    true,
+			Public:    false,
 		}, {
 			Namespace: "debug",
 			Version:   "1.0",
-			Service:   NewPrivateDebugAPI(s.chainConfig, s),
-		}, {
-			Namespace: "debug",
-			Version:   "1.0",
-			Service:   privateTracerAPI,
+			Service:   tracerAPI,
 			Public:    false,
 		}, {
 			Namespace: "net",
@@ -542,7 +554,7 @@ func (s *CN) APIs() []rpc.API {
 		}, {
 			Namespace: "governance",
 			Version:   "1.0",
-			Service:   governance.NewGovernanceAPI(s.governance),
+			Service:   governanceAPI,
 			Public:    true,
 		}, {
 			Namespace: "klay",
@@ -586,33 +598,6 @@ func (s *CN) Rewardbase() (eb common.Address, err error) {
 	return common.Address{}, fmt.Errorf("rewardbase must be explicitly specified")
 }
 
-func (s *CN) RewardbaseWallet() (accounts.Wallet, error) {
-	rewardBase, err := s.Rewardbase()
-	if err != nil {
-		return nil, err
-	}
-
-	account := accounts.Account{Address: rewardBase}
-	wallet, err := s.AccountManager().Find(account)
-	if err != nil {
-		logger.Error("find err", "err", err)
-		return nil, err
-	}
-	return wallet, nil
-}
-
-func (s *CN) SetRewardbase(rewardbase common.Address) {
-	s.lock.Lock()
-	s.rewardbase = rewardbase
-	s.lock.Unlock()
-	wallet, err := s.RewardbaseWallet()
-	if err != nil {
-		logger.Error("find err", "err", err)
-	}
-	s.protocolManager.SetRewardbase(rewardbase)
-	s.protocolManager.SetRewardbaseWallet(wallet)
-}
-
 func (s *CN) StartMining(local bool) error {
 	if local {
 		// If local (CPU) mining is started, we can disable the transaction rejection
@@ -639,6 +624,7 @@ func (s *CN) IsListening() bool                       { return true } // Always 
 func (s *CN) ProtocolVersion() int                    { return s.protocolManager.ProtocolVersion() }
 func (s *CN) NetVersion() uint64                      { return s.networkId }
 func (s *CN) Progress() klaytn.SyncProgress           { return s.protocolManager.Downloader().Progress() }
+func (s *CN) Governance() governance.Engine           { return s.governance }
 
 func (s *CN) ReBroadcastTxs(transactions types.Transactions) {
 	s.protocolManager.ReBroadcastTxs(transactions)

@@ -26,31 +26,34 @@ import (
 	"github.com/klaytn/klaytn/storage/database"
 )
 
+//go:generate mockgen -package governance -destination=interface_mock_test.go github.com/klaytn/klaytn/governance Engine
 type Engine interface {
 	HeaderEngine
 	ReaderEngine
+	HeaderGov() HeaderEngine
+	ContractGov() ReaderEngine
 }
 
 type ReaderEngine interface {
-	// Returns the params at the current block. The returned params shall be
+	// CurrentParams returns the params at the current block. The returned params shall be
 	// used to build the upcoming (head+1) block. Block processing codes
 	// should use this method.
-	Params() *params.GovParamSet
+	CurrentParams() *params.GovParamSet
 
-	// Returns the params at given block number. The returned params
+	// EffectiveParams returns the params at given block number. The returned params
 	// were used to build the block at given number.
 	// The number must be equal or less than current block height (head).
-	ParamsAt(num uint64) (*params.GovParamSet, error)
+	EffectiveParams(num uint64) (*params.GovParamSet, error)
 
-	// Update the current params (the ones returned by Params()).
+	// UpdateParams updates the current params (the ones returned by CurrentParams()).
 	// by reading the latest blockchain states.
 	// This function must be called after every block is mined to
-	// guarantee that Params() works correctly.
-	UpdateParams() error
+	// guarantee that CurrentParams() works correctly.
+	UpdateParams(num uint64) error
 }
 
 type HeaderEngine interface {
-	// Cast votes from API
+	// AddVote casts votes from API
 	AddVote(key string, val interface{}) bool
 	ValidateVote(vote *GovernanceVote) (*GovernanceVote, bool)
 
@@ -77,8 +80,6 @@ type HeaderEngine interface {
 		istanbul.ValidatorSet, []GovernanceVote, []GovernanceTallyItem)
 
 	// Get internal fields
-	ChainId() uint64
-	InitialChainConfig() *params.ChainConfig
 	GetVoteMapCopy() map[string]VoteStatus
 	GetGovernanceTalliesCopy() []GovernanceTallyItem
 	CurrentSetCopy() map[string]interface{}
@@ -106,9 +107,13 @@ type HeaderEngine interface {
 type blockChain interface {
 	blockchain.ChainContext
 
+	// Subset of consensus.ChainReader
+	Config() *params.ChainConfig
 	CurrentHeader() *types.Header
 	GetHeaderByNumber(val uint64) *types.Header
-	GetBlockByNumber(num uint64) *types.Block
+	GetBlock(hash common.Hash, number uint64) *types.Block
+	State() (*state.StateDB, error)
 	StateAt(root common.Hash) (*state.StateDB, error)
-	Config() *params.ChainConfig
+
+	CurrentBlock() *types.Block
 }

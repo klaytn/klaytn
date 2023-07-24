@@ -32,7 +32,7 @@ import (
 )
 
 func newEmptySecureTrie() *SecureTrie {
-	trie, _ := NewSecureTrie(common.Hash{}, NewDatabase(database.NewMemoryDBManager()))
+	trie, _ := NewSecureTrie(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil)
 	return trie
 }
 
@@ -41,7 +41,7 @@ func makeTestSecureTrie() (*Database, *SecureTrie, map[string][]byte) {
 	// Create an empty trie
 	triedb := NewDatabase(database.NewMemoryDBManager())
 
-	trie, _ := NewSecureTrie(common.Hash{}, triedb)
+	trie, _ := NewSecureTrie(common.Hash{}, triedb, nil)
 
 	// Fill it with some arbitrary data
 	content := make(map[string][]byte)

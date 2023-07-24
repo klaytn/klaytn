@@ -54,6 +54,9 @@ const (
 	// by default before being forcefully aborted.
 	defaultTraceTimeout = 5 * time.Second
 
+	// defaultLoggerTimeout is the amount of time a logger can aggregate trace logs
+	defaultLoggerTimeout = 1 * time.Second
+
 	// defaultTraceReexec is the number of blocks the tracer is willing to go back
 	// and reexecute to produce missing historical state necessary to run a specific
 	// trace.
@@ -92,32 +95,40 @@ type Backend interface {
 
 // API is the collection of tracing APIs exposed over the private debugging endpoint.
 type API struct {
-	backend Backend
+	backend     Backend
+	unsafeTrace bool
 }
 
-// NewAPI creates a new API definition for the tracing methods of the CN service.
+// NewAPIUnsafeDisabled creates a new API definition for the tracing methods of the CN service,
+// only allowing predefined tracers.
+func NewAPIUnsafeDisabled(backend Backend) *API {
+	return &API{backend: backend, unsafeTrace: false}
+}
+
+// NewAPI creates a new API definition for the tracing methods of the CN service,
+// allowing both predefined tracers and Javascript snippet based tracing.
 func NewAPI(backend Backend) *API {
-	return &API{backend: backend}
+	return &API{backend: backend, unsafeTrace: true}
 }
 
 type chainContext struct {
-	api *API
-	ctx context.Context
+	backend Backend
+	ctx     context.Context
 }
 
 func (context *chainContext) Engine() consensus.Engine {
-	return context.api.backend.Engine()
+	return context.backend.Engine()
 }
 
 func (context *chainContext) GetHeader(hash common.Hash, number uint64) *types.Header {
-	header, err := context.api.backend.HeaderByNumber(context.ctx, rpc.BlockNumber(number))
+	header, err := context.backend.HeaderByNumber(context.ctx, rpc.BlockNumber(number))
 	if err != nil {
 		return nil
 	}
 	if header.Hash() == hash {
 		return header
 	}
-	header, err = context.api.backend.HeaderByHash(context.ctx, hash)
+	header, err = context.backend.HeaderByHash(context.ctx, hash)
 	if err != nil {
 		return nil
 	}
@@ -126,8 +137,8 @@ func (context *chainContext) GetHeader(hash common.Hash, number uint64) *types.H
 
 // chainContext constructs the context reader which is used by the evm for reading
 // the necessary chain context.
-func (api *API) chainContext(ctx context.Context) blockchain.ChainContext {
-	return &chainContext{api: api, ctx: ctx}
+func newChainContext(ctx context.Context, backend Backend) blockchain.ChainContext {
+	return &chainContext{backend: backend, ctx: ctx}
 }
 
 // blockByNumber is the wrapper of the chain access function offered by the backend.
@@ -158,9 +169,10 @@ func (api *API) blockByNumberAndHash(ctx context.Context, number rpc.BlockNumber
 // TraceConfig holds extra parameters to trace functions.
 type TraceConfig struct {
 	*vm.LogConfig
-	Tracer  *string
-	Timeout *string
-	Reexec  *uint64
+	Tracer        *string
+	Timeout       *string
+	LoggerTimeout *string
+	Reexec        *uint64
 }
 
 // StdTraceConfig holds extra parameters to standard-json trace functions.
@@ -285,7 +297,7 @@ func (api *API) traceChain(start, end *types.Block, config *TraceConfig, notifie
 						break
 					}
 
-					vmctx := blockchain.NewEVMContext(msg, task.block.Header(), api.chainContext(localctx), nil)
+					vmctx := blockchain.NewEVMContext(msg, task.block.Header(), newChainContext(localctx, api.backend), nil)
 
 					res, err := api.traceTx(localctx, msg, vmctx, task.statedb, config)
 					if err != nil {
@@ -367,7 +379,7 @@ func (api *API) traceChain(start, end *types.Block, config *TraceConfig, notifie
 			}
 			if trieDb := statedb.Database().TrieDB(); trieDb != nil {
 				// Hold the reference for tracer, will be released at the final stage
-				trieDb.Reference(block.Root(), common.Hash{})
+				trieDb.ReferenceRoot(block.Root())
 
 				// Release the parent state because it's already held by the tracer
 				if !common.EmptyHash(parent) {
@@ -492,6 +504,9 @@ func (api *API) TraceBlock(ctx context.Context, blob hexutil.Bytes, config *Trac
 // TraceBlockFromFile returns the structured logs created during the execution of
 // EVM and returns them as a JSON object.
 func (api *API) TraceBlockFromFile(ctx context.Context, file string, config *TraceConfig) ([]*txTraceResult, error) {
+	if !api.unsafeTrace {
+		return nil, errors.New("TraceBlockFromFile is disabled")
+	}
 	blob, err := ioutil.ReadFile(file)
 	if err != nil {
 		return nil, fmt.Errorf("could not read file: %v", err)
@@ -519,6 +534,9 @@ func (api *API) TraceBadBlock(ctx context.Context, hash common.Hash, config *Tra
 // execution of EVM to the local file system and returns a list of files
 // to the caller.
 func (api *API) StandardTraceBlockToFile(ctx context.Context, hash common.Hash, config *StdTraceConfig) ([]string, error) {
+	if !api.unsafeTrace {
+		return nil, errors.New("StandardTraceBlockToFile is disabled")
+	}
 	block, err := api.blockByHash(ctx, hash)
 	if err != nil {
 		return nil, fmt.Errorf("block %#x not found", hash)
@@ -530,6 +548,9 @@ func (api *API) StandardTraceBlockToFile(ctx context.Context, hash common.Hash, 
 // execution of EVM against a block pulled from the pool of bad ones to the
 // local file system and returns a list of files to the caller.
 func (api *API) StandardTraceBadBlockToFile(ctx context.Context, hash common.Hash, config *StdTraceConfig) ([]string, error) {
+	if !api.unsafeTrace {
+		return nil, errors.New("StandardTraceBadBlockToFile is disabled")
+	}
 	blocks, err := api.backend.ChainDB().ReadAllBadBlocks()
 	if err != nil {
 		return nil, err
@@ -590,7 +611,7 @@ func (api *API) traceBlock(ctx context.Context, block *types.Block, config *Trac
 					continue
 				}
 
-				vmctx := blockchain.NewEVMContext(msg, block.Header(), api.chainContext(ctx), nil)
+				vmctx := blockchain.NewEVMContext(msg, block.Header(), newChainContext(ctx, api.backend), nil)
 				res, err := api.traceTx(ctx, msg, vmctx, task.statedb, config)
 				if err != nil {
 					results[task.index] = &txTraceResult{TxHash: txs[task.index].Hash(), Error: err.Error()}
@@ -614,10 +635,10 @@ func (api *API) traceBlock(ctx context.Context, block *types.Block, config *Trac
 			break
 		}
 
-		vmctx := blockchain.NewEVMContext(msg, block.Header(), api.chainContext(ctx), nil)
+		vmctx := blockchain.NewEVMContext(msg, block.Header(), newChainContext(ctx, api.backend), nil)
 		vmenv := vm.NewEVM(vmctx, statedb, api.backend.ChainConfig(), &vm.Config{UseOpcodeComputationCost: true})
-		if _, _, kerr := blockchain.ApplyMessage(vmenv, msg); kerr.ErrTxInvalid != nil {
-			failed = kerr.ErrTxInvalid
+		if _, err = blockchain.ApplyMessage(vmenv, msg); err != nil {
+			failed = err
 			break
 		}
 		// Finalize the state so any modifications are written to the trie
@@ -685,7 +706,7 @@ func (api *API) standardTraceBlockToFile(ctx context.Context, block *types.Block
 		}
 
 		var (
-			vmctx = blockchain.NewEVMContext(msg, block.Header(), api.chainContext(ctx), nil)
+			vmctx = blockchain.NewEVMContext(msg, block.Header(), newChainContext(ctx, api.backend), nil)
 
 			vmConf vm.Config
 			dump   *os.File
@@ -712,14 +733,14 @@ func (api *API) standardTraceBlockToFile(ctx context.Context, block *types.Block
 		}
 		// Execute the transaction and flush any traces to disk
 		vmenv := vm.NewEVM(vmctx, statedb, api.backend.ChainConfig(), &vmConf)
-		_, _, kerr := blockchain.ApplyMessage(vmenv, msg)
+		_, err = blockchain.ApplyMessage(vmenv, msg)
 
 		if dump != nil {
 			dump.Close()
 			logger.Info("Wrote standard trace", "file", dump.Name())
 		}
-		if kerr.ErrTxInvalid != nil {
-			return dumps, kerr.ErrTxInvalid
+		if err != nil {
+			return dumps, err
 		}
 		// Finalize the state so any modifications are written to the trie
 		statedb.Finalise(true, true)
@@ -793,8 +814,8 @@ func (api *API) traceTx(ctx context.Context, message blockchain.Message, vmctx v
 		if *config.Tracer == fastCallTracer {
 			tracer = vm.NewInternalTxTracer()
 		} else {
-			// Constuct the JavaScript tracer to execute with
-			if tracer, err = New(*config.Tracer); err != nil {
+			// Construct the JavaScript tracer to execute with
+			if tracer, err = New(*config.Tracer, api.unsafeTrace); err != nil {
 				return nil, err
 			}
 		}
@@ -824,19 +845,29 @@ func (api *API) traceTx(ctx context.Context, message blockchain.Message, vmctx v
 	// Run the transaction with tracing enabled.
 	vmenv := vm.NewEVM(vmctx, statedb, api.backend.ChainConfig(), &vm.Config{Debug: true, Tracer: tracer, UseOpcodeComputationCost: true})
 
-	ret, gas, kerr := blockchain.ApplyMessage(vmenv, message)
-	if kerr.ErrTxInvalid != nil {
-		return nil, fmt.Errorf("tracing failed: %v", kerr.ErrTxInvalid)
+	ret, err := blockchain.ApplyMessage(vmenv, message)
+	if err != nil {
+		return nil, fmt.Errorf("tracing failed: %v", err)
 	}
 	// Depending on the tracer type, format and return the output
 	switch tracer := tracer.(type) {
 	case *vm.StructLogger:
-		return &klaytnapi.ExecutionResult{
-			Gas:         gas,
-			Failed:      kerr.Status != types.ReceiptStatusSuccessful,
-			ReturnValue: fmt.Sprintf("%x", ret),
-			StructLogs:  klaytnapi.FormatLogs(tracer.StructLogs()),
-		}, nil
+		loggerTimeout := defaultLoggerTimeout
+		if config != nil && config.LoggerTimeout != nil {
+			if loggerTimeout, err = time.ParseDuration(*config.LoggerTimeout); err != nil {
+				return nil, err
+			}
+		}
+		if logs, err := klaytnapi.FormatLogs(loggerTimeout, tracer.StructLogs()); err == nil {
+			return &klaytnapi.ExecutionResult{
+				Gas:         ret.UsedGas,
+				Failed:      ret.Failed(),
+				ReturnValue: fmt.Sprintf("%x", ret.Return()),
+				StructLogs:  logs,
+			}, nil
+		} else {
+			return nil, err
+		}
 
 	case *Tracer:
 		return tracer.GetResult()

@@ -113,11 +113,10 @@ func (lb *LocalBackend) CallContract(ctx context.Context, call klaytn.CallMsg, b
 	if err != nil {
 		return nil, err
 	}
-	rval, _, _, err := lb.callContract(ctx, call, lb.subbridge.blockchain.CurrentBlock(), currentState)
-	return rval, err
+	return lb.callContract(ctx, call, lb.subbridge.blockchain.CurrentBlock(), currentState)
 }
 
-func (b *LocalBackend) callContract(ctx context.Context, call klaytn.CallMsg, block *types.Block, statedb *state.StateDB) ([]byte, uint64, bool, error) {
+func (b *LocalBackend) callContract(ctx context.Context, call klaytn.CallMsg, block *types.Block, statedb *state.StateDB) ([]byte, error) {
 	// Set default gas & gas price if none were set
 	gas, gasPrice := uint64(call.Gas), call.GasPrice
 	if gas == 0 {
@@ -129,7 +128,7 @@ func (b *LocalBackend) callContract(ctx context.Context, call klaytn.CallMsg, bl
 
 	intrinsicGas, err := types.IntrinsicGas(call.Data, nil, call.To == nil, b.config.Rules(block.Number()))
 	if err != nil {
-		return nil, 0, false, err
+		return nil, err
 	}
 
 	// Create new call message
@@ -155,18 +154,16 @@ func (b *LocalBackend) callContract(ctx context.Context, call klaytn.CallMsg, bl
 		evm.Cancel(vm.CancelByCtxDone)
 	}()
 
-	res, gas, kerr := blockchain.ApplyMessage(evm, msg)
-	err = kerr.ErrTxInvalid
+	result, err := blockchain.ApplyMessage(evm, msg)
 	if err := vmError(); err != nil {
-		return nil, 0, false, err
+		return nil, err
 	}
 
-	// Propagate error of Receipt as JSON RPC error
-	if err == nil {
-		err = blockchain.GetVMerrFromReceiptStatus(kerr.Status)
+	if err != nil {
+		return nil, err
 	}
 
-	return res, gas, kerr.Status != types.ReceiptStatusSuccessful, err
+	return result.Return(), result.Unwrap()
 }
 
 func (lb *LocalBackend) PendingCodeAt(ctx context.Context, contract common.Address) ([]byte, error) {
@@ -220,8 +217,7 @@ func (lb *LocalBackend) EstimateGas(ctx context.Context, call klaytn.CallMsg) (g
 		if err != nil {
 			return false
 		}
-		_, _, failed, err := lb.callContract(ctx, call, lb.subbridge.blockchain.CurrentBlock(), currentState)
-		if err != nil || failed {
+		if _, err := lb.callContract(ctx, call, lb.subbridge.blockchain.CurrentBlock(), currentState); err != nil {
 			return false
 		}
 		return true

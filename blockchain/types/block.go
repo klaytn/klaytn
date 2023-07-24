@@ -24,10 +24,10 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"reflect"
 	"sort"
 	"sync/atomic"
 	"time"
-	"unsafe"
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
@@ -41,12 +41,7 @@ const (
 	Engine_Gxhash
 )
 
-var (
-	// EmptyRootHash is transaction/receipt root hash when there is no transaction.
-	// This value is initialized in InitDeriveSha.
-	EmptyRootHash = common.Hash{}
-	EngineType    = Engine_IBFT
-)
+var EngineType = Engine_IBFT
 
 //go:generate gencodec -type Header -field-override headerMarshaling -out gen_header_json.go
 
@@ -120,7 +115,14 @@ func (h *Header) HashNoNonce() common.Hash {
 // Size returns the approximate memory used by all internal contents. It is used
 // to approximate and limit the memory consumption of various caches.
 func (h *Header) Size() common.StorageSize {
-	return common.StorageSize(unsafe.Sizeof(*h)) + common.StorageSize(len(h.Extra)+(h.BlockScore.BitLen()+h.Number.BitLen()+h.Time.BitLen())/8)
+	constantSize := common.StorageSize(reflect.TypeOf(Header{}).Size())
+	byteSize := common.StorageSize(len(h.Extra) + len(h.Governance) + len(h.Vote))
+	bigIntSize := common.StorageSize((h.BlockScore.BitLen() + h.Number.BitLen() + h.Time.BitLen()) / 8)
+	if h.BaseFee != nil {
+		return constantSize + byteSize + bigIntSize + common.StorageSize(h.BaseFee.BitLen()/8)
+	} else {
+		return constantSize + byteSize + bigIntSize
+	}
 }
 
 func (h *Header) Round() byte {
@@ -148,12 +150,12 @@ func prefixedRlpHash(prefix byte, x interface{}) (h common.Hash) {
 // EmptyBody returns true if there is no additional 'body' to complete the header
 // that is: no transactions.
 func (h *Header) EmptyBody() bool {
-	return h.TxHash == EmptyRootHash
+	return h.TxHash == EmptyRootHash(h.Number)
 }
 
 // EmptyReceipts returns true if there are no receipts for this header/block.
 func (h *Header) EmptyReceipts() bool {
-	return h.ReceiptHash == EmptyRootHash
+	return h.ReceiptHash == EmptyRootHash(h.Number)
 }
 
 // Body is a simple (mutable, non-safe) data container for storing and moving
@@ -202,17 +204,17 @@ func NewBlock(header *Header, txs []*Transaction, receipts []*Receipt) *Block {
 
 	// TODO: panic if len(txs) != len(receipts)
 	if len(txs) == 0 {
-		b.header.TxHash = EmptyRootHash
+		b.header.TxHash = EmptyRootHash(header.Number)
 	} else {
-		b.header.TxHash = DeriveSha(Transactions(txs))
+		b.header.TxHash = DeriveSha(Transactions(txs), header.Number)
 		b.transactions = make(Transactions, len(txs))
 		copy(b.transactions, txs)
 	}
 
 	if len(receipts) == 0 {
-		b.header.ReceiptHash = EmptyRootHash
+		b.header.ReceiptHash = EmptyRootHash(header.Number)
 	} else {
-		b.header.ReceiptHash = DeriveSha(Receipts(receipts))
+		b.header.ReceiptHash = DeriveSha(Receipts(receipts), header.Number)
 		b.header.Bloom = CreateBloom(receipts)
 	}
 

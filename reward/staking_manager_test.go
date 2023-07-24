@@ -20,10 +20,35 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/log"
+	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
 )
+
+type testGovernance struct {
+	p *params.GovParamSet
+}
+
+func newTestGovernance(intMap map[int]interface{}) *testGovernance {
+	p, _ := params.NewGovParamSetIntMap(intMap)
+	return &testGovernance{p}
+}
+
+func newDefaultTestGovernance() *testGovernance {
+	return newTestGovernance(map[int]interface{}{
+		params.Epoch:               604800,
+		params.Policy:              params.WeightedRandom,
+		params.UnitPrice:           25000000000,
+		params.MintingAmount:       "9600000000000000000",
+		params.Ratio:               "34/54/12",
+		params.UseGiniCoeff:        true,
+		params.DeferredTxFee:       true,
+		params.MinimumStake:        "5000000",
+		params.StakeUpdateInterval: 86400,
+	})
+}
 
 type stakingManagerTestCase struct {
 	blockNum    uint64       // Requested num in GetStakingInfo(num)
@@ -75,7 +100,7 @@ func newStakingManagerForTest(t *testing.T) {
 	assert.EqualError(t, CheckStakingInfoStored(789), ErrStakingManagerNotSet.Error())
 
 	// test if get same
-	stNew := NewStakingManager(newTestBlockChain(), newDefaultTestGovernance(), nil)
+	stNew := NewStakingManager(&blockchain.BlockChain{}, newDefaultTestGovernance(), nil)
 	stGet := GetStakingManager()
 	assert.NotNil(t, stNew)
 	assert.Equal(t, stGet, stNew)

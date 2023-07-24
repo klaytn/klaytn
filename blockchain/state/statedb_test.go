@@ -46,7 +46,7 @@ func TestUpdateLeaks(t *testing.T) {
 	// Create an empty state database
 	memDBManager := database.NewMemoryDBManager()
 	db := memDBManager.GetMemDB()
-	state, _ := New(common.Hash{}, NewDatabase(memDBManager), nil)
+	state, _ := New(common.Hash{}, NewDatabase(memDBManager), nil, nil)
 
 	// Update it with some accounts
 	for i := byte(0); i < 255; i++ {
@@ -79,8 +79,8 @@ func TestIntermediateLeaks(t *testing.T) {
 	transDb := transDBManager.GetMemDB()
 	finalDb := finalDBManager.GetMemDB()
 
-	transState, _ := New(common.Hash{}, NewDatabase(transDBManager), nil)
-	finalState, _ := New(common.Hash{}, NewDatabase(finalDBManager), nil)
+	transState, _ := New(common.Hash{}, NewDatabase(transDBManager), nil, nil)
+	finalState, _ := New(common.Hash{}, NewDatabase(finalDBManager), nil, nil)
 
 	modify := func(state *StateDB, addr common.Address, i, tweak byte) {
 		if i%2 == 0 {
@@ -133,7 +133,7 @@ func TestIntermediateLeaks(t *testing.T) {
 // https://github.com/ethereum/go-ethereum/pull/15549.
 func TestCopy(t *testing.T) {
 	// Create a random state test to copy and modify "independently"
-	orig, _ := New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil)
+	orig, _ := New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil, nil)
 
 	for i := byte(0); i < 255; i++ {
 		obj := orig.GetOrNewStateObject(common.BytesToAddress([]byte{i}))
@@ -195,7 +195,7 @@ func TestSnapshotRandom(t *testing.T) {
 // TestStateObjects tests basic functional operations of StateObjects.
 // It will be updated by StateDB.Commit() with state objects in StateDB.stateObjects.
 func TestStateObjects(t *testing.T) {
-	stateDB, _ := New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil)
+	stateDB, _ := New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil, nil)
 
 	// Update each account, it will update StateDB.stateObjects.
 	for i := byte(0); i < 128; i++ {
@@ -307,6 +307,29 @@ func newTestAction(addr common.Address, r *rand.Rand) testAction {
 			},
 			args: make([]int64, 1),
 		},
+		{
+			name: "AddPreimage",
+			fn: func(a testAction, s *StateDB) {
+				preimage := []byte{1}
+				hash := common.BytesToHash(preimage)
+				s.AddPreimage(hash, preimage)
+			},
+			args: make([]int64, 1),
+		},
+		{
+			name: "AddAddressToAccessList",
+			fn: func(a testAction, s *StateDB) {
+				s.AddAddressToAccessList(addr)
+			},
+		},
+		{
+			name: "AddSlotToAccessList",
+			fn: func(a testAction, s *StateDB) {
+				s.AddSlotToAccessList(addr,
+					common.Hash{byte(a.args[0])})
+			},
+			args: make([]int64, 1),
+		},
 	}
 	action := actions[r.Intn(len(actions))]
 	var nameargs []string
@@ -364,7 +387,7 @@ func (test *snapshotTest) String() string {
 func (test *snapshotTest) run() bool {
 	// Run all actions and create snapshots.
 	var (
-		state, _     = New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil)
+		state, _     = New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil, nil)
 		snapshotRevs = make([]int, len(test.snapshots))
 		sindex       = 0
 	)
@@ -378,7 +401,7 @@ func (test *snapshotTest) run() bool {
 	// Revert all snapshots in reverse order. Each revert must yield a state
 	// that is equivalent to fresh state with all actions up the snapshot applied.
 	for sindex--; sindex >= 0; sindex-- {
-		checkstate, _ := New(common.Hash{}, state.Database(), nil)
+		checkstate, _ := New(common.Hash{}, state.Database(), nil, nil)
 		for _, action := range test.actions[:test.snapshots[sindex]] {
 			action.fn(action, checkstate)
 		}
@@ -457,7 +480,7 @@ func (s *StateSuite) TestSnapshotWithJournalDirties(c *check.C) {
 // TestCopyOfCopy tests that modified objects are carried over to the copy, and the copy of the copy.
 // See https://github.com/ethereum/go-ethereum/pull/15225#issuecomment-380191512
 func TestCopyOfCopy(t *testing.T) {
-	sdb, _ := New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil)
+	sdb, _ := New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil, nil)
 	addr := common.HexToAddress("aaaa")
 	sdb.SetBalance(addr, big.NewInt(42))
 
@@ -472,7 +495,7 @@ func TestCopyOfCopy(t *testing.T) {
 // TestZeroHashNode checks returning values of `(db *Database) Node` function.
 // The function should return (nil, ErrZeroHashNode) for default common.Hash{} value.
 func TestZeroHashNode(t *testing.T) {
-	zeroHash := common.Hash{}
+	zeroHash := common.ExtHash{}
 
 	db := database.NewMemoryDBManager()
 	sdb := NewDatabase(db)
@@ -493,7 +516,7 @@ func TestMissingTrieNodes(t *testing.T) {
 	memDb := database.NewMemoryDBManager()
 	db := NewDatabase(memDb)
 	var root common.Hash
-	state, _ := New(common.Hash{}, db, nil)
+	state, _ := New(common.Hash{}, db, nil, nil)
 	addr := toAddr([]byte("so"))
 	{
 		state.SetBalance(addr, big.NewInt(1))
@@ -507,7 +530,7 @@ func TestMissingTrieNodes(t *testing.T) {
 		state.Database().TrieDB().Cap(0)
 	}
 	// Create a new state on the old root
-	state, _ = New(root, db, nil)
+	state, _ = New(root, db, nil, nil)
 	// Now we clear out the memdb
 	it := memDb.GetMemDB().NewIterator(nil, nil)
 	for it.Next() {
@@ -528,5 +551,179 @@ func TestMissingTrieNodes(t *testing.T) {
 	root, err := state.Commit(false)
 	if err == nil {
 		t.Fatalf("expected error, got root :%x", root)
+	}
+}
+
+func TestStateDBAccessList(t *testing.T) {
+	// Some helpers
+	addr := func(a string) common.Address {
+		return common.HexToAddress(a)
+	}
+	slot := func(a string) common.Hash {
+		return common.HexToHash(a)
+	}
+
+	memDb := database.NewMemoryDBManager()
+	db := NewDatabase(memDb)
+	state, _ := New(common.Hash{}, db, nil, nil)
+	state.accessList = newAccessList()
+
+	verifyAddrs := func(astrings ...string) {
+		t.Helper()
+		// convert to common.Address form
+		var addresses []common.Address
+		addressMap := make(map[common.Address]struct{})
+		for _, astring := range astrings {
+			address := addr(astring)
+			addresses = append(addresses, address)
+			addressMap[address] = struct{}{}
+		}
+		// Check that the given addresses are in the access list
+		for _, address := range addresses {
+			if !state.AddressInAccessList(address) {
+				t.Fatalf("expected %x to be in access list", address)
+			}
+		}
+		// Check that only the expected addresses are present in the acesslist
+		for address := range state.accessList.addresses {
+			if _, exist := addressMap[address]; !exist {
+				t.Fatalf("extra address %x in access list", address)
+			}
+		}
+	}
+	verifySlots := func(addrString string, slotStrings ...string) {
+		if !state.AddressInAccessList(addr(addrString)) {
+			t.Fatalf("scope missing address/slots %v", addrString)
+		}
+		address := addr(addrString)
+		// convert to common.Hash form
+		var slots []common.Hash
+		slotMap := make(map[common.Hash]struct{})
+		for _, slotString := range slotStrings {
+			s := slot(slotString)
+			slots = append(slots, s)
+			slotMap[s] = struct{}{}
+		}
+		// Check that the expected items are in the access list
+		for i, s := range slots {
+			if _, slotPresent := state.SlotInAccessList(address, s); !slotPresent {
+				t.Fatalf("input %d: scope missing slot %v (address %v)", i, s, addrString)
+			}
+		}
+		// Check that no extra elements are in the access list
+		index := state.accessList.addresses[address]
+		if index >= 0 {
+			stateSlots := state.accessList.slots[index]
+			for s := range stateSlots {
+				if _, slotPresent := slotMap[s]; !slotPresent {
+					t.Fatalf("scope has extra slot %v (address %v)", s, addrString)
+				}
+			}
+		}
+	}
+
+	state.AddAddressToAccessList(addr("aa"))          // 1
+	state.AddSlotToAccessList(addr("bb"), slot("01")) // 2,3
+	state.AddSlotToAccessList(addr("bb"), slot("02")) // 4
+	verifyAddrs("aa", "bb")
+	verifySlots("bb", "01", "02")
+
+	// Make a copy
+	stateCopy1 := state.Copy()
+	if exp, got := 4, state.journal.length(); exp != got {
+		t.Fatalf("journal length mismatch: have %d, want %d", got, exp)
+	}
+
+	// same again, should cause no journal entries
+	state.AddSlotToAccessList(addr("bb"), slot("01"))
+	state.AddSlotToAccessList(addr("bb"), slot("02"))
+	state.AddAddressToAccessList(addr("aa"))
+	if exp, got := 4, state.journal.length(); exp != got {
+		t.Fatalf("journal length mismatch: have %d, want %d", got, exp)
+	}
+	// some new ones
+	state.AddSlotToAccessList(addr("bb"), slot("03")) // 5
+	state.AddSlotToAccessList(addr("aa"), slot("01")) // 6
+	state.AddSlotToAccessList(addr("cc"), slot("01")) // 7,8
+	state.AddAddressToAccessList(addr("cc"))
+	if exp, got := 8, state.journal.length(); exp != got {
+		t.Fatalf("journal length mismatch: have %d, want %d", got, exp)
+	}
+
+	verifyAddrs("aa", "bb", "cc")
+	verifySlots("aa", "01")
+	verifySlots("bb", "01", "02", "03")
+	verifySlots("cc", "01")
+
+	// now start rolling back changes
+	state.journal.revert(state, 7)
+	if _, ok := state.SlotInAccessList(addr("cc"), slot("01")); ok {
+		t.Fatalf("slot present, expected missing")
+	}
+	verifyAddrs("aa", "bb", "cc")
+	verifySlots("aa", "01")
+	verifySlots("bb", "01", "02", "03")
+
+	state.journal.revert(state, 6)
+	if state.AddressInAccessList(addr("cc")) {
+		t.Fatalf("addr present, expected missing")
+	}
+	verifyAddrs("aa", "bb")
+	verifySlots("aa", "01")
+	verifySlots("bb", "01", "02", "03")
+
+	state.journal.revert(state, 5)
+	if _, ok := state.SlotInAccessList(addr("aa"), slot("01")); ok {
+		t.Fatalf("slot present, expected missing")
+	}
+	verifyAddrs("aa", "bb")
+	verifySlots("bb", "01", "02", "03")
+
+	state.journal.revert(state, 4)
+	if _, ok := state.SlotInAccessList(addr("bb"), slot("03")); ok {
+		t.Fatalf("slot present, expected missing")
+	}
+	verifyAddrs("aa", "bb")
+	verifySlots("bb", "01", "02")
+
+	state.journal.revert(state, 3)
+	if _, ok := state.SlotInAccessList(addr("bb"), slot("02")); ok {
+		t.Fatalf("slot present, expected missing")
+	}
+	verifyAddrs("aa", "bb")
+	verifySlots("bb", "01")
+
+	state.journal.revert(state, 2)
+	if _, ok := state.SlotInAccessList(addr("bb"), slot("01")); ok {
+		t.Fatalf("slot present, expected missing")
+	}
+	verifyAddrs("aa", "bb")
+
+	state.journal.revert(state, 1)
+	if state.AddressInAccessList(addr("bb")) {
+		t.Fatalf("addr present, expected missing")
+	}
+	verifyAddrs("aa")
+
+	state.journal.revert(state, 0)
+	if state.AddressInAccessList(addr("aa")) {
+		t.Fatalf("addr present, expected missing")
+	}
+	if got, exp := len(state.accessList.addresses), 0; got != exp {
+		t.Fatalf("expected empty, got %d", got)
+	}
+	if got, exp := len(state.accessList.slots), 0; got != exp {
+		t.Fatalf("expected empty, got %d", got)
+	}
+	// Check the copy
+	// Make a copy
+	state = stateCopy1
+	verifyAddrs("aa", "bb")
+	verifySlots("bb", "01", "02")
+	if got, exp := len(state.accessList.addresses), 2; got != exp {
+		t.Fatalf("expected empty, got %d", got)
+	}
+	if got, exp := len(state.accessList.slots), 1; got != exp {
+		t.Fatalf("expected empty, got %d", got)
 	}
 }

@@ -56,13 +56,17 @@ commands:
           command: |
             apt install -y netcat
   install-golang:
+    parameters:
+      os-network:
+        type: string
+        default: "linux-amd64"
     steps:
       - run:
           name: "Install golang on machine"
-          command: |
-            curl -O https://dl.google.com/go/go1.18.linux-amd64.tar.gz
+          command: | 
+            curl -O https://dl.google.com/go/go1.18.<< parameters.os-network >>.tar.gz
             mkdir $HOME/go1.18
-            tar -C $HOME/go1.18 -xzf go1.18.linux-amd64.tar.gz
+            tar -C $HOME/go1.18 -xzf go1.18.<< parameters.os-network >>.tar.gz
   install-golangci-lint:
     steps:
       - run:
@@ -93,14 +97,20 @@ commands:
     parameters:
       os-network:
         type: string
-        default: "tar-linux-amd64-all"
+        default: "linux-amd64"
+      baobab:
+        type: string
+        default: ""
     steps:
       - run:
-          name: "build new(Cross compile)"
+          name: "build and packaging"
           command: |
             export GOPATH=~/go
             export PATH=$HOME/go1.18/go/bin:$PATH
-            make << parameters.os-network >>
+            make all
+            for item in kcn kpn ken kscn kspn ksen kbn kgen homi; do
+              ./build/package-tar.sh << parameters.baobab >> << parameters.os-network >> $item
+            done
   upload-repo:
     description: "upload packaging tar.gz"
     parameters:
@@ -120,15 +130,17 @@ commands:
     steps:
       - run:
           name: "rpm tagging"
-          command: make rpm-all
+          command: |
+            for item in kcn kpn ken kscn kspn ksen kbn kgen homi; do
+              ./build/package-rpm.sh $item
+            done
       - run:
           name: "upload S3 repo"
           command: |
             PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
             KLAYTN_VERSION=$(go run build/rpm/main.go version)
 
-            for item in kcn kpn ken kscn kspn ksen kbn kgen homi;
-            do
+            for item in kcn kpn ken kscn kspn ksen kbn kgen homi; do
               TARGET_RPM=$(find $item-linux-x86_64/rpmbuild/RPMS/x86_64/ | awk -v pat="$item(d)?-v" '$0~pat')
               aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
               aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
@@ -139,15 +151,13 @@ commands:
       - run:
           name: "rpm tagging baobab"
           command: |
-              make rpm-baobab-kcn
-              make rpm-baobab-kpn
-              make rpm-baobab-ken
+            for item in kcn kpn ken; do
+              ./build/package-rpm.sh -b $item
+            done
       - run:
           name: "upload S3 repo"
           command: |
-            for item in kcn kpn ken;
-            do
-              PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
+            for item in kcn kpn ken; do
               TARGET_RPM=$(find $item-linux-x86_64/rpmbuild/RPMS/x86_64/ | awk -v pat="$item(d)?-baobab-v" '$0~pat')
               aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
               aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
@@ -446,7 +456,7 @@ jobs:
       - notify-success
       - store_artifacts:
           path: /tmp/linter_reports
-  
+
   rpc-tester-report:
     executor: test-executor
     steps:
@@ -458,7 +468,7 @@ jobs:
       - notify-success
 
   packaging-linux:
-    machine: 
+    machine:
       image: ubuntu-2004:202201-02
     resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
@@ -470,7 +480,7 @@ jobs:
       - upload-repo
 
   packaging-linux-baobab:
-    machine: 
+    machine:
       image: ubuntu-2004:202201-02
     resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
@@ -479,34 +489,37 @@ jobs:
       - install-golang
       - pre-build
       - build-packaging:
-          os-network: "tar-baobab-linux-amd64-all"
+          baobab: "-b"
       - upload-repo:
           item: "kcn kpn ken"
 
   packaging-darwin:
-    machine: 
-      image: ubuntu-2004:202201-02
-    resource_class: large
+    macos:
+      xcode: 14.2.0
+    resource_class: macos.x86.medium.gen2
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
-      - install-golang
+      - install-golang:
+          os-network: "darwin-amd64"
       - pre-build
       - build-packaging:
-          os-network: "tar-darwin-amd64-all"
+          os-network: "darwin-amd64"
       - upload-repo
 
   packaging-darwin-baobab:
-    machine: 
-      image: ubuntu-2004:202201-02
-    resource_class: large
+    macos:
+      xcode: 14.2.0
+    resource_class: macos.x86.medium.gen2
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
-      - install-golang
+      - install-golang:
+          os-network: "darwin-amd64"
       - pre-build
       - build-packaging:
-          os-network: "tar-baobab-darwin-amd64-all"
+          os-network: "darwin-amd64"
+          baobab: "-b"
       - upload-repo:
           item: "kcn kpn ken"
 
@@ -593,7 +606,7 @@ workflows:
             - tagger-verify
           filters: *filter-version-not-release
 
-      - docker/publish:
+      - docker/publish: # for dev branch
           filters:
             branches:
               only: dev
@@ -605,6 +618,23 @@ workflows:
           executor: docker/docker
           use-remote-docker: true
           remote-docker-version: 20.10.14
+          use-buildkit: true
+
+      - docker/publish: # for release versions
+          filters:
+            tags:
+              only: /^v[0-9]+\.[0-9]+\.[0-9]+/
+            branches:
+              ignore: /.*/
+          requires:
+            - pass-tests
+          extra_build_args: '--platform=linux/amd64'
+          image: klaytn/klaytn
+          tag: latest,$CIRCLE_TAG
+          executor: docker/docker
+          use-remote-docker: true
+          remote-docker-version: 20.10.14
+          use-buildkit: true
 
       - tag-verify:
           filters: *filter-only-version-tag
@@ -662,21 +692,6 @@ workflows:
           requires:
             - pass-tests
 
-      - docker/publish:
-          filters:
-            tags:
-              only: /^v[0-9]+\.[0-9]+\.[0-9]+/
-            branches:
-              ignore: /.*/
-          requires:
-            - pass-tests
-          extra_build_args: '--platform=linux/amd64'
-          image: klaytn/klaytn
-          tag: latest,$CIRCLE_TAG
-          executor: docker/docker
-          use-remote-docker: true
-          remote-docker-version: 20.10.14
-
       - major-tagging:
           filters:
             branches:
@@ -701,7 +716,7 @@ workflows:
               only: dev
     jobs:
       - linters
-  
+
   nightly-rpc:
     triggers:
       - schedule:

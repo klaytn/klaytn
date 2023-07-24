@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/klaytn/klaytn"
+	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/bloombits"
@@ -36,6 +37,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/consensus/gxhash"
 	"github.com/klaytn/klaytn/event"
@@ -52,7 +54,6 @@ var (
 	errBlockNumberUnsupported  = errors.New("simulatedBackend cannot access blocks other than the latest block")
 	errBlockDoesNotExist       = errors.New("block does not exist in blockchain")
 	errTransactionDoesNotExist = errors.New("transaction does not exist")
-	errGasEstimationFailed     = errors.New("gas required exceeds allowance or always failing transaction")
 )
 
 // SimulatedBackend implements bind.ContractBackend, simulating a blockchain in
@@ -135,7 +136,7 @@ func (b *SimulatedBackend) rollback() {
 	stateDB, _ := b.blockchain.State()
 
 	b.pendingBlock = blocks[0]
-	b.pendingState, _ = state.New(b.pendingBlock.Root(), stateDB.Database(), nil)
+	b.pendingState, _ = state.New(b.pendingBlock.Root(), stateDB.Database(), nil, nil)
 }
 
 // stateByBlockNumber retrieves a state by a given blocknumber.
@@ -354,6 +355,36 @@ func (b *SimulatedBackend) PendingCodeAt(_ context.Context, contract common.Addr
 	return b.pendingState.GetCode(contract), nil
 }
 
+func newRevertError(result *blockchain.ExecutionResult) *revertError {
+	reason, errUnpack := abi.UnpackRevert(result.Revert())
+	err := errors.New("execution reverted")
+	if errUnpack == nil {
+		err = fmt.Errorf("execution reverted: %v", reason)
+	}
+	return &revertError{
+		error:  err,
+		reason: hexutil.Encode(result.Revert()),
+	}
+}
+
+// revertError is an API error that encompassas an EVM revertal with JSON error
+// code and a binary data blob.
+type revertError struct {
+	error
+	reason string // revert reason hex encoded
+}
+
+// ErrorCode returns the JSON error code for a revertal.
+// See: https://github.com/ethereum/wiki/wiki/JSON-RPC-Error-Codes-Improvement-Proposal
+func (e *revertError) ErrorCode() int {
+	return 3
+}
+
+// ErrorData returns the hex encoded revert reason.
+func (e *revertError) ErrorData() interface{} {
+	return e.reason
+}
+
 // CallContract executes a contract call.
 func (b *SimulatedBackend) CallContract(ctx context.Context, call klaytn.CallMsg, blockNumber *big.Int) ([]byte, error) {
 	b.mu.Lock()
@@ -366,8 +397,15 @@ func (b *SimulatedBackend) CallContract(ctx context.Context, call klaytn.CallMsg
 	if err != nil {
 		return nil, err
 	}
-	res, _, _, err := b.callContract(ctx, call, b.blockchain.CurrentBlock(), stateDB)
-	return res, err
+	res, err := b.callContract(ctx, call, b.blockchain.CurrentBlock(), stateDB)
+	if err != nil {
+		return nil, err
+	}
+	// If the result contains a revert reason, try to unpack and return it.
+	if len(res.Revert()) > 0 {
+		return nil, newRevertError(res)
+	}
+	return res.Return(), res.Unwrap()
 }
 
 // PendingCallContract executes a contract call on the pending state.
@@ -376,8 +414,15 @@ func (b *SimulatedBackend) PendingCallContract(ctx context.Context, call klaytn.
 	defer b.mu.Unlock()
 	defer b.pendingState.RevertToSnapshot(b.pendingState.Snapshot())
 
-	rval, _, _, err := b.callContract(ctx, call, b.pendingBlock, b.pendingState)
-	return rval, err
+	res, err := b.callContract(ctx, call, b.pendingBlock, b.pendingState)
+	if err != nil {
+		return nil, err
+	}
+	// If the result contains a revert reason, try to unpack and return it.
+	if len(res.Revert()) > 0 {
+		return nil, newRevertError(res)
+	}
+	return res.Return(), res.Unwrap()
 }
 
 // PendingNonceAt implements PendingStateReader.PendingNonceAt, retrieving
@@ -437,23 +482,33 @@ func (b *SimulatedBackend) EstimateGas(ctx context.Context, call klaytn.CallMsg)
 	cap = hi
 
 	// Create a helper to check if a gas allowance results in an executable transaction
-	executable := func(gas uint64) bool {
+	executable := func(gas uint64) (bool, *blockchain.ExecutionResult, error) {
 		call.Gas = gas
 
 		currentState, err := b.blockchain.State()
 		if err != nil {
-			return false
+			return true, nil, nil
 		}
-		_, _, failed, err := b.callContract(ctx, call, b.blockchain.CurrentBlock(), currentState)
-		if err != nil || failed {
-			return false
+		res, err := b.callContract(ctx, call, b.blockchain.CurrentBlock(), currentState)
+		if err != nil {
+			if errors.Is(err, blockchain.ErrIntrinsicGas) {
+				return true, nil, nil // Special case, raise gas limit
+			}
+			return true, nil, err // Bail out
 		}
-		return true
+		return res.Failed(), res, nil
 	}
 	// Execute the binary search and hone in on an executable gas limit
 	for lo+1 < hi {
 		mid := (hi + lo) / 2
-		if !executable(mid) {
+		failed, _, err := executable(mid)
+		// If the error is not nil(when not a vm error), it means the provided message
+		// call or transaction will never be accepted no matter how much gas it is
+		// assigned. Return the error directly, don't struggle any more
+		if err != nil {
+			return 0, err
+		}
+		if failed {
 			lo = mid
 		} else {
 			hi = mid
@@ -461,8 +516,19 @@ func (b *SimulatedBackend) EstimateGas(ctx context.Context, call klaytn.CallMsg)
 	}
 	// Reject the transaction as invalid if it still fails at the highest allowance
 	if hi == cap {
-		if !executable(hi) {
-			return 0, errGasEstimationFailed
+		failed, result, err := executable(hi)
+		if err != nil {
+			return 0, err
+		}
+		if failed {
+			if result != nil && result.VmExecutionStatus != types.ReceiptStatusErrOutOfGas {
+				if len(result.Revert()) > 0 {
+					return 0, newRevertError(result)
+				}
+				return 0, result.Unwrap()
+			}
+			// Otherwise, the specified gas cap is too low
+			return 0, fmt.Errorf("gas required exceeds allowance (%d)", cap)
 		}
 	}
 	return hi, nil
@@ -470,7 +536,7 @@ func (b *SimulatedBackend) EstimateGas(ctx context.Context, call klaytn.CallMsg)
 
 // callContract implements common code between normal and pending contract calls.
 // state is modified during execution, make sure to copy it if necessary.
-func (b *SimulatedBackend) callContract(_ context.Context, call klaytn.CallMsg, block *types.Block, stateDB *state.StateDB) ([]byte, uint64, bool, error) {
+func (b *SimulatedBackend) callContract(_ context.Context, call klaytn.CallMsg, block *types.Block, stateDB *state.StateDB) (*blockchain.ExecutionResult, error) {
 	// Ensure message is initialized properly.
 	if call.GasPrice == nil {
 		call.GasPrice = big.NewInt(1)
@@ -494,15 +560,7 @@ func (b *SimulatedBackend) callContract(_ context.Context, call klaytn.CallMsg, 
 	// about the transaction and calling mechanisms.
 	vmenv := vm.NewEVM(evmContext, stateDB, b.config, &vm.Config{})
 
-	ret, usedGas, kerr := blockchain.NewStateTransition(vmenv, msg).TransitionDb()
-
-	// Propagate error of Receipt
-	err := kerr.ErrTxInvalid
-	if err == nil {
-		err = blockchain.GetVMerrFromReceiptStatus(kerr.Status)
-	}
-
-	return ret, usedGas, kerr.Status != types.ReceiptStatusSuccessful, err
+	return blockchain.NewStateTransition(vmenv, msg).TransitionDb()
 }
 
 // SendTransaction updates the pending block to include the given transaction.
@@ -533,7 +591,7 @@ func (b *SimulatedBackend) SendTransaction(_ context.Context, tx *types.Transact
 	stateDB, _ := b.blockchain.State()
 
 	b.pendingBlock = blocks[0]
-	b.pendingState, _ = state.New(b.pendingBlock.Root(), stateDB.Database(), nil)
+	b.pendingState, _ = state.New(b.pendingBlock.Root(), stateDB.Database(), nil, nil)
 	return nil
 }
 
@@ -653,7 +711,7 @@ func (b *SimulatedBackend) AdjustTime(adjustment time.Duration) error {
 	stateDB, _ := b.blockchain.State()
 
 	b.pendingBlock = blocks[0]
-	b.pendingState, _ = state.New(b.pendingBlock.Root(), stateDB.Database(), nil)
+	b.pendingState, _ = state.New(b.pendingBlock.Root(), stateDB.Database(), nil, nil)
 
 	return nil
 }

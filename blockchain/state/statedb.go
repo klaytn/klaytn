@@ -91,6 +91,9 @@ type StateDB struct {
 
 	preimages map[common.Hash][]byte
 
+	// Per-transaction access list
+	accessList *accessList
+
 	// Journal of state modifications. This is the backbone of
 	// Snapshot and RevertToSnapshot.
 	journal        *journal
@@ -114,8 +117,8 @@ type StateDB struct {
 }
 
 // Create a new state from a given trie.
-func New(root common.Hash, db Database, snaps *snapshot.Tree) (*StateDB, error) {
-	tr, err := db.OpenTrie(root)
+func New(root common.Hash, db Database, snaps *snapshot.Tree, opts *statedb.TrieOpts) (*StateDB, error) {
+	tr, err := db.OpenTrie(root, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -128,6 +131,7 @@ func New(root common.Hash, db Database, snaps *snapshot.Tree) (*StateDB, error) 
 		stateObjectsDirty:        make(map[common.Address]struct{}),
 		logs:                     make(map[common.Hash][]*types.Log),
 		preimages:                make(map[common.Hash][]byte),
+		accessList:               newAccessList(),
 		journal:                  newJournal(),
 	}
 	if sdb.snaps != nil {
@@ -137,33 +141,8 @@ func New(root common.Hash, db Database, snaps *snapshot.Tree) (*StateDB, error) 
 			sdb.snapStorage = make(map[common.Hash]map[common.Hash][]byte)
 		}
 	}
-	return sdb, nil
-}
-
-// Create a new state from a given trie with prefetching
-func NewForPrefetching(root common.Hash, db Database, snaps *snapshot.Tree) (*StateDB, error) {
-	tr, err := db.OpenTrieForPrefetching(root)
-	if err != nil {
-		return nil, err
-	}
-	sdb := &StateDB{
-		db:                       db,
-		trie:                     tr,
-		snaps:                    snaps,
-		stateObjects:             make(map[common.Address]*stateObject),
-		stateObjectsDirtyStorage: make(map[common.Address]struct{}),
-		stateObjectsDirty:        make(map[common.Address]struct{}),
-		logs:                     make(map[common.Hash][]*types.Log),
-		preimages:                make(map[common.Hash][]byte),
-		journal:                  newJournal(),
-		prefetching:              true,
-	}
-	if sdb.snaps != nil {
-		if sdb.snap = sdb.snaps.Snapshot(root); sdb.snap != nil {
-			sdb.snapDestructs = make(map[common.Hash]struct{})
-			sdb.snapAccounts = make(map[common.Hash][]byte)
-			sdb.snapStorage = make(map[common.Hash]map[common.Hash][]byte)
-		}
+	if opts != nil && opts.Prefetching {
+		sdb.prefetching = true
 	}
 	return sdb, nil
 }
@@ -192,7 +171,7 @@ func (self *StateDB) Error() error {
 // Reset clears out all ephemeral state objects from the state db, but keeps
 // the underlying state trie to avoid reloading data for the next operations.
 func (self *StateDB) Reset(root common.Hash) error {
-	tr, err := self.db.OpenTrie(root)
+	tr, err := self.db.OpenTrie(root, nil)
 	if err != nil {
 		return err
 	}
@@ -206,6 +185,7 @@ func (self *StateDB) Reset(root common.Hash) error {
 	self.logSize = 0
 	self.preimages = make(map[common.Hash][]byte)
 	self.clearJournalAndRefund()
+	self.accessList = newAccessList()
 	return nil
 }
 
@@ -835,6 +815,13 @@ func (self *StateDB) Copy() *StateDB {
 		state.preimages[hash] = preimage
 	}
 
+	// Do we need to copy the access list? In practice: No. At the start of a
+	// transaction, the access list is empty. In practice, we only ever copy state
+	// _between_ transactions/blocks, never in the middle of a transaction.
+	// However, it doesn't cost us much to copy an empty list, so we do it anyway
+	// to not blow up if we ever decide copy it in the middle of a transaction
+	state.accessList = self.accessList.Copy()
+
 	if self.snaps != nil {
 		// In order for the miner to be able to use and make additions
 		// to the snapshot tree, we need to copy that aswell.
@@ -1028,7 +1015,7 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 	if EnabledExpensive {
 		defer func(start time.Time) { s.AccountCommits += time.Since(start) }(time.Now())
 	}
-	root, err = s.trie.Commit(func(_ [][]byte, _ []byte, leaf []byte, parent common.Hash, parentDepth int) error {
+	root, err = s.trie.Commit(func(_ [][]byte, _ []byte, leaf []byte, parent common.ExtHash, parentDepth int) error {
 		serializer := account.NewAccountSerializer()
 		if err := rlp.DecodeBytes(leaf, serializer); err != nil {
 			logger.Warn("RLP decode failed", "err", err, "leaf", string(leaf))
@@ -1036,7 +1023,7 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 		}
 		acc := serializer.GetAccount()
 		if pa := account.GetProgramAccount(acc); pa != nil {
-			if pa.GetStorageRoot() != emptyState {
+			if pa.GetStorageRoot().Unextend() != emptyState {
 				s.db.TrieDB().Reference(pa.GetStorageRoot(), parent)
 			}
 		}
@@ -1077,17 +1064,90 @@ var (
 	errNotContractAddress = fmt.Errorf("given address is not a contract address")
 )
 
-func (s *StateDB) GetContractStorageRoot(contractAddr common.Address) (common.Hash, error) {
+func (s *StateDB) GetContractStorageRoot(contractAddr common.Address) (common.ExtHash, error) {
 	acc := s.GetAccount(contractAddr)
 	if acc == nil {
-		return common.Hash{}, errNotExistingAddress
+		return common.ExtHash{}, errNotExistingAddress
 	}
 	if acc.Type() != account.SmartContractAccountType {
-		return common.Hash{}, errNotContractAddress
+		return common.ExtHash{}, errNotContractAddress
 	}
 	contract, true := acc.(*account.SmartContractAccount)
 	if !true {
-		return common.Hash{}, errNotContractAddress
+		return common.ExtHash{}, errNotContractAddress
 	}
 	return contract.GetStorageRoot(), nil
+}
+
+// PrepareAccessList handles the preparatory steps for executing a state transition with
+// regards to EIP-2929:
+//
+// - Add sender to access list (2929)
+// - Add feepayer to access list (only for klaytn)
+// - Add destination to access list (2929)
+// - Add precompiles to access list (2929)
+//
+// regards to EIP-3651:
+// - Add coinbase to access list (EIP-3651)
+func (s *StateDB) PrepareAccessList(rules params.Rules, sender, feepayer, coinbase common.Address, dst *common.Address, precompiles []common.Address) {
+	// Clear out any leftover from previous executions
+	s.accessList = newAccessList()
+
+	s.AddAddressToAccessList(sender)
+	if !common.EmptyAddress(feepayer) {
+		s.AddAddressToAccessList(feepayer)
+	}
+	if dst != nil {
+		s.AddAddressToAccessList(*dst)
+		// If it's a create-tx, the destination will be added inside evm.create
+	}
+	for _, addr := range precompiles {
+		s.AddAddressToAccessList(addr)
+	}
+	// Uncommented below code because we do not support optional accessList yet (written at eip-2930).
+	// Optional accessList is the accessList mentioned through tx args.
+	//for _, el := range list {
+	//	s.AddAddressToAccessList(el.Address)
+	//	for _, key := range el.StorageKeys {
+	//		s.AddSlotToAccessList(el.Address, key)
+	//	}
+	//}
+	if rules.IsMantle {
+		s.AddAddressToAccessList(coinbase)
+	}
+}
+
+// AddAddressToAccessList adds the given address to the access list
+func (s *StateDB) AddAddressToAccessList(addr common.Address) {
+	if s.accessList.AddAddress(addr) {
+		s.journal.append(accessListAddAccountChange{&addr})
+	}
+}
+
+// AddSlotToAccessList adds the given (address, slot)-tuple to the access list
+func (s *StateDB) AddSlotToAccessList(addr common.Address, slot common.Hash) {
+	addrMod, slotMod := s.accessList.AddSlot(addr, slot)
+	if addrMod {
+		// In practice, this should not happen, since there is no way to enter the
+		// scope of 'address' without having the 'address' become already added
+		// to the access list (via call-variant, create, etc).
+		// Better safe than sorry, though
+		s.journal.append(accessListAddAccountChange{&addr})
+	}
+	if slotMod {
+		s.journal.append(accessListAddSlotChange{
+			address: &addr,
+			slot:    &slot,
+		})
+	}
+}
+
+// AddressInAccessList returns true if the given address is in the access list.
+func (s *StateDB) AddressInAccessList(addr common.Address) bool {
+	return s.accessList.ContainsAddress(addr)
+}
+
+// SlotInAccessList returns true if the given (address, slot)-tuple is in the access list.
+func (s *StateDB) SlotInAccessList(addr common.Address, slot common.Hash) (addressPresent bool, slotPresent bool) {
+	return s.accessList.Contains(addr, slot)
 }

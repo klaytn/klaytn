@@ -82,12 +82,27 @@ var tstData = []voteValue{
 	{k: "governance.governingnode", v: "address", e: false},
 	{k: "governance.governingnode", v: 0, e: false},
 	{k: "governance.governingnode", v: true, e: false},
+	{k: "governance.govparamcontract", v: "0x00000000000000000000", e: false},
+	{k: "governance.govparamcontract", v: "0x0000000000000000000000000000000000000000", e: true},
+	{k: "governance.govparamcontract", v: "0x000000000000000000000000000abcd000000000", e: true},
+	{k: "governance.govparamcontract", v: "000000000000000000000000000abcd000000000", e: true},
+	{k: "governance.govparamcontract", v: common.HexToAddress("000000000000000000000000000abcd000000000"), e: true},
+	{k: "governance.govparamcontract", v: "0x000000000000000000000000000xxxx000000000", e: false},
+	{k: "governance.govparamcontract", v: "address", e: false},
+	{k: "governance.govparamcontract", v: 0, e: false},
+	{k: "governance.govparamcontract", v: true, e: false},
 	{k: "governance.unitprice", v: float64(0.0), e: true},
 	{k: "governance.unitprice", v: float64(0.1), e: false},
 	{k: "governance.unitprice", v: uint64(25000000000), e: true},
 	{k: "governance.unitprice", v: float64(-10), e: false},
 	{k: "governance.unitprice", v: "25000000000", e: false},
 	{k: "governance.unitprice", v: true, e: false},
+	{k: "governance.deriveshaimpl", v: float64(0.0), e: true},
+	{k: "governance.deriveshaimpl", v: float64(0.1), e: false},
+	{k: "governance.deriveshaimpl", v: uint64(2), e: true},
+	{k: "governance.deriveshaimpl", v: float64(-1), e: false},
+	{k: "governance.deriveshaimpl", v: "2", e: false},
+	{k: "governance.deriveshaimpl", v: true, e: false},
 	{k: "reward.useginicoeff", v: false, e: true},
 	{k: "reward.useginicoeff", v: true, e: true},
 	{k: "reward.useginicoeff", v: "true", e: false},
@@ -110,6 +125,12 @@ var tstData = []voteValue{
 	{k: "reward.ratio", v: "0/0/0", e: false},
 	{k: "reward.ratio", v: "30.5/40/29.5", e: false},
 	{k: "reward.ratio", v: "30.5/40/30.5", e: false},
+	{k: "reward.kip82ratio", v: "20/80", e: true},
+	{k: "reward.kip82ratio", v: "10/90", e: true},
+	{k: "reward.kip82ratio", v: "30/80", e: false},
+	{k: "reward.kip82ratio", v: "30/30/40", e: false},
+	{k: "reward.kip82ratio", v: "49.5/50.5", e: false},
+	{k: "reward.kip82ratio", v: "50.5/50.5", e: false},
 	{k: "kip71.lowerboundbasefee", v: uint64(25000000000), e: true},
 	{k: "kip71.lowerboundbasefee", v: 25000000, e: false},
 	{k: "kip71.lowerboundbasefee", v: "250000000", e: false},
@@ -176,6 +197,7 @@ var goodVotes = []voteValue{
 	{k: "governance.governancemode", v: "single", e: true},
 	{k: "governance.governingnode", v: common.HexToAddress("0x0000000000000000000000000000000000000000"), e: true},
 	{k: "governance.unitprice", v: uint64(25000000000), e: true},
+	{k: "governance.deriveshaimpl", v: uint64(0), e: true},
 	{k: "kip71.lowerboundbasefee", v: uint64(25000000000), e: true},
 	{k: "kip71.upperboundbasefee", v: uint64(750000000000), e: true},
 	{k: "kip71.gastarget", v: uint64(30000000), e: true},
@@ -184,6 +206,7 @@ var goodVotes = []voteValue{
 	{k: "reward.useginicoeff", v: false, e: true},
 	{k: "reward.mintingamount", v: "9600000000000000000", e: true},
 	{k: "reward.ratio", v: "10/10/80", e: true},
+	{k: "reward.kip82ratio", v: "20/80", e: true},
 	{k: "istanbul.timeout", v: uint64(5000), e: true},
 	{k: "governance.addvalidator", v: "0x639e5ebfc483716fbac9810b230ff6ad487f366c,0x828880c5f09cc1cc6a58715e3fe2b4c4cf3c5869", e: true},
 }
@@ -610,7 +633,7 @@ func TestBaoBabGenesisHash(t *testing.T) {
 	baobabHash := params.BaobabGenesisHash
 	genesis := blockchain.DefaultBaobabGenesisBlock()
 	genesis.Governance = blockchain.SetGenesisGovernance(genesis)
-	blockchain.InitDeriveSha(genesis.Config.DeriveShaImpl)
+	blockchain.InitDeriveSha(genesis.Config)
 
 	db := database.NewMemoryDBManager()
 	block, _ := genesis.Commit(common.Hash{}, db)
@@ -623,7 +646,7 @@ func TestCypressGenesisHash(t *testing.T) {
 	cypressHash := params.CypressGenesisHash
 	genesis := blockchain.DefaultGenesisBlock()
 	genesis.Governance = blockchain.SetGenesisGovernance(genesis)
-	blockchain.InitDeriveSha(genesis.Config.DeriveShaImpl)
+	blockchain.InitDeriveSha(genesis.Config)
 
 	db := database.NewMemoryDBManager()
 	block, _ := genesis.Commit(common.Hash{}, db)
@@ -681,7 +704,7 @@ func TestGovernance_initializeCache(t *testing.T) {
 		gov.itemCache.Purge()
 
 		// 2. call initializeCache
-		err := gov.initializeCache()
+		err := gov.initializeCache(config)
 
 		// 3. check the affected values with expected results
 		assert.NoError(t, err)
@@ -743,7 +766,6 @@ func TestGovernance_ReadGovernanceState(t *testing.T) {
 	gov.ReadGovernanceState()
 
 	assert.Equal(t, bn, gov.lastGovernanceStateBlock)
-	assert.Equal(t, config, gov.ChainConfig)
 	assert.Equal(t, gjson.VoteMap, gov.voteMap.items)
 	assert.Equal(t, gjson.NodeAddress, gov.nodeAddress.Load())
 	assert.Equal(t, gjson.GovernanceVotes, gov.GovernanceVotes.items)
@@ -823,7 +845,7 @@ func TestGovernance_HandleGovernanceVote_None_mode(t *testing.T) {
 	demotedValidators := getTestDemotedValidators()
 	rewards := getTestRewards()
 
-	blockCounter := common.Big0
+	blockCounter := big.NewInt(0)
 	valSet := validator.NewWeightedCouncil(validators, demotedValidators, rewards, getTestVotingPowers(len(validators)), nil, istanbul.WeightedRandom, 21, 0, 0, nil)
 	gov := getGovernance()
 	gov.nodeAddress.Store(validators[len(validators)-1])
@@ -960,7 +982,7 @@ func TestGovernance_HandleGovernanceVote_Ballot_mode(t *testing.T) {
 	demotedValidators := getTestDemotedValidators()
 	rewards := getTestRewards()
 
-	blockCounter := common.Big0
+	blockCounter := big.NewInt(0)
 	var valSet istanbul.ValidatorSet
 	valSet = validator.NewWeightedCouncil(validators, demotedValidators, rewards, getTestVotingPowers(len(validators)), nil, istanbul.WeightedRandom, 21, 0, 0, nil)
 
@@ -1239,4 +1261,50 @@ func TestGovernance_VerifyGovernance(t *testing.T) {
 	assert.Nil(t, err)
 	err = gov.VerifyGovernance(r)
 	assert.Equal(t, ErrVoteValueMismatch, err)
+}
+
+func TestGovernance_ParamsAt(t *testing.T) {
+	valueA := uint64(0x11)
+	valueB := uint64(0x22)
+	valueC := uint64(0x33)
+	koreBlock := uint64(100)
+
+	dbm := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
+	config := getTestConfig()
+	config.Istanbul.Epoch = 30
+	config.Istanbul.SubGroupSize = valueA
+	config.KoreCompatibleBlock = new(big.Int).SetUint64(koreBlock)
+	gov := NewGovernanceInitialize(config, dbm)
+
+	// Write to database. Note that we must use gov.WriteGovernance(), not db.WriteGovernance()
+	// The reason is that gov.ReadGovernance() depends on the caches, and that
+	// gov.WriteGovernance() sets idxCache accordingly, whereas db.WriteGovernance don't
+	items := gov.CurrentParams().StrMap()
+	gset := NewGovernanceSet()
+
+	items["istanbul.committeesize"] = valueB
+	gset.Import(items)
+	gov.WriteGovernance(30, NewGovernanceSet(), gset)
+
+	items["istanbul.committeesize"] = valueC
+	gset.Import(items)
+	gov.WriteGovernance(120, NewGovernanceSet(), gset)
+
+	testcases := []struct {
+		num   uint64
+		value uint64
+	}{
+		{59, valueA},
+		{60, valueA},
+		{61, valueB},
+		{149, valueB},
+		{150, valueC},
+		{151, valueC},
+	}
+	for _, tc := range testcases {
+		// Check that e.EffectiveParams() == tc
+		pset, err := gov.EffectiveParams(tc.num)
+		assert.Nil(t, err)
+		assert.Equal(t, tc.value, pset.CommitteeSize(), "Wrong at %d", tc.num)
+	}
 }

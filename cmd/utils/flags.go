@@ -656,6 +656,11 @@ var (
 		Aliases: []string{"http-rpc.gascap"},
 		EnvVars: []string{"KLAYTN_RPC_GASCAP"},
 	}
+	RPCGlobalEVMTimeoutFlag = cli.DurationFlag{
+		Name:   "rpc.evmtimeout",
+		Usage:  "Sets a timeout used for eth_call (0=infinite)",
+		EnvVar: "KLAYTN_RPC_EVMTIMEOUT",
+	}
 	RPCGlobalEthTxFeeCapFlag = cli.Float64Flag{
 		Name:    "rpc.ethtxfeecap",
 		Usage:   "Sets a cap on transaction fee (in klay) that can be sent via the eth namespace RPC APIs (0 = no cap)",
@@ -832,6 +837,11 @@ var (
 		Value:   filters.GetLogsMaxItems,
 		Aliases: []string{},
 		EnvVars: []string{"KLAYTN_API_FILTER_GETLOGS_MAXITEMS"},
+	}
+	UnsafeDebugDisableFlag = cli.BoolFlag{
+		Name:   "rpc.unsafe-debug.disable",
+		Usage:  "Disable unsafe debug APIs (traceTransaction, writeXXX, ...).",
+		EnvVar: "KLAYTN_RPC_UNSAFE_DEBUG_DISABLE",
 	}
 
 	// Network Settings
