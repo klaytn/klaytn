@@ -23,7 +23,6 @@ import (
 	"github.com/klaytn/klaytn/cmd/utils"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/pkg/errors"
-
 	"github.com/urfave/cli/v2"
 )
 

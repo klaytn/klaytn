@@ -70,7 +70,11 @@ require (
 	gotest.tools v2.2.0+incompatible
 )
 
-require gopkg.in/urfave/cli.v1 v1.20.0
+require (
+	github.com/satori/go.uuid v1.2.0
+	github.com/tyler-smith/go-bip32 v1.0.0
+	gopkg.in/urfave/cli.v1 v1.20.0
+)
 
 require (
 	github.com/AndreasBriese/bbloom v0.0.0-20190306092124-e2d15f34fcf9 // indirect
@@ -79,6 +83,8 @@ require (
 	github.com/DataDog/datadog-go v4.8.2+incompatible // indirect
 	github.com/DataDog/datadog-go/v5 v5.0.2 // indirect
 	github.com/DataDog/sketches-go v1.2.1 // indirect
+	github.com/FactomProject/basen v0.0.0-20150613233007-fe3947df716e // indirect
+	github.com/FactomProject/btcutilecc v0.0.0-20130527213604-d3a63a5752ec // indirect
 	github.com/Microsoft/go-winio v0.5.1 // indirect
 	github.com/andybalholm/brotli v1.0.4 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect

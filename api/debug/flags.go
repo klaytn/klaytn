@@ -30,7 +30,6 @@ import (
 
 	"github.com/fjl/memsize/memsizeui"
 	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/log/term"
 	"github.com/mattn/go-colorable"
 	"github.com/mattn/go-isatty"
 	"github.com/urfave/cli/v2"
@@ -69,43 +68,50 @@ var (
 		EnvVars: []string{"KLAYTN_DEBUG"},
 	}
 	logFormatFlag = cli.StringFlag{
-		Name:   "log.format",
-		Usage:  "Log format to use (json|logfmt|terminal)",
-		Value:  "terminal",
-		EnvVar: "KLAYTN_LOGFORMAT",
+		Name:    "log.format",
+		Usage:   "Log format to use (json|logfmt|terminal)",
+		Value:   "terminal",
+		Aliases: []string{},
+		EnvVars: []string{"KLAYTN_LOGFORMAT"},
 	}
 	logFileFlag = cli.StringFlag{
-		Name:   "log.file",
-		Usage:  "Write logs to a file",
-		EnvVar: "KLAYTN_LOGFILE",
+		Name:    "log.file",
+		Usage:   "Write logs to a file",
+		Aliases: []string{},
+		EnvVars: []string{"KLAYTN_LOGFILE"},
 	}
 	logRotateFlag = cli.BoolFlag{
-		Name:   "log.rotate",
-		Usage:  "Enables log file rotation",
-		EnvVar: "KLAYTN_LOGROTATE",
+		Name:    "log.rotate",
+		Usage:   "Enables log file rotation",
+		Aliases: []string{},
+		EnvVars: []string{"KLAYTN_LOGROTATE"},
 	}
 	logMaxSizeMBsFlag = cli.IntFlag{
-		Name:   "log.maxsize",
-		Usage:  "Maximum size in MBs of a single log file (use with --log.rotate flag)",
-		Value:  100,
-		EnvVar: "KLAYTN_LOGMAXSIZE",
+		Name:    "log.maxsize",
+		Usage:   "Maximum size in MBs of a single log file (use with --log.rotate flag)",
+		Value:   100,
+		Aliases: []string{},
+		EnvVars: []string{"KLAYTN_LOGMAXSIZE"},
 	}
 	logMaxBackupsFlag = cli.IntFlag{
-		Name:   "log.maxbackups",
-		Usage:  "Maximum number of log files to retain (use with --log.rotate flag)",
-		Value:  10,
-		EnvVar: "KLAYTN_LOGMAXBACKUPS",
+		Name:    "log.maxbackups",
+		Usage:   "Maximum number of log files to retain (use with --log.rotate flag)",
+		Value:   10,
+		Aliases: []string{},
+		EnvVars: []string{"KLAYTN_LOGMAXBACKUPS"},
 	}
 	logMaxAgeFlag = cli.IntFlag{
-		Name:   "log.maxage",
-		Usage:  "Maximum number of days to retain a log file (use with --log.rotate flag)",
-		Value:  30,
-		EnvVar: "KLAYTN_LOGMAXAGE",
+		Name:    "log.maxage",
+		Usage:   "Maximum number of days to retain a log file (use with --log.rotate flag)",
+		Value:   30,
+		Aliases: []string{},
+		EnvVars: []string{"KLAYTN_LOGMAXAGE"},
 	}
 	logCompressFlag = cli.BoolFlag{
-		Name:   "log.compress",
-		Usage:  "Compress the log files (use with --log.rotate flag)",
-		EnvVar: "KLAYTN_LOGCOMPRESS",
+		Name:    "log.compress",
+		Usage:   "Compress the log files (use with --log.rotate flag)",
+		Aliases: []string{},
+		EnvVars: []string{"KLAYTN_LOGCOMPRESS"},
 	}
 	pprofFlag = cli.BoolFlag{
 		Name:    "pprof",

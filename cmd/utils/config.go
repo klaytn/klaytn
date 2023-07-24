@@ -313,22 +313,22 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 func (kCfg *KlayConfig) SetNodeConfig(ctx *cli.Context) {
 	cfg := &kCfg.Node
 	// ntp check enable with remote server
-	if ctx.GlobalBool(NtpDisableFlag.Name) {
+	if ctx.Bool(NtpDisableFlag.Name) {
 		cfg.NtpRemoteServer = ""
 	} else {
-		cfg.NtpRemoteServer = ctx.GlobalString(NtpServerFlag.Name)
+		cfg.NtpRemoteServer = ctx.String(NtpServerFlag.Name)
 	}
 
 	// disable unsafe debug APIs
-	cfg.DisableUnsafeDebug = ctx.GlobalBool(UnsafeDebugDisableFlag.Name)
+	cfg.DisableUnsafeDebug = ctx.Bool(UnsafeDebugDisableFlag.Name)
 
 	SetP2PConfig(ctx, &cfg.P2P)
 	setIPC(ctx, cfg)
 
 	// httptype is http
 	// fasthttp type is deprecated
-	if ctx.GlobalIsSet(SrvTypeFlag.Name) {
-		cfg.HTTPServerType = ctx.GlobalString(SrvTypeFlag.Name)
+	if ctx.IsSet(SrvTypeFlag.Name) {
+		cfg.HTTPServerType = ctx.String(SrvTypeFlag.Name)
 
 		if cfg.HTTPServerType == "fasthttp" {
 			logger.Warn("The fasthttp option is deprecated. Instead, the server will start with the http type")
@@ -602,11 +602,11 @@ func (kCfg *KlayConfig) SetKlayConfig(ctx *cli.Context, stack *node.Node) {
 	if ctx.IsSet(RPCGlobalGasCap.Name) {
 		cfg.RPCGasCap = new(big.Int).SetUint64(ctx.Uint64(RPCGlobalGasCap.Name))
 	}
-	if ctx.GlobalIsSet(RPCGlobalEVMTimeoutFlag.Name) {
-		cfg.RPCEVMTimeout = ctx.GlobalDuration(RPCGlobalEVMTimeoutFlag.Name)
+	if ctx.IsSet(RPCGlobalEVMTimeoutFlag.Name) {
+		cfg.RPCEVMTimeout = ctx.Duration(RPCGlobalEVMTimeoutFlag.Name)
 	}
-	if ctx.GlobalIsSet(RPCGlobalEthTxFeeCapFlag.Name) {
-		cfg.RPCTxFeeCap = ctx.GlobalFloat64(RPCGlobalEthTxFeeCapFlag.Name)
+	if ctx.IsSet(RPCGlobalEthTxFeeCapFlag.Name) {
+		cfg.RPCTxFeeCap = ctx.Float64(RPCGlobalEthTxFeeCapFlag.Name)
 	}
 
 	// Only CNs could set BlockGenerationIntervalFlag and BlockGenerationTimeLimitFlag
@@ -634,7 +634,7 @@ func (kCfg *KlayConfig) SetKlayConfig(ctx *cli.Context, stack *node.Node) {
 	}
 
 	// disable unsafe debug APIs
-	cfg.DisableUnsafeDebug = ctx.GlobalBool(UnsafeDebugDisableFlag.Name)
+	cfg.DisableUnsafeDebug = ctx.Bool(UnsafeDebugDisableFlag.Name)
 
 	// Override any default configs for hard coded network.
 	// TODO-Klaytn-Bootnode: Discuss and add `baobab` test network's genesis block

@@ -86,22 +86,22 @@ func action(ctx *cli.Context) error {
 	)
 	switch ctx.Command.Name {
 	case DECODE_EXTRA:
-		if len(ctx.Args()) != 1 {
+		if ctx.Args().Len() != 1 {
 			return ErrInvalidCmd
 		}
 		m, err = decodeExtra(ctx.Args().Get(0))
 	case DECODE_VOTE:
-		if len(ctx.Args()) != 1 {
+		if ctx.Args().Len() != 1 {
 			return ErrInvalidCmd
 		}
 		m, err = decodeVote(hex2Bytes(ctx.Args().Get(0)))
 	case DECODE_GOV:
-		if len(ctx.Args()) != 1 {
+		if ctx.Args().Len() != 1 {
 			return ErrInvalidCmd
 		}
 		m, err = decodeGov(hex2Bytes(ctx.Args().Get(0)))
 	case DECRYPT_KEY:
-		if len(ctx.Args()) != 2 {
+		if ctx.Args().Len() != 2 {
 			return ErrInvalidCmd
 		}
 		keystorePath, passwd := ctx.Args().Get(0), ctx.Args().Get(1)
