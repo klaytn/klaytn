@@ -97,8 +97,10 @@ func (v *Vrank) HandleCommitted(blockNum *big.Int) {
 	for _, v := range v.commitArrivalTimeMap {
 		sum += int64(v)
 	}
-	avg := sum / int64(len(v.commitArrivalTimeMap))
-	vrankAvgCommitArrivalTimeWithinQuorumGauge.Update(avg)
+	if len(v.commitArrivalTimeMap) != 0 {
+		avg := sum / int64(len(v.commitArrivalTimeMap))
+		vrankAvgCommitArrivalTimeWithinQuorumGauge.Update(avg)
+	}
 }
 
 // Log logs accumulated data in a compressed form
