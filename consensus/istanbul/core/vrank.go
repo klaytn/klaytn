@@ -73,13 +73,11 @@ func (v *Vrank) TimeSinceStart() time.Duration {
 	return time.Now().Sub(v.startTime)
 }
 
-func (v *Vrank) AddCommit(msg *istanbul.Subject, src istanbul.Validator) time.Duration {
+func (v *Vrank) AddCommit(msg *istanbul.Subject, src istanbul.Validator) {
 	if v.isTargetCommit(msg, src) {
 		t := v.TimeSinceStart()
 		v.commitArrivalTimeMap[src.Address()] = t
-		return t
 	}
-	return -1
 }
 
 func (v *Vrank) HandleCommitted(blockNum *big.Int) {

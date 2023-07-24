@@ -58,9 +58,9 @@ func TestVrank(t *testing.T) {
 	}
 	vrank.HandleCommitted(view.Sequence)
 	for i := quorum; i < N; i++ {
-		t := vrank.AddCommit(msg, committee[i])
+		vrank.AddCommit(msg, committee[i])
 		expectedAssessList = append(expectedAssessList, vrankArrivedLate)
-		expectedLateCommits = append(expectedLateCommits, t)
+		expectedLateCommits = append(expectedLateCommits, vrank.commitArrivalTimeMap[committee[i].Address()])
 	}
 
 	bitmap, late := vrank.Log()
