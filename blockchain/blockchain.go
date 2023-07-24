@@ -2177,7 +2177,7 @@ func (bc *BlockChain) CurrentBlockUpdateLoop(pool *TxPool) {
 			if block == nil {
 				head = bc.db.ReadHeadBlockBackupHash()
 				if head == (common.Hash{}) {
-					logger.Error("Empty database, resetting chain")
+					logger.Error("There is no block backup hash")
 					continue
 				}
 
