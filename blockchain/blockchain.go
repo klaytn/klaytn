@@ -2170,7 +2170,8 @@ func (bc *BlockChain) CurrentBlockUpdateLoop(pool *TxPool) {
 			// Restore the last known head block
 			head := bc.db.ReadHeadBlockHash()
 			if head == (common.Hash{}) {
-				logger.Warn("Failed to read head block hash")
+				logger.Error("Failed to read head block hash")
+				continue
 			}
 
 			block := bc.db.ReadBlockByHash(head)
