@@ -672,7 +672,10 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 		return ErrTxTypeNotSupported
 	}
 
-	gasFeePayer := uint64(0)
+	// Check whether the init code size has been exceeded
+	if pool.rules.IsMantle && tx.To() == nil && len(tx.Data()) > params.MaxInitCodeSize {
+		return fmt.Errorf("%w: code size %v, limit %v", ErrMaxInitCodeSizeExceeded, len(tx.Data()), params.MaxInitCodeSize)
+	}
 
 	// Check chain Id first.
 	if tx.Protected() && tx.ChainId().Cmp(pool.chainconfig.ChainID) != 0 {
@@ -747,8 +750,12 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	if err != nil {
 		return types.ErrSender(err)
 	}
-	from := tx.ValidatedSender()
 
+	var (
+		from          = tx.ValidatedSender()
+		senderBalance = pool.getBalance(from)
+		gasFeePayer   = uint64(0)
+	)
 	// Ensure the transaction adheres to nonce ordering
 	if pool.getNonce(from) > tx.Nonce() {
 		return ErrNonceTooLow
@@ -756,16 +763,18 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 
 	// Transactor should have enough funds to cover the costs
 	// cost == V + GP * GL
-	senderBalance := pool.getBalance(from)
 	if tx.IsFeeDelegatedTransaction() {
 		// balance check for fee-delegated tx
 		gasFeePayer, err = tx.ValidateFeePayer(pool.signer, pool.currentState, pool.currentBlockNumber)
 		if err != nil {
 			return types.ErrFeePayer(err)
 		}
-		feePayer := tx.ValidatedFeePayer()
-		feePayerBalance := pool.getBalance(feePayer)
-		feeRatio, isRatioTx := tx.FeeRatio()
+
+		var (
+			feePayer            = tx.ValidatedFeePayer()
+			feePayerBalance     = pool.getBalance(feePayer)
+			feeRatio, isRatioTx = tx.FeeRatio()
+		)
 		if isRatioTx {
 			// Check fee ratio range
 			if !feeRatio.IsValid() {
