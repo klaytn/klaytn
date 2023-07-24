@@ -93,11 +93,11 @@ func (v *Vrank) HandleCommitted(blockNum *big.Int) {
 	}
 
 	vrankQuorumCommitArrivalTimeGauge.Update(int64(committedTime))
-	sum := int64(0)
-	for _, v := range v.commitArrivalTimeMap {
-		sum += int64(v)
-	}
 	if len(v.commitArrivalTimeMap) != 0 {
+		sum := int64(0)
+		for _, v := range v.commitArrivalTimeMap {
+			sum += int64(v)
+		}
 		avg := sum / int64(len(v.commitArrivalTimeMap))
 		vrankAvgCommitArrivalTimeWithinQuorumGauge.Update(avg)
 	}
