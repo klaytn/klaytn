@@ -319,7 +319,7 @@ func validateLogLocation(path string) error {
 		return fmt.Errorf("error creating the directory: %w", err)
 	}
 	// Check if the path is writable by trying to create a temporary file
-	tmp := filepath.Join(path, ".temp")
+	tmp := path + ".temp"
 	if f, err := os.Create(tmp); err != nil {
 		return err
 	} else {
