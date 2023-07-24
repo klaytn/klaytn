@@ -153,7 +153,7 @@ func (v *Vrank) isTargetCommit(msg *istanbul.Subject, src istanbul.Validator) bo
 }
 
 // assess determines if given time is early, late, or not arrived
-func assess(t, threshold time.Duration) int {
+func assess(t, threshold time.Duration) uint8 {
 	if t == vrankNotArrivedPlaceholder {
 		return vrankNotArrived
 	}
@@ -165,8 +165,8 @@ func assess(t, threshold time.Duration) int {
 	}
 }
 
-func assessBatch(ts []time.Duration, threshold time.Duration) []int {
-	ret := make([]int, len(ts))
+func assessBatch(ts []time.Duration, threshold time.Duration) []uint8 {
+	ret := make([]uint8, len(ts))
 	for i, t := range ts {
 		ret[i] = assess(t, threshold)
 	}
@@ -196,8 +196,8 @@ func serialize(committee istanbul.Validators, arrivalTimeMap map[common.Address]
 
 // compress compresses data into 2-bit bitmap
 // e.g., [1, 0, 2] => [0b01_00_10_00]
-func compress(arr []int) []byte {
-	zip := func(a, b, c, d int) byte {
+func compress(arr []uint8) []byte {
+	zip := func(a, b, c, d uint8) byte {
 		a &= 0b11
 		b &= 0b11
 		c &= 0b11

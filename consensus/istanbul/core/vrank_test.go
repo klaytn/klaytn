@@ -47,7 +47,7 @@ func TestVrank(t *testing.T) {
 		msg       = &istanbul.Subject{View: &view}
 		vrank     = NewVrank(view, committee)
 
-		expectedAssessList  []int
+		expectedAssessList  []uint8
 		expectedLateCommits []time.Duration
 	)
 
@@ -71,7 +71,7 @@ func TestVrank(t *testing.T) {
 func TestVrankAssessBatch(t *testing.T) {
 	arr := []time.Duration{0, 4, 1, vrankNotArrivedPlaceholder, 2}
 	threshold := time.Duration(2)
-	expected := []int{
+	expected := []uint8{
 		vrankArrivedEarly, vrankArrivedLate, vrankArrivedEarly, vrankNotArrived, vrankArrivedEarly,
 	}
 	assert.Equal(t, expected, assessBatch(arr, threshold))
@@ -98,43 +98,43 @@ func TestVrankSerialize(t *testing.T) {
 
 func TestVrankCompress(t *testing.T) {
 	tcs := []struct {
-		input    []int
+		input    []uint8
 		expected []byte
 	}{
 		{
-			input:    []int{2},
+			input:    []uint8{2},
 			expected: []byte{0b10_000000},
 		},
 		{
-			input:    []int{2, 1},
+			input:    []uint8{2, 1},
 			expected: []byte{0b10_01_0000},
 		},
 		{
-			input:    []int{0, 2, 1},
+			input:    []uint8{0, 2, 1},
 			expected: []byte{0b00_10_01_00},
 		},
 		{
-			input:    []int{0, 2, 1, 1},
+			input:    []uint8{0, 2, 1, 1},
 			expected: []byte{0b00_10_01_01},
 		},
 		{
-			input:    []int{1, 2, 1, 2, 1},
+			input:    []uint8{1, 2, 1, 2, 1},
 			expected: []byte{0b01_10_01_10, 0b01_000000},
 		},
 		{
-			input:    []int{1, 2, 1, 2, 1, 2},
+			input:    []uint8{1, 2, 1, 2, 1, 2},
 			expected: []byte{0b01_10_01_10, 0b01_10_0000},
 		},
 		{
-			input:    []int{1, 2, 1, 2, 1, 2, 1},
+			input:    []uint8{1, 2, 1, 2, 1, 2, 1},
 			expected: []byte{0b01_10_01_10, 0b01_10_01_00},
 		},
 		{
-			input:    []int{1, 2, 1, 2, 1, 2, 0, 2},
+			input:    []uint8{1, 2, 1, 2, 1, 2, 0, 2},
 			expected: []byte{0b01_10_01_10, 0b01_10_00_10},
 		},
 		{
-			input:    []int{1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2, 1, 1},
+			input:    []uint8{1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2, 1, 1},
 			expected: []byte{0b01011010, 0b01011010, 0b01011010, 0b01011010, 0b01010000},
 		},
 	}
