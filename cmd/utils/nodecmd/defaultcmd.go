@@ -188,9 +188,8 @@ func CheckCommands(ctx *cli.Context) error {
 	return nil
 }
 
-var confFile = "conf" // flag option for yaml file name
-
 func FlagsFromYaml(ctx *cli.Context) error {
+	confFile := "conf" // flag option for yaml file name
 	if ctx.String(confFile) != "" {
 		if err := altsrc.InitInputSourceWithContext(utils.AllNodeFlags(), altsrc.NewYamlSourceFromFlagFunc(confFile))(ctx); err != nil {
 			return err

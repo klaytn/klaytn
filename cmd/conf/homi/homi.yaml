@@ -58,7 +58,7 @@ genesis:
   governance-mode: "none"
   governing-node: "0x0000000000000000000000000000000000000000"
   unit-price: 0
-  derive-sha-implement: 0
+  derive-sha-impl: 0
   reward: 
     mint-amount: "9600000000000000000"
     ratio: "100/0/0"
@@ -79,7 +79,7 @@ genesis:
     # Istanbul consensus engine options (default engine)
     istanbul: 
       epoch: 604800
-      proposer-policy: 0
+      policy: 0
       subgroup: 21
 
     # To enable clique consensus engine

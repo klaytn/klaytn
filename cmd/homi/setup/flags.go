@@ -73,7 +73,7 @@ var (
 	cliqueFlag = cli.BoolFlag{
 		Name:    "clique",
 		Usage:   "Use Clique consensus",
-		Aliases: []string{},
+		Aliases: []string{"clique.enable"},
 	}
 
 	numOfCNsFlag = cli.IntFlag{

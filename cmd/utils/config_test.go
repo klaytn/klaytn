@@ -1,9 +1,9 @@
 package utils
 
 import (
-	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/urfave/cli/v2"
 	"github.com/urfave/cli/v2/altsrc"
 )
@@ -256,11 +256,7 @@ func TestLoadYaml(t *testing.T) {
 
 	printFlags := func(ctx *cli.Context) error {
 		for _, flag := range AllNodeFlags() {
-			expected := testcases[flag.Names()[0]]
-			actual := ctx.IsSet(flag.Names()[0])
-			if expected != actual {
-				return fmt.Errorf("flag IsSet expected %t, but return %t", expected, actual)
-			}
+			assert.Equal(t, testcases[flag.Names()[0]], ctx.IsSet(flag.Names()[0]), "IsSet returned unexpected result")
 		}
 		return nil
 	}

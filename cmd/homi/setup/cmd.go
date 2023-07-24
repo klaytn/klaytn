@@ -1103,19 +1103,21 @@ func indexGenType(genTypeFlag string, base string) int {
 }
 
 func findGenType(ctx *cli.Context) int {
-	var genType int
+	var (
+		genTypeName string
+		baseString  string
+		genType     int
+	)
+
 	if ctx.Args().Present() {
-		genType = indexGenType(ctx.Args().First(), "")
+		genTypeName, baseString = ctx.Args().First(), ""
 	} else {
-		genType = indexGenType(ctx.String(genTypeFlag.Name), Types[0])
+		genTypeName, baseString = ctx.String(genTypeFlag.Name), Types[0]
 	}
 
+	genType = indexGenType(genTypeName, baseString)
 	if genType == TypeNotDefined {
-		if ctx.Args().Present() {
-			fmt.Printf("Wrong Type : %s\nSupported Types : [docker, local, remote, deploy]\n\n", ctx.Args().First())
-		} else {
-			fmt.Printf("Wrong Type : %s\nSupported Types : [docker, local, remote, deploy]\n\n", ctx.String(genTypeFlag.Name))
-		}
+		fmt.Printf("Wrong Type : %s\nSupported Types : [docker, local, remote, deploy]\n\n", genTypeName)
 		cli.ShowSubcommandHelp(ctx)
 		os.Exit(1)
 	}

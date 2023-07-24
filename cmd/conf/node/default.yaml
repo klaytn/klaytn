@@ -64,7 +64,7 @@ vm:
 metrics-collection-reporting: 
   enable: false
   prometheus: false
-  prometheusport: 61001
+  prometheus-port: 61001
 
 autorestart: 
   enable: false
@@ -244,7 +244,7 @@ chain-data-fetcher:
   mode: kafka
   no-default: false
   num-handlers: 10
-  job-channel.size: 50
+  job-channel-size: 50
   block-channel-size: 50
   max-processing-data-size: 500
   kafka: 
