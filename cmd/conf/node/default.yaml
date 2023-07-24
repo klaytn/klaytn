@@ -9,8 +9,8 @@ common:
   garbage-collection-mode: full
   sender-tx-hash-indexing: false
   target-gas-limit: 4712388
-  block-extra-data: 
-  srvtype: fasthttp
+  block-extra-data: ""
+  srvtype: http
   # rewardbase: 0
   write-address: false
   child-chain-indexing: false
