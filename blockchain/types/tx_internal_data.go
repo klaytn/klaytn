@@ -557,7 +557,7 @@ func IntrinsicGasPayload(gas uint64, data []byte, isContractCreation bool, rules
 			return 0, kerrors.ErrOutOfGas
 		}
 		if isContractCreation && rules.IsMantle {
-			lenWords := toWordSize(uint64(len(data)))
+			lenWords := toWordSize(length)
 			if (math.MaxUint64-gas)/params.InitCodeWordGas < lenWords {
 				return 0, kerrors.ErrOutOfGas
 			}
