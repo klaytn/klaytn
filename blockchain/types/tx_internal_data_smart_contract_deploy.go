@@ -272,7 +272,8 @@ func (t *TxInternalDataSmartContractDeploy) IntrinsicGas(currentBlockNumber uint
 	if t.HumanReadable {
 		gas += params.TxGasHumanReadable
 	}
-	gasPayloadWithGas, err := IntrinsicGasPayload(gas, t.Payload, t.GetRecipient() == nil, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
+
+	gasPayloadWithGas, err := IntrinsicGasPayload(gas, t.Payload, true, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
 	if err != nil {
 		return 0, err
 	}
