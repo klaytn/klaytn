@@ -249,7 +249,7 @@ func TestValidationPoolInsertMagma(t *testing.T) {
 		{"invalidGasPrice", decreaseGasPriceMagma},
 	}
 
-	prof := profile.NewProfiler()
+	// prof := profile.NewProfiler()
 
 	// Initialize blockchain
 	bcdata, err := NewBCData(6, 4)
@@ -304,10 +304,6 @@ func TestValidationPoolInsertMagma(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		txs = append(txs, tx)
-
-		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
-			t.Fatal(err)
-		}
 
 		contract.Addr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce)
 
