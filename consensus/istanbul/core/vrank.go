@@ -166,9 +166,9 @@ func assess(t, threshold time.Duration) int {
 }
 
 func assessBatch(ts []time.Duration, threshold time.Duration) []int {
-	ret := make([]int, 0)
-	for _, t := range ts {
-		ret = append(ret, assess(t, threshold))
+	ret := make([]int, len(ts))
+	for i, t := range ts {
+		ret[i] = assess(t, threshold)
 	}
 	return ret
 }
@@ -210,11 +210,11 @@ func compress(arr []int) []byte {
 		arr = append(arr, 0)
 	}
 
-	ret := make([]byte, 0)
+	ret := make([]byte, len(arr)/4)
 
 	for i := 0; i < len(arr)/4; i++ {
 		chunk := arr[4*i : 4*(i+1)]
-		ret = append(ret, zip(chunk[0], chunk[1], chunk[2], chunk[3]))
+		ret[i] = zip(chunk[0], chunk[1], chunk[2], chunk[3])
 	}
 	return ret
 }
