@@ -505,7 +505,7 @@ func (db *levelDB) updateLevelStats(s *leveldb.DBStats, lv int) {
 }
 
 func (db *levelDB) GetProperty(name string) string {
-	return ""
+	return db.GetProperty(name)
 }
 
 func (db *levelDB) NewBatch() Batch {

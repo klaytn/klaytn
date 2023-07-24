@@ -39,7 +39,6 @@ import (
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
-	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/storage/statedb"
 	"github.com/klaytn/klaytn/work"
 )
@@ -282,11 +281,6 @@ type PublicDebugAPI struct {
 // related public debug methods of the Klaytn service.
 func NewPublicDebugAPI(cn *CN) *PublicDebugAPI {
 	return &PublicDebugAPI{cn: cn}
-}
-
-func (api *PublicDebugAPI) GetRocksDBProperty(dt database.DBEntryType, name string) string {
-	dbm := api.cn.ChainDB()
-	return dbm.GetProperty(dt, name)
 }
 
 // DumpBlock retrieves the entire state of the database at a given block.

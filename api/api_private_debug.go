@@ -27,6 +27,7 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/klaytn/klaytn/networks/rpc"
+	"github.com/klaytn/klaytn/storage/database"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
 )
@@ -41,6 +42,11 @@ type PrivateDebugAPI struct {
 // of the Klaytn service.
 func NewPrivateDebugAPI(b Backend) *PrivateDebugAPI {
 	return &PrivateDebugAPI{b: b}
+}
+
+// GetDBProperty returns the value of the given property of the given database.
+func (api *PrivateDebugAPI) GetDBProperty(dt database.DBEntryType, name string) string {
+	return api.b.ChainDB().GetProperty(dt, name)
 }
 
 // ChaindbProperty returns leveldb properties of the chain database.
