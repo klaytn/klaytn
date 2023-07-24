@@ -25,7 +25,6 @@ import (
 
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 )
@@ -122,6 +121,9 @@ var (
 	ErrSenderPubkeyNotSupported   = errors.New("SenderPubkey is not supported for this signer")
 	ErrSenderFeePayerNotSupported = errors.New("SenderFeePayer is not supported for this signer")
 	ErrHashFeePayerNotSupported   = errors.New("HashFeePayer is not supported for this signer")
+
+	// ErrGasUintOverflow is returned when calculating gas usage.
+	ErrGasUintOverflow = errors.New("gas uint64 overflow")
 )
 
 func (t TxValueKeyType) String() string {
@@ -554,12 +556,12 @@ func IntrinsicGasPayload(gas uint64, data []byte, isContractCreation bool, rules
 	if length > 0 {
 		// Make sure we don't exceed uint64 for all data combinations
 		if (math.MaxUint64-gas)/params.TxDataGas < length {
-			return 0, kerrors.ErrOutOfGas
+			return 0, ErrGasUintOverflow
 		}
 		if isContractCreation && rules.IsMantle {
 			lenWords := toWordSize(length)
 			if (math.MaxUint64-gas)/params.InitCodeWordGas < lenWords {
-				return 0, kerrors.ErrOutOfGas
+				return 0, ErrGasUintOverflow
 			}
 			gas += lenWords * params.InitCodeWordGas
 		}
@@ -579,13 +581,13 @@ func IntrinsicGasPayloadLegacy(gas uint64, data []byte) (uint64, error) {
 		}
 		// Make sure we don't exceed uint64 for all data combinations
 		if (math.MaxUint64-gas)/params.TxDataNonZeroGas < nz {
-			return 0, kerrors.ErrOutOfGas
+			return 0, ErrGasUintOverflow
 		}
 		gas += nz * params.TxDataNonZeroGas
 
 		z := uint64(len(data)) - nz
 		if (math.MaxUint64-gas)/params.TxDataZeroGas < z {
-			return 0, kerrors.ErrOutOfGas
+			return 0, ErrGasUintOverflow
 		}
 		gas += z * params.TxDataZeroGas
 	}
