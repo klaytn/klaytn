@@ -43,7 +43,7 @@ var (
 	vrankAvgCommitArrivalTimeWithinQuorumGauge = metrics.NewRegisteredGauge("vrank/avg_commit_within_quorum", nil)
 	vrankLastCommitArrivalTimeGauge            = metrics.NewRegisteredGauge("vrank/last_commit", nil)
 
-	vrankDefaultThreshold = "300ms"
+	vrankDefaultThreshold = "300ms" // the time to receive 2f+1 commits in an ideal network
 
 	vrank *Vrank
 )
