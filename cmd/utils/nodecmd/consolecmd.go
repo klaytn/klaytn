@@ -33,21 +33,19 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var (
-	AttachCommand = cli.Command{
-		Action:    remoteConsole,
-		Name:      "attach",
-		Usage:     "Start an interactive JavaScript environment (connect to node)",
-		ArgsUsage: "[endpoint]",
-		Flags:     append(utils.ConsoleFlags, &utils.DataDirFlag),
-		Category:  "CONSOLE COMMANDS",
-		Description: `
+var AttachCommand = cli.Command{
+	Action:    remoteConsole,
+	Name:      "attach",
+	Usage:     "Start an interactive JavaScript environment (connect to node)",
+	ArgsUsage: "[endpoint]",
+	Flags:     append(utils.ConsoleFlags, &utils.DataDirFlag),
+	Category:  "CONSOLE COMMANDS",
+	Description: `
 The Klaytn console is an interactive shell for the JavaScript runtime environment
 which exposes a node admin interface as well as the Ðapp JavaScript API.
 See https://github.com/ethereum/go-ethereum/wiki/JavaScript-Console.
 This command allows to open a console on a running Klaytn node.`,
-	}
-)
+}
 
 // GetConsoleCommand returns cli.Command `console` whose flags are initialized with nodeFlags, rpcFlags, and ConsoleFlags.
 func GetConsoleCommand(nodeFlags, rpcFlags []cli.Flag) *cli.Command {

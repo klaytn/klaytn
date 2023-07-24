@@ -24,10 +24,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/klaytn/klaytn/log"
-
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/log"
 	uuid "github.com/satori/go.uuid"
 )
 
