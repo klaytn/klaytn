@@ -131,7 +131,11 @@ func (v *Vrank) Log() (string, []string) {
 
 	lateCommitsStrArr := encodeDurationBatch(lateCommits)
 
-	logger.Info("VRank", "bitmap", bitmap, "late", lateCommitsStrArr)
+	logger.Info("VRank", "seq", v.view.Sequence.Int64(),
+		"round", v.view.Round.Int64(),
+		"bitmap", bitmap,
+		"late", lateCommitsStrArr,
+	)
 	return bitmap, lateCommitsStrArr
 }
 
