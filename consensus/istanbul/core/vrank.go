@@ -101,23 +101,30 @@ func (v *Vrank) HandleCommitted(blockNum *big.Int) {
 	}
 }
 
-// Log logs accumulated data in a compressed form
-func (v *Vrank) Log() (string, []string) {
-	var (
-		serialized = serialize(v.committee, v.commitArrivalTimeMap)
-		assessed   = assessBatch(serialized, v.threshold)
-		compressed = compress(assessed)
-		bitmap     = hex.EncodeToString(compressed)
+func (v *Vrank) Bitmap() string {
+	serialized := serialize(v.committee, v.commitArrivalTimeMap)
+	assessed := assessBatch(serialized, v.threshold)
+	compressed := compress(assessed)
+	return hex.EncodeToString(compressed)
+}
 
-		lateCommits = make([]time.Duration, 0)
-		lastCommit  = time.Duration(0)
-	)
-
+func (v *Vrank) LateCommits() []time.Duration {
+	serialized := serialize(v.committee, v.commitArrivalTimeMap)
+	lateCommits := make([]time.Duration, 0)
 	for _, t := range serialized {
 		if assess(t, v.threshold) == vrankArrivedLate {
 			lateCommits = append(lateCommits, t)
 		}
 	}
+	return lateCommits
+}
+
+// Log logs accumulated data in a compressed form
+func (v *Vrank) Log() {
+	var (
+		lastCommit  = time.Duration(0)
+		lateCommits = v.LateCommits()
+	)
 
 	// lastCommit = max(lateCommits)
 	for _, t := range lateCommits {
@@ -129,14 +136,11 @@ func (v *Vrank) Log() (string, []string) {
 		vrankLastCommitArrivalTimeGauge.Update(int64(lastCommit))
 	}
 
-	lateCommitsStrArr := encodeDurationBatch(lateCommits)
-
 	logger.Info("VRank", "seq", v.view.Sequence.Int64(),
 		"round", v.view.Round.Int64(),
-		"bitmap", bitmap,
-		"late", lateCommitsStrArr,
+		"bitmap", v.Bitmap(),
+		"late", encodeDurationBatch(lateCommits),
 	)
-	return bitmap, lateCommitsStrArr
 }
 
 func (v *Vrank) isTargetCommit(msg *istanbul.Subject, src istanbul.Validator) bool {
@@ -221,7 +225,7 @@ func compress(arr []uint8) []byte {
 }
 
 // encodeDuration encodes given duration into string
-// The returned string is at most 3 bytes
+// The returned string is at most 4 bytes
 func encodeDuration(d time.Duration) string {
 	if d > 10*time.Second {
 		return fmt.Sprintf("%.0fs", d.Seconds())

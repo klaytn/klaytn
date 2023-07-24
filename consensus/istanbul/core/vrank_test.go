@@ -63,9 +63,9 @@ func TestVrank(t *testing.T) {
 		expectedLateCommits = append(expectedLateCommits, vrank.commitArrivalTimeMap[committee[i].Address()])
 	}
 
-	bitmap, late := vrank.Log()
+	bitmap, late := vrank.Bitmap(), vrank.LateCommits()
 	assert.Equal(t, hex.EncodeToString(compress(expectedAssessList)), bitmap)
-	assert.Equal(t, encodeDurationBatch(expectedLateCommits), late)
+	assert.Equal(t, expectedLateCommits, late)
 }
 
 func TestVrankAssessBatch(t *testing.T) {
