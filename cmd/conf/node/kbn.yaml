@@ -1,0 +1,73 @@
+common: 
+  srvtype: fasthttp
+  # datadir: 
+  # gen-key-path: 
+  # write-address: 
+  # authorized-nodes: 
+  ntp: 
+    disable: false
+    server: "pool.ntp.org:123"
+
+p2p:
+  networkid: 8217
+  bn-addr: :32323
+  nat: any
+  # node-key: 
+  # node-key-hex: 
+  # netrestrict: 
+
+metrics-collection-reporting: 
+  enable: false
+  prometheus: false
+  prometheusport: 61001
+
+debug: 
+  verbosity: 3
+  vmodule: ""
+  backtrace: ""
+  print-site: false
+  pprof: 
+    enable: false
+    addr: 127.0.0.1
+    port: 6060
+  mem-profile: 
+    file-name: ""
+    rate: 524288
+  block-profile: 
+    rate: 0
+  cpu-profile: 
+    file-name: ""
+  trace: 
+    file-name: ""
+
+http-rpc: 
+  enable: false
+  addr: localhost
+  port: 8551
+  api: ""
+  gascap: 0
+  eth-tx-feecap: 0
+  read-timeout: 30
+  write-timeout: 30
+  idle-timeout: 120
+  execution-timeout: 30
+  concurrency-limit: 3000
+  cors-domain: ""
+  vhosts: localhost
+  eth-noncompatible: false
+
+ws-rpc: 
+  enable: false
+  addr: localhost
+  port: 8552
+  api: ""
+  origins: ""
+  max-subscription-per-conn: 3000
+  read-deadline: 0
+  write-deadline: 0
+  max-connections: 3000
+
+grpc: 
+  enable: false
+  addr: localhost
+  port: 8553
