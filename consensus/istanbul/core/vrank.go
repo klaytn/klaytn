@@ -142,6 +142,9 @@ func (v *Vrank) Log() (string, []string) {
 }
 
 func (v *Vrank) isTargetCommit(msg *istanbul.Subject, src istanbul.Validator) bool {
+	if msg.View == nil || msg.View.Sequence == nil || msg.View.Round == nil {
+		return false
+	}
 	if msg.View.Cmp(&v.view) != 0 {
 		return false
 	}
