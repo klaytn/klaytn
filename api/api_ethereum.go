@@ -1492,7 +1492,6 @@ func (api *EthereumAPI) Resend(ctx context.Context, sendArgs EthTransactionArgs,
 	}
 
 	return common.Hash{}, fmt.Errorf("Transaction %#x not found", matchTx.Hash())
-
 }
 
 // Accounts returns the collection of accounts this node manages.
