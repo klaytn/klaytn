@@ -150,6 +150,25 @@ func (s *PublicBlockChainAPI) GetAccount(ctx context.Context, address common.Add
 	return serAcc, state.Error()
 }
 
+func (s *PublicKlayAPI) ForkStatus(ctx context.Context, number rpc.BlockNumber) (map[string]bool, error) {
+	block, err := s.b.BlockByNumber(ctx, number)
+	if err != nil {
+		return nil, err
+	}
+	blockNumber := block.Number()
+	cfg := s.b.ChainConfig()
+
+	return map[string]bool{
+		"Istanbul":  cfg.IsIstanbulForkEnabled(blockNumber),
+		"London":    cfg.IsLondonForkEnabled(blockNumber),
+		"EthTxType": cfg.IsEthTxTypeForkEnabled(blockNumber),
+		"Magma":     cfg.IsMagmaForkEnabled(blockNumber),
+		"Kore":      cfg.IsKoreForkEnabled(blockNumber),
+		"KIP103":    cfg.IsKIP103ForkBlock(blockNumber),
+		"Mantle":    cfg.IsMantleForkEnabled(blockNumber),
+	}, nil
+}
+
 // rpcMarshalHeader converts the given header to the RPC output.
 func (s *PublicBlockChainAPI) rpcMarshalHeader(header *types.Header) map[string]interface{} {
 	fields := filters.RPCMarshalHeader(header, s.b.ChainConfig().IsEthTxTypeForkEnabled(header.Number))
