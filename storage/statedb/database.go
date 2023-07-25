@@ -466,8 +466,13 @@ func (db *Database) insertPreimage(hash common.Hash, preimage []byte) {
 	db.preimagesSize += common.StorageSize(common.HashLength + len(preimage))
 }
 
-func (db *Database) insertPruningMark(mark database.PruningMark) {
-	db.pruningMarks = append(db.pruningMarks, mark)
+// insertPruningMark writes a new pruning mark to the memory database.
+// Note, this method assumes that the database's lock is held!
+func (db *Database) insertPruningMark(hash common.ExtHash, blockNum uint64) {
+	db.pruningMarks = append(db.pruningMarks, database.PruningMark{
+		Number: blockNum,
+		Hash:   hash,
+	})
 }
 
 // getCachedNode finds an encoded node in the trie node cache if enabled.

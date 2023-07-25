@@ -27,7 +27,6 @@ import (
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/storage/database"
 )
 
 var (
@@ -74,8 +73,10 @@ type Trie struct {
 	db           *Database
 	root         node
 	originalRoot common.ExtHash
-	pruning      bool // True if the underlying database has pruning enabled.
-	storage      bool // If storage and Pruning are both true, root hash is attached a fresh nonce.
+
+	pruning           bool // True if the underlying database has pruning enabled.
+	storage           bool // If storage and Pruning are both true, root hash is attached a fresh nonce.
+	pruningMarksCache map[common.ExtHash]uint64
 }
 
 // newFlag returns the cache flag value for a newly created node.
@@ -115,11 +116,12 @@ func newTrie(root common.ExtHash, db *Database, opts *TrieOpts, storage bool) (*
 	}
 
 	trie := &Trie{
-		TrieOpts:     *opts,
-		db:           db,
-		pruning:      db.diskDB.ReadPruningEnabled(),
-		originalRoot: root,
-		storage:      storage,
+		TrieOpts:          *opts,
+		db:                db,
+		originalRoot:      root,
+		pruning:           db.diskDB.ReadPruningEnabled(),
+		storage:           storage,
+		pruningMarksCache: make(map[common.ExtHash]uint64),
 	}
 	if !trie.pruning && trie.PruningBlockNumber != 0 {
 		return nil, ErrPruningDisabled
@@ -578,6 +580,7 @@ func (t *Trie) CommitExt(onleaf LeafCallback) (root common.ExtHash, err error) {
 	if t.db == nil {
 		panic("commit called on trie with nil database")
 	}
+	t.commitPruningMarks()
 	hash, cached := t.hashRoot(t.db, onleaf)
 	t.root = cached
 	return hash, nil
@@ -611,18 +614,25 @@ func (t *Trie) markPrunableNode(n node) {
 		// If a node exists as a hashNode, it means the node is either:
 		// (1) lives in database but yet to be resolved - subject to pruning,
 		// (2) collapsed by Hash or Commit - may or may not be in database, add the mark anyway.
-		t.db.insertPruningMark(database.PruningMark{
-			Number: t.PruningBlockNumber,
-			Hash:   common.BytesToExtHash(hn),
-		})
+		t.pruningMarksCache[common.BytesToExtHash(hn)] = t.PruningBlockNumber
 	} else if hn, _ := n.cache(); hn != nil {
 		// If node.flags.hash is nonempty, it means the node is either:
 		// (1) loaded from databas - subject to pruning,
 		// (2) went through hasher by Hash or Commit - may or may not be in database, add the mark anyway.
-		t.db.insertPruningMark(database.PruningMark{
-			Number: t.PruningBlockNumber,
-			Hash:   common.BytesToExtHash(hn),
-		})
+		t.pruningMarksCache[common.BytesToExtHash(hn)] = t.PruningBlockNumber
+	}
+}
+
+// commitPruningMarks writes all the pruning marks
+func (t *Trie) commitPruningMarks() {
+	if len(t.pruningMarksCache) > 0 {
+		t.db.lock.Lock()
+		for hash, blockNum := range t.pruningMarksCache {
+			t.db.insertPruningMark(hash, blockNum)
+		}
+		t.db.lock.Unlock()
+
+		t.pruningMarksCache = make(map[common.ExtHash]uint64)
 	}
 }
 
