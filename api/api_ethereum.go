@@ -465,10 +465,10 @@ func (api *EthereumAPI) GetHeaderByHash(ctx context.Context, hash common.Hash) m
 }
 
 // GetBlockByNumber returns the requested canonical block.
-// * When blockNr is -1 the chain head is returned.
-// * When blockNr is -2 the pending chain head is returned.
-// * When fullTx is true all transactions in the block are returned, otherwise
-//   only the transaction hash is returned.
+//   - When blockNr is -1 the chain head is returned.
+//   - When blockNr is -2 the pending chain head is returned.
+//   - When fullTx is true all transactions in the block are returned, otherwise
+//     only the transaction hash is returned.
 func (api *EthereumAPI) GetBlockByNumber(ctx context.Context, number rpc.BlockNumber, fullTx bool) (map[string]interface{}, error) {
 	// Klaytn backend returns error when there is no matched block but
 	// Ethereum returns it as nil without error, so we should return is as nil when there is no matched block.
@@ -1453,7 +1453,46 @@ func (api *EthereumAPI) PendingTransactions() ([]*EthRPCTransaction, error) {
 // Resend accepts an existing transaction and a new gas price and limit. It will remove
 // the given transaction from the pool and reinsert it with the new gas price and limit.
 func (api *EthereumAPI) Resend(ctx context.Context, sendArgs EthTransactionArgs, gasPrice *hexutil.Big, gasLimit *hexutil.Uint64) (common.Hash, error) {
-	return common.Hash{}, errors.New("this api is not supported by Klaytn because Klaytn use fixed gasPrice policy")
+	if sendArgs.Nonce == nil {
+		return common.Hash{}, fmt.Errorf("missing transaction nonce in transaction spec")
+	}
+
+	if err := sendArgs.setDefaults(ctx, api.publicTransactionPoolAPI.b); err != nil {
+		return common.Hash{}, err
+	}
+
+	matchTx := sendArgs.toTransaction()
+	pending, err := api.publicTransactionPoolAPI.b.GetPoolTransactions()
+	if err != nil {
+		return common.Hash{}, err
+	}
+	for _, p := range pending {
+		signer := types.LatestSignerForChainID(p.ChainId())
+		wantSigHash := signer.Hash(matchTx)
+
+		if pFrom, err := types.Sender(signer, p); err == nil && pFrom == *sendArgs.From && signer.Hash(p) == wantSigHash {
+			// Match. Re-sign and send the transaction.
+			if gasPrice != nil && (*big.Int)(gasPrice).Sign() != 0 {
+				sendArgs.GasPrice = gasPrice
+			}
+			if gasLimit != nil && *gasLimit != 0 {
+				sendArgs.Gas = gasLimit
+			}
+			tx := sendArgs.toTransaction()
+
+			signedTx, err := api.publicTransactionPoolAPI.sign(*sendArgs.From, tx)
+			if err != nil {
+				return common.Hash{}, err
+			}
+			if err = api.publicTransactionPoolAPI.b.SendTx(ctx, signedTx); err != nil {
+				return common.Hash{}, err
+			}
+			return signedTx.Hash(), nil
+		}
+	}
+
+	return common.Hash{}, fmt.Errorf("Transaction %#x not found", matchTx.Hash())
+
 }
 
 // Accounts returns the collection of accounts this node manages.
