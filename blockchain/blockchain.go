@@ -251,8 +251,8 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		cacheConfig:        cacheConfig,
 		db:                 db,
 		triegc:             prque.New(),
-		chBlock:            make(chan gcBlock, 1000),
-		chPrune:            make(chan uint64, 1000),
+		chBlock:            make(chan gcBlock, 2048), // downloader.maxResultsProcess
+		chPrune:            make(chan uint64, 2048),  // downloader.maxResultsProcess
 		stateCache:         state.NewDatabaseWithNewCache(db, cacheConfig.TrieNodeCacheConfig),
 		quit:               make(chan struct{}),
 		futureBlocks:       futureBlocks,
