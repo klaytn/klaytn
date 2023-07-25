@@ -134,6 +134,9 @@ func (b *BlockchainContractCaller) getBlockAndState(num *big.Int) (*types.Block,
 		}
 		block = b.bc.GetBlock(header.Hash(), header.Number.Uint64())
 	}
+	if block == nil {
+		return nil, nil, errBlockDoesNotExist
+	}
 
 	state, err := b.bc.StateAt(block.Root())
 	return block, state, err
