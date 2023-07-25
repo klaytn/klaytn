@@ -1292,13 +1292,12 @@ func TestStatePruning(t *testing.T) {
 	cacheConfig := &CacheConfig{
 		ArchiveMode:          false,
 		CacheSize:            512,
-		BlockInterval:        1, // Write frequently to test pruning
+		BlockInterval:        2, // Write frequently to test pruning
 		TriesInMemory:        DefaultTriesInMemory,
 		LivePruningRetention: retention, // Enable pruning on blockchain by setting it nonzero
 		TrieNodeCacheConfig:  statedb.GetEmptyTrieNodeCacheConfig(),
 	}
 	blockchain, _ := NewBlockChain(db, cacheConfig, gspec.Config, engine, vm.Config{})
-	defer blockchain.Stop()
 
 	chain, _ := GenerateChain(gspec.Config, genesis, engine, db, numBlocks, func(i int, gen *BlockGen) {
 		tx, _ := types.SignTx(types.NewTransaction(
@@ -1312,6 +1311,14 @@ func TestStatePruning(t *testing.T) {
 
 	// Give some time for pruning loop to run
 	time.Sleep(100 * time.Millisecond)
+
+	// Note that even if trie nodes are deleted from disk (DiskDB),
+	// they may still be cached in memory (TrieDB).
+	//
+	// Therefore reopen the blockchain from the DiskDB with a clean TrieDB.
+	// This simulates the node program restart.
+	blockchain.Stop()
+	blockchain, _ = NewBlockChain(db, cacheConfig, gspec.Config, engine, vm.Config{})
 
 	// Genesis block always survives
 	state, err := blockchain.StateAt(genesis.Root())
@@ -1331,6 +1338,7 @@ func TestStatePruning(t *testing.T) {
 		assert.NotZero(t, state.GetBalance(addr1).Uint64())
 		assert.NotZero(t, state.GetBalance(addr2).Uint64())
 	}
+	blockchain.Stop()
 }
 
 // TODO-Klaytn-FailedTest Failed test. Enable this later.
