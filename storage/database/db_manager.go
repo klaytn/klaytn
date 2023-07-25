@@ -1873,6 +1873,7 @@ func (dbm *databaseManager) PutTrieNodeToBatch(batch Batch, hash common.ExtHash,
 	}
 }
 
+// DeleteTrieNode deletes a trie node having a specific hash. It is used only for testing.
 func (dbm *databaseManager) DeleteTrieNode(hash common.ExtHash) {
 	if err := dbm.getDatabase(StateTrieDB).Delete(TrieNodeKey(hash)); err != nil {
 		logger.Crit("Failed to delete trie node", "err", err)

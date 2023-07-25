@@ -281,7 +281,8 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	}
 	// Live pruning is enabled according to the flag in database
 	// regardless of the command line flag --state.live-pruning
-	if chainDB.ReadPruningEnabled() {
+	// But live pruning is disabled when --state.live-pruning-retention 0
+	if chainDB.ReadPruningEnabled() && config.LivePruningRetention != 0 {
 		logger.Info("Live pruning is enabled")
 	}
 
