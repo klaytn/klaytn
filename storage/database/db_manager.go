@@ -68,6 +68,7 @@ type DBManager interface {
 	GetStateTrieMigrationDB() Database
 	GetMiscDB() Database
 	GetSnapshotDB() Database
+	GetProperty(dt DBEntryType, name string) string
 
 	// from accessors_chain.go
 	ReadCanonicalHash(number uint64) common.Hash
@@ -434,6 +435,9 @@ type DBConfig struct {
 	LevelDBCompression LevelDBCompressionType
 	LevelDBBufferPool  bool
 
+	// RocksDB related configurations
+	RocksDBConfig *RocksDBConfig
+
 	// DynamoDB related configurations
 	DynamoDBConfig *DynamoDBConfig
 }
@@ -518,6 +522,8 @@ func newDatabase(dbc *DBConfig, entryType DBEntryType) (Database, error) {
 	switch dbc.DBType {
 	case LevelDB:
 		return NewLevelDB(dbc, entryType)
+	case RocksDB:
+		return NewRocksDB(dbc.Dir, dbc.RocksDBConfig)
 	case BadgerDB:
 		return NewBadgerDB(dbc.Dir)
 	case MemoryDB:
@@ -658,6 +664,12 @@ func (stdBatch *stateTrieDBBatch) Write() error {
 func (stdBatch *stateTrieDBBatch) Reset() {
 	for _, batch := range stdBatch.batches {
 		batch.Reset()
+	}
+}
+
+func (stdBatch *stateTrieDBBatch) Release() {
+	for _, batch := range stdBatch.batches {
+		batch.Release()
 	}
 }
 
@@ -830,6 +842,10 @@ func (dbm *databaseManager) GetMiscDB() Database {
 
 func (dbm *databaseManager) GetSnapshotDB() Database {
 	return dbm.getDatabase(SnapshotDB)
+}
+
+func (dbm *databaseManager) GetProperty(dt DBEntryType, name string) string {
+	return dbm.getDatabase(dt).GetProperty(name)
 }
 
 func (dbm *databaseManager) GetMemDB() *MemDB {
@@ -1867,6 +1883,7 @@ func (dbm *databaseManager) PutTrieNodeToBatch(batch Batch, hash common.ExtHash,
 // current block number, and is used for debug messages only.
 func (dbm *databaseManager) WritePreimages(number uint64, preimages map[common.Hash][]byte) {
 	batch := dbm.NewBatch(StateTrieDB)
+	defer batch.Release()
 	for hash, preimage := range preimages {
 		if err := batch.Put(preimageKey(hash), preimage); err != nil {
 			logger.Crit("Failed to store trie preimage", "err", err)
@@ -1913,6 +1930,7 @@ func (dbm *databaseManager) WriteTxLookupEntries(block *types.Block) {
 
 func (dbm *databaseManager) WriteAndCacheTxLookupEntries(block *types.Block) error {
 	batch := dbm.NewBatch(TxLookUpEntryDB)
+	defer batch.Release()
 	for i, tx := range block.Transactions() {
 		entry := TxLookupEntry{
 			BlockHash:  block.Hash(),
@@ -1981,7 +1999,7 @@ func (dbm *databaseManager) ReadTxAndLookupInfo(hash common.Hash) (*types.Transa
 
 // NewSenderTxHashToTxHashBatch returns a batch to write senderTxHash to txHash mapping information.
 func (dbm *databaseManager) NewSenderTxHashToTxHashBatch() Batch {
-	return dbm.NewBatch(MiscDB)
+	return dbm.NewBatch(MiscDB) // batch.Release should be called from caller
 }
 
 // PutSenderTxHashToTxHashToBatch 1) puts the given senderTxHash and txHash to the given batch and

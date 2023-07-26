@@ -311,6 +311,9 @@ type BlockChain interface {
 	BlockSubscriptionLoop(pool *blockchain.TxPool)
 	CloseBlockSubscriptionLoop()
 
+	// read-only mode
+	CurrentBlockUpdateLoop(pool *blockchain.TxPool)
+
 	// Snapshot
 	Snapshots() *snapshot.Tree
 }

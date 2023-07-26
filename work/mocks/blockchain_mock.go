@@ -158,6 +158,18 @@ func (mr *MockBlockChainMockRecorder) CurrentBlock() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CurrentBlock", reflect.TypeOf((*MockBlockChain)(nil).CurrentBlock))
 }
 
+// CurrentBlockUpdateLoop mocks base method.
+func (m *MockBlockChain) CurrentBlockUpdateLoop(arg0 *blockchain.TxPool) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "CurrentBlockUpdateLoop", arg0)
+}
+
+// CurrentBlockUpdateLoop indicates an expected call of CurrentBlockUpdateLoop.
+func (mr *MockBlockChainMockRecorder) CurrentBlockUpdateLoop(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CurrentBlockUpdateLoop", reflect.TypeOf((*MockBlockChain)(nil).CurrentBlockUpdateLoop), arg0)
+}
+
 // CurrentFastBlock mocks base method.
 func (m *MockBlockChain) CurrentFastBlock() *types.Block {
 	m.ctrl.T.Helper()

@@ -1189,6 +1189,11 @@ func (bc *BlockChain) InsertReceiptChain(blockChain types.Blocks, receiptChain [
 		receiptsBatch        = bc.db.NewBatch(database.ReceiptsDB)
 		txLookupEntriesBatch = bc.db.NewBatch(database.TxLookUpEntryDB)
 	)
+
+	defer bodyBatch.Release()
+	defer receiptsBatch.Release()
+	defer txLookupEntriesBatch.Release()
+
 	for i, block := range blockChain {
 		receipts := receiptChain[i]
 		// Short circuit insertion if shutting down or processing failed
@@ -2147,6 +2152,51 @@ func (bc *BlockChain) CloseBlockSubscriptionLoop() {
 		if err := pubSub.UnsubscribeBlock(); err != nil {
 			logger.Error("failed to unsubscribe blocks", "err", err, "trieNodeCacheConfig",
 				bc.stateCache.TrieDB().GetTrieNodeCacheConfig())
+		}
+	}
+}
+
+// CurrentBlockUpdateLoop updates the current block in the chain for updating read-only node.
+func (bc *BlockChain) CurrentBlockUpdateLoop(pool *TxPool) {
+	bc.wg.Add(1)
+	defer bc.wg.Done()
+
+	refresher := time.NewTicker(1 * time.Second)
+	defer refresher.Stop()
+
+	for {
+		select {
+		case <-refresher.C:
+			// Restore the last known head block
+			head := bc.db.ReadHeadBlockHash()
+			if head == (common.Hash{}) {
+				logger.Error("Failed to read head block hash")
+				continue
+			}
+
+			block := bc.db.ReadBlockByHash(head)
+			if block == nil {
+				head = bc.db.ReadHeadBlockBackupHash()
+				if head == (common.Hash{}) {
+					logger.Error("There is no block backup hash")
+					continue
+				}
+
+				block = bc.GetBlockByHash(head)
+				if block == nil {
+					logger.Error("Failed to read head block from database", "hash", head.String())
+					continue
+				}
+			}
+
+			oldHead := bc.CurrentHeader()
+			bc.replaceCurrentBlock(block)
+			pool.lockedReset(oldHead, bc.CurrentHeader())
+
+			// TODO-Klaytn-RocksDB: update logic for subscription API. check BlockSubscriptionLoop method.
+		case <-bc.quit:
+			logger.Info("Closed current block update loop")
+			return
 		}
 	}
 }

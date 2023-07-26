@@ -760,6 +760,7 @@ func (db *Database) Cap(limit common.StorageSize) error {
 	// Keep committing nodes from the flush-list until we're below allowance
 	oldest := db.oldest
 	batch := db.diskDB.NewBatch(database.StateTrieDB)
+	defer batch.Release()
 	for size > limit && !common.EmptyExtHash(oldest) {
 		// Fetch the oldest referenced node and push into the batch
 		node := db.nodes[oldest]
@@ -854,6 +855,7 @@ func (db *Database) writeBatchNodes(node common.ExtHash) error {
 	}
 
 	batch := db.diskDB.NewBatch(database.StateTrieDB)
+	defer batch.Release()
 	for numGoRoutines > 0 {
 		result := <-resultCh
 		if common.EmptyExtHash(result.hash) && result.val == nil {

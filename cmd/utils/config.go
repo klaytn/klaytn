@@ -347,6 +347,7 @@ func (kCfg *KlayConfig) SetNodeConfig(ctx *cli.Context) {
 		logger.Crit("invalid dbtype", "dbtype", ctx.GlobalString(DbTypeFlag.Name))
 	}
 	cfg.DataDir = ctx.GlobalString(DataDirFlag.Name)
+	cfg.ChainDataDir = ctx.GlobalString(ChainDataDirFlag.Name)
 
 	if ctx.GlobalIsSet(KeyStoreDirFlag.Name) {
 		cfg.KeyStoreDir = ctx.GlobalString(KeyStoreDirFlag.Name)
@@ -519,6 +520,19 @@ func (kCfg *KlayConfig) SetKlayConfig(ctx *cli.Context, stack *node.Node) {
 	cfg.LevelDBBufferPool = !ctx.GlobalIsSet(LevelDBNoBufferPoolFlag.Name)
 	cfg.EnableDBPerfMetrics = !ctx.GlobalIsSet(DBNoPerformanceMetricsFlag.Name)
 	cfg.LevelDBCacheSize = ctx.GlobalInt(LevelDBCacheSizeFlag.Name)
+
+	cfg.RocksDBConfig.Secondary = ctx.GlobalIsSet(RocksDBSecondaryFlag.Name)
+	if cfg.RocksDBConfig.Secondary {
+		cfg.FetcherDisable = true
+		cfg.DownloaderDisable = true
+		cfg.WorkerDisable = true
+	}
+	cfg.RocksDBConfig.CacheSize = ctx.GlobalUint64(RocksDBCacheSizeFlag.Name)
+	cfg.RocksDBConfig.DumpMallocStat = ctx.GlobalIsSet(RocksDBDumpMallocStatFlag.Name)
+	cfg.RocksDBConfig.CompressionType = ctx.GlobalString(RocksDBCompressionTypeFlag.Name)
+	cfg.RocksDBConfig.BottommostCompressionType = ctx.GlobalString(RocksDBBottommostCompressionTypeFlag.Name)
+	cfg.RocksDBConfig.FilterPolicy = ctx.GlobalString(RocksDBFilterPolicyFlag.Name)
+	cfg.RocksDBConfig.DisableMetrics = ctx.GlobalBool(RocksDBDisableMetricsFlag.Name)
 
 	cfg.DynamoDBConfig.TableName = ctx.GlobalString(DynamoDBTableNameFlag.Name)
 	cfg.DynamoDBConfig.Region = ctx.GlobalString(DynamoDBRegionFlag.Name)

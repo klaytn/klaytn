@@ -60,7 +60,7 @@ type SuiteDynamoDB struct {
 
 func TestDynamoDB(t *testing.T) {
 	storage.SkipLocalTest(t)
-	db, remove := newTestDynamoS3DB()
+	db, remove, _ := newTestDynamoS3DB()
 	defer remove()
 
 	suite.Run(t, &SuiteDynamoDB{database: db})

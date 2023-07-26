@@ -171,6 +171,7 @@ func senderTxHashIndexer(db database.DBManager, chainEvent <-chan blockchain.Cha
 
 			if err == nil {
 				batch.Write()
+				batch.Release()
 			}
 
 		case <-subscription.Err():
@@ -405,6 +406,10 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		go cn.blockchain.BlockSubscriptionLoop(cn.txPool.(*blockchain.TxPool))
 	}
 
+	if config.DBType == database.RocksDB && config.RocksDBConfig.Secondary {
+		go cn.blockchain.CurrentBlockUpdateLoop(cn.txPool.(*blockchain.TxPool))
+	}
+
 	return cn, nil
 }
 
@@ -459,7 +464,7 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) database.DB
 	dbc := &database.DBConfig{
 		Dir: name, DBType: config.DBType, ParallelDBWrite: config.ParallelDBWrite, SingleDB: config.SingleDB, NumStateTrieShards: config.NumStateTrieShards,
 		LevelDBCacheSize: config.LevelDBCacheSize, OpenFilesLimit: database.GetOpenFilesLimit(), LevelDBCompression: config.LevelDBCompression,
-		LevelDBBufferPool: config.LevelDBBufferPool, EnableDBPerfMetrics: config.EnableDBPerfMetrics, DynamoDBConfig: &config.DynamoDBConfig,
+		LevelDBBufferPool: config.LevelDBBufferPool, EnableDBPerfMetrics: config.EnableDBPerfMetrics, RocksDBConfig: &config.RocksDBConfig, DynamoDBConfig: &config.DynamoDBConfig,
 	}
 	return ctx.OpenDatabase(dbc)
 }

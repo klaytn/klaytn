@@ -81,6 +81,9 @@ func (batch *emptyBatch) ValueSize() int {
 func (batch *emptyBatch) Reset() {
 }
 
+func (batch *emptyBatch) Release() {
+}
+
 func (batch *emptyBatch) Replay(w KeyValueWriter) error {
 	return nil
 }

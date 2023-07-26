@@ -106,6 +106,12 @@ var (
 		Usage:  "Data directory for the databases and keystore. This value is only used in local DB.",
 		EnvVar: "KLAYTN_DATADIR",
 	}
+	ChainDataDirFlag = DirectoryFlag{
+		Name:   "chaindatadir",
+		Value:  DirectoryString{""},
+		Usage:  "Data directory for chaindata. If this is not specified, chaindata is stored in datadir",
+		EnvVar: "KLAYTN_CHAINDATADIR",
+	}
 	KeyStoreDirFlag = DirectoryFlag{
 		Name:   "keystore",
 		Usage:  "Directory for the keystore (default = inside the datadir)",
@@ -273,6 +279,45 @@ var (
 		Name:   "db.leveldb.no-buffer-pool",
 		Usage:  "Disables using buffer pool for LevelDB's block allocation",
 		EnvVar: "KLAYTN_DB_LEVELDB_NO_BUFFER_POOL",
+	}
+	RocksDBSecondaryFlag = cli.BoolFlag{
+		Name:   "db.rocksdb.secondary",
+		Usage:  "Enable rocksdb secondary mode (read-only and catch-up with primary node dynamically)",
+		EnvVar: "KLAYTN_DB_ROCKSDB_SECONDARY",
+	}
+	RocksDBCacheSizeFlag = cli.Uint64Flag{
+		Name:   "db.rocksdb.cache-size",
+		Usage:  "Size of in-memory cache in RocksDB (MiB)",
+		Value:  768,
+		EnvVar: "KLAYTN_DB_ROCKSDB_CACHE_SIZE",
+	}
+	RocksDBDumpMallocStatFlag = cli.BoolFlag{
+		Name:   "db.rocksdb.dump-memory-stat",
+		Usage:  "Enable to print memory stat together with rocksdb.stat. Works with Jemalloc only.",
+		EnvVar: "KLAYTN_DB_ROCKSDB_DUMP_MALLOC_STAT",
+	}
+	RocksDBCompressionTypeFlag = cli.StringFlag{
+		Name:   "db.rocksdb.compression-type",
+		Usage:  "RocksDB block compression type. Supported values are 'no', 'snappy', 'zlib', 'bz', 'lz4', 'lz4hc', 'xpress', 'zstd'",
+		Value:  database.GetDefaultRocksDBConfig().CompressionType,
+		EnvVar: "KLAYTN_DB_ROCKSDB_COMPRESSION_TYPE",
+	}
+	RocksDBBottommostCompressionTypeFlag = cli.StringFlag{
+		Name:   "db.rocksdb.bottommost-compression-type",
+		Usage:  "RocksDB bottommost block compression type. Supported values are 'no', 'snappy', 'zlib', 'bz2', 'lz4', 'lz4hc', 'xpress', 'zstd'",
+		Value:  database.GetDefaultRocksDBConfig().BottommostCompressionType,
+		EnvVar: "KLAYTN_DB_ROCKSDB_BOTTOMMOST_COMPRESSION_TYPE",
+	}
+	RocksDBFilterPolicyFlag = cli.StringFlag{
+		Name:   "db.rocksdb.filter-policy",
+		Usage:  "RocksDB filter policy. Supported values are 'no', 'bloom', 'ribbon'",
+		Value:  database.GetDefaultRocksDBConfig().FilterPolicy,
+		EnvVar: "KLAYTN_DB_ROCKSDB_FILTER_POLICY",
+	}
+	RocksDBDisableMetricsFlag = cli.BoolFlag{
+		Name:   "db.rocksdb.disable-metrics",
+		Usage:  "Disable RocksDB metrics",
+		EnvVar: "KLAYTN_DB_ROCKSDB_DISABLE_METRICS",
 	}
 	DynamoDBTableNameFlag = cli.StringFlag{
 		Name:   "db.dynamo.tablename",
