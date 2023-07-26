@@ -94,6 +94,7 @@ genesis:
     eth-tx-type-compatible-blocknumber: 0
     magma-compatible-blocknumber: 0
     kore-compatible-blocknumber: 0
+    shanghai-compatible-blocknumber: 0
 
   # For using the patched addressbook contract
   patched-address-book: 
