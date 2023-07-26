@@ -45,15 +45,16 @@ var logger = log.NewModuleLogger(log.NodeCN)
 // GetDefaultConfig returns default settings for use on the Klaytn main net.
 func GetDefaultConfig() *Config {
 	return &Config{
-		SyncMode:            downloader.FullSync,
-		NetworkId:           params.CypressNetworkId,
-		LevelDBCacheSize:    768,
-		TrieCacheSize:       512,
-		TrieTimeout:         5 * time.Minute,
-		TrieBlockInterval:   blockchain.DefaultBlockInterval,
-		TrieNodeCacheConfig: *statedb.GetEmptyTrieNodeCacheConfig(),
-		TriesInMemory:       blockchain.DefaultTriesInMemory,
-		GasPrice:            big.NewInt(18 * params.Ston),
+		SyncMode:             downloader.FullSync,
+		NetworkId:            params.CypressNetworkId,
+		LevelDBCacheSize:     768,
+		TrieCacheSize:        512,
+		TrieTimeout:          5 * time.Minute,
+		TrieBlockInterval:    blockchain.DefaultBlockInterval,
+		TrieNodeCacheConfig:  *statedb.GetEmptyTrieNodeCacheConfig(),
+		TriesInMemory:        blockchain.DefaultTriesInMemory,
+		LivePruningRetention: blockchain.DefaultLivePruningRetention,
+		GasPrice:             big.NewInt(18 * params.Ston),
 
 		TxPool: blockchain.DefaultTxPoolConfig,
 		GPO: gasprice.Config{
@@ -122,6 +123,8 @@ type Config struct {
 	TrieTimeout          time.Duration
 	TrieBlockInterval    uint
 	TriesInMemory        uint64
+	LivePruning          bool
+	LivePruningRetention uint64
 	SenderTxHashIndexing bool
 	ParallelDBWrite      bool
 	TrieNodeCacheConfig  statedb.TrieNodeCacheConfig

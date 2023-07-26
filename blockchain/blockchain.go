@@ -107,9 +107,10 @@ const (
 )
 
 const (
-	DefaultTriesInMemory = 128
-	DefaultBlockInterval = 128
-	MaxPrefetchTxs       = 20000
+	DefaultTriesInMemory        = 128
+	DefaultBlockInterval        = 128
+	DefaultLivePruningRetention = 172800
+	MaxPrefetchTxs              = 20000
 
 	// BlockChainVersion ensures that an incompatible database forces a resync from scratch.
 	// Changelog:
@@ -127,6 +128,7 @@ type CacheConfig struct {
 	CacheSize            int                          // Size of in-memory cache of a trie (MiB) to flush matured singleton trie nodes to disk
 	BlockInterval        uint                         // Block interval to flush the trie. Each interval state trie will be flushed into disk
 	TriesInMemory        uint64                       // Maximum number of recent state tries according to its block number
+	LivePruningRetention uint64                       // Number of blocks before trie nodes in pruning marks to be deleted. If zero, obsolete nodes are not deleted.
 	SenderTxHashIndexing bool                         // Enables saving senderTxHash to txHash mapping information to database and cache
 	TrieNodeCacheConfig  *statedb.TrieNodeCacheConfig // Configures trie node cache
 	SnapshotCacheSize    int                          // Memory allowance (MB) to use for caching snapshot entries in memory
@@ -161,6 +163,7 @@ type BlockChain struct {
 	snaps   *snapshot.Tree     // Snapshot tree for fast trie leaf access
 	triegc  *prque.Prque       // Priority queue mapping block numbers to tries to gc
 	chBlock chan gcBlock       // chPushBlockGCPrque is a channel for delivering the gc item to gc loop.
+	chPrune chan uint64        // chPrune is a channel for delivering the current block number for pruning loop.
 
 	hc            *HeaderChain
 	rmLogsFeed    event.Feed
@@ -224,13 +227,14 @@ type prefetchTx struct {
 func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config) (*BlockChain, error) {
 	if cacheConfig == nil {
 		cacheConfig = &CacheConfig{
-			ArchiveMode:         false,
-			CacheSize:           512,
-			BlockInterval:       DefaultBlockInterval,
-			TriesInMemory:       DefaultTriesInMemory,
-			TrieNodeCacheConfig: statedb.GetEmptyTrieNodeCacheConfig(),
-			SnapshotCacheSize:   512,
-			SnapshotAsyncGen:    true,
+			ArchiveMode:          false,
+			CacheSize:            512,
+			BlockInterval:        DefaultBlockInterval,
+			TriesInMemory:        DefaultTriesInMemory,
+			LivePruningRetention: DefaultLivePruningRetention,
+			TrieNodeCacheConfig:  statedb.GetEmptyTrieNodeCacheConfig(),
+			SnapshotCacheSize:    512,
+			SnapshotAsyncGen:     true,
 		}
 	}
 
@@ -247,7 +251,8 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		cacheConfig:        cacheConfig,
 		db:                 db,
 		triegc:             prque.New(),
-		chBlock:            make(chan gcBlock, 1000),
+		chBlock:            make(chan gcBlock, 2048), // downloader.maxResultsProcess
+		chPrune:            make(chan uint64, 2048),  // downloader.maxResultsProcess
 		stateCache:         state.NewDatabaseWithNewCache(db, cacheConfig.TrieNodeCacheConfig),
 		quit:               make(chan struct{}),
 		futureBlocks:       futureBlocks,
@@ -353,6 +358,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 	// Take ownership of this particular state
 	go bc.update()
 	bc.gcCachedNodeLoop()
+	bc.pruneTrieNodeLoop()
 	bc.restartStateMigration()
 
 	if cacheConfig.TrieNodeCacheConfig.DumpPeriodically() {
@@ -685,6 +691,18 @@ func (bc *BlockChain) State() (*state.StateDB, error) {
 // StateAt returns a new mutable state based on a particular point in time.
 func (bc *BlockChain) StateAt(root common.Hash) (*state.StateDB, error) {
 	return state.New(root, bc.stateCache, bc.snaps, nil)
+}
+
+// PrunableStateAt returns a new mutable state based on a particular point in time.
+// If live pruning is enabled on the databse, and num is nonzero, then trie will mark obsolete nodes for pruning.
+func (bc *BlockChain) PrunableStateAt(root common.Hash, num uint64) (*state.StateDB, error) {
+	if bc.db.ReadPruningEnabled() && bc.cacheConfig.LivePruningRetention != 0 {
+		return state.New(root, bc.stateCache, bc.snaps, &statedb.TrieOpts{
+			PruningBlockNumber: num,
+		})
+	} else {
+		return bc.StateAt(root)
+	}
 }
 
 // StateAtWithPersistent returns a new mutable state based on a particular point in time with persistent trie nodes.
@@ -1340,8 +1358,8 @@ func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) e
 					logger.Error("Error from trieDB.Cap by state migration", "err", err)
 				}
 			}
-
 			bc.lastCommittedBlock = block.NumberU64()
+			bc.chPrune <- block.NumberU64()
 		}
 
 		bc.chBlock <- gcBlock{root, block.NumberU64()}
@@ -1395,6 +1413,41 @@ func (bc *BlockChain) gcCachedNodeLoop() {
 					cnt++
 				}
 				logger.Debug("GC cached node", "currentBlk", blkNum, "chosenBlk", chosen, "deferenceCnt", cnt)
+			case <-bc.quit:
+				return
+			}
+		}
+	}()
+}
+
+func (bc *BlockChain) pruneTrieNodeLoop() {
+	// ReadPruningMarks(1, limit) is very slow because it iterates over the most of MiscDB.
+	// ReadPruningMarks(start, limit) is much faster because it only iterates a small range.
+	startNum := uint64(1)
+
+	bc.wg.Add(1)
+	go func() {
+		defer bc.wg.Done()
+		for {
+			select {
+			case num := <-bc.chPrune:
+				if !bc.db.ReadPruningEnabled() || bc.cacheConfig.LivePruningRetention == 0 {
+					continue
+				}
+				if num <= bc.cacheConfig.LivePruningRetention {
+					continue
+				}
+				limit := num - bc.cacheConfig.LivePruningRetention // Prune [1, latest - retention]
+
+				startTime := time.Now()
+				marks := bc.db.ReadPruningMarks(startNum, limit+1)
+				bc.db.PruneTrieNodes(marks)
+				bc.db.DeletePruningMarks(marks)
+
+				logger.Info("Pruned trie nodes", "number", num, "start", startNum, "limit", limit,
+					"count", len(marks), "elapsed", time.Since(startTime))
+
+				startNum = limit + 1
 			case <-bc.quit:
 				return
 			}
@@ -1923,7 +1976,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			return i, events, coalescedLogs, err
 		}
 
-		stateDB, err := bc.StateAt(parent.Root())
+		stateDB, err := bc.PrunableStateAt(parent.Root(), parent.NumberU64())
 		if err != nil {
 			return i, events, coalescedLogs, err
 		}

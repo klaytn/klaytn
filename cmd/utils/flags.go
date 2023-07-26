@@ -396,6 +396,17 @@ var (
 		Value:  blockchain.DefaultTriesInMemory,
 		EnvVar: "KLAYTN_STATE_TRIES_IN_MEMORY",
 	}
+	LivePruningFlag = cli.BoolFlag{
+		Name:   "state.live-pruning",
+		Usage:  "Enable trie live pruning",
+		EnvVar: "KLAYTN_STATE_LIVE_PRUNING",
+	}
+	LivePruningRetentionFlag = cli.Uint64Flag{
+		Name:   "state.live-pruning-retention",
+		Usage:  "Number of blocks from the latest block that are not to be pruned",
+		Value:  blockchain.DefaultLivePruningRetention,
+		EnvVar: "KLAYTN_STATE_LIVE_PRUNING_RETENTION",
+	}
 	CacheTypeFlag = cli.IntFlag{
 		Name:   "cache.type",
 		Usage:  "Cache Type: 0=LRUCache, 1=LRUShardCache, 2=FIFOCache",

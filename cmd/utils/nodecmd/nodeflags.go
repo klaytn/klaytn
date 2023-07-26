@@ -164,6 +164,8 @@ var CommonNodeFlags = []cli.Flag{
 	altsrc.NewIntFlag(utils.TrieMemoryCacheSizeFlag),
 	altsrc.NewUintFlag(utils.TrieBlockIntervalFlag),
 	altsrc.NewUint64Flag(utils.TriesInMemoryFlag),
+	altsrc.NewBoolFlag(utils.LivePruningFlag),
+	altsrc.NewUint64Flag(utils.LivePruningRetentionFlag),
 	altsrc.NewIntFlag(utils.CacheTypeFlag),
 	altsrc.NewIntFlag(utils.CacheScaleFlag),
 	altsrc.NewStringFlag(utils.CacheUsageLevelFlag),

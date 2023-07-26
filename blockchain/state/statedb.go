@@ -60,8 +60,9 @@ var (
 // StateDBs within the Klaytn protocol are used to cache stateObjects from Merkle Patricia Trie
 // and mediate the operations to them.
 type StateDB struct {
-	db   Database
-	trie Trie
+	db       Database
+	trie     Trie
+	trieOpts *statedb.TrieOpts
 
 	snaps         *snapshot.Tree
 	snap          snapshot.Snapshot
@@ -125,6 +126,7 @@ func New(root common.Hash, db Database, snaps *snapshot.Tree, opts *statedb.Trie
 	sdb := &StateDB{
 		db:                       db,
 		trie:                     tr,
+		trieOpts:                 opts,
 		snaps:                    snaps,
 		stateObjects:             make(map[common.Address]*stateObject),
 		stateObjectsDirtyStorage: make(map[common.Address]struct{}),
@@ -171,7 +173,7 @@ func (self *StateDB) Error() error {
 // Reset clears out all ephemeral state objects from the state db, but keeps
 // the underlying state trie to avoid reloading data for the next operations.
 func (self *StateDB) Reset(root common.Hash) error {
-	tr, err := self.db.OpenTrie(root, nil)
+	tr, err := self.db.OpenTrie(root, self.trieOpts)
 	if err != nil {
 		return err
 	}
