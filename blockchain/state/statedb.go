@@ -713,15 +713,11 @@ func (self *StateDB) createObjectWithMap(addr common.Address, accountType accoun
 }
 
 // CreateAccount explicitly creates a state object. If a state object with the address
-// already exists the balance is carried over to the new account.
-//
-// CreateAccount is called during the EVM CREATE operation. The situation might arise that
-// a contract does the following:
-//
-//   1. sends funds to sha(account ++ (nonce + 1))
-//   2. tx_create(sha(account ++ nonce)) (note that this gets the address of 1)
-//
+// already exists, the balance is carried over to the new account.
 // Carrying over the balance ensures that Ether doesn't disappear.
+//
+// CreateAccount is currently used for test code only. Instead,
+// use CreateEOA, CreateSmartContractAccount, or CreateSmartContractAccountWithKey to create a typed account.
 func (self *StateDB) CreateAccount(addr common.Address) {
 	new, prev := self.createObject(addr)
 	if prev != nil {

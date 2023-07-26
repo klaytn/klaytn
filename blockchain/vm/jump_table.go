@@ -75,6 +75,7 @@ func newMantleInstructionSet() JumpTable {
 	instructionSet := newKoreInstructionSet()
 
 	enable3855(&instructionSet) // PUSH0 opcode
+	enable3860(&instructionSet) // EIP-3860: limit and meter initcode
 	return instructionSet
 }
 

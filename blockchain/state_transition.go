@@ -22,6 +22,7 @@ package blockchain
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -335,6 +336,11 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	rules := st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber)
 	if rules.IsKore {
 		st.state.PrepareAccessList(rules, msg.ValidatedSender(), msg.ValidatedFeePayer(), st.evm.Coinbase, msg.To(), vm.ActivePrecompiles(rules))
+	}
+
+	// Check whether the init code size has been exceeded.
+	if rules.IsMantle && msg.To() == nil && len(st.data) > params.MaxInitCodeSize {
+		return nil, fmt.Errorf("%w: code size %v limit %v", ErrMaxInitCodeSizeExceeded, len(st.data), params.MaxInitCodeSize)
 	}
 
 	var (
