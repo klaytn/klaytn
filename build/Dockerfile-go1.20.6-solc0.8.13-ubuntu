@@ -19,7 +19,7 @@ RUN add-apt-repository ppa:longsleep/golang-backports -y && \
     ln -fs /usr/share/zoneinfo/America/New_York /etc/localtime && \
     dpkg-reconfigure -f noninteractive tzdata
 RUN apt install -y build-essential bash gcc musl-dev openssl wget golang golang-1.17
-RUN wget -O go.src.tar.gz https://dl.google.com/go/go1.20.src.tar.gz
+RUN wget -O go.src.tar.gz https://dl.google.com/go/go1.20.6.src.tar.gz
 RUN tar -C /usr/local -xzf go.src.tar.gz
 RUN cd /usr/local/go/src/ && \
     ./make.bash
