@@ -455,9 +455,20 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 
 	// Ensure there's no existing contract already at the designated address
 	contractHash := evm.StateDB.GetCodeHash(address)
-	if evm.StateDB.GetNonce(address) != 0 || (contractHash != (common.Hash{}) && contractHash != emptyCodeHash) {
-		return nil, common.Address{}, 0, ErrContractAddressCollision // TODO-Klaytn-Issue615
+
+	// The early Klaytn design tried to support the account creation with a user selected address,
+	// so the account overwriting was restricted.
+	// Because the feature was postponed for long time and abused to prevent SCA creation,
+	// Klaytn enables SCA overwriting over EOA like Ethereum.
+	// NOTE: The following code should be re-considered when Klaytn enables TxTypeAccountCreation
+	if evm.chainRules.IsShanghai {
+		if evm.StateDB.GetNonce(address) != 0 || (contractHash != (common.Hash{}) && contractHash != emptyCodeHash) {
+			return nil, common.Address{}, 0, ErrContractAddressCollision
+		}
+	} else if evm.StateDB.Exist(address) {
+		return nil, common.Address{}, 0, ErrContractAddressCollision
 	}
+
 	if common.IsPrecompiledContractAddress(address) {
 		return nil, common.Address{}, gas, kerrors.ErrPrecompiledContractAddress
 	}
