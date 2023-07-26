@@ -673,7 +673,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	}
 
 	// Check whether the init code size has been exceeded
-	if pool.rules.IsMantle && tx.To() == nil && len(tx.Data()) > params.MaxInitCodeSize {
+	if pool.rules.IsShanghai && tx.To() == nil && len(tx.Data()) > params.MaxInitCodeSize {
 		return fmt.Errorf("%w: code size %v, limit %v", ErrMaxInitCodeSizeExceeded, len(tx.Data()), params.MaxInitCodeSize)
 	}
 

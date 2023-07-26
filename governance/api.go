@@ -420,7 +420,7 @@ func getChainConfig(governance Engine, num *rpc.BlockNumber) *params.ChainConfig
 	config.KoreCompatibleBlock = latestConfig.KoreCompatibleBlock
 	config.Kip103CompatibleBlock = latestConfig.Kip103CompatibleBlock
 	config.Kip103ContractAddress = latestConfig.Kip103ContractAddress
-	config.MantleCompatibleBlock = latestConfig.MantleCompatibleBlock
+	config.ShanghaiCompatibleBlock = latestConfig.ShanghaiCompatibleBlock
 
 	return config
 }

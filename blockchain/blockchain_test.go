@@ -1377,7 +1377,7 @@ func TestEIP3651(t *testing.T) {
 	gspec.Config.EthTxTypeCompatibleBlock = common.Big0
 	gspec.Config.MagmaCompatibleBlock = common.Big0
 	gspec.Config.KoreCompatibleBlock = common.Big0
-	gspec.Config.MantleCompatibleBlock = common.Big0
+	gspec.Config.ShanghaiCompatibleBlock = common.Big0
 
 	signer := types.LatestSigner(gspec.Config)
 	genesis := gspec.MustCommit(db)

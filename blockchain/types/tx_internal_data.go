@@ -562,7 +562,7 @@ func IntrinsicGasPayload(gas uint64, data []byte, isContractCreation bool, rules
 	}
 	gas += length * params.TxDataGas
 
-	if isContractCreation && rules.IsMantle {
+	if isContractCreation && rules.IsShanghai {
 		lenWords := toWordSize(length)
 		if (math.MaxUint64-gas)/params.InitCodeWordGas < lenWords {
 			return 0, ErrGasUintOverflow

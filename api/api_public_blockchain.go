@@ -165,7 +165,7 @@ func (s *PublicKlayAPI) ForkStatus(ctx context.Context, number rpc.BlockNumber) 
 		"Magma":     cfg.IsMagmaForkEnabled(blockNumber),
 		"Kore":      cfg.IsKoreForkEnabled(blockNumber),
 		"KIP103":    cfg.IsKIP103ForkBlock(blockNumber),
-		"Mantle":    cfg.IsMantleForkEnabled(blockNumber),
+		"Shanghai":  cfg.IsShanghaiForkEnabled(blockNumber),
 	}, nil
 }
 
