@@ -232,7 +232,7 @@ func TestGetDefaultGovernanceConfig(t *testing.T) {
 		params.DefaultRatio,
 		common.HexToAddress(params.DefaultGoverningNode),
 		params.DefaultGovernanceMode,
-		params.DefaultDefferedTxFee,
+		params.DefaultDeferredTxFee,
 	}
 
 	got := []interface{}{

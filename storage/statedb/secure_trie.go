@@ -168,8 +168,8 @@ func (t *SecureTrie) Commit(onleaf LeafCallback) (root common.Hash, err error) {
 	return t.trie.Commit(onleaf)
 }
 
-// Commit writes all nodes and the secure hash pre-images to the trie's database.
-// Nodes are stored with their sha3 hash as the key.
+// CommitExt writes all nodes and the secure hash pre-images to the trie's database.
+// Nodes are stored with their extended sha3 hash as the key.
 //
 // Committing flushes nodes from memory. Subsequent Get calls will load nodes
 // from the database.

@@ -41,6 +41,7 @@ type Config struct {
 	BlockScore  *big.Int
 	Origin      common.Address
 	Coinbase    common.Address
+	Rewardbase  common.Address
 	BlockNumber *big.Int
 	Time        *big.Int
 	GasLimit    uint64
@@ -63,7 +64,7 @@ func setDefaults(cfg *Config) {
 			LondonCompatibleBlock:    new(big.Int),
 			EthTxTypeCompatibleBlock: new(big.Int),
 			KoreCompatibleBlock:      new(big.Int),
-			MantleCompatibleBlock:    new(big.Int),
+			ShanghaiCompatibleBlock:  new(big.Int),
 		}
 	}
 

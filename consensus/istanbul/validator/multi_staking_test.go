@@ -111,6 +111,33 @@ func TestWeightedCouncil_getStakingAmountsOfValidators(t *testing.T) {
 	}
 }
 
+func TestRewardAddressLookup(t *testing.T) {
+	testCases := []struct {
+		validators             []common.Address
+		stakingInfo            *reward.StakingInfo
+		expectedStakingAmounts []float64
+	}{
+		{
+			[]common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103")},
+			&reward.StakingInfo{
+				CouncilNodeAddrs:      []common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103")},
+				CouncilRewardAddrs:    []common.Address{common.StringToAddress("201"), common.StringToAddress("202"), common.StringToAddress("203")},
+				CouncilStakingAmounts: []uint64{10000000, 5000000, 5000000},
+			},
+			[]float64{10000000, 5000000, 5000000},
+		},
+	}
+	for _, testCase := range testCases {
+		council := newTestWeightedCouncil(testCase.validators)
+		weightedValidators, _, err := getStakingAmountsOfValidators(council.validators, testCase.stakingInfo)
+
+		assert.NoError(t, err)
+		for _, val := range weightedValidators {
+			assert.NotEqual(t, val.RewardAddress(), common.Address{})
+		}
+	}
+}
+
 // TestCalcTotalAmount tests calcTotalAmount that calculates totalAmount of stakingAmounts and gini coefficient if UseGini is true.
 // if UseGini is true, gini is calculated and reflected to stakingAmounts.
 func TestCalcTotalAmount(t *testing.T) {
