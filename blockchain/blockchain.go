@@ -109,7 +109,7 @@ const (
 const (
 	DefaultTriesInMemory        = 128
 	DefaultBlockInterval        = 128
-	DefaultLivePruningRetention = 172800
+	DefaultLivePruningRetention = 172800 // 2*params.DefaultStakeUpdateInterval
 	MaxPrefetchTxs              = 20000
 
 	// BlockChainVersion ensures that an incompatible database forces a resync from scratch.

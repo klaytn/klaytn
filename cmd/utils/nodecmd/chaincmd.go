@@ -177,8 +177,8 @@ func initGenesis(ctx *cli.Context) error {
 
 		// Write the live pruning flag to database
 		if livePruning {
+			logger.Info("Writing live pruning flag to database")
 			chainDB.WritePruningEnabled()
-			logger.Info("Enabling live pruning")
 		}
 
 		logger.Info("Successfully wrote genesis state", "database", name, "hash", hash.String())

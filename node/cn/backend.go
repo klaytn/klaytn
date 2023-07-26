@@ -277,14 +277,18 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		if bc.CurrentBlock().NumberU64() > 0 {
 			return nil, errors.New("cannot enable live pruning after chain has advanced")
 		}
+		logger.Info("Writing live pruning flag to database")
 		chainDB.WritePruningEnabled()
-		logger.Info("Enabling live pruning")
 	}
 	// Live pruning is enabled according to the flag in database
 	// regardless of the command line flag --state.live-pruning
-	// But live pruning is disabled when --state.live-pruning-retention 0
+	// But live pruning is disabled when --state.live-pruning-retention=0
 	if chainDB.ReadPruningEnabled() && config.LivePruningRetention != 0 {
 		logger.Info("Live pruning is enabled")
+	} else if !chainDB.ReadPruningEnabled() {
+		logger.Info("Live pruning is disabled because flag not stored in database")
+	} else if config.LivePruningRetention == 0 {
+		logger.Info("Live pruning is disabled because retention is set to zero")
 	}
 
 	cn.blockchain = bc
