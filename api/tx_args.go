@@ -820,5 +820,3 @@ func (args *EthTransactionArgs) toTransaction() (*types.Transaction, error) {
 	}
 	return tx, nil
 }
-
-
