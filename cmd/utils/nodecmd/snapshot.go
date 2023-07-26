@@ -57,6 +57,7 @@ var SnapshotCommand = cli.Command{
 				utils.DynamoDBWriteCapacityFlag,
 				utils.LevelDBCompressionTypeFlag,
 				utils.DataDirFlag,
+				utils.ChainDataDirFlag,
 			},
 			Description: `
 klay snapshot verify-state <state-root>
@@ -81,6 +82,7 @@ In other words, this command does the snapshot to trie conversion.
 				utils.DynamoDBWriteCapacityFlag,
 				utils.LevelDBCompressionTypeFlag,
 				utils.DataDirFlag,
+				utils.ChainDataDirFlag,
 			},
 			Description: `
 klaytn statedb trace-trie <state-root>
@@ -106,6 +108,7 @@ reading all nodes and logging the missing nodes.
 				utils.DynamoDBWriteCapacityFlag,
 				utils.LevelDBCompressionTypeFlag,
 				utils.DataDirFlag,
+				utils.ChainDataDirFlag,
 			},
 			Description: `
 klaytn statedb iterate-triedb

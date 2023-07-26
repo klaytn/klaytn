@@ -57,6 +57,7 @@ var (
 			utils.DynamoDBReadOnlyFlag,
 			utils.LevelDBCompressionTypeFlag,
 			utils.DataDirFlag,
+			utils.ChainDataDirFlag,
 			utils.OverwriteGenesisFlag,
 			utils.LivePruningFlag,
 		},
