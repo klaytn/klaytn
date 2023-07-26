@@ -22,11 +22,11 @@ executors:
   test-executor:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
-      - image: klaytn/build_base:1.2-go.1.18-solc0.8.13
+      - image: klaytn/build_base:1.2-go.1.20.6-solc0.8.13
   test-others-executor:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
-      - image: klaytn/build_base:1.2-go.1.18-solc0.8.13
+      - image: klaytn/build_base:1.2-go.1.20.6-solc0.8.13
       - image: localstack/localstack:0.13.0
       - image: circleci/redis:6.0.8-alpine
       - name: zookeeper
@@ -42,11 +42,11 @@ executors:
   rpm-executor:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
-      - image: klaytn/circleci-rpmbuild:1.18
+      - image: klaytn/circleci-rpmbuild:1.20.6
   default:
     working_directory: ~/go/src/github.com/klaytn/klaytn
     docker:
-      - image: cimg/go:1.18
+      - image: cimg/go:1.20.6
 
 commands:
   install-netcat:
@@ -64,15 +64,15 @@ commands:
       - run:
           name: "Install golang on machine"
           command: | 
-            curl -O https://dl.google.com/go/go1.18.<< parameters.os-network >>.tar.gz
-            mkdir $HOME/go1.18
-            tar -C $HOME/go1.18 -xzf go1.18.<< parameters.os-network >>.tar.gz
+            curl -O https://dl.google.com/go/go1.20.6.<< parameters.os-network >>.tar.gz
+            mkdir $HOME/go1.20.6
+            tar -C $HOME/go1.20.6 -xzf go1.20.6.<< parameters.os-network >>.tar.gz
   install-golangci-lint:
     steps:
       - run:
           name: "Install golangci-lint"
           command: |
-            curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.45.2
+            curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.52.0
   pre-build:
     description: "before build, set version"
     steps:
@@ -80,7 +80,7 @@ commands:
           name: "set variables"
           command: |
             export GOPATH=~/go
-            export PATH=$HOME/go1.18/go/bin:$PATH
+            export PATH=$HOME/go1.20.6/go/bin:$PATH
             pat="^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+.*"
 
             if [[ $CIRCLE_TAG =~ $pat ]]; then
@@ -106,7 +106,7 @@ commands:
           name: "build and packaging"
           command: |
             export GOPATH=~/go
-            export PATH=$HOME/go1.18/go/bin:$PATH
+            export PATH=$HOME/go1.20.6/go/bin:$PATH
             make all
             for item in kcn kpn ken kscn kspn ksen kbn kgen homi; do
               ./build/package-tar.sh << parameters.baobab >> << parameters.os-network >> $item
@@ -122,7 +122,7 @@ commands:
           name: "upload S3 repo"
           command: |
             export GOPATH=~/go
-            export PATH=$HOME/go1.18/go/bin:$PATH
+            export PATH=$HOME/go1.20.6/go/bin:$PATH
             KLAYTN_VERSION=$(go run build/rpm/main.go version)
             for item in << parameters.item >>; do aws s3 cp packages/${item}-*.tar.gz s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/; done
   rpm-tagging:
@@ -329,7 +329,7 @@ jobs:
       - run:
           name: "Build"
           command: |
-            export PATH=$HOME/go1.18/go/bin:$PATH
+            export PATH=$HOME/go1.20.6/go/bin:$PATH
             make fmt
             make all
 
