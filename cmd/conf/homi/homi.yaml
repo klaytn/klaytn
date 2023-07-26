@@ -47,10 +47,10 @@ log-dir: /var/klay/log
 # cypress-test, cypress, baobab-test, baobab, servicechain, servicechain-test, clique, default
 genesis-type: default
 chainID: 1000
-serviceChainID: 1001 
+serviceChainID: 1001
 funding-addr: ""
 
-# governance, reward and dynamic fee flags, 
+# governance, reward and dynamic fee flags,
 # This flags are only activated by default genesis-type
 governance: false
 gov-mode: "none"
@@ -85,6 +85,7 @@ london-compatible-blocknumber: 0
 eth-tx-type-compatible-blocknumber: 0
 magma-compatible-blocknumber: 0
 kore-compatible-blocknumber: 0
+shanghai-compatible-blocknumber: 0
 
 # For using the patched addressbook contract
 patch-address-book: false

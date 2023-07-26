@@ -1108,7 +1108,7 @@ func (s *StateDB) PrepareAccessList(rules params.Rules, sender, feepayer, coinba
 	//		s.AddSlotToAccessList(el.Address, key)
 	//	}
 	//}
-	if rules.IsMantle {
+	if rules.IsShanghai {
 		s.AddAddressToAccessList(coinbase)
 	}
 }
