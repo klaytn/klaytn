@@ -553,20 +553,23 @@ func toWordSize(size uint64) uint64 {
 func IntrinsicGasPayload(gas uint64, data []byte, isContractCreation bool, rules params.Rules) (uint64, error) {
 	// Bump the required gas by the amount of transactional data
 	length := uint64(len(data))
-	if length > 0 {
-		// Make sure we don't exceed uint64 for all data combinations
-		if (math.MaxUint64-gas)/params.TxDataGas < length {
+	if length == 0 {
+		return gas, nil
+	}
+	// Make sure we don't exceed uint64 for all data combinations
+	if (math.MaxUint64-gas)/params.TxDataGas < length {
+		return 0, ErrGasUintOverflow
+	}
+	gas += length * params.TxDataGas
+
+	if isContractCreation && rules.IsMantle {
+		lenWords := toWordSize(length)
+		if (math.MaxUint64-gas)/params.InitCodeWordGas < lenWords {
 			return 0, ErrGasUintOverflow
 		}
-		if isContractCreation && rules.IsMantle {
-			lenWords := toWordSize(length)
-			if (math.MaxUint64-gas)/params.InitCodeWordGas < lenWords {
-				return 0, ErrGasUintOverflow
-			}
-			gas += lenWords * params.InitCodeWordGas
-		}
+		gas += lenWords * params.InitCodeWordGas
 	}
-	return gas + length*params.TxDataGas, nil
+	return gas, nil
 }
 
 func IntrinsicGasPayloadLegacy(gas uint64, data []byte) (uint64, error) {
