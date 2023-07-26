@@ -824,10 +824,6 @@ func (args *EthTransactionArgs) toTransaction() (*types.Transaction, error) {
 	return tx, nil
 }
 
-func (args *EthTransactionArgs) ToTransaction() (*types.Transaction, error) {
-	return args.toTransaction()
-}
-
 // isReverted checks given error is vm.ErrExecutionReverted
 func isReverted(err error) bool {
 	if errors.Is(err, vm.ErrExecutionReverted) {
