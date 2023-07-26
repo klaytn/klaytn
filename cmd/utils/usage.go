@@ -69,7 +69,7 @@ func NewHelpPrinter(fg []FlagGroup) func(w io.Writer, tmp string, data interface
 		} else if tmpl == CommandHelpTemplate {
 			// Iterate over all command specific flags and categorize them
 			categorized := make(map[string][]cli.Flag)
-			for _, flag := range data.(cli.Command).Flags {
+			for _, flag := range data.(*cli.Command).Flags {
 				if _, ok := categorized[flag.String()]; !ok {
 					categorized[flagCategory(flag, fg)] = append(categorized[flagCategory(flag, fg)], flag)
 				}
