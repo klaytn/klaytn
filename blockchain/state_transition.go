@@ -47,8 +47,10 @@ The state transitioning model does all the necessary work to work out a valid ne
 3) Create a new state object if the recipient is \0*32
 4) Value transfer
 == If contract creation ==
-  4a) Attempt to run transaction data
-  4b) If valid, use result as code for the new state object
+
+	4a) Attempt to run transaction data
+	4b) If valid, use result as code for the new state object
+
 == end ==
 5) Run Script section
 6) Derive new state root
@@ -182,7 +184,7 @@ func getReceiptStatusFromErrTxFailed(errTxFailed error) (status uint) {
 
 // NewStateTransition initialises and returns a new state transition object.
 func NewStateTransition(evm *vm.EVM, msg Message) *StateTransition {
-	// before magma hardfork, effectiveGasPrice is  GasPrice of tx
+	// before magma hardfork, effectiveGasPrice is GasPrice of tx
 	// after magma hardfork, effectiveGasPrice is BaseFee
 	effectiveGasPrice := evm.Context.GasPrice
 
@@ -289,14 +291,14 @@ func (st *StateTransition) preCheck() error {
 // TransitionDb will transition the state by applying the current message and
 // returning the evm execution result with following fields.
 //
-// - used gas:
-//      total gas used (including gas being refunded)
-// - returndata:
-//      the returned data from evm
-// - vm execution status:
-//      indicates the execution result of a transaction. if the execution succeed, the status is 1.
-//      if it fails, the status indicates various **EVM** errors which abort the execution.
-//      e.g. ReceiptStatusErrOutOfGas, ReceiptStatusErrExecutionReverted
+//   - used gas:
+//     total gas used (including gas being refunded)
+//   - returndata:
+//     the returned data from evm
+//   - vm execution status:
+//     indicates the execution result of a transaction. if the execution succeed, the status is 1.
+//     if it fails, the status indicates various **EVM** errors which abort the execution.
+//     e.g. ReceiptStatusErrOutOfGas, ReceiptStatusErrExecutionReverted
 //
 // However if any consensus issue encountered, return the error directly with
 // nil evm execution result.
@@ -357,8 +359,14 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 
 	// Defer transferring Tx fee when DeferredTxFee is true
 	if st.evm.ChainConfig().Governance == nil || !st.evm.ChainConfig().Governance.DeferredTxFee() {
-		effectiveGasPrice := msg.EffectiveGasPrice(nil)
-		st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), effectiveGasPrice))
+		if rules.IsMagma {
+			effectiveGasPrice := st.gasPrice
+			txFee := getBurnAmountMagma(new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), effectiveGasPrice))
+			st.state.AddBalance(st.evm.Rewardbase, txFee)
+		} else {
+			effectiveGasPrice := msg.EffectiveGasPrice(nil)
+			st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), effectiveGasPrice))
+		}
 	}
 
 	return &ExecutionResult{
@@ -461,4 +469,8 @@ func (st *StateTransition) refundGas(refundQuotient uint64) {
 // gasUsed returns the amount of gas used up by the state transition.
 func (st *StateTransition) gasUsed() uint64 {
 	return st.initialGas - st.gas
+}
+
+func getBurnAmountMagma(fee *big.Int) *big.Int {
+	return new(big.Int).Div(fee, big.NewInt(2))
 }
