@@ -1936,6 +1936,7 @@ func (dbm *databaseManager) DeletePruningEnabled() {
 // WritePruningMarks writes the provided set of pruning marks to the database.
 func (dbm *databaseManager) WritePruningMarks(marks []PruningMark) {
 	batch := dbm.NewBatch(MiscDB)
+	defer batch.Release()
 	for _, mark := range marks {
 		if err := batch.Put(pruningMarkKey(mark), pruningMarkValue); err != nil {
 			logger.Crit("Failed to store trie pruning mark", "err", err)
@@ -1971,6 +1972,7 @@ func (dbm *databaseManager) ReadPruningMarks(startNumber, endNumber uint64) []Pr
 // the PruneTrieNodes or DeleteTrieNode functions.
 func (dbm *databaseManager) DeletePruningMarks(marks []PruningMark) {
 	batch := dbm.NewBatch(MiscDB)
+	defer batch.Release()
 	for _, mark := range marks {
 		if err := batch.Delete(pruningMarkKey(mark)); err != nil {
 			logger.Crit("Failed to delete trie pruning mark", "err", err)
@@ -1987,6 +1989,7 @@ func (dbm *databaseManager) DeletePruningMarks(marks []PruningMark) {
 // PruneTrieNodes deletes the trie nodes according to the provided set of pruning marks.
 func (dbm *databaseManager) PruneTrieNodes(marks []PruningMark) {
 	batch := dbm.NewBatch(StateTrieDB)
+	defer batch.Release()
 	for _, mark := range marks {
 		if err := batch.Delete(TrieNodeKey(mark.Hash)); err != nil {
 			logger.Crit("Failed to prune trie node", "err", err)
