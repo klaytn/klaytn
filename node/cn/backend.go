@@ -171,6 +171,7 @@ func senderTxHashIndexer(db database.DBManager, chainEvent <-chan blockchain.Cha
 
 			if err == nil {
 				batch.Write()
+				batch.Release()
 			}
 
 		case <-subscription.Err():
@@ -253,9 +254,15 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	var (
 		vmConfig    = config.getVMConfig()
 		cacheConfig = &blockchain.CacheConfig{
-			ArchiveMode: config.NoPruning, CacheSize: config.TrieCacheSize,
-			BlockInterval: config.TrieBlockInterval, TriesInMemory: config.TriesInMemory,
-			TrieNodeCacheConfig: &config.TrieNodeCacheConfig, SenderTxHashIndexing: config.SenderTxHashIndexing, SnapshotCacheSize: config.SnapshotCacheSize, SnapshotAsyncGen: config.SnapshotAsyncGen,
+			ArchiveMode:          config.NoPruning,
+			CacheSize:            config.TrieCacheSize,
+			BlockInterval:        config.TrieBlockInterval,
+			TriesInMemory:        config.TriesInMemory,
+			LivePruningRetention: config.LivePruningRetention,
+			TrieNodeCacheConfig:  &config.TrieNodeCacheConfig,
+			SenderTxHashIndexing: config.SenderTxHashIndexing,
+			SnapshotCacheSize:    config.SnapshotCacheSize,
+			SnapshotAsyncGen:     config.SnapshotAsyncGen,
 		}
 	)
 
@@ -264,6 +271,21 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		return nil, err
 	}
 	bc.SetCanonicalBlock(config.StartBlockNumber)
+
+	// Write the live pruning flag to database if the node is started for the first time
+	if config.LivePruning && !chainDB.ReadPruningEnabled() {
+		if bc.CurrentBlock().NumberU64() > 0 {
+			return nil, errors.New("cannot enable live pruning after chain has advanced")
+		}
+		chainDB.WritePruningEnabled()
+		logger.Info("Enabling live pruning")
+	}
+	// Live pruning is enabled according to the flag in database
+	// regardless of the command line flag --state.live-pruning
+	// But live pruning is disabled when --state.live-pruning-retention 0
+	if chainDB.ReadPruningEnabled() && config.LivePruningRetention != 0 {
+		logger.Info("Live pruning is enabled")
+	}
 
 	cn.blockchain = bc
 	governance.SetBlockchain(cn.blockchain)
@@ -405,6 +427,10 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		go cn.blockchain.BlockSubscriptionLoop(cn.txPool.(*blockchain.TxPool))
 	}
 
+	if config.DBType == database.RocksDB && config.RocksDBConfig.Secondary {
+		go cn.blockchain.CurrentBlockUpdateLoop(cn.txPool.(*blockchain.TxPool))
+	}
+
 	return cn, nil
 }
 
@@ -459,7 +485,7 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) database.DB
 	dbc := &database.DBConfig{
 		Dir: name, DBType: config.DBType, ParallelDBWrite: config.ParallelDBWrite, SingleDB: config.SingleDB, NumStateTrieShards: config.NumStateTrieShards,
 		LevelDBCacheSize: config.LevelDBCacheSize, OpenFilesLimit: database.GetOpenFilesLimit(), LevelDBCompression: config.LevelDBCompression,
-		LevelDBBufferPool: config.LevelDBBufferPool, EnableDBPerfMetrics: config.EnableDBPerfMetrics, DynamoDBConfig: &config.DynamoDBConfig,
+		LevelDBBufferPool: config.LevelDBBufferPool, EnableDBPerfMetrics: config.EnableDBPerfMetrics, RocksDBConfig: &config.RocksDBConfig, DynamoDBConfig: &config.DynamoDBConfig,
 	}
 	return ctx.OpenDatabase(dbc)
 }

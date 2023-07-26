@@ -586,6 +586,12 @@ web3._extend({
 			params: 1,
 		}),
 		new web3._extend.Method({
+			name: 'getDBProperty',
+			call: 'debug_getDBProperty',
+			params: 2,
+			outputFormatter: console.log
+		}),
+		new web3._extend.Method({
 			name: 'chaindbProperty',
 			call: 'debug_chaindbProperty',
 			params: 1,

@@ -428,6 +428,14 @@ func (db *shardedDB) Meter(prefix string) {
 	}
 }
 
+func (db *shardedDB) GetProperty(name string) string {
+	var buf bytes.Buffer
+	for index, shard := range db.shards {
+		buf.WriteString(fmt.Sprintf("shard %d: %s\n", index, shard.GetProperty(name)))
+	}
+	return buf.String()
+}
+
 type shardedDBBatch struct {
 	batches    []Batch
 	numBatches uint
@@ -486,6 +494,12 @@ func (sdbBatch *shardedDBBatch) Write() error {
 func (sdbBatch *shardedDBBatch) Reset() {
 	for _, batch := range sdbBatch.batches {
 		batch.Reset()
+	}
+}
+
+func (sdbBatch *shardedDBBatch) Release() {
+	for _, batch := range sdbBatch.batches {
+		batch.Release()
 	}
 }
 

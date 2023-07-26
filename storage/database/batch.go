@@ -38,6 +38,9 @@ type Batch interface {
 	// Reset resets the Batch for reuse.
 	Reset()
 
+	// Release deallocate WriteBatch object of RocksDB.
+	Release()
+
 	// Replay replays the Batch contents.
 	Replay(w KeyValueWriter) error
 }

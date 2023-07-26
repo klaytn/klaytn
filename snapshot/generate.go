@@ -145,6 +145,7 @@ func generateSnapshot(db database.DBManager, triedb *statedb.Database, cache int
 		batch     = db.NewSnapshotDBBatch()
 		genMarker = []byte{} // Initialized but empty!
 	)
+	defer batch.Release()
 
 	batch.WriteSnapshotRoot(root)
 	journalProgress(batch, genMarker, stats)
@@ -559,6 +560,7 @@ func (dl *diskLayer) generate(stats *generatorStats) {
 		accOrigin = common.CopyBytes(accMarker)
 		abort     chan *generatorStats
 	)
+	defer batch.Release()
 	stats.Log("Resuming state snapshot generation", dl.root, dl.genMarker)
 
 	checkAndFlush := func(currentLocation []byte) error {

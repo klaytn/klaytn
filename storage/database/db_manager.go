@@ -68,6 +68,7 @@ type DBManager interface {
 	GetStateTrieMigrationDB() Database
 	GetMiscDB() Database
 	GetSnapshotDB() Database
+	GetProperty(dt DBEntryType, name string) string
 
 	// from accessors_chain.go
 	ReadCanonicalHash(number uint64) common.Hash
@@ -167,6 +168,16 @@ type DBManager interface {
 	PutTrieNodeToBatch(batch Batch, hash common.ExtHash, node []byte)
 	DeleteTrieNode(hash common.ExtHash)
 	WritePreimages(number uint64, preimages map[common.Hash][]byte)
+
+	// Trie pruning
+	ReadPruningEnabled() bool
+	WritePruningEnabled()
+	DeletePruningEnabled()
+
+	WritePruningMarks(marks []PruningMark)
+	ReadPruningMarks(startNumber, endNumber uint64) []PruningMark
+	DeletePruningMarks(marks []PruningMark)
+	PruneTrieNodes(marks []PruningMark)
 
 	// from accessors_indexes.go
 	ReadTxLookupEntry(hash common.Hash) (common.Hash, uint64, uint64)
@@ -434,6 +445,9 @@ type DBConfig struct {
 	LevelDBCompression LevelDBCompressionType
 	LevelDBBufferPool  bool
 
+	// RocksDB related configurations
+	RocksDBConfig *RocksDBConfig
+
 	// DynamoDB related configurations
 	DynamoDBConfig *DynamoDBConfig
 }
@@ -518,6 +532,8 @@ func newDatabase(dbc *DBConfig, entryType DBEntryType) (Database, error) {
 	switch dbc.DBType {
 	case LevelDB:
 		return NewLevelDB(dbc, entryType)
+	case RocksDB:
+		return NewRocksDB(dbc.Dir, dbc.RocksDBConfig)
 	case BadgerDB:
 		return NewBadgerDB(dbc.Dir)
 	case MemoryDB:
@@ -658,6 +674,12 @@ func (stdBatch *stateTrieDBBatch) Write() error {
 func (stdBatch *stateTrieDBBatch) Reset() {
 	for _, batch := range stdBatch.batches {
 		batch.Reset()
+	}
+}
+
+func (stdBatch *stateTrieDBBatch) Release() {
+	for _, batch := range stdBatch.batches {
+		batch.Release()
 	}
 }
 
@@ -830,6 +852,10 @@ func (dbm *databaseManager) GetMiscDB() Database {
 
 func (dbm *databaseManager) GetSnapshotDB() Database {
 	return dbm.getDatabase(SnapshotDB)
+}
+
+func (dbm *databaseManager) GetProperty(dt DBEntryType, name string) string {
+	return dbm.getDatabase(dt).GetProperty(name)
 }
 
 func (dbm *databaseManager) GetMemDB() *MemDB {
@@ -1863,10 +1889,18 @@ func (dbm *databaseManager) PutTrieNodeToBatch(batch Batch, hash common.ExtHash,
 	}
 }
 
+// DeleteTrieNode deletes a trie node having a specific hash. It is used only for testing.
+func (dbm *databaseManager) DeleteTrieNode(hash common.ExtHash) {
+	if err := dbm.getDatabase(StateTrieDB).Delete(TrieNodeKey(hash)); err != nil {
+		logger.Crit("Failed to delete trie node", "err", err)
+	}
+}
+
 // WritePreimages writes the provided set of preimages to the database. `number` is the
 // current block number, and is used for debug messages only.
 func (dbm *databaseManager) WritePreimages(number uint64, preimages map[common.Hash][]byte) {
 	batch := dbm.NewBatch(StateTrieDB)
+	defer batch.Release()
 	for hash, preimage := range preimages {
 		if err := batch.Put(preimageKey(hash), preimage); err != nil {
 			logger.Crit("Failed to store trie preimage", "err", err)
@@ -1882,9 +1916,87 @@ func (dbm *databaseManager) WritePreimages(number uint64, preimages map[common.H
 	preimageHitCounter.Inc(int64(len(preimages)))
 }
 
-func (dbm *databaseManager) DeleteTrieNode(hash common.ExtHash) {
-	if err := dbm.getDatabase(StateTrieDB).Delete(TrieNodeKey(hash)); err != nil {
-		logger.Crit("Failed to delete trie node", "err", err)
+func (dbm *databaseManager) ReadPruningEnabled() bool {
+	ok, _ := dbm.getDatabase(MiscDB).Has(pruningEnabledKey)
+	return ok
+}
+
+func (dbm *databaseManager) WritePruningEnabled() {
+	if err := dbm.getDatabase(MiscDB).Put(pruningEnabledKey, []byte("42")); err != nil {
+		logger.Crit("Failed to store pruning enabled flag", "err", err)
+	}
+}
+
+func (dbm *databaseManager) DeletePruningEnabled() {
+	if err := dbm.getDatabase(MiscDB).Delete(pruningEnabledKey); err != nil {
+		logger.Crit("Failed to remove pruning enabled flag", "err", err)
+	}
+}
+
+// WritePruningMarks writes the provided set of pruning marks to the database.
+func (dbm *databaseManager) WritePruningMarks(marks []PruningMark) {
+	batch := dbm.NewBatch(MiscDB)
+	for _, mark := range marks {
+		if err := batch.Put(pruningMarkKey(mark), pruningMarkValue); err != nil {
+			logger.Crit("Failed to store trie pruning mark", "err", err)
+		}
+		if _, err := WriteBatchesOverThreshold(batch); err != nil {
+			logger.Crit("Failed to store trie pruning mark", "err", err)
+		}
+	}
+	if err := batch.Write(); err != nil {
+		logger.Crit("Failed to batch write pruning mark", "err", err)
+	}
+}
+
+// ReadPruningMarks reads the pruning marks in the block number range [startNumber, endNumber).
+func (dbm *databaseManager) ReadPruningMarks(startNumber, endNumber uint64) []PruningMark {
+	prefix := pruningMarkPrefix
+	startKey := pruningMarkKey(PruningMark{startNumber, common.ExtHash{}})
+	it := dbm.getDatabase(MiscDB).NewIterator(prefix, startKey[len(prefix):])
+
+	var marks []PruningMark
+	for it.Next() {
+		mark := parsePruningMarkKey(it.Key())
+		if endNumber != 0 && mark.Number >= endNumber {
+			break
+		}
+		marks = append(marks, mark)
+	}
+	return marks
+}
+
+// DeletePruningMarks deletes the provided set of pruning marks from the database.
+// Note that trie nodes are not deleted by this function. To prune trie nodes, use
+// the PruneTrieNodes or DeleteTrieNode functions.
+func (dbm *databaseManager) DeletePruningMarks(marks []PruningMark) {
+	batch := dbm.NewBatch(MiscDB)
+	for _, mark := range marks {
+		if err := batch.Delete(pruningMarkKey(mark)); err != nil {
+			logger.Crit("Failed to delete trie pruning mark", "err", err)
+		}
+		if _, err := WriteBatchesOverThreshold(batch); err != nil {
+			logger.Crit("Failed to delete trie pruning mark", "err", err)
+		}
+	}
+	if err := batch.Write(); err != nil {
+		logger.Crit("Failed to batch delete pruning mark", "err", err)
+	}
+}
+
+// PruneTrieNodes deletes the trie nodes according to the provided set of pruning marks.
+func (dbm *databaseManager) PruneTrieNodes(marks []PruningMark) {
+	batch := dbm.NewBatch(StateTrieDB)
+	for _, mark := range marks {
+		if err := batch.Delete(TrieNodeKey(mark.Hash)); err != nil {
+			logger.Crit("Failed to prune trie node", "err", err)
+		}
+		if _, err := WriteBatchesOverThreshold(batch); err != nil {
+			logger.Crit("Failed to prune trie node", "err", err)
+		}
+	}
+	if err := batch.Write(); err != nil {
+		logger.Crit("Failed to batch prune trie node", "err", err)
 	}
 }
 
@@ -1913,6 +2025,7 @@ func (dbm *databaseManager) WriteTxLookupEntries(block *types.Block) {
 
 func (dbm *databaseManager) WriteAndCacheTxLookupEntries(block *types.Block) error {
 	batch := dbm.NewBatch(TxLookUpEntryDB)
+	defer batch.Release()
 	for i, tx := range block.Transactions() {
 		entry := TxLookupEntry{
 			BlockHash:  block.Hash(),
@@ -1981,7 +2094,7 @@ func (dbm *databaseManager) ReadTxAndLookupInfo(hash common.Hash) (*types.Transa
 
 // NewSenderTxHashToTxHashBatch returns a batch to write senderTxHash to txHash mapping information.
 func (dbm *databaseManager) NewSenderTxHashToTxHashBatch() Batch {
-	return dbm.NewBatch(MiscDB)
+	return dbm.NewBatch(MiscDB) // batch.Release should be called from caller
 }
 
 // PutSenderTxHashToTxHashToBatch 1) puts the given senderTxHash and txHash to the given batch and

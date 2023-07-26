@@ -41,6 +41,7 @@ import (
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/consensus/gxhash"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage"
@@ -48,6 +49,7 @@ import (
 	"github.com/klaytn/klaytn/storage/statedb"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // So we can deterministically seed different blockchains
@@ -1260,6 +1262,83 @@ func TestTrieForkGC(t *testing.T) {
 	if len(chain.stateCache.TrieDB().Nodes()) > 0 {
 		t.Fatalf("stale tries still alive after garbase collection")
 	}
+}
+
+// Tests that State pruning indeed deletes obsolete trie nodes.
+func TestStatePruning(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlInfo)
+	var (
+		db      = database.NewMemoryDBManager()
+		key1, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+		addr1   = crypto.PubkeyToAddress(key1.PublicKey)
+		addr2   = common.HexToAddress("0xaaaa")
+
+		gspec = &Genesis{
+			Config: params.TestChainConfig,
+			Alloc:  GenesisAlloc{addr1: {Balance: big.NewInt(10000000000000)}},
+		}
+		genesis = gspec.MustCommit(db)
+		signer  = types.LatestSignerForChainID(gspec.Config.ChainID)
+		engine  = gxhash.NewFaker()
+
+		// Latest `retention` blocks survive.
+		// Blocks 1..7 are pruned, blocks 8..10 are kept.
+		retention = uint64(3)
+		numBlocks = 10
+		pruneNum  = uint64(numBlocks) - retention
+	)
+
+	db.WritePruningEnabled() // Enable pruning on database by writing the flag at genesis
+	cacheConfig := &CacheConfig{
+		ArchiveMode:          false,
+		CacheSize:            512,
+		BlockInterval:        2, // Write frequently to test pruning
+		TriesInMemory:        DefaultTriesInMemory,
+		LivePruningRetention: retention, // Enable pruning on blockchain by setting it nonzero
+		TrieNodeCacheConfig:  statedb.GetEmptyTrieNodeCacheConfig(),
+	}
+	blockchain, _ := NewBlockChain(db, cacheConfig, gspec.Config, engine, vm.Config{})
+
+	chain, _ := GenerateChain(gspec.Config, genesis, engine, db, numBlocks, func(i int, gen *BlockGen) {
+		tx, _ := types.SignTx(types.NewTransaction(
+			gen.TxNonce(addr1), addr2, common.Big1, 21000, common.Big1, nil), signer, key1)
+		gen.AddTx(tx)
+	})
+	if _, err := blockchain.InsertChain(chain); err != nil {
+		t.Fatalf("failed to insert chain: %v", err)
+	}
+	assert.Equal(t, uint64(numBlocks), blockchain.CurrentBlock().NumberU64())
+
+	// Give some time for pruning loop to run
+	time.Sleep(100 * time.Millisecond)
+
+	// Note that even if trie nodes are deleted from disk (DiskDB),
+	// they may still be cached in memory (TrieDB).
+	//
+	// Therefore reopen the blockchain from the DiskDB with a clean TrieDB.
+	// This simulates the node program restart.
+	blockchain.Stop()
+	blockchain, _ = NewBlockChain(db, cacheConfig, gspec.Config, engine, vm.Config{})
+
+	// Genesis block always survives
+	state, err := blockchain.StateAt(genesis.Root())
+	assert.Nil(t, err)
+	assert.NotZero(t, state.GetBalance(addr1).Uint64())
+
+	// Pruned blocks should be inaccessible.
+	for num := uint64(1); num <= pruneNum; num++ {
+		_, err := blockchain.StateAt(blockchain.GetBlockByNumber(num).Root())
+		assert.IsType(t, &statedb.MissingNodeError{}, err, num)
+	}
+
+	// Recent unpruned blocks should be accessible.
+	for num := pruneNum + 1; num < uint64(numBlocks); num++ {
+		state, err := blockchain.StateAt(blockchain.GetBlockByNumber(num).Root())
+		require.Nil(t, err, num)
+		assert.NotZero(t, state.GetBalance(addr1).Uint64())
+		assert.NotZero(t, state.GetBalance(addr2).Uint64())
+	}
+	blockchain.Stop()
 }
 
 // TODO-Klaytn-FailedTest Failed test. Enable this later.
