@@ -429,7 +429,7 @@ func setWS(ctx *cli.Context, cfg *node.Config) {
 // setIPC creates an IPC path configuration from the set command line flags,
 // returning an empty string if IPC was explicitly disabled, or the set path.
 func setIPC(ctx *cli.Context, cfg *node.Config) {
-	CheckExclusive(ctx, &IPCDisabledFlag, &IPCPathFlag)
+	CheckExclusive(ctx, IPCDisabledFlag, IPCPathFlag)
 	switch {
 	case ctx.Bool(IPCDisabledFlag.Name):
 		cfg.IPCPath = ""

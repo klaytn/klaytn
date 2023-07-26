@@ -30,7 +30,6 @@ import (
 	"github.com/klaytn/klaytn/accounts/keystore"
 	"github.com/klaytn/klaytn/api/debug"
 	"github.com/klaytn/klaytn/client"
-	"github.com/klaytn/klaytn/cmd/homi/setup"
 	"github.com/klaytn/klaytn/cmd/utils"
 	"github.com/klaytn/klaytn/log"
 	metricutils "github.com/klaytn/klaytn/metrics/utils"
@@ -199,12 +198,10 @@ func FlagsFromYaml(ctx *cli.Context) error {
 }
 
 func BeforeRunNode(ctx *cli.Context) error {
-	if err := setup.CheckArgs(ctx); err != nil {
-		return err
-	}
 	if err := FlagsFromYaml(ctx); err != nil {
 		return err
 	}
+	MigrateGlobalFlags(ctx)
 	if err := CheckCommands(ctx); err != nil {
 		return err
 	}
@@ -219,9 +216,8 @@ func BeforeRunNode(ctx *cli.Context) error {
 	return nil
 }
 
-// SetupNetwork configures the system for either the main net or some test network.
+// setupNetwork configures the system for either the main net or some test network.
 func setupNetwork(ctx *cli.Context) {
-	// TODO(fjl): move target gas limit into config
 	params.TargetGasLimit = ctx.Uint64(utils.TargetGasLimitFlag.Name)
 }
 
@@ -229,9 +225,65 @@ func BeforeRunBootnode(ctx *cli.Context) error {
 	if err := FlagsFromYaml(ctx); err != nil {
 		return err
 	}
+	MigrateGlobalFlags(ctx)
 	if err := debug.Setup(ctx); err != nil {
 		return err
 	}
 	metricutils.StartMetricCollectionAndExport(ctx)
 	return nil
+}
+
+var migrationApplied = map[*cli.Command]struct{}{}
+
+// migrateGlobalFlags makes all global flag values available in the
+// context. This should be called as early as possible in app.Before.
+//
+// Example:
+//
+//    geth account new --keystore /tmp/mykeystore --lightkdf
+//
+// is equivalent after calling this method with:
+//
+//    geth --keystore /tmp/mykeystore --lightkdf account new
+//
+// i.e. in the subcommand Action function of 'account new', ctx.Bool("lightkdf)
+// will return true even if --lightkdf is set as a global option.
+//
+// This function may become unnecessary when https://github.com/urfave/cli/pull/1245 is merged.
+func MigrateGlobalFlags(ctx *cli.Context) {
+	var iterate func(cs []*cli.Command, fn func(*cli.Command))
+	iterate = func(cs []*cli.Command, fn func(*cli.Command)) {
+		for _, cmd := range cs {
+			if _, ok := migrationApplied[cmd]; ok {
+				continue
+			}
+			migrationApplied[cmd] = struct{}{}
+			fn(cmd)
+			iterate(cmd.Subcommands, fn)
+		}
+	}
+
+	// This iterates over all commands and wraps their action function.
+	iterate(ctx.App.Commands, func(cmd *cli.Command) {
+		if cmd.Action == nil {
+			return
+		}
+
+		action := cmd.Action
+		cmd.Action = func(ctx *cli.Context) error {
+			doMigrateFlags(ctx)
+			return action(ctx)
+		}
+	})
+}
+
+func doMigrateFlags(ctx *cli.Context) {
+	for _, name := range ctx.FlagNames() {
+		for _, parent := range ctx.Lineage()[1:] {
+			if parent.IsSet(name) {
+				ctx.Set(name, parent.String(name))
+				break
+			}
+		}
+	}
 }

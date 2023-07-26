@@ -1201,26 +1201,10 @@ func homiFlagsFromYaml(ctx *cli.Context) error {
 	return nil
 }
 
-// In urfave/cli/v2 flags must come before args
-func CheckArgs(ctx *cli.Context) error {
-	args := ctx.Args().Slice()
-	for i, arg := range args {
-		if strings.HasPrefix(arg, "--") {
-			if i > 1 {
-				return fmt.Errorf("flag %s must come before arguments", arg)
-			}
-			break
-		}
-	}
-	return nil
-}
-
 func BeforeRunHomi(ctx *cli.Context) error {
-	if err := CheckArgs(ctx); err != nil {
-		return err
-	}
 	if err := homiFlagsFromYaml(ctx); err != nil {
 		return err
 	}
+
 	return nil
 }
