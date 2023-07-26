@@ -47,7 +47,7 @@ const (
 
 var ErrInvalidCmd = errors.New("Invalid command. Check usage through --help command")
 
-var UtilCommand = cli.Command{
+var UtilCommand = &cli.Command{
 	Name:     "util",
 	Usage:    "offline utility",
 	Category: "MISCELLANEOUS COMMANDS",

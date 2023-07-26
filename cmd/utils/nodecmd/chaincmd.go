@@ -40,26 +40,26 @@ import (
 var logger = log.NewModuleLogger(log.CMDUtilsNodeCMD)
 
 var (
-	InitCommand = cli.Command{
+	InitCommand = &cli.Command{
 		Action:    initGenesis,
 		Name:      "init",
 		Usage:     "Bootstrap and initialize a new genesis block",
 		ArgsUsage: "<genesisPath>",
 		Flags: []cli.Flag{
-			&utils.DbTypeFlag,
-			&utils.SingleDBFlag,
-			&utils.NumStateTrieShardsFlag,
-			&utils.DynamoDBTableNameFlag,
-			&utils.DynamoDBRegionFlag,
-			&utils.DynamoDBIsProvisionedFlag,
-			&utils.DynamoDBReadCapacityFlag,
-			&utils.DynamoDBWriteCapacityFlag,
-			&utils.DynamoDBReadOnlyFlag,
-			&utils.LevelDBCompressionTypeFlag,
-			&utils.DataDirFlag,
-			&utils.ChainDataDirFlag,
-			&utils.OverwriteGenesisFlag,
-			&utils.LivePruningFlag,
+			utils.DbTypeFlag,
+			utils.SingleDBFlag,
+			utils.NumStateTrieShardsFlag,
+			utils.DynamoDBTableNameFlag,
+			utils.DynamoDBRegionFlag,
+			utils.DynamoDBIsProvisionedFlag,
+			utils.DynamoDBReadCapacityFlag,
+			utils.DynamoDBWriteCapacityFlag,
+			utils.DynamoDBReadOnlyFlag,
+			utils.LevelDBCompressionTypeFlag,
+			utils.DataDirFlag,
+			utils.ChainDataDirFlag,
+			utils.OverwriteGenesisFlag,
+			utils.LivePruningFlag,
 		},
 		Category: "BLOCKCHAIN COMMANDS",
 		Description: `
@@ -70,14 +70,14 @@ participating.
 It expects the genesis file as argument.`,
 	}
 
-	DumpGenesisCommand = cli.Command{
+	DumpGenesisCommand = &cli.Command{
 		Action:    dumpGenesis,
 		Name:      "dumpgenesis",
 		Usage:     "Dumps genesis block JSON configuration to stdout",
 		ArgsUsage: "",
 		Flags: []cli.Flag{
-			&utils.CypressFlag,
-			&utils.BaobabFlag,
+			utils.CypressFlag,
+			utils.BaobabFlag,
 		},
 		Category: "BLOCKCHAIN COMMANDS",
 		Description: `

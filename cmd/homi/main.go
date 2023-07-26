@@ -39,8 +39,8 @@ func main() {
 	app.Version = "v0.3.3"
 	app.Copyright = "Copyright 2018-2023 The klaytn Authors"
 	app.Commands = []*cli.Command{
-		&setup.SetupCommand,
-		&extra.ExtraCommand,
+		setup.SetupCommand,
+		extra.ExtraCommand,
 	}
 
 	app.Flags = append(app.Flags, setup.HomiFlags...)

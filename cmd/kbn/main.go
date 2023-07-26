@@ -194,8 +194,8 @@ func main() {
 	app.UsageText = app.Name + " [global options] [commands]"
 	app.Flags = append(app.Flags, utils.BNAppFlags()...)
 	app.Commands = []*cli.Command{
-		&nodecmd.VersionCommand,
-		&nodecmd.AttachCommand,
+		nodecmd.VersionCommand,
+		nodecmd.AttachCommand,
 	}
 
 	app.Action = bootnode

@@ -70,17 +70,17 @@ func init() {
 	app.Copyright = "Copyright 2018-2023 The klaytn Authors"
 	app.Commands = []*cli.Command{
 		// See chaincmd.go:
-		&InitCommand,
+		InitCommand,
 
 		// See accountcmd.go
-		&AccountCommand,
+		AccountCommand,
 
 		// See consolecmd.go:
 		GetConsoleCommand(nodeFlags, rpcFlags),
-		&AttachCommand,
+		AttachCommand,
 
 		// See versioncmd.go:
-		&VersionCommand,
+		VersionCommand,
 
 		// See dumpconfigcmd.go:
 		GetDumpConfigCommand(nodeFlags, rpcFlags),

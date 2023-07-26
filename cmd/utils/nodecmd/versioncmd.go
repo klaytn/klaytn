@@ -35,7 +35,7 @@ var (
 	gitTag = ""
 )
 
-var VersionCommand = cli.Command{
+var VersionCommand = &cli.Command{
 	Action:    version,
 	Name:      "version",
 	Usage:     "Show version number",

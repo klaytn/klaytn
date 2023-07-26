@@ -47,16 +47,16 @@ const (
 
 var (
 	logger   = log.NewModuleLogger(log.CMDKGEN)
-	fileFlag = cli.BoolFlag{
+	fileFlag = &cli.BoolFlag{
 		Name:  "file",
 		Usage: `Generate a nodekey and a Klaytn node information as files`,
 	}
-	portFlag = cli.IntFlag{
+	portFlag = &cli.IntFlag{
 		Name:  "port",
 		Usage: `Specify a tcp port number`,
 		Value: 32323,
 	}
-	ipFlag = cli.StringFlag{
+	ipFlag = &cli.StringFlag{
 		Name:  "ip",
 		Usage: `Specify an ip address`,
 		Value: "0.0.0.0",
@@ -75,12 +75,12 @@ func main() {
 	app.Copyright = "Copyright 2018-2023 The klaytn Authors"
 	app.Action = genNodeKey
 	app.Flags = []cli.Flag{
-		&fileFlag,
-		&ipFlag,
-		&portFlag,
+		fileFlag,
+		ipFlag,
+		portFlag,
 	}
 	app.Commands = []*cli.Command{
-		&nodecmd.VersionCommand,
+		nodecmd.VersionCommand,
 	}
 	app.HideVersion = true
 	// app.CustomAppHelpTemplate = kgenHelper

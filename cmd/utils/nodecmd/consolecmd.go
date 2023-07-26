@@ -33,12 +33,12 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var AttachCommand = cli.Command{
+var AttachCommand = &cli.Command{
 	Action:    remoteConsole,
 	Name:      "attach",
 	Usage:     "Start an interactive JavaScript environment (connect to node)",
 	ArgsUsage: "[endpoint]",
-	Flags:     append(utils.ConsoleFlags, &utils.DataDirFlag),
+	Flags:     append(utils.ConsoleFlags, utils.DataDirFlag),
 	Category:  "CONSOLE COMMANDS",
 	Description: `
 The Klaytn console is an interactive shell for the JavaScript runtime environment

@@ -26,7 +26,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var ExtraCommand = cli.Command{
+var ExtraCommand = &cli.Command{
 	Name:  "extra",
 	Usage: "Istanbul extraData manipulation",
 	Subcommands: []*cli.Command{
@@ -36,7 +36,7 @@ var ExtraCommand = cli.Command{
 			Usage:     "To decode an Istanbul extraData",
 			ArgsUsage: "<extra data>",
 			Flags: []cli.Flag{
-				&extraDataFlag,
+				extraDataFlag,
 			},
 			Description: `
 		This command decodes extraData to vanity and validators.
@@ -48,9 +48,9 @@ var ExtraCommand = cli.Command{
 			Usage:     "To encode an Istanbul extraData",
 			ArgsUsage: "<config file> or \"0xValidator1,0xValidator2...\"",
 			Flags: []cli.Flag{
-				&configFlag,
-				&validatorsFlag,
-				&vanityFlag,
+				configFlag,
+				validatorsFlag,
+				vanityFlag,
 			},
 			Description: `
 		This command encodes vanity and validators to extraData. Please refer to example/config.toml.

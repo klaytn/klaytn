@@ -40,125 +40,125 @@ import (
 var Memsize memsizeui.Handler
 
 var (
-	verbosityFlag = cli.IntFlag{
+	verbosityFlag = &cli.IntFlag{
 		Name:    "verbosity",
 		Usage:   "Logging verbosity: 0=silent, 1=error, 2=warn, 3=info, 4=debug, 5=detail",
 		Value:   3,
 		Aliases: []string{"debug-profile.verbosity"},
 		EnvVars: []string{"KLAYTN_VERBOSITY"},
 	}
-	vmoduleFlag = cli.StringFlag{
+	vmoduleFlag = &cli.StringFlag{
 		Name:    "vmodule",
 		Usage:   "Per-module verbosity: comma-separated list of <pattern>=<level> (e.g. klay/*=5,p2p=4)",
 		Value:   "",
 		Aliases: []string{"debug-profile.vmodule"},
 		EnvVars: []string{"KLAYTN_VMODULE"},
 	}
-	backtraceAtFlag = cli.StringFlag{
+	backtraceAtFlag = &cli.StringFlag{
 		Name:    "backtrace",
 		Usage:   "Request a stack trace at a specific logging statement (e.g. \"block.go:271\")",
 		Value:   "",
 		Aliases: []string{"debug-profile.backtrace"},
 		EnvVars: []string{"KLAYTN_BACKTRACE"},
 	}
-	debugFlag = cli.BoolFlag{
+	debugFlag = &cli.BoolFlag{
 		Name:    "debug",
 		Usage:   "Prepends log messages with call-site location (file and line number)",
 		Aliases: []string{"debug-profile.print-site"},
 		EnvVars: []string{"KLAYTN_DEBUG"},
 	}
-	logFormatFlag = cli.StringFlag{
+	logFormatFlag = &cli.StringFlag{
 		Name:    "log.format",
 		Usage:   "Log format to use (json|logfmt|terminal)",
 		Value:   "terminal",
 		Aliases: []string{},
 		EnvVars: []string{"KLAYTN_LOGFORMAT"},
 	}
-	logFileFlag = cli.StringFlag{
+	logFileFlag = &cli.StringFlag{
 		Name:    "log.file",
 		Usage:   "Write logs to a file",
 		Aliases: []string{},
 		EnvVars: []string{"KLAYTN_LOGFILE"},
 	}
-	logRotateFlag = cli.BoolFlag{
+	logRotateFlag = &cli.BoolFlag{
 		Name:    "log.rotate",
 		Usage:   "Enables log file rotation",
 		Aliases: []string{},
 		EnvVars: []string{"KLAYTN_LOGROTATE"},
 	}
-	logMaxSizeMBsFlag = cli.IntFlag{
+	logMaxSizeMBsFlag = &cli.IntFlag{
 		Name:    "log.maxsize",
 		Usage:   "Maximum size in MBs of a single log file (use with --log.rotate flag)",
 		Value:   100,
 		Aliases: []string{},
 		EnvVars: []string{"KLAYTN_LOGMAXSIZE"},
 	}
-	logMaxBackupsFlag = cli.IntFlag{
+	logMaxBackupsFlag = &cli.IntFlag{
 		Name:    "log.maxbackups",
 		Usage:   "Maximum number of log files to retain (use with --log.rotate flag)",
 		Value:   10,
 		Aliases: []string{},
 		EnvVars: []string{"KLAYTN_LOGMAXBACKUPS"},
 	}
-	logMaxAgeFlag = cli.IntFlag{
+	logMaxAgeFlag = &cli.IntFlag{
 		Name:    "log.maxage",
 		Usage:   "Maximum number of days to retain a log file (use with --log.rotate flag)",
 		Value:   30,
 		Aliases: []string{},
 		EnvVars: []string{"KLAYTN_LOGMAXAGE"},
 	}
-	logCompressFlag = cli.BoolFlag{
+	logCompressFlag = &cli.BoolFlag{
 		Name:    "log.compress",
 		Usage:   "Compress the log files (use with --log.rotate flag)",
 		Aliases: []string{},
 		EnvVars: []string{"KLAYTN_LOGCOMPRESS"},
 	}
-	pprofFlag = cli.BoolFlag{
+	pprofFlag = &cli.BoolFlag{
 		Name:    "pprof",
 		Usage:   "Enable the pprof HTTP server",
 		Aliases: []string{"debug-profile.pprof.enable"},
 		EnvVars: []string{"KLAYTN_PPROF"},
 	}
-	pprofPortFlag = cli.IntFlag{
+	pprofPortFlag = &cli.IntFlag{
 		Name:    "pprofport",
 		Usage:   "pprof HTTP server listening port",
 		Value:   6060,
 		Aliases: []string{"debug-profile.pprof.port"},
 		EnvVars: []string{"KLAYTN_PPROFPORT"},
 	}
-	pprofAddrFlag = cli.StringFlag{
+	pprofAddrFlag = &cli.StringFlag{
 		Name:    "pprofaddr",
 		Usage:   "pprof HTTP server listening interface",
 		Value:   "127.0.0.1",
 		Aliases: []string{"debug-profile.pprof.addr"},
 		EnvVars: []string{"KLAYTN_PPROFADDR"},
 	}
-	memprofileFlag = cli.StringFlag{
+	memprofileFlag = &cli.StringFlag{
 		Name:    "memprofile",
 		Usage:   "Write memory profile to the given file",
 		Aliases: []string{"debug-profile.mem-profile.file-name"},
 		EnvVars: []string{"KLAYTN_MEMPROFILE"},
 	}
-	memprofilerateFlag = cli.IntFlag{
+	memprofilerateFlag = &cli.IntFlag{
 		Name:    "memprofilerate",
 		Usage:   "Turn on memory profiling with the given rate",
 		Value:   runtime.MemProfileRate,
 		Aliases: []string{"debug-profile.mem-profile.rate"},
 		EnvVars: []string{"KLAYTN_MEMPROFILERATE"},
 	}
-	blockprofilerateFlag = cli.IntFlag{
+	blockprofilerateFlag = &cli.IntFlag{
 		Name:    "blockprofilerate",
 		Usage:   "Turn on block profiling with the given rate",
 		Aliases: []string{"debug-profile.block-profile.rate"},
 		EnvVars: []string{"KLAYTN_BLOCKPROFILERATE"},
 	}
-	cpuprofileFlag = cli.StringFlag{
+	cpuprofileFlag = &cli.StringFlag{
 		Name:    "cpuprofile",
 		Usage:   "Write CPU profile to the given file",
 		Aliases: []string{"debug-profile.cpu-profile.file-name"},
 		EnvVars: []string{"KLAYTN_CPUPROFILE"},
 	}
-	traceFlag = cli.StringFlag{
+	traceFlag = &cli.StringFlag{
 		Name:    "trace",
 		Usage:   "Write execution trace to the given file",
 		Aliases: []string{"debug-profile.trace.file-name"},
@@ -168,25 +168,25 @@ var (
 
 // Flags holds all command-line flags required for debugging.
 var Flags = []cli.Flag{
-	altsrc.NewIntFlag(&verbosityFlag),
-	altsrc.NewStringFlag(&vmoduleFlag),
-	altsrc.NewStringFlag(&backtraceAtFlag),
-	altsrc.NewBoolFlag(&debugFlag),
-	altsrc.NewStringFlag(&logFormatFlag),
-	altsrc.NewStringFlag(&logFileFlag),
-	altsrc.NewBoolFlag(&logRotateFlag),
-	altsrc.NewIntFlag(&logMaxSizeMBsFlag),
-	altsrc.NewIntFlag(&logMaxBackupsFlag),
-	altsrc.NewIntFlag(&logMaxAgeFlag),
-	altsrc.NewBoolFlag(&logCompressFlag),
-	altsrc.NewBoolFlag(&pprofFlag),
-	altsrc.NewStringFlag(&pprofAddrFlag),
-	altsrc.NewIntFlag(&pprofPortFlag),
-	altsrc.NewStringFlag(&memprofileFlag),
-	altsrc.NewIntFlag(&memprofilerateFlag),
-	altsrc.NewIntFlag(&blockprofilerateFlag),
-	altsrc.NewStringFlag(&cpuprofileFlag),
-	altsrc.NewStringFlag(&traceFlag),
+	altsrc.NewIntFlag(verbosityFlag),
+	altsrc.NewStringFlag(vmoduleFlag),
+	altsrc.NewStringFlag(backtraceAtFlag),
+	altsrc.NewBoolFlag(debugFlag),
+	altsrc.NewStringFlag(logFormatFlag),
+	altsrc.NewStringFlag(logFileFlag),
+	altsrc.NewBoolFlag(logRotateFlag),
+	altsrc.NewIntFlag(logMaxSizeMBsFlag),
+	altsrc.NewIntFlag(logMaxBackupsFlag),
+	altsrc.NewIntFlag(logMaxAgeFlag),
+	altsrc.NewBoolFlag(logCompressFlag),
+	altsrc.NewBoolFlag(pprofFlag),
+	altsrc.NewStringFlag(pprofAddrFlag),
+	altsrc.NewIntFlag(pprofPortFlag),
+	altsrc.NewStringFlag(memprofileFlag),
+	altsrc.NewIntFlag(memprofilerateFlag),
+	altsrc.NewIntFlag(blockprofilerateFlag),
+	altsrc.NewStringFlag(cpuprofileFlag),
+	altsrc.NewStringFlag(traceFlag),
 }
 
 var glogger *log.GlogHandler

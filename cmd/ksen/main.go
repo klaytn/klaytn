@@ -48,27 +48,27 @@ func init() {
 	app.Copyright = "Copyright 2018-2023 The klaytn Authors"
 	app.Commands = []*cli.Command{
 		// See utils/nodecmd/chaincmd.go:
-		&nodecmd.InitCommand,
-		&nodecmd.DumpGenesisCommand,
+		nodecmd.InitCommand,
+		nodecmd.DumpGenesisCommand,
 
 		// See utils/nodecmd/accountcmd.go
-		&nodecmd.AccountCommand,
+		nodecmd.AccountCommand,
 
 		// See utils/nodecmd/consolecmd.go:
 		nodecmd.GetConsoleCommand(utils.KsenNodeFlags(), utils.CommonRPCFlags),
-		&nodecmd.AttachCommand,
+		nodecmd.AttachCommand,
 
 		// See utils/nodecmd/versioncmd.go:
-		&nodecmd.VersionCommand,
+		nodecmd.VersionCommand,
 
 		// See utils/nodecmd/dumpconfigcmd.go:
 		nodecmd.GetDumpConfigCommand(utils.KsenNodeFlags(), utils.CommonRPCFlags),
 
 		// See utils/nodecmd/util.go:
-		&nodecmd.UtilCommand,
+		nodecmd.UtilCommand,
 
 		// See utils/nodecmd/snapshot.go:
-		&nodecmd.SnapshotCommand,
+		nodecmd.SnapshotCommand,
 	}
 	sort.Sort(cli.CommandsByName(app.Commands))
 

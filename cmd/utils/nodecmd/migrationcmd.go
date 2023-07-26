@@ -29,7 +29,7 @@ import (
 var (
 	dbMigrationFlags = append(utils.DBMigrationSrcFlags, utils.DBMigrationDstFlags...)
 
-	MigrationCommand = cli.Command{
+	MigrationCommand = &cli.Command{
 		Name:     "db-migration",
 		Usage:    "db migration",
 		Flags:    []cli.Flag{},

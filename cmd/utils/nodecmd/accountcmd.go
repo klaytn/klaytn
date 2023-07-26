@@ -33,7 +33,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var AccountCommand = cli.Command{
+var AccountCommand = &cli.Command{
 	Name:     "account",
 	Usage:    "Manage accounts",
 	Category: "ACCOUNT COMMANDS",
@@ -63,8 +63,8 @@ Make sure you backup your keys regularly.`,
 			Usage:  "Print summary of existing accounts",
 			Action: accountList,
 			Flags: []cli.Flag{
-				&utils.DataDirFlag,
-				&utils.KeyStoreDirFlag,
+				utils.DataDirFlag,
+				utils.KeyStoreDirFlag,
 			},
 			Description: `
 Print a short summary of all accounts`,
@@ -74,10 +74,10 @@ Print a short summary of all accounts`,
 			Usage:  "Create a new account",
 			Action: accountCreate,
 			Flags: []cli.Flag{
-				&utils.DataDirFlag,
-				&utils.KeyStoreDirFlag,
-				&utils.PasswordFileFlag,
-				&utils.LightKDFFlag,
+				utils.DataDirFlag,
+				utils.KeyStoreDirFlag,
+				utils.PasswordFileFlag,
+				utils.LightKDFFlag,
 			},
 			Description: `
     klay account new
@@ -100,9 +100,9 @@ password to file or expose in any other way.
 			Action:    accountUpdate,
 			ArgsUsage: "<address>",
 			Flags: []cli.Flag{
-				&utils.DataDirFlag,
-				&utils.KeyStoreDirFlag,
-				&utils.LightKDFFlag,
+				utils.DataDirFlag,
+				utils.KeyStoreDirFlag,
+				utils.LightKDFFlag,
 			},
 			Description: `
     klay account update <address>
@@ -128,10 +128,10 @@ changing your password is only possible interactively.
 			Usage:  "Import a private key into a new account",
 			Action: accountImport,
 			Flags: []cli.Flag{
-				&utils.DataDirFlag,
-				&utils.KeyStoreDirFlag,
-				&utils.PasswordFileFlag,
-				&utils.LightKDFFlag,
+				utils.DataDirFlag,
+				utils.KeyStoreDirFlag,
+				utils.PasswordFileFlag,
+				utils.LightKDFFlag,
 			},
 			ArgsUsage: "<keyFile>",
 			Description: `
