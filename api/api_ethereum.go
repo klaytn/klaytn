@@ -1304,7 +1304,7 @@ func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrO
 	}
 	var balanceBaseFee *big.Int
 	if header.BaseFee != nil {
-		balanceBaseFee = new(big.Int).Mul(baseFee, common.Big2)
+		balanceBaseFee = baseFee
 	} else {
 		balanceBaseFee = msg.GasPrice()
 	}

@@ -2452,17 +2452,21 @@ func (mc *testChainContext) GetHeader(common.Hash, uint64) *types.Header {
 var codeRevertHello = "0x6080604052348015600f57600080fd5b5060405162461bcd60e51b815260206004820152600560248201526468656c6c6f60d81b604482015260640160405180910390fdfe"
 
 func testEstimateGas(t *testing.T, mockBackend *mock_api.MockBackend, fnEstimateGas func(EthTransactionArgs) (hexutil.Uint64, error)) {
+	chainConfig := &params.ChainConfig{}
+	chainConfig.IstanbulCompatibleBlock = common.Big0
+	chainConfig.LondonCompatibleBlock = common.Big0
+	chainConfig.EthTxTypeCompatibleBlock = common.Big0
+	chainConfig.MagmaCompatibleBlock = common.Big0
 	var (
 		// genesis
-		account1    = common.HexToAddress("0xaaaa")
-		account2    = common.HexToAddress("0xbbbb")
-		account3    = common.HexToAddress("0xcccc")
-		chainConfig = params.TestChainConfig
-		gspec       = &blockchain.Genesis{Alloc: blockchain.GenesisAlloc{
+		account1 = common.HexToAddress("0xaaaa")
+		account2 = common.HexToAddress("0xbbbb")
+		account3 = common.HexToAddress("0xcccc")
+		gspec    = &blockchain.Genesis{Alloc: blockchain.GenesisAlloc{
 			account1: {Balance: big.NewInt(params.KLAY * 2)},
 			account2: {Balance: common.Big0},
 			account3: {Balance: common.Big0, Code: hexutil.MustDecode(codeRevertHello)},
-		}}
+		}, Config: chainConfig}
 
 		// blockchain
 		dbm    = database.NewMemoryDBManager()
@@ -2474,6 +2478,7 @@ func testEstimateGas(t *testing.T, mockBackend *mock_api.MockBackend, fnEstimate
 		// tx arguments
 		KLAY     = hexutil.Big(*big.NewInt(params.KLAY))
 		mKLAY    = hexutil.Big(*big.NewInt(params.KLAY / 1000))
+		KLAY2_1  = hexutil.Big(*big.NewInt(params.KLAY*2 + 1))
 		gas1000  = hexutil.Uint64(1000)
 		gas40000 = hexutil.Uint64(40000)
 		baddata  = hexutil.Bytes(hexutil.MustDecode("0xdeadbeef"))
@@ -2515,6 +2520,15 @@ func testEstimateGas(t *testing.T, mockBackend *mock_api.MockBackend, fnEstimate
 				From:  &account2, // sender has 0 KLAY
 				To:    &account1,
 				Value: &KLAY, // transfer 1 KLAY
+			},
+			expectErr: "insufficient balance for transfer",
+		},
+		{ // simple transfer with slightly insufficient funds with zero gasPrice
+			// this testcase is to check whether the gas prefunded in EthDoCall is not too much
+			args: EthTransactionArgs{
+				From:  &account1, // sender has 2 KLAY
+				To:    &account2,
+				Value: &KLAY2_1, // transfer 2.0000...1 KLAY
 			},
 			expectErr: "insufficient balance for transfer",
 		},
