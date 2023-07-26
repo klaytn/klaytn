@@ -533,11 +533,18 @@ func (self *worker) commitNewWork() {
 		// wait for a while and get a new timestamp
 		if tstart.Before(ideal) {
 			wait := ideal.Sub(tstart)
-			logger.Info("Mining too far in the future", "wait", common.PrettyDuration(wait))
+			logger.Debug("Mining too far in the future", "wait", common.PrettyDuration(wait))
 			time.Sleep(wait)
 
 			tstart = time.Now()    // refresh for metrics
 			tstamp = tstart.Unix() // refresh for block timestamp
+		} else {
+			logger.Info("Mining start for new block is later than expected",
+				"nextBlockNum", nextBlockNum,
+				"delay", tstamp-parent.Time().Int64()-1,
+				"previousBlockTimestamp", parent.Time().Int64(),
+				"nextBlockTimestamp", tstamp,
+			)
 		}
 	}
 
