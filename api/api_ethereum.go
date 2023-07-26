@@ -615,7 +615,7 @@ func (api *EthereumAPI) Call(ctx context.Context, args EthTransactionArgs, block
 	}
 
 	if len(result.Revert()) > 0 {
-		return nil, newRevertError(result)
+		return nil, blockchain.NewRevertError(result)
 	}
 	return result.Return(), result.Unwrap()
 }
@@ -1345,68 +1345,31 @@ func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrO
 }
 
 func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, blockNrOrHash rpc.BlockNumberOrHash, gasCap uint64) (hexutil.Uint64, error) {
-	// Binary search the gas requirement, as it may be higher than the amount used
-	var (
-		lo  uint64 = params.TxGas - 1
-		hi  uint64 = params.UpperGasLimit
-		cap uint64
-	)
 	// Use zero address if sender unspecified.
 	if args.From == nil {
 		args.From = new(common.Address)
 	}
-	// Determine the highest gas limit can be used during the estimation.
-	if args.Gas != nil && uint64(*args.Gas) >= params.TxGas {
-		hi = uint64(*args.Gas)
-	} else {
-		// Ethereum set hi as gas ceiling of the block but,
-		// there is no actual gas limit in Klaytn, so we set it as params.UpperGasLimit.
-		hi = params.UpperGasLimit
+
+	var gasLimit uint64 = 0
+	if args.Gas != nil {
+		gasLimit = uint64(*args.Gas)
 	}
+
 	// Normalize the max fee per gas the call is willing to spend.
-	var feeCap *big.Int
+	var feeCap *big.Int = common.Big0
 	if args.GasPrice != nil && (args.MaxFeePerGas != nil || args.MaxPriorityFeePerGas != nil) {
 		return 0, errors.New("both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified")
 	} else if args.GasPrice != nil {
 		feeCap = args.GasPrice.ToInt()
 	} else if args.MaxFeePerGas != nil {
 		feeCap = args.MaxFeePerGas.ToInt()
-	} else {
-		feeCap = common.Big0
 	}
-	// recap the highest gas limit with account's available balance.
-	if feeCap.BitLen() != 0 {
-		state, _, err := b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
-		if err != nil {
-			return 0, err
-		}
-		balance := state.GetBalance(*args.From) // from can't be nil
-		available := new(big.Int).Set(balance)
-		if args.Value != nil {
-			if args.Value.ToInt().Cmp(available) >= 0 {
-				return 0, errors.New("insufficient funds for transfer")
-			}
-			available.Sub(available, args.Value.ToInt())
-		}
-		allowance := new(big.Int).Div(available, feeCap)
 
-		// If the allowance is larger than maximum uint64, skip checking
-		if allowance.IsUint64() && hi > allowance.Uint64() {
-			transfer := args.Value
-			if transfer == nil {
-				transfer = new(hexutil.Big)
-			}
-			logger.Warn("Gas estimation capped by limited funds", "original", hi, "balance", balance,
-				"sent", transfer.ToInt(), "maxFeePerGas", feeCap, "fundable", allowance)
-			hi = allowance.Uint64()
-		}
+	state, _, err := b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
+	if err != nil {
+		return 0, err
 	}
-	// Recap the highest gas allowance with specified gascap.
-	if gasCap != 0 && hi > gasCap {
-		logger.Warn("Caller gas above allowance, capping", "requested", hi, "cap", gasCap)
-		hi = gasCap
-	}
-	cap = hi
+	balance := state.GetBalance(*args.From) // from can't be nil
 
 	executable := func(gas uint64) (bool, *blockchain.ExecutionResult, error) {
 		args.Gas = (*hexutil.Uint64)(&gas)
@@ -1422,38 +1385,7 @@ func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, b
 		return result.Failed(), result, nil
 	}
 
-	// Execute the binary search and hone in on an executable gas limit
-	for lo+1 < hi {
-		mid := (hi + lo) / 2
-		failed, _, err := executable(mid)
-		if err != nil {
-			return 0, err
-		}
-
-		if failed {
-			lo = mid
-		} else {
-			hi = mid
-		}
-	}
-	// Reject the transaction as invalid if it still fails at the highest allowance
-	if hi == cap {
-		failed, result, err := executable(hi)
-		if err != nil {
-			return 0, err
-		}
-		if failed {
-			if result != nil {
-				if len(result.Revert()) > 0 && result.VmExecutionStatus != types.ReceiptStatusErrOutOfGas {
-					return 0, newRevertError(result)
-				}
-				return 0, result.Unwrap()
-			}
-			// Otherwise, the specified gas cap is too low
-			return 0, fmt.Errorf("gas required exceeds allowance (%d)", cap)
-		}
-	}
-	return hexutil.Uint64(hi), nil
+	return blockchain.DoEstimateGas(ctx, gasLimit, gasCap, args.Value.ToInt(), feeCap, balance, executable)
 }
 
 // checkTxFee is an internal function used to check whether the fee of
