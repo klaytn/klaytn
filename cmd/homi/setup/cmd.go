@@ -597,6 +597,8 @@ func Gen(ctx *cli.Context) error {
 			serviceChainTest = true
 		case "clique":
 			clique = true
+		default:
+			fmt.Printf("Unknown genesis type is %s.\n", genesisType)
 		}
 	}
 
