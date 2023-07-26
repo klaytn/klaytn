@@ -453,7 +453,9 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 		evm.StateDB.AddAddressToAccessList(address)
 	}
 
-	if evm.StateDB.Exist(address) {
+	// Ensure there's no existing contract already at the designated address
+	contractHash := evm.StateDB.GetCodeHash(address)
+	if evm.StateDB.GetNonce(address) != 0 || (contractHash != (common.Hash{}) && contractHash != emptyCodeHash) {
 		return nil, common.Address{}, 0, ErrContractAddressCollision // TODO-Klaytn-Issue615
 	}
 	if common.IsPrecompiledContractAddress(address) {
