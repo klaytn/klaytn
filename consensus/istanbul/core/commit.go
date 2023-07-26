@@ -153,7 +153,7 @@ func (c *core) acceptCommit(msg *message, src istanbul.Validator) error {
 		return err
 	}
 
-	if c.current.Commits.Size() == 1 {
+	if c.current.Commits.Size() == 1 && vrank != nil {
 		vrankFirstCommitArrivalTimeGauge.Update(int64(vrank.TimeSinceStart()))
 	}
 
