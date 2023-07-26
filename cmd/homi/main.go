@@ -37,7 +37,7 @@ func main() {
 	app.Usage = "the klaytn-tools command line interface"
 
 	app.Version = "v0.3.3"
-	app.Copyright = "Copyright 2018-2019 The klaytn Authors"
+	app.Copyright = "Copyright 2018-2023 The klaytn Authors"
 	app.Commands = []*cli.Command{
 		&setup.SetupCommand,
 		&extra.ExtraCommand,
