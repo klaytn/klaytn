@@ -209,6 +209,67 @@ func TestStateObjects(t *testing.T) {
 	assert.Equal(t, 128, len(stateDB.stateObjects))
 }
 
+// Test that invalid pruning options are prohibited.
+func TestPruningOptions(t *testing.T) {
+	opens := func(pruning bool, pruningNum bool) bool {
+		dbm := database.NewMemoryDBManager()
+		opts := &statedb.TrieOpts{}
+		if pruning {
+			dbm.WritePruningEnabled()
+		}
+		if pruningNum {
+			opts.PruningBlockNumber = 1
+		}
+		_, err := New(common.Hash{}, NewDatabase(dbm), nil, opts)
+		return err == nil
+	}
+
+	// DB pruning disabled & not request pruning. Normal non-pruning setup.
+	assert.True(t, opens(false, false))
+	// DB pruning disabled & request pruning must fail.
+	assert.False(t, opens(false, true))
+
+	// DB pruning enabled & not request pruning. Temporary trie,
+	// such as in debug_traceTransaction or eth_call.
+	assert.True(t, opens(true, false))
+	// DB pruning enabled & request pruning. Normal pruning setup,
+	// such as in InsertChain.
+	assert.True(t, opens(true, true))
+}
+
+// Test that the storage root (ExtHash) has correct extensions
+// under different pruning options.
+func TestPruningRoot(t *testing.T) {
+	addr := common.HexToAddress("0xaaaa")
+
+	makeState := func(db Database) common.Hash {
+		stateDB, _ := New(common.Hash{}, db, nil, nil)
+		stateDB.CreateSmartContractAccount(addr, params.CodeFormatEVM, params.Rules{})
+		stateDB.SetState(addr, common.HexToHash("1"), common.HexToHash("2"))
+		root, _ := stateDB.Commit(false)
+		return root
+	}
+
+	// When pruning is disabled, storage root is zero-extended.
+	dbm := database.NewMemoryDBManager()
+
+	db := NewDatabase(dbm)
+	root := makeState(db)
+	stateDB, _ := New(root, db, nil, nil)
+	storageRoot, _ := stateDB.GetContractStorageRoot(addr)
+	assert.True(t, storageRoot.IsLegacy())
+
+	// When pruning is enabled, storage root is nonzero-extended.
+	dbm = database.NewMemoryDBManager()
+	dbm.WritePruningEnabled()
+
+	db = NewDatabase(dbm)
+	root = makeState(db)
+	stateDB, _ = New(root, db, nil, nil) // Reopen trie to check the account stored in disk.
+	storageRoot, _ = stateDB.GetContractStorageRoot(addr)
+	assert.False(t, storageRoot.IsLegacy())
+}
+
 // A snapshotTest checks that reverting StateDB snapshots properly undoes all changes
 // captured by the snapshot. Instances of this test with pseudorandom content are created
 // by Generate.

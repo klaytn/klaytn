@@ -60,8 +60,9 @@ var (
 // StateDBs within the Klaytn protocol are used to cache stateObjects from Merkle Patricia Trie
 // and mediate the operations to them.
 type StateDB struct {
-	db   Database
-	trie Trie
+	db       Database
+	trie     Trie
+	trieOpts *statedb.TrieOpts
 
 	snaps         *snapshot.Tree
 	snap          snapshot.Snapshot
@@ -125,6 +126,7 @@ func New(root common.Hash, db Database, snaps *snapshot.Tree, opts *statedb.Trie
 	sdb := &StateDB{
 		db:                       db,
 		trie:                     tr,
+		trieOpts:                 opts,
 		snaps:                    snaps,
 		stateObjects:             make(map[common.Address]*stateObject),
 		stateObjectsDirtyStorage: make(map[common.Address]struct{}),
@@ -171,7 +173,7 @@ func (self *StateDB) Error() error {
 // Reset clears out all ephemeral state objects from the state db, but keeps
 // the underlying state trie to avoid reloading data for the next operations.
 func (self *StateDB) Reset(root common.Hash) error {
-	tr, err := self.db.OpenTrie(root, nil)
+	tr, err := self.db.OpenTrie(root, self.trieOpts)
 	if err != nil {
 		return err
 	}
@@ -713,15 +715,11 @@ func (self *StateDB) createObjectWithMap(addr common.Address, accountType accoun
 }
 
 // CreateAccount explicitly creates a state object. If a state object with the address
-// already exists the balance is carried over to the new account.
-//
-// CreateAccount is called during the EVM CREATE operation. The situation might arise that
-// a contract does the following:
-//
-//   1. sends funds to sha(account ++ (nonce + 1))
-//   2. tx_create(sha(account ++ nonce)) (note that this gets the address of 1)
-//
+// already exists, the balance is carried over to the new account.
 // Carrying over the balance ensures that Ether doesn't disappear.
+//
+// CreateAccount is currently used for test code only. Instead,
+// use CreateEOA, CreateSmartContractAccount, or CreateSmartContractAccountWithKey to create a typed account.
 func (self *StateDB) CreateAccount(addr common.Address) {
 	new, prev := self.createObject(addr)
 	if prev != nil {
@@ -1112,7 +1110,7 @@ func (s *StateDB) PrepareAccessList(rules params.Rules, sender, feepayer, coinba
 	//		s.AddSlotToAccessList(el.Address, key)
 	//	}
 	//}
-	if rules.IsMantle {
+	if rules.IsShanghai {
 		s.AddAddressToAccessList(coinbase)
 	}
 }

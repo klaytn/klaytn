@@ -141,15 +141,17 @@ func TestNodeIteratorCoverage(t *testing.T) {
 
 // NodeIterator yields exact same result for Trie and StroageTrie
 func TestNodeIteratorStorageTrie(t *testing.T) {
-	triedb := NewDatabase(database.NewMemoryDBManager())
+	dbm := database.NewMemoryDBManager()
+	dbm.WritePruningEnabled()
+	triedb := NewDatabase(dbm)
 
-	trie1, _ := NewTrie(common.Hash{}, triedb, &TrieOpts{Pruning: true})
+	trie1, _ := NewTrie(common.Hash{}, triedb, nil)
 	hashes1 := make(map[common.Hash]struct{})
 	for it := trie1.NodeIterator(nil); it.Next(true); {
 		hashes1[it.Hash()] = struct{}{}
 	}
 
-	trie2, _ := NewStorageTrie(common.ExtHash{}, triedb, &TrieOpts{Pruning: true})
+	trie2, _ := NewStorageTrie(common.ExtHash{}, triedb, nil)
 	hashes2 := make(map[common.Hash]struct{})
 	for it := trie2.NodeIterator(nil); it.Next(true); {
 		hashes2[it.Hash()] = struct{}{}

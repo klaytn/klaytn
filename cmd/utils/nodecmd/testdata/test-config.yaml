@@ -94,6 +94,14 @@ db:
     read-capacity: 10000
     write-capacity: 10000
     read-only: false
+  rocksdb:
+    secondary: false
+    cache-size: 768
+    dump-memory-stat: false
+    compression-type: "lz4"
+    bottommost-compression-type: "zstd"
+    filter-policy: "ribbon"
+    disable-metrics: false
 
 snapshot-database: 
   enable: false
@@ -106,6 +114,8 @@ state:
   tries-in-memory: 128
   trie-cache-limit: -1
   trie-cache-save-period: 0s
+  live-pruning: false
+  live-pruning-retention: 172800
 
 cache: 
   type: 2

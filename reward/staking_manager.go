@@ -58,6 +58,7 @@ type blockChain interface {
 	GetBlock(hash common.Hash, number uint64) *types.Block
 	GetHeaderByNumber(number uint64) *types.Header
 	State() (*state.StateDB, error)
+	CurrentBlock() *types.Block
 
 	blockchain.ChainContext
 }

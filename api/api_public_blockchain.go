@@ -150,6 +150,25 @@ func (s *PublicBlockChainAPI) GetAccount(ctx context.Context, address common.Add
 	return serAcc, state.Error()
 }
 
+func (s *PublicKlayAPI) ForkStatus(ctx context.Context, number rpc.BlockNumber) (map[string]bool, error) {
+	block, err := s.b.BlockByNumber(ctx, number)
+	if err != nil {
+		return nil, err
+	}
+	blockNumber := block.Number()
+	cfg := s.b.ChainConfig()
+
+	return map[string]bool{
+		"Istanbul":  cfg.IsIstanbulForkEnabled(blockNumber),
+		"London":    cfg.IsLondonForkEnabled(blockNumber),
+		"EthTxType": cfg.IsEthTxTypeForkEnabled(blockNumber),
+		"Magma":     cfg.IsMagmaForkEnabled(blockNumber),
+		"Kore":      cfg.IsKoreForkEnabled(blockNumber),
+		"KIP103":    cfg.IsKIP103ForkBlock(blockNumber),
+		"Shanghai":  cfg.IsShanghaiForkEnabled(blockNumber),
+	}, nil
+}
+
 // rpcMarshalHeader converts the given header to the RPC output.
 func (s *PublicBlockChainAPI) rpcMarshalHeader(header *types.Header) map[string]interface{} {
 	fields := filters.RPCMarshalHeader(header, s.b.ChainConfig().IsEthTxTypeForkEnabled(header.Number))
@@ -363,7 +382,7 @@ func (s *PublicBlockChainAPI) Call(ctx context.Context, args CallArgs, blockNrOr
 	}
 
 	if len(result.Revert()) > 0 {
-		return nil, newRevertError(result)
+		return nil, blockchain.NewRevertError(result)
 	}
 	return result.Return(), result.Unwrap()
 }
@@ -387,20 +406,18 @@ func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs) (h
 }
 
 func (s *PublicBlockChainAPI) DoEstimateGas(ctx context.Context, b Backend, args CallArgs, gasCap *big.Int) (hexutil.Uint64, error) {
-	// Binary search the gas requirement, as it may be higher than the amount used
-	var (
-		lo  uint64 = params.TxGas - 1
-		hi  uint64
-		cap uint64
-	)
-	if uint64(args.Gas) >= params.TxGas {
-		hi = uint64(args.Gas)
+	var feeCap *big.Int
+	if args.GasPrice != nil {
+		feeCap = args.GasPrice.ToInt()
 	} else {
-		// Retrieve the current pending block to act as the gas ceiling
-		hi = params.UpperGasLimit
+		feeCap = common.Big0
 	}
-	// TODO-Klaytn: set hi value with account balance
-	cap = hi
+
+	state, _, err := b.StateAndHeaderByNumber(ctx, rpc.LatestBlockNumber)
+	if err != nil {
+		return 0, err
+	}
+	balance := state.GetBalance(args.From) // from can't be nil
 
 	// Create a helper to check if a gas allowance results in an executable transaction
 	executable := func(gas uint64) (bool, *blockchain.ExecutionResult, error) {
@@ -415,37 +432,7 @@ func (s *PublicBlockChainAPI) DoEstimateGas(ctx context.Context, b Backend, args
 		return result.Failed(), result, nil
 	}
 
-	// Execute the binary search and hone in on an executable gas limit
-	for lo+1 < hi {
-		mid := (hi + lo) / 2
-		failed, _, err := executable(mid)
-		if err != nil {
-			return 0, err
-		}
-		if failed {
-			lo = mid
-		} else {
-			hi = mid
-		}
-	}
-	// Reject the transaction as invalid if it still fails at the highest allowance
-	if hi == cap {
-		failed, result, err := executable(hi)
-		if err != nil {
-			return 0, err
-		}
-		if failed {
-			if result != nil && result.VmExecutionStatus != types.ReceiptStatusErrOutOfGas {
-				if len(result.Revert()) > 0 {
-					return 0, newRevertError(result)
-				}
-				return 0, result.Unwrap()
-			}
-			// Otherwise, the specified gas cap is too low
-			return 0, fmt.Errorf("gas required exceeds allowance (%d)", cap)
-		}
-	}
-	return hexutil.Uint64(hi), nil
+	return blockchain.DoEstimateGas(ctx, uint64(args.Gas), gasCap.Uint64(), args.Value.ToInt(), feeCap, balance, executable)
 }
 
 // ExecutionResult groups all structured logs emitted by the EVM

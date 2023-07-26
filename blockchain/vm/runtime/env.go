@@ -33,6 +33,7 @@ func NewEnv(cfg *Config) *vm.EVM {
 
 		Origin:      cfg.Origin,
 		Coinbase:    cfg.Coinbase,
+		Rewardbase:  cfg.Rewardbase,
 		BlockNumber: cfg.BlockNumber,
 		Time:        cfg.Time,
 		BlockScore:  cfg.BlockScore,

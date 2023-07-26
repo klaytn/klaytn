@@ -40,3 +40,4 @@ func (err *MissingNodeError) Error() string {
 }
 
 var ErrZeroHashNode = errors.New("cannot retrieve a node which has 0x00 hash value")
+var ErrPruningDisabled = errors.New("pruning is disabled on database")

@@ -360,6 +360,13 @@ func (hc *HeaderChain) CurrentHeader() *types.Header {
 	return hc.currentHeader.Load().(*types.Header)
 }
 
+// CurrentBlock is added because HeaderChain is sometimes used as
+// type consensus.ChainReader and consensus.ChainReader interface has CurrentBlock.
+// However CurrentBlock is not supported in HeaderChain so this function just panics.
+func (hc *HeaderChain) CurrentBlock() *types.Block {
+	panic("CurrentBlock not supported for HeaderChain")
+}
+
 // SetCurrentHeader sets the current head header of the canonical chain.
 func (hc *HeaderChain) SetCurrentHeader(head *types.Header) {
 	hc.chainDB.WriteHeadHeaderHash(head.Hash())

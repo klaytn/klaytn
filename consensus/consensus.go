@@ -40,6 +40,9 @@ type ChainReader interface {
 	// CurrentHeader retrieves the current header from the local chain.
 	CurrentHeader() *types.Header
 
+	// CurrentBlock revrieves the current block from the local chain.
+	CurrentBlock() *types.Block
+
 	// Engine retrieves the header chain's consensus engine.
 	Engine() Engine
 

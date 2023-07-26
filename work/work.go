@@ -271,6 +271,7 @@ type BlockChain interface {
 	Processor() blockchain.Processor
 	BadBlocks() ([]blockchain.BadBlockArgs, error)
 	StateAt(root common.Hash) (*state.StateDB, error)
+	PrunableStateAt(root common.Hash, num uint64) (*state.StateDB, error)
 	StateAtWithPersistent(root common.Hash) (*state.StateDB, error)
 	StateAtWithGCLock(root common.Hash) (*state.StateDB, error)
 	Export(w io.Writer) error
@@ -310,6 +311,9 @@ type BlockChain interface {
 	// KES
 	BlockSubscriptionLoop(pool *blockchain.TxPool)
 	CloseBlockSubscriptionLoop()
+
+	// read-only mode
+	CurrentBlockUpdateLoop(pool *blockchain.TxPool)
 
 	// Snapshot
 	Snapshots() *snapshot.Tree

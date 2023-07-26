@@ -172,6 +172,7 @@ func benchmarkEVM_Create(bench *testing.B, code string) {
 		GasLimit:    10000000,
 		Time:        new(big.Int).SetUint64(0),
 		Coinbase:    common.Address{},
+		Rewardbase:  common.Address{},
 		BlockNumber: new(big.Int).SetUint64(1),
 		ChainConfig: &params.ChainConfig{Istanbul: params.GetDefaultIstanbulConfig(), Governance: params.GetDefaultGovernanceConfig()},
 		EVMConfig:   vm.Config{},

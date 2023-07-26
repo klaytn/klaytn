@@ -123,9 +123,15 @@ func doInstall(cmdline []string) {
 	var (
 		arch = flag.String("arch", "", "Architecture to cross build for")
 		cc   = flag.String("cc", "", "C compiler to cross build with")
+		tags = flag.String("tags", "", "Build tags")
 	)
 	flag.CommandLine.Parse(cmdline)
 	env := build.Env()
+
+	var tagsArgs []string
+	if len(*tags) > 0 {
+		tagsArgs = append(tagsArgs, "-tags", *tags)
+	}
 
 	// Check Go version. People regularly open issues about compilation
 	// failure with outdated Go. This should save them the trouble.
@@ -150,6 +156,7 @@ func doInstall(cmdline []string) {
 	if *arch == "" || *arch == runtime.GOARCH {
 		goinstall := goTool("install", buildFlags(env)...)
 		goinstall.Args = append(goinstall.Args, "-v")
+		goinstall.Args = append(goinstall.Args, tagsArgs...)
 		// goinstall.Args = append(goinstall.Args, "-race")
 		goinstall.Args = append(goinstall.Args, packages...)
 		build.MustRun(goinstall)
@@ -165,6 +172,7 @@ func doInstall(cmdline []string) {
 	// Seems we are cross compiling, work around forbidden GOBIN
 	goinstall := goToolArch(*arch, *cc, "install", buildFlags(env)...)
 	goinstall.Args = append(goinstall.Args, "-v")
+	goinstall.Args = append(goinstall.Args, tagsArgs...)
 	goinstall.Args = append(goinstall.Args, []string{"-buildmode", "archive"}...)
 	goinstall.Args = append(goinstall.Args, packages...)
 	build.MustRun(goinstall)
@@ -179,6 +187,7 @@ func doInstall(cmdline []string) {
 				if name == "main" {
 					gobuild := goToolArch(*arch, *cc, "build", buildFlags(env)...)
 					gobuild.Args = append(gobuild.Args, "-v")
+					gobuild.Args = append(goinstall.Args, tagsArgs...)
 					gobuild.Args = append(gobuild.Args, []string{"-o", executablePath(cmd.Name())}...)
 					gobuild.Args = append(gobuild.Args, "."+string(filepath.Separator)+filepath.Join("cmd", cmd.Name()))
 					build.MustRun(gobuild)

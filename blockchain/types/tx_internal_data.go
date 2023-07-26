@@ -25,7 +25,6 @@ import (
 
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 )
@@ -122,6 +121,9 @@ var (
 	ErrSenderPubkeyNotSupported   = errors.New("SenderPubkey is not supported for this signer")
 	ErrSenderFeePayerNotSupported = errors.New("SenderFeePayer is not supported for this signer")
 	ErrHashFeePayerNotSupported   = errors.New("HashFeePayer is not supported for this signer")
+
+	// ErrGasUintOverflow is returned when calculating gas usage.
+	ErrGasUintOverflow = errors.New("gas uint64 overflow")
 )
 
 func (t TxValueKeyType) String() string {
@@ -539,20 +541,40 @@ func NewTxInternalDataWithMap(t TxType, values map[TxValueKeyType]interface{}) (
 	return nil, errUndefinedTxType
 }
 
-func IntrinsicGasPayload(gas uint64, data []byte) (uint64, error) {
+// toWordSize returns the ceiled word size required for init code payment calculation.
+func toWordSize(size uint64) uint64 {
+	if size > math.MaxUint64-31 {
+		return math.MaxUint64/32 + 1
+	}
+
+	return (size + 31) / 32
+}
+
+func IntrinsicGasPayload(gas uint64, data []byte, isContractCreation bool, rules params.Rules) (uint64, error) {
 	// Bump the required gas by the amount of transactional data
 	length := uint64(len(data))
-	if length > 0 {
-		// Make sure we don't exceed uint64 for all data combinations
-		if (math.MaxUint64-gas)/params.TxDataGas < length {
-			return 0, kerrors.ErrOutOfGas
-		}
+	if length == 0 {
+		return gas, nil
 	}
-	return gas + length*params.TxDataGas, nil
+	// Make sure we don't exceed uint64 for all data combinations
+	if (math.MaxUint64-gas)/params.TxDataGas < length {
+		return 0, ErrGasUintOverflow
+	}
+	gas += length * params.TxDataGas
+
+	if isContractCreation && rules.IsShanghai {
+		lenWords := toWordSize(length)
+		if (math.MaxUint64-gas)/params.InitCodeWordGas < lenWords {
+			return 0, ErrGasUintOverflow
+		}
+		gas += lenWords * params.InitCodeWordGas
+	}
+	return gas, nil
 }
 
 func IntrinsicGasPayloadLegacy(gas uint64, data []byte) (uint64, error) {
-	if len(data) > 0 {
+	length := uint64(len(data))
+	if length > 0 {
 		// Zero and non-zero bytes are priced differently
 		var nz uint64
 		for _, byt := range data {
@@ -562,13 +584,13 @@ func IntrinsicGasPayloadLegacy(gas uint64, data []byte) (uint64, error) {
 		}
 		// Make sure we don't exceed uint64 for all data combinations
 		if (math.MaxUint64-gas)/params.TxDataNonZeroGas < nz {
-			return 0, kerrors.ErrOutOfGas
+			return 0, ErrGasUintOverflow
 		}
 		gas += nz * params.TxDataNonZeroGas
 
 		z := uint64(len(data)) - nz
 		if (math.MaxUint64-gas)/params.TxDataZeroGas < z {
-			return 0, kerrors.ErrOutOfGas
+			return 0, ErrGasUintOverflow
 		}
 		gas += z * params.TxDataZeroGas
 	}
@@ -589,7 +611,7 @@ func IntrinsicGas(data []byte, accessList AccessList, contractCreation bool, r p
 	var gasPayloadWithGas uint64
 	var err error
 	if r.IsIstanbul {
-		gasPayloadWithGas, err = IntrinsicGasPayload(gas, data)
+		gasPayloadWithGas, err = IntrinsicGasPayload(gas, data, contractCreation, r)
 	} else {
 		gasPayloadWithGas, err = IntrinsicGasPayloadLegacy(gas, data)
 	}

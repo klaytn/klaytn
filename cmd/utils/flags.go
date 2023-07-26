@@ -113,6 +113,13 @@ var (
 		Aliases: []string{"common.datadir", "migration.src.datadir"},
 		EnvVars: []string{"KLAYTN_DATADIR"},
 	}
+	ChainDataDirFlag = cli.PathFlag{
+		Name:    "chaindatadir",
+		Value:   "",
+		Usage:   "Data directory for chaindata. If this is not specified, chaindata is stored in datadir",
+		Aliases: []string{"common.chaindatadir"},
+		EnvVars: []string{"KLAYTN_CHAINDATADIR"},
+	}
 	KeyStoreDirFlag = cli.PathFlag{
 		Name:    "keystore",
 		Usage:   "Directory for the keystore (default = inside the datadir)",
@@ -312,6 +319,45 @@ var (
 		Aliases: []string{},
 		EnvVars: []string{"KLAYTN_DB_LEVELDB_NO_BUFFER_POOL"},
 	}
+	RocksDBSecondaryFlag = cli.BoolFlag{
+		Name:    "db.rocksdb.secondary",
+		Usage:   "Enable rocksdb secondary mode (read-only and catch-up with primary node dynamically)",
+		EnvVars: []string{"KLAYTN_DB_ROCKSDB_SECONDARY"},
+	}
+	RocksDBCacheSizeFlag = cli.Uint64Flag{
+		Name:    "db.rocksdb.cache-size",
+		Usage:   "Size of in-memory cache in RocksDB (MiB)",
+		Value:   768,
+		EnvVars: []string{"KLAYTN_DB_ROCKSDB_CACHE_SIZE"},
+	}
+	RocksDBDumpMallocStatFlag = cli.BoolFlag{
+		Name:    "db.rocksdb.dump-memory-stat",
+		Usage:   "Enable to print memory stat together with rocksdb.stat. Works with Jemalloc only.",
+		EnvVars: []string{"KLAYTN_DB_ROCKSDB_DUMP_MALLOC_STAT"},
+	}
+	RocksDBCompressionTypeFlag = cli.StringFlag{
+		Name:    "db.rocksdb.compression-type",
+		Usage:   "RocksDB block compression type. Supported values are 'no', 'snappy', 'zlib', 'bz', 'lz4', 'lz4hc', 'xpress', 'zstd'",
+		Value:   database.GetDefaultRocksDBConfig().CompressionType,
+		EnvVars: []string{"KLAYTN_DB_ROCKSDB_COMPRESSION_TYPE"},
+	}
+	RocksDBBottommostCompressionTypeFlag = cli.StringFlag{
+		Name:    "db.rocksdb.bottommost-compression-type",
+		Usage:   "RocksDB bottommost block compression type. Supported values are 'no', 'snappy', 'zlib', 'bz2', 'lz4', 'lz4hc', 'xpress', 'zstd'",
+		Value:   database.GetDefaultRocksDBConfig().BottommostCompressionType,
+		EnvVars: []string{"KLAYTN_DB_ROCKSDB_BOTTOMMOST_COMPRESSION_TYPE"},
+	}
+	RocksDBFilterPolicyFlag = cli.StringFlag{
+		Name:    "db.rocksdb.filter-policy",
+		Usage:   "RocksDB filter policy. Supported values are 'no', 'bloom', 'ribbon'",
+		Value:   database.GetDefaultRocksDBConfig().FilterPolicy,
+		EnvVars: []string{"KLAYTN_DB_ROCKSDB_FILTER_POLICY"},
+	}
+	RocksDBDisableMetricsFlag = cli.BoolFlag{
+		Name:    "db.rocksdb.disable-metrics",
+		Usage:   "Disable RocksDB metrics",
+		EnvVars: []string{"KLAYTN_DB_ROCKSDB_DISABLE_METRICS"},
+	}
 	DynamoDBTableNameFlag = cli.StringFlag{
 		Name:    "db.dynamo.tablename",
 		Usage:   "Specifies DynamoDB table name. This is mandatory to use dynamoDB. (Set dbtype to use DynamoDBS3)",
@@ -404,6 +450,19 @@ var (
 		Value:   blockchain.DefaultTriesInMemory,
 		Aliases: []string{},
 		EnvVars: []string{"KLAYTN_STATE_TRIES_IN_MEMORY"},
+	}
+	LivePruningFlag = cli.BoolFlag{
+		Name:    "state.live-pruning",
+		Usage:   "Enable trie live pruning",
+		Aliases: []string{},
+		EnvVars: []string{"KLAYTN_STATE_LIVE_PRUNING"},
+	}
+	LivePruningRetentionFlag = cli.Uint64Flag{
+		Name:    "state.live-pruning-retention",
+		Usage:   "Number of blocks from the latest block that are not to be pruned",
+		Value:   blockchain.DefaultLivePruningRetention,
+		Aliases: []string{},
+		EnvVars: []string{"KLAYTN_STATE_LIVE_PRUNING_RETENTION"},
 	}
 	CacheTypeFlag = cli.IntFlag{
 		Name:    "cache.type",

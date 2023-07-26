@@ -64,7 +64,7 @@ type Config struct {
 	// in the devp2p node identifier.
 	Version string `toml:"-"`
 
-	// key-value database type [LevelDB, BadgerDB, MemoryDB, DynamoDB]
+	// key-value database type [LevelDB, RocksDB, BadgerDB, MemoryDB, DynamoDB]
 	DBType database.DBType
 
 	// DataDir is the file system folder the node should use for any data storage
@@ -73,6 +73,10 @@ type Config struct {
 	// databases or flat files. This enables ephemeral nodes which can fully reside
 	// in memory.
 	DataDir string
+
+	// ChainDataDir is separate directory path for chaindata. This is introduced in order to
+	// serve API from multiple processes to share chaindata with others.
+	ChainDataDir string
 
 	// Configuration of peer-to-peer networking.
 	P2P p2p.Config
@@ -314,6 +318,9 @@ func (c *Config) ResolvePath(path string) string {
 		oldpath := ""
 		if c.Name == "klay" {
 			oldpath = filepath.Join(c.DataDir, path)
+		}
+		if c.ChainDataDir != "" && path == "chaindata" {
+			return filepath.Join(c.ChainDataDir, path)
 		}
 		if oldpath != "" && common.FileExist(oldpath) {
 			// TODO: print warning

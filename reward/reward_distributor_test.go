@@ -341,13 +341,13 @@ func TestRewardDistributor_GetBlockReward(t *testing.T) {
 			expected: &RewardSpec{
 				Minted:   minted,
 				TotalFee: new(big.Int).SetUint64(1000),
-				BurntFee: new(big.Int).SetUint64(0),
-				Proposer: new(big.Int).SetUint64(9.6e18 + 1000),
+				BurntFee: new(big.Int).SetUint64(500),
+				Proposer: new(big.Int).SetUint64(9.6e18 + 500),
 				Stakers:  new(big.Int).SetUint64(0),
 				KFF:      new(big.Int).SetUint64(0),
 				KCF:      new(big.Int).SetUint64(0),
 				Rewards: map[common.Address]*big.Int{
-					proposerAddr: new(big.Int).SetUint64(9.6e18 + 1000),
+					proposerAddr: new(big.Int).SetUint64(9.6e18 + 500),
 				},
 			},
 		},
@@ -377,13 +377,13 @@ func TestRewardDistributor_GetBlockReward(t *testing.T) {
 			expected: &RewardSpec{
 				Minted:   minted,
 				TotalFee: new(big.Int).SetUint64(1000),
-				BurntFee: new(big.Int).SetUint64(0),
-				Proposer: new(big.Int).SetUint64(0.6528e18 + 1000 + 1),
+				BurntFee: new(big.Int).SetUint64(500),
+				Proposer: new(big.Int).SetUint64(0.6528e18 + 500 + 1),
 				Stakers:  new(big.Int).SetUint64(2.6112e18 - 1),
 				KFF:      new(big.Int).SetUint64(5.184e18),
 				KCF:      new(big.Int).SetUint64(1.152e18),
 				Rewards: map[common.Address]*big.Int{
-					proposerAddr:                     new(big.Int).SetUint64(0.6528e18 + 1000 + 1),
+					proposerAddr:                     new(big.Int).SetUint64(0.6528e18 + 500 + 1),
 					kffAddr:                          new(big.Int).SetUint64(5.184e18),
 					kcfAddr:                          new(big.Int).SetUint64(1.152e18),
 					intToAddress(rewardBaseAddr):     new(big.Int).SetUint64(1492114285714285714),
@@ -474,7 +474,7 @@ func TestRewardDistributor_CalcDeferredRewardSimple(t *testing.T) {
 // Before Kore, there was a bug that distributed txFee at the end of
 // block processing regardless of `deferredTxFee` flag.
 // See https://github.com/klaytn/klaytn/issues/1692.
-// To maintain backward compatibility, we only fix the buggy logic after Kore
+// To maintain backward compatibility, we only fix the buggy logic after Magma
 // and leave the buggy logic before Kore.
 func TestRewardDistributor_CalcDeferredRewardSimple_nodeferred(t *testing.T) {
 	header := &types.Header{
@@ -505,19 +505,19 @@ func TestRewardDistributor_CalcDeferredRewardSimple_nodeferred(t *testing.T) {
 				},
 			},
 		},
-		{ // totalFee should have been 0, but returned due to bug
+		{ // totalFee is now 0 because bug is fixed after Magma
 			isMagma: true,
 			isKore:  false,
 			expected: &RewardSpec{
 				Minted:   minted,
-				TotalFee: new(big.Int).SetUint64(1000),
-				BurntFee: new(big.Int).SetUint64(500),
-				Proposer: new(big.Int).SetUint64(9.6e18 + 500),
+				TotalFee: new(big.Int).SetUint64(0),
+				BurntFee: new(big.Int).SetUint64(0),
+				Proposer: new(big.Int).SetUint64(9.6e18),
 				Stakers:  new(big.Int).SetUint64(0),
 				KFF:      new(big.Int).SetUint64(0),
 				KCF:      new(big.Int).SetUint64(0),
 				Rewards: map[common.Address]*big.Int{
-					proposerAddr: new(big.Int).SetUint64(9.6e18 + 500),
+					proposerAddr: new(big.Int).SetUint64(9.6e18),
 				},
 			},
 		},
@@ -551,7 +551,6 @@ func TestRewardDistributor_CalcDeferredRewardSimple_nodeferred(t *testing.T) {
 		rules := config.Rules(header.Number)
 		pset, err := params.NewGovParamSetChainConfig(config)
 		require.Nil(t, err)
-
 		spec, err := CalcDeferredRewardSimple(header, rules, pset)
 		require.Nil(t, err, "testcases[%d] failed", i)
 		assertEqualRewardSpecs(t, tc.expected, spec, "testcases[%d] failed", i)

@@ -348,6 +348,7 @@ func (kCfg *KlayConfig) SetNodeConfig(ctx *cli.Context) {
 		logger.Crit("invalid dbtype", "dbtype", ctx.String(DbTypeFlag.Name))
 	}
 	cfg.DataDir = ctx.String(DataDirFlag.Name)
+	cfg.ChainDataDir = ctx.String(ChainDataDirFlag.Name)
 
 	if ctx.IsSet(KeyStoreDirFlag.Name) {
 		cfg.KeyStoreDir = ctx.String(KeyStoreDirFlag.Name)
@@ -521,6 +522,19 @@ func (kCfg *KlayConfig) SetKlayConfig(ctx *cli.Context, stack *node.Node) {
 	cfg.EnableDBPerfMetrics = !ctx.Bool(DBNoPerformanceMetricsFlag.Name)
 	cfg.LevelDBCacheSize = ctx.Int(LevelDBCacheSizeFlag.Name)
 
+	cfg.RocksDBConfig.Secondary = ctx.IsSet(RocksDBSecondaryFlag.Name)
+	if cfg.RocksDBConfig.Secondary {
+		cfg.FetcherDisable = true
+		cfg.DownloaderDisable = true
+		cfg.WorkerDisable = true
+	}
+	cfg.RocksDBConfig.CacheSize = ctx.Uint64(RocksDBCacheSizeFlag.Name)
+	cfg.RocksDBConfig.DumpMallocStat = ctx.IsSet(RocksDBDumpMallocStatFlag.Name)
+	cfg.RocksDBConfig.CompressionType = ctx.String(RocksDBCompressionTypeFlag.Name)
+	cfg.RocksDBConfig.BottommostCompressionType = ctx.String(RocksDBBottommostCompressionTypeFlag.Name)
+	cfg.RocksDBConfig.FilterPolicy = ctx.String(RocksDBFilterPolicyFlag.Name)
+	cfg.RocksDBConfig.DisableMetrics = ctx.Bool(RocksDBDisableMetricsFlag.Name)
+
 	cfg.DynamoDBConfig.TableName = ctx.String(DynamoDBTableNameFlag.Name)
 	cfg.DynamoDBConfig.Region = ctx.String(DynamoDBRegionFlag.Name)
 	cfg.DynamoDBConfig.IsProvisioned = ctx.Bool(DynamoDBIsProvisionedFlag.Name)
@@ -541,6 +555,8 @@ func (kCfg *KlayConfig) SetKlayConfig(ctx *cli.Context, stack *node.Node) {
 	common.DefaultCacheType = common.CacheType(ctx.Int(CacheTypeFlag.Name))
 	cfg.TrieBlockInterval = ctx.Uint(TrieBlockIntervalFlag.Name)
 	cfg.TriesInMemory = ctx.Uint64(TriesInMemoryFlag.Name)
+	cfg.LivePruning = ctx.Bool(LivePruningFlag.Name)
+	cfg.LivePruningRetention = ctx.Uint64(LivePruningRetentionFlag.Name)
 
 	if ctx.IsSet(CacheScaleFlag.Name) {
 		common.CacheScale = ctx.Int(CacheScaleFlag.Name)

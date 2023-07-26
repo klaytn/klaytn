@@ -586,6 +586,12 @@ web3._extend({
 			params: 1,
 		}),
 		new web3._extend.Method({
+			name: 'getDBProperty',
+			call: 'debug_getDBProperty',
+			params: 2,
+			outputFormatter: console.log
+		}),
+		new web3._extend.Method({
 			name: 'chaindbProperty',
 			call: 'debug_chaindbProperty',
 			params: 1,
@@ -1010,6 +1016,12 @@ web3._extend({
 			inputFormatter: [web3._extend.utils.toHex],
 		}),
 		new web3._extend.Method({
+			name: 'forkStatus',
+			call: 'klay_forkStatus',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
 			name: 'encodeAccountKey',
 			call: 'klay_encodeAccountKey',
 			params: 1,
@@ -1072,7 +1084,7 @@ web3._extend({
 			name: 'maxPriorityFeePerGas',
 			getter: 'klay_maxPriorityFeePerGas',
 			outputFormatter: web3._extend.utils.toBigNumber
-		}),
+		})
 	]
 });
 `

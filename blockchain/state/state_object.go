@@ -35,7 +35,6 @@ import (
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/rlp"
-	"github.com/klaytn/klaytn/storage/statedb"
 )
 
 var emptyCodeHash = crypto.Keccak256(nil)
@@ -130,7 +129,8 @@ func newObject(db *StateDB, address common.Address, data account.Account) *state
 
 // EncodeRLP implements rlp.Encoder.
 func (c *stateObject) EncodeRLP(w io.Writer) error {
-	serializer := account.NewAccountSerializerWithAccount(c.account)
+	// State objects are RLP encoded with ExtHash preserved.
+	serializer := account.NewAccountSerializerExtWithAccount(c.account)
 	return rlp.Encode(w, serializer)
 }
 
@@ -157,7 +157,7 @@ func (c *stateObject) touch() {
 }
 
 func (c *stateObject) openStorageTrie(hash common.ExtHash, db Database) (Trie, error) {
-	return db.OpenStorageTrie(hash, &statedb.TrieOpts{Prefetching: c.db.prefetching})
+	return db.OpenStorageTrie(hash, c.db.trieOpts)
 }
 
 func (c *stateObject) getStorageTrie(db Database) Trie {

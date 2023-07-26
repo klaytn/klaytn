@@ -324,8 +324,12 @@ func TestLargeValue(t *testing.T) {
 
 func TestStorageTrie(t *testing.T) {
 	newStorageTrie := func(pruning bool) *Trie {
-		db := NewDatabase(database.NewMemoryDBManager())
-		trie, _ := NewStorageTrie(common.ExtHash{}, db, &TrieOpts{Pruning: pruning})
+		dbm := database.NewMemoryDBManager()
+		if pruning {
+			dbm.WritePruningEnabled()
+		}
+		db := NewDatabase(dbm)
+		trie, _ := NewStorageTrie(common.ExtHash{}, db, nil)
 		updateString(trie, "doe", "reindeer")
 		return trie
 	}
@@ -347,6 +351,100 @@ func TestStorageTrie(t *testing.T) {
 	trie = newStorageTrie(true)
 	root, _ = trie.CommitExt(nil)
 	assert.False(t, root.IsLegacy())
+}
+
+func TestPruningByUpdate(t *testing.T) {
+	dbm := database.NewMemoryDBManager()
+	dbm.WritePruningEnabled()
+	db := NewDatabase(dbm)
+	hasnode := func(hash common.ExtHash) bool { ok, _ := dbm.HasTrieNode(hash); return ok }
+	common.ResetExtHashCounterForTest(0xccccddddeeee00)
+
+	trie, _ := NewTrie(common.Hash{}, db, &TrieOpts{PruningBlockNumber: 1})
+	nodehash1 := common.HexToExtHash("05ae693aac2107336a79309e0c60b24a7aac6aa3edecaef593921500d33c63c400000000000000")
+	nodehash2 := common.HexToExtHash("f226ef598ed9195f2211546cf5b2860dc27b4da07ff7ab5108ee68107f0c9d00ccccddddeeee01")
+
+	// Test that extension and branch nodes are correctly pruned via Update.
+	// - extension <05ae693aac2107336a79309e0c60b24a7aac6aa3edecaef593921500d33c63c400000000000045>
+	//   - branch  <f226ef598ed9195f2211546cf5b2860dc27b4da07ff7ab5108ee68107f0c9d00ccccddddeeee01>
+	//     - [5]value "reindeer"
+	//     - [7]value "puppy"
+	// By inserting "dogglesworth", both extension and branch nodes are affected, hence pruning the both.
+
+	// Update and commit to store the nodes
+	updateString(trie, "doe", "reindeer")
+	updateString(trie, "dog", "puppy")
+	trie.Commit(nil)
+	db.Cap(0)
+
+	// The nodes still exist
+	assert.True(t, hasnode(nodehash1))
+	assert.True(t, hasnode(nodehash2))
+
+	// Trigger pruning
+	updateString(trie, "dogglesworth", "cat")
+	trie.Commit(nil)
+	db.Cap(0)
+
+	// Those nodes and the only those nodes are scheduled to be deleted
+	expectedMarks := []database.PruningMark{
+		{Number: 1, Hash: nodehash1},
+		{Number: 1, Hash: nodehash2},
+	}
+	marks := dbm.ReadPruningMarks(0, 0)
+	assert.Equal(t, expectedMarks, marks)
+
+	// The nodes are deleted
+	dbm.PruneTrieNodes(marks)
+	assert.False(t, hasnode(nodehash1))
+	assert.False(t, hasnode(nodehash2))
+}
+
+func TestPruningByDelete(t *testing.T) {
+	dbm := database.NewMemoryDBManager()
+	dbm.WritePruningEnabled()
+	db := NewDatabase(dbm)
+	hasnode := func(hash common.ExtHash) bool { ok, _ := dbm.HasTrieNode(hash); return ok }
+	common.ResetExtHashCounterForTest(0xccccddddeeee00)
+
+	trie, _ := NewTrie(common.Hash{}, db, &TrieOpts{PruningBlockNumber: 1})
+	nodehash1 := common.HexToExtHash("05ae693aac2107336a79309e0c60b24a7aac6aa3edecaef593921500d33c63c400000000000000")
+	nodehash2 := common.HexToExtHash("f226ef598ed9195f2211546cf5b2860dc27b4da07ff7ab5108ee68107f0c9d00ccccddddeeee01")
+
+	// Test that extension and branch nodes are correctly pruned via Delete.
+	// - extension <05ae693aac2107336a79309e0c60b24a7aac6aa3edecaef593921500d33c63c400000000000045>
+	//   - branch  <f226ef598ed9195f2211546cf5b2860dc27b4da07ff7ab5108ee68107f0c9d00ccccddddeeee01>
+	//     - [5]value "reindeer"
+	//     - [7]value "puppy"
+	// By deleting "doe", both extension and branch nodes are affected, hence pruning the both.
+
+	// Update and commit to store the nodes
+	updateString(trie, "doe", "reindeer")
+	updateString(trie, "dog", "puppy")
+	trie.Commit(nil)
+	db.Cap(0)
+
+	// The nodes still exist
+	assert.True(t, hasnode(nodehash1))
+	assert.True(t, hasnode(nodehash2))
+
+	// Trigger pruning
+	deleteString(trie, "doe")
+	trie.Commit(nil)
+	db.Cap(0)
+
+	// Those nodes and the only those nodes are scheduled to be deleted
+	expectedMarks := []database.PruningMark{
+		{Number: 1, Hash: nodehash1},
+		{Number: 1, Hash: nodehash2},
+	}
+	marks := dbm.ReadPruningMarks(0, 0)
+	assert.Equal(t, expectedMarks, marks)
+
+	// The nodes are deleted
+	dbm.PruneTrieNodes(marks)
+	assert.False(t, hasnode(nodehash1))
+	assert.False(t, hasnode(nodehash2))
 }
 
 type countingDB struct {

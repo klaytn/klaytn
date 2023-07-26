@@ -26,6 +26,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/crypto/sha3"
+	"github.com/klaytn/klaytn/fork"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 )
@@ -260,7 +261,9 @@ func (t *TxInternalDataChainDataAnchoring) SetSignature(s TxSignatures) {
 func (t *TxInternalDataChainDataAnchoring) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
 	gas := params.TxChainDataAnchoringGas
 
-	gasPayloadWithGas, err := IntrinsicGasPayload(gas, t.Payload)
+	// ChainDataAnchoring does not have Recipient, but it is not contract deployment transaction type.
+	// So, isContractCreation is explicitly set as false.
+	gasPayloadWithGas, err := IntrinsicGasPayload(gas, t.Payload, false, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
 	if err != nil {
 		return 0, err
 	}
