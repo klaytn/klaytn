@@ -440,12 +440,13 @@ var (
 	kip103CompatibleBlockNumberFlag = cli.Int64Flag{
 		Name:  "kip103-compatible-blocknumber",
 		Usage: "kip103Compatible blockNumber",
+		Value: 0,
 	}
 
-	// TODO-klaytn: use shanghaiCompatibleBlockNumberFlag
 	shanghaiCompatibleBlockNumberFlag = cli.Int64Flag{
 		Name:  "shanghai-compatible-blocknumber",
 		Usage: "shanghaiCompatible blockNumber",
+		Value: 0,
 	}
 
 	kip103ContractAddressFlag = cli.StringFlag{
