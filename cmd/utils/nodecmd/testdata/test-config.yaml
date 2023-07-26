@@ -10,7 +10,7 @@ common:
   sender-tx-hash-indexing: false
   target-gaslimit: 4712388
   # block-extra-data: 
-  srvtype: fasthttp
+  srvtype: http
   # rewardbase: 0
   write-address: false
   child-chain-indexing: false
@@ -248,7 +248,7 @@ chain-data-fetcher:
   block-channel-size: 50
   max-processing-data-size: 500
   kafka: 
-    replicas: 1
+    replicas: 5
     brokers: ["192.168.11.12"]
     partitions: 1
     topic: 

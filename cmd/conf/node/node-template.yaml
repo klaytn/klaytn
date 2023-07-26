@@ -5,11 +5,11 @@ common:
   overwrite-genesis: false
   start-block-num: 0
   # keystore: 
-  syncmode: full
+  syncmode: snap
   garbage-collection-mode: full
   sender-tx-hash-indexing: false
-  target-gas-limit: 4712388
-  block-extra-data: ""
+  target-gaslimit: 4712388
+  # block-extra-data: 
   srvtype: http
   # rewardbase: 0
   write-address: false
@@ -43,13 +43,14 @@ p2p:
   bn-addr: ":32323"
   nat: any
   no-discover: false
-  net-restrict: 
-  node-key: 
-  node-key-hex: 
+  # net-restrict: 
+  # node-key: 
+  # node-key-hex: 
 
 experimental:
   opcode-computation-cost-limit: 100000000
-  block-generation-interval: 1
+  # will be added again after bugfix
+  # block-generation-interval: 1
   block-generation-time-limit: 250ms
 
 account-update:
@@ -79,7 +80,7 @@ api:
 
 db: 
   type: "levelDB"
-  single: false
+  single: true
   num-statetrie-shards: 4
   no-perf-metrics: false
   no-parallel-write: false
@@ -91,8 +92,9 @@ db:
     table-name: ""
     region: ap-northeast-2
     is-provisioned: false
-    read-capacity: 10000
-    write-capacity: 10000
+    # will be added again after bugfix
+    # read-capacity: 10000
+    # write-capacity: 10000
     read-only: false
 
 snapshot-database: 
@@ -109,9 +111,9 @@ state:
 
 cache: 
   type: 2
-  scale: 0
-  level: 
-  memory: 0
+  # scale: 0
+  # level: 
+  # memory: 0
   
 statedb: 
   cache: 
@@ -119,7 +121,7 @@ statedb:
     num-fetcher-prefetch-worker: 32
     use-snapshot-for-prefetch: false
     redis: 
-      endpoints: []
+      endpoints: ["192.168.11.12"]
       cluster: false
       publish: false
       subscribe: false
@@ -165,7 +167,7 @@ http-rpc:
   port: 8551
   api: ""
   gascap: 0
-  eth-tx-feecap: 0
+  eth-tx-feecap: 0.0
   read-timeout: 30
   write-timeout: 30
   idle-timeout: 120
@@ -182,7 +184,8 @@ ws-rpc:
   api: ""
   origins: ""
   max-subscription-per-conn: 3000
-  read-deadline: 0
+  # will be added again after bugfix
+  # read-deadline: 0
   write-deadline: 0
   max-connections: 3000
 
@@ -223,7 +226,7 @@ db-syncer:
   enable: false
   log-mode: false
   mode: multi
-  genquery.th: 50
+  genquery-th: 50
   insert-thread: 30
   bulk-size: 20 
   event-mode: head
@@ -231,13 +234,13 @@ db-syncer:
   max-block-diff: 0
   db: 
     host: ""
-    port: 3306
+    port: "3306"
     name: ""
     user: ""
-    password: 
+    password: ""
     max-idle: 50
     max-open: 30
-    max-lifetime: 3600000000000 #ms
+    max-lifetime: 1h
 
 chain-data-fetcher: 
   enable: false
@@ -248,8 +251,9 @@ chain-data-fetcher:
   block-channel-size: 50
   max-processing-data-size: 500
   kafka: 
-    replicas: 1
-    brokers: []
+    # will be added again after bugfix
+    # replicas: 1
+    brokers: ["192.168.11.12"]
     partitions: 1
     topic: 
       resource: en-0
@@ -257,5 +261,5 @@ chain-data-fetcher:
     max-message-bytes: 1000000
     segment-size: 1000000
     required-acks: 1
-    msg-version: 1.0
+    msg-version: "1.0"
     # producer-id: 
