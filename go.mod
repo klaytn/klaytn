@@ -14,7 +14,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckarep/golang-set v1.8.0
 	github.com/dgraph-io/badger v1.6.0
-	github.com/docker/docker v1.13.1
+	github.com/docker/docker v20.10.24+incompatible
 	github.com/edsrzf/mmap-go v1.0.0
 	github.com/fatih/color v1.9.0
 	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5
@@ -59,7 +59,7 @@ require (
 	golang.org/x/crypto v0.1.0
 	golang.org/x/net v0.7.0
 	golang.org/x/sys v0.5.0
-	golang.org/x/tools v0.1.12
+	golang.org/x/tools v0.2.0
 	google.golang.org/grpc v1.53.0
 	gopkg.in/DataDog/dd-trace-go.v1 v1.42.0
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
@@ -122,7 +122,7 @@ require (
 	go4.org/intern v0.0.0-20211027215823-ae77deb06f29 // indirect
 	go4.org/unsafe/assume-no-moving-gc v0.0.0-20220617031537-928513b29760 // indirect
 	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616 // indirect
-	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
+	golang.org/x/mod v0.6.0 // indirect
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4 // indirect
 	golang.org/x/text v0.7.0 // indirect
 	golang.org/x/time v0.0.0-20211116232009-f0f3c7e86c11 // indirect
@@ -136,6 +136,7 @@ require (
 	gopkg.in/sourcemap.v1 v1.0.5 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
+	gotest.tools/v3 v3.5.0 // indirect
 	honnef.co/go/tools v0.0.1-2020.1.4 // indirect
 	inet.af/netaddr v0.0.0-20220617031823-097006376321 // indirect
 )
