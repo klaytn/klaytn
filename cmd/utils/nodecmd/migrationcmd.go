@@ -40,6 +40,7 @@ var (
 		utils.DynamoDBWriteCapacityFlag,
 		utils.LevelDBCompressionTypeFlag,
 		utils.DataDirFlag,
+		utils.ChainDataDirFlag,
 	}
 	dbMigrationFlags = append(dbFlags, DBMigrationFlags...)
 
