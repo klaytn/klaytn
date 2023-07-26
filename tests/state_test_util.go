@@ -154,6 +154,7 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config) (*state.StateD
 		return nil, UnsupportedForkError{subtest.Fork}
 	}
 	vmconfig.ExtraEips = eips
+	blockchain.InitDeriveSha(config)
 	block := t.genesis(config).ToBlock(common.Hash{}, nil)
 	memDBManager := database.NewMemoryDBManager()
 	statedb := MakePreState(memDBManager, t.json.Pre)
