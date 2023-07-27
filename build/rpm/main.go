@@ -8,7 +8,7 @@ import (
 	"text/template"
 
 	"github.com/klaytn/klaytn/params"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 const (
@@ -109,25 +109,25 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "klaytn_rpmtool"
 	app.Version = "0.2"
-	app.Commands = []cli.Command{
+	app.Commands = []*cli.Command{
 		{
 			Name:    "gen_spec",
 			Aliases: []string{"a"},
 			Usage:   "generate rpm spec file",
 			Flags: []cli.Flag{
-				cli.StringFlag{
+				&cli.StringFlag{
 					Name:  "binary_type",
 					Usage: "Klaytn binary type (kcn, kpn, ken, kscn, kspn, ksen, kbn, kgen, homi)",
 				},
-				cli.BoolFlag{
+				&cli.BoolFlag{
 					Name:  "devel",
 					Usage: "generate spec for devel version",
 				},
-				cli.BoolFlag{
+				&cli.BoolFlag{
 					Name:  "baobab",
 					Usage: "generate spec for baobab version",
 				},
-				cli.IntFlag{
+				&cli.IntFlag{
 					Name:  "build_num",
 					Usage: "build number",
 				},

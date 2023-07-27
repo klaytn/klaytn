@@ -44,8 +44,8 @@ import (
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/params"
-	"github.com/urfave/cli/altsrc"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v2/altsrc"
 )
 
 type ValidatorInfo struct {
@@ -129,7 +129,7 @@ var HomiFlags = []cli.Flag{
 	altsrc.NewStringFlag(kip103ContractAddressFlag),
 }
 
-var SetupCommand = cli.Command{
+var SetupCommand = &cli.Command{
 	Name:  "setup",
 	Usage: "Generate klaytn CN's init files",
 	Description: `This tool helps generate:
@@ -740,7 +740,7 @@ func Gen(ctx *cli.Context) error {
 			ctx.Bool(fasthttpFlag.Name),
 			ctx.Int(networkIdFlag.Name),
 			int(chainid),
-			!ctx.BoolT(nografanaFlag.Name),
+			!ctx.Bool(nografanaFlag.Name),
 			proxyNodeKeys,
 			enKeys,
 			scnKeys,
@@ -1161,15 +1161,21 @@ func indexGenType(genTypeFlag string, base string) int {
 }
 
 func findGenType(ctx *cli.Context) int {
-	var genType int
+	var (
+		genTypeName string
+		baseString  string
+		genType     int
+	)
+
 	if ctx.Args().Present() {
-		genType = indexGenType(ctx.Args()[0], "")
+		genTypeName, baseString = ctx.Args().First(), ""
 	} else {
-		genType = indexGenType(ctx.String(genTypeFlag.Name), Types[0])
+		genTypeName, baseString = ctx.String(genTypeFlag.Name), Types[0]
 	}
 
+	genType = indexGenType(genTypeName, baseString)
 	if genType == TypeNotDefined {
-		fmt.Printf("Wrong Type : %s\nSupported Types : [docker, local, remote, deploy]\n\n", genTypeFlag)
+		fmt.Printf("Wrong Type : %s\nSupported Types : [docker, local, remote, deploy]\n\n", genTypeName)
 		cli.ShowSubcommandHelp(ctx)
 		os.Exit(1)
 	}
@@ -1188,7 +1194,7 @@ func removeSpacesAndLines(b []byte) string {
 func homiFlagsFromYaml(ctx *cli.Context) error {
 	filePath := ctx.String(homiYamlFlag.Name)
 	if filePath != "" {
-		if err := altsrc.InitInputSourceWithContext(SetupCommand.Flags, altsrc.NewYamlSourceFromFlagFunc(homiYamlFlag.Name))(ctx); err != nil {
+		if err := altsrc.InitInputSourceWithContext(HomiFlags, altsrc.NewYamlSourceFromFlagFunc(homiYamlFlag.Name))(ctx); err != nil {
 			return err
 		}
 	}
@@ -1199,5 +1205,6 @@ func BeforeRunHomi(ctx *cli.Context) error {
 	if err := homiFlagsFromYaml(ctx); err != nil {
 		return err
 	}
+
 	return nil
 }

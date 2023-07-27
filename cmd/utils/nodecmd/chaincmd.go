@@ -34,14 +34,14 @@ import (
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 var logger = log.NewModuleLogger(log.CMDUtilsNodeCMD)
 
 var (
-	InitCommand = cli.Command{
-		Action:    utils.MigrateFlags(initGenesis),
+	InitCommand = &cli.Command{
+		Action:    initGenesis,
 		Name:      "init",
 		Usage:     "Bootstrap and initialize a new genesis block",
 		ArgsUsage: "<genesisPath>",
@@ -70,8 +70,8 @@ participating.
 It expects the genesis file as argument.`,
 	}
 
-	DumpGenesisCommand = cli.Command{
-		Action:    utils.MigrateFlags(dumpGenesis),
+	DumpGenesisCommand = &cli.Command{
+		Action:    dumpGenesis,
 		Name:      "dumpgenesis",
 		Usage:     "Dumps genesis block JSON configuration to stdout",
 		ArgsUsage: "",
@@ -130,26 +130,26 @@ func initGenesis(ctx *cli.Context) error {
 
 	// Open an initialise both full and light databases
 	stack := MakeFullNode(ctx)
-	parallelDBWrite := !ctx.GlobalIsSet(utils.NoParallelDBWriteFlag.Name)
-	singleDB := ctx.GlobalIsSet(utils.SingleDBFlag.Name)
-	numStateTrieShards := ctx.GlobalUint(utils.NumStateTrieShardsFlag.Name)
-	overwriteGenesis := ctx.GlobalBool(utils.OverwriteGenesisFlag.Name)
-	livePruning := ctx.GlobalBool(utils.LivePruningFlag.Name)
+	parallelDBWrite := !ctx.IsSet(utils.NoParallelDBWriteFlag.Name)
+	singleDB := ctx.IsSet(utils.SingleDBFlag.Name)
+	numStateTrieShards := ctx.Uint(utils.NumStateTrieShardsFlag.Name)
+	overwriteGenesis := ctx.Bool(utils.OverwriteGenesisFlag.Name)
+	livePruning := ctx.Bool(utils.LivePruningFlag.Name)
 
-	dbtype := database.DBType(ctx.GlobalString(utils.DbTypeFlag.Name)).ToValid()
+	dbtype := database.DBType(ctx.String(utils.DbTypeFlag.Name)).ToValid()
 	if len(dbtype) == 0 {
-		logger.Crit("invalid dbtype", "dbtype", ctx.GlobalString(utils.DbTypeFlag.Name))
+		logger.Crit("invalid dbtype", "dbtype", ctx.String(utils.DbTypeFlag.Name))
 	}
 
 	var dynamoDBConfig *database.DynamoDBConfig
 	if dbtype == database.DynamoDB {
 		dynamoDBConfig = &database.DynamoDBConfig{
-			TableName:          ctx.GlobalString(utils.DynamoDBTableNameFlag.Name),
-			Region:             ctx.GlobalString(utils.DynamoDBRegionFlag.Name),
-			IsProvisioned:      ctx.GlobalBool(utils.DynamoDBIsProvisionedFlag.Name),
-			ReadCapacityUnits:  ctx.GlobalInt64(utils.DynamoDBReadCapacityFlag.Name),
-			WriteCapacityUnits: ctx.GlobalInt64(utils.DynamoDBWriteCapacityFlag.Name),
-			ReadOnly:           ctx.GlobalBool(utils.DynamoDBReadOnlyFlag.Name),
+			TableName:          ctx.String(utils.DynamoDBTableNameFlag.Name),
+			Region:             ctx.String(utils.DynamoDBRegionFlag.Name),
+			IsProvisioned:      ctx.Bool(utils.DynamoDBIsProvisionedFlag.Name),
+			ReadCapacityUnits:  ctx.Int64(utils.DynamoDBReadCapacityFlag.Name),
+			WriteCapacityUnits: ctx.Int64(utils.DynamoDBWriteCapacityFlag.Name),
+			ReadOnly:           ctx.Bool(utils.DynamoDBReadOnlyFlag.Name),
 		}
 	}
 
@@ -202,9 +202,9 @@ func dumpGenesis(ctx *cli.Context) error {
 func MakeGenesis(ctx *cli.Context) *blockchain.Genesis {
 	var genesis *blockchain.Genesis
 	switch {
-	case ctx.GlobalBool(utils.CypressFlag.Name):
+	case ctx.Bool(utils.CypressFlag.Name):
 		genesis = blockchain.DefaultGenesisBlock()
-	case ctx.GlobalBool(utils.BaobabFlag.Name):
+	case ctx.Bool(utils.BaobabFlag.Name):
 		genesis = blockchain.DefaultBaobabGenesisBlock()
 	}
 	return genesis

@@ -33,14 +33,14 @@ import (
 	"github.com/klaytn/klaytn/snapshot"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/storage/statedb"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
-var SnapshotCommand = cli.Command{
+var SnapshotCommand = &cli.Command{
 	Name:        "snapshot",
 	Usage:       "A set of commands based on the snapshot",
 	Description: "",
-	Subcommands: []cli.Command{
+	Subcommands: []*cli.Command{
 		{
 			Name:      "verify-state",
 			Usage:     "Recalculate state hash based on the snapshot for verification",
@@ -132,21 +132,21 @@ var (
 func getConfig(ctx *cli.Context) *database.DBConfig {
 	return &database.DBConfig{
 		Dir:                "chaindata",
-		DBType:             database.DBType(ctx.GlobalString(utils.DbTypeFlag.Name)).ToValid(),
-		SingleDB:           ctx.GlobalBool(utils.SingleDBFlag.Name),
-		NumStateTrieShards: ctx.GlobalUint(utils.NumStateTrieShardsFlag.Name),
+		DBType:             database.DBType(ctx.String(utils.DbTypeFlag.Name)).ToValid(),
+		SingleDB:           ctx.Bool(utils.SingleDBFlag.Name),
+		NumStateTrieShards: ctx.Uint(utils.NumStateTrieShardsFlag.Name),
 		OpenFilesLimit:     database.GetOpenFilesLimit(),
 
-		LevelDBCacheSize:    ctx.GlobalInt(utils.LevelDBCacheSizeFlag.Name),
-		LevelDBCompression:  database.LevelDBCompressionType(ctx.GlobalInt(utils.LevelDBCompressionTypeFlag.Name)),
+		LevelDBCacheSize:    ctx.Int(utils.LevelDBCacheSizeFlag.Name),
+		LevelDBCompression:  database.LevelDBCompressionType(ctx.Int(utils.LevelDBCompressionTypeFlag.Name)),
 		EnableDBPerfMetrics: !ctx.IsSet(utils.DBNoPerformanceMetricsFlag.Name),
 
 		DynamoDBConfig: &database.DynamoDBConfig{
-			TableName:          ctx.GlobalString(utils.DynamoDBTableNameFlag.Name),
-			Region:             ctx.GlobalString(utils.DynamoDBRegionFlag.Name),
-			IsProvisioned:      ctx.GlobalBool(utils.DynamoDBIsProvisionedFlag.Name),
-			ReadCapacityUnits:  ctx.GlobalInt64(utils.DynamoDBReadCapacityFlag.Name),
-			WriteCapacityUnits: ctx.GlobalInt64(utils.DynamoDBWriteCapacityFlag.Name),
+			TableName:          ctx.String(utils.DynamoDBTableNameFlag.Name),
+			Region:             ctx.String(utils.DynamoDBRegionFlag.Name),
+			IsProvisioned:      ctx.Bool(utils.DynamoDBIsProvisionedFlag.Name),
+			ReadCapacityUnits:  ctx.Int64(utils.DynamoDBReadCapacityFlag.Name),
+			WriteCapacityUnits: ctx.Int64(utils.DynamoDBWriteCapacityFlag.Name),
 			PerfCheck:          !ctx.IsSet(utils.DBNoPerformanceMetricsFlag.Name),
 		},
 	}

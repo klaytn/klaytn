@@ -30,7 +30,7 @@ import (
 	"github.com/klaytn/klaytn/cmd/utils/nodecmd"
 	"github.com/klaytn/klaytn/console"
 	"github.com/klaytn/klaytn/log"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 var (
@@ -46,7 +46,7 @@ func init() {
 	app.Action = nodecmd.RunKlaytnNode
 	app.HideVersion = true // we have a command to print the version
 	app.Copyright = "Copyright 2018-2023 The klaytn Authors"
-	app.Commands = []cli.Command{
+	app.Commands = []*cli.Command{
 		// See utils/nodecmd/chaincmd.go:
 		nodecmd.InitCommand,
 		nodecmd.DumpGenesisCommand,
@@ -55,14 +55,14 @@ func init() {
 		nodecmd.AccountCommand,
 
 		// See utils/nodecmd/consolecmd.go:
-		nodecmd.GetConsoleCommand(nodecmd.KenNodeFlags(), nodecmd.CommonRPCFlags),
+		nodecmd.GetConsoleCommand(utils.KenNodeFlags(), utils.CommonRPCFlags),
 		nodecmd.AttachCommand,
 
 		// See utils/nodecmd/versioncmd.go:
 		nodecmd.VersionCommand,
 
 		// See utils/nodecmd/dumpconfigcmd.go:
-		nodecmd.GetDumpConfigCommand(nodecmd.KenNodeFlags(), nodecmd.CommonRPCFlags),
+		nodecmd.GetDumpConfigCommand(utils.KenNodeFlags(), utils.CommonRPCFlags),
 
 		// See utils/nodecmd/db_migration.go:
 		nodecmd.MigrationCommand,
@@ -75,7 +75,7 @@ func init() {
 	}
 	sort.Sort(cli.CommandsByName(app.Commands))
 
-	app.Flags = nodecmd.KenAppFlags()
+	app.Flags = utils.KenAppFlags()
 
 	cli.AppHelpTemplate = utils.GlobalAppHelpTemplate
 	cli.HelpPrinter = utils.NewHelpPrinter(utils.CategorizeFlags(app.Flags))

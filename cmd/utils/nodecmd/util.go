@@ -35,7 +35,7 @@ import (
 	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 const (
@@ -47,11 +47,11 @@ const (
 
 var ErrInvalidCmd = errors.New("Invalid command. Check usage through --help command")
 
-var UtilCommand = cli.Command{
+var UtilCommand = &cli.Command{
 	Name:     "util",
 	Usage:    "offline utility",
 	Category: "MISCELLANEOUS COMMANDS",
-	Subcommands: []cli.Command{
+	Subcommands: []*cli.Command{
 		{
 			Name:        DECODE_EXTRA,
 			Usage:       "<header file (json format)>",
@@ -86,22 +86,22 @@ func action(ctx *cli.Context) error {
 	)
 	switch ctx.Command.Name {
 	case DECODE_EXTRA:
-		if len(ctx.Args()) != 1 {
+		if ctx.Args().Len() != 1 {
 			return ErrInvalidCmd
 		}
 		m, err = decodeExtra(ctx.Args().Get(0))
 	case DECODE_VOTE:
-		if len(ctx.Args()) != 1 {
+		if ctx.Args().Len() != 1 {
 			return ErrInvalidCmd
 		}
 		m, err = decodeVote(hex2Bytes(ctx.Args().Get(0)))
 	case DECODE_GOV:
-		if len(ctx.Args()) != 1 {
+		if ctx.Args().Len() != 1 {
 			return ErrInvalidCmd
 		}
 		m, err = decodeGov(hex2Bytes(ctx.Args().Get(0)))
 	case DECRYPT_KEY:
-		if len(ctx.Args()) != 2 {
+		if ctx.Args().Len() != 2 {
 			return ErrInvalidCmd
 		}
 		keystorePath, passwd := ctx.Args().Get(0), ctx.Args().Get(1)

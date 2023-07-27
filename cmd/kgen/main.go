@@ -32,7 +32,7 @@ import (
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 type validatorInfo struct {
@@ -47,16 +47,16 @@ const (
 
 var (
 	logger   = log.NewModuleLogger(log.CMDKGEN)
-	fileFlag = cli.BoolFlag{
+	fileFlag = &cli.BoolFlag{
 		Name:  "file",
 		Usage: `Generate a nodekey and a Klaytn node information as files`,
 	}
-	portFlag = cli.IntFlag{
+	portFlag = &cli.IntFlag{
 		Name:  "port",
 		Usage: `Specify a tcp port number`,
 		Value: 32323,
 	}
-	ipFlag = cli.StringFlag{
+	ipFlag = &cli.StringFlag{
 		Name:  "ip",
 		Usage: `Specify an ip address`,
 		Value: "0.0.0.0",
@@ -79,7 +79,7 @@ func main() {
 		ipFlag,
 		portFlag,
 	}
-	app.Commands = []cli.Command{
+	app.Commands = []*cli.Command{
 		nodecmd.VersionCommand,
 	}
 	app.HideVersion = true

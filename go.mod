@@ -48,14 +48,12 @@ require (
 	github.com/rjeczalik/notify v0.9.3
 	github.com/robertkrimen/otto v0.0.0-20180506084358-03d472dc43ab
 	github.com/rs/cors v1.7.0
-	github.com/satori/go.uuid v1.2.0
 	github.com/steakknife/bloomfilter v0.0.0-20180922174646-6819c0d2a570
 	github.com/steakknife/hamming v0.0.0-20180906055917-c99c65617cd3 // indirect
-	github.com/stretchr/testify v1.8.2
+	github.com/stretchr/testify v1.8.4
 	github.com/supranational/blst v0.3.10
 	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
-	github.com/tyler-smith/go-bip32 v1.0.0
-	github.com/urfave/cli v1.20.0
+	github.com/urfave/cli/v2 v2.25.7
 	github.com/valyala/fasthttp v1.34.0
 	go.uber.org/zap v1.13.0
 	golang.org/x/crypto v0.1.0
@@ -69,13 +67,18 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce
 	gopkg.in/olebedev/go-duktape.v3 v3.0.0-20200619000410-60c24ae608a6
-	gopkg.in/urfave/cli.v1 v1.20.0
+	gopkg.in/sourcemap.v1 v1.0.5 // indirect
 	gotest.tools v2.2.0+incompatible
 )
 
 require (
+	github.com/satori/go.uuid v1.2.0
+	github.com/tyler-smith/go-bip32 v1.0.0
+)
+
+require (
 	github.com/AndreasBriese/bbloom v0.0.0-20190306092124-e2d15f34fcf9 // indirect
-	github.com/BurntSushi/toml v0.3.1 // indirect
+	github.com/BurntSushi/toml v1.3.2 // indirect
 	github.com/DataDog/datadog-agent/pkg/obfuscate v0.0.0-20211129110424-6491aa3bf583 // indirect
 	github.com/DataDog/datadog-go v4.8.2+incompatible // indirect
 	github.com/DataDog/datadog-go/v5 v5.0.2 // indirect
@@ -86,6 +89,7 @@ require (
 	github.com/andybalholm/brotli v1.0.4 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
+	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/dgraph-io/ristretto v0.1.0 // indirect
 	github.com/dgryski/go-farm v0.0.0-20190423205320-6a90982ecee2 // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
@@ -115,8 +119,10 @@ require (
 	github.com/prometheus/common v0.26.0 // indirect
 	github.com/prometheus/procfs v0.6.0 // indirect
 	github.com/prometheus/tsdb v0.10.0 // indirect
+	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/tinylib/msgp v1.1.2 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
+	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	go.uber.org/atomic v1.5.0 // indirect
 	go.uber.org/multierr v1.3.0 // indirect
 	go.uber.org/tools v0.0.0-20190618225709-2cfd321de3ee // indirect
@@ -134,8 +140,6 @@ require (
 	gopkg.in/jcmturner/dnsutils.v1 v1.0.1 // indirect
 	gopkg.in/jcmturner/gokrb5.v7 v7.5.0 // indirect
 	gopkg.in/jcmturner/rpc.v1 v1.1.0 // indirect
-	gopkg.in/sourcemap.v1 v1.0.5 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gotest.tools/v3 v3.5.0 // indirect
 	honnef.co/go/tools v0.0.1-2020.1.4 // indirect
