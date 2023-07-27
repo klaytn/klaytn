@@ -458,8 +458,8 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 
 	// The early Klaytn design tried to support the account creation with a user selected address,
 	// so the account overwriting was restricted.
-	// Because the feature was postponed for long time and abused to prevent SCA creation,
-	// Klaytn enables SCA overwriting over EOA like Ethereum.
+	// Because the feature was postponed for a long time and the restriction can be abused to prevent SCA creation,
+	// Klaytn enables SCA overwriting over EOA like Ethereum after Shanghai compatible hardfork.
 	// NOTE: The following code should be re-considered when Klaytn enables TxTypeAccountCreation
 	if evm.chainRules.IsShanghai {
 		if evm.StateDB.GetNonce(address) != 0 || (contractHash != (common.Hash{}) && contractHash != emptyCodeHash) {
