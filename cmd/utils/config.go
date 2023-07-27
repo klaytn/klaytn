@@ -353,10 +353,10 @@ func (kCfg *KlayConfig) SetNodeConfig(ctx *cli.Context) {
 	if ctx.IsSet(KeyStoreDirFlag.Name) {
 		cfg.KeyStoreDir = ctx.String(KeyStoreDirFlag.Name)
 	}
-	if ctx.Bool(LightKDFFlag.Name) {
+	if ctx.IsSet(LightKDFFlag.Name) {
 		cfg.UseLightweightKDF = ctx.Bool(LightKDFFlag.Name)
 	}
-	if ctx.Bool(RPCNonEthCompatibleFlag.Name) {
+	if ctx.IsSet(RPCNonEthCompatibleFlag.Name) {
 		rpc.NonEthCompatible = ctx.Bool(RPCNonEthCompatibleFlag.Name)
 	}
 }
@@ -600,7 +600,7 @@ func (kCfg *KlayConfig) SetKlayConfig(ctx *cli.Context, stack *node.Node) {
 		RedisSubscribeBlockEnable: ctx.Bool(TrieNodeCacheRedisSubscribeBlockFlag.Name),
 	}
 
-	if ctx.Bool(VMEnableDebugFlag.Name) {
+	if ctx.IsSet(VMEnableDebugFlag.Name) {
 		// TODO(fjl): force-enable this in --dev mode
 		cfg.EnablePreimageRecording = ctx.Bool(VMEnableDebugFlag.Name)
 	}
@@ -632,13 +632,13 @@ func (kCfg *KlayConfig) SetKlayConfig(ctx *cli.Context, stack *node.Node) {
 			logger.Crit("Block generation interval should be equal or larger than 1", "interval", params.BlockGenerationInterval)
 		}
 	}
-	if ctx.Bool(BlockGenerationTimeLimitFlag.Name) {
+	if ctx.IsSet(BlockGenerationTimeLimitFlag.Name) {
 		params.BlockGenerationTimeLimit = ctx.Duration(BlockGenerationTimeLimitFlag.Name)
 	}
 
 	params.OpcodeComputationCostLimit = ctx.Uint64(OpcodeComputationCostLimitFlag.Name)
 
-	if ctx.Bool(SnapshotFlag.Name) {
+	if ctx.IsSet(SnapshotFlag.Name) {
 		cfg.SnapshotCacheSize = ctx.Int(SnapshotCacheSizeFlag.Name)
 		if cfg.StartBlockNumber != 0 {
 			logger.Crit("State snapshot should not be used with --start-block-num", "num", cfg.StartBlockNumber)
@@ -727,13 +727,13 @@ func MakeAddress(ks *keystore.KeyStore, account string) (accounts.Account, error
 }
 
 func setTxPool(ctx *cli.Context, cfg *blockchain.TxPoolConfig) {
-	if ctx.Bool(TxPoolNoLocalsFlag.Name) {
+	if ctx.IsSet(TxPoolNoLocalsFlag.Name) {
 		cfg.NoLocals = ctx.Bool(TxPoolNoLocalsFlag.Name)
 	}
-	if ctx.Bool(TxPoolAllowLocalAnchorTxFlag.Name) {
+	if ctx.IsSet(TxPoolAllowLocalAnchorTxFlag.Name) {
 		cfg.AllowLocalAnchorTx = ctx.Bool(TxPoolAllowLocalAnchorTxFlag.Name)
 	}
-	if ctx.Bool(TxPoolDenyRemoteTxFlag.Name) {
+	if ctx.IsSet(TxPoolDenyRemoteTxFlag.Name) {
 		cfg.DenyRemoteTx = ctx.Bool(TxPoolDenyRemoteTxFlag.Name)
 	}
 	if ctx.IsSet(TxPoolJournalFlag.Name) {
