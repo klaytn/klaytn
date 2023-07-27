@@ -67,6 +67,12 @@ commands:
             curl -O https://dl.google.com/go/go1.20.6.<< parameters.os-network >>.tar.gz
             mkdir $HOME/go1.20.6
             tar -C $HOME/go1.20.6 -xzf go1.20.6.<< parameters.os-network >>.tar.gz
+  install-awscli:
+    steps:
+      - run:
+          name: "Install awscli on macos machine"
+          command: |
+            brew install awscli
   install-golangci-lint:
     steps:
       - run:
@@ -509,6 +515,7 @@ jobs:
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
+      - install-awscli
       - install-golang:
           os-network: "darwin-amd64"
       - pre-build:
@@ -524,6 +531,7 @@ jobs:
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
+      - install-awscli
       - install-golang:
           os-network: "darwin-amd64"
       - pre-build:
