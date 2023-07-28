@@ -46,7 +46,8 @@ func tmpDatadirWithKeystore(t *testing.T) string {
 }
 
 func TestAccountListEmpty(t *testing.T) {
-	klay := runKlay(t, "klay-test", "account", "list")
+	datadir := tmpdir(t)
+	klay := runKlay(t, "klay-test", "account", "list", "--datadir", datadir)
 	klay.ExpectExit()
 }
 
