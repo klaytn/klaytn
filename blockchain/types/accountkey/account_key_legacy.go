@@ -45,6 +45,11 @@ func (a *AccountKeyLegacy) IsCompositeType() bool {
 	return false
 }
 
+// AccountKeyLegacy cannot check the public key, just return address of the public key argument always
+func (a *AccountKeyLegacy) IsContainedKey(recoveredKey *ecdsa.PublicKey) bool {
+	return true
+}
+
 func (a *AccountKeyLegacy) Equal(b AccountKey) bool {
 	if _, ok := b.(*AccountKeyLegacy); !ok {
 		return false

@@ -51,6 +51,10 @@ func (a *AccountKeyPublic) IsCompositeType() bool {
 	return false
 }
 
+func (a *AccountKeyPublic) IsContainedKey(recoveredKey *ecdsa.PublicKey) bool {
+	return a.PublicKeySerializable.Equal((*PublicKeySerializable)(recoveredKey))
+}
+
 func (a *AccountKeyPublic) DeepCopy() AccountKey {
 	return &AccountKeyPublic{
 		a.PublicKeySerializable.DeepCopy(),

@@ -30,6 +30,45 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestIsContainedKey(t *testing.T) {
+	keys := map[string]AccountKey{
+		"Nil":              genAccountKeyNil(),
+		"Legacy":           genAccountKeyLegacy(),
+		"Public":           genAccountKeyPublic(),
+		"Fail":             genAccountKeyFail(),
+		"WeightedMultisig": genAccountKeyWeightedMultisig(),
+		"RoleBased":        genAccountKeyRoleBased(),
+	}
+
+	// keys of the "RoleBased"
+	tk, _ := crypto.HexToECDSA("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab")
+	ak, _ := crypto.HexToECDSA("c64f2cd1196e2a1791365b00c4bc07ab8f047b73152e4617c6ed06ac221a4b0c") // multisig accountUpdate key of the role-based key
+	fk, _ := crypto.HexToECDSA("ed580f5bd71a2ee4dae5cb43e331b7d0318596e561e6add7844271ed94156b20")
+	// for test
+	testPubkey, _ := crypto.GenerateKey()
+
+	testcases := []struct {
+		name         string
+		recoveredKey ecdsa.PublicKey
+		result       bool
+	}{
+		{"Nil", testPubkey.PublicKey, false},
+		{"Legacy", testPubkey.PublicKey, true},
+		{"Public", testPubkey.PublicKey, false},
+		{"Fail", testPubkey.PublicKey, false},
+		{"WeightedMultisig", testPubkey.PublicKey, false},
+		{"RoleBased", testPubkey.PublicKey, false},
+		{"RoleBased", tk.PublicKey, true}, // even test IsContainedKey of the multisig
+		{"RoleBased", ak.PublicKey, true},
+		{"RoleBased", fk.PublicKey, true},
+	}
+
+	for i, testcase := range testcases {
+		assert.Equal(t, testcase.result, keys[testcase.name].IsContainedKey(&testcase.recoveredKey), i)
+	}
+
+}
+
 func TestAccountKeySerialization(t *testing.T) {
 	keys := []struct {
 		Name string

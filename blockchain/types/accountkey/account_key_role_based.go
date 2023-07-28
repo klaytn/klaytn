@@ -69,6 +69,15 @@ func (a *AccountKeyRoleBased) IsCompositeType() bool {
 	return true
 }
 
+func (a *AccountKeyRoleBased) IsContainedKey(recoveredKey *ecdsa.PublicKey) bool {
+	for _, rk := range *a {
+		if rk.IsContainedKey(recoveredKey) {
+			return true
+		}
+	}
+	return false
+}
+
 func (a *AccountKeyRoleBased) DeepCopy() AccountKey {
 	n := make(AccountKeyRoleBased, len(*a))
 

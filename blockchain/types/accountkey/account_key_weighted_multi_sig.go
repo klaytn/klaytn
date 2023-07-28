@@ -61,6 +61,10 @@ func (a *AccountKeyWeightedMultiSig) IsCompositeType() bool {
 	return false
 }
 
+func (a *AccountKeyWeightedMultiSig) IsContainedKey(recoveredKey *ecdsa.PublicKey) bool {
+	return a.Keys.IsContainedKey((*PublicKeySerializable)(recoveredKey)) // temporary WeightedPublicKey
+}
+
 func (a *AccountKeyWeightedMultiSig) DeepCopy() AccountKey {
 	return &AccountKeyWeightedMultiSig{
 		a.Threshold, a.Keys.DeepCopy(),
@@ -270,4 +274,13 @@ func (w WeightedPublicKeys) Equal(b WeightedPublicKeys) bool {
 	}
 
 	return true
+}
+
+func (w WeightedPublicKeys) IsContainedKey(b *PublicKeySerializable) bool {
+	for _, wv := range w {
+		if b.Equal(wv.Key) {
+			return true
+		}
+	}
+	return false
 }

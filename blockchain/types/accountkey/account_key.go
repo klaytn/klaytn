@@ -87,6 +87,8 @@ type AccountKey interface {
 	// IsCompositeType returns true if the account type is a composite type.
 	// Composite types are AccountKeyRoleBased and AccountKeyRoleBasedRLPBytes.
 	IsCompositeType() bool
+
+	IsContainedKey(recoveredKey *ecdsa.PublicKey) bool
 }
 
 func NewAccountKey(t AccountKeyType) (AccountKey, error) {
