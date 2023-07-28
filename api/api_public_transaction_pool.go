@@ -552,3 +552,39 @@ func resend(s *PublicTransactionPoolAPI, ctx context.Context, sendArgs NewTxArgs
 
 	return common.Hash{}, fmt.Errorf("Transaction %#x not found", matchTx.Hash())
 }
+
+// This API doesn't allow rueqesters to use block hash according to ValidateSender function's parameter
+func (s *PublicTransactionPoolAPI) RecoverTransaction(ctx context.Context, encodedTx hexutil.Bytes, blockNumber rpc.BlockNumber) (common.Address, error) {
+	tx := new(types.Transaction)
+	if err := rlp.DecodeBytes(encodedTx, tx); err != nil {
+		return common.Address{}, err
+	}
+
+	signer := types.MakeSigner(s.b.ChainConfig(), s.b.CurrentBlock().Number())
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNumber)
+	if err != nil {
+		return common.Address{}, err
+	}
+	_, err = tx.ValidateSender(signer, state, blockNumber.Uint64())
+	if err != nil {
+		return common.Address{}, err
+	}
+	return signer.Sender(tx)
+}
+
+func (s *PublicTransactionPoolAPI) RecoverMessage(
+	ctx context.Context, address common.Address, data, sig hexutil.Bytes, blockNumber rpc.BlockNumber) (common.Address, error) {
+	pubkey, err := klayEthEcRecover(data, sig)
+	if err != nil {
+		return common.Address{}, err
+	}
+
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNumber)
+	if err != nil {
+		return common.Address{}, err
+	}
+	if state.GetKey(address).IsContainedKey(pubkey) {
+		return crypto.PubkeyToAddress(*pubkey), nil
+	}
+	return common.Address{}, nil
+}
