@@ -90,6 +90,7 @@ func init() {
 	app.Flags = utils.AllNodeFlags()
 
 	app.Before = func(ctx *cli.Context) error {
+		MigrateGlobalFlags(ctx)
 		runtime.GOMAXPROCS(runtime.NumCPU())
 		logDir := (&node.Config{DataDir: utils.MakeDataDir(ctx)}).ResolvePath("logs")
 		debug.CreateLogDir(logDir)
@@ -153,7 +154,7 @@ func runKlay(t *testing.T, name string, args ...string) *testklay {
 	if tt.Datadir == "" {
 		tt.Datadir = tmpdir(t)
 		tt.Cleanup = func() { os.RemoveAll(tt.Datadir) }
-		args = append([]string{"-datadir", tt.Datadir}, args...)
+		args = append([]string{"--datadir", tt.Datadir}, args...)
 		// Remove the temporary datadir if something fails below.
 		defer func() {
 			if t.Failed() {
