@@ -573,7 +573,8 @@ func (s *PublicTransactionPoolAPI) RecoverTransaction(ctx context.Context, encod
 }
 
 func (s *PublicTransactionPoolAPI) RecoverMessage(
-	ctx context.Context, address common.Address, data, sig hexutil.Bytes, blockNumber rpc.BlockNumber) (common.Address, error) {
+	ctx context.Context, address common.Address, data, sig hexutil.Bytes, blockNumber rpc.BlockNumber,
+) (common.Address, error) {
 	pubkey, err := klayEthEcRecover(data, sig)
 	if err != nil {
 		return common.Address{}, err

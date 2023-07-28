@@ -66,7 +66,6 @@ func TestIsContainedKey(t *testing.T) {
 	for i, testcase := range testcases {
 		assert.Equal(t, testcase.result, keys[testcase.name].IsContainedKey(&testcase.recoveredKey), i)
 	}
-
 }
 
 func TestAccountKeySerialization(t *testing.T) {
