@@ -22,6 +22,7 @@ package api
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"errors"
 	"fmt"
 	"time"
@@ -414,6 +415,11 @@ func signHash(data []byte) []byte {
 	return crypto.Keccak256([]byte(msg))
 }
 
+func ethSignHash(data []byte) []byte {
+	msg := fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(data), data)
+	return crypto.Keccak256([]byte(msg))
+}
+
 // sign is a helper function that signs a transaction with the private key of the given address.
 // If the given password isn't able to decrypt the key, it fails.
 func (s *PrivateAccountAPI) sign(addr common.Address, passwd string, tx *types.Transaction) (*types.Transaction, error) {
@@ -479,19 +485,31 @@ func (s *PrivateAccountAPI) Sign(ctx context.Context, data hexutil.Bytes, addr c
 //
 // https://github.com/ethereum/go-ethereum/wiki/Management-APIs#personal_ecRecover
 func (s *PrivateAccountAPI) EcRecover(ctx context.Context, data, sig hexutil.Bytes) (common.Address, error) {
-	if len(sig) != crypto.SignatureLength {
-		return common.Address{}, fmt.Errorf("signature must be 65 bytes long")
-	}
-	if sig[crypto.RecoveryIDOffset] != 27 && sig[crypto.RecoveryIDOffset] != 28 {
-		return common.Address{}, fmt.Errorf("invalid Klaytn signature (V is not 27 or 28)")
-	}
-	sig[crypto.RecoveryIDOffset] -= 27 // Transform yellow paper V from 27/28 to 0/1
-
-	rpk, err := crypto.SigToPub(signHash(data), sig)
+	pubkey, err := klayEthEcRecover(data, sig)
 	if err != nil {
 		return common.Address{}, err
 	}
-	return crypto.PubkeyToAddress(*rpk), nil
+	return crypto.PubkeyToAddress(*pubkey), nil
+}
+
+func klayEthEcRecover(data, sig hexutil.Bytes) (*ecdsa.PublicKey, error) {
+	if len(sig) != crypto.SignatureLength {
+		return nil, fmt.Errorf("signature must be 65 bytes long")
+	}
+	if sig[crypto.RecoveryIDOffset] != 27 && sig[crypto.RecoveryIDOffset] != 28 {
+		return nil, fmt.Errorf("invalid Klaytn signature (V is not 27 or 28)")
+	}
+	sig[crypto.RecoveryIDOffset] -= 27 // Transform yellow paper V from 27/28 to 0/1
+
+	klayRpk, klayErr := crypto.SigToPub(signHash(data), sig)
+	if klayErr == nil {
+		return klayRpk, nil
+	}
+	ethRpk, ethErr := crypto.SigToPub(ethSignHash(data), sig)
+	if ethErr == nil {
+		return ethRpk, nil
+	}
+	return nil, klayErr // klayErr has more priority
 }
 
 // SignAndSendTransaction was renamed to SendTransaction. This method is deprecated
