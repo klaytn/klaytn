@@ -130,8 +130,8 @@ func initGenesis(ctx *cli.Context) error {
 
 	// Open an initialise both full and light databases
 	stack := MakeFullNode(ctx)
-	parallelDBWrite := !ctx.IsSet(utils.NoParallelDBWriteFlag.Name)
-	singleDB := ctx.IsSet(utils.SingleDBFlag.Name)
+	parallelDBWrite := !ctx.Bool(utils.NoParallelDBWriteFlag.Name)
+	singleDB := ctx.Bool(utils.SingleDBFlag.Name)
 	numStateTrieShards := ctx.Uint(utils.NumStateTrieShardsFlag.Name)
 	overwriteGenesis := ctx.Bool(utils.OverwriteGenesisFlag.Name)
 	livePruning := ctx.Bool(utils.LivePruningFlag.Name)
