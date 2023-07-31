@@ -176,6 +176,13 @@ var FlagGroups = []FlagGroup{
 			DstDynamoDBIsProvisionedFlag,
 			DstDynamoDBReadCapacityFlag,
 			DstDynamoDBWriteCapacityFlag,
+			DstRocksDBSecondaryFlag,
+			DstRocksDBCacheSizeFlag,
+			DstRocksDBDumpMallocStatFlag,
+			DstRocksDBCompressionTypeFlag,
+			DstRocksDBBottommostCompressionTypeFlag,
+			DstRocksDBFilterPolicyFlag,
+			DstRocksDBDisableMetricsFlag,
 		},
 	},
 	{

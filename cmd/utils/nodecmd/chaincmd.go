@@ -58,6 +58,13 @@ var (
 			utils.LevelDBCompressionTypeFlag,
 			utils.DataDirFlag,
 			utils.ChainDataDirFlag,
+			utils.RocksDBSecondaryFlag,
+			utils.RocksDBCacheSizeFlag,
+			utils.RocksDBDumpMallocStatFlag,
+			utils.RocksDBFilterPolicyFlag,
+			utils.RocksDBCompressionTypeFlag,
+			utils.RocksDBBottommostCompressionTypeFlag,
+			utils.RocksDBDisableMetricsFlag,
 			utils.OverwriteGenesisFlag,
 			utils.LivePruningFlag,
 		},
@@ -152,12 +159,24 @@ func initGenesis(ctx *cli.Context) error {
 			ReadOnly:           ctx.Bool(utils.DynamoDBReadOnlyFlag.Name),
 		}
 	}
+	rocksDBConfig := database.GetDefaultRocksDBConfig()
+	if dbtype == database.RocksDB {
+		rocksDBConfig = &database.RocksDBConfig{
+			Secondary:                 ctx.Bool(utils.RocksDBSecondaryFlag.Name),
+			DumpMallocStat:            ctx.Bool(utils.RocksDBDumpMallocStatFlag.Name),
+			DisableMetrics:            ctx.Bool(utils.RocksDBDisableMetricsFlag.Name),
+			CacheSize:                 ctx.Uint64(utils.RocksDBCacheSizeFlag.Name),
+			CompressionType:           ctx.String(utils.RocksDBCompressionTypeFlag.Name),
+			BottommostCompressionType: ctx.String(utils.RocksDBBottommostCompressionTypeFlag.Name),
+			FilterPolicy:              ctx.String(utils.RocksDBFilterPolicyFlag.Name),
+		}
+	}
 
 	for _, name := range []string{"chaindata"} { // Removed "lightchaindata" since Klaytn doesn't use it
 		dbc := &database.DBConfig{
 			Dir: name, DBType: dbtype, ParallelDBWrite: parallelDBWrite,
 			SingleDB: singleDB, NumStateTrieShards: numStateTrieShards,
-			LevelDBCacheSize: 0, OpenFilesLimit: 0, DynamoDBConfig: dynamoDBConfig,
+			LevelDBCacheSize: 0, OpenFilesLimit: 0, DynamoDBConfig: dynamoDBConfig, RocksDBConfig: rocksDBConfig,
 		}
 		chainDB := stack.OpenDatabase(dbc)
 

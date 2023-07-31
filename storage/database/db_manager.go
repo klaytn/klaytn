@@ -401,6 +401,12 @@ func getDBEntryConfig(originalDBC *DBConfig, i DBEntryType, dbDir string) *DBCon
 		newDBC.DynamoDBConfig = &newDynamoDBConfig
 	}
 
+	if newDBC.RocksDBConfig != nil {
+		newRocksDBConfig := *originalDBC.RocksDBConfig
+		newRocksDBConfig.CacheSize = originalDBC.RocksDBConfig.CacheSize * uint64(ratio) / 100
+		newDBC.RocksDBConfig = &newRocksDBConfig
+	}
+
 	return &newDBC
 }
 

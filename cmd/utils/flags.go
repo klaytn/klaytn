@@ -1577,6 +1577,52 @@ var (
 		Aliases: []string{"migration.dst.db.dynamo.write-capacity"},
 		EnvVars: []string{"KLAYTN_DB_DST_DYNAMO_WRITE_CAPACITY"},
 	}
+	DstRocksDBSecondaryFlag = &cli.BoolFlag{
+		Name:    "db.dst.rocksdb.secondary",
+		Usage:   "Enable rocksdb secondary mode (read-only and catch-up with primary node dynamically)",
+		Aliases: []string{"migration.dst.db.rocksdb.secondary"},
+		EnvVars: []string{"KLAYTN_DB_DST_ROCKSDB_SECONDARY"},
+	}
+	DstRocksDBCacheSizeFlag = &cli.Uint64Flag{
+		Name:    "db.dst.rocksdb.cache-size",
+		Usage:   "Size of in-memory cache in RocksDB (MiB)",
+		Value:   768,
+		Aliases: []string{"migration.dst.db.rocksdb.cache-size"},
+		EnvVars: []string{"KLAYTN_DB_DST_ROCKSDB_CACHE_SIZE"},
+	}
+	DstRocksDBDumpMallocStatFlag = &cli.BoolFlag{
+		Name:    "db.dst.rocksdb.dump-memory-stat",
+		Usage:   "Enable to print memory stat together with rocksdb.stat. Works with Jemalloc only.",
+		Aliases: []string{"migration.dst.db.rocksdb.dump-malloc-stat"},
+		EnvVars: []string{"KLAYTN_DB_DST_ROCKSDB_DUMP_MALLOC_STAT"},
+	}
+	DstRocksDBCompressionTypeFlag = &cli.StringFlag{
+		Name:    "db.dst.rocksdb.compression-type",
+		Usage:   "RocksDB block compression type. Supported values are 'no', 'snappy', 'zlib', 'bz', 'lz4', 'lz4hc', 'xpress', 'zstd'",
+		Value:   database.GetDefaultRocksDBConfig().CompressionType,
+		Aliases: []string{"migration.dst.db.rocksdb.compression-type"},
+		EnvVars: []string{"KLAYTN_DB_DST_ROCKSDB_COMPRESSION_TYPE"},
+	}
+	DstRocksDBBottommostCompressionTypeFlag = &cli.StringFlag{
+		Name:    "db.dst.rocksdb.bottommost-compression-type",
+		Usage:   "RocksDB bottommost block compression type. Supported values are 'no', 'snappy', 'zlib', 'bz2', 'lz4', 'lz4hc', 'xpress', 'zstd'",
+		Value:   database.GetDefaultRocksDBConfig().BottommostCompressionType,
+		Aliases: []string{"migration.dst.db.rocksdb.bottommost-compression-type"},
+		EnvVars: []string{"KLAYTN_DB_DST_ROCKSDB_BOTTOMMOST_COMPRESSION_TYPE"},
+	}
+	DstRocksDBFilterPolicyFlag = &cli.StringFlag{
+		Name:    "db.dst.rocksdb.filter-policy",
+		Usage:   "RocksDB filter policy. Supported values are 'no', 'bloom', 'ribbon'",
+		Value:   database.GetDefaultRocksDBConfig().FilterPolicy,
+		Aliases: []string{"migration.dst.db.rocksdb.filter-policy"},
+		EnvVars: []string{"KLAYTN_DB_DST_ROCKSDB_FILTER_POLICY"},
+	}
+	DstRocksDBDisableMetricsFlag = &cli.BoolFlag{
+		Name:    "db.dst.rocksdb.disable-metrics",
+		Usage:   "Disable RocksDB metrics",
+		Aliases: []string{"migration.dst.db.rocksdb.disable-metrics"},
+		EnvVars: []string{"KLAYTN_DB_DST_ROCKSDB_DISABLE_METRICS"},
+	}
 
 	// Config
 	ConfigFileFlag = &cli.StringFlag{

@@ -58,6 +58,13 @@ var SnapshotCommand = &cli.Command{
 				utils.LevelDBCompressionTypeFlag,
 				utils.DataDirFlag,
 				utils.ChainDataDirFlag,
+				utils.RocksDBSecondaryFlag,
+				utils.RocksDBCacheSizeFlag,
+				utils.RocksDBDumpMallocStatFlag,
+				utils.RocksDBFilterPolicyFlag,
+				utils.RocksDBCompressionTypeFlag,
+				utils.RocksDBBottommostCompressionTypeFlag,
+				utils.RocksDBDisableMetricsFlag,
 			},
 			Description: `
 klay snapshot verify-state <state-root>
@@ -83,6 +90,13 @@ In other words, this command does the snapshot to trie conversion.
 				utils.LevelDBCompressionTypeFlag,
 				utils.DataDirFlag,
 				utils.ChainDataDirFlag,
+				utils.RocksDBSecondaryFlag,
+				utils.RocksDBCacheSizeFlag,
+				utils.RocksDBDumpMallocStatFlag,
+				utils.RocksDBFilterPolicyFlag,
+				utils.RocksDBCompressionTypeFlag,
+				utils.RocksDBBottommostCompressionTypeFlag,
+				utils.RocksDBDisableMetricsFlag,
 			},
 			Description: `
 klaytn statedb trace-trie <state-root>
@@ -109,6 +123,13 @@ reading all nodes and logging the missing nodes.
 				utils.LevelDBCompressionTypeFlag,
 				utils.DataDirFlag,
 				utils.ChainDataDirFlag,
+				utils.RocksDBSecondaryFlag,
+				utils.RocksDBCacheSizeFlag,
+				utils.RocksDBDumpMallocStatFlag,
+				utils.RocksDBFilterPolicyFlag,
+				utils.RocksDBCompressionTypeFlag,
+				utils.RocksDBBottommostCompressionTypeFlag,
+				utils.RocksDBDisableMetricsFlag,
 			},
 			Description: `
 klaytn statedb iterate-triedb
@@ -148,6 +169,16 @@ func getConfig(ctx *cli.Context) *database.DBConfig {
 			ReadCapacityUnits:  ctx.Int64(utils.DynamoDBReadCapacityFlag.Name),
 			WriteCapacityUnits: ctx.Int64(utils.DynamoDBWriteCapacityFlag.Name),
 			PerfCheck:          !ctx.IsSet(utils.DBNoPerformanceMetricsFlag.Name),
+		},
+
+		RocksDBConfig: &database.RocksDBConfig{
+			CacheSize:                 ctx.Uint64(utils.RocksDBCacheSizeFlag.Name),
+			DumpMallocStat:            ctx.Bool(utils.RocksDBDumpMallocStatFlag.Name),
+			DisableMetrics:            ctx.Bool(utils.RocksDBDisableMetricsFlag.Name),
+			Secondary:                 ctx.Bool(utils.RocksDBSecondaryFlag.Name),
+			CompressionType:           ctx.String(utils.RocksDBCompressionTypeFlag.Name),
+			BottommostCompressionType: ctx.String(utils.RocksDBBottommostCompressionTypeFlag.Name),
+			FilterPolicy:              ctx.String(utils.RocksDBFilterPolicyFlag.Name),
 		},
 	}
 }

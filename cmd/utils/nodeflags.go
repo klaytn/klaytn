@@ -484,6 +484,13 @@ var DBMigrationSrcFlags = []cli.Flag{
 	altsrc.NewInt64Flag(DynamoDBWriteCapacityFlag),
 	altsrc.NewIntFlag(LevelDBCompressionTypeFlag),
 	altsrc.NewBoolFlag(DBNoPerformanceMetricsFlag),
+	altsrc.NewBoolFlag(RocksDBSecondaryFlag),
+	altsrc.NewUint64Flag(RocksDBCacheSizeFlag),
+	altsrc.NewBoolFlag(RocksDBDumpMallocStatFlag),
+	altsrc.NewStringFlag(RocksDBFilterPolicyFlag),
+	altsrc.NewStringFlag(RocksDBCompressionTypeFlag),
+	altsrc.NewStringFlag(RocksDBBottommostCompressionTypeFlag),
+	altsrc.NewBoolFlag(RocksDBDisableMetricsFlag),
 }
 
 var DBMigrationDstFlags = []cli.Flag{
@@ -498,6 +505,13 @@ var DBMigrationDstFlags = []cli.Flag{
 	altsrc.NewBoolFlag(DstDynamoDBIsProvisionedFlag),
 	altsrc.NewInt64Flag(DstDynamoDBReadCapacityFlag),
 	altsrc.NewInt64Flag(DstDynamoDBWriteCapacityFlag),
+	altsrc.NewUint64Flag(DstRocksDBCacheSizeFlag),
+	altsrc.NewBoolFlag(DstRocksDBDumpMallocStatFlag),
+	altsrc.NewBoolFlag(DstRocksDBDisableMetricsFlag),
+	altsrc.NewBoolFlag(DstRocksDBSecondaryFlag),
+	altsrc.NewStringFlag(DstRocksDBCompressionTypeFlag),
+	altsrc.NewStringFlag(DstRocksDBBottommostCompressionTypeFlag),
+	altsrc.NewStringFlag(DstRocksDBFilterPolicyFlag),
 }
 
 var ChainDataFetcherFlags = []cli.Flag{
