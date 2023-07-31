@@ -584,7 +584,10 @@ func (s *PublicTransactionPoolAPI) RecoverMessage(
 	if err != nil {
 		return common.Address{}, err
 	}
-	if state.GetKey(address).IsContainedKey(pubkey) {
+	key := state.GetKey(address)
+	// If the key is the AccountKeyTypeLegacy, confirmation will be delegated to the user
+	// by returning the recovered address
+	if key.ValidateMember(pubkey, address) {
 		return crypto.PubkeyToAddress(*pubkey), nil
 	}
 	return common.Address{}, nil

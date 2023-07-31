@@ -69,9 +69,9 @@ func (a *AccountKeyRoleBased) IsCompositeType() bool {
 	return true
 }
 
-func (a *AccountKeyRoleBased) IsContainedKey(recoveredKey *ecdsa.PublicKey) bool {
+func (a *AccountKeyRoleBased) ValidateMember(recoveredKey *ecdsa.PublicKey, from common.Address) bool {
 	for _, rk := range *a {
-		if rk.IsContainedKey(recoveredKey) {
+		if rk.ValidateMember(recoveredKey, from) {
 			return true
 		}
 	}

@@ -44,7 +44,7 @@ func (a *AccountKeyFail) IsCompositeType() bool {
 }
 
 // This type of account key always return false
-func (a *AccountKeyFail) IsContainedKey(recoveredKey *ecdsa.PublicKey) bool {
+func (a *AccountKeyFail) ValidateMember(recoveredKey *ecdsa.PublicKey, from common.Address) bool {
 	return false
 }
 

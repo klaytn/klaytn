@@ -51,7 +51,7 @@ func (a *AccountKeyPublic) IsCompositeType() bool {
 	return false
 }
 
-func (a *AccountKeyPublic) IsContainedKey(recoveredKey *ecdsa.PublicKey) bool {
+func (a *AccountKeyPublic) ValidateMember(recoveredKey *ecdsa.PublicKey, from common.Address) bool {
 	return a.PublicKeySerializable.Equal((*PublicKeySerializable)(recoveredKey))
 }
 

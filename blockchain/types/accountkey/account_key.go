@@ -65,6 +65,9 @@ type AccountKey interface {
 	// Validate returns true if the given public keys are verifiable with the AccountKey.
 	Validate(currentBlockNumber uint64, r RoleType, recoveredKeys []*ecdsa.PublicKey, from common.Address) bool
 
+	// ValidateMember returns true if the account type contains the given public key in any part of its AccountKey.
+	ValidateMember(recoveredKey *ecdsa.PublicKey, from common.Address) bool
+
 	// DeepCopy creates a new object and copies all the attributes to the new object.
 	DeepCopy() AccountKey
 
@@ -87,8 +90,6 @@ type AccountKey interface {
 	// IsCompositeType returns true if the account type is a composite type.
 	// Composite types are AccountKeyRoleBased and AccountKeyRoleBasedRLPBytes.
 	IsCompositeType() bool
-
-	IsContainedKey(recoveredKey *ecdsa.PublicKey) bool
 }
 
 func NewAccountKey(t AccountKeyType) (AccountKey, error) {

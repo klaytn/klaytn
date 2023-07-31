@@ -30,7 +30,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestIsContainedKey(t *testing.T) {
+// assume that the account has already been taken from an address and state by a specific block number.
+func TestValidateMember(t *testing.T) {
 	keys := map[string]AccountKey{
 		"Nil":              genAccountKeyNil(),
 		"Legacy":           genAccountKeyLegacy(),
@@ -50,21 +51,22 @@ func TestIsContainedKey(t *testing.T) {
 	testcases := []struct {
 		name         string
 		recoveredKey ecdsa.PublicKey
+		address      common.Address
 		result       bool
 	}{
-		{"Nil", testPubkey.PublicKey, false},
-		{"Legacy", testPubkey.PublicKey, true},
-		{"Public", testPubkey.PublicKey, false},
-		{"Fail", testPubkey.PublicKey, false},
-		{"WeightedMultisig", testPubkey.PublicKey, false},
-		{"RoleBased", testPubkey.PublicKey, false},
-		{"RoleBased", tk.PublicKey, true}, // even test IsContainedKey of the multisig
-		{"RoleBased", ak.PublicKey, true},
-		{"RoleBased", fk.PublicKey, true},
+		{"Nil", testPubkey.PublicKey, common.Address{}, false},
+		{"Legacy", testPubkey.PublicKey, crypto.PubkeyToAddress(testPubkey.PublicKey), true},
+		{"Public", testPubkey.PublicKey, common.Address{}, false},
+		{"Fail", testPubkey.PublicKey, common.Address{}, false},
+		{"WeightedMultisig", testPubkey.PublicKey, common.Address{}, false},
+		{"RoleBased", testPubkey.PublicKey, common.Address{}, false},
+		{"RoleBased", tk.PublicKey, common.Address{}, true}, // even test IsContainedPubkey of the multisig
+		{"RoleBased", ak.PublicKey, common.Address{}, true},
+		{"RoleBased", fk.PublicKey, common.Address{}, true},
 	}
 
 	for i, testcase := range testcases {
-		assert.Equal(t, testcase.result, keys[testcase.name].IsContainedKey(&testcase.recoveredKey), i)
+		assert.Equal(t, testcase.result, keys[testcase.name].ValidateMember(&testcase.recoveredKey, testcase.address), i)
 	}
 }
 
