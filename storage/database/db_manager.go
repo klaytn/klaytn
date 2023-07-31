@@ -1958,6 +1958,7 @@ func (dbm *databaseManager) ReadPruningMarks(startNumber, endNumber uint64) []Pr
 	prefix := pruningMarkPrefix
 	startKey := pruningMarkKey(PruningMark{startNumber, common.ExtHash{}})
 	it := dbm.getDatabase(MiscDB).NewIterator(prefix, startKey[len(prefix):])
+	defer it.Release()
 
 	var marks []PruningMark
 	for it.Next() {
