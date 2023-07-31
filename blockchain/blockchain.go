@@ -696,7 +696,7 @@ func (bc *BlockChain) StateAt(root common.Hash) (*state.StateDB, error) {
 // PrunableStateAt returns a new mutable state based on a particular point in time.
 // If live pruning is enabled on the databse, and num is nonzero, then trie will mark obsolete nodes for pruning.
 func (bc *BlockChain) PrunableStateAt(root common.Hash, num uint64) (*state.StateDB, error) {
-	if bc.db.ReadPruningEnabled() && bc.cacheConfig.LivePruningRetention != 0 {
+	if bc.IsLivePruningRequired() {
 		return state.New(root, bc.stateCache, bc.snaps, &statedb.TrieOpts{
 			PruningBlockNumber: num,
 		})
@@ -1359,7 +1359,10 @@ func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) e
 				}
 			}
 			bc.lastCommittedBlock = block.NumberU64()
-			bc.chPrune <- block.NumberU64()
+
+			if bc.IsLivePruningRequired() {
+				bc.chPrune <- block.NumberU64()
+			}
 		}
 
 		bc.chBlock <- gcBlock{root, block.NumberU64()}
@@ -1421,6 +1424,11 @@ func (bc *BlockChain) gcCachedNodeLoop() {
 }
 
 func (bc *BlockChain) pruneTrieNodeLoop() {
+	// If live pruning is disabled, do not bother starting a goroutine.
+	if !bc.IsLivePruningRequired() {
+		return
+	}
+
 	// ReadPruningMarks(1, limit) is very slow because it iterates over the most of MiscDB.
 	// ReadPruningMarks(start, limit) is much faster because it only iterates a small range.
 	startNum := uint64(1)
@@ -1431,9 +1439,6 @@ func (bc *BlockChain) pruneTrieNodeLoop() {
 		for {
 			select {
 			case num := <-bc.chPrune:
-				if !bc.db.ReadPruningEnabled() || bc.cacheConfig.LivePruningRetention == 0 {
-					continue
-				}
 				if num <= bc.cacheConfig.LivePruningRetention {
 					continue
 				}
@@ -1453,6 +1458,10 @@ func (bc *BlockChain) pruneTrieNodeLoop() {
 			}
 		}
 	}()
+}
+
+func (bc *BlockChain) IsLivePruningRequired() bool {
+	return bc.db.ReadPruningEnabled() && bc.cacheConfig.LivePruningRetention != 0
 }
 
 func isCommitTrieRequired(bc *BlockChain, blockNum uint64) bool {
