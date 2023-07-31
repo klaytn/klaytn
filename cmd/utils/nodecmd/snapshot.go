@@ -139,7 +139,7 @@ func getConfig(ctx *cli.Context) *database.DBConfig {
 
 		LevelDBCacheSize:    ctx.Int(utils.LevelDBCacheSizeFlag.Name),
 		LevelDBCompression:  database.LevelDBCompressionType(ctx.Int(utils.LevelDBCompressionTypeFlag.Name)),
-		EnableDBPerfMetrics: !ctx.IsSet(utils.DBNoPerformanceMetricsFlag.Name),
+		EnableDBPerfMetrics: !ctx.Bool(utils.DBNoPerformanceMetricsFlag.Name),
 
 		DynamoDBConfig: &database.DynamoDBConfig{
 			TableName:          ctx.String(utils.DynamoDBTableNameFlag.Name),
@@ -147,7 +147,7 @@ func getConfig(ctx *cli.Context) *database.DBConfig {
 			IsProvisioned:      ctx.Bool(utils.DynamoDBIsProvisionedFlag.Name),
 			ReadCapacityUnits:  ctx.Int64(utils.DynamoDBReadCapacityFlag.Name),
 			WriteCapacityUnits: ctx.Int64(utils.DynamoDBWriteCapacityFlag.Name),
-			PerfCheck:          !ctx.IsSet(utils.DBNoPerformanceMetricsFlag.Name),
+			PerfCheck:          !ctx.Bool(utils.DBNoPerformanceMetricsFlag.Name),
 		},
 	}
 }

@@ -277,10 +277,10 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 	case ctx.IsSet(BootnodesFlag.Name):
 		logger.Info("Customized bootnodes are set")
 		urls = strings.Split(ctx.String(BootnodesFlag.Name), ",")
-	case ctx.IsSet(CypressFlag.Name):
+	case ctx.Bool(CypressFlag.Name):
 		logger.Info("Cypress bootnodes are set")
 		urls = params.MainnetBootnodes[cfg.ConnectionType].Addrs
-	case ctx.IsSet(BaobabFlag.Name):
+	case ctx.Bool(BaobabFlag.Name):
 		logger.Info("Baobab bootnodes are set")
 		// set pre-configured bootnodes when 'baobab' option was enabled
 		urls = params.BaobabBootnodes[cfg.ConnectionType].Addrs
@@ -522,14 +522,14 @@ func (kCfg *KlayConfig) SetKlayConfig(ctx *cli.Context, stack *node.Node) {
 	cfg.EnableDBPerfMetrics = !ctx.Bool(DBNoPerformanceMetricsFlag.Name)
 	cfg.LevelDBCacheSize = ctx.Int(LevelDBCacheSizeFlag.Name)
 
-	cfg.RocksDBConfig.Secondary = ctx.IsSet(RocksDBSecondaryFlag.Name)
+	cfg.RocksDBConfig.Secondary = ctx.Bool(RocksDBSecondaryFlag.Name)
 	if cfg.RocksDBConfig.Secondary {
 		cfg.FetcherDisable = true
 		cfg.DownloaderDisable = true
 		cfg.WorkerDisable = true
 	}
 	cfg.RocksDBConfig.CacheSize = ctx.Uint64(RocksDBCacheSizeFlag.Name)
-	cfg.RocksDBConfig.DumpMallocStat = ctx.IsSet(RocksDBDumpMallocStatFlag.Name)
+	cfg.RocksDBConfig.DumpMallocStat = ctx.Bool(RocksDBDumpMallocStatFlag.Name)
 	cfg.RocksDBConfig.CompressionType = ctx.String(RocksDBCompressionTypeFlag.Name)
 	cfg.RocksDBConfig.BottommostCompressionType = ctx.String(RocksDBBottommostCompressionTypeFlag.Name)
 	cfg.RocksDBConfig.FilterPolicy = ctx.String(RocksDBFilterPolicyFlag.Name)
