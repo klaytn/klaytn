@@ -1325,6 +1325,10 @@ func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) e
 
 		bc.checkStartStateMigration(block.NumberU64(), root)
 		bc.lastCommittedBlock = block.NumberU64()
+
+		if bc.IsLivePruningRequired() {
+			bc.chPrune <- block.NumberU64()
+		}
 	} else {
 		// Full but not archive node, do proper garbage collection
 		trieDB.ReferenceRoot(root) // metadata reference to keep trie alive
