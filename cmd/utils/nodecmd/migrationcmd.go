@@ -113,6 +113,16 @@ func createDBConfigForMigration(ctx *cli.Context) (*database.DBConfig, *database
 			WriteCapacityUnits: ctx.Int64(utils.DynamoDBWriteCapacityFlag.Name),
 			PerfCheck:          !ctx.Bool(utils.DBNoPerformanceMetricsFlag.Name),
 		},
+
+		RocksDBConfig: &database.RocksDBConfig{
+			CacheSize:                 ctx.Uint64(utils.RocksDBCacheSizeFlag.Name),
+			DumpMallocStat:            ctx.Bool(utils.RocksDBDumpMallocStatFlag.Name),
+			DisableMetrics:            ctx.Bool(utils.RocksDBDisableMetricsFlag.Name),
+			Secondary:                 ctx.Bool(utils.RocksDBSecondaryFlag.Name),
+			CompressionType:           ctx.String(utils.RocksDBCompressionTypeFlag.Name),
+			BottommostCompressionType: ctx.String(utils.RocksDBBottommostCompressionTypeFlag.Name),
+			FilterPolicy:              ctx.String(utils.RocksDBFilterPolicyFlag.Name),
+		},
 	}
 	if len(srcDBC.DBType) == 0 { // changed to invalid type
 		return nil, nil, errors.New("srcDB is not specified or invalid : " + ctx.String(utils.DbTypeFlag.Name))
@@ -137,6 +147,16 @@ func createDBConfigForMigration(ctx *cli.Context) (*database.DBConfig, *database
 			ReadCapacityUnits:  ctx.Int64(utils.DstDynamoDBReadCapacityFlag.Name),
 			WriteCapacityUnits: ctx.Int64(utils.DstDynamoDBWriteCapacityFlag.Name),
 			PerfCheck:          !ctx.Bool(utils.DBNoPerformanceMetricsFlag.Name),
+		},
+
+		RocksDBConfig: &database.RocksDBConfig{
+			CacheSize:                 ctx.Uint64(utils.DstRocksDBCacheSizeFlag.Name),
+			DumpMallocStat:            ctx.Bool(utils.DstRocksDBDumpMallocStatFlag.Name),
+			DisableMetrics:            ctx.Bool(utils.DstRocksDBDisableMetricsFlag.Name),
+			Secondary:                 ctx.Bool(utils.DstRocksDBSecondaryFlag.Name),
+			CompressionType:           ctx.String(utils.DstRocksDBCompressionTypeFlag.Name),
+			BottommostCompressionType: ctx.String(utils.DstRocksDBBottommostCompressionTypeFlag.Name),
+			FilterPolicy:              ctx.String(utils.DstRocksDBFilterPolicyFlag.Name),
 		},
 	}
 	if len(dstDBC.DBType) == 0 { // changed to invalid type

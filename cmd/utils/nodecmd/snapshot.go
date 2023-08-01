@@ -46,19 +46,7 @@ var SnapshotCommand = &cli.Command{
 			Usage:     "Recalculate state hash based on the snapshot for verification",
 			ArgsUsage: "<root>",
 			Action:    utils.MigrateFlags(verifyState),
-			Flags: []cli.Flag{
-				utils.DbTypeFlag,
-				utils.SingleDBFlag,
-				utils.NumStateTrieShardsFlag,
-				utils.DynamoDBTableNameFlag,
-				utils.DynamoDBRegionFlag,
-				utils.DynamoDBIsProvisionedFlag,
-				utils.DynamoDBReadCapacityFlag,
-				utils.DynamoDBWriteCapacityFlag,
-				utils.LevelDBCompressionTypeFlag,
-				utils.DataDirFlag,
-				utils.ChainDataDirFlag,
-			},
+			Flags:     utils.SnapshotFlags,
 			Description: `
 klay snapshot verify-state <state-root>
 will traverse the whole accounts and storages set based on the specified
@@ -71,19 +59,7 @@ In other words, this command does the snapshot to trie conversion.
 			Usage:     "trace all trie nodes for verification",
 			ArgsUsage: "<root>",
 			Action:    utils.MigrateFlags(traceTrie),
-			Flags: []cli.Flag{
-				utils.DbTypeFlag,
-				utils.SingleDBFlag,
-				utils.NumStateTrieShardsFlag,
-				utils.DynamoDBTableNameFlag,
-				utils.DynamoDBRegionFlag,
-				utils.DynamoDBIsProvisionedFlag,
-				utils.DynamoDBReadCapacityFlag,
-				utils.DynamoDBWriteCapacityFlag,
-				utils.LevelDBCompressionTypeFlag,
-				utils.DataDirFlag,
-				utils.ChainDataDirFlag,
-			},
+			Flags:     utils.SnapshotFlags,
 			Description: `
 klaytn statedb trace-trie <state-root>
 trace all account and storage nodes to find missing data
@@ -97,19 +73,7 @@ reading all nodes and logging the missing nodes.
 			Usage:     "Iterate StateTrie DB for node count",
 			ArgsUsage: "<root>",
 			Action:    utils.MigrateFlags(iterateTrie),
-			Flags: []cli.Flag{
-				utils.DbTypeFlag,
-				utils.SingleDBFlag,
-				utils.NumStateTrieShardsFlag,
-				utils.DynamoDBTableNameFlag,
-				utils.DynamoDBRegionFlag,
-				utils.DynamoDBIsProvisionedFlag,
-				utils.DynamoDBReadCapacityFlag,
-				utils.DynamoDBWriteCapacityFlag,
-				utils.LevelDBCompressionTypeFlag,
-				utils.DataDirFlag,
-				utils.ChainDataDirFlag,
-			},
+			Flags:     utils.SnapshotFlags,
 			Description: `
 klaytn statedb iterate-triedb
 Count the number of nodes in the state-trie db.
@@ -148,6 +112,16 @@ func getConfig(ctx *cli.Context) *database.DBConfig {
 			ReadCapacityUnits:  ctx.Int64(utils.DynamoDBReadCapacityFlag.Name),
 			WriteCapacityUnits: ctx.Int64(utils.DynamoDBWriteCapacityFlag.Name),
 			PerfCheck:          !ctx.Bool(utils.DBNoPerformanceMetricsFlag.Name),
+		},
+
+		RocksDBConfig: &database.RocksDBConfig{
+			CacheSize:                 ctx.Uint64(utils.RocksDBCacheSizeFlag.Name),
+			DumpMallocStat:            ctx.Bool(utils.RocksDBDumpMallocStatFlag.Name),
+			DisableMetrics:            ctx.Bool(utils.RocksDBDisableMetricsFlag.Name),
+			Secondary:                 ctx.Bool(utils.RocksDBSecondaryFlag.Name),
+			CompressionType:           ctx.String(utils.RocksDBCompressionTypeFlag.Name),
+			BottommostCompressionType: ctx.String(utils.RocksDBBottommostCompressionTypeFlag.Name),
+			FilterPolicy:              ctx.String(utils.RocksDBFilterPolicyFlag.Name),
 		},
 	}
 }
