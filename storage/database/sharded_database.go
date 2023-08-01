@@ -70,11 +70,18 @@ func newShardedDB(dbc *DBConfig, et DBEntryType, numShards uint) (*shardedDB, er
 	sdbBatchTaskCh := make(chan sdbBatchTask, numShards*2)
 	sdbLevelDBCacheSize := dbc.LevelDBCacheSize / int(numShards)
 	sdbOpenFilesLimit := dbc.OpenFilesLimit / int(numShards)
+	sdbRocksDBCacheSize := GetDefaultRocksDBConfig().CacheSize / uint64(numShards)
+	if dbc.RocksDBConfig != nil {
+		sdbRocksDBCacheSize = dbc.RocksDBConfig.CacheSize / uint64(numShards)
+	}
 	for i := 0; i < int(numShards); i++ {
 		copiedDBC := *dbc
 		copiedDBC.Dir = path.Join(copiedDBC.Dir, strconv.Itoa(i))
 		copiedDBC.LevelDBCacheSize = sdbLevelDBCacheSize
 		copiedDBC.OpenFilesLimit = sdbOpenFilesLimit
+		if copiedDBC.RocksDBConfig != nil {
+			copiedDBC.RocksDBConfig.CacheSize = sdbRocksDBCacheSize
+		}
 
 		db, err := newDatabase(&copiedDBC, et)
 		if err != nil {

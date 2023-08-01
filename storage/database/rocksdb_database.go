@@ -245,7 +245,9 @@ func (i *rdbIter) Key() []byte {
 	if i.first {
 		return nil
 	}
-	return i.iter.Key().Data()
+	key := i.iter.Key()
+	defer key.Free()
+	return key.Data()
 }
 
 // Value returns the value of the current key/value pair, or nil if done. The
@@ -255,7 +257,9 @@ func (i *rdbIter) Value() []byte {
 	if i.first {
 		return nil
 	}
-	return i.iter.Value().Data()
+	val := i.iter.Value()
+	defer val.Free()
+	return val.Data()
 }
 
 // Release releases associated resources. Release should always succeed and can
