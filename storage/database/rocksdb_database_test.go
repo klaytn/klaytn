@@ -1,4 +1,4 @@
-// Copyright 2019 The klaytn Authors
+// Copyright 2023 The klaytn Authors
 // This file is part of the klaytn library.
 //
 // The klaytn library is free software: you can redistribute it and/or modify
@@ -14,26 +14,35 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-package reward
+//go:build rocksdb
+// +build rocksdb
+
+package database
 
 import (
-	"testing"
-
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/params"
-	"github.com/stretchr/testify/assert"
+	"io/ioutil"
+	"os"
 )
 
-func newTestBlockChain() *blockchain.BlockChain {
-	return &blockchain.BlockChain{}
+func init() {
+	testDatabases = append(testDatabases, newTestRocksDB)
+	addRocksdb = true
 }
 
-func TestAddressBookManager_makeMsgToAddressBook(t *testing.T) {
-	targetAddress := "0x0000000000000000000000000000000000000400" // address of addressBook which the message has to be sent to
-	ac := newAddressBookConnector(newTestBlockChain(), nil)
-	msg, err := ac.makeMsgToAddressBook(params.Rules{IsIstanbul: true})
-	if !assert.NoError(t, err) {
-		t.FailNow()
+func newTestRocksDB() (Database, func(), string) {
+	dirName, err := ioutil.TempDir(os.TempDir(), "klay_rocksdb_test_")
+	if err != nil {
+		panic("failed to create test file: " + err.Error())
 	}
-	assert.Equal(t, targetAddress, msg.To().String())
+	config := GetDefaultRocksDBConfig()
+	config.DisableMetrics = true
+	db, err := NewRocksDB(dirName, config)
+	if err != nil {
+		panic("failed to create new rocksdb: " + err.Error())
+	}
+
+	return db, func() {
+		db.Close()
+		os.RemoveAll(dirName)
+	}, "rdb"
 }

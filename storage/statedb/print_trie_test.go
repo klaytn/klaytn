@@ -226,6 +226,8 @@ func TestPrintTrie(t *testing.T) {
 		}
 	}
 
-	fmt.Printf("var nodes = new vis.DataSet([%s]);\n", SerializeNodes(visNodes))
-	fmt.Printf("var edges = new vis.DataSet([%s]);\n", SerializeEdges(visEdges))
+	serNodes := SerializeNodes(visNodes)
+	serEdges := SerializeEdges(visEdges)
+	t.Logf("var nodes = new vis.DataSet([%s]);\n", serNodes)
+	t.Logf("var edges = new vis.DataSet([%s]);\n", serEdges)
 }

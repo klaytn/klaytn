@@ -37,7 +37,7 @@ import (
 func TestAddressBookConnector(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
 
-	fullNode, node, validator, chainId, workspace := newBlockchain(t)
+	fullNode, node, validator, chainId, workspace := newBlockchain(t, nil)
 	defer os.RemoveAll(workspace)
 	defer fullNode.Stop()
 
@@ -89,7 +89,7 @@ func TestAddressBookConnector(t *testing.T) {
 		t.Logf("AddressBook deployed at block=%2d", deployBlock)
 	}
 
-	// Temporarily use the newly deployed address in addressBookConnector
+	// Temporarily use the newly deployed address in StakingManager
 	oldAddr := common.HexToAddress(rewardcontract.AddressBookContractAddress)
 	reward.SetTestAddressBookAddress(deployAddr)
 	defer reward.SetTestAddressBookAddress(oldAddr)

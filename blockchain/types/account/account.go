@@ -18,6 +18,7 @@ package account
 
 import (
 	"errors"
+	"io"
 	"math/big"
 
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
@@ -110,14 +111,18 @@ type Account interface {
 type ProgramAccount interface {
 	Account
 
-	GetStorageRoot() common.Hash
+	GetStorageRoot() common.ExtHash
 	GetCodeHash() []byte
 	GetCodeFormat() params.CodeFormat
 	GetVmVersion() params.VmVersion
 
-	SetStorageRoot(h common.Hash)
+	SetStorageRoot(h common.ExtHash)
 	SetCodeHash(h []byte)
 	SetCodeInfo(codeInfo params.CodeInfo)
+
+	// A variant of EncodeRLP that preserves ExtHash fields as-is.
+	// In contrast, vanilla EncodeRLP must unextend ExtHash when encoding.
+	EncodeRLPExt(w io.Writer) error
 }
 
 type AccountWithKey interface {

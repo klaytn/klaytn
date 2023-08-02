@@ -33,31 +33,20 @@ import (
 	"github.com/klaytn/klaytn/snapshot"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/storage/statedb"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
-var SnapshotCommand = cli.Command{
+var SnapshotCommand = &cli.Command{
 	Name:        "snapshot",
 	Usage:       "A set of commands based on the snapshot",
 	Description: "",
-	Subcommands: []cli.Command{
+	Subcommands: []*cli.Command{
 		{
 			Name:      "verify-state",
 			Usage:     "Recalculate state hash based on the snapshot for verification",
 			ArgsUsage: "<root>",
 			Action:    utils.MigrateFlags(verifyState),
-			Flags: []cli.Flag{
-				utils.DbTypeFlag,
-				utils.SingleDBFlag,
-				utils.NumStateTrieShardsFlag,
-				utils.DynamoDBTableNameFlag,
-				utils.DynamoDBRegionFlag,
-				utils.DynamoDBIsProvisionedFlag,
-				utils.DynamoDBReadCapacityFlag,
-				utils.DynamoDBWriteCapacityFlag,
-				utils.LevelDBCompressionTypeFlag,
-				utils.DataDirFlag,
-			},
+			Flags:     utils.SnapshotFlags,
 			Description: `
 klay snapshot verify-state <state-root>
 will traverse the whole accounts and storages set based on the specified
@@ -70,18 +59,7 @@ In other words, this command does the snapshot to trie conversion.
 			Usage:     "trace all trie nodes for verification",
 			ArgsUsage: "<root>",
 			Action:    utils.MigrateFlags(traceTrie),
-			Flags: []cli.Flag{
-				utils.DbTypeFlag,
-				utils.SingleDBFlag,
-				utils.NumStateTrieShardsFlag,
-				utils.DynamoDBTableNameFlag,
-				utils.DynamoDBRegionFlag,
-				utils.DynamoDBIsProvisionedFlag,
-				utils.DynamoDBReadCapacityFlag,
-				utils.DynamoDBWriteCapacityFlag,
-				utils.LevelDBCompressionTypeFlag,
-				utils.DataDirFlag,
-			},
+			Flags:     utils.SnapshotFlags,
 			Description: `
 klaytn statedb trace-trie <state-root>
 trace all account and storage nodes to find missing data
@@ -95,18 +73,7 @@ reading all nodes and logging the missing nodes.
 			Usage:     "Iterate StateTrie DB for node count",
 			ArgsUsage: "<root>",
 			Action:    utils.MigrateFlags(iterateTrie),
-			Flags: []cli.Flag{
-				utils.DbTypeFlag,
-				utils.SingleDBFlag,
-				utils.NumStateTrieShardsFlag,
-				utils.DynamoDBTableNameFlag,
-				utils.DynamoDBRegionFlag,
-				utils.DynamoDBIsProvisionedFlag,
-				utils.DynamoDBReadCapacityFlag,
-				utils.DynamoDBWriteCapacityFlag,
-				utils.LevelDBCompressionTypeFlag,
-				utils.DataDirFlag,
-			},
+			Flags:     utils.SnapshotFlags,
 			Description: `
 klaytn statedb iterate-triedb
 Count the number of nodes in the state-trie db.
@@ -129,22 +96,32 @@ var (
 func getConfig(ctx *cli.Context) *database.DBConfig {
 	return &database.DBConfig{
 		Dir:                "chaindata",
-		DBType:             database.DBType(ctx.GlobalString(utils.DbTypeFlag.Name)).ToValid(),
-		SingleDB:           ctx.GlobalBool(utils.SingleDBFlag.Name),
-		NumStateTrieShards: ctx.GlobalUint(utils.NumStateTrieShardsFlag.Name),
+		DBType:             database.DBType(ctx.String(utils.DbTypeFlag.Name)).ToValid(),
+		SingleDB:           ctx.Bool(utils.SingleDBFlag.Name),
+		NumStateTrieShards: ctx.Uint(utils.NumStateTrieShardsFlag.Name),
 		OpenFilesLimit:     database.GetOpenFilesLimit(),
 
-		LevelDBCacheSize:    ctx.GlobalInt(utils.LevelDBCacheSizeFlag.Name),
-		LevelDBCompression:  database.LevelDBCompressionType(ctx.GlobalInt(utils.LevelDBCompressionTypeFlag.Name)),
-		EnableDBPerfMetrics: !ctx.IsSet(utils.DBNoPerformanceMetricsFlag.Name),
+		LevelDBCacheSize:    ctx.Int(utils.LevelDBCacheSizeFlag.Name),
+		LevelDBCompression:  database.LevelDBCompressionType(ctx.Int(utils.LevelDBCompressionTypeFlag.Name)),
+		EnableDBPerfMetrics: !ctx.Bool(utils.DBNoPerformanceMetricsFlag.Name),
 
 		DynamoDBConfig: &database.DynamoDBConfig{
-			TableName:          ctx.GlobalString(utils.DynamoDBTableNameFlag.Name),
-			Region:             ctx.GlobalString(utils.DynamoDBRegionFlag.Name),
-			IsProvisioned:      ctx.GlobalBool(utils.DynamoDBIsProvisionedFlag.Name),
-			ReadCapacityUnits:  ctx.GlobalInt64(utils.DynamoDBReadCapacityFlag.Name),
-			WriteCapacityUnits: ctx.GlobalInt64(utils.DynamoDBWriteCapacityFlag.Name),
-			PerfCheck:          !ctx.IsSet(utils.DBNoPerformanceMetricsFlag.Name),
+			TableName:          ctx.String(utils.DynamoDBTableNameFlag.Name),
+			Region:             ctx.String(utils.DynamoDBRegionFlag.Name),
+			IsProvisioned:      ctx.Bool(utils.DynamoDBIsProvisionedFlag.Name),
+			ReadCapacityUnits:  ctx.Int64(utils.DynamoDBReadCapacityFlag.Name),
+			WriteCapacityUnits: ctx.Int64(utils.DynamoDBWriteCapacityFlag.Name),
+			PerfCheck:          !ctx.Bool(utils.DBNoPerformanceMetricsFlag.Name),
+		},
+
+		RocksDBConfig: &database.RocksDBConfig{
+			CacheSize:                 ctx.Uint64(utils.RocksDBCacheSizeFlag.Name),
+			DumpMallocStat:            ctx.Bool(utils.RocksDBDumpMallocStatFlag.Name),
+			DisableMetrics:            ctx.Bool(utils.RocksDBDisableMetricsFlag.Name),
+			Secondary:                 ctx.Bool(utils.RocksDBSecondaryFlag.Name),
+			CompressionType:           ctx.String(utils.RocksDBCompressionTypeFlag.Name),
+			BottommostCompressionType: ctx.String(utils.RocksDBBottommostCompressionTypeFlag.Name),
+			FilterPolicy:              ctx.String(utils.RocksDBFilterPolicyFlag.Name),
 		},
 	}
 }
@@ -229,14 +206,14 @@ func traceTrie(ctx *cli.Context) error {
 
 	logger.Info("Trace Start", "BlockNum", blockNumber)
 
-	sdb, err := state.New(root, state.NewDatabase(dbm), nil)
+	sdb, err := state.New(root, state.NewDatabase(dbm), nil, nil)
 	if err != nil {
 		return fmt.Errorf("Failed to open newDB trie : %v", err)
 	}
 	trieDB := sdb.Database().TrieDB()
 
 	// Get root-node childrens to create goroutine by number of childrens
-	children, err := trieDB.NodeChildren(root)
+	children, err := trieDB.NodeChildren(root.ExtendLegacy())
 	if err != nil {
 		return fmt.Errorf("Fail get childrens of root : %v", err)
 	}
@@ -261,7 +238,7 @@ func traceTrie(ctx *cli.Context) error {
 		go func(child common.Hash) {
 			defer childWait.Done()
 			doTraceTrie(sdb.Database(), child)
-		}(child)
+		}(child.Unextend())
 	}
 
 	childWait.Wait()
@@ -273,7 +250,7 @@ func traceTrie(ctx *cli.Context) error {
 func doTraceTrie(db state.Database, root common.Hash) (resultErr error) {
 	logger.Info("Trie Tracer Start", "Hash Root", root)
 	// Create and iterate a state trie rooted in a sub-node
-	oldState, err := state.New(root, db, nil)
+	oldState, err := state.New(root, db, nil, nil)
 	if err != nil {
 		logger.Error("can not open trie DB", err.Error())
 		panic(err)
@@ -309,7 +286,7 @@ func doTraceTrie(db state.Database, root common.Hash) (resultErr error) {
 func iterateTrie(ctx *cli.Context) error {
 	stack := MakeFullNode(ctx)
 	dbm := stack.OpenDatabase(getConfig(ctx))
-	sdb, err := state.New(common.Hash{}, state.NewDatabase(dbm), nil)
+	sdb, err := state.New(common.Hash{}, state.NewDatabase(dbm), nil, nil)
 	if err != nil {
 		return fmt.Errorf("Failed to open newDB trie : %v", err)
 	}

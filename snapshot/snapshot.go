@@ -288,6 +288,7 @@ func (t *Tree) Disable() {
 
 	// Delete all snapshot liveness information from the database
 	batch := t.diskdb.NewSnapshotDBBatch()
+	defer batch.Release()
 
 	batch.WriteSnapshotDisabled()
 	batch.DeleteSnapshotRoot()
@@ -532,6 +533,7 @@ func diffToDisk(bottom *diffLayer) *diskLayer {
 		batch = base.diskdb.NewSnapshotDBBatch()
 		stats *generatorStats
 	)
+	defer batch.Release()
 	// If the disk layer is running a snapshot generator, abort it
 	if base.genAbort != nil {
 		abort := make(chan *generatorStats)

@@ -21,10 +21,12 @@
 package downloader
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -37,6 +39,7 @@ import (
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/event"
+	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/snapshot"
@@ -65,7 +68,7 @@ type govSetter struct {
 }
 
 // setTestGovernance sets staking manager with memory db and staking update interval to 4.
-func setTestGovernance() {
+func setTestGovernance(db database.DBManager) {
 	lock.Lock()
 	defer lock.Unlock()
 	if setter == nil {
@@ -75,7 +78,7 @@ func setTestGovernance() {
 			origStakingManager:  reward.GetStakingManager(),
 		}
 
-		reward.SetTestStakingManagerWithDB(database.NewMemoryDBManager())
+		reward.SetTestStakingManagerWithDB(db)
 		params.SetStakingUpdateInterval(testStakingUpdateInterval)
 	}
 	setter.numTesting += 1
@@ -123,13 +126,14 @@ type downloadTester struct {
 
 // newTester creates a new downloader test mocker.
 func newTester() *downloadTester {
-	testdb := database.NewMemoryDBManager()
-	genesis := blockchain.GenesisBlockForTesting(testdb, testAddress, big.NewInt(1000000000))
-	setTestGovernance()
+	remotedb := database.NewMemoryDBManager()
+	localdb := database.NewMemoryDBManager()
+	genesis := blockchain.GenesisBlockForTesting(remotedb, testAddress, big.NewInt(1000000000))
+	setTestGovernance(localdb)
 
 	tester := &downloadTester{
 		genesis:           genesis,
-		peerDb:            testdb,
+		peerDb:            remotedb,
 		ownHashes:         []common.Hash{genesis.Hash()},
 		ownHeaders:        map[common.Hash]*types.Header{genesis.Hash(): genesis.Header()},
 		ownBlocks:         map[common.Hash]*types.Block{genesis.Hash(): genesis},
@@ -144,8 +148,8 @@ func newTester() *downloadTester {
 		peerChainTds:      make(map[string]map[common.Hash]*big.Int),
 		peerMissingStates: make(map[string]map[common.Hash]bool),
 	}
-	tester.stateDb = database.NewMemoryDBManager()
-	tester.stateDb.GetMemDB().Put(genesis.Root().Bytes(), []byte{0x00})
+	tester.stateDb = localdb
+	tester.stateDb.WriteTrieNode(genesis.Root().ExtendLegacy(), []byte{0x00})
 
 	tester.downloader = New(FullSync, tester.stateDb, statedb.NewSyncBloom(1, tester.stateDb.GetMemDB()), new(event.TypeMux), tester, nil, tester.dropPeer, uint64(istanbul.WeightedRandom))
 
@@ -157,7 +161,7 @@ func (dl *downloadTester) makeStakingInfoData(blockNumber uint64) (*reward.Staki
 	addr := crypto.PubkeyToAddress(k.PublicKey)
 	si := &reward.StakingInfo{
 		BlockNum: blockNumber,
-		KIRAddr:  addr, // assign KIR in order to put unique staking information
+		KCFAddr:  addr, // assign KCF in order to put unique staking information
 	}
 	siBytes, _ := json.Marshal(si)
 	return si, siBytes
@@ -294,6 +298,10 @@ func (dl *downloadTester) sync(id string, td *big.Int, mode SyncMode) error {
 	return err
 }
 
+func (dl *downloadTester) syncStakingInfos(id string, from, to uint64) error {
+	return dl.downloader.SyncStakingInfo(id, from, to)
+}
+
 // HasHeader checks if a header is present in the testers canonical chain.
 func (dl *downloadTester) HasHeader(hash common.Hash, number uint64) bool {
 	return dl.GetHeaderByHash(hash) != nil
@@ -340,7 +348,7 @@ func (dl *downloadTester) CurrentBlock() *types.Block {
 
 	for i := len(dl.ownHashes) - 1; i >= 0; i-- {
 		if block := dl.ownBlocks[dl.ownHashes[i]]; block != nil {
-			if _, err := dl.stateDb.GetMemDB().Get(block.Root().Bytes()); err == nil {
+			if has, _ := dl.stateDb.HasTrieNode(block.Root().ExtendLegacy()); has {
 				return block
 			}
 		}
@@ -365,7 +373,7 @@ func (dl *downloadTester) CurrentFastBlock() *types.Block {
 func (dl *downloadTester) FastSyncCommitHead(hash common.Hash) error {
 	// For now only check that the state trie is correct
 	if block := dl.GetBlockByHash(hash); block != nil {
-		_, err := statedb.NewSecureTrie(block.Root(), statedb.NewDatabase(dl.stateDb))
+		_, err := statedb.NewSecureTrie(block.Root(), statedb.NewDatabase(dl.stateDb), nil)
 		return err
 	}
 	return fmt.Errorf("non existent block: %x", hash[:4])
@@ -422,15 +430,15 @@ func (dl *downloadTester) InsertChain(blocks types.Blocks) (int, error) {
 	for i, block := range blocks {
 		if parent, ok := dl.ownBlocks[block.ParentHash()]; !ok {
 			return i, fmt.Errorf("InsertChain: unknown parent at position %d / %d", i, len(blocks))
-		} else if _, err := dl.stateDb.GetMemDB().Get(parent.Root().Bytes()); err != nil {
-			return i, fmt.Errorf("InsertChain: unknown parent state %x: %v", parent.Root(), err)
+		} else if has, _ := dl.stateDb.HasTrieNode(parent.Root().ExtendLegacy()); !has {
+			return i, fmt.Errorf("InsertChain: unknown parent state %x", parent.Root())
 		}
 		if _, ok := dl.ownHeaders[block.Hash()]; !ok {
 			dl.ownHashes = append(dl.ownHashes, block.Hash())
 			dl.ownHeaders[block.Hash()] = block.Header()
 		}
 		dl.ownBlocks[block.Hash()] = block
-		dl.stateDb.GetMemDB().Put(block.Root().Bytes(), []byte{0x00})
+		dl.stateDb.WriteTrieNode(block.Root().ExtendLegacy(), []byte{0x00})
 		dl.ownChainTd[block.Hash()] = new(big.Int).Add(dl.ownChainTd[block.ParentHash()], block.BlockScore())
 	}
 	return len(blocks), nil
@@ -726,7 +734,7 @@ func (dlp *downloadTesterPeer) RequestNodeData(hashes []common.Hash) error {
 
 	results := make([][]byte, 0, len(hashes))
 	for _, hash := range hashes {
-		if data, err := dlp.dl.peerDb.GetMemDB().Get(hash.Bytes()); err == nil {
+		if data, err := dlp.dl.peerDb.ReadTrieNode(hash.ExtendLegacy()); err == nil {
 			if !dlp.dl.peerMissingStates[dlp.id][hash] {
 				results = append(results, data)
 			}
@@ -1892,5 +1900,51 @@ func testDeliverHeadersHang(t *testing.T, protocol int, mode SyncMode) {
 
 		// Flush all goroutines to prevent messing with subsequent tests
 		tester.downloader.peers.peers["peer"].peer.(*floodingTestPeer).pend.Wait()
+	}
+}
+
+func TestStakingInfoSync(t *testing.T) { testStakingInfoSync(t, 65) }
+
+func testStakingInfoSync(t *testing.T, protocol int) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlInfo)
+
+	tester := newTester()
+	defer tester.terminate()
+
+	// Create a small enough block chain to download
+	targetBlocks := blockCacheMaxItems - 15
+	hashes, headers, blocks, receipts, stakingInfos := tester.makeChain(targetBlocks, 0, tester.genesis, nil, false)
+
+	tester.newPeer("peer", protocol, hashes, headers, blocks, receipts, stakingInfos)
+
+	stakedBlocks := make([]uint64, len(stakingInfos))
+	for blockHash, stakingInfo := range stakingInfos {
+		stakedBlocks = append(stakedBlocks, stakingInfo.BlockNum)
+		tester.stateDb.WriteCanonicalHash(blockHash, stakingInfo.BlockNum)
+	}
+
+	// check staking information is not stored in database
+	for _, block := range stakedBlocks {
+		si, err := tester.stateDb.ReadStakingInfo(block)
+		if len(si) != 0 && !strings.Contains(err.Error(), "data is not found with the given key") {
+			t.Errorf("already staking info exists")
+		}
+	}
+
+	if err := tester.downloader.SyncStakingInfo("peer", 0, uint64(targetBlocks)); err != nil {
+		t.Errorf("sync staking info failed: %v", err)
+	}
+
+	time.Sleep(3 * time.Second)
+
+	for _, stakingInfo := range stakingInfos {
+		expected, _ := json.Marshal(stakingInfo)
+		actual, err := tester.stateDb.ReadStakingInfo(stakingInfo.BlockNum)
+		if err != nil {
+			t.Errorf("failed to read stakingInfo: %v", err)
+		}
+		if bytes.Compare(expected, actual) != 0 {
+			t.Errorf("staking infos are different (expected: %v, actual: %v)", string(expected), string(actual))
+		}
 	}
 }

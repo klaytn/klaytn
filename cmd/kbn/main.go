@@ -37,7 +37,7 @@ import (
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/networks/p2p/nat"
 	"github.com/klaytn/klaytn/networks/rpc"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 var logger = log.NewModuleLogger(log.CMDKBN)
@@ -56,17 +56,17 @@ func bootnode(ctx *cli.Context) error {
 		err  error
 		bcfg = bootnodeConfig{
 			// Config variables
-			networkID:    ctx.GlobalUint64(utils.NetworkIdFlag.Name),
-			addr:         ctx.GlobalString(utils.BNAddrFlag.Name),
-			genKeyPath:   ctx.GlobalString(utils.GenKeyFlag.Name),
-			nodeKeyFile:  ctx.GlobalString(utils.NodeKeyFileFlag.Name),
-			nodeKeyHex:   ctx.GlobalString(utils.NodeKeyHexFlag.Name),
-			natFlag:      ctx.GlobalString(utils.NATFlag.Name),
-			netrestrict:  ctx.GlobalString(utils.NetrestrictFlag.Name),
-			writeAddress: ctx.GlobalBool(utils.WriteAddressFlag.Name),
+			networkID:    ctx.Uint64(utils.NetworkIdFlag.Name),
+			addr:         ctx.String(utils.BNAddrFlag.Name),
+			genKeyPath:   ctx.String(utils.GenKeyFlag.Name),
+			nodeKeyFile:  ctx.String(utils.NodeKeyFileFlag.Name),
+			nodeKeyHex:   ctx.String(utils.NodeKeyHexFlag.Name),
+			natFlag:      ctx.String(utils.NATFlag.Name),
+			netrestrict:  ctx.String(utils.NetrestrictFlag.Name),
+			writeAddress: ctx.Bool(utils.WriteAddressFlag.Name),
 
 			IPCPath:          "klay.ipc",
-			DataDir:          ctx.GlobalString(utils.DataDirFlag.Name),
+			DataDir:          ctx.String(utils.DataDirFlag.Name),
 			HTTPPort:         DefaultHTTPPort,
 			HTTPModules:      []string{"net"},
 			HTTPVirtualHosts: []string{"localhost"},
@@ -85,8 +85,8 @@ func bootnode(ctx *cli.Context) error {
 
 	setIPC(ctx, &bcfg)
 	// httptype is http or fasthttp
-	if ctx.GlobalIsSet(utils.SrvTypeFlag.Name) {
-		bcfg.HTTPServerType = ctx.GlobalString(utils.SrvTypeFlag.Name)
+	if ctx.IsSet(utils.SrvTypeFlag.Name) {
+		bcfg.HTTPServerType = ctx.String(utils.SrvTypeFlag.Name)
 	}
 	setHTTP(ctx, &bcfg)
 	setWS(ctx, &bcfg)
@@ -187,31 +187,13 @@ func startNode(node *Node) error {
 }
 
 func main() {
-	cliFlags := []cli.Flag{
-		utils.SrvTypeFlag,
-		utils.DataDirFlag,
-		utils.GenKeyFlag,
-		utils.NodeKeyFileFlag,
-		utils.NodeKeyHexFlag,
-		utils.WriteAddressFlag,
-		utils.BNAddrFlag,
-		utils.NATFlag,
-		utils.NetrestrictFlag,
-		utils.MetricsEnabledFlag,
-		utils.PrometheusExporterFlag,
-		utils.PrometheusExporterPortFlag,
-		utils.AuthorizedNodesFlag,
-		utils.NetworkIdFlag,
-	}
 	// TODO-Klaytn: remove `help` command
 	app := utils.NewApp("", "the Klaytn's bootnode command line interface")
 	app.Name = "kbn"
 	app.Copyright = "Copyright 2018 The klaytn Authors"
 	app.UsageText = app.Name + " [global options] [commands]"
-	app.Flags = append(app.Flags, cliFlags...)
-	app.Flags = append(app.Flags, debug.Flags...)
-	app.Flags = append(app.Flags, nodecmd.CommonRPCFlags...)
-	app.Commands = []cli.Command{
+	app.Flags = append(app.Flags, utils.BNAppFlags()...)
+	app.Commands = []*cli.Command{
 		nodecmd.VersionCommand,
 		nodecmd.AttachCommand,
 	}

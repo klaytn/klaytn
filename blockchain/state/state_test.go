@@ -94,7 +94,7 @@ func (s *StateSuite) TestDump(c *checker.C) {
 
 func (s *StateSuite) SetUpTest(c *checker.C) {
 	s.db = database.NewMemoryDBManager()
-	s.state, _ = New(common.Hash{}, NewDatabase(s.db), nil)
+	s.state, _ = New(common.Hash{}, NewDatabase(s.db), nil, nil)
 }
 
 func (s *StateSuite) TestNull(c *checker.C) {
@@ -151,7 +151,7 @@ func (s *StateSuite) TestSnapshotEmpty(c *checker.C) {
 // This test is to compare deleted/non-deleted stateObject after restoring.
 func TestSnapshotForDeletedObject(t *testing.T) {
 	memDB := database.NewMemoryDBManager()
-	state, _ := New(common.Hash{}, NewDatabase(memDB), nil)
+	state, _ := New(common.Hash{}, NewDatabase(memDB), nil, nil)
 
 	stateObjAddr0 := toAddr([]byte("so0"))
 	stateObjAddr1 := toAddr([]byte("so1"))

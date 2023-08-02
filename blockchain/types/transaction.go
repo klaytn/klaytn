@@ -26,6 +26,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"math/big"
 	"sync"
@@ -56,6 +57,14 @@ var (
 // deriveSigner makes a *best* guess about which signer to use.
 func deriveSigner(V *big.Int) Signer {
 	return LatestSignerForChainID(deriveChainId(V))
+}
+
+func ErrSender(err error) error {
+	return fmt.Errorf("invalid sender: %s", err)
+}
+
+func ErrFeePayer(err error) error {
+	return fmt.Errorf("invalid fee payer: %s", err)
 }
 
 type Transaction struct {
@@ -565,7 +574,7 @@ func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKey
 
 	gasFrom, err := tx.ValidateSender(s, picker, currentBlockNumber)
 	if err != nil {
-		return nil, err
+		return nil, ErrSender(err)
 	}
 
 	tx.mu.Lock()
@@ -576,7 +585,7 @@ func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKey
 	if tx.IsFeeDelegatedTransaction() {
 		gasFeePayer, err = tx.ValidateFeePayer(s, picker, currentBlockNumber)
 		if err != nil {
-			return nil, err
+			return nil, ErrFeePayer(err)
 		}
 	}
 

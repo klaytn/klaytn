@@ -33,6 +33,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/stretchr/testify/assert"
 )
 
 const jsondata = `
@@ -761,6 +762,41 @@ func TestUnpackEvent(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+}
+
+// Testset (ABI and hexdata) was created based on this contract format.
+/*
+contract T {
+     event eventInDynamicType(uint elem1, string[3] elem2);
+     constructor() {}
+     function test123() public {
+         string[3] memory vals = ["A...","B...","C..."];
+         emit eventInDynamicType(123, vals);
+     }
+ }
+*/
+func TestUnpackEventOffsetBound(t *testing.T) {
+	const abiJSON = `[{"inputs":[],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"elem1","type":"uint256"},{"indexed":false,"internalType":"string[3]","name":"elem2","type":"string[3]"}],"name":"ev123","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"elem1","type":"uint256"},{"indexed":false,"internalType":"string[3]","name":"elem2","type":"string[3]"}],"name":"eventInDynamicType","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"address","name":"sender","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"bytes","name":"memo","type":"bytes"}],"name":"received","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"address","name":"sender","type":"address"}],"name":"receivedAddr","type":"event"},{"inputs":[],"name":"test123","outputs":[],"stateMutability":"nonpayable","type":"function"}]`
+
+	abi, err := JSON(strings.NewReader(abiJSON))
+	assert.Nil(t, err, err)
+
+	const rawData = `000000000000000000000000000000000000000000000000000000000000007b0000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000140000000000000000000000000000000000000000000000000000000000000004141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000354242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242000000000000000000000000000000000000000000000000000000000000000000000000000000000000684343434343434343434343434343434343434343434343434343434343434343434343434343434343434343434343434343434343434343434343434343434343434343434343434343434343434343434343434343434343434343434343434343434343434343000000000000000000000000000000000000000000000000`
+	// Modify offset value (0x40 -> 0xffff) to attemp out-of-bounds access
+	modifiedRawData := rawData[:124] + "ffff" + rawData[128:]
+
+	data, err := hex.DecodeString(modifiedRawData)
+	assert.Nil(t, err)
+
+	type evObj struct {
+		Elem1 *big.Int
+		Elem2 [3]string
+	}
+
+	var params evObj
+	err = abi.Unpack(&params, "eventInDynamicType", data)
+	// Must return error
+	assert.NotNil(t, err, err)
 }
 
 func TestUnpackEventIntoMap(t *testing.T) {

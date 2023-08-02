@@ -26,8 +26,10 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
+	"github.com/klaytn/klaytn/crypto/sha3"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 var CalcDeferredRewardTimer time.Duration
@@ -46,8 +48,8 @@ type BalanceAdder interface {
 // Cannot use governance.Engine because of cyclic dependency.
 // Instead declare only the methods used by this package.
 type governanceHelper interface {
-	Params() *params.GovParamSet
-	ParamsAt(num uint64) (*params.GovParamSet, error)
+	CurrentParams() *params.GovParamSet
+	EffectiveParams(num uint64) (*params.GovParamSet, error)
 }
 
 type rewardConfig struct {
@@ -64,8 +66,8 @@ type rewardConfig struct {
 
 	// parsed ratio
 	cnRatio    *big.Int
-	kgfRatio   *big.Int
-	kirRatio   *big.Int
+	kffRatio   *big.Int
+	kcfRatio   *big.Int
 	totalRatio *big.Int
 
 	// parsed KIP82 ratio
@@ -80,9 +82,36 @@ type RewardSpec struct {
 	BurntFee *big.Int                    `json:"burntFee"` // the amount burnt
 	Proposer *big.Int                    `json:"proposer"` // the amount allocated to the block proposer
 	Stakers  *big.Int                    `json:"stakers"`  // total amount allocated to stakers
-	Kgf      *big.Int                    `json:"kgf"`      // the amount allocated to KGF
-	Kir      *big.Int                    `json:"kir"`      // the amount allocated to KIR
+	KFF      *big.Int                    `json:"kff"`      // the amount allocated to KFF
+	KCF      *big.Int                    `json:"kcf"`      // the amount allocated to KCF
 	Rewards  map[common.Address]*big.Int `json:"rewards"`  // mapping from reward recipient to amounts
+}
+
+func NewRewardSpec() *RewardSpec {
+	return &RewardSpec{
+		Minted:   big.NewInt(0),
+		TotalFee: big.NewInt(0),
+		BurntFee: big.NewInt(0),
+		Proposer: big.NewInt(0),
+		Stakers:  big.NewInt(0),
+		KFF:      big.NewInt(0),
+		KCF:      big.NewInt(0),
+		Rewards:  make(map[common.Address]*big.Int),
+	}
+}
+
+func (spec *RewardSpec) Add(delta *RewardSpec) {
+	spec.Minted.Add(spec.Minted, delta.Minted)
+	spec.TotalFee.Add(spec.TotalFee, delta.TotalFee)
+	spec.BurntFee.Add(spec.BurntFee, delta.BurntFee)
+	spec.Proposer.Add(spec.Proposer, delta.Proposer)
+	spec.Stakers.Add(spec.Stakers, delta.Stakers)
+	spec.KFF.Add(spec.KFF, delta.KFF)
+	spec.KCF.Add(spec.KCF, delta.KCF)
+
+	for addr, amount := range delta.Rewards {
+		incrementRewardsMap(spec.Rewards, addr, amount)
+	}
 }
 
 // TODO: this is for legacy, will be removed
@@ -100,7 +129,7 @@ func DistributeBlockReward(b BalanceAdder, rewards map[common.Address]*big.Int) 
 }
 
 func NewRewardConfig(header *types.Header, rules params.Rules, pset *params.GovParamSet) (*rewardConfig, error) {
-	cnRatio, kgfRatio, kirRatio, totalRatio, err := parseRewardRatio(pset.Ratio())
+	cnRatio, kffRatio, kcfRatio, totalRatio, err := parseRewardRatio(pset.Ratio())
 	if err != nil {
 		return nil, err
 	}
@@ -127,8 +156,8 @@ func NewRewardConfig(header *types.Header, rules params.Rules, pset *params.GovP
 
 		// parsed ratio
 		cnRatio:    big.NewInt(cnRatio),
-		kgfRatio:   big.NewInt(kgfRatio),
-		kirRatio:   big.NewInt(kirRatio),
+		kffRatio:   big.NewInt(kffRatio),
+		kcfRatio:   big.NewInt(kcfRatio),
 		totalRatio: big.NewInt(totalRatio),
 
 		// parsed KIP82 ratio
@@ -184,10 +213,27 @@ func GetBlockReward(header *types.Header, rules params.Rules, pset *params.GovPa
 	// If not DeferredTxFee, CalcDeferredReward() assumes 0 total_fee, but
 	// some non-zero fee already has been paid to the proposer.
 	if !pset.DeferredTxFee() {
-		blockFee := GetTotalTxFee(header, rules, pset)
-		spec.Proposer = spec.Proposer.Add(spec.Proposer, spec.TotalFee)
-		spec.TotalFee = spec.TotalFee.Add(spec.TotalFee, blockFee)
-		incrementRewardsMap(spec.Rewards, header.Rewardbase, blockFee)
+		if rules.IsMagma {
+			txFee := GetTotalTxFee(header, rules, pset)
+			txFeeBurn := getBurnAmountMagma(txFee)
+			txFeeRemained := new(big.Int).Sub(txFee, txFeeBurn)
+			spec.BurntFee = txFeeBurn
+
+			spec.Proposer = spec.Proposer.Add(spec.Proposer, txFeeRemained)
+			spec.TotalFee = spec.TotalFee.Add(spec.TotalFee, txFee)
+			incrementRewardsMap(spec.Rewards, header.Rewardbase, txFeeRemained)
+		} else {
+			txFee := GetTotalTxFee(header, rules, pset)
+			spec.Proposer = spec.Proposer.Add(spec.Proposer, txFee)
+			spec.TotalFee = spec.TotalFee.Add(spec.TotalFee, txFee)
+			// get the proposer of this block.
+			proposer, err := ecrecover(header)
+			if err != nil {
+				return nil, err
+			}
+			incrementRewardsMap(spec.Rewards, proposer, txFee)
+
+		}
 	}
 
 	return spec, nil
@@ -210,22 +256,22 @@ func CalcDeferredRewardSimple(header *types.Header, rules params.Rules, pset *pa
 	// Therefore, there are no fees to distribute here at the end of block processing.
 	// However, before Kore, there was a bug that distributed tx fee regardless
 	// of `deferredTxFee` flag. See https://github.com/klaytn/klaytn/issues/1692.
-	// To maintain backward compatibility, we only fix the buggy logic after Kore
-	// and leave the buggy logic before Kore.
+	// To maintain backward compatibility, we only fix the buggy logic after Magma
+	// and leave the buggy logic before Magma.
 	// However, the fees must be compensated to calculate actual rewards paid.
 
-	// bug-fixed logic after Kore
-	if !rc.deferredTxFee && rc.rules.IsKore {
+	// bug-fixed logic after Magma
+	if !rc.deferredTxFee && rc.rules.IsMagma {
 		proposer := new(big.Int).Set(minted)
 		logger.Debug("CalcDeferredRewardSimple after Kore when deferredTxFee=false returns",
 			"proposer", proposer)
-		return &RewardSpec{
-			Minted:   minted,
-			TotalFee: big.NewInt(0),
-			BurntFee: big.NewInt(0),
-			Proposer: proposer,
-			Rewards:  map[common.Address]*big.Int{header.Rewardbase: proposer},
-		}, nil
+		spec := NewRewardSpec()
+		spec.Minted = minted
+		spec.TotalFee = big.NewInt(0)
+		spec.BurntFee = big.NewInt(0)
+		spec.Proposer = proposer
+		incrementRewardsMap(spec.Rewards, header.Rewardbase, proposer)
+		return spec, nil
 	}
 
 	totalFee := rc.totalFee
@@ -246,13 +292,13 @@ func CalcDeferredRewardSimple(header *types.Header, rules params.Rules, pset *pa
 		"burntFee", burntFee.Uint64(),
 	)
 
-	return &RewardSpec{
-		Minted:   minted,
-		TotalFee: totalFee,
-		BurntFee: burntFee,
-		Proposer: proposer,
-		Rewards:  map[common.Address]*big.Int{header.Rewardbase: proposer},
-	}, nil
+	spec := NewRewardSpec()
+	spec.Minted = minted
+	spec.TotalFee = totalFee
+	spec.BurntFee = burntFee
+	spec.Proposer = proposer
+	incrementRewardsMap(spec.Rewards, header.Rewardbase, proposer)
+	return spec, nil
 }
 
 // CalcDeferredReward calculates the deferred rewards,
@@ -273,44 +319,44 @@ func CalcDeferredReward(header *types.Header, rules params.Rules, pset *params.G
 	)
 
 	totalFee, rewardFee, burntFee := calcDeferredFee(rc)
-	proposer, stakers, kgf, kir, splitRem := calcSplit(rc, minted, rewardFee)
+	proposer, stakers, kff, kcf, splitRem := calcSplit(rc, minted, rewardFee)
 	shares, shareRem := calcShares(stakingInfo, stakers, rc.minimumStake.Uint64())
 
-	// Remainder from (CN, KGF, KIR) split goes to KGF
-	kgf = kgf.Add(kgf, splitRem)
+	// Remainder from (CN, KFF, KCF) split goes to KFF
+	kff = kff.Add(kff, splitRem)
 	// Remainder from staker shares goes to Proposer
+	// Then, deduct it from stakers so that `minted + totalFee - burntFee = proposer + stakers + kff + kcf`
 	proposer = proposer.Add(proposer, shareRem)
+	stakers = stakers.Sub(stakers, shareRem)
 
-	// if KGF or KIR is not set, proposer gets the portion
-	if stakingInfo == nil || common.EmptyAddress(stakingInfo.PoCAddr) {
-		logger.Debug("KGF empty, proposer gets its portion", "kgf", kgf)
-		proposer = proposer.Add(proposer, kgf)
-		kgf = big.NewInt(0)
+	// if KFF or KCF is not set, proposer gets the portion
+	if stakingInfo == nil || common.EmptyAddress(stakingInfo.KFFAddr) {
+		logger.Debug("KFF empty, proposer gets its portion", "kff", kff)
+		proposer = proposer.Add(proposer, kff)
+		kff = big.NewInt(0)
 	}
-	if stakingInfo == nil || common.EmptyAddress(stakingInfo.KIRAddr) {
-		logger.Debug("KIR empty, proposer gets its portion", "kir", kir)
-		proposer = proposer.Add(proposer, kir)
-		kir = big.NewInt(0)
-	}
-
-	spec := &RewardSpec{
-		Minted:   minted,
-		TotalFee: totalFee,
-		BurntFee: burntFee,
-		Proposer: proposer,
-		Stakers:  stakers,
-		Kgf:      kgf,
-		Kir:      kir,
+	if stakingInfo == nil || common.EmptyAddress(stakingInfo.KCFAddr) {
+		logger.Debug("KCF empty, proposer gets its portion", "kcf", kcf)
+		proposer = proposer.Add(proposer, kcf)
+		kcf = big.NewInt(0)
 	}
 
-	spec.Rewards = make(map[common.Address]*big.Int)
+	spec := NewRewardSpec()
+	spec.Minted = minted
+	spec.TotalFee = totalFee
+	spec.BurntFee = burntFee
+	spec.Proposer = proposer
+	spec.Stakers = stakers
+	spec.KFF = kff
+	spec.KCF = kcf
+
 	incrementRewardsMap(spec.Rewards, header.Rewardbase, proposer)
 
-	if stakingInfo != nil && !common.EmptyAddress(stakingInfo.PoCAddr) {
-		incrementRewardsMap(spec.Rewards, stakingInfo.PoCAddr, kgf)
+	if stakingInfo != nil && !common.EmptyAddress(stakingInfo.KFFAddr) {
+		incrementRewardsMap(spec.Rewards, stakingInfo.KFFAddr, kff)
 	}
-	if stakingInfo != nil && !common.EmptyAddress(stakingInfo.KIRAddr) {
-		incrementRewardsMap(spec.Rewards, stakingInfo.KIRAddr, kir)
+	if stakingInfo != nil && !common.EmptyAddress(stakingInfo.KCFAddr) {
+		incrementRewardsMap(spec.Rewards, stakingInfo.KCFAddr, kcf)
 	}
 
 	for rewardAddr, rewardAmount := range shares {
@@ -376,21 +422,21 @@ func getBurnAmountKore(rc *rewardConfig, fee *big.Int) *big.Int {
 	}
 }
 
-// calcSplit splits fee into (proposer, stakers, kgf, kir, remaining)
+// calcSplit splits fee into (proposer, stakers, kff, kcf, remaining)
 // the sum of the output must be equal to (minted + fee)
 func calcSplit(rc *rewardConfig, minted, fee *big.Int) (*big.Int, *big.Int, *big.Int, *big.Int, *big.Int) {
 	totalResource := big.NewInt(0)
 	totalResource = totalResource.Add(minted, fee)
 
 	if rc.rules.IsKore {
-		cn, kgf, kir := splitByRatio(rc, minted)
+		cn, kff, kcf := splitByRatio(rc, minted)
 		proposer, stakers := splitByKip82Ratio(rc, cn)
 
 		proposer = proposer.Add(proposer, fee)
 
 		remaining := new(big.Int).Set(totalResource)
-		remaining = remaining.Sub(remaining, kgf)
-		remaining = remaining.Sub(remaining, kir)
+		remaining = remaining.Sub(remaining, kff)
+		remaining = remaining.Sub(remaining, kcf)
 		remaining = remaining.Sub(remaining, proposer)
 		remaining = remaining.Sub(remaining, stakers)
 
@@ -399,28 +445,28 @@ func calcSplit(rc *rewardConfig, minted, fee *big.Int) (*big.Int, *big.Int, *big
 			"[in] fee", fee.Uint64(),
 			"[out] proposer", proposer.Uint64(),
 			"[out] stakers", stakers.Uint64(),
-			"[out] kgf", kgf.Uint64(),
-			"[out] kir", kir.Uint64(),
+			"[out] kff", kff.Uint64(),
+			"[out] kcf", kcf.Uint64(),
 			"[out] remaining", remaining.Uint64(),
 		)
-		return proposer, stakers, kgf, kir, remaining
+		return proposer, stakers, kff, kcf, remaining
 	} else {
-		cn, kgf, kir := splitByRatio(rc, totalResource)
+		cn, kff, kcf := splitByRatio(rc, totalResource)
 
 		remaining := new(big.Int).Set(totalResource)
-		remaining = remaining.Sub(remaining, kgf)
-		remaining = remaining.Sub(remaining, kir)
+		remaining = remaining.Sub(remaining, kff)
+		remaining = remaining.Sub(remaining, kcf)
 		remaining = remaining.Sub(remaining, cn)
 
 		logger.Debug("calcSplit() before kore",
 			"[in] minted", minted.Uint64(),
 			"[in] fee", fee.Uint64(),
 			"[out] cn", cn.Uint64(),
-			"[out] kgf", kgf.Uint64(),
-			"[out] kir", kir.Uint64(),
+			"[out] kff", kff.Uint64(),
+			"[out] kcf", kcf.Uint64(),
 			"[out] remaining", remaining.Uint64(),
 		)
-		return cn, big.NewInt(0), kgf, kir, remaining
+		return cn, big.NewInt(0), kff, kcf, remaining
 	}
 }
 
@@ -429,13 +475,13 @@ func splitByRatio(rc *rewardConfig, source *big.Int) (*big.Int, *big.Int, *big.I
 	cn := new(big.Int).Mul(source, rc.cnRatio)
 	cn = cn.Div(cn, rc.totalRatio)
 
-	kgf := new(big.Int).Mul(source, rc.kgfRatio)
-	kgf = kgf.Div(kgf, rc.totalRatio)
+	kff := new(big.Int).Mul(source, rc.kffRatio)
+	kff = kff.Div(kff, rc.totalRatio)
 
-	kir := new(big.Int).Mul(source, rc.kirRatio)
-	kir = kir.Div(kir, rc.totalRatio)
+	kcf := new(big.Int).Mul(source, rc.kcfRatio)
+	kcf = kcf.Div(kcf, rc.totalRatio)
 
-	return cn, kgf, kir
+	return cn, kff, kcf
 }
 
 // splitByKip82Ratio splits by `kip82ratio`. It ignores any remaining amounts.
@@ -500,14 +546,14 @@ func parseRewardRatio(ratio string) (int64, int64, int64, int64, error) {
 		return 0, 0, 0, 0, errInvalidFormat
 	}
 	cn, err1 := strconv.ParseInt(s[0], 10, 64)
-	poc, err2 := strconv.ParseInt(s[1], 10, 64)
-	kir, err3 := strconv.ParseInt(s[2], 10, 64)
+	kff, err2 := strconv.ParseInt(s[1], 10, 64)
+	kcf, err3 := strconv.ParseInt(s[2], 10, 64)
 
 	if err1 != nil || err2 != nil || err3 != nil {
 		logger.Error("Could not parse ratio", "ratio", ratio)
 		return 0, 0, 0, 0, errParsingRatio
 	}
-	return cn, poc, kir, cn + poc + kir, nil
+	return cn, kff, kcf, cn + kff + kcf, nil
 }
 
 // parseRewardKip82Ratio parses string `kip82ratio` into ints
@@ -534,4 +580,35 @@ func incrementRewardsMap(m map[common.Address]*big.Int, addr common.Address, amo
 	}
 
 	m[addr] = m[addr].Add(m[addr], amount)
+}
+
+// ecrecover extracts the Klaytn account address from a signed header.
+func ecrecover(header *types.Header) (common.Address, error) {
+	// Retrieve the signature from the header extra-data
+	istanbulExtra, err := types.ExtractIstanbulExtra(header)
+	if err != nil {
+		return common.Address{}, nil
+	}
+
+	sigHash, err := sigHash(header)
+	if err != nil {
+		return common.Address{}, err
+	}
+	addr, err := istanbul.GetSignatureAddress(sigHash.Bytes(), istanbulExtra.Seal)
+	if err != nil {
+		return addr, err
+	}
+	return addr, nil
+}
+
+func sigHash(header *types.Header) (hash common.Hash, err error) {
+	hasher := sha3.NewKeccak256()
+
+	// Clean seal is required for calculating proposer seal.
+	if err := rlp.Encode(hasher, types.IstanbulFilteredHeader(header, false)); err != nil {
+		logger.Error("fail to encode", "err", err)
+		return common.Hash{}, err
+	}
+	hasher.Sum(hash[:0])
+	return hash, nil
 }

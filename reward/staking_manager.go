@@ -18,12 +18,17 @@ package reward
 
 import (
 	"errors"
+	"fmt"
+	"math/big"
 	"sync"
 
+	"github.com/klaytn/klaytn/accounts/abi/bind"
+	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/contracts/reward/contract"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/params"
 )
@@ -32,24 +37,39 @@ const (
 	chainHeadChanSize = 100
 )
 
+// addressType defined in AddressBook
+const (
+	addressTypeNodeID = iota
+	addressTypeStakingAddr
+	addressTypeRewardAddr
+	addressTypePoCAddr // TODO-klaytn: PoC should be changed to KFF after changing AddressBook contract
+	addressTypeKIRAddr // TODO-klaytn: KIR should be changed to KCF after changing AddressBook contract
+)
+
+var addressBookContractAddress = common.HexToAddress(contract.AddressBookContractAddress)
+
 // blockChain is an interface for blockchain.Blockchain used in reward package.
 type blockChain interface {
 	SubscribeChainHeadEvent(ch chan<- blockchain.ChainHeadEvent) event.Subscription
 	GetBlockByNumber(number uint64) *types.Block
 	StateAt(root common.Hash) (*state.StateDB, error)
 	Config() *params.ChainConfig
+	CurrentHeader() *types.Header
+	GetBlock(hash common.Hash, number uint64) *types.Block
+	GetHeaderByNumber(number uint64) *types.Header
+	State() (*state.StateDB, error)
+	CurrentBlock() *types.Block
 
 	blockchain.ChainContext
 }
 
 type StakingManager struct {
-	addressBookConnector *addressBookConnector
-	stakingInfoCache     *stakingInfoCache
-	stakingInfoDB        stakingInfoDB
-	governanceHelper     governanceHelper
-	blockchain           blockChain
-	chainHeadChan        chan blockchain.ChainHeadEvent
-	chainHeadSub         event.Subscription
+	stakingInfoCache *stakingInfoCache
+	stakingInfoDB    stakingInfoDB
+	governanceHelper governanceHelper
+	blockchain       blockChain
+	chainHeadChan    chan blockchain.ChainHeadEvent
+	chainHeadSub     event.Subscription
 }
 
 var (
@@ -72,12 +92,11 @@ func NewStakingManager(bc blockChain, gh governanceHelper, db stakingInfoDB) *St
 		// this is only called once
 		once.Do(func() {
 			stakingManager = &StakingManager{
-				addressBookConnector: newAddressBookConnector(bc, gh),
-				stakingInfoCache:     newStakingInfoCache(),
-				stakingInfoDB:        db,
-				governanceHelper:     gh,
-				blockchain:           bc,
-				chainHeadChan:        make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
+				stakingInfoCache: newStakingInfoCache(),
+				stakingInfoDB:    db,
+				governanceHelper: gh,
+				blockchain:       bc,
+				chainHeadChan:    make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
 			}
 
 			// Before migration, staking information of current and before should be stored in DB.
@@ -117,9 +136,9 @@ func GetStakingInfo(blockNum uint64) *StakingInfo {
 // Fixup for Gini coefficients:
 // Klaytn core stores Gini: -1 in its database.
 // We ensure GetStakingInfoOnStakingBlock() to always return meaningful Gini.
-//   If cache hit                               -> fillMissingGini -> modifies cached in-memory object
-//   If db hit                                  -> fillMissingGini -> write to cache
-//   If read contract -> write to db (gini: -1) -> fillMissingGini -> write to cache
+// - If cache hit                               -> fillMissingGini -> modifies cached in-memory object
+// - If db hit                                  -> fillMissingGini -> write to cache
+// - If read contract -> write to db (gini: -1) -> fillMissingGini -> write to cache
 func GetStakingInfoOnStakingBlock(stakingBlockNumber uint64) *StakingInfo {
 	if stakingManager == nil {
 		logger.Error("unable to GetStakingInfo", "err", ErrStakingManagerNotSet)
@@ -171,7 +190,7 @@ func updateStakingInfo(blockNum uint64) (*StakingInfo, error) {
 		return nil, ErrStakingManagerNotSet
 	}
 
-	stakingInfo, err := stakingManager.addressBookConnector.getStakingInfoFromAddressBook(blockNum)
+	stakingInfo, err := getStakingInfoFromAddressBook(blockNum)
 	if err != nil {
 		return nil, err
 	}
@@ -193,6 +212,76 @@ func updateStakingInfo(blockNum uint64) (*StakingInfo, error) {
 	logger.Info("Add a new stakingInfo to stakingInfoCache and stakingInfoDB", "blockNum", blockNum)
 	logger.Debug("Added stakingInfo", "stakingInfo", stakingInfo)
 	return stakingInfo, nil
+}
+
+// NOTE: Even if the AddressBook contract code is erroneous and it returns unexpected result, this function should not return error in order not to stop block proposal.
+// getStakingInfoFromAddressBook returns stakingInfo fetched from AddressBook contract
+// 1. If calling AddressBook contract fails, it returns error
+// 2. If AddressBook is not activated, emptyStakingInfo is returned without error
+// 3. If AddressBook is activated, it returns fetched stakingInfo
+func getStakingInfoFromAddressBook(blockNum uint64) (*StakingInfo, error) {
+	if !params.IsStakingUpdateInterval(blockNum) {
+		return nil, fmt.Errorf("not staking block number. blockNum: %d", blockNum)
+	}
+
+	caller := backends.NewBlockchainContractCaller(stakingManager.blockchain)
+	contract, err := contract.NewAddressBookCaller(addressBookContractAddress, caller)
+	if err != nil {
+		return nil, fmt.Errorf("failed to call AddressBook contract. root err: %s", err)
+	}
+
+	types, addrs, err := contract.GetAllAddress(&bind.CallOpts{BlockNumber: new(big.Int).SetUint64(blockNum)})
+	if err != nil {
+		return nil, fmt.Errorf("failed to call AddressBook contract. root err: %s", err)
+	}
+
+	if len(types) == 0 && len(addrs) == 0 {
+		// This is an expected behavior when the addressBook contract is not activated yet.
+		logger.Info("The addressBook is not yet activated. Use empty stakingInfo")
+		return newEmptyStakingInfo(blockNum), nil
+	}
+
+	if len(types) != len(addrs) {
+		return nil, fmt.Errorf("length of type list and address list differ. len(type)=%d, len(addrs)=%d", len(types), len(addrs))
+	}
+
+	var (
+		nodeIds      = []common.Address{}
+		stakingAddrs = []common.Address{}
+		rewardAddrs  = []common.Address{}
+		pocAddr      = common.Address{}
+		kirAddr      = common.Address{}
+	)
+
+	// Parse and construct node information
+	for i, addrType := range types {
+		switch addrType {
+		case addressTypeNodeID:
+			nodeIds = append(nodeIds, addrs[i])
+		case addressTypeStakingAddr:
+			stakingAddrs = append(stakingAddrs, addrs[i])
+		case addressTypeRewardAddr:
+			rewardAddrs = append(rewardAddrs, addrs[i])
+		case addressTypePoCAddr:
+			pocAddr = addrs[i]
+		case addressTypeKIRAddr:
+			kirAddr = addrs[i]
+		default:
+			return nil, fmt.Errorf("invalid type from AddressBook: %d", addrType)
+		}
+	}
+
+	// validate parsed node information
+	if len(nodeIds) != len(stakingAddrs) ||
+		len(nodeIds) != len(rewardAddrs) ||
+		common.EmptyAddress(pocAddr) ||
+		common.EmptyAddress(kirAddr) {
+		// This is an expected behavior when the addressBook contract is not activated yet.
+		logger.Info("The addressBook is not yet activated. Use empty stakingInfo")
+		return newEmptyStakingInfo(blockNum), nil
+	}
+
+	return newStakingInfo(stakingManager.blockchain, stakingManager.governanceHelper, blockNum, nodeIds, stakingAddrs, rewardAddrs, kirAddr, pocAddr)
 }
 
 // CheckStakingInfoStored makes sure the given staking info is stored in cache and DB
@@ -227,7 +316,7 @@ func fillMissingGiniCoefficient(stakingInfo *StakingInfo, number uint64) error {
 	// - Gini was calculated but there was no eligible node, so Gini = -1.
 	// For the second case, in theory we won't have to recalculalte Gini,
 	// but there is no way to distinguish both. So we just recalculate.
-	pset, err := stakingManager.governanceHelper.ParamsAt(number)
+	pset, err := stakingManager.governanceHelper.EffectiveParams(number)
 	if err != nil {
 		return err
 	}
@@ -273,7 +362,11 @@ func handleChainHeadEvent() {
 		select {
 		// Handle ChainHeadEvent
 		case ev := <-stakingManager.chainHeadChan:
-			pset := stakingManager.governanceHelper.Params()
+			pset, err := stakingManager.governanceHelper.EffectiveParams(ev.Block.NumberU64() + 1)
+			if err != nil {
+				logger.Error("unable to fetch parameters at", "blockNum", ev.Block.NumberU64()+1)
+				continue
+			}
 			if pset.Policy() == params.WeightedRandom {
 				// check and update if staking info is not valid before for the next update interval blocks
 				stakingInfo := GetStakingInfo(ev.Block.NumberU64() + pset.StakeUpdateInterval())
@@ -308,12 +401,11 @@ func StakingManagerUnsubscribe() {
 // Note that this method is used only for testing purpose.
 func SetTestStakingManagerWithChain(bc blockChain, gh governanceHelper, db stakingInfoDB) {
 	SetTestStakingManager(&StakingManager{
-		addressBookConnector: newAddressBookConnector(bc, gh),
-		stakingInfoCache:     newStakingInfoCache(),
-		stakingInfoDB:        db,
-		governanceHelper:     gh,
-		blockchain:           bc,
-		chainHeadChan:        make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
+		stakingInfoCache: newStakingInfoCache(),
+		stakingInfoDB:    db,
+		governanceHelper: gh,
+		blockchain:       bc,
+		chainHeadChan:    make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
 	})
 }
 
@@ -339,4 +431,9 @@ func SetTestStakingManagerWithStakingInfoCache(testInfo *StakingInfo) {
 // Note that this method is used only for testing purpose.
 func SetTestStakingManager(sm *StakingManager) {
 	stakingManager = sm
+}
+
+// SetTestAddressBookAddress is only for testing purpose.
+func SetTestAddressBookAddress(addr common.Address) {
+	addressBookContractAddress = common.HexToAddress(addr.Hex())
 }

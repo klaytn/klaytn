@@ -502,7 +502,13 @@ func (s *PublicTransactionPoolAPI) PendingTransactions() ([]map[string]interface
 // Resend accepts an existing transaction and a new gas price and limit. It will remove
 // the given transaction from the pool and reinsert it with the new gas price and limit.
 func (s *PublicTransactionPoolAPI) Resend(ctx context.Context, sendArgs SendTxArgs, gasPrice *hexutil.Big, gasLimit *hexutil.Uint64) (common.Hash, error) {
-	if sendArgs.AccountNonce == nil {
+	return resend(s, ctx, &sendArgs, gasPrice, gasLimit)
+}
+
+// Resend accepts an existing transaction and a new gas price and limit. It will remove
+// the given transaction from the pool and reinsert it with the new gas price and limit.
+func resend(s *PublicTransactionPoolAPI, ctx context.Context, sendArgs NewTxArgs, gasPrice *hexutil.Big, gasLimit *hexutil.Uint64) (common.Hash, error) {
+	if sendArgs.nonce() == nil {
 		return common.Hash{}, fmt.Errorf("missing transaction nonce in transaction spec")
 	}
 	if err := sendArgs.setDefaults(ctx, s.b); err != nil {
@@ -521,19 +527,19 @@ func (s *PublicTransactionPoolAPI) Resend(ctx context.Context, sendArgs SendTxAr
 		signer := types.LatestSignerForChainID(p.ChainId())
 		wantSigHash := signer.Hash(matchTx)
 
-		if pFrom, err := types.Sender(signer, p); err == nil && pFrom == sendArgs.From && signer.Hash(p) == wantSigHash {
+		if pFrom, err := types.Sender(signer, p); err == nil && pFrom == sendArgs.from() && signer.Hash(p) == wantSigHash {
 			// Match. Re-sign and send the transaction.
 			if gasPrice != nil && (*big.Int)(gasPrice).Sign() != 0 {
-				sendArgs.Price = gasPrice
+				sendArgs.setGasPrice(gasPrice)
 			}
 			if gasLimit != nil && *gasLimit != 0 {
-				sendArgs.GasLimit = gasLimit
+				sendArgs.setGas(gasLimit)
 			}
 			tx, err := sendArgs.toTransaction()
 			if err != nil {
 				return common.Hash{}, err
 			}
-			signedTx, err := s.sign(sendArgs.From, tx)
+			signedTx, err := s.sign(sendArgs.from(), tx)
 			if err != nil {
 				return common.Hash{}, err
 			}

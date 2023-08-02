@@ -20,26 +20,26 @@ package extra
 import (
 	"strings"
 
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 var (
-	configFlag = cli.StringFlag{
+	configFlag = &cli.StringFlag{
 		Name:  "config",
 		Usage: "TOML configuration file",
 	}
 
-	extraDataFlag = cli.StringFlag{
+	extraDataFlag = &cli.StringFlag{
 		Name:  "extradata",
 		Usage: "Hex string for RLP encoded Istanbul extraData",
 	}
 
-	validatorsFlag = cli.StringFlag{
+	validatorsFlag = &cli.StringFlag{
 		Name:  "validators",
 		Usage: "Validators for RLP encoded Istanbul extraData",
 	}
 
-	vanityFlag = cli.StringFlag{
+	vanityFlag = &cli.StringFlag{
 		Name:  "vanity",
 		Usage: "Vanity for RLP encoded Istanbul extraData",
 		Value: "0x00",

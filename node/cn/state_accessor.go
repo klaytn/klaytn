@@ -67,7 +67,7 @@ func (cn *CN) stateAtBlock(block *types.Block, reexec uint64, base *state.StateD
 			// Create an ephemeral trie.Database for isolating the live one. Otherwise
 			// the internal junks created by tracing will be persisted into the disk.
 			database = state.NewDatabaseWithExistingCache(cn.ChainDB(), cn.blockchain.StateCache().TrieDB().TrieNodeCache())
-			if statedb, err = state.New(block.Root(), database, nil); err == nil {
+			if statedb, err = state.New(block.Root(), database, nil, nil); err == nil {
 				logger.Info("Found disk backend for state trie", "root", block.Root(), "number", block.Number())
 				return statedb, nil
 			}
@@ -93,7 +93,7 @@ func (cn *CN) stateAtBlock(block *types.Block, reexec uint64, base *state.StateD
 			}
 			current = parent
 
-			statedb, err = state.New(current.Root(), database, nil)
+			statedb, err = state.New(current.Root(), database, nil, nil)
 			if err == nil {
 				break
 			}
@@ -136,7 +136,7 @@ func (cn *CN) stateAtBlock(block *types.Block, reexec uint64, base *state.StateD
 		if err := statedb.Reset(root); err != nil {
 			return nil, fmt.Errorf("state reset after block %d failed: %v", current.NumberU64(), err)
 		}
-		database.TrieDB().Reference(root, common.Hash{})
+		database.TrieDB().ReferenceRoot(root)
 		if !common.EmptyHash(parent) {
 			database.TrieDB().Dereference(parent)
 		}
@@ -186,7 +186,7 @@ func (cn *CN) stateAtTransaction(block *types.Block, txIndex int, reexec uint64)
 		}
 		// Not yet the searched for transaction, execute on top of the current state
 		vmenv := vm.NewEVM(context, statedb, cn.blockchain.Config(), &vm.Config{UseOpcodeComputationCost: true})
-		if _, _, kerr := blockchain.ApplyMessage(vmenv, msg); kerr.ErrTxInvalid != nil {
+		if _, err := blockchain.ApplyMessage(vmenv, msg); err != nil {
 			return nil, vm.Context{}, nil, fmt.Errorf("transaction %#x failed: %v", tx.Hash(), err)
 		}
 		// Ensure any modifications are committed to the state

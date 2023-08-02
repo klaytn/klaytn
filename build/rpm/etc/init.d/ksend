@@ -303,7 +303,7 @@ if [[ ! -z $SC_SUB_BRIDGE ]] && [[ $SC_SUB_BRIDGE -eq 1 ]]; then
             exit 1
         fi
         OPTIONS="$OPTIONS --kas.x-chain-id $SC_KAS_ANCHOR_X_CHAIN_ID"
-        
+
         if [ ! -z $SC_KAS_ANCHOR_REQUEST_TIMEOUT ]; then
             OPTIONS="$OPTIONS --kas.sc.anchor.request.timeout $SC_KAS_ANCHOR_REQUEST_TIMEOUT"
         fi
@@ -333,6 +333,22 @@ if [[ ! -z $AUTO_RESTART ]] && [[ $AUTO_RESTART -eq 1 ]]; then
     OPTIONS="$OPTIONS --autorestart.enable"
 fi
 
+if [[ ! -z $LOG_ROTATE ]] && [[ $LOG_ROTATE -eq 1 ]]; then
+    OPTIONS="$OPTIONS --log.rotate"
+    if [[ ! -z $LOG_MAXSIZE ]]; then
+      OPTIONS="$OPTIONS --log.maxsize $LOG_MAXSIZE"
+    fi
+    if [[ ! -z $LOG_MAXBACKUP ]]; then
+      OPTIONS="$OPTIONS --log.maxbackup $LOG_MAXBACKUP"
+    fi
+    if [[ ! -z $LOG_MAXAGE ]]; then
+      OPTIONS="$OPTIONS --log.maxage $LOG_MAXAGE"
+    fi
+    if [[ ! -z $LOG_COMPRESS ]] && [[ $LOG_COMPRESS -eq 1 ]]; then
+      OPTIONS="$OPTIONS --log.compress"
+    fi
+fi
+
 BASEDIR="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 CURRENTFILE=`basename "$0"`
 OPTIONS="$OPTIONS --autorestart.daemon.path $BASEDIR/$CURRENTFILE"
@@ -348,7 +364,8 @@ start_node() {
     [ -n "$pid" ] && echo && return
 
     set -f
-    $ksen $OPTIONS >> ${LOG_DIR}/ksend.out 2>&1 &
+    OPTIONS="$OPTIONS --log.file ${LOG_DIR}/ksend.out"
+    TERM="dumb" $ksen $OPTIONS >> ${LOG_DIR}/ksend.out 2>&1 &
     RETVAL=$?
     PIDNUM=$!
     set +f

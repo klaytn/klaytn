@@ -358,10 +358,12 @@ func TestValidateTransaction(t *testing.T) {
 	for _, fn := range testfns {
 		fnname := getFunctionName(fn)
 		fnname = fnname[strings.LastIndex(fnname, ".")+1:]
-		t.Run(fnname, func(t *testing.T) {
+		testFunc := func(t *testing.T) {
 			t.Parallel()
 			fn(t)
-		})
+		}
+
+		t.Run(fnname, testFunc)
 	}
 }
 

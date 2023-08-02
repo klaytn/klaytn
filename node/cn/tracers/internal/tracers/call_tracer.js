@@ -138,6 +138,7 @@
 		}
 		// If an existing call is returning, pop off the call stack
 		if (syscall && op == 'REVERT') {
+			// TODO-klaytn: sort the revert error out.
 			this.callstack[this.callstack.length - 1].error = "execution reverted";
 			if(this.revertedContract == "")
 			{
