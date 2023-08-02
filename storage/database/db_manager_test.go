@@ -74,7 +74,7 @@ var (
 	signer types.Signer
 )
 
-var addRocksdb = false
+var addRocksDB = false
 
 func init() {
 	GetOpenFilesLimit()
@@ -94,7 +94,7 @@ func init() {
 		dbConfigs = append(dbConfigs, bc)
 		dbConfigs = append(dbConfigs, &badgerConfig)
 		dbConfigs = append(dbConfigs, &memoryConfig)
-		if addRocksdb {
+		if addRocksDB {
 			dbConfigs = append(dbConfigs, &rockdbConfig)
 		}
 	}

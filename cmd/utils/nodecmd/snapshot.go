@@ -122,6 +122,8 @@ func getConfig(ctx *cli.Context) *database.DBConfig {
 			CompressionType:           ctx.String(utils.RocksDBCompressionTypeFlag.Name),
 			BottommostCompressionType: ctx.String(utils.RocksDBBottommostCompressionTypeFlag.Name),
 			FilterPolicy:              ctx.String(utils.RocksDBFilterPolicyFlag.Name),
+			MaxOpenFiles:              ctx.Int(utils.RocksDBMaxOpenFilesFlag.Name),
+			CacheIndexAndFilter:       ctx.Bool(utils.RocksDBCacheIndexAndFilterFlag.Name),
 		},
 	}
 }

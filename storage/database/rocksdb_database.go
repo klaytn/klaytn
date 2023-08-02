@@ -105,11 +105,26 @@ func NewRocksDB(path string, config *RocksDBConfig) (*rocksDB, error) {
 		return nil, err
 	}
 
+	// Ensure we have some minimal caching and file guarantees
+	if config.CacheSize < minCacheSizeForRocksDB {
+		config.CacheSize = minCacheSizeForRocksDB
+	}
+	if config.MaxOpenFiles >= 0 && config.MaxOpenFiles < minOpenFilesForRocksDB {
+		config.MaxOpenFiles = minOpenFilesForRocksDB
+	}
+
 	blockCacheSize := config.CacheSize / 2 * 1024 * 1024 // half of cacheSize in MiB
 	bufferSize := config.CacheSize / 2 * 1024 * 1024     // half of cacheSize in MiB
 
 	bbto := grocksdb.NewDefaultBlockBasedTableOptions()
 	bbto.SetBlockCache(grocksdb.NewLRUCache(blockCacheSize))
+	if cacheIndexAndFilter := config.CacheIndexAndFilter; cacheIndexAndFilter {
+		bbto.SetCacheIndexAndFilterBlocks(cacheIndexAndFilter)
+		bbto.SetPinL0FilterAndIndexBlocksInCache(cacheIndexAndFilter)
+	} else if config.MaxOpenFiles == -1 {
+		logger.Warn("Use caching index and filter blocks or limit max open files to avoid memory explosion")
+	}
+
 	policy := filterPolicyStrToNative(config.FilterPolicy)
 	if policy != nil {
 		bbto.SetFilterPolicy(policy)
@@ -123,8 +138,9 @@ func NewRocksDB(path string, config *RocksDBConfig) (*rocksDB, error) {
 	opts.SetDumpMallocStats(config.DumpMallocStat)
 	opts.SetCompression(compressionStrToType(config.CompressionType))
 	opts.SetBottommostCompression(compressionStrToType(config.BottommostCompressionType))
+	opts.SetMaxOpenFiles(config.MaxOpenFiles)
 
-	logger.Info("RocksDB configuration", "blockCacheSize", blockCacheSize, "bufferSize", bufferSize, "enableDumpMallocStat", config.DumpMallocStat, "compressionType", config.CompressionType, "bottommostCompressionType", config.BottommostCompressionType, "filterPolicy", config.FilterPolicy, "disableMetrics", config.DisableMetrics)
+	logger.Info("RocksDB configuration", "blockCacheSize", blockCacheSize, "bufferSize", bufferSize, "enableDumpMallocStat", config.DumpMallocStat, "compressionType", config.CompressionType, "bottommostCompressionType", config.BottommostCompressionType, "filterPolicy", config.FilterPolicy, "disableMetrics", config.DisableMetrics, "maxOpenFiles", config.MaxOpenFiles, "cacheIndexAndFilter", config.CacheIndexAndFilter)
 
 	var (
 		db  *grocksdb.DB
@@ -284,7 +300,7 @@ func (db *rocksDB) Close() {
 	db.db.Close()
 	db.wo.Destroy()
 	db.ro.Destroy()
-	db.logger.Info("Rocksdb is closed")
+	db.logger.Info("RocksDB is closed")
 }
 
 func (db *rocksDB) updateMeter(name string, meter metrics.Meter) {

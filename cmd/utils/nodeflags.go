@@ -203,6 +203,8 @@ var CommonNodeFlags = []cli.Flag{
 	altsrc.NewStringFlag(RocksDBBottommostCompressionTypeFlag),
 	altsrc.NewStringFlag(RocksDBFilterPolicyFlag),
 	altsrc.NewBoolFlag(RocksDBDisableMetricsFlag),
+	altsrc.NewIntFlag(RocksDBMaxOpenFilesFlag),
+	altsrc.NewBoolFlag(RocksDBCacheIndexAndFilterFlag),
 	altsrc.NewStringFlag(DynamoDBTableNameFlag),
 	altsrc.NewStringFlag(DynamoDBRegionFlag),
 	altsrc.NewBoolFlag(DynamoDBIsProvisionedFlag),
@@ -492,6 +494,8 @@ var SnapshotFlags = []cli.Flag{
 	altsrc.NewStringFlag(RocksDBCompressionTypeFlag),
 	altsrc.NewStringFlag(RocksDBBottommostCompressionTypeFlag),
 	altsrc.NewBoolFlag(RocksDBDisableMetricsFlag),
+	altsrc.NewIntFlag(RocksDBMaxOpenFilesFlag),
+	altsrc.NewBoolFlag(RocksDBCacheIndexAndFilterFlag),
 }
 
 var DBMigrationSrcFlags = []cli.Flag{
@@ -514,6 +518,8 @@ var DBMigrationSrcFlags = []cli.Flag{
 	altsrc.NewStringFlag(RocksDBCompressionTypeFlag),
 	altsrc.NewStringFlag(RocksDBBottommostCompressionTypeFlag),
 	altsrc.NewBoolFlag(RocksDBDisableMetricsFlag),
+	altsrc.NewIntFlag(RocksDBMaxOpenFilesFlag),
+	altsrc.NewBoolFlag(RocksDBCacheIndexAndFilterFlag),
 }
 
 var DBMigrationDstFlags = []cli.Flag{
@@ -535,6 +541,8 @@ var DBMigrationDstFlags = []cli.Flag{
 	altsrc.NewStringFlag(DstRocksDBCompressionTypeFlag),
 	altsrc.NewStringFlag(DstRocksDBBottommostCompressionTypeFlag),
 	altsrc.NewStringFlag(DstRocksDBFilterPolicyFlag),
+	altsrc.NewIntFlag(DstRocksDBMaxOpenFilesFlag),
+	altsrc.NewBoolFlag(DstRocksDBCacheIndexAndFilterFlag),
 }
 
 var ChainDataFetcherFlags = []cli.Flag{
