@@ -1428,11 +1428,6 @@ func (bc *BlockChain) gcCachedNodeLoop() {
 }
 
 func (bc *BlockChain) pruneTrieNodeLoop() {
-	// If live pruning is disabled, do not bother starting a goroutine.
-	if !bc.IsLivePruningRequired() {
-		return
-	}
-
 	// ReadPruningMarks(1, limit) is very slow because it iterates over the most of MiscDB.
 	// ReadPruningMarks(start, limit) is much faster because it only iterates a small range.
 	startNum := uint64(1)
