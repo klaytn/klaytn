@@ -529,7 +529,7 @@ func (kCfg *KlayConfig) SetKlayConfig(ctx *cli.Context, stack *node.Node) {
 		cfg.WorkerDisable = true
 	}
 	cfg.RocksDBConfig.CacheSize = ctx.Uint64(RocksDBCacheSizeFlag.Name)
-	cfg.RocksDBConfig.DumpMallocStat = ctx.Bool(RocksDBDumpMallocStatFlag.Name)
+	cfg.RocksDBConfig.DumpMallocStat = ctx.Bool(RocksDBDumpMemoryStatFlag.Name)
 	cfg.RocksDBConfig.CompressionType = ctx.String(RocksDBCompressionTypeFlag.Name)
 	cfg.RocksDBConfig.BottommostCompressionType = ctx.String(RocksDBBottommostCompressionTypeFlag.Name)
 	cfg.RocksDBConfig.FilterPolicy = ctx.String(RocksDBFilterPolicyFlag.Name)

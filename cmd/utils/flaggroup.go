@@ -95,7 +95,7 @@ var FlagGroups = []FlagGroup{
 			LevelDBNoBufferPoolFlag,
 			RocksDBSecondaryFlag,
 			RocksDBCacheSizeFlag,
-			RocksDBDumpMallocStatFlag,
+			RocksDBDumpMemoryStatFlag,
 			RocksDBCompressionTypeFlag,
 			RocksDBBottommostCompressionTypeFlag,
 			RocksDBFilterPolicyFlag,

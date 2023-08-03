@@ -116,7 +116,7 @@ func getConfig(ctx *cli.Context) *database.DBConfig {
 
 		RocksDBConfig: &database.RocksDBConfig{
 			CacheSize:                 ctx.Uint64(utils.RocksDBCacheSizeFlag.Name),
-			DumpMallocStat:            ctx.Bool(utils.RocksDBDumpMallocStatFlag.Name),
+			DumpMallocStat:            ctx.Bool(utils.RocksDBDumpMemoryStatFlag.Name),
 			DisableMetrics:            ctx.Bool(utils.RocksDBDisableMetricsFlag.Name),
 			Secondary:                 ctx.Bool(utils.RocksDBSecondaryFlag.Name),
 			CompressionType:           ctx.String(utils.RocksDBCompressionTypeFlag.Name),

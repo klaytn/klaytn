@@ -60,7 +60,7 @@ var (
 			utils.ChainDataDirFlag,
 			utils.RocksDBSecondaryFlag,
 			utils.RocksDBCacheSizeFlag,
-			utils.RocksDBDumpMallocStatFlag,
+			utils.RocksDBDumpMemoryStatFlag,
 			utils.RocksDBFilterPolicyFlag,
 			utils.RocksDBCompressionTypeFlag,
 			utils.RocksDBBottommostCompressionTypeFlag,
@@ -163,7 +163,7 @@ func initGenesis(ctx *cli.Context) error {
 	if dbtype == database.RocksDB {
 		rocksDBConfig = &database.RocksDBConfig{
 			Secondary:                 ctx.Bool(utils.RocksDBSecondaryFlag.Name),
-			DumpMallocStat:            ctx.Bool(utils.RocksDBDumpMallocStatFlag.Name),
+			DumpMallocStat:            ctx.Bool(utils.RocksDBDumpMemoryStatFlag.Name),
 			DisableMetrics:            ctx.Bool(utils.RocksDBDisableMetricsFlag.Name),
 			CacheSize:                 ctx.Uint64(utils.RocksDBCacheSizeFlag.Name),
 			CompressionType:           ctx.String(utils.RocksDBCompressionTypeFlag.Name),
