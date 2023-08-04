@@ -100,10 +100,10 @@ func (v *Vrank) HandleCommitted(blockNum *big.Int) {
 	if len(v.commitArrivalTimeMap) != 0 {
 		sum := int64(0)
 		quorumCommitTime := time.Duration(0)
-		for _, v := range v.commitArrivalTimeMap {
-			sum += int64(v)
-			if quorumCommitTime < v {
-				quorumCommitTime = v
+		for _, arrivalTime := range v.commitArrivalTimeMap {
+			sum += int64(arrivalTime)
+			if quorumCommitTime < arrivalTime {
+				quorumCommitTime = arrivalTime
 			}
 		}
 		avg := sum / int64(len(v.commitArrivalTimeMap))
