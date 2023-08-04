@@ -19,6 +19,7 @@ package core
 import (
 	"encoding/hex"
 	"fmt"
+	"math"
 	"math/big"
 	"sort"
 	"time"
@@ -85,10 +86,6 @@ func (v *Vrank) AddCommit(msg *istanbul.Subject, src istanbul.Validator) {
 	if v.isTargetCommit(msg, src) {
 		t := v.TimeSinceStart()
 		v.commitArrivalTimeMap[src.Address()] = t
-
-		if len(v.commitArrivalTimeMap) == 1 {
-			v.firstCommit = int64(t)
-		}
 	}
 }
 
@@ -99,15 +96,20 @@ func (v *Vrank) HandleCommitted(blockNum *big.Int) {
 
 	if len(v.commitArrivalTimeMap) != 0 {
 		sum := int64(0)
+		firstCommitTime := time.Duration(math.MaxInt64)
 		quorumCommitTime := time.Duration(0)
 		for _, arrivalTime := range v.commitArrivalTimeMap {
 			sum += int64(arrivalTime)
+			if firstCommitTime > arrivalTime {
+				firstCommitTime = arrivalTime
+			}
 			if quorumCommitTime < arrivalTime {
 				quorumCommitTime = arrivalTime
 			}
 		}
 		avg := sum / int64(len(v.commitArrivalTimeMap))
 		v.avgCommitWithinQuorum = avg
+		v.firstCommit = int64(firstCommitTime)
 		v.quorumCommit = int64(quorumCommitTime)
 
 		if quorumCommitTime != time.Duration(0) && v.threshold > quorumCommitTime {
