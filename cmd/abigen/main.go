@@ -129,7 +129,7 @@ func init() {
 }
 
 func abigen(c *cli.Context) error {
-	utils.CheckExclusive(c, &abiFlag, &jsonFlag, &solFlag) // Only one source can be selected.
+	utils.CheckExclusive(c, abiFlag, jsonFlag, solFlag) // Only one source can be selected.
 	if c.String(pkgFlag.Name) == "" {
 		log.Fatalf("No destination package specified (--pkg)")
 	}
