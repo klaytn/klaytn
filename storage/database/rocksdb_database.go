@@ -107,9 +107,11 @@ func NewRocksDB(path string, config *RocksDBConfig) (*rocksDB, error) {
 
 	// Ensure we have some minimal caching and file guarantees
 	if config.CacheSize < minCacheSizeForRocksDB {
+		logger.Warn("Cache size too small, increasing to minimum recommended", "oldCacheSize", config.CacheSize, "newCacheSize", minCacheSizeForRocksDB)
 		config.CacheSize = minCacheSizeForRocksDB
 	}
 	if config.MaxOpenFiles >= 0 && config.MaxOpenFiles < minOpenFilesForRocksDB {
+		logger.Warn("Max open files too small, increasing to minimum recommended", "oldMaxOpenFiles", config.MaxOpenFiles, "newMaxOpenFiles", minOpenFilesForRocksDB)
 		config.MaxOpenFiles = minOpenFilesForRocksDB
 	}
 
