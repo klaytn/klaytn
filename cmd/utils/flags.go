@@ -331,7 +331,7 @@ var (
 		EnvVars: []string{"KLAYTN_DB_ROCKSDB_CACHE_SIZE"},
 	}
 	RocksDBDumpMallocStatFlag = &cli.BoolFlag{
-		Name:    "db.rocksdb.dump-memory-stat",
+		Name:    "db.rocksdb.dump-malloc-stat",
 		Usage:   "Enable to print memory stat together with rocksdb.stat. Works with Jemalloc only.",
 		EnvVars: []string{"KLAYTN_DB_ROCKSDB_DUMP_MALLOC_STAT"},
 	}
