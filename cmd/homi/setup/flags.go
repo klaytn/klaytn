@@ -387,21 +387,21 @@ var (
 		Aliases: []string{"genesis.kip71.upper-bound-base-fee"},
 	}
 
-	magmaGasTarget = cli.Uint64Flag{
+	magmaGasTarget = &cli.Uint64Flag{
 		Name:    "gas-target",
 		Usage:   "gas target flag",
 		Value:   params.DefaultGasTarget,
 		Aliases: []string{"genesis.kip71.gas-target"},
 	}
 
-	magmaMaxBlockGasUsedForBaseFee = cli.Uint64Flag{
+	magmaMaxBlockGasUsedForBaseFee = &cli.Uint64Flag{
 		Name:    "block-gas-limit",
 		Usage:   "block gas limit flag",
 		Value:   params.DefaultMaxBlockGasUsedForBaseFee,
 		Aliases: []string{"genesis.kip71.block-gas-limit"},
 	}
 
-	magmaBaseFeeDenominator = cli.Uint64Flag{
+	magmaBaseFeeDenominator = &cli.Uint64Flag{
 		Name:    "base-fee-denominator",
 		Usage:   "base fee denominator flag",
 		Value:   params.DefaultBaseFeeDenominator,
