@@ -330,10 +330,10 @@ var (
 		Value:   768,
 		EnvVars: []string{"KLAYTN_DB_ROCKSDB_CACHE_SIZE"},
 	}
-	RocksDBDumpMemoryStatFlag = &cli.BoolFlag{
+	RocksDBDumpMallocStatFlag = &cli.BoolFlag{
 		Name:    "db.rocksdb.dump-memory-stat",
 		Usage:   "Enable to print memory stat together with rocksdb.stat. Works with Jemalloc only.",
-		EnvVars: []string{"KLAYTN_DB_ROCKSDB_DUMP_MEMORY_STAT"},
+		EnvVars: []string{"KLAYTN_DB_ROCKSDB_DUMP_MALLOC_STAT"},
 	}
 	RocksDBCompressionTypeFlag = &cli.StringFlag{
 		Name:    "db.rocksdb.compression-type",

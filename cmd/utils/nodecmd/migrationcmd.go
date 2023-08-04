@@ -116,7 +116,7 @@ func createDBConfigForMigration(ctx *cli.Context) (*database.DBConfig, *database
 
 		RocksDBConfig: &database.RocksDBConfig{
 			CacheSize:                 ctx.Uint64(utils.RocksDBCacheSizeFlag.Name),
-			DumpMallocStat:            ctx.Bool(utils.RocksDBDumpMemoryStatFlag.Name),
+			DumpMallocStat:            ctx.Bool(utils.RocksDBDumpMallocStatFlag.Name),
 			DisableMetrics:            ctx.Bool(utils.RocksDBDisableMetricsFlag.Name),
 			Secondary:                 ctx.Bool(utils.RocksDBSecondaryFlag.Name),
 			CompressionType:           ctx.String(utils.RocksDBCompressionTypeFlag.Name),
