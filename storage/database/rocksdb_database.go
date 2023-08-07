@@ -110,7 +110,7 @@ func NewRocksDB(path string, config *RocksDBConfig) (*rocksDB, error) {
 		logger.Warn("Cache size too small, increasing to minimum recommended", "oldCacheSize", config.CacheSize, "newCacheSize", minCacheSizeForRocksDB)
 		config.CacheSize = minCacheSizeForRocksDB
 	}
-	if config.MaxOpenFiles >= 0 && config.MaxOpenFiles < minOpenFilesForRocksDB {
+	if config.MaxOpenFiles < minOpenFilesForRocksDB {
 		logger.Warn("Max open files too small, increasing to minimum recommended", "oldMaxOpenFiles", config.MaxOpenFiles, "newMaxOpenFiles", minOpenFilesForRocksDB)
 		config.MaxOpenFiles = minOpenFilesForRocksDB
 	}
@@ -123,8 +123,6 @@ func NewRocksDB(path string, config *RocksDBConfig) (*rocksDB, error) {
 	if cacheIndexAndFilter := config.CacheIndexAndFilter; cacheIndexAndFilter {
 		bbto.SetCacheIndexAndFilterBlocks(cacheIndexAndFilter)
 		bbto.SetPinL0FilterAndIndexBlocksInCache(cacheIndexAndFilter)
-	} else if config.MaxOpenFiles == -1 {
-		logger.Warn("Use caching index and filter blocks or limit max open files to avoid memory explosion")
 	}
 
 	policy := filterPolicyStrToNative(config.FilterPolicy)

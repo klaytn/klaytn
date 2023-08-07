@@ -74,11 +74,7 @@ func newShardedDB(dbc *DBConfig, et DBEntryType, numShards uint) (*shardedDB, er
 	sdbRocksDBMaxOpenFiles := GetDefaultRocksDBConfig().MaxOpenFiles / int(numShards)
 	if dbc.RocksDBConfig != nil {
 		sdbRocksDBCacheSize = dbc.RocksDBConfig.CacheSize / uint64(numShards)
-		if dbc.RocksDBConfig.MaxOpenFiles == -1 {
-			sdbRocksDBMaxOpenFiles = dbc.RocksDBConfig.MaxOpenFiles
-		} else {
-			sdbRocksDBMaxOpenFiles = dbc.RocksDBConfig.MaxOpenFiles / int(numShards)
-		}
+		sdbRocksDBMaxOpenFiles = dbc.RocksDBConfig.MaxOpenFiles / int(numShards)
 	}
 	for i := 0; i < int(numShards); i++ {
 		copiedDBC := *dbc

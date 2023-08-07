@@ -404,11 +404,7 @@ func getDBEntryConfig(originalDBC *DBConfig, i DBEntryType, dbDir string) *DBCon
 	if newDBC.RocksDBConfig != nil {
 		newRocksDBConfig := *originalDBC.RocksDBConfig
 		newRocksDBConfig.CacheSize = originalDBC.RocksDBConfig.CacheSize * uint64(ratio) / 100
-		if originalDBC.RocksDBConfig.MaxOpenFiles == -1 {
-			newRocksDBConfig.MaxOpenFiles = originalDBC.RocksDBConfig.MaxOpenFiles
-		} else {
-			newRocksDBConfig.MaxOpenFiles = originalDBC.RocksDBConfig.MaxOpenFiles * ratio / 100
-		}
+		newRocksDBConfig.MaxOpenFiles = originalDBC.RocksDBConfig.MaxOpenFiles * ratio / 100
 		newDBC.RocksDBConfig = &newRocksDBConfig
 	}
 

@@ -360,7 +360,7 @@ var (
 	}
 	RocksDBMaxOpenFilesFlag = &cli.IntFlag{
 		Name:    "db.rocksdb.max-open-files",
-		Usage:   "Set RocksDB max open files. (-1: unlimited, or the value should be greater than 16)",
+		Usage:   "Set RocksDB max open files. (the value should be greater than 16)",
 		Value:   database.GetDefaultRocksDBConfig().MaxOpenFiles,
 		EnvVars: []string{"KLAYTN_DB_ROCKSDB_MAX_OPEN_FILES"},
 	}
@@ -1636,7 +1636,7 @@ var (
 	}
 	DstRocksDBMaxOpenFilesFlag = &cli.IntFlag{
 		Name:    "db.dst.rocksdb.max-open-files",
-		Usage:   "Set RocksDB max open files. (-1: unlimited, or the value should be greater than 16)",
+		Usage:   "Set RocksDB max open files. (the value should be greater than 16)",
 		Value:   database.GetDefaultRocksDBConfig().MaxOpenFiles,
 		Aliases: []string{"migration.dst.db.rocksdb.max-open-files"},
 		EnvVars: []string{"KLAYTN_DB_DST_ROCKSDB_MAX_OPEN_FILES"},
