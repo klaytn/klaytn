@@ -483,8 +483,8 @@ jobs:
       - notify-success
 
   packaging-linux:
-    machine:
-      image: ubuntu-2004:202201-02
+    docker:
+      - image: klaytn/build_base:1.2-ubuntu18.04-go.1.20.6-solc0.8.13
     resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
@@ -496,7 +496,7 @@ jobs:
 
   packaging-linux-baobab:
     machine:
-      image: ubuntu-2004:202201-02
+      image: klaytn/build_base:1.2-ubuntu18.04-go.1.20.6-solc0.8.13
     resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
