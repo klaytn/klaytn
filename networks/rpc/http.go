@@ -269,6 +269,7 @@ func NewHTTPServer(cors []string, vhosts []string, timeouts HTTPTimeouts, srv ht
 	// Wrap the CORS-handler within a host-handler
 	handler := newCorsHandler(srv, cors)
 	handler = newVHostHandler(vhosts, handler)
+	handler = http.TimeoutHandler(handler, timeouts.ExecutionTimeout, "timeout")
 
 	// If os environment variables for NewRelic exist, register the NewRelicHTTPHandler
 	nrApp := newNewRelicApp()
