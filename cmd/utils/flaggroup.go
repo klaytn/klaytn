@@ -266,6 +266,8 @@ var FlagGroups = []FlagGroup{
 			RPCConcurrencyLimit,
 			RPCNonEthCompatibleFlag,
 			UnsafeDebugDisableFlag,
+			HeavyDebugRequestLimitFlag,
+			StateRegenerationTimeLimitFlag,
 			IPCDisabledFlag,
 			IPCPathFlag,
 			WSEnabledFlag,

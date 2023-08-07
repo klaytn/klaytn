@@ -185,7 +185,8 @@ type Config struct {
 	RPCTxFeeCap float64
 
 	// Disable option for unsafe debug APIs
-	DisableUnsafeDebug bool `toml:",omitempty"`
+	DisableUnsafeDebug         bool          `toml:",omitempty"`
+	StateRegenerationTimeLimit time.Duration `toml:",omitempty"`
 }
 
 type configMarshaling struct {

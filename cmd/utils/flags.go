@@ -900,9 +900,24 @@ var (
 	}
 	UnsafeDebugDisableFlag = &cli.BoolFlag{
 		Name:    "rpc.unsafe-debug.disable",
-		Usage:   "Disable unsafe debug APIs (traceTransaction, writeXXX, ...).",
+		Usage:   "Disable unsafe debug APIs (traceTransaction, traceChain, ...).",
 		Aliases: []string{"http-rpc.unsafe-debug.disable"},
 		EnvVars: []string{"KLAYTN_RPC_UNSAFE_DEBUG_DISABLE"},
+	}
+	// TODO-klaytn: Consider limiting the non-debug heavy apis.
+	HeavyDebugRequestLimitFlag = &cli.IntFlag{
+		Name:    "rpc.unsafe-debug.heavy-debug.requestlimit",
+		Usage:   "Limit the maximum number of heavy debug api requests. Works with unsafe-debug only.",
+		Value:   50,
+		Aliases: []string{},
+		EnvVars: []string{"KLAYTN_RPC_UNSAFE_DEBUG_HEAVY_DEBUG_REQUEST_LIMIT"},
+	}
+	StateRegenerationTimeLimitFlag = &cli.DurationFlag{
+		Name:    "rpc.unsafe-debug.state-regeneration.timelimit",
+		Usage:   "Limit the state regeneration time. Works with unsafe-debug only.",
+		Value:   60 * time.Second,
+		Aliases: []string{},
+		EnvVars: []string{"KLAYTN_RPC_UNSAFE_DEBUG_STATE_REGENERATION_TIME_LIMIT"},
 	}
 
 	// Network Settings

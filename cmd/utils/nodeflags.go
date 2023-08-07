@@ -295,6 +295,8 @@ var CommonRPCFlags = []cli.Flag{
 	altsrc.NewIntFlag(RPCIdleTimeoutFlag),
 	altsrc.NewIntFlag(RPCExecutionTimeoutFlag),
 	altsrc.NewBoolFlag(UnsafeDebugDisableFlag),
+	altsrc.NewIntFlag(HeavyDebugRequestLimitFlag),
+	altsrc.NewDurationFlag(StateRegenerationTimeLimitFlag),
 }
 
 var BNFlags = []cli.Flag{
