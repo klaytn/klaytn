@@ -15,6 +15,8 @@ import (
 var (
 	errNotEnoughRetiredBal = errors.New("the sum of retired accounts' balance is smaller than the distributing amount")
 	errNotProperStatus     = errors.New("cannot read a proper status value")
+
+	pendingCallOpts = &bind.CallOpts{Pending: true}
 )
 
 type kip103result struct {
@@ -34,14 +36,14 @@ func newKip103Receipt() *kip103result {
 }
 
 func (result *kip103result) fillRetired(contract *kip103.TreasuryRebalanceCaller, state *state.StateDB) error {
-	numRetiredBigInt, err := contract.GetRetiredCount(nil)
+	numRetiredBigInt, err := contract.GetRetiredCount(pendingCallOpts)
 	if err != nil {
 		logger.Error("Failed to get RetiredCount from TreasuryRebalance contract", "err", err)
 		return err
 	}
 
 	for i := 0; i < int(numRetiredBigInt.Int64()); i++ {
-		ret, err := contract.Retirees(nil, big.NewInt(int64(i)))
+		ret, err := contract.Retirees(pendingCallOpts, big.NewInt(int64(i)))
 		if err != nil {
 			logger.Error("Failed to get Retirees from TreasuryRebalance contract", "err", err)
 			return err
@@ -52,14 +54,14 @@ func (result *kip103result) fillRetired(contract *kip103.TreasuryRebalanceCaller
 }
 
 func (result *kip103result) fillNewbie(contract *kip103.TreasuryRebalanceCaller) error {
-	numNewbieBigInt, err := contract.GetNewbieCount(nil)
+	numNewbieBigInt, err := contract.GetNewbieCount(pendingCallOpts)
 	if err != nil {
 		logger.Error("Failed to get NewbieCount from TreasuryRebalance contract", "err", err)
 		return nil
 	}
 
 	for i := 0; i < int(numNewbieBigInt.Int64()); i++ {
-		ret, err := contract.Newbies(nil, big.NewInt(int64(i)))
+		ret, err := contract.Newbies(pendingCallOpts, big.NewInt(int64(i)))
 		if err != nil {
 			logger.Error("Failed to get Newbies from TreasuryRebalance contract", "err", err)
 			return err
@@ -107,17 +109,17 @@ func RebalanceTreasury(state *state.StateDB, chain consensus.ChainReader, header
 	}
 
 	// Validation 1) Check the target block number
-	if blockNum, err := caller.RebalanceBlockNumber(nil); err != nil || blockNum.Cmp(header.Number) != 0 {
+	if blockNum, err := caller.RebalanceBlockNumber(pendingCallOpts); err != nil || blockNum.Cmp(header.Number) != 0 {
 		return result, errors.New("cannot find a proper target block number")
 	}
 
 	// Validation 2) Check whether status is approved. It should be 2 meaning approved
-	if status, err := caller.Status(nil); err != nil || status != 2 {
+	if status, err := caller.Status(pendingCallOpts); err != nil || status != 2 {
 		return result, errNotProperStatus
 	}
 
 	// Validation 3) Check approvals from retirees
-	if err := caller.CheckRetiredsApproved(nil); err != nil {
+	if err := caller.CheckRetiredsApproved(pendingCallOpts); err != nil {
 		return result, err
 	}
 
