@@ -56,7 +56,9 @@ type BlockChainForCaller interface {
 // Note that SimulatedBackend creates a new temporary BlockChain for testing,
 // whereas BlockchainContractCaller uses an existing BlockChain with existing database.
 type BlockchainContractCaller struct {
-	bc BlockChainForCaller
+	bc            BlockChainForCaller
+	pendingHeader *types.Header
+	pendingState  *state.StateDB
 }
 
 // This nil assignment ensures at compile time that BlockchainContractCaller implements bind.ContractCaller.
@@ -68,12 +70,28 @@ func NewBlockchainContractCaller(bc BlockChainForCaller) *BlockchainContractCall
 	}
 }
 
+func NewBlockchainPendingContractCaller(bc BlockChainForCaller, pendingHeader *types.Header, pendingState *state.StateDB) *BlockchainContractCaller {
+	return &BlockchainContractCaller{
+		bc:            bc,
+		pendingHeader: pendingHeader,
+		pendingState:  pendingState,
+	}
+}
+
 func (b *BlockchainContractCaller) CodeAt(ctx context.Context, account common.Address, blockNumber *big.Int) ([]byte, error) {
 	if _, state, err := b.getBlockAndState(blockNumber); err != nil {
 		return nil, err
 	} else {
 		return state.GetCode(account), nil
 	}
+}
+
+func (b *BlockchainContractCaller) PendingCodeAt(ctx context.Context, account common.Address) ([]byte, error) {
+	if b.pendingState == nil {
+		return nil, bind.ErrNoPendingState
+	}
+
+	return b.pendingState.GetCode(account), nil
 }
 
 // Executes a read-only function call with respect to the specified block's state, or latest state if not specified.
@@ -90,7 +108,7 @@ func (b *BlockchainContractCaller) CallContract(ctx context.Context, call klaytn
 		return nil, err
 	}
 
-	res, err := b.callContract(call, block, state)
+	res, err := b.callContract(call, block.Header(), state)
 	if err != nil {
 		return nil, err
 	}
@@ -100,12 +118,27 @@ func (b *BlockchainContractCaller) CallContract(ctx context.Context, call klaytn
 	return res.Return(), res.Unwrap()
 }
 
-func (b *BlockchainContractCaller) callContract(call klaytn.CallMsg, block *types.Block, state *state.StateDB) (*blockchain.ExecutionResult, error) {
+func (b *BlockchainContractCaller) PendingCallContract(ctx context.Context, call klaytn.CallMsg) ([]byte, error) {
+	if b.pendingHeader == nil || b.pendingState == nil {
+		return nil, bind.ErrNoPendingState
+	}
+
+	res, err := b.callContract(call, b.pendingHeader, b.pendingState)
+	if err != nil {
+		return nil, err
+	}
+	if len(res.Revert()) > 0 {
+		return nil, blockchain.NewRevertError(res)
+	}
+	return res.Return(), res.Unwrap()
+}
+
+func (b *BlockchainContractCaller) callContract(call klaytn.CallMsg, header *types.Header, state *state.StateDB) (*blockchain.ExecutionResult, error) {
 	if call.Gas == 0 {
 		call.Gas = uint64(3e8) // enough gas for ordinary contract calls
 	}
 
-	intrinsicGas, err := types.IntrinsicGas(call.Data, nil, call.To == nil, b.bc.Config().Rules(block.Number()))
+	intrinsicGas, err := types.IntrinsicGas(call.Data, nil, call.To == nil, b.bc.Config().Rules(header.Number))
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +146,7 @@ func (b *BlockchainContractCaller) callContract(call klaytn.CallMsg, block *type
 	msg := types.NewMessage(call.From, call.To, 0, call.Value, call.Gas, call.GasPrice, call.Data,
 		false, intrinsicGas)
 
-	evmContext := blockchain.NewEVMContext(msg, block.Header(), b.bc, nil)
+	evmContext := blockchain.NewEVMContext(msg, header, b.bc, nil)
 	// EVM demands the sender to have enough KLAY balance (gasPrice * gasLimit) in buyGas()
 	// After KIP-71, gasPrice is nonzero baseFee, regardless of the msg.gasPrice (usually 0)
 	// But our sender (usually 0x0) won't have enough balance. Instead we override gasPrice = 0 here
