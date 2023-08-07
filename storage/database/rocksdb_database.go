@@ -105,11 +105,26 @@ func NewRocksDB(path string, config *RocksDBConfig) (*rocksDB, error) {
 		return nil, err
 	}
 
+	// Ensure we have some minimal caching and file guarantees
+	if config.CacheSize < minCacheSizeForRocksDB {
+		logger.Warn("Cache size too small, increasing to minimum recommended", "oldCacheSize", config.CacheSize, "newCacheSize", minCacheSizeForRocksDB)
+		config.CacheSize = minCacheSizeForRocksDB
+	}
+	if config.MaxOpenFiles < minOpenFilesForRocksDB {
+		logger.Warn("Max open files too small, increasing to minimum recommended", "oldMaxOpenFiles", config.MaxOpenFiles, "newMaxOpenFiles", minOpenFilesForRocksDB)
+		config.MaxOpenFiles = minOpenFilesForRocksDB
+	}
+
 	blockCacheSize := config.CacheSize / 2 * 1024 * 1024 // half of cacheSize in MiB
 	bufferSize := config.CacheSize / 2 * 1024 * 1024     // half of cacheSize in MiB
 
 	bbto := grocksdb.NewDefaultBlockBasedTableOptions()
 	bbto.SetBlockCache(grocksdb.NewLRUCache(blockCacheSize))
+	if cacheIndexAndFilter := config.CacheIndexAndFilter; cacheIndexAndFilter {
+		bbto.SetCacheIndexAndFilterBlocks(cacheIndexAndFilter)
+		bbto.SetPinL0FilterAndIndexBlocksInCache(cacheIndexAndFilter)
+	}
+
 	policy := filterPolicyStrToNative(config.FilterPolicy)
 	if policy != nil {
 		bbto.SetFilterPolicy(policy)
@@ -123,8 +138,9 @@ func NewRocksDB(path string, config *RocksDBConfig) (*rocksDB, error) {
 	opts.SetDumpMallocStats(config.DumpMallocStat)
 	opts.SetCompression(compressionStrToType(config.CompressionType))
 	opts.SetBottommostCompression(compressionStrToType(config.BottommostCompressionType))
+	opts.SetMaxOpenFiles(config.MaxOpenFiles)
 
-	logger.Info("RocksDB configuration", "blockCacheSize", blockCacheSize, "bufferSize", bufferSize, "enableDumpMallocStat", config.DumpMallocStat, "compressionType", config.CompressionType, "bottommostCompressionType", config.BottommostCompressionType, "filterPolicy", config.FilterPolicy, "disableMetrics", config.DisableMetrics)
+	logger.Info("RocksDB configuration", "blockCacheSize", blockCacheSize, "bufferSize", bufferSize, "enableDumpMallocStat", config.DumpMallocStat, "compressionType", config.CompressionType, "bottommostCompressionType", config.BottommostCompressionType, "filterPolicy", config.FilterPolicy, "disableMetrics", config.DisableMetrics, "maxOpenFiles", config.MaxOpenFiles, "cacheIndexAndFilter", config.CacheIndexAndFilter)
 
 	var (
 		db  *grocksdb.DB
@@ -245,7 +261,9 @@ func (i *rdbIter) Key() []byte {
 	if i.first {
 		return nil
 	}
-	return i.iter.Key().Data()
+	key := i.iter.Key()
+	defer key.Free()
+	return key.Data()
 }
 
 // Value returns the value of the current key/value pair, or nil if done. The
@@ -255,7 +273,9 @@ func (i *rdbIter) Value() []byte {
 	if i.first {
 		return nil
 	}
-	return i.iter.Value().Data()
+	val := i.iter.Value()
+	defer val.Free()
+	return val.Data()
 }
 
 // Release releases associated resources. Release should always succeed and can
@@ -280,7 +300,7 @@ func (db *rocksDB) Close() {
 	db.db.Close()
 	db.wo.Destroy()
 	db.ro.Destroy()
-	db.logger.Info("Rocksdb is closed")
+	db.logger.Info("RocksDB is closed")
 }
 
 func (db *rocksDB) updateMeter(name string, meter metrics.Meter) {

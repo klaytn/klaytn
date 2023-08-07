@@ -122,6 +122,8 @@ func createDBConfigForMigration(ctx *cli.Context) (*database.DBConfig, *database
 			CompressionType:           ctx.String(utils.RocksDBCompressionTypeFlag.Name),
 			BottommostCompressionType: ctx.String(utils.RocksDBBottommostCompressionTypeFlag.Name),
 			FilterPolicy:              ctx.String(utils.RocksDBFilterPolicyFlag.Name),
+			MaxOpenFiles:              ctx.Int(utils.RocksDBMaxOpenFilesFlag.Name),
+			CacheIndexAndFilter:       ctx.Bool(utils.RocksDBCacheIndexAndFilterFlag.Name),
 		},
 	}
 	if len(srcDBC.DBType) == 0 { // changed to invalid type
@@ -157,6 +159,8 @@ func createDBConfigForMigration(ctx *cli.Context) (*database.DBConfig, *database
 			CompressionType:           ctx.String(utils.DstRocksDBCompressionTypeFlag.Name),
 			BottommostCompressionType: ctx.String(utils.DstRocksDBBottommostCompressionTypeFlag.Name),
 			FilterPolicy:              ctx.String(utils.DstRocksDBFilterPolicyFlag.Name),
+			MaxOpenFiles:              ctx.Int(utils.DstRocksDBMaxOpenFilesFlag.Name),
+			CacheIndexAndFilter:       ctx.Bool(utils.DstRocksDBCacheIndexAndFilterFlag.Name),
 		},
 	}
 	if len(dstDBC.DBType) == 0 { // changed to invalid type

@@ -17,8 +17,11 @@
 package database
 
 const (
-	defaultRocksDBCacheSize = 2 // 2MB
-	defaultBitsPerKey       = 10
+	defaultRocksDBCacheSize    = 2 // 2MB
+	defaultBitsPerKey          = 10
+	minCacheSizeForRocksDB     = 16
+	defaultOpenFilesForRocksDB = 1024
+	minOpenFilesForRocksDB     = 16
 )
 
 var properties = []string{
@@ -71,6 +74,8 @@ type RocksDBConfig struct {
 	CompressionType           string
 	BottommostCompressionType string
 	FilterPolicy              string
+	MaxOpenFiles              int
+	CacheIndexAndFilter       bool
 }
 
 func GetDefaultRocksDBConfig() *RocksDBConfig {
@@ -82,5 +87,7 @@ func GetDefaultRocksDBConfig() *RocksDBConfig {
 		BottommostCompressionType: "zstd",
 		FilterPolicy:              "ribbon",
 		DisableMetrics:            false,
+		MaxOpenFiles:              defaultOpenFilesForRocksDB,
+		CacheIndexAndFilter:       true,
 	}
 }

@@ -534,6 +534,8 @@ func (kCfg *KlayConfig) SetKlayConfig(ctx *cli.Context, stack *node.Node) {
 	cfg.RocksDBConfig.BottommostCompressionType = ctx.String(RocksDBBottommostCompressionTypeFlag.Name)
 	cfg.RocksDBConfig.FilterPolicy = ctx.String(RocksDBFilterPolicyFlag.Name)
 	cfg.RocksDBConfig.DisableMetrics = ctx.Bool(RocksDBDisableMetricsFlag.Name)
+	cfg.RocksDBConfig.MaxOpenFiles = ctx.Int(RocksDBMaxOpenFilesFlag.Name)
+	cfg.RocksDBConfig.CacheIndexAndFilter = ctx.Bool(RocksDBCacheIndexAndFilterFlag.Name)
 
 	cfg.DynamoDBConfig.TableName = ctx.String(DynamoDBTableNameFlag.Name)
 	cfg.DynamoDBConfig.Region = ctx.String(DynamoDBRegionFlag.Name)

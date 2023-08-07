@@ -65,6 +65,8 @@ var (
 			utils.RocksDBCompressionTypeFlag,
 			utils.RocksDBBottommostCompressionTypeFlag,
 			utils.RocksDBDisableMetricsFlag,
+			utils.RocksDBMaxOpenFilesFlag,
+			utils.RocksDBCacheIndexAndFilterFlag,
 			utils.OverwriteGenesisFlag,
 			utils.LivePruningFlag,
 		},
@@ -169,6 +171,8 @@ func initGenesis(ctx *cli.Context) error {
 			CompressionType:           ctx.String(utils.RocksDBCompressionTypeFlag.Name),
 			BottommostCompressionType: ctx.String(utils.RocksDBBottommostCompressionTypeFlag.Name),
 			FilterPolicy:              ctx.String(utils.RocksDBFilterPolicyFlag.Name),
+			MaxOpenFiles:              ctx.Int(utils.RocksDBMaxOpenFilesFlag.Name),
+			CacheIndexAndFilter:       ctx.Bool(utils.RocksDBCacheIndexAndFilterFlag.Name),
 		}
 	}
 

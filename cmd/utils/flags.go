@@ -358,6 +358,17 @@ var (
 		Usage:   "Disable RocksDB metrics",
 		EnvVars: []string{"KLAYTN_DB_ROCKSDB_DISABLE_METRICS"},
 	}
+	RocksDBMaxOpenFilesFlag = &cli.IntFlag{
+		Name:    "db.rocksdb.max-open-files",
+		Usage:   "Set RocksDB max open files. (the value should be greater than 16)",
+		Value:   database.GetDefaultRocksDBConfig().MaxOpenFiles,
+		EnvVars: []string{"KLAYTN_DB_ROCKSDB_MAX_OPEN_FILES"},
+	}
+	RocksDBCacheIndexAndFilterFlag = &cli.BoolFlag{
+		Name:    "db.rocksdb.cache-index-and-filter",
+		Usage:   "Use block cache for index and filter blocks.",
+		EnvVars: []string{"KLAYTN_DB_ROCKSDB_CACHE_INDEX_AND_FILTER"},
+	}
 	DynamoDBTableNameFlag = &cli.StringFlag{
 		Name:    "db.dynamo.tablename",
 		Usage:   "Specifies DynamoDB table name. This is mandatory to use dynamoDB. (Set dbtype to use DynamoDBS3)",
@@ -1622,6 +1633,19 @@ var (
 		Usage:   "Disable RocksDB metrics",
 		Aliases: []string{"migration.dst.db.rocksdb.disable-metrics"},
 		EnvVars: []string{"KLAYTN_DB_DST_ROCKSDB_DISABLE_METRICS"},
+	}
+	DstRocksDBMaxOpenFilesFlag = &cli.IntFlag{
+		Name:    "db.dst.rocksdb.max-open-files",
+		Usage:   "Set RocksDB max open files. (the value should be greater than 16)",
+		Value:   database.GetDefaultRocksDBConfig().MaxOpenFiles,
+		Aliases: []string{"migration.dst.db.rocksdb.max-open-files"},
+		EnvVars: []string{"KLAYTN_DB_DST_ROCKSDB_MAX_OPEN_FILES"},
+	}
+	DstRocksDBCacheIndexAndFilterFlag = &cli.BoolFlag{
+		Name:    "db.dst.rocksdb.cache-index-and-filter",
+		Usage:   "Use block cache for index and filter blocks.",
+		Aliases: []string{"migration.dst.db.rocksdb.cache-index-and-filter"},
+		EnvVars: []string{"KLAYTN_DB_DST_ROCKSDB_CACHE_INDEX_AND_FILTER"},
 	}
 
 	// Config

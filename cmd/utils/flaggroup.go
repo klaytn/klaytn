@@ -100,6 +100,8 @@ var FlagGroups = []FlagGroup{
 			RocksDBBottommostCompressionTypeFlag,
 			RocksDBFilterPolicyFlag,
 			RocksDBDisableMetricsFlag,
+			RocksDBMaxOpenFilesFlag,
+			RocksDBCacheIndexAndFilterFlag,
 			DynamoDBTableNameFlag,
 			DynamoDBRegionFlag,
 			DynamoDBIsProvisionedFlag,
@@ -183,6 +185,8 @@ var FlagGroups = []FlagGroup{
 			DstRocksDBBottommostCompressionTypeFlag,
 			DstRocksDBFilterPolicyFlag,
 			DstRocksDBDisableMetricsFlag,
+			DstRocksDBMaxOpenFilesFlag,
+			DstRocksDBCacheIndexAndFilterFlag,
 		},
 	},
 	{
