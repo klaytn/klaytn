@@ -11,6 +11,7 @@ import (
 
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts/abi"
+	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/contracts/kip103"
@@ -24,8 +25,14 @@ type mockKip103ContractCaller struct {
 	retMap     map[string][]interface{}
 }
 
+var _ (bind.PendingContractCaller) = (*mockKip103ContractCaller)(nil)
+
 func (caller *mockKip103ContractCaller) CodeAt(ctx context.Context, contract common.Address, blockNumber *big.Int) ([]byte, error) {
 	return []byte(kip103.TreasuryRebalanceBinRuntime), nil
+}
+
+func (caller *mockKip103ContractCaller) PendingCodeAt(ctx context.Context, contract common.Address) ([]byte, error) {
+	return caller.CodeAt(ctx, contract, nil)
 }
 
 func (caller *mockKip103ContractCaller) CallContract(ctx context.Context, call klaytn.CallMsg, blockNumber *big.Int) ([]byte, error) {
@@ -40,6 +47,10 @@ func (caller *mockKip103ContractCaller) CallContract(ctx context.Context, call k
 
 	mockRet := caller.retMap[mockKey]
 	return caller.abi.Methods[funcName].Outputs.Pack(mockRet...)
+}
+
+func (caller *mockKip103ContractCaller) PendingCallContract(ctx context.Context, call klaytn.CallMsg) ([]byte, error) {
+	return caller.CallContract(ctx, call, nil)
 }
 
 func TestRebalanceTreasury(t *testing.T) {
