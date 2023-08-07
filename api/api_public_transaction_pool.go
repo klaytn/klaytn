@@ -553,7 +553,7 @@ func resend(s *PublicTransactionPoolAPI, ctx context.Context, sendArgs NewTxArgs
 	return common.Hash{}, fmt.Errorf("Transaction %#x not found", matchTx.Hash())
 }
 
-// RecoverTransaction recovers the sender address from a signed raw transaction.
+// RecoverFromTransaction recovers the sender address from a signed raw transaction.
 // The signature is validated against the sender account's key configuration at the given block number.
 func (s *PublicTransactionPoolAPI) RecoverFromTransaction(ctx context.Context, encodedTx hexutil.Bytes, blockNumber rpc.BlockNumber) (common.Address, error) {
 	tx := new(types.Transaction)
@@ -573,7 +573,7 @@ func (s *PublicTransactionPoolAPI) RecoverFromTransaction(ctx context.Context, e
 	return signer.Sender(tx)
 }
 
-// RecoverMessage validates that the message is signed by one of the keys in the given account.
+// RecoverFromMessage validates that the message is signed by one of the keys in the given account.
 // Returns the recovered signer address, which may be different from the account address.
 func (s *PublicTransactionPoolAPI) RecoverFromMessage(
 	ctx context.Context, address common.Address, data, sig hexutil.Bytes, blockNumber rpc.BlockNumber,
