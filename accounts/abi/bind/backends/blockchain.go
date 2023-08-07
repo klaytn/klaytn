@@ -63,6 +63,7 @@ type BlockchainContractCaller struct {
 
 // This nil assignment ensures at compile time that BlockchainContractCaller implements bind.ContractCaller.
 var _ bind.ContractCaller = (*BlockchainContractCaller)(nil)
+var _ bind.PendingContractCaller = (*BlockchainContractCaller)(nil)
 
 func NewBlockchainContractCaller(bc BlockChainForCaller) *BlockchainContractCaller {
 	return &BlockchainContractCaller{
