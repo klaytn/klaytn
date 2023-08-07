@@ -561,7 +561,7 @@ func (s *PublicTransactionPoolAPI) RecoverFromTransaction(ctx context.Context, e
 		return common.Address{}, err
 	}
 
-	signer := types.MakeSigner(s.b.ChainConfig(), s.b.CurrentBlock().Number())
+	signer := types.MakeSigner(s.b.ChainConfig(), new(big.Int).SetUint64(blockNumber.Uint64()))
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNumber)
 	if err != nil {
 		return common.Address{}, err
