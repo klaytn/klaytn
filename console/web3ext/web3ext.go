@@ -1006,13 +1006,13 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
-			name: 'recoverTransaction',
-			call: 'klay_recoverTransaction',
+			name: 'recoverFromTransaction',
+			call: 'klay_recoverFromTransaction',
 			params: 2
 		}),
 		new web3._extend.Method({
-			name: 'recoverMessage',
-			call: 'klay_recoverMessage',
+			name: 'recoverFromMessage',
+			call: 'klay_recoverFromMessage',
 			params: 4
 		}),
 		new web3._extend.Method({
