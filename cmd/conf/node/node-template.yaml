@@ -171,38 +171,37 @@ txpool:
   spamthrottler: 
     disable: false
 
-http-rpc: 
-  enable: false
-  addr: localhost
-  port: 8551
-  api: ""
-  gascap: 0
-  eth-tx-feecap: 0.0
-  read-timeout: 30
-  write-timeout: 30
-  idle-timeout: 120
-  execution-timeout: 30
-  concurrency-limit: 3000
-  # cors-domain: ""
-  vhosts: localhost
-  eth-noncompatible: false
-
-ws-rpc: 
-  enable: false
-  addr: localhost
-  port: 8552
-  api: ""
-  origins: ""
-  max-subscription-per-conn: 3000
-  # will be added again after bugfix
-  # read-deadline: 0
-  write-deadline: 0
-  max-connections: 3000
-
-g-rpc: 
-  enable: false
-  addr: localhost
-  port: 8553
+rpc:
+  http:
+    enable: false
+    addr: localhost
+    port: 8551
+    api: ""
+    gascap: 0
+    eth-tx-feecap: 0.0
+    read-timeout: 30
+    write-timeout: 30
+    idle-timeout: 120
+    execution-timeout: 30
+    concurrency-limit: 3000
+    # cors-domain: ""
+    vhosts: localhost
+    eth-noncompatible: false
+  ws:
+    enable: false
+    addr: localhost
+    port: 8552
+    api: ""
+    origins: ""
+    max-subscription-per-conn: 3000
+    # will be added again after bugfix
+    # read-deadline: 0
+    write-deadline: 0
+    max-connections: 3000
+  grpc:
+    enable: false
+    addr: localhost
+    port: 8553
 
 ipc: 
   disable: false

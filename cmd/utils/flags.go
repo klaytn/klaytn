@@ -671,184 +671,184 @@ var (
 	RPCEnabledFlag = &cli.BoolFlag{
 		Name:    "rpc",
 		Usage:   "Enable the HTTP-RPC server",
-		Aliases: []string{"http-rpc.enable"},
+		Aliases: []string{"rpc.http.enable"},
 		EnvVars: []string{"KLAYTN_RPC"},
 	}
 	RPCListenAddrFlag = &cli.StringFlag{
 		Name:    "rpcaddr",
 		Usage:   "HTTP-RPC server listening interface",
 		Value:   node.DefaultHTTPHost,
-		Aliases: []string{"http-rpc.addr"},
+		Aliases: []string{"rpc.http.addr"},
 		EnvVars: []string{"KLAYTN_RPCADDR"},
 	}
 	RPCPortFlag = &cli.IntFlag{
 		Name:    "rpcport",
 		Usage:   "HTTP-RPC server listening port",
 		Value:   node.DefaultHTTPPort,
-		Aliases: []string{"http-rpc.port"},
+		Aliases: []string{"rpc.http.port"},
 		EnvVars: []string{"KLAYTN_RPCPORT"},
 	}
 	RPCCORSDomainFlag = &cli.StringFlag{
 		Name:    "rpccorsdomain",
 		Usage:   "Comma separated list of domains from which to accept cross origin requests (browser enforced)",
 		Value:   "",
-		Aliases: []string{"http-rpc.cors-domain"},
+		Aliases: []string{"rpc.http.cors-domain"},
 		EnvVars: []string{"KLAYTN_RPCCORSDOMAIN"},
 	}
 	RPCVirtualHostsFlag = &cli.StringFlag{
 		Name:    "rpcvhosts",
 		Usage:   "Comma separated list of virtual hostnames from which to accept requests (server enforced). Accepts '*' wildcard.",
 		Value:   strings.Join(node.DefaultConfig.HTTPVirtualHosts, ","),
-		Aliases: []string{"http-rpc.vhosts"},
+		Aliases: []string{"rpc.http.vhosts"},
 		EnvVars: []string{"KLAYTN_RPCVHOSTS"},
 	}
 	RPCApiFlag = &cli.StringFlag{
 		Name:    "rpcapi",
 		Usage:   "API's offered over the HTTP-RPC interface",
 		Value:   "",
-		Aliases: []string{"http-rpc.api"},
+		Aliases: []string{"rpc.http.api"},
 		EnvVars: []string{"KLAYTN_RPCAPI"},
 	}
 	RPCGlobalGasCap = &cli.Uint64Flag{
 		Name:    "rpc.gascap",
 		Usage:   "Sets a cap on gas that can be used in klay_call/estimateGas",
-		Aliases: []string{"http-rpc.gascap"},
+		Aliases: []string{"rpc.http.gascap"},
 		EnvVars: []string{"KLAYTN_RPC_GASCAP"},
 	}
 	RPCGlobalEVMTimeoutFlag = &cli.DurationFlag{
 		Name:    "rpc.evmtimeout",
 		Usage:   "Sets a timeout used for eth_call (0=infinite)",
-		Aliases: []string{"http-rpc.evmtimeout"},
+		Aliases: []string{"rpc.http.evm-timeout"},
 		EnvVars: []string{"KLAYTN_RPC_EVMTIMEOUT"},
 	}
 	RPCGlobalEthTxFeeCapFlag = &cli.Float64Flag{
 		Name:    "rpc.ethtxfeecap",
 		Usage:   "Sets a cap on transaction fee (in klay) that can be sent via the eth namespace RPC APIs (0 = no cap)",
-		Aliases: []string{"http-rpc.eth-tx-feecap"},
+		Aliases: []string{"rpc.http.eth-tx-feecap"},
 		EnvVars: []string{"KLAYTN_RPC_ETHTXFEECAP"},
 	}
 	RPCConcurrencyLimit = &cli.IntFlag{
 		Name:    "rpc.concurrencylimit",
 		Usage:   "Sets a limit of concurrent connection number of HTTP-RPC server",
 		Value:   rpc.ConcurrencyLimit,
-		Aliases: []string{"http-rpc.concurrency-limit"},
+		Aliases: []string{"rpc.http.concurrency-limit"},
 		EnvVars: []string{"KLAYTN_RPC_CONCURRENCYLIMIT"},
 	}
 	RPCNonEthCompatibleFlag = &cli.BoolFlag{
 		Name:    "rpc.eth.noncompatible",
 		Usage:   "Disables the eth namespace API return formatting for compatibility",
-		Aliases: []string{"http-rpc.eth-noncompatible"},
+		Aliases: []string{"rpc.http.eth-noncompatible"},
 		EnvVars: []string{"KLAYTN_RPC_ETH_NONCOMPATIBLE"},
 	}
 	RPCReadTimeout = &cli.IntFlag{
 		Name:    "rpcreadtimeout",
 		Usage:   "HTTP-RPC server read timeout (seconds)",
 		Value:   int(rpc.DefaultHTTPTimeouts.ReadTimeout / time.Second),
-		Aliases: []string{"http-rpc.read-timeout"},
+		Aliases: []string{"rpc.http.read-timeout"},
 		EnvVars: []string{"KLAYTN_RPCREADTIMEOUT"},
 	}
 	RPCWriteTimeoutFlag = &cli.IntFlag{
 		Name:    "rpcwritetimeout",
 		Usage:   "HTTP-RPC server write timeout (seconds)",
 		Value:   int(rpc.DefaultHTTPTimeouts.WriteTimeout / time.Second),
-		Aliases: []string{"http-rpc.write-timeout"},
+		Aliases: []string{"rpc.http.write-timeout"},
 		EnvVars: []string{"KLAYTN_RPCWRITETIMEOUT"},
 	}
 	RPCIdleTimeoutFlag = &cli.IntFlag{
 		Name:    "rpcidletimeout",
 		Usage:   "HTTP-RPC server idle timeout (seconds)",
 		Value:   int(rpc.DefaultHTTPTimeouts.IdleTimeout / time.Second),
-		Aliases: []string{"http-rpc.idle-timeout"},
+		Aliases: []string{"rpc.http.idle-timeout"},
 		EnvVars: []string{"KLAYTN_RPCIDLETIMEOUT"},
 	}
 	RPCExecutionTimeoutFlag = &cli.IntFlag{
 		Name:    "rpcexecutiontimeout",
 		Usage:   "HTTP-RPC server execution timeout (seconds)",
 		Value:   int(rpc.DefaultHTTPTimeouts.ExecutionTimeout / time.Second),
-		Aliases: []string{"http-rpc.execution-timeout"},
+		Aliases: []string{"rpc.http.execution-timeout"},
 		EnvVars: []string{"KLAYTN_RPCEXECUTIONTIMEOUT"},
 	}
 
 	WSEnabledFlag = &cli.BoolFlag{
 		Name:    "ws",
 		Usage:   "Enable the WS-RPC server",
-		Aliases: []string{"ws-rpc.enable"},
+		Aliases: []string{"rpc.ws.enable"},
 		EnvVars: []string{"KLAYTN_WS"},
 	}
 	WSListenAddrFlag = &cli.StringFlag{
 		Name:    "wsaddr",
 		Usage:   "WS-RPC server listening interface",
 		Value:   node.DefaultWSHost,
-		Aliases: []string{"ws-rpc.addr"},
+		Aliases: []string{"rpc.ws.addr"},
 		EnvVars: []string{"KLAYTN_WSADDR"},
 	}
 	WSPortFlag = &cli.IntFlag{
 		Name:    "wsport",
 		Usage:   "WS-RPC server listening port",
 		Value:   node.DefaultWSPort,
-		Aliases: []string{"ws-rpc.port"},
+		Aliases: []string{"rpc.ws.port"},
 		EnvVars: []string{"KLAYTN_WSPORT"},
 	}
 	WSApiFlag = &cli.StringFlag{
 		Name:    "wsapi",
 		Usage:   "API's offered over the WS-RPC interface",
 		Value:   "",
-		Aliases: []string{"ws-rpc.api"},
+		Aliases: []string{"rpc.ws.api"},
 		EnvVars: []string{"KLAYTN_WSAPI"},
 	}
 	WSAllowedOriginsFlag = &cli.StringFlag{
 		Name:    "wsorigins",
 		Usage:   "Origins from which to accept websockets requests",
 		Value:   "",
-		Aliases: []string{"ws-rpc.origins"},
+		Aliases: []string{"rpc.ws.origins"},
 		EnvVars: []string{"KLAYTN_WSORIGINS"},
 	}
 	WSMaxSubscriptionPerConn = &cli.IntFlag{
 		Name:    "wsmaxsubscriptionperconn",
 		Usage:   "Allowed maximum subscription number per a websocket connection",
 		Value:   int(rpc.MaxSubscriptionPerWSConn),
-		Aliases: []string{"ws-rpc.max-subscription-per-conn"},
+		Aliases: []string{"rpc.ws.max-subscription-per-conn"},
 		EnvVars: []string{"KLAYTN_WSMAXSUBSCRIPTIONPERCONN"},
 	}
 	WSReadDeadLine = &cli.Int64Flag{
 		Name:    "wsreaddeadline",
 		Usage:   "Set the read deadline on the underlying network connection in seconds. 0 means read will not timeout",
 		Value:   rpc.WebsocketReadDeadline,
-		Aliases: []string{"ws-rpc.read-deadline"},
+		Aliases: []string{"rpc.ws.read-deadline"},
 		EnvVars: []string{"KLAYTN_WSREADDEADLINE"},
 	}
 	WSWriteDeadLine = &cli.Int64Flag{
 		Name:    "wswritedeadline",
 		Usage:   "Set the Write deadline on the underlying network connection in seconds. 0 means write will not timeout",
 		Value:   rpc.WebsocketWriteDeadline,
-		Aliases: []string{"ws-rpc.write-deadline"},
+		Aliases: []string{"rpc.ws.write-deadline"},
 		EnvVars: []string{"KLAYTN_WSWRITEDEADLINE"},
 	}
 	WSMaxConnections = &cli.IntFlag{
 		Name:    "wsmaxconnections",
 		Usage:   "Allowed maximum websocket connection number",
 		Value:   3000,
-		Aliases: []string{"ws-rpc.max-connections"},
+		Aliases: []string{"rpc.ws.max-connections"},
 		EnvVars: []string{"KLAYTN_WSMAXCONNECTIONS"},
 	}
 	GRPCEnabledFlag = &cli.BoolFlag{
 		Name:    "grpc",
 		Usage:   "Enable the gRPC server",
-		Aliases: []string{"g-rpc.enable"},
+		Aliases: []string{"rpc.grpc.enable"},
 		EnvVars: []string{"KLAYTN_GRPC"},
 	}
 	GRPCListenAddrFlag = &cli.StringFlag{
 		Name:    "grpcaddr",
 		Usage:   "gRPC server listening interface",
 		Value:   node.DefaultGRPCHost,
-		Aliases: []string{"g-rpc.addr"},
+		Aliases: []string{"rpc.grpc.addr"},
 		EnvVars: []string{"KLAYTN_GRPCADDR"},
 	}
 	GRPCPortFlag = &cli.IntFlag{
 		Name:    "grpcport",
 		Usage:   "gRPC server listening port",
 		Value:   node.DefaultGRPCPort,
-		Aliases: []string{"g-rpc.port"},
+		Aliases: []string{"rpc.grpc.port"},
 		EnvVars: []string{"KLAYTN_GRPCPORT"},
 	}
 	IPCDisabledFlag = &cli.BoolFlag{
@@ -901,7 +901,7 @@ var (
 	UnsafeDebugDisableFlag = &cli.BoolFlag{
 		Name:    "rpc.unsafe-debug.disable",
 		Usage:   "Disable unsafe debug APIs (traceTransaction, writeXXX, ...).",
-		Aliases: []string{"http-rpc.unsafe-debug.disable"},
+		Aliases: []string{"rpc.http.unsafe-debug.disable"},
 		EnvVars: []string{"KLAYTN_RPC_UNSAFE_DEBUG_DISABLE"},
 	}
 
