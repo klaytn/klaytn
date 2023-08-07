@@ -19,6 +19,7 @@ package core
 import (
 	"encoding/hex"
 	"fmt"
+	"math"
 	"math/big"
 	"sort"
 	"time"
@@ -29,11 +30,15 @@ import (
 )
 
 type Vrank struct {
-	startTime            time.Time
-	view                 istanbul.View
-	committee            istanbul.Validators
-	threshold            time.Duration
-	commitArrivalTimeMap map[common.Address]time.Duration
+	startTime             time.Time
+	view                  istanbul.View
+	committee             istanbul.Validators
+	threshold             time.Duration
+	firstCommit           int64
+	quorumCommit          int64
+	avgCommitWithinQuorum int64
+	lastCommit            int64
+	commitArrivalTimeMap  map[common.Address]time.Duration
 }
 
 var (
@@ -61,11 +66,15 @@ const (
 func NewVrank(view istanbul.View, committee istanbul.Validators) *Vrank {
 	threshold, _ := time.ParseDuration(vrankDefaultThreshold)
 	return &Vrank{
-		startTime:            time.Now(),
-		view:                 view,
-		committee:            committee,
-		threshold:            threshold,
-		commitArrivalTimeMap: make(map[common.Address]time.Duration),
+		startTime:             time.Now(),
+		view:                  view,
+		committee:             committee,
+		threshold:             threshold,
+		firstCommit:           int64(0),
+		quorumCommit:          int64(0),
+		avgCommitWithinQuorum: int64(0),
+		lastCommit:            int64(0),
+		commitArrivalTimeMap:  make(map[common.Address]time.Duration),
 	}
 }
 
@@ -85,19 +94,27 @@ func (v *Vrank) HandleCommitted(blockNum *big.Int) {
 		return
 	}
 
-	committedTime := v.TimeSinceStart()
-	if v.threshold > committedTime {
-		v.threshold = committedTime
-	}
-
-	vrankQuorumCommitArrivalTimeGauge.Update(int64(committedTime))
 	if len(v.commitArrivalTimeMap) != 0 {
 		sum := int64(0)
-		for _, v := range v.commitArrivalTimeMap {
-			sum += int64(v)
+		firstCommitTime := time.Duration(math.MaxInt64)
+		quorumCommitTime := time.Duration(0)
+		for _, arrivalTime := range v.commitArrivalTimeMap {
+			sum += int64(arrivalTime)
+			if firstCommitTime > arrivalTime {
+				firstCommitTime = arrivalTime
+			}
+			if quorumCommitTime < arrivalTime {
+				quorumCommitTime = arrivalTime
+			}
 		}
 		avg := sum / int64(len(v.commitArrivalTimeMap))
-		vrankAvgCommitArrivalTimeWithinQuorumGauge.Update(avg)
+		v.avgCommitWithinQuorum = avg
+		v.firstCommit = int64(firstCommitTime)
+		v.quorumCommit = int64(quorumCommitTime)
+
+		if quorumCommitTime != time.Duration(0) && v.threshold > quorumCommitTime {
+			v.threshold = quorumCommitTime
+		}
 	}
 }
 
@@ -132,15 +149,30 @@ func (v *Vrank) Log() {
 			lastCommit = t
 		}
 	}
-	if lastCommit != time.Duration(0) {
-		vrankLastCommitArrivalTimeGauge.Update(int64(lastCommit))
-	}
+	v.lastCommit = int64(lastCommit)
+
+	v.updateMetrics()
 
 	logger.Info("VRank", "seq", v.view.Sequence.Int64(),
 		"round", v.view.Round.Int64(),
 		"bitmap", v.Bitmap(),
 		"late", encodeDurationBatch(lateCommits),
 	)
+}
+
+func (v *Vrank) updateMetrics() {
+	if v.firstCommit != int64(0) {
+		vrankFirstCommitArrivalTimeGauge.Update(v.firstCommit)
+	}
+	if v.quorumCommit != int64(0) {
+		vrankQuorumCommitArrivalTimeGauge.Update(v.quorumCommit)
+	}
+	if v.avgCommitWithinQuorum != int64(0) {
+		vrankAvgCommitArrivalTimeWithinQuorumGauge.Update(v.avgCommitWithinQuorum)
+	}
+	if v.lastCommit != int64(0) {
+		vrankLastCommitArrivalTimeGauge.Update(v.lastCommit)
+	}
 }
 
 func (v *Vrank) isTargetCommit(msg *istanbul.Subject, src istanbul.Validator) bool {
