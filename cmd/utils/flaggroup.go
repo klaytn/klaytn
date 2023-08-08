@@ -268,6 +268,8 @@ var FlagGroups = []FlagGroup{
 		Name: "API AND CONSOLE",
 		Flags: []cli.Flag{
 			RPCEnabledFlag,
+			HeavyDebugRequestLimitFlag,
+			StateRegenerationTimeLimitFlag,
 			RPCListenAddrFlag,
 			RPCPortFlag,
 			RPCCORSDomainFlag,
