@@ -1006,6 +1006,16 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
+			name: 'recoverFromTransaction',
+			call: 'klay_recoverFromTransaction',
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'recoverFromMessage',
+			call: 'klay_recoverFromMessage',
+			params: 4
+		}),
+		new web3._extend.Method({
 			name: 'getCypressCredit',
 			call: 'klay_getCypressCredit',
 		}),
