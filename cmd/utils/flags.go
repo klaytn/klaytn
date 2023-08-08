@@ -906,14 +906,14 @@ var (
 	}
 	// TODO-klaytn: Consider limiting the non-debug heavy apis.
 	HeavyDebugRequestLimitFlag = &cli.IntFlag{
-		Name:    "rpc.unsafe-debug.heavy-debug.requestlimit",
+		Name:    "rpc.unsafe-debug.heavy-debug.request-limit",
 		Usage:   "Limit the maximum number of heavy debug api requests. Works with unsafe-debug only.",
 		Value:   50,
 		Aliases: []string{},
 		EnvVars: []string{"KLAYTN_RPC_UNSAFE_DEBUG_HEAVY_DEBUG_REQUEST_LIMIT"},
 	}
 	StateRegenerationTimeLimitFlag = &cli.DurationFlag{
-		Name:    "rpc.unsafe-debug.state-regeneration.timelimit",
+		Name:    "rpc.unsafe-debug.state-regeneration.time-limit",
 		Usage:   "Limit the state regeneration time. Works with unsafe-debug only.",
 		Value:   60 * time.Second,
 		Aliases: []string{},
