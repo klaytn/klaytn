@@ -1031,11 +1031,11 @@ var (
 		Category: "API AND CONSOLE",
 	}
 	UnsafeDebugDisableFlag = &cli.BoolFlag{
-		Name:    "rpc.unsafe-debug.disable",
-		Usage:   "Disable unsafe debug APIs (traceTransaction, traceChain, ...).",
-		Aliases: []string{"http-rpc.unsafe-debug.disable"},
-		EnvVars: []string{"KLAYTN_RPC_UNSAFE_DEBUG_DISABLE"},
-    Category: "API AND CONSOLE",
+		Name:     "rpc.unsafe-debug.disable",
+		Usage:    "Disable unsafe debug APIs (traceTransaction, traceChain, ...).",
+		Aliases:  []string{"http-rpc.unsafe-debug.disable"},
+		EnvVars:  []string{"KLAYTN_RPC_UNSAFE_DEBUG_DISABLE"},
+		Category: "API AND CONSOLE",
 	}
 	// TODO-klaytn: Consider limiting the non-debug heavy apis.
 	HeavyDebugRequestLimitFlag = &cli.IntFlag{
