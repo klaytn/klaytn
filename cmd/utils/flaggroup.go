@@ -283,6 +283,8 @@ var FlagGroups = []FlagGroup{
 			RPCReadTimeout,
 			RPCWriteTimeoutFlag,
 			UnsafeDebugDisableFlag,
+			HeavyDebugRequestLimitFlag,
+			StateRegenerationTimeLimitFlag,
 			IPCDisabledFlag,
 			IPCPathFlag,
 			WSEnabledFlag,

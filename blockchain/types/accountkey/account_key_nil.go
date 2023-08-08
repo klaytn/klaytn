@@ -46,6 +46,10 @@ func (a *AccountKeyNil) IsCompositeType() bool {
 	return false
 }
 
+func (a *AccountKeyNil) ValidateMember(recoveredKey *ecdsa.PublicKey, from common.Address) bool {
+	return false
+}
+
 func (a *AccountKeyNil) Equal(b AccountKey) bool {
 	if _, ok := b.(*AccountKeyNil); !ok {
 		return false

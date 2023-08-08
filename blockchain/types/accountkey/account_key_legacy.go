@@ -45,6 +45,13 @@ func (a *AccountKeyLegacy) IsCompositeType() bool {
 	return false
 }
 
+// Other accountKey types have the pubkey so that we can compare the pubkeys in Klaytn.
+// But AccountKeyLegacy doesn't have the pubkey so ValidateMember receives 'from' address more
+// and then checks whether the recovered pubkey's address form equals the 'from' address.
+func (a *AccountKeyLegacy) ValidateMember(recoveredKey *ecdsa.PublicKey, from common.Address) bool {
+	return from == crypto.PubkeyToAddress(*recoveredKey)
+}
+
 func (a *AccountKeyLegacy) Equal(b AccountKey) bool {
 	if _, ok := b.(*AccountKeyLegacy); !ok {
 		return false

@@ -552,3 +552,52 @@ func resend(s *PublicTransactionPoolAPI, ctx context.Context, sendArgs NewTxArgs
 
 	return common.Hash{}, fmt.Errorf("Transaction %#x not found", matchTx.Hash())
 }
+
+// RecoverFromTransaction recovers the sender address from a signed raw transaction.
+// The signature is validated against the sender account's key configuration at the given block number.
+func (s *PublicTransactionPoolAPI) RecoverFromTransaction(ctx context.Context, encodedTx hexutil.Bytes, blockNumber rpc.BlockNumber) (common.Address, error) {
+	tx := new(types.Transaction)
+	if err := rlp.DecodeBytes(encodedTx, tx); err != nil {
+		return common.Address{}, err
+	}
+
+	var bn uint64
+	if blockNumber == rpc.LatestBlockNumber || blockNumber == rpc.PendingBlockNumber {
+		bn = s.b.CurrentBlock().NumberU64()
+	} else {
+		bn = blockNumber.Uint64()
+	}
+
+	signer := types.MakeSigner(s.b.ChainConfig(), new(big.Int).SetUint64(bn))
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNumber)
+	if err != nil {
+		return common.Address{}, err
+	}
+	_, err = tx.ValidateSender(signer, state, bn)
+	if err != nil {
+		return common.Address{}, err
+	}
+	return signer.Sender(tx)
+}
+
+// RecoverFromMessage validates that the message is signed by one of the keys in the given account.
+// Returns the recovered signer address, which may be different from the account address.
+func (s *PublicTransactionPoolAPI) RecoverFromMessage(
+	ctx context.Context, address common.Address, data, sig hexutil.Bytes, blockNumber rpc.BlockNumber,
+) (common.Address, error) {
+	pubkey, err := klayEthEcRecover(data, sig)
+	if err != nil {
+		return common.Address{}, err
+	}
+
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNumber)
+	if err != nil {
+		return common.Address{}, err
+	}
+
+	key := state.GetKey(address)
+	if key.ValidateMember(pubkey, address) {
+		return crypto.PubkeyToAddress(*pubkey), nil
+	}
+	return common.Address{}, fmt.Errorf("Invalid signature")
+}
