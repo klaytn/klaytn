@@ -31,11 +31,17 @@ import (
 	"github.com/klaytn/klaytn/log"
 )
 
-var Logger = log.NewModuleLogger(log.AccountsAbiBind)
+var (
+	Logger     = log.NewModuleLogger(log.AccountsAbiBind)
+	ErrEmptyTx = errors.New("Transaction must not be nil")
+)
 
 // WaitMined waits for tx to be mined on the blockchain.
 // It stops waiting when the context is canceled.
 func WaitMined(ctx context.Context, b DeployBackend, tx *types.Transaction) (*types.Receipt, error) {
+	if tx == nil {
+		return nil, ErrEmptyTx
+	}
 	queryTicker := time.NewTicker(time.Second)
 	defer queryTicker.Stop()
 
@@ -82,6 +88,9 @@ func CheckWaitMined(b DeployBackend, tx *types.Transaction) error {
 // WaitDeployed waits for a contract deployment transaction and returns the on-chain
 // contract address when it is mined. It stops waiting when ctx is canceled.
 func WaitDeployed(ctx context.Context, b DeployBackend, tx *types.Transaction) (common.Address, error) {
+	if tx == nil {
+		return common.Address{}, ErrEmptyTx
+	}
 	if tx.To() != nil {
 		return common.Address{}, errors.New("tx is not contract creation")
 	}
