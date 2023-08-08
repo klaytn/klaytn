@@ -561,17 +561,19 @@ func (s *PublicTransactionPoolAPI) RecoverFromTransaction(ctx context.Context, e
 		return common.Address{}, err
 	}
 
-	var signer types.Signer
+	var bn uint64
 	if blockNumber == rpc.LatestBlockNumber || blockNumber == rpc.PendingBlockNumber {
-		signer = types.MakeSigner(s.b.ChainConfig(), new(big.Int).SetUint64(s.b.CurrentBlock().Number().Uint64()))
+		bn = s.b.CurrentBlock().NumberU64()
 	} else {
-		signer = types.MakeSigner(s.b.ChainConfig(), new(big.Int).SetUint64(blockNumber.Uint64()))
+		bn = blockNumber.Uint64()
 	}
+
+	signer := types.MakeSigner(s.b.ChainConfig(), new(big.Int).SetUint64(bn))
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNumber)
 	if err != nil {
 		return common.Address{}, err
 	}
-	_, err = tx.ValidateSender(signer, state, blockNumber.Uint64())
+	_, err = tx.ValidateSender(signer, state, bn)
 	if err != nil {
 		return common.Address{}, err
 	}
