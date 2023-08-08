@@ -945,7 +945,7 @@ func TestCommit(t *testing.T) {
 				defer engine.Stop()
 
 				block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
-				expectedBlock, _ := engine.updateBlock(engine.chain.GetHeader(block.ParentHash(), block.NumberU64()-1), block)
+				expectedBlock, _ := engine.updateBlock(block)
 				return expectedBlock
 			},
 		},
@@ -958,7 +958,7 @@ func TestCommit(t *testing.T) {
 				defer engine.Stop()
 
 				block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
-				expectedBlock, _ := engine.updateBlock(engine.chain.GetHeader(block.ParentHash(), block.NumberU64()-1), block)
+				expectedBlock, _ := engine.updateBlock(block)
 				return expectedBlock
 			},
 		},
