@@ -476,6 +476,15 @@ web3._extend({
 			call: 'admin_getSpamThrottlerThrottleList',
 		}),
 		new web3._extend.Method({
+			name: 'getDebugAPILimiter',
+			call: 'admin_getDebugAPILimiter',
+		}),
+		new web3._extend.Method({
+			name: 'setDebugAPILimiter',
+			call: 'admin_setDebugAPILimiter',
+			params: 2
+		}),
+		new web3._extend.Method({
 			name: 'getSpamThrottlerCandidateList',
 			call: 'admin_getSpamThrottlerCandidateList',
 		}),

@@ -29,6 +29,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/klaytn/klaytn/blockchain"
@@ -37,6 +38,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/networks/rpc"
+	"github.com/klaytn/klaytn/node/cn/tracers"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/statedb"
@@ -269,6 +271,32 @@ func (api *PrivateAdminAPI) GetSpamThrottlerCandidateList(ctx context.Context) (
 		return nil, errors.New("spam throttler is not running")
 	}
 	return throttler.GetCandidates(), nil
+}
+
+func (api *PrivateAdminAPI) GetDebugAPILimiter(ctx context.Context) string {
+	if !api.cn.config.DisableUnsafeDebug {
+		return fmt.Sprintf("unsafe-debug is enabled")
+	}
+	return fmt.Sprintf("heavyAPILimit: %d, stateRegenerationTimeLimit: %.fs", tracers.HeavyAPIRequestLimit, api.cn.config.StateRegenerationTimeLimit.Seconds())
+}
+
+func (api *PrivateAdminAPI) SetDebugAPILimiter(ctx context.Context, heavyAPILimit int32, duration string) (bool, error) {
+	if !api.cn.config.DisableUnsafeDebug {
+		return false, errors.New("unsafe-debug is enabled")
+	}
+	timeLimit, err := time.ParseDuration(duration)
+	wrongDuration := err != nil || timeLimit <= time.Duration(0)
+
+	if heavyAPILimit <= 0 && wrongDuration {
+		return false, fmt.Errorf("both settings are wrong. heavyAPILimit: %d, duration: %s", heavyAPILimit, err)
+	}
+	if heavyAPILimit > 0 {
+		atomic.StoreInt32(&tracers.HeavyAPIRequestLimit, heavyAPILimit)
+	}
+	if !wrongDuration {
+		atomic.StoreInt64((*int64)(&api.cn.config.StateRegenerationTimeLimit), int64(timeLimit))
+	}
+	return true, nil
 }
 
 // PublicDebugAPI is the collection of Klaytn full node APIs exposed
