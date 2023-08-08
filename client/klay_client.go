@@ -225,6 +225,9 @@ func (ec *Client) TransactionCount(ctx context.Context, blockHash common.Hash) (
 func (ec *Client) TransactionInBlock(ctx context.Context, blockHash common.Hash, index uint) (*types.Transaction, error) {
 	var json *rpcTransaction
 	err := ec.c.CallContext(ctx, &json, "klay_getTransactionByBlockHashAndIndex", blockHash, hexutil.Uint64(index))
+	if err != nil {
+		return nil, err
+	}
 	if err == nil {
 		if json == nil {
 			return nil, klaytn.NotFound
