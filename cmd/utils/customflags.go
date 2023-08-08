@@ -203,7 +203,7 @@ func (f *TextMarshalerFlag) IsVisible() bool {
 }
 
 func (f *TextMarshalerFlag) String() string {
-	return fmt.Sprintf("%s \"%v\"\t%v", prefixedNames(f.Name), f.Value, f.Usage)
+	return cli.FlagStringer(f)
 }
 
 // TakesValue returns true of the flag takes a value, otherwise false
@@ -223,8 +223,13 @@ func (f *TextMarshalerFlag) GetCategory() string {
 
 // GetValue returns the flags value as string representation and an empty
 // string if the flag takes no value at all.
-func (f *TextMarshalerFlag) GetValue() TextMarshaler {
-	return f.Value
+func (f *TextMarshalerFlag) GetValue() string {
+	return fmt.Sprintf("%q", f.Value)
+}
+
+// GetDefaultText returns the default text for this flag
+func (f *TextMarshalerFlag) GetDefaultText() string {
+	return fmt.Sprintf("%q", f.Value)
 }
 
 // GetEnvVars returns the env vars for this flag
