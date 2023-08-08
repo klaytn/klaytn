@@ -547,7 +547,7 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, stop <-
 	if parent == nil {
 		return nil, consensus.ErrUnknownAncestor
 	}
-	block, err = sb.updateBlock(parent, block)
+	block, err = sb.updateBlock(block)
 	if err != nil {
 		return nil, err
 	}
@@ -593,7 +593,7 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, stop <-
 }
 
 // update timestamp and signature of the block based on its number of transactions
-func (sb *backend) updateBlock(parent *types.Header, block *types.Block) (*types.Block, error) {
+func (sb *backend) updateBlock(block *types.Block) (*types.Block, error) {
 	header := block.Header()
 	// sign the hash
 	seal, err := sb.Sign(sigHash(header).Bytes())
