@@ -193,6 +193,9 @@ func (ec *Client) TransactionByHash(ctx context.Context, hash common.Hash) (tx *
 // There is a fast-path for transactions retrieved by TransactionByHash and
 // TransactionInBlock. Getting their sender address can be done without an RPC interaction.
 func (ec *Client) TransactionSender(ctx context.Context, tx *types.Transaction, block common.Hash, index uint) (common.Address, error) {
+	if tx == nil {
+		return common.Address{}, errors.New("Transaction must not be nil")
+	}
 	// Try to load the address from the cache.
 	sender, err := types.Sender(&senderFromServer{blockhash: block}, tx)
 	if err == nil {
