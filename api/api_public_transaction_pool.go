@@ -585,7 +585,21 @@ func (s *PublicTransactionPoolAPI) RecoverFromTransaction(ctx context.Context, e
 func (s *PublicTransactionPoolAPI) RecoverFromMessage(
 	ctx context.Context, address common.Address, data, sig hexutil.Bytes, blockNumber rpc.BlockNumber,
 ) (common.Address, error) {
-	pubkey, err := klayEthEcRecover(data, sig)
+	if len(sig) != crypto.SignatureLength {
+		return common.Address{}, fmt.Errorf("signature must be 65 bytes long")
+	}
+	if sig[crypto.RecoveryIDOffset] != 27 && sig[crypto.RecoveryIDOffset] != 28 {
+		return common.Address{}, fmt.Errorf("invalid Klaytn signature (V is not 27 or 28)")
+	}
+
+	// Transform yellow paper V from 27/28 to 0/1
+	sig[crypto.RecoveryIDOffset] -= 27
+
+	klayRpk, err := klayEcRecover(data, sig)
+	if err != nil {
+		return common.Address{}, err
+	}
+	ethRpk, err := ethEcRecover(data, sig)
 	if err != nil {
 		return common.Address{}, err
 	}
@@ -596,8 +610,11 @@ func (s *PublicTransactionPoolAPI) RecoverFromMessage(
 	}
 
 	key := state.GetKey(address)
-	if key.ValidateMember(pubkey, address) {
-		return crypto.PubkeyToAddress(*pubkey), nil
+	if key.ValidateMember(klayRpk, address) {
+		return crypto.PubkeyToAddress(*klayRpk), nil
+	}
+	if key.ValidateMember(ethRpk, address) {
+		return crypto.PubkeyToAddress(*ethRpk), nil
 	}
 	return common.Address{}, fmt.Errorf("Invalid signature")
 }

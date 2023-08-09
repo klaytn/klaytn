@@ -485,31 +485,37 @@ func (s *PrivateAccountAPI) Sign(ctx context.Context, data hexutil.Bytes, addr c
 //
 // https://github.com/ethereum/go-ethereum/wiki/Management-APIs#personal_ecRecover
 func (s *PrivateAccountAPI) EcRecover(ctx context.Context, data, sig hexutil.Bytes) (common.Address, error) {
-	pubkey, err := klayEthEcRecover(data, sig)
+	if len(sig) != crypto.SignatureLength {
+		return common.Address{}, fmt.Errorf("signature must be 65 bytes long")
+	}
+	if sig[crypto.RecoveryIDOffset] != 27 && sig[crypto.RecoveryIDOffset] != 28 {
+		return common.Address{}, fmt.Errorf("invalid Klaytn signature (V is not 27 or 28)")
+	}
+
+	// Transform yellow paper V from 27/28 to 0/1
+	sig[crypto.RecoveryIDOffset] -= 27
+
+	pubkey, err := klayEcRecover(data, sig)
 	if err != nil {
 		return common.Address{}, err
 	}
 	return crypto.PubkeyToAddress(*pubkey), nil
 }
 
-func klayEthEcRecover(data, sig hexutil.Bytes) (*ecdsa.PublicKey, error) {
-	if len(sig) != crypto.SignatureLength {
-		return nil, fmt.Errorf("signature must be 65 bytes long")
+func klayEcRecover(data, sig hexutil.Bytes) (*ecdsa.PublicKey, error) {
+	rpk, err := crypto.SigToPub(signHash(data), sig)
+	if err == nil {
+		return rpk, nil
 	}
-	if sig[crypto.RecoveryIDOffset] != 27 && sig[crypto.RecoveryIDOffset] != 28 {
-		return nil, fmt.Errorf("invalid Klaytn signature (V is not 27 or 28)")
-	}
-	sig[crypto.RecoveryIDOffset] -= 27 // Transform yellow paper V from 27/28 to 0/1
+	return nil, err // klayErr has more priority
+}
 
-	klayRpk, klayErr := crypto.SigToPub(signHash(data), sig)
-	if klayErr == nil {
-		return klayRpk, nil
+func ethEcRecover(data, sig hexutil.Bytes) (*ecdsa.PublicKey, error) {
+	rpk, err := crypto.SigToPub(ethSignHash(data), sig)
+	if err == nil {
+		return rpk, nil
 	}
-	ethRpk, ethErr := crypto.SigToPub(ethSignHash(data), sig)
-	if ethErr == nil {
-		return ethRpk, nil
-	}
-	return nil, klayErr // klayErr has more priority
+	return nil, err
 }
 
 // SignAndSendTransaction was renamed to SendTransaction. This method is deprecated
