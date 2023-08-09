@@ -41,7 +41,6 @@ var (
 )
 
 func init() {
-	utils.InitHelper()
 	// Initialize the CLI app and start ken
 	app.Action = nodecmd.RunKlaytnNode
 	app.HideVersion = true // we have a command to print the version
@@ -76,9 +75,6 @@ func init() {
 	sort.Sort(cli.CommandsByName(app.Commands))
 
 	app.Flags = utils.KenAppFlags()
-
-	cli.AppHelpTemplate = utils.GlobalAppHelpTemplate
-	cli.HelpPrinter = utils.NewHelpPrinter(utils.CategorizeFlags(app.Flags))
 
 	app.CommandNotFound = nodecmd.CommandNotExist
 	app.OnUsageError = nodecmd.OnUsageError
