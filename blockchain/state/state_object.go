@@ -129,7 +129,8 @@ func newObject(db *StateDB, address common.Address, data account.Account) *state
 
 // EncodeRLP implements rlp.Encoder.
 func (c *stateObject) EncodeRLP(w io.Writer) error {
-	serializer := account.NewAccountSerializerWithAccount(c.account)
+	// State objects are RLP encoded with ExtHash preserved.
+	serializer := account.NewAccountSerializerExtWithAccount(c.account)
 	return rlp.Encode(w, serializer)
 }
 
@@ -155,11 +156,8 @@ func (c *stateObject) touch() {
 	}
 }
 
-func (c *stateObject) openStorageTrie(hash common.Hash, db Database) (Trie, error) {
-	if c.db.prefetching {
-		return db.OpenStorageTrieForPrefetching(hash)
-	}
-	return db.OpenStorageTrie(hash)
+func (c *stateObject) openStorageTrie(hash common.ExtHash, db Database) (Trie, error) {
+	return db.OpenStorageTrie(hash, c.db.trieOpts)
 }
 
 func (c *stateObject) getStorageTrie(db Database) Trie {
@@ -168,12 +166,12 @@ func (c *stateObject) getStorageTrie(db Database) Trie {
 			var err error
 			c.storageTrie, err = c.openStorageTrie(acc.GetStorageRoot(), db)
 			if err != nil {
-				c.storageTrie, _ = c.openStorageTrie(common.Hash{}, db)
+				c.storageTrie, _ = c.openStorageTrie(common.ExtHash{}, db)
 				c.setError(fmt.Errorf("can't create storage trie: %v", err))
 			}
 		} else {
 			// not a contract account, just returns the empty trie.
-			c.storageTrie, _ = c.openStorageTrie(common.Hash{}, db)
+			c.storageTrie, _ = c.openStorageTrie(common.ExtHash{}, db)
 		}
 	}
 	return c.storageTrie
@@ -378,7 +376,7 @@ func (self *stateObject) updateStorageRoot(db Database) {
 		if EnabledExpensive {
 			defer func(start time.Time) { self.db.StorageHashes += time.Since(start) }(time.Now())
 		}
-		acc.SetStorageRoot(self.storageTrie.Hash())
+		acc.SetStorageRoot(self.storageTrie.HashExt())
 	}
 }
 
@@ -391,7 +389,7 @@ func (self *stateObject) setStorageRoot(updateStorageRoot bool, objectsToUpdate 
 			if EnabledExpensive {
 				defer func(start time.Time) { self.db.StorageHashes += time.Since(start) }(time.Now())
 			}
-			acc.SetStorageRoot(self.storageTrie.Hash())
+			acc.SetStorageRoot(self.storageTrie.HashExt())
 			return
 		}
 		// If updateStorageRoot == false, it just marks the object and updates its storage root later.
@@ -411,7 +409,7 @@ func (self *stateObject) CommitStorageTrie(db Database) error {
 		defer func(start time.Time) { self.db.StorageCommits += time.Since(start) }(time.Now())
 	}
 	if acc := account.GetProgramAccount(self.account); acc != nil {
-		root, err := self.storageTrie.Commit(nil)
+		root, err := self.storageTrie.CommitExt(nil)
 		if err != nil {
 			return err
 		}
@@ -420,7 +418,7 @@ func (self *stateObject) CommitStorageTrie(db Database) error {
 	return nil
 }
 
-// AddBalance removes amount from c's balance.
+// AddBalance adds amount to c's balance.
 // It is used to add funds to the destination account of a transfer.
 func (c *stateObject) AddBalance(amount *big.Int) {
 	// EIP158: We must check emptiness for the objects such that the account

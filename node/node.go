@@ -28,9 +28,12 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
+	"time"
 
+	"github.com/bt51/ntpclient"
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/api/debug"
 	"github.com/klaytn/klaytn/event"
@@ -342,31 +345,19 @@ func (n *Node) startRPC(services map[reflect.Type]Service) error {
 		n.stopInProc()
 		return err
 	}
-	if n.config.IsFastHTTP() {
-		if err := n.startFastHTTP(n.httpEndpoint, apis, n.config.HTTPModules, n.config.HTTPCors, n.config.HTTPVirtualHosts, n.config.HTTPTimeouts); err != nil {
-			n.stopIPC()
-			n.stopInProc()
-			return err
-		}
-		if err := n.startFastWS(n.wsEndpoint, apis, n.config.WSModules, n.config.WSOrigins, n.config.WSExposeAll); err != nil {
-			n.stopHTTP()
-			n.stopIPC()
-			n.stopInProc()
-			return err
-		}
-	} else {
-		if err := n.startHTTP(n.httpEndpoint, apis, n.config.HTTPModules, n.config.HTTPCors, n.config.HTTPVirtualHosts, n.config.HTTPTimeouts); err != nil {
-			n.stopIPC()
-			n.stopInProc()
-			return err
-		}
-		if err := n.startWS(n.wsEndpoint, apis, n.config.WSModules, n.config.WSOrigins, n.config.WSExposeAll); err != nil {
-			n.stopHTTP()
-			n.stopIPC()
-			n.stopInProc()
-			return err
-		}
+
+	if err := n.startHTTP(n.httpEndpoint, apis, n.config.HTTPModules, n.config.HTTPCors, n.config.HTTPVirtualHosts, n.config.HTTPTimeouts); err != nil {
+		n.stopIPC()
+		n.stopInProc()
+		return err
 	}
+	if err := n.startWS(n.wsEndpoint, apis, n.config.WSModules, n.config.WSOrigins, n.config.WSExposeAll); err != nil {
+		n.stopHTTP()
+		n.stopIPC()
+		n.stopInProc()
+		return err
+	}
+
 	// start gRPC server
 	if err := n.startgRPC(apis); err != nil {
 		n.stopHTTP()
@@ -768,7 +759,7 @@ func (n *Node) ResolvePath(x string) string {
 }
 
 func (n *Node) apis() []rpc.API {
-	return []rpc.API{
+	rpcApi := []rpc.API{
 		{
 			Namespace: "admin",
 			Version:   "1.0",
@@ -781,12 +772,7 @@ func (n *Node) apis() []rpc.API {
 		}, {
 			Namespace: "debug",
 			Version:   "1.0",
-			Service:   debug.Handler,
-		}, {
-			Namespace: "debug",
-			Version:   "1.0",
 			Service:   NewPublicDebugAPI(n),
-			Public:    true,
 		}, {
 			// "web3" namespace will be deprecated soon. The same APIs in "web3" are available in "klay" namespace.
 			Namespace: "web3",
@@ -800,4 +786,73 @@ func (n *Node) apis() []rpc.API {
 			Public:    true,
 		},
 	}
+	debugRpcApi := []rpc.API{
+		{
+			Namespace: "debug",
+			Version:   "1.0",
+			Service:   debug.Handler,
+		},
+	}
+	if !n.config.DisableUnsafeDebug {
+		rpcApi = append(rpcApi, debugRpcApi...)
+	}
+	return rpcApi
+}
+
+const (
+	ntpTolerance = time.Second
+	RFC3339Nano  = "2006-01-02T15:04:05.999999999Z07:00"
+	ntpMaxRetry  = 10
+)
+
+func timeIsNear(lhs, rhs time.Time) bool {
+	diff := lhs.Sub(rhs)
+	// TODO: use time.Duration.Abs() after go1.19
+	if diff < 0 {
+		diff = -diff
+	}
+	return diff < ntpTolerance
+}
+
+func NtpCheckWithLocal(n *Node) error {
+	// Skip check if server is empty (e.g. `ntp.disable` flag)
+	if n.config.NtpRemoteServer == "" {
+		return nil
+	}
+
+	url, port, err := net.SplitHostPort(n.config.NtpRemoteServer)
+	if err != nil {
+		return err
+	}
+	portNum, err := strconv.Atoi(port)
+	if err != nil {
+		return err
+	}
+
+	ntpRetryTime := time.Duration(1)
+	var remote *time.Time
+	for i := 0; i < ntpMaxRetry; i++ {
+		time.Sleep(ntpRetryTime)
+		remote, err = ntpclient.GetNetworkTime(url, portNum)
+		if remote != nil {
+			break
+		}
+
+		logger.Warn("Cannot connect to remote ntp server", "url", url, "err", err)
+		ntpRetryTime = ntpRetryTime * 2
+	}
+
+	usage := "You can use \"--ntp.disable\" or \"--ntp.server\" option to change ntp time checking config"
+	if err != nil {
+		logger.Warn("Failed to remote ntp server."+"\n"+usage, "url", url)
+		return nil
+	}
+
+	local := time.Now()
+	if !timeIsNear(local, *remote) {
+		errFormat := "System time is out of sync, local:%s remote:%s"
+		return fmt.Errorf(errFormat+"\n"+usage, local.UTC().Format(RFC3339Nano), remote.UTC().Format(RFC3339Nano))
+	}
+	logger.Info("Ntp time check", "local", local.UTC().Format(RFC3339Nano), "remote", remote.UTC().Format(RFC3339Nano))
+	return nil
 }

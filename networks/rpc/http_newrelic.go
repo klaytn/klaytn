@@ -82,7 +82,7 @@ func newNewRelicHTTPHandler(nrApp *newrelic.Application, handler http.Handler) h
 			// The error will be handled in `handler.ServeHTTP()` and printed with `printRPCErrorLog()`
 			logger.Debug("failed to parse RPC request", "err", err, "len(reqs)", len(reqs))
 		} else {
-			reqMethod = reqs[0].method
+			reqMethod = reqs[0].Method
 			if isBatch {
 				reqMethod += "_batch"
 			}
@@ -112,7 +112,7 @@ func newNewRelicHTTPHandler(nrApp *newrelic.Application, handler http.Handler) h
 				for i, rpcReturn := range rpcReturns {
 					if data, err := json.Marshal(rpcReturn); err == nil {
 						// TODO-Klaytn: make the log level configurable or separate module name of the logger
-						printRPCErrorLog(data, reqs[i].method, r)
+						printRPCErrorLog(data, reqs[i].Method, r)
 					}
 				}
 			}
@@ -125,19 +125,22 @@ func newNewRelicHTTPHandler(nrApp *newrelic.Application, handler http.Handler) h
 
 // getRPCRequests copies a http request body data and parses RPC requests from the data.
 // It returns a slice of RPC request, an indication if these requests are in batch, and an error.
-func getRPCRequests(r *http.Request) ([]rpcRequest, bool, error) {
+// Ethereum returns []*jsonrpcMessage, which replaces []rpcRequest
+func getRPCRequests(r *http.Request) ([]*jsonrpcMessage, bool, error) {
 	reqBody, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		logger.Error("cannot read a request body", "err", err)
 		return nil, false, err
 	}
+
 	r.Body = ioutil.NopCloser(bytes.NewReader(reqBody))
+	conn := &httpServerConn{Reader: ioutil.NopCloser(bytes.NewReader(reqBody)), Writer: bytes.NewBufferString(""), r: r}
 
-	// parse request API method
-	codec := NewJSONCodec(&httpReadWriteNopCloser{ioutil.NopCloser(bytes.NewReader(reqBody)), bytes.NewBufferString("")})
-	defer codec.Close()
+	codec := NewCodec(conn)
 
-	return codec.ReadRequestHeaders()
+	defer codec.close()
+
+	return codec.readBatch()
 }
 
 // printRPCErrorLog prints an error log if responseBody contains RPC error message.

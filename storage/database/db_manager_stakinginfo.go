@@ -16,6 +16,14 @@
 
 package database
 
+// HasStakingInfo returns existence of staking information of the given block number from database.
+func (dbm *databaseManager) HasStakingInfo(blockNum uint64) (bool, error) {
+	db := dbm.getDatabase(MiscDB)
+
+	key := makeKey(stakingInfoPrefix, blockNum)
+	return db.Has(key)
+}
+
 // ReadStakingInfo reads staking information from database. It returns
 // (StakingInfo, nil) if it succeeds to read and (nil, error) if it fails.
 // StakingInfo is stored in MiscDB.

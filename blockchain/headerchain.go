@@ -59,9 +59,10 @@ type HeaderChain struct {
 }
 
 // NewHeaderChain creates a new HeaderChain structure.
-//  getValidator should return the parent's validator
-//  procInterrupt points to the parent's interrupt semaphore
-//  wg points to the parent's shutdown wait group
+//
+//	getValidator should return the parent's validator
+//	procInterrupt points to the parent's interrupt semaphore
+//	wg points to the parent's shutdown wait group
 func NewHeaderChain(chainDB database.DBManager, config *params.ChainConfig, engine consensus.Engine, procInterrupt func() bool) (*HeaderChain, error) {
 	// Seed a fast but crypto originating random generator
 	seed, err := crand.Int(crand.Reader, big.NewInt(math.MaxInt64))
@@ -86,6 +87,10 @@ func NewHeaderChain(chainDB database.DBManager, config *params.ChainConfig, engi
 	if head := chainDB.ReadHeadBlockHash(); head != (common.Hash{}) {
 		if chead := hc.GetHeaderByHash(head); chead != nil {
 			hc.currentHeader.Store(chead)
+		} else if head := chainDB.ReadHeadBlockBackupHash(); head != (common.Hash{}) {
+			if chead := hc.GetHeaderByHash(head); chead != nil {
+				hc.currentHeader.Store(chead)
+			}
 		}
 	}
 	hc.currentHeaderHash = hc.CurrentHeader().Hash()
@@ -355,6 +360,13 @@ func (hc *HeaderChain) CurrentHeader() *types.Header {
 	return hc.currentHeader.Load().(*types.Header)
 }
 
+// CurrentBlock is added because HeaderChain is sometimes used as
+// type consensus.ChainReader and consensus.ChainReader interface has CurrentBlock.
+// However CurrentBlock is not supported in HeaderChain so this function just panics.
+func (hc *HeaderChain) CurrentBlock() *types.Block {
+	panic("CurrentBlock not supported for HeaderChain")
+}
+
 // SetCurrentHeader sets the current head header of the canonical chain.
 func (hc *HeaderChain) SetCurrentHeader(head *types.Header) {
 	hc.chainDB.WriteHeadHeaderHash(head.Hash())
@@ -440,4 +452,8 @@ func (hc *HeaderChain) GetBlock(hash common.Hash, number uint64) *types.Block {
 
 func (hc *HeaderChain) State() (*state.StateDB, error) {
 	return nil, errors.New("HeaderChain does not support State() method")
+}
+
+func (hc *HeaderChain) StateAt(root common.Hash) (*state.StateDB, error) {
+	return nil, errors.New("HeaderChain does not support StateAt() method")
 }

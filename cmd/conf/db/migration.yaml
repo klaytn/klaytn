@@ -1,0 +1,32 @@
+migration:
+  no-perf-metrics: false
+  src:
+    dbtype: LevelDB
+    datadir: ""
+    single: false
+    db: 
+      leveldb: 
+        cache-size: 768
+        compression: 0
+        num-statetrie-shards: 4
+      dynamo: 
+        table-name: ""
+        region: ap-northeast-2
+        is-provisioned: false
+        read-capacity: 10000
+        write-capacity: 10000
+  dst: 
+    dbtype: LevelDB
+    datadir: ""
+    single: false
+    db: 
+      leveldb: 
+        cache-size: 768
+        compression: 0
+        num-statetrie-shards: 4
+      dynamo: 
+        table-name: ""
+        region: ap-northeast-2
+        is-provisioned: false
+        read-capacity: 10000
+        write-capacity: 10000

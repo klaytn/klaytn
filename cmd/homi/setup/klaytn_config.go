@@ -33,15 +33,16 @@ type KlaytnConfig struct {
 	NodeType  string
 }
 
-func New(rpcPort int, wsPort int, p2pPort int, dataDir string, logDir string, runDir string, nodeType string) *KlaytnConfig {
+func NewKlaytnConfig(networkId int, rpcPort int, wsPort int, p2pPort int, dataDir string, logDir string, runDir string, nodeType string) *KlaytnConfig {
 	kConf := &KlaytnConfig{
-		RPCPort:  rpcPort,
-		WSPort:   wsPort,
-		P2PPort:  p2pPort,
-		DataDir:  dataDir,
-		LogDir:   logDir,
-		RunDir:   runDir,
-		NodeType: nodeType,
+		NetworkId: networkId,
+		RPCPort:   rpcPort,
+		WSPort:    wsPort,
+		P2PPort:   p2pPort,
+		DataDir:   dataDir,
+		LogDir:    logDir,
+		RunDir:    runDir,
+		NodeType:  nodeType,
 	}
 	return kConf
 }

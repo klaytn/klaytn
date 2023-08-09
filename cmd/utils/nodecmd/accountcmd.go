@@ -30,10 +30,10 @@ import (
 	"github.com/klaytn/klaytn/console"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/log"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
-var AccountCommand = cli.Command{
+var AccountCommand = &cli.Command{
 	Name:     "account",
 	Usage:    "Manage accounts",
 	Category: "ACCOUNT COMMANDS",
@@ -57,11 +57,11 @@ It is safe to transfer the entire directory or the individual keys therein
 between klay nodes by simply copying.
 
 Make sure you backup your keys regularly.`,
-	Subcommands: []cli.Command{
+	Subcommands: []*cli.Command{
 		{
 			Name:   "list",
 			Usage:  "Print summary of existing accounts",
-			Action: utils.MigrateFlags(accountList),
+			Action: accountList,
 			Flags: []cli.Flag{
 				utils.DataDirFlag,
 				utils.KeyStoreDirFlag,
@@ -72,7 +72,7 @@ Print a short summary of all accounts`,
 		{
 			Name:   "new",
 			Usage:  "Create a new account",
-			Action: utils.MigrateFlags(accountCreate),
+			Action: accountCreate,
 			Flags: []cli.Flag{
 				utils.DataDirFlag,
 				utils.KeyStoreDirFlag,
@@ -97,7 +97,7 @@ password to file or expose in any other way.
 		{
 			Name:      "update",
 			Usage:     "Update an existing account",
-			Action:    utils.MigrateFlags(accountUpdate),
+			Action:    accountUpdate,
 			ArgsUsage: "<address>",
 			Flags: []cli.Flag{
 				utils.DataDirFlag,
@@ -126,7 +126,7 @@ changing your password is only possible interactively.
 		{
 			Name:   "import",
 			Usage:  "Import a private key into a new account",
-			Action: utils.MigrateFlags(accountImport),
+			Action: accountImport,
 			Flags: []cli.Flag{
 				utils.DataDirFlag,
 				utils.KeyStoreDirFlag,
@@ -163,7 +163,7 @@ func accountList(ctx *cli.Context) error {
 	if glogger, err := debug.GetGlogger(); err == nil {
 		log.ChangeGlobalLogLevel(glogger, log.Lvl(log.LvlError))
 	}
-	stack, _ := makeConfigNode(ctx)
+	stack, _ := utils.MakeConfigNode(ctx)
 	var index int
 	for _, wallet := range stack.AccountManager().Wallets() {
 		for _, account := range wallet.Accounts() {
@@ -264,14 +264,14 @@ func accountCreate(ctx *cli.Context) error {
 	if glogger, err := debug.GetGlogger(); err == nil {
 		log.ChangeGlobalLogLevel(glogger, log.Lvl(log.LvlError))
 	}
-	cfg := klayConfig{Node: defaultNodeConfig()}
+	cfg := utils.KlayConfig{Node: utils.DefaultNodeConfig()}
 	// Load config file.
-	if file := ctx.GlobalString(utils.ConfigFileFlag.Name); file != "" {
-		if err := loadConfig(file, &cfg); err != nil {
+	if file := ctx.String(utils.ConfigFileFlag.Name); file != "" {
+		if err := utils.LoadConfig(file, &cfg); err != nil {
 			log.Fatalf("%v", err)
 		}
 	}
-	utils.SetNodeConfig(ctx, &cfg.Node)
+	cfg.SetNodeConfig(ctx)
 	scryptN, scryptP, keydir, err := cfg.Node.AccountConfig()
 	if err != nil {
 		log.Fatalf("Failed to read configuration: %v", err)
@@ -293,13 +293,13 @@ func accountUpdate(ctx *cli.Context) error {
 	if glogger, err := debug.GetGlogger(); err == nil {
 		log.ChangeGlobalLogLevel(glogger, log.Lvl(log.LvlError))
 	}
-	if len(ctx.Args()) == 0 {
+	if ctx.Args().Len() == 0 {
 		log.Fatalf("No accounts specified to update")
 	}
-	stack, _ := makeConfigNode(ctx)
+	stack, _ := utils.MakeConfigNode(ctx)
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
 
-	for _, addr := range ctx.Args() {
+	for _, addr := range ctx.Args().Slice() {
 		account, oldPassword := UnlockAccount(ctx, ks, addr, 0, nil)
 		newPassword := getPassPhrase("Please give a new password. Do not forget this password.", true, 0, nil)
 		if err := ks.Update(account, oldPassword, newPassword); err != nil {
@@ -321,7 +321,7 @@ func accountImport(ctx *cli.Context) error {
 	if err != nil {
 		log.Fatalf("Failed to load the private key: %v", err)
 	}
-	stack, _ := makeConfigNode(ctx)
+	stack, _ := utils.MakeConfigNode(ctx)
 	passphrase := getPassPhrase("Your new account is locked with a password. Please give a password. Do not forget this password.", true, 0, utils.MakePasswordList(ctx))
 
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)

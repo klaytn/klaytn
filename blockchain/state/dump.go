@@ -72,7 +72,7 @@ func (self *StateDB) RawDump() Dump {
 			Storage:  make(map[string]string),
 		}
 		if pa := account.GetProgramAccount(data); pa != nil {
-			acc.Root = common.Bytes2Hex(pa.GetStorageRoot().Bytes())
+			acc.Root = common.Bytes2Hex(pa.GetStorageRoot().Unextend().Bytes())
 			acc.CodeHash = common.Bytes2Hex(pa.GetCodeHash())
 			acc.Code = common.Bytes2Hex(obj.Code(self.db))
 		} else {

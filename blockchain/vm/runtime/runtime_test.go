@@ -21,18 +21,19 @@
 package runtime
 
 import (
+	"fmt"
 	"math/big"
 	"strings"
 	"testing"
 
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/consensus"
-
 	"github.com/klaytn/klaytn/accounts/abi"
+	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/blockchain/asm"
 	"github.com/klaytn/klaytn/blockchain/state"
+	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
 )
@@ -77,6 +78,7 @@ func TestEVM(t *testing.T) {
 		byte(vm.ORIGIN),
 		byte(vm.BLOCKHASH),
 		byte(vm.COINBASE),
+		byte(vm.PREVRANDAO),
 	}, nil, nil)
 }
 
@@ -100,7 +102,7 @@ func TestExecute(t *testing.T) {
 }
 
 func TestCall(t *testing.T) {
-	state, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil)
+	state, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
 	address := common.HexToAddress("0x0a00")
 	state.SetCode(address, []byte{
 		byte(vm.PUSH1), 10,
@@ -157,7 +159,7 @@ func BenchmarkCall(b *testing.B) {
 
 func benchmarkEVM_Create(bench *testing.B, code string) {
 	var (
-		statedb, _ = state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil)
+		statedb, _ = state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
 		sender     = common.BytesToAddress([]byte("sender"))
 		receiver   = common.BytesToAddress([]byte("receiver"))
 	)
@@ -170,6 +172,7 @@ func benchmarkEVM_Create(bench *testing.B, code string) {
 		GasLimit:    10000000,
 		Time:        new(big.Int).SetUint64(0),
 		Coinbase:    common.Address{},
+		Rewardbase:  common.Address{},
 		BlockNumber: new(big.Int).SetUint64(1),
 		ChainConfig: &params.ChainConfig{Istanbul: params.GetDefaultIstanbulConfig(), Governance: params.GetDefaultGovernanceConfig()},
 		EVMConfig:   vm.Config{},
@@ -304,5 +307,187 @@ func TestBlockhash(t *testing.T) {
 	}
 	if exp, got := 255, chain.counter; exp != got {
 		t.Errorf("suboptimal; too much chain iteration, expected %d, got %d", exp, got)
+	}
+}
+
+// TestEip2929Cases contains various testcases that are used for
+// EIP-2929 about gas repricings
+func TestEip2929Cases(t *testing.T) {
+	id := 1
+	prettyPrint := func(comment string, code []byte) {
+		instrs := make([]string, 0)
+		it := asm.NewInstructionIterator(code)
+		for it.Next() {
+			if it.Arg() != nil && 0 < len(it.Arg()) {
+				instrs = append(instrs, fmt.Sprintf("%v 0x%x", it.Op(), it.Arg()))
+			} else {
+				instrs = append(instrs, fmt.Sprintf("%v", it.Op()))
+			}
+		}
+		ops := strings.Join(instrs, ", ")
+		fmt.Printf("### Case %d\n\n", id)
+		id++
+		fmt.Printf("%v\n\nBytecode: \n```\n0x%x\n```\nOperations: \n```\n%v\n```\n\n",
+			comment,
+			code, ops)
+		Execute(code, nil, &Config{
+			EVMConfig: vm.Config{
+				Debug:     true,
+				Tracer:    vm.NewStructLogger(nil),
+				ExtraEips: []int{2929},
+			},
+		})
+	}
+	{ // First eip testcase
+		code := []byte{
+			// Three checks against a precompile
+			byte(vm.PUSH1), 1, byte(vm.EXTCODEHASH), byte(vm.POP),
+			byte(vm.PUSH1), 2, byte(vm.EXTCODESIZE), byte(vm.POP),
+			byte(vm.PUSH1), 3, byte(vm.BALANCE), byte(vm.POP),
+			// Three checks against a non-precompile
+			byte(vm.PUSH1), 0xf1, byte(vm.EXTCODEHASH), byte(vm.POP),
+			byte(vm.PUSH1), 0xf2, byte(vm.EXTCODESIZE), byte(vm.POP),
+			byte(vm.PUSH1), 0xf3, byte(vm.BALANCE), byte(vm.POP),
+			// Same three checks (should be cheaper)
+			byte(vm.PUSH1), 0xf2, byte(vm.EXTCODEHASH), byte(vm.POP),
+			byte(vm.PUSH1), 0xf3, byte(vm.EXTCODESIZE), byte(vm.POP),
+			byte(vm.PUSH1), 0xf1, byte(vm.BALANCE), byte(vm.POP),
+			// Check the origin, and the 'this'
+			byte(vm.ORIGIN), byte(vm.BALANCE), byte(vm.POP),
+			byte(vm.ADDRESS), byte(vm.BALANCE), byte(vm.POP),
+			byte(vm.STOP),
+		}
+		prettyPrint("This checks `EXT`(codehash,codesize,balance) of precompiles, which should be `100`, "+
+			"and later checks the same operations twice against some non-precompiles. "+
+			"Those are cheaper second time they are accessed. Lastly, it checks the `BALANCE` of `origin` and `this`.", code)
+	}
+	{ // EXTCODECOPY
+		code := []byte{
+			// extcodecopy( 0xff,0,0,0,0)
+			byte(vm.PUSH1), 0x00, byte(vm.PUSH1), 0x00, byte(vm.PUSH1), 0x00, // length, codeoffset, memoffset
+			byte(vm.PUSH1), 0xff, byte(vm.EXTCODECOPY),
+			// extcodecopy( 0xff,0,0,0,0)
+			byte(vm.PUSH1), 0x00, byte(vm.PUSH1), 0x00, byte(vm.PUSH1), 0x00, // length, codeoffset, memoffset
+			byte(vm.PUSH1), 0xff, byte(vm.EXTCODECOPY),
+			// extcodecopy( this,0,0,0,0)
+			byte(vm.PUSH1), 0x00, byte(vm.PUSH1), 0x00, byte(vm.PUSH1), 0x00, // length, codeoffset, memoffset
+			byte(vm.ADDRESS), byte(vm.EXTCODECOPY),
+			byte(vm.STOP),
+		}
+		prettyPrint("This checks `extcodecopy( 0xff,0,0,0,0)` twice, (should be expensive first time), "+
+			"and then does `extcodecopy( this,0,0,0,0)`.", code)
+	}
+	{ // SLOAD + SSTORE
+		code := []byte{
+			// Add slot `0x1` to access list
+			byte(vm.PUSH1), 0x01, byte(vm.SLOAD), byte(vm.POP), // SLOAD( 0x1) (add to access list)
+			// Write to `0x1` which is already in access list
+			byte(vm.PUSH1), 0x11, byte(vm.PUSH1), 0x01, byte(vm.SSTORE), // SSTORE( loc: 0x01, val: 0x11)
+			// Write to `0x2` which is not in access list
+			byte(vm.PUSH1), 0x11, byte(vm.PUSH1), 0x02, byte(vm.SSTORE), // SSTORE( loc: 0x02, val: 0x11)
+			// Write again to `0x2`
+			byte(vm.PUSH1), 0x11, byte(vm.PUSH1), 0x02, byte(vm.SSTORE), // SSTORE( loc: 0x02, val: 0x11)
+			// Read slot in access list (0x2)
+			byte(vm.PUSH1), 0x02, byte(vm.SLOAD), // SLOAD( 0x2)
+			// Read slot in access list (0x1)
+			byte(vm.PUSH1), 0x01, byte(vm.SLOAD), // SLOAD( 0x1)
+		}
+		prettyPrint("This checks `sload( 0x1)` followed by `sstore(loc: 0x01, val:0x11)`, then 'naked' sstore:"+
+			"`sstore(loc: 0x02, val:0x11)` twice, and `sload(0x2)`, `sload(0x1)`. ", code)
+	}
+	{ // Call variants
+		code := []byte{
+			// identity precompile
+			byte(vm.PUSH1), 0x0, byte(vm.DUP1), byte(vm.DUP1), byte(vm.DUP1), byte(vm.DUP1),
+			byte(vm.PUSH1), 0x04, byte(vm.PUSH1), 0x0, byte(vm.CALL), byte(vm.POP),
+			// random account - call 1
+			byte(vm.PUSH1), 0x0, byte(vm.DUP1), byte(vm.DUP1), byte(vm.DUP1), byte(vm.DUP1),
+			byte(vm.PUSH1), 0xff, byte(vm.PUSH1), 0x0, byte(vm.CALL), byte(vm.POP),
+			// random account - call 2
+			byte(vm.PUSH1), 0x0, byte(vm.DUP1), byte(vm.DUP1), byte(vm.DUP1), byte(vm.DUP1),
+			byte(vm.PUSH1), 0xff, byte(vm.PUSH1), 0x0, byte(vm.STATICCALL), byte(vm.POP),
+		}
+		prettyPrint("This calls the `identity`-precompile (cheap), then calls an account (expensive) and `staticcall`s the same"+
+			"account (cheap)", code)
+	}
+}
+
+// TestColdAccountAccessCost test that the cold account access cost is reported
+// correctly
+// see: https://github.com/ethereum/go-ethereum/issues/22649
+func TestColdAccountAccessCost(t *testing.T) {
+	for i, tc := range []struct {
+		code []byte
+		step int
+		want uint64
+	}{
+		{ // EXTCODEHASH(0xff)
+			code: []byte{byte(vm.PUSH1), 0xFF, byte(vm.EXTCODEHASH), byte(vm.POP)},
+			step: 1,
+			want: 2600,
+		},
+		{ // BALANCE(0xff)
+			code: []byte{byte(vm.PUSH1), 0xFF, byte(vm.BALANCE), byte(vm.POP)},
+			step: 1,
+			want: 2600,
+		},
+		{ // CALL(0xff)
+			code: []byte{
+				byte(vm.PUSH1), 0x0,
+				byte(vm.DUP1), byte(vm.DUP1), byte(vm.DUP1), byte(vm.DUP1),
+				byte(vm.PUSH1), 0xff, byte(vm.DUP1), byte(vm.CALL), byte(vm.POP),
+			},
+			step: 7,
+			want: 2855,
+		},
+		{ // CALLCODE(0xff)
+			code: []byte{
+				byte(vm.PUSH1), 0x0,
+				byte(vm.DUP1), byte(vm.DUP1), byte(vm.DUP1), byte(vm.DUP1),
+				byte(vm.PUSH1), 0xff, byte(vm.DUP1), byte(vm.CALLCODE), byte(vm.POP),
+			},
+			step: 7,
+			want: 2855,
+		},
+		{ // DELEGATECALL(0xff)
+			code: []byte{
+				byte(vm.PUSH1), 0x0,
+				byte(vm.DUP1), byte(vm.DUP1), byte(vm.DUP1),
+				byte(vm.PUSH1), 0xff, byte(vm.DUP1), byte(vm.DELEGATECALL), byte(vm.POP),
+			},
+			step: 6,
+			want: 2855,
+		},
+		{ // STATICCALL(0xff)
+			code: []byte{
+				byte(vm.PUSH1), 0x0,
+				byte(vm.DUP1), byte(vm.DUP1), byte(vm.DUP1),
+				byte(vm.PUSH1), 0xff, byte(vm.DUP1), byte(vm.STATICCALL), byte(vm.POP),
+			},
+			step: 6,
+			want: 2855,
+		},
+		{ // SELFDESTRUCT(0xff)
+			code: []byte{
+				byte(vm.PUSH1), 0xff, byte(vm.SELFDESTRUCT),
+			},
+			step: 1,
+			want: 7600,
+		},
+	} {
+		tracer := vm.NewStructLogger(nil)
+		Execute(tc.code, nil, &Config{
+			EVMConfig: vm.Config{
+				Debug:  true,
+				Tracer: tracer,
+			},
+		})
+		have := tracer.StructLogs()[tc.step].GasCost
+		if want := tc.want; have != want {
+			for ii, op := range tracer.StructLogs() {
+				t.Logf("%d: %v %d", ii, op.OpName(), op.GasCost)
+			}
+			t.Fatalf("tescase %d, gas report wrong, step %d, have %d want %d", i, tc.step, have, want)
+		}
 	}
 }

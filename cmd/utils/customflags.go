@@ -30,10 +30,16 @@ import (
 	"os/user"
 	"path"
 	"strings"
+	"syscall"
 
 	"github.com/klaytn/klaytn/common/math"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/klaytn/klaytn/datasync/downloader"
+	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v2/altsrc"
 )
+
+// NOTE-klaytn: The custom directoryFlag deprecated.
+// urfave.v2 new flag, PathFlag, replaced the directoryFlag.
 
 // Custom type which is registered in the flags library which cli uses for
 // argument parsing. This allows us to expand Value to an absolute path when
@@ -51,12 +57,44 @@ func (self *DirectoryString) Set(value string) error {
 	return nil
 }
 
+type WrappedDirectoryFlag struct {
+	DirectoryFlag
+	set *flag.FlagSet
+}
+
+func NewWrappedDirectoryFlag(fl DirectoryFlag) *WrappedDirectoryFlag {
+	return &WrappedDirectoryFlag{DirectoryFlag: fl, set: nil}
+}
+
+func (f *WrappedDirectoryFlag) Apply(set *flag.FlagSet) {
+	f.set = set
+	f.DirectoryFlag.Apply(set)
+}
+
+func (f *WrappedDirectoryFlag) ApplyInputSourceValue(context *cli.Context, isc altsrc.InputSourceContext) error {
+	if f.set != nil {
+		if !isEnvVarSet(f.EnvVar) {
+			value, err := isc.String(f.DirectoryFlag.Name)
+			if err != nil {
+				return err
+			}
+			if value != "" {
+				eachName(f.Name, func(name string) {
+					f.set.Set(f.Name, value)
+				})
+			}
+		}
+	}
+	return nil
+}
+
 // Custom cli.Flag type which expand the received string to an absolute path.
 // e.g. ~/.ethereum -> /home/username/.ethereum
 type DirectoryFlag struct {
-	Name  string
-	Value DirectoryString
-	Usage string
+	Name   string
+	Value  DirectoryString
+	Usage  string
+	EnvVar string
 }
 
 func (self DirectoryFlag) String() string {
@@ -67,6 +105,19 @@ func (self DirectoryFlag) String() string {
 	return fmt.Sprintf(fmtString, prefixedNames(self.Name), self.Value.Value, self.Usage)
 }
 
+// called by cli library, grabs variable from environment (if in env)
+// and adds variable to flag set for parsing.
+func (self DirectoryFlag) Apply(set *flag.FlagSet) {
+	if self.EnvVar != "" {
+		if envVal, ok := syscall.Getenv(self.EnvVar); ok {
+			self.Value.Value = envVal
+		}
+	}
+	eachName(self.Name, func(name string) {
+		set.Var(&self.Value, self.Name, self.Usage)
+	})
+}
+
 func eachName(longName string, fn func(string)) {
 	parts := strings.Split(longName, ",")
 	for _, name := range parts {
@@ -75,12 +126,18 @@ func eachName(longName string, fn func(string)) {
 	}
 }
 
-// called by cli library, grabs variable from environment (if in env)
-// and adds variable to flag set for parsing.
-func (self DirectoryFlag) Apply(set *flag.FlagSet) {
-	eachName(self.Name, func(name string) {
-		set.Var(&self.Value, self.Name, self.Usage)
-	})
+func isEnvVarSet(envVars string) bool {
+	for _, envVar := range strings.Split(envVars, ",") {
+		envVar = strings.TrimSpace(envVar)
+		if env, ok := syscall.Getenv(envVar); ok {
+			// TODO: Can't use this for bools as
+			// set means that it was true or false based on
+			// Bool flag type, should work for other types
+			logger.Info("env", "env", env)
+			return true
+		}
+	}
+	return false
 }
 
 type TextMarshaler interface {
@@ -107,28 +164,150 @@ func (v textMarshalerVal) Set(s string) error {
 
 // TextMarshalerFlag wraps a TextMarshaler value.
 type TextMarshalerFlag struct {
-	Name  string
-	Value TextMarshaler
-	Usage string
+	Name string
+
+	Category string
+	Usage    string
+
+	Required   bool
+	Hidden     bool
+	HasBeenSet bool
+
+	Value       TextMarshaler
+	Destination *TextMarshaler
+
+	Aliases []string
+	EnvVars []string
+
+	Action func(*cli.Context, TextMarshaler) error
 }
 
-func (f TextMarshalerFlag) GetName() string {
-	return f.Name
+// IsSet returns whether or not the flag has been set through env or file
+func (f *TextMarshalerFlag) IsSet() bool {
+	return f.HasBeenSet
 }
 
-func (f TextMarshalerFlag) String() string {
-	return fmt.Sprintf("%s \"%v\"\t%v", prefixedNames(f.Name), f.Value, f.Usage)
+// Names returns the names of the flag
+func (f *TextMarshalerFlag) Names() []string {
+	return cli.FlagNames(f.Name, f.Aliases)
 }
 
-func (f TextMarshalerFlag) Apply(set *flag.FlagSet) {
+// IsRequired returns whether or not the flag is required
+func (f *TextMarshalerFlag) IsRequired() bool {
+	return f.Required
+}
+
+// IsVisible returns true if the flag is not hidden, otherwise false
+func (f *TextMarshalerFlag) IsVisible() bool {
+	return !f.Hidden
+}
+
+func (f *TextMarshalerFlag) String() string {
+	return cli.FlagStringer(f)
+}
+
+// TakesValue returns true of the flag takes a value, otherwise false
+func (f *TextMarshalerFlag) TakesValue() bool {
+	return true
+}
+
+// GetUsage returns the usage string for the flag
+func (f *TextMarshalerFlag) GetUsage() string {
+	return f.Usage
+}
+
+// GetCategory returns the category for the flag
+func (f *TextMarshalerFlag) GetCategory() string {
+	return f.Category
+}
+
+// GetValue returns the flags value as string representation and an empty
+// string if the flag takes no value at all.
+func (f *TextMarshalerFlag) GetValue() string {
+	return fmt.Sprintf("%q", f.Value)
+}
+
+// GetDefaultText returns the default text for this flag
+func (f *TextMarshalerFlag) GetDefaultText() string {
+	return fmt.Sprintf("%q", f.Value)
+}
+
+// GetEnvVars returns the env vars for this flag
+func (f *TextMarshalerFlag) GetEnvVars() []string {
+	return f.EnvVars
+}
+
+func (f *TextMarshalerFlag) Apply(set *flag.FlagSet) error {
+	if f.EnvVars[0] != "" && f.Value != nil {
+		if envVal, ok := syscall.Getenv(f.EnvVars[0]); ok {
+			var mode downloader.SyncMode
+			switch envVal {
+			case "full":
+				mode = downloader.FullSync
+			case "fast":
+				mode = downloader.FastSync
+			case "snap":
+				mode = downloader.SnapSync
+			case "light":
+				mode = downloader.LightSync
+			}
+			f.Value = &mode
+		}
+	}
 	eachName(f.Name, func(name string) {
 		set.Var(textMarshalerVal{f.Value}, f.Name, f.Usage)
 	})
+
+	return nil
+}
+
+// Get returns the flag’s value in the given Context.
+func (f *TextMarshalerFlag) Get(ctx *cli.Context) string {
+	return ctx.Path(f.Name)
+}
+
+// RunAction executes flag action if set
+func (f *TextMarshalerFlag) RunAction(c *cli.Context) error {
+	if f.Action != nil {
+		return f.Action(c, GlobalTextMarshaler(c, f.Name))
+	}
+	return nil
+}
+
+type WrappedTextMarshalerFlag struct {
+	*TextMarshalerFlag
+	set *flag.FlagSet
+}
+
+func NewWrappedTextMarshalerFlag(fl *TextMarshalerFlag) *WrappedTextMarshalerFlag {
+	return &WrappedTextMarshalerFlag{TextMarshalerFlag: fl, set: nil}
+}
+
+func (f *WrappedTextMarshalerFlag) Apply(set *flag.FlagSet) error {
+	f.set = set
+	return f.TextMarshalerFlag.Apply(set)
+}
+
+func (f *WrappedTextMarshalerFlag) ApplyInputSourceValue(context *cli.Context, isc altsrc.InputSourceContext) error {
+	if f.set != nil {
+		if !context.IsSet(f.Name) && !isEnvVarSet(f.EnvVars[0]) {
+			value, err := isc.String(f.TextMarshalerFlag.Name)
+			if err != nil {
+				return err
+			}
+			if value != "" {
+				eachName(f.Name, func(name string) {
+					f.set.Set(f.Name, value)
+				})
+			}
+		}
+	}
+	return nil
 }
 
 // GlobalTextMarshaler returns the value of a TextMarshalerFlag from the global flag set.
 func GlobalTextMarshaler(ctx *cli.Context, name string) TextMarshaler {
-	val := ctx.GlobalGeneric(name)
+	val := ctx.Generic(name)
 	if val == nil {
 		return nil
 	}
@@ -182,7 +361,7 @@ func (f BigFlag) Apply(set *flag.FlagSet) {
 
 // GlobalBig returns the value of a BigFlag from the global flag set.
 func GlobalBig(ctx *cli.Context, name string) *big.Int {
-	val := ctx.GlobalGeneric(name)
+	val := ctx.Generic(name)
 	if val == nil {
 		return nil
 	}
@@ -209,14 +388,6 @@ func prefixedNames(fullName string) (prefixed string) {
 		}
 	}
 	return
-}
-
-func (self DirectoryFlag) GetName() string {
-	return self.Name
-}
-
-func (self *DirectoryFlag) Set(value string) {
-	self.Value.Value = value
 }
 
 // Expands a file path

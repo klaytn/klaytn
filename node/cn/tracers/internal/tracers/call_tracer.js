@@ -138,6 +138,7 @@
 		}
 		// If an existing call is returning, pop off the call stack
 		if (syscall && op == 'REVERT') {
+			// TODO-klaytn: sort the revert error out.
 			this.callstack[this.callstack.length - 1].error = "execution reverted";
 			if(this.revertedContract == "")
 			{
@@ -284,15 +285,26 @@
 		if (result.error !== undefined && (result.error !== "execution reverted" || result.output === "0x")) {
 			delete result.output;
 		}
+		// Revert output example:
+		// 0x08c379a0
+		//   0000000000000000000000000000000000000000000000000000000000000020 stringOffset
+		//   0000000000000000000000000000000000000000000000000000000000000008 stringLength
+		//   4141414141414141
 		if (ctx.error == "evm: execution reverted") {
 			outputHex = toHex(ctx.output);
 			if (outputHex.slice(2,10) == "08c379a0") {
-				defaultOffset=10;
-				stringOffset = parseInt(bigInt("0x"+outputHex.slice(defaultOffset,defaultOffset+32*2)).toString());
-				stringLength = parseInt(bigInt("0x"+outputHex.slice(defaultOffset+32*2,defaultOffset+32*2+32*2)).toString());
-				start = defaultOffset+32*2+stringOffset*2;
-				end = start + stringLength*2;
-				this.revertString = this.toAscii(outputHex.slice(start,end));
+				defaultOffset = 10;
+				stringOffsetHex = "0x"+outputHex.slice(defaultOffset, defaultOffset + 32*2);
+				stringLengthHex = "0x"+outputHex.slice(defaultOffset + 32*2, defaultOffset + 32*2 + 32*2);
+				try {
+					stringOffset = parseInt(bigInt(stringOffsetHex).toString());
+					stringLength = parseInt(bigInt(stringLengthHex).toString());
+					start = defaultOffset + 32*2 + stringOffset*2;
+					end = start + stringLength*2;
+					this.revertString = this.toAscii(outputHex.slice(start,end));
+				} catch (e) {
+					this.revertString = "";
+				}
 			}
 			result.reverted = {"contract": this.revertedContract, "message": this.revertString};
 		}

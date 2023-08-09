@@ -665,8 +665,13 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, config
 		return nil
 	}
 
-	totalStaking, _ := calcTotalAmount(weightedValidators, newStakingInfo, stakingAmounts)
-	calcWeight(weightedValidators, stakingAmounts, totalStaking)
+	// weight and gini were neutralized after Kore hard fork
+	if chainRules.IsKore {
+		setZeroWeight(weightedValidators)
+	} else {
+		totalStaking, _ := calcTotalAmount(weightedValidators, newStakingInfo, stakingAmounts)
+		calcWeight(weightedValidators, stakingAmounts, totalStaking)
+	}
 
 	valSet.refreshProposers(seed, blockNum)
 
@@ -747,43 +752,30 @@ func filterValidators(isSingleMode bool, govNodeAddr common.Address, weightedVal
 //  - []*weightedValidator : a list of validators which type is converted to weightedValidator
 //  - []float64 : a list of stakingAmounts.
 func getStakingAmountsOfValidators(validators istanbul.Validators, stakingInfo *reward.StakingInfo) ([]*weightedValidator, []float64, error) {
-	numValidators := len(validators)
-	weightedValidators := make([]*weightedValidator, numValidators)
-	stakingAmounts := make([]float64, numValidators)
-	addedStaking := make([]bool, len(stakingInfo.CouncilNodeAddrs))
+	nVals := len(validators)
+	weightedVals := make([]*weightedValidator, nVals)
+	stakingAmounts := make([]float64, nVals)
 
 	for vIdx, val := range validators {
 		weightedVal, ok := val.(*weightedValidator)
 		if !ok {
 			return nil, nil, errors.New(fmt.Sprintf("not weightedValidator. val=%s", val.Address().String()))
 		}
-		weightedValidators[vIdx] = weightedVal
+		weightedVals[vIdx] = weightedVal
 
-		sIdx, err := stakingInfo.GetIndexByNodeAddress(weightedVal.address)
-		if err == nil {
-			rewardAddr := stakingInfo.CouncilRewardAddrs[sIdx]
-			weightedVal.SetRewardAddress(rewardAddr)
-			stakingAmounts[vIdx] = float64(stakingInfo.CouncilStakingAmounts[sIdx])
-			addedStaking[sIdx] = true
-		} else {
-			weightedVal.SetRewardAddress(common.Address{})
-		}
-	}
-
-	for sIdx, isAdded := range addedStaking {
-		if isAdded {
-			continue
-		}
-		for vIdx, val := range weightedValidators {
-			if val.RewardAddress() == stakingInfo.CouncilRewardAddrs[sIdx] {
-				stakingAmounts[vIdx] += float64(stakingInfo.CouncilStakingAmounts[sIdx])
-				break
+		if cIdx, err := stakingInfo.GetIndexByNodeAddress(weightedVal.address); err == nil {
+			valRewardAddr := stakingInfo.CouncilRewardAddrs[cIdx]
+			weightedVal.SetRewardAddress(valRewardAddr)
+			for rIdx, rewardAddr := range stakingInfo.CouncilRewardAddrs {
+				if rewardAddr == valRewardAddr {
+					stakingAmounts[vIdx] += float64(stakingInfo.CouncilStakingAmounts[rIdx])
+				}
 			}
 		}
 	}
 
-	logger.Debug("stakingAmounts of validators", "validators", weightedValidators, "stakingAmounts", stakingAmounts)
-	return weightedValidators, stakingAmounts, nil
+	logger.Debug("stakingAmounts of validators", "validators", weightedVals, "stakingAmounts", stakingAmounts)
+	return weightedVals, stakingAmounts, nil
 }
 
 // calcTotalAmount calculates totalAmount of stakingAmounts.
@@ -820,6 +812,13 @@ func calcTotalAmount(weightedValidators []*weightedValidator, stakingInfo *rewar
 
 	logger.Debug("calculate totalStaking", "UseGini", stakingInfo.UseGini, "Gini", gini, "totalStaking", totalStaking, "stakingAmounts", stakingAmounts)
 	return totalStaking, gini
+}
+
+// setZeroWeight makes each validator's weight to zero
+func setZeroWeight(weightedValidators []*weightedValidator) {
+	for _, weightedVal := range weightedValidators {
+		atomic.StoreUint64(&weightedVal.weight, 0)
+	}
 }
 
 // calcWeight updates each validator's weight based on the ratio of its staking amount vs. the total staking amount.

@@ -33,10 +33,13 @@ import (
 	"testing/quick"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/klaytn/klaytn/blockchain/types/account"
+	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
+	"github.com/stretchr/testify/assert"
 )
 
 func init() {
@@ -46,7 +49,7 @@ func init() {
 
 // Used for testing
 func newEmptyTrie() *Trie {
-	trie, _ := NewTrie(common.Hash{}, NewDatabase(database.NewMemoryDBManager()))
+	trie, _ := NewTrie(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil)
 	return trie
 }
 
@@ -70,7 +73,7 @@ func TestNull(t *testing.T) {
 }
 
 func TestMissingRoot(t *testing.T) {
-	trie, err := NewTrie(common.HexToHash("0beec7b5ea3f0fdbc95d0dd47f3c5bc275da8a33"), NewDatabase(database.NewMemoryDBManager()))
+	trie, err := NewTrie(common.HexToHash("0beec7b5ea3f0fdbc95d0dd47f3c5bc275da8a33"), NewDatabase(database.NewMemoryDBManager()), nil)
 	if trie != nil {
 		t.Error("NewTrie returned non-nil trie for invalid root")
 	}
@@ -83,11 +86,10 @@ func TestMissingNodeDisk(t *testing.T)    { testMissingNode(t, false) }
 func TestMissingNodeMemonly(t *testing.T) { testMissingNode(t, true) }
 
 func testMissingNode(t *testing.T, memonly bool) {
-	memDBManager := database.NewMemoryDBManager()
-	diskdb := memDBManager.GetMemDB()
-	triedb := NewDatabase(memDBManager)
+	dbm := database.NewMemoryDBManager()
+	triedb := NewDatabase(dbm)
 
-	trie, _ := NewTrie(common.Hash{}, triedb)
+	trie, _ := NewTrie(common.Hash{}, triedb, nil)
 	updateString(trie, "120000", "qwerqwerqwerqwerqwerqwerqwerqwer")
 	updateString(trie, "123456", "asdfasdfasdfasdfasdfasdfasdfasdf")
 	root, _ := trie.Commit(nil)
@@ -95,60 +97,60 @@ func testMissingNode(t *testing.T, memonly bool) {
 		triedb.Commit(root, true, 0)
 	}
 
-	trie, _ = NewTrie(root, triedb)
+	trie, _ = NewTrie(root, triedb, nil)
 	_, err := trie.TryGet([]byte("120000"))
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
-	trie, _ = NewTrie(root, triedb)
+	trie, _ = NewTrie(root, triedb, nil)
 	_, err = trie.TryGet([]byte("120099"))
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
-	trie, _ = NewTrie(root, triedb)
+	trie, _ = NewTrie(root, triedb, nil)
 	_, err = trie.TryGet([]byte("123456"))
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
-	trie, _ = NewTrie(root, triedb)
+	trie, _ = NewTrie(root, triedb, nil)
 	err = trie.TryUpdate([]byte("120099"), []byte("zxcvzxcvzxcvzxcvzxcvzxcvzxcvzxcv"))
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
-	trie, _ = NewTrie(root, triedb)
+	trie, _ = NewTrie(root, triedb, nil)
 	err = trie.TryDelete([]byte("123456"))
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
 
-	hash := common.HexToHash("0xe1d943cc8f061a0c0b98162830b970395ac9315654824bf21b73b891365262f9")
+	hash := common.HexToHash("0xe1d943cc8f061a0c0b98162830b970395ac9315654824bf21b73b891365262f9").ExtendLegacy()
 	if memonly {
 		delete(triedb.nodes, hash)
 	} else {
-		diskdb.Delete(hash[:])
+		dbm.DeleteTrieNode(hash)
 	}
 
-	trie, _ = NewTrie(root, triedb)
+	trie, _ = NewTrie(root, triedb, nil)
 	_, err = trie.TryGet([]byte("120000"))
 	if _, ok := err.(*MissingNodeError); !ok {
 		t.Errorf("Wrong error: %v", err)
 	}
-	trie, _ = NewTrie(root, triedb)
+	trie, _ = NewTrie(root, triedb, nil)
 	_, err = trie.TryGet([]byte("120099"))
 	if _, ok := err.(*MissingNodeError); !ok {
 		t.Errorf("Wrong error: %v", err)
 	}
-	trie, _ = NewTrie(root, triedb)
+	trie, _ = NewTrie(root, triedb, nil)
 	_, err = trie.TryGet([]byte("123456"))
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
-	trie, _ = NewTrie(root, triedb)
+	trie, _ = NewTrie(root, triedb, nil)
 	err = trie.TryUpdate([]byte("120099"), []byte("zxcv"))
 	if _, ok := err.(*MissingNodeError); !ok {
 		t.Errorf("Wrong error: %v", err)
 	}
-	trie, _ = NewTrie(root, triedb)
+	trie, _ = NewTrie(root, triedb, nil)
 	err = trie.TryDelete([]byte("123456"))
 	if _, ok := err.(*MissingNodeError); !ok {
 		t.Errorf("Wrong error: %v", err)
@@ -276,7 +278,7 @@ func TestReplication(t *testing.T) {
 	}
 
 	// create a new trie on top of the database and check that lookups work.
-	trie2, err := NewTrie(exp, trie.db)
+	trie2, err := NewTrie(exp, trie.db, nil)
 	if err != nil {
 		t.Fatalf("can't recreate trie at %x: %v", exp, err)
 	}
@@ -318,6 +320,131 @@ func TestLargeValue(t *testing.T) {
 	trie.Update([]byte("key1"), []byte{99, 99, 99, 99})
 	trie.Update([]byte("key2"), bytes.Repeat([]byte{1}, 32))
 	trie.Hash()
+}
+
+func TestStorageTrie(t *testing.T) {
+	newStorageTrie := func(pruning bool) *Trie {
+		dbm := database.NewMemoryDBManager()
+		if pruning {
+			dbm.WritePruningEnabled()
+		}
+		db := NewDatabase(dbm)
+		trie, _ := NewStorageTrie(common.ExtHash{}, db, nil)
+		updateString(trie, "doe", "reindeer")
+		return trie
+	}
+
+	// non-pruning storage trie returns Legacy ExtHash for root
+	trie := newStorageTrie(false)
+	root := trie.HashExt()
+	assert.True(t, root.IsLegacy())
+
+	trie = newStorageTrie(false)
+	root, _ = trie.CommitExt(nil)
+	assert.True(t, root.IsLegacy())
+
+	// pruning storage trie returns non-Legacy ExtHash for root
+	trie = newStorageTrie(true)
+	root = trie.HashExt()
+	assert.False(t, root.IsLegacy())
+
+	trie = newStorageTrie(true)
+	root, _ = trie.CommitExt(nil)
+	assert.False(t, root.IsLegacy())
+}
+
+func TestPruningByUpdate(t *testing.T) {
+	dbm := database.NewMemoryDBManager()
+	dbm.WritePruningEnabled()
+	db := NewDatabase(dbm)
+	hasnode := func(hash common.ExtHash) bool { ok, _ := dbm.HasTrieNode(hash); return ok }
+	common.ResetExtHashCounterForTest(0xccccddddeeee00)
+
+	trie, _ := NewTrie(common.Hash{}, db, &TrieOpts{PruningBlockNumber: 1})
+	nodehash1 := common.HexToExtHash("05ae693aac2107336a79309e0c60b24a7aac6aa3edecaef593921500d33c63c400000000000000")
+	nodehash2 := common.HexToExtHash("f226ef598ed9195f2211546cf5b2860dc27b4da07ff7ab5108ee68107f0c9d00ccccddddeeee01")
+
+	// Test that extension and branch nodes are correctly pruned via Update.
+	// - extension <05ae693aac2107336a79309e0c60b24a7aac6aa3edecaef593921500d33c63c400000000000045>
+	//   - branch  <f226ef598ed9195f2211546cf5b2860dc27b4da07ff7ab5108ee68107f0c9d00ccccddddeeee01>
+	//     - [5]value "reindeer"
+	//     - [7]value "puppy"
+	// By inserting "dogglesworth", both extension and branch nodes are affected, hence pruning the both.
+
+	// Update and commit to store the nodes
+	updateString(trie, "doe", "reindeer")
+	updateString(trie, "dog", "puppy")
+	trie.Commit(nil)
+	db.Cap(0)
+
+	// The nodes still exist
+	assert.True(t, hasnode(nodehash1))
+	assert.True(t, hasnode(nodehash2))
+
+	// Trigger pruning
+	updateString(trie, "dogglesworth", "cat")
+	trie.Commit(nil)
+	db.Cap(0)
+
+	// Those nodes and the only those nodes are scheduled to be deleted
+	expectedMarks := []database.PruningMark{
+		{Number: 1, Hash: nodehash1},
+		{Number: 1, Hash: nodehash2},
+	}
+	marks := dbm.ReadPruningMarks(0, 0)
+	assert.Equal(t, expectedMarks, marks)
+
+	// The nodes are deleted
+	dbm.PruneTrieNodes(marks)
+	assert.False(t, hasnode(nodehash1))
+	assert.False(t, hasnode(nodehash2))
+}
+
+func TestPruningByDelete(t *testing.T) {
+	dbm := database.NewMemoryDBManager()
+	dbm.WritePruningEnabled()
+	db := NewDatabase(dbm)
+	hasnode := func(hash common.ExtHash) bool { ok, _ := dbm.HasTrieNode(hash); return ok }
+	common.ResetExtHashCounterForTest(0xccccddddeeee00)
+
+	trie, _ := NewTrie(common.Hash{}, db, &TrieOpts{PruningBlockNumber: 1})
+	nodehash1 := common.HexToExtHash("05ae693aac2107336a79309e0c60b24a7aac6aa3edecaef593921500d33c63c400000000000000")
+	nodehash2 := common.HexToExtHash("f226ef598ed9195f2211546cf5b2860dc27b4da07ff7ab5108ee68107f0c9d00ccccddddeeee01")
+
+	// Test that extension and branch nodes are correctly pruned via Delete.
+	// - extension <05ae693aac2107336a79309e0c60b24a7aac6aa3edecaef593921500d33c63c400000000000045>
+	//   - branch  <f226ef598ed9195f2211546cf5b2860dc27b4da07ff7ab5108ee68107f0c9d00ccccddddeeee01>
+	//     - [5]value "reindeer"
+	//     - [7]value "puppy"
+	// By deleting "doe", both extension and branch nodes are affected, hence pruning the both.
+
+	// Update and commit to store the nodes
+	updateString(trie, "doe", "reindeer")
+	updateString(trie, "dog", "puppy")
+	trie.Commit(nil)
+	db.Cap(0)
+
+	// The nodes still exist
+	assert.True(t, hasnode(nodehash1))
+	assert.True(t, hasnode(nodehash2))
+
+	// Trigger pruning
+	deleteString(trie, "doe")
+	trie.Commit(nil)
+	db.Cap(0)
+
+	// Those nodes and the only those nodes are scheduled to be deleted
+	expectedMarks := []database.PruningMark{
+		{Number: 1, Hash: nodehash1},
+		{Number: 1, Hash: nodehash2},
+	}
+	marks := dbm.ReadPruningMarks(0, 0)
+	assert.Equal(t, expectedMarks, marks)
+
+	// The nodes are deleted
+	dbm.PruneTrieNodes(marks)
+	assert.False(t, hasnode(nodehash1))
+	assert.False(t, hasnode(nodehash2))
 }
 
 type countingDB struct {
@@ -385,7 +512,7 @@ func (randTest) Generate(r *rand.Rand, size int) reflect.Value {
 func runRandTest(rt randTest) bool {
 	triedb := NewDatabase(database.NewMemoryDBManager())
 
-	tr, _ := NewTrie(common.Hash{}, triedb)
+	tr, _ := NewTrie(common.Hash{}, triedb, nil)
 	values := make(map[string]string) // tracks content of the trie
 
 	for i, step := range rt {
@@ -412,14 +539,14 @@ func runRandTest(rt randTest) bool {
 				rt[i].err = err
 				return false
 			}
-			newtr, err := NewTrie(hash, triedb)
+			newtr, err := NewTrie(hash, triedb, nil)
 			if err != nil {
 				rt[i].err = err
 				return false
 			}
 			tr = newtr
 		case opItercheckhash:
-			checktr, _ := NewTrie(common.Hash{}, triedb)
+			checktr, _ := NewTrie(common.Hash{}, triedb, nil)
 			it := NewIterator(tr.NodeIterator(nil))
 			for it.Next() {
 				checktr.Update(it.Key, it.Value)
@@ -457,7 +584,7 @@ func benchGet(b *testing.B, commit bool) {
 
 	if commit {
 		dbDir, tmpdb := tempDB()
-		trie, _ = NewTrie(common.Hash{}, tmpdb)
+		trie, _ = NewTrie(common.Hash{}, tmpdb, nil)
 
 		defer os.RemoveAll(dbDir)
 		defer tmpdb.diskDB.Close()
@@ -525,6 +652,30 @@ func BenchmarkHash(b *testing.B) {
 	trie.Hash()
 }
 
+// Benchmarks the trie Commit following a Hash. Since the trie caches the result of any operation,
+// we cannot use b.N as the number of hashing rounds, since all rounds apart from
+// the first one will be NOOP. As such, we'll use b.N as the number of account to
+// insert into the trie before measuring the hashing.
+func BenchmarkCommitAfterHash(b *testing.B) {
+	b.Run("no-onleaf", func(b *testing.B) {
+		benchmarkCommitAfterHash(b)
+	})
+}
+
+func benchmarkCommitAfterHash(b *testing.B) {
+	// Make the random benchmark deterministic
+	addresses, accounts := makeAccounts(b.N)
+	trie, _ := NewTrie(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil)
+	for i := 0; i < len(addresses); i++ {
+		trie.Update(crypto.Keccak256(addresses[i][:]), accounts[i])
+	}
+	// Insert the accounts into the trie and hash it
+	trie.Hash()
+	b.ResetTimer()
+	b.ReportAllocs()
+	trie.Commit(nil)
+}
+
 func tempDB() (string, *Database) {
 	dir, err := ioutil.TempDir("", "trie-bench")
 	if err != nil {
@@ -533,6 +684,204 @@ func tempDB() (string, *Database) {
 	dbc := &database.DBConfig{Dir: dir, DBType: database.LevelDB, LevelDBCacheSize: 256, OpenFilesLimit: 0}
 	diskDB := database.NewDBManager(dbc)
 	return dir, NewDatabase(diskDB)
+}
+
+func genExternallyOwnedAccount(nonce uint64, balance *big.Int) (account.Account, error) {
+	return account.NewAccountWithMap(account.ExternallyOwnedAccountType, map[account.AccountValueKeyType]interface{}{
+		account.AccountValueKeyNonce:         nonce,
+		account.AccountValueKeyBalance:       balance,
+		account.AccountValueKeyHumanReadable: false,
+		account.AccountValueKeyAccountKey:    accountkey.NewAccountKeyLegacy(),
+	})
+}
+
+func makeAccounts(size int) (addresses [][20]byte, accounts [][]byte) {
+	// Make the random benchmark deterministic
+	random := rand.New(rand.NewSource(0))
+	// Create a realistic account trie to hash
+	addresses = make([][20]byte, size)
+	for i := 0; i < len(addresses); i++ {
+		data := make([]byte, 20)
+		random.Read(data)
+		copy(addresses[i][:], data)
+	}
+	accounts = make([][]byte, len(addresses))
+	for i := 0; i < len(accounts); i++ {
+		// The big.Rand function is not deterministic with regards to 64 vs 32 bit systems,
+		// and will consume different amount of data from the rand source.
+		// balance = new(big.Int).Rand(random, new(big.Int).Exp(common.Big2, common.Big256, nil))
+		// Therefore, we instead just read via byte buffer
+		numBytes := random.Uint32() % 33 // [0, 32] bytes
+		balanceBytes := make([]byte, numBytes)
+		random.Read(balanceBytes)
+		acc, _ := genExternallyOwnedAccount(uint64(i), big.NewInt(int64(i)))
+		serializer := account.NewAccountSerializerWithAccount(acc)
+		data, _ := rlp.EncodeToBytes(serializer)
+		accounts[i] = data
+	}
+	return addresses, accounts
+}
+
+// BenchmarkCommitAfterHashFixedSize benchmarks the Commit (after Hash) of a fixed number of updates to a trie.
+// This benchmark is meant to capture the difference on efficiency of small versus large changes. Typically,
+// storage tries are small (a couple of entries), whereas the full post-block account trie update is large (a couple
+// of thousand entries)
+func BenchmarkHashFixedSize(b *testing.B) {
+	b.Run("10", func(b *testing.B) {
+		b.StopTimer()
+		acc, add := makeAccounts(20)
+		for i := 0; i < b.N; i++ {
+			benchmarkHashFixedSize(b, acc, add)
+		}
+	})
+	b.Run("100", func(b *testing.B) {
+		b.StopTimer()
+		acc, add := makeAccounts(100)
+		for i := 0; i < b.N; i++ {
+			benchmarkHashFixedSize(b, acc, add)
+		}
+	})
+
+	b.Run("1K", func(b *testing.B) {
+		b.StopTimer()
+		acc, add := makeAccounts(1000)
+		for i := 0; i < b.N; i++ {
+			benchmarkHashFixedSize(b, acc, add)
+		}
+	})
+	b.Run("10K", func(b *testing.B) {
+		b.StopTimer()
+		acc, add := makeAccounts(10000)
+		for i := 0; i < b.N; i++ {
+			benchmarkHashFixedSize(b, acc, add)
+		}
+	})
+	b.Run("100K", func(b *testing.B) {
+		b.StopTimer()
+		acc, add := makeAccounts(100000)
+		for i := 0; i < b.N; i++ {
+			benchmarkHashFixedSize(b, acc, add)
+		}
+	})
+}
+
+func benchmarkHashFixedSize(b *testing.B, addresses [][20]byte, accounts [][]byte) {
+	b.ReportAllocs()
+	trie, _ := NewTrie(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil)
+	for i := 0; i < len(addresses); i++ {
+		trie.Update(crypto.Keccak256(addresses[i][:]), accounts[i])
+	}
+	// Insert the accounts into the trie and hash it
+	b.StartTimer()
+	trie.Hash()
+	b.StopTimer()
+}
+
+func BenchmarkCommitAfterHashFixedSize(b *testing.B) {
+	b.Run("10", func(b *testing.B) {
+		b.StopTimer()
+		acc, add := makeAccounts(20)
+		for i := 0; i < b.N; i++ {
+			benchmarkCommitAfterHashFixedSize(b, acc, add)
+		}
+	})
+	b.Run("100", func(b *testing.B) {
+		b.StopTimer()
+		acc, add := makeAccounts(100)
+		for i := 0; i < b.N; i++ {
+			benchmarkCommitAfterHashFixedSize(b, acc, add)
+		}
+	})
+
+	b.Run("1K", func(b *testing.B) {
+		b.StopTimer()
+		acc, add := makeAccounts(1000)
+		for i := 0; i < b.N; i++ {
+			benchmarkCommitAfterHashFixedSize(b, acc, add)
+		}
+	})
+	b.Run("10K", func(b *testing.B) {
+		b.StopTimer()
+		acc, add := makeAccounts(10000)
+		for i := 0; i < b.N; i++ {
+			benchmarkCommitAfterHashFixedSize(b, acc, add)
+		}
+	})
+	b.Run("100K", func(b *testing.B) {
+		b.StopTimer()
+		acc, add := makeAccounts(100000)
+		for i := 0; i < b.N; i++ {
+			benchmarkCommitAfterHashFixedSize(b, acc, add)
+		}
+	})
+}
+
+func benchmarkCommitAfterHashFixedSize(b *testing.B, addresses [][20]byte, accounts [][]byte) {
+	b.ReportAllocs()
+	trie, _ := NewTrie(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil)
+	for i := 0; i < len(addresses); i++ {
+		trie.Update(crypto.Keccak256(addresses[i][:]), accounts[i])
+	}
+	// Insert the accounts into the trie and hash it
+	trie.Hash()
+	b.StartTimer()
+	trie.Commit(nil)
+	b.StopTimer()
+}
+
+func BenchmarkDerefRootFixedSize(b *testing.B) {
+	b.Run("10", func(b *testing.B) {
+		b.StopTimer()
+		acc, add := makeAccounts(20)
+		for i := 0; i < b.N; i++ {
+			benchmarkDerefRootFixedSize(b, acc, add)
+		}
+	})
+	b.Run("100", func(b *testing.B) {
+		b.StopTimer()
+		acc, add := makeAccounts(100)
+		for i := 0; i < b.N; i++ {
+			benchmarkDerefRootFixedSize(b, acc, add)
+		}
+	})
+
+	b.Run("1K", func(b *testing.B) {
+		b.StopTimer()
+		acc, add := makeAccounts(1000)
+		for i := 0; i < b.N; i++ {
+			benchmarkDerefRootFixedSize(b, acc, add)
+		}
+	})
+	b.Run("10K", func(b *testing.B) {
+		b.StopTimer()
+		acc, add := makeAccounts(10000)
+		for i := 0; i < b.N; i++ {
+			benchmarkDerefRootFixedSize(b, acc, add)
+		}
+	})
+	b.Run("100K", func(b *testing.B) {
+		b.StopTimer()
+		acc, add := makeAccounts(100000)
+		for i := 0; i < b.N; i++ {
+			benchmarkDerefRootFixedSize(b, acc, add)
+		}
+	})
+}
+
+func benchmarkDerefRootFixedSize(b *testing.B, addresses [][20]byte, accounts [][]byte) {
+	b.ReportAllocs()
+	triedb := NewDatabase(database.NewMemoryDBManager())
+	trie, _ := NewTrie(common.Hash{}, triedb, nil)
+	for i := 0; i < len(addresses); i++ {
+		trie.Update(crypto.Keccak256(addresses[i][:]), accounts[i])
+	}
+	h := trie.Hash()
+	trie.Commit(nil)
+	//_, nodes := trie.Commit(nil)
+	//triedb.Update(NewWithNodeSet(nodes))
+	b.StartTimer()
+	triedb.Dereference(h)
+	b.StopTimer()
 }
 
 func getString(trie *Trie, k string) []byte {

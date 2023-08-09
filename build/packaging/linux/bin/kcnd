@@ -270,6 +270,22 @@ __check_option() {
     if [[ ! -z $AUTO_RESTART ]] && [[ $AUTO_RESTART -eq 1 ]]; then
         OPTIONS="$OPTIONS --autorestart.enable"
     fi
+
+    if [[ ! -z $LOG_ROTATE ]] && [[ $LOG_ROTATE -eq 1 ]]; then
+        OPTIONS="$OPTIONS --log.rotate"
+        if [[ ! -z $LOG_MAXSIZE ]]; then
+          OPTIONS="$OPTIONS --log.maxsize $LOG_MAXSIZE"
+        fi
+        if [[ ! -z $LOG_MAXBACKUP ]]; then
+          OPTIONS="$OPTIONS --log.maxbackup $LOG_MAXBACKUP"
+        fi
+        if [[ ! -z $LOG_MAXAGE ]]; then
+          OPTIONS="$OPTIONS --log.maxage $LOG_MAXAGE"
+        fi
+        if [[ ! -z $LOG_COMPRESS ]] && [[ $LOG_COMPRESS -eq 1 ]]; then
+          OPTIONS="$OPTIONS --log.compress"
+        fi
+    fi
 }
 
 start_node() {
@@ -284,7 +300,8 @@ start_node() {
     CURRENTFILE=`basename "$0"`
     OPTIONS="$OPTIONS --autorestart.daemon.path $BASEDIR/$CURRENTFILE"
 
-    $BIN/kcn $OPTIONS >> ${LOG_DIR}/kcnd.out 2>&1 &
+    OPTIONS="$OPTIONS --log.file ${LOG_DIR}/kcnd.out"
+    TERM="dumb" $BIN/kcn $OPTIONS >> ${LOG_DIR}/kcnd.out 2>&1 &
     RETVAL=$?
     PIDNUM=$!
 

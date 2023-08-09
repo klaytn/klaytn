@@ -19,364 +19,479 @@ package setup
 
 import (
 	"github.com/klaytn/klaytn/params"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 var (
-	fundingAddr   string
 	dockerImageId string
 	outputPath    string
 )
 
 var (
-	cypressTestFlag = cli.BoolFlag{
-		Name:  "cypress-test",
-		Usage: "Generate genesis.json similar to the one used for Cypress with shorter intervals for testing",
+	homiYamlFlag = &cli.StringFlag{
+		Name:    "homi-yaml",
+		Usage:   "Import homi.yaml to generate the config files to run the nodes",
+		Aliases: []string{"yaml"},
+	}
+	genTypeFlag = &cli.StringFlag{
+		Name:    "gen-type",
+		Usage:   "Generate environment files according to the type (docker, local, remote, deploy)",
+		Value:   "docker",
+		Aliases: []string{},
 	}
 
-	cypressFlag = cli.BoolFlag{
-		Name:  "cypress",
-		Usage: "Generate genesis.json similar to the one used for Cypress",
+	cypressTestFlag = &cli.BoolFlag{
+		Name:    "cypress-test",
+		Usage:   "Generate genesis.json similar to the one used for Cypress with shorter intervals for testing",
+		Aliases: []string{},
+	}
+	cypressFlag = &cli.BoolFlag{
+		Name:    "cypress",
+		Usage:   "Generate genesis.json similar to the one used for Cypress",
+		Aliases: []string{},
+	}
+	baobabTestFlag = &cli.BoolFlag{
+		Name:    "baobab-test",
+		Usage:   "Generate genesis.json similar to the one used for Baobab with shorter intervals for testing",
+		Aliases: []string{},
+	}
+	baobabFlag = &cli.BoolFlag{
+		Name:    "baobab",
+		Usage:   "Generate genesis.json similar to the one used for Baobab",
+		Aliases: []string{},
+	}
+	serviceChainFlag = &cli.BoolFlag{
+		Name:    "servicechain",
+		Usage:   "Generate genesis.json similar to the one used for Serivce Chain",
+		Aliases: []string{},
+	}
+	serviceChainTestFlag = &cli.BoolFlag{
+		Name:    "servicechain-test",
+		Usage:   "Generate genesis.json similar to the one used for Serivce Chain with shorter intervals for testing",
+		Aliases: []string{},
+	}
+	cliqueFlag = &cli.BoolFlag{
+		Name:    "clique",
+		Usage:   "Use Clique consensus",
+		Aliases: []string{"clique.enable"},
 	}
 
-	baobabTestFlag = cli.BoolFlag{
-		Name:  "baobab-test",
-		Usage: "Generate genesis.json similar to the one used for Baobab with shorter intervals for testing",
+	numOfCNsFlag = &cli.IntFlag{
+		Name:    "cn-num",
+		Usage:   "Number of consensus nodes",
+		Value:   0,
+		Aliases: []string{"topology.cn-num"},
+	}
+	numOfValidatorsFlag = &cli.IntFlag{
+		Name:    "validators-num",
+		Usage:   "Number of validators. If not set, it will be set the number of option cn-num",
+		Value:   0,
+		Aliases: []string{"topology.validators-num"},
+	}
+	numOfPNsFlag = &cli.IntFlag{
+		Name:    "pn-num",
+		Usage:   "Number of proxy node",
+		Value:   0,
+		Aliases: []string{"topology.pn-num"},
+	}
+	numOfENsFlag = &cli.IntFlag{
+		Name:    "en-num",
+		Usage:   "Number of end-point node",
+		Value:   0,
+		Aliases: []string{"topology.en-num"},
+	}
+	numOfSCNsFlag = &cli.IntFlag{
+		Name:    "scn-num",
+		Usage:   "Number of service chain nodes",
+		Value:   0,
+		Aliases: []string{"topology.scn-num"},
+	}
+	numOfSPNsFlag = &cli.IntFlag{
+		Name:    "spn-num",
+		Usage:   "Number of service chain proxy nodes",
+		Value:   0,
+		Aliases: []string{"topology.spn-num"},
+	}
+	numOfSENsFlag = &cli.IntFlag{
+		Name:    "sen-num",
+		Usage:   "Number of service chain end-point nodes",
+		Value:   0,
+		Aliases: []string{"topology.sen-num"},
+	}
+	numOfTestKeyFlag = &cli.IntFlag{
+		Name:    "test-num",
+		Usage:   "Number of test key",
+		Value:   0,
+		Aliases: []string{"topology.test-num"},
 	}
 
-	baobabFlag = cli.BoolFlag{
-		Name:  "baobab",
-		Usage: "Generate genesis.json similar to the one used for Baobab",
+	genesisTypeFlag = &cli.StringFlag{
+		Name:    "genesis-type",
+		Usage:   "Set the type of genesis.json to generate (cypress-test, cypress, baobab-test, baobab, clique, servicechain, servicechain-test, istanbul)",
+		Aliases: []string{"genesis.type"},
+	}
+	mnemonic = &cli.StringFlag{
+		Name:  "mnemonic",
+		Usage: "Use given mnemonic to derive node keys",
+		Value: "",
 	}
 
-	serviceChainFlag = cli.BoolFlag{
-		Name:  "servicechain",
-		Usage: "Generate genesis.json similar to the one used for Serivce Chain",
+	mnemonicPath = &cli.StringFlag{
+		Name:  "mnemonic-path",
+		Usage: "Use given path/coin to derive node keys (format: m/44'/60'/0'/0/). Effective only if --mnemonic is given",
+		Value: "eth",
 	}
 
-	serviceChainTestFlag = cli.BoolFlag{
-		Name:  "servicechain-test",
-		Usage: "Generate genesis.json similar to the one used for Serivce Chain with shorter intervals for testing",
+	chainIDFlag = &cli.Uint64Flag{
+		Name:    "chainID",
+		Usage:   "ChainID",
+		Value:   1000,
+		Aliases: []string{"genesis.chain-id"},
 	}
 
-	cliqueFlag = cli.BoolFlag{
-		Name:  "clique",
-		Usage: "Use Clique consensus",
+	serviceChainIDFlag = &cli.Uint64Flag{
+		Name:    "serviceChainID",
+		Usage:   "Service Chain ID",
+		Value:   1001,
+		Aliases: []string{"genesis.service-chain-id"},
 	}
 
-	numOfCNsFlag = cli.IntFlag{
-		Name:  "cn-num",
-		Usage: "Number of consensus nodes",
-		Value: 0,
+	unitPriceFlag = &cli.Uint64Flag{
+		Name:    "unitPrice",
+		Usage:   "Price of unit",
+		Value:   0,
+		Aliases: []string{"genesis.unit-price"},
 	}
 
-	numOfValidatorsFlag = cli.IntFlag{
-		Name:  "validators-num",
-		Usage: "Number of validators. If not set, it will be set the number of option cn-num",
-		Value: 0,
+	deriveShaImplFlag = &cli.IntFlag{
+		Name:    "deriveShaImpl",
+		Usage:   "Implementation of DeriveSha [0:Original, 1:Simple, 2:Concat]",
+		Value:   0,
+		Aliases: []string{"genesis.derive-sha-impl"},
 	}
 
-	numOfPNsFlag = cli.IntFlag{
-		Name:  "pn-num",
-		Usage: "Number of proxy node",
-		Value: 0,
-	}
-
-	numOfENsFlag = cli.IntFlag{
-		Name:  "en-num",
-		Usage: "Number of end-point node",
-		Value: 0,
-	}
-
-	numOfSCNsFlag = cli.IntFlag{
-		Name:  "scn-num",
-		Usage: "Number of service chain nodes",
-		Value: 0,
-	}
-
-	numOfSPNsFlag = cli.IntFlag{
-		Name:  "spn-num",
-		Usage: "Number of service chain proxy nodes",
-		Value: 0,
-	}
-
-	numOfSENsFlag = cli.IntFlag{
-		Name:  "sen-num",
-		Usage: "Number of service chain end-point nodes",
-		Value: 0,
-	}
-
-	numOfTestKeyFlag = cli.IntFlag{
-		Name:  "test-num",
-		Usage: "Number of test key",
-		Value: 0,
-	}
-
-	chainIDFlag = cli.Uint64Flag{
-		Name:  "chainID",
-		Usage: "ChainID",
-		Value: 1000,
-	}
-
-	serviceChainIDFlag = cli.Uint64Flag{
-		Name:  "serviceChainID",
-		Usage: "Service Chain ID",
-		Value: 1001,
-	}
-
-	unitPriceFlag = cli.Uint64Flag{
-		Name:  "unitPrice",
-		Usage: "Price of unit",
-		Value: 0,
-	}
-
-	deriveShaImplFlag = cli.IntFlag{
-		Name:  "deriveShaImpl",
-		Usage: "Implementation of DeriveSha [0:Original, 1:Simple, 2:Concat]",
-		Value: 0,
-	}
-
-	outputPathFlag = cli.StringFlag{
-		Name:        "output, o",
+	outputPathFlag = &cli.StringFlag{
+		Name:        "output",
 		Usage:       "homi's result saved at this output folder",
+		Aliases:     []string{"o"},
 		Value:       "homi-output",
 		Destination: &outputPath,
 	}
 
-	fundingAddrFlag = cli.StringFlag{
-		Name:        "fundingAddr",
-		Value:       "75a59b94889a05c03c66c3c84e9d2f8308ca4abd",
-		Usage:       "Give initial fund to the given addr",
-		Destination: &fundingAddr,
+	fundingAddrFlag = &cli.StringFlag{
+		Name:    "funding-addr",
+		Value:   "",
+		Usage:   "Give initial fund to the given addr",
+		Aliases: []string{"genesis.funding-addr"},
 	}
 
-	dockerImageIdFlag = cli.StringFlag{
+	patchAddressBookFlag = &cli.BoolFlag{
+		Name:    "patch-address-book",
+		Usage:   "Patch genesis AddressBook's constructContract function",
+		Aliases: []string{"genesis.patched-address-book.enable"},
+	}
+
+	patchAddressBookAddrFlag = &cli.StringFlag{
+		Name:    "patch-address-book-addr",
+		Usage:   "The address to inject in AddressBook's constructContract function [default: first CN's address]",
+		Value:   "",
+		Aliases: []string{"genesis.patched-address-book.addr"},
+	}
+	// Deprecated: it doesn't used anymore
+	subGroupSizeFlag = &cli.IntFlag{
+		Name:    "subgroup-size",
+		Usage:   "CN's Subgroup size",
+		Value:   21,
+		Aliases: []string{},
+	}
+
+	addressBookMockFlag = &cli.BoolFlag{
+		Name:  "address-book-mock",
+		Usage: "Allocate an AddressBookMock at the genesis block",
+	}
+
+	dockerImageIdFlag = &cli.StringFlag{
 		Name:        "docker-image-id",
 		Value:       "klaytn/klaytn:latest", // https://hub.docker.com/r/klaytn/klaytn
 		Usage:       "Base docker image ID (Image[:tag]), e.g., klaytn/klaytn:v1.5.3",
+		Aliases:     []string{"deploy.docker.image-id"},
 		Destination: &dockerImageId,
 	}
-
-	subGroupSizeFlag = cli.IntFlag{
-		Name:  "subgroup-size",
-		Usage: "CN's Subgroup size",
-		Value: 21,
+	fasthttpFlag = &cli.BoolFlag{
+		Name:    "fasthttp",
+		Usage:   "(docker only) Use High performance http module",
+		Aliases: []string{"deploy.docker.fasthttp"},
+	}
+	networkIdFlag = &cli.IntFlag{
+		Name:    "network-id",
+		Usage:   "(docker only) network identifier (default : 2018)",
+		Value:   2018,
+		Aliases: []string{"deploy.docker.network-id"},
+	}
+	nografanaFlag = &cli.BoolFlag{
+		Name:    "no-grafana",
+		Usage:   "(docker only) Do not make grafana container",
+		Aliases: []string{"deploy.docker.no-grafana"},
+	}
+	useTxGenFlag = &cli.BoolFlag{
+		Name:    "txgen",
+		Usage:   "(docker only) Add txgen container",
+		Aliases: []string{"deploy.docker.tx-gen.enable"},
+	}
+	txGenRateFlag = &cli.IntFlag{
+		Name:    "txgen-rate",
+		Usage:   "(docker only) txgen's rate option [default : 2000]",
+		Value:   2000,
+		Aliases: []string{"deploy.docker.tx-gen.rate"},
+	}
+	txGenConnFlag = &cli.IntFlag{
+		Name:    "txgen-conn",
+		Usage:   "(docker only) txgen's connection size option [default : 100]",
+		Value:   100,
+		Aliases: []string{"deploy.docker.tx-gen.connetions"},
+	}
+	txGenDurFlag = &cli.StringFlag{
+		Name:    "txgen-dur",
+		Usage:   "(docker only) txgen's duration option [default : 1m]",
+		Value:   "1m",
+		Aliases: []string{"deploy.docker.tx-gen.duration"},
+	}
+	txGenThFlag = &cli.IntFlag{
+		Name:    "txgen-th",
+		Usage:   "(docker-only) txgen's thread size option [default : 2]",
+		Value:   2,
+		Aliases: []string{"deploy.docker.tx-gen.thread"},
 	}
 
-	fasthttpFlag = cli.BoolFlag{
-		Name:  "fasthttp",
-		Usage: "(docker only) Use High performance http module",
+	rpcPortFlag = &cli.IntFlag{
+		Name:    "rpc-port",
+		Usage:   "klay.conf - Klaytn node's rpc port [default: 8551] ",
+		Value:   8551,
+		Aliases: []string{"deploy.rpc-port"},
 	}
 
-	networkIdFlag = cli.IntFlag{
-		Name:  "network-id",
-		Usage: "(docker only) network identifier (default : 2018)",
-		Value: 2018,
+	wsPortFlag = &cli.IntFlag{
+		Name:    "ws-port",
+		Usage:   "klay.conf - Klaytn node's ws port [default: 8552]",
+		Value:   8552,
+		Aliases: []string{"deploy.ws-port"},
 	}
 
-	nografanaFlag = cli.BoolFlag{
-		Name:  "no-grafana",
-		Usage: "(docker only) Do not make grafana container",
+	p2pPortFlag = &cli.IntFlag{
+		Name:    "p2p-port",
+		Usage:   "klay.conf - Klaytn node's p2p port [default: 32323]",
+		Value:   32323,
+		Aliases: []string{"deploy.p2p-port"},
 	}
 
-	useTxGenFlag = cli.BoolFlag{
-		Name:  "txgen",
-		Usage: "(docker only) Add txgen container",
+	dataDirFlag = &cli.StringFlag{
+		Name:    "data-dir",
+		Usage:   "klay.conf - Klaytn node's data directory path [default : /var/klay/data]",
+		Value:   "/var/klay/data",
+		Aliases: []string{"deploy.data-dir"},
 	}
 
-	txGenRateFlag = cli.IntFlag{
-		Name:  "txgen-rate",
-		Usage: "(docker only) txgen's rate option [default : 2000]",
-		Value: 2000,
-	}
-
-	txGenConnFlag = cli.IntFlag{
-		Name:  "txgen-conn",
-		Usage: "(docker only) txgen's connection size option [default : 100]",
-		Value: 100,
-	}
-
-	txGenDurFlag = cli.StringFlag{
-		Name:  "txgen-dur",
-		Usage: "(docker only) txgen's duration option [default : 1m]",
-		Value: "1m",
-	}
-
-	txGenThFlag = cli.IntFlag{
-		Name:  "txgen-th",
-		Usage: "(docker-only) txgen's thread size option [default : 2]",
-		Value: 2,
-	}
-
-	rpcPortFlag = cli.IntFlag{
-		Name:  "rpc-port",
-		Usage: "klay.conf - Klaytn node's rpc port [default: 8551] ",
-		Value: 8551,
-	}
-
-	wsPortFlag = cli.IntFlag{
-		Name:  "ws-port",
-		Usage: "klay.conf - Klaytn node's ws port [default: 8552]",
-		Value: 8552,
-	}
-
-	p2pPortFlag = cli.IntFlag{
-		Name:  "p2p-port",
-		Usage: "klay.conf - Klaytn node's p2p port [default: 32323]",
-		Value: 32323,
-	}
-
-	dataDirFlag = cli.StringFlag{
-		Name:  "data-dir",
-		Usage: "klay.conf - Klaytn node's data directory path [default : /var/klay/data]",
-		Value: "/var/klay/data",
-	}
-
-	logDirFlag = cli.StringFlag{
-		Name:  "log-dir",
-		Usage: "klay.conf - Klaytn node's log directory path [default : /var/klay/log]",
-		Value: "/var/klay/log",
+	logDirFlag = &cli.StringFlag{
+		Name:    "log-dir",
+		Usage:   "klay.conf - Klaytn node's log directory path [default : /var/klay/log]",
+		Value:   "/var/klay/log",
+		Aliases: []string{"deploy.log-dir"},
 	}
 
 	// Governance flags
-	governanceFlag = cli.BoolFlag{
-		Name:  "governance",
-		Usage: "governance field is added in the genesis file if this flag is set",
+	governanceFlag = &cli.BoolFlag{
+		Name:    "governance",
+		Usage:   "governance field is added in the genesis file if this flag is set",
+		Aliases: []string{"genesis.governance"},
 	}
 
-	govModeFlag = cli.StringFlag{
-		Name:  "gov-mode",
-		Usage: "governance mode (none, single, ballot) [default: none]",
-		Value: params.DefaultGovernanceMode,
+	govModeFlag = &cli.StringFlag{
+		Name:    "gov-mode",
+		Usage:   "governance mode (none, single, ballot) [default: none]",
+		Value:   params.DefaultGovernanceMode,
+		Aliases: []string{"genesis.governance-mode"},
 	}
 
-	governingNodeFlag = cli.StringFlag{
-		Name:  "governing-node",
-		Usage: "the governing node [default: 0x0000000000000000000000000000000000000000]",
-		Value: params.DefaultGoverningNode,
+	governingNodeFlag = &cli.StringFlag{
+		Name:    "governing-node",
+		Usage:   "the governing node [default: 0x0000000000000000000000000000000000000000]",
+		Value:   params.DefaultGoverningNode,
+		Aliases: []string{"genesis.governing-node"},
 	}
 
-	rewardMintAmountFlag = cli.StringFlag{
-		Name:  "reward-mint-amount",
-		Usage: "governance minting amount",
-		Value: "9600000000000000000",
+	govParamContractFlag = &cli.StringFlag{
+		Name:  "gov-param-contract",
+		Usage: "the GovParam contract address [default: 0x0000000000000000000000000000000000000000]",
+		Value: params.DefaultGovParamContract,
 	}
 
-	rewardRatioFlag = cli.StringFlag{
-		Name:  "reward-ratio",
-		Usage: "governance ratio [default: 100/0/0]",
-		Value: params.DefaultRatio,
+	rewardMintAmountFlag = &cli.StringFlag{
+		Name:    "reward-mint-amount",
+		Usage:   "governance minting amount",
+		Value:   "9600000000000000000",
+		Aliases: []string{"genesis.reward.mint-amount"},
+	}
+	rewardRatioFlag = &cli.StringFlag{
+		Name:    "reward-ratio",
+		Usage:   "governance ratio [default: 100/0/0]",
+		Value:   params.DefaultRatio,
+		Aliases: []string{"genesis.reward.ratio"},
 	}
 
-	rewardGiniCoeffFlag = cli.BoolFlag{
-		Name:  "reward-gini-coeff",
-		Usage: "governance gini-coefficient",
+	rewardKip82RatioFlag = &cli.StringFlag{
+		Name:  "reward-kip82-ratio",
+		Usage: "kip82 ratio [default: 20/80]",
+		Value: params.DefaultKip82Ratio,
 	}
 
-	rewardDeferredTxFeeFlag = cli.BoolFlag{
-		Name:  "reward-deferred-tx",
-		Usage: "governance deferred transaction",
+	rewardGiniCoeffFlag = &cli.BoolFlag{
+		Name:    "reward-gini-coeff",
+		Usage:   "governance gini-coefficient",
+		Aliases: []string{"genesis.reward.gini-coefficient"},
+	}
+	rewardDeferredTxFeeFlag = &cli.BoolFlag{
+		Name:    "reward-deferred-tx",
+		Usage:   "governance deferred transaction",
+		Aliases: []string{"genesis.reward.deferred-tx"},
+	}
+	rewardStakingFlag = &cli.Uint64Flag{
+		Name:    "reward-staking-interval",
+		Usage:   "reward staking update interval flag",
+		Value:   86400,
+		Aliases: []string{"genesis.reward.staking-interval"},
+	}
+	rewardProposerFlag = &cli.Uint64Flag{
+		Name:    "reward-proposer-interval",
+		Usage:   "reward proposer update interval flag",
+		Value:   3600,
+		Aliases: []string{"genesis.reward.proposer-inteval"},
+	}
+	rewardMinimumStakeFlag = &cli.StringFlag{
+		Name:    "reward-minimum-stake",
+		Usage:   "reward minimum stake flag",
+		Value:   "2000000",
+		Aliases: []string{"genesis.reward.minimum-stake"},
 	}
 
-	rewardStakingFlag = cli.Uint64Flag{
-		Name:  "reward-staking-interval",
-		Usage: "reward staking update interval flag",
-		Value: 86400,
+	magmaLowerBoundBaseFeeFlag = &cli.Uint64Flag{
+		Name:    "lower-bound-base-fee",
+		Usage:   "lower bound base fee flag",
+		Value:   params.DefaultLowerBoundBaseFee,
+		Aliases: []string{"genesis.kip71.lower-bound-base-fee"},
 	}
 
-	rewardProposerFlag = cli.Uint64Flag{
-		Name:  "reward-proposer-interval",
-		Usage: "reward proposer update interval flag",
-		Value: 3600,
+	magmaUpperBoundBaseFeeFlag = &cli.Uint64Flag{
+		Name:    "upper-bound-base-fee",
+		Usage:   "upper bound base fee flag",
+		Value:   params.DefaultUpperBoundBaseFee,
+		Aliases: []string{"genesis.kip71.upper-bound-base-fee"},
 	}
 
-	rewardMinimumStakeFlag = cli.StringFlag{
-		Name:  "reward-minimum-stake",
-		Usage: "reward minimum stake flag",
-		Value: "2000000",
+	magmaGasTarget = &cli.Uint64Flag{
+		Name:    "gas-target",
+		Usage:   "gas target flag",
+		Value:   params.DefaultGasTarget,
+		Aliases: []string{"genesis.kip71.gas-target"},
 	}
 
-	magmaLowerBoundBaseFeeFlag = cli.Uint64Flag{
-		Name:  "lower-bound-base-fee",
-		Usage: "lower bound base fee flag",
-		Value: params.DefaultLowerBoundBaseFee,
+	magmaMaxBlockGasUsedForBaseFee = &cli.Uint64Flag{
+		Name:    "block-gas-limit",
+		Usage:   "block gas limit flag",
+		Value:   params.DefaultMaxBlockGasUsedForBaseFee,
+		Aliases: []string{"genesis.kip71.block-gas-limit"},
 	}
 
-	magmaUpperBoundBaseFeeFlag = cli.Uint64Flag{
-		Name:  "upper-bound-base-fee",
-		Usage: "upper bound base fee flag",
-		Value: params.DefaultUpperBoundBaseFee,
+	magmaBaseFeeDenominator = &cli.Uint64Flag{
+		Name:    "base-fee-denominator",
+		Usage:   "base fee denominator flag",
+		Value:   params.DefaultBaseFeeDenominator,
+		Aliases: []string{"genesis.kip71.base-fee-denominator"},
 	}
 
-	magmaGasTarget = cli.Uint64Flag{
-		Name:  "gas-target",
-		Usage: "gas target flag",
-		Value: params.DefaultGasTarget,
+	istEpochFlag = &cli.Uint64Flag{
+		Name:    "ist-epoch",
+		Usage:   "governance epoch [default: 604800]",
+		Value:   params.DefaultEpoch,
+		Aliases: []string{"genesis.consensus.istanbul.epoch"},
 	}
 
-	magmaMaxBlockGasUsedForBaseFee = cli.Uint64Flag{
-		Name:  "block-gas-limit",
-		Usage: "block gas limit flag",
-		Value: params.DefaultMaxBlockGasUsedForBaseFee,
+	istProposerPolicyFlag = &cli.Uint64Flag{
+		Name:    "ist-proposer-policy",
+		Usage:   "governance proposer policy (0: RoundRobin, 1: Sticky, 2: WeightedRandom) [default: 0]",
+		Value:   params.DefaultProposerPolicy,
+		Aliases: []string{"genesis.consensus.istanbul.policy"},
 	}
 
-	magmaBaseFeeDenominator = cli.Uint64Flag{
-		Name:  "base-fee-denominator",
-		Usage: "base fee denominator flag",
-		Value: params.DefaultBaseFeeDenominator,
+	istSubGroupFlag = &cli.Uint64Flag{
+		Name:    "ist-subgroup",
+		Usage:   "governance subgroup size [default: 21]",
+		Value:   params.DefaultSubGroupSize,
+		Aliases: []string{"genesis.consensus.istanbul.subgroup"},
 	}
 
-	istEpochFlag = cli.Uint64Flag{
-		Name:  "ist-epoch",
-		Usage: "governance epoch [default: 604800]",
-		Value: params.DefaultEpoch,
+	cliqueEpochFlag = &cli.Uint64Flag{
+		Name:    "clique-epoch",
+		Usage:   "clique epoch",
+		Value:   params.DefaultEpoch,
+		Aliases: []string{"genesis.consensus.clique.epoch"},
 	}
 
-	istProposerPolicyFlag = cli.Uint64Flag{
-		Name:  "ist-proposer-policy",
-		Usage: "governance proposer policy (0: RoundRobin, 1: Sticky, 2: WeightedRandom) [default: 0]",
-		Value: params.DefaultProposerPolicy,
+	cliquePeriodFlag = &cli.Uint64Flag{
+		Name:    "clique-period",
+		Usage:   "clique period",
+		Value:   params.DefaultPeriod,
+		Aliases: []string{"genesis.consensus.clique.period"},
 	}
 
-	istSubGroupFlag = cli.Uint64Flag{
-		Name:  "ist-subgroup",
-		Usage: "governance subgroup size [default: 21]",
-		Value: params.DefaultSubGroupSize,
+	istanbulCompatibleBlockNumberFlag = &cli.Int64Flag{
+		Name:    "istanbul-compatible-blocknumber",
+		Usage:   "istanbulCompatible blockNumber",
+		Value:   0,
+		Aliases: []string{"genesis.hardfork.istanbul-compatible-blocknumber"},
 	}
 
-	cliqueEpochFlag = cli.Uint64Flag{
-		Name:  "clique-epoch",
-		Usage: "clique epoch",
-		Value: params.DefaultEpoch,
+	londonCompatibleBlockNumberFlag = &cli.Int64Flag{
+		Name:    "london-compatible-blocknumber",
+		Usage:   "londonCompatible blockNumber",
+		Value:   0,
+		Aliases: []string{"genesis.hardfork.london-compatible-blocknumber"},
 	}
 
-	cliquePeriodFlag = cli.Uint64Flag{
-		Name:  "clique-period",
-		Usage: "clique period",
-		Value: params.DefaultPeriod,
+	ethTxTypeCompatibleBlockNumberFlag = &cli.Int64Flag{
+		Name:    "eth-tx-type-compatible-blocknumber",
+		Usage:   "ethTxTypeCompatible blockNumber",
+		Value:   0,
+		Aliases: []string{"genesis.hardfork.eth-tx-type-compatible-blocknumber"},
 	}
 
-	istanbulCompatibleBlockNumberFlag = cli.Int64Flag{
-		Name:  "istanbul-compatible-blocknumber",
-		Usage: "istanbulCompatible blockNumber",
+	magmaCompatibleBlockNumberFlag = &cli.Int64Flag{
+		Name:    "magma-compatible-blocknumber",
+		Usage:   "magmaCompatible blockNumber",
+		Value:   0,
+		Aliases: []string{"genesis.hardfork.magma-compatible-blocknumber"},
+	}
+
+	koreCompatibleBlockNumberFlag = &cli.Int64Flag{
+		Name:    "kore-compatible-blocknumber",
+		Usage:   "koreCompatible blockNumber",
+		Value:   0,
+		Aliases: []string{"genesis.hardfork.kore-compatible-blocknumber"},
+	}
+
+	kip103CompatibleBlockNumberFlag = &cli.Int64Flag{
+		Name:  "kip103-compatible-blocknumber",
+		Usage: "kip103Compatible blockNumber",
 		Value: 0,
 	}
 
-	londonCompatibleBlockNumberFlag = cli.Int64Flag{
-		Name:  "london-compatible-blocknumber",
-		Usage: "londonCompatible blockNumber",
+	shanghaiCompatibleBlockNumberFlag = &cli.Int64Flag{
+		Name:  "shanghai-compatible-blocknumber",
+		Usage: "shanghaiCompatible blockNumber",
 		Value: 0,
 	}
 
-	ethTxTypeCompatibleBlockNumberFlag = cli.Int64Flag{
-		Name:  "eth-tx-type-compatible-blocknumber",
-		Usage: "ethTxTypeCompatible blockNumber",
-		Value: 0,
-	}
-
-	magmaCompatibleBlockNumberFlag = cli.Int64Flag{
-		Name:  "magma-compatible-blocknumber",
-		Usage: "magmaCompatible blockNumber",
-		Value: 0,
+	kip103ContractAddressFlag = &cli.StringFlag{
+		Name:  "kip103-contract-address",
+		Usage: "kip103 contract address",
 	}
 )

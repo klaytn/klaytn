@@ -40,6 +40,12 @@ type ChainReader interface {
 	// CurrentHeader retrieves the current header from the local chain.
 	CurrentHeader() *types.Header
 
+	// CurrentBlock revrieves the current block from the local chain.
+	CurrentBlock() *types.Block
+
+	// Engine retrieves the header chain's consensus engine.
+	Engine() Engine
+
 	// GetHeader retrieves a block header from the database by hash and number.
 	GetHeader(hash common.Hash, number uint64) *types.Header
 
@@ -54,6 +60,9 @@ type ChainReader interface {
 
 	// State() retrieves statedb
 	State() (*state.StateDB, error)
+
+	// StateAt() retrieves statedb on a particular point in time
+	StateAt(root common.Hash) (*state.StateDB, error)
 }
 
 //go:generate mockgen -destination=consensus/mocks/engine_mock.go -package=mocks github.com/klaytn/klaytn/consensus Engine
@@ -109,8 +118,11 @@ type Engine interface {
 	// Protocol returns the protocol for this consensus
 	Protocol() Protocol
 
-	// CreateSnapshot does not return a snapshot but creates a new snapshot at a given point in time.
+	// CreateSnapshot does not return a snapshot but creates a new snapshot if not exists at a given point in time.
 	CreateSnapshot(chain ChainReader, number uint64, hash common.Hash, parents []*types.Header) error
+
+	// GetConsensusInfo returns consensus information regarding the given block number.
+	GetConsensusInfo(block *types.Block) (ConsensusInfo, error)
 }
 
 // PoW is a consensus engine based on proof-of-work.
@@ -148,4 +160,14 @@ type Istanbul interface {
 
 	// SetChain sets chain of the Istanbul backend
 	SetChain(chain ChainReader)
+
+	// UpdateParam updates the governance parameter
+	UpdateParam(num uint64) error
+}
+
+type ConsensusInfo struct {
+	Proposer       common.Address
+	OriginProposer common.Address // the proposal of 0 round at the same block number
+	Committee      []common.Address
+	Round          byte
 }

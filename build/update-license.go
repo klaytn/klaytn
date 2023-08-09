@@ -685,7 +685,7 @@ var (
 		"node/cn/handler.go":                                 "eth/handler.go",
 		"node/cn/api_backend.go":                             "eth/api_backend.go",
 		"node/cn/api_sc_backend.go":                          "eth/api_backend.go",
-		"node/cn/api_tracer.go":                              "eth/api_tracer.go",
+		"node/cn/tracers/api.go":                             "eth/tracers/api.go",
 		"node/cn/config.go":                                  "eth/config.go",
 		"node/cn/backend.go":                                 "eth/backend.go",
 		"node/cn/sc_backend.go":                              "eth/backend.go",

@@ -36,6 +36,7 @@ import (
 	"github.com/klaytn/klaytn/event"
 	klaytnmetrics "github.com/klaytn/klaytn/metrics"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/rcrowley/go-metrics"
 )
@@ -69,6 +70,7 @@ var (
 	gasLimitReachedTxsGauge = metrics.NewRegisteredGauge("miner/limitreached/gas/txs", nil)
 	strangeErrorTxsCounter  = metrics.NewRegisteredCounter("miner/strangeerror/txs", nil)
 
+	blockBaseFee              = metrics.NewRegisteredGauge("miner/block/mining/basefee", nil)
 	blockMiningTimer          = klaytnmetrics.NewRegisteredHybridTimer("miner/block/mining/time", nil)
 	blockMiningExecuteTxTimer = klaytnmetrics.NewRegisteredHybridTimer("miner/block/execute/time", nil)
 	blockMiningCommitTxTimer  = klaytnmetrics.NewRegisteredHybridTimer("miner/block/commit/time", nil)
@@ -87,6 +89,7 @@ var (
 	snapshotAccountReadTimer = metrics.NewRegisteredTimer("miner/snapshot/account/reads", nil)
 	snapshotStorageReadTimer = metrics.NewRegisteredTimer("miner/snapshot/storage/reads", nil)
 	snapshotCommitTimer      = metrics.NewRegisteredTimer("miner/snapshot/commits", nil)
+	calcDeferredRewardTimer  = metrics.NewRegisteredTimer("reward/distribute/calcdeferredreward", nil)
 )
 
 // Agent can register themself with the worker
@@ -204,6 +207,9 @@ func (self *worker) pending() (*types.Block, *state.StateDB) {
 		// return a snapshot to avoid contention on currentMu mutex
 		self.snapshotMu.RLock()
 		defer self.snapshotMu.RUnlock()
+		if self.snapshotState == nil {
+			return nil, nil
+		}
 		return self.snapshotBlock, self.snapshotState.Copy()
 	}
 
@@ -224,6 +230,9 @@ func (self *worker) pendingBlock() *types.Block {
 
 	self.currentMu.Lock()
 	defer self.currentMu.Unlock()
+	if self.current == nil {
+		return nil
+	}
 	return self.current.Block
 }
 
@@ -434,6 +443,13 @@ func (self *worker) wait(TxResendUseLegacy bool) {
 				logger.Error("Failed to call snapshot", "err", err)
 			}
 
+			// update governance parameters
+			if istanbul, ok := self.engine.(consensus.Istanbul); ok {
+				if err := istanbul.UpdateParam(block.NumberU64()); err != nil {
+					logger.Error("Failed to update governance parameters", "err", err)
+				}
+			}
+
 			logger.Info("Successfully wrote mined block", "num", block.NumberU64(),
 				"hash", block.Hash(), "txs", len(block.Transactions()), "elapsed", blockWriteTime)
 			self.chain.PostChainEvents(events, logs)
@@ -462,13 +478,15 @@ func (self *worker) push(work *Task) {
 
 // makeCurrent creates a new environment for the current cycle.
 func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error {
-	stateDB, err := self.chain.StateAt(parent.Root())
+	stateDB, err := self.chain.PrunableStateAt(parent.Root(), parent.NumberU64())
 	if err != nil {
 		return err
 	}
 	work := NewTask(self.config, types.MakeSigner(self.config, header.Number), stateDB, header)
 	if self.nodetype != common.CONSENSUSNODE {
+		// set the current block and header as pending block and header to support APIs requesting a pending block.
 		work.Block = parent
+		work.header = parent.Header()
 	}
 
 	// Keep track of transactions which return errors so they can be removed
@@ -510,16 +528,24 @@ func (self *worker) commitNewWork() {
 	tstart := time.Now()
 	tstamp := tstart.Unix()
 	if self.nodetype == common.CONSENSUSNODE {
-		ideal := time.Unix(parent.Time().Int64()+params.BlockGenerationInterval, 0)
+		parentTimestamp := parent.Time().Int64()
+		ideal := time.Unix(parentTimestamp+params.BlockGenerationInterval, 0)
 		// If a timestamp of this block is faster than the ideal timestamp,
 		// wait for a while and get a new timestamp
 		if tstart.Before(ideal) {
 			wait := ideal.Sub(tstart)
-			logger.Info("Mining too far in the future", "wait", common.PrettyDuration(wait))
+			logger.Debug("Mining too far in the future", "wait", common.PrettyDuration(wait))
 			time.Sleep(wait)
 
 			tstart = time.Now()    // refresh for metrics
 			tstamp = tstart.Unix() // refresh for block timestamp
+		} else if tstart.After(ideal) {
+			logger.Info("Mining start for new block is later than expected",
+				"nextBlockNum", nextBlockNum,
+				"delay", tstart.Sub(ideal),
+				"parentBlockTimestamp", parentTimestamp,
+				"nextBlockTimestamp", tstamp,
+			)
 		}
 	}
 
@@ -578,6 +604,8 @@ func (self *worker) commitNewWork() {
 			snapshotStorageReadTimer.Update(work.state.SnapshotStorageReads)
 			snapshotCommitTimer.Update(work.state.SnapshotCommits)
 
+			calcDeferredRewardTimer.Update(reward.CalcDeferredRewardTimer)
+
 			trieAccess := work.state.AccountReads + work.state.AccountHashes + work.state.AccountUpdates + work.state.AccountCommits
 			trieAccess += work.state.StorageReads + work.state.StorageHashes + work.state.StorageUpdates + work.state.StorageCommits
 
@@ -586,6 +614,9 @@ func (self *worker) commitNewWork() {
 			commitTxTime := finishedCommitTx.Sub(tstart)
 			finalizeTime := finishedFinalize.Sub(finishedCommitTx)
 
+			if header.BaseFee != nil {
+				blockBaseFee.Update(header.BaseFee.Int64() / int64(params.Ston))
+			}
 			blockMiningTimer.Update(blockMiningTime)
 			blockMiningCommitTxTimer.Update(commitTxTime)
 			blockMiningExecuteTxTimer.Update(commitTxTime - trieAccess)
@@ -782,7 +813,7 @@ CommitTransactionLoop:
 func (env *Task) commitTransaction(tx *types.Transaction, bc BlockChain, rewardbase common.Address, vmConfig *vm.Config) (error, []*types.Log) {
 	snap := env.state.Snapshot()
 
-	receipt, _, _, err := bc.ApplyTransaction(env.config, &rewardbase, env.state, env.header, tx, &env.header.GasUsed, vmConfig)
+	receipt, _, err := bc.ApplyTransaction(env.config, &rewardbase, env.state, env.header, tx, &env.header.GasUsed, vmConfig)
 	if err != nil {
 		if err != vm.ErrInsufficientBalance && err != vm.ErrTotalTimeLimitReached {
 			tx.MarkUnexecutable(true)

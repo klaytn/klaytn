@@ -30,7 +30,7 @@ import (
 	"github.com/klaytn/klaytn/cmd/utils/nodecmd"
 	"github.com/klaytn/klaytn/console"
 	"github.com/klaytn/klaytn/log"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 var (
@@ -38,20 +38,14 @@ var (
 
 	// The app that holds all commands and flags.
 	app = utils.NewApp(nodecmd.GetGitCommit(), "The command line interface for Klaytn ServiceChain Node")
-
-	// flags that configure the node
-	nodeFlags = append(nodecmd.CommonNodeFlags, nodecmd.KSCNFlags...)
-
-	rpcFlags = nodecmd.CommonRPCFlags
 )
 
 func init() {
-	utils.InitHelper()
 	// Initialize the CLI app and start kcn
 	app.Action = nodecmd.RunKlaytnNode
 	app.HideVersion = true // we have a command to print the version
-	app.Copyright = "Copyright 2018-2019 The klaytn Authors"
-	app.Commands = []cli.Command{
+	app.Copyright = "Copyright 2018-2023 The klaytn Authors"
+	app.Commands = []*cli.Command{
 		// See utils/nodecmd/chaincmd.go:
 		nodecmd.InitCommand,
 		nodecmd.DumpGenesisCommand,
@@ -60,30 +54,28 @@ func init() {
 		nodecmd.AccountCommand,
 
 		// See utils/nodecmd/consolecmd.go:
-		nodecmd.GetConsoleCommand(nodeFlags, rpcFlags),
+		nodecmd.GetConsoleCommand(utils.KscnNodeFlags(), utils.CommonRPCFlags),
 		nodecmd.AttachCommand,
 
 		// See utils/nodecmd/versioncmd.go:
 		nodecmd.VersionCommand,
 
 		// See utils/nodecmd/dumpconfigcmd.go:
-		nodecmd.GetDumpConfigCommand(nodeFlags, rpcFlags),
+		nodecmd.GetDumpConfigCommand(utils.KscnNodeFlags(), utils.CommonRPCFlags),
+
+		// See utils/nodecmd/util.go:
+		nodecmd.UtilCommand,
+
+		// See utils/nodecmd/snapshot.go:
+		nodecmd.SnapshotCommand,
 	}
 	sort.Sort(cli.CommandsByName(app.Commands))
 
-	app.Flags = append(app.Flags, nodeFlags...)
-	app.Flags = append(app.Flags, rpcFlags...)
-	app.Flags = append(app.Flags, nodecmd.ConsoleFlags...)
-	app.Flags = append(app.Flags, debug.Flags...)
-
-	cli.AppHelpTemplate = utils.GlobalAppHelpTemplate
-	cli.HelpPrinter = utils.NewHelpPrinter(utils.CategorizeFlags(app.Flags))
+	app.Flags = utils.KscnAppFlags()
 
 	app.CommandNotFound = nodecmd.CommandNotExist
 	app.OnUsageError = nodecmd.OnUsageError
-
-	app.Before = nodecmd.BeforeRunKlaytn
-
+	app.Before = nodecmd.BeforeRunNode
 	app.After = func(ctx *cli.Context) error {
 		debug.Exit()
 		console.Stdin.Close() // Resets terminal mode.
@@ -94,7 +86,7 @@ func init() {
 func main() {
 	// Set NodeTypeFlag to cn
 	utils.NodeTypeFlag.Value = "cn"
-	utils.NetworkTypeFlag.Value = nodecmd.SCNNetworkType
+	utils.NetworkTypeFlag.Value = utils.SCNNetworkType
 
 	if err := app.Run(os.Args); err != nil {
 		fmt.Fprintln(os.Stderr, err)

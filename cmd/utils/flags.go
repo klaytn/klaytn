@@ -21,33 +21,20 @@
 package utils
 
 import (
-	"crypto/ecdsa"
 	"fmt"
 	"io/ioutil"
-	"math/big"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
-	"github.com/klaytn/klaytn/accounts"
-	"github.com/klaytn/klaytn/accounts/keystore"
-	"github.com/klaytn/klaytn/api/debug"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/fdlimit"
-	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/datasync/chaindatafetcher"
 	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kafka"
 	"github.com/klaytn/klaytn/datasync/dbsyncer"
-	"github.com/klaytn/klaytn/datasync/downloader"
 	"github.com/klaytn/klaytn/log"
 	metricutils "github.com/klaytn/klaytn/metrics/utils"
-	"github.com/klaytn/klaytn/networks/p2p"
-	"github.com/klaytn/klaytn/networks/p2p/discover"
-	"github.com/klaytn/klaytn/networks/p2p/nat"
-	"github.com/klaytn/klaytn/networks/p2p/netutil"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/node/cn"
@@ -56,21 +43,20 @@ import (
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/storage/statedb"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
-func InitHelper() {
-	cli.AppHelpTemplate = AppHelpTemplate
-	cli.CommandHelpTemplate = CommandHelpTemplate
+func init() {
+	cli.FlagStringer = FlagString
 }
 
 // NewApp creates an app with sane defaults.
 func NewApp(gitCommit, usage string) *cli.App {
 	app := cli.NewApp()
 	app.Name = filepath.Base(os.Args[0])
-	app.Author = ""
+	// app.Author = ""
 	// app.Authors = nil
-	app.Email = ""
+	// app.Email = ""
 	app.Version = params.Version
 	if len(gitCommit) >= 8 {
 		app.Version += "-" + gitCommit[:8]
@@ -81,1013 +67,1866 @@ func NewApp(gitCommit, usage string) *cli.App {
 
 var (
 	// General settings
-	NetworkTypeFlag = cli.StringFlag{
-		Name:  "networktype",
-		Usage: "Klaytn network type (main-net (mn), service chain-net (scn))",
-		Value: "mn",
+	ConfFlag = &cli.StringFlag{
+		Name: "conf",
 	}
-	DbTypeFlag = cli.StringFlag{
-		Name:  "dbtype",
-		Usage: `Blockchain storage database type ("LevelDB", "BadgerDB", "MemoryDB", "DynamoDBS3")`,
-		Value: "LevelDB",
+	NtpDisableFlag = &cli.BoolFlag{
+		Name:     "ntp.disable",
+		Usage:    "Disable checking if the local time is synchronized with ntp server. If this flag is not set, the local time is checked with the time of the server specified by ntp.server.",
+		Value:    false,
+		Aliases:  []string{"common.ntp.disable"},
+		EnvVars:  []string{"KLAYTN_NTP_DISABLE"},
+		Category: "KLAY",
 	}
-	SrvTypeFlag = cli.StringFlag{
-		Name:  "srvtype",
-		Usage: `json rpc server type ("http", "fasthttp")`,
-		Value: "fasthttp",
+	NtpServerFlag = &cli.StringFlag{
+		Name:     "ntp.server",
+		Usage:    "Remote ntp server:port to get the time",
+		Value:    "pool.ntp.org:123",
+		Aliases:  []string{"common.ntp.server", "ns"},
+		EnvVars:  []string{"KLAYTN_NTP_SERVER"},
+		Category: "KLAY",
 	}
-	DataDirFlag = DirectoryFlag{
-		Name:  "datadir",
-		Usage: "Data directory for the databases and keystore. This value is only used in local DB.",
-		Value: DirectoryString{node.DefaultDataDir()},
+	NetworkTypeFlag = &cli.StringFlag{
+		Name:    "networktype",
+		Usage:   "Klaytn network type (main-net (mn), service chain-net (scn))",
+		Value:   "mn",
+		Aliases: []string{},
+		EnvVars: []string{"KLAYTN_NETWORKTYPE"},
 	}
-	KeyStoreDirFlag = DirectoryFlag{
-		Name:  "keystore",
-		Usage: "Directory for the keystore (default = inside the datadir)",
+	DbTypeFlag = &cli.StringFlag{
+		Name:     "dbtype",
+		Usage:    `Blockchain storage database type ("LevelDB", "BadgerDB", "MemoryDB", "DynamoDBS3")`,
+		Value:    "LevelDB",
+		Aliases:  []string{"db.type", "migration.src.dbtype"},
+		EnvVars:  []string{"KLAYTN_DBTYPE"},
+		Category: "KLAY",
+	}
+	SrvTypeFlag = &cli.StringFlag{
+		Name:     "srvtype",
+		Usage:    `json rpc server type ("http", "fasthttp")`,
+		Value:    "fasthttp",
+		Aliases:  []string{"common.srvtype"},
+		EnvVars:  []string{"KLAYTN_SRVTYPE"},
+		Category: "KLAY",
+	}
+	DataDirFlag = &cli.PathFlag{
+		Name:     "datadir",
+		Value:    node.DefaultDataDir(),
+		Usage:    "Data directory for the databases and keystore. This value is only used in local DB.",
+		Aliases:  []string{"common.datadir", "migration.src.datadir"},
+		EnvVars:  []string{"KLAYTN_DATADIR"},
+		Category: "KLAY",
+	}
+	ChainDataDirFlag = &cli.PathFlag{
+		Name:     "chaindatadir",
+		Value:    "",
+		Usage:    "Data directory for chaindata. If this is not specified, chaindata is stored in datadir",
+		Aliases:  []string{"common.chaindatadir"},
+		EnvVars:  []string{"KLAYTN_CHAINDATADIR"},
+		Category: "KLAY",
+	}
+	KeyStoreDirFlag = &cli.PathFlag{
+		Name:     "keystore",
+		Usage:    "Directory for the keystore (default = inside the datadir)",
+		Aliases:  []string{"common.keystore"},
+		EnvVars:  []string{"KLAYTN_KEYSTORE"},
+		Category: "ACCOUNT",
 	}
 	// TODO-Klaytn-Bootnode: redefine networkid
-	NetworkIdFlag = cli.Uint64Flag{
-		Name:  "networkid",
-		Usage: "Network identifier (integer, 1=MainNet (Not yet launched), 1000=Aspen, 1001=Baobab)",
-		Value: cn.GetDefaultConfig().NetworkId,
+	NetworkIdFlag = &cli.Uint64Flag{
+		Name:     "networkid",
+		Usage:    "Network identifier (integer, 8217=Cypress (Mainnet) , 1000=Aspen, 1001=Baobab)",
+		Value:    cn.GetDefaultConfig().NetworkId,
+		Aliases:  []string{"p2p.network-id"},
+		EnvVars:  []string{"KLAYTN_NETWORKID"},
+		Category: "NETWORK",
 	}
-	IdentityFlag = cli.StringFlag{
-		Name:  "identity",
-		Usage: "Custom node name",
+	IdentityFlag = &cli.StringFlag{
+		Name:     "identity",
+		Usage:    "Custom node name",
+		Aliases:  []string{"common.identity"},
+		EnvVars:  []string{"KLAYTN_IDENTITY"},
+		Category: "KLAY",
 	}
-	DocRootFlag = DirectoryFlag{
+	DocRootFlag = &cli.PathFlag{
 		Name:  "docroot",
 		Usage: "Document Root for HTTPClient file scheme",
-		Value: DirectoryString{homeDir()},
+		// Value:   DirectoryString{homeDir()},
+		Value:    homeDir(),
+		Aliases:  []string{"common.docroot"},
+		EnvVars:  []string{"KLAYTN_DOCROOT"},
+		Category: "KLAY",
 	}
 	defaultSyncMode = cn.GetDefaultConfig().SyncMode
-	SyncModeFlag    = TextMarshalerFlag{
-		Name:  "syncmode",
-		Usage: `Blockchain sync mode ("full" or "snap")`,
-		Value: &defaultSyncMode,
+	SyncModeFlag    = &TextMarshalerFlag{
+		Name:     "syncmode",
+		Usage:    `Blockchain sync mode ("full" or "snap")`,
+		Value:    &defaultSyncMode,
+		Aliases:  []string{"common.syncmode"},
+		EnvVars:  []string{"KLAYTN_SYNCMODE"},
+		Category: "KLAY",
 	}
-	GCModeFlag = cli.StringFlag{
-		Name:  "gcmode",
-		Usage: `Blockchain garbage collection mode ("full", "archive")`,
-		Value: "full",
+	GCModeFlag = &cli.StringFlag{
+		Name:     "gcmode",
+		Usage:    `Blockchain garbage collection mode ("full", "archive")`,
+		Value:    "full",
+		Aliases:  []string{"common.garbage-collection-mode"},
+		EnvVars:  []string{"KLAYTN_GCMODE"},
+		Category: "KLAY",
 	}
-	LightKDFFlag = cli.BoolFlag{
-		Name:  "lightkdf",
-		Usage: "Reduce key-derivation RAM & CPU usage at some expense of KDF strength",
+	LightKDFFlag = &cli.BoolFlag{
+		Name:     "lightkdf",
+		Usage:    "Reduce key-derivation RAM & CPU usage at some expense of KDF strength",
+		Aliases:  []string{"common.light-kdf"},
+		EnvVars:  []string{"KLAYTN_LIGHTKDF"},
+		Category: "ACCOUNT",
 	}
-	OverwriteGenesisFlag = cli.BoolFlag{
-		Name:  "overwrite-genesis",
-		Usage: "Overwrites genesis block with the given new genesis block for testing purpose",
+	OverwriteGenesisFlag = &cli.BoolFlag{
+		Name:     "overwrite-genesis",
+		Usage:    "Overwrites genesis block with the given new genesis block for testing purpose",
+		Aliases:  []string{"common.overwrite-genesis"},
+		EnvVars:  []string{"KLAYTN_OVERWRITE_GENESIS"},
+		Category: "KLAY",
 	}
-	StartBlockNumberFlag = cli.Uint64Flag{
-		Name:  "start-block-num",
-		Usage: "Starts the node from the given block number. Starting from 0 is not supported.",
+	StartBlockNumberFlag = &cli.Uint64Flag{
+		Name:     "start-block-num",
+		Usage:    "Starts the node from the given block number. Starting from 0 is not supported.",
+		Aliases:  []string{"common.start-block-num"},
+		EnvVars:  []string{"KLAYTN_START_BLOCK_NUM"},
+		Category: "KLAY",
 	}
 	// Transaction pool settings
-	TxPoolNoLocalsFlag = cli.BoolFlag{
-		Name:  "txpool.nolocals",
-		Usage: "Disables price exemptions for locally submitted transactions",
+	TxPoolNoLocalsFlag = &cli.BoolFlag{
+		Name:     "txpool.nolocals",
+		Usage:    "Disables price exemptions for locally submitted transactions",
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_TXPOOL_NOLOCALS"},
+		Category: "TXPOOL",
 	}
-	TxPoolAllowLocalAnchorTxFlag = cli.BoolFlag{
-		Name:  "txpool.allow-local-anchortx",
-		Usage: "Allow locally submitted anchoring transactions",
+	TxPoolAllowLocalAnchorTxFlag = &cli.BoolFlag{
+		Name:     "txpool.allow-local-anchortx",
+		Usage:    "Allow locally submitted anchoring transactions",
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_TXPOOL_ALLOW_LOCAL_ANCHORTX"},
+		Category: "TXPOOL",
 	}
-	TxPoolDenyRemoteTxFlag = cli.BoolFlag{
-		Name:  "txpool.deny.remotetx",
-		Usage: "Deny remote transaction receiving from other peers. Use only for emergency cases",
+	TxPoolDenyRemoteTxFlag = &cli.BoolFlag{
+		Name:     "txpool.deny.remotetx",
+		Usage:    "Deny remote transaction receiving from other peers. Use only for emergency cases",
+		Aliases:  []string{"txpool.deny-remote-tx"},
+		EnvVars:  []string{"KLAYTN_TXPOOL_DENY_REMOTETX"},
+		Category: "TXPOOL",
 	}
-	TxPoolJournalFlag = cli.StringFlag{
-		Name:  "txpool.journal",
-		Usage: "Disk journal for local transaction to survive node restarts",
-		Value: blockchain.DefaultTxPoolConfig.Journal,
+	TxPoolJournalFlag = &cli.StringFlag{
+		Name:     "txpool.journal",
+		Usage:    "Disk journal for local transaction to survive node restarts",
+		Value:    blockchain.DefaultTxPoolConfig.Journal,
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_TXPOOL_JOURNAL"},
+		Category: "TXPOOL",
 	}
-	TxPoolJournalIntervalFlag = cli.DurationFlag{
-		Name:  "txpool.journal-interval",
-		Usage: "Time interval to regenerate the local transaction journal",
-		Value: blockchain.DefaultTxPoolConfig.JournalInterval,
+	TxPoolJournalIntervalFlag = &cli.DurationFlag{
+		Name:     "txpool.journal-interval",
+		Usage:    "Time interval to regenerate the local transaction journal",
+		Value:    blockchain.DefaultTxPoolConfig.JournalInterval,
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_TXPOOL_JOURNAL_INTERVAL"},
+		Category: "TXPOOL",
 	}
-	TxPoolPriceLimitFlag = cli.Uint64Flag{
-		Name:  "txpool.pricelimit",
-		Usage: "Minimum gas price limit to enforce for acceptance into the pool",
-		Value: cn.GetDefaultConfig().TxPool.PriceLimit,
+	TxPoolPriceLimitFlag = &cli.Uint64Flag{
+		Name:     "txpool.pricelimit",
+		Usage:    "Minimum gas price limit to enforce for acceptance into the pool",
+		Value:    cn.GetDefaultConfig().TxPool.PriceLimit,
+		Aliases:  []string{"txpool.price-limit"},
+		EnvVars:  []string{"KLAYTN_TXPOOL_PRICELIMIT"},
+		Category: "TXPOOL",
 	}
-	TxPoolPriceBumpFlag = cli.Uint64Flag{
-		Name:  "txpool.pricebump",
-		Usage: "Price bump percentage to replace an already existing transaction",
-		Value: cn.GetDefaultConfig().TxPool.PriceBump,
+	TxPoolPriceBumpFlag = &cli.Uint64Flag{
+		Name:     "txpool.pricebump",
+		Usage:    "Price bump percentage to replace an already existing transaction",
+		Value:    cn.GetDefaultConfig().TxPool.PriceBump,
+		Aliases:  []string{"txpool.price-bump"},
+		EnvVars:  []string{"KLAYTN_TXPOOL_PRICEBUMP"},
+		Category: "TXPOOL",
 	}
-	TxPoolExecSlotsAccountFlag = cli.Uint64Flag{
-		Name:  "txpool.exec-slots.account",
-		Usage: "Number of executable transaction slots guaranteed per account",
-		Value: cn.GetDefaultConfig().TxPool.ExecSlotsAccount,
+	TxPoolExecSlotsAccountFlag = &cli.Uint64Flag{
+		Name:     "txpool.exec-slots.account",
+		Usage:    "Number of executable transaction slots guaranteed per account",
+		Value:    cn.GetDefaultConfig().TxPool.ExecSlotsAccount,
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_TXPOOL_EXEC_SLOTS_ACCOUNT"},
+		Category: "TXPOOL",
 	}
-	TxPoolExecSlotsAllFlag = cli.Uint64Flag{
-		Name:  "txpool.exec-slots.all",
-		Usage: "Maximum number of executable transaction slots for all accounts",
-		Value: cn.GetDefaultConfig().TxPool.ExecSlotsAll,
+	TxPoolExecSlotsAllFlag = &cli.Uint64Flag{
+		Name:     "txpool.exec-slots.all",
+		Usage:    "Maximum number of executable transaction slots for all accounts",
+		Value:    cn.GetDefaultConfig().TxPool.ExecSlotsAll,
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_TXPOOL_EXEC_SLOTS_ALL"},
+		Category: "TXPOOL",
 	}
-	TxPoolNonExecSlotsAccountFlag = cli.Uint64Flag{
-		Name:  "txpool.nonexec-slots.account",
-		Usage: "Maximum number of non-executable transaction slots permitted per account",
-		Value: cn.GetDefaultConfig().TxPool.NonExecSlotsAccount,
+	TxPoolNonExecSlotsAccountFlag = &cli.Uint64Flag{
+		Name:     "txpool.nonexec-slots.account",
+		Usage:    "Maximum number of non-executable transaction slots permitted per account",
+		Value:    cn.GetDefaultConfig().TxPool.NonExecSlotsAccount,
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_TXPOOL_NONEXEC_SLOTS_ACCOUNT"},
+		Category: "TXPOOL",
 	}
-	TxPoolNonExecSlotsAllFlag = cli.Uint64Flag{
-		Name:  "txpool.nonexec-slots.all",
-		Usage: "Maximum number of non-executable transaction slots for all accounts",
-		Value: cn.GetDefaultConfig().TxPool.NonExecSlotsAll,
+	TxPoolNonExecSlotsAllFlag = &cli.Uint64Flag{
+		Name:     "txpool.nonexec-slots.all",
+		Usage:    "Maximum number of non-executable transaction slots for all accounts",
+		Value:    cn.GetDefaultConfig().TxPool.NonExecSlotsAll,
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_TXPOOL_NONEXEC_SLOTS_ALL"},
+		Category: "TXPOOL",
 	}
-	TxPoolKeepLocalsFlag = cli.BoolFlag{
-		Name:  "txpool.keeplocals",
-		Usage: "Disables removing timed-out local transactions",
+	TxPoolKeepLocalsFlag = &cli.BoolFlag{
+		Name:     "txpool.keeplocals",
+		Usage:    "Disables removing timed-out local transactions",
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_TXPOOL_KEEPLOCALS"},
+		Category: "TXPOOL",
 	}
-	TxPoolLifetimeFlag = cli.DurationFlag{
-		Name:  "txpool.lifetime",
-		Usage: "Maximum amount of time non-executable transaction are queued",
-		Value: cn.GetDefaultConfig().TxPool.Lifetime,
+	TxPoolLifetimeFlag = &cli.DurationFlag{
+		Name:     "txpool.lifetime",
+		Usage:    "Maximum amount of time non-executable transaction are queued",
+		Value:    cn.GetDefaultConfig().TxPool.Lifetime,
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_TXPOOL_LIFETIME"},
+		Category: "TXPOOL",
 	}
 	// PN specific txpool settings
-	TxPoolSpamThrottlerDisableFlag = cli.BoolFlag{
-		Name:  "txpool.spamthrottler.disable",
-		Usage: "Disable txpool spam throttler prototype",
+	TxPoolSpamThrottlerDisableFlag = &cli.BoolFlag{
+		Name:    "txpool.spamthrottler.disable",
+		Usage:   "Disable txpool spam throttler prototype",
+		Aliases: []string{},
+		EnvVars: []string{"KLAYTN_TXPOOL_SPAMTHROTTLER_DISABLE"},
 	}
 
 	// KES
-	KESNodeTypeServiceFlag = cli.BoolFlag{
-		Name:  "kes.nodetype.service",
-		Usage: "Run as a KES Service Node (Disable fetcher, downloader, and worker)",
+	KESNodeTypeServiceFlag = &cli.BoolFlag{
+		Name:     "kes.nodetype.service",
+		Usage:    "Run as a KES Service Node (Disable fetcher, downloader, and worker)",
+		Aliases:  []string{"common.kes-nodetype-service"},
+		EnvVars:  []string{"KLAYTN_KES_NODETYPE_SERVICE"},
+		Category: "MISC",
 	}
-	SingleDBFlag = cli.BoolFlag{
-		Name:  "db.single",
-		Usage: "Create a single persistent storage. MiscDB, headerDB and etc are stored in one DB.",
+	SingleDBFlag = &cli.BoolFlag{
+		Name:     "db.single",
+		Usage:    "Create a single persistent storage. MiscDB, headerDB and etc are stored in one DB.",
+		Aliases:  []string{"migration.src.single"},
+		EnvVars:  []string{"KLAYTN_DB_SINGLE"},
+		Category: "DATABASE",
 	}
-	NumStateTrieShardsFlag = cli.UintFlag{
-		Name:  "db.num-statetrie-shards",
-		Usage: "Number of internal shards of state trie DB shards. Should be power of 2",
-		Value: 4,
+	NumStateTrieShardsFlag = &cli.UintFlag{
+		Name:     "db.num-statetrie-shards",
+		Usage:    "Number of internal shards of state trie DB shards. Should be power of 2",
+		Value:    4,
+		Aliases:  []string{"migration.src.db.leveldb.num-statetrie-shards"},
+		EnvVars:  []string{"KLAYTN_DB_NUM_STATETRIE_SHARDS"},
+		Category: "DATABASE",
 	}
-	LevelDBCacheSizeFlag = cli.IntFlag{
-		Name:  "db.leveldb.cache-size",
-		Usage: "Size of in-memory cache in LevelDB (MiB)",
-		Value: 768,
+	LevelDBCacheSizeFlag = &cli.IntFlag{
+		Name:     "db.leveldb.cache-size",
+		Usage:    "Size of in-memory cache in LevelDB (MiB)",
+		Value:    768,
+		Aliases:  []string{"migration.src.db.leveldb.cache-size"},
+		EnvVars:  []string{"KLAYTN_DB_LEVELDB_CACHE_SIZE"},
+		Category: "DATABASE",
 	}
 	// TODO-Klaytn-Database LevelDBCompressionTypeFlag should be removed before main-net release.
-	LevelDBCompressionTypeFlag = cli.IntFlag{
-		Name:  "db.leveldb.compression",
-		Usage: "Determines the compression method for LevelDB. 0=AllNoCompression, 1=ReceiptOnlySnappyCompression, 2=StateTrieOnlyNoCompression, 3=AllSnappyCompression",
-		Value: 0,
+	LevelDBCompressionTypeFlag = &cli.IntFlag{
+		Name:     "db.leveldb.compression",
+		Usage:    "Determines the compression method for LevelDB. 0=AllNoCompression, 1=ReceiptOnlySnappyCompression, 2=StateTrieOnlyNoCompression, 3=AllSnappyCompression",
+		Value:    0,
+		Aliases:  []string{"migration.src.db.leveldb.compression"},
+		EnvVars:  []string{"KLAYTN_DB_LEVELDB_COMPRESSION"},
+		Category: "DATABASE",
 	}
-	LevelDBNoBufferPoolFlag = cli.BoolFlag{
-		Name:  "db.leveldb.no-buffer-pool",
-		Usage: "Disables using buffer pool for LevelDB's block allocation",
+	LevelDBNoBufferPoolFlag = &cli.BoolFlag{
+		Name:     "db.leveldb.no-buffer-pool",
+		Usage:    "Disables using buffer pool for LevelDB's block allocation",
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_DB_LEVELDB_NO_BUFFER_POOL"},
+		Category: "DATABASE",
 	}
-	DynamoDBTableNameFlag = cli.StringFlag{
-		Name:  "db.dynamo.tablename",
-		Usage: "Specifies DynamoDB table name. This is mandatory to use dynamoDB. (Set dbtype to use DynamoDBS3)",
+	RocksDBSecondaryFlag = &cli.BoolFlag{
+		Name:     "db.rocksdb.secondary",
+		Usage:    "Enable rocksdb secondary mode (read-only and catch-up with primary node dynamically)",
+		EnvVars:  []string{"KLAYTN_DB_ROCKSDB_SECONDARY"},
+		Category: "DATABASE",
 	}
-	DynamoDBRegionFlag = cli.StringFlag{
-		Name:  "db.dynamo.region",
-		Usage: "AWS region where the DynamoDB will be created.",
-		Value: database.GetDefaultDynamoDBConfig().Region,
+	RocksDBCacheSizeFlag = &cli.Uint64Flag{
+		Name:     "db.rocksdb.cache-size",
+		Usage:    "Size of in-memory cache in RocksDB (MiB)",
+		Value:    768,
+		EnvVars:  []string{"KLAYTN_DB_ROCKSDB_CACHE_SIZE"},
+		Category: "DATABASE",
 	}
-	DynamoDBIsProvisionedFlag = cli.BoolFlag{
-		Name:  "db.dynamo.is-provisioned",
-		Usage: "Set DynamoDB billing mode to provision. The default billing mode is on-demand.",
+	RocksDBDumpMallocStatFlag = &cli.BoolFlag{
+		Name:     "db.rocksdb.dump-malloc-stat",
+		Usage:    "Enable to print memory stat together with rocksdb.stat. Works with Jemalloc only.",
+		EnvVars:  []string{"KLAYTN_DB_ROCKSDB_DUMP_MALLOC_STAT"},
+		Category: "DATABASE",
 	}
-	DynamoDBReadCapacityFlag = cli.Int64Flag{
-		Name:  "db.dynamo.read-capacity",
-		Usage: "Read capacity unit of dynamoDB. If is-provisioned is not set, this flag will not be applied.",
-		Value: database.GetDefaultDynamoDBConfig().ReadCapacityUnits,
+	RocksDBCompressionTypeFlag = &cli.StringFlag{
+		Name:     "db.rocksdb.compression-type",
+		Usage:    "RocksDB block compression type. Supported values are 'no', 'snappy', 'zlib', 'bz', 'lz4', 'lz4hc', 'xpress', 'zstd'",
+		Value:    database.GetDefaultRocksDBConfig().CompressionType,
+		EnvVars:  []string{"KLAYTN_DB_ROCKSDB_COMPRESSION_TYPE"},
+		Category: "DATABASE",
 	}
-	DynamoDBWriteCapacityFlag = cli.Int64Flag{
-		Name:  "db.dynamo.write-capacity",
-		Usage: "Write capacity unit of dynamoDB. If is-provisioned is not set, this flag will not be applied",
-		Value: database.GetDefaultDynamoDBConfig().WriteCapacityUnits,
+	RocksDBBottommostCompressionTypeFlag = &cli.StringFlag{
+		Name:     "db.rocksdb.bottommost-compression-type",
+		Usage:    "RocksDB bottommost block compression type. Supported values are 'no', 'snappy', 'zlib', 'bz2', 'lz4', 'lz4hc', 'xpress', 'zstd'",
+		Value:    database.GetDefaultRocksDBConfig().BottommostCompressionType,
+		EnvVars:  []string{"KLAYTN_DB_ROCKSDB_BOTTOMMOST_COMPRESSION_TYPE"},
+		Category: "DATABASE",
 	}
-	DynamoDBReadOnlyFlag = cli.BoolFlag{
-		Name:  "db.dynamo.read-only",
-		Usage: "Disables write to DynamoDB. Only read is possible.",
+	RocksDBFilterPolicyFlag = &cli.StringFlag{
+		Name:     "db.rocksdb.filter-policy",
+		Usage:    "RocksDB filter policy. Supported values are 'no', 'bloom', 'ribbon'",
+		Value:    database.GetDefaultRocksDBConfig().FilterPolicy,
+		EnvVars:  []string{"KLAYTN_DB_ROCKSDB_FILTER_POLICY"},
+		Category: "DATABASE",
 	}
-	NoParallelDBWriteFlag = cli.BoolFlag{
-		Name:  "db.no-parallel-write",
-		Usage: "Disables parallel writes of block data to persistent database",
+	RocksDBDisableMetricsFlag = &cli.BoolFlag{
+		Name:     "db.rocksdb.disable-metrics",
+		Usage:    "Disable RocksDB metrics",
+		EnvVars:  []string{"KLAYTN_DB_ROCKSDB_DISABLE_METRICS"},
+		Category: "DATABASE",
 	}
-	DBNoPerformanceMetricsFlag = cli.BoolFlag{
-		Name:  "db.no-perf-metrics",
-		Usage: "Disables performance metrics of database's read and write operations",
+	RocksDBMaxOpenFilesFlag = &cli.IntFlag{
+		Name:     "db.rocksdb.max-open-files",
+		Usage:    "Set RocksDB max open files. (the value should be greater than 16)",
+		Value:    database.GetDefaultRocksDBConfig().MaxOpenFiles,
+		EnvVars:  []string{"KLAYTN_DB_ROCKSDB_MAX_OPEN_FILES"},
+		Category: "DATABASE",
 	}
-	SnapshotFlag = cli.BoolFlag{
-		Name:  "snapshot",
-		Usage: "Enables snapshot-database mode",
+	RocksDBCacheIndexAndFilterFlag = &cli.BoolFlag{
+		Name:     "db.rocksdb.cache-index-and-filter",
+		Usage:    "Use block cache for index and filter blocks.",
+		EnvVars:  []string{"KLAYTN_DB_ROCKSDB_CACHE_INDEX_AND_FILTER"},
+		Category: "DATABASE",
 	}
-	SnapshotCacheSizeFlag = cli.IntFlag{
-		Name:  "snapshot.cache-size",
-		Usage: "Size of in-memory cache of the state snapshot cache (in MiB)",
-		Value: 512,
+	DynamoDBTableNameFlag = &cli.StringFlag{
+		Name:     "db.dynamo.tablename",
+		Usage:    "Specifies DynamoDB table name. This is mandatory to use dynamoDB. (Set dbtype to use DynamoDBS3)",
+		Aliases:  []string{"migration.src.db.dynamo.table-name", "db.dynamo.table-name"},
+		EnvVars:  []string{"KLAYTN_DB_DYNAMO_TABLENAME"},
+		Category: "DATABASE",
 	}
-	TrieMemoryCacheSizeFlag = cli.IntFlag{
-		Name:  "state.cache-size",
-		Usage: "Size of in-memory cache of the global state (in MiB) to flush matured singleton trie nodes to disk",
-		Value: 512,
+	DynamoDBRegionFlag = &cli.StringFlag{
+		Name:     "db.dynamo.region",
+		Usage:    "AWS region where the DynamoDB will be created.",
+		Value:    database.GetDefaultDynamoDBConfig().Region,
+		Aliases:  []string{"migration.src.db.dynamo.region"},
+		EnvVars:  []string{"KLAYTN_DB_DYNAMO_REGION"},
+		Category: "DATABASE",
 	}
-	TrieBlockIntervalFlag = cli.UintFlag{
-		Name:  "state.block-interval",
-		Usage: "An interval in terms of block number to commit the global state to disk",
-		Value: blockchain.DefaultBlockInterval,
+	DynamoDBIsProvisionedFlag = &cli.BoolFlag{
+		Name:     "db.dynamo.is-provisioned",
+		Usage:    "Set DynamoDB billing mode to provision. The default billing mode is on-demand.",
+		Aliases:  []string{"migration.src.db.dynamo.is-provisioned"},
+		EnvVars:  []string{"KLAYTN_DB_DYNAMO_IS_PROVISIONED"},
+		Category: "DATABASE",
 	}
-	TriesInMemoryFlag = cli.Uint64Flag{
-		Name:  "state.tries-in-memory",
-		Usage: "The number of recent state tries residing in the memory",
-		Value: blockchain.DefaultTriesInMemory,
+	DynamoDBReadCapacityFlag = &cli.Int64Flag{
+		Name:     "db.dynamo.read-capacity",
+		Usage:    "Read capacity unit of dynamoDB. If is-provisioned is not set, this flag will not be applied.",
+		Value:    database.GetDefaultDynamoDBConfig().ReadCapacityUnits,
+		Aliases:  []string{"migration.src.db.dynamo.read-capacity"},
+		EnvVars:  []string{"KLAYTN_DB_DYNAMO_READ_CAPACITY"},
+		Category: "DATABASE",
 	}
-	CacheTypeFlag = cli.IntFlag{
-		Name:  "cache.type",
-		Usage: "Cache Type: 0=LRUCache, 1=LRUShardCache, 2=FIFOCache",
-		Value: int(common.DefaultCacheType),
+	DynamoDBWriteCapacityFlag = &cli.Int64Flag{
+		Name:     "db.dynamo.write-capacity",
+		Usage:    "Write capacity unit of dynamoDB. If is-provisioned is not set, this flag will not be applied",
+		Value:    database.GetDefaultDynamoDBConfig().WriteCapacityUnits,
+		Aliases:  []string{"migration.src.db.dynamo.write-capacity"},
+		EnvVars:  []string{"KLAYTN_DB_DYNAMO_WRITE_CAPACITY"},
+		Category: "DATABASE",
 	}
-	CacheScaleFlag = cli.IntFlag{
-		Name:  "cache.scale",
-		Usage: "Scale of cache (cache size = preset size * scale of cache(%))",
+	DynamoDBReadOnlyFlag = &cli.BoolFlag{
+		Name:     "db.dynamo.read-only",
+		Usage:    "Disables write to DynamoDB. Only read is possible.",
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_DB_DYNAMO_READ_ONLY"},
+		Category: "DATABASE",
 	}
-	CacheUsageLevelFlag = cli.StringFlag{
-		Name:  "cache.level",
-		Usage: "Set the cache usage level ('saving', 'normal', 'extreme')",
+	NoParallelDBWriteFlag = &cli.BoolFlag{
+		Name:     "db.no-parallel-write",
+		Usage:    "Disables parallel writes of block data to persistent database",
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_DB_NO_PARALLEL_WRITE"},
+		Category: "DATABASE",
 	}
-	MemorySizeFlag = cli.IntFlag{
-		Name:  "cache.memory",
-		Usage: "Set the physical RAM size (GB, Default: 16GB)",
+	DBNoPerformanceMetricsFlag = &cli.BoolFlag{
+		Name:     "db.no-perf-metrics",
+		Usage:    "Disables performance metrics of database's read and write operations",
+		Value:    false,
+		Aliases:  []string{"migration.no-perf-metrics"},
+		EnvVars:  []string{"KLAYTN_DB_NO_PERF_METRICS"},
+		Category: "DATABASE",
 	}
-	TrieNodeCacheTypeFlag = cli.StringFlag{
+	SnapshotFlag = &cli.BoolFlag{
+		Name:     "snapshot",
+		Usage:    "Enables snapshot-database mode",
+		Aliases:  []string{"snapshot-database.enable"},
+		EnvVars:  []string{"KLAYTN_SNAPSHOT"},
+		Category: "MISC",
+	}
+	SnapshotCacheSizeFlag = &cli.IntFlag{
+		Name:     "snapshot.cache-size",
+		Usage:    "Size of in-memory cache of the state snapshot cache (in MiB)",
+		Value:    512,
+		Aliases:  []string{"snapshot-database.cache-size"},
+		EnvVars:  []string{"KLAYTN_SNAPSHOT_CACHE_SIZE"},
+		Category: "MISC",
+	}
+	SnapshotAsyncGen = &cli.BoolFlag{
+		Name:     "snapshot.async-gen",
+		Usage:    "Enables snapshot data generation in background",
+		Value:    true,
+		Aliases:  []string{"snapshot-database.async-gen"},
+		EnvVars:  []string{"KLAYTN_SNAPSHOT_BACKGROUND_GENERATION"},
+		Category: "MISC",
+	}
+	TrieMemoryCacheSizeFlag = &cli.IntFlag{
+		Name:     "state.cache-size",
+		Usage:    "Size of in-memory cache of the global state (in MiB) to flush matured singleton trie nodes to disk",
+		Value:    512,
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_STATE_CACHE_SIZE"},
+		Category: "STATE",
+	}
+	TrieBlockIntervalFlag = &cli.UintFlag{
+		Name:     "state.block-interval",
+		Usage:    "An interval in terms of block number to commit the global state to disk",
+		Value:    blockchain.DefaultBlockInterval,
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_STATE_BLOCK_INTERVAL"},
+		Category: "STATE",
+	}
+	TriesInMemoryFlag = &cli.Uint64Flag{
+		Name:     "state.tries-in-memory",
+		Usage:    "The number of recent state tries residing in the memory",
+		Value:    blockchain.DefaultTriesInMemory,
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_STATE_TRIES_IN_MEMORY"},
+		Category: "STATE",
+	}
+	LivePruningFlag = &cli.BoolFlag{
+		Name:     "state.live-pruning",
+		Usage:    "Enable trie live pruning",
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_STATE_LIVE_PRUNING"},
+		Category: "STATE",
+	}
+	LivePruningRetentionFlag = &cli.Uint64Flag{
+		Name:     "state.live-pruning-retention",
+		Usage:    "Number of blocks from the latest block that are not to be pruned",
+		Value:    blockchain.DefaultLivePruningRetention,
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_STATE_LIVE_PRUNING_RETENTION"},
+		Category: "STATE",
+	}
+	CacheTypeFlag = &cli.IntFlag{
+		Name:     "cache.type",
+		Usage:    "Cache Type: 0=LRUCache, 1=LRUShardCache, 2=FIFOCache",
+		Value:    int(common.DefaultCacheType),
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_CACHE_TYPE"},
+		Category: "CACHE",
+	}
+	CacheScaleFlag = &cli.IntFlag{
+		Name:     "cache.scale",
+		Usage:    "Scale of cache (cache size = preset size * scale of cache(%))",
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_CACHE_SCALE"},
+		Category: "CACHE",
+	}
+	CacheUsageLevelFlag = &cli.StringFlag{
+		Name:     "cache.level",
+		Usage:    "Set the cache usage level ('saving', 'normal', 'extreme')",
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_CACHE_LEVEL"},
+		Category: "CACHE",
+	}
+	MemorySizeFlag = &cli.IntFlag{
+		Name:     "cache.memory",
+		Usage:    "Set the physical RAM size (GB, Default: 16GB)",
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_CACHE_MEMORY"},
+		Category: "CACHE",
+	}
+	TrieNodeCacheTypeFlag = &cli.StringFlag{
 		Name: "statedb.cache.type",
 		Usage: "Set trie node cache type ('LocalCache', 'RemoteCache', " +
 			"'HybridCache') (default = 'LocalCache')",
-		Value: string(statedb.CacheTypeLocal),
+		Value:    string(statedb.CacheTypeLocal),
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_STATEDB_CACHE_TYPE"},
+		Category: "CACHE",
 	}
-	NumFetcherPrefetchWorkerFlag = cli.IntFlag{
-		Name:  "statedb.cache.num-fetcher-prefetch-worker",
-		Usage: "Number of workers used to prefetch block when fetcher fetches block",
-		Value: 32,
+	NumFetcherPrefetchWorkerFlag = &cli.IntFlag{
+		Name:     "statedb.cache.num-fetcher-prefetch-worker",
+		Usage:    "Number of workers used to prefetch block when fetcher fetches block",
+		Value:    32,
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_STATEDB_CACHE_NUM_FETCHER_PREFETCH_WORKER"},
+		Category: "CACHE",
 	}
-	UseSnapshotForPrefetchFlag = cli.BoolFlag{
-		Name:  "statedb.cache.use-snapshot-for-prefetch",
-		Usage: "Use state snapshot functionality while prefetching",
+	UseSnapshotForPrefetchFlag = &cli.BoolFlag{
+		Name:     "statedb.cache.use-snapshot-for-prefetch",
+		Usage:    "Use state snapshot functionality while prefetching",
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_STATEDB_CACHE_USE_SNAPSHOT_FOR_PREFETCH"},
+		Category: "CACHE",
 	}
-	TrieNodeCacheRedisEndpointsFlag = cli.StringSliceFlag{
-		Name:  "statedb.cache.redis.endpoints",
-		Usage: "Set endpoints of redis trie node cache. More than one endpoints can be set",
+	TrieNodeCacheRedisEndpointsFlag = &cli.StringSliceFlag{
+		Name:     "statedb.cache.redis.endpoints",
+		Usage:    "Set endpoints of redis trie node cache. More than one endpoints can be set",
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_STATEDB_CACHE_REDIS_ENDPOINTS"},
+		Category: "CACHE",
 	}
-	TrieNodeCacheRedisClusterFlag = cli.BoolFlag{
-		Name:  "statedb.cache.redis.cluster",
-		Usage: "Enables cluster-enabled mode of redis trie node cache",
+	TrieNodeCacheRedisClusterFlag = &cli.BoolFlag{
+		Name:     "statedb.cache.redis.cluster",
+		Usage:    "Enables cluster-enabled mode of redis trie node cache",
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_STATEDB_CACHE_REDIS_CLUSTER"},
+		Category: "CACHE",
 	}
-	TrieNodeCacheRedisPublishBlockFlag = cli.BoolFlag{
-		Name:  "statedb.cache.redis.publish",
-		Usage: "Publishes every committed block to redis trie node cache",
+	TrieNodeCacheRedisPublishBlockFlag = &cli.BoolFlag{
+		Name:     "statedb.cache.redis.publish",
+		Usage:    "Publishes every committed block to redis trie node cache",
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_STATEDB_CACHE_REDIS_PUBLISH"},
+		Category: "CACHE",
 	}
-	TrieNodeCacheRedisSubscribeBlockFlag = cli.BoolFlag{
-		Name:  "statedb.cache.redis.subscribe",
-		Usage: "Subscribes blocks from redis trie node cache",
+	TrieNodeCacheRedisSubscribeBlockFlag = &cli.BoolFlag{
+		Name:     "statedb.cache.redis.subscribe",
+		Usage:    "Subscribes blocks from redis trie node cache",
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_STATEDB_CACHE_REDIS_SUBSCRIBE"},
+		Category: "CACHE",
 	}
-	TrieNodeCacheLimitFlag = cli.IntFlag{
-		Name:  "state.trie-cache-limit",
-		Usage: "Memory allowance (MiB) to use for caching trie nodes in memory. -1 is for auto-scaling",
-		Value: -1,
+	TrieNodeCacheLimitFlag = &cli.IntFlag{
+		Name:     "state.trie-cache-limit",
+		Usage:    "Memory allowance (MiB) to use for caching trie nodes in memory. -1 is for auto-scaling",
+		Value:    -1,
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_STATE_TRIE_CACHE_LIMIT"},
+		Category: "CACHE",
 	}
-	TrieNodeCacheSavePeriodFlag = cli.DurationFlag{
-		Name:  "state.trie-cache-save-period",
-		Usage: "Period of saving in memory trie cache to file if fastcache is used, 0 means disabled",
-		Value: 0,
-	}
-	SenderTxHashIndexingFlag = cli.BoolFlag{
-		Name:  "sendertxhashindexing",
-		Usage: "Enables storing mapping information of senderTxHash to txHash",
-	}
-	ChildChainIndexingFlag = cli.BoolFlag{
-		Name:  "childchainindexing",
-		Usage: "Enables storing transaction hash of child chain transaction for fast access to child chain data",
-	}
-	TargetGasLimitFlag = cli.Uint64Flag{
-		Name:  "targetgaslimit",
-		Usage: "Target gas limit sets the artificial target gas floor for the blocks to mine",
-		Value: params.GenesisGasLimit,
-	}
-	ServiceChainSignerFlag = cli.StringFlag{
-		Name:  "scsigner",
-		Usage: "Public address for signing blocks in the service chain (default = first account created)",
-		Value: "0",
-	}
-	RewardbaseFlag = cli.StringFlag{
-		Name:  "rewardbase",
-		Usage: "Public address for block consensus rewards (default = first account created)",
-		Value: "0",
-	}
-	ExtraDataFlag = cli.StringFlag{
-		Name:  "extradata",
-		Usage: "Block extra data set by the work (default = client version)",
+	TrieNodeCacheSavePeriodFlag = &cli.DurationFlag{
+		Name:     "state.trie-cache-save-period",
+		Usage:    "Period of saving in memory trie cache to file if fastcache is used, 0 means disabled",
+		Value:    0,
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_STATE_TRIE_CACHE_SAVE_PERIOD"},
+		Category: "CACHE",
 	}
 
-	TxResendIntervalFlag = cli.Uint64Flag{
-		Name:  "txresend.interval",
-		Usage: "Set the transaction resend interval in seconds",
-		Value: uint64(cn.DefaultTxResendInterval),
+	SenderTxHashIndexingFlag = &cli.BoolFlag{
+		Name:     "sendertxhashindexing",
+		Usage:    "Enables storing mapping information of senderTxHash to txHash",
+		Aliases:  []string{"common.sender-tx-hash-indexing"},
+		EnvVars:  []string{"KLAYTN_SENDERTXHASHINDEXING"},
+		Category: "DATABASE",
 	}
-	TxResendCountFlag = cli.IntFlag{
-		Name:  "txresend.max-count",
-		Usage: "Set the max count of resending transactions",
-		Value: cn.DefaultMaxResendTxCount,
+	ChildChainIndexingFlag = &cli.BoolFlag{
+		Name:     "childchainindexing",
+		Usage:    "Enables storing transaction hash of child chain transaction for fast access to child chain data",
+		Aliases:  []string{"common.child-chain-indexing"},
+		EnvVars:  []string{"KLAYTN_CHILDCHAININDEXING"},
+		Category: "SERVICECHAIN",
+	}
+	TargetGasLimitFlag = &cli.Uint64Flag{
+		Name:     "targetgaslimit",
+		Usage:    "Target gas limit sets the artificial target gas floor for the blocks to mine",
+		Value:    params.GenesisGasLimit,
+		Aliases:  []string{"common.target-gaslimit"},
+		EnvVars:  []string{"KLAYTN_TARGETGASLIMIT"},
+		Category: "NETWORK",
+	}
+	ServiceChainSignerFlag = &cli.StringFlag{
+		Name:     "scsigner",
+		Usage:    "Public address for signing blocks in the service chain (default = first account created)",
+		Value:    "0",
+		Aliases:  []string{"common.scsigner"},
+		EnvVars:  []string{"KLAYTN_SCSIGNER"},
+		Category: "CONSENSUS",
+	}
+	RewardbaseFlag = &cli.StringFlag{
+		Name:     "rewardbase",
+		Usage:    "Public address for block consensus rewards (default = first account created)",
+		Value:    "0",
+		Aliases:  []string{"common.rewardbase"},
+		EnvVars:  []string{"KLAYTN_REWARDBASE"},
+		Category: "CONSENSUS",
+	}
+	ExtraDataFlag = &cli.StringFlag{
+		Name:     "extradata",
+		Usage:    "Block extra data set by the work (default = client version)",
+		Aliases:  []string{"common.block-extra-data"},
+		EnvVars:  []string{"KLAYTN_EXTRADATA"},
+		Category: "KLAY",
+	}
+
+	TxResendIntervalFlag = &cli.Uint64Flag{
+		Name:     "txresend.interval",
+		Usage:    "Set the transaction resend interval in seconds",
+		Value:    uint64(cn.DefaultTxResendInterval),
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_TXRESEND_INTERVAL"},
+		Category: "TXPOOL",
+	}
+	TxResendCountFlag = &cli.IntFlag{
+		Name:     "txresend.max-count",
+		Usage:    "Set the max count of resending transactions",
+		Value:    cn.DefaultMaxResendTxCount,
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_TXRESEND_MAX_COUNT"},
+		Category: "TXPOOL",
 	}
 	// TODO-Klaytn-RemoveLater Remove this flag when we are confident with the new transaction resend logic
-	TxResendUseLegacyFlag = cli.BoolFlag{
-		Name:  "txresend.use-legacy",
-		Usage: "Enable the legacy transaction resend logic (For testing only)",
+	TxResendUseLegacyFlag = &cli.BoolFlag{
+		Name:     "txresend.use-legacy",
+		Usage:    "Enable the legacy transaction resend logic (For testing only)",
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_TXRESEND_USE_LEGACY"},
+		Category: "TXPOOL",
 	}
 	// Account settings
-	UnlockedAccountFlag = cli.StringFlag{
-		Name:  "unlock",
-		Usage: "Comma separated list of accounts to unlock",
-		Value: "",
+	UnlockedAccountFlag = &cli.StringFlag{
+		Name:     "unlock",
+		Usage:    "Comma separated list of accounts to unlock",
+		Value:    "",
+		Aliases:  []string{"account-update.unlock"},
+		EnvVars:  []string{"KLAYTN_UNLOCK"},
+		Category: "ACCOUNT",
 	}
-	PasswordFileFlag = cli.StringFlag{
-		Name:  "password",
-		Usage: "Password file to use for non-interactive password input",
-		Value: "",
+	PasswordFileFlag = &cli.StringFlag{
+		Name:     "password",
+		Usage:    "Password file to use for non-interactive password input",
+		Value:    "",
+		Aliases:  []string{"account-update.password"},
+		EnvVars:  []string{"KLAYTN_PASSWORD"},
+		Category: "ACCOUNT",
 	}
 
-	VMEnableDebugFlag = cli.BoolFlag{
-		Name:  "vmdebug",
-		Usage: "Record information useful for VM and contract debugging",
+	VMEnableDebugFlag = &cli.BoolFlag{
+		Name:     "vmdebug",
+		Usage:    "Record information useful for VM and contract debugging",
+		Aliases:  []string{"vm.debug"},
+		EnvVars:  []string{"KLAYTN_VMDEBUG"},
+		Category: "VIRTUAL MACHINE",
 	}
-	VMLogTargetFlag = cli.IntFlag{
-		Name:  "vmlog",
-		Usage: "Set the output target of vmlog precompiled contract (0: no output, 1: file, 2: stdout, 3: both)",
-		Value: 0,
+	VMLogTargetFlag = &cli.IntFlag{
+		Name:     "vmlog",
+		Usage:    "Set the output target of vmlog precompiled contract (0: no output, 1: file, 2: stdout, 3: both)",
+		Value:    0,
+		Aliases:  []string{"vm.log"},
+		EnvVars:  []string{"KLAYTN_VMLOG"},
+		Category: "VIRTUAL MACHINE",
 	}
-	VMTraceInternalTxFlag = cli.BoolFlag{
-		Name:  "vm.internaltx",
-		Usage: "Collect internal transaction data while processing a block",
+	VMTraceInternalTxFlag = &cli.BoolFlag{
+		Name:     "vm.internaltx",
+		Usage:    "Collect internal transaction data while processing a block",
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_VM_INTERNALTX"},
+		Category: "VIRTUAL MACHINE",
 	}
 
 	// Logging and debug settings
-	MetricsEnabledFlag = cli.BoolFlag{
-		Name:  metricutils.MetricsEnabledFlag,
-		Usage: "Enable metrics collection and reporting",
+	MetricsEnabledFlag = &cli.BoolFlag{
+		Name:     metricutils.MetricsEnabledFlag,
+		Usage:    "Enable metrics collection and reporting",
+		Aliases:  []string{"metrics-collection-reporting.enable"},
+		EnvVars:  []string{"KLAYTN_METRICUTILS_METRICSENABLEDFLAG"},
+		Category: "METRIC",
 	}
-	PrometheusExporterFlag = cli.BoolFlag{
-		Name:  metricutils.PrometheusExporterFlag,
-		Usage: "Enable prometheus exporter",
+	PrometheusExporterFlag = &cli.BoolFlag{
+		Name:     metricutils.PrometheusExporterFlag,
+		Usage:    "Enable prometheus exporter",
+		Aliases:  []string{"metrics-collection-reporting.prometheus"},
+		EnvVars:  []string{"KLAYTN_METRICUTILS_PROMETHEUSEXPORTERFLAG"},
+		Category: "METRIC",
 	}
-	PrometheusExporterPortFlag = cli.IntFlag{
-		Name:  metricutils.PrometheusExporterPortFlag,
-		Usage: "Prometheus exporter listening port",
-		Value: 61001,
-	}
-	// RPC settings
-	RPCEnabledFlag = cli.BoolFlag{
-		Name:  "rpc",
-		Usage: "Enable the HTTP-RPC server",
-	}
-	RPCListenAddrFlag = cli.StringFlag{
-		Name:  "rpcaddr",
-		Usage: "HTTP-RPC server listening interface",
-		Value: node.DefaultHTTPHost,
-	}
-	RPCPortFlag = cli.IntFlag{
-		Name:  "rpcport",
-		Usage: "HTTP-RPC server listening port",
-		Value: node.DefaultHTTPPort,
-	}
-	RPCCORSDomainFlag = cli.StringFlag{
-		Name:  "rpccorsdomain",
-		Usage: "Comma separated list of domains from which to accept cross origin requests (browser enforced)",
-		Value: "",
-	}
-	RPCVirtualHostsFlag = cli.StringFlag{
-		Name:  "rpcvhosts",
-		Usage: "Comma separated list of virtual hostnames from which to accept requests (server enforced). Accepts '*' wildcard.",
-		Value: strings.Join(node.DefaultConfig.HTTPVirtualHosts, ","),
-	}
-	RPCApiFlag = cli.StringFlag{
-		Name:  "rpcapi",
-		Usage: "API's offered over the HTTP-RPC interface",
-		Value: "",
-	}
-	RPCGlobalGasCap = cli.Uint64Flag{
-		Name:  "rpc.gascap",
-		Usage: "Sets a cap on gas that can be used in klay_call/estimateGas",
-	}
-	RPCGlobalEthTxFeeCapFlag = cli.Float64Flag{
-		Name:  "rpc.ethtxfeecap",
-		Usage: "Sets a cap on transaction fee (in klay) that can be sent via the eth namespace RPC APIs (0 = no cap)",
-	}
-	RPCConcurrencyLimit = cli.IntFlag{
-		Name:  "rpc.concurrencylimit",
-		Usage: "Sets a limit of concurrent connection number of HTTP-RPC server",
-		Value: rpc.ConcurrencyLimit,
-	}
-	RPCNonEthCompatibleFlag = cli.BoolFlag{
-		Name:  "rpc.eth.noncompatible",
-		Usage: "Disables the eth namespace API return formatting for compatibility",
-	}
-	WSEnabledFlag = cli.BoolFlag{
-		Name:  "ws",
-		Usage: "Enable the WS-RPC server",
-	}
-	WSListenAddrFlag = cli.StringFlag{
-		Name:  "wsaddr",
-		Usage: "WS-RPC server listening interface",
-		Value: node.DefaultWSHost,
-	}
-	WSPortFlag = cli.IntFlag{
-		Name:  "wsport",
-		Usage: "WS-RPC server listening port",
-		Value: node.DefaultWSPort,
-	}
-	WSApiFlag = cli.StringFlag{
-		Name:  "wsapi",
-		Usage: "API's offered over the WS-RPC interface",
-		Value: "",
-	}
-	WSAllowedOriginsFlag = cli.StringFlag{
-		Name:  "wsorigins",
-		Usage: "Origins from which to accept websockets requests",
-		Value: "",
-	}
-	WSMaxSubscriptionPerConn = cli.IntFlag{
-		Name:  "wsmaxsubscriptionperconn",
-		Usage: "Allowed maximum subscription number per a websocket connection",
-		Value: int(rpc.MaxSubscriptionPerWSConn),
-	}
-	WSReadDeadLine = cli.Int64Flag{
-		Name:  "wsreaddeadline",
-		Usage: "Set the read deadline on the underlying network connection in seconds. 0 means read will not timeout",
-		Value: rpc.WebsocketReadDeadline,
-	}
-	WSWriteDeadLine = cli.Int64Flag{
-		Name:  "wswritedeadline",
-		Usage: "Set the Write deadline on the underlying network connection in seconds. 0 means write will not timeout",
-		Value: rpc.WebsocketWriteDeadline,
-	}
-	WSMaxConnections = cli.IntFlag{
-		Name:  "wsmaxconnections",
-		Usage: "Allowed maximum websocket connection number",
-		Value: 3000,
-	}
-	GRPCEnabledFlag = cli.BoolFlag{
-		Name:  "grpc",
-		Usage: "Enable the gRPC server",
-	}
-	GRPCListenAddrFlag = cli.StringFlag{
-		Name:  "grpcaddr",
-		Usage: "gRPC server listening interface",
-		Value: node.DefaultGRPCHost,
-	}
-	GRPCPortFlag = cli.IntFlag{
-		Name:  "grpcport",
-		Usage: "gRPC server listening port",
-		Value: node.DefaultGRPCPort,
-	}
-	IPCDisabledFlag = cli.BoolFlag{
-		Name:  "ipcdisable",
-		Usage: "Disable the IPC-RPC server",
-	}
-	IPCPathFlag = DirectoryFlag{
-		Name:  "ipcpath",
-		Usage: "Filename for IPC socket/pipe within the datadir (explicit paths escape it)",
-	}
-	ExecFlag = cli.StringFlag{
-		Name:  "exec",
-		Usage: "Execute JavaScript statement",
-	}
-	PreloadJSFlag = cli.StringFlag{
-		Name:  "preload",
-		Usage: "Comma separated list of JavaScript files to preload into the console",
-	}
-	APIFilterGetLogsDeadlineFlag = cli.DurationFlag{
-		Name:  "api.filter.getLogs.deadline",
-		Usage: "Execution deadline for log collecting filter APIs",
-		Value: filters.GetLogsDeadline,
-	}
-	APIFilterGetLogsMaxItemsFlag = cli.IntFlag{
-		Name:  "api.filter.getLogs.maxitems",
-		Usage: "Maximum allowed number of return items for log collecting filter API",
-		Value: filters.GetLogsMaxItems,
-	}
-	RPCReadTimeout = cli.IntFlag{
-		Name:  "rpcreadtimeout",
-		Usage: "HTTP-RPC server read timeout (seconds)",
-		Value: int(rpc.DefaultHTTPTimeouts.ReadTimeout / time.Second),
-	}
-	RPCWriteTimeoutFlag = cli.IntFlag{
-		Name:  "rpcwritetimeout",
-		Usage: "HTTP-RPC server write timeout (seconds)",
-		Value: int(rpc.DefaultHTTPTimeouts.WriteTimeout / time.Second),
-	}
-	RPCIdleTimeoutFlag = cli.IntFlag{
-		Name:  "rpcidletimeout",
-		Usage: "HTTP-RPC server idle timeout (seconds)",
-		Value: int(rpc.DefaultHTTPTimeouts.IdleTimeout / time.Second),
-	}
-	RPCExecutionTimeoutFlag = cli.IntFlag{
-		Name:  "rpcexecutiontimeout",
-		Usage: "HTTP-RPC server execution timeout (seconds)",
-		Value: int(rpc.DefaultHTTPTimeouts.ExecutionTimeout / time.Second),
+	PrometheusExporterPortFlag = &cli.IntFlag{
+		Name:     metricutils.PrometheusExporterPortFlag,
+		Usage:    "Prometheus exporter listening port",
+		Value:    61001,
+		Aliases:  []string{"metrics-collection-reporting.prometheus-port"},
+		EnvVars:  []string{"KLAYTN_METRICUTILS_PROMETHEUSEXPORTERPORTFLAG"},
+		Category: "METRIC",
 	}
 
-	// Network Settings
-	NodeTypeFlag = cli.StringFlag{
-		Name:  "nodetype",
-		Usage: "Klaytn node type (consensus node (cn), proxy node (pn), endpoint node (en))",
-		Value: "en",
+	// RPC settings
+	RPCEnabledFlag = &cli.BoolFlag{
+		Name:     "rpc",
+		Usage:    "Enable the HTTP-RPC server",
+		Aliases:  []string{"http-rpc.enable"},
+		EnvVars:  []string{"KLAYTN_RPC"},
+		Category: "API AND CONSOLE",
 	}
-	MaxConnectionsFlag = cli.IntFlag{
-		Name:  "maxconnections",
-		Usage: "Maximum number of physical connections. All single channel peers can be maxconnections peers. All multi channel peers can be maxconnections/2 peers. (network disabled if set to 0)",
-		Value: node.DefaultMaxPhysicalConnections,
+	RPCListenAddrFlag = &cli.StringFlag{
+		Name:     "rpcaddr",
+		Usage:    "HTTP-RPC server listening interface",
+		Value:    node.DefaultHTTPHost,
+		Aliases:  []string{"http-rpc.addr"},
+		EnvVars:  []string{"KLAYTN_RPCADDR"},
+		Category: "API AND CONSOLE",
 	}
-	MaxPendingPeersFlag = cli.IntFlag{
-		Name:  "maxpendpeers",
-		Usage: "Maximum number of pending connection attempts (defaults used if set to 0)",
-		Value: 0,
+	RPCPortFlag = &cli.IntFlag{
+		Name:     "rpcport",
+		Usage:    "HTTP-RPC server listening port",
+		Value:    node.DefaultHTTPPort,
+		Aliases:  []string{"http-rpc.port"},
+		EnvVars:  []string{"KLAYTN_RPCPORT"},
+		Category: "API AND CONSOLE",
 	}
-	ListenPortFlag = cli.IntFlag{
-		Name:  "port",
-		Usage: "Network listening port",
-		Value: node.DefaultP2PPort,
+	RPCCORSDomainFlag = &cli.StringFlag{
+		Name:     "rpccorsdomain",
+		Usage:    "Comma separated list of domains from which to accept cross origin requests (browser enforced)",
+		Value:    "",
+		Aliases:  []string{"http-rpc.cors-domain"},
+		EnvVars:  []string{"KLAYTN_RPCCORSDOMAIN"},
+		Category: "API AND CONSOLE",
 	}
-	SubListenPortFlag = cli.IntFlag{
-		Name:  "subport",
-		Usage: "Network sub listening port",
-		Value: node.DefaultP2PSubPort,
+	RPCVirtualHostsFlag = &cli.StringFlag{
+		Name:     "rpcvhosts",
+		Usage:    "Comma separated list of virtual hostnames from which to accept requests (server enforced). Accepts '*' wildcard.",
+		Value:    strings.Join(node.DefaultConfig.HTTPVirtualHosts, ","),
+		Aliases:  []string{"http-rpc.vhosts"},
+		EnvVars:  []string{"KLAYTN_RPCVHOSTS"},
+		Category: "API AND CONSOLE",
 	}
-	MultiChannelUseFlag = cli.BoolFlag{
-		Name:  "multichannel",
-		Usage: "Create a dedicated channel for block propagation",
+	RPCApiFlag = &cli.StringFlag{
+		Name:     "rpcapi",
+		Usage:    "API's offered over the HTTP-RPC interface",
+		Value:    "",
+		Aliases:  []string{"http-rpc.api"},
+		EnvVars:  []string{"KLAYTN_RPCAPI"},
+		Category: "API AND CONSOLE",
 	}
-	BootnodesFlag = cli.StringFlag{
-		Name:  "bootnodes",
-		Usage: "Comma separated kni URLs for P2P discovery bootstrap",
-		Value: "",
+	RPCGlobalGasCap = &cli.Uint64Flag{
+		Name:     "rpc.gascap",
+		Usage:    "Sets a cap on gas that can be used in klay_call/estimateGas",
+		Aliases:  []string{"http-rpc.gascap"},
+		EnvVars:  []string{"KLAYTN_RPC_GASCAP"},
+		Category: "API AND CONSOLE",
 	}
-	NodeKeyFileFlag = cli.StringFlag{
-		Name:  "nodekey",
-		Usage: "P2P node key file",
+	RPCGlobalEVMTimeoutFlag = &cli.DurationFlag{
+		Name:     "rpc.evmtimeout",
+		Usage:    "Sets a timeout used for eth_call (0=infinite)",
+		Aliases:  []string{"http-rpc.evmtimeout"},
+		EnvVars:  []string{"KLAYTN_RPC_EVMTIMEOUT"},
+		Category: "API AND CONSOLE",
 	}
-	NodeKeyHexFlag = cli.StringFlag{
-		Name:  "nodekeyhex",
-		Usage: "P2P node key as hex (for testing)",
+	RPCGlobalEthTxFeeCapFlag = &cli.Float64Flag{
+		Name:     "rpc.ethtxfeecap",
+		Usage:    "Sets a cap on transaction fee (in klay) that can be sent via the eth namespace RPC APIs (0 = no cap)",
+		Aliases:  []string{"http-rpc.eth-tx-feecap"},
+		EnvVars:  []string{"KLAYTN_RPC_ETHTXFEECAP"},
+		Category: "API AND CONSOLE",
 	}
-	NATFlag = cli.StringFlag{
-		Name:  "nat",
-		Usage: "NAT port mapping mechanism (any|none|upnp|pmp|extip:<IP>)",
-		Value: "any",
+	RPCConcurrencyLimit = &cli.IntFlag{
+		Name:     "rpc.concurrencylimit",
+		Usage:    "Sets a limit of concurrent connection number of HTTP-RPC server",
+		Value:    rpc.ConcurrencyLimit,
+		Aliases:  []string{"http-rpc.concurrency-limit"},
+		EnvVars:  []string{"KLAYTN_RPC_CONCURRENCYLIMIT"},
+		Category: "API AND CONSOLE",
 	}
-	NoDiscoverFlag = cli.BoolFlag{
-		Name:  "nodiscover",
-		Usage: "Disables the peer discovery mechanism (manual peer addition)",
+	RPCNonEthCompatibleFlag = &cli.BoolFlag{
+		Name:     "rpc.eth.noncompatible",
+		Usage:    "Disables the eth namespace API return formatting for compatibility",
+		Aliases:  []string{"http-rpc.eth-noncompatible"},
+		EnvVars:  []string{"KLAYTN_RPC_ETH_NONCOMPATIBLE"},
+		Category: "API AND CONSOLE",
 	}
-	NetrestrictFlag = cli.StringFlag{
-		Name:  "netrestrict",
-		Usage: "Restricts network communication to the given IP network (CIDR masks)",
+	RPCReadTimeout = &cli.IntFlag{
+		Name:     "rpcreadtimeout",
+		Usage:    "HTTP-RPC server read timeout (seconds)",
+		Value:    int(rpc.DefaultHTTPTimeouts.ReadTimeout / time.Second),
+		Aliases:  []string{"http-rpc.read-timeout"},
+		EnvVars:  []string{"KLAYTN_RPCREADTIMEOUT"},
+		Category: "API AND CONSOLE",
 	}
-	AnchoringPeriodFlag = cli.Uint64Flag{
-		Name:  "chaintxperiod",
-		Usage: "The period to make and send a chain transaction to the parent chain",
-		Value: 1,
+	RPCWriteTimeoutFlag = &cli.IntFlag{
+		Name:     "rpcwritetimeout",
+		Usage:    "HTTP-RPC server write timeout (seconds)",
+		Value:    int(rpc.DefaultHTTPTimeouts.WriteTimeout / time.Second),
+		Aliases:  []string{"http-rpc.write-timeout"},
+		EnvVars:  []string{"KLAYTN_RPCWRITETIMEOUT"},
+		Category: "API AND CONSOLE",
 	}
-	SentChainTxsLimit = cli.Uint64Flag{
-		Name:  "chaintxlimit",
-		Usage: "Number of service chain transactions stored for resending",
-		Value: 100,
+	RPCIdleTimeoutFlag = &cli.IntFlag{
+		Name:     "rpcidletimeout",
+		Usage:    "HTTP-RPC server idle timeout (seconds)",
+		Value:    int(rpc.DefaultHTTPTimeouts.IdleTimeout / time.Second),
+		Aliases:  []string{"http-rpc.idle-timeout"},
+		EnvVars:  []string{"KLAYTN_RPCIDLETIMEOUT"},
+		Category: "API AND CONSOLE",
 	}
-	RWTimerIntervalFlag = cli.Uint64Flag{
-		Name:  "rwtimerinterval",
-		Usage: "Interval of using rw timer to check if it works well",
-		Value: 1000,
+	RPCExecutionTimeoutFlag = &cli.IntFlag{
+		Name:     "rpcexecutiontimeout",
+		Usage:    "HTTP-RPC server execution timeout (seconds)",
+		Value:    int(rpc.DefaultHTTPTimeouts.ExecutionTimeout / time.Second),
+		Aliases:  []string{"http-rpc.execution-timeout"},
+		EnvVars:  []string{"KLAYTN_RPCEXECUTIONTIMEOUT"},
+		Category: "API AND CONSOLE",
 	}
-	RWTimerWaitTimeFlag = cli.DurationFlag{
-		Name:  "rwtimerwaittime",
-		Usage: "Wait time the rw timer waits for message writing",
-		Value: 15 * time.Second,
+
+	WSEnabledFlag = &cli.BoolFlag{
+		Name:     "ws",
+		Usage:    "Enable the WS-RPC server",
+		Aliases:  []string{"ws-rpc.enable"},
+		EnvVars:  []string{"KLAYTN_WS"},
+		Category: "API AND CONSOLE",
 	}
-	MaxRequestContentLengthFlag = cli.IntFlag{
-		Name:  "maxRequestContentLength",
-		Usage: "Max request content length in byte for http, websocket and gRPC",
-		Value: common.MaxRequestContentLength,
+	WSListenAddrFlag = &cli.StringFlag{
+		Name:     "wsaddr",
+		Usage:    "WS-RPC server listening interface",
+		Value:    node.DefaultWSHost,
+		Aliases:  []string{"ws-rpc.addr"},
+		EnvVars:  []string{"KLAYTN_WSADDR"},
+		Category: "API AND CONSOLE",
+	}
+	WSPortFlag = &cli.IntFlag{
+		Name:     "wsport",
+		Usage:    "WS-RPC server listening port",
+		Value:    node.DefaultWSPort,
+		Aliases:  []string{"ws-rpc.port"},
+		EnvVars:  []string{"KLAYTN_WSPORT"},
+		Category: "API AND CONSOLE",
+	}
+	WSApiFlag = &cli.StringFlag{
+		Name:     "wsapi",
+		Usage:    "API's offered over the WS-RPC interface",
+		Value:    "",
+		Aliases:  []string{"ws-rpc.api"},
+		EnvVars:  []string{"KLAYTN_WSAPI"},
+		Category: "API AND CONSOLE",
+	}
+	WSAllowedOriginsFlag = &cli.StringFlag{
+		Name:     "wsorigins",
+		Usage:    "Origins from which to accept websockets requests",
+		Value:    "",
+		Aliases:  []string{"ws-rpc.origins"},
+		EnvVars:  []string{"KLAYTN_WSORIGINS"},
+		Category: "API AND CONSOLE",
+	}
+	WSMaxSubscriptionPerConn = &cli.IntFlag{
+		Name:     "wsmaxsubscriptionperconn",
+		Usage:    "Allowed maximum subscription number per a websocket connection",
+		Value:    int(rpc.MaxSubscriptionPerWSConn),
+		Aliases:  []string{"ws-rpc.max-subscription-per-conn"},
+		EnvVars:  []string{"KLAYTN_WSMAXSUBSCRIPTIONPERCONN"},
+		Category: "API AND CONSOLE",
+	}
+	WSReadDeadLine = &cli.Int64Flag{
+		Name:     "wsreaddeadline",
+		Usage:    "Set the read deadline on the underlying network connection in seconds. 0 means read will not timeout",
+		Value:    rpc.WebsocketReadDeadline,
+		Aliases:  []string{"ws-rpc.read-deadline"},
+		EnvVars:  []string{"KLAYTN_WSREADDEADLINE"},
+		Category: "API AND CONSOLE",
+	}
+	WSWriteDeadLine = &cli.Int64Flag{
+		Name:     "wswritedeadline",
+		Usage:    "Set the Write deadline on the underlying network connection in seconds. 0 means write will not timeout",
+		Value:    rpc.WebsocketWriteDeadline,
+		Aliases:  []string{"ws-rpc.write-deadline"},
+		EnvVars:  []string{"KLAYTN_WSWRITEDEADLINE"},
+		Category: "API AND CONSOLE",
+	}
+	WSMaxConnections = &cli.IntFlag{
+		Name:     "wsmaxconnections",
+		Usage:    "Allowed maximum websocket connection number",
+		Value:    3000,
+		Aliases:  []string{"ws-rpc.max-connections"},
+		EnvVars:  []string{"KLAYTN_WSMAXCONNECTIONS"},
+		Category: "API AND CONSOLE",
+	}
+	GRPCEnabledFlag = &cli.BoolFlag{
+		Name:     "grpc",
+		Usage:    "Enable the gRPC server",
+		Aliases:  []string{"g-rpc.enable"},
+		EnvVars:  []string{"KLAYTN_GRPC"},
+		Category: "API AND CONSOLE",
+	}
+	GRPCListenAddrFlag = &cli.StringFlag{
+		Name:     "grpcaddr",
+		Usage:    "gRPC server listening interface",
+		Value:    node.DefaultGRPCHost,
+		Aliases:  []string{"g-rpc.addr"},
+		EnvVars:  []string{"KLAYTN_GRPCADDR"},
+		Category: "API AND CONSOLE",
+	}
+	GRPCPortFlag = &cli.IntFlag{
+		Name:     "grpcport",
+		Usage:    "gRPC server listening port",
+		Value:    node.DefaultGRPCPort,
+		Aliases:  []string{"g-rpc.port"},
+		EnvVars:  []string{"KLAYTN_GRPCPORT"},
+		Category: "API AND CONSOLE",
+	}
+	IPCDisabledFlag = &cli.BoolFlag{
+		Name:     "ipcdisable",
+		Usage:    "Disable the IPC-RPC server",
+		Aliases:  []string{"ipc.disable"},
+		EnvVars:  []string{"KLAYTN_IPCDISABLE"},
+		Category: "API AND CONSOLE",
+	}
+	IPCPathFlag = &cli.PathFlag{
+		Name:     "ipcpath",
+		Usage:    "Filename for IPC socket/pipe within the datadir (explicit paths escape it)",
+		Aliases:  []string{"ipc.path"},
+		EnvVars:  []string{"KLAYTN_IPCPATH"},
+		Category: "API AND CONSOLE",
 	}
 
 	// ATM the url is left to the user and deployment to
-	JSpathFlag = cli.StringFlag{
-		Name:  "jspath",
-		Usage: "JavaScript root path for `loadScript`",
-		Value: ".",
+	JSpathFlag = &cli.StringFlag{
+		Name:     "jspath",
+		Usage:    "JavaScript root path for `loadScript`",
+		Value:    ".",
+		Aliases:  []string{"console.js-path"},
+		EnvVars:  []string{"KLAYTN_JSPATH"},
+		Category: "API AND CONSOLE",
 	}
-	CypressFlag = cli.BoolFlag{
-		Name:  "cypress",
-		Usage: "Pre-configured Klaytn Cypress network",
+	ExecFlag = &cli.StringFlag{
+		Name:     "exec",
+		Usage:    "Execute JavaScript statement",
+		Aliases:  []string{"console.exec"},
+		EnvVars:  []string{"KLAYTN_EXEC"},
+		Category: "API AND CONSOLE",
+	}
+	PreloadJSFlag = &cli.StringFlag{
+		Name:     "preload",
+		Usage:    "Comma separated list of JavaScript files to preload into the console",
+		Aliases:  []string{"console.preload"},
+		EnvVars:  []string{"KLAYTN_PRELOAD"},
+		Category: "API AND CONSOLE",
+	}
+	APIFilterGetLogsDeadlineFlag = &cli.DurationFlag{
+		Name:     "api.filter.getLogs.deadline",
+		Usage:    "Execution deadline for log collecting filter APIs",
+		Value:    filters.GetLogsDeadline,
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_API_FILTER_GETLOGS_DEADLINE"},
+		Category: "API AND CONSOLE",
+	}
+	APIFilterGetLogsMaxItemsFlag = &cli.IntFlag{
+		Name:     "api.filter.getLogs.maxitems",
+		Usage:    "Maximum allowed number of return items for log collecting filter API",
+		Value:    filters.GetLogsMaxItems,
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_API_FILTER_GETLOGS_MAXITEMS"},
+		Category: "API AND CONSOLE",
+	}
+	UnsafeDebugDisableFlag = &cli.BoolFlag{
+		Name:     "rpc.unsafe-debug.disable",
+		Usage:    "Disable unsafe debug APIs (traceTransaction, traceChain, ...).",
+		Aliases:  []string{"http-rpc.unsafe-debug.disable"},
+		EnvVars:  []string{"KLAYTN_RPC_UNSAFE_DEBUG_DISABLE"},
+		Category: "API AND CONSOLE",
+	}
+	// TODO-klaytn: Consider limiting the non-debug heavy apis.
+	HeavyDebugRequestLimitFlag = &cli.IntFlag{
+		Name:     "rpc.unsafe-debug.heavy-debug.request-limit",
+		Usage:    "Limit the maximum number of heavy debug api requests. Works with unsafe-debug only.",
+		Value:    50,
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_RPC_UNSAFE_DEBUG_HEAVY_DEBUG_REQUEST_LIMIT"},
+		Category: "API AND CONSOLE",
+	}
+	StateRegenerationTimeLimitFlag = &cli.DurationFlag{
+		Name:     "rpc.unsafe-debug.state-regeneration.time-limit",
+		Usage:    "Limit the state regeneration time. Works with unsafe-debug only.",
+		Value:    60 * time.Second,
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_RPC_UNSAFE_DEBUG_STATE_REGENERATION_TIME_LIMIT"},
+		Category: "API AND CONSOLE",
+	}
+
+	// Network Settings
+	NodeTypeFlag = &cli.StringFlag{
+		Name:    "nodetype",
+		Usage:   "Klaytn node type (consensus node (cn), proxy node (pn), endpoint node (en))",
+		Value:   "en",
+		Aliases: []string{},
+		EnvVars: []string{"KLAYTN_NODETYPE"},
+	}
+	MaxConnectionsFlag = &cli.IntFlag{
+		Name:     "maxconnections",
+		Usage:    "Maximum number of physical connections. All single channel peers can be maxconnections peers. All multi channel peers can be maxconnections/2 peers. (network disabled if set to 0)",
+		Value:    node.DefaultMaxPhysicalConnections,
+		Aliases:  []string{"p2p.max-connections"},
+		EnvVars:  []string{"KLAYTN_MAXCONNECTIONS"},
+		Category: "NETWORK",
+	}
+	MaxPendingPeersFlag = &cli.IntFlag{
+		Name:     "maxpendpeers",
+		Usage:    "Maximum number of pending connection attempts (defaults used if set to 0)",
+		Value:    0,
+		Aliases:  []string{"p2p.max-pend-peers"},
+		EnvVars:  []string{"KLAYTN_MAXPENDPEERS"},
+		Category: "NETWORK",
+	}
+	ListenPortFlag = &cli.IntFlag{
+		Name:     "port",
+		Usage:    "Network listening port",
+		Value:    node.DefaultP2PPort,
+		Aliases:  []string{"p2p.port"},
+		EnvVars:  []string{"KLAYTN_PORT"},
+		Category: "NETWORK",
+	}
+	SubListenPortFlag = &cli.IntFlag{
+		Name:     "subport",
+		Usage:    "Network sub listening port",
+		Value:    node.DefaultP2PSubPort,
+		Aliases:  []string{"p2p.sub-port"},
+		EnvVars:  []string{"KLAYTN_SUBPORT"},
+		Category: "NETWORK",
+	}
+	MultiChannelUseFlag = &cli.BoolFlag{
+		Name:     "multichannel",
+		Usage:    "Create a dedicated channel for block propagation",
+		Aliases:  []string{"p2p.multi-channel"},
+		EnvVars:  []string{"KLAYTN_MULTICHANNEL"},
+		Category: "NETWORK",
+	}
+	BootnodesFlag = &cli.StringFlag{
+		Name:     "bootnodes",
+		Usage:    "Comma separated kni URLs for P2P discovery bootstrap",
+		Value:    "",
+		Aliases:  []string{"p2p.bootnodes"},
+		EnvVars:  []string{"KLAYTN_BOOTNODES"},
+		Category: "NETWORK",
+	}
+	NodeKeyFileFlag = &cli.StringFlag{
+		Name:     "nodekey",
+		Usage:    "P2P node key file",
+		Aliases:  []string{"p2p.node-key"},
+		EnvVars:  []string{"KLAYTN_NODEKEY"},
+		Category: "NETWORK",
+	}
+	NodeKeyHexFlag = &cli.StringFlag{
+		Name:     "nodekeyhex",
+		Usage:    "P2P node key as hex (for testing)",
+		Aliases:  []string{"p2p.node-key-hex"},
+		EnvVars:  []string{"KLAYTN_NODEKEYHEX"},
+		Category: "NETWORK",
+	}
+	NATFlag = &cli.StringFlag{
+		Name:     "nat",
+		Usage:    "NAT port mapping mechanism (any|none|upnp|pmp|extip:<IP>)",
+		Value:    "any",
+		Aliases:  []string{"p2p.nat"},
+		EnvVars:  []string{"KLAYTN_NAT"},
+		Category: "NETWORK",
+	}
+	NoDiscoverFlag = &cli.BoolFlag{
+		Name:     "nodiscover",
+		Usage:    "Disables the peer discovery mechanism (manual peer addition)",
+		Aliases:  []string{"p2p.no-discover"},
+		EnvVars:  []string{"KLAYTN_NODISCOVER"},
+		Category: "NETWORK",
+	}
+	NetrestrictFlag = &cli.StringFlag{
+		Name:     "netrestrict",
+		Usage:    "Restricts network communication to the given IP network (CIDR masks)",
+		Aliases:  []string{"p2p.net-restrict"},
+		EnvVars:  []string{"KLAYTN_NETRESTRICT"},
+		Category: "NETWORK",
+	}
+	RWTimerIntervalFlag = &cli.Uint64Flag{
+		Name:     "rwtimerinterval",
+		Usage:    "Interval of using rw timer to check if it works well",
+		Value:    1000,
+		Aliases:  []string{"p2p.rw-timer-interval"},
+		EnvVars:  []string{"KLAYTN_RWTIMERINTERVAL"},
+		Category: "NETWORK",
+	}
+	RWTimerWaitTimeFlag = &cli.DurationFlag{
+		Name:     "rwtimerwaittime",
+		Usage:    "Wait time the rw timer waits for message writing",
+		Value:    15 * time.Second,
+		Aliases:  []string{"p2p.rw-timer-wait-time"},
+		EnvVars:  []string{"KLAYTN_RWTIMERWAITTIME"},
+		Category: "NETWORK",
+	}
+	MaxRequestContentLengthFlag = &cli.IntFlag{
+		Name:     "maxRequestContentLength",
+		Usage:    "Max request content length in byte for http, websocket and gRPC",
+		Value:    common.MaxRequestContentLength,
+		Aliases:  []string{"p2p.max-request-content-length"},
+		EnvVars:  []string{"KLAYTN_MAXREQUESTCONTENTLENGTH"},
+		Category: "API AND CONSOLE",
+	}
+
+	CypressFlag = &cli.BoolFlag{
+		Name:     "cypress",
+		Usage:    "Pre-configured Klaytn Cypress network",
+		Aliases:  []string{"p2p.cypress"},
+		EnvVars:  []string{"KLAYTN_CYPRESS"},
+		Category: "NETWORK",
 	}
 	// Baobab bootnodes setting
-	BaobabFlag = cli.BoolFlag{
-		Name:  "baobab",
-		Usage: "Pre-configured Klaytn baobab network",
+	BaobabFlag = &cli.BoolFlag{
+		Name:     "baobab",
+		Usage:    "Pre-configured Klaytn baobab network",
+		Aliases:  []string{"p2p.baobab"},
+		EnvVars:  []string{"KLAYTN_BAOBAB"},
+		Category: "NETWORK",
 	}
 	// Bootnode's settings
-	AuthorizedNodesFlag = cli.StringFlag{
-		Name:  "authorized-nodes",
-		Usage: "Comma separated kni URLs for authorized nodes list",
-		Value: "",
+	AuthorizedNodesFlag = &cli.StringFlag{
+		Name:    "authorized-nodes",
+		Usage:   "Comma separated kni URLs for authorized nodes list",
+		Value:   "",
+		Aliases: []string{"common.authorized-nodes"},
+		EnvVars: []string{"KLAYTN_AUTHORIZED_NODES"},
 	}
 	// TODO-Klaytn-Bootnode the boodnode flags should be updated when it is implemented
-	BNAddrFlag = cli.StringFlag{
-		Name:  "bnaddr",
-		Usage: `udp address to use node discovery`,
-		Value: ":32323",
+	BNAddrFlag = &cli.StringFlag{
+		Name:    "bnaddr",
+		Usage:   `udp address to use node discovery`,
+		Value:   ":32323",
+		Aliases: []string{"p2p.bn-addr"},
+		EnvVars: []string{"KLAYTN_BNADDR"},
 	}
-	GenKeyFlag = cli.StringFlag{
-		Name:  "genkey",
-		Usage: "generate a node private key and write to given filename",
+	GenKeyFlag = &cli.StringFlag{
+		Name:     "genkey",
+		Usage:    "generate a node private key and write to given filename",
+		Aliases:  []string{"common.gen-key-path"},
+		EnvVars:  []string{"KLAYTN_GENKEY"},
+		Category: "MISC",
 	}
-	WriteAddressFlag = cli.BoolFlag{
-		Name:  "writeaddress",
-		Usage: `write out the node's public key which is given by "--nodekeyfile" or "--nodekeyhex"`,
+	WriteAddressFlag = &cli.BoolFlag{
+		Name:     "writeaddress",
+		Usage:    `write out the node's public key which is given by "--nodekey" or "--nodekeyhex"`,
+		Aliases:  []string{"common.write-address"},
+		EnvVars:  []string{"KLAYTN_WRITEADDRESS"},
+		Category: "MISC",
 	}
 	// ServiceChain's settings
-	MainBridgeFlag = cli.BoolFlag{
-		Name:  "mainbridge",
-		Usage: "Enable main bridge service for service chain",
+	AnchoringPeriodFlag = &cli.Uint64Flag{
+		Name:     "chaintxperiod",
+		Usage:    "The period to make and send a chain transaction to the parent chain",
+		Value:    1,
+		Aliases:  []string{"servicechain.chain-tx-period"},
+		EnvVars:  []string{"KLAYTN_CHAINTXPERIOD"},
+		Category: "SERVICECHAIN",
 	}
-	SubBridgeFlag = cli.BoolFlag{
-		Name:  "subbridge",
-		Usage: "Enable sub bridge service for service chain",
+	SentChainTxsLimit = &cli.Uint64Flag{
+		Name:     "chaintxlimit",
+		Usage:    "Number of service chain transactions stored for resending",
+		Value:    100,
+		Aliases:  []string{"servicechain.chain-tx-limit"},
+		EnvVars:  []string{"KLAYTN_CHAINTXLIMIT"},
+		Category: "SERVICECHAIN",
 	}
-	MainBridgeListenPortFlag = cli.IntFlag{
-		Name:  "mainbridgeport",
-		Usage: "main bridge listen port",
-		Value: 50505,
+	MainBridgeFlag = &cli.BoolFlag{
+		Name:     "mainbridge",
+		Usage:    "Enable main bridge service for service chain",
+		Aliases:  []string{"servicechain.mainbridge"},
+		EnvVars:  []string{"KLAYTN_MAINBRIDGE"},
+		Category: "SERVICECHAIN",
 	}
-	SubBridgeListenPortFlag = cli.IntFlag{
-		Name:  "subbridgeport",
-		Usage: "sub bridge listen port",
-		Value: 50506,
+	SubBridgeFlag = &cli.BoolFlag{
+		Name:     "subbridge",
+		Usage:    "Enable sub bridge service for service chain",
+		Aliases:  []string{"servicechain.subbridge"},
+		EnvVars:  []string{"KLAYTN_SUBBRIDGE"},
+		Category: "SERVICECHAIN",
 	}
-	ParentChainIDFlag = cli.IntFlag{
-		Name:  "parentchainid",
-		Usage: "parent chain ID",
-		Value: 8217, // Klaytn mainnet chain ID
+	MainBridgeListenPortFlag = &cli.IntFlag{
+		Name:     "mainbridgeport",
+		Usage:    "main bridge listen port",
+		Value:    50505,
+		Aliases:  []string{"servicechain.mainbridge-port"},
+		EnvVars:  []string{"KLAYTN_MAINBRIDGEPORT"},
+		Category: "SERVICECHAIN",
 	}
-	VTRecoveryFlag = cli.BoolFlag{
-		Name:  "vtrecovery",
-		Usage: "Enable value transfer recovery (default: false)",
+	SubBridgeListenPortFlag = &cli.IntFlag{
+		Name:     "subbridgeport",
+		Usage:    "sub bridge listen port",
+		Value:    50506,
+		Aliases:  []string{"servicechain.subbridge-port"},
+		EnvVars:  []string{"KLAYTN_SUBBRIDGEPORT"},
+		Category: "SERVICECHAIN",
 	}
-	VTRecoveryIntervalFlag = cli.Uint64Flag{
-		Name:  "vtrecoveryinterval",
-		Usage: "Set the value transfer recovery interval (seconds)",
-		Value: 5,
+	ParentChainIDFlag = &cli.IntFlag{
+		Name:     "parentchainid",
+		Usage:    "parent chain ID",
+		Value:    8217, // Klaytn mainnet chain ID
+		Aliases:  []string{"servicechain.parent-chainid"},
+		EnvVars:  []string{"KLAYTN_PARENTCHAINID"},
+		Category: "SERVICECHAIN",
 	}
-	ServiceChainParentOperatorTxGasLimitFlag = cli.Uint64Flag{
-		Name:  "sc.parentoperator.gaslimit",
-		Usage: "Set the default value of gas limit for transactions made by bridge parent operator",
-		Value: 10000000,
+	VTRecoveryFlag = &cli.BoolFlag{
+		Name:     "vtrecovery",
+		Usage:    "Enable value transfer recovery (default: false)",
+		Aliases:  []string{"servicechain.vt-recovery"},
+		EnvVars:  []string{"KLAYTN_VTRECOVERY"},
+		Category: "SERVICECHAIN",
 	}
-	ServiceChainChildOperatorTxGasLimitFlag = cli.Uint64Flag{
-		Name:  "sc.childoperator.gaslimit",
-		Usage: "Set the default value of gas limit for transactions made by bridge child operator",
-		Value: 10000000,
+	VTRecoveryIntervalFlag = &cli.Uint64Flag{
+		Name:     "vtrecoveryinterval",
+		Usage:    "Set the value transfer recovery interval (seconds)",
+		Value:    5,
+		Aliases:  []string{"servicechain.vt-recovery-interval"},
+		EnvVars:  []string{"KLAYTN_VTRECOVERYINTERVAL"},
+		Category: "SERVICECHAIN",
 	}
-	ServiceChainNewAccountFlag = cli.BoolFlag{
-		Name:  "scnewaccount",
-		Usage: "Enable account creation for the service chain (default: false). If set true, generated account can't be synced with the parent chain.",
+	ServiceChainParentOperatorTxGasLimitFlag = &cli.Uint64Flag{
+		Name:     "sc.parentoperator.gaslimit",
+		Usage:    "Set the default value of gas limit for transactions made by bridge parent operator",
+		Value:    10000000,
+		Aliases:  []string{"servicechain.parent-operator-gaslimit"},
+		EnvVars:  []string{"KLAYTN_SC_PARENTOPERATOR_GASLIMIT"},
+		Category: "SERVICECHAIN",
 	}
-	ServiceChainConsensusFlag = cli.StringFlag{
-		Name:  "scconsensus",
-		Usage: "Set the service chain consensus (\"istanbul\", \"clique\")",
-		Value: "istanbul",
+	ServiceChainChildOperatorTxGasLimitFlag = &cli.Uint64Flag{
+		Name:     "sc.childoperator.gaslimit",
+		Usage:    "Set the default value of gas limit for transactions made by bridge child operator",
+		Value:    10000000,
+		Aliases:  []string{"servicechain.child-operator-gaslimit"},
+		EnvVars:  []string{"KLAYTN_SC_CHILDOPERATOR_GASLIMIT"},
+		Category: "SERVICECHAIN",
 	}
-	ServiceChainAnchoringFlag = cli.BoolFlag{
-		Name:  "anchoring",
-		Usage: "Enable anchoring for service chain",
+	ServiceChainNewAccountFlag = &cli.BoolFlag{
+		Name:     "scnewaccount",
+		Usage:    "Enable account creation for the service chain (default: false). If set true, generated account can't be synced with the parent chain.",
+		Aliases:  []string{"servicechain.new-account"},
+		EnvVars:  []string{"KLAYTN_SCNEWACCOUNT"},
+		Category: "SERVICECHAIN",
+	}
+	ServiceChainAnchoringFlag = &cli.BoolFlag{
+		Name:     "anchoring",
+		Usage:    "Enable anchoring for service chain",
+		Aliases:  []string{"servicechain.anchoring"},
+		EnvVars:  []string{"KLAYTN_ANCHORING"},
+		Category: "SERVICECHAIN",
+	}
+	// TODO-klaytn: need to check if deprecated.
+	ServiceChainConsensusFlag = &cli.StringFlag{
+		Name:    "scconsensus",
+		Usage:   "Set the service chain consensus (\"istanbul\", \"clique\")",
+		Value:   "istanbul",
+		Aliases: []string{"servicechain.consensus"},
+		EnvVars: []string{"KLAYTN_SCCONSENSUS"},
 	}
 
 	// KAS
-	KASServiceChainAnchorFlag = cli.BoolFlag{
-		Name:  "kas.sc.anchor",
-		Usage: "Enable KAS anchoring for service chain",
+	KASServiceChainAnchorFlag = &cli.BoolFlag{
+		Name:     "kas.sc.anchor",
+		Usage:    "Enable KAS anchoring for service chain",
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_KAS_SC_ANCHOR"},
+		Category: "SERVICECHAIN",
 	}
-	KASServiceChainAnchorPeriodFlag = cli.Uint64Flag{
-		Name:  "kas.sc.anchor.period",
-		Usage: "The period to anchor service chain blocks to KAS",
-		Value: 1,
+	KASServiceChainAnchorPeriodFlag = &cli.Uint64Flag{
+		Name:     "kas.sc.anchor.period",
+		Usage:    "The period to anchor service chain blocks to KAS",
+		Value:    1,
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_KAS_SC_ANCHOR_PERIOD"},
+		Category: "SERVICECHAIN",
 	}
-	KASServiceChainAnchorUrlFlag = cli.StringFlag{
-		Name:  "kas.sc.anchor.url",
-		Usage: "The url for KAS anchor",
+	KASServiceChainAnchorUrlFlag = &cli.StringFlag{
+		Name:     "kas.sc.anchor.url",
+		Usage:    "The url for KAS anchor",
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_KAS_SC_ANCHOR_URL"},
+		Category: "SERVICECHAIN",
 	}
-	KASServiceChainAnchorOperatorFlag = cli.StringFlag{
-		Name:  "kas.sc.anchor.operator",
-		Usage: "The operator address for KAS anchor",
+	KASServiceChainAnchorOperatorFlag = &cli.StringFlag{
+		Name:     "kas.sc.anchor.operator",
+		Usage:    "The operator address for KAS anchor",
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_KAS_SC_ANCHOR_OPERATOR"},
+		Category: "SERVICECHAIN",
 	}
-	KASServiceChainAnchorRequestTimeoutFlag = cli.DurationFlag{
-		Name:  "kas.sc.anchor.request.timeout",
-		Usage: "The reuqest timeout for KAS Anchoring API call",
-		Value: 500 * time.Millisecond,
+	KASServiceChainAnchorRequestTimeoutFlag = &cli.DurationFlag{
+		Name:     "kas.sc.anchor.request.timeout",
+		Usage:    "The reuqest timeout for KAS Anchoring API call",
+		Value:    500 * time.Millisecond,
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_KAS_SC_ANCHOR_REQUEST_TIMEOUT"},
+		Category: "SERVICECHAIN",
 	}
-	KASServiceChainXChainIdFlag = cli.StringFlag{
-		Name:  "kas.x-chain-id",
-		Usage: "The x-chain-id for KAS",
+	KASServiceChainXChainIdFlag = &cli.StringFlag{
+		Name:     "kas.x-chain-id",
+		Usage:    "The x-chain-id for KAS",
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_KAS_X_CHAIN_ID"},
+		Category: "SERVICECHAIN",
 	}
-	KASServiceChainAccessKeyFlag = cli.StringFlag{
-		Name:  "kas.accesskey",
-		Usage: "The access key id for KAS",
+	KASServiceChainAccessKeyFlag = &cli.StringFlag{
+		Name:     "kas.accesskey",
+		Usage:    "The access key id for KAS",
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_KAS_ACCESSKEY"},
+		Category: "SERVICECHAIN",
 	}
-	KASServiceChainSecretKeyFlag = cli.StringFlag{
-		Name:  "kas.secretkey",
-		Usage: "The secret key for KAS",
+	KASServiceChainSecretKeyFlag = &cli.StringFlag{
+		Name:     "kas.secretkey",
+		Usage:    "The secret key for KAS",
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_KAS_SECRETKEY"},
+		Category: "SERVICECHAIN",
 	}
 
 	// ChainDataFetcher
-	EnableChainDataFetcherFlag = cli.BoolFlag{
-		Name:  "chaindatafetcher",
-		Usage: "Enable the ChainDataFetcher Service",
+	EnableChainDataFetcherFlag = &cli.BoolFlag{
+		Name:     "chaindatafetcher",
+		Usage:    "Enable the ChainDataFetcher Service",
+		Aliases:  []string{"chain-data-fetcher.enable"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER"},
+		Category: "CHAINDATAFETCHER",
 	}
-	ChainDataFetcherMode = cli.StringFlag{
-		Name:  "chaindatafetcher.mode",
-		Usage: "The mode of chaindatafetcher (\"kas\", \"kafka\")",
-		Value: "kas",
+	ChainDataFetcherMode = &cli.StringFlag{
+		Name:     "chaindatafetcher.mode",
+		Usage:    "The mode of chaindatafetcher (\"kas\", \"kafka\")",
+		Value:    "kas",
+		Aliases:  []string{"chain-data-fetcher.mode"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_MODE"},
+		Category: "CHAINDATAFETCHER",
 	}
-	ChainDataFetcherNoDefault = cli.BoolFlag{
-		Name:  "chaindatafetcher.no.default",
-		Usage: "Turn off the starting of the chaindatafetcher",
+	ChainDataFetcherNoDefault = &cli.BoolFlag{
+		Name:     "chaindatafetcher.no.default",
+		Usage:    "Turn off the starting of the chaindatafetcher",
+		Aliases:  []string{"chain-data-fetcher.no-default"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_NO_DEFAULT"},
+		Category: "CHAINDATAFETCHER",
 	}
-	ChainDataFetcherNumHandlers = cli.IntFlag{
-		Name:  "chaindatafetcher.num.handlers",
-		Usage: "Number of chaindata handlers",
-		Value: chaindatafetcher.DefaultNumHandlers,
+	ChainDataFetcherNumHandlers = &cli.IntFlag{
+		Name:     "chaindatafetcher.num.handlers",
+		Usage:    "Number of chaindata handlers",
+		Value:    chaindatafetcher.DefaultNumHandlers,
+		Aliases:  []string{"chain-data-fetcher.num-handlers"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_NUM_HANDLERS"},
+		Category: "CHAINDATAFETCHER",
 	}
-	ChainDataFetcherJobChannelSize = cli.IntFlag{
-		Name:  "chaindatafetcher.job.channel.size",
-		Usage: "Job channel size",
-		Value: chaindatafetcher.DefaultJobChannelSize,
+	ChainDataFetcherJobChannelSize = &cli.IntFlag{
+		Name:     "chaindatafetcher.job.channel.size",
+		Usage:    "Job channel size",
+		Value:    chaindatafetcher.DefaultJobChannelSize,
+		Aliases:  []string{"chain-data-fetcher.job-channel-size"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_JOB_CHANNEL_SIZE"},
+		Category: "CHAINDATAFETCHER",
 	}
-	ChainDataFetcherChainEventSizeFlag = cli.IntFlag{
-		Name:  "chaindatafetcher.block.channel.size",
-		Usage: "Block received channel size",
-		Value: chaindatafetcher.DefaultJobChannelSize,
+	ChainDataFetcherChainEventSizeFlag = &cli.IntFlag{
+		Name:     "chaindatafetcher.block.channel.size",
+		Usage:    "Block received channel size",
+		Value:    chaindatafetcher.DefaultJobChannelSize,
+		Aliases:  []string{"chain-data-fetcher.block-channel-size"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_BLOCK_CHANNEL_SIZE"},
+		Category: "CHAINDATAFETCHER",
 	}
-	ChainDataFetcherKASDBHostFlag = cli.StringFlag{
-		Name:  "chaindatafetcher.kas.db.host",
-		Usage: "KAS specific DB host in chaindatafetcher",
+	ChainDataFetcherMaxProcessingDataSize = &cli.IntFlag{
+		Name:     "chaindatafetcher.max.processing.data.size",
+		Usage:    "Maximum size of processing data before requesting range fetching of blocks (in MB)",
+		Value:    chaindatafetcher.DefaultMaxProcessingDataSize,
+		Aliases:  []string{"chain-data-fetcher.max-processing-data-size"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_MAX_PROCESSING_DATA_SIZE"},
+		Category: "CHAINDATAFETCHER",
 	}
-	ChainDataFetcherKASDBPortFlag = cli.StringFlag{
-		Name:  "chaindatafetcher.kas.db.port",
-		Usage: "KAS specific DB port in chaindatafetcher",
-		Value: chaindatafetcher.DefaultDBPort,
+	ChainDataFetcherKASDBHostFlag = &cli.StringFlag{
+		Name:     "chaindatafetcher.kas.db.host",
+		Usage:    "KAS specific DB host in chaindatafetcher",
+		Aliases:  []string{"chain-data-fetcher.kas.db.host"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAS_DB_HOST"},
+		Category: "CHAINDATAFETCHER",
 	}
-	ChainDataFetcherKASDBNameFlag = cli.StringFlag{
-		Name:  "chaindatafetcher.kas.db.name",
-		Usage: "KAS specific DB name in chaindatafetcher",
+	ChainDataFetcherKASDBPortFlag = &cli.StringFlag{
+		Name:     "chaindatafetcher.kas.db.port",
+		Usage:    "KAS specific DB port in chaindatafetcher",
+		Value:    chaindatafetcher.DefaultDBPort,
+		Aliases:  []string{"chain-data-fetcher.kas.db.port"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAS_DB_PORT"},
+		Category: "CHAINDATAFETCHER",
 	}
-	ChainDataFetcherKASDBUserFlag = cli.StringFlag{
-		Name:  "chaindatafetcher.kas.db.user",
-		Usage: "KAS specific DB user in chaindatafetcher",
+	ChainDataFetcherKASDBNameFlag = &cli.StringFlag{
+		Name:     "chaindatafetcher.kas.db.name",
+		Usage:    "KAS specific DB name in chaindatafetcher",
+		Aliases:  []string{"chain-data-fetcher.kas.db.name"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAS_DB_NAME"},
+		Category: "CHAINDATAFETCHER",
 	}
-	ChainDataFetcherKASDBPasswordFlag = cli.StringFlag{
-		Name:  "chaindatafetcher.kas.db.password",
-		Usage: "KAS specific DB password in chaindatafetcher",
+	ChainDataFetcherKASDBUserFlag = &cli.StringFlag{
+		Name:     "chaindatafetcher.kas.db.user",
+		Usage:    "KAS specific DB user in chaindatafetcher",
+		Aliases:  []string{"chain-data-fetcher.kas.db.user"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAS_DB_USER"},
+		Category: "CHAINDATAFETCHER",
 	}
-	ChainDataFetcherKASCacheUse = cli.BoolFlag{
-		Name:  "chaindatafetcher.kas.cache.use",
-		Usage: "Enable KAS cache invalidation",
+	ChainDataFetcherKASDBPasswordFlag = &cli.StringFlag{
+		Name:     "chaindatafetcher.kas.db.password",
+		Usage:    "KAS specific DB password in chaindatafetcher",
+		Aliases:  []string{"chain-data-fetcher.kas.db.password"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAS_DB_PASSWORD"},
+		Category: "CHAINDATAFETCHER",
 	}
-	ChainDataFetcherKASCacheURLFlag = cli.StringFlag{
-		Name:  "chaindatafetcher.kas.cache.url",
-		Usage: "KAS specific cache invalidate API endpoint in chaindatafetcher",
+	ChainDataFetcherKASCacheUse = &cli.BoolFlag{
+		Name:     "chaindatafetcher.kas.cache.use",
+		Usage:    "Enable KAS cache invalidation",
+		Aliases:  []string{"chain-data-fetcher.kas.cache.use"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAS_CACHE_USE"},
+		Category: "CHAINDATAFETCHER",
 	}
-	ChainDataFetcherKASXChainIdFlag = cli.StringFlag{
-		Name:  "chaindatafetcher.kas.xchainid",
-		Usage: "KAS specific header x-chain-id in chaindatafetcher",
+	ChainDataFetcherKASCacheURLFlag = &cli.StringFlag{
+		Name:     "chaindatafetcher.kas.cache.url",
+		Usage:    "KAS specific cache invalidate API endpoint in chaindatafetcher",
+		Aliases:  []string{"chain-data-fetcher.kas.cache.url"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAS_CACHE_URL"},
+		Category: "CHAINDATAFETCHER",
 	}
-	ChainDataFetcherKASBasicAuthParamFlag = cli.StringFlag{
-		Name:  "chaindatafetcher.kas.basic.auth.param",
-		Usage: "KAS specific header basic authorization parameter in chaindatafetcher",
+	ChainDataFetcherKASXChainIdFlag = &cli.StringFlag{
+		Name:     "chaindatafetcher.kas.xchainid",
+		Usage:    "KAS specific header x-chain-id in chaindatafetcher",
+		Aliases:  []string{"chain-data-fetcher.kas.xchainid"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAS_XCHAINID"},
+		Category: "CHAINDATAFETCHER",
 	}
-	ChainDataFetcherKafkaBrokersFlag = cli.StringSliceFlag{
-		Name:  "chaindatafetcher.kafka.brokers",
-		Usage: "Kafka broker URL list",
+	ChainDataFetcherKASBasicAuthParamFlag = &cli.StringFlag{
+		Name:     "chaindatafetcher.kas.basic.auth.param",
+		Usage:    "KAS specific header basic authorization parameter in chaindatafetcher",
+		Aliases:  []string{"chain-data-fetcher.kas.basic.auth.param"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAS_BASIC_AUTH_PARAM"},
+		Category: "CHAINDATAFETCHER",
 	}
-	ChainDataFetcherKafkaTopicEnvironmentFlag = cli.StringFlag{
-		Name:  "chaindatafetcher.kafka.topic.environment",
-		Usage: "Kafka topic environment prefix",
-		Value: kafka.DefaultTopicEnvironmentName,
+	ChainDataFetcherKafkaBrokersFlag = &cli.StringSliceFlag{
+		Name:     "chaindatafetcher.kafka.brokers",
+		Usage:    "Kafka broker URL list",
+		Aliases:  []string{"chain-data-fetcher.kafka.brokers"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAFKA_BROKERS"},
+		Category: "CHAINDATAFETCHER",
 	}
-	ChainDataFetcherKafkaTopicResourceFlag = cli.StringFlag{
-		Name:  "chaindatafetcher.kafka.topic.resource",
-		Usage: "Kafka topic resource name",
-		Value: kafka.DefaultTopicResourceName,
+	ChainDataFetcherKafkaTopicEnvironmentFlag = &cli.StringFlag{
+		Name:     "chaindatafetcher.kafka.topic.environment",
+		Usage:    "Kafka topic environment prefix",
+		Value:    kafka.DefaultTopicEnvironmentName,
+		Aliases:  []string{"chain-data-fetcher.kafka.topic.environment"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAFKA_TOPIC_ENVIRONMENT"},
+		Category: "CHAINDATAFETCHER",
 	}
-	ChainDataFetcherKafkaReplicasFlag = cli.Int64Flag{
-		Name:  "chaindatafetcher.kafka.replicas",
-		Usage: "Kafka partition replication factor",
-		Value: kafka.DefaultReplicas,
+	ChainDataFetcherKafkaTopicResourceFlag = &cli.StringFlag{
+		Name:     "chaindatafetcher.kafka.topic.resource",
+		Usage:    "Kafka topic resource name",
+		Value:    kafka.DefaultTopicResourceName,
+		Aliases:  []string{"chain-data-fetcher.kafka.topic.resource"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAFKA_TOPIC_RESOURCE"},
+		Category: "CHAINDATAFETCHER",
 	}
-	ChainDataFetcherKafkaPartitionsFlag = cli.IntFlag{
-		Name:  "chaindatafetcher.kafka.partitions",
-		Usage: "The number of partitions in a topic",
-		Value: kafka.DefaultPartitions,
+	ChainDataFetcherKafkaReplicasFlag = &cli.Int64Flag{
+		Name:     "chaindatafetcher.kafka.replicas",
+		Usage:    "Kafka partition replication factor",
+		Value:    kafka.DefaultReplicas,
+		Aliases:  []string{"chain-data-fetcher.kafka.replicas"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAFKA_REPLICAS"},
+		Category: "CHAINDATAFETCHER",
 	}
-	ChainDataFetcherKafkaMaxMessageBytesFlag = cli.Int64Flag{
-		Name:  "chaindatafetcher.kafka.max.message.bytes",
-		Usage: "The max size of a message produced by Kafka producer ",
-		Value: kafka.DefaultMaxMessageBytes,
+	ChainDataFetcherKafkaPartitionsFlag = &cli.IntFlag{
+		Name:     "chaindatafetcher.kafka.partitions",
+		Usage:    "The number of partitions in a topic",
+		Value:    kafka.DefaultPartitions,
+		Aliases:  []string{"chain-data-fetcher.kafka.partitions"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAFKA_PARTITIONS"},
+		Category: "CHAINDATAFETCHER",
 	}
-	ChainDataFetcherKafkaSegmentSizeBytesFlag = cli.IntFlag{
-		Name:  "chaindatafetcher.kafka.segment.size",
-		Usage: "The kafka data segment size (in byte)",
-		Value: kafka.DefaultSegmentSizeBytes,
+	ChainDataFetcherKafkaMaxMessageBytesFlag = &cli.IntFlag{
+		Name:     "chaindatafetcher.kafka.max.message.bytes",
+		Usage:    "The max size of a message produced by Kafka producer ",
+		Value:    kafka.DefaultMaxMessageBytes,
+		Aliases:  []string{"chain-data-fetcher.kafka.max-message-bytes"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAFKA_MAX_MESSAGE_BYTES"},
+		Category: "CHAINDATAFETCHER",
 	}
-	ChainDataFetcherKafkaRequiredAcksFlag = cli.IntFlag{
-		Name:  "chaindatafetcher.kafka.required.acks",
-		Usage: "The level of acknowledgement reliability needed from Kafka broker (0: NoResponse, 1: WaitForLocal, -1: WaitForAll)",
-		Value: kafka.DefaultRequiredAcks,
+	ChainDataFetcherKafkaSegmentSizeBytesFlag = &cli.IntFlag{
+		Name:     "chaindatafetcher.kafka.segment.size",
+		Usage:    "The kafka data segment size (in byte)",
+		Value:    kafka.DefaultSegmentSizeBytes,
+		Aliases:  []string{"chain-data-fetcher.kafka.segment-size"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAFKA_SEGMENT_SIZE"},
+		Category: "CHAINDATAFETCHER",
 	}
-	ChainDataFetcherKafkaMessageVersionFlag = cli.StringFlag{
-		Name:  "chaindatafetcher.kafka.msg.version",
-		Usage: "The version of Kafka message",
-		Value: kafka.DefaultKafkaMessageVersion,
+	ChainDataFetcherKafkaRequiredAcksFlag = &cli.IntFlag{
+		Name:     "chaindatafetcher.kafka.required.acks",
+		Usage:    "The level of acknowledgement reliability needed from Kafka broker (0: NoResponse, 1: WaitForLocal, -1: WaitForAll)",
+		Value:    kafka.DefaultRequiredAcks,
+		Aliases:  []string{"chain-data-fetcher.kafka.required-acks"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAFKA_REQUIRED_ACKS"},
+		Category: "CHAINDATAFETCHER",
 	}
-	ChainDataFetcherKafkaProducerIdFlag = cli.StringFlag{
-		Name:  "chaindatafetcher.kafka.producer.id",
-		Usage: "The identifier of kafka message producer",
-		Value: kafka.GetDefaultProducerId(),
+	ChainDataFetcherKafkaMessageVersionFlag = &cli.StringFlag{
+		Name:     "chaindatafetcher.kafka.msg.version",
+		Usage:    "The version of Kafka message",
+		Value:    kafka.DefaultKafkaMessageVersion,
+		Aliases:  []string{"chain-data-fetcher.kafka.msg-version"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAFKA_MSG_VERSION"},
+		Category: "CHAINDATAFETCHER",
+	}
+	ChainDataFetcherKafkaProducerIdFlag = &cli.StringFlag{
+		Name:     "chaindatafetcher.kafka.producer.id",
+		Usage:    "The identifier of kafka message producer",
+		Value:    kafka.GetDefaultProducerId(),
+		Aliases:  []string{"chain-data-fetcher.kafka.producer-id"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAFKA_PRODUCER_ID"},
+		Category: "CHAINDATAFETCHER",
 	}
 	// DBSyncer
-	EnableDBSyncerFlag = cli.BoolFlag{
-		Name:  "dbsyncer",
-		Usage: "Enable the DBSyncer",
+	EnableDBSyncerFlag = &cli.BoolFlag{
+		Name:     "dbsyncer",
+		Usage:    "Enable the DBSyncer",
+		Aliases:  []string{"db-syncer.enable"},
+		EnvVars:  []string{"KLAYTN_DBSYNCER"},
+		Category: "DATABASE SYNCER",
 	}
-	DBHostFlag = cli.StringFlag{
-		Name:  "dbsyncer.db.host",
-		Usage: "db.host in dbsyncer",
+	DBHostFlag = &cli.StringFlag{
+		Name:     "dbsyncer.db.host",
+		Usage:    "db.host in dbsyncer",
+		Aliases:  []string{"db-syncer.db.host"},
+		EnvVars:  []string{"KLAYTN_DBSYNCER_DB_HOST"},
+		Category: "DATABASE SYNCER",
 	}
-	DBPortFlag = cli.StringFlag{
-		Name:  "dbsyncer.db.port",
-		Usage: "db.port in dbsyncer",
-		Value: "3306",
+	DBPortFlag = &cli.StringFlag{
+		Name:     "dbsyncer.db.port",
+		Usage:    "db.port in dbsyncer",
+		Value:    "3306",
+		Aliases:  []string{"db-syncer.db.port"},
+		EnvVars:  []string{"KLAYTN_DBSYNCER_DB_PORT"},
+		Category: "DATABASE SYNCER",
 	}
-	DBNameFlag = cli.StringFlag{
-		Name:  "dbsyncer.db.name",
-		Usage: "db.name in dbsyncer",
+	DBNameFlag = &cli.StringFlag{
+		Name:     "dbsyncer.db.name",
+		Usage:    "db.name in dbsyncer",
+		Aliases:  []string{"db-syncer.db.name"},
+		EnvVars:  []string{"KLAYTN_DBSYNCER_DB_NAME"},
+		Category: "DATABASE SYNCER",
 	}
-	DBUserFlag = cli.StringFlag{
-		Name:  "dbsyncer.db.user",
-		Usage: "db.user in dbsyncer",
+	DBUserFlag = &cli.StringFlag{
+		Name:     "dbsyncer.db.user",
+		Usage:    "db.user in dbsyncer",
+		Aliases:  []string{"db-syncer.db.user"},
+		EnvVars:  []string{"KLAYTN_DBSYNCER_DB_USER"},
+		Category: "DATABASE SYNCER",
 	}
-	DBPasswordFlag = cli.StringFlag{
-		Name:  "dbsyncer.db.password",
-		Usage: "db.password in dbsyncer",
+	DBPasswordFlag = &cli.StringFlag{
+		Name:     "dbsyncer.db.password",
+		Usage:    "db.password in dbsyncer",
+		Aliases:  []string{"db-syncer.db.password"},
+		EnvVars:  []string{"KLAYTN_DBSYNCER_DB_PASSWORD"},
+		Category: "DATABASE SYNCER",
 	}
-	EnabledLogModeFlag = cli.BoolFlag{
-		Name:  "dbsyncer.logmode",
-		Usage: "Enable the dbsyncer logmode",
+	EnabledLogModeFlag = &cli.BoolFlag{
+		Name:     "dbsyncer.logmode",
+		Usage:    "Enable the dbsyncer logmode",
+		Aliases:  []string{"db-syncer.log-mode"},
+		EnvVars:  []string{"KLAYTN_DBSYNCER_LOGMODE"},
+		Category: "DATABASE SYNCER",
 	}
-	MaxIdleConnsFlag = cli.IntFlag{
-		Name:  "dbsyncer.db.max.idle",
-		Usage: "The maximum number of connections in the idle connection pool",
-		Value: 50,
+	MaxIdleConnsFlag = &cli.IntFlag{
+		Name:     "dbsyncer.db.max.idle",
+		Usage:    "The maximum number of connections in the idle connection pool",
+		Value:    50,
+		Aliases:  []string{"db-syncer.db.max-idle"},
+		EnvVars:  []string{"KLAYTN_DBSYNCER_DB_MAX_IDLE"},
+		Category: "DATABASE SYNCER",
 	}
-	MaxOpenConnsFlag = cli.IntFlag{
-		Name:  "dbsyncer.db.max.open",
-		Usage: "The maximum number of open connections to the database",
-		Value: 30,
+	MaxOpenConnsFlag = &cli.IntFlag{
+		Name:     "dbsyncer.db.max.open",
+		Usage:    "The maximum number of open connections to the database",
+		Value:    30,
+		Aliases:  []string{"db-syncer.db.max-open"},
+		EnvVars:  []string{"KLAYTN_DBSYNCER_DB_MAX_OPEN"},
+		Category: "DATABASE SYNCER",
 	}
-	ConnMaxLifeTimeFlag = cli.DurationFlag{
-		Name:  "dbsyncer.db.max.lifetime",
-		Usage: "The maximum amount of time a connection may be reused (default : 1h), ex: 300ms, 2h45m, 60s, ...",
-		Value: 1 * time.Hour,
+	ConnMaxLifeTimeFlag = &cli.DurationFlag{
+		Name:     "dbsyncer.db.max.lifetime",
+		Usage:    "The maximum amount of time a connection may be reused (default : 1h), ex: 300ms, 2h45m, 60s, ...",
+		Value:    1 * time.Hour,
+		Aliases:  []string{"db-syncer.db.max-lifetime"},
+		EnvVars:  []string{"KLAYTN_DBSYNCER_DB_MAX_LIFETIME"},
+		Category: "DATABASE SYNCER",
 	}
-	BlockSyncChannelSizeFlag = cli.IntFlag{
-		Name:  "dbsyncer.block.channel.size",
-		Usage: "Block received channel size",
-		Value: 5,
+	BlockSyncChannelSizeFlag = &cli.IntFlag{
+		Name:     "dbsyncer.block.channel.size",
+		Usage:    "Block received channel size",
+		Value:    5,
+		Aliases:  []string{"db-syncer.block-channel-size"},
+		EnvVars:  []string{"KLAYTN_DBSYNCER_BLOCK_CHANNEL_SIZE"},
+		Category: "DATABASE SYNCER",
 	}
-	DBSyncerModeFlag = cli.StringFlag{
-		Name:  "dbsyncer.mode",
-		Usage: "The mode of dbsyncer is way which handle block/tx data to insert db (multi, single, context)",
-		Value: "multi",
+	DBSyncerModeFlag = &cli.StringFlag{
+		Name:     "dbsyncer.mode",
+		Usage:    "The mode of dbsyncer is way which handle block/tx data to insert db (multi, single, context)",
+		Value:    "multi",
+		Aliases:  []string{"db-syncer.mode"},
+		EnvVars:  []string{"KLAYTN_DBSYNCER_MODE"},
+		Category: "DATABASE SYNCER",
 	}
-	GenQueryThreadFlag = cli.IntFlag{
-		Name:  "dbsyncer.genquery.th",
-		Usage: "The amount of thread of generation query in multi mode",
-		Value: 50,
+	GenQueryThreadFlag = &cli.IntFlag{
+		Name:     "dbsyncer.genquery.th",
+		Usage:    "The amount of thread of generation query in multi mode",
+		Value:    50,
+		Aliases:  []string{"db-syncer.genquery-th"},
+		EnvVars:  []string{"KLAYTN_DBSYNCER_GENQUERY_TH"},
+		Category: "DATABASE SYNCER",
 	}
-	InsertThreadFlag = cli.IntFlag{
-		Name:  "dbsyncer.insert.th",
-		Usage: "The amount of thread of insert operation in multi mode",
-		Value: 30,
+	InsertThreadFlag = &cli.IntFlag{
+		Name:     "dbsyncer.insert.th",
+		Usage:    "The amount of thread of insert operation in multi mode",
+		Value:    30,
+		Aliases:  []string{"db-syncer.insert-thread"},
+		EnvVars:  []string{"KLAYTN_DBSYNCER_INSERT_TH"},
+		Category: "DATABASE SYNCER",
 	}
-	BulkInsertSizeFlag = cli.IntFlag{
-		Name:  "dbsyncer.bulk.size",
-		Usage: "The amount of row for bulk-insert",
-		Value: 200,
+	BulkInsertSizeFlag = &cli.IntFlag{
+		Name:     "dbsyncer.bulk.size",
+		Usage:    "The amount of row for bulk-insert",
+		Value:    200,
+		Aliases:  []string{"db-syncer.bulk-size"},
+		EnvVars:  []string{"KLAYTN_DBSYNCER_BULK_SIZE"},
+		Category: "DATABASE SYNCER",
 	}
-	EventModeFlag = cli.StringFlag{
-		Name:  "dbsyncer.event.mode",
-		Usage: "The way how to sync all block or last block (block, head)",
-		Value: "head",
+	EventModeFlag = &cli.StringFlag{
+		Name:     "dbsyncer.event.mode",
+		Usage:    "The way how to sync all block or last block (block, head)",
+		Value:    "head",
+		Aliases:  []string{"db-syncer.event-mode"},
+		EnvVars:  []string{"KLAYTN_DBSYNCER_EVENT_MODE"},
+		Category: "DATABASE SYNCER",
 	}
-	MaxBlockDiffFlag = cli.Uint64Flag{
-		Name:  "dbsyncer.max.block.diff",
-		Usage: "The maximum difference between current block and event block. 0 means off",
-		Value: 0,
+	MaxBlockDiffFlag = &cli.Uint64Flag{
+		Name:     "dbsyncer.max.block.diff",
+		Usage:    "The maximum difference between current block and event block. 0 means off",
+		Value:    0,
+		Aliases:  []string{"db-syncer.max-block-diff"},
+		EnvVars:  []string{"KLAYTN_DBSYNCER_MAX_BLOCK_DIFF"},
+		Category: "DATABASE SYNCER",
 	}
-	AutoRestartFlag = cli.BoolFlag{
-		Name:  "autorestart.enable",
-		Usage: "Node can restart itself when there is a problem in making consensus",
+	AutoRestartFlag = &cli.BoolFlag{
+		Name:     "autorestart.enable",
+		Usage:    "Node can restart itself when there is a problem in making consensus",
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_AUTORESTART_ENABLE"},
+		Category: "MISC",
 	}
-	RestartTimeOutFlag = cli.DurationFlag{
-		Name:  "autorestart.timeout",
-		Usage: "The elapsed time to wait auto restart (minutes)",
-		Value: 15 * time.Minute,
+	RestartTimeOutFlag = &cli.DurationFlag{
+		Name:     "autorestart.timeout",
+		Usage:    "The elapsed time to wait auto restart (minutes)",
+		Value:    15 * time.Minute,
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_AUTORESTART_TIMEOUT"},
+		Category: "MISC",
 	}
-	DaemonPathFlag = cli.StringFlag{
-		Name:  "autorestart.daemon.path",
-		Usage: "Path of node daemon. Used to give signal to kill",
-		Value: "~/klaytn/bin/kcnd",
+	DaemonPathFlag = &cli.StringFlag{
+		Name:     "autorestart.daemon.path",
+		Usage:    "Path of node daemon. Used to give signal to kill",
+		Value:    "~/klaytn/bin/kcnd",
+		Aliases:  []string{"autorestart.daemon-path"},
+		EnvVars:  []string{"KLAYTN_AUTORESTART_DAEMON_PATH"},
+		Category: "MISC",
 	}
 
 	// db migration vars
-	DstDbTypeFlag = cli.StringFlag{
-		Name:  "dst.dbtype",
-		Usage: `Blockchain storage database type ("LevelDB", "BadgerDB", "DynamoDBS3")`,
-		Value: "LevelDB",
+	DstDbTypeFlag = &cli.StringFlag{
+		Name:     "dst.dbtype",
+		Usage:    `Blockchain storage database type ("LevelDB", "BadgerDB", "DynamoDBS3")`,
+		Value:    "LevelDB",
+		Aliases:  []string{"migration.dst.dbtype"},
+		EnvVars:  []string{"KLAYTN_DST_DBTYPE"},
+		Category: "DATABASE MIGRATION",
 	}
-	DstDataDirFlag = DirectoryFlag{
-		Name:  "dst.datadir",
-		Usage: "Data directory for the databases and keystore. This value is only used in local DB.",
+	DstDataDirFlag = &cli.PathFlag{
+		Name:     "dst.datadir",
+		Usage:    "Data directory for the databases and keystore. This value is only used in local DB.",
+		Aliases:  []string{"migration.dst.datadir"},
+		EnvVars:  []string{"KLAYTN_DST_DATADIR"},
+		Category: "DATABASE MIGRATION",
 	}
-	DstSingleDBFlag = cli.BoolFlag{
-		Name:  "db.dst.single",
-		Usage: "Create a single persistent storage. MiscDB, headerDB and etc are stored in one DB.",
+	DstSingleDBFlag = &cli.BoolFlag{
+		Name:     "db.dst.single",
+		Usage:    "Create a single persistent storage. MiscDB, headerDB and etc are stored in one DB.",
+		Aliases:  []string{"migration.dst.single"},
+		EnvVars:  []string{"KLAYTN_DB_DST_SINGLE"},
+		Category: "DATABASE MIGRATION",
 	}
-	DstLevelDBCacheSizeFlag = cli.IntFlag{
-		Name:  "db.dst.leveldb.cache-size",
-		Usage: "Size of in-memory cache in LevelDB (MiB)",
-		Value: 768,
+	DstLevelDBCacheSizeFlag = &cli.IntFlag{
+		Name:     "db.dst.leveldb.cache-size",
+		Usage:    "Size of in-memory cache in LevelDB (MiB)",
+		Value:    768,
+		Aliases:  []string{"migration.dst.db.leveldb.cache-size"},
+		EnvVars:  []string{"KLAYTN_DB_DST_LEVELDB_CACHE_SIZE"},
+		Category: "DATABASE MIGRATION",
 	}
-	DstLevelDBCompressionTypeFlag = cli.IntFlag{
-		Name:  "db.dst.leveldb.compression",
-		Usage: "Determines the compression method for LevelDB. 0=AllNoCompression, 1=ReceiptOnlySnappyCompression, 2=StateTrieOnlyNoCompression, 3=AllSnappyCompression",
-		Value: 0,
+	DstLevelDBCompressionTypeFlag = &cli.IntFlag{
+		Name:     "db.dst.leveldb.compression",
+		Usage:    "Determines the compression method for LevelDB. 0=AllNoCompression, 1=ReceiptOnlySnappyCompression, 2=StateTrieOnlyNoCompression, 3=AllSnappyCompression",
+		Value:    0,
+		Aliases:  []string{"migration.dst.db.leveldb.compression"},
+		EnvVars:  []string{"KLAYTN_DB_DST_LEVELDB_COMPRESSION"},
+		Category: "DATABASE MIGRATION",
 	}
-	DstNumStateTrieShardsFlag = cli.UintFlag{
-		Name:  "db.dst.num-statetrie-shards",
-		Usage: "Number of internal shards of state trie DB shards. Should be power of 2",
-		Value: 4,
+	DstNumStateTrieShardsFlag = &cli.UintFlag{
+		Name:     "db.dst.num-statetrie-shards",
+		Usage:    "Number of internal shards of state trie DB shards. Should be power of 2",
+		Value:    4,
+		Aliases:  []string{"migration.dst.db.leveldb.num-statetrie-shards"},
+		EnvVars:  []string{"KLAYTN_DB_DST_NUM_STATETRIE_SHARDS"},
+		Category: "DATABASE MIGRATION",
 	}
-	DstDynamoDBTableNameFlag = cli.StringFlag{
-		Name:  "db.dst.dynamo.tablename",
-		Usage: "Specifies DynamoDB table name. This is mandatory to use dynamoDB. (Set dbtype to use DynamoDBS3). If dstDB is singleDB, tableName should be in form of 'PREFIX-TABLENAME'.(e.g. 'klaytn-misc', 'klaytn-statetrie')",
+	DstDynamoDBTableNameFlag = &cli.StringFlag{
+		Name:     "db.dst.dynamo.tablename",
+		Usage:    "Specifies DynamoDB table name. This is mandatory to use dynamoDB. (Set dbtype to use DynamoDBS3). If dstDB is singleDB, tableName should be in form of 'PREFIX-TABLENAME'.(e.g. 'klaytn-misc', 'klaytn-statetrie')",
+		Aliases:  []string{"migration.dst.db.dynamo.table-name"},
+		EnvVars:  []string{"KLAYTN_DB_DST_DYNAMO_TABLENAME"},
+		Category: "DATABASE MIGRATION",
 	}
-	DstDynamoDBRegionFlag = cli.StringFlag{
-		Name:  "db.dst.dynamo.region",
-		Usage: "AWS region where the DynamoDB will be created.",
-		Value: database.GetDefaultDynamoDBConfig().Region,
+	DstDynamoDBRegionFlag = &cli.StringFlag{
+		Name:     "db.dst.dynamo.region",
+		Usage:    "AWS region where the DynamoDB will be created.",
+		Value:    database.GetDefaultDynamoDBConfig().Region,
+		Aliases:  []string{"migration.dst.db.dynamo.region"},
+		EnvVars:  []string{"KLAYTN_DB_DST_DYNAMO_REGION"},
+		Category: "DATABASE MIGRATION",
 	}
-	DstDynamoDBIsProvisionedFlag = cli.BoolFlag{
-		Name:  "db.dst.dynamo.is-provisioned",
-		Usage: "Set DynamoDB billing mode to provision. The default billing mode is on-demand.",
+	DstDynamoDBIsProvisionedFlag = &cli.BoolFlag{
+		Name:     "db.dst.dynamo.is-provisioned",
+		Usage:    "Set DynamoDB billing mode to provision. The default billing mode is on-demand.",
+		Aliases:  []string{"migration.dst.db.dynamo.is-provisioned"},
+		EnvVars:  []string{"KLAYTN_DB_DST_DYNAMO_IS_PROVISIONED"},
+		Category: "DATABASE MIGRATION",
 	}
-	DstDynamoDBReadCapacityFlag = cli.Int64Flag{
-		Name:  "db.dst.dynamo.read-capacity",
-		Usage: "Read capacity unit of dynamoDB. If is-provisioned is not set, this flag will not be applied.",
-		Value: database.GetDefaultDynamoDBConfig().ReadCapacityUnits,
+	DstDynamoDBReadCapacityFlag = &cli.Int64Flag{
+		Name:     "db.dst.dynamo.read-capacity",
+		Usage:    "Read capacity unit of dynamoDB. If is-provisioned is not set, this flag will not be applied.",
+		Value:    database.GetDefaultDynamoDBConfig().ReadCapacityUnits,
+		Aliases:  []string{"migration.dst.db.dynamo.read-capacity"},
+		EnvVars:  []string{"KLAYTN_DB_DST_DYNAMO_READ_CAPACITY"},
+		Category: "DATABASE MIGRATION",
 	}
-	DstDynamoDBWriteCapacityFlag = cli.Int64Flag{
-		Name:  "db.dst.dynamo.write-capacity",
-		Usage: "Write capacity unit of dynamoDB. If is-provisioned is not set, this flag will not be applied",
-		Value: database.GetDefaultDynamoDBConfig().WriteCapacityUnits,
+	DstDynamoDBWriteCapacityFlag = &cli.Int64Flag{
+		Name:     "db.dst.dynamo.write-capacity",
+		Usage:    "Write capacity unit of dynamoDB. If is-provisioned is not set, this flag will not be applied",
+		Value:    database.GetDefaultDynamoDBConfig().WriteCapacityUnits,
+		Aliases:  []string{"migration.dst.db.dynamo.write-capacity"},
+		EnvVars:  []string{"KLAYTN_DB_DST_DYNAMO_WRITE_CAPACITY"},
+		Category: "DATABASE MIGRATION",
+	}
+	DstRocksDBSecondaryFlag = &cli.BoolFlag{
+		Name:     "db.dst.rocksdb.secondary",
+		Usage:    "Enable rocksdb secondary mode (read-only and catch-up with primary node dynamically)",
+		Aliases:  []string{"migration.dst.db.rocksdb.secondary"},
+		EnvVars:  []string{"KLAYTN_DB_DST_ROCKSDB_SECONDARY"},
+		Category: "DATABASE MIGRATION",
+	}
+	DstRocksDBCacheSizeFlag = &cli.Uint64Flag{
+		Name:     "db.dst.rocksdb.cache-size",
+		Usage:    "Size of in-memory cache in RocksDB (MiB)",
+		Value:    768,
+		Aliases:  []string{"migration.dst.db.rocksdb.cache-size"},
+		EnvVars:  []string{"KLAYTN_DB_DST_ROCKSDB_CACHE_SIZE"},
+		Category: "DATABASE MIGRATION",
+	}
+	DstRocksDBDumpMallocStatFlag = &cli.BoolFlag{
+		Name:     "db.dst.rocksdb.dump-memory-stat",
+		Usage:    "Enable to print memory stat together with rocksdb.stat. Works with Jemalloc only.",
+		Aliases:  []string{"migration.dst.db.rocksdb.dump-malloc-stat"},
+		EnvVars:  []string{"KLAYTN_DB_DST_ROCKSDB_DUMP_MALLOC_STAT"},
+		Category: "DATABASE MIGRATION",
+	}
+	DstRocksDBCompressionTypeFlag = &cli.StringFlag{
+		Name:     "db.dst.rocksdb.compression-type",
+		Usage:    "RocksDB block compression type. Supported values are 'no', 'snappy', 'zlib', 'bz', 'lz4', 'lz4hc', 'xpress', 'zstd'",
+		Value:    database.GetDefaultRocksDBConfig().CompressionType,
+		Aliases:  []string{"migration.dst.db.rocksdb.compression-type"},
+		EnvVars:  []string{"KLAYTN_DB_DST_ROCKSDB_COMPRESSION_TYPE"},
+		Category: "DATABASE MIGRATION",
+	}
+	DstRocksDBBottommostCompressionTypeFlag = &cli.StringFlag{
+		Name:     "db.dst.rocksdb.bottommost-compression-type",
+		Usage:    "RocksDB bottommost block compression type. Supported values are 'no', 'snappy', 'zlib', 'bz2', 'lz4', 'lz4hc', 'xpress', 'zstd'",
+		Value:    database.GetDefaultRocksDBConfig().BottommostCompressionType,
+		Aliases:  []string{"migration.dst.db.rocksdb.bottommost-compression-type"},
+		EnvVars:  []string{"KLAYTN_DB_DST_ROCKSDB_BOTTOMMOST_COMPRESSION_TYPE"},
+		Category: "DATABASE MIGRATION",
+	}
+	DstRocksDBFilterPolicyFlag = &cli.StringFlag{
+		Name:     "db.dst.rocksdb.filter-policy",
+		Usage:    "RocksDB filter policy. Supported values are 'no', 'bloom', 'ribbon'",
+		Value:    database.GetDefaultRocksDBConfig().FilterPolicy,
+		Aliases:  []string{"migration.dst.db.rocksdb.filter-policy"},
+		EnvVars:  []string{"KLAYTN_DB_DST_ROCKSDB_FILTER_POLICY"},
+		Category: "DATABASE MIGRATION",
+	}
+	DstRocksDBDisableMetricsFlag = &cli.BoolFlag{
+		Name:     "db.dst.rocksdb.disable-metrics",
+		Usage:    "Disable RocksDB metrics",
+		Aliases:  []string{"migration.dst.db.rocksdb.disable-metrics"},
+		EnvVars:  []string{"KLAYTN_DB_DST_ROCKSDB_DISABLE_METRICS"},
+		Category: "DATABASE MIGRATION",
+	}
+	DstRocksDBMaxOpenFilesFlag = &cli.IntFlag{
+		Name:     "db.dst.rocksdb.max-open-files",
+		Usage:    "Set RocksDB max open files. (the value should be greater than 16)",
+		Value:    database.GetDefaultRocksDBConfig().MaxOpenFiles,
+		Aliases:  []string{"migration.dst.db.rocksdb.max-open-files"},
+		EnvVars:  []string{"KLAYTN_DB_DST_ROCKSDB_MAX_OPEN_FILES"},
+		Category: "DATABASE MIGRATION",
+	}
+	DstRocksDBCacheIndexAndFilterFlag = &cli.BoolFlag{
+		Name:     "db.dst.rocksdb.cache-index-and-filter",
+		Usage:    "Use block cache for index and filter blocks.",
+		Aliases:  []string{"migration.dst.db.rocksdb.cache-index-and-filter"},
+		EnvVars:  []string{"KLAYTN_DB_DST_ROCKSDB_CACHE_INDEX_AND_FILTER"},
+		Category: "DATABASE MIGRATION",
 	}
 
 	// Config
-	ConfigFileFlag = cli.StringFlag{
-		Name:  "config",
-		Usage: "TOML configuration file",
+	ConfigFileFlag = &cli.StringFlag{
+		Name:     "config",
+		Usage:    "TOML configuration file",
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_CONFIG"},
+		Category: "KLAY",
 	}
-	BlockGenerationIntervalFlag = cli.Int64Flag{
+	BlockGenerationIntervalFlag = &cli.Int64Flag{
 		Name: "block-generation-interval",
 		Usage: "(experimental option) Set the block generation interval in seconds. " +
 			"It should be equal or larger than 1. This flag is only applicable to CN.",
-		Value: params.DefaultBlockGenerationInterval,
+		Value:    params.DefaultBlockGenerationInterval,
+		Aliases:  []string{"experimental.block-generation-interval"},
+		EnvVars:  []string{"KLAYTN_BLOCK_GENERATION_INTERVAL"},
+		Category: "KLAY",
 	}
-	BlockGenerationTimeLimitFlag = cli.DurationFlag{
+	BlockGenerationTimeLimitFlag = &cli.DurationFlag{
 		Name: "block-generation-time-limit",
 		Usage: "(experimental option) Set the vm execution time limit during block generation. " +
 			"Less than half of the block generation interval is recommended for this value. " +
 			"This flag is only applicable to CN",
-		Value: params.DefaultBlockGenerationTimeLimit,
+		Value:    params.DefaultBlockGenerationTimeLimit,
+		Aliases:  []string{"experimental.block-generation-time-limit"},
+		EnvVars:  []string{"KLAYTN_BLOCK_GENERATION_TIME_LIMIT"},
+		Category: "KLAY",
 	}
-	OpcodeComputationCostLimitFlag = cli.Uint64Flag{
+	OpcodeComputationCostLimitFlag = &cli.Uint64Flag{
 		Name: "opcode-computation-cost-limit",
 		Usage: "(experimental option) Set the computation cost limit for a tx. " +
 			"Should set the same value within the network",
-		Value: params.DefaultOpcodeComputationCostLimit,
+		Value:    params.DefaultOpcodeComputationCostLimit,
+		Aliases:  []string{"experimental.opcode-computation-cost-limit"},
+		EnvVars:  []string{"KLAYTN_OPCODE_COMPUTATION_COST_LIMIT"},
+		Category: "KLAY",
 	}
 
 	// TODO-Klaytn-Bootnode: Add bootnode's metric options
@@ -1098,8 +1937,8 @@ var (
 // if none (or the empty string) is specified. If the node is starting a baobab,
 // the a subdirectory of the specified datadir will be used.
 func MakeDataDir(ctx *cli.Context) string {
-	if path := ctx.GlobalString(DataDirFlag.Name); path != "" {
-		if ctx.GlobalBool(BaobabFlag.Name) {
+	if path := ctx.String(DataDirFlag.Name); path != "" {
+		if ctx.Bool(BaobabFlag.Name) {
 			return filepath.Join(path, "baobab")
 		}
 		return path
@@ -1108,107 +1947,9 @@ func MakeDataDir(ctx *cli.Context) string {
 	return ""
 }
 
-// setNodeKey creates a node key from set command line flags, either loading it
-// from a file or as a specified hex value. If neither flags were provided, this
-// method returns nil and an emphemeral key is to be generated.
-func setNodeKey(ctx *cli.Context, cfg *p2p.Config) {
-	var (
-		hex  = ctx.GlobalString(NodeKeyHexFlag.Name)
-		file = ctx.GlobalString(NodeKeyFileFlag.Name)
-		key  *ecdsa.PrivateKey
-		err  error
-	)
-	switch {
-	case file != "" && hex != "":
-		log.Fatalf("Options %q and %q are mutually exclusive", NodeKeyFileFlag.Name, NodeKeyHexFlag.Name)
-	case file != "":
-		if key, err = crypto.LoadECDSA(file); err != nil {
-			log.Fatalf("Option %q: %v", NodeKeyFileFlag.Name, err)
-		}
-		cfg.PrivateKey = key
-	case hex != "":
-		if key, err = crypto.HexToECDSA(hex); err != nil {
-			log.Fatalf("Option %q: %v", NodeKeyHexFlag.Name, err)
-		}
-		cfg.PrivateKey = key
-	}
-}
-
-// setNodeUserIdent creates the user identifier from CLI flags.
-func setNodeUserIdent(ctx *cli.Context, cfg *node.Config) {
-	if identity := ctx.GlobalString(IdentityFlag.Name); len(identity) > 0 {
-		cfg.UserIdent = identity
-	}
-}
-
-// setBootstrapNodes creates a list of bootstrap nodes from the command line
-// flags, reverting to pre-configured ones if none have been specified.
-func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
-	var urls []string
-	switch {
-	case ctx.GlobalIsSet(BootnodesFlag.Name):
-		logger.Info("Customized bootnodes are set")
-		urls = strings.Split(ctx.GlobalString(BootnodesFlag.Name), ",")
-	case ctx.GlobalIsSet(CypressFlag.Name):
-		logger.Info("Cypress bootnodes are set")
-		urls = params.MainnetBootnodes[cfg.ConnectionType].Addrs
-	case ctx.GlobalIsSet(BaobabFlag.Name):
-		logger.Info("Baobab bootnodes are set")
-		// set pre-configured bootnodes when 'baobab' option was enabled
-		urls = params.BaobabBootnodes[cfg.ConnectionType].Addrs
-	case cfg.BootstrapNodes != nil:
-		return // already set, don't apply defaults.
-	case !ctx.GlobalIsSet(NetworkIdFlag.Name):
-		if NodeTypeFlag.Value != "scn" && NodeTypeFlag.Value != "spn" && NodeTypeFlag.Value != "sen" {
-			logger.Info("Cypress bootnodes are set")
-			urls = params.MainnetBootnodes[cfg.ConnectionType].Addrs
-		}
-	}
-
-	cfg.BootstrapNodes = make([]*discover.Node, 0, len(urls))
-	for _, url := range urls {
-		node, err := discover.ParseNode(url)
-		if err != nil {
-			logger.Error("Bootstrap URL invalid", "kni", url, "err", err)
-			continue
-		}
-		if node.NType == discover.NodeTypeUnknown {
-			logger.Debug("setBootstrapNode: set nodetype as bn from unknown", "nodeid", node.ID)
-			node.NType = discover.NodeTypeBN
-		}
-		logger.Info("Bootnode - Add Seed", "Node", node)
-		cfg.BootstrapNodes = append(cfg.BootstrapNodes, node)
-	}
-}
-
-// setListenAddress creates a TCP listening address string from set command
-// line flags.
-func setListenAddress(ctx *cli.Context, cfg *p2p.Config) {
-	if ctx.GlobalIsSet(ListenPortFlag.Name) {
-		cfg.ListenAddr = fmt.Sprintf(":%d", ctx.GlobalInt(ListenPortFlag.Name))
-	}
-
-	if ctx.GlobalBool(MultiChannelUseFlag.Name) {
-		cfg.EnableMultiChannelServer = true
-		SubListenAddr := fmt.Sprintf(":%d", ctx.GlobalInt(SubListenPortFlag.Name))
-		cfg.SubListenAddr = []string{SubListenAddr}
-	}
-}
-
-// setNAT creates a port mapper from command line flags.
-func setNAT(ctx *cli.Context, cfg *p2p.Config) {
-	if ctx.GlobalIsSet(NATFlag.Name) {
-		natif, err := nat.Parse(ctx.GlobalString(NATFlag.Name))
-		if err != nil {
-			log.Fatalf("Option %s: %v", NATFlag.Name, err)
-		}
-		cfg.NAT = natif
-	}
-}
-
 // splitAndTrim splits input separated by a comma
 // and trims excessive white space from the substrings.
-func splitAndTrim(input string) []string {
+func SplitAndTrim(input string) []string {
 	result := strings.Split(input, ",")
 	for i, r := range result {
 		result[i] = strings.TrimSpace(r)
@@ -1216,152 +1957,9 @@ func splitAndTrim(input string) []string {
 	return result
 }
 
-// setHTTP creates the HTTP RPC listener interface string from the set
-// command line flags, returning empty if the HTTP endpoint is disabled.
-func setHTTP(ctx *cli.Context, cfg *node.Config) {
-	if ctx.GlobalBool(RPCEnabledFlag.Name) && cfg.HTTPHost == "" {
-		cfg.HTTPHost = "127.0.0.1"
-		if ctx.GlobalIsSet(RPCListenAddrFlag.Name) {
-			cfg.HTTPHost = ctx.GlobalString(RPCListenAddrFlag.Name)
-		}
-	}
-
-	if ctx.GlobalIsSet(RPCPortFlag.Name) {
-		cfg.HTTPPort = ctx.GlobalInt(RPCPortFlag.Name)
-	}
-	if ctx.GlobalIsSet(RPCCORSDomainFlag.Name) {
-		cfg.HTTPCors = splitAndTrim(ctx.GlobalString(RPCCORSDomainFlag.Name))
-	}
-	if ctx.GlobalIsSet(RPCApiFlag.Name) {
-		cfg.HTTPModules = splitAndTrim(ctx.GlobalString(RPCApiFlag.Name))
-	}
-	if ctx.GlobalIsSet(RPCVirtualHostsFlag.Name) {
-		cfg.HTTPVirtualHosts = splitAndTrim(ctx.GlobalString(RPCVirtualHostsFlag.Name))
-	}
-	if ctx.GlobalIsSet(RPCConcurrencyLimit.Name) {
-		rpc.ConcurrencyLimit = ctx.GlobalInt(RPCConcurrencyLimit.Name)
-		logger.Info("Set the concurrency limit of RPC-HTTP server", "limit", rpc.ConcurrencyLimit)
-	}
-	if ctx.GlobalIsSet(RPCReadTimeout.Name) {
-		cfg.HTTPTimeouts.ReadTimeout = time.Duration(ctx.GlobalInt(RPCReadTimeout.Name)) * time.Second
-	}
-	if ctx.GlobalIsSet(RPCWriteTimeoutFlag.Name) {
-		cfg.HTTPTimeouts.WriteTimeout = time.Duration(ctx.GlobalInt(RPCWriteTimeoutFlag.Name)) * time.Second
-	}
-	if ctx.GlobalIsSet(RPCIdleTimeoutFlag.Name) {
-		cfg.HTTPTimeouts.IdleTimeout = time.Duration(ctx.GlobalInt(RPCIdleTimeoutFlag.Name)) * time.Second
-	}
-	if ctx.GlobalIsSet(RPCExecutionTimeoutFlag.Name) {
-		cfg.HTTPTimeouts.ExecutionTimeout = time.Duration(ctx.GlobalInt(RPCExecutionTimeoutFlag.Name)) * time.Second
-	}
-}
-
-// setWS creates the WebSocket RPC listener interface string from the set
-// command line flags, returning empty if the HTTP endpoint is disabled.
-func setWS(ctx *cli.Context, cfg *node.Config) {
-	if ctx.GlobalBool(WSEnabledFlag.Name) && cfg.WSHost == "" {
-		cfg.WSHost = "127.0.0.1"
-		if ctx.GlobalIsSet(WSListenAddrFlag.Name) {
-			cfg.WSHost = ctx.GlobalString(WSListenAddrFlag.Name)
-		}
-	}
-
-	if ctx.GlobalIsSet(WSPortFlag.Name) {
-		cfg.WSPort = ctx.GlobalInt(WSPortFlag.Name)
-	}
-	if ctx.GlobalIsSet(WSAllowedOriginsFlag.Name) {
-		cfg.WSOrigins = splitAndTrim(ctx.GlobalString(WSAllowedOriginsFlag.Name))
-	}
-	if ctx.GlobalIsSet(WSApiFlag.Name) {
-		cfg.WSModules = splitAndTrim(ctx.GlobalString(WSApiFlag.Name))
-	}
-	rpc.MaxSubscriptionPerWSConn = int32(ctx.GlobalInt(WSMaxSubscriptionPerConn.Name))
-	rpc.WebsocketReadDeadline = ctx.GlobalInt64(WSReadDeadLine.Name)
-	rpc.WebsocketWriteDeadline = ctx.GlobalInt64(WSWriteDeadLine.Name)
-	rpc.MaxWebsocketConnections = int32(ctx.GlobalInt(WSMaxConnections.Name))
-}
-
-// setIPC creates an IPC path configuration from the set command line flags,
-// returning an empty string if IPC was explicitly disabled, or the set path.
-func setIPC(ctx *cli.Context, cfg *node.Config) {
-	CheckExclusive(ctx, IPCDisabledFlag, IPCPathFlag)
-	switch {
-	case ctx.GlobalBool(IPCDisabledFlag.Name):
-		cfg.IPCPath = ""
-	case ctx.GlobalIsSet(IPCPathFlag.Name):
-		cfg.IPCPath = ctx.GlobalString(IPCPathFlag.Name)
-	}
-}
-
-// setgRPC creates the gRPC listener interface string from the set
-// command line flags, returning empty if the gRPC endpoint is disabled.
-func setgRPC(ctx *cli.Context, cfg *node.Config) {
-	if ctx.GlobalBool(GRPCEnabledFlag.Name) && cfg.GRPCHost == "" {
-		cfg.GRPCHost = "127.0.0.1"
-		if ctx.GlobalIsSet(GRPCListenAddrFlag.Name) {
-			cfg.GRPCHost = ctx.GlobalString(GRPCListenAddrFlag.Name)
-		}
-	}
-
-	if ctx.GlobalIsSet(GRPCPortFlag.Name) {
-		cfg.GRPCPort = ctx.GlobalInt(GRPCPortFlag.Name)
-	}
-}
-
-// setAPIConfig sets configurations for specific APIs.
-func setAPIConfig(ctx *cli.Context) {
-	filters.GetLogsDeadline = ctx.GlobalDuration(APIFilterGetLogsDeadlineFlag.Name)
-	filters.GetLogsMaxItems = ctx.GlobalInt(APIFilterGetLogsMaxItemsFlag.Name)
-}
-
-// MakeAddress converts an account specified directly as a hex encoded string or
-// a key index in the key store to an internal account representation.
-func MakeAddress(ks *keystore.KeyStore, account string) (accounts.Account, error) {
-	// If the specified account is a valid address, return it
-	if common.IsHexAddress(account) {
-		return accounts.Account{Address: common.HexToAddress(account)}, nil
-	}
-	// Otherwise try to interpret the account as a keystore index
-	index, err := strconv.Atoi(account)
-	if err != nil || index < 0 {
-		return accounts.Account{}, fmt.Errorf("invalid account address or index %q", account)
-	}
-	logger.Warn("Use explicit addresses! Referring to accounts by order in the keystore folder is dangerous and will be deprecated!")
-
-	accs := ks.Accounts()
-	if len(accs) <= index {
-		return accounts.Account{}, fmt.Errorf("index %d higher than number of accounts %d", index, len(accs))
-	}
-	return accs[index], nil
-}
-
-// setServiceChainSigner retrieves the service chain signer either from the directly specified
-// command line flags or from the keystore if CLI indexed.
-func setServiceChainSigner(ctx *cli.Context, ks *keystore.KeyStore, cfg *cn.Config) {
-	if ctx.GlobalIsSet(ServiceChainSignerFlag.Name) {
-		account, err := MakeAddress(ks, ctx.GlobalString(ServiceChainSignerFlag.Name))
-		if err != nil {
-			log.Fatalf("Option %q: %v", ServiceChainSignerFlag.Name, err)
-		}
-		cfg.ServiceChainSigner = account.Address
-	}
-}
-
-// setRewardbase retrieves the rewardbase either from the directly specified
-// command line flags or from the keystore if CLI indexed.
-func setRewardbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *cn.Config) {
-	if ctx.GlobalIsSet(RewardbaseFlag.Name) {
-		account, err := MakeAddress(ks, ctx.GlobalString(RewardbaseFlag.Name))
-		if err != nil {
-			log.Fatalf("Option %q: %v", RewardbaseFlag.Name, err)
-		}
-		cfg.Rewardbase = account.Address
-	}
-}
-
 // MakePasswordList reads password lines from the file specified by the global --password flag.
 func MakePasswordList(ctx *cli.Context) []string {
-	path := ctx.GlobalString(PasswordFileFlag.Name)
+	path := ctx.String(PasswordFileFlag.Name)
 	if path == "" {
 		return nil
 	}
@@ -1377,390 +1975,10 @@ func MakePasswordList(ctx *cli.Context) []string {
 	return lines
 }
 
-func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
-	setNodeKey(ctx, cfg)
-	setNAT(ctx, cfg)
-	setListenAddress(ctx, cfg)
-
-	var nodeType string
-	if ctx.GlobalIsSet(NodeTypeFlag.Name) {
-		nodeType = ctx.GlobalString(NodeTypeFlag.Name)
-	} else {
-		nodeType = NodeTypeFlag.Value
-	}
-
-	cfg.ConnectionType = convertNodeType(nodeType)
-	if cfg.ConnectionType == common.UNKNOWNNODE {
-		logger.Crit("Unknown node type", "nodetype", nodeType)
-	}
-	logger.Info("Setting connection type", "nodetype", nodeType, "conntype", cfg.ConnectionType)
-
-	// set bootnodes via this function by check specified parameters
-	setBootstrapNodes(ctx, cfg)
-
-	if ctx.GlobalIsSet(MaxConnectionsFlag.Name) {
-		cfg.MaxPhysicalConnections = ctx.GlobalInt(MaxConnectionsFlag.Name)
-	}
-	logger.Info("Setting MaxPhysicalConnections", "MaxPhysicalConnections", cfg.MaxPhysicalConnections)
-
-	if ctx.GlobalIsSet(MaxPendingPeersFlag.Name) {
-		cfg.MaxPendingPeers = ctx.GlobalInt(MaxPendingPeersFlag.Name)
-	}
-
-	cfg.NoDiscovery = ctx.GlobalIsSet(NoDiscoverFlag.Name)
-
-	cfg.RWTimerConfig = p2p.RWTimerConfig{}
-	cfg.RWTimerConfig.Interval = ctx.GlobalUint64(RWTimerIntervalFlag.Name)
-	cfg.RWTimerConfig.WaitTime = ctx.GlobalDuration(RWTimerWaitTimeFlag.Name)
-
-	if netrestrict := ctx.GlobalString(NetrestrictFlag.Name); netrestrict != "" {
-		list, err := netutil.ParseNetlist(netrestrict)
-		if err != nil {
-			log.Fatalf("Option %q: %v", NetrestrictFlag.Name, err)
-		}
-		cfg.NetRestrict = list
-	}
-
-	common.MaxRequestContentLength = ctx.GlobalInt(MaxRequestContentLengthFlag.Name)
-
-	cfg.NetworkID, _ = getNetworkId(ctx)
-}
-
-func convertNodeType(nodetype string) common.ConnType {
-	switch strings.ToLower(nodetype) {
-	case "cn", "scn":
-		return common.CONSENSUSNODE
-	case "pn", "spn":
-		return common.PROXYNODE
-	case "en", "sen":
-		return common.ENDPOINTNODE
-	default:
-		return common.UNKNOWNNODE
-	}
-}
-
-// SetNodeConfig applies node-related command line flags to the config.
-func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
-	SetP2PConfig(ctx, &cfg.P2P)
-	setIPC(ctx, cfg)
-
-	// httptype is http or fasthttp
-	if ctx.GlobalIsSet(SrvTypeFlag.Name) {
-		cfg.HTTPServerType = ctx.GlobalString(SrvTypeFlag.Name)
-	}
-
-	setHTTP(ctx, cfg)
-	setWS(ctx, cfg)
-	setgRPC(ctx, cfg)
-	setAPIConfig(ctx)
-	setNodeUserIdent(ctx, cfg)
-
-	if dbtype := database.DBType(ctx.GlobalString(DbTypeFlag.Name)).ToValid(); len(dbtype) != 0 {
-		cfg.DBType = dbtype
-	} else {
-		logger.Crit("invalid dbtype", "dbtype", ctx.GlobalString(DbTypeFlag.Name))
-	}
-	cfg.DataDir = ctx.GlobalString(DataDirFlag.Name)
-
-	if ctx.GlobalIsSet(KeyStoreDirFlag.Name) {
-		cfg.KeyStoreDir = ctx.GlobalString(KeyStoreDirFlag.Name)
-	}
-	if ctx.GlobalIsSet(LightKDFFlag.Name) {
-		cfg.UseLightweightKDF = ctx.GlobalBool(LightKDFFlag.Name)
-	}
-	if ctx.GlobalIsSet(RPCNonEthCompatibleFlag.Name) {
-		rpc.NonEthCompatible = ctx.GlobalBool(RPCNonEthCompatibleFlag.Name)
-	}
-}
-
-func setTxPool(ctx *cli.Context, cfg *blockchain.TxPoolConfig) {
-	if ctx.GlobalIsSet(TxPoolNoLocalsFlag.Name) {
-		cfg.NoLocals = ctx.GlobalBool(TxPoolNoLocalsFlag.Name)
-	}
-	if ctx.GlobalIsSet(TxPoolAllowLocalAnchorTxFlag.Name) {
-		cfg.AllowLocalAnchorTx = ctx.GlobalBool(TxPoolAllowLocalAnchorTxFlag.Name)
-	}
-	if ctx.GlobalIsSet(TxPoolDenyRemoteTxFlag.Name) {
-		cfg.DenyRemoteTx = ctx.GlobalBool(TxPoolDenyRemoteTxFlag.Name)
-	}
-	if ctx.GlobalIsSet(TxPoolJournalFlag.Name) {
-		cfg.Journal = ctx.GlobalString(TxPoolJournalFlag.Name)
-	}
-	if ctx.GlobalIsSet(TxPoolJournalIntervalFlag.Name) {
-		cfg.JournalInterval = ctx.GlobalDuration(TxPoolJournalIntervalFlag.Name)
-	}
-	if ctx.GlobalIsSet(TxPoolPriceLimitFlag.Name) {
-		cfg.PriceLimit = ctx.GlobalUint64(TxPoolPriceLimitFlag.Name)
-	}
-	if ctx.GlobalIsSet(TxPoolPriceBumpFlag.Name) {
-		cfg.PriceBump = ctx.GlobalUint64(TxPoolPriceBumpFlag.Name)
-	}
-	if ctx.GlobalIsSet(TxPoolExecSlotsAccountFlag.Name) {
-		cfg.ExecSlotsAccount = ctx.GlobalUint64(TxPoolExecSlotsAccountFlag.Name)
-	}
-	if ctx.GlobalIsSet(TxPoolExecSlotsAllFlag.Name) {
-		cfg.ExecSlotsAll = ctx.GlobalUint64(TxPoolExecSlotsAllFlag.Name)
-	}
-	if ctx.GlobalIsSet(TxPoolNonExecSlotsAccountFlag.Name) {
-		cfg.NonExecSlotsAccount = ctx.GlobalUint64(TxPoolNonExecSlotsAccountFlag.Name)
-	}
-	if ctx.GlobalIsSet(TxPoolNonExecSlotsAllFlag.Name) {
-		cfg.NonExecSlotsAll = ctx.GlobalUint64(TxPoolNonExecSlotsAllFlag.Name)
-	}
-
-	cfg.KeepLocals = ctx.GlobalIsSet(TxPoolKeepLocalsFlag.Name)
-
-	if ctx.GlobalIsSet(TxPoolLifetimeFlag.Name) {
-		cfg.Lifetime = ctx.GlobalDuration(TxPoolLifetimeFlag.Name)
-	}
-
-	// PN specific txpool setting
-	if NodeTypeFlag.Value == "pn" {
-		cfg.EnableSpamThrottlerAtRuntime = !ctx.GlobalIsSet(TxPoolSpamThrottlerDisableFlag.Name)
-	}
-}
-
-// CheckExclusive verifies that only a single instance of the provided flags was
-// set by the user. Each flag might optionally be followed by a string type to
-// specialize it further.
-func CheckExclusive(ctx *cli.Context, args ...interface{}) {
-	set := make([]string, 0, 1)
-	for i := 0; i < len(args); i++ {
-		// Make sure the next argument is a flag and skip if not set
-		flag, ok := args[i].(cli.Flag)
-		if !ok {
-			panic(fmt.Sprintf("invalid argument, not cli.Flag type: %T", args[i]))
-		}
-		// Check if next arg extends current and expand its name if so
-		name := flag.GetName()
-
-		if i+1 < len(args) {
-			switch option := args[i+1].(type) {
-			case string:
-				// Extended flag, expand the name and shift the arguments
-				if ctx.GlobalString(flag.GetName()) == option {
-					name += "=" + option
-				}
-				i++
-
-			case cli.Flag:
-			default:
-				panic(fmt.Sprintf("invalid argument, not cli.Flag or string extension: %T", args[i+1]))
-			}
-		}
-		// Mark the flag if it's set
-		if ctx.GlobalIsSet(flag.GetName()) {
-			set = append(set, "--"+name)
-		}
-	}
-	if len(set) > 1 {
-		log.Fatalf("Flags %v can't be used at the same time", strings.Join(set, ", "))
-	}
-}
-
-// raiseFDLimit increases the file descriptor limit to process's maximum value
-func raiseFDLimit() {
-	limit, err := fdlimit.Maximum()
-	if err != nil {
-		logger.Error("Failed to read maximum fd. you may suffer fd exhaustion", "err", err)
-		return
-	}
-	raised, err := fdlimit.Raise(uint64(limit))
-	if err != nil {
-		logger.Warn("Failed to increase fd limit. you may suffer fd exhaustion", "err", err)
-		return
-	}
-	logger.Info("Raised fd limit to process's maximum value", "fd", raised)
-}
-
-// SetKlayConfig applies klay-related command line flags to the config.
-func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
-	// TODO-Klaytn-Bootnode: better have to check conflicts about network flags when we add Klaytn's `mainnet` parameter
-	// checkExclusive(ctx, DeveloperFlag, TestnetFlag, RinkebyFlag)
-	raiseFDLimit()
-
-	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
-	setServiceChainSigner(ctx, ks, cfg)
-	setRewardbase(ctx, ks, cfg)
-	setTxPool(ctx, &cfg.TxPool)
-
-	if ctx.GlobalIsSet(SyncModeFlag.Name) {
-		cfg.SyncMode = *GlobalTextMarshaler(ctx, SyncModeFlag.Name).(*downloader.SyncMode)
-		if cfg.SyncMode != downloader.FullSync && cfg.SyncMode != downloader.SnapSync {
-			log.Fatalf("Full Sync or Snap Sync (prototype) is supported only!")
-		}
-		if cfg.SyncMode == downloader.SnapSync {
-			logger.Info("Snap sync requested, enabling --snapshot")
-			ctx.Set(SnapshotFlag.Name, "true")
-		} else {
-			cfg.SnapshotCacheSize = 0 // Disabled
-		}
-	}
-
-	if ctx.GlobalBool(KESNodeTypeServiceFlag.Name) {
-		cfg.FetcherDisable = true
-		cfg.DownloaderDisable = true
-		cfg.WorkerDisable = true
-	}
-
-	cfg.NetworkId, cfg.IsPrivate = getNetworkId(ctx)
-
-	if dbtype := database.DBType(ctx.GlobalString(DbTypeFlag.Name)).ToValid(); len(dbtype) != 0 {
-		cfg.DBType = dbtype
-	} else {
-		logger.Crit("invalid dbtype", "dbtype", ctx.GlobalString(DbTypeFlag.Name))
-	}
-	cfg.SingleDB = ctx.GlobalIsSet(SingleDBFlag.Name)
-	cfg.NumStateTrieShards = ctx.GlobalUint(NumStateTrieShardsFlag.Name)
-	if !database.IsPow2(cfg.NumStateTrieShards) {
-		log.Fatalf("%v should be power of 2 but %v is not!", NumStateTrieShardsFlag.Name, cfg.NumStateTrieShards)
-	}
-
-	cfg.OverwriteGenesis = ctx.GlobalBool(OverwriteGenesisFlag.Name)
-	cfg.StartBlockNumber = ctx.GlobalUint64(StartBlockNumberFlag.Name)
-
-	cfg.LevelDBCompression = database.LevelDBCompressionType(ctx.GlobalInt(LevelDBCompressionTypeFlag.Name))
-	cfg.LevelDBBufferPool = !ctx.GlobalIsSet(LevelDBNoBufferPoolFlag.Name)
-	cfg.EnableDBPerfMetrics = !ctx.GlobalIsSet(DBNoPerformanceMetricsFlag.Name)
-	cfg.LevelDBCacheSize = ctx.GlobalInt(LevelDBCacheSizeFlag.Name)
-
-	cfg.DynamoDBConfig.TableName = ctx.GlobalString(DynamoDBTableNameFlag.Name)
-	cfg.DynamoDBConfig.Region = ctx.GlobalString(DynamoDBRegionFlag.Name)
-	cfg.DynamoDBConfig.IsProvisioned = ctx.GlobalBool(DynamoDBIsProvisionedFlag.Name)
-	cfg.DynamoDBConfig.ReadCapacityUnits = ctx.GlobalInt64(DynamoDBReadCapacityFlag.Name)
-	cfg.DynamoDBConfig.WriteCapacityUnits = ctx.GlobalInt64(DynamoDBWriteCapacityFlag.Name)
-	cfg.DynamoDBConfig.ReadOnly = ctx.GlobalBool(DynamoDBReadOnlyFlag.Name)
-
-	if gcmode := ctx.GlobalString(GCModeFlag.Name); gcmode != "full" && gcmode != "archive" {
-		log.Fatalf("--%s must be either 'full' or 'archive'", GCModeFlag.Name)
-	}
-	cfg.NoPruning = ctx.GlobalString(GCModeFlag.Name) == "archive"
-	logger.Info("Archiving mode of this node", "isArchiveMode", cfg.NoPruning)
-
-	cfg.AnchoringPeriod = ctx.GlobalUint64(AnchoringPeriodFlag.Name)
-	cfg.SentChainTxsLimit = ctx.GlobalUint64(SentChainTxsLimit.Name)
-
-	cfg.TrieCacheSize = ctx.GlobalInt(TrieMemoryCacheSizeFlag.Name)
-	common.DefaultCacheType = common.CacheType(ctx.GlobalInt(CacheTypeFlag.Name))
-	cfg.TrieBlockInterval = ctx.GlobalUint(TrieBlockIntervalFlag.Name)
-	cfg.TriesInMemory = ctx.GlobalUint64(TriesInMemoryFlag.Name)
-
-	if ctx.GlobalIsSet(CacheScaleFlag.Name) {
-		common.CacheScale = ctx.GlobalInt(CacheScaleFlag.Name)
-	}
-	if ctx.GlobalIsSet(CacheUsageLevelFlag.Name) {
-		cacheUsageLevelFlag := ctx.GlobalString(CacheUsageLevelFlag.Name)
-		if scaleByCacheUsageLevel, err := common.GetScaleByCacheUsageLevel(cacheUsageLevelFlag); err != nil {
-			logger.Crit("Incorrect CacheUsageLevelFlag value", "error", err, "CacheUsageLevelFlag", cacheUsageLevelFlag)
-		} else {
-			common.ScaleByCacheUsageLevel = scaleByCacheUsageLevel
-		}
-	}
-	if ctx.GlobalIsSet(MemorySizeFlag.Name) {
-		physicalMemory := common.TotalPhysicalMemGB
-		common.TotalPhysicalMemGB = ctx.GlobalInt(MemorySizeFlag.Name)
-		logger.Info("Physical memory has been replaced by user settings", "PhysicalMemory(GB)", physicalMemory, "UserSetting(GB)", common.TotalPhysicalMemGB)
-	} else {
-		logger.Debug("Memory settings", "PhysicalMemory(GB)", common.TotalPhysicalMemGB)
-	}
-
-	if ctx.GlobalIsSet(DocRootFlag.Name) {
-		cfg.DocRoot = ctx.GlobalString(DocRootFlag.Name)
-	}
-	if ctx.GlobalIsSet(ExtraDataFlag.Name) {
-		cfg.ExtraData = []byte(ctx.GlobalString(ExtraDataFlag.Name))
-	}
-
-	cfg.SenderTxHashIndexing = ctx.GlobalIsSet(SenderTxHashIndexingFlag.Name)
-	cfg.ParallelDBWrite = !ctx.GlobalIsSet(NoParallelDBWriteFlag.Name)
-	cfg.TrieNodeCacheConfig = statedb.TrieNodeCacheConfig{
-		CacheType: statedb.TrieNodeCacheType(ctx.GlobalString(TrieNodeCacheTypeFlag.
-			Name)).ToValid(),
-		NumFetcherPrefetchWorker:  ctx.GlobalInt(NumFetcherPrefetchWorkerFlag.Name),
-		UseSnapshotForPrefetch:    ctx.GlobalBool(UseSnapshotForPrefetchFlag.Name),
-		LocalCacheSizeMiB:         ctx.GlobalInt(TrieNodeCacheLimitFlag.Name),
-		FastCacheFileDir:          ctx.GlobalString(DataDirFlag.Name) + "/fastcache",
-		FastCacheSavePeriod:       ctx.GlobalDuration(TrieNodeCacheSavePeriodFlag.Name),
-		RedisEndpoints:            ctx.GlobalStringSlice(TrieNodeCacheRedisEndpointsFlag.Name),
-		RedisClusterEnable:        ctx.GlobalBool(TrieNodeCacheRedisClusterFlag.Name),
-		RedisPublishBlockEnable:   ctx.GlobalBool(TrieNodeCacheRedisPublishBlockFlag.Name),
-		RedisSubscribeBlockEnable: ctx.GlobalBool(TrieNodeCacheRedisSubscribeBlockFlag.Name),
-	}
-
-	if ctx.GlobalIsSet(VMEnableDebugFlag.Name) {
-		// TODO(fjl): force-enable this in --dev mode
-		cfg.EnablePreimageRecording = ctx.GlobalBool(VMEnableDebugFlag.Name)
-	}
-	if ctx.GlobalIsSet(VMLogTargetFlag.Name) {
-		if _, err := debug.Handler.SetVMLogTarget(ctx.GlobalInt(VMLogTargetFlag.Name)); err != nil {
-			logger.Warn("Incorrect vmlog value", "err", err)
-		}
-	}
-	cfg.EnableInternalTxTracing = ctx.GlobalIsSet(VMTraceInternalTxFlag.Name)
-
-	cfg.AutoRestartFlag = ctx.GlobalBool(AutoRestartFlag.Name)
-	cfg.RestartTimeOutFlag = ctx.GlobalDuration(RestartTimeOutFlag.Name)
-	cfg.DaemonPathFlag = ctx.GlobalString(DaemonPathFlag.Name)
-
-	if ctx.GlobalIsSet(RPCGlobalGasCap.Name) {
-		cfg.RPCGasCap = new(big.Int).SetUint64(ctx.GlobalUint64(RPCGlobalGasCap.Name))
-	}
-
-	if ctx.GlobalIsSet(RPCGlobalEthTxFeeCapFlag.Name) {
-		cfg.RPCTxFeeCap = ctx.GlobalFloat64(RPCGlobalEthTxFeeCapFlag.Name)
-	}
-
-	// Only CNs could set BlockGenerationIntervalFlag and BlockGenerationTimeLimitFlag
-	if ctx.GlobalIsSet(BlockGenerationIntervalFlag.Name) {
-		params.BlockGenerationInterval = ctx.GlobalInt64(BlockGenerationIntervalFlag.Name)
-		if params.BlockGenerationInterval < 1 {
-			logger.Crit("Block generation interval should be equal or larger than 1", "interval", params.BlockGenerationInterval)
-		}
-	}
-	if ctx.GlobalIsSet(BlockGenerationTimeLimitFlag.Name) {
-		params.BlockGenerationTimeLimit = ctx.GlobalDuration(BlockGenerationTimeLimitFlag.Name)
-	}
-
-	params.OpcodeComputationCostLimit = ctx.GlobalUint64(OpcodeComputationCostLimitFlag.Name)
-
-	if ctx.GlobalIsSet(SnapshotFlag.Name) {
-		cfg.SnapshotCacheSize = ctx.GlobalInt(SnapshotCacheSizeFlag.Name)
-		if cfg.StartBlockNumber != 0 {
-			logger.Crit("State snapshot should not be used with --start-block-num", "num", cfg.StartBlockNumber)
-		}
-		logger.Info("State snapshot is enabled", "cache-size (MB)", cfg.SnapshotCacheSize)
-	} else {
-		cfg.SnapshotCacheSize = 0 // snapshot disabled
-	}
-
-	// Override any default configs for hard coded network.
-	// TODO-Klaytn-Bootnode: Discuss and add `baobab` test network's genesis block
-	/*
-		if ctx.GlobalBool(TestnetFlag.Name) {
-			if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
-				cfg.NetworkId = 3
-			}
-			cfg.Genesis = blockchain.DefaultBaobabGenesisBlock()
-		}
-	*/
-	// Set the Tx resending related configuration variables
-	setTxResendConfig(ctx, cfg)
-}
-
-func MakeGenesis(ctx *cli.Context) *blockchain.Genesis {
-	var genesis *blockchain.Genesis
-	switch {
-	case ctx.GlobalBool(CypressFlag.Name):
-		genesis = blockchain.DefaultGenesisBlock()
-	case ctx.GlobalBool(BaobabFlag.Name):
-		genesis = blockchain.DefaultBaobabGenesisBlock()
-	}
-	return genesis
-}
-
 // RegisterCNService adds a CN client to the stack.
 func RegisterCNService(stack *node.Node, cfg *cn.Config) {
 	// TODO-Klaytn add syncMode.LightSync func and add LesServer
+
 	err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
 		cfg.WsEndpoint = stack.WSEndpoint()
 		fullNode, err := cn.New(ctx, cfg)
@@ -1819,24 +2037,18 @@ func RegisterDBSyncerService(stack *node.Node, cfg *dbsyncer.DBConfig) {
 	}
 }
 
-// SetupNetwork configures the system for either the main net or some test network.
-func SetupNetwork(ctx *cli.Context) {
-	// TODO(fjl): move target gas limit into config
-	params.TargetGasLimit = ctx.GlobalUint64(TargetGasLimitFlag.Name)
-}
-
 // MakeConsolePreloads retrieves the absolute paths for the console JavaScript
 // scripts to preload before starting.
 func MakeConsolePreloads(ctx *cli.Context) []string {
 	// Skip preloading if there's nothing to preload
-	if ctx.GlobalString(PreloadJSFlag.Name) == "" {
+	if ctx.String(PreloadJSFlag.Name) == "" {
 		return nil
 	}
 	// Otherwise resolve absolute paths and return them
 	var preloads []string
 
-	assets := ctx.GlobalString(JSpathFlag.Name)
-	for _, file := range strings.Split(ctx.GlobalString(PreloadJSFlag.Name), ",") {
+	assets := ctx.String(JSpathFlag.Name)
+	for _, file := range strings.Split(ctx.String(PreloadJSFlag.Name), ",") {
 		preloads = append(preloads, common.AbsolutePath(assets, strings.TrimSpace(file)))
 	}
 	return preloads
@@ -1855,61 +2067,92 @@ func MakeConsolePreloads(ctx *cli.Context) []string {
 // This allows the use of the existing configuration functionality.
 // When all flags are migrated this function can be removed and the existing
 // configuration functionality must be changed that is uses local flags
+// Deprecated: urfave/cli/v2 doesn't support local scope flag and there is only global scope.
 func MigrateFlags(action func(ctx *cli.Context) error) func(*cli.Context) error {
 	return func(ctx *cli.Context) error {
 		for _, name := range ctx.FlagNames() {
 			if ctx.IsSet(name) {
-				ctx.GlobalSet(name, ctx.String(name))
+				ctx.Set(name, ctx.String(name))
 			}
 		}
 		return action(ctx)
 	}
 }
 
-func setTxResendConfig(ctx *cli.Context, cfg *cn.Config) {
-	// Set the Tx resending related configuration variables
-	cfg.TxResendInterval = ctx.GlobalUint64(TxResendIntervalFlag.Name)
-	if cfg.TxResendInterval == 0 {
-		cfg.TxResendInterval = cn.DefaultTxResendInterval
-	}
+// CheckExclusive verifies that only a single instance of the provided flags was
+// set by the user. Each flag might optionally be followed by a string type to
+// specialize it further.
+func CheckExclusive(ctx *cli.Context, args ...interface{}) {
+	set := make([]string, 0, 1)
+	for i := 0; i < len(args); i++ {
+		// Make sure the next argument is a flag and skip if not set
+		flag, ok := args[i].(cli.Flag)
+		if !ok {
+			panic(fmt.Sprintf("invalid argument, not cli.Flag type: %T", args[i]))
+		}
+		// Check if next arg extends current and expand its name if so
+		name := flag.Names()[0]
 
-	cfg.TxResendCount = ctx.GlobalInt(TxResendCountFlag.Name)
-	if cfg.TxResendCount < cn.DefaultMaxResendTxCount {
-		cfg.TxResendCount = cn.DefaultMaxResendTxCount
+		if i+1 < len(args) {
+			switch option := args[i+1].(type) {
+			case string:
+				// Extended flag, expand the name and shift the arguments
+				if ctx.String(flag.Names()[0]) == option {
+					name += "=" + option
+				}
+				i++
+
+			case cli.Flag:
+			default:
+				panic(fmt.Sprintf("invalid argument, not cli.Flag or string extension: %T", args[i+1]))
+			}
+		}
+		// Mark the flag if it's set
+		if ctx.IsSet(flag.Names()[0]) {
+			set = append(set, "--"+name)
+		}
 	}
-	cfg.TxResendUseLegacy = ctx.GlobalBool(TxResendUseLegacyFlag.Name)
-	logger.Debug("TxResend config", "Interval", cfg.TxResendInterval, "TxResendCount", cfg.TxResendCount, "UseLegacy", cfg.TxResendUseLegacy)
+	if len(set) > 1 {
+		log.Fatalf("Flags %v can't be used at the same time", strings.Join(set, ", "))
+	}
 }
 
-// getNetworkID returns the associated network ID with whether or not the network is private.
-func getNetworkId(ctx *cli.Context) (uint64, bool) {
-	if ctx.GlobalIsSet(BaobabFlag.Name) && ctx.GlobalIsSet(CypressFlag.Name) {
-		log.Fatalf("--baobab and --cypress must not be set together")
-	}
-	if ctx.GlobalIsSet(BaobabFlag.Name) && ctx.GlobalIsSet(NetworkIdFlag.Name) {
-		log.Fatalf("--baobab and --networkid must not be set together")
-	}
-	if ctx.GlobalIsSet(CypressFlag.Name) && ctx.GlobalIsSet(NetworkIdFlag.Name) {
-		log.Fatalf("--cypress and --networkid must not be set together")
+// FlagString prints a single flag in help.
+func FlagString(f cli.Flag) string {
+	df, ok := f.(cli.DocGenerationFlag)
+	if !ok {
+		return ""
 	}
 
-	switch {
-	case ctx.GlobalIsSet(CypressFlag.Name):
-		logger.Info("Cypress network ID is set", "networkid", params.CypressNetworkId)
-		return params.CypressNetworkId, false
-	case ctx.GlobalIsSet(BaobabFlag.Name):
-		logger.Info("Baobab network ID is set", "networkid", params.BaobabNetworkId)
-		return params.BaobabNetworkId, false
-	case ctx.GlobalIsSet(NetworkIdFlag.Name):
-		networkId := ctx.GlobalUint64(NetworkIdFlag.Name)
-		logger.Info("A private network ID is set", "networkid", networkId)
-		return networkId, true
-	default:
-		if NodeTypeFlag.Value == "scn" || NodeTypeFlag.Value == "spn" || NodeTypeFlag.Value == "sen" {
-			logger.Info("A Service Chain default network ID is set", "networkid", params.ServiceChainDefaultNetworkId)
-			return params.ServiceChainDefaultNetworkId, true
-		}
-		logger.Info("Cypress network ID is set", "networkid", params.CypressNetworkId)
-		return params.CypressNetworkId, false
+	needsPlaceholder := df.TakesValue()
+	placeholder := ""
+	if needsPlaceholder {
+		placeholder = "value"
 	}
+
+	// namesText := cli.FlagNamePrefixer([]string{df.Names()[0]}, placeholder)
+	// if len(df.Names()) > 1 {
+	// 	namesText = cli.FlagNamePrefixer([]string{df.Names()[1]}, placeholder)
+	// }
+	namesText := cli.FlagNamePrefixer(df.Names(), placeholder)
+
+	defaultValueString := ""
+	if s := df.GetDefaultText(); s != "" {
+		defaultValueString = " (default: " + s + ")"
+	}
+
+	usage := strings.TrimSpace(df.GetUsage())
+	envHint := strings.TrimSpace(cli.FlagEnvHinter(df.GetEnvVars(), ""))
+	if len(envHint) > 0 {
+		usage += "\nEnvVar: " + envHint
+	}
+
+	// usage = wordWrap(usage, 150)
+	usage = indent(usage, 10)
+	return fmt.Sprintf("\n    %s%s\n%s", namesText, defaultValueString, usage)
+}
+
+func indent(s string, nspace int) string {
+	ind := strings.Repeat(" ", nspace)
+	return ind + strings.ReplaceAll(s, "\n", "\n"+ind)
 }

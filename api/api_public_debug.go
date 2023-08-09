@@ -24,7 +24,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/rlp"
 )
@@ -53,14 +52,4 @@ func (api *PublicDebugAPI) GetBlockRlp(ctx context.Context, blockNrOrHash rpc.Bl
 		return "", err
 	}
 	return fmt.Sprintf("%x", encoded), nil
-}
-
-// PrintBlock retrieves a block and returns its pretty printed form.
-func (api *PublicDebugAPI) PrintBlock(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (string, error) {
-	block, _ := api.b.BlockByNumberOrHash(ctx, blockNrOrHash)
-	if block == nil {
-		blockNumberOrHashString, _ := blockNrOrHash.NumberOrHashString()
-		return "", fmt.Errorf("block %v not found", blockNumberOrHashString)
-	}
-	return spew.Sdump(block), nil
 }

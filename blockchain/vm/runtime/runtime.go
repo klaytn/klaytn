@@ -41,6 +41,7 @@ type Config struct {
 	BlockScore  *big.Int
 	Origin      common.Address
 	Coinbase    common.Address
+	Rewardbase  common.Address
 	BlockNumber *big.Int
 	Time        *big.Int
 	GasLimit    uint64
@@ -62,6 +63,8 @@ func setDefaults(cfg *Config) {
 			IstanbulCompatibleBlock:  new(big.Int),
 			LondonCompatibleBlock:    new(big.Int),
 			EthTxTypeCompatibleBlock: new(big.Int),
+			KoreCompatibleBlock:      new(big.Int),
+			ShanghaiCompatibleBlock:  new(big.Int),
 		}
 	}
 
@@ -106,13 +109,17 @@ func Execute(code, input []byte, cfg *Config) ([]byte, *state.StateDB, error) {
 
 	if cfg.State == nil {
 		memDBManager := database.NewMemoryDBManager()
-		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(memDBManager), nil)
+		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(memDBManager), nil, nil)
 	}
 	var (
 		address = common.BytesToAddress([]byte("contract"))
 		vmenv   = NewEnv(cfg)
 		sender  = vm.AccountRef(cfg.Origin)
+		rules   = cfg.ChainConfig.Rules(vmenv.BlockNumber)
 	)
+	if rules.IsKore {
+		cfg.State.PrepareAccessList(rules, cfg.Origin, common.Address{}, cfg.Coinbase, &address, vm.ActivePrecompiles(rules))
+	}
 	cfg.State.CreateSmartContractAccount(address, params.CodeFormatEVM, cfg.ChainConfig.Rules(cfg.BlockNumber))
 	// set the receiver's (the executing contract) code for execution.
 	cfg.State.SetCode(address, code)
@@ -137,13 +144,16 @@ func Create(input []byte, cfg *Config) ([]byte, common.Address, uint64, error) {
 
 	if cfg.State == nil {
 		memDBManager := database.NewMemoryDBManager()
-		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(memDBManager), nil)
+		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(memDBManager), nil, nil)
 	}
 	var (
 		vmenv  = NewEnv(cfg)
 		sender = vm.AccountRef(cfg.Origin)
+		rules  = cfg.ChainConfig.Rules(vmenv.BlockNumber)
 	)
-
+	if rules.IsKore {
+		cfg.State.PrepareAccessList(rules, cfg.Origin, common.Address{}, cfg.Coinbase, nil, vm.ActivePrecompiles(rules))
+	}
 	// Call the code with the given configuration.
 	code, address, leftOverGas, err := vmenv.Create(
 		sender,
@@ -163,10 +173,15 @@ func Create(input []byte, cfg *Config) ([]byte, common.Address, uint64, error) {
 func Call(address common.Address, input []byte, cfg *Config) ([]byte, uint64, error) {
 	setDefaults(cfg)
 
-	vmenv := NewEnv(cfg)
-
-	senderAccount := cfg.State.GetOrNewStateObject(cfg.Origin)
-	sender := types.NewAccountRefWithFeePayer(senderAccount.Address(), senderAccount.Address())
+	var (
+		vmenv         = NewEnv(cfg)
+		senderAccount = cfg.State.GetOrNewStateObject(cfg.Origin)
+		sender        = types.NewAccountRefWithFeePayer(senderAccount.Address(), senderAccount.Address())
+		rules         = cfg.ChainConfig.Rules(vmenv.BlockNumber)
+	)
+	if rules.IsKore {
+		cfg.State.PrepareAccessList(rules, cfg.Origin, common.Address{}, cfg.Coinbase, &address, vm.ActivePrecompiles(rules))
+	}
 	// Call the code with the given configuration.
 	ret, leftOverGas, err := vmenv.Call(
 		sender,

@@ -17,23 +17,19 @@
 package blockchain
 
 import (
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/storage/statedb"
+	"github.com/klaytn/klaytn/blockchain/types/derivesha"
+	"github.com/klaytn/klaytn/params"
 )
 
-func InitDeriveSha(deriveShaImpl int) {
-	switch deriveShaImpl {
-	case types.ImplDeriveShaOriginal:
-		logger.Info("Using DeriveShaOrig!")
-		types.InitDeriveSha(statedb.DeriveShaOrig{})
-	case types.ImplDeriveShaSimple:
-		logger.Info("Using DeriveShaSimple!")
-		types.InitDeriveSha(types.DeriveShaSimple{})
-	case types.ImplDeriveShaConcat:
-		logger.Info("Using DeriveShaConcat!")
-		types.InitDeriveSha(types.DeriveShaConcat{})
-	default:
-		logger.Error("Undefined deriveShaImpl!! use DeriveShaOrig!")
-		types.InitDeriveSha(statedb.DeriveShaOrig{})
-	}
+// InitDeriveSha makes DeriveSha() and EmptyRootHash() depend on only ChainConfig.DeriveShaImpl.
+// Call InitDeriveSha when you work exclusivly with genesis block (e.g. initGenesis)
+func InitDeriveSha(config *params.ChainConfig) {
+	derivesha.InitDeriveSha(config, nil)
+}
+
+// InitDeriveShaWithGov makes DeriveSha() and EmptyRootHash depend on the
+// governance parameters. For any given block number, correct DeriveShaImpl will be used.
+// Call InitDeriveShaWithGov before processing blocks.
+func InitDeriveShaWithGov(config *params.ChainConfig, gov derivesha.GovernanceEngine) {
+	derivesha.InitDeriveSha(config, gov)
 }

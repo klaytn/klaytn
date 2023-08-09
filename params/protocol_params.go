@@ -42,6 +42,7 @@ const (
 	CallStipend           uint64 = 2300  // Free gas given at beginning of call.                                // G_callstipend
 	Sha3Gas               uint64 = 30    // Once per SHA3 operation.                                                 // G_sha3
 	Sha3WordGas           uint64 = 6     // Once per word of the SHA3 operation's data.                              // G_sha3word
+	InitCodeWordGas       uint64 = 2     // Once per word of the init code when creating a contract.				 // G_InitCodeWord
 	SstoreResetGas        uint64 = 5000  // Once per SSTORE operation if the zeroness changes from zero.             // G_sreset
 	SstoreClearGas        uint64 = 5000  // Once per SSTORE operation if the zeroness doesn't change.                // G_sreset
 	SstoreRefundGas       uint64 = 15000 // Once per SSTORE operation if the zeroness changes to zero.               // R_sclear
@@ -51,6 +52,16 @@ const (
 	SstoreSetGasEIP2200               uint64 = 20000 // Once per SSTORE operation from clean zero to non-zero
 	SstoreResetGasEIP2200             uint64 = 5000  // Once per SSTORE operation from clean non-zero to something else
 	SstoreClearsScheduleRefundEIP2200 uint64 = 15000 // Once per SSTORE operation for clearing an originally existing storage slot
+
+	ColdAccountAccessCostEIP2929 = uint64(2600) // COLD_ACCOUNT_ACCESS_COST
+	ColdSloadCostEIP2929         = uint64(2100) // COLD_SLOAD_COST
+	WarmStorageReadCostEIP2929   = uint64(100)  // WARM_STORAGE_READ_COST
+
+	// In EIP-2200: SstoreResetGas was 5000.
+	// In EIP-2929: SstoreResetGas was changed to '5000 - COLD_SLOAD_COST'.
+	// In EIP-3529: SSTORE_CLEARS_SCHEDULE is defined as SSTORE_RESET_GAS + ACCESS_LIST_STORAGE_KEY_COST
+	// Which becomes: 5000 - 2100 + 1900 = 4800
+	SstoreClearsScheduleRefundEIP3529 uint64 = SstoreResetGasEIP2200 - ColdSloadCostEIP2929 + TxAccessListStorageKeyGas
 
 	JumpdestGas           uint64 = 1     // Once per JUMPDEST operation.
 	CreateDataGas         uint64 = 200   // Paid per byte for a CREATE operation to succeed in placing code into state. // G_codedeposit
@@ -105,20 +116,24 @@ const (
 	Ripemd160PerWordGas uint64 = 120  // Per-word price for a RIPEMD160 operation
 	IdentityBaseGas     uint64 = 15   // Base price for a data copy operation
 	IdentityPerWordGas  uint64 = 3    // Per-work price for a data copy operation
-	ModExpQuadCoeffDiv  uint64 = 20   // Divisor for the quadratic particle of the big int modular exponentiation
 
-	Bn256AddGasConstantinople             uint64 = 500    // Gas needed for an elliptic curve addition
-	Bn256AddGasIstanbul                   uint64 = 150    // Istanbul version of gas needed for an elliptic curve addition
-	Bn256ScalarMulGasConstantinople       uint64 = 40000  // Gas needed for an elliptic curve scalar multiplication
-	Bn256ScalarMulGasIstanbul             uint64 = 6000   // Istanbul version of gas needed for an elliptic curve scalar multiplication
-	Bn256PairingBaseGasConstantinople     uint64 = 100000 // Base price for an elliptic curve pairing check
-	Bn256PairingBaseGasIstanbul           uint64 = 45000  // Istanbul version of base price for an elliptic curve pairing check
-	Bn256PairingPerPointGasConstantinople uint64 = 80000  // Per-point price for an elliptic curve pairing check
-	Bn256PairingPerPointGasIstanbul       uint64 = 34000  // Istanbul version of per-point price for an elliptic curve pairing check
-	VMLogBaseGas                          uint64 = 100    // Base price for a VMLOG operation
-	VMLogPerByteGas                       uint64 = 20     // Per-byte price for a VMLOG operation
-	FeePayerGas                           uint64 = 300    // Gas needed for calculating the fee payer of the transaction in a smart contract.
-	ValidateSenderGas                     uint64 = 5000   // Gas needed for validating the signature of a message.
+	Bn256AddGasByzantium             uint64 = 500    // Gas needed for an elliptic curve addition
+	Bn256AddGasIstanbul              uint64 = 150    // Istanbul version of gas needed for an elliptic curve addition
+	Bn256ScalarMulGasByzantium       uint64 = 40000  // Gas needed for an elliptic curve scalar multiplication
+	Bn256ScalarMulGasIstanbul        uint64 = 6000   // Istanbul version of gas needed for an elliptic curve scalar multiplication
+	Bn256PairingBaseGasByzantium     uint64 = 100000 // Base price for an elliptic curve pairing check
+	Bn256PairingBaseGasIstanbul      uint64 = 45000  // Istanbul version of base price for an elliptic curve pairing check
+	Bn256PairingPerPointGasByzantium uint64 = 80000  // Per-point price for an elliptic curve pairing check
+	Bn256PairingPerPointGasIstanbul  uint64 = 34000  // Istanbul version of per-point price for an elliptic curve pairing check
+	VMLogBaseGas                     uint64 = 100    // Base price for a VMLOG operation
+	VMLogPerByteGas                  uint64 = 20     // Per-byte price for a VMLOG operation
+	FeePayerGas                      uint64 = 300    // Gas needed for calculating the fee payer of the transaction in a smart contract.
+	ValidateSenderGas                uint64 = 5000   // Gas needed for validating the signature of a message.
+
+	// The Refund Quotient is the cap on how much of the used gas can be refunded. Before EIP-3529,
+	// up to half the consumed gas could be refunded. Redefined as 1/5th in EIP-3529
+	RefundQuotient        uint64 = 2
+	RefundQuotientEIP3529 uint64 = 5
 
 	GasLimitBoundDivisor uint64 = 1024    // The bound divisor of the gas limit, used in update calculations.
 	MinGasLimit          uint64 = 5000    // Minimum the gas limit may ever be.
@@ -130,7 +145,9 @@ const (
 	CallCreateDepth uint64 = 1024  // Maximum depth of call/create stack.
 	StackLimit      uint64 = 1024  // Maximum size of VM stack allowed.
 
-	MaxCodeSize = 24576 // Maximum bytecode to permit for a contract
+	// eip-3860: limit and meter initcode (Shanghai)
+	MaxCodeSize     = 24576           // Maximum bytecode to permit for a contract
+	MaxInitCodeSize = 2 * MaxCodeSize // Maximum initcode to permit in a creation transaction and create instructions
 
 	// istanbul BFT
 	BFTMaximumExtraDataSize uint64 = 65 // Maximum size extra data may be after Genesis.

@@ -34,14 +34,14 @@ import (
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 var logger = log.NewModuleLogger(log.CMDUtilsNodeCMD)
 
 var (
-	InitCommand = cli.Command{
-		Action:    utils.MigrateFlags(initGenesis),
+	InitCommand = &cli.Command{
+		Action:    initGenesis,
 		Name:      "init",
 		Usage:     "Bootstrap and initialize a new genesis block",
 		ArgsUsage: "<genesisPath>",
@@ -57,7 +57,18 @@ var (
 			utils.DynamoDBReadOnlyFlag,
 			utils.LevelDBCompressionTypeFlag,
 			utils.DataDirFlag,
+			utils.ChainDataDirFlag,
+			utils.RocksDBSecondaryFlag,
+			utils.RocksDBCacheSizeFlag,
+			utils.RocksDBDumpMallocStatFlag,
+			utils.RocksDBFilterPolicyFlag,
+			utils.RocksDBCompressionTypeFlag,
+			utils.RocksDBBottommostCompressionTypeFlag,
+			utils.RocksDBDisableMetricsFlag,
+			utils.RocksDBMaxOpenFilesFlag,
+			utils.RocksDBCacheIndexAndFilterFlag,
 			utils.OverwriteGenesisFlag,
+			utils.LivePruningFlag,
 		},
 		Category: "BLOCKCHAIN COMMANDS",
 		Description: `
@@ -68,8 +79,8 @@ participating.
 It expects the genesis file as argument.`,
 	}
 
-	DumpGenesisCommand = cli.Command{
-		Action:    utils.MigrateFlags(dumpGenesis),
+	DumpGenesisCommand = &cli.Command{
+		Action:    dumpGenesis,
 		Name:      "dumpgenesis",
 		Usage:     "Dumps genesis block JSON configuration to stdout",
 		ArgsUsage: "",
@@ -107,7 +118,7 @@ func initGenesis(ctx *cli.Context) error {
 	}
 
 	// Update undefined config with default values
-	genesis.Config.SetDefaults()
+	genesis.Config.SetDefaultsForGenesis()
 
 	// Validate config values
 	if err := ValidateGenesisConfig(genesis); err != nil {
@@ -128,25 +139,40 @@ func initGenesis(ctx *cli.Context) error {
 
 	// Open an initialise both full and light databases
 	stack := MakeFullNode(ctx)
-	parallelDBWrite := !ctx.GlobalIsSet(utils.NoParallelDBWriteFlag.Name)
-	singleDB := ctx.GlobalIsSet(utils.SingleDBFlag.Name)
-	numStateTrieShards := ctx.GlobalUint(utils.NumStateTrieShardsFlag.Name)
-	overwriteGenesis := ctx.GlobalBool(utils.OverwriteGenesisFlag.Name)
+	parallelDBWrite := !ctx.Bool(utils.NoParallelDBWriteFlag.Name)
+	singleDB := ctx.Bool(utils.SingleDBFlag.Name)
+	numStateTrieShards := ctx.Uint(utils.NumStateTrieShardsFlag.Name)
+	overwriteGenesis := ctx.Bool(utils.OverwriteGenesisFlag.Name)
+	livePruning := ctx.Bool(utils.LivePruningFlag.Name)
 
-	dbtype := database.DBType(ctx.GlobalString(utils.DbTypeFlag.Name)).ToValid()
+	dbtype := database.DBType(ctx.String(utils.DbTypeFlag.Name)).ToValid()
 	if len(dbtype) == 0 {
-		logger.Crit("invalid dbtype", "dbtype", ctx.GlobalString(utils.DbTypeFlag.Name))
+		logger.Crit("invalid dbtype", "dbtype", ctx.String(utils.DbTypeFlag.Name))
 	}
 
 	var dynamoDBConfig *database.DynamoDBConfig
 	if dbtype == database.DynamoDB {
 		dynamoDBConfig = &database.DynamoDBConfig{
-			TableName:          ctx.GlobalString(utils.DynamoDBTableNameFlag.Name),
-			Region:             ctx.GlobalString(utils.DynamoDBRegionFlag.Name),
-			IsProvisioned:      ctx.GlobalBool(utils.DynamoDBIsProvisionedFlag.Name),
-			ReadCapacityUnits:  ctx.GlobalInt64(utils.DynamoDBReadCapacityFlag.Name),
-			WriteCapacityUnits: ctx.GlobalInt64(utils.DynamoDBWriteCapacityFlag.Name),
-			ReadOnly:           ctx.GlobalBool(utils.DynamoDBReadOnlyFlag.Name),
+			TableName:          ctx.String(utils.DynamoDBTableNameFlag.Name),
+			Region:             ctx.String(utils.DynamoDBRegionFlag.Name),
+			IsProvisioned:      ctx.Bool(utils.DynamoDBIsProvisionedFlag.Name),
+			ReadCapacityUnits:  ctx.Int64(utils.DynamoDBReadCapacityFlag.Name),
+			WriteCapacityUnits: ctx.Int64(utils.DynamoDBWriteCapacityFlag.Name),
+			ReadOnly:           ctx.Bool(utils.DynamoDBReadOnlyFlag.Name),
+		}
+	}
+	rocksDBConfig := database.GetDefaultRocksDBConfig()
+	if dbtype == database.RocksDB {
+		rocksDBConfig = &database.RocksDBConfig{
+			Secondary:                 ctx.Bool(utils.RocksDBSecondaryFlag.Name),
+			DumpMallocStat:            ctx.Bool(utils.RocksDBDumpMallocStatFlag.Name),
+			DisableMetrics:            ctx.Bool(utils.RocksDBDisableMetricsFlag.Name),
+			CacheSize:                 ctx.Uint64(utils.RocksDBCacheSizeFlag.Name),
+			CompressionType:           ctx.String(utils.RocksDBCompressionTypeFlag.Name),
+			BottommostCompressionType: ctx.String(utils.RocksDBBottommostCompressionTypeFlag.Name),
+			FilterPolicy:              ctx.String(utils.RocksDBFilterPolicyFlag.Name),
+			MaxOpenFiles:              ctx.Int(utils.RocksDBMaxOpenFilesFlag.Name),
+			CacheIndexAndFilter:       ctx.Bool(utils.RocksDBCacheIndexAndFilterFlag.Name),
 		}
 	}
 
@@ -154,12 +180,12 @@ func initGenesis(ctx *cli.Context) error {
 		dbc := &database.DBConfig{
 			Dir: name, DBType: dbtype, ParallelDBWrite: parallelDBWrite,
 			SingleDB: singleDB, NumStateTrieShards: numStateTrieShards,
-			LevelDBCacheSize: 0, OpenFilesLimit: 0, DynamoDBConfig: dynamoDBConfig,
+			LevelDBCacheSize: 0, OpenFilesLimit: 0, DynamoDBConfig: dynamoDBConfig, RocksDBConfig: rocksDBConfig,
 		}
 		chainDB := stack.OpenDatabase(dbc)
 
 		// Initialize DeriveSha implementation
-		blockchain.InitDeriveSha(genesis.Config.DeriveShaImpl)
+		blockchain.InitDeriveSha(genesis.Config)
 
 		_, hash, err := blockchain.SetupGenesisBlock(chainDB, genesis, params.UnusedNetworkId, false, overwriteGenesis)
 		if err != nil {
@@ -173,6 +199,12 @@ func initGenesis(ctx *cli.Context) error {
 			logger.Crit("Failed to write governance items", "err", err)
 		}
 
+		// Write the live pruning flag to database
+		if livePruning {
+			logger.Info("Writing live pruning flag to database")
+			chainDB.WritePruningEnabled()
+		}
+
 		logger.Info("Successfully wrote genesis state", "database", name, "hash", hash.String())
 		chainDB.Close()
 	}
@@ -180,7 +212,7 @@ func initGenesis(ctx *cli.Context) error {
 }
 
 func dumpGenesis(ctx *cli.Context) error {
-	genesis := utils.MakeGenesis(ctx)
+	genesis := MakeGenesis(ctx)
 	if genesis == nil {
 		genesis = blockchain.DefaultGenesisBlock()
 	}
@@ -188,6 +220,17 @@ func dumpGenesis(ctx *cli.Context) error {
 		logger.Crit("could not encode genesis")
 	}
 	return nil
+}
+
+func MakeGenesis(ctx *cli.Context) *blockchain.Genesis {
+	var genesis *blockchain.Genesis
+	switch {
+	case ctx.Bool(utils.CypressFlag.Name):
+		genesis = blockchain.DefaultGenesisBlock()
+	case ctx.Bool(utils.BaobabFlag.Name):
+		genesis = blockchain.DefaultBaobabGenesisBlock()
+	}
+	return genesis
 }
 
 func ValidateGenesisConfig(g *blockchain.Genesis) error {

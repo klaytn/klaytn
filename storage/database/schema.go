@@ -25,6 +25,7 @@ import (
 	"encoding/binary"
 
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/rcrowley/go-metrics"
 )
 
@@ -37,10 +38,12 @@ var (
 	headHeaderKey = []byte("LastHeader")
 
 	// headBlockKey tracks the latest know full block's hash.
-	headBlockKey = []byte("LastBlock")
+	headBlockKey       = []byte("LastBlock")
+	headBlockBackupKey = []byte("LastBlockBackup")
 
 	// headFastBlockKey tracks the latest known incomplete block's hash duirng fast sync.
-	headFastBlockKey = []byte("LastFast")
+	headFastBlockKey       = []byte("LastFast")
+	headFastBlockBackupKey = []byte("LastFastBackup")
 
 	// fastTrieProgressKey tracks the number of trie entries imported during fast sync.
 	fastTrieProgressKey = []byte("TrieSync")
@@ -89,6 +92,11 @@ var (
 
 	preimagePrefix = []byte("secure-key-")  // preimagePrefix + hash -> preimage
 	configPrefix   = []byte("klay-config-") // config prefix for the db
+
+	pruningEnabledKey = []byte("PruningEnabled")
+	pruningMarkPrefix = []byte("Pruning-")                                // KIP-111 pruning markings
+	pruningMarkValue  = []byte{0x01}                                      // A nonempty value to store a pruning mark
+	pruningMarkKeyLen = len(pruningMarkPrefix) + 8 + common.ExtHashLength // prefix + num (uint64) + node hash
 
 	// Chain index prefixes (use `i` + single byte to avoid mixing data types).
 	BloomBitsIndexPrefix = []byte("iB") // BloomBitsIndexPrefix is the data table of a chain indexer to track its progress
@@ -230,7 +238,7 @@ func snapshotKey(hash common.Hash) []byte {
 }
 
 func childChainTxHashKey(ccBlockHash common.Hash) []byte {
-	return append(append(childChainTxHashPrefix, ccBlockHash.Bytes()...))
+	return append(childChainTxHashPrefix, ccBlockHash.Bytes()...)
 }
 
 func receiptFromParentChainKey(blockHash common.Hash) []byte {
@@ -258,4 +266,41 @@ func makeKey(prefix []byte, num uint64) []byte {
 
 func databaseDirKey(dbEntryType uint64) []byte {
 	return append(databaseDirPrefix, common.Int64ToByteBigEndian(dbEntryType)...)
+}
+
+// TrieNodeKey = if Legacy, hash32. Otherwise, exthash
+func TrieNodeKey(hash common.ExtHash) []byte {
+	if hash.IsLegacy() {
+		return hash.Unextend().Bytes()
+	} else {
+		return hash.Bytes()
+	}
+}
+
+type PruningMark struct {
+	Number uint64
+	Hash   common.ExtHash
+}
+
+// TriePruningMarkKey = prefix + number + hash
+// Block number comes first to sort the entries by block numbers.
+// Later we can iterate through the marks and extract any given block number range.
+func pruningMarkKey(mark PruningMark) []byte {
+	bNumber := make([]byte, 8)
+	binary.BigEndian.PutUint64(bNumber, mark.Number)
+	bHash := mark.Hash.Bytes()
+	return append(append(pruningMarkPrefix, bNumber...), bHash...)
+}
+
+func parsePruningMarkKey(key []byte) PruningMark {
+	if len(key) != pruningMarkKeyLen {
+		logger.Crit("Invalid pruningMarkKey", "key", hexutil.Encode(key))
+	}
+	prefixLen := len(pruningMarkPrefix)
+	bNumber := key[prefixLen : prefixLen+8]
+	bHash := key[prefixLen+8:]
+	return PruningMark{
+		Number: binary.BigEndian.Uint64(bNumber),
+		Hash:   common.BytesToExtHash(bHash),
+	}
 }

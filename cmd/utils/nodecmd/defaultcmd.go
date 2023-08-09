@@ -35,13 +35,9 @@ import (
 	metricutils "github.com/klaytn/klaytn/metrics/utils"
 	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/node/cn"
-	"gopkg.in/urfave/cli.v1"
-)
-
-const (
-	clientIdentifier = "klay" // Client identifier to advertise over the network
-	SCNNetworkType   = "scn"  // Service Chain Network
-	MNNetworkType    = "mn"   // Mainnet Network
+	"github.com/klaytn/klaytn/params"
+	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v2/altsrc"
 )
 
 // runKlaytnNode is the main entry point into the system if no special subcommand is ran.
@@ -54,11 +50,40 @@ func RunKlaytnNode(ctx *cli.Context) error {
 	return nil
 }
 
+func MakeFullNode(ctx *cli.Context) *node.Node {
+	stack, cfg := utils.MakeConfigNode(ctx)
+
+	if utils.NetworkTypeFlag.Value == utils.SCNNetworkType && cfg.ServiceChain.EnabledSubBridge {
+		if !cfg.CN.NoAccountCreation {
+			logger.Warn("generated accounts can't be synced with the parent chain since account creation is enabled")
+		}
+		switch cfg.ServiceChain.ServiceChainConsensus {
+		case "istanbul":
+			utils.RegisterCNService(stack, &cfg.CN)
+		case "clique":
+			logger.Crit("using clique consensus type is not allowed anymore!")
+		default:
+			logger.Crit("unknown consensus type for the service chain", "consensus", cfg.ServiceChain.ServiceChainConsensus)
+		}
+	} else {
+		utils.RegisterCNService(stack, &cfg.CN)
+	}
+	utils.RegisterService(stack, &cfg.ServiceChain)
+	utils.RegisterDBSyncerService(stack, &cfg.DB)
+	utils.RegisterChainDataFetcherService(stack, &cfg.ChainDataFetcher)
+	return stack
+}
+
 // startNode boots up the system node and all registered protocols, after which
 // it unlocks any requested accounts, and starts the RPC/IPC interfaces and the
 // miner.
 func startNode(ctx *cli.Context, stack *node.Node) {
 	debug.Memsize.Add("node", stack)
+
+	// Ntp time check
+	if err := node.NtpCheckWithLocal(stack); err != nil {
+		log.Fatalf("System time should be synchronized: %v", err)
+	}
 
 	// Start up the node itself
 	utils.StartNode(stack)
@@ -105,7 +130,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		}
 	}()
 
-	if utils.NetworkTypeFlag.Value == SCNNetworkType && utils.ServiceChainConsensusFlag.Value == "clique" {
+	if utils.NetworkTypeFlag.Value == utils.SCNNetworkType && utils.ServiceChainConsensusFlag.Value == "clique" {
 		logger.Crit("using clique consensus type is not allowed anymore!")
 	} else {
 		startKlaytnAuxiliaryService(ctx, stack)
@@ -115,7 +140,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
 
 	passwords := utils.MakePasswordList(ctx)
-	unlocks := strings.Split(ctx.GlobalString(utils.UnlockedAccountFlag.Name), ",")
+	unlocks := strings.Split(ctx.String(utils.UnlockedAccountFlag.Name), ",")
 	for i, account := range unlocks {
 		if trimmed := strings.TrimSpace(account); trimmed != "" {
 			UnlockAccount(ctx, ks, trimmed, i, passwords)
@@ -162,7 +187,21 @@ func CheckCommands(ctx *cli.Context) error {
 	return nil
 }
 
-func BeforeRunKlaytn(ctx *cli.Context) error {
+func FlagsFromYaml(ctx *cli.Context) error {
+	confFile := "conf" // flag option for yaml file name
+	if ctx.String(confFile) != "" {
+		if err := altsrc.InitInputSourceWithContext(utils.AllNodeFlags(), altsrc.NewYamlSourceFromFlagFunc(confFile))(ctx); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func BeforeRunNode(ctx *cli.Context) error {
+	if err := FlagsFromYaml(ctx); err != nil {
+		return err
+	}
+	MigrateGlobalFlags(ctx)
 	if err := CheckCommands(ctx); err != nil {
 		return err
 	}
@@ -173,14 +212,78 @@ func BeforeRunKlaytn(ctx *cli.Context) error {
 		return err
 	}
 	metricutils.StartMetricCollectionAndExport(ctx)
-	utils.SetupNetwork(ctx)
+	setupNetwork(ctx)
 	return nil
 }
 
+// setupNetwork configures the system for either the main net or some test network.
+func setupNetwork(ctx *cli.Context) {
+	params.TargetGasLimit = ctx.Uint64(utils.TargetGasLimitFlag.Name)
+}
+
 func BeforeRunBootnode(ctx *cli.Context) error {
+	if err := FlagsFromYaml(ctx); err != nil {
+		return err
+	}
+	MigrateGlobalFlags(ctx)
 	if err := debug.Setup(ctx); err != nil {
 		return err
 	}
 	metricutils.StartMetricCollectionAndExport(ctx)
 	return nil
+}
+
+var migrationApplied = map[*cli.Command]struct{}{}
+
+// migrateGlobalFlags makes all global flag values available in the
+// context. This should be called as early as possible in app.Before.
+//
+// Example:
+//
+//    ken account new --keystore /tmp/mykeystore --lightkdf
+//
+// is equivalent after calling this method with:
+//
+//    ken --keystore /tmp/mykeystore --lightkdf account new
+//
+// i.e. in the subcommand Action function of 'account new', ctx.Bool("lightkdf)
+// will return true even if --lightkdf is set as a global option.
+//
+// This function may become unnecessary when https://github.com/urfave/cli/pull/1245 is merged.
+func MigrateGlobalFlags(ctx *cli.Context) {
+	var iterate func(cs []*cli.Command, fn func(*cli.Command))
+	iterate = func(cs []*cli.Command, fn func(*cli.Command)) {
+		for _, cmd := range cs {
+			if _, ok := migrationApplied[cmd]; ok {
+				continue
+			}
+			migrationApplied[cmd] = struct{}{}
+			fn(cmd)
+			iterate(cmd.Subcommands, fn)
+		}
+	}
+
+	// This iterates over all commands and wraps their action function.
+	iterate(ctx.App.Commands, func(cmd *cli.Command) {
+		if cmd.Action == nil {
+			return
+		}
+
+		action := cmd.Action
+		cmd.Action = func(ctx *cli.Context) error {
+			doMigrateFlags(ctx)
+			return action(ctx)
+		}
+	})
+}
+
+func doMigrateFlags(ctx *cli.Context) {
+	for _, name := range ctx.FlagNames() {
+		for _, parent := range ctx.Lineage()[1:] {
+			if parent.IsSet(name) {
+				ctx.Set(name, parent.String(name))
+				break
+			}
+		}
+	}
 }

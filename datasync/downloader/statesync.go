@@ -414,6 +414,7 @@ func (s *stateSync) commit(force bool) error {
 	}
 	start := time.Now()
 	stateTrieBatch := s.d.stateDB.NewBatch(database.StateTrieDB)
+	defer stateTrieBatch.Release()
 	if written, err := s.sched.Commit(stateTrieBatch); written == 0 || err != nil {
 		return err
 	}

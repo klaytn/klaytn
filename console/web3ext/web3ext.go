@@ -255,17 +255,17 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'resolve',
 			call: 'bootnode_resolve',
-			params: 1
+			params: 2
 		}),
 		new web3._extend.Method({
 			name: 'lookup',
 			call: 'bootnode_lookup',
-			params: 1
+			params: 2
 		}),
 		new web3._extend.Method({
 			name: 'readRandomNodes',
 			call: 'bootnode_readRandomNodes',
-			params: 0
+			params: 1
 		}),
         new web3._extend.Method({
 			name: 'getAuthorizedNodes',
@@ -297,8 +297,8 @@ web3._extend({
 			params: 2
 		}),
 		new web3._extend.Method({
-			name: 'itemsAt',
-			call: 'governance_itemsAt',
+			name: 'getParams',
+			call: 'governance_getParams',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
@@ -313,6 +313,18 @@ web3._extend({
 			call: 'governance_getStakingInfo',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
+			name: 'getChainConfig',
+			call: 'governance_getChainConfig',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
+			name: 'getRewardsAccumulated',
+			call: 'governance_getRewardsAccumulated',
+			params: 2,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter, web3._extend.formatters.inputBlockNumberFormatter]
 		})
 	],
 	properties: [
@@ -332,10 +344,6 @@ web3._extend({
 			name: 'myVotingPower',
 			getter: 'governance_myVotingPower',
 		}),
-		new web3._extend.Property({
-			name: 'chainConfig',
-			getter: 'governance_chainConfig',
-		}),	
 		new web3._extend.Property({
 			name: 'nodeAddress',
 			getter: 'governance_nodeAddress',
@@ -377,8 +385,8 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'exportChain',
 			call: 'admin_exportChain',
-			params: 1,
-			inputFormatter: [null]
+			params: 3,
+			inputFormatter: [null, web3._extend.formatters.inputBlockNumberFormatter, web3._extend.formatters.inputBlockNumberFormatter],
 		}),
 		new web3._extend.Method({
 			name: 'importChain',
@@ -471,6 +479,15 @@ web3._extend({
 			name: 'getSpamThrottlerCandidateList',
 			call: 'admin_getSpamThrottlerCandidateList',
 		}),
+		new web3._extend.Method({
+			name: 'syncStakingInfo',
+			call: 'admin_syncStakingInfo',
+			params: 3,
+		}),
+		new web3._extend.Method({
+			name: 'syncStakingInfoStatus',
+			call: 'admin_syncStakingInfoStatus',
+		}),
 	],
 	properties: [
 		new web3._extend.Property({
@@ -502,21 +519,6 @@ web3._extend({
 	property: 'debug',
 	methods: [
 		new web3._extend.Method({
-			name: 'printBlock',
-			call: 'debug_printBlock',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'getBlockRlp',
-			call: 'debug_getBlockRlp',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'setHead',
-			call: 'debug_setHead',
-			params: 1
-		}),
-		new web3._extend.Method({
 			name: 'dumpBlock',
 			call: 'debug_dumpBlock',
 			params: 1
@@ -525,6 +527,45 @@ web3._extend({
 			name: 'dumpStateTrie',
 			call: 'debug_dumpStateTrie',
 			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getBlockRlp',
+			call: 'debug_getBlockRlp',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getModifiedAccountsByNumber',
+			call: 'debug_getModifiedAccountsByNumber',
+			params: 2,
+			inputFormatter: [null, null],
+		}),
+		new web3._extend.Method({
+			name: 'getModifiedAccountsByHash',
+			call: 'debug_getModifiedAccountsByHash',
+			params: 2,
+			inputFormatter:[null, null],
+		}),
+		new web3._extend.Method({
+			name: 'getModifiedStorageNodesByNumber',
+			call: 'debug_getModifiedStorageNodesByNumber',
+			params: 4,
+			inputFormatter: [null, null, null, null],
+		}),
+		new web3._extend.Method({
+			name: 'getBadBlocks',
+			call: 'debug_getBadBlocks',
+			params: 0,
+		}),
+		new web3._extend.Method({
+			name: 'printBlock',
+			call: 'debug_printBlock',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'setHead',
+			call: 'debug_setHead',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'startWarmUp',
@@ -543,6 +584,12 @@ web3._extend({
 			name: 'startCollectingTrieStats',
 			call: 'debug_startCollectingTrieStats',
 			params: 1,
+		}),
+		new web3._extend.Method({
+			name: 'getDBProperty',
+			call: 'debug_getDBProperty',
+			params: 2,
+			outputFormatter: console.log
 		}),
 		new web3._extend.Method({
 			name: 'chaindbProperty',
@@ -728,6 +775,12 @@ web3._extend({
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter, null]
 		}),
 		new web3._extend.Method({
+			name: 'traceBlockByNumberRange',
+			call: 'debug_traceBlockByNumberRange',
+			params: 3,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter, web3._extend.formatters.inputBlockNumberFormatter, null]
+		}),
+		new web3._extend.Method({
 			name: 'traceBlockByHash',
 			call: 'debug_traceBlockByHash',
 			params: 2,
@@ -746,32 +799,9 @@ web3._extend({
 			inputFormatter: [null]
 		}),
 		new web3._extend.Method({
-			name: 'getBadBlocks',
-			call: 'debug_getBadBlocks',
-			params: 0,
-		}),
-		new web3._extend.Method({
 			name: 'storageRangeAt',
 			call: 'debug_storageRangeAt',
 			params: 5,
-		}),
-		new web3._extend.Method({
-			name: 'getModifiedAccountsByNumber',
-			call: 'debug_getModifiedAccountsByNumber',
-			params: 2,
-			inputFormatter: [null, null],
-		}),
-		new web3._extend.Method({
-			name: 'getModifiedAccountsByHash',
-			call: 'debug_getModifiedAccountsByHash',
-			params: 2,
-			inputFormatter:[null, null],
-		}),
-		new web3._extend.Method({
-			name: 'getModifiedStorageNodesByNumber',
-			call: 'debug_getModifiedStorageNodesByNumber',
-			params: 4,
-			inputFormatter: [null, null, null, null],
 		}),
 		new web3._extend.Method({
 			name: 'setVMLogTarget',
@@ -862,11 +892,28 @@ web3._extend({
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
-			name: 'gasPriceAt',
-			call: 'klay_gasPriceAt',
+			name: 'getRewards',
+			call: 'klay_getRewards',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
-			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
+		}),
+		new web3._extend.Method({
+			name: 'getStakingInfo',
+			call: 'klay_getStakingInfo',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
+			name: 'getParams',
+			call: 'klay_getParams',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
+			name: 'getChainConfig',
+			call: 'klay_getChainConfig',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
 		}),
 		new web3._extend.Method({
 			name: 'accountCreated',
@@ -959,6 +1006,16 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
+			name: 'recoverFromTransaction',
+			call: 'klay_recoverFromTransaction',
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'recoverFromMessage',
+			call: 'klay_recoverFromMessage',
+			params: 4
+		}),
+		new web3._extend.Method({
 			name: 'getCypressCredit',
 			call: 'klay_getCypressCredit',
 		}),
@@ -967,6 +1024,12 @@ web3._extend({
 			call: 'klay_sha3',
 			params: 1,
 			inputFormatter: [web3._extend.utils.toHex],
+		}),
+		new web3._extend.Method({
+			name: 'forkStatus',
+			call: 'klay_forkStatus',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'encodeAccountKey',
@@ -1004,6 +1067,10 @@ web3._extend({
 				return formatted;
 			}
 		}),
+		new web3._extend.Property({
+			name: 'nodeAddress',
+			getter: 'klay_nodeAddress',
+		}),
         new web3._extend.Property({
             name : 'rewardbase',
             getter: 'klay_rewardbase'
@@ -1027,7 +1094,7 @@ web3._extend({
 			name: 'maxPriorityFeePerGas',
 			getter: 'klay_maxPriorityFeePerGas',
 			outputFormatter: web3._extend.utils.toBigNumber
-		}),
+		})
 	]
 });
 `

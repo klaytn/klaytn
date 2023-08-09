@@ -24,14 +24,14 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 // NewApp creates an app with sane defaults.
 func NewCLI() *cli.App {
 	app := cli.NewApp()
 	app.Name = filepath.Base(os.Args[0])
-	app.Author = ""
-	app.Email = ""
+	// app.Author = ""
+	// app.Email = ""
 	return app
 }

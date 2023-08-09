@@ -69,6 +69,15 @@ func (a *AccountKeyRoleBased) IsCompositeType() bool {
 	return true
 }
 
+func (a *AccountKeyRoleBased) ValidateMember(recoveredKey *ecdsa.PublicKey, from common.Address) bool {
+	for _, rk := range *a {
+		if rk.ValidateMember(recoveredKey, from) {
+			return true
+		}
+	}
+	return false
+}
+
 func (a *AccountKeyRoleBased) DeepCopy() AccountKey {
 	n := make(AccountKeyRoleBased, len(*a))
 

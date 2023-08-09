@@ -502,7 +502,13 @@ func (s *PublicTransactionPoolAPI) PendingTransactions() ([]map[string]interface
 // Resend accepts an existing transaction and a new gas price and limit. It will remove
 // the given transaction from the pool and reinsert it with the new gas price and limit.
 func (s *PublicTransactionPoolAPI) Resend(ctx context.Context, sendArgs SendTxArgs, gasPrice *hexutil.Big, gasLimit *hexutil.Uint64) (common.Hash, error) {
-	if sendArgs.AccountNonce == nil {
+	return resend(s, ctx, &sendArgs, gasPrice, gasLimit)
+}
+
+// Resend accepts an existing transaction and a new gas price and limit. It will remove
+// the given transaction from the pool and reinsert it with the new gas price and limit.
+func resend(s *PublicTransactionPoolAPI, ctx context.Context, sendArgs NewTxArgs, gasPrice *hexutil.Big, gasLimit *hexutil.Uint64) (common.Hash, error) {
+	if sendArgs.nonce() == nil {
 		return common.Hash{}, fmt.Errorf("missing transaction nonce in transaction spec")
 	}
 	if err := sendArgs.setDefaults(ctx, s.b); err != nil {
@@ -521,19 +527,19 @@ func (s *PublicTransactionPoolAPI) Resend(ctx context.Context, sendArgs SendTxAr
 		signer := types.LatestSignerForChainID(p.ChainId())
 		wantSigHash := signer.Hash(matchTx)
 
-		if pFrom, err := types.Sender(signer, p); err == nil && pFrom == sendArgs.From && signer.Hash(p) == wantSigHash {
+		if pFrom, err := types.Sender(signer, p); err == nil && pFrom == sendArgs.from() && signer.Hash(p) == wantSigHash {
 			// Match. Re-sign and send the transaction.
 			if gasPrice != nil && (*big.Int)(gasPrice).Sign() != 0 {
-				sendArgs.Price = gasPrice
+				sendArgs.setGasPrice(gasPrice)
 			}
 			if gasLimit != nil && *gasLimit != 0 {
-				sendArgs.GasLimit = gasLimit
+				sendArgs.setGas(gasLimit)
 			}
 			tx, err := sendArgs.toTransaction()
 			if err != nil {
 				return common.Hash{}, err
 			}
-			signedTx, err := s.sign(sendArgs.From, tx)
+			signedTx, err := s.sign(sendArgs.from(), tx)
 			if err != nil {
 				return common.Hash{}, err
 			}
@@ -545,4 +551,53 @@ func (s *PublicTransactionPoolAPI) Resend(ctx context.Context, sendArgs SendTxAr
 	}
 
 	return common.Hash{}, fmt.Errorf("Transaction %#x not found", matchTx.Hash())
+}
+
+// RecoverFromTransaction recovers the sender address from a signed raw transaction.
+// The signature is validated against the sender account's key configuration at the given block number.
+func (s *PublicTransactionPoolAPI) RecoverFromTransaction(ctx context.Context, encodedTx hexutil.Bytes, blockNumber rpc.BlockNumber) (common.Address, error) {
+	tx := new(types.Transaction)
+	if err := rlp.DecodeBytes(encodedTx, tx); err != nil {
+		return common.Address{}, err
+	}
+
+	var bn uint64
+	if blockNumber == rpc.LatestBlockNumber || blockNumber == rpc.PendingBlockNumber {
+		bn = s.b.CurrentBlock().NumberU64()
+	} else {
+		bn = blockNumber.Uint64()
+	}
+
+	signer := types.MakeSigner(s.b.ChainConfig(), new(big.Int).SetUint64(bn))
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNumber)
+	if err != nil {
+		return common.Address{}, err
+	}
+	_, err = tx.ValidateSender(signer, state, bn)
+	if err != nil {
+		return common.Address{}, err
+	}
+	return signer.Sender(tx)
+}
+
+// RecoverFromMessage validates that the message is signed by one of the keys in the given account.
+// Returns the recovered signer address, which may be different from the account address.
+func (s *PublicTransactionPoolAPI) RecoverFromMessage(
+	ctx context.Context, address common.Address, data, sig hexutil.Bytes, blockNumber rpc.BlockNumber,
+) (common.Address, error) {
+	pubkey, err := klayEthEcRecover(data, sig)
+	if err != nil {
+		return common.Address{}, err
+	}
+
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNumber)
+	if err != nil {
+		return common.Address{}, err
+	}
+
+	key := state.GetKey(address)
+	if key.ValidateMember(pubkey, address) {
+		return crypto.PubkeyToAddress(*pubkey), nil
+	}
+	return common.Address{}, fmt.Errorf("Invalid signature")
 }

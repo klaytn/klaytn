@@ -23,9 +23,8 @@ package nodecmd
 import (
 	"fmt"
 
-	"github.com/klaytn/klaytn/cmd/utils"
 	"github.com/klaytn/klaytn/params"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 var (
@@ -36,8 +35,8 @@ var (
 	gitTag = ""
 )
 
-var VersionCommand = cli.Command{
-	Action:    utils.MigrateFlags(version),
+var VersionCommand = &cli.Command{
+	Action:    version,
 	Name:      "version",
 	Usage:     "Show version number",
 	ArgsUsage: " ",

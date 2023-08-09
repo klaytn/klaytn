@@ -34,7 +34,7 @@ import (
 	"github.com/klaytn/klaytn/console"
 	metricutils "github.com/klaytn/klaytn/metrics/utils"
 	"github.com/klaytn/klaytn/node"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 func tmpdir(t *testing.T) string {
@@ -58,35 +58,17 @@ var (
 	app = utils.NewApp(GetGitCommit(), "the Klaytn command line interface")
 
 	// flags that configure the node
-	nodeFlags = CommonNodeFlags
+	nodeFlags = utils.CommonNodeFlags
 
-	rpcFlags = CommonRPCFlags
+	rpcFlags = utils.CommonRPCFlags
 )
-
-func contains(list []cli.Flag, item cli.Flag) bool {
-	for _, flag := range list {
-		if flag.GetName() == item.GetName() {
-			return true
-		}
-	}
-	return false
-}
-
-func union(list1, list2 []cli.Flag) []cli.Flag {
-	for _, item := range list2 {
-		if !contains(list1, item) {
-			list1 = append(list1, item)
-		}
-	}
-	return list1
-}
 
 func init() {
 	// Initialize the CLI app and start Klay
 	app.Action = RunKlaytnNode
 	app.HideVersion = true // we have a command to print the version
-	app.Copyright = "Copyright 2018-2019 The klaytn Authors"
-	app.Commands = []cli.Command{
+	app.Copyright = "Copyright 2018-2023 The klaytn Authors"
+	app.Commands = []*cli.Command{
 		// See chaincmd.go:
 		InitCommand,
 
@@ -105,18 +87,10 @@ func init() {
 	}
 	sort.Sort(cli.CommandsByName(app.Commands))
 
-	app.Flags = append(app.Flags, nodeFlags...)
-	app.Flags = append(app.Flags, rpcFlags...)
-	app.Flags = append(app.Flags, ConsoleFlags...)
-	app.Flags = append(app.Flags, debug.Flags...)
-	app.Flags = union(app.Flags, KCNFlags)
-	app.Flags = union(app.Flags, KPNFlags)
-	app.Flags = union(app.Flags, KENFlags)
-	app.Flags = union(app.Flags, KSCNFlags)
-	app.Flags = union(app.Flags, KSPNFlags)
-	app.Flags = union(app.Flags, KSENFlags)
+	app.Flags = utils.AllNodeFlags()
 
 	app.Before = func(ctx *cli.Context) error {
+		MigrateGlobalFlags(ctx)
 		runtime.GOMAXPROCS(runtime.NumCPU())
 		logDir := (&node.Config{DataDir: utils.MakeDataDir(ctx)}).ResolvePath("logs")
 		debug.CreateLogDir(logDir)
@@ -124,7 +98,7 @@ func init() {
 			return err
 		}
 		metricutils.StartMetricCollectionAndExport(ctx)
-		utils.SetupNetwork(ctx)
+		setupNetwork(ctx)
 		return nil
 	}
 
@@ -180,7 +154,7 @@ func runKlay(t *testing.T, name string, args ...string) *testklay {
 	if tt.Datadir == "" {
 		tt.Datadir = tmpdir(t)
 		tt.Cleanup = func() { os.RemoveAll(tt.Datadir) }
-		args = append([]string{"-datadir", tt.Datadir}, args...)
+		args = append([]string{"--datadir", tt.Datadir}, args...)
 		// Remove the temporary datadir if something fails below.
 		defer func() {
 			if t.Failed() {
