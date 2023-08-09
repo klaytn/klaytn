@@ -356,7 +356,7 @@ jobs:
       - run:
           name: "Run golangci-lint"
           no_output_timeout: 30m
-          command: golangci-lint run --new-from-rev=dev --presets format,performance -v --timeout 10m
+          command: golangci-lint run --new-from-rev=dev --presets format,performance -v --fix --timeout 10m
 
   test-datasync:
     executor: test-others-executor
