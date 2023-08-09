@@ -515,13 +515,15 @@ func TestClientReconnect(t *testing.T) {
 	// Shut down the server and try calling again. It shouldn't work.
 	l1.Close()
 	s1.Stop()
+
+	// Allow for some cool down time so we can listen on the same address again.
+	time.Sleep(2 * time.Second)
+
+	// Try calling again. It shouldn't work.
 	if err := client.CallContext(ctx, &resp, "service_echo", "", 2, nil); err == nil {
 		t.Error("successful call while the server is down")
 		t.Logf("resp: %#v", resp)
 	}
-
-	// Allow for some cool down time so we can listen on the same address again.
-	time.Sleep(2 * time.Second)
 
 	// Start it up again and call again. The connection should be reestablished.
 	// We spawn multiple calls here to check whether this hangs somehow.
