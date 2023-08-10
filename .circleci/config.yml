@@ -334,7 +334,7 @@ commands:
             python3 main.py --protocol rpc
 jobs:
   build:
-    machine:
+    docker:
       image: klaytn/build_base:1.2-ubuntu18.04-go.1.20.6-solc0.8.13
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
