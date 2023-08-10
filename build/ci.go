@@ -357,6 +357,7 @@ func doFmt(cmdline []string) {
 		"--tests",
 		"--disable-all",
 		"--enable=gofmt",
+		"--fix",
 		"--timeout=2m",
 	}
 	build.MustRunCommand(lintBin, append(configs, packages...)...)
