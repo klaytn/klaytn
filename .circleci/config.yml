@@ -22,11 +22,11 @@ executors:
   test-executor:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
-      - image: klaytn/build_base:1.2-go.1.20.6-solc0.8.13
+      - image: klaytn/build_base:1.2-ubuntu18.04-go.1.20.6-solc0.8.13
   test-others-executor:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
-      - image: klaytn/build_base:1.2-go.1.20.6-solc0.8.13
+      - image: klaytn/build_base:1.2-ubuntu18.04-go.1.20.6-solc0.8.13
       - image: localstack/localstack:0.13.0
       - image: circleci/redis:6.0.8-alpine
       - name: zookeeper
@@ -78,7 +78,7 @@ commands:
       - run:
           name: "Install golangci-lint"
           command: |
-            curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.52.0
+            curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.24.0
   pre-build:
     description: "before build, set version"
     parameters:
@@ -334,11 +334,12 @@ commands:
             python3 main.py --protocol rpc
 jobs:
   build:
-    machine:
-      image: ubuntu-2004:202201-02
+    docker:
+      - image: klaytn/build_base:1.2-ubuntu18.04-go.1.20.6-solc0.8.13
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
+      - install-golangci-lint
       - install-golang
       - pre-build
       - run:
@@ -351,7 +352,6 @@ jobs:
   test-linter:
     executor: test-executor
     steps:
-      - install-golangci-lint
       - checkout
       - run:
           name: "Run golangci-lint"
@@ -483,8 +483,8 @@ jobs:
       - notify-success
 
   packaging-linux:
-    machine:
-      image: ubuntu-2004:202201-02
+    docker:
+      - image: klaytn/build_base:1.2-ubuntu18.04-go.1.20.6-solc0.8.13
     resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
@@ -495,8 +495,8 @@ jobs:
       - upload-repo
 
   packaging-linux-baobab:
-    machine:
-      image: ubuntu-2004:202201-02
+    docker:
+      - image: klaytn/build_base:1.2-ubuntu18.04-go.1.20.6-solc0.8.13
     resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
