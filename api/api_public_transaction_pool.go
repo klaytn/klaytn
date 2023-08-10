@@ -601,6 +601,9 @@ func (s *PublicTransactionPoolAPI) RecoverFromMessage(
 	}
 	key := state.GetKey(address)
 
+	// We cannot identify if the signature has signed with klay or eth prefix without the signer's address.
+	// Even though a user signed message with eth prefix, it will return invalid something in klayEcRecover.
+	// We should call each rcrecover function separately and the actual result will be checked in ValidateMember.
 	var recoverErr error
 	if pubkey, err := klayEcRecover(data, sig); err == nil {
 		if key.ValidateMember(pubkey, address) {
