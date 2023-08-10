@@ -595,26 +595,30 @@ func (s *PublicTransactionPoolAPI) RecoverFromMessage(
 	// Transform yellow paper V from 27/28 to 0/1
 	sig[crypto.RecoveryIDOffset] -= 27
 
-	klayRpk, err := klayEcRecover(data, sig)
-	if err != nil {
-		return common.Address{}, err
-	}
-	ethRpk, err := ethEcRecover(data, sig)
-	if err != nil {
-		return common.Address{}, err
-	}
-
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNumber)
 	if err != nil {
 		return common.Address{}, err
 	}
-
 	key := state.GetKey(address)
-	if key.ValidateMember(klayRpk, address) {
-		return crypto.PubkeyToAddress(*klayRpk), nil
+
+	var recoverErr error
+	if pubkey, err := klayEcRecover(data, sig); err == nil {
+		if key.ValidateMember(pubkey, address) {
+			return crypto.PubkeyToAddress(*pubkey), nil
+		}
+	} else {
+		recoverErr = err
 	}
-	if key.ValidateMember(ethRpk, address) {
-		return crypto.PubkeyToAddress(*ethRpk), nil
+	if pubkey, err := ethEcRecover(data, sig); err == nil {
+		if key.ValidateMember(pubkey, address) {
+			return crypto.PubkeyToAddress(*pubkey), nil
+		}
+	} else {
+		recoverErr = err
 	}
-	return common.Address{}, fmt.Errorf("Invalid signature")
+	if recoverErr != nil {
+		return common.Address{}, recoverErr
+	} else {
+		return common.Address{}, errors.New("Invalid signature")
+	}
 }
