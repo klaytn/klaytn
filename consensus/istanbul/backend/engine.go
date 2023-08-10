@@ -29,7 +29,6 @@ import (
 	"time"
 
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -510,7 +509,7 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 	if chain.Config().IsKIP103ForkBlock(header.Number) {
 		// RebalanceTreasury can modify the global state (state),
 		// so the existing state db should be used to apply the rebalancing result.
-		c := backends.NewBlockchainContractCaller(chain)
+		c := &Kip103ContractCaller{state, chain, header}
 		result, err := RebalanceTreasury(state, chain, header, c)
 		if err != nil {
 			logger.Error("failed to execute treasury rebalancing (KIP-103). State not changed", "err", err)
@@ -548,7 +547,7 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, stop <-
 	if parent == nil {
 		return nil, consensus.ErrUnknownAncestor
 	}
-	block, err = sb.updateBlock(parent, block)
+	block, err = sb.updateBlock(block)
 	if err != nil {
 		return nil, err
 	}
@@ -594,7 +593,7 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, stop <-
 }
 
 // update timestamp and signature of the block based on its number of transactions
-func (sb *backend) updateBlock(parent *types.Header, block *types.Block) (*types.Block, error) {
+func (sb *backend) updateBlock(block *types.Block) (*types.Block, error) {
 	header := block.Header()
 	// sign the hash
 	seal, err := sb.Sign(sigHash(header).Bytes())

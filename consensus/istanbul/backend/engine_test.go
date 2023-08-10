@@ -242,7 +242,7 @@ func makeBlockWithSeal(chain *blockchain.BlockChain, engine *backend, parent *ty
 	blockWithoutSeal := makeBlockWithoutSeal(chain, engine, parent)
 
 	// add proposer seal for the block
-	block, err := engine.updateBlock(nil, blockWithoutSeal)
+	block, err := engine.updateBlock(blockWithoutSeal)
 	if err != nil {
 		panic(err)
 	}
@@ -321,7 +321,7 @@ func TestSealCommitted(t *testing.T) {
 	defer engine.Stop()
 
 	block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
-	expectedBlock, _ := engine.updateBlock(engine.chain.GetHeader(block.ParentHash(), block.NumberU64()-1), block)
+	expectedBlock, _ := engine.updateBlock(block)
 
 	actualBlock, err := engine.Seal(chain, block, make(chan struct{}))
 	if err != nil {
@@ -345,7 +345,7 @@ func TestVerifyHeader(t *testing.T) {
 
 	// errEmptyCommittedSeals case
 	block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
-	block, _ = engine.updateBlock(chain.Genesis().Header(), block)
+	block, _ = engine.updateBlock(block)
 	err := engine.VerifyHeader(chain, block.Header(), false)
 	if err != errEmptyCommittedSeals {
 		t.Errorf("error mismatch: have %v, want %v", err, errEmptyCommittedSeals)
@@ -446,11 +446,11 @@ func TestVerifyHeaders(t *testing.T) {
 		var b *types.Block
 		if i == 0 {
 			b = makeBlockWithoutSeal(chain, engine, genesis)
-			b, _ = engine.updateBlock(genesis.Header(), b)
+			b, _ = engine.updateBlock(b)
 			engine.db.WriteHeader(b.Header())
 		} else {
 			b = makeBlockWithoutSeal(chain, engine, blocks[i-1])
-			b, _ = engine.updateBlock(blocks[i-1].Header(), b)
+			b, _ = engine.updateBlock(b)
 			engine.db.WriteHeader(b.Header())
 		}
 		blocks = append(blocks, b)
