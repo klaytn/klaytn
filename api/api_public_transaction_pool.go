@@ -585,19 +585,43 @@ func (s *PublicTransactionPoolAPI) RecoverFromTransaction(ctx context.Context, e
 func (s *PublicTransactionPoolAPI) RecoverFromMessage(
 	ctx context.Context, address common.Address, data, sig hexutil.Bytes, blockNumber rpc.BlockNumber,
 ) (common.Address, error) {
-	pubkey, err := klayEthEcRecover(data, sig)
-	if err != nil {
-		return common.Address{}, err
+	if len(sig) != crypto.SignatureLength {
+		return common.Address{}, fmt.Errorf("signature must be 65 bytes long")
 	}
+	if sig[crypto.RecoveryIDOffset] != 27 && sig[crypto.RecoveryIDOffset] != 28 {
+		return common.Address{}, fmt.Errorf("invalid Klaytn signature (V is not 27 or 28)")
+	}
+
+	// Transform yellow paper V from 27/28 to 0/1
+	sig[crypto.RecoveryIDOffset] -= 27
 
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNumber)
 	if err != nil {
 		return common.Address{}, err
 	}
-
 	key := state.GetKey(address)
-	if key.ValidateMember(pubkey, address) {
-		return crypto.PubkeyToAddress(*pubkey), nil
+
+	// We cannot identify if the signature has signed with klay or eth prefix without the signer's address.
+	// Even though a user signed message with eth prefix, it will return invalid something in klayEcRecover.
+	// We should call each rcrecover function separately and the actual result will be checked in ValidateMember.
+	var recoverErr error
+	if pubkey, err := klayEcRecover(data, sig); err == nil {
+		if key.ValidateMember(pubkey, address) {
+			return crypto.PubkeyToAddress(*pubkey), nil
+		}
+	} else {
+		recoverErr = err
 	}
-	return common.Address{}, fmt.Errorf("Invalid signature")
+	if pubkey, err := ethEcRecover(data, sig); err == nil {
+		if key.ValidateMember(pubkey, address) {
+			return crypto.PubkeyToAddress(*pubkey), nil
+		}
+	} else {
+		recoverErr = err
+	}
+	if recoverErr != nil {
+		return common.Address{}, recoverErr
+	} else {
+		return common.Address{}, errors.New("Invalid signature")
+	}
 }
