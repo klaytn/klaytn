@@ -503,19 +503,11 @@ func (s *PrivateAccountAPI) EcRecover(ctx context.Context, data, sig hexutil.Byt
 }
 
 func klayEcRecover(data, sig hexutil.Bytes) (*ecdsa.PublicKey, error) {
-	rpk, err := crypto.SigToPub(signHash(data), sig)
-	if err == nil {
-		return rpk, nil
-	}
-	return nil, err // klayErr has more priority
+	return crypto.SigToPub(signHash(data), sig)
 }
 
 func ethEcRecover(data, sig hexutil.Bytes) (*ecdsa.PublicKey, error) {
-	rpk, err := crypto.SigToPub(ethSignHash(data), sig)
-	if err == nil {
-		return rpk, nil
-	}
-	return nil, err
+	return crypto.SigToPub(ethSignHash(data), sig)
 }
 
 // SignAndSendTransaction was renamed to SendTransaction. This method is deprecated
