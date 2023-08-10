@@ -335,7 +335,7 @@ commands:
 jobs:
   build:
     machine:
-      image: ubuntu-2004:202201-02
+      image: klaytn/build_base:1.2-ubuntu18.04-go.1.20.6-solc0.8.13
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
