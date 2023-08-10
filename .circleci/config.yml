@@ -78,7 +78,7 @@ commands:
       - run:
           name: "Install golangci-lint"
           command: |
-            curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.52.0
+            curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.24.0
   pre-build:
     description: "before build, set version"
     parameters:
@@ -335,10 +335,11 @@ commands:
 jobs:
   build:
     docker:
-      image: klaytn/build_base:1.2-ubuntu18.04-go.1.20.6-solc0.8.13
+      - image: klaytn/build_base:1.2-ubuntu18.04-go.1.20.6-solc0.8.13
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
+      - install-golangci-lint
       - install-golang
       - pre-build
       - run:
@@ -351,12 +352,11 @@ jobs:
   test-linter:
     executor: test-executor
     steps:
-      - install-golangci-lint
       - checkout
       - run:
           name: "Run golangci-lint"
           no_output_timeout: 30m
-          command: golangci-lint run --new-from-rev=dev --presets format,performance -v --fix --timeout 10m
+          command: golangci-lint run --new-from-rev=dev --presets format,performance -v --timeout 10m
 
   test-datasync:
     executor: test-others-executor
