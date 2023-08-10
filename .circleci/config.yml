@@ -329,8 +329,12 @@ commands:
             cd script
             ./set_CNonly.sh
             cd ..
-            pip3 install -r requirements.txt
             cp config_template.json config.json
+            apt install python3.8 python3-venv -y
+            python3.8 -m venv --without-pip venv
+            source venv/bin/activate
+            curl https://bootstrap.pypa.io/get-pip.py | python
+            pip3 install -r requirements.txt
             python3 main.py --protocol rpc
 jobs:
   build:
