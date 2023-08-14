@@ -359,11 +359,7 @@ commands:
             python3 main.py --protocol rpc
 jobs:
   build:
-    docker:
-      - image: klaytn/build_base:1.2-ubuntu18.04-go.1.20.6-solc0.8.13
-        auth:
-          username: $DOCKER_LOGIN
-          password: $DOCKER_PASSWORD
+    executor: test-executor
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
