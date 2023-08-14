@@ -255,17 +255,17 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'resolve',
 			call: 'bootnode_resolve',
-			params: 1
+			params: 2
 		}),
 		new web3._extend.Method({
 			name: 'lookup',
 			call: 'bootnode_lookup',
-			params: 1
+			params: 2
 		}),
 		new web3._extend.Method({
 			name: 'readRandomNodes',
 			call: 'bootnode_readRandomNodes',
-			params: 0
+			params: 1
 		}),
         new web3._extend.Method({
 			name: 'getAuthorizedNodes',
@@ -297,12 +297,6 @@ web3._extend({
 			params: 2
 		}),
 		new web3._extend.Method({
-			name: 'itemsAt',
-			call: 'governance_itemsAt',
-			params: 1,
-			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
-		}),
-		new web3._extend.Method({
 			name: 'getParams',
 			call: 'governance_getParams',
 			params: 1,
@@ -321,16 +315,16 @@ web3._extend({
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
-			name: 'chainConfigAt',
-			call: 'governance_chainConfigAt',
-			params: 1,
-			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
-		}),
-		new web3._extend.Method({
 			name: 'getChainConfig',
 			call: 'governance_getChainConfig',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
+			name: 'getRewardsAccumulated',
+			call: 'governance_getRewardsAccumulated',
+			params: 2,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter, web3._extend.formatters.inputBlockNumberFormatter]
 		})
 	],
 	properties: [
@@ -391,8 +385,8 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'exportChain',
 			call: 'admin_exportChain',
-			params: 1,
-			inputFormatter: [null]
+			params: 3,
+			inputFormatter: [null, web3._extend.formatters.inputBlockNumberFormatter, web3._extend.formatters.inputBlockNumberFormatter],
 		}),
 		new web3._extend.Method({
 			name: 'importChain',
@@ -590,6 +584,12 @@ web3._extend({
 			name: 'startCollectingTrieStats',
 			call: 'debug_startCollectingTrieStats',
 			params: 1,
+		}),
+		new web3._extend.Method({
+			name: 'getDBProperty',
+			call: 'debug_getDBProperty',
+			params: 2,
+			outputFormatter: console.log
 		}),
 		new web3._extend.Method({
 			name: 'chaindbProperty',
@@ -892,13 +892,6 @@ web3._extend({
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
-			name: 'gasPriceAt',
-			call: 'klay_gasPriceAt',
-			params: 1,
-			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
-			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
-		}),
-		new web3._extend.Method({
 			name: 'getRewards',
 			call: 'klay_getRewards',
 			params: 1,
@@ -911,22 +904,10 @@ web3._extend({
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
-			name: 'govParamsAt',
-			call: 'klay_govParamsAt',
-			params: 1,
-			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
-		}),
-		new web3._extend.Method({
 			name: 'getParams',
 			call: 'klay_getParams',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
-		}),
-		new web3._extend.Method({
-			name: 'chainConfigAt',
-			call: 'klay_chainConfigAt',
-			params: 1,
-			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
 		}),
 		new web3._extend.Method({
 			name: 'getChainConfig',
@@ -1025,6 +1006,16 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
+			name: 'recoverFromTransaction',
+			call: 'klay_recoverFromTransaction',
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'recoverFromMessage',
+			call: 'klay_recoverFromMessage',
+			params: 4
+		}),
+		new web3._extend.Method({
 			name: 'getCypressCredit',
 			call: 'klay_getCypressCredit',
 		}),
@@ -1033,6 +1024,12 @@ web3._extend({
 			call: 'klay_sha3',
 			params: 1,
 			inputFormatter: [web3._extend.utils.toHex],
+		}),
+		new web3._extend.Method({
+			name: 'forkStatus',
+			call: 'klay_forkStatus',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'encodeAccountKey',
@@ -1097,7 +1094,7 @@ web3._extend({
 			name: 'maxPriorityFeePerGas',
 			getter: 'klay_maxPriorityFeePerGas',
 			outputFormatter: web3._extend.utils.toBigNumber
-		}),
+		})
 	]
 });
 `

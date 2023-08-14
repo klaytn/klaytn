@@ -42,34 +42,6 @@ var (
 	blockChainStopWarmUpErr = errors.New("warm-up terminate as blockchain stopped")
 )
 
-type stateTrieMigrationDB struct {
-	database.DBManager
-}
-
-func (td *stateTrieMigrationDB) ReadCachedTrieNode(hash common.Hash) ([]byte, error) {
-	return td.ReadCachedTrieNodeFromNew(hash)
-}
-
-func (td *stateTrieMigrationDB) ReadCachedTrieNodePreimage(secureKey []byte) ([]byte, error) {
-	return td.ReadCachedTrieNodePreimageFromNew(secureKey)
-}
-
-func (td *stateTrieMigrationDB) ReadStateTrieNode(key []byte) ([]byte, error) {
-	return td.ReadStateTrieNodeFromNew(key)
-}
-
-func (td *stateTrieMigrationDB) HasStateTrieNode(key []byte) (bool, error) {
-	return td.HasStateTrieNodeFromNew(key)
-}
-
-func (td *stateTrieMigrationDB) HasCodeWithPrefix(hash common.Hash) bool {
-	return td.HasCodeWithPrefixFromNew(hash)
-}
-
-func (td *stateTrieMigrationDB) ReadPreimage(hash common.Hash) []byte {
-	return td.ReadPreimageFromNew(hash)
-}
-
 func (bc *BlockChain) stateMigrationCommit(s *statedb.TrieSync, batch database.Batch) (int, error) {
 	written, err := s.Commit(batch)
 	if written == 0 || err != nil {
@@ -92,7 +64,7 @@ func (bc *BlockChain) concurrentRead(db state.Database, quitCh chan struct{}, ha
 		case <-quitCh:
 			return
 		case hash := <-hashCh:
-			data, err := db.TrieDB().NodeFromOld(hash)
+			data, err := db.TrieDB().NodeFromOld(hash.ExtendLegacy())
 			if err != nil {
 				data, err = db.ContractCode(hash)
 			}
@@ -127,7 +99,7 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) (returnErr error) {
 	start := time.Now()
 
 	srcState := bc.StateCache()
-	dstState := state.NewDatabase(&stateTrieMigrationDB{bc.db})
+	dstState := state.NewDatabase(bc.db)
 
 	// NOTE: lruCache is mandatory when state migration and block processing are executed simultaneously
 	lruCache, _ := lru.New(int(2 * units.Giga / common.HashLength)) // 2GB for 62,500,000 common.Hash key values
@@ -147,6 +119,7 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) (returnErr error) {
 	}
 
 	stateTrieBatch := dstState.TrieDB().DiskDB().NewBatch(database.StateTrieDB)
+	defer stateTrieBatch.Release()
 	stats := migrationStats{initialStartTime: start, startTime: mclock.Now()}
 
 	if bc.testMigrationHook != nil {
@@ -283,12 +256,12 @@ func (st *migrationStats) stateMigrationReport(force bool, pending int, progress
 }
 
 func (bc *BlockChain) checkTrieContents(oldDB, newDB *statedb.Database, root common.Hash) ([]common.Address, error) {
-	oldTrie, err := statedb.NewSecureTrie(root, oldDB)
+	oldTrie, err := statedb.NewSecureTrie(root, oldDB, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	newTrie, err := statedb.NewSecureTrie(root, newDB)
+	newTrie, err := statedb.NewSecureTrie(root, newDB, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -334,6 +307,10 @@ func (bc *BlockChain) restartStateMigration() {
 
 // PrepareStateMigration sets prepareStateMigration to be called in checkStartStateMigration.
 func (bc *BlockChain) PrepareStateMigration() error {
+	if bc.db.ReadPruningEnabled() {
+		return errors.New("state migration not supported with live pruning enabled")
+	}
+
 	if bc.db.InMigration() || bc.prepareStateMigration {
 		return errors.New("migration already started")
 	}
@@ -413,10 +390,10 @@ func (bc *BlockChain) StateMigrationStatus() (bool, uint64, int, int, int, float
 // iterateStateTrie runs state.Iterator, generated from the given state trie node hash,
 // until it reaches end. If it reaches end, it will send a nil error to errCh to indicate that
 // it has been finished.
-func (bc *BlockChain) iterateStateTrie(root common.Hash, db state.Database, resultCh chan struct{}, errCh chan error) (resultErr error) {
+func (bc *BlockChain) iterateStateTrie(root common.ExtHash, db state.Database, resultCh chan struct{}, errCh chan error) (resultErr error) {
 	defer func() { errCh <- resultErr }()
 
-	stateDB, err := state.New(root, db, nil)
+	stateDB, err := state.New(root.Unextend(), db, nil, nil)
 	if err != nil {
 		return err
 	}
@@ -512,7 +489,7 @@ func (bc *BlockChain) StartWarmUp() error {
 		return err
 	}
 	// retrieve children nodes of state trie root node
-	children, err := db.TrieDB().NodeChildren(block.Root())
+	children, err := db.TrieDB().NodeChildren(block.Root().ExtendLegacy())
 	if err != nil {
 		return err
 	}
@@ -555,7 +532,7 @@ func (bc *BlockChain) StartCollectingTrieStats(contractAddr common.Address) erro
 	}
 	db := state.NewDatabaseWithExistingCache(bc.db, cache)
 
-	startNode := block.Root()
+	startNode := block.Root().ExtendLegacy()
 	// If the contractAddr is given, start collecting stats from the root of storage trie
 	if !common.EmptyAddress(contractAddr) {
 		var err error
@@ -582,14 +559,14 @@ func (bc *BlockChain) StartCollectingTrieStats(contractAddr common.Address) erro
 }
 
 // collectChildrenStats wraps CollectChildrenStats, in order to send finish signal to resultCh.
-func collectChildrenStats(db state.Database, child common.Hash, resultCh chan<- statedb.NodeInfo) {
+func collectChildrenStats(db state.Database, child common.ExtHash, resultCh chan<- statedb.NodeInfo) {
 	db.TrieDB().CollectChildrenStats(child, 2, resultCh)
 	resultCh <- statedb.NodeInfo{Finished: true}
 }
 
 // collectTrieStats is the main function of collecting trie statistics.
 // It spawns goroutines for the upper-most children and iterates each sub-trie.
-func collectTrieStats(db state.Database, startNode common.Hash) {
+func collectTrieStats(db state.Database, startNode common.ExtHash) {
 	children, err := db.TrieDB().NodeChildren(startNode)
 	if err != nil {
 		logger.Error("Failed to retrieve the children of start node", "err", err)
@@ -651,10 +628,10 @@ func printDepthStats(depthCounter map[int]int) {
 }
 
 // GetContractStorageRoot returns the storage root of a contract based on the given block.
-func (bc *BlockChain) GetContractStorageRoot(block *types.Block, db state.Database, contractAddr common.Address) (common.Hash, error) {
-	stateDB, err := state.New(block.Root(), db, nil)
+func (bc *BlockChain) GetContractStorageRoot(block *types.Block, db state.Database, contractAddr common.Address) (common.ExtHash, error) {
+	stateDB, err := state.New(block.Root(), db, nil, nil)
 	if err != nil {
-		return common.Hash{}, fmt.Errorf("failed to get StateDB - %w", err)
+		return common.ExtHash{}, fmt.Errorf("failed to get StateDB - %w", err)
 	}
 	return stateDB.GetContractStorageRoot(contractAddr)
 }
@@ -683,7 +660,7 @@ func (bc *BlockChain) prepareWarmUp() (*types.Block, state.Database, *statedb.Da
 // iterateStorageTrie runs statedb.Iterator, generated from the given storage trie node hash,
 // until it reaches end. If it reaches end, it will send a nil error to errCh to indicate that
 // it has been finished.
-func (bc *BlockChain) iterateStorageTrie(child common.Hash, storageTrie state.Trie, resultCh chan struct{}, errCh chan error) (resultErr error) {
+func (bc *BlockChain) iterateStorageTrie(child common.ExtHash, storageTrie state.Trie, resultCh chan struct{}, errCh chan error) (resultErr error) {
 	defer func() { errCh <- resultErr }()
 
 	itr := statedb.NewIterator(storageTrie.NodeIterator(child[:]))
@@ -700,18 +677,18 @@ func (bc *BlockChain) iterateStorageTrie(child common.Hash, storageTrie state.Tr
 	return nil
 }
 
-func prepareContractWarmUp(block *types.Block, db state.Database, contractAddr common.Address) (common.Hash, state.Trie, error) {
-	stateDB, err := state.New(block.Root(), db, nil)
+func prepareContractWarmUp(block *types.Block, db state.Database, contractAddr common.Address) (common.ExtHash, state.Trie, error) {
+	stateDB, err := state.New(block.Root(), db, nil, nil)
 	if err != nil {
-		return common.Hash{}, nil, fmt.Errorf("failed to get StateDB, err: %w", err)
+		return common.ExtHash{}, nil, fmt.Errorf("failed to get StateDB, err: %w", err)
 	}
 	storageTrieRoot, err := stateDB.GetContractStorageRoot(contractAddr)
 	if err != nil {
-		return common.Hash{}, nil, err
+		return common.ExtHash{}, nil, err
 	}
-	storageTrie, err := db.OpenStorageTrie(storageTrieRoot)
+	storageTrie, err := db.OpenStorageTrie(storageTrieRoot, nil)
 	if err != nil {
-		return common.Hash{}, nil, err
+		return common.ExtHash{}, nil, err
 	}
 	return storageTrieRoot, storageTrie, nil
 }

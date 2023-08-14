@@ -26,8 +26,10 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
+	"github.com/klaytn/klaytn/crypto/sha3"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 var CalcDeferredRewardTimer time.Duration
@@ -95,6 +97,20 @@ func NewRewardSpec() *RewardSpec {
 		KFF:      big.NewInt(0),
 		KCF:      big.NewInt(0),
 		Rewards:  make(map[common.Address]*big.Int),
+	}
+}
+
+func (spec *RewardSpec) Add(delta *RewardSpec) {
+	spec.Minted.Add(spec.Minted, delta.Minted)
+	spec.TotalFee.Add(spec.TotalFee, delta.TotalFee)
+	spec.BurntFee.Add(spec.BurntFee, delta.BurntFee)
+	spec.Proposer.Add(spec.Proposer, delta.Proposer)
+	spec.Stakers.Add(spec.Stakers, delta.Stakers)
+	spec.KFF.Add(spec.KFF, delta.KFF)
+	spec.KCF.Add(spec.KCF, delta.KCF)
+
+	for addr, amount := range delta.Rewards {
+		incrementRewardsMap(spec.Rewards, addr, amount)
 	}
 }
 
@@ -197,10 +213,27 @@ func GetBlockReward(header *types.Header, rules params.Rules, pset *params.GovPa
 	// If not DeferredTxFee, CalcDeferredReward() assumes 0 total_fee, but
 	// some non-zero fee already has been paid to the proposer.
 	if !pset.DeferredTxFee() {
-		blockFee := GetTotalTxFee(header, rules, pset)
-		spec.Proposer = spec.Proposer.Add(spec.Proposer, blockFee)
-		spec.TotalFee = spec.TotalFee.Add(spec.TotalFee, blockFee)
-		incrementRewardsMap(spec.Rewards, header.Rewardbase, blockFee)
+		if rules.IsMagma {
+			txFee := GetTotalTxFee(header, rules, pset)
+			txFeeBurn := getBurnAmountMagma(txFee)
+			txFeeRemained := new(big.Int).Sub(txFee, txFeeBurn)
+			spec.BurntFee = txFeeBurn
+
+			spec.Proposer = spec.Proposer.Add(spec.Proposer, txFeeRemained)
+			spec.TotalFee = spec.TotalFee.Add(spec.TotalFee, txFee)
+			incrementRewardsMap(spec.Rewards, header.Rewardbase, txFeeRemained)
+		} else {
+			txFee := GetTotalTxFee(header, rules, pset)
+			spec.Proposer = spec.Proposer.Add(spec.Proposer, txFee)
+			spec.TotalFee = spec.TotalFee.Add(spec.TotalFee, txFee)
+			// get the proposer of this block.
+			proposer, err := ecrecover(header)
+			if err != nil {
+				return nil, err
+			}
+			incrementRewardsMap(spec.Rewards, proposer, txFee)
+
+		}
 	}
 
 	return spec, nil
@@ -223,12 +256,12 @@ func CalcDeferredRewardSimple(header *types.Header, rules params.Rules, pset *pa
 	// Therefore, there are no fees to distribute here at the end of block processing.
 	// However, before Kore, there was a bug that distributed tx fee regardless
 	// of `deferredTxFee` flag. See https://github.com/klaytn/klaytn/issues/1692.
-	// To maintain backward compatibility, we only fix the buggy logic after Kore
-	// and leave the buggy logic before Kore.
+	// To maintain backward compatibility, we only fix the buggy logic after Magma
+	// and leave the buggy logic before Magma.
 	// However, the fees must be compensated to calculate actual rewards paid.
 
-	// bug-fixed logic after Kore
-	if !rc.deferredTxFee && rc.rules.IsKore {
+	// bug-fixed logic after Magma
+	if !rc.deferredTxFee && rc.rules.IsMagma {
 		proposer := new(big.Int).Set(minted)
 		logger.Debug("CalcDeferredRewardSimple after Kore when deferredTxFee=false returns",
 			"proposer", proposer)
@@ -547,4 +580,35 @@ func incrementRewardsMap(m map[common.Address]*big.Int, addr common.Address, amo
 	}
 
 	m[addr] = m[addr].Add(m[addr], amount)
+}
+
+// ecrecover extracts the Klaytn account address from a signed header.
+func ecrecover(header *types.Header) (common.Address, error) {
+	// Retrieve the signature from the header extra-data
+	istanbulExtra, err := types.ExtractIstanbulExtra(header)
+	if err != nil {
+		return common.Address{}, nil
+	}
+
+	sigHash, err := sigHash(header)
+	if err != nil {
+		return common.Address{}, err
+	}
+	addr, err := istanbul.GetSignatureAddress(sigHash.Bytes(), istanbulExtra.Seal)
+	if err != nil {
+		return addr, err
+	}
+	return addr, nil
+}
+
+func sigHash(header *types.Header) (hash common.Hash, err error) {
+	hasher := sha3.NewKeccak256()
+
+	// Clean seal is required for calculating proposer seal.
+	if err := rlp.Encode(hasher, types.IstanbulFilteredHeader(header, false)); err != nil {
+		logger.Error("fail to encode", "err", err)
+		return common.Hash{}, err
+	}
+	hasher.Sum(hash[:0])
+	return hash, nil
 }

@@ -1,6 +1,6 @@
 
 # generation type : docker, local, remote, deploy
-gen-type: docker
+gen-type: local
 
 # The output path for files (keys, genesis.json. conf, etc...)
 output: "homi-output"
@@ -10,82 +10,93 @@ output: "homi-output"
 ######################################################################
 
 # Network topology
-cn-num: 1
-pn-num: 0
-en-num: 0
-scn-num: 0
-spn-num: 0
-sen-num: 0
-test-num: 0
-validators-num: 0
+topology: 
+  cn-num: 1
+  pn-num: 0
+  en-num: 0
+  scn-num: 0
+  spn-num: 0
+  sen-num: 0
+  test-num: 0
+  validators-num: 0
 
 ######################################################################
 #                       For deploy environment                       #
 ######################################################################
 
-# Only for docker gen-type
-docker-image-id: klaytn/klaytn:latest
-fasthttp: false
-network-id: 2018
-no-grafana: false
-txgen: false
-txgen-rate: 2000
-txgen-conn: 100
-txgen-dur: "1m"
-txgen-th: 2
-
-rpc-port: 8551
-ws-port: 8552
-p2p-port: 32323
-data-dir: /var/klay/data
-log-dir: /var/klay/log
+deploy: 
+  rpc-port: 8551
+  ws-port: 8552
+  p2p-port: 32323
+  data-dir: /var/klay/data
+  log-dir: /var/klay/log
+  # Only for docker gen-type
+  docker: 
+    image-id: klaytn/klaytn:latest
+    network-id: 2018
+    no-grafana: false
+    tx-gen: 
+      enable: false
+      rate: 2000
+      connections: 100
+      duration: "1m"
+      thread: 2
 
 ######################################################################
 #                       For genesis.json                             #
 ######################################################################
+genesis: 
+  # cypress-test, cypress, baobab-test, baobab, servicechain, servicechain-test, clique, default
+  type: "default"
+  chain-id: 1000
+  service-chain-id: 1001 
+  funding-addr: ""
+ 
+  # This flags are only activated by default genesis-type
+  governance: false
+  governance-mode: "none"
+  governing-node: "0x0000000000000000000000000000000000000000"
+  unit-price: 0
+  derive-sha-impl: 0
+  reward: 
+    mint-amount: "9600000000000000000"
+    ratio: "100/0/0"
+    gini-coefficient: false
+    deferred-tx: false
+    staking-interval: 86400
+    proposer-interval: 3600
+    minimum-stake: "2000000"
+  # dynamic fee
+  kip71: 
+    lower-bound-base-fee: 25000000000
+    upper-bound-base-fee: 750000000000
+    gas-target: 30000000
+    block-gas-limit: 60000000
+    base-fee-denominator: 20
 
-# cypress-test, cypress, baobab-test, baobab, servicechain, servicechain-test, clique, default
-genesis-type: default
-chainID: 1000
-serviceChainID: 1001 
-funding-addr: ""
+  consensus: 
+    # Istanbul consensus engine options (default engine)
+    istanbul: 
+      epoch: 604800
+      policy: 0
+      subgroup: 21
 
-# governance, reward and dynamic fee flags, 
-# This flags are only activated by default genesis-type
-governance: false
-gov-mode: "none"
-governing-node: "0x0000000000000000000000000000000000000000"
-unitPrice: 0
-deriveShaImpl: 0
-reward-mint-amount: "9600000000000000000"
-reward-ratio: "100/0/0"
-reward-gini-coeff: false
-reward-deferred-tx: false
-reward-staking-interval: 86400
-reward-proposer-interval: 3600
-reward-minimum-stake: "2000000"
-lower-bound-base-fee: 25000000000
-upper-bound-base-fee: 750000000000
-gas-target: 30000000
-block-gas-limit: 60000000
-base-fee-denominator: 20
+    # To enable clique consensus engine
+    clique: 
+      enable: false
+      epoch: 604800
+      period: 1
 
-# Istanbul consensus engine options (default engine)
-ist-epoch: 604800
-ist-proposer-policy: 0
-ist-subgroup: 21
+  # Hard fork numbers, these should be ordered by ascending
+  hardfork: 
+    istanbul-compatible-blocknumber: 0
+    london-compatible-blocknumber: 0
+    eth-tx-type-compatible-blocknumber: 0
+    magma-compatible-blocknumber: 0
+    kore-compatible-blocknumber: 0
+    shanghai-compatible-blocknumber: 0
 
-# To enable clique consensus engine
-clique-epoch: 604800
-clique-period: 1
-
-# Hard fork numbers, these should be ordered by ascending
-istanbul-compatible-blocknumber: 0
-london-compatible-blocknumber: 0
-eth-tx-type-compatible-blocknumber: 0
-magma-compatible-blocknumber: 0
-kore-compatible-blocknumber: 0
-
-# For using the patched addressbook contract
-patch-address-book: false
-patch-address-book-addr: ""
+  # For using the patched addressbook contract
+  patched-address-book: 
+    enable: false
+    addr: ""

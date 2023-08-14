@@ -49,8 +49,8 @@ func (caller *Kip103ContractCaller) CallContract(ctx context.Context, call klayt
 	context.GasPrice = gasPrice                                                  // set gasPrice again if baseFee is assigned
 	evm := vm.NewEVM(context, caller.state, caller.chain.Config(), &vm.Config{}) // no additional vm config required
 
-	res, _, kerr := blockchain.ApplyMessage(evm, msg)
-	return res, kerr.ErrTxInvalid
+	result, err := blockchain.ApplyMessage(evm, msg)
+	return result.Return(), err
 }
 
 type kip103result struct {

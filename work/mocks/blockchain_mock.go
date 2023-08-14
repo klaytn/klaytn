@@ -158,6 +158,18 @@ func (mr *MockBlockChainMockRecorder) CurrentBlock() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CurrentBlock", reflect.TypeOf((*MockBlockChain)(nil).CurrentBlock))
 }
 
+// CurrentBlockUpdateLoop mocks base method.
+func (m *MockBlockChain) CurrentBlockUpdateLoop(arg0 *blockchain.TxPool) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "CurrentBlockUpdateLoop", arg0)
+}
+
+// CurrentBlockUpdateLoop indicates an expected call of CurrentBlockUpdateLoop.
+func (mr *MockBlockChainMockRecorder) CurrentBlockUpdateLoop(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CurrentBlockUpdateLoop", reflect.TypeOf((*MockBlockChain)(nil).CurrentBlockUpdateLoop), arg0)
+}
+
 // CurrentFastBlock mocks base method.
 func (m *MockBlockChain) CurrentFastBlock() *types.Block {
 	m.ctrl.T.Helper()
@@ -212,6 +224,20 @@ func (m *MockBlockChain) Export(arg0 io.Writer) error {
 func (mr *MockBlockChainMockRecorder) Export(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Export", reflect.TypeOf((*MockBlockChain)(nil).Export), arg0)
+}
+
+// ExportN mocks base method.
+func (m *MockBlockChain) ExportN(arg0 io.Writer, arg1, arg2 uint64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExportN", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ExportN indicates an expected call of ExportN.
+func (mr *MockBlockChainMockRecorder) ExportN(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExportN", reflect.TypeOf((*MockBlockChain)(nil).ExportN), arg0, arg1, arg2)
 }
 
 // FastSyncCommitHead mocks base method.
@@ -327,10 +353,10 @@ func (mr *MockBlockChainMockRecorder) GetBodyRLP(arg0 interface{}) *gomock.Call 
 }
 
 // GetContractStorageRoot mocks base method.
-func (m *MockBlockChain) GetContractStorageRoot(arg0 *types.Block, arg1 state.Database, arg2 common.Address) (common.Hash, error) {
+func (m *MockBlockChain) GetContractStorageRoot(arg0 *types.Block, arg1 state.Database, arg2 common.Address) (common.ExtHash, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetContractStorageRoot", arg0, arg1, arg2)
-	ret0, _ := ret[0].(common.Hash)
+	ret0, _ := ret[0].(common.ExtHash)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -662,6 +688,21 @@ func (m *MockBlockChain) Processor() blockchain.Processor {
 func (mr *MockBlockChainMockRecorder) Processor() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Processor", reflect.TypeOf((*MockBlockChain)(nil).Processor))
+}
+
+// PrunableStateAt mocks base method.
+func (m *MockBlockChain) PrunableStateAt(arg0 common.Hash, arg1 uint64) (*state.StateDB, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PrunableStateAt", arg0, arg1)
+	ret0, _ := ret[0].(*state.StateDB)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PrunableStateAt indicates an expected call of PrunableStateAt.
+func (mr *MockBlockChainMockRecorder) PrunableStateAt(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrunableStateAt", reflect.TypeOf((*MockBlockChain)(nil).PrunableStateAt), arg0, arg1)
 }
 
 // ResetWithGenesisBlock mocks base method.

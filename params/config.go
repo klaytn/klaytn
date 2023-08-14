@@ -48,6 +48,7 @@ var (
 		MagmaCompatibleBlock:     big.NewInt(99841497),
 		KoreCompatibleBlock:      big.NewInt(119750400),
 		Kip103CompatibleBlock:    big.NewInt(119750400),
+		ShanghaiCompatibleBlock:  nil,
 		Kip103ContractAddress:    common.HexToAddress("0xD5ad6D61Dd87EdabE2332607C328f5cc96aeCB95"),
 		DeriveShaImpl:            2,
 		Governance: &GovernanceConfig{
@@ -81,6 +82,7 @@ var (
 		KoreCompatibleBlock:      big.NewInt(111736800),
 		Kip103CompatibleBlock:    big.NewInt(119145600),
 		Kip103ContractAddress:    common.HexToAddress("0xD5ad6D61Dd87EdabE2332607C328f5cc96aeCB95"),
+		ShanghaiCompatibleBlock:  big.NewInt(131608000),
 		DeriveShaImpl:            2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x99fb17d324fa0e07f23b49d09028ac0919414db6"),
@@ -180,6 +182,7 @@ type ChainConfig struct {
 	EthTxTypeCompatibleBlock *big.Int `json:"ethTxTypeCompatibleBlock,omitempty"` // EthTxTypeCompatibleBlock switch block (nil = no fork, 0 = already on ethTxType)
 	MagmaCompatibleBlock     *big.Int `json:"magmaCompatibleBlock,omitempty"`     // MagmaCompatible switch block (nil = no fork, 0 already on Magma)
 	KoreCompatibleBlock      *big.Int `json:"koreCompatibleBlock,omitempty"`      // KoreCompatible switch block (nil = no fork, 0 already on Kore)
+	ShanghaiCompatibleBlock  *big.Int `json:"shanghaiCompatibleBlock,omitempty"`  // ShanghaiCompatible switch block (nil = no fork, 0 already on shanghai)
 
 	// KIP103 is a special purpose hardfork feature that can be executed only once
 	// Both Kip103CompatibleBlock and Kip103ContractAddress should be specified to enable KIP103
@@ -279,13 +282,14 @@ func (c *ChainConfig) String() string {
 	kip103 := fmt.Sprintf("KIP103CompatibleBlock: %v KIP103ContractAddress %s", c.Kip103CompatibleBlock, c.Kip103ContractAddress.String())
 
 	if c.Istanbul != nil {
-		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v KoreCompatibleBlock: %v %s SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d Engine: %v}",
+		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v KoreCompatibleBlock: %v ShanghaiCompatibleBlock: %v %s SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d Engine: %v}",
 			c.ChainID,
 			c.IstanbulCompatibleBlock,
 			c.LondonCompatibleBlock,
 			c.EthTxTypeCompatibleBlock,
 			c.MagmaCompatibleBlock,
 			c.KoreCompatibleBlock,
+			c.ShanghaiCompatibleBlock,
 			kip103,
 			c.Istanbul.SubGroupSize,
 			c.UnitPrice,
@@ -293,13 +297,14 @@ func (c *ChainConfig) String() string {
 			engine,
 		)
 	} else {
-		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v KoreCompatibleBlock: %v %s UnitPrice: %d DeriveShaImpl: %d Engine: %v }",
+		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v KoreCompatibleBlock: %v ShanghaiCompatibleBlock: %v %s UnitPrice: %d DeriveShaImpl: %d Engine: %v }",
 			c.ChainID,
 			c.IstanbulCompatibleBlock,
 			c.LondonCompatibleBlock,
 			c.EthTxTypeCompatibleBlock,
 			c.MagmaCompatibleBlock,
 			c.KoreCompatibleBlock,
+			c.ShanghaiCompatibleBlock,
 			kip103,
 			c.UnitPrice,
 			c.DeriveShaImpl,
@@ -330,17 +335,22 @@ func (c *ChainConfig) IsEthTxTypeForkEnabled(num *big.Int) bool {
 	return isForked(c.EthTxTypeCompatibleBlock, num)
 }
 
-// IsMagmaForkedEnabled returns whether num is either equal to the magma block or greater.
+// IsMagmaForkEnabled returns whether num is either equal to the magma block or greater.
 func (c *ChainConfig) IsMagmaForkEnabled(num *big.Int) bool {
 	return isForked(c.MagmaCompatibleBlock, num)
 }
 
-// IsKoreForkedEnabled returns whether num is either equal to the kore block or greater.
+// IsKoreForkEnabled returns whether num is either equal to the kore block or greater.
 func (c *ChainConfig) IsKoreForkEnabled(num *big.Int) bool {
 	return isForked(c.KoreCompatibleBlock, num)
 }
 
-// IsKIP103ForkBlock returns whether num is equal to the kore block.
+// IsShanghaiForkEnabled returns whether num is either equal to the shanghai block or greater.
+func (c *ChainConfig) IsShanghaiForkEnabled(num *big.Int) bool {
+	return isForked(c.ShanghaiCompatibleBlock, num)
+}
+
+// IsKIP103ForkBlock returns whether num is equal to the kip103 block.
 func (c *ChainConfig) IsKIP103ForkBlock(num *big.Int) bool {
 	if c.Kip103CompatibleBlock == nil || num == nil {
 		return false
@@ -381,6 +391,7 @@ func (c *ChainConfig) CheckConfigForkOrder() error {
 		{name: "ethTxTypeBlock", block: c.EthTxTypeCompatibleBlock},
 		{name: "magmaBlock", block: c.MagmaCompatibleBlock},
 		{name: "koreBlock", block: c.KoreCompatibleBlock},
+		{name: "shanghaiBlock", block: c.ShanghaiCompatibleBlock},
 	} {
 		if lastFork.name != "" {
 			// Next one must be higher number
@@ -418,6 +429,11 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *Confi
 	}
 	if isForkIncompatible(c.KoreCompatibleBlock, newcfg.KoreCompatibleBlock, head) {
 		return newCompatError("Kore Block", c.KoreCompatibleBlock, newcfg.KoreCompatibleBlock)
+	}
+	// We have intentionally skipped kip103Block in the fork ordering check since kip103 is designed
+	// as an optional hardfork and there are no dependency with other forks.
+	if isForkIncompatible(c.ShanghaiCompatibleBlock, newcfg.ShanghaiCompatibleBlock, head) {
+		return newCompatError("Shanghai Block", c.ShanghaiCompatibleBlock, newcfg.ShanghaiCompatibleBlock)
 	}
 	return nil
 }
@@ -531,11 +547,13 @@ func (err *ConfigCompatError) Error() string {
 // Rules is a one time interface meaning that it shouldn't be used in between transition
 // phases.
 type Rules struct {
-	ChainID    *big.Int
-	IsIstanbul bool
-	IsLondon   bool
-	IsMagma    bool
-	IsKore     bool
+	ChainID     *big.Int
+	IsIstanbul  bool
+	IsLondon    bool
+	IsEthTxType bool
+	IsMagma     bool
+	IsKore      bool
+	IsShanghai  bool
 }
 
 // Rules ensures c's ChainID is not nil.
@@ -545,11 +563,13 @@ func (c *ChainConfig) Rules(num *big.Int) Rules {
 		chainID = new(big.Int)
 	}
 	return Rules{
-		ChainID:    new(big.Int).Set(chainID),
-		IsIstanbul: c.IsIstanbulForkEnabled(num),
-		IsLondon:   c.IsLondonForkEnabled(num),
-		IsMagma:    c.IsMagmaForkEnabled(num),
-		IsKore:     c.IsKoreForkEnabled(num),
+		ChainID:     new(big.Int).Set(chainID),
+		IsIstanbul:  c.IsIstanbulForkEnabled(num),
+		IsLondon:    c.IsLondonForkEnabled(num),
+		IsEthTxType: c.IsEthTxTypeForkEnabled(num),
+		IsMagma:     c.IsMagmaForkEnabled(num),
+		IsKore:      c.IsKoreForkEnabled(num),
+		IsShanghai:  c.IsShanghaiForkEnabled(num),
 	}
 }
 
@@ -587,7 +607,7 @@ func GetDefaultRewardConfigForGenesis() *RewardConfig {
 		MintingAmount:          DefaultMintingAmount,
 		Ratio:                  DefaultRatio,
 		UseGiniCoeff:           DefaultUseGiniCoeff,
-		DeferredTxFee:          DefaultDefferedTxFee,
+		DeferredTxFee:          DefaultDeferredTxFee,
 		StakingUpdateInterval:  DefaultStakeUpdateInterval,
 		ProposerUpdateInterval: DefaultProposerRefreshInterval,
 		MinimumStake:           DefaultMinimumStake,
@@ -600,7 +620,7 @@ func GetDefaultRewardConfig() *RewardConfig {
 		Ratio:                  DefaultRatio,
 		Kip82Ratio:             DefaultKip82Ratio,
 		UseGiniCoeff:           DefaultUseGiniCoeff,
-		DeferredTxFee:          DefaultDefferedTxFee,
+		DeferredTxFee:          DefaultDeferredTxFee,
 		StakingUpdateInterval:  DefaultStakeUpdateInterval,
 		ProposerUpdateInterval: DefaultProposerRefreshInterval,
 		MinimumStake:           DefaultMinimumStake,

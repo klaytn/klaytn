@@ -53,15 +53,15 @@ func TestConsoleWelcome(t *testing.T) {
 	klay.SetTemplateFunc("gover", runtime.Version)
 	// TODO: Fix as in testAttachWelcome()
 	klay.SetTemplateFunc("klayver", func() string { return params.VersionWithCommit("") })
-	klay.SetTemplateFunc("niltime", func() string { return time.Unix(0, 0).Format(time.RFC1123) })
 	klay.SetTemplateFunc("apis", func() string { return ipcAPIs })
+	klay.SetTemplateFunc("datadir", func() string { return klay.Datadir })
 
 	// Verify the actual welcome message to the required template
 	klay.Expect(`
 Welcome to the Klaytn JavaScript console!
 
 instance: Klaytn/{{klayver}}/{{goos}}-{{goarch}}/{{gover}}
- datadir: {{.Datadir}}
+ datadir: {{datadir}}
  modules: {{apis}}
 
 > {{.InputLine "exit"}}
@@ -131,8 +131,6 @@ func testAttachWelcome(t *testing.T, klay *testklay, endpoint, apis string) {
 	// TODO: Fix the cmd/utils.DefaultNodeConfig() to use cmd/utils/nodecmd.gitCommit
 	// and then restore "klayver" to use gitCommit.
 	attach.SetTemplateFunc("klayver", func() string { return params.VersionWithCommit("") })
-	attach.SetTemplateFunc("rewardbase", func() string { return klay.Rewardbase })
-	attach.SetTemplateFunc("niltime", func() string { return time.Unix(0, 0).Format(time.RFC1123) })
 	attach.SetTemplateFunc("ipc", func() bool { return strings.HasPrefix(endpoint, "ipc") })
 	attach.SetTemplateFunc("datadir", func() string { return klay.Datadir })
 	attach.SetTemplateFunc("apis", func() string { return apis })

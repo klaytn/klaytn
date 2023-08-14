@@ -21,8 +21,6 @@
 package core
 
 import (
-	"reflect"
-
 	"github.com/klaytn/klaytn/consensus/istanbul"
 )
 
@@ -103,7 +101,7 @@ func (c *core) verifyPrepare(prepare *istanbul.Subject, src istanbul.Validator) 
 	logger := c.logger.NewWith("from", src, "state", c.state)
 
 	sub := c.current.Subject()
-	if !reflect.DeepEqual(prepare, sub) {
+	if !prepare.Equal(sub) {
 		logger.Warn("Inconsistent subjects between PREPARE and proposal", "expected", sub, "got", prepare)
 		return errInconsistentSubject
 	}

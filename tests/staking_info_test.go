@@ -89,7 +89,7 @@ func TestAddressBookConnector(t *testing.T) {
 		t.Logf("AddressBook deployed at block=%2d", deployBlock)
 	}
 
-	// Temporarily use the newly deployed address in addressBookConnector
+	// Temporarily use the newly deployed address in StakingManager
 	oldAddr := common.HexToAddress(rewardcontract.AddressBookContractAddress)
 	reward.SetTestAddressBookAddress(deployAddr)
 	defer reward.SetTestAddressBookAddress(oldAddr)

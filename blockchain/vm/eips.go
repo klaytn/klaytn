@@ -18,6 +18,7 @@ package vm
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/klaytn/klaytn/params"
 )
@@ -27,6 +28,10 @@ import (
 // defined jump tables are not polluted.
 func EnableEIP(eipNum int, jt *JumpTable) error {
 	switch eipNum {
+	case 3860:
+		enable3860(jt)
+	case 3855:
+		enable3855(jt)
 	case 4399:
 		enable4399(jt)
 	case 3529:
@@ -187,4 +192,28 @@ func enable4399(jt *JumpTable) {
 		maxStack:        maxStack(0, 1),
 		computationCost: params.RandomComputationCost,
 	}
+}
+
+// enable3855 applies EIP-3855 (PUSH0 opcode)
+func enable3855(jt *JumpTable) {
+	jt[PUSH0] = &operation{
+		execute:         opPush0,
+		constantGas:     GasQuickStep,
+		minStack:        minStack(0, 1),
+		maxStack:        maxStack(0, 1),
+		computationCost: params.Push0ComputationCost,
+	}
+}
+
+// opPush0 implements the PUSH0 opcode
+func opPush0(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
+	stack.push(new(big.Int))
+	return nil, nil
+}
+
+// enable3860 enables "EIP-3860: Limit and meter initcode"
+// https://eips.ethereum.org/EIPS/eip-3860
+func enable3860(jt *JumpTable) {
+	jt[CREATE].dynamicGas = gasCreateEip3860
+	jt[CREATE2].dynamicGas = gasCreate2Eip3860
 }

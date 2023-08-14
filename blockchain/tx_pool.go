@@ -212,9 +212,7 @@ type TxPool struct {
 
 	txMsgCh chan types.Transactions
 
-	eip2718 bool // Fork indicator whether we are using EIP-2718 type transactions.
-	eip1559 bool // Fork indicator whether we are using EIP-1559 type transactions.
-	magma   bool // Fork indicator whether we are using Magma type transactions.
+	rules params.Rules // Fork indicator
 }
 
 // NewTxPool creates a new transaction pool to gather, sort and filter inbound
@@ -483,16 +481,10 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	pool.promoteExecutables(nil)
 
 	// Update all fork indicator by next pending block number.
-	next := new(big.Int).Add(newHead.Number, big.NewInt(1))
+	pool.rules = pool.chainconfig.Rules(new(big.Int).Add(newHead.Number, big.NewInt(1)))
 
-	// Enable Ethereum tx type transactions
-	pool.eip2718 = pool.chainconfig.IsEthTxTypeForkEnabled(next)
-	pool.eip1559 = pool.chainconfig.IsEthTxTypeForkEnabled(next)
-	// Enable dynamic base fee
-	pool.magma = pool.chainconfig.IsMagmaForkEnabled(next)
-
-	// It need to update gas price of tx pool after magma hardfork
-	if pool.magma {
+	// It needs to update gas price of tx pool since magma hardfork
+	if pool.rules.IsMagma {
 		pool.gasPrice = misc.NextMagmaBlockBaseFee(newHead, pool.chainconfig.Governance.KIP71)
 	}
 }
@@ -530,7 +522,7 @@ func (pool *TxPool) GasPrice() *big.Int {
 
 // SetGasPrice updates the gas price of the transaction pool for new transactions, and drops all old transactions.
 func (pool *TxPool) SetGasPrice(price *big.Int) {
-	if pool.magma {
+	if pool.rules.IsMagma {
 		logger.Info("Ignoring SetGasPrice after Magma fork")
 		return
 	}
@@ -672,15 +664,18 @@ func (pool *TxPool) local() map[common.Address]types.Transactions {
 // rules and adheres to some heuristic limits of the local node (price and size).
 func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	// Accept only legacy transactions until EIP-2718/2930 activates.
-	if !pool.eip2718 && tx.IsEthTypedTransaction() {
+	if !pool.rules.IsEthTxType && tx.IsEthTypedTransaction() {
 		return ErrTxTypeNotSupported
 	}
 	// Reject dynamic fee transactions until EIP-1559 activates.
-	if !pool.eip1559 && tx.Type() == types.TxTypeEthereumDynamicFee {
+	if !pool.rules.IsEthTxType && tx.Type() == types.TxTypeEthereumDynamicFee {
 		return ErrTxTypeNotSupported
 	}
 
-	gasFeePayer := uint64(0)
+	// Check whether the init code size has been exceeded
+	if pool.rules.IsShanghai && tx.To() == nil && len(tx.Data()) > params.MaxInitCodeSize {
+		return fmt.Errorf("%w: code size %v, limit %v", ErrMaxInitCodeSizeExceeded, len(tx.Data()), params.MaxInitCodeSize)
+	}
 
 	// Check chain Id first.
 	if tx.Protected() && tx.ChainId().Cmp(pool.chainconfig.ChainID) != 0 {
@@ -704,7 +699,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 			return ErrTipAboveFeeCap
 		}
 
-		if pool.magma {
+		if pool.rules.IsMagma {
 			// Ensure transaction's gasFeeCap is greater than or equal to transaction pool's gasPrice(baseFee).
 			if pool.gasPrice.Cmp(tx.GasFeeCap()) > 0 {
 				logger.Trace("fail to validate maxFeePerGas", "pool.gasPrice", pool.gasPrice, "maxFeePerGas", tx.GasFeeCap())
@@ -724,7 +719,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 		}
 
 	} else {
-		if pool.magma {
+		if pool.rules.IsMagma {
 			if pool.gasPrice.Cmp(tx.GasPrice()) > 0 {
 				// Ensure transaction's gasPrice is greater than or equal to transaction pool's gasPrice(baseFee).
 				logger.Trace("fail to validate gasprice", "pool.gasPrice", pool.gasPrice, "tx.gasPrice", tx.GasPrice())
@@ -753,10 +748,14 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	// Make sure the transaction is signed properly
 	gasFrom, err := tx.ValidateSender(pool.signer, pool.currentState, pool.currentBlockNumber)
 	if err != nil {
-		return err
+		return types.ErrSender(err)
 	}
-	from := tx.ValidatedSender()
 
+	var (
+		from          = tx.ValidatedSender()
+		senderBalance = pool.getBalance(from)
+		gasFeePayer   = uint64(0)
+	)
 	// Ensure the transaction adheres to nonce ordering
 	if pool.getNonce(from) > tx.Nonce() {
 		return ErrNonceTooLow
@@ -764,16 +763,18 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 
 	// Transactor should have enough funds to cover the costs
 	// cost == V + GP * GL
-	senderBalance := pool.getBalance(from)
 	if tx.IsFeeDelegatedTransaction() {
 		// balance check for fee-delegated tx
 		gasFeePayer, err = tx.ValidateFeePayer(pool.signer, pool.currentState, pool.currentBlockNumber)
 		if err != nil {
-			return ErrInvalidFeePayer
+			return types.ErrFeePayer(err)
 		}
-		feePayer := tx.ValidatedFeePayer()
-		feePayerBalance := pool.getBalance(feePayer)
-		feeRatio, isRatioTx := tx.FeeRatio()
+
+		var (
+			feePayer            = tx.ValidatedFeePayer()
+			feePayerBalance     = pool.getBalance(feePayer)
+			feeRatio, isRatioTx = tx.FeeRatio()
+		)
 		if isRatioTx {
 			// Check fee ratio range
 			if !feeRatio.IsValid() {
@@ -923,7 +924,7 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 	from, _ := types.Sender(pool.signer, tx) // already validated
 	if list := pool.pending[from]; list != nil && list.Overlaps(tx) {
 		// Nonce already pending, check if required price bump is met
-		inserted, old := list.Add(tx, pool.config.PriceBump, pool.magma)
+		inserted, old := list.Add(tx, pool.config.PriceBump, pool.rules.IsMagma)
 		if !inserted {
 			pendingDiscardCounter.Inc(1)
 			return false, ErrAlreadyNonceExistInPool
@@ -969,7 +970,7 @@ func (pool *TxPool) enqueueTx(hash common.Hash, tx *types.Transaction) (bool, er
 	if pool.queue[from] == nil {
 		pool.queue[from] = newTxList(false)
 	}
-	inserted, old := pool.queue[from].Add(tx, pool.config.PriceBump, pool.magma)
+	inserted, old := pool.queue[from].Add(tx, pool.config.PriceBump, pool.rules.IsMagma)
 	if !inserted {
 		// An older transaction was better, discard this
 		queuedDiscardCounter.Inc(1)
@@ -1013,7 +1014,7 @@ func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *types.T
 	}
 	list := pool.pending[addr]
 
-	inserted, old := list.Add(tx, pool.config.PriceBump, pool.magma)
+	inserted, old := list.Add(tx, pool.config.PriceBump, pool.rules.IsMagma)
 	if !inserted {
 		// An older transaction was better, discard this
 		pool.all.Remove(hash)
@@ -1408,7 +1409,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 
 		// Gather all executable transactions and promote them
 		var readyTxs types.Transactions
-		if pool.magma {
+		if pool.rules.IsMagma {
 			readyTxs = list.ReadyWithGasPrice(pool.getPendingNonce(addr), pool.gasPrice)
 		} else {
 			readyTxs = list.Ready(pool.getPendingNonce(addr))
@@ -1607,7 +1608,7 @@ func (pool *TxPool) demoteUnexecutables() {
 
 		// Enqueue transaction if gasPrice of transaction is lower than gasPrice of txPool.
 		// All transactions with a nonce greater than enqueued transaction also stored queue.
-		if pool.magma && list.Len() > 0 {
+		if pool.rules.IsMagma && list.Len() > 0 {
 			for _, tx := range list.Flatten() {
 				hash := tx.Hash()
 				if tx.GasPrice().Cmp(pool.gasPrice) < 0 {

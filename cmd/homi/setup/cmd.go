@@ -44,8 +44,8 @@ import (
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/params"
-	"github.com/urfave/cli/altsrc"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v2/altsrc"
 )
 
 type ValidatorInfo struct {
@@ -77,6 +77,8 @@ var HomiFlags = []cli.Flag{
 	altsrc.NewIntFlag(numOfSPNsFlag),
 	altsrc.NewIntFlag(numOfSENsFlag),
 	altsrc.NewIntFlag(numOfTestKeyFlag),
+	altsrc.NewStringFlag(mnemonic),
+	altsrc.NewStringFlag(mnemonicPath),
 	altsrc.NewUint64Flag(chainIDFlag),
 	altsrc.NewUint64Flag(serviceChainIDFlag),
 	altsrc.NewUint64Flag(unitPriceFlag),
@@ -122,11 +124,12 @@ var HomiFlags = []cli.Flag{
 	altsrc.NewInt64Flag(ethTxTypeCompatibleBlockNumberFlag),
 	altsrc.NewInt64Flag(magmaCompatibleBlockNumberFlag),
 	altsrc.NewInt64Flag(koreCompatibleBlockNumberFlag),
+	altsrc.NewInt64Flag(shanghaiCompatibleBlockNumberFlag),
 	altsrc.NewInt64Flag(kip103CompatibleBlockNumberFlag),
 	altsrc.NewStringFlag(kip103ContractAddressFlag),
 }
 
-var SetupCommand = cli.Command{
+var SetupCommand = &cli.Command{
 	Name:  "setup",
 	Usage: "Generate klaytn CN's init files",
 	Description: `This tool helps generate:
@@ -610,7 +613,35 @@ func Gen(ctx *cli.Context) error {
 		return fmt.Errorf("validators-num(%d) cannot be greater than num(%d)", numValidators, cnNum)
 	}
 
-	privKeys, nodeKeys, nodeAddrs := istcommon.GenerateKeys(cnNum)
+	var (
+		privKeys  []*ecdsa.PrivateKey
+		nodeKeys  []string
+		nodeAddrs []common.Address
+	)
+
+	if len(ctx.String(mnemonic.Name)) == 0 {
+		privKeys, nodeKeys, nodeAddrs = istcommon.GenerateKeys(cnNum)
+	} else {
+		mnemonic := ctx.String(mnemonic.Name)
+		mnemonic = strings.ReplaceAll(mnemonic, ",", " ")
+		// common keys used by web3 tools such as hardhat, foundry, etc.
+		if mnemonic == "test junk" {
+			mnemonic = "test test test test test test test test test test test junk"
+		}
+		path := strings.ToLower(ctx.String(mnemonicPath.Name))
+		if !strings.HasPrefix(path, "m") {
+			switch path {
+			case "klay":
+				path = "m/44'/8217'/0'/0/"
+			case "eth":
+				path = "m/44'/60'/0'/0/"
+			default:
+				return fmt.Errorf("invalid mnemonic path (format: m/44'/60'/0'/0/)")
+			}
+		}
+		privKeys, nodeKeys, nodeAddrs = istcommon.GenerateKeysFromMnemonic(cnNum, mnemonic, path)
+	}
+
 	testPrivKeys, testKeys, testAddrs := istcommon.GenerateKeys(numTestAccs)
 
 	var (
@@ -648,6 +679,7 @@ func Gen(ctx *cli.Context) error {
 	genesisJson.Config.EthTxTypeCompatibleBlock = big.NewInt(ctx.Int64(ethTxTypeCompatibleBlockNumberFlag.Name))
 	genesisJson.Config.MagmaCompatibleBlock = big.NewInt(ctx.Int64(magmaCompatibleBlockNumberFlag.Name))
 	genesisJson.Config.KoreCompatibleBlock = big.NewInt(ctx.Int64(koreCompatibleBlockNumberFlag.Name))
+	genesisJson.Config.ShanghaiCompatibleBlock = big.NewInt(ctx.Int64(shanghaiCompatibleBlockNumberFlag.Name))
 	genesisJson.Config.Kip103CompatibleBlock = big.NewInt(ctx.Int64(kip103CompatibleBlockNumberFlag.Name))
 	genesisJson.Config.Kip103ContractAddress = common.HexToAddress(ctx.String(kip103ContractAddressFlag.Name))
 
@@ -708,7 +740,7 @@ func Gen(ctx *cli.Context) error {
 			ctx.Bool(fasthttpFlag.Name),
 			ctx.Int(networkIdFlag.Name),
 			int(chainid),
-			!ctx.BoolT(nografanaFlag.Name),
+			!ctx.Bool(nografanaFlag.Name),
 			proxyNodeKeys,
 			enKeys,
 			scnKeys,
@@ -1129,15 +1161,21 @@ func indexGenType(genTypeFlag string, base string) int {
 }
 
 func findGenType(ctx *cli.Context) int {
-	var genType int
+	var (
+		genTypeName string
+		baseString  string
+		genType     int
+	)
+
 	if ctx.Args().Present() {
-		genType = indexGenType(ctx.Args()[0], "")
+		genTypeName, baseString = ctx.Args().First(), ""
 	} else {
-		genType = indexGenType(ctx.String(genTypeFlag.Name), Types[0])
+		genTypeName, baseString = ctx.String(genTypeFlag.Name), Types[0]
 	}
 
+	genType = indexGenType(genTypeName, baseString)
 	if genType == TypeNotDefined {
-		fmt.Printf("Wrong Type : %s\nSupported Types : [docker, local, remote, deploy]\n\n", genTypeFlag)
+		fmt.Printf("Wrong Type : %s\nSupported Types : [docker, local, remote, deploy]\n\n", genTypeName)
 		cli.ShowSubcommandHelp(ctx)
 		os.Exit(1)
 	}
@@ -1156,7 +1194,7 @@ func removeSpacesAndLines(b []byte) string {
 func homiFlagsFromYaml(ctx *cli.Context) error {
 	filePath := ctx.String(homiYamlFlag.Name)
 	if filePath != "" {
-		if err := altsrc.InitInputSourceWithContext(SetupCommand.Flags, altsrc.NewYamlSourceFromFlagFunc(homiYamlFlag.Name))(ctx); err != nil {
+		if err := altsrc.InitInputSourceWithContext(HomiFlags, altsrc.NewYamlSourceFromFlagFunc(homiYamlFlag.Name))(ctx); err != nil {
 			return err
 		}
 	}
@@ -1167,5 +1205,6 @@ func BeforeRunHomi(ctx *cli.Context) error {
 	if err := homiFlagsFromYaml(ctx); err != nil {
 		return err
 	}
+
 	return nil
 }
