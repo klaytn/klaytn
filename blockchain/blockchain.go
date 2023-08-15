@@ -2228,6 +2228,11 @@ func (bc *BlockChain) CurrentBlockUpdateLoop(pool *TxPool) {
 	for {
 		select {
 		case <-refresher.C:
+			if err := bc.db.TryCatchUpWithPrimary(); err != nil {
+				logger.Error("Failed to catch up with primary", "err", err)
+				continue
+			}
+
 			// Restore the last known head block
 			head := bc.db.ReadHeadBlockHash()
 			if head == (common.Hash{}) {
