@@ -524,10 +524,13 @@ func (kCfg *KlayConfig) SetKlayConfig(ctx *cli.Context, stack *node.Node) {
 	cfg.LevelDBCacheSize = ctx.Int(LevelDBCacheSizeFlag.Name)
 
 	cfg.RocksDBConfig.Secondary = ctx.Bool(RocksDBSecondaryFlag.Name)
+	cfg.RocksDBConfig.MaxOpenFiles = ctx.Int(RocksDBMaxOpenFilesFlag.Name)
 	if cfg.RocksDBConfig.Secondary {
 		cfg.FetcherDisable = true
 		cfg.DownloaderDisable = true
 		cfg.WorkerDisable = true
+		cfg.RocksDBConfig.MaxOpenFiles = -1
+		logger.Info("Secondary rocksdb is enabled, disabling fetcher, downloader, worker. MaxOpenFiles is forced to unlimited")
 	}
 	cfg.RocksDBConfig.CacheSize = ctx.Uint64(RocksDBCacheSizeFlag.Name)
 	cfg.RocksDBConfig.DumpMallocStat = ctx.Bool(RocksDBDumpMallocStatFlag.Name)
@@ -535,7 +538,6 @@ func (kCfg *KlayConfig) SetKlayConfig(ctx *cli.Context, stack *node.Node) {
 	cfg.RocksDBConfig.BottommostCompressionType = ctx.String(RocksDBBottommostCompressionTypeFlag.Name)
 	cfg.RocksDBConfig.FilterPolicy = ctx.String(RocksDBFilterPolicyFlag.Name)
 	cfg.RocksDBConfig.DisableMetrics = ctx.Bool(RocksDBDisableMetricsFlag.Name)
-	cfg.RocksDBConfig.MaxOpenFiles = ctx.Int(RocksDBMaxOpenFilesFlag.Name)
 	cfg.RocksDBConfig.CacheIndexAndFilter = ctx.Bool(RocksDBCacheIndexAndFilterFlag.Name)
 
 	cfg.DynamoDBConfig.TableName = ctx.String(DynamoDBTableNameFlag.Name)
