@@ -23,16 +23,34 @@ executors:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
       - image: klaytn/build_base:1.2-ubuntu18.04-go.1.20.6-solc0.8.13
+        auth:
+          username: $DOCKER_LOGIN
+          password: $DOCKER_PASSWORD
   test-others-executor:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
       - image: klaytn/build_base:1.2-ubuntu18.04-go.1.20.6-solc0.8.13
+        auth:
+          username: $DOCKER_LOGIN
+          password: $DOCKER_PASSWORD
       - image: localstack/localstack:0.13.0
+        auth:
+          username: $DOCKER_LOGIN
+          password: $DOCKER_PASSWORD
       - image: circleci/redis:6.0.8-alpine
+        auth:
+          username: $DOCKER_LOGIN
+          password: $DOCKER_PASSWORD
       - name: zookeeper
         image: wurstmeister/zookeeper
+        auth:
+          username: $DOCKER_LOGIN
+          password: $DOCKER_PASSWORD
       - name: kafka
         image: wurstmeister/kafka
+        auth:
+          username: $DOCKER_LOGIN
+          password: $DOCKER_PASSWORD
         environment:
           KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
           KAFKA_ADVERTISED_LISTENERS: INSIDE://:9092,OUTSIDE://kafka:9094
@@ -43,6 +61,9 @@ executors:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
       - image: klaytn/circleci-rpmbuild:1.20.6
+        auth:
+          username: $DOCKER_LOGIN
+          password: $DOCKER_PASSWORD
   default:
     working_directory: ~/go/src/github.com/klaytn/klaytn
     docker:
@@ -338,8 +359,7 @@ commands:
             python3 main.py --protocol rpc
 jobs:
   build:
-    docker:
-      - image: klaytn/build_base:1.2-ubuntu18.04-go.1.20.6-solc0.8.13
+    executor: test-executor
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
@@ -489,6 +509,9 @@ jobs:
   packaging-linux:
     docker:
       - image: klaytn/build_base:1.2-ubuntu18.04-go.1.20.6-solc0.8.13
+        auth:
+          username: $DOCKER_LOGIN
+          password: $DOCKER_PASSWORD
     resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
@@ -501,6 +524,9 @@ jobs:
   packaging-linux-baobab:
     docker:
       - image: klaytn/build_base:1.2-ubuntu18.04-go.1.20.6-solc0.8.13
+        auth:
+          username: $DOCKER_LOGIN
+          password: $DOCKER_PASSWORD
     resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
