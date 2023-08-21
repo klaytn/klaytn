@@ -18,18 +18,25 @@ package backends
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"math/big"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/golang/mock/gomock"
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/gxhash"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/event"
+	"github.com/klaytn/klaytn/node/cn/filters"
+	mock_filter "github.com/klaytn/klaytn/node/cn/filters/mock"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
@@ -146,4 +153,236 @@ func TestBlockchainCallContract(t *testing.T) {
 		Data: data_revertString,
 	}, nil)
 	assert.Equal(t, "execution reverted: some error", err.Error())
+}
+
+func TestBlockchainPendingCodeAt(t *testing.T) {
+	bc := newTestBlockchain()
+	c := NewBlockchainContractBackend(bc, nil, nil)
+
+	// Normal cases
+	code, err := c.PendingCodeAt(context.Background(), code1Addr)
+	assert.Nil(t, err)
+	assert.Equal(t, code1Bytes, code)
+
+	code, err = c.PendingCodeAt(context.Background(), code2Addr)
+	assert.Nil(t, err)
+	assert.Equal(t, code2Bytes, code)
+
+	// Non-code address
+	code, err = c.PendingCodeAt(context.Background(), testAddr)
+	assert.True(t, code == nil && err == nil)
+}
+
+func TestBlockChainSuggestGasPrice(t *testing.T) {
+	bc := newTestBlockchain()
+	c := NewBlockchainContractTransactor(bc, nil)
+
+	// Normal case
+	gasPrice, err := c.SuggestGasPrice(context.Background())
+	assert.Nil(t, err)
+	assert.Equal(t, params.TestChainConfig.UnitPrice, gasPrice.Uint64())
+}
+
+func TestBlockChainEstimateGas(t *testing.T) {
+	bc := newTestBlockchain()
+	c := NewBlockchainContractTransactor(bc, nil)
+
+	// Normal case
+	gas, err := c.EstimateGas(context.Background(), klaytn.CallMsg{
+		From:  testAddr,
+		To:    &testAddr,
+		Value: big.NewInt(1000),
+	})
+	assert.Nil(t, err)
+	assert.Equal(t, uint64(params.TxGas), gas)
+
+	// Error case - simple transfer with insufficient funds with zero gasPrice
+	gas, err = c.EstimateGas(context.Background(), klaytn.CallMsg{
+		From:  code1Addr,
+		To:    &code1Addr,
+		Value: big.NewInt(1),
+	})
+	assert.Contains(t, err.Error(), "insufficient balance for transfer")
+	assert.Zero(t, gas)
+}
+
+func TestBlockChainSendTransaction(t *testing.T) {
+	bc := newTestBlockchain()
+	block := bc.CurrentBlock()
+	state, err := bc.State()
+	txPoolConfig := blockchain.DefaultTxPoolConfig
+	txPoolConfig.Journal = "/dev/null" // disable journaling to file
+	txPool := blockchain.NewTxPool(txPoolConfig, bc.Config(), bc)
+	defer txPool.Stop()
+	assert.Nil(t, err)
+	c := NewBlockchainContractBackend(bc, nil, txPool)
+
+	// create a signed transaction to send
+	nonce := state.GetNonce(testAddr)
+	tx := types.NewTransaction(nonce, testAddr, big.NewInt(1000), params.TxGas, big.NewInt(1), nil)
+	chainId, err := c.ChainID(context.Background())
+	if err != nil {
+		t.Errorf("could not get chain ID: %v", err)
+	}
+	signedTx, err := types.SignTx(tx, types.LatestSignerForChainID(chainId), testKey)
+	if err != nil {
+		t.Errorf("could not sign tx: %v", err)
+	}
+
+	// send tx to simulated backend
+	err = c.SendTransaction(context.Background(), signedTx)
+	if err != nil {
+		t.Errorf("could not add tx to pending block: %v", err)
+	}
+
+	blocks, _ := blockchain.GenerateChain(bc.Config(), block, gxhash.NewFaker(), state.Database().TrieDB().DiskDB(), 1, func(i int, b *blockchain.BlockGen) {
+		txs, err := txPool.Pending()
+		if err != nil {
+			t.Errorf("could not get pending txs: %v", err)
+		}
+		for _, v := range txs {
+			for _, v2 := range v {
+				b.AddTx(v2)
+			}
+		}
+	})
+	bc.InsertChain(blocks)
+
+	block = bc.GetBlockByNumber(11)
+	if block == nil {
+		t.Errorf("could not get block at height 1")
+	}
+
+	if signedTx.Hash() != block.Transactions()[0].Hash() {
+		t.Errorf("did not commit sent transaction. expected hash %v got hash %v", block.Transactions()[0].Hash(), signedTx.Hash())
+	}
+}
+
+func TestBlockChainChainID(t *testing.T) {
+	bc := newTestBlockchain()
+	c := NewBlockchainContractBackend(bc, nil, nil)
+
+	// Normal case
+	chainId, err := c.ChainID(context.Background())
+	assert.Nil(t, err)
+	assert.Equal(t, params.TestChainConfig.ChainID, chainId)
+}
+
+func initBackendForFiltererTests(t *testing.T, bc *blockchain.BlockChain) *BlockchainContractBackend {
+	block := bc.CurrentBlock()
+	state, _ := bc.State()
+
+	// Add one block with contract execution to generate logs
+	data_receive, _ := parsedAbi1.Pack("receive", []byte("X"))
+	tx := types.NewTransaction(uint64(0), code1Addr, big.NewInt(0), 50000, big.NewInt(1), data_receive)
+	chainId := bc.Config().ChainID
+
+	signedTx, err := types.SignTx(tx, types.LatestSignerForChainID(chainId), testKey)
+	if err != nil {
+		t.Errorf("could not sign tx: %v", err)
+	}
+
+	blocks, _ := blockchain.GenerateChain(bc.Config(), block, gxhash.NewFaker(), state.Database().TrieDB().DiskDB(), 1, func(i int, b *blockchain.BlockGen) {
+		b.AddTx(signedTx)
+	})
+	bc.InsertChain(blocks)
+
+	// mock filterer backend
+	mockCtrl := gomock.NewController(t)
+	mockBackend := mock_filter.NewMockBackend(mockCtrl)
+
+	any := gomock.Any()
+	txPoolConfig := blockchain.DefaultTxPoolConfig
+	txPoolConfig.Journal = "/dev/null" // disable journaling to file
+	txPool := blockchain.NewTxPool(txPoolConfig, bc.Config(), bc)
+	subscribeNewTxsEvent := func(ch chan<- blockchain.NewTxsEvent) klaytn.Subscription {
+		return txPool.SubscribeNewTxsEvent(ch)
+	}
+	subscribeLogsEvent := func(ch chan<- []*types.Log) klaytn.Subscription {
+		return bc.SubscribeLogsEvent(ch)
+	}
+	subscribeRemovedLogsEvent := func(ch chan<- blockchain.RemovedLogsEvent) klaytn.Subscription {
+		return bc.SubscribeRemovedLogsEvent(ch)
+	}
+	subscribeChainEvent := func(ch chan<- blockchain.ChainEvent) klaytn.Subscription {
+		return bc.SubscribeChainEvent(ch)
+	}
+	mockBackend.EXPECT().SubscribeNewTxsEvent(any).DoAndReturn(subscribeNewTxsEvent).AnyTimes()
+	mockBackend.EXPECT().SubscribeLogsEvent(any).DoAndReturn(subscribeLogsEvent).AnyTimes()
+	mockBackend.EXPECT().SubscribeRemovedLogsEvent(any).DoAndReturn(subscribeRemovedLogsEvent).AnyTimes()
+	mockBackend.EXPECT().SubscribeChainEvent(any).DoAndReturn(subscribeChainEvent).AnyTimes()
+
+	f := filters.NewEventSystem(&event.TypeMux{}, mockBackend, false)
+	c := NewBlockchainContractBackend(bc, f, nil)
+
+	return c
+}
+
+func TestBlockChainFilterLogs(t *testing.T) {
+	bc := newTestBlockchain()
+	c := initBackendForFiltererTests(t, bc)
+
+	// Normal case
+	logs, err := c.FilterLogs(context.Background(), klaytn.FilterQuery{
+		FromBlock: big.NewInt(10),
+		ToBlock:   big.NewInt(11),
+		Addresses: []common.Address{code1Addr},
+	})
+	assert.Nil(t, err)
+	assert.Equal(t, 2, len(logs))
+
+	// Non-code address
+	logs, err = c.FilterLogs(context.Background(), klaytn.FilterQuery{
+		FromBlock: big.NewInt(0),
+		ToBlock:   big.NewInt(11),
+		Addresses: []common.Address{testAddr},
+	})
+	assert.Nil(t, err)
+	assert.Equal(t, 0, len(logs))
+}
+
+func TestBlockChainSubscribeFilterLogs(t *testing.T) {
+	bc := newTestBlockchain()
+	c := initBackendForFiltererTests(t, bc)
+
+	logs := make(chan types.Log)
+	sub, err := c.SubscribeFilterLogs(context.Background(), klaytn.FilterQuery{
+		FromBlock: big.NewInt(0),
+		ToBlock:   big.NewInt(20),
+		Addresses: []common.Address{code1Addr},
+	}, logs)
+	assert.Nil(t, err)
+	assert.NotNil(t, sub)
+
+	// Insert a block with contract execution to generate logs
+	go func() {
+		state, _ := bc.State()
+		nonce := state.GetNonce(testAddr)
+		data_receive, _ := parsedAbi1.Pack("receive", []byte("X"))
+		tx := types.NewTransaction(nonce, code1Addr, big.NewInt(0), 50000, big.NewInt(1), data_receive)
+		chainId, _ := c.ChainID(context.Background())
+
+		signedTx, err := types.SignTx(tx, types.LatestSignerForChainID(chainId), testKey)
+		if err != nil {
+			t.Errorf("could not sign tx: %v", err)
+		}
+
+		block := bc.CurrentBlock()
+
+		blocks, _ := blockchain.GenerateChain(c.BlockchainContractFilterer.bc.Config(), block, gxhash.NewFaker(), state.Database().TrieDB().DiskDB(), 1, func(i int, b *blockchain.BlockGen) {
+			b.AddTx(signedTx)
+		})
+		bc.InsertChain(blocks)
+	}()
+
+	// Wait for 2 logs
+	for i := 0; i < 2; i++ {
+		select {
+		case log := <-logs:
+			assert.Equal(t, code1Addr, log.Address)
+			assert.Contains(t, hex.EncodeToString(log.Data), hex.EncodeToString(testAddr.Bytes()))
+		case <-time.After(3 * time.Second):
+			t.Fatal("timeout while waiting for logs")
+		}
+	}
 }

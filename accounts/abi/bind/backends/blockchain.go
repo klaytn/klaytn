@@ -18,6 +18,7 @@ package backends
 
 import (
 	"context"
+	"errors"
 	"math/big"
 
 	"github.com/klaytn/klaytn"
@@ -27,6 +28,8 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/event"
+	"github.com/klaytn/klaytn/node/cn/filters"
 	"github.com/klaytn/klaytn/params"
 )
 
@@ -140,4 +143,198 @@ func (b *BlockchainContractCaller) getBlockAndState(num *big.Int) (*types.Block,
 
 	state, err := b.bc.StateAt(block.Root())
 	return block, state, err
+}
+
+type BlockchainContractTransactor struct {
+	bc     BlockChainForCaller
+	txPool *blockchain.TxPool
+}
+
+// This nil assignment ensures at compile time that BlockchainContractCaller implements bind.ContractCaller.
+var _ bind.ContractTransactor = (*BlockchainContractTransactor)(nil)
+
+func NewBlockchainContractTransactor(bc BlockChainForCaller, txPool *blockchain.TxPool) *BlockchainContractTransactor {
+	return &BlockchainContractTransactor{bc, txPool}
+}
+
+func (b *BlockchainContractTransactor) PendingCodeAt(ctx context.Context, account common.Address) ([]byte, error) {
+	// TODO-Klaytn this is not pending code but latest code
+	state, err := b.bc.State()
+	if err != nil {
+		return nil, err
+	}
+	return state.GetCode(account), nil
+}
+
+func (b *BlockchainContractTransactor) PendingNonceAt(ctx context.Context, account common.Address) (uint64, error) {
+	if b.txPool != nil {
+		return b.txPool.GetPendingNonce(account), nil
+	}
+	// TODO-Klaytn this is not pending nonce but latest nonce
+	state, err := b.bc.State()
+	if err != nil {
+		return 0, err
+	}
+	return state.GetNonce(account), nil
+}
+
+func (b *BlockchainContractTransactor) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
+	if b.bc.Config().IsMagmaForkEnabled(b.bc.CurrentHeader().Number) {
+		return new(big.Int).SetUint64(b.bc.Config().Governance.KIP71.UpperBoundBaseFee), nil
+	} else {
+		return new(big.Int).SetUint64(b.bc.Config().UnitPrice), nil
+	}
+}
+
+func (b *BlockchainContractTransactor) EstimateGas(ctx context.Context, call klaytn.CallMsg) (uint64, error) {
+	state, err := b.bc.State()
+	if err != nil {
+		return 0, err
+	}
+	balance := state.GetBalance(call.From) // from can't be nil
+
+	// Create a helper to check if a gas allowance results in an executable transaction
+	executable := func(gas uint64) (bool, *blockchain.ExecutionResult, error) {
+		call.Gas = gas
+
+		currentState, err := b.bc.State()
+		if err != nil {
+			return true, nil, nil
+		}
+		bc := NewBlockchainContractCaller(b.bc)
+		res, err := bc.callContract(call, b.bc.CurrentBlock(), currentState)
+		if err != nil {
+			if errors.Is(err, blockchain.ErrIntrinsicGas) {
+				return true, nil, nil // Special case, raise gas limit
+			}
+			return true, nil, err // Bail out
+		}
+		return res.Failed(), res, nil
+	}
+
+	estimated, err := blockchain.DoEstimateGas(ctx, call.Gas, 0, call.Value, call.GasPrice, balance, executable)
+	if err != nil {
+		return 0, err
+	} else {
+		return uint64(estimated), nil
+	}
+}
+
+func (b *BlockchainContractTransactor) SendTransaction(ctx context.Context, tx *types.Transaction) error {
+	if b.txPool == nil {
+		return errors.New("tx pool not configured")
+	}
+	return b.txPool.AddLocal(tx)
+}
+
+func (b *BlockchainContractTransactor) ChainID(ctx context.Context) (*big.Int, error) {
+	return b.bc.Config().ChainID, nil
+}
+
+type BlockchainContractFilterer struct {
+	bc BlockChainForCaller
+	es *filters.EventSystem
+}
+
+// This nil assignment ensures at compile time that BlockchainContractCaller implements bind.ContractCaller.
+var _ bind.ContractFilterer = (*BlockchainContractFilterer)(nil)
+
+func NewBlockchainContractFilterer(bc BlockChainForCaller, es *filters.EventSystem) *BlockchainContractFilterer {
+	return &BlockchainContractFilterer{
+		bc: bc,
+		es: es,
+	}
+}
+
+func (b *BlockchainContractFilterer) FilterLogs(ctx context.Context, query klaytn.FilterQuery) ([]types.Log, error) {
+	// Convert the current block numbers into internal representations
+	if query.FromBlock == nil {
+		query.FromBlock = big.NewInt(b.bc.CurrentBlock().Number().Int64())
+	}
+	if query.ToBlock == nil {
+		query.ToBlock = big.NewInt(b.bc.CurrentBlock().Number().Int64())
+	}
+	from := query.FromBlock.Int64()
+	to := query.ToBlock.Int64()
+
+	state, err := b.bc.State()
+	if err != nil {
+		return nil, err
+	}
+	filter := filters.NewRangeFilter(&filterBackend{state.Database().TrieDB().DiskDB(), b.bc.(*blockchain.BlockChain)}, from, to, query.Addresses, query.Topics)
+
+	logs, err := filter.Logs(ctx)
+	if err != nil {
+		return nil, err
+	}
+	res := make([]types.Log, len(logs))
+	for i, log := range logs {
+		res[i] = *log
+	}
+	return res, nil
+}
+
+func (b *BlockchainContractFilterer) SubscribeFilterLogs(ctx context.Context, query klaytn.FilterQuery, ch chan<- types.Log) (klaytn.Subscription, error) {
+	// Subscribe to contract events
+	sink := make(chan []*types.Log)
+
+	if b.es == nil {
+		return nil, errors.New("events system not configured")
+	}
+	sub, err := b.es.SubscribeLogs(query, sink)
+	if err != nil {
+		return nil, err
+	}
+	// Since we're getting logs in batches, we need to flatten them into a plain stream
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case logs := <-sink:
+				for _, log := range logs {
+					select {
+					case ch <- *log:
+					case err := <-sub.Err():
+						return err
+					case <-quit:
+						return nil
+					}
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+type BlockchainContractBackend struct {
+	BlockchainContractCaller
+	BlockchainContractTransactor
+	BlockchainContractFilterer
+}
+
+// This nil assignment ensures at compile time that BlockchainContractCaller implements bind.ContractCaller.
+var _ bind.ContractBackend = (*BlockchainContractBackend)(nil)
+
+func NewBlockchainContractBackend(bc BlockChainForCaller, es *filters.EventSystem, tp *blockchain.TxPool) *BlockchainContractBackend {
+	return &BlockchainContractBackend{
+		BlockchainContractCaller{bc},
+		BlockchainContractTransactor{bc, tp},
+		BlockchainContractFilterer{bc, es},
+	}
+}
+
+func (b *BlockchainContractBackend) BalanceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (*big.Int, error) {
+	if _, state, err := b.getBlockAndState(blockNumber); err != nil {
+		return nil, err
+	} else {
+		return state.GetBalance(account), nil
+	}
+}
+
+func (b *BlockchainContractBackend) CurrentBlockNumber(ctx context.Context) (uint64, error) {
+	var bc BlockchainContractCaller = b.BlockchainContractCaller
+	return bc.bc.CurrentBlock().NumberU64(), nil
 }

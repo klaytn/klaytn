@@ -33,6 +33,7 @@ import (
 
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
+	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 	"github.com/klaytn/klaytn/api"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -43,6 +44,7 @@ import (
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node"
+	"github.com/klaytn/klaytn/node/cn/filters"
 	"github.com/klaytn/klaytn/node/sc/bridgepool"
 	"github.com/klaytn/klaytn/node/sc/kas"
 	"github.com/klaytn/klaytn/params"
@@ -363,12 +365,9 @@ func (sb *SubBridge) SetComponents(components []interface{}) {
 			return
 		}
 	}
-	sb.localBackend, err = NewLocalBackend(sb)
-	if err != nil {
-		logger.Error("fail to initialize LocalBackend", "err", err)
-		sb.bootFail = true
-		return
-	}
+
+	es := filters.NewEventSystem(sb.eventMux, &filterLocalBackend{sb}, false)
+	sb.localBackend = backends.NewBlockchainContractBackend(sb.blockchain, es, sb.txPool)
 
 	sb.bridgeManager, err = NewBridgeManager(sb)
 	if err != nil {
