@@ -20,7 +20,7 @@ import (
 	"sort"
 
 	"github.com/klaytn/klaytn/api/debug"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 const uncategorized = "MISC" // Uncategorized flags will belong to this group
@@ -41,11 +41,10 @@ var FlagGroups = []FlagGroup{
 			NtpServerFlag,
 			DbTypeFlag,
 			DataDirFlag,
-			KeyStoreDirFlag,
+			ChainDataDirFlag,
 			IdentityFlag,
 			SyncModeFlag,
 			GCModeFlag,
-			LightKDFFlag,
 			SrvTypeFlag,
 			ExtraDataFlag,
 			ConfigFileFlag,
@@ -61,6 +60,8 @@ var FlagGroups = []FlagGroup{
 		Flags: []cli.Flag{
 			UnlockedAccountFlag,
 			PasswordFileFlag,
+			LightKDFFlag,
+			KeyStoreDirFlag,
 		},
 	},
 	{
@@ -92,11 +93,21 @@ var FlagGroups = []FlagGroup{
 			NumStateTrieShardsFlag,
 			LevelDBCompressionTypeFlag,
 			LevelDBNoBufferPoolFlag,
+			RocksDBSecondaryFlag,
+			RocksDBCacheSizeFlag,
+			RocksDBDumpMallocStatFlag,
+			RocksDBCompressionTypeFlag,
+			RocksDBBottommostCompressionTypeFlag,
+			RocksDBFilterPolicyFlag,
+			RocksDBDisableMetricsFlag,
+			RocksDBMaxOpenFilesFlag,
+			RocksDBCacheIndexAndFilterFlag,
 			DynamoDBTableNameFlag,
 			DynamoDBRegionFlag,
 			DynamoDBIsProvisionedFlag,
 			DynamoDBReadCapacityFlag,
 			DynamoDBWriteCapacityFlag,
+			DynamoDBReadOnlyFlag,
 			NoParallelDBWriteFlag,
 			SenderTxHashIndexingFlag,
 			DBNoPerformanceMetricsFlag,
@@ -162,12 +173,22 @@ var FlagGroups = []FlagGroup{
 			DstDataDirFlag,
 			DstSingleDBFlag,
 			DstLevelDBCompressionTypeFlag,
+			DstLevelDBCacheSizeFlag,
 			DstNumStateTrieShardsFlag,
 			DstDynamoDBTableNameFlag,
 			DstDynamoDBRegionFlag,
 			DstDynamoDBIsProvisionedFlag,
 			DstDynamoDBReadCapacityFlag,
 			DstDynamoDBWriteCapacityFlag,
+			DstRocksDBSecondaryFlag,
+			DstRocksDBCacheSizeFlag,
+			DstRocksDBDumpMallocStatFlag,
+			DstRocksDBCompressionTypeFlag,
+			DstRocksDBBottommostCompressionTypeFlag,
+			DstRocksDBFilterPolicyFlag,
+			DstRocksDBDisableMetricsFlag,
+			DstRocksDBMaxOpenFilesFlag,
+			DstRocksDBCacheIndexAndFilterFlag,
 		},
 	},
 	{
@@ -176,6 +197,8 @@ var FlagGroups = []FlagGroup{
 			TrieMemoryCacheSizeFlag,
 			TrieBlockIntervalFlag,
 			TriesInMemoryFlag,
+			LivePruningFlag,
+			LivePruningRetentionFlag,
 		},
 	},
 	{
@@ -245,15 +268,23 @@ var FlagGroups = []FlagGroup{
 		Name: "API AND CONSOLE",
 		Flags: []cli.Flag{
 			RPCEnabledFlag,
+			HeavyDebugRequestLimitFlag,
+			StateRegenerationTimeLimitFlag,
 			RPCListenAddrFlag,
 			RPCPortFlag,
 			RPCCORSDomainFlag,
 			RPCVirtualHostsFlag,
 			RPCApiFlag,
 			RPCGlobalGasCap,
+			RPCGlobalEVMTimeoutFlag,
 			RPCGlobalEthTxFeeCapFlag,
 			RPCConcurrencyLimit,
 			RPCNonEthCompatibleFlag,
+			RPCExecutionTimeoutFlag,
+			RPCIdleTimeoutFlag,
+			RPCReadTimeout,
+			RPCWriteTimeoutFlag,
+			UnsafeDebugDisableFlag,
 			IPCDisabledFlag,
 			IPCPathFlag,
 			WSEnabledFlag,
@@ -261,6 +292,10 @@ var FlagGroups = []FlagGroup{
 			WSPortFlag,
 			WSApiFlag,
 			WSAllowedOriginsFlag,
+			WSMaxConnections,
+			WSMaxSubscriptionPerConn,
+			WSReadDeadLine,
+			WSWriteDeadLine,
 			GRPCEnabledFlag,
 			GRPCListenAddrFlag,
 			GRPCPortFlag,
@@ -315,6 +350,7 @@ var FlagGroups = []FlagGroup{
 			SnapshotFlag,
 			SnapshotCacheSizeFlag,
 			SnapshotAsyncGen,
+			DocRootFlag,
 		},
 	},
 }
@@ -326,15 +362,15 @@ func CategorizeFlags(flags []cli.Flag) []FlagGroup {
 
 	// Find its group for each flag
 	for _, flag := range flags {
-		if isFlagAdded[flag.GetName()] {
-			logger.Debug("a flag is added in the help description more than one time", "flag", flag.GetName())
+		if isFlagAdded[flag.Names()[0]] {
+			logger.Debug("a flag is added in the help description more than one time", "flag", flag.Names()[0])
 			continue
 		}
 
 		// Find a group of the flag. If a flag doesn't belong to any groups, categorize it as a MISC flag
 		group := flagCategory(flag, FlagGroups)
 		flagGroupsMap[group] = append(flagGroupsMap[group], flag)
-		isFlagAdded[flag.GetName()] = true
+		isFlagAdded[flag.Names()[0]] = true
 	}
 
 	// Convert flagGroupsMap to a slice of FlagGroup
@@ -365,7 +401,7 @@ func sortFlagGroup(flagGroups []FlagGroup, uncategorized string) []FlagGroup {
 	// Sort flags in each group i ascending order of flag name.
 	for _, group := range flagGroups {
 		sort.Slice(group.Flags, func(i, j int) bool {
-			return group.Flags[i].GetName() < group.Flags[j].GetName()
+			return group.Flags[i].Names()[0] < group.Flags[j].Names()[0]
 		})
 	}
 
@@ -376,7 +412,7 @@ func sortFlagGroup(flagGroups []FlagGroup, uncategorized string) []FlagGroup {
 func flagCategory(flag cli.Flag, fg []FlagGroup) string {
 	for _, category := range fg {
 		for _, flg := range category.Flags {
-			if flg.GetName() == flag.GetName() {
+			if flg.Names()[0] == flag.Names()[0] {
 				return category.Name
 			}
 		}

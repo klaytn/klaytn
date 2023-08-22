@@ -64,6 +64,10 @@ var (
 	// ErrAlreadyNonceExistInPool is returned if there is another tx with the same nonce in the tx pool.
 	ErrAlreadyNonceExistInPool = errors.New("there is another tx which has the same nonce in the tx pool")
 
+	// ErrMaxInitCodeSizeExceeded is returned if creation transaction provides the init code bigger
+	// than init code size limit.
+	ErrMaxInitCodeSizeExceeded = errors.New("max initcode size exceeded")
+
 	// ErrInsufficientFunds is returned if the total cost of executing a transaction
 	// is higher than the balance of the user's account.
 	ErrInsufficientFunds = errors.New("insufficient funds for gas * price + value")

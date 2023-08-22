@@ -74,6 +74,8 @@ var (
 	signer types.Signer
 )
 
+var addRocksDB = false
+
 func init() {
 	GetOpenFilesLimit()
 
@@ -86,10 +88,15 @@ func init() {
 		badgerConfig.DBType = BadgerDB
 		memoryConfig := *bc
 		memoryConfig.DBType = MemoryDB
+		rockdbConfig := *bc
+		rockdbConfig.DBType = RocksDB
 
 		dbConfigs = append(dbConfigs, bc)
 		dbConfigs = append(dbConfigs, &badgerConfig)
 		dbConfigs = append(dbConfigs, &memoryConfig)
+		if addRocksDB {
+			dbConfigs = append(dbConfigs, &rockdbConfig)
+		}
 	}
 
 	dbManagers = createDBManagers(dbConfigs)
@@ -453,37 +460,36 @@ func TestDBManager_IstanbulSnapshot(t *testing.T) {
 // TestDBManager_TrieNode tests read and write operations of state trie nodes.
 func TestDBManager_TrieNode(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
+	var (
+		key1  = hash1.ExtendLegacy()
+		key2  = hash2.Extend()
+		node1 = hash1[:]
+		node2 = hash2[:]
+	)
 	for _, dbm := range dbManagers {
-		cachedNode, _ := dbm.ReadCachedTrieNode(hash1)
+		cachedNode, _ := dbm.ReadTrieNode(key1)
 		assert.Nil(t, cachedNode)
-		hasStateTrieNode, _ := dbm.HasStateTrieNode(hash1[:])
+		hasStateTrieNode, _ := dbm.HasTrieNode(key1)
 		assert.False(t, hasStateTrieNode)
 
 		batch := dbm.NewBatch(StateTrieDB)
-		if err := batch.Put(hash1[:], hash2[:]); err != nil {
-			t.Fatal("Failed putting a row into the batch", "err", err)
-		}
+		dbm.PutTrieNodeToBatch(batch, key1, node2)
 		if _, err := WriteBatches(batch); err != nil {
 			t.Fatal("Failed writing batch", "err", err)
 		}
 
-		cachedNode, _ = dbm.ReadCachedTrieNode(hash1)
-		assert.Equal(t, hash2[:], cachedNode)
+		cachedNode, _ = dbm.ReadTrieNode(key1)
+		assert.Equal(t, node2, cachedNode)
 
-		if err := batch.Put(hash1[:], hash1[:]); err != nil {
-			t.Fatal("Failed putting a row into the batch", "err", err)
-		}
+		dbm.PutTrieNodeToBatch(batch, key1, node1)
 		if _, err := WriteBatches(batch); err != nil {
 			t.Fatal("Failed writing batch", "err", err)
 		}
 
-		cachedNode, _ = dbm.ReadCachedTrieNode(hash1)
-		assert.Equal(t, hash1[:], cachedNode)
+		cachedNode, _ = dbm.ReadTrieNode(key1)
+		assert.Equal(t, node1, cachedNode)
 
-		stateTrieNode, _ := dbm.ReadStateTrieNode(hash1[:])
-		assert.Equal(t, hash1[:], stateTrieNode)
-
-		hasStateTrieNode, _ = dbm.HasStateTrieNode(hash1[:])
+		hasStateTrieNode, _ = dbm.HasTrieNode(key1)
 		assert.True(t, hasStateTrieNode)
 
 		if dbm.IsSingle() {
@@ -492,45 +498,80 @@ func TestDBManager_TrieNode(t *testing.T) {
 		err := dbm.CreateMigrationDBAndSetStatus(123)
 		assert.NoError(t, err)
 
-		cachedNode, _ = dbm.ReadCachedTrieNode(hash1)
-		oldCachedNode, _ := dbm.ReadCachedTrieNodeFromOld(hash1)
-		assert.Equal(t, hash1[:], cachedNode)
-		assert.Equal(t, hash1[:], oldCachedNode)
+		cachedNode, _ = dbm.ReadTrieNode(key1)
+		oldCachedNode, _ := dbm.ReadTrieNodeFromOld(key1)
+		assert.Equal(t, node1, cachedNode)
+		assert.Equal(t, node1, oldCachedNode)
 
-		stateTrieNode, _ = dbm.ReadStateTrieNode(hash1[:])
-		oldStateTrieNode, _ := dbm.ReadStateTrieNodeFromOld(hash1[:])
-		assert.Equal(t, hash1[:], stateTrieNode)
-		assert.Equal(t, hash1[:], oldStateTrieNode)
-
-		hasStateTrieNode, _ = dbm.HasStateTrieNode(hash1[:])
-		hasOldStateTrieNode, _ := dbm.HasStateTrieNodeFromOld(hash1[:])
+		hasStateTrieNode, _ = dbm.HasTrieNode(key1)
+		hasOldStateTrieNode, _ := dbm.HasTrieNodeFromOld(key1)
 		assert.True(t, hasStateTrieNode)
 		assert.True(t, hasOldStateTrieNode)
 
 		batch = dbm.NewBatch(StateTrieDB)
-		if err := batch.Put(hash2[:], hash2[:]); err != nil {
-			t.Fatal("Failed putting a row into the batch", "err", err)
-		}
+		dbm.PutTrieNodeToBatch(batch, key2, node2)
 		if _, err := WriteBatches(batch); err != nil {
 			t.Fatal("Failed writing batch", "err", err)
 		}
 
-		cachedNode, _ = dbm.ReadCachedTrieNode(hash2)
-		oldCachedNode, _ = dbm.ReadCachedTrieNodeFromOld(hash2)
-		assert.Equal(t, hash2[:], cachedNode)
-		assert.Equal(t, hash2[:], oldCachedNode)
+		cachedNode, _ = dbm.ReadTrieNode(key2)
+		oldCachedNode, _ = dbm.ReadTrieNodeFromOld(key2)
+		assert.Equal(t, node2, cachedNode)
+		assert.Equal(t, node2, oldCachedNode)
 
-		stateTrieNode, _ = dbm.ReadStateTrieNode(hash2[:])
-		oldStateTrieNode, _ = dbm.ReadStateTrieNodeFromOld(hash2[:])
-		assert.Equal(t, hash2[:], stateTrieNode)
-		assert.Equal(t, hash2[:], oldStateTrieNode)
-
-		hasStateTrieNode, _ = dbm.HasStateTrieNode(hash2[:])
-		hasOldStateTrieNode, _ = dbm.HasStateTrieNodeFromOld(hash2[:])
+		hasStateTrieNode, _ = dbm.HasTrieNode(key2)
+		hasOldStateTrieNode, _ = dbm.HasTrieNodeFromOld(key2)
 		assert.True(t, hasStateTrieNode)
 		assert.True(t, hasOldStateTrieNode)
 
 		dbm.FinishStateMigration(true)
+	}
+}
+
+func TestDBManager_PruningMarks(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
+	for _, dbm := range dbManagers {
+		if dbm.GetMiscDB().Type() == BadgerDB {
+			continue // badgerDB doesn't support NewIterator, so cannot test ReadPruningMarks.
+		}
+
+		assert.False(t, dbm.ReadPruningEnabled())
+		dbm.WritePruningEnabled()
+		assert.True(t, dbm.ReadPruningEnabled())
+		dbm.DeletePruningEnabled()
+		assert.False(t, dbm.ReadPruningEnabled())
+
+		var (
+			node1 = hash1.Extend()
+			node2 = hash2.Extend()
+			node3 = hash3.Extend()
+			node4 = hash4.Extend()
+			value = []byte("value")
+		)
+
+		dbm.WriteTrieNode(node1, value)
+		dbm.WriteTrieNode(node2, value)
+		dbm.WriteTrieNode(node3, value)
+		dbm.WriteTrieNode(node4, value)
+		dbm.WritePruningMarks([]PruningMark{
+			{100, node1}, {200, node2}, {300, node3}, {400, node4},
+		})
+
+		marks := dbm.ReadPruningMarks(300, 0)
+		assert.Equal(t, []PruningMark{{300, node3}, {400, node4}}, marks)
+		marks = dbm.ReadPruningMarks(0, 300)
+		assert.Equal(t, []PruningMark{{100, node1}, {200, node2}}, marks)
+
+		dbm.PruneTrieNodes(marks) // delete node1, node2
+		has := func(hash common.ExtHash) bool { ok, _ := dbm.HasTrieNode(hash); return ok }
+		assert.False(t, has(node1))
+		assert.False(t, has(node2))
+		assert.True(t, has(node3))
+		assert.True(t, has(node4))
+
+		dbm.DeletePruningMarks(marks)
+		marks = dbm.ReadPruningMarks(0, 0)
+		assert.Equal(t, []PruningMark{{300, node3}, {400, node4}}, marks)
 	}
 }
 

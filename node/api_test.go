@@ -175,7 +175,6 @@ func TestStartRPC(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			runTestWithServerType(t, test, "fasthttp")
 			runTestWithServerType(t, test, "http")
 		})
 	}

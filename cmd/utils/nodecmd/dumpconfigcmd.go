@@ -25,13 +25,13 @@ import (
 	"os"
 
 	"github.com/klaytn/klaytn/cmd/utils"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 // GetDumpConfigCommand returns cli.Command `dumpconfig` whose flags are initialized with nodeFlags and rpcFlags.
-func GetDumpConfigCommand(nodeFlags, rpcFlags []cli.Flag) cli.Command {
-	return cli.Command{
-		Action:      utils.MigrateFlags(dumpConfig),
+func GetDumpConfigCommand(nodeFlags, rpcFlags []cli.Flag) *cli.Command {
+	return &cli.Command{
+		Action:      dumpConfig,
 		Name:        "dumpconfig",
 		Usage:       "Show configuration values",
 		ArgsUsage:   "",

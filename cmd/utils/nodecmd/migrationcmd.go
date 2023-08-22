@@ -23,27 +23,13 @@ import (
 	"github.com/klaytn/klaytn/cmd/utils"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/pkg/errors"
-
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 var (
-	dbFlags = []cli.Flag{
-		// src DB
-		utils.DbTypeFlag,
-		utils.SingleDBFlag,
-		utils.NumStateTrieShardsFlag,
-		utils.DynamoDBTableNameFlag,
-		utils.DynamoDBRegionFlag,
-		utils.DynamoDBIsProvisionedFlag,
-		utils.DynamoDBReadCapacityFlag,
-		utils.DynamoDBWriteCapacityFlag,
-		utils.LevelDBCompressionTypeFlag,
-		utils.DataDirFlag,
-	}
-	dbMigrationFlags = append(dbFlags, DBMigrationFlags...)
+	dbMigrationFlags = append(utils.DBMigrationSrcFlags, utils.DBMigrationDstFlags...)
 
-	MigrationCommand = cli.Command{
+	MigrationCommand = &cli.Command{
 		Name:     "db-migration",
 		Usage:    "db migration",
 		Flags:    []cli.Flag{},
@@ -55,12 +41,12 @@ The type of DBs can be different.
 Note: This feature is only provided when srcDB is single LevelDB.
 Note: Do not use db migration while a node is executing.
 `,
-		Subcommands: []cli.Command{
+		Subcommands: []*cli.Command{
 			{
 				Name:   "start",
 				Usage:  "Start db migration",
 				Flags:  dbMigrationFlags,
-				Action: utils.MigrateFlags(startMigration),
+				Action: startMigration,
 				Description: `
 This command starts DB migration.
 
@@ -109,52 +95,76 @@ func createDBManagerForMigration(ctx *cli.Context) (database.DBManager, database
 func createDBConfigForMigration(ctx *cli.Context) (*database.DBConfig, *database.DBConfig, error) {
 	// srcDB
 	srcDBC := &database.DBConfig{
-		Dir:                ctx.GlobalString(utils.DataDirFlag.Name),
-		DBType:             database.DBType(ctx.GlobalString(utils.DbTypeFlag.Name)).ToValid(),
-		SingleDB:           ctx.GlobalBool(utils.SingleDBFlag.Name),
-		NumStateTrieShards: ctx.GlobalUint(utils.NumStateTrieShardsFlag.Name),
+		Dir:                ctx.String(utils.DataDirFlag.Name),
+		DBType:             database.DBType(ctx.String(utils.DbTypeFlag.Name)).ToValid(),
+		SingleDB:           ctx.Bool(utils.SingleDBFlag.Name),
+		NumStateTrieShards: ctx.Uint(utils.NumStateTrieShardsFlag.Name),
 		OpenFilesLimit:     database.GetOpenFilesLimit(),
 
-		LevelDBCacheSize:    ctx.GlobalInt(utils.LevelDBCacheSizeFlag.Name),
-		LevelDBCompression:  database.LevelDBCompressionType(ctx.GlobalInt(utils.LevelDBCompressionTypeFlag.Name)),
-		EnableDBPerfMetrics: !ctx.IsSet(utils.DBNoPerformanceMetricsFlag.Name),
+		LevelDBCacheSize:    ctx.Int(utils.LevelDBCacheSizeFlag.Name),
+		LevelDBCompression:  database.LevelDBCompressionType(ctx.Int(utils.LevelDBCompressionTypeFlag.Name)),
+		EnableDBPerfMetrics: !ctx.Bool(utils.DBNoPerformanceMetricsFlag.Name),
 
 		DynamoDBConfig: &database.DynamoDBConfig{
-			TableName:          ctx.GlobalString(utils.DynamoDBTableNameFlag.Name),
-			Region:             ctx.GlobalString(utils.DynamoDBRegionFlag.Name),
-			IsProvisioned:      ctx.GlobalBool(utils.DynamoDBIsProvisionedFlag.Name),
-			ReadCapacityUnits:  ctx.GlobalInt64(utils.DynamoDBReadCapacityFlag.Name),
-			WriteCapacityUnits: ctx.GlobalInt64(utils.DynamoDBWriteCapacityFlag.Name),
-			PerfCheck:          !ctx.IsSet(utils.DBNoPerformanceMetricsFlag.Name),
+			TableName:          ctx.String(utils.DynamoDBTableNameFlag.Name),
+			Region:             ctx.String(utils.DynamoDBRegionFlag.Name),
+			IsProvisioned:      ctx.Bool(utils.DynamoDBIsProvisionedFlag.Name),
+			ReadCapacityUnits:  ctx.Int64(utils.DynamoDBReadCapacityFlag.Name),
+			WriteCapacityUnits: ctx.Int64(utils.DynamoDBWriteCapacityFlag.Name),
+			PerfCheck:          !ctx.Bool(utils.DBNoPerformanceMetricsFlag.Name),
+		},
+
+		RocksDBConfig: &database.RocksDBConfig{
+			CacheSize:                 ctx.Uint64(utils.RocksDBCacheSizeFlag.Name),
+			DumpMallocStat:            ctx.Bool(utils.RocksDBDumpMallocStatFlag.Name),
+			DisableMetrics:            ctx.Bool(utils.RocksDBDisableMetricsFlag.Name),
+			Secondary:                 ctx.Bool(utils.RocksDBSecondaryFlag.Name),
+			CompressionType:           ctx.String(utils.RocksDBCompressionTypeFlag.Name),
+			BottommostCompressionType: ctx.String(utils.RocksDBBottommostCompressionTypeFlag.Name),
+			FilterPolicy:              ctx.String(utils.RocksDBFilterPolicyFlag.Name),
+			MaxOpenFiles:              ctx.Int(utils.RocksDBMaxOpenFilesFlag.Name),
+			CacheIndexAndFilter:       ctx.Bool(utils.RocksDBCacheIndexAndFilterFlag.Name),
 		},
 	}
 	if len(srcDBC.DBType) == 0 { // changed to invalid type
-		return nil, nil, errors.New("srcDB is not specified or invalid : " + ctx.GlobalString(utils.DbTypeFlag.Name))
+		return nil, nil, errors.New("srcDB is not specified or invalid : " + ctx.String(utils.DbTypeFlag.Name))
 	}
 
 	// dstDB
 	dstDBC := &database.DBConfig{
-		Dir:                ctx.GlobalString(utils.DstDataDirFlag.Name),
-		DBType:             database.DBType(ctx.GlobalString(utils.DstDbTypeFlag.Name)).ToValid(),
-		SingleDB:           ctx.GlobalBool(utils.DstSingleDBFlag.Name),
-		NumStateTrieShards: ctx.GlobalUint(utils.DstNumStateTrieShardsFlag.Name),
+		Dir:                ctx.String(utils.DstDataDirFlag.Name),
+		DBType:             database.DBType(ctx.String(utils.DstDbTypeFlag.Name)).ToValid(),
+		SingleDB:           ctx.Bool(utils.DstSingleDBFlag.Name),
+		NumStateTrieShards: ctx.Uint(utils.DstNumStateTrieShardsFlag.Name),
 		OpenFilesLimit:     database.GetOpenFilesLimit(),
 
-		LevelDBCacheSize:    ctx.GlobalInt(utils.DstLevelDBCacheSizeFlag.Name),
-		LevelDBCompression:  database.LevelDBCompressionType(ctx.GlobalInt(utils.DstLevelDBCompressionTypeFlag.Name)),
-		EnableDBPerfMetrics: !ctx.IsSet(utils.DBNoPerformanceMetricsFlag.Name),
+		LevelDBCacheSize:    ctx.Int(utils.DstLevelDBCacheSizeFlag.Name),
+		LevelDBCompression:  database.LevelDBCompressionType(ctx.Int(utils.DstLevelDBCompressionTypeFlag.Name)),
+		EnableDBPerfMetrics: !ctx.Bool(utils.DBNoPerformanceMetricsFlag.Name),
 
 		DynamoDBConfig: &database.DynamoDBConfig{
-			TableName:          ctx.GlobalString(utils.DstDynamoDBTableNameFlag.Name),
-			Region:             ctx.GlobalString(utils.DstDynamoDBRegionFlag.Name),
-			IsProvisioned:      ctx.GlobalBool(utils.DstDynamoDBIsProvisionedFlag.Name),
-			ReadCapacityUnits:  ctx.GlobalInt64(utils.DstDynamoDBReadCapacityFlag.Name),
-			WriteCapacityUnits: ctx.GlobalInt64(utils.DstDynamoDBWriteCapacityFlag.Name),
-			PerfCheck:          !ctx.IsSet(utils.DBNoPerformanceMetricsFlag.Name),
+			TableName:          ctx.String(utils.DstDynamoDBTableNameFlag.Name),
+			Region:             ctx.String(utils.DstDynamoDBRegionFlag.Name),
+			IsProvisioned:      ctx.Bool(utils.DstDynamoDBIsProvisionedFlag.Name),
+			ReadCapacityUnits:  ctx.Int64(utils.DstDynamoDBReadCapacityFlag.Name),
+			WriteCapacityUnits: ctx.Int64(utils.DstDynamoDBWriteCapacityFlag.Name),
+			PerfCheck:          !ctx.Bool(utils.DBNoPerformanceMetricsFlag.Name),
+		},
+
+		RocksDBConfig: &database.RocksDBConfig{
+			CacheSize:                 ctx.Uint64(utils.DstRocksDBCacheSizeFlag.Name),
+			DumpMallocStat:            ctx.Bool(utils.DstRocksDBDumpMallocStatFlag.Name),
+			DisableMetrics:            ctx.Bool(utils.DstRocksDBDisableMetricsFlag.Name),
+			Secondary:                 ctx.Bool(utils.DstRocksDBSecondaryFlag.Name),
+			CompressionType:           ctx.String(utils.DstRocksDBCompressionTypeFlag.Name),
+			BottommostCompressionType: ctx.String(utils.DstRocksDBBottommostCompressionTypeFlag.Name),
+			FilterPolicy:              ctx.String(utils.DstRocksDBFilterPolicyFlag.Name),
+			MaxOpenFiles:              ctx.Int(utils.DstRocksDBMaxOpenFilesFlag.Name),
+			CacheIndexAndFilter:       ctx.Bool(utils.DstRocksDBCacheIndexAndFilterFlag.Name),
 		},
 	}
 	if len(dstDBC.DBType) == 0 { // changed to invalid type
-		return nil, nil, errors.New("dstDB is not specified or invalid : " + ctx.GlobalString(utils.DstDbTypeFlag.Name))
+		return nil, nil, errors.New("dstDB is not specified or invalid : " + ctx.String(utils.DstDbTypeFlag.Name))
 	}
 
 	return srcDBC, dstDBC, nil

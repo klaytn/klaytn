@@ -107,6 +107,7 @@ type Context struct {
 
 	// Block information
 	Coinbase    common.Address // Provides information for COINBASE
+	Rewardbase  common.Address // Provides information for rewardbase when deferredTxfee is false
 	GasLimit    uint64         // Provides information for GASLIMIT
 	BlockNumber *big.Int       // Provides information for NUMBER
 	Time        *big.Int       // Provides information for TIME
@@ -304,8 +305,10 @@ func (evm *EVM) CallCode(caller types.ContractRef, addr common.Address, input []
 	if evm.depth > int(params.CallCreateDepth) {
 		return nil, gas, ErrDepth // TODO-Klaytn-Issue615
 	}
-	// Fail if we're trying to transfer more than the available balance
-	if !evm.CanTransfer(evm.StateDB, caller.Address(), value) {
+	// Note although it's noop to transfer X ether to caller itself. But
+	// if caller doesn't have enough balance, it would be an error to allow
+	// over-charging itself. So the check here is necessary.
+	if !evm.Context.CanTransfer(evm.StateDB, caller.Address(), value) {
 		return nil, gas, ErrInsufficientBalance // TODO-Klaytn-Issue615
 	}
 
@@ -437,7 +440,7 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 	if evm.depth > int(params.CallCreateDepth) {
 		return nil, common.Address{}, gas, ErrDepth // TODO-Klaytn-Issue615
 	}
-	if !evm.CanTransfer(evm.StateDB, caller.Address(), value) {
+	if !evm.Context.CanTransfer(evm.StateDB, caller.Address(), value) {
 		return nil, common.Address{}, gas, ErrInsufficientBalance // TODO-Klaytn-Issue615
 	}
 
@@ -450,9 +453,22 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 		evm.StateDB.AddAddressToAccessList(address)
 	}
 
-	if evm.StateDB.Exist(address) {
-		return nil, common.Address{}, 0, ErrContractAddressCollision // TODO-Klaytn-Issue615
+	// Ensure there's no existing contract already at the designated address
+	contractHash := evm.StateDB.GetCodeHash(address)
+
+	// The early Klaytn design tried to support the account creation with a user selected address,
+	// so the account overwriting was restricted.
+	// Because the feature was postponed for a long time and the restriction can be abused to prevent SCA creation,
+	// Klaytn enables SCA overwriting over EOA like Ethereum after Shanghai compatible hardfork.
+	// NOTE: The following code should be re-considered when Klaytn enables TxTypeAccountCreation
+	if evm.chainRules.IsShanghai {
+		if evm.StateDB.GetNonce(address) != 0 || (contractHash != (common.Hash{}) && contractHash != emptyCodeHash) {
+			return nil, common.Address{}, 0, ErrContractAddressCollision
+		}
+	} else if evm.StateDB.Exist(address) {
+		return nil, common.Address{}, 0, ErrContractAddressCollision
 	}
+
 	if common.IsPrecompiledContractAddress(address) {
 		return nil, common.Address{}, gas, kerrors.ErrPrecompiledContractAddress
 	}
@@ -481,7 +497,7 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 	}
 	start := time.Now()
 
-	ret, err = run(evm, contract, nil)
+	ret, err = evm.interpreter.Run(contract, nil)
 
 	// check whether the max code size has been exceeded
 	maxCodeSizeExceeded := len(ret) > params.MaxCodeSize

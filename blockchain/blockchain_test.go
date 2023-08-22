@@ -41,6 +41,7 @@ import (
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/consensus/gxhash"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage"
@@ -48,6 +49,7 @@ import (
 	"github.com/klaytn/klaytn/storage/statedb"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // So we can deterministically seed different blockchains
@@ -162,7 +164,7 @@ func testBlockChainImport(chain types.Blocks, blockchain *BlockChain) error {
 			}
 			return err
 		}
-		statedb, err := state.New(blockchain.GetBlockByHash(block.ParentHash()).Root(), blockchain.stateCache, nil)
+		statedb, err := state.New(blockchain.GetBlockByHash(block.ParentHash()).Root(), blockchain.stateCache, nil, nil)
 		if err != nil {
 			return err
 		}
@@ -1099,9 +1101,7 @@ func TestEIP155Transition(t *testing.T) {
 		}
 	})
 	_, err := blockchain.InsertChain(blocks)
-	if err != types.ErrInvalidChainId {
-		t.Error("expected error:", types.ErrInvalidChainId)
-	}
+	assert.Equal(t, types.ErrSender(types.ErrInvalidChainId), err)
 }
 
 // TODO-Klaytn-FailedTest Failed test. Enable this later.
@@ -1264,6 +1264,83 @@ func TestTrieForkGC(t *testing.T) {
 	}
 }
 
+// Tests that State pruning indeed deletes obsolete trie nodes.
+func TestStatePruning(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlInfo)
+	var (
+		db      = database.NewMemoryDBManager()
+		key1, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+		addr1   = crypto.PubkeyToAddress(key1.PublicKey)
+		addr2   = common.HexToAddress("0xaaaa")
+
+		gspec = &Genesis{
+			Config: params.TestChainConfig,
+			Alloc:  GenesisAlloc{addr1: {Balance: big.NewInt(10000000000000)}},
+		}
+		genesis = gspec.MustCommit(db)
+		signer  = types.LatestSignerForChainID(gspec.Config.ChainID)
+		engine  = gxhash.NewFaker()
+
+		// Latest `retention` blocks survive.
+		// Blocks 1..7 are pruned, blocks 8..10 are kept.
+		retention = uint64(3)
+		numBlocks = 10
+		pruneNum  = uint64(numBlocks) - retention
+	)
+
+	db.WritePruningEnabled() // Enable pruning on database by writing the flag at genesis
+	cacheConfig := &CacheConfig{
+		ArchiveMode:          false,
+		CacheSize:            512,
+		BlockInterval:        2, // Write frequently to test pruning
+		TriesInMemory:        DefaultTriesInMemory,
+		LivePruningRetention: retention, // Enable pruning on blockchain by setting it nonzero
+		TrieNodeCacheConfig:  statedb.GetEmptyTrieNodeCacheConfig(),
+	}
+	blockchain, _ := NewBlockChain(db, cacheConfig, gspec.Config, engine, vm.Config{})
+
+	chain, _ := GenerateChain(gspec.Config, genesis, engine, db, numBlocks, func(i int, gen *BlockGen) {
+		tx, _ := types.SignTx(types.NewTransaction(
+			gen.TxNonce(addr1), addr2, common.Big1, 21000, common.Big1, nil), signer, key1)
+		gen.AddTx(tx)
+	})
+	if _, err := blockchain.InsertChain(chain); err != nil {
+		t.Fatalf("failed to insert chain: %v", err)
+	}
+	assert.Equal(t, uint64(numBlocks), blockchain.CurrentBlock().NumberU64())
+
+	// Give some time for pruning loop to run
+	time.Sleep(100 * time.Millisecond)
+
+	// Note that even if trie nodes are deleted from disk (DiskDB),
+	// they may still be cached in memory (TrieDB).
+	//
+	// Therefore reopen the blockchain from the DiskDB with a clean TrieDB.
+	// This simulates the node program restart.
+	blockchain.Stop()
+	blockchain, _ = NewBlockChain(db, cacheConfig, gspec.Config, engine, vm.Config{})
+
+	// Genesis block always survives
+	state, err := blockchain.StateAt(genesis.Root())
+	assert.Nil(t, err)
+	assert.NotZero(t, state.GetBalance(addr1).Uint64())
+
+	// Pruned blocks should be inaccessible.
+	for num := uint64(1); num <= pruneNum; num++ {
+		_, err := blockchain.StateAt(blockchain.GetBlockByNumber(num).Root())
+		assert.IsType(t, &statedb.MissingNodeError{}, err, num)
+	}
+
+	// Recent unpruned blocks should be accessible.
+	for num := pruneNum + 1; num < uint64(numBlocks); num++ {
+		state, err := blockchain.StateAt(blockchain.GetBlockByNumber(num).Root())
+		require.Nil(t, err, num)
+		assert.NotZero(t, state.GetBalance(addr1).Uint64())
+		assert.NotZero(t, state.GetBalance(addr2).Uint64())
+	}
+	blockchain.Stop()
+}
+
 // TODO-Klaytn-FailedTest Failed test. Enable this later.
 /*
 // Tests that doing large reorgs works even if the state associated with the
@@ -1319,6 +1396,122 @@ func TestLargeReorgTrieGC(t *testing.T) {
 	}
 }
 */
+
+func TestEIP3651(t *testing.T) {
+	var (
+		aa     = params.AuthorAddressForTesting
+		bb     = common.HexToAddress("0x000000000000000000000000000000000000bbbb")
+		engine = gxhash.NewFaker()
+		db     = database.NewMemoryDBManager()
+
+		// A sender who makes transactions, has some funds
+		key1, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+		key2, _ = crypto.HexToECDSA("8a1f9a8f95be41cd7ccb6168179afb4504aefe388d1e14474d32c45c72ce7b7a")
+		addr1   = crypto.PubkeyToAddress(key1.PublicKey)
+		addr2   = crypto.PubkeyToAddress(key2.PublicKey)
+		funds   = new(big.Int).Mul(common.Big1, big.NewInt(params.KLAY))
+		gspec   = &Genesis{
+			Config: params.CypressChainConfig.Copy(),
+			Alloc: GenesisAlloc{
+				addr1: {Balance: funds},
+				addr2: {Balance: funds},
+				// The address 0xAAAA sloads 0x00 and 0x01
+				aa: {
+					Code: []byte{
+						byte(vm.PC),
+						byte(vm.PC),
+						byte(vm.SLOAD),
+						byte(vm.SLOAD),
+					},
+					Nonce:   0,
+					Balance: big.NewInt(0),
+				},
+				// The address 0xBBBB calls 0xAAAA
+				// delegatecall(gas, address, in_offset(argsOffset), in_size(argsSize), out_offset(retOffset))
+				// bb.Code: execute delegatecall to the contract which address is same as coinbase(producer)
+				bb: {
+					Code: []byte{
+						byte(vm.PUSH1), 0, // out size
+						byte(vm.DUP1),   // out offset
+						byte(vm.DUP1),   // out insize
+						byte(vm.DUP1),   // in offset
+						byte(vm.PUSH20), // address
+						byte(0xc0), byte(0xea), byte(0x08), byte(0xa2),
+						byte(0xd4), byte(0x04), byte(0xd3), byte(0x17),
+						byte(0x2d), byte(0x2a), byte(0xdd), byte(0x29),
+						byte(0xa4), byte(0x5b), byte(0xe5), byte(0x6d),
+						byte(0xa4), byte(0x0e), byte(0x29), byte(0x49),
+						byte(vm.GAS), // gas
+						byte(vm.DELEGATECALL),
+					},
+					Nonce:   0,
+					Balance: big.NewInt(0),
+				},
+			},
+		}
+	)
+	gspec.Config.SetDefaults()
+	gspec.Config.IstanbulCompatibleBlock = common.Big0
+	gspec.Config.LondonCompatibleBlock = common.Big0
+	gspec.Config.EthTxTypeCompatibleBlock = common.Big0
+	gspec.Config.MagmaCompatibleBlock = common.Big0
+	gspec.Config.KoreCompatibleBlock = common.Big0
+	gspec.Config.ShanghaiCompatibleBlock = common.Big0
+
+	signer := types.LatestSigner(gspec.Config)
+	genesis := gspec.MustCommit(db)
+
+	blocks, _ := GenerateChain(gspec.Config, genesis, engine, db, 1, func(i int, b *BlockGen) {
+		// One transaction to Coinbase
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:    uint64(0),
+			types.TxValueKeyTo:       bb,
+			types.TxValueKeyAmount:   big.NewInt(0),
+			types.TxValueKeyGasLimit: uint64(20000000),
+			types.TxValueKeyGasPrice: big.NewInt(750 * params.Ston),
+			types.TxValueKeyData:     []byte{},
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeLegacyTransaction, values)
+		assert.Equal(t, nil, err)
+
+		tx, err = types.SignTx(tx, signer, key1)
+		assert.Equal(t, nil, err)
+
+		b.AddTx(tx)
+	})
+	chain, err := NewBlockChain(db, nil, gspec.Config, engine, vm.Config{})
+	if err != nil {
+		t.Fatalf("failed to create tester chain: %v", err)
+	}
+	if n, err := chain.InsertChain(blocks); err != nil {
+		t.Fatalf("block %d: failed to insert into chain: %v", n, err)
+	}
+
+	block := chain.GetBlockByNumber(1)
+
+	// 1+2: Ensure access lists are accounted for via gas usage.
+	innerGas := vm.GasQuickStep*2 + params.ColdSloadCostEIP2929*2
+	expectedGas := params.TxGas + 5*vm.GasFastestStep + vm.GasQuickStep + 100 + innerGas // 100 because 0xaaaa is in access list
+	if block.GasUsed() != expectedGas {
+		t.Fatalf("incorrect amount of gas spent: expected %d, got %d", expectedGas, block.GasUsed())
+	}
+
+	state, _ := chain.State()
+
+	// 3: Ensure that miner received only the mining fee (consensus is gxHash, so 3 klay is the total reward)
+	actual := state.GetBalance(params.AuthorAddressForTesting)
+	expected := gxhash.ByzantiumBlockReward
+	if actual.Cmp(expected) != 0 {
+		t.Fatalf("miner balance incorrect: expected %d, got %d", expected, actual)
+	}
+
+	// 4: Ensure the tx sender paid for the gasUsed * (block baseFee).
+	actual = new(big.Int).Sub(funds, state.GetBalance(addr1))
+	expected = new(big.Int).Mul(new(big.Int).SetUint64(block.GasUsed()), block.Header().BaseFee)
+	if actual.Cmp(expected) != 0 {
+		t.Fatalf("sender balance incorrect: expected %d, got %d", expected, actual)
+	}
+}
 
 // Benchmarks large blocks with value transfers to non-existing accounts
 func benchmarkLargeNumberOfValueToNonexisting(b *testing.B, numTxs, numBlocks int, recipientFn func(uint64) common.Address, dataFn func(uint64) []byte) {

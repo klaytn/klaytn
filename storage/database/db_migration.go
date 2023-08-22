@@ -36,6 +36,7 @@ func copyDB(name string, srcDB, dstDB Database, quit chan struct{}) error {
 	// create src iterator and dst batch
 	srcIter := srcDB.NewIterator(nil, nil)
 	dstBatch := dstDB.NewBatch()
+	defer dstBatch.Release()
 
 	// vars for log
 	start := time.Now()

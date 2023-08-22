@@ -30,7 +30,7 @@ import (
 	"github.com/klaytn/klaytn/cmd/utils/nodecmd"
 	"github.com/klaytn/klaytn/console"
 	"github.com/klaytn/klaytn/log"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 var (
@@ -41,12 +41,11 @@ var (
 )
 
 func init() {
-	utils.InitHelper()
 	// Initialize the CLI app and start kpn
 	app.Action = nodecmd.RunKlaytnNode
 	app.HideVersion = true // we have a command to print the version
-	app.Copyright = "Copyright 2018-2019 The klaytn Authors"
-	app.Commands = []cli.Command{
+	app.Copyright = "Copyright 2018-2023 The klaytn Authors"
+	app.Commands = []*cli.Command{
 		// See utils/nodecmd/chaincmd.go:
 		nodecmd.InitCommand,
 		nodecmd.DumpGenesisCommand,
@@ -55,27 +54,27 @@ func init() {
 		nodecmd.AccountCommand,
 
 		// See utils/nodecmd/consolecmd.go:
-		nodecmd.GetConsoleCommand(nodecmd.KpnNodeFlags(), nodecmd.CommonRPCFlags),
+		nodecmd.GetConsoleCommand(utils.KpnNodeFlags(), utils.CommonRPCFlags),
 		nodecmd.AttachCommand,
 
 		// See utils/nodecmd/versioncmd.go:
 		nodecmd.VersionCommand,
 
 		// See utils/nodecmd/dumpconfigcmd.go:
-		nodecmd.GetDumpConfigCommand(nodecmd.KpnNodeFlags(), nodecmd.CommonRPCFlags),
+		nodecmd.GetDumpConfigCommand(utils.KpnNodeFlags(), utils.CommonRPCFlags),
 
 		// See utils/nodecmd/db_migration.go:
 		nodecmd.MigrationCommand,
+
+		// See utils/nodecmd/util.go:
+		nodecmd.UtilCommand,
 
 		// See utils/nodecmd/snapshot.go:
 		nodecmd.SnapshotCommand,
 	}
 	sort.Sort(cli.CommandsByName(app.Commands))
 
-	app.Flags = nodecmd.KpnAppFlags()
-
-	cli.AppHelpTemplate = utils.GlobalAppHelpTemplate
-	cli.HelpPrinter = utils.NewHelpPrinter(utils.CategorizeFlags(app.Flags))
+	app.Flags = utils.KpnAppFlags()
 
 	app.CommandNotFound = nodecmd.CommandNotExist
 	app.OnUsageError = nodecmd.OnUsageError

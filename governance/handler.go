@@ -383,8 +383,13 @@ func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, votes 
 		number := header.Number.Uint64()
 		// Check vote's validity
 		if gVote, ok := gov.ValidateVote(gVote); ok {
-			governanceMode := gov.Params().GovernanceModeInt()
-			governingNode := gov.Params().GoverningNode()
+			pset, err := gov.EffectiveParams(number)
+			if err != nil {
+				logger.Error("EffectiveParams failed", "number", number)
+				return valset, votes, tally
+			}
+			governanceMode := pset.GovernanceModeInt()
+			governingNode := pset.GoverningNode()
 
 			// Remove old vote with same validator and key
 			votes, tally = gov.removePreviousVote(valset, votes, tally, proposer, gVote, governanceMode, governingNode, writable)

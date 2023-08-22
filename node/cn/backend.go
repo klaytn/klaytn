@@ -92,8 +92,6 @@ type BackendProtocolManager interface {
 	ProtocolVersion() int
 	ReBroadcastTxs(transactions types.Transactions)
 	SetAcceptTxs()
-	SetRewardbase(addr common.Address)
-	SetRewardbaseWallet(wallet accounts.Wallet)
 	NodeType() common.ConnType
 	Start(maxPeers int)
 	Stop()
@@ -173,6 +171,7 @@ func senderTxHashIndexer(db database.DBManager, chainEvent <-chan blockchain.Cha
 
 			if err == nil {
 				batch.Write()
+				batch.Release()
 			}
 
 		case <-subscription.Err():
@@ -255,9 +254,15 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	var (
 		vmConfig    = config.getVMConfig()
 		cacheConfig = &blockchain.CacheConfig{
-			ArchiveMode: config.NoPruning, CacheSize: config.TrieCacheSize,
-			BlockInterval: config.TrieBlockInterval, TriesInMemory: config.TriesInMemory,
-			TrieNodeCacheConfig: &config.TrieNodeCacheConfig, SenderTxHashIndexing: config.SenderTxHashIndexing, SnapshotCacheSize: config.SnapshotCacheSize, SnapshotAsyncGen: config.SnapshotAsyncGen,
+			ArchiveMode:          config.NoPruning,
+			CacheSize:            config.TrieCacheSize,
+			BlockInterval:        config.TrieBlockInterval,
+			TriesInMemory:        config.TriesInMemory,
+			LivePruningRetention: config.LivePruningRetention,
+			TrieNodeCacheConfig:  &config.TrieNodeCacheConfig,
+			SenderTxHashIndexing: config.SenderTxHashIndexing,
+			SnapshotCacheSize:    config.SnapshotCacheSize,
+			SnapshotAsyncGen:     config.SnapshotAsyncGen,
 		}
 	)
 
@@ -267,19 +272,42 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	}
 	bc.SetCanonicalBlock(config.StartBlockNumber)
 
+	// Write the live pruning flag to database if the node is started for the first time
+	if config.LivePruning && !chainDB.ReadPruningEnabled() {
+		if bc.CurrentBlock().NumberU64() > 0 {
+			return nil, errors.New("cannot enable live pruning after chain has advanced")
+		}
+		logger.Info("Writing live pruning flag to database")
+		chainDB.WritePruningEnabled()
+	}
+	// Live pruning is enabled according to the flag in database
+	// regardless of the command line flag --state.live-pruning
+	// But live pruning is disabled when --state.live-pruning-retention=0
+	if chainDB.ReadPruningEnabled() && config.LivePruningRetention != 0 {
+		logger.Info("Live pruning is enabled", "retention", config.LivePruningRetention)
+	} else if !chainDB.ReadPruningEnabled() {
+		logger.Info("Live pruning is disabled because flag not stored in database")
+	} else if config.LivePruningRetention == 0 {
+		logger.Info("Live pruning is disabled because retention is set to zero")
+	}
+
 	cn.blockchain = bc
 	governance.SetBlockchain(cn.blockchain)
-	if err := governance.UpdateParams(); err != nil {
+	if err := governance.UpdateParams(cn.blockchain.CurrentBlock().NumberU64()); err != nil {
 		return nil, err
 	}
 	blockchain.InitDeriveShaWithGov(cn.chainConfig, governance)
 
 	// Synchronize proposerpolicy & useGiniCoeff
+	pset, err := governance.EffectiveParams(bc.CurrentBlock().NumberU64() + 1)
+	if err != nil {
+		return nil, err
+	}
 	if cn.blockchain.Config().Istanbul != nil {
-		cn.blockchain.Config().Istanbul.ProposerPolicy = governance.Params().Policy()
+		cn.blockchain.Config().Istanbul.ProposerPolicy = pset.Policy()
 	}
 	if cn.blockchain.Config().Governance.Reward != nil {
-		cn.blockchain.Config().Governance.Reward.UseGiniCoeff = governance.Params().UseGiniCoeff()
+		cn.blockchain.Config().Governance.Reward.UseGiniCoeff = pset.UseGiniCoeff()
 	}
 
 	if config.SenderTxHashIndexing {
@@ -316,13 +344,23 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	cn.protocolManager.SetWsEndPoint(config.WsEndpoint)
 
-	if err := cn.setRewardWallet(); err != nil {
-		logger.Error("Error happened while setting the reward wallet", "err", err)
+	if ctx.NodeType() == common.CONSENSUSNODE {
+		if _, err := cn.Rewardbase(); err != nil {
+			logger.Error("Cannot determine the rewardbase address", "err", err)
+		}
 	}
 
-	if governance.Params().Policy() == uint64(istanbul.WeightedRandom) {
+	if pset.Policy() == uint64(istanbul.WeightedRandom) {
 		// NewStakingManager is called with proper non-nil parameters
 		reward.NewStakingManager(cn.blockchain, governance, cn.chainDB)
+	}
+
+	// Governance states which are not yet applied to the db remains at in-memory storage
+	// It disappears during the node restart, so restoration is needed before the sync starts
+	// By calling CreateSnapshot, it restores the gov state snapshots and apply the votes in it
+	// Particularly, the gov.changeSet is also restored here.
+	if err := cn.Engine().CreateSnapshot(cn.blockchain, cn.blockchain.CurrentBlock().NumberU64(), cn.blockchain.CurrentBlock().Hash(), nil); err != nil {
+		logger.Error("CreateSnapshot failed", "err", err)
 	}
 
 	// set worker
@@ -393,6 +431,10 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		go cn.blockchain.BlockSubscriptionLoop(cn.txPool.(*blockchain.TxPool))
 	}
 
+	if config.DBType == database.RocksDB && config.RocksDBConfig.Secondary {
+		go cn.blockchain.CurrentBlockUpdateLoop(cn.txPool.(*blockchain.TxPool))
+	}
+
 	return cn, nil
 }
 
@@ -407,20 +449,6 @@ func (s *CN) setAcceptTxs() error {
 				s.protocolManager.SetAcceptTxs()
 			}
 		}
-	}
-	return nil
-}
-
-// setRewardWallet sets reward base and reward base wallet if the node is CN.
-func (s *CN) setRewardWallet() error {
-	if s.protocolManager.NodeType() == common.CONSENSUSNODE {
-		wallet, err := s.RewardbaseWallet()
-		if err != nil {
-			return err
-		} else {
-			s.protocolManager.SetRewardbaseWallet(wallet)
-		}
-		s.protocolManager.SetRewardbase(s.rewardbase)
 	}
 	return nil
 }
@@ -461,7 +489,7 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) database.DB
 	dbc := &database.DBConfig{
 		Dir: name, DBType: config.DBType, ParallelDBWrite: config.ParallelDBWrite, SingleDB: config.SingleDB, NumStateTrieShards: config.NumStateTrieShards,
 		LevelDBCacheSize: config.LevelDBCacheSize, OpenFilesLimit: database.GetOpenFilesLimit(), LevelDBCompression: config.LevelDBCompression,
-		LevelDBBufferPool: config.LevelDBBufferPool, EnableDBPerfMetrics: config.EnableDBPerfMetrics, DynamoDBConfig: &config.DynamoDBConfig,
+		LevelDBBufferPool: config.LevelDBBufferPool, EnableDBPerfMetrics: config.EnableDBPerfMetrics, RocksDBConfig: &config.RocksDBConfig, DynamoDBConfig: &config.DynamoDBConfig,
 	}
 	return ctx.OpenDatabase(dbc)
 }
@@ -478,21 +506,35 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 // APIs returns the collection of RPC services the ethereum package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
 func (s *CN) APIs() []rpc.API {
-	apis, ethAPI := api.GetAPIs(s.APIBackend)
+	apis, ethAPI := api.GetAPIs(s.APIBackend, s.config.DisableUnsafeDebug)
 
 	// Append any APIs exposed explicitly by the consensus engine
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)
 
 	publicFilterAPI := filters.NewPublicFilterAPI(s.APIBackend, false)
 	governanceKlayAPI := governance.NewGovernanceKlayAPI(s.governance, s.blockchain)
-	publicGovernanceAPI := governance.NewGovernanceAPI(s.governance)
+	governanceAPI := governance.NewGovernanceAPI(s.governance)
 	publicDownloaderAPI := downloader.NewPublicDownloaderAPI(s.protocolManager.Downloader(), s.eventMux)
-	tracerAPI := tracers.NewAPI(s.APIBackend)
-	unsafeTracerAPI := tracers.NewUnsafeAPI(s.APIBackend)
+	privateDownloaderAPI := downloader.NewPrivateDownloaderAPI(s.protocolManager.Downloader())
 
 	ethAPI.SetPublicFilterAPI(publicFilterAPI)
 	ethAPI.SetGovernanceKlayAPI(governanceKlayAPI)
-	ethAPI.SetPublicGovernanceAPI(publicGovernanceAPI)
+	ethAPI.SetGovernanceAPI(governanceAPI)
+
+	var tracerAPI *tracers.API
+	if s.config.DisableUnsafeDebug {
+		tracerAPI = tracers.NewAPIUnsafeDisabled(s.APIBackend)
+	} else {
+		tracerAPI = tracers.NewAPI(s.APIBackend)
+		apis = append(apis, []rpc.API{
+			{
+				Namespace: "debug",
+				Version:   "1.0",
+				Service:   NewPrivateDebugAPI(s.chainConfig, s),
+				Public:    false,
+			},
+		}...)
+	}
 
 	// Append all the local APIs and return
 	return append(apis, []rpc.API{
@@ -519,6 +561,10 @@ func (s *CN) APIs() []rpc.API {
 		}, {
 			Namespace: "admin",
 			Version:   "1.0",
+			Service:   privateDownloaderAPI,
+		}, {
+			Namespace: "admin",
+			Version:   "1.0",
 			Service:   NewPrivateAdminAPI(s),
 		}, {
 			Namespace: "debug",
@@ -526,19 +572,9 @@ func (s *CN) APIs() []rpc.API {
 			Service:   NewPublicDebugAPI(s),
 			Public:    false,
 		}, {
-			Namespace: "unsafedebug",
-			Version:   "1.0",
-			Service:   NewPrivateDebugAPI(s.chainConfig, s),
-			Public:    false,
-		}, {
 			Namespace: "debug",
 			Version:   "1.0",
 			Service:   tracerAPI,
-			Public:    false,
-		}, {
-			Namespace: "unsafedebug",
-			Version:   "1.0",
-			Service:   unsafeTracerAPI,
 			Public:    false,
 		}, {
 			Namespace: "net",
@@ -548,7 +584,7 @@ func (s *CN) APIs() []rpc.API {
 		}, {
 			Namespace: "governance",
 			Version:   "1.0",
-			Service:   governance.NewGovernanceAPI(s.governance),
+			Service:   governanceAPI,
 			Public:    true,
 		}, {
 			Namespace: "klay",
@@ -590,33 +626,6 @@ func (s *CN) Rewardbase() (eb common.Address, err error) {
 	}
 
 	return common.Address{}, fmt.Errorf("rewardbase must be explicitly specified")
-}
-
-func (s *CN) RewardbaseWallet() (accounts.Wallet, error) {
-	rewardBase, err := s.Rewardbase()
-	if err != nil {
-		return nil, err
-	}
-
-	account := accounts.Account{Address: rewardBase}
-	wallet, err := s.AccountManager().Find(account)
-	if err != nil {
-		logger.Error("find err", "err", err)
-		return nil, err
-	}
-	return wallet, nil
-}
-
-func (s *CN) SetRewardbase(rewardbase common.Address) {
-	s.lock.Lock()
-	s.rewardbase = rewardbase
-	s.lock.Unlock()
-	wallet, err := s.RewardbaseWallet()
-	if err != nil {
-		logger.Error("find err", "err", err)
-	}
-	s.protocolManager.SetRewardbase(rewardbase)
-	s.protocolManager.SetRewardbaseWallet(wallet)
 }
 
 func (s *CN) StartMining(local bool) error {

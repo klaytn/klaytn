@@ -587,6 +587,7 @@ func (s *Syncer) Sync(root common.Hash, cancel chan struct{}) error {
 			s.stateWriter.Write()
 			s.stateWriter.Reset()
 		}
+		s.stateWriter.Release()
 	}()
 	defer s.report(true)
 
@@ -710,12 +711,12 @@ func (s *Syncer) loadSyncStatus() {
 			s.tasks = progress.Tasks
 			for _, task := range s.tasks {
 				task.trieDb = statedb.NewDatabase(s.db)
-				task.genTrie, err = statedb.NewTrie(common.Hash{}, task.trieDb)
+				task.genTrie, err = statedb.NewTrie(common.Hash{}, task.trieDb, nil)
 
 				for _, subtasks := range task.SubTasks {
 					for _, subtask := range subtasks {
 						subtask.trieDb = statedb.NewDatabase(s.db)
-						subtask.genTrie, _ = statedb.NewTrie(common.Hash{}, subtask.trieDb)
+						subtask.genTrie, _ = statedb.NewTrie(common.Hash{}, subtask.trieDb, nil)
 					}
 				}
 			}
@@ -762,7 +763,7 @@ func (s *Syncer) loadSyncStatus() {
 			last = common.HexToHash("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
 		}
 		db := statedb.NewDatabase(s.db)
-		trie, _ := statedb.NewTrie(common.Hash{}, db)
+		trie, _ := statedb.NewTrie(common.Hash{}, db, nil)
 		s.tasks = append(s.tasks, &accountTask{
 			Next:     next,
 			Last:     last,
@@ -1790,8 +1791,8 @@ func (s *Syncer) processAccountResponse(res *accountResponse) {
 			}
 		}
 		// Check if the account is a contract with an unknown storage trie
-		if pacc != nil && pacc.GetStorageRoot() != emptyRoot {
-			if ok, err := s.db.HasStateTrieNode(pacc.GetStorageRoot().Bytes()); err != nil || !ok {
+		if pacc != nil && pacc.GetStorageRoot().Unextend() != emptyRoot {
+			if ok, err := s.db.HasTrieNode(pacc.GetStorageRoot()); err != nil || !ok {
 				// If there was a previous large state retrieval in progress,
 				// don't restart it from scratch. This happens if a sync cycle
 				// is interrupted and resumed later. However, *do* update the
@@ -1799,12 +1800,12 @@ func (s *Syncer) processAccountResponse(res *accountResponse) {
 				if subtasks, ok := res.task.SubTasks[res.hashes[i]]; ok {
 					logger.Debug("Resuming large storage retrieval", "account", res.hashes[i], "root", pacc.GetStorageRoot())
 					for _, subtask := range subtasks {
-						subtask.root = pacc.GetStorageRoot()
+						subtask.root = pacc.GetStorageRoot().Unextend()
 					}
 					res.task.needHeal[i] = true
 					resumed[res.hashes[i]] = struct{}{}
 				} else {
-					res.task.stateTasks[res.hashes[i]] = pacc.GetStorageRoot()
+					res.task.stateTasks[res.hashes[i]] = pacc.GetStorageRoot().Unextend()
 				}
 				res.task.needState[i] = true
 				res.task.pend++
@@ -1834,6 +1835,7 @@ func (s *Syncer) processAccountResponse(res *accountResponse) {
 // into the account tasks.
 func (s *Syncer) processBytecodeResponse(res *bytecodeResponse) {
 	batch := s.db.NewBatch(database.StateTrieDB)
+	defer batch.Release()
 
 	var codes uint64
 	for i, hash := range res.hashes {
@@ -1854,9 +1856,7 @@ func (s *Syncer) processBytecodeResponse(res *bytecodeResponse) {
 		}
 		// Push the bytecode into a database batch
 		codes++
-		if err := batch.Put(database.CodeKey(hash), code); err != nil {
-			logger.Crit("Failed to store contract code", "err", err)
-		}
+		s.db.PutCodeToBatch(batch, hash, code)
 	}
 	bytes := common.StorageSize(batch.ValueSize())
 	if err := batch.Write(); err != nil {
@@ -1885,6 +1885,7 @@ func (s *Syncer) processStorageResponse(res *storageResponse) {
 		res.subTask.req = nil
 	}
 	batch := s.db.NewSnapshotDBBatch()
+	defer batch.Release()
 	var (
 		slots           int
 		oldStorageBytes = s.storageBytes
@@ -1952,21 +1953,21 @@ func (s *Syncer) processStorageResponse(res *storageResponse) {
 
 					// Our first task is the one that was just filled by this response.
 					db := statedb.NewDatabase(s.db)
-					trie, _ := statedb.NewTrie(common.Hash{}, db)
+					trie, _ := statedb.NewTrie(common.Hash{}, db, nil)
 					tasks = append(tasks, &storageTask{
 						Next:    common.Hash{},
 						Last:    r.End(),
-						root:    pacc.GetStorageRoot(),
+						root:    pacc.GetStorageRoot().Unextend(),
 						genTrie: trie,
 						trieDb:  db,
 					})
 					for r.Next() {
 						db := statedb.NewDatabase(s.db)
-						trie, _ := statedb.NewTrie(common.Hash{}, db)
+						trie, _ := statedb.NewTrie(common.Hash{}, db, nil)
 						tasks = append(tasks, &storageTask{
 							Next:    r.Start(),
 							Last:    r.End(),
-							root:    pacc.GetStorageRoot(),
+							root:    pacc.GetStorageRoot().Unextend(),
 							genTrie: trie,
 							trieDb:  db,
 						})
@@ -2014,7 +2015,7 @@ func (s *Syncer) processStorageResponse(res *storageResponse) {
 
 		if i < len(res.hashes)-1 || res.subTask == nil {
 			db := statedb.NewDatabase(s.db)
-			tr, _ := statedb.NewTrie(common.Hash{}, db)
+			tr, _ := statedb.NewTrie(common.Hash{}, db, nil)
 			for j := 0; j < len(res.hashes[i]); j++ {
 				tr.Update(res.hashes[i][j][:], res.slots[i][j])
 			}
@@ -2104,6 +2105,7 @@ func (s *Syncer) processTrienodeHealResponse(res *trienodeHealResponse) {
 		}
 	}
 	batch := s.db.NewBatch(database.StateTrieDB)
+	defer batch.Release()
 	if _, err := s.healer.scheduler.Commit(batch); err != nil {
 		logger.Error("Failed to commit healing data", "err", err)
 	}
@@ -2140,6 +2142,7 @@ func (s *Syncer) processBytecodeHealResponse(res *bytecodeHealResponse) {
 		}
 	}
 	batch := s.db.NewBatch(database.StateTrieDB)
+	defer batch.Release()
 	if _, err := s.healer.scheduler.Commit(batch); err != nil {
 		logger.Error("Failed to commit healing data", "err", err)
 	}
@@ -2166,6 +2169,7 @@ func (s *Syncer) forwardAccountTask(task *accountTask) {
 	oldAccountBytes := s.accountBytes
 
 	batch := s.db.NewSnapshotDBBatch()
+	defer batch.Release()
 	for i, hash := range res.hashes {
 		if task.needCode[i] || task.needState[i] {
 			break

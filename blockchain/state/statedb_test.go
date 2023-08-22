@@ -46,7 +46,7 @@ func TestUpdateLeaks(t *testing.T) {
 	// Create an empty state database
 	memDBManager := database.NewMemoryDBManager()
 	db := memDBManager.GetMemDB()
-	state, _ := New(common.Hash{}, NewDatabase(memDBManager), nil)
+	state, _ := New(common.Hash{}, NewDatabase(memDBManager), nil, nil)
 
 	// Update it with some accounts
 	for i := byte(0); i < 255; i++ {
@@ -79,8 +79,8 @@ func TestIntermediateLeaks(t *testing.T) {
 	transDb := transDBManager.GetMemDB()
 	finalDb := finalDBManager.GetMemDB()
 
-	transState, _ := New(common.Hash{}, NewDatabase(transDBManager), nil)
-	finalState, _ := New(common.Hash{}, NewDatabase(finalDBManager), nil)
+	transState, _ := New(common.Hash{}, NewDatabase(transDBManager), nil, nil)
+	finalState, _ := New(common.Hash{}, NewDatabase(finalDBManager), nil, nil)
 
 	modify := func(state *StateDB, addr common.Address, i, tweak byte) {
 		if i%2 == 0 {
@@ -133,7 +133,7 @@ func TestIntermediateLeaks(t *testing.T) {
 // https://github.com/ethereum/go-ethereum/pull/15549.
 func TestCopy(t *testing.T) {
 	// Create a random state test to copy and modify "independently"
-	orig, _ := New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil)
+	orig, _ := New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil, nil)
 
 	for i := byte(0); i < 255; i++ {
 		obj := orig.GetOrNewStateObject(common.BytesToAddress([]byte{i}))
@@ -195,7 +195,7 @@ func TestSnapshotRandom(t *testing.T) {
 // TestStateObjects tests basic functional operations of StateObjects.
 // It will be updated by StateDB.Commit() with state objects in StateDB.stateObjects.
 func TestStateObjects(t *testing.T) {
-	stateDB, _ := New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil)
+	stateDB, _ := New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil, nil)
 
 	// Update each account, it will update StateDB.stateObjects.
 	for i := byte(0); i < 128; i++ {
@@ -207,6 +207,67 @@ func TestStateObjects(t *testing.T) {
 	}
 
 	assert.Equal(t, 128, len(stateDB.stateObjects))
+}
+
+// Test that invalid pruning options are prohibited.
+func TestPruningOptions(t *testing.T) {
+	opens := func(pruning bool, pruningNum bool) bool {
+		dbm := database.NewMemoryDBManager()
+		opts := &statedb.TrieOpts{}
+		if pruning {
+			dbm.WritePruningEnabled()
+		}
+		if pruningNum {
+			opts.PruningBlockNumber = 1
+		}
+		_, err := New(common.Hash{}, NewDatabase(dbm), nil, opts)
+		return err == nil
+	}
+
+	// DB pruning disabled & not request pruning. Normal non-pruning setup.
+	assert.True(t, opens(false, false))
+	// DB pruning disabled & request pruning must fail.
+	assert.False(t, opens(false, true))
+
+	// DB pruning enabled & not request pruning. Temporary trie,
+	// such as in debug_traceTransaction or eth_call.
+	assert.True(t, opens(true, false))
+	// DB pruning enabled & request pruning. Normal pruning setup,
+	// such as in InsertChain.
+	assert.True(t, opens(true, true))
+}
+
+// Test that the storage root (ExtHash) has correct extensions
+// under different pruning options.
+func TestPruningRoot(t *testing.T) {
+	addr := common.HexToAddress("0xaaaa")
+
+	makeState := func(db Database) common.Hash {
+		stateDB, _ := New(common.Hash{}, db, nil, nil)
+		stateDB.CreateSmartContractAccount(addr, params.CodeFormatEVM, params.Rules{})
+		stateDB.SetState(addr, common.HexToHash("1"), common.HexToHash("2"))
+		root, _ := stateDB.Commit(false)
+		return root
+	}
+
+	// When pruning is disabled, storage root is zero-extended.
+	dbm := database.NewMemoryDBManager()
+
+	db := NewDatabase(dbm)
+	root := makeState(db)
+	stateDB, _ := New(root, db, nil, nil)
+	storageRoot, _ := stateDB.GetContractStorageRoot(addr)
+	assert.True(t, storageRoot.IsLegacy())
+
+	// When pruning is enabled, storage root is nonzero-extended.
+	dbm = database.NewMemoryDBManager()
+	dbm.WritePruningEnabled()
+
+	db = NewDatabase(dbm)
+	root = makeState(db)
+	stateDB, _ = New(root, db, nil, nil) // Reopen trie to check the account stored in disk.
+	storageRoot, _ = stateDB.GetContractStorageRoot(addr)
+	assert.False(t, storageRoot.IsLegacy())
 }
 
 // A snapshotTest checks that reverting StateDB snapshots properly undoes all changes
@@ -387,7 +448,7 @@ func (test *snapshotTest) String() string {
 func (test *snapshotTest) run() bool {
 	// Run all actions and create snapshots.
 	var (
-		state, _     = New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil)
+		state, _     = New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil, nil)
 		snapshotRevs = make([]int, len(test.snapshots))
 		sindex       = 0
 	)
@@ -401,7 +462,7 @@ func (test *snapshotTest) run() bool {
 	// Revert all snapshots in reverse order. Each revert must yield a state
 	// that is equivalent to fresh state with all actions up the snapshot applied.
 	for sindex--; sindex >= 0; sindex-- {
-		checkstate, _ := New(common.Hash{}, state.Database(), nil)
+		checkstate, _ := New(common.Hash{}, state.Database(), nil, nil)
 		for _, action := range test.actions[:test.snapshots[sindex]] {
 			action.fn(action, checkstate)
 		}
@@ -480,7 +541,7 @@ func (s *StateSuite) TestSnapshotWithJournalDirties(c *check.C) {
 // TestCopyOfCopy tests that modified objects are carried over to the copy, and the copy of the copy.
 // See https://github.com/ethereum/go-ethereum/pull/15225#issuecomment-380191512
 func TestCopyOfCopy(t *testing.T) {
-	sdb, _ := New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil)
+	sdb, _ := New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil, nil)
 	addr := common.HexToAddress("aaaa")
 	sdb.SetBalance(addr, big.NewInt(42))
 
@@ -495,7 +556,7 @@ func TestCopyOfCopy(t *testing.T) {
 // TestZeroHashNode checks returning values of `(db *Database) Node` function.
 // The function should return (nil, ErrZeroHashNode) for default common.Hash{} value.
 func TestZeroHashNode(t *testing.T) {
-	zeroHash := common.Hash{}
+	zeroHash := common.ExtHash{}
 
 	db := database.NewMemoryDBManager()
 	sdb := NewDatabase(db)
@@ -516,7 +577,7 @@ func TestMissingTrieNodes(t *testing.T) {
 	memDb := database.NewMemoryDBManager()
 	db := NewDatabase(memDb)
 	var root common.Hash
-	state, _ := New(common.Hash{}, db, nil)
+	state, _ := New(common.Hash{}, db, nil, nil)
 	addr := toAddr([]byte("so"))
 	{
 		state.SetBalance(addr, big.NewInt(1))
@@ -530,7 +591,7 @@ func TestMissingTrieNodes(t *testing.T) {
 		state.Database().TrieDB().Cap(0)
 	}
 	// Create a new state on the old root
-	state, _ = New(root, db, nil)
+	state, _ = New(root, db, nil, nil)
 	// Now we clear out the memdb
 	it := memDb.GetMemDB().NewIterator(nil, nil)
 	for it.Next() {
@@ -565,7 +626,7 @@ func TestStateDBAccessList(t *testing.T) {
 
 	memDb := database.NewMemoryDBManager()
 	db := NewDatabase(memDb)
-	state, _ := New(common.Hash{}, db, nil)
+	state, _ := New(common.Hash{}, db, nil, nil)
 	state.accessList = newAccessList()
 
 	verifyAddrs := func(astrings ...string) {

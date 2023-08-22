@@ -232,7 +232,7 @@ func TestGetDefaultGovernanceConfig(t *testing.T) {
 		params.DefaultRatio,
 		common.HexToAddress(params.DefaultGoverningNode),
 		params.DefaultGovernanceMode,
-		params.DefaultDefferedTxFee,
+		params.DefaultDeferredTxFee,
 	}
 
 	got := []interface{}{
@@ -1261,4 +1261,50 @@ func TestGovernance_VerifyGovernance(t *testing.T) {
 	assert.Nil(t, err)
 	err = gov.VerifyGovernance(r)
 	assert.Equal(t, ErrVoteValueMismatch, err)
+}
+
+func TestGovernance_ParamsAt(t *testing.T) {
+	valueA := uint64(0x11)
+	valueB := uint64(0x22)
+	valueC := uint64(0x33)
+	koreBlock := uint64(100)
+
+	dbm := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
+	config := getTestConfig()
+	config.Istanbul.Epoch = 30
+	config.Istanbul.SubGroupSize = valueA
+	config.KoreCompatibleBlock = new(big.Int).SetUint64(koreBlock)
+	gov := NewGovernanceInitialize(config, dbm)
+
+	// Write to database. Note that we must use gov.WriteGovernance(), not db.WriteGovernance()
+	// The reason is that gov.ReadGovernance() depends on the caches, and that
+	// gov.WriteGovernance() sets idxCache accordingly, whereas db.WriteGovernance don't
+	items := gov.CurrentParams().StrMap()
+	gset := NewGovernanceSet()
+
+	items["istanbul.committeesize"] = valueB
+	gset.Import(items)
+	gov.WriteGovernance(30, NewGovernanceSet(), gset)
+
+	items["istanbul.committeesize"] = valueC
+	gset.Import(items)
+	gov.WriteGovernance(120, NewGovernanceSet(), gset)
+
+	testcases := []struct {
+		num   uint64
+		value uint64
+	}{
+		{59, valueA},
+		{60, valueA},
+		{61, valueB},
+		{149, valueB},
+		{150, valueC},
+		{151, valueC},
+	}
+	for _, tc := range testcases {
+		// Check that e.EffectiveParams() == tc
+		pset, err := gov.EffectiveParams(tc.num)
+		assert.Nil(t, err)
+		assert.Equal(t, tc.value, pset.CommitteeSize(), "Wrong at %d", tc.num)
+	}
 }

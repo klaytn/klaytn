@@ -34,7 +34,7 @@ type IDeriveSha interface {
 }
 
 type GovernanceEngine interface {
-	ParamsAt(num uint64) (*params.GovParamSet, error)
+	EffectiveParams(num uint64) (*params.GovParamSet, error)
 }
 
 var (
@@ -82,7 +82,7 @@ func getType(num *big.Int) int {
 	// and unit tests. gov != nil if blockchain.InitDeriveShaWithGov is used,
 	// in ordinary blockchain processing.
 	if gov != nil {
-		if pset, err := gov.ParamsAt(num.Uint64()); err != nil {
+		if pset, err := gov.EffectiveParams(num.Uint64()); err != nil {
 			logger.Crit("Cannot determine DeriveShaImpl", "num", num.Uint64(), "err", err)
 		} else {
 			implType = pset.DeriveShaImpl()

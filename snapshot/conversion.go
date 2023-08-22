@@ -275,7 +275,7 @@ func generateTrieRoot(it Iterator, accountHash common.Hash, generatorFn trieGene
 						results <- err
 						return
 					}
-					rootHash := contract.GetStorageRoot()
+					rootHash := contract.GetStorageRoot().Unextend()
 					if rootHash != subroot {
 						results <- fmt.Errorf("invalid subroot(path %x), want %x, have %x", hash, rootHash, subroot)
 						return
@@ -317,7 +317,7 @@ func generateTrieRoot(it Iterator, accountHash common.Hash, generatorFn trieGene
 
 func trieGenerate(in chan trieKV, out chan common.Hash) {
 	db := statedb.NewDatabase(database.NewMemoryDBManager())
-	t, _ := statedb.NewTrie(common.Hash{}, db)
+	t, _ := statedb.NewTrie(common.Hash{}, db, nil)
 	for leaf := range in {
 		t.TryUpdate(leaf.key[:], leaf.value)
 	}

@@ -21,8 +21,6 @@
 package core
 
 import (
-	"reflect"
-
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
 )
@@ -80,6 +78,10 @@ func (c *core) handleCommit(msg *message, src istanbul.Validator) error {
 		return errInvalidMessage
 	}
 
+	if vrank != nil {
+		vrank.AddCommit(commit, src)
+	}
+
 	// logger.Error("receive handle commit","num", commit.View.Sequence)
 	if err := c.checkMessage(msgCommit, commit.View); err != nil {
 		// logger.Error("### istanbul/commit.go checkMessage","num",commit.View.Sequence,"err",err)
@@ -134,7 +136,7 @@ func (c *core) verifyCommit(commit *istanbul.Subject, src istanbul.Validator) er
 	logger := c.logger.NewWith("from", src, "state", c.state)
 
 	sub := c.current.Subject()
-	if !reflect.DeepEqual(commit, sub) {
+	if !commit.Equal(sub) {
 		logger.Warn("Inconsistent subjects between commit and proposal", "expected", sub, "got", commit)
 		return errInconsistentSubject
 	}

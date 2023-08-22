@@ -78,7 +78,7 @@ func TestCodeFormat(t *testing.T) {
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	testCodeFormat := func(tx *types.Transaction, state error) {
-		receipt, _, err := applyTransaction(t, bcdata, tx)
+		receipt, err := applyTransaction(t, bcdata, tx)
 		if err != nil {
 			assert.Equal(t, state, err)
 			assert.Equal(t, (*types.Receipt)(nil), receipt)

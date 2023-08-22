@@ -21,16 +21,15 @@ import (
 	"fmt"
 	"os"
 
-	"gopkg.in/urfave/cli.v1"
-
 	"github.com/klaytn/klaytn/common"
 	"github.com/naoina/toml"
+	"github.com/urfave/cli/v2"
 )
 
-var ExtraCommand = cli.Command{
+var ExtraCommand = &cli.Command{
 	Name:  "extra",
 	Usage: "Istanbul extraData manipulation",
-	Subcommands: []cli.Command{
+	Subcommands: []*cli.Command{
 		{
 			Action:    decode,
 			Name:      "decode",

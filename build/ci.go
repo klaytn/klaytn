@@ -112,8 +112,6 @@ func main() {
 		doAndroidArchive(os.Args[2:])
 	case "xcode":
 		doXCodeFramework(os.Args[2:])
-	case "xgo":
-		doXgo(os.Args[2:])
 	default:
 		log.Fatal("unknown command ", os.Args[1])
 	}
@@ -125,9 +123,15 @@ func doInstall(cmdline []string) {
 	var (
 		arch = flag.String("arch", "", "Architecture to cross build for")
 		cc   = flag.String("cc", "", "C compiler to cross build with")
+		tags = flag.String("tags", "", "Build tags")
 	)
 	flag.CommandLine.Parse(cmdline)
 	env := build.Env()
+
+	var tagsArgs []string
+	if len(*tags) > 0 {
+		tagsArgs = append(tagsArgs, "-tags", *tags)
+	}
 
 	// Check Go version. People regularly open issues about compilation
 	// failure with outdated Go. This should save them the trouble.
@@ -152,6 +156,7 @@ func doInstall(cmdline []string) {
 	if *arch == "" || *arch == runtime.GOARCH {
 		goinstall := goTool("install", buildFlags(env)...)
 		goinstall.Args = append(goinstall.Args, "-v")
+		goinstall.Args = append(goinstall.Args, tagsArgs...)
 		// goinstall.Args = append(goinstall.Args, "-race")
 		goinstall.Args = append(goinstall.Args, packages...)
 		build.MustRun(goinstall)
@@ -167,6 +172,7 @@ func doInstall(cmdline []string) {
 	// Seems we are cross compiling, work around forbidden GOBIN
 	goinstall := goToolArch(*arch, *cc, "install", buildFlags(env)...)
 	goinstall.Args = append(goinstall.Args, "-v")
+	goinstall.Args = append(goinstall.Args, tagsArgs...)
 	goinstall.Args = append(goinstall.Args, []string{"-buildmode", "archive"}...)
 	goinstall.Args = append(goinstall.Args, packages...)
 	build.MustRun(goinstall)
@@ -181,6 +187,7 @@ func doInstall(cmdline []string) {
 				if name == "main" {
 					gobuild := goToolArch(*arch, *cc, "build", buildFlags(env)...)
 					gobuild.Args = append(gobuild.Args, "-v")
+					gobuild.Args = append(goinstall.Args, tagsArgs...)
 					gobuild.Args = append(gobuild.Args, []string{"-o", executablePath(cmd.Name())}...)
 					gobuild.Args = append(gobuild.Args, "."+string(filepath.Separator)+filepath.Join("cmd", cmd.Name()))
 					build.MustRun(gobuild)
@@ -998,60 +1005,6 @@ func newPodMetadata(env build.Environment, archive string) podMetadata {
 		Commit:       env.Commit,
 		Contributors: contribs,
 	}
-}
-
-// Cross compilation
-
-func doXgo(cmdline []string) {
-	alltools := flag.Bool("alltools", false, `Flag whether we're building all known tools, or only on in particular`)
-	flag.CommandLine.Parse(cmdline)
-	env := build.Env()
-
-	// Make sure xgo is available for cross compilation
-	build.MustRun(goTool("get", "github.com/klaytn/xgo"))
-
-	// From go1.18, golang requires 'go install' to install a package binary
-	if strings.Compare(runtime.Version(), "go1.18") >= 0 {
-		build.MustRun(goTool("install", "github.com/klaytn/xgo"))
-	}
-
-	// If all tools building is requested, build everything the builder wants
-	args := append(buildFlags(env), flag.Args()...)
-
-	if *alltools {
-		args = append(args, []string{"--dest", GOBIN}...)
-		for _, res := range allToolsArchiveFiles {
-			if strings.HasPrefix(res, GOBIN) {
-				// Binary tool found, cross build it explicitly
-				args = append(args, "./"+filepath.Join("cmd", filepath.Base(res)))
-				xgo := xgoTool(args)
-				build.MustRun(xgo)
-				args = args[:len(args)-1]
-			}
-		}
-		return
-	}
-	// Otherwise xxecute the explicit cross compilation
-	path := args[len(args)-1]
-	args = append(args[:len(args)-1], []string{"--dest", GOBIN, path}...)
-
-	xgo := xgoTool(args)
-	build.MustRun(xgo)
-}
-
-func xgoTool(args []string) *exec.Cmd {
-	cmd := exec.Command(filepath.Join(GOBIN, "xgo"), args...)
-	cmd.Env = []string{
-		"GOPATH=" + build.GOPATH(),
-		"GOBIN=" + GOBIN,
-	}
-	for _, e := range os.Environ() {
-		if strings.HasPrefix(e, "GOPATH=") || strings.HasPrefix(e, "GOBIN=") {
-			continue
-		}
-		cmd.Env = append(cmd.Env, e)
-	}
-	return cmd
 }
 
 func installLinter() string {

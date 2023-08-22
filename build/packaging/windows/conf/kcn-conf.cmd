@@ -4,7 +4,7 @@ set NETWORK_ID=8217
 
 set PORT=32323
 
-set SERVER_TYPE="fasthttp"
+set SERVER_TYPE="http"
 set SYNCMODE="full"
 set VERBOSITY=3
 set MAXCONNECTIONS=100
