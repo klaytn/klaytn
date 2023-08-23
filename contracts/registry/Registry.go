@@ -24,6 +24,7 @@ var (
 	_ = types.BloomLookup
 	_ = event.NewSubscription
 )
+
 // RegistryMetaData contains all meta data concerning the Registry contract.
 var RegistryMetaData = &bind.MetaData{
 	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"activationBlockNumber\",\"type\":\"uint256\"}],\"name\":\"Activated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"governance\",\"type\":\"address\"}],\"name\":\"ConstructContract\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"deprecateBlockNumber\",\"type\":\"uint256\"}],\"name\":\"Deprecated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"Registered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"prevName\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"newName\",\"type\":\"string\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"replaceBlockNumber\",\"type\":\"uint256\"}],\"name\":\"Replaced\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newGovernance\",\"type\":\"address\"}],\"name\":\"UpdateGovernance\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"activationBlockNumber\",\"type\":\"uint256\"}],\"name\":\"activate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_governance\",\"type\":\"address\"}],\"name\":\"constructContract\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"contractNames\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"deprecateBlockNumber\",\"type\":\"uint256\"}],\"name\":\"deprecate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllContractNames\",\"outputs\":[{\"internalType\":\"string[]\",\"name\":\"\",\"type\":\"string[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"}],\"name\":\"getContractIfActive\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"governance\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"internalType\":\"enumIRegistry.State\",\"name\":\"state\",\"type\":\"uint8\"}],\"name\":\"readAllContractsAtGivenState\",\"outputs\":[{\"internalType\":\"string[]\",\"name\":\"\",\"type\":\"string[]\"},{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"},{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"activation\",\"type\":\"bool\"}],\"name\":\"register\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"name\":\"registry\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"activationBlockNumber\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"deprecateBlockNumber\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"prevName\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"newName\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"replaceBlockNumber\",\"type\":\"uint256\"}],\"name\":\"replace\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"}],\"name\":\"stateAt\",\"outputs\":[{\"internalType\":\"enumIRegistry.State\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_newGovernance\",\"type\":\"address\"}],\"name\":\"updateGovernance\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
@@ -332,7 +333,8 @@ func (_Registry *RegistrySession) Registry(arg0 string) (struct {
 	Addr                  common.Address
 	ActivationBlockNumber *big.Int
 	DeprecateBlockNumber  *big.Int
-}, error) {
+}, error,
+) {
 	return _Registry.Contract.Registry(&_Registry.CallOpts, arg0)
 }
 
@@ -343,7 +345,8 @@ func (_Registry *RegistryCallerSession) Registry(arg0 string) (struct {
 	Addr                  common.Address
 	ActivationBlockNumber *big.Int
 	DeprecateBlockNumber  *big.Int
-}, error) {
+}, error,
+) {
 	return _Registry.Contract.Registry(&_Registry.CallOpts, arg0)
 }
 
@@ -504,10 +507,10 @@ type RegistryActivatedIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log        // Log channel receiving the found contract events
+	logs chan types.Log      // Log channel receiving the found contract events
 	sub  klaytn.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -575,7 +578,6 @@ type RegistryActivated struct {
 //
 // Solidity: event Activated(string name, uint256 indexed activationBlockNumber)
 func (_Registry *RegistryFilterer) FilterActivated(opts *bind.FilterOpts, activationBlockNumber []*big.Int) (*RegistryActivatedIterator, error) {
-
 	var activationBlockNumberRule []interface{}
 	for _, activationBlockNumberItem := range activationBlockNumber {
 		activationBlockNumberRule = append(activationBlockNumberRule, activationBlockNumberItem)
@@ -592,7 +594,6 @@ func (_Registry *RegistryFilterer) FilterActivated(opts *bind.FilterOpts, activa
 //
 // Solidity: event Activated(string name, uint256 indexed activationBlockNumber)
 func (_Registry *RegistryFilterer) WatchActivated(opts *bind.WatchOpts, sink chan<- *RegistryActivated, activationBlockNumber []*big.Int) (event.Subscription, error) {
-
 	var activationBlockNumberRule []interface{}
 	for _, activationBlockNumberItem := range activationBlockNumber {
 		activationBlockNumberRule = append(activationBlockNumberRule, activationBlockNumberItem)
@@ -649,10 +650,10 @@ type RegistryConstructContractIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log        // Log channel receiving the found contract events
+	logs chan types.Log      // Log channel receiving the found contract events
 	sub  klaytn.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -719,7 +720,6 @@ type RegistryConstructContract struct {
 //
 // Solidity: event ConstructContract(address indexed governance)
 func (_Registry *RegistryFilterer) FilterConstructContract(opts *bind.FilterOpts, governance []common.Address) (*RegistryConstructContractIterator, error) {
-
 	var governanceRule []interface{}
 	for _, governanceItem := range governance {
 		governanceRule = append(governanceRule, governanceItem)
@@ -736,7 +736,6 @@ func (_Registry *RegistryFilterer) FilterConstructContract(opts *bind.FilterOpts
 //
 // Solidity: event ConstructContract(address indexed governance)
 func (_Registry *RegistryFilterer) WatchConstructContract(opts *bind.WatchOpts, sink chan<- *RegistryConstructContract, governance []common.Address) (event.Subscription, error) {
-
 	var governanceRule []interface{}
 	for _, governanceItem := range governance {
 		governanceRule = append(governanceRule, governanceItem)
@@ -793,10 +792,10 @@ type RegistryDeprecatedIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log        // Log channel receiving the found contract events
+	logs chan types.Log      // Log channel receiving the found contract events
 	sub  klaytn.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -864,7 +863,6 @@ type RegistryDeprecated struct {
 //
 // Solidity: event Deprecated(string name, uint256 indexed deprecateBlockNumber)
 func (_Registry *RegistryFilterer) FilterDeprecated(opts *bind.FilterOpts, deprecateBlockNumber []*big.Int) (*RegistryDeprecatedIterator, error) {
-
 	var deprecateBlockNumberRule []interface{}
 	for _, deprecateBlockNumberItem := range deprecateBlockNumber {
 		deprecateBlockNumberRule = append(deprecateBlockNumberRule, deprecateBlockNumberItem)
@@ -881,7 +879,6 @@ func (_Registry *RegistryFilterer) FilterDeprecated(opts *bind.FilterOpts, depre
 //
 // Solidity: event Deprecated(string name, uint256 indexed deprecateBlockNumber)
 func (_Registry *RegistryFilterer) WatchDeprecated(opts *bind.WatchOpts, sink chan<- *RegistryDeprecated, deprecateBlockNumber []*big.Int) (event.Subscription, error) {
-
 	var deprecateBlockNumberRule []interface{}
 	for _, deprecateBlockNumberItem := range deprecateBlockNumber {
 		deprecateBlockNumberRule = append(deprecateBlockNumberRule, deprecateBlockNumberItem)
@@ -938,10 +935,10 @@ type RegistryRegisteredIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log        // Log channel receiving the found contract events
+	logs chan types.Log      // Log channel receiving the found contract events
 	sub  klaytn.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -1009,7 +1006,6 @@ type RegistryRegistered struct {
 //
 // Solidity: event Registered(string name, address indexed addr)
 func (_Registry *RegistryFilterer) FilterRegistered(opts *bind.FilterOpts, addr []common.Address) (*RegistryRegisteredIterator, error) {
-
 	var addrRule []interface{}
 	for _, addrItem := range addr {
 		addrRule = append(addrRule, addrItem)
@@ -1026,7 +1022,6 @@ func (_Registry *RegistryFilterer) FilterRegistered(opts *bind.FilterOpts, addr 
 //
 // Solidity: event Registered(string name, address indexed addr)
 func (_Registry *RegistryFilterer) WatchRegistered(opts *bind.WatchOpts, sink chan<- *RegistryRegistered, addr []common.Address) (event.Subscription, error) {
-
 	var addrRule []interface{}
 	for _, addrItem := range addr {
 		addrRule = append(addrRule, addrItem)
@@ -1083,10 +1078,10 @@ type RegistryReplacedIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log        // Log channel receiving the found contract events
+	logs chan types.Log      // Log channel receiving the found contract events
 	sub  klaytn.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -1155,7 +1150,6 @@ type RegistryReplaced struct {
 //
 // Solidity: event Replaced(string prevName, string newName, uint256 indexed replaceBlockNumber)
 func (_Registry *RegistryFilterer) FilterReplaced(opts *bind.FilterOpts, replaceBlockNumber []*big.Int) (*RegistryReplacedIterator, error) {
-
 	var replaceBlockNumberRule []interface{}
 	for _, replaceBlockNumberItem := range replaceBlockNumber {
 		replaceBlockNumberRule = append(replaceBlockNumberRule, replaceBlockNumberItem)
@@ -1172,7 +1166,6 @@ func (_Registry *RegistryFilterer) FilterReplaced(opts *bind.FilterOpts, replace
 //
 // Solidity: event Replaced(string prevName, string newName, uint256 indexed replaceBlockNumber)
 func (_Registry *RegistryFilterer) WatchReplaced(opts *bind.WatchOpts, sink chan<- *RegistryReplaced, replaceBlockNumber []*big.Int) (event.Subscription, error) {
-
 	var replaceBlockNumberRule []interface{}
 	for _, replaceBlockNumberItem := range replaceBlockNumber {
 		replaceBlockNumberRule = append(replaceBlockNumberRule, replaceBlockNumberItem)
@@ -1229,10 +1222,10 @@ type RegistryUpdateGovernanceIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log        // Log channel receiving the found contract events
+	logs chan types.Log      // Log channel receiving the found contract events
 	sub  klaytn.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -1299,7 +1292,6 @@ type RegistryUpdateGovernance struct {
 //
 // Solidity: event UpdateGovernance(address indexed newGovernance)
 func (_Registry *RegistryFilterer) FilterUpdateGovernance(opts *bind.FilterOpts, newGovernance []common.Address) (*RegistryUpdateGovernanceIterator, error) {
-
 	var newGovernanceRule []interface{}
 	for _, newGovernanceItem := range newGovernance {
 		newGovernanceRule = append(newGovernanceRule, newGovernanceItem)
@@ -1316,7 +1308,6 @@ func (_Registry *RegistryFilterer) FilterUpdateGovernance(opts *bind.FilterOpts,
 //
 // Solidity: event UpdateGovernance(address indexed newGovernance)
 func (_Registry *RegistryFilterer) WatchUpdateGovernance(opts *bind.WatchOpts, sink chan<- *RegistryUpdateGovernance, newGovernance []common.Address) (event.Subscription, error) {
-
 	var newGovernanceRule []interface{}
 	for _, newGovernanceItem := range newGovernance {
 		newGovernanceRule = append(newGovernanceRule, newGovernanceItem)

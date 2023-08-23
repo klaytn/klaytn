@@ -50,9 +50,7 @@ const (
 	fetcherID = "istanbul"
 )
 
-var (
-	registryAddress = common.HexToAddress(registry.RegistryContractAddress)
-)
+var registryAddress = common.HexToAddress(registry.RegistryContractAddress)
 
 var logger = log.NewModuleLogger(log.ConsensusIstanbulBackend)
 
