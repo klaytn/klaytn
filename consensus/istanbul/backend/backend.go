@@ -28,6 +28,7 @@ import (
 	"time"
 
 	lru "github.com/hashicorp/golang-lru"
+	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -35,6 +36,7 @@ import (
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	istanbulCore "github.com/klaytn/klaytn/consensus/istanbul/core"
 	"github.com/klaytn/klaytn/consensus/istanbul/validator"
+	"github.com/klaytn/klaytn/contracts/registry"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/governance"
@@ -46,6 +48,10 @@ import (
 const (
 	// fetcherID is the ID indicates the block is from Istanbul engine
 	fetcherID = "istanbul"
+)
+
+var (
+	registryAddress = common.HexToAddress(registry.RegistryContractAddress)
 )
 
 var logger = log.NewModuleLogger(log.ConsensusIstanbulBackend)
@@ -425,4 +431,34 @@ func (sb *backend) HasBadProposal(hash common.Hash) bool {
 		return false
 	}
 	return sb.hasBadBlock(hash)
+}
+
+func (sb *backend) ResolveAddressFromRegistry(name string) common.Address {
+	caller := sb.GetRegistryContractCaller()
+	if caller == nil {
+		return common.Address{}
+	}
+
+	addr, err := caller.GetContractIfActive(nil, name)
+	if err != nil {
+		sb.logger.Error("Failed to get contract address", "err", err)
+		return common.Address{}
+	}
+	return addr
+}
+
+func (sb *backend) GetRegistryContractCaller() *registry.RegistryCaller {
+	currentBlockNumber := sb.chain.CurrentBlock().Number()
+	if !sb.chain.Config().IsRegistryForkEnabled(currentBlockNumber) {
+		return nil
+	}
+
+	c := backends.NewBlockchainContractCaller(sb.chain)
+
+	caller, err := registry.NewRegistryCaller(registryAddress, c)
+	if err != nil {
+		sb.logger.Error("Failed to get registry", "err", err)
+		return nil
+	}
+	return caller
 }

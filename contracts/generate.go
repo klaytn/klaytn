@@ -30,6 +30,8 @@ package contracts
 
 //go:generate abigen --sol ./kip103/TreasuryRebalance.sol --pkg kip103 --out ./kip103/TreasuryRebalance.go
 
+//go:generate abigen --sol ./registry/Registry.sol --pkg registry --out ./registry/Registry.go
+
 //`credit.sol` was compiled by solidity@0.4.24.
 // This code data was included in cypress genesis file.
 ////go:generate abigen --sol ./cypress/credit.sol --pkg cypress --out ./cypress/credit.go
