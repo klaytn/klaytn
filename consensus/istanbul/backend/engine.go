@@ -758,6 +758,10 @@ func (sb *backend) GetConsensusInfo(block *types.Block) (consensus.ConsensusInfo
 		return consensus.ConsensusInfo{}, err
 	}
 
+	if sb.chain == nil {
+		return consensus.ConsensusInfo{}, errNoChainReader
+	}
+
 	// get the snapshot of the previous block.
 	parentHash := block.ParentHash()
 	snap, err := sb.snapshot(sb.chain, blockNumber-1, parentHash, nil, false)
