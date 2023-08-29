@@ -62,7 +62,7 @@ var GovernanceItems = map[int]check{
 	params.UseGiniCoeff:              {boolT, checkUint64andBool, nil},
 	params.Kip82Ratio:                {stringT, checkKip82Ratio, nil},
 	params.DeferredTxFee:             {boolT, checkUint64andBool, nil},
-	params.MinimumStake:              {stringT, checkRewardMinimumStake, nil},
+	params.MinimumStake:              {stringT, checkBigInt, nil},
 	params.StakeUpdateInterval:       {uint64T, checkUint64andBool, nil},
 	params.ProposerRefreshInterval:   {uint64T, checkUint64andBool, nil},
 	params.Epoch:                     {uint64T, checkUint64andBool, nil},
@@ -245,18 +245,6 @@ func checkCommitteeSize(k string, v interface{}) bool {
 	return true
 }
 
-func checkRewardMinimumStake(k string, v interface{}) bool {
-	if !checkBigInt(k, v) {
-		return false
-	}
-	if v, ok := new(big.Int).SetString(v.(string), 10); ok {
-		if v.Cmp(common.Big0) < 0 {
-			return false
-		}
-	}
-	return true
-}
-
 func checkUint64andBool(k string, v interface{}) bool {
 	// for Uint64 and Bool, no more check is needed
 	if reflect.TypeOf(v) == uint64T || reflect.TypeOf(v) == boolT {
@@ -273,11 +261,10 @@ func checkProposerPolicy(k string, v interface{}) bool {
 }
 
 func checkBigInt(k string, v interface{}) bool {
-	x := new(big.Int)
-	if _, ok := x.SetString(v.(string), 10); ok {
-		return true
+	if v, ok := new(big.Int).SetString(v.(string), 10); !ok || v.Cmp(common.Big0) < 0 {
+		return false
 	}
-	return false
+	return true
 }
 
 func checkAddress(k string, v interface{}) bool {
