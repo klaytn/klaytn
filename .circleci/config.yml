@@ -94,12 +94,6 @@ commands:
           name: "Install awscli on macos machine"
           command: |
             brew install awscli
-  install-golangci-lint:
-    steps:
-      - run:
-          name: "Install golangci-lint"
-          command: |
-            curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.24.0
   pre-build:
     description: "before build, set version"
     parameters:
@@ -363,8 +357,6 @@ jobs:
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
-      - install-golangci-lint
-      - install-golang
       - pre-build
       - run:
           name: "Build"
@@ -439,7 +431,6 @@ jobs:
     executor: test-executor
     steps:
       - checkout
-      - install-golang
       - pre-build
       - run-rpc
 
@@ -500,7 +491,6 @@ jobs:
     executor: test-executor
     steps:
       - checkout
-      - install-golang
       - pre-build
       - run-rpc
       - notify-failure
@@ -516,7 +506,6 @@ jobs:
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
-      - install-golang
       - pre-build
       - build-packaging
       - upload-repo
@@ -531,7 +520,6 @@ jobs:
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
-      - install-golang
       - pre-build
       - build-packaging:
           baobab: "-b"
