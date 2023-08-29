@@ -300,6 +300,8 @@ type DBManager interface {
 	// ChainDataFetcher checkpoint function
 	WriteChainDataFetcherCheckpoint(checkpoint uint64) error
 	ReadChainDataFetcherCheckpoint() (uint64, error)
+
+	TryCatchUpWithPrimary() error
 }
 
 type DBEntryType uint8
@@ -863,6 +865,17 @@ func (dbm *databaseManager) GetSnapshotDB() Database {
 
 func (dbm *databaseManager) GetProperty(dt DBEntryType, name string) string {
 	return dbm.getDatabase(dt).GetProperty(name)
+}
+
+func (dbm *databaseManager) TryCatchUpWithPrimary() error {
+	for _, db := range dbm.dbs {
+		if db != nil {
+			if err := db.TryCatchUpWithPrimary(); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func (dbm *databaseManager) GetMemDB() *MemDB {

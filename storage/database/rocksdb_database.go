@@ -181,10 +181,6 @@ func (db *rocksDB) Put(key []byte, value []byte) error {
 }
 
 func (db *rocksDB) Has(key []byte) (bool, error) {
-	if db.config.Secondary {
-		db.db.TryCatchUpWithPrimary()
-	}
-
 	dat, err := db.db.GetBytes(db.ro, key)
 	if dat == nil || err != nil {
 		return false, err
@@ -194,9 +190,6 @@ func (db *rocksDB) Has(key []byte) (bool, error) {
 }
 
 func (db *rocksDB) Get(key []byte) ([]byte, error) {
-	if db.config.Secondary {
-		db.db.TryCatchUpWithPrimary()
-	}
 	if !db.config.DisableMetrics {
 		start := time.Now()
 		defer db.getTimer.Update(time.Since(start))
@@ -225,6 +218,10 @@ func (db *rocksDB) Delete(key []byte) error {
 
 func (db *rocksDB) GetProperty(name string) string {
 	return db.db.GetProperty(name)
+}
+
+func (db *rocksDB) TryCatchUpWithPrimary() error {
+	return db.db.TryCatchUpWithPrimary()
 }
 
 type rdbIter struct {
