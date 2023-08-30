@@ -250,12 +250,14 @@ func TestBlockChainSendTransaction(t *testing.T) {
 
 	block = bc.GetBlockByNumber(11)
 	if block == nil {
-		t.Errorf("could not get block at height 1")
+		t.Errorf("could not get block at height 11")
 	}
 
+	assert.True(t, len(block.Transactions()) != 0)
 	if signedTx.Hash() != block.Transactions()[0].Hash() {
 		t.Errorf("did not commit sent transaction. expected hash %v got hash %v", block.Transactions()[0].Hash(), signedTx.Hash())
 	}
+	assert.False(t, block.Header().EmptyReceipts())
 }
 
 func TestBlockChainChainID(t *testing.T) {
@@ -331,11 +333,11 @@ func TestBlockChainFilterLogs(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(logs))
 
-	// Non-code address
+	// No logs exist for code2Addr
 	logs, err = c.FilterLogs(context.Background(), klaytn.FilterQuery{
 		FromBlock: big.NewInt(0),
 		ToBlock:   big.NewInt(11),
-		Addresses: []common.Address{testAddr},
+		Addresses: []common.Address{code2Addr},
 	})
 	assert.Nil(t, err)
 	assert.Equal(t, 0, len(logs))

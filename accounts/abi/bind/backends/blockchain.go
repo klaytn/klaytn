@@ -213,11 +213,7 @@ func (b *BlockchainContractTransactor) EstimateGas(ctx context.Context, call kla
 	}
 
 	estimated, err := blockchain.DoEstimateGas(ctx, call.Gas, 0, call.Value, call.GasPrice, balance, executable)
-	if err != nil {
-		return 0, err
-	} else {
-		return uint64(estimated), nil
-	}
+	return uint64(estimated), err
 }
 
 func (b *BlockchainContractTransactor) SendTransaction(ctx context.Context, tx *types.Transaction) error {
@@ -232,8 +228,8 @@ func (b *BlockchainContractTransactor) ChainID(ctx context.Context) (*big.Int, e
 }
 
 type BlockchainContractFilterer struct {
-	bc BlockChainForCaller
-	es *filters.EventSystem
+	bc     BlockChainForCaller
+	events *filters.EventSystem
 }
 
 // This nil assignment ensures at compile time that BlockchainContractCaller implements bind.ContractCaller.
@@ -241,8 +237,8 @@ var _ bind.ContractFilterer = (*BlockchainContractFilterer)(nil)
 
 func NewBlockchainContractFilterer(bc BlockChainForCaller, es *filters.EventSystem) *BlockchainContractFilterer {
 	return &BlockchainContractFilterer{
-		bc: bc,
-		es: es,
+		bc:     bc,
+		events: es,
 	}
 }
 
@@ -278,10 +274,10 @@ func (b *BlockchainContractFilterer) SubscribeFilterLogs(ctx context.Context, qu
 	// Subscribe to contract events
 	sink := make(chan []*types.Log)
 
-	if b.es == nil {
+	if b.events == nil {
 		return nil, errors.New("events system not configured")
 	}
-	sub, err := b.es.SubscribeLogs(query, sink)
+	sub, err := b.events.SubscribeLogs(query, sink)
 	if err != nil {
 		return nil, err
 	}
@@ -335,6 +331,5 @@ func (b *BlockchainContractBackend) BalanceAt(ctx context.Context, account commo
 }
 
 func (b *BlockchainContractBackend) CurrentBlockNumber(ctx context.Context) (uint64, error) {
-	var bc BlockchainContractCaller = b.BlockchainContractCaller
-	return bc.bc.CurrentBlock().NumberU64(), nil
+	return b.BlockchainContractCaller.bc.CurrentBlock().NumberU64(), nil
 }
