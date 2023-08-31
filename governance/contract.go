@@ -98,7 +98,7 @@ func (e *ContractEngine) contractGetAllParamsAt(num uint64) (*params.GovParamSet
 		return params.NewGovParamSet(), nil
 	}
 
-	caller := backends.NewBlockchainContractCaller(chain)
+	caller := backends.NewBlockchainContractBackend(chain, nil, nil)
 	contract, _ := govcontract.NewGovParamCaller(addr, caller)
 
 	names, values, err := contract.GetAllParamsAt(nil, new(big.Int).SetUint64(num))

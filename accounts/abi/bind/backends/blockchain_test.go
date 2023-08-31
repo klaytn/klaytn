@@ -55,6 +55,10 @@ var (
 
 func newTestBlockchain() *blockchain.BlockChain {
 	config := params.TestChainConfig.Copy()
+	return newTestBlockchainWithConfig(config)
+}
+
+func newTestBlockchainWithConfig(config *params.ChainConfig) *blockchain.BlockChain {
 	alloc := blockchain.GenesisAlloc{
 		testAddr:  {Balance: big.NewInt(10000000000)},
 		code1Addr: {Balance: big.NewInt(0), Code: code1Bytes},
@@ -77,7 +81,7 @@ func newTestBlockchain() *blockchain.BlockChain {
 
 func TestBlockchainCodeAt(t *testing.T) {
 	bc := newTestBlockchain()
-	c := NewBlockchainContractCaller(bc)
+	c := NewBlockchainContractBackend(bc, nil, nil)
 
 	// Normal cases
 	code, err := c.CodeAt(context.Background(), code1Addr, nil)
@@ -111,7 +115,7 @@ func TestBlockchainCodeAt(t *testing.T) {
 
 func TestBlockchainCallContract(t *testing.T) {
 	bc := newTestBlockchain()
-	c := NewBlockchainContractCaller(bc)
+	c := NewBlockchainContractBackend(bc, nil, nil)
 
 	data_receive, _ := parsedAbi1.Pack("receive", []byte("X"))
 	data_revertString, _ := parsedAbi2.Pack("revertString")
@@ -175,17 +179,33 @@ func TestBlockchainPendingCodeAt(t *testing.T) {
 
 func TestBlockChainSuggestGasPrice(t *testing.T) {
 	bc := newTestBlockchain()
-	c := NewBlockchainContractTransactor(bc, nil)
+	c := NewBlockchainContractBackend(bc, nil, nil)
 
 	// Normal case
 	gasPrice, err := c.SuggestGasPrice(context.Background())
 	assert.Nil(t, err)
 	assert.Equal(t, params.TestChainConfig.UnitPrice, gasPrice.Uint64())
+
+	config := params.TestChainConfig.Copy()
+	config.IstanbulCompatibleBlock = common.Big0
+	config.LondonCompatibleBlock = common.Big0
+	config.EthTxTypeCompatibleBlock = common.Big0
+	config.MagmaCompatibleBlock = common.Big0
+	config.KoreCompatibleBlock = common.Big0
+	config.Governance = params.GetDefaultGovernanceConfig()
+	config.Governance.KIP71.LowerBoundBaseFee = 0
+	bc = newTestBlockchainWithConfig(config)
+	c = NewBlockchainContractBackend(bc, nil, nil)
+
+	// Normal case
+	gasPrice, err = c.SuggestGasPrice(context.Background())
+	assert.Nil(t, err)
+	assert.Equal(t, bc.CurrentBlock().Header().BaseFee.Uint64()*2, gasPrice.Uint64())
 }
 
 func TestBlockChainEstimateGas(t *testing.T) {
 	bc := newTestBlockchain()
-	c := NewBlockchainContractTransactor(bc, nil)
+	c := NewBlockchainContractBackend(bc, nil, nil)
 
 	// Normal case
 	gas, err := c.EstimateGas(context.Background(), klaytn.CallMsg{
@@ -215,7 +235,7 @@ func TestBlockChainSendTransaction(t *testing.T) {
 	txPool := blockchain.NewTxPool(txPoolConfig, bc.Config(), bc)
 	defer txPool.Stop()
 	assert.Nil(t, err)
-	c := NewBlockchainContractBackend(bc, nil, txPool)
+	c := NewBlockchainContractBackend(bc, txPool, nil)
 
 	// create a signed transaction to send
 	nonce := state.GetNonce(testAddr)
@@ -315,7 +335,7 @@ func initBackendForFiltererTests(t *testing.T, bc *blockchain.BlockChain) *Block
 	mockBackend.EXPECT().SubscribeChainEvent(any).DoAndReturn(subscribeChainEvent).AnyTimes()
 
 	f := filters.NewEventSystem(&event.TypeMux{}, mockBackend, false)
-	c := NewBlockchainContractBackend(bc, f, nil)
+	c := NewBlockchainContractBackend(bc, nil, f)
 
 	return c
 }
@@ -371,7 +391,7 @@ func TestBlockChainSubscribeFilterLogs(t *testing.T) {
 
 		block := bc.CurrentBlock()
 
-		blocks, _ := blockchain.GenerateChain(c.BlockchainContractFilterer.bc.Config(), block, gxhash.NewFaker(), state.Database().TrieDB().DiskDB(), 1, func(i int, b *blockchain.BlockGen) {
+		blocks, _ := blockchain.GenerateChain(c.bc.Config(), block, gxhash.NewFaker(), state.Database().TrieDB().DiskDB(), 1, func(i int, b *blockchain.BlockGen) {
 			b.AddTx(signedTx)
 		})
 		bc.InsertChain(blocks)
