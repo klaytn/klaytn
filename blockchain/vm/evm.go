@@ -257,6 +257,10 @@ func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte
 	evm.Transfer(evm.StateDB, caller.Address(), to.Address(), value)
 
 	if !isProgramAccount(evm, caller.Address(), addr, evm.StateDB) {
+		if evm.vmConfig.Debug && evm.depth == 0 {
+			evm.vmConfig.Tracer.CaptureStart(caller.Address(), addr, false, input, gas, value)
+			evm.vmConfig.Tracer.CaptureEnd(ret, 0, 0, nil)
+		}
 		return ret, gas, nil
 	}
 
