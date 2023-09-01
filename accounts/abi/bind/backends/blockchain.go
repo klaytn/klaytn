@@ -44,7 +44,6 @@ type BlockChainForCaller interface {
 	// Only using the vocabulary of consensus.ChainReader for potential
 	// usability within consensus package.
 	Config() *params.ChainConfig
-	CurrentHeader() *types.Header
 	GetHeaderByNumber(number uint64) *types.Header
 	GetBlock(hash common.Hash, number uint64) *types.Block
 	State() (*state.StateDB, error)
@@ -73,6 +72,9 @@ var (
 	_ bind.ContractBackend    = (*BlockchainContractBackend)(nil)
 )
 
+// `txPool` is required for bind.ContractTransactor methods and `events` is required for bind.ContractFilterer methods.
+// If `tp=nil`, bind.ContractTransactor methods could return errors.
+// If `es=nil`, bind.ContractFilterer methods could return errors.
 func NewBlockchainContractBackend(bc BlockChainForCaller, tp *blockchain.TxPool, es *filters.EventSystem) *BlockchainContractBackend {
 	return &BlockchainContractBackend{bc, tp, es}
 }
@@ -177,7 +179,7 @@ func (b *BlockchainContractBackend) PendingNonceAt(ctx context.Context, account 
 }
 
 func (b *BlockchainContractBackend) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
-	if b.bc.Config().IsMagmaForkEnabled(b.bc.CurrentHeader().Number) {
+	if b.bc.Config().IsMagmaForkEnabled(b.bc.CurrentBlock().Number()) {
 		if b.txPool != nil {
 			return new(big.Int).Mul(b.txPool.GasPrice(), big.NewInt(2)), nil
 		} else {

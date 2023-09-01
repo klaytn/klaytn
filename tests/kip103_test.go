@@ -11,7 +11,6 @@ import (
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/contracts/kip103"
 	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/node/cn/filters"
 	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
 )
@@ -38,8 +37,7 @@ func TestRebalanceTreasury_EOA(t *testing.T) {
 	}()
 
 	optsOwner := bind.NewKeyedTransactor(validator.Keys[0])
-	es := filters.NewEventSystem(node.EventMux(), node.APIBackend, false)
-	transactor := backends.NewBlockchainContractBackend(node.BlockChain(), node.TxPool().(*blockchain.TxPool), es)
+	transactor := backends.NewBlockchainContractBackend(node.BlockChain(), node.TxPool().(*blockchain.TxPool), nil)
 	// We need to wait for the following contract executions to be processed, so let's have enough number of blocks
 	targetBlockNum := new(big.Int).Add(node.BlockChain().CurrentBlock().Number(), big.NewInt(10))
 
