@@ -40,6 +40,7 @@ func SignatureFromBytes(b []byte) (types.Signature, error) {
 	}
 
 	p := new(blstSignature).Uncompress(b)
+	// Do not check for infinity since an aggregated signature could be infinite.
 	if p == nil || !p.SigValidate(false) {
 		return nil, types.ErrSignatureUnmarshal
 	}
@@ -83,6 +84,7 @@ func MultipleSignaturesFromBytes(bs [][]byte) ([]types.Signature, error) {
 		p := batchPs[i]
 		b := batchBytes[i]
 
+		// Do not check for infinity since an aggregated signature could be infinite.
 		if p == nil || !p.SigValidate(false) {
 			return nil, types.ErrSignatureUnmarshal
 		}

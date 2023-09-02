@@ -28,10 +28,11 @@ type secretKey struct {
 	p *blstSecretKey
 }
 
-func RandKey() (types.SecretKey, error) {
-	ikm := make([]byte, 32)
-	if _, err := rand.Read(ikm); err != nil {
-		return nil, err
+func GenerateKey(ikm []byte) (types.SecretKey, error) {
+	// draft-irtf-cfrg-bls-signature-05 section 2.3. KeyGen
+	// requires that IKM MUST be at least 32 bytes long, but it MAY be longer.
+	if len(ikm) < 32 {
+		return nil, types.ErrSecretKeyGen
 	}
 
 	p := blst.KeyGen(ikm)
@@ -39,6 +40,14 @@ func RandKey() (types.SecretKey, error) {
 		return nil, types.ErrSecretKeyGen
 	}
 	return &secretKey{p: p}, nil
+}
+
+func RandKey() (types.SecretKey, error) {
+	ikm := make([]byte, 32)
+	if _, err := rand.Read(ikm); err != nil {
+		return nil, err
+	}
+	return GenerateKey(ikm)
 }
 
 func SecretKeyFromBytes(b []byte) (types.SecretKey, error) {
