@@ -36,11 +36,11 @@ import (
 )
 
 const (
-	HashLength         = 32
-	ExtHashNonceLength = 7
-	ExtHashLength      = HashLength + ExtHashNonceLength
-	AddressLength      = 20
-	SignatureLength    = 65
+	HashLength           = 32
+	ExtHashCounterLength = 7
+	ExtHashLength        = HashLength + ExtHashCounterLength
+	AddressLength        = 20
+	SignatureLength      = 65
 )
 
 var (
@@ -52,21 +52,21 @@ var (
 var (
 	lastPrecompiledContractAddressHex = hexutil.MustDecode("0x00000000000000000000000000000000000003FF")
 
-	// extHashCounter is the counter used to generate the nonce for the ExtHash.
+	// extHashLastCounter is the counter used to generate the nonce for the ExtHash.
 	// It starts off the most significant 7 bytes of the timestamp in nanoseconds at program startup.
 	// It increments every time a new ExtHash nonce is generated.
-	//                  [b1 b2 b3 b4 b5 b6 b7 b8] = UnixNano()
-	// extHashCounter = [00 b1 b2 b3 b4 b5 b6 b7]
-	// nextNonce      =    [b1 b2 b3 b4 b5 b6 b7]
-	extHashCounter = uint64(0)
-	// extHashLegacyNonce signifies the trie node referred by the ExtHash is actually
+	//                      [b1 b2 b3 b4 b5 b6 b7 b8] = UnixNano()
+	// extHashLastCounter = [00 b1 b2 b3 b4 b5 b6 b7]
+	// nextCounter        =    [b1 b2 b3 b4 b5 b6 b7]
+	extHashLastCounter = uint64(0)
+	// extHashZeroCounter signifies the trie node referred by the ExtHash is actually
 	// identified by the regular 32-byte Hash.
-	extHashLegacyNonce = ExtHashNonce{0, 0, 0, 0, 0, 0, 0}
+	extHashZeroCounter = ExtHashCounter{0, 0, 0, 0, 0, 0, 0}
 )
 
 func init() {
-	extHashCounter = uint64(time.Now().UnixNano() >> 8)
-	if extHashCounter == 0 {
+	extHashLastCounter = uint64(time.Now().UnixNano() >> 8)
+	if extHashLastCounter == 0 {
 		panic("Failed to retrieve current timestamp for ExtHashCounter")
 	}
 }
@@ -181,13 +181,13 @@ func (h UnprefixedHash) MarshalText() ([]byte, error) {
 /////////// ExtHash
 
 type (
-	// ExtHash is an extended hash composed of a 32 byte Hash and a 7 byte Nonce.
+	// ExtHash is an extended hash composed of a 32 byte Hash and a 7 byte Counter.
 	// ExtHash is used as the reference of Merkle Patricia Trie nodes to enable
 	// the KIP-111 live state database pruning. The Hash component shall represent
-	// the merkle hash of the node and the Nonce component shall differentiate
+	// the merkle hash of the node and the Counter component shall differentiate
 	// nodes with the same merkle hash.
-	ExtHash      [ExtHashLength]byte
-	ExtHashNonce [ExtHashNonceLength]byte
+	ExtHash        [ExtHashLength]byte
+	ExtHashCounter [ExtHashCounterLength]byte
 )
 
 // BytesToExtHash converts the byte array b to ExtHash.
@@ -206,23 +206,23 @@ func BytesToExtHash(b []byte) (eh ExtHash) {
 	}
 }
 
-func BytesToExtHashNonce(b []byte) (nonce ExtHashNonce) {
-	if len(b) == ExtHashNonceLength {
-		copy(nonce[:], b)
-		return nonce
+func BytesToExtHashCounter(b []byte) (counter ExtHashCounter) {
+	if len(b) == ExtHashCounterLength {
+		copy(counter[:], b)
+		return counter
 	} else {
-		logger.Crit("Invalid ExtHashNonce bytes", "data", hexutil.Encode(b))
-		return ExtHashNonce{}
+		logger.Crit("Invalid ExtHashCounter bytes", "data", hexutil.Encode(b))
+		return ExtHashCounter{}
 	}
 }
 
 func HexToExtHash(s string) ExtHash { return BytesToExtHash(FromHex(s)) }
 
-func HexToExtHashNonce(s string) ExtHashNonce { return BytesToExtHashNonce(FromHex(s)) }
+func HexToExtHashCounter(s string) ExtHashCounter { return BytesToExtHashCounter(FromHex(s)) }
 
-func (n ExtHashNonce) Bytes() []byte { return n[:] }
+func (n ExtHashCounter) Bytes() []byte { return n[:] }
 
-func (n ExtHashNonce) Hex() string { return hexutil.Encode(n[:]) }
+func (n ExtHashCounter) Hex() string { return hexutil.Encode(n[:]) }
 
 func (eh ExtHash) Bytes() []byte { return eh[:] }
 
@@ -275,48 +275,48 @@ func (eh ExtHash) Unextend() (h Hash) {
 	return h
 }
 
-// Nonce returns the 7 byte nonce component of an ExtHash
-func (eh ExtHash) Nonce() (nonce ExtHashNonce) {
-	copy(nonce[:], eh[HashLength:])
-	return nonce
+// Counter returns the 7 byte counter component of an ExtHash
+func (eh ExtHash) Counter() (counter ExtHashCounter) {
+	copy(counter[:], eh[HashLength:])
+	return counter
 }
 
 func (eh ExtHash) IsLegacy() bool {
-	return bytes.Equal(eh.Nonce().Bytes(), extHashLegacyNonce[:])
+	return bytes.Equal(eh.Counter().Bytes(), extHashZeroCounter[:])
 }
 
 // ResetExtHashCounterForTest sets the extHashCounter for deterministic testing
 func ResetExtHashCounterForTest(counter uint64) {
-	atomic.StoreUint64(&extHashCounter, counter)
+	atomic.StoreUint64(&extHashLastCounter, counter)
 }
 
-func nextExtHashNonce() ExtHashNonce {
-	num := atomic.AddUint64(&extHashCounter, 1)
+func nextExtHashCounter() ExtHashCounter {
+	num := atomic.AddUint64(&extHashLastCounter, 1)
 	bin := make([]byte, 8)
 	binary.BigEndian.PutUint64(bin, num)
-	return BytesToExtHashNonce(bin[1:8])
+	return BytesToExtHashCounter(bin[1:8])
 }
 
-// extend converts Hash to ExtHash by attaching a given nonce
-func (h Hash) extend(nonce ExtHashNonce) (eh ExtHash) {
+// extend converts Hash to ExtHash by attaching a given counter
+func (h Hash) extend(counter ExtHashCounter) (eh ExtHash) {
 	copy(eh[:HashLength], h[:HashLength])
-	copy(eh[HashLength:], nonce[:])
+	copy(eh[HashLength:], counter[:])
 	return eh
 }
 
-// Extend converts Hash to ExtHash by attaching an auto-generated nonce
-// Auto-generated nonces must be different every time
+// Extend converts Hash to ExtHash by attaching an auto-generated counter
+// Auto-generated counters must be different every time
 func (h Hash) Extend() ExtHash {
-	nonce := nextExtHashNonce()
-	eh := h.extend(nonce)
+	counter := nextExtHashCounter()
+	eh := h.extend(counter)
 	// logger.Trace("extend hash", "exthash", eh.Hex())
 	return eh
 }
 
-// ExtendLegacy converts Hash to ExtHash by attaching the fixed legacy nonce "0x00000000000045"
-// Legacy nonce are attached to hashes of Trie nodes in the legacy trie database
+// ExtendLegacy converts Hash to ExtHash by attaching the zero counter.
+// Zero counters are attached to hashes of Trie nodes in the legacy trie database
 func (h Hash) ExtendLegacy() ExtHash {
-	return h.extend(extHashLegacyNonce)
+	return h.extend(extHashZeroCounter)
 }
 
 /////////// Address
