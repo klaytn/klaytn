@@ -52,9 +52,9 @@ var (
 var (
 	lastPrecompiledContractAddressHex = hexutil.MustDecode("0x00000000000000000000000000000000000003FF")
 
-	// extHashLastCounter is the counter used to generate the nonce for the ExtHash.
+	// extHashLastCounter is the counter used to generate the counter for the ExtHash.
 	// It starts off the most significant 7 bytes of the timestamp in nanoseconds at program startup.
-	// It increments every time a new ExtHash nonce is generated.
+	// It increments every time a new ExtHash counter is generated.
 	//                      [b1 b2 b3 b4 b5 b6 b7 b8] = UnixNano()
 	// extHashLastCounter = [00 b1 b2 b3 b4 b5 b6 b7]
 	// nextCounter        =    [b1 b2 b3 b4 b5 b6 b7]
@@ -191,7 +191,7 @@ type (
 )
 
 // BytesToExtHash converts the byte array b to ExtHash.
-// If len(b) is 0 or 32, then b is interpreted as a Hash and extended with LegacyNonce.
+// If len(b) is 0 or 32, then b is interpreted as a Hash and zero-extended.
 // If len(b) is 39, then b is interpreted as an ExtHash.
 // Otherwise, this function panics.
 func BytesToExtHash(b []byte) (eh ExtHash) {
@@ -316,7 +316,8 @@ func (h Hash) Extend() ExtHash {
 }
 
 // ExtendZero converts Hash to ExtHash by attaching the zero counter.
-// Zero counters are attached to hashes of Trie nodes in the legacy trie database
+// A zero counter is attached to a 32-byte Hash of Trie nodes,
+// later to be unextended back to a Hash.
 func (h Hash) ExtendZero() ExtHash {
 	return h.extend(extHashZeroCounter)
 }
