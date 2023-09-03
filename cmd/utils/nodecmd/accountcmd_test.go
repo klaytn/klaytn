@@ -272,3 +272,32 @@ Fatal: None of the listed files could be unlocked.
 `)
 	klay.ExpectExit()
 }
+
+func TestBlsInfoPrintOnly(t *testing.T) {
+	klay := runKlay(t, "klay-test", "account", "bls-info",
+		"--nodekeyhex", "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80")
+	defer klay.ExpectExit()
+
+	klay.ExpectRegexp(`{"pop":"[0-9a-f]{192}","pub":"[0-9a-f]{96}"}\s*$`)
+}
+
+func TestBlsDecrypt(t *testing.T) {
+	jsonPath := "../../../accounts/keystore/testdata/eip2335_scrypt.json"
+	passwordPath := "../../../accounts/keystore/testdata/eip2335_password.txt"
+
+	klay := runKlay(t, "klay-test", "account", "bls-decrypt",
+		"--bls-nodekeystore", jsonPath, "--password", passwordPath)
+	defer klay.ExpectExit()
+
+	klay.ExpectRegexp(`000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f\s*$`)
+}
+
+func TestBlsEncrypt(t *testing.T) {
+	klay := runKlay(t, "klay-test", "account", "bls-encrypt",
+		"--bls-nodekeyhex", "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f")
+	defer klay.ExpectExit()
+
+	klay.InputLine("1234") // Enter password
+	klay.InputLine("1234") // Confirm password
+	klay.ExpectRegexp(`{"publickey":"[0-9a-f]{96}","crypto":{.*},"id":".*"}\s*$`)
+}

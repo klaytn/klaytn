@@ -21,7 +21,11 @@
 package nodecmd
 
 import (
+	"encoding/hex"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"os"
 
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/accounts/keystore"
@@ -29,6 +33,7 @@ import (
 	"github.com/klaytn/klaytn/cmd/utils"
 	"github.com/klaytn/klaytn/console"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/crypto/bls"
 	"github.com/klaytn/klaytn/log"
 	"github.com/urfave/cli/v2"
 )
@@ -38,7 +43,6 @@ var AccountCommand = &cli.Command{
 	Usage:    "Manage accounts",
 	Category: "ACCOUNT COMMANDS",
 	Description: `
-
 Manage accounts, list all existing accounts, import a private key into a new
 account, create a new account or update an existing account.
 
@@ -80,15 +84,13 @@ Print a short summary of all accounts`,
 				utils.LightKDFFlag,
 			},
 			Description: `
-    klay account new
-
 Creates a new account and prints the address.
 
 The account is saved in encrypted format, you are prompted for a passphrase.
 
 You must remember this passphrase to unlock your account in the future.
 
-For non-interactive use the passphrase can be specified with the --password flag:
+For non-interactive use the passphrase can be specified with the ---password flag:
 
 Note, this is meant to be used for testing only, it is a bad idea to save your
 password to file or expose in any other way.
@@ -105,8 +107,6 @@ password to file or expose in any other way.
 				utils.LightKDFFlag,
 			},
 			Description: `
-    klay account update <address>
-
 Update an existing account.
 
 The account is saved in the newest version in encrypted format, you are prompted
@@ -115,9 +115,7 @@ for a passphrase to unlock the account and another to save the updated file.
 This same command can therefore be used to migrate an account of a deprecated
 format to the newest format or change the password for an account.
 
-For non-interactive use the passphrase can be specified with the --password flag:
-
-    klay account update [options] <address>
+For non-interactive use the passphrase can be specified with the ---password flag:
 
 Since only one password can be given, only format update can be performed,
 changing your password is only possible interactively.
@@ -135,8 +133,6 @@ changing your password is only possible interactively.
 			},
 			ArgsUsage: "<keyFile>",
 			Description: `
-    klay account import <keyfile>
-
 Imports an unencrypted private key from <keyfile> and creates a new account.
 Prints the address.
 
@@ -146,14 +142,96 @@ The account is saved in encrypted format, you are prompted for a passphrase.
 
 You must remember this passphrase to unlock your account in the future.
 
-For non-interactive use the passphrase can be specified with the -password flag:
+For non-interactive use the passphrase can be specified with the --password flag:
 
-    klay account import [options] <keyfile>
-
-Note:
-As you can directly copy your encrypted accounts to another klay instance,
+Note, as you can directly copy your encrypted accounts to another klay instance,
 this import mechanism is not needed when you transfer an account between
 nodes.
+`,
+		},
+		{
+			Name:   "bls-info",
+			Usage:  "Calculate BLS public key info",
+			Action: accountBlsInfo,
+			Flags: []cli.Flag{
+				utils.NodeKeyFileFlag,
+				utils.NodeKeyHexFlag,
+				utils.BlsNodeKeyFileFlag,
+				utils.BlsNodeKeyHexFlag,
+				utils.BlsNodeKeystoreFileFlag,
+				utils.PasswordFileFlag,
+			},
+			Description: `
+Calculate BLS public key info (the public key and proof-of-possession)
+then prints to STDOUT.
+
+The input must be one of the following:
+
+(1) A 32-byte raw EC private key (--nodekey, --nodekeyhex)
+    In this case the EC private key is first derived to a BLS private key,
+    then the BLS public key info is calculated.
+(2) A 32-byte raw BLS private key (--bls-nodekey, --bls-nodekeyhex)
+(3) An encrypted BLS keystore JSON (--bls-nodekeystore)
+
+EXAMPLES
+
+# Print public key info of the BLS key derived from the EC nodekey
+kcn acount bls-info --nodekey /var/kcnd/data/nodekey
+
+# Print public key info of the saved BLS key
+kcn acount bls-info --bls-nodekey /var/kcnd/data/bls-nodekey
+
+# Print public key info of the BLS key inside EIP-2335 keystore
+kcn acount bls-info --bls-nodekeystore blskey.json
+`,
+		},
+		{
+			Name:   "bls-decrypt",
+			Usage:  "Decrypt a BLS private key from an EIP-2335 keystore JSON",
+			Action: accountBlsDecrypt,
+			Flags: []cli.Flag{
+				utils.BlsNodeKeystoreFileFlag,
+				utils.PasswordFileFlag,
+			},
+			Description: `
+Decrypt an EIP-2335 keystore JSON and prints the raw BLS private key to STDOUT.
+
+EXAMPLES
+
+# Import the BLS private key from an existing EIP-2335 keystore file
+kcn account bls-decrypt --bls-nodekeystore blskey.json --password pw.txt > /var/kcnd/data/bls-nodekey
+`,
+		},
+		{
+			Name:   "bls-encrypt",
+			Usage:  "Encrypt a BLS private key to an EIP-2335 keystore JSON",
+			Action: accountBlsEncrypt,
+			Flags: []cli.Flag{
+				utils.NodeKeyFileFlag,
+				utils.NodeKeyHexFlag,
+				utils.BlsNodeKeyFileFlag,
+				utils.BlsNodeKeyHexFlag,
+				utils.PasswordFileFlag,
+				utils.LightKDFFlag,
+			},
+			Description: `
+Encrypt a BLS private key to an EIP-2335 keystore JSON and prints to STDOUT.
+
+The input must be one of the following:
+
+(1) A 32-byte raw EC private key (--nodekey, --nodekeyhex).
+    In this case the EC private key is first derived to a BLS private key, then encrypted.
+(2) A 32-byte raw BLS private key (--bls-nodekey, --bls-nodekeyhex)
+
+EXAMPLES
+
+# Store a backup BLS private key as an EIP-2335 keystore file
+kcn account bls-encrypt --bls-nodekey /var/kcnd/data/bls-nodekey --password pw.txt > bls-keystore.json
+
+# Change the password of an EIP-2335 keystore
+kcn account bls-encrypt \
+	--bls-nodekeyhex $(kcn account bls-decrypt --bls-nodekeystore blskey.json --password pw1.txt) \
+	--password pw2.txt > blskey.json
 `,
 		},
 	},
@@ -333,5 +411,105 @@ func accountImport(ctx *cli.Context) error {
 	if _acct, err := ks.Find(acct); err == nil {
 		fmt.Println("Your account is imported at", _acct.URL.Path)
 	}
+	return nil
+}
+
+func loadBlsNodeKeystore(ctx *cli.Context) (bls.SecretKey, error) {
+	if !ctx.IsSet(utils.BlsNodeKeystoreFileFlag.Name) {
+		return nil, errors.New("No BLS key input specified")
+	}
+
+	file := ctx.String(utils.BlsNodeKeystoreFileFlag.Name)
+	content, err := os.ReadFile(file)
+	if err != nil {
+		return nil, err
+	}
+
+	storedPasswords := utils.MakePasswordList(ctx)
+	password := getPassPhrase("Enter the password",
+		false, 0, storedPasswords)
+
+	plainKeystore, err := keystore.DecryptKeyEIP2335(content, password)
+	if err != nil {
+		return nil, err
+	}
+	return plainKeystore.SecretKey, nil
+}
+
+func accountBlsInfo(ctx *cli.Context) error {
+	utils.CheckExclusive(ctx,
+		utils.NodeKeyFileFlag,
+		utils.NodeKeyHexFlag,
+		utils.BlsNodeKeyFileFlag,
+		utils.BlsNodeKeyHexFlag,
+		utils.BlsNodeKeystoreFileFlag,
+	)
+
+	var blsPriv bls.SecretKey
+	var err error
+	if ctx.IsSet(utils.BlsNodeKeystoreFileFlag.Name) {
+		blsPriv, err = loadBlsNodeKeystore(ctx)
+	} else {
+		blsPriv, err = utils.LoadBlsNodeKey(ctx)
+	}
+	if err != nil {
+		return err
+	}
+
+	pub := blsPriv.PublicKey().Marshal()
+	pop := bls.PopProve(blsPriv).Marshal()
+	publicKeyInfo := map[string]string{
+		"pub": hex.EncodeToString(pub),
+		"pop": hex.EncodeToString(pop),
+	}
+	publicKeyInfoJSON, err := json.Marshal(publicKeyInfo)
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(publicKeyInfoJSON))
+	return nil
+}
+
+func accountBlsDecrypt(ctx *cli.Context) error {
+	blsPriv, err := loadBlsNodeKeystore(ctx)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(hex.EncodeToString(blsPriv.Marshal()))
+	return nil
+}
+
+func accountBlsEncrypt(ctx *cli.Context) error {
+	utils.CheckExclusive(ctx,
+		utils.NodeKeyFileFlag,
+		utils.NodeKeyHexFlag,
+		utils.BlsNodeKeyFileFlag,
+		utils.BlsNodeKeyHexFlag,
+	)
+	blsPriv, err := utils.LoadBlsNodeKey(ctx)
+	if err != nil {
+		return err
+	}
+
+	storedPasswords := utils.MakePasswordList(ctx)
+	password := getPassPhrase("Please give a new password. Do not forget this password.",
+		true, 0, storedPasswords)
+
+	scryptN := keystore.StandardScryptN
+	scryptP := keystore.StandardScryptP
+	if ctx.Bool(utils.LightKDFFlag.Name) {
+		scryptN = keystore.LightScryptN
+		scryptP = keystore.LightScryptP
+	}
+
+	plainKeystore := keystore.NewKeyEIP2335(blsPriv)
+	encryptedKeystore, err := keystore.EncryptKeyEIP2335(
+		plainKeystore, password, scryptN, scryptP)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(string(encryptedKeystore))
 	return nil
 }

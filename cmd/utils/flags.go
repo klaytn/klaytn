@@ -1124,6 +1124,27 @@ var (
 		EnvVars:  []string{"KLAYTN_NODEKEYHEX"},
 		Category: "NETWORK",
 	}
+	BlsNodeKeyFileFlag = &cli.StringFlag{
+		Name:     "bls-nodekey",
+		Usage:    "Consensus BLS node key file",
+		Aliases:  []string{"p2p.bls-node-key"},
+		EnvVars:  []string{"KLAYTN_BLS_NODEKEY"},
+		Category: "NETWORK",
+	}
+	BlsNodeKeyHexFlag = &cli.StringFlag{
+		Name:     "bls-nodekeyhex",
+		Usage:    "Consensus BLS node key in hex (for testing)",
+		Aliases:  []string{"p2p.bls-node-key-hex"},
+		EnvVars:  []string{"KLAYTN_BLS_NODEKEYHEX"},
+		Category: "NETWORK",
+	}
+	BlsNodeKeystoreFileFlag = &cli.StringFlag{
+		Name:     "bls-nodekeystore",
+		Usage:    "Consensus BLS node keystore JSON file",
+		Aliases:  []string{"p2p.bls-node-keystore"},
+		EnvVars:  []string{"KLAYTN_BLS_NODEKEYSTORE"},
+		Category: "NETWORK",
+	}
 	NATFlag = &cli.StringFlag{
 		Name:     "nat",
 		Usage:    "NAT port mapping mechanism (any|none|upnp|pmp|extip:<IP>)",

@@ -23,6 +23,7 @@ package utils
 import (
 	"bufio"
 	"crypto/ecdsa"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -41,6 +42,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/fdlimit"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/crypto/bls"
 	"github.com/klaytn/klaytn/datasync/chaindatafetcher"
 	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kafka"
 	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kas"
@@ -211,25 +213,68 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 // method returns nil and an emphemeral key is to be generated.
 func setNodeKey(ctx *cli.Context, cfg *p2p.Config) {
 	var (
-		hex  = ctx.String(NodeKeyHexFlag.Name)
+		str  = ctx.String(NodeKeyHexFlag.Name)
 		file = ctx.String(NodeKeyFileFlag.Name)
 		key  *ecdsa.PrivateKey
 		err  error
 	)
 	switch {
-	case file != "" && hex != "":
+	case file != "" && str != "":
 		log.Fatalf("Options %q and %q are mutually exclusive", NodeKeyFileFlag.Name, NodeKeyHexFlag.Name)
 	case file != "":
 		if key, err = crypto.LoadECDSA(file); err != nil {
 			log.Fatalf("Option %q: %v", NodeKeyFileFlag.Name, err)
 		}
 		cfg.PrivateKey = key
-	case hex != "":
-		if key, err = crypto.HexToECDSA(hex); err != nil {
+	case str != "":
+		if key, err = crypto.HexToECDSA(str); err != nil {
 			log.Fatalf("Option %q: %v", NodeKeyHexFlag.Name, err)
 		}
 		cfg.PrivateKey = key
 	}
+}
+
+func LoadBlsNodeKey(ctx *cli.Context) (bls.SecretKey, error) {
+	if ctx.IsSet(NodeKeyFileFlag.Name) {
+		file := ctx.String(NodeKeyFileFlag.Name)
+		ecPriv, err := crypto.LoadECDSA(file)
+		if err != nil {
+			return nil, err
+		}
+		return bls.GenerateKey(crypto.FromECDSA(ecPriv))
+	}
+	if ctx.IsSet(NodeKeyHexFlag.Name) {
+		str := ctx.String(NodeKeyHexFlag.Name)
+		ecPriv, err := crypto.HexToECDSA(str)
+		if err != nil {
+			return nil, err
+		}
+		return bls.GenerateKey(crypto.FromECDSA(ecPriv))
+	}
+	if ctx.IsSet(BlsNodeKeyFileFlag.Name) {
+		file := ctx.String(BlsNodeKeyFileFlag.Name)
+		content, err := os.ReadFile(file)
+		if err != nil {
+			return nil, err
+		}
+		if len(content) > 64 {
+			content = content[:64]
+		}
+		blsBytes, err := hex.DecodeString(string(content))
+		if err != nil {
+			return nil, err
+		}
+		return bls.SecretKeyFromBytes(blsBytes)
+	}
+	if ctx.IsSet(BlsNodeKeyHexFlag.Name) {
+		str := ctx.String(BlsNodeKeyHexFlag.Name)
+		blsBytes, err := hex.DecodeString(str)
+		if err != nil {
+			return nil, err
+		}
+		return bls.SecretKeyFromBytes(blsBytes)
+	}
+	return nil, errors.New("No BLS key input specified")
 }
 
 // setNAT creates a port mapper from command line flags.
