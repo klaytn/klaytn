@@ -183,7 +183,7 @@ func (h UnprefixedHash) MarshalText() ([]byte, error) {
 type (
 	// ExtHash is an extended hash composed of a 32 byte Hash and a 7 byte Nonce.
 	// ExtHash is used as the reference of Merkle Patricia Trie nodes to enable
-	// the KIP-111 online state database pruning. The Hash component shall represent
+	// the KIP-111 live state database pruning. The Hash component shall represent
 	// the merkle hash of the node and the Nonce component shall differentiate
 	// nodes with the same merkle hash.
 	ExtHash      [ExtHashLength]byte

@@ -198,7 +198,7 @@ func CheckStateConsistencyParallel(oldDB Database, newDB Database, root common.H
 		return errors.WithMessage(err, "can not open newDB trie")
 	}
 	// get children hash
-	children, err := oldDB.TrieDB().NodeChildren(root.ExtendLegacy()) // does not work with Online Pruning
+	children, err := oldDB.TrieDB().NodeChildren(root.ExtendLegacy()) // does not work with Live Pruning
 	if err != nil {
 		logger.Error("cannot start CheckStateConsistencyParallel", "err", err)
 		return errors.WithMessage(err, "cannot get children before consistency check")
@@ -247,7 +247,7 @@ func CheckStateConsistencyParallel(oldDB Database, newDB Database, root common.H
 
 // concurrentIterator checks the consistency of all state/storage trie of given two state database
 // and pass the result via the channel. The 'root' here can be a subtrie root.
-// Does not work with Online Pruning.
+// Does not work with Live Pruning.
 func concurrentIterator(oldDB Database, newDB Database, root common.ExtHash, quit chan struct{}, resultCh chan struct{}, finishCh chan error) (resultErr error) {
 	defer func() {
 		finishCh <- resultErr
