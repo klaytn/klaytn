@@ -122,7 +122,7 @@ func VerifyProof(rootHash common.Hash, key []byte, proofDB database.DBManager) (
 	key = keybytesToHex(key)
 	wantHash := rootHash
 	for i := 0; ; i++ {
-		buf, _ := proofDB.ReadTrieNode(wantHash.ExtendLegacy()) // only works with hash32
+		buf, _ := proofDB.ReadTrieNode(wantHash.ExtendZero()) // only works with hash32
 		if buf == nil {
 			return nil, fmt.Errorf("proof node %d (hash %064x) missing", i, wantHash), i
 		}
@@ -165,7 +165,7 @@ func proofToPath(rootHash common.Hash, root node, key []byte, proofDb ProofDBRea
 	// If the root node is empty, resolve it first.
 	// Root node must be included in the proof.
 	if root == nil {
-		n, err := resolveNode(rootHash.ExtendLegacy())
+		n, err := resolveNode(rootHash.ExtendZero())
 		if err != nil {
 			return nil, nil, err
 		}

@@ -198,7 +198,7 @@ func CheckStateConsistencyParallel(oldDB Database, newDB Database, root common.H
 		return errors.WithMessage(err, "can not open newDB trie")
 	}
 	// get children hash
-	children, err := oldDB.TrieDB().NodeChildren(root.ExtendLegacy()) // does not work with Live Pruning
+	children, err := oldDB.TrieDB().NodeChildren(root.ExtendZero()) // does not work with Live Pruning
 	if err != nil {
 		logger.Error("cannot start CheckStateConsistencyParallel", "err", err)
 		return errors.WithMessage(err, "cannot get children before consistency check")

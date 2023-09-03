@@ -27,8 +27,8 @@ import (
 var (
 	childHash     = common.HexToHash("1341655") // 20190805 in hexadecimal
 	parentHash    = common.HexToHash("1343A3F") // 20199999 in hexadecimal
-	childExtHash  = childHash.ExtendLegacy()
-	parentExtHash = parentHash.ExtendLegacy()
+	childExtHash  = childHash.ExtendZero()
+	parentExtHash = parentHash.ExtendZero()
 )
 
 func TestDatabase_Reference(t *testing.T) {

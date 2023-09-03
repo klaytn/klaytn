@@ -644,7 +644,7 @@ func (db *Database) ReferenceRoot(root common.Hash) {
 	db.lock.Lock()
 	defer db.lock.Unlock()
 
-	db.reference(root.ExtendLegacy(), common.ExtHash{})
+	db.reference(root.ExtendZero(), common.ExtHash{})
 }
 
 // Reference adds a new reference from a parent node to a child node.
@@ -691,7 +691,7 @@ func (db *Database) Dereference(root common.Hash) {
 	defer db.lock.Unlock()
 
 	nodes, storage, start := len(db.nodes), db.nodesSize, time.Now()
-	db.dereference(root.ExtendLegacy(), common.ExtHash{})
+	db.dereference(root.ExtendZero(), common.ExtHash{})
 
 	db.gcnodes += uint64(nodes - len(db.nodes))
 	db.gcsize += storage - db.nodesSize
@@ -902,7 +902,7 @@ func (db *Database) concurrentCommit(hash common.ExtHash, resultCh chan<- commit
 //
 // As a side effect, all pre-images accumulated up to this point are also written.
 func (db *Database) Commit(root common.Hash, report bool, blockNum uint64) error {
-	hash := root.ExtendLegacy()
+	hash := root.ExtendZero()
 	// Create a database batch to flush persistent data out. It is important that
 	// outside code doesn't see an inconsistent state (referenced data removed from
 	// memory cache during commit but not yet in persistent database). This is ensured

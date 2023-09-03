@@ -261,7 +261,7 @@ func (h *hasher) makeHashNode(data []byte, onRoot bool) hashNode {
 	if h.pruning && (h.storageRoot || !onRoot) {
 		return hash.Extend().Bytes()
 	} else {
-		return hash.ExtendLegacy().Bytes()
+		return hash.ExtendZero().Bytes()
 	}
 }
 

@@ -196,7 +196,7 @@ type (
 // Otherwise, this function panics.
 func BytesToExtHash(b []byte) (eh ExtHash) {
 	if len(b) == 0 || len(b) == HashLength {
-		return BytesToHash(b).ExtendLegacy()
+		return BytesToHash(b).ExtendZero()
 	} else if len(b) == ExtHashLength {
 		eh.SetBytes(b)
 		return eh
@@ -313,9 +313,9 @@ func (h Hash) Extend() ExtHash {
 	return eh
 }
 
-// ExtendLegacy converts Hash to ExtHash by attaching the zero counter.
+// ExtendZero converts Hash to ExtHash by attaching the zero counter.
 // Zero counters are attached to hashes of Trie nodes in the legacy trie database
-func (h Hash) ExtendLegacy() ExtHash {
+func (h Hash) ExtendZero() ExtHash {
 	return h.extend(extHashZeroCounter)
 }
 

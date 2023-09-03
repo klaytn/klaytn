@@ -102,17 +102,17 @@ func TestExtHash(t *testing.T) {
 
 	// Hash <-> ExtHash
 	assert.Equal(t, h, eh.Unextend())
-	assert.Equal(t, sExtLegacy, h.ExtendLegacy().Hex())
+	assert.Equal(t, sExtLegacy, h.ExtendZero().Hex())
 	ResetExtHashCounterForTest(nCounter - 1)
 	assert.Equal(t, sExtHash, h.Extend().Hex())
 	assert.Equal(t, sExtHash2, h.Extend().Hex())
 
 	// Predicates
 	assert.False(t, eh.IsLegacy())
-	assert.True(t, h.ExtendLegacy().IsLegacy())
+	assert.True(t, h.ExtendZero().IsLegacy())
 
 	assert.False(t, EmptyExtHash(eh))
-	assert.True(t, EmptyExtHash(Hash{}.ExtendLegacy()))
+	assert.True(t, EmptyExtHash(Hash{}.ExtendZero()))
 	assert.True(t, EmptyExtHash(ExtHash{}))
 }
 

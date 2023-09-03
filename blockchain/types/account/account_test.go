@@ -207,7 +207,7 @@ func TestSmartContractAccountExt(t *testing.T) {
 		scaLegacyRLP = "0x02f84dc98212348256788001c0a000112233445566778899aabbccddeeff00112233445566778899aabbccddeeffa0aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd10"
 		scaLegacy    = &SmartContractAccount{
 			AccountCommon: commonFields,
-			storageRoot:   hash.ExtendLegacy(),
+			storageRoot:   hash.ExtendZero(),
 			codeHash:      codehash,
 			codeInfo:      codeinfo,
 		}

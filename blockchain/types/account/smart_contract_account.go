@@ -92,7 +92,7 @@ func newSmartContractAccountWithMap(values map[AccountValueKeyType]interface{}) 
 	}
 
 	if v, ok := values[AccountValueKeyStorageRoot].(common.Hash); ok {
-		sca.storageRoot = v.ExtendLegacy()
+		sca.storageRoot = v.ExtendZero()
 	}
 	if v, ok := values[AccountValueKeyStorageRoot].(common.ExtHash); ok {
 		sca.storageRoot = v
@@ -129,7 +129,7 @@ func (sca *SmartContractAccount) toSerializableExt() *smartContractAccountSerial
 
 func (sca *SmartContractAccount) fromSerializable(o *smartContractAccountSerializable) {
 	sca.AccountCommon.fromSerializable(o.CommonSerializable)
-	sca.storageRoot = o.StorageRoot.ExtendLegacy()
+	sca.storageRoot = o.StorageRoot.ExtendZero()
 	sca.codeHash = o.CodeHash
 	sca.codeInfo = o.CodeInfo
 }
@@ -208,7 +208,7 @@ func (sca *SmartContractAccount) UnmarshalJSON(b []byte) error {
 	sca.balance = (*big.Int)(serialized.Balance)
 	sca.humanReadable = serialized.HumanReadable
 	sca.key = serialized.Key.GetKey()
-	sca.storageRoot = serialized.StorageRoot.ExtendLegacy() // API inputs should contain merkle hash
+	sca.storageRoot = serialized.StorageRoot.ExtendZero() // API inputs should contain merkle hash
 	sca.codeHash = serialized.CodeHash
 	sca.codeInfo = params.NewCodeInfo(serialized.CodeFormat, serialized.VmVersion)
 

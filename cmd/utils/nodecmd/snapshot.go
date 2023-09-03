@@ -215,7 +215,7 @@ func traceTrie(ctx *cli.Context) error {
 	trieDB := sdb.Database().TrieDB()
 
 	// Get root-node childrens to create goroutine by number of childrens
-	children, err := trieDB.NodeChildren(root.ExtendLegacy())
+	children, err := trieDB.NodeChildren(root.ExtendZero())
 	if err != nil {
 		return fmt.Errorf("Fail get childrens of root : %v", err)
 	}
