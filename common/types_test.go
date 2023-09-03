@@ -108,8 +108,8 @@ func TestExtHash(t *testing.T) {
 	assert.Equal(t, sExtHash2, h.Extend().Hex())
 
 	// Predicates
-	assert.False(t, eh.IsLegacy())
-	assert.True(t, h.ExtendZero().IsLegacy())
+	assert.False(t, eh.IsZeroExtended())
+	assert.True(t, h.ExtendZero().IsZeroExtended())
 
 	assert.False(t, EmptyExtHash(eh))
 	assert.True(t, EmptyExtHash(Hash{}.ExtendZero()))

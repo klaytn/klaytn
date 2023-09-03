@@ -257,7 +257,7 @@ func TestPruningRoot(t *testing.T) {
 	root := makeState(db)
 	stateDB, _ := New(root, db, nil, nil)
 	storageRoot, _ := stateDB.GetContractStorageRoot(addr)
-	assert.True(t, storageRoot.IsLegacy())
+	assert.True(t, storageRoot.IsZeroExtended())
 
 	// When pruning is enabled, storage root is nonzero-extended.
 	dbm = database.NewMemoryDBManager()
@@ -267,7 +267,7 @@ func TestPruningRoot(t *testing.T) {
 	root = makeState(db)
 	stateDB, _ = New(root, db, nil, nil) // Reopen trie to check the account stored in disk.
 	storageRoot, _ = stateDB.GetContractStorageRoot(addr)
-	assert.False(t, storageRoot.IsLegacy())
+	assert.False(t, storageRoot.IsZeroExtended())
 }
 
 // A snapshotTest checks that reverting StateDB snapshots properly undoes all changes

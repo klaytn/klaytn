@@ -281,7 +281,9 @@ func (eh ExtHash) Counter() (counter ExtHashCounter) {
 	return counter
 }
 
-func (eh ExtHash) IsLegacy() bool {
+// IsZeroExtended returns true if the counter component of an ExtHash is zero.
+// A zero counter signifies that the ExtHash is actually a Hash.
+func (eh ExtHash) IsZeroExtended() bool {
 	return bytes.Equal(eh.Counter().Bytes(), extHashZeroCounter[:])
 }
 

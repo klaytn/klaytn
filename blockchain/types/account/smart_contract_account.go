@@ -146,7 +146,7 @@ func (sca *SmartContractAccount) EncodeRLP(w io.Writer) error {
 }
 
 func (sca *SmartContractAccount) EncodeRLPExt(w io.Writer) error {
-	if sca.storageRoot.IsLegacy() {
+	if sca.storageRoot.IsZeroExtended() {
 		return rlp.Encode(w, sca.toSerializable())
 	} else {
 		return rlp.Encode(w, sca.toSerializableExt())

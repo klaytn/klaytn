@@ -287,7 +287,7 @@ func unextendNode(original node, preserveExtHash bool) node {
 		return stored
 	case hashNode:
 		exthash := common.BytesToExtHash(n)
-		if exthash.IsLegacy() { // Always unextend ExtHashLegacy
+		if exthash.IsZeroExtended() { // Always unextend ExtHashLegacy
 			return hashNode(exthash.Unextend().Bytes())
 		} else if !preserveExtHash { // It's ExtHash and not preserving ExtHash (for merkle hash)
 			return hashNode(exthash.Unextend().Bytes())
