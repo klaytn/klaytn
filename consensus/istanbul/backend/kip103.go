@@ -42,8 +42,9 @@ func (caller *Kip103ContractCaller) CallContract(ctx context.Context, call klayt
 	// call.To: the target contract address will be assigned by `BoundContract`
 	// call.Value: nil value is acceptable for `types.NewMessage`
 	// call.Data: a proper value will be assigned by `BoundContract`
+	// No need to handle acccess list here
 	msg := types.NewMessage(call.From, call.To, caller.state.GetNonce(call.From),
-		call.Value, gasLimit, gasPrice, call.Data, false, intrinsicGas)
+		call.Value, gasLimit, gasPrice, call.Data, false, intrinsicGas, nil)
 
 	context := blockchain.NewEVMContext(msg, caller.header, caller.chain, nil)
 	context.GasPrice = gasPrice                                                  // set gasPrice again if baseFee is assigned

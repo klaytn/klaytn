@@ -1024,7 +1024,7 @@ func (t *TransactionsByTimeAndNonce) Pop() {
 }
 
 // NewMessage returns a `*Transaction` object with the given arguments.
-func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, checkNonce bool, intrinsicGas uint64) *Transaction {
+func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, checkNonce bool, intrinsicGas uint64, list AccessList) *Transaction {
 	transaction := &Transaction{
 		validatedIntrinsicGas: intrinsicGas,
 		validatedFeePayer:     from,
@@ -1032,8 +1032,13 @@ func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *b
 		checkNonce:            checkNonce,
 	}
 
-	internalData := newTxInternalDataLegacyWithValues(nonce, to, amount, gasLimit, gasPrice, data)
-	transaction.setDecoded(internalData, 0)
+	if list != nil {
+		internalData := newTxInternalDataEthereumAccessListWithValues(nonce, to, amount, gasLimit, gasPrice, data, list, nil)
+		transaction.setDecoded(internalData, 0)
+	} else {
+		internalData := newTxInternalDataLegacyWithValues(nonce, to, amount, gasLimit, gasPrice, data)
+		transaction.setDecoded(internalData, 0)
+	}
 
 	return transaction
 }

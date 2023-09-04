@@ -276,7 +276,7 @@ func (tx *stTransaction) toMessage(ps stPostState, r params.Rules) (blockchain.M
 		return nil, err
 	}
 
-	msg := types.NewMessage(from, to, tx.Nonce, value, gasLimit, tx.GasPrice, data, true, intrinsicGas)
+	msg := types.NewMessage(from, to, tx.Nonce, value, gasLimit, tx.GasPrice, data, true, intrinsicGas, nil)
 	return msg, nil
 }
 

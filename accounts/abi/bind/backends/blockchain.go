@@ -123,8 +123,12 @@ func (b *BlockchainContractBackend) callContract(call klaytn.CallMsg, block *typ
 		return nil, err
 	}
 
+	var accessList types.AccessList
+	if call.AccessList != nil {
+		accessList = *call.AccessList
+	}
 	msg := types.NewMessage(call.From, call.To, 0, call.Value, call.Gas, call.GasPrice, call.Data,
-		false, intrinsicGas)
+		false, intrinsicGas, accessList)
 
 	evmContext := blockchain.NewEVMContext(msg, block.Header(), b.bc, nil)
 	// EVM demands the sender to have enough KLAY balance (gasPrice * gasLimit) in buyGas()

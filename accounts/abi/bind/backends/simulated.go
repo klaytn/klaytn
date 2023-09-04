@@ -461,7 +461,12 @@ func (b *SimulatedBackend) callContract(_ context.Context, call klaytn.CallMsg, 
 	// Execute the call.
 	nonce := from.Nonce()
 	intrinsicGas, _ := types.IntrinsicGas(call.Data, nil, call.To == nil, b.config.Rules(block.Number()))
-	msg := types.NewMessage(call.From, call.To, nonce, call.Value, call.Gas, call.GasPrice, call.Data, true, intrinsicGas)
+
+	var accessList types.AccessList
+	if call.AccessList != nil {
+		accessList = *call.AccessList
+	}
+	msg := types.NewMessage(call.From, call.To, nonce, call.Value, call.Gas, call.GasPrice, call.Data, true, intrinsicGas, accessList)
 
 	evmContext := blockchain.NewEVMContext(msg, block.Header(), b.blockchain, nil)
 	// Create a new environment which holds all relevant information

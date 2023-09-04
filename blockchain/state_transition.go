@@ -119,6 +119,8 @@ type Message interface {
 
 	// Execute performs execution of the transaction according to the transaction type.
 	Execute(vm types.VM, stateDB types.StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) ([]byte, uint64, error)
+
+	AccessList() types.AccessList
 }
 
 // ExecutionResult includes all output after executing given evm
@@ -342,7 +344,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 
 	rules := st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber)
 	if rules.IsKore {
-		st.state.PrepareAccessList(rules, msg.ValidatedSender(), msg.ValidatedFeePayer(), st.evm.Coinbase, msg.To(), vm.ActivePrecompiles(rules))
+		st.state.PrepareAccessList(rules, msg.ValidatedSender(), msg.ValidatedFeePayer(), st.evm.Coinbase, msg.To(), vm.ActivePrecompiles(rules), msg.AccessList())
 	}
 
 	// Check whether the init code size has been exceeded.
