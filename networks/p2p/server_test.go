@@ -33,6 +33,7 @@ import (
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/crypto/sha3"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
+	"github.com/klaytn/klaytn/networks/p2p/rlpx"
 )
 
 func init() {
@@ -41,25 +42,26 @@ func init() {
 
 type testTransport struct {
 	id discover.NodeID
-	*rlpx
+	*rlpxTransport
 	mutichannel bool
 
 	closeErr error
 }
 
-func newTestTransport(id discover.NodeID, fd net.Conn, mutichannel bool) transport {
-	wrapped := newRLPX(fd).(*rlpx)
-	wrapped.rw = newRLPXFrameRW(fd, secrets{
-		MAC:        zero16,
-		AES:        zero16,
+func newTestTransport(id discover.NodeID, fd net.Conn, dialDest *ecdsa.PublicKey, mutichannel bool) transport {
+	wrapped := newRLPX(fd, dialDest).(*rlpxTransport)
+	wrapped.conn.InitWithSecrets(rlpx.Secrets{
+		MAC:        make([]byte, 16),
+		AES:        make([]byte, 16),
 		IngressMAC: sha3.NewKeccak256(),
 		EgressMAC:  sha3.NewKeccak256(),
 	})
-	return &testTransport{id: id, rlpx: wrapped, mutichannel: mutichannel}
+	return &testTransport{id: id, rlpxTransport: wrapped, mutichannel: mutichannel}
 }
 
-func (c *testTransport) doEncHandshake(prv *ecdsa.PrivateKey, dialDest *discover.Node) (discover.NodeID, error) {
-	return c.id, nil
+func (c *testTransport) doEncHandshake(prv *ecdsa.PrivateKey) (*ecdsa.PublicKey, error) {
+	remoteKey, _ := c.id.Pubkey()
+	return remoteKey, nil
 }
 
 func (c *testTransport) doProtoHandshake(our *protoHandshake) (*protoHandshake, error) {
@@ -71,7 +73,7 @@ func (c *testTransport) doConnTypeHandshake(myConnType common.ConnType) (common.
 }
 
 func (c *testTransport) close(err error) {
-	c.rlpx.fd.Close()
+	c.conn.Close()
 	c.closeErr = err
 }
 
@@ -84,8 +86,8 @@ func startTestServer(t *testing.T, id discover.NodeID, pf func(*Peer), config *C
 		&BaseServer{
 			Config:      *config,
 			newPeerHook: pf,
-			newTransport: func(fd net.Conn) transport {
-				return newTestTransport(id, fd, false)
+			newTransport: func(fd net.Conn, dialDest *ecdsa.PublicKey) transport {
+				return newTestTransport(id, fd, dialDest, false)
 			},
 		},
 	}
@@ -109,8 +111,8 @@ func startTestMultiChannelServer(t *testing.T, id discover.NodeID, pf func(*Peer
 		BaseServer: &BaseServer{
 			Config:      *config,
 			newPeerHook: pf,
-			newTransport: func(fd net.Conn) transport {
-				return newTestTransport(id, fd, true)
+			newTransport: func(fd net.Conn, dialDest *ecdsa.PublicKey) transport {
+				return newTestTransport(id, fd, dialDest, true)
 			},
 		},
 		listeners:      listeners,
@@ -124,19 +126,21 @@ func startTestMultiChannelServer(t *testing.T, id discover.NodeID, pf func(*Peer
 }
 
 func makeconn(fd net.Conn, id discover.NodeID) *conn {
-	tx := newTestTransport(id, fd, false)
+	dialDest, _ := id.Pubkey()
+	tx := newTestTransport(id, fd, dialDest, false)
 	return &conn{fd: fd, transport: tx, flags: staticDialedConn, conntype: common.ConnTypeUndefined, id: id, cont: make(chan error)}
 }
 
 func makeMultiChannelConn(fd net.Conn, id discover.NodeID) *conn {
-	tx := newTestTransport(id, fd, true)
+	dialDest, _ := id.Pubkey()
+	tx := newTestTransport(id, fd, dialDest, true)
 	return &conn{fd: fd, transport: tx, flags: staticDialedConn, conntype: common.ConnTypeUndefined, id: id, cont: make(chan error), multiChannel: true}
 }
 
 func TestServerListen(t *testing.T) {
 	// start the test server
 	connected := make(chan *Peer)
-	remid := randomID()
+	remid := discover.PubkeyID(&newkey().PublicKey)
 	srv := startTestServer(t, remid, func(p *Peer) {
 		if p.ID() != remid {
 			t.Error("peer func called with wrong node id")
@@ -178,7 +182,7 @@ func TestServerListen(t *testing.T) {
 func TestMultiChannelServerListen(t *testing.T) {
 	// start the test server
 	connected := make(chan *Peer)
-	remid := randomID()
+	remid := discover.PubkeyID(&newkey().PublicKey)
 	config := &Config{ListenAddr: "127.0.0.1:33331", SubListenAddr: []string{"127.0.0.1:33333"}}
 	srv := startTestMultiChannelServer(t, remid, func(p *Peer) {
 		if p.ID() != remid {
@@ -206,9 +210,6 @@ func TestMultiChannelServerListen(t *testing.T) {
 		if err != nil {
 			t.Fatalf("could not dial: %v", err)
 		}
-
-		c := makeMultiChannelConn(conn, randomID())
-		c.doConnTypeHandshake(c.conntype)
 	}
 
 	select {
@@ -230,7 +231,7 @@ func TestMultiChannelServerListen(t *testing.T) {
 func TestServerNoListen(t *testing.T) {
 	// start the test server
 	connected := make(chan *Peer)
-	remid := randomID()
+	remid := discover.PubkeyID(&newkey().PublicKey)
 	srv := startTestServer(t, remid, func(p *Peer) {
 		if p.ID() != remid {
 			t.Error("peer func called with wrong node id")
@@ -265,14 +266,14 @@ func TestServerDial(t *testing.T) {
 			return
 		}
 
-		c := makeconn(conn, randomID())
+		c := makeconn(conn, discover.PubkeyID(&newkey().PublicKey))
 		c.doConnTypeHandshake(c.conntype)
 		accepted <- conn
 	}()
 
 	// start the server
 	connected := make(chan *Peer)
-	remid := randomID()
+	remid := discover.PubkeyID(&newkey().PublicKey)
 	srv := startTestServer(t, remid, func(p *Peer) { connected <- p }, &Config{})
 	defer close(connected)
 	defer srv.Stop()
@@ -479,7 +480,7 @@ func TestServerAtCap(t *testing.T) {
 
 	newconn := func(id discover.NodeID) *conn {
 		fd, _ := net.Pipe()
-		tx := newTestTransport(id, fd, false)
+		tx := newTestTransport(id, fd, nil, false)
 		return &conn{fd: fd, transport: tx, flags: inboundConn, conntype: common.ConnTypeUndefined, id: id, cont: make(chan error)}
 	}
 
@@ -506,9 +507,12 @@ func TestServerAtCap(t *testing.T) {
 }
 
 func TestServerSetupConn(t *testing.T) {
-	id := randomID()
-	srvkey := newkey()
-	srvid := discover.PubkeyID(&srvkey.PublicKey)
+	var (
+		id     = discover.PubkeyID(&newkey().PublicKey)
+		srvkey = newkey()
+		srvid  = discover.PubkeyID(&srvkey.PublicKey)
+	)
+
 	tests := []struct {
 		dontstart bool
 		tt        *setupTransport
@@ -529,13 +533,6 @@ func TestServerSetupConn(t *testing.T) {
 			flags:        inboundConn,
 			wantCalls:    "doEncHandshake,close,",
 			wantCloseErr: errors.New("read error"),
-		},
-		{
-			tt:           &setupTransport{id: id},
-			dialDest:     &discover.Node{ID: randomID(), NType: discover.NodeType(common.ENDPOINTNODE)},
-			flags:        dynDialedConn,
-			wantCalls:    "doEncHandshake,close,",
-			wantCloseErr: DiscUnexpectedIdentity,
 		},
 		{
 			tt:           &setupTransport{id: id, phs: &protoHandshake{ID: randomID()}},
@@ -575,7 +572,7 @@ func TestServerSetupConn(t *testing.T) {
 					Protocols:              []Protocol{discard},
 					ConnectionType:         1, // ENDPOINTNODE
 				},
-				newTransport: func(fd net.Conn) transport { return test.tt },
+				newTransport: func(fd net.Conn, dialDest *ecdsa.PublicKey) transport { return test.tt },
 				logger:       logger.NewWith(),
 			},
 		}
@@ -610,9 +607,10 @@ func (c *setupTransport) doConnTypeHandshake(myConnType common.ConnType) (common
 	return 1, nil
 }
 
-func (c *setupTransport) doEncHandshake(prv *ecdsa.PrivateKey, dialDest *discover.Node) (discover.NodeID, error) {
+func (c *setupTransport) doEncHandshake(prv *ecdsa.PrivateKey) (*ecdsa.PublicKey, error) {
 	c.calls += "doEncHandshake,"
-	return c.id, c.encHandshakeErr
+	pubkey, _ := c.id.Pubkey()
+	return pubkey, c.encHandshakeErr
 }
 
 func (c *setupTransport) doProtoHandshake(our *protoHandshake) (*protoHandshake, error) {

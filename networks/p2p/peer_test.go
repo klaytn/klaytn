@@ -51,9 +51,15 @@ var discard = Protocol{
 }
 
 func testPeer(protos []Protocol) (func(), *conn, *Peer, <-chan error) {
-	fd1, fd2 := net.Pipe()
-	c1 := &conn{fd: fd1, transport: newTestTransport(randomID(), fd1, false)}
-	c2 := &conn{fd: fd2, transport: newTestTransport(randomID(), fd2, false)}
+	var (
+		fd1, fd2   = net.Pipe()
+		id1, id2   = randomID(), randomID()
+		pubkey1, _ = id1.Pubkey()
+		t1         = newTestTransport(id2, fd1, nil, true)
+		t2         = newTestTransport(id1, fd2, pubkey1, true)
+	)
+	c1 := &conn{fd: fd1, transport: t1}
+	c2 := &conn{fd: fd2, transport: t2}
 	for _, p := range protos {
 		c1.caps = append(c1.caps, p.cap())
 		c2.caps = append(c2.caps, p.cap())
@@ -75,9 +81,15 @@ func testPeerWithRWs(protos []Protocol, channelSize int) (func(), []*conn, *Peer
 	peerSideConn := make([]*conn, 0, channelSize)
 
 	for i := 0; i < channelSize; i++ {
-		fd1, fd2 := net.Pipe()
-		c1 := &conn{fd: fd1, transport: newTestTransport(randomID(), fd1, true)}
-		c2 := &conn{fd: fd2, transport: newTestTransport(randomID(), fd2, true)}
+		var (
+			fd1, fd2   = net.Pipe()
+			id1, id2   = randomID(), randomID()
+			pubkey1, _ = id1.Pubkey()
+			t1         = newTestTransport(id2, fd1, nil, true)
+			t2         = newTestTransport(id1, fd2, pubkey1, true)
+		)
+		c1 := &conn{fd: fd1, transport: t1}
+		c2 := &conn{fd: fd2, transport: t2}
 		for _, p := range protos {
 			c1.caps = append(c1.caps, p.cap())
 			c2.caps = append(c2.caps, p.cap())
@@ -87,7 +99,7 @@ func testPeerWithRWs(protos []Protocol, channelSize int) (func(), []*conn, *Peer
 	}
 
 	peer, _ := newPeer(serverSideConn, protos, defaultRWTimerConfig)
-	errc := make(chan error, 1)
+	errc := make(chan error, 2)
 	go func() {
 		_, err := peer.runWithRWs()
 		errc <- err
