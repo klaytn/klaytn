@@ -1,0 +1,45 @@
+{
+  "_comment": "This test json file is a legacy transaction that sends KLAY to an EOA",
+  "context": {
+    "blockscore": "0x1",
+    "number": "37784",
+    "timestamp": "1693799477"
+  },
+  "genesis": {
+    "alloc": {
+      "0x337160455646d3b876cc3768e701a41bbc21ed3a": {
+        "balance": "0xd3c21bcecceda1000000",
+        "nonce": "0x79"
+      },
+      "0x3693da93b9d5e63cb4804b8813c8214a76724485": {
+        "balance": "0xd3c21bcecceda1000000"
+      }
+    },
+    "blockscore": "0x1",
+    "config": {
+      "chainId": 1972,
+      "unitPrice": 25000000000
+    },
+    "extraData": "0xd983010b00846b6c617988676f312e32312e308664617277696e000000000000f89ed594337160455646d3b876cc3768e701a41bbc21ed3ab8413a2a7a3b46e3633afae57003432adf7966a8277b54b8851b4ff501175ff27dd93cf3b4b8478a442678418947c31fdd079274a1e96cd2ba6410b5064135f7943b00f843b841b5848f3cb08aed77c40e21ad417950ea105e3f3eb41e355b9257894bd7e196ea7c6d8d6716d4c08b16bfa38ebae5274e595c3c12fa431a7aeaf93e2b5575976900",
+    "hash": "0x01a1804c44ec46bf3cfff1ec875bfbd87cb7c7c4da112adfe078da7b2473f502",
+    "number": "37783",
+    "reward": "0x337160455646d3b876cc3768e701a41bbc21ed3a",
+    "stateRoot": "0x4db9703708afebbd4722761bcf8728bfcdf6ce6560c584b6bcc213549585b954",
+    "timestamp": "1693448289",
+    "timestampFoS": 1,
+    "totalBlockScore": "0x9398",
+    "voteData": "0x"
+  },
+  "input": "0xf86f79850ba43b74008261a894072d51ab13cee591d38f527c589c36669c0a6854893635c9adc5dea0000080820f8ba01acfc257c5fc50d2fde3b647a13b08fd6dd7038490f648d88c23f94d60d8dcdfa06c365d6fe888e844b74a6e9ddabe091329a24ae207792f4f6252ec3e5fe4aa46",
+  "result":
+    {
+      "from": "0x337160455646d3b876cc3768e701a41bbc21ed3a",
+      "gas": "0xfa0",
+      "gasUsed": "0x0",
+      "input": "0x",
+      "output": "0x",
+      "to": "0x072d51ab13cee591d38f527c589c36669c0a6854",
+      "type": "CALL",
+      "value": "0x3635c9adc5dea00000"
+    }
+}
