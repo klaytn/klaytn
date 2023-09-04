@@ -224,7 +224,7 @@ func getStakingInfoFromAddressBook(blockNum uint64) (*StakingInfo, error) {
 		return nil, fmt.Errorf("not staking block number. blockNum: %d", blockNum)
 	}
 
-	caller := backends.NewBlockchainContractCaller(stakingManager.blockchain)
+	caller := backends.NewBlockchainContractBackend(stakingManager.blockchain, nil, nil)
 	contract, err := contract.NewAddressBookCaller(addressBookContractAddress, caller)
 	if err != nil {
 		return nil, fmt.Errorf("failed to call AddressBook contract. root err: %s", err)

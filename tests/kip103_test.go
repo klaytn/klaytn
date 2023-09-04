@@ -1,96 +1,19 @@
 package tests
 
 import (
-	"context"
 	"math/big"
 	"os"
 	"testing"
-	"time"
 
-	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
-	"github.com/klaytn/klaytn/api"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/hexutil"
+	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
+	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/contracts/kip103"
 	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/networks/rpc"
-	"github.com/klaytn/klaytn/node/cn"
 	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
 )
-
-type testKip103TxTransactor struct {
-	node *cn.CN
-}
-
-func (t *testKip103TxTransactor) FilterLogs(ctx context.Context, query klaytn.FilterQuery) ([]types.Log, error) {
-	return nil, nil
-}
-
-func (t *testKip103TxTransactor) SubscribeFilterLogs(ctx context.Context, query klaytn.FilterQuery, ch chan<- types.Log) (klaytn.Subscription, error) {
-	return nil, nil
-}
-
-func (t *testKip103TxTransactor) PendingCodeAt(ctx context.Context, account common.Address) ([]byte, error) {
-	return t.CodeAt(ctx, account, nil)
-}
-
-func (t *testKip103TxTransactor) PendingNonceAt(ctx context.Context, account common.Address) (uint64, error) {
-	return t.node.TxPool().GetPendingNonce(account), nil
-}
-
-func (t *testKip103TxTransactor) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
-	return big.NewInt(int64(t.node.BlockChain().Config().UnitPrice)), nil
-}
-
-func (t *testKip103TxTransactor) EstimateGas(ctx context.Context, call klaytn.CallMsg) (gas uint64, err error) {
-	return uint64(1e8), nil
-}
-
-func (t *testKip103TxTransactor) SendTransaction(ctx context.Context, tx *types.Transaction) error {
-	return t.node.TxPool().AddLocal(tx)
-}
-
-func (t *testKip103TxTransactor) ChainID(ctx context.Context) (*big.Int, error) {
-	return t.node.BlockChain().Config().ChainID, nil
-}
-
-func (t *testKip103TxTransactor) CodeAt(ctx context.Context, contract common.Address, blockNumber *big.Int) ([]byte, error) {
-	if blockNumber == nil {
-		blockNumber = t.node.BlockChain().CurrentBlock().Number()
-	}
-	root := t.node.BlockChain().GetHeaderByNumber(blockNumber.Uint64()).Root
-	state, err := t.node.BlockChain().StateAt(root)
-	if err != nil {
-		return nil, err
-	}
-	return state.GetCode(contract), nil
-}
-
-func (t *testKip103TxTransactor) CallContract(ctx context.Context, call klaytn.CallMsg, blockNumber *big.Int) ([]byte, error) {
-	if blockNumber == nil {
-		blockNumber = t.node.BlockChain().CurrentBlock().Number()
-	}
-
-	price := hexutil.Big(*t.node.TxPool().GasPrice())
-	if call.GasPrice != nil {
-		price = hexutil.Big(*call.GasPrice)
-	}
-
-	value := hexutil.Big(*big.NewInt(0))
-	if call.Value != nil {
-		value = hexutil.Big(*call.Value)
-	}
-
-	arg := api.CallArgs{From: call.From, To: call.To, Gas: hexutil.Uint64(1e8), GasPrice: &price, Value: value, Data: call.Data}
-	bn := rpc.BlockNumber(blockNumber.Int64())
-
-	apiBackend := api.NewPublicBlockChainAPI(t.node.APIBackend)
-	return apiBackend.Call(ctx, arg, rpc.NewBlockNumberOrHashWithNumber(bn))
-}
 
 func TestRebalanceTreasury_EOA(t *testing.T) {
 	log.EnableLogForTest(log.LvlError, log.LvlInfo)
@@ -114,12 +37,17 @@ func TestRebalanceTreasury_EOA(t *testing.T) {
 	}()
 
 	optsOwner := bind.NewKeyedTransactor(validator.Keys[0])
-	transactor := &testKip103TxTransactor{node: node}
-	targetBlockNum := new(big.Int).Add(node.BlockChain().CurrentBlock().Number(), big.NewInt(5))
+	transactor := backends.NewBlockchainContractBackend(node.BlockChain(), node.TxPool().(*blockchain.TxPool), nil)
+	// We need to wait for the following contract executions to be processed, so let's have enough number of blocks
+	targetBlockNum := new(big.Int).Add(node.BlockChain().CurrentBlock().Number(), big.NewInt(10))
 
-	contractAddr, _, contract, err := kip103.DeployTreasuryRebalance(optsOwner, transactor, targetBlockNum)
+	contractAddr, tx, contract, err := kip103.DeployTreasuryRebalance(optsOwner, transactor, targetBlockNum)
 	if err != nil {
 		t.Fatal(err)
+	}
+	receipt := waitReceipt(node.BlockChain().(*blockchain.BlockChain), tx.Hash())
+	if receipt == nil {
+		t.Fatal("timeout")
 	}
 
 	// set kip103 hardfork config
@@ -129,9 +57,6 @@ func TestRebalanceTreasury_EOA(t *testing.T) {
 	t.Log("ContractOwner Addr:", validator.GetAddr().String())
 	t.Log("Contract Addr:", contractAddr.String())
 	t.Log("Target Block:", targetBlockNum.Int64())
-
-	// naive waiting for tx processing
-	time.Sleep(2 * time.Second)
 
 	// prepare newbie accounts
 	numNewbie := 3
@@ -167,13 +92,23 @@ func TestRebalanceTreasury_EOA(t *testing.T) {
 	}
 
 	// initialized -> registered
-	if _, err := contract.FinalizeRegistration(optsOwner); err != nil {
+	if tx, err = contract.FinalizeRegistration(optsOwner); err != nil {
 		t.Fatal(err)
+	}
+	// Should wait for this tx to be processed, or next tx will be failed when estimating gas
+	receipt = waitReceipt(node.BlockChain().(*blockchain.BlockChain), tx.Hash())
+	if receipt == nil {
+		t.Fatal("timeout")
 	}
 
 	// approve
-	if _, err := contract.Approve(optsOwner, validator.GetAddr()); err != nil {
+	if tx, err = contract.Approve(optsOwner, validator.GetAddr()); err != nil {
 		t.Fatal(err)
+	}
+	// Should wait for this tx to be processed, or next tx will be failed when estimating gas
+	receipt = waitReceipt(node.BlockChain().(*blockchain.BlockChain), tx.Hash())
+	if receipt == nil {
+		t.Fatal("timeout")
 	}
 
 	// registered -> approved
