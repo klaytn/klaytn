@@ -32,11 +32,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/klaytn/klaytn/networks/p2p/simulations/pipes"
-
 	"github.com/davecgh/go-spew/spew"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/crypto/ecies"
+	"github.com/klaytn/klaytn/networks/p2p/simulations/pipes"
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/stretchr/testify/assert"
 )

@@ -30,7 +30,6 @@ import (
 	"time"
 
 	"github.com/klaytn/klaytn/common/math"
-
 	"github.com/stretchr/testify/assert"
 )
 
