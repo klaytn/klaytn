@@ -54,8 +54,7 @@ func (pe *peerError) Error() string {
 
 var errProtocolReturned = errors.New("protocol returned")
 
-// TODO-klaytn: update the type to uint8
-type DiscReason uint
+type DiscReason uint8
 
 const (
 	DiscRequested DiscReason = iota
@@ -90,7 +89,7 @@ var discReasonToString = [...]string{
 }
 
 func (d DiscReason) String() string {
-	if uint(len(discReasonToString)) < uint(d) {
+	if uint(len(discReasonToString))-1 < uint(d) {
 		return fmt.Sprintf("unknown disconnect reason %d", d)
 	}
 	return discReasonToString[d]

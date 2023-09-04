@@ -23,12 +23,13 @@ package p2p
 import (
 	"errors"
 	"fmt"
-	"math"
 	"math/rand"
 	"net"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/klaytn/klaytn/common/math"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -182,15 +183,24 @@ func TestPeerPing(t *testing.T) {
 }
 
 func TestPeerDisconnect(t *testing.T) {
-	testData := []DiscReason{DiscQuitting, math.MaxUint}
-	for _, tc := range testData {
+	for _, tc := range []struct {
+		dc    DiscReason
+		error string
+	}{
+		{DiscQuitting, "client quitting"},
+		{DiscSubprotocolError, "subprotocol error"},
+		{17, "unknown disconnect reason 17"},
+		{18, "unknown disconnect reason 18"},
+		{math.MaxUint8, "unknown disconnect reason 255"},
+	} {
 		closer, rw, _, disc := testPeer(nil)
-		if err := SendItems(rw, discMsg, tc); err != nil {
+		if err := SendItems(rw, discMsg, tc.dc); err != nil {
 			t.Fatal(err)
 		}
 		select {
 		case reason := <-disc:
-			assert.Equal(t, tc.Error(), reason.Error())
+			assert.Equal(t, tc.dc, reason)
+			assert.Equal(t, tc.error, reason.Error())
 		case <-time.After(500 * time.Millisecond):
 			t.Error("peer did not return")
 		}
