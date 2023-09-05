@@ -22,6 +22,7 @@ package keystore
 import (
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 
 	"github.com/klaytn/klaytn/crypto/bls"
 	"github.com/pborman/uuid"
@@ -39,7 +40,7 @@ type KeyEIP2335 struct {
 type encryptedKeyEIP2335JSON struct {
 	PublicKey string                 `json:"publickey"`
 	Crypto    map[string]interface{} `json:"crypto"`
-	ID        string                 `json:"id"`
+	ID        string                 `json:"uuid"`
 }
 
 // NewKeyEIP2335 creates a new EIP-2335 keystore Key type using a BLS private key.
@@ -58,6 +59,11 @@ func DecryptKeyEIP2335(keyJSON []byte, password string) (*KeyEIP2335, error) {
 		return nil, err
 	}
 
+	id := uuid.Parse(k.ID)
+	if id == nil {
+		return nil, errors.New("Invalid UUID")
+	}
+
 	decryptor := keystorev4.New()
 	keyBytes, err := decryptor.Decrypt(k.Crypto, password)
 	if err != nil {
@@ -70,7 +76,7 @@ func DecryptKeyEIP2335(keyJSON []byte, password string) (*KeyEIP2335, error) {
 	}
 
 	return &KeyEIP2335{
-		ID:        uuid.Parse(k.ID),
+		ID:        id,
 		PublicKey: secretKey.PublicKey(),
 		SecretKey: secretKey,
 	}, nil

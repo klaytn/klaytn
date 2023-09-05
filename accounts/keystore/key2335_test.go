@@ -16,17 +16,17 @@ func TestEncryptDecryptEIP2335(t *testing.T) {
 	sk, err := bls.RandKey()
 	require.Nil(t, err)
 
-	plain1 := NewKeyEIP2335(sk)
+	plain := NewKeyEIP2335(sk)
 
-	encrypted, err := EncryptKeyEIP2335(plain1, password, LightScryptN, LightScryptP)
+	encrypted, err := EncryptKeyEIP2335(plain, password, LightScryptN, LightScryptP)
 	require.Nil(t, err)
 
-	plain2, err := DecryptKeyEIP2335(encrypted, password)
+	decrypted, err := DecryptKeyEIP2335(encrypted, password)
 	require.Nil(t, err)
 
-	assert.Equal(t, plain1.ID, plain2.ID)
-	assert.Equal(t, plain1.SecretKey.Marshal(), plain2.SecretKey.Marshal())
-	assert.Equal(t, plain1.PublicKey.Marshal(), plain2.PublicKey.Marshal())
+	assert.Equal(t, plain.ID, decrypted.ID)
+	assert.Equal(t, plain.SecretKey.Marshal(), decrypted.SecretKey.Marshal())
+	assert.Equal(t, plain.PublicKey.Marshal(), decrypted.PublicKey.Marshal())
 }
 
 func TestDecryptEIP2335(t *testing.T) {
