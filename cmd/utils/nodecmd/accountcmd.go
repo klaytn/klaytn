@@ -176,13 +176,13 @@ The input must be one of the following:
 EXAMPLES
 
 # Print public key info of the BLS key derived from the EC nodekey
-kcn acount bls-info --nodekey /var/kcnd/data/nodekey
+kcn account bls-info --nodekey /var/kcnd/data/nodekey
 
 # Print public key info of the saved BLS key
-kcn acount bls-info --bls-nodekey /var/kcnd/data/bls-nodekey
+kcn account bls-info --bls-nodekey /var/kcnd/data/bls-nodekey
 
 # Print public key info of the BLS key inside EIP-2335 keystore
-kcn acount bls-info --bls-nodekeystore blskey.json
+kcn account bls-info --bls-nodekeystore blskey.json
 `,
 		},
 		{
