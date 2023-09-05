@@ -257,10 +257,8 @@ func LoadBlsNodeKey(ctx *cli.Context) (bls.SecretKey, error) {
 		if err != nil {
 			return nil, err
 		}
-		if len(content) > 64 {
-			content = content[:64]
-		}
-		blsBytes, err := hex.DecodeString(string(content))
+		str := strings.TrimSpace(string(content))
+		blsBytes, err := hex.DecodeString(str)
 		if err != nil {
 			return nil, err
 		}
