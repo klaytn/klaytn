@@ -90,7 +90,7 @@ The account is saved in encrypted format, you are prompted for a passphrase.
 
 You must remember this passphrase to unlock your account in the future.
 
-For non-interactive use the passphrase can be specified with the ---password flag:
+For non-interactive use the passphrase can be specified with the --password flag:
 
 Note, this is meant to be used for testing only, it is a bad idea to save your
 password to file or expose in any other way.
@@ -115,7 +115,7 @@ for a passphrase to unlock the account and another to save the updated file.
 This same command can therefore be used to migrate an account of a deprecated
 format to the newest format or change the password for an account.
 
-For non-interactive use the passphrase can be specified with the ---password flag:
+For non-interactive use the passphrase can be specified with the --password flag:
 
 Since only one password can be given, only format update can be performed,
 changing your password is only possible interactively.
