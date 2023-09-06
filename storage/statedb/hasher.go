@@ -287,19 +287,19 @@ func unextendNode(original node, preserveExtHash bool) node {
 		return stored
 	case hashNode:
 		exthash := common.BytesToExtHash(n)
-		if exthash.IsZeroExtended() { // Always unextend ExtHashLegacy
+		if exthash.IsZeroExtended() { // Always unextend zero extensions
 			return hashNode(exthash.Unextend().Bytes())
-		} else if !preserveExtHash { // It's ExtHash and not preserving ExtHash (for merkle hash)
+		} else if !preserveExtHash { // We're given an ExtHash and will strip extension for merkle hash
 			return hashNode(exthash.Unextend().Bytes())
-		} else { // It's ExtHash and preserving ExtHash (for storing)
+		} else { // We're given an ExtHash and will preserve extension for storing
 			return n
 		}
 	case valueNode:
 		if !preserveExtHash {
 			return valueNode(account.UnextendSerializedAccount(n))
 		} else {
-			// ExtHashLegacy should have been always unextended by AccountSerializer,
-			// hence no need to check IsLegacy() here.
+			// Zero extensions should have been unextended by AccountSerializer,
+			// hence no need to check IsZeroExtended() here.
 			return n
 		}
 	default:

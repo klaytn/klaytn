@@ -204,8 +204,8 @@ func TestSmartContractAccountExt(t *testing.T) {
 		codeinfo = params.CodeInfo(0x10)
 
 		// StorageRoot is hash32:  maketc 2 '[["0x1234","0x5678","","0x01",[]],"0x00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff","0xaaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd","0x10"]'
-		scaLegacyRLP = "0x02f84dc98212348256788001c0a000112233445566778899aabbccddeeff00112233445566778899aabbccddeeffa0aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd10"
-		scaLegacy    = &SmartContractAccount{
+		scaUnextRLP = "0x02f84dc98212348256788001c0a000112233445566778899aabbccddeeff00112233445566778899aabbccddeeffa0aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd10"
+		scaUnext    = &SmartContractAccount{
 			AccountCommon: commonFields,
 			storageRoot:   hash.ExtendZero(),
 			codeHash:      codehash,
@@ -232,10 +232,10 @@ func TestSmartContractAccountExt(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, encoded, hexutil.Encode(b))
 	}
-	checkEncode(scaLegacy, scaLegacyRLP)
-	checkEncodeExt(scaLegacy, scaLegacyRLP) // LegacyExt are always unextended
+	checkEncode(scaUnext, scaUnextRLP)
+	checkEncodeExt(scaUnext, scaUnextRLP) // zero extensions are always unextended
 
-	checkEncode(scaExt, scaLegacyRLP) // Regular encoding still results in hash32. Use it for merkle hash.
+	checkEncode(scaExt, scaUnextRLP)  // Regular encoding still results in hash32. Use it for merkle hash.
 	checkEncodeExt(scaExt, scaExtRLP) // Must use SerializeExt to preserve exthash. Use it for disk storage.
 
 	checkDecode := func(encoded string, account Account) {
@@ -253,8 +253,8 @@ func TestSmartContractAccountExt(t *testing.T) {
 		assert.True(t, dec.GetAccount().Equal(account))
 	}
 
-	checkDecode(scaLegacyRLP, scaLegacy)
-	checkDecodeExt(scaLegacyRLP, scaLegacy)
+	checkDecode(scaUnextRLP, scaUnext)
+	checkDecodeExt(scaUnextRLP, scaUnext)
 
 	checkDecode(scaExtRLP, scaExt)
 	checkDecodeExt(scaExtRLP, scaExt)

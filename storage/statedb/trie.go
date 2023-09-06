@@ -102,7 +102,7 @@ func NewTrie(root common.Hash, db *Database, opts *TrieOpts) (*Trie, error) {
 // not exist in the database. Accessing the trie loads nodes from db on demand.
 //
 // A storage trie is identified with an ExtHash root node. With Live Pruning enabled,
-// its root hash will be extended with a non-legacy nonce.
+// its root hash will be extended with a nonzero nonce.
 func NewStorageTrie(root common.ExtHash, db *Database, opts *TrieOpts) (*Trie, error) {
 	return newTrie(root, db, opts, true)
 }
