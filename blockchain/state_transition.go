@@ -321,6 +321,13 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 
 	msg := st.msg
 
+	if st.evm.VmConfig.Debug {
+		st.evm.VmConfig.Tracer.CaptureTxStart(st.initialGas)
+		defer func() {
+			st.evm.VmConfig.Tracer.CaptureTxEnd(st.gas)
+		}()
+	}
+
 	// Check clauses 4-5, subtract intrinsic gas if everything is correct
 	amount := msg.ValidatedIntrinsicGas()
 	if st.gas < amount {

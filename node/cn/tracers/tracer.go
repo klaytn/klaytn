@@ -315,6 +315,8 @@ type Tracer struct {
 
 	interrupt uint32 // Atomic flag to signal execution interruption
 	reason    error  // Textual reason for the interruption
+
+	gasLimit uint64 // Amount of gas bought for the whole tx
 }
 
 // New instantiates a new tracer instance. code specifies either a predefined
@@ -563,6 +565,7 @@ func (jst *Tracer) CaptureStart(from common.Address, to common.Address, create b
 	jst.ctx["input"] = input
 	jst.ctx["gas"] = gas
 	jst.ctx["value"] = value
+	jst.ctx["intrinsicGas"] = jst.gasLimit - gas
 
 	return nil
 }
@@ -631,6 +634,14 @@ func (jst *Tracer) CaptureEnd(output []byte, gasUsed uint64, t time.Duration, er
 		jst.ctx["error"] = err.Error()
 	}
 	return nil
+}
+
+func (jst *Tracer) CaptureTxStart(gasLimit uint64) {
+	jst.gasLimit = gasLimit
+}
+
+func (jst *Tracer) CaptureTxEnd(restGas uint64) {
+	jst.ctx["gasUsed"] = jst.gasLimit - restGas
 }
 
 // GetResult calls the Javascript 'result' function and returns its value, or any accumulated error

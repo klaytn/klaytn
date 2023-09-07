@@ -102,6 +102,8 @@ func (s *StructLog) ErrorString() string {
 // Note that reference types are actual VM data structures; make copies
 // if you need to retain them beyond the current call.
 type Tracer interface {
+	CaptureTxStart(gasLimit uint64)
+	CaptureTxEnd(restGas uint64)
 	CaptureStart(from common.Address, to common.Address, call bool, input []byte, gas uint64, value *big.Int) error
 	CaptureState(env *EVM, pc uint64, op OpCode, gas, cost uint64, memory *Memory, stack *Stack, contract *Contract, depth int, err error) error
 	CaptureFault(env *EVM, pc uint64, op OpCode, gas, cost uint64, memory *Memory, stack *Stack, contract *Contract, depth int, err error) error
@@ -206,6 +208,10 @@ func (l *StructLogger) CaptureEnd(output []byte, gasUsed uint64, t time.Duration
 	}
 	return nil
 }
+
+func (l *StructLogger) CaptureTxStart(gasLimit uint64) {}
+
+func (l *StructLogger) CaptureTxEnd(restGas uint64) {}
 
 // StructLogs returns the captured log entries.
 func (l *StructLogger) StructLogs() []StructLog { return l.logs }
