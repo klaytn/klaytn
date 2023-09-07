@@ -321,10 +321,10 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 
 	msg := st.msg
 
-	if st.evm.VmConfig.Debug {
-		st.evm.VmConfig.Tracer.CaptureTxStart(st.initialGas)
+	if st.evm.VMConfig.Debug {
+		st.evm.VMConfig.Tracer.CaptureTxStart(st.initialGas)
 		defer func() {
-			st.evm.VmConfig.Tracer.CaptureTxEnd(st.gas)
+			st.evm.VMConfig.Tracer.CaptureTxEnd(st.gas)
 		}()
 	}
 
