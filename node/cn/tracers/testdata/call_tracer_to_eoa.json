@@ -35,7 +35,7 @@
     {
       "from": "0x337160455646d3b876cc3768e701a41bbc21ed3a",
       "gas": "0xfa0",
-      "gasUsed": "0x0",
+      "gasUsed": "0x5208",
       "input": "0x",
       "output": "0x",
       "to": "0x072d51ab13cee591d38f527c589c36669c0a6854",
