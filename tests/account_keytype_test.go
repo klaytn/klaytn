@@ -378,7 +378,7 @@ func expectedTestResultForDefaultTx(accountKeyType accountkey.AccountKeyType, tx
 		if txType.IsAccountUpdate() {
 			return kerrors.ErrAccountKeyFailNotUpdatable
 		}
-		return types.ErrSender(types.ErrInvalidSigSender)
+		return types.ErrSender(types.ErrInvalidAccountKey)
 	}
 	return nil
 }
