@@ -48,7 +48,7 @@ var (
 		MagmaCompatibleBlock:     big.NewInt(99841497),
 		KoreCompatibleBlock:      big.NewInt(119750400),
 		Kip103CompatibleBlock:    big.NewInt(119750400),
-		ShanghaiCompatibleBlock:  nil,
+		ShanghaiCompatibleBlock:  big.NewInt(135456000),
 		Kip103ContractAddress:    common.HexToAddress("0xD5ad6D61Dd87EdabE2332607C328f5cc96aeCB95"),
 		DeriveShaImpl:            2,
 		Governance: &GovernanceConfig{
