@@ -24,9 +24,25 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// https://github.com/ethereum/bls12-381-tests
-// sign/sign_case_142f678a8d05fcd1.json
-var testSecretKeyBytes = common.FromHex("0x47b8192d77bf871b62e87859d653922725724a5c031afeabc60bcef5ff665138")
+var (
+	// https://github.com/ethereum/bls12-381-tests
+	// sign/sign_case_142f678a8d05fcd1.json
+	testSecretKeyBytes = common.FromHex("0x47b8192d77bf871b62e87859d653922725724a5c031afeabc60bcef5ff665138")
+
+	// Standard test mnemonic test..junk
+	testEcPrivateKeyBytes = common.FromHex("0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80")
+)
+
+func TestGenerateKey(t *testing.T) {
+	sk1, err := GenerateKey(testEcPrivateKeyBytes)
+	assert.Nil(t, err)
+
+	sk2, err := GenerateKey(testEcPrivateKeyBytes)
+	assert.Nil(t, err)
+
+	// GenerateKey is deterministic
+	assert.Equal(t, sk1.Marshal(), sk2.Marshal())
+}
 
 func TestRandKey(t *testing.T) {
 	sk, err := RandKey()
