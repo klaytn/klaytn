@@ -666,7 +666,7 @@ func TestValidationInvalidSig(t *testing.T) {
 
 				// For block tx validation test
 				if expectedErr == blockchain.ErrInvalidFeePayer {
-					expectedErr = types.ErrFeePayer(types.ErrInvalidSigFeePayer)
+					expectedErr = types.ErrFeePayer(types.ErrInvalidAccountKey)
 				}
 				receipt, err := applyTransaction(t, bcdata, tx)
 				assert.Equal(t, expectedErr, err)
@@ -698,7 +698,7 @@ func testInvalidSenderSig(t *testing.T, txType types.TxType, reservoir *TestAcco
 			tx.SignFeePayerWithKeys(signer, reservoir.Keys)
 			assert.Equal(t, nil, err)
 		}
-		return tx, types.ErrSender(types.ErrInvalidSigSender)
+		return tx, types.ErrSender(types.ErrInvalidAccountKey)
 	}
 	return nil, nil
 }
@@ -726,7 +726,7 @@ func testInvalidFeePayerSig(t *testing.T, txType types.TxType, reservoir *TestAc
 
 		// Look at the blockchain/types/transaction.go/ValidateFeePayer
 		// Testcases using this function should return invalid signature error
-		return tx, types.ErrFeePayer(types.ErrInvalidSigFeePayer)
+		return tx, types.ErrFeePayer(types.ErrInvalidAccountKey)
 	}
 	return nil, nil
 }

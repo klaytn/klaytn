@@ -1603,14 +1603,14 @@ func TestAccountUpdateRoleBasedKey(t *testing.T) {
 		// For tx pool validation test
 		{
 			err = txpool.AddRemote(tx)
-			assert.Equal(t, types.ErrSender(types.ErrInvalidSigSender), err)
+			assert.Equal(t, types.ErrSender(types.ErrInvalidAccountKey), err)
 		}
 
 		// For block tx validation test
 		{
 			receipt, err := applyTransaction(t, bcdata, tx)
 			assert.Equal(t, (*types.Receipt)(nil), receipt)
-			assert.Equal(t, types.ErrSender(types.ErrInvalidSigSender), err)
+			assert.Equal(t, types.ErrSender(types.ErrInvalidAccountKey), err)
 		}
 	}
 
@@ -1632,14 +1632,14 @@ func TestAccountUpdateRoleBasedKey(t *testing.T) {
 		// For tx pool validation test
 		{
 			err = txpool.AddRemote(tx)
-			assert.Equal(t, types.ErrSender(types.ErrInvalidSigSender), err)
+			assert.Equal(t, types.ErrSender(types.ErrInvalidAccountKey), err)
 		}
 
 		// For block tx validation test
 		{
 			receipt, err := applyTransaction(t, bcdata, tx)
 			assert.Equal(t, (*types.Receipt)(nil), receipt)
-			assert.Equal(t, types.ErrSender(types.ErrInvalidSigSender), err)
+			assert.Equal(t, types.ErrSender(types.ErrInvalidAccountKey), err)
 		}
 	}
 
@@ -1992,13 +1992,13 @@ func TestRoleBasedKeySendTx(t *testing.T) {
 				// For tx pool validation test
 				{
 					err = txpool.AddRemote(tx)
-					assert.Equal(t, types.ErrSender(types.ErrInvalidSigSender), err)
+					assert.Equal(t, types.ErrSender(types.ErrInvalidAccountKey), err)
 				}
 
 				// For block tx validation test
 				{
 					receipt, err := applyTransaction(t, bcdata, tx)
-					assert.Equal(t, types.ErrSender(types.ErrInvalidSigSender), err)
+					assert.Equal(t, types.ErrSender(types.ErrInvalidAccountKey), err)
 					assert.Equal(t, (*types.Receipt)(nil), receipt)
 				}
 			}
@@ -2189,13 +2189,13 @@ func TestRoleBasedKeyFeeDelegation(t *testing.T) {
 				// For tx pool validation test
 				{
 					err = txpool.AddRemote(tx)
-					assert.Equal(t, types.ErrFeePayer(types.ErrInvalidSigFeePayer), err)
+					assert.Equal(t, types.ErrFeePayer(types.ErrInvalidAccountKey), err)
 				}
 
 				// For block tx validation test
 				{
 					receipt, err := applyTransaction(t, bcdata, tx)
-					assert.Equal(t, types.ErrFeePayer(types.ErrInvalidSigFeePayer), err)
+					assert.Equal(t, types.ErrFeePayer(types.ErrInvalidAccountKey), err)
 					assert.Equal(t, (*types.Receipt)(nil), receipt)
 				}
 			}
