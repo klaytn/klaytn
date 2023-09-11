@@ -498,21 +498,15 @@ func (srv *MultiChannelServer) SetupConn(fd net.Conn, flags connFlag, dialDest *
 		return errors.New("shutdown")
 	}
 
-	// retrieve pubkey. if err occurs, dialPubkey is automatically set as nil
-	var dialPubkey *ecdsa.PublicKey
-	if dialDest != nil {
-		dialPubkey, _ = dialDest.ID.Pubkey()
-	}
-
 	c := &conn{fd: fd, flags: flags, conntype: common.ConnTypeUndefined, cont: make(chan error), portOrder: PortOrderUndefined}
-	if dialDest == nil {
-		c.transport = srv.newTransport(fd, nil)
-	} else {
-		c.transport = srv.newTransport(fd, dialPubkey)
-	}
+
 	if dialDest != nil {
+		// retrieve pubkey. if err occurs, dialPubkey is automatically set as nil
+		dialPubkey, _ := dialDest.ID.Pubkey()
+		c.transport = srv.newTransport(fd, dialPubkey)
 		c.portOrder = PortOrder(dialDest.PortOrder)
 	} else {
+		c.transport = srv.newTransport(fd, nil)
 		for i, addr := range srv.ListenAddrs {
 			s1 := strings.Split(addr, ":")                    // string format example, [::]:30303 or 123.123.123.123:30303
 			s2 := strings.Split(fd.LocalAddr().String(), ":") // string format example, 123.123.123.123:30303
@@ -543,19 +537,8 @@ func (srv *MultiChannelServer) setupConn(c *conn, flags connFlag, dialDest *disc
 		return errServerStopped
 	}
 
-	// If dialing, figure out the remote public key
-	var (
-		dialPubkey *ecdsa.PublicKey
-		err        error
-	)
-	if dialDest != nil {
-		dialPubkey, err = dialDest.ID.Pubkey()
-		if err != nil {
-			return err
-		}
-	}
-
 	// Run the connection type handshake
+	var err error
 	if c.conntype, err = c.doConnTypeHandshake(srv.ConnectionType); err != nil {
 		srv.logger.Warn("Failed doConnTypeHandshake", "addr", c.fd.RemoteAddr(), "conn", c.flags,
 			"conntype", c.conntype, "err", err)
@@ -573,7 +556,7 @@ func (srv *MultiChannelServer) setupConn(c *conn, flags connFlag, dialDest *disc
 	c.id = discover.PubkeyID(remotePubkey)
 	clog := srv.logger.NewWith("id", c.id, "addr", c.fd.RemoteAddr(), "conn", c.flags)
 	// For dialed connections, check that the remote public key matches.
-	if dialDest != nil && !remotePubkey.Equal(dialPubkey) {
+	if dialDest != nil && c.id != dialDest.ID {
 		clog.Trace("Dialed identity mismatch", "want", c, dialDest.ID)
 		return DiscUnexpectedIdentity
 	}
@@ -1674,17 +1657,14 @@ func (srv *BaseServer) SetupConn(fd net.Conn, flags connFlag, dialDest *discover
 		return errors.New("shutdown")
 	}
 
-	// if err occurs, dialPubkey is automatically set as nil
-	var dialPubkey *ecdsa.PublicKey
-	if dialDest != nil {
-		dialPubkey, _ = dialDest.ID.Pubkey()
-	}
-
 	c := &conn{fd: fd, flags: flags, conntype: common.ConnTypeUndefined, cont: make(chan error), portOrder: ConnDefault}
-	if dialDest == nil {
-		c.transport = srv.newTransport(fd, nil)
-	} else {
+
+	// if err occurs, dialPubkey is automatically set as nil
+	if dialDest != nil {
+		dialPubkey, _ := dialDest.ID.Pubkey()
 		c.transport = srv.newTransport(fd, dialPubkey)
+	} else {
+		c.transport = srv.newTransport(fd, nil)
 	}
 
 	err := srv.setupConn(c, flags, dialDest)
@@ -1704,19 +1684,8 @@ func (srv *BaseServer) setupConn(c *conn, flags connFlag, dialDest *discover.Nod
 		return errServerStopped
 	}
 
-	// If dialing, figure out the remote public key
-	var (
-		dialPubkey *ecdsa.PublicKey
-		err        error
-	)
-	if dialDest != nil {
-		dialPubkey, err = dialDest.ID.Pubkey()
-		if err != nil {
-			return err
-		}
-	}
-
 	// Run the connection type handshake
+	var err error
 	if c.conntype, err = c.doConnTypeHandshake(srv.ConnectionType); err != nil {
 		srv.logger.Warn("Failed doConnTypeHandshake", "addr", c.fd.RemoteAddr(), "conn", c.flags,
 			"conntype", c.conntype, "err", err)
@@ -1734,7 +1703,7 @@ func (srv *BaseServer) setupConn(c *conn, flags connFlag, dialDest *discover.Nod
 	c.id = discover.PubkeyID(remotePubkey)
 	clog := srv.logger.NewWith("id", c.id, "addr", c.fd.RemoteAddr(), "conn", c.flags)
 	// For dialed connections, check that the remote public key matches.
-	if dialDest != nil && !remotePubkey.Equal(dialPubkey) {
+	if dialDest != nil && c.id != dialDest.ID {
 		clog.Trace("Dialed identity mismatch", "want", c, dialDest.ID)
 		return DiscUnexpectedIdentity
 	}
