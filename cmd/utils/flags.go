@@ -354,6 +354,7 @@ var (
 	RocksDBSecondaryFlag = &cli.BoolFlag{
 		Name:     "db.rocksdb.secondary",
 		Usage:    "Enable rocksdb secondary mode (read-only and catch-up with primary node dynamically)",
+		Aliases:  []string{"migration.src.db.rocksdb.secondary"},
 		EnvVars:  []string{"KLAYTN_DB_ROCKSDB_SECONDARY"},
 		Category: "DATABASE",
 	}
@@ -361,12 +362,14 @@ var (
 		Name:     "db.rocksdb.cache-size",
 		Usage:    "Size of in-memory cache in RocksDB (MiB)",
 		Value:    768,
+		Aliases:  []string{"migration.src.db.rocksdb.cache-size"},
 		EnvVars:  []string{"KLAYTN_DB_ROCKSDB_CACHE_SIZE"},
 		Category: "DATABASE",
 	}
 	RocksDBDumpMallocStatFlag = &cli.BoolFlag{
 		Name:     "db.rocksdb.dump-malloc-stat",
 		Usage:    "Enable to print memory stat together with rocksdb.stat. Works with Jemalloc only.",
+		Aliases:  []string{"migration.src.db.rocksdb.dump-malloc-stat"},
 		EnvVars:  []string{"KLAYTN_DB_ROCKSDB_DUMP_MALLOC_STAT"},
 		Category: "DATABASE",
 	}
@@ -374,6 +377,7 @@ var (
 		Name:     "db.rocksdb.compression-type",
 		Usage:    "RocksDB block compression type. Supported values are 'no', 'snappy', 'zlib', 'bz', 'lz4', 'lz4hc', 'xpress', 'zstd'",
 		Value:    database.GetDefaultRocksDBConfig().CompressionType,
+		Aliases:  []string{"migration.src.db.rocksdb.compression-type"},
 		EnvVars:  []string{"KLAYTN_DB_ROCKSDB_COMPRESSION_TYPE"},
 		Category: "DATABASE",
 	}
@@ -381,6 +385,7 @@ var (
 		Name:     "db.rocksdb.bottommost-compression-type",
 		Usage:    "RocksDB bottommost block compression type. Supported values are 'no', 'snappy', 'zlib', 'bz2', 'lz4', 'lz4hc', 'xpress', 'zstd'",
 		Value:    database.GetDefaultRocksDBConfig().BottommostCompressionType,
+		Aliases:  []string{"migration.src.db.rocksdb.bottommost-compression-type"},
 		EnvVars:  []string{"KLAYTN_DB_ROCKSDB_BOTTOMMOST_COMPRESSION_TYPE"},
 		Category: "DATABASE",
 	}
@@ -388,12 +393,14 @@ var (
 		Name:     "db.rocksdb.filter-policy",
 		Usage:    "RocksDB filter policy. Supported values are 'no', 'bloom', 'ribbon'",
 		Value:    database.GetDefaultRocksDBConfig().FilterPolicy,
+		Aliases:  []string{"migration.src.db.rocksdb.filter-policy"},
 		EnvVars:  []string{"KLAYTN_DB_ROCKSDB_FILTER_POLICY"},
 		Category: "DATABASE",
 	}
 	RocksDBDisableMetricsFlag = &cli.BoolFlag{
 		Name:     "db.rocksdb.disable-metrics",
 		Usage:    "Disable RocksDB metrics",
+		Aliases:  []string{"migration.src.db.rocksdb.disable-metrics"},
 		EnvVars:  []string{"KLAYTN_DB_ROCKSDB_DISABLE_METRICS"},
 		Category: "DATABASE",
 	}
@@ -401,12 +408,14 @@ var (
 		Name:     "db.rocksdb.max-open-files",
 		Usage:    "Set RocksDB max open files. (the value should be greater than 16)",
 		Value:    database.GetDefaultRocksDBConfig().MaxOpenFiles,
+		Aliases:  []string{"migration.src.db.rocksdb.max-open-files"},
 		EnvVars:  []string{"KLAYTN_DB_ROCKSDB_MAX_OPEN_FILES"},
 		Category: "DATABASE",
 	}
 	RocksDBCacheIndexAndFilterFlag = &cli.BoolFlag{
 		Name:     "db.rocksdb.cache-index-and-filter",
 		Usage:    "Use block cache for index and filter blocks.",
+		Aliases:  []string{"migration.src.db.rocksdb.cache-index-and-filter"},
 		EnvVars:  []string{"KLAYTN_DB_ROCKSDB_CACHE_INDEX_AND_FILTER"},
 		Category: "DATABASE",
 	}
