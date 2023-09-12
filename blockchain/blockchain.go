@@ -610,6 +610,7 @@ func (bc *BlockChain) setHeadBeyondRoot(head uint64, root common.Hash, repair bo
 		// removed in the hc.SetHead function.
 		bc.db.DeleteBody(hash, num)
 		bc.db.DeleteReceipts(hash, num)
+		bc.db.DeleteGovernance(num)
 	}
 
 	// If SetHead was only called as a chain reparation method, try to skip
