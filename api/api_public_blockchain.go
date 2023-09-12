@@ -282,7 +282,7 @@ type CallArgs struct {
 	Input                hexutil.Bytes   `json:"input"`
 }
 
-func (args *CallArgs) data() []byte {
+func (args *CallArgs) Payload() []byte {
 	if args.Input != nil {
 		return args.Input
 	}
@@ -311,7 +311,7 @@ func DoCall(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.Blo
 	// this makes sure resources are cleaned up.
 	defer cancel()
 
-	intrinsicGas, err := types.IntrinsicGas(args.data(), nil, args.To == nil, b.ChainConfig().Rules(header.Number))
+	intrinsicGas, err := types.IntrinsicGas(args.Payload(), nil, args.To == nil, b.ChainConfig().Rules(header.Number))
 	if err != nil {
 		return nil, 0, err
 	}
@@ -709,5 +709,5 @@ func (args *CallArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsic
 	// if args.AccessList != nil {
 	//	 accessList = *args.AccessList
 	// }
-	return types.NewMessage(addr, args.To, 0, value, gas, gasPrice, args.data(), false, intrinsicGas), nil
+	return types.NewMessage(addr, args.To, 0, value, gas, gasPrice, args.Payload(), false, intrinsicGas), nil
 }
