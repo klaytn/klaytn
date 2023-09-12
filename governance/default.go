@@ -154,6 +154,7 @@ type GovernanceTallyList struct {
 	items []GovernanceTallyItem
 	mu    *sync.RWMutex
 }
+
 type GovernanceVotes struct {
 	items []GovernanceVote
 	mu    *sync.RWMutex
@@ -1025,6 +1026,14 @@ func (gov *Governance) UnmarshalJSON(b []byte) error {
 	atomic.StoreUint64(&gov.lastGovernanceStateBlock, j.BlockNumber)
 
 	return nil
+}
+
+func (gov *Governance) InitGovCache() {
+	gov.initializeCache(gov.ChainConfig)
+}
+
+func (gov *Governance) InitLastGovStateBlkNum() {
+	atomic.StoreUint64(&gov.lastGovernanceStateBlock, 0)
 }
 
 func (gov *Governance) CanWriteGovernanceState(num uint64) bool {
