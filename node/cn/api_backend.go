@@ -36,10 +36,12 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/event"
+	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node/cn/gasprice"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
+	"github.com/klaytn/klaytn/work"
 )
 
 // CNAPIBackend implements api.Backend for full nodes
@@ -76,11 +78,21 @@ func (b *CNAPIBackend) CurrentBlock() *types.Block {
 	return b.cn.blockchain.CurrentBlock()
 }
 
-func (b *CNAPIBackend) SetHead(number uint64) {
+func doSetHead(bc work.BlockChain, cn consensus.Engine, gov governance.Engine, number uint64) error {
+	if err := bc.SetHead(number); err != nil {
+		return err
+	}
+	cn.InitSnapshot()
+	gov.InitGovCache()
+	gov.InitLastGovStateBlkNum()
+	return nil
+}
+
+func (b *CNAPIBackend) SetHead(number uint64) error {
 	b.cn.protocolManager.Downloader().Cancel()
 	b.cn.protocolManager.SetSyncStop(true)
-	b.cn.blockchain.SetHead(number)
-	b.cn.protocolManager.SetSyncStop(false)
+	defer b.cn.protocolManager.SetSyncStop(false)
+	return doSetHead(b.cn.blockchain, b.cn.engine, b.cn.governance, number)
 }
 
 func (b *CNAPIBackend) HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Header, error) {
