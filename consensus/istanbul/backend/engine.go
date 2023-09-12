@@ -819,6 +819,10 @@ func (sb *backend) GetConsensusInfo(block *types.Block) (consensus.ConsensusInfo
 	return cInfo, nil
 }
 
+func (sb *backend) InitSnapshot() {
+	sb.recents.Purge()
+}
+
 // snapshot retrieves the state of the authorization voting at a given point in time.
 // There's in-memory snapshot and on-disk snapshot. On-disk snapshot is stored every checkpointInterval blocks.
 // Moreover, if the block has no in-memory or on-disk snapshot, before generating snapshot, it gathers the header and apply the vote in it.

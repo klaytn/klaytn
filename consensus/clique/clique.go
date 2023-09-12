@@ -569,6 +569,8 @@ func (c *Clique) Prepare(chain consensus.ChainReader, header *types.Header) erro
 	return nil
 }
 
+func (c *Clique) InitSnapshot() {}
+
 // Finalize implements consensus.Engine and returns the final block.
 func (c *Clique) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) (*types.Block, error) {
 	// No block rewards in PoA, so the state remains as is

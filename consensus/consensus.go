@@ -123,6 +123,8 @@ type Engine interface {
 
 	// GetConsensusInfo returns consensus information regarding the given block number.
 	GetConsensusInfo(block *types.Block) (ConsensusInfo, error)
+
+	InitSnapshot()
 }
 
 // PoW is a consensus engine based on proof-of-work.
