@@ -2689,7 +2689,7 @@ func (dbm *databaseManager) WriteGovernanceIdx(num uint64) error {
 	return db.Put(governanceHistoryKey, data)
 }
 
-/// DeleteGovernanceIdxRange leaves governanceHistory from 0 to `num`
+// DeleteGovernanceIdxRange leaves governanceHistory from 0 to `num`
 func (dbm *databaseManager) deleteGovernanceIdxRange(num uint64) ([]uint64, error) {
 	db := dbm.getDatabase(MiscDB)
 	newSlice := make([]uint64, 0)
