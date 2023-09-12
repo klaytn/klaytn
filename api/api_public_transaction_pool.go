@@ -577,7 +577,7 @@ func (s *PublicTransactionPoolAPI) RecoverFromTransaction(ctx context.Context, e
 	if err != nil {
 		return common.Address{}, err
 	}
-	return signer.Sender(tx)
+	return tx.From()
 }
 
 // RecoverFromMessage validates that the message is signed by one of the keys in the given account.
