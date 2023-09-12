@@ -75,7 +75,6 @@ type DBManager interface {
 	WriteCanonicalHash(hash common.Hash, number uint64)
 	DeleteCanonicalHash(number uint64)
 
-	ReadAllHashes(number uint64) []common.Hash
 	ReadHeadHeaderHash() common.Hash
 	WriteHeadHeaderHash(hash common.Hash)
 
@@ -287,6 +286,7 @@ type DBManager interface {
 	ReadGovernanceAtNumber(num uint64, epoch uint64) (uint64, map[string]interface{}, error)
 	WriteGovernanceState(b []byte) error
 	ReadGovernanceState() ([]byte, error)
+	DeleteGovernance(num uint64)
 	// TODO-Klaytn implement governance DB deletion methods.
 
 	// StakingInfo related functions
@@ -954,24 +954,6 @@ func (dbm *databaseManager) DeleteCanonicalHash(number uint64) {
 		logger.Crit("Failed to delete number to hash mapping", "err", err)
 	}
 	dbm.cm.writeCanonicalHashCache(number, common.Hash{})
-}
-
-// ReadAllHashes retrieves all the hashes assigned to blocks at a certain heights,
-// both canonical and reorged forks included.
-func (dbm *databaseManager) ReadAllHashes(number uint64) []common.Hash {
-	db := dbm.getDatabase(headerDB)
-	prefix := headerKeyPrefix(number)
-
-	hashes := make([]common.Hash, 0, 1)
-	it := db.NewIterator(prefix, nil)
-	defer it.Release()
-
-	for it.Next() {
-		if key := it.Key(); len(key) == len(prefix)+32 {
-			hashes = append(hashes, common.BytesToHash(key[len(key)-32:]))
-		}
-	}
-	return hashes
 }
 
 // Head Header Hash operations.
@@ -2672,6 +2654,16 @@ func (dbm *databaseManager) WriteGovernance(data map[string]interface{}, num uin
 	return db.Put(makeKey(governancePrefix, num), b)
 }
 
+func (dbm *databaseManager) DeleteGovernance(num uint64) {
+	db := dbm.getDatabase(MiscDB)
+	if _, err := dbm.deleteGovernanceIdxRange(num); err != nil {
+		logger.Crit("Failed to delete Governance index", "err", err)
+	}
+	if err := db.Delete(makeKey(governancePrefix, num)); err != nil {
+		logger.Crit("Failed to delete Governance", "err", err)
+	}
+}
+
 func (dbm *databaseManager) WriteGovernanceIdx(num uint64) error {
 	db := dbm.getDatabase(MiscDB)
 	newSlice := make([]uint64, 0)
@@ -2695,6 +2687,30 @@ func (dbm *databaseManager) WriteGovernanceIdx(num uint64) error {
 		return err
 	}
 	return db.Put(governanceHistoryKey, data)
+}
+
+/// DeleteGovernanceIdxRange leaves governanceHistory from 0 to `num`
+func (dbm *databaseManager) deleteGovernanceIdxRange(num uint64) ([]uint64, error) {
+	db := dbm.getDatabase(MiscDB)
+	newSlice := make([]uint64, 0)
+
+	idxHistory, err := dbm.ReadRecentGovernanceIdx(0)
+	if err != nil {
+		// Do nothing and return nil if no recent index was not found
+		return nil, nil
+	}
+	for i := 0; i < len(idxHistory); i++ {
+		if idxHistory[i] > num {
+			break
+		}
+		newSlice = append(newSlice, idxHistory[i])
+	}
+
+	data, err := json.Marshal(newSlice)
+	if err != nil {
+		return nil, err
+	}
+	return idxHistory[len(newSlice):], db.Put(governanceHistoryKey, data)
 }
 
 func (dbm *databaseManager) ReadGovernance(num uint64) (map[string]interface{}, error) {
