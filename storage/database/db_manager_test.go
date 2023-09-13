@@ -461,7 +461,7 @@ func TestDBManager_IstanbulSnapshot(t *testing.T) {
 func TestDBManager_TrieNode(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	var (
-		key1  = hash1.ExtendLegacy()
+		key1  = hash1.ExtendZero()
 		key2  = hash2.Extend()
 		node1 = hash1[:]
 		node2 = hash2[:]

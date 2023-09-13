@@ -91,7 +91,7 @@ func (t *Trie) newFlag() nodeFlag {
 // NewTrie will panic if db is nil and returns a MissingNodeError if root does
 // not exist in the database. Accessing the trie loads nodes from db on demand.
 func NewTrie(root common.Hash, db *Database, opts *TrieOpts) (*Trie, error) {
-	return newTrie(root.ExtendLegacy(), db, opts, false)
+	return newTrie(root.ExtendZero(), db, opts, false)
 }
 
 // NewStorageTrie creates a storage trie with an existing root node from db.
@@ -102,7 +102,7 @@ func NewTrie(root common.Hash, db *Database, opts *TrieOpts) (*Trie, error) {
 // not exist in the database. Accessing the trie loads nodes from db on demand.
 //
 // A storage trie is identified with an ExtHash root node. With Live Pruning enabled,
-// its root hash will be extended with a non-legacy nonce.
+// its root hash will be extended with a nonzero nonce.
 func NewStorageTrie(root common.ExtHash, db *Database, opts *TrieOpts) (*Trie, error) {
 	return newTrie(root, db, opts, true)
 }
@@ -588,7 +588,7 @@ func (t *Trie) CommitExt(onleaf LeafCallback) (root common.ExtHash, err error) {
 
 func (t *Trie) hashRoot(db *Database, onleaf LeafCallback) (common.ExtHash, node) {
 	if t.root == nil {
-		return emptyRoot.ExtendLegacy(), nil
+		return emptyRoot.ExtendZero(), nil
 	}
 	h := newHasher(&hasherOpts{
 		onleaf:      onleaf,

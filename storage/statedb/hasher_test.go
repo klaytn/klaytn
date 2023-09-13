@@ -55,11 +55,11 @@ func TestHasherHashTC(t *testing.T) {
 	optsState := &hasherOpts{pruning: true}
 	optsStorage := &hasherOpts{pruning: true, storageRoot: true}
 
-	for name, tc := range collapsedNodeTCs_legacy() {
+	for name, tc := range collapsedNodeTCs_unext() {
 		checkHasherHash(t, name, tc, optsLegacy, true)
 		checkHasherHash(t, name, tc, optsLegacy, false)
 	}
-	for name, tc := range resolvedNodeTCs_legacy() {
+	for name, tc := range resolvedNodeTCs_unext() {
 		checkHasherHash(t, name, tc, optsLegacy, true)
 		checkHasherHash(t, name, tc, optsLegacy, false)
 	}
