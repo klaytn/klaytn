@@ -263,7 +263,7 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 		}
 
 		// We limit tx's execution time using the sum of computation cost of opcodes.
-		if in.evm.vmConfig.UseOpcodeComputationCost {
+		if in.evm.VMConfig.UseOpcodeComputationCost {
 			///////////////////////////////////////////////////////
 			// OpcodeComputationCostLimit: The below code is commented and will be usd for debugging purposes.
 			//if opDebug && prevOp > 0 {

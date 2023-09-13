@@ -55,17 +55,17 @@ type reverted struct {
 
 // callTrace is the result of a callTracer run.
 type callTrace struct {
-	Type     string          `json:"type"`
-	From     *common.Address `json:"from"`
-	To       *common.Address `json:"to"`
-	Input    hexutil.Bytes   `json:"input"`
-	Output   hexutil.Bytes   `json:"output"`
-	Gas      hexutil.Uint64  `json:"gas,omitempty"`
-	GasUsed  hexutil.Uint64  `json:"gasUsed,omitempty"`
-	Value    hexutil.Uint64  `json:"value,omitempty"`
-	Error    string          `json:"error,omitempty"`
-	Calls    []callTrace     `json:"calls,omitempty"`
-	Reverted *reverted       `json:"reverted,omitempty"`
+	Type     string               `json:"type"`
+	From     *common.Address      `json:"from"`
+	To       *common.Address      `json:"to"`
+	Input    hexutil.Bytes        `json:"input"`
+	Output   hexutil.Bytes        `json:"output"`
+	Gas      hexutil.Uint64       `json:"gas,omitempty"`
+	GasUsed  hexutil.Uint64       `json:"gasUsed,omitempty"`
+	Value    math.HexOrDecimal256 `json:"value,omitempty"`
+	Error    string               `json:"error,omitempty"`
+	Calls    []callTrace          `json:"calls,omitempty"`
+	Reverted *reverted            `json:"reverted,omitempty"`
 }
 
 type callContext struct {
@@ -194,9 +194,9 @@ func covertToCallTrace(t *testing.T, internalTx *vm.InternalTxTrace) *callTrace 
 			t.Fatal("failed to decode value of an internal transaction", "err", err)
 		}
 	}
-	var val hexutil.Uint64
+	var val math.HexOrDecimal256
 	if value != nil {
-		val = hexutil.Uint64(value.Uint64())
+		val = math.HexOrDecimal256(*value)
 	}
 
 	errStr := ""

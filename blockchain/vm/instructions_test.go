@@ -328,7 +328,7 @@ func opBenchmark(bench *testing.B, op func(pc *uint64, evm *EVM, contract *Contr
 		env            = NewEVM(ctx, statedb, params.TestChainConfig, &Config{})
 		stack          = newstack()
 		mem            = NewMemory()
-		evmInterpreter = NewEVMInterpreter(env, env.vmConfig)
+		evmInterpreter = NewEVMInterpreter(env, env.VMConfig)
 	)
 
 	env.Origin = common.HexToAddress("0x9d19bb4553940f422104b1d0c8e5704c5aab63c9")
@@ -588,7 +588,7 @@ func TestOpMstore(t *testing.T) {
 		env            = NewEVM(Context{}, nil, params.TestChainConfig, &Config{})
 		stack          = newstack()
 		mem            = NewMemory()
-		evmInterpreter = NewEVMInterpreter(env, env.vmConfig)
+		evmInterpreter = NewEVMInterpreter(env, env.VMConfig)
 	)
 
 	env.interpreter = evmInterpreter
@@ -614,7 +614,7 @@ func BenchmarkOpMstore(bench *testing.B) {
 		env            = NewEVM(Context{}, nil, params.TestChainConfig, &Config{})
 		stack          = newstack()
 		mem            = NewMemory()
-		evmInterpreter = NewEVMInterpreter(env, env.vmConfig)
+		evmInterpreter = NewEVMInterpreter(env, env.VMConfig)
 	)
 
 	env.interpreter = evmInterpreter
@@ -637,7 +637,7 @@ func BenchmarkOpSHA3(bench *testing.B) {
 		env            = NewEVM(Context{}, nil, params.TestChainConfig, &Config{})
 		stack          = newstack()
 		mem            = NewMemory()
-		evmInterpreter = NewEVMInterpreter(env, env.vmConfig)
+		evmInterpreter = NewEVMInterpreter(env, env.VMConfig)
 	)
 	env.interpreter = evmInterpreter
 	evmInterpreter.intPool = poolOfIntPools.get()
@@ -875,7 +875,7 @@ func BenchmarkOpSstore(bench *testing.B) {
 
 		env            = NewEVM(Context{}, statedb, params.TestChainConfig, &Config{})
 		stack          = newstack()
-		evmInterpreter = NewEVMInterpreter(env, env.vmConfig)
+		evmInterpreter = NewEVMInterpreter(env, env.VMConfig)
 	)
 
 	env.interpreter = evmInterpreter
