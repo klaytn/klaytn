@@ -27,8 +27,6 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/klaytn/klaytn/node/cn/filters"
-
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/types/account"
@@ -39,6 +37,7 @@ import (
 	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/rpc"
+	"github.com/klaytn/klaytn/node/cn/filters"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 )
@@ -282,7 +281,7 @@ type CallArgs struct {
 	Input                hexutil.Bytes   `json:"input"`
 }
 
-func (args *CallArgs) Payload() []byte {
+func (args *CallArgs) InputData() []byte {
 	if args.Input != nil {
 		return args.Input
 	}
@@ -311,7 +310,7 @@ func DoCall(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.Blo
 	// this makes sure resources are cleaned up.
 	defer cancel()
 
-	intrinsicGas, err := types.IntrinsicGas(args.Payload(), nil, args.To == nil, b.ChainConfig().Rules(header.Number))
+	intrinsicGas, err := types.IntrinsicGas(args.InputData(), nil, args.To == nil, b.ChainConfig().Rules(header.Number))
 	if err != nil {
 		return nil, 0, err
 	}
@@ -709,5 +708,5 @@ func (args *CallArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsic
 	// if args.AccessList != nil {
 	//	 accessList = *args.AccessList
 	// }
-	return types.NewMessage(addr, args.To, 0, value, gas, gasPrice, args.Payload(), false, intrinsicGas), nil
+	return types.NewMessage(addr, args.To, 0, value, gas, gasPrice, args.InputData(), false, intrinsicGas), nil
 }

@@ -855,7 +855,7 @@ func (api *API) TraceCall(ctx context.Context, args klaytnapi.CallArgs, blockNrO
 	}
 
 	// Execute the trace
-	intrinsicGas, err := types.IntrinsicGas(args.Payload(), nil, args.To == nil, api.backend.ChainConfig().Rules(block.Number()))
+	intrinsicGas, err := types.IntrinsicGas(args.InputData(), nil, args.To == nil, api.backend.ChainConfig().Rules(block.Number()))
 	if err != nil {
 		return nil, err
 	}
