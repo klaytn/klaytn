@@ -292,23 +292,8 @@ func TestTraceCall(t *testing.T) {
 	}
 	for _, testspec := range testSuite {
 		result, err := api.TraceCall(context.Background(), testspec.call, rpc.BlockNumberOrHash{BlockNumber: &testspec.blockNumber}, testspec.config)
-		if testspec.expectErr != nil {
-			if err == nil {
-				t.Errorf("Expect error %v, get nothing", testspec.expectErr)
-				continue
-			}
-			if !reflect.DeepEqual(err, testspec.expectErr) {
-				t.Errorf("Error mismatch, want %v, get %v", testspec.expectErr, err)
-			}
-		} else {
-			if err != nil {
-				t.Errorf("Expect no error, get %v", err)
-				continue
-			}
-			if !reflect.DeepEqual(result, testspec.expect) {
-				t.Errorf("Result mismatch, want %v, get %v", testspec.expect, result)
-			}
-		}
+		assert.Equal(t, err, testspec.expectErr)
+		assert.Equal(t, result, testspec.expect)
 	}
 }
 
