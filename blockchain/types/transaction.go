@@ -45,8 +45,9 @@ var (
 	ErrInvalidSig                     = errors.New("invalid transaction v, r, s values")
 	ErrInvalidSigSender               = errors.New("invalid transaction v, r, s values of the sender")
 	ErrInvalidSigFeePayer             = errors.New("invalid transaction v, r, s values of the fee payer")
-	errNoSigner                       = errors.New("missing signing methods")
 	ErrInvalidTxTypeForAnchoredData   = errors.New("invalid transaction type for anchored data")
+	ErrNotLegacyAccount               = errors.New("not a legacy account")
+	ErrInvalidAccountKey              = errors.New("invalid account key")
 	errLegacyTransaction              = errors.New("should not be called by a legacy transaction")
 	errNotImplementTxInternalDataFrom = errors.New("not implement TxInternalDataFrom")
 	errNotFeeDelegationTransaction    = errors.New("not a fee delegation type transaction")
@@ -392,21 +393,23 @@ func (tx *Transaction) ValidateMutableValue(db StateDB, signer Signer, currentBl
 	accKey := db.GetKey(tx.ValidatedSender())
 	if tx.IsEthereumTransaction() {
 		if !accKey.Type().IsLegacyAccountKey() {
-			return ErrInvalidSigSender
+			return ErrNotLegacyAccount
 		}
 	} else {
-		pubkey, err := SenderPubkey(signer, tx)
-		if err != nil || accountkey.ValidateAccountKey(currentBlockNumber, tx.ValidatedSender(), accKey, pubkey, tx.GetRoleTypeForValidation()) != nil {
+		if pubkey, err := SenderPubkey(signer, tx); err != nil {
 			return ErrInvalidSigSender
+		} else if accountkey.ValidateAccountKey(currentBlockNumber, tx.ValidatedSender(), accKey, pubkey, tx.GetRoleTypeForValidation()) != nil {
+			return ErrInvalidAccountKey
 		}
 	}
 
 	// validate the fee payer's account key
 	if tx.IsFeeDelegatedTransaction() {
 		feePayerAccKey := db.GetKey(tx.ValidatedFeePayer())
-		feePayerPubkey, err := SenderFeePayerPubkey(signer, tx)
-		if err != nil || accountkey.ValidateAccountKey(currentBlockNumber, tx.ValidatedFeePayer(), feePayerAccKey, feePayerPubkey, accountkey.RoleFeePayer) != nil {
+		if feePayerPubkey, err := SenderFeePayerPubkey(signer, tx); err != nil {
 			return ErrInvalidSigFeePayer
+		} else if accountkey.ValidateAccountKey(currentBlockNumber, tx.ValidatedFeePayer(), feePayerAccKey, feePayerPubkey, accountkey.RoleFeePayer) != nil {
+			return ErrInvalidAccountKey
 		}
 	}
 
@@ -784,7 +787,7 @@ func (tx *Transaction) ValidateSender(signer Signer, p AccountKeyPicker, current
 	}
 
 	if err := accountkey.ValidateAccountKey(currentBlockNumber, from, accKey, pubkey, tx.GetRoleTypeForValidation()); err != nil {
-		return 0, ErrInvalidSigSender
+		return 0, ErrInvalidAccountKey
 	}
 
 	tx.mu.Lock()
@@ -819,7 +822,7 @@ func (tx *Transaction) ValidateFeePayer(signer Signer, p AccountKeyPicker, curre
 	}
 
 	if err := accountkey.ValidateAccountKey(currentBlockNumber, feePayer, accKey, pubkey, accountkey.RoleFeePayer); err != nil {
-		return 0, ErrInvalidSigFeePayer
+		return 0, ErrInvalidAccountKey
 	}
 
 	tx.mu.Lock()

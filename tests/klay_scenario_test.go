@@ -675,7 +675,7 @@ func TestSmartContractSign(t *testing.T) {
 
 		receipt, err := applyTransaction(t, bcdata, tx)
 		assert.Equal(t, (*types.Receipt)(nil), receipt)
-		assert.Equal(t, types.ErrSender(types.ErrInvalidSigSender), err)
+		assert.Equal(t, types.ErrSender(types.ErrInvalidAccountKey), err)
 	}
 
 	// 4. Try fee delegation. It should be failed.
@@ -701,7 +701,7 @@ func TestSmartContractSign(t *testing.T) {
 
 		receipt, err := applyTransaction(t, bcdata, tx)
 		assert.Equal(t, (*types.Receipt)(nil), receipt)
-		assert.Equal(t, types.ErrFeePayer(types.ErrInvalidSigFeePayer), err)
+		assert.Equal(t, types.ErrFeePayer(types.ErrInvalidAccountKey), err)
 	}
 }
 
@@ -1721,7 +1721,7 @@ func TestMultisigScenario(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		receipt, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, types.ErrSender(types.ErrInvalidSigSender), err)
+		assert.Equal(t, types.ErrSender(types.ErrInvalidAccountKey), err)
 		assert.Equal(t, (*types.Receipt)(nil), receipt)
 	}
 
