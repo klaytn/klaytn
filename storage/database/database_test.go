@@ -394,10 +394,10 @@ func insertRandomData(db KeyValueWriter, prefix []byte, num int) (testDataSlice,
 	ret := testDataSlice{}
 	for i := 0; i < num; i++ {
 		key := common.MakeRandomBytes(32)
+		val := append(key, key...)
 		if len(prefix) > 0 {
 			key = append(prefix, key...)
 		}
-		val := common.MakeRandomBytes(100)
 		ret = append(ret, &testData{k: key, v: val})
 
 		if err := db.Put(key, val); err != nil {
