@@ -187,9 +187,9 @@ func TestTraceCall(t *testing.T) {
 	// Initialize test accounts
 	accounts := newAccounts(3)
 	genesis := &blockchain.Genesis{Alloc: blockchain.GenesisAlloc{
-		accounts[0].addr: {Balance: big.NewInt(params.KLAY)},
-		accounts[1].addr: {Balance: big.NewInt(params.KLAY)},
-		accounts[2].addr: {Balance: big.NewInt(params.KLAY)},
+		accounts[0].addr: {Balance: big.NewInt(0)},
+		accounts[1].addr: {Balance: big.NewInt(1000 * 10)},
+		accounts[2].addr: {Balance: big.NewInt(0)},
 	}}
 	genBlocks := 10
 	signer := types.LatestSignerForChainID(params.TestChainConfig.ChainID)
@@ -197,7 +197,7 @@ func TestTraceCall(t *testing.T) {
 		// Transfer from account[0] to account[1]
 		//    value: 1000 peb
 		//    fee:   0 peb
-		tx, err := types.SignTx(types.NewTransaction(uint64(i), accounts[1].addr, big.NewInt(1000), params.TxGas, big.NewInt(0), nil), signer, accounts[0].key)
+		tx, err := types.SignTx(types.NewTransaction(uint64(i), accounts[0].addr, big.NewInt(1000), params.TxGas, big.NewInt(0), nil), signer, accounts[1].key)
 		assert.NoError(t, err)
 		b.AddTx(tx)
 	}))
@@ -218,13 +218,8 @@ func TestTraceCall(t *testing.T) {
 				Value: (hexutil.Big)(*big.NewInt(1000)),
 			},
 			config:    nil,
-			expectErr: nil,
-			expect: &klaytnapi.ExecutionResult{
-				Gas:         params.TxGas,
-				Failed:      false,
-				ReturnValue: "",
-				StructLogs:  []klaytnapi.StructLogRes{},
-			},
+			expectErr: errors.New("tracing failed: insufficient balance for transfer"),
+			expect:    nil,
 		},
 		// Standard JSON trace upon the head, plain transfer.
 		{
