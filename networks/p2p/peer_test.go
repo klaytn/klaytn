@@ -99,7 +99,7 @@ func testPeerWithRWs(protos []Protocol, channelSize int) (func(), []*conn, *Peer
 	}
 
 	peer, _ := newPeer(serverSideConn, protos, defaultRWTimerConfig)
-	errc := make(chan error, 2)
+	errc := make(chan error, 1)
 	go func() {
 		_, err := peer.runWithRWs()
 		errc <- err
