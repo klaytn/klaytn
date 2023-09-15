@@ -194,7 +194,7 @@ func TestTraceCall(t *testing.T) {
 	genBlocks := 10
 	signer := types.LatestSignerForChainID(params.TestChainConfig.ChainID)
 	api := NewAPI(newTestBackend(t, genBlocks, genesis, func(i int, b *blockchain.BlockGen) {
-		// Transfer from account[0] to account[1]
+		// Transfer from account[1] to account[0]
 		//    value: 1000 peb
 		//    fee:   0 peb
 		tx, err := types.SignTx(types.NewTransaction(uint64(i), accounts[0].addr, big.NewInt(1000), params.TxGas, big.NewInt(0), nil), signer, accounts[1].key)
