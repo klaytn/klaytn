@@ -187,7 +187,7 @@ func getReceiptStatusFromErrTxFailed(errTxFailed error) (status uint) {
 func NewStateTransition(evm *vm.EVM, msg Message) *StateTransition {
 	// before magma hardfork, effectiveGasPrice is GasPrice of tx
 	// after magma hardfork, effectiveGasPrice is BaseFee
-	effectiveGasPrice := evm.Context.GasPrice
+	effectiveGasPrice := evm.GasPrice
 
 	return &StateTransition{
 		evm:       evm,
@@ -342,7 +342,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 
 	rules := st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber)
 	if rules.IsKore {
-		st.state.PrepareAccessList(rules, msg.ValidatedSender(), msg.ValidatedFeePayer(), st.evm.Coinbase, msg.To(), vm.ActivePrecompiles(rules))
+		st.state.PrepareAccessList(rules, msg.ValidatedSender(), msg.ValidatedFeePayer(), st.evm.Context.Coinbase, msg.To(), vm.ActivePrecompiles(rules))
 	}
 
 	// Check whether the init code size has been exceeded.
@@ -354,7 +354,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		ret   []byte
 		vmerr error
 	)
-	ret, st.gas, vmerr = msg.Execute(st.evm, st.state, st.evm.BlockNumber.Uint64(), st.gas, st.value)
+	ret, st.gas, vmerr = msg.Execute(st.evm, st.state, st.evm.Context.BlockNumber.Uint64(), st.gas, st.value)
 
 	// time-limit error is not a vm error. This error is returned when the EVM is still running while the
 	// block proposer's total execution time of txs for a candidate block reached the predefined limit.
@@ -375,10 +375,10 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		if rules.IsMagma {
 			effectiveGasPrice := st.gasPrice
 			txFee := getBurnAmountMagma(new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), effectiveGasPrice))
-			st.state.AddBalance(st.evm.Rewardbase, txFee)
+			st.state.AddBalance(st.evm.Context.Rewardbase, txFee)
 		} else {
 			effectiveGasPrice := msg.EffectiveGasPrice(nil)
-			st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), effectiveGasPrice))
+			st.state.AddBalance(st.evm.Context.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), effectiveGasPrice))
 		}
 	}
 

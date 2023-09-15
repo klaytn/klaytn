@@ -561,9 +561,9 @@ func opGasprice(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack 
 func opBlockhash(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 	num := stack.pop()
 
-	n := evm.interpreter.intPool.get().Sub(evm.BlockNumber, common.Big257)
-	if num.Cmp(n) > 0 && num.Cmp(evm.BlockNumber) < 0 {
-		stack.push(evm.GetHash(num.Uint64()).Big())
+	n := evm.interpreter.intPool.get().Sub(evm.Context.BlockNumber, common.Big257)
+	if num.Cmp(n) > 0 && num.Cmp(evm.Context.BlockNumber) < 0 {
+		stack.push(evm.Context.GetHash(num.Uint64()).Big())
 	} else {
 		stack.push(evm.interpreter.intPool.getZero())
 	}
@@ -572,34 +572,34 @@ func opBlockhash(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack
 }
 
 func opCoinbase(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	stack.push(evm.interpreter.intPool.get().SetBytes(evm.Coinbase.Bytes()))
+	stack.push(evm.interpreter.intPool.get().SetBytes(evm.Context.Coinbase.Bytes()))
 	return nil, nil
 }
 
 func opTimestamp(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	stack.push(math.U256(evm.interpreter.intPool.get().Set(evm.Time)))
+	stack.push(math.U256(evm.interpreter.intPool.get().Set(evm.Context.Time)))
 	return nil, nil
 }
 
 func opNumber(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	stack.push(math.U256(evm.interpreter.intPool.get().Set(evm.BlockNumber)))
+	stack.push(math.U256(evm.interpreter.intPool.get().Set(evm.Context.BlockNumber)))
 	return nil, nil
 }
 
 func opDifficulty(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	stack.push(math.U256(evm.interpreter.intPool.get().Set(evm.BlockScore)))
+	stack.push(math.U256(evm.interpreter.intPool.get().Set(evm.Context.BlockScore)))
 	return nil, nil
 }
 
 func opRandom(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 	// evm.BlockNumber.Uint64() is always greater than or equal to 1
 	// since evm will not run on the genesis block
-	stack.push(evm.GetHash(evm.BlockNumber.Uint64() - 1).Big())
+	stack.push(evm.Context.GetHash(evm.Context.BlockNumber.Uint64() - 1).Big())
 	return nil, nil
 }
 
 func opGasLimit(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	stack.push(math.U256(evm.interpreter.intPool.get().SetUint64(evm.GasLimit)))
+	stack.push(math.U256(evm.interpreter.intPool.get().SetUint64(evm.Context.GasLimit)))
 	return nil, nil
 }
 
@@ -925,7 +925,7 @@ func makeLog(size int) executionFunc {
 			Data:    d,
 			// This is a non-consensus field, but assigned here because
 			// blockchain/state doesn't know the current block number.
-			BlockNumber: evm.BlockNumber.Uint64(),
+			BlockNumber: evm.Context.BlockNumber.Uint64(),
 		})
 
 		evm.interpreter.intPool.put(mStart, mSize)

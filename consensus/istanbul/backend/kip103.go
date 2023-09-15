@@ -45,9 +45,10 @@ func (caller *Kip103ContractCaller) CallContract(ctx context.Context, call klayt
 	msg := types.NewMessage(call.From, call.To, caller.state.GetNonce(call.From),
 		call.Value, gasLimit, gasPrice, call.Data, false, intrinsicGas)
 
-	context := blockchain.NewEVMContext(msg, caller.header, caller.chain, nil)
-	context.GasPrice = gasPrice                                                  // set gasPrice again if baseFee is assigned
-	evm := vm.NewEVM(context, caller.state, caller.chain.Config(), &vm.Config{}) // no additional vm config required
+	blockContext := blockchain.NewEVMBlockContext(caller.header, caller.chain, nil)
+	txContext := blockchain.NewEVMTxContext(msg, caller.header)
+	txContext.GasPrice = gasPrice                                                  // set gasPrice again if baseFee is assigned
+	evm := vm.NewEVM(blockContext, txContext, caller.state, caller.chain.Config(), &vm.Config{}) // no additional vm config required
 
 	result, err := blockchain.ApplyMessage(evm, msg)
 	return result.Return(), err

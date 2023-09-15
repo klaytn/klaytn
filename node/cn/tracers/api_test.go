@@ -152,33 +152,34 @@ func (b *testBackend) StateAtBlock(ctx context.Context, block *types.Block, reex
 	return statedb, nil
 }
 
-func (b *testBackend) StateAtTransaction(ctx context.Context, block *types.Block, txIndex int, reexec uint64) (blockchain.Message, vm.Context, *state.StateDB, error) {
+func (b *testBackend) StateAtTransaction(ctx context.Context, block *types.Block, txIndex int, reexec uint64) (blockchain.Message, vm.BlockContext, vm.TxContext, *state.StateDB, error) {
 	parent := b.chain.GetBlock(block.ParentHash(), block.NumberU64()-1)
 	if parent == nil {
-		return nil, vm.Context{}, nil, errBlockNotFound
+		return nil, vm.BlockContext{}, vm.TxContext{}, nil, errBlockNotFound
 	}
 	statedb, err := b.chain.StateAt(parent.Root())
 	if err != nil {
-		return nil, vm.Context{}, nil, errStateNotFound
+		return nil, vm.BlockContext{}, vm.TxContext{}, nil, errStateNotFound
 	}
 	if txIndex == 0 && len(block.Transactions()) == 0 {
-		return nil, vm.Context{}, statedb, nil
+		return nil, vm.BlockContext{}, vm.TxContext{}, statedb, nil
 	}
 	// Recompute transactions up to the target index.
 	signer := types.MakeSigner(b.chainConfig, block.Number())
 	for idx, tx := range block.Transactions() {
 		msg, _ := tx.AsMessageWithAccountKeyPicker(signer, statedb, block.NumberU64())
-		context := blockchain.NewEVMContext(msg, block.Header(), b.chain, nil)
+		txContext := blockchain.NewEVMTxContext(msg, block.Header())
+		blockContext := blockchain.NewEVMBlockContext(block.Header(), b.chain, nil)
 		if idx == txIndex {
-			return msg, context, statedb, nil
+			return msg, blockContext, txContext, statedb, nil
 		}
-		vmenv := vm.NewEVM(context, statedb, b.chainConfig, &vm.Config{Debug: true, EnableInternalTxTracing: true})
+		vmenv := vm.NewEVM(blockContext, txContext, statedb, b.chainConfig, &vm.Config{Debug: true, EnableInternalTxTracing: true})
 		if _, err := blockchain.ApplyMessage(vmenv, msg); err != nil {
-			return nil, vm.Context{}, nil, fmt.Errorf("transaction %#x failed: %v", tx.Hash(), err)
+			return nil, vm.BlockContext{}, vm.TxContext{}, nil, fmt.Errorf("transaction %#x failed: %v", tx.Hash(), err)
 		}
 		statedb.Finalise(true, true)
 	}
-	return nil, vm.Context{}, nil, fmt.Errorf("transaction index %d out of range for block %#x", txIndex, block.Hash())
+	return nil, vm.BlockContext{}, vm.TxContext{}, nil, fmt.Errorf("transaction index %d out of range for block %#x", txIndex, block.Hash())
 }
 
 func TestTraceCall(t *testing.T) {

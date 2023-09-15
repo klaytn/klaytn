@@ -99,7 +99,7 @@ func init() {
 
 func testTwoOperandOp(t *testing.T, tests []TwoOperandTestcase, opFn executionFunc, name string) {
 	var (
-		env            = NewEVM(Context{}, nil, params.TestChainConfig, &Config{})
+		env            = NewEVM(BlockContext{}, TxContext{}, nil, params.TestChainConfig, &Config{})
 		stack          = newstack()
 		pc             = uint64(0)
 		evmInterpreter = env.interpreter
@@ -218,7 +218,7 @@ func TestSAR(t *testing.T) {
 // getResult is a convenience function to generate the expected values
 func getResult(args []*twoOperandParams, opFn executionFunc) []TwoOperandTestcase {
 	var (
-		env         = NewEVM(Context{}, nil, params.TestChainConfig, &Config{})
+		env         = NewEVM(BlockContext{}, TxContext{}, nil, params.TestChainConfig, &Config{})
 		stack       = newstack()
 		pc          = uint64(0)
 		interpreter = env.interpreter
@@ -307,11 +307,10 @@ func opBenchmark(bench *testing.B, op func(pc *uint64, evm *EVM, contract *Contr
 			return db.GetBalance(address).Cmp(amount) >= 0
 		}
 
-		ctx = Context{
+		blockCtx = BlockContext{
 			BlockNumber: big1024,
 			BlockScore:  big.NewInt(0),
 			Coinbase:    common.HexToAddress("0xf4b0cb429b7d341bf467f2d51c09b64cd9add37c"),
-			GasPrice:    big.NewInt(1),
 			BaseFee:     big.NewInt(1000000000000000000),
 			GasLimit:    uint64(1000000000000000),
 			Time:        big.NewInt(1488928920),
@@ -321,11 +320,14 @@ func opBenchmark(bench *testing.B, op func(pc *uint64, evm *EVM, contract *Contr
 			CanTransfer: canTransfer,
 			Transfer:    func(db StateDB, sender, recipient common.Address, amount *big.Int) {},
 		}
+		txCtx = TxContext{
+			GasPrice: big.NewInt(1),
+		}
 
 		memDBManager = database.NewMemoryDBManager()
 		statedb      = initStateDB(memDBManager)
 
-		env            = NewEVM(ctx, statedb, params.TestChainConfig, &Config{})
+		env            = NewEVM(blockCtx, txCtx, statedb, params.TestChainConfig, &Config{})
 		stack          = newstack()
 		mem            = NewMemory()
 		evmInterpreter = NewEVMInterpreter(env, env.VMConfig)
@@ -585,7 +587,7 @@ func BenchmarkOpIsZero(b *testing.B) {
 
 func TestOpMstore(t *testing.T) {
 	var (
-		env            = NewEVM(Context{}, nil, params.TestChainConfig, &Config{})
+		env            = NewEVM(BlockContext{}, TxContext{}, nil, params.TestChainConfig, &Config{})
 		stack          = newstack()
 		mem            = NewMemory()
 		evmInterpreter = NewEVMInterpreter(env, env.VMConfig)
@@ -611,7 +613,7 @@ func TestOpMstore(t *testing.T) {
 
 func BenchmarkOpMstore(bench *testing.B) {
 	var (
-		env            = NewEVM(Context{}, nil, params.TestChainConfig, &Config{})
+		env            = NewEVM(BlockContext{}, TxContext{}, nil, params.TestChainConfig, &Config{})
 		stack          = newstack()
 		mem            = NewMemory()
 		evmInterpreter = NewEVMInterpreter(env, env.VMConfig)
@@ -634,7 +636,7 @@ func BenchmarkOpMstore(bench *testing.B) {
 
 func BenchmarkOpSHA3(bench *testing.B) {
 	var (
-		env            = NewEVM(Context{}, nil, params.TestChainConfig, &Config{})
+		env            = NewEVM(BlockContext{}, TxContext{}, nil, params.TestChainConfig, &Config{})
 		stack          = newstack()
 		mem            = NewMemory()
 		evmInterpreter = NewEVMInterpreter(env, env.VMConfig)
@@ -873,7 +875,7 @@ func BenchmarkOpSstore(bench *testing.B) {
 		memDBManager = database.NewMemoryDBManager()
 		statedb      = initStateDB(memDBManager)
 
-		env            = NewEVM(Context{}, statedb, params.TestChainConfig, &Config{})
+		env            = NewEVM(BlockContext{}, TxContext{}, statedb, params.TestChainConfig, &Config{})
 		stack          = newstack()
 		evmInterpreter = NewEVMInterpreter(env, env.VMConfig)
 	)

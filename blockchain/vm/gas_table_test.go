@@ -115,15 +115,15 @@ func TestEIP2200(t *testing.T) {
 		statedb.SetState(address, common.Hash{}, common.BytesToHash([]byte{tt.original}))
 		statedb.Finalise(true, false) // Push the state into the "original" slot
 
-		vmctx := Context{
+		vmctx := BlockContext{
 			CanTransfer: func(StateDB, common.Address, *big.Int) bool { return true },
 			Transfer:    func(StateDB, common.Address, common.Address, *big.Int) {},
 		}
 		var vmenv *EVM
 		if i <= 18 {
-			vmenv = NewEVM(vmctx, statedb, params.AllGxhashProtocolChanges, &Config{})
+			vmenv = NewEVM(vmctx, TxContext{}, statedb, params.AllGxhashProtocolChanges, &Config{})
 		} else {
-			vmenv = NewEVM(vmctx, statedb, params.AllGxhashProtocolChanges, &Config{ExtraEips: []int{2200}})
+			vmenv = NewEVM(vmctx, TxContext{}, statedb, params.AllGxhashProtocolChanges, &Config{ExtraEips: []int{2200}})
 		}
 
 		_, gas, err := vmenv.Call(AccountRef(common.Address{}), address, nil, tt.gaspool, new(big.Int))
@@ -171,7 +171,7 @@ func TestCreateGas(t *testing.T) {
 			statedb.SetCode(address, hexutil.MustDecode(tt.code))
 			statedb.Finalise(true, false)
 
-			vmctx := Context{
+			vmctx := BlockContext{
 				CanTransfer: func(StateDB, common.Address, *big.Int) bool { return true },
 				Transfer:    func(StateDB, common.Address, common.Address, *big.Int) {},
 			}
@@ -180,7 +180,7 @@ func TestCreateGas(t *testing.T) {
 				config.ExtraEips = []int{3860}
 			}
 
-			vmenv := NewEVM(vmctx, statedb, params.AllGxhashProtocolChanges, &config)
+			vmenv := NewEVM(vmctx, TxContext{}, statedb, params.AllGxhashProtocolChanges, &config)
 			startGas := uint64(testGas)
 			ret, gas, err := vmenv.Call(AccountRef(common.Address{}), address, nil, startGas, new(big.Int))
 			if err != nil {

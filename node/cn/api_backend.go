@@ -220,8 +220,10 @@ func (b *CNAPIBackend) GetTd(blockHash common.Hash) *big.Int {
 func (b *CNAPIBackend) GetEVM(ctx context.Context, msg blockchain.Message, state *state.StateDB, header *types.Header, vmCfg vm.Config) (*vm.EVM, func() error, error) {
 	vmError := func() error { return nil }
 
-	context := blockchain.NewEVMContext(msg, header, b.cn.BlockChain(), nil)
-	return vm.NewEVM(context, state, b.cn.chainConfig, &vmCfg), vmError, nil
+	txContext := blockchain.NewEVMTxContext(msg, header)
+	blockContext := blockchain.NewEVMBlockContext(header, b.cn.BlockChain(), nil)
+
+	return vm.NewEVM(blockContext, txContext, state, b.cn.chainConfig, &vmCfg), vmError, nil
 }
 
 func (b *CNAPIBackend) SubscribeRemovedLogsEvent(ch chan<- blockchain.RemovedLogsEvent) event.Subscription {
@@ -371,7 +373,7 @@ func (b *CNAPIBackend) StateAtBlock(ctx context.Context, block *types.Block, ree
 	return b.cn.stateAtBlock(block, reexec, base, checkLive, preferDisk)
 }
 
-func (b *CNAPIBackend) StateAtTransaction(ctx context.Context, block *types.Block, txIndex int, reexec uint64) (blockchain.Message, vm.Context, *state.StateDB, error) {
+func (b *CNAPIBackend) StateAtTransaction(ctx context.Context, block *types.Block, txIndex int, reexec uint64) (blockchain.Message, vm.BlockContext, vm.TxContext, *state.StateDB, error) {
 	return b.cn.stateAtTransaction(block, txIndex, reexec)
 }
 
