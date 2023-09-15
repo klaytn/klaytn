@@ -21,6 +21,7 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/klaytn/klaytn/blockchain/system"
 	"github.com/klaytn/klaytn/cmd/homi/extra"
 	"github.com/klaytn/klaytn/consensus/clique"
 	"github.com/klaytn/klaytn/contracts/reward/contract"
@@ -74,11 +75,11 @@ func Alloc(addrs []common.Address, balance *big.Int) Option {
 func AllocWithPrecypressContract(addrs []common.Address, balance *big.Int) Option {
 	return func(genesis *blockchain.Genesis) {
 		alloc := makeGenesisAccount(addrs, balance)
-		alloc[common.HexToAddress(contract.CypressCreditContractAddress)] = blockchain.GenesisAccount{
+		alloc[system.CreditAddr] = blockchain.GenesisAccount{
 			Code:    common.FromHex(CypressCreditBin),
 			Balance: big.NewInt(0),
 		}
-		alloc[common.HexToAddress(contract.AddressBookContractAddress)] = blockchain.GenesisAccount{
+		alloc[system.AddressBookAddr] = blockchain.GenesisAccount{
 			Code:    common.FromHex(PreCypressAddressBookBin),
 			Balance: big.NewInt(0),
 		}
@@ -89,11 +90,11 @@ func AllocWithPrecypressContract(addrs []common.Address, balance *big.Int) Optio
 func AllocWithCypressContract(addrs []common.Address, balance *big.Int) Option {
 	return func(genesis *blockchain.Genesis) {
 		alloc := makeGenesisAccount(addrs, balance)
-		alloc[common.HexToAddress(contract.CypressCreditContractAddress)] = blockchain.GenesisAccount{
+		alloc[system.CreditAddr] = blockchain.GenesisAccount{
 			Code:    common.FromHex(CypressCreditBin),
 			Balance: big.NewInt(0),
 		}
-		alloc[common.HexToAddress(contract.AddressBookContractAddress)] = blockchain.GenesisAccount{
+		alloc[system.AddressBookAddr] = blockchain.GenesisAccount{
 			Code:    common.FromHex(CypressAddressBookBin),
 			Balance: big.NewInt(0),
 		}
@@ -104,7 +105,7 @@ func AllocWithCypressContract(addrs []common.Address, balance *big.Int) Option {
 func AllocWithPrebaobabContract(addrs []common.Address, balance *big.Int) Option {
 	return func(genesis *blockchain.Genesis) {
 		alloc := makeGenesisAccount(addrs, balance)
-		alloc[common.HexToAddress(contract.AddressBookContractAddress)] = blockchain.GenesisAccount{
+		alloc[system.AddressBookAddr] = blockchain.GenesisAccount{
 			Code:    common.FromHex(PrebaobabAddressBookBin),
 			Balance: big.NewInt(0),
 		}
@@ -115,7 +116,7 @@ func AllocWithPrebaobabContract(addrs []common.Address, balance *big.Int) Option
 func AllocWithBaobabContract(addrs []common.Address, balance *big.Int) Option {
 	return func(genesis *blockchain.Genesis) {
 		alloc := makeGenesisAccount(addrs, balance)
-		alloc[common.HexToAddress(contract.AddressBookContractAddress)] = blockchain.GenesisAccount{
+		alloc[system.AddressBookAddr] = blockchain.GenesisAccount{
 			Code:    common.FromHex(BaobabAddressBookBin),
 			Balance: big.NewInt(0),
 		}
@@ -126,7 +127,7 @@ func AllocWithBaobabContract(addrs []common.Address, balance *big.Int) Option {
 // Patch the hardcoded line in AddressBook.sol:constructContract().
 func PatchAddressBook(addr common.Address) Option {
 	return func(genesis *blockchain.Genesis) {
-		contractAddr := common.HexToAddress(contract.AddressBookContractAddress)
+		contractAddr := system.AddressBookAddr
 		contractAccount, ok := genesis.Alloc[contractAddr]
 		if !ok {
 			log.Fatalf("No AddressBook to patch")
@@ -156,7 +157,7 @@ func PatchAddressBook(addr common.Address) Option {
 
 func AddressBookMock() Option {
 	return func(genesis *blockchain.Genesis) {
-		contractAddr := common.HexToAddress(contract.AddressBookContractAddress)
+		contractAddr := system.AddressBookAddr
 		contractAccount, ok := genesis.Alloc[contractAddr]
 		if !ok {
 			log.Fatalf("No AddressBook to patch")

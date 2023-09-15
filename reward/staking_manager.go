@@ -26,6 +26,7 @@ import (
 	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/state"
+	"github.com/klaytn/klaytn/blockchain/system"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/contracts/reward/contract"
@@ -46,7 +47,7 @@ const (
 	addressTypeKIRAddr // TODO-klaytn: KIR should be changed to KCF after changing AddressBook contract
 )
 
-var addressBookContractAddress = common.HexToAddress(contract.AddressBookContractAddress)
+var addressBookContractAddress = system.AddressBookAddr
 
 // blockChain is an interface for blockchain.Blockchain used in reward package.
 type blockChain interface {
@@ -435,5 +436,5 @@ func SetTestStakingManager(sm *StakingManager) {
 
 // SetTestAddressBookAddress is only for testing purpose.
 func SetTestAddressBookAddress(addr common.Address) {
-	addressBookContractAddress = common.HexToAddress(addr.Hex())
+	addressBookContractAddress = addr
 }
