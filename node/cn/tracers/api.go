@@ -818,6 +818,64 @@ func (api *API) TraceTransaction(ctx context.Context, hash common.Hash, config *
 	return api.traceTx(ctx, msg, vmctx, statedb, config)
 }
 
+// TraceCall lets you trace a given klay_call. It collects the structured logs
+// created during the execution of EVM if the given transaction was added on
+// top of the provided block and returns them as a JSON object.
+func (api *API) TraceCall(ctx context.Context, args klaytnapi.CallArgs, blockNrOrHash rpc.BlockNumberOrHash, config *TraceConfig) (interface{}, error) {
+	if !api.unsafeTrace {
+		if atomic.LoadInt32(&heavyAPIRequestCount) >= HeavyAPIRequestLimit {
+			return nil, fmt.Errorf("heavy debug api requests exceed the limit: %d", int64(HeavyAPIRequestLimit))
+		}
+		atomic.AddInt32(&heavyAPIRequestCount, 1)
+		defer atomic.AddInt32(&heavyAPIRequestCount, -1)
+	}
+	// Try to retrieve the specified block
+	var (
+		err   error
+		block *types.Block
+	)
+	if hash, ok := blockNrOrHash.Hash(); ok {
+		block, err = api.blockByHash(ctx, hash)
+	} else if number, ok := blockNrOrHash.Number(); ok {
+		block, err = api.blockByNumber(ctx, number)
+	} else {
+		return nil, errors.New("invalid arguments; neither block nor hash specified")
+	}
+	if err != nil {
+		return nil, err
+	}
+	// try to recompute the state
+	reexec := defaultTraceReexec
+	if config != nil && config.Reexec != nil {
+		reexec = *config.Reexec
+	}
+	statedb, err := api.backend.StateAtBlock(ctx, block, reexec, nil, true, false)
+	if err != nil {
+		return nil, err
+	}
+
+	// Execute the trace
+	intrinsicGas, err := types.IntrinsicGas(args.InputData(), nil, args.To == nil, api.backend.ChainConfig().Rules(block.Number()))
+	if err != nil {
+		return nil, err
+	}
+	basefee := new(big.Int).SetUint64(params.ZeroBaseFee)
+	if block.Header().BaseFee != nil {
+		basefee = block.Header().BaseFee
+	}
+	gasCap := uint64(0)
+	if rpcGasCap := api.backend.RPCGasCap(); rpcGasCap != nil {
+		gasCap = rpcGasCap.Uint64()
+	}
+	msg, err := args.ToMessage(gasCap, basefee, intrinsicGas)
+	if err != nil {
+		return nil, err
+	}
+	vmctx := blockchain.NewEVMContext(msg, block.Header(), newChainContext(ctx, api.backend), nil)
+
+	return api.traceTx(ctx, msg, vmctx, statedb, config)
+}
+
 // traceTx configures a new tracer according to the provided configuration, and
 // executes the given message in the provided environment. The return value will
 // be tracer dependent.
