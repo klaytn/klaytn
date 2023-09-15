@@ -47,9 +47,9 @@ var (
 		EthTxTypeCompatibleBlock: big.NewInt(86816005),
 		MagmaCompatibleBlock:     big.NewInt(99841497),
 		KoreCompatibleBlock:      big.NewInt(119750400),
-		Kip103CompatibleBlock:    big.NewInt(119750400),
 		ShanghaiCompatibleBlock:  big.NewInt(135456000),
 		CancunCompatibleBlock:    nil, // TODO-Klaytn-Cancun: set Cypress CancunCompatibleBlock
+		Kip103CompatibleBlock:    big.NewInt(119750400),
 		Kip103ContractAddress:    common.HexToAddress("0xD5ad6D61Dd87EdabE2332607C328f5cc96aeCB95"),
 		DeriveShaImpl:            2,
 		Governance: &GovernanceConfig{
@@ -81,10 +81,10 @@ var (
 		EthTxTypeCompatibleBlock: big.NewInt(86513895),
 		MagmaCompatibleBlock:     big.NewInt(98347376),
 		KoreCompatibleBlock:      big.NewInt(111736800),
-		Kip103CompatibleBlock:    big.NewInt(119145600),
-		Kip103ContractAddress:    common.HexToAddress("0xD5ad6D61Dd87EdabE2332607C328f5cc96aeCB95"),
 		ShanghaiCompatibleBlock:  big.NewInt(131608000),
 		CancunCompatibleBlock:    nil, // TODO-Klaytn-Cancun: set Baobab CancunCompatibleBlock
+		Kip103CompatibleBlock:    big.NewInt(119145600),
+		Kip103ContractAddress:    common.HexToAddress("0xD5ad6D61Dd87EdabE2332607C328f5cc96aeCB95"),
 		DeriveShaImpl:            2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x99fb17d324fa0e07f23b49d09028ac0919414db6"),
@@ -285,7 +285,7 @@ func (c *ChainConfig) String() string {
 	kip103 := fmt.Sprintf("KIP103CompatibleBlock: %v KIP103ContractAddress %s", c.Kip103CompatibleBlock, c.Kip103ContractAddress.String())
 
 	if c.Istanbul != nil {
-		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v KoreCompatibleBlock: %v ShanghaiCompatibleBlock: %v %s CancunCompatibleBlock: %v SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d Engine: %v}",
+		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v KoreCompatibleBlock: %v ShanghaiCompatibleBlock: %v CancunCompatibleBlock: %v %s SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d Engine: %v}",
 			c.ChainID,
 			c.IstanbulCompatibleBlock,
 			c.LondonCompatibleBlock,
@@ -293,15 +293,15 @@ func (c *ChainConfig) String() string {
 			c.MagmaCompatibleBlock,
 			c.KoreCompatibleBlock,
 			c.ShanghaiCompatibleBlock,
-			kip103,
 			c.CancunCompatibleBlock,
+			kip103,
 			c.Istanbul.SubGroupSize,
 			c.UnitPrice,
 			c.DeriveShaImpl,
 			engine,
 		)
 	} else {
-		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v KoreCompatibleBlock: %v ShanghaiCompatibleBlock: %v %s CancunCompatibleBlock: %v UnitPrice: %d DeriveShaImpl: %d Engine: %v }",
+		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v KoreCompatibleBlock: %v ShanghaiCompatibleBlock: %v CancunCompatibleBlock: %v %s UnitPrice: %d DeriveShaImpl: %d Engine: %v }",
 			c.ChainID,
 			c.IstanbulCompatibleBlock,
 			c.LondonCompatibleBlock,
@@ -309,8 +309,8 @@ func (c *ChainConfig) String() string {
 			c.MagmaCompatibleBlock,
 			c.KoreCompatibleBlock,
 			c.ShanghaiCompatibleBlock,
-			kip103,
 			c.CancunCompatibleBlock,
+			kip103,
 			c.UnitPrice,
 			c.DeriveShaImpl,
 			engine,
@@ -355,17 +355,17 @@ func (c *ChainConfig) IsShanghaiForkEnabled(num *big.Int) bool {
 	return isForked(c.ShanghaiCompatibleBlock, num)
 }
 
+// IsCancunForkEnabled returns whether num is either equal to the cancun block or greater.
+func (c *ChainConfig) IsCancunForkEnabled(num *big.Int) bool {
+	return isForked(c.CancunCompatibleBlock, num)
+}
+
 // IsKIP103ForkBlock returns whether num is equal to the kip103 block.
 func (c *ChainConfig) IsKIP103ForkBlock(num *big.Int) bool {
 	if c.Kip103CompatibleBlock == nil || num == nil {
 		return false
 	}
 	return c.Kip103CompatibleBlock.Cmp(num) == 0
-}
-
-// IsCancunForkEnabled returns whether num is either equal to the cancun block or greater.
-func (c *ChainConfig) IsCancunForkEnabled(num *big.Int) bool {
-	return isForked(c.CancunCompatibleBlock, num)
 }
 
 // CheckCompatible checks whether scheduled fork transitions have been imported
