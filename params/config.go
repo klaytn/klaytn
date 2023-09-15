@@ -49,6 +49,7 @@ var (
 		KoreCompatibleBlock:      big.NewInt(119750400),
 		Kip103CompatibleBlock:    big.NewInt(119750400),
 		ShanghaiCompatibleBlock:  big.NewInt(135456000),
+		CancunCompatibleBlock:    big.NewInt(0xffffffff),
 		Kip103ContractAddress:    common.HexToAddress("0xD5ad6D61Dd87EdabE2332607C328f5cc96aeCB95"),
 		DeriveShaImpl:            2,
 		Governance: &GovernanceConfig{
@@ -83,6 +84,7 @@ var (
 		Kip103CompatibleBlock:    big.NewInt(119145600),
 		Kip103ContractAddress:    common.HexToAddress("0xD5ad6D61Dd87EdabE2332607C328f5cc96aeCB95"),
 		ShanghaiCompatibleBlock:  big.NewInt(131608000),
+		CancunCompatibleBlock:    big.NewInt(0xffffffff),
 		DeriveShaImpl:            2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x99fb17d324fa0e07f23b49d09028ac0919414db6"),
@@ -183,6 +185,7 @@ type ChainConfig struct {
 	MagmaCompatibleBlock     *big.Int `json:"magmaCompatibleBlock,omitempty"`     // MagmaCompatible switch block (nil = no fork, 0 already on Magma)
 	KoreCompatibleBlock      *big.Int `json:"koreCompatibleBlock,omitempty"`      // KoreCompatible switch block (nil = no fork, 0 already on Kore)
 	ShanghaiCompatibleBlock  *big.Int `json:"shanghaiCompatibleBlock,omitempty"`  // ShanghaiCompatible switch block (nil = no fork, 0 already on shanghai)
+	CancunCompatibleBlock    *big.Int `json:"cancunCompatibleBlock,omitempty"`    // CancunCompatible switch block (nil = no fork, 0 already on Cancun)
 
 	// KIP103 is a special purpose hardfork feature that can be executed only once
 	// Both Kip103CompatibleBlock and Kip103ContractAddress should be specified to enable KIP103
@@ -282,7 +285,7 @@ func (c *ChainConfig) String() string {
 	kip103 := fmt.Sprintf("KIP103CompatibleBlock: %v KIP103ContractAddress %s", c.Kip103CompatibleBlock, c.Kip103ContractAddress.String())
 
 	if c.Istanbul != nil {
-		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v KoreCompatibleBlock: %v ShanghaiCompatibleBlock: %v %s SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d Engine: %v}",
+		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v KoreCompatibleBlock: %v ShanghaiCompatibleBlock: %v %s CancunCompatibleBlock: %v SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d Engine: %v}",
 			c.ChainID,
 			c.IstanbulCompatibleBlock,
 			c.LondonCompatibleBlock,
@@ -291,13 +294,14 @@ func (c *ChainConfig) String() string {
 			c.KoreCompatibleBlock,
 			c.ShanghaiCompatibleBlock,
 			kip103,
+			c.CancunCompatibleBlock,
 			c.Istanbul.SubGroupSize,
 			c.UnitPrice,
 			c.DeriveShaImpl,
 			engine,
 		)
 	} else {
-		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v KoreCompatibleBlock: %v ShanghaiCompatibleBlock: %v %s UnitPrice: %d DeriveShaImpl: %d Engine: %v }",
+		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v KoreCompatibleBlock: %v ShanghaiCompatibleBlock: %v %s CancunCompatibleBlock: %v UnitPrice: %d DeriveShaImpl: %d Engine: %v }",
 			c.ChainID,
 			c.IstanbulCompatibleBlock,
 			c.LondonCompatibleBlock,
@@ -306,6 +310,7 @@ func (c *ChainConfig) String() string {
 			c.KoreCompatibleBlock,
 			c.ShanghaiCompatibleBlock,
 			kip103,
+			c.CancunCompatibleBlock,
 			c.UnitPrice,
 			c.DeriveShaImpl,
 			engine,
@@ -358,6 +363,11 @@ func (c *ChainConfig) IsKIP103ForkBlock(num *big.Int) bool {
 	return c.Kip103CompatibleBlock.Cmp(num) == 0
 }
 
+// IsCancunForkEnabled returns whether num is either equal to the cancun block or greater.
+func (c *ChainConfig) IsCancunForkEnabled(num *big.Int) bool {
+	return isForked(c.CancunCompatibleBlock, num)
+}
+
 // CheckCompatible checks whether scheduled fork transitions have been imported
 // with a mismatching chain configuration.
 func (c *ChainConfig) CheckCompatible(newcfg *ChainConfig, height uint64) *ConfigCompatError {
@@ -392,6 +402,7 @@ func (c *ChainConfig) CheckConfigForkOrder() error {
 		{name: "magmaBlock", block: c.MagmaCompatibleBlock},
 		{name: "koreBlock", block: c.KoreCompatibleBlock},
 		{name: "shanghaiBlock", block: c.ShanghaiCompatibleBlock},
+		{name: "cancunBlock", block: c.CancunCompatibleBlock},
 	} {
 		if lastFork.name != "" {
 			// Next one must be higher number
@@ -434,6 +445,9 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *Confi
 	// as an optional hardfork and there are no dependency with other forks.
 	if isForkIncompatible(c.ShanghaiCompatibleBlock, newcfg.ShanghaiCompatibleBlock, head) {
 		return newCompatError("Shanghai Block", c.ShanghaiCompatibleBlock, newcfg.ShanghaiCompatibleBlock)
+	}
+	if isForkIncompatible(c.CancunCompatibleBlock, newcfg.CancunCompatibleBlock, head) {
+		return newCompatError("Cancun Block", c.CancunCompatibleBlock, newcfg.CancunCompatibleBlock)
 	}
 	return nil
 }
@@ -554,6 +568,7 @@ type Rules struct {
 	IsMagma     bool
 	IsKore      bool
 	IsShanghai  bool
+	IsCancun    bool
 }
 
 // Rules ensures c's ChainID is not nil.
@@ -570,6 +585,7 @@ func (c *ChainConfig) Rules(num *big.Int) Rules {
 		IsMagma:     c.IsMagmaForkEnabled(num),
 		IsKore:      c.IsKoreForkEnabled(num),
 		IsShanghai:  c.IsShanghaiForkEnabled(num),
+		IsCancun:    c.IsCancunForkEnabled(num),
 	}
 }
 

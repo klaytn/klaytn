@@ -494,4 +494,10 @@ var (
 		Name:  "kip103-contract-address",
 		Usage: "kip103 contract address",
 	}
+
+	cancunCompatibleBlockNumberFlag = &cli.Int64Flag{
+		Name:  "cancun-compatible-blocknumber",
+		Usage: "cancunCompatible blockNumber",
+		Value: 0,
+	}
 )
