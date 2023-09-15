@@ -49,7 +49,7 @@ var (
 		KoreCompatibleBlock:      big.NewInt(119750400),
 		Kip103CompatibleBlock:    big.NewInt(119750400),
 		ShanghaiCompatibleBlock:  big.NewInt(135456000),
-		CancunCompatibleBlock:    big.NewInt(0xffffffff),
+		CancunCompatibleBlock:    nil, // TODO-Klaytn-Cancun: set Cypress CancunCompatibleBlock
 		Kip103ContractAddress:    common.HexToAddress("0xD5ad6D61Dd87EdabE2332607C328f5cc96aeCB95"),
 		DeriveShaImpl:            2,
 		Governance: &GovernanceConfig{
@@ -84,7 +84,7 @@ var (
 		Kip103CompatibleBlock:    big.NewInt(119145600),
 		Kip103ContractAddress:    common.HexToAddress("0xD5ad6D61Dd87EdabE2332607C328f5cc96aeCB95"),
 		ShanghaiCompatibleBlock:  big.NewInt(131608000),
-		CancunCompatibleBlock:    big.NewInt(0xffffffff),
+		CancunCompatibleBlock:    nil, // TODO-Klaytn-Cancun: set Baobab CancunCompatibleBlock
 		DeriveShaImpl:            2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x99fb17d324fa0e07f23b49d09028ac0919414db6"),
