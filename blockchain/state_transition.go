@@ -343,8 +343,10 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	}
 
 	rules := st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber)
-	if rules.IsKore {
+	if rules.IsCancun {
 		st.state.PrepareAccessList(rules, msg.ValidatedSender(), msg.ValidatedFeePayer(), st.evm.Coinbase, msg.To(), vm.ActivePrecompiles(rules), msg.AccessList())
+	} else if rules.IsKore {
+		st.state.PrepareAccessList(rules, msg.ValidatedSender(), msg.ValidatedFeePayer(), st.evm.Coinbase, msg.To(), vm.ActivePrecompiles(rules), nil)
 	}
 
 	// Check whether the init code size has been exceeded.
