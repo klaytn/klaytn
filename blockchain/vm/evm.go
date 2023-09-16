@@ -23,7 +23,6 @@ package vm
 import (
 	"math/big"
 	"sync/atomic"
-	"time"
 
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
@@ -245,7 +244,7 @@ func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte
 			// Return an error if an enabled precompiled address is called or a value is transferred to a precompiled address.
 			if debug && evm.depth == 0 {
 				evm.Config.Tracer.CaptureStart(caller.Address(), addr, false, input, gas, value)
-				evm.Config.Tracer.CaptureEnd(ret, 0, 0, nil)
+				evm.Config.Tracer.CaptureEnd(ret, 0, nil)
 			}
 			return nil, gas, kerrors.ErrPrecompiledContractAddress
 		}
@@ -262,7 +261,7 @@ func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte
 			// Calling a non-existing account (probably contract), don't do anything, but ping the tracer
 			if debug && evm.depth == 0 {
 				evm.Config.Tracer.CaptureStart(caller.Address(), addr, false, input, gas, value)
-				evm.Config.Tracer.CaptureEnd(ret, 0, 0, nil)
+				evm.Config.Tracer.CaptureEnd(ret, 0, nil)
 			}
 			return nil, gas, nil
 		}
@@ -274,7 +273,7 @@ func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte
 	if debug && evm.depth == 0 {
 		evm.Config.Tracer.CaptureStart(caller.Address(), addr, false, input, gas, value)
 		defer func(startGas uint64) {
-			evm.Config.Tracer.CaptureEnd(ret, startGas-gas, 0, err)
+			evm.Config.Tracer.CaptureEnd(ret, startGas-gas, err)
 		}(gas)
 	}
 
@@ -506,7 +505,6 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 	if evm.Config.Debug && evm.depth == 0 {
 		evm.Config.Tracer.CaptureStart(caller.Address(), address, true, codeAndHash.code, gas, value)
 	}
-	start := time.Now()
 
 	ret, err = evm.interpreter.Run(contract, nil)
 
@@ -552,7 +550,7 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 	}
 
 	if evm.Config.Debug && evm.depth == 0 {
-		evm.Config.Tracer.CaptureEnd(ret, gas-contract.Gas, time.Since(start), err)
+		evm.Config.Tracer.CaptureEnd(ret, gas-contract.Gas, err)
 	}
 	return ret, address, contract.Gas, err
 }

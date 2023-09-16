@@ -26,7 +26,6 @@ import (
 	"fmt"
 	"math/big"
 	"sync/atomic"
-	"time"
 	"unsafe"
 
 	"github.com/klaytn/klaytn/blockchain/vm"
@@ -621,10 +620,9 @@ func (jst *Tracer) CaptureFault(env *vm.EVM, pc uint64, op vm.OpCode, gas, cost 
 }
 
 // CaptureEnd is called after the call finishes to finalize the tracing.
-func (jst *Tracer) CaptureEnd(output []byte, gasUsed uint64, t time.Duration, err error) {
+func (jst *Tracer) CaptureEnd(output []byte, gasUsed uint64, err error) {
 	jst.ctx["output"] = output
 	jst.ctx["gasUsed"] = gasUsed
-	jst.ctx["time"] = t.String()
 
 	if err != nil {
 		jst.ctx["error"] = err.Error()

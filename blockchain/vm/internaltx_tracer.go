@@ -409,10 +409,9 @@ func (this *InternalTxTracer) CaptureFault(env *EVM, pc uint64, op OpCode, gas, 
 }
 
 // CaptureEnd is called after the call finishes to finalize the tracing.
-func (this *InternalTxTracer) CaptureEnd(output []byte, gasUsed uint64, t time.Duration, err error) {
+func (this *InternalTxTracer) CaptureEnd(output []byte, gasUsed uint64, err error) {
 	this.ctx["output"] = hexutil.Encode(output)
 	this.ctx["gasUsed"] = gasUsed
-	this.ctx["time"] = t
 
 	if err != nil {
 		this.ctx["error"] = err
