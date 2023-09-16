@@ -143,7 +143,7 @@ type EVM struct {
 	chainRules params.Rules
 	// virtual machine configuration options used to initialise the
 	// evm.
-	VMConfig *Config
+	Config *Config
 	// global (to this context) ethereum virtual machine
 	// used throughout the execution of the tx.
 	interpreter *Interpreter
@@ -166,7 +166,7 @@ func NewEVM(blockCtx BlockContext, txCtx TxContext, statedb StateDB, chainConfig
 		Context:     blockCtx,
 		TxContext:   txCtx,
 		StateDB:     statedb,
-		VMConfig:    vmConfig,
+		Config:      vmConfig,
 		chainConfig: chainConfig,
 		chainRules:  chainConfig.Rules(blockCtx.BlockNumber),
 	}
@@ -206,7 +206,7 @@ func (evm *EVM) Cancel(reason int32) {
 }
 
 func (evm *EVM) IsPrefetching() bool {
-	return evm.VMConfig.Prefetching
+	return evm.Config.Prefetching
 }
 
 // Cancelled returns true if Cancel has been called
@@ -219,7 +219,7 @@ func (evm *EVM) Cancelled() bool {
 // the necessary steps to create accounts and reverses the state in case of an
 // execution error or failed value transfer.
 func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte, gas uint64, value *big.Int) (ret []byte, leftOverGas uint64, err error) {
-	if evm.VMConfig.NoRecursion && evm.depth > 0 {
+	if evm.Config.NoRecursion && evm.depth > 0 {
 		return nil, gas, nil
 	}
 
@@ -235,7 +235,7 @@ func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte
 	var (
 		to       = AccountRef(addr)
 		snapshot = evm.StateDB.Snapshot()
-		debug    = evm.VMConfig.Debug
+		debug    = evm.Config.Debug
 	)
 
 	// Filter out invalid precompiled address calls, and create a precompiled contract object if it is not exist.
@@ -244,8 +244,8 @@ func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte
 		if precompiles[addr] == nil || value.Sign() != 0 {
 			// Return an error if an enabled precompiled address is called or a value is transferred to a precompiled address.
 			if debug && evm.depth == 0 {
-				evm.VMConfig.Tracer.CaptureStart(caller.Address(), addr, false, input, gas, value)
-				evm.VMConfig.Tracer.CaptureEnd(ret, 0, 0, nil)
+				evm.Config.Tracer.CaptureStart(caller.Address(), addr, false, input, gas, value)
+				evm.Config.Tracer.CaptureEnd(ret, 0, 0, nil)
 			}
 			return nil, gas, kerrors.ErrPrecompiledContractAddress
 		}
@@ -261,8 +261,8 @@ func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte
 		if value.Sign() == 0 {
 			// Calling a non-existing account (probably contract), don't do anything, but ping the tracer
 			if debug && evm.depth == 0 {
-				evm.VMConfig.Tracer.CaptureStart(caller.Address(), addr, false, input, gas, value)
-				evm.VMConfig.Tracer.CaptureEnd(ret, 0, 0, nil)
+				evm.Config.Tracer.CaptureStart(caller.Address(), addr, false, input, gas, value)
+				evm.Config.Tracer.CaptureEnd(ret, 0, 0, nil)
 			}
 			return nil, gas, nil
 		}
@@ -272,9 +272,9 @@ func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte
 	evm.Context.Transfer(evm.StateDB, caller.Address(), to.Address(), value)
 
 	if debug && evm.depth == 0 {
-		evm.VMConfig.Tracer.CaptureStart(caller.Address(), addr, false, input, gas, value)
+		evm.Config.Tracer.CaptureStart(caller.Address(), addr, false, input, gas, value)
 		defer func(startGas uint64) {
-			evm.VMConfig.Tracer.CaptureEnd(ret, startGas-gas, 0, err)
+			evm.Config.Tracer.CaptureEnd(ret, startGas-gas, 0, err)
 		}(gas)
 	}
 
@@ -308,7 +308,7 @@ func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte
 // CallCode differs from Call in the sense that it executes the given address'
 // code with the caller as context.
 func (evm *EVM) CallCode(caller types.ContractRef, addr common.Address, input []byte, gas uint64, value *big.Int) (ret []byte, leftOverGas uint64, err error) {
-	if evm.VMConfig.NoRecursion && evm.depth > 0 {
+	if evm.Config.NoRecursion && evm.depth > 0 {
 		return nil, gas, nil
 	}
 
@@ -353,7 +353,7 @@ func (evm *EVM) CallCode(caller types.ContractRef, addr common.Address, input []
 // DelegateCall differs from CallCode in the sense that it executes the given address'
 // code with the caller as context and the caller is set to the caller of the caller.
 func (evm *EVM) DelegateCall(caller types.ContractRef, addr common.Address, input []byte, gas uint64) (ret []byte, leftOverGas uint64, err error) {
-	if evm.VMConfig.NoRecursion && evm.depth > 0 {
+	if evm.Config.NoRecursion && evm.depth > 0 {
 		return nil, gas, nil
 	}
 	// Fail if we're trying to execute above the call depth limit
@@ -390,7 +390,7 @@ func (evm *EVM) DelegateCall(caller types.ContractRef, addr common.Address, inpu
 // Opcodes that attempt to perform such modifications will result in exceptions
 // instead of performing the modifications.
 func (evm *EVM) StaticCall(caller types.ContractRef, addr common.Address, input []byte, gas uint64) (ret []byte, leftOverGas uint64, err error) {
-	if evm.VMConfig.NoRecursion && evm.depth > 0 {
+	if evm.Config.NoRecursion && evm.depth > 0 {
 		return nil, gas, nil
 	}
 	// Fail if we're trying to execute above the call depth limit
@@ -499,12 +499,12 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 	contract := NewContract(caller, AccountRef(address), value, gas)
 	contract.SetCodeOptionalHash(&address, codeAndHash)
 
-	if evm.VMConfig.NoRecursion && evm.depth > 0 {
+	if evm.Config.NoRecursion && evm.depth > 0 {
 		return nil, address, gas, nil
 	}
 
-	if evm.VMConfig.Debug && evm.depth == 0 {
-		evm.VMConfig.Tracer.CaptureStart(caller.Address(), address, true, codeAndHash.code, gas, value)
+	if evm.Config.Debug && evm.depth == 0 {
+		evm.Config.Tracer.CaptureStart(caller.Address(), address, true, codeAndHash.code, gas, value)
 	}
 	start := time.Now()
 
@@ -551,8 +551,8 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 		err = ErrInvalidCode
 	}
 
-	if evm.VMConfig.Debug && evm.depth == 0 {
-		evm.VMConfig.Tracer.CaptureEnd(ret, gas-contract.Gas, time.Since(start), err)
+	if evm.Config.Debug && evm.depth == 0 {
+		evm.Config.Tracer.CaptureEnd(ret, gas-contract.Gas, time.Since(start), err)
 	}
 	return ret, address, contract.Gas, err
 }
