@@ -29,7 +29,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/contracts/kip103"
+	"github.com/klaytn/klaytn/contracts/system_contracts"
 )
 
 func Kip103Transition(pendingState *state.StateDB, pendingHeader *types.Header, chain backends.BlockChainForCaller) {
@@ -100,7 +100,7 @@ func newKip103Receipt() *kip103result {
 	}
 }
 
-func (result *kip103result) fillRetired(contract *kip103.TreasuryRebalanceCaller, state *state.StateDB) error {
+func (result *kip103result) fillRetired(contract *system_contracts.TreasuryRebalanceCaller, state *state.StateDB) error {
 	numRetiredBigInt, err := contract.GetRetiredCount(nil)
 	if err != nil {
 		logger.Error("Failed to get RetiredCount from TreasuryRebalance contract", "err", err)
@@ -118,7 +118,7 @@ func (result *kip103result) fillRetired(contract *kip103.TreasuryRebalanceCaller
 	return nil
 }
 
-func (result *kip103result) fillNewbie(contract *kip103.TreasuryRebalanceCaller) error {
+func (result *kip103result) fillNewbie(contract *system_contracts.TreasuryRebalanceCaller) error {
 	numNewbieBigInt, err := contract.GetNewbieCount(nil)
 	if err != nil {
 		logger.Error("Failed to get NewbieCount from TreasuryRebalance contract", "err", err)
@@ -158,7 +158,7 @@ func (result *kip103result) totalNewbieBalance() *big.Int {
 func RebalanceTreasury(state *state.StateDB, chain backends.BlockChainForCaller, header *types.Header, c bind.ContractCaller) (*kip103result, error) {
 	result := newKip103Receipt()
 
-	caller, err := kip103.NewTreasuryRebalanceCaller(chain.Config().Kip103ContractAddress, c)
+	caller, err := system_contracts.NewTreasuryRebalanceCaller(chain.Config().Kip103ContractAddress, c)
 	if err != nil {
 		return result, err
 	}

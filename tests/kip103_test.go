@@ -9,7 +9,7 @@ import (
 	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/consensus/istanbul"
-	"github.com/klaytn/klaytn/contracts/kip103"
+	"github.com/klaytn/klaytn/contracts/system_contracts"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
@@ -41,7 +41,7 @@ func TestRebalanceTreasury_EOA(t *testing.T) {
 	// We need to wait for the following contract executions to be processed, so let's have enough number of blocks
 	targetBlockNum := new(big.Int).Add(node.BlockChain().CurrentBlock().Number(), big.NewInt(10))
 
-	contractAddr, tx, contract, err := kip103.DeployTreasuryRebalance(optsOwner, transactor, targetBlockNum)
+	contractAddr, tx, contract, err := system_contracts.DeployTreasuryRebalance(optsOwner, transactor, targetBlockNum)
 	if err != nil {
 		t.Fatal(err)
 	}
