@@ -38,7 +38,7 @@ type Config struct {
 	NoRecursion             bool   // Disables call, callcode, delegate call and create
 	EnablePreimageRecording bool   // Enables recording of SHA3/keccak preimages
 
-	JumpTable [256]*operation // EVM instruction table, automatically populated if unset
+	JumpTable JumpTable // EVM instruction table, automatically populated if unset
 
 	// RunningEVM is to indicate the running EVM and used to stop the EVM.
 	RunningEVM chan *EVM
@@ -72,11 +72,11 @@ type keccakState interface {
 	Read([]byte) (int, error)
 }
 
-// Interpreter is used to run Klaytn based contracts and will utilise the
+// EVMInterpreter is used to run Klaytn based contracts and will utilise the
 // passed environment to query external sources for state information.
-// The Interpreter will run the byte code VM based on the passed
+// The EVMInterpreter will run the byte code VM based on the passed
 // configuration.
-type Interpreter struct {
+type EVMInterpreter struct {
 	evm *EVM
 	cfg *Config
 
@@ -90,10 +90,11 @@ type Interpreter struct {
 }
 
 // NewEVMInterpreter returns a new instance of the Interpreter.
-func NewEVMInterpreter(evm *EVM, cfg *Config) *Interpreter {
+func NewEVMInterpreter(evm *EVM) *EVMInterpreter {
 	// We use the STOP instruction whether to see
 	// the jump table was initialised. If it was not
 	// we'll set the default jump table.
+	cfg := evm.Config
 	if cfg.JumpTable[STOP] == nil {
 		var jt JumpTable
 		switch {
@@ -118,7 +119,7 @@ func NewEVMInterpreter(evm *EVM, cfg *Config) *Interpreter {
 		cfg.JumpTable = jt
 	}
 
-	return &Interpreter{
+	return &EVMInterpreter{
 		evm: evm,
 		cfg: cfg,
 	}
@@ -143,7 +144,7 @@ func NewEVMInterpreter(evm *EVM, cfg *Config) *Interpreter {
 // It's important to note that any errors returned by the interpreter should be
 // considered a revert-and-consume-all-gas operation except for
 // ErrExecutionReverted which means revert-and-keep-gas-left.
-func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err error) {
+func (in *EVMInterpreter) Run(contract *Contract, input []byte) (ret []byte, err error) {
 	if in.intPool == nil {
 		in.intPool = poolOfIntPools.get()
 		defer func() {

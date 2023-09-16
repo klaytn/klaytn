@@ -145,7 +145,7 @@ type EVM struct {
 	Config *Config
 	// global (to this context) ethereum virtual machine
 	// used throughout the execution of the tx.
-	interpreter *Interpreter
+	interpreter *EVMInterpreter
 	// abort is used to abort the EVM calling operations
 	// NOTE: must be set atomically
 	abort int32
@@ -180,7 +180,7 @@ func NewEVM(blockCtx BlockContext, txCtx TxContext, statedb StateDB, chainConfig
 		vmConfig.Tracer = NewInternalTxTracer()
 	}
 
-	evm.interpreter = NewEVMInterpreter(evm, vmConfig)
+	evm.interpreter = NewEVMInterpreter(evm)
 
 	return evm
 }
@@ -605,6 +605,6 @@ func (evm *EVM) GetPrecompiledContractMap(addr common.Address) map[common.Addres
 func (evm *EVM) ChainConfig() *params.ChainConfig { return evm.chainConfig }
 
 // Interpreter returns the EVM interpreter
-func (evm *EVM) Interpreter() *Interpreter { return evm.interpreter }
+func (evm *EVM) Interpreter() *EVMInterpreter { return evm.interpreter }
 
 func (evm *EVM) GetOpCodeComputationCost() uint64 { return evm.opcodeComputationCostSum }
