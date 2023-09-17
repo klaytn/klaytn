@@ -25,6 +25,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"reflect"
 	"time"
 
 	"github.com/klaytn/klaytn/node/cn/filters"
@@ -150,23 +151,24 @@ func (s *PublicBlockChainAPI) GetAccount(ctx context.Context, address common.Add
 	return serAcc, state.Error()
 }
 
-func (s *PublicKlayAPI) ForkStatus(ctx context.Context, number rpc.BlockNumber) (map[string]bool, error) {
+func (s *PublicKlayAPI) ForkStatus(ctx context.Context, number rpc.BlockNumber) (map[string]interface{}, error) {
 	block, err := s.b.BlockByNumber(ctx, number)
 	if err != nil {
 		return nil, err
 	}
-	blockNumber := block.Number()
-	cfg := s.b.ChainConfig()
+	blkNum := block.Number()
+	rules := s.b.ChainConfig().Rules(blkNum)
+	status := make(map[string]interface{})
 
-	return map[string]bool{
-		"Istanbul":  cfg.IsIstanbulForkEnabled(blockNumber),
-		"London":    cfg.IsLondonForkEnabled(blockNumber),
-		"EthTxType": cfg.IsEthTxTypeForkEnabled(blockNumber),
-		"Magma":     cfg.IsMagmaForkEnabled(blockNumber),
-		"Kore":      cfg.IsKoreForkEnabled(blockNumber),
-		"KIP103":    cfg.IsKIP103ForkBlock(blockNumber),
-		"Shanghai":  cfg.IsShanghaiForkEnabled(blockNumber),
-	}, nil
+	rulesVal := reflect.ValueOf(rules)
+	for i := 0; i < rulesVal.NumField(); i++ {
+		val := rulesVal.Field(i)
+		typ := rulesVal.Type().Field(i)
+		status[typ.Name] = val.Interface()
+	}
+	// `IsKIP103` is not defined in the `Rules` struct. Exceptionally, we manually add it
+	status["IsKIP103"] = s.b.ChainConfig().IsKIP103ForkBlock(blkNum)
+	return status, nil
 }
 
 // rpcMarshalHeader converts the given header to the RPC output.
