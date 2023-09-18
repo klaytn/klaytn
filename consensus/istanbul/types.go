@@ -90,9 +90,7 @@ func (v *View) String() string {
 
 // Cmp compares v and y and returns:
 // -1 if v < y
-//
-//	0 if v == y
-//
+//  0 if v == y
 // +1 if v > y
 func (v *View) Cmp(y *View) int {
 	sdiff := v.Sequence.Cmp(y.Sequence)

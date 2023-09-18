@@ -22,7 +22,7 @@ type IRequestValueTransferEvent interface {
 	GetRaw() types.Log
 }
 
-// ////////////////// type RequestValueTransferEvent struct ////////////////////
+//////////////////// type RequestValueTransferEvent struct ////////////////////
 // RequestValueTransferEvent from Bridge contract
 type RequestValueTransferEvent struct {
 	*bridgecontract.BridgeRequestValueTransfer
@@ -68,7 +68,7 @@ func (rEv RequestValueTransferEvent) GetRaw() types.Log {
 	return rEv.Raw
 }
 
-// ////////////////// type RequestValueTransferEncodedEvent struct ////////////////////
+//////////////////// type RequestValueTransferEncodedEvent struct ////////////////////
 type RequestValueTransferEncodedEvent struct {
 	*bridgecontract.BridgeRequestValueTransferEncoded
 }

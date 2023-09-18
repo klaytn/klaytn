@@ -44,9 +44,8 @@ import (
 
 var logger = log.NewModuleLogger(log.Work)
 
-// TxPool is an interface of blockchain.TxPool used by ProtocolManager and Backend.
-//
 //go:generate mockgen -destination=work/mocks/txpool_mock.go -package=mocks github.com/klaytn/klaytn/work TxPool
+// TxPool is an interface of blockchain.TxPool used by ProtocolManager and Backend.
 type TxPool interface {
 	// HandleTxMsg should add the given transactions to the pool.
 	HandleTxMsg(types.Transactions)
@@ -220,9 +219,8 @@ func (self *Miner) PendingBlock() *types.Block {
 	return self.worker.pendingBlock()
 }
 
-// BlockChain is an interface of blockchain.BlockChain used by ProtocolManager.
-//
 //go:generate mockgen -destination=mocks/blockchain_mock.go -package=mocks github.com/klaytn/klaytn/work BlockChain
+// BlockChain is an interface of blockchain.BlockChain used by ProtocolManager.
 type BlockChain interface {
 	Genesis() *types.Block
 

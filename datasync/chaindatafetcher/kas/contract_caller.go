@@ -53,9 +53,8 @@ var (
 	errMsgEmptyOutput = "abi: unmarshalling empty output"
 )
 
-// BlockchainAPI interface is for testing purpose.
-//
 //go:generate mockgen -destination=./mocks/blockchain_api_mock.go -package=mocks github.com/klaytn/klaytn/datasync/chaindatafetcher/kas BlockchainAPI
+// BlockchainAPI interface is for testing purpose.
 type BlockchainAPI interface {
 	GetCode(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Bytes, error)
 	Call(ctx context.Context, args api.CallArgs, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Bytes, error)

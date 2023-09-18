@@ -128,9 +128,8 @@ var errorToString = map[int]string{
 	ErrUnsupportedEnginePolicy: "Unsupported engine or policy",
 }
 
-// ProtocolManagerDownloader is an interface of downloader.Downloader used by ProtocolManager.
-//
 //go:generate mockgen -destination=node/cn/mocks/downloader_mock.go -package=mocks github.com/klaytn/klaytn/node/cn ProtocolManagerDownloader
+// ProtocolManagerDownloader is an interface of downloader.Downloader used by ProtocolManager.
 type ProtocolManagerDownloader interface {
 	RegisterPeer(id string, version int, peer downloader.Peer) error
 	UnregisterPeer(id string) error
@@ -152,9 +151,8 @@ type ProtocolManagerDownloader interface {
 	SyncStakingInfoStatus() *downloader.SyncingStatus
 }
 
-// ProtocolManagerFetcher is an interface of fetcher.Fetcher used by ProtocolManager.
-//
 //go:generate mockgen -destination=node/cn/mocks/fetcher_mock.go -package=mocks github.com/klaytn/klaytn/node/cn ProtocolManagerFetcher
+// ProtocolManagerFetcher is an interface of fetcher.Fetcher used by ProtocolManager.
 type ProtocolManagerFetcher interface {
 	Enqueue(peer string, block *types.Block) error
 	FilterBodies(peer string, transactions [][]*types.Transaction, time time.Time) [][]*types.Transaction

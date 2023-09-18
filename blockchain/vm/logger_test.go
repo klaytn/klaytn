@@ -66,7 +66,7 @@ func TestStoreCapture(t *testing.T) {
 
 	var index common.Hash
 
-	logger.CaptureState(env, 0, SSTORE, 0, 0, &ScopeContext{Memory: mem, Stack: stack, Contract: contract}, 0, nil)
+	logger.CaptureState(env, 0, SSTORE, 0, 0, &ScopeContext{Memory:mem, Stack:stack, Contract:contract}, 0, nil)
 	if len(logger.changedValues[contract.Address()]) == 0 {
 		t.Fatalf("expected exactly 1 changed value on address %x, got %d", contract.Address(), len(logger.changedValues[contract.Address()]))
 	}

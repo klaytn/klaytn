@@ -32,9 +32,8 @@ import (
 // By default it is set to print all log messages as standard output, but you can set it to redirect wherever you want.
 var Logger sarama.StdLogger = log.New(os.Stdout, "[Chaindatafetcher] ", log.LstdFlags)
 
-// ConsumerGroupSession is for mocking sarama.ConsumerGroupSession for better testing.
-//
 //go:generate mockgen -destination=./mocks/consumer_group_session_mock.go -package=mocks github.com/klaytn/klaytn/datasync/chaindatafetcher/kafka ConsumerGroupSession
+// ConsumerGroupSession is for mocking sarama.ConsumerGroupSession for better testing.
 type ConsumerGroupSession interface {
 	MarkOffset(topic string, partition int32, offset int64, metadata string)
 	MarkMessage(msg *sarama.ConsumerMessage, metadata string)

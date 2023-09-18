@@ -1726,9 +1726,9 @@ func genInternalTxTransaction(t *testing.T, block *BlockGen, address common.Addr
 
 // TestCallTraceChainEventSubscription tests if the method insertChain posts a chain event correctly.
 // Scenario:
-//  1. Deploy a contract
-//     sendKlay(n uint32, receiver address): send 1 peb to `receiver` address `n` times.
-//  2. Send a smart contract execution transaction
+// 1. Deploy a contract
+//   sendKlay(n uint32, receiver address): send 1 peb to `receiver` address `n` times.
+// 2. Send a smart contract execution transaction
 func TestCallTraceChainEventSubscription(t *testing.T) {
 	// configure and generate a sample block chain
 	var (
