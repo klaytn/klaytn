@@ -73,8 +73,8 @@ func prepareInterpreterAndContract(code []byte) (*vm.Interpreter, *vm.Contract) 
 	// runtime.go:Execute()
 	cfg := makeBenchConfig()
 	txContext := vm.TxContext{
-		Origin:      cfg.Origin,
-		GasPrice:    cfg.GasPrice,
+		Origin:   cfg.Origin,
+		GasPrice: cfg.GasPrice,
 	}
 	blockContext := vm.BlockContext{
 		CanTransfer: blockchain.CanTransfer,
