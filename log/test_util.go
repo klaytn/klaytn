@@ -11,7 +11,9 @@ import (
 
 // Enable logging to STDERR
 // Exmaple use
-//     log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
+//
+//	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
+//
 // `normalLvl` is used in most cases
 // `verboseLvl` is used if `go test -v` flag is given
 func EnableLogForTest(normalLvl, verboseLvl Lvl) {

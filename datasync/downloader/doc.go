@@ -21,12 +21,12 @@
 /*
 Package downloader contains the manual full chain synchronisation.
 
-How downloader works
+# How downloader works
 
 The downloader is responsible for synchronizing up-to-date status from the peers connected to it. To do this,
 it downloads "headers", "bodies", and "receipts" in parallel, merges them through the pipeline, and reflects them in the state trie.
 
-Source Files
+# Source Files
 
 Downloader related functions and variables are defined in the files listed below.
   - api.go              : Console APIs to get synchronization information.

@@ -21,7 +21,7 @@
 /*
 Package debug provides interfaces for Go runtime debugging facilities.
 
-Overview of debug package
+# Overview of debug package
 
 This package is mostly glue code making these facilities available through the CLI and RPC subsystem.
 If you want to use them from Go code, use package runtime instead.

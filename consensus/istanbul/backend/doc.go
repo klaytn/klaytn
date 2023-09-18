@@ -19,14 +19,13 @@ Package backend defines backend struct which implements Backend interface of Ist
 backend struct works as a backbone of the consensus engine having Istanbul core,
 required objects to get information for making a consensus, recent messages and a broadcaster to send its message to peer nodes.
 
-Source Files
+# Source Files
 
 Implementation of Backend interface and APIs are included in this package
- - `api.go`: Implements APIs which provide the states of Istanbul
- - `backend.go`: Defines backend struct which implements Backend interface working as a backbone of the consensus engine
- - `engine.go`: Implements various backend methods especially for verifying and building header information
- - `handler.go`: Implements backend methods for handling messages and broadcaster
- - `snapshot.go`: Defines snapshot struct which handles votes from nodes and makes governance changes
-
+  - `api.go`: Implements APIs which provide the states of Istanbul
+  - `backend.go`: Defines backend struct which implements Backend interface working as a backbone of the consensus engine
+  - `engine.go`: Implements various backend methods especially for verifying and building header information
+  - `handler.go`: Implements backend methods for handling messages and broadcaster
+  - `snapshot.go`: Defines snapshot struct which handles votes from nodes and makes governance changes
 */
 package backend

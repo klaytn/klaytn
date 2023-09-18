@@ -22,7 +22,7 @@
 Package statedb implements the Merkle Patricia Trie structure used for state object trie.
 This package is used to read/write data from/to the state object trie.
 
-Overview of statedb package
+# Overview of statedb package
 
 There are 3 key struct in this package: Trie, SecureTrie and Database.
 
@@ -36,8 +36,7 @@ Database is an intermediate write layer between the trie data structures and
 the disk database. The aim is to accumulate trie writes in-memory and only
 periodically flush a couple tries to disk, garbage collecting the remainder.
 
-
-Source Files
+# Source Files
 
 Related functions and variables are defined in the files listed below
   - database.go     : Implementation of Database struct

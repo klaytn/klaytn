@@ -25,8 +25,7 @@ In the model exposed by this package, a node is a collection of services which u
 resources to provide RPC APIs. Services can also offer devp2p protocols, which are wired
 up to the devp2p network when the node instance is started.
 
-
-Resources Managed By Node
+# Resources Managed By Node
 
 All file-system resources used by a node instance are located in a directory called the
 data directory. The location of each resource can be overridden through additional node
@@ -50,8 +49,7 @@ without a data directory, databases are opened in memory instead.
 Node also creates the shared store of encrypted Klaytn account keys. Services can access
 the account manager through the service context.
 
-
-Sharing Data Directory Among Instances
+# Sharing Data Directory Among Instances
 
 Multiple node instances can share a single data directory if they have distinct instance
 names (set through the Name config option). Sharing behaviour depends on the type of
@@ -69,29 +67,28 @@ create one database for each instance.
 The account key store is shared among all node instances using the same data directory
 unless its location is changed through the KeyStoreDir configuration option.
 
-
-Data Directory Sharing Example
+# Data Directory Sharing Example
 
 In this example, two node instances named A and B are started with the same data
 directory. Mode instance A opens the database "db", node instance B opens the databases
 "db" and "db-2". The following files will be created in the data directory:
 
-   data-directory/
-        A/
-            nodekey            -- devp2p node key of instance A
-            nodes/             -- devp2p discovery knowledge database of instance A
-            db/                -- LevelDB content for "db"
-        A.ipc                  -- JSON-RPC UNIX domain socket endpoint of instance A
-        B/
-            nodekey            -- devp2p node key of node B
-            nodes/             -- devp2p discovery knowledge database of instance B
-            static-nodes.json  -- devp2p static node list of instance B
-            db/                -- LevelDB content for "db"
-            db-2/              -- LevelDB content for "db-2"
-        B.ipc                  -- JSON-RPC UNIX domain socket endpoint of instance A
-        keystore/              -- account key store, used by both instances
+	data-directory/
+	     A/
+	         nodekey            -- devp2p node key of instance A
+	         nodes/             -- devp2p discovery knowledge database of instance A
+	         db/                -- LevelDB content for "db"
+	     A.ipc                  -- JSON-RPC UNIX domain socket endpoint of instance A
+	     B/
+	         nodekey            -- devp2p node key of node B
+	         nodes/             -- devp2p discovery knowledge database of instance B
+	         static-nodes.json  -- devp2p static node list of instance B
+	         db/                -- LevelDB content for "db"
+	         db-2/              -- LevelDB content for "db-2"
+	     B.ipc                  -- JSON-RPC UNIX domain socket endpoint of instance A
+	     keystore/              -- account key store, used by both instances
 
-Source Files
+# Source Files
 
 Functions and variables related to Node are defined in the files listed below
   - config.go            : Define the Config type for node creation

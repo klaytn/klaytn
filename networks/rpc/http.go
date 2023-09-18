@@ -48,8 +48,10 @@ const (
 )
 
 // https://www.jsonrpc.org/historical/json-rpc-over-http.html#id13
-var acceptedContentTypes = []string{contentType, "application/json-rpc", "application/jsonrequest"}
-var nullAddr, _ = net.ResolveTCPAddr("tcp", "127.0.0.1:0")
+var (
+	acceptedContentTypes = []string{contentType, "application/json-rpc", "application/jsonrequest"}
+	nullAddr, _          = net.ResolveTCPAddr("tcp", "127.0.0.1:0")
+)
 
 type httpConn struct {
 	client    *http.Client

@@ -22,9 +22,9 @@
 /*
 common package provides utility functions to generate random keys and random directory
 
-Source Files
+# Source Files
 
 Each file contains following contents
- - utils.go : Provides utility functions to generate a random directory and random keys
+  - utils.go : Provides utility functions to generate a random directory and random keys
 */
 package common

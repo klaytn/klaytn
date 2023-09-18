@@ -23,15 +23,14 @@ Package state provides an uppermost caching layer of the Klaytn state trie.
 This package is used to read/write stateObject from/to StateDB and it also acts as a bridge between
 the objects and the persistent layer.
 
-Overview of state package
+# Overview of state package
 
 stateObject represents a Klaytn account identified by its address.
 Once it is loaded from the persistent layer, it is cached and managed by StateDB.
 
 StateDB caches stateObjects and mediates the operations to them.
 
-
-Source Files
+# Source Files
 
 Related functions and variables are defined in the files listed below
   - database.go              : Defines Database and other interfaces used in the package

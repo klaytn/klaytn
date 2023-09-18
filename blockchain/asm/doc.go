@@ -21,7 +21,7 @@
 /*
 Package asm provides support for dealing with EVM assembly instructions (e.g., disassembling them).
 
-Source Files
+# Source Files
 
 Each file provides the following features.
   - asm.go: provides instruction iterators for EVM assembly instructions.

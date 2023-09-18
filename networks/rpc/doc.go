@@ -26,14 +26,15 @@ conventions can be called remotely. It also has support for the publish/subscrib
 pattern.
 
 Methods that satisfy the following criteria are made available for remote access:
- - object must be exported
- - method must be exported
- - method returns 0, 1 (response or error) or 2 (response and error) values
- - method argument(s) must be exported or builtin types
- - method returned value(s) must be exported or builtin types
+  - object must be exported
+  - method must be exported
+  - method returns 0, 1 (response or error) or 2 (response and error) values
+  - method argument(s) must be exported or builtin types
+  - method returned value(s) must be exported or builtin types
 
 An example method:
- func (s *CalcService) Add(a, b int) (int, error)
+
+	func (s *CalcService) Add(a, b int) (int, error)
 
 When the returned error isn't nil the returned integer is ignored and the error is
 send back to the client. Otherwise the returned integer is send back to the client.
@@ -42,7 +43,7 @@ Optional arguments are supported by accepting pointer values as arguments. E.g.
 if we want to do the addition in an optional finite field we can accept a mod
 argument as pointer value.
 
- func (s *CalService) Add(a, b int, mod *int) (int, error)
+	func (s *CalService) Add(a, b int, mod *int) (int, error)
 
 This RPC method can be called with 2 integers and a null value as third argument.
 In that case the mod argument will be nil. Or it can be called with 3 integers,
@@ -56,47 +57,49 @@ client using the codec. The server can execute requests concurrently. Responses
 can be sent back to the client out of order.
 
 An example server which uses the JSON codec:
- type CalculatorService struct {}
 
- func (s *CalculatorService) Add(a, b int) int {
-	return a + b
- }
+	 type CalculatorService struct {}
 
- func (s *CalculatorService Div(a, b int) (int, error) {
-	if b == 0 {
-		return 0, errors.New("divide by zero")
-	}
-	return a/b, nil
- }
+	 func (s *CalculatorService) Add(a, b int) int {
+		return a + b
+	 }
 
- calculator := new(CalculatorService)
- server := NewServer()
- server.RegisterName("calculator", calculator")
+	 func (s *CalculatorService Div(a, b int) (int, error) {
+		if b == 0 {
+			return 0, errors.New("divide by zero")
+		}
+		return a/b, nil
+	 }
 
- l, _ := net.ListenUnix("unix", &net.UnixAddr{Net: "unix", Name: "/tmp/calculator.sock"})
- for {
-	c, _ := l.AcceptUnix()
-	codec := v2.NewJSONCodec(c)
-	go server.ServeCodec(codec)
- }
+	 calculator := new(CalculatorService)
+	 server := NewServer()
+	 server.RegisterName("calculator", calculator")
+
+	 l, _ := net.ListenUnix("unix", &net.UnixAddr{Net: "unix", Name: "/tmp/calculator.sock"})
+	 for {
+		c, _ := l.AcceptUnix()
+		codec := v2.NewJSONCodec(c)
+		go server.ServeCodec(codec)
+	 }
 
 The package also supports the publish subscribe pattern through the use of subscriptions.
 A method that is considered eligible for notifications must satisfy the following criteria:
- - object must be exported
- - method must be exported
- - first method argument type must be context.Context
- - method argument(s) must be exported or builtin types
- - method must return the tuple Subscription, error
+  - object must be exported
+  - method must be exported
+  - first method argument type must be context.Context
+  - method argument(s) must be exported or builtin types
+  - method must return the tuple Subscription, error
 
 An example method:
- func (s *BlockChainService) NewBlocks(ctx context.Context) (Subscription, error) {
- 	...
- }
+
+	func (s *BlockChainService) NewBlocks(ctx context.Context) (Subscription, error) {
+		...
+	}
 
 Subscriptions are deleted when:
- - the user sends an unsubscribe request
- - the connection which was used to create the subscription is closed. This can be initiated
-   by the client and server. The server will close the connection on a write error or when
-   the queue of buffered notifications gets too big.
+  - the user sends an unsubscribe request
+  - the connection which was used to create the subscription is closed. This can be initiated
+    by the client and server. The server will close the connection on a write error or when
+    the queue of buffered notifications gets too big.
 */
 package rpc

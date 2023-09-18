@@ -23,12 +23,12 @@
 extra defines options for homi's extra command
 It supports encoding and decoding of extra data in genesis.json file
 
-Source Files
+# Source Files
 
 Each file contains following contents
- - cmd.go : Defines encode and decode functions for extra data
- - decoder.go : Provides a decoder for extra data
- - encoder.go : Provides an encoder for extra data
- - flags.go : Defines command line options for extra command
+  - cmd.go : Defines encode and decode functions for extra data
+  - decoder.go : Provides a decoder for extra data
+  - encoder.go : Provides an encoder for extra data
+  - flags.go : Defines command line options for extra command
 */
 package extra

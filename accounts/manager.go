@@ -42,8 +42,9 @@ type Manager struct {
 	lock sync.RWMutex
 }
 
-//go:generate mockgen -destination=accounts/mocks/account_manager_mock.go github.com/klaytn/klaytn/accounts AccountManager
 // AccountManager is an interface of accounts.Manager struct.
+//
+//go:generate mockgen -destination=accounts/mocks/account_manager_mock.go github.com/klaytn/klaytn/accounts AccountManager
 type AccountManager interface {
 	Wallet(url string) (Wallet, error)
 	Wallets() []Wallet

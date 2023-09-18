@@ -22,7 +22,7 @@
 Package hexutil implements hex encoding with 0x prefix.
 This encoding is used by the Klaytn RPC API to transport binary data in JSON payloads.
 
-Encoding Rules
+# Encoding Rules
 
 All hex data must have prefix "0x".
 
@@ -32,7 +32,7 @@ encodes as "0x".
 Integers are encoded using the least amount of digits (no leading zero digits). Their
 encoding may be of uneven length. The number zero encodes as "0x0".
 
-Source Files
+# Source Files
 
 `hexutil.go` has functions to provide hex encoding and decoding.
 

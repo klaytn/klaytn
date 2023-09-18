@@ -21,7 +21,7 @@ Validators can deploy multiple staking contracts.
 If a validator wants to deploy additional staking contracts, those staking contracts should have same rewardAddress.
 StakingAmounts of staking contracts with a same rewardAddress will be added and it is reflected to a probability of becoming a block proposer.
 
-Testing
+# Testing
 
 StakingInfos are data from addressBook.
 A StakingInfo has lists of addresses and stakingAmount.
@@ -50,10 +50,11 @@ func newTestWeightedCouncil(nodeAddrs []common.Address) *weightedCouncil {
 // TestWeightedCouncil_getStakingAmountsOfValidators checks if validators and stakingAmounts from a stakingInfo are matched well.
 // stakingAmounts of additional staking contracts will be added to stakingAmounts of validators which have the same reward address.
 // input
-//  - validator and stakingInfo is matched by a nodeAddress.
+//   - validator and stakingInfo is matched by a nodeAddress.
+//
 // output
-//  - weightedValidators are sorted by nodeAddress
-//  - stakingAmounts should be same as expectedStakingAmounts
+//   - weightedValidators are sorted by nodeAddress
+//   - stakingAmounts should be same as expectedStakingAmounts
 func TestWeightedCouncil_getStakingAmountsOfValidators(t *testing.T) {
 	testCases := []struct {
 		validators             []common.Address

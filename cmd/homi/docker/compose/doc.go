@@ -22,9 +22,9 @@
 /*
 compose package provides homi object which is to be used to create a docker-compose.yml
 
-Source Files
+# Source Files
 
 Each file contains following contents
- - homi.go : Provides `Homi` and creates an assembled docker-compose.yml
+  - homi.go : Provides `Homi` and creates an assembled docker-compose.yml
 */
 package compose

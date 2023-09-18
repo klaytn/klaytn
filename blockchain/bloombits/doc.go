@@ -21,7 +21,7 @@
 /*
 Package bloombits implements bloom filtering on batches of data.
 
-Source Files
+# Source Files
 
 Each file provides the following features.
   - generator.go : generates the rotated bloom bits to be used for batched filtering.

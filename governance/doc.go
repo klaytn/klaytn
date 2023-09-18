@@ -19,13 +19,13 @@ Package governance contains functions and variables used for voting and reflecti
 In Klaytn, various settings such as the amount of KLAY minted as a block reward can be changed by using governance vote.
 These votes can be casted by nodes of Governance Council and detailed introduction can be found at https://docs.klaytn.com/klaytn/design/governance
 
-How to cast a vote
+# How to cast a vote
 
 To cast a vote, a node have to be a member of the Governance Council.
 If the governance mode is "single", only one designated node (the governing node) can vote.
 In the console of the node, "governance.vote(key, value)" API can be used to cast a vote.
 
-Keys for the voting API
+# Keys for the voting API
 
 Following keys can be handled as of 7/20/2019.
   - "governance.governancemode"   : To change the governance mode
@@ -41,8 +41,7 @@ Following keys can be handled as of 7/20/2019.
   - "reward.deferredtxfee"        : To change the way of distributing tx fee
   - "reward.minimumstake"         : To change the minimum amount of stake to participate in the governance council
 
-
-How governance works
+# How governance works
 
 Governance package contains a governance struct which stores current system configurations and voting status.
 If a vote passed, the governance struct is updated to provide new information to related packages and users.
@@ -54,8 +53,7 @@ parse the header and handle it. This process is handled by snapshot.go in the co
 If a vote satisfies the requirement (more than 50% of votes in favor of), it will update the governance struct and many other packages
 like "reward", "txpool" and so on will reference it.
 
-
-Source Files
+# Source Files
 
 Governance related functions and variables are defined in the files listed below
   - default.go    : the governance struct, cache and persistence
@@ -63,6 +61,5 @@ Governance related functions and variables are defined in the files listed below
   - api.go        : console APIs to get governance information and to cast a vote
   - interface.go  : Abstract interfaces to various underlying implementations
   - mixed.go      : Wrapper for multiple engine implementations
-
 */
 package governance

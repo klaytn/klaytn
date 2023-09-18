@@ -19,10 +19,10 @@ Package ecies implements the Elliptic Curve Integrated Encryption Scheme.
 
 Package ecies provides functions to Encrypt / Decrypt messages using ECIES which are used in RLPx transport protocol in Klaytn.
 
-Source Files
+# Source Files
 
 Each file contains following contents
- - ecies.go  : Provides encryption / decryption related functions used for exchanging messages in RLPx protocol
- - params.go : Contains parameters for ECIES encryption, specifying the symmetric encryption and HMAC parameters
+  - ecies.go  : Provides encryption / decryption related functions used for exchanging messages in RLPx protocol
+  - params.go : Contains parameters for ECIES encryption, specifying the symmetric encryption and HMAC parameters
 */
 package ecies

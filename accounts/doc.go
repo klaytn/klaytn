@@ -22,15 +22,16 @@
 Package accounts implements high level Klaytn account management.
 
 There are several important data structures and their hierarchy is as below
- Manager -> Backend -> Wallet -> Account
 
-Source Files
+	Manager -> Backend -> Wallet -> Account
+
+# Source Files
 
 Each file provides the following features
- - accounts.go	: Provides `Account` struct and Wallet/Backend interfaces. `Account` represents a Klaytn account located at a specific location defined by the optional URL field. `Wallet` represents a software or hardware wallet and `Backend` is a wallet provider that may contain a batch of accounts they can sign transactions with
- - errors.go	: Provides various account related error variables and helper functions
- - hd.go		: Defines derivation paths for Klaytn and parser function to derive the path from a path string. Klaytn uses 8217 as its coin type
- - manager.go 	: Provides `Manager` which is an overarching account manager that can communicate with various backends for signing transactions
- - url.go 	: Provides `URL` struct which represents the canonical identification URL of a wallet or account
+  - accounts.go	: Provides `Account` struct and Wallet/Backend interfaces. `Account` represents a Klaytn account located at a specific location defined by the optional URL field. `Wallet` represents a software or hardware wallet and `Backend` is a wallet provider that may contain a batch of accounts they can sign transactions with
+  - errors.go	: Provides various account related error variables and helper functions
+  - hd.go		: Defines derivation paths for Klaytn and parser function to derive the path from a path string. Klaytn uses 8217 as its coin type
+  - manager.go 	: Provides `Manager` which is an overarching account manager that can communicate with various backends for signing transactions
+  - url.go 	: Provides `URL` struct which represents the canonical identification URL of a wallet or account
 */
 package accounts

@@ -20,12 +20,12 @@ Package grpc implements the gRPC protocol for Klaytn.
 This package allows you to use Klaytn's RPC API using gRPC.
 See below for gRPC: https://grpc.io/docs/quickstart/go/
 
-Source files
+# Source files
 
 Each file provides the following features
- - gClient.go : gRPC client implementation.
- - gServer.go : gRPC server implementation.
- - klaytn.proto : Define a interface and messages to use in gRPC server and clients.
- - klaytn.pb.go : the generated Go file from klaytn.proto by protoc-gen-go.
+  - gClient.go : gRPC client implementation.
+  - gServer.go : gRPC server implementation.
+  - klaytn.proto : Define a interface and messages to use in gRPC server and clients.
+  - klaytn.pb.go : the generated Go file from klaytn.proto by protoc-gen-go.
 */
 package grpc

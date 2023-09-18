@@ -23,7 +23,7 @@ Package web3ext contains the Klaytn specific web3.js extensions.
 
 web3ext defines `Modules` which defines APIs for each category. This `Modules` is used by console to provide APIs to users.
 
-API Categories
+# API Categories
 
 APIs are categorized as follows. If you want to know more detail, please refer to https://docs.klaytn.com/bapp/json-rpc
   - admin

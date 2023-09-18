@@ -113,8 +113,10 @@ func benchmark_MDP_Put_NoGoRoutine(b *testing.B, mdo *multiDiskOption) {
 }
 
 // please change below rowSize to change the size of an input row for MDP_Put tests (GoRoutine & NoGoRoutine)
-const rowSizePutMDP = 250
-const numRowsPutMDP = 1000 * 10
+const (
+	rowSizePutMDP = 250
+	numRowsPutMDP = 1000 * 10
+)
 
 var putMDPBenchmarks = [...]struct {
 	name string
@@ -262,8 +264,10 @@ func benchmark_MDP_Batch_NoGoRoutine(b *testing.B, mdo *multiDiskOption) {
 }
 
 // please change below rowSize to change the size of an input row for MDP_Batch tests (GoRoutine & NoGoRoutine)
-const rowSizeBatchMDP = 250
-const numRowsBatchMDP = 1000 * 10
+const (
+	rowSizeBatchMDP = 250
+	numRowsBatchMDP = 1000 * 10
+)
 
 var batchMDPBenchmarks = [...]struct {
 	name string

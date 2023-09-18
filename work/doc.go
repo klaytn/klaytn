@@ -26,9 +26,9 @@ work package is in charge of generating blocks and it contains `miner`, `worker`
 `worker` contains `agent`s and each `agent` performs mining activity.
 
 Source Files
- - agent.go		: Provides CpuAgent and accompanying functions which works as an agent of a miner. Agent is in charge of creating a block
- - remote_agent.go	: Provides RemoteAgent working as an another agent for a miner and can be controlled by RPC calls
- - work.go		: Provides Miner struct and interfaces through which the miner communicate with other objects
- - worker.go		: Provides Worker and performs the main part of block creation
+  - agent.go		: Provides CpuAgent and accompanying functions which works as an agent of a miner. Agent is in charge of creating a block
+  - remote_agent.go	: Provides RemoteAgent working as an another agent for a miner and can be controlled by RPC calls
+  - work.go		: Provides Miner struct and interfaces through which the miner communicate with other objects
+  - worker.go		: Provides Worker and performs the main part of block creation
 */
 package work

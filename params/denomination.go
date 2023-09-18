@@ -23,8 +23,7 @@ package params
 // These are the multipliers for KLAY denominations.
 // Example: To get the peb value of an amount in 'ston', use
 //
-//    new(big.Int).Mul(value, big.NewInt(params.Ston))
-//
+//	new(big.Int).Mul(value, big.NewInt(params.Ston))
 const (
 	Peb      = 1    // official notation 'peb'
 	Kpeb     = 1e3  // official notation 'kpeb'

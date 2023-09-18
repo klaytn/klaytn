@@ -17,18 +17,18 @@
 /*
 Package params contains configuration parameters for Klaytn.
 
-Source Files
+# Source Files
 
 Each file contains following parameters.
 
-	- bootnodes.go			: Provides boot nodes information for Cypress and Baobab
-	- computation_cost_params.go	: Defines computation costs for each opcode
-	- config.go			: Defines various structs for different settings of a network. Also provides getters for those settings
-	- denomination.go		: Defines units of KLAY
-	- gas_table.go			: Organizes gas prices for different Klaytn phases. Currently prices for Cypress is defined
-	- governance_params.go		: Defines constants for governance and reward system. Also provides setters and getters for reward releated variables
-	- network_params.go		: Defines network parameters that need to be constant between clients. Only `BloomBitsBlocks` is defined at the moment
-	- protocol_params.go		: Defines fee schedule, total time limit and maximum computation cost
-	- version.go			: Defines release and version number. Also provides a getter for the version
+  - bootnodes.go			: Provides boot nodes information for Cypress and Baobab
+  - computation_cost_params.go	: Defines computation costs for each opcode
+  - config.go			: Defines various structs for different settings of a network. Also provides getters for those settings
+  - denomination.go		: Defines units of KLAY
+  - gas_table.go			: Organizes gas prices for different Klaytn phases. Currently prices for Cypress is defined
+  - governance_params.go		: Defines constants for governance and reward system. Also provides setters and getters for reward releated variables
+  - network_params.go		: Defines network parameters that need to be constant between clients. Only `BloomBitsBlocks` is defined at the moment
+  - protocol_params.go		: Defines fee schedule, total time limit and maximum computation cost
+  - version.go			: Defines release and version number. Also provides a getter for the version
 */
 package params

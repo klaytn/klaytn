@@ -139,8 +139,10 @@ func (n *Node) String() string {
 }
 
 // TODO-Klaytn-NodeDiscovery: Deprecate supporting "enode"
-var incompleteNodeURL = regexp.MustCompile("(?i)^(?:kni://|enode://)?([0-9a-f]+)$")
-var lookupIPFunc = net.LookupIP
+var (
+	incompleteNodeURL = regexp.MustCompile("(?i)^(?:kni://|enode://)?([0-9a-f]+)$")
+	lookupIPFunc      = net.LookupIP
+)
 
 // ParseNode parses a node designator.
 //
@@ -150,8 +152,8 @@ var lookupIPFunc = net.LookupIP
 //
 // For incomplete nodes, the designator must look like one of these
 //
-//    kni://<hex node id> or enode://<hex node id>
-//    <hex node id>
+//	kni://<hex node id> or enode://<hex node id>
+//	<hex node id>
 //
 // For complete nodes, the node ID is encoded in the username portion
 // of the URL, separated from the host by an @ sign. The hostname can
@@ -164,8 +166,8 @@ var lookupIPFunc = net.LookupIP
 // a node with IP address 10.3.58.6, TCP listening port 30303
 // and UDP discovery port 30301.
 //
-//    kni://<hex node id>@10.3.58.6:30303?&subport=30304&discport=30301[&ntype=cn|pn|en|bn]
-//    enode://<hex node id>@10.3.58.6:30303?discport=30301[&ntype=cn|pn|en|bn]
+//	kni://<hex node id>@10.3.58.6:30303?&subport=30304&discport=30301[&ntype=cn|pn|en|bn]
+//	enode://<hex node id>@10.3.58.6:30303?discport=30301[&ntype=cn|pn|en|bn]
 func ParseNode(rawurl string) (*Node, error) {
 	if m := incompleteNodeURL.FindStringSubmatch(rawurl); m != nil {
 		id, err := HexID(m[1])

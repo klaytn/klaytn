@@ -21,7 +21,7 @@
 /*
 Package common contains various helper functions, commonly used data types and constants.
 
-Source Files
+# Source Files
 
 Each source file provides functions and types as listed below
   - big.go   		: Defines common big integers often used such as Big1

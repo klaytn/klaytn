@@ -22,20 +22,21 @@
 Package jsre provides an execution environment for JavaScript.
 
 JSRE is a generic JS runtime environment embedding the otto Javascript interpreter. <https://github.com/robertkrimen/otto>
- It provides some helper functions to
- - load code from files
- - run code snippets
- - require libraries
- - bind native go objects
+
+	It provides some helper functions to
+	- load code from files
+	- run code snippets
+	- require libraries
+	- bind native go objects
 
 Because of JSRE, an user can utilize JavaScript in the console as needed.
 JSRE also provides two JavaScript libraries, bignumber.js and web3.js, for users to easily access Klaytn.
 
-Source Files
+# Source Files
 
 Each file provides following features
- - completion.go	: Provides functions for keyword completion
- - jsre.go	: Wraps otto JavaScript interpreter and provides an event loop
- - pretty.go	: Prints results to the standard output in more readable way
+  - completion.go	: Provides functions for keyword completion
+  - jsre.go	: Wraps otto JavaScript interpreter and provides an event loop
+  - pretty.go	: Prints results to the standard output in more readable way
 */
 package jsre

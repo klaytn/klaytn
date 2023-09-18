@@ -23,9 +23,9 @@
 homi is a command line interface which helps to create configuration files for a new network
 homi supports various options for different deployment modes, number of nodes, etc.
 
-Source Files
+# Source Files
 
 Each file contains the following contents
- - main.go : Runs the application as an entry point
+  - main.go : Runs the application as an entry point
 */
 package main

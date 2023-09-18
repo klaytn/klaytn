@@ -18,7 +18,7 @@
 Package reward implements the Klaytn Reward System.
 The Klaytn reward system manages stakingInfo and distributes block rewards.
 
-Managing stakingInfo
+# Managing stakingInfo
 
 Klaytn uses WeightedRandom policy to choose a block proposer.
 It means, the percentage of becoming a block proposer depends on how much KLAY a node has staked.
@@ -48,16 +48,14 @@ StakingInfo is managed by a StakingManager which has a cache for saving StakingI
 The StakingManager calculates block number with interval to find a stakingInfo for current block
 and returns correct stakingInfo to use.
 
+	related struct
+	- RewardDistributor
+	- StakingManager
+	- addressBookConnector
+	- stakingInfoCache
+	- stakingInfo
 
- related struct
- - RewardDistributor
- - StakingManager
- - addressBookConnector
- - stakingInfoCache
- - stakingInfo
-
-
-Distributing Reward
+# Distributing Reward
 
 Klaytn distributes the reward of a block to proposer, KFF and KCF.
 The detail information of KFF and KCF is available on Klaytn docs.
@@ -73,8 +71,8 @@ First, calculate totalReward by adding mintingAmount and totalTxFee (unitPrice *
 Second, divide totalReward by ratio (default 34/54/12 - proposer/KFF/KCF).
 Last, distribute reward to each address (proposer, KFF, KCF).
 
- related struct
- - RewardDistributor
- - rewardConfigCache
+	related struct
+	- RewardDistributor
+	- rewardConfigCache
 */
 package reward

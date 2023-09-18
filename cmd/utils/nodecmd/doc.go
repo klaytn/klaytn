@@ -17,16 +17,16 @@
 /*
 Package nodecmd contains command definitions and related functions used for node cmds, such as kcn, kpn, and ken.
 
-Source Files
+# Source Files
 
 Each file contains following contents
- - accountcmd.go		: Provides functions for creating, updating and importing an account.
- - chaincmd.go		: Provides functions to `init` a block chain,
- - consolecmd.go		: Provides console functions `attach` and `console`
- - migrationcmd.go		: Provides functions of DB migration
- - defaultcmd.go		: Provides functions to start a node
- - dumpconfigcmd.go		: Provides functions to dump and print current config to stdout
- - nodeflags.go		: Defines various flags that configure the node
- - versioncmd.go		: Provides functions to print application's version
+  - accountcmd.go		: Provides functions for creating, updating and importing an account.
+  - chaincmd.go		: Provides functions to `init` a block chain,
+  - consolecmd.go		: Provides console functions `attach` and `console`
+  - migrationcmd.go		: Provides functions of DB migration
+  - defaultcmd.go		: Provides functions to start a node
+  - dumpconfigcmd.go		: Provides functions to dump and print current config to stdout
+  - nodeflags.go		: Defines various flags that configure the node
+  - versioncmd.go		: Provides functions to print application's version
 */
 package nodecmd

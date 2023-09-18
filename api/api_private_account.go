@@ -407,7 +407,8 @@ func (s *PrivateAccountAPI) SignTransactionAsFeePayer(ctx context.Context, args 
 // safely used to calculate a signature from.
 //
 // The hash is calulcated as
-//   keccak256("\x19Klaytn Signed Message:\n"${message length}${message}).
+//
+//	keccak256("\x19Klaytn Signed Message:\n"${message length}${message}).
 //
 // This gives context to the signed message and prevents signing of transactions.
 func signHash(data []byte) []byte {

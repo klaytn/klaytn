@@ -23,12 +23,12 @@
 setup package generates config files following the given deployment options.
 It creates the given number of genesis.json and nodekeys
 
-Source Files
+# Source Files
 
 Each file contains the following contents
- - cmd.go : Provides functions to generate config files with given deployment configuration
- - flags.go : Defines command line flags which can be used in `setup` command
- - klaytn_config.go : Defines `KlaytnConfig` and provides a template to build it
- - prometheus_config.go : Defines `PrometheusConfig` and provides a template to build it
+  - cmd.go : Provides functions to generate config files with given deployment configuration
+  - flags.go : Defines command line flags which can be used in `setup` command
+  - klaytn_config.go : Defines `KlaytnConfig` and provides a template to build it
+  - prometheus_config.go : Defines `PrometheusConfig` and provides a template to build it
 */
 package setup

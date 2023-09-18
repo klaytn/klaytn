@@ -612,11 +612,14 @@ func (valSet *weightedCouncil) Policy() istanbul.ProposerPolicy { return valSet.
 
 // Refresh recalculates up-to-date proposers only when blockNum is the proposer update interval.
 // It returns an error if it can't make up-to-date proposers
-//   (1) due toe wrong parameters
-//   (2) due to lack of staking information
+//
+//	(1) due toe wrong parameters
+//	(2) due to lack of staking information
+//
 // It returns no error when weightedCouncil:
-//   (1) already has up-do-date proposers
-//   (2) successfully calculated up-do-date proposers
+//
+//	(1) already has up-do-date proposers
+//	(2) successfully calculated up-do-date proposers
 func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, config *params.ChainConfig, isSingle bool, governingNode common.Address, minStaking uint64) error {
 	// TODO-Klaytn-Governance divide the following logic into two parts: proposers update / validators update
 	valSet.validatorMu.Lock()
@@ -749,8 +752,8 @@ func filterValidators(isSingleMode bool, govNodeAddr common.Address, weightedVal
 
 // getStakingAmountsOfValidators calculates stakingAmounts of validators.
 // If validators have multiple staking contracts, stakingAmounts will be a sum of stakingAmounts with the same rewardAddress.
-//  - []*weightedValidator : a list of validators which type is converted to weightedValidator
-//  - []float64 : a list of stakingAmounts.
+//   - []*weightedValidator : a list of validators which type is converted to weightedValidator
+//   - []float64 : a list of stakingAmounts.
 func getStakingAmountsOfValidators(validators istanbul.Validators, stakingInfo *reward.StakingInfo) ([]*weightedValidator, []float64, error) {
 	nVals := len(validators)
 	weightedVals := make([]*weightedValidator, nVals)

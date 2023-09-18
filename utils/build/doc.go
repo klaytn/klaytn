@@ -17,12 +17,12 @@
 /*
 Package build contains the utility functions for the build environment.
 
-Source Files
+# Source Files
 
 Each file contains the following contents
- - archive.go: Provides functions to create a zip or tarball archive.
- - env.go: Provides functions to retrieve environment variables and apply given values.
- - pgp.go: Provides functions to parse a PGP private key.
- - util.go: Provides utility functions to run command, git, file copy and so on.
+  - archive.go: Provides functions to create a zip or tarball archive.
+  - env.go: Provides functions to retrieve environment variables and apply given values.
+  - pgp.go: Provides functions to parse a PGP private key.
+  - util.go: Provides utility functions to run command, git, file copy and so on.
 */
 package build

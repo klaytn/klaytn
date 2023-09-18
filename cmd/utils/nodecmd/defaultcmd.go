@@ -240,11 +240,11 @@ var migrationApplied = map[*cli.Command]struct{}{}
 //
 // Example:
 //
-//    ken account new --keystore /tmp/mykeystore --lightkdf
+//	ken account new --keystore /tmp/mykeystore --lightkdf
 //
 // is equivalent after calling this method with:
 //
-//    ken --keystore /tmp/mykeystore --lightkdf account new
+//	ken --keystore /tmp/mykeystore --lightkdf account new
 //
 // i.e. in the subcommand Action function of 'account new', ctx.Bool("lightkdf)
 // will return true even if --lightkdf is set as a global option.

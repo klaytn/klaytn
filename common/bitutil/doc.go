@@ -13,7 +13,7 @@
 /*
 Package bitutil implements fast bitwise operations and compression/decompressions.
 
-Bitwise Operations
+# Bitwise Operations
 
 Following operations are supported
   - AND, OR, XOR operations
@@ -21,13 +21,13 @@ Following operations are supported
     `Safe` means it can be performed on all architectures
     `Fast` means it only can be performed on architecture which supports unaligned read/write
 
-Compression and Decompression
+# Compression and Decompression
 
 Following operations are supported
   - CompressBytes
   - DecompressBytes
 
-How compression works
+# How compression works
 
 The compression algorithm implemented by CompressBytes and DecompressBytes is
 optimized for sparse input data which contains a lot of zero bytes. Decompression

@@ -18,7 +18,7 @@
 Package accountkey implements the AccountKey used in Klaytn.
 Inside the package, types, functions and interfaces associated with the AccountKey are defined.
 
-Type of AccountKey
+# Type of AccountKey
 
 The AccountKey types used in Klaytn are as follows:
   - AccountKeyTypeNil
@@ -30,7 +30,7 @@ The AccountKey types used in Klaytn are as follows:
 
 Each AccountKey type implements the AccountKey interface.
 
-Source Files
+# Source Files
 
 AccountKey related functions and variables are defined in the files listed below.
   - account_key.go                    : Defines the AccountKey types, the AccountKey interface and the functions related to AccountKey.

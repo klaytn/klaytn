@@ -24,22 +24,22 @@ Each phase has its own message and by handling these messages the consensus can 
 
 When a consensus is made for a given block, core communicates with the Istanbul backend to proceed.
 
-Source Files
+# Source Files
 
 Core package is composed of following files
- - `backlog.go`: Implements core methods handling future messages. The future message is a message which has future timestamp or in a different phase
- - `commit.go`: Implements core methods which send, receive, handle, verify and accept commit messages
- - `core.go`: Defines core struct and its methods related to timer setup, start new round and round state update
- - `errors.go`: Defines consensus message related errors
- - `events.go`: Defines backlog event and timeout event
- - `final_committed.go`: Start a new round when a final committed proposal is stored
- - `handler.go`: Implements core.Engine.Start and Stop. Provides event and message hendlers
- - `message_set.go`: Defines messageSet struct which has a validator set and messages from other nodes
- - `prepare.go`: Implements core methods which send, receive, handle, verify and accept prepare phase messages
- - `preprepare.go`: Implements core methods which send, handle and accept preprepare messages
- - `request.go`: Implements core methods which handle, check, store and process preprepare messages
- - `roundchange.go`: Implement core methods receiving and handling roundchange messages
- - `roundstate.go`: Defines roundState struct which has messages of each phase for a round
- - `types.go`: Defines Engine interface and message, State type
+  - `backlog.go`: Implements core methods handling future messages. The future message is a message which has future timestamp or in a different phase
+  - `commit.go`: Implements core methods which send, receive, handle, verify and accept commit messages
+  - `core.go`: Defines core struct and its methods related to timer setup, start new round and round state update
+  - `errors.go`: Defines consensus message related errors
+  - `events.go`: Defines backlog event and timeout event
+  - `final_committed.go`: Start a new round when a final committed proposal is stored
+  - `handler.go`: Implements core.Engine.Start and Stop. Provides event and message hendlers
+  - `message_set.go`: Defines messageSet struct which has a validator set and messages from other nodes
+  - `prepare.go`: Implements core methods which send, receive, handle, verify and accept prepare phase messages
+  - `preprepare.go`: Implements core methods which send, handle and accept preprepare messages
+  - `request.go`: Implements core methods which handle, check, store and process preprepare messages
+  - `roundchange.go`: Implement core methods receiving and handling roundchange messages
+  - `roundstate.go`: Defines roundState struct which has messages of each phase for a round
+  - `types.go`: Defines Engine interface and message, State type
 */
 package core

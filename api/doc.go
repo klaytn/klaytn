@@ -21,7 +21,7 @@
 /*
 Package api implements the general Klaytn API functions.
 
-Overview of api package
+# Overview of api package
 
 This package provides various APIs to access the data of the Klaytn node.
 Remote users can interact with Klyatn by calling these APIs instead of IPC.

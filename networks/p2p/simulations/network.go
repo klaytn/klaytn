@@ -290,7 +290,6 @@ func (net *Network) Connect(oneID, otherID discover.NodeID) error {
 	return client.Call(nil, "admin_addPeer", string(conn.other.Addr()))
 }
 
-//
 // method on the "one" node that it connect to all "other" nodes
 func (net *Network) ConnectAll() error {
 	logger.Debug(fmt.Sprintf("connecting all nodes to all other nodes"))

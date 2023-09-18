@@ -22,15 +22,14 @@
 /*
 service package provides various templates to build a docker-compose.yml
 
-Source Files
+# Source Files
 
 Each file contains following contents
- - constellation.go : Deprecated. This is not being used in Klaytn
- - eth_stats.go : Defines `KlayStats` and provides a yaml template for a KlayStats service
- - grafana.go : Defines `GrafanaService` and provides a yaml template for a Grafana service
- - prometheus.go : Defines `PrometheusService` and provides a yaml template for a Prometheus service
- - txgen.go : Defines `TxGenService` and provides a yaml template for a txgen service
- - validator.go : Defines `Validator` and provides a yaml template for a validator configuration
-
+  - constellation.go : Deprecated. This is not being used in Klaytn
+  - eth_stats.go : Defines `KlayStats` and provides a yaml template for a KlayStats service
+  - grafana.go : Defines `GrafanaService` and provides a yaml template for a Grafana service
+  - prometheus.go : Defines `PrometheusService` and provides a yaml template for a Prometheus service
+  - txgen.go : Defines `TxGenService` and provides a yaml template for a txgen service
+  - validator.go : Defines `Validator` and provides a yaml template for a validator configuration
 */
 package service

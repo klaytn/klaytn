@@ -17,7 +17,7 @@
 /*
 Package log provides an opinionated, simple toolkit for best-practice logging.
 
-Overview of log package
+# Overview of log package
 
 Logger is the interface for various implementation of logging.
 There are log15 and zap logger and log15 is the default logger.

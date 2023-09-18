@@ -26,7 +26,6 @@ The followings describe main features of Service chain.
   - Various bridge contract configurations
   - Support high availability
 
-
 Service Chain provides the inter-connectivity to another Klaytn chain through two bridges, MainBridge and SubBridge.
 Each bridge has a bridge contract on different blockchain networks and pairs up with another bridge to interact with.
 They are directly connected on the network layer and communicate with each other through p2p messages enabling inter-chain operations.
@@ -47,8 +46,7 @@ Following is the process of the KLAY transfer from Klaytn main chain to a Servic
 4. The SubBridge generates a transaction on the child chain node to the bridge contract of the SubBridge.
 5. Finally, The bridge contract mints (or uses its KLAY) and sends KLAY to the target address.
 
-
-Source Files
+# Source Files
 
 Functions and variables related to Service Chain are defined in the files listed below.
   - api_bridge.go : provides APIs for MainBridge or SubBridge.

@@ -19,7 +19,7 @@
 // http://cryptojedi.org/papers/dclxvi-20100714.pdf. Its output is compatible
 // with the implementation described in that paper.
 //
-//This package previously claimed to operate at a 128-bit security level. However, recent improvements in attacks mean that it is no longer true. See https://moderncrypto.org/mail-archive/curves/2016/000740.html.
+// This package previously claimed to operate at a 128-bit security level. However, recent improvements in attacks mean that it is no longer true. See https://moderncrypto.org/mail-archive/curves/2016/000740.html.
 //
-//Deprecated: due to its weakened security, new systems should not rely on this elliptic curve. This package is frozen, and not implemented in constant time. There is a more complete implementation at github.com/cloudflare/bn256, but note that it suffers from the same security issues of the underlying curve.
+// Deprecated: due to its weakened security, new systems should not rely on this elliptic curve. This package is frozen, and not implemented in constant time. There is a more complete implementation at github.com/cloudflare/bn256, but note that it suffers from the same security issues of the underlying curve.
 package bn256

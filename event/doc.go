@@ -23,13 +23,12 @@ Package event deals with subscriptions to real-time events.
 
 Package event provides three different types of event dispatchers and different go-routines in a node can receive/send data by using it.
 
-Source Files
+# Source Files
 
 Each file provides the following features
 
- - event.go: Provides `TypeMux` struct which dispatches events to registered receivers. Receivers can be registered to handle events of a certain type
- - feed.go: Provides `Feed` struct implements one-to-many subscriptions where the carrier of events is a channel. Values sent to a Feed are delivered to all subscribed channels simultaneously. Feeds can only be used with a single type
- - subscription.go: Provides `Subscription` interface which represents a stream of events. The carrier of the events is typically a channel but isn't part of the interface. Subscriptions can fail while established and failures are reported through an error channel
-
+  - event.go: Provides `TypeMux` struct which dispatches events to registered receivers. Receivers can be registered to handle events of a certain type
+  - feed.go: Provides `Feed` struct implements one-to-many subscriptions where the carrier of events is a channel. Values sent to a Feed are delivered to all subscribed channels simultaneously. Feeds can only be used with a single type
+  - subscription.go: Provides `Subscription` interface which represents a stream of events. The carrier of the events is typically a channel but isn't part of the interface. Subscriptions can fail while established and failures are reported through an error channel
 */
 package event

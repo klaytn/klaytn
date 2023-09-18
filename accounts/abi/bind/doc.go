@@ -21,15 +21,15 @@
 /*
 Package bind generates Go bindings for Klaytn contracts.
 
-Source Files
+# Source Files
 
 Each file provides following features
- - auth.go : Provides functions to create transaction signer from a private key or a keystore wallet
- - backend.go : Defines various interfaces which work as a backend in deploying / calling a contract and filtering logs
- - base.go : Provides functions to deploy a contract, filter / watch logs, invoke a transaction and so on
- - bind.go : Provides functions to generate a wrapper around a contract ABI
- - template.go : Provides templates to build a binding to use a contract in Go and Java
- - topics.go : Provides functions for making and parsing topics
- - util.go : Provides utility functions to wait for a transaction to be mined
+  - auth.go : Provides functions to create transaction signer from a private key or a keystore wallet
+  - backend.go : Defines various interfaces which work as a backend in deploying / calling a contract and filtering logs
+  - base.go : Provides functions to deploy a contract, filter / watch logs, invoke a transaction and so on
+  - bind.go : Provides functions to generate a wrapper around a contract ABI
+  - template.go : Provides templates to build a binding to use a contract in Go and Java
+  - topics.go : Provides functions for making and parsing topics
+  - util.go : Provides utility functions to wait for a transaction to be mined
 */
 package bind

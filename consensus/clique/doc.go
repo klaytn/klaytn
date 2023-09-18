@@ -17,7 +17,7 @@
 /*
 Package clique implements PoA (Proof of Authority) consensus engine which is mainly for private chains.
 
-Consensus Engine Overview
+# Consensus Engine Overview
 
 In clique, only pre-selected nodes can propose a block. The list of these nodes are described in the header's extra field and the list can be changed by calling Propose() API.
 
