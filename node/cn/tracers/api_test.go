@@ -36,6 +36,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/consensus/gxhash"
 	"github.com/klaytn/klaytn/crypto"
@@ -43,6 +44,7 @@ import (
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/storage/statedb"
+	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -179,136 +181,116 @@ func (b *testBackend) StateAtTransaction(ctx context.Context, block *types.Block
 	return nil, vm.Context{}, nil, fmt.Errorf("transaction index %d out of range for block %#x", txIndex, block.Hash())
 }
 
-// TODO-tracer: implement TraceCall
-//func TestTraceCall(t *testing.T) {
-//	t.Parallel()
-//
-//	// Initialize test accounts
-//	accounts := newAccounts(3)
-//	genesis := &blockchain.Genesis{Alloc: blockchain.GenesisAlloc{
-//		accounts[0].addr: {Balance: big.NewInt(params.KLAY)},
-//		accounts[1].addr: {Balance: big.NewInt(params.KLAY)},
-//		accounts[2].addr: {Balance: big.NewInt(params.KLAY)},
-//	}}
-//	genBlocks := 10
-//	signer := types.HomesteadSigner{}
-//	api := NewAPI(newTestBackend(t, genBlocks, genesis, func(i int, b *blockchain.BlockGen) {
-//		// Transfer from account[0] to account[1]
-//		//    value: 1000 peb
-//		//    fee:   0 peb
-//		tx, _ := types.SignTx(types.NewTransaction(uint64(i), accounts[1].addr, big.NewInt(1000), params.TxGas, big.NewInt(0), nil), signer, accounts[0].key)
-//		b.AddTx(tx)
-//	}))
-//
-//	var testSuite = []struct {
-//		blockNumber rpc.BlockNumber
-//		call        klaytnapi.CallArgs
-//		config      *TraceConfig
-//		expectErr   error
-//		expect      interface{}
-//	}{
-//		// Standard JSON trace upon the genesis, plain transfer.
-//		{
-//			blockNumber: rpc.BlockNumber(0),
-//			call: klaytnapi.CallArgs{
-//				From:  accounts[0].addr,
-//				To:    &accounts[1].addr,
-//				Value: (hexutil.Big)(*big.NewInt(1000)),
-//			},
-//			config:    nil,
-//			expectErr: nil,
-//			expect: &klaytnapi.ExecutionResult{
-//				Gas:         params.TxGas,
-//				Failed:      false,
-//				ReturnValue: "",
-//				StructLogs:  []klaytnapi.StructLogRes{},
-//			},
-//		},
-//		// Standard JSON trace upon the head, plain transfer.
-//		{
-//			blockNumber: rpc.BlockNumber(genBlocks),
-//			call: klaytnapi.CallArgs{
-//				From:  accounts[0].addr,
-//				To:    &accounts[1].addr,
-//				Value: (hexutil.Big)(*big.NewInt(1000)),
-//			},
-//			config:    nil,
-//			expectErr: nil,
-//			expect: &klaytnapi.ExecutionResult{
-//				Gas:         params.TxGas,
-//				Failed:      false,
-//				ReturnValue: "",
-//				StructLogs:  []klaytnapi.StructLogRes{},
-//			},
-//		},
-//		// Standard JSON trace upon the non-existent block, error expects
-//		{
-//			blockNumber: rpc.BlockNumber(genBlocks + 1),
-//			call: klaytnapi.CallArgs{
-//				From:  accounts[0].addr,
-//				To:    &accounts[1].addr,
-//				Value: (hexutil.Big)(*big.NewInt(1000)),
-//			},
-//			config:    nil,
-//			expectErr: fmt.Errorf("the block does not exist (block number: %d)", genBlocks+1),
-//			expect:    nil,
-//		},
-//		// Standard JSON trace upon the latest block
-//		{
-//			blockNumber: rpc.LatestBlockNumber,
-//			call: klaytnapi.CallArgs{
-//				From:  accounts[0].addr,
-//				To:    &accounts[1].addr,
-//				Value: (hexutil.Big)(*big.NewInt(1000)),
-//			},
-//			config:    nil,
-//			expectErr: nil,
-//			expect: &klaytnapi.ExecutionResult{
-//				Gas:         params.TxGas,
-//				Failed:      false,
-//				ReturnValue: "",
-//				StructLogs:  []klaytnapi.StructLogRes{},
-//			},
-//		},
-//		// Standard JSON trace upon the pending block
-//		{
-//			blockNumber: rpc.PendingBlockNumber,
-//			call: klaytnapi.CallArgs{
-//				From:  accounts[0].addr,
-//				To:    &accounts[1].addr,
-//				Value: (hexutil.Big)(*big.NewInt(1000)),
-//			},
-//			config:    nil,
-//			expectErr: nil,
-//			expect: &klaytnapi.ExecutionResult{
-//				Gas:         params.TxGas,
-//				Failed:      false,
-//				ReturnValue: "",
-//				StructLogs:  []klaytnapi.StructLogRes{},
-//			},
-//		},
-//	}
-//	for _, testspec := range testSuite {
-//		result, err := api.TraceCall(context.Background(), testspec.call, rpc.BlockNumberOrHash{BlockNumber: &testspec.blockNumber}, testspec.config)
-//		if testspec.expectErr != nil {
-//			if err == nil {
-//				t.Errorf("Expect error %v, get nothing", testspec.expectErr)
-//				continue
-//			}
-//			if !reflect.DeepEqual(err, testspec.expectErr) {
-//				t.Errorf("Error mismatch, want %v, get %v", testspec.expectErr, err)
-//			}
-//		} else {
-//			if err != nil {
-//				t.Errorf("Expect no error, get %v", err)
-//				continue
-//			}
-//			if !reflect.DeepEqual(result, testspec.expect) {
-//				t.Errorf("Result mismatch, want %v, get %v", testspec.expect, result)
-//			}
-//		}
-//	}
-//}
+func TestTraceCall(t *testing.T) {
+	t.Parallel()
+
+	// Initialize test accounts
+	accounts := newAccounts(3)
+	genesis := &blockchain.Genesis{Alloc: blockchain.GenesisAlloc{
+		accounts[0].addr: {Balance: big.NewInt(0)},
+		accounts[1].addr: {Balance: big.NewInt(1000 * 10)},
+		accounts[2].addr: {Balance: big.NewInt(0)},
+	}}
+	genBlocks := 10
+	signer := types.LatestSignerForChainID(params.TestChainConfig.ChainID)
+	api := NewAPI(newTestBackend(t, genBlocks, genesis, func(i int, b *blockchain.BlockGen) {
+		// Transfer from account[1] to account[0]
+		//    value: 1000 peb
+		//    fee:   0 peb
+		tx, err := types.SignTx(types.NewTransaction(uint64(i), accounts[0].addr, big.NewInt(1000), params.TxGas, big.NewInt(0), nil), signer, accounts[1].key)
+		assert.NoError(t, err)
+		b.AddTx(tx)
+	}))
+
+	testSuite := []struct {
+		blockNumber rpc.BlockNumber
+		call        klaytnapi.CallArgs
+		config      *TraceConfig
+		expectErr   error
+		expect      interface{}
+	}{
+		// Standard JSON trace upon the genesis, plain transfer.
+		{
+			blockNumber: rpc.BlockNumber(0),
+			call: klaytnapi.CallArgs{
+				From:  accounts[0].addr,
+				To:    &accounts[1].addr,
+				Value: (hexutil.Big)(*big.NewInt(1000)),
+			},
+			config:    nil,
+			expectErr: errors.New("tracing failed: insufficient balance for transfer"),
+			expect:    nil,
+		},
+		// Standard JSON trace upon the head, plain transfer.
+		{
+			blockNumber: rpc.BlockNumber(genBlocks),
+			call: klaytnapi.CallArgs{
+				From:  accounts[0].addr,
+				To:    &accounts[1].addr,
+				Value: (hexutil.Big)(*big.NewInt(1000)),
+			},
+			config:    nil,
+			expectErr: nil,
+			expect: &klaytnapi.ExecutionResult{
+				Gas:         params.TxGas,
+				Failed:      false,
+				ReturnValue: "",
+				StructLogs:  []klaytnapi.StructLogRes{},
+			},
+		},
+		// Standard JSON trace upon the non-existent block, error expects
+		{
+			blockNumber: rpc.BlockNumber(genBlocks + 1),
+			call: klaytnapi.CallArgs{
+				From:  accounts[0].addr,
+				To:    &accounts[1].addr,
+				Value: (hexutil.Big)(*big.NewInt(1000)),
+			},
+			config:    nil,
+			expectErr: fmt.Errorf("the block does not exist (block number: %d)", genBlocks+1),
+			expect:    nil,
+		},
+		// Standard JSON trace upon the latest block
+		{
+			blockNumber: rpc.LatestBlockNumber,
+			call: klaytnapi.CallArgs{
+				From:  accounts[0].addr,
+				To:    &accounts[1].addr,
+				Value: (hexutil.Big)(*big.NewInt(1000)),
+			},
+			config:    nil,
+			expectErr: nil,
+			expect: &klaytnapi.ExecutionResult{
+				Gas:         params.TxGas,
+				Failed:      false,
+				ReturnValue: "",
+				StructLogs:  []klaytnapi.StructLogRes{},
+			},
+		},
+		// Standard JSON trace upon the pending block
+		{
+			blockNumber: rpc.PendingBlockNumber,
+			call: klaytnapi.CallArgs{
+				From:  accounts[0].addr,
+				To:    &accounts[1].addr,
+				Value: (hexutil.Big)(*big.NewInt(1000)),
+			},
+			config:    nil,
+			expectErr: nil,
+			expect: &klaytnapi.ExecutionResult{
+				Gas:         params.TxGas,
+				Failed:      false,
+				ReturnValue: "",
+				StructLogs:  []klaytnapi.StructLogRes{},
+			},
+		},
+	}
+	for _, testspec := range testSuite {
+		result, err := api.TraceCall(context.Background(), testspec.call, rpc.BlockNumberOrHash{BlockNumber: &testspec.blockNumber}, testspec.config)
+		assert.Equal(t, err, testspec.expectErr)
+		assert.Equal(t, result, testspec.expect)
+	}
+}
 
 func TestTraceTransaction(t *testing.T) {
 	t.Parallel()
