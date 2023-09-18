@@ -85,3 +85,7 @@ func (l *JSONLogger) CaptureEnd(output []byte, gasUsed uint64, t time.Duration, 
 	}
 	return l.encoder.Encode(endLog{common.Bytes2Hex(output), math.HexOrDecimal64(gasUsed), t, ""})
 }
+
+func (l *JSONLogger) CaptureTxStart(gasLimit uint64) {}
+
+func (l *JSONLogger) CaptureTxEnd(restGas uint64) {}

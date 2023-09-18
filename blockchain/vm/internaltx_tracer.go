@@ -59,6 +59,8 @@ type InternalTxTracer struct {
 
 	interrupt uint32 // Atomic flag to signal execution interruption
 	reason    error  // Textual reason for the interruption
+
+	gasLimit uint64 // Amount of gas bought for the whole tx
 }
 
 // NewInternalTxTracer returns a new InternalTxTracer.
@@ -420,6 +422,14 @@ func (this *InternalTxTracer) CaptureEnd(output []byte, gasUsed uint64, t time.D
 		this.ctx["error"] = err
 	}
 	return nil
+}
+
+func (this *InternalTxTracer) CaptureTxStart(gasLimit uint64) {
+	this.gasLimit = gasLimit
+}
+
+func (this *InternalTxTracer) CaptureTxEnd(restGas uint64) {
+	this.ctx["gasUsed"] = this.gasLimit - restGas
 }
 
 func (this *InternalTxTracer) GetResult() (*InternalTxTrace, error) {

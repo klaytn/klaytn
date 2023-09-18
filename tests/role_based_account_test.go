@@ -590,7 +590,7 @@ func TestAccountUpdateRoleBasedLegacy(t *testing.T) {
 
 		receipt, err := applyTransaction(t, bcdata, tx)
 		assert.Equal(t, (*types.Receipt)(nil), receipt)
-		assert.Equal(t, types.ErrSender(types.ErrInvalidSigSender), err)
+		assert.Equal(t, types.ErrSender(types.ErrInvalidAccountKey), err)
 	}
 
 	// 6. Test RoleTransfer of the RoleBasedKey with invalid number of signatures
@@ -615,7 +615,7 @@ func TestAccountUpdateRoleBasedLegacy(t *testing.T) {
 
 		receipt, err := applyTransaction(t, bcdata, tx)
 		assert.Equal(t, (*types.Receipt)(nil), receipt)
-		assert.Equal(t, types.ErrSender(types.ErrInvalidSigSender), err)
+		assert.Equal(t, types.ErrSender(types.ErrInvalidAccountKey), err)
 	}
 }
 
@@ -859,7 +859,7 @@ func TestAccountUpdateRoleBasedTransition(t *testing.T) {
 
 		txpool := makeTxPool(bcdata, 10)
 		err = txpool.AddRemote(tx)
-		assert.Equal(t, types.ErrSender(types.ErrInvalidSigSender), err)
+		assert.Equal(t, types.ErrSender(types.ErrInvalidAccountKey), err)
 	}
 
 	// 4. Execute TxTypeAccountUpdate
@@ -904,7 +904,7 @@ func TestAccountUpdateRoleBasedTransition(t *testing.T) {
 
 		txpool := makeTxPool(bcdata, 10)
 		err = txpool.AddRemote(tx)
-		assert.Equal(t, types.ErrSender(types.ErrInvalidSigSender), err)
+		assert.Equal(t, types.ErrSender(types.ErrInvalidAccountKey), err)
 	}
 
 	// 6. Inserting a tx signed by new key into the pool. It should pass.

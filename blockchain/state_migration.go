@@ -64,7 +64,7 @@ func (bc *BlockChain) concurrentRead(db state.Database, quitCh chan struct{}, ha
 		case <-quitCh:
 			return
 		case hash := <-hashCh:
-			data, err := db.TrieDB().NodeFromOld(hash.ExtendLegacy())
+			data, err := db.TrieDB().NodeFromOld(hash.ExtendZero())
 			if err != nil {
 				data, err = db.ContractCode(hash)
 			}
@@ -489,7 +489,7 @@ func (bc *BlockChain) StartWarmUp() error {
 		return err
 	}
 	// retrieve children nodes of state trie root node
-	children, err := db.TrieDB().NodeChildren(block.Root().ExtendLegacy())
+	children, err := db.TrieDB().NodeChildren(block.Root().ExtendZero())
 	if err != nil {
 		return err
 	}
@@ -532,7 +532,7 @@ func (bc *BlockChain) StartCollectingTrieStats(contractAddr common.Address) erro
 	}
 	db := state.NewDatabaseWithExistingCache(bc.db, cache)
 
-	startNode := block.Root().ExtendLegacy()
+	startNode := block.Root().ExtendZero()
 	// If the contractAddr is given, start collecting stats from the root of storage trie
 	if !common.EmptyAddress(contractAddr) {
 		var err error

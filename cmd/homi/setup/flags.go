@@ -478,20 +478,31 @@ var (
 		Aliases: []string{"genesis.hardfork.kore-compatible-blocknumber"},
 	}
 
-	kip103CompatibleBlockNumberFlag = &cli.Int64Flag{
-		Name:  "kip103-compatible-blocknumber",
-		Usage: "kip103Compatible blockNumber",
-		Value: 0,
+	shanghaiCompatibleBlockNumberFlag = &cli.Int64Flag{
+		Name:    "shanghai-compatible-blocknumber",
+		Usage:   "shanghaiCompatible blockNumber",
+		Value:   0,
+		Aliases: []string{"genesis.hardfork.shanghai-compatible-blocknumber"},
 	}
 
-	shanghaiCompatibleBlockNumberFlag = &cli.Int64Flag{
-		Name:  "shanghai-compatible-blocknumber",
-		Usage: "shanghaiCompatible blockNumber",
-		Value: 0,
+	cancunCompatibleBlockNumberFlag = &cli.Int64Flag{
+		Name:    "cancun-compatible-blocknumber",
+		Usage:   "cancunCompatible blockNumber",
+		Value:   0,
+		Aliases: []string{"genesis.hardfork.cancun-compatible-blocknumber"},
+	}
+
+	// KIP103 hardfork is optional
+	kip103CompatibleBlockNumberFlag = &cli.Int64Flag{
+		Name:    "kip103-compatible-blocknumber",
+		Usage:   "kip103Compatible blockNumber",
+		Value:   0,
+		Aliases: []string{"genesis.hardfork.kip103-compatible-blocknumber"},
 	}
 
 	kip103ContractAddressFlag = &cli.StringFlag{
-		Name:  "kip103-contract-address",
-		Usage: "kip103 contract address",
+		Name:    "kip103-contract-address",
+		Usage:   "kip103 contract address",
+		Aliases: []string{"genesis.hardfork.kip103-contract-address"},
 	}
 )

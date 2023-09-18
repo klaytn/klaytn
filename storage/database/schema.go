@@ -258,7 +258,7 @@ func databaseDirKey(dbEntryType uint64) []byte {
 
 // TrieNodeKey = if Legacy, hash32. Otherwise, exthash
 func TrieNodeKey(hash common.ExtHash) []byte {
-	if hash.IsLegacy() {
+	if hash.IsZeroExtended() {
 		return hash.Unextend().Bytes()
 	} else {
 		return hash.Bytes()

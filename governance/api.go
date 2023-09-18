@@ -418,9 +418,10 @@ func getChainConfig(governance Engine, num *rpc.BlockNumber) *params.ChainConfig
 	config.EthTxTypeCompatibleBlock = latestConfig.EthTxTypeCompatibleBlock
 	config.MagmaCompatibleBlock = latestConfig.MagmaCompatibleBlock
 	config.KoreCompatibleBlock = latestConfig.KoreCompatibleBlock
+	config.ShanghaiCompatibleBlock = latestConfig.ShanghaiCompatibleBlock
+	config.CancunCompatibleBlock = latestConfig.CancunCompatibleBlock
 	config.Kip103CompatibleBlock = latestConfig.Kip103CompatibleBlock
 	config.Kip103ContractAddress = latestConfig.Kip103ContractAddress
-	config.ShanghaiCompatibleBlock = latestConfig.ShanghaiCompatibleBlock
 
 	return config
 }

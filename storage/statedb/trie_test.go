@@ -123,7 +123,7 @@ func testMissingNode(t *testing.T, memonly bool) {
 		t.Errorf("Unexpected error: %v", err)
 	}
 
-	hash := common.HexToHash("0xe1d943cc8f061a0c0b98162830b970395ac9315654824bf21b73b891365262f9").ExtendLegacy()
+	hash := common.HexToHash("0xe1d943cc8f061a0c0b98162830b970395ac9315654824bf21b73b891365262f9").ExtendZero()
 	if memonly {
 		delete(triedb.nodes, hash)
 	} else {
@@ -337,20 +337,20 @@ func TestStorageTrie(t *testing.T) {
 	// non-pruning storage trie returns Legacy ExtHash for root
 	trie := newStorageTrie(false)
 	root := trie.HashExt()
-	assert.True(t, root.IsLegacy())
+	assert.True(t, root.IsZeroExtended())
 
 	trie = newStorageTrie(false)
 	root, _ = trie.CommitExt(nil)
-	assert.True(t, root.IsLegacy())
+	assert.True(t, root.IsZeroExtended())
 
 	// pruning storage trie returns non-Legacy ExtHash for root
 	trie = newStorageTrie(true)
 	root = trie.HashExt()
-	assert.False(t, root.IsLegacy())
+	assert.False(t, root.IsZeroExtended())
 
 	trie = newStorageTrie(true)
 	root, _ = trie.CommitExt(nil)
-	assert.False(t, root.IsLegacy())
+	assert.False(t, root.IsZeroExtended())
 }
 
 func TestPruningByUpdate(t *testing.T) {
