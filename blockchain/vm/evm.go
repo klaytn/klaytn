@@ -508,16 +508,13 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 
 	ret, err = evm.interpreter.Run(contract, nil)
 
-	// Check whether the max code size has been exceeded, assign err if the case.
-	if err == nil && len(ret) > params.MaxCodeSize {
-		err = ErrMaxCodeSizeExceeded
-	}
-
+	// check whether the max code size has been exceeded
+	maxCodeSizeExceeded := len(ret) > params.MaxCodeSize
 	// if the contract creation ran successfully and no errors were returned
 	// calculate the gas required to store the code. If the code could not
 	// be stored due to not enough gas set an error and let it be handled
 	// by the error checking condition below.
-	if err == nil {
+	if err == nil && !maxCodeSizeExceeded {
 		createDataGas := uint64(len(ret)) * params.CreateDataGas
 		if contract.UseGas(createDataGas) {
 			if evm.StateDB.SetCode(address, ret) != nil {
@@ -536,11 +533,15 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 
 	// When an error was returned by the EVM or when setting the creation code
 	// above we revert to the snapshot and consume any gas remaining.
-	if err != nil && err != ErrCodeStoreOutOfGas {
+	if maxCodeSizeExceeded || err != nil {
 		evm.StateDB.RevertToSnapshot(snapshot)
 		if err != ErrExecutionReverted {
 			contract.UseGas(contract.Gas)
 		}
+	}
+	// Assign err if contract code size exceeds the max while the err is still empty.
+	if maxCodeSizeExceeded && err == nil {
+		err = ErrMaxCodeSizeExceeded // TODO-Klaytn-Issue615
 	}
 
 	// Reject code starting with 0xEF if EIP-3541 is enabled.
