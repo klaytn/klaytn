@@ -108,8 +108,8 @@ func TestPrestateTracerCreate2(t *testing.T) {
 	*/
 	origin, _ := signer.Sender(tx)
 	txContext := vm.TxContext{
-		Origin:      origin,
-		GasPrice:    big.NewInt(1),
+		Origin:   origin,
+		GasPrice: big.NewInt(1),
 	}
 	blockContext := vm.BlockContext{
 		CanTransfer: blockchain.CanTransfer,
@@ -290,8 +290,8 @@ func TestCallTracer(t *testing.T) {
 			origin, _ := signer.Sender(tx)
 
 			txContext := vm.TxContext{
-				Origin:      origin,
-				GasPrice:    tx.GasPrice(),
+				Origin:   origin,
+				GasPrice: tx.GasPrice(),
 			}
 			blockContext := vm.BlockContext{
 				CanTransfer: blockchain.CanTransfer,
@@ -403,8 +403,8 @@ func TestInternalCallTracer(t *testing.T) {
 			origin, _ := signer.Sender(tx)
 
 			txContext := vm.TxContext{
-				Origin:      origin,
-				GasPrice:    tx.GasPrice(),
+				Origin:   origin,
+				GasPrice: tx.GasPrice(),
 			}
 			blockContext := vm.BlockContext{
 				CanTransfer: blockchain.CanTransfer,
