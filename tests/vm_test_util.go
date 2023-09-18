@@ -144,8 +144,8 @@ func (t *VMTest) newEVM(statedb *state.StateDB, vmconfig vm.Config) *vm.EVM {
 	}
 	transfer := func(db vm.StateDB, sender, recipient common.Address, amount *big.Int) {}
 	txContext := vm.TxContext{
-		Origin:   t.json.Exec.Origin,
-		GasPrice: t.json.Exec.GasPrice,
+		Origin:      t.json.Exec.Origin,
+		GasPrice:    t.json.Exec.GasPrice,
 	}
 	blockContext := vm.BlockContext{
 		CanTransfer: canTransfer,
