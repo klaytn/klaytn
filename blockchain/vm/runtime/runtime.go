@@ -115,7 +115,7 @@ func Execute(code, input []byte, cfg *Config) ([]byte, *state.StateDB, error) {
 		address = common.BytesToAddress([]byte("contract"))
 		vmenv   = NewEnv(cfg)
 		sender  = vm.AccountRef(cfg.Origin)
-		rules   = cfg.ChainConfig.Rules(vmenv.BlockNumber)
+		rules   = cfg.ChainConfig.Rules(vmenv.Context.BlockNumber)
 	)
 	if rules.IsKore {
 		cfg.State.PrepareAccessList(rules, cfg.Origin, common.Address{}, cfg.Coinbase, &address, vm.ActivePrecompiles(rules), nil)
@@ -149,7 +149,7 @@ func Create(input []byte, cfg *Config) ([]byte, common.Address, uint64, error) {
 	var (
 		vmenv  = NewEnv(cfg)
 		sender = vm.AccountRef(cfg.Origin)
-		rules  = cfg.ChainConfig.Rules(vmenv.BlockNumber)
+		rules  = cfg.ChainConfig.Rules(vmenv.Context.BlockNumber)
 	)
 	if rules.IsKore {
 		cfg.State.PrepareAccessList(rules, cfg.Origin, common.Address{}, cfg.Coinbase, nil, vm.ActivePrecompiles(rules), nil)
@@ -177,7 +177,7 @@ func Call(address common.Address, input []byte, cfg *Config) ([]byte, uint64, er
 		vmenv         = NewEnv(cfg)
 		senderAccount = cfg.State.GetOrNewStateObject(cfg.Origin)
 		sender        = types.NewAccountRefWithFeePayer(senderAccount.Address(), senderAccount.Address())
-		rules         = cfg.ChainConfig.Rules(vmenv.BlockNumber)
+		rules         = cfg.ChainConfig.Rules(vmenv.Context.BlockNumber)
 	)
 	if rules.IsKore {
 		cfg.State.PrepareAccessList(rules, cfg.Origin, common.Address{}, cfg.Coinbase, &address, vm.ActivePrecompiles(rules), nil)

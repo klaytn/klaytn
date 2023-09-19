@@ -90,9 +90,9 @@ func run(evm *EVM, contract *Contract, input []byte) ([]byte, error) {
 	return evm.interpreter.Run(contract, input)
 }
 
-// Context provides the EVM with auxiliary information. Once provided
+// BlockContext provides the EVM with auxiliary information. Once provided
 // it shouldn't be modified.
-type Context struct {
+type BlockContext struct {
 	// CanTransfer returns whether the account contains
 	// sufficient KLAY to transfer the value
 	CanTransfer CanTransferFunc
@@ -100,10 +100,6 @@ type Context struct {
 	Transfer TransferFunc
 	// GetHash returns the hash corresponding to n
 	GetHash GetHashFunc
-
-	// Message information
-	Origin   common.Address // Provides information for ORIGIN
-	GasPrice *big.Int       // Provides information for GASPRICE
 
 	// Block information
 	Coinbase    common.Address // Provides information for COINBASE
@@ -113,6 +109,14 @@ type Context struct {
 	Time        *big.Int       // Provides information for TIME
 	BlockScore  *big.Int       // Provides information for DIFFICULTY
 	BaseFee     *big.Int       // Provides information for BASEFEE
+}
+
+// TxContext provides the EVM with information about a transaction.
+// All fields can change between transactions.
+type TxContext struct {
+	// Message information
+	Origin   common.Address // Provides information for ORIGIN
+	GasPrice *big.Int       // Provides information for GASPRICE
 }
 
 // EVM is the Ethereum Virtual Machine base object and provides
@@ -126,7 +130,8 @@ type Context struct {
 // The EVM should never be reused and is not thread safe.
 type EVM struct {
 	// Context provides auxiliary blockchain related information
-	Context
+	Context BlockContext
+	TxContext
 	// StateDB gives access to the underlying state
 	StateDB StateDB
 	// Depth is the current call stack
@@ -156,13 +161,14 @@ type EVM struct {
 
 // NewEVM returns a new EVM. The returned EVM is not thread safe and should
 // only ever be used *once*.
-func NewEVM(ctx Context, statedb StateDB, chainConfig *params.ChainConfig, vmConfig *Config) *EVM {
+func NewEVM(blockCtx BlockContext, txCtx TxContext, statedb StateDB, chainConfig *params.ChainConfig, vmConfig *Config) *EVM {
 	evm := &EVM{
-		Context:     ctx,
+		Context:     blockCtx,
+		TxContext:   txCtx,
 		StateDB:     statedb,
 		VMConfig:    vmConfig,
 		chainConfig: chainConfig,
-		chainRules:  chainConfig.Rules(ctx.BlockNumber),
+		chainRules:  chainConfig.Rules(blockCtx.BlockNumber),
 	}
 
 	if vmConfig.RunningEVM != nil {
@@ -176,7 +182,15 @@ func NewEVM(ctx Context, statedb StateDB, chainConfig *params.ChainConfig, vmCon
 	}
 
 	evm.interpreter = NewEVMInterpreter(evm, vmConfig)
+
 	return evm
+}
+
+// Reset resets the EVM with a new transaction context.Reset
+// This is not threadsafe and should only be done very cautiously.
+func (evm *EVM) Reset(txCtx TxContext, statedb StateDB) {
+	evm.TxContext = txCtx
+	evm.StateDB = statedb
 }
 
 // Cancel cancels any running EVM operation. This may be called concurrently and
@@ -255,7 +269,7 @@ func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte
 		// If non-existing address is called with a value, an object of the address is created.
 		evm.StateDB.CreateEOA(addr, false, accountkey.NewAccountKeyLegacy())
 	}
-	evm.Transfer(evm.StateDB, caller.Address(), to.Address(), value)
+	evm.Context.Transfer(evm.StateDB, caller.Address(), to.Address(), value)
 
 	if debug && evm.depth == 0 {
 		evm.VMConfig.Tracer.CaptureStart(caller.Address(), addr, false, input, gas, value)
@@ -478,7 +492,7 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 	evm.StateDB.CreateSmartContractAccountWithKey(address, humanReadable, accountkey.NewAccountKeyFail(), codeFormat, evm.chainRules)
 	evm.StateDB.SetNonce(address, 1)
 	if value.Sign() != 0 {
-		evm.Transfer(evm.StateDB, caller.Address(), address, value)
+		evm.Context.Transfer(evm.StateDB, caller.Address(), address, value)
 	}
 	// Initialise a new contract and set the code that is to be used by the EVM.
 	// The contract is a scoped environment for this execution context only.
