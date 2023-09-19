@@ -631,7 +631,6 @@ func (bc *BlockChain) setHeadBeyondRoot(head uint64, root common.Hash, repair bo
 	// Clear out any stale content from the caches
 	bc.futureBlocks.Purge()
 	bc.db.ClearBlockChainCache()
-	// TODO-Klaytn add governance DB deletion logic.
 
 	return rootNumber, bc.loadLastState()
 }

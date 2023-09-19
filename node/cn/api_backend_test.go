@@ -740,7 +740,7 @@ func testCfg(epoch uint64) *params.ChainConfig {
 	config := params.TestChainConfig.Copy()
 	config.Governance = params.GetDefaultGovernanceConfig()
 	config.Istanbul = params.GetDefaultIstanbulConfig()
-	config.Istanbul.Epoch = 5
+	config.Istanbul.Epoch = epoch
 	return config
 }
 

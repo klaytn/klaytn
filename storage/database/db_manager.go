@@ -2656,7 +2656,7 @@ func (dbm *databaseManager) WriteGovernance(data map[string]interface{}, num uin
 
 func (dbm *databaseManager) DeleteGovernance(num uint64) {
 	db := dbm.getDatabase(MiscDB)
-	if _, err := dbm.deleteGovernanceIdxRange(num); err != nil {
+	if err := dbm.deleteGovernanceBeyondWithExactMatch(num); err != nil {
 		logger.Crit("Failed to delete Governance index", "err", err)
 	}
 	if err := db.Delete(makeKey(governancePrefix, num)); err != nil {
@@ -2689,28 +2689,23 @@ func (dbm *databaseManager) WriteGovernanceIdx(num uint64) error {
 	return db.Put(governanceHistoryKey, data)
 }
 
-// DeleteGovernanceIdxRange deletes governanceHistory beyond `num`
-func (dbm *databaseManager) deleteGovernanceIdxRange(num uint64) ([]uint64, error) {
+// deleteGovernanceBeyondWithExactMatch deletes governanceHistory beyond `num`
+// If the target number is not in history, does not delete anything and just returns
+func (dbm *databaseManager) deleteGovernanceBeyondWithExactMatch(num uint64) error {
 	db := dbm.getDatabase(MiscDB)
-	newSlice := make([]uint64, 0)
-
 	idxHistory, err := dbm.ReadRecentGovernanceIdx(0)
 	if err != nil {
-		// Do nothing and return nil if no recent index was not found
-		return nil, nil
+		return nil // Do nothing and return nil if no recent index found
 	}
-	for i := 0; i < len(idxHistory); i++ {
-		if idxHistory[i] > num {
-			break
-		}
-		newSlice = append(newSlice, idxHistory[i])
+	end := len(idxHistory)
+	if idxHistory[end-1] != num {
+		return nil // Do nothing and return nil if the target number does not match the tip number
 	}
-
-	data, err := json.Marshal(newSlice)
+	data, err := json.Marshal(idxHistory[0 : end-1])
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return idxHistory[len(newSlice):], db.Put(governanceHistoryKey, data)
+	return db.Put(governanceHistoryKey, data)
 }
 
 func (dbm *databaseManager) ReadGovernance(num uint64) (map[string]interface{}, error) {
