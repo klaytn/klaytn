@@ -257,9 +257,6 @@
 		if (ctx.output === undefined) {
 			ctx.output = ""
 		}
-		if (ctx.time === undefined) {
-			ctx.time = 0
-		}
 		if (this.callstack[0] == undefined) {
 			this.callstack[0] = {}
 		}
@@ -272,7 +269,6 @@
 			gasUsed: '0x' + bigInt(ctx.gasUsed).toString(16),
 			input:   toHex(ctx.input),
 			output:  toHex(ctx.output),
-			time:    ctx.time,
 		};
 		if (this.callstack[0].calls !== undefined) {
 			result.calls = this.callstack[0].calls;
@@ -325,7 +321,6 @@
 			input:   call.input,
 			output:  call.output,
 			error:   call.error,
-			time:    call.time,
 			calls:   call.calls,
 			reverted: call.reverted,
 		}

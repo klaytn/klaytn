@@ -38,7 +38,7 @@ type Config struct {
 	NoRecursion             bool   // Disables call, callcode, delegate call and create
 	EnablePreimageRecording bool   // Enables recording of SHA3/keccak preimages
 
-	JumpTable [256]*operation // EVM instruction table, automatically populated if unset
+	JumpTable JumpTable // EVM instruction table, automatically populated if unset
 
 	// RunningEVM is to indicate the running EVM and used to stop the EVM.
 	RunningEVM chan *EVM
@@ -56,6 +56,14 @@ type Config struct {
 	ExtraEips []int
 }
 
+// ScopeContext contains the things that are per-call, such as stack and memory,
+// but not transients like pc and gas
+type ScopeContext struct {
+	Memory   *Memory
+	Stack    *Stack
+	Contract *Contract
+}
+
 // keccakState wraps sha3.state. In addition to the usual hash methods, it also supports
 // Read to get a variable amount of data from the hash state. Read is faster than Sum
 // because it doesn't copy the internal state, but also modifies the internal state.
@@ -64,11 +72,11 @@ type keccakState interface {
 	Read([]byte) (int, error)
 }
 
-// Interpreter is used to run Klaytn based contracts and will utilise the
+// EVMInterpreter is used to run Klaytn based contracts and will utilise the
 // passed environment to query external sources for state information.
-// The Interpreter will run the byte code VM based on the passed
+// The EVMInterpreter will run the byte code VM based on the passed
 // configuration.
-type Interpreter struct {
+type EVMInterpreter struct {
 	evm *EVM
 	cfg *Config
 
@@ -82,10 +90,11 @@ type Interpreter struct {
 }
 
 // NewEVMInterpreter returns a new instance of the Interpreter.
-func NewEVMInterpreter(evm *EVM, cfg *Config) *Interpreter {
+func NewEVMInterpreter(evm *EVM) *EVMInterpreter {
 	// We use the STOP instruction whether to see
 	// the jump table was initialised. If it was not
 	// we'll set the default jump table.
+	cfg := evm.Config
 	if cfg.JumpTable[STOP] == nil {
 		var jt JumpTable
 		switch {
@@ -110,7 +119,7 @@ func NewEVMInterpreter(evm *EVM, cfg *Config) *Interpreter {
 		cfg.JumpTable = jt
 	}
 
-	return &Interpreter{
+	return &EVMInterpreter{
 		evm: evm,
 		cfg: cfg,
 	}
@@ -135,7 +144,7 @@ func NewEVMInterpreter(evm *EVM, cfg *Config) *Interpreter {
 // It's important to note that any errors returned by the interpreter should be
 // considered a revert-and-consume-all-gas operation except for
 // ErrExecutionReverted which means revert-and-keep-gas-left.
-func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err error) {
+func (in *EVMInterpreter) Run(contract *Contract, input []byte) (ret []byte, err error) {
 	if in.intPool == nil {
 		in.intPool = poolOfIntPools.get()
 		defer func() {
@@ -183,9 +192,14 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 	}
 
 	var (
-		op    OpCode        // current opcode
-		mem   = NewMemory() // bound memory
-		stack = newstack()  // local stack
+		op          OpCode        // current opcode
+		mem         = NewMemory() // bound memory
+		stack       = newstack()  // local stack
+		callContext = &ScopeContext{
+			Memory:   mem,
+			Stack:    stack,
+			Contract: contract,
+		}
 		// For optimisation reason we're using uint64 as the program counter.
 		// It's theoretically possible to go above 2^64. The YP defines the PC
 		// to be uint256. Practically much less so feasible.
@@ -207,9 +221,9 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 		defer func() {
 			if err != nil {
 				if !logged {
-					in.cfg.Tracer.CaptureState(in.evm, pcCopy, op, gasCopy, cost, mem, stack, contract, in.evm.depth, err)
+					in.cfg.Tracer.CaptureState(in.evm, pcCopy, op, gasCopy, cost, callContext, in.evm.depth, err)
 				} else {
-					in.cfg.Tracer.CaptureFault(in.evm, pcCopy, op, gasCopy, cost, mem, stack, contract, in.evm.depth, err)
+					in.cfg.Tracer.CaptureFault(in.evm, pcCopy, op, gasCopy, cost, callContext, in.evm.depth, err)
 				}
 			}
 		}()
@@ -263,7 +277,7 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 		}
 
 		// We limit tx's execution time using the sum of computation cost of opcodes.
-		if in.evm.VMConfig.UseOpcodeComputationCost {
+		if in.evm.Config.UseOpcodeComputationCost {
 			///////////////////////////////////////////////////////
 			// OpcodeComputationCostLimit: The below code is commented and will be usd for debugging purposes.
 			//if opDebug && prevOp > 0 {
@@ -316,7 +330,7 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 		}
 
 		if in.cfg.Debug {
-			in.cfg.Tracer.CaptureState(in.evm, pc, op, gasCopy, cost, mem, stack, contract, in.evm.depth, err)
+			in.cfg.Tracer.CaptureState(in.evm, pc, op, gasCopy, cost, callContext, in.evm.depth, err)
 			logged = true
 		}
 

@@ -69,7 +69,7 @@ func makeBenchConfig() *BenchConfig {
 	return cfg
 }
 
-func prepareInterpreterAndContract(code []byte) (*vm.Interpreter, *vm.Contract) {
+func prepareInterpreterAndContract(code []byte) (*vm.EVMInterpreter, *vm.Contract) {
 	// runtime.go:Execute()
 	cfg := makeBenchConfig()
 	txContext := vm.TxContext{
