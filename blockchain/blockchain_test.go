@@ -1411,19 +1411,19 @@ func TestAccessListTx(t *testing.T) {
 	config.Governance = params.GetDefaultGovernanceConfig()
 	config.Governance.KIP71.LowerBoundBaseFee = 0
 	var (
-		aa     = common.HexToAddress("0x000000000000000000000000000000000000aaaa")
-		engine = gxhash.NewFaker()
+		contractAddr = common.HexToAddress("0x000000000000000000000000000000000000aaaa")
+		engine       = gxhash.NewFaker()
+		signer       = types.LatestSigner(config)
 
 		// A sender who makes transactions, has some funds
-		key, _  = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
-		address = crypto.PubkeyToAddress(key.PublicKey)
-		funds   = big.NewInt(1000000000000000)
-		gspec   = &Genesis{
+		senderKey, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+		senderAddr   = crypto.PubkeyToAddress(senderKey.PublicKey)
+		senderNonce  = uint64(0)
+		gspec        = &Genesis{
 			Config: config,
 			Alloc: GenesisAlloc{
-				address: {Balance: funds},
-				// The address 0xAAAA sloads 0x00 and 0x01
-				aa: {
+				senderAddr: {Balance: big.NewInt(params.KLAY)},
+				contractAddr: { // SLOAD 0x00 and 0x01
 					Code: []byte{
 						byte(vm.PC),
 						byte(vm.PC),
@@ -1438,7 +1438,7 @@ func TestAccessListTx(t *testing.T) {
 		db       = database.NewMemoryDBManager()
 		block    = gspec.MustCommit(db)
 		accesses = types.AccessList{{
-			Address:     aa,
+			Address:     contractAddr,
 			StorageKeys: []common.Hash{{0}},
 		}}
 	)
@@ -1450,22 +1450,25 @@ func TestAccessListTx(t *testing.T) {
 	}
 	defer chain.Stop()
 
-	// Generate blocks
-	blocks, _ := GenerateChain(gspec.Config, block, engine, db, 1, func(i int, b *BlockGen) {
-		b.SetRewardbase(common.Address{1})
+	// helper function to insert a block with a transaction
+	insertBlockWithTx := func(list types.AccessList) *types.Block {
+		// Generate blocks
+		blocks, _ := GenerateChain(gspec.Config, block, engine, db, 1, func(i int, b *BlockGen) {
+			b.SetRewardbase(common.Address{1})
 
-		// One transaction to 0xAAAA, with access list
-		intrinsicGas, _ := types.IntrinsicGas([]byte{}, accesses, false, gspec.Config.Rules(big.NewInt(1)))
-		signer := types.LatestSigner(gspec.Config)
-		tx, _ := types.SignTx(types.NewMessage(address, &aa, 0, big.NewInt(0), 30000, big.NewInt(1), []byte{}, false, intrinsicGas, accesses), signer, key)
-		b.AddTx(tx)
-	})
-
-	if n, err := chain.InsertChain(blocks); err != nil {
-		t.Fatalf("block %d: failed to insert into chain: %v", n, err)
+			// One transaction to 0xAAAA
+			intrinsicGas, _ := types.IntrinsicGas([]byte{}, list, false, gspec.Config.Rules(block.Number()))
+			tx, _ := types.SignTx(types.NewMessage(senderAddr, &contractAddr, senderNonce, big.NewInt(0), 30000, big.NewInt(1), []byte{}, false, intrinsicGas, list), signer, senderKey)
+			b.AddTx(tx)
+		})
+		if n, err := chain.InsertChain(blocks); err != nil {
+			t.Fatalf("block %d: failed to insert into chain: %v", n, err)
+		}
+		senderNonce++
+		return chain.CurrentBlock()
 	}
 
-	block = chain.GetBlockByNumber(1)
+	block = insertBlockWithTx(accesses) // with AccessList
 
 	// Expected gas is intrinsic + 2 * pc + hot load + cold load, since only one load is in the access list
 	expected := params.TxGas + params.TxAccessListAddressGas + params.TxAccessListStorageKeyGas +
@@ -1474,22 +1477,7 @@ func TestAccessListTx(t *testing.T) {
 		t.Fatalf("incorrect amount of gas spent: expected %d, got %d", expected, block.GasUsed())
 	}
 
-	// Generate blocks
-	blocks, _ = GenerateChain(gspec.Config, block, engine, db, 1, func(i int, b *BlockGen) {
-		b.SetRewardbase(common.Address{1})
-
-		// One transaction to 0xAAAA, with access list
-		intrinsicGas, _ := types.IntrinsicGas([]byte{}, nil, false, gspec.Config.Rules(big.NewInt(1)))
-		signer := types.LatestSigner(gspec.Config)
-		tx, _ := types.SignTx(types.NewMessage(address, &aa, 1, big.NewInt(0), 30000, big.NewInt(1), []byte{}, false, intrinsicGas, nil), signer, key)
-		b.AddTx(tx)
-	})
-
-	if n, err := chain.InsertChain(blocks); err != nil {
-		t.Fatalf("block %d: failed to insert into chain: %v", n, err)
-	}
-
-	block = chain.GetBlockByNumber(2)
+	block = insertBlockWithTx(nil) // without AccessList
 
 	// Expected gas is intrinsic + 2 * pc + 2 * cold load, since no access list provided
 	expected = params.TxGas + vm.GasQuickStep*2 + params.ColdSloadCostEIP2929*2
