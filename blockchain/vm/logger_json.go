@@ -78,11 +78,11 @@ func (l *JSONLogger) CaptureEnd(output []byte, gasUsed uint64, err error) {
 		GasUsed math.HexOrDecimal64 `json:"gasUsed"`
 		Err     string              `json:"error,omitempty"`
 	}
+	var errMsg string
 	if err != nil {
-		l.encoder.Encode(endLog{common.Bytes2Hex(output), math.HexOrDecimal64(gasUsed), err.Error()})
+		errMsg = err.Error()
 	}
-
-	l.encoder.Encode(endLog{common.Bytes2Hex(output), math.HexOrDecimal64(gasUsed), ""})
+	l.encoder.Encode(endLog{common.Bytes2Hex(output), math.HexOrDecimal64(gasUsed), errMsg})
 }
 
 func (l *JSONLogger) CaptureTxStart(gasLimit uint64) {}
