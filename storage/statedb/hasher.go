@@ -38,8 +38,9 @@ type hasherOpts struct {
 
 type hasher struct {
 	hasherOpts
-	tmp sliceBuffer
-	sha KeccakState
+	tmp    sliceBuffer
+	sha    KeccakState
+	encbuf rlp.EncoderBuffer
 }
 
 // KeccakState wraps sha3.state. In addition to the usual hash methods, it also supports
@@ -65,8 +66,9 @@ func (b *sliceBuffer) Reset() {
 var hasherPool = sync.Pool{
 	New: func() interface{} {
 		return &hasher{
-			tmp: make(sliceBuffer, 0, 550), // cap is as large as a full fullNode.
-			sha: sha3.NewKeccak256().(KeccakState),
+			tmp:    make(sliceBuffer, 0, 550), // cap is as large as a full fullNode.
+			sha:    sha3.NewKeccak256().(KeccakState),
+			encbuf: rlp.NewEncoderBuffer(nil),
 		}
 	},
 }
@@ -206,11 +208,9 @@ func (h *hasher) store(n node, db *Database, force bool, onRoot bool) (node, uin
 	// Calculate lenEncoded if not set
 	if hash == nil || lenEncoded == 0 {
 		// Generate the RLP encoding of the node for database storing
-		h.tmp.Reset()
-		if err := rlp.Encode(&h.tmp, h.nodeForStoring(n)); err != nil {
-			panic("encode error: " + err.Error())
-		}
-		lenEncoded = uint16(len(h.tmp))
+		h.nodeForStoring(n).encode(h.encbuf)
+		enc := h.encodedBytes()
+		lenEncoded = uint16(len(enc))
 	}
 	if lenEncoded < 32 && !force {
 		return n, lenEncoded // Nodes smaller than 32 bytes are stored inside their parent
@@ -219,11 +219,9 @@ func (h *hasher) store(n node, db *Database, force bool, onRoot bool) (node, uin
 	// Calculate hash if not set
 	if hash == nil {
 		// Generate the RLP encoding of the node for Merkle hashing
-		h.tmp.Reset()
-		if err := rlp.Encode(&h.tmp, h.nodeForHashing(n)); err != nil {
-			panic("encode error: " + err.Error())
-		}
-		hash = h.makeHashNode(h.tmp, onRoot)
+		h.nodeForHashing(n).encode(h.encbuf)
+		enc := h.encodedBytes()
+		hash = h.hashData(enc, onRoot)
 	}
 
 	if db != nil {
@@ -253,7 +251,7 @@ func (h *hasher) store(n node, db *Database, force bool, onRoot bool) (node, uin
 	return hash, lenEncoded
 }
 
-func (h *hasher) makeHashNode(data []byte, onRoot bool) hashNode {
+func (h *hasher) hashData(data []byte, onRoot bool) hashNode {
 	var hash common.Hash
 	h.sha.Reset()
 	h.sha.Write(data)
@@ -263,6 +261,14 @@ func (h *hasher) makeHashNode(data []byte, onRoot bool) hashNode {
 	} else {
 		return hash.ExtendZero().Bytes()
 	}
+}
+
+// encodedBytes returns the result of the last encoding operation on h.encbuf.
+// This also resets the encoder buffer.
+func (h *hasher) encodedBytes() []byte {
+	h.tmp = h.encbuf.AppendToBytes(h.tmp[:0])
+	h.encbuf.Reset(nil)
+	return h.tmp
 }
 
 func (h *hasher) nodeForHashing(original node) node {
