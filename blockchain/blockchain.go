@@ -2706,10 +2706,11 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 		return nil, nil, err
 	}
 	// Create a new context to be used in the EVM environment
-	context := NewEVMContext(msg, header, bc, author)
+	blockContext := NewEVMBlockContext(header, bc, author)
+	txContext := NewEVMTxContext(msg, header)
 	// Create a new environment which holds all relevant information
 	// about the transaction and calling mechanisms.
-	vmenv := vm.NewEVM(context, statedb, chainConfig, vmConfig)
+	vmenv := vm.NewEVM(blockContext, txContext, statedb, chainConfig, vmConfig)
 	// Apply the transaction to the current state (included in the env)
 	result, err := ApplyMessage(vmenv, msg)
 	if err != nil {
@@ -2729,7 +2730,7 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 
 	receipt := types.NewReceipt(result.VmExecutionStatus, tx.Hash(), result.UsedGas)
 	// if the transaction created a contract, store the creation address in the receipt.
-	msg.FillContractAddress(vmenv.Context.Origin, receipt)
+	msg.FillContractAddress(vmenv.Origin, receipt)
 	// Set the receipt logs and create a bloom for filtering
 	receipt.Logs = statedb.GetLogs(tx.Hash())
 	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})

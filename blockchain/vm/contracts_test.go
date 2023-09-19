@@ -110,7 +110,7 @@ func prepare(reqGas uint64) (*Contract, *EVM, error) {
 	stateDb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
 	txhash := common.HexToHash("0xc6a37e155d3fa480faea012a68ad35fd53c8cc3cd8263a434c697755985a6577")
 	stateDb.Prepare(txhash, common.Hash{}, 0)
-	evm := NewEVM(Context{BlockNumber: big.NewInt(0)}, stateDb, &params.ChainConfig{IstanbulCompatibleBlock: big.NewInt(0)}, &Config{})
+	evm := NewEVM(BlockContext{BlockNumber: big.NewInt(0)}, TxContext{}, stateDb, &params.ChainConfig{IstanbulCompatibleBlock: big.NewInt(0)}, &Config{})
 
 	// Only stdout logging is tested to avoid file handling. It is used at vmLog test.
 	params.VMLogTarget = params.VMLogToStdout
@@ -388,7 +388,7 @@ func TestEVM_CVE_2021_39137(t *testing.T) {
 
 	gasLimit := uint64(99999999)
 	tracer := NewStructLogger(nil)
-	vmctx := Context{
+	blockCtx := BlockContext{
 		CanTransfer: func(StateDB, common.Address, *big.Int) bool { return true },
 		Transfer:    func(StateDB, common.Address, common.Address, *big.Int) {},
 	}
@@ -397,7 +397,7 @@ func TestEVM_CVE_2021_39137(t *testing.T) {
 	for _, tc := range testCases {
 		stateDb.SetCode(contractAddr, tc.testCode)
 
-		evm := NewEVM(vmctx, stateDb, params.TestChainConfig, &Config{Debug: true, Tracer: tracer})
+		evm := NewEVM(blockCtx, TxContext{}, stateDb, params.TestChainConfig, &Config{Debug: true, Tracer: tracer})
 		ret, _, err := evm.Call(AccountRef(fromAddr), contractAddr, nil, gasLimit, new(big.Int))
 		if err != nil {
 			t.Fatal(err)
