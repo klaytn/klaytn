@@ -164,9 +164,10 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config) (*state.StateD
 	if err != nil {
 		return nil, err
 	}
-	context := blockchain.NewEVMContext(msg, block.Header(), nil, &t.json.Env.Coinbase)
-	context.GetHash = vmTestBlockHash
-	evm := vm.NewEVM(context, statedb, config, &vmconfig)
+	txContext := blockchain.NewEVMTxContext(msg, block.Header())
+	blockContext := blockchain.NewEVMBlockContext(block.Header(), nil, &t.json.Env.Coinbase)
+	blockContext.GetHash = vmTestBlockHash
+	evm := vm.NewEVM(blockContext, txContext, statedb, config, &vmconfig)
 
 	snapshot := statedb.Snapshot()
 	if _, err = blockchain.ApplyMessage(evm, msg); err != nil {

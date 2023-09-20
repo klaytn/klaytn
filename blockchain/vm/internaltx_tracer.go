@@ -203,7 +203,7 @@ func (this *InternalTxTracer) CaptureState(env *EVM, pc uint64, op OpCode, gas, 
 	if this.err == nil {
 		// Initialize the context if it wasn't done yet
 		if !this.initialized {
-			this.ctx["block"] = env.BlockNumber.Uint64()
+			this.ctx["block"] = env.Context.BlockNumber.Uint64()
 			this.initialized = true
 		}
 		// If tracing was interrupted, set the error and stop

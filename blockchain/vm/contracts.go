@@ -675,7 +675,7 @@ func (c *validateSender) GetRequiredGasAndComputationCost(input []byte) (uint64,
 }
 
 func (c *validateSender) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
-	if err := c.validateSender(input, evm.StateDB, evm.BlockNumber.Uint64()); err != nil {
+	if err := c.validateSender(input, evm.StateDB, evm.Context.BlockNumber.Uint64()); err != nil {
 		// If return error makes contract execution failed, do not return the error.
 		// Instead, print log.
 		logger.Trace("validateSender failed", "err", err)

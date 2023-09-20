@@ -96,7 +96,7 @@ type Backend interface {
 	// N.B: For executing transactions on block N, the required stateRoot is block N-1,
 	// so this method should be called with the parent.
 	StateAtBlock(ctx context.Context, block *types.Block, reexec uint64, base *state.StateDB, checkLive bool, preferDisk bool) (*state.StateDB, error)
-	StateAtTransaction(ctx context.Context, block *types.Block, txIndex int, reexec uint64) (blockchain.Message, vm.Context, *state.StateDB, error)
+	StateAtTransaction(ctx context.Context, block *types.Block, txIndex int, reexec uint64) (blockchain.Message, vm.BlockContext, vm.TxContext, *state.StateDB, error)
 }
 
 // API is the collection of tracing APIs exposed over the private debugging endpoint.
@@ -306,9 +306,10 @@ func (api *API) traceChain(start, end *types.Block, config *TraceConfig, notifie
 						break
 					}
 
-					vmctx := blockchain.NewEVMContext(msg, task.block.Header(), newChainContext(localctx, api.backend), nil)
+					txCtx := blockchain.NewEVMTxContext(msg, task.block.Header())
+					blockCtx := blockchain.NewEVMBlockContext(task.block.Header(), newChainContext(localctx, api.backend), nil)
 
-					res, err := api.traceTx(localctx, msg, vmctx, task.statedb, config)
+					res, err := api.traceTx(localctx, msg, blockCtx, txCtx, task.statedb, config)
 					if err != nil {
 						task.results[i] = &txTraceResult{TxHash: tx.Hash(), Error: err.Error()}
 						logger.Warn("Tracing failed", "hash", tx.Hash(), "block", task.block.NumberU64(), "err", err)
@@ -630,8 +631,9 @@ func (api *API) traceBlock(ctx context.Context, block *types.Block, config *Trac
 					continue
 				}
 
-				vmctx := blockchain.NewEVMContext(msg, block.Header(), newChainContext(ctx, api.backend), nil)
-				res, err := api.traceTx(ctx, msg, vmctx, task.statedb, config)
+				txCtx := blockchain.NewEVMTxContext(msg, block.Header())
+				blockCtx := blockchain.NewEVMBlockContext(block.Header(), newChainContext(ctx, api.backend), nil)
+				res, err := api.traceTx(ctx, msg, blockCtx, txCtx, task.statedb, config)
 				if err != nil {
 					results[task.index] = &txTraceResult{TxHash: txs[task.index].Hash(), Error: err.Error()}
 					continue
@@ -654,8 +656,9 @@ func (api *API) traceBlock(ctx context.Context, block *types.Block, config *Trac
 			break
 		}
 
-		vmctx := blockchain.NewEVMContext(msg, block.Header(), newChainContext(ctx, api.backend), nil)
-		vmenv := vm.NewEVM(vmctx, statedb, api.backend.ChainConfig(), &vm.Config{UseOpcodeComputationCost: true})
+		txCtx := blockchain.NewEVMTxContext(msg, block.Header())
+		blockCtx := blockchain.NewEVMBlockContext(block.Header(), newChainContext(ctx, api.backend), nil)
+		vmenv := vm.NewEVM(blockCtx, txCtx, statedb, api.backend.ChainConfig(), &vm.Config{UseOpcodeComputationCost: true})
 		if _, err = blockchain.ApplyMessage(vmenv, msg); err != nil {
 			failed = err
 			break
@@ -725,7 +728,8 @@ func (api *API) standardTraceBlockToFile(ctx context.Context, block *types.Block
 		}
 
 		var (
-			vmctx = blockchain.NewEVMContext(msg, block.Header(), newChainContext(ctx, api.backend), nil)
+			txCtx    = blockchain.NewEVMTxContext(msg, block.Header())
+			blockCtx = blockchain.NewEVMBlockContext(block.Header(), newChainContext(ctx, api.backend), nil)
 
 			vmConf vm.Config
 			dump   *os.File
@@ -751,7 +755,7 @@ func (api *API) standardTraceBlockToFile(ctx context.Context, block *types.Block
 			}
 		}
 		// Execute the transaction and flush any traces to disk
-		vmenv := vm.NewEVM(vmctx, statedb, api.backend.ChainConfig(), &vmConf)
+		vmenv := vm.NewEVM(blockCtx, txCtx, statedb, api.backend.ChainConfig(), &vmConf)
 		_, err = blockchain.ApplyMessage(vmenv, msg)
 
 		if dump != nil {
@@ -810,12 +814,12 @@ func (api *API) TraceTransaction(ctx context.Context, hash common.Hash, config *
 	if err != nil {
 		return nil, err
 	}
-	msg, vmctx, statedb, err := api.backend.StateAtTransaction(ctx, block, int(index), reexec)
+	msg, blockCtx, txCtx, statedb, err := api.backend.StateAtTransaction(ctx, block, int(index), reexec)
 	if err != nil {
 		return nil, err
 	}
 	// Trace the transaction and return
-	return api.traceTx(ctx, msg, vmctx, statedb, config)
+	return api.traceTx(ctx, msg, blockCtx, txCtx, statedb, config)
 }
 
 // TraceCall lets you trace a given klay_call. It collects the structured logs
@@ -871,15 +875,17 @@ func (api *API) TraceCall(ctx context.Context, args klaytnapi.CallArgs, blockNrO
 	if err != nil {
 		return nil, err
 	}
-	vmctx := blockchain.NewEVMContext(msg, block.Header(), newChainContext(ctx, api.backend), nil)
 
-	return api.traceTx(ctx, msg, vmctx, statedb, config)
+	txCtx := blockchain.NewEVMTxContext(msg, block.Header())
+	blockCtx := blockchain.NewEVMBlockContext(block.Header(), newChainContext(ctx, api.backend), nil)
+
+	return api.traceTx(ctx, msg, blockCtx, txCtx, statedb, config)
 }
 
 // traceTx configures a new tracer according to the provided configuration, and
 // executes the given message in the provided environment. The return value will
 // be tracer dependent.
-func (api *API) traceTx(ctx context.Context, message blockchain.Message, vmctx vm.Context, statedb *state.StateDB, config *TraceConfig) (interface{}, error) {
+func (api *API) traceTx(ctx context.Context, message blockchain.Message, blockCtx vm.BlockContext, txCtx vm.TxContext, statedb *state.StateDB, config *TraceConfig) (interface{}, error) {
 	// Assemble the structured logger or the JavaScript tracer
 	var (
 		tracer vm.Tracer
@@ -927,7 +933,7 @@ func (api *API) traceTx(ctx context.Context, message blockchain.Message, vmctx v
 		tracer = vm.NewStructLogger(config.LogConfig)
 	}
 	// Run the transaction with tracing enabled.
-	vmenv := vm.NewEVM(vmctx, statedb, api.backend.ChainConfig(), &vm.Config{Debug: true, Tracer: tracer, UseOpcodeComputationCost: true})
+	vmenv := vm.NewEVM(blockCtx, txCtx, statedb, api.backend.ChainConfig(), &vm.Config{Debug: true, Tracer: tracer, UseOpcodeComputationCost: true})
 
 	ret, err := blockchain.ApplyMessage(vmenv, message)
 	if err != nil {

@@ -2493,8 +2493,9 @@ func testEstimateGas(t *testing.T, mockBackend *mock_api.MockBackend, fnEstimate
 	getEVM := func(_ context.Context, msg blockchain.Message, state *state.StateDB, header *types.Header, vmConfig vm.Config) (*vm.EVM, func() error, error) {
 		// Taken from node/cn/api_backend.go
 		vmError := func() error { return nil }
-		context := blockchain.NewEVMContext(msg, header, chain, nil)
-		return vm.NewEVM(context, state, chainConfig, &vmConfig), vmError, nil
+		txContext := blockchain.NewEVMTxContext(msg, header)
+		blockContext := blockchain.NewEVMBlockContext(header, chain, nil)
+		return vm.NewEVM(blockContext, txContext, state, chainConfig, &vmConfig), vmError, nil
 	}
 	mockBackend.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
 	mockBackend.EXPECT().RPCGasCap().Return(common.Big0).AnyTimes()
