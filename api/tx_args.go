@@ -768,12 +768,11 @@ func (args *EthTransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int,
 	}
 	data := args.data()
 
-	// TODO-Klaytn: Klaytn does not support accessList yet.
-	// var accessList types.AccessList
-	// if args.AccessList != nil {
-	//	 accessList = *args.AccessList
-	// }
-	return types.NewMessage(addr, args.To, 0, value, gas, gasPrice, data, false, intrinsicGas), nil
+	var accessList types.AccessList
+	if args.AccessList != nil {
+		accessList = *args.AccessList
+	}
+	return types.NewMessage(addr, args.To, 0, value, gas, gasPrice, data, false, intrinsicGas, accessList), nil
 }
 
 // toTransaction converts the arguments to a transaction.

@@ -1397,6 +1397,95 @@ func TestLargeReorgTrieGC(t *testing.T) {
 }
 */
 
+// Taken from go-ethereum core.TestEIP2718Transition
+// https://github.com/ethereum/go-ethereum/blob/v1.12.2/core/blockchain_test.go#L3441
+func TestAccessListTx(t *testing.T) {
+	config := params.TestChainConfig.Copy()
+	config.IstanbulCompatibleBlock = common.Big0
+	config.LondonCompatibleBlock = common.Big0
+	config.EthTxTypeCompatibleBlock = common.Big0
+	config.MagmaCompatibleBlock = common.Big0
+	config.KoreCompatibleBlock = common.Big0
+	config.ShanghaiCompatibleBlock = common.Big0
+	config.CancunCompatibleBlock = common.Big0
+	config.Governance = params.GetDefaultGovernanceConfig()
+	config.Governance.KIP71.LowerBoundBaseFee = 0
+	var (
+		contractAddr = common.HexToAddress("0x000000000000000000000000000000000000aaaa")
+		engine       = gxhash.NewFaker()
+		signer       = types.LatestSigner(config)
+
+		// A sender who makes transactions, has some funds
+		senderKey, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+		senderAddr   = crypto.PubkeyToAddress(senderKey.PublicKey)
+		senderNonce  = uint64(0)
+		gspec        = &Genesis{
+			Config: config,
+			Alloc: GenesisAlloc{
+				senderAddr: {Balance: big.NewInt(params.KLAY)},
+				contractAddr: { // SLOAD 0x00 and 0x01
+					Code: []byte{
+						byte(vm.PC),
+						byte(vm.PC),
+						byte(vm.SLOAD),
+						byte(vm.SLOAD),
+					},
+					Nonce:   0,
+					Balance: big.NewInt(0),
+				},
+			},
+		}
+		db       = database.NewMemoryDBManager()
+		block    = gspec.MustCommit(db)
+		accesses = types.AccessList{{
+			Address:     contractAddr,
+			StorageKeys: []common.Hash{{0}},
+		}}
+	)
+
+	// Import the canonical chain
+	chain, err := NewBlockChain(db, nil, gspec.Config, engine, vm.Config{})
+	if err != nil {
+		t.Fatalf("failed to create tester chain: %v", err)
+	}
+	defer chain.Stop()
+
+	// helper function to insert a block with a transaction
+	insertBlockWithTx := func(list types.AccessList) *types.Block {
+		// Generate blocks
+		blocks, _ := GenerateChain(gspec.Config, block, engine, db, 1, func(i int, b *BlockGen) {
+			b.SetRewardbase(common.Address{1})
+
+			// One transaction to 0xAAAA
+			intrinsicGas, _ := types.IntrinsicGas([]byte{}, list, false, gspec.Config.Rules(block.Number()))
+			tx, _ := types.SignTx(types.NewMessage(senderAddr, &contractAddr, senderNonce, big.NewInt(0), 30000, big.NewInt(1), []byte{}, false, intrinsicGas, list), signer, senderKey)
+			b.AddTx(tx)
+		})
+		if n, err := chain.InsertChain(blocks); err != nil {
+			t.Fatalf("block %d: failed to insert into chain: %v", n, err)
+		}
+		senderNonce++
+		return chain.CurrentBlock()
+	}
+
+	block = insertBlockWithTx(accesses) // with AccessList
+
+	// Expected gas is intrinsic + 2 * pc + hot load + cold load, since only one load is in the access list
+	expected := params.TxGas + params.TxAccessListAddressGas + params.TxAccessListStorageKeyGas +
+		vm.GasQuickStep*2 + params.WarmStorageReadCostEIP2929 + params.ColdSloadCostEIP2929
+	if block.GasUsed() != expected {
+		t.Fatalf("incorrect amount of gas spent: expected %d, got %d", expected, block.GasUsed())
+	}
+
+	block = insertBlockWithTx(nil) // without AccessList
+
+	// Expected gas is intrinsic + 2 * pc + 2 * cold load, since no access list provided
+	expected = params.TxGas + vm.GasQuickStep*2 + params.ColdSloadCostEIP2929*2
+	if block.GasUsed() != expected {
+		t.Fatalf("incorrect amount of gas spent: expected %d, got %d", expected, block.GasUsed())
+	}
+}
+
 func TestEIP3651(t *testing.T) {
 	var (
 		aa     = params.AuthorAddressForTesting

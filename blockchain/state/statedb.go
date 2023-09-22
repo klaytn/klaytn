@@ -1087,31 +1087,36 @@ func (s *StateDB) GetContractStorageRoot(contractAddr common.Address) (common.Ex
 //
 // regards to EIP-3651:
 // - Add coinbase to access list (EIP-3651)
-func (s *StateDB) PrepareAccessList(rules params.Rules, sender, feepayer, coinbase common.Address, dst *common.Address, precompiles []common.Address) {
-	// Clear out any leftover from previous executions
-	s.accessList = newAccessList()
+func (s *StateDB) PrepareAccessList(rules params.Rules, sender, feepayer, coinbase common.Address, dst *common.Address, precompiles []common.Address, list types.AccessList) {
+	if rules.IsKore {
+		// Clear out any leftover from previous executions
+		s.accessList = newAccessList()
 
-	s.AddAddressToAccessList(sender)
-	if !common.EmptyAddress(feepayer) {
-		s.AddAddressToAccessList(feepayer)
-	}
-	if dst != nil {
-		s.AddAddressToAccessList(*dst)
-		// If it's a create-tx, the destination will be added inside evm.create
-	}
-	for _, addr := range precompiles {
-		s.AddAddressToAccessList(addr)
-	}
-	// Uncommented below code because we do not support optional accessList yet (written at eip-2930).
-	// Optional accessList is the accessList mentioned through tx args.
-	//for _, el := range list {
-	//	s.AddAddressToAccessList(el.Address)
-	//	for _, key := range el.StorageKeys {
-	//		s.AddSlotToAccessList(el.Address, key)
-	//	}
-	//}
-	if rules.IsShanghai {
-		s.AddAddressToAccessList(coinbase)
+		s.AddAddressToAccessList(sender)
+		if !common.EmptyAddress(feepayer) {
+			s.AddAddressToAccessList(feepayer)
+		}
+		if dst != nil {
+			s.AddAddressToAccessList(*dst)
+			// If it's a create-tx, the destination will be added inside evm.create
+		}
+		for _, addr := range precompiles {
+			s.AddAddressToAccessList(addr)
+		}
+
+		if rules.IsCancun {
+			// Optional accessList is the accessList mentioned through tx args.
+			for _, el := range list {
+				s.AddAddressToAccessList(el.Address)
+				for _, key := range el.StorageKeys {
+					s.AddSlotToAccessList(el.Address, key)
+				}
+			}
+		}
+
+		if rules.IsShanghai {
+			s.AddAddressToAccessList(coinbase)
+		}
 	}
 }
 
