@@ -27,14 +27,14 @@ var (
 )
 
 // IRegistryABI is the input ABI used to generate the binding from.
-const IRegistryABI = "[{\"inputs\":[{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"}],\"name\":\"getActiveContract\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
+const IRegistryABI = "[{\"inputs\":[{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"}],\"name\":\"getActiveAddr\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
 // IRegistryBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
 const IRegistryBinRuntime = ``
 
 // IRegistryFuncSigs maps the 4-byte function signature to its string representation.
 var IRegistryFuncSigs = map[string]string{
-	"080d5721": "getActiveContract(string)",
+	"e2693e3f": "getActiveAddr(string)",
 }
 
 // IRegistry is an auto generated Go binding around a Klaytn contract.
@@ -179,45 +179,45 @@ func (_IRegistry *IRegistryTransactorRaw) Transact(opts *bind.TransactOpts, meth
 	return _IRegistry.Contract.contract.Transact(opts, method, params...)
 }
 
-// GetActiveContract is a free data retrieval call binding the contract method 0x080d5721.
+// GetActiveAddr is a free data retrieval call binding the contract method 0xe2693e3f.
 //
-// Solidity: function getActiveContract(string name) view returns(address)
-func (_IRegistry *IRegistryCaller) GetActiveContract(opts *bind.CallOpts, name string) (common.Address, error) {
+// Solidity: function getActiveAddr(string name) view returns(address)
+func (_IRegistry *IRegistryCaller) GetActiveAddr(opts *bind.CallOpts, name string) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
 	)
 	out := ret0
-	err := _IRegistry.contract.Call(opts, out, "getActiveContract", name)
+	err := _IRegistry.contract.Call(opts, out, "getActiveAddr", name)
 	return *ret0, err
 }
 
-// GetActiveContract is a free data retrieval call binding the contract method 0x080d5721.
+// GetActiveAddr is a free data retrieval call binding the contract method 0xe2693e3f.
 //
-// Solidity: function getActiveContract(string name) view returns(address)
-func (_IRegistry *IRegistrySession) GetActiveContract(name string) (common.Address, error) {
-	return _IRegistry.Contract.GetActiveContract(&_IRegistry.CallOpts, name)
+// Solidity: function getActiveAddr(string name) view returns(address)
+func (_IRegistry *IRegistrySession) GetActiveAddr(name string) (common.Address, error) {
+	return _IRegistry.Contract.GetActiveAddr(&_IRegistry.CallOpts, name)
 }
 
-// GetActiveContract is a free data retrieval call binding the contract method 0x080d5721.
+// GetActiveAddr is a free data retrieval call binding the contract method 0xe2693e3f.
 //
-// Solidity: function getActiveContract(string name) view returns(address)
-func (_IRegistry *IRegistryCallerSession) GetActiveContract(name string) (common.Address, error) {
-	return _IRegistry.Contract.GetActiveContract(&_IRegistry.CallOpts, name)
+// Solidity: function getActiveAddr(string name) view returns(address)
+func (_IRegistry *IRegistryCallerSession) GetActiveAddr(name string) (common.Address, error) {
+	return _IRegistry.Contract.GetActiveAddr(&_IRegistry.CallOpts, name)
 }
 
 // RegistryABI is the input ABI used to generate the binding from.
-const RegistryABI = "[{\"inputs\":[{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"}],\"name\":\"getActiveContract\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
+const RegistryABI = "[{\"inputs\":[{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"}],\"name\":\"getActiveAddr\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
 // RegistryBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
-const RegistryBinRuntime = `608060405234801561001057600080fd5b506004361061002b5760003560e01c8063080d572114610030575b600080fd5b61004361003e3660046100b6565b61005f565b6040516001600160a01b03909116815260200160405180910390f35b60405162461bcd60e51b815260206004820152600f60248201526e1b9bdd081a5b5c1b195b595b9d1959608a1b604482015260009060640160405180910390fd5b634e487b7160e01b600052604160045260246000fd5b6000602082840312156100c857600080fd5b813567ffffffffffffffff808211156100e057600080fd5b818401915084601f8301126100f457600080fd5b813581811115610106576101066100a0565b604051601f8201601f19908116603f0116810190838211818310171561012e5761012e6100a0565b8160405282815287602084870101111561014757600080fd5b82602086016020830137600092810160200192909252509594505050505056fea26469706673582212201b2ec5ac3f64bc0b73fe2515f6c12d958b63dbd7387cae5d88affc9c69b01e5664736f6c63430008110033`
+const RegistryBinRuntime = `608060405234801561001057600080fd5b506004361061002b5760003560e01c8063e2693e3f14610030575b600080fd5b61004361003e3660046100b6565b61005f565b6040516001600160a01b03909116815260200160405180910390f35b60405162461bcd60e51b815260206004820152600f60248201526e1b9bdd081a5b5c1b195b595b9d1959608a1b604482015260009060640160405180910390fd5b634e487b7160e01b600052604160045260246000fd5b6000602082840312156100c857600080fd5b813567ffffffffffffffff808211156100e057600080fd5b818401915084601f8301126100f457600080fd5b813581811115610106576101066100a0565b604051601f8201601f19908116603f0116810190838211818310171561012e5761012e6100a0565b8160405282815287602084870101111561014757600080fd5b82602086016020830137600092810160200192909252509594505050505056fea26469706673582212202baebcbf67ab9b5cbd8fc6dcc00c381bef5833202c81d669604bbe8d34bc7bb764736f6c63430008110033`
 
 // RegistryFuncSigs maps the 4-byte function signature to its string representation.
 var RegistryFuncSigs = map[string]string{
-	"080d5721": "getActiveContract(string)",
+	"e2693e3f": "getActiveAddr(string)",
 }
 
 // RegistryBin is the compiled bytecode used for deploying new contracts.
-var RegistryBin = "0x608060405234801561001057600080fd5b5061019d806100206000396000f3fe608060405234801561001057600080fd5b506004361061002b5760003560e01c8063080d572114610030575b600080fd5b61004361003e3660046100b6565b61005f565b6040516001600160a01b03909116815260200160405180910390f35b60405162461bcd60e51b815260206004820152600f60248201526e1b9bdd081a5b5c1b195b595b9d1959608a1b604482015260009060640160405180910390fd5b634e487b7160e01b600052604160045260246000fd5b6000602082840312156100c857600080fd5b813567ffffffffffffffff808211156100e057600080fd5b818401915084601f8301126100f457600080fd5b813581811115610106576101066100a0565b604051601f8201601f19908116603f0116810190838211818310171561012e5761012e6100a0565b8160405282815287602084870101111561014757600080fd5b82602086016020830137600092810160200192909252509594505050505056fea26469706673582212201b2ec5ac3f64bc0b73fe2515f6c12d958b63dbd7387cae5d88affc9c69b01e5664736f6c63430008110033"
+var RegistryBin = "0x608060405234801561001057600080fd5b5061019d806100206000396000f3fe608060405234801561001057600080fd5b506004361061002b5760003560e01c8063e2693e3f14610030575b600080fd5b61004361003e3660046100b6565b61005f565b6040516001600160a01b03909116815260200160405180910390f35b60405162461bcd60e51b815260206004820152600f60248201526e1b9bdd081a5b5c1b195b595b9d1959608a1b604482015260009060640160405180910390fd5b634e487b7160e01b600052604160045260246000fd5b6000602082840312156100c857600080fd5b813567ffffffffffffffff808211156100e057600080fd5b818401915084601f8301126100f457600080fd5b813581811115610106576101066100a0565b604051601f8201601f19908116603f0116810190838211818310171561012e5761012e6100a0565b8160405282815287602084870101111561014757600080fd5b82602086016020830137600092810160200192909252509594505050505056fea26469706673582212202baebcbf67ab9b5cbd8fc6dcc00c381bef5833202c81d669604bbe8d34bc7bb764736f6c63430008110033"
 
 // DeployRegistry deploys a new Klaytn contract, binding an instance of Registry to it.
 func DeployRegistry(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Registry, error) {
@@ -375,47 +375,47 @@ func (_Registry *RegistryTransactorRaw) Transact(opts *bind.TransactOpts, method
 	return _Registry.Contract.contract.Transact(opts, method, params...)
 }
 
-// GetActiveContract is a free data retrieval call binding the contract method 0x080d5721.
+// GetActiveAddr is a free data retrieval call binding the contract method 0xe2693e3f.
 //
-// Solidity: function getActiveContract(string name) view returns(address)
-func (_Registry *RegistryCaller) GetActiveContract(opts *bind.CallOpts, name string) (common.Address, error) {
+// Solidity: function getActiveAddr(string name) view returns(address)
+func (_Registry *RegistryCaller) GetActiveAddr(opts *bind.CallOpts, name string) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
 	)
 	out := ret0
-	err := _Registry.contract.Call(opts, out, "getActiveContract", name)
+	err := _Registry.contract.Call(opts, out, "getActiveAddr", name)
 	return *ret0, err
 }
 
-// GetActiveContract is a free data retrieval call binding the contract method 0x080d5721.
+// GetActiveAddr is a free data retrieval call binding the contract method 0xe2693e3f.
 //
-// Solidity: function getActiveContract(string name) view returns(address)
-func (_Registry *RegistrySession) GetActiveContract(name string) (common.Address, error) {
-	return _Registry.Contract.GetActiveContract(&_Registry.CallOpts, name)
+// Solidity: function getActiveAddr(string name) view returns(address)
+func (_Registry *RegistrySession) GetActiveAddr(name string) (common.Address, error) {
+	return _Registry.Contract.GetActiveAddr(&_Registry.CallOpts, name)
 }
 
-// GetActiveContract is a free data retrieval call binding the contract method 0x080d5721.
+// GetActiveAddr is a free data retrieval call binding the contract method 0xe2693e3f.
 //
-// Solidity: function getActiveContract(string name) view returns(address)
-func (_Registry *RegistryCallerSession) GetActiveContract(name string) (common.Address, error) {
-	return _Registry.Contract.GetActiveContract(&_Registry.CallOpts, name)
+// Solidity: function getActiveAddr(string name) view returns(address)
+func (_Registry *RegistryCallerSession) GetActiveAddr(name string) (common.Address, error) {
+	return _Registry.Contract.GetActiveAddr(&_Registry.CallOpts, name)
 }
 
 // RegistryMockABI is the input ABI used to generate the binding from.
-const RegistryMockABI = "[{\"inputs\":[{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"}],\"name\":\"getActiveContract\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"name\":\"records\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"},{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"register\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const RegistryMockABI = "[{\"inputs\":[{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"}],\"name\":\"getActiveAddr\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"records\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"activation\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"},{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"activation\",\"type\":\"uint256\"}],\"name\":\"register\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // RegistryMockBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
-const RegistryMockBinRuntime = `608060405234801561001057600080fd5b50600436106100415760003560e01c8063080d5721146100465780631e59c52914610075578063541e771d1461008a575b600080fd5b6100596100543660046101d5565b6100be565b6040516001600160a01b03909116815260200160405180910390f35b610088610083366004610212565b6100ee565b005b6100596100983660046101d5565b80516020818301810180516000825292820191909301209152546001600160a01b031681565b600080826040516100cf9190610270565b908152604051908190036020019020546001600160a01b031692915050565b806000836040516100ff9190610270565b90815260405190819003602001902080546001600160a01b03929092166001600160a01b03199092169190911790555050565b634e487b7160e01b600052604160045260246000fd5b600082601f83011261015957600080fd5b813567ffffffffffffffff8082111561017457610174610132565b604051601f8301601f19908116603f0116810190828211818310171561019c5761019c610132565b816040528381528660208588010111156101b557600080fd5b836020870160208301376000602085830101528094505050505092915050565b6000602082840312156101e757600080fd5b813567ffffffffffffffff8111156101fe57600080fd5b61020a84828501610148565b949350505050565b6000806040838503121561022557600080fd5b823567ffffffffffffffff81111561023c57600080fd5b61024885828601610148565b92505060208301356001600160a01b038116811461026557600080fd5b809150509250929050565b6000825160005b818110156102915760208186018101518583015201610277565b50600092019182525091905056fea26469706673582212200be7666a50b9065e81c071c025510f3e57b6e8294690ac5940a1c711cf00340b64736f6c63430008110033`
+const RegistryMockBinRuntime = `608060405234801561001057600080fd5b50600436106100415760003560e01c80633b51650d14610046578063d393c8711461007d578063e2693e3f14610092575b600080fd5b6100596100543660046102b6565b6100bd565b604080516001600160a01b0390931683526020830191909152015b60405180910390f35b61009061008b3660046102fb565b610112565b005b6100a56100a0366004610361565b610181565b6040516001600160a01b039091168152602001610074565b815160208184018101805160008252928201918501919091209190528054829081106100e857600080fd5b6000918252602090912060029091020180546001909101546001600160a01b039091169250905082565b600083604051610122919061039e565b90815260408051602092819003830181208183019092526001600160a01b039485168152828101938452815460018082018455600093845293909220905160029092020180546001600160a01b03191691909416178355905191015550565b600080600083604051610194919061039e565b90815260405190819003602001902054905060008190036101b85750600092915050565b6000836040516101c8919061039e565b9081526040519081900360200190206101e26001836103cd565b815481106101f2576101f26103f4565b60009182526020909120600290910201546001600160a01b03169392505050565b634e487b7160e01b600052604160045260246000fd5b600082601f83011261023a57600080fd5b813567ffffffffffffffff8082111561025557610255610213565b604051601f8301601f19908116603f0116810190828211818310171561027d5761027d610213565b8160405283815286602085880101111561029657600080fd5b836020870160208301376000602085830101528094505050505092915050565b600080604083850312156102c957600080fd5b823567ffffffffffffffff8111156102e057600080fd5b6102ec85828601610229565b95602094909401359450505050565b60008060006060848603121561031057600080fd5b833567ffffffffffffffff81111561032757600080fd5b61033386828701610229565b93505060208401356001600160a01b038116811461035057600080fd5b929592945050506040919091013590565b60006020828403121561037357600080fd5b813567ffffffffffffffff81111561038a57600080fd5b61039684828501610229565b949350505050565b6000825160005b818110156103bf57602081860181015185830152016103a5565b506000920191825250919050565b818103818111156103ee57634e487b7160e01b600052601160045260246000fd5b92915050565b634e487b7160e01b600052603260045260246000fdfea26469706673582212205fe32fa81ee789c8e1f6cf6e001eeea21e25ad22870152e09ff2b670f942aa8c64736f6c63430008110033`
 
 // RegistryMockFuncSigs maps the 4-byte function signature to its string representation.
 var RegistryMockFuncSigs = map[string]string{
-	"080d5721": "getActiveContract(string)",
-	"541e771d": "records(string)",
-	"1e59c529": "register(string,address)",
+	"e2693e3f": "getActiveAddr(string)",
+	"3b51650d": "records(string,uint256)",
+	"d393c871": "register(string,address,uint256)",
 }
 
 // RegistryMockBin is the compiled bytecode used for deploying new contracts.
-var RegistryMockBin = "0x608060405234801561001057600080fd5b506102d5806100206000396000f3fe608060405234801561001057600080fd5b50600436106100415760003560e01c8063080d5721146100465780631e59c52914610075578063541e771d1461008a575b600080fd5b6100596100543660046101d5565b6100be565b6040516001600160a01b03909116815260200160405180910390f35b610088610083366004610212565b6100ee565b005b6100596100983660046101d5565b80516020818301810180516000825292820191909301209152546001600160a01b031681565b600080826040516100cf9190610270565b908152604051908190036020019020546001600160a01b031692915050565b806000836040516100ff9190610270565b90815260405190819003602001902080546001600160a01b03929092166001600160a01b03199092169190911790555050565b634e487b7160e01b600052604160045260246000fd5b600082601f83011261015957600080fd5b813567ffffffffffffffff8082111561017457610174610132565b604051601f8301601f19908116603f0116810190828211818310171561019c5761019c610132565b816040528381528660208588010111156101b557600080fd5b836020870160208301376000602085830101528094505050505092915050565b6000602082840312156101e757600080fd5b813567ffffffffffffffff8111156101fe57600080fd5b61020a84828501610148565b949350505050565b6000806040838503121561022557600080fd5b823567ffffffffffffffff81111561023c57600080fd5b61024885828601610148565b92505060208301356001600160a01b038116811461026557600080fd5b809150509250929050565b6000825160005b818110156102915760208186018101518583015201610277565b50600092019182525091905056fea26469706673582212200be7666a50b9065e81c071c025510f3e57b6e8294690ac5940a1c711cf00340b64736f6c63430008110033"
+var RegistryMockBin = "0x608060405234801561001057600080fd5b50610440806100206000396000f3fe608060405234801561001057600080fd5b50600436106100415760003560e01c80633b51650d14610046578063d393c8711461007d578063e2693e3f14610092575b600080fd5b6100596100543660046102b6565b6100bd565b604080516001600160a01b0390931683526020830191909152015b60405180910390f35b61009061008b3660046102fb565b610112565b005b6100a56100a0366004610361565b610181565b6040516001600160a01b039091168152602001610074565b815160208184018101805160008252928201918501919091209190528054829081106100e857600080fd5b6000918252602090912060029091020180546001909101546001600160a01b039091169250905082565b600083604051610122919061039e565b90815260408051602092819003830181208183019092526001600160a01b039485168152828101938452815460018082018455600093845293909220905160029092020180546001600160a01b03191691909416178355905191015550565b600080600083604051610194919061039e565b90815260405190819003602001902054905060008190036101b85750600092915050565b6000836040516101c8919061039e565b9081526040519081900360200190206101e26001836103cd565b815481106101f2576101f26103f4565b60009182526020909120600290910201546001600160a01b03169392505050565b634e487b7160e01b600052604160045260246000fd5b600082601f83011261023a57600080fd5b813567ffffffffffffffff8082111561025557610255610213565b604051601f8301601f19908116603f0116810190828211818310171561027d5761027d610213565b8160405283815286602085880101111561029657600080fd5b836020870160208301376000602085830101528094505050505092915050565b600080604083850312156102c957600080fd5b823567ffffffffffffffff8111156102e057600080fd5b6102ec85828601610229565b95602094909401359450505050565b60008060006060848603121561031057600080fd5b833567ffffffffffffffff81111561032757600080fd5b61033386828701610229565b93505060208401356001600160a01b038116811461035057600080fd5b929592945050506040919091013590565b60006020828403121561037357600080fd5b813567ffffffffffffffff81111561038a57600080fd5b61039684828501610229565b949350505050565b6000825160005b818110156103bf57602081860181015185830152016103a5565b506000920191825250919050565b818103818111156103ee57634e487b7160e01b600052601160045260246000fd5b92915050565b634e487b7160e01b600052603260045260246000fdfea26469706673582212205fe32fa81ee789c8e1f6cf6e001eeea21e25ad22870152e09ff2b670f942aa8c64736f6c63430008110033"
 
 // DeployRegistryMock deploys a new Klaytn contract, binding an instance of RegistryMock to it.
 func DeployRegistryMock(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *RegistryMock, error) {
@@ -573,75 +573,85 @@ func (_RegistryMock *RegistryMockTransactorRaw) Transact(opts *bind.TransactOpts
 	return _RegistryMock.Contract.contract.Transact(opts, method, params...)
 }
 
-// GetActiveContract is a free data retrieval call binding the contract method 0x080d5721.
+// GetActiveAddr is a free data retrieval call binding the contract method 0xe2693e3f.
 //
-// Solidity: function getActiveContract(string name) view returns(address)
-func (_RegistryMock *RegistryMockCaller) GetActiveContract(opts *bind.CallOpts, name string) (common.Address, error) {
+// Solidity: function getActiveAddr(string name) view returns(address)
+func (_RegistryMock *RegistryMockCaller) GetActiveAddr(opts *bind.CallOpts, name string) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
 	)
 	out := ret0
-	err := _RegistryMock.contract.Call(opts, out, "getActiveContract", name)
+	err := _RegistryMock.contract.Call(opts, out, "getActiveAddr", name)
 	return *ret0, err
 }
 
-// GetActiveContract is a free data retrieval call binding the contract method 0x080d5721.
+// GetActiveAddr is a free data retrieval call binding the contract method 0xe2693e3f.
 //
-// Solidity: function getActiveContract(string name) view returns(address)
-func (_RegistryMock *RegistryMockSession) GetActiveContract(name string) (common.Address, error) {
-	return _RegistryMock.Contract.GetActiveContract(&_RegistryMock.CallOpts, name)
+// Solidity: function getActiveAddr(string name) view returns(address)
+func (_RegistryMock *RegistryMockSession) GetActiveAddr(name string) (common.Address, error) {
+	return _RegistryMock.Contract.GetActiveAddr(&_RegistryMock.CallOpts, name)
 }
 
-// GetActiveContract is a free data retrieval call binding the contract method 0x080d5721.
+// GetActiveAddr is a free data retrieval call binding the contract method 0xe2693e3f.
 //
-// Solidity: function getActiveContract(string name) view returns(address)
-func (_RegistryMock *RegistryMockCallerSession) GetActiveContract(name string) (common.Address, error) {
-	return _RegistryMock.Contract.GetActiveContract(&_RegistryMock.CallOpts, name)
+// Solidity: function getActiveAddr(string name) view returns(address)
+func (_RegistryMock *RegistryMockCallerSession) GetActiveAddr(name string) (common.Address, error) {
+	return _RegistryMock.Contract.GetActiveAddr(&_RegistryMock.CallOpts, name)
 }
 
-// Records is a free data retrieval call binding the contract method 0x541e771d.
+// Records is a free data retrieval call binding the contract method 0x3b51650d.
 //
-// Solidity: function records(string ) view returns(address)
-func (_RegistryMock *RegistryMockCaller) Records(opts *bind.CallOpts, arg0 string) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
-	out := ret0
-	err := _RegistryMock.contract.Call(opts, out, "records", arg0)
-	return *ret0, err
+// Solidity: function records(string , uint256 ) view returns(address addr, uint256 activation)
+func (_RegistryMock *RegistryMockCaller) Records(opts *bind.CallOpts, arg0 string, arg1 *big.Int) (struct {
+	Addr       common.Address
+	Activation *big.Int
+}, error) {
+	ret := new(struct {
+		Addr       common.Address
+		Activation *big.Int
+	})
+	out := ret
+	err := _RegistryMock.contract.Call(opts, out, "records", arg0, arg1)
+	return *ret, err
 }
 
-// Records is a free data retrieval call binding the contract method 0x541e771d.
+// Records is a free data retrieval call binding the contract method 0x3b51650d.
 //
-// Solidity: function records(string ) view returns(address)
-func (_RegistryMock *RegistryMockSession) Records(arg0 string) (common.Address, error) {
-	return _RegistryMock.Contract.Records(&_RegistryMock.CallOpts, arg0)
+// Solidity: function records(string , uint256 ) view returns(address addr, uint256 activation)
+func (_RegistryMock *RegistryMockSession) Records(arg0 string, arg1 *big.Int) (struct {
+	Addr       common.Address
+	Activation *big.Int
+}, error) {
+	return _RegistryMock.Contract.Records(&_RegistryMock.CallOpts, arg0, arg1)
 }
 
-// Records is a free data retrieval call binding the contract method 0x541e771d.
+// Records is a free data retrieval call binding the contract method 0x3b51650d.
 //
-// Solidity: function records(string ) view returns(address)
-func (_RegistryMock *RegistryMockCallerSession) Records(arg0 string) (common.Address, error) {
-	return _RegistryMock.Contract.Records(&_RegistryMock.CallOpts, arg0)
+// Solidity: function records(string , uint256 ) view returns(address addr, uint256 activation)
+func (_RegistryMock *RegistryMockCallerSession) Records(arg0 string, arg1 *big.Int) (struct {
+	Addr       common.Address
+	Activation *big.Int
+}, error) {
+	return _RegistryMock.Contract.Records(&_RegistryMock.CallOpts, arg0, arg1)
 }
 
-// Register is a paid mutator transaction binding the contract method 0x1e59c529.
+// Register is a paid mutator transaction binding the contract method 0xd393c871.
 //
-// Solidity: function register(string name, address addr) returns()
-func (_RegistryMock *RegistryMockTransactor) Register(opts *bind.TransactOpts, name string, addr common.Address) (*types.Transaction, error) {
-	return _RegistryMock.contract.Transact(opts, "register", name, addr)
+// Solidity: function register(string name, address addr, uint256 activation) returns()
+func (_RegistryMock *RegistryMockTransactor) Register(opts *bind.TransactOpts, name string, addr common.Address, activation *big.Int) (*types.Transaction, error) {
+	return _RegistryMock.contract.Transact(opts, "register", name, addr, activation)
 }
 
-// Register is a paid mutator transaction binding the contract method 0x1e59c529.
+// Register is a paid mutator transaction binding the contract method 0xd393c871.
 //
-// Solidity: function register(string name, address addr) returns()
-func (_RegistryMock *RegistryMockSession) Register(name string, addr common.Address) (*types.Transaction, error) {
-	return _RegistryMock.Contract.Register(&_RegistryMock.TransactOpts, name, addr)
+// Solidity: function register(string name, address addr, uint256 activation) returns()
+func (_RegistryMock *RegistryMockSession) Register(name string, addr common.Address, activation *big.Int) (*types.Transaction, error) {
+	return _RegistryMock.Contract.Register(&_RegistryMock.TransactOpts, name, addr, activation)
 }
 
-// Register is a paid mutator transaction binding the contract method 0x1e59c529.
+// Register is a paid mutator transaction binding the contract method 0xd393c871.
 //
-// Solidity: function register(string name, address addr) returns()
-func (_RegistryMock *RegistryMockTransactorSession) Register(name string, addr common.Address) (*types.Transaction, error) {
-	return _RegistryMock.Contract.Register(&_RegistryMock.TransactOpts, name, addr)
+// Solidity: function register(string name, address addr, uint256 activation) returns()
+func (_RegistryMock *RegistryMockTransactorSession) Register(name string, addr common.Address, activation *big.Int) (*types.Transaction, error) {
+	return _RegistryMock.Contract.Register(&_RegistryMock.TransactOpts, name, addr, activation)
 }

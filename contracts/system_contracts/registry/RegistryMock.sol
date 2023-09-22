@@ -20,13 +20,18 @@ pragma solidity ^0.8.0;
 import "./IRegistry.sol";
 
 contract RegistryMock is IRegistry {
-    mapping(string => address) public records;
+    mapping(string => Record[]) public records;
 
-    function register(string memory name, address addr) external {
-        records[name] = addr;
+    function register(string memory name, address addr, uint256 activation) external {
+        records[name].push(Record(addr, activation));
     }
 
-    function getActiveContract(string memory name) external view returns (address) {
-        return records[name];
+    function getActiveAddr(string memory name) external override view returns (address) {
+        uint256 len = records[name].length;
+        if (len == 0) {
+            return address(0);
+        } else {
+            return records[name][len-1].addr;
+        }
     }
 }

@@ -43,8 +43,9 @@ func TestSystemRegistry(t *testing.T) {
 	assert.Equal(t, common.Address{}, addr)
 
 	// Register a record
-	contract, _ := contracts.NewRegistryMockTransactor(RegistryAddr, backend)
-	contract.Register(sender, recordName, recordAddr)
+	contract, err := contracts.NewRegistryMockTransactor(RegistryAddr, backend)
+	_, err = contract.Register(sender, recordName, recordAddr, common.Big1)
+	assert.Nil(t, err)
 	backend.Commit()
 
 	// With the record

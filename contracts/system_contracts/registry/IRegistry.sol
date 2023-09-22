@@ -18,5 +18,10 @@
 pragma solidity ^0.8.0;
 
 interface IRegistry {
-    function getActiveContract(string memory name) external view returns (address);
+    struct Record {
+        address addr;
+        uint256 activation;
+    }
+
+    function getActiveAddr(string memory name) external virtual view returns (address);
 }

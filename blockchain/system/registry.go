@@ -45,5 +45,5 @@ func ReadRegistryActiveAddr(backend bind.ContractCaller, name string, num *big.I
 	}
 
 	opts := &bind.CallOpts{BlockNumber: num}
-	return caller.GetActiveContract(opts, name)
+	return caller.GetActiveAddr(opts, name)
 }

@@ -20,7 +20,7 @@ pragma solidity ^0.8.0;
 import "./IRegistry.sol";
 
 contract Registry is IRegistry {
-    function getActiveContract(string memory name) external view returns (address) {
+    function getActiveAddr(string memory name) external override view returns (address) {
         revert("not implemented");
     }
 }
