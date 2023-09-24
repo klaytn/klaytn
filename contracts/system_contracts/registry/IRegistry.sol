@@ -17,11 +17,17 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 pragma solidity ^0.8.0;
 
-interface IRegistry {
+abstract contract IRegistry {
     struct Record {
         address addr;
         uint256 activation;
     }
+
+    // Crucial variables are baked in the interface
+    // because their storage layout matters in protocol consensus.
+    mapping(string => Record[]) public records;
+    string[] public names;
+    address internal _owner;
 
     function getActiveAddr(string memory name) external virtual view returns (address);
 }

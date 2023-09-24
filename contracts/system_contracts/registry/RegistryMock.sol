@@ -20,9 +20,14 @@ pragma solidity ^0.8.0;
 import "./IRegistry.sol";
 
 contract RegistryMock is IRegistry {
-    mapping(string => Record[]) public records;
+    function transferOwnership(address newOwner) external {
+        _owner = newOwner;
+    }
 
-    function register(string memory name, address addr, uint256 activation) external {
+    function register(string memory name, address addr, uint256 activation) public {
+        if (records[name].length == 0) {
+            names.push(name);
+        }
         records[name].push(Record(addr, activation));
     }
 
