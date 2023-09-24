@@ -42,6 +42,9 @@ type AllocRegistryInit struct {
 // https://docs.soliditylang.org/en/v1.8.20/internals/layout_in_storage.html
 func AllocRegistry(init *AllocRegistryInit) map[common.Hash]common.Hash {
 	storage := make(map[common.Hash]common.Hash)
+	if init == nil {
+		return storage
+	}
 
 	// slot[0]: mapping(string => Record[]) records;
 	// - records[x].length @ Hash(x, 0)
@@ -75,8 +78,15 @@ func AllocRegistry(init *AllocRegistryInit) map[common.Hash]common.Hash {
 	return storage
 }
 
-func InstallRegistry(state *state.StateDB) error {
-	return state.SetCode(RegistryAddr, RegistryCode)
+func InstallRegistry(state *state.StateDB, init *AllocRegistryInit) error {
+	if err := state.SetCode(RegistryAddr, RegistryCode); err != nil {
+		return err
+	}
+	storage := AllocRegistry(init)
+	for key, value := range storage {
+		state.SetState(RegistryAddr, key, value)
+	}
+	return nil
 }
 
 func ReadRegistryActiveAddr(backend bind.ContractCaller, name string, num *big.Int) (common.Address, error) {
