@@ -15,15 +15,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSystemRegistry(t *testing.T) {
-	log.EnableLogForTest(log.LvlCrit, log.LvlInfo)
+func TestReadRegistry(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
 	var (
 		senderKey, _ = crypto.GenerateKey()
 		sender       = bind.NewKeyedTransactor(senderKey)
-		senderAddr   = sender.From
 
 		alloc = blockchain.GenesisAlloc{
-			senderAddr: {
+			sender.From: {
 				Balance: big.NewInt(params.KLAY),
 			},
 			RegistryAddr: {
@@ -52,4 +51,71 @@ func TestSystemRegistry(t *testing.T) {
 	addr, err = ReadRegistryActiveAddr(backend, recordName, common.Big1)
 	assert.Nil(t, err)
 	assert.Equal(t, recordAddr, addr)
+}
+
+// Test that AllocRegistry correctly reproduces the storage state
+// identical to the state after a series of register() call.
+func TestAllocRegistry(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
+
+	// 1. Create storage with AllocRegistry
+	allocStorage := AllocRegistry(&AllocRegistryInit{
+		Records: map[string][]RegistryRecord{
+			"AcmeContract": []RegistryRecord{
+				{common.HexToAddress("0xaaaa"), big.NewInt(0x1234)},
+				{common.HexToAddress("0xbbbb"), big.NewInt(0x5678)},
+			},
+			"TestContract": []RegistryRecord{
+				{common.HexToAddress("0xcccc"), big.NewInt(0x9999)},
+			},
+		},
+		Names: []string{
+			"AcmeContract",
+			"TestContract",
+		},
+		Owner: common.HexToAddress("0xffff"),
+	})
+
+	// 2. Create storage by calling register()
+	var (
+		senderKey, _ = crypto.GenerateKey()
+		sender       = bind.NewKeyedTransactor(senderKey)
+
+		alloc = blockchain.GenesisAlloc{
+			sender.From: {
+				Balance: big.NewInt(params.KLAY),
+			},
+			RegistryAddr: {
+				Code:    RegistryMockCode,
+				Balance: common.Big0,
+			},
+		}
+		backend     = backends.NewSimulatedBackend(alloc)
+		contract, _ = contracts.NewRegistryMockTransactor(RegistryAddr, backend)
+	)
+
+	contract.Register(sender,
+		"AcmeContract", common.HexToAddress("0xaaaa"), big.NewInt(0x1234))
+	contract.Register(sender,
+		"AcmeContract", common.HexToAddress("0xbbbb"), big.NewInt(0x5678))
+	contract.Register(sender,
+		"TestContract", common.HexToAddress("0xcccc"), big.NewInt(0x9999))
+	contract.TransferOwnership(sender, common.HexToAddress("0xffff"))
+	backend.Commit()
+
+	execStorage := make(map[common.Hash]common.Hash)
+	stateDB, _ := backend.BlockChain().State()
+	stateDB.ForEachStorage(RegistryAddr, func(key common.Hash, value common.Hash) bool {
+		execStorage[key] = value
+		return true
+	})
+
+	// 3. Compare the two states
+	for k, v := range allocStorage {
+		assert.Equal(t, v.Hex(), execStorage[k].Hex(), k.Hex())
+		t.Logf("%x %x\n", k, v)
+	}
+	for k, v := range execStorage {
+		assert.Equal(t, v.Hex(), allocStorage[k].Hex(), k.Hex())
+	}
 }
