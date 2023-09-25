@@ -61,11 +61,11 @@ func TestAllocRegistry(t *testing.T) {
 	// 1. Create storage with AllocRegistry
 	allocStorage := AllocRegistry(&AllocRegistryInit{
 		Records: map[string][]RegistryRecord{
-			"AcmeContract": []RegistryRecord{
+			"AcmeContract": {
 				{common.HexToAddress("0xaaaa"), big.NewInt(0x1234)},
 				{common.HexToAddress("0xbbbb"), big.NewInt(0x5678)},
 			},
-			"TestContract": []RegistryRecord{
+			"TestContract": {
 				{common.HexToAddress("0xcccc"), big.NewInt(0x9999)},
 			},
 		},

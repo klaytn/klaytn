@@ -39,7 +39,7 @@ type AllocRegistryInit struct {
 
 // Create storage state from the given initial values.
 // The storage slots are calculated according to the solidity layout rule.
-// https://docs.soliditylang.org/en/v1.8.20/internals/layout_in_storage.html
+// https://docs.soliditylang.org/en/v0.8.20/internals/layout_in_storage.html
 func AllocRegistry(init *AllocRegistryInit) map[common.Hash]common.Hash {
 	storage := make(map[common.Hash]common.Hash)
 	if init == nil {
