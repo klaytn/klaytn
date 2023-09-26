@@ -133,6 +133,7 @@ type DBManager interface {
 
 	ReadIstanbulSnapshot(hash common.Hash) ([]byte, error)
 	WriteIstanbulSnapshot(hash common.Hash, blob []byte) error
+	DeleteIstanbulSnapshot(hash common.Hash)
 
 	WriteMerkleProof(key, value []byte)
 
@@ -293,6 +294,7 @@ type DBManager interface {
 	ReadStakingInfo(blockNum uint64) ([]byte, error)
 	WriteStakingInfo(blockNum uint64, stakingInfo []byte) error
 	HasStakingInfo(blockNum uint64) (bool, error)
+	DeleteStakingInfo(blockNum uint64)
 
 	// DB migration related function
 	StartDBMigration(DBManager) error
@@ -1690,6 +1692,13 @@ func (dbm *databaseManager) ReadIstanbulSnapshot(hash common.Hash) ([]byte, erro
 func (dbm *databaseManager) WriteIstanbulSnapshot(hash common.Hash, blob []byte) error {
 	db := dbm.getDatabase(MiscDB)
 	return db.Put(snapshotKey(hash), blob)
+}
+
+func (dbm *databaseManager) DeleteIstanbulSnapshot(hash common.Hash) {
+	db := dbm.getDatabase(MiscDB)
+	if err := db.Delete(snapshotKey(hash)); err != nil {
+		logger.Crit("Failed to delete snpahost", "err", err)
+	}
 }
 
 // Merkle Proof operation.
