@@ -315,7 +315,7 @@ func (api *EthereumAPI) LowerBoundGasPrice(ctx context.Context) *hexutil.Big {
 
 // MaxPriorityFeePerGas returns a suggestion for a gas tip cap for dynamic fee transactions.
 func (api *EthereumAPI) MaxPriorityFeePerGas(ctx context.Context) (*hexutil.Big, error) {
-	return api.GasPrice(ctx)
+	return (*hexutil.Big)(common.Big0), nil
 }
 
 // DecimalOrHex unmarshals a non-negative decimal or hex parameter into a uint64.

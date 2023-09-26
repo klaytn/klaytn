@@ -26,6 +26,7 @@ import (
 	"errors"
 
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
+	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/rlp"
@@ -63,7 +64,7 @@ func (s *PublicKlayAPI) ProtocolVersion() hexutil.Uint {
 
 // MaxPriorityFeePerGas returns a suggestion for a gas tip cap for dynamic fee transactions.
 func (s *PublicKlayAPI) MaxPriorityFeePerGas(ctx context.Context) (*hexutil.Big, error) {
-	return s.GasPrice(ctx)
+	return (*hexutil.Big)(common.Big0), nil
 }
 
 type FeeHistoryResult struct {
