@@ -731,8 +731,9 @@ func expectedGovMap(t *testing.T, gov *governance.MixedEngine, num uint64, item 
 
 func TestSetHead(t *testing.T) {
 	headerGovTest(t, &rewindTest{
-		canonicalBlocks: 24,
-		// canonicalBlocks:    2000,
+		// `params.CheckpointInterval` is constant value of 1024.
+		// Make it longer to include its working coverage
+		canonicalBlocks:    1500,
 		setheadBlock:       6,
 		expCanonicalBlocks: 6,
 		expHeadHeader:      6,
@@ -760,7 +761,6 @@ func headerGovTest(t *testing.T, tt *rewindTest) {
 		epoch                 uint64 = 5
 		govBlockNum                  = 10
 		appliedGovBlockNum    uint64 = 20
-		checkpointInterval    uint64 = 15
 		stakingUpdateInterval uint64 = 1
 		stakingUpdateBlockNum uint64 = 15
 		gov                          = governance.NewMixedEngine(testCfg(epoch), db)
@@ -781,7 +781,7 @@ func headerGovTest(t *testing.T, tt *rewindTest) {
 	}
 
 	// Store snapshot
-	snap := backend.Snapshot{Number: checkpointInterval, Hash: chain.GetHeaderByNumber(checkpointInterval).Hash()}
+	snap := backend.Snapshot{Number: params.CheckpointInterval, Hash: chain.GetHeaderByNumber(params.CheckpointInterval).Hash()}
 	blob, err := json.Marshal(snap)
 	assert.Nil(t, err)
 	err = db.WriteIstanbulSnapshot(snap.Hash, blob)
