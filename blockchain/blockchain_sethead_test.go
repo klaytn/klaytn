@@ -124,6 +124,7 @@ func testSetHead(t *testing.T, tt *rewindTest) {
 		t.Fatalf("failed to create pristine chain: %v", err)
 	}
 	defer chain.Stop()
+	chain.Config().Istanbul = params.GetDefaultIstanbulConfig()
 
 	// If sidechain blocks are needed, make a light chain and import it
 	var sideblocks types.Blocks

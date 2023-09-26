@@ -513,6 +513,7 @@ func testReorgBadHashes(t *testing.T, full bool) {
 	if err != nil {
 		t.Fatalf("failed to create pristine chain: %v", err)
 	}
+	blockchain.Config().Istanbul = params.GetDefaultIstanbulConfig()
 	// Create a chain, import and ban afterwards
 	headers := MakeHeaderChain(blockchain.CurrentHeader(), 4, gxhash.NewFaker(), db, 10)
 	blocks := MakeBlockChain(blockchain.CurrentBlock(), 4, gxhash.NewFaker(), db, 10)
@@ -548,8 +549,8 @@ func testReorgBadHashes(t *testing.T, full bool) {
 			t.Errorf("last block hash mismatch: have: %x, want %x", ncm.CurrentBlock().Hash(), blocks[2].Header().Hash())
 		}
 	} else {
-		if ncm.CurrentHeader().Hash() != headers[2].Hash() {
-			t.Errorf("last header hash mismatch: have: %x, want %x", ncm.CurrentHeader().Hash(), headers[2].Hash())
+		if ncm.CurrentHeader().Hash() != ncm.GetBlockByNumber(0).Hash() {
+			t.Errorf("last header hash mismatch: have: %x, want %x", ncm.CurrentHeader().Hash(), ncm.GetBlockByNumber(0).Hash())
 		}
 	}
 	ncm.Stop()
