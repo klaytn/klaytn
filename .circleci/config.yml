@@ -19,14 +19,14 @@ orbs:
   docker: circleci/docker@2.1.1
 
 executors:
-  test-executor:
-    working_directory: /go/src/github.com/klaytn/klaytn
+  linux-executor: # this executor is for general testing and packaging linux binaries
+    working_directory: ~/go/src/github.com/klaytn/klaytn
     docker:
       - image: klaytn/build_base:1.2-ubuntu18.04-go.1.20.6-solc0.8.13
         auth:
           username: $DOCKER_LOGIN
           password: $DOCKER_PASSWORD
-  test-others-executor:
+  linux-others-executor: # this executor is for test-others job
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
       - image: klaytn/build_base:1.2-ubuntu18.04-go.1.20.6-solc0.8.13
@@ -57,7 +57,16 @@ executors:
           KAFKA_LISTENERS: INSIDE://:9092,OUTSIDE://kafka:9094
           KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
           KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
-  rpm-executor:
+  darwin-executor: # this executor is for packaging darwin binaries
+    working_directory: ~/go/src/github.com/klaytn/klaytn
+    macos:
+      xcode: 14.2.0
+    resource_class: macos.x86.medium.gen2
+    parameters:
+      os-network:
+        type: string
+        default: "darwin-amd64"
+  rpm-executor: # this executor is for packaging rpm binaries
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
       - image: klaytn/circleci-rpmbuild:1.20.6
@@ -353,8 +362,7 @@ commands:
             python3 main.py --protocol rpc
 jobs:
   build:
-    executor: test-executor
-    working_directory: ~/go/src/github.com/klaytn/klaytn
+    executor: linux-executor
     steps:
       - checkout
       - pre-build
@@ -366,7 +374,7 @@ jobs:
             make all
 
   test-linter:
-    executor: test-executor
+    executor: linux-executor
     steps:
       - checkout
       - run:
@@ -375,7 +383,7 @@ jobs:
           command: golangci-lint run --new-from-rev=dev --presets format,performance -v --timeout 10m
 
   test-datasync:
-    executor: test-others-executor
+    executor: linux-others-executor
     steps:
       - install-netcat
       - checkout
@@ -386,7 +394,7 @@ jobs:
           command: make test-datasync
 
   test-networks:
-    executor: test-executor
+    executor: linux-executor
     steps:
       - checkout
       - run:
@@ -395,7 +403,7 @@ jobs:
           command: make test-networks
 
   test-node:
-    executor: test-executor
+    executor: linux-executor
     steps:
       - checkout
       - run:
@@ -404,7 +412,7 @@ jobs:
           command: make test-node
 
   test-tests:
-    executor: test-executor
+    executor: linux-executor
     steps:
       - checkout
       - run:
@@ -415,7 +423,8 @@ jobs:
             make test-tests
 
   test-others:
-    executor: test-others-executor
+    executor: linux-others-executor
+    resource_class: xlarge
     steps:
       - install-netcat
       - checkout
@@ -425,10 +434,9 @@ jobs:
           no_output_timeout: 30m
           command: |
             make test-others
-    resource_class: xlarge
 
   test-rpc:
-    executor: test-executor
+    executor: linux-executor
     steps:
       - checkout
       - pre-build
@@ -448,7 +456,7 @@ jobs:
       - tagger-verify
 
   coverage:
-    executor: test-others-executor
+    executor: linux-others-executor
     resource_class: xlarge
     steps:
       - install-netcat
@@ -473,7 +481,7 @@ jobs:
           file: /tmp/coverage_reports/coverage_*
 
   linters:
-    executor: test-executor
+    executor: linux-executor
     steps:
       - checkout
       - run:
@@ -488,7 +496,7 @@ jobs:
           path: /tmp/linter_reports
 
   rpc-tester-report:
-    executor: test-executor
+    executor: linux-executor
     steps:
       - checkout
       - pre-build
@@ -497,13 +505,7 @@ jobs:
       - notify-success
 
   packaging-linux:
-    docker:
-      - image: klaytn/build_base:1.2-ubuntu18.04-go.1.20.6-solc0.8.13
-        auth:
-          username: $DOCKER_LOGIN
-          password: $DOCKER_PASSWORD
-    resource_class: large
-    working_directory: ~/go/src/github.com/klaytn/klaytn
+    executor: linux-executor
     steps:
       - checkout
       - pre-build
@@ -511,13 +513,7 @@ jobs:
       - upload-repo
 
   packaging-linux-baobab:
-    docker:
-      - image: klaytn/build_base:1.2-ubuntu18.04-go.1.20.6-solc0.8.13
-        auth:
-          username: $DOCKER_LOGIN
-          password: $DOCKER_PASSWORD
-    resource_class: large
-    working_directory: ~/go/src/github.com/klaytn/klaytn
+    executor: linux-executor
     steps:
       - checkout
       - pre-build
@@ -527,35 +523,21 @@ jobs:
           item: "kcn kpn ken"
 
   packaging-darwin:
-    macos:
-      xcode: 14.2.0
-    resource_class: macos.x86.medium.gen2
-    working_directory: ~/go/src/github.com/klaytn/klaytn
+    executor: darwin-executor
     steps:
       - checkout
-      - install-awscli
-      - install-golang:
-          os-network: "darwin-amd64"
-      - pre-build:
-          os-network: "darwin-amd64"
-      - build-packaging:
-          os-network: "darwin-amd64"
+      - install-darwin-dependencies
+      - pre-build
+      - build-packaging
       - upload-repo
 
   packaging-darwin-baobab:
-    macos:
-      xcode: 14.2.0
-    resource_class: macos.x86.medium.gen2
-    working_directory: ~/go/src/github.com/klaytn/klaytn
+    executor: darwin-executor
     steps:
       - checkout
-      - install-awscli
-      - install-golang:
-          os-network: "darwin-amd64"
-      - pre-build:
-          os-network: "darwin-amd64"
+      - install-darwin-dependencies
+      - pre-build
       - build-packaging:
-          os-network: "darwin-amd64"
           baobab: "-b"
       - upload-repo:
           item: "kcn kpn ken"
@@ -583,7 +565,7 @@ jobs:
       - notify-success
 
   tag-verify:
-    executor: test-executor
+    executor: linux-executor
     steps:
       - checkout
       - tag-verify
