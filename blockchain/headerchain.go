@@ -380,7 +380,7 @@ type (
 	// before head header is updated. The method will return the actual block it
 	// updated the head to (missing state) and a flag if setHead should continue
 	// rewinding till that forcefully (exceeded ancient limits)
-	UpdateHeadBlocksCallback func(*types.Header) error
+	UpdateHeadBlocksCallback func(*types.Header) (uint64, error)
 
 	// DeleteBlockContentCallback is a callback function that is called by SetHead
 	// before each header is deleted.
@@ -407,8 +407,15 @@ func (hc *HeaderChain) SetHead(head uint64, updateFn UpdateHeadBlocksCallback, d
 		//
 		// Update head first(head fast block, head full block) before deleting the data.
 		if updateFn != nil {
-			if err := updateFn(parent); err != nil {
-				return err
+			latestBlkNum, err := updateFn(parent)
+			if err != nil {
+				// rewound blockchain to genesis block
+				head = 0
+			}
+			if latestBlkNum < head {
+				// Delete further if some of missing block state appears
+				// to match the latest block number between blockchain and headerchain
+				head = latestBlkNum
 			}
 		}
 		// Update head header then.
