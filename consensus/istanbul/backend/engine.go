@@ -286,7 +286,7 @@ func (sb *backend) VerifyHeaders(chain consensus.ChainReader, headers []*types.H
 	return abort, results
 }
 
-func (sb *backend) removeReleasedVal(header *types.Header, curVals istanbul.ValidatorSet) error {
+func (sb *backend) disconnectReleasedVal(header *types.Header, curVals istanbul.ValidatorSet) error {
 	if curVals == nil {
 		return errors.New("validator set is nil")
 	}
@@ -343,7 +343,7 @@ func (sb *backend) verifySigner(chain consensus.ChainReader, header *types.Heade
 	if err != nil {
 		return err
 	}
-	err = sb.removeReleasedVal(header, snap.ValSet)
+	err = sb.disconnectReleasedVal(header, snap.ValSet)
 	if err != nil {
 		return err
 	}
