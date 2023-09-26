@@ -293,6 +293,13 @@ func (sb *backend) disconnectReleasedVal(header *types.Header, curVals istanbul.
 	if header == nil {
 		return errors.New("header is nil")
 	}
+	// Istanbul BFT chain does not have nil for `sb.broadcaster`,
+	// This addition is for existing testbase that did not correctly intiialize
+	// braodcaster. Theferoe, it can be interpreted that the network setup
+	// is not correctly configured, which is not the case of production
+	if sb.broadcaster == nil {
+		return nil
+	}
 
 	var ppNumber uint64
 	switch header.Number.Uint64() {
