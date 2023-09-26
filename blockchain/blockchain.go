@@ -631,7 +631,6 @@ func (bc *BlockChain) setHeadBeyondRoot(head uint64, root common.Hash, repair bo
 		// Rewind the chain to the requested head and keep going backwards until a
 		// block with a state is found
 		logger.Warn("Rewinding blockchain", "target", head)
-		// Important: this is bug fix
 		if err := bc.hc.SetHead(head, updateFn, delFn); err != nil {
 			return 0, err
 		}
