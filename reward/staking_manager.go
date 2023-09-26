@@ -393,6 +393,10 @@ func StakingManagerUnsubscribe() {
 	stakingManager.chainHeadSub.Unsubscribe()
 }
 
+func PurgeStakingInfoCache() {
+	stakingManager.stakingInfoCache.purge()
+}
+
 // TODO-Klaytn-Reward the following methods are used for testing purpose, it needs to be moved into test files.
 // Unlike NewStakingManager(), SetTestStakingManager*() do not trigger once.Do().
 // This way you can avoid irreversible side effects during tests.
@@ -436,4 +440,8 @@ func SetTestStakingManager(sm *StakingManager) {
 // SetTestAddressBookAddress is only for testing purpose.
 func SetTestAddressBookAddress(addr common.Address) {
 	addressBookContractAddress = common.HexToAddress(addr.Hex())
+}
+
+func TestGetStakingCacheSize() int {
+	return len(GetStakingManager().stakingInfoCache.cells)
 }
