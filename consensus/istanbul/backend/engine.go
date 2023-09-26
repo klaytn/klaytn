@@ -39,6 +39,7 @@ import (
 	"github.com/klaytn/klaytn/consensus/istanbul/validator"
 	"github.com/klaytn/klaytn/consensus/misc"
 	"github.com/klaytn/klaytn/crypto/sha3"
+	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/rlp"
@@ -285,6 +286,50 @@ func (sb *backend) VerifyHeaders(chain consensus.ChainReader, headers []*types.H
 	return abort, results
 }
 
+func (sb *backend) removeReleasedVal(header *types.Header, curVals istanbul.ValidatorSet) error {
+	if curVals == nil {
+		return errors.New("validator set is nil")
+	}
+	if header == nil {
+		return errors.New("header is nil")
+	}
+
+	var ppNumber uint64
+	switch header.Number.Uint64() {
+	case 0, 1:
+		ppNumber = 0
+	default:
+		ppNumber = header.Number.Uint64() - 2
+	}
+	ppHeader := sb.chain.GetHeaderByNumber(ppNumber)
+	if ppHeader == nil {
+		return consensus.ErrUnknownAncestor
+	}
+	ppHash := ppHeader.Hash()
+	prevVals := sb.getValidators(ppNumber, ppHash)
+
+	for _, prevVal := range append(prevVals.List(), prevVals.DemotedList()...) {
+		for _, curVal := range append(curVals.List(), curVals.DemotedList()...) {
+			if curVal.Address() == prevVal.Address() {
+				goto ValidatorNotRemoved
+			}
+		}
+		goto ValidatorRemoved
+	ValidatorNotRemoved:
+		continue
+	ValidatorRemoved:
+		for addr, peer := range sb.broadcaster.GetCNPeers() {
+			if addr == prevVal.Address() {
+				peer.DisconnectP2PPeer(p2p.DiscInvalidIdentity)
+				logger.Info("Remove non-validator from peer set",
+					"addr", addr.String(), "releasedAt", header.Number.Uint64()-1)
+				break
+			}
+		}
+	}
+	return nil
+}
+
 // verifySigner checks whether the signer is in parent's validator set
 func (sb *backend) verifySigner(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
 	// Verifying the genesis block is not supported
@@ -295,6 +340,10 @@ func (sb *backend) verifySigner(chain consensus.ChainReader, header *types.Heade
 
 	// Retrieve the snapshot needed to verify this header and cache it
 	snap, err := sb.snapshot(chain, number-1, header.ParentHash, parents, true)
+	if err != nil {
+		return err
+	}
+	err = sb.removeReleasedVal(header, snap.ValSet)
 	if err != nil {
 		return err
 	}

@@ -72,6 +72,9 @@ type Peer interface {
 	// Send sends the message to this peer
 	Send(msgcode uint64, data interface{}) error
 
+	// DisconnectP2PPeer disconnects the p2p peer with the given reason.
+	DisconnectP2PPeer(discReason p2p.DiscReason)
+
 	// RegisterConsensusMsgCode registers the channel of consensus msg.
 	RegisterConsensusMsgCode(msgCode uint64) error
 }
