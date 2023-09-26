@@ -28,6 +28,8 @@ import (
 // defined jump tables are not polluted.
 func EnableEIP(eipNum int, jt *JumpTable) error {
 	switch eipNum {
+	case 5656:
+		enable5656(jt)
 	case 3860:
 		enable3860(jt)
 	case 3855:
@@ -71,9 +73,9 @@ func enable1884(jt *JumpTable) {
 	}
 }
 
-func opSelfBalance(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	balance := evm.interpreter.intPool.get().Set(evm.StateDB.GetBalance(contract.Address()))
-	stack.push(balance)
+func opSelfBalance(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
+	balance := evm.interpreter.intPool.get().Set(evm.StateDB.GetBalance(scope.Contract.Address()))
+	scope.Stack.push(balance)
 	return nil, nil
 }
 
@@ -91,9 +93,9 @@ func enable1344(jt *JumpTable) {
 }
 
 // opChainID implements CHAINID opcode
-func opChainID(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
+func opChainID(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
 	chainId := evm.interpreter.intPool.get().Set(evm.chainConfig.ChainID)
-	stack.push(chainId)
+	scope.Stack.push(chainId)
 	return nil, nil
 }
 
@@ -129,9 +131,9 @@ func enable3198(jt *JumpTable) {
 }
 
 // opBaseFee implements BASEFEE opcode
-func opBaseFee(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
+func opBaseFee(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
 	baseFee := evm.interpreter.intPool.get().Set(evm.Context.BaseFee)
-	stack.push(baseFee)
+	scope.Stack.push(baseFee)
 	return nil, nil
 }
 
@@ -206,8 +208,8 @@ func enable3855(jt *JumpTable) {
 }
 
 // opPush0 implements the PUSH0 opcode
-func opPush0(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	stack.push(new(big.Int))
+func opPush0(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
+	scope.Stack.push(new(big.Int))
 	return nil, nil
 }
 
@@ -216,4 +218,30 @@ func opPush0(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *St
 func enable3860(jt *JumpTable) {
 	jt[CREATE].dynamicGas = gasCreateEip3860
 	jt[CREATE2].dynamicGas = gasCreate2Eip3860
+}
+
+// enable5656 enables EIP-5656 (MCOPY opcode)
+// https://eips.ethereum.org/EIPS/eip-5656
+func enable5656(jt *JumpTable) {
+	jt[MCOPY] = &operation{
+		execute:     opMcopy,
+		constantGas: GasFastestStep,
+		dynamicGas:  gasMcopy,
+		minStack:    minStack(3, 0),
+		maxStack:    maxStack(3, 0),
+		memorySize:  memoryMcopy,
+	}
+}
+
+// opMcopy implements the MCOPY opcode (https://eips.ethereum.org/EIPS/eip-5656)
+func opMcopy(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
+	var (
+		dst    = scope.Stack.pop()
+		src    = scope.Stack.pop()
+		length = scope.Stack.pop()
+	)
+	// These values are checked for overflow during memory expansion calculation
+	// (the memorySize function on the opcode).
+	scope.Memory.Copy(dst.Uint64(), src.Uint64(), length.Uint64())
+	return nil, nil
 }

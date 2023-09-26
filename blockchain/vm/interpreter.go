@@ -335,7 +335,7 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte) (ret []byte, err
 		}
 
 		// execute the operation
-		res, err = operation.execute(&pc, in.evm, contract, mem, stack)
+		res, err = operation.execute(&pc, in.evm, &ScopeContext{mem, stack, contract})
 		// verifyPool is a build flag. Pool verification makes sure the integrity
 		// of the integer pool by comparing values to a default value.
 		if verifyPool {

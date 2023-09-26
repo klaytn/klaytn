@@ -27,7 +27,7 @@ import (
 )
 
 type (
-	executionFunc func(pc *uint64, env *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error)
+	executionFunc func(pc *uint64, env *EVM, scope *ScopeContext) ([]byte, error)
 	gasFunc       func(*EVM, *Contract, *Stack, *Memory, uint64) (uint64, error) // last parameter is the requested memory size as a uint64
 	// memorySizeFunc returns the required size, and whether the operation overflowed a uint64
 	memorySizeFunc func(*Stack) (size uint64, overflow bool)
@@ -66,10 +66,17 @@ var (
 	LondonInstructionSet         = newLondonInstructionSet()
 	KoreInstructionSet           = newKoreInstructionSet()
 	ShanghaiInstructionSet       = newShanghaiInstructionSet()
+	CancunInstructionSet         = newCancunInstructionSet()
 )
 
 // JumpTable contains the EVM opcodes supported at a given fork.
 type JumpTable [256]*operation
+
+func newCancunInstructionSet() JumpTable {
+	instructionSet := newShanghaiInstructionSet()
+	enable5656(&instructionSet) // EIP-5656 (MCOPY opcode)
+	return instructionSet
+}
 
 func newShanghaiInstructionSet() JumpTable {
 	instructionSet := newKoreInstructionSet()
