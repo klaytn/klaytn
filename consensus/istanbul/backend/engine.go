@@ -286,34 +286,27 @@ func (sb *backend) VerifyHeaders(chain consensus.ChainReader, headers []*types.H
 	return abort, results
 }
 
-func (sb *backend) disconnectReleasedVal(header *types.Header, curVals istanbul.ValidatorSet) error {
+func (sb *backend) disconnectReleasedVal(headerNumber uint64, curVals istanbul.ValidatorSet) error {
 	if curVals == nil {
 		return errors.New("validator set is nil")
 	}
-	if header == nil {
-		return errors.New("header is nil")
-	}
 	// Istanbul BFT chain does not have nil for `sb.broadcaster`,
 	// This addition is for existing testbase that did not correctly intiialize
-	// braodcaster. Theferoe, it can be interpreted that the network setup
-	// is not correctly configured, which is not the case of production
+	// broadcaster. Therefore, it can be interpreted that the network setup
+	// was not correctly configured, which is not the case of production
 	if sb.broadcaster == nil {
 		return nil
 	}
 
-	var ppNumber uint64
-	switch header.Number.Uint64() {
-	case 0, 1:
-		ppNumber = 0
-	default:
-		ppNumber = header.Number.Uint64() - 2
+	ppNumber := uint64(0)
+	if headerNumber > 1 {
+		ppNumber = headerNumber - 2
 	}
 	ppHeader := sb.chain.GetHeaderByNumber(ppNumber)
 	if ppHeader == nil {
 		return consensus.ErrUnknownAncestor
 	}
-	ppHash := ppHeader.Hash()
-	prevVals := sb.getValidators(ppNumber, ppHash)
+	prevVals := sb.getValidators(ppNumber, ppHeader.Hash())
 
 	for _, prevVal := range append(prevVals.List(), prevVals.DemotedList()...) {
 		for _, curVal := range append(curVals.List(), curVals.DemotedList()...) {
@@ -329,7 +322,7 @@ func (sb *backend) disconnectReleasedVal(header *types.Header, curVals istanbul.
 			if addr == prevVal.Address() {
 				peer.DisconnectP2PPeer(p2p.DiscInvalidIdentity)
 				logger.Info("Remove non-validator from peer set",
-					"addr", addr.String(), "releasedAt", header.Number.Uint64()-1)
+					"addr", addr.String(), "releasedAt", headerNumber-1)
 				break
 			}
 		}
@@ -350,7 +343,7 @@ func (sb *backend) verifySigner(chain consensus.ChainReader, header *types.Heade
 	if err != nil {
 		return err
 	}
-	err = sb.disconnectReleasedVal(header, snap.ValSet)
+	err = sb.disconnectReleasedVal(number, snap.ValSet)
 	if err != nil {
 		return err
 	}
