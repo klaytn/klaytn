@@ -79,30 +79,18 @@ executors:
       - image: cimg/go:1.20.6
 
 commands:
-  install-netcat:
+  install-darwin-dependencies:
+    description: Install dependencies on darwin machine
     steps:
       - run:
-          name: "Install netcat"
+          name: "install darwin dependencies"
           command: |
-            apt install -y netcat
-  install-golang:
-    parameters:
-      os-network:
-        type: string
-        default: "linux-amd64"
-    steps:
-      - run:
-          name: "Install golang on machine"
-          command: | 
-            curl -O https://dl.google.com/go/go1.20.6.<< parameters.os-network >>.tar.gz
-            mkdir $HOME/go1.20.6
-            tar -C $HOME/go1.20.6 -xzf go1.20.6.<< parameters.os-network >>.tar.gz
-  install-awscli:
-    steps:
-      - run:
-          name: "Install awscli on macos machine"
-          command: |
+            # install awscli
             brew install awscli
+            # install golang
+            curl -O https://dl.google.com/go/go1.20.6.darwin-amd64.tar.gz
+            mkdir $HOME/go1.20.6
+            tar -C $HOME/go1.20.6 -xzf go1.20.6.darwin-amd64.tar.gz
   pre-build:
     description: "before build, set version"
     parameters:
@@ -228,39 +216,39 @@ commands:
       - run:
           name: "Verify tag and file version match"
           command: |
-              TAGGER=$(git for-each-ref --format='%(tagger)' refs/tags/$CIRCLE_TAG | sed 's/ .*//')
-              if [ $TAGGER == 'circleci-klaytn' ]; then
-                echo "Pass! Tagger is circleci-klaytn"
-              else
-                echo "only circleci-klaytn can tagging major version"
-                exit 1
-              fi
+            TAGGER=$(git for-each-ref --format='%(tagger)' refs/tags/$CIRCLE_TAG | sed 's/ .*//')
+            if [ $TAGGER == 'circleci-klaytn' ]; then
+              echo "Pass! Tagger is circleci-klaytn"
+            else
+              echo "only circleci-klaytn can tagging major version"
+              exit 1
+            fi
   make-pr:
     steps:
       - run:
           name: "Push to release branch"
           command: |
-              echo "push to release branch: /release/${CIRCLE_TAG%-*}"
-              git checkout -b release/${CIRCLE_TAG%-*}
-              git push origin release/${CIRCLE_TAG%-*}
+            echo "push to release branch: /release/${CIRCLE_TAG%-*}"
+            git checkout -b release/${CIRCLE_TAG%-*}
+            git push origin release/${CIRCLE_TAG%-*}
       - run:
           name: "Install hub"
           command: |
-              curl -sSLf https://github.com/github/hub/releases/download/v2.12.3/hub-linux-amd64-2.12.3.tgz | \
-                tar zxf - --strip-components=1 -C /tmp && \
-                sudo mv /tmp/bin/hub /usr/local/bin/hub
-              type hub
+            curl -sSLf https://github.com/github/hub/releases/download/v2.12.3/hub-linux-amd64-2.12.3.tgz | \
+              tar zxf - --strip-components=1 -C /tmp && \
+              sudo mv /tmp/bin/hub /usr/local/bin/hub
+            type hub
       - run:
           name: "Create pull request"
           command: |
-              version=$(hub pr list -s open -L 10 -f "%H%n")
-              echo $version
-              if [[ $version == *"release/${CIRCLE_TAG%-*}"* ]]; then
-                echo "PR already exist"
-              else
-                echo "hub pull-request -m "[Master] release/$CIRCLE_TAG QA Signoff" -b $CIRCLE_PROJECT_USERNAME:master -h $CIRCLE_PROJECT_USERNAME:${CIRCLE_TAG%-*}"
-                echo -e "[Master] release/${CIRCLE_TAG%-*} QA Sign-off\n\nThis PR is automatically created by CI to release a new official version of $CIRCLE_PROJECT_REPONAME.\n\nWhen this PR is approved by QA team, a new version will be released." | hub pull-request -b $CIRCLE_PROJECT_USERNAME:master -h $CIRCLE_PROJECT_USERNAME:release/${CIRCLE_TAG%-*} -r $GITHUB_reviewer -l circleci -F-
-              fi
+            version=$(hub pr list -s open -L 10 -f "%H%n")
+            echo $version
+            if [[ $version == *"release/${CIRCLE_TAG%-*}"* ]]; then
+              echo "PR already exist"
+            else
+              echo "hub pull-request -m "[Master] release/$CIRCLE_TAG QA Signoff" -b $CIRCLE_PROJECT_USERNAME:master -h $CIRCLE_PROJECT_USERNAME:${CIRCLE_TAG%-*}"
+              echo -e "[Master] release/${CIRCLE_TAG%-*} QA Sign-off\n\nThis PR is automatically created by CI to release a new official version of $CIRCLE_PROJECT_REPONAME.\n\nWhen this PR is approved by QA team, a new version will be released." | hub pull-request -b $CIRCLE_PROJECT_USERNAME:master -h $CIRCLE_PROJECT_USERNAME:release/${CIRCLE_TAG%-*} -r $GITHUB_reviewer -l circleci -F-
+            fi
       - run:
           name: "build announce"
           command: .circleci/scripts/build_announce.sh
@@ -269,25 +257,28 @@ commands:
       - run:
           name: "Generate tag"
           command: |
-              export version=$(go run build/rpm/main.go version) >> $BASH_ENV
-              echo "git tag $version"
-              git config --global user.email "team.devops@groundx.xyz"
-              git config --global user.name "circleci-klaytn"
-              git tag -a $version -m "$CIRCLE_STAGE"
-              git push origin $version
+            export version=$(go run build/rpm/main.go version) >> $BASH_ENV
+            echo "git tag $version"
+            git config --global user.email "team.devops@groundx.xyz"
+            git config --global user.name "circleci-klaytn"
+            git tag -a $version -m "$CIRCLE_STAGE"
+            git push origin $version
       - run:
           name: "Delete release branch"
           command: |
-              export version=$(go run build/rpm/main.go version) >> $BASH_ENV
-              #delete release branch. it trigger by merge title
-              if [[ "release/v" = $(git log --oneline -1 | grep -o "release/v") ]]; then
-                echo "Delete branch release/$version"
-                git push origin --delete release/$version
-              else
-                echo "Need to delete branch manually"
-              fi
+            export version=$(go run build/rpm/main.go version) >> $BASH_ENV
+            #delete release branch. it trigger by merge title
+            if [[ "release/v" = $(git log --oneline -1 | grep -o "release/v") ]]; then
+              echo "Delete branch release/$version"
+              git push origin --delete release/$version
+            else
+              echo "Need to delete branch manually"
+            fi
   wait-other-containers-ready:
     steps:
+      - run:
+          name: "Install net-cat"
+          command: apt install -y netcat
       - run:
           name: "Waiting for Redis to be ready"
           command: |
@@ -385,7 +376,6 @@ jobs:
   test-datasync:
     executor: linux-others-executor
     steps:
-      - install-netcat
       - checkout
       - wait-other-containers-ready
       - run:
@@ -426,7 +416,6 @@ jobs:
     executor: linux-others-executor
     resource_class: xlarge
     steps:
-      - install-netcat
       - checkout
       - wait-other-containers-ready
       - run:
@@ -459,7 +448,6 @@ jobs:
     executor: linux-others-executor
     resource_class: xlarge
     steps:
-      - install-netcat
       - checkout
       - wait-other-containers-ready
       - run:
@@ -601,17 +589,17 @@ workflows:
       - test-tests:
           filters: *filter-version-not-release
       - test-others:
-         filters: *filter-version-not-release
+          filters: *filter-version-not-release
       - test-linter:
           filters: *filter-version-not-release
       - tagger-verify:
-         filters:
+          filters:
             tags:
               only: /^v[0-9]+\.[0-9]+\.[0-9]+/
             branches:
               ignore: /.*/
       - test-rpc:
-         filters: *filter-only-version-tag
+          filters: *filter-only-version-tag
 
       - pass-tests:
           requires:
