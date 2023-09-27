@@ -17,6 +17,7 @@
 package reward
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math/big"
@@ -225,6 +226,16 @@ func getStakingInfoFromAddressBook(blockNum uint64) (*StakingInfo, error) {
 	}
 
 	caller := backends.NewBlockchainContractBackend(stakingManager.blockchain, nil, nil)
+	code, err := caller.CodeAt(context.Background(), addressBookContractAddress, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve code of AddressBook contract. root err: %s", err)
+	}
+	if code == nil {
+		// This is an expected behavior when the addressBook contract is not installed.
+		logger.Info("The addressBook is not installed. Use empty stakingInfo")
+		return newEmptyStakingInfo(blockNum), nil
+	}
+
 	contract, err := contract.NewAddressBookCaller(addressBookContractAddress, caller)
 	if err != nil {
 		return nil, fmt.Errorf("failed to call AddressBook contract. root err: %s", err)
