@@ -361,10 +361,7 @@ jobs:
       - pre-build
       - run:
           name: "Build"
-          command: |
-            export PATH=$HOME/go1.20.6/go/bin:$PATH
-            make fmt
-            make all
+          command: make all
 
   test-linter:
     executor: linux-executor
@@ -373,7 +370,7 @@ jobs:
       - run:
           name: "Run golangci-lint"
           no_output_timeout: 30m
-          command: golangci-lint run --new-from-rev=dev --presets format,performance -v --timeout 10m
+          command: go run build/ci.go lint -v --new-from-rev=dev
 
   test-datasync:
     executor: linux-others-executor
