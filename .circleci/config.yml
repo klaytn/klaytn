@@ -21,6 +21,7 @@ orbs:
 executors:
   linux-executor: # this executor is for general testing and packaging linux binaries
     working_directory: ~/go/src/github.com/klaytn/klaytn
+    resource_class: medium
     docker:
       - image: klaytn/build_base:1.2-ubuntu18.04-go.1.20.6-solc0.8.13
         auth:
@@ -28,6 +29,7 @@ executors:
           password: $DOCKER_PASSWORD
   linux-others-executor: # this executor is for test-others job
     working_directory: /go/src/github.com/klaytn/klaytn
+    resource_class: xlarge
     docker:
       - image: klaytn/build_base:1.2-ubuntu18.04-go.1.20.6-solc0.8.13
         auth:
@@ -494,6 +496,7 @@ jobs:
 
   packaging-linux:
     executor: linux-executor
+    resource_class: large
     steps:
       - checkout
       - pre-build
@@ -502,6 +505,7 @@ jobs:
 
   packaging-linux-baobab:
     executor: linux-executor
+    resource_class: large
     steps:
       - checkout
       - pre-build
