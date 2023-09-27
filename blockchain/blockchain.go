@@ -1354,7 +1354,7 @@ func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) e
 			if err := trieDB.Commit(block.Header().Root, true, block.NumberU64()); err != nil {
 				return err
 			}
-			logger.Trace("Commit the state trie into the disk", "blocknum", block.NumberU64())
+			logger.Trace("Committed the state trie into the disk", "blocknum", block.NumberU64())
 
 			if bc.checkStartStateMigration(block.NumberU64(), root) {
 				// flush referenced trie nodes out to new stateTrieDB
