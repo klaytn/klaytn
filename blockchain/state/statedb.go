@@ -767,7 +767,13 @@ func (db *StateDB) ForEachStorage(addr common.Address, cb func(key, value common
 			cb(key, value)
 			continue
 		}
-		cb(key, common.BytesToHash(it.Value))
+		enc := it.Value
+		if len(enc) > 0 {
+			_, content, _, _ := rlp.Split(enc)
+			cb(key, common.BytesToHash(content))
+		} else {
+			cb(key, common.Hash{})
+		}
 	}
 }
 
