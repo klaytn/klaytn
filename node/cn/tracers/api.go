@@ -876,6 +876,9 @@ func (api *API) TraceCall(ctx context.Context, args klaytnapi.CallArgs, blockNrO
 		return nil, err
 	}
 
+	// Add gas fee to sender for estimating gasLimit/computing cost or calling a function by insufficient balance sender.
+	statedb.AddBalance(msg.ValidatedSender(), new(big.Int).Mul(new(big.Int).SetUint64(msg.Gas()), basefee))
+
 	txCtx := blockchain.NewEVMTxContext(msg, block.Header())
 	blockCtx := blockchain.NewEVMBlockContext(block.Header(), newChainContext(ctx, api.backend), nil)
 
