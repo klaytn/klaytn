@@ -549,7 +549,7 @@ func testReorgBadHashes(t *testing.T, full bool) {
 			t.Errorf("last block hash mismatch: have: %x, want %x", ncm.CurrentBlock().Hash(), blocks[2].Header().Hash())
 		}
 	} else {
-		if ncm.CurrentHeader().Hash() != ncm.GetBlockByNumber(0).Hash() {
+		if ncm.CurrentHeader().Hash() != blocks[0].Hash() {
 			t.Errorf("last header hash mismatch: have: %x, want %x", ncm.CurrentHeader().Hash(), ncm.GetBlockByNumber(0).Hash())
 		}
 	}

@@ -2665,7 +2665,7 @@ func (dbm *databaseManager) WriteGovernance(data map[string]interface{}, num uin
 
 func (dbm *databaseManager) DeleteGovernance(num uint64) {
 	db := dbm.getDatabase(MiscDB)
-	if err := dbm.deleteGovernanceBeyondWithExactMatch(num); err != nil {
+	if err := dbm.deleteLastGovernance(num); err != nil {
 		logger.Crit("Failed to delete Governance index", "err", err)
 	}
 	if err := db.Delete(makeKey(governancePrefix, num)); err != nil {
@@ -2698,9 +2698,8 @@ func (dbm *databaseManager) WriteGovernanceIdx(num uint64) error {
 	return db.Put(governanceHistoryKey, data)
 }
 
-// deleteGovernanceBeyondWithExactMatch deletes governanceHistory beyond `num`
-// If the target number is not in history, does not delete anything and just returns
-func (dbm *databaseManager) deleteGovernanceBeyondWithExactMatch(num uint64) error {
+// deleteLastGovernance deletes the last governanceIdx only if it is equal to `num`
+func (dbm *databaseManager) deleteLastGovernance(num uint64) error {
 	db := dbm.getDatabase(MiscDB)
 	idxHistory, err := dbm.ReadRecentGovernanceIdx(0)
 	if err != nil {

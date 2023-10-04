@@ -638,17 +638,15 @@ func (bc *BlockChain) setHeadBeyondRoot(head uint64, root common.Hash, repair bo
 
 	// Delete istanbul snapshot database further two epochs
 	var (
-		curBlkNum       = bc.CurrentBlock().Number().Uint64()
-		epoch           = bc.Config().Istanbul.Epoch
-		twoEpochs       = epoch * 2
-		beforeTwoEpochs uint64
+		curBlkNum   = bc.CurrentBlock().Number().Uint64()
+		epoch       = bc.Config().Istanbul.Epoch
+		votingEpoch = curBlkNum - (curBlkNum % epoch)
 	)
-	if twoEpochs > curBlkNum {
-		beforeTwoEpochs = 1
-	} else {
-		beforeTwoEpochs = curBlkNum - twoEpochs
+	if votingEpoch == 0 {
+		votingEpoch = 1
 	}
-	for i := curBlkNum; i >= beforeTwoEpochs; i-- {
+	// Delete the snapshot state beyond the block number of the previous epoch on the right
+	for i := curBlkNum; i >= votingEpoch; i-- {
 		if params.IsCheckpointInterval(i) {
 			// delete from sethead number to previous two epoch block nums
 			// to handle a block that contains non-empty vote data to make sure
@@ -656,7 +654,7 @@ func (bc *BlockChain) setHeadBeyondRoot(head uint64, root common.Hash, repair bo
 			bc.db.DeleteIstanbulSnapshot(bc.GetBlockByNumber(i).Hash())
 		}
 	}
-	logger.Trace("[SetHead] Snapshot database deleted", "from", originLatestBlkNum, "to", beforeTwoEpochs)
+	logger.Trace("[SetHead] Snapshot database deleted", "from", originLatestBlkNum, "to", votingEpoch)
 
 	// Clear out any stale content from the caches
 	bc.futureBlocks.Purge()

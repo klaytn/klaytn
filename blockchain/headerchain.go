@@ -409,12 +409,11 @@ func (hc *HeaderChain) SetHead(head uint64, updateFn UpdateHeadBlocksCallback, d
 		if updateFn != nil {
 			latestBlkNum, err := updateFn(parent)
 			if err != nil {
-				// rewound blockchain to genesis block
-				head = 0
+				return err
 			}
 			if latestBlkNum < head {
-				// Delete further if some of missing block state appears
-				// to match the latest block number between blockchain and headerchain
+				// Discrepancy of loop iteration occurs. blockchain sets the
+				// current block number to `latestBlkNum`. Remove further blocks accordingly
 				head = latestBlkNum
 			}
 		}
