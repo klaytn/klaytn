@@ -1400,6 +1400,7 @@ func fillStacks(stacks []string, n int) []string {
 	}
 	return stacks
 }
+
 func BenchmarkOpMcopy(b *testing.B) {
 	opBenchmark(b, opMcopy, "0x20" /*len*/, "0x20" /*src*/, "0x0" /*dst*/)
 }
