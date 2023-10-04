@@ -224,12 +224,13 @@ func enable3860(jt *JumpTable) {
 // https://eips.ethereum.org/EIPS/eip-5656
 func enable5656(jt *JumpTable) {
 	jt[MCOPY] = &operation{
-		execute:     opMcopy,
-		constantGas: GasFastestStep,
-		dynamicGas:  gasMcopy,
-		minStack:    minStack(3, 0),
-		maxStack:    maxStack(3, 0),
-		memorySize:  memoryMcopy,
+		execute:         opMcopy,
+		constantGas:     GasFastestStep,
+		dynamicGas:      gasMcopy,
+		minStack:        minStack(3, 0),
+		maxStack:        maxStack(3, 0),
+		memorySize:      memoryMcopy,
+		computationCost: params.McopyComputationCost,
 	}
 }
 

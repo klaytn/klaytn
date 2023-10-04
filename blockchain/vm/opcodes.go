@@ -123,7 +123,7 @@ const (
 	MSIZE
 	GAS
 	JUMPDEST
-	MCOPY
+	MCOPY OpCode = 0x5e
 	PUSH0 OpCode = 0x5f
 )
 

@@ -98,6 +98,8 @@ func NewEVMInterpreter(evm *EVM) *EVMInterpreter {
 	if cfg.JumpTable[STOP] == nil {
 		var jt JumpTable
 		switch {
+		case evm.chainRules.IsCancun:
+			jt = CancunInstructionSet
 		case evm.chainRules.IsShanghai:
 			jt = ShanghaiInstructionSet
 		case evm.chainRules.IsKore:
