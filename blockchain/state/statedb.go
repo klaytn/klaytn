@@ -498,10 +498,10 @@ func (self *StateDB) UpdateKey(addr common.Address, newKey accountkey.AccountKey
 //
 // The account's state object is still available until the state is committed,
 // getStateObject will return a non-nil account after Suicide.
-func (self *StateDB) Suicide(addr common.Address) bool {
+func (self *StateDB) Suicide(addr common.Address) {
 	stateObject := self.getStateObject(addr)
 	if stateObject == nil {
-		return false
+		return
 	}
 	self.journal.append(suicideChange{
 		account:     &addr,
@@ -510,8 +510,6 @@ func (self *StateDB) Suicide(addr common.Address) bool {
 	})
 	stateObject.markSuicided()
 	stateObject.account.SetBalance(new(big.Int))
-
-	return true
 }
 
 //

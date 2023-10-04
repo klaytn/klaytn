@@ -58,7 +58,7 @@ type StateDB interface {
 	GetState(common.Address, common.Hash) common.Hash
 	SetState(common.Address, common.Hash, common.Hash)
 
-	Suicide(common.Address) bool
+	Suicide(common.Address)
 	HasSuicided(common.Address) bool
 
 	// UpdateKey updates the account's key with the given key.
