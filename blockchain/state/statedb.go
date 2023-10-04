@@ -246,7 +246,7 @@ func (self *StateDB) SubRefund(gas uint64) {
 }
 
 // Exist reports whether the given account address exists in the state.
-// Notably this also returns true for suicided accounts.
+// Notably this also returns true for self-destructed accounts.
 func (self *StateDB) Exist(addr common.Address) bool {
 	return self.getStateObject(addr) != nil
 }
@@ -408,10 +408,10 @@ func (self *StateDB) StorageTrie(addr common.Address) Trie {
 	return cpy.updateStorageTrie(self.db)
 }
 
-func (self *StateDB) HasSuicided(addr common.Address) bool {
+func (self *StateDB) HasSelfDestructed(addr common.Address) bool {
 	stateObject := self.getStateObject(addr)
 	if stateObject != nil {
-		return stateObject.suicided
+		return stateObject.selfDestructed
 	}
 	return false
 }
@@ -493,22 +493,22 @@ func (self *StateDB) UpdateKey(addr common.Address, newKey accountkey.AccountKey
 	return errAccountDoesNotExist
 }
 
-// Suicide marks the given account as suicided.
+// SelfDestruct marks the given account as self-destructed.
 // This clears the account balance.
 //
 // The account's state object is still available until the state is committed,
-// getStateObject will return a non-nil account after Suicide.
-func (self *StateDB) Suicide(addr common.Address) {
+// getStateObject will return a non-nil account after SelfDestruct.
+func (self *StateDB) SelfDestruct(addr common.Address) {
 	stateObject := self.getStateObject(addr)
 	if stateObject == nil {
 		return
 	}
-	self.journal.append(suicideChange{
+	self.journal.append(selfDestructChange{
 		account:     &addr,
-		prev:        stateObject.suicided,
+		prev:        stateObject.selfDestructed,
 		prevbalance: new(big.Int).Set(stateObject.Balance()),
 	})
-	stateObject.markSuicided()
+	stateObject.markSelfDestructed()
 	stateObject.account.SetBalance(new(big.Int))
 }
 
@@ -908,7 +908,7 @@ func (stateDB *StateDB) Finalise(deleteEmptyObjects bool, setStorageRoot bool) {
 			continue
 		}
 
-		if so.suicided || (deleteEmptyObjects && so.empty()) {
+		if so.selfDestructed || (deleteEmptyObjects && so.empty()) {
 			stateDB.deleteStateObject(so)
 
 			// If state snapshotting is active, also mark the destruction there.
@@ -986,7 +986,7 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 	for addr, stateObject := range s.stateObjects {
 		_, isDirty := s.stateObjectsDirty[addr]
 		switch {
-		case stateObject.suicided || (isDirty && deleteEmptyObjects && stateObject.empty()):
+		case stateObject.selfDestructed || (isDirty && deleteEmptyObjects && stateObject.empty()):
 			// If the object has been removed, don't bother syncing it
 			// and just mark it for deletion in the trie.
 			s.deleteStateObject(stateObject)

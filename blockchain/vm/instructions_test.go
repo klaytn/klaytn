@@ -1007,9 +1007,9 @@ func BenchmarkOpRevert(b *testing.B) {
 	opBenchmark(b, opRevert, size, offset)
 }
 
-func BenchmarkOpSuicide(b *testing.B) {
+func BenchmarkOpSelfDestruct(b *testing.B) {
 	addr := "18f30de96ce789fe778b9a5f420f6fdbbd9b34d8"
-	opBenchmark(b, opSuicide, addr)
+	opBenchmark(b, opSelfDestruct, addr)
 }
 
 func BenchmarkOpPush1(b *testing.B) {

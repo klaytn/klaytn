@@ -58,14 +58,14 @@ type StateDB interface {
 	GetState(common.Address, common.Hash) common.Hash
 	SetState(common.Address, common.Hash, common.Hash)
 
-	Suicide(common.Address)
-	HasSuicided(common.Address) bool
+	SelfDestruct(common.Address)
+	HasSelfDestructed(common.Address) bool
 
 	// UpdateKey updates the account's key with the given key.
 	UpdateKey(addr common.Address, newKey accountkey.AccountKey, currentBlockNumber uint64) error
 
 	// Exist reports whether the given account exists in state.
-	// Notably this should also return true for suicided accounts.
+	// Notably this should also return true for self-destructed accounts.
 	Exist(common.Address) bool
 	// Empty returns whether the given account is empty. Empty
 	// is defined according to EIP161 (balance = nonce = code = 0).

@@ -540,7 +540,7 @@ func opExtCodeCopy(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
 // If the precompile account is not transferred any amount on a private or
 // customized chain, the return value will be zero.
 //
-//	(5) Caller tries to get the code hash for an account which is marked as suicided
+//	(5) Caller tries to get the code hash for an account which is marked as self-destructed
 //
 // in the current transaction, the code hash of this account should be returned.
 //
@@ -884,11 +884,11 @@ func opStop(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
 	return nil, nil
 }
 
-func opSuicide(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
+func opSelfDestruct(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
 	balance := evm.StateDB.GetBalance(scope.Contract.Address())
 	evm.StateDB.AddBalance(common.BigToAddress(scope.Stack.pop()), balance)
 
-	evm.StateDB.Suicide(scope.Contract.Address())
+	evm.StateDB.SelfDestruct(scope.Contract.Address())
 	return nil, nil
 }
 

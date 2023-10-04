@@ -94,11 +94,15 @@ type stateObject struct {
 	fakeStorage   Storage // Fake storage which constructed by caller for debugging purpose.
 
 	// Cache flags.
-	// When an object is marked suicided it will be delete from the trie
+	// When an object is marked self-destructed it will be delete from the trie
 	// during the "update" phase of the state transition.
 	dirtyCode bool // true if the code was updated
-	suicided  bool
-	deleted   bool
+
+	// Flag whether the account was marked as self-destructed. The self-destructed account
+	// is still accessible in the scope of same transaction.
+	selfDestructed bool
+
+	deleted bool
 
 	encoded atomic.Value // RLP-encoded data
 }
@@ -141,8 +145,8 @@ func (self *stateObject) setError(err error) {
 	}
 }
 
-func (self *stateObject) markSuicided() {
-	self.suicided = true
+func (self *stateObject) markSelfDestructed() {
+	self.selfDestructed = true
 }
 
 func (c *stateObject) touch() {
@@ -301,7 +305,7 @@ func (self *stateObject) IsContractAccount() bool {
 // IsContractAvailable returns true if the account has a smart contract code hash and didn't self-destruct
 func (self *stateObject) IsContractAvailable() bool {
 	acc := account.GetProgramAccount(self.account)
-	if acc != nil && !bytes.Equal(acc.GetCodeHash(), emptyCodeHash) && self.suicided == false {
+	if acc != nil && !bytes.Equal(acc.GetCodeHash(), emptyCodeHash) && self.selfDestructed == false {
 		return true
 	}
 	return false
@@ -465,7 +469,7 @@ func (self *stateObject) deepCopy(db *StateDB) *stateObject {
 	stateObject.code = self.code
 	stateObject.dirtyStorage = self.dirtyStorage.Copy()
 	stateObject.originStorage = self.originStorage.Copy()
-	stateObject.suicided = self.suicided
+	stateObject.selfDestructed = self.selfDestructed
 	stateObject.dirtyCode = self.dirtyCode
 	stateObject.deleted = self.deleted
 	return stateObject

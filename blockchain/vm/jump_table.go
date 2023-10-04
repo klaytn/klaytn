@@ -1162,7 +1162,7 @@ func newFrontierInstructionSet() JumpTable {
 			computationCost: params.ReturnComputationCost,
 		},
 		SELFDESTRUCT: {
-			execute:         opSuicide,
+			execute:         opSelfDestruct,
 			dynamicGas:      gasSelfdestruct,
 			minStack:        minStack(1, 0),
 			maxStack:        maxStack(1, 0),
