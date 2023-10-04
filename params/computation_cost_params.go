@@ -69,6 +69,7 @@ const (
 	DifficultyComputationCost     = 180
 	GasLimitComputationCost       = 166
 	PopComputationCost            = 140
+	McopyComputationCost          = 250
 	MloadComputationCost          = 376
 	MstoreComputationCost         = 288
 	Mstore8ComputationCost        = 5142

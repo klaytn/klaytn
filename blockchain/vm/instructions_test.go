@@ -24,13 +24,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"math/big"
+	"os"
+	"strings"
 	"testing"
 
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
@@ -116,7 +118,7 @@ func testTwoOperandOp(t *testing.T, tests []TwoOperandTestcase, opFn executionFu
 		expected := new(big.Int).SetBytes(common.Hex2Bytes(test.Expected))
 		stack.push(x)
 		stack.push(y)
-		opFn(&pc, env, nil, nil, stack)
+		opFn(&pc, env, &ScopeContext{nil, stack, nil})
 		actual := stack.pop()
 
 		if actual.Cmp(expected) != 0 {
@@ -230,7 +232,7 @@ func getResult(args []*twoOperandParams, opFn executionFunc) []TwoOperandTestcas
 		y := new(big.Int).SetBytes(common.Hex2Bytes(param.y))
 		stack.push(x)
 		stack.push(y)
-		opFn(&pc, env, nil, nil, stack)
+		opFn(&pc, env, &ScopeContext{nil, stack, nil})
 		actual := stack.pop()
 		result[i] = TwoOperandTestcase{param.x, param.y, fmt.Sprintf("%064x", actual)}
 	}
@@ -245,7 +247,7 @@ func xTestWriteExpectedValues(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		_ = ioutil.WriteFile(fmt.Sprintf("testdata/testcases_%v.json", name), data, 0o644)
+		_ = os.WriteFile(fmt.Sprintf("testdata/testcases_%v.json", name), data, 0o644)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -256,7 +258,7 @@ func xTestWriteExpectedValues(t *testing.T) {
 // TestJsonTestcases runs through all the testcases defined as json-files
 func TestJsonTestcases(t *testing.T) {
 	for name := range twoOpMethods {
-		data, err := ioutil.ReadFile(fmt.Sprintf("testdata/testcases_%v.json", name))
+		data, err := os.ReadFile(fmt.Sprintf("testdata/testcases_%v.json", name))
 		if err != nil {
 			t.Fatal("Failed to read file", err)
 		}
@@ -296,7 +298,7 @@ func initStateDB(db database.DBManager) *state.StateDB {
 	return statedb
 }
 
-func opBenchmark(bench *testing.B, op func(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error), args ...string) {
+func opBenchmark(bench *testing.B, op func(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error), args ...string) {
 	var (
 		initialCall = true
 		canTransfer = func(db StateDB, address common.Address, amount *big.Int) bool {
@@ -364,7 +366,7 @@ func opBenchmark(bench *testing.B, op func(pc *uint64, evm *EVM, contract *Contr
 			a := new(big.Int).SetBytes(arg)
 			stack.push(a)
 		}
-		op(&pc, env, contract, mem, stack)
+		op(&pc, env, &ScopeContext{mem, stack, contract})
 		if stack.len() > 0 {
 			stack.pop()
 		}
@@ -599,12 +601,12 @@ func TestOpMstore(t *testing.T) {
 	pc := uint64(0)
 	v := "abcdef00000000000000abba000000000deaf000000c0de00100000000133700"
 	stack.pushN(new(big.Int).SetBytes(common.Hex2Bytes(v)), big.NewInt(0))
-	opMstore(&pc, env, nil, mem, stack)
+	opMstore(&pc, env, &ScopeContext{mem, stack, nil})
 	if got := common.Bytes2Hex(mem.GetCopy(0, 32)); got != v {
 		t.Fatalf("Mstore fail, got %v, expected %v", got, v)
 	}
 	stack.pushN(big.NewInt(0x1), big.NewInt(0))
-	opMstore(&pc, env, nil, mem, stack)
+	opMstore(&pc, env, &ScopeContext{mem, stack, nil})
 	if common.Bytes2Hex(mem.GetCopy(0, 32)) != "0000000000000000000000000000000000000000000000000000000000000001" {
 		t.Fatalf("Mstore failed to overwrite previous value")
 	}
@@ -629,7 +631,7 @@ func BenchmarkOpMstore(bench *testing.B) {
 	bench.ResetTimer()
 	for i := 0; i < bench.N; i++ {
 		stack.pushN(value, memStart)
-		opMstore(&pc, env, nil, mem, stack)
+		opMstore(&pc, env, &ScopeContext{mem, stack, nil})
 	}
 	poolOfIntPools.put(evmInterpreter.intPool)
 }
@@ -650,7 +652,7 @@ func BenchmarkOpSHA3(bench *testing.B) {
 	bench.ResetTimer()
 	for i := 0; i < bench.N; i++ {
 		stack.pushN(big.NewInt(32), start)
-		opSha3(&pc, env, nil, mem, stack)
+		opSha3(&pc, env, &ScopeContext{mem, stack, nil})
 	}
 	poolOfIntPools.put(evmInterpreter.intPool)
 }
@@ -901,7 +903,7 @@ func BenchmarkOpSstore(bench *testing.B) {
 	for i := 0; i < bench.N; i++ {
 		stack.push(new(big.Int).SetBytes(byteArgs[0]))
 		stack.push(new(big.Int).SetBytes(append(byteArgs[1], byte(i))))
-		opSstore(&pc, env, contract, nil, stack)
+		opSstore(&pc, env, &ScopeContext{nil, stack, contract})
 		if stack.len() > 0 {
 			stack.pop()
 		}
@@ -1397,4 +1399,146 @@ func fillStacks(stacks []string, n int) []string {
 		stacks[i] = "FBCDEF090807060504030201ffffffffFBCDEF090807060504030201ffffffff"
 	}
 	return stacks
+}
+
+func BenchmarkOpMcopy(b *testing.B) {
+	opBenchmark(b, opMcopy, "0x20" /*len*/, "0x20" /*src*/, "0x0" /*dst*/)
+}
+
+func TestOpMCopy(t *testing.T) {
+	// Test cases from https://eips.ethereum.org/EIPS/eip-5656#test-cases
+	for i, tc := range []struct {
+		dst, src, len string
+		pre           string
+		want          string
+		wantGas       uint64
+	}{
+		{ // MCOPY 0 32 32 - copy 32 bytes from offset 32 to offset 0.
+			dst: "0x0", src: "0x20", len: "0x20",
+			pre:     "0000000000000000000000000000000000000000000000000000000000000000 000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+			want:    "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f 000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+			wantGas: 6,
+		},
+
+		{ // MCOPY 0 0 32 - copy 32 bytes from offset 0 to offset 0.
+			dst: "0x0", src: "0x0", len: "0x20",
+			pre:     "0101010101010101010101010101010101010101010101010101010101010101",
+			want:    "0101010101010101010101010101010101010101010101010101010101010101",
+			wantGas: 6,
+		},
+		{ // MCOPY 0 1 8 - copy 8 bytes from offset 1 to offset 0 (overlapping).
+			dst: "0x0", src: "0x1", len: "0x8",
+			pre:     "000102030405060708 000000000000000000000000000000000000000000000000",
+			want:    "010203040506070808 000000000000000000000000000000000000000000000000",
+			wantGas: 6,
+		},
+		{ // MCOPY 1 0 8 - copy 8 bytes from offset 0 to offset 1 (overlapping).
+			dst: "0x1", src: "0x0", len: "0x8",
+			pre:     "000102030405060708 000000000000000000000000000000000000000000000000",
+			want:    "000001020304050607 000000000000000000000000000000000000000000000000",
+			wantGas: 6,
+		},
+		// Tests below are not in the EIP, but maybe should be added
+		{ // MCOPY 0xFFFFFFFFFFFF 0xFFFFFFFFFFFF 0 - copy zero bytes from out-of-bounds index(overlapping).
+			dst: "0xFFFFFFFFFFFF", src: "0xFFFFFFFFFFFF", len: "0x0",
+			pre:     "11",
+			want:    "11",
+			wantGas: 3,
+		},
+		{ // MCOPY 0xFFFFFFFFFFFF 0 0 - copy zero bytes from start of mem to out-of-bounds.
+			dst: "0xFFFFFFFFFFFF", src: "0x0", len: "0x0",
+			pre:     "11",
+			want:    "11",
+			wantGas: 3,
+		},
+		{ // MCOPY 0 0xFFFFFFFFFFFF 0 - copy zero bytes from out-of-bounds to start of mem
+			dst: "0x0", src: "0xFFFFFFFFFFFF", len: "0x0",
+			pre:     "11",
+			want:    "11",
+			wantGas: 3,
+		},
+		{ // MCOPY - copy 1 from space outside of uint64  space
+			dst: "0x0", src: "0x10000000000000000", len: "0x1",
+			pre: "0",
+		},
+		{ // MCOPY - copy 1 from 0 to space outside of uint64
+			dst: "0x10000000000000000", src: "0x0", len: "0x1",
+			pre: "0",
+		},
+		{ // MCOPY - copy nothing from 0 to space outside of uint64
+			dst: "0x10000000000000000", src: "0x0", len: "0x0",
+			pre:     "",
+			want:    "",
+			wantGas: 3,
+		},
+		{ // MCOPY - copy 1 from 0x20 to 0x10, with no prior allocated mem
+			dst: "0x10", src: "0x20", len: "0x1",
+			pre: "",
+			// 64 bytes
+			want:    "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+			wantGas: 12,
+		},
+		{ // MCOPY - copy 1 from 0x19 to 0x10, with no prior allocated mem
+			dst: "0x10", src: "0x19", len: "0x1",
+			pre: "",
+			// 32 bytes
+			want:    "0x0000000000000000000000000000000000000000000000000000000000000000",
+			wantGas: 9,
+		},
+	} {
+		var (
+			env   = NewEVM(BlockContext{}, TxContext{}, nil, params.TestChainConfig, &Config{})
+			stack = newstack()
+			pc    = uint64(0)
+		)
+		data := common.FromHex(strings.ReplaceAll(tc.pre, " ", ""))
+		// Set pre
+		mem := NewMemory()
+		mem.Resize(uint64(len(data)))
+		mem.Set(0, uint64(len(data)), data)
+		// Push stack args
+		len, _ := new(big.Int).SetString(tc.len, 0)
+		src, _ := new(big.Int).SetString(tc.src, 0)
+		dst, _ := new(big.Int).SetString(tc.dst, 0)
+
+		stack.push(len)
+		stack.push(src)
+		stack.push(dst)
+		wantErr := (tc.wantGas == 0)
+		// Calc mem expansion
+		var memorySize uint64
+		if memSize, overflow := memoryMcopy(stack); overflow {
+			if wantErr {
+				continue
+			}
+			t.Errorf("overflow")
+		} else {
+			var overflow bool
+			if memorySize, overflow = math.SafeMul(toWordSize(memSize), 32); overflow {
+				t.Error(errGasUintOverflow)
+			}
+		}
+		// and the dynamic cost
+		var haveGas uint64
+		if dynamicCost, err := gasMcopy(env, nil, stack, mem, memorySize); err != nil {
+			t.Error(err)
+		} else {
+			haveGas = GasFastestStep + dynamicCost
+		}
+
+		// Expand mem
+		if memorySize > 0 {
+			mem.Resize(memorySize)
+		}
+		// Do the copy
+		opMcopy(&pc, env, &ScopeContext{mem, stack, nil})
+		want := common.FromHex(strings.ReplaceAll(tc.want, " ", ""))
+		if have := mem.store; !bytes.Equal(want, have) {
+			t.Errorf("case %d: \nwant: %#x\nhave: %#x\n", i, want, have)
+		}
+		wantGas := tc.wantGas
+		if haveGas != wantGas {
+			t.Errorf("case %d: gas wrong, want %d have %d\n", i, wantGas, haveGas)
+		}
+	}
 }
