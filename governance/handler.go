@@ -514,7 +514,7 @@ func (gov *Governance) addNewVote(valset istanbul.ValidatorSet, votes []Governan
 				atomic.StoreUint64(&istanbul.DefaultConfig.Timeout, timeout)
 				fallthrough
 			default:
-				if writable && blockNum > atomic.LoadUint64(&gov.lastGovernanceStateBlock) {
+				if writable && blockNum >= atomic.LoadUint64(&gov.lastGovernanceStateBlock) {
 					logger.Info("Reflecting parameter vote", "num", blockNum, "key", gVote.Key, "value", gVote.Value)
 					gov.ReflectVotes(*gVote)
 				}
