@@ -512,6 +512,17 @@ func (self *StateDB) SelfDestruct(addr common.Address) {
 	stateObject.account.SetBalance(new(big.Int))
 }
 
+func (self *StateDB) SelfDestruct6780(addr common.Address) {
+	stateObject := self.getStateObject(addr)
+	if stateObject == nil {
+		return
+	}
+
+	if stateObject.created {
+		self.SelfDestruct(addr)
+	}
+}
+
 //
 // Setting, updating & deleting state object methods.
 //
@@ -672,6 +683,9 @@ func (self *StateDB) createObject(addr common.Address) (newobj, prev *stateObjec
 	} else {
 		self.journal.append(resetObjectChange{prev: prev, prevdestruct: prevdestruct})
 	}
+
+	newobj.created = true
+
 	self.setStateObject(newobj)
 	if prev != nil && !prev.deleted {
 		return newobj, prev
@@ -925,6 +939,7 @@ func (stateDB *StateDB) Finalise(deleteEmptyObjects bool, setStorageRoot bool) {
 			so.setStorageRoot(setStorageRoot, stateDB.stateObjectsDirtyStorage)
 			stateDB.updateStateObject(so)
 		}
+		so.created = false
 		stateDB.stateObjectsDirty[addr] = struct{}{}
 	}
 	// Invalidate journal because reverting across transactions is not allowed.

@@ -75,12 +75,12 @@ type JumpTable [256]*operation
 func newCancunInstructionSet() JumpTable {
 	instructionSet := newShanghaiInstructionSet()
 	enable5656(&instructionSet) // EIP-5656 (MCOPY opcode)
+	enable6780(&instructionSet) // EIP-6780 SELFDESTRUCT only in same transaction
 	return instructionSet
 }
 
 func newShanghaiInstructionSet() JumpTable {
 	instructionSet := newKoreInstructionSet()
-
 	enable3855(&instructionSet) // PUSH0 opcode
 	enable3860(&instructionSet) // EIP-3860: limit and meter initcode
 	return instructionSet
@@ -88,7 +88,6 @@ func newShanghaiInstructionSet() JumpTable {
 
 func newKoreInstructionSet() JumpTable {
 	instructionSet := newLondonInstructionSet()
-
 	enable2929(&instructionSet) // Access lists for trie accesses https://eips.ethereum.org/EIPS/eip-2929
 	enable3529(&instructionSet) // EIP-3529: Reduction in refunds https://eips.ethereum.org/EIPS/eip-3529
 	enable4399(&instructionSet) // Change 0x44 opcode return value (from difficulty value to prev blockhash value)

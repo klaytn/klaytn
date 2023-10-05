@@ -28,6 +28,8 @@ import (
 // defined jump tables are not polluted.
 func EnableEIP(eipNum int, jt *JumpTable) error {
 	switch eipNum {
+	case 6780:
+		enable6780(jt)
 	case 5656:
 		enable5656(jt)
 	case 3860:
@@ -245,4 +247,16 @@ func opMcopy(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
 	// (the memorySize function on the opcode).
 	scope.Memory.Copy(dst.Uint64(), src.Uint64(), length.Uint64())
 	return nil, nil
+}
+
+// enable6780 applies EIP-6780 (deactivate SELFDESTRUCT)
+func enable6780(jt *JumpTable) {
+	jt[SELFDESTRUCT] = &operation{
+		execute:         opSelfdestruct6780,
+		dynamicGas:      gasSelfdestructEIP3529,
+		constantGas:     params.SelfdestructGasEIP150,
+		minStack:        minStack(1, 0),
+		maxStack:        maxStack(1, 0),
+		computationCost: params.SelfDestructComputationCost,
+	}
 }

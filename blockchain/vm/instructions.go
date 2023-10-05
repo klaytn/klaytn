@@ -907,6 +907,22 @@ func opPush1(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
 	return nil, nil
 }
 
+func opSelfdestruct6780(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
+	if evm.interpreter.readOnly {
+		return nil, ErrWriteProtection
+	}
+	beneficiary := scope.Stack.pop()
+	balance := evm.StateDB.GetBalance(scope.Contract.Address())
+	evm.StateDB.SubBalance(scope.Contract.Address(), balance)
+	evm.StateDB.AddBalance(common.BigToAddress(beneficiary), balance)
+	evm.StateDB.SelfDestruct6780(scope.Contract.Address())
+	// if tracer := interpreter.evm.Config.Tracer; tracer != nil {
+	// 	tracer.CaptureEnter(SELFDESTRUCT, scope.Contract.Address(), common.BigToAddress(beneficiary), []byte{}, 0, balance)
+	// 	tracer.CaptureExit([]byte{}, 0, nil)
+	// }
+	return nil, errStopToken
+}
+
 // following functions are used by the instruction jump  table
 
 // make log instruction function

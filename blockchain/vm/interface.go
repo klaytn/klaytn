@@ -61,6 +61,8 @@ type StateDB interface {
 	SelfDestruct(common.Address)
 	HasSelfDestructed(common.Address) bool
 
+	SelfDestruct6780(common.Address)
+
 	// UpdateKey updates the account's key with the given key.
 	UpdateKey(addr common.Address, newKey accountkey.AccountKey, currentBlockNumber uint64) error
 
