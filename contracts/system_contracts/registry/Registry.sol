@@ -21,6 +21,23 @@ import "./IRegistry.sol";
 
 contract Registry is IRegistry {
     function getActiveAddr(string memory name) external override view returns (address) {
-        revert("not implemented");
+        uint256 len = records[name].length;
+        if (len == 0) {
+            return address(0);
+        } else {
+            return records[name][len-1].addr;
+        }
+    }
+
+    function getAllRecords(string memory name) external view returns (Record[] memory) {
+        return records[name];
+    }
+
+    function getAllNames() external view returns (string[] memory) {
+        return names;
+    }
+
+    function owner() external view returns (address) {
+        return _owner;
     }
 }

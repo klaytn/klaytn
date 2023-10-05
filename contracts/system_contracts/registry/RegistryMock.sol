@@ -39,4 +39,16 @@ contract RegistryMock is IRegistry {
             return records[name][len-1].addr;
         }
     }
+
+    function getAllRecords(string memory name) external view returns (Record[] memory) {
+        return records[name];
+    }
+
+    function getAllNames() external view returns (string[] memory) {
+        return names;
+    }
+
+    function owner() external view returns (address) {
+        return _owner;
+    }
 }
