@@ -24,6 +24,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/common"
 	contracts "github.com/klaytn/klaytn/contracts/system_contracts"
+	"github.com/klaytn/klaytn/params"
 )
 
 type RegistryRecord struct {
@@ -35,6 +36,23 @@ type AllocRegistryInit struct {
 	Records map[string][]RegistryRecord
 	Names   []string
 	Owner   common.Address
+}
+
+func NewAllocRegistryInit() *AllocRegistryInit {
+	return &AllocRegistryInit{
+		Records: make(map[string][]RegistryRecord),
+	}
+}
+
+func (init *AllocRegistryInit) AddRecord(name string, addr common.Address, activation *big.Int) {
+	isFirst := len(init.Records[name]) == 0
+
+	record := RegistryRecord{Addr: addr, Activation: activation}
+	init.Records[name] = append(init.Records[name], record)
+
+	if isFirst {
+		init.Names = append(init.Names, name)
+	}
 }
 
 // Create storage state from the given initial values.
@@ -87,6 +105,38 @@ func InstallRegistry(state *state.StateDB, init *AllocRegistryInit) error {
 		state.SetState(RegistryAddr, key, value)
 	}
 	return nil
+}
+
+// Install Registry at the state with the initial records.
+// The initial records contains pre-deployed system contracts that could have
+// existed before the Cancun hardfork.
+//
+// - "AddressBook" at the constant AddressBookAdddr if code exists
+// - "GovParam" at govParamAddr if nonzero
+// - "TreasuryRebalance" at config.Kip103ContractAddress if nonzero
+//
+// Because these system contracts must exist in the Registry right after the
+// Cancun hardfork block number, add them to Registry by modifying the state.
+func InstallRegistryAtCancunFork(state *state.StateDB, config *params.ChainConfig, govParamAddr common.Address) error {
+	return InstallRegistry(state, cancunRegistryInit(state, config, govParamAddr))
+}
+
+func cancunRegistryInit(state *state.StateDB, config *params.ChainConfig, govParamAddr common.Address) *AllocRegistryInit {
+	init := NewAllocRegistryInit()
+
+	if len(state.GetCode(AddressBookAddr)) > 0 {
+		init.AddRecord(AddressBookName, AddressBookAddr, common.Big0)
+	}
+
+	if (govParamAddr != common.Address{}) {
+		init.AddRecord(GovParamName, govParamAddr, common.Big0)
+	}
+
+	if (config.Kip103ContractAddress != common.Address{}) {
+		init.AddRecord(Kip103Name, config.Kip103ContractAddress, common.Big0)
+	}
+
+	return init
 }
 
 func ReadRegistryActiveAddr(backend bind.ContractCaller, name string, num *big.Int) (common.Address, error) {

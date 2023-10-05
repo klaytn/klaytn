@@ -7,11 +7,14 @@ import (
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/hexutil"
 	contracts "github.com/klaytn/klaytn/contracts/system_contracts"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -117,5 +120,79 @@ func TestAllocRegistry(t *testing.T) {
 	}
 	for k, v := range execStorage {
 		assert.Equal(t, v.Hex(), allocStorage[k].Hex(), k.Hex())
+	}
+}
+
+func TestCancunRegistryInit(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
+
+	{ // Cypress. AddressBook + TreasuryRebalance.
+		var (
+			kip103Addr = common.HexToAddress("0x1111")
+
+			alloc = blockchain.GenesisAlloc{
+				AddressBookAddr: blockchain.GenesisAccount{
+					Code:    hexutil.MustDecode("0xcccc"),
+					Balance: common.Big0,
+				},
+			}
+			config = &params.ChainConfig{
+				Kip103CompatibleBlock: common.Big1,
+				Kip103ContractAddress: kip103Addr,
+			}
+
+			genesis = blockchain.Genesis{Alloc: alloc, Config: config}
+			dbm     = database.NewMemoryDBManager()
+			block   = genesis.MustCommit(dbm)
+			sdb, _  = state.New(block.Root(), state.NewDatabase(dbm), nil, nil)
+		)
+
+		init := cancunRegistryInit(sdb, config, common.Address{})
+		assert.Equal(t, []string{AddressBookName, Kip103Name}, init.Names)
+		assert.Equal(t, AddressBookAddr, init.Records[AddressBookName][0].Addr)
+		assert.Equal(t, kip103Addr, init.Records[Kip103Name][0].Addr)
+	}
+	{ // Baobab. AddressBook + GovParam + TreasuryRebalance.
+		var (
+			kip103Addr   = common.HexToAddress("0x1111")
+			govParamAddr = common.HexToAddress("0x2222")
+
+			alloc = blockchain.GenesisAlloc{
+				AddressBookAddr: blockchain.GenesisAccount{
+					Code:    hexutil.MustDecode("0xcccc"),
+					Balance: common.Big0,
+				},
+			}
+			config = &params.ChainConfig{
+				Kip103CompatibleBlock: common.Big1,
+				Kip103ContractAddress: kip103Addr,
+			}
+
+			genesis = blockchain.Genesis{Alloc: alloc, Config: config}
+			dbm     = database.NewMemoryDBManager()
+			block   = genesis.MustCommit(dbm)
+			sdb, _  = state.New(block.Root(), state.NewDatabase(dbm), nil, nil)
+		)
+
+		init := cancunRegistryInit(sdb, config, govParamAddr)
+		assert.Equal(t, []string{AddressBookName, GovParamName, Kip103Name}, init.Names)
+		assert.Equal(t, AddressBookAddr, init.Records[AddressBookName][0].Addr)
+		assert.Equal(t, kip103Addr, init.Records[Kip103Name][0].Addr)
+		assert.Equal(t, govParamAddr, init.Records[GovParamName][0].Addr)
+	}
+	{ // Service chain No entry.
+		var (
+			alloc  = blockchain.GenesisAlloc{}
+			config = &params.ChainConfig{}
+
+			genesis = blockchain.Genesis{Alloc: alloc, Config: config}
+			dbm     = database.NewMemoryDBManager()
+			block   = genesis.MustCommit(dbm)
+			sdb, _  = state.New(block.Root(), state.NewDatabase(dbm), nil, nil)
+		)
+
+		init := cancunRegistryInit(sdb, config, common.Address{})
+		assert.Equal(t, 0, len(init.Names))
+		assert.Equal(t, 0, len(init.Records))
 	}
 }

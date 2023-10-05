@@ -360,6 +360,15 @@ func (c *ChainConfig) IsCancunForkEnabled(num *big.Int) bool {
 	return isForked(c.CancunCompatibleBlock, num)
 }
 
+// IsCancunForkBlockParent returns whethere num is one block before the cancun block.
+func (c *ChainConfig) IsCancunForkBlockParent(num *big.Int) bool {
+	if c.CancunCompatibleBlock == nil || num == nil {
+		return false
+	}
+	nextNum := new(big.Int).Add(num, common.Big1)
+	return c.CancunCompatibleBlock.Cmp(nextNum) == 0 // cancun == num + 1
+}
+
 // IsKIP103ForkBlock returns whether num is equal to the kip103 block.
 func (c *ChainConfig) IsKIP103ForkBlock(num *big.Int) bool {
 	if c.Kip103CompatibleBlock == nil || num == nil {
