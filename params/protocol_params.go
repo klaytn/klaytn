@@ -80,13 +80,13 @@ const (
 	SelfdestructGas uint64 = 5000 // Cost of SELFDESTRUCT post EIP 150 (Tangerine)
 
 	// Istanbul version of BalanceGas, SloadGas, ExtcodeHash is added.
-	BalanceGasEIP150             uint64 = 400 // Cost of BALANCE     before EIP 1884
-	BalanceGasEIP1884            uint64 = 700 // Cost of BALANCE     after  EIP 1884 (part of Istanbul)
-	SloadGasEIP150               uint64 = 200 // Cost of SLOAD       before EIP 1884
-	SloadGasEIP1884              uint64 = 800 // Cost of SLOAD       after  EIP 1884 (part of Istanbul)
-	SloadGasEIP2200              uint64 = 800 // Cost of SLOAD       after  EIP 2200 (part of Istanbul)
-	ExtcodeHashGasConstantinople uint64 = 400 // Cost of EXTCODEHASH before EIP 1884
-	ExtcodeHashGasEIP1884        uint64 = 700 // Cost of EXTCODEHASH after  EIP 1884 (part in Istanbul)
+	BalanceGasEIP150             uint64 = 400  // Cost of BALANCE     before EIP 1884
+	BalanceGasEIP1884            uint64 = 700  // Cost of BALANCE     after  EIP 1884 (part of Istanbul)
+	SloadGasEIP150               uint64 = 200  // Cost of SLOAD       before EIP 1884
+	SloadGasEIP1884              uint64 = 800  // Cost of SLOAD       after  EIP 1884 (part of Istanbul)
+	SloadGasEIP2200              uint64 = 800  // Cost of SLOAD       after  EIP 2200 (part of Istanbul)
+	ExtcodeHashGasConstantinople uint64 = 400  // Cost of EXTCODEHASH before EIP 1884
+	ExtcodeHashGasEIP1884        uint64 = 700  // Cost of EXTCODEHASH after  EIP 1884 (part in Istanbul)
 	SelfdestructGasEIP150        uint64 = 5000 // Cost of SELFDESTRUCT post EIP 150 (Tangerine)
 
 	// EXP has a dynamic portion depending on the size of the exponent
