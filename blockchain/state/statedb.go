@@ -508,7 +508,7 @@ func (self *StateDB) SelfDestruct(addr common.Address) {
 		prev:        stateObject.selfDestructed,
 		prevbalance: new(big.Int).Set(stateObject.Balance()),
 	})
-	stateObject.markSelfDestructed()
+	stateObject.markSelfdestructed()
 	stateObject.account.SetBalance(new(big.Int))
 }
 

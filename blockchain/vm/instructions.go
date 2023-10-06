@@ -884,7 +884,7 @@ func opStop(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
 	return nil, nil
 }
 
-func opSelfDestruct(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
+func opSelfdestruct(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
 	balance := evm.StateDB.GetBalance(scope.Contract.Address())
 	evm.StateDB.AddBalance(common.BigToAddress(scope.Stack.pop()), balance)
 
@@ -916,10 +916,13 @@ func opSelfdestruct6780(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, erro
 	evm.StateDB.SubBalance(scope.Contract.Address(), balance)
 	evm.StateDB.AddBalance(common.BigToAddress(beneficiary), balance)
 	evm.StateDB.SelfDestruct6780(scope.Contract.Address())
+
+	// TODO-klaytn: call frame tracing https://github.com/ethereum/go-ethereum/pull/23087
 	// if tracer := interpreter.evm.Config.Tracer; tracer != nil {
 	// 	tracer.CaptureEnter(SELFDESTRUCT, scope.Contract.Address(), common.BigToAddress(beneficiary), []byte{}, 0, balance)
 	// 	tracer.CaptureExit([]byte{}, 0, nil)
 	// }
+
 	return nil, errStopToken
 }
 

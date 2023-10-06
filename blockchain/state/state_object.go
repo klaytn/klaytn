@@ -151,7 +151,7 @@ func (self *stateObject) setError(err error) {
 	}
 }
 
-func (self *stateObject) markSelfDestructed() {
+func (self *stateObject) markSelfdestructed() {
 	self.selfDestructed = true
 }
 
