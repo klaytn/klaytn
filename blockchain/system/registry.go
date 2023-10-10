@@ -25,13 +25,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/common"
 	contracts "github.com/klaytn/klaytn/contracts/system_contracts"
-	"github.com/klaytn/klaytn/params"
 )
-
-type RegistryRecord struct {
-	Addr       common.Address
-	Activation *big.Int
-}
 
 // AllocRegistryInit Specifies the initial Registry state.
 // This struct only represents a special case of Registry state where:
@@ -39,13 +33,13 @@ type RegistryRecord struct {
 // - the activation of all records is zero
 // - the names array is lexicographically sorted
 type AllocRegistryInit struct {
-	Contracts map[string]common.Address
-	Owner     common.Address
+	Records map[string]common.Address
+	Owner   common.Address
 }
 
 func NewAllocRegistryInit() *AllocRegistryInit {
 	return &AllocRegistryInit{
-		Contracts: make(map[string]common.Address),
+		Records: make(map[string]common.Address),
 	}
 }
 
@@ -63,7 +57,7 @@ func AllocRegistry(init *AllocRegistryInit) map[common.Hash]common.Hash {
 	// - records[x].length @ Hash(x, 0)
 	// - records[x][i].addr @ Hash(Hash(x, 0)) + (2*i)
 	// - records[x][i].activation @ Hash(Hash(x, 0)) + (2*i + 1)
-	for name, addr := range init.Contracts {
+	for name, addr := range init.Records {
 		arraySlot := calcMappingSlot(0, name)
 		storage[arraySlot] = lpad32(1)
 
@@ -75,7 +69,7 @@ func AllocRegistry(init *AllocRegistryInit) map[common.Hash]common.Hash {
 	}
 
 	names := make([]string, 0)
-	for name, _ := range init.Contracts {
+	for name := range init.Records {
 		names = append(names, name)
 	}
 	sort.Strings(names)
@@ -104,38 +98,6 @@ func InstallRegistry(state *state.StateDB, init *AllocRegistryInit) error {
 		state.SetState(RegistryAddr, key, value)
 	}
 	return nil
-}
-
-// Install Registry at the state with the initial records.
-// The initial records contains pre-deployed system contracts that could have
-// existed before the Cancun hardfork.
-//
-// - "AddressBook" at the constant AddressBookAdddr if code exists
-// - "GovParam" at govParamAddr if nonzero
-// - "TreasuryRebalance" at config.Kip103ContractAddress if nonzero
-//
-// Because these system contracts must exist in the Registry right after the
-// Cancun hardfork block number, add them to Registry by modifying the state.
-func InstallRegistryAtCancunFork(state *state.StateDB, config *params.ChainConfig, govParamAddr common.Address) error {
-	return InstallRegistry(state, cancunRegistryInit(state, config, govParamAddr))
-}
-
-func cancunRegistryInit(state *state.StateDB, config *params.ChainConfig, govParamAddr common.Address) *AllocRegistryInit {
-	init := NewAllocRegistryInit()
-
-	if len(state.GetCode(AddressBookAddr)) > 0 {
-		init.Contracts[AddressBookName] = AddressBookAddr
-	}
-
-	if (govParamAddr != common.Address{}) {
-		init.Contracts[GovParamName] = govParamAddr
-	}
-
-	if (config.Kip103ContractAddress != common.Address{}) {
-		init.Contracts[Kip103Name] = config.Kip103ContractAddress
-	}
-
-	return init
 }
 
 func ReadRegistryActiveAddr(backend bind.ContractCaller, name string, num *big.Int) (common.Address, error) {

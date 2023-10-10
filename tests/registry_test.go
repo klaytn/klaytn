@@ -24,7 +24,6 @@ func TestRegistryFork(t *testing.T) {
 
 	forkParentNum := big.NewInt(4)
 	forkNum := big.NewInt(5)
-	kip103Addr := common.HexToAddress("0x103103")
 
 	// Start blockchain node
 	config := params.CypressChainConfig.Copy()
@@ -37,8 +36,10 @@ func TestRegistryFork(t *testing.T) {
 	config.KoreCompatibleBlock = big.NewInt(0)
 	config.ShanghaiCompatibleBlock = big.NewInt(0)
 	config.CancunCompatibleBlock = forkNum
-	config.Kip103CompatibleBlock = common.Big1
-	config.Kip103ContractAddress = kip103Addr
+	config.RandaoCompatibleBlock = forkNum
+	config.RandaoRegistryRecords = map[string]common.Address{
+		"AcmeContract": common.HexToAddress("0xaaaa"),
+	}
 
 	fullNode, node, _, _, workspace := newBlockchain(t, config)
 	defer func() {
@@ -64,15 +65,10 @@ func TestRegistryFork(t *testing.T) {
 	names, err := contract.GetAllNames(atForkParent)
 	t.Log("Registry.getAllNames()", names)
 	assert.Nil(t, err)
-	assert.Equal(t, []string{system.AddressBookName, system.Kip103Name}, names)
+	assert.Equal(t, []string{"AcmeContract"}, names)
 
-	addr, err := contract.GetActiveAddr(atForkParent, system.AddressBookName)
-	t.Log("Registry.getActiveAddr('AddressBook')", addr.Hex())
+	addr, err := contract.GetActiveAddr(atForkParent, "AcmeContract")
+	t.Log("Registry.getActiveAddr('AcmeContract')", addr.Hex())
 	assert.Nil(t, err)
-	assert.Equal(t, system.AddressBookAddr, addr)
-
-	addr, err = contract.GetActiveAddr(atForkParent, system.Kip103Name)
-	t.Log("Registry.getActiveAddr('TreasuryRebalance')", addr.Hex())
-	assert.Nil(t, err)
-	assert.Equal(t, kip103Addr, addr)
+	assert.Equal(t, common.HexToAddress("0xaaaa"), addr)
 }

@@ -525,8 +525,11 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 
 	// The Registry contract must be immediately available from the fork block.
 	// So it is installed BEFORE the fork block.
-	if chain.Config().IsCancunForkBlockParent(header.Number) {
-		system.InstallRegistryAtCancunFork(state, chain.Config(), pset.GovParamContract())
+	if chain.Config().IsRandaoForkBlockParent(header.Number) {
+		system.InstallRegistry(state, &system.AllocRegistryInit{
+			Records: chain.Config().RandaoRegistryRecords,
+			Owner:   chain.Config().RandaoRegistryOwner,
+		})
 	}
 
 	header.Root = state.IntermediateRoot(true)

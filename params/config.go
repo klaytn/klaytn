@@ -192,6 +192,12 @@ type ChainConfig struct {
 	Kip103CompatibleBlock *big.Int       `json:"kip103CompatibleBlock,omitempty"` // Kip103Compatible activate block (nil = no fork)
 	Kip103ContractAddress common.Address `json:"kip103ContractAddress,omitempty"` // Kip103 contract address already deployed on the network
 
+	// Randao is an optional hardfork
+	// RandaoCompatibleBlock, RandaoRegistryRecords and RandaoRegistryOwner all must be specified to enable Randao
+	RandaoCompatibleBlock *big.Int                  `json:"randaoCompatibleBlock,omitempty"` // RandaoCompatible activate block (nil = no fork)
+	RandaoRegistryRecords map[string]common.Address `json:"randaoRegistryRecords,omitempty"` // Initial registry records (existing system contracts)
+	RandaoRegistryOwner   common.Address            `json:"randaoRegistryOwner,omitempty"`   // Initial registry owner account
+
 	// Various consensus engines
 	Gxhash   *GxhashConfig   `json:"gxhash,omitempty"` // (deprecated) not supported engine
 	Clique   *CliqueConfig   `json:"clique,omitempty"`
@@ -360,21 +366,21 @@ func (c *ChainConfig) IsCancunForkEnabled(num *big.Int) bool {
 	return isForked(c.CancunCompatibleBlock, num)
 }
 
-// IsCancunForkBlockParent returns whethere num is one block before the cancun block.
-func (c *ChainConfig) IsCancunForkBlockParent(num *big.Int) bool {
-	if c.CancunCompatibleBlock == nil || num == nil {
-		return false
-	}
-	nextNum := new(big.Int).Add(num, common.Big1)
-	return c.CancunCompatibleBlock.Cmp(nextNum) == 0 // cancun == num + 1
-}
-
 // IsKIP103ForkBlock returns whether num is equal to the kip103 block.
 func (c *ChainConfig) IsKIP103ForkBlock(num *big.Int) bool {
 	if c.Kip103CompatibleBlock == nil || num == nil {
 		return false
 	}
 	return c.Kip103CompatibleBlock.Cmp(num) == 0
+}
+
+// IsRandaoForkBlockParent returns whethere num is one block before the randao block.
+func (c *ChainConfig) IsRandaoForkBlockParent(num *big.Int) bool {
+	if c.RandaoCompatibleBlock == nil || num == nil {
+		return false
+	}
+	nextNum := new(big.Int).Add(num, common.Big1)
+	return c.RandaoCompatibleBlock.Cmp(nextNum) == 0 // randao == num + 1
 }
 
 // CheckCompatible checks whether scheduled fork transitions have been imported
@@ -412,6 +418,7 @@ func (c *ChainConfig) CheckConfigForkOrder() error {
 		{name: "koreBlock", block: c.KoreCompatibleBlock},
 		{name: "shanghaiBlock", block: c.ShanghaiCompatibleBlock},
 		{name: "cancunBlock", block: c.CancunCompatibleBlock},
+		{name: "randaoBlock", block: c.RandaoCompatibleBlock, optional: true},
 	} {
 		if lastFork.name != "" {
 			// Next one must be higher number
@@ -457,6 +464,9 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *Confi
 	}
 	if isForkIncompatible(c.CancunCompatibleBlock, newcfg.CancunCompatibleBlock, head) {
 		return newCompatError("Cancun Block", c.CancunCompatibleBlock, newcfg.CancunCompatibleBlock)
+	}
+	if isForkIncompatible(c.RandaoCompatibleBlock, newcfg.RandaoCompatibleBlock, head) {
+		return newCompatError("Cancun Block", c.RandaoCompatibleBlock, newcfg.RandaoCompatibleBlock)
 	}
 	return nil
 }
