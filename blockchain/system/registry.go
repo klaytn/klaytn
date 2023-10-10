@@ -19,6 +19,7 @@ package system
 import (
 	"context"
 	"math/big"
+	"sort"
 
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/blockchain/state"
@@ -32,26 +33,19 @@ type RegistryRecord struct {
 	Activation *big.Int
 }
 
+// AllocRegistryInit Specifies the initial Registry state.
+// This struct only represents a special case of Registry state where:
+// - there is only one record for each name
+// - the activation of all records is zero
+// - the names array is lexicographically sorted
 type AllocRegistryInit struct {
-	Records map[string][]RegistryRecord
-	Names   []string
-	Owner   common.Address
+	Contracts map[string]common.Address
+	Owner     common.Address
 }
 
 func NewAllocRegistryInit() *AllocRegistryInit {
 	return &AllocRegistryInit{
-		Records: make(map[string][]RegistryRecord),
-	}
-}
-
-func (init *AllocRegistryInit) AddRecord(name string, addr common.Address, activation *big.Int) {
-	isFirst := len(init.Records[name]) == 0
-
-	record := RegistryRecord{Addr: addr, Activation: activation}
-	init.Records[name] = append(init.Records[name], record)
-
-	if isFirst {
-		init.Names = append(init.Names, name)
+		Contracts: make(map[string]common.Address),
 	}
 }
 
@@ -65,27 +59,32 @@ func AllocRegistry(init *AllocRegistryInit) map[common.Hash]common.Hash {
 	storage := make(map[common.Hash]common.Hash)
 
 	// slot[0]: mapping(string => Record[]) records;
+	// In AllocRegistry, records[name] is always Record[] of one element.
 	// - records[x].length @ Hash(x, 0)
 	// - records[x][i].addr @ Hash(Hash(x, 0)) + (2*i)
 	// - records[x][i].activation @ Hash(Hash(x, 0)) + (2*i + 1)
-	for name, records := range init.Records {
+	for name, addr := range init.Contracts {
 		arraySlot := calcMappingSlot(0, name)
-		storage[arraySlot] = lpad32(len(records))
+		storage[arraySlot] = lpad32(1)
 
-		for i, record := range records {
-			addrSlot := calcArraySlot(arraySlot, 2, i, 0)
-			activationSlot := calcArraySlot(arraySlot, 2, i, 1)
+		addrSlot := calcArraySlot(arraySlot, 2, 0, 0)
+		activationSlot := calcArraySlot(arraySlot, 2, 0, 1)
 
-			storage[addrSlot] = lpad32(record.Addr)
-			storage[activationSlot] = lpad32(record.Activation)
-		}
+		storage[addrSlot] = lpad32(addr)
+		storage[activationSlot] = lpad32(0)
 	}
+
+	names := make([]string, 0)
+	for name, _ := range init.Contracts {
+		names = append(names, name)
+	}
+	sort.Strings(names)
 
 	// slot[1]: string[] names;
 	// - names.length @ 1
 	// - names[i] @ Hash(1) + i
-	storage[lpad32(1)] = lpad32(len(init.Names))
-	for i, name := range init.Names {
+	storage[lpad32(1)] = lpad32(len(names))
+	for i, name := range names {
 		nameSlot := calcArraySlot(1, 1, i, 0)
 		storage[nameSlot] = encodeShortString(name)
 	}
@@ -125,15 +124,15 @@ func cancunRegistryInit(state *state.StateDB, config *params.ChainConfig, govPar
 	init := NewAllocRegistryInit()
 
 	if len(state.GetCode(AddressBookAddr)) > 0 {
-		init.AddRecord(AddressBookName, AddressBookAddr, common.Big0)
+		init.Contracts[AddressBookName] = AddressBookAddr
 	}
 
 	if (govParamAddr != common.Address{}) {
-		init.AddRecord(GovParamName, govParamAddr, common.Big0)
+		init.Contracts[GovParamName] = govParamAddr
 	}
 
 	if (config.Kip103ContractAddress != common.Address{}) {
-		init.AddRecord(Kip103Name, config.Kip103ContractAddress, common.Big0)
+		init.Contracts[Kip103Name] = config.Kip103ContractAddress
 	}
 
 	return init
