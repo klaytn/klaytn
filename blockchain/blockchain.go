@@ -262,6 +262,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		stopStateMigration: make(chan struct{}),
 		prefetchTxCh:       make(chan prefetchTx, MaxPrefetchTxs),
 	}
+	logger.Info("Trie memory size", "nTries", cacheConfig.TriesInMemory)
 
 	// set hardForkBlockNumberConfig which will be used as a global variable
 	if err := fork.SetHardForkBlockNumberConfig(bc.chainConfig); err != nil {
@@ -1403,12 +1404,13 @@ func (bc *BlockChain) gcCachedNodeLoop() {
 				logger.Trace("Push GC block", "blkNum", block.blockNum, "hash", block.root.String())
 
 				blkNum := block.blockNum
-				if blkNum <= bc.triesInMemory() {
+				nTries := bc.triesInMemory()
+				if blkNum <= nTries {
 					continue
 				}
 
 				// Garbage collect anything below our required write retention
-				chosen := blkNum - bc.triesInMemory()
+				chosen := blkNum - nTries
 				cnt := 0
 				for !bc.triegc.Empty() {
 					root, number := bc.triegc.Pop()
@@ -1419,7 +1421,8 @@ func (bc *BlockChain) gcCachedNodeLoop() {
 					trieDB.Dereference(root.(common.Hash))
 					cnt++
 				}
-				logger.Debug("GC cached node", "currentBlk", blkNum, "chosenBlk", chosen, "deferenceCnt", cnt)
+				logger.Debug("GC cached node", "currentBlk", blkNum, "chosenBlk", chosen,
+					"deferenceCnt", cnt, "nTries", nTries)
 			case <-bc.quit:
 				return
 			}
@@ -1438,10 +1441,11 @@ func (bc *BlockChain) pruneTrieNodeLoop() {
 		for {
 			select {
 			case num := <-bc.chPrune:
-				if num <= bc.cacheConfig.LivePruningRetention {
+				retention := bc.cacheConfig.LivePruningRetention
+				if num <= retention {
 					continue
 				}
-				limit := num - bc.cacheConfig.LivePruningRetention // Prune [1, latest - retention]
+				limit := num - retention // Prune [1, latest - retention]
 
 				startTime := time.Now()
 				marks := bc.db.ReadPruningMarks(startNum, limit+1)
@@ -1449,7 +1453,7 @@ func (bc *BlockChain) pruneTrieNodeLoop() {
 				bc.db.DeletePruningMarks(marks)
 
 				logger.Info("Pruned trie nodes", "number", num, "start", startNum, "limit", limit,
-					"count", len(marks), "elapsed", time.Since(startTime))
+					"count", len(marks), "retention", retention, "elapsed", time.Since(startTime))
 
 				startNum = limit + 1
 			case <-bc.quit:
