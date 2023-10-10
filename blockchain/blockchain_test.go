@@ -1816,9 +1816,9 @@ func genInternalTxTransaction(t *testing.T, block *BlockGen, address common.Addr
 
 // TestCallTraceChainEventSubscription tests if the method insertChain posts a chain event correctly.
 // Scenario:
-// 1. Deploy a contract
-//   sendKlay(n uint32, receiver address): send 1 peb to `receiver` address `n` times.
-// 2. Send a smart contract execution transaction
+//  1. Deploy a contract
+//     sendKlay(n uint32, receiver address): send 1 peb to `receiver` address `n` times.
+//  2. Send a smart contract execution transaction
 func TestCallTraceChainEventSubscription(t *testing.T) {
 	// configure and generate a sample block chain
 	var (
@@ -2108,4 +2108,99 @@ func TestBlockChain_InsertChain_InsertFutureBlocks(t *testing.T) {
 	}
 
 	assert.Equal(t, consensus.ErrUnknownAncestor, err)
+}
+
+// TestTransientStorageReset ensures the transient storage is wiped correctly
+// between transactions.
+func TestTransientStorageReset(t *testing.T) {
+	var (
+		key, _      = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+		address     = crypto.PubkeyToAddress(key.PublicKey)
+		destAddress = crypto.CreateAddress(address, 0)
+		funds       = big.NewInt(1000000000000000000)
+
+		testEngine = gxhash.NewFaker()
+	)
+	code := append([]byte{
+		// TLoad value with location 1
+		byte(vm.PUSH1), 0x1,
+		byte(vm.TLOAD),
+
+		// PUSH location
+		byte(vm.PUSH1), 0x1,
+
+		// SStore location:value
+		byte(vm.SSTORE),
+	}, make([]byte, 32-6)...)
+	initCode := []byte{
+		// TSTORE 1:1
+		byte(vm.PUSH1), 0x1,
+		byte(vm.PUSH1), 0x1,
+		byte(vm.TSTORE),
+
+		// Get the runtime-code on the stack
+		byte(vm.PUSH32),
+	}
+	initCode = append(initCode, code...)
+	initCode = append(initCode, []byte{
+		byte(vm.PUSH1), 0x0, // offset
+		byte(vm.MSTORE),
+		byte(vm.PUSH1), 0x6, // size
+		byte(vm.PUSH1), 0x0, // offset
+		byte(vm.RETURN), // return 6 bytes of zero-code
+	}...)
+
+	gspec := &Genesis{
+		Config: params.TestChainConfig,
+		Alloc: GenesisAlloc{
+			address: {Balance: funds},
+		},
+	}
+	gspec.Config.SetDefaults()
+	gspec.Config.IstanbulCompatibleBlock = common.Big0
+	gspec.Config.LondonCompatibleBlock = common.Big0
+	gspec.Config.EthTxTypeCompatibleBlock = common.Big0
+	gspec.Config.MagmaCompatibleBlock = common.Big0
+	gspec.Config.KoreCompatibleBlock = common.Big0
+	gspec.Config.ShanghaiCompatibleBlock = common.Big0
+	gspec.Config.CancunCompatibleBlock = common.Big0
+
+	testdb := database.NewMemoryDBManager()
+	genesis := gspec.MustCommit(testdb)
+	blocks, _ := GenerateChain(gspec.Config, genesis, testEngine, testdb, 10, func(i int, gen *BlockGen) {
+		fee := big.NewInt(1)
+		if gen.header.BaseFee != nil {
+			fee = gen.header.BaseFee
+		}
+		gen.SetRewardbase(common.Address{1})
+		signer := types.LatestSigner(gen.config)
+		tx, _ := types.SignTx(types.NewTransaction(gen.TxNonce(address), common.Address{}, nil, 100000, fee, initCode), signer, key)
+		gen.AddTx(tx)
+		tx, _ = types.SignTx(types.NewTransaction(gen.TxNonce(address), destAddress, nil, 100000, fee, initCode), signer, key)
+		gen.AddTx(tx)
+	})
+
+	// Initialize the blockchain with 1153 enabled.
+	testdb = database.NewMemoryDBManager()
+	gspec.MustCommit(testdb)
+	chain, err := NewBlockChain(testdb, nil, gspec.Config, testEngine, vm.Config{})
+	if err != nil {
+		t.Fatalf("failed to create tester chain: %v", err)
+	}
+	defer chain.Stop()
+
+	// Import the blocks
+	if _, err := chain.InsertChain(blocks); err != nil {
+		t.Fatalf("failed to insert into chain: %v", err)
+	}
+	// Check the storage
+	state, err := chain.StateAt(chain.CurrentHeader().Root)
+	if err != nil {
+		t.Fatalf("Failed to load state %v", err)
+	}
+	loc := common.BytesToHash([]byte{1})
+	slot := state.GetState(destAddress, loc)
+	if slot != (common.Hash{}) {
+		t.Fatalf("Unexpected dirty storage slot")
+	}
 }

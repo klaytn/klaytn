@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/params"
 )
 
@@ -48,6 +49,8 @@ func EnableEIP(eipNum int, jt *JumpTable) error {
 		enable1884(jt)
 	case 1344:
 		enable1344(jt)
+	case 1153:
+		enable1153(jt)
 	default:
 		return fmt.Errorf("undefined eip %d", eipNum)
 	}
@@ -117,6 +120,43 @@ func enableIstanbulComputationCostModification(jt *JumpTable) {
 	jt[SHL].computationCost = params.ShlComputationCostIstanbul
 	jt[SHR].computationCost = params.ShrComputationCostIstanbul
 	jt[SAR].computationCost = params.SarComputationCostIstanbul
+}
+
+// enable1153 applies EIP-1153 "Transient Storage"
+// - Adds TLOAD that reads from transient storage
+// - Adds TSTORE that writes to transient storage
+func enable1153(jt *JumpTable) {
+	jt[TLOAD] = &operation{
+		execute:         opTload,
+		constantGas:     params.WarmStorageReadCostEIP2929,
+		minStack:        minStack(1, 1),
+		maxStack:        maxStack(1, 1),
+		computationCost: params.TloadComputationCost,
+	}
+
+	jt[TSTORE] = &operation{
+		execute:         opTstore,
+		constantGas:     params.WarmStorageReadCostEIP2929,
+		minStack:        minStack(2, 0),
+		maxStack:        maxStack(2, 0),
+		computationCost: params.TstoreComputationCost,
+	}
+}
+
+// opTload implements TLOAD opcode
+func opTload(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
+	loc := scope.Stack.Peek()
+	val := evm.StateDB.GetTransientState(scope.Contract.Address(), common.BigToHash(loc))
+	loc.SetBytes(val.Bytes())
+	return nil, nil
+}
+
+// opTstore implements TSTORE opcode
+func opTstore(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
+	loc := scope.Stack.pop()
+	val := scope.Stack.pop()
+	evm.StateDB.SetTransientState(scope.Contract.Address(), common.BigToHash(loc), common.BigToHash(val))
+	return nil, nil
 }
 
 // enable3198 applies EIP-3198 (BASEFEE Opcode)

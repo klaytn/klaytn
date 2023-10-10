@@ -109,7 +109,7 @@ func prepare(reqGas uint64) (*Contract, *EVM, error) {
 	// Generate EVM
 	stateDb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
 	txhash := common.HexToHash("0xc6a37e155d3fa480faea012a68ad35fd53c8cc3cd8263a434c697755985a6577")
-	stateDb.Prepare(txhash, common.Hash{}, 0)
+	stateDb.SetTxContext(txhash, common.Hash{}, 0)
 	evm := NewEVM(BlockContext{BlockNumber: big.NewInt(0)}, TxContext{}, stateDb, &params.ChainConfig{IstanbulCompatibleBlock: big.NewInt(0)}, &Config{})
 
 	// Only stdout logging is tested to avoid file handling. It is used at vmLog test.

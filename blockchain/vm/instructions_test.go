@@ -54,6 +54,61 @@ var (
 	twoOpMethods map[string]executionFunc
 )
 
+type contractRef struct {
+	addr common.Address
+}
+
+func (c contractRef) Address() common.Address {
+	return c.addr
+}
+
+func (c contractRef) FeePayer() common.Address {
+	return common.Address{}
+}
+
+func TestOpTstore(t *testing.T) {
+	var (
+		statedb, _     = state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+		env            = NewEVM(BlockContext{}, TxContext{}, statedb, params.TestChainConfig, &Config{})
+		stack          = newstack()
+		mem            = NewMemory()
+		evmInterpreter = NewEVMInterpreter(env)
+		caller         = common.Address{}
+		to             = common.Address{1}
+		contractRef    = contractRef{caller}
+		contract       = NewContract(contractRef, AccountRef(to), new(big.Int), 0)
+		scopeContext   = ScopeContext{mem, stack, contract}
+		value          = common.Hex2Bytes("abcdef00000000000000abba000000000deaf000000c0de00100000000133700")
+	)
+
+	// Add a stateObject for the caller and the contract being called
+	statedb.CreateAccount(caller)
+	statedb.CreateAccount(to)
+
+	env.interpreter = evmInterpreter
+	pc := uint64(0)
+	// push the value to the stack
+	stack.push(new(big.Int).SetBytes(value))
+	// push the location to the stack
+	stack.push(new(big.Int))
+	opTstore(&pc, env, &scopeContext)
+	// there should be no elements on the stack after TSTORE
+	if stack.len() != 0 {
+		t.Fatal("stack wrong size")
+	}
+	// push the location to the stack
+	stack.push(new(big.Int))
+	opTload(&pc, env, &scopeContext)
+	// there should be one element on the stack after TLOAD
+	if stack.len() != 1 {
+		t.Fatal("stack wrong size")
+	}
+	val := stack.Peek()
+	if !bytes.Equal(val.Bytes(), value) {
+		t.Fatal("incorrect element read from transient storage")
+	}
+}
+
 func init() {
 	// Params is a list of common edgecases that should be used for some common tests
 	params := []string{
@@ -1403,6 +1458,16 @@ func fillStacks(stacks []string, n int) []string {
 
 func BenchmarkOpMcopy(b *testing.B) {
 	opBenchmark(b, opMcopy, "0x20" /*len*/, "0x20" /*src*/, "0x0" /*dst*/)
+}
+
+func BenchmarkOpTload(b *testing.B) {
+	x := "FBCDEF090807060504030201ffffffffFBCDEF090807060504030201ffffffff"
+	opBenchmark(b, opTload, x)
+}
+
+func BenchmarkOpTstore(b *testing.B) {
+	x := "FBCDEF090807060504030201ffffffffFBCDEF090807060504030201ffffffff"
+	opBenchmark(b, opTstore, x, "0x20")
 }
 
 func TestOpMCopy(t *testing.T) {
