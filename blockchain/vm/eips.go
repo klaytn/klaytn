@@ -254,7 +254,7 @@ func enable6780(jt *JumpTable) {
 	jt[SELFDESTRUCT] = &operation{
 		execute:         opSelfdestruct6780,
 		dynamicGas:      gasSelfdestructEIP3529,
-		constantGas:     params.SelfdestructGasEIP150,
+		constantGas:     params.SelfdestructGas,
 		minStack:        minStack(1, 0),
 		maxStack:        maxStack(1, 0),
 		computationCost: params.SelfDestructComputationCost,

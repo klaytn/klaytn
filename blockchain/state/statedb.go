@@ -719,6 +719,9 @@ func (s *StateDB) createObjectWithMap(addr common.Address, accountType account.A
 	} else {
 		s.journal.append(resetObjectChange{prev: prev, prevdestruct: prevdestruct})
 	}
+
+	newobj.created = true
+
 	s.setStateObject(newobj)
 	if prev != nil && !prev.deleted {
 		return newobj, prev
