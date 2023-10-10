@@ -32,11 +32,13 @@ var (
 	AddressBookName = "AddressBook"
 	GovParamName    = "GovParam"
 	Kip103Name      = "TreasuryRebalance"
+	Kip113Name      = "KIP113"
 
 	AllContractNames = []string{
 		AddressBookName,
 		GovParamName,
 		Kip103Name,
+		Kip113Name,
 	}
 
 	// Some system contracts are allocated at special addresses.
@@ -46,7 +48,10 @@ var (
 	// System contract binaries to be injected at hardfork or used in testing.
 	RegistryCode     = hexutil.MustDecode("0x" + contracts.RegistryBinRuntime)
 	RegistryMockCode = hexutil.MustDecode("0x" + contracts.RegistryMockBinRuntime)
+	Kip113MockCode   = hexutil.MustDecode("0x" + contracts.KIP113MockBinRuntime)
 
 	// Errors
 	ErrRegistryNotInstalled = errors.New("Registry contract not installed")
+	ErrKip113BadResult      = errors.New("KIP113 call returned bad data")
+	ErrKip113BadPop         = errors.New("KIP113 PoP verification failed")
 )
