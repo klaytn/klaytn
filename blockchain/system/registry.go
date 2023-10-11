@@ -25,30 +25,18 @@ import (
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/common"
 	contracts "github.com/klaytn/klaytn/contracts/system_contracts"
+	"github.com/klaytn/klaytn/params"
 )
-
-// AllocRegistryInit Specifies the initial Registry state.
-// This struct only represents a special case of Registry state where:
-// - there is only one record for each name
-// - the activation of all records is zero
-// - the names array is lexicographically sorted
-type AllocRegistryInit struct {
-	Records map[string]common.Address
-	Owner   common.Address
-}
-
-func NewAllocRegistryInit() *AllocRegistryInit {
-	return &AllocRegistryInit{
-		Records: make(map[string]common.Address),
-	}
-}
 
 // Create storage state from the given initial values.
 // The storage slots are calculated according to the solidity layout rule.
 // https://docs.soliditylang.org/en/v0.8.20/internals/layout_in_storage.html
-func AllocRegistry(init *AllocRegistryInit) map[common.Hash]common.Hash {
+func AllocRegistry(init *params.RegistryConfig) map[common.Hash]common.Hash {
 	if init == nil {
 		return nil
+	}
+	if init.Records == nil {
+		init.Records = make(map[string]common.Address)
 	}
 	storage := make(map[common.Hash]common.Hash)
 
@@ -59,13 +47,13 @@ func AllocRegistry(init *AllocRegistryInit) map[common.Hash]common.Hash {
 	// - records[x][i].activation @ Hash(Hash(x, 0)) + (2*i + 1)
 	for name, addr := range init.Records {
 		arraySlot := calcMappingSlot(0, name)
-		storage[arraySlot] = lpad32(1)
+		storage[arraySlot] = lpad32(1) // records[name].length = 1
 
 		addrSlot := calcArraySlot(arraySlot, 2, 0, 0)
 		activationSlot := calcArraySlot(arraySlot, 2, 0, 1)
 
-		storage[addrSlot] = lpad32(addr)
-		storage[activationSlot] = lpad32(0)
+		storage[addrSlot] = lpad32(addr)    // records[name][0].addr
+		storage[activationSlot] = lpad32(0) // records[name][0].activation
 	}
 
 	names := make([]string, 0)
@@ -77,10 +65,10 @@ func AllocRegistry(init *AllocRegistryInit) map[common.Hash]common.Hash {
 	// slot[1]: string[] names;
 	// - names.length @ 1
 	// - names[i] @ Hash(1) + i
-	storage[lpad32(1)] = lpad32(len(names))
+	storage[lpad32(1)] = lpad32(len(names)) // names.length
 	for i, name := range names {
 		nameSlot := calcArraySlot(1, 1, i, 0)
-		storage[nameSlot] = encodeShortString(name)
+		storage[nameSlot] = encodeShortString(name) // names[i]
 	}
 
 	// slot[2]: address _owner;
@@ -89,7 +77,7 @@ func AllocRegistry(init *AllocRegistryInit) map[common.Hash]common.Hash {
 	return storage
 }
 
-func InstallRegistry(state *state.StateDB, init *AllocRegistryInit) error {
+func InstallRegistry(state *state.StateDB, init *params.RegistryConfig) error {
 	if err := state.SetCode(RegistryAddr, RegistryCode); err != nil {
 		return err
 	}

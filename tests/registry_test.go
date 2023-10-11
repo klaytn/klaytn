@@ -37,8 +37,10 @@ func TestRegistryFork(t *testing.T) {
 	config.ShanghaiCompatibleBlock = big.NewInt(0)
 	config.CancunCompatibleBlock = forkNum
 	config.RandaoCompatibleBlock = forkNum
-	config.RandaoRegistryRecords = map[string]common.Address{
-		"AcmeContract": common.HexToAddress("0xaaaa"),
+	config.RandaoRegistryInit = &params.RegistryConfig{
+		Records: map[string]common.Address{
+			"AcmeContract": common.HexToAddress("0xaaaa"),
+		},
 	}
 
 	fullNode, node, _, _, workspace := newBlockchain(t, config)

@@ -194,9 +194,8 @@ type ChainConfig struct {
 
 	// Randao is an optional hardfork
 	// RandaoCompatibleBlock, RandaoRegistryRecords and RandaoRegistryOwner all must be specified to enable Randao
-	RandaoCompatibleBlock *big.Int                  `json:"randaoCompatibleBlock,omitempty"` // RandaoCompatible activate block (nil = no fork)
-	RandaoRegistryRecords map[string]common.Address `json:"randaoRegistryRecords,omitempty"` // Initial registry records (existing system contracts)
-	RandaoRegistryOwner   common.Address            `json:"randaoRegistryOwner,omitempty"`   // Initial registry owner account
+	RandaoCompatibleBlock *big.Int        `json:"randaoCompatibleBlock,omitempty"`  // RandaoCompatible activate block (nil = no fork)
+	RandaoRegistryInit    *RegistryConfig `json:"randaoRegistryOverride,omitempty"` // Registry initial states
 
 	// Various consensus engines
 	Gxhash   *GxhashConfig   `json:"gxhash,omitempty"` // (deprecated) not supported engine
@@ -247,6 +246,19 @@ type IstanbulConfig struct {
 	Epoch          uint64 `json:"epoch"`  // Epoch length to reset votes and checkpoint
 	ProposerPolicy uint64 `json:"policy"` // The policy for proposer selection; 0: Round Robin, 1: Sticky, 2: Weighted Random
 	SubGroupSize   uint64 `json:"sub"`
+}
+
+// RegistryConfig is the initial KIP-149 system contract registry states.
+// It is installed at block (RandaoCompatibleBlock - 1). Initial states are not applied if RandaoCompatibleBlock is nil or 0.
+// To install the initial states from the block 0, use the AllocRegistry to generate GenesisAlloc.
+//
+// This struct only represents a special case of Registry state where:
+// - there is only one record for each name
+// - the activation of all records is zero
+// - the names array is lexicographically sorted
+type RegistryConfig struct {
+	Records map[string]common.Address `json:"records"`
+	Owner   common.Address            `json:"owner"`
 }
 
 // GxhashConfig is the consensus engine configs for proof-of-work based sealing.
