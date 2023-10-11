@@ -491,9 +491,12 @@ func (db *Database) getCachedNode(hash common.ExtHash) []byte {
 func (db *Database) setCachedNode(hash common.ExtHash, enc []byte) {
 	if db.trieNodeCache != nil {
 		db.trieNodeCache.Set(hash[:], enc)
-		memcacheCleanMissMeter.Mark(1)
 		memcacheCleanWriteMeter.Mark(int64(len(enc)))
 	}
+}
+
+func recordTrieCacheMiss() {
+	memcacheCleanMissMeter.Mark(1)
 }
 
 // node retrieves a cached trie node from memory, or returns nil if node can be
@@ -522,6 +525,7 @@ func (db *Database) node(hash common.ExtHash) (n node, fromDB bool) {
 		return nil, true
 	}
 	db.setCachedNode(hash, enc)
+	recordTrieCacheMiss()
 	return mustDecodeNode(hash[:], enc), true
 }
 
@@ -548,6 +552,7 @@ func (db *Database) Node(hash common.ExtHash) ([]byte, error) {
 	enc, err := db.diskDB.ReadTrieNode(hash)
 	if err == nil && enc != nil {
 		db.setCachedNode(hash, enc)
+		recordTrieCacheMiss()
 	}
 	return enc, err
 }
@@ -575,6 +580,7 @@ func (db *Database) NodeFromOld(hash common.ExtHash) ([]byte, error) {
 	enc, err := db.diskDB.ReadTrieNodeFromOld(hash)
 	if err == nil && enc != nil {
 		db.setCachedNode(hash, enc)
+		recordTrieCacheMiss()
 	}
 	return enc, err
 }
