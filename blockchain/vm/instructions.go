@@ -885,10 +885,17 @@ func opStop(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
 }
 
 func opSelfdestruct(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
+	// TODO-klaytn: call frame tracing https://github.com/ethereum/go-ethereum/pull/23087
+	// beneficiary := scope.Stack.pop()
 	balance := evm.StateDB.GetBalance(scope.Contract.Address())
 	evm.StateDB.AddBalance(common.BigToAddress(scope.Stack.pop()), balance)
-
 	evm.StateDB.SelfDestruct(scope.Contract.Address())
+
+	// if evm.interpreter.cfg.Debug {
+	// 	evm.interpreter.cfg.Tracer.CaptureEnter(SELFDESTRUCT, scope.Contract.Address(), common.BigToAddress(beneficiary), []byte{}, 0, balance)
+	// 	evm.interpreter.cfg.Tracer.CaptureExit([]byte{}, 0, nil)
+	// }
+
 	return nil, nil
 }
 
@@ -923,7 +930,7 @@ func opSelfdestruct6780(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, erro
 	// 	tracer.CaptureExit([]byte{}, 0, nil)
 	// }
 
-	return nil, errStopToken
+	return nil, nil
 }
 
 // following functions are used by the instruction jump  table
