@@ -29,15 +29,15 @@ func TestRegistryFork(t *testing.T) {
 	config := params.CypressChainConfig.Copy()
 	config.Istanbul.SubGroupSize = 1
 	config.Istanbul.ProposerPolicy = uint64(istanbul.RoundRobin)
-	config.LondonCompatibleBlock = big.NewInt(0)
-	config.IstanbulCompatibleBlock = big.NewInt(0)
-	config.EthTxTypeCompatibleBlock = big.NewInt(0)
-	config.MagmaCompatibleBlock = big.NewInt(0)
-	config.KoreCompatibleBlock = big.NewInt(0)
-	config.ShanghaiCompatibleBlock = big.NewInt(0)
+	config.LondonCompatibleBlock = common.Big0
+	config.IstanbulCompatibleBlock = common.Big0
+	config.EthTxTypeCompatibleBlock = common.Big0
+	config.MagmaCompatibleBlock = common.Big0
+	config.KoreCompatibleBlock = common.Big0
+	config.ShanghaiCompatibleBlock = common.Big0
 	config.CancunCompatibleBlock = forkNum
 	config.RandaoCompatibleBlock = forkNum
-	config.RandaoRegistryInit = &params.RegistryConfig{
+	config.RandaoRegistry = &params.RegistryConfig{
 		Records: map[string]common.Address{
 			"AcmeContract": common.HexToAddress("0xaaaa"),
 		},

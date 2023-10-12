@@ -194,8 +194,8 @@ type ChainConfig struct {
 
 	// Randao is an optional hardfork
 	// RandaoCompatibleBlock, RandaoRegistryRecords and RandaoRegistryOwner all must be specified to enable Randao
-	RandaoCompatibleBlock *big.Int        `json:"randaoCompatibleBlock,omitempty"`  // RandaoCompatible activate block (nil = no fork)
-	RandaoRegistryInit    *RegistryConfig `json:"randaoRegistryOverride,omitempty"` // Registry initial states
+	RandaoCompatibleBlock *big.Int        `json:"randaoCompatibleBlock,omitempty"` // RandaoCompatible activate block (nil = no fork)
+	RandaoRegistry        *RegistryConfig `json:"randaoRegistry,omitempty"`        // Registry initial states
 
 	// Various consensus engines
 	Gxhash   *GxhashConfig   `json:"gxhash,omitempty"` // (deprecated) not supported engine
@@ -478,7 +478,7 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *Confi
 		return newCompatError("Cancun Block", c.CancunCompatibleBlock, newcfg.CancunCompatibleBlock)
 	}
 	if isForkIncompatible(c.RandaoCompatibleBlock, newcfg.RandaoCompatibleBlock, head) {
-		return newCompatError("Cancun Block", c.RandaoCompatibleBlock, newcfg.RandaoCompatibleBlock)
+		return newCompatError("Randao Block", c.RandaoCompatibleBlock, newcfg.RandaoCompatibleBlock)
 	}
 	return nil
 }
