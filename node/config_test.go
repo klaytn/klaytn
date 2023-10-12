@@ -53,13 +53,13 @@ func TestDatadirCreation(t *testing.T) {
 		t.Fatalf("freshly created datadir not accessible: %v", err)
 	}
 	// Verify that an impossible datadir fails creation
-	file, err := os.MkdirTemp("", "")
+	file, err := os.CreateTemp("", "")
 	if err != nil {
 		t.Fatalf("failed to create temporary file: %v", err)
 	}
-	defer os.Remove(file)
+	defer os.Remove(file.Name())
 
-	dir = filepath.Join(file, "invalid/path")
+	dir = filepath.Join(file.Name(), "invalid/path")
 	if _, err := New(&Config{DataDir: dir}); err == nil {
 		t.Fatalf("protocol stack created with an invalid datadir")
 	}
