@@ -24,7 +24,6 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"encoding/hex"
-	"io/ioutil"
 	"math/big"
 	"os"
 	"reflect"
@@ -159,7 +158,7 @@ func TestLoadECDSAFile(t *testing.T) {
 		}
 	}
 
-	ioutil.WriteFile(fileName0, []byte(testPrivHex), 0o600)
+	os.WriteFile(fileName0, []byte(testPrivHex), 0o600)
 	defer os.Remove(fileName0)
 
 	key0, err := LoadECDSA(fileName0)

@@ -22,7 +22,6 @@ package blockchain
 
 import (
 	"crypto/ecdsa"
-	"io/ioutil"
 	"math/big"
 	"os"
 	"testing"
@@ -360,7 +359,7 @@ func benchReadChain(b *testing.B, full bool, databaseType database.DBType, count
 
 // genTempDirForDB returns temp dir for database
 func genTempDirForDB(b *testing.B) string {
-	dir, err := ioutil.TempDir("", "klay-blockchain-bench")
+	dir, err := os.MkdirTemp("", "klay-blockchain-bench")
 	if err != nil {
 		b.Fatalf("cannot create temporary directory: %v", err)
 	}

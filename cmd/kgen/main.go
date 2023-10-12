@@ -21,7 +21,6 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"path"
@@ -100,7 +99,7 @@ func writeNodeKeyInfoToFile(validator *validatorInfo, parentDir string, nodekey 
 	}
 
 	nodeKeyFilePath := path.Join(parentPath, "nodekey")
-	if err = ioutil.WriteFile(nodeKeyFilePath, []byte(nodekey), os.ModePerm); err != nil {
+	if err = os.WriteFile(nodeKeyFilePath, []byte(nodekey), os.ModePerm); err != nil {
 		return err
 	}
 	fmt.Println("Created : ", nodeKeyFilePath)
@@ -110,7 +109,7 @@ func writeNodeKeyInfoToFile(validator *validatorInfo, parentDir string, nodekey 
 		return err
 	}
 	validatorInfoFilePath := path.Join(parentPath, "node_info.json")
-	if err = ioutil.WriteFile(validatorInfoFilePath, []byte(str), os.ModePerm); err != nil {
+	if err = os.WriteFile(validatorInfoFilePath, []byte(str), os.ModePerm); err != nil {
 		return err
 	}
 

@@ -22,7 +22,6 @@ package nodecmd
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"runtime"
 	"sort"
@@ -38,7 +37,7 @@ import (
 )
 
 func tmpdir(t *testing.T) string {
-	dir, err := ioutil.TempDir("", "klay-test")
+	dir, err := os.MkdirTemp("", "klay-test")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -21,7 +21,6 @@
 package nodecmd
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -777,7 +776,7 @@ func testFlags(t *testing.T, flag string, value string, idx int) {
 	defer os.RemoveAll(datadir)
 
 	json := filepath.Join(datadir, "genesis.json")
-	if err := ioutil.WriteFile(json, []byte(genesis), 0o600); err != nil {
+	if err := os.WriteFile(json, []byte(genesis), 0o600); err != nil {
 		t.Fatalf("test %d: failed to write genesis file: %v", idx, err)
 	}
 
@@ -792,7 +791,7 @@ func testWrongFlags(t *testing.T, flag string, value string, idx int, expectedEr
 	defer os.RemoveAll(datadir)
 
 	json := filepath.Join(datadir, "genesis.json")
-	if err := ioutil.WriteFile(json, []byte(genesis), 0o600); err != nil {
+	if err := os.WriteFile(json, []byte(genesis), 0o600); err != nil {
 		t.Fatalf("test %d: failed to write genesis file: %v", idx, err)
 	}
 

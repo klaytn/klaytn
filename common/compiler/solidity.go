@@ -26,7 +26,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -145,8 +145,9 @@ func CompileSolidity(solc string, sourcefiles ...string) (map[string]*Contract, 
 // If suitable compiler is not available, try to load combinedJSON stored as file.
 // The combinedJSON file should be named as *.sol.json.
 // Create combinedJSON with following command:
-//   solc --combined-json bin,bin-runtime,srcmap,srcmap-runtime,abi,userdoc,devdoc \
-//       --optimize --allow-paths '., ./, ../' test.sol > test.sol.json
+//
+//	solc --combined-json bin,bin-runtime,srcmap,srcmap-runtime,abi,userdoc,devdoc \
+//	    --optimize --allow-paths '., ./, ../' test.sol > test.sol.json
 func CompileSolidityOrLoad(solc string, sourcefiles ...string) (map[string]*Contract, error) {
 	// Extract solidity version requirements from source codes
 	if len(sourcefiles) == 0 {
@@ -177,7 +178,7 @@ func CompileSolidityOrLoad(solc string, sourcefiles ...string) (map[string]*Cont
 // Search for CombinedJSON at <solidity_file_name>.json
 func loadCombinedJSON(source string, sourcefiles ...string) (map[string]*Contract, error) {
 	path := sourcefiles[0] + ".json"
-	combinedJSON, err := ioutil.ReadFile(path)
+	combinedJSON, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot open combined json at %s", path)
 	}

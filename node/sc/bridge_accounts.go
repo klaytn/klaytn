@@ -18,7 +18,6 @@ package sc
 
 import (
 	"errors"
-	"io/ioutil"
 	"math"
 	"math/big"
 	"os"
@@ -224,7 +223,7 @@ func InitializeBridgeAccountKeystore(keystorePath string) (*keystore.KeyStore, c
 	// If unlocking failed, user should unlock it through API.
 	acc := ks.Accounts()[0]
 	pwdFilePath := path.Join(keystorePath, acc.Address.String())
-	pwdStr, err := ioutil.ReadFile(pwdFilePath)
+	pwdStr, err := os.ReadFile(pwdFilePath)
 	if err == nil {
 		if err := ks.Unlock(acc, string(pwdStr)); err != nil {
 			logger.Warn("bridge account wallet unlock is failed by exist password file.", "address", acc.Address, "err", err)

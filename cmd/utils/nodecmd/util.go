@@ -23,7 +23,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"github.com/klaytn/klaytn/accounts/keystore"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -132,7 +132,7 @@ func prettyPrint(m map[string]interface{}) {
 }
 
 func extractKeypair(keystorePath, passwd string) (map[string]interface{}, error) {
-	keyjson, err := ioutil.ReadFile(keystorePath)
+	keyjson, err := os.ReadFile(keystorePath)
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +166,7 @@ func decodeGov(bytes []byte) (map[string]interface{}, error) {
 
 func parseHeaderFile(headerFile string) (*types.Header, common.Hash, error) {
 	header := new(types.Header)
-	bytes, err := ioutil.ReadFile(headerFile)
+	bytes, err := os.ReadFile(headerFile)
 	if err != nil {
 		return nil, common.Hash{}, err
 	}

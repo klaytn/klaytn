@@ -19,8 +19,8 @@ package genesis
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"math/big"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -94,5 +94,5 @@ func Save(dataDir string, genesis *blockchain.Genesis) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(filePath, raw, 0o600)
+	return os.WriteFile(filePath, raw, 0o600)
 }

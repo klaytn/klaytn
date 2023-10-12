@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"io"
 	"math/big"
 	"math/rand"
 	"net/http"
@@ -101,7 +101,7 @@ func TestSendRequest(t *testing.T) {
 			Code: 0,
 		}
 		bodyBytes, _ := json.Marshal(expectedRespBody)
-		expectedRes.Body = ioutil.NopCloser(bytes.NewReader(bodyBytes))
+		expectedRes.Body = io.NopCloser(bytes.NewReader(bodyBytes))
 		expectedRes.StatusCode = http.StatusOK
 
 		m.EXPECT().Do(gomock.Any()).Times(1).Return(&expectedRes, nil)

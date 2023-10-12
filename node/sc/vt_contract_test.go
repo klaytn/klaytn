@@ -17,7 +17,6 @@
 package sc
 
 import (
-	"io/ioutil"
 	"math/big"
 	"os"
 	"strconv"
@@ -32,7 +31,7 @@ import (
 
 // TestTokenPublicVariables checks the results of the public variables.
 func TestTokenPublicVariables(t *testing.T) {
-	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
 	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
@@ -79,7 +78,7 @@ func TestTokenPublicVariables(t *testing.T) {
 
 // TestTokenPublicVariables checks the results of the public variables.
 func TestNFTPublicVariables(t *testing.T) {
-	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
 	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {

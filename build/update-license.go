@@ -44,7 +44,6 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -910,7 +909,7 @@ func gitAuthors(files []string) []string {
 
 // gitAuthors returns git authors from AUTHORS file
 func readAuthors() []string {
-	content, err := ioutil.ReadFile("AUTHORS")
+	content, err := os.ReadFile("AUTHORS")
 	if err != nil && !os.IsNotExist(err) {
 		log.Fatalln("error reading AUTHORS:", err)
 	}
@@ -969,7 +968,7 @@ func writeAuthors(files []string) {
 		content.WriteString("\n")
 	}
 	fmt.Println("writing AUTHORS")
-	if err := ioutil.WriteFile("AUTHORS", content.Bytes(), 0o644); err != nil {
+	if err := os.WriteFile("AUTHORS", content.Bytes(), 0o644); err != nil {
 		log.Fatalln(err)
 	}
 }
@@ -1055,7 +1054,7 @@ func writeLicense(info *info) {
 	if err != nil {
 		log.Fatalf("error stat'ing %s: %v\n", info.file, err)
 	}
-	content, err := ioutil.ReadFile(info.file)
+	content, err := os.ReadFile(info.file)
 	if err != nil {
 		log.Fatalf("error reading %s: %v\n", info.file, err)
 	}
@@ -1095,7 +1094,7 @@ func writeLicense(info *info) {
 		fmt.Println("skipping (no changes)", info.file)
 		return
 	}
-	if err := ioutil.WriteFile(info.file, buf.Bytes(), fi.Mode()); err != nil {
+	if err := os.WriteFile(info.file, buf.Bytes(), fi.Mode()); err != nil {
 		log.Fatalf("error writing %s: %v", info.file, err)
 	}
 }

@@ -18,7 +18,6 @@ package tests
 
 import (
 	"crypto/ecdsa"
-	"io/ioutil"
 	"math/big"
 	"os"
 	"testing"
@@ -92,7 +91,7 @@ func TestSimpleBlockchain(t *testing.T) {
 func newBlockchain(t *testing.T, config *params.ChainConfig) (*node.Node, *cn.CN, *TestAccountType, *big.Int, string) {
 	t.Log("Create a new blockchain")
 	// Prepare workspace
-	workspace, err := ioutil.TempDir("", "klaytn-test-state")
+	workspace, err := os.MkdirTemp("", "klaytn-test-state")
 	if err != nil {
 		t.Fatalf("failed to create temporary keystore: %v", err)
 	}
