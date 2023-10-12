@@ -225,7 +225,7 @@ func (api *EthereumAPI) NewHeads(ctx context.Context) (*rpc.Subscription, error)
 		for {
 			select {
 			case h := <-headers:
-				header, err := api.rpcMarshalHeader(h)
+				header, err := api.rpcMarshalHeader(h, true)
 				if err != nil {
 					logger.Error("Failed to marshal header during newHeads subscription", "err", err)
 					headersSub.Unsubscribe()
@@ -435,7 +435,8 @@ func (api *EthereumAPI) GetHeaderByNumber(ctx context.Context, number rpc.BlockN
 		}
 		return nil, err
 	}
-	response, err := api.rpcMarshalHeader(klaytnHeader)
+	inclMiner := number != rpc.PendingBlockNumber
+	response, err := api.rpcMarshalHeader(klaytnHeader, inclMiner)
 	if err != nil {
 		return nil, err
 	}
@@ -453,7 +454,7 @@ func (api *EthereumAPI) GetHeaderByHash(ctx context.Context, hash common.Hash) m
 	// In Ethereum, err is always nil because the backend of Ethereum always return nil.
 	klaytnHeader, _ := api.publicBlockChainAPI.b.HeaderByHash(ctx, hash)
 	if klaytnHeader != nil {
-		response, err := api.rpcMarshalHeader(klaytnHeader)
+		response, err := api.rpcMarshalHeader(klaytnHeader, true)
 		if err != nil {
 			return nil
 		}
@@ -477,7 +478,10 @@ func (api *EthereumAPI) GetBlockByNumber(ctx context.Context, number rpc.BlockNu
 		}
 		return nil, err
 	}
-	response, err := api.rpcMarshalBlock(klaytnBlock, true, fullTx)
+
+	inclMiner := number != rpc.PendingBlockNumber
+	inclTx := true
+	response, err := api.rpcMarshalBlock(klaytnBlock, inclMiner, inclTx, fullTx)
 	if err == nil && number == rpc.PendingBlockNumber {
 		// Pending blocks need to nil out a few fields
 		for _, field := range []string{"hash", "nonce", "miner"} {
@@ -499,7 +503,7 @@ func (api *EthereumAPI) GetBlockByHash(ctx context.Context, hash common.Hash, fu
 		}
 		return nil, err
 	}
-	return api.rpcMarshalBlock(klaytnBlock, true, fullTx)
+	return api.rpcMarshalBlock(klaytnBlock, true, true, fullTx)
 }
 
 // GetUncleByBlockNumberAndIndex returns nil because there is no uncle block in Klaytn.
@@ -1185,12 +1189,12 @@ func (api *EthereumAPI) Accounts() []common.Address {
 
 // rpcMarshalHeader marshal block header as Ethereum compatible format.
 // It returns error when fetching Author which is block proposer is failed.
-func (api *EthereumAPI) rpcMarshalHeader(head *types.Header) (map[string]interface{}, error) {
+func (api *EthereumAPI) rpcMarshalHeader(head *types.Header, inclMiner bool) (map[string]interface{}, error) {
 	var proposer common.Address
 	var err error
 
 	b := api.publicKlayAPI.b
-	if head.Number.Sign() != 0 {
+	if head.Number.Sign() != 0 && inclMiner {
 		proposer, err = b.Engine().Author(head)
 		if err != nil {
 			// miner is the field Klaytn should provide the correct value. It's not the field dummy value is allowed.
@@ -1214,7 +1218,7 @@ func (api *EthereumAPI) rpcMarshalHeader(head *types.Header) (map[string]interfa
 		// we cannot provide original header of Klaytn and this field is used as consensus info which is encoded value of validators addresses, validators signatures, and proposer signature in Klaytn.
 		"extraData": hexutil.Bytes{},
 		"size":      hexutil.Uint64(head.Size()),
-		// There is no gas limit mechanism in Klaytn, check details in https://docs.klaytn.com/klaytn/design/computation/computation-cost.
+		// No block gas limit in Klaytn, instead there is computation cost.
 		"gasLimit":         hexutil.Uint64(params.UpperGasLimit),
 		"gasUsed":          hexutil.Uint64(head.GasUsed),
 		"timestamp":        hexutil.Big(*head.Time),
@@ -1222,7 +1226,7 @@ func (api *EthereumAPI) rpcMarshalHeader(head *types.Header) (map[string]interfa
 		"receiptsRoot":     head.ReceiptHash,
 	}
 
-	if api.publicBlockChainAPI.b.ChainConfig().IsEthTxTypeForkEnabled(head.Number) {
+	if b.ChainConfig().IsEthTxTypeForkEnabled(head.Number) {
 		if head.BaseFee == nil {
 			result["baseFeePerGas"] = (*hexutil.Big)(new(big.Int).SetUint64(params.ZeroBaseFee))
 		} else {
@@ -1233,8 +1237,8 @@ func (api *EthereumAPI) rpcMarshalHeader(head *types.Header) (map[string]interfa
 }
 
 // rpcMarshalBlock marshal block as Ethereum compatible format
-func (api *EthereumAPI) rpcMarshalBlock(block *types.Block, inclTx, fullTx bool) (map[string]interface{}, error) {
-	fields, err := api.rpcMarshalHeader(block.Header())
+func (api *EthereumAPI) rpcMarshalBlock(block *types.Block, inclMiner, inclTx, fullTx bool) (map[string]interface{}, error) {
+	fields, err := api.rpcMarshalHeader(block.Header(), inclMiner)
 	if err != nil {
 		return nil, err
 	}
