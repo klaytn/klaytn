@@ -2151,7 +2151,7 @@ func TestTransientStorageReset(t *testing.T) {
 	}...)
 
 	gspec := &Genesis{
-		Config: params.TestChainConfig,
+		Config: params.TestChainConfig.Copy(),
 		Alloc: GenesisAlloc{
 			address: {Balance: funds},
 		},
