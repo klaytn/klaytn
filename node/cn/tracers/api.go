@@ -908,7 +908,7 @@ func (api *API) traceTx(ctx context.Context, message blockchain.Message, blockCt
 			tracer = vm.NewInternalTxTracer()
 		} else {
 			// Construct the JavaScript tracer to execute with
-			if tracer, err = New(*config.Tracer, api.unsafeTrace); err != nil {
+			if tracer, err = New(*config.Tracer, new(Context), api.unsafeTrace); err != nil {
 				return nil, err
 			}
 		}

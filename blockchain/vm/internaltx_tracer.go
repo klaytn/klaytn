@@ -159,7 +159,7 @@ type RevertedInfo struct {
 }
 
 // CaptureStart implements the Tracer interface to initialize the tracing operation.
-func (this *InternalTxTracer) CaptureStart(from common.Address, to common.Address, create bool, input []byte, gas uint64, value *big.Int) {
+func (this *InternalTxTracer) CaptureStart(env *EVM, from common.Address, to common.Address, create bool, input []byte, gas uint64, value *big.Int) {
 	this.ctx["type"] = CALL.String()
 	if create {
 		this.ctx["type"] = CREATE.String()
@@ -168,6 +168,7 @@ func (this *InternalTxTracer) CaptureStart(from common.Address, to common.Addres
 	this.ctx["to"] = to
 	this.ctx["input"] = hexutil.Encode(input)
 	this.ctx["gas"] = gas
+	this.ctx["gasPrice"] = env.TxContext.GasPrice
 	this.ctx["value"] = value
 }
 
@@ -417,6 +418,11 @@ func (this *InternalTxTracer) CaptureEnd(output []byte, gasUsed uint64, err erro
 		this.ctx["error"] = err
 	}
 }
+
+func (this *InternalTxTracer) CaptureEnter(typ OpCode, from common.Address, to common.Address, input []byte, gas uint64, value *big.Int) {
+}
+
+func (this *InternalTxTracer) CaptureExit(output []byte, gasUsed uint64, err error) {}
 
 func (this *InternalTxTracer) CaptureTxStart(gasLimit uint64) {
 	this.gasLimit = gasLimit
