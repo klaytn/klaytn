@@ -185,11 +185,7 @@ func (n *cachedNode) rlp() []byte {
 	if node, ok := n.node.(rawNode); ok {
 		return node
 	}
-	blob, err := rlp.EncodeToBytes(n.node)
-	if err != nil {
-		panic(err)
-	}
-	return blob
+	return nodeToBytes(n.node)
 }
 
 // obj returns the decoded and expanded trie node, either directly from the cache,
