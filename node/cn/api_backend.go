@@ -313,6 +313,12 @@ func (b *CNAPIBackend) SuggestPrice(ctx context.Context) (*big.Int, error) {
 	return b.gpo.SuggestPrice(ctx)
 }
 
+// SuggestTipCap returns the baseFee if the current block is magma hard forked.
+// Other cases, it returns the unitPrice.
+func (b *CNAPIBackend) SuggestTipCap(ctx context.Context) (*big.Int, error) {
+	return b.gpo.SuggestTipCap(ctx)
+}
+
 func (b *CNAPIBackend) UpperBoundGasPrice(ctx context.Context) *big.Int {
 	bignum := b.CurrentBlock().Number()
 	pset, err := b.cn.governance.EffectiveParams(bignum.Uint64() + 1)
