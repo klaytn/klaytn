@@ -17,7 +17,7 @@
 package blockchain
 
 import (
-	"io/ioutil"
+	"os"
 	"testing"
 	"time"
 
@@ -34,7 +34,7 @@ import (
 
 func getTestBlock(t *testing.T) types.Block {
 	var block types.Block
-	blockDump, err := ioutil.ReadFile("../tests/b1.rlp")
+	blockDump, err := os.ReadFile("../tests/b1.rlp")
 	if err != nil {
 		t.Fatal(err)
 	}

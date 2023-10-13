@@ -24,7 +24,6 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/big"
 	"math/rand"
 	"os"
@@ -1921,15 +1920,13 @@ func testTransactionJournaling(t *testing.T, nolocals bool) {
 	t.Parallel()
 
 	// Create a temporary file for the journal
-	file, err := ioutil.TempFile("", "")
+	journal, err := os.MkdirTemp("", "")
 	if err != nil {
 		t.Fatalf("failed to create temporary journal: %v", err)
 	}
-	journal := file.Name()
 	defer os.Remove(journal)
 
 	// Clean up the temporary file, we only need the path for now
-	file.Close()
 	os.Remove(journal)
 
 	// Create the original pool to inject transaction into the journal
@@ -2638,15 +2635,13 @@ func TestTransactionJournalingSortedByTime(t *testing.T) {
 	t.Parallel()
 
 	// Create a temporary file for the journal
-	file, err := ioutil.TempFile("", "")
+	journal, err := os.MkdirTemp("", "")
 	if err != nil {
 		t.Fatalf("failed to create temporary journal: %v", err)
 	}
-	journal := file.Name()
 	defer os.Remove(journal)
 
 	// Clean up the temporary file, we only need the path for now
-	file.Close()
 	os.Remove(journal)
 
 	// Create the pool to test the status retrievals with

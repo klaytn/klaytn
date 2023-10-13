@@ -20,7 +20,6 @@ import (
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"math/big"
 	"os"
 	"strings"
@@ -63,11 +62,11 @@ func TestHardForkBlock(t *testing.T) {
 	// return
 
 	// load raw data from files.
-	genesisJson, err := ioutil.ReadFile("genesis.json")
+	genesisJson, err := os.ReadFile("genesis.json")
 	require.Equal(t, nil, err)
-	rawb1, err := ioutil.ReadFile("b1.rlp")
+	rawb1, err := os.ReadFile("b1.rlp")
 	require.Equal(t, nil, err)
-	rawb2, err := ioutil.ReadFile("b2.rlp")
+	rawb2, err := os.ReadFile("b2.rlp")
 	require.Equal(t, nil, err)
 
 	err = json.Unmarshal([]byte(genesisJson), &genesis)
@@ -163,7 +162,7 @@ func genBlocks(t *testing.T) {
 	prof.Profile("main_init_blockchain", time.Now().Sub(start))
 
 	b, err := json.Marshal(bcdata.genesis)
-	ioutil.WriteFile("genesis.json", b, 0o755)
+	os.WriteFile("genesis.json", b, 0o755)
 
 	defer bcdata.Shutdown()
 
