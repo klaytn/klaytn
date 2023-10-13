@@ -365,6 +365,19 @@ func (b *CNAPIBackend) RPCTxFeeCap() float64 {
 	return b.cn.config.RPCTxFeeCap
 }
 
+func (b *CNAPIBackend) GetConfig(hide bool) interface{} {
+	// making value chnages to `cfg` does not influence to `b.cn.config`
+	cfg := *b.cn.config
+	if hide {
+		// hide directory path
+		cfg.DaemonPathFlag = ""
+		cfg.TxPool.Journal = ""
+		cfg.TrieNodeCacheConfig.FastCacheFileDir = ""
+		cfg.DynamoDBConfig.Region = ""
+	}
+	return cfg
+}
+
 func (b *CNAPIBackend) Engine() consensus.Engine {
 	return b.cn.engine
 }

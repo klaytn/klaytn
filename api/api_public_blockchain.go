@@ -715,3 +715,7 @@ func (args *CallArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsic
 	}
 	return types.NewMessage(addr, args.To, 0, value, gas, gasPrice, args.Data, false, intrinsicGas, accessList), nil
 }
+
+func (s *PublicBlockChainAPI) GetNodeConfig(ctx context.Context) interface{} {
+	return s.b.GetConfig(true)
+}

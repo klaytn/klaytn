@@ -1100,7 +1100,11 @@ web3._extend({
 			name: 'maxPriorityFeePerGas',
 			getter: 'klay_maxPriorityFeePerGas',
 			outputFormatter: web3._extend.utils.toBigNumber
-		})
+		}),
+		new web3._extend.Property({
+			name: 'getNodeConfig',
+			getter: 'klay_getNodeConfig',
+		}),
 	]
 });
 `
