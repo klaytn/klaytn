@@ -18,7 +18,6 @@ package api
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -35,7 +34,7 @@ func TestPrivateAccountAPI_ImportRawKey(t *testing.T) {
 
 	// To get JSON files use below.
 	// keydir := filepath.Join(".", "keystore")
-	keydir, err := ioutil.TempDir("", "klay-test")
+	keydir, err := os.MkdirTemp("", "klay-test")
 	require.NoError(t, err)
 	defer os.RemoveAll(keydir)
 

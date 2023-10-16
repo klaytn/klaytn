@@ -18,7 +18,6 @@ package sc
 
 import (
 	"fmt"
-	"io/ioutil"
 	"math/big"
 	"os"
 	"reflect"
@@ -37,7 +36,7 @@ import (
 
 // testNewSubBridge returns a test SubBridge.
 func testNewSubBridge(t *testing.T) *SubBridge {
-	tempDir, err := ioutil.TempDir(os.TempDir(), "klaytn-test-sb-")
+	tempDir, err := os.MkdirTemp(os.TempDir(), "klaytn-test-sb-")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -21,7 +21,6 @@ import (
 	"crypto/rand"
 	"crypto/sha512"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -138,12 +137,12 @@ func RandomBytes(len int) ([]byte, error) {
 }
 
 func copyFile(src string, dst string) {
-	data, err := ioutil.ReadFile(src)
+	data, err := os.ReadFile(src)
 	if err != nil {
 		logger.Error("Failed to read file", "file", src, "err", err)
 		return
 	}
-	err = ioutil.WriteFile(dst, data, 0o644)
+	err = os.WriteFile(dst, data, 0o644)
 	if err != nil {
 		logger.Error("Failed to write file", "file", dst, "err", err)
 		return

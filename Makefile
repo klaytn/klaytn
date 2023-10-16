@@ -54,8 +54,8 @@ cover:
 	go tool cover -html=coverage.out -o coverage_report.html
 	@echo "Two coverage reports coverage_report.txt and coverage_report.html are generated."
 
-fmt:
-	$(GORUN) build/ci.go fmt
+lint:
+	$(GORUN) build/ci.go lint
 
 lint-try:
 	$(GORUN) build/ci.go lint-try

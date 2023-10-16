@@ -23,7 +23,6 @@ package database
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"math/big"
 	"os"
 	"sort"
@@ -39,7 +38,7 @@ import (
 )
 
 func newTestLDB() (Database, func(), string) {
-	dirName, err := ioutil.TempDir(os.TempDir(), "klay_leveldb_test_")
+	dirName, err := os.MkdirTemp(os.TempDir(), "klay_leveldb_test_")
 	if err != nil {
 		panic("failed to create test file: " + err.Error())
 	}
@@ -55,7 +54,7 @@ func newTestLDB() (Database, func(), string) {
 }
 
 func newTestBadgerDB() (Database, func(), string) {
-	dirName, err := ioutil.TempDir(os.TempDir(), "klay_badgerdb_test_")
+	dirName, err := os.MkdirTemp(os.TempDir(), "klay_badgerdb_test_")
 	if err != nil {
 		panic("failed to create test file: " + err.Error())
 	}

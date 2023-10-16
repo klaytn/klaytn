@@ -17,7 +17,6 @@
 package statedb
 
 import (
-	"io/ioutil"
 	"os"
 	"reflect"
 	"runtime"
@@ -49,7 +48,7 @@ func TestNewTrieNodeCache(t *testing.T) {
 
 func TestFastCache_SaveAndLoad(t *testing.T) {
 	// Create test directory
-	dirName, err := ioutil.TempDir(os.TempDir(), "fastcache_saveandload")
+	dirName, err := os.MkdirTemp(os.TempDir(), "fastcache_saveandload")
 	if err != nil {
 		t.Fatal(err)
 	}

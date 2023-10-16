@@ -93,7 +93,7 @@ func (t *Trie) Prove(key []byte, fromLevel uint, proofDB ProofDBWriter) error {
 				// hash is for the merkle proof. hash = Keccak(rlp.Encode(nodeForHashing(n)))
 				enc, _ := rlp.EncodeToBytes(hasher.nodeForHashing(n))
 				if !ok {
-					hash = hasher.makeHashNode(enc, false)
+					hash = hasher.hashData(enc, false)
 				}
 				dbKey := database.TrieNodeKey(common.BytesToExtHash(hash))
 				proofDB.WriteMerkleProof(dbKey, enc)

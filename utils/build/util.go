@@ -25,7 +25,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -77,7 +76,7 @@ func GOPATH() string {
 
 // VERSION returns the content of the VERSION file.
 func VERSION() string {
-	version, err := ioutil.ReadFile("VERSION")
+	version, err := os.ReadFile("VERSION")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -106,7 +105,7 @@ func RunGit(args ...string) string {
 
 // readGitFile returns content of file in .git directory.
 func readGitFile(file string) string {
-	content, err := ioutil.ReadFile(path.Join(".git", file))
+	content, err := os.ReadFile(path.Join(".git", file))
 	if err != nil {
 		return ""
 	}
@@ -167,7 +166,7 @@ func CopyFile(dst, src string, mode os.FileMode) {
 // so that go commands executed by build use the same version of Go as the 'host' that runs
 // build code. e.g.
 //
-//     /usr/lib/go-1.8/bin/go run build/ci.go ...
+//	/usr/lib/go-1.8/bin/go run build/ci.go ...
 //
 // runs using go 1.8 and invokes go 1.8 tools from the same GOROOT. This is also important
 // because runtime.Version checks on the host should match the tools that are run.

@@ -540,7 +540,7 @@ func opExtCodeCopy(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
 // If the precompile account is not transferred any amount on a private or
 // customized chain, the return value will be zero.
 //
-//	(5) Caller tries to get the code hash for an account which is marked as suicided
+//	(5) Caller tries to get the code hash for an account which is marked as self-destructed
 //
 // in the current transaction, the code hash of this account should be returned.
 //
@@ -884,11 +884,18 @@ func opStop(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
 	return nil, nil
 }
 
-func opSuicide(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
+func opSelfdestruct(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
+	// TODO-klaytn: call frame tracing https://github.com/ethereum/go-ethereum/pull/23087
+	// beneficiary := scope.Stack.pop()
 	balance := evm.StateDB.GetBalance(scope.Contract.Address())
 	evm.StateDB.AddBalance(common.BigToAddress(scope.Stack.pop()), balance)
+	evm.StateDB.SelfDestruct(scope.Contract.Address())
 
-	evm.StateDB.Suicide(scope.Contract.Address())
+	// if evm.interpreter.cfg.Debug {
+	// 	evm.interpreter.cfg.Tracer.CaptureEnter(SELFDESTRUCT, scope.Contract.Address(), common.BigToAddress(beneficiary), []byte{}, 0, balance)
+	// 	evm.interpreter.cfg.Tracer.CaptureExit([]byte{}, 0, nil)
+	// }
+
 	return nil, nil
 }
 
@@ -904,6 +911,25 @@ func opPush1(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
 	} else {
 		scope.Stack.push(integer.SetUint64(0))
 	}
+	return nil, nil
+}
+
+func opSelfdestruct6780(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
+	if evm.interpreter.readOnly {
+		return nil, ErrWriteProtection
+	}
+	beneficiary := scope.Stack.pop()
+	balance := evm.StateDB.GetBalance(scope.Contract.Address())
+	evm.StateDB.SubBalance(scope.Contract.Address(), balance)
+	evm.StateDB.AddBalance(common.BigToAddress(beneficiary), balance)
+	evm.StateDB.SelfDestruct6780(scope.Contract.Address())
+
+	// TODO-klaytn: call frame tracing https://github.com/ethereum/go-ethereum/pull/23087
+	// if tracer := interpreter.evm.Config.Tracer; tracer != nil {
+	// 	tracer.CaptureEnter(SELFDESTRUCT, scope.Contract.Address(), common.BigToAddress(beneficiary), []byte{}, 0, balance)
+	// 	tracer.CaptureExit([]byte{}, 0, nil)
+	// }
+
 	return nil, nil
 }
 
