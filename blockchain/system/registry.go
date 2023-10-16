@@ -89,17 +89,17 @@ func InstallRegistry(state *state.StateDB, init *params.RegistryConfig) error {
 }
 
 func ReadRegistryActiveAddr(backend bind.ContractCaller, name string, num *big.Int) (common.Address, error) {
-	caller, err := contracts.NewRegistryCaller(RegistryAddr, backend)
-	if err != nil {
-		return common.Address{}, err
-	}
-
-	code, err := backend.CodeAt(context.Background(), RegistryAddr, nil)
+	code, err := backend.CodeAt(context.Background(), RegistryAddr, num)
 	if err != nil {
 		return common.Address{}, err
 	}
 	if code == nil {
 		return common.Address{}, ErrRegistryNotInstalled
+	}
+
+	caller, err := contracts.NewRegistryCaller(RegistryAddr, backend)
+	if err != nil {
+		return common.Address{}, err
 	}
 
 	opts := &bind.CallOpts{BlockNumber: num}
