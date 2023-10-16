@@ -223,20 +223,6 @@ func (mr *MockBackendMockRecorder) GetBlockReceiptsInCache(arg0 interface{}) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlockReceiptsInCache", reflect.TypeOf((*MockBackend)(nil).GetBlockReceiptsInCache), arg0)
 }
 
-// GetConfig mocks base method.
-func (m *MockBackend) GetConfig(arg0 bool) interface{} {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetConfig", arg0)
-	ret0, _ := ret[0].(interface{})
-	return ret0
-}
-
-// GetConfig indicates an expected call of GetConfig.
-func (mr *MockBackendMockRecorder) GetConfig(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConfig", reflect.TypeOf((*MockBackend)(nil).GetConfig), arg0)
-}
-
 // GetEVM mocks base method.
 func (m *MockBackend) GetEVM(arg0 context.Context, arg1 blockchain.Message, arg2 *state.StateDB, arg3 *types.Header, arg4 vm.Config) (*vm.EVM, func() error, error) {
 	m.ctrl.T.Helper()

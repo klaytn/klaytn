@@ -55,7 +55,6 @@ type Backend interface {
 	RPCEVMTimeout() time.Duration // global timeout for klay_call
 	RPCGasCap() *big.Int          // global gas cap for klay_call over rpc: DoS protection
 	RPCTxFeeCap() float64         // global tx fee cap for all transaction related APIs
-	GetConfig(bool) interface{}
 	Engine() consensus.Engine
 	FeeHistory(ctx context.Context, blockCount int, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*big.Int, [][]*big.Int, []*big.Int, []float64, error)
 
