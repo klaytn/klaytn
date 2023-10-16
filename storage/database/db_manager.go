@@ -75,7 +75,6 @@ type DBManager interface {
 	WriteCanonicalHash(hash common.Hash, number uint64)
 	DeleteCanonicalHash(number uint64)
 
-	ReadAllHashes(number uint64) []common.Hash
 	ReadHeadHeaderHash() common.Hash
 	WriteHeadHeaderHash(hash common.Hash)
 
@@ -134,6 +133,7 @@ type DBManager interface {
 
 	ReadIstanbulSnapshot(hash common.Hash) ([]byte, error)
 	WriteIstanbulSnapshot(hash common.Hash, blob []byte) error
+	DeleteIstanbulSnapshot(hash common.Hash)
 
 	WriteMerkleProof(key, value []byte)
 
@@ -287,12 +287,14 @@ type DBManager interface {
 	ReadGovernanceAtNumber(num uint64, epoch uint64) (uint64, map[string]interface{}, error)
 	WriteGovernanceState(b []byte) error
 	ReadGovernanceState() ([]byte, error)
+	DeleteGovernance(num uint64)
 	// TODO-Klaytn implement governance DB deletion methods.
 
 	// StakingInfo related functions
 	ReadStakingInfo(blockNum uint64) ([]byte, error)
 	WriteStakingInfo(blockNum uint64, stakingInfo []byte) error
 	HasStakingInfo(blockNum uint64) (bool, error)
+	DeleteStakingInfo(blockNum uint64)
 
 	// DB migration related function
 	StartDBMigration(DBManager) error
@@ -954,24 +956,6 @@ func (dbm *databaseManager) DeleteCanonicalHash(number uint64) {
 		logger.Crit("Failed to delete number to hash mapping", "err", err)
 	}
 	dbm.cm.writeCanonicalHashCache(number, common.Hash{})
-}
-
-// ReadAllHashes retrieves all the hashes assigned to blocks at a certain heights,
-// both canonical and reorged forks included.
-func (dbm *databaseManager) ReadAllHashes(number uint64) []common.Hash {
-	db := dbm.getDatabase(headerDB)
-	prefix := headerKeyPrefix(number)
-
-	hashes := make([]common.Hash, 0, 1)
-	it := db.NewIterator(prefix, nil)
-	defer it.Release()
-
-	for it.Next() {
-		if key := it.Key(); len(key) == len(prefix)+32 {
-			hashes = append(hashes, common.BytesToHash(key[len(key)-32:]))
-		}
-	}
-	return hashes
 }
 
 // Head Header Hash operations.
@@ -1708,6 +1692,13 @@ func (dbm *databaseManager) ReadIstanbulSnapshot(hash common.Hash) ([]byte, erro
 func (dbm *databaseManager) WriteIstanbulSnapshot(hash common.Hash, blob []byte) error {
 	db := dbm.getDatabase(MiscDB)
 	return db.Put(snapshotKey(hash), blob)
+}
+
+func (dbm *databaseManager) DeleteIstanbulSnapshot(hash common.Hash) {
+	db := dbm.getDatabase(MiscDB)
+	if err := db.Delete(snapshotKey(hash)); err != nil {
+		logger.Crit("Failed to delete snpahost", "err", err)
+	}
 }
 
 // Merkle Proof operation.
@@ -2672,6 +2663,16 @@ func (dbm *databaseManager) WriteGovernance(data map[string]interface{}, num uin
 	return db.Put(makeKey(governancePrefix, num), b)
 }
 
+func (dbm *databaseManager) DeleteGovernance(num uint64) {
+	db := dbm.getDatabase(MiscDB)
+	if err := dbm.deleteLastGovernance(num); err != nil {
+		logger.Crit("Failed to delete Governance index", "err", err)
+	}
+	if err := db.Delete(makeKey(governancePrefix, num)); err != nil {
+		logger.Crit("Failed to delete Governance", "err", err)
+	}
+}
+
 func (dbm *databaseManager) WriteGovernanceIdx(num uint64) error {
 	db := dbm.getDatabase(MiscDB)
 	newSlice := make([]uint64, 0)
@@ -2691,6 +2692,24 @@ func (dbm *databaseManager) WriteGovernanceIdx(num uint64) error {
 	newSlice = append(newSlice, num)
 
 	data, err := json.Marshal(newSlice)
+	if err != nil {
+		return err
+	}
+	return db.Put(governanceHistoryKey, data)
+}
+
+// deleteLastGovernance deletes the last governanceIdx only if it is equal to `num`
+func (dbm *databaseManager) deleteLastGovernance(num uint64) error {
+	db := dbm.getDatabase(MiscDB)
+	idxHistory, err := dbm.ReadRecentGovernanceIdx(0)
+	if err != nil {
+		return nil // Do nothing and return nil if no recent index found
+	}
+	end := len(idxHistory)
+	if idxHistory[end-1] != num {
+		return nil // Do nothing and return nil if the target number does not match the tip number
+	}
+	data, err := json.Marshal(idxHistory[0 : end-1])
 	if err != nil {
 		return err
 	}

@@ -268,6 +268,14 @@ func (e *MixedEngine) CanWriteGovernanceState(num uint64) bool {
 	return e.headerGov.CanWriteGovernanceState(num)
 }
 
+func (e *MixedEngine) InitGovCache() {
+	e.headerGov.InitGovCache()
+}
+
+func (e *MixedEngine) InitLastGovStateBlkNum() {
+	e.headerGov.InitLastGovStateBlkNum()
+}
+
 func (e *MixedEngine) WriteGovernanceState(num uint64, isCheckpoint bool) error {
 	return e.headerGov.WriteGovernanceState(num, isCheckpoint)
 }

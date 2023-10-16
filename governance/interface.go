@@ -53,6 +53,12 @@ type ReaderEngine interface {
 }
 
 type HeaderEngine interface {
+	// Governance cache initialization
+	InitGovCache()
+
+	// Reset the latest block number that contains governance data
+	InitLastGovStateBlkNum()
+
 	// AddVote casts votes from API
 	AddVote(key string, val interface{}) bool
 	ValidateVote(vote *GovernanceVote) (*GovernanceVote, bool)
