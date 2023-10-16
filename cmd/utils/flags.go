@@ -22,7 +22,6 @@ package utils
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -1993,7 +1992,7 @@ func MakePasswordList(ctx *cli.Context) []string {
 	if path == "" {
 		return nil
 	}
-	text, err := ioutil.ReadFile(path)
+	text, err := os.ReadFile(path)
 	if err != nil {
 		log.Fatalf("Failed to read password file: %v", err)
 	}

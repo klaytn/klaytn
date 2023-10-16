@@ -1165,25 +1165,25 @@ func TestSnapshot_Validators_AddRemove(t *testing.T) {
 			},
 		},
 		{ // Around checkpoint interval (i.e. every 1024 block)
-			checkpointInterval + 10,
+			params.CheckpointInterval + 10,
 			map[int]vote{
-				checkpointInterval - 5: {"governance.removevalidator", 3},
-				checkpointInterval - 1: {"governance.removevalidator", 2},
-				checkpointInterval + 0: {"governance.removevalidator", 1},
-				checkpointInterval + 1: {"governance.addvalidator", 1},
-				checkpointInterval + 2: {"governance.addvalidator", 2},
-				checkpointInterval + 3: {"governance.addvalidator", 3},
+				params.CheckpointInterval - 5: {"governance.removevalidator", 3},
+				params.CheckpointInterval - 1: {"governance.removevalidator", 2},
+				params.CheckpointInterval + 0: {"governance.removevalidator", 1},
+				params.CheckpointInterval + 1: {"governance.addvalidator", 1},
+				params.CheckpointInterval + 2: {"governance.addvalidator", 2},
+				params.CheckpointInterval + 3: {"governance.addvalidator", 3},
 			},
 			map[int]expected{
-				0:                      {[]int{0, 1, 2, 3}},
-				1:                      {[]int{0, 1, 2, 3}},
-				checkpointInterval - 4: {[]int{0, 1, 2}},
-				checkpointInterval + 0: {[]int{0, 1}},
-				checkpointInterval + 1: {[]int{0}},
-				checkpointInterval + 2: {[]int{0, 1}},
-				checkpointInterval + 3: {[]int{0, 1, 2}},
-				checkpointInterval + 4: {[]int{0, 1, 2, 3}},
-				checkpointInterval + 9: {[]int{0, 1, 2, 3}},
+				0:                             {[]int{0, 1, 2, 3}},
+				1:                             {[]int{0, 1, 2, 3}},
+				params.CheckpointInterval - 4: {[]int{0, 1, 2}},
+				params.CheckpointInterval + 0: {[]int{0, 1}},
+				params.CheckpointInterval + 1: {[]int{0}},
+				params.CheckpointInterval + 2: {[]int{0, 1}},
+				params.CheckpointInterval + 3: {[]int{0, 1, 2}},
+				params.CheckpointInterval + 4: {[]int{0, 1, 2, 3}},
+				params.CheckpointInterval + 9: {[]int{0, 1, 2, 3}},
 			},
 		},
 		{ // multiple addvalidator & removevalidator
@@ -1890,7 +1890,7 @@ func TestChainConfig_ReadFromDBAfterVotes(t *testing.T) {
 		assert.NoError(t, err)
 
 		// insert blocks until the vote is applied
-		for i := 0; i < checkpointInterval; i++ {
+		for i := 0; i < params.CheckpointInterval; i++ {
 			previousBlock = currentBlock
 			currentBlock = makeBlockWithSeal(chain, engine, previousBlock)
 			_, err = chain.InsertChain(types.Blocks{currentBlock})

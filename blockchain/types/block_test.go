@@ -22,8 +22,8 @@ package types
 
 import (
 	"bytes"
-	"io/ioutil"
 	"math/big"
+	"os"
 	"reflect"
 	"testing"
 
@@ -467,7 +467,7 @@ func TestHeaderSizeCalc(t *testing.T) {
 }
 
 func BenchmarkBlockEncodingHashWithInterface(b *testing.B) {
-	data, err := ioutil.ReadFile("../../tests/b1.rlp")
+	data, err := os.ReadFile("../../tests/b1.rlp")
 	if err != nil {
 		b.Fatal("Failed to read a block file: ", err)
 	}
@@ -485,7 +485,7 @@ func BenchmarkBlockEncodingHashWithInterface(b *testing.B) {
 }
 
 func BenchmarkBlockEncodingRlpHash(b *testing.B) {
-	data, err := ioutil.ReadFile("../../tests/b1.rlp")
+	data, err := os.ReadFile("../../tests/b1.rlp")
 	if err != nil {
 		b.Fatal("Failed to read a block file: ", err)
 	}
@@ -503,7 +503,7 @@ func BenchmarkBlockEncodingRlpHash(b *testing.B) {
 }
 
 func BenchmarkBlockEncodingCopiedBlockHeader(b *testing.B) {
-	data, err := ioutil.ReadFile("../../tests/b1.rlp")
+	data, err := os.ReadFile("../../tests/b1.rlp")
 	if err != nil {
 		b.Fatal("Failed to read a block file: ", err)
 	}

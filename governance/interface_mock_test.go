@@ -291,6 +291,30 @@ func (mr *MockEngineMockRecorder) IdxCacheFromDb() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IdxCacheFromDb", reflect.TypeOf((*MockEngine)(nil).IdxCacheFromDb))
 }
 
+// InitGovCache mocks base method.
+func (m *MockEngine) InitGovCache() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "InitGovCache")
+}
+
+// InitGovCache indicates an expected call of InitGovCache.
+func (mr *MockEngineMockRecorder) InitGovCache() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InitGovCache", reflect.TypeOf((*MockEngine)(nil).InitGovCache))
+}
+
+// InitLastGovStateBlkNum mocks base method.
+func (m *MockEngine) InitLastGovStateBlkNum() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "InitLastGovStateBlkNum")
+}
+
+// InitLastGovStateBlkNum indicates an expected call of InitLastGovStateBlkNum.
+func (mr *MockEngineMockRecorder) InitLastGovStateBlkNum() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InitLastGovStateBlkNum", reflect.TypeOf((*MockEngine)(nil).InitLastGovStateBlkNum))
+}
+
 // MyVotingPower mocks base method.
 func (m *MockEngine) MyVotingPower() uint64 {
 	m.ctrl.T.Helper()

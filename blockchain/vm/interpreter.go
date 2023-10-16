@@ -343,27 +343,20 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte) (ret []byte, err
 		if verifyPool {
 			verifyIntegerPool(in.intPool)
 		}
-		// if the operation clears the return data (e.g. it has returning data)
-		// set the last return to the result of the operation.
-		if operation.returns {
-			in.returnData = res
-		}
 
-		switch {
-		case err != nil:
-			return nil, err // TODO-Klaytn-Issue615
-		case operation.reverts:
-			return res, ErrExecutionReverted // TODO-Klaytn-Issue615
-		case operation.halts:
-			return res, nil
-		case !operation.jumps:
-			pc++
+		if err != nil {
+			break
 		}
+		pc++
 	}
 
 	abort := atomic.LoadInt32(&in.evm.abort)
 	if (abort & CancelByTotalTimeLimit) != 0 {
 		return nil, ErrTotalTimeLimitReached // TODO-Klaytn-Issue615
 	}
-	return nil, nil
+	if err == errStopToken {
+		err = nil // clear stop token error
+	}
+
+	return res, err
 }

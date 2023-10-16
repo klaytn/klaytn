@@ -27,7 +27,7 @@ package database
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"time"
 
 	"github.com/klaytn/klaytn/common/hexutil"
@@ -142,7 +142,7 @@ func (s3DB *s3FileDB) read(key []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	returnVal, err := ioutil.ReadAll(output.Body)
+	returnVal, err := io.ReadAll(output.Body)
 	if err != nil {
 		return nil, err
 	}
