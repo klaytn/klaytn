@@ -53,11 +53,7 @@ type operation struct {
 	// This value will be used to limit the execution time of a transaction on EVM.
 	computationCost uint64
 
-	halts   bool // indicates whether the operation should halt further execution
-	jumps   bool // indicates whether the program counter should not increment
 	writes  bool // determines whether this a state modifying operation
-	reverts bool // determines whether the operation reverts state (implicitly halts)
-	returns bool // determines whether the operations sets the return data content
 }
 
 var (
@@ -153,7 +149,6 @@ func newConstantinopleInstructionSet() JumpTable {
 		maxStack:        maxStack(4, 1),
 		memorySize:      memoryCreate2,
 		writes:          true,
-		returns:         true,
 		computationCost: params.Create2ComputationCost,
 	}
 	return instructionSet
@@ -171,7 +166,6 @@ func newByzantiumInstructionSet() JumpTable {
 		minStack:        minStack(6, 1),
 		maxStack:        maxStack(6, 1),
 		memorySize:      memoryStaticCall,
-		returns:         true,
 		computationCost: params.StaticCallComputationCost,
 	}
 	instructionSet[RETURNDATASIZE] = &operation{
@@ -196,8 +190,6 @@ func newByzantiumInstructionSet() JumpTable {
 		minStack:        minStack(2, 0),
 		maxStack:        maxStack(2, 0),
 		memorySize:      memoryRevert,
-		reverts:         true,
-		returns:         true,
 		computationCost: params.RevertComputationCost,
 	}
 	return instructionSet
@@ -214,7 +206,6 @@ func newHomesteadInstructionSet() JumpTable {
 		minStack:        minStack(6, 1),
 		maxStack:        maxStack(6, 1),
 		memorySize:      memoryDelegateCall,
-		returns:         true,
 		computationCost: params.DelegateCallComputationCost,
 	}
 	return instructionSet
@@ -229,7 +220,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     0,
 			minStack:        minStack(0, 0),
 			maxStack:        maxStack(0, 0),
-			halts:           true,
 			computationCost: params.StopComputationCost,
 		},
 		ADD: {
@@ -588,7 +578,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasMidStep,
 			minStack:        minStack(1, 0),
 			maxStack:        maxStack(1, 0),
-			jumps:           true,
 			computationCost: params.JumpComputationCost,
 		},
 		JUMPI: {
@@ -596,7 +585,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasSlowStep,
 			minStack:        minStack(2, 0),
 			maxStack:        maxStack(2, 0),
-			jumps:           true,
 			computationCost: params.JumpiComputationCost,
 		},
 		PC: {
@@ -1128,7 +1116,6 @@ func newFrontierInstructionSet() JumpTable {
 			maxStack:        maxStack(3, 1),
 			memorySize:      memoryCreate,
 			writes:          true,
-			returns:         true,
 			computationCost: params.CreateComputationCost,
 		},
 		CALL: {
@@ -1138,7 +1125,6 @@ func newFrontierInstructionSet() JumpTable {
 			minStack:        minStack(7, 1),
 			maxStack:        maxStack(7, 1),
 			memorySize:      memoryCall,
-			returns:         true,
 			computationCost: params.CallComputationCost,
 		},
 		CALLCODE: {
@@ -1148,7 +1134,6 @@ func newFrontierInstructionSet() JumpTable {
 			minStack:        minStack(7, 1),
 			maxStack:        maxStack(7, 1),
 			memorySize:      memoryCall,
-			returns:         true,
 			computationCost: params.CallCodeComputationCost,
 		},
 		RETURN: {
@@ -1157,7 +1142,6 @@ func newFrontierInstructionSet() JumpTable {
 			minStack:        minStack(2, 0),
 			maxStack:        maxStack(2, 0),
 			memorySize:      memoryReturn,
-			halts:           true,
 			computationCost: params.ReturnComputationCost,
 		},
 		SELFDESTRUCT: {
@@ -1165,7 +1149,6 @@ func newFrontierInstructionSet() JumpTable {
 			dynamicGas:      gasSelfdestruct,
 			minStack:        minStack(1, 0),
 			maxStack:        maxStack(1, 0),
-			halts:           true,
 			writes:          true,
 			computationCost: params.SelfDestructComputationCost,
 		},
