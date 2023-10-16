@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"io/ioutil"
 	"math/big"
 	"os"
 	"reflect"
@@ -72,7 +71,7 @@ func TestTxTypeSupport(t *testing.T) {
 	chainConf := params.ChainConfig{ChainID: big.NewInt(1)}
 
 	// generate a keystore and active accounts
-	dir, err := ioutil.TempDir("", "klay-keystore-test")
+	dir, err := os.MkdirTemp("", "klay-keystore-test")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -26,7 +26,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"math/big"
 	"os"
 	"reflect"
@@ -520,7 +519,7 @@ func (api *API) TraceBlockFromFile(ctx context.Context, file string, config *Tra
 	if !api.unsafeTrace {
 		return nil, errors.New("TraceBlockFromFile is disabled")
 	}
-	blob, err := ioutil.ReadFile(file)
+	blob, err := os.ReadFile(file)
 	if err != nil {
 		return nil, fmt.Errorf("could not read file: %v", err)
 	}
@@ -740,7 +739,7 @@ func (api *API) standardTraceBlockToFile(ctx context.Context, block *types.Block
 			// Generate a unique temporary file to dump it into
 			prefix := fmt.Sprintf("block_%#x-%d-%#x-", block.Hash().Bytes()[:4], i, tx.Hash().Bytes()[:4])
 
-			dump, err = ioutil.TempFile(os.TempDir(), prefix)
+			dump, err = os.CreateTemp(os.TempDir(), prefix)
 			if err != nil {
 				return nil, err
 			}

@@ -653,7 +653,7 @@ func opJump(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
 	if !scope.Contract.validJumpdest(pos) {
 		return nil, ErrInvalidJump
 	}
-	*pc = pos.Uint64()
+	*pc = pos.Uint64() - 1 // pc will be increased by the interpreter loop
 
 	evm.interpreter.intPool.put(pos)
 	return nil, nil
@@ -665,9 +665,7 @@ func opJumpi(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
 		if !scope.Contract.validJumpdest(pos) {
 			return nil, ErrInvalidJump
 		}
-		*pc = pos.Uint64()
-	} else {
-		*pc++
+		*pc = pos.Uint64() - 1 // pc will be increased by the interpreter loop
 	}
 
 	evm.interpreter.intPool.put(pos, cond)
@@ -719,8 +717,10 @@ func opCreate(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
 	evm.interpreter.intPool.put(value, offset, size)
 
 	if suberr == ErrExecutionReverted {
+		evm.interpreter.returnData = res // set REVERT data to return data buffer
 		return res, nil
 	}
+	evm.interpreter.returnData = nil // clear dirty return data buffer
 	return nil, nil
 }
 
@@ -747,8 +747,10 @@ func opCreate2(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
 	evm.interpreter.intPool.put(endowment, offset, size, salt)
 
 	if suberr == ErrExecutionReverted {
+		evm.interpreter.returnData = res // set REVERT data to return data buffer
 		return res, nil
 	}
+	evm.interpreter.returnData = nil // clear dirty return data buffer
 	return nil, nil
 }
 
@@ -779,6 +781,7 @@ func opCall(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
 	scope.Contract.Gas += returnGas
 
 	evm.interpreter.intPool.put(addr, value, inOffset, inSize, retOffset, retSize)
+	evm.interpreter.returnData = ret
 	return ret, nil
 }
 
@@ -809,6 +812,7 @@ func opCallCode(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
 	scope.Contract.Gas += returnGas
 
 	evm.interpreter.intPool.put(addr, value, inOffset, inSize, retOffset, retSize)
+	evm.interpreter.returnData = ret
 	return ret, nil
 }
 
@@ -835,6 +839,7 @@ func opDelegateCall(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
 	scope.Contract.Gas += returnGas
 
 	evm.interpreter.intPool.put(addr, inOffset, inSize, retOffset, retSize)
+	evm.interpreter.returnData = ret
 	return ret, nil
 }
 
@@ -861,6 +866,7 @@ func opStaticCall(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
 	scope.Contract.Gas += returnGas
 
 	evm.interpreter.intPool.put(addr, inOffset, inSize, retOffset, retSize)
+	evm.interpreter.returnData = ret
 	return ret, nil
 }
 
@@ -869,7 +875,7 @@ func opReturn(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
 	ret := scope.Memory.GetPtr(offset.Int64(), size.Int64())
 
 	evm.interpreter.intPool.put(offset, size)
-	return ret, nil
+	return ret, errStopToken
 }
 
 func opRevert(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
@@ -877,11 +883,12 @@ func opRevert(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
 	ret := scope.Memory.GetPtr(offset.Int64(), size.Int64())
 
 	evm.interpreter.intPool.put(offset, size)
-	return ret, nil
+	evm.interpreter.returnData = ret
+	return ret, ErrExecutionReverted
 }
 
 func opStop(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	return nil, nil
+	return nil, errStopToken
 }
 
 // opPush1 is a specialized version of pushN
@@ -911,7 +918,7 @@ func opSelfdestruct(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
 		tracer.CaptureEnter(SELFDESTRUCT, scope.Contract.Address(), common.BigToAddress(beneficiary), []byte{}, 0, balance)
 		tracer.CaptureExit([]byte{}, 0, nil)
 	}
-	return nil, nil
+	return nil, errStopToken
 }
 
 func opSelfdestruct6780(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
@@ -927,7 +934,7 @@ func opSelfdestruct6780(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, erro
 		tracer.CaptureEnter(SELFDESTRUCT, scope.Contract.Address(), common.BigToAddress(beneficiary), []byte{}, 0, balance)
 		tracer.CaptureExit([]byte{}, 0, nil)
 	}
-	return nil, nil
+	return nil, errStopToken
 }
 
 // following functions are used by the instruction jump  table

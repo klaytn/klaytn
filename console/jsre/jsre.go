@@ -25,8 +25,8 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
+	"os"
 	"time"
 
 	"github.com/klaytn/klaytn/common"
@@ -245,7 +245,7 @@ func (re *JSRE) Stop(waitForCallbacks bool) {
 // Exec(file) loads and runs the contents of a file
 // if a relative path is given, the jsre's assetPath is used
 func (re *JSRE) Exec(file string) error {
-	code, err := ioutil.ReadFile(common.AbsolutePath(re.assetPath, file))
+	code, err := os.ReadFile(common.AbsolutePath(re.assetPath, file))
 	if err != nil {
 		return err
 	}
@@ -292,7 +292,7 @@ func (re *JSRE) loadScript(call otto.FunctionCall) otto.Value {
 		return otto.FalseValue()
 	}
 	file = common.AbsolutePath(re.assetPath, file)
-	source, err := ioutil.ReadFile(file)
+	source, err := os.ReadFile(file)
 	if err != nil {
 		// TODO: throw exception
 		return otto.FalseValue()

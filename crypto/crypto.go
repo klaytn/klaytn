@@ -28,7 +28,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/big"
 	"os"
 
@@ -194,7 +193,7 @@ func LoadECDSA(file string) (*ecdsa.PrivateKey, error) {
 // restrictive permissions. The key data is saved hex-encoded.
 func SaveECDSA(file string, key *ecdsa.PrivateKey) error {
 	k := hex.EncodeToString(FromECDSA(key))
-	return ioutil.WriteFile(file, []byte(k), 0o600)
+	return os.WriteFile(file, []byte(k), 0o600)
 }
 
 func GenerateKey() (*ecdsa.PrivateKey, error) {

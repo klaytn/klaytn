@@ -22,7 +22,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"math"
 	"math/big"
 	"os"
@@ -178,7 +177,7 @@ func getAddrsAndKeysFromFile(numAccounts int, testDataDir string, run int, fileP
 	addrs := make([]*common.Address, 0, numAccounts)
 	privKeys := make([]*ecdsa.PrivateKey, 0, numAccounts)
 
-	files, err := ioutil.ReadDir(path.Join(testDataDir, addressDirectory))
+	files, err := os.ReadDir(path.Join(testDataDir, addressDirectory))
 	if err != nil {
 		return nil, nil, err
 	}

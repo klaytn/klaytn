@@ -688,7 +688,7 @@ func TestHashimoto(t *testing.T) {
 /*
 func TestConcurrentDiskCacheGeneration(t *testing.T) {
 	// Create a temp folder to generate the caches into
-	cachedir, err := ioutil.TempDir("", "")
+	cachedir, err := os.MkdirTemp("", "")
 	if err != nil {
 		t.Fatalf("Failed to create temporary cache dir: %v", err)
 	}

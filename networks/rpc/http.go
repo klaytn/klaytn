@@ -28,7 +28,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"mime"
 	"net"
 	"net/http"
@@ -48,8 +47,10 @@ const (
 )
 
 // https://www.jsonrpc.org/historical/json-rpc-over-http.html#id13
-var acceptedContentTypes = []string{contentType, "application/json-rpc", "application/jsonrequest"}
-var nullAddr, _ = net.ResolveTCPAddr("tcp", "127.0.0.1:0")
+var (
+	acceptedContentTypes = []string{contentType, "application/json-rpc", "application/jsonrequest"}
+	nullAddr, _          = net.ResolveTCPAddr("tcp", "127.0.0.1:0")
+)
 
 type httpConn struct {
 	client    *http.Client
@@ -202,7 +203,7 @@ func (hc *httpConn) doRequest(ctx context.Context, msg interface{}) (io.ReadClos
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequestWithContext(ctx, "POST", hc.url, ioutil.NopCloser(bytes.NewReader(body)))
+	req, err := http.NewRequestWithContext(ctx, "POST", hc.url, io.NopCloser(bytes.NewReader(body)))
 	if err != nil {
 		return nil, err
 	}

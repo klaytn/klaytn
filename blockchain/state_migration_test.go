@@ -18,7 +18,6 @@ package blockchain
 
 import (
 	"bytes"
-	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -32,7 +31,7 @@ import (
 )
 
 func createLocalTestDB(t *testing.T) (string, database.DBManager) {
-	dir, err := ioutil.TempDir("", "klaytn-test-migration")
+	dir, err := os.MkdirTemp("", "klaytn-test-migration")
 	if err != nil {
 		t.Fatalf("failed to create a database: %v", err)
 	}
