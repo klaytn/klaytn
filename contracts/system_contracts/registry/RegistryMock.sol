@@ -20,23 +20,35 @@ pragma solidity ^0.8.0;
 import "./IRegistry.sol";
 
 contract RegistryMock is IRegistry {
-    function transferOwnership(address newOwner) external {
+    function transferOwnership(address newOwner) external override {
         _owner = newOwner;
     }
 
-    function register(string memory name, address addr, uint256 activation) public {
+    function register(string memory name, address addr, uint256 activation) public override {
         if (records[name].length == 0) {
             names.push(name);
         }
         records[name].push(Record(addr, activation));
     }
 
-    function getActiveAddr(string memory name) external override view returns (address) {
+    function getActiveAddr(string memory name) external view override returns (address) {
         uint256 len = records[name].length;
         if (len == 0) {
             return address(0);
         } else {
-            return records[name][len-1].addr;
+            return records[name][len - 1].addr;
         }
+    }
+
+    function getAllRecords(string memory name) external view override returns (Record[] memory) {
+        return records[name];
+    }
+
+    function getAllNames() external view override returns (string[] memory) {
+        return names;
+    }
+
+    function owner() external view override returns (address) {
+        return _owner;
     }
 }
