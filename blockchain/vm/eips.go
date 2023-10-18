@@ -153,9 +153,13 @@ func opTload(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
 
 // opTstore implements TSTORE opcode
 func opTstore(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
+	if evm.interpreter.readOnly {
+		return nil, ErrWriteProtection
+	}
 	loc := scope.Stack.pop()
 	val := scope.Stack.pop()
 	evm.StateDB.SetTransientState(scope.Contract.Address(), common.BigToHash(loc), common.BigToHash(val))
+	evm.interpreter.intPool.put(loc, val)
 	return nil, nil
 }
 

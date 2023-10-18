@@ -86,6 +86,7 @@ func TestOpTstore(t *testing.T) {
 	statedb.CreateAccount(to)
 
 	env.interpreter = evmInterpreter
+	env.interpreter.intPool = poolOfIntPools.get()
 	pc := uint64(0)
 	// push the value to the stack
 	stack.push(new(big.Int).SetBytes(value))
@@ -1466,8 +1467,9 @@ func BenchmarkOpTload(b *testing.B) {
 }
 
 func BenchmarkOpTstore(b *testing.B) {
-	x := "FBCDEF090807060504030201ffffffffFBCDEF090807060504030201ffffffff"
-	opBenchmark(b, opTstore, x, "0x20")
+	x := "ffffffff"
+	y := "ffffffff"
+	opBenchmark(b, opTstore, x, y)
 }
 
 func TestOpMCopy(t *testing.T) {
