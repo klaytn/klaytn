@@ -2176,7 +2176,7 @@ func TestTransientStorageReset(t *testing.T) {
 		signer := types.LatestSigner(gen.config)
 		tx, _ := types.SignTx(types.NewTransaction(gen.TxNonce(address), common.Address{}, nil, 100000, fee, initCode), signer, key)
 		gen.AddTx(tx)
-		tx, _ = types.SignTx(types.NewTransaction(gen.TxNonce(address), destAddress, nil, 100000, fee, initCode), signer, key)
+		tx, _ = types.SignTx(types.NewTransaction(gen.TxNonce(address), destAddress, nil, 100000, fee, nil), signer, key)
 		gen.AddTx(tx)
 	})
 
