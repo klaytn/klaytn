@@ -1218,7 +1218,7 @@ func (api *EthereumAPI) rpcMarshalHeader(head *types.Header, inclMiner bool) (ma
 		// we cannot provide original header of Klaytn and this field is used as consensus info which is encoded value of validators addresses, validators signatures, and proposer signature in Klaytn.
 		"extraData": hexutil.Bytes{},
 		"size":      hexutil.Uint64(head.Size()),
-		// No block gas limit in Klaytn, instead there is computation cost.
+		// No block gas limit in Klaytn, instead there is computation cost limit per tx.
 		"gasLimit":         hexutil.Uint64(params.UpperGasLimit),
 		"gasUsed":          hexutil.Uint64(head.GasUsed),
 		"timestamp":        hexutil.Big(*head.Time),
