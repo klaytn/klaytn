@@ -177,6 +177,6 @@ const (
 
 	// computation cost added at CancunCompatible
 	McopyComputationCost  = 250
-	TloadComputationCost  = 300
-	TstoreComputationCost = 540
+	TloadComputationCost  = 220
+	TstoreComputationCost = 280
 )
