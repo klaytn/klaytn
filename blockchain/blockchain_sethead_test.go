@@ -22,6 +22,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/consensus/gxhash"
 	"github.com/klaytn/klaytn/params"
+	"github.com/stretchr/testify/assert"
 )
 
 // Tests a sethead for a short canonical chain where a recent block was already
@@ -277,4 +278,27 @@ func verifyCutoff(t *testing.T, chain *BlockChain, canonical bool, inserted type
 			}
 		}
 	}
+}
+
+func TestSetHeadEarlyExit(t *testing.T) {
+	testSetHeadEarlyExit(t, &rewindTest{
+		canonicalBlocks: 8,
+		setheadBlock:    3,
+	})
+}
+
+func testSetHeadEarlyExit(t *testing.T, tt *rewindTest) {
+	db, chain, err := newCanonical(gxhash.NewFullFaker(), 0, true)
+	if err != nil {
+		t.Fatalf("failed to create pristine chain: %v", err)
+	}
+	defer chain.Stop()
+	chain.Config().Istanbul = params.GetDefaultIstanbulConfig()
+
+	canonblocks, _ := GenerateChain(params.TestChainConfig, chain.CurrentBlock(), gxhash.NewFaker(), db, tt.canonicalBlocks, func(i int, b *BlockGen) {})
+	if _, err := chain.InsertChain(canonblocks); err != nil {
+		t.Fatalf("Failed to import canonical chain start: %v", err)
+	}
+	db.WriteLastPrunedBlockNumber(tt.setheadBlock + 1)
+	assert.NotNil(t, chain.SetHead(tt.setheadBlock))
 }
