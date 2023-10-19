@@ -33,10 +33,11 @@ import (
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestKIP113(t *testing.T) {
-	log.EnableLogForTest(log.LvlError, log.LvlInfo)
+func TestKip113(t *testing.T) {
+	log.EnableLogForTest(log.LvlError, log.LvlWarn)
 
 	// prepare chain configuration
 	config := params.CypressChainConfig.Copy()
@@ -48,7 +49,6 @@ func TestKIP113(t *testing.T) {
 	config.ShanghaiCompatibleBlock = big.NewInt(0)
 	config.Istanbul.SubGroupSize = 1
 	config.Istanbul.ProposerPolicy = uint64(istanbul.RoundRobin)
-	config.Governance.Reward.MintingAmount = new(big.Int).Mul(big.NewInt(9000000000000000000), big.NewInt(params.KLAY))
 
 	// make a blockchain node
 	fullNode, node, validator, _, workspace := newBlockchain(t, config)
@@ -58,57 +58,31 @@ func TestKIP113(t *testing.T) {
 	}()
 
 	var (
-		senderKey  = validator.Keys[0]
-		sender     = bind.NewKeyedTransactor(senderKey)
-		senderAddr = sender.From
+		senderKey = validator.Keys[0]
+		sender    = bind.NewKeyedTransactor(senderKey)
 
-		transactor = backends.NewBlockchainContractBackend(node.BlockChain(), node.TxPool().(*blockchain.TxPool), nil)
+		chain      = node.BlockChain().(*blockchain.BlockChain)
+		transactor = backends.NewBlockchainContractBackend(chain, node.TxPool().(*blockchain.TxPool), nil)
 
+		nodeId        = common.HexToAddress("0xaaaa")
 		_, pub1, pop1 = makeBlsKey()
-		_, pub2, _    = makeBlsKey()
 	)
 	contractAddr, tx, contract, err := contracts.DeployKIP113Mock(sender, transactor)
-	if err != nil {
-		t.Fatal(err)
-	}
-	checkReceipt(t, node.BlockChain().(*blockchain.BlockChain), tx.Hash())
+	require.Nil(t, err)
+	require.NotNil(t, waitReceipt(chain, tx.Hash()))
 
-	// Register BLS key for sender
-	if tx, err = contract.RegisterPublicKey(sender, pub1, pop1); err != nil {
-		t.Fatal(err)
-	}
-	checkReceipt(t, node.BlockChain().(*blockchain.BlockChain), tx.Hash())
+	// Register a BLS key
+	tx, err = contract.Register(sender, nodeId, pub1, pop1)
+	require.Nil(t, err)
+	require.NotNil(t, waitReceipt(chain, tx.Hash()))
 
 	infos, err := system.ReadKip113All(transactor, contractAddr, nil)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(infos))
-	assert.Equal(t, pub1, infos[senderAddr].PublicKey)
-	assert.Equal(t, pop1, infos[senderAddr].Pop)
+	assert.Equal(t, pub1, infos[nodeId].PublicKey)
+	assert.Equal(t, pop1, infos[nodeId].Pop)
 
-	// Unregister BLS key for sender
-	if tx, err = contract.UnregisterPublicKey(sender, senderAddr); err != nil {
-		t.Fatal(err)
-	}
-	checkReceipt(t, node.BlockChain().(*blockchain.BlockChain), tx.Hash())
-
-	infos, err = system.ReadKip113All(transactor, contractAddr, nil)
-	assert.Nil(t, err)
-	assert.Nil(t, infos[senderAddr].PublicKey)
-	assert.Nil(t, infos[senderAddr].Pop)
-	assert.Equal(t, 0, len(infos))
-
-	// Register invalid BLS key for sender
-	if tx, err = contract.RegisterPublicKey(sender, pub2, pop1); err != nil {
-		t.Fatal(err)
-	}
-	checkReceipt(t, node.BlockChain().(*blockchain.BlockChain), tx.Hash())
-
-	// Invalid BLS key will be filtered out in REadKip113All function
-	infos, err = system.ReadKip113All(transactor, contractAddr, nil)
-	assert.Nil(t, err)
-	assert.Nil(t, infos[senderAddr].PublicKey)
-	assert.Nil(t, infos[senderAddr].Pop)
-	assert.Equal(t, 0, len(infos))
+	// TODO: test with Registry
 }
 
 func makeBlsKey() (priv, pub, pop []byte) {
@@ -126,11 +100,4 @@ func makeBlsKey() (priv, pub, pop []byte) {
 		panic("bad bls key")
 	}
 	return
-}
-
-func checkReceipt(t *testing.T, chain *blockchain.BlockChain, txHash common.Hash) {
-	receipt := waitReceipt(chain, txHash)
-	if receipt == nil {
-		t.Fatal("timeout")
-	}
 }

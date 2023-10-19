@@ -77,21 +77,9 @@ func TestAllocKip113(t *testing.T) {
 	)
 
 	// 1. Create storage with AllocKIP113
-	allocStorage := AllocKip113(&AllocKIP113Init{
-		Infos: map[common.Address]BlsPublicKeyInfo{
-			nodeId1: {
-				PublicKey: pub1,
-				Pop:       pop1,
-			},
-			nodeId2: {
-				PublicKey: pub2,
-				Pop:       pop2,
-			},
-		},
-		Addrs: []common.Address{
-			nodeId1,
-			nodeId2,
-		},
+	allocStorage := AllocKip113(AllocKip113Init{
+		nodeId1: {PublicKey: pub1, Pop: pop1},
+		nodeId2: {PublicKey: pub2, Pop: pop2},
 	})
 
 	// 2. Create storage by calling register()

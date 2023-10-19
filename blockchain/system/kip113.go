@@ -18,6 +18,8 @@ package system
 
 import (
 	"math/big"
+	"sort"
+	"strings"
 
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/common"
@@ -30,34 +32,29 @@ type BlsPublicKeyInfo struct {
 	Pop       []byte
 }
 
-type AllocKIP113Init struct {
-	// Owner common.Address
-	Infos map[common.Address]BlsPublicKeyInfo
-	Addrs []common.Address
-}
+type (
+	BlsPublicKeyInfos map[common.Address]BlsPublicKeyInfo
+	AllocKip113Init   = BlsPublicKeyInfos
+)
 
-type BlsPublicKeyInfos map[common.Address]BlsPublicKeyInfo
-
-func AllocKip113(init *AllocKIP113Init) map[common.Hash]common.Hash {
+func AllocKip113(init AllocKip113Init) map[common.Hash]common.Hash {
 	if init == nil {
 		return nil
 	}
 	storage := make(map[common.Hash]common.Hash)
 
-	// TODO-klaytn: add storage slot calculation for owner address
-
 	// slot[0]: mapping(address => BlsPublicKeyInfo) infos;
-	// - infos[x].publicKey.length @ Hash(x, 0)
-	//   - infos[x].publicKey[:32] @ Hash(Hash(x, 0)) + 0
-	//   - infos[x].publicKey[32:] @ Hash(Hash(x, 0)) + 1
-	// - infos[x].pop.length @ Hash(x, 1) + 1
-	//   - infos[x].pop[:32] @ Hash(Hash(x, 1) + 1) + 0
-	//   - infos[x].pop[32:64] @ Hash(Hash(x, 1) + 1) + 1
-	//   - infos[x].pop[64:] @ Hash(Hash(x, 1) + 1) + 2
-	for addr, info := range init.Infos {
+	// - infos[x].publicKey.length  @ Hash(x, 0)
+	//   - infos[x].publicKey[:32]  @ Hash(Hash(x, 0)) + 0
+	//   - infos[x].publicKey[32:]  @ Hash(Hash(x, 0)) + 1
+	// - infos[x].pop.length    @ Hash(x, 0) + 1
+	//   - infos[x].pop[:32]    @ Hash(Hash(x, 0) + 1) + 0
+	//   - infos[x].pop[32:64]  @ Hash(Hash(x, 0) + 1) + 1
+	//   - infos[x].pop[64:]    @ Hash(Hash(x, 0) + 1) + 2
+	for addr, info := range init {
+		// The below slot calculation assumes 48-byte and 96-byte Solidity `bytes` values.
 		if len(info.PublicKey) != 48 || len(info.Pop) != 96 {
-			logger.Crit("Invalid BLS key", "PublicKey", info.PublicKey, "Pop", info.Pop)
-			continue
+			logger.Crit("Invalid AllocKip113Init")
 		}
 		pupKeySlot := calcMappingSlot(0, addr)
 		popKeySlot := addIntToHash(pupKeySlot, 1)
@@ -66,27 +63,32 @@ func AllocKip113(init *AllocKIP113Init) map[common.Hash]common.Hash {
 		storage[pupKeySlot] = lpad32(len(info.PublicKey)*2 + 1)
 		storage[popKeySlot] = lpad32(len(info.Pop)*2 + 1)
 
-		// publicKey[:32]
-		storage[calcStructSlot(pupKeySlot, 0)] = common.BytesToHash(info.PublicKey[:32])
-		// publicKey[32:]
-		// Note: solidity padded from the right for the byte type.
-		var h common.Hash
-		copy(h[:len(info.PublicKey[32:])], info.PublicKey[32:])
-		storage[calcStructSlot(pupKeySlot, 1)] = h
+		// 48 = 32 + 16. The latter 16 byte must be right padded (= left justed),
+		// so that the two slots form a consecutive 48-byte.
+		storage[calcStructSlot(pupKeySlot, 0)] = common.BytesToHash(info.PublicKey[:32]) // publicKey[:32]
+		pad := make([]byte, 16)
+		padded := append(info.PublicKey[32:], pad...)
+		storage[calcStructSlot(pupKeySlot, 1)] = common.BytesToHash(padded) // publicKey[32:]
 
-		// pop[:32]
-		storage[calcStructSlot(popKeySlot, 0)] = common.BytesToHash(info.Pop[:32])
-		// pop[32:64]
-		storage[calcStructSlot(popKeySlot, 1)] = common.BytesToHash(info.Pop[32:64])
-		// pop[64:]
-		storage[calcStructSlot(popKeySlot, 2)] = common.BytesToHash(info.Pop[64:])
+		// Conveniently, 96 = 32 * 3
+		storage[calcStructSlot(popKeySlot, 0)] = common.BytesToHash(info.Pop[:32])   // pop[:32]
+		storage[calcStructSlot(popKeySlot, 1)] = common.BytesToHash(info.Pop[32:64]) // pop[32:64]
+		storage[calcStructSlot(popKeySlot, 2)] = common.BytesToHash(info.Pop[64:])   // pop[64:]
 	}
+
+	addrs := make([]common.Address, 0)
+	for addr := range init {
+		addrs = append(addrs, addr)
+	}
+	sort.Slice(addrs, func(i, j int) bool {
+		return strings.Compare(addrs[i].Hex(), addrs[j].Hex()) > 0
+	})
 
 	// slot[1]: address[] addrs;
 	// - addrs.length @ 1
 	// - addrs[i] @ Hash(1) + i
-	storage[lpad32(1)] = lpad32(len(init.Addrs))
-	for i, addr := range init.Addrs {
+	storage[lpad32(1)] = lpad32(len(addrs))
+	for i, addr := range addrs {
 		addrSlot := calcArraySlot(1, 1, i, 0)
 		storage[addrSlot] = lpad32(addr)
 	}
