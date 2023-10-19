@@ -129,6 +129,8 @@ var (
 	stakingInfoPrefix = []byte("stakingInfo")
 
 	chaindatafetcherCheckpointKey = []byte("chaindatafetcherCheckpoint")
+
+	lastPrunedBlockNumberKey = []byte("lastPrunedBlockNumber")
 )
 
 // TxLookupEntry is a positional metadata to help looking up the data content of
