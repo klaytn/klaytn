@@ -22,7 +22,6 @@ func TestReadKip113(t *testing.T) {
 	var (
 		senderKey, _ = crypto.GenerateKey()
 		sender       = bind.NewKeyedTransactor(senderKey)
-		senderAddr   = sender.From
 
 		alloc = blockchain.GenesisAlloc{
 			sender.From: {
@@ -31,6 +30,7 @@ func TestReadKip113(t *testing.T) {
 		}
 		backend = backends.NewSimulatedBackend(alloc)
 
+		nodeId        = common.HexToAddress("0xaaaa")
 		_, pub1, pop1 = makeBlsKey()
 		_, pub2, _    = makeBlsKey()
 	)
@@ -41,18 +41,18 @@ func TestReadKip113(t *testing.T) {
 	t.Logf("KIP113Mock at %x", contractAddr)
 
 	// With a valid record
-	contract.RegisterPublicKey(sender, pub1, pop1)
+	contract.Register(sender, nodeId, pub1, pop1)
 	backend.Commit()
 
 	infos, err := ReadKip113All(backend, contractAddr, nil)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(infos))
-	assert.Equal(t, pub1, infos[senderAddr].PublicKey)
-	assert.Equal(t, pop1, infos[senderAddr].Pop)
+	assert.Equal(t, pub1, infos[nodeId].PublicKey)
+	assert.Equal(t, pop1, infos[nodeId].Pop)
 
 	// With an invalid record
-	// Another registerPublicKey() call from the same sender overwrites the existing info.
-	contract.RegisterPublicKey(sender, pub2, pop1) // pub vs. pop mismatch
+	// Another register() call for the same nodeId overwrites the existing info.
+	contract.Register(sender, nodeId, pub2, pop1) // pub vs. pop mismatch
 	backend.Commit()
 
 	// Returns zero record because invalid records have been filtered out.
@@ -61,49 +61,43 @@ func TestReadKip113(t *testing.T) {
 	assert.Equal(t, 0, len(infos))
 }
 
-func TestAllocKIP113(t *testing.T) {
+func TestAllocKip113(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
 
 	var (
 		senderKey, _ = crypto.GenerateKey()
 		sender       = bind.NewKeyedTransactor(senderKey)
-		senderAddr   = sender.From
-
-		senderKey2, _ = crypto.GenerateKey()
-		sender2       = bind.NewKeyedTransactor(senderKey2)
-		senderAddr2   = sender2.From
 
 		KIP113MockAddr = common.HexToAddress("0x0000000000000000000000000000000000000402")
 
+		nodeId1       = common.HexToAddress("0xaaaa")
+		nodeId2       = common.HexToAddress("0xbbbb")
 		_, pub1, pop1 = makeBlsKey()
 		_, pub2, pop2 = makeBlsKey()
 	)
 
 	// 1. Create storage with AllocKIP113
-	allocStorage := AllocKIP113(&AllocKIP113Init{
+	allocStorage := AllocKip113(&AllocKIP113Init{
 		Infos: map[common.Address]BlsPublicKeyInfo{
-			senderAddr: {
+			nodeId1: {
 				PublicKey: pub1,
 				Pop:       pop1,
 			},
-			senderAddr2: {
+			nodeId2: {
 				PublicKey: pub2,
 				Pop:       pop2,
 			},
 		},
 		Addrs: []common.Address{
-			senderAddr,
-			senderAddr2,
+			nodeId1,
+			nodeId2,
 		},
 	})
 
-	// 2. Create storage by calling registerPublicKey()
+	// 2. Create storage by calling register()
 	var (
 		alloc = blockchain.GenesisAlloc{
 			sender.From: {
-				Balance: big.NewInt(params.KLAY),
-			},
-			sender2.From: {
 				Balance: big.NewInt(params.KLAY),
 			},
 			KIP113MockAddr: {
@@ -115,8 +109,8 @@ func TestAllocKIP113(t *testing.T) {
 		contract, _ = contracts.NewKIP113MockTransactor(KIP113MockAddr, backend)
 	)
 
-	contract.RegisterPublicKey(sender, pub1, pop1)
-	contract.RegisterPublicKey(sender2, pub2, pop2)
+	contract.Register(sender, nodeId1, pub1, pop1)
+	contract.Register(sender, nodeId2, pub2, pop2)
 	backend.Commit()
 
 	execStorage := make(map[common.Hash]common.Hash)

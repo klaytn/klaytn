@@ -38,7 +38,7 @@ type AllocKIP113Init struct {
 
 type BlsPublicKeyInfos map[common.Address]BlsPublicKeyInfo
 
-func AllocKIP113(init *AllocKIP113Init) map[common.Hash]common.Hash {
+func AllocKip113(init *AllocKIP113Init) map[common.Hash]common.Hash {
 	if init == nil {
 		return nil
 	}
@@ -119,18 +119,18 @@ func ReadKip113All(backend bind.ContractCaller, contractAddr common.Address, num
 	}
 
 	opts := &bind.CallOpts{BlockNumber: num}
-	ret, err := caller.GetAllInfo(opts)
+	ret, err := caller.GetAllBlsInfo(opts)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(ret.AddrList) != len(ret.PubkeyList) {
+	if len(ret.NodeIdList) != len(ret.PubkeyList) {
 		return nil, ErrKip113BadResult
 	}
 
 	infos := make(BlsPublicKeyInfos)
-	for i := 0; i < len(ret.AddrList); i++ {
-		addr := ret.AddrList[i]
+	for i := 0; i < len(ret.NodeIdList); i++ {
+		addr := ret.NodeIdList[i]
 		info := BlsPublicKeyInfo{
 			PublicKey: ret.PubkeyList[i].PublicKey,
 			Pop:       ret.PubkeyList[i].Pop,

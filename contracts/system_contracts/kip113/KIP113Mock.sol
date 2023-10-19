@@ -20,35 +20,31 @@ pragma solidity ^0.8.0;
 import "./IKIP113.sol";
 
 contract KIP113Mock is IKIP113 {
-    function registerPublicKey(bytes calldata publicKey, bytes calldata pop) external virtual override {
-        address addr = msg.sender;
+    mapping(address => BlsPublicKeyInfo) public record;
+    address[] public allNodeIds;
 
-        if (infos[addr].publicKey.length == 0) {
-            addrs.push(addr);
+    function register(
+        address addr,
+        bytes calldata publicKey,
+        bytes calldata pop
+    ) external {
+        if (record[addr].publicKey.length == 0) {
+            allNodeIds.push(addr);
         }
-
-        infos[addr] = BlsPublicKeyInfo(publicKey, pop);
+        record[addr] = BlsPublicKeyInfo(publicKey, pop);
     }
 
-    function unregisterPublicKey(address addr) external virtual override {
-        delete infos[addr];
-    }
+    function getAllBlsInfo() external virtual override view
+    returns (address[] memory nodeIdList, BlsPublicKeyInfo[] memory pubkeyList) {
+        uint count = allNodeIds.length;
 
-    function getInfo(address addr) external virtual override view returns (BlsPublicKeyInfo memory pubkey) {
-        return infos[addr];
-    }
-
-    function getAllInfo() external virtual override view returns (address[] memory addrList, BlsPublicKeyInfo[] memory pubkeyList) {
-        uint count = addrs.length;
-
-        addrList = new address[](count);
+        nodeIdList = new address[](count);
         pubkeyList = new BlsPublicKeyInfo[](count);
 
         for (uint i = 0; i < count; i++) {
-            addrList[i] = addrs[i];
-            pubkeyList[i] = infos[addrs[i]];
+            nodeIdList[i] = allNodeIds[i];
+            pubkeyList[i] = record[allNodeIds[i]];
         }
-        return (addrList, pubkeyList);
+        return (nodeIdList, pubkeyList);
     }
 }
-

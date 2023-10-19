@@ -19,8 +19,7 @@ pragma solidity ^0.8.0;
 
 /// @title KIP-113 BLS public key registry
 /// @dev See https://github.com/klaytn/kips/issues/113
-abstract contract IKIP113 {
-
+interface IKIP113 {
     struct BlsPublicKeyInfo {
         /// @dev compressed BLS12-381 public key (48 bytes)
         bytes publicKey;
@@ -31,34 +30,7 @@ abstract contract IKIP113 {
         bytes pop;
     }
 
-    mapping(address => BlsPublicKeyInfo) infos;
-    address[] addrs;
-
-    event PubkeyRegistered(address addr, bytes publicKey, bytes pop);
-    event PubkeyUnregistered(address addr, bytes publicKey, bytes pop);
-
-    /// @dev Registers the given public key associated with the `msg.sender` address.
-    ///  The function validates the following requirements:
-    ///  - The function MUST revert if `publicKey.length != 48` or `pop.length != 96`.
-    ///  - The function MUST revert if `publicKey` or `pop` is equal to zero.
-    ///  - The function SHOULD authenticate and authorize `msg.sender`.
-    ///  The function emits a `PubkeyRegistered` event.
-    ///  _Note_ The function is not able to verify the validity of the public key and the proof-of-possession due to the lack of [EIP-2537](https://eips.ethereum.org/EIPS/eip-2537). See [validation](https://kips.klaytn.foundation/KIPs/kip-113#validation) for off-chain validation.
-    function registerPublicKey(bytes calldata publicKey, bytes calldata pop) external virtual;
-
-    /// @dev Unregisters the public key associated with the given `addr` address.
-    ///  The function validates the following requirements:
-    ///  - The function MUST revert if `addr` has not been registered.
-    ///  - The function SHOULD authenticate and authorize `msg.sender`.
-    ///  The function emits a `PubkeyUnregistered` event.
-    function unregisterPublicKey(address addr) external virtual;
-
-    /// @dev Returns the public key and proof-of-possession given a `addr`.
-    ///  The function MUST revert if given `addr` is not registered.
-    ///  _Note_ The function is not able to verify the validity of the public key and the proof-of-possession due to the lack of [EIP-2537](https://eips.ethereum.org/EIPS/eip-2537). See [validation](https://kips.klaytn.foundation/KIPs/kip-113#validation) for off-chain validation.
-    function getInfo(address addr) external virtual view returns (BlsPublicKeyInfo memory pubkey);
-
     /// @dev Returns all the stored addresses, public keys, and proof-of-possessions at once.
     ///  _Note_ The function is not able to verify the validity of the public key and the proof-of-possession due to the lack of [EIP-2537](https://eips.ethereum.org/EIPS/eip-2537). See [validation](https://kips.klaytn.foundation/KIPs/kip-113#validation) for off-chain validation.
-    function getAllInfo() external virtual view returns (address[] memory addrList, BlsPublicKeyInfo[] memory pubkeyList);
+    function getAllBlsInfo() external view returns (address[] memory nodeIdList, BlsPublicKeyInfo[] memory pubkeyList);
 }
