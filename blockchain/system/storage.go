@@ -85,6 +85,19 @@ func calcArraySlot(baseSlot interface{}, elemSize, index, offset int) common.Has
 	return common.BytesToHash(slot.Bytes())
 }
 
+// Calculate the contract storage slot for a struct element.
+// Returns keccak256(base) + index
+func calcStructSlot(baseSlot interface{}, index int) common.Hash {
+	baseBytes := lpad32(baseSlot).Bytes()
+	baseHash := crypto.Keccak256Hash(baseBytes)
+
+	slot := new(big.Int).SetBytes(baseHash.Bytes())
+
+	slot.Add(slot, big.NewInt(int64(index))) // slot += index
+
+	return common.BytesToHash(slot.Bytes())
+}
+
 // Pad Solidity "value types" to 32 bytes.
 // Only a few value types are implemented here.
 // See https://docs.soliditylang.org/en/v0.8.20/types.html
@@ -122,4 +135,13 @@ func encodeShortString(s string) common.Hash {
 	copy(b, []byte(s))
 	b[31] = byte(len(s)) * 2
 	return common.BytesToHash(b)
+}
+
+// Add a int to a hash.
+func addIntToHash(h common.Hash, i int) common.Hash {
+	slot := new(big.Int).SetBytes(h.Bytes())
+
+	slot.Add(slot, big.NewInt(int64(i))) // slot += index
+
+	return common.BytesToHash(slot.Bytes())
 }

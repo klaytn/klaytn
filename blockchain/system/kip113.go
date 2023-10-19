@@ -30,7 +30,69 @@ type BlsPublicKeyInfo struct {
 	Pop       []byte
 }
 
+type AllocKIP113Init struct {
+	// Owner common.Address
+	Infos map[common.Address]BlsPublicKeyInfo
+	Addrs []common.Address
+}
+
 type BlsPublicKeyInfos map[common.Address]BlsPublicKeyInfo
+
+func AllocKIP113(init *AllocKIP113Init) map[common.Hash]common.Hash {
+	if init == nil {
+		return nil
+	}
+	storage := make(map[common.Hash]common.Hash)
+
+	// TODO-klaytn: add storage slot calculation for owner address
+
+	// slot[0]: mapping(address => BlsPublicKeyInfo) infos;
+	// - infos[x].publicKey.length @ Hash(x, 0)
+	//   - infos[x].publicKey[:32] @ Hash(Hash(x, 0)) + 0
+	//   - infos[x].publicKey[32:] @ Hash(Hash(x, 0)) + 1
+	// - infos[x].pop.length @ Hash(x, 1) + 1
+	//   - infos[x].pop[:32] @ Hash(Hash(x, 1) + 1) + 0
+	//   - infos[x].pop[32:64] @ Hash(Hash(x, 1) + 1) + 1
+	//   - infos[x].pop[64:] @ Hash(Hash(x, 1) + 1) + 2
+	for addr, info := range init.Infos {
+		if len(info.PublicKey) != 48 || len(info.Pop) != 96 {
+			logger.Crit("Invalid BLS key", "PublicKey", info.PublicKey, "Pop", info.Pop)
+			continue
+		}
+		pupKeySlot := calcMappingSlot(0, addr)
+		popKeySlot := addIntToHash(pupKeySlot, 1)
+
+		// set publicKey.length and pop.length
+		storage[pupKeySlot] = lpad32(len(info.PublicKey)*2 + 1)
+		storage[popKeySlot] = lpad32(len(info.Pop)*2 + 1)
+
+		// publicKey[:32]
+		storage[calcStructSlot(pupKeySlot, 0)] = common.BytesToHash(info.PublicKey[:32])
+		// publicKey[32:]
+		// Note: solidity padded from the right for the byte type.
+		var h common.Hash
+		copy(h[:len(info.PublicKey[32:])], info.PublicKey[32:])
+		storage[calcStructSlot(pupKeySlot, 1)] = h
+
+		// pop[:32]
+		storage[calcStructSlot(popKeySlot, 0)] = common.BytesToHash(info.Pop[:32])
+		// pop[32:64]
+		storage[calcStructSlot(popKeySlot, 1)] = common.BytesToHash(info.Pop[32:64])
+		// pop[64:]
+		storage[calcStructSlot(popKeySlot, 2)] = common.BytesToHash(info.Pop[64:])
+	}
+
+	// slot[1]: address[] addrs;
+	// - addrs.length @ 1
+	// - addrs[i] @ Hash(1) + i
+	storage[lpad32(1)] = lpad32(len(init.Addrs))
+	for i, addr := range init.Addrs {
+		addrSlot := calcArraySlot(1, 1, i, 0)
+		storage[addrSlot] = lpad32(addr)
+	}
+
+	return storage
+}
 
 func (info BlsPublicKeyInfo) Verify() error {
 	pk, err := bls.PublicKeyFromBytes(info.PublicKey)
