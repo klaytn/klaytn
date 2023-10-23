@@ -93,10 +93,11 @@ var (
 	preimagePrefix = []byte("secure-key-")  // preimagePrefix + hash -> preimage
 	configPrefix   = []byte("klay-config-") // config prefix for the db
 
-	pruningEnabledKey = []byte("PruningEnabled")
-	pruningMarkPrefix = []byte("Pruning-")                                // KIP-111 pruning markings
-	pruningMarkValue  = []byte{0x01}                                      // A nonempty value to store a pruning mark
-	pruningMarkKeyLen = len(pruningMarkPrefix) + 8 + common.ExtHashLength // prefix + num (uint64) + node hash
+	pruningEnabledKey        = []byte("PruningEnabled")
+	pruningMarkPrefix        = []byte("Pruning-")                                // KIP-111 pruning markings
+	pruningMarkValue         = []byte{0x01}                                      // A nonempty value to store a pruning mark
+	pruningMarkKeyLen        = len(pruningMarkPrefix) + 8 + common.ExtHashLength // prefix + num (uint64) + node hash
+	lastPrunedBlockNumberKey = []byte("lastPrunedBlockNumber")
 
 	// Chain index prefixes (use `i` + single byte to avoid mixing data types).
 	BloomBitsIndexPrefix = []byte("iB") // BloomBitsIndexPrefix is the data table of a chain indexer to track its progress
@@ -129,8 +130,6 @@ var (
 	stakingInfoPrefix = []byte("stakingInfo")
 
 	chaindatafetcherCheckpointKey = []byte("chaindatafetcherCheckpoint")
-
-	lastPrunedBlockNumberKey = []byte("lastPrunedBlockNumber")
 )
 
 // TxLookupEntry is a positional metadata to help looking up the data content of
