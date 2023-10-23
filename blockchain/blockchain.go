@@ -520,7 +520,7 @@ func (bc *BlockChain) SetHead(head uint64) error {
 	// If the check below satisfied, `SetHead` exit early to avoid unncessary
 	// exhaustive loop
 	if lastPruned, err := bc.db.ReadLastPrunedBlockNumber(); err == nil {
-		if head < lastPruned {
+		if head <= lastPruned {
 			return fmt.Errorf("[SetHead] Rewinding is failed because no state trie exist beyond the target number. lastPrunedr=%d, targetHead=%d",
 				lastPruned, head)
 		}

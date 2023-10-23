@@ -299,6 +299,13 @@ func testSetHeadEarlyExit(t *testing.T, tt *rewindTest) {
 	if _, err := chain.InsertChain(canonblocks); err != nil {
 		t.Fatalf("Failed to import canonical chain start: %v", err)
 	}
+
 	db.WriteLastPrunedBlockNumber(tt.setheadBlock + 1)
-	assert.NotNil(t, chain.SetHead(tt.setheadBlock))
+	assert.Error(t, chain.SetHead(tt.setheadBlock))
+
+	db.WriteLastPrunedBlockNumber(tt.setheadBlock)
+	assert.Error(t, chain.SetHead(tt.setheadBlock))
+
+	db.WriteLastPrunedBlockNumber(tt.setheadBlock - 1)
+	assert.Nil(t, chain.SetHead(tt.setheadBlock))
 }
