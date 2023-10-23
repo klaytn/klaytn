@@ -2024,7 +2024,7 @@ func (dbm *databaseManager) PruneTrieNodes(marks []PruningMark) {
 func (dbm *databaseManager) WriteLastPrunedBlockNumber(blockNumber uint64) {
 	db := dbm.getDatabase(MiscDB)
 	if err := db.Put(lastPrunedBlockNumberKey, common.Int64ToByteLittleEndian(blockNumber)); err != nil {
-		logger.Crit("Failed to record the last pruned block number", "err", err)
+		logger.Crit("Failed to store the last pruned block number", "err", err)
 	}
 }
 
