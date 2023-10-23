@@ -511,8 +511,8 @@ web3._extend({
 			getter: 'admin_spamThrottlerConfig'
 		}),
 		new web3._extend.Property({
-			name: 'getNodeConfig',
-			getter: 'admin_getNodeConfig',
+			name: 'nodeConfig',
+			getter: 'admin_nodeConfig',
 		}),
 	]
 });

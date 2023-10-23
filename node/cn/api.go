@@ -617,6 +617,6 @@ func (api *PublicDebugAPI) getModifiedStorageNodes(contractAddr common.Address, 
 	return numModifiedNodes, nil
 }
 
-func (s *PrivateAdminAPI) GetNodeConfig(ctx context.Context) interface{} {
+func (s *PrivateAdminAPI) NodeConfig(ctx context.Context) interface{} {
 	return *s.cn.config
 }
