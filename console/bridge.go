@@ -390,6 +390,7 @@ func (b *bridge) Send(call jsre.Call) (goja.Value, error) {
 		dec    = json.NewDecoder(strings.NewReader(rawReq))
 		reqs   []jsonrpcCall
 		batch  bool
+		resps  []*goja.Object
 	)
 	dec.UseNumber() // avoid float64s
 	if rawReq[0] == '[' {
@@ -402,7 +403,6 @@ func (b *bridge) Send(call jsre.Call) (goja.Value, error) {
 	}
 
 	// Execute the requests.
-	var resps []*goja.Object
 	for _, req := range reqs {
 		resp := call.VM.NewObject()
 		resp.Set("jsonrpc", "2.0")
