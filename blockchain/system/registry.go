@@ -19,57 +19,56 @@ package system
 import (
 	"context"
 	"math/big"
+	"sort"
 
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/common"
 	contracts "github.com/klaytn/klaytn/contracts/system_contracts"
+	"github.com/klaytn/klaytn/params"
 )
-
-type RegistryRecord struct {
-	Addr       common.Address
-	Activation *big.Int
-}
-
-type AllocRegistryInit struct {
-	Records map[string][]RegistryRecord
-	Names   []string
-	Owner   common.Address
-}
 
 // Create storage state from the given initial values.
 // The storage slots are calculated according to the solidity layout rule.
 // https://docs.soliditylang.org/en/v0.8.20/internals/layout_in_storage.html
-func AllocRegistry(init *AllocRegistryInit) map[common.Hash]common.Hash {
+func AllocRegistry(init *params.RegistryConfig) map[common.Hash]common.Hash {
 	if init == nil {
 		return nil
+	}
+	if init.Records == nil {
+		init.Records = make(map[string]common.Address)
 	}
 	storage := make(map[common.Hash]common.Hash)
 
 	// slot[0]: mapping(string => Record[]) records;
+	// In AllocRegistry, records[name] is always Record[] of one element.
 	// - records[x].length @ Hash(x, 0)
 	// - records[x][i].addr @ Hash(Hash(x, 0)) + (2*i)
 	// - records[x][i].activation @ Hash(Hash(x, 0)) + (2*i + 1)
-	for name, records := range init.Records {
+	for name, addr := range init.Records {
 		arraySlot := calcMappingSlot(0, name)
-		storage[arraySlot] = lpad32(len(records))
+		storage[arraySlot] = lpad32(1) // records[name].length = 1
 
-		for i, record := range records {
-			addrSlot := calcArraySlot(arraySlot, 2, i, 0)
-			activationSlot := calcArraySlot(arraySlot, 2, i, 1)
+		addrSlot := calcArraySlot(arraySlot, 2, 0, 0)
+		activationSlot := calcArraySlot(arraySlot, 2, 0, 1)
 
-			storage[addrSlot] = lpad32(record.Addr)
-			storage[activationSlot] = lpad32(record.Activation)
-		}
+		storage[addrSlot] = lpad32(addr)    // records[name][0].addr
+		storage[activationSlot] = lpad32(0) // records[name][0].activation
 	}
+
+	names := make([]string, 0)
+	for name := range init.Records {
+		names = append(names, name)
+	}
+	sort.Strings(names)
 
 	// slot[1]: string[] names;
 	// - names.length @ 1
 	// - names[i] @ Hash(1) + i
-	storage[lpad32(1)] = lpad32(len(init.Names))
-	for i, name := range init.Names {
+	storage[lpad32(1)] = lpad32(len(names)) // names.length
+	for i, name := range names {
 		nameSlot := calcArraySlot(1, 1, i, 0)
-		storage[nameSlot] = encodeShortString(name)
+		storage[nameSlot] = encodeShortString(name) // names[i]
 	}
 
 	// slot[2]: address _owner;
@@ -78,7 +77,7 @@ func AllocRegistry(init *AllocRegistryInit) map[common.Hash]common.Hash {
 	return storage
 }
 
-func InstallRegistry(state *state.StateDB, init *AllocRegistryInit) error {
+func InstallRegistry(state *state.StateDB, init *params.RegistryConfig) error {
 	if err := state.SetCode(RegistryAddr, RegistryCode); err != nil {
 		return err
 	}
@@ -90,17 +89,17 @@ func InstallRegistry(state *state.StateDB, init *AllocRegistryInit) error {
 }
 
 func ReadRegistryActiveAddr(backend bind.ContractCaller, name string, num *big.Int) (common.Address, error) {
-	caller, err := contracts.NewRegistryCaller(RegistryAddr, backend)
-	if err != nil {
-		return common.Address{}, err
-	}
-
-	code, err := backend.CodeAt(context.Background(), RegistryAddr, nil)
+	code, err := backend.CodeAt(context.Background(), RegistryAddr, num)
 	if err != nil {
 		return common.Address{}, err
 	}
 	if code == nil {
 		return common.Address{}, ErrRegistryNotInstalled
+	}
+
+	caller, err := contracts.NewRegistryCaller(RegistryAddr, backend)
+	if err != nil {
+		return common.Address{}, err
 	}
 
 	opts := &bind.CallOpts{BlockNumber: num}

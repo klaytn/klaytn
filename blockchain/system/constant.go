@@ -30,13 +30,18 @@ var (
 
 	// Canonical system contract names registered in Registry.
 	AddressBookName = "AddressBook"
+	GovParamName    = "GovParam"
+	Kip103Name      = "TreasuryRebalance"
 
 	AllContractNames = []string{
 		AddressBookName,
+		GovParamName,
+		Kip103Name,
 	}
 
 	// Some system contracts are allocated at special addresses.
-	RegistryAddr = common.HexToAddress("0x0000000000000000000000000000000000000401")
+	AddressBookAddr = common.HexToAddress("0x0000000000000000000000000000000000000400") // TODO: replace contracts/reward/contract/utils.go
+	RegistryAddr    = common.HexToAddress("0x0000000000000000000000000000000000000401")
 
 	// System contract binaries to be injected at hardfork or used in testing.
 	RegistryCode     = hexutil.MustDecode("0x" + contracts.RegistryBinRuntime)
