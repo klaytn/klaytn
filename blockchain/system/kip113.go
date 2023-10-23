@@ -44,36 +44,25 @@ func AllocKip113(init AllocKip113Init) map[common.Hash]common.Hash {
 	storage := make(map[common.Hash]common.Hash)
 
 	// slot[0]: mapping(address => BlsPublicKeyInfo) infos;
-	// - infos[x].publicKey.length  @ Hash(x, 0)
-	//   - infos[x].publicKey[:32]  @ Hash(Hash(x, 0)) + 0
-	//   - infos[x].publicKey[32:]  @ Hash(Hash(x, 0)) + 1
-	// - infos[x].pop.length    @ Hash(x, 0) + 1
-	//   - infos[x].pop[:32]    @ Hash(Hash(x, 0) + 1) + 0
-	//   - infos[x].pop[32:64]  @ Hash(Hash(x, 0) + 1) + 1
-	//   - infos[x].pop[64:]    @ Hash(Hash(x, 0) + 1) + 2
+	// - infos[x].publicKey.length @ Hash(x, 0)      = el
+	// - infos[x].publicKey        @ Hash(el) + 0..1
+	// - infos[x].pop.length       @ Hash(x, 0) + 1  = el
+	// - infos[x].pop              @ Hash(el) + 0..2
 	for addr, info := range init {
 		// The below slot calculation assumes 48-byte and 96-byte Solidity `bytes` values.
 		if len(info.PublicKey) != 48 || len(info.Pop) != 96 {
 			logger.Crit("Invalid AllocKip113Init")
 		}
-		pupKeySlot := calcMappingSlot(0, addr)
-		popKeySlot := addIntToHash(pupKeySlot, 1)
 
-		// set publicKey.length and pop.length
-		storage[pupKeySlot] = lpad32(len(info.PublicKey)*2 + 1)
-		storage[popKeySlot] = lpad32(len(info.Pop)*2 + 1)
+		pubSlot := calcMappingSlot(0, addr, 0)
+		popSlot := calcMappingSlot(0, addr, 1)
 
-		// 48 = 32 + 16. The latter 16 byte must be right padded (= left justed),
-		// so that the two slots form a consecutive 48-byte.
-		storage[calcStructSlot(pupKeySlot, 0)] = common.BytesToHash(info.PublicKey[:32]) // publicKey[:32]
-		pad := make([]byte, 16)
-		padded := append(info.PublicKey[32:], pad...)
-		storage[calcStructSlot(pupKeySlot, 1)] = common.BytesToHash(padded) // publicKey[32:]
-
-		// Conveniently, 96 = 32 * 3
-		storage[calcStructSlot(popKeySlot, 0)] = common.BytesToHash(info.Pop[:32])   // pop[:32]
-		storage[calcStructSlot(popKeySlot, 1)] = common.BytesToHash(info.Pop[32:64]) // pop[32:64]
-		storage[calcStructSlot(popKeySlot, 2)] = common.BytesToHash(info.Pop[64:])   // pop[64:]
+		for k, v := range allocDynamicData(pubSlot, info.PublicKey) {
+			storage[k] = v
+		}
+		for k, v := range allocDynamicData(popSlot, info.Pop) {
+			storage[k] = v
+		}
 	}
 
 	addrs := make([]common.Address, 0)
@@ -138,7 +127,7 @@ func ReadKip113All(backend bind.ContractCaller, contractAddr common.Address, num
 			Pop:       ret.PubkeyList[i].Pop,
 		}
 
-		if err := info.Verify(); err == nil {
+		if info.Verify() == nil {
 			infos[addr] = info
 		}
 	}

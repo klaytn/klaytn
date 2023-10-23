@@ -24,7 +24,7 @@ import (
 )
 
 // Calculate the contract storage slot for a mapping element.
-// Returns keccak256(h(key) . base) where h() differs by the key type.
+// Returns keccak256(h(key) . base) + offset where h() differs by the key type.
 //
 // "The value corresponding to a mapping key k is located at keccak256(h(k) . p)
 // where . is concatenation and h is a function that is applied to the key depending
@@ -41,7 +41,7 @@ import (
 // - string to represent Solidity string
 //
 // See https://docs.soliditylang.org/en/v0.8.20/internals/layout_in_storage.html
-func calcMappingSlot(baseSlot, key interface{}) common.Hash {
+func calcMappingSlot(baseSlot, key interface{}, offset int) common.Hash {
 	baseBytes := lpad32(baseSlot).Bytes()
 
 	var keyBytes []byte
@@ -56,7 +56,11 @@ func calcMappingSlot(baseSlot, key interface{}) common.Hash {
 		keyBytes = lpad32(key).Bytes()
 	}
 
-	return crypto.Keccak256Hash(append(keyBytes, baseBytes...))
+	elemHash := crypto.Keccak256Hash(append(keyBytes, baseBytes...))
+
+	slot := new(big.Int).SetBytes(elemHash.Bytes())
+	slot.Add(slot, big.NewInt(int64(offset))) // slot += offset
+	return common.BytesToHash(slot.Bytes())
 }
 
 // Calculate the contract storage slot for a dynamic array element.
@@ -85,17 +89,48 @@ func calcArraySlot(baseSlot interface{}, elemSize, index, offset int) common.Has
 	return common.BytesToHash(slot.Bytes())
 }
 
-// Calculate the contract storage slot for a struct element.
-// Returns keccak256(base) + index
-func calcStructSlot(baseSlot interface{}, index int) common.Hash {
-	baseBytes := lpad32(baseSlot).Bytes()
-	baseHash := crypto.Keccak256Hash(baseBytes)
+// Allocates a dynamic string or bytes data that begins at `baseSlot`.
+//   - If the data is less than 32-bytes long,
+//     @ base         [data..., 0..., len*2+0] // even number indicates short string
+//   - If the data is 32-bytes or longer,
+//     @ base         [0...,          len*2+1] // odd number indicates long string
+//     @ H(base) + i  [ data[i*32 : i*32+32] ] // right padded (left aligned)
+func allocDynamicData(baseSlot interface{}, data []byte) map[common.Hash]common.Hash {
+	storage := make(map[common.Hash]common.Hash)
+	base := lpad32(baseSlot)
 
-	slot := new(big.Int).SetBytes(baseHash.Bytes())
+	// Short string
+	if len(data) < 32 {
+		slice := make([]byte, 32)
+		copy(slice[:], data)
+		slice[31] = byte(len(data) * 2)
 
-	slot.Add(slot, big.NewInt(int64(index))) // slot += index
+		storage[base] = common.BytesToHash(slice)
+		return storage
+	}
 
-	return common.BytesToHash(slot.Bytes())
+	// Long string
+	bigLen := big.NewInt(int64(len(data)*2 + 1))
+	storage[base] = common.BytesToHash(bigLen.Bytes())
+
+	baseHash := crypto.Keccak256Hash(base.Bytes())
+	bigSlot := new(big.Int).SetBytes(baseHash.Bytes())
+	for len(data) >= 32 {
+		slot := common.BytesToHash(bigSlot.Bytes())
+		storage[slot] = common.BytesToHash(data[0:32])
+
+		data = data[32:]
+		bigSlot = new(big.Int).Add(bigSlot, common.Big1)
+	}
+	if len(data) > 0 {
+		slice := make([]byte, 32)
+		copy(slice[:], data)
+
+		slot := common.BytesToHash(bigSlot.Bytes())
+		storage[slot] = common.BytesToHash(slice)
+	}
+
+	return storage
 }
 
 // Pad Solidity "value types" to 32 bytes.
@@ -117,31 +152,4 @@ func lpad32(value interface{}) common.Hash {
 		logger.Crit("not a slot value type", "value", value)
 		return common.Hash{}
 	}
-}
-
-// Pad a dynamic string to a single slot.
-// Only strings at most 31 bytes long are implemented here.
-// See https://docs.soliditylang.org/en/v0.8.20/internals/layout_in_storage.html
-func encodeShortString(s string) common.Hash {
-	if len(s) > 31 {
-		logger.Crit("encoding more than 31 byte string is not implemented")
-		return common.Hash{}
-	}
-
-	// "In particular: if the data is at most 31 bytes long,
-	// the elements are stored in the higher-order bytes (left aligned)
-	// and the lowest-order byte stores the value length * 2."
-	b := make([]byte, 32)
-	copy(b, []byte(s))
-	b[31] = byte(len(s)) * 2
-	return common.BytesToHash(b)
-}
-
-// Add a int to a hash.
-func addIntToHash(h common.Hash, i int) common.Hash {
-	slot := new(big.Int).SetBytes(h.Bytes())
-
-	slot.Add(slot, big.NewInt(int64(i))) // slot += index
-
-	return common.BytesToHash(slot.Bytes())
 }
