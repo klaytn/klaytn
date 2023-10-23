@@ -18,16 +18,50 @@
 pragma solidity ^0.8.0;
 
 abstract contract IRegistry {
+    /* ========== VARIABLES ========== */
+    /// The following variables are baked here because their storage layouts matter in protocol consensus
+    /// when inject initial states (pre-deployed system contracts, owner) of the Registry.
+    /// @dev Mapping of system contracts
+    mapping(string => Record[]) public records;
+
+    /// @dev Array of system contract names
+    string[] public names;
+
+    /// @dev Owner of contract
+    address internal _owner;
+
+    /* ========== TYPES ========== */
+    /// @dev Struct of system contracts
     struct Record {
         address addr;
         uint256 activation;
     }
 
-    // Crucial variables are baked in the interface
-    // because their storage layout matters in protocol consensus.
-    mapping(string => Record[]) public records;
-    string[] public names;
-    address internal _owner;
+    /* ========== EVENTS ========== */
+    /// @dev Emitted when the contract owner is updated by `transferOwnership`.
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
-    function getActiveAddr(string memory name) external virtual view returns (address);
+    /// @dev Emitted when a new system contract is registered.
+    event Registered(string name, address indexed addr, uint256 indexed activation);
+
+    /* ========== MUTATORS ========== */
+    /// @dev Registers a new system contract.
+    function register(string memory name, address addr, uint256 activation) external virtual;
+
+    /// @dev Transfers ownership to newOwner.
+    function transferOwnership(address newOwner) external virtual;
+
+    /* ========== GETTERS ========== */
+    /// @dev Returns an address for active system contracts registered as name if exists.
+    /// It returns a zero address if there's no active system contract with name.
+    function getActiveAddr(string memory name) external virtual returns (address);
+
+    /// @dev Returns all system contracts registered as name.
+    function getAllRecords(string memory name) external view virtual returns (Record[] memory);
+
+    /// @dev Returns all names of registered system contracts.
+    function getAllNames() external view virtual returns (string[] memory);
+
+    /// @dev Returns owner of contract.
+    function owner() external view virtual returns (address);
 }
