@@ -387,7 +387,7 @@ func TestPruningByUpdate(t *testing.T) {
 
 	// Those nodes and the only those nodes are scheduled to be deleted
 	expectedMarks := []database.PruningMark{
-		{Number: 1, Hash: nodehash1},
+		// `nodeHash1` was not marked beacuse of the zero-extended hash
 		{Number: 1, Hash: nodehash2},
 	}
 	marks := dbm.ReadPruningMarks(0, 0)
@@ -395,7 +395,6 @@ func TestPruningByUpdate(t *testing.T) {
 
 	// The nodes are deleted
 	dbm.PruneTrieNodes(marks)
-	assert.False(t, hasnode(nodehash1))
 	assert.False(t, hasnode(nodehash2))
 }
 
@@ -433,8 +432,8 @@ func TestPruningByDelete(t *testing.T) {
 	db.Cap(0)
 
 	// Those nodes and the only those nodes are scheduled to be deleted
+	// `nodeHash1` was not marked beacuse of the zero-extended hash
 	expectedMarks := []database.PruningMark{
-		{Number: 1, Hash: nodehash1},
 		{Number: 1, Hash: nodehash2},
 	}
 	marks := dbm.ReadPruningMarks(0, 0)
@@ -442,7 +441,6 @@ func TestPruningByDelete(t *testing.T) {
 
 	// The nodes are deleted
 	dbm.PruneTrieNodes(marks)
-	assert.False(t, hasnode(nodehash1))
 	assert.False(t, hasnode(nodehash2))
 }
 

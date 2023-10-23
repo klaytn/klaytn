@@ -619,7 +619,11 @@ func (t *Trie) markPrunableNode(n node) {
 		// If node.flags.hash is nonempty, it means the node is either:
 		// (1) loaded from databas - subject to pruning,
 		// (2) went through hasher by Hash or Commit - may or may not be in database, add the mark anyway.
-		t.pruningMarksCache[common.BytesToExtHash(hn)] = t.PruningBlockNumber
+		h := common.BytesToExtHash(hn)
+		if !h.IsZeroExtended() {
+			// Remove the dity node with non-zero extended hash
+			t.pruningMarksCache[common.BytesToExtHash(hn)] = t.PruningBlockNumber
+		}
 	}
 }
 

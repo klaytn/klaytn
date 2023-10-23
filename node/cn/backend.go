@@ -274,9 +274,6 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	// Write the live pruning flag to database if the node is started for the first time
 	if config.LivePruning && !chainDB.ReadPruningEnabled() {
-		if bc.CurrentBlock().NumberU64() > 0 {
-			return nil, errors.New("cannot enable live pruning after chain has advanced")
-		}
 		logger.Info("Writing live pruning flag to database")
 		chainDB.WritePruningEnabled()
 	}
