@@ -622,7 +622,7 @@ func (t *Trie) markPrunableNode(n node) {
 		h := common.BytesToExtHash(hn)
 		if !h.IsZeroExtended() {
 			// Remove the dity node with non-zero extended hash
-			t.pruningMarksCache[common.BytesToExtHash(hn)] = t.PruningBlockNumber
+			t.pruningMarksCache[h] = t.PruningBlockNumber
 		}
 	}
 }
