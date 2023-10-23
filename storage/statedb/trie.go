@@ -595,6 +595,7 @@ func (t *Trie) hashRoot(db *Database, onleaf LeafCallback) (common.ExtHash, node
 		pruning:     t.pruning, // If database has pruning enabled, nodes must be stored with ExtHash.
 		storageRoot: t.storage,
 	})
+
 	defer returnHasherToPool(h)
 	hashed, cached := h.hashRoot(t.root, db, true)
 	hash := common.BytesToExtHash(hashed.(hashNode))
@@ -620,8 +621,8 @@ func (t *Trie) markPrunableNode(n node) {
 		// (1) loaded from databas - subject to pruning,
 		// (2) went through hasher by Hash or Commit - may or may not be in database, add the mark anyway.
 		h := common.BytesToExtHash(hn)
-		if !h.IsZeroExtended() {
-			// Remove the dity node with non-zero extended hash
+		if !h.IsZeroExtended() || t.originalRoot == h {
+			// Remove a dity node which exists as unique
 			t.pruningMarksCache[h] = t.PruningBlockNumber
 		}
 	}
