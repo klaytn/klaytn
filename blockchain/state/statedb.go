@@ -95,6 +95,9 @@ type StateDB struct {
 	// Per-transaction access list
 	accessList *accessList
 
+	// Transient storage
+	transientStorage transientStorage
+
 	// Journal of state modifications. This is the backbone of
 	// Snapshot and RevertToSnapshot.
 	journal        *journal
@@ -134,6 +137,7 @@ func New(root common.Hash, db Database, snaps *snapshot.Tree, opts *statedb.Trie
 		logs:                     make(map[common.Hash][]*types.Log),
 		preimages:                make(map[common.Hash][]byte),
 		accessList:               newAccessList(),
+		transientStorage:         newTransientStorage(),
 		journal:                  newJournal(),
 	}
 	if sdb.snaps != nil {
@@ -523,6 +527,35 @@ func (s *StateDB) SelfDestruct6780(addr common.Address) {
 	}
 }
 
+// SetTransientState sets transient storage for a given account. It
+// adds the change to the journal so that it can be rolled back
+// to its previous value if there is a revert.
+func (s *StateDB) SetTransientState(addr common.Address, key, value common.Hash) {
+	prev := s.GetTransientState(addr, key)
+	if prev == value {
+		return
+	}
+
+	s.journal.append(transientStorageChange{
+		account:  &addr,
+		key:      key,
+		prevalue: prev,
+	})
+
+	s.setTransientState(addr, key, value)
+}
+
+// setTransientState is a lower level setter for transient storage. It
+// is called during a revert to prevent modifications to the journal.
+func (s *StateDB) setTransientState(addr common.Address, key, value common.Hash) {
+	s.transientStorage.Set(addr, key, value)
+}
+
+// GetTransientState gets transient storage for a given account.
+func (s *StateDB) GetTransientState(addr common.Address, key common.Hash) common.Hash {
+	return s.transientStorage.Get(addr, key)
+}
+
 //
 // Setting, updating & deleting state object methods.
 //
@@ -840,7 +873,7 @@ func (s *StateDB) Copy() *StateDB {
 	// However, it doesn't cost us much to copy an empty list, so we do it anyway
 	// to not blow up if we ever decide copy it in the middle of a transaction
 	state.accessList = s.accessList.Copy()
-
+	state.transientStorage = s.transientStorage.Copy()
 	if s.snaps != nil {
 		// In order for the miner to be able to use and make additions
 		// to the snapshot tree, we need to copy that aswell.
@@ -972,9 +1005,9 @@ func (s *StateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 	return s.trie.Hash()
 }
 
-// Prepare sets the current transaction hash and index and block hash which is
+// SetTxContext sets the current transaction hash and index and block hash which is
 // used when the EVM emits new state logs.
-func (s *StateDB) Prepare(thash, bhash common.Hash, ti int) {
+func (s *StateDB) SetTxContext(thash, bhash common.Hash, ti int) {
 	s.thash = thash
 	s.bhash = bhash
 	s.txIndex = ti
@@ -1099,17 +1132,20 @@ func (s *StateDB) GetContractStorageRoot(contractAddr common.Address) (common.Ex
 	return contract.GetStorageRoot(), nil
 }
 
-// PrepareAccessList handles the preparatory steps for executing a state transition with
-// regards to EIP-2929:
+// Prepare handles the preparatory steps for executing a state transition with.
+// This method must be invoked before state transition.
 //
+// Kore fork:
 // - Add sender to access list (2929)
 // - Add feepayer to access list (only for klaytn)
 // - Add destination to access list (2929)
 // - Add precompiles to access list (2929)
 //
-// regards to EIP-3651:
+// Shanghai fork:
 // - Add coinbase to access list (EIP-3651)
-func (s *StateDB) PrepareAccessList(rules params.Rules, sender, feepayer, coinbase common.Address, dst *common.Address, precompiles []common.Address, list types.AccessList) {
+// Potential EIPs:
+// - Reset transient storage(1153)
+func (s *StateDB) Prepare(rules params.Rules, sender, feepayer, coinbase common.Address, dst *common.Address, precompiles []common.Address, list types.AccessList) {
 	if rules.IsKore {
 		// Clear out any leftover from previous executions
 		s.accessList = newAccessList()
@@ -1125,21 +1161,21 @@ func (s *StateDB) PrepareAccessList(rules params.Rules, sender, feepayer, coinba
 		for _, addr := range precompiles {
 			s.AddAddressToAccessList(addr)
 		}
-
-		if rules.IsCancun {
-			// Optional accessList is the accessList mentioned through tx args.
-			for _, el := range list {
-				s.AddAddressToAccessList(el.Address)
-				for _, key := range el.StorageKeys {
-					s.AddSlotToAccessList(el.Address, key)
-				}
+	}
+	if rules.IsShanghai {
+		s.AddAddressToAccessList(coinbase)
+	}
+	if rules.IsCancun {
+		// Optional accessList is the accessList mentioned through tx args.
+		for _, el := range list {
+			s.AddAddressToAccessList(el.Address)
+			for _, key := range el.StorageKeys {
+				s.AddSlotToAccessList(el.Address, key)
 			}
 		}
-
-		if rules.IsShanghai {
-			s.AddAddressToAccessList(coinbase)
-		}
 	}
+	// Reset transient storage at the beginning of transaction execution
+	s.transientStorage = newTransientStorage()
 }
 
 // AddAddressToAccessList adds the given address to the access list

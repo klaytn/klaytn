@@ -343,7 +343,11 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	}
 
 	rules := st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber)
-	st.state.PrepareAccessList(rules, msg.ValidatedSender(), msg.ValidatedFeePayer(), st.evm.Context.Coinbase, msg.To(), vm.ActivePrecompiles(rules), msg.AccessList())
+
+	// Execute the preparatory steps for state transition which includes:
+	// - prepare accessList(post-berlin)
+	// - reset transient storage(eip 1153)
+	st.state.Prepare(rules, msg.ValidatedSender(), msg.ValidatedFeePayer(), st.evm.Context.Coinbase, msg.To(), vm.ActivePrecompiles(rules), msg.AccessList())
 
 	// Check whether the init code size has been exceeded.
 	if rules.IsShanghai && msg.To() == nil && len(st.data) > params.MaxInitCodeSize {
