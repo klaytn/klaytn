@@ -12,7 +12,7 @@ aliases:
     branches:
       ignore:
         - /release\/.*/
-        - master
+        - main
 
 orbs:
   codecov: codecov/codecov@1.0.5
@@ -234,8 +234,8 @@ commands:
               if [[ $version == *"release/${CIRCLE_TAG%-*}"* ]]; then
                 echo "PR already exist"
               else
-                echo "hub pull-request -m "[Master] release/$CIRCLE_TAG QA Signoff" -b $CIRCLE_PROJECT_USERNAME:master -h $CIRCLE_PROJECT_USERNAME:${CIRCLE_TAG%-*}"
-                echo -e "[Master] release/${CIRCLE_TAG%-*} QA Sign-off\n\nThis PR is automatically created by CI to release a new official version of $CIRCLE_PROJECT_REPONAME.\n\nWhen this PR is approved by QA team, a new version will be released." | hub pull-request -b $CIRCLE_PROJECT_USERNAME:master -h $CIRCLE_PROJECT_USERNAME:release/${CIRCLE_TAG%-*} -r $GITHUB_reviewer -l circleci -F-
+                echo "hub pull-request -m "[Main] release/$CIRCLE_TAG QA Signoff" -b $CIRCLE_PROJECT_USERNAME:master -h $CIRCLE_PROJECT_USERNAME:${CIRCLE_TAG%-*}"
+                echo -e "[Main] release/${CIRCLE_TAG%-*} QA Sign-off\n\nThis PR is automatically created by CI to release a new official version of $CIRCLE_PROJECT_REPONAME.\n\nWhen this PR is approved by QA team, a new version will be released." | hub pull-request -b $CIRCLE_PROJECT_USERNAME:main -h $CIRCLE_PROJECT_USERNAME:release/${CIRCLE_TAG%-*} -r $GITHUB_reviewer -l circleci -F-
               fi
       - run:
           name: "build announce"
@@ -718,7 +718,7 @@ workflows:
       - major-tagging:
           filters:
             branches:
-              only: master
+              only: main
 
   nightly-coverage:
     triggers:

@@ -18,6 +18,6 @@ jobs:
         with:
           path-to-signatures: "${{ github.event.repository.name }}/signatures/version1/cla.json"
           path-to-document: "https://gist.github.com/e78f99e1c527225637e269cff1bc7e49" # Klaytn Gist
-          branch: "master"
+          branch: "main"
           allowlist: dependabot[bot], KlaytnDev, circleci-klaytn
           remote-repository-name: ${{ secrets.CLA_REPOSITORY }}
