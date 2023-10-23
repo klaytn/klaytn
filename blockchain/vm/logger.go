@@ -101,12 +101,18 @@ func (s *StructLog) ErrorString() string {
 // Note that reference types are actual VM data structures; make copies
 // if you need to retain them beyond the current call.
 type Tracer interface {
+	// Transaction level
 	CaptureTxStart(gasLimit uint64)
 	CaptureTxEnd(restGas uint64)
-	CaptureStart(from common.Address, to common.Address, call bool, input []byte, gas uint64, value *big.Int)
+	// Top call frame
+	CaptureStart(env *EVM, from common.Address, to common.Address, call bool, input []byte, gas uint64, value *big.Int)
+	CaptureEnd(output []byte, gasUsed uint64, err error)
+	// Rest of call frames
+	CaptureEnter(typ OpCode, from common.Address, to common.Address, input []byte, gas uint64, value *big.Int)
+	CaptureExit(output []byte, gasUsed uint64, err error)
+	// Opcode level
 	CaptureState(env *EVM, pc uint64, op OpCode, gas, cost uint64, scope *ScopeContext, depth int, err error)
 	CaptureFault(env *EVM, pc uint64, op OpCode, gas, cost uint64, scope *ScopeContext, depth int, err error)
-	CaptureEnd(output []byte, gasUsed uint64, err error)
 }
 
 // StructLogger is an EVM state logger and implements Tracer.
@@ -135,7 +141,7 @@ func NewStructLogger(cfg *LogConfig) *StructLogger {
 }
 
 // CaptureStart implements the Tracer interface to initialize the tracing operation.
-func (l *StructLogger) CaptureStart(from common.Address, to common.Address, create bool, input []byte, gas uint64, value *big.Int) {
+func (l *StructLogger) CaptureStart(env *EVM, from common.Address, to common.Address, create bool, input []byte, gas uint64, value *big.Int) {
 }
 
 // CaptureState logs a new structured log message and pushes it out to the environment
@@ -206,6 +212,11 @@ func (l *StructLogger) CaptureEnd(output []byte, gasUsed uint64, err error) {
 		}
 	}
 }
+
+func (l *StructLogger) CaptureEnter(typ OpCode, from common.Address, to common.Address, input []byte, gas uint64, value *big.Int) {
+}
+
+func (l *StructLogger) CaptureExit(output []byte, gasUsed uint64, err error) {}
 
 func (l *StructLogger) CaptureTxStart(gasLimit uint64) {}
 
