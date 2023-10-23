@@ -32,12 +32,11 @@ import (
 	"syscall"
 
 	"github.com/dop251/goja"
-	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/networks/rpc"
-
 	"github.com/klaytn/klaytn/console/jsre"
 	"github.com/klaytn/klaytn/console/jsre/deps"
 	"github.com/klaytn/klaytn/console/web3ext"
+	"github.com/klaytn/klaytn/log"
+	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/mattn/go-colorable"
 	"github.com/peterh/liner"
 )

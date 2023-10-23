@@ -53,7 +53,7 @@ type operation struct {
 	// This value will be used to limit the execution time of a transaction on EVM.
 	computationCost uint64
 
-	writes  bool // determines whether this a state modifying operation
+	writes bool // determines whether this a state modifying operation
 }
 
 var (
