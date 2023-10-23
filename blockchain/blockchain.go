@@ -514,14 +514,12 @@ func (bc *BlockChain) loadLastState() error {
 // that the rewind must pass the specified state root. The method will try to
 // delete minimal data from disk whilst retaining chain consistency.
 func (bc *BlockChain) SetHead(head uint64) error {
-	// With the live-pruning enable, `setHead` operation had a limitation
-	// against the target block number to be rewound because live-pruning
-	// have removed beyond the number of `LivePruningRetention`
-	// If the check below satisfied, `SetHead` exit early to avoid unncessary
-	// exhaustive loop
+	// With the live pruning enabled, an attempt to SetHead into a state-pruned block number
+	// may result in an infinite loop, trying to find the existing block (probably the genesis block).
+	// If the target `head` is below the surviving block numbers, SetHead early exits with an error.
 	if lastPruned, err := bc.db.ReadLastPrunedBlockNumber(); err == nil {
 		if head <= lastPruned {
-			return fmt.Errorf("[SetHead] Rewinding is failed because no state trie exist beyond the target number. lastPrunedr=%d, targetHead=%d",
+			return fmt.Errorf("[SetHead] Cannot rewind to a state-pruned block number. lastPrunedBlock=%d targetHead=%d",
 				lastPruned, head)
 		}
 	}
