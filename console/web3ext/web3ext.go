@@ -510,6 +510,10 @@ web3._extend({
 			name: 'spamThrottlerConfig',
 			getter: 'admin_spamThrottlerConfig'
 		}),
+		new web3._extend.Property({
+			name: 'nodeConfig',
+			getter: 'admin_nodeConfig',
+		}),
 	]
 });
 `
@@ -1100,7 +1104,7 @@ web3._extend({
 			name: 'maxPriorityFeePerGas',
 			getter: 'klay_maxPriorityFeePerGas',
 			outputFormatter: web3._extend.utils.toBigNumber
-		})
+		}),
 	]
 });
 `
