@@ -622,7 +622,8 @@ func (t *Trie) markPrunableNode(n node) {
 		// (2) went through hasher by Hash or Commit - may or may not be in database, add the mark anyway.
 		h := common.BytesToExtHash(hn)
 		if !h.IsZeroExtended() || t.originalRoot == h {
-			// Remove a dity node which exists as unique
+			// (1) Remove a dirty node which exists as unique
+			// (2) Remove a dirty root node which probably exists as unique
 			t.pruningMarksCache[h] = t.PruningBlockNumber
 		}
 	}

@@ -371,6 +371,7 @@ func TestPruningByUpdate(t *testing.T) {
 	// By inserting "dogglesworth", both extension and branch nodes are affected, hence pruning the both.
 
 	// Update and commit to store the nodes
+	trie.originalRoot = nodehash1 // set trie root hash
 	updateString(trie, "doe", "reindeer")
 	updateString(trie, "dog", "puppy")
 	trie.Commit(nil)
@@ -388,6 +389,7 @@ func TestPruningByUpdate(t *testing.T) {
 	// Those nodes and the only those nodes are scheduled to be deleted
 	expectedMarks := []database.PruningMark{
 		// `nodeHash1` was not marked beacuse of the zero-extended hash
+		{Number: 1, Hash: nodehash1},
 		{Number: 1, Hash: nodehash2},
 	}
 	marks := dbm.ReadPruningMarks(0, 0)
@@ -395,6 +397,7 @@ func TestPruningByUpdate(t *testing.T) {
 
 	// The nodes are deleted
 	dbm.PruneTrieNodes(marks)
+	assert.False(t, hasnode(nodehash1))
 	assert.False(t, hasnode(nodehash2))
 }
 
@@ -417,6 +420,7 @@ func TestPruningByDelete(t *testing.T) {
 	// By deleting "doe", both extension and branch nodes are affected, hence pruning the both.
 
 	// Update and commit to store the nodes
+	trie.originalRoot = nodehash1 // set trie root hash
 	updateString(trie, "doe", "reindeer")
 	updateString(trie, "dog", "puppy")
 	trie.Commit(nil)
@@ -434,6 +438,7 @@ func TestPruningByDelete(t *testing.T) {
 	// Those nodes and the only those nodes are scheduled to be deleted
 	// `nodeHash1` was not marked beacuse of the zero-extended hash
 	expectedMarks := []database.PruningMark{
+		{Number: 1, Hash: nodehash1},
 		{Number: 1, Hash: nodehash2},
 	}
 	marks := dbm.ReadPruningMarks(0, 0)
@@ -441,6 +446,7 @@ func TestPruningByDelete(t *testing.T) {
 
 	// The nodes are deleted
 	dbm.PruneTrieNodes(marks)
+	assert.False(t, hasnode(nodehash1))
 	assert.False(t, hasnode(nodehash2))
 }
 
