@@ -891,21 +891,6 @@ func opStop(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
 	return nil, errStopToken
 }
 
-func opSelfdestruct(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	// TODO-klaytn: call frame tracing https://github.com/ethereum/go-ethereum/pull/23087
-	// beneficiary := scope.Stack.pop()
-	balance := evm.StateDB.GetBalance(scope.Contract.Address())
-	evm.StateDB.AddBalance(common.BigToAddress(scope.Stack.pop()), balance)
-	evm.StateDB.SelfDestruct(scope.Contract.Address())
-
-	// if evm.interpreter.cfg.Debug {
-	// 	evm.interpreter.cfg.Tracer.CaptureEnter(SELFDESTRUCT, scope.Contract.Address(), common.BigToAddress(beneficiary), []byte{}, 0, balance)
-	// 	evm.interpreter.cfg.Tracer.CaptureExit([]byte{}, 0, nil)
-	// }
-
-	return nil, errStopToken
-}
-
 // opPush1 is a specialized version of pushN
 func opPush1(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
 	var (
@@ -921,6 +906,21 @@ func opPush1(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
 	return nil, nil
 }
 
+func opSelfdestruct(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
+	if evm.interpreter.readOnly {
+		return nil, ErrWriteProtection
+	}
+	beneficiary := scope.Stack.pop()
+	balance := evm.StateDB.GetBalance(scope.Contract.Address())
+	evm.StateDB.AddBalance(common.BigToAddress(beneficiary), balance)
+	evm.StateDB.SelfDestruct(scope.Contract.Address())
+	if tracer := evm.Config.Tracer; tracer != nil {
+		tracer.CaptureEnter(SELFDESTRUCT, scope.Contract.Address(), common.BigToAddress(beneficiary), []byte{}, 0, balance)
+		tracer.CaptureExit([]byte{}, 0, nil)
+	}
+	return nil, errStopToken
+}
+
 func opSelfdestruct6780(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
 	if evm.interpreter.readOnly {
 		return nil, ErrWriteProtection
@@ -930,13 +930,10 @@ func opSelfdestruct6780(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, erro
 	evm.StateDB.SubBalance(scope.Contract.Address(), balance)
 	evm.StateDB.AddBalance(common.BigToAddress(beneficiary), balance)
 	evm.StateDB.SelfDestruct6780(scope.Contract.Address())
-
-	// TODO-klaytn: call frame tracing https://github.com/ethereum/go-ethereum/pull/23087
-	// if tracer := interpreter.evm.Config.Tracer; tracer != nil {
-	// 	tracer.CaptureEnter(SELFDESTRUCT, scope.Contract.Address(), common.BigToAddress(beneficiary), []byte{}, 0, balance)
-	// 	tracer.CaptureExit([]byte{}, 0, nil)
-	// }
-
+	if tracer := evm.Config.Tracer; tracer != nil {
+		tracer.CaptureEnter(SELFDESTRUCT, scope.Contract.Address(), common.BigToAddress(beneficiary), []byte{}, 0, balance)
+		tracer.CaptureExit([]byte{}, 0, nil)
+	}
 	return nil, errStopToken
 }
 

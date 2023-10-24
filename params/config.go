@@ -192,6 +192,11 @@ type ChainConfig struct {
 	Kip103CompatibleBlock *big.Int       `json:"kip103CompatibleBlock,omitempty"` // Kip103Compatible activate block (nil = no fork)
 	Kip103ContractAddress common.Address `json:"kip103ContractAddress,omitempty"` // Kip103 contract address already deployed on the network
 
+	// Randao is an optional hardfork
+	// RandaoCompatibleBlock, RandaoRegistryRecords and RandaoRegistryOwner all must be specified to enable Randao
+	RandaoCompatibleBlock *big.Int        `json:"randaoCompatibleBlock,omitempty"` // RandaoCompatible activate block (nil = no fork)
+	RandaoRegistry        *RegistryConfig `json:"randaoRegistry,omitempty"`        // Registry initial states
+
 	// Various consensus engines
 	Gxhash   *GxhashConfig   `json:"gxhash,omitempty"` // (deprecated) not supported engine
 	Clique   *CliqueConfig   `json:"clique,omitempty"`
@@ -241,6 +246,19 @@ type IstanbulConfig struct {
 	Epoch          uint64 `json:"epoch"`  // Epoch length to reset votes and checkpoint
 	ProposerPolicy uint64 `json:"policy"` // The policy for proposer selection; 0: Round Robin, 1: Sticky, 2: Weighted Random
 	SubGroupSize   uint64 `json:"sub"`
+}
+
+// RegistryConfig is the initial KIP-149 system contract registry states.
+// It is installed at block (RandaoCompatibleBlock - 1). Initial states are not applied if RandaoCompatibleBlock is nil or 0.
+// To install the initial states from the block 0, use the AllocRegistry to generate GenesisAlloc.
+//
+// This struct only represents a special case of Registry state where:
+// - there is only one record for each name
+// - the activation of all records is zero
+// - the names array is lexicographically sorted
+type RegistryConfig struct {
+	Records map[string]common.Address `json:"records"`
+	Owner   common.Address            `json:"owner"`
 }
 
 // GxhashConfig is the consensus engine configs for proof-of-work based sealing.
@@ -368,6 +386,15 @@ func (c *ChainConfig) IsKIP103ForkBlock(num *big.Int) bool {
 	return c.Kip103CompatibleBlock.Cmp(num) == 0
 }
 
+// IsRandaoForkBlockParent returns whethere num is one block before the randao block.
+func (c *ChainConfig) IsRandaoForkBlockParent(num *big.Int) bool {
+	if c.RandaoCompatibleBlock == nil || num == nil {
+		return false
+	}
+	nextNum := new(big.Int).Add(num, common.Big1)
+	return c.RandaoCompatibleBlock.Cmp(nextNum) == 0 // randao == num + 1
+}
+
 // CheckCompatible checks whether scheduled fork transitions have been imported
 // with a mismatching chain configuration.
 func (c *ChainConfig) CheckCompatible(newcfg *ChainConfig, height uint64) *ConfigCompatError {
@@ -403,6 +430,7 @@ func (c *ChainConfig) CheckConfigForkOrder() error {
 		{name: "koreBlock", block: c.KoreCompatibleBlock},
 		{name: "shanghaiBlock", block: c.ShanghaiCompatibleBlock},
 		{name: "cancunBlock", block: c.CancunCompatibleBlock},
+		{name: "randaoBlock", block: c.RandaoCompatibleBlock, optional: true},
 	} {
 		if lastFork.name != "" {
 			// Next one must be higher number
@@ -448,6 +476,9 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *Confi
 	}
 	if isForkIncompatible(c.CancunCompatibleBlock, newcfg.CancunCompatibleBlock, head) {
 		return newCompatError("Cancun Block", c.CancunCompatibleBlock, newcfg.CancunCompatibleBlock)
+	}
+	if isForkIncompatible(c.RandaoCompatibleBlock, newcfg.RandaoCompatibleBlock, head) {
+		return newCompatError("Randao Block", c.RandaoCompatibleBlock, newcfg.RandaoCompatibleBlock)
 	}
 	return nil
 }

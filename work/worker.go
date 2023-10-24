@@ -746,7 +746,7 @@ CommitTransactionLoop:
 		//	continue
 		//}
 		// Start executing the transaction
-		env.state.Prepare(tx.Hash(), common.Hash{}, env.tcount)
+		env.state.SetTxContext(tx.Hash(), common.Hash{}, env.tcount)
 
 		err, logs := env.commitTransaction(tx, bc, rewardbase, vmConfig)
 		switch err {

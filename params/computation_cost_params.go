@@ -69,7 +69,6 @@ const (
 	DifficultyComputationCost     = 180
 	GasLimitComputationCost       = 166
 	PopComputationCost            = 140
-	McopyComputationCost          = 250
 	MloadComputationCost          = 376
 	MstoreComputationCost         = 288
 	Mstore8ComputationCost        = 5142
@@ -81,7 +80,6 @@ const (
 	MsizeComputationCost          = 137
 	GasComputationCost            = 230
 	JumpDestComputationCost       = 10
-	Push0ComputationCost          = 80
 	PushComputationCost           = 120
 	Dup1ComputationCost           = 190
 	Dup2ComputationCost           = 190
@@ -171,6 +169,14 @@ const (
 	XorComputationCost            = 657
 	XorComputationCostIstanbul    = 454
 
-	// computation costs for opcode added at koreCompatible Protocol Upgrade
+	// computation cost added at KoreCompatible
 	RandomComputationCost = 1498
+
+	// computation cost added at ShanghaiCompatible
+	Push0ComputationCost = 80
+
+	// computation cost added at CancunCompatible
+	McopyComputationCost  = 250
+	TloadComputationCost  = 220
+	TstoreComputationCost = 280
 )
