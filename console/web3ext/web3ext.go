@@ -574,11 +574,14 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'startWarmUp',
 			call: 'debug_startWarmUp',
+			params: 1,
+			inputFormatter: [null]
 		}),
 		new web3._extend.Method({
 			name: 'startContractWarmUp',
 			call: 'debug_startContractWarmUp',
-			params: 1
+			params: 2
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter, null]
 		}),
 		new web3._extend.Method({
 			name: 'stopWarmUp',
