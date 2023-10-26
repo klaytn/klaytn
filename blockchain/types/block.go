@@ -63,21 +63,32 @@ type Header struct {
 	Governance []byte `json:"governanceData"            gencodec:"required"`
 	Vote       []byte `json:"voteData,omitempty"`
 
-	BaseFee *big.Int `json:"baseFeePerGas,omitempty"    rlp:"optional"`
+	// Added with Magma hardfork for KIP-71 dynamic fee.
+	BaseFee *big.Int `json:"baseFeePerGas,omitempty" rlp:"optional"`
+
+	// Added with Randao hardfork for KIP-114 RANDAO.
+	RandomReveal []byte `json:"randomReveal,omitempty" rlp:"optional"` // 96 byte BLS signature
+	MixHash      []byte `json:"mixHash,omitempty" rlp:"optional"`      // 32 byte RANDAO mix
+
+	// New header fields must be added at tail for backward compatibility.
 }
 
-// field type overrides for gencodec
+// field type overrides for gencodec. When creating gen_header_json.go,
+// gencodec will recognize headerMarshaling struct and use below types
+// instead of the default native types. e.g. []byte -> hexutil.Byte
 type headerMarshaling struct {
-	BlockScore *hexutil.Big
-	Number     *hexutil.Big
-	GasUsed    hexutil.Uint64
-	Time       *hexutil.Big
-	TimeFoS    hexutil.Uint
-	Extra      hexutil.Bytes
-	BaseFee    *hexutil.Big
-	Hash       common.Hash `json:"hash"` // adds call to Hash() in MarshalJSON
-	Governance hexutil.Bytes
-	Vote       hexutil.Bytes
+	BlockScore   *hexutil.Big
+	Number       *hexutil.Big
+	GasUsed      hexutil.Uint64
+	Time         *hexutil.Big
+	TimeFoS      hexutil.Uint
+	Extra        hexutil.Bytes
+	BaseFee      *hexutil.Big
+	Hash         common.Hash `json:"hash"` // adds call to Hash() in MarshalJSON
+	Governance   hexutil.Bytes
+	Vote         hexutil.Bytes
+	RandomReveal hexutil.Bytes
+	MixHash      hexutil.Bytes
 }
 
 // Hash returns the block hash of the header, which is simply the keccak256 hash of its
@@ -116,7 +127,7 @@ func (h *Header) HashNoNonce() common.Hash {
 // to approximate and limit the memory consumption of various caches.
 func (h *Header) Size() common.StorageSize {
 	constantSize := common.StorageSize(reflect.TypeOf(Header{}).Size())
-	byteSize := common.StorageSize(len(h.Extra) + len(h.Governance) + len(h.Vote))
+	byteSize := common.StorageSize(len(h.Extra) + len(h.Governance) + len(h.Vote) + len(h.RandomReveal) + len(h.MixHash))
 	bigIntSize := common.StorageSize((h.BlockScore.BitLen() + h.Number.BitLen() + h.Time.BitLen()) / 8)
 	if h.BaseFee != nil {
 		return constantSize + byteSize + bigIntSize + common.StorageSize(h.BaseFee.BitLen()/8)

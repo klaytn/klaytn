@@ -254,7 +254,6 @@ func testGetHeader(t *testing.T, testAPIName string, forkEnabled bool) {
 	assert.Equal(t, true, ok)
 	assert.NotEqual(t, ethHeader, nil)
 
-	// TODO-klaytn size set to 0x214
 	// We can get a real mashaled data by using real backend instance, not mock
 	// Mock just return a header instance, not rlp decoded json data
 	expected := make(map[string]interface{})
@@ -276,7 +275,7 @@ func testGetHeader(t *testing.T, testAPIName string, forkEnabled bool) {
 		"parentHash": "0xc8036293065bacdfce87debec0094a71dbbe40345b078d21dcc47adb4513f348",
 		"receiptsRoot": "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470",
 		"sha3Uncles": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347",
-		"size": "0x214",
+		"size": "0x244",
 		"stateRoot": "0xad31c32942fa033166e4ef588ab973dbe26657c594de4ba98192108becf0fec9",
 		"timestamp": "0x61d53854",
 		"totalDifficulty": "0x5",
