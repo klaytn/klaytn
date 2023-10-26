@@ -396,14 +396,18 @@ func (bc *BlockChain) StateMigrationStatus() (bool, uint64, int, int, int, float
 // until it reaches end. If it reaches end, it will send a nil error to errCh to indicate that
 // it has been finished.
 func (bc *BlockChain) trieWarmUp(next func() bool, resultCh chan int, errCh chan error) {
-	var resultErr error
-	reportTicker := time.NewTicker(DefaultIterateItv)
+	var (
+		resultErr    error
+		reportTicker = time.NewTicker(DefaultIterateItv)
+		nReads       = 0
+	)
+
 	defer func() {
+		resultCh <- nReads
 		errCh <- resultErr
 		reportTicker.Stop()
 	}()
 
-	nReads := 0
 	for next() {
 		select {
 		case <-bc.quitWarmUp:
@@ -413,12 +417,11 @@ func (bc *BlockChain) trieWarmUp(next func() bool, resultCh chan int, errCh chan
 			return
 		case <-reportTicker.C:
 			resultCh <- nReads
-			nReads = 0
+			nReads = 1
 		default:
 			nReads++
 		}
 	}
-	resultCh <- nReads
 }
 
 // warmUpChecker receives errors from each warm-up goroutine.
