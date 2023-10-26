@@ -413,23 +413,34 @@ func (bc *BlockChain) SetCanonicalBlock(blockNum uint64) {
 		logger.Error("failed to retrieve the block", "blockNum", blockNum)
 		return
 	}
+
+	var (
+		err      error
+		curBlock = bc.CurrentBlock()
+	)
+	defer func() {
+		if err != nil {
+			// if canonical block set is failed, revert the reparing to target block
+			bc.insert(curBlock)
+		}
+	}()
 	bc.insert(targetBlock)
-	if err := bc.loadLastState(); err != nil {
+	if err = bc.loadLastState(); err != nil {
 		logger.Error("failed to load last state after setting the canonical block", "err", err)
 		return
 	}
 	// Make sure the state associated with the block is available
 	head := bc.CurrentBlock()
-	if _, err := state.New(head.Root(), bc.stateCache, bc.snaps, nil); err != nil {
+	if _, getStateFailed := state.New(head.Root(), bc.stateCache, bc.snaps, nil); getStateFailed != nil {
 		// Dangling block without a state associated, init from scratch
 		logger.Warn("Head state missing, repairing chain",
 			"number", head.NumberU64(), "hash", head.Hash().String())
-		if _, err := bc.setHeadBeyondRoot(head.NumberU64(), common.Hash{}, true); err != nil {
+		if _, err = bc.setHeadBeyondRoot(head.NumberU64(), common.Hash{}, true); err != nil {
 			logger.Error("Repairing chain is failed", "number", head.NumberU64(), "hash", head.Hash().String(), "err", err)
 			return
 		}
 	}
-	logger.Info("successfully set the canonical block", "blockNum", blockNum)
+	logger.Info("successfully set the canonical block", "blockNum", bc.CurrentBlock().NumberU64())
 }
 
 func (bc *BlockChain) UseGiniCoeff() bool {
@@ -514,15 +525,6 @@ func (bc *BlockChain) loadLastState() error {
 // that the rewind must pass the specified state root. The method will try to
 // delete minimal data from disk whilst retaining chain consistency.
 func (bc *BlockChain) SetHead(head uint64) error {
-	// With the live pruning enabled, an attempt to SetHead into a state-pruned block number
-	// may result in an infinite loop, trying to find the existing block (probably the genesis block).
-	// If the target `head` is below the surviving block numbers, SetHead early exits with an error.
-	if lastPruned, err := bc.db.ReadLastPrunedBlockNumber(); err == nil {
-		if head <= lastPruned {
-			return fmt.Errorf("[SetHead] Cannot rewind to a state-pruned block number. lastPrunedBlock=%d targetHead=%d",
-				lastPruned, head)
-		}
-	}
 	_, err := bc.setHeadBeyondRoot(head, common.Hash{}, false)
 	return err
 }
@@ -538,6 +540,16 @@ func (bc *BlockChain) SetHead(head uint64) error {
 func (bc *BlockChain) setHeadBeyondRoot(head uint64, root common.Hash, repair bool) (uint64, error) {
 	bc.mu.Lock()
 	defer bc.mu.Unlock()
+
+	// With the live pruning enabled, an attempt to SetHead into a state-pruned block number
+	// may result in an infinite loop, trying to find the existing block (probably the genesis block).
+	// If the target `head` is below the surviving block numbers, SetHead early exits with an error.
+	if lastPruned, err := bc.db.ReadLastPrunedBlockNumber(); err == nil {
+		if head <= lastPruned {
+			return 0, fmt.Errorf("[SetHead] Cannot rewind to a state-pruned block number. lastPrunedBlock=%d targetHead=%d",
+				lastPruned, head)
+		}
+	}
 
 	// Track the block number of the requested root hash
 	var rootNumber uint64 // (no root == always 0)
