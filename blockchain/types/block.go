@@ -389,9 +389,8 @@ Transactions:
 }
 
 func (h *Header) String() string {
-	prefix := `Header(%x):
-	[`
-	strBaseHeader := `
+	str := fmt.Sprintf(`Header(%x):
+	[
 		ParentHash:       %x
 		Rewardbase:       %x
 		Root:             %x
@@ -403,21 +402,22 @@ func (h *Header) String() string {
 		GasUsed:          %v
 		Time:             %v
 		TimeFoS:          %v
-		Extra:            %s
+		Extra:            %x
 		Governance:       %x
 		Vote:             %x
-	`
-	suffix := `
-	]`
-	strHeader := ""
+`,
+		h.Hash(), h.ParentHash, h.Rewardbase, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.BlockScore, h.Number, h.GasUsed, h.Time, h.TimeFoS, h.Extra, h.Governance, h.Vote)
+
 	if h.BaseFee != nil {
-		strBaseHeader = strBaseHeader + `	BaseFee:          %x
-		`
-		strHeader = fmt.Sprintf(prefix+strBaseHeader+suffix, h.Hash(), h.ParentHash, h.Rewardbase, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.BlockScore, h.Number, h.GasUsed, h.Time, h.TimeFoS, h.Extra, h.Governance, h.Vote, h.BaseFee)
-	} else {
-		strHeader = fmt.Sprintf(prefix+strBaseHeader+suffix, h.Hash(), h.ParentHash, h.Rewardbase, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.BlockScore, h.Number, h.GasUsed, h.Time, h.TimeFoS, h.Extra, h.Governance, h.Vote)
+		str += fmt.Sprintf("		BaseFee:          %x\n", h.BaseFee)
 	}
-	return strHeader
+	if h.RandomReveal != nil {
+		str += fmt.Sprintf("		RandomReveal:     %x\n", h.RandomReveal)
+		str += fmt.Sprintf("		MixHash:          %x\n", h.MixHash)
+	}
+
+	str += "]"
+	return str
 }
 
 type Blocks []*Block
