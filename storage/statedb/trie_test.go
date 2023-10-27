@@ -371,7 +371,6 @@ func TestPruningByUpdate(t *testing.T) {
 	// By inserting "dogglesworth", both extension and branch nodes are affected, hence pruning the both.
 
 	// Update and commit to store the nodes
-	trie.originalRoot = nodehash1 // set trie root hash
 	updateString(trie, "doe", "reindeer")
 	updateString(trie, "dog", "puppy")
 	trie.Commit(nil)
@@ -382,6 +381,7 @@ func TestPruningByUpdate(t *testing.T) {
 	assert.True(t, hasnode(nodehash2))
 
 	// Trigger pruning
+	trie, _ = NewTrie(nodehash1.Unextend(), db, &TrieOpts{PruningBlockNumber: 1})
 	updateString(trie, "dogglesworth", "cat")
 	trie.Commit(nil)
 	db.Cap(0)
@@ -419,7 +419,6 @@ func TestPruningByDelete(t *testing.T) {
 	// By deleting "doe", both extension and branch nodes are affected, hence pruning the both.
 
 	// Update and commit to store the nodes
-	trie.originalRoot = nodehash1 // set trie root hash
 	updateString(trie, "doe", "reindeer")
 	updateString(trie, "dog", "puppy")
 	trie.Commit(nil)
@@ -430,6 +429,7 @@ func TestPruningByDelete(t *testing.T) {
 	assert.True(t, hasnode(nodehash2))
 
 	// Trigger pruning
+	trie, _ = NewTrie(nodehash1.Unextend(), db, &TrieOpts{PruningBlockNumber: 1})
 	deleteString(trie, "doe")
 	trie.Commit(nil)
 	db.Cap(0)
