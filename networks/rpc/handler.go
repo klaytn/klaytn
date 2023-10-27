@@ -32,6 +32,7 @@ import (
 	"time"
 
 	"github.com/klaytn/klaytn/log"
+	"github.com/klaytn/klaytn/storage/statedb"
 )
 
 // handler handles JSON-RPC messages. There is one handler per connection. Note that
@@ -427,10 +428,20 @@ func (h *handler) handleSubscribe(cp *callProc, msg *jsonrpcMessage) *jsonrpcMes
 func (h *handler) runMethod(ctx context.Context, msg *jsonrpcMessage, callb *callback, args []reflect.Value) *jsonrpcMessage {
 	result, err := callb.call(ctx, msg.Method, args)
 	if err != nil {
+		if _, ok := err.(*statedb.MissingNodeError); ok {
+			if c, _ := DialContext(ctx, UpstreamArchiveEN); c != nil {
+				defer c.Close()
+				var params []interface{}
+				_ = json.Unmarshal(msg.Params, &params)
+				if err = c.CallContext(ctx, &result, msg.Method, params...); err == nil {
+					rpcSuccessResponsesCounter.Inc(1)
+					return msg.response(result)
+				}
+			}
+		}
 		rpcErrorResponsesCounter.Inc(1)
 		return msg.errorResponse(err)
 	}
-
 	rpcSuccessResponsesCounter.Inc(1)
 	return msg.response(result)
 }
