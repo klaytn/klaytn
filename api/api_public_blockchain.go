@@ -172,7 +172,7 @@ func (s *PublicKlayAPI) ForkStatus(ctx context.Context, number rpc.BlockNumber) 
 
 // rpcMarshalHeader converts the given header to the RPC output.
 func (s *PublicBlockChainAPI) rpcMarshalHeader(header *types.Header) map[string]interface{} {
-	fields := filters.RPCMarshalHeader(header, s.b.ChainConfig().IsEthTxTypeForkEnabled(header.Number))
+	fields := filters.RPCMarshalHeader(header, s.b.ChainConfig().Rules(header.Number))
 	return fields
 }
 
@@ -530,7 +530,9 @@ func FormatLogs(timeout time.Duration, logs []vm.StructLog) ([]StructLogRes, err
 	return formatted, nil
 }
 
-func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool, isEnabledEthTxTypeFork bool) (map[string]interface{}, error) {
+// For klay_getBlockByNumber, klay_getBlockByHash, klay_getBlockWithconsensusInfoByNumber, klay_getBlockWithconsensusInfoByHash APIs
+// and Kafka chaindatafetcher.
+func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool, rules params.Rules) (map[string]interface{}, error) {
 	head := b.Header() // copies the header once
 	fields := map[string]interface{}{
 		"number":           (*hexutil.Big)(head.Number),
@@ -574,12 +576,16 @@ func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool, isEna
 		fields["transactions"] = transactions
 	}
 
-	if isEnabledEthTxTypeFork {
+	if rules.IsEthTxType {
 		if head.BaseFee == nil {
 			fields["baseFeePerGas"] = (*hexutil.Big)(new(big.Int).SetUint64(params.ZeroBaseFee))
 		} else {
 			fields["baseFeePerGas"] = (*hexutil.Big)(head.BaseFee)
 		}
+	}
+	if rules.IsRandao {
+		fields["randomReveal"] = hexutil.Bytes(head.RandomReveal)
+		fields["mixHash"] = hexutil.Bytes(head.MixHash)
 	}
 
 	return fields, nil
@@ -589,7 +595,7 @@ func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool, isEna
 // returned. When fullTx is true the returned block contains full transaction details, otherwise it will only contain
 // transaction hashes.
 func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx bool) (map[string]interface{}, error) {
-	return RpcOutputBlock(b, s.b.GetTd(b.Hash()), inclTx, fullTx, s.b.ChainConfig().IsEthTxTypeForkEnabled(b.Header().Number))
+	return RpcOutputBlock(b, s.b.GetTd(b.Hash()), inclTx, fullTx, s.b.ChainConfig().Rules(b.Header().Number))
 }
 
 func getFrom(tx *types.Transaction) common.Address {
