@@ -249,6 +249,7 @@ var CommonNodeFlags = []cli.Flag{
 	altsrc.NewBoolFlag(VMEnableDebugFlag),
 	altsrc.NewIntFlag(VMLogTargetFlag),
 	altsrc.NewBoolFlag(VMTraceInternalTxFlag),
+	altsrc.NewBoolFlag(VMOpDebugFlag),
 	altsrc.NewUint64Flag(NetworkIdFlag),
 	altsrc.NewBoolFlag(MetricsEnabledFlag),
 	altsrc.NewBoolFlag(PrometheusExporterFlag),

@@ -658,6 +658,7 @@ func (kCfg *KlayConfig) SetKlayConfig(ctx *cli.Context, stack *node.Node) {
 		}
 	}
 	cfg.EnableInternalTxTracing = ctx.Bool(VMTraceInternalTxFlag.Name)
+	cfg.EnableOpDebug = ctx.Bool(VMOpDebugFlag.Name)
 
 	cfg.AutoRestartFlag = ctx.Bool(AutoRestartFlag.Name)
 	cfg.RestartTimeOutFlag = ctx.Duration(RestartTimeOutFlag.Name)
