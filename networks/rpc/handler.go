@@ -429,10 +429,16 @@ func (h *handler) runMethod(ctx context.Context, msg *jsonrpcMessage, callb *cal
 	result, err := callb.call(ctx, msg.Method, args)
 	if err != nil {
 		if _, ok := err.(*statedb.MissingNodeError); ok {
-			if c, _ := DialContext(ctx, UpstreamArchiveEN); c != nil {
+			ctx, cancel := context.WithTimeout(ctx, DefaultHTTPTimeouts.ExecutionTimeout)
+			defer cancel()
+
+			if c, err := DialContext(ctx, UpstreamArchiveEN); err == nil {
 				defer c.Close()
+
 				var params []interface{}
-				_ = json.Unmarshal(msg.Params, &params)
+				for _, a := range args {
+					params = append(params, a.Interface())
+				}
 				if err = c.CallContext(ctx, &result, msg.Method, params...); err == nil {
 					rpcSuccessResponsesCounter.Inc(1)
 					return msg.response(result)
@@ -442,6 +448,7 @@ func (h *handler) runMethod(ctx context.Context, msg *jsonrpcMessage, callb *cal
 		rpcErrorResponsesCounter.Inc(1)
 		return msg.errorResponse(err)
 	}
+
 	rpcSuccessResponsesCounter.Inc(1)
 	return msg.response(result)
 }
