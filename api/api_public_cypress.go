@@ -56,7 +56,7 @@ func (s *PublicBlockChainAPI) callCypressCreditGetFunc(ctx context.Context, pars
 	}
 
 	output := new(string)
-	err = parsed.Unpack(output, funcName, ret)
+	err = parsed.UnpackIntoInterface(output, funcName, ret)
 	if err != nil {
 		return nil, err
 	}
