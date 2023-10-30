@@ -38,8 +38,8 @@ import (
 )
 
 const (
-	DefaultWarmUpMinLoad = 90
-	DefaultWarmUpReportInterval    = time.Second * 10
+	DefaultWarmUpMinLoad        = 90
+	DefaultWarmUpReportInterval = time.Second * 10
 )
 
 var (
