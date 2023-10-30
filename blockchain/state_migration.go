@@ -39,7 +39,7 @@ import (
 
 const (
 	DefaultWarmUpMinLoad = 90
-	DefaultIterateItv    = time.Second * 10
+	DefaultWarmUpReportInterval    = time.Second * 10
 )
 
 var (
@@ -398,7 +398,7 @@ func (bc *BlockChain) StateMigrationStatus() (bool, uint64, int, int, int, float
 func (bc *BlockChain) trieWarmUp(next func() bool, resultCh chan int, errCh chan error) {
 	var (
 		resultErr    error
-		reportTicker = time.NewTicker(DefaultIterateItv)
+		reportTicker = time.NewTicker(DefaultWarmUpReportInterval)
 		nReads       = 0
 	)
 
@@ -427,7 +427,7 @@ func (bc *BlockChain) trieWarmUp(next func() bool, resultCh chan int, errCh chan
 // warmUpChecker receives errors from each warm-up goroutine.
 // If it receives a nil error, it means a child goroutine is successfully terminated.
 // It also periodically checks and logs warm-up progress.
-func (bc *BlockChain) wramUpTrieCache(mainTrieDB *statedb.Database, minLoad uint, nChildren int,
+func (bc *BlockChain) warmUpTrieCache(mainTrieDB *statedb.Database, minLoad uint, nChildren int,
 	resultCh chan int, errCh chan error,
 ) {
 	defer func() { bc.quitWarmUp = nil }()
@@ -524,7 +524,7 @@ func (bc *BlockChain) StartWarmUp(minLoad uint) error {
 		go bc.trieWarmUp(it.Next, resultCh, errCh)
 	}
 	// run a warm-up checker routine
-	go bc.wramUpTrieCache(mainTrieDB, minLoad, len(children), resultCh, errCh)
+	go bc.warmUpTrieCache(mainTrieDB, minLoad, len(children), resultCh, errCh)
 	logger.Info("State trie warm-up is started", "blockNum", block.NumberU64(),
 		"root", block.Root().String(), "len(children)", len(children))
 	return nil
@@ -722,7 +722,7 @@ func (bc *BlockChain) StartContractWarmUp(contractAddr common.Address, minLoad u
 		go bc.trieWarmUp(it.Next, resultCh, errCh)
 	}
 	// run a warm-up checker routine
-	go bc.wramUpTrieCache(mainTrieDB, minLoad, len(children), resultCh, errCh)
+	go bc.warmUpTrieCache(mainTrieDB, minLoad, len(children), resultCh, errCh)
 	logger.Info("Contract storage trie warm-up is started",
 		"blockNum", block.NumberU64(), "root", block.Root().String(), "contractAddr", contractAddr.String(),
 		"contractStorageRoot", storageTrieRoot.String(), "len(children)", len(children))
