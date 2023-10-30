@@ -118,7 +118,7 @@ func Execute(code, input []byte, cfg *Config) ([]byte, *state.StateDB, error) {
 		rules   = cfg.ChainConfig.Rules(vmenv.Context.BlockNumber)
 	)
 
-	cfg.State.PrepareAccessList(rules, cfg.Origin, common.Address{}, cfg.Coinbase, &address, vm.ActivePrecompiles(rules), nil)
+	cfg.State.Prepare(rules, cfg.Origin, common.Address{}, cfg.Coinbase, &address, vm.ActivePrecompiles(rules), nil)
 	cfg.State.CreateSmartContractAccount(address, params.CodeFormatEVM, cfg.ChainConfig.Rules(cfg.BlockNumber))
 	// set the receiver's (the executing contract) code for execution.
 	cfg.State.SetCode(address, code)
@@ -151,7 +151,7 @@ func Create(input []byte, cfg *Config) ([]byte, common.Address, uint64, error) {
 		rules  = cfg.ChainConfig.Rules(vmenv.Context.BlockNumber)
 	)
 
-	cfg.State.PrepareAccessList(rules, cfg.Origin, common.Address{}, cfg.Coinbase, nil, vm.ActivePrecompiles(rules), nil)
+	cfg.State.Prepare(rules, cfg.Origin, common.Address{}, cfg.Coinbase, nil, vm.ActivePrecompiles(rules), nil)
 	// Call the code with the given configuration.
 	code, address, leftOverGas, err := vmenv.Create(
 		sender,
@@ -178,7 +178,7 @@ func Call(address common.Address, input []byte, cfg *Config) ([]byte, uint64, er
 		rules         = cfg.ChainConfig.Rules(vmenv.Context.BlockNumber)
 	)
 
-	cfg.State.PrepareAccessList(rules, cfg.Origin, common.Address{}, cfg.Coinbase, &address, vm.ActivePrecompiles(rules), nil)
+	cfg.State.Prepare(rules, cfg.Origin, common.Address{}, cfg.Coinbase, &address, vm.ActivePrecompiles(rules), nil)
 	// Call the code with the given configuration.
 	ret, leftOverGas, err := vmenv.Call(
 		sender,

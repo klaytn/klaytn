@@ -30,6 +30,7 @@ import (
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/blockchain/state"
+	"github.com/klaytn/klaytn/blockchain/system"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
@@ -521,6 +522,13 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 			logger.Info("successfully executed treasury rebalancing (KIP-103)", "memo", string(memo))
 		}
 	}
+
+	// The Registry contract must be immediately available from the fork block.
+	// So it is installed at block (RandaoCompatibleBlock - 1) which is before the fork block.
+	if chain.Config().IsRandaoForkBlockParent(header.Number) {
+		system.InstallRegistry(state, chain.Config().RandaoRegistry)
+	}
+
 	header.Root = state.IntermediateRoot(true)
 
 	// Assemble and return the final block for sealing

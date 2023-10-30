@@ -96,107 +96,62 @@ func NewOracle(backend OracleBackend, params Config, txPool TxPool) *Oracle {
 	}
 }
 
+// Tx gas price requirements has changed over the hardforks
+//
+// | Fork              | gasPrice                     | maxFeePerGas                 | maxPriorityFeePerGas         |
+// |------------------ |----------------------------- |----------------------------- |----------------------------- |
+// | Before EthTxType  | must be fixed UnitPrice (1)  | N/A (2)                      | N/A (2)                      |
+// | After EthTxType   | must be fixed UnitPrice (1)  | must be fixed UnitPrice (3)  | must be fixed UnitPrice (3)  |
+// | After Magma       | BaseFee or higher (4)        | BaseFee or higher (4)        | Ignored (4)                  |
+//
+// (1) If tx.type != 2 && !rules.IsMagma: https://github.com/klaytn/klaytn/blob/v1.11.1/blockchain/tx_pool.go#L729
+// (2) If tx.type == 2 && !rules.IsEthTxType: https://github.com/klaytn/klaytn/blob/v1.11.1/blockchain/tx_pool.go#L670
+// (3) If tx.type == 2 && !rules.IsMagma: https://github.com/klaytn/klaytn/blob/v1.11.1/blockchain/tx_pool.go#L710
+// (4) If tx.type == 2 && rules.IsMagma: https://github.com/klaytn/klaytn/blob/v1.11.1/blockchain/tx_pool.go#L703
+//
+// The suggested prices needs to match the requirements.
+//
+// | Fork              | SuggestPrice (for gasPrice and maxFeePerGas)                | SuggestTipCap (for maxPriorityFeePerGas) |
+// |------------------ |------------------------------------------------------------ |----------------------------- |
+// | Before Magma      | Fixed UnitPrice                                             | Fixed UnitPrice              |
+// | After Magma       | BaseFee * 2                                                 | Zero                         |
+
 // SuggestPrice returns the recommended gas price.
+// This value is intended to be used as gasPrice or maxFeePerGas.
 func (gpo *Oracle) SuggestPrice(ctx context.Context) (*big.Int, error) {
 	if gpo.txPool == nil {
 		// If txpool is not set, just return 0. This is used for testing.
 		return common.Big0, nil
 	}
-	// Since we have fixed gas price, we can directly get this value from TxPool.
-	suggestedPrice := gpo.txPool.GasPrice()
-	if gpo.backend.ChainConfig().IsMagmaForkEnabled(new(big.Int).Add(gpo.backend.CurrentBlock().Number(), common.Big1)) {
-		return new(big.Int).Mul(suggestedPrice, common.Big2), nil
+
+	nextNum := new(big.Int).Add(gpo.backend.CurrentBlock().Number(), common.Big1)
+	if gpo.backend.ChainConfig().IsMagmaForkEnabled(nextNum) {
+		// After Magma, return the twice of BaseFee as a buffer.
+		baseFee := gpo.txPool.GasPrice()
+		return new(big.Int).Mul(baseFee, common.Big2), nil
+	} else {
+		// Before Magma, return the fixed UnitPrice.
+		unitPrice := gpo.txPool.GasPrice()
+		return unitPrice, nil
 	}
-	return suggestedPrice, nil
-	/*
-		// TODO-Klaytn-RemoveLater Later remove below obsolete code if we don't need them anymore.
-		gpo.cacheLock.RLock()
-		lastHead := gpo.lastHead
-		lastPrice := gpo.lastPrice
-		gpo.cacheLock.RUnlock()
-
-		head, _ := gpo.backend.HeaderByNumber(ctx, rpc.LatestBlockNumber)
-		headHash := head.Hash()
-		if headHash == lastHead {
-			return lastPrice, nil
-		}
-
-		gpo.fetchLock.Lock()
-		defer gpo.fetchLock.Unlock()
-
-		// try checking the cache again, maybe the last fetch fetched what we need
-		gpo.cacheLock.RLock()
-		lastHead = gpo.lastHead
-		lastPrice = gpo.lastPrice
-		gpo.cacheLock.RUnlock()
-		if headHash == lastHead {
-			return lastPrice, nil
-		}
-
-		blockNum := head.Number.Uint64()
-		ch := make(chan getBlockPricesResult, gpo.checkBlocks)
-		sent := 0
-		exp := 0
-		var blockPrices []*big.Int
-		for sent < gpo.checkBlocks && blockNum > 0 {
-			go gpo.getBlockPrices(ctx, types.MakeSigner(gpo.backend.ChainConfig(), big.NewInt(int64(blockNum))), blockNum, ch)
-			sent++
-			exp++
-			blockNum--
-		}
-		maxEmpty := gpo.maxEmpty
-		for exp > 0 {
-			res := <-ch
-			if res.err != nil {
-				return lastPrice, res.err
-			}
-			exp--
-			if res.price != nil {
-				blockPrices = append(blockPrices, res.price)
-				continue
-			}
-			if maxEmpty > 0 {
-				maxEmpty--
-				continue
-			}
-			if blockNum > 0 && sent < gpo.maxBlocks {
-				go gpo.getBlockPrices(ctx, types.MakeSigner(gpo.backend.ChainConfig(), big.NewInt(int64(blockNum))), blockNum, ch)
-				sent++
-				exp++
-				blockNum--
-			}
-		}
-		price := lastPrice
-		if len(blockPrices) > 0 {
-			sort.Sort(bigIntArray(blockPrices))
-			price = blockPrices[(len(blockPrices)-1)*gpo.percentile/100]
-		}
-		if price.Cmp(maxPrice) > 0 {
-			price = new(big.Int).Set(maxPrice)
-		}
-
-		gpo.cacheLock.Lock()
-		gpo.lastHead = headHash
-		gpo.lastPrice = price
-		gpo.cacheLock.Unlock()
-		return price, nil
-	*/
 }
 
-// TODO-Klaytn-RemoveLater Later remove below obsolete code if we don't need them anymore.
-//type getBlockPricesResult struct {
-//	price *big.Int
-//	err   error
-//}
-//
-//type transactionsByGasPrice []*types.Transaction
-//
-//func (t transactionsByGasPrice) Len() int           { return len(t) }
-//func (t transactionsByGasPrice) Swap(i, j int)      { t[i], t[j] = t[j], t[i] }
-//func (t transactionsByGasPrice) Less(i, j int) bool { return t[i].GasPrice().Cmp(t[j].GasPrice()) < 0 }
-//
-//type bigIntArray []*big.Int
-//
-//func (s bigIntArray) Len() int           { return len(s) }
-//func (s bigIntArray) Less(i, j int) bool { return s[i].Cmp(s[j]) < 0 }
-//func (s bigIntArray) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+// SuggestTipCap returns the recommended gas tip cap.
+// This value is intended to be used as maxPriorityFeePerGas.
+// Though Klaytn does not recognize gas tip, this function returns some value for compatibility.
+func (gpo *Oracle) SuggestTipCap(ctx context.Context) (*big.Int, error) {
+	if gpo.txPool == nil {
+		// If txpool is not set, just return 0. This is used for testing.
+		return common.Big0, nil
+	}
+
+	nextNum := new(big.Int).Add(gpo.backend.CurrentBlock().Number(), common.Big1)
+	if gpo.backend.ChainConfig().IsMagmaForkEnabled(nextNum) {
+		// After Magma, return zero
+		return common.Big0, nil
+	} else {
+		// Before Magma, return the fixed UnitPrice.
+		unitPrice := gpo.txPool.GasPrice()
+		return unitPrice, nil
+	}
+}

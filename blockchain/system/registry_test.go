@@ -59,19 +59,10 @@ func TestAllocRegistry(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
 
 	// 1. Create storage with AllocRegistry
-	allocStorage := AllocRegistry(&AllocRegistryInit{
-		Records: map[string][]RegistryRecord{
-			"AcmeContract": {
-				{common.HexToAddress("0xaaaa"), big.NewInt(0x1234)},
-				{common.HexToAddress("0xbbbb"), big.NewInt(0x5678)},
-			},
-			"TestContract": {
-				{common.HexToAddress("0xcccc"), big.NewInt(0x9999)},
-			},
-		},
-		Names: []string{
-			"AcmeContract",
-			"TestContract",
+	allocStorage := AllocRegistry(&params.RegistryConfig{
+		Records: map[string]common.Address{
+			"AcmeContract": common.HexToAddress("0xaaaa"),
+			"TestContract": common.HexToAddress("0xcccc"),
 		},
 		Owner: common.HexToAddress("0xffff"),
 	})
@@ -94,12 +85,8 @@ func TestAllocRegistry(t *testing.T) {
 		contract, _ = contracts.NewRegistryMockTransactor(RegistryAddr, backend)
 	)
 
-	contract.Register(sender,
-		"AcmeContract", common.HexToAddress("0xaaaa"), big.NewInt(0x1234))
-	contract.Register(sender,
-		"AcmeContract", common.HexToAddress("0xbbbb"), big.NewInt(0x5678))
-	contract.Register(sender,
-		"TestContract", common.HexToAddress("0xcccc"), big.NewInt(0x9999))
+	contract.Register(sender, "AcmeContract", common.HexToAddress("0xaaaa"), common.Big0)
+	contract.Register(sender, "TestContract", common.HexToAddress("0xcccc"), common.Big0)
 	contract.TransferOwnership(sender, common.HexToAddress("0xffff"))
 	backend.Commit()
 
