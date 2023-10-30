@@ -823,8 +823,15 @@ func newTestBackendWithConfig(chainConfig *params.ChainConfig, blockPeriod uint6
 	istanbulConfig.Epoch = chainConfig.Istanbul.Epoch
 	istanbulConfig.SubGroupSize = chainConfig.Istanbul.SubGroupSize
 
-	backend := New(getTestRewards()[0], istanbulConfig, key, dbm, gov, common.CONSENSUSNODE).(*backend)
-	gov.SetNodeAddress(crypto.PubkeyToAddress(key.PublicKey))
+	backend := New(&BackendOpts{
+		IstanbulConfig: istanbulConfig,
+		Rewardbase:     getTestRewards()[0],
+		PrivateKey:     key,
+		DB:             dbm,
+		Governance:     gov,
+		NodeType:       common.CONSENSUSNODE,
+	}).(*backend)
+	gov.SetNodeAddress(backend.Address())
 	return backend
 }
 

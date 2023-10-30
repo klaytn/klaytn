@@ -50,27 +50,36 @@ const (
 
 var logger = log.NewModuleLogger(log.ConsensusIstanbulBackend)
 
-func New(rewardbase common.Address, config *istanbul.Config, privateKey *ecdsa.PrivateKey, db database.DBManager, governance governance.Engine, nodetype common.ConnType) consensus.Istanbul {
+type BackendOpts struct {
+	IstanbulConfig *istanbul.Config // Istanbul consensus core config
+	Rewardbase     common.Address
+	PrivateKey     *ecdsa.PrivateKey // Consensus message signing key
+	DB             database.DBManager
+	Governance     governance.Engine // Governance parameter provider
+	NodeType       common.ConnType
+}
+
+func New(opts *BackendOpts) consensus.Istanbul {
 	recents, _ := lru.NewARC(inmemorySnapshots)
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
 	knownMessages, _ := lru.NewARC(inmemoryMessages)
 	backend := &backend{
-		config:            config,
+		config:            opts.IstanbulConfig,
 		istanbulEventMux:  new(event.TypeMux),
-		privateKey:        privateKey,
-		address:           crypto.PubkeyToAddress(privateKey.PublicKey),
+		privateKey:        opts.PrivateKey,
+		address:           crypto.PubkeyToAddress(opts.PrivateKey.PublicKey),
 		logger:            logger.NewWith(),
-		db:                db,
+		db:                opts.DB,
 		commitCh:          make(chan *types.Result, 1),
 		recents:           recents,
 		candidates:        make(map[common.Address]bool),
 		coreStarted:       false,
 		recentMessages:    recentMessages,
 		knownMessages:     knownMessages,
-		rewardbase:        rewardbase,
-		governance:        governance,
-		nodetype:          nodetype,
-		rewardDistributor: reward.NewRewardDistributor(governance),
+		rewardbase:        opts.Rewardbase,
+		governance:        opts.Governance,
+		nodetype:          opts.NodeType,
+		rewardDistributor: reward.NewRewardDistributor(opts.Governance),
 	}
 	backend.currentView.Store(&istanbul.View{Sequence: big.NewInt(0), Round: big.NewInt(0)})
 	backend.core = istanbulCore.New(backend, backend.config)

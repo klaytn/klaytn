@@ -500,7 +500,14 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 	if chainConfig.Governance == nil {
 		chainConfig.Governance = params.GetDefaultGovernanceConfig()
 	}
-	return istanbulBackend.New(config.Rewardbase, &config.Istanbul, ctx.NodeKey(), db, gov, nodetype)
+	return istanbulBackend.New(&istanbulBackend.BackendOpts{
+		IstanbulConfig: &config.Istanbul,
+		Rewardbase:     config.Rewardbase,
+		PrivateKey:     ctx.NodeKey(),
+		DB:             db,
+		Governance:     gov,
+		NodeType:       nodetype,
+	})
 }
 
 // APIs returns the collection of RPC services the ethereum package offers.
