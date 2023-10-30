@@ -187,7 +187,7 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte) (ret []byte, err
 		allocatedMemorySize = uint64(mem.Len()) // Currently allocated memory size
 
 		// used for collecting opcode execution time
-		globalTimer time.Time
+		opExecStart time.Time
 	)
 	contract.Input = input
 
@@ -212,7 +212,7 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte) (ret []byte, err
 	// parent context.
 	for atomic.LoadInt32(&in.evm.abort) == 0 {
 		if in.evm.Config.EnableOpDebug {
-			globalTimer = time.Now()
+			opExecStart = time.Now()
 		}
 		if in.cfg.Debug {
 			// Capture pre-execution values for tracing.
@@ -306,7 +306,7 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte) (ret []byte, err
 			verifyIntegerPool(in.intPool)
 		}
 		if in.evm.Config.EnableOpDebug {
-			opTime[op] += uint64(time.Since(globalTimer).Nanoseconds())
+			opTime[op] += uint64(time.Since(opExecStart).Nanoseconds())
 			opCnt[op] += 1
 		}
 		if err != nil {
