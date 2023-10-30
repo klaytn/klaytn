@@ -428,22 +428,8 @@ func (h *handler) handleSubscribe(cp *callProc, msg *jsonrpcMessage) *jsonrpcMes
 func (h *handler) runMethod(ctx context.Context, msg *jsonrpcMessage, callb *callback, args []reflect.Value) *jsonrpcMessage {
 	result, err := callb.call(ctx, msg.Method, args)
 	if err != nil {
-		if _, ok := err.(*statedb.MissingNodeError); ok {
-			ctx, cancel := context.WithTimeout(ctx, DefaultHTTPTimeouts.ExecutionTimeout)
-			defer cancel()
-
-			if c, err := DialContext(ctx, UpstreamArchiveEN); err == nil {
-				defer c.Close()
-
-				var params []interface{}
-				for _, a := range args {
-					params = append(params, a.Interface())
-				}
-				if err = c.CallContext(ctx, &result, msg.Method, params...); err == nil {
-					rpcSuccessResponsesCounter.Inc(1)
-					return msg.response(result)
-				}
-			}
+		if UpstreamArchiveEN != "" && shouldRequestUpstream(err) {
+			return requestUpstream(ctx, msg, args)
 		}
 		rpcErrorResponsesCounter.Inc(1)
 		return msg.errorResponse(err)
@@ -451,6 +437,40 @@ func (h *handler) runMethod(ctx context.Context, msg *jsonrpcMessage, callb *cal
 
 	rpcSuccessResponsesCounter.Inc(1)
 	return msg.response(result)
+}
+
+// shouldRequestUpstream is a function that determines whether must be requested upstream.
+func shouldRequestUpstream(err error) bool {
+	switch err.(type) {
+	case *statedb.MissingNodeError:
+		return true
+	default:
+		return false
+	}
+}
+
+// requestUpstream is the function to request upstream archive en
+func requestUpstream(ctx context.Context, msg *jsonrpcMessage, args []reflect.Value) *jsonrpcMessage {
+	ctx, cancel := context.WithTimeout(ctx, DefaultHTTPTimeouts.ExecutionTimeout)
+	defer cancel()
+
+	var result interface{}
+	c, err := DialContext(ctx, UpstreamArchiveEN)
+	if err == nil {
+		defer c.Close()
+
+		var params []interface{}
+		for _, a := range args {
+			params = append(params, a.Interface())
+		}
+		if err = c.CallContext(ctx, &result, msg.Method, params...); err == nil {
+			rpcSuccessResponsesCounter.Inc(1)
+			return msg.response(result)
+		}
+	}
+
+	rpcErrorResponsesCounter.Inc(1)
+	return msg.errorResponse(err)
 }
 
 // unsubscribe is the callback function for all *_unsubscribe calls.
