@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/klaytn/klaytn"
-	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -229,7 +228,8 @@ func (_IKIP113 *IKIP113Caller) GetAllBlsInfo(opts *bind.CallOpts) (struct {
 func (_IKIP113 *IKIP113Session) GetAllBlsInfo() (struct {
 	NodeIdList []common.Address
 	PubkeyList []IKIP113BlsPublicKeyInfo
-}, error) {
+}, error,
+) {
 	return _IKIP113.Contract.GetAllBlsInfo(&_IKIP113.CallOpts)
 }
 
@@ -239,7 +239,8 @@ func (_IKIP113 *IKIP113Session) GetAllBlsInfo() (struct {
 func (_IKIP113 *IKIP113CallerSession) GetAllBlsInfo() (struct {
 	NodeIdList []common.Address
 	PubkeyList []IKIP113BlsPublicKeyInfo
-}, error) {
+}, error,
+) {
 	return _IKIP113.Contract.GetAllBlsInfo(&_IKIP113.CallOpts)
 }
 
@@ -562,7 +563,8 @@ func (_IRegistry *IRegistryCaller) Records(opts *bind.CallOpts, arg0 string, arg
 func (_IRegistry *IRegistrySession) Records(arg0 string, arg1 *big.Int) (struct {
 	Addr       common.Address
 	Activation *big.Int
-}, error) {
+}, error,
+) {
 	return _IRegistry.Contract.Records(&_IRegistry.CallOpts, arg0, arg1)
 }
 
@@ -572,7 +574,8 @@ func (_IRegistry *IRegistrySession) Records(arg0 string, arg1 *big.Int) (struct 
 func (_IRegistry *IRegistryCallerSession) Records(arg0 string, arg1 *big.Int) (struct {
 	Addr       common.Address
 	Activation *big.Int
-}, error) {
+}, error,
+) {
 	return _IRegistry.Contract.Records(&_IRegistry.CallOpts, arg0, arg1)
 }
 
@@ -717,7 +720,6 @@ type IRegistryOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_IRegistry *IRegistryFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*IRegistryOwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -738,7 +740,6 @@ func (_IRegistry *IRegistryFilterer) FilterOwnershipTransferred(opts *bind.Filte
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_IRegistry *IRegistryFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *IRegistryOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -870,7 +871,6 @@ type IRegistryRegistered struct {
 //
 // Solidity: event Registered(string name, address indexed addr, uint256 indexed activation)
 func (_IRegistry *IRegistryFilterer) FilterRegistered(opts *bind.FilterOpts, addr []common.Address, activation []*big.Int) (*IRegistryRegisteredIterator, error) {
-
 	var addrRule []interface{}
 	for _, addrItem := range addr {
 		addrRule = append(addrRule, addrItem)
@@ -891,7 +891,6 @@ func (_IRegistry *IRegistryFilterer) FilterRegistered(opts *bind.FilterOpts, add
 //
 // Solidity: event Registered(string name, address indexed addr, uint256 indexed activation)
 func (_IRegistry *IRegistryFilterer) WatchRegistered(opts *bind.WatchOpts, sink chan<- *IRegistryRegistered, addr []common.Address, activation []*big.Int) (event.Subscription, error) {
-
 	var addrRule []interface{}
 	for _, addrItem := range addr {
 		addrRule = append(addrRule, addrItem)
@@ -1130,6 +1129,78 @@ func (_KIP113Mock *KIP113MockTransactorRaw) Transact(opts *bind.TransactOpts, me
 	return _KIP113Mock.Contract.contract.Transact(opts, method, params...)
 }
 
+// ZERO48HASH is a free data retrieval call binding the contract method 0x6fc522c6.
+//
+// Solidity: function ZERO48HASH() view returns(bytes32)
+func (_KIP113Mock *KIP113MockCaller) ZERO48HASH(opts *bind.CallOpts) ([32]byte, error) {
+	ret0 := new([32]byte)
+	out := ret0
+	err := _KIP113Mock.contract.Call(opts, out, "ZERO48HASH")
+	return *ret0, err
+}
+
+// ZERO48HASH is a free data retrieval call binding the contract method 0x6fc522c6.
+//
+// Solidity: function ZERO48HASH() view returns(bytes32)
+func (_KIP113Mock *KIP113MockSession) ZERO48HASH() ([32]byte, error) {
+	return _KIP113Mock.Contract.ZERO48HASH(&_KIP113Mock.CallOpts)
+}
+
+// ZERO48HASH is a free data retrieval call binding the contract method 0x6fc522c6.
+//
+// Solidity: function ZERO48HASH() view returns(bytes32)
+func (_KIP113Mock *KIP113MockCallerSession) ZERO48HASH() ([32]byte, error) {
+	return _KIP113Mock.Contract.ZERO48HASH(&_KIP113Mock.CallOpts)
+}
+
+// ZERO96HASH is a free data retrieval call binding the contract method 0x20abd458.
+//
+// Solidity: function ZERO96HASH() view returns(bytes32)
+func (_KIP113Mock *KIP113MockCaller) ZERO96HASH(opts *bind.CallOpts) ([32]byte, error) {
+	ret0 := new([32]byte)
+	out := ret0
+	err := _KIP113Mock.contract.Call(opts, out, "ZERO96HASH")
+	return *ret0, err
+}
+
+// ZERO96HASH is a free data retrieval call binding the contract method 0x20abd458.
+//
+// Solidity: function ZERO96HASH() view returns(bytes32)
+func (_KIP113Mock *KIP113MockSession) ZERO96HASH() ([32]byte, error) {
+	return _KIP113Mock.Contract.ZERO96HASH(&_KIP113Mock.CallOpts)
+}
+
+// ZERO96HASH is a free data retrieval call binding the contract method 0x20abd458.
+//
+// Solidity: function ZERO96HASH() view returns(bytes32)
+func (_KIP113Mock *KIP113MockCallerSession) ZERO96HASH() ([32]byte, error) {
+	return _KIP113Mock.Contract.ZERO96HASH(&_KIP113Mock.CallOpts)
+}
+
+// Abook is a free data retrieval call binding the contract method 0x829d639d.
+//
+// Solidity: function abook() view returns(address)
+func (_KIP113Mock *KIP113MockCaller) Abook(opts *bind.CallOpts) (common.Address, error) {
+	ret0 := new(common.Address)
+	out := ret0
+	err := _KIP113Mock.contract.Call(opts, out, "abook")
+	return *ret0, err
+}
+
+// Abook is a free data retrieval call binding the contract method 0x829d639d.
+//
+// Solidity: function abook() view returns(address)
+func (_KIP113Mock *KIP113MockSession) Abook() (common.Address, error) {
+	return _KIP113Mock.Contract.Abook(&_KIP113Mock.CallOpts)
+}
+
+// Abook is a free data retrieval call binding the contract method 0x829d639d.
+//
+// Solidity: function abook() view returns(address)
+func (_KIP113Mock *KIP113MockCallerSession) Abook() (common.Address, error) {
+	return _KIP113Mock.Contract.Abook(&_KIP113Mock.CallOpts)
+}
+
 // AllNodeIds is a free data retrieval call binding the contract method 0xa5834971.
 //
 // Solidity: function allNodeIds(uint256 ) view returns(address)
@@ -1188,7 +1259,8 @@ func (_KIP113Mock *KIP113MockCaller) GetAllBlsInfo(opts *bind.CallOpts) (struct 
 func (_KIP113Mock *KIP113MockSession) GetAllBlsInfo() (struct {
 	NodeIdList []common.Address
 	PubkeyList []IKIP113BlsPublicKeyInfo
-}, error) {
+}, error,
+) {
 	return _KIP113Mock.Contract.GetAllBlsInfo(&_KIP113Mock.CallOpts)
 }
 
@@ -1198,8 +1270,57 @@ func (_KIP113Mock *KIP113MockSession) GetAllBlsInfo() (struct {
 func (_KIP113Mock *KIP113MockCallerSession) GetAllBlsInfo() (struct {
 	NodeIdList []common.Address
 	PubkeyList []IKIP113BlsPublicKeyInfo
-}, error) {
+}, error,
+) {
 	return _KIP113Mock.Contract.GetAllBlsInfo(&_KIP113Mock.CallOpts)
+}
+
+// Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
+//
+// Solidity: function owner() view returns(address)
+func (_KIP113Mock *KIP113MockCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
+	ret0 := new(common.Address)
+	out := ret0
+	err := _KIP113Mock.contract.Call(opts, out, "owner")
+	return *ret0, err
+}
+
+// Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
+//
+// Solidity: function owner() view returns(address)
+func (_KIP113Mock *KIP113MockSession) Owner() (common.Address, error) {
+	return _KIP113Mock.Contract.Owner(&_KIP113Mock.CallOpts)
+}
+
+// Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
+//
+// Solidity: function owner() view returns(address)
+func (_KIP113Mock *KIP113MockCallerSession) Owner() (common.Address, error) {
+	return _KIP113Mock.Contract.Owner(&_KIP113Mock.CallOpts)
+}
+
+// ProxiableUUID is a free data retrieval call binding the contract method 0x52d1902d.
+//
+// Solidity: function proxiableUUID() view returns(bytes32)
+func (_KIP113Mock *KIP113MockCaller) ProxiableUUID(opts *bind.CallOpts) ([32]byte, error) {
+	ret0 := new([32]byte)
+	out := ret0
+	err := _KIP113Mock.contract.Call(opts, out, "proxiableUUID")
+	return *ret0, err
+}
+
+// ProxiableUUID is a free data retrieval call binding the contract method 0x52d1902d.
+//
+// Solidity: function proxiableUUID() view returns(bytes32)
+func (_KIP113Mock *KIP113MockSession) ProxiableUUID() ([32]byte, error) {
+	return _KIP113Mock.Contract.ProxiableUUID(&_KIP113Mock.CallOpts)
+}
+
+// ProxiableUUID is a free data retrieval call binding the contract method 0x52d1902d.
+//
+// Solidity: function proxiableUUID() view returns(bytes32)
+func (_KIP113Mock *KIP113MockCallerSession) ProxiableUUID() ([32]byte, error) {
+	return _KIP113Mock.Contract.ProxiableUUID(&_KIP113Mock.CallOpts)
 }
 
 // Record is a free data retrieval call binding the contract method 0x3465d6d5.
@@ -1229,7 +1350,8 @@ func (_KIP113Mock *KIP113MockCaller) Record(opts *bind.CallOpts, arg0 common.Add
 func (_KIP113Mock *KIP113MockSession) Record(arg0 common.Address) (struct {
 	PublicKey []byte
 	Pop       []byte
-}, error) {
+}, error,
+) {
 	return _KIP113Mock.Contract.Record(&_KIP113Mock.CallOpts, arg0)
 }
 
@@ -1239,8 +1361,30 @@ func (_KIP113Mock *KIP113MockSession) Record(arg0 common.Address) (struct {
 func (_KIP113Mock *KIP113MockCallerSession) Record(arg0 common.Address) (struct {
 	PublicKey []byte
 	Pop       []byte
-}, error) {
+}, error,
+) {
 	return _KIP113Mock.Contract.Record(&_KIP113Mock.CallOpts, arg0)
+}
+
+// Initialize is a paid mutator transaction binding the contract method 0x8129fc1c.
+//
+// Solidity: function initialize() returns()
+func (_KIP113Mock *KIP113MockTransactor) Initialize(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _KIP113Mock.contract.Transact(opts, "initialize")
+}
+
+// Initialize is a paid mutator transaction binding the contract method 0x8129fc1c.
+//
+// Solidity: function initialize() returns()
+func (_KIP113Mock *KIP113MockSession) Initialize() (*types.Transaction, error) {
+	return _KIP113Mock.Contract.Initialize(&_KIP113Mock.TransactOpts)
+}
+
+// Initialize is a paid mutator transaction binding the contract method 0x8129fc1c.
+//
+// Solidity: function initialize() returns()
+func (_KIP113Mock *KIP113MockTransactorSession) Initialize() (*types.Transaction, error) {
+	return _KIP113Mock.Contract.Initialize(&_KIP113Mock.TransactOpts)
 }
 
 // Register is a paid mutator transaction binding the contract method 0x786cd4d7.
@@ -1636,7 +1780,8 @@ func (_Registry *RegistryCaller) Records(opts *bind.CallOpts, arg0 string, arg1 
 func (_Registry *RegistrySession) Records(arg0 string, arg1 *big.Int) (struct {
 	Addr       common.Address
 	Activation *big.Int
-}, error) {
+}, error,
+) {
 	return _Registry.Contract.Records(&_Registry.CallOpts, arg0, arg1)
 }
 
@@ -1646,7 +1791,8 @@ func (_Registry *RegistrySession) Records(arg0 string, arg1 *big.Int) (struct {
 func (_Registry *RegistryCallerSession) Records(arg0 string, arg1 *big.Int) (struct {
 	Addr       common.Address
 	Activation *big.Int
-}, error) {
+}, error,
+) {
 	return _Registry.Contract.Records(&_Registry.CallOpts, arg0, arg1)
 }
 
@@ -1770,7 +1916,6 @@ type RegistryOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_Registry *RegistryFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*RegistryOwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -1791,7 +1936,6 @@ func (_Registry *RegistryFilterer) FilterOwnershipTransferred(opts *bind.FilterO
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_Registry *RegistryFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *RegistryOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -1923,7 +2067,6 @@ type RegistryRegistered struct {
 //
 // Solidity: event Registered(string name, address indexed addr, uint256 indexed activation)
 func (_Registry *RegistryFilterer) FilterRegistered(opts *bind.FilterOpts, addr []common.Address, activation []*big.Int) (*RegistryRegisteredIterator, error) {
-
 	var addrRule []interface{}
 	for _, addrItem := range addr {
 		addrRule = append(addrRule, addrItem)
@@ -1944,7 +2087,6 @@ func (_Registry *RegistryFilterer) FilterRegistered(opts *bind.FilterOpts, addr 
 //
 // Solidity: event Registered(string name, address indexed addr, uint256 indexed activation)
 func (_Registry *RegistryFilterer) WatchRegistered(opts *bind.WatchOpts, sink chan<- *RegistryRegistered, addr []common.Address, activation []*big.Int) (event.Subscription, error) {
-
 	var addrRule []interface{}
 	for _, addrItem := range addr {
 		addrRule = append(addrRule, addrItem)
@@ -2369,7 +2511,8 @@ func (_RegistryMock *RegistryMockCaller) Records(opts *bind.CallOpts, arg0 strin
 func (_RegistryMock *RegistryMockSession) Records(arg0 string, arg1 *big.Int) (struct {
 	Addr       common.Address
 	Activation *big.Int
-}, error) {
+}, error,
+) {
 	return _RegistryMock.Contract.Records(&_RegistryMock.CallOpts, arg0, arg1)
 }
 
@@ -2379,7 +2522,8 @@ func (_RegistryMock *RegistryMockSession) Records(arg0 string, arg1 *big.Int) (s
 func (_RegistryMock *RegistryMockCallerSession) Records(arg0 string, arg1 *big.Int) (struct {
 	Addr       common.Address
 	Activation *big.Int
-}, error) {
+}, error,
+) {
 	return _RegistryMock.Contract.Records(&_RegistryMock.CallOpts, arg0, arg1)
 }
 
@@ -2503,7 +2647,6 @@ type RegistryMockOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_RegistryMock *RegistryMockFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*RegistryMockOwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -2524,7 +2667,6 @@ func (_RegistryMock *RegistryMockFilterer) FilterOwnershipTransferred(opts *bind
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_RegistryMock *RegistryMockFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *RegistryMockOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -2656,7 +2798,6 @@ type RegistryMockRegistered struct {
 //
 // Solidity: event Registered(string name, address indexed addr, uint256 indexed activation)
 func (_RegistryMock *RegistryMockFilterer) FilterRegistered(opts *bind.FilterOpts, addr []common.Address, activation []*big.Int) (*RegistryMockRegisteredIterator, error) {
-
 	var addrRule []interface{}
 	for _, addrItem := range addr {
 		addrRule = append(addrRule, addrItem)
@@ -2677,7 +2818,6 @@ func (_RegistryMock *RegistryMockFilterer) FilterRegistered(opts *bind.FilterOpt
 //
 // Solidity: event Registered(string name, address indexed addr, uint256 indexed activation)
 func (_RegistryMock *RegistryMockFilterer) WatchRegistered(opts *bind.WatchOpts, sink chan<- *RegistryMockRegistered, addr []common.Address, activation []*big.Int) (event.Subscription, error) {
-
 	var addrRule []interface{}
 	for _, addrItem := range addr {
 		addrRule = append(addrRule, addrItem)
@@ -2725,6 +2865,1132 @@ func (_RegistryMock *RegistryMockFilterer) WatchRegistered(opts *bind.WatchOpts,
 func (_RegistryMock *RegistryMockFilterer) ParseRegistered(log types.Log) (*RegistryMockRegistered, error) {
 	event := new(RegistryMockRegistered)
 	if err := _RegistryMock.contract.UnpackLog(event, "Registered", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// StorageSlotMetaData contains all meta data concerning the StorageSlot contract.
+var StorageSlotMetaData = &bind.MetaData{
+	ABI: "[]",
+	Bin: "0x60566037600b82828239805160001a607314602a57634e487b7160e01b600052600060045260246000fd5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea264697066735822122061ca98bd9a9672bf10c068dcf42a45d13fc17620bb619c26bdf064388a883db964736f6c63430008130033",
+}
+
+// StorageSlotABI is the input ABI used to generate the binding from.
+// Deprecated: Use StorageSlotMetaData.ABI instead.
+var StorageSlotABI = StorageSlotMetaData.ABI
+
+// StorageSlotBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
+const StorageSlotBinRuntime = `73000000000000000000000000000000000000000030146080604052600080fdfea264697066735822122061ca98bd9a9672bf10c068dcf42a45d13fc17620bb619c26bdf064388a883db964736f6c63430008130033`
+
+// StorageSlotBin is the compiled bytecode used for deploying new contracts.
+// Deprecated: Use StorageSlotMetaData.Bin instead.
+var StorageSlotBin = StorageSlotMetaData.Bin
+
+// DeployStorageSlot deploys a new Klaytn contract, binding an instance of StorageSlot to it.
+func DeployStorageSlot(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *StorageSlot, error) {
+	parsed, err := StorageSlotMetaData.GetAbi()
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	if parsed == nil {
+		return common.Address{}, nil, nil, errors.New("GetABI returned nil")
+	}
+
+	address, tx, contract, err := bind.DeployContract(auth, *parsed, common.FromHex(StorageSlotBin), backend)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	return address, tx, &StorageSlot{StorageSlotCaller: StorageSlotCaller{contract: contract}, StorageSlotTransactor: StorageSlotTransactor{contract: contract}, StorageSlotFilterer: StorageSlotFilterer{contract: contract}}, nil
+}
+
+// StorageSlot is an auto generated Go binding around a Klaytn contract.
+type StorageSlot struct {
+	StorageSlotCaller     // Read-only binding to the contract
+	StorageSlotTransactor // Write-only binding to the contract
+	StorageSlotFilterer   // Log filterer for contract events
+}
+
+// StorageSlotCaller is an auto generated read-only Go binding around a Klaytn contract.
+type StorageSlotCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// StorageSlotTransactor is an auto generated write-only Go binding around a Klaytn contract.
+type StorageSlotTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// StorageSlotFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+type StorageSlotFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// StorageSlotSession is an auto generated Go binding around a Klaytn contract,
+// with pre-set call and transact options.
+type StorageSlotSession struct {
+	Contract     *StorageSlot      // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts     // Call options to use throughout this session
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+}
+
+// StorageSlotCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// with pre-set call options.
+type StorageSlotCallerSession struct {
+	Contract *StorageSlotCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts      // Call options to use throughout this session
+}
+
+// StorageSlotTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// with pre-set transact options.
+type StorageSlotTransactorSession struct {
+	Contract     *StorageSlotTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts      // Transaction auth options to use throughout this session
+}
+
+// StorageSlotRaw is an auto generated low-level Go binding around a Klaytn contract.
+type StorageSlotRaw struct {
+	Contract *StorageSlot // Generic contract binding to access the raw methods on
+}
+
+// StorageSlotCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+type StorageSlotCallerRaw struct {
+	Contract *StorageSlotCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// StorageSlotTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+type StorageSlotTransactorRaw struct {
+	Contract *StorageSlotTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewStorageSlot creates a new instance of StorageSlot, bound to a specific deployed contract.
+func NewStorageSlot(address common.Address, backend bind.ContractBackend) (*StorageSlot, error) {
+	contract, err := bindStorageSlot(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &StorageSlot{StorageSlotCaller: StorageSlotCaller{contract: contract}, StorageSlotTransactor: StorageSlotTransactor{contract: contract}, StorageSlotFilterer: StorageSlotFilterer{contract: contract}}, nil
+}
+
+// NewStorageSlotCaller creates a new read-only instance of StorageSlot, bound to a specific deployed contract.
+func NewStorageSlotCaller(address common.Address, caller bind.ContractCaller) (*StorageSlotCaller, error) {
+	contract, err := bindStorageSlot(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &StorageSlotCaller{contract: contract}, nil
+}
+
+// NewStorageSlotTransactor creates a new write-only instance of StorageSlot, bound to a specific deployed contract.
+func NewStorageSlotTransactor(address common.Address, transactor bind.ContractTransactor) (*StorageSlotTransactor, error) {
+	contract, err := bindStorageSlot(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &StorageSlotTransactor{contract: contract}, nil
+}
+
+// NewStorageSlotFilterer creates a new log filterer instance of StorageSlot, bound to a specific deployed contract.
+func NewStorageSlotFilterer(address common.Address, filterer bind.ContractFilterer) (*StorageSlotFilterer, error) {
+	contract, err := bindStorageSlot(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &StorageSlotFilterer{contract: contract}, nil
+}
+
+// bindStorageSlot binds a generic wrapper to an already deployed contract.
+func bindStorageSlot(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := StorageSlotMetaData.GetAbi()
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, *parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_StorageSlot *StorageSlotRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _StorageSlot.Contract.StorageSlotCaller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_StorageSlot *StorageSlotRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _StorageSlot.Contract.StorageSlotTransactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_StorageSlot *StorageSlotRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _StorageSlot.Contract.StorageSlotTransactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_StorageSlot *StorageSlotCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _StorageSlot.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_StorageSlot *StorageSlotTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _StorageSlot.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_StorageSlot *StorageSlotTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _StorageSlot.Contract.contract.Transact(opts, method, params...)
+}
+
+// StorageSlotUpgradeableMetaData contains all meta data concerning the StorageSlotUpgradeable contract.
+var StorageSlotUpgradeableMetaData = &bind.MetaData{
+	ABI: "[]",
+	Bin: "0x60566037600b82828239805160001a607314602a57634e487b7160e01b600052600060045260246000fd5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea2646970667358221220591c77dfec17118a2ca0803e321cdaa6629b0a43ce207b858ac44c985568473064736f6c63430008130033",
+}
+
+// StorageSlotUpgradeableABI is the input ABI used to generate the binding from.
+// Deprecated: Use StorageSlotUpgradeableMetaData.ABI instead.
+var StorageSlotUpgradeableABI = StorageSlotUpgradeableMetaData.ABI
+
+// StorageSlotUpgradeableBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
+const StorageSlotUpgradeableBinRuntime = `73000000000000000000000000000000000000000030146080604052600080fdfea2646970667358221220591c77dfec17118a2ca0803e321cdaa6629b0a43ce207b858ac44c985568473064736f6c63430008130033`
+
+// StorageSlotUpgradeableBin is the compiled bytecode used for deploying new contracts.
+// Deprecated: Use StorageSlotUpgradeableMetaData.Bin instead.
+var StorageSlotUpgradeableBin = StorageSlotUpgradeableMetaData.Bin
+
+// DeployStorageSlotUpgradeable deploys a new Klaytn contract, binding an instance of StorageSlotUpgradeable to it.
+func DeployStorageSlotUpgradeable(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *StorageSlotUpgradeable, error) {
+	parsed, err := StorageSlotUpgradeableMetaData.GetAbi()
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	if parsed == nil {
+		return common.Address{}, nil, nil, errors.New("GetABI returned nil")
+	}
+
+	address, tx, contract, err := bind.DeployContract(auth, *parsed, common.FromHex(StorageSlotUpgradeableBin), backend)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	return address, tx, &StorageSlotUpgradeable{StorageSlotUpgradeableCaller: StorageSlotUpgradeableCaller{contract: contract}, StorageSlotUpgradeableTransactor: StorageSlotUpgradeableTransactor{contract: contract}, StorageSlotUpgradeableFilterer: StorageSlotUpgradeableFilterer{contract: contract}}, nil
+}
+
+// StorageSlotUpgradeable is an auto generated Go binding around a Klaytn contract.
+type StorageSlotUpgradeable struct {
+	StorageSlotUpgradeableCaller     // Read-only binding to the contract
+	StorageSlotUpgradeableTransactor // Write-only binding to the contract
+	StorageSlotUpgradeableFilterer   // Log filterer for contract events
+}
+
+// StorageSlotUpgradeableCaller is an auto generated read-only Go binding around a Klaytn contract.
+type StorageSlotUpgradeableCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// StorageSlotUpgradeableTransactor is an auto generated write-only Go binding around a Klaytn contract.
+type StorageSlotUpgradeableTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// StorageSlotUpgradeableFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+type StorageSlotUpgradeableFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// StorageSlotUpgradeableSession is an auto generated Go binding around a Klaytn contract,
+// with pre-set call and transact options.
+type StorageSlotUpgradeableSession struct {
+	Contract     *StorageSlotUpgradeable // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts           // Call options to use throughout this session
+	TransactOpts bind.TransactOpts       // Transaction auth options to use throughout this session
+}
+
+// StorageSlotUpgradeableCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// with pre-set call options.
+type StorageSlotUpgradeableCallerSession struct {
+	Contract *StorageSlotUpgradeableCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts                 // Call options to use throughout this session
+}
+
+// StorageSlotUpgradeableTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// with pre-set transact options.
+type StorageSlotUpgradeableTransactorSession struct {
+	Contract     *StorageSlotUpgradeableTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts                 // Transaction auth options to use throughout this session
+}
+
+// StorageSlotUpgradeableRaw is an auto generated low-level Go binding around a Klaytn contract.
+type StorageSlotUpgradeableRaw struct {
+	Contract *StorageSlotUpgradeable // Generic contract binding to access the raw methods on
+}
+
+// StorageSlotUpgradeableCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+type StorageSlotUpgradeableCallerRaw struct {
+	Contract *StorageSlotUpgradeableCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// StorageSlotUpgradeableTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+type StorageSlotUpgradeableTransactorRaw struct {
+	Contract *StorageSlotUpgradeableTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewStorageSlotUpgradeable creates a new instance of StorageSlotUpgradeable, bound to a specific deployed contract.
+func NewStorageSlotUpgradeable(address common.Address, backend bind.ContractBackend) (*StorageSlotUpgradeable, error) {
+	contract, err := bindStorageSlotUpgradeable(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &StorageSlotUpgradeable{StorageSlotUpgradeableCaller: StorageSlotUpgradeableCaller{contract: contract}, StorageSlotUpgradeableTransactor: StorageSlotUpgradeableTransactor{contract: contract}, StorageSlotUpgradeableFilterer: StorageSlotUpgradeableFilterer{contract: contract}}, nil
+}
+
+// NewStorageSlotUpgradeableCaller creates a new read-only instance of StorageSlotUpgradeable, bound to a specific deployed contract.
+func NewStorageSlotUpgradeableCaller(address common.Address, caller bind.ContractCaller) (*StorageSlotUpgradeableCaller, error) {
+	contract, err := bindStorageSlotUpgradeable(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &StorageSlotUpgradeableCaller{contract: contract}, nil
+}
+
+// NewStorageSlotUpgradeableTransactor creates a new write-only instance of StorageSlotUpgradeable, bound to a specific deployed contract.
+func NewStorageSlotUpgradeableTransactor(address common.Address, transactor bind.ContractTransactor) (*StorageSlotUpgradeableTransactor, error) {
+	contract, err := bindStorageSlotUpgradeable(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &StorageSlotUpgradeableTransactor{contract: contract}, nil
+}
+
+// NewStorageSlotUpgradeableFilterer creates a new log filterer instance of StorageSlotUpgradeable, bound to a specific deployed contract.
+func NewStorageSlotUpgradeableFilterer(address common.Address, filterer bind.ContractFilterer) (*StorageSlotUpgradeableFilterer, error) {
+	contract, err := bindStorageSlotUpgradeable(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &StorageSlotUpgradeableFilterer{contract: contract}, nil
+}
+
+// bindStorageSlotUpgradeable binds a generic wrapper to an already deployed contract.
+func bindStorageSlotUpgradeable(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := StorageSlotUpgradeableMetaData.GetAbi()
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, *parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_StorageSlotUpgradeable *StorageSlotUpgradeableRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _StorageSlotUpgradeable.Contract.StorageSlotUpgradeableCaller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_StorageSlotUpgradeable *StorageSlotUpgradeableRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _StorageSlotUpgradeable.Contract.StorageSlotUpgradeableTransactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_StorageSlotUpgradeable *StorageSlotUpgradeableRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _StorageSlotUpgradeable.Contract.StorageSlotUpgradeableTransactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_StorageSlotUpgradeable *StorageSlotUpgradeableCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _StorageSlotUpgradeable.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_StorageSlotUpgradeable *StorageSlotUpgradeableTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _StorageSlotUpgradeable.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_StorageSlotUpgradeable *StorageSlotUpgradeableTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _StorageSlotUpgradeable.Contract.contract.Transact(opts, method, params...)
+}
+
+// UUPSUpgradeableMetaData contains all meta data concerning the UUPSUpgradeable contract.
+var UUPSUpgradeableMetaData = &bind.MetaData{
+	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"previousAdmin\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAdmin\",\"type\":\"address\"}],\"name\":\"AdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"beacon\",\"type\":\"address\"}],\"name\":\"BeaconUpgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"Upgraded\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"proxiableUUID\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"}],\"name\":\"upgradeTo\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"upgradeToAndCall\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"}]",
+	Sigs: map[string]string{
+		"52d1902d": "proxiableUUID()",
+		"3659cfe6": "upgradeTo(address)",
+		"4f1ef286": "upgradeToAndCall(address,bytes)",
+	},
+}
+
+// UUPSUpgradeableABI is the input ABI used to generate the binding from.
+// Deprecated: Use UUPSUpgradeableMetaData.ABI instead.
+var UUPSUpgradeableABI = UUPSUpgradeableMetaData.ABI
+
+// UUPSUpgradeableBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
+const UUPSUpgradeableBinRuntime = ``
+
+// UUPSUpgradeableFuncSigs maps the 4-byte function signature to its string representation.
+// Deprecated: Use UUPSUpgradeableMetaData.Sigs instead.
+var UUPSUpgradeableFuncSigs = UUPSUpgradeableMetaData.Sigs
+
+// UUPSUpgradeable is an auto generated Go binding around a Klaytn contract.
+type UUPSUpgradeable struct {
+	UUPSUpgradeableCaller     // Read-only binding to the contract
+	UUPSUpgradeableTransactor // Write-only binding to the contract
+	UUPSUpgradeableFilterer   // Log filterer for contract events
+}
+
+// UUPSUpgradeableCaller is an auto generated read-only Go binding around a Klaytn contract.
+type UUPSUpgradeableCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// UUPSUpgradeableTransactor is an auto generated write-only Go binding around a Klaytn contract.
+type UUPSUpgradeableTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// UUPSUpgradeableFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+type UUPSUpgradeableFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// UUPSUpgradeableSession is an auto generated Go binding around a Klaytn contract,
+// with pre-set call and transact options.
+type UUPSUpgradeableSession struct {
+	Contract     *UUPSUpgradeable  // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts     // Call options to use throughout this session
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+}
+
+// UUPSUpgradeableCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// with pre-set call options.
+type UUPSUpgradeableCallerSession struct {
+	Contract *UUPSUpgradeableCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts          // Call options to use throughout this session
+}
+
+// UUPSUpgradeableTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// with pre-set transact options.
+type UUPSUpgradeableTransactorSession struct {
+	Contract     *UUPSUpgradeableTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts          // Transaction auth options to use throughout this session
+}
+
+// UUPSUpgradeableRaw is an auto generated low-level Go binding around a Klaytn contract.
+type UUPSUpgradeableRaw struct {
+	Contract *UUPSUpgradeable // Generic contract binding to access the raw methods on
+}
+
+// UUPSUpgradeableCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+type UUPSUpgradeableCallerRaw struct {
+	Contract *UUPSUpgradeableCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// UUPSUpgradeableTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+type UUPSUpgradeableTransactorRaw struct {
+	Contract *UUPSUpgradeableTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewUUPSUpgradeable creates a new instance of UUPSUpgradeable, bound to a specific deployed contract.
+func NewUUPSUpgradeable(address common.Address, backend bind.ContractBackend) (*UUPSUpgradeable, error) {
+	contract, err := bindUUPSUpgradeable(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &UUPSUpgradeable{UUPSUpgradeableCaller: UUPSUpgradeableCaller{contract: contract}, UUPSUpgradeableTransactor: UUPSUpgradeableTransactor{contract: contract}, UUPSUpgradeableFilterer: UUPSUpgradeableFilterer{contract: contract}}, nil
+}
+
+// NewUUPSUpgradeableCaller creates a new read-only instance of UUPSUpgradeable, bound to a specific deployed contract.
+func NewUUPSUpgradeableCaller(address common.Address, caller bind.ContractCaller) (*UUPSUpgradeableCaller, error) {
+	contract, err := bindUUPSUpgradeable(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &UUPSUpgradeableCaller{contract: contract}, nil
+}
+
+// NewUUPSUpgradeableTransactor creates a new write-only instance of UUPSUpgradeable, bound to a specific deployed contract.
+func NewUUPSUpgradeableTransactor(address common.Address, transactor bind.ContractTransactor) (*UUPSUpgradeableTransactor, error) {
+	contract, err := bindUUPSUpgradeable(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &UUPSUpgradeableTransactor{contract: contract}, nil
+}
+
+// NewUUPSUpgradeableFilterer creates a new log filterer instance of UUPSUpgradeable, bound to a specific deployed contract.
+func NewUUPSUpgradeableFilterer(address common.Address, filterer bind.ContractFilterer) (*UUPSUpgradeableFilterer, error) {
+	contract, err := bindUUPSUpgradeable(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &UUPSUpgradeableFilterer{contract: contract}, nil
+}
+
+// bindUUPSUpgradeable binds a generic wrapper to an already deployed contract.
+func bindUUPSUpgradeable(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := UUPSUpgradeableMetaData.GetAbi()
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, *parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_UUPSUpgradeable *UUPSUpgradeableRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _UUPSUpgradeable.Contract.UUPSUpgradeableCaller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_UUPSUpgradeable *UUPSUpgradeableRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _UUPSUpgradeable.Contract.UUPSUpgradeableTransactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_UUPSUpgradeable *UUPSUpgradeableRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _UUPSUpgradeable.Contract.UUPSUpgradeableTransactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_UUPSUpgradeable *UUPSUpgradeableCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _UUPSUpgradeable.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_UUPSUpgradeable *UUPSUpgradeableTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _UUPSUpgradeable.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_UUPSUpgradeable *UUPSUpgradeableTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _UUPSUpgradeable.Contract.contract.Transact(opts, method, params...)
+}
+
+// ProxiableUUID is a free data retrieval call binding the contract method 0x52d1902d.
+//
+// Solidity: function proxiableUUID() view returns(bytes32)
+func (_UUPSUpgradeable *UUPSUpgradeableCaller) ProxiableUUID(opts *bind.CallOpts) ([32]byte, error) {
+	ret0 := new([32]byte)
+	out := ret0
+	err := _UUPSUpgradeable.contract.Call(opts, out, "proxiableUUID")
+	return *ret0, err
+}
+
+// ProxiableUUID is a free data retrieval call binding the contract method 0x52d1902d.
+//
+// Solidity: function proxiableUUID() view returns(bytes32)
+func (_UUPSUpgradeable *UUPSUpgradeableSession) ProxiableUUID() ([32]byte, error) {
+	return _UUPSUpgradeable.Contract.ProxiableUUID(&_UUPSUpgradeable.CallOpts)
+}
+
+// ProxiableUUID is a free data retrieval call binding the contract method 0x52d1902d.
+//
+// Solidity: function proxiableUUID() view returns(bytes32)
+func (_UUPSUpgradeable *UUPSUpgradeableCallerSession) ProxiableUUID() ([32]byte, error) {
+	return _UUPSUpgradeable.Contract.ProxiableUUID(&_UUPSUpgradeable.CallOpts)
+}
+
+// UpgradeTo is a paid mutator transaction binding the contract method 0x3659cfe6.
+//
+// Solidity: function upgradeTo(address newImplementation) returns()
+func (_UUPSUpgradeable *UUPSUpgradeableTransactor) UpgradeTo(opts *bind.TransactOpts, newImplementation common.Address) (*types.Transaction, error) {
+	return _UUPSUpgradeable.contract.Transact(opts, "upgradeTo", newImplementation)
+}
+
+// UpgradeTo is a paid mutator transaction binding the contract method 0x3659cfe6.
+//
+// Solidity: function upgradeTo(address newImplementation) returns()
+func (_UUPSUpgradeable *UUPSUpgradeableSession) UpgradeTo(newImplementation common.Address) (*types.Transaction, error) {
+	return _UUPSUpgradeable.Contract.UpgradeTo(&_UUPSUpgradeable.TransactOpts, newImplementation)
+}
+
+// UpgradeTo is a paid mutator transaction binding the contract method 0x3659cfe6.
+//
+// Solidity: function upgradeTo(address newImplementation) returns()
+func (_UUPSUpgradeable *UUPSUpgradeableTransactorSession) UpgradeTo(newImplementation common.Address) (*types.Transaction, error) {
+	return _UUPSUpgradeable.Contract.UpgradeTo(&_UUPSUpgradeable.TransactOpts, newImplementation)
+}
+
+// UpgradeToAndCall is a paid mutator transaction binding the contract method 0x4f1ef286.
+//
+// Solidity: function upgradeToAndCall(address newImplementation, bytes data) payable returns()
+func (_UUPSUpgradeable *UUPSUpgradeableTransactor) UpgradeToAndCall(opts *bind.TransactOpts, newImplementation common.Address, data []byte) (*types.Transaction, error) {
+	return _UUPSUpgradeable.contract.Transact(opts, "upgradeToAndCall", newImplementation, data)
+}
+
+// UpgradeToAndCall is a paid mutator transaction binding the contract method 0x4f1ef286.
+//
+// Solidity: function upgradeToAndCall(address newImplementation, bytes data) payable returns()
+func (_UUPSUpgradeable *UUPSUpgradeableSession) UpgradeToAndCall(newImplementation common.Address, data []byte) (*types.Transaction, error) {
+	return _UUPSUpgradeable.Contract.UpgradeToAndCall(&_UUPSUpgradeable.TransactOpts, newImplementation, data)
+}
+
+// UpgradeToAndCall is a paid mutator transaction binding the contract method 0x4f1ef286.
+//
+// Solidity: function upgradeToAndCall(address newImplementation, bytes data) payable returns()
+func (_UUPSUpgradeable *UUPSUpgradeableTransactorSession) UpgradeToAndCall(newImplementation common.Address, data []byte) (*types.Transaction, error) {
+	return _UUPSUpgradeable.Contract.UpgradeToAndCall(&_UUPSUpgradeable.TransactOpts, newImplementation, data)
+}
+
+// UUPSUpgradeableAdminChangedIterator is returned from FilterAdminChanged and is used to iterate over the raw logs and unpacked data for AdminChanged events raised by the UUPSUpgradeable contract.
+type UUPSUpgradeableAdminChangedIterator struct {
+	Event *UUPSUpgradeableAdminChanged // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *UUPSUpgradeableAdminChangedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(UUPSUpgradeableAdminChanged)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(UUPSUpgradeableAdminChanged)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *UUPSUpgradeableAdminChangedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *UUPSUpgradeableAdminChangedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// UUPSUpgradeableAdminChanged represents a AdminChanged event raised by the UUPSUpgradeable contract.
+type UUPSUpgradeableAdminChanged struct {
+	PreviousAdmin common.Address
+	NewAdmin      common.Address
+	Raw           types.Log // Blockchain specific contextual infos
+}
+
+// FilterAdminChanged is a free log retrieval operation binding the contract event 0x7e644d79422f17c01e4894b5f4f588d331ebfa28653d42ae832dc59e38c9798f.
+//
+// Solidity: event AdminChanged(address previousAdmin, address newAdmin)
+func (_UUPSUpgradeable *UUPSUpgradeableFilterer) FilterAdminChanged(opts *bind.FilterOpts) (*UUPSUpgradeableAdminChangedIterator, error) {
+	logs, sub, err := _UUPSUpgradeable.contract.FilterLogs(opts, "AdminChanged")
+	if err != nil {
+		return nil, err
+	}
+	return &UUPSUpgradeableAdminChangedIterator{contract: _UUPSUpgradeable.contract, event: "AdminChanged", logs: logs, sub: sub}, nil
+}
+
+// WatchAdminChanged is a free log subscription operation binding the contract event 0x7e644d79422f17c01e4894b5f4f588d331ebfa28653d42ae832dc59e38c9798f.
+//
+// Solidity: event AdminChanged(address previousAdmin, address newAdmin)
+func (_UUPSUpgradeable *UUPSUpgradeableFilterer) WatchAdminChanged(opts *bind.WatchOpts, sink chan<- *UUPSUpgradeableAdminChanged) (event.Subscription, error) {
+	logs, sub, err := _UUPSUpgradeable.contract.WatchLogs(opts, "AdminChanged")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(UUPSUpgradeableAdminChanged)
+				if err := _UUPSUpgradeable.contract.UnpackLog(event, "AdminChanged", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseAdminChanged is a log parse operation binding the contract event 0x7e644d79422f17c01e4894b5f4f588d331ebfa28653d42ae832dc59e38c9798f.
+//
+// Solidity: event AdminChanged(address previousAdmin, address newAdmin)
+func (_UUPSUpgradeable *UUPSUpgradeableFilterer) ParseAdminChanged(log types.Log) (*UUPSUpgradeableAdminChanged, error) {
+	event := new(UUPSUpgradeableAdminChanged)
+	if err := _UUPSUpgradeable.contract.UnpackLog(event, "AdminChanged", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// UUPSUpgradeableBeaconUpgradedIterator is returned from FilterBeaconUpgraded and is used to iterate over the raw logs and unpacked data for BeaconUpgraded events raised by the UUPSUpgradeable contract.
+type UUPSUpgradeableBeaconUpgradedIterator struct {
+	Event *UUPSUpgradeableBeaconUpgraded // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *UUPSUpgradeableBeaconUpgradedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(UUPSUpgradeableBeaconUpgraded)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(UUPSUpgradeableBeaconUpgraded)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *UUPSUpgradeableBeaconUpgradedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *UUPSUpgradeableBeaconUpgradedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// UUPSUpgradeableBeaconUpgraded represents a BeaconUpgraded event raised by the UUPSUpgradeable contract.
+type UUPSUpgradeableBeaconUpgraded struct {
+	Beacon common.Address
+	Raw    types.Log // Blockchain specific contextual infos
+}
+
+// FilterBeaconUpgraded is a free log retrieval operation binding the contract event 0x1cf3b03a6cf19fa2baba4df148e9dcabedea7f8a5c07840e207e5c089be95d3e.
+//
+// Solidity: event BeaconUpgraded(address indexed beacon)
+func (_UUPSUpgradeable *UUPSUpgradeableFilterer) FilterBeaconUpgraded(opts *bind.FilterOpts, beacon []common.Address) (*UUPSUpgradeableBeaconUpgradedIterator, error) {
+	var beaconRule []interface{}
+	for _, beaconItem := range beacon {
+		beaconRule = append(beaconRule, beaconItem)
+	}
+
+	logs, sub, err := _UUPSUpgradeable.contract.FilterLogs(opts, "BeaconUpgraded", beaconRule)
+	if err != nil {
+		return nil, err
+	}
+	return &UUPSUpgradeableBeaconUpgradedIterator{contract: _UUPSUpgradeable.contract, event: "BeaconUpgraded", logs: logs, sub: sub}, nil
+}
+
+// WatchBeaconUpgraded is a free log subscription operation binding the contract event 0x1cf3b03a6cf19fa2baba4df148e9dcabedea7f8a5c07840e207e5c089be95d3e.
+//
+// Solidity: event BeaconUpgraded(address indexed beacon)
+func (_UUPSUpgradeable *UUPSUpgradeableFilterer) WatchBeaconUpgraded(opts *bind.WatchOpts, sink chan<- *UUPSUpgradeableBeaconUpgraded, beacon []common.Address) (event.Subscription, error) {
+	var beaconRule []interface{}
+	for _, beaconItem := range beacon {
+		beaconRule = append(beaconRule, beaconItem)
+	}
+
+	logs, sub, err := _UUPSUpgradeable.contract.WatchLogs(opts, "BeaconUpgraded", beaconRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(UUPSUpgradeableBeaconUpgraded)
+				if err := _UUPSUpgradeable.contract.UnpackLog(event, "BeaconUpgraded", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseBeaconUpgraded is a log parse operation binding the contract event 0x1cf3b03a6cf19fa2baba4df148e9dcabedea7f8a5c07840e207e5c089be95d3e.
+//
+// Solidity: event BeaconUpgraded(address indexed beacon)
+func (_UUPSUpgradeable *UUPSUpgradeableFilterer) ParseBeaconUpgraded(log types.Log) (*UUPSUpgradeableBeaconUpgraded, error) {
+	event := new(UUPSUpgradeableBeaconUpgraded)
+	if err := _UUPSUpgradeable.contract.UnpackLog(event, "BeaconUpgraded", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// UUPSUpgradeableInitializedIterator is returned from FilterInitialized and is used to iterate over the raw logs and unpacked data for Initialized events raised by the UUPSUpgradeable contract.
+type UUPSUpgradeableInitializedIterator struct {
+	Event *UUPSUpgradeableInitialized // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *UUPSUpgradeableInitializedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(UUPSUpgradeableInitialized)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(UUPSUpgradeableInitialized)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *UUPSUpgradeableInitializedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *UUPSUpgradeableInitializedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// UUPSUpgradeableInitialized represents a Initialized event raised by the UUPSUpgradeable contract.
+type UUPSUpgradeableInitialized struct {
+	Version uint8
+	Raw     types.Log // Blockchain specific contextual infos
+}
+
+// FilterInitialized is a free log retrieval operation binding the contract event 0x7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb3847402498.
+//
+// Solidity: event Initialized(uint8 version)
+func (_UUPSUpgradeable *UUPSUpgradeableFilterer) FilterInitialized(opts *bind.FilterOpts) (*UUPSUpgradeableInitializedIterator, error) {
+	logs, sub, err := _UUPSUpgradeable.contract.FilterLogs(opts, "Initialized")
+	if err != nil {
+		return nil, err
+	}
+	return &UUPSUpgradeableInitializedIterator{contract: _UUPSUpgradeable.contract, event: "Initialized", logs: logs, sub: sub}, nil
+}
+
+// WatchInitialized is a free log subscription operation binding the contract event 0x7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb3847402498.
+//
+// Solidity: event Initialized(uint8 version)
+func (_UUPSUpgradeable *UUPSUpgradeableFilterer) WatchInitialized(opts *bind.WatchOpts, sink chan<- *UUPSUpgradeableInitialized) (event.Subscription, error) {
+	logs, sub, err := _UUPSUpgradeable.contract.WatchLogs(opts, "Initialized")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(UUPSUpgradeableInitialized)
+				if err := _UUPSUpgradeable.contract.UnpackLog(event, "Initialized", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseInitialized is a log parse operation binding the contract event 0x7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb3847402498.
+//
+// Solidity: event Initialized(uint8 version)
+func (_UUPSUpgradeable *UUPSUpgradeableFilterer) ParseInitialized(log types.Log) (*UUPSUpgradeableInitialized, error) {
+	event := new(UUPSUpgradeableInitialized)
+	if err := _UUPSUpgradeable.contract.UnpackLog(event, "Initialized", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// UUPSUpgradeableUpgradedIterator is returned from FilterUpgraded and is used to iterate over the raw logs and unpacked data for Upgraded events raised by the UUPSUpgradeable contract.
+type UUPSUpgradeableUpgradedIterator struct {
+	Event *UUPSUpgradeableUpgraded // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *UUPSUpgradeableUpgradedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(UUPSUpgradeableUpgraded)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(UUPSUpgradeableUpgraded)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *UUPSUpgradeableUpgradedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *UUPSUpgradeableUpgradedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// UUPSUpgradeableUpgraded represents a Upgraded event raised by the UUPSUpgradeable contract.
+type UUPSUpgradeableUpgraded struct {
+	Implementation common.Address
+	Raw            types.Log // Blockchain specific contextual infos
+}
+
+// FilterUpgraded is a free log retrieval operation binding the contract event 0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b.
+//
+// Solidity: event Upgraded(address indexed implementation)
+func (_UUPSUpgradeable *UUPSUpgradeableFilterer) FilterUpgraded(opts *bind.FilterOpts, implementation []common.Address) (*UUPSUpgradeableUpgradedIterator, error) {
+	var implementationRule []interface{}
+	for _, implementationItem := range implementation {
+		implementationRule = append(implementationRule, implementationItem)
+	}
+
+	logs, sub, err := _UUPSUpgradeable.contract.FilterLogs(opts, "Upgraded", implementationRule)
+	if err != nil {
+		return nil, err
+	}
+	return &UUPSUpgradeableUpgradedIterator{contract: _UUPSUpgradeable.contract, event: "Upgraded", logs: logs, sub: sub}, nil
+}
+
+// WatchUpgraded is a free log subscription operation binding the contract event 0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b.
+//
+// Solidity: event Upgraded(address indexed implementation)
+func (_UUPSUpgradeable *UUPSUpgradeableFilterer) WatchUpgraded(opts *bind.WatchOpts, sink chan<- *UUPSUpgradeableUpgraded, implementation []common.Address) (event.Subscription, error) {
+	var implementationRule []interface{}
+	for _, implementationItem := range implementation {
+		implementationRule = append(implementationRule, implementationItem)
+	}
+
+	logs, sub, err := _UUPSUpgradeable.contract.WatchLogs(opts, "Upgraded", implementationRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(UUPSUpgradeableUpgraded)
+				if err := _UUPSUpgradeable.contract.UnpackLog(event, "Upgraded", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseUpgraded is a log parse operation binding the contract event 0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b.
+//
+// Solidity: event Upgraded(address indexed implementation)
+func (_UUPSUpgradeable *UUPSUpgradeableFilterer) ParseUpgraded(log types.Log) (*UUPSUpgradeableUpgraded, error) {
+	event := new(UUPSUpgradeableUpgraded)
+	if err := _UUPSUpgradeable.contract.UnpackLog(event, "Upgraded", log); err != nil {
 		return nil, err
 	}
 	return event, nil
