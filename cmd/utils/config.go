@@ -208,9 +208,10 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	cfg.NetworkID, _ = getNetworkId(ctx)
 }
 
-// setNodeKey creates a node key from set command line flags, either loading it
-// from a file or as a specified hex value. If neither flags were provided, this
-// method returns nil and an emphemeral key is to be generated.
+// setNodeKey parses manually provided node key from command line flags,
+// either loading it from a file or as a specified hex value. If neither flags
+// were provided, this method sets cfg.PrivateKey = nil and node.Config.NodeKey()
+// will handle the fallback logic.
 func setNodeKey(ctx *cli.Context, cfg *p2p.Config) {
 	var (
 		str  = ctx.String(NodeKeyHexFlag.Name)
@@ -231,6 +232,36 @@ func setNodeKey(ctx *cli.Context, cfg *p2p.Config) {
 			log.Fatalf("Option %q: %v", NodeKeyHexFlag.Name, err)
 		}
 		cfg.PrivateKey = key
+	}
+}
+
+// setBlsNodeKey parses manually provided bls secret key from the command line flags,
+// either loading it from a file or as a specified hex value. If neither flags were
+// provided, this method sets cfg.BlsKey = nil and node.Config.BlsNodeKey() will
+// handle the fallback logic.
+func setBlsNodeKey(ctx *cli.Context, cfg *node.Config) {
+	str := ctx.String(BlsNodeKeyHexFlag.Name)
+	file := ctx.String(BlsNodeKeyFileFlag.Name)
+
+	switch {
+	case file != "" && str != "":
+		log.Fatalf("Options %q and %q are mutually exclusive", BlsNodeKeyFileFlag.Name, BlsNodeKeyHexFlag.Name)
+	case file != "":
+		key, err := bls.LoadKey(file)
+		if err != nil {
+			log.Fatalf("Option %q: %v", BlsNodeKeyFileFlag.Name, err)
+		}
+		cfg.BlsKey = key
+	case str != "":
+		b, err := hex.DecodeString(str)
+		if err != nil {
+			log.Fatalf("Option %q: %v", BlsNodeKeyHexFlag.Name, err)
+		}
+		key, err := bls.SecretKeyFromBytes(b)
+		if err != nil {
+			log.Fatalf("Option %q: %v", BlsNodeKeyHexFlag.Name, err)
+		}
+		cfg.BlsKey = key
 	}
 }
 
@@ -367,6 +398,7 @@ func (kCfg *KlayConfig) SetNodeConfig(ctx *cli.Context) {
 	cfg.DisableUnsafeDebug = ctx.Bool(UnsafeDebugDisableFlag.Name)
 
 	SetP2PConfig(ctx, &cfg.P2P)
+	setBlsNodeKey(ctx, cfg)
 	setIPC(ctx, cfg)
 
 	// httptype is http

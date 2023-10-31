@@ -345,6 +345,11 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	cn.protocolManager.SetWsEndPoint(config.WsEndpoint)
 
 	if ctx.NodeType() == common.CONSENSUSNODE {
+		logger.Info("Loaded node keys",
+			"nodeAddress", crypto.PubkeyToAddress(ctx.NodeKey().PublicKey),
+			"nodePublicKey", hexutil.Encode(crypto.FromECDSAPub(&ctx.NodeKey().PublicKey)),
+			"blsPublicKey", hexutil.Encode(ctx.BlsNodeKey().PublicKey().Marshal()))
+
 		if _, err := cn.Rewardbase(); err != nil {
 			logger.Error("Cannot determine the rewardbase address", "err", err)
 		}
