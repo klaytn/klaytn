@@ -48,6 +48,7 @@ var (
 	// System contract binaries to be injected at hardfork or used in testing.
 	RegistryCode     = hexutil.MustDecode("0x" + contracts.RegistryBinRuntime)
 	RegistryMockCode = hexutil.MustDecode("0x" + contracts.RegistryMockBinRuntime)
+	Kip113Code       = hexutil.MustDecode("0x" + contracts.KIP113BinRuntime)
 	Kip113MockCode   = hexutil.MustDecode("0x" + contracts.KIP113MockBinRuntime)
 
 	// Errors

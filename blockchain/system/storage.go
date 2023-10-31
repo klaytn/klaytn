@@ -148,6 +148,9 @@ func lpad32(value interface{}) common.Hash {
 		return common.BytesToHash(v.Bytes())
 	case common.Hash:
 		return v
+	case []byte:
+		// Use allocDynamicData() for dynamic bytes types
+		return common.BytesToHash(v)
 	default:
 		logger.Crit("not a slot value type", "value", value)
 		return common.Hash{}

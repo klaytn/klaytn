@@ -67,12 +67,11 @@ func TestKip113(t *testing.T) {
 		nodeId        = common.HexToAddress("0xaaaa")
 		_, pub1, pop1 = makeBlsKey()
 	)
-	contractAddr, tx, contract, err := contracts.DeployKIP113Mock(sender, transactor)
-	require.Nil(t, err)
-	require.NotNil(t, waitReceipt(chain, tx.Hash()))
+
+	contract, contractAddr := deployKip113Mock(t, sender, transactor, chain)
 
 	// Register a BLS key
-	tx, err = contract.Register(sender, nodeId, pub1, pop1)
+	tx, err := contract.Register(sender, nodeId, pub1, pop1)
 	require.Nil(t, err)
 	require.NotNil(t, waitReceipt(chain, tx.Hash()))
 
@@ -83,6 +82,30 @@ func TestKip113(t *testing.T) {
 	assert.Equal(t, pop1, infos[nodeId].Pop)
 
 	// TODO: test with Registry
+}
+
+func deployKip113Mock(t *testing.T, sender *bind.TransactOpts, backend *backends.BlockchainContractBackend, chain *blockchain.BlockChain, params ...interface{}) (*contracts.KIP113MockTransactor, common.Address) {
+	// Prepare input data for ERC1967Proxy constructor
+	abi, err := contracts.KIP113MockMetaData.GetAbi()
+	assert.Nil(t, err)
+	data, err := abi.Pack("initialize")
+	assert.Nil(t, err)
+
+	// Deploy Proxy contract
+	// 1. Deploy KIP113Mock implementation contract
+	implAddr, tx, _, err := contracts.DeployKIP113Mock(sender, backend)
+	require.Nil(t, err)
+	require.NotNil(t, waitReceipt(chain, tx.Hash()))
+
+	// 2. Deploy ERC1967Proxy(KIP113Mock.address, _data)
+	contractAddr, tx, _, err := contracts.DeployERC1967Proxy(sender, backend, implAddr, data)
+	require.Nil(t, err)
+	require.NotNil(t, waitReceipt(chain, tx.Hash()))
+
+	// 3. Attach KIP113Mock contract to the proxy
+	contract, _ := contracts.NewKIP113MockTransactor(contractAddr, backend)
+
+	return contract, contractAddr
 }
 
 func makeBlsKey() (priv, pub, pop []byte) {
