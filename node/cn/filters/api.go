@@ -252,7 +252,7 @@ func RPCMarshalHeader(head *types.Header, rules params.Rules) map[string]interfa
 		}
 	}
 	if rules.IsRandao {
-		result["reandomReveal"] = hexutil.Bytes(head.RandomReveal)
+		result["randomReveal"] = hexutil.Bytes(head.RandomReveal)
 		result["mixhash"] = hexutil.Bytes(head.MixHash)
 	}
 
