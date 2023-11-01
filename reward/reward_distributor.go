@@ -222,6 +222,10 @@ func GetBlockReward(header *types.Header, rules params.Rules, pset *params.GovPa
 			spec.Proposer = spec.Proposer.Add(spec.Proposer, txFeeRemained)
 			spec.TotalFee = spec.TotalFee.Add(spec.TotalFee, txFee)
 			incrementRewardsMap(spec.Rewards, header.Rewardbase, txFeeRemained)
+		} else if rules.IsServiceChainTxFee {
+			txFee := GetTotalTxFee(header, rules, pset)
+			spec.Proposer = spec.Proposer.Add(spec.Proposer, txFee)
+			spec.TotalFee = spec.TotalFee.Add(spec.TotalFee, txFee)
 		} else {
 			txFee := GetTotalTxFee(header, rules, pset)
 			spec.Proposer = spec.Proposer.Add(spec.Proposer, txFee)
@@ -261,7 +265,7 @@ func CalcDeferredRewardSimple(header *types.Header, rules params.Rules, pset *pa
 	// However, the fees must be compensated to calculate actual rewards paid.
 
 	// bug-fixed logic after Magma
-	if !rc.deferredTxFee && rc.rules.IsMagma {
+	if !rc.deferredTxFee && (rc.rules.IsMagma || rc.rules.IsServiceChainTxFee) {
 		proposer := new(big.Int).Set(minted)
 		logger.Debug("CalcDeferredRewardSimple after Kore when deferredTxFee=false returns",
 			"proposer", proposer)
