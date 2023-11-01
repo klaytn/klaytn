@@ -505,4 +505,11 @@ var (
 		Usage:   "kip103 contract address",
 		Aliases: []string{"genesis.hardfork.kip103-contract-address"},
 	}
+
+	servicechainTxfeeCompatibleBlockNumberFlag = &cli.Int64Flag{
+		Name:    "servicechaintxfee-compatible-blocknumber",
+		Usage:   "ServiceChainTxFeeCompatible blockNumber",
+		Value:   0,
+		Aliases: []string{"genesis.hardfork.servicechaintxfee-compatible-blocknumber"},
+	}
 )

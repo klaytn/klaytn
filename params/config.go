@@ -197,6 +197,9 @@ type ChainConfig struct {
 	RandaoCompatibleBlock *big.Int        `json:"randaoCompatibleBlock,omitempty"` // RandaoCompatible activate block (nil = no fork)
 	RandaoRegistry        *RegistryConfig `json:"randaoRegistry,omitempty"`        // Registry initial states
 
+	// ServiceChainTxFee is an optional hardfork
+	ServiceChainTxFeeCompatibleBlock *big.Int `json:"servicechainCompatibleBlock,omitempty"` // CancunCompatible switch block (nil = no fork, 0 already on Cancun)
+
 	// Various consensus engines
 	Gxhash   *GxhashConfig   `json:"gxhash,omitempty"` // (deprecated) not supported engine
 	Clique   *CliqueConfig   `json:"clique,omitempty"`
@@ -395,6 +398,15 @@ func (c *ChainConfig) IsRandaoForkBlockParent(num *big.Int) bool {
 	return c.RandaoCompatibleBlock.Cmp(nextNum) == 0 // randao == num + 1
 }
 
+// IsServiceChainTxFeeForkEnabled returns whether num is either equal to the ServiceChainTxFee block or greater.
+func (c *ChainConfig) IsServiceChainTxFeeForkEnabled(num *big.Int) bool {
+	if c.ServiceChainTxFeeCompatibleBlock == nil || num == nil {
+		return false
+	}
+
+	return isForked(c.ServiceChainTxFeeCompatibleBlock, num)
+}
+
 // CheckCompatible checks whether scheduled fork transitions have been imported
 // with a mismatching chain configuration.
 func (c *ChainConfig) CheckCompatible(newcfg *ChainConfig, height uint64) *ConfigCompatError {
@@ -479,6 +491,9 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *Confi
 	}
 	if isForkIncompatible(c.RandaoCompatibleBlock, newcfg.RandaoCompatibleBlock, head) {
 		return newCompatError("Randao Block", c.RandaoCompatibleBlock, newcfg.RandaoCompatibleBlock)
+	}
+	if isForkIncompatible(c.ServiceChainTxFeeCompatibleBlock, newcfg.ServiceChainTxFeeCompatibleBlock, head) {
+		return newCompatError("SerivceChainTxFee Block", c.ServiceChainTxFeeCompatibleBlock, newcfg.ServiceChainTxFeeCompatibleBlock)
 	}
 	return nil
 }
@@ -592,14 +607,15 @@ func (err *ConfigCompatError) Error() string {
 // Rules is a one time interface meaning that it shouldn't be used in between transition
 // phases.
 type Rules struct {
-	ChainID     *big.Int
-	IsIstanbul  bool
-	IsLondon    bool
-	IsEthTxType bool
-	IsMagma     bool
-	IsKore      bool
-	IsShanghai  bool
-	IsCancun    bool
+	ChainID             *big.Int
+	IsIstanbul          bool
+	IsLondon            bool
+	IsEthTxType         bool
+	IsMagma             bool
+	IsKore              bool
+	IsShanghai          bool
+	IsCancun            bool
+	IsServiceChainTxFee bool
 }
 
 // Rules ensures c's ChainID is not nil.
@@ -609,14 +625,15 @@ func (c *ChainConfig) Rules(num *big.Int) Rules {
 		chainID = new(big.Int)
 	}
 	return Rules{
-		ChainID:     new(big.Int).Set(chainID),
-		IsIstanbul:  c.IsIstanbulForkEnabled(num),
-		IsLondon:    c.IsLondonForkEnabled(num),
-		IsEthTxType: c.IsEthTxTypeForkEnabled(num),
-		IsMagma:     c.IsMagmaForkEnabled(num),
-		IsKore:      c.IsKoreForkEnabled(num),
-		IsShanghai:  c.IsShanghaiForkEnabled(num),
-		IsCancun:    c.IsCancunForkEnabled(num),
+		ChainID:             new(big.Int).Set(chainID),
+		IsIstanbul:          c.IsIstanbulForkEnabled(num),
+		IsLondon:            c.IsLondonForkEnabled(num),
+		IsEthTxType:         c.IsEthTxTypeForkEnabled(num),
+		IsMagma:             c.IsMagmaForkEnabled(num),
+		IsKore:              c.IsKoreForkEnabled(num),
+		IsShanghai:          c.IsShanghaiForkEnabled(num),
+		IsCancun:            c.IsCancunForkEnabled(num),
+		IsServiceChainTxFee: c.IsServiceChainTxFeeForkEnabled(num),
 	}
 }
 
