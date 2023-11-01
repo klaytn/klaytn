@@ -332,7 +332,7 @@ var (
 			{{if .Structured}}
 			outstruct := new(struct{ {{range .Normalized.Outputs}} {{.Name}} {{bindtype .Type $structs}}; {{end}} })
 			{{range $i, $t := .Normalized.Outputs}} 
-			outstruct.{{.Name}} = out[{{$i}}].({{bindtype .Type $structs}}){{end}}
+			outstruct.{{.Name}} = *abi.ConvertType(out[{{$i}}], new({{bindtype .Type $structs}})).(*{{bindtype .Type $structs}}){{end}}
 			return *outstruct, err
 			{{else}}
 			if err != nil {
