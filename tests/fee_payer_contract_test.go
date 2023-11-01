@@ -126,7 +126,7 @@ func testFeePayerContract(t *testing.T, fn string) {
 
 		// 4. Check the returned value with the specified fee payer.
 		var feePayer common.Address
-		if err := abii.Unpack(&feePayer, fn, ret); err != nil {
+		if err := abii.UnpackIntoInterface(&feePayer, fn, ret); err != nil {
 			t.Fatal(err)
 		}
 		assert.Equal(t, *bcdata.addrs[1], feePayer)
@@ -221,7 +221,7 @@ func testFeePayerContractIndirect(t *testing.T, fn string) {
 
 		// 5. Check the returned value with the specified fee payer.
 		var feePayer common.Address
-		if err := abii.Unpack(&feePayer, fn, ret); err != nil {
+		if err := abii.UnpackIntoInterface(&feePayer, fn, ret); err != nil {
 			t.Fatal(err)
 		}
 		assert.Equal(t, *bcdata.addrs[1], feePayer)
