@@ -217,8 +217,8 @@ func (_IKIP113 *IKIP113Caller) GetAllBlsInfo(opts *bind.CallOpts) (struct {
 		PubkeyList []IKIP113BlsPublicKeyInfo
 	})
 
-	outstruct.NodeIdList = out[0].([]common.Address)
-	outstruct.PubkeyList = out[1].([]IKIP113BlsPublicKeyInfo)
+	outstruct.NodeIdList = *abi.ConvertType(out[0], new([]common.Address)).(*[]common.Address)
+	outstruct.PubkeyList = *abi.ConvertType(out[1], new([]IKIP113BlsPublicKeyInfo)).(*[]IKIP113BlsPublicKeyInfo)
 	return *outstruct, err
 
 }
@@ -550,8 +550,8 @@ func (_IRegistry *IRegistryCaller) Records(opts *bind.CallOpts, arg0 string, arg
 		Activation *big.Int
 	})
 
-	outstruct.Addr = out[0].(common.Address)
-	outstruct.Activation = out[1].(*big.Int)
+	outstruct.Addr = *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+	outstruct.Activation = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
 	return *outstruct, err
 
 }
@@ -1176,8 +1176,8 @@ func (_KIP113Mock *KIP113MockCaller) GetAllBlsInfo(opts *bind.CallOpts) (struct 
 		PubkeyList []IKIP113BlsPublicKeyInfo
 	})
 
-	outstruct.NodeIdList = out[0].([]common.Address)
-	outstruct.PubkeyList = out[1].([]IKIP113BlsPublicKeyInfo)
+	outstruct.NodeIdList = *abi.ConvertType(out[0], new([]common.Address)).(*[]common.Address)
+	outstruct.PubkeyList = *abi.ConvertType(out[1], new([]IKIP113BlsPublicKeyInfo)).(*[]IKIP113BlsPublicKeyInfo)
 	return *outstruct, err
 
 }
@@ -1217,8 +1217,8 @@ func (_KIP113Mock *KIP113MockCaller) Record(opts *bind.CallOpts, arg0 common.Add
 		Pop       []byte
 	})
 
-	outstruct.PublicKey = out[0].([]byte)
-	outstruct.Pop = out[1].([]byte)
+	outstruct.PublicKey = *abi.ConvertType(out[0], new([]byte)).(*[]byte)
+	outstruct.Pop = *abi.ConvertType(out[1], new([]byte)).(*[]byte)
 	return *outstruct, err
 
 }
@@ -1624,8 +1624,8 @@ func (_Registry *RegistryCaller) Records(opts *bind.CallOpts, arg0 string, arg1 
 		Activation *big.Int
 	})
 
-	outstruct.Addr = out[0].(common.Address)
-	outstruct.Activation = out[1].(*big.Int)
+	outstruct.Addr = *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+	outstruct.Activation = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
 	return *outstruct, err
 
 }
@@ -2357,8 +2357,8 @@ func (_RegistryMock *RegistryMockCaller) Records(opts *bind.CallOpts, arg0 strin
 		Activation *big.Int
 	})
 
-	outstruct.Addr = out[0].(common.Address)
-	outstruct.Activation = out[1].(*big.Int)
+	outstruct.Addr = *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+	outstruct.Activation = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
 	return *outstruct, err
 
 }

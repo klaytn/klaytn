@@ -205,8 +205,8 @@ func (_IRetiredContract *IRetiredContractCaller) GetState(opts *bind.CallOpts) (
 		Quorom    *big.Int
 	})
 
-	outstruct.AdminList = out[0].([]common.Address)
-	outstruct.Quorom = out[1].(*big.Int)
+	outstruct.AdminList = *abi.ConvertType(out[0], new([]common.Address)).(*[]common.Address)
+	outstruct.Quorom = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
 	return *outstruct, err
 
 }
@@ -3020,8 +3020,8 @@ func (_TreasuryRebalance *TreasuryRebalanceCaller) Newbies(opts *bind.CallOpts, 
 		Amount *big.Int
 	})
 
-	outstruct.Newbie = out[0].(common.Address)
-	outstruct.Amount = out[1].(*big.Int)
+	outstruct.Newbie = *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+	outstruct.Amount = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
 	return *outstruct, err
 
 }
