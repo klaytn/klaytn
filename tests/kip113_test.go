@@ -29,6 +29,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	contracts "github.com/klaytn/klaytn/contracts/system_contracts"
+	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/crypto/bls"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
@@ -51,7 +52,7 @@ func TestKip113(t *testing.T) {
 	config.Istanbul.ProposerPolicy = uint64(istanbul.RoundRobin)
 
 	// make a blockchain node
-	fullNode, node, validator, _, workspace := newBlockchain(t, config)
+	fullNode, node, validator, _, workspace := newBlockchain(t, config, nil)
 	defer func() {
 		fullNode.Stop()
 		os.RemoveAll(workspace)
@@ -82,6 +83,93 @@ func TestKip113(t *testing.T) {
 	assert.Equal(t, pop1, infos[nodeId].Pop)
 
 	// TODO: test with Registry
+}
+
+func TestKIP113GenesisAlloc(t *testing.T) {
+	log.EnableLogForTest(log.LvlError, log.LvlWarn)
+
+	// prepare chain configuration
+	config := params.CypressChainConfig.Copy()
+	config.LondonCompatibleBlock = big.NewInt(0)
+	config.IstanbulCompatibleBlock = big.NewInt(0)
+	config.EthTxTypeCompatibleBlock = big.NewInt(0)
+	config.MagmaCompatibleBlock = big.NewInt(0)
+	config.KoreCompatibleBlock = big.NewInt(0)
+	config.ShanghaiCompatibleBlock = big.NewInt(0)
+	config.Istanbul.SubGroupSize = 1
+	config.Istanbul.ProposerPolicy = uint64(istanbul.RoundRobin)
+
+	var (
+		ownerKey, _ = crypto.GenerateKey()
+		owner       = bind.NewKeyedTransactor(ownerKey)
+
+		KIP113MockAddr   = common.HexToAddress("0x0000000000000000000000000000000000000402")
+		ERC1967ProxyAddr = common.HexToAddress("0x0000000000000000000000000000000000000403")
+
+		nodeId        = common.HexToAddress("0xaaaa")
+		nodeId2       = common.HexToAddress("0xbbbb")
+		_, pub1, pop1 = makeBlsKey()
+		_, pub2, pop2 = makeBlsKey()
+
+		allocProxyStorage  = system.AllocProxy(KIP113MockAddr)
+		allocKip113Storage = system.AllocKip113(system.AllocKip113Init{
+			Infos: system.BlsPublicKeyInfos{
+				nodeId:  {PublicKey: pub1, Pop: pop1},
+				nodeId2: {PublicKey: pub2, Pop: pop2},
+			},
+			Owner: owner.From,
+		})
+	)
+
+	// Create storage with AllocProxy() and AllocKip113()
+	allocStorage := make(map[common.Hash]common.Hash)
+	for k, v := range allocProxyStorage {
+		allocStorage[k] = v
+	}
+	for k, v := range allocKip113Storage {
+		allocStorage[k] = v
+	}
+
+	genesisAlloc := blockchain.GenesisAlloc{
+		owner.From: {
+			Balance: big.NewInt(params.KLAY),
+		},
+		KIP113MockAddr: {
+			Code:    system.Kip113MockCode,
+			Balance: common.Big0,
+		},
+		ERC1967ProxyAddr: {
+			Code:    system.ERC1967ProxyCode,
+			Storage: allocStorage,
+			Balance: common.Big0,
+		},
+	}
+
+	genesis := blockchain.DefaultGenesisBlock()
+	for k, v := range genesisAlloc {
+		genesis.Alloc[k] = v
+	}
+
+	// make a blockchain node
+	fullNode, node, _, _, workspace := newBlockchain(t, config, genesis)
+	defer func() {
+		fullNode.Stop()
+		os.RemoveAll(workspace)
+	}()
+
+	var (
+		chain      = node.BlockChain().(*blockchain.BlockChain)
+		transactor = backends.NewBlockchainContractBackend(chain, node.TxPool().(*blockchain.TxPool), nil)
+	)
+
+	// Check BLS keys have been allocated correctly
+	infos, err := system.ReadKip113All(transactor, ERC1967ProxyAddr, nil)
+	assert.Nil(t, err)
+	assert.Equal(t, 2, len(infos))
+	assert.Equal(t, pub1, infos[nodeId].PublicKey)
+	assert.Equal(t, pop1, infos[nodeId].Pop)
+	assert.Equal(t, pub2, infos[nodeId2].PublicKey)
+	assert.Equal(t, pop2, infos[nodeId2].Pop)
 }
 
 func deployKip113Mock(t *testing.T, sender *bind.TransactOpts, backend *backends.BlockchainContractBackend, chain *blockchain.BlockChain, params ...interface{}) (*contracts.KIP113MockTransactor, common.Address) {

@@ -50,7 +50,7 @@ func TestRegistryFork(t *testing.T) {
 		Owner: ownerAddr,
 	}
 
-	fullNode, node, _, _, workspace := newBlockchain(t, config)
+	fullNode, node, _, _, workspace := newBlockchain(t, config, nil)
 	defer func() {
 		fullNode.Stop()
 		os.RemoveAll(workspace)

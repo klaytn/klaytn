@@ -51,6 +51,8 @@ var (
 	Kip113Code       = hexutil.MustDecode("0x" + contracts.KIP113BinRuntime)
 	Kip113MockCode   = hexutil.MustDecode("0x" + contracts.KIP113MockBinRuntime)
 
+	ERC1967ProxyCode = hexutil.MustDecode("0x" + contracts.ERC1967ProxyBinRuntime)
+
 	// Errors
 	ErrRegistryNotInstalled = errors.New("Registry contract not installed")
 	ErrKip113BadResult      = errors.New("KIP113 call returned bad data")
