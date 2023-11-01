@@ -20,10 +20,6 @@ import (
 	"github.com/klaytn/klaytn/common"
 )
 
-// This is the keccak-256 hash of "eip1967.proxy.implementation" subtracted by 1 used in the
-// EIP-1967 proxy contract. See https://eips.ethereum.org/EIPS/eip-1967#implementation-slot
-var ImplementationSlot = common.Hex2Bytes("360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc")
-
 func AllocProxy(impl common.Address) map[common.Hash]common.Hash {
 	if impl == (common.Address{}) {
 		return nil

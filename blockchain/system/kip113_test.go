@@ -93,14 +93,8 @@ func TestAllocKip113(t *testing.T) {
 		})
 	)
 
-	// 1. Create storage with AllocProxy() and AllocKip113()
-	allocStorage := make(map[common.Hash]common.Hash)
-	for k, v := range allocProxyStorage {
-		allocStorage[k] = v
-	}
-	for k, v := range allocKip113Storage {
-		allocStorage[k] = v
-	}
+	// 1. Merge two storage maps
+	allocStorage := MergeStorage(allocProxyStorage, allocKip113Storage)
 
 	// 2. Create storage by calling register()
 	var (

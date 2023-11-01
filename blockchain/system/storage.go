@@ -133,6 +133,21 @@ func allocDynamicData(baseSlot interface{}, data []byte) map[common.Hash]common.
 	return storage
 }
 
+// MergeStorage merges multiple storage maps into one.
+func MergeStorage(ss ...map[common.Hash]common.Hash) map[common.Hash]common.Hash {
+	out := make(map[common.Hash]common.Hash)
+	for _, s := range ss {
+		for k, v := range s {
+			if _, ok := out[k]; ok {
+				logger.Crit("storage slot collision", "slot", k)
+			} else {
+				out[k] = v
+			}
+		}
+	}
+	return out
+}
+
 // Pad Solidity "value types" to 32 bytes.
 // Only a few value types are implemented here.
 // See https://docs.soliditylang.org/en/v0.8.20/types.html

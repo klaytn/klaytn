@@ -122,13 +122,7 @@ func TestKIP113GenesisAlloc(t *testing.T) {
 	)
 
 	// Create storage with AllocProxy() and AllocKip113()
-	allocStorage := make(map[common.Hash]common.Hash)
-	for k, v := range allocProxyStorage {
-		allocStorage[k] = v
-	}
-	for k, v := range allocKip113Storage {
-		allocStorage[k] = v
-	}
+	allocStorage := system.MergeStorage(allocProxyStorage, allocKip113Storage)
 
 	genesisAlloc := blockchain.GenesisAlloc{
 		owner.From: {
