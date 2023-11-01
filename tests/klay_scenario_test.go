@@ -539,7 +539,7 @@ func TestSmartContractScenario(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		balance := new(big.Int)
-		abii.Unpack(&balance, "balanceOf", ret)
+		abii.UnpackIntoInterface(&balance, "balanceOf", ret)
 
 		assert.Equal(t, amountToSend, balance)
 		reservoir.Nonce += 1
@@ -884,7 +884,7 @@ func TestFeeDelegatedSmartContractScenario(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		balance := new(big.Int)
-		abii.Unpack(&balance, "balanceOf", ret)
+		abii.UnpackIntoInterface(&balance, "balanceOf", ret)
 
 		assert.Equal(t, amountToSend, balance)
 		reservoir.Nonce += 1
@@ -1076,7 +1076,7 @@ func TestFeeDelegatedSmartContractScenarioWithRatio(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		balance := new(big.Int)
-		abii.Unpack(&balance, "balanceOf", ret)
+		abii.UnpackIntoInterface(&balance, "balanceOf", ret)
 
 		assert.Equal(t, amountToSend, balance)
 		reservoir.Nonce += 1

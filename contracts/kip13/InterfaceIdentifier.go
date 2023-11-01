@@ -4,6 +4,7 @@
 package kip13
 
 import (
+	"errors"
 	"math/big"
 	"strings"
 
@@ -17,6 +18,7 @@ import (
 
 // Reference imports to suppress errors if they are not otherwise used.
 var (
+	_ = errors.New
 	_ = big.NewInt
 	_ = strings.NewReader
 	_ = klaytn.NotFound
@@ -24,18 +26,27 @@ var (
 	_ = common.Big1
 	_ = types.BloomLookup
 	_ = event.NewSubscription
+	_ = abi.ConvertType
 )
 
+// InterfaceIdentifierMetaData contains all meta data concerning the InterfaceIdentifier contract.
+var InterfaceIdentifierMetaData = &bind.MetaData{
+	ABI: "[{\"constant\":true,\"inputs\":[{\"name\":\"interfaceID\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]",
+	Sigs: map[string]string{
+		"01ffc9a7": "supportsInterface(bytes4)",
+	},
+}
+
 // InterfaceIdentifierABI is the input ABI used to generate the binding from.
-const InterfaceIdentifierABI = "[{\"constant\":true,\"inputs\":[{\"name\":\"interfaceID\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
+// Deprecated: Use InterfaceIdentifierMetaData.ABI instead.
+var InterfaceIdentifierABI = InterfaceIdentifierMetaData.ABI
 
 // InterfaceIdentifierBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
 const InterfaceIdentifierBinRuntime = ``
 
 // InterfaceIdentifierFuncSigs maps the 4-byte function signature to its string representation.
-var InterfaceIdentifierFuncSigs = map[string]string{
-	"01ffc9a7": "supportsInterface(bytes4)",
-}
+// Deprecated: Use InterfaceIdentifierMetaData.Sigs instead.
+var InterfaceIdentifierFuncSigs = InterfaceIdentifierMetaData.Sigs
 
 // InterfaceIdentifier is an auto generated Go binding around a Klaytn contract.
 type InterfaceIdentifier struct {
@@ -134,18 +145,18 @@ func NewInterfaceIdentifierFilterer(address common.Address, filterer bind.Contra
 
 // bindInterfaceIdentifier binds a generic wrapper to an already deployed contract.
 func bindInterfaceIdentifier(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
-	parsed, err := abi.JSON(strings.NewReader(InterfaceIdentifierABI))
+	parsed, err := InterfaceIdentifierMetaData.GetAbi()
 	if err != nil {
 		return nil, err
 	}
-	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+	return bind.NewBoundContract(address, *parsed, caller, transactor, filterer), nil
 }
 
 // Call invokes the (constant) contract method with params as input values and
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_InterfaceIdentifier *InterfaceIdentifierRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_InterfaceIdentifier *InterfaceIdentifierRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _InterfaceIdentifier.Contract.InterfaceIdentifierCaller.contract.Call(opts, result, method, params...)
 }
 
@@ -164,7 +175,7 @@ func (_InterfaceIdentifier *InterfaceIdentifierRaw) Transact(opts *bind.Transact
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_InterfaceIdentifier *InterfaceIdentifierCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_InterfaceIdentifier *InterfaceIdentifierCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _InterfaceIdentifier.Contract.contract.Call(opts, result, method, params...)
 }
 
@@ -183,12 +194,17 @@ func (_InterfaceIdentifier *InterfaceIdentifierTransactorRaw) Transact(opts *bin
 //
 // Solidity: function supportsInterface(bytes4 interfaceID) view returns(bool)
 func (_InterfaceIdentifier *InterfaceIdentifierCaller) SupportsInterface(opts *bind.CallOpts, interfaceID [4]byte) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
-	out := ret0
-	err := _InterfaceIdentifier.contract.Call(opts, out, "supportsInterface", interfaceID)
-	return *ret0, err
+	var out []interface{}
+	err := _InterfaceIdentifier.contract.Call(opts, &out, "supportsInterface", interfaceID)
+
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
