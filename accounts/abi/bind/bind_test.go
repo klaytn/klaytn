@@ -543,7 +543,6 @@ var bindTests = []struct {
 	},
 	// Tests that structs are correctly unpacked
 	{
-
 		`Structs`,
 		`
 		pragma solidity ^0.6.5;
