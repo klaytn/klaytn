@@ -7,3 +7,4 @@ pragma solidity ^0.8.0;
 
 import "./registry/Registry.sol";
 import "./registry/RegistryMock.sol";
+import "./kip113/KIP113Mock.sol";

@@ -443,6 +443,10 @@ func setHTTP(ctx *cli.Context, cfg *node.Config) {
 	if ctx.IsSet(RPCExecutionTimeoutFlag.Name) {
 		cfg.HTTPTimeouts.ExecutionTimeout = time.Duration(ctx.Int(RPCExecutionTimeoutFlag.Name)) * time.Second
 	}
+	if ctx.IsSet(RPCUpstreamArchiveENFlag.Name) {
+		rpc.UpstreamArchiveEN = ctx.String(RPCUpstreamArchiveENFlag.Name)
+		cfg.UpstreamArchiveEN = rpc.UpstreamArchiveEN
+	}
 }
 
 // setWS creates the WebSocket RPC listener interface string from the set
