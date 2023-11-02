@@ -515,10 +515,13 @@ func (bc *BlockChain) StartWarmUp(minLoad uint) error {
 	resultCh := make(chan int, len(children))
 	errCh := make(chan error)
 	bc.quitWarmUp = make(chan struct{})
-	for _, child := range children {
-		stateDB, err := state.New(child.Unextend(), db, nil, nil)
+	for idx, child := range children {
+		childHash := child.Unextend()
+		stateDB, err := state.New(childHash, db, nil, nil)
 		if err != nil {
-			return err
+			logger.Warn("[WarmUp] Failed to get state",
+				"rootHash", children, "childIdx", idx, "childHash", childHash.Hex())
+			continue
 		}
 		it := state.NewNodeIterator(stateDB)
 		go bc.trieWarmUp(it.Next, resultCh, errCh)
