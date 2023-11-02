@@ -70,6 +70,9 @@ var (
 	// NonEthCompatible is a bool value that determines whether to use return formatting of the eth namespace API  provided for compatibility.
 	// It can be overwritten by rpc.eth.noncompatible flag
 	NonEthCompatible = false
+
+	// UpstreamArchiveEN is the upstream archive mode EN endpoint
+	UpstreamArchiveEN string
 )
 
 // Server is an RPC server.

@@ -14,7 +14,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckarep/golang-set v1.8.0
 	github.com/dgraph-io/badger v1.6.0
-	github.com/docker/docker v20.10.24+incompatible
+	github.com/docker/docker v24.0.7+incompatible
 	github.com/edsrzf/mmap-go v1.0.0
 	github.com/fatih/color v1.9.0
 	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5
@@ -71,6 +71,7 @@ require (
 
 require (
 	github.com/dop251/goja v0.0.0-20231014103939-873a1496dc8e
+	github.com/btcsuite/btcd/btcec/v2 v2.3.2
 	github.com/satori/go.uuid v1.2.0
 	github.com/tyler-smith/go-bip32 v1.0.0
 	github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4 v1.4.1
@@ -90,6 +91,7 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
+	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.0.1 // indirect
 	github.com/dgraph-io/ristretto v0.1.0 // indirect
 	github.com/dgryski/go-farm v0.0.0-20190423205320-6a90982ecee2 // indirect
 	github.com/dlclark/regexp2 v1.7.0 // indirect

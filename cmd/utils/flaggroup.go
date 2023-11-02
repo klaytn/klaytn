@@ -284,6 +284,7 @@ var FlagGroups = []FlagGroup{
 			RPCIdleTimeoutFlag,
 			RPCReadTimeout,
 			RPCWriteTimeoutFlag,
+			RPCUpstreamArchiveENFlag,
 			UnsafeDebugDisableFlag,
 			IPCDisabledFlag,
 			IPCPathFlag,

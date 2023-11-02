@@ -238,7 +238,7 @@ func TestValidateSenderContract(t *testing.T) {
 
 		// 4. Check the returned value.
 		var validated bool
-		if err := abii.Unpack(&validated, "ValidateSender", ret); err != nil {
+		if err := abii.UnpackIntoInterface(&validated, "ValidateSender", ret); err != nil {
 			t.Fatal(err)
 		}
 		assert.Equal(t, true, validated)
@@ -278,7 +278,7 @@ func TestValidateSenderContract(t *testing.T) {
 
 		// 4. Check the returned value.
 		var validated bool
-		if err := abii.Unpack(&validated, "ValidateSender", ret); err != nil {
+		if err := abii.UnpackIntoInterface(&validated, "ValidateSender", ret); err != nil {
 			t.Fatal(err)
 		}
 		assert.Equal(t, true, validated)
@@ -318,7 +318,7 @@ func TestValidateSenderContract(t *testing.T) {
 
 		// 4. Check the returned value.
 		var validated bool
-		if err := abii.Unpack(&validated, "ValidateSender", ret); err != nil {
+		if err := abii.UnpackIntoInterface(&validated, "ValidateSender", ret); err != nil {
 			t.Fatal(err)
 		}
 		assert.Equal(t, false, validated)
@@ -361,7 +361,7 @@ func TestValidateSenderContract(t *testing.T) {
 
 		// 4. Check the returned value.
 		var validated bool
-		if err := abii.Unpack(&validated, "ValidateSender", ret); err != nil {
+		if err := abii.UnpackIntoInterface(&validated, "ValidateSender", ret); err != nil {
 			t.Fatal(err)
 		}
 		assert.Equal(t, false, validated)
@@ -407,7 +407,7 @@ func TestValidateSenderContract(t *testing.T) {
 
 		// 4. Check the returned value.
 		var validated bool
-		if err := abii.Unpack(&validated, "ValidateSender", ret); err != nil {
+		if err := abii.UnpackIntoInterface(&validated, "ValidateSender", ret); err != nil {
 			t.Fatal(err)
 		}
 		assert.Equal(t, false, validated)

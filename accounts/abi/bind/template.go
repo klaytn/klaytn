@@ -34,7 +34,7 @@ type tmplData struct {
 type tmplContract struct {
 	Type            string                 // Type name of the main contract binding
 	InputABI        string                 // JSON ABI used as the input to generate the binding from
-	InputBin        string                 // Optional EVM bytecode used to denetare deploy code from
+	InputBin        string                 // Optional EVM bytecode used to generate deploy code from
 	FuncSigs        map[string]string      // Optional map: string signature -> 4-byte signature
 	InputBinRuntime string                 // Optional EVM-Runtime bytecode used to add genesis block
 	Constructor     abi.Method             // Contract constructor for deploy parametrization
@@ -98,6 +98,7 @@ import (
 	"errors"
 
 	"github.com/klaytn/klaytn"
+	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -114,6 +115,7 @@ var (
 	_ = common.Big1
 	_ = types.BloomLookup
 	_ = event.NewSubscription
+	_ = abi.ConvertType
 )
 
 {{$structs := .Structs}}
@@ -286,7 +288,7 @@ var (
 	// sets the output to result. The result type might be a single field for simple
 	// returns, a slice of interfaces for anonymous returns and a struct for named
 	// returns.
-	func (_{{$contract.Type}} *{{$contract.Type}}Raw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	func (_{{$contract.Type}} *{{$contract.Type}}Raw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 		return _{{$contract.Type}}.Contract.{{$contract.Type}}Caller.contract.Call(opts, result, method, params...)
 	}
 
@@ -305,7 +307,7 @@ var (
 	// sets the output to result. The result type might be a single field for simple
 	// returns, a slice of interfaces for anonymous returns and a struct for named
 	// returns.
-	func (_{{$contract.Type}} *{{$contract.Type}}CallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	func (_{{$contract.Type}} *{{$contract.Type}}CallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 		return _{{$contract.Type}}.Contract.contract.Call(opts, result, method, params...)
 	}
 
@@ -325,19 +327,22 @@ var (
 		//
 		// Solidity: {{.Original.String}}
 		func (_{{$contract.Type}} *{{$contract.Type}}Caller) {{.Normalized.Name}}(opts *bind.CallOpts {{range .Normalized.Inputs}}, {{.Name}} {{bindtype .Type $structs}} {{end}}) ({{if .Structured}}struct{ {{range .Normalized.Outputs}}{{.Name}} {{bindtype .Type $structs}};{{end}} },{{else}}{{range .Normalized.Outputs}}{{bindtype .Type $structs}},{{end}}{{end}} error) {
-			{{if .Structured}}ret := new(struct{
-				{{range .Normalized.Outputs}}{{.Name}} {{bindtype .Type $structs}}
-				{{end}}
-			}){{else}}var (
-				{{range $i, $_ := .Normalized.Outputs}}ret{{$i}} = new({{bindtype .Type $structs}})
-				{{end}}
-			){{end}}
-			out := {{if .Structured}}ret{{else}}{{if eq (len .Normalized.Outputs) 1}}ret0{{else}}&[]interface{}{
-				{{range $i, $_ := .Normalized.Outputs}}ret{{$i}},
-				{{end}}
-			}{{end}}{{end}}
-			err := _{{$contract.Type}}.contract.Call(opts, out, "{{.Original.Name}}" {{range .Normalized.Inputs}}, {{.Name}}{{end}})
-			return {{if .Structured}}*ret,{{else}}{{range $i, $_ := .Normalized.Outputs}}*ret{{$i}},{{end}}{{end}} err
+			var out []interface{}
+			err := _{{$contract.Type}}.contract.Call(opts, &out, "{{.Original.Name}}" {{range .Normalized.Inputs}}, {{.Name}}{{end}})
+			{{if .Structured}}
+			outstruct := new(struct{ {{range .Normalized.Outputs}} {{.Name}} {{bindtype .Type $structs}}; {{end}} })
+			{{range $i, $t := .Normalized.Outputs}} 
+			outstruct.{{.Name}} = *abi.ConvertType(out[{{$i}}], new({{bindtype .Type $structs}})).(*{{bindtype .Type $structs}}){{end}}
+			return *outstruct, err
+			{{else}}
+			if err != nil {
+				return {{range $i, $_ := .Normalized.Outputs}}*new({{bindtype .Type $structs}}), {{end}} err
+			}
+			{{range $i, $t := .Normalized.Outputs}}
+			out{{$i}} := *abi.ConvertType(out[{{$i}}], new({{bindtype .Type $structs}})).(*{{bindtype .Type $structs}}){{end}}
+			
+			return {{range $i, $t := .Normalized.Outputs}}out{{$i}}, {{end}} err
+			{{end}}
 		}
 
 		// {{.Normalized.Name}} is a free data retrieval call binding the contract method 0x{{printf "%x" .Original.ID}}.
