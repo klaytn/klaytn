@@ -889,6 +889,13 @@ var (
 		EnvVars:  []string{"KLAYTN_RPCEXECUTIONTIMEOUT"},
 		Category: "API AND CONSOLE",
 	}
+	RPCUpstreamArchiveENFlag = &cli.StringFlag{
+		Name:     "upstream-en",
+		Usage:    "upstream archive mode EN endpoint",
+		Aliases:  []string{"rpc.upstream-en"},
+		EnvVars:  []string{"KLAYTN_RPC_UPSTREAM_EN"},
+		Category: "API AND CONSOLE",
+	}
 
 	WSEnabledFlag = &cli.BoolFlag{
 		Name:     "ws",
