@@ -220,7 +220,7 @@ func executeBalanceOf(c *deployedContract, transactions types.Transactions, prof
 		}
 
 		balance := new(big.Int)
-		abii.Unpack(&balance, "balanceOf", ret)
+		abii.UnpackIntoInterface(&balance, "balanceOf", ret)
 	}
 
 	return nil
