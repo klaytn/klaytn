@@ -109,6 +109,7 @@ type BlockContext struct {
 	Time        *big.Int       // Provides information for TIME
 	BlockScore  *big.Int       // Provides information for DIFFICULTY
 	BaseFee     *big.Int       // Provides information for BASEFEE
+	Random      common.Hash    // Provides information for RANDOM
 }
 
 // TxContext provides the EVM with information about a transaction.
