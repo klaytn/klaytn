@@ -592,9 +592,10 @@ func opDifficulty(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
 }
 
 func opRandom(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	// evm.BlockNumber.Uint64() is always greater than or equal to 1
-	// since evm will not run on the genesis block
-	scope.Stack.push(evm.Context.GetHash(evm.Context.BlockNumber.Uint64() - 1).Big())
+	// evm.Context.Random is
+	// - header.MixHash after Randao hardfork
+	// - header.ParentHash before Randao hardfork
+	scope.Stack.push(evm.Context.Random.Big())
 	return nil, nil
 }
 
