@@ -491,7 +491,7 @@ func initBlockChain(db database.DBManager, cacheConfig *blockchain.CacheConfig, 
 
 	genesis.Config = &cfg
 
-	chain, err := blockchain.NewBlockChain(db, cacheConfig, genesis.Config, engine, vm.Config{})
+	chain, err := blockchain.NewBlockChain(db, cacheConfig, genesis.Config, engine, vm.Config{}, false)
 	if err != nil {
 		return nil, nil, err
 	}

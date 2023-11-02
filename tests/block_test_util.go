@@ -108,7 +108,7 @@ func (t *BlockTest) Run() error {
 	}
 
 	// TODO-Klaytn: Replace gxhash with istanbul
-	chain, err := blockchain.NewBlockChain(db, nil, config, gxhash.NewShared(), vm.Config{})
+	chain, err := blockchain.NewBlockChain(db, nil, config, gxhash.NewShared(), vm.Config{}, false)
 	if err != nil {
 		return err
 	}

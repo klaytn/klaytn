@@ -93,7 +93,7 @@ func testBlockChain(t *testing.T) *blockchain.BlockChain {
 		t.Fatal(err)
 	}
 
-	bc, err := blockchain.NewBlockChain(db, nil, chainConfig, engine, vm.Config{})
+	bc, err := blockchain.NewBlockChain(db, nil, chainConfig, engine, vm.Config{}, false)
 	if err != nil {
 		t.Fatal(err)
 	}
