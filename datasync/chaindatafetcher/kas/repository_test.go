@@ -74,7 +74,7 @@ func makeChainEventsWithInternalTraces(numBlocks int, genTxs func(i int, block *
 	testGenesis.MustCommit(db)
 
 	// create new blockchain with enabled internal tx tracing option
-	b, _ := blockchain.NewBlockChain(db, nil, testGenesis.Config, gxhash.NewFaker(), vm.Config{Debug: true, EnableInternalTxTracing: true})
+	b, _ := blockchain.NewBlockChain(db, nil, testGenesis.Config, gxhash.NewFaker(), vm.Config{Debug: true, EnableInternalTxTracing: true}, false)
 	defer b.Stop()
 
 	// subscribe a new chain event channel

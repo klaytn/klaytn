@@ -99,7 +99,7 @@ func newTestBackend(t *testing.T) *testBackend {
 		b.AddTx(tx)
 	})
 	// Construct testing chain
-	chain, err := blockchain.NewBlockChain(db, nil, gspec.Config, gxhash.NewFaker(), vm.Config{})
+	chain, err := blockchain.NewBlockChain(db, nil, gspec.Config, gxhash.NewFaker(), vm.Config{}, false)
 	if err != nil {
 		t.Fatalf("Failed to create local chain, %v", err)
 	}
