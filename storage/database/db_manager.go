@@ -174,6 +174,8 @@ type DBManager interface {
 	ReadPruningMarks(startNumber, endNumber uint64) []PruningMark
 	DeletePruningMarks(marks []PruningMark)
 	PruneTrieNodes(marks []PruningMark)
+	WriteLastPrunedBlockNumber(blockNumber uint64)
+	ReadLastPrunedBlockNumber() (uint64, error)
 
 	// from accessors_indexes.go
 	ReadTxLookupEntry(hash common.Hash) (common.Hash, uint64, uint64)
@@ -1992,6 +1994,24 @@ func (dbm *databaseManager) PruneTrieNodes(marks []PruningMark) {
 	if err := batch.Write(); err != nil {
 		logger.Crit("Failed to batch prune trie node", "err", err)
 	}
+}
+
+// WriteLastPrunedBlockNumber records a block number of the most recent pruning block
+func (dbm *databaseManager) WriteLastPrunedBlockNumber(blockNumber uint64) {
+	db := dbm.getDatabase(MiscDB)
+	if err := db.Put(lastPrunedBlockNumberKey, common.Int64ToByteLittleEndian(blockNumber)); err != nil {
+		logger.Crit("Failed to store the last pruned block number", "err", err)
+	}
+}
+
+// ReadLastPrunedBlockNumber reads a block number of the most recent pruning block
+func (dbm *databaseManager) ReadLastPrunedBlockNumber() (uint64, error) {
+	db := dbm.getDatabase(MiscDB)
+	lastPruned, err := db.Get(lastPrunedBlockNumberKey)
+	if err != nil {
+		return 0, err
+	}
+	return binary.LittleEndian.Uint64(lastPruned), nil
 }
 
 // ReadTxLookupEntry retrieves the positional metadata associated with a transaction

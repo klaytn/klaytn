@@ -518,6 +518,15 @@ func (bc *BlockChain) loadLastState() error {
 // that the rewind must pass the specified state root. The method will try to
 // delete minimal data from disk whilst retaining chain consistency.
 func (bc *BlockChain) SetHead(head uint64) error {
+	// With the live pruning enabled, an attempt to SetHead into a state-pruned block number
+	// may result in an infinite loop, trying to find the existing block (probably the genesis block).
+	// If the target `head` is below the surviving block numbers, SetHead early exits with an error.
+	if lastPruned, err := bc.db.ReadLastPrunedBlockNumber(); err == nil {
+		if head <= lastPruned {
+			return fmt.Errorf("[SetHead] Cannot rewind to a state-pruned block number. lastPrunedBlock=%d targetHead=%d",
+				lastPruned, head)
+		}
+	}
 	_, err := bc.setHeadBeyondRoot(head, common.Hash{}, false)
 	return err
 }
@@ -1480,6 +1489,7 @@ func (bc *BlockChain) pruneTrieNodeLoop() {
 				marks := bc.db.ReadPruningMarks(startNum, limit+1)
 				bc.db.PruneTrieNodes(marks)
 				bc.db.DeletePruningMarks(marks)
+				bc.db.WriteLastPrunedBlockNumber(limit)
 
 				logger.Info("Pruned trie nodes", "number", num, "start", startNum, "limit", limit,
 					"count", len(marks), "elapsed", time.Since(startTime))

@@ -47,6 +47,7 @@ type Backend interface {
 	Progress() klaytn.SyncProgress
 	ProtocolVersion() int
 	SuggestPrice(ctx context.Context) (*big.Int, error)
+	SuggestTipCap(ctx context.Context) (*big.Int, error)
 	UpperBoundGasPrice(ctx context.Context) *big.Int
 	LowerBoundGasPrice(ctx context.Context) *big.Int
 	ChainDB() database.DBManager

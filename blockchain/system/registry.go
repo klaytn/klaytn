@@ -46,7 +46,7 @@ func AllocRegistry(init *params.RegistryConfig) map[common.Hash]common.Hash {
 	// - records[x][i].addr @ Hash(Hash(x, 0)) + (2*i)
 	// - records[x][i].activation @ Hash(Hash(x, 0)) + (2*i + 1)
 	for name, addr := range init.Records {
-		arraySlot := calcMappingSlot(0, name)
+		arraySlot := calcMappingSlot(0, name, 0)
 		storage[arraySlot] = lpad32(1) // records[name].length = 1
 
 		addrSlot := calcArraySlot(arraySlot, 2, 0, 0)
@@ -65,10 +65,12 @@ func AllocRegistry(init *params.RegistryConfig) map[common.Hash]common.Hash {
 	// slot[1]: string[] names;
 	// - names.length @ 1
 	// - names[i] @ Hash(1) + i
-	storage[lpad32(1)] = lpad32(len(names)) // names.length
+	storage[lpad32(1)] = lpad32(len(names))
 	for i, name := range names {
-		nameSlot := calcArraySlot(1, 1, i, 0)
-		storage[nameSlot] = encodeShortString(name) // names[i]
+		nameSlot := calcArraySlot(1, 1, i, 0) // Hash(1) + 1*i + 0
+		for k, v := range allocDynamicData(nameSlot, []byte(name)) {
+			storage[k] = v
+		}
 	}
 
 	// slot[2]: address _owner;

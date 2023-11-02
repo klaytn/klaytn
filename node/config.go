@@ -169,6 +169,9 @@ type Config struct {
 	// ephemeral nodes).
 	GRPCPort int `toml:",omitempty"`
 
+	// UpstreamArchiveEN is an archive mode EN endpoint
+	UpstreamArchiveEN string
+
 	// Ntp server:port to check the synchronization when booting the node
 	NtpRemoteServer string `toml:",omitempty"`
 
