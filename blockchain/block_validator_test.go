@@ -50,7 +50,7 @@ func TestHeaderVerification(t *testing.T) {
 		headers[i] = block.Header()
 	}
 	// Run the header checker for blocks one-by-one, checking for both valid and invalid nonces
-	chain, _ := NewBlockChain(testdb, nil, params.TestChainConfig, gxhash.NewFaker(), vm.Config{})
+	chain, _ := NewBlockChain(testdb, nil, params.TestChainConfig, gxhash.NewFaker(), vm.Config{}, false)
 	defer chain.Stop()
 
 	for i := 0; i < len(blocks); i++ {
@@ -143,7 +143,7 @@ func TestVerifyBlockBody(t *testing.T) {
 
 	// We don't need istanbul instance here because validateBody is in BlockValidator instance
 	GenerateChain(params.TestChainConfig, genesis, gxhash.NewFaker(), testdb, 8, nil)
-	chain, _ := NewBlockChain(testdb, nil, params.TestChainConfig, gxhash.NewFaker(), vm.Config{})
+	chain, _ := NewBlockChain(testdb, nil, params.TestChainConfig, gxhash.NewFaker(), vm.Config{}, false)
 	defer chain.Stop()
 
 	// Generate a batch of accounts to start with
@@ -202,11 +202,11 @@ func testHeaderConcurrentVerification(t *testing.T, threads int) {
 		var results <-chan error
 
 		if valid {
-			chain, _ := NewBlockChain(testdb, nil, params.TestChainConfig, gxhash.NewFaker(), vm.Config{})
+			chain, _ := NewBlockChain(testdb, nil, params.TestChainConfig, gxhash.NewFaker(), vm.Config{}, false)
 			_, results = chain.engine.VerifyHeaders(chain, headers, seals)
 			chain.Stop()
 		} else {
-			chain, _ := NewBlockChain(testdb, nil, params.TestChainConfig, gxhash.NewFakeFailer(uint64(len(headers)-1)), vm.Config{})
+			chain, _ := NewBlockChain(testdb, nil, params.TestChainConfig, gxhash.NewFakeFailer(uint64(len(headers)-1)), vm.Config{}, false)
 			_, results = chain.engine.VerifyHeaders(chain, headers, seals)
 			chain.Stop()
 		}
@@ -269,7 +269,7 @@ func testHeaderConcurrentAbortion(t *testing.T, threads int) {
 	defer runtime.GOMAXPROCS(old)
 
 	// Start the verifications and immediately abort
-	chain, _ := NewBlockChain(testdb, nil, params.TestChainConfig, gxhash.NewFakeDelayer(time.Millisecond), vm.Config{})
+	chain, _ := NewBlockChain(testdb, nil, params.TestChainConfig, gxhash.NewFakeDelayer(time.Millisecond), vm.Config{}, false)
 	defer chain.Stop()
 
 	abort, results := chain.engine.VerifyHeaders(chain, headers, seals)

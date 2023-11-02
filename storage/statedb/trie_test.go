@@ -324,11 +324,12 @@ func TestLargeValue(t *testing.T) {
 func TestStorageTrie(t *testing.T) {
 	newStorageTrie := func(pruning bool) *Trie {
 		dbm := database.NewMemoryDBManager()
+		var trieOpts *TrieOpts = nil
 		if pruning {
-			dbm.WritePruningEnabled()
+			trieOpts = &TrieOpts{LivePruningEnabled: true}
 		}
 		db := NewDatabase(dbm)
-		trie, _ := NewStorageTrie(common.ExtHash{}, db, nil)
+		trie, _ := NewStorageTrie(common.ExtHash{}, db, trieOpts)
 		updateString(trie, "doe", "reindeer")
 		return trie
 	}
@@ -354,12 +355,16 @@ func TestStorageTrie(t *testing.T) {
 
 func TestPruningByUpdate(t *testing.T) {
 	dbm := database.NewMemoryDBManager()
-	dbm.WritePruningEnabled()
 	db := NewDatabase(dbm)
 	hasnode := func(hash common.ExtHash) bool { ok, _ := dbm.HasTrieNode(hash); return ok }
 	common.ResetExtHashCounterForTest(0xccccddddeeee00)
 
-	trie, _ := NewTrie(common.Hash{}, db, &TrieOpts{PruningBlockNumber: 1})
+	trieOpts := &TrieOpts{
+		LivePruningEnabled: true,
+		PruningBlockNumber: 1,
+	}
+
+	trie, _ := NewTrie(common.Hash{}, db, trieOpts)
 	nodehash1 := common.HexToExtHash("05ae693aac2107336a79309e0c60b24a7aac6aa3edecaef593921500d33c63c400000000000000")
 	nodehash2 := common.HexToExtHash("f226ef598ed9195f2211546cf5b2860dc27b4da07ff7ab5108ee68107f0c9d00ccccddddeeee01")
 
@@ -381,7 +386,7 @@ func TestPruningByUpdate(t *testing.T) {
 	assert.True(t, hasnode(nodehash2))
 
 	// Trigger pruning
-	trie, _ = NewTrie(nodehash1.Unextend(), db, &TrieOpts{PruningBlockNumber: 1})
+	trie, _ = NewTrie(nodehash1.Unextend(), db, trieOpts)
 	updateString(trie, "dogglesworth", "cat")
 	trie.Commit(nil)
 	db.Cap(0)
@@ -402,12 +407,16 @@ func TestPruningByUpdate(t *testing.T) {
 
 func TestPruningByDelete(t *testing.T) {
 	dbm := database.NewMemoryDBManager()
-	dbm.WritePruningEnabled()
 	db := NewDatabase(dbm)
 	hasnode := func(hash common.ExtHash) bool { ok, _ := dbm.HasTrieNode(hash); return ok }
 	common.ResetExtHashCounterForTest(0xccccddddeeee00)
 
-	trie, _ := NewTrie(common.Hash{}, db, &TrieOpts{PruningBlockNumber: 1})
+	trieOpts := &TrieOpts{
+		LivePruningEnabled: true,
+		PruningBlockNumber: 1,
+	}
+
+	trie, _ := NewTrie(common.Hash{}, db, trieOpts)
 	nodehash1 := common.HexToExtHash("05ae693aac2107336a79309e0c60b24a7aac6aa3edecaef593921500d33c63c400000000000000")
 	nodehash2 := common.HexToExtHash("f226ef598ed9195f2211546cf5b2860dc27b4da07ff7ab5108ee68107f0c9d00ccccddddeeee01")
 
@@ -429,7 +438,7 @@ func TestPruningByDelete(t *testing.T) {
 	assert.True(t, hasnode(nodehash2))
 
 	// Trigger pruning
-	trie, _ = NewTrie(nodehash1.Unextend(), db, &TrieOpts{PruningBlockNumber: 1})
+	trie, _ = NewTrie(nodehash1.Unextend(), db, trieOpts)
 	deleteString(trie, "doe")
 	trie.Commit(nil)
 	db.Cap(0)

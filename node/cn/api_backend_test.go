@@ -705,7 +705,7 @@ func newCanonical(engine consensus.Engine, n int, full bool) (database.DBManager
 	)
 
 	// Initialize a fresh chain with only a genesis block
-	bc, _ := blockchain.NewBlockChain(db, nil, params.AllGxhashProtocolChanges, engine, vm.Config{})
+	bc, _ := blockchain.NewBlockChain(db, nil, params.AllGxhashProtocolChanges, engine, vm.Config{}, false)
 	// Create and inject the requested chain
 	if n == 0 {
 		return db, bc, nil

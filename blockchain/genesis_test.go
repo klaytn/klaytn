@@ -112,7 +112,7 @@ func TestHardCodedChainConfigUpdate(t *testing.T) {
 				genesis := genCypressGenesisBlock()
 				genesisBlock := genesis.MustCommit(db)
 
-				bc, _ := NewBlockChain(db, nil, genesis.Config, gxhash.NewFullFaker(), vm.Config{})
+				bc, _ := NewBlockChain(db, nil, genesis.Config, gxhash.NewFullFaker(), vm.Config{}, false)
 				defer bc.Stop()
 
 				blocks, _ := GenerateChain(genesis.Config, genesisBlock, gxhash.NewFaker(), db, 4, nil)
@@ -303,7 +303,7 @@ func TestSetupGenesis(t *testing.T) {
 				// Advance to block #4, past the Istanbul transition block of customGenesis.
 				genesis := customGenesis.MustCommit(db)
 
-				bc, _ := NewBlockChain(db, nil, customGenesis.Config, gxhash.NewFullFaker(), vm.Config{})
+				bc, _ := NewBlockChain(db, nil, customGenesis.Config, gxhash.NewFullFaker(), vm.Config{}, false)
 				defer bc.Stop()
 
 				blocks, _ := GenerateChain(customGenesis.Config, genesis, gxhash.NewFaker(), db, 4, nil)

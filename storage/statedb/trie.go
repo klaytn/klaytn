@@ -45,6 +45,7 @@ type TrieOpts struct {
 	// will schedule obsolete nodes to be pruned when the given block number becomes obsolete.
 	// This option is only viable when the pruning is enabled on database.
 	PruningBlockNumber uint64
+	LivePruningEnabled bool // True if the underlying database has pruning enabled.
 }
 
 // LeafCallback is a callback type invoked when a trie operation reaches a leaf
@@ -74,7 +75,6 @@ type Trie struct {
 	root         node
 	originalRoot common.ExtHash
 
-	pruning           bool // True if the underlying database has pruning enabled.
 	storage           bool // If storage and Pruning are both true, root hash is attached a fresh nonce.
 	pruningMarksCache map[common.ExtHash]uint64
 }
@@ -119,11 +119,10 @@ func newTrie(root common.ExtHash, db *Database, opts *TrieOpts, storage bool) (*
 		TrieOpts:          *opts,
 		db:                db,
 		originalRoot:      root,
-		pruning:           db.diskDB.ReadPruningEnabled(),
 		storage:           storage,
 		pruningMarksCache: make(map[common.ExtHash]uint64),
 	}
-	if !trie.pruning && trie.PruningBlockNumber != 0 {
+	if !trie.LivePruningEnabled && trie.PruningBlockNumber != 0 {
 		return nil, ErrPruningDisabled
 	}
 	if !common.EmptyExtHash(root) && root.Unextend() != emptyRoot {
@@ -592,7 +591,7 @@ func (t *Trie) hashRoot(db *Database, onleaf LeafCallback) (common.ExtHash, node
 	}
 	h := newHasher(&hasherOpts{
 		onleaf:      onleaf,
-		pruning:     t.pruning, // If database has pruning enabled, nodes must be stored with ExtHash.
+		pruning:     t.LivePruningEnabled, // If database has pruning enabled, nodes must be stored with ExtHash.
 		storageRoot: t.storage,
 	})
 
@@ -607,7 +606,7 @@ func (t *Trie) markPrunableNode(n node) {
 	// Mark nodes only if both conditions are met:
 	// - t.pruning: database has pruning enabled, i.e. nodes are stored with ExtHash
 	// - t.PruningBlockNumber: requested pruning through state.New -> OpenTrie -> NewTrie.
-	if !t.pruning || t.PruningBlockNumber == 0 {
+	if !t.LivePruningEnabled || t.PruningBlockNumber == 0 {
 		return
 	}
 

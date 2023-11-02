@@ -211,6 +211,9 @@ type BlockChain struct {
 	lastCommittedBlock uint64
 	quitWarmUp         chan struct{}
 
+	// LivePruning
+	livePruningEnabled bool
+
 	prefetchTxCh chan prefetchTx
 }
 
@@ -224,7 +227,7 @@ type prefetchTx struct {
 // NewBlockChain returns a fully initialised block chain using information
 // available in the database. It initialises the default Klaytn validator and
 // Processor.
-func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config) (*BlockChain, error) {
+func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config, livePruningEnabled bool) (*BlockChain, error) {
 	if cacheConfig == nil {
 		cacheConfig = &CacheConfig{
 			ArchiveMode:          false,
@@ -261,6 +264,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		parallelDBWrite:    db.IsParallelDBWrite(),
 		stopStateMigration: make(chan struct{}),
 		prefetchTxCh:       make(chan prefetchTx, MaxPrefetchTxs),
+		livePruningEnabled: livePruningEnabled,
 	}
 
 	// set hardForkBlockNumberConfig which will be used as a global variable
@@ -726,6 +730,7 @@ func (bc *BlockChain) StateAt(root common.Hash) (*state.StateDB, error) {
 func (bc *BlockChain) PrunableStateAt(root common.Hash, num uint64) (*state.StateDB, error) {
 	if bc.IsLivePruningRequired() {
 		return state.New(root, bc.stateCache, bc.snaps, &statedb.TrieOpts{
+			LivePruningEnabled: bc.livePruningEnabled,
 			PruningBlockNumber: num,
 		})
 	} else {
@@ -1488,7 +1493,7 @@ func (bc *BlockChain) pruneTrieNodeLoop() {
 }
 
 func (bc *BlockChain) IsLivePruningRequired() bool {
-	return bc.db.ReadPruningEnabled() && bc.cacheConfig.LivePruningRetention != 0
+	return bc.livePruningEnabled && bc.cacheConfig.LivePruningRetention != 0
 }
 
 func isCommitTrieRequired(bc *BlockChain, blockNum uint64) bool {
