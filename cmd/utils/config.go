@@ -604,7 +604,6 @@ func (kCfg *KlayConfig) SetKlayConfig(ctx *cli.Context, stack *node.Node) {
 	cfg.TrieBlockInterval = ctx.Uint(TrieBlockIntervalFlag.Name)
 	cfg.TriesInMemory = ctx.Uint64(TriesInMemoryFlag.Name)
 	cfg.LivePruning = ctx.Bool(LivePruningFlag.Name)
-	fmt.Println("WWWW", cfg.LivePruning)
 	cfg.LivePruningRetention = ctx.Uint64(LivePruningRetentionFlag.Name)
 
 	if ctx.IsSet(CacheScaleFlag.Name) {
