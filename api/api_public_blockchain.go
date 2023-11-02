@@ -96,13 +96,14 @@ func (s *PublicBlockChainAPI) IsContractAccount(ctx context.Context, address com
 //	return state.IsHumanReadable(address), state.Error()
 // }
 
-// GetBlockReceipts returns all the transaction receipts for the given block hash.
-func (s *PublicBlockChainAPI) GetBlockReceipts(ctx context.Context, blockHash common.Hash) ([]map[string]interface{}, error) {
-	receipts := s.b.GetBlockReceipts(ctx, blockHash)
-	block, err := s.b.BlockByHash(ctx, blockHash)
+// GetBlockReceipts returns the receipts of all transactions in the block identified by number or hash.
+func (s *PublicBlockChainAPI) GetBlockReceipts(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) ([]map[string]interface{}, error) {
+	block, err := s.b.BlockByNumberOrHash(ctx, blockNrOrHash)
 	if err != nil {
 		return nil, err
 	}
+	blockHash := block.Hash()
+	receipts := s.b.GetBlockReceipts(ctx, blockHash)
 	txs := block.Transactions()
 	if receipts.Len() != txs.Len() {
 		return nil, fmt.Errorf("the size of transactions and receipts is different in the block (%s)", blockHash.String())
