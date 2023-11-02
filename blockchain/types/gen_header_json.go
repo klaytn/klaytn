@@ -31,8 +31,8 @@ func (h Header) MarshalJSON() ([]byte, error) {
 		Governance   hexutil.Bytes  `json:"governanceData"            gencodec:"required"`
 		Vote         hexutil.Bytes  `json:"voteData,omitempty"`
 		BaseFee      *hexutil.Big   `json:"baseFeePerGas,omitempty" rlp:"optional"`
-		RandomReveal []byte         `json:"randomReveal,omitempty" rlp:"optional"`
-		MixHash      []byte         `json:"mixHash,omitempty" rlp:"optional"`
+		RandomReveal hexutil.Bytes  `json:"randomReveal,omitempty" rlp:"optional"`
+		MixHash      hexutil.Bytes  `json:"mixHash,omitempty" rlp:"optional"`
 		Hash         common.Hash    `json:"hash"`
 	}
 	var enc Header
@@ -75,8 +75,8 @@ func (h *Header) UnmarshalJSON(input []byte) error {
 		Governance   *hexutil.Bytes  `json:"governanceData"            gencodec:"required"`
 		Vote         *hexutil.Bytes  `json:"voteData,omitempty"`
 		BaseFee      *hexutil.Big    `json:"baseFeePerGas,omitempty" rlp:"optional"`
-		RandomReveal []byte          `json:"randomReveal,omitempty" rlp:"optional"`
-		MixHash      []byte          `json:"mixHash,omitempty" rlp:"optional"`
+		RandomReveal *hexutil.Bytes  `json:"randomReveal,omitempty" rlp:"optional"`
+		MixHash      *hexutil.Bytes  `json:"mixHash,omitempty" rlp:"optional"`
 	}
 	var dec Header
 	if err := json.Unmarshal(input, &dec); err != nil {
@@ -141,10 +141,10 @@ func (h *Header) UnmarshalJSON(input []byte) error {
 		h.BaseFee = (*big.Int)(dec.BaseFee)
 	}
 	if dec.RandomReveal != nil {
-		h.RandomReveal = dec.RandomReveal
+		h.RandomReveal = *dec.RandomReveal
 	}
 	if dec.MixHash != nil {
-		h.MixHash = dec.MixHash
+		h.MixHash = *dec.MixHash
 	}
 	return nil
 }
