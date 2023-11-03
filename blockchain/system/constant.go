@@ -41,6 +41,10 @@ var (
 		Kip113Name,
 	}
 
+	// This is the keccak-256 hash of "eip1967.proxy.implementation" subtracted by 1 used in the
+	// EIP-1967 proxy contract. See https://eips.ethereum.org/EIPS/eip-1967#implementation-slot
+	ImplementationSlot = common.Hex2Bytes("360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc")
+
 	// Some system contracts are allocated at special addresses.
 	AddressBookAddr = common.HexToAddress("0x0000000000000000000000000000000000000400") // TODO: replace contracts/reward/contract/utils.go
 	RegistryAddr    = common.HexToAddress("0x0000000000000000000000000000000000000401")
@@ -48,7 +52,10 @@ var (
 	// System contract binaries to be injected at hardfork or used in testing.
 	RegistryCode     = hexutil.MustDecode("0x" + contracts.RegistryBinRuntime)
 	RegistryMockCode = hexutil.MustDecode("0x" + contracts.RegistryMockBinRuntime)
+	Kip113Code       = hexutil.MustDecode("0x" + contracts.KIP113BinRuntime)
 	Kip113MockCode   = hexutil.MustDecode("0x" + contracts.KIP113MockBinRuntime)
+
+	ERC1967ProxyCode = hexutil.MustDecode("0x" + contracts.ERC1967ProxyBinRuntime)
 
 	// Errors
 	ErrRegistryNotInstalled = errors.New("Registry contract not installed")

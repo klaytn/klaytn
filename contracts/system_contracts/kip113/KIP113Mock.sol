@@ -15,27 +15,25 @@
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
 // SPDX-License-Identifier: LGPL-3.0-only
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.18;
 
-import "./IKIP113.sol";
+import "./KIP113.sol";
 
-contract KIP113Mock is IKIP113 {
-    mapping(address => BlsPublicKeyInfo) public record;
-    address[] public allNodeIds;
-
-    function register(
-        address addr,
-        bytes calldata publicKey,
-        bytes calldata pop
-    ) external {
+contract KIP113Mock is KIP113 {
+    function register(address addr, bytes calldata publicKey, bytes calldata pop) external override {
         if (record[addr].publicKey.length == 0) {
             allNodeIds.push(addr);
         }
         record[addr] = BlsPublicKeyInfo(publicKey, pop);
     }
 
-    function getAllBlsInfo() external virtual override view
-    returns (address[] memory nodeIdList, BlsPublicKeyInfo[] memory pubkeyList) {
+    function getAllBlsInfo()
+        external
+        view
+        virtual
+        override
+        returns (address[] memory nodeIdList, BlsPublicKeyInfo[] memory pubkeyList)
+    {
         uint count = allNodeIds.length;
 
         nodeIdList = new address[](count);

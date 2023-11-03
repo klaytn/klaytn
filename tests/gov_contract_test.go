@@ -59,7 +59,7 @@ func TestGovernance_Engines(t *testing.T) {
 	config.Governance.GovParamContract = common.Address{}
 	config.Governance.GovernanceMode = "none"
 
-	fullNode, node, validator, chainId, workspace := newBlockchain(t, config)
+	fullNode, node, validator, chainId, workspace := newBlockchain(t, config, nil)
 	defer os.RemoveAll(workspace)
 	defer fullNode.Stop()
 

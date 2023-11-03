@@ -35,14 +35,19 @@ func TestReadKip113(t *testing.T) {
 		_, pub2, _    = makeBlsKey()
 	)
 
-	contractAddr, _, contract, err := contracts.DeployKIP113Mock(sender, backend)
-	backend.Commit()
-	assert.Nil(t, err)
-	t.Logf("KIP113Mock at %x", contractAddr)
+	// Deploy Proxy contract
+	transactor, contractAddr := deployKip113Mock(t, sender, backend)
 
 	// With a valid record
-	contract.Register(sender, nodeId, pub1, pop1)
+	transactor.Register(sender, nodeId, pub1, pop1)
 	backend.Commit()
+
+	caller, _ := contracts.NewKIP113Caller(contractAddr, backend)
+
+	opts := &bind.CallOpts{BlockNumber: nil}
+	owner, _ := caller.Owner(opts)
+	assert.Equal(t, sender.From, owner)
+	t.Logf("owner: %x", owner)
 
 	infos, err := ReadKip113All(backend, contractAddr, nil)
 	assert.Nil(t, err)
@@ -52,7 +57,7 @@ func TestReadKip113(t *testing.T) {
 
 	// With an invalid record
 	// Another register() call for the same nodeId overwrites the existing info.
-	contract.Register(sender, nodeId, pub2, pop1) // pub vs. pop mismatch
+	transactor.Register(sender, nodeId, pub2, pop1) // pub vs. pop mismatch
 	backend.Commit()
 
 	// Returns zero record because invalid records have been filtered out.
@@ -74,13 +79,22 @@ func TestAllocKip113(t *testing.T) {
 		nodeId2       = common.HexToAddress("0xbbbb")
 		_, pub1, pop1 = makeBlsKey()
 		_, pub2, pop2 = makeBlsKey()
+
+		abi, _   = contracts.KIP113MockMetaData.GetAbi()
+		input, _ = abi.Pack("initialize")
+
+		allocProxyStorage  = AllocProxy(KIP113MockAddr)
+		allocKip113Storage = AllocKip113(AllocKip113Init{
+			Infos: BlsPublicKeyInfos{
+				nodeId1: {PublicKey: pub1, Pop: pop1},
+				nodeId2: {PublicKey: pub2, Pop: pop2},
+			},
+			Owner: sender.From,
+		})
 	)
 
-	// 1. Create storage with AllocKIP113
-	allocStorage := AllocKip113(AllocKip113Init{
-		nodeId1: {PublicKey: pub1, Pop: pop1},
-		nodeId2: {PublicKey: pub2, Pop: pop2},
-	})
+	// 1. Merge two storage maps
+	allocStorage := MergeStorage(allocProxyStorage, allocKip113Storage)
 
 	// 2. Create storage by calling register()
 	var (
@@ -93,9 +107,12 @@ func TestAllocKip113(t *testing.T) {
 				Balance: common.Big0,
 			},
 		}
-		backend     = backends.NewSimulatedBackend(alloc)
-		contract, _ = contracts.NewKIP113MockTransactor(KIP113MockAddr, backend)
+		backend               = backends.NewSimulatedBackend(alloc)
+		contractAddr, _, _, _ = contracts.DeployERC1967Proxy(sender, backend, KIP113MockAddr, input)
 	)
+	backend.Commit()
+
+	contract, _ := contracts.NewKIP113MockTransactor(contractAddr, backend)
 
 	contract.Register(sender, nodeId1, pub1, pop1)
 	contract.Register(sender, nodeId2, pub2, pop2)
@@ -103,7 +120,7 @@ func TestAllocKip113(t *testing.T) {
 
 	execStorage := make(map[common.Hash]common.Hash)
 	stateDB, _ := backend.BlockChain().State()
-	stateDB.ForEachStorage(KIP113MockAddr, func(key common.Hash, value common.Hash) bool {
+	stateDB.ForEachStorage(contractAddr, func(key common.Hash, value common.Hash) bool {
 		execStorage[key] = value
 		return true
 	})
@@ -116,6 +133,32 @@ func TestAllocKip113(t *testing.T) {
 	for k, v := range execStorage {
 		assert.Equal(t, v.Hex(), allocStorage[k].Hex(), k.Hex())
 	}
+}
+
+func deployKip113Mock(t *testing.T, sender *bind.TransactOpts, backend *backends.SimulatedBackend, params ...interface{}) (*contracts.KIP113MockTransactor, common.Address) {
+	// Prepare input data for ERC1967Proxy constructor
+	abi, err := contracts.KIP113MockMetaData.GetAbi()
+	assert.Nil(t, err)
+	data, err := abi.Pack("initialize")
+	assert.Nil(t, err)
+
+	// Deploy Proxy contract
+	// 1. Deploy KIP113Mock implementation contract
+	implAddr, _, _, err := contracts.DeployKIP113Mock(sender, backend)
+	backend.Commit()
+	assert.Nil(t, err)
+	t.Logf("KIP113Mock impl at %x", implAddr)
+
+	// 2. Deploy ERC1967Proxy(KIP113Mock.address, _data)
+	contractAddr, _, _, err := contracts.DeployERC1967Proxy(sender, backend, implAddr, data)
+	backend.Commit()
+	assert.Nil(t, err)
+	t.Logf("ERC1967Proxy at %x", contractAddr)
+
+	// 3. Attach KIP113Mock contract to the proxy
+	transactor, _ := contracts.NewKIP113MockTransactor(contractAddr, backend)
+
+	return transactor, contractAddr
 }
 
 func makeBlsKey() (priv, pub, pop []byte) {
