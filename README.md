@@ -4,11 +4,6 @@
 [![GoDoc](https://godoc.org/github.com/klaytn/klaytn?status.svg)](https://pkg.go.dev/github.com/klaytn/klaytn)
 [![Gitter](https://badges.gitter.im/klaytn/Lobby.svg)](https://gitter.im/klaytn/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
-# Branch name will be changed
-
-We will change the `master` branch to `main` on Dec 15, 2022.
-After the branch policy change, please check your local or forked repository settings.
-
 # Klaytn
 
 Official golang implementation of the Klaytn protocol. Please visit [KlaytnDocs](https://docs.klaytn.com/) for more details on Klaytn design, node operation guides and application development resources.
