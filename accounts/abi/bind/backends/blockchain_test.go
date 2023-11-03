@@ -69,7 +69,7 @@ func newTestBlockchainWithConfig(config *params.ChainConfig) *blockchain.BlockCh
 	genesis := blockchain.Genesis{Config: config, Alloc: alloc}
 	genesis.MustCommit(db)
 
-	bc, _ := blockchain.NewBlockChain(db, nil, genesis.Config, gxhash.NewFaker(), vm.Config{}, false)
+	bc, _ := blockchain.NewBlockChain(db, nil, genesis.Config, gxhash.NewFaker(), vm.Config{})
 
 	// Append 10 blocks to test with block numbers other than 0
 	block := bc.CurrentBlock()
