@@ -128,6 +128,7 @@ type CacheConfig struct {
 	CacheSize            int                          // Size of in-memory cache of a trie (MiB) to flush matured singleton trie nodes to disk
 	BlockInterval        uint                         // Block interval to flush the trie. Each interval state trie will be flushed into disk
 	TriesInMemory        uint64                       // Maximum number of recent state tries according to its block number
+	LivePruningEnabled   bool                         // LivePruning operations works if true
 	LivePruningRetention uint64                       // Number of blocks before trie nodes in pruning marks to be deleted. If zero, obsolete nodes are not deleted.
 	SenderTxHashIndexing bool                         // Enables saving senderTxHash to txHash mapping information to database and cache
 	TrieNodeCacheConfig  *statedb.TrieNodeCacheConfig // Configures trie node cache
@@ -211,9 +212,6 @@ type BlockChain struct {
 	lastCommittedBlock uint64
 	quitWarmUp         chan struct{}
 
-	// LivePruning
-	livePruningEnabled bool
-
 	prefetchTxCh chan prefetchTx
 }
 
@@ -227,7 +225,7 @@ type prefetchTx struct {
 // NewBlockChain returns a fully initialised block chain using information
 // available in the database. It initialises the default Klaytn validator and
 // Processor.
-func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config, livePruningEnabled bool) (*BlockChain, error) {
+func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config) (*BlockChain, error) {
 	if cacheConfig == nil {
 		cacheConfig = &CacheConfig{
 			ArchiveMode:          false,
@@ -235,6 +233,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 			BlockInterval:        DefaultBlockInterval,
 			TriesInMemory:        DefaultTriesInMemory,
 			LivePruningRetention: DefaultLivePruningRetention,
+			LivePruningEnabled:   false,
 			TrieNodeCacheConfig:  statedb.GetEmptyTrieNodeCacheConfig(),
 			SnapshotCacheSize:    512,
 			SnapshotAsyncGen:     true,
@@ -264,7 +263,6 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		parallelDBWrite:    db.IsParallelDBWrite(),
 		stopStateMigration: make(chan struct{}),
 		prefetchTxCh:       make(chan prefetchTx, MaxPrefetchTxs),
-		livePruningEnabled: livePruningEnabled,
 	}
 
 	// set hardForkBlockNumberConfig which will be used as a global variable
@@ -739,7 +737,7 @@ func (bc *BlockChain) StateAt(root common.Hash) (*state.StateDB, error) {
 func (bc *BlockChain) PrunableStateAt(root common.Hash, num uint64) (*state.StateDB, error) {
 	if bc.IsLivePruningRequired() {
 		return state.New(root, bc.stateCache, bc.snaps, &statedb.TrieOpts{
-			LivePruningEnabled: bc.livePruningEnabled,
+			LivePruningEnabled: bc.cacheConfig.LivePruningEnabled,
 			PruningBlockNumber: num,
 		})
 	} else {
@@ -1503,7 +1501,7 @@ func (bc *BlockChain) pruneTrieNodeLoop() {
 }
 
 func (bc *BlockChain) IsLivePruningRequired() bool {
-	return bc.livePruningEnabled && bc.cacheConfig.LivePruningRetention != 0
+	return bc.cacheConfig.LivePruningEnabled && bc.cacheConfig.LivePruningRetention != 0
 }
 
 func isCommitTrieRequired(bc *BlockChain, blockNum uint64) bool {

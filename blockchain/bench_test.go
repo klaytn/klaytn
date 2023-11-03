@@ -177,7 +177,7 @@ func benchInsertChain(b *testing.B, dbType database.DBType, gen func(int, *Block
 
 	// Time the insertion of the new chain.
 	// State and blocks are stored in the same DB.
-	chainman, _ := NewBlockChain(db, nil, gspec.Config, gxhash.NewFaker(), vm.Config{}, false)
+	chainman, _ := NewBlockChain(db, nil, gspec.Config, gxhash.NewFaker(), vm.Config{})
 	defer chainman.Stop()
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -339,7 +339,7 @@ func benchReadChain(b *testing.B, full bool, databaseType database.DBType, count
 
 		db = genDBManagerForTest(dir, databaseType)
 
-		chain, err := NewBlockChain(db, nil, params.TestChainConfig, gxhash.NewFaker(), vm.Config{}, false)
+		chain, err := NewBlockChain(db, nil, params.TestChainConfig, gxhash.NewFaker(), vm.Config{})
 		if err != nil {
 			b.Fatalf("error creating chain: %v", err)
 		}

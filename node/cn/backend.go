@@ -266,7 +266,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		}
 	)
 
-	bc, err := blockchain.NewBlockChain(chainDB, cacheConfig, cn.chainConfig, cn.engine, vmConfig, config.LivePruning)
+	bc, err := blockchain.NewBlockChain(chainDB, cacheConfig, cn.chainConfig, cn.engine, vmConfig)
 	if err != nil {
 		return nil, err
 	}

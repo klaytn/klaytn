@@ -83,7 +83,7 @@ func newTestBackend(t *testing.T, n int, gspec *blockchain.Genesis, generator fu
 		SnapshotCacheSize:   512,
 		ArchiveMode:         true, // Archive mode
 	}
-	chain, err := blockchain.NewBlockChain(backend.chaindb, cacheConfig, backend.chainConfig, backend.engine, vm.Config{}, false)
+	chain, err := blockchain.NewBlockChain(backend.chaindb, cacheConfig, backend.chainConfig, backend.engine, vm.Config{})
 	if err != nil {
 		t.Fatalf("failed to create tester chain: %v", err)
 	}

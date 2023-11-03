@@ -179,7 +179,7 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 
 	genesis.MustCommit(b.db)
 
-	bc, err := blockchain.NewBlockChain(b.db, nil, genesis.Config, b, vm.Config{}, false)
+	bc, err := blockchain.NewBlockChain(b.db, nil, genesis.Config, b, vm.Config{})
 	if err != nil {
 		panic(err)
 	}

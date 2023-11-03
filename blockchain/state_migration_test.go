@@ -51,7 +51,7 @@ func TestBlockChain_migrateState(t *testing.T) {
 		_     = gspec.MustCommit(testdb)
 	)
 
-	chain, err := NewBlockChain(testdb, nil, gspec.Config, gxhash.NewFaker(), vm.Config{}, false)
+	chain, err := NewBlockChain(testdb, nil, gspec.Config, gxhash.NewFaker(), vm.Config{})
 	if err != nil {
 		t.Fatalf("Failed to create local chain, %v", err)
 	}

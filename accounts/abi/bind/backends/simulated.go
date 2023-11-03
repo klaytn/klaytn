@@ -77,7 +77,7 @@ type SimulatedBackend struct {
 func NewSimulatedBackendWithDatabase(database database.DBManager, alloc blockchain.GenesisAlloc, cfg *params.ChainConfig) *SimulatedBackend {
 	genesis := blockchain.Genesis{Config: cfg, Alloc: alloc}
 	genesis.MustCommit(database)
-	blockchain, _ := blockchain.NewBlockChain(database, nil, genesis.Config, gxhash.NewFaker(), vm.Config{}, false)
+	blockchain, _ := blockchain.NewBlockChain(database, nil, genesis.Config, gxhash.NewFaker(), vm.Config{})
 
 	backend := &SimulatedBackend{
 		database:   database,

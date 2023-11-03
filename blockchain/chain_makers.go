@@ -184,7 +184,7 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, engine conse
 			SnapshotCacheSize:   512,
 			SnapshotAsyncGen:    true,
 		}
-		blockchain, _ := NewBlockChain(db, cacheConfig, config, engine, vm.Config{}, false)
+		blockchain, _ := NewBlockChain(db, cacheConfig, config, engine, vm.Config{})
 		defer blockchain.Stop()
 
 		b := &BlockGen{i: i, parent: parent, chain: blocks, chainReader: blockchain, statedb: stateDB, config: config, engine: engine}
