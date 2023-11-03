@@ -258,6 +258,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 			CacheSize:            config.TrieCacheSize,
 			BlockInterval:        config.TrieBlockInterval,
 			TriesInMemory:        config.TriesInMemory,
+			LivePruningEnabled:   config.LivePruning,
 			LivePruningRetention: config.LivePruningRetention,
 			TrieNodeCacheConfig:  &config.TrieNodeCacheConfig,
 			SenderTxHashIndexing: config.SenderTxHashIndexing,
