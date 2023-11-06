@@ -28,6 +28,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/consensus/istanbul/core"
 	"github.com/klaytn/klaytn/crypto"
@@ -72,6 +73,29 @@ type testOverrides struct {
 	blockPeriod    *uint64           // Override block period. If not set, 1 second is used.
 	stakingAmounts []uint64          // Override staking amounts. If not set, 0 for all nodes.
 }
+
+// Mock BlsPubkeyProvider that replaces KIP-113 contract query.
+type mockBlsPubkeyProvider struct {
+	infos map[common.Address]bls.PublicKey
+}
+
+func newMockBlsPubkeyProvider(addrs []common.Address, blsKeys []bls.SecretKey) *mockBlsPubkeyProvider {
+	infos := make(map[common.Address]bls.PublicKey)
+	for i := 0; i < len(addrs); i++ {
+		infos[addrs[i]] = blsKeys[i].PublicKey()
+	}
+	return &mockBlsPubkeyProvider{infos}
+}
+
+func (m *mockBlsPubkeyProvider) GetBlsPubkey(chain consensus.ChainReader, proposer common.Address) (bls.PublicKey, error) {
+	if pub, ok := m.infos[proposer]; ok {
+		return pub, nil
+	} else {
+		return nil, errNoBlsPub
+	}
+}
+
+func (m *mockBlsPubkeyProvider) ResetBlsCache() {}
 
 type testContext struct {
 	config      *params.ChainConfig
@@ -142,13 +166,14 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 		SubGroupSize:   config.Istanbul.SubGroupSize,
 	}
 	engine := New(&BackendOpts{
-		IstanbulConfig: istanbulConfig,
-		Rewardbase:     common.HexToAddress("0x2A35FE72F847aa0B509e4055883aE90c87558AaD"),
-		PrivateKey:     nodeKeys[0],
-		BlsSecretKey:   nodeBlsKeys[0],
-		DB:             dbm,
-		Governance:     gov,
-		NodeType:       common.CONSENSUSNODE,
+		IstanbulConfig:    istanbulConfig,
+		Rewardbase:        common.HexToAddress("0x2A35FE72F847aa0B509e4055883aE90c87558AaD"),
+		PrivateKey:        nodeKeys[0],
+		BlsSecretKey:      nodeBlsKeys[0],
+		DB:                dbm,
+		Governance:        gov,
+		BlsPubkeyProvider: newMockBlsPubkeyProvider(nodeAddrs, nodeBlsKeys),
+		NodeType:          common.CONSENSUSNODE,
 	}).(*backend)
 	gov.SetNodeAddress(engine.Address())
 

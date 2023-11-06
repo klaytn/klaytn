@@ -86,8 +86,12 @@ var (
 	errMismatchTxhashes = errors.New("mismatch transactions hashes")
 	// errNoBlsKey is returned if the BLS secret key is not configured.
 	errNoBlsKey = errors.New("bls key not configured")
-	// errInvalidRandao is returned if the Randao fields randomReveal or mixHash are invalid.
-	errInvalidRandao = errors.New("invalid randao fields")
+	// errNoBlsPub is returned if the BLS public key is not found for the proposer.
+	errNoBlsPub = errors.New("bls pubkey not found for the proposer")
+	// errInvalidRandaoFields is returned if the Randao fields randomReveal or mixHash are invalid.
+	errInvalidRandaoFields = errors.New("invalid randao fields")
+	// errUnexpectedRandao is returned if the Randao fields randomReveal or mixHash are present when must not.
+	errUnexpectedRandao = errors.New("unexpected randao fields")
 )
 
 var (
@@ -246,6 +250,19 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 	}
 	if err := sb.verifySigner(chain, header, parents); err != nil {
 		return err
+	}
+
+	// VerifyRandao must be after verifySigner because it needs the signer (proposer) address
+	if chain.Config().IsRandaoForkEnabled(header.Number) {
+		prevMixHash := parent.MixHash
+		if chain.Config().IsRandaoForkBlockParent(parent.Number) {
+			prevMixHash = params.ZeroMixHash
+		}
+		if err := sb.VerifyRandao(chain, header, prevMixHash); err != nil {
+			return err
+		}
+	} else if header.RandomReveal != nil || header.MixHash != nil {
+		return errUnexpectedRandao
 	}
 
 	// At every epoch governance data will come in block header. Verify it.
@@ -840,6 +857,7 @@ func (sb *backend) GetConsensusInfo(block *types.Block) (consensus.ConsensusInfo
 
 func (sb *backend) InitSnapshot() {
 	sb.recents.Purge()
+	sb.blsPubkeyProvider.ResetBlsCache()
 }
 
 // snapshot retrieves the state of the authorization voting at a given point in time.
