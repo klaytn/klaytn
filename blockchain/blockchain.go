@@ -1112,6 +1112,10 @@ func (bc *BlockChain) Stop() {
 		_ = triedb.TrieNodeCache().Close()
 	}
 
+	if bc.vmConfig.EnableOpDebug {
+		vm.PrintOpCodeExecTime()
+	}
+
 	logger.Info("Blockchain manager stopped")
 }
 

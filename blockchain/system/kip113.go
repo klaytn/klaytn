@@ -34,28 +34,66 @@ type BlsPublicKeyInfo struct {
 
 type (
 	BlsPublicKeyInfos map[common.Address]BlsPublicKeyInfo
-	AllocKip113Init   = BlsPublicKeyInfos
+	AllocKip113Init   struct {
+		Infos BlsPublicKeyInfos
+		Owner common.Address
+	}
 )
 
 func AllocKip113(init AllocKip113Init) map[common.Hash]common.Hash {
-	if init == nil {
+	if init.Infos == nil {
 		return nil
 	}
 	storage := make(map[common.Hash]common.Hash)
 
-	// slot[0]: mapping(address => BlsPublicKeyInfo) infos;
-	// - infos[x].publicKey.length @ Hash(x, 0)      = el
+	// Overall storage layout for KIP113 contract:
+	//
+	// | Name          | Type                                                | Slot | Offset | Bytes |
+	// |---------------|-----------------------------------------------------|------|--------|-------|
+	// | _initialized  | uint8                                               | 0    | 0      | 1     |
+	// | _initializing | bool                                                | 0    | 1      | 1     |
+	// | __gap         | uint256[50]                                         | 1    | 0      | 1600  |
+	// | __gap         | uint256[50]                                         | 51   | 0      | 1600  |
+	// | __gap         | uint256[50]                                         | 101  | 0      | 1600  |
+	// | _owner        | address                                             | 151  | 0      | 20    |
+	// | __gap         | uint256[49]                                         | 152  | 0      | 1568  |
+	// | allNodeIds    | address[]                                           | 201  | 0      | 32    |
+	// | record        | mapping(address => struct IKIP113.BlsPublicKeyInfo) | 202  | 0      | 32    |
+	//
+	// We need to consider the following:
+	storage[lpad32(0)] = lpad32([]byte{0, 1}) // false, 1
+	storage[lpad32(151)] = lpad32(init.Owner)
+
+	addrs := make([]common.Address, 0)
+	for addr := range init.Infos {
+		addrs = append(addrs, addr)
+	}
+	sort.Slice(addrs, func(i, j int) bool {
+		return strings.Compare(addrs[i].Hex(), addrs[j].Hex()) > 0
+	})
+
+	// slot[201]: address[] allNodeIds;
+	// - addrs.length @ 0
+	// - addrs[i] @ Hash(201) + i
+	storage[lpad32(201)] = lpad32(len(addrs))
+	for i, addr := range addrs {
+		addrSlot := calcArraySlot(201, 1, i, 0)
+		storage[addrSlot] = lpad32(addr)
+	}
+
+	// slot[202]: mapping(address => BlsPublicKeyInfo) record;
+	// - infos[x].publicKey.length @ Hash(x, 202)      = el
 	// - infos[x].publicKey        @ Hash(el) + 0..1
-	// - infos[x].pop.length       @ Hash(x, 0) + 1  = el
+	// - infos[x].pop.length       @ Hash(x, 202) + 1  = el
 	// - infos[x].pop              @ Hash(el) + 0..2
-	for addr, info := range init {
+	for addr, info := range init.Infos {
 		// The below slot calculation assumes 48-byte and 96-byte Solidity `bytes` values.
 		if len(info.PublicKey) != 48 || len(info.Pop) != 96 {
 			logger.Crit("Invalid AllocKip113Init")
 		}
 
-		pubSlot := calcMappingSlot(0, addr, 0)
-		popSlot := calcMappingSlot(0, addr, 1)
+		pubSlot := calcMappingSlot(202, addr, 0)
+		popSlot := calcMappingSlot(202, addr, 1)
 
 		for k, v := range allocDynamicData(pubSlot, info.PublicKey) {
 			storage[k] = v
@@ -63,23 +101,6 @@ func AllocKip113(init AllocKip113Init) map[common.Hash]common.Hash {
 		for k, v := range allocDynamicData(popSlot, info.Pop) {
 			storage[k] = v
 		}
-	}
-
-	addrs := make([]common.Address, 0)
-	for addr := range init {
-		addrs = append(addrs, addr)
-	}
-	sort.Slice(addrs, func(i, j int) bool {
-		return strings.Compare(addrs[i].Hex(), addrs[j].Hex()) > 0
-	})
-
-	// slot[1]: address[] addrs;
-	// - addrs.length @ 1
-	// - addrs[i] @ Hash(1) + i
-	storage[lpad32(1)] = lpad32(len(addrs))
-	for i, addr := range addrs {
-		addrSlot := calcArraySlot(1, 1, i, 0)
-		storage[addrSlot] = lpad32(addr)
 	}
 
 	return storage

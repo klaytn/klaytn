@@ -67,7 +67,7 @@ func makeBlockGroupOutput(blockchain *blockchain.BlockChain, block *types.Block,
 	hash := head.Hash()
 
 	td := blockchain.GetTd(hash, block.NumberU64())
-	r, _ := klaytnApi.RpcOutputBlock(block, td, false, false, blockchain.Config().IsEthTxTypeForkEnabled(block.Header().Number))
+	r, _ := klaytnApi.RpcOutputBlock(block, td, false, false, blockchain.Config().Rules(block.Header().Number))
 
 	// make transactions
 	transactions := block.Transactions()

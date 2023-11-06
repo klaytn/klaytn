@@ -381,6 +381,11 @@ func (c *ChainConfig) IsCancunForkEnabled(num *big.Int) bool {
 	return isForked(c.CancunCompatibleBlock, num)
 }
 
+// IsRandaoForkEnabled returns whether num is either equal to the randao block or greater.
+func (c *ChainConfig) IsRandaoForkEnabled(num *big.Int) bool {
+	return isForked(c.RandaoCompatibleBlock, num)
+}
+
 // IsKIP103ForkBlock returns whether num is equal to the kip103 block.
 func (c *ChainConfig) IsKIP103ForkBlock(num *big.Int) bool {
 	if c.Kip103CompatibleBlock == nil || num == nil {
@@ -607,15 +612,16 @@ func (err *ConfigCompatError) Error() string {
 // Rules is a one time interface meaning that it shouldn't be used in between transition
 // phases.
 type Rules struct {
-	ChainID             *big.Int
-	IsIstanbul          bool
-	IsLondon            bool
-	IsEthTxType         bool
-	IsMagma             bool
-	IsKore              bool
-	IsShanghai          bool
-	IsCancun            bool
-	IsServiceChainTxFee bool
+	ChainID     *big.Int
+	IsIstanbul  bool
+	IsLondon    bool
+	IsEthTxType bool
+	IsMagma     bool
+	IsKore      bool
+	IsShanghai  bool
+	IsCancun    bool
+	IsRandao    bool
+  IsServiceChainTxFee bool
 }
 
 // Rules ensures c's ChainID is not nil.
@@ -625,14 +631,15 @@ func (c *ChainConfig) Rules(num *big.Int) Rules {
 		chainID = new(big.Int)
 	}
 	return Rules{
-		ChainID:             new(big.Int).Set(chainID),
-		IsIstanbul:          c.IsIstanbulForkEnabled(num),
-		IsLondon:            c.IsLondonForkEnabled(num),
-		IsEthTxType:         c.IsEthTxTypeForkEnabled(num),
-		IsMagma:             c.IsMagmaForkEnabled(num),
-		IsKore:              c.IsKoreForkEnabled(num),
-		IsShanghai:          c.IsShanghaiForkEnabled(num),
-		IsCancun:            c.IsCancunForkEnabled(num),
+		ChainID:     new(big.Int).Set(chainID),
+		IsIstanbul:  c.IsIstanbulForkEnabled(num),
+		IsLondon:    c.IsLondonForkEnabled(num),
+		IsEthTxType: c.IsEthTxTypeForkEnabled(num),
+		IsMagma:     c.IsMagmaForkEnabled(num),
+		IsKore:      c.IsKoreForkEnabled(num),
+		IsShanghai:  c.IsShanghaiForkEnabled(num),
+		IsCancun:    c.IsCancunForkEnabled(num),
+		IsRandao:    c.IsRandaoForkEnabled(num),
 		IsServiceChainTxFee: c.IsServiceChainTxFeeForkEnabled(num),
 	}
 }

@@ -748,6 +748,13 @@ var (
 		EnvVars:  []string{"KLAYTN_VM_INTERNALTX"},
 		Category: "VIRTUAL MACHINE",
 	}
+	VMOpDebugFlag = &cli.BoolFlag{
+		Name:     "vm.opdebug",
+		Usage:    "Collect and print the execution time of opcodes when node stops",
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_VM_OPDEBUG"},
+		Category: "VIRTUAL MACHINE",
+	}
 
 	// Logging and debug settings
 	MetricsEnabledFlag = &cli.BoolFlag{
@@ -887,6 +894,13 @@ var (
 		Value:    int(rpc.DefaultHTTPTimeouts.ExecutionTimeout / time.Second),
 		Aliases:  []string{"http-rpc.execution-timeout"},
 		EnvVars:  []string{"KLAYTN_RPCEXECUTIONTIMEOUT"},
+		Category: "API AND CONSOLE",
+	}
+	RPCUpstreamArchiveENFlag = &cli.StringFlag{
+		Name:     "upstream-en",
+		Usage:    "upstream archive mode EN endpoint",
+		Aliases:  []string{"rpc.upstream-en"},
+		EnvVars:  []string{"KLAYTN_RPC_UPSTREAM_EN"},
 		Category: "API AND CONSOLE",
 	}
 

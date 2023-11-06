@@ -443,6 +443,10 @@ func setHTTP(ctx *cli.Context, cfg *node.Config) {
 	if ctx.IsSet(RPCExecutionTimeoutFlag.Name) {
 		cfg.HTTPTimeouts.ExecutionTimeout = time.Duration(ctx.Int(RPCExecutionTimeoutFlag.Name)) * time.Second
 	}
+	if ctx.IsSet(RPCUpstreamArchiveENFlag.Name) {
+		rpc.UpstreamArchiveEN = ctx.String(RPCUpstreamArchiveENFlag.Name)
+		cfg.UpstreamArchiveEN = rpc.UpstreamArchiveEN
+	}
 }
 
 // setWS creates the WebSocket RPC listener interface string from the set
@@ -658,6 +662,7 @@ func (kCfg *KlayConfig) SetKlayConfig(ctx *cli.Context, stack *node.Node) {
 		}
 	}
 	cfg.EnableInternalTxTracing = ctx.Bool(VMTraceInternalTxFlag.Name)
+	cfg.EnableOpDebug = ctx.Bool(VMOpDebugFlag.Name)
 
 	cfg.AutoRestartFlag = ctx.Bool(AutoRestartFlag.Name)
 	cfg.RestartTimeOutFlag = ctx.Duration(RestartTimeOutFlag.Name)

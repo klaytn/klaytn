@@ -30,7 +30,7 @@ func TestRebalanceTreasury_EOA(t *testing.T) {
 	config.Governance.Reward.MintingAmount = new(big.Int).Mul(big.NewInt(9000000000000000000), big.NewInt(params.KLAY))
 
 	// make a blockchain node
-	fullNode, node, validator, _, workspace := newBlockchain(t, config)
+	fullNode, node, validator, _, workspace := newBlockchain(t, config, nil)
 	defer func() {
 		fullNode.Stop()
 		os.RemoveAll(workspace)
