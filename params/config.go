@@ -198,7 +198,7 @@ type ChainConfig struct {
 	RandaoRegistry        *RegistryConfig `json:"randaoRegistry,omitempty"`        // Registry initial states
 
 	// ServiceChainTxFee is an optional hardfork
-	ServiceChainTxFeeCompatibleBlock *big.Int `json:"servicechainCompatibleBlock,omitempty"` // CancunCompatible switch block (nil = no fork, 0 already on Cancun)
+	ServiceChainTxFeeCompatibleBlock *big.Int `json:"serviceChainTxFeeCompatibleBlock,omitempty"` // ServiceChainTxFeeCompatible switch block (nil = no fork, 0 already on)
 
 	// Various consensus engines
 	Gxhash   *GxhashConfig   `json:"gxhash,omitempty"` // (deprecated) not supported engine

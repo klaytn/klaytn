@@ -226,6 +226,7 @@ func GetBlockReward(header *types.Header, rules params.Rules, pset *params.GovPa
 			txFee := GetTotalTxFee(header, rules, pset)
 			spec.Proposer = spec.Proposer.Add(spec.Proposer, txFee)
 			spec.TotalFee = spec.TotalFee.Add(spec.TotalFee, txFee)
+			incrementRewardsMap(spec.Rewards, header.Rewardbase, txFee)
 		} else {
 			txFee := GetTotalTxFee(header, rules, pset)
 			spec.Proposer = spec.Proposer.Add(spec.Proposer, txFee)
