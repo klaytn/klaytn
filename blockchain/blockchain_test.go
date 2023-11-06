@@ -2164,6 +2164,7 @@ func TestTransientStorageReset(t *testing.T) {
 	gspec.Config.KoreCompatibleBlock = common.Big0
 	gspec.Config.ShanghaiCompatibleBlock = common.Big0
 	gspec.Config.CancunCompatibleBlock = common.Big0
+	gspec.Config.RandaoCompatibleBlock = common.Big0
 
 	testdb := database.NewMemoryDBManager()
 	genesis := gspec.MustCommit(testdb)

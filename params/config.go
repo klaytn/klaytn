@@ -378,6 +378,11 @@ func (c *ChainConfig) IsCancunForkEnabled(num *big.Int) bool {
 	return isForked(c.CancunCompatibleBlock, num)
 }
 
+// IsRandaoForkEnabled returns whether num is either equal to the randao block or greater.
+func (c *ChainConfig) IsRandaoForkEnabled(num *big.Int) bool {
+	return isForked(c.RandaoCompatibleBlock, num)
+}
+
 // IsKIP103ForkBlock returns whether num is equal to the kip103 block.
 func (c *ChainConfig) IsKIP103ForkBlock(num *big.Int) bool {
 	if c.Kip103CompatibleBlock == nil || num == nil {
@@ -600,6 +605,7 @@ type Rules struct {
 	IsKore      bool
 	IsShanghai  bool
 	IsCancun    bool
+	IsRandao    bool
 }
 
 // Rules ensures c's ChainID is not nil.
@@ -617,6 +623,7 @@ func (c *ChainConfig) Rules(num *big.Int) Rules {
 		IsKore:      c.IsKoreForkEnabled(num),
 		IsShanghai:  c.IsShanghaiForkEnabled(num),
 		IsCancun:    c.IsCancunForkEnabled(num),
+		IsRandao:    c.IsRandaoForkEnabled(num),
 	}
 }
 

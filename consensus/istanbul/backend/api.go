@@ -308,7 +308,7 @@ func (api *APIExtension) makeRPCBlockOutput(b *types.Block,
 	if bc, ok := api.chain.(*blockchain.BlockChain); ok {
 		td = bc.GetTd(hash, b.NumberU64())
 	}
-	r, err := klaytnApi.RpcOutputBlock(b, td, false, false, api.chain.Config().IsEthTxTypeForkEnabled(b.Header().Number))
+	r, err := klaytnApi.RpcOutputBlock(b, td, false, false, api.chain.Config().Rules(b.Header().Number))
 	if err != nil {
 		logger.Error("failed to RpcOutputBlock", "err", err)
 		return nil
