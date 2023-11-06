@@ -372,6 +372,12 @@ func (sb *backend) CheckSignature(data []byte, address common.Address, sig []byt
 	return nil
 }
 
+func (sb *backend) CalcRandao(number *big.Int, prevMixHash []byte) ([]byte, []byte, error) {
+	randomReveal := make([]byte, 96)
+	mixHash := make([]byte, 32)
+	return randomReveal, mixHash, nil
+}
+
 // HasPropsal implements istanbul.Backend.HashBlock
 func (sb *backend) HasPropsal(hash common.Hash, number *big.Int) bool {
 	return sb.chain.GetHeader(hash, number.Uint64()) != nil

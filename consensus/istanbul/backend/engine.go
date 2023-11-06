@@ -33,7 +33,6 @@ import (
 	"github.com/klaytn/klaytn/blockchain/system"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	istanbulCore "github.com/klaytn/klaytn/consensus/istanbul/core"
@@ -91,14 +90,11 @@ var (
 )
 
 var (
-	defaultBlockScore = big.NewInt(1)
-	now               = time.Now
-
-	nonceAuthVote = hexutil.MustDecode("0xffffffffffffffff") // Magic nonce number to vote on adding a new validator
-	nonceDropVote = hexutil.MustDecode("0x0000000000000000") // Magic nonce number to vote on removing a validator.
-
-	inmemoryBlocks             = 2048 // Number of blocks to precompute validators' addresses
-	inmemoryValidatorsPerBlock = 30   // Approximate number of validators' addresses from ecrecover
+	defaultBlockScore          = big.NewInt(1)
+	now                        = time.Now
+	zeroMixHash                = make([]byte, 32) // zero mixHash used at the exact Randao fork block
+	inmemoryBlocks             = 2048             // Number of blocks to precompute validators' addresses
+	inmemoryValidatorsPerBlock = 30               // Approximate number of validators' addresses from ecrecover
 	signatureAddresses, _      = lru.NewARC(inmemoryBlocks * inmemoryValidatorsPerBlock)
 )
 
@@ -424,6 +420,20 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	header.Vote = sb.governance.GetEncodedVote(sb.address, number)
 	if len(header.Vote) > 0 {
 		logger.Info("Put voteData", "num", number, "data", hex.EncodeToString(header.Vote))
+	}
+
+	if chain.Config().IsRandaoForkEnabled(header.Number) {
+		prevMixHash := parent.MixHash
+		if chain.Config().IsRandaoForkBlockParent(parent.Number) {
+			prevMixHash = zeroMixHash
+		}
+
+		randomReveal, mixHash, err := sb.CalcRandao(header.Number, prevMixHash)
+		if err != nil {
+			return err
+		}
+		header.RandomReveal = randomReveal
+		header.MixHash = mixHash
 	}
 
 	// add validators (council list) in snapshot to extraData's validators section
