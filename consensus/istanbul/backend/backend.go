@@ -22,6 +22,7 @@ package backend
 
 import (
 	"crypto/ecdsa"
+	"encoding/binary"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -31,11 +32,13 @@ import (
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	istanbulCore "github.com/klaytn/klaytn/consensus/istanbul/core"
 	"github.com/klaytn/klaytn/consensus/istanbul/validator"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/crypto/bls"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/log"
@@ -54,6 +57,7 @@ type BackendOpts struct {
 	IstanbulConfig *istanbul.Config // Istanbul consensus core config
 	Rewardbase     common.Address
 	PrivateKey     *ecdsa.PrivateKey // Consensus message signing key
+	BlsSecretKey   bls.SecretKey     // Randao signing key. Required since Randao fork
 	DB             database.DBManager
 	Governance     governance.Engine // Governance parameter provider
 	NodeType       common.ConnType
@@ -68,6 +72,7 @@ func New(opts *BackendOpts) consensus.Istanbul {
 		istanbulEventMux:  new(event.TypeMux),
 		privateKey:        opts.PrivateKey,
 		address:           crypto.PubkeyToAddress(opts.PrivateKey.PublicKey),
+		blsSecretKey:      opts.BlsSecretKey,
 		logger:            logger.NewWith(),
 		db:                opts.DB,
 		commitCh:          make(chan *types.Result, 1),
@@ -93,6 +98,7 @@ type backend struct {
 	istanbulEventMux *event.TypeMux
 	privateKey       *ecdsa.PrivateKey
 	address          common.Address
+	blsSecretKey     bls.SecretKey
 	core             istanbulCore.Engine
 	logger           log.Logger
 	db               database.DBManager
@@ -372,9 +378,31 @@ func (sb *backend) CheckSignature(data []byte, address common.Address, sig []byt
 	return nil
 }
 
+// Calculate KIP-114 Randao header fields
+// https://github.com/klaytn/kips/blob/kip114/KIPs/kip-114.md
 func (sb *backend) CalcRandao(number *big.Int, prevMixHash []byte) ([]byte, []byte, error) {
-	randomReveal := make([]byte, 96)
+	if sb.blsSecretKey == nil {
+		return nil, nil, errNoBlsKey
+	}
+	if len(prevMixHash) != 32 {
+		logger.Error("invalid prevMixHash", "number", number.Uint64(), "prevMixHash", hexutil.Encode(prevMixHash))
+		return nil, nil, errInvalidRandao
+	}
+
+	// block_num_to_bytes() = num.to_bytes(8, byteorder="big")
+	msg := make([]byte, 8)
+	binary.BigEndian.PutUint64(msg, number.Uint64())
+
+	// calc_random_reveal() = sign(privateKey, headerNumber)
+	randomReveal := bls.Sign(sb.blsSecretKey, msg).Marshal()
+
+	// calc_mix_hash() = xor(prevMixHash, keccak256(randomReveal))
+	revealHash := crypto.Keccak256(randomReveal)
 	mixHash := make([]byte, 32)
+	for i := 0; i < 32; i++ {
+		mixHash[i] = prevMixHash[i] ^ revealHash[i]
+	}
+
 	return randomReveal, mixHash, nil
 }
 

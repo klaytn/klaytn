@@ -509,6 +509,7 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 		IstanbulConfig: &config.Istanbul,
 		Rewardbase:     config.Rewardbase,
 		PrivateKey:     ctx.NodeKey(),
+		BlsSecretKey:   ctx.BlsNodeKey(),
 		DB:             db,
 		Governance:     gov,
 		NodeType:       nodetype,

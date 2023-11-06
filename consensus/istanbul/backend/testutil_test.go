@@ -31,6 +31,7 @@ import (
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/consensus/istanbul/core"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/crypto/bls"
 	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
@@ -67,14 +68,16 @@ func init() {
 
 type testOverrides struct {
 	node0Key       *ecdsa.PrivateKey // Override node[0] key
+	node0BlsKey    bls.SecretKey     // Override node[0] bls key
 	blockPeriod    *uint64           // Override block period. If not set, 1 second is used.
 	stakingAmounts []uint64          // Override staking amounts. If not set, 0 for all nodes.
 }
 
 type testContext struct {
-	config    *params.ChainConfig
-	nodeKeys  []*ecdsa.PrivateKey // Generated node keys
-	nodeAddrs []common.Address    // Generated node addrs
+	config      *params.ChainConfig
+	nodeKeys    []*ecdsa.PrivateKey // Generated node keys
+	nodeAddrs   []common.Address    // Generated node addrs
+	nodeBlsKeys []bls.SecretKey     // Generated node bls keys
 
 	chain  *blockchain.BlockChain
 	engine *backend
@@ -91,6 +94,9 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 	if overrides.node0Key == nil {
 		overrides.node0Key, _ = crypto.GenerateKey()
 	}
+	if overrides.node0BlsKey == nil {
+		overrides.node0BlsKey, _ = bls.DeriveFromECDSA(overrides.node0Key)
+	}
 	if overrides.blockPeriod == nil {
 		one := uint64(1)
 		overrides.blockPeriod = &one
@@ -101,17 +107,20 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 
 	// Create node keys
 	var (
-		nodeKeys  = make([]*ecdsa.PrivateKey, numNodes)
-		nodeAddrs = make([]common.Address, numNodes)
+		nodeKeys    = make([]*ecdsa.PrivateKey, numNodes)
+		nodeAddrs   = make([]common.Address, numNodes)
+		nodeBlsKeys = make([]bls.SecretKey, numNodes)
 
 		dbm = database.NewMemoryDBManager()
 		gov = governance.NewMixedEngine(config, dbm)
 	)
 	nodeKeys[0] = overrides.node0Key
 	nodeAddrs[0] = crypto.PubkeyToAddress(nodeKeys[0].PublicKey)
+	nodeBlsKeys[0] = overrides.node0BlsKey
 	for i := 1; i < numNodes; i++ {
 		nodeKeys[i], _ = crypto.GenerateKey()
 		nodeAddrs[i] = crypto.PubkeyToAddress(nodeKeys[i].PublicKey)
+		nodeBlsKeys[i], _ = bls.DeriveFromECDSA(nodeKeys[i])
 	}
 
 	// Create genesis block
@@ -136,6 +145,7 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 		IstanbulConfig: istanbulConfig,
 		Rewardbase:     common.HexToAddress("0x2A35FE72F847aa0B509e4055883aE90c87558AaD"),
 		PrivateKey:     nodeKeys[0],
+		BlsSecretKey:   nodeBlsKeys[0],
 		DB:             dbm,
 		Governance:     gov,
 		NodeType:       common.CONSENSUSNODE,

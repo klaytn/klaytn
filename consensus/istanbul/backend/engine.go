@@ -78,23 +78,24 @@ var (
 	// errInvalidVotingChain is returned if an authorization list is attempted to
 	// be modified via out-of-range or non-contiguous headers.
 	errInvalidVotingChain = errors.New("invalid voting chain")
-	// errInvalidVote is returned if a nonce value is something else that the two
-	// allowed constants of 0x00..0 or 0xff..f.
-	errInvalidVote = errors.New("vote nonce not 0x00..0 or 0xff..f")
 	// errInvalidCommittedSeals is returned if the committed seal is not signed by any of parent validators.
 	errInvalidCommittedSeals = errors.New("invalid committed seals")
 	// errEmptyCommittedSeals is returned if the field of committed seals is zero.
 	errEmptyCommittedSeals = errors.New("zero committed seals")
 	// errMismatchTxhashes is returned if the TxHash in header is mismatch.
 	errMismatchTxhashes = errors.New("mismatch transactions hashes")
+	// errNoBlsKey is returned if the BLS secret key is not configured.
+	errNoBlsKey = errors.New("bls key not configured")
+	// errInvalidRandao is returned if the Randao fields randomReveal or mixHash are invalid.
+	errInvalidRandao = errors.New("invalid randao fields")
 )
 
 var (
-	defaultBlockScore          = big.NewInt(1)
-	now                        = time.Now
-	zeroMixHash                = make([]byte, 32) // zero mixHash used at the exact Randao fork block
-	inmemoryBlocks             = 2048             // Number of blocks to precompute validators' addresses
-	inmemoryValidatorsPerBlock = 30               // Approximate number of validators' addresses from ecrecover
+	defaultBlockScore = big.NewInt(1)
+	now               = time.Now
+
+	inmemoryBlocks             = 2048 // Number of blocks to precompute validators' addresses
+	inmemoryValidatorsPerBlock = 30   // Approximate number of validators' addresses from ecrecover
 	signatureAddresses, _      = lru.NewARC(inmemoryBlocks * inmemoryValidatorsPerBlock)
 )
 
@@ -425,7 +426,7 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	if chain.Config().IsRandaoForkEnabled(header.Number) {
 		prevMixHash := parent.MixHash
 		if chain.Config().IsRandaoForkBlockParent(parent.Number) {
-			prevMixHash = zeroMixHash
+			prevMixHash = params.ZeroMixHash
 		}
 
 		randomReveal, mixHash, err := sb.CalcRandao(header.Number, prevMixHash)
