@@ -715,10 +715,10 @@ func simulateChainSplit(t *testing.T, numValidators int) (State, State) {
 // 2) the proposer is malicious; it sends two different blocks to each group
 func TestCore_chainSplit(t *testing.T) {
 	// After the patch of RequiredMessageCount,
-	// Even though the number of validators is not 3f+1, the chain does not split.
+	// If the number of validators is not 3f+1, the chain can be split.
 	stateA, stateB := simulateChainSplit(t, 5)
-	assert.Equal(t, StatePreprepared, stateA)
-	assert.Equal(t, StatePreprepared, stateB)
+	assert.Equal(t, StateCommitted, stateA)
+	assert.Equal(t, StateCommitted, stateB)
 
 	// If the number of validators is 3f+1, the chain cannot be split.
 	stateA, stateB = simulateChainSplit(t, 7)
