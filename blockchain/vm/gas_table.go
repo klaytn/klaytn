@@ -75,7 +75,7 @@ func memoryCopierGas(stackpos int) gasFunc {
 			return 0, err
 		}
 		// And gas for copying data, charged per word at param.CopyGas
-		words, overflow := bigUint64(stack.Back(stackpos))
+		words, overflow := stack.Back(stackpos).Uint64WithOverflow()
 		if overflow {
 			return 0, errGasUintOverflow
 		}
@@ -102,14 +102,14 @@ var (
 func gasSStore(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 	var (
 		y, x    = stack.Back(1), stack.Back(0)
-		current = evm.StateDB.GetState(contract.Address(), common.BigToHash(x))
+		current = evm.StateDB.GetState(contract.Address(), common.Hash(x.Bytes32()))
 	)
 	// This checks for 3 scenario's and calculates gas accordingly
 	// 1. From a zero-value address to a non-zero value         (NEW VALUE)
 	// 2. From a non-zero value address to a zero-value address (DELETE)
 	// 3. From a non-zero to a non-zero                         (CHANGE)
 	isOldEmpty := common.EmptyHash(current)
-	isNewEmpty := common.EmptyHash(common.BigToHash(y))
+	isNewEmpty := common.EmptyHash(common.Hash(y.Bytes32()))
 	if isOldEmpty && !isNewEmpty {
 		// 0 => non 0
 		return params.SstoreSetGas, nil
@@ -144,14 +144,14 @@ func gasSStoreEIP2200(evm *EVM, contract *Contract, stack *Stack, mem *Memory, m
 	// Gas sentry honoured, do the actual gas calculation based on the stored value
 	var (
 		y, x    = stack.Back(1), stack.Back(0)
-		current = evm.StateDB.GetState(contract.Address(), common.BigToHash(x))
+		current = evm.StateDB.GetState(contract.Address(), common.Hash(x.Bytes32()))
 	)
-	value := common.BigToHash(y)
+	value := common.Hash(y.Bytes32())
 
 	if current == value { // noop (1)
 		return params.SloadGasEIP2200, nil
 	}
-	original := evm.StateDB.GetCommittedState(contract.Address(), common.BigToHash(x))
+	original := evm.StateDB.GetCommittedState(contract.Address(), common.Hash(x.Bytes32()))
 	if original == current {
 		if original == (common.Hash{}) { // create slot (2.1.1)
 			return params.SstoreSetGasEIP2200, nil
@@ -180,7 +180,7 @@ func gasSStoreEIP2200(evm *EVM, contract *Contract, stack *Stack, mem *Memory, m
 
 func makeGasLog(n uint64) gasFunc {
 	return func(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
-		requestedSize, overflow := bigUint64(stack.Back(1))
+		requestedSize, overflow := stack.Back(1).Uint64WithOverflow()
 		if overflow {
 			return 0, errGasUintOverflow
 		}
@@ -213,7 +213,7 @@ func gasSha3(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize
 	if err != nil {
 		return 0, err
 	}
-	wordGas, overflow := bigUint64(stack.Back(1))
+	wordGas, overflow := stack.Back(1).Uint64WithOverflow()
 	if overflow {
 		return 0, errGasUintOverflow
 	}
@@ -247,7 +247,7 @@ func gasCreate2(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memoryS
 	if err != nil {
 		return 0, err
 	}
-	wordGas, overflow := bigUint64(stack.Back(2))
+	wordGas, overflow := stack.Back(2).Uint64WithOverflow()
 	if overflow {
 		return 0, errGasUintOverflow
 	}
@@ -265,7 +265,7 @@ func gasCreateEip3860(evm *EVM, contract *Contract, stack *Stack, mem *Memory, m
 	if err != nil {
 		return 0, err
 	}
-	size, overflow := bigUint64(stack.Back(2))
+	size, overflow := stack.Back(2).Uint64WithOverflow()
 	if overflow || size > params.MaxInitCodeSize {
 		return 0, errGasUintOverflow
 	}
@@ -282,7 +282,7 @@ func gasCreate2Eip3860(evm *EVM, contract *Contract, stack *Stack, mem *Memory, 
 	if err != nil {
 		return 0, err
 	}
-	size, overflow := bigUint64(stack.Back(2))
+	size, overflow := stack.Back(2).Uint64WithOverflow()
 	if overflow || size > params.MaxInitCodeSize {
 		return 0, errGasUintOverflow
 	}
@@ -313,7 +313,7 @@ func gasCall(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize
 	var (
 		gas            uint64
 		transfersValue = stack.Back(2).Sign() != 0
-		address        = common.BigToAddress(stack.Back(1))
+		address        = common.Address(stack.Back(1).Bytes20())
 	)
 	if transfersValue {
 		if evm.StateDB.Empty(address) {
@@ -399,7 +399,7 @@ func gasStaticCall(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memo
 
 func gasSelfdestruct(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 	gas := params.SelfdestructGas
-	address := common.BigToAddress(stack.Back(0))
+	address := common.Address(stack.Back(0).Bytes20())
 
 	// This is from eip158
 	// if empty and transfers value

@@ -30,6 +30,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/holiman/uint256"
 	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
@@ -235,17 +236,17 @@ func (t *InternalTxTracer) step(log *tracerLog) error {
 	// If a new contract is being created, add to the call stack
 	if sysCall && (op == CREATE || op == CREATE2) {
 		inOff := log.stack.Back(1)
-		inEnd := big.NewInt(0).Add(inOff, log.stack.Back(2)).Int64()
+		inEnd := big.NewInt(0).Add(inOff.ToBig(), log.stack.Back(2).ToBig()).Int64()
 
 		// Assemble the internal call report and store for completion
 		fromAddr := log.contract.Address()
 		call := &InternalCall{
 			Type:    op.String(),
 			From:    &fromAddr,
-			Input:   hexutil.Encode(log.memory.Slice(inOff.Int64(), inEnd)),
+			Input:   hexutil.Encode(log.memory.Slice(int64(inOff.Uint64()), inEnd)),
 			GasIn:   log.gas,
 			GasCost: log.cost,
-			Value:   "0x" + log.stack.Peek().Text(16), // '0x' + tracerLog.stack.peek(0).toString(16)
+			Value:   "0x" + log.stack.peek().Hex(), // '0x' + tracerLog.stack.peek(0).toString(16)
 		}
 		t.callStack = append(t.callStack, call)
 		t.descended = true
@@ -261,8 +262,8 @@ func (t *InternalTxTracer) step(log *tracerLog) error {
 			t.callStack[left-1].Calls = []*InternalCall{}
 		}
 		contractAddr := log.contract.Address()
-		ret := log.stack.Peek()
-		toAddr := common.HexToAddress(ret.Text(16))
+		ret := log.stack.peek()
+		toAddr := common.HexToAddress(ret.Hex())
 		t.callStack[left-1].Calls = append(
 			t.callStack[left-1].Calls,
 			&InternalCall{
@@ -280,7 +281,7 @@ func (t *InternalTxTracer) step(log *tracerLog) error {
 	if sysCall && (op == CALL || op == CALLCODE || op == DELEGATECALL || op == STATICCALL) {
 
 		// Skip any pre-compile invocations, those are just fancy opcodes
-		toAddr := common.HexToAddress(log.stack.Back(1).Text(16))
+		toAddr := common.HexToAddress(log.stack.Back(1).Hex())
 		if _, ok := PrecompiledContractsByzantiumCompatible[toAddr]; ok {
 			return nil
 		}
@@ -291,7 +292,7 @@ func (t *InternalTxTracer) step(log *tracerLog) error {
 		}
 
 		inOff := log.stack.Back(2 + off)
-		inEnd := big.NewInt(0).Add(inOff, log.stack.Back(3+off)).Int64()
+		inEnd := big.NewInt(0).Add(inOff.ToBig(), log.stack.Back(3+off).ToBig()).Int64()
 
 		// Assemble the internal call report and store for completion
 		fromAddr := log.contract.Address()
@@ -299,14 +300,14 @@ func (t *InternalTxTracer) step(log *tracerLog) error {
 			Type:    op.String(),
 			From:    &fromAddr,
 			To:      &toAddr,
-			Input:   hexutil.Encode(log.memory.Slice(inOff.Int64(), inEnd)),
+			Input:   hexutil.Encode(log.memory.Slice(int64(inOff.Uint64()), inEnd)),
 			GasIn:   log.gas,
 			GasCost: log.cost,
-			OutOff:  big.NewInt(log.stack.Back(4 + off).Int64()),
-			OutLen:  big.NewInt(log.stack.Back(5 + off).Int64()),
+			OutOff:  big.NewInt(int64(log.stack.Back(4 + off).Uint64())),
+			OutLen:  big.NewInt(int64(log.stack.Back(5 + off).Uint64())),
 		}
 		if op != DELEGATECALL && op != STATICCALL {
-			call.Value = "0x" + log.stack.Back(2).Text(16)
+			call.Value = "0x" + log.stack.Back(2).Hex()
 		}
 		t.callStack = append(t.callStack, call)
 		t.descended = true
@@ -347,11 +348,11 @@ func (t *InternalTxTracer) step(log *tracerLog) error {
 			call.GasUsed = call.GasIn - call.GasCost - log.gas
 			call.GasIn, call.GasCost = uint64(0), uint64(0)
 
-			ret := log.stack.Peek()
-			if ret.Cmp(big.NewInt(0)) != 0 {
-				toAddr := common.HexToAddress(ret.Text(16))
+			ret := log.stack.peek()
+			if ret.Cmp(uint256.NewInt(0)) != 0 {
+				toAddr := common.HexToAddress(ret.Hex())
 				call.To = &toAddr
-				call.Output = hexutil.Encode(log.env.StateDB.GetCode(common.HexToAddress(ret.Text(16))))
+				call.Output = hexutil.Encode(log.env.StateDB.GetCode(common.HexToAddress(ret.Hex())))
 			} else if call.Error == nil {
 				call.Error = errInternalFailure // TODO(karalabe): surface these faults somehow
 			}
@@ -360,8 +361,8 @@ func (t *InternalTxTracer) step(log *tracerLog) error {
 			if call.Gas != uint64(0) {
 				call.GasUsed = call.GasIn - call.GasCost + call.Gas - log.gas
 			}
-			ret := log.stack.Peek()
-			if ret == nil || ret.Cmp(big.NewInt(0)) != 0 {
+			ret := log.stack.peek()
+			if ret == nil || ret.Cmp(uint256.NewInt(0)) != 0 {
 				callOutOff, callOutLen := call.OutOff.Int64(), call.OutLen.Int64()
 				call.Output = hexutil.Encode(log.memory.Slice(callOutOff, callOutOff+callOutLen))
 			} else if call.Error == nil {

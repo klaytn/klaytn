@@ -24,6 +24,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/holiman/uint256"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/params"
@@ -61,8 +62,9 @@ func TestStoreCapture(t *testing.T) {
 		stack    = newstack()
 		contract = NewContract(&dummyContractRef{}, &dummyContractRef{}, new(big.Int), 0)
 	)
-	stack.push(big.NewInt(1))
-	stack.push(big.NewInt(0))
+
+	stack.push(uint256.NewInt(1))
+	stack.push(uint256.NewInt(0))
 
 	var index common.Hash
 

@@ -18,8 +18,8 @@ package vm
 
 import (
 	"fmt"
-	"math/big"
 
+	"github.com/holiman/uint256"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/params"
 )
@@ -78,8 +78,8 @@ func enable1884(jt *JumpTable) {
 	}
 }
 
-func opSelfBalance(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	balance := evm.interpreter.intPool.get().Set(evm.StateDB.GetBalance(scope.Contract.Address()))
+func opSelfBalance(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	balance, _ := uint256.FromBig(interpreter.evm.StateDB.GetBalance(scope.Contract.Address()))
 	scope.Stack.push(balance)
 	return nil, nil
 }
@@ -98,8 +98,8 @@ func enable1344(jt *JumpTable) {
 }
 
 // opChainID implements CHAINID opcode
-func opChainID(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	chainId := evm.interpreter.intPool.get().Set(evm.chainConfig.ChainID)
+func opChainID(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	chainId, _ := uint256.FromBig(interpreter.evm.chainConfig.ChainID)
 	scope.Stack.push(chainId)
 	return nil, nil
 }
@@ -144,22 +144,22 @@ func enable1153(jt *JumpTable) {
 }
 
 // opTload implements TLOAD opcode
-func opTload(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	loc := scope.Stack.Peek()
-	val := evm.StateDB.GetTransientState(scope.Contract.Address(), common.BigToHash(loc))
+func opTload(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	loc := scope.Stack.peek()
+	hash := common.Hash(loc.Bytes32())
+	val := interpreter.evm.StateDB.GetTransientState(scope.Contract.Address(), hash)
 	loc.SetBytes(val.Bytes())
 	return nil, nil
 }
 
 // opTstore implements TSTORE opcode
-func opTstore(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	if evm.interpreter.readOnly {
+func opTstore(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	if interpreter.readOnly {
 		return nil, ErrWriteProtection
 	}
 	loc := scope.Stack.pop()
 	val := scope.Stack.pop()
-	evm.StateDB.SetTransientState(scope.Contract.Address(), common.BigToHash(loc), common.BigToHash(val))
-	evm.interpreter.intPool.put(loc, val)
+	interpreter.evm.StateDB.SetTransientState(scope.Contract.Address(), loc.Bytes32(), val.Bytes32())
 	return nil, nil
 }
 
@@ -177,8 +177,8 @@ func enable3198(jt *JumpTable) {
 }
 
 // opBaseFee implements BASEFEE opcode
-func opBaseFee(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	baseFee := evm.interpreter.intPool.get().Set(evm.Context.BaseFee)
+func opBaseFee(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	baseFee, _ := uint256.FromBig(interpreter.evm.Context.BaseFee)
 	scope.Stack.push(baseFee)
 	return nil, nil
 }
@@ -254,8 +254,8 @@ func enable3855(jt *JumpTable) {
 }
 
 // opPush0 implements the PUSH0 opcode
-func opPush0(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	scope.Stack.push(new(big.Int))
+func opPush0(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	scope.Stack.push(new(uint256.Int))
 	return nil, nil
 }
 
@@ -281,7 +281,7 @@ func enable5656(jt *JumpTable) {
 }
 
 // opMcopy implements the MCOPY opcode (https://eips.ethereum.org/EIPS/eip-5656)
-func opMcopy(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
+func opMcopy(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 	var (
 		dst    = scope.Stack.pop()
 		src    = scope.Stack.pop()
