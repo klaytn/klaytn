@@ -259,17 +259,14 @@ func CalcDeferredRewardSimple(header *types.Header, rules params.Rules, pset *pa
 
 	// If not DeferredTxFee, fees are already added to the proposer during TX execution.
 	// Therefore, there are no fees to distribute here at the end of block processing.
-	// However, before Kore, there was a bug that distributed tx fee regardless
-	// of `deferredTxFee` flag. See https://github.com/klaytn/klaytn/issues/1692.
+	// However, there was a bug causing the fees to be distributed again.
+	// See https://github.com/klaytn/klaytn/issues/1692.
 	// To maintain backward compatibility, we only fix the buggy logic after Magma
 	// and leave the buggy logic before Magma.
-	// However, the fees must be compensated to calculate actual rewards paid.
-
-	// bug-fixed logic after Magma
+	// However, if you wish to address only this issue instead, apply the ServiceChainTxFeeHardfork.
+	// Before the hardforks, tx fees must be compensated to calculate actual rewards paid.
 	if !rc.deferredTxFee && (rc.rules.IsMagma || rc.rules.IsServiceChainTxFee) {
 		proposer := new(big.Int).Set(minted)
-		logger.Debug("CalcDeferredRewardSimple after Kore when deferredTxFee=false returns",
-			"proposer", proposer)
 		spec := NewRewardSpec()
 		spec.Minted = minted
 		spec.TotalFee = big.NewInt(0)
