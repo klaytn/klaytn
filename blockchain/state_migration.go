@@ -392,7 +392,7 @@ func (bc *BlockChain) StateMigrationStatus() (bool, uint64, int, int, int, float
 	return bc.db.InMigration(), bc.db.MigrationBlockNumber(), bc.readCnt, bc.committedCnt, bc.pendingCnt, bc.progress, bc.migrationErr
 }
 
-// iterateStateTrie runs state.Iterator, generated from the given state or storage trie node hash,
+// trieWarmUp runs state.Iterator, generated from the given state or storage trie node hash,
 // until it reaches end. If it reaches end, it will send a nil error to errCh to indicate that
 // it has been finished.
 func (bc *BlockChain) trieWarmUp(next func() bool, resultCh chan int, errCh chan error) {
