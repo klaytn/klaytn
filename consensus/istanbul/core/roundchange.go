@@ -30,7 +30,7 @@ import (
 
 const (
 	// If the number of validators is 6 or less, the chain could be forked by round change if the required minimum consensus message is "2f+1".
-	// So, the exceptional case such as number of validator is 6, gather more messages than "2f+1". See requiredMessageCount for more specific information.
+	// So, the exceptional case such as number of validator is 6, gather more messages than "2f+1". See RequiredMessageCount for more specific information.
 	exceptionalValidatorsNumber = 6
 )
 
@@ -120,15 +120,16 @@ func (c *core) handleRoundChange(msg *message, src istanbul.Validator) error {
 
 	var numCatchUp, numStartNewRound int
 	if c.valSet.Size() <= exceptionalValidatorsNumber {
-		n := requiredMessageCount(c.valSet)
+		n := RequiredMessageCount(c.valSet, c.isCancunForkEnabled(rc.View.Sequence))
 		// N ROUND CHANGE messages can start new round.
 		numStartNewRound = n
 		// N - 1 ROUND CHANGE messages can catch up the round.
 		numCatchUp = n - 1
 	} else {
+		n := RequiredMessageCount(c.valSet, c.isCancunForkEnabled(rc.View.Sequence))
 		f := int(c.valSet.F())
-		// 2*F + 1 ROUND CHANGE messages can start new round.
-		numStartNewRound = 2*f + 1
+		// N ROUND CHANGE messages can start new round.
+		numStartNewRound = n
 		// F + 1 ROUND CHANGE messages can start catch up the round.
 		numCatchUp = f + 1
 	}

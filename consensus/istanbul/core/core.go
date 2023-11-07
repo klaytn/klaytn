@@ -419,6 +419,13 @@ func (c *core) checkValidatorSignature(data []byte, sig []byte) (common.Address,
 	return istanbul.CheckValidatorSignature(c.valSet, data, sig)
 }
 
+func (c *core) isCancunForkEnabled(num *big.Int) bool {
+	if c.config.CancunForkNum == nil || num == nil {
+		return false
+	}
+	return c.config.CancunForkNum.Cmp(num) <= 0
+}
+
 // PrepareCommittedSeal returns a committed seal for the given hash
 func PrepareCommittedSeal(hash common.Hash) []byte {
 	var buf bytes.Buffer
@@ -428,7 +435,10 @@ func PrepareCommittedSeal(hash common.Hash) []byte {
 }
 
 // Minimum required number of consensus messages to proceed
-func requiredMessageCount(valSet istanbul.ValidatorSet) int {
+func RequiredMessageCount(valSet istanbul.ValidatorSet, isAbcEnabled bool) int {
+	if isAbcEnabled {
+		return int(math.Ceil(float64(2*valSet.Size()) / 3))
+	}
 	var size uint64
 	if valSet.IsSubSet() {
 		size = valSet.SubGroupSize()

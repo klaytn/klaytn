@@ -109,7 +109,7 @@ func (c *core) handleCommit(msg *message, src istanbul.Validator) error {
 			logger.Warn("received commit of the hash locked proposal and change state to prepared", "msgType", msgCommit)
 			c.setState(StatePrepared)
 			c.sendCommit()
-		} else if c.current.GetPrepareOrCommitSize() >= requiredMessageCount(c.valSet) {
+		} else if c.current.GetPrepareOrCommitSize() >= RequiredMessageCount(c.valSet, c.isCancunForkEnabled(commit.View.Sequence)) {
 			logger.Info("received a quorum of the messages and change state to prepared", "msgType", msgCommit, "valSet", c.valSet.Size())
 			c.current.LockHash()
 			c.setState(StatePrepared)
@@ -122,7 +122,7 @@ func (c *core) handleCommit(msg *message, src istanbul.Validator) error {
 	// If we already have a proposal, we may have chance to speed up the consensus process
 	// by committing the proposal without PREPARE messages.
 	//logger.Error("### consensus check","len(commits)",c.current.Commits.Size(),"f(2/3)",2*c.valSet.F(),"state",c.state.Cmp(StateCommitted))
-	if c.state.Cmp(StateCommitted) < 0 && c.current.Commits.Size() >= requiredMessageCount(c.valSet) {
+	if c.state.Cmp(StateCommitted) < 0 && c.current.Commits.Size() >= RequiredMessageCount(c.valSet, c.isCancunForkEnabled(commit.View.Sequence)) {
 		// Still need to call LockHash here since state can skip Prepared state and jump directly to the Committed state.
 		c.current.LockHash()
 		c.commit()

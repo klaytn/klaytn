@@ -20,6 +20,8 @@
 
 package istanbul
 
+import "math/big"
+
 type ProposerPolicy uint64
 
 const (
@@ -34,6 +36,7 @@ type Config struct {
 	ProposerPolicy ProposerPolicy `toml:",omitempty"` // The policy for proposer selection
 	Epoch          uint64         `toml:",omitempty"` // The number of blocks after which to checkpoint and reset the pending votes
 	SubGroupSize   uint64         `toml:",omitempty"`
+	CancunForkNum  *big.Int       `toml:",omitempty"`
 }
 
 // TODO-Klaytn-Istanbul: Do not use DefaultConfig except for assigning new config
