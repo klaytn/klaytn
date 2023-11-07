@@ -428,7 +428,7 @@ func PrepareCommittedSeal(hash common.Hash) []byte {
 }
 
 // Minimum required number of consensus messages to proceed
-func requiredMessageCount(valSet istanbul.ValidatorSet) int {
+func RequiredMessageCount(valSet istanbul.ValidatorSet) int {
 	var size uint64
 	if valSet.IsSubSet() {
 		size = valSet.SubGroupSize()
