@@ -22,6 +22,7 @@ package core
 
 import (
 	"bytes"
+	"github.com/klaytn/klaytn/fork"
 	"math"
 	"math/big"
 	"sync"
@@ -428,7 +429,10 @@ func PrepareCommittedSeal(hash common.Hash) []byte {
 }
 
 // Minimum required number of consensus messages to proceed
-func RequiredMessageCount(valSet istanbul.ValidatorSet) int {
+func RequiredMessageCount(valSet istanbul.ValidatorSet, num *big.Int) int {
+	if fork.Rules(num).IsCancun {
+		return int(math.Ceil(float64(2*valSet.Size()) / 3))
+	}
 	var size uint64
 	if valSet.IsSubSet() {
 		size = valSet.SubGroupSize()
