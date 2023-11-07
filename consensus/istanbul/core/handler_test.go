@@ -717,8 +717,8 @@ func TestCore_chainSplit(t *testing.T) {
 	// After the patch of requiredMessageCount,
 	// Even though the number of validators is not 3f+1, the chain does not split.
 	stateA, stateB := simulateChainSplit(t, 5)
-	assert.inEqual(t, StatePreprepared, stateA)
-	assert.inEqual(t, StatePreprepared, stateB)
+	assert.Equal(t, StatePreprepared, stateA)
+	assert.Equal(t, StatePreprepared, stateB)
 
 	// If the number of validators is 3f+1, the chain cannot be split.
 	stateA, stateB = simulateChainSplit(t, 7)
