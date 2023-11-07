@@ -424,7 +424,7 @@ func (bc *BlockChain) trieWarmUp(next func() bool, resultCh chan int, errCh chan
 	}
 }
 
-// warmUpChecker receives errors from each warm-up goroutine.
+// warmUpTrieCache receives errors from each warm-up goroutine.
 // If it receives a nil error, it means a child goroutine is successfully terminated.
 // It also periodically checks and logs warm-up progress.
 func (bc *BlockChain) warmUpTrieCache(mainTrieDB *statedb.Database, minLoad uint, nChildren int,
