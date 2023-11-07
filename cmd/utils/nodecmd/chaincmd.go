@@ -68,7 +68,6 @@ var (
 			utils.RocksDBMaxOpenFilesFlag,
 			utils.RocksDBCacheIndexAndFilterFlag,
 			utils.OverwriteGenesisFlag,
-			utils.LivePruningFlag,
 		},
 		Category: "BLOCKCHAIN COMMANDS",
 		Description: `

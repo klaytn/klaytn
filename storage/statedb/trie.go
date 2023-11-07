@@ -44,8 +44,8 @@ type TrieOpts struct {
 	// If PruningBlockNumber is nonzero, trie update and delete operations
 	// will schedule obsolete nodes to be pruned when the given block number becomes obsolete.
 	// This option is only viable when the pruning is enabled on database.
+	LivePruningEnabled bool
 	PruningBlockNumber uint64
-	LivePruningEnabled bool // True if the underlying database has pruning enabled.
 }
 
 // LeafCallback is a callback type invoked when a trie operation reaches a leaf
