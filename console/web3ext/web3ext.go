@@ -580,7 +580,7 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'startContractWarmUp',
 			call: 'debug_startContractWarmUp',
-			params: 2
+			params: 2,
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter, null]
 		}),
 		new web3._extend.Method({
