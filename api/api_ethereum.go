@@ -979,6 +979,38 @@ func (api *EthereumAPI) GetTransactionReceipt(ctx context.Context, hash common.H
 	return ethTx, nil
 }
 
+// GetBlockReceipts returns the receipts of all transactions in the block identified by number or hash.
+func (api *EthereumAPI) GetBlockReceipts(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) ([]map[string]interface{}, error) {
+	b := api.publicBlockChainAPI.b
+	block, err := b.BlockByNumberOrHash(ctx, blockNrOrHash)
+	if err != nil {
+		return nil, err
+	}
+
+	var (
+		header            = block.Header()
+		blockHash         = block.Hash()
+		blockNumber       = block.NumberU64()
+		txs               = block.Transactions()
+		receipts          = b.GetBlockReceipts(ctx, block.Hash())
+		cumulativeGasUsed = uint64(0)
+		outputList        = make([]map[string]interface{}, 0, len(receipts))
+	)
+	if receipts.Len() != txs.Len() {
+		return nil, fmt.Errorf("the size of transactions and receipts is different in the block (%s)", blockHash.String())
+	}
+	for index, receipt := range receipts {
+		tx := txs[index]
+		cumulativeGasUsed += receipt.GasUsed
+		output, err := newEthTransactionReceipt(header, tx, b, blockHash, blockNumber, uint64(index), cumulativeGasUsed, receipt)
+		if err != nil {
+			return nil, err
+		}
+		outputList = append(outputList, output)
+	}
+	return outputList, nil
+}
+
 // newEthTransactionReceipt creates a transaction receipt in Ethereum format.
 func newEthTransactionReceipt(header *types.Header, tx *types.Transaction, b Backend, blockHash common.Hash, blockNumber, index, cumulativeGasUsed uint64, receipt *types.Receipt) (map[string]interface{}, error) {
 	// When an unknown transaction receipt is requested through rpc call,
