@@ -223,8 +223,9 @@ func (api *PublicFilterAPI) NewBlockFilter() rpc.ID {
 	return headerSub.ID
 }
 
-// RPCMarshalHeader converts the given header to the RPC output that includes the baseFeePerGas field.
-func RPCMarshalHeader(head *types.Header, isEnabledEthTxTypeFork bool) map[string]interface{} {
+// RPCMarshalHeader converts the given header to the RPC output that includes Klaytn-specific fields.
+// For klay_getHeaderByNumber and klay_getHeaderByHash APIs.
+func RPCMarshalHeader(head *types.Header, rules params.Rules) map[string]interface{} {
 	result := map[string]interface{}{
 		"parentHash":       head.ParentHash,
 		"reward":           head.Rewardbase,
@@ -243,12 +244,16 @@ func RPCMarshalHeader(head *types.Header, isEnabledEthTxTypeFork bool) map[strin
 		"hash":             head.Hash(),
 	}
 
-	if isEnabledEthTxTypeFork {
+	if rules.IsEthTxType {
 		if head.BaseFee == nil {
 			result["baseFeePerGas"] = (*hexutil.Big)(new(big.Int).SetUint64(params.ZeroBaseFee))
 		} else {
 			result["baseFeePerGas"] = (*hexutil.Big)(head.BaseFee)
 		}
+	}
+	if rules.IsRandao {
+		result["randomReveal"] = hexutil.Bytes(head.RandomReveal)
+		result["mixhash"] = hexutil.Bytes(head.MixHash)
 	}
 
 	return result
@@ -270,7 +275,7 @@ func (api *PublicFilterAPI) NewHeads(ctx context.Context) (*rpc.Subscription, er
 		for {
 			select {
 			case h := <-headers:
-				header := RPCMarshalHeader(h, api.backend.ChainConfig().IsEthTxTypeForkEnabled(h.Number))
+				header := RPCMarshalHeader(h, api.backend.ChainConfig().Rules(h.Number))
 				notifier.Notify(rpcSub.ID, header)
 			case <-rpcSub.Err():
 				headersSub.Unsubscribe()

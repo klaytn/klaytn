@@ -930,13 +930,13 @@ web3._extend({
 		}),
 		new web3._extend.Method({
 			name: 'accountCreated',
-			call: 'klay_accountCreated'
+			call: 'klay_accountCreated',
 			params: 2,
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter, web3._extend.formatters.inputDefaultBlockNumberFormatter],
 		}),
 		new web3._extend.Method({
 			name: 'getAccount',
-			call: 'klay_getAccount'
+			call: 'klay_getAccount',
 			params: 2,
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter, web3._extend.formatters.inputDefaultBlockNumberFormatter],
 		}),

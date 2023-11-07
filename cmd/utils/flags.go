@@ -748,6 +748,13 @@ var (
 		EnvVars:  []string{"KLAYTN_VM_INTERNALTX"},
 		Category: "VIRTUAL MACHINE",
 	}
+	VMOpDebugFlag = &cli.BoolFlag{
+		Name:     "vm.opdebug",
+		Usage:    "Collect and print the execution time of opcodes when node stops",
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_VM_OPDEBUG"},
+		Category: "VIRTUAL MACHINE",
+	}
 
 	// Logging and debug settings
 	MetricsEnabledFlag = &cli.BoolFlag{

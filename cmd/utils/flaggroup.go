@@ -262,6 +262,7 @@ var FlagGroups = []FlagGroup{
 			VMEnableDebugFlag,
 			VMLogTargetFlag,
 			VMTraceInternalTxFlag,
+			VMOpDebugFlag,
 		},
 	},
 	{
