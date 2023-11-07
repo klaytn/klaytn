@@ -246,7 +246,7 @@ func (t *InternalTxTracer) step(log *tracerLog) error {
 			Input:   hexutil.Encode(log.memory.Slice(int64(inOff.Uint64()), inEnd)),
 			GasIn:   log.gas,
 			GasCost: log.cost,
-			Value:   "0x" + log.stack.peek().Hex(), // '0x' + tracerLog.stack.peek(0).toString(16)
+			Value:   log.stack.peek().Hex(), // '0x' + tracerLog.stack.peek(0).toString(16)
 		}
 		t.callStack = append(t.callStack, call)
 		t.descended = true
@@ -307,7 +307,7 @@ func (t *InternalTxTracer) step(log *tracerLog) error {
 			OutLen:  big.NewInt(int64(log.stack.Back(5 + off).Uint64())),
 		}
 		if op != DELEGATECALL && op != STATICCALL {
-			call.Value = "0x" + log.stack.Back(2).Hex()
+			call.Value = log.stack.Back(2).Hex()
 		}
 		t.callStack = append(t.callStack, call)
 		t.descended = true
