@@ -435,8 +435,8 @@ func PrepareCommittedSeal(hash common.Hash) []byte {
 }
 
 // Minimum required number of consensus messages to proceed
-func RequiredMessageCount(valSet istanbul.ValidatorSet, isAbcEnabled bool) int {
-	if isAbcEnabled {
+func RequiredMessageCount(valSet istanbul.ValidatorSet, isCancunHardforkEnabled bool) int {
+	if isCancunHardforkEnabled {
 		return int(math.Ceil(float64(2*valSet.Size()) / 3))
 	}
 	var size uint64
