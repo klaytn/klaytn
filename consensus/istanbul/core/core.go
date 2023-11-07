@@ -443,8 +443,8 @@ func RequiredMessageCount(valSet istanbul.ValidatorSet, num *big.Int) int {
 	// in the certain cases we must receive the messages from all consensus nodes to ensure finality...
 	case 1, 2, 3:
 		return int(size)
-	case 5, 6:
-		return 4 // when the number of valSet is 5 or 6 and return value is 2*F+1, the return value(int 3) is not safe. It should return 4 or more.
+	case 6:
+		return 4 // when the number of valSet is 6 and return value is 2*F+1, the return value(int 3) is not safe. It should return 4 or more.
 	default:
 		return 2*valSet.F() + 1
 	}
