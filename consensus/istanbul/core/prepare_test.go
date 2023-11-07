@@ -27,7 +27,7 @@ func TestCore_sendPrepare(t *testing.T) {
 	istConfig := istanbul.DefaultConfig
 	istConfig.ProposerPolicy = istanbul.WeightedRandom
 
-	istCore := New(mockBackend, istConfig).(*core)
+	istCore := New(mockBackend).(*core)
 	if err := istCore.Start(); err != nil {
 		t.Fatal(err)
 	}

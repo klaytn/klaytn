@@ -22,12 +22,13 @@ package core
 
 import (
 	"bytes"
-	"github.com/klaytn/klaytn/fork"
 	"math"
 	"math/big"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/klaytn/klaytn/fork"
 
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -41,9 +42,9 @@ import (
 var logger = log.NewModuleLogger(log.ConsensusIstanbulCore)
 
 // New creates an Istanbul consensus core
-func New(backend istanbul.Backend, config *istanbul.Config) Engine {
+func New(backend istanbul.Backend) Engine {
 	c := &core{
-		config:             config,
+		// config:             config,
 		address:            backend.Address(),
 		state:              StateAcceptRequest,
 		handlerWg:          new(sync.WaitGroup),
@@ -70,7 +71,8 @@ func New(backend istanbul.Backend, config *istanbul.Config) Engine {
 // ----------------------------------------------------------------------------
 
 type core struct {
-	config  *istanbul.Config
+	// config  *istanbul.Config
+
 	address common.Address
 	state   State
 	logger  log.Logger
@@ -433,6 +435,7 @@ func RequiredMessageCount(valSet istanbul.ValidatorSet, num *big.Int) int {
 	if fork.Rules(num).IsCancun {
 		return int(math.Ceil(float64(2*valSet.Size()) / 3))
 	}
+	// fork.Rules(num) chainConfig.Rules(num)
 	var size uint64
 	if valSet.IsSubSet() {
 		size = valSet.SubGroupSize()

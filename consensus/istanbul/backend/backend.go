@@ -73,7 +73,7 @@ func New(rewardbase common.Address, config *istanbul.Config, privateKey *ecdsa.P
 		rewardDistributor: reward.NewRewardDistributor(governance),
 	}
 	backend.currentView.Store(&istanbul.View{Sequence: big.NewInt(0), Round: big.NewInt(0)})
-	backend.core = istanbulCore.New(backend, backend.config)
+	backend.core = istanbulCore.New(backend)
 	return backend
 }
 

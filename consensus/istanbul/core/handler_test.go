@@ -249,7 +249,7 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 	istConfig.ProposerPolicy = istanbul.WeightedRandom
 
 	// When the istanbul core started, a message handling loop in `handleEvents()` waits istanbul messages
-	istCore := New(mockBackend, istConfig).(*core)
+	istCore := New(mockBackend).(*core)
 	if err := istCore.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -427,7 +427,7 @@ func TestCore_handlerMsg(t *testing.T) {
 	istConfig := istanbul.DefaultConfig
 	istConfig.ProposerPolicy = istanbul.WeightedRandom
 
-	istCore := New(mockBackend, istConfig).(*core)
+	istCore := New(mockBackend).(*core)
 	if err := istCore.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -556,7 +556,7 @@ func simulateMaliciousCN(t *testing.T, numValidators int, numMalicious int) Stat
 	// Start istanbul core
 	istConfig := istanbul.DefaultConfig
 	istConfig.ProposerPolicy = istanbul.WeightedRandom
-	istCore := New(mockBackend, istConfig).(*core)
+	istCore := New(mockBackend).(*core)
 	err := istCore.Start()
 	require.Nil(t, err)
 	defer istCore.Stop()
@@ -645,9 +645,9 @@ func simulateChainSplit(t *testing.T, numValidators int) (State, State) {
 	// Start istanbul core
 	istConfig := istanbul.DefaultConfig
 	istConfig.ProposerPolicy = istanbul.WeightedRandom
-	coreProposer := New(mockBackend, istConfig).(*core)
-	coreA := New(mockBackend, istConfig).(*core)
-	coreB := New(mockBackend, istConfig).(*core)
+	coreProposer := New(mockBackend).(*core)
+	coreA := New(mockBackend).(*core)
+	coreB := New(mockBackend).(*core)
 	require.Nil(t,
 		coreProposer.Start(),
 		coreA.Start(),
@@ -710,9 +710,9 @@ func simulateChainSplit(t *testing.T, numValidators int) (State, State) {
 }
 
 // TestCore_chainSplit tests whether a chain split occurs in a certain conditions:
-// 1) the number of validators does not consist of 3f+1;
+//  1. the number of validators does not consist of 3f+1;
 //     e.g. if the number of validator is 5, it consists of 3f+2 (f=1)
-// 2) the proposer is malicious; it sends two different blocks to each group
+//  2. the proposer is malicious; it sends two different blocks to each group
 func TestCore_chainSplit(t *testing.T) {
 	// After the patch of RequiredMessageCount,
 	// If the number of validators is not 3f+1, the chain can be split.
@@ -766,7 +766,7 @@ func TestCore_handleTimeoutMsg_race(t *testing.T) {
 	istConfig := istanbul.DefaultConfig
 	istConfig.ProposerPolicy = istanbul.WeightedRandom
 
-	istCore := New(mockBackend, istConfig).(*core)
+	istCore := New(mockBackend).(*core)
 	if err := istCore.Start(); err != nil {
 		t.Fatal(err)
 	}
