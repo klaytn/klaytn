@@ -21,7 +21,7 @@ import (
 )
 
 // Test full Randao hardfork scenario under the condition similar to the Cypress network.
-func TestRandaoFork(t *testing.T) {
+func TestRandaoFork_Deploy(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
 
 	// Test parameters
@@ -63,6 +63,46 @@ func TestRandaoFork(t *testing.T) {
 	ctx.WaitBlock(t, forkNum.Uint64()+uint64(numNodes))
 }
 
+// Test Randao hardfork scenario where it's enabled from the genesis
+func TestRandaoFork_Genesis(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
+
+	// Test parameters
+	var (
+		numNodes   = 1
+		forkNum    = big.NewInt(5)
+		owner      = bind.NewKeyedTransactor(deriveTestAccount(5))
+		kip113Addr = common.HexToAddress("0x0000000000000000000000000000000000000403")
+		config     = testRandao_config(forkNum, owner.From, kip113Addr)
+		alloc      = testRandao_alloc(numNodes, kip113Addr)
+	)
+
+	// Start the chain
+	ctx, err := newBlockchainTestContext(&blockchainTestOverrides{
+		numNodes:    numNodes,
+		numAccounts: 8,
+		config:      config,
+		alloc:       alloc,
+	})
+	require.Nil(t, err)
+	ctx.Subscribe(t, func(ev *blockchain.ChainEvent) {
+		b := ev.Block
+		t.Logf("block[%3d] txs=%d mixHash=%x", b.NumberU64(), b.Transactions().Len(), b.Header().MixHash)
+	})
+	ctx.Start()
+	defer ctx.Cleanup()
+
+	// Pass the hardfork block
+	ctx.WaitBlock(t, forkNum.Uint64())
+
+	// Inspect the chain
+	testRandao_checkRegistry(t, ctx)
+	testRandao_checkKip113(t, ctx)
+
+	// Propose by each node for once
+	ctx.WaitBlock(t, forkNum.Uint64()+uint64(numNodes))
+}
+
 // Make ChainConfig that hardforks at `forkNum` and the Registry owner be `owner`.
 func testRandao_config(forkNum *big.Int, owner, kip113Addr common.Address) *params.ChainConfig {
 	config := blockchainTestChainConfig.Copy()
@@ -81,6 +121,45 @@ func testRandao_config(forkNum *big.Int, owner, kip113Addr common.Address) *para
 		Owner: owner,
 	}
 	return config
+}
+
+// Make GenesisAlloc that contains node BLS public keys
+func testRandao_alloc(numNodes int, kip113Addr common.Address) blockchain.GenesisAlloc {
+	infos := make(system.BlsPublicKeyInfos)
+	for i := 0; i < numNodes; i++ {
+		var (
+			key   = deriveTestAccount(i)
+			addr  = crypto.PubkeyToAddress(key.PublicKey)
+			sk, _ = bls.DeriveFromECDSA(key)
+			pk    = sk.PublicKey().Marshal()
+			pop   = bls.PopProve(sk).Marshal()
+		)
+		infos[addr] = system.BlsPublicKeyInfo{PublicKey: pk, Pop: pop}
+	}
+
+	var (
+		implAddr = common.HexToAddress("0x0000000000000000000000000000000000000402")
+		owner    = crypto.PubkeyToAddress(deriveTestAccount(5).PublicKey)
+
+		proxyStorage = system.AllocProxy(implAddr)
+		implStorage  = system.AllocKip113(system.AllocKip113Init{
+			Infos: infos,
+			Owner: owner,
+		})
+		storage = system.MergeStorage(proxyStorage, implStorage)
+	)
+
+	return blockchain.GenesisAlloc{
+		implAddr: {
+			Code:    system.Kip113MockCode,
+			Balance: common.Big0,
+		},
+		kip113Addr: {
+			Code:    system.ERC1967ProxyCode,
+			Storage: storage,
+			Balance: common.Big0,
+		},
+	}
 }
 
 // Deploy KIP-113 contract
