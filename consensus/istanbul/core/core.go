@@ -436,7 +436,14 @@ func PrepareCommittedSeal(hash common.Hash) []byte {
 
 // Minimum required number of consensus messages to proceed
 func RequiredMessageCount(valSet istanbul.ValidatorSet, isCancunHardforkEnabled bool) int {
+	// Quorum size adjustment for 4x+1 validator counts to maintain BFT consensus stability
 	if isCancunHardforkEnabled {
+		// For less than 4 validators, quorum size equals validator count.
+		if valSet.Size() < 4 {
+			return int(valSet.Size())
+		}
+		// Adopted QBFT quorum implementation
+		// https://github.com/Consensys/quorum/blob/master/consensus/istanbul/qbft/core/core.go#L312
 		return int(math.Ceil(float64(2*valSet.Size()) / 3))
 	}
 	var size uint64
