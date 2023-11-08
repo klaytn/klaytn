@@ -35,6 +35,7 @@ import (
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/accounts/keystore"
 	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/blockchain/system"
 	istcommon "github.com/klaytn/klaytn/cmd/homi/common"
 	"github.com/klaytn/klaytn/cmd/homi/docker/compose"
 	"github.com/klaytn/klaytn/cmd/homi/docker/service"
@@ -128,6 +129,11 @@ var HomiFlags = []cli.Flag{
 	altsrc.NewInt64Flag(cancunCompatibleBlockNumberFlag),
 	altsrc.NewInt64Flag(kip103CompatibleBlockNumberFlag),
 	altsrc.NewStringFlag(kip103ContractAddressFlag),
+	altsrc.NewInt64Flag(randaoCompatibleBlockNumberFlag),
+	altsrc.NewStringFlag(kip113ProxyAddressFlag),
+	altsrc.NewStringFlag(kip113LogicAddressFlag),
+	altsrc.NewBoolFlag(kip113MockFlag),
+	altsrc.NewBoolFlag(registryMockFlag),
 }
 
 var SetupCommand = &cli.Command{
@@ -548,6 +554,77 @@ func useAddressBookMock(ctx *cli.Context, genesisJson *blockchain.Genesis) {
 	allocationFunction(genesisJson)
 }
 
+func allocateRegistry(ctx *cli.Context, genesisJson *blockchain.Genesis, owner common.Address, kip113Addr *common.Address) {
+	if randaoCompatibleBlock := ctx.Int64(randaoCompatibleBlockNumberFlag.Name); randaoCompatibleBlock != 0 {
+		return
+	}
+
+	registryConfig := &params.RegistryConfig{
+		Records: make(map[string]common.Address),
+		Owner:   owner,
+	}
+
+	if kip113Addr != nil {
+		registryConfig.Records["SimpleBlsRegistry"] = *kip113Addr
+	}
+
+	allocRegistryStorage := system.AllocRegistry(registryConfig)
+
+	allocationFunction := genesis.AllocateRegistry(allocRegistryStorage)
+	allocationFunction(genesisJson)
+}
+
+func useRegistryMock(ctx *cli.Context, genesisJson *blockchain.Genesis) {
+	if useMock := ctx.Bool(registryMockFlag.Name); !useMock {
+		return
+	}
+
+	allocationFunction := genesis.RegistryMock()
+	allocationFunction(genesisJson)
+}
+
+func allocateKip113(ctx *cli.Context, genesisJson *blockchain.Genesis, init system.AllocKip113Init) (*common.Address, *common.Address) {
+	if randaoCompatibleBlock := ctx.Int64(randaoCompatibleBlockNumberFlag.Name); randaoCompatibleBlock != 0 {
+		return nil, nil
+	}
+	if len(init.Infos) == 0 {
+		return nil, nil
+	}
+
+	kip113ProxyAddr := common.HexToAddress(ctx.String(kip113ProxyAddressFlag.Name))
+	kip113LogicAddr := common.HexToAddress(ctx.String(kip113LogicAddressFlag.Name))
+
+	if !common.IsHexAddress(ctx.String(kip113ProxyAddressFlag.Name)) {
+		log.Fatalf("Kip113 proxy address is not a valid hex address", "value", kip113ProxyAddr)
+		kip113ProxyAddr = system.Kip113ProxyAddrMock
+	}
+	if !common.IsHexAddress(ctx.String(kip113LogicAddressFlag.Name)) {
+		log.Fatalf("Kip113 logic address is not a valid hex address", "value", kip113LogicAddr)
+		kip113LogicAddr = system.Kip113LogicAddrMock
+	}
+
+	allocProxyStorage := system.AllocProxy(kip113LogicAddr)
+	allocKip113Storage := system.AllocKip113(init)
+	allocStorage := system.MergeStorage(allocProxyStorage, allocKip113Storage)
+
+	allocationFunction := genesis.AllocateKip113(kip113ProxyAddr, kip113LogicAddr, allocStorage)
+	allocationFunction(genesisJson)
+
+	return &kip113ProxyAddr, &kip113LogicAddr
+}
+
+func useKip113Mock(ctx *cli.Context, genesisJson *blockchain.Genesis, kip113LogicAddr *common.Address) {
+	if useMock := ctx.Bool(kip113MockFlag.Name); !useMock {
+		return
+	}
+	if kip113LogicAddr == nil {
+		return
+	}
+
+	allocationFunction := genesis.Kip113Mock(*kip113LogicAddr)
+	allocationFunction(genesisJson)
+}
+
 func RandStringRunes(n int) string {
 	letterRunes := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789~!@#$%^&*()_+{}|[]")
 
@@ -644,6 +721,7 @@ func Gen(ctx *cli.Context) error {
 	}
 
 	testPrivKeys, testKeys, testAddrs := istcommon.GenerateKeys(numTestAccs)
+	kip113Init := istcommon.GenerateKip113Init(privKeys[:numValidators], nodeAddrs[0])
 
 	var (
 		genesisJson      *blockchain.Genesis
@@ -675,6 +753,12 @@ func Gen(ctx *cli.Context) error {
 	patchGenesisAddressBook(ctx, genesisJson, validatorNodeAddrs)
 	useAddressBookMock(ctx, genesisJson)
 
+	// Randao hardfork related system contracts
+	kip113ProxyAddr, kip113LogicAddr := allocateKip113(ctx, genesisJson, kip113Init)
+	allocateRegistry(ctx, genesisJson, nodeAddrs[0], kip113ProxyAddr)
+	useKip113Mock(ctx, genesisJson, kip113LogicAddr)
+	useRegistryMock(ctx, genesisJson)
+
 	genesisJson.Config.IstanbulCompatibleBlock = big.NewInt(ctx.Int64(istanbulCompatibleBlockNumberFlag.Name))
 	genesisJson.Config.LondonCompatibleBlock = big.NewInt(ctx.Int64(londonCompatibleBlockNumberFlag.Name))
 	genesisJson.Config.EthTxTypeCompatibleBlock = big.NewInt(ctx.Int64(ethTxTypeCompatibleBlockNumberFlag.Name))
@@ -686,6 +770,8 @@ func Gen(ctx *cli.Context) error {
 	// KIP103 hardfork is optional
 	genesisJson.Config.Kip103CompatibleBlock = big.NewInt(ctx.Int64(kip103CompatibleBlockNumberFlag.Name))
 	genesisJson.Config.Kip103ContractAddress = common.HexToAddress(ctx.String(kip103ContractAddressFlag.Name))
+
+	genesisJson.Config.RandaoCompatibleBlock = big.NewInt(ctx.Int64(randaoCompatibleBlockNumberFlag.Name))
 
 	genesisJsonBytes, _ = json.MarshalIndent(genesisJson, "", "    ")
 	genValidatorKeystore(privKeys)

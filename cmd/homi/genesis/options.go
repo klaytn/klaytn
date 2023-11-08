@@ -21,6 +21,7 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/klaytn/klaytn/blockchain/system"
 	"github.com/klaytn/klaytn/cmd/homi/extra"
 	"github.com/klaytn/klaytn/consensus/clique"
 	"github.com/klaytn/klaytn/contracts/reward/contract"
@@ -166,6 +167,70 @@ func AddressBookMock() Option {
 		genesis.Alloc[contractAddr] = blockchain.GenesisAccount{
 			Code:    common.FromHex(code),
 			Balance: contractAccount.Balance,
+		}
+	}
+}
+
+func AllocateRegistry(storage map[common.Hash]common.Hash) Option {
+	return func(genesis *blockchain.Genesis) {
+		registryCode := system.RegistryCode
+		registryAddr := system.RegistryAddr
+
+		genesis.Alloc[registryAddr] = blockchain.GenesisAccount{
+			Code:    registryCode,
+			Storage: storage,
+			Balance: big.NewInt(0),
+		}
+	}
+}
+
+func RegistryMock() Option {
+	return func(genesis *blockchain.Genesis) {
+		registryMockCode := system.RegistryMockCode
+		registryAddr := system.RegistryAddr
+
+		registry, ok := genesis.Alloc[registryAddr]
+		if !ok {
+			log.Fatalf("No AddressBook to patch")
+		}
+
+		genesis.Alloc[registryAddr] = blockchain.GenesisAccount{
+			Code:    registryMockCode,
+			Storage: registry.Storage,
+			Balance: big.NewInt(0),
+		}
+	}
+}
+
+func AllocateKip113(kip113ProxyAddr, kip113LogicAddr common.Address, storage map[common.Hash]common.Hash) Option {
+	return func(genesis *blockchain.Genesis) {
+		proxyCode := system.ERC1967ProxyCode
+		logicCode := system.Kip113Code
+
+		genesis.Alloc[kip113ProxyAddr] = blockchain.GenesisAccount{
+			Code:    proxyCode,
+			Storage: storage,
+			Balance: big.NewInt(0),
+		}
+		genesis.Alloc[kip113LogicAddr] = blockchain.GenesisAccount{
+			Code:    logicCode,
+			Balance: big.NewInt(0),
+		}
+	}
+}
+
+func Kip113Mock(kip113LogicAddr common.Address) Option {
+	return func(genesis *blockchain.Genesis) {
+		kip113MockCode := system.Kip113MockCode
+
+		_, ok := genesis.Alloc[kip113LogicAddr]
+		if !ok {
+			log.Fatalf("No AddressBook to patch")
+		}
+
+		genesis.Alloc[kip113LogicAddr] = blockchain.GenesisAccount{
+			Code:    kip113MockCode,
+			Balance: big.NewInt(0),
 		}
 	}
 }
