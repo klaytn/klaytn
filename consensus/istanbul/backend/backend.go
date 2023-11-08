@@ -87,7 +87,7 @@ func New(opts *BackendOpts) consensus.Istanbul {
 		rewardDistributor: reward.NewRewardDistributor(opts.Governance),
 	}
 	if backend.blsPubkeyProvider == nil {
-		backend.blsPubkeyProvider = backend
+		backend.blsPubkeyProvider = newChainBlsPubkeyProvider()
 	}
 
 	backend.currentView.Store(&istanbul.View{Sequence: big.NewInt(0), Round: big.NewInt(0)})

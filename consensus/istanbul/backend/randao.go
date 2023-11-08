@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"math/big"
 
+	lru "github.com/hashicorp/golang-lru"
+	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
+	"github.com/klaytn/klaytn/blockchain/system"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
@@ -14,19 +17,60 @@ import (
 
 // For testing without KIP-113 contract setup
 type BlsPubkeyProvider interface {
-	GetBlsPubkey(chain consensus.ChainReader, proposer common.Address) (bls.PublicKey, error)
+	GetBlsPubkey(chain consensus.ChainReader, proposer common.Address, num *big.Int) (bls.PublicKey, error)
 	ResetBlsCache()
+}
+
+type ChainBlsPubkeyProvider struct {
+	cache *lru.ARCCache // Cached BlsPublicKeyInfos
+}
+
+func newChainBlsPubkeyProvider() *ChainBlsPubkeyProvider {
+	cache, _ := lru.NewARC(128)
+	return &ChainBlsPubkeyProvider{
+		cache: cache,
+	}
 }
 
 // The default implementation for BlsPubkeyFunc.
 // Queries KIP-113 contract and verifies the PoP.
-func (sb *backend) GetBlsPubkey(chain consensus.ChainReader, proposer common.Address) (bls.PublicKey, error) {
-	logger.Crit("not implemented")
-	return nil, errNoBlsPub
+func (p *ChainBlsPubkeyProvider) GetBlsPubkey(chain consensus.ChainReader, proposer common.Address, num *big.Int) (bls.PublicKey, error) {
+	infos, err := p.getAllCached(chain, num)
+	if err != nil {
+		return nil, err
+	}
+
+	info, ok := infos[proposer]
+	if !ok {
+		return nil, errNoBlsPub
+	}
+	return bls.PublicKeyFromBytes(info.PublicKey)
 }
 
-func (sb *backend) ResetBlsCache() {
-	logger.Crit("not implemented")
+func (p *ChainBlsPubkeyProvider) getAllCached(chain consensus.ChainReader, num *big.Int) (system.BlsPublicKeyInfos, error) {
+	if item, ok := p.cache.Get(num.Uint64()); ok {
+		logger.Trace("BlsPublicKeyInfos cache hit", "number", num.Uint64())
+		return item.(system.BlsPublicKeyInfos), nil
+	}
+
+	backend := backends.NewBlockchainContractBackend(chain, nil, nil)
+	kip113Addr, err := system.ReadRegistryActiveAddr(backend, system.Kip113Name, num)
+	if err != nil {
+		return nil, err
+	}
+
+	infos, err := system.ReadKip113All(backend, kip113Addr, num)
+	if err != nil {
+		return nil, err
+	}
+	logger.Trace("BlsPublicKeyInfos cache miss", "number", num.Uint64())
+	p.cache.Add(num.Uint64(), infos)
+
+	return infos, nil
+}
+
+func (p *ChainBlsPubkeyProvider) ResetBlsCache() {
+	p.cache.Purge()
 }
 
 // Calculate KIP-114 Randao header fields
@@ -53,6 +97,11 @@ func (sb *backend) CalcRandao(number *big.Int, prevMixHash []byte) ([]byte, []by
 }
 
 func (sb *backend) VerifyRandao(chain consensus.ChainReader, header *types.Header, prevMixHash []byte) error {
+	if header.Number.Sign() == 0 {
+		return nil // Do not verify genesis block
+	}
+	parentNum := new(big.Int).Sub(header.Number, common.Big1)
+
 	proposer, err := sb.Author(header)
 	if err != nil {
 		return err
@@ -60,7 +109,7 @@ func (sb *backend) VerifyRandao(chain consensus.ChainReader, header *types.Heade
 
 	// [proposerPubkey, proposerPop] = get_proposer_pubkey_pop()
 	// if not pop_verify(proposerPubkey, proposerPop): return False
-	proposerPub, err := sb.blsPubkeyProvider.GetBlsPubkey(chain, proposer)
+	proposerPub, err := sb.blsPubkeyProvider.GetBlsPubkey(chain, proposer, parentNum)
 	if err != nil {
 		return err
 	}

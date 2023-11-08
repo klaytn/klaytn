@@ -87,7 +87,7 @@ func newMockBlsPubkeyProvider(addrs []common.Address, blsKeys []bls.SecretKey) *
 	return &mockBlsPubkeyProvider{infos}
 }
 
-func (m *mockBlsPubkeyProvider) GetBlsPubkey(chain consensus.ChainReader, proposer common.Address) (bls.PublicKey, error) {
+func (m *mockBlsPubkeyProvider) GetBlsPubkey(chain consensus.ChainReader, proposer common.Address, num *big.Int) (bls.PublicKey, error) {
 	if pub, ok := m.infos[proposer]; ok {
 		return pub, nil
 	} else {

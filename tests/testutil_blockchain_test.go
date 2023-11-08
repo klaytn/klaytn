@@ -55,31 +55,29 @@ type blockchainTestOverrides struct {
 	alloc       blockchain.GenesisAlloc // default: 10_000_000 KLAY for each account
 }
 
-var (
-	blockchainTestChainConfig = &params.ChainConfig{
-		ChainID:       big.NewInt(31337),
-		DeriveShaImpl: 2,
-		UnitPrice:     25 * params.Ston,
-		Governance: &params.GovernanceConfig{
-			GovernanceMode: "none",
-			Reward: &params.RewardConfig{
-				MintingAmount:          big.NewInt(params.KLAY * 6.4),
-				Ratio:                  "100/0/0",
-				Kip82Ratio:             "20/80",
-				UseGiniCoeff:           false,
-				DeferredTxFee:          true,
-				StakingUpdateInterval:  60,
-				ProposerUpdateInterval: 30,
-				MinimumStake:           big.NewInt(5_000_000),
-			},
+var blockchainTestChainConfig = &params.ChainConfig{
+	ChainID:       big.NewInt(31337),
+	DeriveShaImpl: 2,
+	UnitPrice:     25 * params.Ston,
+	Governance: &params.GovernanceConfig{
+		GovernanceMode: "none",
+		Reward: &params.RewardConfig{
+			MintingAmount:          big.NewInt(params.KLAY * 6.4),
+			Ratio:                  "100/0/0",
+			Kip82Ratio:             "20/80",
+			UseGiniCoeff:           false,
+			DeferredTxFee:          true,
+			StakingUpdateInterval:  60,
+			ProposerUpdateInterval: 30,
+			MinimumStake:           big.NewInt(5_000_000),
 		},
-		Istanbul: &params.IstanbulConfig{
-			Epoch:          120,
-			ProposerPolicy: uint64(istanbul.RoundRobin),
-			SubGroupSize:   100,
-		},
-	}
-)
+	},
+	Istanbul: &params.IstanbulConfig{
+		Epoch:          120,
+		ProposerPolicy: uint64(istanbul.RoundRobin),
+		SubGroupSize:   100,
+	},
+}
 
 func newBlockchainTestContext(overrides *blockchainTestOverrides) (*blockchainTestContext, error) {
 	if overrides == nil {

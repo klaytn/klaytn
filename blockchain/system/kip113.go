@@ -17,6 +17,8 @@
 package system
 
 import (
+	"encoding/hex"
+	"encoding/json"
 	"math/big"
 	"sort"
 	"strings"
@@ -104,6 +106,15 @@ func AllocKip113(init AllocKip113Init) map[common.Hash]common.Hash {
 	}
 
 	return storage
+}
+
+func (infos BlsPublicKeyInfos) String() string {
+	obj := make(map[string]string)
+	for addr, info := range infos {
+		obj[addr.Hex()] = hex.EncodeToString(info.PublicKey)
+	}
+	j, _ := json.Marshal(obj)
+	return string(j)
 }
 
 func (info BlsPublicKeyInfo) Verify() error {
