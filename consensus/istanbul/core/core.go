@@ -436,21 +436,21 @@ func PrepareCommittedSeal(hash common.Hash) []byte {
 
 // Minimum required number of consensus messages to proceed
 func RequiredMessageCount(valSet istanbul.ValidatorSet, isCancunHardforkEnabled bool) int {
-	// Quorum size adjustment for 4x+1 validator counts to maintain BFT consensus stability
-	if isCancunHardforkEnabled {
-		// For less than 4 validators, quorum size equals validator count.
-		if valSet.Size() < 4 {
-			return int(valSet.Size())
-		}
-		// Adopted QBFT quorum implementation
-		// https://github.com/Consensys/quorum/blob/master/consensus/istanbul/qbft/core/core.go#L312
-		return int(math.Ceil(float64(2*valSet.Size()) / 3))
-	}
 	var size uint64
 	if valSet.IsSubSet() {
 		size = valSet.SubGroupSize()
 	} else {
 		size = valSet.Size()
+	}
+	// Quorum size adjustment for 4x+1 validator counts to maintain BFT consensus stability
+	if isCancunHardforkEnabled {
+		// For less than 4 validators, quorum size equals validator count.
+		if size < 4 {
+			return int(size)
+		}
+		// Adopted QBFT quorum implementation
+		// https://github.com/Consensys/quorum/blob/master/consensus/istanbul/qbft/core/core.go#L312
+		return int(math.Ceil(float64(2*size) / 3))
 	}
 	switch size {
 	// in the certain cases we must receive the messages from all consensus nodes to ensure finality...
