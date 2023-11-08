@@ -462,10 +462,8 @@ type AccessListResult struct {
 
 // CreateAccessList creates a EIP-2930 type AccessList for the given transaction.
 // Reexec and BlockNrOrHash can be specified to create the accessList on top of a certain state.
-// TODO-Klaytn: Have to implement logic. For now, Klaytn does not implement actual access list logic, so return empty access list result.
-func (s *PublicBlockChainAPI) CreateAccessList(ctx context.Context, args SendTxArgs, blockNrOrHash *rpc.BlockNumberOrHash) (*AccessListResult, error) {
-	result := &AccessListResult{Accesslist: &types.AccessList{}, GasUsed: hexutil.Uint64(0)}
-	return result, nil
+func (s *PublicBlockChainAPI) CreateAccessList(ctx context.Context, args EthTransactionArgs, blockNrOrHash *rpc.BlockNumberOrHash) (interface{}, error) {
+	return doCreateAccessList(ctx, s.b, args, blockNrOrHash)
 }
 
 // StructLogRes stores a structured log emitted by the EVM while replaying a

@@ -138,7 +138,7 @@ web3._extend({
 			name: 'createAccessList',
 			call: 'eth_createAccessList',
 			params: 2,
-			inputFormatter: [null, web3._extend.formatters.inputBlockNumberFormatter],
+			inputFormatter: [web3._extend.formatters.inputCallFormatter, web3._extend.formatters.inputBlockNumberFormatter],
 		}),
 		new web3._extend.Method({
 			name: 'feeHistory',
@@ -1059,7 +1059,7 @@ web3._extend({
 			name: 'createAccessList',
 			call: 'klay_createAccessList',
 			params: 2,
-			inputFormatter: [null, web3._extend.formatters.inputBlockNumberFormatter],
+			inputFormatter: [web3._extend.formatters.inputCallFormatter, web3._extend.formatters.inputBlockNumberFormatter],
 		}),
 		new web3._extend.Method({
 			name: 'feeHistory',
