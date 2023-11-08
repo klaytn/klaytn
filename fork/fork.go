@@ -35,7 +35,7 @@ var (
 // CAUTIOUS: Use it when chainConfig value is not reachable
 func Rules(blockNumber *big.Int) *params.Rules {
 	if hardForkBlockNumberConfig == nil {
-		logger.Crit("fork.Rules should never be called before hardForkBlockNumberConfig initialization.")
+		logger.CritWithStack("fork.Rules should never be called before hardForkBlockNumberConfig initialization.")
 	}
 	rules := hardForkBlockNumberConfig.Rules(blockNumber)
 	return &rules
