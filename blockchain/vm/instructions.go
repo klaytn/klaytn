@@ -21,19 +21,11 @@
 package vm
 
 import (
-	"math/big"
-
 	"github.com/holiman/uint256"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/crypto/sha3"
 	"github.com/klaytn/klaytn/params"
-)
-
-var (
-	bigZero = new(big.Int)
-	tt255   = math.BigPow(2, 255)
 )
 
 func opAdd(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
