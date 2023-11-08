@@ -369,21 +369,21 @@ func TestEVM_CVE_2021_39137(t *testing.T) {
 				0016    F3  *RETURN
 			*/
 		},
-		// {
-		// 	"call test",
-		// 	contractAddr.Bytes(),
-		// 	hexutil.MustDecode("0x30345260206007602060003460045af1602034343e604034f3"),
-		// },
-		// {
-		// 	"callCode test",
-		// 	contractAddr.Bytes(),
-		// 	hexutil.MustDecode("0x30345260206007602060003460045af2602034343e604034f3"),
-		// },
-		// {
-		// 	"delegateCall test",
-		// 	contractAddr.Bytes(),
-		// 	hexutil.MustDecode("0x3034526020600760203460045af4602034343e604034f3"),
-		// },
+		{
+			"call test",
+			contractAddr.Bytes(),
+			hexutil.MustDecode("0x30345260206007602060003460045af1602034343e604034f3"),
+		},
+		{
+			"callCode test",
+			contractAddr.Bytes(),
+			hexutil.MustDecode("0x30345260206007602060003460045af2602034343e604034f3"),
+		},
+		{
+			"delegateCall test",
+			contractAddr.Bytes(),
+			hexutil.MustDecode("0x3034526020600760203460045af4602034343e604034f3"),
+		},
 	}
 
 	gasLimit := uint64(99999999)
