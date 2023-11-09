@@ -313,6 +313,7 @@ var isKlaytnResource = map[string]bool{
 	"chaindata":          true,
 	"nodes":              true,
 	"nodekey":            true,
+	"bls-nodekey":        true,
 	"static-nodes.json":  true,
 	"trusted-nodes.json": true,
 }
