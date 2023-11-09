@@ -713,11 +713,13 @@ func simulateChainSplit(t *testing.T, numValidators int) (State, State) {
 //  1. the number of validators does not consist of 3f+1;
 //     e.g. if the number of validator is 5, it consists of 3f+2 (f=1)
 //  2. the proposer is malicious; it sends two different blocks to each group
+//
+// After Ceil(2N/3) quorum calculation, the chain should not be split
 func TestCore_chainSplit(t *testing.T) {
-	// If the number of validators is not 3f+1, the chain can be split.
+	// Even though the number of validators is not 3f+1, the chain is not split.
 	stateA, stateB := simulateChainSplit(t, 5)
-	assert.Equal(t, StateCommitted, stateA)
-	assert.Equal(t, StateCommitted, stateB)
+	assert.Equal(t, StatePreprepared, stateA)
+	assert.Equal(t, StatePreprepared, stateB)
 
 	// If the number of validators is 3f+1, the chain cannot be split.
 	stateA, stateB = simulateChainSplit(t, 7)
