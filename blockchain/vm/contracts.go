@@ -64,9 +64,9 @@ type PrecompiledContract interface {
 	Run(input []byte, contract *Contract, evm *EVM) ([]byte, error)
 }
 
-// PrecompiledContractsByzantiumCompatible contains the default set of pre-compiled Klaytn
+// PrecompiledContractsByzantium contains the default set of pre-compiled Klaytn
 // contracts based on Ethereum Byzantium.
-var PrecompiledContractsByzantiumCompatible = map[common.Address]PrecompiledContract{
+var PrecompiledContractsByzantium = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{1}):  &ecrecover{},
 	common.BytesToAddress([]byte{2}):  &sha256hash{},
 	common.BytesToAddress([]byte{3}):  &ripemd160hash{},
@@ -82,9 +82,9 @@ var PrecompiledContractsByzantiumCompatible = map[common.Address]PrecompiledCont
 
 // DO NOT USE 0x3FD, 0x3FE, 0x3FF ADDRESSES BEFORE ISTANBUL CHANGE ACTIVATED.
 
-// PrecompiledContractsIstanbulCompatible contains the default set of pre-compiled Klaytn
+// PrecompiledContractsIstanbul contains the default set of pre-compiled Klaytn
 // contracts based on Ethereum Istanbul.
-var PrecompiledContractsIstanbulCompatible = map[common.Address]PrecompiledContract{
+var PrecompiledContractsIstanbul = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{1}):      &ecrecover{},
 	common.BytesToAddress([]byte{2}):      &sha256hash{},
 	common.BytesToAddress([]byte{3}):      &ripemd160hash{},
@@ -140,18 +140,20 @@ var (
 )
 
 func init() {
-	for k := range PrecompiledContractsByzantiumCompatible {
+	for k := range PrecompiledContractsByzantium {
 		PrecompiledAddressesByzantium = append(PrecompiledAddressesByzantium, k)
 	}
 
 	// After istanbulCompatible hf, need to support for vmversion0 contracts, too.
 	// VmVersion0 contracts are deployed before istanbulCompatible and they use byzantiumCompatible precompiled contracts.
 	// VmVersion0 contracts are the contracts deployed before istanbulCompatible hf.
-	for k := range PrecompiledContractsIstanbulCompatible {
+	for k := range PrecompiledContractsIstanbul {
 		PrecompiledAddressIstanbul = append(PrecompiledAddressIstanbul, k)
 	}
+	PrecompiledAddressIstanbul = append(PrecompiledAddressIstanbul,
+		[]common.Address{common.BytesToAddress([]byte{10}), common.BytesToAddress([]byte{11})}...)
 
-	for k := range PrecompiledContractsIstanbulCompatible {
+	for k := range PrecompiledContractsCancun {
 		PrecompiledAddressCancun = append(PrecompiledAddressCancun, k)
 	}
 }

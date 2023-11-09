@@ -282,7 +282,7 @@ func (t *InternalTxTracer) step(log *tracerLog) error {
 
 		// Skip any pre-compile invocations, those are just fancy opcodes
 		toAddr := common.HexToAddress(log.stack.Back(1).Hex())
-		if _, ok := PrecompiledContractsByzantiumCompatible[toAddr]; ok {
+		if _, ok := PrecompiledContractsByzantium[toAddr]; ok {
 			return nil
 		}
 

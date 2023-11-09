@@ -646,7 +646,7 @@ func (evm *EVM) GetPrecompiledContractMap(addr common.Address) map[common.Addres
 	if vmVersion, ok := evm.StateDB.GetVmVersion(addr); ok && vmVersion == params.VmVersion0 {
 		// Without VmVersion0, precompiled contract address 0x09-0x0b won't work properly
 		// with the contracts deployed before istanbulHF
-		return PrecompiledContractsByzantiumCompatible
+		return PrecompiledContractsByzantium
 	}
 
 	switch {
@@ -655,9 +655,9 @@ func (evm *EVM) GetPrecompiledContractMap(addr common.Address) map[common.Addres
 	case evm.chainRules.IsKore:
 		return PrecompiledContractsKore
 	case evm.chainRules.IsIstanbul:
-		return PrecompiledContractsIstanbulCompatible
+		return PrecompiledContractsIstanbul
 	default:
-		return PrecompiledContractsByzantiumCompatible
+		return PrecompiledContractsByzantium
 	}
 }
 

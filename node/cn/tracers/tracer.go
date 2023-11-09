@@ -511,7 +511,7 @@ func New(code string, ctx *Context, unsafeTrace bool) (*Tracer, error) {
 		return 1
 	})
 	tracer.vm.PushGlobalGoFunction("isPrecompiled", func(ctx *duktape.Context) int {
-		_, ok := vm.PrecompiledContractsByzantiumCompatible[common.BytesToAddress(popSlice(ctx))]
+		_, ok := vm.PrecompiledContractsByzantium[common.BytesToAddress(popSlice(ctx))]
 		ctx.PushBoolean(ok)
 		return 1
 	})
