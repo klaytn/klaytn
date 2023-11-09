@@ -650,7 +650,7 @@ func (evm *EVM) GetPrecompiledContractMap(addr common.Address) map[common.Addres
 	}
 
 	switch {
-	case evm.chainRules.IsKore:
+	case evm.chainRules.IsCancun:
 		return PrecompiledContractsCancun
 	case evm.chainRules.IsKore:
 		return PrecompiledContractsKore
