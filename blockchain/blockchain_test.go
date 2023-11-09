@@ -1319,7 +1319,6 @@ func TestStatePruning(t *testing.T) {
 	// Therefore reopen the blockchain from the DiskDB with a clean TrieDB.
 	// This simulates the node program restart.
 	blockchain.Stop()
-	// Does not matter `true` or `false` for `LivePruningEnable` intiialization
 	blockchain, _ = NewBlockChain(db, cacheConfig, gspec.Config, engine, vm.Config{})
 
 	// Genesis block always survives
