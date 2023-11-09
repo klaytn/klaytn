@@ -28,7 +28,6 @@ import (
 	"sync/atomic"
 	"unsafe"
 
-	"github.com/holiman/uint256"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
@@ -159,14 +158,14 @@ type stackWrapper struct {
 }
 
 // peek returns the nth-from-the-top element of the stack.
-func (sw *stackWrapper) peek(idx int) *uint256.Int {
+func (sw *stackWrapper) peek(idx int) *big.Int {
 	if len(sw.stack.Data()) <= idx || idx < 0 {
 		// TODO(karalabe): We can't js-throw from Go inside duktape inside Go. The Go
 		// runtime goes belly up https://github.com/golang/go/issues/15639.
 		logger.Warn("Tracer accessed out of bound stack", "size", len(sw.stack.Data()), "index", idx)
-		return uint256.NewInt(0)
+		return new(big.Int)
 	}
-	return &sw.stack.Data()[len(sw.stack.Data())-idx-1]
+	return sw.stack.Data()[len(sw.stack.Data())-idx-1].ToBig()
 }
 
 // pushObject assembles a JSVM object wrapping a swappable stack and pushes it
@@ -182,7 +181,7 @@ func (sw *stackWrapper) pushObject(vm *duktape.Context) {
 		offset := ctx.GetInt(-1)
 		ctx.Pop()
 
-		pushBigInt(sw.peek(offset).ToBig(), ctx)
+		pushBigInt(sw.peek(offset), ctx)
 		return 1
 	})
 	vm.PutPropString(obj, "peek")
