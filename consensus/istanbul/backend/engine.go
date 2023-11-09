@@ -357,7 +357,7 @@ func (sb *backend) verifyCommittedSeals(chain consensus.ChainReader, header *typ
 	}
 
 	// The length of validSeal should be larger than number of faulty node + 1
-	if validSeal < istanbulCore.RequiredMessageCount(snap.ValSet, chain.Config().IsCancunForkEnabled(header.Number)) {
+	if validSeal <= 2*snap.ValSet.F() {
 		return errInvalidCommittedSeals
 	}
 
