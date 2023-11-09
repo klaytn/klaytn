@@ -19,6 +19,7 @@ package system
 import (
 	"math/big"
 
+	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
 )
@@ -139,7 +140,21 @@ func MergeStorage(ss ...map[common.Hash]common.Hash) map[common.Hash]common.Hash
 	for _, s := range ss {
 		for k, v := range s {
 			if _, ok := out[k]; ok {
-				logger.Crit("storage slot collision", "slot", k)
+				logger.Crit("storage slot collision", "slot", k.Hex())
+			} else {
+				out[k] = v
+			}
+		}
+	}
+	return out
+}
+
+func MergeGenesisAlloc(aa ...blockchain.GenesisAlloc) blockchain.GenesisAlloc {
+	out := make(blockchain.GenesisAlloc)
+	for _, a := range aa {
+		for k, v := range a {
+			if _, ok := out[k]; ok {
+				logger.Crit("genesis alloc collision", "addr", k.Hex())
 			} else {
 				out[k] = v
 			}

@@ -193,8 +193,9 @@ const (
 )
 
 var (
-	// ZeroMixHash is the virtual PrevMixHash at the exactly RandaoForkBlock.
-	ZeroMixHash = make([]byte, 32)
+	// Dummy Randao fields to be used in a Randao-enabled Genesis block.
+	ZeroRandomReveal = make([]byte, 96)
+	ZeroMixHash      = make([]byte, 32)
 
 	TxGasHumanReadable uint64 = 4000000000 // NOTE: HumanReadable related functions are inactivated now
 

@@ -339,6 +339,7 @@ func (g *Genesis) ToBlock(baseStateRoot common.Hash, db database.DBManager) *typ
 		}
 	}
 	if g.Config != nil && g.Config.IsRandaoForkEnabled(common.Big0) {
+		head.RandomReveal = params.ZeroRandomReveal
 		head.MixHash = params.ZeroMixHash
 	}
 
