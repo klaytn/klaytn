@@ -52,7 +52,6 @@ func NewEVMBlockContext(header *types.Header, chain ChainContext, author *common
 		beneficiary common.Address
 		rewardBase  common.Address
 		baseFee     *big.Int
-		random      common.Hash
 	)
 
 	if author == nil {
@@ -65,14 +64,9 @@ func NewEVMBlockContext(header *types.Header, chain ChainContext, author *common
 
 	if header.BaseFee != nil {
 		baseFee = header.BaseFee
-	} else { // Before Magma hardfork, BASEFEE (48) returns 0
+	} else {
+		// before magma hardfork, base fee is 0, effectiveGasPrice is unitPrice
 		baseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
-	}
-
-	if header.MixHash != nil {
-		random = common.BytesToHash(header.MixHash)
-	} else { // Before Randao hardfork, RANDOM (44) returns last block hash
-		random = header.ParentHash
 	}
 
 	return vm.BlockContext{
@@ -85,7 +79,6 @@ func NewEVMBlockContext(header *types.Header, chain ChainContext, author *common
 		Time:        new(big.Int).Set(header.Time),
 		BlockScore:  new(big.Int).Set(header.BlockScore),
 		BaseFee:     baseFee,
-		Random:      random,
 	}
 }
 
