@@ -51,7 +51,7 @@ type BlockChainForCaller interface {
 	CurrentBlock() *types.Block
 }
 
-// Maintain separate minimal interfaces of blockchain.TxPool becase ContractBackend are used
+// Maintain separate minimal interfaces of blockchain.TxPool because ContractBackend are used
 // in various situations. TxPool instances are often passed down as work.TxPool.
 type TxPoolForCaller interface {
 	// Below is a subset of work.TxPool
