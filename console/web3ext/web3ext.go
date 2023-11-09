@@ -108,6 +108,14 @@ web3._extend({
 			inputFormatter: [null, function (val) { return !!val; }]
 		}),
 		new web3._extend.Method({
+			name: 'getBlockReceipts',
+			call: 'eth_getBlockReceipts',
+			params: 1,
+			outputFormatter: function(receipts) {
+				return receipts.map(web3._extend.formatters.outputTransactionReceiptFormatter);
+			}
+		}),
+		new web3._extend.Method({
 			name: 'getRawTransaction',
 			call: 'eth_getRawTransactionByHash',
 			params: 1
@@ -574,11 +582,14 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'startWarmUp',
 			call: 'debug_startWarmUp',
+			params: 1,
+			inputFormatter: [null]
 		}),
 		new web3._extend.Method({
 			name: 'startContractWarmUp',
 			call: 'debug_startContractWarmUp',
-			params: 1
+			params: 2,
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter, null]
 		}),
 		new web3._extend.Method({
 			name: 'stopWarmUp',
@@ -840,11 +851,7 @@ web3._extend({
 			call: 'klay_getBlockReceipts',
 			params: 1,
 			outputFormatter: function(receipts) {
-				var formatted = [];
-				for (var i = 0; i < receipts.length; i++) {
-					formatted.push(web3._extend.formatters.outputTransactionReceiptFormatter(receipts[i]));
-				}
-				return formatted;
+				return receipts.map(web3._extend.formatters.outputTransactionReceiptFormatter);
 			}
 		}),
 		new web3._extend.Method({

@@ -297,8 +297,8 @@ type BlockChain interface {
 	StateMigrationStatus() (bool, uint64, int, int, int, float64, error)
 
 	// Warm up
-	StartWarmUp() error
-	StartContractWarmUp(contractAddr common.Address) error
+	StartWarmUp(minLoad uint) error
+	StartContractWarmUp(contractAddr common.Address, minLoad uint) error
 	StopWarmUp() error
 
 	// Collect state/storage trie statistics

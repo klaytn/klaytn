@@ -21,496 +21,374 @@
 package vm
 
 import (
-	"math/big"
-
+	"github.com/holiman/uint256"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/crypto/sha3"
 	"github.com/klaytn/klaytn/params"
 )
 
-var (
-	bigZero = new(big.Int)
-	tt255   = math.BigPow(2, 255)
-)
-
-func opAdd(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	x, y := scope.Stack.pop(), scope.Stack.Peek()
-	math.U256(y.Add(x, y))
-
-	evm.interpreter.intPool.put(x)
+func opAdd(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	x, y := scope.Stack.pop(), scope.Stack.peek()
+	y.Add(&x, y)
 	return nil, nil
 }
 
-func opSub(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	x, y := scope.Stack.pop(), scope.Stack.Peek()
-	math.U256(y.Sub(x, y))
-
-	evm.interpreter.intPool.put(x)
+func opSub(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	x, y := scope.Stack.pop(), scope.Stack.peek()
+	y.Sub(&x, y)
 	return nil, nil
 }
 
-func opMul(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	x, y := scope.Stack.pop(), scope.Stack.pop()
-	scope.Stack.push(math.U256(x.Mul(x, y)))
-
-	evm.interpreter.intPool.put(y)
-
+func opMul(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	x, y := scope.Stack.pop(), scope.Stack.peek()
+	y.Mul(&x, y)
 	return nil, nil
 }
 
-func opDiv(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	x, y := scope.Stack.pop(), scope.Stack.Peek()
-	if y.Sign() != 0 {
-		math.U256(y.Div(x, y))
+func opDiv(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	x, y := scope.Stack.pop(), scope.Stack.peek()
+	y.Div(&x, y)
+	return nil, nil
+}
+
+func opSdiv(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	x, y := scope.Stack.pop(), scope.Stack.peek()
+	y.SDiv(&x, y)
+	return nil, nil
+}
+
+func opMod(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	x, y := scope.Stack.pop(), scope.Stack.peek()
+	y.Mod(&x, y)
+	return nil, nil
+}
+
+func opSmod(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	x, y := scope.Stack.pop(), scope.Stack.peek()
+	y.SMod(&x, y)
+	return nil, nil
+}
+
+func opExp(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	base, exponent := scope.Stack.pop(), scope.Stack.peek()
+	exponent.Exp(&base, exponent)
+	return nil, nil
+}
+
+func opSignExtend(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	back, num := scope.Stack.pop(), scope.Stack.peek()
+	num.ExtendSign(num, &back)
+	return nil, nil
+}
+
+func opNot(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	x := scope.Stack.peek()
+	x.Not(x)
+	return nil, nil
+}
+
+func opLt(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	x, y := scope.Stack.pop(), scope.Stack.peek()
+	if x.Lt(y) {
+		y.SetOne()
 	} else {
-		y.SetUint64(0)
+		y.Clear()
 	}
-	evm.interpreter.intPool.put(x)
 	return nil, nil
 }
 
-func opSdiv(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	x, y := math.S256(scope.Stack.pop()), math.S256(scope.Stack.pop())
-	res := evm.interpreter.intPool.getZero()
-
-	if y.Sign() == 0 || x.Sign() == 0 {
-		scope.Stack.push(res)
+func opGt(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	x, y := scope.Stack.pop(), scope.Stack.peek()
+	if x.Gt(y) {
+		y.SetOne()
 	} else {
-		if x.Sign() != y.Sign() {
-			res.Div(x.Abs(x), y.Abs(y))
-			res.Neg(res)
-		} else {
-			res.Div(x.Abs(x), y.Abs(y))
-		}
-		scope.Stack.push(math.U256(res))
+		y.Clear()
 	}
-	evm.interpreter.intPool.put(x, y)
 	return nil, nil
 }
 
-func opMod(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	x, y := scope.Stack.pop(), scope.Stack.pop()
-	if y.Sign() == 0 {
-		scope.Stack.push(x.SetUint64(0))
+func opSlt(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	x, y := scope.Stack.pop(), scope.Stack.peek()
+	if x.Slt(y) {
+		y.SetOne()
 	} else {
-		scope.Stack.push(math.U256(x.Mod(x, y)))
+		y.Clear()
 	}
-	evm.interpreter.intPool.put(y)
 	return nil, nil
 }
 
-func opSmod(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	x, y := math.S256(scope.Stack.pop()), math.S256(scope.Stack.pop())
-	res := evm.interpreter.intPool.getZero()
-
-	if y.Sign() == 0 {
-		scope.Stack.push(res)
+func opSgt(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	x, y := scope.Stack.pop(), scope.Stack.peek()
+	if x.Sgt(y) {
+		y.SetOne()
 	} else {
-		if x.Sign() < 0 {
-			res.Mod(x.Abs(x), y.Abs(y))
-			res.Neg(res)
-		} else {
-			res.Mod(x.Abs(x), y.Abs(y))
-		}
-		scope.Stack.push(math.U256(res))
+		y.Clear()
 	}
-	evm.interpreter.intPool.put(x, y)
 	return nil, nil
 }
 
-func opExp(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	base, exponent := scope.Stack.pop(), scope.Stack.pop()
-	// some shortcuts
-	cmpToOne := exponent.Cmp(big1)
-	if cmpToOne < 0 { // Exponent is zero
-		// x ^ 0 == 1
-		scope.Stack.push(base.SetUint64(1))
-	} else if base.Sign() == 0 {
-		// 0 ^ y, if y != 0, == 0
-		scope.Stack.push(base.SetUint64(0))
-	} else if cmpToOne == 0 { // Exponent is one
-		// x ^ 1 == x
-		scope.Stack.push(base)
+func opEq(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	x, y := scope.Stack.pop(), scope.Stack.peek()
+	if x.Eq(y) {
+		y.SetOne()
 	} else {
-		scope.Stack.push(math.Exp(base, exponent))
-		evm.interpreter.intPool.put(base)
+		y.Clear()
 	}
-	evm.interpreter.intPool.put(exponent)
-
 	return nil, nil
 }
 
-func opSignExtend(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	back := scope.Stack.pop()
-	if back.Cmp(big.NewInt(31)) < 0 {
-		bit := uint(back.Uint64()*8 + 7)
-		num := scope.Stack.pop()
-		mask := back.Lsh(common.Big1, bit)
-		mask.Sub(mask, common.Big1)
-		if num.Bit(int(bit)) > 0 {
-			num.Or(num, mask.Not(mask))
-		} else {
-			num.And(num, mask)
-		}
-
-		scope.Stack.push(math.U256(num))
-	}
-
-	evm.interpreter.intPool.put(back)
-	return nil, nil
-}
-
-func opNot(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	x := scope.Stack.Peek()
-	math.U256(x.Not(x))
-	return nil, nil
-}
-
-func opLt(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	x, y := scope.Stack.pop(), scope.Stack.Peek()
-	if x.Cmp(y) < 0 {
-		y.SetUint64(1)
+func opIszero(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	x := scope.Stack.peek()
+	if x.IsZero() {
+		x.SetOne()
 	} else {
-		y.SetUint64(0)
+		x.Clear()
 	}
-	evm.interpreter.intPool.put(x)
 	return nil, nil
 }
 
-func opGt(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	x, y := scope.Stack.pop(), scope.Stack.Peek()
-	if x.Cmp(y) > 0 {
-		y.SetUint64(1)
+func opAnd(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	x, y := scope.Stack.pop(), scope.Stack.peek()
+	y.And(&x, y)
+	return nil, nil
+}
+
+func opOr(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	x, y := scope.Stack.pop(), scope.Stack.peek()
+	y.Or(&x, y)
+	return nil, nil
+}
+
+func opXor(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	x, y := scope.Stack.pop(), scope.Stack.peek()
+	y.Xor(&x, y)
+	return nil, nil
+}
+
+func opByte(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	th, val := scope.Stack.pop(), scope.Stack.peek()
+	val.Byte(&th)
+	return nil, nil
+}
+
+func opAddmod(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	x, y, z := scope.Stack.pop(), scope.Stack.pop(), scope.Stack.peek()
+	if z.IsZero() {
+		z.Clear()
 	} else {
-		y.SetUint64(0)
-	}
-	evm.interpreter.intPool.put(x)
-	return nil, nil
-}
-
-func opSlt(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	x, y := scope.Stack.pop(), scope.Stack.Peek()
-
-	xSign := x.Cmp(tt255)
-	ySign := y.Cmp(tt255)
-
-	switch {
-	case xSign >= 0 && ySign < 0:
-		y.SetUint64(1)
-
-	case xSign < 0 && ySign >= 0:
-		y.SetUint64(0)
-
-	default:
-		if x.Cmp(y) < 0 {
-			y.SetUint64(1)
-		} else {
-			y.SetUint64(0)
-		}
-	}
-	evm.interpreter.intPool.put(x)
-	return nil, nil
-}
-
-func opSgt(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	x, y := scope.Stack.pop(), scope.Stack.Peek()
-
-	xSign := x.Cmp(tt255)
-	ySign := y.Cmp(tt255)
-
-	switch {
-	case xSign >= 0 && ySign < 0:
-		y.SetUint64(0)
-
-	case xSign < 0 && ySign >= 0:
-		y.SetUint64(1)
-
-	default:
-		if x.Cmp(y) > 0 {
-			y.SetUint64(1)
-		} else {
-			y.SetUint64(0)
-		}
-	}
-	evm.interpreter.intPool.put(x)
-	return nil, nil
-}
-
-func opEq(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	x, y := scope.Stack.pop(), scope.Stack.Peek()
-	if x.Cmp(y) == 0 {
-		y.SetUint64(1)
-	} else {
-		y.SetUint64(0)
-	}
-	evm.interpreter.intPool.put(x)
-	return nil, nil
-}
-
-func opIszero(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	x := scope.Stack.Peek()
-	if x.Sign() > 0 {
-		x.SetUint64(0)
-	} else {
-		x.SetUint64(1)
+		z.AddMod(&x, &y, z)
 	}
 	return nil, nil
 }
 
-func opAnd(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	x, y := scope.Stack.pop(), scope.Stack.pop()
-	scope.Stack.push(x.And(x, y))
-
-	evm.interpreter.intPool.put(y)
-	return nil, nil
-}
-
-func opOr(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	x, y := scope.Stack.pop(), scope.Stack.Peek()
-	y.Or(x, y)
-
-	evm.interpreter.intPool.put(x)
-	return nil, nil
-}
-
-func opXor(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	x, y := scope.Stack.pop(), scope.Stack.Peek()
-	y.Xor(x, y)
-
-	evm.interpreter.intPool.put(x)
-	return nil, nil
-}
-
-func opByte(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	th, val := scope.Stack.pop(), scope.Stack.Peek()
-	if th.Cmp(common.Big32) < 0 {
-		b := math.Byte(val, 32, int(th.Int64()))
-		val.SetUint64(uint64(b))
-	} else {
-		val.SetUint64(0)
-	}
-	evm.interpreter.intPool.put(th)
-	return nil, nil
-}
-
-func opAddmod(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	x, y, z := scope.Stack.pop(), scope.Stack.pop(), scope.Stack.pop()
-	if z.Cmp(bigZero) > 0 {
-		x.Add(x, y)
-		x.Mod(x, z)
-		scope.Stack.push(math.U256(x))
-	} else {
-		scope.Stack.push(x.SetUint64(0))
-	}
-	evm.interpreter.intPool.put(y, z)
-	return nil, nil
-}
-
-func opMulmod(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	x, y, z := scope.Stack.pop(), scope.Stack.pop(), scope.Stack.pop()
-	if z.Cmp(bigZero) > 0 {
-		x.Mul(x, y)
-		x.Mod(x, z)
-		scope.Stack.push(math.U256(x))
-	} else {
-		scope.Stack.push(x.SetUint64(0))
-	}
-	evm.interpreter.intPool.put(y, z)
+func opMulmod(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	x, y, z := scope.Stack.pop(), scope.Stack.pop(), scope.Stack.peek()
+	z.MulMod(&x, &y, z)
 	return nil, nil
 }
 
 // opSHL implements Shift Left
 // The SHL instruction (shift left) pops 2 values from the stack, first arg1 and then arg2,
 // and pushes on the stack arg2 shifted to the left by arg1 number of bits.
-func opSHL(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
+func opSHL(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 	// Note, second operand is left in the stack; accumulate result into it, and no need to push it afterwards
-	shift, value := math.U256(scope.Stack.pop()), math.U256(scope.Stack.Peek())
-	defer evm.interpreter.intPool.put(shift) // First operand back into the pool
-
-	if shift.Cmp(common.Big256) >= 0 {
-		value.SetUint64(0)
-		return nil, nil
+	shift, value := scope.Stack.pop(), scope.Stack.peek()
+	if shift.LtUint64(256) {
+		value.Lsh(value, uint(shift.Uint64()))
+	} else {
+		value.Clear()
 	}
-	n := uint(shift.Uint64())
-	math.U256(value.Lsh(value, n))
-
 	return nil, nil
 }
 
 // opSHR implements Logical Shift Right
 // The SHR instruction (logical shift right) pops 2 values from the stack, first arg1 and then arg2,
 // and pushes on the stack arg2 shifted to the right by arg1 number of bits with zero fill.
-func opSHR(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
+func opSHR(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 	// Note, second operand is left in the stack; accumulate result into it, and no need to push it afterwards
-	shift, value := math.U256(scope.Stack.pop()), math.U256(scope.Stack.Peek())
-	defer evm.interpreter.intPool.put(shift) // First operand back into the pool
-
-	if shift.Cmp(common.Big256) >= 0 {
-		value.SetUint64(0)
-		return nil, nil
+	shift, value := scope.Stack.pop(), scope.Stack.peek()
+	if shift.LtUint64(256) {
+		value.Rsh(value, uint(shift.Uint64()))
+	} else {
+		value.Clear()
 	}
-	n := uint(shift.Uint64())
-	math.U256(value.Rsh(value, n))
-
 	return nil, nil
 }
 
 // opSAR implements Arithmetic Shift Right
 // The SAR instruction (arithmetic shift right) pops 2 values from the stack, first arg1 and then arg2,
 // and pushes on the stack arg2 shifted to the right by arg1 number of bits with sign extension.
-func opSAR(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	// Note, S256 returns (potentially) a new bigint, so we're popping, not peeking this one
-	shift, value := math.U256(scope.Stack.pop()), math.S256(scope.Stack.pop())
-	defer evm.interpreter.intPool.put(shift) // First operand back into the pool
-
-	if shift.Cmp(common.Big256) >= 0 {
+func opSAR(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	shift, value := scope.Stack.pop(), scope.Stack.peek()
+	if shift.GtUint64(256) {
 		if value.Sign() >= 0 {
-			value.SetUint64(0)
+			value.Clear()
 		} else {
-			value.SetInt64(-1)
+			// Max negative shift: all bits set
+			value.SetAllOne()
 		}
-		scope.Stack.push(math.U256(value))
 		return nil, nil
 	}
 	n := uint(shift.Uint64())
-	value.Rsh(value, n)
-	scope.Stack.push(math.U256(value))
-
+	value.SRsh(value, n)
 	return nil, nil
 }
 
-func opSha3(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	offset, size := scope.Stack.pop(), scope.Stack.pop()
-	data := scope.Memory.GetPtr(offset.Int64(), size.Int64())
+func opSha3(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	offset, size := scope.Stack.pop(), scope.Stack.peek()
+	data := scope.Memory.GetPtr(int64(offset.Uint64()), int64(size.Uint64()))
 
-	if evm.interpreter.hasher == nil {
-		evm.interpreter.hasher = sha3.NewKeccak256().(keccakState)
+	if interpreter.hasher == nil {
+		interpreter.hasher = sha3.NewKeccak256().(keccakState)
 	} else {
-		evm.interpreter.hasher.Reset()
+		interpreter.hasher.Reset()
 	}
-	evm.interpreter.hasher.Write(data)
-	evm.interpreter.hasher.Read(evm.interpreter.hasherBuf[:])
+	interpreter.hasher.Write(data)
+	interpreter.hasher.Read(interpreter.hasherBuf[:])
 
+	evm := interpreter.evm
 	if evm.Config.EnablePreimageRecording {
-		evm.StateDB.AddPreimage(evm.interpreter.hasherBuf, data)
+		evm.StateDB.AddPreimage(interpreter.hasherBuf, data)
 	}
-	scope.Stack.push(evm.interpreter.intPool.get().SetBytes(evm.interpreter.hasherBuf[:]))
-
-	evm.interpreter.intPool.put(offset, size)
+	size.SetBytes(interpreter.hasherBuf[:])
 	return nil, nil
 }
 
-func opAddress(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	scope.Stack.push(evm.interpreter.intPool.get().SetBytes(scope.Contract.Address().Bytes()))
+func opAddress(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	scope.Stack.push(new(uint256.Int).SetBytes(scope.Contract.Address().Bytes()))
 	return nil, nil
 }
 
-func opBalance(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	slot := scope.Stack.Peek()
-	slot.Set(evm.StateDB.GetBalance(common.BigToAddress(slot)))
+func opBalance(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	slot := scope.Stack.peek()
+	address := common.Address(slot.Bytes20())
+	slot.SetFromBig(interpreter.evm.StateDB.GetBalance(address))
 	return nil, nil
 }
 
-func opOrigin(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	scope.Stack.push(evm.interpreter.intPool.get().SetBytes(evm.Origin.Bytes()))
+func opOrigin(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	scope.Stack.push(new(uint256.Int).SetBytes(interpreter.evm.Origin.Bytes()))
 	return nil, nil
 }
 
-func opCaller(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	scope.Stack.push(evm.interpreter.intPool.get().SetBytes(scope.Contract.Caller().Bytes()))
+func opCaller(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	scope.Stack.push(new(uint256.Int).SetBytes(scope.Contract.Caller().Bytes()))
 	return nil, nil
 }
 
-func opCallValue(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	scope.Stack.push(evm.interpreter.intPool.get().Set(scope.Contract.value))
+func opCallValue(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	v, _ := uint256.FromBig(scope.Contract.value)
+	scope.Stack.push(v)
 	return nil, nil
 }
 
-func opCallDataLoad(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	scope.Stack.push(evm.interpreter.intPool.get().SetBytes(getDataBig(scope.Contract.Input, scope.Stack.pop(), big32)))
+func opCallDataLoad(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	x := scope.Stack.peek()
+	if offset, overflow := x.Uint64WithOverflow(); !overflow {
+		data := getData(scope.Contract.Input, offset, 32)
+		x.SetBytes(data)
+	} else {
+		x.Clear()
+	}
 	return nil, nil
 }
 
-func opCallDataSize(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	scope.Stack.push(evm.interpreter.intPool.get().SetInt64(int64(len(scope.Contract.Input))))
+func opCallDataSize(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	scope.Stack.push(new(uint256.Int).SetUint64(uint64(len(scope.Contract.Input))))
 	return nil, nil
 }
 
-func opCallDataCopy(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
+func opCallDataCopy(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 	var (
 		memOffset  = scope.Stack.pop()
 		dataOffset = scope.Stack.pop()
 		length     = scope.Stack.pop()
 	)
-	scope.Memory.Set(memOffset.Uint64(), length.Uint64(), getDataBig(scope.Contract.Input, dataOffset, length))
+	dataOffset64, overflow := dataOffset.Uint64WithOverflow()
+	if overflow {
+		dataOffset64 = 0xffffffffffffffff
+	}
+	// These values are checked for overflow during gas cost calculation
+	memOffset64 := memOffset.Uint64()
+	length64 := length.Uint64()
+	scope.Memory.Set(memOffset64, length64, getData(scope.Contract.Input, dataOffset64, length64))
 
-	evm.interpreter.intPool.put(memOffset, dataOffset, length)
 	return nil, nil
 }
 
-func opReturnDataSize(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	scope.Stack.push(evm.interpreter.intPool.get().SetUint64(uint64(len(evm.interpreter.returnData))))
+func opReturnDataSize(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	scope.Stack.push(new(uint256.Int).SetUint64(uint64(len(interpreter.returnData))))
 	return nil, nil
 }
 
-func opReturnDataCopy(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
+func opReturnDataCopy(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 	var (
 		memOffset  = scope.Stack.pop()
 		dataOffset = scope.Stack.pop()
 		length     = scope.Stack.pop()
-
-		end = evm.interpreter.intPool.get().Add(dataOffset, length)
 	)
-	defer evm.interpreter.intPool.put(memOffset, dataOffset, length, end)
 
-	if !end.IsUint64() || uint64(len(evm.interpreter.returnData)) < end.Uint64() {
-		return nil, ErrReturnDataOutOfBounds // TODO-Klaytn-Issue615
+	offset64, overflow := dataOffset.Uint64WithOverflow()
+	if overflow {
+		return nil, ErrReturnDataOutOfBounds
 	}
-	scope.Memory.Set(memOffset.Uint64(), length.Uint64(), evm.interpreter.returnData[dataOffset.Uint64():end.Uint64()])
-
+	// we can reuse dataOffset now (aliasing it for clarity)
+	end := dataOffset
+	end.Add(&dataOffset, &length)
+	end64, overflow := end.Uint64WithOverflow()
+	if overflow || uint64(len(interpreter.returnData)) < end64 {
+		return nil, ErrReturnDataOutOfBounds
+	}
+	scope.Memory.Set(memOffset.Uint64(), length.Uint64(), interpreter.returnData[offset64:end64])
 	return nil, nil
 }
 
-func opExtCodeSize(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	slot := scope.Stack.Peek()
-	slot.SetUint64(uint64(evm.StateDB.GetCodeSize(common.BigToAddress(slot))))
-
+func opExtCodeSize(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	slot := scope.Stack.peek()
+	slot.SetUint64(uint64(interpreter.evm.StateDB.GetCodeSize(slot.Bytes20())))
 	return nil, nil
 }
 
-func opCodeSize(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	l := evm.interpreter.intPool.get().SetInt64(int64(len(scope.Contract.Code)))
+func opCodeSize(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	l := new(uint256.Int)
+	l.SetUint64(uint64(len(scope.Contract.Code)))
 	scope.Stack.push(l)
-
 	return nil, nil
 }
 
-func opCodeCopy(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
+func opCodeCopy(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 	var (
 		memOffset  = scope.Stack.pop()
 		codeOffset = scope.Stack.pop()
 		length     = scope.Stack.pop()
 	)
-	codeCopy := getDataBig(scope.Contract.Code, codeOffset, length)
+	uint64CodeOffset, overflow := codeOffset.Uint64WithOverflow()
+	if overflow {
+		uint64CodeOffset = 0xffffffffffffffff
+	}
+	codeCopy := getData(scope.Contract.Code, uint64CodeOffset, length.Uint64())
 	scope.Memory.Set(memOffset.Uint64(), length.Uint64(), codeCopy)
 
-	evm.interpreter.intPool.put(memOffset, codeOffset, length)
 	return nil, nil
 }
 
-func opExtCodeCopy(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
+func opExtCodeCopy(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 	var (
-		addr       = common.BigToAddress(scope.Stack.pop())
-		memOffset  = scope.Stack.pop()
-		codeOffset = scope.Stack.pop()
-		length     = scope.Stack.pop()
+		stack      = scope.Stack
+		a          = stack.pop()
+		memOffset  = stack.pop()
+		codeOffset = stack.pop()
+		length     = stack.pop()
 	)
-	codeCopy := getDataBig(evm.StateDB.GetCode(addr), codeOffset, length)
+	uint64CodeOffset, overflow := codeOffset.Uint64WithOverflow()
+	if overflow {
+		uint64CodeOffset = 0xffffffffffffffff
+	}
+	addr := common.Address(a.Bytes20())
+	codeCopy := getData(interpreter.evm.StateDB.GetCode(addr), uint64CodeOffset, length.Uint64())
 	scope.Memory.Set(memOffset.Uint64(), length.Uint64(), codeCopy)
 
-	evm.interpreter.intPool.put(memOffset, codeOffset, length)
 	return nil, nil
 }
 
@@ -518,420 +396,454 @@ func opExtCodeCopy(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
 // There are several cases when the function is called, while we can relay everything
 // to `state.GetCodeHash` function to ensure the correctness.
 //
-//	(1) Caller tries to get the code hash of a normal contract account, state
+//  1. Caller tries to get the code hash of a normal contract account, state
+//     should return the relative code hash and set it as the result.
 //
-// should return the relative code hash and set it as the result.
+//  2. Caller tries to get the code hash of a non-existent account, state should
+//     return common.Hash{} and zero will be set as the result.
 //
-//	(2) Caller tries to get the code hash of a non-existent account, state should
+//  3. Caller tries to get the code hash for an account without contract code, state
+//     should return emptyCodeHash(0xc5d246...) as the result.
 //
-// return common.Hash{} and zero will be set as the result.
+//  4. Caller tries to get the code hash of a precompiled account, the result should be
+//     zero or emptyCodeHash.
 //
-//	(3) Caller tries to get the code hash for an account without contract code,
-//
-// state should return emptyCodeHash(0xc5d246...) as the result.
-//
-//	(4) Caller tries to get the code hash of a precompiled account, the result
-//
-// should be zero or emptyCodeHash.
-//
-// It is worth noting that in order to avoid unnecessary create and clean,
-// all precompile accounts on mainnet have been transferred 1 wei, so the return
-// here should be emptyCodeHash.
-// If the precompile account is not transferred any amount on a private or
+// It is worth noting that in order to avoid unnecessary create and clean, all precompile
+// accounts on mainnet have been transferred 1 wei, so the return here should be
+// emptyCodeHash. If the precompile account is not transferred any amount on a private or
 // customized chain, the return value will be zero.
 //
-//	(5) Caller tries to get the code hash for an account which is marked as self-destructed
+//  5. Caller tries to get the code hash for an account which is marked as self-destructed
+//     in the current transaction, the code hash of this account should be returned.
 //
-// in the current transaction, the code hash of this account should be returned.
-//
-//	(6) Caller tries to get the code hash for an account which is marked as deleted,
-//
-// this account should be regarded as a non-existent account and zero should be returned.
-func opExtCodeHash(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	slot := scope.Stack.Peek()
-	slot.SetBytes(evm.StateDB.GetCodeHash(common.BigToAddress(slot)).Bytes())
-	return nil, nil
-}
-
-func opGasprice(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	scope.Stack.push(evm.interpreter.intPool.get().Set(evm.GasPrice))
-	return nil, nil
-}
-
-func opBlockhash(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	num := scope.Stack.pop()
-
-	n := evm.interpreter.intPool.get().Sub(evm.Context.BlockNumber, common.Big257)
-	if num.Cmp(n) > 0 && num.Cmp(evm.Context.BlockNumber) < 0 {
-		scope.Stack.push(evm.Context.GetHash(num.Uint64()).Big())
+//  6. Caller tries to get the code hash for an account which is marked as deleted, this
+//     account should be regarded as a non-existent account and zero should be returned.
+func opExtCodeHash(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	slot := scope.Stack.peek()
+	address := common.Address(slot.Bytes20())
+	if interpreter.evm.StateDB.Empty(address) {
+		slot.Clear()
 	} else {
-		scope.Stack.push(evm.interpreter.intPool.getZero())
+		slot.SetBytes(interpreter.evm.StateDB.GetCodeHash(address).Bytes())
 	}
-	evm.interpreter.intPool.put(num, n)
 	return nil, nil
 }
 
-func opCoinbase(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	scope.Stack.push(evm.interpreter.intPool.get().SetBytes(evm.Context.Coinbase.Bytes()))
+func opGasprice(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	v, _ := uint256.FromBig(interpreter.evm.GasPrice)
+	scope.Stack.push(v)
 	return nil, nil
 }
 
-func opTimestamp(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	scope.Stack.push(math.U256(evm.interpreter.intPool.get().Set(evm.Context.Time)))
+func opBlockhash(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	num := scope.Stack.peek()
+	num64, overflow := num.Uint64WithOverflow()
+	if overflow {
+		num.Clear()
+		return nil, nil
+	}
+	var upper, lower uint64
+	upper = interpreter.evm.Context.BlockNumber.Uint64()
+	if upper < 257 {
+		lower = 0
+	} else {
+		lower = upper - 256
+	}
+	if num64 >= lower && num64 < upper {
+		num.SetBytes(interpreter.evm.Context.GetHash(num64).Bytes())
+	} else {
+		num.Clear()
+	}
 	return nil, nil
 }
 
-func opNumber(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	scope.Stack.push(math.U256(evm.interpreter.intPool.get().Set(evm.Context.BlockNumber)))
+func opCoinbase(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	scope.Stack.push(new(uint256.Int).SetBytes(interpreter.evm.Context.Coinbase.Bytes()))
 	return nil, nil
 }
 
-func opDifficulty(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	scope.Stack.push(math.U256(evm.interpreter.intPool.get().Set(evm.Context.BlockScore)))
+func opTimestamp(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	scope.Stack.push(new(uint256.Int).SetUint64(interpreter.evm.Context.Time.Uint64()))
 	return nil, nil
 }
 
-func opRandom(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
+func opNumber(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	v, _ := uint256.FromBig(interpreter.evm.Context.BlockNumber)
+	scope.Stack.push(v)
+	return nil, nil
+}
+
+func opDifficulty(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	v, _ := uint256.FromBig(interpreter.evm.Context.BlockScore)
+	scope.Stack.push(v)
+	return nil, nil
+}
+
+func opRandom(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 	// evm.BlockNumber.Uint64() is always greater than or equal to 1
 	// since evm will not run on the genesis block
-	scope.Stack.push(evm.Context.GetHash(evm.Context.BlockNumber.Uint64() - 1).Big())
+	prevBlockHash := interpreter.evm.Context.GetHash(interpreter.evm.Context.BlockNumber.Uint64() - 1)
+	v, _ := uint256.FromBig(prevBlockHash.Big())
+	scope.Stack.push(v)
 	return nil, nil
 }
 
-func opGasLimit(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	scope.Stack.push(math.U256(evm.interpreter.intPool.get().SetUint64(evm.Context.GasLimit)))
+func opGasLimit(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	scope.Stack.push(new(uint256.Int).SetUint64(interpreter.evm.Context.GasLimit))
 	return nil, nil
 }
 
-func opPop(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	evm.interpreter.intPool.put(scope.Stack.pop())
+func opPop(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	scope.Stack.pop()
 	return nil, nil
 }
 
-func opMload(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	v := scope.Stack.Peek()
-	offset := v.Int64()
+func opMload(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	v := scope.Stack.peek()
+	offset := int64(v.Uint64())
 	v.SetBytes(scope.Memory.GetPtr(offset, 32))
-
 	return nil, nil
 }
 
-func opMstore(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
+func opMstore(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 	// pop value of the stack
 	mStart, val := scope.Stack.pop(), scope.Stack.pop()
-	scope.Memory.Set32(mStart.Uint64(), val)
-
-	evm.interpreter.intPool.put(mStart, val)
+	scope.Memory.Set32(mStart.Uint64(), &val)
 	return nil, nil
 }
 
-func opMstore8(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	off, val := scope.Stack.pop().Int64(), scope.Stack.pop().Int64()
-	scope.Memory.store[off] = byte(val & 0xff)
-
+func opMstore8(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	off, val := scope.Stack.pop(), scope.Stack.pop()
+	scope.Memory.store[off.Uint64()] = byte(val.Uint64())
 	return nil, nil
 }
 
-func opSload(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	loc := scope.Stack.Peek()
-	val := evm.StateDB.GetState(scope.Contract.Address(), common.BigToHash(loc))
+func opSload(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	loc := scope.Stack.peek()
+	hash := common.Hash(loc.Bytes32())
+	val := interpreter.evm.StateDB.GetState(scope.Contract.Address(), hash)
 	loc.SetBytes(val.Bytes())
 	return nil, nil
 }
 
-func opSstore(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	loc := common.BigToHash(scope.Stack.pop())
+func opSstore(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	if interpreter.readOnly {
+		return nil, ErrWriteProtection
+	}
+	loc := scope.Stack.pop()
 	val := scope.Stack.pop()
-	evm.StateDB.SetState(scope.Contract.Address(), loc, common.BigToHash(val))
-
-	evm.interpreter.intPool.put(val)
+	interpreter.evm.StateDB.SetState(scope.Contract.Address(), loc.Bytes32(), val.Bytes32())
 	return nil, nil
 }
 
-func opJump(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
+func opJump(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	if interpreter.evm.Cancelled() {
+		return nil, errStopToken
+	}
 	pos := scope.Stack.pop()
-	if !scope.Contract.validJumpdest(pos) {
+	if !scope.Contract.validJumpdest(&pos) {
 		return nil, ErrInvalidJump
 	}
 	*pc = pos.Uint64() - 1 // pc will be increased by the interpreter loop
-
-	evm.interpreter.intPool.put(pos)
 	return nil, nil
 }
 
-func opJumpi(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
+func opJumpi(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	if interpreter.evm.Cancelled() {
+		return nil, errStopToken
+	}
 	pos, cond := scope.Stack.pop(), scope.Stack.pop()
-	if cond.Sign() != 0 {
-		if !scope.Contract.validJumpdest(pos) {
+	if !cond.IsZero() {
+		if !scope.Contract.validJumpdest(&pos) {
 			return nil, ErrInvalidJump
 		}
 		*pc = pos.Uint64() - 1 // pc will be increased by the interpreter loop
 	}
-
-	evm.interpreter.intPool.put(pos, cond)
 	return nil, nil
 }
 
-func opJumpdest(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
+func opJumpdest(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 	return nil, nil
 }
 
-func opPc(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	scope.Stack.push(evm.interpreter.intPool.get().SetUint64(*pc))
+func opPc(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	scope.Stack.push(new(uint256.Int).SetUint64(*pc))
 	return nil, nil
 }
 
-func opMsize(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	scope.Stack.push(evm.interpreter.intPool.get().SetInt64(int64(scope.Memory.Len())))
+func opMsize(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	scope.Stack.push(new(uint256.Int).SetUint64(uint64(scope.Memory.Len())))
 	return nil, nil
 }
 
-func opGas(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	scope.Stack.push(evm.interpreter.intPool.get().SetUint64(scope.Contract.Gas))
+func opGas(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	scope.Stack.push(new(uint256.Int).SetUint64(scope.Contract.Gas))
 	return nil, nil
 }
 
-func opCreate(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
+func opCreate(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 	var (
 		value        = scope.Stack.pop()
 		offset, size = scope.Stack.pop(), scope.Stack.pop()
-		input        = scope.Memory.GetCopy(offset.Int64(), size.Int64())
+		input        = scope.Memory.GetCopy(int64(offset.Uint64()), int64(size.Uint64()))
 		gas          = scope.Contract.Gas
 	)
 
 	// This is from EIP150.
 	gas -= gas / 64
 
+	// reuse size int for stackvalue
+	stackvalue := size
+
 	scope.Contract.UseGas(gas)
-	res, addr, returnGas, suberr := evm.Create(scope.Contract, input, gas, value, params.CodeFormatEVM)
+	// TODO: use uint256.Int instead of converting with toBig()
+	bigVal := common.Big0
+	if !value.IsZero() {
+		bigVal = value.ToBig()
+	}
+	res, addr, returnGas, suberr := interpreter.evm.Create(scope.Contract, input, gas, bigVal, params.CodeFormatEVM)
 	// Push item on the stack based on the returned error. If the ruleset is
 	// homestead we must check for CodeStoreOutOfGasError (homestead only
 	// rule) and treat as an error, if the ruleset is frontier we must
 	// ignore this error and pretend the operation was successful.
-	if suberr != nil {
-		scope.Stack.push(evm.interpreter.intPool.getZero())
+	if suberr == ErrCodeStoreOutOfGas {
+		stackvalue.Clear()
+	} else if suberr != nil && suberr != ErrCodeStoreOutOfGas {
+		stackvalue.Clear()
 	} else {
-		scope.Stack.push(evm.interpreter.intPool.get().SetBytes(addr.Bytes()))
+		stackvalue.SetBytes(addr.Bytes())
 	}
+	scope.Stack.push(&stackvalue)
 	scope.Contract.Gas += returnGas
-	evm.interpreter.intPool.put(value, offset, size)
 
 	if suberr == ErrExecutionReverted {
-		evm.interpreter.returnData = res // set REVERT data to return data buffer
+		interpreter.returnData = res // set REVERT data to return data buffer
 		return res, nil
 	}
-	evm.interpreter.returnData = nil // clear dirty return data buffer
+	interpreter.returnData = nil // clear dirty return data buffer
 	return nil, nil
 }
 
-func opCreate2(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
+func opCreate2(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 	var (
 		endowment    = scope.Stack.pop()
 		offset, size = scope.Stack.pop(), scope.Stack.pop()
 		salt         = scope.Stack.pop()
-		input        = scope.Memory.GetCopy(offset.Int64(), size.Int64())
+		input        = scope.Memory.GetCopy(int64(offset.Uint64()), int64(size.Uint64()))
 		gas          = scope.Contract.Gas
 	)
 
 	// Apply EIP150
 	gas -= gas / 64
 	scope.Contract.UseGas(gas)
-	res, addr, returnGas, suberr := evm.Create2(scope.Contract, input, gas, endowment, salt, params.CodeFormatEVM)
+	// reuse size int for stackvalue
+	stackvalue := size
+	// TODO: use uint256.Int instead of converting with toBig()
+	bigEndowment := common.Big0
+	if !endowment.IsZero() {
+		bigEndowment = endowment.ToBig()
+	}
+
+	res, addr, returnGas, suberr := interpreter.evm.Create2(scope.Contract, input, gas,
+		bigEndowment, &salt, params.CodeFormatEVM)
 	// Push item on the stack based on the returned error.
 	if suberr != nil {
-		scope.Stack.push(evm.interpreter.intPool.getZero())
+		stackvalue.Clear()
 	} else {
-		scope.Stack.push(evm.interpreter.intPool.get().SetBytes(addr.Bytes()))
+		stackvalue.SetBytes(addr.Bytes())
 	}
+	scope.Stack.push(&stackvalue)
 	scope.Contract.Gas += returnGas
-	evm.interpreter.intPool.put(endowment, offset, size, salt)
 
 	if suberr == ErrExecutionReverted {
-		evm.interpreter.returnData = res // set REVERT data to return data buffer
+		interpreter.returnData = res // set REVERT data to return data buffer
 		return res, nil
 	}
-	evm.interpreter.returnData = nil // clear dirty return data buffer
+	interpreter.returnData = nil // clear dirty return data buffer
 	return nil, nil
 }
 
-func opCall(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	// Pop gas. The actual gas in evm.callGasTemp.
-	evm.interpreter.intPool.put(scope.Stack.pop())
-	gas := evm.callGasTemp
+func opCall(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	stack := scope.Stack
+	// Pop gas. The actual gas in interpreter.evm.callGasTemp.
+	// We can use this as a temporary value
+	temp := stack.pop()
+	gas := interpreter.evm.callGasTemp
 	// Pop other call parameters.
-	addr, value, inOffset, inSize, retOffset, retSize := scope.Stack.pop(), scope.Stack.pop(), scope.Stack.pop(), scope.Stack.pop(), scope.Stack.pop(), scope.Stack.pop()
-	toAddr := common.BigToAddress(addr)
-	value = math.U256(value)
+	addr, value, inOffset, inSize, retOffset, retSize := stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop()
+	toAddr := common.Address(addr.Bytes20())
 	// Get the arguments from the memory.
-	args := scope.Memory.GetPtr(inOffset.Int64(), inSize.Int64())
+	args := scope.Memory.GetPtr(int64(inOffset.Uint64()), int64(inSize.Uint64()))
 
-	if value.Sign() != 0 {
+	if interpreter.readOnly && !value.IsZero() {
+		return nil, ErrWriteProtection
+	}
+	bigVal := common.Big0
+	// TODO: use uint256.Int instead of converting with toBig()
+	// By using big0 here, we save an alloc for the most common case (non-ether-transferring contract calls),
+	// but it would make more sense to extend the usage of uint256.Int
+	if !value.IsZero() {
 		gas += params.CallStipend
+		bigVal = value.ToBig()
 	}
-	ret, returnGas, err := evm.Call(scope.Contract, toAddr, args, gas, value)
+
+	ret, returnGas, err := interpreter.evm.Call(scope.Contract, toAddr, args, gas, bigVal)
+
 	if err != nil {
-		scope.Stack.push(evm.interpreter.intPool.getZero())
+		temp.Clear()
 	} else {
-		scope.Stack.push(evm.interpreter.intPool.get().SetUint64(1))
+		temp.SetOne()
 	}
+	stack.push(&temp)
 	if err == nil || err == ErrExecutionReverted {
 		ret = common.CopyBytes(ret)
 		scope.Memory.Set(retOffset.Uint64(), retSize.Uint64(), ret)
 	}
 	scope.Contract.Gas += returnGas
 
-	evm.interpreter.intPool.put(addr, value, inOffset, inSize, retOffset, retSize)
-	evm.interpreter.returnData = ret
+	interpreter.returnData = ret
 	return ret, nil
 }
 
-func opCallCode(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	// Pop gas. The actual gas is in evm.callGasTemp.
-	evm.interpreter.intPool.put(scope.Stack.pop())
-	gas := evm.callGasTemp
+func opCallCode(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	// Pop gas. The actual gas is in interpreter.evm.callGasTemp.
+	stack := scope.Stack
+	// We use it as a temporary value
+	temp := stack.pop()
+	gas := interpreter.evm.callGasTemp
 	// Pop other call parameters.
-	addr, value, inOffset, inSize, retOffset, retSize := scope.Stack.pop(), scope.Stack.pop(), scope.Stack.pop(), scope.Stack.pop(), scope.Stack.pop(), scope.Stack.pop()
-	toAddr := common.BigToAddress(addr)
-	value = math.U256(value)
+	addr, value, inOffset, inSize, retOffset, retSize := stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop()
+	toAddr := common.Address(addr.Bytes20())
 	// Get arguments from the memory.
-	args := scope.Memory.GetPtr(inOffset.Int64(), inSize.Int64())
+	args := scope.Memory.GetPtr(int64(inOffset.Uint64()), int64(inSize.Uint64()))
 
-	if value.Sign() != 0 {
+	// TODO: use uint256.Int instead of converting with toBig()
+	bigVal := common.Big0
+	if !value.IsZero() {
 		gas += params.CallStipend
+		bigVal = value.ToBig()
 	}
-	ret, returnGas, err := evm.CallCode(scope.Contract, toAddr, args, gas, value)
+
+	ret, returnGas, err := interpreter.evm.CallCode(scope.Contract, toAddr, args, gas, bigVal)
 	if err != nil {
-		scope.Stack.push(evm.interpreter.intPool.getZero())
+		temp.Clear()
 	} else {
-		scope.Stack.push(evm.interpreter.intPool.get().SetUint64(1))
+		temp.SetOne()
 	}
+	stack.push(&temp)
 	if err == nil || err == ErrExecutionReverted {
 		ret = common.CopyBytes(ret)
 		scope.Memory.Set(retOffset.Uint64(), retSize.Uint64(), ret)
 	}
 	scope.Contract.Gas += returnGas
 
-	evm.interpreter.intPool.put(addr, value, inOffset, inSize, retOffset, retSize)
-	evm.interpreter.returnData = ret
+	interpreter.returnData = ret
 	return ret, nil
 }
 
-func opDelegateCall(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	// Pop gas. The actual gas is in evm.callGasTemp.
-	evm.interpreter.intPool.put(scope.Stack.pop())
-	gas := evm.callGasTemp
+func opDelegateCall(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	stack := scope.Stack
+	// Pop gas. The actual gas is in interpreter.evm.callGasTemp.
+	// We use it as a temporary value
+	temp := stack.pop()
+	gas := interpreter.evm.callGasTemp
 	// Pop other call parameters.
-	addr, inOffset, inSize, retOffset, retSize := scope.Stack.pop(), scope.Stack.pop(), scope.Stack.pop(), scope.Stack.pop(), scope.Stack.pop()
-	toAddr := common.BigToAddress(addr)
+	addr, inOffset, inSize, retOffset, retSize := stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop()
+	toAddr := common.Address(addr.Bytes20())
 	// Get arguments from the memory.
-	args := scope.Memory.GetPtr(inOffset.Int64(), inSize.Int64())
+	args := scope.Memory.GetPtr(int64(inOffset.Uint64()), int64(inSize.Uint64()))
 
-	ret, returnGas, err := evm.DelegateCall(scope.Contract, toAddr, args, gas)
+	ret, returnGas, err := interpreter.evm.DelegateCall(scope.Contract, toAddr, args, gas)
 	if err != nil {
-		scope.Stack.push(evm.interpreter.intPool.getZero())
+		temp.Clear()
 	} else {
-		scope.Stack.push(evm.interpreter.intPool.get().SetUint64(1))
+		temp.SetOne()
 	}
+	stack.push(&temp)
 	if err == nil || err == ErrExecutionReverted {
 		ret = common.CopyBytes(ret)
 		scope.Memory.Set(retOffset.Uint64(), retSize.Uint64(), ret)
 	}
 	scope.Contract.Gas += returnGas
 
-	evm.interpreter.intPool.put(addr, inOffset, inSize, retOffset, retSize)
-	evm.interpreter.returnData = ret
+	interpreter.returnData = ret
 	return ret, nil
 }
 
-func opStaticCall(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	// Pop gas. The actual gas is in evm.callGasTemp.
-	evm.interpreter.intPool.put(scope.Stack.pop())
-	gas := evm.callGasTemp
+func opStaticCall(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	// Pop gas. The actual gas is in interpreter.evm.callGasTemp.
+	stack := scope.Stack
+	// We use it as a temporary value
+	temp := stack.pop()
+	gas := interpreter.evm.callGasTemp
 	// Pop other call parameters.
-	addr, inOffset, inSize, retOffset, retSize := scope.Stack.pop(), scope.Stack.pop(), scope.Stack.pop(), scope.Stack.pop(), scope.Stack.pop()
-	toAddr := common.BigToAddress(addr)
+	addr, inOffset, inSize, retOffset, retSize := stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop()
+	toAddr := common.Address(addr.Bytes20())
 	// Get arguments from the memory.
-	args := scope.Memory.GetPtr(inOffset.Int64(), inSize.Int64())
+	args := scope.Memory.GetPtr(int64(inOffset.Uint64()), int64(inSize.Uint64()))
 
-	ret, returnGas, err := evm.StaticCall(scope.Contract, toAddr, args, gas)
+	ret, returnGas, err := interpreter.evm.StaticCall(scope.Contract, toAddr, args, gas)
 	if err != nil {
-		scope.Stack.push(evm.interpreter.intPool.getZero())
+		temp.Clear()
 	} else {
-		scope.Stack.push(evm.interpreter.intPool.get().SetUint64(1))
+		temp.SetOne()
 	}
+	stack.push(&temp)
 	if err == nil || err == ErrExecutionReverted {
 		ret = common.CopyBytes(ret)
 		scope.Memory.Set(retOffset.Uint64(), retSize.Uint64(), ret)
 	}
 	scope.Contract.Gas += returnGas
 
-	evm.interpreter.intPool.put(addr, inOffset, inSize, retOffset, retSize)
-	evm.interpreter.returnData = ret
+	interpreter.returnData = ret
 	return ret, nil
 }
 
-func opReturn(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
+func opReturn(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 	offset, size := scope.Stack.pop(), scope.Stack.pop()
-	ret := scope.Memory.GetPtr(offset.Int64(), size.Int64())
+	ret := scope.Memory.GetPtr(int64(offset.Uint64()), int64(size.Uint64()))
 
-	evm.interpreter.intPool.put(offset, size)
 	return ret, errStopToken
 }
 
-func opRevert(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
+func opRevert(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 	offset, size := scope.Stack.pop(), scope.Stack.pop()
-	ret := scope.Memory.GetPtr(offset.Int64(), size.Int64())
+	ret := scope.Memory.GetPtr(int64(offset.Uint64()), int64(size.Uint64()))
 
-	evm.interpreter.intPool.put(offset, size)
-	evm.interpreter.returnData = ret
+	interpreter.returnData = ret
 	return ret, ErrExecutionReverted
 }
 
-func opStop(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
+func opStop(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 	return nil, errStopToken
 }
 
-// opPush1 is a specialized version of pushN
-func opPush1(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	var (
-		codeLen = uint64(len(scope.Contract.Code))
-		integer = evm.interpreter.intPool.get()
-	)
-	*pc += 1
-	if *pc < codeLen {
-		scope.Stack.push(integer.SetUint64(uint64(scope.Contract.Code[*pc])))
-	} else {
-		scope.Stack.push(integer.SetUint64(0))
-	}
-	return nil, nil
-}
-
-func opSelfdestruct(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	if evm.interpreter.readOnly {
+func opSelfdestruct(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	if interpreter.readOnly {
 		return nil, ErrWriteProtection
 	}
 	beneficiary := scope.Stack.pop()
-	balance := evm.StateDB.GetBalance(scope.Contract.Address())
-	evm.StateDB.AddBalance(common.BigToAddress(beneficiary), balance)
-	evm.StateDB.SelfDestruct(scope.Contract.Address())
-	if tracer := evm.Config.Tracer; tracer != nil {
-		tracer.CaptureEnter(SELFDESTRUCT, scope.Contract.Address(), common.BigToAddress(beneficiary), []byte{}, 0, balance)
+	balance := interpreter.evm.StateDB.GetBalance(scope.Contract.Address())
+	interpreter.evm.StateDB.AddBalance(beneficiary.Bytes20(), balance)
+	interpreter.evm.StateDB.SelfDestruct(scope.Contract.Address())
+	if tracer := interpreter.evm.Config.Tracer; tracer != nil {
+		tracer.CaptureEnter(SELFDESTRUCT, scope.Contract.Address(), beneficiary.Bytes20(), []byte{}, 0, balance)
 		tracer.CaptureExit([]byte{}, 0, nil)
 	}
 	return nil, errStopToken
 }
 
-func opSelfdestruct6780(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-	if evm.interpreter.readOnly {
+func opSelfdestruct6780(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	if interpreter.readOnly {
 		return nil, ErrWriteProtection
 	}
 	beneficiary := scope.Stack.pop()
-	balance := evm.StateDB.GetBalance(scope.Contract.Address())
-	evm.StateDB.SubBalance(scope.Contract.Address(), balance)
-	evm.StateDB.AddBalance(common.BigToAddress(beneficiary), balance)
-	evm.StateDB.SelfDestruct6780(scope.Contract.Address())
-	if tracer := evm.Config.Tracer; tracer != nil {
-		tracer.CaptureEnter(SELFDESTRUCT, scope.Contract.Address(), common.BigToAddress(beneficiary), []byte{}, 0, balance)
+	balance := interpreter.evm.StateDB.GetBalance(scope.Contract.Address())
+	interpreter.evm.StateDB.SubBalance(scope.Contract.Address(), balance)
+	interpreter.evm.StateDB.AddBalance(beneficiary.Bytes20(), balance)
+	interpreter.evm.StateDB.SelfDestruct6780(scope.Contract.Address())
+	if tracer := interpreter.evm.Config.Tracer; tracer != nil {
+		tracer.CaptureEnter(SELFDESTRUCT, scope.Contract.Address(), beneficiary.Bytes20(), []byte{}, 0, balance)
 		tracer.CaptureExit([]byte{}, 0, nil)
 	}
 	return nil, errStopToken
@@ -941,31 +853,50 @@ func opSelfdestruct6780(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, erro
 
 // make log instruction function
 func makeLog(size int) executionFunc {
-	return func(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
+	return func(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+		if interpreter.readOnly {
+			return nil, ErrWriteProtection
+		}
 		topics := make([]common.Hash, size)
-		mStart, mSize := scope.Stack.pop(), scope.Stack.pop()
+		stack := scope.Stack
+		mStart, mSize := stack.pop(), stack.pop()
 		for i := 0; i < size; i++ {
-			topics[i] = common.BigToHash(scope.Stack.pop())
+			addr := stack.pop()
+			topics[i] = addr.Bytes32()
 		}
 
-		d := scope.Memory.GetCopy(mStart.Int64(), mSize.Int64())
-		evm.StateDB.AddLog(&types.Log{
+		d := scope.Memory.GetCopy(int64(mStart.Uint64()), int64(mSize.Uint64()))
+		interpreter.evm.StateDB.AddLog(&types.Log{
 			Address: scope.Contract.Address(),
 			Topics:  topics,
 			Data:    d,
 			// This is a non-consensus field, but assigned here because
-			// blockchain/state doesn't know the current block number.
-			BlockNumber: evm.Context.BlockNumber.Uint64(),
+			// core/state doesn't know the current block number.
+			BlockNumber: interpreter.evm.Context.BlockNumber.Uint64(),
 		})
 
-		evm.interpreter.intPool.put(mStart, mSize)
 		return nil, nil
 	}
 }
 
+// opPush1 is a specialized version of pushN
+func opPush1(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	var (
+		codeLen = uint64(len(scope.Contract.Code))
+		integer = new(uint256.Int)
+	)
+	*pc += 1
+	if *pc < codeLen {
+		scope.Stack.push(integer.SetUint64(uint64(scope.Contract.Code[*pc])))
+	} else {
+		scope.Stack.push(integer.Clear())
+	}
+	return nil, nil
+}
+
 // make push instruction function
 func makePush(size uint64, pushByteSize int) executionFunc {
-	return func(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
+	return func(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 		codeLen := len(scope.Contract.Code)
 
 		startMin := codeLen
@@ -978,8 +909,9 @@ func makePush(size uint64, pushByteSize int) executionFunc {
 			endMin = startMin + pushByteSize
 		}
 
-		integer := evm.interpreter.intPool.get()
-		scope.Stack.push(integer.SetBytes(common.RightPadBytes(scope.Contract.Code[startMin:endMin], pushByteSize)))
+		integer := new(uint256.Int)
+		scope.Stack.push(integer.SetBytes(common.RightPadBytes(
+			scope.Contract.Code[startMin:endMin], pushByteSize)))
 
 		*pc += size
 		return nil, nil
@@ -988,8 +920,8 @@ func makePush(size uint64, pushByteSize int) executionFunc {
 
 // make dup instruction function
 func makeDup(size int64) executionFunc {
-	return func(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
-		scope.Stack.dup(evm.interpreter.intPool, int(size))
+	return func(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+		scope.Stack.dup(int(size))
 		return nil, nil
 	}
 }
@@ -998,7 +930,7 @@ func makeDup(size int64) executionFunc {
 func makeSwap(size int64) executionFunc {
 	// switch n + 1 otherwise n would be swapped with n
 	size++
-	return func(pc *uint64, evm *EVM, scope *ScopeContext) ([]byte, error) {
+	return func(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 		scope.Stack.swap(int(size))
 		return nil, nil
 	}
