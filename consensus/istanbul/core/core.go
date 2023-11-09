@@ -435,8 +435,6 @@ func RequiredMessageCount(valSet istanbul.ValidatorSet) int {
 	} else {
 		size = valSet.Size()
 	}
-	// Quorum size adjustment for 4x+1 validator counts to maintain BFT consensus stability
-
 	// For less than 4 validators, quorum size equals validator count.
 	if size < 4 {
 		return int(size)
