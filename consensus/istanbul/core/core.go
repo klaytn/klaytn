@@ -419,13 +419,6 @@ func (c *core) checkValidatorSignature(data []byte, sig []byte) (common.Address,
 	return istanbul.CheckValidatorSignature(c.valSet, data, sig)
 }
 
-func (c *core) isCancunForkEnabled(num *big.Int) bool {
-	if c.config.CancunForkNum == nil || num == nil {
-		return false
-	}
-	return c.config.CancunForkNum.Cmp(num) <= 0
-}
-
 // PrepareCommittedSeal returns a committed seal for the given hash
 func PrepareCommittedSeal(hash common.Hash) []byte {
 	var buf bytes.Buffer
@@ -435,7 +428,7 @@ func PrepareCommittedSeal(hash common.Hash) []byte {
 }
 
 // Minimum required number of consensus messages to proceed
-func RequiredMessageCount(valSet istanbul.ValidatorSet, isCancunHardforkEnabled bool) int {
+func RequiredMessageCount(valSet istanbul.ValidatorSet) int {
 	var size uint64
 	if valSet.IsSubSet() {
 		size = valSet.SubGroupSize()
@@ -443,22 +436,12 @@ func RequiredMessageCount(valSet istanbul.ValidatorSet, isCancunHardforkEnabled 
 		size = valSet.Size()
 	}
 	// Quorum size adjustment for 4x+1 validator counts to maintain BFT consensus stability
-	if isCancunHardforkEnabled {
-		// For less than 4 validators, quorum size equals validator count.
-		if size < 4 {
-			return int(size)
-		}
-		// Adopted QBFT quorum implementation
-		// https://github.com/Consensys/quorum/blob/master/consensus/istanbul/qbft/core/core.go#L312
-		return int(math.Ceil(float64(2*size) / 3))
-	}
-	switch size {
-	// in the certain cases we must receive the messages from all consensus nodes to ensure finality...
-	case 1, 2, 3:
+
+	// For less than 4 validators, quorum size equals validator count.
+	if size < 4 {
 		return int(size)
-	case 6:
-		return 4 // when the number of valSet is 6 and return value is 2*F+1, the return value(int 3) is not safe. It should return 4 or more.
-	default:
-		return 2*valSet.F() + 1
 	}
+	// Adopted QBFT quorum implementation
+	// https://github.com/Consensys/quorum/blob/master/consensus/istanbul/qbft/core/core.go#L312
+	return int(math.Ceil(float64(2*size) / 3))
 }

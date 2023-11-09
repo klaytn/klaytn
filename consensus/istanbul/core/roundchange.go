@@ -120,13 +120,13 @@ func (c *core) handleRoundChange(msg *message, src istanbul.Validator) error {
 
 	var numCatchUp, numStartNewRound int
 	if c.valSet.Size() <= exceptionalValidatorsNumber {
-		n := RequiredMessageCount(c.valSet, c.isCancunForkEnabled(rc.View.Sequence))
+		n := RequiredMessageCount(c.valSet)
 		// N ROUND CHANGE messages can start new round.
 		numStartNewRound = n
 		// N - 1 ROUND CHANGE messages can catch up the round.
 		numCatchUp = n - 1
 	} else {
-		n := RequiredMessageCount(c.valSet, c.isCancunForkEnabled(rc.View.Sequence))
+		n := RequiredMessageCount(c.valSet)
 		f := int(c.valSet.F())
 		// N ROUND CHANGE messages can start new round.
 		numStartNewRound = n
