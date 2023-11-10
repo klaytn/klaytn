@@ -243,6 +243,11 @@ func TestDefaultSet_IsProposer(t *testing.T) {
 }
 
 func TestWeightedCouncil_RefreshWithZeroWeight(t *testing.T) {
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{
+		IstanbulCompatibleBlock: big.NewInt(5),
+	})
+	defer fork.ClearHardForkBlockNumberConfig()
+
 	validators := makeTestValidators(testZeroWeights)
 
 	valSet := makeTestWeightedCouncil(testZeroWeights)

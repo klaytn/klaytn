@@ -113,6 +113,7 @@ type weightedCouncil struct {
 	stakingInfo *reward.StakingInfo
 
 	blockNum uint64 // block number when council is determined
+	mixHash  []byte // mixHash at blockNum
 }
 
 func RecoverWeightedCouncilProposer(valSet istanbul.ValidatorSet, proposerAddrs []common.Address) {
@@ -271,6 +272,17 @@ func weightedRandomProposer(valSet istanbul.ValidatorSet, lastProposer common.Ad
 		return nil
 	}
 
+	rules := fork.Rules(new(big.Int).SetUint64(weightedCouncil.blockNum + 1))
+	// After Randao: Select one from ValidatorSet using MixHash as a seed.
+	if rules.IsRandao {
+		if weightedCouncil.mixHash == nil {
+			logger.Error("No MixHash", "number", weightedCouncil.blockNum)
+			return nil
+		}
+		// TODO: implement
+	}
+
+	// Before Randao: Select one from the pre-shuffled `proposers[]` with a round-robin algorithm.
 	numProposers := len(weightedCouncil.proposers)
 	if numProposers == 0 {
 		logger.Error("weightedRandomProposer() No available proposers.")
@@ -359,6 +371,19 @@ func (valSet *weightedCouncil) SubListWithProposer(prevHash common.Hash, propose
 		return []istanbul.Validator{proposer}
 	}
 
+	rules := fork.Rules(new(big.Int).SetUint64(valSet.blockNum + 1))
+	// After Randao: SelectRandaoCommittee
+	if rules.IsRandao {
+		// This committee must include proposers for all rounds because
+		// the proposer is picked from the this committee. See weightedRandomProposer().
+		if valSet.mixHash == nil {
+			logger.Error("No MixHash", "number", valSet.blockNum)
+			return nil
+		}
+		// TODO: implement
+	}
+
+	// Before Randao: SelectRandomCommittee, but the first two members are proposer and next proposer
 	// find the next proposer
 	var nextProposer istanbul.Validator
 	idx := uint64(1)
@@ -597,6 +622,9 @@ func (valSet *weightedCouncil) Copy() istanbul.ValidatorSet {
 	newWeightedCouncil.proposers = make([]istanbul.Validator, len(valSet.proposers))
 	copy(newWeightedCouncil.proposers, valSet.proposers)
 
+	newWeightedCouncil.mixHash = make([]byte, len(valSet.mixHash))
+	copy(newWeightedCouncil.mixHash, valSet.mixHash)
+
 	return &newWeightedCouncil
 }
 
@@ -612,11 +640,11 @@ func (valSet *weightedCouncil) Policy() istanbul.ProposerPolicy { return valSet.
 
 // Refresh recalculates up-to-date proposers only when blockNum is the proposer update interval.
 // It returns an error if it can't make up-to-date proposers
-//   (1) due toe wrong parameters
-//   (2) due to lack of staking information
+// - due to wrong parameters
+// - due to lack of staking information
 // It returns no error when weightedCouncil:
-//   (1) already has up-do-date proposers
-//   (2) successfully calculated up-do-date proposers
+// - already has up-do-date proposers
+// - successfully calculated up-do-date proposers
 func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, config *params.ChainConfig, isSingle bool, governingNode common.Address, minStaking uint64) error {
 	// TODO-Klaytn-Governance divide the following logic into two parts: proposers update / validators update
 	valSet.validatorMu.Lock()
@@ -884,6 +912,10 @@ func (valSet *weightedCouncil) refreshProposers(seed int64, blockNum uint64) {
 
 func (valSet *weightedCouncil) SetBlockNum(blockNum uint64) {
 	valSet.blockNum = blockNum
+}
+
+func (valSet *weightedCouncil) SetMixHash(mixHash []byte) {
+	valSet.mixHash = mixHash
 }
 
 func (valSet *weightedCouncil) Proposers() []istanbul.Validator {

@@ -23,6 +23,7 @@ package backend
 import (
 	"bytes"
 	"encoding/json"
+	"math/big"
 
 	"github.com/klaytn/klaytn/consensus"
 
@@ -223,8 +224,16 @@ func (s *Snapshot) apply(headers []*types.Header, gov governance.Engine, addr co
 	snap.Hash = headers[len(headers)-1].Hash()
 
 	if snap.ValSet.Policy() == istanbul.WeightedRandom {
-		// TODO-Klaytn-Issue1166 We have to update block number of ValSet too.
 		snap.ValSet.SetBlockNum(snap.Number)
+
+		bigNum := new(big.Int).SetUint64(snap.Number)
+		if chain.Config().IsRandaoForkBlockParent(bigNum) {
+			// The ForkBlock must select proposers using MixHash but (ForkBlock - 1) has no MixHash. Using ZeroMixHash instead.
+			snap.ValSet.SetMixHash(params.ZeroMixHash)
+		} else if chain.Config().IsRandaoForkEnabled(bigNum) {
+			// Feed parent MixHash
+			snap.ValSet.SetMixHash(headers[len(headers)-1].MixHash)
+		}
 	}
 	snap.ValSet.SetSubGroupSize(snap.CommitteeSize)
 
