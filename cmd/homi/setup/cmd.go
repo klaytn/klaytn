@@ -565,7 +565,7 @@ func allocateRegistry(ctx *cli.Context, genesisJson *blockchain.Genesis, owner c
 	}
 
 	if kip113Addr != nil {
-		registryConfig.Records["SimpleBlsRegistry"] = *kip113Addr
+		registryConfig.Records[system.Kip113Name] = *kip113Addr
 	}
 
 	allocRegistryStorage := system.AllocRegistry(registryConfig)
