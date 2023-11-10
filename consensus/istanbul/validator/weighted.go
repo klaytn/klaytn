@@ -227,7 +227,7 @@ func NewWeightedCouncil(addrs []common.Address, demotedAddrs []common.Address, r
 	return valSet
 }
 
-func GetWeightedCouncilData(valSet istanbul.ValidatorSet) (validators []common.Address, demotedValidators []common.Address, rewardAddrs []common.Address, votingPowers []uint64, weights []uint64, proposers []common.Address, proposersBlockNum uint64) {
+func GetWeightedCouncilData(valSet istanbul.ValidatorSet) (validators []common.Address, demotedValidators []common.Address, rewardAddrs []common.Address, votingPowers []uint64, weights []uint64, proposers []common.Address, proposersBlockNum uint64, mixHash []byte) {
 	weightedCouncil, ok := valSet.(*weightedCouncil)
 	if !ok {
 		logger.Error("not weightedCouncil type.")
@@ -259,6 +259,7 @@ func GetWeightedCouncilData(valSet istanbul.ValidatorSet) (validators []common.A
 			proposers[i] = proposer.Address()
 		}
 		proposersBlockNum = weightedCouncil.proposersBlockNum
+		mixHash = weightedCouncil.mixHash
 	} else {
 		logger.Error("invalid proposer policy for weightedCouncil")
 	}
