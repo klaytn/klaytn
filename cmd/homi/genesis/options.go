@@ -191,7 +191,7 @@ func RegistryMock() Option {
 
 		registry, ok := genesis.Alloc[registryAddr]
 		if !ok {
-			log.Fatalf("No AddressBook to patch")
+			log.Fatalf("No registry to patch")
 		}
 
 		genesis.Alloc[registryAddr] = blockchain.GenesisAccount{
@@ -225,7 +225,7 @@ func Kip113Mock(kip113LogicAddr common.Address) Option {
 
 		_, ok := genesis.Alloc[kip113LogicAddr]
 		if !ok {
-			log.Fatalf("No AddressBook to patch")
+			log.Fatalf("No kip113 to patch")
 		}
 
 		genesis.Alloc[kip113LogicAddr] = blockchain.GenesisAccount{
