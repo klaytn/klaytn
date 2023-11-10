@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/big"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -23,6 +24,7 @@ import (
 	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/node/cn"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/stretchr/testify/assert"
 	"github.com/tyler-smith/go-bip32"
@@ -39,7 +41,8 @@ type blockchainTestContext struct {
 	config       *params.ChainConfig
 	genesis      *blockchain.Genesis
 
-	nodes []*blockchainTestNode
+	workspace string
+	nodes     []*blockchainTestNode
 }
 
 type blockchainTestNode struct {
@@ -105,6 +108,7 @@ func newBlockchainTestContext(overrides *blockchainTestOverrides) (*blockchainTe
 	ctx.setAccounts(overrides.numAccounts)
 	ctx.setConfig(overrides.config)
 	ctx.setGenesis(overrides.alloc)
+	ctx.setWorkspace()
 	err := ctx.setNodes(ctx.numNodes)
 	return ctx, err
 }
@@ -152,6 +156,11 @@ func (ctx *blockchainTestContext) setGenesis(alloc blockchain.GenesisAlloc) {
 	}
 }
 
+func (ctx *blockchainTestContext) setWorkspace() {
+	workspace, _ := os.MkdirTemp("", "klaytn-test-state")
+	ctx.workspace = workspace
+}
+
 func (ctx *blockchainTestContext) setNodes(numNodes int) error {
 	ctx.nodes = make([]*blockchainTestNode, numNodes)
 	for i := 0; i < numNodes; i++ {
@@ -164,11 +173,7 @@ func (ctx *blockchainTestContext) setNodes(numNodes int) error {
 
 func (ctx *blockchainTestContext) setNode(nodeIndex int) (err error) {
 	tn := &blockchainTestNode{}
-
-	tn.datadir, err = os.MkdirTemp("", "klaytn-test-state")
-	if err != nil {
-		return err
-	}
+	tn.datadir = filepath.Join(ctx.workspace, fmt.Sprintf("node%d", nodeIndex))
 
 	// P2P ports: 32000, 32001, 32002...
 	// RPC ports: 38000, 38001, 38002...
@@ -212,8 +217,9 @@ func (ctx *blockchainTestContext) setNode(nodeIndex int) (err error) {
 	cnConf.NetworkId = ctx.config.ChainID.Uint64()
 	cnConf.Genesis = ctx.genesis
 	cnConf.Rewardbase = ctx.accountAddrs[nodeIndex]
-	cnConf.SingleDB = false
-	cnConf.NumStateTrieShards = 4
+	cnConf.SingleDB = false       // identical to regular CN
+	cnConf.NumStateTrieShards = 4 // identical to regular CN
+	cnConf.NoPruning = true       // archive mode
 	err = tn.node.Register(func(ctx *node.ServiceContext) (node.Service, error) {
 		return cn.New(ctx, cnConf)
 	})
@@ -230,21 +236,54 @@ func (ctx *blockchainTestContext) setNode(nodeIndex int) (err error) {
 	return
 }
 
-func (ctx *blockchainTestContext) Start() error {
+func (ctx *blockchainTestContext) forEachNode(f func(*blockchainTestNode) error) error {
 	for _, tn := range ctx.nodes {
-		if err := tn.cn.StartMining(false); err != nil {
+		if err := f(tn); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (ctx *blockchainTestContext) Cleanup() error {
-	for _, tn := range ctx.nodes {
-		tn.node.Stop()
-		os.RemoveAll(tn.datadir)
+func (ctx *blockchainTestContext) Start() error {
+	return ctx.forEachNode(func(tn *blockchainTestNode) error {
+		return tn.cn.StartMining(false)
+	})
+}
+
+func (ctx *blockchainTestContext) Stop() error {
+	err := ctx.forEachNode(func(tn *blockchainTestNode) error {
+		return tn.node.Stop()
+	})
+	if err != nil {
+		return err
 	}
+
+	// TODO: make StakingManager not singleton OR recreate new in cn.New()
+	// StakingManager is a global singleton and it never gets recreated.
+	// Manually clear StakingManager-related global states so that
+	// other tests can use StakingManager as if it's fresh.
+	reward.PurgeStakingInfoCache()
+	blockchain.ClearMigrationPrerequisites()
 	return nil
+}
+
+func (ctx *blockchainTestContext) Restart() error {
+	if err := ctx.Stop(); err != nil {
+		return err
+	}
+	// Recreate nodes
+	if err := ctx.setNodes(ctx.numNodes); err != nil {
+		return err
+	}
+	return ctx.Start()
+}
+
+func (ctx *blockchainTestContext) Cleanup() error {
+	if err := ctx.Stop(); err != nil {
+		return err
+	}
+	return os.RemoveAll(ctx.workspace)
 }
 
 func (ctx *blockchainTestContext) WaitBlock(t *testing.T, num uint64) {

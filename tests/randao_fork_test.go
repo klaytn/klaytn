@@ -364,11 +364,11 @@ func testRandao_checkKip114(t *testing.T, ctx *blockchainTestContext, randomAddr
 		if num < forkNum {
 			assert.Nil(t, header.RandomReveal, num)
 			assert.Nil(t, header.MixHash, num)
-			assert.Equal(t, header.ParentHash.Bytes(), random)
+			assert.Equal(t, header.ParentHash.Bytes(), random, num)
 		} else {
 			assert.NotNil(t, header.RandomReveal, num)
 			assert.NotNil(t, header.MixHash, num)
-			assert.Equal(t, header.MixHash, random)
+			assert.Equal(t, header.MixHash, random, num)
 		}
 	}
 }
