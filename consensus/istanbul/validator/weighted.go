@@ -277,10 +277,15 @@ func weightedRandomProposer(valSet istanbul.ValidatorSet, lastProposer common.Ad
 	// After Randao: Select one from ValidatorSet using MixHash as a seed.
 	if rules.IsRandao {
 		if weightedCouncil.mixHash == nil {
-			logger.Error("No MixHash", "number", weightedCouncil.blockNum)
+			logger.Error("no mixHash", "number", weightedCouncil.blockNum)
 			return nil
 		}
-		// TODO: implement
+		committee := SelectRandaoCommittee(weightedCouncil.List(), weightedCouncil.subSize, weightedCouncil.mixHash)
+		if committee == nil {
+			logger.Error("weightedRandomProposer() SelectRandaoCommittee() returns nil.")
+			return nil
+		}
+		return committee[round%uint64(len(committee))]
 	}
 
 	// Before Randao: Select one from the pre-shuffled `proposers[]` with a round-robin algorithm.
@@ -378,10 +383,10 @@ func (valSet *weightedCouncil) SubListWithProposer(prevHash common.Hash, propose
 		// This committee must include proposers for all rounds because
 		// the proposer is picked from the this committee. See weightedRandomProposer().
 		if valSet.mixHash == nil {
-			logger.Error("No MixHash", "number", valSet.blockNum)
+			logger.Error("no mixHash", "number", valSet.blockNum)
 			return nil
 		}
-		// TODO: implement
+		return SelectRandaoCommittee(validators, committeeSize, valSet.mixHash)
 	}
 
 	// Before Randao: SelectRandomCommittee, but the first two members are proposer and next proposer
