@@ -75,7 +75,7 @@ func TestAllocKip113(t *testing.T) {
 		senderKey, _ = crypto.GenerateKey()
 		sender       = bind.NewKeyedTransactor(senderKey)
 
-		KIP113MockAddr = common.HexToAddress("0x0000000000000000000000000000000000000402")
+		KIP113MockAddr = Kip113LogicAddrMock
 
 		nodeId1       = common.HexToAddress("0xaaaa")
 		nodeId2       = common.HexToAddress("0xbbbb")

@@ -1289,13 +1289,13 @@ func TestStatePruning(t *testing.T) {
 		pruneNum  = uint64(numBlocks) - retention
 	)
 
-	db.WritePruningEnabled() // Enable pruning on database by writing the flag at genesis
 	cacheConfig := &CacheConfig{
 		ArchiveMode:          false,
 		CacheSize:            512,
 		BlockInterval:        2, // Write frequently to test pruning
 		TriesInMemory:        DefaultTriesInMemory,
-		LivePruningRetention: retention, // Enable pruning on blockchain by setting it nonzero
+		LivePruningEnabled:   true, // Enable pruning
+		LivePruningRetention: retention,
 		TrieNodeCacheConfig:  statedb.GetEmptyTrieNodeCacheConfig(),
 	}
 	blockchain, _ := NewBlockChain(db, cacheConfig, gspec.Config, engine, vm.Config{})
