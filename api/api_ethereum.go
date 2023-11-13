@@ -1489,7 +1489,7 @@ func AccessList(ctx context.Context, b Backend, blockNrOrHash rpc.BlockNumberOrH
 	}
 
 	if args.Gas == nil {
-		// Set gaslimit to maximum to if the gas is not specified
+		// Set gaslimit to maximum if the gas is not specified
 		upperGasLimit := hexutil.Uint64(params.UpperGasLimit)
 		args.Gas = &upperGasLimit
 	}
