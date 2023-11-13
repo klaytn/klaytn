@@ -428,20 +428,18 @@ func PrepareCommittedSeal(hash common.Hash) []byte {
 }
 
 // Minimum required number of consensus messages to proceed
-func requiredMessageCount(valSet istanbul.ValidatorSet) int {
+func RequiredMessageCount(valSet istanbul.ValidatorSet) int {
 	var size uint64
 	if valSet.IsSubSet() {
 		size = valSet.SubGroupSize()
 	} else {
 		size = valSet.Size()
 	}
-	switch size {
-	// in the certain cases we must receive the messages from all consensus nodes to ensure finality...
-	case 1, 2, 3:
+	// For less than 4 validators, quorum size equals validator count.
+	if size < 4 {
 		return int(size)
-	case 6:
-		return 4 // when the number of valSet is 6 and return value is 2*F+1, the return value(int 3) is not safe. It should return 4 or more.
-	default:
-		return 2*valSet.F() + 1
 	}
+	// Adopted QBFT quorum implementation
+	// https://github.com/Consensys/quorum/blob/master/consensus/istanbul/qbft/core/core.go#L312
+	return int(math.Ceil(float64(2*size) / 3))
 }

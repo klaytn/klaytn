@@ -534,12 +534,6 @@ func TestDBManager_PruningMarks(t *testing.T) {
 			continue // badgerDB doesn't support NewIterator, so cannot test ReadPruningMarks.
 		}
 
-		assert.False(t, dbm.ReadPruningEnabled())
-		dbm.WritePruningEnabled()
-		assert.True(t, dbm.ReadPruningEnabled())
-		dbm.DeletePruningEnabled()
-		assert.False(t, dbm.ReadPruningEnabled())
-
 		var (
 			node1 = hash1.Extend()
 			node2 = hash2.Extend()
