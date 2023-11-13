@@ -1476,6 +1476,32 @@ func AccessList(ctx context.Context, b Backend, blockNrOrHash rpc.BlockNumberOrH
 		gasCap = rpcGasCap.Uint64()
 	}
 
+	// Retrieve the precompiles since they don't need to be added to the access list
+	rules := b.ChainConfig().Rules(header.Number)
+	precompiles := vm.ActivePrecompiles(rules)
+
+	toMsg := func() (*types.Transaction, error) {
+		intrinsicGas, err := types.IntrinsicGas(args.data(), nil, args.To == nil, rules)
+		if err != nil {
+			return nil, err
+		}
+		return args.ToMessage(gasCap, header.BaseFee, intrinsicGas)
+	}
+
+	if args.Gas == nil {
+		// Set gaslimit to maximum to if the gas is not specified
+		upperGasLimit := hexutil.Uint64(params.UpperGasLimit)
+		args.Gas = &upperGasLimit
+	}
+	if msg, err := toMsg(); err == nil {
+		baseFee := new(big.Int).SetUint64(params.ZeroBaseFee)
+		if header.BaseFee != nil {
+			baseFee = header.BaseFee
+		}
+		// Add gas fee to sender for estimating gasLimit/computing cost or calling a function by insufficient balance sender.
+		db.AddBalance(msg.ValidatedSender(), new(big.Int).Mul(new(big.Int).SetUint64(msg.Gas()), baseFee))
+	}
+
 	// Ensure any missing fields are filled, extract the recipient and input data
 	if err := args.setDefaults(ctx, b); err != nil {
 		return nil, 0, nil, err
@@ -1486,9 +1512,6 @@ func AccessList(ctx context.Context, b Backend, blockNrOrHash rpc.BlockNumberOrH
 	} else {
 		to = crypto.CreateAddress(args.from(), uint64(*args.Nonce))
 	}
-	// Retrieve the precompiles since they don't need to be added to the access list
-	rules := b.ChainConfig().Rules(header.Number)
-	precompiles := vm.ActivePrecompiles(rules)
 
 	// Create an initial tracer
 	prevTracer := vm.NewAccessListTracer(nil, args.from(), to, precompiles)
@@ -1504,11 +1527,7 @@ func AccessList(ctx context.Context, b Backend, blockNrOrHash rpc.BlockNumberOrH
 		statedb := db.Copy()
 		// Set the accesslist to the last al
 		args.AccessList = &accessList
-		intrinsicGas, err := types.IntrinsicGas(args.data(), nil, args.To == nil, rules)
-		if err != nil {
-			return nil, 0, nil, err
-		}
-		msg, err := args.ToMessage(gasCap, header.BaseFee, intrinsicGas)
+		msg, err := toMsg()
 		if err != nil {
 			return nil, 0, nil, err
 		}
@@ -1520,7 +1539,7 @@ func AccessList(ctx context.Context, b Backend, blockNrOrHash rpc.BlockNumberOrH
 		res, err := blockchain.ApplyMessage(vmenv, msg)
 		if err != nil {
 			tx, _ := args.toTransaction()
-			return nil, 0, nil, fmt.Errorf("failed to apply transaction: %v err: %v", tx.Hash(), err)
+			return nil, 0, nil, fmt.Errorf("failed to apply transaction: %v err: %v", tx.Hash().Hex(), err)
 		}
 		if tracer.Equal(prevTracer) {
 			return accessList, res.UsedGas, res.Unwrap(), nil
