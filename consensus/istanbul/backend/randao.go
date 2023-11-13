@@ -44,6 +44,9 @@ func (p *ChainBlsPubkeyProvider) GetBlsPubkey(chain consensus.ChainReader, propo
 	if !ok {
 		return nil, errNoBlsPub
 	}
+	if info.VerifyErr != nil {
+		return nil, info.VerifyErr
+	}
 	return bls.PublicKeyFromBytes(info.PublicKey)
 }
 
