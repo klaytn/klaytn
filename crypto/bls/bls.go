@@ -98,6 +98,12 @@ func LoadKey(path string) (SecretKey, error) {
 	return SecretKeyFromBytes(b)
 }
 
+// SaveKey stores a BLS secret key to the given file.
+func SaveKey(path string, sk SecretKey) error {
+	b := hex.EncodeToString(sk.Marshal())
+	return os.WriteFile(path, []byte(b), 0o600)
+}
+
 // SecretKeyFromBytes unmarshals and validates a BLS secret key from bytes.
 func SecretKeyFromBytes(b []byte) (SecretKey, error) {
 	return blst.SecretKeyFromBytes(b)

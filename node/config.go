@@ -382,6 +382,7 @@ func (c *Config) NodeKey() *ecdsa.PrivateKey {
 	if err := crypto.SaveECDSA(keyfile, key); err != nil {
 		logger.Crit("Failed to persist node key", "err", err)
 	}
+	logger.Warn("Generated nodekey")
 	return key
 }
 
@@ -400,12 +401,20 @@ func (c *Config) BlsNodeKey() bls.SecretKey {
 		return key
 	}
 
-	// Derive from NodeKey
-	nodekey := c.NodeKey()
-	key, err := bls.GenerateKey(crypto.FromECDSA(nodekey))
+	// No persistent key found, derive from NodeKey and store it
+	key, err := bls.GenerateKey(crypto.FromECDSA(c.NodeKey()))
 	if err != nil {
 		logger.Crit("Failed to derive bls-nodekey from nodekey", "err", err)
 	}
+	instanceDir := filepath.Join(c.DataDir, c.name())
+	if err := os.MkdirAll(instanceDir, 0o700); err != nil {
+		logger.Crit("Failed to make dir to persist bls node key", "err", err)
+	}
+	keyfile := c.ResolvePath(datadirBlsSecretKey)
+	if err := bls.SaveKey(keyfile, key); err != nil {
+		logger.Crit("Failed to persist bls node key", "err", err)
+	}
+	logger.Warn("Derived bls-nodekey from nodekey")
 	return key
 }
 

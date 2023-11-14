@@ -218,7 +218,7 @@ func beforeAccountCmd(ctx *cli.Context) error {
 	// Account commands are almost independent from the regular node operation,
 	// so INFO logs about networking or chain config are not necessary.
 	if glogger, err := debug.GetGlogger(); err == nil {
-		log.ChangeGlobalLogLevel(glogger, log.Lvl(log.LvlError))
+		log.ChangeGlobalLogLevel(glogger, log.Lvl(log.LvlWarn))
 	}
 	return nil
 }
@@ -389,25 +389,12 @@ func accountImport(ctx *cli.Context) error {
 }
 
 func accountBlsInfo(ctx *cli.Context) error {
-	utils.CheckExclusive(ctx,
-		utils.BlsNodeKeyFileFlag,
-		utils.BlsNodeKeyHexFlag,
-		utils.BlsNodeKeystoreFileFlag,
-	)
-
 	// Parse CLI arguments in the same way as running a node.
 	var (
 		_, cfg  = utils.MakeConfigNode(ctx)
 		nodeKey = cfg.Node.NodeKey()
 		blsPriv = cfg.Node.BlsNodeKey()
 	)
-	if ctx.IsSet(utils.BlsNodeKeystoreFileFlag.Name) {
-		if key, err := loadBlsNodeKeystore(ctx); err != nil {
-			return err
-		} else {
-			blsPriv = key
-		}
-	}
 
 	// Calculate filename from node address.
 	nodeAddr := crypto.PubkeyToAddress(nodeKey.PublicKey)
@@ -448,7 +435,8 @@ func accountBlsImport(ctx *cli.Context) error {
 	path := cfg.Node.ResolvePath("bls-nodekey")
 
 	fmt.Printf("Importing BLS key: pub=%x\n", blsPriv.PublicKey().Marshal())
-	writeFile(path, blsPrivStr, 0o400) // Secret file permission.
+	// Not using bls.SaveKey to prevent overwriting the existing file.
+	writeFile(path, blsPrivStr, 0o600) // Secret file permission.
 	return nil
 }
 
