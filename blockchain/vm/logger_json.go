@@ -44,6 +44,7 @@ func (l *JSONLogger) CaptureStart(env *EVM, from common.Address, to common.Addre
 }
 
 // CaptureState outputs state information on the logger.
+// TODO: Add rData (return data) later
 func (l *JSONLogger) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost uint64, scope *ScopeContext, depth int, err error) {
 	memory := scope.Memory
 	stack := scope.Stack
@@ -74,6 +75,7 @@ func (l *JSONLogger) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost uint
 
 // CaptureFault outputs state information on the logger.
 func (l *JSONLogger) CaptureFault(env *EVM, pc uint64, op OpCode, gas, cost uint64, scope *ScopeContext, depth int, err error) {
+	l.CaptureState(env, pc, op, gas, cost, scope, depth, err)
 }
 
 // CaptureEnd is triggered at end of execution.
