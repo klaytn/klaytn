@@ -29,6 +29,10 @@ import (
 // defined jump tables are not polluted.
 func EnableEIP(eipNum int, jt *JumpTable) error {
 	switch eipNum {
+	case 4844:
+		enable4844(jt)
+	case 7516:
+		enable7516(jt)
 	case 6780:
 		enable6780(jt)
 	case 5656:
@@ -302,5 +306,46 @@ func enable6780(jt *JumpTable) {
 		minStack:        minStack(1, 0),
 		maxStack:        maxStack(1, 0),
 		computationCost: params.SelfDestructComputationCost,
+	}
+}
+
+// opBlobHash implements the BLOBHASH opcode
+// Since blob data is generated in dank sharding, opBlobHash will perform only the default action of setting the top of the stack as zero
+// as long as the blob txType is not fully supported in Klaytn.
+func opBlobHash(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	index := scope.Stack.peek()
+	index.Clear()
+
+	return nil, nil
+}
+
+// opBlobBaseFee implements BLOBBASEFEE opcode
+// Since blob data is generated in dank sharding, opBlobBaseFee will use only the zeroBaseFee
+// as long as the blob txType is not fully supported in Klaytn.
+func opBlobBaseFee(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	blobBaseFee := uint256.NewInt(params.ZeroBaseFee)
+	scope.Stack.push(blobBaseFee)
+	return nil, nil
+}
+
+// enable4844 applies EIP-4844 (BLOBHASH opcode)
+func enable4844(jt *JumpTable) {
+	jt[BLOBHASH] = &operation{
+		execute:         opBlobHash,
+		constantGas:     GasFastestStep,
+		minStack:        minStack(1, 1),
+		maxStack:        maxStack(1, 1),
+		computationCost: params.BlobHashComptationCost,
+	}
+}
+
+// enable7516 applies EIP-7516 (BLOBBASEFEE opcode)
+func enable7516(jt *JumpTable) {
+	jt[BLOBBASEFEE] = &operation{
+		execute:         opBlobBaseFee,
+		constantGas:     GasQuickStep,
+		minStack:        minStack(0, 1),
+		maxStack:        maxStack(0, 1),
+		computationCost: params.BlobBaseFeeComputationCost,
 	}
 }

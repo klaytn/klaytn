@@ -25,6 +25,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"math/big"
 	"strconv"
 
@@ -36,6 +37,7 @@ import (
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/crypto/blake2b"
 	"github.com/klaytn/klaytn/crypto/bn256"
+	"github.com/klaytn/klaytn/crypto/kzg4844"
 	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
@@ -117,7 +119,7 @@ var PrecompiledContractsKore = map[common.Address]PrecompiledContract{
 }
 
 // PrecompiledContractsCancun contains the default set of pre-compiled Klaytn
-// Have the same list with Kore
+// Have the same list with Cancun
 var PrecompiledContractsCancun = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{1}):      &ecrecover{},
 	common.BytesToAddress([]byte{2}):      &sha256hash{},
@@ -128,6 +130,7 @@ var PrecompiledContractsCancun = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{7}):      &bn256ScalarMulIstanbul{},
 	common.BytesToAddress([]byte{8}):      &bn256PairingIstanbul{},
 	common.BytesToAddress([]byte{9}):      &blake2F{},
+	common.BytesToAddress([]byte{0x0a}):   &kzgPointEvaluation{},
 	common.BytesToAddress([]byte{3, 253}): &vmLog{},
 	common.BytesToAddress([]byte{3, 254}): &feePayer{},
 	common.BytesToAddress([]byte{3, 255}): &validateSender{},
@@ -306,9 +309,10 @@ var (
 // modexpMultComplexity implements bigModexp multComplexity formula, as defined in EIP-198
 //
 // def mult_complexity(x):
-//    if x <= 64: return x ** 2
-//    elif x <= 1024: return x ** 2 // 4 + 96 * x - 3072
-//    else: return x ** 2 // 16 + 480 * x - 199680
+//
+//	if x <= 64: return x ** 2
+//	elif x <= 1024: return x ** 2 // 4 + 96 * x - 3072
+//	else: return x ** 2 // 16 + 480 * x - 199680
 //
 // where is x is max(length_of_MODULUS, length_of_BASE)
 func modexpMultComplexity(x *big.Int) *big.Int {
@@ -658,6 +662,70 @@ func (c *blake2F) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error
 		binary.LittleEndian.PutUint64(output[offset:offset+8], h[i])
 	}
 	return output, nil
+}
+
+// kzgPointEvaluation implements the EIP-4844 point evaluation precompile.
+type kzgPointEvaluation struct{}
+
+// GetRequiredGasAndComputationCost estimates the gas required for running the point evaluation precompile and computation cost.
+func (b *kzgPointEvaluation) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
+	return params.BlobTxPointEvaluationPrecompileGas, params.BlobTxPointEvaluationPrecompileComputationCost
+}
+
+const (
+	blobVerifyInputLength           = 192  // Max input length for the point evaluation precompile.
+	blobCommitmentVersionKZG  uint8 = 0x01 // Version byte for the point evaluation precompile.
+	blobPrecompileReturnValue       = "000000000000000000000000000000000000000000000000000000000000100073eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001"
+)
+
+var (
+	errBlobVerifyInvalidInputLength = errors.New("invalid input length")
+	errBlobVerifyMismatchedVersion  = errors.New("mismatched versioned hash")
+	errBlobVerifyKZGProof           = errors.New("error verifying kzg proof")
+)
+
+// Run executes the point evaluation precompile.
+func (b *kzgPointEvaluation) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	if len(input) != blobVerifyInputLength {
+		return nil, errBlobVerifyInvalidInputLength
+	}
+	// versioned hash: first 32 bytes
+	var versionedHash common.Hash
+	copy(versionedHash[:], input[:])
+
+	var (
+		point kzg4844.Point
+		claim kzg4844.Claim
+	)
+	// Evaluation point: next 32 bytes
+	copy(point[:], input[32:])
+	// Expected output: next 32 bytes
+	copy(claim[:], input[64:])
+
+	// input kzg point: next 48 bytes
+	var commitment kzg4844.Commitment
+	copy(commitment[:], input[96:])
+	if kZGToVersionedHash(commitment) != versionedHash {
+		return nil, errBlobVerifyMismatchedVersion
+	}
+
+	// Proof: next 48 bytes
+	var proof kzg4844.Proof
+	copy(proof[:], input[144:])
+
+	if err := kzg4844.VerifyProof(commitment, point, claim, proof); err != nil {
+		return nil, fmt.Errorf("%w: %v", errBlobVerifyKZGProof, err)
+	}
+
+	return common.Hex2Bytes(blobPrecompileReturnValue), nil
+}
+
+// kZGToVersionedHash implements kzg_to_versioned_hash from EIP-4844
+func kZGToVersionedHash(kzg kzg4844.Commitment) common.Hash {
+	h := sha256.Sum256(kzg[:])
+	h[0] = blobCommitmentVersionKZG
+
+	return h
 }
 
 // vmLog implemented as a native contract.
