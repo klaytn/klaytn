@@ -416,10 +416,12 @@ func accountBlsInfo(ctx *cli.Context) error {
 	// Calculate public key info.
 	pub := blsPriv.PublicKey().Marshal()
 	pop := bls.PopProve(blsPriv).Marshal()
-	info := map[string]string{
+	info := map[string]interface{}{
 		"address": nodeAddr.Hex(),
-		"pub":     hex.EncodeToString(pub),
-		"pop":     hex.EncodeToString(pop),
+		"blsPublicKeyInfo": map[string]interface{}{
+			"publicKey": hex.EncodeToString(pub),
+			"pop":       hex.EncodeToString(pop),
+		},
 	}
 	infoJson, err := json.MarshalIndent(info, "", "  ")
 	if err != nil {

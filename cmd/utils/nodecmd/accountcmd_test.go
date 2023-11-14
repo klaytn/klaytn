@@ -287,8 +287,10 @@ func TestBlsInfo(t *testing.T) {
 		expectPrint = `Successfully wrote 'bls-publicinfo-0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266.json'`
 		expectFile  = `{
 			"address": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-			"pub": "876006073c4ef19d23df948fea3e7e95398d6a7b5acc6a510f24e2d5160bbbd9f636a58cdfe69c8eba42b1cfce0fa60a",
-			"pop": "a76d6d4e1886b86f0d3a711917c0845c99c765a2473543ebbecd5471034a65f9e962f7a78b5eb41d8797988a2d71393308a593bcbf14aaaaca3ae0e43e7430c348d529bf99fcb829e80d87cf1db69675405ec3f32829eec609ebc459c4976ad1"
+			"blsPublicKeyInfo": {
+				"publicKey": "876006073c4ef19d23df948fea3e7e95398d6a7b5acc6a510f24e2d5160bbbd9f636a58cdfe69c8eba42b1cfce0fa60a",
+				"pop": "a76d6d4e1886b86f0d3a711917c0845c99c765a2473543ebbecd5471034a65f9e962f7a78b5eb41d8797988a2d71393308a593bcbf14aaaaca3ae0e43e7430c348d529bf99fcb829e80d87cf1db69675405ec3f32829eec609ebc459c4976ad1"
+			}
 		}`
 	)
 	defer os.RemoveAll(datadir)
