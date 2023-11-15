@@ -128,6 +128,7 @@ type CacheConfig struct {
 	CacheSize            int                          // Size of in-memory cache of a trie (MiB) to flush matured singleton trie nodes to disk
 	BlockInterval        uint                         // Block interval to flush the trie. Each interval state trie will be flushed into disk
 	TriesInMemory        uint64                       // Maximum number of recent state tries according to its block number
+	LivePruningEnabled   bool                         // LivePruning operations works if true
 	LivePruningRetention uint64                       // Number of blocks before trie nodes in pruning marks to be deleted. If zero, obsolete nodes are not deleted.
 	SenderTxHashIndexing bool                         // Enables saving senderTxHash to txHash mapping information to database and cache
 	TrieNodeCacheConfig  *statedb.TrieNodeCacheConfig // Configures trie node cache
@@ -232,6 +233,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 			BlockInterval:        DefaultBlockInterval,
 			TriesInMemory:        DefaultTriesInMemory,
 			LivePruningRetention: DefaultLivePruningRetention,
+			LivePruningEnabled:   false,
 			TrieNodeCacheConfig:  statedb.GetEmptyTrieNodeCacheConfig(),
 			SnapshotCacheSize:    512,
 			SnapshotAsyncGen:     true,
@@ -735,6 +737,7 @@ func (bc *BlockChain) StateAt(root common.Hash) (*state.StateDB, error) {
 func (bc *BlockChain) PrunableStateAt(root common.Hash, num uint64) (*state.StateDB, error) {
 	if bc.IsLivePruningRequired() {
 		return state.New(root, bc.stateCache, bc.snaps, &statedb.TrieOpts{
+			LivePruningEnabled: bc.cacheConfig.LivePruningEnabled,
 			PruningBlockNumber: num,
 		})
 	} else {
@@ -1502,7 +1505,7 @@ func (bc *BlockChain) pruneTrieNodeLoop() {
 }
 
 func (bc *BlockChain) IsLivePruningRequired() bool {
-	return bc.db.ReadPruningEnabled() && bc.cacheConfig.LivePruningRetention != 0
+	return bc.cacheConfig.LivePruningEnabled && bc.cacheConfig.LivePruningRetention != 0
 }
 
 func isCommitTrieRequired(bc *BlockChain, blockNum uint64) bool {

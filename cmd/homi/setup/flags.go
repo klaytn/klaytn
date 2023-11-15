@@ -18,6 +18,7 @@
 package setup
 
 import (
+	"github.com/klaytn/klaytn/blockchain/system"
 	"github.com/klaytn/klaytn/params"
 	"github.com/urfave/cli/v2"
 )
@@ -511,5 +512,35 @@ var (
 		Usage:   "ServiceChainTxFeeCompatible blockNumber",
 		Value:   0,
 		Aliases: []string{"genesis.hardfork.servicechaintxfee-compatible-blocknumber"},
+
+	randaoCompatibleBlockNumberFlag = &cli.Int64Flag{
+		Name:    "randao-compatible-blocknumber",
+		Usage:   "randaoCompatible blockNumber",
+		Value:   0,
+		Aliases: []string{"genesis.hardfork.randao-compatible-blocknumber"},
+	}
+
+	kip113ProxyAddressFlag = &cli.StringFlag{
+		Name:    "kip113-proxy-contract-address",
+		Usage:   "kip113 proxy contract address",
+		Value:   system.Kip113ProxyAddrMock.String(),
+		Aliases: []string{"genesis.hardfork.kip113-proxy-contract-address"},
+	}
+
+	kip113LogicAddressFlag = &cli.StringFlag{
+		Name:    "kip113-logic-contract-address",
+		Usage:   "kip113 logic contract address",
+		Value:   system.Kip113LogicAddrMock.String(),
+		Aliases: []string{"genesis.hardfork.kip113-logic-contract-address"},
+	}
+
+	kip113MockFlag = &cli.BoolFlag{
+		Name:  "kip113-mock",
+		Usage: "Allocate an Kip113Mock at the genesis block",
+	}
+
+	registryMockFlag = &cli.BoolFlag{
+		Name:  "registry-mock",
+		Usage: "Allocate an RegistryMock at the genesis block",
 	}
 )

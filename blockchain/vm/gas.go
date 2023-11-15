@@ -20,9 +20,7 @@
 
 package vm
 
-import (
-	"math/big"
-)
+import "github.com/holiman/uint256"
 
 // Gas costs
 const (
@@ -38,7 +36,7 @@ const (
 // calcGas returns the actual gas cost of the call.
 //
 // The returned gas is gas - base * 63 / 64.
-func callGas(availableGas, base uint64, callCost *big.Int) (uint64, error) {
+func callGas(availableGas, base uint64, callCost *uint256.Int) (uint64, error) {
 	availableGas = availableGas - base
 	gas := availableGas - availableGas/64
 	// If the bit length exceeds 64 bit we know that the newly calculated "gas" for EIP150

@@ -360,15 +360,15 @@ func (api *PublicDebugAPI) DumpStateTrie(ctx context.Context, blockNrOrHash rpc.
 
 // TODO-klaytn: Rearrange PublicDebugAPI and PrivateDebugAPI receivers
 // StartWarmUp retrieves all state/storage tries of the latest committed state root and caches the tries.
-func (api *PrivateDebugAPI) StartWarmUp() error {
-	return api.cn.blockchain.StartWarmUp()
+func (api *PrivateDebugAPI) StartWarmUp(minLoad uint) error {
+	return api.cn.blockchain.StartWarmUp(minLoad)
 }
 
 // TODO-klaytn: Rearrange PublicDebugAPI and PrivateDebugAPI receivers
 // StartContractWarmUp retrieves a storage trie of the latest state root and caches the trie
 // corresponding to the given contract address.
-func (api *PrivateDebugAPI) StartContractWarmUp(contractAddr common.Address) error {
-	return api.cn.blockchain.StartContractWarmUp(contractAddr)
+func (api *PrivateDebugAPI) StartContractWarmUp(contractAddr common.Address, minLoad uint) error {
+	return api.cn.blockchain.StartContractWarmUp(contractAddr, minLoad)
 }
 
 // TODO-klaytn: Rearrange PublicDebugAPI and PrivateDebugAPI receivers

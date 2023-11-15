@@ -48,6 +48,9 @@ var (
 	// Some system contracts are allocated at special addresses.
 	AddressBookAddr = common.HexToAddress("0x0000000000000000000000000000000000000400") // TODO: replace contracts/reward/contract/utils.go
 	RegistryAddr    = common.HexToAddress("0x0000000000000000000000000000000000000401")
+	// The following addresses are only used for testing.
+	Kip113ProxyAddrMock = common.HexToAddress("0x0000000000000000000000000000000000000402")
+	Kip113LogicAddrMock = common.HexToAddress("0x0000000000000000000000000000000000000403")
 
 	// System contract binaries to be injected at hardfork or used in testing.
 	RegistryCode     = hexutil.MustDecode("0x" + contracts.RegistryBinRuntime)

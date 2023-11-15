@@ -84,8 +84,6 @@ type EVMInterpreter struct {
 	evm *EVM
 	cfg *Config
 
-	intPool *intPool
-
 	hasher    keccakState // Keccak256 hasher instance shared across opcodes
 	hasherBuf common.Hash // Keccak256 hasher result array shared aross opcodes
 
@@ -144,14 +142,6 @@ var (
 // considered a revert-and-consume-all-gas operation except for
 // ErrExecutionReverted which means revert-and-keep-gas-left.
 func (in *EVMInterpreter) Run(contract *Contract, input []byte) (ret []byte, err error) {
-	if in.intPool == nil {
-		in.intPool = poolOfIntPools.get()
-		defer func() {
-			poolOfIntPools.put(in.intPool)
-			in.intPool = nil
-		}()
-	}
-
 	// Increment the call depth which is restricted to 1024
 	in.evm.depth++
 	defer func() { in.evm.depth-- }()
@@ -190,9 +180,6 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte) (ret []byte, err
 		opExecStart time.Time
 	)
 	contract.Input = input
-
-	// Reclaim the stack as an int pool when the execution stops
-	defer func() { in.intPool.put(stack.data...) }()
 
 	if in.cfg.Debug {
 		defer func() {
@@ -299,12 +286,7 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte) (ret []byte, err
 		}
 
 		// execute the operation
-		res, err = operation.execute(&pc, in.evm, &ScopeContext{mem, stack, contract})
-		// verifyPool is a build flag. Pool verification makes sure the integrity
-		// of the integer pool by comparing values to a default value.
-		if verifyPool {
-			verifyIntegerPool(in.intPool)
-		}
+		res, err = operation.execute(&pc, in, &ScopeContext{mem, stack, contract})
 		if in.evm.Config.EnableOpDebug {
 			opTime[op] += uint64(time.Since(opExecStart).Nanoseconds())
 			opCnt[op] += 1

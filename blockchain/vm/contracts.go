@@ -64,9 +64,9 @@ type PrecompiledContract interface {
 	Run(input []byte, contract *Contract, evm *EVM) ([]byte, error)
 }
 
-// PrecompiledContractsByzantiumCompatible contains the default set of pre-compiled Klaytn
+// PrecompiledContractsByzantium contains the default set of pre-compiled Klaytn
 // contracts based on Ethereum Byzantium.
-var PrecompiledContractsByzantiumCompatible = map[common.Address]PrecompiledContract{
+var PrecompiledContractsByzantium = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{1}):  &ecrecover{},
 	common.BytesToAddress([]byte{2}):  &sha256hash{},
 	common.BytesToAddress([]byte{3}):  &ripemd160hash{},
@@ -82,9 +82,9 @@ var PrecompiledContractsByzantiumCompatible = map[common.Address]PrecompiledCont
 
 // DO NOT USE 0x3FD, 0x3FE, 0x3FF ADDRESSES BEFORE ISTANBUL CHANGE ACTIVATED.
 
-// PrecompiledContractsIstanbulCompatible contains the default set of pre-compiled Klaytn
+// PrecompiledContractsIstanbul contains the default set of pre-compiled Klaytn
 // contracts based on Ethereum Istanbul.
-var PrecompiledContractsIstanbulCompatible = map[common.Address]PrecompiledContract{
+var PrecompiledContractsIstanbul = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{1}):      &ecrecover{},
 	common.BytesToAddress([]byte{2}):      &sha256hash{},
 	common.BytesToAddress([]byte{3}):      &ripemd160hash{},
@@ -116,33 +116,61 @@ var PrecompiledContractsKore = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{3, 255}): &validateSender{},
 }
 
+// PrecompiledContractsCancun contains the default set of pre-compiled Klaytn
+// Have the same list with Kore
+var PrecompiledContractsCancun = map[common.Address]PrecompiledContract{
+	common.BytesToAddress([]byte{1}):      &ecrecover{},
+	common.BytesToAddress([]byte{2}):      &sha256hash{},
+	common.BytesToAddress([]byte{3}):      &ripemd160hash{},
+	common.BytesToAddress([]byte{4}):      &dataCopy{},
+	common.BytesToAddress([]byte{5}):      &bigModExp{eip2565: true},
+	common.BytesToAddress([]byte{6}):      &bn256AddIstanbul{},
+	common.BytesToAddress([]byte{7}):      &bn256ScalarMulIstanbul{},
+	common.BytesToAddress([]byte{8}):      &bn256PairingIstanbul{},
+	common.BytesToAddress([]byte{9}):      &blake2F{},
+	common.BytesToAddress([]byte{3, 253}): &vmLog{},
+	common.BytesToAddress([]byte{3, 254}): &feePayer{},
+	common.BytesToAddress([]byte{3, 255}): &validateSender{},
+}
+
 var (
-	PrecompiledAddressesIstanbulCompatible  []common.Address
-	PrecompiledAddressesByzantiumCompatible []common.Address
+	PrecompiledAddressCancun      []common.Address
+	PrecompiledAddressIstanbul    []common.Address
+	PrecompiledAddressesByzantium []common.Address
 )
 
 func init() {
-	for k := range PrecompiledContractsByzantiumCompatible {
-		PrecompiledAddressesByzantiumCompatible = append(PrecompiledAddressesByzantiumCompatible, k)
+	for k := range PrecompiledContractsByzantium {
+		PrecompiledAddressesByzantium = append(PrecompiledAddressesByzantium, k)
+	}
+	for k := range PrecompiledContractsIstanbul {
+		PrecompiledAddressIstanbul = append(PrecompiledAddressIstanbul, k)
+	}
+	for k := range PrecompiledContractsCancun {
+		PrecompiledAddressCancun = append(PrecompiledAddressCancun, k)
+	}
+}
+
+// ActivePrecompiles returns the precompiles enabled with the current configuration.
+func ActivePrecompiles(rules params.Rules) []common.Address {
+	var precompiledContractAddrs []common.Address
+	switch {
+	case rules.IsCancun:
+		precompiledContractAddrs = PrecompiledAddressCancun
+	case rules.IsIstanbul:
+		precompiledContractAddrs = PrecompiledAddressIstanbul
+	default:
+		precompiledContractAddrs = PrecompiledAddressesByzantium
 	}
 
 	// After istanbulCompatible hf, need to support for vmversion0 contracts, too.
 	// VmVersion0 contracts are deployed before istanbulCompatible and they use byzantiumCompatible precompiled contracts.
 	// VmVersion0 contracts are the contracts deployed before istanbulCompatible hf.
-	for k := range PrecompiledContractsIstanbulCompatible {
-		PrecompiledAddressesIstanbulCompatible = append(PrecompiledAddressesIstanbulCompatible, k)
-	}
-	PrecompiledAddressesIstanbulCompatible = append(PrecompiledAddressesIstanbulCompatible,
-		[]common.Address{common.BytesToAddress([]byte{10}), common.BytesToAddress([]byte{11})}...)
-}
-
-// ActivePrecompiles returns the precompiles enabled with the current configuration.
-func ActivePrecompiles(rules params.Rules) []common.Address {
-	switch {
-	case rules.IsIstanbul:
-		return PrecompiledAddressesIstanbulCompatible
-	default:
-		return PrecompiledAddressesByzantiumCompatible
+	if rules.IsIstanbul {
+		return append(precompiledContractAddrs,
+			[]common.Address{common.BytesToAddress([]byte{10}), common.BytesToAddress([]byte{11})}...)
+	} else {
+		return precompiledContractAddrs
 	}
 }
 

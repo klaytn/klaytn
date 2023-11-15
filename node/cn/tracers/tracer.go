@@ -165,7 +165,7 @@ func (sw *stackWrapper) peek(idx int) *big.Int {
 		logger.Warn("Tracer accessed out of bound stack", "size", len(sw.stack.Data()), "index", idx)
 		return new(big.Int)
 	}
-	return sw.stack.Data()[len(sw.stack.Data())-idx-1]
+	return sw.stack.Data()[len(sw.stack.Data())-idx-1].ToBig()
 }
 
 // pushObject assembles a JSVM object wrapping a swappable stack and pushes it
@@ -511,7 +511,7 @@ func New(code string, ctx *Context, unsafeTrace bool) (*Tracer, error) {
 		return 1
 	})
 	tracer.vm.PushGlobalGoFunction("isPrecompiled", func(ctx *duktape.Context) int {
-		_, ok := vm.PrecompiledContractsByzantiumCompatible[common.BytesToAddress(popSlice(ctx))]
+		_, ok := vm.PrecompiledContractsByzantium[common.BytesToAddress(popSlice(ctx))]
 		ctx.PushBoolean(ok)
 		return 1
 	})

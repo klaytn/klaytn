@@ -788,17 +788,17 @@ func (mr *MockBlockChainMockRecorder) StartCollectingTrieStats(arg0 interface{})
 }
 
 // StartContractWarmUp mocks base method.
-func (m *MockBlockChain) StartContractWarmUp(arg0 common.Address) error {
+func (m *MockBlockChain) StartContractWarmUp(arg0 common.Address, arg1 uint) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StartContractWarmUp", arg0)
+	ret := m.ctrl.Call(m, "StartContractWarmUp", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // StartContractWarmUp indicates an expected call of StartContractWarmUp.
-func (mr *MockBlockChainMockRecorder) StartContractWarmUp(arg0 interface{}) *gomock.Call {
+func (mr *MockBlockChainMockRecorder) StartContractWarmUp(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartContractWarmUp", reflect.TypeOf((*MockBlockChain)(nil).StartContractWarmUp), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartContractWarmUp", reflect.TypeOf((*MockBlockChain)(nil).StartContractWarmUp), arg0, arg1)
 }
 
 // StartStateMigration mocks base method.
@@ -816,17 +816,17 @@ func (mr *MockBlockChainMockRecorder) StartStateMigration(arg0, arg1 interface{}
 }
 
 // StartWarmUp mocks base method.
-func (m *MockBlockChain) StartWarmUp() error {
+func (m *MockBlockChain) StartWarmUp(arg0 uint) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StartWarmUp")
+	ret := m.ctrl.Call(m, "StartWarmUp", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // StartWarmUp indicates an expected call of StartWarmUp.
-func (mr *MockBlockChainMockRecorder) StartWarmUp() *gomock.Call {
+func (mr *MockBlockChainMockRecorder) StartWarmUp(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartWarmUp", reflect.TypeOf((*MockBlockChain)(nil).StartWarmUp))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartWarmUp", reflect.TypeOf((*MockBlockChain)(nil).StartWarmUp), arg0)
 }
 
 // State mocks base method.

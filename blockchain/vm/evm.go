@@ -24,6 +24,7 @@ import (
 	"math/big"
 	"sync/atomic"
 
+	"github.com/holiman/uint256"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
@@ -623,9 +624,9 @@ func (evm *EVM) Create(caller types.ContractRef, code []byte, gas uint64, value 
 //
 // The different between Create2 with Create is Create2 uses sha3(0xff ++ msg.sender ++ salt ++ sha3(init_code))[12:]
 // instead of the usual sender-and-nonce-hash as the address where the contract is initialized at.
-func (evm *EVM) Create2(caller types.ContractRef, code []byte, gas uint64, endowment *big.Int, salt *big.Int, codeFormat params.CodeFormat) (ret []byte, contractAddr common.Address, leftOverGas uint64, err error) {
+func (evm *EVM) Create2(caller types.ContractRef, code []byte, gas uint64, endowment *big.Int, salt *uint256.Int, codeFormat params.CodeFormat) (ret []byte, contractAddr common.Address, leftOverGas uint64, err error) {
 	codeAndHash := &codeAndHash{code: code}
-	contractAddr = crypto.CreateAddress2(caller.Address(), common.BigToHash(salt), codeAndHash.Hash().Bytes())
+	contractAddr = crypto.CreateAddress2(caller.Address(), salt.Bytes32(), codeAndHash.Hash().Bytes())
 	return evm.create(caller, codeAndHash, gas, endowment, contractAddr, CREATE2, false, codeFormat)
 }
 
@@ -645,16 +646,18 @@ func (evm *EVM) GetPrecompiledContractMap(addr common.Address) map[common.Addres
 	if vmVersion, ok := evm.StateDB.GetVmVersion(addr); ok && vmVersion == params.VmVersion0 {
 		// Without VmVersion0, precompiled contract address 0x09-0x0b won't work properly
 		// with the contracts deployed before istanbulHF
-		return PrecompiledContractsByzantiumCompatible
+		return PrecompiledContractsByzantium
 	}
 
 	switch {
+	case evm.chainRules.IsCancun:
+		return PrecompiledContractsCancun
 	case evm.chainRules.IsKore:
 		return PrecompiledContractsKore
 	case evm.chainRules.IsIstanbul:
-		return PrecompiledContractsIstanbulCompatible
+		return PrecompiledContractsIstanbul
 	default:
-		return PrecompiledContractsByzantiumCompatible
+		return PrecompiledContractsByzantium
 	}
 }
 

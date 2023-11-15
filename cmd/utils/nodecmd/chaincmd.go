@@ -68,7 +68,6 @@ var (
 			utils.RocksDBMaxOpenFilesFlag,
 			utils.RocksDBCacheIndexAndFilterFlag,
 			utils.OverwriteGenesisFlag,
-			utils.LivePruningFlag,
 		},
 		Category: "BLOCKCHAIN COMMANDS",
 		Description: `
@@ -143,7 +142,6 @@ func initGenesis(ctx *cli.Context) error {
 	singleDB := ctx.Bool(utils.SingleDBFlag.Name)
 	numStateTrieShards := ctx.Uint(utils.NumStateTrieShardsFlag.Name)
 	overwriteGenesis := ctx.Bool(utils.OverwriteGenesisFlag.Name)
-	livePruning := ctx.Bool(utils.LivePruningFlag.Name)
 
 	dbtype := database.DBType(ctx.String(utils.DbTypeFlag.Name)).ToValid()
 	if len(dbtype) == 0 {
@@ -197,12 +195,6 @@ func initGenesis(ctx *cli.Context) error {
 		gov := governance.NewMixedEngineNoInit(genesis.Config, chainDB)
 		if err := gov.WriteGovernance(0, govSet, governance.NewGovernanceSet()); err != nil {
 			logger.Crit("Failed to write governance items", "err", err)
-		}
-
-		// Write the live pruning flag to database
-		if livePruning {
-			logger.Info("Writing live pruning flag to database")
-			chainDB.WritePruningEnabled()
 		}
 
 		logger.Info("Successfully wrote genesis state", "database", name, "hash", hash.String())
