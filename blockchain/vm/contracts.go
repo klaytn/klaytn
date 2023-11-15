@@ -119,7 +119,7 @@ var PrecompiledContractsKore = map[common.Address]PrecompiledContract{
 }
 
 // PrecompiledContractsCancun contains the default set of pre-compiled Klaytn
-// Have the same list with Cancun
+// contracts based on Ethereum Cancun.
 var PrecompiledContractsCancun = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{1}):      &ecrecover{},
 	common.BytesToAddress([]byte{2}):      &sha256hash{},
