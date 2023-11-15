@@ -192,7 +192,7 @@ Decrypt an EIP-2335 keystore and save the BLS secret key to default location (DA
 
 EXAMPLES
 
-kcn account bls-decrypt --bls-nodekeystore bls-keystore.json
+kcn account bls-import --bls-nodekeystore bls-keystore.json
 `,
 		},
 		{
