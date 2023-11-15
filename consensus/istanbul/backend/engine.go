@@ -33,7 +33,6 @@ import (
 	"github.com/klaytn/klaytn/blockchain/system"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	istanbulCore "github.com/klaytn/klaytn/consensus/istanbul/core"
@@ -79,23 +78,25 @@ var (
 	// errInvalidVotingChain is returned if an authorization list is attempted to
 	// be modified via out-of-range or non-contiguous headers.
 	errInvalidVotingChain = errors.New("invalid voting chain")
-	// errInvalidVote is returned if a nonce value is something else that the two
-	// allowed constants of 0x00..0 or 0xff..f.
-	errInvalidVote = errors.New("vote nonce not 0x00..0 or 0xff..f")
 	// errInvalidCommittedSeals is returned if the committed seal is not signed by any of parent validators.
 	errInvalidCommittedSeals = errors.New("invalid committed seals")
 	// errEmptyCommittedSeals is returned if the field of committed seals is zero.
 	errEmptyCommittedSeals = errors.New("zero committed seals")
 	// errMismatchTxhashes is returned if the TxHash in header is mismatch.
 	errMismatchTxhashes = errors.New("mismatch transactions hashes")
+	// errNoBlsKey is returned if the BLS secret key is not configured.
+	errNoBlsKey = errors.New("bls key not configured")
+	// errNoBlsPub is returned if the BLS public key is not found for the proposer.
+	errNoBlsPub = errors.New("bls pubkey not found for the proposer")
+	// errInvalidRandaoFields is returned if the Randao fields randomReveal or mixHash are invalid.
+	errInvalidRandaoFields = errors.New("invalid randao fields")
+	// errUnexpectedRandao is returned if the Randao fields randomReveal or mixHash are present when must not.
+	errUnexpectedRandao = errors.New("unexpected randao fields")
 )
 
 var (
 	defaultBlockScore = big.NewInt(1)
 	now               = time.Now
-
-	nonceAuthVote = hexutil.MustDecode("0xffffffffffffffff") // Magic nonce number to vote on adding a new validator
-	nonceDropVote = hexutil.MustDecode("0x0000000000000000") // Magic nonce number to vote on removing a validator.
 
 	inmemoryBlocks             = 2048 // Number of blocks to precompute validators' addresses
 	inmemoryValidatorsPerBlock = 30   // Approximate number of validators' addresses from ecrecover
@@ -249,6 +250,19 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 	}
 	if err := sb.verifySigner(chain, header, parents); err != nil {
 		return err
+	}
+
+	// VerifyRandao must be after verifySigner because it needs the signer (proposer) address
+	if chain.Config().IsRandaoForkEnabled(header.Number) {
+		prevMixHash := parent.MixHash
+		if chain.Config().IsRandaoForkBlockParent(parent.Number) {
+			prevMixHash = params.ZeroMixHash
+		}
+		if err := sb.VerifyRandao(chain, header, prevMixHash); err != nil {
+			return err
+		}
+	} else if header.RandomReveal != nil || header.MixHash != nil {
+		return errUnexpectedRandao
 	}
 
 	// At every epoch governance data will come in block header. Verify it.
@@ -424,6 +438,20 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	header.Vote = sb.governance.GetEncodedVote(sb.address, number)
 	if len(header.Vote) > 0 {
 		logger.Info("Put voteData", "num", number, "data", hex.EncodeToString(header.Vote))
+	}
+
+	if chain.Config().IsRandaoForkEnabled(header.Number) {
+		prevMixHash := parent.MixHash
+		if chain.Config().IsRandaoForkBlockParent(parent.Number) {
+			prevMixHash = params.ZeroMixHash
+		}
+
+		randomReveal, mixHash, err := sb.CalcRandao(header.Number, prevMixHash)
+		if err != nil {
+			return err
+		}
+		header.RandomReveal = randomReveal
+		header.MixHash = mixHash
 	}
 
 	// add validators (council list) in snapshot to extraData's validators section
@@ -829,6 +857,7 @@ func (sb *backend) GetConsensusInfo(block *types.Block) (consensus.ConsensusInfo
 
 func (sb *backend) InitSnapshot() {
 	sb.recents.Purge()
+	sb.blsPubkeyProvider.ResetBlsCache()
 }
 
 // snapshot retrieves the state of the authorization voting at a given point in time.

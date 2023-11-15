@@ -54,6 +54,7 @@ func TestReadKip113(t *testing.T) {
 	assert.Equal(t, 1, len(infos))
 	assert.Equal(t, pub1, infos[nodeId].PublicKey)
 	assert.Equal(t, pop1, infos[nodeId].Pop)
+	assert.Nil(t, infos[nodeId].VerifyErr) // valid PublicKeyInfo
 
 	// With an invalid record
 	// Another register() call for the same nodeId overwrites the existing info.
@@ -63,7 +64,8 @@ func TestReadKip113(t *testing.T) {
 	// Returns zero record because invalid records have been filtered out.
 	infos, err = ReadKip113All(backend, contractAddr, nil)
 	assert.Nil(t, err)
-	assert.Equal(t, 0, len(infos))
+	assert.Equal(t, 1, len(infos))
+	assert.ErrorIs(t, infos[nodeId].VerifyErr, ErrKip113BadPop) // invalid PublicKeyInfo
 }
 
 func TestAllocKip113(t *testing.T) {

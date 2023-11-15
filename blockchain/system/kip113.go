@@ -17,6 +17,8 @@
 package system
 
 import (
+	"encoding/hex"
+	"encoding/json"
 	"math/big"
 	"sort"
 	"strings"
@@ -30,15 +32,50 @@ import (
 type BlsPublicKeyInfo struct {
 	PublicKey []byte
 	Pop       []byte
+	VerifyErr error // Nil if valid. Must check before use.
 }
 
-type (
-	BlsPublicKeyInfos map[common.Address]BlsPublicKeyInfo
-	AllocKip113Init   struct {
-		Infos BlsPublicKeyInfos
-		Owner common.Address
+func newBlsPublicKeyInfo(publicKey []byte, pop []byte) BlsPublicKeyInfo {
+	return BlsPublicKeyInfo{
+		PublicKey: publicKey,
+		Pop:       pop,
+		VerifyErr: verifyBlsPublicKeyInfo(publicKey, pop),
 	}
-)
+}
+
+func verifyBlsPublicKeyInfo(publicKey []byte, pop []byte) error {
+	pk, err := bls.PublicKeyFromBytes(publicKey)
+	if err != nil {
+		return err
+	}
+
+	sig, err := bls.SignatureFromBytes(pop)
+	if err != nil {
+		return err
+	}
+
+	if !bls.PopVerify(pk, sig) {
+		return ErrKip113BadPop
+	}
+
+	return nil
+}
+
+type BlsPublicKeyInfos map[common.Address]BlsPublicKeyInfo
+
+func (infos BlsPublicKeyInfos) String() string {
+	obj := make(map[string]string)
+	for addr, info := range infos {
+		obj[addr.Hex()] = hex.EncodeToString(info.PublicKey)
+	}
+	j, _ := json.Marshal(obj)
+	return string(j)
+}
+
+type AllocKip113Init struct {
+	Infos BlsPublicKeyInfos
+	Owner common.Address
+}
 
 func AllocKip113(init AllocKip113Init) map[common.Hash]common.Hash {
 	if init.Infos == nil {
@@ -106,24 +143,6 @@ func AllocKip113(init AllocKip113Init) map[common.Hash]common.Hash {
 	return storage
 }
 
-func (info BlsPublicKeyInfo) Verify() error {
-	pk, err := bls.PublicKeyFromBytes(info.PublicKey)
-	if err != nil {
-		return err
-	}
-
-	sig, err := bls.SignatureFromBytes(info.Pop)
-	if err != nil {
-		return err
-	}
-
-	if !bls.PopVerify(pk, sig) {
-		return ErrKip113BadPop
-	}
-
-	return nil
-}
-
 func ReadKip113All(backend bind.ContractCaller, contractAddr common.Address, num *big.Int) (BlsPublicKeyInfos, error) {
 	caller, err := contracts.NewIKIP113Caller(contractAddr, backend)
 	if err != nil {
@@ -143,14 +162,10 @@ func ReadKip113All(backend bind.ContractCaller, contractAddr common.Address, num
 	infos := make(BlsPublicKeyInfos)
 	for i := 0; i < len(ret.NodeIdList); i++ {
 		addr := ret.NodeIdList[i]
-		info := BlsPublicKeyInfo{
-			PublicKey: ret.PubkeyList[i].PublicKey,
-			Pop:       ret.PubkeyList[i].Pop,
-		}
-
-		if info.Verify() == nil {
-			infos[addr] = info
-		}
+		infos[addr] = newBlsPublicKeyInfo(
+			ret.PubkeyList[i].PublicKey,
+			ret.PubkeyList[i].Pop,
+		)
 	}
 
 	return infos, err

@@ -51,6 +51,15 @@ type BlockChainForCaller interface {
 	CurrentBlock() *types.Block
 }
 
+// Maintain separate minimal interfaces of blockchain.TxPool because ContractBackend are used
+// in various situations. TxPool instances are often passed down as work.TxPool.
+type TxPoolForCaller interface {
+	// Below is a subset of work.TxPool
+	GetPendingNonce(addr common.Address) uint64
+	AddLocal(tx *types.Transaction) error
+	GasPrice() *big.Int
+}
+
 // BlockchainContractBackend implements bind.Contract* and bind.DeployBackend, based on
 // a user-supplied blockchain.BlockChain instance.
 // Its intended purpose is reading system contracts during block processing.
@@ -59,7 +68,7 @@ type BlockChainForCaller interface {
 // whereas BlockchainContractBackend uses an existing BlockChain with existing database.
 type BlockchainContractBackend struct {
 	bc     BlockChainForCaller
-	txPool *blockchain.TxPool
+	txPool TxPoolForCaller
 	events *filters.EventSystem
 }
 
@@ -75,7 +84,7 @@ var (
 // `txPool` is required for bind.ContractTransactor methods and `events` is required for bind.ContractFilterer methods.
 // If `tp=nil`, bind.ContractTransactor methods could return errors.
 // If `es=nil`, bind.ContractFilterer methods could return errors.
-func NewBlockchainContractBackend(bc BlockChainForCaller, tp *blockchain.TxPool, es *filters.EventSystem) *BlockchainContractBackend {
+func NewBlockchainContractBackend(bc BlockChainForCaller, tp TxPoolForCaller, es *filters.EventSystem) *BlockchainContractBackend {
 	return &BlockchainContractBackend{bc, tp, es}
 }
 

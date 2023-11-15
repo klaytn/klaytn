@@ -289,6 +289,8 @@ func TestPrepare(t *testing.T) {
 func TestSealStopChannel(t *testing.T) {
 	chain, engine := newBlockChain(4)
 	defer engine.Stop()
+	oldStakingManager := setTestStakingInfo(nil)
+	defer reward.SetTestStakingManager(oldStakingManager)
 
 	block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
 	stop := make(chan struct{}, 1)
@@ -319,6 +321,8 @@ func TestSealStopChannel(t *testing.T) {
 func TestSealCommitted(t *testing.T) {
 	chain, engine := newBlockChain(1)
 	defer engine.Stop()
+	oldStakingManager := setTestStakingInfo(nil)
+	defer reward.SetTestStakingManager(oldStakingManager)
 
 	block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
 	expectedBlock, _ := engine.updateBlock(block)
@@ -398,6 +402,8 @@ func TestVerifyHeader(t *testing.T) {
 func TestVerifySeal(t *testing.T) {
 	chain, engine := newBlockChain(1)
 	defer engine.Stop()
+	oldStakingManager := setTestStakingInfo(nil)
+	defer reward.SetTestStakingManager(oldStakingManager)
 
 	genesis := chain.Genesis()
 
@@ -434,6 +440,9 @@ func TestVerifySeal(t *testing.T) {
 func TestVerifyHeaders(t *testing.T) {
 	chain, engine := newBlockChain(1)
 	defer engine.Stop()
+
+	oldStakingManager := setTestStakingInfo(nil)
+	defer reward.SetTestStakingManager(oldStakingManager)
 
 	genesis := chain.Genesis()
 
@@ -747,11 +756,17 @@ func makeSnapshotTestConfigItems() []interface{} {
 	}
 }
 
-func makeFakeStakingInfo(blockNumber uint64, keys []*ecdsa.PrivateKey, amounts []uint64) *reward.StakingInfo {
-	stakingInfo := &reward.StakingInfo{
-		BlockNum: blockNumber,
+// Set StakingInfo with given amount for nodeKeys. If amounts == nil, set to 0 amounts.
+// Returns the original (old) StakingManager. Call `reward.SetTestStakingManager(oldStakingManager)`
+func setTestStakingInfo(amounts []uint64) *reward.StakingManager {
+	if amounts == nil {
+		amounts = make([]uint64, len(nodeKeys))
 	}
-	for idx, key := range keys {
+
+	stakingInfo := &reward.StakingInfo{
+		BlockNum: 0,
+	}
+	for idx, key := range nodeKeys {
 		addr := crypto.PubkeyToAddress(key.PublicKey)
 
 		pk, _ := crypto.GenerateKey()
@@ -762,7 +777,11 @@ func makeFakeStakingInfo(blockNumber uint64, keys []*ecdsa.PrivateKey, amounts [
 		stakingInfo.CouncilStakingAmounts = append(stakingInfo.CouncilStakingAmounts, amounts[idx])
 		stakingInfo.CouncilRewardAddrs = append(stakingInfo.CouncilRewardAddrs, rewardAddr)
 	}
-	return stakingInfo
+
+	// Save old StakingManager, overwrite to the fake one.
+	oldStakingManager := reward.GetStakingManager()
+	reward.SetTestStakingManagerWithStakingInfoCache(stakingInfo)
+	return oldStakingManager
 }
 
 func toAddressList(validators []istanbul.Validator) []common.Address {
@@ -810,9 +829,9 @@ func TestSnapshot_Validators_AfterMinimumStakingVotes(t *testing.T) {
 		demoted    []int
 	}
 	type testcase struct {
-		stakingInfo []uint64
-		votes       []vote
-		expected    []expected
+		stakingAmounts []uint64
+		votes          []vote
+		expected       []expected
 	}
 
 	testcases := []testcase{
@@ -896,13 +915,7 @@ func TestSnapshot_Validators_AfterMinimumStakingVotes(t *testing.T) {
 
 	for _, tc := range testcases {
 		chain, engine := newBlockChain(4, configItems...)
-
-		// set old staking manager after finishing this test.
-		oldStakingManager := reward.GetStakingManager()
-
-		// set new staking manager with the given staking information.
-		stakingInfo := makeFakeStakingInfo(0, nodeKeys, tc.stakingInfo)
-		reward.SetTestStakingManagerWithStakingInfoCache(stakingInfo)
+		oldStakingManager := setTestStakingInfo(tc.stakingAmounts)
 
 		var previousBlock, currentBlock *types.Block = nil, chain.Genesis()
 
@@ -1092,13 +1105,7 @@ func TestSnapshot_Validators_BasedOnStaking(t *testing.T) {
 			configItems = append(configItems, governanceMode("single"))
 		}
 		chain, engine := newBlockChain(testNum, configItems...)
-
-		// set old staking manager after finishing this test.
-		oldStakingManager := reward.GetStakingManager()
-
-		// set new staking manager with the given staking information.
-		stakingInfo := makeFakeStakingInfo(0, nodeKeys, tc.stakingAmounts)
-		reward.SetTestStakingManagerWithStakingInfoCache(stakingInfo)
+		oldStakingManager := setTestStakingInfo(tc.stakingAmounts)
 
 		block := makeBlockWithSeal(chain, engine, chain.Genesis())
 		_, err := chain.InsertChain(types.Blocks{block})
@@ -1266,10 +1273,7 @@ func TestSnapshot_Validators_AddRemove(t *testing.T) {
 	for _, tc := range testcases {
 		// Create test blockchain
 		chain, engine := newBlockChain(4, configItems...)
-
-		oldStakingManager := reward.GetStakingManager()
-		stakingInfo := makeFakeStakingInfo(0, nodeKeys, stakes)
-		reward.SetTestStakingManagerWithStakingInfoCache(stakingInfo)
+		oldStakingManager := setTestStakingInfo(stakes)
 
 		// Backup the globals. The globals `nodeKeys` and `addrs` will be
 		// modified according to validator change votes.
@@ -1346,6 +1350,9 @@ func TestSnapshot_Writable(t *testing.T) {
 	configItems = append(configItems, governanceMode("single"))
 	configItems = append(configItems, blockPeriod(0)) // set block period to 0 to prevent creating future block
 	chain, engine := newBlockChain(1, configItems...)
+	defer engine.Stop()
+	oldStakingManager := setTestStakingInfo(nil)
+	defer reward.SetTestStakingManager(oldStakingManager)
 
 	// add votes and insert voted blocks
 	var (
@@ -1603,6 +1610,7 @@ func TestGovernance_Votes(t *testing.T) {
 	configItems = append(configItems, blockPeriod(0)) // set block period to 0 to prevent creating future block
 	for _, tc := range testcases {
 		chain, engine := newBlockChain(1, configItems...)
+		oldStakingManager := setTestStakingInfo(nil)
 
 		// test initial governance items
 		assert.Equal(t, uint64(3), engine.governance.CurrentParams().Epoch())
@@ -1646,6 +1654,7 @@ func TestGovernance_Votes(t *testing.T) {
 			assert.Equal(t, item.value, items[item.key])
 		}
 
+		reward.SetTestStakingManager(oldStakingManager)
 		engine.Stop()
 	}
 }
@@ -1693,10 +1702,7 @@ func TestGovernance_ReaderEngine(t *testing.T) {
 	for _, tc := range testcases {
 		// Create test blockchain
 		chain, engine := newBlockChain(4, configItems...)
-
-		oldStakingManager := reward.GetStakingManager()
-		stakingInfo := makeFakeStakingInfo(0, nodeKeys, stakes)
-		reward.SetTestStakingManagerWithStakingInfoCache(stakingInfo)
+		oldStakingManager := setTestStakingInfo(stakes)
 
 		var previousBlock, currentBlock *types.Block = nil, chain.Genesis()
 
@@ -1868,6 +1874,7 @@ func TestChainConfig_ReadFromDBAfterVotes(t *testing.T) {
 	configItems = append(configItems, blockPeriod(0)) // set block period to 0 to prevent creating future block
 	for _, tc := range testcases {
 		chain, engine := newBlockChain(1, configItems...)
+		oldStakingManager := setTestStakingInfo(nil)
 
 		// test initial governance items
 		assert.Equal(t, uint64(25000000000), chain.Config().Governance.KIP71.LowerBoundBaseFee)
@@ -1912,6 +1919,7 @@ func TestChainConfig_ReadFromDBAfterVotes(t *testing.T) {
 			assert.Error(t, nil)
 		}
 
+		reward.SetTestStakingManager(oldStakingManager)
 		engine.Stop()
 	}
 }

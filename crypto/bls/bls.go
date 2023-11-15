@@ -17,6 +17,12 @@
 package bls
 
 import (
+	"crypto/ecdsa"
+	"encoding/hex"
+	"os"
+	"strings"
+
+	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/crypto/bls/blst"
 	"github.com/klaytn/klaytn/crypto/bls/types"
 )
@@ -37,6 +43,8 @@ type (
 //
 // ikm -> SK:  GenerateKey
 // ()  -> SK:  RandKey
+// ec  -> SK:  DeriveFromECDSA
+// path -> SK: LoadKey
 // b32 -> SK:  SecretKeyFromBytes
 // b48 -> PK:  PublicKeyFromBytes
 // b96 -> Sig: SignatureFromBytes
@@ -57,7 +65,6 @@ type (
 
 // GenerateKey generates a BLS secret key from the initial key material (IKM).
 // It is deterministic process. Same IKM yields the same secret key.
-// It can convert an existing EC private key to BLS secret key.
 func GenerateKey(ikm []byte) (SecretKey, error) {
 	return blst.GenerateKey(ikm)
 }
@@ -65,6 +72,30 @@ func GenerateKey(ikm []byte) (SecretKey, error) {
 // RandKey generates a random BLS secret key.
 func RandKey() (SecretKey, error) {
 	return blst.RandKey()
+}
+
+// DeriveFromECDSA generates a BLS secret key from the given EC private key.
+// It is deterministic process. Same EC private key yields the same secret key.
+func DeriveFromECDSA(priv *ecdsa.PrivateKey) (SecretKey, error) {
+	return GenerateKey(crypto.FromECDSA(priv))
+}
+
+// LoadKey loads a BLS secret key from the given file.
+func LoadKey(path string) (SecretKey, error) {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	content := string(b)
+	content = strings.TrimSpace(content)
+	content = strings.TrimPrefix(content, "0x")
+	b, err = hex.DecodeString(content)
+	if err != nil {
+		return nil, err
+	}
+
+	return SecretKeyFromBytes(b)
 }
 
 // SecretKeyFromBytes unmarshals and validates a BLS secret key from bytes.

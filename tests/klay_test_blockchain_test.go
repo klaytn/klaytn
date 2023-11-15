@@ -112,7 +112,14 @@ func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Setup istanbul consensus backend
-	engine := istanbulBackend.New(genesisAddr, istanbul.DefaultConfig, validatorPrivKeys[0], chainDb, gov, common.CONSENSUSNODE)
+	engine := istanbulBackend.New(&istanbulBackend.BackendOpts{
+		IstanbulConfig: istanbul.DefaultConfig,
+		Rewardbase:     genesisAddr,
+		PrivateKey:     validatorPrivKeys[0],
+		DB:             chainDb,
+		Governance:     gov,
+		NodeType:       common.CONSENSUSNODE,
+	})
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Make a blockchain

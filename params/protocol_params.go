@@ -193,6 +193,10 @@ const (
 )
 
 var (
+	// Dummy Randao fields to be used in a Randao-enabled Genesis block.
+	ZeroRandomReveal = make([]byte, 96)
+	ZeroMixHash      = make([]byte, 32)
+
 	TxGasHumanReadable uint64 = 4000000000 // NOTE: HumanReadable related functions are inactivated now
 
 	// TODO-Klaytn Change the variables used in GXhash to more appropriate values for Klaytn Network

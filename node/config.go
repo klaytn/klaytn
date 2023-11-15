@@ -32,6 +32,7 @@ import (
 	"github.com/klaytn/klaytn/accounts/keystore"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/crypto/bls"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
@@ -41,6 +42,7 @@ import (
 
 const (
 	datadirPrivateKey      = "nodekey"            // Path within the datadir to the node's private key
+	datadirBlsSecretKey    = "bls-nodekey"        // Path within the datadir to the node's bls secret key
 	datadirDefaultKeyStore = "keystore"           // Path within the datadir to the keystore
 	datadirStaticNodes     = "static-nodes.json"  // Path within the datadir to the static node list
 	datadirTrustedNodes    = "trusted-nodes.json" // Path within the datadir to the trusted node list
@@ -78,6 +80,7 @@ type Config struct {
 	ChainDataDir string
 
 	// Configuration of peer-to-peer networking.
+	// Includes the ECDSA NodeKey
 	P2P p2p.Config
 
 	// KeyStoreDir is the file system folder that contains private keys. The directory can
@@ -88,6 +91,12 @@ type Config struct {
 	// DataDir. If DataDir is unspecified and KeyStoreDir is empty, an ephemeral directory
 	// is created by New and destroyed when the node is stopped.
 	KeyStoreDir string `toml:",omitempty"`
+
+	// BlsKey is the BLS secret key for Randao consensus.
+	// If BlsKey is empty, the node will look for the default location which is the
+	// "bls-nodekey" file in DataDir. If the "bls-nodekey" does not exist, then BlsKey
+	// is derived from the ECDSA NodeKey.
+	BlsKey bls.SecretKey `toml:"-"` // ignored by toml marshaller
 
 	// UseLightweightKDF lowers the memory and CPU requirements of the key store
 	// scrypt KDF at the expense of security.
@@ -371,6 +380,30 @@ func (c *Config) NodeKey() *ecdsa.PrivateKey {
 	keyfile = filepath.Join(instanceDir, datadirPrivateKey)
 	if err := crypto.SaveECDSA(keyfile, key); err != nil {
 		logger.Crit("Failed to persist node key", "err", err)
+	}
+	return key
+}
+
+// BlsNodeKey retrieves the currently configured BLS secret key key of the node,
+// check first any manually set key, falling back to the one found in the configured
+// data folder. If no key can be found, derive from the NodeKey.
+func (c *Config) BlsNodeKey() bls.SecretKey {
+	// Manually set via flags --bls-nodekey or --bls-nodekeyhex
+	if c.BlsKey != nil {
+		return c.BlsKey
+	}
+
+	// Load from default location under datadir
+	path := c.ResolvePath(datadirBlsSecretKey)
+	if key, err := bls.LoadKey(path); err == nil {
+		return key
+	}
+
+	// Derive from NodeKey
+	nodekey := c.NodeKey()
+	key, err := bls.GenerateKey(crypto.FromECDSA(nodekey))
+	if err != nil {
+		logger.Crit("Failed to derive bls-nodekey from nodekey", "err", err)
 	}
 	return key
 }

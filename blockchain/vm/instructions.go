@@ -482,8 +482,7 @@ func opDifficulty(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) 
 func opRandom(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 	// evm.BlockNumber.Uint64() is always greater than or equal to 1
 	// since evm will not run on the genesis block
-	prevBlockHash := interpreter.evm.Context.GetHash(interpreter.evm.Context.BlockNumber.Uint64() - 1)
-	v, _ := uint256.FromBig(prevBlockHash.Big())
+	v, _ := uint256.FromBig(interpreter.evm.Context.Random.Big())
 	scope.Stack.push(v)
 	return nil, nil
 }
