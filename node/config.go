@@ -42,7 +42,7 @@ import (
 
 const (
 	datadirPrivateKey      = "nodekey"            // Path within the datadir to the node's private key
-	datadirBlsSecretKey    = "bls-nodekey"        // Path within the datadir to the node's bls secret key
+	DatadirBlsSecretKey    = "bls-nodekey"        // Path within the datadir to the node's bls secret key
 	datadirDefaultKeyStore = "keystore"           // Path within the datadir to the keystore
 	datadirStaticNodes     = "static-nodes.json"  // Path within the datadir to the static node list
 	datadirTrustedNodes    = "trusted-nodes.json" // Path within the datadir to the trusted node list
@@ -396,7 +396,7 @@ func (c *Config) BlsNodeKey() bls.SecretKey {
 	}
 
 	// Load from default location under datadir
-	path := c.ResolvePath(datadirBlsSecretKey)
+	path := c.ResolvePath(DatadirBlsSecretKey)
 	if key, err := bls.LoadKey(path); err == nil {
 		return key
 	}
@@ -410,7 +410,7 @@ func (c *Config) BlsNodeKey() bls.SecretKey {
 	if err := os.MkdirAll(instanceDir, 0o700); err != nil {
 		logger.Crit("Failed to make dir to persist bls node key", "err", err)
 	}
-	keyfile := c.ResolvePath(datadirBlsSecretKey)
+	keyfile := c.ResolvePath(DatadirBlsSecretKey)
 	if err := bls.SaveKey(keyfile, key); err != nil {
 		logger.Crit("Failed to persist bls node key", "err", err)
 	}

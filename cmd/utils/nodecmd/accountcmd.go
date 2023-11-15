@@ -38,6 +38,7 @@ import (
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/crypto/bls"
 	"github.com/klaytn/klaytn/log"
+	"github.com/klaytn/klaytn/node"
 	"github.com/urfave/cli/v2"
 )
 
@@ -425,7 +426,7 @@ func accountBlsImport(ctx *cli.Context) error {
 
 	// Parse CLI arguments in the same way as running a node.
 	_, cfg := utils.MakeConfigNode(ctx)
-	path := cfg.Node.ResolvePath("bls-nodekey")
+	path := cfg.Node.ResolvePath(node.DatadirBlsSecretKey)
 
 	// Write DATADIR/bls-nodekey
 	// Not using bls.SaveKey to prevent overwriting the existing file.
