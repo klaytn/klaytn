@@ -774,9 +774,8 @@ func Gen(ctx *cli.Context) error {
 
 	// ServiceChainTxFee hardfork is optional
 	genesisJson.Config.ServiceChainTxFeeCompatibleBlock = big.NewInt(ctx.Int64(serviceChainTxFeeCompatibleBlockNumberFlag.Name))
-	
-  genesisJson.Config.RandaoCompatibleBlock = big.NewInt(ctx.Int64(randaoCompatibleBlockNumberFlag.Name))
 
+	genesisJson.Config.RandaoCompatibleBlock = big.NewInt(ctx.Int64(randaoCompatibleBlockNumberFlag.Name))
 
 	genesisJsonBytes, _ = json.MarshalIndent(genesisJson, "", "    ")
 	genValidatorKeystore(privKeys)

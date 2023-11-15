@@ -512,6 +512,7 @@ var (
 		Usage:   "ServiceChainTxFeeCompatible blockNumber",
 		Value:   0,
 		Aliases: []string{"genesis.hardfork.servicechaintxfee-compatible-blocknumber"},
+	}
 
 	randaoCompatibleBlockNumberFlag = &cli.Int64Flag{
 		Name:    "randao-compatible-blocknumber",
