@@ -222,7 +222,7 @@ func GetBlockReward(header *types.Header, rules params.Rules, pset *params.GovPa
 			spec.Proposer = spec.Proposer.Add(spec.Proposer, txFeeRemained)
 			spec.TotalFee = spec.TotalFee.Add(spec.TotalFee, txFee)
 			incrementRewardsMap(spec.Rewards, header.Rewardbase, txFeeRemained)
-		} else if rules.IsServiceChainTxFee {
+		} else if rules.IsServiceChainRewardFix {
 			txFee := GetTotalTxFee(header, rules, pset)
 			spec.Proposer = spec.Proposer.Add(spec.Proposer, txFee)
 			spec.TotalFee = spec.TotalFee.Add(spec.TotalFee, txFee)
@@ -263,9 +263,9 @@ func CalcDeferredRewardSimple(header *types.Header, rules params.Rules, pset *pa
 	// See https://github.com/klaytn/klaytn/issues/1692.
 	// To maintain backward compatibility, we only fix the buggy logic after Magma
 	// and leave the buggy logic before Magma.
-	// However, if you wish to address only this issue instead, apply the ServiceChainTxFeeHardfork.
+	// However, if you wish to address only this issue instead, apply the ServiceChainRewardFixHardfork.
 	// Before the hardforks, tx fees must be compensated to calculate actual rewards paid.
-	if !rc.deferredTxFee && (rc.rules.IsMagma || rc.rules.IsServiceChainTxFee) {
+	if !rc.deferredTxFee && (rc.rules.IsMagma || rc.rules.IsServiceChainRewardFix) {
 		proposer := new(big.Int).Set(minted)
 		spec := NewRewardSpec()
 		spec.Minted = minted

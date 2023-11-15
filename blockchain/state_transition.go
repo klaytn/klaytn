@@ -380,7 +380,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 			effectiveGasPrice := st.gasPrice
 			txFee := getBurnAmountMagma(new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), effectiveGasPrice))
 			st.state.AddBalance(st.evm.Context.Rewardbase, txFee)
-		} else if rules.IsServiceChainTxFee {
+		} else if rules.IsServiceChainRewardFix {
 			effectiveGasPrice := msg.EffectiveGasPrice(nil)
 			st.state.AddBalance(st.evm.Context.Rewardbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), effectiveGasPrice))
 		} else {

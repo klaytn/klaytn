@@ -507,11 +507,11 @@ var (
 		Aliases: []string{"genesis.hardfork.kip103-contract-address"},
 	}
 
-	serviceChainTxFeeCompatibleBlockNumberFlag = &cli.Int64Flag{
-		Name:    "servicechaintxfee-compatible-blocknumber",
-		Usage:   "ServiceChainTxFeeCompatible blockNumber",
+	serviceChainRewardFixCompatibleBlockNumberFlag = &cli.Int64Flag{
+		Name:    "servicechainrewardfix-compatible-blocknumber",
+		Usage:   "ServiceChainRewardFixCompatible blockNumber",
 		Value:   0,
-		Aliases: []string{"genesis.hardfork.servicechaintxfee-compatible-blocknumber"},
+		Aliases: []string{"genesis.hardfork.servicechainrewardfix-compatible-blocknumber"},
 	}
 
 	randaoCompatibleBlockNumberFlag = &cli.Int64Flag{
