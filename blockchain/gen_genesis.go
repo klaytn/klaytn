@@ -6,12 +6,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"log"
 	"math/big"
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/common/math"
+	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
 )
 
@@ -66,7 +66,11 @@ func (g *Genesis) UnmarshalJSON(input []byte) error {
 	decoder := json.NewDecoder(bytes.NewReader(input))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&dec); err != nil {
-		log.Fatalf("Unknown field: %v", err)
+		log.NewModuleLogger(log.CMDUtilsNodeCMD).Error("Unmarshal error", "error", err)
+	}
+
+	if err := json.Unmarshal(input, &dec); err != nil {
+		return err
 	}
 
 	if dec.Config != nil {
