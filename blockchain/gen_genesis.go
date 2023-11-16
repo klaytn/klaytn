@@ -109,5 +109,3 @@ func (g *Genesis) UnmarshalJSON(input []byte) error {
 	printUnknownFields(input)
 	return nil
 }
-
-// print unknown fields in genesis configuration
