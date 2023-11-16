@@ -280,11 +280,9 @@ func weightedRandomProposer(valSet istanbul.ValidatorSet, lastProposer common.Ad
 			logger.Error("no mixHash", "number", weightedCouncil.blockNum)
 			return nil
 		}
+		// def proposer_selector(validators, committee_size, round, seed):
+		// select_committee_KIP146(validators, committee_size, seed)[round % len(validators)]
 		committee := SelectRandaoCommittee(weightedCouncil.List(), weightedCouncil.subSize, weightedCouncil.mixHash)
-		if committee == nil {
-			logger.Error("in weightedRandomProposer() SelectRandaoCommittee() returns nil.")
-			return nil
-		}
 		return committee[round%uint64(len(committee))]
 	}
 
@@ -386,11 +384,10 @@ func (valSet *weightedCouncil) SubListWithProposer(prevHash common.Hash, propose
 			logger.Error("no mixHash", "number", valSet.blockNum)
 			return nil
 		}
-		if committee := SelectRandaoCommittee(validators, committeeSize, valSet.mixHash); committee != nil {
-			logger.Error("in SubListWithProposer() SelectRandaoCommittee() returns nil.")
-			return committee
-		}
-		return validators
+		// def select_committee_KIP146(validators, committee_size, seed):
+		// shuffled = shuffle_validators_KIP146(validators, seed)
+		// return shuffled[:min(committee_size, len(validators))]
+		return SelectRandaoCommittee(validators, committeeSize, valSet.mixHash)
 	}
 
 	// Before Randao: SelectRandomCommittee, but the first two members are proposer and next proposer

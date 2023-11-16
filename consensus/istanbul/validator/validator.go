@@ -144,14 +144,6 @@ func SelectRandomCommittee(validators []istanbul.Validator, committeeSize uint64
 // SelectRandaoCommittee composes a committee selecting validators randomly based on the mixHash.
 // It returns nil if the given committeeSize is bigger than validatorSize.
 func SelectRandaoCommittee(validators []istanbul.Validator, committeeSize uint64, mixHash []byte) []istanbul.Validator {
-	// ensure committeeSize is valid
-	validatorSize := len(validators)
-	if validatorSize < int(committeeSize) {
-		logger.Error("invalid committee size or validator indexes", "validatorSize", validatorSize,
-			"committeeSize", committeeSize)
-		return nil
-	}
-
 	// it cannot be happened. just to make sure
 	if committeeSize < 2 {
 		if committeeSize == 0 {
@@ -162,7 +154,11 @@ func SelectRandaoCommittee(validators []istanbul.Validator, committeeSize uint64
 	}
 
 	seed := int64(binary.BigEndian.Uint64(mixHash[:8]))
-	return shuffleValidators(validators, seed)[:committeeSize]
+	size := committeeSize
+	if committeeSize > uint64(len(validators)) {
+		size = uint64(len(validators))
+	}
+	return shuffleValidators(validators, seed)[:size]
 }
 
 func shuffleValidators(validators istanbul.Validators, seed int64) []istanbul.Validator {
