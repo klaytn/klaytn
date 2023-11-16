@@ -292,6 +292,43 @@ func TestAddMod(t *testing.T) {
 	}
 }
 
+func TestBlobHash(t *testing.T) {
+	type testcase struct {
+		name   string
+		idx    uint64
+		expect common.Hash
+		// hashes []common.Hash // klaytn doesn't support blobHashes
+	}
+	zero := common.Hash{0}
+	for _, tt := range []testcase{
+		{name: "[{1}]", idx: 0, expect: zero},
+		{name: "[1,{2},3]", idx: 2, expect: zero},
+		{name: "out-of-bounds (empty)", idx: 10, expect: zero},
+		{name: "out-of-bounds", idx: 25, expect: zero},
+		{name: "out-of-bounds (nil)", idx: 25, expect: zero},
+	} {
+		var (
+			env            = NewEVM(BlockContext{}, TxContext{}, nil, params.TestChainConfig, &Config{})
+			stack          = newstack()
+			pc             = uint64(0)
+			evmInterpreter = env.interpreter
+		)
+		stack.push(uint256.NewInt(tt.idx))
+		opBlobHash(&pc, evmInterpreter, &ScopeContext{nil, stack, nil})
+		if len(stack.data) != 1 {
+			t.Errorf("Expected one item on stack after %v, got %d: ", tt.name, len(stack.data))
+		}
+		actual := stack.pop()
+		expected, overflow := uint256.FromBig(new(big.Int).SetBytes(tt.expect.Bytes()))
+		if overflow {
+			t.Errorf("Testcase %v: invalid overflow", tt.name)
+		}
+		if actual.Cmp(expected) != 0 {
+			t.Errorf("Testcase %v: expected  %x, got %x", tt.name, expected, actual)
+		}
+	}
+}
+
 // getResult is a convenience function to generate the expected values
 func getResult(args []*twoOperandParams, opFn executionFunc) []TwoOperandTestcase {
 	var (
@@ -1438,6 +1475,15 @@ func BenchmarkOpSelfBalance(b *testing.B) {
 
 func BenchmarkOpBaseFee(b *testing.B) {
 	opBenchmark(b, opBaseFee)
+}
+
+func BenchmarkOpBlobHash(b *testing.B) {
+	x := "FBCDEF090807060504030201ffffffffFBCDEF090807060504030201ffffffff"
+	opBenchmark(b, opBlobHash, x)
+}
+
+func BenchmarkOpBlobBaseFee(b *testing.B) {
+	opBenchmark(b, opBlobBaseFee)
 }
 
 func genStacksForDup(size int) []string {
