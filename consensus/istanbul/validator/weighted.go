@@ -375,9 +375,8 @@ func (valSet *weightedCouncil) SubListWithProposer(prevHash common.Hash, propose
 		return []istanbul.Validator{proposer}
 	}
 
-	rules := fork.Rules(new(big.Int).SetUint64(valSet.blockNum + 1))
 	// After Randao: SelectRandaoCommittee
-	if rules.IsRandao {
+	if fork.Rules(view.Sequence).IsRandao {
 		// This committee must include proposers for all rounds because
 		// the proposer is picked from the this committee. See weightedRandomProposer().
 		if valSet.mixHash == nil {
