@@ -265,47 +265,6 @@ func setBlsNodeKey(ctx *cli.Context, cfg *node.Config) {
 	}
 }
 
-func LoadBlsNodeKey(ctx *cli.Context) (bls.SecretKey, error) {
-	if ctx.IsSet(NodeKeyFileFlag.Name) {
-		file := ctx.String(NodeKeyFileFlag.Name)
-		ecPriv, err := crypto.LoadECDSA(file)
-		if err != nil {
-			return nil, err
-		}
-		return bls.GenerateKey(crypto.FromECDSA(ecPriv))
-	}
-	if ctx.IsSet(NodeKeyHexFlag.Name) {
-		str := ctx.String(NodeKeyHexFlag.Name)
-		ecPriv, err := crypto.HexToECDSA(str)
-		if err != nil {
-			return nil, err
-		}
-		return bls.GenerateKey(crypto.FromECDSA(ecPriv))
-	}
-	if ctx.IsSet(BlsNodeKeyFileFlag.Name) {
-		file := ctx.String(BlsNodeKeyFileFlag.Name)
-		content, err := os.ReadFile(file)
-		if err != nil {
-			return nil, err
-		}
-		str := strings.TrimSpace(string(content))
-		blsBytes, err := hex.DecodeString(str)
-		if err != nil {
-			return nil, err
-		}
-		return bls.SecretKeyFromBytes(blsBytes)
-	}
-	if ctx.IsSet(BlsNodeKeyHexFlag.Name) {
-		str := ctx.String(BlsNodeKeyHexFlag.Name)
-		blsBytes, err := hex.DecodeString(str)
-		if err != nil {
-			return nil, err
-		}
-		return bls.SecretKeyFromBytes(blsBytes)
-	}
-	return nil, errors.New("No BLS key input specified")
-}
-
 // setNAT creates a port mapper from command line flags.
 func setNAT(ctx *cli.Context, cfg *p2p.Config) {
 	if ctx.IsSet(NATFlag.Name) {

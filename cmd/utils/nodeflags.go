@@ -246,6 +246,8 @@ var CommonNodeFlags = []cli.Flag{
 	altsrc.NewStringFlag(NetrestrictFlag),
 	altsrc.NewStringFlag(NodeKeyFileFlag),
 	altsrc.NewStringFlag(NodeKeyHexFlag),
+	altsrc.NewStringFlag(BlsNodeKeyFileFlag),
+	altsrc.NewStringFlag(BlsNodeKeyHexFlag),
 	altsrc.NewBoolFlag(VMEnableDebugFlag),
 	altsrc.NewIntFlag(VMLogTargetFlag),
 	altsrc.NewBoolFlag(VMTraceInternalTxFlag),

@@ -37,10 +37,15 @@ type KeyEIP2335 struct {
 	SecretKey bls.SecretKey // Represents the private key of the user.
 }
 
+// https://eips.ethereum.org/EIPS/eip-2335
+// Required fields: crypto, path, uuid, version
 type encryptedKeyEIP2335JSON struct {
-	PublicKey string                 `json:"publickey"`
-	Crypto    map[string]interface{} `json:"crypto"`
-	ID        string                 `json:"uuid"`
+	Crypto      map[string]interface{} `json:"crypto"`
+	Description string                 `json:"description"`
+	Pubkey      string                 `json:"pubkey"`
+	Path        string                 `json:"path"`
+	ID          string                 `json:"uuid"`
+	Version     int                    `json:"version"`
 }
 
 // NewKeyEIP2335 creates a new EIP-2335 keystore Key type using a BLS private key.
@@ -93,9 +98,12 @@ func EncryptKeyEIP2335(key *KeyEIP2335, password string, scryptN, scryptP int) (
 	}
 
 	encryptedJSON := encryptedKeyEIP2335JSON{
-		hex.EncodeToString(key.PublicKey.Marshal()),
-		cryptoObj,
-		key.ID.String(),
+		Crypto:      cryptoObj,
+		Description: "",
+		Pubkey:      hex.EncodeToString(key.PublicKey.Marshal()),
+		Path:        "", // EIP-2335: if no path is known or the path is not relevant, the empty string, "" indicates this
+		ID:          key.ID.String(),
+		Version:     4,
 	}
 	return json.Marshal(encryptedJSON)
 }

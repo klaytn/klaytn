@@ -42,7 +42,7 @@ import (
 
 const (
 	datadirPrivateKey      = "nodekey"            // Path within the datadir to the node's private key
-	datadirBlsSecretKey    = "bls-nodekey"        // Path within the datadir to the node's bls secret key
+	DatadirBlsSecretKey    = "bls-nodekey"        // Path within the datadir to the node's bls secret key
 	datadirDefaultKeyStore = "keystore"           // Path within the datadir to the keystore
 	datadirStaticNodes     = "static-nodes.json"  // Path within the datadir to the static node list
 	datadirTrustedNodes    = "trusted-nodes.json" // Path within the datadir to the trusted node list
@@ -313,6 +313,7 @@ var isKlaytnResource = map[string]bool{
 	"chaindata":          true,
 	"nodes":              true,
 	"nodekey":            true,
+	"bls-nodekey":        true,
 	"static-nodes.json":  true,
 	"trusted-nodes.json": true,
 }
@@ -381,6 +382,7 @@ func (c *Config) NodeKey() *ecdsa.PrivateKey {
 	if err := crypto.SaveECDSA(keyfile, key); err != nil {
 		logger.Crit("Failed to persist node key", "err", err)
 	}
+	logger.Warn("Generated nodekey")
 	return key
 }
 
@@ -394,17 +396,25 @@ func (c *Config) BlsNodeKey() bls.SecretKey {
 	}
 
 	// Load from default location under datadir
-	path := c.ResolvePath(datadirBlsSecretKey)
+	path := c.ResolvePath(DatadirBlsSecretKey)
 	if key, err := bls.LoadKey(path); err == nil {
 		return key
 	}
 
-	// Derive from NodeKey
-	nodekey := c.NodeKey()
-	key, err := bls.GenerateKey(crypto.FromECDSA(nodekey))
+	// No persistent key found, derive from NodeKey and store it
+	key, err := bls.GenerateKey(crypto.FromECDSA(c.NodeKey()))
 	if err != nil {
 		logger.Crit("Failed to derive bls-nodekey from nodekey", "err", err)
 	}
+	instanceDir := filepath.Join(c.DataDir, c.name())
+	if err := os.MkdirAll(instanceDir, 0o700); err != nil {
+		logger.Crit("Failed to make dir to persist bls node key", "err", err)
+	}
+	keyfile := c.ResolvePath(DatadirBlsSecretKey)
+	if err := bls.SaveKey(keyfile, key); err != nil {
+		logger.Crit("Failed to persist bls node key", "err", err)
+	}
+	logger.Warn("Derived bls-nodekey from nodekey")
 	return key
 }
 

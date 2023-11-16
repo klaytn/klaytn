@@ -61,7 +61,7 @@ func TestReadKip113(t *testing.T) {
 	transactor.Register(sender, nodeId, pub2, pop1) // pub vs. pop mismatch
 	backend.Commit()
 
-	// Returns zero record because invalid records have been filtered out.
+	// Returns one record with VerifyErr.
 	infos, err = ReadKip113All(backend, contractAddr, nil)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(infos))

@@ -1162,7 +1162,7 @@ var (
 	}
 	BlsNodeKeystoreFileFlag = &cli.StringFlag{
 		Name:     "bls-nodekeystore",
-		Usage:    "Consensus BLS node keystore JSON file",
+		Usage:    "Consensus BLS node keystore JSON file (to be imported)",
 		Aliases:  []string{"p2p.bls-node-keystore"},
 		EnvVars:  []string{"KLAYTN_BLS_NODEKEYSTORE"},
 		Category: "NETWORK",
