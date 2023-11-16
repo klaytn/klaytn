@@ -3,8 +3,10 @@
 package blockchain
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
+	"log"
 	"math/big"
 
 	"github.com/klaytn/klaytn/common"
@@ -60,9 +62,13 @@ func (g *Genesis) UnmarshalJSON(input []byte) error {
 		ParentHash *common.Hash                                `json:"parentHash"`
 	}
 	var dec Genesis
-	if err := json.Unmarshal(input, &dec); err != nil {
-		return err
+
+	decoder := json.NewDecoder(bytes.NewReader(input))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&dec); err != nil {
+		log.Fatalf("Unknown field: %v", err)
 	}
+
 	if dec.Config != nil {
 		g.Config = dec.Config
 	}
