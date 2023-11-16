@@ -125,32 +125,33 @@ const (
 	SelfDestructComputationCost   = 0
 
 	// Computation cost for precompiled contracts
-	EcrecoverComputationCost            = 113150
-	Sha256PerWordComputationCost        = 100
-	Sha256BaseComputationCost           = 1000
-	Ripemd160PerWordComputationCost     = 10
-	Ripemd160BaseComputationCost        = 100
-	IdentityPerWordComputationCost      = 0
-	IdentityBaseComputationCost         = 0
-	BigModExpPerGasComputationCost      = 10
-	BigModExpBaseComputationCost        = 100
-	Bn256AddComputationCost             = 8000
-	Bn256ScalarMulComputationCost       = 100000
-	Bn256ParingBaseComputationCost      = 2000000
-	Bn256ParingPerPointComputationCost  = 1000000
-	VMLogPerByteComputationCost         = 0
-	VMLogBaseComputationCost            = 10
-	FeePayerComputationCost             = 10
-	ValidateSenderPerSigComputationCost = 180000
-	ValidateSenderBaseComputationCost   = 10000
+	EcrecoverComputationCost                       = 113150
+	Sha256PerWordComputationCost                   = 100
+	Sha256BaseComputationCost                      = 1000
+	Ripemd160PerWordComputationCost                = 10
+	Ripemd160BaseComputationCost                   = 100
+	IdentityPerWordComputationCost                 = 0
+	IdentityBaseComputationCost                    = 0
+	BigModExpPerGasComputationCost                 = 10
+	BigModExpBaseComputationCost                   = 100
+	Bn256AddComputationCost                        = 8000
+	Bn256ScalarMulComputationCost                  = 100000
+	Bn256ParingBaseComputationCost                 = 2000000
+	Bn256ParingPerPointComputationCost             = 1000000
+	BlobTxPointEvaluationPrecompileComputationCost = 2200000
+	VMLogPerByteComputationCost                    = 0
+	VMLogBaseComputationCost                       = 10
+	FeePayerComputationCost                        = 10
+	ValidateSenderPerSigComputationCost            = 180000
+	ValidateSenderBaseComputationCost              = 10000
 
-	// computation costs for opcode added at istanbulCompatible Protocol Upgrade
+	// computation costs added at istanbulCompatible
 	ChainIDComputationCost      = 120
 	SelfBalanceComputationCost  = 374
 	Blake2bBaseComputationCost  = 10000
 	Blake2bScaleComputationCost = 10
 
-	// computation costs for opcode added at londonCompatible Protocol Upgrade
+	// computation cost added at londonCompatible
 	BaseFeeComputationCost = 198
 
 	// Opcode Computation Cost Modification
@@ -176,7 +177,9 @@ const (
 	Push0ComputationCost = 80
 
 	// computation cost added at CancunCompatible
-	McopyComputationCost  = 250
-	TloadComputationCost  = 220
-	TstoreComputationCost = 280
+	McopyComputationCost       = 250
+	TloadComputationCost       = 220
+	TstoreComputationCost      = 280
+	BlobHashComptationCost     = 165
+	BlobBaseFeeComputationCost = 120
 )
