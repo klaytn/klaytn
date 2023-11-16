@@ -11,11 +11,14 @@ require (
 	github.com/bt51/ntpclient v0.0.0-20140310165113-3045f71e2530
 	github.com/cespare/cp v1.0.0
 	github.com/clevergo/websocket v1.0.0
+	github.com/consensys/gnark-crypto v0.10.0
+	github.com/crate-crypto/go-kzg-4844 v0.7.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckarep/golang-set v1.8.0
 	github.com/dgraph-io/badger v1.6.0
 	github.com/docker/docker v24.0.7+incompatible
 	github.com/edsrzf/mmap-go v1.0.0
+	github.com/ethereum/c-kzg-4844 v0.4.0
 	github.com/fatih/color v1.9.0
 	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5
 	github.com/go-redis/redis/v7 v7.4.0
@@ -70,8 +73,8 @@ require (
 )
 
 require (
-	github.com/dop251/goja v0.0.0-20231014103939-873a1496dc8e
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2
+	github.com/dop251/goja v0.0.0-20231014103939-873a1496dc8e
 	github.com/satori/go.uuid v1.2.0
 	github.com/tyler-smith/go-bip32 v1.0.0
 	github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4 v1.4.1
@@ -89,7 +92,9 @@ require (
 	github.com/Microsoft/go-winio v0.5.1 // indirect
 	github.com/andybalholm/brotli v1.0.4 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/bits-and-blooms/bitset v1.5.0 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
+	github.com/consensys/bavard v0.1.13 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.0.1 // indirect
 	github.com/dgraph-io/ristretto v0.1.0 // indirect
@@ -115,6 +120,7 @@ require (
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
+	github.com/mmcloughlin/addchain v0.4.0 // indirect
 	github.com/naoina/go-stringutil v0.1.0 // indirect
 	github.com/otiai10/mint v1.2.4 // indirect
 	github.com/philhofer/fwd v1.1.1 // indirect
@@ -150,4 +156,5 @@ require (
 	gotest.tools/v3 v3.5.0 // indirect
 	honnef.co/go/tools v0.0.1-2020.1.4 // indirect
 	inet.af/netaddr v0.0.0-20220617031823-097006376321 // indirect
+	rsc.io/tmplfunc v0.0.3 // indirect
 )

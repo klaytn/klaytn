@@ -70,6 +70,7 @@ var allPrecompiles = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{8}):    &bn256PairingIstanbul{},
 	common.BytesToAddress([]byte{9}):    &blake2F{},
 	// TODO-klaytn import bls-signature precompiled contracts
+	common.BytesToAddress([]byte{0xa}):    &kzgPointEvaluation{},
 	common.BytesToAddress([]byte{3, 253}): &vmLog{},
 	common.BytesToAddress([]byte{3, 254}): &feePayer{},
 	common.BytesToAddress([]byte{3, 255}): &validateSender{},
@@ -252,6 +253,9 @@ func BenchmarkPrecompiledBn256Pairing(b *testing.B) { benchJson("bn256Pairing", 
 func TestPrecompiledBlake2F(t *testing.T)              { testJson("blake2F", "09", t) }
 func BenchmarkPrecompiledBlake2F(b *testing.B)         { benchJson("blake2F", "09", b) }
 func TestPrecompileBlake2FMalformedInput(t *testing.T) { testJsonFail("blake2F", "09", t) }
+
+func TestPrecompiledPointEvaluation(t *testing.T)      { testJson("pointEvaluation", "a", t) }
+func BenchmarkPrecompiledPointEvaluation(b *testing.B) { benchJson("pointEvaluation", "a", b) }
 
 // Tests the sample inputs of the vmLog
 func TestPrecompiledVmLog(t *testing.T)      { testJson("vmLog", "3fd", t) }
