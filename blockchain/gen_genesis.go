@@ -61,13 +61,17 @@ func (g *Genesis) UnmarshalJSON(input []byte) error {
 		GasUsed    *math.HexOrDecimal64                        `json:"gasUsed"`
 		ParentHash *common.Hash                                `json:"parentHash"`
 	}
-	var dec Genesis
-
-	decoder := json.NewDecoder(bytes.NewReader(input))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&dec); err != nil {
-		log.NewModuleLogger(log.CMDUtilsNodeCMD).Error("Unmarshal error", "error", err)
+	printUnknownFields := func(input []byte) {
+		// print unknown fields in genesis configuration
+		gen := new(Genesis)
+		decoder := json.NewDecoder(bytes.NewReader(input))
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(gen); err != nil {
+			log.NewModuleLogger(log.CMDUtilsNodeCMD).Error("Unmarshal error", "error", err)
+		}
 	}
+
+	var dec Genesis
 	if err := json.Unmarshal(input, &dec); err != nil {
 		return err
 	}
@@ -102,5 +106,8 @@ func (g *Genesis) UnmarshalJSON(input []byte) error {
 	if dec.ParentHash != nil {
 		g.ParentHash = *dec.ParentHash
 	}
+	printUnknownFields(input)
 	return nil
 }
+
+// print unknown fields in genesis configuration
