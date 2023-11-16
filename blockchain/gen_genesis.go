@@ -68,11 +68,9 @@ func (g *Genesis) UnmarshalJSON(input []byte) error {
 	if err := decoder.Decode(&dec); err != nil {
 		log.NewModuleLogger(log.CMDUtilsNodeCMD).Error("Unmarshal error", "error", err)
 	}
-
 	if err := json.Unmarshal(input, &dec); err != nil {
 		return err
 	}
-
 	if dec.Config != nil {
 		g.Config = dec.Config
 	}
