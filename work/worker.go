@@ -709,8 +709,7 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByTimeAndNonce, bc Blo
 	}()
 
 	vmConfig := &vm.Config{
-		RunningEVM:               chEVM,
-		UseOpcodeComputationCost: true,
+		RunningEVM: chEVM,
 	}
 
 	var numTxsChecked int64 = 0

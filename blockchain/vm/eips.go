@@ -349,3 +349,22 @@ func enable7516(jt *JumpTable) {
 		computationCost: params.BlobBaseFeeComputationCost,
 	}
 }
+
+// As the cpu performance has been improved a lot, and as the storage size has increased a lot
+// recalculated the computation cost of some opcodes
+func enableCancunComputationCostModification(jt *JumpTable) {
+	jt[SDIV].computationCost = params.SdivComputationCostCancun
+	jt[MOD].computationCost = params.ModComputationCostCancun
+	jt[ADDMOD].computationCost = params.AddmodComputationCostCancun
+	jt[MULMOD].computationCost = params.MulmodComputationCostCancun
+	jt[EXP].computationCost = params.ExpComputationCostCancun
+	jt[SHA3].computationCost = params.Sha3ComputationCostCancun
+	jt[MSTORE8].computationCost = params.Mstore8ComputationCostCancun
+
+	jt[SLOAD].computationCost = params.SloadComputationCostCancun
+	jt[SSTORE].computationCost = params.SstoreComputationCostCancun
+	jt[LOG1].computationCost = params.Log1ComputationCostCancun
+	jt[LOG2].computationCost = params.Log2ComputationCostCancun
+	jt[LOG3].computationCost = params.Log3ComputationCostCancun
+	jt[LOG4].computationCost = params.Log4ComputationCostCancun
+}

@@ -657,7 +657,7 @@ func (api *API) traceBlock(ctx context.Context, block *types.Block, config *Trac
 
 		txCtx := blockchain.NewEVMTxContext(msg, block.Header())
 		blockCtx := blockchain.NewEVMBlockContext(block.Header(), newChainContext(ctx, api.backend), nil)
-		vmenv := vm.NewEVM(blockCtx, txCtx, statedb, api.backend.ChainConfig(), &vm.Config{UseOpcodeComputationCost: true})
+		vmenv := vm.NewEVM(blockCtx, txCtx, statedb, api.backend.ChainConfig(), &vm.Config{})
 		if _, err = blockchain.ApplyMessage(vmenv, msg); err != nil {
 			failed = err
 			break
@@ -747,10 +747,9 @@ func (api *API) standardTraceBlockToFile(ctx context.Context, block *types.Block
 
 			// Swap out the noop logger to the standard tracer
 			vmConf = vm.Config{
-				Debug:                    true,
-				Tracer:                   vm.NewJSONLogger(&logConfig, bufio.NewWriter(dump)),
-				EnablePreimageRecording:  true,
-				UseOpcodeComputationCost: true,
+				Debug:                   true,
+				Tracer:                  vm.NewJSONLogger(&logConfig, bufio.NewWriter(dump)),
+				EnablePreimageRecording: true,
 			}
 		}
 		// Execute the transaction and flush any traces to disk
@@ -935,7 +934,7 @@ func (api *API) traceTx(ctx context.Context, message blockchain.Message, blockCt
 		tracer = vm.NewStructLogger(config.LogConfig)
 	}
 	// Run the transaction with tracing enabled.
-	vmenv := vm.NewEVM(blockCtx, txCtx, statedb, api.backend.ChainConfig(), &vm.Config{Debug: true, Tracer: tracer, UseOpcodeComputationCost: true})
+	vmenv := vm.NewEVM(blockCtx, txCtx, statedb, api.backend.ChainConfig(), &vm.Config{Debug: true, Tracer: tracer})
 
 	ret, err := blockchain.ApplyMessage(vmenv, message)
 	if err != nil {

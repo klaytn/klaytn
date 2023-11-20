@@ -188,9 +188,8 @@ const (
 )
 
 const (
-	DefaultBlockGenerationInterval    = int64(1) // unit: seconds
-	DefaultBlockGenerationTimeLimit   = 250 * time.Millisecond
-	DefaultOpcodeComputationCostLimit = uint64(100000000)
+	DefaultBlockGenerationInterval  = int64(1) // unit: seconds
+	DefaultBlockGenerationTimeLimit = 250 * time.Millisecond
 )
 
 var (
@@ -216,8 +215,6 @@ var (
 	// TODO-Klaytn-Governance Change the following variables to governance items which requires consensus of CCN
 	// Block generation interval in seconds. It should be equal or larger than 1
 	BlockGenerationInterval = DefaultBlockGenerationInterval
-	// Computation cost limit for a tx. For now, it is approximately 100 ms
-	OpcodeComputationCostLimit = DefaultOpcodeComputationCostLimit
 )
 
 // istanbul BFT

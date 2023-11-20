@@ -1966,7 +1966,6 @@ var (
 		Name: "opcode-computation-cost-limit",
 		Usage: "(experimental option) Set the computation cost limit for a tx. " +
 			"Should set the same value within the network",
-		Value:    params.DefaultOpcodeComputationCostLimit,
 		Aliases:  []string{"experimental.opcode-computation-cost-limit"},
 		EnvVars:  []string{"KLAYTN_OPCODE_COMPUTATION_COST_LIMIT"},
 		Category: "KLAY",
