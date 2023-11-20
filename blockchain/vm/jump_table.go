@@ -69,10 +69,11 @@ type JumpTable [256]*operation
 func newCancunInstructionSet() JumpTable {
 	instructionSet := newShanghaiInstructionSet()
 	enable4844(&instructionSet) // EIP-4844 BLOBHASH opcode
-	enable7516(&instructionSet) // EIP-7516 (BLOBBASEFEE opcode)
-	enable5656(&instructionSet) // EIP-5656 (MCOPY opcode)
+	enable7516(&instructionSet) // EIP-7516 BLOBBASEFEE opcode
+	enable5656(&instructionSet) // EIP-5656 MCOPY opcode
 	enable6780(&instructionSet) // EIP-6780 SELFDESTRUCT only in same transaction
-	enable1153(&instructionSet) // EIP-1153 (Tload, Tstore opcode)
+	enable1153(&instructionSet) // EIP-1153 TLOAD, TSTORE opcode
+	enable1052(&instructionSet) // EIP-1052 EXTCODEHASH fix
 	enableCancunComputationCostModification(&instructionSet)
 	return instructionSet
 }
