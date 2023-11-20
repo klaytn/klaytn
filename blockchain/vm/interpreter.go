@@ -44,7 +44,7 @@ type Config struct {
 	// RunningEVM is to indicate the running EVM and used to stop the EVM.
 	RunningEVM chan *EVM
 
-	// ComputationCostLimit is the limit of the total computation cost of a transaction.
+	// ComputationCostLimit is the limit of the total computation cost of a transaction. Set to Zero of Infinite to disable the computation cost limit.
 	ComputationCostLimit uint64
 
 	// Enables collecting internal transaction data during processing a block
