@@ -268,6 +268,14 @@ func CopyHeader(h *Header) *Header {
 		cpy.Vote = make([]byte, len(h.Vote))
 		copy(cpy.Vote, h.Vote)
 	}
+	if len(h.RandomReveal) > 0 {
+		cpy.RandomReveal = make([]byte, len(h.RandomReveal))
+		copy(cpy.RandomReveal, h.RandomReveal)
+	}
+	if len(h.MixHash) > 0 {
+		cpy.MixHash = make([]byte, len(h.MixHash))
+		copy(cpy.MixHash, h.MixHash)
+	}
 	return &cpy
 }
 
