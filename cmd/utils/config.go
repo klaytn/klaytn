@@ -680,7 +680,7 @@ func (kCfg *KlayConfig) SetKlayConfig(ctx *cli.Context, stack *node.Node) {
 		params.BlockGenerationTimeLimit = ctx.Duration(BlockGenerationTimeLimitFlag.Name)
 	}
 	if ctx.IsSet(OpcodeComputationCostLimitFlag.Name) {
-		params.ExperimentOpcodeComputationCostLimit = ctx.Uint64(OpcodeComputationCostLimitFlag.Name)
+		params.OpcodeComputationCostLimitOverride = ctx.Uint64(OpcodeComputationCostLimitFlag.Name)
 	}
 
 	if ctx.IsSet(SnapshotFlag.Name) {

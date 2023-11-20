@@ -136,8 +136,8 @@ func NewEVMInterpreter(evm *EVM) *EVMInterpreter {
 	}
 
 	// It is an experimental feature.
-	if params.ExperimentOpcodeComputationCostLimit != 0 {
-		cfg.ComputationCostLimit = params.ExperimentOpcodeComputationCostLimit
+	if params.OpcodeComputationCostLimitOverride != 0 {
+		cfg.ComputationCostLimit = params.OpcodeComputationCostLimitOverride
 	}
 
 	return &EVMInterpreter{

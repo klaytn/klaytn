@@ -24,8 +24,6 @@ import (
 	"fmt"
 	"math/big"
 	"time"
-
-	"github.com/klaytn/klaytn/common/math"
 )
 
 var TargetGasLimit = GenesisGasLimit // The artificial target
@@ -192,9 +190,6 @@ const (
 const (
 	DefaultBlockGenerationInterval  = int64(1) // unit: seconds
 	DefaultBlockGenerationTimeLimit = 250 * time.Millisecond
-
-	OpcodeComputationCostLimitInfinite = math.MaxUint64
-	OpcodeComputationCostLimitOverride = uint64(0)
 )
 
 var (
@@ -202,8 +197,7 @@ var (
 	ZeroRandomReveal = make([]byte, 96)
 	ZeroMixHash      = make([]byte, 32)
 
-	TxGasHumanReadable                   uint64 = 4000000000 // NOTE: HumanReadable related functions are inactivated now
-	ExperimentOpcodeComputationCostLimit        = OpcodeComputationCostLimitOverride
+	TxGasHumanReadable uint64 = 4000000000 // NOTE: HumanReadable related functions are inactivated now
 
 	// TODO-Klaytn Change the variables used in GXhash to more appropriate values for Klaytn Network
 	BlockScoreBoundDivisor = big.NewInt(2048)   // The bound divisor of the blockscore, used in the update calculations.

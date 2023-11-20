@@ -20,6 +20,8 @@
 
 package params
 
+import "github.com/klaytn/klaytn/common/math"
+
 const (
 	// Computation cost for opcodes
 	ExtCodeHashComputationCost    = 1000
@@ -199,6 +201,11 @@ const (
 	Log3ComputationCostCancun   = 500
 	Log4ComputationCostCancun   = 500
 
-	OpcodeComputationCostLimit       = 100000000 // 100ms
-	OpcodeComputationCostLimitCancun = 150000000 // 150ms
+	OpcodeComputationCostLimit         = 100000000      // 100ms
+	OpcodeComputationCostLimitCancun   = 150000000      // 150ms
+	OpcodeComputationCostLimitInfinite = math.MaxUint64 // pass it to disable computation cost checks
 )
+
+// OpcodeComputationCostLimitOverride set by --opcode-computation-cost-limit.
+// Overrides chain default settings above.
+var OpcodeComputationCostLimitOverride = uint64(0)
