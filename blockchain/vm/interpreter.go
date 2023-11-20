@@ -44,7 +44,7 @@ type Config struct {
 	// RunningEVM is to indicate the running EVM and used to stop the EVM.
 	RunningEVM chan *EVM
 
-	// ComputationCostLimit is the limit of the total computation cost of a transaction. Set to Zero of Infinite to disable the computation cost limit.
+	// ComputationCostLimit is the limit of the total computation cost of a transaction. Set infinite to disable the computation cost limit.
 	ComputationCostLimit uint64
 
 	// Enables collecting internal transaction data during processing a block
@@ -127,10 +127,8 @@ func NewEVMInterpreter(evm *EVM) *EVMInterpreter {
 	if cfg.ComputationCostLimit == 0 {
 		switch {
 		case evm.chainRules.IsCancun:
-			// approximately 120 ms
 			cfg.ComputationCostLimit = uint64(params.OpcodeComputationCostLimitCancun)
 		default:
-			// approximately 100 ms
 			cfg.ComputationCostLimit = uint64(params.OpcodeComputationCostLimit)
 		}
 	}
