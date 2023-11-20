@@ -24,6 +24,8 @@ import (
 	"fmt"
 	"math/big"
 	"time"
+
+	"github.com/klaytn/klaytn/common/math"
 )
 
 var TargetGasLimit = GenesisGasLimit // The artificial target
@@ -188,9 +190,11 @@ const (
 )
 
 const (
-	DefaultBlockGenerationInterval    = int64(1) // unit: seconds
-	DefaultBlockGenerationTimeLimit   = 250 * time.Millisecond
-	DefaultOpcodeComputationCostLimit = uint64(100000000)
+	DefaultBlockGenerationInterval  = int64(1) // unit: seconds
+	DefaultBlockGenerationTimeLimit = 250 * time.Millisecond
+
+	OpcodeComputationCostLimitInfinite = math.MaxUint64
+	OpcodeComputationCostLimitOverride = uint64(0)
 )
 
 var (
@@ -198,7 +202,8 @@ var (
 	ZeroRandomReveal = make([]byte, 96)
 	ZeroMixHash      = make([]byte, 32)
 
-	TxGasHumanReadable uint64 = 4000000000 // NOTE: HumanReadable related functions are inactivated now
+	TxGasHumanReadable                   uint64 = 4000000000 // NOTE: HumanReadable related functions are inactivated now
+	ExperimentOpcodeComputationCostLimit        = OpcodeComputationCostLimitOverride
 
 	// TODO-Klaytn Change the variables used in GXhash to more appropriate values for Klaytn Network
 	BlockScoreBoundDivisor = big.NewInt(2048)   // The bound divisor of the blockscore, used in the update calculations.
@@ -216,8 +221,6 @@ var (
 	// TODO-Klaytn-Governance Change the following variables to governance items which requires consensus of CCN
 	// Block generation interval in seconds. It should be equal or larger than 1
 	BlockGenerationInterval = DefaultBlockGenerationInterval
-	// Computation cost limit for a tx. For now, it is approximately 100 ms
-	OpcodeComputationCostLimit = DefaultOpcodeComputationCostLimit
 )
 
 // istanbul BFT

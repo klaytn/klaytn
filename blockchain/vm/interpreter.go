@@ -44,8 +44,8 @@ type Config struct {
 	// RunningEVM is to indicate the running EVM and used to stop the EVM.
 	RunningEVM chan *EVM
 
-	// UseOpcodeComputationCost is to enable applying the opcode computation cost limit.
-	UseOpcodeComputationCost bool
+	// ComputationCostLimit is the limit of the total computation cost of a transaction.
+	ComputationCostLimit uint64
 
 	// Enables collecting internal transaction data during processing a block
 	EnableInternalTxTracing bool
@@ -121,6 +121,23 @@ func NewEVMInterpreter(evm *EVM) *EVMInterpreter {
 			}
 		}
 		cfg.JumpTable = jt
+	}
+
+	// Enable the opcode computation cost limit
+	if cfg.ComputationCostLimit == 0 {
+		switch {
+		case evm.chainRules.IsCancun:
+			// approximately 120 ms
+			cfg.ComputationCostLimit = uint64(params.OpcodeComputationCostLimitCancun)
+		default:
+			// approximately 100 ms
+			cfg.ComputationCostLimit = uint64(params.OpcodeComputationCostLimit)
+		}
+	}
+
+	// It is an experimental feature.
+	if params.ExperimentOpcodeComputationCostLimit != 0 {
+		cfg.ComputationCostLimit = params.ExperimentOpcodeComputationCostLimit
 	}
 
 	return &EVMInterpreter{
@@ -227,9 +244,9 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte) (ret []byte, err
 		}
 
 		// We limit tx's execution time using the sum of computation cost of opcodes.
-		if in.evm.Config.UseOpcodeComputationCost {
+		if in.evm.Config.ComputationCostLimit != 0 {
 			in.evm.opcodeComputationCostSum += operation.computationCost
-			if in.evm.opcodeComputationCostSum > params.OpcodeComputationCostLimit {
+			if in.evm.opcodeComputationCostSum > in.evm.Config.ComputationCostLimit {
 				return nil, ErrOpcodeComputationCostLimitReached
 			}
 		}

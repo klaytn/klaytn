@@ -128,7 +128,7 @@ func (cn *CN) stateAtBlock(block *types.Block, reexec uint64, base *state.StateD
 		if current = cn.blockchain.GetBlockByNumber(next); current == nil {
 			return nil, fmt.Errorf("block #%d not found", next)
 		}
-		_, _, _, _, _, err := cn.blockchain.Processor().Process(current, statedb, vm.Config{UseOpcodeComputationCost: true})
+		_, _, _, _, _, err := cn.blockchain.Processor().Process(current, statedb, vm.Config{})
 		if err != nil {
 			return nil, fmt.Errorf("processing block %d failed: %v", current.NumberU64(), err)
 		}
@@ -190,7 +190,7 @@ func (cn *CN) stateAtTransaction(block *types.Block, txIndex int, reexec uint64)
 			return msg, blockContext, txContext, statedb, nil
 		}
 		// Not yet the searched for transaction, execute on top of the current state
-		vmenv := vm.NewEVM(blockContext, txContext, statedb, cn.blockchain.Config(), &vm.Config{UseOpcodeComputationCost: true})
+		vmenv := vm.NewEVM(blockContext, txContext, statedb, cn.blockchain.Config(), &vm.Config{})
 		if _, err := blockchain.ApplyMessage(vmenv, msg); err != nil {
 			return nil, vm.BlockContext{}, vm.TxContext{}, nil, fmt.Errorf("transaction %#x failed: %v", tx.Hash(), err)
 		}
