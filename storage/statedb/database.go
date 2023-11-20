@@ -336,9 +336,11 @@ func getTrieNodeCacheSizeMiB() int {
 		return 0
 	} else if totalPhysicalMemMiB < 20*1024 {
 		return 1 * 1024 // allocate 1G for small memory
+	} else if totalPhysicalMemMiB < 30*1024 {
+		return 6 * 1024 // allocate 6G for medium memory
 	} else {
 		return 10 * 1024 // allocate 10G for large memory (>20G)
-	}
+	} 
 }
 
 // DiskDB retrieves the persistent database backing the trie database.
