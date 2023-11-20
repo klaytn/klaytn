@@ -350,8 +350,8 @@ func enable7516(jt *JumpTable) {
 	}
 }
 
-// As the cpu performance has been improved a lot,
-// recalculate the computation cost of some opcodes
+// As the cpu performance has been improved a lot, and as the storage size has increased a lot
+// recalculated the computation cost of some opcodes
 func enableCancunComputationCostModification(jt *JumpTable) {
 	jt[SDIV].computationCost = params.SdivComputationCostCancun
 	jt[MOD].computationCost = params.ModComputationCostCancun
