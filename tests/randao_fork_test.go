@@ -13,6 +13,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
+	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/contracts/system_contracts"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/crypto/bls"
@@ -52,6 +53,9 @@ func TestRandao_Deploy(t *testing.T) {
 	})
 	ctx.Start()
 	defer ctx.Cleanup()
+
+	// Wait for the chain to start consensus (especially when numNodes > 1)
+	ctx.WaitBlock(t, 1)
 
 	// Deploy KIP113 before hardfork.
 	// Note: this test has a minor difference from Cypress scenario.
@@ -125,6 +129,9 @@ func testRandao_config(forkNum *big.Int, owner, kip113Addr common.Address) *para
 	config.ShanghaiCompatibleBlock = common.Big0
 	config.CancunCompatibleBlock = forkNum
 	config.RandaoCompatibleBlock = forkNum
+
+	// Use WeightedRandom to test KIP-146 random proposer selection
+	config.Istanbul.ProposerPolicy = uint64(istanbul.WeightedRandom)
 
 	if forkNum.Sign() != 0 {
 		// RandaoRegistry is only effective if forkNum > 0
@@ -364,11 +371,11 @@ func testRandao_checkKip114(t *testing.T, ctx *blockchainTestContext, randomAddr
 		if num < forkNum {
 			assert.Nil(t, header.RandomReveal, num)
 			assert.Nil(t, header.MixHash, num)
-			assert.Equal(t, header.ParentHash.Bytes(), random)
+			assert.Equal(t, header.ParentHash.Bytes(), random, num)
 		} else {
 			assert.NotNil(t, header.RandomReveal, num)
 			assert.NotNil(t, header.MixHash, num)
-			assert.Equal(t, header.MixHash, random)
+			assert.Equal(t, header.MixHash, random, num)
 		}
 	}
 }

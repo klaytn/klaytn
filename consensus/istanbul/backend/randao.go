@@ -13,6 +13,7 @@ import (
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/crypto/bls"
+	"github.com/klaytn/klaytn/params"
 )
 
 // For testing without KIP-113 contract setup
@@ -149,4 +150,13 @@ func calcMixHash(randomReveal, prevMixHash []byte) []byte {
 		mixHash[i] = prevMixHash[i] ^ revealHash[i]
 	}
 	return mixHash
+}
+
+// At the fork block's parent, pretend that prevMixHash is ZeroMixHash.
+func headerMixHash(chain consensus.ChainReader, header *types.Header) []byte {
+	if chain.Config().IsRandaoForkBlockParent(header.Number) {
+		return params.ZeroMixHash
+	} else {
+		return header.MixHash
+	}
 }

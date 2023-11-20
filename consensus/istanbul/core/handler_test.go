@@ -731,6 +731,9 @@ func TestCore_chainSplit(t *testing.T) {
 // TestCore_handleTimeoutMsg_race tests a race condition between round change triggers.
 // There should be no race condition when round change message and timeout event are handled simultaneously.
 func TestCore_handleTimeoutMsg_race(t *testing.T) {
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
+
 	// important variables to construct test cases
 	const sleepTime = 200 * time.Millisecond
 	const processingTime = 400 * time.Millisecond
