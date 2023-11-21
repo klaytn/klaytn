@@ -110,12 +110,9 @@ commands:
             if [[ $CIRCLE_TAG =~ $pat ]]; then
               echo "this is rc version $CIRCLE_TAG"
               rc_num=$(echo $CIRCLE_TAG | cut -d '-' -f 2)
-              if [[ << parameters.os-network >> =~ .*"darwin".* ]]; then
-                sed -i '' 's/%d.%d.%d/%d.%d.%d~'$rc_num'/' params/version.go
-              else
-                sed -i 's/%d.%d.%d/%d.%d.%d~'$rc_num'/' params/version.go
-              fi
 
+              sed 's/%d.%d.%d/%d.%d.%d~'$rc_num'/' params/version.go > params/version.go.tmp
+              mv params/version.go.tmp params/version.go
               sed -n '/%d.%d.%d/p' params/version.go
             else
               echo "this is not RC version"
